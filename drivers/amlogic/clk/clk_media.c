@@ -763,6 +763,7 @@ void amlogic_init_media(void)
 	clks[CLKID_VPU_MUX] = clk_register(NULL,
 		vpu_clk_hws[CLKID_VPU_MUX - CLKID_VPU_P0_MUX]);
 	WARN_ON(IS_ERR(clks[CLKID_VPU_MUX]));
+	clk_prepare_enable(clks[CLKID_VPU_MUX]);
 
 	/* cts_vapb_clk */
 	clks[CLKID_VAPB_P0_COMP] = clk_register_composite(NULL,
@@ -794,6 +795,7 @@ void amlogic_init_media(void)
 	clks[CLKID_VAPB_MUX] = clk_register(NULL,
 		vapb_clk_hws[CLKID_VAPB_MUX - CLKID_VAPB_P0_MUX]);
 	WARN_ON(IS_ERR(clks[CLKID_VAPB_MUX]));
+	clk_prepare_enable(clks[CLKID_VAPB_MUX]);
 
 	clks[CLKID_GE2D_GATE] = clk_register(NULL,
 		&ge2d_gate.hw);

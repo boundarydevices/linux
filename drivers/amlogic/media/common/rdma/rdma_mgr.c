@@ -326,6 +326,7 @@ int rdma_config(int handle, int trigger_type)
 	unsigned long flags;
 	struct rdma_device_info *info = &rdma_info;
 	struct rdma_instance_s *ins = &info->rdma_ins[handle];
+	bool auto_start = false;
 
 	if (handle == 0)
 		pr_info("%s error, rdma_config(handle == 0) not allowed\n",
@@ -339,7 +340,34 @@ int rdma_config(int handle, int trigger_type)
 		return -1;
 	}
 
-	if (ins->rdma_item_count <= 0 || trigger_type == 0) {
+	if (trigger_type & RDMA_AUTO_START_MASK)
+		auto_start = true;
+
+	trigger_type &= ~RDMA_AUTO_START_MASK;
+	if (auto_start) {
+		WRITE_VCBUS_REG_BITS(
+			ins->rdma_regadr->trigger_mask_reg,
+			0,
+			ins->rdma_regadr->trigger_mask_reg_bitpos,
+			8);
+
+		WRITE_VCBUS_REG_BITS(
+			ins->rdma_regadr->addr_inc_reg,
+			0,
+			ins->rdma_regadr->addr_inc_reg_bitpos,
+			1);
+		WRITE_VCBUS_REG_BITS(
+			ins->rdma_regadr->rw_flag_reg,
+			1,
+			ins->rdma_regadr->rw_flag_reg_bitpos,
+			1);
+		WRITE_VCBUS_REG_BITS(
+			ins->rdma_regadr->trigger_mask_reg,
+			trigger_type,
+			ins->rdma_regadr->trigger_mask_reg_bitpos,
+			8);
+		ret = 1;
+	} else if (ins->rdma_item_count <= 0 || trigger_type == 0) {
 		if (trigger_type == RDMA_TRIGGER_MANUAL)
 			WRITE_VCBUS_REG(RDMA_ACCESS_MAN,
 				READ_VCBUS_REG(RDMA_ACCESS_MAN) & (~1));

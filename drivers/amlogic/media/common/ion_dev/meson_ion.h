@@ -53,4 +53,9 @@ struct ion_client *meson_ion_client_create(unsigned int heap_mask,
 
 int meson_ion_share_fd_to_phys(struct ion_client *client,
 		int share_fd, ion_phys_addr_t *addr, size_t *len);
+
+
+int ion_phys(struct ion_client *client, struct ion_handle *handle,
+	     ion_phys_addr_t *addr, size_t *len);
+
 #endif

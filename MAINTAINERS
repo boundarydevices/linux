@@ -13540,3 +13540,22 @@ AMLOGIC driver for vout
 M: Evoke Zhang <evoke.zhang@amlogic.com>
 F: drivers/amlogic/dispaly/*
 
+AMLOGIC ION device
+M: Simon Zheng <simon.zheng@amlogic.com>
+F:	drivers/amlogic/media/common/ion_dev/*
+
+AMLOGIC multimedia osd & ge2d
+M:	Pengcheng Chen <pengcheng.chen@amlogic.com>
+F:	drivers/amlogic/media/osd/*
+F:	drivers/amlogic/media/osd_ext/*
+F:	drivers/amlogic/media/logo/*
+F:	drivers/amlogic/media/common/ge2d/*
+F:  include/linux/amlogic/media/ge2d/*
+F:  arch/arm64/configs/meson64_defconfig
+F:  drivers/amlogic/media/Kconfig
+F:  drivers/amlogic/media/Makefile
+F:  arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F:  arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F:  arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F:  drivers/amlogic/clk/clk_media.c
+F:  include/linux/amlogic/media/vout/vout_notify.h

@@ -19,7 +19,7 @@
 #include <linux/types.h>
 
 /* Amlogic Headers */
-#include <linux/amlogic/media/old_cpu_version.h>
+#include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/ge2d/ge2d.h>
 
 /* Local Headers */
@@ -633,6 +633,22 @@ void ge2d_set_dp_gen(struct ge2d_dp_gen_s *cfg)
 		cfg->matrix_sat_in_en = 0;
 		cfg->matrix_minus_16_ctrl = 0;
 		cfg->matrix_sign_ctrl = 0x3;
+	} else if (cfg->use_matrix_default == MATRIX_RGB_TO_FULL_RANGE_YCC) {
+		cfg->matrix_coef[0] = 0x132;
+		cfg->matrix_coef[1] = 0x259;
+		cfg->matrix_coef[2] = 0x75;
+		cfg->matrix_coef[3] = 0x1f53;
+		cfg->matrix_coef[4] = 0x1ead;
+		cfg->matrix_coef[5] = 0x200;
+		cfg->matrix_coef[6] = 0x200;
+		cfg->matrix_coef[7] = 0x1e53;
+		cfg->matrix_coef[8] = 0x1fad;
+		cfg->matrix_offset[0] = 0;
+		cfg->matrix_offset[1] = 128;
+		cfg->matrix_offset[2] = 128;
+		cfg->matrix_sat_in_en = 0;
+		cfg->matrix_minus_16_ctrl = 0;
+		cfg->matrix_sign_ctrl = 0;
 	}
 
 	if (cfg->matrix_minus_16_ctrl)
@@ -726,32 +742,6 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 	x_yc_ratio = ge2d_reg_get_bits(GE2D_GEN_CTRL0, 11, 1);
 	y_yc_ratio = ge2d_reg_get_bits(GE2D_GEN_CTRL0, 10, 1);
 
-	/* #if MESON_CPU_TYPE == MESON_CPU_TYPE_MESON6 */
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_M6) {
-		if (x_yc_ratio) {
-			if (cfg->src1_x_rev) {
-				x_extra_bit_start = 0;
-				x_extra_bit_end   = 3;
-				x_chr_phase = 0x80;
-			} else {
-				x_extra_bit_start = 3;
-				x_extra_bit_end   = 0;
-				x_chr_phase = 0x08;
-			}
-		}
-		if (y_yc_ratio) {
-			if (cfg->src1_y_rev) {
-				y_extra_bit_start = 2;
-				y_extra_bit_end   = 3;
-				y_chr_phase = 0xc4;
-			} else {
-				y_extra_bit_start = 3;
-				y_extra_bit_end   = 2;
-				y_chr_phase = 0x4c;
-			}
-		}
-	} else {
-		/* #else */
 		if (x_yc_ratio) {
 			if ((cfg->src1_x_rev + cfg->dst_x_rev) == 1) {
 				x_extra_bit_start = 3;
@@ -774,9 +764,7 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 				y_extra_bit_end   = 3;
 				y_chr_phase = 0x4c;
 			}
-		}
 	}
-	/* #endif */
 
 	ge2d_reg_write(GE2D_SRC1_X_START_END,
 			(x_extra_bit_start << 30) |  /* x start extra */

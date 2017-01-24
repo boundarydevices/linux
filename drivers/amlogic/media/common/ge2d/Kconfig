@@ -1,7 +1,7 @@
 #
 # GE2D Module
 #
-config  AMLOGIC_GE2D
+config  AMLOGIC_MEDIA_GE2D
 	bool "Amlogic GE2D Module"
 	default n
 	help

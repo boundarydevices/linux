@@ -1,0 +1,70 @@
+#
+# Frame buffer configuration
+#
+menu "Amlogic OSD Module"
+
+config AMLOGIC_MEDIA_FB
+	bool "Amlogic OSD Support"
+	depends on FB
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	depends on AMLOGIC_MEDIA_CANVAS
+#	depends on AMLOGIC_VOUT_SERVE
+	default n
+	help
+		This is the frame buffer device driver.
+		It provide basic frame buffer device driver.
+
+		It need enable canvas.
+		It need enable vout.
+
+config AMLOGIC_MEDIAFB_OSD_SYNC_FENCE
+	bool "OSD SYNC FENCE"
+	default n
+	depends on AMLOGIC_MEDIA_FB
+	depends on STAGING
+	depends on ANDROID
+	depends on SYNC
+	depends on SW_SYNC
+	help
+		Select to enable OSD SYNC FENCE.
+		This is the frame buffer device driver.
+		It provide basic frame buffer device driver.
+
+		This module is used in android system.
+		It used sync fence.
+
+config AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
+	bool "OSD VSYNC RDMA"
+	default n
+	depends on AMLOGIC_MEDIA_FB
+	depends on AMLOGIC_MEDIA_RDMA
+	help
+		This is the frame buffer device driver.
+		Select to enable OSD VSYNC RDMA.
+
+		This module used VSYNC RDMA.
+		It used rdma.
+
+config AMLOGIC_MEDIA_FB_OSD2_ENABLE
+	bool "OSD2 Layer Support"
+	default n
+	depends on AMLOGIC_MEDIA_FB
+	help
+		This is the frame buffer device driver.
+		Select to enable OSD2 Layer.
+
+		This module enable OSD2 layer,
+		otherwise we used OSD1 only.
+
+config AMLOGIC_MEDIA_FB_OSD2_CURSOR
+	bool "OSD2 Cursor Support"
+	depends on AMLOGIC_MEDIA_FB_OSD2_ENABLE
+	default n
+	help
+		This is the frame buffer device driver.
+		Select to enable OSD2 cursor.
+
+		This module used2 OSD2 as cursor.
+endmenu

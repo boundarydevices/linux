@@ -17,7 +17,7 @@
 
 #ifndef VIDEO_HEADER_
 #define VIDEO_HEADER_
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 
 int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 int VSYNC_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);

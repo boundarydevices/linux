@@ -13,7 +13,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
-*/
+ */
 
 #ifndef _VOUT_NOTIFY_H_
 #define _VOUT_NOTIFY_H_

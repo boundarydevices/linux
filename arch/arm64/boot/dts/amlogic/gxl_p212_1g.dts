@@ -306,8 +306,46 @@
 			"mailbox_1",
 			"mailbox_2";
 	};
-};
 
+	meson-fb {
+		compatible = "amlogic, meson-fb";
+		memory-region = <&fb_reserved>;
+		dev_name = "meson-fb";
+		status = "okay";
+		interrupts = <0 3 1
+			0 89 1>;
+		interrupt-names = "viu-vsync", "rdma";
+		mem_size = <0x01851000 0x00100000>; /* fb0/fb1 memory size */
+		display_mode_default = "1080p60hz";
+		scale_mode = <1>;
+		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
+		display_size_default = <1920 1080 1920 3240 32>;
+		/*1920*1080*4*3 = 0x17BB000*/
+		logo_addr = "0x3d851000";
+		/*ion base + fb0 memory size for uboot logo osd1*/
+	};
+	ge2d {
+		compatible = "amlogic, ge2d";
+		dev_name = "ge2d";
+		status = "okay";
+		interrupts = <0 150 1>;
+		interrupt-names = "ge2d";
+		clocks = <&clkc CLKID_VAPB_MUX>,
+			<&clkc CLKID_GE2D_GATE>,
+			<&clkc CLKID_G2D>;
+		clock-names = "clk_vapb_0",
+			"clk_ge2d",
+			"clk_ge2d_gate";
+	};
+
+	rdma{
+		compatible = "amlogic, meson, rdma";
+		dev_name = "amlogic-rdma";
+		status = "ok";
+		interrupts = <0 89 1>;
+		interrupt-names = "rdma";
+	};
+};
 &efuse {
 	status = "ok";
 };

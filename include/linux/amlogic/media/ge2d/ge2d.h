@@ -123,6 +123,7 @@
 #define MATRIX_YCC_TO_RGB               1
 #define MATRIX_RGB_TO_YCC               2
 #define MATRIX_FULL_RANGE_YCC_TO_RGB    3
+#define MATRIX_RGB_TO_FULL_RANGE_YCC    4
 
 
 #define GE2D_ENDIAN_SHIFT	24
@@ -813,6 +814,13 @@ struct compat_config_para_ex_s {
 #ifdef CONFIG_COMPAT
 #define GE2D_CONFIG_EX32  \
 	_IOW(GE2D_IOC_MAGIC, 0x01,  struct compat_config_para_ex_s)
+#endif
+
+#define	GE2D_SRCCOLORKEY     _IOW(GE2D_IOC_MAGIC, 0x02, struct config_para_s)
+
+#ifdef CONFIG_COMPAT
+#define	GE2D_SRCCOLORKEY32   \
+	_IOW(GE2D_IOC_MAGIC, 0x02, struct compat_config_para_s)
 #endif
 
 extern void ge2d_set_src1_data(struct ge2d_src1_data_s *cfg);

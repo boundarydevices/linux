@@ -99,6 +99,7 @@ int ion_phys(struct ion_client *client, struct ion_handle *handle,
 	}
 	return 0;
 }
+EXPORT_SYMBOL(ion_phys);
 
 int meson_ion_share_fd_to_phys(struct ion_client *client,
 		int share_fd, ion_phys_addr_t *addr, size_t *len)

@@ -110,4 +110,15 @@ void blend_noblk(struct ge2d_context_s *wq,
 		 int dst_x, int dst_y, int dst_w, int dst_h,
 		 int op);
 
+void blend_noalpha(struct ge2d_context_s *wq,
+	   int src_x, int src_y, int src_w, int src_h,
+	   int src2_x, int src2_y, int src2_w, int src2_h,
+	   int dst_x, int dst_y, int dst_w, int dst_h,
+	   int op);
+
+void blend_noalpha_noblk(struct ge2d_context_s *wq,
+	   int src_x, int src_y, int src_w, int src_h,
+	   int src2_x, int src2_y, int src2_w, int src2_h,
+	   int dst_x, int dst_y, int dst_w, int dst_h,
+	   int op);
 #endif

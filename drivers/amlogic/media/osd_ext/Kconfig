@@ -1,0 +1,17 @@
+#
+# Frame buffer configuration
+#
+menu "Amlogic OSD_EXT Module"
+
+config AMLOGIC_MEDIA_FB_EXT
+	bool "Amlogic OSD_EXT Support"
+	default n
+	depends on AMLOGIC_MEDIA_FB
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	depends on AMLOGIC_MEDIA_CANVAS
+	depends on AMLOGIC_VOUT2
+	help
+		This is the frame buffer device driver.
+endmenu

@@ -1,0 +1,10 @@
+#
+# Amlogic Logo configuration
+#
+config AMLOGIC_MEDIA_LOGO
+	bool "Amlogic Logo Module"
+	default n
+	depends on AMLOGIC_MEDIA_FB
+	depends on AMLOGIC_VOUT
+	help
+		Select to enable Logo module

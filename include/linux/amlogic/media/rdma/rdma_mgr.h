@@ -23,9 +23,11 @@ struct rdma_op_s {
 	void *arg;
 };
 
+#define RDMA_TRIGGER_VSYNC_INPUT 0x1
 #define RDMA_TRIGGER_MANUAL	0x100
 #define RDMA_TRIGGER_DEBUG1 0x101
 #define RDMA_TRIGGER_DEBUG2 0x102
+#define RDMA_AUTO_START_MASK 0x80000
 
 /*
  *	rdma_read_reg(), rdma_write_reg(), rdma_clear() can only be called

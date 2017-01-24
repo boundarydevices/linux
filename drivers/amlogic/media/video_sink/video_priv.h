@@ -58,7 +58,9 @@ u32 get_video_enabled(void);
 int ext_frame_capture_poll(int endflags);
 #endif
 
-/*extern u32 disp_canvas_index[2][6];*/
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
+extern u32 disp_canvas_index[2][6];
+#endif
 #endif
 
 /*VIDEO_PRIV_HEADER_HH*/

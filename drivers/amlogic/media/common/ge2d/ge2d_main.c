@@ -16,9 +16,7 @@
  */
 
 /* Linux Headers */
-#include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/types.h>
 #include <linux/interrupt.h>
 #include <linux/fb.h>
@@ -39,7 +37,7 @@
 /* Amlogic Headers */
 #include <linux/amlogic/media/ge2d/ge2d.h>
 #include <linux/amlogic/media/ge2d/ge2d_cmd.h>
-#include <linux/amlogic/media/old_cpu_version.h>
+#include <linux/amlogic/cpu_version.h>
 
 /* Local Headers */
 #include "ge2dgen.h"
@@ -60,6 +58,8 @@ struct ge2d_device_s {
 static struct ge2d_device_s ge2d_device;
 static DEFINE_MUTEX(ge2d_mutex);
 unsigned int ge2d_log_level;
+unsigned int ge2d_dump_reg_enable;
+unsigned int ge2d_dump_reg_cnt;
 
 static int ge2d_open(struct inode *inode, struct file *file);
 static long ge2d_ioctl(struct file *filp, unsigned int cmd,
@@ -75,6 +75,19 @@ static ssize_t log_level_show(struct class *cla,
 static ssize_t log_level_store(struct class *cla,
 			       struct class_attribute *attr,
 			       const char *buf, size_t count);
+static ssize_t dump_reg_enable_show(struct class *cla,
+			      struct class_attribute *attr,
+			      char *buf);
+static ssize_t dump_reg_enable_store(struct class *cla,
+				 struct class_attribute *attr,
+				 const char *buf, size_t count);
+static ssize_t dump_reg_cnt_show(struct class *cla,
+			      struct class_attribute *attr,
+			      char *buf);
+static ssize_t dump_reg_cnt_store(struct class *cla,
+			       struct class_attribute *attr,
+			       const char *buf, size_t count);
+
 
 static const struct file_operations ge2d_fops = {
 	.owner		= THIS_MODULE,
@@ -93,6 +106,10 @@ static struct class_attribute ge2d_class_attrs[] = {
 			free_queue_status_show, NULL),
 	__ATTR(log_level, 0644,
 			log_level_show, log_level_store),
+	__ATTR(dump_reg_enable, 0644,
+			dump_reg_enable_show, dump_reg_enable_store),
+	__ATTR(dump_reg_cnt, 0644,
+			dump_reg_cnt_show, dump_reg_cnt_store),
 	__ATTR_NULL
 };
 
@@ -101,6 +118,47 @@ static struct class ge2d_class = {
 	.class_attrs = ge2d_class_attrs,
 };
 
+static ssize_t dump_reg_enable_show(struct class *cla,
+			      struct class_attribute *attr,
+			      char *buf)
+{
+	return snprintf(buf, 40, "%d\n", ge2d_dump_reg_enable);
+}
+
+static ssize_t dump_reg_enable_store(struct class *cla,
+			       struct class_attribute *attr,
+			       const char *buf, size_t count)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	ge2d_log_info("ge2d dump_reg_enbale: %d->%d\n",
+		ge2d_dump_reg_enable, res);
+	ge2d_dump_reg_enable = res;
+
+	return count;
+}
+
+static ssize_t dump_reg_cnt_show(struct class *cla,
+			      struct class_attribute *attr,
+			      char *buf)
+{
+	return snprintf(buf, 40, "%d\n", ge2d_dump_reg_cnt);
+}
+
+static ssize_t dump_reg_cnt_store(struct class *cla,
+			       struct class_attribute *attr,
+			       const char *buf, size_t count)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	ge2d_log_info("ge2d dump_reg: %d->%d\n", ge2d_dump_reg_cnt, res);
+	ge2d_dump_reg_cnt = res;
+	return count;
+}
 
 static ssize_t log_level_show(struct class *cla,
 			      struct class_attribute *attr,
@@ -121,19 +179,6 @@ static ssize_t log_level_store(struct class *cla,
 	ge2d_log_level = res;
 
 	return count;
-}
-
-static bool command_valid(unsigned int cmd)
-{
-	bool ret = false;
-#ifdef CONFIG_COMPAT
-	ret = (cmd <= GE2D_CONFIG_EX32 &&
-		cmd >= GE2D_ANTIFLICKER_ENABLE);
-#else
-	ret = (cmd <= GE2D_CONFIG_EX &&
-		cmd >= GE2D_ANTIFLICKER_ENABLE);
-#endif
-	return ret;
 }
 
 static int ge2d_open(struct inode *inode, struct file *file)
@@ -161,22 +206,53 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	int ret = 0;
 #ifdef CONFIG_COMPAT
 	struct compat_config_para_s __user *uf;
+	struct compat_config_para_ex_s __user *uf_ex;
 	int r = 0;
 	int i, j;
 #endif
 	void __user *argp = (void __user *)args;
 
-	if (!command_valid(cmd))
-		return -1;
-
 	context = (struct ge2d_context_s *)filp->private_data;
 	memset(&ge2d_config, 0, sizeof(struct config_para_s));
+	memset(&ge2d_config_ex, 0, sizeof(struct config_para_ex_s));
 	switch (cmd) {
 	case GE2D_CONFIG:
 	case GE2D_SRCCOLORKEY:
 		ret = copy_from_user(&ge2d_config,
 				argp, sizeof(struct config_para_s));
 		break;
+#ifdef CONFIG_COMPAT
+	case GE2D_SRCCOLORKEY32:
+		uf = (struct compat_config_para_s *)argp;
+		r = get_user(ge2d_config.src_dst_type, &uf->src_dst_type);
+		r |= get_user(ge2d_config.alu_const_color,
+			&uf->alu_const_color);
+		r |= get_user(ge2d_config.src_format, &uf->src_format);
+		r |= get_user(ge2d_config.dst_format, &uf->dst_format);
+		for (i = 0; i < 4; i++) {
+			r |= get_user(ge2d_config.src_planes[i].addr,
+				&uf->src_planes[i].addr);
+			r |= get_user(ge2d_config.src_planes[i].w,
+				&uf->src_planes[i].w);
+			r |= get_user(ge2d_config.src_planes[i].h,
+				&uf->src_planes[i].h);
+		}
+		for (j = 0; j < 4; j++) {
+			r |= get_user(ge2d_config.dst_planes[j].addr,
+				&uf->dst_planes[j].addr);
+			r |= get_user(ge2d_config.dst_planes[j].w,
+				&uf->dst_planes[j].w);
+			r |= get_user(ge2d_config.dst_planes[j].h,
+				&uf->dst_planes[j].h);
+		}
+		r |= copy_from_user(&ge2d_config.src_key, &uf->src_key,
+			sizeof(struct src_key_ctrl_s));
+		if (r) {
+			pr_err("GE2D_SRCCOLORKEY32 get parameter failed .\n");
+			return -EFAULT;
+			}
+		break;
+#endif
 #ifdef CONFIG_COMPAT
 	case GE2D_CONFIG32:
 		uf = (struct compat_config_para_s *)argp;
@@ -214,9 +290,96 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		ret = copy_from_user(&ge2d_config_ex, argp,
 				sizeof(struct config_para_ex_s));
 		break;
+#ifdef CONFIG_COMPAT
+	case GE2D_CONFIG_EX32:
+		uf_ex = (struct compat_config_para_ex_s *)argp;
+		r = copy_from_user(&ge2d_config_ex.src_para, &uf_ex->src_para,
+			sizeof(struct src_dst_para_ex_s));
+		r |= copy_from_user(&ge2d_config_ex.src2_para,
+			&uf_ex->src2_para,
+			sizeof(struct src_dst_para_ex_s));
+		r |= copy_from_user(&ge2d_config_ex.dst_para, &uf_ex->dst_para,
+			sizeof(struct src_dst_para_ex_s));
+
+		r |= copy_from_user(&ge2d_config_ex.src_key, &uf_ex->src_key,
+			sizeof(struct src_key_ctrl_s));
+		r |= copy_from_user(&ge2d_config_ex.src2_key, &uf_ex->src2_key,
+			sizeof(struct src_key_ctrl_s));
+
+		r |= get_user(ge2d_config_ex.alu_const_color,
+			&uf_ex->alu_const_color);
+		r |= get_user(ge2d_config_ex.src1_gb_alpha,
+			&uf_ex->src1_gb_alpha);
+		r |= get_user(ge2d_config_ex.op_mode, &uf_ex->op_mode);
+		r |= get_user(ge2d_config_ex.bitmask_en, &uf_ex->bitmask_en);
+		r |= get_user(ge2d_config_ex.bytemask_only,
+			&uf_ex->bytemask_only);
+		r |= get_user(ge2d_config_ex.bitmask, &uf_ex->bitmask);
+		r |= get_user(ge2d_config_ex.dst_xy_swap, &uf_ex->dst_xy_swap);
+		r |= get_user(ge2d_config_ex.hf_init_phase,
+			&uf_ex->hf_init_phase);
+		r |= get_user(ge2d_config_ex.hf_rpt_num, &uf_ex->hf_rpt_num);
+		r |= get_user(ge2d_config_ex.hsc_start_phase_step,
+			&uf_ex->hsc_start_phase_step);
+		r |= get_user(ge2d_config_ex.hsc_phase_slope,
+			&uf_ex->hsc_phase_slope);
+		r |= get_user(ge2d_config_ex.vf_init_phase,
+			&uf_ex->vf_init_phase);
+		r |= get_user(ge2d_config_ex.vf_rpt_num, &uf_ex->vf_rpt_num);
+		r |= get_user(ge2d_config_ex.vsc_start_phase_step,
+			&uf_ex->vsc_start_phase_step);
+		r |= get_user(ge2d_config_ex.vsc_phase_slope,
+			&uf_ex->vsc_phase_slope);
+		r |= get_user(ge2d_config_ex.src1_vsc_phase0_always_en,
+			&uf_ex->src1_vsc_phase0_always_en);
+		r |= get_user(ge2d_config_ex.src1_hsc_phase0_always_en,
+			&uf_ex->src1_hsc_phase0_always_en);
+		r |= get_user(ge2d_config_ex.src1_hsc_rpt_ctrl,
+			&uf_ex->src1_hsc_rpt_ctrl);
+		r |= get_user(ge2d_config_ex.src1_vsc_rpt_ctrl,
+			&uf_ex->src1_vsc_rpt_ctrl);
+
+		for (i = 0; i < 4; i++) {
+			r |= get_user(ge2d_config_ex.src_planes[i].addr,
+				&uf_ex->src_planes[i].addr);
+			r |= get_user(ge2d_config_ex.src_planes[i].w,
+				&uf_ex->src_planes[i].w);
+			r |= get_user(ge2d_config_ex.src_planes[i].h,
+				&uf_ex->src_planes[i].h);
+		}
+
+		for (i = 0; i < 4; i++) {
+			r |= get_user(ge2d_config_ex.src2_planes[i].addr,
+				&uf_ex->src2_planes[i].addr);
+			r |= get_user(ge2d_config_ex.src2_planes[i].w,
+				&uf_ex->src2_planes[i].w);
+			r |= get_user(ge2d_config_ex.src2_planes[i].h,
+				&uf_ex->src2_planes[i].h);
+		}
+
+		for (j = 0; j < 4; j++) {
+			r |= get_user(ge2d_config_ex.dst_planes[j].addr,
+				&uf_ex->dst_planes[j].addr);
+			r |= get_user(ge2d_config_ex.dst_planes[j].w,
+				&uf_ex->dst_planes[j].w);
+			r |= get_user(ge2d_config_ex.dst_planes[j].h,
+				&uf_ex->dst_planes[j].h);
+		}
+
+		if (r) {
+			pr_err("GE2D_CONFIG_EX32 get parameter failed .\n");
+			return -EFAULT;
+			}
+		break;
+#endif
 	case GE2D_SET_COEF:
 	case GE2D_ANTIFLICKER_ENABLE:
 		break;
+	case GE2D_CONFIG_OLD:
+	case GE2D_CONFIG_EX_OLD:
+	case GE2D_SRCCOLORKEY_OLD:
+		pr_err("ioctl not support yed.\n");
+		return -EINVAL;
 	default:
 		ret = copy_from_user(&para, argp, sizeof(struct ge2d_para_s));
 		break;
@@ -231,6 +394,9 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		ret = ge2d_context_config(context, &ge2d_config);
 		break;
 	case GE2D_CONFIG_EX:
+#ifdef CONFIG_COMPAT
+	case GE2D_CONFIG_EX32:
+#endif
 		ret = ge2d_context_config_ex(context, &ge2d_config_ex);
 		break;
 	case GE2D_SET_COEF:
@@ -240,6 +406,15 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		ge2d_antiflicker_enable(context, args);
 		break;
 	case GE2D_SRCCOLORKEY:
+#ifdef CONFIG_COMPAT
+	case GE2D_SRCCOLORKEY32:
+#endif
+		ge2d_log_dbg("src colorkey...,key_enable=0x%x,key_color=0x%x,key_mask=0x%x,key_mode=0x%x\n",
+			     ge2d_config.src_key.key_enable,
+			     ge2d_config.src_key.key_color,
+			     ge2d_config.src_key.key_mask,
+			     ge2d_config.src_key.key_mode);
+
 		ge2dgen_src_key(context, ge2d_config.src_key.key_enable,
 				ge2d_config.src_key.key_color,
 				ge2d_config.src_key.key_mask,
@@ -334,6 +509,28 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 			    para.dst_rect.w, para.dst_rect.h,
 			    para.op);
 		break;
+	case GE2D_BLEND_NOALPHA:
+		ge2d_log_dbg("blend_noalpha ...\n");
+		blend_noalpha(context,
+			  para.src1_rect.x, para.src1_rect.y,
+			  para.src1_rect.w, para.src1_rect.h,
+			  para.src2_rect.x, para.src2_rect.y,
+			  para.src2_rect.w, para.src2_rect.h,
+			  para.dst_rect.x, para.dst_rect.y,
+			  para.dst_rect.w, para.dst_rect.h,
+			  para.op);
+			break;
+	case GE2D_BLEND_NOALPHA_NOBLOCK:
+		ge2d_log_dbg("blend_noalpha ...,noblk\n");
+		blend_noalpha_noblk(context,
+				para.src1_rect.x, para.src1_rect.y,
+				para.src1_rect.w, para.src1_rect.h,
+				para.src2_rect.x, para.src2_rect.y,
+				para.src2_rect.w, para.src2_rect.h,
+				para.dst_rect.x, para.dst_rect.y,
+				para.dst_rect.w, para.dst_rect.h,
+				para.op);
+		break;
 	case GE2D_BLIT_NOALPHA:
 		/* bitblt_noalpha */
 		ge2d_log_dbg("blit_noalpha...\n");
@@ -413,6 +610,7 @@ static int ge2d_probe(struct platform_device *pdev)
 	int ret = 0;
 	int irq = 0;
 	struct reset_control *rstc = NULL;
+	struct clk *clk_gate;
 	struct clk *clk;
 	/* get interrupt resource */
 	irq = platform_get_irq_byname(pdev, "ge2d");
@@ -422,35 +620,42 @@ static int ge2d_probe(struct platform_device *pdev)
 		goto failed1;
 	}
 
-	rstc = devm_reset_control_get(&pdev->dev, "ge2d");
-	if (IS_ERR(rstc)) {
-		ge2d_log_err("get ge2d rstc error: %lx\n", PTR_ERR(rstc));
-		rstc = NULL;
+	clk_gate = devm_clk_get(&pdev->dev, "clk_ge2d_gate");
+	if (IS_ERR(clk_gate)) {
+		ge2d_log_err("cannot get clock\n");
+		clk_gate = NULL;
 		ret = -ENOENT;
 		goto failed1;
 	}
+	ge2d_log_info("clock source clk_ge2d_gate %p\n", clk_gate);
+	clk_prepare_enable(clk_gate);
 
-	reset_control_assert(rstc);
-	clk = clk_get(&pdev->dev, "clk_ge2d");
+	clk = devm_clk_get(&pdev->dev, "clk_ge2d");
 	if (IS_ERR(clk)) {
 		ge2d_log_err("cannot get clock\n");
 		clk = NULL;
 		ret = -ENOENT;
 		goto failed1;
 	}
+	ge2d_log_info("clock clk_ge2d source %p\n", clk);
+	clk_prepare_enable(clk);
+
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB) {
 		struct clk *clk_vapb0;
 		int vapb_rate;
 
-		clk_vapb0 = clk_get(&pdev->dev, "clk_vapb_0");
+		clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
+		ge2d_log_info("clock source clk_vapb_0 %p\n", clk_vapb0);
+		clk_prepare_enable(clk_vapb0);
+
 		if (!IS_ERR(clk_vapb0)) {
 			vapb_rate = clk_get_rate(clk_vapb0);
-			clk_put(clk_vapb0);
+			clk_set_rate(clk_vapb0, vapb_rate);
 			ge2d_log_info("ge2d clock is %d MHZ\n",
 				vapb_rate/1000000);
 		}
 	}
-	ret = ge2d_wq_init(pdev, irq, rstc, clk);
+	ret = ge2d_wq_init(pdev, irq, rstc, clk_gate);
 failed1:
 	return ret;
 }

@@ -1,9 +1,8 @@
 #Ascending by module name's ASCII
 source "drivers/amlogic/media/common/codec_mm/Kconfig"
 source "drivers/amlogic/media/common/canvas/Kconfig"
+source "drivers/amlogic/media/common/ge2d/Kconfig"
 source "drivers/amlogic/media/common/ion_dev/Kconfig"
 source "drivers/amlogic/media/common/rdma/Kconfig"
 source "drivers/amlogic/media/common/vfm/Kconfig"
-source "drivers/amlogic/media/common/ge2d/Kconfig"
-source "drivers/amlogic/media/common/ion_dev/Kconfig"
 source "drivers/amlogic/media/common/vpu/Kconfig"
