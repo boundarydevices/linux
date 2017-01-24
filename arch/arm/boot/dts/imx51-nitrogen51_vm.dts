@@ -16,6 +16,8 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 
+#define USE_SAS
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -374,6 +376,9 @@
 		mxcfb1 = &fb_lcd2;
 #endif
 		pwm_lcd = &pwm1;
+		serial0 = &uart1;
+		serial1 = &uart3;
+		serial2 = &uart2;
 #ifdef USE_DRM
 		t_lcd = &lcd_timings;
 		t_lcd2 = &lcd2_timings;
@@ -609,6 +614,7 @@
 		};
 	};
 
+#ifdef USE_SAS
 	sas: sas@73fc0000 {
 		clocks = <&clks 30>, <&clks 31>;
 		clock-names = "ipg", "per";
@@ -619,17 +625,7 @@
 		pinctrl-0 = <&pinctrl_uart2>;
 		reg = <0x73fc0000 0x4000>;
 	};
-
-	sas: sas@73fc0000 {
-		clocks = <&clks 30>, <&clks 31>;
-		clock-names = "ipg", "per";
-	        compatible = "boundary,imx51-sas";
-		interrupt-parent = <&tzic>;
-		interrupts = <32>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_uart2>;
-		reg = <0x73fc0000 0x4000>;
-	};
+#endif
 
 	sound {
 		compatible = "fsl,imx51-nitrogen51_vm-sgtl5000",
@@ -901,6 +897,7 @@
 	status = "okay";
 };
 
+#ifdef USE_SAS
 &sas {
         baud = <19200>;
         flush_on_mark = <0>;
@@ -910,6 +907,7 @@
         status = "okay";
         txbufsize = <4096>;
 };
+#endif
 
 &ssi2 {
 	fsl,mode = "i2s-slave";
@@ -921,6 +919,14 @@
 	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
 };
+
+#ifndef USE_SAS
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart2>;
+	status = "okay";
+};
+#endif
 
 &uart3 {
 	pinctrl-names = "default";
