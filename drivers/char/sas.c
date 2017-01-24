@@ -606,50 +606,54 @@ static int sas_open(struct inode *inode, struct file *file)
 			clk_disable(dev->clk_per);
 			goto out;
 		}
+		writel(0x0, dev->base + UCR1);
+		writel(0x0, dev->base + UCR2);
+
+		while (!(readl(dev->base + UCR2) & UCR2_SRST))
+			;
+
+		writel(IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP,
+		       dev->base + UCR3);
+		writel(0x8000, dev->base + UCR4);
+		writel(0x002b, dev->base + UESC);
+		writel(0x0, dev->base + UTIM);
+		writel(0x0, dev->base + IMX1_UTS);
+		writel(0, dev->base + IMX21_UTS);
+		dev->force_tx_par_err = 0;
+
+		/* divide input clock by 2, receive fifo 1, txtl 2 */
+		writel((4 << 7) | 0x801, dev->base + UFCR);
+		writel(0xf, dev->base + UBIR);
+		writel(clk_get_rate(dev->clk_per) / (2 * dev->baud),
+		       dev->base + UBMR);
+
+		if (dev->umcr_reg) {
+			writel(UMCR_MDEN, dev->base + dev->umcr_reg);
+		}
+		writel(UCR2_WS | UCR2_IRTS
+		       | UCR2_RXEN | UCR2_TXEN
+		       | UCR2_SRST | UCR2_PREN,
+		       dev->base + UCR2);
+
+		dev->rxbuf.head =
+		dev->rxbuf.tail =
+		dev->txbuf.head =
+		dev->txbuf.tail = 0;
+		dev->rxmsgadd =
+		dev->rxmsgtake = 0;
+		dev->rxmsgs[0].start = 0;
+		dev->last_parity = 0;
+		force_address_match(dev);
+
 		rval = devm_request_irq(&dev->pdev->dev,
 					  dev->irq, irq_handler,
 					  IRQF_TRIGGER_PROBE, DRIVER_NAME, dev);
 		if (!rval) {
-			writel(0x0, dev->base + UCR1);
-			writel(0x0, dev->base + UCR2);
-
-			while (!(readl(dev->base + UCR2) & UCR2_SRST))
-				;
-
-			writel(IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP,
-			       dev->base + UCR3);
-			writel(0x8000, dev->base + UCR4);
-			writel(0x002b, dev->base + UESC);
-			writel(0x0, dev->base + UTIM);
-			writel(0x0, dev->base + IMX1_UTS);
-			writel(0, dev->base + IMX21_UTS);
-			dev->force_tx_par_err = 0;
-
-			/* divide input clock by 2, receive fifo 1, txtl 2 */
-			writel((4 << 7) | 0x801, dev->base + UFCR);
-			writel(0xf, dev->base + UBIR);
-			writel(clk_get_rate(dev->clk_per) / (2 * dev->baud),
-			       dev->base + UBMR);
-
-			if (dev->umcr_reg) {
-				writel(UMCR_MDEN, dev->base + dev->umcr_reg);
-			}
-			writel(UCR2_WS | UCR2_IRTS
-			       | UCR2_RXEN | UCR2_TXEN
-			       | UCR2_SRST | UCR2_PREN,
-			       dev->base + UCR2);
-
-			dev->rxbuf.head =
-			dev->rxbuf.tail =
-			dev->txbuf.head =
-			dev->txbuf.tail = 0;
-			dev->rxmsgadd =
-			dev->rxmsgtake = 0;
-			dev->rxmsgs[0].start = 0;
-			dev->last_parity = 0;
-			force_address_match(dev);
 			writel(UCR1_UARTEN | UCR1_RRDYEN, dev->base + UCR1);
 		} else {
+			writel(0x0, dev->base + UCR1);
+			clk_disable(dev->clk_ipg);
+			clk_disable(dev->clk_per);
 			dev_err(&dev->pdev->dev,
 				"Error %d requesting irq %d\n",
 				rval, dev->irq);
