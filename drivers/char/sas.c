@@ -589,11 +589,15 @@ static int sas_open(struct inode *inode, struct file *file)
 {
 	int rval = 0;
 	unsigned long flags;
+	unsigned cnt;
 	struct sas_dev *dev = container_of(inode->i_cdev,
 					   struct sas_dev, cdev);
 	file->private_data = dev;
 	spin_lock_irqsave(&dev->lock, flags);
-	if (1 == ++dev->open_count) {
+	cnt = ++dev->open_count;
+	spin_unlock_irqrestore(&dev->lock, flags);
+
+	if (1 == cnt) {
 		rval = clk_enable(dev->clk_per);
 		if (rval)
 			goto out;
@@ -635,9 +639,6 @@ static int sas_open(struct inode *inode, struct file *file)
 			       | UCR2_SRST | UCR2_PREN,
 			       dev->base + UCR2);
 
-			force_address_match(dev);
-			writel(UCR1_UARTEN | UCR1_RRDYEN, dev->base + UCR1);
-
 			dev->rxbuf.head =
 			dev->rxbuf.tail =
 			dev->txbuf.head =
@@ -646,6 +647,8 @@ static int sas_open(struct inode *inode, struct file *file)
 			dev->rxmsgtake = 0;
 			dev->rxmsgs[0].start = 0;
 			dev->last_parity = 0;
+			force_address_match(dev);
+			writel(UCR1_UARTEN | UCR1_RRDYEN, dev->base + UCR1);
 		} else {
 			dev_err(&dev->pdev->dev,
 				"Error %d requesting irq %d\n",
@@ -654,7 +657,6 @@ static int sas_open(struct inode *inode, struct file *file)
 		}
 	}
 out:
-	spin_unlock_irqrestore(&dev->lock, flags);
 	return rval;
 }
 
