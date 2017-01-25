@@ -116,9 +116,6 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	unsigned header_sz = 0;
 	unsigned mps, max_payload_size;
 	unsigned rp;
-//	int tf = dma_get_attr(DMA_ATTR_WRITE_COMBINE, &uvc_dma_attrs) ? 0
-//			: URB_NO_TRANSFER_DMA_MAP;
-//	int tf = buffer_is_cacheable ? 0 : URB_NO_TRANSFER_DMA_MAP;
 	int tf = URB_NO_TRANSFER_DMA_MAP;
 
 	if (!buf->urb_cnt)
@@ -187,6 +184,11 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 
 	frame_rem = stream->ctrl.dwMaxVideoFrameSize;
 	header_copy_sz = psize - header_sz;
+	if (buf->buf_dma_handle && buf->for_cpu) {
+		dma_sync_single_for_device(&stream->dev->udev->dev,
+			buf->buf_dma_handle, buf->length, DMA_FROM_DEVICE);
+		buf->for_cpu = 0;
+	}
 	while (1) {
 		if (i >= buf->urb_cnt) {
 			pr_err("%s: not enough urbs\n", __func__);
@@ -619,6 +621,20 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
 		buf->mem = req_mem;
 		buf->length = req_length;
 		buf->setup_done = 0;
+		if (buf->buf_dma_handle) {
+			dma_unmap_single(&stream->dev->udev->dev, buf->buf_dma_handle,
+					buf->length, DMA_FROM_DEVICE);
+			buf->buf_dma_handle = NULL;
+		}
+		if (buffer_is_cacheable) {
+			buf->buf_dma_handle = dma_map_single(&stream->dev->udev->dev,
+					buf->mem, buf->length, DMA_FROM_DEVICE);
+			if (dma_mapping_error(&stream->dev->udev->dev, buf->buf_dma_handle)) {
+				dev_dbg(&stream->dev->udev->dev, "dma_mapping_error\n");
+				buf->buf_dma_handle = NULL;
+			}
+			buf->for_cpu = 0;
+		}
 	}
 
 	if (vb->v4l2_buf.type == V4L2_BUF_TYPE_VIDEO_CAPTURE)
@@ -659,6 +675,11 @@ static void uvc_buf_cleanup(struct vb2_buffer *vb)
 	struct uvc_buffer *buf = container_of(vb, struct uvc_buffer, buf);
 
 	cleanup_buf(stream, buf);
+	if (buf->buf_dma_handle) {
+		dma_unmap_single(&stream->dev->udev->dev, buf->buf_dma_handle,
+				buf->length, DMA_FROM_DEVICE);
+		buf->buf_dma_handle = NULL;
+	}
 }
 
 static void stop_queue(struct uvc_video_queue *queue)

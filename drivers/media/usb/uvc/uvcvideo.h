@@ -359,6 +359,7 @@ enum uvc_buffer_owner {
 struct uvc_buffer {
 	struct vb2_buffer buf;
 	unsigned int error;
+	dma_addr_t buf_dma_handle;
 
 	void *mem;
 	unsigned int length;
@@ -381,6 +382,7 @@ struct uvc_buffer {
 	u8 ready;
 	u8 ts;
 	u8 setup_done;
+	u8 for_cpu;
 };
 
 #define UVC_QUEUE_DROP_CORRUPTED	(1 << 1)

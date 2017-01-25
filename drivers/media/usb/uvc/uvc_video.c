@@ -1522,6 +1522,12 @@ static void urb_processing_work(struct work_struct *work)
 					urb_buf->prev_completed_urb);
 				return;
 			}
+			if (urb_buf->buf_dma_handle && !urb_buf->for_cpu) {
+				dma_sync_single_for_cpu(&stream->dev->udev->dev,
+						urb_buf->buf_dma_handle,
+						urb_buf->length, DMA_FROM_DEVICE);
+				urb_buf->for_cpu = 1;
+			}
 			process_urb(urb, stream, urb_buf, queue);
 			urb_buf->prev_completed_urb = last;
 
