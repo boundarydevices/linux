@@ -1,0 +1,31 @@
+#
+# Amlogic mhu mailbox device configuration
+#
+
+menu "MESON MHU mailbox Support"
+
+config AMLOGIC_MHU_MBOX
+	tristate "MESON MHU Mailbox"
+	default n
+	select MAILBOX
+	select ARM_SCPI_PROTOCOL
+	help
+		MESON MHU Mailbox driver.
+		.
+		.
+		.
+
+config ARM_SCPI_PROTOCOL
+	tristate "ARM System Control and Power Interface (SCPI) Message Protocol"
+	default n
+	help
+		System Control and Power Interface (SCPI) Message Protocol is
+		defined for the purpose of communication between the Application
+		Cores(AP) and the System Control Processor(SCP). The MHU peripheral
+		provides a mechanism for inter-processor communication between SCP
+		and AP.
+
+		This protocol library provides interface for all the client drivers
+		making use of the features offered by the SCP.
+
+endmenu

@@ -1,0 +1,6 @@
+config	AMLOGIC_CPU_INFO
+	bool "Amlogic chipid"
+	default n
+	help
+	  say y to enable Amlogic chipid driver.
+

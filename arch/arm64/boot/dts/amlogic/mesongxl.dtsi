@@ -130,7 +130,6 @@
 		interrupts = <GIC_PPI 9 0xf04>;
 	};
 
-
 	psci {
 		compatible = "arm,psci";
 		method = "smc";
@@ -139,12 +138,14 @@
 		cpu_on = <0xC4000003>;
 		migrate = <0xC4000005>;
 	};
+
 	secmon {
 		compatible = "amlogic, secmon";
 		memory-region = <&secmon_reserved>;
 		in_base_func = <0x82000020>;
 		out_base_func = <0x82000021>;
 	};
+
 	cpu_iomap{
 		compatible = "amlogic, iomap";
 		#address-cells=<2>;
@@ -163,7 +164,26 @@
 
 	cpu_version{
 		reg=<0x0 0xc8100220 0x0 0x4>;
+		status = "okay";
 	};
+
+	cpu_info{
+		compatible = "amlogic, cpuinfo";
+		cpuinfo_cmd = <0x82000044>;
+		status = "okay";
+	};
+
+	mailbox: mhu@c883c400 {
+		compatible = "amlogic, meson_mhu";
+		reg = <0x0 0xc883c400 0x0 0x4c>,   /* MHU registers */
+		      <0x0 0xc8013000 0x0 0x800>;   /* Payload area */
+		interrupts = <0 209 8>,   /* low priority interrupt */
+			     <0 210 8>;   /* high priority interrupt */
+		#mbox-cells = <1>;
+		mbox-names = "cpu_to_scp_low", "cpu_to_scp_high";
+		mboxes = <&mailbox 0 &mailbox 1>;
+	};
+
 	aobus: aobus@c8100000 {
 		compatible = "simple-bus";
 		reg = <0x0 0xc8100000 0x0 0x100000>;

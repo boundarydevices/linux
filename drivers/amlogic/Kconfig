@@ -16,5 +16,18 @@ source "drivers/amlogic/uart/Kconfig"
 source "drivers/amlogic/iomap/Kconfig"
 
 source "drivers/amlogic/pinctrl/Kconfig"
+
+source "drivers/amlogic/secmon/Kconfig"
+
+source "drivers/amlogic/cpu_version/Kconfig"
+
+source "drivers/amlogic/cpu_info/Kconfig"
+
+source "drivers/amlogic/mailbox/Kconfig"
+
+source "drivers/amlogic/reg_access/Kconfig"
+
+source "drivers/amlogic/clocksource/Kconfig"
+
 endmenu
 endif

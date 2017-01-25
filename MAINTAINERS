@@ -13409,3 +13409,25 @@ F:	*/
 AMLOGIC Pinmux
 M: Jianxin Pan <jianxin.pan@amlogic.com>
 F: drivers/amlogic/pinctrl/*
+
+AMLOGIC CLOCKSOURCE DRIVER
+M:	Yun Cai <yun.cai@amlogic.com>
+F:	drivers/amlogic/clocksource/
+
+AMLOGIC CPU INFORMATION DRIVER
+M:      Yun Cai <yun.cai@amlogic.com>
+F:      drivers/amlogic/cpu_info/
+F:	drivers/amlogic/cpu_version/
+
+AMLOGIC MAILBOX DRIVER
+M:      Yun Cai <yun.cai@amlogic.com>
+F:      drivers/amlogic/mailbox/
+
+AMLOGIC REGISTER DEBUG DRIVER
+M:      Yun Cai <yun.cai@amlogic.com>
+F:	drivers/amlogic/reg_access/
+
+AMLOGIC SECURE MONITOR DRIVER
+M:      Yun Cai <yun.cai@amlogic.com>
+F:      drivers/amlogic/secmon/
+

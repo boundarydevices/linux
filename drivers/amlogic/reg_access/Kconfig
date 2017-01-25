@@ -1,0 +1,7 @@
+# Amlogic DEBUG
+#
+config AMLOGIC_REG_ACCESS
+    bool "Amlogic register access from userspace support"
+    default n
+    help
+      This is the Amlogic debug sysfs interface driver using debugfs interface

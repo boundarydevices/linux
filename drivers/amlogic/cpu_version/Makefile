@@ -1,0 +1,1 @@
+obj-$(CONFIG_AMLOGIC_MESON64_VERSION)	+= meson64_cpu.o
