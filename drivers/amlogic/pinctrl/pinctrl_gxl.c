@@ -852,6 +852,9 @@ static const char * const sdio_groups[] = {
 	"sdio_d0", "sdio_d1", "sdio_d2", "sdio_d3", "sdio_clk", "sdio_cmd",
 };
 
+static const char * const uart_ao_a_1_groups[] = {
+	"uart_tx_ao_a_1", "uart_rx_ao_a_1",
+};
 
 static struct meson_pmx_func meson_gxl_periphs_functions[] = {
 	FUNCTION(gpio_periphs),
@@ -875,6 +878,7 @@ static struct meson_pmx_func meson_gxl_periphs_functions[] = {
 	FUNCTION(hdmi_hpd),
 	FUNCTION(nand),
 	FUNCTION(sdio),
+	FUNCTION(uart_ao_a_1),
 
 };
 
@@ -884,9 +888,7 @@ static const char * const gpio_aobus_groups[] = {
 };
 
 static const char * const uart_ao_groups[] = {
-	"uart_tx_ao_a_0", "uart_rx_ao_a_0", "uart_cts_ao_a_0",
-	"uart_rts_ao_a_0",	"uart_tx_ao_a_1", "uart_rx_ao_a_1",
-	"uart_cts_ao_a_1", "uart_rts_ao_a_1",
+	"uart_tx_ao_a_0", "uart_rx_ao_a_0",
 };
 
 static const char * const uart_ao_b_groups[] = {

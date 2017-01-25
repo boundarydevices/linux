@@ -10,5 +10,6 @@ config AMLOGIC_PINCTRL
     select GENERIC_PINCONF
     select GPIOLIB
     select OF_GPIO
+    select GPIOLIB_IRQCHIP
     help
       This is the Amlogic PINCTRL/GPIO  driver

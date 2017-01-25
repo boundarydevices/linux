@@ -115,6 +115,43 @@ struct meson_domain_data {
 };
 
 /**
+  *enum meson_irq_register - registers offset of gpio irq
+  */
+enum meson_irq_register {
+	GPIO_IRQ_EDGE_OFFSET,
+	GPIO_IRQ_MUX_0_3,
+	GPIO_IRQ_MUX_4_7,
+	GPIO_IRQ_FILTER_OFFSET,
+};
+
+/**
+ * struct meson_gpio_irq_desc - describe the gpio irq
+ *
+ * @used_flag: indicate the 'parent_virq' whether be used or not
+ * @parent_virq: gpio virtual interrupt number
+ * @hwirq: hw irq for gpio
+ */
+struct meson_gpio_irq_desc {
+	unsigned char used_flag;
+	unsigned int parent_virq;
+	unsigned int hwirq;
+};
+
+/**
+ *struct meson_irq_resource - describe resource for irq
+ *
+ *@irq_num: number of gpio irq
+ *@gpio_irq: a pointer to 'struct meson_gpio_irq_desc'
+ *@reg_irq: registers for gpio irq settings
+ */
+struct meson_irq_resource {
+	unsigned char irq_num;
+	unsigned char init_flag;
+	struct meson_gpio_irq_desc *gpio_irq;
+	struct regmap *reg_irq;
+};
+
+/**
  * struct meson_domain
  *
  * @reg_mux:	registers for mux settings

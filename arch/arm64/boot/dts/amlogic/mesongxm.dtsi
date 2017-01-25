@@ -282,7 +282,8 @@
 
 		aobus: aobus@c8100000 {
 			compatible = "simple-bus";
-			reg = <0x0 0xc8100000 0x0 0x100000>;
+			reg = <0x0 0xc8100000 0x0 0x100000>,
+				<0x0 0xc1109880 0x0 0x10>;
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xc8100000 0x0 0x100000>;
@@ -294,7 +295,8 @@
 
 		periphs: periphs@c8834000 {
 			compatible = "simple-bus";
-			reg = <0x0 0xc8834000 0x0 0x2000>;
+			reg = <0x0 0xc8834000 0x0 0x2000>,
+				<0x0 0xc1109880 0x0 0x10>;
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xc8834000 0x0 0x2000>;
@@ -335,9 +337,19 @@
 			reg = <0x0 0x00014 0x0 0x8>,
 			      <0x0 0x0002c 0x0 0x4>,
 			      <0x0 0x00024 0x0 0x8>;
+			interrupts = <GIC_SPI 64 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 65 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 66 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 67 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 68 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 69 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 70 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 71 IRQ_TYPE_EDGE_RISING>;
 			reg-names = "mux", "pull", "gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
 		};
 
 		remote_pins:remote_pin {
@@ -397,10 +409,20 @@
 			      <0x0 0x004e8 0x0 0x14>,
 			      <0x0 0x00120 0x0 0x14>,
 			      <0x0 0x00430 0x0 0x40>;
+			interrupts = <GIC_SPI 64 IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI 65 IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI 66 IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI 67 IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI 68 IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI 69 IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI 70 IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI 71 IRQ_TYPE_EDGE_RISING>;
 			reg-names = "mux", "pull",
 				"pull-enable", "gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
 		};
 
 		eth_pins:eth_pins {
