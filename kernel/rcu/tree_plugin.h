@@ -1768,6 +1768,7 @@ static void wake_nocb_leader(struct rcu_data *rdp, bool force)
 		return;
 	if (READ_ONCE(rdp_leader->nocb_leader_sleep) || force) {
 		/* Prior smp_mb__after_atomic() orders against prior enqueue. */
+		WRITE_ONCE(rdp->nocb_defer_wakeup, RCU_NOGP_WAKE_NOT);
 		WRITE_ONCE(rdp_leader->nocb_leader_sleep, false);
 		swake_up(&rdp_leader->nocb_wq);
 	}
@@ -1853,7 +1854,9 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 		return;
 	}
 	len = atomic_long_read(&rdp->nocb_q_count);
-	if (old_rhpp == &rdp->nocb_head) {
+	if (old_rhpp == &rdp->nocb_head ||
+	    (rcu_nocb_need_deferred_wakeup(rdp) &&
+	     !irqs_disabled_flags(flags))) {
 		if (!irqs_disabled_flags(flags)) {
 			/* ... if queue was empty ... */
 			wake_nocb_leader(rdp, false);
