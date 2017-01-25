@@ -624,14 +624,14 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
 		if (buf->buf_dma_handle) {
 			dma_unmap_single(&stream->dev->udev->dev, buf->buf_dma_handle,
 					buf->length, DMA_FROM_DEVICE);
-			buf->buf_dma_handle = NULL;
+			buf->buf_dma_handle = 0;
 		}
-		if (buffer_is_cacheable) {
+		if (buffer_is_cacheable && (queue->dma_mode == DMA_MODE_CONTIG)) {
 			buf->buf_dma_handle = dma_map_single(&stream->dev->udev->dev,
 					buf->mem, buf->length, DMA_FROM_DEVICE);
 			if (dma_mapping_error(&stream->dev->udev->dev, buf->buf_dma_handle)) {
 				dev_dbg(&stream->dev->udev->dev, "dma_mapping_error\n");
-				buf->buf_dma_handle = NULL;
+				buf->buf_dma_handle = 0;
 			}
 			buf->for_cpu = 0;
 		}
@@ -678,7 +678,7 @@ static void uvc_buf_cleanup(struct vb2_buffer *vb)
 	if (buf->buf_dma_handle) {
 		dma_unmap_single(&stream->dev->udev->dev, buf->buf_dma_handle,
 				buf->length, DMA_FROM_DEVICE);
-		buf->buf_dma_handle = NULL;
+		buf->buf_dma_handle = 0;
 	}
 }
 
