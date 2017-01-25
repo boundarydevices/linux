@@ -2201,7 +2201,8 @@ static void do_nocb_deferred_wakeup(struct rcu_data *rdp)
 {
 	int ndw;
 
-	if (!rcu_nocb_need_deferred_wakeup(rdp))
+	if (!rcu_nocb_need_deferred_wakeup(rdp) ||
+	    unlikely(rcu_scheduler_active != RCU_SCHEDULER_RUNNING))
 		return;
 	ndw = READ_ONCE(rdp->nocb_defer_wakeup);
 	WRITE_ONCE(rdp->nocb_defer_wakeup, RCU_NOGP_WAKE_NOT);
