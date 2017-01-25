@@ -189,7 +189,7 @@ static int adc081c_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	iio->name = dev_name(&client->dev);
+	iio->name = id->name;
 	iio->modes = INDIO_DIRECT_MODE;
 	iio->info = &adc081c_info;
 
