@@ -2271,6 +2271,9 @@ static int imx_serial_port_suspend_noirq(struct device *dev)
 	if (ret)
 		return ret;
 
+	/* enable wakeup from i.MX UART */
+	serial_imx_enable_wakeup(sport, true);
+
 	serial_imx_save_context(sport);
 
 	clk_disable(sport->clk_ipg);
@@ -2294,6 +2297,9 @@ static int imx_serial_port_resume_noirq(struct device *dev)
 
 	serial_imx_restore_context(sport);
 
+	/* disable wakeup from i.MX UART */
+	serial_imx_enable_wakeup(sport, false);
+
 	clk_disable(sport->clk_ipg);
 
 	return 0;
@@ -2303,9 +2309,6 @@ static int imx_serial_port_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_port *sport = platform_get_drvdata(pdev);
-
-	/* enable wakeup from i.MX UART */
-	serial_imx_enable_wakeup(sport, true);
 
 	uart_suspend_port(&imx_reg, &sport->port);
 
@@ -2317,9 +2320,6 @@ static int imx_serial_port_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_port *sport = platform_get_drvdata(pdev);
-
-	/* disable wakeup from i.MX UART */
-	serial_imx_enable_wakeup(sport, false);
 
 	uart_resume_port(&imx_reg, &sport->port);
 
