@@ -391,6 +391,7 @@ struct uvc_buffer {
 	u8 ts;
 	u8 setup_done;
 	u8 for_cpu;
+	u8 cpu_dirty;
 };
 
 #define UVC_QUEUE_DROP_CORRUPTED	(1 << 1)

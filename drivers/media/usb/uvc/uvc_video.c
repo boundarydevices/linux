@@ -1102,6 +1102,12 @@ static void uvc_video_decode_data(struct uvc_streaming *stream,
 				stream->sync = 0;
 			}
 			/*
+			 * even when sync'ed the dirty part can straddle
+			 * a cache line, requiring a invalidate before
+			 * the next urb submission.
+			 */
+			buf->cpu_dirty = 1;
+			/*
 			 * If frame buffer becomes cacheable memory
 			 * we need to delay copying the header until
 			 * the next urb returns so that the cache line on

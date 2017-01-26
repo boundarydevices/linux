@@ -279,6 +279,15 @@ static int add_to_available(struct uvc_video_queue *queue, struct uvc_buffer *bu
 		return 0;
 	}
 
+	if (buf->buf_dma_handle && buf->cpu_dirty) {
+		struct uvc_streaming *stream = uvc_queue_to_stream(queue);
+
+		dma_sync_single_for_device(get_mdev(stream),
+			buf->buf_dma_handle, buf->length, DMA_FROM_DEVICE);
+		buf->cpu_dirty = 0;
+	}
+	buf->for_cpu = 0;
+
 	spin_lock_irqsave(&queue->irqlock, flags);
 	if (buf->usb_active) {
 		buf->owner = UVC_OWNER_USB_ACTIVE;
@@ -343,10 +352,10 @@ static int submit_buffer(struct uvc_video_queue *queue, struct uvc_streaming *st
 	if ((queue->submitted_insert_shift >= 32) || !queue->streaming)
 		return 0;
 	i = 0;
-	if (!stream->sync) {
+	{
 		unsigned s = queue->submitted;
 
-		/* Only submit 2 buffers while not sync'ed */
+		/* Only have 2 buffers submitted for DMA */
 		if (s != (s & -s))
 			return 0;
 	}
@@ -403,12 +412,6 @@ no_sync:
 	queue->pending |= (1 << buf_index);
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 	if (0) pr_info("%s: start %d total %d\n", __func__, i, buf->used_urb_cnt);
-
-	if (buf->buf_dma_handle && buf->for_cpu) {
-		dma_sync_single_for_device(get_mdev(stream),
-			buf->buf_dma_handle, buf->length, DMA_FROM_DEVICE);
-		buf->for_cpu = 0;
-	}
 
 	while (i < buf->used_urb_cnt) {
 		int ret;
@@ -475,8 +478,13 @@ static void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffe
 		add_to_available(queue, buf);
 
 	if (queue->workqueue && queue->streaming && queue->available
-			&& (queue->submitted_insert_shift < 32))
-		queue_work(queue->workqueue, &queue->work);
+			&& (queue->submitted_insert_shift < 32)) {
+		unsigned s = queue->submitted;
+
+		/* Only have 2 buffers submitted for DMA */
+		if (s == (s & -s))
+			queue_work(queue->workqueue, &queue->work);
+	}
 }
 
 struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue)
@@ -659,6 +667,7 @@ static void uvc_buffer_queue(struct vb2_buffer *vb)
 	if (0) pr_info("%s: buf=%p(%d)\n", __func__, buf, buf->buf.v4l2_buf.index);
 
 	buf->owner = UVC_OWNER_USB;
+	buf->cpu_dirty = 1;
 	uvc_queue_start_work(queue, buf);
 }
 
@@ -1077,30 +1086,25 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 			&& (!buf || !buf->bytesused))
 		queue->sync_index = queue->urb_index_of_frame;
 
-	if (queue->dma_mode == DMA_MODE_CONTIG) {
-		unsigned s =  queue->submitted | queue->available;
-
-		if (s == (s & -s)) {
-			/* Not at least 2 buffers ready for dma */
-			if (!buf) {
-				nextbuf = NULL;
-				goto fake_buf;
-			}
-			if (!buf->mem)
-				return buf;
-			/* Switch to fakebuf, and release for dma work */
-			nextbuf = &queue->fake_buf;
-			nextbuf->error = buf->error;
-			nextbuf->bytesused = buf->bytesused;
-			nextbuf->ready = buf->ready;
-			nextbuf->ts = buf->ts;
-			nextbuf->owner = UVC_OWNER_FAKE;
-			nextbuf->length = 0x7fffffff;
-			queue->in_progress = nextbuf;
-
-			uvc_queue_start_work(queue, buf);
-			return nextbuf;
+	if ((queue->dma_mode == DMA_MODE_CONTIG) && !queue->available) {
+		if (!buf) {
+			nextbuf = NULL;
+			goto fake_buf;
 		}
+		if (!buf->mem)
+			return buf;
+		/* Switch to fakebuf, and release for dma work */
+		nextbuf = &queue->fake_buf;
+		nextbuf->error = buf->error;
+		nextbuf->bytesused = buf->bytesused;
+		nextbuf->ready = buf->ready;
+		nextbuf->ts = buf->ts;
+		nextbuf->owner = UVC_OWNER_FAKE;
+		nextbuf->length = 0x7fffffff;
+		queue->in_progress = nextbuf;
+
+		uvc_queue_start_work(queue, buf);
+		return nextbuf;
 	}
 
 	if (buf) {
