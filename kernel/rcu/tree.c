@@ -495,12 +495,16 @@ static void rcu_momentary_dyntick_idle(void)
  */
 void rcu_note_context_switch(void)
 {
+	struct rcu_state *rsp;
+
 	barrier(); /* Avoid RCU read-side critical sections leaking down. */
 	trace_rcu_utilization(TPS("Start context switch"));
 	rcu_sched_qs();
 	rcu_preempt_note_context_switch();
 	if (unlikely(raw_cpu_read(rcu_sched_qs_mask)))
 		rcu_momentary_dyntick_idle();
+	for_each_rcu_flavor(rsp)
+		do_nocb_deferred_wakeup(this_cpu_ptr(rsp->rda));
 	trace_rcu_utilization(TPS("End context switch"));
 	barrier(); /* Avoid RCU read-side critical sections leaking up. */
 }
