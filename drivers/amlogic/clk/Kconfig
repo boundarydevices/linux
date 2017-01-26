@@ -1,0 +1,15 @@
+config AMLOGIC_CLK
+	bool "Amlogic clock driver  support"
+	depends on OF
+	select COMMON_CLK
+	help
+		This is the Amlogic Clock  driver
+		Say Y if you want peripherals
+		and CPU frequency scaling to work
+		.
+
+config AMLOGIC_RESET
+        bool "Meson Reset Driver"
+        default AMLOGIC_CLK
+        help
+		This enables the reset driver for Amlogic Meson SoCs.

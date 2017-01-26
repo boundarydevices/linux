@@ -12,7 +12,7 @@ Required properties:
 example:
 
 reset: reset-controller {
-	compatible = "amlogic,meson-gxbb-reset";
+	compatible = "amlogic,reset";
 	reg = <0x0 0x04404 0x0 0x20>;
 	#reset-cells = <1>;
 };

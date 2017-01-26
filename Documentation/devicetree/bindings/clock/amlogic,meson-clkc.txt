@@ -1,0 +1,38 @@
+* Amlogic Meson Clock and Reset Unit
+
+The Amlogic Meson clock controller generates and supplies clock to various
+controllers of the SoC.
+
+Required Properties:
+
+- compatible: Should be one of the following:
+	"amlogic,gxl-aoclkc"   - for gxl ao clock
+	"amlogic,gxl-clkc"     - for gxl ee clock
+
+- reg: physical base address of the clock controller and length of memory
+       mapped region.
+
+- #clock-cells: should be 1.
+
+- #reset-cells: should be 1.
+
+Example: gxl AO Clock controller node:
+
+	clkc_AO: clock-controller@040 {
+		compatible = "amlogic,gxl-aoclkc";
+		reg = <0x0 0x040 0x0 0x4>;
+		#clock-cells = <1>;
+		#reset-cells = <1>;
+	};
+
+Example: UART controller node that consumes the clock and reset generated
+  by the clock controller:
+
+	uart_AO: serial@4c0 {
+		compatible = "amlogic,meson-uart";
+		reg = <0x4c0 0x14>;
+		interrupts = <0 90 1>;
+		clocks = <&clkc_AO CLKID_AO_UART1>;
+		resets = <&clkc_AO RESET_AO_UART1>;
+		status = "disabled";
+	};

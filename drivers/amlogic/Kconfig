@@ -29,5 +29,6 @@ source "drivers/amlogic/reg_access/Kconfig"
 
 source "drivers/amlogic/clocksource/Kconfig"
 
+source "drivers/amlogic/clk/Kconfig"
 endmenu
 endif
