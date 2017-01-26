@@ -96,8 +96,10 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	if (0) pr_info("%s:psize = %x sz=%x npackets=%x\n", __func__, psize, sz, stream->npackets);
 
 	if ((queue->dma_mode == DMA_MODE_CONTIG) && !alloc_ctxs[0]) {
+		dev_dbg(&stream->dev->udev->dev, "setting dma_ops\n");
 		dma_set_mask_and_coherent(&stream->dev->udev->dev, DMA_BIT_MASK(32));
-		arch_setup_dma_ops(&stream->dev->udev->dev, 0, 0, NULL, true);
+		if (buffer_is_cacheable)
+			arch_setup_dma_ops(&stream->dev->udev->dev, 0, 0, NULL, true);
 		alloc_ctxs[0] = vb2_dma_contig_init_ctx(&stream->dev->udev->dev);
 		if (0) pr_info("%s: %p %p\n", __func__, alloc_ctxs[0], vq->alloc_ctx[0]);
 	}
@@ -184,11 +186,7 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 
 	frame_rem = stream->ctrl.dwMaxVideoFrameSize;
 	header_copy_sz = psize - header_sz;
-	if (buf->buf_dma_handle && buf->for_cpu) {
-		dma_sync_single_for_device(&stream->dev->udev->dev,
-			buf->buf_dma_handle, buf->length, DMA_FROM_DEVICE);
-		buf->for_cpu = 0;
-	}
+
 	while (1) {
 		if (i >= buf->urb_cnt) {
 			pr_err("%s: not enough urbs\n", __func__);
@@ -406,6 +404,12 @@ no_sync:
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 	if (0) pr_info("%s: start %d total %d\n", __func__, i, buf->used_urb_cnt);
 
+	if (buf->buf_dma_handle && buf->for_cpu) {
+		dma_sync_single_for_device(get_mdev(stream),
+			buf->buf_dma_handle, buf->length, DMA_FROM_DEVICE);
+		buf->for_cpu = 0;
+	}
+
 	while (i < buf->used_urb_cnt) {
 		int ret;
 
@@ -622,15 +626,15 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
 		buf->length = req_length;
 		buf->setup_done = 0;
 		if (buf->buf_dma_handle) {
-			dma_unmap_single(&stream->dev->udev->dev, buf->buf_dma_handle,
+			dma_unmap_single(get_mdev(stream), buf->buf_dma_handle,
 					buf->length, DMA_FROM_DEVICE);
 			buf->buf_dma_handle = 0;
 		}
 		if (buffer_is_cacheable && (queue->dma_mode == DMA_MODE_CONTIG)) {
-			buf->buf_dma_handle = dma_map_single(&stream->dev->udev->dev,
+			buf->buf_dma_handle = dma_map_single(get_mdev(stream),
 					buf->mem, buf->length, DMA_FROM_DEVICE);
-			if (dma_mapping_error(&stream->dev->udev->dev, buf->buf_dma_handle)) {
-				dev_dbg(&stream->dev->udev->dev, "dma_mapping_error\n");
+			if (dma_mapping_error(get_mdev(stream), buf->buf_dma_handle)) {
+				pr_info("%s:dma_mapping_error\n", __func__);
 				buf->buf_dma_handle = 0;
 			}
 			buf->for_cpu = 0;
@@ -676,7 +680,7 @@ static void uvc_buf_cleanup(struct vb2_buffer *vb)
 
 	cleanup_buf(stream, buf);
 	if (buf->buf_dma_handle) {
-		dma_unmap_single(&stream->dev->udev->dev, buf->buf_dma_handle,
+		dma_unmap_single(get_mdev(stream), buf->buf_dma_handle,
 				buf->length, DMA_FROM_DEVICE);
 		buf->buf_dma_handle = 0;
 	}

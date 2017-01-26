@@ -1523,7 +1523,7 @@ static void urb_processing_work(struct work_struct *work)
 				return;
 			}
 			if (urb_buf->buf_dma_handle && !urb_buf->for_cpu) {
-				dma_sync_single_for_cpu(&stream->dev->udev->dev,
+				dma_sync_single_for_cpu(get_mdev(stream),
 						urb_buf->buf_dma_handle,
 						urb_buf->length, DMA_FROM_DEVICE);
 				urb_buf->for_cpu = 1;

@@ -17,6 +17,14 @@
 #include <media/v4l2-fh.h>
 #include <media/videobuf2-v4l2.h>
 
+/*
+ * Parent because this device has been marked as coherent
+ * in order to return cacheable buffers to user space.
+ * The parent device is used with dma_map_single to perform
+ * cache management
+ */
+#define get_mdev(stream) stream->dev->udev->dev.parent
+
 /* --------------------------------------------------------------------------
  * UVC constants
  */
