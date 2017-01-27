@@ -380,6 +380,12 @@
 			enable-active-high;
 		};
 	};
+
+	reserved-memory {
+		linux,cma {
+			size = <0x22000000>;
+		};
+	};
 };
 
 &ecspi1 {
