@@ -380,6 +380,22 @@
 			enable-active-high;
 		};
 	};
+
+	reserved-memory {
+		linux,cma {
+			size = <0x08000000>;
+		};
+
+		camera_reserved: camera-reserved {
+			compatible = "shared-dma-pool";
+#if 0
+			reusable;
+#else
+			no-map;
+#endif
+			size = <0x20000000>;
+		};
+	};
 };
 
 &ecspi1 {
@@ -446,6 +462,80 @@
 	pinctrl-0 = <&pinctrl_pcie>;
 	reset-gpios = GP_PCIE_PON_RESET,GP_PCIE_RESET,GP_PCIE_RESET2;
 	status = "okay";
+
+	hub@pcie {
+		reg = <0x010000 0 0 0 0>;
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		usb@pcie {
+			reg = <0x010000 0 0 0 0>;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@1 {
+				compatible = "usb2a0b,00d3";
+				memory-region = <&camera_reserved>;
+				reg = <1>;
+
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				camera@1 {
+					compatible = "usb2a0b,00d3";
+					memory-region = <&camera_reserved>;
+					reg = <1>;
+				};
+			};
+
+			port@2 {
+				compatible = "usb2a0b,00d3";
+				memory-region = <&camera_reserved>;
+				reg = <2>;
+
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				camera@1 {
+					compatible = "usb2a0b,00d3";
+					memory-region = <&camera_reserved>;
+					reg = <1>;
+				};
+			};
+
+			port@3 {
+				compatible = "usb2a0b,00d3";
+				memory-region = <&camera_reserved>;
+				reg = <3>;
+
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				camera@1 {
+					compatible = "usb2a0b,00d3";
+					memory-region = <&camera_reserved>;
+					reg = <1>;
+				};
+			};
+
+			port@4 {
+				compatible = "usb2a0b,00d3";
+				memory-region = <&camera_reserved>;
+				reg = <4>;
+
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				camera@1 {
+					compatible = "usb2a0b,00d3";
+					memory-region = <&camera_reserved>;
+					reg = <1>;
+				};
+			};
+		};
+	};
 };
 
 &uart1 {
