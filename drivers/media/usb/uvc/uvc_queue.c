@@ -463,7 +463,7 @@ static void submit_buffers(struct uvc_video_queue *queue)
 	if (0) pr_info("%s:e submitted=%x avail=%x\n", __func__, queue->submitted, queue->available);
 }
 
-static void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
+void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
 {
 	if (buf)
 		add_to_available(queue, buf);

@@ -1572,6 +1572,7 @@ static void uvc_video_complete_contig(struct urb *urb)
 		if (rbuf->owner == UVC_OWNER_USB_ACTIVE)
 			rbuf->owner = UVC_OWNER_USB;
 		spin_unlock_irqrestore(&queue->irqlock, flags);
+		uvc_queue_start_work(queue, NULL);
 	}
 	queue_work(stream->workqueue, &stream->work);
 }

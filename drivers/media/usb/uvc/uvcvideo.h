@@ -691,6 +691,7 @@ extern struct uvc_driver uvc_driver;
 extern struct uvc_entity *uvc_entity_by_id(struct uvc_device *dev, int id);
 
 /* Video buffers queue management. */
+void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf);
 struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue);
 struct uvc_buffer *uvc_get_next_pending(struct uvc_video_queue *queue);
 extern void uvc_buffer_done(struct uvc_buffer *buf, int state, const char *s);
