@@ -466,10 +466,16 @@ void rcu_note_context_switch(void)
 	trace_rcu_utilization(TPS("Start context switch"));
 	rcu_sched_qs();
 	rcu_preempt_note_context_switch();
+	/* Load rcu_urgent_qs before other flags. */
+	if (!smp_load_acquire(this_cpu_ptr(&rcu_dynticks.rcu_urgent_qs)))
+		goto out;
+	this_cpu_write(rcu_dynticks.rcu_urgent_qs, false);
 	if (unlikely(raw_cpu_read(rcu_dynticks.rcu_need_heavy_qs)))
 		rcu_momentary_dyntick_idle();
 	for_each_rcu_flavor(rsp)
 		do_nocb_deferred_wakeup(this_cpu_ptr(rsp->rda));
+	this_cpu_inc(rcu_dynticks.rcu_qs_ctr);
+out:
 	trace_rcu_utilization(TPS("End context switch"));
 	barrier(); /* Avoid RCU read-side critical sections leaking up. */
 }
@@ -493,34 +499,28 @@ void rcu_all_qs(void)
 	unsigned long flags;
 	struct rcu_state *rsp;
 
+	if (!raw_cpu_read(rcu_dynticks.rcu_urgent_qs))
+		return;
+	preempt_disable();
+	/* Load rcu_urgent_qs before other flags. */
+	if (!smp_load_acquire(this_cpu_ptr(&rcu_dynticks.rcu_urgent_qs))) {
+		preempt_enable();
+		return;
+	}
+	this_cpu_write(rcu_dynticks.rcu_urgent_qs, false);
 	barrier(); /* Avoid RCU read-side critical sections leaking down. */
 	if (unlikely(raw_cpu_read(rcu_dynticks.rcu_need_heavy_qs))) {
 		local_irq_save(flags);
 		rcu_momentary_dyntick_idle();
 		local_irq_restore(flags);
 	}
-	if (unlikely(raw_cpu_read(rcu_sched_data.cpu_no_qs.b.exp))) {
-		/*
-		 * Yes, we just checked a per-CPU variable with preemption
-		 * enabled, so we might be migrated to some other CPU at
-		 * this point.  That is OK because in that case, the
-		 * migration will supply the needed quiescent state.
-		 * We might end up needlessly disabling preemption and
-		 * invoking rcu_sched_qs() on the destination CPU, but
-		 * the probability and cost are both quite low, so this
-		 * should not be a problem in practice.
-		 */
-		preempt_disable();
+	if (unlikely(raw_cpu_read(rcu_sched_data.cpu_no_qs.b.exp)))
 		rcu_sched_qs();
-		preempt_enable();
-	}
-	for_each_rcu_flavor(rsp) {
-		preempt_disable();
+	for_each_rcu_flavor(rsp)
 		do_nocb_deferred_wakeup(this_cpu_ptr(rsp->rda));
-		preempt_enable();
-	}
 	this_cpu_inc(rcu_dynticks.rcu_qs_ctr);
 	barrier(); /* Avoid RCU read-side critical sections leaking up. */
+	preempt_enable();
 }
 EXPORT_SYMBOL_GPL(rcu_all_qs);
 
@@ -1256,6 +1256,7 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 {
 	unsigned long jtsq;
 	bool *rnhqp;
+	bool *ruqp;
 	unsigned long rjtsc;
 	struct rcu_node *rnp;
 
@@ -1291,11 +1292,15 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 	 * might not be the case for nohz_full CPUs looping in the kernel.
 	 */
 	rnp = rdp->mynode;
+	ruqp = per_cpu_ptr(&rcu_dynticks.rcu_urgent_qs, rdp->cpu);
 	if (time_after(jiffies, rdp->rsp->gp_start + jtsq) &&
 	    READ_ONCE(rdp->rcu_qs_ctr_snap) != per_cpu(rcu_dynticks.rcu_qs_ctr, rdp->cpu) &&
 	    READ_ONCE(rdp->gpnum) == rnp->gpnum && !rdp->gpwrap) {
 		trace_rcu_fqs(rdp->rsp->name, rdp->gpnum, rdp->cpu, TPS("rqc"));
 		return 1;
+	} else {
+		/* Load rcu_qs_ctr before store to rcu_urgent_qs. */
+		smp_store_release(ruqp, true);
 	}
 
 	/* Check for the CPU being offline. */
@@ -1331,6 +1336,8 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
 	    (time_after(jiffies, rdp->rsp->gp_start + jtsq) ||
 	     time_after(jiffies, rdp->rsp->jiffies_resched))) {
 		WRITE_ONCE(*rnhqp, true);
+		/* Store rcu_need_heavy_qs before rcu_urgent_qs. */
+		smp_store_release(ruqp, true);
 		rdp->rsp->jiffies_resched += 5; /* Re-enable beating. */
 	}
 
