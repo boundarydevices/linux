@@ -313,18 +313,9 @@ static struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue
 	if (queue->available) {
 		struct vb2_buffer *vb;
 		int buf_index = __ffs(queue->available);
-		unsigned s = (queue->dma_mode == DMA_MODE_CONTIG) ?
-				queue->submitted : 0xf;
-		int gteq2 = (s != (s & -s));
 
-		/*
-		 * return buffer if
-		 * >1 buffers available
-		 * or < 2 buffers submitted and for_dma
-		 * or >= 2 buffers submitted and !for_dma
-		 */
-		if ((queue->available != (1 << buf_index)) ||
-				(gteq2 ^ for_dma)) {
+		if ((queue->available != (1 << buf_index)) || for_dma
+				|| (queue->dma_mode != DMA_MODE_CONTIG)) {
 			queue->available &= ~(1 << buf_index);
 			vb = queue->queue.bufs[buf_index];
 			buf = container_of(vb, struct uvc_buffer, buf);
@@ -542,6 +533,12 @@ static void cleanup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	}
 	if (buf->header_buf) {
 		if (0) pr_info("%s:header_buf=%p\n", __func__, buf->header_buf);
+		if (buf->hbuf_dma_handle) {
+			dma_unmap_single(get_mdev(stream), buf->hbuf_dma_handle,
+					buf->header_buf_len, DMA_FROM_DEVICE);
+			buf->hbuf_dma_handle = 0;
+		}
+
 		usb_free_coherent(stream->dev->udev,
 			buf->header_buf_len,
 			buf->header_buf, buf->header_phys);
@@ -598,6 +595,15 @@ static int alloc_buf_urbs(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	if (!buf->header_buf) {
 		cleanup_buf(stream, buf);
 		return -ENOMEM;
+	}
+	if (buffer_is_cacheable && (stream->queue.dma_mode == DMA_MODE_CONTIG)) {
+		buf->hbuf_dma_handle = dma_map_single(get_mdev(stream),
+				buf->header_buf, buf->header_buf_len,
+				DMA_FROM_DEVICE);
+		if (dma_mapping_error(get_mdev(stream), buf->hbuf_dma_handle)) {
+			pr_err("%s:hbuf dma_mapping_error\n", __func__);
+			buf->hbuf_dma_handle = 0;
+		}
 	}
 	buf->header_buf_len = header_buf_len;
 	stream->queue.using_headers = 1;
@@ -703,6 +709,10 @@ static void stop_queue(struct uvc_video_queue *queue)
 
 	queue->return_buffers = 1;
 	uvc_queue_cancel(queue);
+	if (queue->workqueue) {
+		flush_work(&queue->work);
+		flush_work(&stream->work);
+	}
 	while (1) {
 		struct vb2_buffer *vb;
 		struct uvc_buffer *buf;
@@ -729,10 +739,6 @@ static void stop_queue(struct uvc_video_queue *queue)
 			retry = 0;
 			i++;
 		}
-	}
-	if (queue->workqueue) {
-		flush_work(&queue->work);
-		flush_work(&stream->work);
 	}
 	queue->return_buffers = 0;
 }

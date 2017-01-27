@@ -368,6 +368,7 @@ struct uvc_buffer {
 	struct vb2_buffer buf;
 	unsigned int error;
 	dma_addr_t buf_dma_handle;
+	dma_addr_t hbuf_dma_handle;
 
 	void *mem;
 	unsigned int length;

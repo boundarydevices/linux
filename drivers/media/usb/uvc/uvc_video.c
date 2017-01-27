@@ -1208,7 +1208,7 @@ static void uvc_video_validate_buffer(const struct uvc_streaming *stream,
  * Completion handler for video URBs.
  */
 static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
-	struct uvc_buffer *urb_buf)
+	struct uvc_buffer *rbuf)
 {
 	struct uvc_video_queue *queue = &stream->queue;
 	u8 *mem;
@@ -1218,7 +1218,7 @@ static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
 	for (i = 0; i < urb->number_of_packets; ++i) {
 		unsigned len;
 
-		buf = uvc_get_buffer(queue, urb_buf);
+		buf = uvc_get_buffer(queue, rbuf);
 		if (urb->iso_frame_desc[i].status < 0) {
 			uvc_trace(UVC_TRACE_FRAME, "USB isochronous frame "
 				"lost (%d).\n", urb->iso_frame_desc[i].status);
@@ -1249,7 +1249,7 @@ static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
 			if (ret == -EAGAIN) {
 				uvc_video_validate_buffer(stream, buf);
 				uvc_put_buffer(&stream->queue);
-				buf = uvc_get_buffer(&stream->queue, urb_buf);
+				buf = uvc_get_buffer(&stream->queue, rbuf);
 			}
 		} while (ret == -EAGAIN);
 
@@ -1298,21 +1298,23 @@ static void check_sync(struct uvc_streaming *stream)
 	}
 }
 
-static void copy_buffer(struct uvc_buffer *buf, struct uvc_buffer *urb_buf,
+static void copy_buffer(struct uvc_buffer *buf, struct uvc_buffer *rbuf,
 		unsigned bytesused)
 {
-	buf->pts = urb_buf->pts;
-	buf->error = urb_buf->error;
-	buf->ts = urb_buf->ts;
-	buf->buf.v4l2_buf.sequence = urb_buf->buf.v4l2_buf.sequence;
-	buf->buf.v4l2_buf.timestamp = urb_buf->buf.v4l2_buf.timestamp;
+	buf->pts = rbuf->pts;
+	buf->error = rbuf->error;
+	buf->ts = rbuf->ts;
+	buf->buf.v4l2_buf.sequence = rbuf->buf.v4l2_buf.sequence;
+	buf->buf.v4l2_buf.timestamp = rbuf->buf.v4l2_buf.timestamp;
 	buf->bytesused = bytesused;
-	if (bytesused && buf->mem)
-		memcpy(buf->mem, urb_buf->mem, bytesused);
+	if (bytesused && buf->mem) {
+		memcpy(buf->mem, rbuf->mem, bytesused);
+		buf->cpu_dirty = 1;
+	}
 }
 
 static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
-	struct uvc_buffer *urb_buf)
+	struct uvc_buffer *rbuf)
 {
 	struct uvc_video_queue *queue = &stream->queue;
 	u8 *mem;
@@ -1330,11 +1332,11 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 	len = urb->actual_length;
 	stream->bulk.payload_size += len;
 
-	buf = uvc_get_buffer(queue, urb_buf);
+	buf = uvc_get_buffer(queue, rbuf);
 
-	if (0) pr_info("%s:urb_buf=%p mem(%p)=%x %x, len=%x, "
+	if (0) pr_info("%s:rbuf=%p mem(%p)=%x %x, len=%x, "
 				"header_size=%x bytes_used=%x\n",
-			__func__, urb_buf, mem, mem[0], mem[1], len,
+			__func__, rbuf, mem, mem[0], mem[1], len,
 			stream->bulk.header_size, buf->bytesused);
 
 	/* If the URB is the first of its payload, decode and save the
@@ -1344,7 +1346,7 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 		ret = uvc_video_decode_start(stream, buf, mem, len);
 		if (ret == -EAGAIN) {
 			uvc_put_buffer(&stream->queue);
-			buf = uvc_get_buffer(queue, urb_buf);
+			buf = uvc_get_buffer(queue, rbuf);
 			ret = uvc_video_decode_start(stream, buf, mem, len);
 		}
 
@@ -1360,15 +1362,15 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 			memcpy(stream->bulk.header, mem, ret);
 			if (0) pr_info("%s: aaa ret=%d mem=%p\n", __func__, ret, mem);
 			stream->bulk.header_size = ret;
-			if ((ret < buf->header_sz) && (buf == urb_buf) &&
+			if ((ret < buf->header_sz) && (buf == rbuf) &&
 					buf->header_sz) {
-				unsigned bytesused = urb_buf->bytesused;
+				unsigned bytesused = rbuf->bytesused;
 
-				urb_buf->bytesused = 0;
+				rbuf->bytesused = 0;
 				/* we need to copy to a new buffer */
 				queue->in_progress = NULL;
 				buf = uvc_get_buffer(queue, NULL);
-				copy_buffer(buf, urb_buf, bytesused);
+				copy_buffer(buf, rbuf, bytesused);
 			}
 			if (0) pr_info("%s: bbb ret=%d mem=%p\n", __func__, ret, mem);
 			if ((ret != stream->header_sz) && stream->header_sz)
@@ -1394,7 +1396,7 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 				stream->bulk.payload_size);
 			if (buf->ready) {
 				uvc_put_buffer(&stream->queue);
-			} else if (!stream->sync && urb_buf) {
+			} else if (!stream->sync && rbuf) {
 				check_sync(stream);
 			}
 		}
@@ -1406,12 +1408,12 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 }
 
 static void uvc_video_encode_bulk(struct urb *urb, struct uvc_streaming *stream,
-	struct uvc_buffer *urb_buf)
+	struct uvc_buffer *rbuf)
 {
 	struct uvc_video_queue *queue = &stream->queue;
 	u8 *mem = urb->transfer_buffer;
 	int len = stream->urb_size, ret;
-	struct uvc_buffer *buf = uvc_get_buffer(queue, urb_buf);
+	struct uvc_buffer *buf = uvc_get_buffer(queue, rbuf);
 
 	/* If the URB is the first of its payload, add the header. */
 	if (stream->bulk.header_size == 0) {
@@ -1486,61 +1488,65 @@ static void uvc_video_complete(struct urb *urb)
 }
 
 static void process_urb(struct urb *urb, struct uvc_streaming *stream,
-		struct uvc_buffer *urb_buf,
+		struct uvc_buffer *rbuf,
 		struct uvc_video_queue *queue)
 {
 	if (urb->status) {
 		check_status(urb, stream);
 		return;
 	}
-	if (urb_buf->header_sz)
-		queue->urb_index_of_frame = urb_buf->pending_urb_index;
-	if (0) pr_info("%s:urb_buf=%p, owner=%x\n", __func__, urb_buf, urb_buf->owner);
-	stream->decode(urb, stream, urb_buf);
+	if (rbuf->header_sz)
+		queue->urb_index_of_frame = rbuf->pending_urb_index;
+	if (0) pr_info("%s:rbuf=%p, owner=%x\n", __func__, rbuf, rbuf->owner);
+	stream->decode(urb, stream, rbuf);
 }
 
 static void urb_processing_work(struct work_struct *work)
 {
 	struct uvc_streaming *stream = container_of(work, struct uvc_streaming, work);
 	struct uvc_video_queue *queue = &stream->queue;
-	struct uvc_buffer *urb_buf = uvc_get_first_pending(queue);
+	struct uvc_buffer *rbuf = uvc_get_first_pending(queue);
 	struct urb *urb;
 	struct urb *last;
 
-	while (urb_buf) {
+	while (rbuf) {
 		int i;
 
-		if (!urb_buf->last_completed_urb)
+		if (!rbuf->last_completed_urb)
 			return;
-		i = urb_buf->pending_urb_index;
+		i = rbuf->pending_urb_index;
 
-		while (i < urb_buf->used_urb_cnt) {
-			urb = urb_buf->urbs[i];
-			last = urb_buf->last_completed_urb;
-			if ((urb == last) && urb_buf->usb_active)
+		while (i < rbuf->used_urb_cnt) {
+			urb = rbuf->urbs[i];
+			last = rbuf->last_completed_urb;
+			if ((urb == last) && rbuf->usb_active)
 				return;
 			if (urb->status == -EINPROGRESS) {
 				pr_info("%s: error last=%p: %p %p %p active=%d %p\n", __func__,
 					last,
-					(i >= 2) ? urb_buf->urbs[i - 2] : NULL,
-					i ? urb_buf->urbs[i - 1] : NULL,
-					urb, urb_buf->usb_active,
-					urb_buf->prev_completed_urb);
+					(i >= 2) ? rbuf->urbs[i - 2] : NULL,
+					i ? rbuf->urbs[i - 1] : NULL,
+					urb, rbuf->usb_active,
+					rbuf->prev_completed_urb);
 				return;
 			}
-			if (urb_buf->buf_dma_handle && !urb_buf->for_cpu) {
+			if (rbuf->buf_dma_handle && !rbuf->for_cpu) {
 				dma_sync_single_for_cpu(get_mdev(stream),
-						urb_buf->buf_dma_handle,
-						urb_buf->length, DMA_FROM_DEVICE);
-				urb_buf->for_cpu = 1;
+						rbuf->buf_dma_handle,
+						rbuf->length, DMA_FROM_DEVICE);
+				if (rbuf->hbuf_dma_handle)
+					dma_sync_single_for_cpu(get_mdev(stream),
+						rbuf->hbuf_dma_handle,
+						rbuf->header_buf_len, DMA_FROM_DEVICE);
+				rbuf->for_cpu = 1;
 			}
-			process_urb(urb, stream, urb_buf, queue);
-			urb_buf->prev_completed_urb = last;
+			process_urb(urb, stream, rbuf, queue);
+			rbuf->prev_completed_urb = last;
 
-			urb_buf->pending_urb_index++;
+			rbuf->pending_urb_index++;
 			i++;
 		}
-		urb_buf = uvc_get_next_pending(queue);
+		rbuf = uvc_get_next_pending(queue);
 	}
 }
 
@@ -1549,22 +1555,22 @@ static void uvc_video_complete_contig(struct urb *urb)
 	struct vb2_buffer *vb = urb->context;
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vb->vb2_queue);
 	struct uvc_streaming *stream = container_of(queue, struct uvc_streaming, queue);
-	struct uvc_buffer *urb_buf = container_of(vb, struct uvc_buffer, buf);
+	struct uvc_buffer *rbuf = container_of(vb, struct uvc_buffer, buf);
 	unsigned long flags;
 
-	if (0) pr_info("%s: buf=%p(%i) urb=%p %x\n", __func__, urb_buf,
-			vb->v4l2_buf.index, urb, urb_buf->bytesused);
-	urb_buf->last_completed_urb = urb;
-	if (urb_buf->used_urb_cnt && urb_buf->urbs &&
-			urb == urb_buf->urbs[urb_buf->used_urb_cnt - 1]) {
+	if (0) pr_info("%s: buf=%p(%i) urb=%p %x\n", __func__, rbuf,
+			vb->v4l2_buf.index, urb, rbuf->bytesused);
+	rbuf->last_completed_urb = urb;
+	if (rbuf->used_urb_cnt && rbuf->urbs &&
+			urb == rbuf->urbs[rbuf->used_urb_cnt - 1]) {
 		if (0) pr_info("%s:buf=%p(%i), owner=%x urb=%p submitted=%x\n",
-				__func__, urb_buf, vb->v4l2_buf.index,
-				urb_buf->owner,	urb, queue->submitted);
+				__func__, rbuf, vb->v4l2_buf.index,
+				rbuf->owner,	urb, queue->submitted);
 		spin_lock_irqsave(&queue->irqlock, flags);
-		urb_buf->usb_active = 0;
+		rbuf->usb_active = 0;
 		queue->submitted &= ~(1 << vb->v4l2_buf.index);
-		if (urb_buf->owner == UVC_OWNER_USB_ACTIVE)
-			urb_buf->owner = UVC_OWNER_USB;
+		if (rbuf->owner == UVC_OWNER_USB_ACTIVE)
+			rbuf->owner = UVC_OWNER_USB;
 		spin_unlock_irqrestore(&queue->irqlock, flags);
 	}
 	queue_work(stream->workqueue, &stream->work);
