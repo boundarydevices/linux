@@ -1546,7 +1546,20 @@ static void urb_processing_work(struct work_struct *work)
 			rbuf->pending_urb_index++;
 			i++;
 		}
-		rbuf = uvc_get_next_pending(queue);
+		while (1) {
+			struct uvc_buffer *buf;
+
+			rbuf = uvc_get_next_pending(queue);
+			if (queue->submitted_insert_shift < (4 * 5))
+				break;
+			/* while we have too much work pending, drop frame */
+			stream->last_fid ^= UVC_STREAM_FID;
+			buf = queue->in_progress;
+			if (buf) {
+				buf->error = 1;
+				stream->bulk.skip_payload = 1;
+			}
+		}
 	}
 }
 

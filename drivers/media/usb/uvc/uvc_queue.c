@@ -340,7 +340,7 @@ static int submit_buffer(struct uvc_video_queue *queue, struct uvc_streaming *st
 	int first;
 	int buf_index;
 
-	if ((queue->submitted_insert_shift >= 32) || !queue->streaming)
+	if ((queue->submitted_insert_shift >= (6 * 5)) || !queue->streaming)
 		return 0;
 	i = 0;
 	{
@@ -397,7 +397,7 @@ no_sync:
 	buf->usb_active = 1;
 	buf->pending_urb_index = i;
 	queue->submitted_buffers |= buf_index << queue->submitted_insert_shift;
-	queue->submitted_insert_shift += 8;
+	queue->submitted_insert_shift += 5;
 
 	queue->submitted |= (1 << buf_index);
 	queue->pending |= (1 << buf_index);
@@ -421,8 +421,8 @@ no_sync:
 				queue->submitted &= ~(1 << buf->buf.v4l2_buf.index);
 				queue->pending &= ~(1 << buf->buf.v4l2_buf.index);
 				buf->usb_active = 0;
-				queue->submitted_insert_shift -= 8;
-				queue->submitted_buffers &= ~(0xff << queue->submitted_insert_shift);
+				queue->submitted_insert_shift -= 5;
+				queue->submitted_buffers &= ~(0x1f << queue->submitted_insert_shift);
 				spin_unlock_irqrestore(&queue->irqlock, flags);
 
 				uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
@@ -432,8 +432,8 @@ no_sync:
 					queue->submitted &= ~(1 << buf->buf.v4l2_buf.index);
 					queue->pending &= ~(1 << buf->buf.v4l2_buf.index);
 					buf->usb_active = 0;
-					queue->submitted_insert_shift -= 8;
-					queue->submitted_buffers &= ~(0xff << queue->submitted_insert_shift);
+					queue->submitted_insert_shift -= 5;
+					queue->submitted_buffers &= ~(0x1f << queue->submitted_insert_shift);
 					spin_unlock_irqrestore(&queue->irqlock, flags);
 
 					uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
@@ -469,7 +469,7 @@ void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
 		add_to_available(queue, buf);
 
 	if (queue->workqueue && queue->streaming && queue->available
-			&& (queue->submitted_insert_shift < 32)) {
+			&& (queue->submitted_insert_shift < (6 * 5))) {
 		unsigned s = queue->submitted;
 
 		/* Only have 2 buffers submitted for DMA */
@@ -484,7 +484,7 @@ struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue)
 
 	if (!queue->submitted_insert_shift)
 		return NULL;
-	vb = queue->queue.bufs[queue->submitted_buffers & 0xff];
+	vb = queue->queue.bufs[queue->submitted_buffers & 0x1f];
 	return container_of(vb, struct uvc_buffer, buf);
 }
 
@@ -492,7 +492,7 @@ struct uvc_buffer *uvc_get_next_pending(struct uvc_video_queue *queue)
 {
 	struct vb2_buffer *vb;
 	struct uvc_buffer *buf;
-	int buf_index;
+	unsigned buf_index;
 	unsigned long flags;
 
 	if (!queue->submitted_insert_shift)
@@ -500,12 +500,13 @@ struct uvc_buffer *uvc_get_next_pending(struct uvc_video_queue *queue)
 
 	spin_lock_irqsave(&queue->irqlock, flags);
 	buf_index = queue->submitted_buffers;
-	queue->submitted_buffers = buf_index >> 8;
-	queue->submitted_insert_shift -= 8;
+	queue->submitted_buffers = buf_index >> 5;
+	queue->submitted_insert_shift -= 5;
+	buf_index &= 0x1f;
 	queue->pending &= ~(1 << buf_index);
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 
-	vb = queue->queue.bufs[buf_index & 0xff];
+	vb = queue->queue.bufs[buf_index];
 	buf = container_of(vb, struct uvc_buffer, buf);
 	uvc_queue_start_work(queue, buf);
 	return uvc_get_first_pending(queue);
@@ -1081,7 +1082,6 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 			goto fake_buf;
 		if (nextbuf->mem) {
 			uvc_put_buffer(queue);
-			nextbuf = NULL;
 			goto fake_buf;
 		}
 		return nextbuf;
@@ -1093,10 +1093,8 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 		queue->sync_index = queue->urb_index_of_frame;
 
 	if ((queue->dma_mode == DMA_MODE_CONTIG) && !queue->available) {
-		if (!buf) {
-			nextbuf = NULL;
+		if (!buf)
 			goto fake_buf;
-		}
 		if (!buf->mem)
 			return buf;
 		/* Switch to fakebuf, and release for dma work */
@@ -1128,8 +1126,8 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 		}
 	}
 	nextbuf = uvc_get_available_buffer(queue, 0);
-fake_buf:
 	if (!nextbuf) {
+fake_buf:
 		nextbuf = &queue->fake_buf;
 		nextbuf->error = 0;
 		nextbuf->bytesused = 0;
