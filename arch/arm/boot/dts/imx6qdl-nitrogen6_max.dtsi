@@ -738,6 +738,12 @@
 		};
 	};
 
+	reserved-memory {
+		linux,cma {
+			size = <0x22000000>;
+		};
+	};
+
 	sound {
 		compatible = "fsl,imx6q-nitrogen6_max-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
