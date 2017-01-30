@@ -1182,6 +1182,11 @@ int caam_sm_startup(struct platform_device *pdev)
 	}
 
 	jrpriv = dev_get_drvdata(smpriv->smringdev);
+	if (!jrpriv) {
+		kfree(smpriv);
+		dev_err(smdev, "dev_get_drvdata failed\n");
+		return -EINVAL;
+	}
 	lpagect = 0;
 	pgstat = 0;
 	lpagedesc = kzalloc(sizeof(struct sm_page_descriptor)
