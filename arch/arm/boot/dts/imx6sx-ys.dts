@@ -186,7 +186,7 @@
 		fsl,pins = <
 			MX6SX_PAD_KEY_COL3__UART5_TX		0x1b0b1
 			MX6SX_PAD_KEY_ROW3__UART5_RX		0x1b0b1
-#define GP_RS485_RXEN		<&gpio1 12 GPIO_ACTIVE_LOW>
+#define GP_UART5_TX_EN		<&gpio1 12 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_GPIO1_IO12__GPIO1_IO_12	0x0b0b0
 		>;
 	};
@@ -533,6 +533,12 @@
 &uart5 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
+	control-gpios = GP_UART5_TX_EN;
+#define M_TX_EN		1
+	rs485_txen_mask = <M_TX_EN>;
+	rs485_txen_levels = <M_TX_EN>;
+	uart-has-rs485-half-duplex;
+	rs485-mode = <1>;
 	status = "okay";
 };
 
