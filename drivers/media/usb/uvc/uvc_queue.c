@@ -26,7 +26,7 @@
 
 #include "uvcvideo.h"
 
-struct dma_attrs uvc_dma_attrs;
+//struct dma_attrs uvc_dma_attrs;
 /* ------------------------------------------------------------------------
  * Video buffers queue management.
  *
@@ -59,7 +59,7 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	unsigned npackets;
 	unsigned psize;
 
-	dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, &uvc_dma_attrs);
+//	dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, &uvc_dma_attrs);
 //	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &uvc_dma_attrs);
 
 	if (*nbuffers > UVC_MAX_VIDEO_BUFFERS)
@@ -116,8 +116,7 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	unsigned header_sz = 0;
 	unsigned mps, max_payload_size;
 	unsigned rp;
-	int tf = dma_get_attr(DMA_ATTR_WRITE_COMBINE, &uvc_dma_attrs) ? 0
-			: URB_NO_TRANSFER_DMA_MAP;
+	int tf = URB_NO_TRANSFER_DMA_MAP;
 
 	if (!buf->urb_cnt)
 		return 0;
