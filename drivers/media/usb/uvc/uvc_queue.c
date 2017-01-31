@@ -667,6 +667,10 @@ static void stop_queue(struct uvc_video_queue *queue)
 
 	queue->return_buffers = 1;
 	uvc_queue_cancel(queue);
+	if (queue->workqueue) {
+		flush_work(&queue->work);
+		flush_work(&stream->work);
+	}
 	while (1) {
 		struct vb2_buffer *vb;
 		struct uvc_buffer *buf;
@@ -693,10 +697,6 @@ static void stop_queue(struct uvc_video_queue *queue)
 			retry = 0;
 			i++;
 		}
-	}
-	if (queue->workqueue) {
-		flush_work(&queue->work);
-		flush_work(&stream->work);
 	}
 	queue->return_buffers = 0;
 }
@@ -753,9 +753,9 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 	queue->queue.drv_priv = queue;
 	queue->queue.buf_struct_size = sizeof(struct uvc_buffer);
 	queue->queue.ops = &uvc_queue_qops;
+	queue->dma_mode = dma_mode;
 	queue->queue.mem_ops = (dma_mode == DMA_MODE_CONTIG) ?
 		&vb2_dma_contig_memops : &vb2_vmalloc_memops;
-	queue->dma_mode = dma_mode;
 
 	queue->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 //	queue->queue.dma_attrs = &uvc_dma_attrs;
