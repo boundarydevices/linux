@@ -1102,6 +1102,12 @@ static void uvc_video_decode_data(struct uvc_streaming *stream,
 				stream->sync = 0;
 			}
 			/*
+			 * even when sync'ed the dirty part can straddle
+			 * a cache line, requiring a invalidate before
+			 * the next urb submission.
+			 */
+			buf->cpu_dirty = 1;
+			/*
 			 * If frame buffer becomes cacheable memory
 			 * we need to delay copying the header until
 			 * the next urb returns so that the cache line on
@@ -1299,8 +1305,10 @@ static void copy_buffer(struct uvc_buffer *buf, struct uvc_buffer *rbuf,
 	buf->buf.v4l2_buf.sequence = rbuf->buf.v4l2_buf.sequence;
 	buf->buf.v4l2_buf.timestamp = rbuf->buf.v4l2_buf.timestamp;
 	buf->bytesused = bytesused;
-	if (bytesused && buf->mem)
+	if (bytesused && buf->mem) {
 		memcpy(buf->mem, rbuf->mem, bytesused);
+		buf->cpu_dirty = 1;
+	}
 }
 
 static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
@@ -1519,6 +1527,16 @@ static void urb_processing_work(struct work_struct *work)
 					urb, rbuf->usb_active,
 					rbuf->prev_completed_urb);
 				return;
+			}
+			if (rbuf->buf_dma_handle && !rbuf->for_cpu) {
+				dma_sync_single_for_cpu(get_mdev(stream),
+						rbuf->buf_dma_handle,
+						rbuf->length, DMA_FROM_DEVICE);
+				if (rbuf->hbuf_dma_handle)
+					dma_sync_single_for_cpu(get_mdev(stream),
+						rbuf->hbuf_dma_handle,
+						rbuf->header_buf_len, DMA_FROM_DEVICE);
+				rbuf->for_cpu = 1;
 			}
 			process_urb(urb, stream, rbuf, queue);
 			rbuf->prev_completed_urb = last;

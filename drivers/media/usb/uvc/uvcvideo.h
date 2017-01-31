@@ -17,6 +17,14 @@
 #include <media/v4l2-fh.h>
 #include <media/videobuf2-core.h>
 
+/*
+ * Parent because this device has been marked as coherent
+ * in order to return cacheable buffers to user space.
+ * The parent device is used with dma_map_single to perform
+ * cache management
+ */
+#define get_mdev(stream) stream->dev->udev->dev.parent
+
 /* --------------------------------------------------------------------------
  * UVC constants
  */
@@ -359,6 +367,8 @@ enum uvc_buffer_owner {
 struct uvc_buffer {
 	struct vb2_buffer buf;
 	unsigned int error;
+	dma_addr_t buf_dma_handle;
+	dma_addr_t hbuf_dma_handle;
 
 	void *mem;
 	unsigned int length;
@@ -381,6 +391,8 @@ struct uvc_buffer {
 	u8 ready;
 	u8 ts;
 	u8 setup_done;
+	u8 for_cpu;
+	u8 cpu_dirty;
 };
 
 #define UVC_QUEUE_DROP_CORRUPTED	(1 << 1)
