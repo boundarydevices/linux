@@ -316,18 +316,9 @@ static struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue
 	if (queue->available) {
 		struct vb2_buffer *vb;
 		int buf_index = __ffs(queue->available);
-		unsigned s = (queue->dma_mode == DMA_MODE_CONTIG) ?
-				queue->submitted : 0xf;
-		int gteq2 = (s != (s & -s));
 
-		/*
-		 * return buffer if
-		 * >1 buffers available
-		 * or < 2 buffers submitted and for_dma
-		 * or >= 2 buffers submitted and !for_dma
-		 */
-		if ((queue->available != (1 << buf_index)) ||
-				(gteq2 ^ for_dma)) {
+		if ((queue->available != (1 << buf_index)) || for_dma
+				|| (queue->dma_mode != DMA_MODE_CONTIG)) {
 			queue->available &= ~(1 << buf_index);
 			vb = queue->queue.bufs[buf_index];
 			buf = container_of(vb, struct uvc_buffer, buf);
@@ -355,10 +346,10 @@ static int submit_buffer(struct uvc_video_queue *queue, struct uvc_streaming *st
 	if ((queue->submitted_insert_shift >= (6 * 5)) || !queue->streaming)
 		return 0;
 	i = 0;
-	if (!stream->sync) {
+	{
 		unsigned s = queue->submitted;
 
-		/* Only submit 2 buffers while not sync'ed */
+		/* Only have 2 buffers submitted for DMA */
 		if (s != (s & -s))
 			return 0;
 	}
@@ -475,14 +466,19 @@ static void submit_buffers(struct uvc_video_queue *queue)
 	if (0) pr_info("%s:e submitted=%x avail=%x\n", __func__, queue->submitted, queue->available);
 }
 
-static void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
+void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
 {
 	if (buf)
 		add_to_available(queue, buf);
 
 	if (queue->workqueue && queue->streaming && queue->available
-			&& (queue->submitted_insert_shift < (6 * 5)))
-		queue_work(queue->workqueue, &queue->work);
+			&& (queue->submitted_insert_shift < (6 * 5))) {
+		unsigned s = queue->submitted;
+
+		/* Only have 2 buffers submitted for DMA */
+		if (s == (s & -s))
+			queue_work(queue->workqueue, &queue->work);
+	}
 }
 
 struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue)
@@ -1098,28 +1094,23 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 			&& (!buf || !buf->bytesused))
 		queue->sync_index = queue->urb_index_of_frame;
 
-	if (queue->dma_mode == DMA_MODE_CONTIG) {
-		unsigned s =  queue->submitted | queue->available;
+	if ((queue->dma_mode == DMA_MODE_CONTIG) && !queue->available) {
+		if (!buf)
+			goto fake_buf;
+		if (!buf->mem)
+			return buf;
+		/* Switch to fakebuf, and release for dma work */
+		nextbuf = &queue->fake_buf;
+		nextbuf->error = buf->error;
+		nextbuf->bytesused = buf->bytesused;
+		nextbuf->ready = buf->ready;
+		nextbuf->ts = buf->ts;
+		nextbuf->owner = UVC_OWNER_FAKE;
+		nextbuf->length = 0x7fffffff;
+		queue->in_progress = nextbuf;
 
-		if (s == (s & -s)) {
-			/* Not at least 2 buffers ready for dma */
-			if (!buf)
-				goto fake_buf;
-			if (!buf->mem)
-				return buf;
-			/* Switch to fakebuf, and release for dma work */
-			nextbuf = &queue->fake_buf;
-			nextbuf->error = buf->error;
-			nextbuf->bytesused = buf->bytesused;
-			nextbuf->ready = buf->ready;
-			nextbuf->ts = buf->ts;
-			nextbuf->owner = UVC_OWNER_FAKE;
-			nextbuf->length = 0x7fffffff;
-			queue->in_progress = nextbuf;
-
-			uvc_queue_start_work(queue, buf);
-			return nextbuf;
-		}
+		uvc_queue_start_work(queue, buf);
+		return nextbuf;
 	}
 
 	if (buf) {
