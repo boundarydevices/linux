@@ -27,6 +27,7 @@
 #include "uvcvideo.h"
 
 #define buffer_is_cacheable 1
+#define hbuf_is_cacheable 1
 
 //struct dma_attrs uvc_dma_attrs;
 /* ------------------------------------------------------------------------
@@ -98,6 +99,7 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	if ((queue->dma_mode == DMA_MODE_CONTIG) && !alloc_ctxs[0]) {
 		dev_dbg(&stream->dev->udev->dev, "setting dma_ops\n");
 		dma_set_mask_and_coherent(&stream->dev->udev->dev, DMA_BIT_MASK(32));
+		dma_set_mask_and_coherent(stream->dev->udev->dev.parent, DMA_BIT_MASK(32));
 		if (buffer_is_cacheable)
 			arch_setup_dma_ops(&stream->dev->udev->dev, 0, 0, NULL, true);
 		alloc_ctxs[0] = vb2_dma_contig_init_ctx(&stream->dev->udev->dev);
@@ -539,8 +541,8 @@ static void cleanup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 					buf->header_buf_len, DMA_FROM_DEVICE);
 			buf->hbuf_dma_handle = 0;
 		}
-
-		usb_free_coherent(stream->dev->udev,
+		dma_free_coherent(
+			hbuf_is_cacheable ? &stream->dev->udev->dev : get_mdev(stream),
 			buf->header_buf_len,
 			buf->header_buf, buf->header_phys);
 		buf->header_buf = NULL;
@@ -589,15 +591,17 @@ static int alloc_buf_urbs(struct uvc_streaming *stream, struct uvc_buffer *buf)
 
 	/* n urbs * psize bytes / urb, half of which are for headers */
 	header_buf_len = (n * stream->psize) >> 1;
-	buf->header_buf = usb_alloc_coherent(
-		stream->dev->udev, header_buf_len,
-		stream->gfp_flags | __GFP_NOWARN, &buf->header_phys);
+
+	buf->header_buf = dma_alloc_coherent(
+		hbuf_is_cacheable ? &stream->dev->udev->dev : get_mdev(stream),
+		header_buf_len, &buf->header_phys,
+		stream->gfp_flags | __GFP_NOWARN);
 
 	if (!buf->header_buf) {
 		cleanup_buf(stream, buf);
 		return -ENOMEM;
 	}
-	if (buffer_is_cacheable && (stream->queue.dma_mode == DMA_MODE_CONTIG)) {
+	if (hbuf_is_cacheable && (stream->queue.dma_mode == DMA_MODE_CONTIG)) {
 		buf->hbuf_dma_handle = dma_map_single(get_mdev(stream),
 				buf->header_buf, buf->header_buf_len,
 				DMA_FROM_DEVICE);
