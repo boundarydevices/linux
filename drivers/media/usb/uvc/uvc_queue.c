@@ -1088,7 +1088,6 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 			goto fake_buf;
 		if (nextbuf->mem) {
 			uvc_put_buffer(queue);
-			nextbuf = NULL;
 			goto fake_buf;
 		}
 		return nextbuf;
@@ -1104,10 +1103,8 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 
 		if (s == (s & -s)) {
 			/* Not at least 2 buffers ready for dma */
-			if (!buf) {
-				nextbuf = NULL;
+			if (!buf)
 				goto fake_buf;
-			}
 			if (!buf->mem)
 				return buf;
 			/* Switch to fakebuf, and release for dma work */
@@ -1140,8 +1137,8 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 		}
 	}
 	nextbuf = uvc_get_available_buffer(queue, 0);
-fake_buf:
 	if (!nextbuf) {
+fake_buf:
 		nextbuf = &queue->fake_buf;
 		nextbuf->error = 0;
 		nextbuf->bytesused = 0;
