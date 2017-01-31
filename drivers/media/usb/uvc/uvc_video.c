@@ -1517,7 +1517,7 @@ static void urb_processing_work(struct work_struct *work)
 		while (i < rbuf->used_urb_cnt) {
 			urb = rbuf->urbs[i];
 			last = rbuf->last_completed_urb;
-			if ((urb == last) && rbuf->usb_active)
+			if (rbuf->usb_active)
 				return;
 			if (urb->status == -EINPROGRESS) {
 				pr_info("%s: error last=%p: %p %p %p active=%d %p\n", __func__,
@@ -1584,8 +1584,8 @@ static void uvc_video_complete_contig(struct urb *urb)
 			rbuf->owner = UVC_OWNER_USB;
 		spin_unlock_irqrestore(&queue->irqlock, flags);
 		uvc_queue_start_work(queue, NULL);
+		queue_work(stream->workqueue, &stream->work);
 	}
-	queue_work(stream->workqueue, &stream->work);
 }
 
 /*
