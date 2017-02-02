@@ -1510,17 +1510,38 @@ static void urb_processing_work(struct work_struct *work)
 	struct urb *last;
 
 	while (rbuf) {
-		int i;
+		int i = rbuf->pending_urb_index;
 
-		if (!rbuf->last_completed_urb)
-			return;
-		i = rbuf->pending_urb_index;
+		if (rbuf->combined_start) {
+			int len;
+			struct uvc_buffer *buf = uvc_get_buffer(queue, rbuf);
+
+			pr_debug("%s: combined_start=%p, sequential=%x, skip_size=%x\n",
+					__func__, rbuf->combined_start,
+					rbuf->combined_cnt, rbuf->combined_payload);
+			stream->bulk.payload_size += rbuf->combined_payload;
+			urb = rbuf->urbs[i - 1];
+			len = urb->actual_length;
+			if (len == stream->psize) {
+				u8 *mem = urb->transfer_buffer;
+				int ret = uvc_video_decode_start(stream, buf, mem, len);
+				if (ret == -EAGAIN) {
+					uvc_put_buffer(&stream->queue);
+					buf = uvc_get_buffer(queue, rbuf);
+					ret = uvc_video_decode_start(stream, buf, mem, len);
+				}
+				memcpy(stream->bulk.header, mem, rbuf->header_sz);
+				stream->bulk.header_size = rbuf->header_sz;
+			} else {
+				stream->bulk.header_size = 0;
+			}
+			uvc_video_decode_data(stream, buf, rbuf->combined_start, rbuf->combined_cnt);
+			rbuf->combined_start = 0;
+		}
 
 		while (i < rbuf->used_urb_cnt) {
 			urb = rbuf->urbs[i];
 			last = rbuf->last_completed_urb;
-			if (rbuf->usb_active)
-				return;
 			if (urb->status == -EINPROGRESS) {
 				pr_info("%s: error last=%p: %p %p %p active=%d %p\n", __func__,
 					last,
@@ -1530,63 +1551,79 @@ static void urb_processing_work(struct work_struct *work)
 					rbuf->prev_completed_urb);
 				return;
 			}
-			if (rbuf->buf_dma_handle && !rbuf->for_cpu) {
-				dma_sync_single_for_cpu(get_mdev(stream),
-						rbuf->buf_dma_handle,
-						rbuf->length, DMA_FROM_DEVICE);
-				if (rbuf->hbuf_dma_handle)
-					dma_sync_single_for_cpu(get_mdev(stream),
-						rbuf->hbuf_dma_handle,
-						rbuf->header_buf_len, DMA_FROM_DEVICE);
-				rbuf->for_cpu = 1;
-			}
 			process_urb(urb, stream, rbuf, queue);
 			rbuf->prev_completed_urb = last;
 
 			rbuf->pending_urb_index++;
 			i++;
 		}
-		while (1) {
-			struct uvc_buffer *buf;
-
-			rbuf = uvc_get_next_pending(queue);
-			if (queue->submitted_insert_shift < (4 * 5))
-				break;
-			/* while we have too much work pending, drop frame */
-			stream->last_fid ^= UVC_STREAM_FID;
-			buf = queue->in_progress;
-			if (buf) {
-				buf->error = 1;
-				stream->bulk.skip_payload = 1;
-			}
-		}
+		rbuf = uvc_get_next_pending(queue);
 	}
 }
 
 static void uvc_video_complete_contig(struct urb *urb)
 {
-	struct vb2_buffer *vb = urb->context;
-	struct uvc_video_queue *queue = vb2_get_drv_priv(vb->vb2_queue);
-	struct uvc_streaming *stream = container_of(queue, struct uvc_streaming, queue);
-	struct uvc_buffer *rbuf = container_of(vb, struct uvc_buffer, buf);
+	struct uvc_video_queue *queue;
+	struct uvc_streaming *stream;
 	unsigned long flags;
+	struct uvc_buffer *rbuf;
+	struct uvc_buffer *drop = NULL;
+	struct vb2_buffer *vb = urb->context;
+
+	rbuf = container_of(vb, struct uvc_buffer, buf);
 
 	if (0) pr_info("%s: buf=%p(%i) urb=%p %x\n", __func__, rbuf,
 			vb->v4l2_buf.index, urb, rbuf->bytesused);
 	rbuf->last_completed_urb = urb;
 	if (rbuf->used_urb_cnt && rbuf->urbs &&
 			urb == rbuf->urbs[rbuf->used_urb_cnt - 1]) {
+		rbuf->for_cpu = 0;
+		queue = vb2_get_drv_priv(vb->vb2_queue);
+		stream = container_of(queue, struct uvc_streaming, queue);
+
 		if (0) pr_info("%s:buf=%p(%i), owner=%x urb=%p submitted=%x\n",
 				__func__, rbuf, vb->v4l2_buf.index,
 				rbuf->owner,	urb, queue->submitted);
 		spin_lock_irqsave(&queue->irqlock, flags);
+
+		if (!queue->available && queue->streaming) {
+			/* Falling behind, drop this buffer */
+			unsigned submitted_insert_shift = 0;
+			unsigned val = queue->submitted_buffers;
+			int i = queue->submitted_insert_shift;
+			unsigned buf_index;
+
+			while (i > 0) {
+				buf_index = val & 0x1f;
+				val >>= 5;
+				i -= 5;
+				if (buf_index == vb->v4l2_buf.index) {
+					drop = rbuf;
+					queue->submitted_buffers |= (0x1f << submitted_insert_shift);
+					queue->pending &= ~(1 << buf_index);
+					break;
+				}
+				submitted_insert_shift += 5;
+			}
+		}
 		rbuf->usb_active = 0;
 		queue->submitted &= ~(1 << vb->v4l2_buf.index);
 		if (rbuf->owner == UVC_OWNER_USB_ACTIVE)
 			rbuf->owner = UVC_OWNER_USB;
 		spin_unlock_irqrestore(&queue->irqlock, flags);
-		uvc_queue_start_work(queue, NULL);
-		queue_work(stream->workqueue, &stream->work);
+
+		uvc_queue_start_work(queue, drop);
+		if (rbuf->buf_dma_handle) {
+			queue_work(queue->cachequeue, &rbuf->cache_work);
+		} else {
+			rbuf->for_cpu = 1;
+			queue_work(stream->workqueue, &stream->work);
+		}
+		if (0 && drop) {
+			pr_info("submit=%08x, %d\n",
+				queue->submitted_buffers,
+				queue->submitted_insert_shift);
+		}
 	}
 }
 
