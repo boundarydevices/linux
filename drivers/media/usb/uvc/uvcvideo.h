@@ -141,7 +141,7 @@
 /* Maximum number of packets per URB. */
 #define UVC_MAX_ISOC_PACKETS		32
 /* Maximum number of video buffers. */
-#define UVC_MAX_VIDEO_BUFFERS	32
+#define UVC_MAX_VIDEO_BUFFERS	31
 /* Maximum status buffer size in bytes of interrupt URB. */
 #define UVC_MAX_STATUS_SIZE	16
 
@@ -375,6 +375,8 @@ struct uvc_buffer {
 	unsigned int bytesused;
 	unsigned int header_sz;
 	unsigned int repeat_payload;
+	struct work_struct 	cache_work;
+	struct work_struct 	to_dev_work;
 
 	u32 pts;
 	unsigned urb_cnt;
@@ -382,6 +384,9 @@ struct uvc_buffer {
 	struct urb **urbs;
 	struct urb *last_completed_urb;
 	struct urb *prev_completed_urb;
+	u8* combined_start;
+	unsigned combined_cnt;
+	unsigned combined_payload;
 	unsigned pending_urb_index;
 	u8 *header_buf;
 	unsigned header_buf_len;
@@ -413,6 +418,7 @@ struct uvc_video_queue {
 	unsigned frame_sync_mask;
 	struct uvc_buffer *in_progress;
 	struct workqueue_struct *workqueue;
+	struct workqueue_struct *cachequeue;
 	struct work_struct 	work;
 	unsigned urb_index_of_frame;
 	/*
