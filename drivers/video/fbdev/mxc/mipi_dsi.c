@@ -947,7 +947,8 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 
 	rc = devm_reset_control_get_optional(&pdev->dev, NULL);
 	if (IS_ERR(rc)) {
-		dev_err(&pdev->dev, "failed to get reset controller\n");
+		if (rc != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "failed to get reset controller\n");
 		ret = PTR_ERR(rc);
 		goto dev_reset_fail;
 	}
