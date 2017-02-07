@@ -114,14 +114,14 @@
 
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
-			MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x1b0b1
+			MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x1b011
 			MX6QDL_PAD_SD3_DAT6__UART1_RX_DATA	0x1b0b1
 		>;
 	};
 
 	pinctrl_uart2: uart2grp {
 		fsl,pins = <
-			MX6QDL_PAD_EIM_D26__UART2_TX_DATA	0x1b0b1
+			MX6QDL_PAD_EIM_D26__UART2_TX_DATA	0x1b011
 			MX6QDL_PAD_EIM_D27__UART2_RX_DATA	0x1b0b1
 		>;
 	};
