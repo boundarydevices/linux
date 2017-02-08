@@ -81,27 +81,16 @@
 		>;
 	};
 
-	pinctrl_gpio_keys: gpio-keysgrp {
-		fsl,pins = <
-#define GP_GPIOKEY_BACK		<&gpio2 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x1b0b0
-#define GP_GPIOKEY_HOME		<&gpio2 4 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x1b0b0
-#define GP_GPIOKEY_MENU		<&gpio2 1 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x1b0b0
-#define GP_GPIOKEY_POWER	<&gpio2 3 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_NANDF_D3__GPIO2_IO03		0x1b0b0
-#define GP_GPIOKEY_VOL_DN	<&gpio4 5 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x1b0b0
-#define GP_GPIOKEY_VOL_UP	<&gpio7 13 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x1b0b0
-		>;
-	};
-
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 #define GP_HOG_TP71	<&gpio2 7 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0
+			MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x1b0b0
+			MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x1b0b0
+			MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x1b0b0
+			MX6QDL_PAD_NANDF_D3__GPIO2_IO03		0x1b0b0
+			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x1b0b0
+			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x1b0b0
 		>;
 	};
 
@@ -319,50 +308,6 @@
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
-	};
-
-	gpio-keys {
-		compatible = "gpio-keys";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_gpio_keys>;
-
-		// GP_GPIOKEY_BACK used as low power warning
-		//back {
-		//	label = "Back";
-		//	gpios = GP_GPIOKEY_BACK;
-		//	linux,code = <KEY_BACK>;
-		//};
-
-		home {
-			label = "Home";
-			gpios = GP_GPIOKEY_HOME;
-			linux,code = <KEY_HOMEPAGE>;
-		};
-
-		menu {
-			label = "Menu";
-			gpios = GP_GPIOKEY_MENU;
-			linux,code = <KEY_MENU>;
-		};
-
-		power {
-			label = "Power Button";
-			gpios = GP_GPIOKEY_POWER;
-			linux,code = <KEY_POWER>;	/* or KEY_SEARCH */
-			gpio-key,wakeup;
-		};
-
-		volume-down {
-			label = "Volume Down";
-			gpios = GP_GPIOKEY_VOL_DN;
-			linux,code = <KEY_VOLUMEDOWN>;
-		};
-
-		volume-up {
-			label = "Volume Up";
-			gpios = GP_GPIOKEY_VOL_UP;
-			linux,code = <KEY_VOLUMEUP>;
-		};
 	};
 
 	memory {
