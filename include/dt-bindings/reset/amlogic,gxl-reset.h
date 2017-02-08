@@ -37,7 +37,7 @@
 /*					15	*/
 #define RESET_GIC			16
 #define RESET_CAPB3_DECODE		17
-#define RESET_NAND_CAPB3		18
+/*					18	*/
 #define RESET_HDMITX_CAPB3		19
 #define RESET_MALI_CAPB3		20
 #define RESET_DOS_CAPB3			21
@@ -47,10 +47,10 @@
 #define RESET_AHB_DATA			25
 #define RESET_VCBUS_CLK81		26
 #define RESET_MMC			27
-#define RESET_MIPI_0			28
-#define RESET_MIPI_1			29
-#define RESET_MIPI_2			30
-#define RESET_MIPI_3			31
+/*					28	*/
+/*					29	*/
+/*					30	*/
+/*					31	*/
 /*	RESET1					*/
 #define RESET_CPPM			32
 #define RESET_DEMUX			33
@@ -81,7 +81,7 @@
 #define RESET_SYS_CPU_L2		58
 #define RESET_SYS_CPU_P			59
 #define RESET_SYS_CPU_MBIST		60
-/*					61	*/
+#define RESET_AUDIO_CODEC		61
 /*					62	*/
 /*					63	*/
 /*	RESET2					*/
@@ -111,7 +111,7 @@
 #define RESET_TVFE			101
 #define RESET_AHB_BRIDGE_CNTL		102
 /*					103	*/
-#define RESET_AUDIO_DAC			104
+/*					104	*/
 #define RESET_DEMUX_TOP			105
 #define RESET_DEMUX_DES			106
 #define RESET_DEMUX_S2P_0		107

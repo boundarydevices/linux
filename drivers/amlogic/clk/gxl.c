@@ -687,7 +687,7 @@ static MESON_GATE(gxl_pl301, HHI_GCLK_MPEG0, 6);
 static MESON_GATE(gxl_periphs, HHI_GCLK_MPEG0, 7);
 static MESON_GATE(gxl_spicc, HHI_GCLK_MPEG0, 8);
 static MESON_GATE(gxl_i2c, HHI_GCLK_MPEG0, 9);
-static MESON_GATE(gxl_sar_adc, HHI_GCLK_MPEG0, 10);
+static MESON_GATE(gxl_sana, HHI_GCLK_MPEG0, 10);
 static MESON_GATE(gxl_smart_card, HHI_GCLK_MPEG0, 11);
 static MESON_GATE(gxl_rng0, HHI_GCLK_MPEG0, 12);
 static MESON_GATE(gxl_uart0, HHI_GCLK_MPEG0, 13);
@@ -697,12 +697,16 @@ static MESON_GATE(gxl_async_fifo, HHI_GCLK_MPEG0, 16);
 static MESON_GATE(gxl_sdio, HHI_GCLK_MPEG0, 17);
 static MESON_GATE(gxl_abuf, HHI_GCLK_MPEG0, 18);
 static MESON_GATE(gxl_hiu_iface, HHI_GCLK_MPEG0, 19);
+static MESON_GATE(gxl_bt656, HHI_GCLK_MPEG0, 22);
 static MESON_GATE(gxl_assist_misc, HHI_GCLK_MPEG0, 23);
 static MESON_GATE(gxl_emmc_a, HHI_GCLK_MPEG0, 24);
 static MESON_GATE(gxl_emmc_b, HHI_GCLK_MPEG0, 25);
 static MESON_GATE(gxl_emmc_c, HHI_GCLK_MPEG0, 26);
+static MESON_GATE(gxl_dma, HHI_GCLK_MPEG0, 27);
+static MESON_GATE(gxl_acodec, HHI_GCLK_MPEG0, 28);
 static MESON_GATE(gxl_spi, HHI_GCLK_MPEG0, 30);
 
+static MESON_GATE(gxl_pclk_tvfe, HHI_GCLK_MPEG1, 0);
 static MESON_GATE(gxl_i2s_spdif, HHI_GCLK_MPEG1, 2);
 static MESON_GATE(gxl_eth, HHI_GCLK_MPEG1, 3);
 static MESON_GATE(gxl_demux, HHI_GCLK_MPEG1, 4);
@@ -715,7 +719,7 @@ static MESON_GATE(gxl_mixer, HHI_GCLK_MPEG1, 11);
 static MESON_GATE(gxl_mixer_iface, HHI_GCLK_MPEG1, 12);
 static MESON_GATE(gxl_adc, HHI_GCLK_MPEG1, 13);
 static MESON_GATE(gxl_blkmv, HHI_GCLK_MPEG1, 14);
-static MESON_GATE(gxl_aiu, HHI_GCLK_MPEG1, 15);
+static MESON_GATE(gxl_aiu_top, HHI_GCLK_MPEG1, 15);
 static MESON_GATE(gxl_uart1, HHI_GCLK_MPEG1, 16);
 static MESON_GATE(gxl_g2d, HHI_GCLK_MPEG1, 20);
 static MESON_GATE(gxl_usb0, HHI_GCLK_MPEG1, 21);
@@ -723,7 +727,7 @@ static MESON_GATE(gxl_usb1, HHI_GCLK_MPEG1, 22);
 static MESON_GATE(gxl_reset, HHI_GCLK_MPEG1, 23);
 static MESON_GATE(gxl_nand, HHI_GCLK_MPEG1, 24);
 static MESON_GATE(gxl_dos_parser, HHI_GCLK_MPEG1, 25);
-static MESON_GATE(gxl_usb, HHI_GCLK_MPEG1, 26);
+static MESON_GATE(gxl_usb_general, HHI_GCLK_MPEG1, 26);
 static MESON_GATE(gxl_vdin1, HHI_GCLK_MPEG1, 28);
 static MESON_GATE(gxl_ahb_arb0, HHI_GCLK_MPEG1, 29);
 static MESON_GATE(gxl_efuse, HHI_GCLK_MPEG1, 30);
@@ -731,33 +735,42 @@ static MESON_GATE(gxl_boot_rom, HHI_GCLK_MPEG1, 31);
 
 static MESON_GATE(gxl_ahb_data_bus, HHI_GCLK_MPEG2, 1);
 static MESON_GATE(gxl_ahb_ctrl_bus, HHI_GCLK_MPEG2, 2);
-static MESON_GATE(gxl_hdmi_intr_sync, HHI_GCLK_MPEG2, 3);
-static MESON_GATE(gxl_hdmi_pclk, HHI_GCLK_MPEG2, 4);
-static MESON_GATE(gxl_usb1_ddr_bridge, HHI_GCLK_MPEG2, 8);
-static MESON_GATE(gxl_usb0_ddr_bridge, HHI_GCLK_MPEG2, 9);
+static MESON_GATE(gxl_hdcp22_pclk, HHI_GCLK_MPEG2, 3);
+static MESON_GATE(gxl_hdmitx_pclk, HHI_GCLK_MPEG2, 4);
+static MESON_GATE(gxl_pdm_pclk, HHI_GCLK_MPEG2, 5);
+static MESON_GATE(gxl_bt656_pclk, HHI_GCLK_MPEG2, 6);
+static MESON_GATE(gxl_usb1_to_ddr, HHI_GCLK_MPEG2, 8);
+static MESON_GATE(gxl_usb0_to_ddr, HHI_GCLK_MPEG2, 9);
+static MESON_GATE(gxl_aiu_pclk, HHI_GCLK_MPEG2, 10);
 static MESON_GATE(gxl_mmc_pclk, HHI_GCLK_MPEG2, 11);
 static MESON_GATE(gxl_dvin, HHI_GCLK_MPEG2, 12);
 static MESON_GATE(gxl_uart2, HHI_GCLK_MPEG2, 15);
-static MESON_GATE(gxl_sana, HHI_GCLK_MPEG2, 22);
+static MESON_GATE(gxl_saradc, HHI_GCLK_MPEG2, 22);
 static MESON_GATE(gxl_vpu_intr, HHI_GCLK_MPEG2, 25);
 static MESON_GATE(gxl_sec_ahb_ahb3_bridge, HHI_GCLK_MPEG2, 26);
-static MESON_GATE(gxl_clk81_a53, HHI_GCLK_MPEG2, 29);
+static MESON_GATE(gxl_apb3_ao, HHI_GCLK_MPEG2, 27);
+static MESON_GATE(gxl_mclk_tvfe, HHI_GCLK_MPEG2, 28);
+static MESON_GATE(gxl_clk81_gic, HHI_GCLK_MPEG2, 30);
 
 static MESON_GATE(gxl_vclk2_venci0, HHI_GCLK_OTHER, 1);
 static MESON_GATE(gxl_vclk2_venci1, HHI_GCLK_OTHER, 2);
 static MESON_GATE(gxl_vclk2_vencp0, HHI_GCLK_OTHER, 3);
 static MESON_GATE(gxl_vclk2_vencp1, HHI_GCLK_OTHER, 4);
-static MESON_GATE(gxl_gclk_venci_int0, HHI_GCLK_OTHER, 8);
-static MESON_GATE(gxl_gclk_vencp_int, HHI_GCLK_OTHER, 9);
+static MESON_GATE(gxl_vclk2_venct0, HHI_GCLK_OTHER, 5);
+static MESON_GATE(gxl_vclk2_venct1, HHI_GCLK_OTHER, 6);
+static MESON_GATE(gxl_vclk2_other, HHI_GCLK_OTHER, 7);
+static MESON_GATE(gxl_vclk2_enci, HHI_GCLK_OTHER, 8);
+static MESON_GATE(gxl_vclk2_encp, HHI_GCLK_OTHER, 9);
 static MESON_GATE(gxl_dac_clk, HHI_GCLK_OTHER, 10);
 static MESON_GATE(gxl_aoclk_gate, HHI_GCLK_OTHER, 14);
 static MESON_GATE(gxl_iec958_gate, HHI_GCLK_OTHER, 16);
 static MESON_GATE(gxl_enc480p, HHI_GCLK_OTHER, 20);
 static MESON_GATE(gxl_rng1, HHI_GCLK_OTHER, 21);
-static MESON_GATE(gxl_gclk_venci_int1, HHI_GCLK_OTHER, 22);
-static MESON_GATE(gxl_vclk2_venclmcc, HHI_GCLK_OTHER, 24);
+static MESON_GATE(gxl_vclk2_enct, HHI_GCLK_OTHER, 22);
+static MESON_GATE(gxl_vclk2_encl, HHI_GCLK_OTHER, 23);
+static MESON_GATE(gxl_vclk2_venclmmc, HHI_GCLK_OTHER, 24);
 static MESON_GATE(gxl_vclk2_vencl, HHI_GCLK_OTHER, 25);
-static MESON_GATE(gxl_vclk_other, HHI_GCLK_OTHER, 26);
+static MESON_GATE(gxl_vclk2_other1, HHI_GCLK_OTHER, 26);
 static MESON_GATE(gxl_edp, HHI_GCLK_OTHER, 31);
 
 /* Always On (AO) domain gates */
@@ -794,7 +807,7 @@ static struct clk_hw *gxl_clk_hws[] = {
 	[CLKID_PERIPHS]		    = &gxl_periphs.hw,
 	[CLKID_SPICC]		    = &gxl_spicc.hw,
 	[CLKID_I2C]		    = &gxl_i2c.hw,
-	[CLKID_SAR_ADC]		    = &gxl_sar_adc.hw,
+	[CLKID_SANA]		    = &gxl_sana.hw,
 	[CLKID_SMART_CARD]	    = &gxl_smart_card.hw,
 	[CLKID_RNG0]		    = &gxl_rng0.hw,
 	[CLKID_UART0]		    = &gxl_uart0.hw,
@@ -804,8 +817,16 @@ static struct clk_hw *gxl_clk_hws[] = {
 	[CLKID_SDIO]		    = &gxl_sdio.hw,
 	[CLKID_ABUF]		    = &gxl_abuf.hw,
 	[CLKID_HIU_IFACE]	    = &gxl_hiu_iface.hw,
+	[CLKID_BT656]	    = &gxl_bt656.hw,
 	[CLKID_ASSIST_MISC]	    = &gxl_assist_misc.hw,
+	[CLKID_SD_EMMC_A]	    = &gxl_emmc_a.hw,
+	[CLKID_SD_EMMC_B]	    = &gxl_emmc_b.hw,
+	[CLKID_SD_EMMC_C]	    = &gxl_emmc_c.hw,
+	[CLKID_SD_EMMC_C]	    = &gxl_emmc_c.hw,
+	[CLKID_DMA]	    = &gxl_dma.hw,
+	[CLKID_ACODEC]	    = &gxl_acodec.hw,
 	[CLKID_SPI]		    = &gxl_spi.hw,
+	[CLKID_PCLK_TVFE]	    = &gxl_pclk_tvfe.hw,
 	[CLKID_I2S_SPDIF]	    = &gxl_i2s_spdif.hw,
 	[CLKID_ETH]		    = &gxl_eth.hw,
 	[CLKID_DEMUX]		    = &gxl_demux.hw,
@@ -818,7 +839,7 @@ static struct clk_hw *gxl_clk_hws[] = {
 	[CLKID_MIXER_IFACE]	    = &gxl_mixer_iface.hw,
 	[CLKID_ADC]		    = &gxl_adc.hw,
 	[CLKID_BLKMV]		    = &gxl_blkmv.hw,
-	[CLKID_AIU]		    = &gxl_aiu.hw,
+	[CLKID_AIU_TOP]		    = &gxl_aiu_top.hw,
 	[CLKID_UART1]		    = &gxl_uart1.hw,
 	[CLKID_G2D]		    = &gxl_g2d.hw,
 	[CLKID_USB0]		    = &gxl_usb0.hw,
@@ -826,48 +847,54 @@ static struct clk_hw *gxl_clk_hws[] = {
 	[CLKID_RESET]		    = &gxl_reset.hw,
 	[CLKID_NAND]		    = &gxl_nand.hw,
 	[CLKID_DOS_PARSER]	    = &gxl_dos_parser.hw,
-	[CLKID_USB]		    = &gxl_usb.hw,
+	[CLKID_USB_GENERAL]		    = &gxl_usb_general.hw,
 	[CLKID_VDIN1]		    = &gxl_vdin1.hw,
 	[CLKID_AHB_ARB0]	    = &gxl_ahb_arb0.hw,
 	[CLKID_EFUSE]		    = &gxl_efuse.hw,
 	[CLKID_BOOT_ROM]	    = &gxl_boot_rom.hw,
 	[CLKID_AHB_DATA_BUS]	    = &gxl_ahb_data_bus.hw,
 	[CLKID_AHB_CTRL_BUS]	    = &gxl_ahb_ctrl_bus.hw,
-	[CLKID_HDMI_INTR_SYNC]	    = &gxl_hdmi_intr_sync.hw,
-	[CLKID_HDMI_PCLK]	    = &gxl_hdmi_pclk.hw,
-	[CLKID_USB1_DDR_BRIDGE]	    = &gxl_usb1_ddr_bridge.hw,
-	[CLKID_USB0_DDR_BRIDGE]	    = &gxl_usb0_ddr_bridge.hw,
+	[CLKID_HDCP22_PCLK]	    = &gxl_hdcp22_pclk.hw,
+	[CLKID_HDMITX_PCLK]	    = &gxl_hdmitx_pclk.hw,
+	[CLKID_PDM_PCLK]	    = &gxl_pdm_pclk.hw,
+	[CLKID_BT656_PCLK]	    = &gxl_bt656_pclk.hw,
+	[CLKID_USB1_TO_DDR]	    = &gxl_usb1_to_ddr.hw,
+	[CLKID_USB0_TO_DDR]	    = &gxl_usb0_to_ddr.hw,
+	[CLKID_AIU_PCLK]	    = &gxl_aiu_pclk.hw,
 	[CLKID_MMC_PCLK]	    = &gxl_mmc_pclk.hw,
 	[CLKID_DVIN]		    = &gxl_dvin.hw,
 	[CLKID_UART2]		    = &gxl_uart2.hw,
-	[CLKID_SANA]		    = &gxl_sana.hw,
+	[CLKID_SARADC]		    = &gxl_saradc.hw,
 	[CLKID_VPU_INTR]	    = &gxl_vpu_intr.hw,
 	[CLKID_SEC_AHB_AHB3_BRIDGE] = &gxl_sec_ahb_ahb3_bridge.hw,
-	[CLKID_CLK81_A53]	    = &gxl_clk81_a53.hw,
+	[CLKID_APB3_AO]	    = &gxl_apb3_ao.hw,
+	[CLKID_MCLK_TVFE]	    = &gxl_mclk_tvfe.hw,
+	[CLKID_CLK81_GIC]	    = &gxl_clk81_gic.hw,
 	[CLKID_VCLK2_VENCI0]	    = &gxl_vclk2_venci0.hw,
 	[CLKID_VCLK2_VENCI1]	    = &gxl_vclk2_venci1.hw,
 	[CLKID_VCLK2_VENCP0]	    = &gxl_vclk2_vencp0.hw,
 	[CLKID_VCLK2_VENCP1]	    = &gxl_vclk2_vencp1.hw,
-	[CLKID_GCLK_VENCI_INT0]	    = &gxl_gclk_venci_int0.hw,
-	[CLKID_GCLK_VENCI_INT]	    = &gxl_gclk_vencp_int.hw,
+	[CLKID_VCLK2_VENCT0]	    = &gxl_vclk2_venct0.hw,
+	[CLKID_VCLK2_VENCT1]	    = &gxl_vclk2_venct1.hw,
+	[CLKID_VCLK2_OTHER]	    = &gxl_vclk2_other.hw,
+	[CLKID_VCLK2_ENCI]	    = &gxl_vclk2_enci.hw,
+	[CLKID_VCLK2_ENCP]	    = &gxl_vclk2_encp.hw,
 	[CLKID_DAC_CLK]		    = &gxl_dac_clk.hw,
 	[CLKID_AOCLK_GATE]	    = &gxl_aoclk_gate.hw,
 	[CLKID_IEC958_GATE]	    = &gxl_iec958_gate.hw,
 	[CLKID_ENC480P]		    = &gxl_enc480p.hw,
 	[CLKID_RNG1]		    = &gxl_rng1.hw,
-	[CLKID_GCLK_VENCI_INT1]	    = &gxl_gclk_venci_int1.hw,
-	[CLKID_VCLK2_VENCLMCC]	    = &gxl_vclk2_venclmcc.hw,
+	[CLKID_VCLK2_ENCT]	    = &gxl_vclk2_enct.hw,
+	[CLKID_VCLK2_ENCL]	    = &gxl_vclk2_encl.hw,
+	[CLKID_VCLK2_VENCLMMC]	    = &gxl_vclk2_venclmmc.hw,
 	[CLKID_VCLK2_VENCL]	    = &gxl_vclk2_vencl.hw,
-	[CLKID_VCLK_OTHER]	    = &gxl_vclk_other.hw,
+	[CLKID_VCLK2_OTHER1]	    = &gxl_vclk2_other1.hw,
 	[CLKID_EDP]		    = &gxl_edp.hw,
 	[CLKID_AO_MEDIA_CPU]	    = &gxl_ao_media_cpu.hw,
 	[CLKID_AO_AHB_SRAM]	    = &gxl_ao_ahb_sram.hw,
 	[CLKID_AO_AHB_BUS]	    = &gxl_ao_ahb_bus.hw,
 	[CLKID_AO_IFACE]	    = &gxl_ao_iface.hw,
 	[CLKID_AO_I2C]		    = &gxl_ao_i2c.hw,
-	[CLKID_SD_EMMC_A]	    = &gxl_emmc_a.hw,
-	[CLKID_SD_EMMC_B]	    = &gxl_emmc_b.hw,
-	[CLKID_SD_EMMC_C]	    = &gxl_emmc_c.hw,
 	[CLKID_CPU_FCLK_P00]	= &gxl_cpu_fixedpll_p00.hw,
 	[CLKID_CPU_FCLK_P01]	= &gxl_cpu_fixedpll_p01.hw,
 	[CLKID_CPU_FCLK_P0]		= &gxl_cpu_fixedpll_p0.hw,
@@ -902,7 +929,7 @@ static struct clk_gate *gxl_clk_gates[] = {
 	&gxl_periphs,
 	&gxl_spicc,
 	&gxl_i2c,
-	&gxl_sar_adc,
+	&gxl_sana,
 	&gxl_smart_card,
 	&gxl_rng0,
 	&gxl_uart0,
@@ -912,8 +939,15 @@ static struct clk_gate *gxl_clk_gates[] = {
 	&gxl_sdio,
 	&gxl_abuf,
 	&gxl_hiu_iface,
+	&gxl_bt656,
 	&gxl_assist_misc,
+	&gxl_emmc_a,
+	&gxl_emmc_b,
+	&gxl_emmc_c,
+	&gxl_dma,
+	&gxl_acodec,
 	&gxl_spi,
+	&gxl_pclk_tvfe,
 	&gxl_i2s_spdif,
 	&gxl_eth,
 	&gxl_demux,
@@ -926,7 +960,7 @@ static struct clk_gate *gxl_clk_gates[] = {
 	&gxl_mixer_iface,
 	&gxl_adc,
 	&gxl_blkmv,
-	&gxl_aiu,
+	&gxl_aiu_top,
 	&gxl_uart1,
 	&gxl_g2d,
 	&gxl_usb0,
@@ -934,48 +968,54 @@ static struct clk_gate *gxl_clk_gates[] = {
 	&gxl_reset,
 	&gxl_nand,
 	&gxl_dos_parser,
-	&gxl_usb,
+	&gxl_usb_general,
 	&gxl_vdin1,
 	&gxl_ahb_arb0,
 	&gxl_efuse,
 	&gxl_boot_rom,
 	&gxl_ahb_data_bus,
 	&gxl_ahb_ctrl_bus,
-	&gxl_hdmi_intr_sync,
-	&gxl_hdmi_pclk,
-	&gxl_usb1_ddr_bridge,
-	&gxl_usb0_ddr_bridge,
+	&gxl_hdcp22_pclk,
+	&gxl_hdmitx_pclk,
+	&gxl_pdm_pclk,
+	&gxl_bt656_pclk,
+	&gxl_usb1_to_ddr,
+	&gxl_usb0_to_ddr,
+	&gxl_aiu_pclk,
 	&gxl_mmc_pclk,
 	&gxl_dvin,
 	&gxl_uart2,
-	&gxl_sana,
+	&gxl_saradc,
 	&gxl_vpu_intr,
 	&gxl_sec_ahb_ahb3_bridge,
-	&gxl_clk81_a53,
+	&gxl_apb3_ao,
+	&gxl_mclk_tvfe,
+	&gxl_clk81_gic,
 	&gxl_vclk2_venci0,
 	&gxl_vclk2_venci1,
 	&gxl_vclk2_vencp0,
 	&gxl_vclk2_vencp1,
-	&gxl_gclk_venci_int0,
-	&gxl_gclk_vencp_int,
+	&gxl_vclk2_venct0,
+	&gxl_vclk2_venct1,
+	&gxl_vclk2_other,
+	&gxl_vclk2_enci,
+	&gxl_vclk2_encp,
 	&gxl_dac_clk,
 	&gxl_aoclk_gate,
 	&gxl_iec958_gate,
 	&gxl_enc480p,
 	&gxl_rng1,
-	&gxl_gclk_venci_int1,
-	&gxl_vclk2_venclmcc,
+	&gxl_vclk2_enct,
+	&gxl_vclk2_encl,
+	&gxl_vclk2_venclmmc,
 	&gxl_vclk2_vencl,
-	&gxl_vclk_other,
+	&gxl_vclk2_other1,
 	&gxl_edp,
 	&gxl_ao_media_cpu,
 	&gxl_ao_ahb_sram,
 	&gxl_ao_ahb_bus,
 	&gxl_ao_iface,
 	&gxl_ao_i2c,
-	&gxl_emmc_a,
-	&gxl_emmc_b,
-	&gxl_emmc_c,
 };
 
 static void __init gxl_clkc_init(struct device_node *np)
