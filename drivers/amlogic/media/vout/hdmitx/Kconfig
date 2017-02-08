@@ -1,0 +1,12 @@
+#
+# HDMITX
+#
+menu "Amlogic HDMITX Module"
+
+config AMLOGIC_HDMITX
+	bool "HDMITX Output Enable"
+	default n
+	help
+		HDMITX Output Enable
+
+endmenu

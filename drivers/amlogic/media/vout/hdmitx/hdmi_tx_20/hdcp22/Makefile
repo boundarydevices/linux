@@ -1,0 +1,1 @@
+obj-y		+= hdcp_main.o

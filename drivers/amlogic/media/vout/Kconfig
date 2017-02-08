@@ -17,6 +17,7 @@ if AMLOGIC_VOUT
 source "drivers/amlogic/media/vout/vout_serve/Kconfig"
 source "drivers/amlogic/media/vout/cvbs/Kconfig"
 source "drivers/amlogic/media/vout/vdac/Kconfig"
+source "drivers/amlogic/media/vout/hdmitx/Kconfig"
 
 endif
 

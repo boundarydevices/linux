@@ -1,0 +1,834 @@
+/*
+ * drivers/amlogic/media/vout/hdmitx/hdmi_tx_20/hw/mach_reg.h
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#ifndef __MACH_REG_H__
+#define __MACH_REG_H__
+#include <linux/amlogic/iomap.h>
+#include <linux/delay.h>
+
+struct reg_s {
+	unsigned int reg;
+	unsigned int val;
+};
+
+#define OFFSET	24
+#define CBUS_REG_ADDR(reg)  ((IO_CBUS_BASE << OFFSET) + (reg << 2))
+#define nCBUS_REG_ADDR(reg)  (0xc8834400 + (reg << 2))
+#define VCBUS_REG_ADDR(reg) (0xd0100000 + (reg << 2))
+#define AOBUS_REG_ADDR(reg) ((IO_AOBUS_BASE << OFFSET) + reg)
+#define APB_REG_ADDR(reg)   ((IO_APB_BUS_BASE << OFFSET) + reg)
+
+unsigned int hd_read_reg(unsigned int addr);
+void hd_write_reg(unsigned int addr, unsigned int val);
+void hd_set_reg_bits(unsigned int addr, unsigned int value, unsigned int offset,
+	unsigned int len);
+void sec_reg_write(unsigned  int *addr, unsigned int value);
+unsigned int sec_reg_read(unsigned int *addr);
+void init_reg_map(void);
+
+#define WAIT_FOR_PLL_LOCKED(reg)				\
+	do {							\
+		unsigned int st = 0, cnt = 10;			\
+		while (cnt--) {                                 \
+			udelay(5);				\
+			st = !!(hd_read_reg(reg) & (1 << 31));	\
+			if (st)					\
+				break;				\
+			else {					\
+				/* reset hpll */		\
+				hd_set_reg_bits(reg, 1, 28, 1);	\
+				hd_set_reg_bits(reg, 0, 28, 1);	\
+			}					\
+		}						\
+		if (cnt < 9)					\
+			pr_info("pll[0x%x] reset %d times\n", reg, 9 - cnt);\
+	} while (0)
+
+#define P_PREG_PAD_GPIO6_EN_N nCBUS_REG_ADDR(0x08)
+#define P_PREG_PAD_GPIO6_O    nCBUS_REG_ADDR(0x09)
+#define P_PREG_PAD_GPIO6_I    nCBUS_REG_ADDR(0x0a)
+#define P_PREG_JTAG_GPIO_ADDR nCBUS_REG_ADDR(0x0b)
+#define P_PREG_PAD_GPIO0_EN_N nCBUS_REG_ADDR(0x0c)
+#define P_PREG_PAD_GPIO0_O    nCBUS_REG_ADDR(0x0d)
+#define P_PREG_PAD_GPIO0_I    nCBUS_REG_ADDR(0x0e)
+#define P_PREG_PAD_GPIO1_EN_N nCBUS_REG_ADDR(0x0f)
+#define P_PREG_PAD_GPIO1_O    nCBUS_REG_ADDR(0x10)
+#define P_PREG_PAD_GPIO1_I    nCBUS_REG_ADDR(0x11)
+#define P_PREG_PAD_GPIO2_EN_N nCBUS_REG_ADDR(0x12)
+#define P_PREG_PAD_GPIO2_O    nCBUS_REG_ADDR(0x13)
+#define P_PREG_PAD_GPIO2_I    nCBUS_REG_ADDR(0x14)
+#define P_PREG_PAD_GPIO3_EN_N nCBUS_REG_ADDR(0x15)
+#define P_PREG_PAD_GPIO3_O    nCBUS_REG_ADDR(0x16)
+#define P_PREG_PAD_GPIO3_I    nCBUS_REG_ADDR(0x17)
+#define P_PREG_PAD_GPIO4_EN_N nCBUS_REG_ADDR(0x18)
+#define P_PREG_PAD_GPIO4_O    nCBUS_REG_ADDR(0x19)
+#define P_PREG_PAD_GPIO4_I    nCBUS_REG_ADDR(0x1a)
+#define P_PREG_PAD_GPIO5_EN_N nCBUS_REG_ADDR(0x1b)
+#define P_PREG_PAD_GPIO5_O    nCBUS_REG_ADDR(0x1c)
+#define P_PREG_PAD_GPIO5_I    nCBUS_REG_ADDR(0x1d)
+#define PERIPHS_PIN_MUX_0 0x2c	/* register.h:419 */
+#define P_PERIPHS_PIN_MUX_0 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_0)
+#define PERIPHS_PIN_MUX_1 0x2d	/* register.h:420 */
+#define P_PERIPHS_PIN_MUX_1 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_1)
+#define PERIPHS_PIN_MUX_2 0x2e	/* register.h:421 */
+#define P_PERIPHS_PIN_MUX_2 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_2)
+#define PERIPHS_PIN_MUX_3 0x2f	/* register.h:422 */
+#define P_PERIPHS_PIN_MUX_3 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_3)
+#define PERIPHS_PIN_MUX_4 0x30	/* register.h:423 */
+#define P_PERIPHS_PIN_MUX_4 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_4)
+#define PERIPHS_PIN_MUX_5 0x31	/* register.h:424 */
+#define P_PERIPHS_PIN_MUX_5 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_5)
+#define PERIPHS_PIN_MUX_6 0x32	/* register.h:425 */
+#define P_PERIPHS_PIN_MUX_6 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_6)
+#define PERIPHS_PIN_MUX_7 0x33	/* register.h:426 */
+#define P_PERIPHS_PIN_MUX_7 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_7)
+#define PERIPHS_PIN_MUX_8 0x34	/* register.h:427 */
+#define P_PERIPHS_PIN_MUX_8 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_8)
+#define PERIPHS_PIN_MUX_9 0x35	/* register.h:428 */
+#define P_PERIPHS_PIN_MUX_9 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_9)
+#define PERIPHS_PIN_MUX_10 0x36	/* register.h:429 */
+#define P_PERIPHS_PIN_MUX_10 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_10)
+#define PERIPHS_PIN_MUX_11 0x37	/* register.h:430 */
+#define P_PERIPHS_PIN_MUX_11 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_11)
+#define PERIPHS_PIN_MUX_12 0x38	/* register.h:431 */
+#define P_PERIPHS_PIN_MUX_12 nCBUS_REG_ADDR(PERIPHS_PIN_MUX_12)
+
+#define PAD_PULL_UP_REG0 0x3a
+#define P_PAD_PULL_UP_REG0 nCBUS_REG_ADDR(PAD_PULL_UP_REG0)
+#define PAD_PULL_UP_REG1 0x3d
+#define P_PAD_PULL_UP_REG1 nCBUS_REG_ADDR(PAD_PULL_UP_REG1)
+#define PAD_PULL_UP_REG2 0x3c
+#define P_PAD_PULL_UP_REG2 nCBUS_REG_ADDR(PAD_PULL_UP_REG2)
+#define PAD_PULL_UP_REG3 0x3d
+#define P_PAD_PULL_UP_REG3 nCBUS_REG_ADDR(PAD_PULL_UP_REG3)
+#define PAD_PULL_UP_REG4 0x3d
+#define P_PAD_PULL_UP_REG4 nCBUS_REG_ADDR(PAD_PULL_UP_REG4)
+#define PAD_PULL_UP_EN_REG0 0x48
+#define P_PAD_PULL_UP_EN_REG0 nCBUS_REG_ADDR(PAD_PULL_UP_EN_REG0)
+#define PAD_PULL_UP_EN_REG1 0x49
+#define P_PAD_PULL_UP_EN_REG1 nCBUS_REG_ADDR(PAD_PULL_UP_EN_REG1)
+#define PAD_PULL_UP_EN_REG2 0x4a
+#define P_PAD_PULL_UP_EN_REG2 nCBUS_REG_ADDR(PAD_PULL_UP_EN_REG2)
+#define PAD_PULL_UP_EN_REG3 0x4b
+#define P_PAD_PULL_UP_EN_REG3 nCBUS_REG_ADDR(PAD_PULL_UP_EN_REG3)
+#define PAD_PULL_UP_EN_REG4 0x4c
+#define P_PAD_PULL_UP_EN_REG4 nCBUS_REG_ADDR(PAD_PULL_UP_EN_REG4)
+
+#define P_HHI_MEM_PD_REG0 (0xc883c000 + (0x40 << 2))
+#define P_HHI_VPU_MEM_PD_REG0 (0xc883c000 + (0x41 << 2))
+#define P_HHI_VPU_MEM_PD_REG1 (0xc883c000 + (0x42 << 2))
+#define P_HHI_AUD_DAC_CTRL (0xc883c000 + (0x44 << 2))
+#define P_HHI_VIID_CLK_DIV (0xc883c000 + (0x4a << 2))
+/* [19] -enable clk_div0 */
+/* [18:16] - cntl_clk_in_sel */
+#define P_HHI_VIID_CLK_CNTL (0xc883c000 + (0x4b << 2))
+#define P_HHI_VIID_DIVIDER_CNTL (0xc883c000 + (0x4c << 2))
+
+/*
+ *========================================================================
+ *  Global Control Registers			    (12'h000 - 12'h0ff)
+ *
+ *========================================================================
+ * -----------------------------------------------
+ * CBUS_BASE:  RESET_CBUS_BASE = 0x11
+ * -----------------------------------------------
+ */
+#define P_VERSION_CTRL ((0x00  << 2) + 0xc1104400)
+#define P_RESET0_REGISTER ((0x01  << 2) + 0xc1104400)
+#define P_RESET1_REGISTER ((0x02  << 2) + 0xc1104400)
+#define P_RESET2_REGISTER ((0x03  << 2) + 0xc1104400)
+#define P_RESET3_REGISTER ((0x04  << 2) + 0xc1104400)
+#define P_RESET4_REGISTER ((0x05  << 2) + 0xc1104400)
+#define P_RESET5_REGISTER ((0x06  << 2) + 0xc1104400)
+#define P_RESET6_REGISTER ((0x07  << 2) + 0xc1104400)
+#define P_RESET7_REGISTER ((0x08  << 2) + 0xc1104400)
+#define P_RESET0_MASK ((0x10  << 2) + 0xc1104400)
+#define P_RESET1_MASK ((0x11  << 2) + 0xc1104400)
+#define P_RESET2_MASK ((0x12  << 2) + 0xc1104400)
+#define P_RESET3_MASK ((0x13  << 2) + 0xc1104400)
+#define P_RESET4_MASK ((0x14  << 2) + 0xc1104400)
+#define P_RESET5_MASK ((0x15  << 2) + 0xc1104400)
+#define P_RESET6_MASK ((0x16  << 2) + 0xc1104400)
+
+/* Gated clock enables.
+ * There are 64 enables for the MPEG clocks and 32 enables for other
+ * clock domains.
+ */
+#define P_HHI_GCLK_MPEG0 (0xc883c000 + (0x50 << 2))
+#define P_HHI_GCLK_MPEG1 (0xc883c000 + (0x51 << 2))
+#define P_HHI_GCLK_MPEG2 (0xc883c000 + (0x52 << 2))
+#define P_HHI_GCLK_OTHER (0xc883c000 + (0x54 << 2))
+#define P_HHI_GCLK_AO (0xc883c000 + (0x55 << 2))
+#define P_HHI_SYS_OSCIN_CNTL (0xc883c000 + (0x56 << 2))
+#define P_HHI_SYS_CPU_CLK_CNTL1 (0xc883c000 + (0x57 << 2))
+#define P_HHI_SYS_CPU_RESET_CNTL (0xc883c000 + (0x58 << 2))
+/* [7:0]   - cntl_xd0 */
+#define P_HHI_VID_CLK_DIV (0xc883c000 + (0x59 << 2))
+#define P_HHI_MPEG_CLK_CNTL (0xc883c000 + (0x5d << 2))
+#define P_HHI_AUD_CLK_CNTL (0xc883c000 + (0x5e << 2))
+/* [18:16] - cntl_clk_in_sel */
+#define P_HHI_VID_CLK_CNTL (0xc883c000 + (0x5f << 2))
+#define P_HHI_WIFI_CLK_CNTL (0xc883c000 + (0x60 << 2))
+#define P_HHI_WIFI_PLL_CNTL (0xc883c000 + (0x61 << 2))
+#define P_HHI_WIFI_PLL_CNTL2 (0xc883c000 + (0x62 << 2))
+#define P_HHI_WIFI_PLL_CNTL3 (0xc883c000 + (0x63 << 2))
+#define P_HHI_AUD_CLK_CNTL2 (0xc883c000 + (0x64 << 2))
+#define P_HHI_VID_CLK_CNTL2 (0xc883c000 + (0x65 << 2))
+#define P_HHI_VID_DIVIDER_CNTL (0xc883c000 + (0x66 << 2))
+#define P_HHI_SYS_CPU_CLK_CNTL (0xc883c000 + (0x67 << 2))
+#define P_HHI_VID_PLL_CLK_DIV (0xc883c000 + (0x68 << 2))
+#define P_HHI_AUD_CLK_CNTL3 (0xc883c000 + (0x69 << 2))
+#define P_HHI_MALI_CLK_CNTL (0xc883c000 + (0x6c << 2))
+#define P_HHI_MIPI_PHY_CLK_CNTL (0xc883c000 + (0x6e << 2))
+#define P_HHI_VPU_CLK_CNTL (0xc883c000 + (0x6f << 2))
+#define P_HHI_OTHER_PLL_CNTL (0xc883c000 + (0x70 << 2))
+#define P_HHI_OTHER_PLL_CNTL2 (0xc883c000 + (0x71 << 2))
+#define P_HHI_OTHER_PLL_CNTL3 (0xc883c000 + (0x72 << 2))
+#define P_HHI_HDMI_CLK_CNTL (0xc883c000 + (0x73 << 2))
+#define P_HHI_DEMOD_CLK_CNTL (0xc883c000 + (0x74 << 2))
+#define P_HHI_SATA_CLK_CNTL (0xc883c000 + (0x75 << 2))
+#define P_HHI_ETH_CLK_CNTL (0xc883c000 + (0x76 << 2))
+#define P_HHI_CLK_DOUBLE_CNTL (0xc883c000 + (0x77 << 2))
+#define P_HHI_VDEC_CLK_CNTL (0xc883c000 + (0x78 << 2))
+#define P_HHI_VDEC2_CLK_CNTL (0xc883c000 + (0x79 << 2))
+#define P_HHI_VDEC3_CLK_CNTL (0xc883c000 + (0x7a << 2))
+#define P_HHI_VDEC4_CLK_CNTL (0xc883c000 + (0x7b << 2))
+#define P_HHI_HDCP22_CLK_CNTL (0xc883c000 + (0x7c << 2))
+#define P_HHI_VAPBCLK_CNTL (0xc883c000 + (0x7d << 2))
+#define P_HHI_VP9DEC_CLK_CNTL (0xc883c000 + (0x7e << 2))
+#define P_HHI_HDMI_AFC_CNTL (0xc883c000 + (0x7f << 2))
+#define P_HHI_HDMIRX_CLK_CNTL (0xc883c000 + (0x80 << 2))
+#define P_HHI_HDMIRX_AUD_CLK_CNTL (0xc883c000 + (0x81 << 2))
+#define P_HHI_EDP_APB_CLK_CNTL (0xc883c000 + (0x82 << 2))
+#define P_HHI_VPU_CLKB_CNTL (0xc883c000 + (0x83 << 2))
+#define P_HHI_VID_PLL_MOD_CNTL0 (0xc883c000 + (0x84 << 2))
+#define P_HHI_VID_PLL_MOD_LOW_TCNT (0xc883c000 + (0x85 << 2))
+#define P_HHI_VID_PLL_MOD_HIGH_TCNT (0xc883c000 + (0x86 << 2))
+#define P_HHI_VID_PLL_MOD_NOM_TCNT (0xc883c000 + (0x87 << 2))
+#define P_HHI_USB_CLK_CNTL (0xc883c000 + (0x88 << 2))
+#define P_HHI_32K_CLK_CNTL (0xc883c000 + (0x89 << 2))
+#define P_HHI_GEN_CLK_CNTL (0xc883c000 + (0x8a << 2))
+#define P_HHI_GEN_CLK_CNTL2 (0xc883c000 + (0x8b << 2))
+#define P_HHI_JTAG_CONFIG (0xc883c000 + (0x8e << 2))
+#define P_HHI_VAFE_CLKXTALIN_CNTL (0xc883c000 + (0x8f << 2))
+#define P_HHI_VAFE_CLKOSCIN_CNTL (0xc883c000 + (0x90 << 2))
+#define P_HHI_VAFE_CLKIN_CNTL (0xc883c000 + (0x91 << 2))
+#define P_HHI_TVFE_AUTOMODE_CLK_CNTL (0xc883c000 + (0x92 << 2))
+#define P_HHI_VAFE_CLKPI_CNTL (0xc883c000 + (0x93 << 2))
+#define P_HHI_VDIN_MEAS_CLK_CNTL (0xc883c000 + (0x94 << 2))
+#define P_HHI_PCM_CLK_CNTL (0xc883c000 + (0x96 << 2))
+#define P_HHI_NAND_CLK_CNTL (0xc883c000 + (0x97 << 2))
+#define P_HHI_ISP_LED_CLK_CNTL (0xc883c000 + (0x98 << 2))
+#define P_HHI_SD_EMMC_CLK_CNTL (0xc883c000 + (0x99 << 2))
+#define P_HHI_EDP_TX_PHY_CNTL0 (0xc883c000 + (0x9c << 2))
+#define P_HHI_EDP_TX_PHY_CNTL1 (0xc883c000 + (0x9d << 2))
+#define P_HHI_MPLL_CNTL (0xc883c000 + (0xa0 << 2))
+#define P_HHI_MPLL_CNTL2 (0xc883c000 + (0xa1 << 2))
+#define P_HHI_MPLL_CNTL3 (0xc883c000 + (0xa2 << 2))
+#define P_HHI_MPLL_CNTL4 (0xc883c000 + (0xa3 << 2))
+#define P_HHI_MPLL_CNTL5 (0xc883c000 + (0xa4 << 2))
+#define P_HHI_MPLL_CNTL6 (0xc883c000 + (0xa5 << 2))
+#define P_HHI_MPLL_CNTL7 (0xc883c000 + (0xa6 << 2))
+#define P_HHI_MPLL_CNTL8 (0xc883c000 + (0xa7 << 2))
+#define P_HHI_MPLL_CNTL9 (0xc883c000 + (0xa8 << 2))
+#define P_HHI_MPLL_CNTL10 (0xc883c000 + (0xa9 << 2))
+#define P_HHI_ADC_PLL_CNTL (0xc883c000 + (0xaa << 2))
+#define P_HHI_ADC_PLL_CNTL2 (0xc883c000 + (0xab << 2))
+#define P_HHI_ADC_PLL_CNTL3 (0xc883c000 + (0xac << 2))
+#define P_HHI_ADC_PLL_CNTL4 (0xc883c000 + (0xad << 2))
+#define P_HHI_ADC_PLL_CNTL_I (0xc883c000 + (0xae << 2))
+#define P_HHI_AUDCLK_PLL_CNTL (0xc883c000 + (0xb0 << 2))
+#define P_HHI_AUDCLK_PLL_CNTL2 (0xc883c000 + (0xb1 << 2))
+#define P_HHI_AUDCLK_PLL_CNTL3 (0xc883c000 + (0xb2 << 2))
+#define P_HHI_AUDCLK_PLL_CNTL4 (0xc883c000 + (0xb3 << 2))
+#define P_HHI_AUDCLK_PLL_CNTL5 (0xc883c000 + (0xb4 << 2))
+#define P_HHI_AUDCLK_PLL_CNTL6 (0xc883c000 + (0xb5 << 2))
+#define P_HHI_L2_DDR_CLK_CNTL (0xc883c000 + (0xb6 << 2))
+#define P_HHI_MPLL3_CNTL0 (0xc883c000 + (0xb8 << 2))
+#define P_HHI_MPLL3_CNTL1 (0xc883c000 + (0xb9 << 2))
+#define P_HHI_VDAC_CNTL0 (0xc883c000 + (0xbd << 2))
+#define P_HHI_VDAC_CNTL1 (0xc883c000 + (0xbe << 2))
+#define P_HHI_SYS_PLL_CNTL (0xc883c000 + (0xc0 << 2))
+#define P_HHI_SYS_PLL_CNTL2 (0xc883c000 + (0xc1 << 2))
+#define P_HHI_SYS_PLL_CNTL3 (0xc883c000 + (0xc2 << 2))
+#define P_HHI_SYS_PLL_CNTL4 (0xc883c000 + (0xc3 << 2))
+#define P_HHI_SYS_PLL_CNTL5 (0xc883c000 + (0xc4 << 2))
+#define P_HHI_DPLL_TOP_I (0xc883c000 + (0xc6 << 2))
+#define P_HHI_DPLL_TOP2_I (0xc883c000 + (0xc7 << 2))
+#define P_HHI_HDMI_PLL_CNTL (0xc883c000 + (0xc8 << 2))
+#define P_HHI_HDMI_PLL_CNTL2 (0xc883c000 + (0xc9 << 2))
+#define P_HHI_HDMI_PLL_CNTL3 (0xc883c000 + (0xca << 2))
+#define P_HHI_HDMI_PLL_CNTL4 (0xc883c000 + (0xcb << 2))
+#define P_HHI_HDMI_PLL_CNTL5 (0xc883c000 + (0xcc << 2))
+#define P_HHI_HDMI_PLL_CNTL6 (0xc883c000 + (0xcd << 2))
+#define P_HHI_HDMI_PLL_CNTL_I (0xc883c000 + (0xce << 2))
+#define P_HHI_HDMI_PLL_CNTL7 (0xc883c000 + (0xcf << 2))
+#define P_HHI_DSI_LVDS_EDP_CNTL0 (0xc883c000 + (0xd1 << 2))
+#define P_HHI_DSI_LVDS_EDP_CNTL1 (0xc883c000 + (0xd2 << 2))
+#define P_HHI_CSI_PHY_CNTL0 (0xc883c000 + (0xd3 << 2))
+#define P_HHI_CSI_PHY_CNTL1 (0xc883c000 + (0xd4 << 2))
+#define P_HHI_CSI_PHY_CNTL2 (0xc883c000 + (0xd5 << 2))
+#define P_HHI_CSI_PHY_CNTL3 (0xc883c000 + (0xd6 << 2))
+#define P_HHI_CSI_PHY_CNTL4 (0xc883c000 + (0xd7 << 2))
+#define P_HHI_DIF_CSI_PHY_CNTL0 (0xc883c000 + (0xd8 << 2))
+#define P_HHI_DIF_CSI_PHY_CNTL1 (0xc883c000 + (0xd9 << 2))
+#define P_HHI_DIF_CSI_PHY_CNTL2 (0xc883c000 + (0xda << 2))
+#define P_HHI_DIF_CSI_PHY_CNTL3 (0xc883c000 + (0xdb << 2))
+#define P_HHI_DIF_CSI_PHY_CNTL4 (0xc883c000 + (0xdc << 2))
+#define P_HHI_DIF_CSI_PHY_CNTL5 (0xc883c000 + (0xdd << 2))
+#define P_HHI_LVDS_TX_PHY_CNTL0 (0xc883c000 + (0xde << 2))
+#define P_HHI_LVDS_TX_PHY_CNTL1 (0xc883c000 + (0xdf << 2))
+#define P_HHI_VID2_PLL_CNTL (0xc883c000 + (0xe0 << 2))
+#define P_HHI_VID2_PLL_CNTL2 (0xc883c000 + (0xe1 << 2))
+#define P_HHI_VID2_PLL_CNTL3 (0xc883c000 + (0xe2 << 2))
+#define P_HHI_VID2_PLL_CNTL4 (0xc883c000 + (0xe3 << 2))
+#define P_HHI_VID2_PLL_CNTL5 (0xc883c000 + (0xe4 << 2))
+#define P_HHI_VID2_PLL_CNTL_I (0xc883c000 + (0xe5 << 2))
+#define P_HHI_HDMI_PHY_CNTL0 (0xc883c000 + (0xe8 << 2))
+#define P_HHI_HDMI_PHY_CNTL1 (0xc883c000 + (0xe9 << 2))
+#define P_HHI_HDMI_PHY_CNTL2 (0xc883c000 + (0xea << 2))
+#define P_HHI_HDMI_PHY_CNTL3 (0xc883c000 + (0xeb << 2))
+#define P_HHI_VID_LOCK_CLK_CNTL (0xc883c000 + (0xf2 << 2))
+#define P_HHI_ATV_DMD_SYS_CLK_CNTL (0xc883c000 + (0xf3 << 2))
+#define P_HHI_BT656_CLK_CNTL (0xc883c000 + (0xf5 << 2))
+#define P_HHI_SAR_CLK_CNTL (0xc883c000 + (0xf6 << 2))
+#define P_HHI_HDMIRX_AUD_PLL_CNTL (0xc883c000 + (0xf8 << 2))
+#define P_HHI_HDMIRX_AUD_PLL_CNTL2 (0xc883c000 + (0xf9 << 2))
+#define P_HHI_HDMIRX_AUD_PLL_CNTL3 (0xc883c000 + (0xfa << 2))
+#define P_HHI_HDMIRX_AUD_PLL_CNTL4 (0xc883c000 + (0xfb << 2))
+#define P_HHI_HDMIRX_AUD_PLL_CNTL5 (0xc883c000 + (0xfc << 2))
+#define P_HHI_HDMIRX_AUD_PLL_CNTL6 (0xc883c000 + (0xfd << 2))
+#define P_HHI_HDMIRX_AUD_PLL_CNTL_I (0xc883c000 + (0xfe << 2))
+
+#define AIU_HDMI_CLK_DATA_CTRL 0x152a	/* register.h:2466 */
+#define P_AIU_HDMI_CLK_DATA_CTRL CBUS_REG_ADDR(AIU_HDMI_CLK_DATA_CTRL)
+
+#define ISA_DEBUG_REG0 0x2600
+#define P_ISA_DEBUG_REG0 CBUS_REG_ADDR(ISA_DEBUG_REG0)
+
+#define VENC_DVI_SETTING 0x1b62	/* register.h:8014 */
+#define P_VENC_DVI_SETTING VCBUS_REG_ADDR(VENC_DVI_SETTING)
+
+#define VENC_VIDEO_TST_EN 0x1b70
+#define P_VENC_VIDEO_TST_EN VCBUS_REG_ADDR(VENC_VIDEO_TST_EN)
+#define VENC_VIDEO_TST_MDSEL 0x1b71
+#define P_VENC_VIDEO_TST_MDSEL VCBUS_REG_ADDR(VENC_VIDEO_TST_MDSEL)
+#define VENC_VIDEO_TST_Y 0x1b72
+#define P_VENC_VIDEO_TST_Y VCBUS_REG_ADDR(VENC_VIDEO_TST_Y)
+#define VENC_VIDEO_TST_CB 0x1b73
+#define P_VENC_VIDEO_TST_CB VCBUS_REG_ADDR(VENC_VIDEO_TST_CB)
+#define VENC_VIDEO_TST_CR 0x1b74
+#define P_VENC_VIDEO_TST_CR VCBUS_REG_ADDR(VENC_VIDEO_TST_CR)
+#define VENC_VIDEO_TST_CLRBAR_STRT 0x1b75
+#define P_VENC_VIDEO_TST_CLRBAR_STRT VCBUS_REG_ADDR(VENC_VIDEO_TST_CLRBAR_STRT)
+#define VENC_VIDEO_TST_CLRBAR_WIDTH 0x1b76
+#define P_VENC_VIDEO_TST_CLRBAR_WIDTH \
+		VCBUS_REG_ADDR(VENC_VIDEO_TST_CLRBAR_WIDTH)
+#define VENC_VIDEO_TST_VDCNT_STSET 0x1b77
+#define P_VENC_VIDEO_TST_VDCNT_STSET VCBUS_REG_ADDR(VENC_VIDEO_TST_VDCNT_STSET)
+#define VENC_VDAC_SETTING 0x1b7e
+#define P_VENC_VDAC_SETTING VCBUS_REG_ADDR(VENC_VDAC_SETTING)
+#define ENCP_VIDEO_EN 0x1b80	/* register.h:8078 */
+#define P_ENCP_VIDEO_EN VCBUS_REG_ADDR(ENCP_VIDEO_EN)
+#define ENCP_VIDEO_SYNC_MODE 0x1b81	/* register.h:8079 */
+#define P_ENCP_VIDEO_SYNC_MODE VCBUS_REG_ADDR(ENCP_VIDEO_SYNC_MODE)
+#define ENCP_MACV_EN 0x1b82	/* register.h:8080 */
+#define P_ENCP_MACV_EN VCBUS_REG_ADDR(ENCP_MACV_EN)
+#define ENCP_VIDEO_Y_SCL 0x1b83	/* register.h:8081 */
+#define P_ENCP_VIDEO_Y_SCL VCBUS_REG_ADDR(ENCP_VIDEO_Y_SCL)
+#define ENCP_VIDEO_PB_SCL 0x1b84	/* register.h:8082 */
+#define P_ENCP_VIDEO_PB_SCL VCBUS_REG_ADDR(ENCP_VIDEO_PB_SCL)
+#define ENCP_VIDEO_PR_SCL 0x1b85	/* register.h:8083 */
+#define P_ENCP_VIDEO_PR_SCL VCBUS_REG_ADDR(ENCP_VIDEO_PR_SCL)
+#define ENCP_VIDEO_SYNC_SCL 0x1b86	/* register.h:8084 */
+#define P_ENCP_VIDEO_SYNC_SCL VCBUS_REG_ADDR(ENCP_VIDEO_SYNC_SCL)
+#define ENCP_VIDEO_MACV_SCL 0x1b87	/* register.h:8085 */
+#define P_ENCP_VIDEO_MACV_SCL VCBUS_REG_ADDR(ENCP_VIDEO_MACV_SCL)
+#define ENCP_VIDEO_Y_OFFST 0x1b88	/* register.h:8086 */
+#define P_ENCP_VIDEO_Y_OFFST VCBUS_REG_ADDR(ENCP_VIDEO_Y_OFFST)
+#define ENCP_VIDEO_PB_OFFST 0x1b89	/* register.h:8087 */
+#define P_ENCP_VIDEO_PB_OFFST VCBUS_REG_ADDR(ENCP_VIDEO_PB_OFFST)
+#define ENCP_VIDEO_PR_OFFST 0x1b8a	/* register.h:8088 */
+#define P_ENCP_VIDEO_PR_OFFST VCBUS_REG_ADDR(ENCP_VIDEO_PR_OFFST)
+#define ENCP_VIDEO_SYNC_OFFST 0x1b8b	/* register.h:8089 */
+#define P_ENCP_VIDEO_SYNC_OFFST VCBUS_REG_ADDR(ENCP_VIDEO_SYNC_OFFST)
+#define ENCP_VIDEO_MACV_OFFST 0x1b8c	/* register.h:8090 */
+#define P_ENCP_VIDEO_MACV_OFFST VCBUS_REG_ADDR(ENCP_VIDEO_MACV_OFFST)
+#define ENCP_VIDEO_MODE 0x1b8d	/* register.h:8092 */
+#define P_ENCP_VIDEO_MODE VCBUS_REG_ADDR(ENCP_VIDEO_MODE)
+#define ENCP_VIDEO_MODE_ADV 0x1b8e	/* register.h:8093 */
+#define P_ENCP_VIDEO_MODE_ADV VCBUS_REG_ADDR(ENCP_VIDEO_MODE_ADV)
+#define ENCP_DBG_PX_RST 0x1b90	/* register.h:8095 */
+#define P_ENCP_DBG_PX_RST VCBUS_REG_ADDR(ENCP_DBG_PX_RST)
+#define ENCP_DBG_LN_RST 0x1b91	/* register.h:8096 */
+#define P_ENCP_DBG_LN_RST VCBUS_REG_ADDR(ENCP_DBG_LN_RST)
+#define ENCP_DBG_PX_INT 0x1b92	/* register.h:8097 */
+#define P_ENCP_DBG_PX_INT VCBUS_REG_ADDR(ENCP_DBG_PX_INT)
+#define ENCP_DBG_LN_INT 0x1b93	/* register.h:8098 */
+#define P_ENCP_DBG_LN_INT VCBUS_REG_ADDR(ENCP_DBG_LN_INT)
+#define ENCP_VIDEO_YFP1_HTIME 0x1b94	/* register.h:8100 */
+#define P_ENCP_VIDEO_YFP1_HTIME VCBUS_REG_ADDR(ENCP_VIDEO_YFP1_HTIME)
+#define ENCP_VIDEO_YFP2_HTIME 0x1b95	/* register.h:8101 */
+#define P_ENCP_VIDEO_YFP2_HTIME VCBUS_REG_ADDR(ENCP_VIDEO_YFP2_HTIME)
+#define ENCP_VIDEO_YC_DLY 0x1b96	/* register.h:8102 */
+#define P_ENCP_VIDEO_YC_DLY VCBUS_REG_ADDR(ENCP_VIDEO_YC_DLY)
+#define ENCP_VIDEO_MAX_PXCNT 0x1b97	/* register.h:8103 */
+#define P_ENCP_VIDEO_MAX_PXCNT VCBUS_REG_ADDR(ENCP_VIDEO_MAX_PXCNT)
+#define ENCP_VIDEO_HSPULS_BEGIN 0x1b98	/* register.h:8104 */
+#define P_ENCP_VIDEO_HSPULS_BEGIN VCBUS_REG_ADDR(ENCP_VIDEO_HSPULS_BEGIN)
+#define ENCP_VIDEO_HSPULS_END 0x1b99	/* register.h:8105 */
+#define P_ENCP_VIDEO_HSPULS_END VCBUS_REG_ADDR(ENCP_VIDEO_HSPULS_END)
+#define ENCP_VIDEO_HSPULS_SWITCH 0x1b9a	/* register.h:8106 */
+#define P_ENCP_VIDEO_HSPULS_SWITCH VCBUS_REG_ADDR(ENCP_VIDEO_HSPULS_SWITCH)
+#define ENCP_VIDEO_VSPULS_BEGIN 0x1b9b	/* register.h:8107 */
+#define P_ENCP_VIDEO_VSPULS_BEGIN VCBUS_REG_ADDR(ENCP_VIDEO_VSPULS_BEGIN)
+#define ENCP_VIDEO_VSPULS_END 0x1b9c	/* register.h:8108 */
+#define P_ENCP_VIDEO_VSPULS_END VCBUS_REG_ADDR(ENCP_VIDEO_VSPULS_END)
+#define ENCP_VIDEO_VSPULS_BLINE 0x1b9d	/* register.h:8109 */
+#define P_ENCP_VIDEO_VSPULS_BLINE VCBUS_REG_ADDR(ENCP_VIDEO_VSPULS_BLINE)
+#define ENCP_VIDEO_VSPULS_ELINE 0x1b9e	/* register.h:8110 */
+#define P_ENCP_VIDEO_VSPULS_ELINE VCBUS_REG_ADDR(ENCP_VIDEO_VSPULS_ELINE)
+#define ENCP_VIDEO_EQPULS_BEGIN 0x1b9f	/* register.h:8111 */
+#define P_ENCP_VIDEO_EQPULS_BEGIN VCBUS_REG_ADDR(ENCP_VIDEO_EQPULS_BEGIN)
+#define ENCP_VIDEO_EQPULS_END 0x1ba0	/* register.h:8112 */
+#define P_ENCP_VIDEO_EQPULS_END VCBUS_REG_ADDR(ENCP_VIDEO_EQPULS_END)
+#define ENCP_VIDEO_EQPULS_BLINE 0x1ba1	/* register.h:8113 */
+#define P_ENCP_VIDEO_EQPULS_BLINE VCBUS_REG_ADDR(ENCP_VIDEO_EQPULS_BLINE)
+#define ENCP_VIDEO_EQPULS_ELINE 0x1ba2	/* register.h:8114 */
+#define P_ENCP_VIDEO_EQPULS_ELINE VCBUS_REG_ADDR(ENCP_VIDEO_EQPULS_ELINE)
+#define ENCP_VIDEO_HAVON_END 0x1ba3	/* register.h:8115 */
+#define P_ENCP_VIDEO_HAVON_END VCBUS_REG_ADDR(ENCP_VIDEO_HAVON_END)
+#define ENCP_VIDEO_HAVON_BEGIN 0x1ba4	/* register.h:8116 */
+#define P_ENCP_VIDEO_HAVON_BEGIN VCBUS_REG_ADDR(ENCP_VIDEO_HAVON_BEGIN)
+#define ENCP_VIDEO_VAVON_ELINE 0x1baf	/* register.h:8117 */
+#define P_ENCP_VIDEO_VAVON_ELINE VCBUS_REG_ADDR(ENCP_VIDEO_VAVON_ELINE)
+#define ENCP_VIDEO_VAVON_BLINE 0x1ba6	/* register.h:8118 */
+#define P_ENCP_VIDEO_VAVON_BLINE VCBUS_REG_ADDR(ENCP_VIDEO_VAVON_BLINE)
+#define ENCP_VIDEO_HSO_BEGIN 0x1ba7	/* register.h:8119 */
+#define P_ENCP_VIDEO_HSO_BEGIN VCBUS_REG_ADDR(ENCP_VIDEO_HSO_BEGIN)
+#define ENCP_VIDEO_HSO_END 0x1ba8	/* register.h:8120 */
+#define P_ENCP_VIDEO_HSO_END VCBUS_REG_ADDR(ENCP_VIDEO_HSO_END)
+#define ENCP_VIDEO_VSO_BEGIN 0x1ba9	/* register.h:8121 */
+#define P_ENCP_VIDEO_VSO_BEGIN VCBUS_REG_ADDR(ENCP_VIDEO_VSO_BEGIN)
+#define ENCP_VIDEO_VSO_END 0x1baa	/* register.h:8122 */
+#define P_ENCP_VIDEO_VSO_END VCBUS_REG_ADDR(ENCP_VIDEO_VSO_END)
+#define ENCP_VIDEO_VSO_BLINE 0x1bab	/* register.h:8123 */
+#define P_ENCP_VIDEO_VSO_BLINE VCBUS_REG_ADDR(ENCP_VIDEO_VSO_BLINE)
+#define ENCP_VIDEO_VSO_ELINE 0x1bac	/* register.h:8124 */
+#define P_ENCP_VIDEO_VSO_ELINE VCBUS_REG_ADDR(ENCP_VIDEO_VSO_ELINE)
+#define ENCP_VIDEO_SYNC_WAVE_CURVE 0x1bad	/* register.h:8125 */
+#define P_ENCP_VIDEO_SYNC_WAVE_CURVE VCBUS_REG_ADDR(ENCP_VIDEO_SYNC_WAVE_CURVE)
+#define ENCP_VIDEO_MAX_LNCNT 0x1bae	/* register.h:8126 */
+#define P_ENCP_VIDEO_MAX_LNCNT VCBUS_REG_ADDR(ENCP_VIDEO_MAX_LNCNT)
+#define ENCP_VIDEO_SY_VAL 0x1bb0	/* register.h:8127 */
+#define P_ENCP_VIDEO_SY_VAL VCBUS_REG_ADDR(ENCP_VIDEO_SY_VAL)
+#define ENCP_VIDEO_SY2_VAL 0x1bb1	/* register.h:8128 */
+#define P_ENCP_VIDEO_SY2_VAL VCBUS_REG_ADDR(ENCP_VIDEO_SY2_VAL)
+#define ENCP_VIDEO_BLANKY_VAL 0x1bb2	/* register.h:8129 */
+#define P_ENCP_VIDEO_BLANKY_VAL VCBUS_REG_ADDR(ENCP_VIDEO_BLANKY_VAL)
+#define ENCP_VIDEO_BLANKPB_VAL 0x1bb3	/* register.h:8130 */
+#define P_ENCP_VIDEO_BLANKPB_VAL VCBUS_REG_ADDR(ENCP_VIDEO_BLANKPB_VAL)
+#define ENCP_VIDEO_BLANKPR_VAL 0x1bb4	/* register.h:8131 */
+#define P_ENCP_VIDEO_BLANKPR_VAL VCBUS_REG_ADDR(ENCP_VIDEO_BLANKPR_VAL)
+#define ENCP_VIDEO_HOFFST 0x1bb5	/* register.h:8132 */
+#define P_ENCP_VIDEO_HOFFST VCBUS_REG_ADDR(ENCP_VIDEO_HOFFST)
+#define ENCP_VIDEO_VOFFST 0x1bb6	/* register.h:8133 */
+#define P_ENCP_VIDEO_VOFFST VCBUS_REG_ADDR(ENCP_VIDEO_VOFFST)
+#define ENCP_VIDEO_RGB_CTRL 0x1bb7	/* register.h:8134 */
+#define P_ENCP_VIDEO_RGB_CTRL VCBUS_REG_ADDR(ENCP_VIDEO_RGB_CTRL)
+#define ENCP_VIDEO_FILT_CTRL 0x1bb8	/* register.h:8135 */
+#define P_ENCP_VIDEO_FILT_CTRL VCBUS_REG_ADDR(ENCP_VIDEO_FILT_CTRL)
+#define ENCP_VIDEO_OFLD_VPEQ_OFST 0x1bb9	/* register.h:8136 */
+#define P_ENCP_VIDEO_OFLD_VPEQ_OFST VCBUS_REG_ADDR(ENCP_VIDEO_OFLD_VPEQ_OFST)
+#define ENCP_VIDEO_OFLD_VOAV_OFST 0x1bba	/* register.h:8137 */
+#define P_ENCP_VIDEO_OFLD_VOAV_OFST VCBUS_REG_ADDR(ENCP_VIDEO_OFLD_VOAV_OFST)
+#define ENCP_VIDEO_MATRIX_CB 0x1bbb	/* register.h:8138 */
+#define P_ENCP_VIDEO_MATRIX_CB VCBUS_REG_ADDR(ENCP_VIDEO_MATRIX_CB)
+#define ENCP_VIDEO_MATRIX_CR 0x1bbc	/* register.h:8139 */
+#define P_ENCP_VIDEO_MATRIX_CR VCBUS_REG_ADDR(ENCP_VIDEO_MATRIX_CR)
+#define ENCP_VIDEO_RGBIN_CTRL 0x1bbd	/* register.h:8140 */
+#define P_ENCP_VIDEO_RGBIN_CTRL VCBUS_REG_ADDR(ENCP_VIDEO_RGBIN_CTRL)
+#define ENCP_MACV_BLANKY_VAL 0x1bc0	/* register.h:8142 */
+#define P_ENCP_MACV_BLANKY_VAL VCBUS_REG_ADDR(ENCP_MACV_BLANKY_VAL)
+#define ENCP_MACV_MAXY_VAL 0x1bc1	/* register.h:8143 */
+#define P_ENCP_MACV_MAXY_VAL VCBUS_REG_ADDR(ENCP_MACV_MAXY_VAL)
+#define ENCP_MACV_1ST_PSSYNC_STRT 0x1bc2	/* register.h:8144 */
+#define P_ENCP_MACV_1ST_PSSYNC_STRT VCBUS_REG_ADDR(ENCP_MACV_1ST_PSSYNC_STRT)
+#define ENCP_MACV_PSSYNC_STRT 0x1bc3	/* register.h:8145 */
+#define P_ENCP_MACV_PSSYNC_STRT VCBUS_REG_ADDR(ENCP_MACV_PSSYNC_STRT)
+#define ENCP_MACV_AGC_STRT 0x1bc4	/* register.h:8146 */
+#define P_ENCP_MACV_AGC_STRT VCBUS_REG_ADDR(ENCP_MACV_AGC_STRT)
+#define ENCP_MACV_AGC_END 0x1bc5	/* register.h:8147 */
+#define P_ENCP_MACV_AGC_END VCBUS_REG_ADDR(ENCP_MACV_AGC_END)
+#define ENCP_MACV_WAVE_END 0x1bc6	/* register.h:8148 */
+#define P_ENCP_MACV_WAVE_END VCBUS_REG_ADDR(ENCP_MACV_WAVE_END)
+#define ENCP_MACV_STRTLINE 0x1bc7	/* register.h:8149 */
+#define P_ENCP_MACV_STRTLINE VCBUS_REG_ADDR(ENCP_MACV_STRTLINE)
+#define ENCP_MACV_ENDLINE 0x1bc8	/* register.h:8150 */
+#define P_ENCP_MACV_ENDLINE VCBUS_REG_ADDR(ENCP_MACV_ENDLINE)
+#define ENCP_MACV_TS_CNT_MAX_L 0x1bc9	/* register.h:8151 */
+#define P_ENCP_MACV_TS_CNT_MAX_L VCBUS_REG_ADDR(ENCP_MACV_TS_CNT_MAX_L)
+#define ENCP_MACV_TS_CNT_MAX_H 0x1bca	/* register.h:8152 */
+#define P_ENCP_MACV_TS_CNT_MAX_H VCBUS_REG_ADDR(ENCP_MACV_TS_CNT_MAX_H)
+#define ENCP_MACV_TIME_DOWN 0x1bcb	/* register.h:8153 */
+#define P_ENCP_MACV_TIME_DOWN VCBUS_REG_ADDR(ENCP_MACV_TIME_DOWN)
+#define ENCP_MACV_TIME_LO 0x1bcc	/* register.h:8154 */
+#define P_ENCP_MACV_TIME_LO VCBUS_REG_ADDR(ENCP_MACV_TIME_LO)
+#define ENCP_MACV_TIME_UP 0x1bcd	/* register.h:8155 */
+#define P_ENCP_MACV_TIME_UP VCBUS_REG_ADDR(ENCP_MACV_TIME_UP)
+#define ENCP_MACV_TIME_RST 0x1bce	/* register.h:8156 */
+#define P_ENCP_MACV_TIME_RST VCBUS_REG_ADDR(ENCP_MACV_TIME_RST)
+#define ENCP_VBI_CTRL 0x1bd0	/* register.h:8158 */
+#define P_ENCP_VBI_CTRL VCBUS_REG_ADDR(ENCP_VBI_CTRL)
+#define ENCP_VBI_SETTING 0x1bd1	/* register.h:8159 */
+#define P_ENCP_VBI_SETTING VCBUS_REG_ADDR(ENCP_VBI_SETTING)
+#define ENCP_VBI_BEGIN 0x1bd2	/* register.h:8160 */
+#define P_ENCP_VBI_BEGIN VCBUS_REG_ADDR(ENCP_VBI_BEGIN)
+#define ENCP_VBI_WIDTH 0x1bd3	/* register.h:8161 */
+#define P_ENCP_VBI_WIDTH VCBUS_REG_ADDR(ENCP_VBI_WIDTH)
+#define ENCP_VBI_HVAL 0x1bd4	/* register.h:8162 */
+#define P_ENCP_VBI_HVAL VCBUS_REG_ADDR(ENCP_VBI_HVAL)
+#define ENCP_VBI_DATA0 0x1bd5	/* register.h:8163 */
+#define P_ENCP_VBI_DATA0 VCBUS_REG_ADDR(ENCP_VBI_DATA0)
+#define ENCP_VBI_DATA1 0x1bd6	/* register.h:8164 */
+#define P_ENCP_VBI_DATA1 VCBUS_REG_ADDR(ENCP_VBI_DATA1)
+
+#define ENCI_VIDEO_MODE 0x1b00	/* register.h:8185 */
+#define P_ENCI_VIDEO_MODE VCBUS_REG_ADDR(ENCI_VIDEO_MODE)
+#define ENCI_VIDEO_MODE_ADV 0x1b01	/* register.h:8186 */
+#define P_ENCI_VIDEO_MODE_ADV VCBUS_REG_ADDR(ENCI_VIDEO_MODE_ADV)
+#define ENCI_VIDEO_FSC_ADJ 0x1b02	/* register.h:8187 */
+#define P_ENCI_VIDEO_FSC_ADJ VCBUS_REG_ADDR(ENCI_VIDEO_FSC_ADJ)
+#define ENCI_VIDEO_BRIGHT 0x1b03	/* register.h:8188 */
+#define P_ENCI_VIDEO_BRIGHT VCBUS_REG_ADDR(ENCI_VIDEO_BRIGHT)
+#define ENCI_VIDEO_CONT 0x1b04	/* register.h:8189 */
+#define P_ENCI_VIDEO_CONT VCBUS_REG_ADDR(ENCI_VIDEO_CONT)
+#define ENCI_VIDEO_SAT 0x1b05	/* register.h:8190 */
+#define P_ENCI_VIDEO_SAT VCBUS_REG_ADDR(ENCI_VIDEO_SAT)
+#define ENCI_VIDEO_HUE 0x1b06	/* register.h:8191 */
+#define P_ENCI_VIDEO_HUE VCBUS_REG_ADDR(ENCI_VIDEO_HUE)
+#define ENCI_VIDEO_SCH 0x1b07	/* register.h:8192 */
+#define P_ENCI_VIDEO_SCH VCBUS_REG_ADDR(ENCI_VIDEO_SCH)
+#define ENCI_SYNC_MODE 0x1b08	/* register.h:8193 */
+#define P_ENCI_SYNC_MODE VCBUS_REG_ADDR(ENCI_SYNC_MODE)
+#define ENCI_SYNC_CTRL 0x1b09	/* register.h:8194 */
+#define P_ENCI_SYNC_CTRL VCBUS_REG_ADDR(ENCI_SYNC_CTRL)
+#define ENCI_SYNC_HSO_BEGIN 0x1b0a	/* register.h:8195 */
+#define P_ENCI_SYNC_HSO_BEGIN VCBUS_REG_ADDR(ENCI_SYNC_HSO_BEGIN)
+#define ENCI_SYNC_HSO_END 0x1b0b	/* register.h:8196 */
+#define P_ENCI_SYNC_HSO_END VCBUS_REG_ADDR(ENCI_SYNC_HSO_END)
+#define ENCI_SYNC_VSO_EVN 0x1b0c	/* register.h:8197 */
+#define P_ENCI_SYNC_VSO_EVN VCBUS_REG_ADDR(ENCI_SYNC_VSO_EVN)
+#define ENCI_SYNC_VSO_ODD 0x1b0d	/* register.h:8198 */
+#define P_ENCI_SYNC_VSO_ODD VCBUS_REG_ADDR(ENCI_SYNC_VSO_ODD)
+#define ENCI_SYNC_VSO_EVNLN 0x1b0e	/* register.h:8199 */
+#define P_ENCI_SYNC_VSO_EVNLN VCBUS_REG_ADDR(ENCI_SYNC_VSO_EVNLN)
+#define ENCI_SYNC_VSO_ODDLN 0x1b0f	/* register.h:8200 */
+#define P_ENCI_SYNC_VSO_ODDLN VCBUS_REG_ADDR(ENCI_SYNC_VSO_ODDLN)
+#define ENCI_SYNC_HOFFST 0x1b10	/* register.h:8201 */
+#define P_ENCI_SYNC_HOFFST VCBUS_REG_ADDR(ENCI_SYNC_HOFFST)
+#define ENCI_SYNC_VOFFST 0x1b11	/* register.h:8202 */
+#define P_ENCI_SYNC_VOFFST VCBUS_REG_ADDR(ENCI_SYNC_VOFFST)
+#define ENCI_SYNC_ADJ 0x1b12	/* register.h:8203 */
+#define P_ENCI_SYNC_ADJ VCBUS_REG_ADDR(ENCI_SYNC_ADJ)
+#define ENCI_RGB_SETTING 0x1b13	/* register.h:8204 */
+#define P_ENCI_RGB_SETTING VCBUS_REG_ADDR(ENCI_RGB_SETTING)
+#define ENCI_DE_H_BEGIN 0x1b16	/* register.h:8207 */
+#define P_ENCI_DE_H_BEGIN VCBUS_REG_ADDR(ENCI_DE_H_BEGIN)
+#define ENCI_DE_H_END 0x1b17	/* register.h:8208 */
+#define P_ENCI_DE_H_END VCBUS_REG_ADDR(ENCI_DE_H_END)
+#define ENCI_DE_V_BEGIN_EVEN 0x1b18	/* register.h:8209 */
+#define P_ENCI_DE_V_BEGIN_EVEN VCBUS_REG_ADDR(ENCI_DE_V_BEGIN_EVEN)
+#define ENCI_DE_V_END_EVEN 0x1b19	/* register.h:8210 */
+#define P_ENCI_DE_V_END_EVEN VCBUS_REG_ADDR(ENCI_DE_V_END_EVEN)
+#define ENCI_DE_V_BEGIN_ODD 0x1b1a	/* register.h:8211 */
+#define P_ENCI_DE_V_BEGIN_ODD VCBUS_REG_ADDR(ENCI_DE_V_BEGIN_ODD)
+#define ENCI_DE_V_END_ODD 0x1b1b	/* register.h:8212 */
+#define P_ENCI_DE_V_END_ODD VCBUS_REG_ADDR(ENCI_DE_V_END_ODD)
+#define ENCI_VBI_SETTING 0x1b20	/* register.h:8213 */
+#define P_ENCI_VBI_SETTING VCBUS_REG_ADDR(ENCI_VBI_SETTING)
+#define ENCI_VBI_CCDT_EVN 0x1b21	/* register.h:8214 */
+#define P_ENCI_VBI_CCDT_EVN VCBUS_REG_ADDR(ENCI_VBI_CCDT_EVN)
+#define ENCI_VBI_CCDT_ODD 0x1b22	/* register.h:8215 */
+#define P_ENCI_VBI_CCDT_ODD VCBUS_REG_ADDR(ENCI_VBI_CCDT_ODD)
+#define ENCI_VBI_CC525_LN 0x1b23	/* register.h:8216 */
+#define P_ENCI_VBI_CC525_LN VCBUS_REG_ADDR(ENCI_VBI_CC525_LN)
+#define ENCI_VBI_CC625_LN 0x1b24	/* register.h:8217 */
+#define P_ENCI_VBI_CC625_LN VCBUS_REG_ADDR(ENCI_VBI_CC625_LN)
+#define ENCI_VBI_WSSDT 0x1b25	/* register.h:8218 */
+#define P_ENCI_VBI_WSSDT VCBUS_REG_ADDR(ENCI_VBI_WSSDT)
+#define ENCI_VBI_WSS_LN 0x1b26	/* register.h:8219 */
+#define P_ENCI_VBI_WSS_LN VCBUS_REG_ADDR(ENCI_VBI_WSS_LN)
+#define ENCI_VBI_CGMSDT_L 0x1b27	/* register.h:8220 */
+#define P_ENCI_VBI_CGMSDT_L VCBUS_REG_ADDR(ENCI_VBI_CGMSDT_L)
+#define ENCI_VBI_CGMSDT_H 0x1b28	/* register.h:8221 */
+#define P_ENCI_VBI_CGMSDT_H VCBUS_REG_ADDR(ENCI_VBI_CGMSDT_H)
+#define ENCI_VBI_CGMS_LN 0x1b29	/* register.h:8222 */
+#define P_ENCI_VBI_CGMS_LN VCBUS_REG_ADDR(ENCI_VBI_CGMS_LN)
+#define ENCI_VBI_TTX_HTIME 0x1b2a	/* register.h:8223 */
+#define P_ENCI_VBI_TTX_HTIME VCBUS_REG_ADDR(ENCI_VBI_TTX_HTIME)
+#define ENCI_VBI_TTX_LN 0x1b2b	/* register.h:8224 */
+#define P_ENCI_VBI_TTX_LN VCBUS_REG_ADDR(ENCI_VBI_TTX_LN)
+#define ENCI_VBI_TTXDT0 0x1b2c	/* register.h:8225 */
+#define P_ENCI_VBI_TTXDT0 VCBUS_REG_ADDR(ENCI_VBI_TTXDT0)
+#define ENCI_VBI_TTXDT1 0x1b2d	/* register.h:8226 */
+#define P_ENCI_VBI_TTXDT1 VCBUS_REG_ADDR(ENCI_VBI_TTXDT1)
+#define ENCI_VBI_TTXDT2 0x1b2e	/* register.h:8227 */
+#define P_ENCI_VBI_TTXDT2 VCBUS_REG_ADDR(ENCI_VBI_TTXDT2)
+#define ENCI_VBI_TTXDT3 0x1b2f	/* register.h:8228 */
+#define P_ENCI_VBI_TTXDT3 VCBUS_REG_ADDR(ENCI_VBI_TTXDT3)
+#define ENCI_MACV_N0 0x1b30	/* register.h:8229 */
+#define P_ENCI_MACV_N0 VCBUS_REG_ADDR(ENCI_MACV_N0)
+#define ENCI_MACV_N1 0x1b31	/* register.h:8230 */
+#define P_ENCI_MACV_N1 VCBUS_REG_ADDR(ENCI_MACV_N1)
+#define ENCI_MACV_N2 0x1b32	/* register.h:8231 */
+#define P_ENCI_MACV_N2 VCBUS_REG_ADDR(ENCI_MACV_N2)
+#define ENCI_MACV_N3 0x1b33	/* register.h:8232 */
+#define P_ENCI_MACV_N3 VCBUS_REG_ADDR(ENCI_MACV_N3)
+#define ENCI_MACV_N4 0x1b34	/* register.h:8233 */
+#define P_ENCI_MACV_N4 VCBUS_REG_ADDR(ENCI_MACV_N4)
+#define ENCI_MACV_N5 0x1b35	/* register.h:8234 */
+#define P_ENCI_MACV_N5 VCBUS_REG_ADDR(ENCI_MACV_N5)
+#define ENCI_MACV_N6 0x1b36	/* register.h:8235 */
+#define P_ENCI_MACV_N6 VCBUS_REG_ADDR(ENCI_MACV_N6)
+#define ENCI_MACV_N7 0x1b37	/* register.h:8236 */
+#define P_ENCI_MACV_N7 VCBUS_REG_ADDR(ENCI_MACV_N7)
+#define ENCI_MACV_N8 0x1b38	/* register.h:8237 */
+#define P_ENCI_MACV_N8 VCBUS_REG_ADDR(ENCI_MACV_N8)
+#define ENCI_MACV_N9 0x1b39	/* register.h:8238 */
+#define P_ENCI_MACV_N9 VCBUS_REG_ADDR(ENCI_MACV_N9)
+#define ENCI_MACV_N10 0x1b3a	/* register.h:8239 */
+#define P_ENCI_MACV_N10 VCBUS_REG_ADDR(ENCI_MACV_N10)
+#define ENCI_MACV_N11 0x1b3b	/* register.h:8240 */
+#define P_ENCI_MACV_N11 VCBUS_REG_ADDR(ENCI_MACV_N11)
+#define ENCI_MACV_N12 0x1b3c	/* register.h:8241 */
+#define P_ENCI_MACV_N12 VCBUS_REG_ADDR(ENCI_MACV_N12)
+#define ENCI_MACV_N13 0x1b3d	/* register.h:8242 */
+#define P_ENCI_MACV_N13 VCBUS_REG_ADDR(ENCI_MACV_N13)
+#define ENCI_MACV_N14 0x1b3e	/* register.h:8243 */
+#define P_ENCI_MACV_N14 VCBUS_REG_ADDR(ENCI_MACV_N14)
+#define ENCI_MACV_N15 0x1b3f	/* register.h:8244 */
+#define P_ENCI_MACV_N15 VCBUS_REG_ADDR(ENCI_MACV_N15)
+#define ENCI_MACV_N16 0x1b40	/* register.h:8245 */
+#define P_ENCI_MACV_N16 VCBUS_REG_ADDR(ENCI_MACV_N16)
+#define ENCI_MACV_N17 0x1b41	/* register.h:8246 */
+#define P_ENCI_MACV_N17 VCBUS_REG_ADDR(ENCI_MACV_N17)
+#define ENCI_MACV_N18 0x1b42	/* register.h:8247 */
+#define P_ENCI_MACV_N18 VCBUS_REG_ADDR(ENCI_MACV_N18)
+#define ENCI_MACV_N19 0x1b43	/* register.h:8248 */
+#define P_ENCI_MACV_N19 VCBUS_REG_ADDR(ENCI_MACV_N19)
+#define ENCI_MACV_N20 0x1b44	/* register.h:8249 */
+#define P_ENCI_MACV_N20 VCBUS_REG_ADDR(ENCI_MACV_N20)
+#define ENCI_MACV_N21 0x1b45	/* register.h:8250 */
+#define P_ENCI_MACV_N21 VCBUS_REG_ADDR(ENCI_MACV_N21)
+#define ENCI_MACV_N22 0x1b46	/* register.h:8251 */
+#define P_ENCI_MACV_N22 VCBUS_REG_ADDR(ENCI_MACV_N22)
+#define ENCI_DBG_PX_RST 0x1b48	/* register.h:8253 */
+#define P_ENCI_DBG_PX_RST VCBUS_REG_ADDR(ENCI_DBG_PX_RST)
+#define ENCI_DBG_FLDLN_RST 0x1b49	/* register.h:8254 */
+#define P_ENCI_DBG_FLDLN_RST VCBUS_REG_ADDR(ENCI_DBG_FLDLN_RST)
+#define ENCI_DBG_PX_INT 0x1b4a	/* register.h:8255 */
+#define P_ENCI_DBG_PX_INT VCBUS_REG_ADDR(ENCI_DBG_PX_INT)
+#define ENCI_DBG_FLDLN_INT 0x1b4b	/* register.h:8256 */
+#define P_ENCI_DBG_FLDLN_INT VCBUS_REG_ADDR(ENCI_DBG_FLDLN_INT)
+#define ENCI_DBG_MAXPX 0x1b4c	/* register.h:8257 */
+#define P_ENCI_DBG_MAXPX VCBUS_REG_ADDR(ENCI_DBG_MAXPX)
+#define ENCI_DBG_MAXLN 0x1b4d	/* register.h:8258 */
+#define P_ENCI_DBG_MAXLN VCBUS_REG_ADDR(ENCI_DBG_MAXLN)
+#define ENCI_MACV_MAX_AMP 0x1b50	/* register.h:8259 */
+#define P_ENCI_MACV_MAX_AMP VCBUS_REG_ADDR(ENCI_MACV_MAX_AMP)
+#define ENCI_MACV_PULSE_LO 0x1b51	/* register.h:8260 */
+#define P_ENCI_MACV_PULSE_LO VCBUS_REG_ADDR(ENCI_MACV_PULSE_LO)
+#define ENCI_MACV_PULSE_HI 0x1b52	/* register.h:8261 */
+#define P_ENCI_MACV_PULSE_HI VCBUS_REG_ADDR(ENCI_MACV_PULSE_HI)
+#define ENCI_MACV_BKP_MAX 0x1b53	/* register.h:8262 */
+#define P_ENCI_MACV_BKP_MAX VCBUS_REG_ADDR(ENCI_MACV_BKP_MAX)
+#define ENCI_CFILT_CTRL 0x1b54	/* register.h:8263 */
+#define P_ENCI_CFILT_CTRL VCBUS_REG_ADDR(ENCI_CFILT_CTRL)
+#define ENCI_CFILT7 0x1b55	/* register.h:8264 */
+#define P_ENCI_CFILT7 VCBUS_REG_ADDR(ENCI_CFILT7)
+#define ENCI_YC_DELAY 0x1b56	/* register.h:8265 */
+#define P_ENCI_YC_DELAY VCBUS_REG_ADDR(ENCI_YC_DELAY)
+#define ENCI_VIDEO_EN 0x1b57	/* register.h:8266 */
+#define P_ENCI_VIDEO_EN VCBUS_REG_ADDR(ENCI_VIDEO_EN)
+#define VENC_VIDEO_PROG_MODE 0x1b68	/* /../ucode/register.h:8023 */
+#define P_VENC_VIDEO_PROG_MODE		VCBUS_REG_ADDR(VENC_VIDEO_PROG_MODE)
+
+#define ENCI_DVI_HSO_BEGIN 0x1c00	/* register.h:8280 */
+#define P_ENCI_DVI_HSO_BEGIN VCBUS_REG_ADDR(ENCI_DVI_HSO_BEGIN)
+#define ENCI_DVI_HSO_END 0x1c01	/* register.h:8281 */
+#define P_ENCI_DVI_HSO_END VCBUS_REG_ADDR(ENCI_DVI_HSO_END)
+#define ENCI_DVI_VSO_BLINE_EVN 0x1c02	/* register.h:8282 */
+#define P_ENCI_DVI_VSO_BLINE_EVN VCBUS_REG_ADDR(ENCI_DVI_VSO_BLINE_EVN)
+#define ENCI_DVI_VSO_BLINE_ODD 0x1c03	/* register.h:8283 */
+#define P_ENCI_DVI_VSO_BLINE_ODD VCBUS_REG_ADDR(ENCI_DVI_VSO_BLINE_ODD)
+#define ENCI_DVI_VSO_ELINE_EVN 0x1c04	/* register.h:8284 */
+#define P_ENCI_DVI_VSO_ELINE_EVN VCBUS_REG_ADDR(ENCI_DVI_VSO_ELINE_EVN)
+#define ENCI_DVI_VSO_ELINE_ODD 0x1c05	/* register.h:8285 */
+#define P_ENCI_DVI_VSO_ELINE_ODD VCBUS_REG_ADDR(ENCI_DVI_VSO_ELINE_ODD)
+#define ENCI_DVI_VSO_BEGIN_EVN 0x1c06	/* register.h:8286 */
+#define P_ENCI_DVI_VSO_BEGIN_EVN VCBUS_REG_ADDR(ENCI_DVI_VSO_BEGIN_EVN)
+#define ENCI_DVI_VSO_BEGIN_ODD 0x1c07	/* register.h:8287 */
+#define P_ENCI_DVI_VSO_BEGIN_ODD VCBUS_REG_ADDR(ENCI_DVI_VSO_BEGIN_ODD)
+#define ENCI_DVI_VSO_END_EVN 0x1c08	/* register.h:8288 */
+#define P_ENCI_DVI_VSO_END_EVN VCBUS_REG_ADDR(ENCI_DVI_VSO_END_EVN)
+#define ENCI_DVI_VSO_END_ODD 0x1c09	/* register.h:8289 */
+#define P_ENCI_DVI_VSO_END_ODD VCBUS_REG_ADDR(ENCI_DVI_VSO_END_ODD)
+#define ENCI_CFILT_CTRL2 0x1c0a	/* register.h:8295 */
+#define P_ENCI_CFILT_CTRL2 VCBUS_REG_ADDR(ENCI_CFILT_CTRL2)
+#define ENCI_DACSEL_0 0x1c0b	/* register.h:8296 */
+#define P_ENCI_DACSEL_0 VCBUS_REG_ADDR(ENCI_DACSEL_0)
+#define ENCI_DACSEL_1 0x1c0c	/* register.h:8297 */
+#define P_ENCI_DACSEL_1 VCBUS_REG_ADDR(ENCI_DACSEL_1)
+#define ENCP_DACSEL_0 0x1c0d	/* register.h:8298 */
+#define P_ENCP_DACSEL_0 VCBUS_REG_ADDR(ENCP_DACSEL_0)
+#define ENCP_DACSEL_1 0x1c0e	/* register.h:8299 */
+#define P_ENCP_DACSEL_1 VCBUS_REG_ADDR(ENCP_DACSEL_1)
+#define ENCP_MAX_LINE_SWITCH_POINT 0x1c0f	/* register.h:8300 */
+#define P_ENCP_MAX_LINE_SWITCH_POINT VCBUS_REG_ADDR(ENCP_MAX_LINE_SWITCH_POINT)
+#define ENCI_TST_EN 0x1c10	/* register.h:8301 */
+#define P_ENCI_TST_EN VCBUS_REG_ADDR(ENCI_TST_EN)
+#define ENCI_TST_MDSEL 0x1c11	/* register.h:8302 */
+#define P_ENCI_TST_MDSEL VCBUS_REG_ADDR(ENCI_TST_MDSEL)
+#define ENCI_TST_Y 0x1c12	/* register.h:8303 */
+#define P_ENCI_TST_Y VCBUS_REG_ADDR(ENCI_TST_Y)
+#define ENCI_TST_CB 0x1c13	/* register.h:8304 */
+#define P_ENCI_TST_CB VCBUS_REG_ADDR(ENCI_TST_CB)
+#define ENCI_TST_CR 0x1c14	/* register.h:8305 */
+#define P_ENCI_TST_CR VCBUS_REG_ADDR(ENCI_TST_CR)
+#define ENCI_TST_CLRBAR_STRT 0x1c15	/* register.h:8306 */
+#define P_ENCI_TST_CLRBAR_STRT VCBUS_REG_ADDR(ENCI_TST_CLRBAR_STRT)
+#define ENCI_TST_CLRBAR_WIDTH 0x1c16	/* register.h:8307 */
+#define P_ENCI_TST_CLRBAR_WIDTH VCBUS_REG_ADDR(ENCI_TST_CLRBAR_WIDTH)
+#define ENCI_TST_VDCNT_STSET 0x1c17	/* register.h:8308 */
+#define P_ENCI_TST_VDCNT_STSET VCBUS_REG_ADDR(ENCI_TST_VDCNT_STSET)
+#define ENCI_VFIFO2VD_CTL 0x1c18	/* register.h:8313 */
+#define P_ENCI_VFIFO2VD_CTL VCBUS_REG_ADDR(ENCI_VFIFO2VD_CTL)
+#define ENCI_VFIFO2VD_PIXEL_START 0x1c19	/* register.h:8315 */
+#define P_ENCI_VFIFO2VD_PIXEL_START \
+	VCBUS_REG_ADDR(ENCI_VFIFO2VD_PIXEL_START)
+#define ENCI_VFIFO2VD_PIXEL_END 0x1c1a	/* register.h:8317 */
+#define P_ENCI_VFIFO2VD_PIXEL_END VCBUS_REG_ADDR(ENCI_VFIFO2VD_PIXEL_END)
+#define ENCI_VFIFO2VD_LINE_TOP_START 0x1c1b	/* register.h:8319 */
+#define P_ENCI_VFIFO2VD_LINE_TOP_START \
+	VCBUS_REG_ADDR(ENCI_VFIFO2VD_LINE_TOP_START)
+#define ENCI_VFIFO2VD_LINE_TOP_END 0x1c1c	/* register.h:8321 */
+#define P_ENCI_VFIFO2VD_LINE_TOP_END \
+	VCBUS_REG_ADDR(ENCI_VFIFO2VD_LINE_TOP_END)
+#define ENCI_VFIFO2VD_LINE_BOT_START 0x1c1d	/* register.h:8323 */
+#define P_ENCI_VFIFO2VD_LINE_BOT_START \
+	VCBUS_REG_ADDR(ENCI_VFIFO2VD_LINE_BOT_START)
+#define ENCI_VFIFO2VD_LINE_BOT_END 0x1c1e	/* register.h:8325 */
+#define P_ENCI_VFIFO2VD_LINE_BOT_END \
+	VCBUS_REG_ADDR(ENCI_VFIFO2VD_LINE_BOT_END)
+#define ENCI_VFIFO2VD_CTL2 0x1c1f	/* register.h:8326 */
+#define P_ENCI_VFIFO2VD_CTL2 VCBUS_REG_ADDR(ENCI_VFIFO2VD_CTL2)
+
+#define ENCP_DVI_HSO_BEGIN 0x1c30	/* register.h:8354 */
+#define P_ENCP_DVI_HSO_BEGIN VCBUS_REG_ADDR(ENCP_DVI_HSO_BEGIN)
+#define ENCP_DVI_HSO_END 0x1c31	/* register.h:8355 */
+#define P_ENCP_DVI_HSO_END VCBUS_REG_ADDR(ENCP_DVI_HSO_END)
+#define ENCP_DVI_VSO_BLINE_EVN 0x1c32	/* register.h:8356 */
+#define P_ENCP_DVI_VSO_BLINE_EVN VCBUS_REG_ADDR(ENCP_DVI_VSO_BLINE_EVN)
+#define ENCP_DVI_VSO_BLINE_ODD 0x1c33	/* register.h:8357 */
+#define P_ENCP_DVI_VSO_BLINE_ODD VCBUS_REG_ADDR(ENCP_DVI_VSO_BLINE_ODD)
+#define ENCP_DVI_VSO_ELINE_EVN 0x1c34	/* register.h:8358 */
+#define P_ENCP_DVI_VSO_ELINE_EVN VCBUS_REG_ADDR(ENCP_DVI_VSO_ELINE_EVN)
+#define ENCP_DVI_VSO_ELINE_ODD 0x1c35	/* register.h:8359 */
+#define P_ENCP_DVI_VSO_ELINE_ODD VCBUS_REG_ADDR(ENCP_DVI_VSO_ELINE_ODD)
+#define ENCP_DVI_VSO_BEGIN_EVN 0x1c36	/* register.h:8360 */
+#define P_ENCP_DVI_VSO_BEGIN_EVN VCBUS_REG_ADDR(ENCP_DVI_VSO_BEGIN_EVN)
+#define ENCP_DVI_VSO_BEGIN_ODD 0x1c37	/* register.h:8361 */
+#define P_ENCP_DVI_VSO_BEGIN_ODD VCBUS_REG_ADDR(ENCP_DVI_VSO_BEGIN_ODD)
+#define ENCP_DVI_VSO_END_EVN 0x1c38	/* register.h:8362 */
+#define P_ENCP_DVI_VSO_END_EVN VCBUS_REG_ADDR(ENCP_DVI_VSO_END_EVN)
+#define ENCP_DVI_VSO_END_ODD 0x1c39	/* register.h:8363 */
+#define P_ENCP_DVI_VSO_END_ODD VCBUS_REG_ADDR(ENCP_DVI_VSO_END_ODD)
+#define ENCP_DE_H_BEGIN 0x1c3a	/* register.h:8364 */
+#define P_ENCP_DE_H_BEGIN VCBUS_REG_ADDR(ENCP_DE_H_BEGIN)
+#define ENCP_DE_H_END 0x1c3b	/* register.h:8365 */
+#define P_ENCP_DE_H_END VCBUS_REG_ADDR(ENCP_DE_H_END)
+#define ENCP_DE_V_BEGIN_EVEN 0x1c3c	/* register.h:8366 */
+#define P_ENCP_DE_V_BEGIN_EVEN VCBUS_REG_ADDR(ENCP_DE_V_BEGIN_EVEN)
+#define ENCP_DE_V_END_EVEN 0x1c3d	/* register.h:8367 */
+#define P_ENCP_DE_V_END_EVEN VCBUS_REG_ADDR(ENCP_DE_V_END_EVEN)
+#define ENCP_DE_V_BEGIN_ODD 0x1c3e	/* register.h:8368 */
+#define P_ENCP_DE_V_BEGIN_ODD VCBUS_REG_ADDR(ENCP_DE_V_BEGIN_ODD)
+#define ENCP_DE_V_END_ODD 0x1c3f	/* register.h:8369 */
+#define P_ENCP_DE_V_END_ODD VCBUS_REG_ADDR(ENCP_DE_V_END_ODD)
+#define ENCI_SYNC_LINE_LENGTH 0x1c40	/* register.h:8372 */
+#define P_ENCI_SYNC_LINE_LENGTH VCBUS_REG_ADDR(ENCI_SYNC_LINE_LENGTH)
+#define ENCI_SYNC_PIXEL_EN 0x1c41	/* register.h:8375 */
+#define P_ENCI_SYNC_PIXEL_EN VCBUS_REG_ADDR(ENCI_SYNC_PIXEL_EN)
+#define ENCI_SYNC_TO_LINE_EN 0x1c42	/* register.h:8382 */
+#define P_ENCI_SYNC_TO_LINE_EN VCBUS_REG_ADDR(ENCI_SYNC_TO_LINE_EN)
+#define ENCI_SYNC_TO_PIXEL 0x1c43	/* register.h:8384 */
+#define P_ENCI_SYNC_TO_PIXEL VCBUS_REG_ADDR(ENCI_SYNC_TO_PIXEL)
+#define ENCP_SYNC_LINE_LENGTH 0x1c44	/* register.h:8387 */
+#define P_ENCP_SYNC_LINE_LENGTH VCBUS_REG_ADDR(ENCP_SYNC_LINE_LENGTH)
+#define ENCP_SYNC_PIXEL_EN 0x1c45	/* register.h:8390 */
+#define P_ENCP_SYNC_PIXEL_EN VCBUS_REG_ADDR(ENCP_SYNC_PIXEL_EN)
+#define ENCP_SYNC_TO_LINE_EN 0x1c46	/* register.h:8397 */
+#define P_ENCP_SYNC_TO_LINE_EN VCBUS_REG_ADDR(ENCP_SYNC_TO_LINE_EN)
+#define ENCP_SYNC_TO_PIXEL 0x1c47	/* register.h:8399 */
+#define P_ENCP_SYNC_TO_PIXEL VCBUS_REG_ADDR(ENCP_SYNC_TO_PIXEL)
+
+/* [3:2] cntl_viu2_sel_venc: 0=ENCL, 1=ENCI, 2=ENCP, 3=ENCT. */
+/* [1:0] cntl_viu1_sel_venc: 0=ENCL, 1=ENCI, 2=ENCP, 3=ENCT. */
+#define VPU_VIU_VENC_MUX_CTRL 0x271a	/* register.h:9214 */
+#define P_VPU_VIU_VENC_MUX_CTRL VCBUS_REG_ADDR(VPU_VIU_VENC_MUX_CTRL)
+#define VPU_HDMI_SETTING 0x271b	/* register.h:9229 */
+#define P_VPU_HDMI_SETTING VCBUS_REG_ADDR(VPU_HDMI_SETTING)
+
+#define VPU_HDMI_DATA_OVR 0x2727	/* register.h:9270 */
+#define P_VPU_HDMI_DATA_OVR VCBUS_REG_ADDR(VPU_HDMI_DATA_OVR)
+#define VPU_HDMI_FMT_CTRL 0x2743
+#define P_VPU_HDMI_FMT_CTRL VCBUS_REG_ADDR(VPU_HDMI_FMT_CTRL)
+/* For GXM and later */
+#define VPU_HDMI_DITH_CNTL 0x27fc
+#define P_VPU_HDMI_DITH_CNTL VCBUS_REG_ADDR(VPU_HDMI_DITH_CNTL)
+
+/* c_always_on_pointer.h:71 */
+#define AO_RTI_PULL_UP_REG ((0x00 << 10) | (0x0B << 2))
+#define P_AO_RTI_PULL_UP_REG		AOBUS_REG_ADDR(AO_RTI_PULL_UP_REG)
+#define AO_RTI_PIN_MUX_REG ((0x00 << 10) | (0x05 << 2))
+#define P_AO_RTI_PIN_MUX_REG		AOBUS_REG_ADDR(AO_RTI_PIN_MUX_REG)
+#define AO_RTI_PIN_MUX_REG2 ((0x00 << 10) | (0x06 << 2))
+#define P_AO_RTI_PIN_MUX_REG2		AOBUS_REG_ADDR(AO_RTI_PIN_MUX_REG2)
+#define AO_CRT_CLK_CNTL1	((0x00 << 10) | (0x1A << 2))
+#define P_AO_CRT_CLK_CNTL1		AOBUS_REG_ADDR(AO_CRT_CLK_CNTL1)
+#define AO_DEBUG_REG0 ((0x00 << 10) | (0x28 << 2))
+#define P_AO_DEBUG_REG0		AOBUS_REG_ADDR(AO_DEBUG_REG0)
+#define AO_DEBUG_REG1 ((0x00 << 10) | (0x29 << 2))
+#define P_AO_DEBUG_REG1		AOBUS_REG_ADDR(AO_DEBUG_REG1)
+#define AO_DEBUG_REG2 ((0x00 << 10) | (0x2a << 2))
+#define P_AO_DEBUG_REG2		AOBUS_REG_ADDR(AO_DEBUG_REG2)
+#define AO_DEBUG_REG3 ((0x00 << 10) | (0x2b << 2))
+#define P_AO_DEBUG_REG3		AOBUS_REG_ADDR(AO_DEBUG_REG3)
+
+#define P_AO_RTI_GEN_PWR_SLEEP0 (0xc8100000 + (0x3a << 2))
+
+#define P_HDMITX_ADDR_PORT_SEC        0xda83a000
+#define P_HDMITX_DATA_PORT_SEC        0xda83a004
+#define P_HDMITX_CTRL_PORT_SEC        0xda83a008
+/* secure address P_HDMITX_ADDR_PORT 0xda83a000 */
+#define P_HDMITX_ADDR_PORT        0xc883a000
+#define P_HDMITX_DATA_PORT        0xc883a004
+#define P_HDMITX_CTRL_PORT        0xc883a008
+
+#define P_ELP_ESM_HPI_REG_BASE		0xd0044000
+#endif
