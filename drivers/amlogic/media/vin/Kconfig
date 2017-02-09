@@ -1,0 +1,18 @@
+#
+# Amlogic multimedia input configuration
+#
+menu "Input drivers"
+config AMLOGIC_MEDIA_VIN
+	bool "Amlogic drivers of the media video in"
+	depends on AMLOGIC_MEDIA_DRIVERS
+	default n
+	help
+		This option is used to configure Amlogic drivers
+		of the multimedia video in, which consists of tvin
+		module, dvb module and camera module.
+
+if AMLOGIC_MEDIA_VIN
+source "drivers/amlogic/media/vin/tvin/Kconfig"
+endif
+
+endmenu

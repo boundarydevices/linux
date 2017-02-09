@@ -13603,3 +13603,13 @@ AMLOGIC DEINTERLACE, DNR, Field Detection, VOF DRIVERS
 M:  Kele Bai <kele.bai@amlogic.com>
 F:  drivers/amlogic/deinterlace/*
 
+AMLOGIC TVIN
+M: Dezhi Kong <dezhi.kong@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/media/Kconfig
+F: drivers/amlogic/media/Makefile
+F: drivers/amlogic/media/vin/

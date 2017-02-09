@@ -1,0 +1,20 @@
+#
+# Amlogic tvin drivers configuration
+#
+
+comment "Tvin drivers"
+
+config AMLOGIC_MEDIA_TVIN
+        bool "Amlogic drivers of the media tvin"
+	depends on AMLOGIC_MEDIA_VIN
+	default n
+	help
+		This option is used to configure Amlogic drivers
+		of the multimedia input of tvin, which consists
+		of tvafe module, viu module, vdin module and
+		hdmirx module.
+
+if AMLOGIC_MEDIA_TVIN
+source "drivers/amlogic/media/vin/tvin/vdin/Kconfig"
+source "drivers/amlogic/media/vin/tvin/viu/Kconfig"
+endif

@@ -1,0 +1,8 @@
+#
+# Viu Device Driver Configuration
+#
+config AMLOGIC_MEDIA_VIUIN
+        tristate "Amlogic VIUIN device driver"
+        default n
+        help
+            VIUIN device driver.
