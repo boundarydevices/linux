@@ -77,6 +77,7 @@
 #define HHI_GEN_CLK_CNTL		0x228 /* 0x8a offset in data sheet */
 #define HHI_GEN_CLK_CNTL		0x228 /* 0x8a offset in data sheet */
 
+#define HHI_VDIN_MEAS_CLK_CNTL		0x250 /* 0x94 offset in data sheet */
 #define HHI_PCM_CLK_CNTL		0x258 /* 0x96 offset in data sheet */
 #define HHI_NAND_CLK_CNTL		0x25C /* 0x97 offset in data sheet */
 #define HHI_SD_EMMC_CLK_CNTL		0x264 /* 0x99 offset in data sheet */

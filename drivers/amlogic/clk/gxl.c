@@ -1082,6 +1082,7 @@ static void __init gxl_clkc_init(struct device_node *np)
 	amlogic_init_sdemmc();
 	amlogic_init_gpu();
 	amlogic_init_media();
+	amlogic_init_misc();
 	pr_debug("%s: register all clk ok!", __func__);
 	/*
 	 * Register CPU clk notifier

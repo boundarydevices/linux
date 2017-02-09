@@ -132,4 +132,5 @@ extern struct clk **clks;
 void amlogic_init_sdemmc(void);
 void amlogic_init_gpu(void);
 void amlogic_init_media(void);
+void amlogic_init_misc(void);
 #endif /* __CLKC_H */
