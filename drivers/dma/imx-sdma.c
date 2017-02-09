@@ -921,9 +921,10 @@ static irqreturn_t sdma_int_handler(int irq, void *dev_id)
 		}
 
 		spin_unlock(&sdmac->vc.lock);
-		if ((sdmac->flags & IMX_DMA_SG_LOOP) &&
-			(sdmac->peripheral_type != IMX_DMATYPE_HDMI))
-			sdma_update_channel_loop(sdmac);
+		if (sdmac->flags & IMX_DMA_SG_LOOP) {
+			if (sdmac->peripheral_type != IMX_DMATYPE_HDMI)
+				sdma_update_channel_loop(sdmac);
+		}
 
 		__clear_bit(channel, &stat);
 	}
