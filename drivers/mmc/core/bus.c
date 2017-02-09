@@ -284,6 +284,10 @@ int mmc_add_card(struct mmc_card *card)
 	int ret;
 	const char *type;
 	const char *uhs_bus_speed_mode = "";
+#ifdef CONFIG_AMLOGIC_MMC
+	int width;
+	struct mmc_host *mmc = card->host;
+#endif
 	static const char *const uhs_speeds[] = {
 		[UHS_SDR12_BUS_SPEED] = "SDR12 ",
 		[UHS_SDR25_BUS_SPEED] = "SDR25 ",
@@ -332,6 +336,23 @@ int mmc_add_card(struct mmc_card *card)
 			mmc_card_ddr52(card) ? "DDR " : "",
 			type);
 	} else {
+#ifdef CONFIG_AMLOGIC_MMC
+		switch (mmc->ios.bus_width) {
+		case MMC_BUS_WIDTH_1:
+				width = 1;
+				break;
+		case MMC_BUS_WIDTH_4:
+				width = 4;
+				break;
+		case MMC_BUS_WIDTH_8:
+				width = 8;
+				break;
+		default:
+				width = -1;
+				break;
+		}
+#endif
+
 		pr_info("%s: new %s%s%s%s%s%s card at address %04x\n",
 			mmc_hostname(card->host),
 			mmc_card_uhs(card) ? "ultra high speed " :
@@ -341,6 +362,12 @@ int mmc_add_card(struct mmc_card *card)
 			mmc_card_hs400es(card) ? "Enhanced strobe " : "",
 			mmc_card_ddr52(card) ? "DDR " : "",
 			uhs_bus_speed_mode, type, card->rca);
+
+#ifdef CONFIG_AMLOGIC_MMC
+		pr_info("%s: clock %d, %u-bit-bus-width\n ",
+				mmc_hostname(card->host),
+				mmc->actual_clock, width);
+#endif
 	}
 
 #ifdef CONFIG_DEBUG_FS

@@ -47,6 +47,9 @@
 
 #include "queue.h"
 #include "block.h"
+#ifdef CONFIG_AMLOGIC_MMC
+#include <linux/mmc/emmc_partitions.h>
+#endif
 
 MODULE_ALIAS("mmc:block");
 #ifdef MODULE_PARAM_PREFIX
@@ -2606,6 +2609,11 @@ static int mmc_blk_probe(struct mmc_card *card)
 
 	if (mmc_add_disk(md))
 		goto out;
+
+#ifdef CONFIG_AMLOGIC_MMC
+	/* amlogic add emmc partitions ops */
+	aml_emmc_partition_ops(card, md->disk);
+#endif
 
 	list_for_each_entry(part_md, &md->part, part) {
 		if (mmc_add_disk(part_md))

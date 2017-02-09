@@ -1,0 +1,19 @@
+# Amlogic MMC driver
+
+comment "MMC/SD/SDIO Host Controller Drivers"
+
+menu "Multimedia Card support"
+
+config AMLOGIC_MMC
+	bool "Amlogic Multimedia Card support"
+	depends on MMC
+	depends on MMC_BLOCK
+	depends on MMC_BLOCK_BOUNCE
+	default n
+	help
+	This selects support for the Amlogic SD/MMC Host Controller
+	found on the S912/GXM family of SoCs.  This controller is
+	MMC 5.1 compliant and supports SD, eMMC and SDIO interfaces.
+	If you have a controller with this interface, say Y here.
+
+endmenu

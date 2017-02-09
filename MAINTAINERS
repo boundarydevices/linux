@@ -13578,3 +13578,26 @@ F: include/uapi/linux/rc_common.h
 F: arch/arm64/boot/dts/amlogic/mesongxl.dtsi
 F: arch/arm64/boot/dts/amlogic/mesongxm.dtsi
 
+AMLOGIC SD/MMC DIRVER SUPPORT
+M: Nan Li <nan.li@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/mesongxl.dtsi
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/Kconfig
+F: drivers/amlogic/Makefile
+F: drivers/amlogic/mmc/Kconfig
+F: drivers/amlogic/mmc/Makefile
+F: drivers/amlogic/mmc/aml_sd_emmc.c
+F: drivers/amlogic/mmc/emmc_partitions.c
+F: drivers/amlogic/mmc/amlsd_of.c
+F: drivers/amlogic/mmc/amlsd.c
+F: drivers/mmc/card/block.c
+F: drivers/mmc/core/bus.c
+F: drivers/mmc/core/core.c
+F: drivers/mmc/core/mmc.c
+F: include/linux/amlogic/amlsd.h
+F: include/linux/amlogic/sd.h
+F: include/linux/mmc/emmc_partitions.h
+F: include/linux/mmc/host.h
+

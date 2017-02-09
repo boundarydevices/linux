@@ -108,6 +108,149 @@
 		};
 	};
 
+	sd_emmc_c: emmc@d0074000 {
+		status = "okay";
+		compatible = "amlogic, meson-aml-mmc";
+		reg = <0x0 0xd0074000 0x0 0x2000>;
+		interrupts = <0 218 1>;
+		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
+		pinctrl-0 = <&emmc_clk_cmd_pins>;
+		pinctrl-1 = <&emmc_conf_pull_up &emmc_conf_pull_done>;
+		clocks = <&clkc CLKID_SD_EMMC_C>,
+			   <&clkc CLKID_SD_EMMC_C_P0_COMP>,
+			   <&clkc CLKID_FCLK_DIV2>;
+		clock-names = "core", "clkin0", "clkin1";
+
+		bus-width = <8>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+
+		max-frequency = <200000000>;
+		non-removable;
+		disable-wp;
+		emmc {
+			status = "disabled";
+			pinname = "emmc";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			caps = "MMC_CAP_8_BIT_DATA",
+				 "MMC_CAP_MMC_HIGHSPEED",
+				 "MMC_CAP_SD_HIGHSPEED",
+				 "MMC_CAP_NONREMOVABLE",
+				 "MMC_CAP_1_8V_DDR",
+				 "MMC_CAP_HW_RESET",
+				 "MMC_CAP_ERASE",
+				 "MMC_CAP_CMD23";
+			caps2 = "MMC_CAP2_HS200", "MMC_CAP2_HS400";
+			f_min = <300000>;
+			f_max = <100000000>;
+			max_req_size = <0x20000>; /**128KB*/
+			hw_reset = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
+			card_type = <1>;
+			/* 1:mmc card(include eMMC),
+			 * 2:sd card(include tSD)
+			 */
+		};
+	};
+
+	sd_emmc_b:sd@d0072000 {
+		status = "okay";
+		compatible = "amlogic, meson-aml-mmc";
+		reg = <0x0 0xd0072000 0x0 0x2000>;
+		interrupts = <0 217 1>;
+		pinctrl-names = "sd_all_pins",
+			"sd_clk_cmd_pins",
+			"sd_clk_cmd_uart_pins",
+			"sd_to_ao_uart_pins",
+			"ao_to_sd_uart_pins";
+		pinctrl-0 = <&sd_all_pins>;
+		pinctrl-1 = <&sd_clk_cmd_pins>;
+		pinctrl-2 = <&sd_clk_cmd_pins &ao_to_sd_uart_pins>;
+		pinctrl-3 = <&sd_to_ao_uart_pins>;
+		pinctrl-4 = <&ao_to_sd_uart_pins>;
+		clocks = <&clkc CLKID_SD_EMMC_B>,
+			   <&clkc CLKID_SD_EMMC_B_P0_COMP>,
+			   <&clkc CLKID_FCLK_DIV2>;
+		clock-names = "core", "clkin0", "clkin1";
+
+		bus-width = <4>;
+		cap-sd-highspeed;
+		max-frequency = <100000000>;
+		disable-wp;
+		sd {
+			status = "disabled";
+			pinname = "sd";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			caps = "MMC_CAP_4_BIT_DATA",
+				 "MMC_CAP_MMC_HIGHSPEED",
+				 "MMC_CAP_SD_HIGHSPEED";
+			/* "MMC_CAP_UHS_SDR12",
+			 * "MMC_CAP_UHS_SDR25",
+			 * "MMC_CAP_UHS_SDR50",
+			 * "MMC_CAP_UHS_SDR104";
+			 */
+			f_min = <400000>;
+			f_max = <100000000>;
+			max_req_size = <0x20000>; /**128KB*/
+			gpio_dat3 = <&gpio CARD_4 GPIO_ACTIVE_HIGH>;
+			jtag_pin = <&gpio CARD_0 GPIO_ACTIVE_HIGH>;
+			gpio_cd = <&gpio CARD_6 GPIO_ACTIVE_HIGH>;
+			card_type = <5>;
+			/* 0:unknown,
+			 * 1:mmc card(include eMMC),
+			 * 2:sd card(include tSD),
+			 * 3:sdio device(ie:sdio-wifi),
+			 * 4:SD combo (IO+mem) card,
+			 * 5:NON sdio device(means sd/mmc card),
+			 * other:reserved
+			 */
+		};
+	};
+
+	sd_emmc_a:sdio@d0070000 {
+		status = "okay";
+		compatible = "amlogic, meson-aml-mmc";
+		reg = <0x0 0xd0070000 0x0 0x2000>;
+		interrupts = <0 216 4>;
+		pinctrl-names = "sdio_clk_cmd_pins", "sdio_all_pins";
+		pinctrl-0 = <&sdio_clk_cmd_pins>;
+		pinctrl-1 = <&sdio_all_pins>;
+		clocks = <&clkc CLKID_SD_EMMC_A>,
+			   <&clkc CLKID_SD_EMMC_A_P0_COMP>,
+			   <&clkc CLKID_FCLK_DIV2>;
+		clock-names = "core", "clkin0", "clkin1";
+
+		bus-width = <4>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		max-frequency = <100000000>;
+		non-removable;
+		disable-wp;
+		sdio {
+			status = "disabled";
+			pinname = "sdio";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			caps = "MMC_CAP_4_BIT_DATA",
+				 "MMC_CAP_MMC_HIGHSPEED",
+				 "MMC_CAP_SD_HIGHSPEED",
+				 "MMC_CAP_NONREMOVABLE",
+				 "MMC_CAP_UHS_SDR12",
+				 "MMC_CAP_UHS_SDR25",
+				 "MMC_CAP_UHS_SDR50",
+				 "MMC_CAP_UHS_SDR104",
+				 "MMC_PM_KEEP_POWER",
+				 "MMC_CAP_SDIO_IRQ";
+			f_min = <400000>;
+			f_max = <200000000>;
+			max_req_size = <0x20000>; /**128KB*/
+			card_type = <3>;
+			/* 3:sdio device(ie:sdio-wifi),
+			 * 4:SD combo (IO+mem) card
+			 */
+		};
+	};
+
 	uart_AO: serial@c81004c0 {
 		compatible = "amlogic, meson-uart";
 		reg = <0x0 0xc81004c0 0x0 0x18>;
@@ -115,6 +258,8 @@
 		status = "okay";
 		xtal_tick_en = <1>;
 		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_uart_pins>;
 		support-sysrq = <0>;	/* 0 not support , 1 support */
 	};
 
@@ -208,6 +353,25 @@
 		status = "okay";
 	};
 
+	amhdmitx: amhdmitx{
+		compatible = "amlogic, amhdmitx";
+		dev_name = "amhdmitx";
+		status = "okay";
+		vend-data = <&vend_data>;
+		pinctrl-names="hdmitx_hpd", "hdmitx_ddc";
+		pinctrl-0=<&hdmitx_hpd>;
+		pinctrl-1=<&hdmitx_ddc>;
+		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
+		interrupts = <0 57 1>;
+		interrupt-names = "hdmitx_hpd";
+		vend_data: vend_data{ /* Should modified by Customer */
+			vendor_name = "Amlogic"; /* Max Chars: 8 */
+			/* standards.ieee.org/develop/regauth/oui/oui.txt */
+			vendor_id = <0x000000>;
+			product_desc = "MBox Meson Ref"; /* Max Chars: 16 */
+		};
+	};
+
 	meson-fb {
 		compatible = "amlogic, meson-fb";
 		/* memory-region = <&fb_reserved>; */
@@ -245,27 +409,82 @@
 		interrupts = <0 89 1>;
 		interrupt-names = "rdma";
 	};
-	amhdmitx: amhdmitx{
-		compatible = "amlogic, amhdmitx";
-		dev_name = "amhdmitx";
-		status = "okay";
-		vend-data = <&vend_data>;
-		pinctrl-names="hdmitx_hpd", "hdmitx_ddc";
-		pinctrl-0=<&hdmitx_hpd>;
-		pinctrl-1=<&hdmitx_ddc>;
-		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
-		interrupts = <0 57 1>;
-		interrupt-names = "hdmitx_hpd";
-		ranges;
-		vend_data: vend_data{ /* Should modified by Customer */
-			vendor_name = "Amlogic"; /* Max Chars: 8 */
-			/* standards.ieee.org/develop/regauth/oui/oui.txt */
-			vendor_id = <0x000000>;
-			product_desc = "MBox Meson Ref"; /* Max Chars: 16 */
+
+	partitions: partitions{
+		parts = <11>;
+		part-0 = <&logo>;
+		part-1 = <&recovery>;
+		part-2 = <&rsv>;
+		part-3 = <&tee>;
+		part-4 = <&crypt>;
+		part-5 = <&misc>;
+		part-6 = <&instaboot>;
+		part-7 = <&boot>;
+		part-8 = <&system>;
+		part-9 = <&cache>;
+		part-10 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		recovery:recovery{
+			pname = "recovery";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		rsv:rsv{
+			pname = "rsv";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		crypt:crypt{
+			pname = "crypt";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		instaboot:instaboot{
+			pname = "instaboot";
+			size = <0x0 0x400000>;
+			mask = <1>;
+		};
+		boot:boot
+		{
+			pname = "boot";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		system:system
+		{
+			pname = "system";
+			size = <0x0 0x80000000>;
+			mask = <1>;
+		};
+		cache:cache
+		{
+			pname = "cache";
+			size = <0x0 0x20000000>;
+			mask = <2>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
 		};
 	};
 };
-
 &efuse {
 	status = "ok";
 };

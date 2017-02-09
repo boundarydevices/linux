@@ -19,6 +19,7 @@
 #include <dt-bindings/reset/amlogic,gxl-reset.h>
 #include <dt-bindings/clock/amlogic,gxl-clkc.h>
 #include <dt-bindings/gpio/gxl.h>
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
@@ -396,6 +397,15 @@
 				function = "remote";
 			};
 		};
+			sd_to_ao_uart_pins:sd_to_ao_uart_pins {
+				mux {
+					groups = "uart_tx_ao_a_0",
+							"uart_rx_ao_a_0";
+					function = "uart_ao";
+					bias-pull-up;
+					input-enable;
+				};
+			};
 
 		ao_uart_pins:ao_uart {
 			mux {
@@ -552,32 +562,29 @@
  * };
  * sd_1bit_uart_pins:sd_1bit_uart_pins {
  *  };
- * sd_to_ao_uart_pins:sd_to_ao_uart_pins {
- *  };
- * ao_to_sd_uart_pins:ao_to_sd_uart_pins {
- * };
  * sd_to_ao_jtag_pins:sd_to_ao_jtag_pins{
  * };
  */
+		ao_to_sd_uart_pins:ao_to_sd_uart_pins {
+				mux {
+					groups = "uart_tx_ao_a_1",
+							"uart_rx_ao_a_1";
+					function = "uart_ao_a_1";
+					bias-pull-up;
+					input-enable;
+				};
+			};
 
 		emmc_clk_cmd_pins:emmc_clk_cmd_pins {
 			mux {
 				groups = "emmc_cmd",
 					"emmc_clk";
 				function = "emmc";
-				bias-pull-up;
 				input-enable;
+				bias-pull-up;
 			};
 		};
 
-		emmc_pins: emmc {
-			mux {
-				groups = "emmc_nand_d07",
-					"emmc_cmd",
-					"emmc_clk";
-				function = "emmc";
-			};
-		};
 
 		emmc_conf_pull_up:emmc_conf_pull_up {
 			mux {
@@ -585,6 +592,7 @@
 					"emmc_clk",
 					"emmc_cmd";
 				function = "emmc";
+				input-enable;
 				bias-pull-up;
 			};
 		};
@@ -593,17 +601,32 @@
 			mux {
 				groups = "emmc_ds";
 				function = "emmc";
+				input-enable;
 				bias-pull-down;
 			};
 		};
 
-		emmc_all_pins:emmc_all_pins {
+		sd_clk_cmd_pins:sd_clk_cmd_pins{
 			mux {
-				groups = "emmc_nand_d07",
-					"emmc_clk",
-					"emmc_cmd";
-				function = "emmc";
+				groups = "sdcard_cmd",
+					"sdcard_clk";
+				function = "sdcard";
 				input-enable;
+				bias-pull-up;
+			};
+		};
+
+		sd_all_pins:sd_all_pins{
+			mux {
+				groups = "sdcard_d0",
+					"sdcard_d1",
+					"sdcard_d2",
+					"sdcard_d3",
+					"sdcard_cmd",
+					"sdcard_clk";
+				function = "sdcard";
+				input-enable;
+				bias-pull-up;
 			};
 		};
 

@@ -51,5 +51,7 @@ source "drivers/amlogic/pwm/Kconfig"
 
 source "drivers/amlogic/media/Kconfig"
 
+source "drivers/amlogic/mmc/Kconfig"
+
 endmenu
 endif
