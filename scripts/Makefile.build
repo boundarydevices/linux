@@ -59,6 +59,11 @@ ifneq ($(userprogs),)
 include $(srctree)/scripts/Makefile.userprogs
 endif
 
+# Do not include host rules unless needed
+ifneq ($(dtbo-y),)
+include scripts/Makefile.dtbo
+endif
+
 ifndef obj
 $(warning kbuild: Makefile.build is included improperly)
 endif
