@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -30,6 +31,8 @@ static u32 share_count_nand;
 static u32 share_count_enet1;
 static u32 share_count_enet2;
 static u32 share_count_pxp;
+static u32 share_count_enet1;
+static u32 share_count_enet2;
 
 static const struct clk_div_table test_div_table[] = {
 	{ .val = 3, .div = 1, },
