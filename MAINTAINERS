@@ -13481,3 +13481,7 @@ F: include/linux/amlogic/usb-gxbbtv.h
 F: include/linux/amlogic/usb-gxl.h
 F: include/linux/amlogic/usb-gxbb.h
 F: include/linux/amlogic/usbtype.h
+
+AMLOGIC scpi cpufreq
+M:  jianxin.pan <jianxin.pan@amlogic.com>
+F:  drivers/amlogic/clk/clk-scpi.c

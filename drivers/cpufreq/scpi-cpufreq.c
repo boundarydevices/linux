@@ -29,6 +29,7 @@
 #include "arm_big_little.h"
 
 static struct scpi_ops *scpi_ops;
+struct scpi_dvfs_info *scpi_dvfs_get_opps(u8 domain);
 
 static struct scpi_dvfs_info *scpi_get_dvfs_info(struct device *cpu_dev)
 {
@@ -36,7 +37,12 @@ static struct scpi_dvfs_info *scpi_get_dvfs_info(struct device *cpu_dev)
 
 	if (domain < 0)
 		return ERR_PTR(-EINVAL);
-	return scpi_ops->dvfs_get_info(domain);
+
+	/* TODO: Use API from 3.14 temporary.
+	 * When 4.4 arm_mhu and arm_scpi is ported,
+	 * tihs will be replaced by: return scpi_ops->dvfs_get_info(domain);
+	 */
+	return scpi_dvfs_get_opps(domain);
 }
 
 static int scpi_get_transition_latency(struct device *cpu_dev)
@@ -88,9 +94,12 @@ static struct cpufreq_arm_bL_ops scpi_cpufreq_ops = {
 
 static int scpi_cpufreq_probe(struct platform_device *pdev)
 {
-	scpi_ops = get_scpi_ops();
-	if (!scpi_ops)
-		return -EIO;
+	/* TODO:  TODO: Use API from 3.14 temporary.
+	 * When 4.4 arm_mhu and arm_scpi is ported, these lines should be added:
+	 * scpi_ops = get_scpi_ops();
+	 * if (!scpi_ops)
+	 *	return -EIO;
+	 */
 
 	return bL_cpufreq_register(&scpi_cpufreq_ops);
 }

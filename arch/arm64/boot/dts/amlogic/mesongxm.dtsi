@@ -60,6 +60,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 
@@ -68,6 +70,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 		CPU2:cpu@2 {
@@ -75,6 +79,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 
@@ -83,6 +89,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 
@@ -91,6 +99,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x100>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 1>;
+			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 
@@ -99,6 +109,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x101>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 1>;
+			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 		CPU6:cpu@102 {
@@ -106,6 +118,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x102>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 1>;
+			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 
@@ -114,6 +128,8 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x103>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 1>;
+			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 		};
 
@@ -226,6 +242,17 @@
 		mboxes = <&mailbox 0 &mailbox 1>;
 	};
 
+	scpi_clocks {
+		compatible = "arm, scpi-clks";
+
+		scpi_dvfs: scpi_clocks@0 {
+			compatible = "arm, scpi-clk-indexed";
+			#clock-cells = <1>;
+			clock-indices = <0 1>;
+			clock-output-names = "vbig", "vlittle";
+		};
+
+	};
 	xtal: xtal-clk {
 		compatible = "fixed-clock";
 		clock-frequency = <24000000>;
@@ -403,7 +430,6 @@
 					"jtag_clk_0",
 					"jtag_tms_0";
 				function = "jtag";
-				bias-pull-down;
 			};
 		};
 
