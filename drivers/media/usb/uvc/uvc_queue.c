@@ -680,7 +680,7 @@ static void cleanup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 					buf->header_buf_len, DMA_FROM_DEVICE);
 			buf->hbuf_dma_handle = 0;
 		}
-		dma_free_coherent(
+		dma_free_writecombine(
 			hbuf_is_cacheable ? &stream->dev->udev->dev : get_mdev(stream),
 			buf->header_buf_len,
 			buf->header_buf, buf->header_phys);
@@ -731,7 +731,7 @@ static int alloc_buf_urbs(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	/* n urbs * psize bytes / urb, half of which are for headers */
 	header_buf_len = (n * stream->psize) >> 1;
 
-	buf->header_buf = dma_alloc_coherent(
+	buf->header_buf = dma_alloc_writecombine(
 		hbuf_is_cacheable ? &stream->dev->udev->dev : get_mdev(stream),
 		header_buf_len, &buf->header_phys,
 		stream->gfp_flags | __GFP_NOWARN);
