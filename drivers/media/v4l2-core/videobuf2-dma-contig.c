@@ -147,7 +147,7 @@ static void vb2_dc_put(void *buf_priv)
 		sg_free_table(buf->sgt_base);
 		kfree(buf->sgt_base);
 	}
-	dma_free_coherent(buf->dev, buf->size, buf->vaddr, buf->dma_addr);
+	dma_free_writecombine(buf->dev, buf->size, buf->vaddr, buf->dma_addr);
 	put_device(buf->dev);
 	kfree(buf);
 }
@@ -162,10 +162,10 @@ static void *vb2_dc_alloc(void *alloc_ctx, unsigned long size, gfp_t gfp_flags)
 	if (!buf)
 		return ERR_PTR(-ENOMEM);
 
-	buf->vaddr = dma_alloc_coherent(dev, size, &buf->dma_addr,
+	buf->vaddr = dma_alloc_writecombine(dev, size, &buf->dma_addr,
 						GFP_KERNEL | gfp_flags);
 	if (!buf->vaddr) {
-		dev_err(dev, "dma_alloc_coherent of size %ld failed\n", size);
+		dev_err(dev, "dma_alloc_writecombine of size %ld failed\n", size);
 		kfree(buf);
 		return ERR_PTR(-ENOMEM);
 	}
