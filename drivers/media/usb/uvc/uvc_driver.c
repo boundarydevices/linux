@@ -21,6 +21,8 @@
 #include <linux/vmalloc.h>
 #include <linux/wait.h>
 #include <linux/version.h>
+#include <linux/of.h>
+#include <linux/of_reserved_mem.h>
 #include <asm/unaligned.h>
 
 #include <media/v4l2-common.h>
@@ -1848,6 +1850,9 @@ static int uvc_probe(struct usb_interface *intf,
 	struct uvc_device *dev;
 	int ret;
 
+	of_reserved_mem_device_init(&udev->dev);
+	of_reserved_mem_device_init(udev->dev.parent);
+
 	if (id->idVendor && id->idProduct)
 		uvc_trace(UVC_TRACE_PROBE, "Probing known UVC device %s "
 				"(%04x:%04x)\n", udev->devpath, id->idVendor,
@@ -1953,6 +1958,7 @@ error:
 static void uvc_disconnect(struct usb_interface *intf)
 {
 	struct uvc_device *dev = usb_get_intfdata(intf);
+	struct usb_device *udev = interface_to_usbdev(intf);
 
 	/* Set the USB interface data to NULL. This can be done outside the
 	 * lock, as there's no other reader.
@@ -1966,6 +1972,8 @@ static void uvc_disconnect(struct usb_interface *intf)
 	dev->state |= UVC_DEV_DISCONNECTED;
 
 	uvc_unregister_video(dev);
+	of_reserved_mem_device_release(&udev->dev);
+	of_reserved_mem_device_release(udev->dev.parent);
 }
 
 static int uvc_suspend(struct usb_interface *intf, pm_message_t message)
