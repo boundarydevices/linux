@@ -175,6 +175,8 @@
 &iomuxc_imx6q_lshore {
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02	0x1b0b0	/* ACC_INT1 */
+			MX6QDL_PAD_GPIO_3__GPIO1_IO03	0x1b0b0	/* ACC_INT2 */
 			MX6QDL_PAD_EIM_DA4__GPIO3_IO04	0x0b0b0	/* GPIO4 */
 			MX6QDL_PAD_EIM_DA3__GPIO3_IO03	0x0b0b0	/* GPIO5 */
 			MX6QDL_PAD_EIM_DA2__GPIO3_IO02	0x0b0b0	/* GPIO6 */
@@ -516,6 +518,15 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+
+	accelerometer@1d {
+		compatible = "fsl,mma8652";
+		reg = <0x1d>;
+		position = <0>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <2 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-route = <1>;
+	};
 };
 
 &i2c3 {
