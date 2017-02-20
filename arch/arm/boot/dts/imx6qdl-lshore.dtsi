@@ -177,6 +177,8 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_2__GPIO1_IO02	0x1b0b0	/* ACC_INT1 */
 			MX6QDL_PAD_GPIO_3__GPIO1_IO03	0x1b0b0	/* ACC_INT2 */
+#define GP_TUSB320_INT	<&gpio1 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_7__GPIO1_IO07	0x1b0b0	/* TUSB320_INT */
 			MX6QDL_PAD_EIM_DA4__GPIO3_IO04	0x0b0b0	/* GPIO4 */
 			MX6QDL_PAD_EIM_DA3__GPIO3_IO03	0x0b0b0	/* GPIO5 */
 			MX6QDL_PAD_EIM_DA2__GPIO3_IO02	0x0b0b0	/* GPIO6 */
@@ -526,6 +528,14 @@
 		interrupt-parent = <&gpio1>;
 		interrupts = <2 IRQ_TYPE_LEVEL_LOW>;
 		interrupt-route = <1>;
+	};
+
+	tusb320@60 {
+		compatible = "ti,tusb320";
+		reg = <0x60>;
+		tusb320,int-gpio = GP_TUSB320_INT;
+		tusb320,select-mode = <0>;
+		tusb320,dfp-power = <0>;
 	};
 };
 
