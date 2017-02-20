@@ -249,6 +249,9 @@ static int tusb320_gpio_reset_device(struct tusb320_chip *chip)
 {
 	struct device *cdev = &chip->client->dev;
 
+	if (!gpio_is_valid(chip->pdata->enb_gpio))
+		return 0;
+
 	gpio_set_value(chip->pdata->enb_gpio, TUBS320_ENB_DISABLE);
 	msleep(TUBS320_ENB_INTERVAL);
 	gpio_set_value(chip->pdata->enb_gpio, TUBS320_ENB_ENABLE);
@@ -662,35 +665,22 @@ int tusb320_init_gpio(struct tusb320_chip *chip)
 		if (rc) {
 			dev_err(cdev, "unable to request enb_gpio %d\n",
 					chip->pdata->enb_gpio);
-			goto err1;
+			goto err;
 		}
-	} else {
-		dev_err(cdev, "enb_gpio %d is not valid\n",
-				chip->pdata->enb_gpio);
-		rc = -EINVAL;
-		goto err1;
 	}
 
 	if (gpio_is_valid(chip->pdata->int_gpio)) {
 		rc = gpio_request_one(chip->pdata->int_gpio,
 				GPIOF_DIR_IN, "tusb320_int_gpio");
-		if (rc) {
+		if (rc)
 			dev_err(cdev, "unable to request int_gpio %d\n",
 					chip->pdata->int_gpio);
-			goto err2;
-		}
 	} else {
 		dev_err(cdev, "int_gpio %d is not valid\n",
 				chip->pdata->int_gpio);
 		rc = -EINVAL;
-		goto err2;
 	}
-
-	return rc;
-
-err2:
-	gpio_free(chip->pdata->enb_gpio);
-err1:
+err:
 	return rc;
 }
 
@@ -710,11 +700,8 @@ static int tusb320_parse_dt(struct device *cdev, struct tusb320_data *data)
 
 	data->enb_gpio = of_get_named_gpio(dev_node,
 				"tusb320,enb-gpio", 0);
-	if (data->enb_gpio < 0) {
-		dev_err(cdev, "enb_gpio is not available\n");
-		rc = data->enb_gpio;
-		goto out;
-	}
+	if (data->enb_gpio < 0)
+		dev_info(cdev, "enb_gpio is not available\n");
 
 	data->int_gpio = of_get_named_gpio(dev_node,
 				"tusb320,int-gpio", 0);
