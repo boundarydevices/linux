@@ -432,6 +432,10 @@ static int tusb320_set_current_max(struct power_supply *psy,
 {
 	const union power_supply_propval ret = {icurrent,};
 
+	/* Skip if no regulator is found */
+	if (!psy || !psy->desc)
+		return 0;
+
 	if (psy->desc->set_property)
 		return psy->desc->set_property(psy,
 				POWER_SUPPLY_PROP_INPUT_CURRENT_MAX, &ret);
@@ -744,10 +748,8 @@ static int tusb320_probe(struct i2c_client *client,
 	struct power_supply *usb_psy;
 
 	usb_psy = power_supply_get_by_name("usb");
-	if (!usb_psy) {
-		dev_err(cdev, "USB supply not found, deferring probe\n");
-		return -EPROBE_DEFER;
-	}
+	if (!usb_psy)
+		dev_info(cdev, "USB supply not found\n");
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_SMBUS_BYTE_DATA |
