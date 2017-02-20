@@ -432,6 +432,10 @@ static int tusb320_set_current_max(struct power_supply *psy,
 {
 	const union power_supply_propval ret = {icurrent,};
 
+	/* Skip if no regulator is found */
+	if (!psy || !psy->desc)
+		return 0;
+
 	if (psy->desc->set_property)
 		return psy->desc->set_property(psy,
 				POWER_SUPPLY_PROP_INPUT_CURRENT_MAX, &ret);
@@ -448,7 +452,7 @@ static void tusb320_not_attach(struct tusb320_chip *chip)
 	case TUBS320_UFP_ATTACH_DFP:
 		break;
 	case TUBS320_DFP_ATTACH_UFP:
-		power_supply_set_usb_otg(chip->usb_psy, false);
+		// TODO: clear USB OTG power supply
 		break;
 	case TUBS320_ATTACH_ACC:
 		break;
@@ -479,7 +483,7 @@ static void tusb320_dfp_attach_ufp(struct tusb320_chip *chip, u8 detail)
 	switch (chip->state) {
 	case TUBS320_NOT_ATTACH:
 		chip->state = TUBS320_DFP_ATTACH_UFP;
-		power_supply_set_usb_otg(chip->usb_psy, true);
+		// TODO: set USB OTG power supply
 		break;
 	case TUBS320_DFP_ATTACH_UFP:
 		break;
@@ -744,10 +748,8 @@ static int tusb320_probe(struct i2c_client *client,
 	struct power_supply *usb_psy;
 
 	usb_psy = power_supply_get_by_name("usb");
-	if (!usb_psy) {
-		dev_err(cdev, "USB supply not found, deferring probe\n");
-		return -EPROBE_DEFER;
-	}
+	if (!usb_psy)
+		dev_info(cdev, "USB supply not found\n");
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_SMBUS_BYTE_DATA |
