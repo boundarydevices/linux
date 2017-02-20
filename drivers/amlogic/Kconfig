@@ -42,5 +42,8 @@ source "drivers/amlogic/input/Kconfig"
 source "drivers/amlogic/efuse/Kconfig"
 
 source "drivers/amlogic/reboot/Kconfig"
+
+source "drivers/amlogic/ethernet/phy/Kconfig"
+
 endmenu
 endif

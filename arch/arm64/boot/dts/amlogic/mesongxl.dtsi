@@ -456,7 +456,7 @@
 			#interrupt-cells = <2>;
 		};
 
-		eth_pins:eth_pins {
+		external_eth_pins:external_eth_pins {
 			mux {
 				groups = "eth_mdio",
 					"eth_mdc",

@@ -1,0 +1,12 @@
+#
+# PHY Layer Configuration
+#
+
+config AMLOGIC_INTERNAL_PHY
+	tristate "Drivers for amlogic internal phy"
+	---help---
+	  Currently supports the amlogic internal phy.
+	  This module implements the amlogic internal phy,
+	  modify the dts file to switch internal external phy.
+
+	  if in doube, ask yizhou.

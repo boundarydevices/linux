@@ -19,6 +19,8 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "mesongxl.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/gpio/gxl.h>
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxl_p212_1g";
@@ -113,6 +115,26 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&ao_uart_pins>;
 		support-sysrq = <0>;	/* 0 not support , 1 support */
+	};
+
+	ethmac: ethernet@0xc9410000 {
+			compatible = "amlogic, gxbb-eth-dwmac";
+			reg = <0x0 0xc9410000 0x0 0x10000
+			0x0 0xc8834540 0x0 0x8
+			0x0 0xc8834558 0x0 0xc>;
+			interrupts = <0 8 1>;
+			pinctrl-names = "external_eth_pins";
+			pinctrl-0 = <&external_eth_pins>;
+			rst_pin-gpios = <&gpio GPIOZ_14 0>;
+			GPIOZ4_pin-gpios = <&gpio GPIOZ_4 0>;
+			GPIOZ5_pin-gpios = <&gpio GPIOZ_5 0>;
+			mc_val_internal_phy = <0x1800>;
+			mc_val_external_phy = <0x1621>;
+			cali_val = <0x20000>;
+			interrupt-names = "macirq";
+			clocks = <&clkc CLKID_ETH>;
+			clock-names = "ethclk81";
+			internal_phy=<1>;
 	};
 
 	dwc3: dwc3@c9000000 {

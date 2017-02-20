@@ -13495,3 +13495,8 @@ F: drivers/amlogic/i2c/aml_slave.h
 F: drivers/amlogic/i2c/Kconfig
 F: drivers/amlogic/i2c/Makefile
 
+AMLOGIC internal phy driver for ethernet
+M: Yizhou Jiang <yizhou.jiang@amlogic.com
+F: drivers/amlogic/ethernet/*
+
+

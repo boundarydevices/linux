@@ -38,3 +38,6 @@ obj-$(CONFIG_AMLOGIC_INPUT)		+= input/
 obj-$(CONFIG_AMLOGIC_EFUSE)             += efuse/
 
 obj-$(CONFIG_AMLOGIC_REBOOT)		+= reboot/
+
+obj-$(CONFIG_AMLOGIC_INTERNAL_PHY)	+= ethernet/phy/
+

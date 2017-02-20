@@ -22,8 +22,11 @@
 
 #ifndef __STMMAC_H__
 #define __STMMAC_H__
-
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+#define STMMAC_RESOURCE_NAME   "ethclk81"
+#else
 #define STMMAC_RESOURCE_NAME   "stmmaceth"
+#endif
 #define DRV_MODULE_VERSION	"Jan_2016"
 
 #include <linux/clk.h>
