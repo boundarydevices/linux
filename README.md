@@ -22,7 +22,7 @@ Latest kernel releases:
 
 Android
 -----------
-Latest KitKat sources are in branch [boundary-imx-kk4.4.3\_2.0.0-ga][latest-kitkat]
+Latest KitKat sources are in branch [boundary-imx-kk4.4.3\_2.0.1-ga][latest-kitkat]
 
 Latest Lollipop sources are in branch [boundary-imx-l5.1.1\_2.1.0-ga][latest-lollipop]
 
@@ -50,7 +50,7 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [nitrogen6-sx]:http://boundarydevices.com/product/nit6_solox-imx6 "Nit6_SoloX product page"
 [nitrogen7]:https://boundarydevices.com/product/nitrogen7 "Nitrogen7 product page"
 [latest-jellybean]:http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
-[latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.0-ga "Boundary KitKat kernel tree"
+[latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.1-ga "Boundary KitKat kernel tree"
 [latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.1.1_2.1.0-ga "Boundary Lollipop kernel tree"
 [latest-marshmallow]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-m6.0.1_1.0.0-ga "Boundary Marshmallow kernel tree"
 [latest-3.0.35]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_4.1.0 "Boundary 3.0.35 4.1.0 kernel tree"
