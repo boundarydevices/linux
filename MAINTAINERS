@@ -13632,3 +13632,10 @@ F: drivers/amlogic/smartcard/smartcard.h
 F: drivers/amlogic/smartcard/smc_reg.h
 F: include/linux/amlogic/amsmc.h
 F: Documentation/devicetree/bindings/amlogic/amlogic-smartcard.txt
+
+AMLOGIC securitykey
+M: Yan Wang <yan.wang@amlogic.com>
+F: drivers\amlogic\securitykey\Kconfig
+F: drivers\amlogic\securitykey\Makefile
+F: drivers\amlogic\securitykey\securitykey.c
+F: include\linux\amlogic\security_key.h
