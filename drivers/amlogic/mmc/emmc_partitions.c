@@ -33,6 +33,7 @@
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/sd.h>
+#include "emmc_key.h"
 
 #define DTB_NAME	"dtb"
 #define	SZ_1M	0x00100000
@@ -956,6 +957,9 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
 		ret = add_emmc_partition(disk, pt_fmt);
 	}
 	mmc_release_host(card->host);
+
+	if (ret == 0) /* ok */
+		ret = emmc_key_init(card);
 
 	amlmmc_dtb_init(card);
 

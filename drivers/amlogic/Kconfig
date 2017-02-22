@@ -61,5 +61,7 @@ source "drivers/amlogic/cec/Kconfig"
 
 source "drivers/amlogic/securitykey/Kconfig"
 
+source "drivers/amlogic/key_manage/Kconfig"
+
 endmenu
 endif
