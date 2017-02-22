@@ -336,8 +336,11 @@ static struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue
 	if (queue->available) {
 		buf_index = __ffs(queue->available);
 
+#ifdef ENSURE_DMA_BUFFER_AVAILABLE
 		if (for_dma || (queue->available != (1 << buf_index))
-				|| (queue->dma_mode != DMA_MODE_CONTIG)) {
+				|| (queue->dma_mode != DMA_MODE_CONTIG))
+#endif
+		{
 			queue->available &= ~(1 << buf_index);
 			vb = queue->queue.bufs[buf_index];
 			buf = container_of(vb, struct uvc_buffer, buf);
@@ -1204,6 +1207,9 @@ void uvc_queue_cancel_sync(struct uvc_video_queue *queue)
 void uvc_put_buffer(struct uvc_video_queue *queue)
 {
 	struct uvc_buffer *buf = queue->in_progress;
+#ifndef ALLOW_SHORT_BUFFERS
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
+#endif
 
 	if (!buf)
 		return;
@@ -1211,6 +1217,13 @@ void uvc_put_buffer(struct uvc_video_queue *queue)
 	if (0) pr_info("%s:bytesused=%x\n", __func__, buf->bytesused);
 	if (!buf->mem)
 		return;		/* This was fake_buf */
+#ifndef ALLOW_SHORT_BUFFERS
+	if (stream->ctrl.dwMaxVideoFrameSize != buf->bytesused &&
+	    !(stream->cur_format->flags & UVC_FMT_FLAG_COMPRESSED)) {
+		buf->error = 1;
+		pr_info("%s: Bad frame size %x\n", __func__, buf->bytesused);
+	}
+#endif
 	if (!buf->error || !(queue->flags & UVC_QUEUE_DROP_CORRUPTED)) {
 		uvc_buffer_done(buf, VB2_BUF_STATE_DONE, __func__);
 		return;
@@ -1246,6 +1259,7 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 			&& (!buf || !buf->bytesused))
 		queue->sync_index = queue->urb_index_of_frame;
 
+#ifdef ENSURE_DMA_BUFFER_AVAILABLE
 	if ((queue->dma_mode == DMA_MODE_CONTIG) && !queue->available) {
 		if (!buf)
 			goto fake_buf;
@@ -1264,6 +1278,7 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 		uvc_queue_start_work(queue, buf);
 		return nextbuf;
 	}
+#endif
 
 	if (buf) {
 		if ((buf == nextbuf) || buf->bytesused || !nextbuf)
