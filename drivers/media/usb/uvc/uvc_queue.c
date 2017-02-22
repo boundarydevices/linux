@@ -32,8 +32,11 @@ static int hcacheable;
 module_param(cacheable, int, 0);
 MODULE_PARM_DESC(cacheable, "Use cacheable memory for returned buffer");
 
-module_param(hcacheable, int, 0);
-MODULE_PARM_DESC(hcacheable, "Use cacheable memory for headers buffer");
+//module_param(hcacheable, int, 0);
+//MODULE_PARM_DESC(hcacheable, "Use cacheable memory for headers buffer");
+
+//currently, they both have to be the same
+#define hcacheable cacheable
 
 //struct dma_attrs uvc_dma_attrs;
 /* ------------------------------------------------------------------------
