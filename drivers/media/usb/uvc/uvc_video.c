@@ -2148,7 +2148,7 @@ int uvc_video_init(struct uvc_streaming *stream)
 		return ret;
 
 	if (dma_mode == DMA_MODE_CONTIG) {
-		stream->workqueue = create_singlethread_workqueue("uvc_urb_process");
+		stream->workqueue = alloc_workqueue("uvc_urb_process", WQ_UNBOUND, 4);
 		INIT_WORK(&stream->work, urb_processing_work);
 		if (!stream->workqueue)
 			return -ENOMEM;
