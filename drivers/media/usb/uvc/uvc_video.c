@@ -1354,8 +1354,9 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 		if ((ret < 0)  || (ret > 12)) {
 			if (!buf->error) {
 				buf->error = 1;
-				pr_info("%s: error ret=%d mem=%p, bytesused=0x%x\n",
-					__func__, ret, mem, buf->bytesused);
+				pr_info("%s: error ret=%d mem(%p)=%x %x, len=%x, bytesused=0x%x\n",
+					__func__, ret, mem, ((u32*)mem)[0],
+					((u32*)mem)[1], len, buf->bytesused);
 			}
 			stream->bulk.skip_payload = 1;
 		} else {
