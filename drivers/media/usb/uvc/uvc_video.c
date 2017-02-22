@@ -1586,22 +1586,19 @@ static void uvc_video_complete_contig(struct urb *urb)
 
 		if (!queue->available && queue->streaming) {
 			/* Falling behind, drop this buffer */
-			unsigned submitted_insert_shift = 0;
 			unsigned val = queue->submitted_buffers;
 			int i = queue->submitted_insert_shift;
 			unsigned buf_index;
 
 			while (i > 0) {
-				buf_index = val & 0x1f;
-				val >>= 5;
 				i -= 5;
+				buf_index = (val >> i) & 0x1f;
 				if (buf_index == vb->v4l2_buf.index) {
 					drop = rbuf;
-					queue->submitted_buffers |= (0x1f << submitted_insert_shift);
+					queue->submitted_buffers |= (0x1f << i);
 					queue->pending &= ~(1 << buf_index);
 					break;
 				}
-				submitted_insert_shift += 5;
 			}
 		}
 		rbuf->usb_active = 0;
@@ -1611,11 +1608,13 @@ static void uvc_video_complete_contig(struct urb *urb)
 		spin_unlock_irqrestore(&queue->irqlock, flags);
 
 		uvc_queue_start_work(queue, drop);
-		if (rbuf->buf_dma_handle) {
-			queue_work(queue->cachequeue, &rbuf->cache_work);
-		} else {
+		if (drop) {
+			queue_work(stream->workqueue, &stream->work);
+		} else if (!rbuf->buf_dma_handle) {
 			rbuf->for_cpu = 1;
 			queue_work(stream->workqueue, &stream->work);
+		} else {
+			queue_work(queue->cachequeue, &rbuf->cache_work);
 		}
 		if (0 && drop) {
 			pr_info("submit=%08x, %d\n",
