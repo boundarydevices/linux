@@ -27,11 +27,11 @@
 #include "uvcvideo.h"
 
 static int cacheable;
-static int hcacheable;
 
 module_param(cacheable, int, 0);
 MODULE_PARM_DESC(cacheable, "Use cacheable memory for returned buffer");
 
+//static int hcacheable;
 //module_param(hcacheable, int, 0);
 //MODULE_PARM_DESC(hcacheable, "Use cacheable memory for headers buffer");
 
