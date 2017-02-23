@@ -1520,14 +1520,34 @@ static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 		if (pxp->devdata && pxp->devdata->pxp_wfe_a_process)
 			pxp->devdata->pxp_wfe_a_process(pxp);
 
-		break;
-	case PXP_OP_WFE_B:
-		pxp_wfe_b_configure(pxp);
-		pxp_wfe_b_process(pxp);
-		break;
-	default:
-		pr_err("Invalid pxp operation type passed\n");
-		return -EINVAL;
+		return 0;
+	}
+
+	/* Configure PxP regs */
+	pxp_set_ctrl(pxp);
+	pxp_set_s0param(pxp);
+	pxp_set_s0crop(pxp);
+	pxp_set_scaling(pxp);
+	ol_nr = pxp_conf_data->layer_nr - 2;
+
+	if (ol_nr == 0) {
+		/* disable AS engine */
+		__raw_writel(BF_PXP_OUT_AS_ULC_X(1) |
+				BF_PXP_OUT_AS_ULC_Y(1),
+				pxp->base + HW_PXP_OUT_AS_ULC);
+
+		__raw_writel(BF_PXP_OUT_AS_LRC_X(0) |
+				BF_PXP_OUT_AS_LRC_Y(0),
+				pxp->base + HW_PXP_OUT_AS_LRC);
+	} else {
+		while (ol_nr > 0) {
+			i = pxp_conf_data->layer_nr - 2 - ol_nr;
+			pxp_set_oln(i, pxp);
+			pxp_set_olparam(i, pxp);
+			/* only the color key in higher overlay will take effect. */
+			pxp_set_olcolorkey(i, pxp);
+			ol_nr--;
+		}
 	}
 
 	return 0;
