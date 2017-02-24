@@ -1611,11 +1611,13 @@ static void uvc_video_complete_contig(struct urb *urb)
 		spin_unlock_irqrestore(&queue->irqlock, flags);
 
 		uvc_queue_start_work(queue, drop);
-		if (!drop && rbuf->buf_dma_handle) {
-			queue_work(queue->cachequeue, &rbuf->cache_work);
-		} else {
+		if (drop) {
+			queue_work(stream->workqueue, &stream->work);
+		} else if (!rbuf->buf_dma_handle) {
 			rbuf->for_cpu = 1;
 			queue_work(stream->workqueue, &stream->work);
+		} else {
+			queue_work(queue->cachequeue, &rbuf->cache_work);
 		}
 		if (0 && drop) {
 			pr_info("submit=%08x, %d\n",
