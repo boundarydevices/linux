@@ -293,7 +293,7 @@
 		nshutdown_gpio = GP_BT_RFKILL_RESET;
 		dev_name = "/dev/ttymxc2";
 		flow_cntrl = <1>;
-		baud_rate = <115200>;
+		baud_rate = <3000000>;
  	};
 
 	clocks {
