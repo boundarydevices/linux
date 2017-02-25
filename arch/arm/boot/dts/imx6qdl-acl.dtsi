@@ -36,10 +36,12 @@
 			MX6QDL_PAD_CSI0_DAT10__ECSPI2_MISO	0x100b1
 			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1
 			MX6QDL_PAD_CSI0_DAT8__ECSPI2_SCLK	0x000b1
-#define GP_ECSPI2_NOR_CS0	<&gpio5 29 GPIO_ACTIVE_LOW>
+#define GP_ECSPI2_MOTOR0	<&gpio5 29 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x0b0b1
-#define GP_ECSPI2_NOR_CS1	<&gpio2 27 GPIO_ACTIVE_LOW>
+#define GP_ECSPI2_MOTOR1	<&gpio2 27 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x0b0b1
+#define GP_ECSPI2_OPTICS	<&gpio1 14 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD2_DAT1__GPIO1_IO14		0x0b0b0
 		>;
 	};
 
@@ -365,6 +367,14 @@
 		pwms = <&pwm3 0 5000000>;
 	};
 
+	clk_optics: clk-optics {
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <8000000>;
+		clock-output-names = "optics";
+		pwms = <&pwm4 0 125>; /* 1 / 125 ns = 8 MHz */
+	};
+
 	fb_lcd: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
@@ -469,7 +479,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
 	fsl,spi-num-chipselects = <2>;
-	cs-gpios = GP_ECSPI2_NOR_CS0, GP_ECSPI2_NOR_CS1;
+	cs-gpios = GP_ECSPI2_MOTOR0, GP_ECSPI2_MOTOR1, GP_ECSPI2_OPTICS;
 	status = "okay";
 
 	spidev@0 {
@@ -482,6 +492,14 @@
 		compatible = "spidev";
 		spi-max-frequency = <2000000>;
 		reg = <1>;
+	};
+
+	spidev@2 {
+		clocks = <&clk_optics>;
+		clock-names = "osc";
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <2>;
 	};
 };
 
