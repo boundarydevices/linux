@@ -57,72 +57,72 @@
 };
 
 &i2c3 {
-	max17135@48 {
-		compatible = "maxim,max17135";
-		reg = <0x48>;
-		vneg_pwrup = <1>;
-		gvee_pwrup = <1>;
-		vpos_pwrup = <2>;
-		gvdd_pwrup = <1>;
-		gvdd_pwrdn = <1>;
-		vpos_pwrdn = <2>;
-		gvee_pwrdn = <1>;
-		vneg_pwrdn = <1>;
-		SENSOR-supply = <&reg_sensor>;
-		gpio_pmic_pwrgood = <&gpio2 21 0>;
-		gpio_pmic_vcom_ctrl = <&gpio3 17 0>;
-		gpio_pmic_wakeup = <&gpio3 20 0>;
-		gpio_pmic_v3p3 = <&gpio2 20 0>;
-		gpio_pmic_intr = <&gpio2 25 0>;
+        max17135@48 {
+                compatible = "maxim,max17135";
+                reg = <0x48>;
+                vneg_pwrup = <1>;
+                gvee_pwrup = <1>;
+                vpos_pwrup = <2>;
+                gvdd_pwrup = <1>;
+                gvdd_pwrdn = <1>;
+                vpos_pwrdn = <2>;
+                gvee_pwrdn = <1>;
+                vneg_pwrdn = <1>;
+                SENSOR-supply = <&reg_sensor>;
+                gpio_pmic_pwrgood = <&gpio2 21 0>;
+                gpio_pmic_vcom_ctrl = <&gpio3 17 0>;
+                gpio_pmic_wakeup = <&gpio3 20 0>;
+                gpio_pmic_v3p3 = <&gpio2 20 0>;
+                gpio_pmic_intr = <&gpio2 25 0>;
 
-		regulators {
-DISPLAY_reg: DISPLAY {
-		     regulator-name = "DISPLAY";
-	     };
+                regulators {
+                        DISPLAY_reg: DISPLAY {
+                                regulator-name = "DISPLAY";
+                        };
 
-GVDD_reg: GVDD {
-		  /* 20v */
-		  regulator-name = "GVDD";
-	  };
+                        GVDD_reg: GVDD {
+                                /* 20v */
+                                regulator-name = "GVDD";
+                        };
 
-GVEE_reg: GVEE {
-		  /* -22v */
-		  regulator-name = "GVEE";
-	  };
+                        GVEE_reg: GVEE {
+                                /* -22v */
+                                regulator-name = "GVEE";
+                        };
 
-HVINN_reg: HVINN {
-		   /* -22v */
-		   regulator-name = "HVINN";
-	   };
+                        HVINN_reg: HVINN {
+                                /* -22v */
+                                regulator-name = "HVINN";
+                        };
 
-HVINP_reg: HVINP {
-		   /* 20v */
-		   regulator-name = "HVINP";
-	   };
+                        HVINP_reg: HVINP {
+                                /* 20v */
+                                regulator-name = "HVINP";
+                        };
 
-VCOM_reg: VCOM {
-		  regulator-name = "VCOM";
-		  /* 2's-compliment, -4325000 */
-		  regulator-min-microvolt = <0xffbe0178>;
-		  /* 2's-compliment, -500000 */
-		  regulator-max-microvolt = <0xfff85ee0>;
-	  };
+                        VCOM_reg: VCOM {
+                                regulator-name = "VCOM";
+                                /* Real max: -500000 */
+                                regulator-max-microvolt = <4325000>;
+                                /* Real min: -4325000 */
+                                regulator-min-microvolt = <500000>;
+                        };
 
-VNEG_reg: VNEG {
-		  /* -15v */
-		  regulator-name = "VNEG";
-	  };
+                        VNEG_reg: VNEG {
+                                /* -15v */
+                                regulator-name = "VNEG";
+                        };
 
-VPOS_reg: VPOS {
-		  /* 15v */
-		  regulator-name = "VPOS";
-	  };
+                        VPOS_reg: VPOS {
+                                /* 15v */
+                                regulator-name = "VPOS";
+                        };
 
-V3P3_reg: V3P3 {
-		  regulator-name = "V3P3";
-	  };
-		};
-	};
+                        V3P3_reg: V3P3 {
+                                regulator-name = "V3P3";
+                        };
+                };
+        };
 };
 
 &ipu1_csi1_from_ipu1_csi1_mux {
