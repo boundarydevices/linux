@@ -388,6 +388,8 @@ struct uvc_buffer {
 	unsigned combined_cnt;
 	unsigned combined_payload;
 	unsigned pending_urb_index;
+	unsigned pending_dma_index;
+	unsigned eof_transfer_length;
 	u8 *header_buf;
 	unsigned header_buf_len;
 	dma_addr_t header_phys;
@@ -420,12 +422,12 @@ struct uvc_video_queue {
 	struct workqueue_struct *workqueue;
 	struct workqueue_struct *cachequeue;
 	struct work_struct 	work;
-	unsigned urb_index_of_frame;
 	/*
 	 * This is the source urb index when copying to
 	 * this buffer started
 	 */
-	unsigned sync_index;
+	unsigned sof_index;
+	unsigned dma_payload;
 	int dma_mode;
 	u8 streaming;
 	u8 return_buffers;
