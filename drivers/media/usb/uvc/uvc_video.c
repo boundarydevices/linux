@@ -1496,8 +1496,6 @@ static void process_urb(struct urb *urb, struct uvc_streaming *stream,
 		check_status(urb, stream);
 		return;
 	}
-	if (rbuf->header_sz)
-		queue->urb_index_of_frame = rbuf->pending_urb_index;
 	if (0) pr_info("%s:rbuf=%p, owner=%x\n", __func__, rbuf, rbuf->owner);
 	stream->decode(urb, stream, rbuf);
 }
@@ -1572,15 +1570,31 @@ static void uvc_video_complete_contig(struct urb *urb)
 	struct vb2_buffer *vb = urb->context;
 
 	rbuf = container_of(vb, struct uvc_buffer, buf);
+	queue = vb2_get_drv_priv(vb->vb2_queue);
+	stream = container_of(queue, struct uvc_streaming, queue);
 
 	if (0) pr_info("%s: buf=%p(%i) urb=%p %x\n", __func__, rbuf,
 			vb->v4l2_buf.index, urb, rbuf->bytesused);
 	rbuf->last_completed_urb = urb;
+	rbuf->pending_dma_index++;
+	queue->dma_payload += urb->actual_length;
+
+	if (urb->actual_length == rbuf->eof_transfer_length) {
+		queue->sof_index = (rbuf->pending_dma_index < rbuf->used_urb_cnt) ?
+				rbuf->pending_dma_index : 0;
+		if (queue->sof_index)
+			pr_info("%s: sof=%x,  %x: %x, %x\n", __func__,
+				queue->sof_index,
+				urb->actual_length, urb->transfer_buffer_length,
+				queue->dma_payload);
+		queue->dma_payload = 0;
+	}
+
 	if (rbuf->used_urb_cnt && rbuf->urbs &&
 			urb == rbuf->urbs[rbuf->used_urb_cnt - 1]) {
+		unsigned mask = (1 << vb->v4l2_buf.index);
+
 		rbuf->for_cpu = 0;
-		queue = vb2_get_drv_priv(vb->vb2_queue);
-		stream = container_of(queue, struct uvc_streaming, queue);
 
 		if (0) pr_info("%s:buf=%p(%i), owner=%x urb=%p submitted=%x\n",
 				__func__, rbuf, vb->v4l2_buf.index,
@@ -1599,13 +1613,14 @@ static void uvc_video_complete_contig(struct urb *urb)
 				if (buf_index == vb->v4l2_buf.index) {
 					drop = rbuf;
 					queue->submitted_buffers |= (0x1f << i);
-					queue->pending &= ~(1 << buf_index);
+					queue->pending &= ~mask;
 					break;
 				}
 			}
 		}
 		rbuf->usb_active = 0;
-		queue->submitted &= ~(1 << vb->v4l2_buf.index);
+		queue->submitted &= ~mask;
+		queue->frame_sync_mask &= ~mask;
 		if (rbuf->owner == UVC_OWNER_USB_ACTIVE)
 			rbuf->owner = UVC_OWNER_USB;
 		spin_unlock_irqrestore(&queue->irqlock, flags);

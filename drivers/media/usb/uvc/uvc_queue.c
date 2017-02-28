@@ -130,7 +130,6 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	unsigned mps, max_payload_size;
 	unsigned rp;
 	struct urb *urb;
-	int urb_cnt;
 	int tf = URB_NO_TRANSFER_DMA_MAP;
 
 	if (!buf->urb_cnt)
@@ -163,47 +162,9 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	h_rem = buf->header_buf_len;
 
 	buf->repeat_payload = repeat_payload;
+	if (!header_sz)
+		header_sz = 12;
 	buf->header_sz = header_sz;
-
-	if (!header_sz) {
-		urb_cnt = (rem / repeat_payload) + (h_rem / repeat_payload);
-		if (urb_cnt > buf->urb_cnt)
-			urb_cnt = buf->urb_cnt;
-
-		while (i < urb_cnt) {
-			if (rem < repeat_payload)
-				break;
-			urb = buf->urbs[i++];
-			stream->init_urb(stream, urb,
-				&buf->buf,
-				mem, repeat_payload, phys, tf);
-			if (0) pr_info("%s: init_urb done, urb[%d]=%p len=0x%x\n",
-				__func__, i - 1, urb, buf->length);
-			mem += repeat_payload;
-			phys += repeat_payload;
-			rem -= repeat_payload;
-		}
-		if (!h_mem)
-			goto exit1;
-
-		while (i < urb_cnt) {
-			if (h_rem < repeat_payload) {
-				pr_err("%s: h buf too small\n", __func__);
-				break;
-			}
-			urb = buf->urbs[i++];
-			stream->init_urb(stream, urb,
-				&buf->buf,
-				h_mem,
-				repeat_payload, h_phys, URB_NO_TRANSFER_DMA_MAP);
-			if (0) pr_info("%s: init_urb done, urb[%d]=%p len=0x%x\n",
-				__func__, i - 1, urb, buf->length);
-			h_mem += repeat_payload;
-			h_phys += repeat_payload;
-			h_rem -= repeat_payload;
-		}
-		goto exit1;
-	}
 
 	frame_rem = stream->ctrl.dwMaxVideoFrameSize;
 	header_copy_sz = psize - header_sz;
@@ -265,10 +226,14 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 		rem -= rp;
 		frame_rem -= rp;
 	}
-exit1:
+	buf->eof_transfer_length = frame_rem;
+	if (i & 1)
+		buf->eof_transfer_length += header_sz;
+
 	buf->used_urb_cnt = i;
 	buf->setup_done = 1;
-	if (0) pr_info("%s: used %u of %u\n", __func__, i, buf->urb_cnt);
+	if (1) pr_info("%s: used %u of %u, eof_transfer_length=%x\n", __func__,
+			i, buf->urb_cnt, buf->eof_transfer_length);
 	return 0;
 }
 
@@ -368,6 +333,7 @@ static int submit_buffer(struct uvc_video_queue *queue, struct uvc_streaming *st
 	int i;
 	int first;
 	int buf_index;
+	int sof_index;
 
 	if ((queue->submitted_insert_shift >= (6 * 5)) || !queue->streaming)
 		return 0;
@@ -379,36 +345,29 @@ static int submit_buffer(struct uvc_video_queue *queue, struct uvc_streaming *st
 		if (s != (s & -s))
 			return 0;
 	}
-	if (!stream->sync && stream->header_sz
+
+	sof_index = queue->sof_index;
+
+	if (sof_index && stream->header_sz
 			&& stream->repeat_payload
-			&& queue->using_headers) {
-		int sync_index;
-
-		if (queue->pending & queue->frame_sync_mask)
-			goto no_sync;
-
-		queue->frame_sync_mask = 0;
-
+			&& queue->using_headers
+			&& !queue->frame_sync_mask) {
 		/*
 		 * Now determine how many payloads are left to fill latest buffer
 		 */
-		sync_index = queue->sync_index;
-		if (!sync_index)
-			goto no_sync;
 
 		buf = uvc_get_available_buffer(queue, 1);
 		if (!buf)
 			return 0;
 		setup_buf(stream, buf);
-		queue->sync_index = 0;
+		queue->sof_index = 0;
 
-		if (buf->used_urb_cnt > sync_index) {
-			i = buf->used_urb_cnt - sync_index;
+		if (buf->used_urb_cnt > sof_index) {
+			i = buf->used_urb_cnt - sof_index;
 			queue->frame_sync_mask = 1 << buf->buf.v4l2_buf.index;
 			if (0) pr_info("%s: syncing %i\n", __func__, i);
 		}
 	} else {
-no_sync:
 		buf = uvc_get_available_buffer(queue, 1);
 		if (!buf)
 			return 0;
@@ -425,6 +384,7 @@ no_sync:
 	buf->last_completed_urb = NULL;
 	buf->usb_active = 1;
 	buf->pending_urb_index = i;
+	buf->pending_dma_index = i;
 	queue->submitted_buffers |= buf_index << queue->submitted_insert_shift;
 	queue->submitted_insert_shift += 5;
 
@@ -759,6 +719,7 @@ static int alloc_buf_urbs(struct uvc_streaming *stream, struct uvc_buffer *buf)
 		}
 	}
 	buf->header_buf_len = header_buf_len;
+	stream->queue.sof_index = 0;
 	stream->queue.using_headers = 1;
 	return 0;
 }
@@ -1258,9 +1219,6 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 	}
 
 	buf = queue->in_progress;
-	if (!(queue->pending & queue->frame_sync_mask)
-			&& (!buf || !buf->bytesused))
-		queue->sync_index = queue->urb_index_of_frame;
 
 #ifdef ENSURE_DMA_BUFFER_AVAILABLE
 	if ((queue->dma_mode == DMA_MODE_CONTIG) && !queue->available) {
