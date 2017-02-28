@@ -1,5 +1,12 @@
 /*
- * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2016 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2017 NXP.
+ */
+
+/*
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,6 +83,7 @@ struct mipi_dsi_info {
 	const struct mipi_dsi_bus_mux	*bus_mux;
 	int				dsi_power_on;
 	int				lcd_inited;
+	int				encoder;
 	u32				dphy_pll_config;
 	int				dev_id;
 	int				disp_id;
