@@ -47,8 +47,8 @@
 
 	pinctrl_ecspi4: ecspi4grp {
 		fsl,pins = <
-			MX6QDL_PAD_EIM_D28__ECSPI4_MOSI		0x100b1
-			MX6QDL_PAD_EIM_D21__ECSPI4_SCLK		0x000b1
+			MX6QDL_PAD_EIM_D28__ECSPI4_MOSI		0x1b0b1
+			MX6QDL_PAD_EIM_D21__ECSPI4_SCLK		0x0b0b1
 #define GP_ECSPI4_DUMMY_CS0	<&gpio3 20 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_D20__GPIO3_IO20		0x000b1
 		>;
@@ -93,10 +93,12 @@
 			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x130b0
 			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x130b0
 			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x130b0
+			/* motor control for CS0, STEP1_RESET */
 			MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x130b0
 			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x130b0
 			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x130b0
 			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x130b0
+			/* motor control for CS1, STEP2_RESET */
 			MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x130b0
 			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x130b0
 			MX6QDL_PAD_EIM_BCLK__GPIO6_IO31		0x130b0
@@ -478,7 +480,7 @@
 &ecspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
-	fsl,spi-num-chipselects = <2>;
+	fsl,spi-num-chipselects = <3>;
 	cs-gpios = GP_ECSPI2_MOTOR0, GP_ECSPI2_MOTOR1, GP_ECSPI2_OPTICS;
 	status = "okay";
 
