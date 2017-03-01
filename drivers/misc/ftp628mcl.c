@@ -96,7 +96,7 @@ static void ftp628_motor_next_phase(struct ftp628_data *pdata)
 		ARRAY_SIZE(mt_phases), mt_phases[pdata->mt_phase]);
 
 	/* Not sure which delay should be used */
-	mdelay(1);
+	mdelay(2);
 
 	for (i = 0; i < ARRAY_SIZE(pdata->mt_ab_gpios); i++) {
 		if (mt_phases[pdata->mt_phase] & (1 << i))
@@ -111,12 +111,7 @@ static void ftp628_motor_next_phase(struct ftp628_data *pdata)
 
 static void ftp628_motor_next_line(struct ftp628_data *pdata)
 {
-	int i = ARRAY_SIZE(mt_phases) * 4;
-
-	ftp628_suspend_motors(pdata, 0);
-	for (; i; i--)
-		ftp628_motor_next_phase(pdata);
-	ftp628_suspend_motors(pdata, 1);
+	ftp628_motor_next_phase(pdata);
 }
 
 static void ftp628_toggle_gpio(struct gpio_desc *gpio, int state, int delay_us)
@@ -139,9 +134,10 @@ static ssize_t ftp628_write(struct file *file, const char __user *data,
 	struct device *dev = &pdata->spi->dev;
 	int ret;
 	int i;
+	loff_t file_off = 0;
 
 	size_t size = simple_write_to_buffer(&buffer, sizeof(buffer),
-					     off, data, count);
+					     &file_off, data, count);
 
 	dev_dbg(dev, "%s count %d (size %d)\n", __func__, count, size);
 
@@ -151,8 +147,13 @@ static ssize_t ftp628_write(struct file *file, const char __user *data,
 
 	/* Handle carriage return command */
 	if (size == 1) {
-		if (buffer[0] == '\r')
+		if (buffer[0] == '\r') {
 			ftp628_motor_next_line(pdata);
+		} else if (buffer[0] == 'B') {
+			ftp628_suspend_motors(pdata, 0);
+		} else {
+			ftp628_suspend_motors(pdata, 1); /* 'E' */
+		}
 		return size;
 	}
 
