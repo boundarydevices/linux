@@ -122,14 +122,6 @@
 
 	pinctrl_gpio_keys: gpio-keysgrp {
 		fsl,pins = <
-#define GP_GPI_1	<&gpio3 8 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x100b0
-#define GP_GPI_2	<&gpio3 9 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x100b0
-#define GP_GPI_3	<&gpio3 10 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x100b0
-#define GP_GPI_4	<&gpio3 11 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x100b0
 #define GP_GPI_5	<&gpio3 12 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x100b0
 #define GP_GPI_6	<&gpio3 13 GPIO_ACTIVE_HIGH>
@@ -475,30 +467,6 @@
 		enable-gpios = GP_GPI_EN_N;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
-
-		gpi1 {
-			label = "gpi1";
-			gpios = GP_GPI_1;
-			linux,code = <KEY_F1>;
-		};
-
-		gpi2 {
-			label = "gpi2";
-			gpios = GP_GPI_2;
-			linux,code = <KEY_F2>;
-		};
-
-		gpi3 {
-			label = "gpi3";
-			gpios = GP_GPI_3;
-			linux,code = <KEY_F3>;
-		};
-
-		gpi4 {
-			label = "gpi4";
-			gpios = GP_GPI_4;
-			linux,code = <KEY_F4>;
-		};
 
 		gpi5 {
 			label = "gpi5";
