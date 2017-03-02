@@ -232,7 +232,7 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 
 	buf->used_urb_cnt = i;
 	buf->setup_done = 1;
-	if (1) pr_info("%s: used %u of %u, eof_transfer_length=%x\n", __func__,
+	pr_debug("%s: used %u of %u, eof_transfer_length=%x\n", __func__,
 			i, buf->urb_cnt, buf->eof_transfer_length);
 	return 0;
 }
