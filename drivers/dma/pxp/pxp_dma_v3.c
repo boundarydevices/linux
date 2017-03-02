@@ -670,13 +670,9 @@ static u32 pxp_parse_ps_fmt(struct pxps *pxp)
 		fmt_ctrl = 0;
 	}
 
-	return fmt_ctrl;
-}
-
-static u32 pxp_parse_out_fmt(struct pxps *pxp)
-{
-	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
-	u32 fmt_ctrl;
+	ctrl = BF_PXP_PS_CTRL_FORMAT(fmt_ctrl) |
+		(proc_data->need_yuv_swap ? BM_PXP_PS_CTRL_WB_SWAP : 0);
+	__raw_writel(ctrl, pxp->base + HW_PXP_PS_CTRL_SET);
 
 	switch (pxp_conf->out_param.pixel_fmt) {
 	case PXP_PIX_FMT_XRGB32:
