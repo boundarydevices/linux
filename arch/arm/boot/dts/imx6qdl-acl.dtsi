@@ -372,9 +372,9 @@
 	clk_optics: clk-optics {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
-		clock-frequency = <8000000>;
+		clock-frequency = <3666667>;
 		clock-output-names = "optics";
-		pwms = <&pwm4 0 125>; /* 1 / 125 ns = 8 MHz */
+		pwms = <&pwm4 0 273>; /* 1 / 273 ns = 3.67 MHz */
 	};
 
 	fb_lcd: fb@0 {
