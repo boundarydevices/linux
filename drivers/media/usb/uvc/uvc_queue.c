@@ -820,6 +820,7 @@ static void stop_queue(struct uvc_video_queue *queue)
 	int i = 0;
 	int retry = 0;
 
+	queue->streaming = 0;
 	queue->return_buffers = 1;
 	uvc_queue_cancel(queue);
 	if (queue->workqueue)
@@ -843,9 +844,9 @@ static void stop_queue(struct uvc_video_queue *queue)
 			if (0) pr_info("%s: %p(%d): usb_active=%x owner=%x\n", __func__, buf,
 				i, buf->usb_active, buf->owner);
 		if (buf->usb_active) {
-			if (!retry)
-				pr_info("%s: waiting for buf %d to be returned\n", __func__, i);
 			msleep(100);
+			if (!retry && buf->usb_active)
+				pr_info("%s: waiting for buf %d to be returned\n", __func__, i);
 			if (retry < 40) {
 				retry++;
 			} else {
@@ -1158,10 +1159,7 @@ void uvc_queue_cancel(struct uvc_video_queue *queue)
 
 void uvc_queue_cancel_sync(struct uvc_video_queue *queue)
 {
-	queue->streaming = 0;
-	if (queue->workqueue)
-		cancel_work_sync(&queue->work);
-	uvc_queue_cancel(queue);
+	stop_queue(queue);
 }
 
 void uvc_put_buffer(struct uvc_video_queue *queue)
