@@ -1601,7 +1601,7 @@ static void uvc_video_complete_contig(struct urb *urb)
 				rbuf->owner,	urb, queue->submitted);
 		spin_lock_irqsave(&queue->irqlock, flags);
 
-		if (!queue->available && queue->streaming) {
+		if (!queue->available || !queue->streaming) {
 			/* Falling behind, drop this buffer */
 			unsigned val = queue->submitted_buffers;
 			int i = queue->submitted_insert_shift;
@@ -2179,7 +2179,6 @@ int uvc_video_enable(struct uvc_streaming *stream, int enable)
 	int ret;
 
 	if (!enable) {
-		uvc_uninit_video(stream, 1);
 		if (stream->iso_packets) {
 			usb_set_interface(stream->dev->udev,
 					  stream->intfnum, 0);
@@ -2199,6 +2198,7 @@ int uvc_video_enable(struct uvc_streaming *stream, int enable)
 			usb_clear_halt(stream->dev->udev, pipe);
 		}
 
+		uvc_uninit_video(stream, 1);
 		uvc_video_clock_cleanup(stream);
 		return 0;
 	}
