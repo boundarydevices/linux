@@ -650,7 +650,7 @@
 	sound {
 		compatible = "fsl,imx6q-nitrogen6_som2-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
-		model = "imx6q-nitrogen6_som2-sgtl5000";
+		model = "sgtl5000-audio";
 		ssi-controller = <&ssi1>;
 		audio-codec = <&sgtl5000>;
 		audio-routing =
