@@ -146,7 +146,8 @@ void vp_del_vqs(struct virtio_device *vdev)
 
 static int vp_find_vqs_msix(struct virtio_device *vdev, unsigned nvqs,
 		struct virtqueue *vqs[], vq_callback_t *callbacks[],
-		const char * const names[], struct irq_affinity *desc)
+		const char * const names[], const bool *ctx,
+		struct irq_affinity *desc)
 {
 	struct virtio_pci_device *vp_dev = to_vp_device(vdev);
 	const char *name = dev_name(&vp_dev->vdev.dev);
@@ -228,7 +229,8 @@ static int vp_find_vqs_msix(struct virtio_device *vdev, unsigned nvqs,
 			msix_vec = VIRTIO_MSI_NO_VECTOR;
 
 		vqs[i] = vp_dev->setup_vq(vp_dev, i, callbacks[i], names[i],
-				msix_vec);
+					  ctx ? ctx[i] : false,
+					  msix_vec);
 		if (IS_ERR(vqs[i])) {
 			err = PTR_ERR(vqs[i]);
 			goto out_remove_vqs;
@@ -286,7 +288,7 @@ out_free_irq_vectors:
 
 static int vp_find_vqs_intx(struct virtio_device *vdev, unsigned nvqs,
 		struct virtqueue *vqs[], vq_callback_t *callbacks[],
-		const char * const names[])
+		const char * const names[], const bool *ctx)
 {
 	struct virtio_pci_device *vp_dev = to_vp_device(vdev);
 	int i, err;
@@ -302,7 +304,8 @@ static int vp_find_vqs_intx(struct virtio_device *vdev, unsigned nvqs,
 			continue;
 		}
 		vqs[i] = vp_dev->setup_vq(vp_dev, i, callbacks[i], names[i],
-				VIRTIO_MSI_NO_VECTOR);
+					  ctx ? ctx[i] : false,
+					  VIRTIO_MSI_NO_VECTOR);
 		if (IS_ERR(vqs[i])) {
 			err = PTR_ERR(vqs[i]);
 			goto out_remove_vqs;
@@ -320,14 +323,15 @@ out_remove_vqs:
 /* the config->find_vqs() implementation */
 int vp_find_vqs(struct virtio_device *vdev, unsigned nvqs,
 		struct virtqueue *vqs[], vq_callback_t *callbacks[],
-		const char * const names[], struct irq_affinity *desc)
+		const char * const names[], const bool *ctx,
+		struct irq_affinity *desc)
 {
 	int err;
 
-	err = vp_find_vqs_msix(vdev, nvqs, vqs, callbacks, names, desc);
+	err = vp_find_vqs_msix(vdev, nvqs, vqs, callbacks, names, ctx, desc);
 	if (!err)
 		return 0;
-	return vp_find_vqs_intx(vdev, nvqs, vqs, callbacks, names);
+	return vp_find_vqs_intx(vdev, nvqs, vqs, callbacks, names, ctx);
 }
 
 const char *vp_bus_name(struct virtio_device *vdev)

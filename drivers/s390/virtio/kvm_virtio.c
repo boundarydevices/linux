@@ -189,7 +189,7 @@ static bool kvm_notify(struct virtqueue *vq)
 static struct virtqueue *kvm_find_vq(struct virtio_device *vdev,
 				     unsigned index,
 				     void (*callback)(struct virtqueue *vq),
-				     const char *name)
+				     const char *name, bool ctx)
 {
 	struct kvm_device *kdev = to_kvmdev(vdev);
 	struct kvm_vqconfig *config;
@@ -256,6 +256,7 @@ static int kvm_find_vqs(struct virtio_device *vdev, unsigned nvqs,
 			struct virtqueue *vqs[],
 			vq_callback_t *callbacks[],
 			const char * const names[],
+			const bool *ctx,
 			struct irq_affinity *desc)
 {
 	struct kvm_device *kdev = to_kvmdev(vdev);
@@ -266,7 +267,8 @@ static int kvm_find_vqs(struct virtio_device *vdev, unsigned nvqs,
 		return -ENOENT;
 
 	for (i = 0; i < nvqs; ++i) {
-		vqs[i] = kvm_find_vq(vdev, i, callbacks[i], names[i]);
+		vqs[i] = kvm_find_vq(vdev, i, callbacks[i], names[i],
+				     ctx ? ctx[i] : false);
 		if (IS_ERR(vqs[i]))
 			goto error;
 	}
