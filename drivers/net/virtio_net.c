@@ -514,21 +514,76 @@ err_buf:
 	return NULL;
 }
 
+/* copy and return last buf including parts of the header */
+static void *memcpy_mergeable_hdr(struct net_device *dev,
+				  struct receive_queue *rq,
+				  struct virtio_net_hdr_mrg_rxbuf *hdr,
+				  void *buf,
+				  void **ctx,
+				  unsigned int *len)
+{
+	void *to = hdr;
+	unsigned offset = 0;
+	struct page *page;
+
+	for (;;) {
+		unsigned copy = min((unsigned)(sizeof(*hdr) - offset), *len);
+
+		memcpy(to + offset, buf, copy);
+		offset += copy;
+		if (likely(offset >= sizeof(*hdr)))
+			return buf;
+
+		page = virt_to_head_page(buf);
+		put_page(page);
+
+		buf = virtqueue_get_buf_ctx(rq->vq, len, ctx);
+		if (unlikely(!buf)) {
+			pr_debug("%s: rx error: total len %u "
+				 "shorter than header size %zu\n",
+				 dev->name, offset, sizeof(*hdr));
+			goto err_buf;
+		}
+
+		if (unlikely(*len > (unsigned long)*ctx)) {
+			pr_debug("%s: rx error: len %u exceeds truesize %lu\n",
+				 dev->name, *len, (unsigned long)*ctx);
+			goto err_buf;
+		}
+	}
+
+err_buf:
+	dev->stats.rx_length_errors++;
+	page = virt_to_head_page(buf);
+	put_page(page);
+	return NULL;
+}
+
 static struct sk_buff *receive_mergeable(struct net_device *dev,
 					 struct virtnet_info *vi,
 					 struct receive_queue *rq,
 					 void *buf,
 					 void *ctx,
-					 unsigned int len)
+					 unsigned int len,
+					 struct virtio_net_hdr_mrg_rxbuf *hdr)
 {
-	struct virtio_net_hdr_mrg_rxbuf *hdr = buf;
-	u16 num_buf = virtio16_to_cpu(vi->vdev, hdr->num_buffers);
-	struct page *page = virt_to_head_page(buf);
-	int offset = buf - page_address(page);
+	u16 num_buf;
+	struct page *page;
+	int offset;
 	struct sk_buff *head_skb, *curr_skb;
 	struct bpf_prog *xdp_prog;
 	unsigned int truesize;
 
+	if (likely(len > sizeof(*hdr))) {
+		memcpy(hdr, buf, sizeof *hdr);
+	} else {
+		buf = memcpy_mergeable_hdr(dev, rq, hdr, buf, &ctx, &len);
+		if (!buf)
+			return NULL;
+	}
+	num_buf = virtio16_to_cpu(vi->vdev, hdr->num_buffers);
+	page = virt_to_head_page(buf);
+	offset = buf - page_address(page);
 	head_skb = NULL;
 
 	rcu_read_lock();
@@ -703,6 +758,7 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 	struct net_device *dev = vi->dev;
 	struct sk_buff *skb;
 	struct virtio_net_hdr_mrg_rxbuf *hdr;
+	struct virtio_net_hdr_mrg_rxbuf hdr0;
 	int ret;
 
 	if (unlikely(len < vi->hdr_len + ETH_HLEN)) {
@@ -718,15 +774,22 @@ static int receive_buf(struct virtnet_info *vi, struct receive_queue *rq,
 		return 0;
 	}
 
-	if (vi->mergeable_rx_bufs)
-		skb = receive_mergeable(dev, vi, rq, buf, ctx, len);
-	else if (vi->big_packets)
+	if (vi->mergeable_rx_bufs) {
+		skb = receive_mergeable(dev, vi, rq, buf, ctx, len, &hdr0);
+		if (unlikely(!skb))
+			return 0;
+		hdr = &hdr0;
+	} else if (vi->big_packets) {
 		skb = receive_big(dev, vi, rq, buf, len);
-	else
+		if (unlikely(!skb))
+			return 0;
+		hdr = skb_vnet_hdr(skb);
+	} else {
 		skb = receive_small(dev, vi, rq, buf, len);
-
-	if (unlikely(!skb))
-		return 0;
+		if (unlikely(!skb))
+			return 0;
+		hdr = skb_vnet_hdr(skb);
+	}
 
 	hdr = skb_vnet_hdr(skb);
 
