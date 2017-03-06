@@ -360,6 +360,7 @@ static struct i2c_driver egalax_ts_driver = {
 	.driver = {
 		.name	= "egalax_ts",
 		.of_match_table	= of_match_ptr(egalax_ts_dt_ids),
+		.pm	= &egalax_ts_pm_ops,
 	},
 	.id_table	= egalax_ts_id,
 	.probe		= egalax_ts_probe,
