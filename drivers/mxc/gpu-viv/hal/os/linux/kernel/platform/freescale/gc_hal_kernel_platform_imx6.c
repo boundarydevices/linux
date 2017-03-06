@@ -140,10 +140,10 @@ static struct notifier_block task_nb = {
 static int
 task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 {
-    struct task_struct *task = data;
+	struct task_struct *task = data;
 
-    if (task == lowmem_deathpending)
-        lowmem_deathpending = NULL;
+	if (task == lowmem_deathpending)
+		lowmem_deathpending = NULL;
 
 	return NOTIFY_DONE;
 }
