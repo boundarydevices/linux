@@ -304,20 +304,14 @@ static struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue
 	if (queue->available) {
 		buf_index = __ffs(queue->available);
 
-#ifdef ENSURE_DMA_BUFFER_AVAILABLE
-		if (for_dma || (queue->available != (1 << buf_index))
-				|| (queue->dma_mode != DMA_MODE_CONTIG))
-#endif
-		{
-			queue->available &= ~(1 << buf_index);
-			vb = queue->queue.bufs[buf_index];
-			buf = container_of(vb, struct uvc_buffer, buf);
-			buf->owner = UVC_OWNER_USB;
-			buf->error = 0;
-			buf->bytesused = 0;
-			buf->ready = 0;
-			buf->ts = 0;
-		}
+		queue->available &= ~(1 << buf_index);
+		vb = queue->queue.bufs[buf_index];
+		buf = container_of(vb, struct uvc_buffer, buf);
+		buf->owner = UVC_OWNER_USB;
+		buf->error = 0;
+		buf->bytesused = 0;
+		buf->ready = 0;
+		buf->ts = 0;
 	}
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 
@@ -1216,27 +1210,6 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 	}
 
 	buf = queue->in_progress;
-
-#ifdef ENSURE_DMA_BUFFER_AVAILABLE
-	if ((queue->dma_mode == DMA_MODE_CONTIG) && !queue->available) {
-		if (!buf)
-			goto fake_buf;
-		if (!buf->mem)
-			return buf;
-		/* Switch to fakebuf, and release for dma work */
-		nextbuf = &queue->fake_buf;
-		nextbuf->error = buf->error;
-		nextbuf->bytesused = buf->bytesused;
-		nextbuf->ready = buf->ready;
-		nextbuf->ts = buf->ts;
-		nextbuf->owner = UVC_OWNER_FAKE;
-		nextbuf->length = 0x7fffffff;
-		queue->in_progress = nextbuf;
-
-		uvc_queue_start_work(queue, buf);
-		return nextbuf;
-	}
-#endif
 
 	if (buf) {
 		if ((buf == nextbuf) || buf->bytesused || !nextbuf)
