@@ -52,7 +52,7 @@
 
 
 
-#include "video_keeper.h"
+#include <linux/amlogic/media/video_sink/video_keeper.h>
 #include "video_priv.h"
 
 
@@ -91,15 +91,15 @@
 #include <linux/amlogic/media/utils/amlog.h>
 MODULE_AMLOG(LOG_LEVEL_ERROR, 0, LOG_DEFAULT_LEVEL_DESC, LOG_MASK_DESC);
 
-#include "vpp.h"
+#include <linux/amlogic/media/video_sink/vpp.h>
 #include "linux/amlogic/media/frame_provider/tvin/tvin_v4l2.h"
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 #define DISPLAY_CANVAS_BASE_INDEX2   0x10
 #define DISPLAY_CANVAS_MAX_INDEX2    0x15
 #include "../common/rdma/rdma.h"
 #endif
-#include <linux/amlogic/media/video_sink/video/video_prot.h>
-#include "video.h"
+#include <linux/amlogic/media/video_sink/video_prot.h>
+#include <linux/amlogic/media/video_sink/video.h>
 
 
 #ifdef CONFIG_GE2D_KEEP_FRAME

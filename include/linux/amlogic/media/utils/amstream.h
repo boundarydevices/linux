@@ -1,7 +1,7 @@
 /*
  * include/linux/amlogic/media/utils/amstream.h
  *
- * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- */
+*/
 
 #ifndef AMSTREAM_H
 #define AMSTREAM_H
@@ -48,6 +48,7 @@
 #define PORT_TYPE_USERDATA      0x200
 #define PORT_TYPE_FRAME         0x400
 #define PORT_TYPE_DECODER_SCHED 0x800
+#define PORT_TYPE_DUALDEC       0x1000
 #endif
 
 #define _A_M  'S'
@@ -203,6 +204,16 @@ enum VIDEO_DEC_TYPE {
 	VIDEO_DEC_FORMAT_MAX
 };
 
+enum FRAME_BASE_VIDEO_PATH {
+	FRAME_BASE_PATH_IONVIDEO = 0,
+	FRAME_BASE_PATH_AMLVIDEO_AMVIDEO,
+	FRAME_BASE_PATH_AMLVIDEO1_AMVIDEO2,
+	FRAME_BASE_PATH_DI_AMVIDEO,
+	FRAME_BASE_PATH_AMVIDEO,
+	FRAME_BASE_PATH_AMVIDEO2,
+	FRAME_BASE_PATH_MAX
+};
+
 struct buf_status {
 
 	int size;
@@ -334,20 +345,20 @@ struct userdata_poc_info_t {
 };
 
 /*
- ******************************************************************
- * 0x100~~0x1FF : set cmd
- * 0x200~~0x2FF : set ex cmd
- * 0x300~~0x3FF : set ptr cmd
- * 0x400~~0x7FF : set reserved cmd
- * 0x800~~0x8FF : get cmd
- * 0x900~~0x9FF : get ex cmd
- * 0xA00~~0xAFF : get ptr cmd
- * 0xBFF~~0xFFF : get reserved cmd
- * 0xX00~~0xX5F : amstream cmd(X: cmd type)
- * 0xX60~~0xXAF : video cmd(X: cmd type)
- * 0xXAF~~0xXFF : reserved cmd(X: cmd type)
- ******************************************************************
- */
+******************************************************************
+* 0x100~~0x1FF : set cmd
+* 0x200~~0x2FF : set ex cmd
+* 0x300~~0x3FF : set ptr cmd
+* 0x400~~0x7FF : set reserved cmd
+* 0x800~~0x8FF : get cmd
+* 0x900~~0x9FF : get ex cmd
+* 0xA00~~0xAFF : get ptr cmd
+* 0xBFF~~0xFFF : get reserved cmd
+* 0xX00~~0xX5F : amstream cmd(X: cmd type)
+* 0xX60~~0xXAF : video cmd(X: cmd type)
+* 0xXAF~~0xXFF : reserved cmd(X: cmd type)
+******************************************************************
+*/
 
 /*  amstream set cmd */
 #define AMSTREAM_SET_VB_START 0x101
@@ -400,13 +411,14 @@ struct userdata_poc_info_t {
 #define AMSTREAM_SET_3D_TYPE 0x171
 #define AMSTREAM_SET_VSYNC_UPINT 0x172
 #define AMSTREAM_SET_VSYNC_SLOW_FACTOR 0x173
-
+#define AMSTREAM_SET_FRAME_BASE_PATH 0x174
 /*  video set ex cmd */
 #define AMSTREAM_SET_EX_VIDEO_AXIS 0x260
 #define AMSTREAM_SET_EX_VIDEO_CROP 0x261
 
 /*  amstream set ptr cmd */
 #define AMSTREAM_SET_PTR_AUDIO_INFO 0x300
+#define AMSTREAM_SET_PTR_CONFIGS 0x301
 
 /*  amstream get cmd */
 #define AMSTREAM_GET_SUB_LENGTH 0x800
@@ -469,6 +481,7 @@ struct am_ioctl_parm {
 		u64 data_64;
 		enum vformat_e data_vformat;
 		enum aformat_e data_aformat;
+		enum FRAME_BASE_VIDEO_PATH frame_base_video_path;
 		char data[8];
 	};
 	u32 cmd;
@@ -497,7 +510,7 @@ struct am_ioctl_parm_ptr {
 		char data[8];
 	};
 	u32 cmd;
-	char reserved[4];
+	u32 len; /*char reserved[4]; */
 };
 
 #define SUPPORT_VDEC_NUM	(20)
@@ -542,9 +555,7 @@ int wakeup_userdata_poll(int wp, unsigned long start_phyaddr, int buf_size,
 	int data_length);
 int get_sub_type(void);
 
-extern void clock_set_init(struct device *dev);
-
-#endif
+#endif				/**/
 
 struct tcon_gamma_table_s {
 

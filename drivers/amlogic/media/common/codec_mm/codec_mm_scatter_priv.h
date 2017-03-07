@@ -1,7 +1,7 @@
 /*
  * drivers/amlogic/media/common/codec_mm/codec_mm_scatter_priv.h
  *
- * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- */
+*/
 
 #ifndef CODEC_MM_SCATTER_PRIV_HEADER
 #define CODEC_MM_SCATTER_PRIV_HEADER
@@ -66,5 +66,7 @@ int codec_mm_scatter_mgt_set_config(const char *buf, size_t size);
 
 int codec_mm_scatter_free_all_ignorecache(void);
 int codec_mm_scatter_valid_locked(struct codec_mm_scatter *mms);
+
+void codec_mm_clear_alloc_infos(void);
 
 #endif

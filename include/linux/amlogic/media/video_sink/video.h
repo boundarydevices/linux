@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/video_sink/video.h
+ * include/linux/amlogic/media/video_sink/video.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/media/video_sink/video/video_prot.h
+ * include/linux/amlogic/media/video_sink/video_prot.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

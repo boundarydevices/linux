@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/media/video_sink/video/video.h
+ * include/linux/amlogic/media/video_sink/video_keeper.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,20 +15,16 @@
  *
  */
 
-#ifndef VIDEO_HEADER_
-#define VIDEO_HEADER_
-#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
+#ifndef VIDEO_KEEPER_HEADER___
+#define VIDEO_KEEPER_HEADER___
 
-int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
-int VSYNC_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
-u32 VSYNC_RD_MPEG_REG(u32 adr);
-u32 RDMA_READ_REG(u32 adr);
-int RDMA_SET_READ(u32 adr);
-#endif
+#include <linux/amlogic/media/vfm/vframe.h>
 
+void video_keeper_new_frame_notify(void);
 void try_free_keep_video(int flags);
-void vh265_free_cmabuf(void);
-void vh264_4k_free_cmabuf(void);
-void vdec_free_cmabuf(void);
+
+int __init video_keeper_init(void);
+void __exit video_keeper_exit(void);
+unsigned int vf_keep_current(struct vframe_s *cur_dispbuf);
 
 #endif

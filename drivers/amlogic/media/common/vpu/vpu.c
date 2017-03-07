@@ -418,6 +418,7 @@ request_vpu_clk_limit:
 #endif
 	return ret;
 }
+EXPORT_SYMBOL(request_vpu_clk_vmod);
 
 /*
  *  Function: release_vpu_clk_vmod

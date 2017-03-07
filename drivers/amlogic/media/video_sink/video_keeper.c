@@ -53,10 +53,10 @@
 #include <linux/amlogic/media/codec_mm/codec_mm_keeper.h>
 
 #include "video_priv.h"
-#include "video_keeper.h"
+#include <linux/amlogic/media/video_sink/video_keeper.h>
 #include <linux/amlogic/media/registers/register.h>
-#include "vpp.h"
-#include "video.h"
+#include <linux/amlogic/media/video_sink/vpp.h>
+#include <linux/amlogic/media/video_sink/video.h>
 #include <linux/amlogic/media/utils/vdec_reg.h>
 
 #define MEM_NAME "video-keeper"

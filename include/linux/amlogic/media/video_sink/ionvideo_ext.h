@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/media/video_sink/video/ionvideo_ext.h
+ * include/linux/amlogic/media/video_sink/ionvideo_ext.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

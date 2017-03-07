@@ -24,11 +24,11 @@
 #include <linux/amlogic/media/vpu/vpu.h>
 
 #include <linux/amlogic/media/vfm/vframe.h>
-#include "video.h"
-#include "vpp.h"
+#include <linux/amlogic/media/video_sink/video.h>
+#include <linux/amlogic/media/video_sink/vpp.h>
 
 #include <linux/amlogic/media/vfm/vframe_provider.h>
-#include <linux/amlogic/media/video_sink/video/video_prot.h>
+#include <linux/amlogic/media/video_sink/video_prot.h>
 /*#include <linux/amlogic/gpio-amlogic.h>*/
 
 #include <linux/amlogic/iomap.h>

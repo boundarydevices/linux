@@ -1,7 +1,7 @@
 /*
  * include/linux/amlogic/media/vfm/vframe_receiver.h
  *
- * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- */
+*/
 
 #ifndef VFRAME_RECEIVER_H
 #define VFRAME_RECEIVER_H
@@ -60,7 +60,9 @@ struct vframe_receiver_s {
 
 extern struct vframe_receiver_s *vf_receiver_alloc(void);
 extern void vf_receiver_init(struct vframe_receiver_s *recv,
-	const char *name, const struct vframe_receiver_op_s *ops, void *op_arg);
+			     const char *name,
+			     const struct vframe_receiver_op_s *ops,
+			     void *op_arg);
 extern void vf_receiver_free(struct vframe_receiver_s *recv);
 
 extern int vf_reg_receiver(struct vframe_receiver_s *recv);

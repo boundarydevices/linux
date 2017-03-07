@@ -1,7 +1,7 @@
 /*
  * include/linux/amlogic/media/vfm/vframe_provider.h
  *
- * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- */
+*/
 
 #ifndef VFRAME_PROVIDER_H
 #define VFRAME_PROVIDER_H
@@ -37,6 +37,18 @@ struct vframe_states {
 #define VFRAME_EVENT_RECEIVER_PARAM_SET	0x10
 #define VFRAME_EVENT_RECEIVER_RESET				0x20
 #define VFRAME_EVENT_RECEIVER_FORCE_UNREG			0x40
+#define VFRAME_EVENT_RECEIVER_GET_AUX_DATA			0x80
+
+	/* for VFRAME_EVENT_RECEIVER_GET_AUX_DATA*/
+struct provider_aux_req_s {
+	/*input*/
+	struct vframe_s *vf;
+	unsigned char bot_flag;
+	/*output*/
+	char *aux_buf;
+	int aux_size;
+	int dv_enhance_exist;
+};
 
 struct vframe_operations_s {
 	struct vframe_s *(*peek)(void *op_arg);
@@ -57,13 +69,17 @@ struct vframe_provider_s {
 
 extern struct vframe_provider_s *vf_provider_alloc(void);
 extern void vf_provider_init(struct vframe_provider_s *prov,
-	const char *name, const struct vframe_operations_s *ops, void *op_arg);
+			     const char *name,
+			     const struct vframe_operations_s *ops,
+			     void *op_arg);
 extern void vf_provider_free(struct vframe_provider_s *prov);
 
 extern int vf_reg_provider(struct vframe_provider_s *prov);
 extern void vf_unreg_provider(struct vframe_provider_s *prov);
 extern int vf_notify_provider(const char *receiver_name, int event_type,
-	void *data);
+			      void *data);
+extern int vf_notify_provider_by_name(const char *provider_name,
+				int event_type, void *data);
 
 void vf_light_unreg_provider(struct vframe_provider_s *prov);
 void vf_ext_light_unreg_provider(struct vframe_provider_s *prov);

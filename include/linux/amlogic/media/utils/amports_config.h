@@ -91,9 +91,11 @@ static inline bool has_vdec2(void)
 
 static inline bool has_hevc_vdec(void)
 {
-#ifndef CONFIG_AM_VDEC_H265
-	return 0;
-#endif
+/*
+ *#ifndef CONFIG_AM_VDEC_H265
+ *	return 0;
+ *#endif
+ */
 	/*only tvd not have hevc,when later than m8 */
 	if (is_meson_mtvd_cpu())
 		return 0;

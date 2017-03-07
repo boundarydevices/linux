@@ -19,7 +19,7 @@
 #define VDEC_REG_H
 
 #include <linux/kernel.h>
-#include <linux/amlogic/media/video_sink/video/video.h>
+#include <linux/amlogic/media/video_sink/video.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/io.h>
 #include <linux/amlogic/media/registers/register.h>

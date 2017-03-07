@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/video_sink/vpp.h
+ * include/linux/amlogic/media/video_sink/vpp.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -18,7 +18,7 @@
 #ifndef VPP_H
 #define VPP_H
 #include <linux/amlogic/media/vout/vinfo.h>
-#include <linux/amlogic/media/video_sink/video/video_prot.h>
+#include <linux/amlogic/media/video_sink/video_prot.h>
 
 #define VPP_FLAG_WIDEMODE_MASK      0x0000000F
 #define VPP_FLAG_INTERLACE_OUT      0x00000010
