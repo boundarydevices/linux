@@ -13566,3 +13566,15 @@ F:  arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
 F:  arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
 F:  drivers/amlogic/clk/clk_media.c
 F:  include/linux/amlogic/media/vout/vout_notify.h
+
+AMLOGIC remote
+M: Zan Peng <zan.peng@amlogic.com>
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/input/Makefile
+F: drivers/amlogic/input/Kconfig
+F: drivers/amlogic/input/remote/*
+F: include/dt-bindings/input/meson_rc.h
+F: include/uapi/linux/rc_common.h
+F: arch/arm64/boot/dts/amlogic/mesongxl.dtsi
+F: arch/arm64/boot/dts/amlogic/mesongxm.dtsi
+

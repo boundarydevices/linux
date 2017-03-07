@@ -1,0 +1,23 @@
+#
+# Remote control drivers
+#
+menuconfig AMLOGIC_REMOTE
+	bool "GX Remotes"
+	default n
+	help
+	  Say Y here, and a list of supported remote controls will be displayed.
+	  This option doesn't affect the kernel.
+
+	  If unsure, say Y.
+
+if AMLOGIC_REMOTE
+
+config AMLOGIC_MESON_REMOTE
+	tristate "GX IR remote control support"
+	default n
+	help
+	  Say Y here if you want to use the Meson IR remote control.
+
+
+
+endif # AMLOGIC_REMOTE
