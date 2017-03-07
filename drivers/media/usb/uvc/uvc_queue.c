@@ -71,6 +71,9 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	unsigned npackets;
 	unsigned psize;
 
+	if (*nbuffers > UVC_MAX_VIDEO_BUFFERS)
+		*nbuffers = UVC_MAX_VIDEO_BUFFERS;
+
 	/* Make sure the image size is large enough. */
 	if (fmt && fmt->fmt.pix.sizeimage < stream->ctrl.dwMaxVideoFrameSize)
 		return -EINVAL;
