@@ -71,9 +71,6 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	unsigned npackets;
 	unsigned psize;
 
-//	dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, &uvc_dma_attrs);
-//	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &uvc_dma_attrs);
-
 	if (*nbuffers > UVC_MAX_VIDEO_BUFFERS)
 		*nbuffers = UVC_MAX_VIDEO_BUFFERS;
 
@@ -81,10 +78,13 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	if (fmt && fmt->fmt.pix.sizeimage < stream->ctrl.dwMaxVideoFrameSize)
 		return -EINVAL;
 
+//	dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, &uvc_dma_attrs);
+//	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &uvc_dma_attrs);
+
 	*nplanes = 1;
 	psize = stream->psize;
 	sz = fmt ? fmt->fmt.pix.sizeimage
-		: stream->ctrl.dwMaxVideoFrameSize;
+		 : stream->ctrl.dwMaxVideoFrameSize;
 	if (queue->dma_mode == DMA_MODE_CONTIG) {
 		/*
 		 * let the last segment transfer an entire payload
@@ -796,7 +796,8 @@ static int uvc_buffer_finish(struct vb2_buffer *vb)
 	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 	struct uvc_buffer *buf = container_of(vb, struct uvc_buffer, buf);
 
-	uvc_video_clock_update(stream, &vb->v4l2_buf, buf);
+	if (vb->state == VB2_BUF_STATE_DONE)
+		uvc_video_clock_update(stream, &vb->v4l2_buf, buf);
 	return 0;
 }
 
@@ -919,9 +920,9 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 		&vb2_dma_contig_memops : &vb2_vmalloc_memops;
 
 	queue->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+	queue->queue.lock = &queue->mutex;
 //	queue->queue.dma_attrs = &uvc_dma_attrs;
 
-	queue->queue.lock = &queue->mutex;
 	ret = vb2_queue_init(&queue->queue);
 	if (ret)
 		return ret;
@@ -943,6 +944,18 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 	return 0;
 }
 
+void uvc_queue_release(struct uvc_video_queue *queue)
+{
+	mutex_lock(&queue->mutex);
+	stop_queue(queue);
+	vb2_queue_release(&queue->queue);
+	if (queue->queue.alloc_ctx[0]) {
+		vb2_dma_contig_cleanup_ctx(queue->queue.alloc_ctx[0]);
+		queue->queue.alloc_ctx[0] = NULL;
+	}
+	mutex_unlock(&queue->mutex);
+}
+
 void uvc_queue_deinit(struct uvc_video_queue *queue)
 {
 	if (queue->workqueue) {
@@ -952,18 +965,6 @@ void uvc_queue_deinit(struct uvc_video_queue *queue)
 	if (queue->cachequeue) {
 		destroy_workqueue(queue->cachequeue);
 		queue->cachequeue = NULL;
-	}
-}
-
-void uvc_queue_release(struct uvc_video_queue *queue)
-{
-	mutex_lock(&queue->mutex);
-	stop_queue(queue);
-	vb2_queue_release(&queue->queue);
-	mutex_unlock(&queue->mutex);
-	if (queue->queue.alloc_ctx[0]) {
-		vb2_dma_contig_cleanup_ctx(queue->queue.alloc_ctx[0]);
-		queue->queue.alloc_ctx[0] = NULL;
 	}
 }
 
