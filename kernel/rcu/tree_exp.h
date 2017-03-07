@@ -247,6 +247,7 @@ static bool sync_exp_work_done(struct rcu_state *rsp, atomic_long_t *stat,
 		/* Ensure test happens before caller kfree(). */
 		smp_mb__before_atomic(); /* ^^^ */
 		atomic_long_inc(stat);
+		smp_mb__after_atomic(); /* ^^^ */
 		return true;
 	}
 	return false;
