@@ -1817,11 +1817,11 @@ static int uvc_init_video_setup(struct uvc_streaming *stream)
 }
 
 /*
- * Initialize isochronous/bulk URBs and allocate transfer buffers.
+ * This will start streaming for ISOC cameras
  */
 static int uvc_init_video(struct uvc_streaming *stream, gfp_t gfp_flags)
 {
-	int ret;
+	int ret = 0;
 
 	stream->gfp_flags = gfp_flags;
 	stream->sequence = -1;
@@ -1832,13 +1832,8 @@ static int uvc_init_video(struct uvc_streaming *stream, gfp_t gfp_flags)
 
 	uvc_video_stats_start(stream);
 
-	if (stream->iso_packets) {
+	if (stream->iso_packets)
 		ret = usb_set_interface(stream->dev->udev, stream->intfnum, stream->altsetting);
-		if (ret >= 0)
-			ret = uvc_alloc_urb_buffers(stream, stream->ctrl.dwMaxVideoFrameSize);
-	} else {
-		ret = uvc_alloc_urb_buffers(stream, stream->ctrl.dwMaxPayloadTransferSize);
-	}
 	return ret;
 }
 
@@ -1924,22 +1919,20 @@ int uvc_video_resume(struct uvc_streaming *stream, int reset)
 
 	uvc_video_clock_reset(stream);
 
+	if (!uvc_queue_streaming(&stream->queue))
+		return 0;
+
 	ret = uvc_commit_video(stream, &stream->ctrl);
 	if (ret < 0) {
 		uvc_queue_enable(&stream->queue, 0);
 		return ret;
 	}
 
-	if (!uvc_queue_streaming(&stream->queue))
-		return 0;
-
-	ret = uvc_init_video(stream, GFP_NOIO);
-	if (ret >= 0)
-		ret = uvc_alloc_submit_urbs(stream);
+	ret = uvc_alloc_submit_urbs(stream);
 	if (ret < 0)
 		uvc_queue_enable(&stream->queue, 0);
 
-	return ret;
+	return uvc_init_video(stream, GFP_NOIO);
 }
 
 void uvc_video_deinit(struct uvc_streaming *stream)
@@ -2111,9 +2104,11 @@ int uvc_video_enable(struct uvc_streaming *stream, int enable)
 	if (ret < 0)
 		return ret;
 
-	ret = uvc_init_video(stream, GFP_KERNEL);
+	ret = uvc_alloc_urb_buffers(stream, (stream->iso_packets) ?
+			stream->ctrl.dwMaxVideoFrameSize :
+			stream->ctrl.dwMaxPayloadTransferSize);
 	if (ret < 0)
-		goto error_video;
+		goto error_queue;
 
 	ret = uvc_queue_enable(&stream->queue, 1);
 	if (ret < 0)
@@ -2126,16 +2121,20 @@ int uvc_video_enable(struct uvc_streaming *stream, int enable)
 
 	ret = uvc_alloc_submit_urbs(stream);
 	if (ret < 0)
-		goto error_commit;
+		goto error_video;
+
+	ret = uvc_init_video(stream, GFP_KERNEL);
+	if (ret < 0)
+		goto error_video;
 
 	return 0;
 
+error_video:
+	usb_set_interface(stream->dev->udev, stream->intfnum, 0);
 error_commit:
 	uvc_queue_enable(&stream->queue, 0);
 error_queue:
 	uvc_video_clock_cleanup(stream);
-error_video:
-	usb_set_interface(stream->dev->udev, stream->intfnum, 0);
 
 	return ret;
 }
