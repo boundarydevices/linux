@@ -106,9 +106,12 @@ static void vp_remove_vqs(struct virtio_device *vdev)
 		if (vp_dev->msix_vector_map) {
 			int v = vp_dev->msix_vector_map[vq->index];
 
-			if (v != VIRTIO_MSI_NO_VECTOR)
-				free_irq(pci_irq_vector(vp_dev->pci_dev, v),
-					vq);
+			if (v != VIRTIO_MSI_NO_VECTOR) {
+				unsigned int irq;
+				irq = pci_irq_vector(vp_dev->pci_dev, v);
+				irq_set_affinity_hint(irq, NULL);
+				free_irq(irq, vq);
+			}
 		}
 		vp_dev->del_vq(vq);
 	}
