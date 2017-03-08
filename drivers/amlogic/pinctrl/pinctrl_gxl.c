@@ -585,7 +585,7 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(emmc_nand_d07, 7,	31),
 	GROUP(emmc_clk,		7,	30),
 	GROUP(emmc_cmd,	7,	29),
-	GROUP(emmc_ds,		4,	31),
+	GROUP(emmc_ds,		7,	28),
 
 	GROUP(tst_clk_0,		7,	23),	/*boot3*/
 
@@ -613,6 +613,7 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 
 	GROUP(tst_clk_9,	6,	7),		/*card4*/
 
+#if 0
 	GROUP(jtag_tdi_0,		0,	0xff),
 	GROUP(jtag_tdo_0,	0,	0xff),
 	GROUP(jtag_clk_0,		0,	0xff),
@@ -621,6 +622,7 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(jtag_tdo_1,	0,	0xff),
 	GROUP(jtag_clk_1,		0,	0xff),
 	GROUP(jtag_tms_1,	0,	0xff),
+#endif
 };
 
 

@@ -262,7 +262,7 @@ static int meson_pmx_request_gpio(struct pinctrl_dev *pcdev,
 {
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
 
-	meson_pmx_disable_other_groups(pc, range->pin_base + offset, -1);
+	meson_pmx_disable_other_groups(pc, offset, -1);
 
 	return 0;
 }
@@ -582,6 +582,7 @@ static int meson_gpiolib_register(struct meson_pinctrl *pc)
 
 	domain->chip.label = domain->data->name;
 		/* domain->chip.dev = pc->dev; */
+		domain->chip.parent = pc->dev;
 		domain->chip.request = meson_gpio_request;
 		domain->chip.free = meson_gpio_free;
 		domain->chip.direction_input = meson_gpio_direction_input;
