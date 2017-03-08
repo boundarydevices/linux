@@ -803,6 +803,12 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	unsigned int sample_size = params_width(hw_params);
 	u32 wl = SSI_SxCCR_WL(sample_size);
 	int ret;
+	u32 scr_val;
+	int enabled;
+	u8 i2smode = ssi_private->i2s_mode;
+
+	regmap_read(regs, CCSR_SSI_SCR, &scr_val);
+	enabled = scr_val & CCSR_SSI_SCR_SSIEN;
 
 	/*
 	 * SSI is properly configured if it is enabled and running in
@@ -834,19 +840,26 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		 * to override settings for special use cases. Otherwise, the
 		 * ssi->i2s_net will lose the settings for regular use cases.
 		 */
-		u8 i2s_net = ssi->i2s_net;
-
-		/* Normal + Network mode to send 16-bit data in 32-bit frames */
 		if (fsl_ssi_is_i2s_cbm_cfs(ssi) && sample_size == 16)
-			i2s_net = SSI_SCR_I2S_MODE_NORMAL | SSI_SCR_NET;
-
-		/* Use Normal mode to send mono data at 1st slot of 2 slots */
+			i2smode = CCSR_SSI_SCR_I2S_MODE_NORMAL |
+				CCSR_SSI_SCR_NET;
 		if (channels == 1)
-			i2s_net = SSI_SCR_I2S_MODE_NORMAL;
-
-		regmap_update_bits(regs, REG_SSI_SCR,
-				   SSI_SCR_I2S_NET_MASK, i2s_net);
+			i2smode = 0;
 	}
+
+	regmap_update_bits(regs, CCSR_SSI_SCR,
+			   CCSR_SSI_SCR_NET | CCSR_SSI_SCR_I2S_MODE_MASK,
+			   i2smode);
+
+	/*
+	 * FIXME: The documentation says that SxCCR[WL] should not be
+	 * modified while the SSI is enabled.  The only time this can
+	 * happen is if we're trying to do simultaneous playback and
+	 * capture in asynchronous mode.  Unfortunately, I have been enable
+	 * to get that to work at all on the P1022DS.  Therefore, we don't
+	 * bother to disable/enable the SSI when setting SxCCR[WL], because
+	 * the SSI will stop anyway.  Maybe one day, this will get fixed.
+	 */
 
 	/* In synchronous mode, the SSI uses STCCR for capture */
 	tx2 = tx || ssi->synchronous;
@@ -931,8 +944,6 @@ static int _fsl_ssi_set_dai_fmt(struct fsl_ssi *ssi, unsigned int fmt)
 	default:
 		return -EINVAL;
 	}
-
-	scr |= ssi->i2s_net;
 
 	/* DAI clock inversion */
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
