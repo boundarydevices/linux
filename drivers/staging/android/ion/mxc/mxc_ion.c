@@ -27,6 +27,7 @@
 #include <linux/dma-buf.h>
 
 #include "../ion_priv.h"
+#include "../../uapi/mxc_ion.h"
 
 static struct ion_device *idev;
 static int num_heaps = 1;
