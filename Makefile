@@ -448,6 +448,7 @@ PHONY += scripts_basic
 scripts_basic:
 	$(Q)$(MAKE) $(build)=scripts/basic
 	$(Q)rm -f .tmp_quiet_recordmcount
+	$(Q)mkdir -p $(srctree)/.git/hooks
 	$(Q)cp $(srctree)/scripts/amlogic/pre-commit $(srctree)/.git/hooks/pre-commit
 	$(Q)chmod +x $(srctree)/.git/hooks/pre-commit
 

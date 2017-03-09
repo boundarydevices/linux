@@ -73,7 +73,7 @@ TEXT_OFFSET := $(shell awk "BEGIN {srand(); printf \"0x%06x\n\", \
 		 int(2 * 1024 * 1024 / (2 ^ $(CONFIG_ARM64_PAGE_SHIFT)) * \
 		 rand()) * (2 ^ $(CONFIG_ARM64_PAGE_SHIFT))}")
 else
-TEXT_OFFSET := 0x0180000
+TEXT_OFFSET := 0x01080000
 endif
 
 # KASAN_SHADOW_OFFSET = VA_START + (1 << (VA_BITS - 3)) - (1 << 61)
