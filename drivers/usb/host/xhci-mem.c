@@ -2417,7 +2417,7 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	 * TRB_SEGMENT_SIZE alignment, so we pick the greater alignment need.
 	 */
 	xhci->segment_pool = dma_pool_create("xHCI ring segments", dev,
-			TRB_SEGMENT_SIZE, TRB_SEGMENT_SIZE, xhci->page_size);
+			TRB_SEGMENT_SIZE, TRB_SEGMENT_SIZE, 0);
 
 	/* See Table 46 and Note on Figure 55 */
 	xhci->device_pool = dma_pool_create("xHCI input/output contexts", dev,
