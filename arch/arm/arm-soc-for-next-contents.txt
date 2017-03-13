@@ -11,13 +11,20 @@ next/fixes-non-critical
 next/cleanup
 
 next/soc
+	gemeni/multiplatform
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-multiplat-dt
 
 next/arm64
+	renesas/arm64-defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.12
 
 next/dt
+	gemini/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-dts-base
 
 next/dt64
 
 next/defconfig
 
 next/drivers
+
