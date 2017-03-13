@@ -92,7 +92,6 @@ static inline struct rcu_head *rcu_cblist_dequeue(struct rcu_cblist *rclp)
 	rhp = rclp->head;
 	if (!rhp)
 		return NULL;
-	prefetch(rhp);
 	rclp->len--;
 	rclp->head = rhp->next;
 	if (!rclp->head)
@@ -174,6 +173,15 @@ struct rcu_segcblist {
 	long len;
 	long len_lazy;
 };
+
+#define RCU_SEGCBLIST_INITIALIZER(n) \
+{ \
+	.head = NULL, \
+	.tails[RCU_DONE_TAIL] = &n.head, \
+	.tails[RCU_WAIT_TAIL] = &n.head, \
+	.tails[RCU_NEXT_READY_TAIL] = &n.head, \
+	.tails[RCU_NEXT_TAIL] = &n.head, \
+}
 
 /*
  * Initialize an rcu_segcblist structure.
@@ -332,7 +340,7 @@ static inline struct rcu_head *
 rcu_segcblist_first_cb(struct rcu_segcblist *rsclp)
 {
 	if (rcu_segcblist_is_enabled(rsclp))
-	       return rsclp->head;
+		return rsclp->head;
 	return NULL;
 }
 
@@ -347,7 +355,7 @@ static inline struct rcu_head *
 rcu_segcblist_first_pend_cb(struct rcu_segcblist *rsclp)
 {
 	if (rcu_segcblist_is_enabled(rsclp))
-	       return *rsclp->tails[RCU_DONE_TAIL];
+		return *rsclp->tails[RCU_DONE_TAIL];
 	return NULL;
 }
 
@@ -465,7 +473,6 @@ static inline void rcu_segcblist_extract_all(struct rcu_segcblist *rsclp,
 static inline void rcu_segcblist_insert_count(struct rcu_segcblist *rsclp,
 					      struct rcu_cblist *rclp)
 {
-	
 	rsclp->len_lazy += rclp->len_lazy;
 	/* ->len sampled locklessly. */
 	WRITE_ONCE(rsclp->len, rsclp->len + rclp->len);
@@ -633,7 +640,7 @@ static inline bool rcu_segcblist_future_gp_needed(struct rcu_segcblist *rsclp,
 	for (i = RCU_WAIT_TAIL; i < RCU_NEXT_TAIL; i++)
 		if (rsclp->tails[i - 1] != rsclp->tails[i] &&
 		    ULONG_CMP_LT(seq, rsclp->gp_seq[i]))
-		    	return true;
+			return true;
 	return false;
 }
 
