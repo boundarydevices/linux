@@ -1,0 +1,23 @@
+fixes
+	patch
+		ARM: dts: add the AB8500 clocks to the device tree
+	<no branch> (0c2bf9f95983fe30aa2f6463cb761cd42c2d521a)
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.11/devicetree-fixes
+	<no branch> (e24bce8fb4c26bd0d8eca74cbbee1ad049246be3)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.11/fixes-rc1-v2
+
+next/fixes-non-critical
+
+next/cleanup
+
+next/soc
+
+next/arm64
+
+next/dt
+
+next/dt64
+
+next/defconfig
+
+next/drivers
