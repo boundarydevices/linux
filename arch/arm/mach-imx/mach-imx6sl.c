@@ -80,10 +80,10 @@ static void __init imx6sl_init_irq(void)
 	imx_init_l2cache();
 	imx_src_init();
 	irqchip_init();
-	if (cpu_is_imx6sl())
-		imx6_pm_ccm_init("fsl,imx6sl-ccm");
-	else
+	if (cpu_is_imx6sll())
 		imx6_pm_ccm_init("fsl,imx6sll-ccm");
+	else
+		imx6_pm_ccm_init("fsl,imx6sl-ccm");
 }
 
 static void __init imx6sl_map_io(void)
