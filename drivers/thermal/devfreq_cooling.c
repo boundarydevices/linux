@@ -164,6 +164,28 @@ freq_get_state(struct devfreq_cooling_device *dfc, unsigned long freq)
 	return THERMAL_CSTATE_INVALID;
 }
 
+static unsigned long get_voltage(struct devfreq *df, unsigned long freq)
+{
+	struct device *dev = df->dev.parent;
+	unsigned long voltage;
+	struct dev_pm_opp *opp;
+
+	opp = dev_pm_opp_find_freq_exact(dev, freq, true);
+	if (IS_ERR(opp) && (PTR_ERR(opp) == -ERANGE))
+		opp = dev_pm_opp_find_freq_exact(dev, freq, false);
+
+	voltage = dev_pm_opp_get_voltage(opp) / 1000; /* mV */
+	dev_pm_opp_put(opp);
+
+	if (voltage == 0) {
+		dev_warn_ratelimited(dev,
+				     "Failed to get voltage for frequency %lu: %ld\n",
+				     freq, IS_ERR(opp) ? PTR_ERR(opp) : 0);
+	}
+
+	return voltage;
+}
+
 /**
  * get_static_power() - calculate the static power
  * @dfc:	Pointer to devfreq cooling device
@@ -178,26 +200,15 @@ static unsigned long
 get_static_power(struct devfreq_cooling_device *dfc, unsigned long freq)
 {
 	struct devfreq *df = dfc->devfreq;
-	struct device *dev = df->dev.parent;
 	unsigned long voltage;
-	struct dev_pm_opp *opp;
 
 	if (!dfc->power_ops->get_static_power)
 		return 0;
 
-	opp = dev_pm_opp_find_freq_exact(dev, freq, true);
-	if (IS_ERR(opp) && (PTR_ERR(opp) == -ERANGE))
-		opp = dev_pm_opp_find_freq_exact(dev, freq, false);
+	voltage = get_voltage(df, freq);
 
-	voltage = dev_pm_opp_get_voltage(opp) / 1000; /* mV */
-	dev_pm_opp_put(opp);
-
-	if (voltage == 0) {
-		dev_warn_ratelimited(dev,
-				     "Failed to get voltage for frequency %lu: %ld\n",
-				     freq, IS_ERR(opp) ? PTR_ERR(opp) : 0);
+	if (voltage == 0)
 		return 0;
-	}
 
 	return dfc->power_ops->get_static_power(df, voltage);
 }
