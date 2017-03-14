@@ -138,6 +138,11 @@ struct thermal_cooling_device_ops {
 			   struct thermal_zone_device *, unsigned long, u32 *);
 	int (*power2state)(struct thermal_cooling_device *,
 			   struct thermal_zone_device *, u32, unsigned long *);
+#ifdef CONFIG_AMLOGIC_TEMP_SENSOR
+	int (*notify_state)(struct thermal_cooling_device *,
+			    struct thermal_zone_device *,
+			    enum thermal_trip_type);
+#endif
 };
 
 struct thermal_cooling_device {
@@ -216,6 +221,9 @@ struct thermal_zone_device {
 	int last_temperature;
 	int emul_temperature;
 	int passive;
+#ifdef CONFIG_AMLOGIC_TEMP_SENSOR
+	int hot_step;
+#endif
 	int prev_low_trip;
 	int prev_high_trip;
 	unsigned int forced_passive;
@@ -365,6 +373,9 @@ struct thermal_zone_of_device_ops {
 	int (*get_temp)(void *, int *);
 	int (*get_trend)(void *, int, enum thermal_trend *);
 	int (*set_trips)(void *, int, int);
+#ifdef CONFIG_AMLOGIC_TEMP_SENSOR
+	int (*set_mode)(struct thermal_zone_device*, enum thermal_device_mode);
+#endif
 	int (*set_emul_temp)(void *, int);
 	int (*set_trip_temp)(void *, int, int);
 };
@@ -469,6 +480,13 @@ struct thermal_instance *get_thermal_instance(struct thermal_zone_device *,
 		struct thermal_cooling_device *, int);
 void thermal_cdev_update(struct thermal_cooling_device *);
 void thermal_notify_framework(struct thermal_zone_device *, int);
+#ifdef CONFIG_AMLOGIC_TEMP_SENSOR
+void thermal_set_upper(struct thermal_zone_device *tzd,
+		       struct thermal_cooling_device *tcd,
+		       int trip, unsigned long upper);
+unsigned long thermal_get_upper(struct thermal_zone_device *tzd,
+				struct thermal_cooling_device *tcd, int trip);
+#endif
 #else
 static inline bool cdev_is_power_actor(struct thermal_cooling_device *cdev)
 { return false; }
@@ -540,6 +558,15 @@ static inline void thermal_cdev_update(struct thermal_cooling_device *cdev)
 static inline void thermal_notify_framework(struct thermal_zone_device *tz,
 	int trip)
 { }
+#ifdef CONFIG_AMLOGIC_TEMP_SENSOR
+static inline void thermal_set_upper(struct thermal_zone_device *tz,
+				     struct thermal_cooling_device *cdev,
+				     int trip, unsigned long upper)
+{ }
+static inline unsigned long thermal_get_upper(struct thermal_zone_device *tz,
+				struct thermal_cooling_device *cdev, int trip)
+{ return -1UL; }
+#endif
 #endif /* CONFIG_THERMAL */
 
 #if defined(CONFIG_NET) && IS_ENABLED(CONFIG_THERMAL)

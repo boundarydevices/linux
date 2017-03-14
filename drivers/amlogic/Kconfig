@@ -63,5 +63,7 @@ source "drivers/amlogic/securitykey/Kconfig"
 
 source "drivers/amlogic/key_manage/Kconfig"
 
+source "drivers/amlogic/thermal/Kconfig"
+
 endmenu
 endif

@@ -1,0 +1,52 @@
+#
+# Amlogic temperature sensor configuration
+#
+
+menu "Amlogic temperature sensor"
+
+config AMLOGIC_TEMP_SENSOR
+	bool "Amlgoic temperature sensor Support"
+	default n
+	---help---
+		Thermal sensor low level support for thermal
+		This driver parse thermal config data from device tree files.
+		And register each cooling device for thermal framework.
+
+		If you wan this driver, selest it.
+
+config AMLOGIC_CPUCORE_THERMAL
+	bool "generic cpu core cooling support"
+	depends on AMLOGIC_TEMP_SENSOR
+	default n
+	help
+	  This implements the generic cpu cooling mechanism through reduce cpu core numbers.
+	  This will be useful for platforms using the generic thermal interface
+	  and not the ACPI interface.
+
+	  If you want this support, you should say Y here.
+
+config AMLOGIC_GPU_THERMAL
+	bool "generic gpu cooling support"
+	depends on AMLOGIC_TEMP_SENSOR
+	default n
+	help
+	  This implements the generic gpu cooling mechanism through frequency
+	  reduction. An ACPI version of this already exists
+	  (drivers/acpi/processor_thermal.c).
+	  This will be useful for platforms using the generic thermal interface
+	  and not the ACPI interface.
+
+	  If you want this support, you should say Y here.
+
+config AMLOGIC_GPUCORE_THERMAL
+	bool "generic gpu core cooling support"
+	depends on AMLOGIC_TEMP_SENSOR
+	default n
+	help
+	  This implements the generic cpu cooling mechanism through reduce cpu core numbers.
+	  This will be useful for platforms using the generic thermal interface
+	  and not the ACPI interface.
+
+	  If you want this support, you should say Y here.
+
+endmenu

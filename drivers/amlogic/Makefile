@@ -59,3 +59,5 @@ obj-$(CONFIG_AMLOGIC_SECURITY_KEY)	+= securitykey/
 
 obj-$(CONFIG_AMLOGIC_KEY_MANAGE)    += key_manage/
 
+obj-$(CONFIG_AMLOGIC_TEMP_SENSOR)	+= thermal/
+

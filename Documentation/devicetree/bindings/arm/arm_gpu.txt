@@ -1,0 +1,10 @@
+ARM Mali GPU device tree bindings
+------------------------------------
+
+Boards with Mali-450 GPU shall have the following properties:
+  Required root node property:
+    compatible: "arm,mali-450"
+
+Boards with Mali-t82x GPU shall have the following properties:
+  Required root node property:
+    compatible: "arm,malit602", "arm,malit60x", "arm,malit6xx", "arm,mali-midgard"
