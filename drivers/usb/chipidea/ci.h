@@ -209,6 +209,7 @@ struct hw_bank {
  * @rev: The revision number for controller
  * @power_lost_work: work item when controller power is lost
  * @power_lost_wq: work queue for controller power is lost
+ * @mutex: protect code from concorrent running
  */
 struct ci_hdrc {
 	struct device			*dev;
@@ -274,6 +275,7 @@ struct ci_hdrc {
 	u32				pm_configured_flag;
 	u32				pm_portsc;
 	u32				pm_usbmode;
+	struct mutex			mutex;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)
