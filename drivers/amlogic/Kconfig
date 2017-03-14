@@ -53,5 +53,6 @@ source "drivers/amlogic/media/Kconfig"
 
 source "drivers/amlogic/mmc/Kconfig"
 
+source "drivers/amlogic/vrtc/Kconfig"
 endmenu
 endif

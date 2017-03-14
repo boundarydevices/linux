@@ -87,4 +87,6 @@ struct scpi_dvfs_info *scpi_dvfs_get_opps(u8 domain);
 int scpi_get_sensor(char *name);
 int scpi_get_sensor_value(u16 sensor, u32 *val);
 int scpi_send_usr_data(u32 client_id, u32 *val, u32 size);
+int scpi_get_vrtc(u32 *p_vrtc);
+int scpi_set_vrtc(u32 vrtc_val);
 #endif /*_SCPI_PROTOCOL_H_*/

@@ -1,0 +1,11 @@
+# Amlogic VRTC
+
+config AMLOGIC_VRTC
+    bool "meson VRTC support"
+    default n
+    select RTC_CLASS
+    help
+      This is the Amlogic virtual Real Time Clock driver,
+      which only has alarm function.
+
+

@@ -1079,5 +1079,13 @@
 		sys_reset = <0x84000009>;
 		sys_poweroff = <0x84000008>;
 	};
+
+	rtc{
+		compatible = "amlogic, aml_vrtc";
+		alarm_reg_addr = <0xc81000a8>;
+		timer_e_addr = <0xc1109988>;
+		init_date = "2017/01/01";
+		status = "okay";
+	};
 };
 

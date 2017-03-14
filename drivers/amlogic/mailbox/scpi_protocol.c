@@ -426,3 +426,38 @@ int scpi_send_usr_data(u32 client_id, u32 *val, u32 size)
 }
 EXPORT_SYMBOL_GPL(scpi_send_usr_data);
 
+int scpi_get_vrtc(u32 *p_vrtc)
+{
+	struct scpi_data_buf sdata;
+	struct mhu_data_buf mdata;
+	u32 temp = 0;
+	struct __packed {
+		u32 status;
+		u32 vrtc;
+	} buf;
+
+	SCPI_SETUP_DBUF(sdata, mdata, SCPI_CL_NONE,
+			SCPI_CMD_GET_RTC, temp, buf);
+	if (scpi_execute_cmd(&sdata))
+		return -EPERM;
+
+	*p_vrtc = buf.vrtc;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(scpi_get_vrtc);
+
+int scpi_set_vrtc(u32 vrtc_val)
+{
+	struct scpi_data_buf sdata;
+	struct mhu_data_buf mdata;
+	int state;
+
+	SCPI_SETUP_DBUF(sdata, mdata, SCPI_CL_NONE,
+			SCPI_CMD_SET_RTC, vrtc_val, state);
+	if (scpi_execute_cmd(&sdata))
+		return -EPERM;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(scpi_set_vrtc);

@@ -13601,3 +13601,6 @@ F: include/linux/amlogic/sd.h
 F: include/linux/mmc/emmc_partitions.h
 F: include/linux/mmc/host.h
 
+AMLOGIC VRTC DRIVER
+M:	Yun Cai <yun.cai@amlogic.com>
+F:	drivers/amlogic/vrtc/
