@@ -5,6 +5,7 @@
 // Author: Timur Tabi <timur@freescale.com>
 //
 // Copyright 2007-2015 Freescale Semiconductor, Inc.
+// Copyright 2017 NXP
 //
 // Some notes why imx-pcm-fiq is used instead of DMA on some boards:
 //
@@ -892,8 +893,9 @@ static int _fsl_ssi_set_dai_fmt(struct fsl_ssi *ssi, unsigned int fmt)
 	/* Synchronize frame sync clock for TE to avoid data slipping */
 	scr |= SSI_SCR_SYNC_TX_FS;
 
-	/* Set to default shifting settings: LSB_ALIGNED */
-	strcr |= SSI_STCR_TXBIT0;
+	regmap_read(regs, CCSR_SSI_SCR, &scr);
+	scr &= ~CCSR_SSI_SCR_SYN;
+	scr |= CCSR_SSI_SCR_SYNC_TX_FS;
 
 	/* Use Network mode as default */
 	ssi->i2s_net = SSI_SCR_NET;
