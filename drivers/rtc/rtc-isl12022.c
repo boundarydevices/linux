@@ -250,11 +250,22 @@ static int isl12022_probe(struct i2c_client *client,
 			  const struct i2c_device_id *id)
 {
 	struct isl12022 *isl12022;
+	unsigned char addr = ISL12022_REG_INT;
+	unsigned char reg_int;
+	struct i2c_msg msgs[] = {
+		{client->addr, 0, 1, &addr},
+		{client->addr, I2C_M_RD, 1, &reg_int},
+	};
 
 	int ret = 0;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -ENODEV;
+
+	if ((i2c_transfer(client->adapter, &msgs[0], 2)) != 2) {
+		dev_err(&client->dev, "%s: read error\n", __func__);
+		return -EIO;
+	}
 
 	isl12022 = kzalloc(sizeof(struct isl12022), GFP_KERNEL);
 	if (!isl12022)
