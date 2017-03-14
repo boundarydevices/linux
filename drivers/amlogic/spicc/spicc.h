@@ -18,8 +18,6 @@
 #ifndef __SPICC_H__
 #define __SPICC_H__
 
-#include <linux/amlogic/saradc.h>
-
 #define SPICC_FIFO_SIZE 16
 #define SPICC_DEFAULT_BIT_WIDTH 8
 #define SPICC_DEFAULT_SPEED_HZ 3000000
@@ -40,6 +38,12 @@
 #define SPICC_REG_LD_WADDR (13<<2)
 #define SPICC_REG_ENHANCE_CNTL (14<<2)
 #define SPICC_REG_ENHANCE_CNTL1 (15<<2)
+
+#define bits_desc(reg_offset, bits_offset, bits_len) \
+	(((bits_len)<<24)|((bits_offset)<<16)|(reg_offset))
+#define of_mem_offset(bd) ((bd)&0xffff)
+#define of_bits_offset(bd) (((bd)>>16)&0xff)
+#define of_bits_len(bd) (((bd)>>24)&0xff)
 
 #define CON_ENABLE bits_desc(SPICC_REG_CON, 0, 1)
 #define CON_MODE bits_desc(SPICC_REG_CON, 1, 1)

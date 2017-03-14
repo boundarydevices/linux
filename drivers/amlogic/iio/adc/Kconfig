@@ -1,0 +1,16 @@
+#
+# ADC drivers
+#
+# When adding new entries keep the list in alphabetical order
+
+menu "Analog to digital converters"
+
+config AMLOGIC_SARADC
+	bool "Meson SAR ADC support"
+	depends on REGMAP_MMIO
+	depends on IIO
+	default n
+	help
+	  Say Y here if you want to use the Meson SAR ADC.
+
+endmenu

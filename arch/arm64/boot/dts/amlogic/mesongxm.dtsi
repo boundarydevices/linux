@@ -18,6 +18,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/reset/amlogic,gxl-reset.h>
 #include <dt-bindings/clock/amlogic,gxl-clkc.h>
+#include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/gpio/gxl.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pwm/meson.h>
@@ -1138,12 +1139,14 @@
 	};
 
 	saradc: saradc {
-		compatible = "amlogic, saradc";
+		compatible = "amlogic,meson-gxl-saradc";
 		status = "okay";
-		clocks = <&clkc CLKID_SARADC>;
-		clock-names = "saradc_clk";
-		reg = <0x0 0xc1108680 0x0 0x30
-		       0x0 0xc883c3d8 0x0 0x08>;
+		#io-channel-cells = <1>;
+		clocks = <&xtal>, <&clkc CLKID_SARADC>,
+				<&clkc CLKID_SARADC_COMP>;
+		clock-names = "xtal", "clk81_gate", "saradc_clk";
+		interrupts = <GIC_SPI 73 IRQ_TYPE_EDGE_RISING>;
+		reg = <0x0 0xc1108680 0x0 0x38>;
 	};
 
 	efuse: efuse{

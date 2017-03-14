@@ -132,7 +132,6 @@ static const char * const log_comment[] = {
 	"pio begin",
 	"pio end"
 };
-
 static void spicc_log_init(struct spicc *spicc)
 {
 	spicc->log = 0;
@@ -211,6 +210,37 @@ static void spicc_log_print(struct spicc *spicc)
 #define spicc_log(spicc, param, param_count, comment_id)
 #define spicc_log_print(spicc)
 #endif
+
+static void setb(void __iomem *mem_base,
+				unsigned int bits_desc,
+				unsigned int bits_val) {
+	unsigned int mem_offset, val;
+	unsigned int bits_offset, bits_mask;
+
+	if (IS_ERR(mem_base))
+		return;
+	mem_offset = of_mem_offset(bits_desc);
+	bits_offset = of_bits_offset(bits_desc);
+	bits_mask = (1L<<of_bits_len(bits_desc))-1;
+	val = readl(mem_base+mem_offset);
+	val &= ~(bits_mask << bits_offset);
+	val |= (bits_val & bits_mask) << bits_offset;
+	writel(val, mem_base+mem_offset);
+}
+
+static unsigned int getb(void __iomem *mem_base,
+				unsigned int bits_desc) {
+	unsigned int mem_offset, val;
+	unsigned int bits_offset, bits_mask;
+
+	if (IS_ERR(mem_base))
+		return -1;
+	mem_offset = of_mem_offset(bits_desc);
+	bits_offset = of_bits_offset(bits_desc);
+	bits_mask = (1L<<of_bits_len(bits_desc))-1;
+	val = readl(mem_base+mem_offset);
+	return (val >> bits_offset) & bits_mask;
+}
 
 /* Note this is chip_select enable or disable */
 void spicc_chip_select(struct spi_device *spi, bool select)

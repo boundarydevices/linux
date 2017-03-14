@@ -13450,7 +13450,9 @@ F:	drivers/amlogic/crypto/*
 
 AMLOGIC saradc
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
-F:	drivers/amlogic/input/saradc/*
+F:	drivers/amlogic/iio/adc/*
+F:	include/dt-bindings/iio/adc/amlogic-saradc.h
+F:	Documentation/devicetree/bindings/iio/adc/amlogic,meson-saradc.txt
 
 AMLOGIC adc_keypad
 M:	Xingyu Chen <xingyu.chen@amlogic.com>

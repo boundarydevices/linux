@@ -380,6 +380,8 @@
 		compatible = "amlogic, aml-thermal";
 		device_name = "thermal";
 		#thermal-sensor-cells = <1>;
+		io-channels = <&saradc SARADC_CH6>;
+		io-channel-names = "TEMP_CHAN";
 		cooling_devices {
 			cpufreq_cool_cluster0 {
 				min_state = <768000>;

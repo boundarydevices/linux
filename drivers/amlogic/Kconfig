@@ -102,5 +102,7 @@ source "drivers/amlogic/pci/Kconfig"
 
 source "drivers/amlogic/irblaster/Kconfig"
 
+source "drivers/amlogic/iio/Kconfig"
+
 endmenu
 endif

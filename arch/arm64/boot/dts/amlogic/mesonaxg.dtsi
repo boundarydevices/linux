@@ -18,6 +18,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/amlogic,axg-clkc.h>
 #include <dt-bindings/clock/amlogic,axg-audio-clk.h>
+#include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/gpio/mesonaxg-gpio.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
@@ -685,6 +686,16 @@
 		status = "okay";
 		interrupts = <0 180 1 0 181 1>;
 		reg = <0x0 0xff63e000 0x0 0x48>;
+	};
+
+	saradc:saradc {
+		compatible = "amlogic,meson-axg-saradc";
+		status = "okay";
+		#io-channel-cells = <1>;
+		clocks = <&xtal>, <&clkc CLKID_SARADC_GATE>;
+		clock-names = "xtal", "saradc_clk";
+		interrupts = <GIC_SPI 73 IRQ_TYPE_EDGE_RISING>;
+		reg = <0x0 0xff809000 0x0 0x38>;
 	};
 };/* end of / */
 

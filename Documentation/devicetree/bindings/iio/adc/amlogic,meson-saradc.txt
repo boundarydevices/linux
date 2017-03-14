@@ -1,0 +1,38 @@
+* Amlogic Meson SAR (Successive Approximation Register) A/D converter
+
+Required properties:
+- compatible:	depending on the SoC this should be one of:
+			- "amlogic,meson-axg-saradc" for AXG
+			- "amlogic,meson-gxl-saradc" for GXL
+			- "amlogic,meson-gxm-saradc" for GXM
+			- "amlogic,meson-m8b-saradc" for M8B
+along with the generic "amlogic,meson-saradc"
+
+- reg:		the physical base address and length of the registers
+
+- interrupts:	the interrupt indicating end of sampling
+
+- clocks:	phandle and clock identifier (see clock-names)
+
+- clock-names:	mandatory clocks:
+			- "xtal" for the reference clock (typically XTAL)
+			- "saradc_clk" for the SAR ADC (sampling) clock
+		optional clocks:
+			- "clk81_gate" for the clk81 clock gate
+
+- #io-channel-cells: must be 1, see ../iio-bindings.txt
+
+Optional properties:
+- status: Shall be "ok" or "okay" if enabled or "disabled" if disabled.
+		  Default is "ok".
+
+Example:
+saradc:saradc {
+	compatible = "amlogic,meson-axg-saradc";
+	status = "okay";
+	#io-channel-cells = <1>;
+	clocks = <&xtal>, <&clkc CLKID_SARADC_GATE>;
+	clock-names = "xtal", "saradc_clk";
+	interrupts = <GIC_SPI 73 IRQ_TYPE_EDGE_RISING>;
+	reg = <0x0 0xff809000 0x0 0x38>;
+}

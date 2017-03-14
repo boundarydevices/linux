@@ -27,7 +27,7 @@
 #include <linux/amlogic/cpucore_cooling.h>
 #include <linux/amlogic/gpucore_cooling.h>
 #include <linux/amlogic/gpu_cooling.h>
-#include <linux/amlogic/saradc.h>
+#include <linux/iio/consumer.h>
 #include <linux/amlogic/efuse.h>
 #include <linux/cpu.h>
 #include <linux/amlogic/aml_thermal_hw.h>
@@ -72,6 +72,7 @@ struct aml_thermal_sensor {
 	unsigned int cool_dev_num  : 9;
 	struct cpumask mask[NUM_CLUSTERS];
 	struct cool_dev *cool_devs;
+	struct iio_channel *temp_chan;
 	struct thermal_zone_device    *tzd;
 };
 
@@ -103,7 +104,7 @@ int thermal_firmware_init(void)
 			soc_sensor.chip_trimmed = 0;
 	}
 	if (soc_sensor.chip_trimmed) {
-		temp_sensor_adc_init(soc_sensor.ts_c);
+		iio_write_channel_raw(soc_sensor.temp_chan, soc_sensor.ts_c);
 		return 0;
 	} else
 		return -1;
@@ -113,17 +114,19 @@ EXPORT_SYMBOL(thermal_firmware_init);
 
 int get_cpu_temp(void)
 {
-	int ret = TEMP_NOT_TRIMMED, tempa;
+	int ret;
+	int tempa;
+	int tval = TEMP_NOT_TRIMMED;
 
 	if (soc_sensor.chip_trimmed) {
-		ret = get_adc_sample(0, TEMP_ADC_CHANNEL);
+		ret = iio_read_channel_processed(soc_sensor.temp_chan, &tval);
 		if (ret >= 0) {
-			tempa = (10 * (ret - soc_sensor.fix_value)) / 32 + 27;
-			ret = tempa;
+			tempa = (10 * (tval - soc_sensor.fix_value)) / 32 + 27;
+			tval = tempa;
 		} else
-			ret = TEMP_ADC_ERROR;
+			tval = TEMP_ADC_ERROR;
 	}
-	return ret;
+	return tval;
 }
 EXPORT_SYMBOL(get_cpu_temp);
 
@@ -356,6 +359,10 @@ static int aml_thermal_probe(struct platform_device *pdev)
 			"Frequency policy not init. Deferring probe...\n");
 		return -EPROBE_DEFER;
 	}
+
+	soc_sensor.temp_chan = devm_iio_channel_get(&pdev->dev, "TEMP_CHAN");
+	if (IS_ERR(soc_sensor.temp_chan))
+		return PTR_ERR(soc_sensor.temp_chan);
 
 	if (thermal_firmware_init() < 0) {
 		dev_err(&pdev->dev, "chip is not trimmed, disable thermal\n");

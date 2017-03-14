@@ -85,3 +85,5 @@ obj-$(CONFIG_AMLOGIC_POWER)		+= power/
 obj-$(CONFIG_AMLOGIC_PCIE)      += pci/
 
 obj-$(CONFIG_AMLOGIC_IRBLASTER) += irblaster/
+
+obj-$(CONFIG_AMLOGIC_IIO)       += iio/

@@ -18,6 +18,7 @@
 #include <dt-bindings/clock/meson8b-clkc.h>
 #include <dt-bindings/gpio/meson8b-gpio.h>
 #include <dt-bindings/reset/amlogic,meson8b-reset.h>
+#include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
@@ -802,10 +803,12 @@ dwc2_b {
 	};
 
 	saradc: saradc {
-		compatible = "amlogic, saradc";
+		compatible = "amlogic,meson-m8b-saradc";
 		status = "okay";
-		clocks = <&clkc CLKID_SAR_ADC>;
-		clock-names = "saradc_clk";
+		#io-channel-cells = <1>;
+		clocks = <&clkc CLKID_XTAL>, <&clkc CLKID_SAR_ADC>;
+		clock-names = "xtal", "clk81_gate";
+		interrupts = <0 73 1>;
 		reg = <0xc1108680 0x30>;
 	};
 
