@@ -2093,14 +2093,14 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 {
 	struct amlsd_host *host = dev_id;
 	struct mmc_request *mrq;
-	struct mmc_command *cmd = host->cmd;
 	unsigned long flags;
 	struct amlsd_platform *pdata = host->pdata;
 	struct mmc_host *mmc;
-	unsigned int err_flag = 0;
 	u32 vstat = 0;
 	u32 virqc = 0;
 	u32 vstart = 0;
+	u32 err = 0;
+
 	struct sd_emmc_irq_en *irqc = (struct sd_emmc_irq_en *)&virqc;
 	struct sd_emmc_status *ista = (struct sd_emmc_status *)&vstat;
 	struct sd_emmc_start *desc_start = (struct sd_emmc_start *)&vstart;
@@ -2108,7 +2108,6 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 	if (WARN_ON(!host))
 		return IRQ_NONE;
 
-	spin_lock_irqsave(&host->mrq_lock, flags);
 	virqc = readl(host->base + SD_EMMC_IRQ_EN) & 0xffff;
 	vstat = readl(host->base + SD_EMMC_STATUS) & 0xffffffff;
 	host->ista = vstat;
@@ -2126,9 +2125,9 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 	} else if (!(vstat & 0x3fff))
 		return IRQ_HANDLED;
 
+	spin_lock_irqsave(&host->mrq_lock, flags);
 	mrq = host->mrq;
 	mmc = host->mmc;
-
 	vstart = readl(host->base + SD_EMMC_START);
 	if ((desc_start->busy == 1)
 		&& (aml_card_type_mmc(pdata) ||
@@ -2200,94 +2199,73 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 	writel(0x7fff, host->base + SD_EMMC_STATUS);
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
 
-	cmd->error = 0;
-	if (vstat & 0x7fff)
-		err_flag = 1;
-	if (err_flag) {
-		if (ista->end_of_chain || ista->desc_irq) {
-			if (mrq->data)
-				host->status = HOST_TASKLET_DATA;
-			else
-				host->status = HOST_TASKLET_CMD;
-			mrq->cmd->error = 0;
-		}
-		if (ista->rxd_err || ista->txd_err) {
-			host->status = HOST_DAT_CRC_ERR;
-			cmd->error = -EILSEQ;
-			if (host->is_tunning == 0) {
-				sd_emmc_err("%s: warning... data crc, vstat:0x%x, virqc:%x",
-						mmc_hostname(host->mmc),
-						vstat, virqc);
-				sd_emmc_err("@ cmd %d with %p; stop %d, status %d\n",
-						mrq->cmd->opcode, mrq->data,
-						host->cmd_is_stop,
-						host->status);
-			}
-		} else if (ista->desc_err) {
-			if (host->is_tunning == 0)
-				sd_emmc_err("%s: warning... desc err,vstat:0x%x,virqc:%x\n",
-						mmc_hostname(host->mmc),
-						vstat, virqc);
-			host->status = HOST_DAT_CRC_ERR;
-			cmd->error = -EILSEQ;
-		} else if (ista->resp_err) {
-			if (host->is_tunning == 0)
-				sd_emmc_err("%s: warning... response crc,vstat:0x%x,virqc:%x\n",
-						mmc_hostname(host->mmc),
-						vstat, virqc);
-			pr_info("%s %d cmd:%d arg:0x%x ",
-					__func__, __LINE__,
-					mrq->cmd->opcode, mrq->cmd->arg);
-			host->status = HOST_RSP_CRC_ERR;
-			cmd->error = -EILSEQ;
-		} else if (ista->resp_timeout) {
-			if (host->is_tunning == 0)
-				sd_emmc_err("%s: resp_timeout,vstat:0x%x,virqc:%x\n",
-						mmc_hostname(host->mmc),
-						vstat, virqc);
-			host->status = HOST_RSP_TIMEOUT_ERR;
-			cmd->error = -ETIMEDOUT;
-		} else if (ista->desc_timeout) {
-			if (host->is_tunning == 0)
-				sd_emmc_err("%s: desc_timeout,vstat:0x%x,virqc:%x\n",
-						mmc_hostname(host->mmc),
-						vstat, virqc);
-			host->status = HOST_DAT_TIMEOUT_ERR;
-			cmd->error = -ETIMEDOUT;
-		}
-		if (cmd->error) {
-			if (host->is_tunning == 0)
-				aml_host_bus_fsm_show(host, ista->bus_fsm);
-			if (aml_card_type_mmc(pdata))
-				mmc_cmd_LBA_show(mmc, mrq);
-		}
-	} else {
-		host->xfer_step = XFER_IRQ_UNKNOWN_IRQ;
-		sd_emmc_err("%s: %s Unknown Irq Ictl 0x%x, Ista 0x%x\n",
-				mmc_hostname(host->mmc),
-				pdata->pinname, virqc, vstat);
-		dev_warn(host->dev, "Unknown IRQ! status=0x%04x: ", host->ista);
-		dev_warn(host->dev, "MMC CMD%u arg=0x%08x flags=0x%08x stop=%d\n",
-				cmd->opcode, cmd->arg,
-				cmd->flags, mrq->stop ? 1 : 0);
-		if (cmd->data) {
-			struct mmc_data *data = cmd->data;
-
-			dev_warn(host->dev, "\tblksz %u blocks %u flags 0x%08x (%s%s)",
-					data->blksz, data->blocks, data->flags,
-					data->flags & MMC_DATA_WRITE ?
-					"write" : "",
-					data->flags & MMC_DATA_READ ?
-					"read" : "");
-		}
+	if (ista->end_of_chain || ista->desc_irq) {
+		if (mrq->data)
+			host->status = HOST_TASKLET_DATA;
+		else
+			host->status = HOST_TASKLET_CMD;
+		mrq->cmd->error = 0;
 	}
 
-	if (host->xfer_step == XFER_IRQ_UNKNOWN_IRQ) {
-		meson_mmc_read_resp(host->mmc, cmd);
-		meson_mmc_request_done(host->mmc, cmd->mrq);
+	if ((vstat & 0x1FFF) && (!host->cmd_is_stop))
+		err = 1;
+
+	if (ista->rxd_err || ista->txd_err) {
+		host->status = HOST_DAT_CRC_ERR;
+		mrq->cmd->error = -EILSEQ;
+		if (host->is_tunning == 0) {
+			sd_emmc_err("%s: warning... data crc, vstat:0x%x, virqc:%x",
+					mmc_hostname(host->mmc),
+					vstat, virqc);
+			sd_emmc_err("@ cmd %d with %p; stop %d, status %d\n",
+					mrq->cmd->opcode, mrq->data,
+					host->cmd_is_stop,
+					host->status);
+		}
+	} else if (ista->desc_err) {
+		if (host->is_tunning == 0)
+			sd_emmc_err("%s: warning... desc err,vstat:0x%x,virqc:%x\n",
+					mmc_hostname(host->mmc),
+					vstat, virqc);
+		host->status = HOST_DAT_CRC_ERR;
+		mrq->cmd->error = -EILSEQ;
+	} else if (ista->resp_err) {
+		if (host->is_tunning == 0)
+			sd_emmc_err("%s: warning... response crc,vstat:0x%x,virqc:%x\n",
+					mmc_hostname(host->mmc),
+					vstat, virqc);
+		pr_info("%s %d cmd:%d arg:0x%x ",
+				__func__, __LINE__,
+				mrq->cmd->opcode, mrq->cmd->arg);
+		host->status = HOST_RSP_CRC_ERR;
+		mrq->cmd->error = -EILSEQ;
+	} else if (ista->resp_timeout) {
+		if (host->is_tunning == 0)
+			sd_emmc_err("%s: resp_timeout,vstat:0x%x,virqc:%x\n",
+					mmc_hostname(host->mmc),
+					vstat, virqc);
+		host->status = HOST_RSP_TIMEOUT_ERR;
+		mrq->cmd->error = -ETIMEDOUT;
+	} else if (ista->desc_timeout) {
+		if (host->is_tunning == 0)
+			sd_emmc_err("%s: desc_timeout,vstat:0x%x,virqc:%x\n",
+					mmc_hostname(host->mmc),
+					vstat, virqc);
+		host->status = HOST_DAT_TIMEOUT_ERR;
+		mrq->cmd->error = -ETIMEDOUT;
+	}
+
+	if (err) {
+		if (host->is_tunning == 0)
+			aml_host_bus_fsm_show(host, ista->bus_fsm);
+		if (aml_card_type_mmc(pdata))
+			mmc_cmd_LBA_show(mmc, mrq);
+	}
+
+	if (host->xfer_step == XFER_IRQ_UNKNOWN_IRQ)
 		return IRQ_HANDLED;
-	}
-	return IRQ_WAKE_THREAD;
+	else
+		return IRQ_WAKE_THREAD;
 }
 
 struct mmc_command aml_sd_emmc_cmd = {
@@ -2317,7 +2295,6 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 	struct amlsd_platform *pdata = host->pdata;
 	unsigned long flags;
 	struct mmc_request *mrq;
-	struct mmc_command *cmd = host->cmd;
 
 	u32 status, rx_phase, xfer_bytes = 0;
 	enum aml_mmc_waitfor xfer_step;
@@ -2332,6 +2309,7 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 	mrq = host->mrq;
 	xfer_step = host->xfer_step;
 	status = host->status;
+
 	if ((xfer_step == XFER_FINISHED) || (xfer_step == XFER_TIMER_TIMEOUT)) {
 		sd_emmc_err("Warning: %s xfer_step=%d, host->status=%d\n",
 			mmc_hostname(host->mmc), xfer_step, status);
@@ -2399,8 +2377,8 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 
 		/* check ready?? */
 		/*Wait command busy*/
-		meson_mmc_read_resp(host->mmc, cmd);
-		meson_mmc_request_done(host->mmc, host->mrq);
+		meson_mmc_read_resp(host->mmc, mrq->cmd);
+		meson_mmc_request_done(host->mmc, mrq);
 
 		break;
 
@@ -2417,7 +2395,7 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 				(mrq->cmd->data->flags & MMC_DATA_READ) ?
 					DMA_FROM_DEVICE : DMA_TO_DEVICE);
 		}
-		meson_mmc_read_resp(host->mmc, cmd);
+		meson_mmc_read_resp(host->mmc, mrq->cmd);
 
 		/* set retry @ 1st error happens! */
 		if ((host->error_flag == 0)
@@ -2869,7 +2847,7 @@ static int meson_mmc_remove(struct platform_device *pdev)
 
 	if (host->bn_buf)
 		dma_free_coherent(host->dev, SD_EMMC_BOUNCE_REQ_SIZE,
-				  host->bn_buf, host->bn_dma_buf);
+				host->bn_buf, host->bn_dma_buf);
 
 	devm_free_irq(&pdev->dev, host->irq, host);
 	iounmap(host->pinmux_base);

@@ -220,6 +220,11 @@ EXPORT_SYMBOL(mmc_request_done);
 
 static void __mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 {
+/*
+ * mmc_retune() will be work on amlogic driver retry, when emmc has err.
+ * Then it will make emmc init fail. So we comment out a piece of code.
+ */
+#ifndef CONFIG_AMLOGIC_MMC
 	int err;
 
 	/* Assumes host controller has been runtime resumed by mmc_claim_host */
@@ -229,7 +234,7 @@ static void __mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 		mmc_request_done(host, mrq);
 		return;
 	}
-
+#endif
 	/*
 	 * For sdio rw commands we must wait for card busy otherwise some
 	 * sdio devices won't work properly.

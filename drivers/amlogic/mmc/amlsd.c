@@ -370,7 +370,8 @@ void sdio_reinit(void)
 {
 	if (sdio_host) {
 		if (sdio_host->card)
-			sdio_reset_comm(sdio_host->card);
+			//temp remove for upstream merge comflict
+			;//sdio_reset_comm(sdio_host->card);
 		else
 			sdio_rescan(sdio_host);
 	} else {
