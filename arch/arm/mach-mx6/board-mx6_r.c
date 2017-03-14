@@ -376,6 +376,12 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.irq = gpio_to_irq(IMX_GPIO_NR(6, 7)),	/* NANDF_CLE */
 	},
 #endif
+#if defined(CONFIG_RTC_DRV_RV4162) || defined(CONFIG_RTC_DRV_RV4162_MODULE)
+	{
+		I2C_BOARD_INFO("rv4162", 0x68),
+		.irq = gpio_to_irq(IMX_GPIO_NR(6, 7)),
+	},
+#endif
         {
                 I2C_BOARD_INFO("mma8451", 0x1c),	/* Accelerometer */
                 .platform_data = (void *)&accelerometer_pos
