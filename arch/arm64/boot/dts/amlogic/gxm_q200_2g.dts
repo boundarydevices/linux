@@ -509,6 +509,28 @@
 		interrupt-names = "rdma";
 	};
 
+	amvenc_avc{
+		compatible = "amlogic, amvenc_avc";
+		dev_name = "amvenc_avc";
+		status = "okay";
+		interrupts = <0 45 1>;
+		interrupt-names = "mailbox_2";
+	};
+
+	hevc_enc{
+		compatible = "cnm, HevcEnc";
+		dev_name = "HevcEnc";
+		status = "okay";
+		interrupts = <0 187 1>;
+		interrupt-names = "wave420l_irq";
+		#address-cells=<2>;
+		#size-cells=<2>;
+		ranges;
+		io_reg_base{
+			reg = <0x0 0xc8810000 0x0 0x4000>;
+		};
+	};
+
 	partitions: partitions{
 		parts = <11>;
 		part-0 = <&logo>;
