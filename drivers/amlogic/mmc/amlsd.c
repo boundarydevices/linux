@@ -285,7 +285,7 @@ int aml_sd_voltage_switch(struct mmc_host *mmc, char signal_voltage)
 		|| (pdata->signal_voltage == signal_voltage)) {
 		if (aml_card_type_sdio(pdata))
 			host->sd_sdio_switch_volat_done = 1;
-			return 0;
+		return 0;
 	}
 	if (pdata->vol_switch) {
 		if (pdata->signal_voltage == 0xff) {

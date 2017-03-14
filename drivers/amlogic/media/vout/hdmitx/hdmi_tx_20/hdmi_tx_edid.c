@@ -448,8 +448,8 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._AC3._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._AC3._32k = 1;
-				info->tv_audio_info._AC3._max_bit =
-					Data[i+2];
+			info->tv_audio_info._AC3._max_bit =
+				Data[i+2];
 			break;
 		case 3:
 			info->tv_audio_info._MPEG1.support_flag = 1;
@@ -469,8 +469,8 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._MPEG1._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._MPEG1._32k = 1;
-				info->tv_audio_info._MPEG1._max_bit =
-					Data[i+2];
+			info->tv_audio_info._MPEG1._max_bit =
+				Data[i+2];
 			break;
 		case 4:
 			info->tv_audio_info._MP3.support_flag = 1;
@@ -490,7 +490,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._MP3._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._MP3._32k = 1;
-				info->tv_audio_info._MP3._max_bit = Data[i+2];
+			info->tv_audio_info._MP3._max_bit = Data[i+2];
 			break;
 		case 5:
 			info->tv_audio_info._MPEG2.support_flag = 1;
@@ -510,7 +510,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._MPEG2._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._MPEG2._32k = 1;
-				info->tv_audio_info._MPEG2._max_bit = Data[i+2];
+			info->tv_audio_info._MPEG2._max_bit = Data[i+2];
 			break;
 		case 6:
 			info->tv_audio_info._AAC.support_flag = 1;
@@ -530,7 +530,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._AAC._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._AAC._32k = 1;
-				info->tv_audio_info._AAC._max_bit = Data[i+2];
+			info->tv_audio_info._AAC._max_bit = Data[i+2];
 			break;
 		case 7:
 			info->tv_audio_info._DTS.support_flag = 1;
@@ -550,7 +550,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._DTS._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._DTS._32k = 1;
-				info->tv_audio_info._DTS._max_bit = Data[i+2];
+			info->tv_audio_info._DTS._max_bit = Data[i+2];
 			break;
 		case 8:
 			info->tv_audio_info._ATRAC.support_flag = 1;
@@ -570,7 +570,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._ATRAC._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._ATRAC._32k = 1;
-				info->tv_audio_info._ATRAC._max_bit = Data[i+2];
+			info->tv_audio_info._ATRAC._max_bit = Data[i+2];
 			break;
 		case 9:
 			info->tv_audio_info._One_Bit_Audio.support_flag = 1;
@@ -590,8 +590,8 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._One_Bit_Audio._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._One_Bit_Audio._32k = 1;
-				info->tv_audio_info._One_Bit_Audio._max_bit =
-					Data[i+2];
+			info->tv_audio_info._One_Bit_Audio._max_bit =
+				Data[i+2];
 			break;
 		case 10:
 			info->tv_audio_info._Dolby.support_flag = 1;
@@ -611,7 +611,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._Dolby._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._Dolby._32k = 1;
-				info->tv_audio_info._Dolby._max_bit = Data[i+2];
+			info->tv_audio_info._Dolby._max_bit = Data[i+2];
 			break;
 
 		case 11:
@@ -632,8 +632,8 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._DTS_HD._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._DTS_HD._32k = 1;
-				info->tv_audio_info._DTS_HD._max_bit =
-					Data[i+2];
+			info->tv_audio_info._DTS_HD._max_bit =
+				Data[i+2];
 			break;
 		case 12:
 			info->tv_audio_info._MAT.support_flag = 1;
@@ -653,7 +653,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._MAT._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._MAT._32k = 1;
-				info->tv_audio_info._MAT._max_bit = Data[i+2];
+			info->tv_audio_info._MAT._max_bit = Data[i+2];
 			break;
 
 		case 13:
@@ -674,7 +674,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._DST._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._DST._32k = 1;
-				info->tv_audio_info._DST._max_bit = Data[i+2];
+			info->tv_audio_info._DST._max_bit = Data[i+2];
 			break;
 
 		case 14:
@@ -695,7 +695,7 @@ static void Edid_ParsingAudioDATABlock(struct hdmitx_info *info,
 				info->tv_audio_info._WMA._44k = 1;
 			if ((Data[i+1]&0x01))
 				info->tv_audio_info._WMA._32k = 1;
-				info->tv_audio_info._WMA._max_bit = Data[i+2];
+			info->tv_audio_info._WMA._max_bit = Data[i+2];
 			break;
 
 		default:
@@ -1079,7 +1079,7 @@ int Edid_ParsingCEADataBlockCollection(struct hdmitx_info *info,
 			if ((Addr + (Data&0x1f)) < D)
 				Edid_ParsingVideoDATABlock(info, buff,
 					Addr + 1, (Data & 0x1F));
-				break;
+			break;
 
 		case AUDIO_TAG:
 			len = (Data & 0x1f) + 1;
