@@ -808,18 +808,6 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	int enabled;
 	u8 i2smode = ssi->i2s_net;
 
-	regmap_read(regs, REG_SSI_SCR, &scr_val);
-	enabled = scr_val & SSI_SCR_SSIEN;
-
-	/*
-	 * SSI is properly configured if it is enabled and running in
-	 * the synchronous mode; Note that AC97 mode is an exception
-	 * that should set separate configurations for STCCR and SRCCR
-	 * despite running in the synchronous mode.
-	 */
-	if (ssi->streams && ssi->synchronous)
-		return 0;
-
 	if (fsl_ssi_is_i2s_master(ssi)) {
 		ret = fsl_ssi_set_bclk(substream, dai, hw_params);
 		if (ret)
@@ -834,6 +822,16 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 			ssi->baudclk_streams |= BIT(substream->stream);
 		}
 	}
+
+	regmap_read(regs, REG_SSI_SCR, &scr_val);
+	enabled = scr_val & SSI_SCR_SSIEN;
+
+	/*
+	 * If we're in synchronous mode, and the SSI is already enabled,
+	 * then STCCR is already set properly.
+	 */
+	if (enabled && ssi->cpu_dai_drv.symmetric_rates)
+		return 0;
 
 	if (!fsl_ssi_is_ac97(ssi)) {
 		/*
