@@ -23,6 +23,7 @@
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
+#include "mesongxm-gpu-t82x.dtsi"
 / {
 	cpus:cpus {
 		#address-cells = <2>;

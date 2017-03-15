@@ -23,6 +23,7 @@
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
+#include "mesongxbb-gpu-mali450.dtsi"
 / {
 	cpus:cpus {
 		#address-cells = <2>;
@@ -1087,5 +1088,11 @@
 		init_date = "2017/01/01";
 		status = "okay";
 	};
+};
+
+&gpu{
+	/*gpu max freq is 750M*/
+	tbl = <&clk125_cfg &clk285_cfg &clk400_cfg
+		   &clk500_cfg &clk666_cfg &clk750_cfg &clk750_cfg>;
 };
 
