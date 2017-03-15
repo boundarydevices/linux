@@ -178,6 +178,11 @@ void amlogic_init_gpu(void)
 		gpu_clk_hws[CLKID_GPU_MUX - CLKID_GPU_P0_MUX]);
 	WARN_ON(IS_ERR(clks[CLKID_GPU_MUX]));
 
+	clk_set_parent(clks[CLKID_GPU_MUX], clks[CLKID_GPU_P0_COMP]);
+	clk_prepare_enable(clks[CLKID_GPU_P0_COMP]);
+	clk_prepare_enable(clks[CLKID_GPU_P1_COMP]);
+	clk_set_rate(clks[CLKID_GPU_MUX], 400000000);
+
 	pr_info("%s: register meson gpu clk\n", __func__);
 }
 
