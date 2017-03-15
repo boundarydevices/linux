@@ -1,0 +1,7 @@
+#
+#Smart card driver configuration
+#
+
+config AMLOGIC_SMARTCARD
+	bool "Amlogic Smartcard driver"
+	default n

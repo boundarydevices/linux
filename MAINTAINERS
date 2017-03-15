@@ -13617,3 +13617,14 @@ F: arch/arm64/configs/meson64_defconfig
 F: drivers/amlogic/media/Kconfig
 F: drivers/amlogic/media/Makefile
 F: drivers/amlogic/media/vin/
+
+AMLOGIC smartcard
+M: Gong Ke <ke.gong@amlogic.com>
+F: drivers/amlogic/smartcard/c_stb_regs_define.h
+F: drivers/amlogic/smartcard/Kconfig
+F: drivers/amlogic/smartcard/Makefile
+F: drivers/amlogic/smartcard/smartcard.c
+F: drivers/amlogic/smartcard/smartcard.h
+F: drivers/amlogic/smartcard/smc_reg.h
+F: include/linux/amlogic/amsmc.h
+F: Documentation/devicetree/bindings/amlogic/amlogic-smartcard.txt

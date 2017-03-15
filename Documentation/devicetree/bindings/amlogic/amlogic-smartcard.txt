@@ -1,0 +1,71 @@
+Device-Tree bindings for smartcard driver
+
+Required properties:
+- compatible: Must be "amlogic, smartcard".
+- interrupts: Smartcard IRQ.
+- smc0_clock_source: Smartcard module's clock source selection.
+- reset_level: Reset level.
+- smc0_det_invert: Invert the DET level.
+- pinctrl: Pinmux setting of the smartcard.
+- resets: Clock domain of the smartcard.
+
+If you want to use GPIO to replace the DET and RESET pins, the following properties should be set:
+- reset_pin: RESET GPIO.
+- detect_pin: DETECT GPIO.
+
+If you want to switch 5v/3v by a GPIO, the following properties should be set:
+- enable_5v3v_pin: 5v/3v switch GPIO.
+- smc0_5v3v_level: 5v/3v GPIO output.
+
+If you want to disable the CLK output when no card inserted, the following properties should be set:
+- smc0_clk_pinmux_reg: CLK pinmux register address.
+- smc0_clk_pinmux_bit: CLK pinmux bit.
+- smc0_clk_oen_reg: CLK GPIO OEN register.
+- smc0_clk_out_reg: CLK GPIO output register.
+- smc0_clk_bit: CLK GPIO bit.
+- smc0_clk_oebit: CLK GPIO OEN bit.;
+- smc0_clk_oubit: BLK GPIO output bit.
+
+Example:
+smartcard {
+	compatible = "amlogic,smartcard";
+	irq_trigger_type = "GPIO_IRQ_LOW";
+
+	reset_pin = <&gpio GPIOX_11 GPIO_ACTIVE_HIGH >;		//Reset pin
+	detect_pin = <&gpio GPIOX_20 GPIO_ACTIVE_HIGH >;	//Detect pin
+	enable_5v3v_pin = <&gpio GPIOX_10 GPIO_ACTIVE_HIGH >;	//5V3V pin, can be ignored
+
+	interrupts = <0 69 4>;		//smc irq
+
+	smc0_clock_source = <0>;	//Smc clock source, if change this, you must adjust clk and divider in smartcard.c
+	smc0_irq = <69 >;		//smc irq
+	smc0_det_invert = <0>;		//0: high voltage on detect pin indicates card in.
+	smc0_5v3v_level = <0>;
+	smc_need_enable_pin = "no";	//Ordinarily, smartcard controller needs a enable pin.
+	reset_level = <0>;		//0: low to reset the smartcard
+
+	smc0_clk_pinmux_reg = <0x30>;
+	smc0_clk_pinmux_bit = <0x80>;
+	smc0_clk_oen_reg = <0x200f>;
+	smc0_clk_out_reg = <0x2010>;
+	smc0_clk_bit = <0x2000>;
+	smc0_clk_oebit = <0x2000000>;
+	smc0_clk_oubit = <0x1000000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&smc_pins>;
+	resets = <&clock GCLK_IDX_SMART_CARD_MPEG_DOMAIN>;
+	reset-names = "smartcard";
+
+	status = "okay";
+};
+
+&pinmux {
+	smc_pins:smc_pins {	//Set gpio to 7816-clk 7816-data mode.
+		amlogic,setmask = <4 0x000000c0>;       //Please refer to core-pin mux document
+		amlogic,clrmask = <3 0x60000280>;
+		amlogic,pins = "GPIOX_8","GPIOX_9";
+	};
+}
+
+
