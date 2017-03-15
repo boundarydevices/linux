@@ -119,6 +119,14 @@ static struct extcon_dev hdmi_hdr = {
 };
 
 static int hdmi_init;
+
+static inline void hdmitx_notify_hpd(int hpd)
+{
+	if (hpd)
+		hdmitx_event_notify(HDMITX_PLUG, NULL);
+	else
+		hdmitx_event_notify(HDMITX_UNPLUG, NULL);
+}
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 static void hdmitx_early_suspend(struct early_suspend *h)
@@ -181,6 +189,8 @@ static void hdmitx_late_resume(struct early_suspend *h)
 	/* update status for hpd and switch/state */
 	hdmitx_device.hpd_state = !!(hdmitx_device.HWOp.CntlMisc(&hdmitx_device,
 		MISC_HPD_GPI_ST, 0));
+	hdmitx_notify_hpd(hdmitx_device.hpd_state);
+
 	/*force to get EDID after resume for Amplifer Power case*/
 	if (hdmitx_device.hpd_state)
 		hdmitx_get_edid(phdmi);
@@ -2335,6 +2345,7 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	set_disp_mode_auto();
 	hdmitx_set_audio(hdev, &(hdev->cur_audio_param), hdmi_ch);
 	hdev->hpd_state = 1;
+	hdmitx_notify_hpd(hdev->hpd_state);
 	extcon_set_state(&sdev, 0, 1);
 	extcon_set_state(&hdmi_audio, 0, 1);
 
@@ -2384,6 +2395,7 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdmitx_edid_clear(hdev);
 	hdmitx_edid_ram_buffer_clear(hdev);
 	hdev->hpd_state = 0;
+	hdmitx_notify_hpd(hdev->hpd_state);
 	extcon_set_state(&sdev, 0, 0);
 	extcon_set_state(&hdmi_audio, 0, 0);
 	mutex_unlock(&setclk_mutex);
@@ -2430,6 +2442,7 @@ static int hdmi_task_handle(void *data)
 	sdev.state = !!(hdmitx_device->HWOp.CntlMisc(hdmitx_device,
 		MISC_HPD_GPI_ST, 0));
 	hdmitx_device->hpd_state = sdev.state;
+	hdmitx_notify_hpd(hdmitx_device->hpd_state);
 	extcon_set_state(&hdmi_power, 0, hdmitx_device->hpd_state);
 	INIT_WORK(&hdmitx_device->work_hdr, hdr_work_func);
 
@@ -2527,6 +2540,40 @@ static int get_dt_vend_init_data(struct device_node *np,
 	return 0;
 }
 
+/* for notify to cec */
+static BLOCKING_NOTIFIER_HEAD(hdmitx_event_notify_list);
+int hdmitx_event_notifier_regist(struct notifier_block *nb)
+{
+	int ret;
+
+	ret = blocking_notifier_chain_register(&hdmitx_event_notify_list, nb);
+	/* update status when register */
+	if (!ret && nb && nb->notifier_call) {
+		hdmitx_notify_hpd(hdmitx_device.hpd_state);
+		if (hdmitx_device.physical_addr != 0xffff)
+			hdmitx_event_notify(HDMITX_PHY_ADDR_VALID,
+					    &hdmitx_device.physical_addr);
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(hdmitx_event_notifier_regist);
+
+int hdmitx_event_notifier_unregist(struct notifier_block *nb)
+{
+	int ret;
+
+	ret = blocking_notifier_chain_unregister(&hdmitx_event_notify_list, nb);
+
+	return ret;
+}
+EXPORT_SYMBOL(hdmitx_event_notifier_unregist);
+
+void hdmitx_event_notify(unsigned long state, void *arg)
+{
+	blocking_notifier_call_chain(&hdmitx_event_notify_list, state, arg);
+}
+
 static int amhdmitx_probe(struct platform_device *pdev)
 {
 	int r, ret = 0;
@@ -2540,6 +2587,7 @@ static int amhdmitx_probe(struct platform_device *pdev)
 #endif
 
 	hdmitx_device.hdtx_dev = &pdev->dev;
+	hdmitx_device.physical_addr = 0xffff;
 	/* init para for NULL protection */
 	hdmitx_device.para = hdmi_get_fmt_name("invalid", fmt_attr);
 	hdmi_print(IMP, SYS "amhdmitx_probe\n");
@@ -2858,6 +2906,7 @@ static int amhdmitx_restore(struct device *dev)
 		mutex_lock(&setclk_mutex);
 		sdev.state = 0;
 		hdmitx_device.hpd_state = sdev.state;
+		hdmitx_notify_hpd(hdmitx_device.hpd_state);
 		mutex_unlock(&setclk_mutex);
 		pr_info("resend hdmi plug in event\n");
 		hdmitx_device.hdmitx_event |= HDMI_TX_HPD_PLUGIN;
@@ -2870,6 +2919,7 @@ static int amhdmitx_restore(struct device *dev)
 		mutex_lock(&setclk_mutex);
 		sdev.state = current_hdmi_state;
 		hdmitx_device.hpd_state = sdev.state;
+		hdmitx_notify_hpd(hdmitx_device.hpd_state);
 		mutex_unlock(&setclk_mutex);
 	}
 	return 0;

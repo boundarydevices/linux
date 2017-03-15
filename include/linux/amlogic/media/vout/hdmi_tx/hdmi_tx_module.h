@@ -162,7 +162,6 @@ struct hdmitx_dev {
 	struct task_struct *task;
 	struct task_struct *task_monitor;
 	struct task_struct *task_hdcp;
-	struct task_struct *task_cec;
 	struct notifier_block nb;
 	struct workqueue_struct *hdmi_wq;
 	struct device *hdtx_dev;
@@ -216,7 +215,6 @@ struct hdmitx_dev {
 	struct hdmi_config_platform_data config_data;
 	enum hdmi_event_t hdmitx_event;
 	unsigned int irq_hpd;
-	unsigned int irq_cec;
 	/* wait_queue_head_t   wait_queue;*/
 	/*EDID*/
 	unsigned int cur_edid_block;
@@ -236,21 +234,18 @@ struct hdmitx_dev {
 #define DISP_SWITCH_FORCE       0
 #define DISP_SWITCH_EDID        1
 	unsigned char disp_switch_config; /* 0, force; 1,edid */
-	unsigned int cur_VIC;
 	unsigned char unplug_powerdown;
+	unsigned short physical_addr;
+	unsigned int cur_VIC;
 	/**/
 	unsigned char hpd_event; /* 1, plugin; 2, plugout */
 	unsigned char hpd_state; /* 1, connect; 0, disconnect */
 	unsigned char force_audio_flag;
 	unsigned char mux_hpd_if_pin_high_flag;
-	unsigned char cec_func_flag;
 	int auth_process_timer;
 	struct hdmitx_info hdmi_info;
 	unsigned char tmp_buf[HDMI_TMP_BUF_SIZE];
 	unsigned int log;
-	unsigned int cec_func_config;
-	unsigned int cec_init_ready;
-	unsigned int tv_cec_support;
 	unsigned int tx_aud_cfg; /* 0, off; 1, on */
 	/* For some un-well-known TVs, no edid at all */
 	unsigned int tv_no_edid;
@@ -480,12 +475,34 @@ extern int hdmi_set_3d(struct hdmitx_dev *hdmitx_device, int type,
 extern int hdmitx_set_audio(struct hdmitx_dev *hdmitx_device,
 	struct hdmitx_audpara *audio_param, int hdmi_ch);
 
+/* for notify to cec */
+#define HDMITX_PLUG			1
+#define HDMITX_UNPLUG			2
+#define HDMITX_PHY_ADDR_VALID		3
+
 #ifdef CONFIG_AMLOGIC_HDMITX
 extern struct hdmitx_dev *get_hdmitx_device(void);
+extern int get_hpd_state(void);
+extern int hdmitx_event_notifier_regist(struct notifier_block *nb);
+extern int hdmitx_event_notifier_unregist(struct notifier_block *nb);
+extern void hdmitx_event_notify(unsigned long state, void *arg);
 #else
 static inline struct hdmitx_dev *get_hdmitx_device(void)
 {
-	return NULL;
+urn NULL;
+}
+static inline int get_hpd_state(void)
+{
+	return -1;
+}
+static inline int hdmitx_event_notifier_regist(struct notifier_block *nb)
+{
+	return -EINVAL;
+}
+
+static inline int hdmitx_event_notifier_unregist(struct notifier_block *nb)
+{
+	return -EINVAL;
 }
 #endif
 
@@ -498,9 +515,6 @@ extern void hdmitx_output_rgb(void);
 extern int get_cur_vout_index(void);
 extern struct vinfo_s *hdmi_get_current_vinfo(void);
 void phy_pll_off(void);
-
-
-extern int get_hpd_state(void);
 
 
 /***********************************************************************

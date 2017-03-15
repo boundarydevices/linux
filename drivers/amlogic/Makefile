@@ -53,3 +53,5 @@ obj-$(CONFIG_AMLOGIC_VRTC)		+= vrtc/
 
 obj-$(CONFIG_AMLOGIC_SMARTCARD)		+= smartcard/
 
+obj-$(CONFIG_AMLOGIC_AO_CEC)		+= cec/
+

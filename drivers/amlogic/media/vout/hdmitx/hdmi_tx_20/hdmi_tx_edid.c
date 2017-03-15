@@ -236,15 +236,24 @@ int get_vsdb_phy_addr(struct vsdb_phyaddr *vsdb)
 	return vsdb->valid;
 }
 
-static void set_vsdb_phy_addr(struct vsdb_phyaddr *vsdb,
-	unsigned char *edid_offset)
+static void set_vsdb_phy_addr(struct hdmitx_dev *hdev,
+			      struct vsdb_phyaddr *vsdb,
+			      unsigned char *edid_offset)
 {
+	int phy_addr;
 	vsdb->a = (edid_offset[4] >> 4) & 0xf;
 	vsdb->b = (edid_offset[4] >> 0) & 0xf;
 	vsdb->c = (edid_offset[5] >> 4) & 0xf;
 	vsdb->d = (edid_offset[5] >> 0) & 0xf;
 	vsdb_local = *vsdb;
 	vsdb->valid = 1;
+
+	phy_addr = ((vsdb->a & 0xf) << 12) |
+		   ((vsdb->b & 0xf) <<  8) |
+		   ((vsdb->c & 0xf) <<  4) |
+		   ((vsdb->d & 0xf) <<  0);
+	hdev->physical_addr = phy_addr;
+	hdmitx_event_notify(HDMITX_PHY_ADDR_VALID, &phy_addr);
 }
 
 static void set_vsdb_dc_cap(struct rx_cap *pRXCap,
@@ -296,7 +305,7 @@ int Edid_Parse_check_HDMI_VSDB(struct hdmitx_dev *hdev,
 		BlockAddr = BlockAddr + len + 1;
 	}
 
-	set_vsdb_phy_addr(&info->vsdb_phy_addr, &buff[BlockAddr]);
+	set_vsdb_phy_addr(hdev, &info->vsdb_phy_addr, &buff[BlockAddr]);
 	if ((check_fbc_special(&hdev->EDID_buf[0])) ||
 	    (check_fbc_special(&hdev->EDID_buf1[0])))
 		rx_edid_physical_addr(0, 0, 0, 0);

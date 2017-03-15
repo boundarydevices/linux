@@ -57,5 +57,7 @@ source "drivers/amlogic/vrtc/Kconfig"
 
 source "drivers/amlogic/smartcard/Kconfig"
 
+source "drivers/amlogic/cec/Kconfig"
+
 endmenu
 endif
