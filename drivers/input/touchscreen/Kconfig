@@ -1392,3 +1392,5 @@ config TOUCHSCREEN_ZINITIX
 	  module will be called zinitix.
 
 endif
+
+source "drivers/input/touchscreen/focaltech_touch/Kconfig"
