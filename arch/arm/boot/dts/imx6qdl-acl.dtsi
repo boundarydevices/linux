@@ -45,6 +45,13 @@
 		>;
 	};
 
+	pinctrl_ecspi2_lmp90079: ecspi2_lmp90079grp {
+		fsl,pins = <
+#define GPIRQ_LMP90079		<&gpio7 1 IRQ_TYPE_EDGE_FALLING>
+			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0
+		>;
+	};
+
 	pinctrl_ecspi4: ecspi4grp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D28__ECSPI4_MOSI		0x1b0b1
@@ -82,7 +89,6 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x130b0
 			/* Buzzer */
 			MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x130b0
 			/* Fan */
@@ -434,9 +440,17 @@
 			regulator-always-on;
 		};
 
-		reg_usbotg_vbus: regulator@3 {
+		reg_adc_vref: regulator@3 {
 			compatible = "regulator-fixed";
 			reg = <3>;
+			regulator-name = "adc_vref";
+			regulator-min-microvolt = <4096000>;
+			regulator-max-microvolt = <4096000>;
+		};
+
+		reg_usbotg_vbus: regulator@4 {
+			compatible = "regulator-fixed";
+			reg = <4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
 			regulator-name = "usb_otg_vbus";
@@ -499,9 +513,13 @@
 	spidev@2 {
 		clocks = <&clk_optics>;
 		clock-names = "osc";
-		compatible = "spidev";
+		compatible = "lmp90079";
+		interrupts-extended = GPIRQ_LMP90079;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_lmp90079>;
 		spi-max-frequency = <2000000>;
 		reg = <2>;
+		vref-supply = <&reg_adc_vref>;
 	};
 };
 
