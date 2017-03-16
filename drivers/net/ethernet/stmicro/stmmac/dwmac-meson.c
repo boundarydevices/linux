@@ -100,7 +100,7 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 			if (of_property_read_u32(np, "mc_val_internal_phy",
 						 &mc_val)) {
 			} else {
-				writel(mc_val, addr);
+				writel(mc_val, PREG_ETH_REG0);
 			}
 			writel(ETH_REG2_REVERSED | INTERNAL_PHY_ID,
 			       PREG_ETH_REG2);
@@ -115,9 +115,9 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 			/* Get mec mode & ting value  set it in cbus2050 */
 			if (of_property_read_u32(np, "mc_val_external_phy",
 						 &mc_val))
-				writel(mc_val, addr);
+				writel(mc_val, PREG_ETH_REG0);
 			if (!of_property_read_u32(np, "cali_val", &cali_val))
-				writel(cali_val, addr + 4);
+				writel(cali_val, PREG_ETH_REG1);
 			writel(ETH_REG2_REVERSED | INTERNAL_PHY_ID,
 			       PREG_ETH_REG2);
 			writel(CLK_IN_EN | ETH_REG3_19_RESVERD	|
@@ -148,7 +148,7 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 		pin_ctl = devm_pinctrl_get_select(&pdev->dev, "eth_pins");
 	}
 	pr_debug("Ethernet: pinmux setup ok\n");
-	return addr;
+	return PREG_ETH_REG0;
 }
 #endif
 static int meson6_dwmac_probe(struct platform_device *pdev)
@@ -156,7 +156,6 @@ static int meson6_dwmac_probe(struct platform_device *pdev)
 	struct plat_stmmacenet_data *plat_dat;
 	struct stmmac_resources stmmac_res;
 	struct meson_dwmac *dwmac;
-	struct resource *res;
 	int ret;
 
 	ret = stmmac_get_platform_resources(pdev, &stmmac_res);
@@ -173,23 +172,25 @@ static int meson6_dwmac_probe(struct platform_device *pdev)
 		goto err_remove_config_dt;
 	}
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	dwmac->reg = network_interface_setup(pdev);
+	/* Custom initialisation (if needed) */
+	if (plat_dat->init) {
+		ret = plat_dat->init(pdev, plat_dat->bsp_priv);
+		if (ret)
+			return ret;
+	}
+#else
+	struct resource *res;
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	dwmac->reg = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(dwmac->reg)) {
 		ret = PTR_ERR(dwmac->reg);
 		goto err_remove_config_dt;
 	}
-
+#endif
 	plat_dat->bsp_priv = dwmac;
 	plat_dat->fix_mac_speed = meson6_dwmac_fix_mac_speed;
-#ifdef CONFIG_AMLOGIC_ETH_PRIVE
-	network_interface_setup(pdev);	/* Custom initialisation (if needed) */
-	if (plat_dat->init) {
-		ret = plat_dat->init(pdev, plat_dat->bsp_priv);
-		if (ret)
-			return ret;
-	}
-#endif
 
 	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
 	if (ret)

@@ -299,7 +299,7 @@
 			interrupt-names = "macirq";
 			clocks = <&clkc CLKID_ETH>;
 			clock-names = "ethclk81";
-			internal_phy=<1>;
+			internal_phy=<0>;
 	};
 
 	codec_io {
