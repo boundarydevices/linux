@@ -1,0 +1,31 @@
+# Amlogic pm
+
+menu "Meson core pm driver"
+
+config AMLOGIC_GX_SUSPEND
+    bool "Meson gx chips pm driver"
+    depends on CPU_IDLE
+    depends on PM_WAKELOCKS
+    depends on ARM64
+    default n
+    help
+      This is the Amlogic suspend driver for 64bit family chips
+      It provides PM suspend entry to ATF. It invoke ATF via idle routine.
+      It support PSCIv0.2 or newer version.
+
+      If you want this support, you should say Y here.
+
+config AMLOGIC_MX_SUSPEND
+    bool "Meson mx chips pm driver"
+    depends on CPU_IDLE
+    depends on PM_WAKELOCKS
+    depends on ARM
+    default n
+    help
+      This is the Amlogic suspend driver for 32bit family chips
+      It provides PM suspend entry to suspend firmware.
+      It invoke suspend firmware via idle routine.
+
+      If you want this support, you should say Y here.
+
+endmenu

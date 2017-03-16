@@ -64,3 +64,5 @@ obj-$(CONFIG_AMLOGIC_KEY_MANAGE)    += key_manage/
 obj-$(CONFIG_AMLOGIC_TEMP_SENSOR)	+= thermal/
 
 obj-$(CONFIG_AMLOGIC_AUDIO_DSP)	+= audiodsp/
+
+obj-$(CONFIG_AMLOGIC_GX_SUSPEND)	+= pm/

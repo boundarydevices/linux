@@ -52,7 +52,8 @@
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
-			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
+			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
 
 		CPU1:cpu@1 {
@@ -62,7 +63,8 @@
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
-			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
+			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
 		CPU2:cpu@2 {
 			device_type = "cpu";
@@ -71,7 +73,8 @@
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
-			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
+			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
 
 		CPU3:cpu@3 {
@@ -81,29 +84,30 @@
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
-			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
+			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
 
 
 		idle-states {
 			entry-method = "arm,psci";
-
+/*
 			CPU_SLEEP_0: cpu-sleep-0 {
-				compatible = "arm, idle-state";
+				compatible = "arm,idle-state";
 				arm,psci-suspend-param = <0x0010000>;
 				local-timer-stop;
 				entry-latency-us = <3000>;
 				exit-latency-us = <3000>;
 				min-residency-us = <8000>;
 			};
-
-			CLUSTER_SLEEP_0: cluster-sleep-0 {
-				compatible = "arm, idle-state";
-				arm,psci-suspend-param = <0x1010000>;
+*/
+			SYSTEM_SLEEP_0: system-sleep-0 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
 				local-timer-stop;
-				entry-latency-us = <3000>;
-				exit-latency-us = <3000>;
-				min-residency-us = <15000>;
+				entry-latency-us = <0x3fffffff>;
+				exit-latency-us = <0x40000000>;
+				min-residency-us = <0xffffffff>;
 			};
 		};
 	};
@@ -146,12 +150,14 @@
 	};
 
 	psci {
-		compatible = "arm,psci";
+		compatible = "arm,psci-0.2";
 		method = "smc";
-		cpu_suspend = <0xC4000001>;
-		cpu_off = <0x84000002>;
-		cpu_on = <0xC4000003>;
-		migrate = <0xC4000005>;
+	};
+
+	meson_suspend:pm{
+		compatible = "amlogic, pm";
+		device_name = "aml_pm";
+		reg = <0x0 0xc810023c 0x0 0x4>;
 	};
 
 	secmon {

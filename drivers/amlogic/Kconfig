@@ -68,5 +68,8 @@ source "drivers/amlogic/key_manage/Kconfig"
 source "drivers/amlogic/thermal/Kconfig"
 
 source "drivers/amlogic/audiodsp/Kconfig"
+
+source "drivers/amlogic/pm/Kconfig"
+
 endmenu
 endif

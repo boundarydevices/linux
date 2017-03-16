@@ -13673,6 +13673,7 @@ M: Frank Chen <frank.chen@amlogic.com>
 F: drivers/staging/android/logger.c
 F: drivers/staging/android/logger.h
 
+<<<<<<< HEAD
 AMLOGIC AMLVIDEO2 DRIVER
 M: Guosong Zhou <guosong.zhou@amlogic.com>
 F: arch/arm64/configs/meson64_defconfig
@@ -13730,3 +13731,7 @@ F: drivers/amlogic/media/video_processor/Kconfig
 F: drivers/amlogic/media/video_processor/Makefile
 F: drivers/amlogic/media/video_processor/ppmgr/*
 F: include/linux/amlogic/media/ppmgr/*
+
+AMLOGIC PM/SLEEP DRIVER SUPPORT
+M: Qiufang Dai <qiufang.dai@amlogic.com>
+F: drivers/amlogic/pm/*
