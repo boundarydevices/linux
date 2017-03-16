@@ -1330,8 +1330,11 @@ int d_set_mounted(struct dentry *dentry)
 	}
 	spin_lock(&dentry->d_lock);
 	if (!d_unlinked(dentry)) {
-		dentry->d_flags |= DCACHE_MOUNTED;
-		ret = 0;
+		ret = -EBUSY;
+		if (!d_mountpoint(dentry)) {
+			dentry->d_flags |= DCACHE_MOUNTED;
+			ret = 0;
+		}
 	}
  	spin_unlock(&dentry->d_lock);
 out:
@@ -3184,6 +3187,7 @@ char *d_absolute_path(const struct path *path,
 		return ERR_PTR(error);
 	return res;
 }
+EXPORT_SYMBOL(d_absolute_path);
 
 /*
  * same as __d_path but appends "(deleted)" for unlinked files.

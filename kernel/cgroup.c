@@ -2856,7 +2856,8 @@ static int cgroup_procs_write_permission(struct task_struct *task,
 	 */
 	if (!uid_eq(cred->euid, GLOBAL_ROOT_UID) &&
 	    !uid_eq(cred->euid, tcred->uid) &&
-	    !uid_eq(cred->euid, tcred->suid))
+	    !uid_eq(cred->euid, tcred->suid) &&
+	    !ns_capable(tcred->user_ns, CAP_SYS_RESOURCE))
 		ret = -EACCES;
 
 	if (!ret && cgroup_on_dfl(dst_cgrp)) {
@@ -5219,6 +5220,11 @@ err_free_css:
 	return ERR_PTR(err);
 }
 
+/*
+ * The returned cgroup is fully initialized including its control mask, but
+ * it isn't associated with its kernfs_node and doesn't have the control
+ * mask applied.
+ */
 static struct cgroup *cgroup_create(struct cgroup *parent)
 {
 	struct cgroup_root *root = parent->root;
@@ -5283,20 +5289,12 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 
 	cgroup_propagate_control(cgrp);
 
-	/* @cgrp doesn't have dir yet so the following will only create csses */
-	ret = cgroup_apply_control_enable(cgrp);
-	if (ret)
-		goto out_destroy;
-
 	return cgrp;
 
 out_cancel_ref:
 	percpu_ref_exit(&cgrp->self.refcnt);
 out_free_cgrp:
 	kfree(cgrp);
-	return ERR_PTR(ret);
-out_destroy:
-	cgroup_destroy_locked(cgrp);
 	return ERR_PTR(ret);
 }
 

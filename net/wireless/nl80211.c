@@ -5874,6 +5874,7 @@ do {									    \
 			break;
 		}
 		cfg->ht_opmode = ht_opmode;
+		mask |= (1 << (NL80211_MESHCONF_HT_OPMODE - 1));
 	}
 	FILL_IN_MESH_PARAM_IF_SET(tb, cfg, dot11MeshHWMPactivePathToRootTimeout,
 				  1, 65535, mask,
@@ -14402,13 +14403,17 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 
 	list_for_each_entry_rcu(rdev, &cfg80211_rdev_list, list) {
 		bool schedule_destroy_work = false;
-		bool schedule_scan_stop = false;
 		struct cfg80211_sched_scan_request *sched_scan_req =
 			rcu_dereference(rdev->sched_scan_req);
 
 		if (sched_scan_req && notify->portid &&
-		    sched_scan_req->owner_nlportid == notify->portid)
-			schedule_scan_stop = true;
+		    sched_scan_req->owner_nlportid == notify->portid) {
+			sched_scan_req->owner_nlportid = 0;
+
+			if (rdev->ops->sched_scan_stop &&
+			    rdev->wiphy.flags & WIPHY_FLAG_SUPPORTS_SCHED_SCAN)
+				schedule_work(&rdev->sched_scan_stop_wk);
+		}
 
 		list_for_each_entry_rcu(wdev, &rdev->wiphy.wdev_list, list) {
 			cfg80211_mlme_unregister_socket(wdev, notify->portid);
@@ -14439,12 +14444,6 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 				spin_unlock(&rdev->destroy_list_lock);
 				schedule_work(&rdev->destroy_work);
 			}
-		} else if (schedule_scan_stop) {
-			sched_scan_req->owner_nlportid = 0;
-
-			if (rdev->ops->sched_scan_stop &&
-			    rdev->wiphy.flags & WIPHY_FLAG_SUPPORTS_SCHED_SCAN)
-				schedule_work(&rdev->sched_scan_stop_wk);
 		}
 	}
 

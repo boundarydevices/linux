@@ -174,7 +174,7 @@ static void *__dma_alloc(struct device *dev, size_t size,
 	/* create a coherent mapping */
 	page = virt_to_page(ptr);
 	coherent_ptr = dma_common_contiguous_remap(page, size, VM_USERMAP,
-						   prot, NULL);
+						   prot, __builtin_return_address(0));
 	if (!coherent_ptr)
 		goto no_map;
 
@@ -524,7 +524,8 @@ EXPORT_SYMBOL(dummy_dma_ops);
 
 static int __init arm64_dma_init(void)
 {
-	if (swiotlb_force || max_pfn > (arm64_dma_phys_limit >> PAGE_SHIFT))
+	if (swiotlb_force == SWIOTLB_FORCE ||
+	    max_pfn > (arm64_dma_phys_limit >> PAGE_SHIFT))
 		swiotlb = 1;
 
 	return atomic_pool_init();

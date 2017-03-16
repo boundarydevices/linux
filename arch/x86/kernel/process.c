@@ -67,19 +67,6 @@ EXPORT_PER_CPU_SYMBOL(cpu_tss);
 
 #ifdef CONFIG_X86_64
 static DEFINE_PER_CPU(unsigned char, is_idle);
-static ATOMIC_NOTIFIER_HEAD(idle_notifier);
-
-void idle_notifier_register(struct notifier_block *n)
-{
-	atomic_notifier_chain_register(&idle_notifier, n);
-}
-EXPORT_SYMBOL_GPL(idle_notifier_register);
-
-void idle_notifier_unregister(struct notifier_block *n)
-{
-	atomic_notifier_chain_unregister(&idle_notifier, n);
-}
-EXPORT_SYMBOL_GPL(idle_notifier_unregister);
 #endif
 
 /*
@@ -255,14 +242,14 @@ static inline void play_dead(void)
 void enter_idle(void)
 {
 	this_cpu_write(is_idle, 1);
-	atomic_notifier_call_chain(&idle_notifier, IDLE_START, NULL);
+	idle_notifier_call_chain(IDLE_START);
 }
 
 static void __exit_idle(void)
 {
 	if (x86_test_and_clear_bit_percpu(0, is_idle) == 0)
 		return;
-	atomic_notifier_call_chain(&idle_notifier, IDLE_END, NULL);
+	idle_notifier_call_chain(IDLE_END);
 }
 
 /* Called from interrupts to signify idle end */
@@ -448,8 +435,7 @@ void select_idle_routine(const struct cpuinfo_x86 *c)
 	if (x86_idle || boot_option_idle_override == IDLE_POLL)
 		return;
 
-	if (cpu_has_bug(c, X86_BUG_AMD_APIC_C1E)) {
-		/* E400: APIC timer interrupt does not wake up CPU from C1e */
+	if (boot_cpu_has_bug(X86_BUG_AMD_E400)) {
 		pr_info("using AMD E400 aware idle routine\n");
 		x86_idle = amd_e400_idle;
 	} else if (prefer_mwait_c1_over_halt(c)) {

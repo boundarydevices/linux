@@ -2449,7 +2449,8 @@ static int vxlan_fill_metadata_dst(struct net_device *dev, struct sk_buff *skb)
 			return -EINVAL;
 		rt = vxlan_get_route(vxlan, skb, 0, info->key.tos,
 				     info->key.u.ipv4.dst,
-				     &info->key.u.ipv4.src, NULL, info);
+				     &info->key.u.ipv4.src,
+				     &info->dst_cache, info);
 		if (IS_ERR(rt))
 			return PTR_ERR(rt);
 		ip_rt_put(rt);
@@ -2459,7 +2460,8 @@ static int vxlan_fill_metadata_dst(struct net_device *dev, struct sk_buff *skb)
 
 		ndst = vxlan6_get_route(vxlan, skb, 0, info->key.tos,
 					info->key.label, &info->key.u.ipv6.dst,
-					&info->key.u.ipv6.src, NULL, info);
+					&info->key.u.ipv6.src,
+					&info->dst_cache, info);
 		if (IS_ERR(ndst))
 			return PTR_ERR(ndst);
 		dst_release(ndst);
@@ -2887,7 +2889,7 @@ static int vxlan_dev_configure(struct net *src_net, struct net_device *dev,
 	memcpy(&vxlan->cfg, conf, sizeof(*conf));
 	if (!vxlan->cfg.dst_port) {
 		if (conf->flags & VXLAN_F_GPE)
-			vxlan->cfg.dst_port = 4790; /* IANA assigned VXLAN-GPE port */
+			vxlan->cfg.dst_port = htons(4790); /* IANA VXLAN-GPE port */
 		else
 			vxlan->cfg.dst_port = default_port;
 	}

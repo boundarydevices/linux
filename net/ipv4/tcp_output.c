@@ -188,7 +188,7 @@ u32 tcp_default_init_rwnd(u32 mss)
 	 * (RFC 3517, Section 4, NextSeg() rule (2)). Further place a
 	 * limit when mss is larger than 1460.
 	 */
-	u32 init_rwnd = TCP_INIT_CWND * 2;
+	u32 init_rwnd = sysctl_tcp_default_init_rwnd;
 
 	if (mss > 1460)
 		init_rwnd = max((1460 * init_rwnd) / mss, 2U);
@@ -2436,9 +2436,11 @@ u32 __tcp_select_window(struct sock *sk)
 	int full_space = min_t(int, tp->window_clamp, allowed_space);
 	int window;
 
-	if (mss > full_space)
+	if (unlikely(mss > full_space)) {
 		mss = full_space;
-
+		if (mss <= 0)
+			return 0;
+	}
 	if (free_space < (full_space >> 1)) {
 		icsk->icsk_ack.quick = 0;
 

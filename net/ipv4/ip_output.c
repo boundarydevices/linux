@@ -1594,7 +1594,8 @@ void ip_send_unicast_reply(struct sock *sk, struct sk_buff *skb,
 			   RT_SCOPE_UNIVERSE, ip_hdr(skb)->protocol,
 			   ip_reply_arg_flowi_flags(arg),
 			   daddr, saddr,
-			   tcp_hdr(skb)->source, tcp_hdr(skb)->dest);
+			   tcp_hdr(skb)->source, tcp_hdr(skb)->dest,
+			   arg->uid);
 	security_skb_classify_flow(skb, flowi4_to_flowi(&fl4));
 	rt = ip_route_output_key(net, &fl4);
 	if (IS_ERR(rt))
@@ -1606,6 +1607,7 @@ void ip_send_unicast_reply(struct sock *sk, struct sk_buff *skb,
 	sk->sk_protocol = ip_hdr(skb)->protocol;
 	sk->sk_bound_dev_if = arg->bound_dev_if;
 	sk->sk_sndbuf = sysctl_wmem_default;
+	sk->sk_mark = fl4.flowi4_mark;
 	err = ip_append_data(sk, &fl4, ip_reply_glue_bits, arg->iov->iov_base,
 			     len, 0, &ipc, &rt, MSG_DONTWAIT);
 	if (unlikely(err)) {

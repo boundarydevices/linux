@@ -273,10 +273,10 @@ do_page_fault(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 		local_irq_enable();
 
 	/*
-	 * If we're in an interrupt or have no user
+	 * If we're in an interrupt, or have no irqs, or have no user
 	 * context, we must not take the fault..
 	 */
-	if (faulthandler_disabled() || !mm)
+	if (faulthandler_disabled() || irqs_disabled() || !mm)
 		goto no_context;
 
 	if (user_mode(regs))
@@ -610,9 +610,9 @@ static int __init early_abort_handler(unsigned long addr, unsigned int fsr,
 
 void __init early_abt_enable(void)
 {
-	fsr_info[22].fn = early_abort_handler;
+	fsr_info[FSR_FS_AEA].fn = early_abort_handler;
 	local_abt_enable();
-	fsr_info[22].fn = do_bad;
+	fsr_info[FSR_FS_AEA].fn = do_bad;
 }
 
 #ifndef CONFIG_ARM_LPAE
