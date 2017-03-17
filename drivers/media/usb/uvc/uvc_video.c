@@ -1640,6 +1640,7 @@ static void uvc_video_complete_contig(struct urb *urb)
 				queue->submitted_insert_shift);
 		}
 	}
+	uvc_submit_ready_buffers(queue);
 }
 
 /*

@@ -138,6 +138,8 @@
 
 /* Number of isochronous URBs. */
 #define UVC_URBS		5
+#define UVC_MAX_BULK_URBS_OUTSTANDING	64
+
 /* Maximum number of packets per URB. */
 #define UVC_MAX_ISOC_PACKETS		32
 /* Maximum number of video buffers. */
@@ -387,6 +389,7 @@ struct uvc_buffer {
 	u8* combined_start;
 	unsigned combined_cnt;
 	unsigned combined_payload;
+	unsigned ready_urb_index;
 	unsigned pending_urb_index;
 	unsigned pending_dma_index;
 	unsigned eof_transfer_length;
@@ -417,6 +420,8 @@ struct uvc_video_queue {
 	unsigned pending;	/* mask of buffers with data left to copy */
 	unsigned submitted_buffers;
 	unsigned submitted_insert_shift;
+	unsigned ready_buffers;
+	unsigned ready_insert_shift;
 	unsigned frame_sync_mask;
 	struct uvc_buffer *in_progress;
 	struct workqueue_struct *workqueue;
@@ -432,6 +437,7 @@ struct uvc_video_queue {
 	u8 streaming;
 	u8 return_buffers;
 	u8 using_headers;
+	struct mutex ready_mutex;
 	/* This buffer has no memory, but allows sync to be maintained */
 	struct uvc_buffer fake_buf;
 };
@@ -703,6 +709,7 @@ void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
 struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue);
 struct uvc_buffer *uvc_get_next_pending(struct uvc_video_queue *queue);
 extern void uvc_buffer_done(struct uvc_buffer *buf, int state, const char *s);
+int uvc_submit_ready_buffers(struct uvc_video_queue *queue);
 extern int uvc_queue_init(struct uvc_video_queue *queue,
 		enum v4l2_buf_type type, int drop_corrupted,
 		int dma_mode);

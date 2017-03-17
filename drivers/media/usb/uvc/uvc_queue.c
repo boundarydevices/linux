@@ -380,64 +380,144 @@ static int submit_buffer(struct uvc_video_queue *queue, struct uvc_streaming *st
 	buf->prev_completed_urb = NULL;
 	buf->last_completed_urb = NULL;
 	buf->usb_active = 1;
+	buf->ready_urb_index = i;
 	buf->pending_urb_index = i;
 	buf->pending_dma_index = i;
 	queue->submitted_buffers |= buf_index << queue->submitted_insert_shift;
 	queue->submitted_insert_shift += 5;
+	queue->ready_buffers |= buf_index << queue->ready_insert_shift;
+	queue->ready_insert_shift += 5;
 
 	queue->submitted |= (1 << buf_index);
 	queue->pending |= (1 << buf_index);
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 	if (0) pr_info("%s: start %d total %d\n", __func__, i, buf->used_urb_cnt);
-
-	while (i < buf->used_urb_cnt) {
-		int ret;
-
-		if (queue->streaming)
-			ret = usb_submit_urb(buf->urbs[i], GFP_KERNEL);
-		else
-			ret = -EINVAL;
-		if (ret < 0) {
-			if (queue->streaming)
-				pr_err("%s: Failed to submit URB "
-					"%u-%u (%d).\n",
-					__func__, first, i, ret);
-			if (i == first) {
-				spin_lock_irqsave(&queue->irqlock, flags);
-				queue->submitted &= ~(1 << buf->buf.v4l2_buf.index);
-				queue->pending &= ~(1 << buf->buf.v4l2_buf.index);
-				buf->usb_active = 0;
-				queue->submitted_insert_shift -= 5;
-				queue->submitted_buffers &= ~(0x1f << queue->submitted_insert_shift);
-				spin_unlock_irqrestore(&queue->irqlock, flags);
-
-				uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
-			} else {
-				spin_lock_irqsave(&queue->irqlock, flags);
-				if (buf->last_completed_urb == buf->urbs[i - 1]) {
-					queue->submitted &= ~(1 << buf->buf.v4l2_buf.index);
-					queue->pending &= ~(1 << buf->buf.v4l2_buf.index);
-					buf->usb_active = 0;
-					queue->submitted_insert_shift -= 5;
-					queue->submitted_buffers &= ~(0x1f << queue->submitted_insert_shift);
-					spin_unlock_irqrestore(&queue->irqlock, flags);
-
-					uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
-				} else {
-					buf->setup_done = 0;
-					buf->used_urb_cnt = i;
-					spin_unlock_irqrestore(&queue->irqlock, flags);
-				}
-			}
-			break;
-		}
-		if (0) pr_info("%s:3 %u of %u\n", __func__, i, buf->used_urb_cnt);
-		i++;
-	}
 	if (0) pr_info("%s: buf=%p(%i) urbs %u-%u submitted=%x avail=%x\n",
 			__func__, buf, buf->buf.v4l2_buf.index,
 			first, i, queue->submitted, queue->available);
 	return 1;
+}
+
+/* spinlock is held when called */
+static int drop_from_submitted(struct uvc_video_queue *queue, unsigned drop)
+{
+	int pos = queue->submitted_insert_shift;
+	unsigned buf_index;
+	unsigned h,l;
+
+	while (pos > 0) {
+		pos -= 5;
+		buf_index = (queue->submitted_buffers >> pos) & 0x1f;
+		if (buf_index == drop) {
+			h = queue->submitted_buffers >> (pos + 5);
+			l = queue->submitted_buffers & ((1 << pos) - 1);
+			queue->submitted_buffers = l | (h << pos);
+			queue->submitted_insert_shift -= 5;
+			return 0;
+		}
+	}
+	return -EINVAL;
+}
+
+/* spinlock is held when called */
+static void drop_from_ready(struct uvc_video_queue *queue, int pos)
+{
+	unsigned h,l;
+
+	h = queue->ready_buffers >> (pos + 5);
+	l = queue->ready_buffers & ((1 << pos) - 1);
+	queue->ready_buffers = l | (h << pos);
+	queue->ready_insert_shift -= 5;
+}
+
+static int submit_ready_urbs(struct uvc_video_queue *queue,
+		struct uvc_buffer *buf, unsigned outstanding)
+{
+	int i = buf->ready_urb_index;
+
+	while (i < buf->used_urb_cnt) {
+		int ret;
+
+		if ((outstanding >= UVC_MAX_BULK_URBS_OUTSTANDING) ||
+				!queue->streaming)
+			return 0;
+
+		ret = usb_submit_urb(buf->urbs[i], GFP_KERNEL);
+		if (ret < 0) {
+			if (queue->streaming)
+				pr_err("%s: Failed to submit URB "
+					"%u (%d).\n",
+					__func__, i, ret);
+			return 0;
+		}
+		if (0) pr_info("%s:3 %u of %u\n", __func__, i, buf->used_urb_cnt);
+		i++;
+		buf->ready_urb_index = i;
+		outstanding++;
+	}
+	return outstanding;
+}
+
+int uvc_submit_ready_buffers(struct uvc_video_queue *queue)
+{
+	int buf_index;
+	struct vb2_buffer *vb;
+	struct uvc_buffer *buf;
+	unsigned outstanding = 0;
+	int cnt;
+	int ret;
+	int pos = 0;
+	unsigned long flags;
+
+	if (!mutex_trylock(&queue->ready_mutex))
+		return 0;
+
+	while (pos < queue->ready_insert_shift) {
+		buf_index = (queue->ready_buffers >> pos) & 0x1f;
+
+		vb = queue->queue.bufs[buf_index];
+		buf = container_of(vb, struct uvc_buffer, buf);
+		cnt = buf->ready_urb_index - buf->pending_dma_index;
+
+		pr_debug("%s: buf_index=%d, pos=%d, ready_buffers=%x %d %d\n", __func__,
+				buf_index, pos, queue->ready_buffers,
+				cnt, !queue->streaming);
+		if ((cnt <= 0) && !queue->streaming) {
+			/* we can free this buffer */
+			spin_lock_irqsave(&queue->irqlock, flags);
+			drop_from_ready(queue, pos);
+
+			queue->submitted &= ~(1 << buf_index);
+			queue->pending &= ~(1 << buf_index);
+			buf->usb_active = 0;
+			ret = drop_from_submitted(queue, buf_index);
+			spin_unlock_irqrestore(&queue->irqlock, flags);
+
+			if (ret >= 0)
+				add_to_available(queue, buf);
+			continue;
+		}
+		if (buf->ready_urb_index >= buf->used_urb_cnt) {
+			/* This buffer has all been submitted */
+			if (cnt > 0) {
+				outstanding += cnt;
+				pos += 5;
+				continue;
+			}
+			/* all urbs have completed */
+			spin_lock_irqsave(&queue->irqlock, flags);
+			drop_from_ready(queue, pos);
+			spin_unlock_irqrestore(&queue->irqlock, flags);
+			continue;
+		}
+		outstanding += cnt;
+		outstanding = submit_ready_urbs(queue, buf, outstanding);
+		if (!outstanding)
+			break;
+		pos += 5;
+	}
+	mutex_unlock(&queue->ready_mutex);
+	return 0;
 }
 
 static void submit_buffers(struct uvc_video_queue *queue)
@@ -446,6 +526,7 @@ static void submit_buffers(struct uvc_video_queue *queue)
 
 	while (submit_buffer(queue, stream))
 		;
+	uvc_submit_ready_buffers(queue);
 	if (0) pr_info("%s:e submitted=%x avail=%x\n", __func__, queue->submitted, queue->available);
 }
 
@@ -830,6 +911,7 @@ static void stop_queue(struct uvc_video_queue *queue)
 		struct vb2_buffer *vb;
 		struct uvc_buffer *buf;
 
+		uvc_submit_ready_buffers(queue);
 		if (i >= queue->queue.num_buffers)
 			break;
 		vb = queue->queue.bufs[i];
@@ -921,6 +1003,7 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 		| V4L2_BUF_FLAG_TSTAMP_SRC_SOE;
 	queue->queue.lock = &queue->mutex;
 //	queue->queue.dma_attrs = &uvc_dma_attrs;
+	mutex_init(&queue->ready_mutex);
 
 	ret = vb2_queue_init(&queue->queue);
 	if (ret)
