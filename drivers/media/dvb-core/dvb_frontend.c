@@ -2600,6 +2600,30 @@ static int dvb_frontend_release(struct inode *inode, struct file *file)
 	return ret;
 }
 
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+static long dvb_frontend_compat_ioctl(struct file *filp,
+			unsigned int cmd, unsigned long args)
+{
+	unsigned long ret;
+	struct dtv_properties tvps;
+
+	args  = (unsigned long)compat_ptr(args);
+
+	if ((cmd == FE_SET_PROPERTY) || (cmd == FE_GET_PROPERTY)) {
+		if (copy_from_user(&tvps, (void *)args,
+			sizeof(struct dtv_properties)))
+			return -EFAULT;
+		tvps.props = compat_ptr((unsigned long)tvps.props);
+		if (copy_to_user((void *)args, (void *)&tvps,
+			sizeof(struct dtv_properties)))
+			return -EFAULT;
+	}
+
+	ret = dvb_generic_ioctl(filp, cmd, args);
+	return ret;
+}
+#endif
+
 static const struct file_operations dvb_frontend_fops = {
 	.owner		= THIS_MODULE,
 	.unlocked_ioctl	= dvb_generic_ioctl,
@@ -2607,6 +2631,9 @@ static const struct file_operations dvb_frontend_fops = {
 	.open		= dvb_frontend_open,
 	.release	= dvb_frontend_release,
 	.llseek		= noop_llseek,
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	.compat_ioctl	= dvb_frontend_compat_ioctl,
+#endif
 };
 
 int dvb_frontend_suspend(struct dvb_frontend *fe)

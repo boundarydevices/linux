@@ -8,6 +8,7 @@ config AMLOGIC_DRIVER
 		this option is provided for control amlogic
 		drivers, if you want to use amlogic driver
 		please open it
+
 if AMLOGIC_DRIVER
 menu "Amlogic Device Drivers"
 
@@ -82,6 +83,8 @@ source "drivers/amlogic/watchdog/Kconfig"
 source "drivers/amlogic/wifi/Kconfig"
 
 source "drivers/amlogic/bluetooth/Kconfig"
+
+source "drivers/amlogic/dvb/Kconfig"
 
 endmenu
 endif

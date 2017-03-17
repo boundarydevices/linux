@@ -1660,6 +1660,17 @@ static unsigned int dvb_ca_en50221_io_poll(struct file *file, poll_table * wait)
 }
 EXPORT_SYMBOL(dvb_ca_en50221_init);
 
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+static long dvb_ca_en50221_compat_ioctl(struct file *filp,
+			unsigned int cmd, unsigned long args)
+{
+	unsigned long ret;
+
+	args = (unsigned long)compat_ptr(args);
+	ret = dvb_ca_en50221_io_ioctl(filp, cmd, args);
+	return ret;
+}
+#endif
 
 static const struct file_operations dvb_ca_fops = {
 	.owner = THIS_MODULE,
@@ -1670,6 +1681,9 @@ static const struct file_operations dvb_ca_fops = {
 	.release = dvb_ca_en50221_io_release,
 	.poll = dvb_ca_en50221_io_poll,
 	.llseek = noop_llseek,
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	.compat_ioctl	= dvb_ca_en50221_compat_ioctl,
+#endif
 };
 
 static const struct dvb_device dvbdev_ca = {

@@ -1128,6 +1128,18 @@ static int dvb_demux_release(struct inode *inode, struct file *file)
 	return ret;
 }
 
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+static long dvb_demux_compat_ioctl(struct file *filp,
+			unsigned int cmd, unsigned long args)
+{
+	unsigned long ret;
+
+	args = (unsigned long)compat_ptr(args);
+	ret = dvb_demux_ioctl(filp, cmd, args);
+	return ret;
+}
+#endif
+
 static const struct file_operations dvb_demux_fops = {
 	.owner = THIS_MODULE,
 	.read = dvb_demux_read,
@@ -1136,6 +1148,9 @@ static const struct file_operations dvb_demux_fops = {
 	.release = dvb_demux_release,
 	.poll = dvb_demux_poll,
 	.llseek = default_llseek,
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	.compat_ioctl	= dvb_demux_compat_ioctl,
+#endif
 };
 
 static const struct dvb_device dvbdev_demux = {
@@ -1203,6 +1218,18 @@ static unsigned int dvb_dvr_poll(struct file *file, poll_table *wait)
 	return mask;
 }
 
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+static long dvb_dvr_compat_ioctl(struct file *filp,
+			unsigned int cmd, unsigned long args)
+{
+	unsigned long ret;
+
+	args = (unsigned long)compat_ptr(args);
+	ret = dvb_dvr_ioctl(filp, cmd, args);
+	return ret;
+}
+#endif
+
 static const struct file_operations dvb_dvr_fops = {
 	.owner = THIS_MODULE,
 	.read = dvb_dvr_read,
@@ -1212,6 +1239,9 @@ static const struct file_operations dvb_dvr_fops = {
 	.release = dvb_dvr_release,
 	.poll = dvb_dvr_poll,
 	.llseek = default_llseek,
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	.compat_ioctl	= dvb_dvr_compat_ioctl,
+#endif
 };
 
 static const struct dvb_device dvbdev_dvr = {

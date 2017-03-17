@@ -106,6 +106,10 @@ struct dmx_sct_filter_params
 #define DMX_ONESHOT         2
 #define DMX_IMMEDIATE_START 4
 #define DMX_KERNEL_CLIENT   0x8000
+
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+#define DMX_USE_SWFILTER    0x100
+#endif
 };
 
 
@@ -131,7 +135,13 @@ typedef enum dmx_source {
 	DMX_SOURCE_DVR0   = 16,
 	DMX_SOURCE_DVR1,
 	DMX_SOURCE_DVR2,
-	DMX_SOURCE_DVR3
+	DMX_SOURCE_DVR3,
+
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	DMX_SOURCE_FRONT0_OFFSET = 100,
+	DMX_SOURCE_FRONT1_OFFSET,
+	DMX_SOURCE_FRONT2_OFFSET
+#endif
 } dmx_source_t;
 
 struct dmx_stc {
