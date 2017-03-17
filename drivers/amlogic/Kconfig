@@ -53,6 +53,8 @@ source "drivers/amlogic/media/Kconfig"
 
 source "drivers/amlogic/mmc/Kconfig"
 
+source "drivers/amlogic/mtd/Kconfig"
+
 source "drivers/amlogic/vrtc/Kconfig"
 
 source "drivers/amlogic/smartcard/Kconfig"

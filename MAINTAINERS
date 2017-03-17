@@ -13603,6 +13603,10 @@ F: include/linux/amlogic/sd.h
 F: include/linux/mmc/emmc_partitions.h
 F: include/linux/mmc/host.h
 
+AMLOGIC MTD DRIVER
+M:	Liang Yang <liang.yang@amlogic.com>
+F:	drivers/amlogic/mtd/
+
 AMLOGIC GPU DEVICETREE
 M:	Jiyu Yang <jiyu.yang@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesongxtvbb-gpu-t83x.dtsi

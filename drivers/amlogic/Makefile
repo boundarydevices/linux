@@ -49,6 +49,8 @@ obj-$(CONFIG_AMLOGIC_MEDIA_ENABLE)	+=	media/
 
 obj-$(CONFIG_AMLOGIC_MMC)             += mmc/
 
+obj-$(CONFIG_AMLOGIC_NAND)	+= mtd/
+
 obj-$(CONFIG_AMLOGIC_VRTC)		+= vrtc/
 
 obj-$(CONFIG_AMLOGIC_SMARTCARD)		+= smartcard/

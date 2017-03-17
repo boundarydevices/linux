@@ -673,7 +673,7 @@
 			};
 		};
 
-		conf_nand_pulldown: conf_nand_pulldown {
+		nand_pulldown: nand_pulldown {
 			mux {
 				groups = "emmc_nand_d07",
 					"emmc_ds";
@@ -682,7 +682,7 @@
 			};
 		};
 
-		conf_nand_pullup: conf_nand_pullup {
+		nand_pullup: nand_pullup {
 			mux {
 				groups = "emmc_clk",
 					"emmc_cmd";
