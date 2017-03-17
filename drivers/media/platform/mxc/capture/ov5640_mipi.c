@@ -157,6 +157,8 @@ static int pwn_gpio, rst_gpio;
 static int focus_mode = V4L2_CID_AUTO_FOCUS_STOP;
 static int focus_range = V4L2_AUTO_FOCUS_RANGE_NORMAL;
 static int colorfx = V4L2_COLORFX_NONE;
+static uint16_t roi_x = 0;
+static uint16_t roi_y = 0;
 
 static struct reg_value brightness_neg4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x40, 0, 0}, {0x5588, 0x09, 0, 0},
@@ -2509,6 +2511,54 @@ static int ov5640_af_get_status(int *status)
 	return 0;
 }
 
+static int ov5640_af_set_region(uint16_t x, uint16_t y)
+{
+	int err = 0;
+
+	/* Considering that both axis being 0 means reset to default */
+	if (!x && !y) {
+		err = ov5640_write_reg(OV5640_REG_AF_MODE,
+				       OV5640_AF_MODE_RELAUNCH);
+		if (err) {
+			pr_err("Resetting focus region failed!\n");
+			return err;
+		}
+		goto end;
+	}
+
+	/* Sanity check */
+	if ((x > OV5640_AF_ZONE_ARRAY_WIDTH) ||
+	    (y > OV5640_AF_ZONE_ARRAY_HEIGHT)) {
+		pr_err("Wrong region values: x %d y %d\n", x, y);
+		return -EINVAL;
+	}
+
+	/* Setting the region */
+	err = ov5640_write_reg(OV5640_REG_AF_PARAM0, x);
+	if (err) {
+		pr_err("Setting param 0 failed!\n");
+		return err;
+	}
+
+	err = ov5640_write_reg(OV5640_REG_AF_PARAM1, y);
+	if (err) {
+		pr_err("Setting param 1 failed!\n");
+		return err;
+	}
+
+	err = ov5640_write_reg(OV5640_REG_AF_MODE,
+			       OV5640_AF_MODE_SET_ZONE);
+	if (err) {
+		pr_err("Resetting focus region failed!\n");
+		return err;
+	}
+end:
+	roi_x = x;
+	roi_y = y;
+
+	return 0;
+}
+
 static int ov5640_af_set_mode(int mode)
 {
 	int err = 0;
@@ -3004,6 +3054,10 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	case V4L2_CID_AUTO_FOCUS_STATUS:
 		ret = ov5640_af_get_status(&vc->value);
 		break;
+	case V4L2_CID_FOCUS_ABSOLUTE:
+		/* Custom implementation that returns the ROI */
+		vc->value = (roi_x << 16) + roi_y;
+		break;
 	case V4L2_CID_FOCUS_AUTO:
 		vc->value = (focus_mode == V4L2_CID_FOCUS_AUTO);
 		break;
@@ -3051,6 +3105,11 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 		break;
 	case V4L2_CID_AUTO_FOCUS_STOP:
 		retval = ov5640_af_stop_single();
+		break;
+	case V4L2_CID_FOCUS_ABSOLUTE:
+		/* Custom implementation that sets the ROI */
+		retval = ov5640_af_set_region((vc->value >> 16),
+					      (vc->value & 0xffff));
 		break;
 	case V4L2_CID_FOCUS_AUTO:
 		retval = ov5640_af_set_auto(!!vc->value);
