@@ -313,30 +313,16 @@ struct sdma_context_data {
 
 struct sdma_engine;
 
-/**
- * struct sdma_desc - descriptor structor for one transfer
- * @vd:			descriptor for virt dma
- * @num_bd:		number of descriptors currently handling
- * @bd_phys:		physical address of bd
- * @buf_tail:		ID of the buffer that was processed
- * @buf_ptail:		ID of the previous buffer that was processed
- * @period_len:		period length, used in cyclic.
- * @chn_real_count:	the real count updated from bd->mode.count
- * @chn_count:		the transfer count set
- * @sdmac:		sdma_channel pointer
- * @bd:			pointer of allocate bd
- */
 struct sdma_desc {
-	struct virt_dma_desc	vd;
-	unsigned int		num_bd;
-	dma_addr_t		bd_phys;
-	unsigned int		buf_tail;
-	unsigned int		buf_ptail;
-	unsigned int		period_len;
-	unsigned int		chn_real_count;
-	unsigned int		chn_count;
-	struct sdma_channel	*sdmac;
-	struct sdma_buffer_descriptor *bd;
+	struct virt_dma_desc		vd;
+	struct list_head		node;
+	unsigned int			num_bd;
+	dma_addr_t			bd_phys;
+	bool				bd_iram;
+	unsigned int                    buf_tail;
+	unsigned int			buf_ptail;
+	struct sdma_channel		*sdmac;
+	struct sdma_buffer_descriptor	*bd;
 };
 
 /**
@@ -366,20 +352,22 @@ struct sdma_desc {
  * @per_addr:		value for gReg[2]
  * @status:		status of dma channel
  * @data:		specific sdma interface structure
+ * @chn_count		the transfer count set
+ * @chn_real_count	the real count updated from bd->mode.count
  * @bd_pool:		dma_pool for bd
- * @bd_iram		flag indicating the memory location of buffer descriptor
  */
 struct sdma_channel {
 	struct virt_dma_chan		vc;
-	struct sdma_desc		*desc;
+	struct list_head		pending;
 	struct sdma_engine		*sdma;
+	struct sdma_desc		*desc;
 	unsigned int			channel;
 	enum dma_transfer_direction		direction;
 	enum sdma_peripheral_type	peripheral_type;
 	unsigned int			event_id0;
 	unsigned int			event_id1;
 	enum dma_slave_buswidth		word_size;
-	bool				bd_iram;
+	unsigned int			period_len;
 	unsigned int			pc_from_device, pc_to_device;
 	unsigned int			device_to_device;
 	unsigned int                    pc_to_pc;
@@ -390,7 +378,10 @@ struct sdma_channel {
 	u32				shp_addr, per_addr;
 	enum dma_status			status;
 	struct imx_dma_data		data;
+	unsigned int			chn_count;
+	unsigned int			chn_real_count;
 	struct dma_pool			*bd_pool;
+	u32				bd_size_sum;
 	bool				src_dualfifo;
 	bool				dst_dualfifo;
 };
@@ -462,10 +453,11 @@ struct sdma_engine {
 	u32				spba_start_addr;
 	u32				spba_end_addr;
 	unsigned int			irq;
+	struct gen_pool			*iram_pool;
+	/* channel0 bd */
 	dma_addr_t			bd0_phys;
 	bool				bd0_iram;
 	struct sdma_buffer_descriptor	*bd0;
-	struct gen_pool			*iram_pool;
 };
 
 static struct sdma_driver_data sdma_imx31 = {
@@ -649,6 +641,8 @@ MODULE_DEVICE_TABLE(of, sdma_dt_ids);
 #define SDMA_H_CONFIG_ACR	BIT(4)  /* indicates if AHB freq /core freq = 2 or 1 */
 #define SDMA_H_CONFIG_CSM	(3)       /* indicates which context switch mode is selected*/
 
+static void sdma_start_desc(struct sdma_channel *sdmac);
+
 static inline u32 chnenbl_ofs(struct sdma_engine *sdma, unsigned int event)
 {
 	u32 chnenbl0 = sdma->drvdata->chnenbl0;
@@ -783,48 +777,20 @@ static void sdma_event_disable(struct sdma_channel *sdmac, unsigned int event)
 	writel_relaxed(val, sdma->regs + chnenbl);
 }
 
-static struct sdma_desc *to_sdma_desc(struct dma_async_tx_descriptor *t)
-{
-	return container_of(t, struct sdma_desc, vd.tx);
-}
-
-static void sdma_start_desc(struct sdma_channel *sdmac)
-{
-	struct virt_dma_desc *vd = vchan_next_desc(&sdmac->vc);
-	struct sdma_desc *desc;
-	struct sdma_engine *sdma = sdmac->sdma;
-	int channel = sdmac->channel;
-
-	if (!vd) {
-		sdmac->desc = NULL;
-		return;
-	}
-	sdmac->desc = desc = to_sdma_desc(&vd->tx);
-	/*
-	 * Do not delete the node in desc_issued list in cyclic mode, otherwise
-	 * the desc allocated will never be freed in vchan_dma_desc_free_list
-	 */
-	if (!(sdmac->flags & IMX_DMA_SG_LOOP))
-		list_del(&vd->node);
-
-	sdma->channel_control[channel].base_bd_ptr = desc->bd_phys;
-	sdma->channel_control[channel].current_bd_ptr = desc->bd_phys;
-	sdma_enable_channel(sdma, sdmac->channel);
-}
-
 static void sdma_update_channel_loop(struct sdma_channel *sdmac)
 {
 	struct sdma_buffer_descriptor *bd;
+	struct sdma_desc *desc = sdmac->desc;
 	int error = 0;
 	enum dma_status	old_status = sdmac->status;
+	unsigned long flags;
 
 	/*
 	 * loop mode. Iterate over descriptors, re-setup them and
 	 * call callback function.
 	 */
-	while (sdmac->desc) {
-		struct sdma_desc *desc = sdmac->desc;
-
+	spin_lock_irqsave(&sdmac->vc.lock, flags);
+	while (desc) {
 		bd = &desc->bd[desc->buf_tail];
 
 		if (bd->mode.status & BD_DONE)
@@ -841,9 +807,9 @@ static void sdma_update_channel_loop(struct sdma_channel *sdmac)
 		* the number of bytes present in the current buffer descriptor.
 		*/
 
-		desc->chn_real_count = bd->mode.count;
+		sdmac->chn_real_count = bd->mode.count;
 		bd->mode.status |= BD_DONE;
-		bd->mode.count = desc->period_len;
+		bd->mode.count = sdmac->period_len;
 		desc->buf_ptail = desc->buf_tail;
 		desc->buf_tail = (desc->buf_tail + 1) % desc->num_bd;
 
@@ -856,16 +822,29 @@ static void sdma_update_channel_loop(struct sdma_channel *sdmac)
 		spin_unlock(&sdmac->vc.lock);
 		dmaengine_desc_get_callback_invoke(&desc->vd.tx, NULL);
 		spin_lock(&sdmac->vc.lock);
+		bd->mode.count = sdmac->period_len;
+		desc->buf_ptail = desc->buf_tail;
+		desc->buf_tail = (desc->buf_tail + 1) % desc->num_bd;
 
 		if (sdmac->peripheral_type == IMX_DMATYPE_UART) {
 			/* restore mode.count after counter readed */
-			desc->chn_real_count = bd->mode.count;
-			bd->mode.count = desc->chn_count;
+			sdmac->chn_real_count = bd->mode.count;
+			bd->mode.count = sdmac->chn_count;
 		}
 
 		if (error)
 			sdmac->status = old_status;
+		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+		/*
+		 * The callback is called from the interrupt context in order
+		 * to reduce latency and to avoid the risk of altering the
+		 * SDMA transaction status by the time the client tasklet is
+		 * executed.
+		 */
+		dmaengine_desc_get_callback_invoke(&desc->vd.tx, NULL);
+		spin_lock_irqsave(&sdmac->vc.lock, flags);
 	}
+	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 }
 
 static void mxc_sdma_handle_channel_normal(struct sdma_channel *data)
@@ -874,7 +853,6 @@ static void mxc_sdma_handle_channel_normal(struct sdma_channel *data)
 	struct sdma_buffer_descriptor *bd;
 	int i, error = 0;
 
-	sdmac->desc->chn_real_count = 0;
 	/*
 	 * non loop mode. Iterate over all descriptors, collect
 	 * errors and call callback function
@@ -884,7 +862,7 @@ static void mxc_sdma_handle_channel_normal(struct sdma_channel *data)
 
 		 if (bd->mode.status & (BD_DONE | BD_RROR))
 			error = -EIO;
-		 sdmac->desc->chn_real_count += bd->mode.count;
+		 sdmac->chn_real_count += bd->mode.count;
 	}
 
 	if (error)
@@ -912,21 +890,20 @@ static irqreturn_t sdma_int_handler(int irq, void *dev_id)
 		desc = sdmac->desc;
 		if (desc) {
 			if (sdmac->flags & IMX_DMA_SG_LOOP) {
-				sdma_update_channel_loop(sdmac);
+				if (sdmac->peripheral_type != IMX_DMATYPE_HDMI)
+					sdma_update_channel_loop(sdmac);
+				else
+					vchan_cyclic_callback(&desc->vd);
 			} else {
 				mxc_sdma_handle_channel_normal(sdmac);
 				vchan_cookie_complete(&desc->vd);
+				if (!list_empty(&sdmac->pending))
+					list_del(&desc->node);
 				sdma_start_desc(sdmac);
 			}
 		}
-
-		spin_unlock(&sdmac->vc.lock);
-		if (sdmac->flags & IMX_DMA_SG_LOOP) {
-			if (sdmac->peripheral_type != IMX_DMATYPE_HDMI)
-				sdma_update_channel_loop(sdmac);
-		}
-
 		__clear_bit(channel, &stat);
+		spin_unlock(&sdmac->vc.lock);
 	}
 
 	return IRQ_HANDLED;
@@ -1098,7 +1075,7 @@ static int sdma_load_context(struct sdma_channel *sdmac)
 static int sdma_save_restore_context(struct sdma_engine *sdma, bool save)
 {
 	struct sdma_context_data *context = sdma->context;
-	struct sdma_buffer_descriptor *bd0 = sdma->channel[0].desc->bd;
+	struct sdma_buffer_descriptor *bd0 = sdma->bd0;
 	unsigned long flags;
 	int ret;
 
@@ -1136,12 +1113,12 @@ static int sdma_disable_channel(struct dma_chan *chan)
 
 	return 0;
 }
-static void sdma_channel_terminate_work(struct work_struct *work)
+
+static int sdma_terminate_all(struct dma_chan *chan);
+
+static int sdma_terminate_all_with_delay(struct dma_chan *chan)
 {
-	struct sdma_channel *sdmac = container_of(work, struct sdma_channel,
-						  terminate_worker);
-	unsigned long flags;
-	LIST_HEAD(head);
+	sdma_terminate_all(chan);
 
 	/*
 	 * According to NXP R&D team a delay of one BD SDMA cost time
@@ -1305,22 +1282,67 @@ static int sdma_set_channel_priority(struct sdma_channel *sdmac,
 	return 0;
 }
 
+static int sdma_alloc_bd(struct sdma_desc *desc)
+{
+	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
+	int ret = -ENOMEM;
+	unsigned long flags;
+
+	desc->bd_iram = true;
+	desc->bd = gen_pool_dma_alloc(desc->sdmac->sdma->iram_pool, bd_size,
+				      &desc->bd_phys);
+	if (!desc->bd) {
+		desc->bd_iram = false;
+		desc->bd = dma_alloc_coherent(NULL, bd_size, &desc->bd_phys,
+					      GFP_ATOMIC);
+		if (!desc->bd)
+			return ret;
+	}
+	spin_lock_irqsave(&desc->sdmac->vc.lock, flags);
+	desc->sdmac->bd_size_sum += bd_size;
+	spin_unlock_irqrestore(&desc->sdmac->vc.lock, flags);
+
+	memset(desc->bd, 0, bd_size);
+
+	return 0;
+}
+
+static void sdma_free_bd(struct sdma_desc *desc)
+{
+	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
+	unsigned long flags;
+
+	if (desc->bd) {
+		if (desc->bd_iram)
+			gen_pool_free(desc->sdmac->sdma->iram_pool,
+				     (unsigned long)desc->bd, bd_size);
+		else
+			dma_free_coherent(NULL, bd_size, desc->bd,
+					  desc->bd_phys);
+		spin_lock_irqsave(&desc->sdmac->vc.lock, flags);
+		desc->sdmac->bd_size_sum -= bd_size;
+		spin_unlock_irqrestore(&desc->sdmac->vc.lock, flags);
+	}
+}
+
 static int sdma_request_channel0(struct sdma_engine *sdma)
 {
-	int ret = -EBUSY;
+	int ret = 0;
 
 	sdma->bd0_iram = true;
 	sdma->bd0 = gen_pool_dma_alloc(sdma->iram_pool, PAGE_SIZE,
 				       &sdma->bd0_phys);
 	if (!sdma->bd0) {
 		sdma->bd0_iram = false;
-		sdma->bd0 = dma_zalloc_coherent(NULL, PAGE_SIZE,
-						&sdma->bd0_phys, GFP_KERNEL);
+		sdma->bd0 = dma_alloc_coherent(NULL, PAGE_SIZE,
+					       &sdma->bd0_phys, GFP_KERNEL);
 		if (!sdma->bd0) {
 			ret = -ENOMEM;
 			goto out;
 		}
 	}
+
+	memset(sdma->bd0, 0, PAGE_SIZE);
 
 	sdma->channel_control[0].base_bd_ptr = sdma->bd0_phys;
 	sdma->channel_control[0].current_bd_ptr = sdma->bd0_phys;
@@ -1332,35 +1354,77 @@ out:
 	return ret;
 }
 
-
-static int sdma_alloc_bd(struct sdma_desc *desc)
+static struct sdma_desc *to_sdma_desc(struct dma_async_tx_descriptor *t)
 {
-	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
-	int ret = 0;
-
-	desc->bd = dma_zalloc_coherent(NULL, bd_size, &desc->bd_phys,
-					GFP_NOWAIT);
-	if (!desc->bd) {
-		ret = -ENOMEM;
-		goto out;
-	}
-out:
-	return ret;
-}
-
-static void sdma_free_bd(struct sdma_desc *desc)
-{
-	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
-
-	dma_free_coherent(NULL, bd_size, desc->bd, desc->bd_phys);
+	return container_of(t, struct sdma_desc, vd.tx);
 }
 
 static void sdma_desc_free(struct virt_dma_desc *vd)
 {
 	struct sdma_desc *desc = container_of(vd, struct sdma_desc, vd);
 
-	sdma_free_bd(desc);
-	kfree(desc);
+	if (desc) {
+		sdma_free_bd(desc);
+		kfree(desc);
+	}
+}
+
+static int sdma_channel_pause(struct dma_chan *chan)
+{
+	struct sdma_channel *sdmac = to_sdma_chan(chan);
+	unsigned long flags;
+
+	if (!(sdmac->flags & IMX_DMA_SG_LOOP))
+		return -EINVAL;
+
+	sdma_disable_channel(chan);
+	spin_lock_irqsave(&sdmac->vc.lock, flags);
+	sdmac->status = DMA_PAUSED;
+	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+
+	return 0;
+}
+
+static int sdma_channel_resume(struct dma_chan *chan)
+{
+	struct sdma_channel *sdmac = to_sdma_chan(chan);
+	unsigned long flags;
+
+	if (!(sdmac->flags & IMX_DMA_SG_LOOP))
+		return -EINVAL;
+
+	sdma_enable_channel(sdmac->sdma, sdmac->channel);
+	spin_lock_irqsave(&sdmac->vc.lock, flags);
+	sdmac->status = DMA_IN_PROGRESS;
+	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+
+	return 0;
+}
+
+static int sdma_terminate_all(struct dma_chan *chan)
+{
+	struct sdma_channel *sdmac = to_sdma_chan(chan);
+	unsigned long flags;
+	LIST_HEAD(head);
+
+	spin_lock_irqsave(&sdmac->vc.lock, flags);
+	vchan_get_all_descriptors(&sdmac->vc, &head);
+	while (!list_empty(&sdmac->pending)) {
+		struct sdma_desc *desc = list_first_entry(&sdmac->pending,
+			struct sdma_desc, node);
+
+		list_del(&desc->node);
+		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+		sdmac->vc.desc_free(&desc->vd);
+		spin_lock_irqsave(&sdmac->vc.lock, flags);
+	}
+	if (sdmac->desc)
+		sdmac->desc = NULL;
+	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+	vchan_dma_desc_free_list(&sdmac->vc, &head);
+	sdma_disable_channel(chan);
+
+	return 0;
 }
 
 static int sdma_alloc_chan_resources(struct dma_chan *chan)
@@ -1420,6 +1484,8 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 	if (ret)
 		goto disable_clk_ahb;
 
+	sdmac->bd_size_sum = 0;
+
 	return 0;
 
 disable_clk_ahb:
@@ -1434,9 +1500,7 @@ static void sdma_free_chan_resources(struct dma_chan *chan)
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 	struct sdma_engine *sdma = sdmac->sdma;
 
-	sdma_disable_channel_async(chan);
-
-	sdma_channel_synchronize(chan);
+	sdma_terminate_all(chan);
 
 	sdma_event_disable(sdmac, sdmac->event_id0);
 	if (sdmac->event_id1)
@@ -1447,47 +1511,34 @@ static void sdma_free_chan_resources(struct dma_chan *chan)
 
 	sdma_set_channel_priority(sdmac, 0);
 
-	if (sdmac->bd_iram)
-		gen_pool_free(sdma->iram_pool, (unsigned long)sdmac->desc->bd,
-			      PAGE_SIZE);
-	else
-		dma_free_coherent(NULL, PAGE_SIZE, sdmac->desc->bd,
-				  sdmac->desc->bd_phys);
-
 	clk_disable(sdma->clk_ipg);
 	clk_disable(sdma->clk_ahb);
+
+	dma_pool_destroy(sdmac->bd_pool);
+	sdmac->bd_pool = NULL;
 }
 
 static struct sdma_desc *sdma_transfer_init(struct sdma_channel *sdmac,
-				enum dma_transfer_direction direction, u32 bds)
+			      enum dma_transfer_direction direction, u32 bds)
 {
 	struct sdma_desc *desc;
-
-	desc = kzalloc((sizeof(*desc)), GFP_NOWAIT);
+	/* Now allocate and setup the descriptor. */
+	desc = kzalloc((sizeof(*desc)), GFP_ATOMIC);
 	if (!desc)
 		goto err_out;
 
 	sdmac->status = DMA_IN_PROGRESS;
-	sdmac->desc->buf_tail = 0;
-	sdmac->desc->buf_ptail = 0;
-	sdmac->desc->chn_real_count = 0;
-	sdmac->flags = 0;
 	sdmac->direction = direction;
 	sdmac->flags = 0;
+	sdmac->chn_count = 0;
+	sdmac->chn_real_count = 0;
 
-	desc->chn_count = 0;
-	desc->chn_real_count = 0;
-	desc->buf_tail = 0;
-	desc->buf_ptail = 0;
 	desc->sdmac = sdmac;
 	desc->num_bd = bds;
+	INIT_LIST_HEAD(&desc->node);
 
 	if (sdma_alloc_bd(desc))
 		goto err_desc_out;
-
-	/* No slave_config called in MEMCPY case, so do here */
-	if (direction == DMA_MEM_TO_MEM)
-		sdma_config_ownership(sdmac, false, true, false);
 
 	if (sdma_load_context(sdmac))
 		goto err_desc_out;
@@ -1539,7 +1590,7 @@ static struct dma_async_tx_descriptor *sdma_prep_memcpy(
 	struct sdma_buffer_descriptor *bd;
 	struct sdma_desc *desc;
 
-	if (!chan || !len || sdmac->status == DMA_IN_PROGRESS)
+	if (!chan || !len)
 		return NULL;
 
 	dev_dbg(sdma->dev, "memcpy: %pad->%pad, len=%zu, channel=%d.\n",
@@ -1552,13 +1603,14 @@ static struct dma_async_tx_descriptor *sdma_prep_memcpy(
 
 	do {
 		count = min_t(size_t, len, SDMA_BD_MAX_CNT);
-		bd = &sdmac->desc->bd[i];
+		bd = &desc->bd[i];
 		bd->buffer_addr = dma_src;
 		bd->ext_buffer_addr = dma_dst;
 		bd->mode.count = count;
+		sdmac->chn_count += count;
 
 		if (check_bd_buswidth(bd, sdmac, count, dma_dst, dma_src))
-			goto err_out;
+			goto err_bd_out;
 
 		dma_src += count;
 		dma_dst += count;
@@ -1579,12 +1631,13 @@ static struct dma_async_tx_descriptor *sdma_prep_memcpy(
 				param & BD_INTR ? " intr" : "");
 
 		bd->mode.status = param;
-		sdmac->desc->chn_count += count;
 	} while (len);
 
 	return vchan_tx_prep(&sdmac->vc, &desc->vd, flags);
+err_bd_out:
+	sdma_free_bd(desc);
+	kfree(desc);
 err_out:
-	sdmac->status = DMA_ERROR;
 	return NULL;
 }
 
@@ -1606,7 +1659,7 @@ static struct dma_async_tx_descriptor *sdma_prep_sg(
 	struct scatterlist *sg_src = src_sg, *sg_dst = dst_sg;
 	struct sdma_desc *desc;
 
-	if (sdmac->status == DMA_IN_PROGRESS)
+	if (!chan)
 		return NULL;
 
 	dev_dbg(sdma->dev, "setting up %d entries for channel %d.\n",
@@ -1617,7 +1670,7 @@ static struct dma_async_tx_descriptor *sdma_prep_sg(
 		goto err_out;
 
 	for_each_sg(src_sg, sg_src, src_nents, i) {
-		struct sdma_buffer_descriptor *bd = &sdmac->desc->bd[i];
+		struct sdma_buffer_descriptor *bd = &desc->bd[i];
 		int param;
 
 		bd->buffer_addr = sg_src->dma_address;
@@ -1637,7 +1690,7 @@ static struct dma_async_tx_descriptor *sdma_prep_sg(
 		}
 
 		bd->mode.count = count;
-		desc->chn_count += count;
+		sdmac->chn_count += count;
 
 		if (direction == DMA_MEM_TO_MEM)
 			ret = check_bd_buswidth(bd, sdmac, count,
@@ -1668,11 +1721,12 @@ static struct dma_async_tx_descriptor *sdma_prep_sg(
 	}
 
 	return vchan_tx_prep(&sdmac->vc, &desc->vd, flags);
+
 err_bd_out:
 	sdma_free_bd(desc);
 	kfree(desc);
 err_out:
-	sdmac->status = DMA_ERROR;
+	dev_dbg(sdma->dev, "Can't get desc.\n");
 	return NULL;
 }
 
@@ -1693,38 +1747,36 @@ static struct dma_async_tx_descriptor *sdma_prep_dma_cyclic(
 	struct sdma_engine *sdma = sdmac->sdma;
 	int channel = sdmac->channel;
 	int i = 0, buf = 0;
-	struct sdma_desc *desc;
 	int num_periods = 0;
+	struct sdma_desc *desc;
 
 	dev_dbg(sdma->dev, "%s channel: %d\n", __func__, channel);
 
+	num_periods = buf_len / period_len;
+	/* Now allocate and setup the descriptor. */
 	desc = sdma_transfer_init(sdmac, direction, num_periods);
 	if (!desc)
 		goto err_out;
 
-	desc->period_len = period_len;
-
+	sdmac->period_len = period_len;
 	sdmac->flags |= IMX_DMA_SG_LOOP;
 
+	/* for hdmi-audio without BDs */
 	if (sdmac->peripheral_type == IMX_DMATYPE_HDMI)
 		return vchan_tx_prep(&sdmac->vc, &desc->vd, flags);
-	else
-		num_periods = buf_len / period_len;
 
-	if (num_periods > NUM_BD) {
-		dev_err(sdma->dev, "SDMA channel %d: maximum number of sg exceeded: %d > %d\n",
-				channel, num_periods, NUM_BD);
-		goto err_out;
-	}
+	desc->buf_tail = 0;
+	desc->buf_ptail = 0;
+	sdmac->chn_real_count = 0;
 
 	if (period_len > SDMA_BD_MAX_CNT) {
 		dev_err(sdma->dev, "SDMA channel %d: maximum period size exceeded: %zu > %d\n",
 				channel, period_len, SDMA_BD_MAX_CNT);
-		goto err_out;
+		goto err_bd_out;
 	}
 
 	if (sdmac->peripheral_type == IMX_DMATYPE_UART)
-		sdmac->desc->chn_count = period_len;
+		sdmac->chn_count = period_len;
 
 	while (buf < buf_len) {
 		struct sdma_buffer_descriptor *bd = &desc->bd[i];
@@ -1757,13 +1809,12 @@ static struct dma_async_tx_descriptor *sdma_prep_dma_cyclic(
 
 		i++;
 	}
-
 	return vchan_tx_prep(&sdmac->vc, &desc->vd, flags);
+
 err_bd_out:
 	sdma_free_bd(desc);
 	kfree(desc);
 err_out:
-	sdmac->status = DMA_ERROR;
 	return NULL;
 }
 
@@ -1813,48 +1864,71 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 				      struct dma_tx_state *txstate)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
-	struct sdma_desc *desc;
 	u32 residue;
 	struct virt_dma_desc *vd;
+	struct sdma_desc *desc;
 	enum dma_status ret;
 	unsigned long flags;
 
 	ret = dma_cookie_status(chan, cookie, txstate);
-	if (ret == DMA_COMPLETE || !txstate)
+	if (!txstate) {
 		return ret;
+	} else if (ret == DMA_COMPLETE) {
+		spin_lock_irqsave(&sdmac->vc.lock, flags);
+		txstate->residue = sdmac->chn_count - sdmac->chn_real_count;
+		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+		return ret;
+	}
 
 	spin_lock_irqsave(&sdmac->vc.lock, flags);
 	vd = vchan_find_desc(&sdmac->vc, cookie);
+	desc = to_sdma_desc(&vd->tx);
 	if (vd) {
-		desc = to_sdma_desc(&vd->tx);
-		if (sdmac->flags & IMX_DMA_SG_LOOP)
-			residue = (desc->num_bd - desc->buf_ptail) *
-				desc->period_len - desc->chn_real_count;
-		else
-			residue = desc->chn_count - desc->chn_real_count;
-	} else if (sdmac->desc && sdmac->desc->vd.tx.cookie == cookie) {
-		residue = sdmac->desc->chn_count - sdmac->desc->chn_real_count;
-	} else {
+		if ((sdmac->flags & IMX_DMA_SG_LOOP)) {
+			if (sdmac->peripheral_type != IMX_DMATYPE_UART)
+				residue = (desc->num_bd - desc->buf_ptail) *
+					   sdmac->period_len -
+					   sdmac->chn_real_count;
+			else
+				residue = sdmac->chn_count -
+					  sdmac->chn_real_count;
+		} else
+			residue = sdmac->chn_count;
+	} else if (sdmac->desc && sdmac->desc->vd.tx.cookie == cookie)
+		residue = sdmac->chn_count - sdmac->chn_real_count;
+	else
 		residue = 0;
-	}
+
+	txstate->residue = residue;
+	ret = sdmac->status;
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 
+	return ret;
+}
+
+static void sdma_start_desc(struct sdma_channel *sdmac)
+{
+	struct virt_dma_desc *vd = vchan_next_desc(&sdmac->vc);
+	struct sdma_desc *desc;
+	struct sdma_engine *sdma = sdmac->sdma;
+	int channel = sdmac->channel;
+
+	if (!vd) {
+		sdmac->desc = NULL;
+		return;
+	}
+	sdmac->desc = desc = to_sdma_desc(&vd->tx);
 	/*
-	 * For uart rx data may not receive fully, use old chn_real_count to
-	 * know the real rx count.
+	 * Do not delete the node in desc_issued list in cyclic mode, otherwise
+	 * the desc alloced will never be freed in vchan_dma_desc_free_list
 	 */
-	if ((sdmac->flags & IMX_DMA_SG_LOOP) &&
-	    sdmac->peripheral_type != IMX_DMATYPE_UART)
-		residue = (sdmac->desc->num_bd - sdmac->desc->buf_ptail) *
-			   sdmac->desc->period_len -
-			   sdmac->desc->chn_real_count;
-	else
-		residue = sdmac->desc->chn_count - sdmac->desc->chn_real_count;
-
-	dma_set_tx_state(txstate, chan->completed_cookie, chan->cookie,
-			 residue);
-
-	return sdmac->status;
+	if (!(sdmac->flags & IMX_DMA_SG_LOOP)) {
+		list_add_tail(&sdmac->desc->node, &sdmac->pending);
+		list_del(&vd->node);
+	}
+	sdma->channel_control[channel].base_bd_ptr = desc->bd_phys;
+	sdma->channel_control[channel].current_bd_ptr = desc->bd_phys;
+	sdma_enable_channel(sdma, sdmac->channel);
 }
 
 static void sdma_issue_pending(struct dma_chan *chan)
@@ -2232,11 +2306,11 @@ static int sdma_probe(struct platform_device *pdev)
 		struct sdma_channel *sdmac = &sdma->channel[i];
 
 		sdmac->sdma = sdma;
-
 		sdmac->channel = i;
+		sdmac->status = DMA_IN_PROGRESS;
 		sdmac->vc.desc_free = sdma_desc_free;
-		INIT_WORK(&sdmac->terminate_worker,
-				sdma_channel_terminate_work);
+		INIT_LIST_HEAD(&sdmac->pending);
+
 		/*
 		 * Add the channel to the DMAC list. Do not add channel 0 though
 		 * because we need it internally in the SDMA driver. This also means
@@ -2295,17 +2369,17 @@ static int sdma_probe(struct platform_device *pdev)
 	sdma->dma_device.device_prep_slave_sg = sdma_prep_slave_sg;
 	sdma->dma_device.device_prep_dma_cyclic = sdma_prep_dma_cyclic;
 	sdma->dma_device.device_config = sdma_config;
-	sdma->dma_device.device_terminate_all = sdma_disable_channel_async;
-	sdma->dma_device.device_synchronize = sdma_channel_synchronize;
-	sdma->dma_device.src_addr_widths = SDMA_DMA_BUSWIDTHS;
-	sdma->dma_device.dst_addr_widths = SDMA_DMA_BUSWIDTHS;
-	sdma->dma_device.directions = SDMA_DMA_DIRECTIONS;
+	sdma->dma_device.device_terminate_all = sdma_terminate_all_with_delay;
+	sdma->dma_device.device_pause = sdma_channel_pause;
+	sdma->dma_device.device_resume = sdma_channel_resume;
+	sdma->dma_device.src_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
+	sdma->dma_device.dst_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
+	sdma->dma_device.directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
 	sdma->dma_device.residue_granularity = DMA_RESIDUE_GRANULARITY_SEGMENT;
 	sdma->dma_device.device_prep_dma_memcpy = sdma_prep_memcpy;
 	sdma->dma_device.device_issue_pending = sdma_issue_pending;
 	sdma->dma_device.dev->dma_parms = &sdma->dma_parms;
 	sdma->dma_device.copy_align = 2;
-	dma_set_max_seg_size(sdma->dma_device.dev, 65535);
 
 	platform_set_drvdata(pdev, sdma);
 
