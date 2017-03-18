@@ -896,6 +896,21 @@ static void uvc_buf_cleanup(struct vb2_buffer *vb)
 	}
 }
 
+static void uvc_cancel_buffer(struct uvc_video_queue *queue, struct uvc_buffer *buf)
+{
+	unsigned j;
+
+	if (buf->usb_active) {
+		for (j = 0; j < buf->used_urb_cnt; j++) {
+			if (0) pr_info("%s: buf=%p owner=%x,urb=%p(%i)\n", __func__,
+					buf, buf->owner, buf->urbs[j], j);
+			usb_unlink_urb(buf->urbs[j]);
+		}
+	}
+	if (buf->owner == UVC_OWNER_AVAIL)
+		uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
+}
+
 static void stop_queue(struct uvc_video_queue *queue)
 {
 	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
@@ -932,6 +947,8 @@ static void stop_queue(struct uvc_video_queue *queue)
 				pr_info("%s: waiting for buf %d to be returned\n", __func__, i);
 			if (retry < 40) {
 				retry++;
+				if (retry == 30)
+					uvc_cancel_buffer(queue, buf);
 			} else {
 				retry = 0;
 				pr_err("%s: complete failed for buf %d\n", __func__, i);
@@ -1182,7 +1199,7 @@ static void uvc_cancel_buffers(struct uvc_video_queue *queue, unsigned mask)
 {
 	struct vb2_buffer *vb;
 	struct uvc_buffer *buf;
-	unsigned i, j;
+	unsigned i;
 
 	while (mask) {
 		i = __ffs(mask);
@@ -1191,16 +1208,7 @@ static void uvc_cancel_buffers(struct uvc_video_queue *queue, unsigned mask)
 		if (!vb)
 			continue;
 		buf = container_of(vb, struct uvc_buffer, buf);
-
-		if (buf->usb_active) {
-			for (j = 0; j < buf->used_urb_cnt; j++) {
-				if (0) pr_info("%s: buf=%p(%i) owner=%x,urb=%p(%i)\n", __func__,
-						buf, i, buf->owner, buf->urbs[j], j);
-				usb_unlink_urb(buf->urbs[j]);
-			}
-		}
-		if (buf->owner == UVC_OWNER_AVAIL)
-			uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
+		uvc_cancel_buffer(queue, buf);
 	}
 }
 
@@ -1220,17 +1228,14 @@ void uvc_queue_cancel(struct uvc_video_queue *queue)
 {
 	struct uvc_buffer *buf;
 	unsigned long flags;
-	unsigned submitted;
 	unsigned available;
 
 	queue->streaming = 0;
 	spin_lock_irqsave(&queue->irqlock, flags);
-	submitted = queue->submitted;
 	available = queue->available;
 	queue->available = 0;
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 
-	uvc_cancel_buffers(queue, submitted);
 	uvc_cancel_buffers(queue, available);
 
 	spin_lock_irqsave(&queue->irqlock, flags);
