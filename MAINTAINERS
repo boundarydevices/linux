@@ -13658,3 +13658,7 @@ F: drivers/amlogic/key_manage/*
 F: drivers/amlogic/mmc/emmc_key.c
 F: drivers/amlogic/mmc/emmc_key.h
 F: include/linux/amlogic/key_manage.h
+
+AMLOGIC P400 BSP
+M: Nan Li <frank.chen@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p400_2g.dts
