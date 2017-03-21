@@ -906,9 +906,23 @@ static void uvc_cancel_buffer(struct uvc_video_queue *queue, struct uvc_buffer *
 					buf, buf->owner, buf->urbs[j], j);
 			usb_unlink_urb(buf->urbs[j]);
 		}
+		pr_info("%s: buffer=%p(%d)\n", __func__, buf, buf->buf.v4l2_buf.index);
 	}
 	if (buf->owner == UVC_OWNER_AVAIL)
 		uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
+}
+
+static void wait_for_urbs(struct uvc_video_queue *queue)
+{
+	unsigned long timeout = jiffies + msecs_to_jiffies(1000);
+
+	while (1) {
+		if (!queue->submitted)
+			break;
+		if (time_after(jiffies, timeout))
+			break;
+		msleep(1);
+	}
 }
 
 static void stop_queue(struct uvc_video_queue *queue)
@@ -987,6 +1001,7 @@ static int uvc_stop_streaming(struct vb2_queue *vq)
 	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 
 	queue->streaming = 0;
+	wait_for_urbs(queue);
 	uvc_video_enable(stream, 0);
 	pr_debug("%s\n", __func__);
 	return 0;
@@ -1237,6 +1252,7 @@ void uvc_queue_cancel(struct uvc_video_queue *queue)
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 
 	uvc_cancel_buffers(queue, available);
+	uvc_cancel_buffers(queue, queue->submitted);
 
 	spin_lock_irqsave(&queue->irqlock, flags);
 	buf = queue->in_progress;
