@@ -35,6 +35,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/rational.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -1366,8 +1367,16 @@ void imx_startup_gpios(struct imx_port *sport)
 static int imx_startup(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
+	struct tty_port *tty_port = &sport->port.state->port;
 	int retval, i;
 	unsigned long flags, temp;
+
+	/* some modem may need reset */
+	if (!(tty_port->flags & ASYNC_SUSPENDED)) {
+		retval = device_reset(sport->port.dev);
+		if (retval && retval != -ENOENT)
+			return retval;
+	}
 
 	retval = clk_prepare_enable(sport->clk_per);
 	if (retval)
