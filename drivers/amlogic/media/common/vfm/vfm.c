@@ -327,9 +327,9 @@ static void vfm_init(void)
 	char def_mipi_id[] = "default_mipi";
 	char def_mipi_name_chain[] = "vdin mipi";
 #endif /**/
-#ifdef CONFIG_V4L_AMLOGIC_VIDEO2
+#ifdef CONFIG_AMLOGIC_V4L_VIDEO2
 	char def_amlvideo2_id[] = "default_amlvideo2";
-	char def_amlvideo2_chain[] = "vdin1 amlvideo2_1";
+	char def_amlvideo2_chain[] = "vdin1 amlvideo2.1";
 #endif /**/
 #if (defined CONFIG_TVIN_AFE) || (defined CONFIG_TVIN_HDMI)
 #ifdef CONFIG_POST_PROCESS_MANAGER
@@ -356,7 +356,7 @@ static void vfm_init(void)
 #if (defined CONFIG_TVIN_AFE) || (defined CONFIG_TVIN_HDMI)
 	vfm_map_add(tvpath_id, tvpath_chain);
 #endif /**/
-#ifdef CONFIG_V4L_AMLOGIC_VIDEO2
+#ifdef CONFIG_AMLOGIC_V4L_VIDEO2
 	vfm_map_add(def_amlvideo2_id, def_amlvideo2_chain);
 #endif /**/
 }

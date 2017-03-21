@@ -1,0 +1,9 @@
+#
+# V4L UTIL configuration
+#
+
+config AMLOGIC_VIDEOBUF_RESOURCE
+	bool "Amlogic V4L UTIL Support"
+	default n
+	help
+		Select to enable V4L UTIL support

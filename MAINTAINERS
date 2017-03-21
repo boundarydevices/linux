@@ -13668,3 +13668,19 @@ ANDROID LOGGER Driver
 M: Frank Chen <frank.chen@amlogic.com>
 F: drivers/staging/android/logger.c
 F: drivers/staging/android/logger.h
+
+AMLOGIC AMLVIDEO2 DRIVER
+M: Guosong Zhou <guosong.zhou@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/media/Kconfig
+F: drivers/amlogic/media/Makefile
+F: drivers/amlogic/media/common/Kconfig
+F: drivers/amlogic/media/common/Makefile
+F: drivers/amlogic/media/common/vfm/vfm.c
+F: drivers/amlogic/media/common/v4l_util/*
+F: drivers/amlogic/media/video_processor/*
+F: include/linux/amlogic/media/v4l_util/*

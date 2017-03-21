@@ -577,6 +577,14 @@
 		interrupts = <0 89 1>;
 		interrupt-names = "rdma";
 	};
+
+	amlvideo2 {
+		compatible = "amlogic, amlvideo2";
+		dev_name = "amlvideo2";
+		status = "okay";
+		cma_mode = <1>;
+	};
+
 	/*if you want to use vdin just modify status to "ok"*/
 	vdin0 {
 		compatible = "amlogic, vdin";
