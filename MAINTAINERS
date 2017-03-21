@@ -13659,9 +13659,10 @@ F: drivers/amlogic/mmc/emmc_key.c
 F: drivers/amlogic/mmc/emmc_key.h
 F: include/linux/amlogic/key_manage.h
 
-AMLOGIC P400 BSP
-M: Nan Li <frank.chen@amlogic.com>
+AMLOGIC P400/P401 BSP
+M: Frank Chen <frank.chen@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p400_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p401_2g.dts
 
 ANDROID LOGGER Driver
 M: Frank Chen <frank.chen@amlogic.com>
