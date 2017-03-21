@@ -394,11 +394,9 @@ int pstore_mkfile(struct pstore_record *record)
 		break;
 	}
 
-	inode_lock(d_inode(root));
-
 	dentry = d_alloc_name(root, name);
 	if (!dentry)
-		goto fail_lockedalloc;
+		goto fail_private;
 
 	inode->i_size = private->total_size = size;
 
@@ -413,16 +411,12 @@ int pstore_mkfile(struct pstore_record *record)
 	list_add(&private->list, &allpstore);
 	spin_unlock_irqrestore(&allpstore_lock, flags);
 
-	inode_unlock(d_inode(root));
-
 	return 0;
 
-fail_lockedalloc:
-	inode_unlock(d_inode(root));
+fail_private:
 	free_pstore_private(private);
 fail_alloc:
 	iput(inode);
-
 fail:
 	return rc;
 }
