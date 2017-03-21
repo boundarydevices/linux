@@ -1,0 +1,17 @@
+Meson SRAM and PERIPH base:
+----------------------------
+
+Meson8 baby SoC uses sram and periph registers for the bringup
+of the cores. Once the core gets powered up it executes the code
+that is residing at the agreed address.
+
+Required node properties:
+- compatible : should be "amlogic,meson8b-cpuconfig"
+
+Example:
+
+	cpucfg@c4300000 {
+			compatible = "amlogic,meson8b-cpuconfig";
+			reg = <0xc4300000 0x1000>,
+			      <0xd9000000 0x20000>;
+	};

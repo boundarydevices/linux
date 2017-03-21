@@ -8,4 +8,4 @@ make ARCH=arm64  -j8 Image  UIMAGE_LOADADDR=0x1080000 || echo "Compile Image Fai
 make ARCH=arm64  -j8 Image.gz  UIMAGE_LOADADDR=0x1080000 || echo "Compile Image Fail !!"
 
 
-./scripts/amlogic/mk_dtb.sh
+./scripts/amlogic/mk_dtb_gx.sh

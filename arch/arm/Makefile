@@ -148,6 +148,7 @@ endif
 textofs-$(CONFIG_ARCH_MSM8X60) := 0x00208000
 textofs-$(CONFIG_ARCH_MSM8960) := 0x00208000
 textofs-$(CONFIG_ARCH_AXXIA) := 0x00308000
+textofs-$(CONFIG_ARCH_MESON) := 0x00008000
 
 # Machine directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
@@ -335,15 +336,15 @@ $(INSTALL_TARGETS):
 	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $@
 
 %.dtb: | scripts
-	$(Q)$(MAKE) $(build)=$(boot)/dts MACHINE=$(MACHINE) $(boot)/dts/$@
+	$(Q)$(MAKE) $(build)=$(boot)/dts/amlogic MACHINE=$(MACHINE) $(boot)/dts/amlogic/$@
 
 PHONY += dtbs dtbs_install
 
 dtbs: prepare scripts
-	$(Q)$(MAKE) $(build)=$(boot)/dts
+	$(Q)$(MAKE) $(build)=$(boot)/dts/amlogic
 
 dtbs_install:
-	$(Q)$(MAKE) $(dtbinst)=$(boot)/dts
+	$(Q)$(MAKE) $(dtbinst)=$(boot)/dts/amlogic
 
 PHONY += vdso_install
 vdso_install:

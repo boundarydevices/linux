@@ -13684,3 +13684,7 @@ F: drivers/amlogic/media/common/vfm/vfm.c
 F: drivers/amlogic/media/common/v4l_util/*
 F: drivers/amlogic/media/video_processor/*
 F: include/linux/amlogic/media/v4l_util/*
+
+AMLOGIC M8b
+M: Jianxin Pan <jianxin.pan@amlogic.com>
+F: arch/arm/boot/dts/amlogic>

@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-meson/meson.c
+ * arch/arm/boot/dts/amlogic/meson8b_m200.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,18 +15,25 @@
  *
  */
 
-#include <linux/of_platform.h>
-#include <asm/mach/arch.h>
+/dts-v1/;
+#include "meson8b.dtsi"
 
-static const char * const meson_common_board_compat[] = {
-	"amlogic,meson6",
-	"amlogic,meson8",
-	"amlogic,meson8b",
-	NULL,
+/ {
+	model = "Meson M8b S805";
+	compatible = "amlogic,meson8b";
+
+	aliases {
+		serial0 = &uart_AO;
+	};
+
+	memory {
+		reg = <0x00000000 0x40000000>;
+		linux,usable-memory = <0x00200000 0x3fe00000>;
+	};
 };
 
-DT_MACHINE_START(MESON, "Amlogic Meson platform")
-	.dt_compat	= meson_common_board_compat,
-	.l2c_aux_val	= 0,
-	.l2c_aux_mask	= ~0,
-MACHINE_END
+&uart_AO {
+	status = "okay";
+	pinctrl-0 = <&uart_ao_a_pins>;
+	pinctrl-names = "default";
+};
