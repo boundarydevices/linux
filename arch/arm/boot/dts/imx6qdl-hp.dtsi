@@ -969,6 +969,10 @@
 
 &usbotg {
 	vbus-supply = <&reg_usbotg_vbus>;
+#if 1
+	/* Always used as peripheral */
+	dr_mode = "peripheral";
+#endif
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
