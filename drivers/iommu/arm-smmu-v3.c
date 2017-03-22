@@ -1888,11 +1888,13 @@ static void arm_smmu_get_resv_regions(struct device *dev,
 	int prot = IOMMU_WRITE | IOMMU_NOEXEC | IOMMU_MMIO;
 
 	region = iommu_alloc_resv_region(MSI_IOVA_BASE, MSI_IOVA_LENGTH,
-					 prot, IOMMU_RESV_MSI);
+					 prot, IOMMU_RESV_SW_MSI);
 	if (!region)
 		return;
 
 	list_add_tail(&region->list, head);
+
+	iommu_dma_get_resv_regions(dev, head);
 }
 
 static void arm_smmu_put_resv_regions(struct device *dev,
