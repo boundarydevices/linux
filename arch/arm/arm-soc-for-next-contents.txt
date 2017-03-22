@@ -5,6 +5,14 @@ fixes
 		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.11/devicetree-fixes
 	<no branch> (e24bce8fb4c26bd0d8eca74cbbee1ad049246be3)
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.11/fixes-rc1-v2
+	<no branch> (12aff99723901bcc0e2a6a34343a4f62c371fdd9)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.11
+	<no branch> (9693219aa61dc7a75ac015e5c011e889cb821eec)
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.11
+	<no branch> (0ca10b60ceeb5372da01798ca68c116ae45a6eb6)
+		git://git.pengutronix.de/git/pza/linux tags/reset-fixes-for-4.11
+	<no branch> (60b89f1928af80b546b5c3fd8714a62f6f4b8844)
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.11-fixes
 
 next/fixes-non-critical
 
@@ -21,10 +29,26 @@ next/arm64
 next/dt
 	gemini/dts
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-dts-base
+	shared/dt-symlinks
+		Merge branch 'shared/dt-symlinks' into next/dt
+	patch
+		ARM: dts: Adjust moxart IRQ controller and flags
+	renesas/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.12
+	renesas/dt-bindings
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-bindings-for-v4.12
 
 next/dt64
+	shared/dt-symlinks
+		Merge branch 'shared/dt-symlinks' into next/dt64
+	renesas/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.12
 
 next/defconfig
 
 next/drivers
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.12-1
+	renesas/drivers
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-drivers-for-v4.12
 
