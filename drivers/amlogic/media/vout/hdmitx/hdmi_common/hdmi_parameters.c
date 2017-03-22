@@ -1430,10 +1430,10 @@ struct hdmi_format_para *hdmi_get_fmt_name(char const *name, char const *attr)
 	int i;
 	char *lname;
 	enum hdmi_vic vic = HDMI_Unknown;
-	struct hdmi_format_para *para = NULL;
+	struct hdmi_format_para *para = &fmt_para_non_hdmi_fmt;
 
 	if (!name)
-		return NULL;
+		return para;
 
 	for (i = 0; all_fmt_paras[i]; i++) {
 		lname = all_fmt_paras[i]->name;
@@ -1461,6 +1461,23 @@ struct hdmi_format_para *hdmi_get_fmt_name(char const *name, char const *attr)
 	}
 	if (strstr(name, "420"))
 		para->cs = COLORSPACE_YUV420;
+
+	/* only 2160p60/50hz smpte60/50hz have Y420 mode */
+	if (para->cs == COLORSPACE_YUV420) {
+		switch ((para->vic) & 0xff) {
+		case HDMI_3840x2160p50_16x9:
+		case HDMI_3840x2160p60_16x9:
+		case HDMI_4096x2160p50_256x135:
+		case HDMI_4096x2160p60_256x135:
+		case HDMI_3840x2160p50_64x27:
+		case HDMI_3840x2160p60_64x27:
+			break;
+		default:
+			para = &fmt_para_non_hdmi_fmt;
+			break;
+		}
+	}
+
 	return para;
 }
 

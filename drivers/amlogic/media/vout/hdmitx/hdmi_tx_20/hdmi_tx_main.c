@@ -447,6 +447,15 @@ static int set_disp_mode_auto(void)
 		}
 	}
 
+	/* In the file hdmi_common/hdmi_parameters.c,
+	 * the data array all_fmt_paras[] treat 2160p60hz and 2160p60hz420
+	 * as two different modes, such Scrambler
+	 * So if node "attr" contains 420, need append 420 to mode.
+	 */
+	if (strstr(fmt_attr, "420")) {
+		if (!strstr(mode, "420"))
+			strncat(mode, "420", 3);
+	}
 	para = hdmi_get_fmt_name(mode, fmt_attr);
 	hdev->para = para;
 	/* msleep(500); */
