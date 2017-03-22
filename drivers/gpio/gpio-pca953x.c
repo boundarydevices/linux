@@ -11,19 +11,20 @@
  *  the Free Software Foundation; version 2 of the License.
  */
 
-#include <linux/module.h>
-#include <linux/init.h>
+#include <linux/acpi.h>
 #include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
-#include <linux/interrupt.h>
 #include <linux/i2c.h>
+#include <linux/init.h>
+#include <linux/interrupt.h>
+#include <linux/module.h>
+#include <linux/of_platform.h>
 #include <linux/platform_data/pca953x.h>
+#include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+
 #include <asm/unaligned.h>
-#include <linux/of_platform.h>
-#include <linux/acpi.h>
-#include <linux/regulator/consumer.h>
 
 #define PCA953X_INPUT		0
 #define PCA953X_OUTPUT		1
