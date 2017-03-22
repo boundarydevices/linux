@@ -212,7 +212,14 @@ enum spi_nor_option_flags {
 	SNOR_F_NO_OP_CHIP_ERASE	= BIT(2),
 	SNOR_F_S3AN_ADDR_DEFAULT = BIT(3),
 	SNOR_F_READY_XSR_RDY	= BIT(4),
+	SNOR_F_4B_OPCODES	= BIT(5),
 };
+
+/**
+ * struct flash_info -	Forward declaration of a structure used internally by
+ *			spi_nor_scan() and spi_nor_init().
+ */
+struct flash_info;
 
 /**
  * struct spi_nor - Structure for defining a the SPI NOR layer
@@ -253,6 +260,7 @@ struct spi_nor {
 	struct mtd_info		mtd;
 	struct mutex		lock;
 	struct device		*dev;
+	const struct flash_info	*info;
 	u32			page_size;
 	u8			addr_width;
 	u8			erase_opcode;

@@ -255,6 +255,8 @@ static void spi_nor_set_4byte_opcodes(struct spi_nor *nor,
 	nor->read_opcode = spi_nor_convert_3to4_read(nor->read_opcode);
 	nor->program_opcode = spi_nor_convert_3to4_program(nor->program_opcode);
 	nor->erase_opcode = spi_nor_convert_3to4_erase(nor->erase_opcode);
+
+	nor->flags |= SNOR_F_4B_OPCODES;
 }
 
 /* Enable/disable 4-byte addressing mode. */
@@ -1809,6 +1811,45 @@ static int spi_nor_setup(struct spi_nor *nor, const struct flash_info *info,
 	return 0;
 }
 
+static int spi_nor_init(struct spi_nor *nor)
+{
+	const struct flash_info *info = nor->info;
+	struct device *dev = nor->dev;
+	int ret;
+
+	/*
+	 * Atmel, SST, Intel/Numonyx, and others serial NOR tend to power up
+	 * with the software protection bits set
+	 */
+
+	if (JEDEC_MFR(info) == SNOR_MFR_ATMEL ||
+	    JEDEC_MFR(info) == SNOR_MFR_INTEL ||
+	    JEDEC_MFR(info) == SNOR_MFR_SST ||
+	    info->flags & SPI_NOR_HAS_LOCK) {
+		write_enable(nor);
+		write_sr(nor, 0);
+		spi_nor_wait_till_ready(nor);
+	}
+
+	/* Set the Quad Enable bit, if needed. */
+	if (nor->flash_quad_enable) {
+		ret = nor->flash_quad_enable(nor);
+		if (ret) {
+			dev_err(dev, "quad mode not supported\n");
+			return ret;
+		}
+	}
+
+	/*
+	 * For SPI flash memories above 128Mib, enter the 4-byte address mode
+	 * only if the 4-byte address instruction set is not supported.
+	 */
+	if (nor->addr_width == 4 && !(nor->flags & SNOR_F_4B_OPCODES))
+		set_4byte(nor, info, 1);
+
+	return 0;
+}
+
 int spi_nor_scan(struct spi_nor *nor, const char *name,
 		 const struct spi_nor_hwcaps *hwcaps)
 {
@@ -1875,20 +1916,6 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	 */
 	if (info->flags & SPI_S3AN)
 		nor->flags |=  SNOR_F_READY_XSR_RDY;
-
-	/*
-	 * Atmel, SST, Intel/Numonyx, and others serial NOR tend to power up
-	 * with the software protection bits set
-	 */
-
-	if (JEDEC_MFR(info) == SNOR_MFR_ATMEL ||
-	    JEDEC_MFR(info) == SNOR_MFR_INTEL ||
-	    JEDEC_MFR(info) == SNOR_MFR_SST ||
-	    info->flags & SPI_NOR_HAS_LOCK) {
-		write_enable(nor);
-		write_sr(nor, 0);
-		spi_nor_wait_till_ready(nor);
-	}
 
 	if (!mtd->name)
 		mtd->name = dev_name(dev);
@@ -1960,14 +1987,6 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	if (ret)
 		return ret;
 
-	if (nor->flash_quad_enable) {
-		ret = nor->flash_quad_enable(nor);
-		if (ret) {
-			dev_err(dev, "quad mode not supported\n");
-			return ret;
-		}
-	}
-
 	if (info->addr_width)
 		nor->addr_width = info->addr_width;
 	else if (mtd->size > 0x1000000) {
@@ -1976,8 +1995,6 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 		if (JEDEC_MFR(info) == SNOR_MFR_SPANSION ||
 		    info->flags & SPI_NOR_4B_OPCODES)
 			spi_nor_set_4byte_opcodes(nor, info);
-		else
-			set_4byte(nor, info, 1);
 	} else {
 		nor->addr_width = 3;
 	}
@@ -1993,6 +2010,12 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 		if (ret)
 			return ret;
 	}
+
+	/* Send all the required SPI flash commands to initialize the memory. */
+	nor->info = info;
+	ret = spi_nor_init(nor);
+	if (ret)
+		return ret;
 
 	dev_info(dev, "%s (%lld Kbytes)\n", info->name,
 			(long long)mtd->size >> 10);
