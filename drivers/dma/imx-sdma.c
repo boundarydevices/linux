@@ -813,25 +813,6 @@ static void sdma_update_channel_loop(struct sdma_channel *sdmac)
 		desc->buf_ptail = desc->buf_tail;
 		desc->buf_tail = (desc->buf_tail + 1) % desc->num_bd;
 
-		/*
-		 * The callback is called from the interrupt context in order
-		 * to reduce latency and to avoid the risk of altering the
-		 * SDMA transaction status by the time the client tasklet is
-		 * executed.
-		 */
-		spin_unlock(&sdmac->vc.lock);
-		dmaengine_desc_get_callback_invoke(&desc->vd.tx, NULL);
-		spin_lock(&sdmac->vc.lock);
-		bd->mode.count = sdmac->period_len;
-		desc->buf_ptail = desc->buf_tail;
-		desc->buf_tail = (desc->buf_tail + 1) % desc->num_bd;
-
-		if (sdmac->peripheral_type == IMX_DMATYPE_UART) {
-			/* restore mode.count after counter readed */
-			sdmac->chn_real_count = bd->mode.count;
-			bd->mode.count = sdmac->chn_count;
-		}
-
 		if (error)
 			sdmac->status = old_status;
 		/*
