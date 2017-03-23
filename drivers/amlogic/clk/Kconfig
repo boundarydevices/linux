@@ -23,3 +23,18 @@ config AMLOGIC_COMMON_CLK_SCPI
 
 	  This driver uses SCPI Message Protocol to interact with the
 	  firmware providing all the clock controls.
+
+config AMLOGIC_M8B_CLK
+	bool "Amlogic meson8b clock driver support"
+	depends on AMLOGIC_CLK
+	help
+	  Support for the clock controller on AmLogic S805 devices, aka
+	  meson8b. Say Y if you want peripherals and CPU frequency scaling to
+	  work.
+
+config AMLOGIC_GX_CLK
+	bool "Amlogic gx clock driver support"
+	depends on AMLOGIC_CLK
+	help
+	  Support for the clock controller on AmLogic S905 devices, aka gxbb.
+	  Say Y if you want peripherals and CPU frequency scaling to work.
