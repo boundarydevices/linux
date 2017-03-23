@@ -254,6 +254,8 @@ struct sas_dev {
 /* start of next message */
 #define NEXTMSGSTART(dev) (dev->rxmsgs[dev->rxmsgadd].start)
 
+//#define DEBUG_READS
+
 static void flush_msg(struct sas_dev *dev)
 {
 	if (dev->rxbuf.head != NEXTMSGSTART(dev)) {
@@ -283,6 +285,12 @@ static ssize_t sas_read
 	(struct file *file, char __user *buf,
 	 size_t count, loff_t *ppos)
 {
+#ifdef DEBUG_READS
+	unsigned char dbg_buf[4];
+	unsigned char *p = dbg_buf;
+	int rem = 4;
+	int len;
+#endif
 	struct sas_dev *dev = (struct sas_dev *)file->private_data;
 	ssize_t numread = 0;
 
@@ -300,6 +308,12 @@ static ssize_t sas_read
 		firstseg = dev->rxbufsize - start;
 		if (firstseg > msgleft)
 			firstseg = msgleft;
+#ifdef DEBUG_READS
+		len = firstseg < rem ? firstseg : rem;
+		memcpy(p, dev->rxbuf.buf+start, len);
+		p += len;
+		rem -= len;
+#endif
 		if (copy_to_user(buf, dev->rxbuf.buf+start, firstseg)) {
 			numread = -EFAULT;
 			goto out;
@@ -310,6 +324,12 @@ static ssize_t sas_read
 		if (0 < msgleft) {
 			/* wrap: need to copy a second segment */
 			buf += firstseg;
+#ifdef DEBUG_READS
+			len = msgleft < rem ? msgleft : rem;
+			memcpy(p, dev->rxbuf.buf+0, len);
+			p += len;
+			rem -= len;
+#endif
 			if (copy_to_user(buf, dev->rxbuf.buf+0, msgleft)) {
 				numread = -EFAULT;
 				goto out;
@@ -323,6 +343,25 @@ static ssize_t sas_read
 	} /* have a message */
 out:
 	mutex_unlock(&dev->rx_lock);
+#ifdef DEBUG_READS
+	p = dbg_buf;
+	if (numread >= 4) {
+		pr_info("%s: %02x %02x %02x %02x\n", __func__,
+			p[0], p[1], p[2], p[3]);
+	} else if (numread == 3) {
+		pr_info("%s: %02x %02x %02x\n", __func__,
+			p[0], p[1], p[2]);
+	} else if (numread == 2) {
+		pr_info("%s: %02x %02x\n", __func__,
+			p[0], p[1]);
+	} else if (numread == 1) {
+		pr_info("%s: %02x\n", __func__,
+			p[0]);
+	} else {
+		pr_info("%s: returning %d\n", __func__, numread);
+
+	}
+#endif
 	return numread;
 }
 
