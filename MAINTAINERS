@@ -13663,7 +13663,6 @@ F: drivers/amlogic/mmc/emmc_key.c
 F: drivers/amlogic/mmc/emmc_key.h
 F: include/linux/amlogic/key_manage.h
 
-<<<<<<< HEAD
 AMLOGIC P400/P401 BSP
 M: Frank Chen <frank.chen@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p400_2g.dts
@@ -13713,3 +13712,20 @@ F: sound/soc/amlogic/*
 F: sound/soc/codecs/Kconfig
 F: sound/soc/codecs/Makefile
 F: sound/soc/codecs/amlogic/*
+
+AMLOGIC PPMGR DRIVER
+M: Guosong Zhou <guosong.zhou@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p400_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_p401_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/media/common/vfm/vfm.c
+F: drivers/amlogic/media/osd_ext/osd_hw.c
+F: drivers/amlogic/media/video_sink/video.c
+F: drivers/amlogic/media/video_processor/Kconfig
+F: drivers/amlogic/media/video_processor/Makefile
+F: drivers/amlogic/media/video_processor/ppmgr/*
+F: include/linux/amlogic/media/ppmgr/*

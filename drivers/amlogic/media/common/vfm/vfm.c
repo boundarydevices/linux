@@ -292,10 +292,11 @@ char *vf_get_receiver_name(const char *provider_name)
 
 static void vfm_init(void)
 {
-#if (defined CONFIG_POST_PROCESS_MANAGER) && (defined CONFIG_DEINTERLACE)
+#if ((defined CONFIG_AMLOGIC_POST_PROCESS_MANAGER) && \
+	(defined CONFIG_DEINTERLACE))
 	char def_id[] = "default";
 	char def_name_chain[] = "decoder ppmgr deinterlace amvideo";
-#elif (defined CONFIG_POST_PROCESS_MANAGER)
+#elif (defined CONFIG_AMLOGIC_POST_PROCESS_MANAGER)
 	char def_id[] = "default";
 	char def_name_chain[] = "decoder ppmgr amvideo";
 #elif (defined CONFIG_DEINTERLACE)
@@ -332,7 +333,7 @@ static void vfm_init(void)
 	char def_amlvideo2_chain[] = "vdin1 amlvideo2.1";
 #endif /**/
 #if (defined CONFIG_TVIN_AFE) || (defined CONFIG_TVIN_HDMI)
-#ifdef CONFIG_POST_PROCESS_MANAGER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER
 	char tvpath_id[] = "tvpath";
 	char tvpath_chain[] = "vdin0 ppmgr deinterlace amvideo";
 #else

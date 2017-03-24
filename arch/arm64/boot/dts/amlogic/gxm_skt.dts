@@ -795,6 +795,13 @@
 		interrupt-names = "rdma";
 	};
 
+	ppmgr {
+		compatible = "amlogic, ppmgr";
+		memory-region = <&ppmgr_reserved>;
+		dev_name = "ppmgr";
+		status = "okay";
+	};
+
 	amlvideo2 {
 		compatible = "amlogic, amlvideo2";
 		dev_name = "amlvideo2";

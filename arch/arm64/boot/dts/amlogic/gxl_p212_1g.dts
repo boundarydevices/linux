@@ -960,6 +960,13 @@
 		};
 	};
 
+	ppmgr {
+		compatible = "amlogic, ppmgr";
+		memory-region = <&ppmgr_reserved>;
+		dev_name = "ppmgr";
+		status = "okay";
+	};
+
 	deinterlace {
 		compatible = "amlogic, deinterlace";
 		status = "okay";

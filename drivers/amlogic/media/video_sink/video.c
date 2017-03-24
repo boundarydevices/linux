@@ -517,7 +517,7 @@ static int video_property_changed;
 static u32 video_notify_flag;
 static int enable_video_discontinue_report = 1;
 
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 static u32 video_scaler_mode;
 static int content_top = 0, content_left = 0, content_w = 0, content_h;
 static int scaler_pos_changed;
@@ -555,7 +555,7 @@ int video_property_notify(int flag)
 	return 0;
 }
 
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 int video_scaler_notify(int flag)
 {
 	video_scaler_mode = flag;
@@ -825,7 +825,7 @@ static int noneseamless_play_clone_rate = 5;
 #endif
 void safe_disble_videolayer(void)
 {
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 	if (video_scaler_mode)
 		DisableVideoLayer_PREBELEND();
 	else
@@ -2969,7 +2969,7 @@ static void vsync_notify(void)
 		vf_notify_provider(RECEIVER_NAME,
 				   VFRAME_EVENT_RECEIVER_FRAME_WAIT, NULL);
 	}
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 	if (video_notify_flag & VIDEO_NOTIFY_POS_CHANGED) {
 		video_notify_flag &= ~VIDEO_NOTIFY_POS_CHANGED;
 		vf_notify_provider(RECEIVER_NAME,
@@ -4198,7 +4198,7 @@ cur_dev->vpp_off, 0, VPP_VD2_ALPHA_BIT, 9);/*vd2 alpha must set*/
 	if (timer_count > 50) {
 		timer_count = 0;
 		video_notify_flag |= VIDEO_NOTIFY_FRAME_WAIT;
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 		if ((video_scaler_mode) && (scaler_pos_changed)) {
 			video_notify_flag |= VIDEO_NOTIFY_POS_CHANGED;
 			scaler_pos_changed = 0;
@@ -4658,7 +4658,7 @@ static void _set_video_window(int *p)
 	w = parsed[2] - parsed[0] + 1;
 	h = parsed[3] - parsed[1] + 1;
 
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 	if (video_scaler_mode) {
 		if ((w == 1) && (h == 1)) {
 			w = 0;
@@ -4849,7 +4849,7 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 
 	case AMSTREAM_IOC_GET_VIDEO_AXIS:{
 			int axis[4];
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 			if (video_scaler_mode) {
 				axis[0] = content_left;
 				axis[1] = content_top;
@@ -5362,7 +5362,7 @@ static ssize_t video_axis_show(struct class *cla,
 		char *buf)
 {
 	int x, y, w, h;
-#ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 	if (video_scaler_mode) {
 		x = content_left;
 		y = content_top;

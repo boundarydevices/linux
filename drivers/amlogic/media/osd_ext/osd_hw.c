@@ -800,7 +800,7 @@ static void osd_ext_set_free_scale_enable_mode0(u32 index, u32 enable)
 {
 	static struct pandata_s save_disp_data = { 0, 0, 0, 0 };
 #ifdef CONFIG_AMLOGIC_VIDEO
-#ifdef CONFIG_POST_PROCESS_MANAGER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER
 	int mode_changed = 0;
 
 	if ((index == OSD1) &&
@@ -887,7 +887,7 @@ static void osd_ext_set_free_scale_enable_mode0(u32 index, u32 enable)
 
 	osd_ext_enable_hw(osd_ext_hw.enable[index], index);
 #ifdef CONFIG_AMLOGIC_VIDEO
-#ifdef CONFIG_POST_PROCESS_MANAGER
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER
 	if (mode_changed) {
 		/* extern void vf_ppmgr_reset(int type); */
 		vf_ppmgr_reset(1);
