@@ -1285,7 +1285,7 @@ static int aml_nand_scan_ident(struct mtd_info *mtd, int maxchips)
 
 	chip->cmdfunc = aml_nand_command;
 	chip->waitfunc = aml_nand_wait;
-	/*chip->erase_cmd = aml_nand_erase_cmd;*/
+	chip->erase = aml_nand_erase_cmd;
 	chip->write_page = aml_nand_write_page;
 
 	return 0;

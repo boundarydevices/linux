@@ -1109,7 +1109,7 @@ void aml_nand_command(struct mtd_info *mtd,
 }
 
 
-void aml_nand_erase_cmd(struct mtd_info *mtd, int page)
+int aml_nand_erase_cmd(struct mtd_info *mtd, int page)
 {
 	struct aml_nand_chip *aml_chip = mtd_to_nand_chip(mtd);
 	struct nand_chip *chip = mtd->priv;
@@ -1123,7 +1123,7 @@ void aml_nand_erase_cmd(struct mtd_info *mtd, int page)
 	vt_page_num = (mtd->writesize / (1 << chip->page_shift));
 	vt_page_num *= (1 << pages_per_blk_shift);
 	if (page % vt_page_num)
-		return;
+		return 0;
 
 	/* Send commands to erase a block */
 	valid_page_num = (mtd->writesize >> chip->page_shift);
@@ -1131,7 +1131,7 @@ void aml_nand_erase_cmd(struct mtd_info *mtd, int page)
 	block_addr = ((page / valid_page_num) >> pages_per_blk_shift);
 
 	if (aml_nand_rsv_erase_protect(mtd, block_addr) == -1)
-		return;
+		return -EPERM;
 
 	valid_page_num /= aml_chip->plane_num;
 
@@ -1166,6 +1166,7 @@ void aml_nand_erase_cmd(struct mtd_info *mtd, int page)
 			}
 		}
 	}
+	return 0;
 }
 
 void aml_nand_dma_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)

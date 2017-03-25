@@ -798,7 +798,7 @@ void aml_nand_command(struct mtd_info *mtd,
 
 int aml_nand_wait(struct mtd_info *mtd, struct nand_chip *chip);
 
-void aml_nand_erase_cmd(struct mtd_info *mtd, int page);
+int aml_nand_erase_cmd(struct mtd_info *mtd, int page);
 
 int add_mtd_partitions(struct mtd_info *mtd,
 	const struct mtd_partition *part, int num);
