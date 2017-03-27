@@ -41,7 +41,7 @@ static const enum fixed_addresses __end_of_fixed_addresses =
 
 #define FIXMAP_PAGE_COMMON	(L_PTE_YOUNG | L_PTE_PRESENT | L_PTE_XN | L_PTE_DIRTY)
 
-#define FIXMAP_PAGE_NORMAL	(FIXMAP_PAGE_COMMON | L_PTE_MT_WRITEBACK)
+#define FIXMAP_PAGE_NORMAL	(pgprot_kernel | L_PTE_XN)
 #define FIXMAP_PAGE_RO		(FIXMAP_PAGE_NORMAL | L_PTE_RDONLY)
 
 /* Used by set_fixmap_(io|nocache), both meant for mapping a device */
@@ -53,13 +53,8 @@ static const enum fixed_addresses __end_of_fixed_addresses =
 #ifdef CONFIG_MMU
 
 void __set_fixmap(enum fixed_addresses idx, phys_addr_t phys, pgprot_t prot);
-void __init early_fixmap_init(void);
 
 #include <asm-generic/fixmap.h>
-
-#else
-
-static inline void early_fixmap_init(void) { }
 
 #endif
 #endif

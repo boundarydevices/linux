@@ -24,6 +24,8 @@ typedef struct {
 #define ASID(mm)	(0)
 #endif
 
+void early_mm_init(void);
+
 #else
 
 /*
