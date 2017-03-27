@@ -18,6 +18,10 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#ifndef _UAPI_CRYPTOUSER_H
+#define _UAPI_CRYPTOUSER_H
+
+#include <linux/crypto.h>
 #include <linux/types.h>
 
 /* Netlink configuration messages.  */
@@ -121,3 +125,5 @@ struct crypto_report_acomp {
 
 #define CRYPTO_REPORT_MAXSIZE (sizeof(struct crypto_user_alg) + \
 			       sizeof(struct crypto_report_blkcipher))
+
+#endif /* _UAPI_CRYPTOUSER_H */
