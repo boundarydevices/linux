@@ -26,6 +26,8 @@
 #define MX7_SNVS_SIZE				(1024*16)
 
 #define ANDROID_NORMAL_BOOT     6
+#define ANDROID_RECOVERY_BOOT   7
+#define ANDROID_FASTBOOT_BOOT   8
 
 void do_switch_mode(char mode)
 {
@@ -54,6 +56,15 @@ void do_switch_mode(char mode)
 	iounmap(addr);
 }
 
+void do_switch_recovery(void)
+{
+	do_switch_mode(ANDROID_RECOVERY_BOOT);
+}
+
+void do_switch_fastboot(void)
+{
+	do_switch_mode(ANDROID_FASTBOOT_BOOT);
+}
 
 void do_switch_normal(void)
 {
@@ -63,7 +74,11 @@ void do_switch_normal(void)
 
 static void restart_special_mode(const char *cmd)
 {
-	if (cmd && strcmp(cmd, "") == 0)
+	if (cmd && strcmp(cmd, "recovery") == 0)
+		do_switch_recovery();
+	else if (cmd && strcmp(cmd, "bootloader") == 0)
+		do_switch_fastboot();
+	else if (cmd && strcmp(cmd, "") == 0)
 		do_switch_normal();
 }
 
