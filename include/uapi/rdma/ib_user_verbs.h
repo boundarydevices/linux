@@ -1124,4 +1124,6 @@ struct ib_uverbs_ex_destroy_rwq_ind_table  {
 	__u32 ind_tbl_handle;
 };
 
+#define IB_DEVICE_NAME_MAX 64
+
 #endif /* IB_USER_VERBS_H */
