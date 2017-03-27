@@ -412,8 +412,13 @@ static ssize_t sas_write(struct file *file, const char __user *buf,
 			dev->txbuf.head = (dev->txbuf.head + written)
 						& (dev->txbufsize - 1);
 			reg = readl(dev->base + UCR1);
-			reg |= UCR1_TRDYEN;
-			writel(reg, dev->base + UCR1);
+			if (!(reg & UCR1_TRDYEN)) {
+				reg = readl(dev->base + UCR4);
+				if (!(reg & UCR4_TCEN)) {
+					reg |= UCR4_TCEN;
+					writel(reg, dev->base + UCR4);
+				}
+			}
 		}
 	}
 
@@ -572,6 +577,19 @@ static void sas_txint(struct sas_dev *dev)
 			reg &= ~UCR4_TCEN;
 			writel(reg, dev->base + UCR4);
 		}
+		if (CIRC_CNT(dev->txbuf.head,
+			      dev->txbuf.tail,
+			      dev->txbufsize)) {
+			/* Turn interrupt back on */
+			reg |= UCR4_TCEN;
+			writel(reg, dev->base + UCR4);
+		}
+	} else {
+		reg = readl(dev->base + UCR1);
+		if (!(reg & UCR1_TRDYEN)) {
+			reg |= UCR1_TRDYEN;
+			writel(reg, dev->base + UCR1);
+		}
 	}
 }
 
@@ -637,12 +655,12 @@ static int sas_open(struct inode *inode, struct file *file)
 	spin_unlock_irqrestore(&dev->lock, flags);
 
 	if (1 == cnt) {
-		rval = clk_enable(dev->clk_per);
+		rval = clk_prepare_enable(dev->clk_per);
 		if (rval)
 			goto out;
-		rval = clk_enable(dev->clk_ipg);
+		rval = clk_prepare_enable(dev->clk_ipg);
 		if (rval) {
-			clk_disable(dev->clk_per);
+			clk_disable_unprepare(dev->clk_per);
 			goto out;
 		}
 		writel(0x0, dev->base + UCR1);
@@ -691,8 +709,8 @@ static int sas_open(struct inode *inode, struct file *file)
 			writel(UCR1_UARTEN | UCR1_RRDYEN, dev->base + UCR1);
 		} else {
 			writel(0x0, dev->base + UCR1);
-			clk_disable(dev->clk_ipg);
-			clk_disable(dev->clk_per);
+			clk_disable_unprepare(dev->clk_ipg);
+			clk_disable_unprepare(dev->clk_per);
 			dev_err(&dev->pdev->dev,
 				"Error %d requesting irq %d\n",
 				rval, dev->irq);
@@ -725,8 +743,8 @@ static int sas_release(struct inode *inode, struct file *file)
 		writel(0x0, dev->base + UCR1);
 		writel(0x0, dev->base + UCR2);
 		devm_free_irq(&dev->pdev->dev, dev->irq, dev);
-		clk_disable(dev->clk_ipg);
-		clk_disable(dev->clk_per);
+		clk_disable_unprepare(dev->clk_ipg);
+		clk_disable_unprepare(dev->clk_per);
 	}
 
 	spin_unlock_irqrestore(&dev->lock, flags);
@@ -1021,15 +1039,6 @@ static int sas_probe(struct platform_device *pdev)
 		goto fail_cdevadd;
 	}
 
-	result = clk_prepare_enable(dev->clk_per);
-	if (result)
-		goto fail_cdevadd;
-	result = clk_prepare_enable(dev->clk_ipg);
-	if (result) {
-		clk_disable_unprepare(dev->clk_per);
-		goto fail_cdevadd;
-	}
-
 	spin_lock_init(&dev->lock);
 
 	dev->chrdev = device_create(sas_class, &platform_bus,
@@ -1082,8 +1091,6 @@ static int sas_remove(struct platform_device *pdev)
 	struct sas_dev *dev = platform_get_drvdata(pdev);
 	if (dev) {
 		sysfs_remove_group(&pdev->dev.kobj, &sas_attr_grp);
-		clk_disable_unprepare(dev->clk_per);
-		clk_disable_unprepare(dev->clk_ipg);
 		cdev_del(&dev->cdev);
 	}
 
