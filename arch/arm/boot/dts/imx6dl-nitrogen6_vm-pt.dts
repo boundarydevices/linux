@@ -23,9 +23,10 @@
 	sas: sas@021ec000 {
 		compatible = "boundary,sas";
 		reg = <0x021ec000 0x4000>;
-		interrupt-parent = <&intc>;
-		interrupts = <0 28 0x04>;
-		clocks = <&clks 160>, <&clks 161>;
+		interrupt-parent = <&gpc>;
+		interrupts = <0 28 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clks IMX6QDL_CLK_UART_IPG>,
+			 <&clks IMX6QDL_CLK_UART_SERIAL>;
 		clock-names = "ipg", "per";
 		status = "okay";
 		baud = <19200>;
