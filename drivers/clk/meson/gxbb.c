@@ -441,15 +441,25 @@ static struct meson_clk_mpll gxbb_mpll0 = {
 		.shift   = 0,
 		.width   = 14,
 	},
+	.sdm_en = {
+		.reg_off = HHI_MPLL_CNTL7,
+		.shift   = 15,
+		.width	 = 1,
+	},
 	.n2 = {
 		.reg_off = HHI_MPLL_CNTL7,
 		.shift   = 16,
 		.width   = 9,
 	},
+	.en = {
+		.reg_off = HHI_MPLL_CNTL7,
+		.shift   = 14,
+		.width	 = 1,
+	},
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "mpll0",
-		.ops = &meson_clk_mpll_ro_ops,
+		.ops = &meson_clk_mpll_ops,
 		.parent_names = (const char *[]){ "fixed_pll" },
 		.num_parents = 1,
 	},
@@ -461,15 +471,25 @@ static struct meson_clk_mpll gxbb_mpll1 = {
 		.shift   = 0,
 		.width   = 14,
 	},
+	.sdm_en = {
+		.reg_off = HHI_MPLL_CNTL8,
+		.shift   = 15,
+		.width	 = 1,
+	},
 	.n2 = {
 		.reg_off = HHI_MPLL_CNTL8,
 		.shift   = 16,
 		.width   = 9,
 	},
+	.en = {
+		.reg_off = HHI_MPLL_CNTL8,
+		.shift   = 14,
+		.width	 = 1,
+	},
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "mpll1",
-		.ops = &meson_clk_mpll_ro_ops,
+		.ops = &meson_clk_mpll_ops,
 		.parent_names = (const char *[]){ "fixed_pll" },
 		.num_parents = 1,
 	},
@@ -481,15 +501,25 @@ static struct meson_clk_mpll gxbb_mpll2 = {
 		.shift   = 0,
 		.width   = 14,
 	},
+	.sdm_en = {
+		.reg_off = HHI_MPLL_CNTL9,
+		.shift   = 15,
+		.width	 = 1,
+	},
 	.n2 = {
 		.reg_off = HHI_MPLL_CNTL9,
 		.shift   = 16,
 		.width   = 9,
 	},
+	.en = {
+		.reg_off = HHI_MPLL_CNTL9,
+		.shift   = 14,
+		.width	 = 1,
+	},
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "mpll2",
-		.ops = &meson_clk_mpll_ro_ops,
+		.ops = &meson_clk_mpll_ops,
 		.parent_names = (const char *[]){ "fixed_pll" },
 		.num_parents = 1,
 	},
@@ -601,6 +631,131 @@ static struct clk_gate gxbb_sar_adc_clk = {
 		.parent_names = (const char *[]){ "sar_adc_clk_div" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+/*
+ * The MALI IP is clocked by two identical clocks (mali_0 and mali_1)
+ * muxed by a glitch-free switch.
+ */
+
+static u32 mux_table_mali_0_1[] = {0, 1, 2, 3, 4, 5, 6, 7};
+static const char *gxbb_mali_0_1_parent_names[] = {
+	"xtal", "gp0_pll", "mpll2", "mpll1", "fclk_div7",
+	"fclk_div4", "fclk_div3", "fclk_div5"
+};
+
+static struct clk_mux gxbb_mali_0_sel = {
+	.reg = (void *)HHI_MALI_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.table = mux_table_mali_0_1,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mali_0_sel",
+		.ops = &clk_mux_ops,
+		/*
+		 * bits 10:9 selects from 8 possible parents:
+		 * xtal, gp0_pll, mpll2, mpll1, fclk_div7,
+		 * fclk_div4, fclk_div3, fclk_div5
+		 */
+		.parent_names = gxbb_mali_0_1_parent_names,
+		.num_parents = 8,
+		.flags = CLK_SET_RATE_NO_REPARENT,
+	},
+};
+
+static struct clk_divider gxbb_mali_0_div = {
+	.reg = (void *)HHI_MALI_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mali_0_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "mali_0_sel" },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_NO_REPARENT,
+	},
+};
+
+static struct clk_gate gxbb_mali_0 = {
+	.reg = (void *)HHI_MALI_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mali_0",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "mali_0_div" },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+static struct clk_mux gxbb_mali_1_sel = {
+	.reg = (void *)HHI_MALI_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 25,
+	.table = mux_table_mali_0_1,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mali_1_sel",
+		.ops = &clk_mux_ops,
+		/*
+		 * bits 10:9 selects from 8 possible parents:
+		 * xtal, gp0_pll, mpll2, mpll1, fclk_div7,
+		 * fclk_div4, fclk_div3, fclk_div5
+		 */
+		.parent_names = gxbb_mali_0_1_parent_names,
+		.num_parents = 8,
+		.flags = CLK_SET_RATE_NO_REPARENT,
+	},
+};
+
+static struct clk_divider gxbb_mali_1_div = {
+	.reg = (void *)HHI_MALI_CLK_CNTL,
+	.shift = 16,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mali_1_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "mali_1_sel" },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_NO_REPARENT,
+	},
+};
+
+static struct clk_gate gxbb_mali_1 = {
+	.reg = (void *)HHI_MALI_CLK_CNTL,
+	.bit_idx = 24,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mali_1",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "mali_1_div" },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+static u32 mux_table_mali[] = {0, 1};
+static const char *gxbb_mali_parent_names[] = {
+	"mali_0", "mali_1"
+};
+
+static struct clk_mux gxbb_mali = {
+	.reg = (void *)HHI_MALI_CLK_CNTL,
+	.mask = 1,
+	.shift = 31,
+	.table = mux_table_mali,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mali",
+		.ops = &clk_mux_ops,
+		.parent_names = gxbb_mali_parent_names,
+		.num_parents = 2,
+		.flags = CLK_SET_RATE_NO_REPARENT,
 	},
 };
 
@@ -797,6 +952,13 @@ static struct clk_hw_onecell_data gxbb_hw_onecell_data = {
 		[CLKID_SAR_ADC_CLK]	    = &gxbb_sar_adc_clk.hw,
 		[CLKID_SAR_ADC_SEL]	    = &gxbb_sar_adc_clk_sel.hw,
 		[CLKID_SAR_ADC_DIV]	    = &gxbb_sar_adc_clk_div.hw,
+		[CLKID_MALI_0_SEL]	    = &gxbb_mali_0_sel.hw,
+		[CLKID_MALI_0_DIV]	    = &gxbb_mali_0_div.hw,
+		[CLKID_MALI_0]		    = &gxbb_mali_0.hw,
+		[CLKID_MALI_1_SEL]	    = &gxbb_mali_1_sel.hw,
+		[CLKID_MALI_1_DIV]	    = &gxbb_mali_1_div.hw,
+		[CLKID_MALI_1]		    = &gxbb_mali_1.hw,
+		[CLKID_MALI]		    = &gxbb_mali.hw,
 	},
 	.num = NR_CLKS,
 };
@@ -816,7 +978,7 @@ static struct meson_clk_mpll *const gxbb_clk_mplls[] = {
 	&gxbb_mpll2,
 };
 
-static struct clk_gate *gxbb_clk_gates[] = {
+static struct clk_gate *const gxbb_clk_gates[] = {
 	&gxbb_clk81,
 	&gxbb_ddr,
 	&gxbb_dos,
@@ -900,6 +1062,23 @@ static struct clk_gate *gxbb_clk_gates[] = {
 	&gxbb_emmc_b,
 	&gxbb_emmc_c,
 	&gxbb_sar_adc_clk,
+	&gxbb_mali_0,
+	&gxbb_mali_1,
+};
+
+static struct clk_mux *const gxbb_clk_muxes[] = {
+	&gxbb_mpeg_clk_sel,
+	&gxbb_sar_adc_clk_sel,
+	&gxbb_mali_0_sel,
+	&gxbb_mali_1_sel,
+	&gxbb_mali,
+};
+
+static struct clk_divider *const gxbb_clk_dividers[] = {
+	&gxbb_mpeg_clk_div,
+	&gxbb_sar_adc_clk_div,
+	&gxbb_mali_0_div,
+	&gxbb_mali_1_div,
 };
 
 static int gxbb_clkc_probe(struct platform_device *pdev)
@@ -928,18 +1107,20 @@ static int gxbb_clkc_probe(struct platform_device *pdev)
 	/* Populate the base address for CPU clk */
 	gxbb_cpu_clk.base = clk_base;
 
-	/* Populate the base address for the MPEG clks */
-	gxbb_mpeg_clk_sel.reg = clk_base + (u64)gxbb_mpeg_clk_sel.reg;
-	gxbb_mpeg_clk_div.reg = clk_base + (u64)gxbb_mpeg_clk_div.reg;
-
-	/* Populate the base address for the SAR ADC clks */
-	gxbb_sar_adc_clk_sel.reg = clk_base + (u64)gxbb_sar_adc_clk_sel.reg;
-	gxbb_sar_adc_clk_div.reg = clk_base + (u64)gxbb_sar_adc_clk_div.reg;
-
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(gxbb_clk_gates); i++)
 		gxbb_clk_gates[i]->reg = clk_base +
 			(u64)gxbb_clk_gates[i]->reg;
+
+	/* Populate base address for muxes */
+	for (i = 0; i < ARRAY_SIZE(gxbb_clk_muxes); i++)
+		gxbb_clk_muxes[i]->reg = clk_base +
+			(u64)gxbb_clk_muxes[i]->reg;
+
+	/* Populate base address for dividers */
+	for (i = 0; i < ARRAY_SIZE(gxbb_clk_dividers); i++)
+		gxbb_clk_dividers[i]->reg = clk_base +
+			(u64)gxbb_clk_dividers[i]->reg;
 
 	/*
 	 * register all clks
