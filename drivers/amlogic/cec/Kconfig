@@ -1,9 +1,28 @@
-menu "AO CEC Support"
+menuconfig AMLOGIC_CEC
+	bool "AMLOGIC CEC Support"
+	depends on AMLOGIC_DRIVER
+	default n
+	help
+		HDMI cec driver provide cec support on Amlogic SOC chips,
+		you can use this driver to implement cec features on TV/MBOX
+
+choice
+	prompt "Amlogic cec chip driver select"
+	depends on AMLOGIC_CEC
+	default AMLOGIC_AO_CEC
 
 config AMLOGIC_AO_CEC
-	bool "HDMI AO cec driver support"
+	bool "HDMI AO cec driver support for gx/gxl/gxm/txl/txlx"
+	depends on AMLOGIC_CEC
 	help
-		HDMI AO cec driver provide cec support on Amlogic SOC chips, you can
-		use this driver to implement cec features on TV/MBOX
+		HDMI cec driver provide cec support for gx/gxl/gxm/txl/txlx chips
+		select if your chip belongs
 
-endmenu
+config AMLOGIC_M8B_CEC
+	bool "HDMI CEC driver support for m8/m8b"
+	depends on MACH_MESON8B && AMLOGIC_CEC
+	help
+		HDMI CEC driver support for m8/m8b chips
+		Select if your chip belongs
+
+endchoice	#AMLOGIC_CEC

@@ -527,6 +527,13 @@
 					function = "i2c_mst_ao";
 				};
 			};
+
+			hdmi_cec_1: hdmi_cec_1 {
+				mux {
+					groups = "hdmi_cec_1";
+					function = "hdmi_cec";
+				};
+			};
 		};
 dwc2_b {
 		compatible = "amlogic,dwc2";

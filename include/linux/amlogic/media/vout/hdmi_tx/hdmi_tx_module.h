@@ -489,7 +489,7 @@ extern void hdmitx_event_notify(unsigned long state, void *arg);
 #else
 static inline struct hdmitx_dev *get_hdmitx_device(void)
 {
-urn NULL;
+	return NULL;
 }
 static inline int get_hpd_state(void)
 {

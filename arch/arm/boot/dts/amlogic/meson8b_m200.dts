@@ -228,6 +228,22 @@
 			status = "okay";
 		};
 	};
+
+	aocec: aocec{
+		compatible = "amlogic, amlogic-aocec";
+		device_name = "aocec";
+		status = "okay";
+		vendor_id = <0x000000>;
+		cec_osd_string = "MBox"; /* Max Chars: 14    */
+		cec_version = <6>; /* 5: 1.4, 6: 2.0 */
+		port_num = <1>;
+		arc_port_mask = <0x0>;
+		interrupts = <0 151 1>;
+		interrupt-names = "hdmi_aocec";
+		pinctrl-names = "hdmi_cec_1";
+		pinctrl-0=<&hdmi_cec_1>;
+		reg = <0xc8100000 0x200>;
+	};
 };
 
 &uart_AO {
