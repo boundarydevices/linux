@@ -240,6 +240,10 @@ static const unsigned int uart_rts_b_pins[]	= { PIN(GPIODV_27, EE_OFF) };
 static const unsigned int i2c_sda_a_pins[]	= { PIN(GPIODV_24, EE_OFF) };
 static const unsigned int i2c_scl_a_pins[]	= { PIN(GPIODV_25, EE_OFF) };
 
+/*for dmic*/
+static const unsigned int pdm_in_pins[] = { PIN(GPIOZ_8, EE_OFF) };
+static const unsigned int pdm_clk_pins[] = { PIN(GPIOZ_9, EE_OFF)};
+
 static const unsigned int i2c_sda_b_pins[]	= { PIN(GPIODV_26, EE_OFF) };
 static const unsigned int i2c_scl_b_pins[]	= { PIN(GPIODV_27, EE_OFF) };
 
@@ -571,6 +575,9 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 
 	GROUP(i2c_sda_a,	1,	15), /*dv24*/
 	GROUP(i2c_scl_a,	1,	14), /*dv25*/
+
+	GROUP(pdm_in,		2,	7), /* dv24 */
+	GROUP(pdm_clk,		2,	6), /* dv25 */
 
 	GROUP(i2c_sda_b,	1,	13), /*dv26*/
 	GROUP(i2c_scl_b,	1,	12), /*dv27*/

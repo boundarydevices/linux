@@ -181,6 +181,7 @@ static struct clk_hw *pdm_hws[] = {
 
 /* cts_clk_i958 */
 const char *i958_parent_names[] = { "NULL", "mpll0", "mpll1", "mpll2"};
+const char *i958_ext_parent_names[] = {"amclk_composite", "i958_composite"};
 
 static struct clk_mux i958_mux = {
 	.reg = (void *)HHI_AUD_CLK_CNTL2,
@@ -219,6 +220,20 @@ static struct clk_gate i958_gate = {
 		.ops = &clk_gate_ops,
 		.parent_names = (const char *[]){ "i958_div" },
 		.num_parents = 1,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+
+static struct clk_mux i958_comp_spdif = {
+	.reg = (void *)HHI_AUD_CLK_CNTL2,
+	.mask = 0x1,
+	.shift = 27,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "i958_comp_spdif",
+		.ops = &clk_mux_ops,
+		.parent_names = i958_ext_parent_names,
+		.num_parents = 2,
 		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
 	},
 };
@@ -330,6 +345,9 @@ void amlogic_init_misc(void)
 	i958_div.reg = clk_base + (u64)(i958_div.reg);
 	i958_gate.reg = clk_base + (u64)(i958_gate.reg);
 
+	/*clk_i958 spdif*/
+	i958_comp_spdif.reg = clk_base + (u64)(i958_comp_spdif.reg);
+
 	/* cts_pclk_mclk */
 	pcm_mclk_mux.reg = clk_base + (u64)(pcm_mclk_mux.reg);
 	pcm_mclk_div.reg = clk_base + (u64)(pcm_mclk_div.reg);
@@ -409,6 +427,9 @@ void amlogic_init_misc(void)
 
 	clks[CLKID_PCM_SCLK_GATE] = clk_register(NULL, &pcm_sclk_gate.hw);
 	WARN_ON(IS_ERR(clks[CLKID_PCM_SCLK_GATE]));
+
+	clks[CLKID_I958_COMP_SPDIF] = clk_register(NULL, &i958_comp_spdif.hw);
+	WARN_ON(IS_ERR(clks[CLKID_I958_COMP_SPDIF]));
 
 	pr_info("%s: register meson misc clk\n", __func__);
 };

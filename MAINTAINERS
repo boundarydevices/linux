@@ -13663,6 +13663,7 @@ F: drivers/amlogic/mmc/emmc_key.c
 F: drivers/amlogic/mmc/emmc_key.h
 F: include/linux/amlogic/key_manage.h
 
+<<<<<<< HEAD
 AMLOGIC P400/P401 BSP
 M: Frank Chen <frank.chen@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p400_2g.dts
@@ -13675,10 +13676,6 @@ F: drivers/staging/android/logger.h
 
 AMLOGIC AMLVIDEO2 DRIVER
 M: Guosong Zhou <guosong.zhou@amlogic.com>
-F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
-F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
 F: arch/arm64/configs/meson64_defconfig
 F: drivers/amlogic/media/Kconfig
 F: drivers/amlogic/media/Makefile
@@ -13692,3 +13689,27 @@ F: include/linux/amlogic/media/v4l_util/*
 AMLOGIC M8b
 M: Jianxin Pan <jianxin.pan@amlogic.com>
 F: arch/arm/boot/dts/amlogic>
+
+ANLOGIC AUDIO
+M: Xing Wang <xing.wang@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
+F: arch/arm64/boot/dts/amlogic/mesongxl.dtsi
+F: arch/arm64/boot/dts/amlogic/mesongxm.dtsi
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/clk/clk-mpll.c
+F: drivers/amlogic/clk/clk_misc.c
+F: drivers/amlogic/clk/clkc.h
+F: drivers/amlogic/clk/gxl.c
+F: drivers/amlogic/media/vout/hdmitx/hdmi_tx_20/hdmi_tx_main.c
+F: drivers/amlogic/pinctrl/pinctrl_gxl.c
+F: include/dt-bindings/clock/amlogic,gxl-clkc.h
+F: include/linux/amlogic/media/sound/audin_regs.h
+F: sound/soc/Kconfig
+F: sound/soc/Makefile
+F: sound/soc/amlogic/*
+F: sound/soc/codecs/Kconfig
+F: sound/soc/codecs/Makefile
+F: sound/soc/codecs/amlogic/*

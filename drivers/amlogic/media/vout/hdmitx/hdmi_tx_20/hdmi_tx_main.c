@@ -53,7 +53,9 @@
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
-/* #include <linux/amlogic/sound/aout_notify.h> */
+#ifdef CONFIG_AMLOGIC_SND_SOC
+#include <linux/amlogic/media/sound/aout_notify.h>
+#endif
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_info_global.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ddc.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
@@ -2684,7 +2686,7 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_valid_mode);
 
 	vout_register_server(&hdmitx_server);
-#ifdef CONFIG_SND_SOC
+#ifdef CONFIG_AMLOGIC_SND_SOC
 	aout_register_client(&hdmitx_notifier_nb_a);
 #else
 	r = r ? (long int)&hdmitx_notifier_nb_a :
@@ -2803,7 +2805,7 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	hdmitx_device.hpd_event = 0xff;
 	kthread_stop(hdmitx_device.task);
 	vout_unregister_server(&hdmitx_server);
-#ifdef CONFIG_SND_SOC
+#ifdef CONFIG_AMLOGIC_SND_SOC
 	aout_unregister_client(&hdmitx_notifier_nb_a);
 #endif
 

@@ -1,0 +1,41 @@
+menuconfig AMLOGIC_SND_SOC_CODECS
+	bool "AMLOGIC CODEC drivers"
+	default n
+	help
+	  Say Y or M if you want to add support for codecs attached to
+	  the Amlogic Asoc interface. You will also need
+	  to select the audio interfaces to support below.
+
+#if AMLOGIC_SND_SOC_CODECS
+
+config AMLOGIC_SND_CODEC_DUMMY_CODEC
+	bool "Amlogic Audio dummy codec"
+	depends on AMLOGIC_SND_SOC_CODECS
+    default n
+	help
+		Amlogic Audio codec,
+		dummy codec,
+		dummy codec,
+		this codec is internal
+
+config AMLOGIC_SND_CODEC_PCM2BT
+	bool "Amlogic Audio pcm2bt codec"
+	depends on AMLOGIC_SND_SOC_CODECS
+    default n
+	help
+		Amlogic Audio codec,
+		pcm2bt codec,
+		pcm2bt codec,
+		this codec is internal
+
+config AMLOGIC_SND_CODEC_AMLT9015
+	bool "Amlogic Audio AMLT9015 codec"
+	depends on AMLOGIC_SND_SOC_CODECS
+    default n
+	help
+		Amlogic Audio codec,
+		AMLT9015 codec,
+		AMLT9015 codec,
+		this codec is internal
+
+#endif #AMLOGIC_SND_SOC_CODECS

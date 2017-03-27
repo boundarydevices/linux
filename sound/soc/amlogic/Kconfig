@@ -1,0 +1,27 @@
+menuconfig AMLOGIC_SND_SOC
+	bool "Amlogic Meson ASoC"
+	default n
+	help
+	  Say Y or M if you want to add support for codecs attached to
+	  the Amlogic Asoc interface. You will also need
+	  to select the audio interfaces to support below.
+
+if AMLOGIC_SND_SOC
+
+config AMLOGIC_SND_SPLIT_MODE
+	bool "AIU split mode, otherwise normal mode"
+	depends on AMLOGIC_SND_SOC
+	default n
+	help
+		Say 'Y' to enable AIU split mode. If not, it's normal mode.
+
+config AMLOGIC_SND_SPLIT_MODE_MMAP
+	bool "AIU split mode, mmap"
+	depends on AMLOGIC_SND_SPLIT_MODE
+	depends on AMLOGIC_SND_SOC
+	default n
+	help
+		Say 'Y' or 'N' to enable/disable AIU split mmap
+
+endif # AMLOGIC_SND_SOC
+

@@ -101,7 +101,7 @@ struct meson_clk_mpll {
 	struct parm n2;
 	/* FIXME ssen gate control? */
 	u8 sdm_en;
-	u8 en_dss;
+	u8 en_dds;
 	spinlock_t *lock;
 };
 

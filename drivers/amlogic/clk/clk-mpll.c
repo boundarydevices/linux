@@ -29,6 +29,8 @@
 /* #undef pr_debug */
 /* #define pr_debug pr_info */
 #define SDM_MAX 16384
+#define MAX_RATE	500000000
+#define MIN_RATE	5000000
 
 #define to_meson_clk_mpll(_hw) container_of(_hw, struct meson_clk_mpll, hw)
 
@@ -56,7 +58,14 @@ static unsigned long mpll_recalc_rate(struct clk_hw *hw,
 static long meson_clk_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 				     unsigned long *parent_rate)
 {
-	return rate;
+	unsigned long rate_val = rate;
+
+	if (rate_val < MIN_RATE)
+		rate = MIN_RATE;
+	if (rate_val > MAX_RATE)
+		rate = MAX_RATE;
+
+	return rate_val;
 }
 
 
@@ -69,9 +78,9 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long reg, old_sdm, old_n2, sdm, n2;
 	unsigned long flags = 0;
 
-	if ((rate > 500000000) || (rate < 250000000)) {
+	if ((rate > MAX_RATE) || (rate < MIN_RATE)) {
 		pr_err("Err: can not set rate to %lu!\n", rate);
-		pr_err("Range[250000000 - 500000000]\n");
+		pr_err("Range[5000000 - 500000000]\n");
 		return -1;
 	}
 
@@ -105,7 +114,7 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 		p = &mpll->n2;
 		reg = PARM_SET(p->width, p->shift, reg, n2);
 		reg = PARM_SET(1, mpll->sdm_en, reg, 1);
-		reg = PARM_SET(1, mpll->en_dss, reg, 1);
+		reg = PARM_SET(1, mpll->en_dds, reg, 1);
 		if (!strcmp(clk_hw_get_name(hw), "mpll3"))
 			/* MPLL_CNTL10 bit14 should be set together
 			 * with MPLL3_CNTL0 bit0

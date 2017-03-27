@@ -76,5 +76,8 @@ source "sound/soc/codecs/Kconfig"
 # generic frame-work
 source "sound/soc/generic/Kconfig"
 
+# for Amlogic Soc
+source "sound/soc/amlogic/Kconfig"
+
 endif	# SND_SOC
 

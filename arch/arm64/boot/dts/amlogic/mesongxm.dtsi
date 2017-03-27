@@ -876,7 +876,7 @@
 			};
 		};
 
-		audio_pins:audio_pin {
+		audio_i2s_pins:audio_i2s {
 			mux {
 				groups = "i2s_am_clk",
 					"i2s_ao_clk_out",
@@ -886,14 +886,14 @@
 			};
 		};
 
-		audio_spdif_pins:audio_pin1 {
+		audio_spdif_pins:audio_spdif {
 			mux {
 				groups = "spdif_out";
 				function = "spdif_out";
 			};
 		};
 
-		audio_btpcm_pins:audio_btpcm_pins {
+		audio_pcm_pins:audio_pcm {
 			mux {
 				groups = "pcm_out_a",
 					"pcm_in_a",
@@ -902,6 +902,14 @@
 				function = "pcm_a";
 			};
 		};
+		aml_dmic_pins:audio_dmic {
+			mux {
+				groups = "pdm_in",
+						"pdm_clk";
+				function = "pdm";
+			};
+		};
+
 	}; /* end of pinctrl_periphs */
 }; /* end of periphs */
 
