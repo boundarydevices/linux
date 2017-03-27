@@ -1229,6 +1229,19 @@ static struct hdmi_format_para fmt_para_non_hdmi_fmt = {
 	.vic = HDMI_Unknown,
 	.name = "invalid",
 	.sname = "invalid",
+	.hdmitx_vinfo = {
+		.name              = "invalid",
+		.mode              = VMODE_MAX,
+		.width             = 1920,
+		.height            = 1080,
+		.field_height      = 1080,
+		.aspect_ratio_num  = 16,
+		.aspect_ratio_den  = 9,
+		.sync_duration_num = 60,
+		.sync_duration_den = 1,
+		.video_clk         = 148500000,
+		.viu_color_fmt     = COLOR_FMT_YUV444,
+	},
 };
 
 /* null mode is used for HDMI, such as current mode is 1080p24hz
@@ -1489,12 +1502,14 @@ struct vinfo_s *hdmi_get_valid_vinfo(char *mode)
 
 	/* the string of mode contains char NF */
 	memset(mode_, 0, sizeof(mode_));
-	strncpy(mode_, mode, sizeof(mode_));
+	strncpy(mode_, mode, strlen(mode));
 	for (i = 0; i < sizeof(mode_); i++)
 		if (mode_[i] == 10)
 			mode_[i] = 0;
 
 	for (i = 0; all_fmt_paras[i]; i++) {
+		if (all_fmt_paras[i]->hdmitx_vinfo.mode == VMODE_MAX)
+			continue;
 		if (strncmp(all_fmt_paras[i]->hdmitx_vinfo.name, mode_,
 			strlen(mode_)) == 0) {
 			info = &all_fmt_paras[i]->hdmitx_vinfo;
