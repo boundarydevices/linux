@@ -71,6 +71,8 @@
 #define HHI_GP0_PLL_CNTL2		0x44 /* 0x11 offset in data sheet */
 #define HHI_GP0_PLL_CNTL3		0x48 /* 0x12 offset in data sheet */
 #define HHI_GP0_PLL_CNTL4		0x4c /* 0x13 offset in data sheet */
+#define	HHI_GP0_PLL_CNTL5		0x50 /* 0x14 offset in data sheet */
+#define	HHI_GP0_PLL_CNTL1		0x58 /* 0x16 offset in data sheet */
 
 #define HHI_XTAL_DIVN_CNTL		0xbc /* 0x2f offset in data sheet */
 #define HHI_TIMER90K			0xec /* 0x3b offset in data sheet */
@@ -177,7 +179,7 @@
 /* CLKID_FCLK_DIV4 */
 #define CLKID_FCLK_DIV5		  7
 #define CLKID_FCLK_DIV7		  8
-#define CLKID_GP0_PLL		  9
+/* CLKID_GP0_PLL */
 #define CLKID_MPEG_SEL		  10
 #define CLKID_MPEG_DIV		  11
 /* CLKID_CLK81 */
