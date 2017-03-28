@@ -913,6 +913,232 @@ static u32 xhci_get_port_status(struct usb_hcd *hcd,
 	return status;
 }
 
+#ifdef CONFIG_AMLOGIC_USB
+static void xhci_port_set_test_mode(struct xhci_hcd *xhci,
+	u16 test_mode, u16 wIndex)
+{
+	u32 temp;
+	__le32 __iomem **port_array;
+
+	port_array = xhci->usb2_ports;
+	temp = readl(port_array[wIndex] + PORTPMSC);
+	temp &= ~(0xf << PORT_TEST_MODE_SHIFT);
+	temp |= test_mode << PORT_TEST_MODE_SHIFT;
+	writel(temp, port_array[wIndex] + PORTPMSC);
+	xhci->test_mode = test_mode;
+	if (test_mode == TEST_FORCE_EN)
+		xhci_start(xhci);
+}
+
+int xhci_disable_slot(struct xhci_hcd *xhci, struct xhci_command *command,
+			u32 slot_id)
+{
+	u32 state;
+	int ret = 0;
+	struct xhci_virt_device *virt_dev;
+
+	virt_dev = xhci->devs[slot_id];
+	if (!virt_dev)
+		return -EINVAL;
+	if (!command)
+		command = xhci_alloc_command(xhci, false, false, GFP_KERNEL);
+	if (!command)
+		return -ENOMEM;
+
+	/* Don't disable the slot if the host controller is dead. */
+	state = readl(&xhci->op_regs->status);
+	if (state == 0xffffffff || (xhci->xhc_state & XHCI_STATE_DYING) ||
+			(xhci->xhc_state & XHCI_STATE_HALTED)) {
+		xhci_free_virt_device(xhci, slot_id);
+		xhci_free_command(xhci, command);
+
+		return ret;
+	}
+
+	ret = xhci_queue_slot_control(xhci, command, TRB_DISABLE_SLOT,
+				slot_id);
+	if (ret) {
+		xhci_err(xhci, "FIXME: allocate a command ring segment\n");
+
+		return ret;
+	}
+	xhci_ring_cmd_db(xhci);
+
+	return ret;
+}
+
+/*
+ * xhci_set_port_power() must be called with xhci->lock held.
+ * It will release and re-aquire the lock while calling ACPI
+ * method.
+ */
+static void xhci_set_port_power(struct xhci_hcd *xhci,
+	 struct usb_hcd *hcd, u16 index, bool on)
+{
+	__le32 __iomem **port_array;
+	u32 temp;
+	unsigned long flags = 0;
+
+	port_array = xhci->usb2_ports;
+	temp = readl(port_array[index]);
+	if (on) {
+		/* Power on */
+		writel(temp | PORT_POWER, port_array[index]);
+		temp = readl(port_array[index]);
+		xhci_err(xhci, "set port power, actual port %d status  = 0x%x\n",
+						index, temp);
+	} else {
+		/* Power off */
+		writel(temp & ~PORT_POWER, port_array[index]);
+	}
+
+	spin_unlock_irqrestore(&xhci->lock, flags);
+	temp = usb_acpi_power_manageable(hcd->self.root_hub,
+					index);
+	if (temp)
+		usb_acpi_set_power_state(hcd->self.root_hub,
+			index, on);
+	spin_lock_irqsave(&xhci->lock, flags);
+}
+
+
+static int xhci_enter_test_mode(struct xhci_hcd *xhci,
+				u16 test_mode, u16 wIndex)
+{
+	int i, retval;
+
+	/* Disable all Device Slots */
+	xhci_err(xhci, "Disable all slots\n");
+	for (i = 1; i <= HCS_MAX_SLOTS(xhci->hcs_params1); i++) {
+		retval = xhci_disable_slot(xhci, NULL, i);
+		if (retval)
+			xhci_err(xhci, "Failed to disable slot %d, %d.\n",
+				 i, retval);
+	}
+	/* Put all ports to the Disable state by clear PP */
+	xhci_err(xhci, "Disable all port (PP = 0)\n");
+	/* Power off USB3 ports*/
+	for (i = 0; i < xhci->num_usb3_ports; i++)
+		xhci_set_port_power(xhci, xhci->shared_hcd, i, false);
+	/* Power off USB2 ports*/
+	for (i = 0; i < xhci->num_usb2_ports; i++)
+		xhci_set_port_power(xhci, xhci->main_hcd, i, false);
+	/* Stop the controller */
+	xhci_err(xhci, "Stop controller\n");
+	retval = xhci_halt(xhci);
+	if (retval)
+		return retval;
+	/* Disable runtime PM for test mode */
+	pm_runtime_forbid(xhci_to_hcd(xhci)->self.controller);
+	/* Set PORTPMSC.PTC field to enter selected test mode */
+	/* Port is selected by wIndex. port_id = wIndex + 1 */
+	xhci_err(xhci, "Enter Test Mode: %d, Port_id=%d\n",
+					test_mode, wIndex + 1);
+	xhci_port_set_test_mode(xhci, test_mode, wIndex);
+	return retval;
+}
+
+static int xhci_exit_test_mode(struct xhci_hcd *xhci)
+{
+	int retval;
+
+	if (!xhci->test_mode) {
+		xhci_err(xhci, "Not in test mode, do nothing.\n");
+		return 0;
+	}
+	if (xhci->test_mode == TEST_FORCE_EN &&
+		!(xhci->xhc_state & XHCI_STATE_HALTED)) {
+		retval = xhci_halt(xhci);
+		if (retval)
+			return retval;
+	}
+	pm_runtime_allow(xhci_to_hcd(xhci)->self.controller);
+	xhci->test_mode = 0;
+	return xhci_reset(xhci);
+}
+
+static int xhci_test_suspend_resume(struct usb_hcd *hcd,
+				u16 wIndex)
+{
+	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
+	unsigned long flags = 0;
+	u32 temp;
+	int slot_id;
+	__le32 __iomem **port_array = xhci->usb2_ports;
+
+	/* 15 second delay per the test spec */
+	spin_unlock_irqrestore(&xhci->lock, flags);
+	xhci_err(xhci, "into suspend\n");
+	spin_lock_irqsave(&xhci->lock, flags);
+
+	/*suspend*/
+	temp = readl(port_array[wIndex]);
+	if ((temp & PORT_PLS_MASK) != XDEV_U0) {
+		/* Resume the port to U0 first */
+		xhci_set_link_state(xhci, port_array, wIndex,
+			XDEV_U0);
+		spin_unlock_irqrestore(&xhci->lock, flags);
+		usleep_range(10000-1, 10000);
+		spin_lock_irqsave(&xhci->lock, flags);
+	}
+	/* In spec software should not attempt to suspend
+	 * a port unless the port reports that it is in the
+	 * enabled (PED = ‘1’,PLS < ‘3’) state.
+	 */
+	temp = readl(port_array[wIndex]);
+	if ((temp & PORT_PE) == 0 || (temp & PORT_RESET)
+		|| (temp & PORT_PLS_MASK) >= XDEV_U3) {
+		xhci_warn(xhci, "USB core suspending device not in U0/U1/U2.\n");
+		return -1;
+	}
+
+	slot_id = xhci_find_slot_id_by_port(hcd, xhci,
+			wIndex + 1);
+	if (!slot_id) {
+		xhci_warn(xhci, "slot_id is zero\n");
+		return -1;
+	}
+	/* unlock to execute stop endpoint commands */
+	spin_unlock_irqrestore(&xhci->lock, flags);
+	xhci_stop_device(xhci, slot_id, 1);
+	spin_lock_irqsave(&xhci->lock, flags);
+
+	xhci_set_link_state(xhci, port_array, wIndex, XDEV_U3);
+
+	spin_unlock_irqrestore(&xhci->lock, flags);
+	usleep_range(10000-1, 10000); /* wait device to enter */
+	spin_lock_irqsave(&xhci->lock, flags);
+
+	/* 15 second delay per the test spec */
+	spin_unlock_irqrestore(&xhci->lock, flags);
+	xhci_err(xhci, "wait 15s\n");
+	msleep(15000);
+	xhci_err(xhci, "into resume\n");
+	spin_lock_irqsave(&xhci->lock, flags);
+
+	temp = readl(port_array[wIndex]);
+	xhci_dbg(xhci, "clear USB_PORT_FEAT_SUSPEND\n");
+	xhci_dbg(xhci, "PORTSC %04x\n", temp);
+	if (temp & PORT_RESET)
+		return -1;
+	if ((temp & PORT_PLS_MASK) == XDEV_U3) {
+		if ((temp & PORT_PE) == 0)
+			return -1;
+
+		xhci_set_link_state(xhci, port_array, wIndex,
+			XDEV_RESUME);
+		spin_unlock_irqrestore(&xhci->lock, flags);
+		msleep(20);
+		spin_lock_irqsave(&xhci->lock, flags);
+		xhci_set_link_state(xhci, port_array, wIndex,
+			XDEV_U0);
+	}
+
+	xhci_ring_device(xhci, slot_id);
+	return 0;
+}
+#endif
+
 int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 		u16 wIndex, char *buf, u16 wLength)
 {
@@ -927,11 +1153,15 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 	u16 link_state = 0;
 	u16 wake_mask = 0;
 	u16 timeout = 0;
+#ifdef CONFIG_AMLOGIC_USB
+	u16 test_mode = 0;
+#endif
 
 	max_ports = xhci_get_ports(hcd, &port_array);
 	bus_state = &xhci->bus_state[hcd_index(hcd)];
 
 	spin_lock_irqsave(&xhci->lock, flags);
+
 	switch (typeReq) {
 	case GetHubStatus:
 		/* No power source, over-current reported per port */
@@ -1000,6 +1230,10 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			link_state = (wIndex & 0xff00) >> 3;
 		if (wValue == USB_PORT_FEAT_REMOTE_WAKE_MASK)
 			wake_mask = wIndex & 0xff00;
+#ifdef CONFIG_AMLOGIC_USB
+		if (wValue == USB_PORT_FEAT_TEST)
+			test_mode = (wIndex & 0xff00) >> 8;
+#endif
 		/* The MSB of wIndex is the U1/U2 timeout */
 		timeout = (wIndex & 0xff00) >> 8;
 		wIndex &= 0xff;
@@ -1175,6 +1409,23 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			temp |= PORT_U2_TIMEOUT(timeout);
 			writel(temp, port_array[wIndex] + PORTPMSC);
 			break;
+#ifdef CONFIG_AMLOGIC_USB
+		case USB_PORT_FEAT_TEST:
+			/* 4.19.6 Port Test Modes (USB2 Test Mode) */
+			if (hcd->speed != HCD_USB2)
+				goto error;
+			if (test_mode > 6 || test_mode < 1)
+				goto error;
+
+			if ((test_mode >= 1) && (test_mode <= 5))
+				retval = xhci_enter_test_mode(xhci,
+				test_mode, wIndex);
+			else if (test_mode == 6)
+				retval = xhci_test_suspend_resume(hcd, wIndex);
+			else
+				retval = 0;
+			break;
+#endif
 		default:
 			goto error;
 		}
@@ -1250,6 +1501,11 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 						wIndex, false);
 			spin_lock_irqsave(&xhci->lock, flags);
 			break;
+#ifdef CONFIG_AMLOGIC_USB
+		case USB_PORT_FEAT_TEST:
+			retval = xhci_exit_test_mode(xhci);
+			break;
+#endif
 		default:
 			goto error;
 		}

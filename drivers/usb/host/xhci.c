@@ -125,7 +125,7 @@ int xhci_halt(struct xhci_hcd *xhci)
 /*
  * Set the run bit and wait for the host to be running.
  */
-static int xhci_start(struct xhci_hcd *xhci)
+int xhci_start(struct xhci_hcd *xhci)
 {
 	u32 temp;
 	int ret;
@@ -1339,7 +1339,9 @@ int xhci_urb_enqueue(struct usb_hcd *hcd, struct urb *urb, gfp_t mem_flags)
 	unsigned int slot_id, ep_index;
 	struct urb_priv	*urb_priv;
 	int size, i;
-
+#ifdef CONFIG_AMLOGIC_USB
+	struct usb_ctrlrequest *setup;
+#endif
 	if (!urb || xhci_check_args(hcd, urb->dev, urb->ep,
 					true, true, __func__) <= 0)
 		return -EINVAL;
@@ -1404,6 +1406,25 @@ int xhci_urb_enqueue(struct usb_hcd *hcd, struct urb *urb, gfp_t mem_flags)
 		spin_lock_irqsave(&xhci->lock, flags);
 		if (xhci->xhc_state & XHCI_STATE_DYING)
 			goto dying;
+
+#ifdef CONFIG_AMLOGIC_USB
+		setup = (struct usb_ctrlrequest *) urb->setup_packet;
+		if ((setup->bRequestType == 0x80) && (setup->bRequest == 0x06)
+			&& (setup->wValue == 0x0100)
+			&& (setup->wIndex != 0x0)) {
+			if ((((setup->wIndex)>>8) & 0xff) == 7) {
+				setup->wIndex = 0;
+				ret = xhci_test_single_step(xhci,
+					GFP_ATOMIC, urb,
+					slot_id, ep_index, 1);
+			} else if ((((setup->wIndex)>>8)&0xff) == 8) {
+				setup->wIndex = 0;
+				ret = xhci_test_single_step(xhci,
+					GFP_ATOMIC, urb,
+					slot_id, ep_index, 2);
+			}
+		} else
+#endif
 		ret = xhci_queue_ctrl_tx(xhci, GFP_ATOMIC, urb,
 				slot_id, ep_index);
 		if (ret)
