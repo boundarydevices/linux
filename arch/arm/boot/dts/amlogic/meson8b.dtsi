@@ -223,5 +223,62 @@
 				};
 			};
 		};
+dwc2_b {
+		compatible = "amlogic,dwc2";
+		device_name = "dwc2_b";
+		reg = <0xC90C0000 0x40000>;
+		interrupts = <0 31 4>;
+		status = "okay";
+		pl-periph-id = <1>; /** lm name */
+		clock-src = "usb1"; /** clock src */
+		port-id = <1>;   /** ref to mach/usb.h */
+		port-type = <1>;	/** 0: otg, 1: host, 2: slave */
+		port-speed = <0>; /** 0: default, 1: high, 2: full */
+		port-config = <0>; /** 0: default */
+		port-dma = <0>; /** 0: default, 1: single, 2: incr, 3: incr4, 4: incr8, 5: incr16, 6: disable*/
+		port-id-mode = <1>; /** 0: hardware, 1: sw_host, 2: sw_slave*/
+		phy-reg = <0xc1108820>;
+		phy-reg-size = <0x20>;
+		usb-fifo = <1024>;
+		host-only-core = <1>;
+		pmu-apply-power = <1>;
+		cpu-type = "meson8";
+		clocks = <&clkc CLKID_USB
+					&clkc CLKID_USB1_DDR_BRIDGE
+					&clkc CLKID_USB1>;
+		clock-names = "usb_general",
+						"usb1_to_ddr",
+						"usb1";
+	};
+
+	dwc2_a {
+		compatible = "amlogic,dwc2";
+		device_name = "dwc2_a";
+		reg = <0xC9040000 0x40000>;
+		interrupts = <0 30 4>;
+		status = "okay";
+		pl-periph-id = <0>; /** lm name */
+		clock-src = "usb0"; /** clock src */
+		port-id = <0>;  /** ref to mach/usb.h */
+		port-type = <0>;	/** 0: otg, 1: host, 2: slave */
+		port-speed = <0>; /** 0: default, high, 1: full */
+		port-config = <0>; /** 0: default */
+		port-dma = <0>; /** 0: default, 1: single, 2: incr, 3: incr4, 4: incr8, 5: incr16, 6: disable*/
+		port-id-mode = <0>; /** 0: hardware, 1: sw_host, 2: sw_slave*/
+		gpio-vbus-power = "GPIODV_24";
+		gpios = <&gpio       GPIODV_24       0>;
+		gpio-work-mask	= <1>; /**0: work on pulldown,1:work on pullup*/
+		phy-reg = <0xc1108800>;
+		phy-reg-size = <0x20>;
+		usb-fifo = <1024>;
+		cpu-type = "meson8";
+		clocks = <&clkc CLKID_USB
+			&clkc CLKID_USB0_DDR_BRIDGE
+			&clkc CLKID_USB0>;
+		clock-names = "usb_general",
+						"usb0_to_ddr",
+						"usb0";
+	};
+
 	};
 }; /* end of / */

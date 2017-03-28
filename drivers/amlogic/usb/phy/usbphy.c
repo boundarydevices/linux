@@ -36,6 +36,8 @@
 #include <linux/amlogic/usb-gxbb.h>
 #include <linux/amlogic/usb-gxbbtv.h>
 #include <linux/amlogic/cpu_version.h>
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 
 /*
  * M chip USB clock setting
@@ -43,9 +45,9 @@
 static int init_count;
 
 struct clk_reset {
-	struct reset_control *usb_reset_usb_general;
-	struct reset_control *usb_reset_usb;
-	struct reset_control *usb_reset_usb_to_ddr;
+	struct clk *usb_reset_usb_general;
+	struct clk *usb_reset_usb;
+	struct clk *usb_reset_usb_to_ddr;
 };
 
 struct clk_reset p_clk_reset[4];
@@ -81,7 +83,7 @@ int clk_enable_usb_meson8(struct platform_device *pdev,
 	int clk_sel, clk_div, clk_src;
 	int time_dly = 500;
 	int i = 0;
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	if (!init_count) {
 		init_count++;
@@ -93,29 +95,27 @@ int clk_enable_usb_meson8(struct platform_device *pdev,
 	clk_name = s_clock_name;
 
 	if (!strcmp(clk_name, "usb0")) {
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb_general");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb_general");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb0");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb0");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb0_to_ddr");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb0_to_ddr");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
-
 		peri = (usb_peri_reg_t *)usb_peri_reg;
 		port_idx = USB_PORT_IDX_A;
 	} else if (!strcmp(clk_name, "usb1")) {
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb_general");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb_general");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb1");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb1");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb1_to_ddr");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb1_to_ddr");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
-
 		peri = (usb_peri_reg_t *)usb_peri_reg;
 		port_idx = USB_PORT_IDX_B;
 	} else {
@@ -175,24 +175,24 @@ int clk_resume_usb_meson8(struct platform_device *pdev,
 			unsigned long usb_peri_reg)
 {
 	const char *clk_name;
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	clk_name = s_clock_name;
 
 	if (0 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 	} else if (1 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 	} else {
 		dev_err(&pdev->dev, "bad usb clk name: %s\n", clk_name);
 		return -1;
@@ -217,7 +217,7 @@ int clk_enable_usb_gxbaby(struct platform_device *pdev,
 	int clk_sel, clk_div, clk_src;
 	int time_dly = 500;
 	int i = 0;
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	if (!init_count) {
 		init_count++;
@@ -229,27 +229,27 @@ int clk_enable_usb_gxbaby(struct platform_device *pdev,
 	clk_name = s_clock_name;
 
 	if (!strcmp(clk_name, "usb0")) {
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb_general");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb_general");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb0");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb0");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb0_to_ddr");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb0_to_ddr");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
 
 		peri = (usb_peri_reg_t *)usb_peri_reg;
 		port_idx = USB_PORT_IDX_A;
 	} else if (!strcmp(clk_name, "usb1")) {
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb_general");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb_general");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb1");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb1");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb = usb_reset;
-		usb_reset = devm_reset_control_get(&pdev->dev, "usb1_to_ddr");
-		reset_control_deassert(usb_reset);
+		usb_reset = devm_clk_get(&pdev->dev, "usb1_to_ddr");
+		clk_prepare_enable(usb_reset);
 		p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
 
 		peri = (usb_peri_reg_t *)usb_peri_reg;
@@ -305,22 +305,22 @@ void clk_disable_usb_gxbaby(struct platform_device *pdev,
 				const char *s_clock_name,
 				unsigned long usb_peri_reg)
 {
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	if (0 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_assert(usb_reset);
+		clk_disable_unprepare(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_assert(usb_reset);
+		clk_disable_unprepare(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_assert(usb_reset);
+		clk_disable_unprepare(usb_reset);
 	} else if (1 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_assert(usb_reset);
+		clk_disable_unprepare(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_assert(usb_reset);
+		clk_disable_unprepare(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_assert(usb_reset);
+		clk_disable_unprepare(usb_reset);
 	} else {
 		dev_err(&pdev->dev, "bad usb clk name.\n");
 		return;
@@ -374,15 +374,15 @@ int clk_enable_usb_gxbabytv(struct platform_device *pdev,
 			const char *s_clock_name, unsigned long usb_peri_reg,
 			int controller_type)
 {
-	struct reset_control *usb_reset;
-	usb_reset = devm_reset_control_get(&pdev->dev, "usb_general");
-	reset_control_deassert(usb_reset);
+	struct clk *usb_reset;
+	usb_reset = devm_clk_get(&pdev->dev, "usb_general");
+	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-	usb_reset = devm_reset_control_get(&pdev->dev, "usb1");
-	reset_control_deassert(usb_reset);
+	usb_reset = devm_clk_get(&pdev->dev, "usb1");
+	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb = usb_reset;
-	usb_reset = devm_reset_control_get(&pdev->dev, "usb1_to_ddr");
-	reset_control_deassert(usb_reset);
+	usb_reset = devm_clk_get(&pdev->dev, "usb1_to_ddr");
+	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
 	set_device_mode(pdev, usb_peri_reg, controller_type);
 	return 0;
@@ -393,16 +393,16 @@ int clk_enable_usb_gxl(struct platform_device *pdev,
 			const char *s_clock_name, unsigned long usb_peri_reg,
 			int controller_type)
 {
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
-	usb_reset = devm_reset_control_get(&pdev->dev, "usb_general");
-	reset_control_deassert(usb_reset);
+	usb_reset = devm_clk_get(&pdev->dev, "usb_general");
+	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-	usb_reset = devm_reset_control_get(&pdev->dev, "usb1");
-	reset_control_deassert(usb_reset);
+	usb_reset = devm_clk_get(&pdev->dev, "usb1");
+	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb = usb_reset;
-	usb_reset = devm_reset_control_get(&pdev->dev, "usb1_to_ddr");
-	reset_control_deassert(usb_reset);
+	usb_reset = devm_clk_get(&pdev->dev, "usb1_to_ddr");
+	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
 	set_device_mode(pdev, usb_peri_reg, controller_type);
 	return 0;
@@ -413,14 +413,14 @@ void clk_disable_usb_gxbabytv(struct platform_device *pdev,
 				const char *s_clock_name,
 				unsigned long usb_peri_reg)
 {
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-	reset_control_assert(usb_reset);
+	clk_disable_unprepare(usb_reset);
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-	reset_control_assert(usb_reset);
+	clk_disable_unprepare(usb_reset);
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-	reset_control_assert(usb_reset);
+	clk_disable_unprepare(usb_reset);
 	return;
 }
 
@@ -428,14 +428,14 @@ void clk_disable_usb_gxl(struct platform_device *pdev,
 				const char *s_clock_name,
 				unsigned long usb_peri_reg)
 {
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-	reset_control_assert(usb_reset);
+	clk_disable_unprepare(usb_reset);
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-	reset_control_assert(usb_reset);
+	clk_disable_unprepare(usb_reset);
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-	reset_control_assert(usb_reset);
+	clk_disable_unprepare(usb_reset);
 	return;
 }
 
@@ -443,22 +443,22 @@ int clk_resume_usb_gxbaby(struct platform_device *pdev,
 			const char *s_clock_name,
 			unsigned long usb_peri_reg)
 {
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	if (0 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 	} else if (1 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 	} else {
 		dev_err(&pdev->dev, "bad usb clk name.\n");
 		return -1;
@@ -473,22 +473,22 @@ int clk_resume_usb_gxl(struct platform_device *pdev,
 			const char *s_clock_name,
 			unsigned long usb_peri_reg)
 {
-	struct reset_control *usb_reset;
+	struct clk *usb_reset;
 
 	if (0 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 	} else if (1 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
-		reset_control_deassert(usb_reset);
+		clk_prepare_enable(usb_reset);
 	} else {
 		dev_err(&pdev->dev, "bad usb clk name.\n");
 		return -1;
