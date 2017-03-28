@@ -3472,12 +3472,8 @@ static int ov5640_probe(struct i2c_client *client,
 	/* Set initial values for the sensor struct. */
 	memset(&ov5640_data, 0, sizeof(ov5640_data));
 	ov5640_data.sensor_clk = devm_clk_get(dev, "csi_mclk");
-	if (IS_ERR(ov5640_data.sensor_clk)) {
-		/* assuming clock enabled by default */
-		ov5640_data.sensor_clk = NULL;
-		dev_err(dev, "clock-frequency missing or invalid\n");
-		return PTR_ERR(ov5640_data.sensor_clk);
-	}
+	if (IS_ERR(ov5640_data.sensor_clk))
+		return -EPROBE_DEFER;
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
 					&(ov5640_data.mclk));
