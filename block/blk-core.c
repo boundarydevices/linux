@@ -500,6 +500,13 @@ void blk_set_queue_dying(struct request_queue *q)
 	queue_flag_set(QUEUE_FLAG_DYING, q);
 	spin_unlock_irq(q->queue_lock);
 
+	/*
+	 * When queue DYING flag is set, we need to block new req
+	 * entering queue, so we call blk_freeze_queue_start() to
+	 * prevent I/O from crossing blk_queue_enter().
+	 */
+	blk_freeze_queue_start(q);
+
 	if (q->mq_ops)
 		blk_mq_wake_waiters(q);
 	else {
@@ -668,6 +675,15 @@ int blk_queue_enter(struct request_queue *q, bool nowait)
 
 		if (nowait)
 			return -EBUSY;
+
+		/*
+		 * read pair of barrier in blk_freeze_queue_start(),
+		 * we need to order reading __PERCPU_REF_DEAD flag of
+		 * .q_usage_counter and reading .mq_freeze_depth or
+		 * queue dying flag, otherwise the following wait may
+		 * never return if the two reads are reordered.
+		 */
+		smp_rmb();
 
 		ret = wait_event_interruptible(q->mq_freeze_wq,
 				!atomic_read(&q->mq_freeze_depth) ||

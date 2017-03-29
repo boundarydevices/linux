@@ -68,7 +68,7 @@ static void blk_mq_hctx_clear_pending(struct blk_mq_hw_ctx *hctx,
 	sbitmap_clear_bit(&hctx->ctx_map, ctx->index_hw);
 }
 
-void blk_mq_freeze_queue_start(struct request_queue *q)
+void blk_freeze_queue_start(struct request_queue *q)
 {
 	int freeze_depth;
 
@@ -78,7 +78,7 @@ void blk_mq_freeze_queue_start(struct request_queue *q)
 		blk_mq_run_hw_queues(q, false);
 	}
 }
-EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
+EXPORT_SYMBOL_GPL(blk_freeze_queue_start);
 
 void blk_mq_freeze_queue_wait(struct request_queue *q)
 {
@@ -108,7 +108,7 @@ void blk_freeze_queue(struct request_queue *q)
 	 * no blk_unfreeze_queue(), and blk_freeze_queue() is not
 	 * exported to drivers as the only user for unfreeze is blk_mq.
 	 */
-	blk_mq_freeze_queue_start(q);
+	blk_freeze_queue_start(q);
 	blk_mq_freeze_queue_wait(q);
 }
 
@@ -523,6 +523,15 @@ void blk_mq_start_request(struct request *rq)
 }
 EXPORT_SYMBOL(blk_mq_start_request);
 
+/*
+ * When we reach here because queue is busy, REQ_ATOM_COMPLETE
+ * flag isn't set yet, so there may be race with timeout hanlder,
+ * but given rq->deadline is just set in .queue_rq() under
+ * this situation, the race won't be possible in reality because
+ * rq->timeout should be set as big enough to cover the window
+ * between blk_mq_start_request() called from .queue_rq() and
+ * clearing REQ_ATOM_STARTED here.
+ */
 static void __blk_mq_requeue_request(struct request *rq)
 {
 	struct request_queue *q = rq->q;
@@ -696,6 +705,19 @@ static void blk_mq_check_expired(struct blk_mq_hw_ctx *hctx,
 	if (!test_bit(REQ_ATOM_STARTED, &rq->atomic_flags))
 		return;
 
+	/*
+	 * The rq being checked may have been freed and reallocated
+	 * out already here, we avoid this race by checking rq->deadline
+	 * and REQ_ATOM_COMPLETE flag together:
+	 *
+	 * - if rq->deadline is observed as new value because of
+	 *   reusing, the rq won't be timed out because of timing.
+	 * - if rq->deadline is observed as previous value,
+	 *   REQ_ATOM_COMPLETE flag won't be cleared in reuse path
+	 *   because we put a barrier between setting rq->deadline
+	 *   and clearing the flag in blk_mq_start_request(), so
+	 *   this rq won't be timed out too.
+	 */
 	if (time_after_eq(jiffies, rq->deadline)) {
 		if (!blk_mark_rq_complete(rq))
 			blk_mq_rq_timed_out(rq, reserved);
@@ -724,7 +746,7 @@ static void blk_mq_timeout_work(struct work_struct *work)
 	 * percpu_ref_tryget directly, because we need to be able to
 	 * obtain a reference even in the short window between the queue
 	 * starting to freeze, by dropping the first reference in
-	 * blk_mq_freeze_queue_start, and the moment the last request is
+	 * blk_freeze_queue_start, and the moment the last request is
 	 * consumed, marked by the instant q_usage_counter reaches
 	 * zero.
 	 */
@@ -2354,7 +2376,7 @@ static void blk_mq_queue_reinit_work(void)
 	 * take place in parallel.
 	 */
 	list_for_each_entry(q, &all_q_list, all_q_node)
-		blk_mq_freeze_queue_start(q);
+		blk_freeze_queue_start(q);
 	list_for_each_entry(q, &all_q_list, all_q_node)
 		blk_mq_freeze_queue_wait(q);
 
