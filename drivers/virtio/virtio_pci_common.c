@@ -141,6 +141,7 @@ void vp_del_vqs(struct virtio_device *vdev)
 	}
 
 	free_irq(pci_irq_vector(vp_dev->pci_dev, 0), vp_dev);
+	vp_dev->msix_vectors = 0;
 	pci_free_irq_vectors(vp_dev->pci_dev);
 }
 
@@ -282,6 +283,7 @@ out_free_msix_affinity_masks:
 out_free_msix_names:
 	kfree(vp_dev->msix_names);
 out_free_irq_vectors:
+	vp_dev->msix_vectors = 0;
 	pci_free_irq_vectors(vp_dev->pci_dev);
 	return err;
 }
