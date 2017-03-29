@@ -8307,7 +8307,6 @@ M:	Richard Leitner <richard.leitner@skidata.com>
 L:	linux-usb@vger.kernel.org
 S:	Maintained
 F:	drivers/usb/misc/usb251xb.c
-F:	include/linux/platform_data/usb251xb.h
 F:	Documentation/devicetree/bindings/usb/usb251xb.txt
 
 MICROSOFT SURFACE PRO 3 BUTTON DRIVER
@@ -9976,7 +9975,6 @@ F:	drivers/scsi/pmcraid.*
 PMC SIERRA PM8001 DRIVER
 M:	Jack Wang <jinpu.wang@profitbricks.com>
 M:	lindar_liu@usish.com
-L:	pmchba@pmcs.com
 L:	linux-scsi@vger.kernel.org
 S:	Supported
 F:	drivers/scsi/pm8001/
