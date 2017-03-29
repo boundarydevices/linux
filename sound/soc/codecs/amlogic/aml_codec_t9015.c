@@ -69,6 +69,9 @@ static int aml_DAC_Gain_get_enum(
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	u32 add, val, val1, val2;
 
+	/*TODO: return 0 for tmp, this wolud modified later */
+	return 0;
+
 	if (codec == NULL)
 		return -1;
 

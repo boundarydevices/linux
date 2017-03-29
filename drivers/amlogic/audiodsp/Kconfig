@@ -1,0 +1,11 @@
+# audio dsp  configuration
+#
+menu "AMLOGIC Audio DSP process"
+
+config AMLOGIC_AUDIO_DSP
+	tristate "audio dsp control support"
+	default n
+	help
+		support the amlogic audio dsp;
+
+endmenu

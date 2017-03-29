@@ -13712,6 +13712,7 @@ F: sound/soc/amlogic/*
 F: sound/soc/codecs/Kconfig
 F: sound/soc/codecs/Makefile
 F: sound/soc/codecs/amlogic/*
+F: drivers/amlogic/audiodsp/*
 
 AMLOGIC PPMGR DRIVER
 M: Guosong Zhou <guosong.zhou@amlogic.com>
