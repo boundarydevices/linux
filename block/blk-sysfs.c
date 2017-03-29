@@ -795,7 +795,6 @@ static void blk_release_queue(struct kobject *kobj)
 	struct request_queue *q =
 		container_of(kobj, struct request_queue, kobj);
 
-	wbt_exit(q);
 	if (test_bit(QUEUE_FLAG_POLL_STATS, &q->queue_flags))
 		blk_stat_remove_callback(q, q->poll_cb);
 	blk_stat_free_callback(q->poll_cb);
@@ -871,6 +870,11 @@ int blk_register_queue(struct gendisk *disk)
 	if (WARN_ON(!q))
 		return -ENXIO;
 
+	WARN_ONCE(test_bit(QUEUE_FLAG_REGISTERED, &q->queue_flags),
+		  "%s is registering an already registered queue\n",
+		  kobject_name(&dev->kobj));
+	queue_flag_set_unlocked(QUEUE_FLAG_REGISTERED, q);
+
 	/*
 	 * SCSI probing may synchronously create and destroy a lot of
 	 * request_queues for non-existent devices.  Shutting down a fully
@@ -930,6 +934,11 @@ void blk_unregister_queue(struct gendisk *disk)
 
 	if (WARN_ON(!q))
 		return;
+
+	queue_flag_clear_unlocked(QUEUE_FLAG_REGISTERED, q);
+
+	wbt_exit(q);
+
 
 	if (q->mq_ops)
 		blk_mq_unregister_dev(disk_to_dev(disk), q);
