@@ -982,6 +982,12 @@
 		hw-version = <2>;
 	};
 
+	amlvideo {
+		compatible = "amlogic, amlvideo";
+		dev_name = "amlvideo";
+		status = "okay";
+	};
+
 	amlvideo2 {
 		compatible = "amlogic, amlvideo2";
 		dev_name = "amlvideo2";

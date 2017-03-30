@@ -13743,3 +13743,11 @@ AMLOGIC JTAG DRIVER SUPPORT
 M: Bo Yang <bo.yang@amlogic.com>
 F: drivers/amlogic/jtag/*
 
+AMLOGIC AMLVIDEO DRIVER
+M: Guosong Zhou <guosong.zhou@amlogic.com>
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/media/video_processor/video_dev/Kconfig
+F: drivers/amlogic/media/video_processor/video_dev/Makefile
+F: drivers/amlogic/media/video_processor/video_dev/amlvideo.h
+F: drivers/amlogic/media/video_processor/video_dev/amlvideo.c
+F: drivers/amlogic/media/video_processor/video_dev/common/vfutil.c

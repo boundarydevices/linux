@@ -79,6 +79,12 @@
 			size = <0x0 0x2000000>;
 		};
 
+		amlvideo {
+			compatible = "amlogic, amlvideo";
+			dev_name = "amlvideo";
+			status = "okay";
+		};
+
 		/*  POST PROCESS MANAGER */
 		ppmgr_reserved:linux,ppmgr {
 			compatible = "shared-dma-pool";

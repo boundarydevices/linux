@@ -656,6 +656,12 @@
 	};
 	/* END OF AUDIO board specific */
 
+	amlvideo {
+		compatible = "amlogic, amlvideo";
+		dev_name = "amlvideo";
+		status = "okay";
+	};
+
 	ppmgr {
 		compatible = "amlogic, ppmgr";
 		memory-region = <&ppmgr_reserved>;
