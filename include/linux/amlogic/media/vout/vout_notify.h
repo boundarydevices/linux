@@ -92,4 +92,6 @@ extern void update_vout_mode(char *name);
 extern char *get_vout_mode_internal(void);
 extern char *get_vout_mode_uboot(void);
 
+extern enum vmode_e get_logo_vmode(void);
+
 #endif /* _VOUT_NOTIFY_H_ */

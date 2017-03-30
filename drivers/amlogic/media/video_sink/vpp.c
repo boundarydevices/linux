@@ -570,7 +570,6 @@ vpp_process_speed_check(s32 width_in,
 		struct vpp_frame_par_s *next_frame_par,
 		const struct vinfo_s *vinfo, struct vframe_s *vf)
 {
-#if 0
 	u32 cur_ratio;
 
 	if (next_frame_par->vscale_skip_count < force_vskip_cnt)
@@ -665,7 +664,6 @@ vpp_process_speed_check(s32 width_in,
 			return SPEED_CHECK_DONE;
 	}
 	/* #endif */
-#endif/*mask*/
 	amlog_mask(LOG_MASK_VPP, "vpp_process_speed_check failed\n");
 	return SPEED_CHECK_VSKIP;
 }

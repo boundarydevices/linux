@@ -586,13 +586,12 @@ static int canvas_dup(ulong dst, ulong src_paddr, ulong size)
 		/*dma_addr_t dma_addr = 0;*/
 
 		memcpy(dst_addr, src_addr, size);
-#if 0
+#if 0//DEBUG_TMP
 		dma_addr = dma_map_single(
 					amports_get_dma_device(), dst_addr,
 					size, DMA_TO_DEVICE);
 		dma_unmap_single(amports_get_dma_device(), dma_addr,
 					FETCHBUF_SIZE, DMA_TO_DEVICE);
-					/*mask*/
 #endif
 		return 1;
 	}

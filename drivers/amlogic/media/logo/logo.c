@@ -22,7 +22,7 @@
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
-#include <linux/amlogic/hdmi_tx/hdmi_tx_module.h>
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 
 /* Local Headers */
 #include <osd/osd_hw.h>
@@ -118,6 +118,7 @@ enum vmode_e get_logo_vmode(void)
 {
 	return vout_init_vmode;
 }
+EXPORT_SYMBOL(get_logo_vmode);
 
 static int set_logo_vmode(enum vmode_e mode)
 {
@@ -278,9 +279,9 @@ __setup("hdmimode=", get_hdmi_mode);
 static int __init get_cvbs_mode(char *str)
 {
 	if (strncmp("480", str, 3) == 0)
-		cvbsmode = VMODE_480CVBS;
+		cvbsmode = 0;//VMODE_480CVBS;//DEBUG_TMP
 	else if (strncmp("576", str, 3) == 0)
-		cvbsmode = VMODE_576CVBS;
+		cvbsmode = 0;//VMODE_576CVBS;//DEBUG_TMP
 	else if (strncmp("nocvbs", str, 6) == 0)
 		cvbsmode = hdmimode;
 	pr_info("get cvbsmode: %s\n", str);

@@ -673,7 +673,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 		 *by avpts-diff too much
 		 *threshold 120s is an arbitrary value
 		 */
-#if 0
+#if 0//DEBUG_TMP
 		if (tsync_enable && !get_vsync_pts_inc_mode())
 			tsync_mode = TSYNC_MODE_AMASTER;
 		else {
@@ -681,7 +681,6 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			if (get_vsync_pts_inc_mode())
 				tsync_stat = TSYNC_STAT_PCRSCR_SETUP_NONE;
 		}
-		/*mask*/
 #endif
 		if (tsync_dec_reset_flag)
 			tsync_dec_reset_video_start = 1;
@@ -915,12 +914,12 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 	case VIDEO_START:
 	case AUDIO_START:
 	case AUDIO_RESUME:
-		/*amvdev_resume();*//*mask*/
+		/*amvdev_resume();*///DEBUG_TMP
 		break;
 	case VIDEO_STOP:
 	case AUDIO_STOP:
 	case AUDIO_PAUSE:
-		/*amvdev_pause();*//*mask*/
+		/*amvdev_pause();*///DEBUG_TMP
 		break;
 	case VIDEO_PAUSE:
 		/*
@@ -929,7 +928,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 		 *else
 		 *	amvdev_resume();
 		 */
-		/*mask*/
+		//DEBUG_TMP
 		break;
 	default:
 		break;
@@ -1065,7 +1064,7 @@ int tsync_set_apts(unsigned int pts)
 		t = timestamp_pcrscr_get();
 	if ((abs(oldpts - pts) > tsync_av_threshold_min)
 			/*&&*/
-	/*(!get_vsync_pts_inc_mode())*//*mask*/) {/* is discontinue */
+	/*(!get_vsync_pts_inc_mode())*//*DEBUG_TMP*/) {/* is discontinue */
 		apts_discontinue = 1;
 		tsync_mode_switch('A', abs(pts - t),
 				pts - oldpts);	/*if in VMASTER ,just wait */
@@ -1073,11 +1072,11 @@ int tsync_set_apts(unsigned int pts)
 	timestamp_apts_set(pts);
 
 	/*if (get_vsync_pts_inc_mode() && (tsync_mode != TSYNC_MODE_VMASTER))*/
-		/*tsync_mode = TSYNC_MODE_VMASTER;*//*mask*/
+		/*tsync_mode = TSYNC_MODE_VMASTER;*///DEBUG_TMP
 
 	if (tsync_mode == TSYNC_MODE_AMASTER)
 		t = timestamp_pcrscr_get();
-#if 0
+#if 0//DEBUG_TMP
 	if (tsync_mode == TSYNC_MODE_AMASTER) {
 		/* special used for Dobly Certification AVSync test */
 		if (dobly_avsync_test) {
@@ -1126,7 +1125,7 @@ int tsync_set_apts(unsigned int pts)
 		}
 	} else if (oldmod != tsync_mode && tsync_mode == TSYNC_MODE_VMASTER)
 		timestamp_pcrscr_set(timestamp_vpts_get());
-#endif /*mask*/
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(tsync_set_apts);
@@ -1958,7 +1957,7 @@ static int __init tsync_init(void)
 
 	add_timer(&tsync_state_switch_timer);
 
-	tsync_pcr_init();/*mask*/
+	tsync_pcr_init();//DEBUG_TMP
 
 	return 0;
 }
@@ -1968,7 +1967,7 @@ static void __exit tsync_exit(void)
 	del_timer_sync(&tsync_pcr_recover_timer);
 
 	class_unregister(&tsync_class);
-	tsync_pcr_exit();/*mask*/
+	tsync_pcr_exit();//DEBUG_TMP
 }
 
 module_init(tsync_init);

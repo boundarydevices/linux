@@ -534,6 +534,14 @@
 						"usb1_to_ddr";
 	};
 
+	meson-amvideom {
+		compatible = "amlogic, amvideom";
+		dev_name = "amvideom";
+		status = "okay";
+		interrupts = <0 3 1>;
+		interrupt-names = "vsync";
+	};
+
 	vout {
 		compatible = "amlogic, vout";
 		dev_name = "vout";

@@ -148,6 +148,7 @@ int vfm_map_remove(char *id)
 	}
 	return ret;
 }
+EXPORT_SYMBOL(vfm_map_remove);
 
 int vfm_map_add(char *id, char *name_chain)
 {
@@ -201,6 +202,7 @@ int vfm_map_add(char *id, char *name_chain)
 	}
 	return ret;
 }
+EXPORT_SYMBOL(vfm_map_add);
 
 static char *vf_get_provider_name_inmap(int i, const char *receiver_name)
 {

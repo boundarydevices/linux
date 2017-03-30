@@ -195,7 +195,7 @@ static DEFINE_SPINLOCK(tsync_pcr_lock);
 
 u32 get_stbuf_rp(int type)
 {
-#if 0
+#if 0//DEBUG_TMP
 	struct stream_buf_s *pbuf = NULL;
 
 	if (type == 0) {
@@ -203,20 +203,20 @@ u32 get_stbuf_rp(int type)
 		/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_M8
 			&& !is_meson_mtvd_cpu()) {
-			pbuf = NULL;/*get_buf_by_type(PTS_TYPE_HEVC);*//*mask*/
+			pbuf = get_buf_by_type(PTS_TYPE_HEVC);
 			if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-				return 0;/*stbuf_rp(pbuf);*//*mask*/
+				return stbuf_rp(pbuf);
 		}
 		/* #endif */
 
-		pbuf = NULL;/*get_buf_by_type(PTS_TYPE_VIDEO);*//*mask*/
+		pbuf = get_buf_by_type(PTS_TYPE_VIDEO);
 		if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-			return 0;/*stbuf_rp(pbuf);*//*mask*/
+			return stbuf_rp(pbuf)
 	} else {
 		/* audio */
-		pbuf = NULL;/*get_buf_by_type(PTS_TYPE_AUDIO);*//*mask*/
+		pbuf = get_buf_by_type(PTS_TYPE_AUDIO);
 		if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-			return 0;/*stbuf_rp(pbuf);*//*mask*/
+			return stbuf_rp(pbuf);
 	}
 #endif
 	return 0;
@@ -225,7 +225,7 @@ EXPORT_SYMBOL(get_stbuf_rp);
 
 int get_stream_buffer_level(int type)
 {
-#if 0
+#if 0//DEBUG_TMP
 	struct stream_buf_s *pbuf = NULL;
 
 	if (type == 0) {
@@ -233,20 +233,20 @@ int get_stream_buffer_level(int type)
 		/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_M8
 			&& !is_meson_mtvd_cpu()) {
-			pbuf = NULL;/*get_buf_by_type(PTS_TYPE_HEVC);*//*mask*/
+			pbuf = get_buf_by_type(PTS_TYPE_HEVC);
 			if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-				return 0;/*stbuf_level(pbuf);*//*mask*/
+				return stbuf_level(pbuf);
 		}
 		/* #endif */
 
-		pbuf = NULL;/*get_buf_by_type(PTS_TYPE_VIDEO);*//*mask*/
+		pbuf = get_buf_by_type(PTS_TYPE_VIDEO);
 		if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-			return 0;/*stbuf_level(pbuf);*//*mask*/
+			return stbuf_level(pbuf);
 	} else {
 		/* audio */
-		pbuf = NULL;/*get_buf_by_type(PTS_TYPE_AUDIO);*//*mask*/
+		pbuf = get_buf_by_type(PTS_TYPE_AUDIO);
 		if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-			return 0;/*stbuf_level(pbuf);*//*mask*/
+			return stbuf_level(pbuf);
 	}
 #endif
 	return 0;
@@ -255,7 +255,7 @@ EXPORT_SYMBOL(get_stream_buffer_level);
 
 int get_stream_buffer_size(int type)
 {
-#if 0
+#if 0//DEBUG_TMP
 	struct stream_buf_s *pbuf = NULL;
 
 	if (type == 0) {
@@ -263,20 +263,20 @@ int get_stream_buffer_size(int type)
 		/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_M8
 			&& !is_meson_mtvd_cpu()) {
-			pbuf = NULL;/*get_buf_by_type(PTS_TYPE_HEVC);*//*mask*/
+			pbuf = get_buf_by_type(PTS_TYPE_HEVC);
 			if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-				return 0;/*stbuf_size(pbuf);*//*mask*/
+				return stbuf_size(pbuf);
 		}
 		/* #endif */
 
-		pbuf = NULL;/*get_buf_by_type(PTS_TYPE_VIDEO);*//*mask*/
+		pbuf = get_buf_by_type(PTS_TYPE_VIDEO);
 		if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-			return 0;/*stbuf_size(pbuf);*//*mask*/
+			return stbuf_size(pbuf);
 	} else {
 		/* audio */
-		pbuf = NULL;/*get_buf_by_type(PTS_TYPE_AUDIO);*//*mask*/
+		pbuf = get_buf_by_type(PTS_TYPE_AUDIO);
 		if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-			return 0;/*stbuf_size(pbuf);*//*mask*/
+			return stbuf_size(pbuf);
 	}
 #endif
 	return 0;
@@ -333,7 +333,7 @@ void tsync_pcr_get_delta(void)
 {
 	/* calculate delta */
 	u64 cur_pcr = timestamp_pcrscr_get();
-	u64 demux_pcr = 0;/*tsdemux_pcrscr_get();*//*mask*/
+	u64 demux_pcr = 0;//tsdemux_pcrscr_get();//DEBUG_TMP
 
 	if (cur_pcr == 0 || demux_pcr == 0) {
 		tsync_pcr_stream_delta = 0;
@@ -371,13 +371,13 @@ void tsync_pcr_pcrscr_set(void)
 		return;
 	}
 
-	first_pcr = 0;/*tsdemux_first_pcrscr_get();*//*mask*/
+	first_pcr = 0;//tsdemux_first_pcrscr_get();//DEBUG_TMP
 	first_apts = timestamp_firstapts_get();
 	first_vpts = timestamp_firstvpts_get();
 	cur_checkin_vpts = get_last_checkin_pts(PTS_TYPE_VIDEO);
 	cur_checkin_apts = get_last_checkin_pts(PTS_TYPE_AUDIO);
 	min_checkinpts = tsync_pcr_get_min_checkinpts();
-	cur_pcr = 0;/*tsdemux_pcrscr_get();*//*mask*/
+	cur_pcr = 0;//tsdemux_pcrscr_get();//DEBUG_TMP
 	abuf_level = get_stream_buffer_level(1);
 	vbuf_level = get_stream_buffer_level(0);
 
@@ -517,11 +517,11 @@ void tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 
 	case VIDEO_TSTAMP_DISCONTINUITY: {
 		/* unsigned oldpts=timestamp_vpts_get(); */
-		/*u32 tsdemux_pcr = 0;*//*tsdemux_pcrscr_get();*//*mask*/
+		/*u32 tsdemux_pcr = 0;*//*tsdemux_pcrscr_get();*///DEBUG_TMP
 		/* if((abs(param-oldpts)>AV_DISCONTINUE_THREDHOLD_MIN) &&
 		 *(!get_vsync_pts_inc_mode())){
 		 */
-#if 0
+#if 0//DEBUG_TMP
 		if (!get_vsync_pts_inc_mode()) {
 			u32 last_checkin_minpts =
 				tsync_pcr_get_min_checkinpts();
@@ -586,7 +586,7 @@ void tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 			tsync_pcr_discontinue_local_point = 0;
 			tsync_pcr_discontinue_waited = 0;
 		}
-#endif /*mask*/
+#endif
 		timestamp_vpts_set(param);
 
 		break;
@@ -695,18 +695,18 @@ void tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 	case VIDEO_START:
 	case AUDIO_START:
 	case AUDIO_RESUME:
-		/*amvdev_resume();*//*mask*/
+		/*amvdev_resume();*///DEBUG_TMP
 		break;
 	case VIDEO_STOP:
 	case AUDIO_STOP:
 	case AUDIO_PAUSE:
-		/*amvdev_pause();*//*mask*/
+		/*amvdev_pause();*///DEBUG_TMP
 		break;
 	case VIDEO_PAUSE:
 		/*if (tsync_pcr_vpause_flag)*/
-			/*amvdev_pause();*//*mask*/
+			/*amvdev_pause();*///DEBUG_TMP
 		/*else*/
-			/*amvdev_resume();*//*mask*/
+			/*amvdev_resume();*///DEBUG_TMP
 		break;
 	default:
 		break;
@@ -734,7 +734,7 @@ static unsigned long tsync_pcr_check(void)
 		|| tsync_pcr_freerun_mode == 1)
 		return res;
 
-	tsdemux_pcr = 0;/*tsdemux_pcrscr_get();*//*mask*/
+	tsdemux_pcr = 0;/*tsdemux_pcrscr_get();*///DEBUG_TMP
 	if (tsync_pcr_usepcr == 1) {
 		/* To monitor the pcr discontinue */
 		tsdemux_pcr_diff = abs(tsdemux_pcr - tsync_pcr_last_tsdemuxpcr);
@@ -1244,7 +1244,7 @@ int tsync_pcr_start(void)
 
 		first_time_record = (jiffies * TIME_UNIT90K) / HZ;
 		tsync_pcr_started = 1;
-		/*if (tsdemux_pcrscr_valid() == 0) {*//*mask*/
+		/*if (tsdemux_pcrscr_valid() == 0) {*///DEBUG_TMP
 		if (0) {
 			tsync_pcr_usepcr = 0;
 			tsync_pcr_inited_mode = INIT_PRIORITY_AUDIO;

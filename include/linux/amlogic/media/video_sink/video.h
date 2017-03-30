@@ -257,4 +257,11 @@ extern void prot_get_parameter(u32 wide_mode, struct vframe_s *vf,
 u32 get_blackout_policy(void);
 int get_video0_frame_info(struct vframe_s *vf);
 
+#define AMVIDEO_UPDATE_OSD_MODE	0x00000001
+
+extern enum vmode_e get_logo_vmode(void);
+
+int query_video_status(int type, int *value);
+int get_video0_frame_info(struct vframe_s *vf);
+
 #endif /* VIDEO_H */
