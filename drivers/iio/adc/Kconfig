@@ -245,6 +245,15 @@ config IMX7D_ADC
 	  This driver can also be built as a module. If so, the module will be
 	  called imx7d_adc.
 
+config ISL28022_ADC
+	tristate "Intersil ISL28022 ADC driver"
+	depends on I2C
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	help
+	  Say yes here to build support for the Intersil ISL28022 adc
+	  converters.
+
 config LP8788_ADC
 	tristate "LP8788 ADC driver"
 	depends on MFD_LP8788
