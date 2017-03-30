@@ -133,9 +133,9 @@ static int aml_pcm_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			pr_info("aiu slave pcm stream %d enable\n\n",
 				substream->stream);
 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-				pcm_out_enable(1);
+				pcm_out_enable(substream, 1);
 			else
-				pcm_in_enable(1);
+				pcm_in_enable(substream, 1);
 		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -152,9 +152,9 @@ static int aml_pcm_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			pr_info("aiu slave pcm stream %d disable\n\n",
 				substream->stream);
 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-				pcm_out_enable(0);
+				pcm_out_enable(substream, 0);
 			else
-				pcm_in_enable(0);
+				pcm_in_enable(substream, 0);
 		}
 		break;
 	default:
@@ -233,12 +233,12 @@ struct snd_soc_dai_driver aml_pcm_dai[] = {
 	 .resume = aml_pcm_dai_resume,
 	 .playback = {
 		      .channels_min = 1,
-		      .channels_max = 8,
+		      .channels_max = 16,
 		      .rates = AML_DAI_PCM_RATES,
 		      .formats = AML_DAI_PCM_FORMATS,},
 	 .capture = {
 		     .channels_min = 1,
-		     .channels_max = 8,
+		     .channels_max = 16,
 		     .rates = AML_DAI_PCM_RATES,
 		     .formats = AML_DAI_PCM_FORMATS,},
 	 .ops = &aml_pcm_dai_ops,

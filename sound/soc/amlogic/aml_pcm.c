@@ -54,37 +54,41 @@ static const struct snd_pcm_hardware aml_pcm_hardware = {
 	    SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE |
 	    SNDRV_PCM_FMTBIT_S32_LE,
 	.period_bytes_min = 32,
-	.period_bytes_max = 8 * 1024,
+	.period_bytes_max = 32 * 1024 * 2,
 	.periods_min = 2,
 	.periods_max = 1024,
-	.buffer_bytes_max = 64 * 1024,
+	.buffer_bytes_max = 512 * 1024,
 	.rate_min = 8000,
-	.rate_max = 48000,
+	.rate_max = 192000,
 	.channels_min = 1,
-	.channels_max = 8,
+	.channels_max = 16,
 };
 
 static const struct snd_pcm_hardware aml_pcm_capture = {
 	.info = SNDRV_PCM_INFO_INTERLEAVED |
-	    SNDRV_PCM_INFO_BLOCK_TRANSFER | SNDRV_PCM_INFO_PAUSE,
-
-	.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		SNDRV_PCM_INFO_BLOCK_TRANSFER |
+		SNDRV_PCM_INFO_MMAP |
+		SNDRV_PCM_INFO_MMAP_VALID |
+		SNDRV_PCM_INFO_PAUSE,
+	.formats =
+		SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE |
+		SNDRV_PCM_FMTBIT_S32_LE,
 	.period_bytes_min = 64,
 	.period_bytes_max = 32 * 1024,
 	.periods_min = 2,
 	.periods_max = 1024,
-	.buffer_bytes_max = 64 * 1024,
+	.buffer_bytes_max = 512 * 1024,
 
 	.rate_min = 8000,
-	.rate_max = 48000,
+	.rate_max = 192000,
 	.channels_min = 1,
-	.channels_max = 8,
+	.channels_max = 16,
 	.fifo_size = 0,
 };
 
-
-static unsigned int period_sizes[] = { 64, 128, 256, 512,
-	1024, 2048, 4096, 8192
+static unsigned int period_sizes[] = {
+	64, 128, 256, 512, 1024, 2048, 4096,
+	8192, 16384, 32768, 65536, 65536 * 2, 65536 * 4
 };
 
 static struct snd_pcm_hw_constraint_list hw_constraints_period_sizes = {
@@ -244,18 +248,15 @@ aml_pcm_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
-	size_t size = params_buffer_bytes(params);
 	int ret = 0;
 
 	pr_info("enter %s\n", __func__);
 
-	ret = snd_pcm_lib_malloc_pages(substream, size);
-	if (ret < 0)
-		pr_err("%s malloc_pages return: %d\n", __func__, ret);
-	else {
-		prtd->buffer_start = runtime->dma_addr;
-		prtd->buffer_size = runtime->dma_bytes;
-	}
+	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
+	runtime->dma_bytes = params_buffer_bytes(params);
+
+	prtd->buffer_start = runtime->dma_addr;
+	prtd->buffer_size = runtime->dma_bytes;
 
 	return ret;
 }
@@ -494,16 +495,30 @@ static int aml_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
-	size_t size = aml_pcm_hardware.buffer_bytes_max;
+	size_t size;
 
-	buf->dev.type = SNDRV_DMA_TYPE_DEV;
-	buf->dev.dev = pcm->card->dev;
-	buf->private_data = NULL;
-	buf->area = dma_alloc_coherent(pcm->card->dev, size,
-				       &buf->addr, GFP_KERNEL);
-	if (!buf->area) {
-		dev_err(pcm->card->dev, "aml_pcm alloc failed!\n");
-		return -ENOMEM;
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		size = aml_pcm_hardware.buffer_bytes_max;
+		buf->dev.type = SNDRV_DMA_TYPE_DEV;
+		buf->dev.dev = pcm->card->dev;
+		buf->private_data = NULL;
+		buf->area = dma_alloc_coherent(pcm->card->dev, size,
+						   &buf->addr, GFP_KERNEL);
+		if (!buf->area) {
+			pr_info("%s dma_alloc_coherent failed!\n", __func__);
+			return -ENOMEM;
+		}
+	} else {
+		size = aml_pcm_capture.buffer_bytes_max;
+		buf->dev.type = SNDRV_DMA_TYPE_DEV;
+		buf->dev.dev = pcm->card->dev;
+		buf->private_data = NULL;
+		buf->area = dma_alloc_coherent(pcm->card->dev, size,
+						   &buf->addr, GFP_KERNEL);
+		if (!buf->area) {
+			pr_info("%s dma_alloc_coherent failed!\n", __func__);
+			return -ENOMEM;
+		}
 	}
 
 	buf->bytes = size;

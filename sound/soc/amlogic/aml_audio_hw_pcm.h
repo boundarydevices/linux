@@ -21,7 +21,9 @@
 #include "sound/asound.h"
 #include <sound/pcm.h>
 
-void pcm_in_enable(int flag);
+#include "aml_audio_hw.h"
+
+void pcm_in_enable(struct snd_pcm_substream *substream, int flag);
 void pcm_in_set_buf(unsigned int addr, unsigned int size);
 int  pcm_in_is_enable(void);
 unsigned int pcm_in_rd_ptr(void);
@@ -29,7 +31,7 @@ unsigned int pcm_in_wr_ptr(void);
 unsigned int pcm_in_set_rd_ptr(unsigned int value);
 unsigned int pcm_in_fifo_int(void);
 
-void pcm_out_enable(int flag);
+void pcm_out_enable(struct snd_pcm_substream *substream, int flag);
 void pcm_out_mute(int flag);
 void pcm_out_set_buf(unsigned int addr, unsigned int size);
 int  pcm_out_is_enable(void);

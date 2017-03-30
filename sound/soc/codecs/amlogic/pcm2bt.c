@@ -36,11 +36,11 @@ struct pcm2bt_priv {
 	struct snd_soc_codec codec;
 };
 
-#define PCM2BT_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000)
+#define PCM2BT_RATES (SNDRV_PCM_RATE_8000_192000)
 
 #define PCM2BT_FORMATS \
 	(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | \
-	SNDRV_PCM_FMTBIT_S8)
+	SNDRV_PCM_FMTBIT_S32_LE)
 
 static int pcm2bt_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params,
@@ -79,14 +79,14 @@ struct snd_soc_dai_driver pcm2bt_dai[] = {
 	 .playback = {
 		      .stream_name = "PCM2BT Playback",
 		      .channels_min = 1,
-		      .channels_max = 1,
+		      .channels_max = 16,
 		      .rates = PCM2BT_RATES,
 		      .formats = PCM2BT_FORMATS,
 		      },
 	 .capture = {
 		     .stream_name = "BT2PCM Capture",
 		     .channels_min = 1,
-		     .channels_max = 1,
+		     .channels_max = 16,
 		     .rates = PCM2BT_RATES,
 		     .formats = PCM2BT_FORMATS,
 		     },
