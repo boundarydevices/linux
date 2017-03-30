@@ -1,0 +1,181 @@
+/*
+ * Copyright 2013 Boundary Devices
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-nitrogen6_max.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX6 Quad Nitrogen6 Max lantech Board";
+	compatible = "fsl,imx6q-nitrogen6_max", "fsl,imx6q";
+};
+
+&iomuxc_imx6q_nitrogen6_max {
+	pinctrl_i2c1_dac: i2c1_dacgrp {
+		fsl,pins = <
+				MX6QDL_PAD_CSI0_DAT9__I2C1_SCL          0x4001b8b1
+				MX6QDL_PAD_CSI0_DAT8__I2C1_SDA          0x4001b8b1
+			>;
+	};
+
+	pinctrl_i2c1b_isl28022: i2c1b_isl28022 {
+		fsl,pins = <
+#define GPIRQ_ISL28022         <&gpio5 28 IRQ_TYPE_LEVEL_LOW>
+#define GP_ISL28022            <&gpio5 28 GPIO_ACTIVE_LOW>
+				MX6QDL_PAD_CSI0_DAT10__GPIO5_IO28               0x1f0b0
+			>;
+	};
+};
+
+/ {
+	i2cmux@4 {
+		compatible = "i2c-mux-pinctrl";
+		i2c-parent = <&i2c1>;
+	
+		pinctrl-names = "std", "dac";
+		pinctrl-0 = <&pinctrl_i2c1>;
+		pinctrl-1 = <&pinctrl_i2c1_dac>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		mux-gpios = GP_I2C3MUX_A;
+		idle-state = <0>;
+	
+		i2c1a: i2c1@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c1b: i2c1@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+
+	regulators {
+		reg_isl76534: regulator@5 {
+			compatible = "regulator-fixed";
+			reg = <5>;
+			regulator-name = "reg_isl76534";
+			regulator-min-microvolt = <6000000>;
+			regulator-max-microvolt = <6000000>;
+			regulator-always-on;
+		};
+	};
+};
+
+&hdmi_core {
+	ipu_id = <1>;
+};
+
+&i2c1 {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-node/ sgtl5000@0a;
+	/delete-node/ rv4162@68;
+};
+
+&i2c1a {
+	clock-frequency = <100000>;
+	status = "okay";
+
+	sgtl5000: sgtl5000@0a {
+		compatible = "fsl,sgtl5000";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_sgtl5000>;
+		reg = <0x0a>;
+		clocks = <&clks IMX6QDL_CLK_CKO>;
+		VDDA-supply = <&reg_2p5v>;
+		VDDIO-supply = <&reg_3p3v>;
+	};
+
+	rv4162@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RTC_RV4162;
+	};
+};
+
+&i2c1b {
+	clock-frequency = <10000>;
+	status = "okay";
+
+	isl28022@40 {
+		compatible = "isl28022";
+		interrupts-extended = GPIRQ_ISL28022;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1b_isl28022>;
+		reg = <0x40>;
+		bus-voltage-max = <16>; 	/* 16/32/60 Volts for full range */
+		shunt-voltage-max = <320>;	/* 40/80/160/320 mV */
+		bus-adc-cfg = <2>;		/* 2 means 14-bit, 258 uSec */
+		shunt-adc-cfg = <2>;		/* 2 means 14-bit, 258 uSec */
+		rshunt = <10>;			/* ohms */
+	};
+
+	isl76534@74 {
+		compatible = "isl76534";
+		reg = <0x74>;
+		vref-supply = <&reg_isl76534>;
+	};
+};
+
+&i2c2a {
+	/delete-node/ ov5642@3c;
+};
+
+&i2c2b {
+	/delete-node/ ov5640_mipi@3c;
+	/delete-node/ tc358743_mipi@0f;
+};
+
+&i2c3 {
+	/delete-node/ atmel_maxtouch@4a;
+	/delete-node/ egalax_ts@04;
+	/delete-node/ ft5x06_ts@38;
+	/delete-node/ gt911@14;
+	/delete-node/ gt911@5d;
+	/delete-node/ ili210x@41;
+	/delete-node/ ov5640@3c;
+	/delete-node/ tsc2004@48;
+};
+
+&pinctrl_i2c3_ov5640 { /* parallel camera */
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK	0xb0b1
+		MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC	0xb0b1
+	>;
+};
+
+&sata {
+	status = "okay";
+};
+
+&v4l2_cap_2 {
+	ipu_id = <1>;
+};
