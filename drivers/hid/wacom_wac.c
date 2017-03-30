@@ -1739,6 +1739,7 @@ static void wacom_wac_pad_usage_mapping(struct hid_device *hdev,
 		features->device_type |= WACOM_DEVICETYPE_PAD;
 		break;
 	case WACOM_HID_WD_TOUCHONOFF:
+	case WACOM_HID_WD_MUTE_DEVICE:
 		/*
 		 * This usage, which is used to mute touch events, comes
 		 * from the pad packet, but is reported on the touch
@@ -1766,6 +1767,26 @@ static void wacom_wac_pad_usage_mapping(struct hid_device *hdev,
 		break;
 	case WACOM_HID_WD_TOUCHRINGSTATUS:
 		wacom_map_usage(input, usage, field, EV_ABS, ABS_WHEEL, 0);
+		features->device_type |= WACOM_DEVICETYPE_PAD;
+		break;
+	case WACOM_HID_WD_BUTTONCONFIG:
+		wacom_map_usage(input, usage, field, EV_KEY, KEY_BUTTONCONFIG, 0);
+		features->device_type |= WACOM_DEVICETYPE_PAD;
+		break;
+	case WACOM_HID_WD_ONSCREEN_KEYBOARD:
+		wacom_map_usage(input, usage, field, EV_KEY, KEY_ONSCREEN_KEYBOARD, 0);
+		features->device_type |= WACOM_DEVICETYPE_PAD;
+		break;
+	case WACOM_HID_WD_CONTROLPANEL:
+		wacom_map_usage(input, usage, field, EV_KEY, KEY_CONTROLPANEL, 0);
+		features->device_type |= WACOM_DEVICETYPE_PAD;
+		break;
+	case WACOM_HID_WD_MODE_CHANGE:
+		/* do not overwrite previous data */
+		if (!wacom_wac->has_mode_change) {
+			wacom_wac->has_mode_change = true;
+			wacom_wac->is_direct_mode = true;
+		}
 		features->device_type |= WACOM_DEVICETYPE_PAD;
 		break;
 	}
@@ -1811,12 +1832,13 @@ static void wacom_wac_pad_event(struct hid_device *hdev, struct hid_field *field
 	struct wacom_features *features = &wacom_wac->features;
 	unsigned equivalent_usage = wacom_equivalent_usage(usage->hid);
 	int i;
+	bool is_touch_on = value;
 
 	/*
 	 * Avoid reporting this event and setting inrange_state if this usage
 	 * hasn't been mapped.
 	 */
-	if (!usage->type)
+	if (!usage->type && equivalent_usage != WACOM_HID_WD_MODE_CHANGE)
 		return;
 
 	if (wacom_equivalent_usage(field->physical) == HID_DG_TABLETFUNCTIONKEY) {
@@ -1830,11 +1852,25 @@ static void wacom_wac_pad_event(struct hid_device *hdev, struct hid_field *field
 			input_event(input, usage->type, usage->code, 0);
 		break;
 
+	case WACOM_HID_WD_MUTE_DEVICE:
+		if (wacom_wac->shared->touch_input && value) {
+			wacom_wac->shared->is_touch_on = !wacom_wac->shared->is_touch_on;
+			is_touch_on = wacom_wac->shared->is_touch_on;
+		}
+
+		/* fall through*/
 	case WACOM_HID_WD_TOUCHONOFF:
 		if (wacom_wac->shared->touch_input) {
 			input_report_switch(wacom_wac->shared->touch_input,
-					    SW_MUTE_DEVICE, !value);
+					    SW_MUTE_DEVICE, !is_touch_on);
 			input_sync(wacom_wac->shared->touch_input);
+		}
+		break;
+
+	case WACOM_HID_WD_MODE_CHANGE:
+		if (wacom_wac->is_direct_mode != value) {
+			wacom_wac->is_direct_mode = value;
+			wacom_schedule_work(&wacom->wacom_wac, WACOM_WORKER_MODE_CHANGE);
 		}
 		break;
 
@@ -2186,6 +2222,13 @@ static void wacom_wac_finger_slot(struct wacom_wac *wacom_wac,
 	bool mt = wacom_wac->features.touch_max > 1;
 	bool prox = hid_data->tipswitch &&
 		    report_touch_events(wacom_wac);
+
+	if (wacom_wac->shared->has_mute_touch_switch &&
+	    !wacom_wac->shared->is_touch_on) {
+		if (!wacom_wac->shared->touch_down)
+			return;
+		prox = 0;
+	}
 
 	wacom_wac->hid_data.num_received++;
 	if (wacom_wac->hid_data.num_received > wacom_wac->hid_data.num_expected)
@@ -4117,7 +4160,7 @@ static const struct wacom_features wacom_features_0x300 =
 	  BAMBOO_PEN, WACOM_INTUOS_RES, WACOM_INTUOS_RES };
 static const struct wacom_features wacom_features_0x301 =
 	{ "Wacom Bamboo One M", 21648, 13530, 1023, 31,
-	  BAMBOO_PT, WACOM_INTUOS_RES, WACOM_INTUOS_RES };
+	  BAMBOO_PEN, WACOM_INTUOS_RES, WACOM_INTUOS_RES };
 static const struct wacom_features wacom_features_0x302 =
 	{ "Wacom Intuos PT S", 15200, 9500, 1023, 31,
 	  INTUOSHT, WACOM_INTUOS_RES, WACOM_INTUOS_RES, .touch_max = 16,
