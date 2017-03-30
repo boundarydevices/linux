@@ -329,6 +329,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-mtp.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_max-apex.dtb \
+	imx6q-nitrogen6_max-lantech.dtb \
 	imx6q-nitrogen6_som2.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6x-careview.dtb \
