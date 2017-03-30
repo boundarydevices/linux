@@ -882,7 +882,7 @@ int cec_ll_tx(const unsigned char *msg, unsigned char len)
 	mutex_lock(&cec_dev->cec_mutex);
 	/* make sure physical address is valid before send */
 	if (len >= 2 && msg[1] == CEC_OC_REPORT_PHYSICAL_ADDRESS)
-		check_physical_addr_valid(MAX_INT);
+		check_physical_addr_valid(20);
 
 try_again:
 	reinit_completion(&cec_dev->tx_ok);
