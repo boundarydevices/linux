@@ -60,20 +60,37 @@ u32 aml_read_crypto_reg(u32 addr)
 	return readl(cryptoreg_offset + (addr << 2));
 }
 #endif
+
+u32 get_dma_t0_offset(void)
+{
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
+		return TXLX_DMA_T0;
+	else
+		return GXL_DMA_T0;
+}
+
+u32 get_dma_sts0_offset(void)
+{
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
+		return TXLX_DMA_STS0;
+	else
+		return GXL_DMA_STS0;
+}
+
 void aml_dma_debug(struct dma_dsc *dsc, u32 nents, const char *msg)
 {
 #if AML_CRYPTO_DEBUG
-	uint32_t i = 0;
+	u32 i = 0;
+	u32 DMA_T0 = get_dma_t0_offset();
+	u32 DMA_STS0 = get_dma_sts0_offset();
 
 	pr_err("begin %s\n", msg);
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < 1; i++)
 		pr_err("reg(%lu) = 0x%8x\n", (uintptr_t)(DMA_T0 + i),
 				aml_read_crypto_reg(DMA_T0 + i));
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < 1; i++)
 		pr_err("reg(%lu) = 0x%8x\n", (uintptr_t)(DMA_STS0 + i),
 				aml_read_crypto_reg(DMA_STS0 + i));
-	pr_err("reg(%lu) = 0x%8x\n", (uintptr_t)(DMA_CFG),
-			aml_read_crypto_reg(DMA_CFG));
 	for (i = 0; i < nents; i++) {
 		pr_err("desc (%4x) (len) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.length);

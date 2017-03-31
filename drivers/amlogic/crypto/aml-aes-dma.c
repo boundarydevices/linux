@@ -57,8 +57,8 @@
 #define AML_AES_QUEUE_LENGTH	50
 #define AML_AES_DMA_THRESHOLD		16
 
-#define DMA_THREAD_REG (DMA_T0 + AES_THREAD_INDEX)
-#define DMA_STATUS_REG (DMA_STS0 + AES_THREAD_INDEX)
+#define DMA_THREAD_REG (get_dma_t0_offset() + AES_THREAD_INDEX)
+#define DMA_STATUS_REG (get_dma_sts0_offset() + AES_THREAD_INDEX)
 
 u8 map_in_aes_dma;
 struct aml_aes_dev;

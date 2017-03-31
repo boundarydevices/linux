@@ -55,8 +55,8 @@
 
 #define AML_TDES_QUEUE_LENGTH	50
 
-#define DMA_THREAD_REG (DMA_T0 + TDES_THREAD_INDEX)
-#define DMA_STATUS_REG (DMA_STS0 + TDES_THREAD_INDEX)
+#define DMA_THREAD_REG (get_dma_t0_offset() + TDES_THREAD_INDEX)
+#define DMA_STATUS_REG (get_dma_sts0_offset() + TDES_THREAD_INDEX)
 u8 map_in_tdes_dma;
 
 struct aml_tdes_dev;
