@@ -41,33 +41,12 @@ ENTRY(meson_cleanup)
 	mrc p15, 0, r4, c1, c0, 0
 	bic r4, r4, #(CR_I)
 	mcr p15, 0, r4, c1, c0, 0
-
-	@ invalid i-cache
-	mov r4, #0
-	mcr p15, 0, r4, c7, c5, 6 @invalid BTAC
-	mcr p15, 0, r4, c7, c5, 0 @invalid icache
-	dsb
-	nop
-	nop
 	isb
 
-	@ dcache disable
-	mrc p15, 0, r4, c1, c0, 0
-	bic r4, r4, #CR_C
-	mcr p15, 0, r4, c1, c0, 0
-	dsb
+	@ invalidate I-cache inner shareable
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c1, 0
 	isb
-
-	/* Flush the D-cache */
-	bl	v7_flush_dcache_louis
-
-	mov r4, #0
-	mcr p15, 0, r4, c7, c10, 4
-	dsb
-	isb
-
-	/* Turn off coherency */
-	exit_smp r4, r5
 
 	ldmfd	sp!, {r0-r11, pc}
 ENDPROC(meson_cleanup)

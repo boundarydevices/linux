@@ -30,6 +30,9 @@
 #include <asm/mach-types.h>
 #include <linux/percpu.h>
 #include "platsmp.h"
+#include <asm/cache.h>
+#include <asm/cacheflush.h>
+#include <asm/cp15.h>
 
 static DEFINE_SPINLOCK(boot_lock);
 static DEFINE_SPINLOCK(clockfw_lock);
@@ -298,15 +301,13 @@ int meson_cpu_kill(unsigned int cpu)
 	return 1;
 }
 
-
 void meson_cpu_die(unsigned int cpu)
 {
 	meson_set_cpu_ctrl_reg(cpu, 0);
-	flush_cache_all();
-	dsb();
-	dmb();
 
 	meson_cleanup();
+	v7_exit_coherency_flush(louis);
+
 	aml_set_reg32_bits(CPU_POWER_CTRL_REG, 0x3, (cpu << 3), 2);
 	asm volatile(
 		"dsb\n"
