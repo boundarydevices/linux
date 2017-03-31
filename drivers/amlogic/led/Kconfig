@@ -1,0 +1,28 @@
+#
+# LED drivers configuration
+#
+
+menuconfig AMLOGIC_LED
+	bool "Amlogic LED Support"
+	default n
+	help
+	  Say Y here to get to see options for led drivers.
+	  This option alone does not add any kernel code.
+
+	  If you say N, all options in this submenu will be
+	  skipped and disabled.
+
+
+if AMLOGIC_LED
+
+config AMLOGIC_LED_SYS
+	bool "System LED Support"
+	depends on LEDS_CLASS
+	default n
+	help
+	  This option enables support for system led drivers.
+
+	  Enable this option to allow the userspace to control
+	  the system led.
+
+endif

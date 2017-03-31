@@ -73,6 +73,8 @@ source "drivers/amlogic/audiodsp/Kconfig"
 
 source "drivers/amlogic/pm/Kconfig"
 
+source "drivers/amlogic/led/Kconfig"
+
 source "drivers/amlogic/jtag/Kconfig"
 
 source "drivers/amlogic/watchdog/Kconfig"
