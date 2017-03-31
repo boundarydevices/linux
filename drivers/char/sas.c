@@ -435,7 +435,7 @@ static unsigned int sas_poll(struct file *file, struct poll_table_struct *table)
 
 	poll_wait(file, &dev->queue, table);
 
-	if (dev->rxmsgadd != dev->rxmsgtake)
+	if (dev->rxbuf.head != dev->rxbuf.tail)
 		flags |= POLLIN | POLLRDNORM;
 	if (CIRC_SPACE(dev->txbuf.head,
 		       dev->txbuf.tail,
