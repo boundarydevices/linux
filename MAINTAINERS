@@ -13751,3 +13751,10 @@ F: drivers/amlogic/media/video_processor/video_dev/Makefile
 F: drivers/amlogic/media/video_processor/video_dev/amlvideo.h
 F: drivers/amlogic/media/video_processor/video_dev/amlvideo.c
 F: drivers/amlogic/media/video_processor/video_dev/common/vfutil.c
+
+AMLOGIC SPICC DRIVER
+M: Sunny Luo <sunny.luo@amlogic.com>
+F: drivers/amlogic/spicc/spicc.c
+F: drivers/amlogic/spicc/spicc.h
+F: drivers/amlogic/spicc/Kconfig
+F: drivers/amlogic/spicc/Makefile

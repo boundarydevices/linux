@@ -338,6 +338,17 @@
 		/* 0: 100.0M    1: 166.7M    2: 200.0M    3: 250.0M */
 		/* 4: 333.3M    5: 400.0M    6: 500.0M    7: 666.7M */
 	};
+
+	spicc:@c1108d80{
+		compatible = "amlogic, spicc";
+		status = "disabled";
+		reg = <0x0 0xc1108d80 0x0 0x28>;
+		clocks = <&clkc CLKID_SPICC>;
+		clock-names = "spicc_clk";
+		interrupts = <0 81 1>;
+		device_id = <0>;
+	};
+
 	i2c_ao: i2c@c8100500{ /*I2C-AO*/
 			compatible = "amlogic, meson-i2c";
 			dev_name = "i2c-AO";
@@ -865,15 +876,6 @@
 			};
 		};
 
-		spicc_pins_z11z12z13: spicc_pins_z11z12z13 {
-			mux {
-				groups = "spi_sclk_0",
-					"spi_miso_0",
-					"spi_mosi_0";
-				function = "spi";
-			};
-		};
-
 		spicc_pulldown_z11z12z13: spicc_pulldown_z11z12z13 {
 			mux {
 				groups = "spi_sclk_0",
@@ -888,15 +890,6 @@
 				groups = "spi_sclk_0",
 					"spi_miso_0",
 					"spi_mosi_0";
-				function = "spi";
-			};
-		};
-
-		spicc_pins_x8x9x11: spicc_pins_x8x9x11 {
-			mux {
-				groups = "spi_sclk_1",
-					"spi_miso_1",
-					"spi_mosi_1";
 				function = "spi";
 			};
 		};

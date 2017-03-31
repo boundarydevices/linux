@@ -21,6 +21,8 @@ obj-$(CONFIG_AMLOGIC_CPU_VERSION)       += cpu_version/
 
 obj-$(CONFIG_AMLOGIC_I2C)		+= i2c/
 
+obj-$(CONFIG_AMLOGIC_SPICC_MASTER) += spicc/
+
 obj-$(CONFIG_AMLOGIC_CPU_INFO)          += cpu_info/
 
 obj-$(CONFIG_AMLOGIC_MHU_MBOX)		+= mailbox/

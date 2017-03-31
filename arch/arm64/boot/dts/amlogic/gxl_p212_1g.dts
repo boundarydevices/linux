@@ -1152,3 +1152,19 @@
 &efuse {
 	status = "ok";
 };
+
+&spicc{
+	status = "disabled";
+	pinctrl-names = "spicc_pulldown","spicc_pullup";
+	pinctrl-0 = <&spicc_pulldown_x8x9x11>;
+	pinctrl-1 = <&spicc_pullup_x8x9x11>;
+	num_chipselect = <1>;
+	cs-gpios = <&gpio GPIOX_10 GPIO_ACTIVE_HIGH>;
+	dma_en = <0>;
+	dma_tx_threshold = <3>;
+	dma_rx_threshold = <3>;
+	dma_num_per_read_burst = <3>;
+	dma_num_per_write_burst = <3>;
+	delay_control = <0x15>;
+	ssctl = <0>;
+};
