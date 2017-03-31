@@ -71,3 +71,5 @@ obj-$(CONFIG_AMLOGIC_GX_SUSPEND)	+= pm/
 
 obj-$(CONFIG_AMLOGIC_JTAG)		+= jtag/
 
+obj-$(CONFIG_AMLOGIC_WDT)		+= watchdog/
+

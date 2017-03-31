@@ -1,0 +1,21 @@
+#
+# watchdog configuration
+#
+
+
+menuconfig AMLOGIC_WDT
+	bool "Amlogic Watchdog Support"
+	select WATCHDOG
+	select WATCHDOG_CORE
+	default n
+	help
+	  say y to enable Amlogic watchdog driver.
+
+
+if AMLOGIC_WDT
+config AMLOGIC_WDT_MESON
+	bool "Amlogic Meson Watchdog"
+	default n
+	help
+	  say y to enable Amlogic meson watchdog driver.
+endif
