@@ -71,5 +71,7 @@ source "drivers/amlogic/audiodsp/Kconfig"
 
 source "drivers/amlogic/pm/Kconfig"
 
+source "drivers/amlogic/jtag/Kconfig"
+
 endmenu
 endif
