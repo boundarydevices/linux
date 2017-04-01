@@ -7170,7 +7170,8 @@ show_frame_format(struct device *dev,
 }
 static DEVICE_ATTR(frame_format, 0444, show_frame_format, NULL);
 
-static int rmem_di_device_init(struct reserved_mem *rmem, struct device *dev)
+static int __init rmem_di_device_init(struct reserved_mem *rmem,
+	struct device *dev)
 {
 	di_dev_t *di_devp = dev_get_drvdata(dev);
 
