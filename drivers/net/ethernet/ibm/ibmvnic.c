@@ -2793,15 +2793,13 @@ static ssize_t trace_read(struct file *file, char __user *user_buf, size_t len,
 	int num = ras_comp_int->num;
 	union ibmvnic_crq crq;
 	dma_addr_t trace_tok;
+	u32 size = be32_to_cpu(adapter->ras_comps[num].trace_buff_size);
+	ssize_t res;
 
-	if (*ppos >= be32_to_cpu(adapter->ras_comps[num].trace_buff_size))
+	if (*ppos >= size)
 		return 0;
 
-	trace =
-	    dma_alloc_coherent(dev,
-			       be32_to_cpu(adapter->ras_comps[num].
-					   trace_buff_size), &trace_tok,
-			       GFP_KERNEL);
+	trace = dma_alloc_coherent(dev, size, &trace_tok, GFP_KERNEL);
 	if (!trace) {
 		dev_err(dev, "Couldn't alloc trace buffer\n");
 		return 0;
@@ -2812,24 +2810,15 @@ static ssize_t trace_read(struct file *file, char __user *user_buf, size_t len,
 	crq.collect_fw_trace.cmd = COLLECT_FW_TRACE;
 	crq.collect_fw_trace.correlator = adapter->ras_comps[num].correlator;
 	crq.collect_fw_trace.ioba = cpu_to_be32(trace_tok);
-	crq.collect_fw_trace.len = adapter->ras_comps[num].trace_buff_size;
+	crq.collect_fw_trace.len = cpu_to_be32(size);
 
 	init_completion(&adapter->fw_done);
 	ibmvnic_send_crq(adapter, &crq);
 	wait_for_completion(&adapter->fw_done);
 
-	if (*ppos + len > be32_to_cpu(adapter->ras_comps[num].trace_buff_size))
-		len =
-		    be32_to_cpu(adapter->ras_comps[num].trace_buff_size) -
-		    *ppos;
-
-	copy_to_user(user_buf, &((u8 *)trace)[*ppos], len);
-
-	dma_free_coherent(dev,
-			  be32_to_cpu(adapter->ras_comps[num].trace_buff_size),
-			  trace, trace_tok);
-	*ppos += len;
-	return len;
+	res = simple_read_from_buffer(user_buf, len, ppos, trace, size);
+	dma_free_coherent(dev, size, trace, trace_tok);
+	return res;
 }
 
 static const struct file_operations trace_ops = {
@@ -2849,12 +2838,7 @@ static ssize_t paused_read(struct file *file, char __user *user_buf, size_t len,
 
 	size = sprintf(buff, "%d\n", adapter->ras_comp_int[num].paused);
 
-	if (*ppos >= size)
-		return 0;
-
-	copy_to_user(user_buf, buff, size);
-	*ppos += size;
-	return size;
+	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
 }
 
 static ssize_t paused_write(struct file *file, const char __user *user_buf,
@@ -2865,10 +2849,11 @@ static ssize_t paused_write(struct file *file, const char __user *user_buf,
 	int num = ras_comp_int->num;
 	union ibmvnic_crq crq;
 	unsigned long val;
-	char buff[9]; /* decimal max int plus \n and \0 */
+	int err;
 
-	copy_from_user(buff, user_buf, sizeof(buff));
-	val = kstrtoul(buff, 10, NULL);
+	err = kstrtoul_from_user(user_buf, len, 10, &val);
+	if (err)
+		return err;
 
 	adapter->ras_comp_int[num].paused = val ? 1 : 0;
 
@@ -2899,13 +2884,7 @@ static ssize_t tracing_read(struct file *file, char __user *user_buf,
 	int size;
 
 	size = sprintf(buff, "%d\n", adapter->ras_comps[num].trace_on);
-
-	if (*ppos >= size)
-		return 0;
-
-	copy_to_user(user_buf, buff, size);
-	*ppos += size;
-	return size;
+	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
 }
 
 static ssize_t tracing_write(struct file *file, const char __user *user_buf,
@@ -2916,10 +2895,11 @@ static ssize_t tracing_write(struct file *file, const char __user *user_buf,
 	int num = ras_comp_int->num;
 	union ibmvnic_crq crq;
 	unsigned long val;
-	char buff[9]; /* decimal max int plus \n and \0 */
+	int err;
 
-	copy_from_user(buff, user_buf, sizeof(buff));
-	val = kstrtoul(buff, 10, NULL);
+	err = kstrtoul_from_user(user_buf, len, 10, &val);
+	if (err)
+		return err;
 
 	memset(&crq, 0, sizeof(crq));
 	crq.control_ras.first = IBMVNIC_CRQ_CMD;
@@ -2947,13 +2927,7 @@ static ssize_t error_level_read(struct file *file, char __user *user_buf,
 	int size;
 
 	size = sprintf(buff, "%d\n", adapter->ras_comps[num].error_check_level);
-
-	if (*ppos >= size)
-		return 0;
-
-	copy_to_user(user_buf, buff, size);
-	*ppos += size;
-	return size;
+	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
 }
 
 static ssize_t error_level_write(struct file *file, const char __user *user_buf,
@@ -2964,11 +2938,11 @@ static ssize_t error_level_write(struct file *file, const char __user *user_buf,
 	int num = ras_comp_int->num;
 	union ibmvnic_crq crq;
 	unsigned long val;
-	char buff[9]; /* decimal max int plus \n and \0 */
+	int err;
 
-	copy_from_user(buff, user_buf, sizeof(buff));
-	val = kstrtoul(buff, 10, NULL);
-
+	err = kstrtoul_from_user(user_buf, len, 10, &val);
+	if (err)
+		return err;
 	if (val > 9)
 		val = 9;
 
@@ -3000,12 +2974,7 @@ static ssize_t trace_level_read(struct file *file, char __user *user_buf,
 	int size;
 
 	size = sprintf(buff, "%d\n", adapter->ras_comps[num].trace_level);
-	if (*ppos >= size)
-		return 0;
-
-	copy_to_user(user_buf, buff, size);
-	*ppos += size;
-	return size;
+	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
 }
 
 static ssize_t trace_level_write(struct file *file, const char __user *user_buf,
@@ -3015,10 +2984,11 @@ static ssize_t trace_level_write(struct file *file, const char __user *user_buf,
 	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
 	union ibmvnic_crq crq;
 	unsigned long val;
-	char buff[9]; /* decimal max int plus \n and \0 */
+	int err;
 
-	copy_from_user(buff, user_buf, sizeof(buff));
-	val = kstrtoul(buff, 10, NULL);
+	err = kstrtoul_from_user(user_buf, len, 10, &val);
+	if (err)
+		return err;
 	if (val > 9)
 		val = 9;
 
@@ -3051,12 +3021,7 @@ static ssize_t trace_buff_size_read(struct file *file, char __user *user_buf,
 	int size;
 
 	size = sprintf(buff, "%d\n", adapter->ras_comps[num].trace_buff_size);
-	if (*ppos >= size)
-		return 0;
-
-	copy_to_user(user_buf, buff, size);
-	*ppos += size;
-	return size;
+	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
 }
 
 static ssize_t trace_buff_size_write(struct file *file,
@@ -3067,10 +3032,11 @@ static ssize_t trace_buff_size_write(struct file *file,
 	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
 	union ibmvnic_crq crq;
 	unsigned long val;
-	char buff[9]; /* decimal max int plus \n and \0 */
+	int err;
 
-	copy_from_user(buff, user_buf, sizeof(buff));
-	val = kstrtoul(buff, 10, NULL);
+	err = kstrtoul_from_user(user_buf, len, 10, &val);
+	if (err)
+		return err;
 
 	memset(&crq, 0, sizeof(crq));
 	crq.control_ras.first = IBMVNIC_CRQ_CMD;
