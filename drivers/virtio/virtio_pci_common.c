@@ -263,6 +263,7 @@ static int vp_find_vqs_msix(struct virtio_device *vdev, unsigned nvqs,
 out_remove_vqs:
 	vp_remove_vqs(vdev);
 	kfree(vp_dev->msix_vector_map);
+	vp_dev->msix_vector_map = NULL;
 out_disable_config_irq:
 	vp_dev->config_vector(vp_dev, VIRTIO_MSI_NO_VECTOR);
 out_free_config_irq:
