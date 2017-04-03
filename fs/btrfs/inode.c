@@ -572,7 +572,7 @@ cont:
 		}
 		if (ret <= 0) {
 			unsigned long clear_flags = EXTENT_DELALLOC |
-				EXTENT_DEFRAG;
+				EXTENT_DELALLOC_NEW | EXTENT_DEFRAG;
 			unsigned long page_error_op;
 
 			clear_flags |= (ret < 0) ? EXTENT_DO_ACCOUNTING : 0;
@@ -879,6 +879,7 @@ out_free:
 				     async_extent->start +
 				     async_extent->ram_size - 1,
 				     NULL, EXTENT_LOCKED | EXTENT_DELALLOC |
+				     EXTENT_DELALLOC_NEW |
 				     EXTENT_DEFRAG | EXTENT_DO_ACCOUNTING,
 				     PAGE_UNLOCK | PAGE_CLEAR_DIRTY |
 				     PAGE_SET_WRITEBACK | PAGE_END_WRITEBACK |
@@ -974,6 +975,7 @@ static noinline int cow_file_range(struct inode *inode,
 			extent_clear_unlock_delalloc(inode, start, end,
 				     delalloc_end, NULL,
 				     EXTENT_LOCKED | EXTENT_DELALLOC |
+				     EXTENT_DELALLOC_NEW |
 				     EXTENT_DEFRAG, PAGE_UNLOCK |
 				     PAGE_CLEAR_DIRTY | PAGE_SET_WRITEBACK |
 				     PAGE_END_WRITEBACK);
@@ -1086,8 +1088,8 @@ out_reserve:
 	btrfs_dec_block_group_reservations(fs_info, ins.objectid);
 	btrfs_free_reserved_extent(fs_info, ins.objectid, ins.offset, 1);
 out_unlock:
-	clear_bits = EXTENT_LOCKED | EXTENT_DELALLOC | EXTENT_DEFRAG |
-		EXTENT_CLEAR_META_RESV;
+	clear_bits = EXTENT_LOCKED | EXTENT_DELALLOC | EXTENT_DELALLOC_NEW |
+		EXTENT_DEFRAG | EXTENT_CLEAR_META_RESV;
 	page_ops = PAGE_UNLOCK | PAGE_CLEAR_DIRTY | PAGE_SET_WRITEBACK |
 		PAGE_END_WRITEBACK;
 	/*
@@ -1775,6 +1777,14 @@ static void btrfs_set_bit_hook(struct inode *inode,
 			btrfs_add_delalloc_inodes(root, inode);
 		spin_unlock(&BTRFS_I(inode)->lock);
 	}
+
+	if (!(state->state & EXTENT_DELALLOC_NEW) &&
+	    (*bits & EXTENT_DELALLOC_NEW)) {
+		spin_lock(&BTRFS_I(inode)->lock);
+		BTRFS_I(inode)->new_delalloc_bytes += state->end + 1 -
+			state->start;
+		spin_unlock(&BTRFS_I(inode)->lock);
+	}
 }
 
 /*
@@ -1838,6 +1848,14 @@ static void btrfs_clear_bit_hook(struct btrfs_inode *inode,
 		    test_bit(BTRFS_INODE_IN_DELALLOC_LIST,
 					&inode->runtime_flags))
 			btrfs_del_delalloc_inode(root, inode);
+		spin_unlock(&inode->lock);
+	}
+
+	if ((state->state & EXTENT_DELALLOC_NEW) &&
+	    (*bits & EXTENT_DELALLOC_NEW)) {
+		spin_lock(&inode->lock);
+		ASSERT(inode->new_delalloc_bytes >= len);
+		inode->new_delalloc_bytes -= len;
 		spin_unlock(&inode->lock);
 	}
 }
@@ -2967,10 +2985,17 @@ static int btrfs_finish_ordered_io(struct btrfs_ordered_extent *ordered_extent)
 						logical_len, logical_len,
 						compress_type, 0, 0,
 						BTRFS_FILE_EXTENT_REG);
-		if (!ret)
+		if (!ret) {
+			clear_extent_bit(&BTRFS_I(inode)->io_tree,
+					 ordered_extent->file_offset,
+					 ordered_extent->file_offset +
+					 ordered_extent->len - 1,
+					 EXTENT_DELALLOC_NEW, 0, 0,
+					 &cached_state, GFP_NOFS);
 			btrfs_release_delalloc_bytes(fs_info,
 						     ordered_extent->start,
 						     ordered_extent->disk_len);
+		}
 	}
 	unpin_extent_cache(&BTRFS_I(inode)->extent_tree,
 			   ordered_extent->file_offset, ordered_extent->len,
@@ -2994,6 +3019,17 @@ out_unlock:
 			     ordered_extent->file_offset +
 			     ordered_extent->len - 1, &cached_state, GFP_NOFS);
 out:
+	if (ret &&
+	    !test_bit(BTRFS_ORDERED_NOCOW, &ordered_extent->flags) &&
+	    !test_bit(BTRFS_ORDERED_PREALLOC, &ordered_extent->flags) &&
+	    !test_bit(BTRFS_ORDERED_DIRECT, &ordered_extent->flags))
+		clear_extent_bit(&BTRFS_I(inode)->io_tree,
+				 ordered_extent->file_offset,
+				 ordered_extent->file_offset +
+				 ordered_extent->len - 1,
+				 EXTENT_DELALLOC_NEW, 0, 0,
+				 &cached_state, GFP_NOFS);
+
 	if (root != fs_info->tree_root)
 		btrfs_delalloc_release_metadata(BTRFS_I(inode),
 				ordered_extent->len);
@@ -8894,6 +8930,7 @@ again:
 		if (!inode_evicting)
 			clear_extent_bit(tree, start, end,
 					 EXTENT_DIRTY | EXTENT_DELALLOC |
+					 EXTENT_DELALLOC_NEW |
 					 EXTENT_LOCKED | EXTENT_DO_ACCOUNTING |
 					 EXTENT_DEFRAG, 1, 0, &cached_state,
 					 GFP_NOFS);
@@ -8951,8 +8988,8 @@ again:
 	if (!inode_evicting) {
 		clear_extent_bit(tree, page_start, page_end,
 				 EXTENT_LOCKED | EXTENT_DIRTY |
-				 EXTENT_DELALLOC | EXTENT_DO_ACCOUNTING |
-				 EXTENT_DEFRAG, 1, 1,
+				 EXTENT_DELALLOC | EXTENT_DELALLOC_NEW |
+				 EXTENT_DO_ACCOUNTING | EXTENT_DEFRAG, 1, 1,
 				 &cached_state, GFP_NOFS);
 
 		__btrfs_releasepage(page, GFP_NOFS);
@@ -9323,6 +9360,7 @@ struct inode *btrfs_alloc_inode(struct super_block *sb)
 	ei->last_sub_trans = 0;
 	ei->logged_trans = 0;
 	ei->delalloc_bytes = 0;
+	ei->new_delalloc_bytes = 0;
 	ei->defrag_bytes = 0;
 	ei->disk_i_size = 0;
 	ei->flags = 0;
@@ -9388,6 +9426,7 @@ void btrfs_destroy_inode(struct inode *inode)
 	WARN_ON(BTRFS_I(inode)->outstanding_extents);
 	WARN_ON(BTRFS_I(inode)->reserved_extents);
 	WARN_ON(BTRFS_I(inode)->delalloc_bytes);
+	WARN_ON(BTRFS_I(inode)->new_delalloc_bytes);
 	WARN_ON(BTRFS_I(inode)->csum_bytes);
 	WARN_ON(BTRFS_I(inode)->defrag_bytes);
 
@@ -9511,7 +9550,7 @@ static int btrfs_getattr(struct vfsmount *mnt,
 	stat->dev = BTRFS_I(inode)->root->anon_dev;
 
 	spin_lock(&BTRFS_I(inode)->lock);
-	delalloc_bytes = BTRFS_I(inode)->delalloc_bytes;
+	delalloc_bytes = BTRFS_I(inode)->new_delalloc_bytes;
 	spin_unlock(&BTRFS_I(inode)->lock);
 	stat->blocks = (ALIGN(inode_get_bytes(inode), blocksize) +
 			ALIGN(delalloc_bytes, blocksize)) >> 9;
