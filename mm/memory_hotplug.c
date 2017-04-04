@@ -1211,7 +1211,7 @@ static pg_data_t __ref *hotadd_new_pgdat(int nid, u64 start)
 		/* Reset the nr_zones, order and classzone_idx before reuse */
 		pgdat->nr_zones = 0;
 		pgdat->kswapd_order = 0;
-		pgdat->kswapd_classzone_idx = 0;
+		pgdat->kswapd_classzone_idx = MAX_NR_ZONES;
 	}
 
 	/* we can use NODE_DATA(nid) from here */
