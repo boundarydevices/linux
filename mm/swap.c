@@ -568,7 +568,8 @@ static void lru_lazyfree_fn(struct page *page, struct lruvec *lruvec,
 	    !PageUnevictable(page)) {
 		bool active = PageActive(page);
 
-		del_page_from_lru_list(page, lruvec, LRU_INACTIVE_ANON + active);
+		del_page_from_lru_list(page, lruvec,
+				       LRU_INACTIVE_ANON + active);
 		ClearPageActive(page);
 		ClearPageReferenced(page);
 		/*
@@ -651,7 +652,7 @@ void deactivate_file_page(struct page *page)
  * This is done to accelerate the reclaim of @page.
  */
 void mark_page_lazyfree(struct page *page)
- {
+{
 	if (PageLRU(page) && PageAnon(page) && PageSwapBacked(page) &&
 	    !PageUnevictable(page)) {
 		struct pagevec *pvec = &get_cpu_var(lru_lazyfree_pvecs);
