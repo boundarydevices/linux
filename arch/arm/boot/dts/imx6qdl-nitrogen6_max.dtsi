@@ -678,6 +678,15 @@
 		pwms = <&pwm3 0 45>; /* 1 / 45 ns = 22 MHz */
 	};
 
+	ramoops_device {
+		compatible = "fsl,mxc_ramoops";
+		record_size = <524288>; /*512K*/
+		console_size = <262144>; /*256K*/
+		ftrace_size = <262144>;  /*256K*/
+		dump_oops = <1>;
+		status = "okay";
+	};
+
 	regulators {
 		compatible = "simple-bus";
 		#address-cells = <1>;
