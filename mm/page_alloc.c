@@ -1977,6 +1977,9 @@ static void steal_suitable_fallback(struct zone *zone, struct page *page,
 		goto single_page;
 
 	pages = move_freepages_block(zone, page, start_type);
+	/* moving whole block can fail due to zone boundary conditions */
+	if (!pages)
+		goto single_page;
 
 	/* Claim the whole block if over half of it is free */
 	if (pages >= (1 << (pageblock_order-1)) ||
