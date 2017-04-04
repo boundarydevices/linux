@@ -879,6 +879,8 @@ int dax_writeback_mapping_range(struct address_space *mapping,
 	start_index = wbc->range_start >> PAGE_SHIFT;
 	end_index = wbc->range_end >> PAGE_SHIFT;
 
+	trace_dax_writeback_range(inode, start_index, end_index);
+
 	tag_pages_for_writeback(mapping, start_index, end_index);
 
 	pagevec_init(&pvec, 0);
@@ -899,10 +901,12 @@ int dax_writeback_mapping_range(struct address_space *mapping,
 			ret = dax_writeback_one(bdev, mapping, indices[i],
 					pvec.pages[i]);
 			if (ret < 0)
-				return ret;
+				goto out;
 		}
 	}
-	return 0;
+out:
+	trace_dax_writeback_range_done(inode, start_index, end_index);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(dax_writeback_mapping_range);
 
