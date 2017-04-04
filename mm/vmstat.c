@@ -1766,11 +1766,10 @@ void __init init_mm_internals(void)
 {
 	int ret __maybe_unused;
 
-	mm_percpu_wq = alloc_workqueue("vmstat",
+	mm_percpu_wq = alloc_workqueue("mm_percpu_wq",
 				       WQ_FREEZABLE|WQ_MEM_RECLAIM, 0);
 
 #ifdef CONFIG_SMP
-
 	ret = cpuhp_setup_state_nocalls(CPUHP_MM_VMSTAT_DEAD, "mm/vmstat:dead",
 					NULL, vmstat_cpu_dead);
 	if (ret < 0)
