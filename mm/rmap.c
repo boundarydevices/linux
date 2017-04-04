@@ -1421,17 +1421,17 @@ static int try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
 			VM_BUG_ON_PAGE(!PageSwapCache(page) && PageSwapBacked(page),
 				page);
 
-			/*
-			 * swapin page could be clean, it has data stored in
-			 * swap. We can't silently discard it without setting
-			 * swap entry in the page table.
-			 */
-			if (!PageDirty(page) && !PageSwapCache(page)) {
-				/* It's a freeable page by MADV_FREE */
-				dec_mm_counter(mm, MM_ANONPAGES);
-				goto discard;
-			} else if (!PageSwapBacked(page)) {
-				/* dirty MADV_FREE page */
+			/* MADV_FREE page check */
+			if (!PageSwapBacked(page)) {
+				if (!PageDirty(page)) {
+					dec_mm_counter(mm, MM_ANONPAGES);
+					goto discard;
+				}
+
+				/*
+				 * If the page was redirtied, it cannot be
+				 * discarded. Remap the page to page table.
+				 */
 				set_pte_at(mm, address, pvmw.pte, pteval);
 				ret = SWAP_DIRTY;
 				page_vma_mapped_walk_done(&pvmw);
