@@ -2018,7 +2018,7 @@ static void steal_suitable_fallback(struct zone *zone, struct page *page,
 	}
 
 	/* moving whole block can fail due to zone boundary conditions */
-	if (!pages)
+	if (!free_pages)
 		goto single_page;
 
 	/*
