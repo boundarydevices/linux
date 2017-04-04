@@ -1565,6 +1565,7 @@ bool madvise_free_huge_pmd(struct mmu_gather *tlb, struct vm_area_struct *vma,
 	unlock_page(page);
 
 	if (pmd_young(orig_pmd) || pmd_dirty(orig_pmd)) {
+		pmdp_invalidate(vma, addr, pmd);
 		orig_pmd = pmd_mkold(orig_pmd);
 		orig_pmd = pmd_mkclean(orig_pmd);
 
