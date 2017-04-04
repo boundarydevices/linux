@@ -390,8 +390,8 @@ repeat:
 	rwsem_acquire_read(&journal->j_trans_commit_map, 0, 0, _THIS_IP_);
 	jbd2_journal_free_transaction(new_transaction);
 	/*
-	 * Make sure that no allocations done while the transaction is
-	 * open is going to recurse back to the fs layer.
+	 * Ensure that no allocations done while the transaction is open are
+	 * going to recurse back to the fs layer.
 	 */
 	handle->saved_alloc_context = memalloc_nofs_save();
 	return 0;
@@ -1768,8 +1768,8 @@ int jbd2_journal_stop(handle_t *handle)
 		jbd2_journal_free_reserved(handle->h_rsv_handle);
 free_and_exit:
 	/*
-	 * scope of th GFP_NOFS context is over here and so we can
-	 * restore the original alloc context.
+	 * Scope of the GFP_NOFS context is over here and so we can restore the
+	 * original alloc context.
 	 */
 	memalloc_nofs_restore(handle->saved_alloc_context);
 	jbd2_free_handle(handle);
