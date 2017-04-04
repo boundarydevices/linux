@@ -382,6 +382,10 @@
 		status = "okay";
 	};
 
+	caam_keyblob {
+		compatible = "fsl,sec-v4.0-keyblob";
+	};
+
 	chosen {
 		stdout-path = &uart2;
 	};
