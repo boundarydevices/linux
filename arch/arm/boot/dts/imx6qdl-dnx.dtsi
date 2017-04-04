@@ -297,6 +297,10 @@
 		baud_rate = <3000000>;
  	};
 
+	caam_keyblob {
+		compatible = "fsl,sec-v4.0-keyblob";
+	};
+
 	clocks {
 		clk24m: clk24m {
 			compatible = "fixed-clock";
