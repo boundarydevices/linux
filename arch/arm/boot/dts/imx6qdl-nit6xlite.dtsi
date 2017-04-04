@@ -350,6 +350,10 @@
 		shutdown-gpios = GP_BRM_BT_SHUTDOWN;
 	};
 
+	caam_keyblob {
+		compatible = "fsl,sec-v4.0-keyblob";
+	};
+
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
