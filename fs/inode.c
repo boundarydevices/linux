@@ -1950,7 +1950,7 @@ void __init inode_init(void)
 					sizeof(struct hlist_head),
 					ihash_entries,
 					14,
-					HASH_ZERO,
+					HASH_ZERO | HASH_ADAPT,
 					&i_hash_shift,
 					&i_hash_mask,
 					0,
