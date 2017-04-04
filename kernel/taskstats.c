@@ -211,6 +211,7 @@ static int fill_stats_for_tgid(pid_t tgid, struct taskstats *stats)
 	unsigned long flags;
 	int rc = -ESRCH;
 	u64 delta, utime, stime;
+	u64 start_time;
 
 	/*
 	 * Add additional stats from live tasks except zombie thread group
@@ -228,6 +229,7 @@ static int fill_stats_for_tgid(pid_t tgid, struct taskstats *stats)
 		memset(stats, 0, sizeof(*stats));
 
 	tsk = first;
+	start_time = ktime_get_ns();
 	do {
 		if (tsk->exit_state)
 			continue;
@@ -240,7 +242,7 @@ static int fill_stats_for_tgid(pid_t tgid, struct taskstats *stats)
 		delayacct_add_tsk(stats, tsk);
 
 		/* calculate task elapsed time in nsec */
-		delta = ktime_get_ns() - tsk->start_time;
+		delta = start_time - tsk->start_time;
 		/* Convert to micro seconds */
 		do_div(delta, NSEC_PER_USEC);
 		stats->ac_etime += delta;
