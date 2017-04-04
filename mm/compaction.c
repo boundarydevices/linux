@@ -1003,9 +1003,6 @@ static bool suitable_migration_source(struct compact_control *cc,
 static bool suitable_migration_target(struct compact_control *cc,
 							struct page *page)
 {
-	if (cc->ignore_block_suitable)
-		return true;
-
 	/* If the page is a large free page, then disallow migration */
 	if (PageBuddy(page)) {
 		/*
@@ -1016,6 +1013,9 @@ static bool suitable_migration_target(struct compact_control *cc,
 		if (page_order_unsafe(page) >= pageblock_order)
 			return false;
 	}
+
+	if (cc->ignore_block_suitable)
+		return true;
 
 	/* If the block is MIGRATE_MOVABLE or MIGRATE_CMA, allow migration */
 	if (is_migrate_movable(get_pageblock_migratetype(page)))
