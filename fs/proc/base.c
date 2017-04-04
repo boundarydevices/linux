@@ -1377,7 +1377,7 @@ static ssize_t proc_fail_nth_write(struct file *file, const char __user *buf,
 	if (n < 0 || n == INT_MAX)
 		return -EINVAL;
 	current->fail_nth = n + 1;
-	return len;
+	return count;
 }
 
 static ssize_t proc_fail_nth_read(struct file *file, char __user *buf,
