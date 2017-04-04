@@ -66,6 +66,11 @@ enum {
 /* In mm/page_alloc.c; keep in sync also with show_migration_types() there */
 extern char * const migratetype_names[MIGRATE_TYPES];
 
+#define is_migrate_highatomic(migratetype)				\
+	(migratetype == MIGRATE_HIGHATOMIC)
+#define is_migrate_highatomic_page(_page)				\
+	(get_pageblock_migratetype(_page) == MIGRATE_HIGHATOMIC)
+
 #ifdef CONFIG_CMA
 #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
 #  define is_migrate_cma_page(_page) (get_pageblock_migratetype(_page) == MIGRATE_CMA)
