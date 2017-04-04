@@ -30,6 +30,7 @@
 #include <linux/pid_namespace.h>
 #include <net/genetlink.h>
 #include <linux/atomic.h>
+#include <linux/sched/cputime.h>
 
 /*
  * Maximum length of a cpumask that can be specified in
