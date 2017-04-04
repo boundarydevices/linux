@@ -1477,6 +1477,9 @@ int kptr_restrict __read_mostly;
  * by an extra set of alphanumeric characters that are extended format
  * specifiers.
  *
+ * Please update scripts/checkpatch.pl when adding new conversion characters.
+ * (search for "check for vsprintf extension").
+ *
  * Right now we handle:
  *
  * - 'F' For symbolic function descriptor pointers with offset
