@@ -173,14 +173,11 @@ static struct resource bss_resource = {
 
 
 #ifdef CONFIG_X86_32
-/* cpu data as detected by the assembly code in head.S */
-struct cpuinfo_x86 new_cpu_data = {
-	.wp_works_ok = -1,
-};
+/* cpu data as detected by the assembly code in head_32.S */
+struct cpuinfo_x86 new_cpu_data;
+
 /* common cpu data for all cpus */
-struct cpuinfo_x86 boot_cpu_data __read_mostly = {
-	.wp_works_ok = -1,
-};
+struct cpuinfo_x86 boot_cpu_data __read_mostly;
 EXPORT_SYMBOL(boot_cpu_data);
 
 unsigned int def_to_bigsmp;
@@ -1225,21 +1222,6 @@ void __init setup_arch(char **cmdline_p)
 	x86_init.paging.pagetable_init();
 
 	kasan_init();
-
-#ifdef CONFIG_X86_32
-	/* sync back kernel address range */
-	clone_pgd_range(initial_page_table + KERNEL_PGD_BOUNDARY,
-			swapper_pg_dir     + KERNEL_PGD_BOUNDARY,
-			KERNEL_PGD_PTRS);
-
-	/*
-	 * sync back low identity map too.  It is used for example
-	 * in the 32-bit EFI stub.
-	 */
-	clone_pgd_range(initial_page_table,
-			swapper_pg_dir     + KERNEL_PGD_BOUNDARY,
-			min(KERNEL_PGD_PTRS, KERNEL_PGD_BOUNDARY));
-#endif
 
 	tboot_probe();
 

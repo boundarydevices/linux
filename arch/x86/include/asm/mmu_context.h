@@ -220,18 +220,6 @@ static inline int vma_pkey(struct vm_area_struct *vma)
 }
 #endif
 
-static inline bool __pkru_allows_pkey(u16 pkey, bool write)
-{
-	u32 pkru = read_pkru();
-
-	if (!__pkru_allows_read(pkru, pkey))
-		return false;
-	if (write && !__pkru_allows_write(pkru, pkey))
-		return false;
-
-	return true;
-}
-
 /*
  * We only want to enforce protection keys on the current process
  * because we effectively have no access to PKRU for other
@@ -268,8 +256,4 @@ static inline bool arch_vma_access_permitted(struct vm_area_struct *vma,
 	return __pkru_allows_pkey(vma_pkey(vma), write);
 }
 
-static inline bool arch_pte_access_permitted(pte_t pte, bool write)
-{
-	return __pkru_allows_pkey(pte_flags_pkey(pte_flags(pte)), write);
-}
 #endif /* _ASM_X86_MMU_CONTEXT_H */

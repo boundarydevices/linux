@@ -41,8 +41,8 @@ extern void paging_init(void);
 
 struct mm_struct;
 
+void set_pte_vaddr_p4d(p4d_t *p4d_page, unsigned long vaddr, pte_t new_pte);
 void set_pte_vaddr_pud(pud_t *pud_page, unsigned long vaddr, pte_t new_pte);
-
 
 static inline void native_pte_clear(struct mm_struct *mm, unsigned long addr,
 				    pte_t *ptep)
@@ -119,6 +119,16 @@ static inline pud_t native_pudp_get_and_clear(pud_t *xp)
 	native_pud_clear(xp);
 	return ret;
 #endif
+}
+
+static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
+{
+	*p4dp = p4d;
+}
+
+static inline void native_p4d_clear(p4d_t *p4d)
+{
+	native_set_p4d(p4d, (p4d_t) { .pgd = native_make_pgd(0)});
 }
 
 static inline void native_set_pgd(pgd_t *pgdp, pgd_t pgd)
@@ -206,6 +216,20 @@ extern void cleanup_highmap(void);
 extern void init_extra_mapping_uc(unsigned long phys, unsigned long size);
 extern void init_extra_mapping_wb(unsigned long phys, unsigned long size);
 
-#endif /* !__ASSEMBLY__ */
+#define gup_fast_permitted gup_fast_permitted
+static inline bool gup_fast_permitted(unsigned long start, int nr_pages,
+		int write)
+{
+	unsigned long len, end;
 
+	len = (unsigned long)nr_pages << PAGE_SHIFT;
+	end = start + len;
+	if (end < start)
+		return false;
+	if (end >> __VIRTUAL_MASK_SHIFT)
+		return false;
+	return true;
+}
+
+#endif /* !__ASSEMBLY__ */
 #endif /* _ASM_X86_PGTABLE_64_H */

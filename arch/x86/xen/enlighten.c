@@ -710,7 +710,7 @@ static void load_TLS_descriptor(struct thread_struct *t,
 
 	*shadow = t->tls_array[i];
 
-	gdt = get_cpu_gdt_table(cpu);
+	gdt = get_cpu_gdt_rw(cpu);
 	maddr = arbitrary_virt_to_machine(&gdt[GDT_ENTRY_TLS_MIN+i]);
 	mc = __xen_mc_entry(0);
 
@@ -1595,7 +1595,6 @@ asmlinkage __visible void __init xen_start_kernel(void)
 	/* set up basic CPUID stuff */
 	cpu_detect(&new_cpu_data);
 	set_cpu_cap(&new_cpu_data, X86_FEATURE_FPU);
-	new_cpu_data.wp_works_ok = 1;
 	new_cpu_data.x86_capability[CPUID_1_EDX] = cpuid_edx(1);
 #endif
 
