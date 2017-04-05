@@ -368,7 +368,7 @@ static int aml_wdt_resume(struct platform_device *pdev)
 #endif
 
 static const struct of_device_id aml_wdt_of_match[] = {
-	{ .compatible = "amlogic, gx-wdt", },
+	{ .compatible = "amlogic, meson-wdt", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, aml_wdt_of_match);

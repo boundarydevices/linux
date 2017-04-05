@@ -696,6 +696,15 @@
 		/*all channels use the default clock source XTAL_CLK*/
 		/*and you can shoose it in file dt-bindings/pwm/meson.h*/
 	};
+
+	sysled {
+		compatible = "amlogic, sysled";
+		dev_name = "sysled";
+		status = "okay";
+		led_gpio = <&gpio GPIODV_24 GPIO_ACTIVE_HIGH>;
+		led_active_low = <1>;
+	};
+
 	meson-fb {
 		compatible = "amlogic, meson-fb";
 		memory-region = <&fb_reserved>;
