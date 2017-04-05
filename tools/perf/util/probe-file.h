@@ -35,6 +35,7 @@ enum probe_type {
 
 /* probe-file.c depends on libelf */
 #ifdef HAVE_LIBELF_SUPPORT
+int open_trace_file(const char *trace_file, bool readwrite);
 int probe_file__open(int flag);
 int probe_file__open_both(int *kfd, int *ufd, int flag);
 struct strlist *probe_file__get_namelist(int fd);
@@ -64,6 +65,7 @@ struct probe_cache_entry *probe_cache__find_by_name(struct probe_cache *pcache,
 					const char *group, const char *event);
 int probe_cache__show_all_caches(struct strfilter *filter);
 bool probe_type_is_available(enum probe_type type);
+bool kretprobe_offset_is_supported(void);
 #else	/* ! HAVE_LIBELF_SUPPORT */
 static inline struct probe_cache *probe_cache__new(const char *tgt __maybe_unused)
 {
