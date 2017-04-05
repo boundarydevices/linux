@@ -49,10 +49,9 @@ unsigned char shutdown_timeout = 5;
 module_param(shutdown_timeout, byte, 0644);
 MODULE_PARM_DESC(shutdown_timeout, "timeout in seconds for controller shutdown");
 
-unsigned int nvme_max_retries = 5;
-module_param_named(max_retries, nvme_max_retries, uint, 0644);
+static u8 nvme_max_retries = 5;
+module_param_named(max_retries, nvme_max_retries, byte, 0644);
 MODULE_PARM_DESC(max_retries, "max number of retries a command may have");
-EXPORT_SYMBOL_GPL(nvme_max_retries);
 
 static int nvme_char_major;
 module_param(nvme_char_major, int, 0);
@@ -67,11 +66,17 @@ static DEFINE_SPINLOCK(dev_list_lock);
 
 static struct class *nvme_class;
 
-static inline bool nvme_req_needs_retry(struct request *req, u16 status)
+static inline bool nvme_req_needs_retry(struct request *req)
 {
-	return !(status & NVME_SC_DNR || blk_noretry_request(req)) &&
-		(jiffies - req->start_time) < req->timeout &&
-		req->retries < nvme_max_retries;
+	if (blk_noretry_request(req))
+		return false;
+	if (req->errors & NVME_SC_DNR)
+		return false;
+	if (jiffies - req->start_time >= req->timeout)
+		return false;
+	if (nvme_req(req)->retries >= nvme_max_retries)
+		return false;
+	return true;
 }
 
 void nvme_complete_rq(struct request *req)
@@ -79,8 +84,8 @@ void nvme_complete_rq(struct request *req)
 	int error = 0;
 
 	if (unlikely(req->errors)) {
-		if (nvme_req_needs_retry(req, req->errors)) {
-			req->retries++;
+		if (nvme_req_needs_retry(req)) {
+			nvme_req(req)->retries++;
 			blk_mq_requeue_request(req,
 					!blk_mq_queue_stopped(req->q));
 			return;
@@ -349,6 +354,11 @@ int nvme_setup_cmd(struct nvme_ns *ns, struct request *req,
 		struct nvme_command *cmd)
 {
 	int ret = BLK_MQ_RQ_QUEUE_OK;
+
+	if (!(req->rq_flags & RQF_DONTPREP)) {
+		nvme_req(req)->retries = 0;
+		req->rq_flags |= RQF_DONTPREP;
+	}
 
 	switch (req_op(req)) {
 	case REQ_OP_DRV_IN:
