@@ -13469,6 +13469,10 @@ AMLOGIC driver for thermal
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/thermal/*
 
+AMLOGIC driver for cpufreq
+M: Tao Zeng <tao.zeng@amlogic.com>
+F: drivers/amlogic/cpufreq/*
+
 HDMITX OUTPUT DRIVER
 M:	Zongdong Jiao <zongdong.jiao@amlogic.com>
 S:	Maintained

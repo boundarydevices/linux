@@ -7,6 +7,7 @@
 ## Do not change.
 ##########################################
 
+obj-$(CONFIG_CPU_FREQ)		+= cpufreq/
 
 obj-$(CONFIG_AMLOGIC_UART)	+= uart/
 

@@ -183,6 +183,29 @@
 			 */
 		};
 	};
+
+	cpufreq-meson{
+		compatible = "amlogic, cpufreq-meson";
+		status = "okay";
+		fixpll_target = <1536000>;
+		clocks = <&clkc CLKID_CPUCLK>,
+			 <&clkc CLKID_PLL_SYS>;
+		clock-names = "cpu_clk", "sys_clk";
+		opp_table = <
+			/* frequent(Khz)    uV    */
+				  96000	 860000
+				 312000	 860000
+				 504000	 860000
+				 600000	 860000
+				 720000	 860000
+				 816000	 900000
+				1008000	1140000
+				1200000	1140000
+				1320000	1140000
+				1488000	1140000
+				1536000	1140000
+			>;
+	};
 };
 
 &uart_AO {

@@ -1,0 +1,23 @@
+menuconfig AMLOGIC_CPUFREQ
+	bool "AMLOGIC CPU frequency driver support"
+	depends on AMLOGIC_DRIVER
+	depends on CPU_FREQ
+	select PM_OPP
+	default n
+	help
+		CPU DVFS driver support for Amlogic SOC chips;
+		You can use this driver to change cpu frequency.
+
+choice
+	prompt "Meson CPU Freq driver select"
+	depends on AMLOGIC_CPUFREQ
+	default AMLOGIC_M8B_CPUFREQ
+
+config AMLOGIC_M8B_CPUFREQ
+	bool "Meson CPU Frequency scaling support for m8/m8b"
+	depends on MACH_MESON8B && AMLOGIC_CPUFREQ
+	help
+		cpufreq driver support for m8/m8b, select
+		it if your chip belongs this group
+
+endchoice #AMLOGIC_CPUFREQ

@@ -12,6 +12,8 @@ config AMLOGIC_DRIVER
 if AMLOGIC_DRIVER
 menu "Amlogic Device Drivers"
 
+source "drivers/amlogic/cpufreq/Kconfig"
+
 source "drivers/amlogic/uart/Kconfig"
 
 source "drivers/amlogic/iomap/Kconfig"
