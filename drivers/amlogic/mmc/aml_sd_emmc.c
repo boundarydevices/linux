@@ -1450,6 +1450,32 @@ static void aml_sd_emmc_set_buswidth(
 	}
 }
 
+/*call by mmc, power on, power off ...*/
+static void aml_sd_emmc_set_power(struct amlsd_host *host, u32 power_mode)
+{
+	struct amlsd_platform *pdata = host->pdata;
+
+	switch (power_mode) {
+	case MMC_POWER_ON:
+		if (pdata->pwr_pre)
+			pdata->pwr_pre(pdata);
+		if (pdata->pwr_on)
+			pdata->pwr_on(pdata);
+		break;
+	case MMC_POWER_UP:
+		break;
+	case MMC_POWER_OFF:
+		writel(0, host->base + SD_EMMC_DELAY);
+		writel(0, host->base + SD_EMMC_ADJUST);
+	default:
+		if (pdata->pwr_pre)
+			pdata->pwr_pre(pdata);
+		if (pdata->pwr_off)
+			pdata->pwr_off(pdata);
+		break;
+	}
+}
+
 static void meson_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct amlsd_host *host = mmc_priv(mmc);
@@ -1457,6 +1483,9 @@ static void meson_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if (!pdata->is_in)
 		return;
+
+	/*Set Power*/
+	aml_sd_emmc_set_power(host, ios->power_mode);
 
 	/* Set Clock */
 	meson_mmc_clk_set_rate(host, ios->clock);
@@ -1466,6 +1495,11 @@ static void meson_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	/* Set Date Mode */
 	aml_sd_emmc_set_timing(host, ios->timing);
+
+	if (ios->chip_select == MMC_CS_HIGH)
+		aml_cs_high(mmc);
+	else if (ios->chip_select == MMC_CS_DONTCARE)
+		aml_cs_dont_care(mmc);
 }
 
 #ifdef SD_EMMC_REQ_DMA_SGMAP

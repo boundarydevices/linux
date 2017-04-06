@@ -162,6 +162,8 @@ int amlsd_get_platform_data(struct amlsd_platform *pdata,
 
 		SD_PARSE_U32_PROP_HEX(child, "power_level",
 				prop, pdata->power_level);
+		SD_PARSE_GPIO_NUM_PROP(child, "gpio_power",
+				str, pdata->gpio_power);
 
 		SD_PARSE_U32_PROP_DEC(child, "gpio_cd_level",
 				prop, pdata->gpio_cd_level);

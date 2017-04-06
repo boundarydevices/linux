@@ -1635,6 +1635,20 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		mmc_set_erase_size(card);
 	}
 
+#ifdef CONFIG_AMLOGIC_MMC
+	/* If emmc support HW reset so enable the function, when emmc
+	 * switch partition failed or programing stuck, can use this
+	 * function to reset emmc and reinitial.
+	 */
+
+	if (!card->ext_csd.rst_n_function
+			&& (host->caps & MMC_CAP_HW_RESET)) {
+		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+				EXT_CSD_RST_N_FUNCTION, 1,
+				card->ext_csd.generic_cmd6_time);
+	}
+#endif
+
 	/*
 	 * If enhanced_area_en is TRUE, host needs to enable ERASE_GRP_DEF
 	 * bit.  This bit will be lost every time after a reset or power off.
@@ -2012,7 +2026,11 @@ static int _mmc_resume(struct mmc_host *host)
 		goto out;
 
 	mmc_power_up(host, host->card->ocr);
+#ifdef CONFIG_AMLOGIC_MMC
+	mmc_hw_reset(host);
+#else
 	err = mmc_init_card(host, host->card->ocr, host->card);
+#endif
 	mmc_card_clr_suspended(host->card);
 
 out:
@@ -2046,8 +2064,21 @@ static int mmc_shutdown(struct mmc_host *host)
  */
 static int mmc_resume(struct mmc_host *host)
 {
+#ifdef CONFIG_AMLOGIC_MMC
+	int err = 0;
+
+	if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
+		err = _mmc_resume(host);
+		pm_runtime_set_active(&host->card->dev);
+		pm_runtime_mark_last_busy(&host->card->dev);
+	}
+#endif
 	pm_runtime_enable(&host->card->dev);
+#ifdef CONFIG_AMLOGIC_MMC
+	return err;
+#else
 	return 0;
+#endif
 }
 
 /*
@@ -2074,6 +2105,11 @@ static int mmc_runtime_suspend(struct mmc_host *host)
 static int mmc_runtime_resume(struct mmc_host *host)
 {
 	int err;
+
+#ifdef CONFIG_AMLOGIC_MMC
+	if (!(host->caps & (MMC_CAP_AGGRESSIVE_PM | MMC_CAP_RUNTIME_RESUME)))
+		return 0;
+#endif
 
 	err = _mmc_resume(host);
 	if (err && err != -ENOMEDIUM)

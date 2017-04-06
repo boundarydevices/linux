@@ -539,4 +539,49 @@ void aml_snprint (char **pp, int *left_size,  const char *fmt, ...)
 	*left_size -= size;
 }
 
+void aml_cs_high(struct mmc_host *mmc) /* chip select high */
+{
+	int ret;
+	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = host->pdata;
+
+	if ((mmc->ios.chip_select == MMC_CS_HIGH)
+			&& (pdata->gpio_dat3 != 0)) {
+		aml_devm_pinctrl_put(host);
+		ret = gpio_request_one(pdata->gpio_dat3,
+				GPIOF_OUT_INIT_HIGH, MODULE_NAME);
+		CHECK_RET(ret);
+		if (ret == 0) {
+			ret = gpio_direction_output(pdata->gpio_dat3, 1);
+			CHECK_RET(ret);
+		}
+	}
+}
+
+void aml_cs_dont_care(struct mmc_host *mmc)
+{
+	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = host->pdata;
+
+	if ((mmc->ios.chip_select == MMC_CS_DONTCARE)
+			&& (pdata->gpio_dat3 != 0)
+			&& (gpio_get_value(pdata->gpio_dat3) >= 0))
+		gpio_free(pdata->gpio_dat3);
+}
+
+void of_amlsd_pwr_prepare(struct amlsd_platform *pdata)
+{
+}
+
+void of_amlsd_pwr_on(struct amlsd_platform *pdata)
+{
+	if (pdata->gpio_power)
+		gpio_set_value(pdata->gpio_power, pdata->power_level);
+}
+
+void of_amlsd_pwr_off(struct amlsd_platform *pdata)
+{
+	if (pdata->gpio_power)
+		gpio_set_value(pdata->gpio_power, !pdata->power_level);
+}
 

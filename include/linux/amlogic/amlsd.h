@@ -184,13 +184,14 @@ int amlsd_get_reg_base(struct platform_device *pdev,
 		struct amlsd_host *host);
 
 /* int of_amlsd_detect(struct amlsd_platform* pdata); */
-void of_amlsd_pwr_prepare(struct amlsd_platform *pdata);
-void of_amlsd_pwr_on(struct amlsd_platform *pdata);
-void of_amlsd_pwr_off(struct amlsd_platform *pdata);
 
 int aml_sd_uart_detect(struct amlsd_platform *pdata);
 void aml_sd_uart_detect_clr(struct amlsd_platform *pdata);
 #endif
+void of_amlsd_pwr_prepare(struct amlsd_platform *pdata);
+void of_amlsd_pwr_on(struct amlsd_platform *pdata);
+void of_amlsd_pwr_off(struct amlsd_platform *pdata);
+
 void of_amlsd_xfer_pre(struct mmc_host *mmc);
 void of_amlsd_xfer_post(struct mmc_host *mmc);
 
@@ -198,12 +199,6 @@ irqreturn_t aml_sd_irq_cd(int irq, void *dev_id);
 irqreturn_t aml_irq_cd_thread(int irq, void *data);
 #if 0
 void aml_sduart_pre(struct amlsd_platform *pdata);
-
-/* chip select high */
-void aml_cs_high(struct amlsd_platform *pdata);
-
-/* chip select don't care */
-void aml_cs_dont_care(struct amlsd_platform *pdata);
 
 /* is eMMC/tSD exist */
 bool is_emmc_exist(struct amlsd_host *host);
@@ -216,6 +211,12 @@ void aml_dbg_verify_pull_up(struct amlsd_platform *pdata);
 int aml_dbg_verify_pinmux(struct amlsd_platform *pdata);
 #endif
 #endif
+/* chip select high */
+void aml_cs_high(struct mmc_host *mmc);
+
+/* chip select don't care */
+void aml_cs_dont_care(struct mmc_host *mmc);
+
 void aml_snprint (char **pp, int *left_size,  const char *fmt, ...);
 
 int of_amlsd_ro(struct amlsd_platform *pdata);
