@@ -2,6 +2,7 @@
 #define __EXTENTIO__
 
 #include <linux/rbtree.h>
+#include <linux/refcount.h>
 #include "ulist.h"
 
 /* bits for the extent state */
@@ -146,7 +147,7 @@ struct extent_state {
 
 	/* ADD NEW ELEMENTS AFTER THIS */
 	wait_queue_head_t wq;
-	atomic_t refs;
+	refcount_t refs;
 	unsigned state;
 
 	struct io_failure_record *failrec;
@@ -204,11 +205,23 @@ struct extent_buffer {
  */
 struct extent_changeset {
 	/* How many bytes are set/cleared in this operation */
-	u64 bytes_changed;
+	unsigned int bytes_changed;
 
 	/* Changed ranges */
 	struct ulist range_changed;
 };
+
+static inline void extent_changeset_init(struct extent_changeset *changeset)
+{
+	changeset->bytes_changed = 0;
+	ulist_init(&changeset->range_changed);
+}
+
+static inline void extent_changeset_release(struct extent_changeset *changeset)
+{
+	changeset->bytes_changed = 0;
+	ulist_release(&changeset->range_changed);
+}
 
 static inline void extent_set_compress_type(unsigned long *bio_flags,
 					    int compress_type)

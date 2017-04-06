@@ -316,14 +316,14 @@ get_caching_control(struct btrfs_block_group_cache *cache)
 	}
 
 	ctl = cache->caching_ctl;
-	atomic_inc(&ctl->count);
+	refcount_inc(&ctl->count);
 	spin_unlock(&cache->lock);
 	return ctl;
 }
 
 static void put_caching_control(struct btrfs_caching_control *ctl)
 {
-	if (atomic_dec_and_test(&ctl->count))
+	if (refcount_dec_and_test(&ctl->count))
 		kfree(ctl);
 }
 
@@ -599,7 +599,7 @@ static int cache_block_group(struct btrfs_block_group_cache *cache,
 	init_waitqueue_head(&caching_ctl->wait);
 	caching_ctl->block_group = cache;
 	caching_ctl->progress = cache->key.objectid;
-	atomic_set(&caching_ctl->count, 1);
+	refcount_set(&caching_ctl->count, 1);
 	btrfs_init_work(&caching_ctl->work, btrfs_cache_helper,
 			caching_thread, NULL, NULL);
 
@@ -620,7 +620,7 @@ static int cache_block_group(struct btrfs_block_group_cache *cache,
 		struct btrfs_caching_control *ctl;
 
 		ctl = cache->caching_ctl;
-		atomic_inc(&ctl->count);
+		refcount_inc(&ctl->count);
 		prepare_to_wait(&ctl->wait, &wait, TASK_UNINTERRUPTIBLE);
 		spin_unlock(&cache->lock);
 
@@ -707,7 +707,7 @@ static int cache_block_group(struct btrfs_block_group_cache *cache,
 	}
 
 	down_write(&fs_info->commit_root_sem);
-	atomic_inc(&caching_ctl->count);
+	refcount_inc(&caching_ctl->count);
 	list_add_tail(&caching_ctl->list, &fs_info->caching_block_groups);
 	up_write(&fs_info->commit_root_sem);
 
@@ -892,7 +892,7 @@ search_again:
 	head = btrfs_find_delayed_ref_head(delayed_refs, bytenr);
 	if (head) {
 		if (!mutex_trylock(&head->mutex)) {
-			atomic_inc(&head->node.refs);
+			refcount_inc(&head->node.refs);
 			spin_unlock(&delayed_refs->lock);
 
 			btrfs_release_path(path);
@@ -2980,7 +2980,7 @@ again:
 				struct btrfs_delayed_ref_node *ref;
 
 				ref = &head->node;
-				atomic_inc(&ref->refs);
+				refcount_inc(&ref->refs);
 
 				spin_unlock(&delayed_refs->lock);
 				/*
@@ -3003,7 +3003,6 @@ again:
 		goto again;
 	}
 out:
-	assert_qgroups_uptodate(trans);
 	trans->can_flush_pending_bgs = can_flush_pending_bgs;
 	return 0;
 }
@@ -3057,7 +3056,7 @@ static noinline int check_delayed_ref(struct btrfs_root *root,
 	}
 
 	if (!mutex_trylock(&head->mutex)) {
-		atomic_inc(&head->node.refs);
+		refcount_inc(&head->node.refs);
 		spin_unlock(&delayed_refs->lock);
 
 		btrfs_release_path(path);
@@ -3355,12 +3354,14 @@ static int cache_save_setup(struct btrfs_block_group_cache *block_group,
 	struct btrfs_fs_info *fs_info = block_group->fs_info;
 	struct btrfs_root *root = fs_info->tree_root;
 	struct inode *inode = NULL;
+	struct extent_changeset data_reserved;
 	u64 alloc_hint = 0;
 	int dcs = BTRFS_DC_ERROR;
 	u64 num_pages = 0;
 	int retries = 0;
 	int ret = 0;
 
+	extent_changeset_init(&data_reserved);
 	/*
 	 * If this block group is smaller than 100 megs don't bother caching the
 	 * block group.
@@ -3443,7 +3444,8 @@ again:
 		/*
 		 * don't bother trying to write stuff out _if_
 		 * a) we're not cached,
-		 * b) we're with nospace_cache mount option.
+		 * b) we're with nospace_cache mount option,
+		 * c) we're with v2 space_cache (FREE_SPACE_TREE).
 		 */
 		dcs = BTRFS_DC_WRITTEN;
 		spin_unlock(&block_group->lock);
@@ -3473,7 +3475,7 @@ again:
 	num_pages *= 16;
 	num_pages *= PAGE_SIZE;
 
-	ret = btrfs_check_data_free_space(inode, 0, num_pages);
+	ret = btrfs_check_data_free_space(inode, &data_reserved, 0, num_pages);
 	if (ret)
 		goto out_put;
 
@@ -3504,6 +3506,7 @@ out:
 	block_group->disk_cache_state = dcs;
 	spin_unlock(&block_group->lock);
 
+	extent_changeset_release(&data_reserved);
 	return ret;
 }
 
@@ -4272,7 +4275,8 @@ commit_trans:
  * Will replace old btrfs_check_data_free_space(), but for patch split,
  * add a new function first and then replace it.
  */
-int btrfs_check_data_free_space(struct inode *inode, u64 start, u64 len)
+int btrfs_check_data_free_space(struct inode *inode,
+			struct extent_changeset *reserved, u64 start, u64 len)
 {
 	struct btrfs_fs_info *fs_info = btrfs_sb(inode->i_sb);
 	int ret;
@@ -4287,9 +4291,11 @@ int btrfs_check_data_free_space(struct inode *inode, u64 start, u64 len)
 		return ret;
 
 	/* Use new btrfs_qgroup_reserve_data to reserve precious data space. */
-	ret = btrfs_qgroup_reserve_data(inode, start, len);
-	if (ret)
+	ret = btrfs_qgroup_reserve_data(inode, reserved, start, len);
+	if (ret < 0)
 		btrfs_free_reserved_data_space_noquota(inode, start, len);
+	else
+		ret = 0;
 	return ret;
 }
 
@@ -4330,7 +4336,8 @@ void btrfs_free_reserved_data_space_noquota(struct inode *inode, u64 start,
  * This one will handle the per-inode data rsv map for accurate reserved
  * space framework.
  */
-void btrfs_free_reserved_data_space(struct inode *inode, u64 start, u64 len)
+void btrfs_free_reserved_data_space(struct inode *inode,
+			struct extent_changeset *reserved, u64 start, u64 len)
 {
 	struct btrfs_root *root = BTRFS_I(inode)->root;
 
@@ -4340,7 +4347,7 @@ void btrfs_free_reserved_data_space(struct inode *inode, u64 start, u64 len)
 	start = round_down(start, root->fs_info->sectorsize);
 
 	btrfs_free_reserved_data_space_noquota(inode, start, len);
-	btrfs_qgroup_free_data(inode, start, len);
+	btrfs_qgroup_free_data(inode, reserved, start, len);
 }
 
 static void force_metadata_allocation(struct btrfs_fs_info *info)
@@ -6130,16 +6137,17 @@ void btrfs_delalloc_release_metadata(struct btrfs_inode *inode, u64 num_bytes)
  * Return 0 for success
  * Return <0 for error(-ENOSPC or -EQUOT)
  */
-int btrfs_delalloc_reserve_space(struct inode *inode, u64 start, u64 len)
+int btrfs_delalloc_reserve_space(struct inode *inode,
+			struct extent_changeset *reserved, u64 start, u64 len)
 {
 	int ret;
 
-	ret = btrfs_check_data_free_space(inode, start, len);
+	ret = btrfs_check_data_free_space(inode, reserved, start, len);
 	if (ret < 0)
 		return ret;
 	ret = btrfs_delalloc_reserve_metadata(BTRFS_I(inode), len);
 	if (ret < 0)
-		btrfs_free_reserved_data_space(inode, start, len);
+		btrfs_free_reserved_data_space(inode, reserved, start, len);
 	return ret;
 }
 
@@ -6158,10 +6166,11 @@ int btrfs_delalloc_reserve_space(struct inode *inode, u64 start, u64 len)
  * list if there are no delalloc bytes left.
  * Also it will handle the qgroup reserved space.
  */
-void btrfs_delalloc_release_space(struct inode *inode, u64 start, u64 len)
+void btrfs_delalloc_release_space(struct inode *inode,
+			struct extent_changeset *reserved, u64 start, u64 len)
 {
 	btrfs_delalloc_release_metadata(BTRFS_I(inode), len);
-	btrfs_free_reserved_data_space(inode, start, len);
+	btrfs_free_reserved_data_space(inode, reserved, start, len);
 }
 
 static int update_block_group(struct btrfs_trans_handle *trans,
@@ -10416,7 +10425,7 @@ int btrfs_remove_block_group(struct btrfs_trans_handle *trans,
 				    &fs_info->caching_block_groups, list)
 				if (ctl->block_group == block_group) {
 					caching_ctl = ctl;
-					atomic_inc(&caching_ctl->count);
+					refcount_inc(&caching_ctl->count);
 					break;
 				}
 		}
@@ -10850,7 +10859,7 @@ static int btrfs_trim_free_extents(struct btrfs_device *device,
 		spin_lock(&fs_info->trans_lock);
 		trans = fs_info->running_transaction;
 		if (trans)
-			atomic_inc(&trans->use_count);
+			refcount_inc(&trans->use_count);
 		spin_unlock(&fs_info->trans_lock);
 
 		ret = find_free_dev_extent_start(trans, device, minlen, start,
