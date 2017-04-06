@@ -95,7 +95,10 @@ static void dw_i2c_acpi_params(struct platform_device *pdev, char method[],
 static int dw_i2c_acpi_configure(struct platform_device *pdev)
 {
 	struct dw_i2c_dev *dev = platform_get_drvdata(pdev);
+	acpi_handle handle = ACPI_HANDLE(&pdev->dev);
 	const struct acpi_device_id *id;
+	struct acpi_device *adev;
+	const char *uid;
 
 	dev->adapter.nr = -1;
 	dev->tx_fifo_depth = 32;
@@ -113,7 +116,19 @@ static int dw_i2c_acpi_configure(struct platform_device *pdev)
 
 	id = acpi_match_device(pdev->dev.driver->acpi_match_table, &pdev->dev);
 	if (id && id->driver_data)
-		dev->accessor_flags |= (u32)id->driver_data;
+		dev->flags |= (u32)id->driver_data;
+
+	if (acpi_bus_get_device(handle, &adev))
+		return -ENODEV;
+
+	/*
+	 * Cherrytrail I2C7 gets used for the PMIC which gets accessed
+	 * through ACPI opregions during late suspend / early resume
+	 * disable pm for it.
+	 */
+	uid = adev->pnp.unique_id;
+	if ((dev->flags & MODEL_CHERRYTRAIL) && !strcmp(uid, "7"))
+		dev->pm_disabled = true;
 
 	return 0;
 }
@@ -124,7 +139,7 @@ static const struct acpi_device_id dw_i2c_acpi_match[] = {
 	{ "INT3432", 0 },
 	{ "INT3433", 0 },
 	{ "80860F41", 0 },
-	{ "808622C1", 0 },
+	{ "808622C1", MODEL_CHERRYTRAIL },
 	{ "AMD0010", ACCESS_INTR_MASK },
 	{ "AMDI0010", ACCESS_INTR_MASK },
 	{ "AMDI0510", 0 },
@@ -248,7 +263,7 @@ static int dw_i2c_plat_probe(struct platform_device *pdev)
 		goto exit_reset;
 	}
 
-	r = i2c_dw_eval_lock_support(dev);
+	r = i2c_dw_probe_lock_support(dev);
 	if (r)
 		goto exit_reset;
 
@@ -286,7 +301,7 @@ static int dw_i2c_plat_probe(struct platform_device *pdev)
 	ACPI_COMPANION_SET(&adap->dev, ACPI_COMPANION(&pdev->dev));
 	adap->dev.of_node = pdev->dev.of_node;
 
-	if (dev->pm_runtime_disabled) {
+	if (dev->pm_disabled) {
 		pm_runtime_forbid(&pdev->dev);
 	} else {
 		pm_runtime_set_autosuspend_delay(&pdev->dev, 1000);
@@ -302,7 +317,7 @@ static int dw_i2c_plat_probe(struct platform_device *pdev)
 	return r;
 
 exit_probe:
-	if (!dev->pm_runtime_disabled)
+	if (!dev->pm_disabled)
 		pm_runtime_disable(&pdev->dev);
 exit_reset:
 	if (!IS_ERR_OR_NULL(dev->rst))
@@ -322,10 +337,12 @@ static int dw_i2c_plat_remove(struct platform_device *pdev)
 
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_put_sync(&pdev->dev);
-	if (!dev->pm_runtime_disabled)
+	if (!dev->pm_disabled)
 		pm_runtime_disable(&pdev->dev);
 	if (!IS_ERR_OR_NULL(dev->rst))
 		reset_control_assert(dev->rst);
+
+	i2c_dw_remove_lock_support(dev);
 
 	return 0;
 }
@@ -372,9 +389,7 @@ static int dw_i2c_plat_resume(struct device *dev)
 	struct dw_i2c_dev *i_dev = platform_get_drvdata(pdev);
 
 	i2c_dw_plat_prepare_clk(i_dev, true);
-
-	if (!i_dev->pm_runtime_disabled)
-		i2c_dw_init(i_dev);
+	i2c_dw_init(i_dev);
 
 	return 0;
 }
