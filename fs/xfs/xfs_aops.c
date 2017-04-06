@@ -1261,8 +1261,8 @@ xfs_get_blocks(
 
 	if (nimaps) {
 		trace_xfs_get_blocks_found(ip, offset, size,
-				ISUNWRITTEN(&imap) ? XFS_IO_UNWRITTEN
-						   : XFS_IO_OVERWRITE, &imap);
+			imap.br_state == XFS_EXT_UNWRITTEN ?
+				XFS_IO_UNWRITTEN : XFS_IO_OVERWRITE, &imap);
 		xfs_iunlock(ip, lockmode);
 	} else {
 		trace_xfs_get_blocks_notfound(ip, offset, size);
@@ -1276,9 +1276,7 @@ xfs_get_blocks(
 	 * For unwritten extents do not report a disk address in the buffered
 	 * read case (treat as if we're reading into a hole).
 	 */
-	if (imap.br_startblock != HOLESTARTBLOCK &&
-	    imap.br_startblock != DELAYSTARTBLOCK &&
-	    !ISUNWRITTEN(&imap))
+	if (xfs_bmap_is_real_extent(&imap))
 		xfs_map_buffer(inode, bh_result, &imap, offset);
 
 	/*
