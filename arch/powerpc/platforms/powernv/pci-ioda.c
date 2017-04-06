@@ -1262,6 +1262,8 @@ static void pnv_pci_ioda_setup_PEs(void)
 			/* PE#0 is needed for error reporting */
 			pnv_ioda_reserve_pe(phb, 0);
 			pnv_ioda_setup_npu_PEs(hose->bus);
+			if (phb->model == PNV_PHB_MODEL_NPU2)
+				pnv_npu2_init(phb);
 		}
 	}
 }
@@ -2735,9 +2737,7 @@ static void pnv_pci_ioda2_setup_dma_pe(struct pnv_phb *phb,
 	if (rc)
 		return;
 
-	if (pe->flags & PNV_IODA_PE_DEV)
-		iommu_add_device(&pe->pdev->dev);
-	else if (pe->flags & (PNV_IODA_PE_BUS | PNV_IODA_PE_BUS_ALL))
+	if (pe->flags & (PNV_IODA_PE_BUS | PNV_IODA_PE_BUS_ALL))
 		pnv_ioda_setup_bus_dma(pe, pe->pbus, true);
 }
 

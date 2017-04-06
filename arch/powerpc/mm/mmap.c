@@ -79,7 +79,7 @@ static inline unsigned long mmap_base(unsigned long rnd)
 	else if (gap > MAX_GAP)
 		gap = MAX_GAP;
 
-	return PAGE_ALIGN(TASK_SIZE - gap - rnd);
+	return PAGE_ALIGN(DEFAULT_MAP_WINDOW - gap - rnd);
 }
 
 #ifdef CONFIG_PPC_RADIX_MMU
@@ -97,7 +97,10 @@ radix__arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	struct vm_area_struct *vma;
 	struct vm_unmapped_area_info info;
 
-	if (len > TASK_SIZE - mmap_min_addr)
+	if (unlikely(addr > mm->context.addr_limit && addr < TASK_SIZE))
+		mm->context.addr_limit = TASK_SIZE;
+
+	if (len > mm->context.addr_limit - mmap_min_addr)
 		return -ENOMEM;
 
 	if (flags & MAP_FIXED)
@@ -106,7 +109,7 @@ radix__arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	if (addr) {
 		addr = PAGE_ALIGN(addr);
 		vma = find_vma(mm, addr);
-		if (TASK_SIZE - len >= addr && addr >= mmap_min_addr &&
+		if (mm->context.addr_limit - len >= addr && addr >= mmap_min_addr &&
 		    (!vma || addr + len <= vma->vm_start))
 			return addr;
 	}
@@ -114,8 +117,13 @@ radix__arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	info.flags = 0;
 	info.length = len;
 	info.low_limit = mm->mmap_base;
-	info.high_limit = TASK_SIZE;
 	info.align_mask = 0;
+
+	if (unlikely(addr > DEFAULT_MAP_WINDOW))
+		info.high_limit = mm->context.addr_limit;
+	else
+		info.high_limit = DEFAULT_MAP_WINDOW;
+
 	return vm_unmapped_area(&info);
 }
 
@@ -131,8 +139,11 @@ radix__arch_get_unmapped_area_topdown(struct file *filp,
 	unsigned long addr = addr0;
 	struct vm_unmapped_area_info info;
 
+	if (unlikely(addr > mm->context.addr_limit && addr < TASK_SIZE))
+		mm->context.addr_limit = TASK_SIZE;
+
 	/* requested length too big for entire address space */
-	if (len > TASK_SIZE - mmap_min_addr)
+	if (len > mm->context.addr_limit - mmap_min_addr)
 		return -ENOMEM;
 
 	if (flags & MAP_FIXED)
@@ -142,7 +153,7 @@ radix__arch_get_unmapped_area_topdown(struct file *filp,
 	if (addr) {
 		addr = PAGE_ALIGN(addr);
 		vma = find_vma(mm, addr);
-		if (TASK_SIZE - len >= addr && addr >= mmap_min_addr &&
+		if (mm->context.addr_limit - len >= addr && addr >= mmap_min_addr &&
 				(!vma || addr + len <= vma->vm_start))
 			return addr;
 	}
@@ -152,7 +163,14 @@ radix__arch_get_unmapped_area_topdown(struct file *filp,
 	info.low_limit = max(PAGE_SIZE, mmap_min_addr);
 	info.high_limit = mm->mmap_base;
 	info.align_mask = 0;
+
+	if (addr > DEFAULT_MAP_WINDOW)
+		info.high_limit += mm->context.addr_limit - DEFAULT_MAP_WINDOW;
+
 	addr = vm_unmapped_area(&info);
+	if (!(addr & ~PAGE_MASK))
+		return addr;
+	VM_BUG_ON(addr != -ENOMEM);
 
 	/*
 	 * A failed mmap() very likely causes application failure,
@@ -160,15 +178,7 @@ radix__arch_get_unmapped_area_topdown(struct file *filp,
 	 * can happen with large stack limits and large mmap()
 	 * allocations.
 	 */
-	if (addr & ~PAGE_MASK) {
-		VM_BUG_ON(addr != -ENOMEM);
-		info.flags = 0;
-		info.low_limit = TASK_UNMAPPED_BASE;
-		info.high_limit = TASK_SIZE;
-		addr = vm_unmapped_area(&info);
-	}
-
-	return addr;
+	return radix__arch_get_unmapped_area(filp, addr0, len, pgoff, flags);
 }
 
 static void radix__arch_pick_mmap_layout(struct mm_struct *mm,
