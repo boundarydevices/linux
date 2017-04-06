@@ -147,7 +147,11 @@ struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 		*flags |= GPIO_ACTIVE_LOW;
 
 	if (of_flags & OF_GPIO_SINGLE_ENDED) {
+#ifdef CONFIG_AMLOGIC_MODIFY
+		if (of_flags & OF_GPIO_OPEN_DRAIN)
+#else
 		if (of_flags & OF_GPIO_ACTIVE_LOW)
+#endif
 			*flags |= GPIO_OPEN_DRAIN;
 		else
 			*flags |= GPIO_OPEN_SOURCE;

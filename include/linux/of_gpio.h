@@ -30,6 +30,9 @@ struct device_node;
 enum of_gpio_flags {
 	OF_GPIO_ACTIVE_LOW = 0x1,
 	OF_GPIO_SINGLE_ENDED = 0x2,
+#ifdef CONFIG_AMLOGIC_MODIFY
+	OF_GPIO_OPEN_DRAIN = 0x4,
+#endif
 };
 
 #ifdef CONFIG_OF_GPIO

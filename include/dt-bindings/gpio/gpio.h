@@ -17,11 +17,25 @@
 #define GPIO_PUSH_PULL 0
 #define GPIO_SINGLE_ENDED 2
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+/* Bit 2 express Open drain or open source */
+#define GPIO_LINE_OPEN_SOURCE 0
+#define GPIO_LINE_OPEN_DRAIN 4
+
+/*
+ * Open Drain/Collector is the combination of single-ended open drain interface.
+ * Open Source/Emitter is the combination of single-ended open source interface.
+ */
+#define GPIO_OPEN_DRAIN (GPIO_SINGLE_ENDED | GPIO_LINE_OPEN_DRAIN)
+#define GPIO_OPEN_SOURCE (GPIO_SINGLE_ENDED | GPIO_LINE_OPEN_SOURCE)
+
+#else
 /*
  * Open Drain/Collector is the combination of single-ended active low,
  * Open Source/Emitter is the combination of single-ended active high.
  */
 #define GPIO_OPEN_DRAIN (GPIO_SINGLE_ENDED | GPIO_ACTIVE_LOW)
 #define GPIO_OPEN_SOURCE (GPIO_SINGLE_ENDED | GPIO_ACTIVE_HIGH)
+#endif
 
 #endif
