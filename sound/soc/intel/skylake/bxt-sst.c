@@ -25,7 +25,8 @@
 #include "skl-sst-ipc.h"
 
 #define BXT_BASEFW_TIMEOUT	3000
-#define BXT_INIT_TIMEOUT	500
+#define BXT_INIT_TIMEOUT	300
+#define BXT_ROM_INIT_TIMEOUT	70
 #define BXT_IPC_PURGE_FW	0x01004000
 
 #define BXT_ROM_INIT		0x5
@@ -45,9 +46,23 @@
 /* Delay before scheduling D0i3 entry */
 #define BXT_D0I3_DELAY 5000
 
+#define BXT_FW_ROM_INIT_RETRY 3
+
 static unsigned int bxt_get_errorcode(struct sst_dsp *ctx)
 {
 	 return sst_dsp_shim_read(ctx, BXT_ADSP_ERROR_CODE);
+}
+
+static void sst_bxt_release_library(struct skl_lib_info *linfo, int lib_count)
+{
+	int i;
+
+	for (i = 1; i < lib_count; i++) {
+		if (linfo[i].fw) {
+			release_firmware(linfo[i].fw);
+			linfo[i].fw = NULL;
+		}
+	}
 }
 
 static int
@@ -55,28 +70,30 @@ bxt_load_library(struct sst_dsp *ctx, struct skl_lib_info *linfo, int lib_count)
 {
 	struct snd_dma_buffer dmab;
 	struct skl_sst *skl = ctx->thread_context;
-	const struct firmware *fw = NULL;
 	struct firmware stripped_fw;
 	int ret = 0, i, dma_id, stream_tag;
 
 	/* library indices start from 1 to N. 0 represents base FW */
 	for (i = 1; i < lib_count; i++) {
-		ret = request_firmware(&fw, linfo[i].name, ctx->dev);
-		if (ret < 0) {
-			dev_err(ctx->dev, "Request lib %s failed:%d\n",
+		if (linfo[i].fw == NULL) {
+			ret = request_firmware(&linfo[i].fw, linfo[i].name,
+						ctx->dev);
+			if (ret < 0) {
+				dev_err(ctx->dev, "Request lib %s failed:%d\n",
 					linfo[i].name, ret);
-			return ret;
+				goto load_library_failed;
+			}
 		}
 
 		if (skl->is_first_boot) {
-			ret = snd_skl_parse_uuids(ctx, fw,
+			ret = snd_skl_parse_uuids(ctx, linfo[i].fw,
 					BXT_ADSP_FW_BIN_HDR_OFFSET, i);
 			if (ret < 0)
 				goto load_library_failed;
 		}
 
-		stripped_fw.data = fw->data;
-		stripped_fw.size = fw->size;
+		stripped_fw.data = linfo[i].fw->data;
+		stripped_fw.size = linfo[i].fw->size;
 		skl_dsp_strip_extended_manifest(&stripped_fw);
 
 		stream_tag = ctx->dsp_ops.prepare(ctx->dev, 0x40,
@@ -99,14 +116,12 @@ bxt_load_library(struct sst_dsp *ctx, struct skl_lib_info *linfo, int lib_count)
 
 		ctx->dsp_ops.trigger(ctx->dev, false, stream_tag);
 		ctx->dsp_ops.cleanup(ctx->dev, &dmab, stream_tag);
-		release_firmware(fw);
-		fw = NULL;
 	}
 
 	return ret;
 
 load_library_failed:
-	release_firmware(fw);
+	sst_bxt_release_library(linfo, lib_count);
 	return ret;
 }
 
@@ -156,7 +171,7 @@ static int sst_bxt_prepare_fw(struct sst_dsp *ctx,
 					SKL_ADSP_REG_HIPCIE_DONE,
 					BXT_INIT_TIMEOUT, "HIPCIE Done");
 	if (ret < 0) {
-		dev_err(ctx->dev, "Timout for Purge Request%d\n", ret);
+		dev_err(ctx->dev, "Timeout for Purge Request%d\n", ret);
 		goto base_fw_load_failed;
 	}
 
@@ -173,7 +188,7 @@ static int sst_bxt_prepare_fw(struct sst_dsp *ctx,
 
 	/* Step 7: Wait for ROM init */
 	ret = sst_dsp_register_poll(ctx, BXT_ADSP_FW_STATUS, SKL_FW_STS_MASK,
-			SKL_FW_INIT, BXT_INIT_TIMEOUT, "ROM Load");
+			SKL_FW_INIT, BXT_ROM_INIT_TIMEOUT, "ROM Load");
 	if (ret < 0) {
 		dev_err(ctx->dev, "Timeout for ROM init, ret:%d\n", ret);
 		goto base_fw_load_failed;
@@ -206,17 +221,15 @@ static int bxt_load_base_firmware(struct sst_dsp *ctx)
 {
 	struct firmware stripped_fw;
 	struct skl_sst *skl = ctx->thread_context;
-	int ret;
+	int ret, i;
 
-	ret = request_firmware(&ctx->fw, ctx->fw_name, ctx->dev);
-	if (ret < 0) {
-		dev_err(ctx->dev, "Request firmware failed %d\n", ret);
-		goto sst_load_base_firmware_failed;
+	if (ctx->fw == NULL) {
+		ret = request_firmware(&ctx->fw, ctx->fw_name, ctx->dev);
+		if (ret < 0) {
+			dev_err(ctx->dev, "Request firmware failed %d\n", ret);
+			return ret;
+		}
 	}
-
-	/* check for extended manifest */
-	if (ctx->fw == NULL)
-		goto sst_load_base_firmware_failed;
 
 	/* prase uuids on first boot */
 	if (skl->is_first_boot) {
@@ -229,18 +242,20 @@ static int bxt_load_base_firmware(struct sst_dsp *ctx)
 	stripped_fw.size = ctx->fw->size;
 	skl_dsp_strip_extended_manifest(&stripped_fw);
 
-	ret = sst_bxt_prepare_fw(ctx, stripped_fw.data, stripped_fw.size);
-	/* Retry Enabling core and ROM load. Retry seemed to help */
-	if (ret < 0) {
+
+	for (i = 0; i < BXT_FW_ROM_INIT_RETRY; i++) {
 		ret = sst_bxt_prepare_fw(ctx, stripped_fw.data, stripped_fw.size);
-		if (ret < 0) {
-			dev_err(ctx->dev, "Error code=0x%x: FW status=0x%x\n",
+		if (ret == 0)
+			break;
+	}
+
+	if (ret < 0) {
+		dev_err(ctx->dev, "Error code=0x%x: FW status=0x%x\n",
 			sst_dsp_shim_read(ctx, BXT_ADSP_ERROR_CODE),
 			sst_dsp_shim_read(ctx, BXT_ADSP_FW_STATUS));
 
-			dev_err(ctx->dev, "Core En/ROM load fail:%d\n", ret);
-			goto sst_load_base_firmware_failed;
-		}
+		dev_err(ctx->dev, "Core En/ROM load fail:%d\n", ret);
+		goto sst_load_base_firmware_failed;
 	}
 
 	ret = sst_transfer_fw_host_dma(ctx);
@@ -265,8 +280,11 @@ static int bxt_load_base_firmware(struct sst_dsp *ctx)
 		}
 	}
 
+	return ret;
+
 sst_load_base_firmware_failed:
 	release_firmware(ctx->fw);
+	ctx->fw = NULL;
 	return ret;
 }
 
@@ -428,6 +446,7 @@ static int bxt_set_dsp_D0(struct sst_dsp *ctx, unsigned int core_id)
 				return ret;
 			}
 		}
+		skl->cores.state[core_id] = SKL_DSP_RUNNING;
 		return ret;
 	}
 
@@ -514,11 +533,22 @@ static int bxt_set_dsp_D3(struct sst_dsp *ctx, unsigned int core_id)
 
 	ret = skl_ipc_set_dx(&skl->ipc, BXT_INSTANCE_ID,
 				BXT_BASE_FW_MODULE_ID, &dx);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(ctx->dev,
 		"Failed to set DSP to D3:core id = %d;Continue reset\n",
 		core_id);
+		/*
+		 * In case of D3 failure, re-download the firmware, so set
+		 * fw_loaded to false.
+		 */
+		skl->fw_loaded = false;
+	}
 
+	if (core_id == SKL_DSP_CORE0_ID) {
+		/* disable Interrupt */
+		skl_ipc_op_int_disable(ctx);
+		skl_ipc_int_disable(ctx);
+	}
 	ret = skl_dsp_disable_core(ctx, core_mask);
 	if (ret < 0) {
 		dev_err(ctx->dev, "Failed to disable core %d\n", ret);
@@ -635,6 +665,10 @@ EXPORT_SYMBOL_GPL(bxt_sst_init_fw);
 
 void bxt_sst_dsp_cleanup(struct device *dev, struct skl_sst *ctx)
 {
+
+	sst_bxt_release_library(ctx->lib_info, ctx->lib_count);
+	if (ctx->dsp->fw)
+		release_firmware(ctx->dsp->fw);
 	skl_freeup_uuid_list(ctx);
 	skl_ipc_free(&ctx->ipc);
 	ctx->dsp->cl_dev.ops.cl_cleanup_controller(ctx->dsp);
