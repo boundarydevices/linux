@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/uaccess.h>
+#include <uapi/linux/crypto.h>
 
 /*
  * Autoloaded crypto modules should only use a prefixed name to avoid allowing
@@ -123,7 +124,6 @@
 /*
  * Miscellaneous stuff.
  */
-#define CRYPTO_MAX_ALG_NAME		64
 
 /*
  * The macro CRYPTO_MINALIGN_ATTR (along with the void * type in the actual
