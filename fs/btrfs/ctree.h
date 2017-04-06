@@ -39,6 +39,7 @@
 #include <linux/security.h>
 #include <linux/sizes.h>
 #include <linux/dynamic_debug.h>
+#include <linux/refcount.h>
 #include "extent_io.h"
 #include "extent_map.h"
 #include "async-thread.h"
@@ -518,7 +519,7 @@ struct btrfs_caching_control {
 	struct btrfs_work work;
 	struct btrfs_block_group_cache *block_group;
 	u64 progress;
-	atomic_t count;
+	refcount_t count;
 };
 
 /* Once caching_thread() finds this much free space, it will wake up waiters. */
@@ -658,6 +659,8 @@ struct seq_list {
 
 #define SEQ_LIST_INIT(name)	{ .list = LIST_HEAD_INIT((name).list), .seq = 0 }
 
+#define SEQ_LAST	((u64)-1)
+
 enum btrfs_orphan_cleanup_state {
 	ORPHAN_CLEANUP_STARTED	= 1,
 	ORPHAN_CLEANUP_DONE	= 2,
@@ -702,6 +705,11 @@ struct btrfs_delayed_root;
 #define BTRFS_FS_BTREE_ERR			11
 #define BTRFS_FS_LOG1_ERR			12
 #define BTRFS_FS_LOG2_ERR			13
+/*
+ * Indicate that a whole-filesystem exclusive operation is running
+ * (device replace, resize, device add/delete, balance)
+ */
+#define BTRFS_FS_EXCL_OP			14
 
 struct btrfs_fs_info {
 	u8 fsid[BTRFS_FSID_SIZE];
@@ -1067,8 +1075,6 @@ struct btrfs_fs_info {
 	/* device replace state */
 	struct btrfs_dev_replace dev_replace;
 
-	atomic_t mutually_exclusive_operation_running;
-
 	struct percpu_counter bio_counter;
 	wait_queue_head_t replace_wait;
 
@@ -1221,7 +1227,7 @@ struct btrfs_root {
 	dev_t anon_dev;
 
 	spinlock_t root_item_lock;
-	atomic_t refs;
+	refcount_t refs;
 
 	struct mutex delalloc_mutex;
 	spinlock_t delalloc_lock;
@@ -3671,8 +3677,7 @@ struct reada_control *btrfs_reada_add(struct btrfs_root *root,
 			      struct btrfs_key *start, struct btrfs_key *end);
 int btrfs_reada_wait(void *handle);
 void btrfs_reada_detach(void *handle);
-int btree_readahead_hook(struct btrfs_fs_info *fs_info,
-			 struct extent_buffer *eb, int err);
+int btree_readahead_hook(struct extent_buffer *eb, int err);
 
 static inline int is_fstree(u64 rootid)
 {

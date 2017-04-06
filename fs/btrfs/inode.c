@@ -4401,9 +4401,17 @@ search_again:
 			if (extent_type != BTRFS_FILE_EXTENT_INLINE) {
 				item_end +=
 				    btrfs_file_extent_num_bytes(leaf, fi);
+
+				trace_btrfs_truncate_show_fi_regular(
+					BTRFS_I(inode), leaf, fi,
+					found_key.offset);
 			} else if (extent_type == BTRFS_FILE_EXTENT_INLINE) {
 				item_end += btrfs_file_extent_inline_len(leaf,
 							 path->slots[0], fi);
+
+				trace_btrfs_truncate_show_fi_inline(
+					BTRFS_I(inode), leaf, fi, path->slots[0],
+					found_key.offset);
 			}
 			item_end--;
 		}
@@ -4602,13 +4610,6 @@ error:
 	}
 
 	btrfs_free_path(path);
-
-	if (err == 0) {
-		/* only inline file may have last_size != new_size */
-		if (new_size >= fs_info->sectorsize ||
-		    new_size > fs_info->max_inline)
-			ASSERT(last_size == new_size);
-	}
 
 	if (be_nice && bytes_deleted > SZ_32M) {
 		unsigned long updates = trans->delayed_ref_updates;
@@ -6835,11 +6836,18 @@ again:
 	    found_type == BTRFS_FILE_EXTENT_PREALLOC) {
 		extent_end = extent_start +
 		       btrfs_file_extent_num_bytes(leaf, item);
+
+		trace_btrfs_get_extent_show_fi_regular(inode, leaf, item,
+						       extent_start);
 	} else if (found_type == BTRFS_FILE_EXTENT_INLINE) {
 		size_t size;
 		size = btrfs_file_extent_inline_len(leaf, path->slots[0], item);
 		extent_end = ALIGN(extent_start + size,
 				   fs_info->sectorsize);
+
+		trace_btrfs_get_extent_show_fi_inline(inode, leaf, item,
+						      path->slots[0],
+						      extent_start);
 	}
 next:
 	if (start >= extent_end) {
@@ -7910,7 +7918,6 @@ struct btrfs_retry_complete {
 static void btrfs_retry_endio_nocsum(struct bio *bio)
 {
 	struct btrfs_retry_complete *done = bio->bi_private;
-	struct inode *inode;
 	struct bio_vec *bvec;
 	int i;
 
@@ -7918,12 +7925,12 @@ static void btrfs_retry_endio_nocsum(struct bio *bio)
 		goto end;
 
 	ASSERT(bio->bi_vcnt == 1);
-	inode = bio->bi_io_vec->bv_page->mapping->host;
-	ASSERT(bio->bi_io_vec->bv_len == btrfs_inode_sectorsize(inode));
+	ASSERT(bio->bi_io_vec->bv_len == btrfs_inode_sectorsize(done->inode));
 
 	done->uptodate = 1;
 	bio_for_each_segment_all(bvec, bio, i)
-	clean_io_failure(BTRFS_I(done->inode), done->start, bvec->bv_page, 0);
+		clean_io_failure(BTRFS_I(done->inode), done->start,
+				 bvec->bv_page, 0);
 end:
 	complete(&done->done);
 	bio_put(bio);
@@ -7986,9 +7993,7 @@ static void btrfs_retry_endio(struct bio *bio)
 {
 	struct btrfs_retry_complete *done = bio->bi_private;
 	struct btrfs_io_bio *io_bio = btrfs_io_bio(bio);
-	struct inode *inode;
 	struct bio_vec *bvec;
-	u64 start;
 	int uptodate;
 	int ret;
 	int i;
@@ -7998,11 +8003,8 @@ static void btrfs_retry_endio(struct bio *bio)
 
 	uptodate = 1;
 
-	start = done->start;
-
 	ASSERT(bio->bi_vcnt == 1);
-	inode = bio->bi_io_vec->bv_page->mapping->host;
-	ASSERT(bio->bi_io_vec->bv_len == btrfs_inode_sectorsize(inode));
+	ASSERT(bio->bi_io_vec->bv_len == btrfs_inode_sectorsize(done->inode));
 
 	bio_for_each_segment_all(bvec, bio, i) {
 		ret = __readpage_endio_check(done->inode, io_bio, i,
