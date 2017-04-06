@@ -1,2 +1,3 @@
 obj-$(CONFIG_AMLOGIC_V4L_VIDEO2) += video_dev/
 obj-$(CONFIG_AMLOGIC_POST_PROCESS_MANAGER) += ppmgr/
+obj-$(CONFIG_AMLOGIC_IONVIDEO)	+= ionvideo/

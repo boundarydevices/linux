@@ -15,6 +15,7 @@ if AMLOGIC_VIDEO_PROCESSOR
 
 source "drivers/amlogic/media/video_processor/video_dev/Kconfig"
 source "drivers/amlogic/media/video_processor/ppmgr/Kconfig"
+source "drivers/amlogic/media/video_processor/ionvideo/Kconfig"
 
 endif
 

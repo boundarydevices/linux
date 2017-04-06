@@ -1,0 +1,31 @@
+#
+# Amlogic ionvideo device configuation
+#
+
+menu "Amlogic ion video support"
+
+config AMLOGIC_VIDEOBUF2_ION
+	tristate "videobuf2-ion video device support"
+	depends on VIDEO_DEV
+	depends on VIDEO_V4L2
+	depends on VIDEOBUF2_CORE
+	depends on VIDEOBUF2_MEMOPS
+	depends on DMA_SHARED_BUFFER
+	default n
+
+	---help---
+		capture ion video to user
+		select to enable capture ion video to user
+		enabled by default
+		good luck
+
+
+config AMLOGIC_IONVIDEO
+	tristate "Amlogic ion video device support"
+	depends on AMLOGIC_VIDEOBUF2_ION
+	default n
+
+	---help---
+	capture ion video to user
+
+endmenu

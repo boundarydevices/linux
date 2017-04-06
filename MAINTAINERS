@@ -13768,4 +13768,16 @@ M: Rongjun Chen <rongjun.chen@amlogic.com>
 F: drivers/amlogic/bluetooth/
 F: drivers/amlogic/wifi/
 
+AMLOGIC IONVIDEO DRIVER
+M: Guosong Zhou <guosong.zhou@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p400_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_p401_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
+F: arch/arm64/configs/meson64_defconfig
+F: drivers/amlogic/media/video_processor/Kconfig
+F: drivers/amlogic/media/video_processor/Makefile
+F: drivers/amlogic/media/video_processor/ionvideo/*
 

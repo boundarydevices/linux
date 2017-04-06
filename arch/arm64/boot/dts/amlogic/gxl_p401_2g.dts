@@ -79,6 +79,12 @@
 			size = <0x0 0x2000000>;
 		};
 
+		ionvideo {
+			compatible = "amlogic, ionvideo";
+			dev_name = "ionvideo";
+			status = "okay";
+		};
+
 		amlvideo {
 			compatible = "amlogic, amlvideo";
 			dev_name = "amlvideo";
