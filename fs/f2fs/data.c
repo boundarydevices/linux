@@ -787,6 +787,21 @@ int f2fs_preallocate_blocks(struct kiocb *iocb, struct iov_iter *from)
 	return err;
 }
 
+static inline void __do_map_lock(struct f2fs_sb_info *sbi, int flag, bool lock)
+{
+	if (flag == F2FS_GET_BLOCK_PRE_AIO) {
+		if (lock)
+			down_read(&sbi->node_change);
+		else
+			up_read(&sbi->node_change);
+	} else {
+		if (lock)
+			f2fs_lock_op(sbi);
+		else
+			f2fs_unlock_op(sbi);
+	}
+}
+
 /*
  * f2fs_map_blocks() now supported readahead/bmap/rw direct_IO with
  * f2fs_map_blocks structure.
@@ -829,7 +844,7 @@ int f2fs_map_blocks(struct inode *inode, struct f2fs_map_blocks *map,
 
 next_dnode:
 	if (create)
-		f2fs_lock_op(sbi);
+		__do_map_lock(sbi, flag, true);
 
 	/* When reading holes, we need its node page */
 	set_new_dnode(&dn, inode, NULL, NULL, 0);
@@ -939,7 +954,7 @@ skip:
 	f2fs_put_dnode(&dn);
 
 	if (create) {
-		f2fs_unlock_op(sbi);
+		__do_map_lock(sbi, flag, false);
 		f2fs_balance_fs(sbi, dn.node_changed);
 	}
 	goto next_dnode;
@@ -948,7 +963,7 @@ sync_out:
 	f2fs_put_dnode(&dn);
 unlock_out:
 	if (create) {
-		f2fs_unlock_op(sbi);
+		__do_map_lock(sbi, flag, false);
 		f2fs_balance_fs(sbi, dn.node_changed);
 	}
 out:
@@ -1151,9 +1166,10 @@ static int f2fs_mpage_readpages(struct address_space *mapping,
 
 	for (page_idx = 0; nr_pages; page_idx++, nr_pages--) {
 
-		prefetchw(&page->flags);
 		if (pages) {
 			page = list_last_entry(pages, struct page, lru);
+
+			prefetchw(&page->flags);
 			list_del(&page->lru);
 			if (add_to_page_cache_lru(page, mapping,
 						  page->index,
@@ -1416,6 +1432,8 @@ write:
 		need_balance_fs = true;
 	else if (has_not_enough_free_secs(sbi, 0, 0))
 		goto redirty_out;
+	else
+		set_inode_flag(inode, FI_HOT_DATA);
 
 	err = -EAGAIN;
 	if (f2fs_has_inline_data(inode)) {
@@ -1441,6 +1459,7 @@ out:
 	if (wbc->for_reclaim) {
 		f2fs_submit_merged_bio_cond(sbi, inode, 0, page->index,
 						DATA, WRITE);
+		clear_inode_flag(inode, FI_HOT_DATA);
 		remove_dirty_inode(inode);
 		submitted = NULL;
 	}
@@ -1494,6 +1513,12 @@ static int f2fs_write_cache_pages(struct address_space *mapping,
 	int tag;
 
 	pagevec_init(&pvec, 0);
+
+	if (get_dirty_pages(mapping->host) <=
+				SM_I(F2FS_M_SB(mapping))->min_hot_blocks)
+		set_inode_flag(mapping->host, FI_HOT_DATA);
+	else
+		clear_inode_flag(mapping->host, FI_HOT_DATA);
 
 	if (wbc->range_cyclic) {
 		writeback_index = mapping->writeback_index; /* prev offset */
@@ -1580,8 +1605,10 @@ continue_unlock:
 				last_idx = page->index;
 			}
 
-			if (--wbc->nr_to_write <= 0 &&
-			    wbc->sync_mode == WB_SYNC_NONE) {
+			/* give a priority to WB_SYNC threads */
+			if ((atomic_read(&F2FS_M_SB(mapping)->wb_sync_req) ||
+					--wbc->nr_to_write <= 0) &&
+					wbc->sync_mode == WB_SYNC_NONE) {
 				done = 1;
 				break;
 			}
@@ -1637,9 +1664,18 @@ static int f2fs_write_data_pages(struct address_space *mapping,
 
 	trace_f2fs_writepages(mapping->host, wbc, DATA);
 
+	/* to avoid spliting IOs due to mixed WB_SYNC_ALL and WB_SYNC_NONE */
+	if (wbc->sync_mode == WB_SYNC_ALL)
+		atomic_inc(&sbi->wb_sync_req);
+	else if (atomic_read(&sbi->wb_sync_req))
+		goto skip_write;
+
 	blk_start_plug(&plug);
 	ret = f2fs_write_cache_pages(mapping, wbc);
 	blk_finish_plug(&plug);
+
+	if (wbc->sync_mode == WB_SYNC_ALL)
+		atomic_dec(&sbi->wb_sync_req);
 	/*
 	 * if some pages were truncated, we cannot guarantee its mapping->host
 	 * to detect pending bios.
@@ -1687,7 +1723,7 @@ static int prepare_write_begin(struct f2fs_sb_info *sbi,
 
 	if (f2fs_has_inline_data(inode) ||
 			(pos & PAGE_MASK) >= i_size_read(inode)) {
-		f2fs_lock_op(sbi);
+		__do_map_lock(sbi, F2FS_GET_BLOCK_PRE_AIO, true);
 		locked = true;
 	}
 restart:
@@ -1723,7 +1759,8 @@ restart:
 			err = get_dnode_of_data(&dn, index, LOOKUP_NODE);
 			if (err || dn.data_blkaddr == NULL_ADDR) {
 				f2fs_put_dnode(&dn);
-				f2fs_lock_op(sbi);
+				__do_map_lock(sbi, F2FS_GET_BLOCK_PRE_AIO,
+								true);
 				locked = true;
 				goto restart;
 			}
@@ -1737,7 +1774,7 @@ out:
 	f2fs_put_dnode(&dn);
 unlock_out:
 	if (locked)
-		f2fs_unlock_op(sbi);
+		__do_map_lock(sbi, F2FS_GET_BLOCK_PRE_AIO, false);
 	return err;
 }
 
@@ -1951,7 +1988,7 @@ void f2fs_invalidate_page(struct page *page, unsigned int offset,
 
 	/* This is atomic written page, keep Private */
 	if (IS_ATOMIC_WRITTEN_PAGE(page))
-		return;
+		return drop_inmem_page(inode, page);
 
 	set_page_private(page, 0);
 	ClearPagePrivate(page);

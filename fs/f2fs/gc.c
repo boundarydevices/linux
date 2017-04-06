@@ -172,7 +172,11 @@ static void select_policy(struct f2fs_sb_info *sbi, int gc_type,
 	if (gc_type != FG_GC && p->max_search > sbi->max_victim_search)
 		p->max_search = sbi->max_victim_search;
 
-	p->offset = sbi->last_victim[p->gc_mode];
+	/* let's select beginning hot/small space first */
+	if (type == CURSEG_HOT_DATA || IS_NODESEG(type))
+		p->offset = 0;
+	else
+		p->offset = sbi->last_victim[p->gc_mode];
 }
 
 static unsigned int get_max_cost(struct f2fs_sb_info *sbi,
@@ -182,7 +186,7 @@ static unsigned int get_max_cost(struct f2fs_sb_info *sbi,
 	if (p->alloc_mode == SSR)
 		return sbi->blocks_per_seg;
 	if (p->gc_mode == GC_GREEDY)
-		return sbi->blocks_per_seg * p->ofs_unit;
+		return 2 * sbi->blocks_per_seg * p->ofs_unit;
 	else if (p->gc_mode == GC_CB)
 		return UINT_MAX;
 	else /* No other gc_mode */
@@ -361,6 +365,7 @@ next:
 				sbi->last_victim[p.gc_mode] = last_victim + 1;
 			else
 				sbi->last_victim[p.gc_mode] = segno + 1;
+			sbi->last_victim[p.gc_mode] %= MAIN_SEGS(sbi);
 			break;
 		}
 	}
@@ -550,8 +555,10 @@ static bool is_alive(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
 	get_node_info(sbi, nid, dni);
 
 	if (sum->version != dni->version) {
-		f2fs_put_page(node_page, 1);
-		return false;
+		f2fs_msg(sbi->sb, KERN_WARNING,
+				"%s: valid data with mismatched node version.",
+				__func__);
+		set_sbi_flag(sbi, SBI_NEED_FSCK);
 	}
 
 	*nofs = ofs_of_node(node_page);

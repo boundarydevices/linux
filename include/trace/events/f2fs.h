@@ -15,6 +15,8 @@ TRACE_DEFINE_ENUM(META);
 TRACE_DEFINE_ENUM(META_FLUSH);
 TRACE_DEFINE_ENUM(INMEM);
 TRACE_DEFINE_ENUM(INMEM_DROP);
+TRACE_DEFINE_ENUM(INMEM_INVALIDATE);
+TRACE_DEFINE_ENUM(INMEM_REVOKE);
 TRACE_DEFINE_ENUM(IPU);
 TRACE_DEFINE_ENUM(OPU);
 TRACE_DEFINE_ENUM(CURSEG_HOT_DATA);
@@ -51,6 +53,7 @@ TRACE_DEFINE_ENUM(CP_DISCARD);
 		{ META_FLUSH,	"META_FLUSH" },				\
 		{ INMEM,	"INMEM" },				\
 		{ INMEM_DROP,	"INMEM_DROP" },				\
+		{ INMEM_INVALIDATE,	"INMEM_INVALIDATE" },		\
 		{ INMEM_REVOKE,	"INMEM_REVOKE" },			\
 		{ IPU,		"IN-PLACE" },				\
 		{ OPU,		"OUT-OF-PLACE" })
@@ -1174,26 +1177,29 @@ TRACE_EVENT(f2fs_issue_reset_zone,
 TRACE_EVENT(f2fs_issue_flush,
 
 	TP_PROTO(struct block_device *dev, unsigned int nobarrier,
-					unsigned int flush_merge),
+				unsigned int flush_merge, int ret),
 
-	TP_ARGS(dev, nobarrier, flush_merge),
+	TP_ARGS(dev, nobarrier, flush_merge, ret),
 
 	TP_STRUCT__entry(
 		__field(dev_t,	dev)
 		__field(unsigned int, nobarrier)
 		__field(unsigned int, flush_merge)
+		__field(int,  ret)
 	),
 
 	TP_fast_assign(
 		__entry->dev	= dev->bd_dev;
 		__entry->nobarrier = nobarrier;
 		__entry->flush_merge = flush_merge;
+		__entry->ret = ret;
 	),
 
-	TP_printk("dev = (%d,%d), %s %s",
+	TP_printk("dev = (%d,%d), %s %s, ret = %d",
 		show_dev(__entry->dev),
 		__entry->nobarrier ? "skip (nobarrier)" : "issue",
-		__entry->flush_merge ? " with flush_merge" : "")
+		__entry->flush_merge ? " with flush_merge" : "",
+		__entry->ret)
 );
 
 TRACE_EVENT(f2fs_lookup_extent_tree_start,
