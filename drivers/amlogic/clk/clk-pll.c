@@ -40,7 +40,11 @@
 #include <linux/string.h>
 #include <linux/amlogic/cpu_version.h>
 
+#ifdef CONFIG_ARM64
 #include "clkc.h"
+#else
+#include "m8b/clkc.h"
+#endif
 
 #define MESON_PLL_RESET				BIT(29)
 #define MESON_PLL_ENABLE			BIT(30)

@@ -1,23 +1,18 @@
 /*
- * AmLogic S805 / Meson8b Clock Controller Driver
+ * drivers/amlogic/clk/m8b/meson8b.c
  *
- * Copyright (c) 2015 Endless Mobile, Inc.
- * Author: Carlo Caione <carlo@endlessm.com>
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
- * Copyright (c) 2016 BayLibre, Inc.
- * Michael Turquette <mturquette@baylibre.com>
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
+ * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/clk.h>
@@ -31,8 +26,9 @@
 #include "clkc.h"
 #include "meson8b.h"
 
-static DEFINE_SPINLOCK(clk_lock);
+DEFINE_SPINLOCK(clk_lock);
 struct clk **clks;
+void __iomem *clk_base;
 static struct clk_onecell_data clk_data;
 
 static const struct pll_rate_table sys_pll_rate_table[] = {
@@ -244,6 +240,96 @@ static struct clk_fixed_factor meson8b_fclk_div7 = {
 	.hw.init = &(struct clk_init_data){
 		.name = "fclk_div7",
 		.ops = &clk_fixed_factor_ops,
+		.parent_names = (const char *[]){ "fixed_pll" },
+		.num_parents = 1,
+	},
+};
+
+static struct meson_clk_mpll meson8b_mpll0 = {
+	.sdm = {
+		.reg_off = HHI_MPLL_CNTL7,
+		.shift   = 0,
+		.width   = 14,
+	},
+	.sdm_en = {
+		.reg_off = HHI_MPLL_CNTL7,
+		.shift   = 15,
+		.width   = 1,
+	},
+	.n2 = {
+		.reg_off = HHI_MPLL_CNTL7,
+		.shift   = 16,
+		.width   = 9,
+	},
+	.en = {
+		.reg_off = HHI_MPLL_CNTL7,
+		.shift   = 14,
+		.width   = 1,
+	},
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mpll0",
+		.ops = &meson_clk_mpll_ops,
+		.parent_names = (const char *[]){ "fixed_pll" },
+		.num_parents = 1,
+	},
+};
+
+static struct meson_clk_mpll meson8b_mpll1 = {
+	.sdm = {
+		.reg_off = HHI_MPLL_CNTL8,
+		.shift   = 0,
+		.width   = 14,
+	},
+	.sdm_en = {
+		.reg_off = HHI_MPLL_CNTL8,
+		.shift   = 15,
+		.width   = 1,
+	},
+	.n2 = {
+		.reg_off = HHI_MPLL_CNTL8,
+		.shift   = 16,
+		.width   = 9,
+	},
+	.en = {
+		.reg_off = HHI_MPLL_CNTL8,
+		.shift   = 14,
+		.width   = 1,
+	},
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mpll1",
+		.ops = &meson_clk_mpll_ops,
+		.parent_names = (const char *[]){ "fixed_pll" },
+		.num_parents = 1,
+	},
+};
+
+static struct meson_clk_mpll meson8b_mpll2 = {
+	.sdm = {
+		.reg_off = HHI_MPLL_CNTL9,
+		.shift   = 0,
+		.width   = 14,
+	},
+	.sdm_en = {
+		.reg_off = HHI_MPLL_CNTL9,
+		.shift   = 15,
+		.width   = 1,
+	},
+	.n2 = {
+		.reg_off = HHI_MPLL_CNTL9,
+		.shift   = 16,
+		.width   = 9,
+	},
+	.en = {
+		.reg_off = HHI_MPLL_CNTL9,
+		.shift   = 14,
+		.width   = 1,
+	},
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "mpll2",
+		.ops = &meson_clk_mpll_ops,
 		.parent_names = (const char *[]){ "fixed_pll" },
 		.num_parents = 1,
 	},
@@ -494,6 +580,9 @@ static struct clk_hw *meson8b_clk_hws[] = {
 		[CLKID_AO_AHB_SRAM]	    = &meson8b_ao_ahb_sram.hw,
 		[CLKID_AO_AHB_BUS]	    = &meson8b_ao_ahb_bus.hw,
 		[CLKID_AO_IFACE]	    = &meson8b_ao_iface.hw,
+		[CLKID_MPLL0]		    = &meson8b_mpll0.hw,
+		[CLKID_MPLL1]		    = &meson8b_mpll1.hw,
+		[CLKID_MPLL2]		    = &meson8b_mpll2.hw,
 };
 
 static struct meson_clk_pll *const meson8b_clk_plls[] = {
@@ -502,6 +591,11 @@ static struct meson_clk_pll *const meson8b_clk_plls[] = {
 	&meson8b_sys_pll,
 };
 
+static struct meson_clk_mpll *const meson8b_clk_mplls[] = {
+	&meson8b_mpll0,
+	&meson8b_mpll1,
+	&meson8b_mpll2,
+};
 static struct clk_gate *meson8b_clk_gates[] = {
 	&meson8b_clk81,
 	&meson8b_ddr,
@@ -583,13 +677,19 @@ static struct clk_gate *meson8b_clk_gates[] = {
 	&meson8b_ao_iface,
 };
 
+static struct clk_mux *const meson8b_clk_muxes[] = {
+	&meson8b_mpeg_clk_sel,
+};
+
+static struct clk_divider *const meson8b_clk_dividers[] = {
+	&meson8b_mpeg_clk_div,
+};
+
 static void __init meson8b_clkc_init(struct device_node *np)
 {
-	void __iomem *clk_base;
 	int ret, clkid, i;
 	struct clk_hw *parent_hw;
 	struct clk *parent_clk;
-	//struct device *dev = &pdev->dev;
 
 	pr_info("%s\n", __func__);
 	/*  Generic clocks and PLLs */
@@ -604,18 +704,27 @@ static void __init meson8b_clkc_init(struct device_node *np)
 	for (i = 0; i < ARRAY_SIZE(meson8b_clk_plls); i++)
 		meson8b_clk_plls[i]->base = clk_base;
 
+	/* Populate base address for MPLLs */
+	for (i = 0; i < ARRAY_SIZE(meson8b_clk_mplls); i++)
+		meson8b_clk_mplls[i]->base = clk_base;
+
 	/* Populate the base address for CPU clk */
 	meson8b_cpu_clk.base = clk_base;
-
-	/* Populate the base address for the MPEG clks */
-	meson8b_mpeg_clk_sel.reg = clk_base + (u32)meson8b_mpeg_clk_sel.reg;
-	meson8b_mpeg_clk_div.reg = clk_base + (u32)meson8b_mpeg_clk_div.reg;
-	meson8b_clk81.reg = clk_base + (u32)meson8b_clk81.reg;
 
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(meson8b_clk_gates); i++)
 		meson8b_clk_gates[i]->reg = clk_base +
 			(u32)meson8b_clk_gates[i]->reg;
+
+	/* Populate base address for muxes */
+	for (i = 0; i < ARRAY_SIZE(meson8b_clk_muxes); i++)
+		meson8b_clk_muxes[i]->reg = clk_base +
+			(u32)meson8b_clk_muxes[i]->reg;
+
+	/* Populate base address for dividers */
+	for (i = 0; i < ARRAY_SIZE(meson8b_clk_dividers); i++)
+		meson8b_clk_dividers[i]->reg = clk_base +
+			(u32)meson8b_clk_dividers[i]->reg;
 
 	clks = kzalloc(NR_CLKS*sizeof(struct clk *), GFP_KERNEL);
 	if (!clks) {
@@ -629,7 +738,7 @@ static void __init meson8b_clkc_init(struct device_node *np)
 	 * register all clks
 	 * CLKID_UNUSED = 0, so skip it and start with CLKID_XTAL = 1
 	 */
-	for (clkid = CLKID_XTAL; clkid < NR_CLKS; clkid++) {
+	for (clkid = CLKID_XTAL; clkid < OTHER_BASE; clkid++) {
 		/* array might be sparse */
 		if (!meson8b_clk_hws[clkid])
 			continue;
@@ -639,6 +748,11 @@ static void __init meson8b_clkc_init(struct device_node *np)
 		WARN_ON(IS_ERR(clks[clkid]));
 	}
 
+	amlogic_init_store();
+	amlogic_init_gpu();
+	amlogic_init_media();
+	amlogic_init_misc();
+	pr_info("%s: register all clk ok!", __func__);
 	/*
 	 * Register CPU clk notifier
 	 *

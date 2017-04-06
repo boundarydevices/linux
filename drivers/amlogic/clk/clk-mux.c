@@ -25,7 +25,11 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
+#ifdef CONFIG_ARM64
 #include "clkc.h"
+#else
+#include "m8b/clkc.h"
+#endif
 
 #define to_clk_mux(_hw) container_of(_hw, struct clk_mux, hw)
 

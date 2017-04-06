@@ -1,23 +1,24 @@
 /*
- * Copyright (c) 2015 Endless Mobile, Inc.
- * Author: Carlo Caione <carlo@endlessm.com>
+ * drivers/amlogic/clk/m8b/clkc.h
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
- * This program is distributed in the hope it will be useful, but WITHOUT
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __CLKC_H
 #define __CLKC_H
 
+#define CLK_PARENT_ALTERNATE BIT(5)
 #define PMASK(width)			GENMASK(width - 1, 0)
 #define SETPMASK(width, shift)		GENMASK(shift + width - 1, shift)
 #define CLRPMASK(width, shift)		(~SETPMASK(width, shift))
@@ -25,7 +26,7 @@
 #define PARM_GET(width, shift, reg)					\
 	(((reg) & SETPMASK(width, shift)) >> (shift))
 #define PARM_SET(width, shift, reg, val)				\
-	(((reg) & CLRPMASK(width, shift)) | (val << (shift)))
+	(((reg) & CLRPMASK(width, shift)) | ((val) << (shift)))
 
 #define MESON_PARM_APPLICABLE(p)		(!!((p)->width))
 
@@ -92,8 +93,9 @@ struct meson_clk_mpll {
 	struct clk_hw hw;
 	void __iomem *base;
 	struct parm sdm;
+	struct parm sdm_en;
 	struct parm n2;
-	/* FIXME ssen gate control? */
+	struct parm en;
 	spinlock_t *lock;
 };
 
@@ -116,5 +118,13 @@ extern const struct clk_ops meson_clk_pll_ro_ops;
 extern const struct clk_ops meson_clk_pll_ops;
 extern const struct clk_ops meson_clk_cpu_ops;
 extern const struct clk_ops meson_clk_mpll_ro_ops;
-
+extern const struct clk_ops meson_clk_mpll_ops;
+extern const struct clk_ops meson_clk_mux_ops;
+extern spinlock_t clk_lock;
+extern void __iomem *clk_base;
+extern struct clk **clks;
+void amlogic_init_store(void);
+void amlogic_init_gpu(void);
+void amlogic_init_media(void);
+void amlogic_init_misc(void);
 #endif /* __CLKC_H */
