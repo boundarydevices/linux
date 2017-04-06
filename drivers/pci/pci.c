@@ -66,7 +66,8 @@ static void pci_dev_d3_sleep(struct pci_dev *dev)
 	if (delay < pci_pm_d3_delay)
 		delay = pci_pm_d3_delay;
 
-	msleep(delay);
+	if (delay)
+		msleep(delay);
 }
 
 #ifdef CONFIG_PCI_DOMAINS
@@ -827,7 +828,8 @@ static void __pci_start_power_transition(struct pci_dev *dev, pci_power_t state)
 		 * because have already delayed for the bridge.
 		 */
 		if (dev->runtime_d3cold) {
-			msleep(dev->d3cold_delay);
+			if (dev->d3cold_delay)
+				msleep(dev->d3cold_delay);
 			/*
 			 * When powering on a bridge from D3cold, the
 			 * whole hierarchy may be powered on into
@@ -4932,6 +4934,8 @@ bool pci_device_is_present(struct pci_dev *pdev)
 {
 	u32 v;
 
+	if (pci_dev_is_disconnected(pdev))
+		return false;
 	return pci_bus_read_dev_vendor_id(pdev->bus, pdev->devfn, &v, 0);
 }
 EXPORT_SYMBOL_GPL(pci_device_is_present);
