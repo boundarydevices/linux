@@ -1519,6 +1519,9 @@ cifs_readv_receive(struct TCP_Server_Info *server, struct mid_q_entry *mid)
 	cifs_dbg(FYI, "0: iov_base=%p iov_len=%u\n",
 		 rdata->iov[0].iov_base, server->total_read);
 
+	mid->resp_buf = server->smallbuf;
+	server->smallbuf = NULL;
+
 	/* how much data is in the response? */
 	data_len = server->ops->read_data_length(buf);
 	if (data_offset + data_len > buflen) {

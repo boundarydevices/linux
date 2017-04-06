@@ -115,21 +115,70 @@ smb3_crypto_shash_allocate(struct TCP_Server_Info *server)
 	return 0;
 }
 
+static struct cifs_ses *
+_smb2_find_smb_ses(struct TCP_Server_Info *server, __u64 ses_id)
+{
+	struct cifs_ses *ses;
+
+	list_for_each_entry(ses, &server->smb_ses_list, smb_ses_list) {
+		if (ses->Suid != ses_id)
+			continue;
+		return ses;
+	}
+
+	return NULL;
+}
+
 struct cifs_ses *
 smb2_find_smb_ses(struct TCP_Server_Info *server, __u64 ses_id)
 {
 	struct cifs_ses *ses;
 
 	spin_lock(&cifs_tcp_ses_lock);
-	list_for_each_entry(ses, &server->smb_ses_list, smb_ses_list) {
-		if (ses->Suid != ses_id)
-			continue;
-		spin_unlock(&cifs_tcp_ses_lock);
-		return ses;
-	}
+	ses = _smb2_find_smb_ses(server, ses_id);
 	spin_unlock(&cifs_tcp_ses_lock);
 
+	return ses;
+}
+
+static struct cifs_tcon *
+_smb2_find_smb_sess_tcon(struct cifs_ses *ses, __u32  tid)
+{
+	struct list_head *tmp;
+	struct cifs_tcon *tcon;
+
+	list_for_each(tmp, &ses->tcon_list) {
+		tcon = list_entry(tmp, struct cifs_tcon, tcon_list);
+		if (tcon->tid != tid)
+			continue;
+		++tcon->tc_count;
+		return tcon;
+	}
+
 	return NULL;
+}
+
+/*
+ * Obtain tcon corresponding to the tid in the given
+ * cifs_ses
+ */
+
+struct cifs_tcon *
+smb2_find_smb_tcon(struct TCP_Server_Info *server, __u64 ses_id, __u32  tid)
+{
+	struct cifs_ses *ses;
+	struct cifs_tcon *tcon;
+
+	spin_lock(&cifs_tcp_ses_lock);
+	ses = _smb2_find_smb_ses(server, ses_id);
+	if (!ses) {
+		spin_unlock(&cifs_tcp_ses_lock);
+		return NULL;
+	}
+	tcon = _smb2_find_smb_sess_tcon(ses, tid);
+	spin_unlock(&cifs_tcp_ses_lock);
+
+	return tcon;
 }
 
 int
@@ -511,6 +560,7 @@ smb2_mid_entry_alloc(const struct smb2_sync_hdr *shdr,
 
 	atomic_inc(&midCount);
 	temp->mid_state = MID_REQUEST_ALLOCATED;
+	temp->mid_flags = 0;
 	return temp;
 }
 
