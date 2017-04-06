@@ -1374,9 +1374,6 @@ static int qgroup_account_snapshot(struct btrfs_trans_handle *trans,
 	ret = commit_fs_roots(trans, fs_info);
 	if (ret)
 		goto out;
-	ret = btrfs_qgroup_prepare_account_extents(trans, fs_info);
-	if (ret < 0)
-		goto out;
 	ret = btrfs_qgroup_account_extents(trans, fs_info);
 	if (ret < 0)
 		goto out;
@@ -2128,13 +2125,6 @@ int btrfs_commit_transaction(struct btrfs_trans_handle *trans)
 		goto scrub_continue;
 	}
 
-	/* Reocrd old roots for later qgroup accounting */
-	ret = btrfs_qgroup_prepare_account_extents(trans, fs_info);
-	if (ret) {
-		mutex_unlock(&fs_info->reloc_mutex);
-		goto scrub_continue;
-	}
-
 	/*
 	 * make sure none of the code above managed to slip in a
 	 * delayed item
@@ -2175,6 +2165,17 @@ int btrfs_commit_transaction(struct btrfs_trans_handle *trans)
 	 * safe to free the root of tree log roots
 	 */
 	btrfs_free_log_root_tree(trans, fs_info);
+
+	/*
+	 * commit_fs_roots() can call btrfs_save_ino_cache(), which generates
+	 * new delayed refs. Must handle them or qgroup can be wrong.
+	 */
+	ret = btrfs_run_delayed_refs(trans, fs_info, (unsigned long)-1);
+	if (ret) {
+		mutex_unlock(&fs_info->tree_log_mutex);
+		mutex_unlock(&fs_info->reloc_mutex);
+		goto scrub_continue;
+	}
 
 	/*
 	 * Since fs roots are all committed, we can get a quite accurate
