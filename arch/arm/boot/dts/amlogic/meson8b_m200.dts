@@ -206,6 +206,28 @@
 				1536000	1140000
 			>;
 	};
+
+	dvfs {
+		compatible = "amlogic, amlogic-dvfs";
+		status = "okay";
+		vcck_dvfs {
+			dvfs_id = <1>;
+		};
+	};
+
+	pmu {
+		compatible = "amlogic, aml_pmu_prober";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+		aml1218 {
+			compatible = "amlogic, amlogic_pmu";
+			sub_type = "aml1218_pmu";
+			i2c_bus = "i2c_bus_ao";
+			slave_address = <0x35>;
+			status = "okay";
+		};
+	};
 };
 
 &uart_AO {

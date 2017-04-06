@@ -88,5 +88,7 @@ source "drivers/amlogic/bluetooth/Kconfig"
 
 source "drivers/amlogic/dvb/Kconfig"
 
+source "drivers/amlogic/power/Kconfig"
+
 endmenu
 endif

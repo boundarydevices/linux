@@ -1,0 +1,16 @@
+menuconfig AMLOGIC_PMU
+	bool "Amlogic PMU drivers"
+	depends on AMLOGIC_POWER
+	depends on I2C
+	default n
+	---help---
+		say yes if you want add Amlogic power management unit support
+
+if AMLOGIC_PMU
+
+config AMLOGIC_1218
+	bool "AML1218 driver"
+	---help---
+		drivers for amlogic pmu AML1218
+
+endif #AMLOGIC_PMU

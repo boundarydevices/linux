@@ -1,0 +1,18 @@
+config AMLOGIC_POWER
+	bool "Amloigc power related driver support"
+	depends on MACH_MESON8B
+	default n
+	help
+		this config enables to use amlogic power management driver
+		Say y here if you want power related driver(pmu/dvfs) support
+
+config AMLOGIC_PMU_OF
+	bool "Amlogic Power OF support"
+	depends on AMLOGIC_POWER
+	depends on I2C
+	default n
+	help
+		Power management device tree support
+
+source "drivers/amlogic/power/aml_pmu/Kconfig"
+source "drivers/amlogic/power/aml_dvfs/Kconfig"

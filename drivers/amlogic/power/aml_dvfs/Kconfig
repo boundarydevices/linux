@@ -1,0 +1,7 @@
+config AMLOGIC_M8B_DVFS
+	bool "Amlogic DVFS interface support"
+	depends on AMLOGIC_POWER
+	default n
+	help
+		interface for clock adjustment and power management
+
