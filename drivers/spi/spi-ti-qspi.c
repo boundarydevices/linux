@@ -395,14 +395,12 @@ static int ti_qspi_dma_xfer(struct ti_qspi *qspi, dma_addr_t dma_dst,
 			    dma_addr_t dma_src, size_t len)
 {
 	struct dma_chan *chan = qspi->rx_chan;
-	struct dma_device *dma_dev = chan->device;
 	dma_cookie_t cookie;
 	enum dma_ctrl_flags flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
 	struct dma_async_tx_descriptor *tx;
 	int ret;
 
-	tx = dma_dev->device_prep_dma_memcpy(chan, dma_dst, dma_src,
-					     len, flags);
+	tx = dmaengine_prep_dma_memcpy(chan, dma_dst, dma_src, len, flags);
 	if (!tx) {
 		dev_err(qspi->dev, "device_prep_dma_memcpy error\n");
 		return -EIO;
