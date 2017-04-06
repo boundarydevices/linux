@@ -77,6 +77,7 @@ dtb-$(CONFIG_ARCH_BCM_5301X) += \
 	bcm4708-asus-rt-ac56u.dtb \
 	bcm4708-asus-rt-ac68u.dtb \
 	bcm4708-buffalo-wzr-1750dhp.dtb \
+	bcm4708-linksys-ea6300-v1.dtb \
 	bcm4708-luxul-xap-1510.dtb \
 	bcm4708-luxul-xwc-1000.dtb \
 	bcm4708-netgear-r6250.dtb \
@@ -87,17 +88,21 @@ dtb-$(CONFIG_ARCH_BCM_5301X) += \
 	bcm47081-buffalo-wzr-900dhp.dtb \
 	bcm47081-luxul-xap-1410.dtb \
 	bcm47081-luxul-xwr-1200.dtb \
+	bcm47081-tplink-archer-c5-v2.dtb \
 	bcm4709-asus-rt-ac87u.dtb \
 	bcm4709-buffalo-wxr-1900dhp.dtb \
+	bcm4709-linksys-ea9200.dtb \
 	bcm4709-netgear-r7000.dtb \
 	bcm4709-netgear-r8000.dtb \
 	bcm4709-tplink-archer-c9-v1.dtb \
 	bcm47094-dlink-dir-885l.dtb \
+	bcm47094-linksys-panamera.dtb \
 	bcm47094-luxul-xwr-3100.dtb \
 	bcm47094-netgear-r8500.dtb \
 	bcm94708.dtb \
 	bcm94709.dtb \
 	bcm953012er.dtb \
+	bcm953012hr.dtb \
 	bcm953012k.dtb
 dtb-$(CONFIG_ARCH_BCM_53573) += \
 	bcm47189-tenda-ac9.dtb
@@ -173,6 +178,12 @@ dtb-$(CONFIG_ARCH_EXYNOS5) += \
 	exynos5440-sd5v1.dtb \
 	exynos5440-ssdk5440.dtb \
 	exynos5800-peach-pi.dtb
+dtb-$(CONFIG_ARCH_GEMINI) += \
+	gemini-nas4220b.dtb \
+	gemini-rut1xx.dtb \
+	gemini-sq201.dtb \
+	gemini-wbd111.dtb \
+	gemini-wbd222.dtb
 dtb-$(CONFIG_ARCH_HI3xxx) += \
 	hi3620-hi4511.dtb
 dtb-$(CONFIG_ARCH_HIGHBANK) += \
@@ -673,6 +684,25 @@ dtb-$(CONFIG_ARCH_REALVIEW) += \
 	arm-realview-eb-a9mp-bbrevd.dtb \
 	arm-realview-pba8.dtb \
 	arm-realview-pbx-a9.dtb
+dtb-$(CONFIG_ARCH_RENESAS) += \
+	emev2-kzm9d.dtb \
+	r7s72100-genmai.dtb \
+	r7s72100-rskrza1.dtb \
+	r8a73a4-ape6evm.dtb \
+	r8a7740-armadillo800eva.dtb \
+	r8a7743-sk-rzg1m.dtb \
+	r8a7745-sk-rzg1e.dtb \
+	r8a7778-bockw.dtb \
+	r8a7779-marzen.dtb \
+	r8a7790-lager.dtb \
+	r8a7791-koelsch.dtb \
+	r8a7791-porter.dtb \
+	r8a7792-blanche.dtb \
+	r8a7792-wheat.dtb \
+	r8a7793-gose.dtb \
+	r8a7794-alt.dtb \
+	r8a7794-silk.dtb \
+	sh73a0-kzm9g.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk1108-evb.dtb \
 	rk3036-evb.dtb \
@@ -695,6 +725,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3288-popmetal.dtb \
 	rk3288-r89.dtb \
 	rk3288-rock2-square.dtb \
+	rk3288-tinker.dtb \
 	rk3288-veyron-brain.dtb \
 	rk3288-veyron-jaq.dtb \
 	rk3288-veyron-jerry.dtb \
@@ -713,25 +744,6 @@ dtb-$(CONFIG_ARCH_S5PV210) += \
 	s5pv210-smdkc110.dtb \
 	s5pv210-smdkv210.dtb \
 	s5pv210-torbreck.dtb
-dtb-$(CONFIG_ARCH_SHMOBILE_MULTI) += \
-	emev2-kzm9d.dtb \
-	r7s72100-genmai.dtb \
-	r7s72100-rskrza1.dtb \
-	r8a73a4-ape6evm.dtb \
-	r8a7740-armadillo800eva.dtb \
-	r8a7743-sk-rzg1m.dtb \
-	r8a7745-sk-rzg1e.dtb \
-	r8a7778-bockw.dtb \
-	r8a7779-marzen.dtb \
-	r8a7790-lager.dtb \
-	r8a7791-koelsch.dtb \
-	r8a7791-porter.dtb \
-	r8a7792-blanche.dtb \
-	r8a7792-wheat.dtb \
-	r8a7793-gose.dtb \
-	r8a7794-alt.dtb \
-	r8a7794-silk.dtb \
-	sh73a0-kzm9g.dtb
 dtb-$(CONFIG_ARCH_SOCFPGA) += \
 	socfpga_arria5_socdk.dtb \
 	socfpga_arria10_socdk_nand.dtb \
@@ -970,6 +982,8 @@ dtb-$(CONFIG_MACH_ARMADA_38X) += \
 	armada-385-db-ap.dtb \
 	armada-385-linksys-caiman.dtb \
 	armada-385-linksys-cobra.dtb \
+	armada-385-linksys-shelby.dtb \
+	armada-385-synology-ds116.dtb \
 	armada-385-turris-omnia.dtb \
 	armada-388-clearfog.dtb \
 	armada-388-clearfog-base.dtb \

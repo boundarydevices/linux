@@ -1,0 +1,115 @@
+fixes
+	omap/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.11/fixes-rc4
+	patch
+		ARM: dts: keystone-k2l: fix broken Ethernet due to disabled OSR
+
+next/fixes-non-critical
+	oxnas/soc
+		https://github.com/OXNAS/linux tags/oxnas-arm-soc-for-4.12
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.12-1
+	patch
+		ARM: w90x900: let clk_disable() return immediately if clk is NULL
+		ARM: mmp: let clk_disable() return immediately if clk is NULL
+	broadcom/maintainers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/maintainers
+
+next/cleanup
+
+next/soc
+	gemeni/multiplatform
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-multiplat-dt
+	davinci/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.12/soc
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.12/soc-v2-signed
+	gemini/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-multiplat-2
+	broadcom/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/soc
+
+next/arm64
+	renesas/arm64-defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.12
+	patch
+		MAINTAINERS: Broadcom Vulcan is now Cavium ThunderX2
+	amlogic/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-defconfig
+	mvebu/defconfig64
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig64-4.12-1
+	broadcom/defconfig64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/defconfig-arm64
+
+next/dt
+	gemini/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-dts-base
+	shared/dt-symlinks
+		Merge branch 'shared/dt-symlinks' into next/dt
+	patch
+		ARM: dts: Adjust moxart IRQ controller and flags
+	renesas/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.12
+	renesas/dt-bindings
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-bindings-for-v4.12
+	uniphier/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt-v4.12
+	patch
+		ARM: dts: augment Moxa ART GPIO node
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.12/dt
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.12-1
+	broadcom/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/devicetree
+	gemini/dts-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-dts-2
+	rockchip/dts32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.12-rockchip-dts32-1
+	omap/dt-v2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.12/dt-v2-signed
+	broadcom/dt-fixes
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.11/devicetree-fixes
+
+next/dt64
+	shared/dt-symlinks
+		Merge branch 'shared/dt-symlinks' into next/dt64
+	renesas/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.12
+	patch
+		dt-bindings: Add arm64 ARCH_THUNDER2 platform documentation
+		arm64: dts: move from ARCH_VULCAN to ARCH_THUNDER2
+	uniphier/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt64-v4.12
+	mvebu/dt64
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.12-1
+	broadcom/dt64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/devicetree-arm64
+	rockchip/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.12-rockchip-dts64-1
+	rockchip/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.12-rockchip-dts64-symlinks-1
+
+next/defconfig
+	patch
+		ARM: configs: stm32: Set CPU_V7M_NUM_IRQ to max value
+	davinci/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.12/defconfig
+	broadcom/defconfig
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/defconfig
+	patch
+		multi_v7_defconfig: make Rockchip DRM drivers built-in
+
+next/drivers
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.12-1
+	renesas/drivers
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-drivers-for-v4.12
+	amlogic/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-drivers
+	broadcom/drivers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/drivers
+
+next/tee
+	tee/initial-merge
+		git://git.linaro.org:/people/jens.wiklander/linux-tee tags/tee-drv-for-4.12
