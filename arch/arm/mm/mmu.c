@@ -22,6 +22,7 @@
 #include <asm/cputype.h>
 #include <asm/sections.h>
 #include <asm/cachetype.h>
+#include <asm/early_ioremap.h>
 #include <asm/fixmap.h>
 #include <asm/sections.h>
 #include <asm/setup.h>
@@ -382,7 +383,7 @@ static inline pmd_t * __init fixmap_pmd(unsigned long addr)
 	return pmd;
 }
 
-void __init early_fixmap_init(void)
+static void __init early_fixmap_init(void)
 {
 	pmd_t *pmd;
 
@@ -1616,7 +1617,6 @@ void __init paging_init(const struct machine_desc *mdesc)
 {
 	void *zero_page;
 
-	build_mem_type_table();
 	prepare_page_table();
 	map_lowmem();
 	memblock_set_current_limit(arm_lowmem_limit);
@@ -1635,4 +1635,12 @@ void __init paging_init(const struct machine_desc *mdesc)
 
 	empty_zero_page = virt_to_page(zero_page);
 	__flush_dcache_page(NULL, empty_zero_page);
+}
+
+void __init early_mm_init(void)
+{
+	build_mem_type_table();
+
+	early_fixmap_init();
+	early_ioremap_init();
 }

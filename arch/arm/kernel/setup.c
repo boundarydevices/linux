@@ -40,7 +40,6 @@
 #include <asm/efi.h>
 #include <asm/elf.h>
 #include <asm/early_ioremap.h>
-#include <asm/fixmap.h>
 #include <asm/procinfo.h>
 #include <asm/psci.h>
 #include <asm/sections.h>
@@ -1082,12 +1081,10 @@ void __init setup_arch(char **cmdline_p)
 	strlcpy(cmd_line, boot_command_line, COMMAND_LINE_SIZE);
 	*cmdline_p = cmd_line;
 
-	early_fixmap_init();
-	early_ioremap_init();
-
 	parse_early_param();
 
 #ifdef CONFIG_MMU
+	early_mm_init();
 	early_paging_init(mdesc);
 #endif
 	setup_dma_zone(mdesc);
