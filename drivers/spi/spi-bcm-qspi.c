@@ -373,7 +373,7 @@ static int bcm_qspi_bspi_set_flex_mode(struct bcm_qspi *qspi, int width,
 			/* default mode, does not need flex_cmd */
 			flex_mode = 0;
 		else
-			command = SPINOR_OP_READ4_FAST;
+			command = SPINOR_OP_READ_FAST_4B;
 		break;
 	case SPI_NBITS_DUAL:
 		bpc = 0x00000001;
@@ -386,7 +386,7 @@ static int bcm_qspi_bspi_set_flex_mode(struct bcm_qspi *qspi, int width,
 		} else {
 			command = SPINOR_OP_READ_1_1_2;
 			if (spans_4byte)
-				command = SPINOR_OP_READ4_1_1_2;
+				command = SPINOR_OP_READ_1_1_2_4B;
 		}
 		break;
 	case SPI_NBITS_QUAD:
@@ -401,7 +401,7 @@ static int bcm_qspi_bspi_set_flex_mode(struct bcm_qspi *qspi, int width,
 		} else {
 			command = SPINOR_OP_READ_1_1_4;
 			if (spans_4byte)
-				command = SPINOR_OP_READ4_1_1_4;
+				command = SPINOR_OP_READ_1_1_4_4B;
 		}
 		break;
 	default:
