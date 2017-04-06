@@ -1534,7 +1534,11 @@ static int bcm2048_parse_rt_match_c(struct bcm2048_device *bdev, int i,
 	if (crc == BCM2048_RDS_CRC_UNRECOVARABLE)
 		return 0;
 
-	BUG_ON((index+2) >= BCM2048_MAX_RDS_RT);
+	if ((index + 2) >= BCM2048_MAX_RDS_RT) {
+		dev_err(&bdev->client->dev,
+			"Incorrect index = %d\n", index);
+		return 0;
+	}
 
 	if ((bdev->rds_info.radio_text[i] & BCM2048_RDS_BLOCK_MASK) ==
 		BCM2048_RDS_BLOCK_C) {
@@ -1557,7 +1561,11 @@ static void bcm2048_parse_rt_match_d(struct bcm2048_device *bdev, int i,
 	if (crc == BCM2048_RDS_CRC_UNRECOVARABLE)
 		return;
 
-	BUG_ON((index+4) >= BCM2048_MAX_RDS_RT);
+	if ((index + 4) >= BCM2048_MAX_RDS_RT) {
+		dev_err(&bdev->client->dev,
+			"Incorrect index = %d\n", index);
+		return;
+	}
 
 	if ((bdev->rds_info.radio_text[i] & BCM2048_RDS_BLOCK_MASK) ==
 	    BCM2048_RDS_BLOCK_D)
@@ -2634,7 +2642,7 @@ exit:
 	return err;
 }
 
-static int __exit bcm2048_i2c_driver_remove(struct i2c_client *client)
+static int bcm2048_i2c_driver_remove(struct i2c_client *client)
 {
 	struct bcm2048_device *bdev = i2c_get_clientdata(client);
 
@@ -2673,7 +2681,7 @@ static struct i2c_driver bcm2048_i2c_driver = {
 		.name	= BCM2048_DRIVER_NAME,
 	},
 	.probe		= bcm2048_i2c_driver_probe,
-	.remove		= __exit_p(bcm2048_i2c_driver_remove),
+	.remove		= bcm2048_i2c_driver_remove,
 	.id_table	= bcm2048_id,
 };
 
