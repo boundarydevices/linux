@@ -189,7 +189,7 @@ static u16 have_canfork_callback __read_mostly;
 
 /* cgroup namespace for init task */
 struct cgroup_namespace init_cgroup_ns = {
-	.count		= { .counter = 2, },
+	.count		= REFCOUNT_INIT(2),
 	.user_ns	= &init_user_ns,
 	.ns.ops		= &cgroupns_operations,
 	.ns.inum	= PROC_CGROUP_INIT_INO,
@@ -554,7 +554,7 @@ EXPORT_SYMBOL_GPL(of_css);
  * haven't been created.
  */
 struct css_set init_css_set = {
-	.refcount		= ATOMIC_INIT(1),
+	.refcount		= REFCOUNT_INIT(1),
 	.tasks			= LIST_HEAD_INIT(init_css_set.tasks),
 	.mg_tasks		= LIST_HEAD_INIT(init_css_set.mg_tasks),
 	.task_iters		= LIST_HEAD_INIT(init_css_set.task_iters),
@@ -724,7 +724,7 @@ void put_css_set_locked(struct css_set *cset)
 
 	lockdep_assert_held(&css_set_lock);
 
-	if (!atomic_dec_and_test(&cset->refcount))
+	if (!refcount_dec_and_test(&cset->refcount))
 		return;
 
 	/* This css_set is dead. unlink it and release cgroup and css refs */
@@ -977,7 +977,7 @@ static struct css_set *find_css_set(struct css_set *old_cset,
 		return NULL;
 	}
 
-	atomic_set(&cset->refcount, 1);
+	refcount_set(&cset->refcount, 1);
 	INIT_LIST_HEAD(&cset->tasks);
 	INIT_LIST_HEAD(&cset->mg_tasks);
 	INIT_LIST_HEAD(&cset->task_iters);
@@ -2425,11 +2425,12 @@ ssize_t __cgroup_procs_write(struct kernfs_open_file *of, char *buf,
 		tsk = tsk->group_leader;
 
 	/*
-	 * Workqueue threads may acquire PF_NO_SETAFFINITY and become
-	 * trapped in a cpuset, or RT worker may be born in a cgroup
-	 * with no rt_runtime allocated.  Just say no.
+	 * kthreads may acquire PF_NO_SETAFFINITY during initialization.
+	 * If userland migrates such a kthread to a non-root cgroup, it can
+	 * become trapped in a cpuset, or RT kthread may be born in a
+	 * cgroup with no rt_runtime allocated.  Just say no.
 	 */
-	if (tsk == kthreadd_task || (tsk->flags & PF_NO_SETAFFINITY)) {
+	if (tsk->no_cgroup_migration || (tsk->flags & PF_NO_SETAFFINITY)) {
 		ret = -EINVAL;
 		goto out_unlock_rcu;
 	}
