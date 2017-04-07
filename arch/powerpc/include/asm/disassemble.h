@@ -87,11 +87,6 @@ static inline unsigned int get_oc(u32 inst)
 	return (inst >> 11) & 0x7fff;
 }
 
-static inline unsigned int get_tx_or_sx(u32 inst)
-{
-	return (inst) & 0x1;
-}
-
 #define IS_XFORM(inst)	(get_op(inst)  == 31)
 #define IS_DSFORM(inst)	(get_op(inst) >= 56)
 
