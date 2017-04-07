@@ -73,6 +73,15 @@
 #define SPINOR_OP_BE_32K_4B	0x5c	/* Erase 32KiB block */
 #define SPINOR_OP_SE_4B		0xdc	/* Sector erase (usually 64KiB) */
 
+/* Double Transfer Rate opcodes - defined in JEDEC JESD216B. */
+#define SPINOR_OP_READ_1_1_1_DTR	0x0d
+#define SPINOR_OP_READ_1_2_2_DTR	0xbd
+#define SPINOR_OP_READ_1_4_4_DTR	0xed
+
+#define SPINOR_OP_READ_1_1_1_DTR_4B	0x0e
+#define SPINOR_OP_READ_1_2_2_DTR_4B	0xbe
+#define SPINOR_OP_READ_1_4_4_DTR_4B	0xee
+
 /* Used for SST flashes only. */
 #define SPINOR_OP_BP		0x02	/* Byte program */
 #define SPINOR_OP_WRDI		0x04	/* Write disable */
@@ -119,12 +128,74 @@
 /* Configuration Register bits. */
 #define CR_QUAD_EN_SPAN		BIT(1)	/* Spansion Quad I/O */
 
-enum read_mode {
-	SPI_NOR_NORMAL = 0,
-	SPI_NOR_FAST,
-	SPI_NOR_DUAL,
-	SPI_NOR_QUAD,
+
+/* Supported SPI protocols */
+#define SNOR_PROTO_WIDTH_MASK	GENMASK(7, 0)
+
+#define SNOR_PROTO_CLASS_MASK	GENMASK(9, 8)
+#define SNOR_PROTO_CLASS_1_1_N	(0x0u << 8)
+#define SNOR_PROTO_CLASS_1_N_N	(0x1u << 8)
+#define SNOR_PROTO_CLASS_N_N_N	(0x2u << 8)
+
+#define SNOR_PROTO_IS_DTR	BIT(10)	/* Double Transfer Rate */
+
+#define SNOR_PROTO_STR(_pclass, _pwidth) \
+	((_pclass) | (_pwidth))
+#define SNOR_PROTO_DTR(_pclass, _pwidth) \
+	(SNOR_PROTO_IS_DTR | (_pclass) | (_pwidth))
+
+enum spi_nor_protocol {
+	SNOR_PROTO_1_1_1 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_1_1_N, 1),
+	SNOR_PROTO_1_1_2 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_1_1_N, 2),
+	SNOR_PROTO_1_1_4 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_1_1_N, 4),
+	SNOR_PROTO_1_1_8 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_1_1_N, 8),
+	SNOR_PROTO_1_2_2 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_1_N_N, 2),
+	SNOR_PROTO_1_4_4 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_1_N_N, 4),
+	SNOR_PROTO_1_8_8 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_1_N_N, 8),
+	SNOR_PROTO_2_2_2 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_N_N_N, 2),
+	SNOR_PROTO_4_4_4 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_N_N_N, 4),
+	SNOR_PROTO_8_8_8 = SNOR_PROTO_STR(SNOR_PROTO_CLASS_N_N_N, 8),
+
+	SNOR_PROTO_1_1_1_DTR = SNOR_PROTO_DTR(SNOR_PROTO_CLASS_1_1_N, 1),
+	SNOR_PROTO_1_2_2_DTR = SNOR_PROTO_DTR(SNOR_PROTO_CLASS_1_N_N, 2),
+	SNOR_PROTO_1_4_4_DTR = SNOR_PROTO_DTR(SNOR_PROTO_CLASS_1_N_N, 4),
+	SNOR_PROTO_1_8_8_DTR = SNOR_PROTO_DTR(SNOR_PROTO_CLASS_1_N_N, 8),
 };
+
+static inline bool spi_nor_protocol_is_dtr(enum spi_nor_protocol proto)
+{
+	return (proto & SNOR_PROTO_IS_DTR) == SNOR_PROTO_IS_DTR;
+}
+
+static inline u32 spi_nor_get_protocol_class(enum spi_nor_protocol proto)
+{
+	return proto & SNOR_PROTO_CLASS_MASK;
+}
+
+static inline u8 spi_nor_get_protocol_width(enum spi_nor_protocol proto)
+{
+	return proto & SNOR_PROTO_WIDTH_MASK;
+}
+
+static inline u8 spi_nor_get_protocol_inst_width(enum spi_nor_protocol proto)
+{
+	return (spi_nor_get_protocol_class(proto) == SNOR_PROTO_CLASS_N_N_N) ?
+		spi_nor_get_protocol_width(proto) :
+		1u;
+}
+
+static inline u8 spi_nor_get_protocol_addr_width(enum spi_nor_protocol proto)
+{
+	return (spi_nor_get_protocol_class(proto) != SNOR_PROTO_CLASS_1_1_N) ?
+		spi_nor_get_protocol_width(proto) :
+		1u;
+}
+
+static inline u8 spi_nor_get_protocol_data_width(enum spi_nor_protocol proto)
+{
+	return spi_nor_get_protocol_width(proto);
+}
+
 
 #define SPI_NOR_MAX_CMD_SIZE	8
 enum spi_nor_ops {
@@ -141,7 +212,14 @@ enum spi_nor_option_flags {
 	SNOR_F_NO_OP_CHIP_ERASE	= BIT(2),
 	SNOR_F_S3AN_ADDR_DEFAULT = BIT(3),
 	SNOR_F_READY_XSR_RDY	= BIT(4),
+	SNOR_F_4B_OPCODES	= BIT(5),
 };
+
+/**
+ * struct flash_info -	Forward declaration of a structure used internally by
+ *			spi_nor_scan() and spi_nor_init().
+ */
+struct flash_info;
 
 /**
  * struct spi_nor - Structure for defining a the SPI NOR layer
@@ -154,9 +232,11 @@ enum spi_nor_option_flags {
  * @read_opcode:	the read opcode
  * @read_dummy:		the dummy needed by the read operation
  * @program_opcode:	the program opcode
- * @flash_read:		the mode of the read
  * @sst_write_second:	used by the SST write operation
  * @flags:		flag options for the current SPI-NOR (SNOR_F_*)
+ * @read_proto:		the SPI protocol for read operations
+ * @write_proto:	the SPI protocol for write operations
+ * @reg_proto		the SPI protocol for read_reg/write_reg/erase operations
  * @cmd_buf:		used by the write_reg
  * @prepare:		[OPTIONAL] do some preparations for the
  *			read/write/erase/lock/unlock operations
@@ -173,19 +253,23 @@ enum spi_nor_option_flags {
  * @flash_unlock:	[FLASH-SPECIFIC] unlock a region of the SPI NOR
  * @flash_is_locked:	[FLASH-SPECIFIC] check if a region of the SPI NOR is
  *			completely locked
+ * @flash_quad_enable:	[FLASH-SPECIFIC] set the Quad Enable bit of the SPI NOR
  * @priv:		the private data
  */
 struct spi_nor {
 	struct mtd_info		mtd;
 	struct mutex		lock;
 	struct device		*dev;
+	const struct flash_info	*info;
 	u32			page_size;
 	u8			addr_width;
 	u8			erase_opcode;
 	u8			read_opcode;
 	u8			read_dummy;
 	u8			program_opcode;
-	enum read_mode		flash_read;
+	enum spi_nor_protocol	read_proto;
+	enum spi_nor_protocol	write_proto;
+	enum spi_nor_protocol	reg_proto;
 	bool			sst_write_second;
 	u32			flags;
 	u8			cmd_buf[SPI_NOR_MAX_CMD_SIZE];
@@ -204,6 +288,7 @@ struct spi_nor {
 	int (*flash_lock)(struct spi_nor *nor, loff_t ofs, uint64_t len);
 	int (*flash_unlock)(struct spi_nor *nor, loff_t ofs, uint64_t len);
 	int (*flash_is_locked)(struct spi_nor *nor, loff_t ofs, uint64_t len);
+	int (*flash_quad_enable)(struct spi_nor *nor);
 
 	void *priv;
 };
@@ -219,11 +304,73 @@ static inline struct device_node *spi_nor_get_flash_node(struct spi_nor *nor)
 	return mtd_get_of_node(&nor->mtd);
 }
 
+
+/**
+ * struct spi_nor_hwcaps - Structure for describing the hardware capabilies
+ * supported by the SPI controller (bus master).
+ * @mask:		the bitmask listing all the supported hw capabilies
+ */
+struct spi_nor_hwcaps {
+	u32	mask;
+};
+
+/*
+ *(Fast) Read capabilities.
+ * MUST be ordered by priority: the higher bit position, the higher priority.
+ * As a matter of performances, it is relevant to use Octo SPI protocols first,
+ * then Quad SPI protocols before Dual SPI protocols, Fast Read and lastly
+ * (Slow) Read.
+ */
+#define SNOR_HWCAPS_READ_MASK		GENMASK(15, 0)
+#define SNOR_HWCAPS_READ		BIT(0)
+#define SNOR_HWCAPS_READ_FAST		BIT(1)
+#define SNOR_HWCAPS_READ_1_1_1_DTR	BIT(2)
+
+#define SNOR_HWCAPS_READ_DUAL		GENMASK(7, 4)
+#define SNOR_HWCAPS_READ_1_1_2		BIT(4)
+#define SNOR_HWCAPS_READ_1_2_2		BIT(5)
+#define SNOR_HWCAPS_READ_2_2_2		BIT(6)
+#define SNOR_HWCAPS_READ_1_2_2_DTR	BIT(7)
+
+#define SNOR_HWCAPS_READ_QUAD		GENMASK(11, 8)
+#define SNOR_HWCAPS_READ_1_1_4		BIT(8)
+#define SNOR_HWCAPS_READ_1_4_4		BIT(9)
+#define SNOR_HWCAPS_READ_4_4_4		BIT(10)
+#define SNOR_HWCAPS_READ_1_4_4_DTR	BIT(11)
+
+#define SNOR_HWCPAS_READ_OCTO		GENMASK(15, 12)
+#define SNOR_HWCAPS_READ_1_1_8		BIT(12)
+#define SNOR_HWCAPS_READ_1_8_8		BIT(13)
+#define SNOR_HWCAPS_READ_8_8_8		BIT(14)
+#define SNOR_HWCAPS_READ_1_8_8_DTR	BIT(15)
+
+/*
+ * Page Program capabilities.
+ * MUST be ordered by priority: the higher bit position, the higher priority.
+ * Like (Fast) Read capabilities, Octo/Quad SPI protocols are preferred to the
+ * legacy SPI 1-1-1 protocol.
+ * Note that Dual Page Programs are not supported because there is no existing
+ * JEDEC/SFDP standard to define them. Also at this moment no SPI flash memory
+ * implements such commands.
+ */
+#define SNOR_HWCAPS_PP_MASK	GENMASK(22, 16)
+#define SNOR_HWCAPS_PP		BIT(16)
+
+#define SNOR_HWCAPS_PP_QUAD	GENMASK(19, 17)
+#define SNOR_HWCAPS_PP_1_1_4	BIT(17)
+#define SNOR_HWCAPS_PP_1_4_4	BIT(18)
+#define SNOR_HWCAPS_PP_4_4_4	BIT(19)
+
+#define SNOR_HWCAPS_PP_OCTO	GENMASK(22, 20)
+#define SNOR_HWCAPS_PP_1_1_8	BIT(20)
+#define SNOR_HWCAPS_PP_1_8_8	BIT(21)
+#define SNOR_HWCAPS_PP_8_8_8	BIT(22)
+
 /**
  * spi_nor_scan() - scan the SPI NOR
  * @nor:	the spi_nor structure
  * @name:	the chip type name
- * @mode:	the read mode supported by the driver
+ * @hwcaps:	the hardware capabilities supported by the controller driver
  *
  * The drivers can use this fuction to scan the SPI NOR.
  * In the scanning, it will try to get all the necessary information to
@@ -233,6 +380,7 @@ static inline struct device_node *spi_nor_get_flash_node(struct spi_nor *nor)
  *
  * Return: 0 for success, others for failure.
  */
-int spi_nor_scan(struct spi_nor *nor, const char *name, enum read_mode mode);
+int spi_nor_scan(struct spi_nor *nor, const char *name,
+		 const struct spi_nor_hwcaps *hwcaps);
 
 #endif
