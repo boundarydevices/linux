@@ -3,7 +3,7 @@
  *
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2015  Intel Mobile Communications GmbH
- * Copyright (C) 2015-2016 Intel Deutschland GmbH
+ * Copyright (C) 2015-2017 Intel Deutschland GmbH
  *
  * This file is GPLv2 as found in COPYING.
  */
@@ -2042,6 +2042,7 @@ static int ieee80211_change_bss(struct wiphy *wiphy,
 					 params->basic_rates_len,
 					 &sdata->vif.bss_conf.basic_rates);
 		changed |= BSS_CHANGED_BASIC_RATES;
+		ieee80211_check_rate_mask(sdata);
 	}
 
 	if (params->ap_isolate >= 0) {
@@ -2630,6 +2631,33 @@ static int ieee80211_set_cqm_rssi_config(struct wiphy *wiphy,
 
 	bss_conf->cqm_rssi_thold = rssi_thold;
 	bss_conf->cqm_rssi_hyst = rssi_hyst;
+	bss_conf->cqm_rssi_low = 0;
+	bss_conf->cqm_rssi_high = 0;
+	sdata->u.mgd.last_cqm_event_signal = 0;
+
+	/* tell the driver upon association, unless already associated */
+	if (sdata->u.mgd.associated &&
+	    sdata->vif.driver_flags & IEEE80211_VIF_SUPPORTS_CQM_RSSI)
+		ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_CQM);
+
+	return 0;
+}
+
+static int ieee80211_set_cqm_rssi_range_config(struct wiphy *wiphy,
+					       struct net_device *dev,
+					       s32 rssi_low, s32 rssi_high)
+{
+	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
+	struct ieee80211_vif *vif = &sdata->vif;
+	struct ieee80211_bss_conf *bss_conf = &vif->bss_conf;
+
+	if (sdata->vif.driver_flags & IEEE80211_VIF_BEACON_FILTER)
+		return -EOPNOTSUPP;
+
+	bss_conf->cqm_rssi_low = rssi_low;
+	bss_conf->cqm_rssi_high = rssi_high;
+	bss_conf->cqm_rssi_thold = 0;
+	bss_conf->cqm_rssi_hyst = 0;
 	sdata->u.mgd.last_cqm_event_signal = 0;
 
 	/* tell the driver upon association, unless already associated */
@@ -2656,6 +2684,21 @@ static int ieee80211_set_bitrate_mask(struct wiphy *wiphy,
 		ret = drv_set_bitrate_mask(local, sdata, mask);
 		if (ret)
 			return ret;
+	}
+
+	/*
+	 * If active validate the setting and reject it if it doesn't leave
+	 * at least one basic rate usable, since we really have to be able
+	 * to send something, and if we're an AP we have to be able to do
+	 * so at a basic rate so that all clients can receive it.
+	 */
+	if (rcu_access_pointer(sdata->vif.chanctx_conf) &&
+	    sdata->vif.bss_conf.chandef.chan) {
+		u32 basic_rates = sdata->vif.bss_conf.basic_rates;
+		enum nl80211_band band = sdata->vif.bss_conf.chandef.chan->band;
+
+		if (!(mask->control[band].legacy & basic_rates))
+			return -EINVAL;
 	}
 
 	for (i = 0; i < NUM_NL80211_BANDS; i++) {
@@ -3639,6 +3682,7 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.mgmt_tx = ieee80211_mgmt_tx,
 	.mgmt_tx_cancel_wait = ieee80211_mgmt_tx_cancel_wait,
 	.set_cqm_rssi_config = ieee80211_set_cqm_rssi_config,
+	.set_cqm_rssi_range_config = ieee80211_set_cqm_rssi_range_config,
 	.mgmt_frame_register = ieee80211_mgmt_frame_register,
 	.set_antenna = ieee80211_set_antenna,
 	.get_antenna = ieee80211_get_antenna,
