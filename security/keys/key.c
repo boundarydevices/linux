@@ -93,7 +93,7 @@ try_again:
 
 	/* if we get here, then the user record still hadn't appeared on the
 	 * second pass - so we use the candidate record */
-	atomic_set(&candidate->usage, 1);
+	refcount_set(&candidate->usage, 1);
 	atomic_set(&candidate->nkeys, 0);
 	atomic_set(&candidate->nikeys, 0);
 	candidate->uid = uid;
@@ -110,7 +110,7 @@ try_again:
 
 	/* okay - we found a user record for this UID */
 found:
-	atomic_inc(&user->usage);
+	refcount_inc(&user->usage);
 	spin_unlock(&key_user_lock);
 	kfree(candidate);
 out:
@@ -122,7 +122,7 @@ out:
  */
 void key_user_put(struct key_user *user)
 {
-	if (atomic_dec_and_lock(&user->usage, &key_user_lock)) {
+	if (refcount_dec_and_lock(&user->usage, &key_user_lock)) {
 		rb_erase(&user->node, &key_user_tree);
 		spin_unlock(&key_user_lock);
 
@@ -285,7 +285,7 @@ struct key *key_alloc(struct key_type *type, const char *desc,
 	if (!key->index_key.description)
 		goto no_memory_3;
 
-	atomic_set(&key->usage, 1);
+	refcount_set(&key->usage, 1);
 	init_rwsem(&key->sem);
 	lockdep_set_class(&key->sem, &type->lock_class);
 	key->index_key.type = type;
@@ -621,7 +621,7 @@ void key_put(struct key *key)
 	if (key) {
 		key_check(key);
 
-		if (atomic_dec_and_test(&key->usage))
+		if (refcount_dec_and_test(&key->usage))
 			schedule_work(&key_gc_work);
 	}
 }
@@ -656,7 +656,7 @@ not_found:
 
 found:
 	/* pretend it doesn't exist if it is awaiting deletion */
-	if (atomic_read(&key->usage) == 0)
+	if (refcount_read(&key->usage) == 0)
 		goto not_found;
 
 	/* this races with key_put(), but that doesn't matter since key_put()
