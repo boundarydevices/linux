@@ -3115,10 +3115,10 @@ static int dt_gpio_count(struct device *dev, const char *con_id)
 				 gpio_suffixes[i]);
 
 		ret = of_gpio_named_count(dev->of_node, propname);
-		if (ret >= 0)
+		if (ret > 0)
 			break;
 	}
-	return ret;
+	return ret ? ret : -ENOENT;
 }
 
 static int platform_gpio_count(struct device *dev, const char *con_id)
@@ -3319,7 +3319,7 @@ EXPORT_SYMBOL_GPL(gpiod_get_index);
  * underlying firmware interface and then makes sure that the GPIO
  * descriptor is requested before it is returned to the caller.
  *
- * On successfull request the GPIO pin is configured in accordance with
+ * On successful request the GPIO pin is configured in accordance with
  * provided @dflags.
  *
  * In case of error an ERR_PTR() is returned.

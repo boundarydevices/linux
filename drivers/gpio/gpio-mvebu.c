@@ -45,6 +45,7 @@
 #include <linux/clk.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/irqchip/chained_irq.h>
+#include <linux/bitops.h>
 
 /*
  * GPIO unit register offsets.
@@ -62,9 +63,11 @@
 #define GPIO_EDGE_MASK_MV78200_OFF(cpu)	  ((cpu) ? 0x30 : 0x18)
 #define GPIO_LEVEL_MASK_MV78200_OFF(cpu)  ((cpu) ? 0x34 : 0x1C)
 
-/* The Armada XP has per-CPU registers for interrupt cause, interrupt
+/*
+ * The Armada XP has per-CPU registers for interrupt cause, interrupt
  * mask and interrupt level mask. Those are relative to the
- * percpu_membase. */
+ * percpu_membase.
+ */
 #define GPIO_EDGE_CAUSE_ARMADAXP_OFF(cpu) ((cpu) * 0x4)
 #define GPIO_EDGE_MASK_ARMADAXP_OFF(cpu)  (0x10 + (cpu) * 0x4)
 #define GPIO_LEVEL_MASK_ARMADAXP_OFF(cpu) (0x20 + (cpu) * 0x4)
@@ -85,47 +88,44 @@ struct mvebu_gpio_chip {
 	int		   soc_variant;
 
 	/* Used to preserve GPIO registers across suspend/resume */
-	u32                out_reg;
-	u32                io_conf_reg;
-	u32                blink_en_reg;
-	u32                in_pol_reg;
-	u32                edge_mask_regs[4];
-	u32                level_mask_regs[4];
+	u32		   out_reg;
+	u32		   io_conf_reg;
+	u32		   blink_en_reg;
+	u32		   in_pol_reg;
+	u32		   edge_mask_regs[4];
+	u32		   level_mask_regs[4];
 };
 
 /*
  * Functions returning addresses of individual registers for a given
  * GPIO controller.
  */
-static inline void __iomem *mvebu_gpioreg_out(struct mvebu_gpio_chip *mvchip)
+static void __iomem *mvebu_gpioreg_out(struct mvebu_gpio_chip *mvchip)
 {
 	return mvchip->membase + GPIO_OUT_OFF;
 }
 
-static inline void __iomem *mvebu_gpioreg_blink(struct mvebu_gpio_chip *mvchip)
+static void __iomem *mvebu_gpioreg_blink(struct mvebu_gpio_chip *mvchip)
 {
 	return mvchip->membase + GPIO_BLINK_EN_OFF;
 }
 
-static inline void __iomem *
-mvebu_gpioreg_io_conf(struct mvebu_gpio_chip *mvchip)
+static void __iomem *mvebu_gpioreg_io_conf(struct mvebu_gpio_chip *mvchip)
 {
 	return mvchip->membase + GPIO_IO_CONF_OFF;
 }
 
-static inline void __iomem *mvebu_gpioreg_in_pol(struct mvebu_gpio_chip *mvchip)
+static void __iomem *mvebu_gpioreg_in_pol(struct mvebu_gpio_chip *mvchip)
 {
 	return mvchip->membase + GPIO_IN_POL_OFF;
 }
 
-static inline void __iomem *
-mvebu_gpioreg_data_in(struct mvebu_gpio_chip *mvchip)
+static void __iomem *mvebu_gpioreg_data_in(struct mvebu_gpio_chip *mvchip)
 {
 	return mvchip->membase + GPIO_DATA_IN_OFF;
 }
 
-static inline void __iomem *
-mvebu_gpioreg_edge_cause(struct mvebu_gpio_chip *mvchip)
+static void __iomem *mvebu_gpioreg_edge_cause(struct mvebu_gpio_chip *mvchip)
 {
 	int cpu;
 
@@ -142,8 +142,7 @@ mvebu_gpioreg_edge_cause(struct mvebu_gpio_chip *mvchip)
 	}
 }
 
-static inline void __iomem *
-mvebu_gpioreg_edge_mask(struct mvebu_gpio_chip *mvchip)
+static void __iomem *mvebu_gpioreg_edge_mask(struct mvebu_gpio_chip *mvchip)
 {
 	int cpu;
 
@@ -184,8 +183,7 @@ static void __iomem *mvebu_gpioreg_level_mask(struct mvebu_gpio_chip *mvchip)
 /*
  * Functions implementing the gpio_chip methods
  */
-
-static void mvebu_gpio_set(struct gpio_chip *chip, unsigned pin, int value)
+static void mvebu_gpio_set(struct gpio_chip *chip, unsigned int pin, int value)
 {
 	struct mvebu_gpio_chip *mvchip = gpiochip_get_data(chip);
 	unsigned long flags;
@@ -194,19 +192,19 @@ static void mvebu_gpio_set(struct gpio_chip *chip, unsigned pin, int value)
 	spin_lock_irqsave(&mvchip->lock, flags);
 	u = readl_relaxed(mvebu_gpioreg_out(mvchip));
 	if (value)
-		u |= 1 << pin;
+		u |= BIT(pin);
 	else
-		u &= ~(1 << pin);
+		u &= ~BIT(pin);
 	writel_relaxed(u, mvebu_gpioreg_out(mvchip));
 	spin_unlock_irqrestore(&mvchip->lock, flags);
 }
 
-static int mvebu_gpio_get(struct gpio_chip *chip, unsigned pin)
+static int mvebu_gpio_get(struct gpio_chip *chip, unsigned int pin)
 {
 	struct mvebu_gpio_chip *mvchip = gpiochip_get_data(chip);
 	u32 u;
 
-	if (readl_relaxed(mvebu_gpioreg_io_conf(mvchip)) & (1 << pin)) {
+	if (readl_relaxed(mvebu_gpioreg_io_conf(mvchip)) & BIT(pin)) {
 		u = readl_relaxed(mvebu_gpioreg_data_in(mvchip)) ^
 			readl_relaxed(mvebu_gpioreg_in_pol(mvchip));
 	} else {
@@ -216,7 +214,8 @@ static int mvebu_gpio_get(struct gpio_chip *chip, unsigned pin)
 	return (u >> pin) & 1;
 }
 
-static void mvebu_gpio_blink(struct gpio_chip *chip, unsigned pin, int value)
+static void mvebu_gpio_blink(struct gpio_chip *chip, unsigned int pin,
+			     int value)
 {
 	struct mvebu_gpio_chip *mvchip = gpiochip_get_data(chip);
 	unsigned long flags;
@@ -225,36 +224,38 @@ static void mvebu_gpio_blink(struct gpio_chip *chip, unsigned pin, int value)
 	spin_lock_irqsave(&mvchip->lock, flags);
 	u = readl_relaxed(mvebu_gpioreg_blink(mvchip));
 	if (value)
-		u |= 1 << pin;
+		u |= BIT(pin);
 	else
-		u &= ~(1 << pin);
+		u &= ~BIT(pin);
 	writel_relaxed(u, mvebu_gpioreg_blink(mvchip));
 	spin_unlock_irqrestore(&mvchip->lock, flags);
 }
 
-static int mvebu_gpio_direction_input(struct gpio_chip *chip, unsigned pin)
+static int mvebu_gpio_direction_input(struct gpio_chip *chip, unsigned int pin)
 {
 	struct mvebu_gpio_chip *mvchip = gpiochip_get_data(chip);
 	unsigned long flags;
 	int ret;
 	u32 u;
 
-	/* Check with the pinctrl driver whether this pin is usable as
-	 * an input GPIO */
+	/*
+	 * Check with the pinctrl driver whether this pin is usable as
+	 * an input GPIO
+	 */
 	ret = pinctrl_gpio_direction_input(chip->base + pin);
 	if (ret)
 		return ret;
 
 	spin_lock_irqsave(&mvchip->lock, flags);
 	u = readl_relaxed(mvebu_gpioreg_io_conf(mvchip));
-	u |= 1 << pin;
+	u |= BIT(pin);
 	writel_relaxed(u, mvebu_gpioreg_io_conf(mvchip));
 	spin_unlock_irqrestore(&mvchip->lock, flags);
 
 	return 0;
 }
 
-static int mvebu_gpio_direction_output(struct gpio_chip *chip, unsigned pin,
+static int mvebu_gpio_direction_output(struct gpio_chip *chip, unsigned int pin,
 				       int value)
 {
 	struct mvebu_gpio_chip *mvchip = gpiochip_get_data(chip);
@@ -262,8 +263,10 @@ static int mvebu_gpio_direction_output(struct gpio_chip *chip, unsigned pin,
 	int ret;
 	u32 u;
 
-	/* Check with the pinctrl driver whether this pin is usable as
-	 * an output GPIO */
+	/*
+	 * Check with the pinctrl driver whether this pin is usable as
+	 * an output GPIO
+	 */
 	ret = pinctrl_gpio_direction_output(chip->base + pin);
 	if (ret)
 		return ret;
@@ -273,16 +276,17 @@ static int mvebu_gpio_direction_output(struct gpio_chip *chip, unsigned pin,
 
 	spin_lock_irqsave(&mvchip->lock, flags);
 	u = readl_relaxed(mvebu_gpioreg_io_conf(mvchip));
-	u &= ~(1 << pin);
+	u &= ~BIT(pin);
 	writel_relaxed(u, mvebu_gpioreg_io_conf(mvchip));
 	spin_unlock_irqrestore(&mvchip->lock, flags);
 
 	return 0;
 }
 
-static int mvebu_gpio_to_irq(struct gpio_chip *chip, unsigned pin)
+static int mvebu_gpio_to_irq(struct gpio_chip *chip, unsigned int pin)
 {
 	struct mvebu_gpio_chip *mvchip = gpiochip_get_data(chip);
+
 	return irq_create_mapping(mvchip->domain, pin);
 }
 
@@ -389,7 +393,7 @@ static int mvebu_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 
 	pin = d->hwirq;
 
-	u = readl_relaxed(mvebu_gpioreg_io_conf(mvchip)) & (1 << pin);
+	u = readl_relaxed(mvebu_gpioreg_io_conf(mvchip)) & BIT(pin);
 	if (!u)
 		return -EINVAL;
 
@@ -409,13 +413,13 @@ static int mvebu_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 	case IRQ_TYPE_EDGE_RISING:
 	case IRQ_TYPE_LEVEL_HIGH:
 		u = readl_relaxed(mvebu_gpioreg_in_pol(mvchip));
-		u &= ~(1 << pin);
+		u &= ~BIT(pin);
 		writel_relaxed(u, mvebu_gpioreg_in_pol(mvchip));
 		break;
 	case IRQ_TYPE_EDGE_FALLING:
 	case IRQ_TYPE_LEVEL_LOW:
 		u = readl_relaxed(mvebu_gpioreg_in_pol(mvchip));
-		u |= 1 << pin;
+		u |= BIT(pin);
 		writel_relaxed(u, mvebu_gpioreg_in_pol(mvchip));
 		break;
 	case IRQ_TYPE_EDGE_BOTH: {
@@ -428,10 +432,10 @@ static int mvebu_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 		 * set initial polarity based on current input level
 		 */
 		u = readl_relaxed(mvebu_gpioreg_in_pol(mvchip));
-		if (v & (1 << pin))
-			u |= 1 << pin;		/* falling */
+		if (v & BIT(pin))
+			u |= BIT(pin);		/* falling */
 		else
-			u &= ~(1 << pin);	/* rising */
+			u &= ~BIT(pin);		/* rising */
 		writel_relaxed(u, mvebu_gpioreg_in_pol(mvchip));
 		break;
 	}
@@ -461,7 +465,7 @@ static void mvebu_gpio_irq_handler(struct irq_desc *desc)
 
 		irq = irq_find_mapping(mvchip->domain, i);
 
-		if (!(cause & (1 << i)))
+		if (!(cause & BIT(i)))
 			continue;
 
 		type = irq_get_trigger_type(irq);
@@ -470,7 +474,7 @@ static void mvebu_gpio_irq_handler(struct irq_desc *desc)
 			u32 polarity;
 
 			polarity = readl_relaxed(mvebu_gpioreg_in_pol(mvchip));
-			polarity ^= 1 << i;
+			polarity ^= BIT(i);
 			writel_relaxed(polarity, mvebu_gpioreg_in_pol(mvchip));
 		}
 
@@ -507,7 +511,7 @@ static void mvebu_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 		if (!label)
 			continue;
 
-		msk = 1 << i;
+		msk = BIT(i);
 		is_out = !(io_conf & msk);
 
 		seq_printf(s, " gpio-%-3d (%-20.20s)", chip->base + i, label);
@@ -712,8 +716,10 @@ static int mvebu_gpio_probe(struct platform_device *pdev)
 	if (IS_ERR(mvchip->membase))
 		return PTR_ERR(mvchip->membase);
 
-	/* The Armada XP has a second range of registers for the
-	 * per-CPU registers */
+	/*
+	 * The Armada XP has a second range of registers for the
+	 * per-CPU registers
+	 */
 	if (soc_variant == MVEBU_GPIO_SOC_VARIANT_ARMADAXP) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 		mvchip->percpu_membase = devm_ioremap_resource(&pdev->dev,
@@ -780,7 +786,8 @@ static int mvebu_gpio_probe(struct platform_device *pdev)
 		goto err_domain;
 	}
 
-	/* NOTE: The common accessors cannot be used because of the percpu
+	/*
+	 * NOTE: The common accessors cannot be used because of the percpu
 	 * access to the mask registers
 	 */
 	gc = irq_get_domain_generic_chip(mvchip->domain, 0);
@@ -801,7 +808,8 @@ static int mvebu_gpio_probe(struct platform_device *pdev)
 	ct->handler = handle_edge_irq;
 	ct->chip.name = mvchip->chip.label;
 
-	/* Setup the interrupt handlers. Each chip can have up to 4
+	/*
+	 * Setup the interrupt handlers. Each chip can have up to 4
 	 * interrupt handlers, with each handler dealing with 8 GPIO
 	 * pins.
 	 */
