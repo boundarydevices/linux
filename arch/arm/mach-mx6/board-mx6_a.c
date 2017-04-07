@@ -337,6 +337,23 @@ static void spi_device_init(void)
 /*
  **********************************************************************
  */
+static struct imxi2c_platform_data i2c_data = {
+	.bitrate = 100000,
+};
+
+
+static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
+#if defined(CONFIG_RTC_DRV_RV4162) || defined(CONFIG_RTC_DRV_RV4162_MODULE)
+	{
+		I2C_BOARD_INFO("rv4162", 0x68),
+		.irq = gpio_to_irq(IMX_GPIO_NR(4, 15)),
+	},
+#endif
+};
+
+/*
+ **********************************************************************
+ */
 static int vbus_on;
 static int vbus_state;
 
@@ -540,6 +557,11 @@ static void __init mx6_board_init(void)
 
 	imx6q_add_imx_snvs_rtc();
 
+	if (ARRAY_SIZE(mxc_i2c1_board_info)) {
+		imx6q_add_imx_i2c(1, &i2c_data);
+		i2c_register_board_info(1, mxc_i2c1_board_info,
+			ARRAY_SIZE(mxc_i2c1_board_info));
+	}
 	/* SPI */
 	imx6q_add_ecspi(0, &mx6_spi_data);
 	spi_device_init();
