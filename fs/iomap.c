@@ -108,7 +108,7 @@ iomap_write_failed(struct inode *inode, loff_t pos, unsigned len)
 
 static int
 iomap_write_begin(struct inode *inode, loff_t pos, unsigned len, unsigned flags,
-		struct page **pagep, struct iomap *iomap)
+		struct page **pagep, const struct iomap *iomap)
 {
 	pgoff_t index = pos >> PAGE_SHIFT;
 	struct page *page;
@@ -151,7 +151,7 @@ iomap_write_end(struct inode *inode, loff_t pos, unsigned len,
 
 static loff_t
 iomap_write_actor(struct inode *inode, loff_t pos, loff_t length, void *data,
-		struct iomap *iomap)
+		  const struct iomap *iomap)
 {
 	struct iov_iter *i = data;
 	long status = 0;
@@ -273,7 +273,7 @@ __iomap_read_page(struct inode *inode, loff_t offset)
 
 static loff_t
 iomap_dirty_actor(struct inode *inode, loff_t pos, loff_t length, void *data,
-		struct iomap *iomap)
+		const struct iomap *iomap)
 {
 	long status = 0;
 	ssize_t written = 0;
@@ -338,7 +338,7 @@ iomap_file_dirty(struct inode *inode, loff_t pos, loff_t len,
 EXPORT_SYMBOL_GPL(iomap_file_dirty);
 
 static int iomap_zero(struct inode *inode, loff_t pos, unsigned offset,
-		unsigned bytes, struct iomap *iomap)
+		unsigned bytes, const struct iomap *iomap)
 {
 	struct page *page;
 	int status;
@@ -355,7 +355,7 @@ static int iomap_zero(struct inode *inode, loff_t pos, unsigned offset,
 }
 
 static int iomap_dax_zero(loff_t pos, unsigned offset, unsigned bytes,
-		struct iomap *iomap)
+		const struct iomap *iomap)
 {
 	sector_t sector = iomap->blkno +
 		(((pos & ~(PAGE_SIZE - 1)) - iomap->offset) >> 9);
@@ -365,7 +365,7 @@ static int iomap_dax_zero(loff_t pos, unsigned offset, unsigned bytes,
 
 static loff_t
 iomap_zero_range_actor(struct inode *inode, loff_t pos, loff_t count,
-		void *data, struct iomap *iomap)
+		void *data, const struct iomap *iomap)
 {
 	bool *did_zero = data;
 	loff_t written = 0;
@@ -434,7 +434,7 @@ EXPORT_SYMBOL_GPL(iomap_truncate_page);
 
 static loff_t
 iomap_page_mkwrite_actor(struct inode *inode, loff_t pos, loff_t length,
-		void *data, struct iomap *iomap)
+		void *data, const struct iomap *iomap)
 {
 	struct page *page = data;
 	int ret;
@@ -525,7 +525,7 @@ static int iomap_to_fiemap(struct fiemap_extent_info *fi,
 
 static loff_t
 iomap_fiemap_actor(struct inode *inode, loff_t pos, loff_t length, void *data,
-		struct iomap *iomap)
+		const struct iomap *iomap)
 {
 	struct fiemap_ctx *ctx = data;
 	loff_t ret = length;
@@ -710,7 +710,7 @@ static void iomap_dio_bio_end_io(struct bio *bio)
 }
 
 static blk_qc_t
-iomap_dio_zero(struct iomap_dio *dio, struct iomap *iomap, loff_t pos,
+iomap_dio_zero(struct iomap_dio *dio, const struct iomap *iomap, loff_t pos,
 		unsigned len)
 {
 	struct page *page = ZERO_PAGE(0);
@@ -734,7 +734,7 @@ iomap_dio_zero(struct iomap_dio *dio, struct iomap *iomap, loff_t pos,
 
 static loff_t
 iomap_dio_actor(struct inode *inode, loff_t pos, loff_t length,
-		void *data, struct iomap *iomap)
+		void *data, const struct iomap *iomap)
 {
 	struct iomap_dio *dio = data;
 	unsigned int blkbits = blksize_bits(bdev_logical_block_size(iomap->bdev));
