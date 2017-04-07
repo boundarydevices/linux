@@ -21,6 +21,8 @@ libdrm Device Lookup
    :doc: getunique and setversion story
 
 
+.. _drm_primary_node:
+
 Primary Nodes, DRM Master and Authentication
 ============================================
 
@@ -102,6 +104,8 @@ Linux kernel's guarantee to keep existing userspace running for 10+ years this
 is already rather painful for the DRM subsystem, with multiple different uAPIs
 for the same thing co-existing. If we add a few more complete mistakes into the
 mix every year it would be entirely unmanageable.
+
+.. _drm_render_node:
 
 Render nodes
 ============
@@ -202,6 +206,18 @@ Display CRC Support
 
 .. kernel-doc:: drivers/gpu/drm/drm_debugfs_crc.c
    :doc: CRC ABI
+
+.. kernel-doc:: drivers/gpu/drm/drm_debugfs_crc.c
+   :export:
+
+Debugfs Support
+---------------
+
+.. kernel-doc:: include/drm/drm_debugfs.h
+   :internal:
+
+.. kernel-doc:: drivers/gpu/drm/drm_debugfs.c
+   :export:
 
 VBlank event handling
 =====================

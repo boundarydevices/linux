@@ -94,7 +94,7 @@ static int cdn_dp_grf_write(struct cdn_dp_device *dp,
 static int cdn_dp_clk_enable(struct cdn_dp_device *dp)
 {
 	int ret;
-	u32 rate;
+	unsigned long rate;
 
 	ret = clk_prepare_enable(dp->pclk);
 	if (ret < 0) {
@@ -123,7 +123,8 @@ static int cdn_dp_clk_enable(struct cdn_dp_device *dp)
 
 	rate = clk_get_rate(dp->core_clk);
 	if (!rate) {
-		DRM_DEV_ERROR(dp->dev, "get clk rate failed: %d\n", rate);
+		DRM_DEV_ERROR(dp->dev, "get clk rate failed\n");
+		ret = -EINVAL;
 		goto err_set_rate;
 	}
 
@@ -1243,7 +1244,7 @@ static const struct dev_pm_ops cdn_dp_pm_ops = {
 				cdn_dp_resume)
 };
 
-static struct platform_driver cdn_dp_driver = {
+struct platform_driver cdn_dp_driver = {
 	.probe = cdn_dp_probe,
 	.remove = cdn_dp_remove,
 	.shutdown = cdn_dp_shutdown,
@@ -1254,9 +1255,3 @@ static struct platform_driver cdn_dp_driver = {
 		   .pm = &cdn_dp_pm_ops,
 	},
 };
-
-module_platform_driver(cdn_dp_driver);
-
-MODULE_AUTHOR("Chris Zhong <zyw@rock-chips.com>");
-MODULE_DESCRIPTION("cdn DP Driver");
-MODULE_LICENSE("GPL v2");
