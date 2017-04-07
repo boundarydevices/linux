@@ -633,20 +633,21 @@ struct bio *bio_clone_fast(struct bio *bio, gfp_t gfp_mask, struct bio_set *bs)
 }
 EXPORT_SYMBOL(bio_clone_fast);
 
-static struct bio *__bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
-				      struct bio_set *bs, int offset,
-				      int size)
+/**
+ * 	bio_clone_bioset - clone a bio
+ * 	@bio_src: bio to clone
+ *	@gfp_mask: allocation priority
+ *	@bs: bio_set to allocate from
+ *
+ *	Clone bio. Caller will own the returned bio, but not the actual data it
+ *	points to. Reference count of returned bio will be one.
+ */
+struct bio *bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
+			     struct bio_set *bs)
 {
 	struct bvec_iter iter;
 	struct bio_vec bv;
 	struct bio *bio;
-	struct bvec_iter iter_src = bio_src->bi_iter;
-
-	/* for supporting partial clone */
-	if (offset || size != bio_src->bi_iter.bi_size) {
-		bio_advance_iter(bio_src, &iter_src, offset);
-		iter_src.bi_size = size;
-	}
 
 	/*
 	 * Pre immutable biovecs, __bio_clone() used to just do a memcpy from
@@ -670,8 +671,7 @@ static struct bio *__bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
 	 *    __bio_clone_fast() anyways.
 	 */
 
-	bio = bio_alloc_bioset(gfp_mask, __bio_segments(bio_src,
-			       &iter_src), bs);
+	bio = bio_alloc_bioset(gfp_mask, bio_segments(bio_src), bs);
 	if (!bio)
 		return NULL;
 	bio->bi_bdev		= bio_src->bi_bdev;
@@ -688,7 +688,7 @@ static struct bio *__bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
 		bio->bi_io_vec[bio->bi_vcnt++] = bio_src->bi_io_vec[0];
 		break;
 	default:
-		__bio_for_each_segment(bv, bio_src, iter, iter_src)
+		bio_for_each_segment(bv, bio_src, iter)
 			bio->bi_io_vec[bio->bi_vcnt++] = bv;
 		break;
 	}
@@ -707,42 +707,7 @@ static struct bio *__bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
 
 	return bio;
 }
-
-/**
- * 	bio_clone_bioset - clone a bio
- * 	@bio_src: bio to clone
- *	@gfp_mask: allocation priority
- *	@bs: bio_set to allocate from
- *
- *	Clone bio. Caller will own the returned bio, but not the actual data it
- *	points to. Reference count of returned bio will be one.
- */
-struct bio *bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
-			     struct bio_set *bs)
-{
-	return __bio_clone_bioset(bio_src, gfp_mask, bs, 0,
-				  bio_src->bi_iter.bi_size);
-}
 EXPORT_SYMBOL(bio_clone_bioset);
-
-/**
- * 	bio_clone_bioset_partial - clone a partial bio
- * 	@bio_src: bio to clone
- *	@gfp_mask: allocation priority
- *	@bs: bio_set to allocate from
- *	@offset: cloned starting from the offset
- *	@size: size for the cloned bio
- *
- *	Clone bio. Caller will own the returned bio, but not the actual data it
- *	points to. Reference count of returned bio will be one.
- */
-struct bio *bio_clone_bioset_partial(struct bio *bio_src, gfp_t gfp_mask,
-				     struct bio_set *bs, int offset,
-				     int size)
-{
-	return __bio_clone_bioset(bio_src, gfp_mask, bs, offset, size);
-}
-EXPORT_SYMBOL(bio_clone_bioset_partial);
 
 /**
  *	bio_add_pc_page	-	attempt to add page to bio
@@ -1027,19 +992,8 @@ int bio_alloc_pages(struct bio *bio, gfp_t gfp_mask)
 }
 EXPORT_SYMBOL(bio_alloc_pages);
 
-/**
- * bio_copy_data - copy contents of data buffers from one chain of bios to
- * another
- * @src: source bio list
- * @dst: destination bio list
- *
- * If @src and @dst are single bios, bi_next must be NULL - otherwise, treats
- * @src and @dst as linked lists of bios.
- *
- * Stops when it reaches the end of either @src or @dst - that is, copies
- * min(src->bi_size, dst->bi_size) bytes (or the equivalent for lists of bios).
- */
-void bio_copy_data(struct bio *dst, struct bio *src)
+static void __bio_copy_data(struct bio *dst, struct bio *src,
+			    int offset, int size)
 {
 	struct bvec_iter src_iter, dst_iter;
 	struct bio_vec src_bv, dst_bv;
@@ -1048,6 +1002,12 @@ void bio_copy_data(struct bio *dst, struct bio *src)
 
 	src_iter = src->bi_iter;
 	dst_iter = dst->bi_iter;
+
+	/* for supporting partial copy */
+	if (offset || size != src->bi_iter.bi_size) {
+		bio_advance_iter(src, &src_iter, offset);
+		src_iter.bi_size = size;
+	}
 
 	while (1) {
 		if (!src_iter.bi_size) {
@@ -1085,7 +1045,46 @@ void bio_copy_data(struct bio *dst, struct bio *src)
 		bio_advance_iter(dst, &dst_iter, bytes);
 	}
 }
+
+/**
+ * bio_copy_data - copy contents of data buffers from one chain of bios to
+ * another
+ * @src: source bio list
+ * @dst: destination bio list
+ *
+ * If @src and @dst are single bios, bi_next must be NULL - otherwise, treats
+ * @src and @dst as linked lists of bios.
+ *
+ * Stops when it reaches the end of either @src or @dst - that is, copies
+ * min(src->bi_size, dst->bi_size) bytes (or the equivalent for lists of bios).
+ */
+void bio_copy_data(struct bio *dst, struct bio *src)
+{
+	__bio_copy_data(dst, src, 0, src->bi_iter.bi_size);
+}
 EXPORT_SYMBOL(bio_copy_data);
+
+/**
+ * bio_copy_data_partial - copy partial contents of data buffers from one
+ * chain of bios to another
+ * @dst: destination bio list
+ * @src: source bio list
+ * @offset: starting copy from the offset
+ * @size: how many bytes to copy
+ *
+ * If @src and @dst are single bios, bi_next must be NULL - otherwise, treats
+ * @src and @dst as linked lists of bios.
+ *
+ * Stops when it reaches the end of either @src or @dst - that is, copies
+ * min(src->bi_size, dst->bi_size) bytes (or the equivalent for lists of bios).
+ */
+void bio_copy_data_partial(struct bio *dst, struct bio *src,
+			   int offset, int size)
+{
+	__bio_copy_data(dst, src, offset, size);
+
+}
+EXPORT_SYMBOL(bio_copy_data_partial);
 
 struct bio_map_data {
 	int is_our_pages;
