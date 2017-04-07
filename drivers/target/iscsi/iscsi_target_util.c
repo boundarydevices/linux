@@ -691,11 +691,15 @@ void iscsit_release_cmd(struct iscsi_cmd *cmd)
 {
 	struct iscsi_session *sess;
 	struct se_cmd *se_cmd = &cmd->se_cmd;
+	struct iscsi_conn *conn = cmd->conn;
 
-	if (cmd->conn)
-		sess = cmd->conn->sess;
-	else
+	if (conn) {
+		sess = conn->sess;
+		if (conn->conn_transport->iscsit_release_cmd)
+			conn->conn_transport->iscsit_release_cmd(conn, cmd);
+	} else {
 		sess = cmd->sess;
+	}
 
 	BUG_ON(!sess || !sess->se_sess);
 
@@ -728,9 +732,6 @@ void __iscsit_free_cmd(struct iscsi_cmd *cmd, bool scsi_cmd,
 		iscsit_remove_cmd_from_immediate_queue(cmd, conn);
 		iscsit_remove_cmd_from_response_queue(cmd, conn);
 	}
-
-	if (conn && conn->conn_transport->iscsit_release_cmd)
-		conn->conn_transport->iscsit_release_cmd(conn, cmd);
 }
 
 void iscsit_free_cmd(struct iscsi_cmd *cmd, bool shutdown)
