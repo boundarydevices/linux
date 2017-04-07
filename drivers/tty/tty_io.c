@@ -1520,7 +1520,7 @@ struct tty_struct *tty_init_dev(struct tty_driver *driver, int idx)
 	 * This code guarantees that either everything succeeds and the
 	 * TTY is ready for operation, or else the table slots are vacated
 	 * and the allocated memory released.  (Except that the termios
-	 * and locked termios may be retained.)
+	 * may be retained.)
 	 */
 
 	if (!try_module_get(driver->owner))
@@ -2843,8 +2843,8 @@ static void tty_warn_deprecated_flags(struct serial_struct __user *ss)
 	flags &= ASYNC_DEPRECATED;
 
 	if (flags && __ratelimit(&depr_flags))
-		pr_warning("%s: '%s' is using deprecated serial flags (with no effect): %.8x\n",
-				__func__, get_task_comm(comm, current), flags);
+		pr_warn("%s: '%s' is using deprecated serial flags (with no effect): %.8x\n",
+			__func__, get_task_comm(comm, current), flags);
 }
 
 /*
@@ -3293,9 +3293,9 @@ struct device *tty_register_device_attr(struct tty_driver *driver,
 {
 	char name[64];
 	dev_t devt = MKDEV(driver->major, driver->minor_start) + index;
-	struct device *dev = NULL;
-	int retval = -ENODEV;
-	bool cdev = false;
+	struct ktermios *tp;
+	struct device *dev;
+	int retval;
 
 	if (index >= driver->num) {
 		pr_err("%s: Attempt to register invalid tty line number (%d)\n",
@@ -3308,18 +3308,9 @@ struct device *tty_register_device_attr(struct tty_driver *driver,
 	else
 		tty_line_name(driver, index, name);
 
-	if (!(driver->flags & TTY_DRIVER_DYNAMIC_ALLOC)) {
-		retval = tty_cdev_add(driver, devt, index, 1);
-		if (retval)
-			goto error;
-		cdev = true;
-	}
-
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		retval = -ENOMEM;
-		goto error;
-	}
+	if (!dev)
+		return ERR_PTR(-ENOMEM);
 
 	dev->devt = devt;
 	dev->class = tty_class;
@@ -3329,18 +3320,38 @@ struct device *tty_register_device_attr(struct tty_driver *driver,
 	dev->groups = attr_grp;
 	dev_set_drvdata(dev, drvdata);
 
+	dev_set_uevent_suppress(dev, 1);
+
 	retval = device_register(dev);
 	if (retval)
-		goto error;
+		goto err_put;
+
+	if (!(driver->flags & TTY_DRIVER_DYNAMIC_ALLOC)) {
+		/*
+		 * Free any saved termios data so that the termios state is
+		 * reset when reusing a minor number.
+		 */
+		tp = driver->termios[index];
+		if (tp) {
+			driver->termios[index] = NULL;
+			kfree(tp);
+		}
+
+		retval = tty_cdev_add(driver, devt, index, 1);
+		if (retval)
+			goto err_del;
+	}
+
+	dev_set_uevent_suppress(dev, 0);
+	kobject_uevent(&dev->kobj, KOBJ_ADD);
 
 	return dev;
 
-error:
+err_del:
+	device_del(dev);
+err_put:
 	put_device(dev);
-	if (cdev) {
-		cdev_del(driver->cdevs[index]);
-		driver->cdevs[index] = NULL;
-	}
+
 	return ERR_PTR(retval);
 }
 EXPORT_SYMBOL_GPL(tty_register_device_attr);
@@ -3441,11 +3452,6 @@ static void destruct_tty_driver(struct kref *kref)
 	struct ktermios *tp;
 
 	if (driver->flags & TTY_DRIVER_INSTALLED) {
-		/*
-		 * Free the termios and termios_locked structures because
-		 * we don't want to get memory leaks when modular tty
-		 * drivers are removed from the kernel.
-		 */
 		for (i = 0; i < driver->num; i++) {
 			tp = driver->termios[i];
 			if (tp) {
