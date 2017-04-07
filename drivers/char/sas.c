@@ -189,6 +189,7 @@ static struct class *sas_class;
 
 #define MS_TO_NS(msec)	((msec) * 1000 * 1000)
 
+#ifndef CONFIG_SAS_PARTIAL_RX
 static void hrtimer_mod(struct hrtimer *timer, u32 ms)
 {
 	ktime_t ktime = ktime_set(0, MS_TO_NS(ms));
@@ -200,7 +201,7 @@ struct msg_t {
 	int start;
 	int end;
 };
-
+#endif
 
 struct imx_sas_devdata {
 	unsigned umcr_reg;
@@ -218,7 +219,6 @@ struct sas_dev {
 	spinlock_t lock; /* only one IRQ at a time */
 	struct mutex rx_lock; /* only one reader */
 	struct mutex tx_lock; /* only one writer */
-	struct hrtimer timer;
 	int open_count;
 
 	struct clk *clk_ipg;
@@ -228,16 +228,19 @@ struct sas_dev {
 	int rxirq;
 	int txirq;
 	u32 baud;
-	u32 interbyte_delay;
 	u32 rxbufsize;
-	u32 maxrxmsgs;
 	u32 txbufsize;
 	u32 maxtxmsg;
-	u32 flush_on_mark;
 	struct circ_buf rxbuf;
+#ifndef CONFIG_SAS_PARTIAL_RX
+	u32 flush_on_mark;
+	struct hrtimer timer;
+	u32 maxrxmsgs;
+	u32 interbyte_delay;
 	struct msg_t *rxmsgs;
 	u32 rxmsgadd;
 	u32 rxmsgtake;
+#endif
 	struct circ_buf txbuf;
 	u8 *txpbuf; /* parity for outbound characters */
 	u8 last_parity;
@@ -247,6 +250,7 @@ struct sas_dev {
 #define CIRC_NEXT(index, size) ((index + 1) & (size - 1))
 #define CIRC_PREV(index, size) ((index - 1) & (size - 1))
 
+#ifndef CONFIG_SAS_PARTIAL_RX
 /* end of last messsage added */
 #define PREVMSGEND(dev) (dev->rxmsgs[CIRC_PREV(dev->rxmsgadd, \
 					       dev->maxrxmsgs)].end)
@@ -280,6 +284,27 @@ static enum hrtimer_restart rx_timer(struct hrtimer *timer)
 	flush_msg(dev);
 	return HRTIMER_NORESTART;
 }
+#endif
+
+static int get_rx_length(struct sas_dev *dev, int *pstart)
+{
+	int len = 0;
+
+#ifndef CONFIG_SAS_PARTIAL_RX
+	if (dev->rxmsgadd != dev->rxmsgtake) {
+		struct msg_t *msg = dev->rxmsgs + dev->rxmsgtake;
+
+		*pstart = msg->start;
+		len = (msg->end - msg->start + 1)
+				& (dev->rxbufsize - 1);
+	}
+#else
+	len = (dev->rxbuf.head - dev->rxbuf.tail)
+		& (dev->rxbufsize - 1);
+	*pstart = dev->rxbuf.tail;
+#endif
+	return len;
+}
 
 static ssize_t sas_read
 	(struct file *file, char __user *buf,
@@ -293,14 +318,14 @@ static ssize_t sas_read
 #endif
 	struct sas_dev *dev = (struct sas_dev *)file->private_data;
 	ssize_t numread = 0;
+	int firstseg;
+	int start;
+	int msgleft;
 
 	mutex_lock(&dev->rx_lock);
-	if (dev->rxmsgadd != dev->rxmsgtake) {
-		struct msg_t *msg = dev->rxmsgs + dev->rxmsgtake;
-		int start = msg->start;
-		int firstseg;
-		int msgleft = (msg->end - msg->start + 1)
-				& (dev->rxbufsize - 1);
+
+	msgleft = get_rx_length(dev, &start);
+	if (msgleft) {
 		if (msgleft > count) {
 			numread = -ENOBUFS;
 			goto out;
@@ -339,7 +364,9 @@ static ssize_t sas_read
 		} else {
 			dev->rxbuf.tail = start + firstseg;
 		}
+#ifndef CONFIG_SAS_PARTIAL_RX
 		dev->rxmsgtake = CIRC_NEXT(dev->rxmsgtake, dev->maxrxmsgs);
+#endif
 	} /* have a message */
 out:
 	mutex_unlock(&dev->rx_lock);
@@ -469,8 +496,10 @@ static void sas_rxint(struct sas_dev *dev)
 			 * if a part of a message is present, terminate it
 			 * and notify userspace
 			 */
+#ifndef CONFIG_SAS_PARTIAL_RX
 			if (dev->flush_on_mark)
 				flush_msg(dev);
+#endif
 			dev->rxbuf.buf[dev->rxbuf.head] = 0xff;
 			dev->rxbuf.head = CIRC_NEXT(dev->rxbuf.head,
 						    dev->rxbufsize);
@@ -489,7 +518,9 @@ static void sas_rxint(struct sas_dev *dev)
 			space--;
 		}
 
+#ifndef CONFIG_SAS_PARTIAL_RX
 		hrtimer_mod(&dev->timer, dev->interbyte_delay);
+#endif
 		if (!(readl(dev->base + USR2) & USR2_RDR))
 			break;
 	}
@@ -498,6 +529,9 @@ static void sas_rxint(struct sas_dev *dev)
 		while (readl(dev->base + URXD0) & URXD_CHARRDY)
 			;
 	}
+#ifdef CONFIG_SAS_PARTIAL_RX
+	wake_up(&dev->queue);
+#endif
 }
 
 static void sas_txint(struct sas_dev *dev)
@@ -696,9 +730,11 @@ static int sas_open(struct inode *inode, struct file *file)
 		dev->rxbuf.tail =
 		dev->txbuf.head =
 		dev->txbuf.tail = 0;
+#ifndef CONFIG_SAS_PARTIAL_RX
 		dev->rxmsgadd =
 		dev->rxmsgtake = 0;
 		dev->rxmsgs[0].start = 0;
+#endif
 		dev->last_parity = 0;
 		force_address_match(dev);
 
@@ -760,35 +796,6 @@ static struct file_operations const sas_fops = {
 	.release = sas_release,
 };
 
-static ssize_t show_ibdelay(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct sas_dev *sas = dev_get_drvdata(dev);
-	return sprintf(buf, "%d\n", sas ? sas->interbyte_delay : -1);
-}
-
-static ssize_t store_ibdelay(struct device *dev,
-			     struct device_attribute *attr,
-			     const char *buf,
-			     size_t count)
-{
-	u32 val;
-	struct sas_dev *sas = dev_get_drvdata(dev);
-	if (1 == sscanf(buf, "%u", &val)) {
-		if (sas) {
-			sas->interbyte_delay = val;
-			return count;
-		} else {
-			return -ENODEV;
-		}
-	} else {
-		return -EINVAL;
-	}
-}
-
-static struct kobj_attribute ibdelay =
-__ATTR(ibdelay, 0644, (void *)show_ibdelay, (void *)store_ibdelay);
-
 static ssize_t show_rxhead(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -829,6 +836,36 @@ static ssize_t show_txtail(struct device *dev,
 static struct kobj_attribute txtail =
 __ATTR(txtail, 0644, (void *)show_txtail, NULL);
 
+#ifndef CONFIG_SAS_PARTIAL_RX
+static ssize_t show_ibdelay(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct sas_dev *sas = dev_get_drvdata(dev);
+	return sprintf(buf, "%d\n", sas ? sas->interbyte_delay : -1);
+}
+
+static ssize_t store_ibdelay(struct device *dev,
+			     struct device_attribute *attr,
+			     const char *buf,
+			     size_t count)
+{
+	u32 val;
+	struct sas_dev *sas = dev_get_drvdata(dev);
+	if (1 == sscanf(buf, "%u", &val)) {
+		if (sas) {
+			sas->interbyte_delay = val;
+			return count;
+		} else {
+			return -ENODEV;
+		}
+	} else {
+		return -EINVAL;
+	}
+}
+
+static struct kobj_attribute ibdelay =
+__ATTR(ibdelay, 0644, (void *)show_ibdelay, (void *)store_ibdelay);
+
 static ssize_t show_rxmsgadd(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -854,15 +891,18 @@ static ssize_t show_rxmsgtake(struct device *dev,
 
 static struct kobj_attribute rxmsgtake =
 __ATTR(rxmsgtake, 0644, (void *)show_rxmsgtake, NULL);
+#endif
 
 static struct attribute *sas_attrs[] = {
-	&ibdelay.attr,
 	&rxhead.attr,
 	&rxtail.attr,
 	&txhead.attr,
 	&txtail.attr,
+#ifndef CONFIG_SAS_PARTIAL_RX
+	&ibdelay.attr,
 	&rxmsgadd.attr,
 	&rxmsgtake.attr,
+#endif
 	NULL,
 };
 
@@ -877,22 +917,24 @@ static int sas_of_probe(struct platform_device *pdev,
 	dev->irq = irq_of_parse_and_map(np, 0);
 	if (of_property_read_u32(np, "baud", &dev->baud))
 		return -EINVAL;
-	if (of_property_read_u32(np, "interbyte_delay", &dev->interbyte_delay))
-		return -EINVAL;
 	if (of_property_read_u32(np, "rxbufsize", &dev->rxbufsize))
 		return -EINVAL;
+#ifndef CONFIG_SAS_PARTIAL_RX
+	if (of_property_read_u32(np, "interbyte_delay", &dev->interbyte_delay))
+		return -EINVAL;
+	if (of_property_read_u32(np, "flush_on_mark", &dev->flush_on_mark))
+		return -EINVAL;
 	dev->maxrxmsgs = dev->rxbufsize / 4;
-	if ((dev->maxrxmsgs == 0) ||
-	    (dev->maxrxmsgs & (dev->maxrxmsgs-1))) {
+#endif
+	if ((dev->rxbufsize < 4) ||
+	    (dev->rxbufsize & (dev->rxbufsize-1))) {
 		dev_err(&pdev->dev,
-			"maxrxmsgs %u must be a non-zero power of 2\n",
-			dev->maxrxmsgs);
+			"rxbufsize %u must be a non-zero power of 2\n",
+			dev->rxbufsize);
 	}
 	if (of_property_read_u32(np, "txbufsize", &dev->txbufsize))
 		return -EINVAL;
 	if (of_property_read_u32(np, "maxtxmsg", &dev->maxtxmsg))
-		return -EINVAL;
-	if (of_property_read_u32(np, "flush_on_mark", &dev->flush_on_mark))
 		return -EINVAL;
 	/* force power of two for transmit and receive buffers */
 	if ((dev->rxbufsize & (dev->rxbufsize-1)) ||
@@ -993,6 +1035,7 @@ static int sas_probe(struct platform_device *pdev)
 		goto fail_entry;
 	}
 
+#ifndef CONFIG_SAS_PARTIAL_RX
 	dev->rxmsgs = devm_kzalloc(&pdev->dev,
 				   dev->maxrxmsgs * sizeof(dev->rxmsgs[0]),
 				   GFP_KERNEL);
@@ -1001,7 +1044,7 @@ static int sas_probe(struct platform_device *pdev)
 			DRIVER_NAME, dev->maxrxmsgs);
 		goto fail_entry;
 	}
-
+#endif
 	dev->txbuf.buf = devm_kzalloc(&pdev->dev, dev->txbufsize, GFP_KERNEL);
 	if (!dev->txbuf.buf) {
 		dev_err(&pdev->dev, "%s: allocating txbuf(%d)",
@@ -1023,8 +1066,10 @@ static int sas_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&dev->queue);
 
+#ifndef CONFIG_SAS_PARTIAL_RX
 	hrtimer_init(&dev->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	dev->timer.function = rx_timer;
+#endif
 
 	result = cdev_add(&dev->cdev, devnum, 1);
 	if (result < 0) {
@@ -1057,24 +1102,26 @@ static int sas_probe(struct platform_device *pdev)
 		DRIVER_NAME, dev->txirq);
 	dev_dbg(&pdev->dev, "%s: baud  == %u\n",
 		DRIVER_NAME, dev->baud);
+#ifndef CONFIG_SAS_PARTIAL_RX
 	dev_dbg(&pdev->dev, "%s: ib_delay == %u ms\n",
 		DRIVER_NAME, dev->interbyte_delay);
+	dev_dbg(&pdev->dev, "%s: flush_on_mark == %d\n",
+		DRIVER_NAME, dev->flush_on_mark);
+	dev_dbg(&pdev->dev, "%s: maxrxmsgs == %u\n",
+		DRIVER_NAME, dev->maxrxmsgs);
+#endif
 	dev_dbg(&pdev->dev, "%s: clks == %p/%p\n",
 		DRIVER_NAME, dev->clk_ipg, dev->clk_per);
 	dev_dbg(&pdev->dev, "%s: mem == %p\n",
 		DRIVER_NAME, (void *)res->start);
 	dev_dbg(&pdev->dev, "%s: rxbufsize == %u\n",
 		DRIVER_NAME, dev->rxbufsize);
-	dev_dbg(&pdev->dev, "%s: maxrxmsgs == %u\n",
-		DRIVER_NAME, dev->maxrxmsgs);
 	dev_dbg(&pdev->dev, "%s: txbufsize == %u\n",
 		DRIVER_NAME, dev->txbufsize);
 	dev_dbg(&pdev->dev, "%s: maxtxmsg == %u\n",
 		DRIVER_NAME, dev->maxtxmsg);
 	dev_dbg(&pdev->dev, "%s: sas_dev == %p\n",
 		DRIVER_NAME, dev);
-	dev_dbg(&pdev->dev, "%s: flush_on_mark == %d\n",
-		DRIVER_NAME, dev->flush_on_mark);
 	dev_dbg(&pdev->dev, "%s: umcr_reg == 0x%x\n",
 		DRIVER_NAME, dev->umcr_reg);
 	dev_info(&pdev->dev, "sas driver installed\n");
