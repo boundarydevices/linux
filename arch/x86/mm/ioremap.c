@@ -13,7 +13,7 @@
 #include <linux/vmalloc.h>
 #include <linux/mmiotrace.h>
 
-#include <asm/cacheflush.h>
+#include <asm/set_memory.h>
 #include <asm/e820.h>
 #include <asm/fixmap.h>
 #include <asm/pgtable.h>

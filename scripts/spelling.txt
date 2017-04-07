@@ -174,6 +174,7 @@ bakup||backup
 baloon||balloon
 baloons||balloons
 bandwith||bandwidth
+banlance||balance
 batery||battery
 beacuse||because
 becasue||because
@@ -365,6 +366,8 @@ dictionnary||dictionary
 didnt||didn't
 diferent||different
 differrence||difference
+diffrent||different
+diffrentiate||differentiate
 difinition||definition
 diplay||display
 direectly||directly
@@ -590,6 +593,9 @@ interruptted||interrupted
 interupted||interrupted
 interupt||interrupt
 intial||initial
+intialisation||initialisation
+intialised||initialised
+intialise||initialise
 intialization||initialization
 intialized||initialized
 intialize||initialize
@@ -672,6 +678,7 @@ miximum||maximum
 mmnemonic||mnemonic
 mnay||many
 modulues||modules
+momery||memory
 monochorome||monochrome
 monochromo||monochrome
 monocrome||monochrome
@@ -871,6 +878,7 @@ registerd||registered
 registeresd||registered
 registes||registers
 registraration||registration
+regsiter||register
 regster||register
 regualar||regular
 reguator||regulator
