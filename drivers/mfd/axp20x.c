@@ -31,6 +31,7 @@
 
 #define AXP20X_OFF	0x80
 
+#define AXP806_REG_ADDR_EXT_ADDR_MASTER_MODE	0
 #define AXP806_REG_ADDR_EXT_ADDR_SLAVE_MODE	BIT(4)
 
 static const char * const axp20x_model_names[] = {
@@ -67,6 +68,7 @@ static const struct regmap_access_table axp152_volatile_table = {
 
 static const struct regmap_range axp20x_writeable_ranges[] = {
 	regmap_reg_range(AXP20X_DATACACHE(0), AXP20X_IRQ5_STATE),
+	regmap_reg_range(AXP20X_CHRG_CTRL1, AXP20X_CHRG_CTRL2),
 	regmap_reg_range(AXP20X_DCDC_MODE, AXP20X_FG_RES),
 	regmap_reg_range(AXP20X_RDC_H, AXP20X_OCV(AXP20X_OCV_MAX)),
 };
@@ -93,6 +95,7 @@ static const struct regmap_access_table axp20x_volatile_table = {
 /* AXP22x ranges are shared with the AXP809, as they cover the same range */
 static const struct regmap_range axp22x_writeable_ranges[] = {
 	regmap_reg_range(AXP20X_DATACACHE(0), AXP20X_IRQ5_STATE),
+	regmap_reg_range(AXP20X_CHRG_CTRL1, AXP22X_CHRG_CTRL3),
 	regmap_reg_range(AXP20X_DCDC_MODE, AXP22X_BATLOW_THRES1),
 };
 
@@ -100,7 +103,7 @@ static const struct regmap_range axp22x_volatile_ranges[] = {
 	regmap_reg_range(AXP20X_PWR_INPUT_STATUS, AXP20X_PWR_OP_MODE),
 	regmap_reg_range(AXP20X_IRQ1_EN, AXP20X_IRQ5_STATE),
 	regmap_reg_range(AXP22X_GPIO_STATE, AXP22X_GPIO_STATE),
-	regmap_reg_range(AXP22X_PMIC_ADC_H, AXP20X_IPSOUT_V_HIGH_L),
+	regmap_reg_range(AXP22X_PMIC_TEMP_H, AXP20X_IPSOUT_V_HIGH_L),
 	regmap_reg_range(AXP20X_FG_RES, AXP20X_FG_RES),
 };
 
@@ -589,6 +592,8 @@ static struct mfd_cell axp20x_cells[] = {
 	}, {
 		.name		= "axp20x-regulator",
 	}, {
+		.name		= "axp20x-adc",
+	}, {
 		.name		= "axp20x-ac-power-supply",
 		.of_compatible	= "x-powers,axp202-ac-power-supply",
 		.num_resources	= ARRAY_SIZE(axp20x_ac_power_supply_resources),
@@ -609,6 +614,13 @@ static struct mfd_cell axp221_cells[] = {
 	}, {
 		.name		= "axp20x-regulator",
 	}, {
+		.name		= "axp22x-adc"
+	}, {
+		.name		= "axp20x-ac-power-supply",
+		.of_compatible	= "x-powers,axp221-ac-power-supply",
+		.num_resources	= ARRAY_SIZE(axp20x_ac_power_supply_resources),
+		.resources	= axp20x_ac_power_supply_resources,
+	}, {
 		.name		= "axp20x-usb-power-supply",
 		.of_compatible	= "x-powers,axp221-usb-power-supply",
 		.num_resources	= ARRAY_SIZE(axp22x_usb_power_supply_resources),
@@ -622,7 +634,14 @@ static struct mfd_cell axp223_cells[] = {
 		.num_resources		= ARRAY_SIZE(axp22x_pek_resources),
 		.resources		= axp22x_pek_resources,
 	}, {
+		.name		= "axp22x-adc",
+	}, {
 		.name			= "axp20x-regulator",
+	}, {
+		.name		= "axp20x-ac-power-supply",
+		.of_compatible	= "x-powers,axp221-ac-power-supply",
+		.num_resources	= ARRAY_SIZE(axp20x_ac_power_supply_resources),
+		.resources	= axp20x_ac_power_supply_resources,
 	}, {
 		.name		= "axp20x-usb-power-supply",
 		.of_compatible	= "x-powers,axp223-usb-power-supply",
@@ -877,15 +896,19 @@ int axp20x_device_probe(struct axp20x_dev *axp20x)
 	 * the these device addressing bits (in the upper 4 bits of the
 	 * registers) match.
 	 *
-	 * Since we only support an AXP806 chained to an AXP809 in slave
-	 * mode, and there isn't any existing hardware which uses AXP806
-	 * in master mode, or has 2 AXP806s in the same system, we can
-	 * just program the register address extension to the slave mode
-	 * address.
+	 * By default we support an AXP806 chained to an AXP809 in slave
+	 * mode. Boards which use an AXP806 in master mode can set the
+	 * property "x-powers,master-mode" to override the default.
 	 */
-	if (axp20x->variant == AXP806_ID)
-		regmap_write(axp20x->regmap, AXP806_REG_ADDR_EXT,
-			     AXP806_REG_ADDR_EXT_ADDR_SLAVE_MODE);
+	if (axp20x->variant == AXP806_ID) {
+		if (of_property_read_bool(axp20x->dev->of_node,
+					  "x-powers,master-mode"))
+			regmap_write(axp20x->regmap, AXP806_REG_ADDR_EXT,
+				     AXP806_REG_ADDR_EXT_ADDR_MASTER_MODE);
+		else
+			regmap_write(axp20x->regmap, AXP806_REG_ADDR_EXT,
+				     AXP806_REG_ADDR_EXT_ADDR_SLAVE_MODE);
+	}
 
 	ret = regmap_add_irq_chip(axp20x->regmap, axp20x->irq,
 			  IRQF_ONESHOT | IRQF_SHARED | axp20x->irq_flags,
