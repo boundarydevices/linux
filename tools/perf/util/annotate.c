@@ -1307,6 +1307,7 @@ static int dso__disassemble_filename(struct dso *dso, char *filename, size_t fil
 {
 	char linkname[PATH_MAX];
 	char *build_id_filename;
+	char *build_id_path = NULL;
 
 	if (dso->symtab_type == DSO_BINARY_TYPE__KALLSYMS &&
 	    !dso__is_kcore(dso))
@@ -1322,8 +1323,14 @@ static int dso__disassemble_filename(struct dso *dso, char *filename, size_t fil
 		goto fallback;
 	}
 
+	build_id_path = strdup(filename);
+	if (!build_id_path)
+		return -1;
+
+	dirname(build_id_path);
+
 	if (dso__is_kcore(dso) ||
-	    readlink(filename, linkname, sizeof(linkname)) < 0 ||
+	    readlink(build_id_path, linkname, sizeof(linkname)) < 0 ||
 	    strstr(linkname, DSO__NAME_KALLSYMS) ||
 	    access(filename, R_OK)) {
 fallback:
@@ -1335,6 +1342,7 @@ fallback:
 		__symbol__join_symfs(filename, filename_size, dso->long_name);
 	}
 
+	free(build_id_path);
 	return 0;
 }
 
@@ -1435,7 +1443,7 @@ int symbol__disassemble(struct symbol *sym, struct map *map, const char *arch_na
 	snprintf(command, sizeof(command),
 		 "%s %s%s --start-address=0x%016" PRIx64
 		 " --stop-address=0x%016" PRIx64
-		 " -l -d %s %s -C %s 2>/dev/null|grep -v %s|expand",
+		 " -l -d %s %s -C %s 2>/dev/null|grep -v %s:|expand",
 		 objdump_path ? objdump_path : "objdump",
 		 disassembler_style ? "-M " : "",
 		 disassembler_style ? disassembler_style : "",
@@ -1482,6 +1490,12 @@ int symbol__disassemble(struct symbol *sym, struct map *map, const char *arch_na
 
 	nline = 0;
 	while (!feof(file)) {
+		/*
+		 * The source code line number (lineno) needs to be kept in
+		 * accross calls to symbol__parse_objdump_line(), so that it
+		 * can associate it with the instructions till the next one.
+		 * See disasm_line__new() and struct disasm_line::line_nr.
+		 */
 		if (symbol__parse_objdump_line(sym, map, arch, file, privsize,
 			    &lineno) < 0)
 			break;
@@ -1651,24 +1665,31 @@ static int symbol__get_source_line(struct symbol *sym, struct map *map,
 	start = map__rip_2objdump(map, sym->start);
 
 	for (i = 0; i < len; i++) {
-		u64 offset;
+		u64 offset, nr_samples;
 		double percent_max = 0.0;
 
 		src_line->nr_pcnt = nr_pcnt;
 
 		for (k = 0; k < nr_pcnt; k++) {
-			h = annotation__histogram(notes, evidx + k);
-			src_line->samples[k].percent = 100.0 * h->addr[i] / h->sum;
+			double percent = 0.0;
 
-			if (src_line->samples[k].percent > percent_max)
-				percent_max = src_line->samples[k].percent;
+			h = annotation__histogram(notes, evidx + k);
+			nr_samples = h->addr[i];
+			if (h->sum)
+				percent = 100.0 * nr_samples / h->sum;
+
+			if (percent > percent_max)
+				percent_max = percent;
+			src_line->samples[k].percent = percent;
+			src_line->samples[k].nr = nr_samples;
 		}
 
 		if (percent_max <= 0.5)
 			goto next;
 
 		offset = start + i;
-		src_line->path = get_srcline(map->dso, offset, NULL, false);
+		src_line->path = get_srcline(map->dso, offset, NULL,
+					     false, true);
 		insert_source_line(&tmp_root, src_line);
 
 	next:

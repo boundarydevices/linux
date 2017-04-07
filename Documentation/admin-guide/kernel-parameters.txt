@@ -989,6 +989,7 @@
 			earlyprintk=ttySn[,baudrate]
 			earlyprintk=dbgp[debugController#]
 			earlyprintk=pciserial,bus:device.function[,baudrate]
+			earlyprintk=xdbc[xhciController#]
 
 			earlyprintk is useful when the kernel crashes before
 			the normal console is initialized. It is not enabled by
@@ -3177,6 +3178,12 @@
 
 	ramdisk_size=	[RAM] Sizes of RAM disks in kilobytes
 			See Documentation/blockdev/ramdisk.txt.
+
+	ras=option[,option,...]	[KNL] RAS-specific options
+
+		cec_disable	[X86]
+				Disable the Correctable Errors Collector,
+				see CONFIG_RAS_CEC help text.
 
 	rcu_nocbs=	[KNL]
 			The argument is a cpu list, as described above.

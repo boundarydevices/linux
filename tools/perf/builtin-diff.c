@@ -364,6 +364,7 @@ static struct perf_tool tool = {
 	.exit	= perf_event__process_exit,
 	.fork	= perf_event__process_fork,
 	.lost	= perf_event__process_lost,
+	.namespaces = perf_event__process_namespaces,
 	.ordered_events = true,
 	.ordering_requires_timestamps = true,
 };
@@ -1320,7 +1321,7 @@ static int diff__config(const char *var, const char *value,
 	return 0;
 }
 
-int cmd_diff(int argc, const char **argv, const char *prefix __maybe_unused)
+int cmd_diff(int argc, const char **argv)
 {
 	int ret = hists__init();
 

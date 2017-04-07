@@ -54,6 +54,11 @@ struct he_stat {
 	u32			nr_events;
 };
 
+struct namespace_id {
+	u64			dev;
+	u64			ino;
+};
+
 struct hist_entry_diff {
 	bool	computed;
 	union {
@@ -91,6 +96,7 @@ struct hist_entry {
 	struct map_symbol	ms;
 	struct thread		*thread;
 	struct comm		*comm;
+	struct namespace_id	cgroup_id;
 	u64			ip;
 	u64			transaction;
 	s32			socket;
@@ -122,6 +128,7 @@ struct hist_entry {
 	};
 	char			*srcline;
 	char			*srcfile;
+	struct inline_node	*inline_node;
 	struct symbol		*parent;
 	struct branch_info	*branch_info;
 	struct hists		*hists;
@@ -211,6 +218,8 @@ enum sort_type {
 	SORT_GLOBAL_WEIGHT,
 	SORT_TRANSACTION,
 	SORT_TRACE,
+	SORT_SYM_SIZE,
+	SORT_CGROUP_ID,
 
 	/* branch stack specific sort keys */
 	__SORT_BRANCH_STACK,

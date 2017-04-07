@@ -236,6 +236,10 @@ void perf_evsel__init(struct perf_evsel *evsel,
 	evsel->sample_size = __perf_evsel__sample_size(attr->sample_type);
 	perf_evsel__calc_id_pos(evsel);
 	evsel->cmdline_group_boundary = false;
+	evsel->metric_expr   = NULL;
+	evsel->metric_name   = NULL;
+	evsel->metric_events = NULL;
+	evsel->collect_stat  = false;
 }
 
 struct perf_evsel *perf_evsel__new_idx(struct perf_event_attr *attr, int idx)
@@ -931,6 +935,9 @@ void perf_evsel__config(struct perf_evsel *evsel, struct record_opts *opts,
 	attr->mmap  = track;
 	attr->mmap2 = track && !perf_missing_features.mmap2;
 	attr->comm  = track;
+
+	if (opts->record_namespaces)
+		attr->namespaces  = track;
 
 	if (opts->record_switch_events)
 		attr->context_switch = track;
