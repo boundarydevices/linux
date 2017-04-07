@@ -21,3 +21,43 @@
 	model = "Freescale i.MX6 Quad MTP Board";
 	compatible = "fsl,imx6q-mtp", "fsl,imx6q";
 };
+
+/ {
+	reserved-memory {
+		/delete-node/ camera-reserved;
+	};
+};
+
+&pcie {
+	hub@pcie {
+		usb@pcie {
+			port@1 {
+				/delete-property/ memory-region;
+				camera@1 {
+					/delete-property/ memory-region;
+				};
+			};
+
+			port@2 {
+				/delete-property/ memory-region;
+				camera@1 {
+					/delete-property/ memory-region;
+				};
+			};
+
+			port@3 {
+				/delete-property/ memory-region;
+				camera@1 {
+					/delete-property/ memory-region;
+				};
+			};
+
+			port@4 {
+				/delete-property/ memory-region;
+				camera@1 {
+					/delete-property/ memory-region;
+				};
+			};
+		};
+	};
+};
