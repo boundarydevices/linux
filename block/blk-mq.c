@@ -39,6 +39,9 @@
 static DEFINE_MUTEX(all_q_mutex);
 static LIST_HEAD(all_q_list);
 
+static void blk_mq_poll_stats_start(struct request_queue *q);
+static void blk_mq_poll_stats_fn(struct blk_stat_callback *cb);
+
 /*
  * Check if any of the ctx's have pending work in this hardware queue
  */
@@ -65,7 +68,7 @@ static void blk_mq_hctx_clear_pending(struct blk_mq_hw_ctx *hctx,
 	sbitmap_clear_bit(&hctx->ctx_map, ctx->index_hw);
 }
 
-void blk_mq_freeze_queue_start(struct request_queue *q)
+void blk_freeze_queue_start(struct request_queue *q)
 {
 	int freeze_depth;
 
@@ -75,7 +78,7 @@ void blk_mq_freeze_queue_start(struct request_queue *q)
 		blk_mq_run_hw_queues(q, false);
 	}
 }
-EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
+EXPORT_SYMBOL_GPL(blk_freeze_queue_start);
 
 void blk_mq_freeze_queue_wait(struct request_queue *q)
 {
@@ -105,7 +108,7 @@ void blk_freeze_queue(struct request_queue *q)
 	 * no blk_unfreeze_queue(), and blk_freeze_queue() is not
 	 * exported to drivers as the only user for unfreeze is blk_mq.
 	 */
-	blk_mq_freeze_queue_start(q);
+	blk_freeze_queue_start(q);
 	blk_mq_freeze_queue_wait(q);
 }
 
@@ -321,7 +324,6 @@ struct request *blk_mq_alloc_request_hctx(struct request_queue *q, int rw,
 
 	rq = blk_mq_sched_get_request(q, NULL, rw, &alloc_data);
 
-	blk_mq_put_ctx(alloc_data.ctx);
 	blk_queue_exit(q);
 
 	if (!rq)
@@ -432,15 +434,8 @@ static void blk_mq_ipi_complete_request(struct request *rq)
 static void blk_mq_stat_add(struct request *rq)
 {
 	if (rq->rq_flags & RQF_STATS) {
-		/*
-		 * We could rq->mq_ctx here, but there's less of a risk
-		 * of races if we have the completion event add the stats
-		 * to the local software queue.
-		 */
-		struct blk_mq_ctx *ctx;
-
-		ctx = __blk_mq_get_ctx(rq->q, raw_smp_processor_id());
-		blk_stat_add(&ctx->stat[rq_data_dir(rq)], rq);
+		blk_mq_poll_stats_start(rq->q);
+		blk_stat_add(rq);
 	}
 }
 
@@ -492,7 +487,7 @@ void blk_mq_start_request(struct request *rq)
 	trace_block_rq_issue(q, rq);
 
 	if (test_bit(QUEUE_FLAG_STATS, &q->queue_flags)) {
-		blk_stat_set_issue_time(&rq->issue_stat);
+		blk_stat_set_issue(&rq->issue_stat, blk_rq_sectors(rq));
 		rq->rq_flags |= RQF_STATS;
 		wbt_issue(q->rq_wb, &rq->issue_stat);
 	}
@@ -527,6 +522,15 @@ void blk_mq_start_request(struct request *rq)
 }
 EXPORT_SYMBOL(blk_mq_start_request);
 
+/*
+ * When we reach here because queue is busy, REQ_ATOM_COMPLETE
+ * flag isn't set yet, so there may be race with timeout handler,
+ * but given rq->deadline is just set in .queue_rq() under
+ * this situation, the race won't be possible in reality because
+ * rq->timeout should be set as big enough to cover the window
+ * between blk_mq_start_request() called from .queue_rq() and
+ * clearing REQ_ATOM_STARTED here.
+ */
 static void __blk_mq_requeue_request(struct request *rq)
 {
 	struct request_queue *q = rq->q;
@@ -667,7 +671,7 @@ void blk_mq_rq_timed_out(struct request *req, bool reserved)
 	 * just be ignored. This can happen due to the bitflag ordering.
 	 * Timeout first checks if STARTED is set, and if it is, assumes
 	 * the request is active. But if we race with completion, then
-	 * we both flags will get cleared. So check here again, and ignore
+	 * both flags will get cleared. So check here again, and ignore
 	 * a timeout event with a request that isn't active.
 	 */
 	if (!test_bit(REQ_ATOM_STARTED, &req->atomic_flags))
@@ -700,6 +704,19 @@ static void blk_mq_check_expired(struct blk_mq_hw_ctx *hctx,
 	if (!test_bit(REQ_ATOM_STARTED, &rq->atomic_flags))
 		return;
 
+	/*
+	 * The rq being checked may have been freed and reallocated
+	 * out already here, we avoid this race by checking rq->deadline
+	 * and REQ_ATOM_COMPLETE flag together:
+	 *
+	 * - if rq->deadline is observed as new value because of
+	 *   reusing, the rq won't be timed out because of timing.
+	 * - if rq->deadline is observed as previous value,
+	 *   REQ_ATOM_COMPLETE flag won't be cleared in reuse path
+	 *   because we put a barrier between setting rq->deadline
+	 *   and clearing the flag in blk_mq_start_request(), so
+	 *   this rq won't be timed out too.
+	 */
 	if (time_after_eq(jiffies, rq->deadline)) {
 		if (!blk_mark_rq_complete(rq))
 			blk_mq_rq_timed_out(rq, reserved);
@@ -728,7 +745,7 @@ static void blk_mq_timeout_work(struct work_struct *work)
 	 * percpu_ref_tryget directly, because we need to be able to
 	 * obtain a reference even in the short window between the queue
 	 * starting to freeze, by dropping the first reference in
-	 * blk_mq_freeze_queue_start, and the moment the last request is
+	 * blk_freeze_queue_start, and the moment the last request is
 	 * consumed, marked by the instant q_usage_counter reaches
 	 * zero.
 	 */
@@ -967,15 +984,7 @@ bool blk_mq_dispatch_rq_list(struct blk_mq_hw_ctx *hctx, struct list_head *list)
 {
 	struct request_queue *q = hctx->queue;
 	struct request *rq;
-	LIST_HEAD(driver_list);
-	struct list_head *dptr;
 	int errors, queued, ret = BLK_MQ_RQ_QUEUE_OK;
-
-	/*
-	 * Start off with dptr being NULL, so we start the first request
-	 * immediately, even if we have more pending.
-	 */
-	dptr = NULL;
 
 	/*
 	 * Now process all the entries, sending them to the driver.
@@ -1009,7 +1018,6 @@ bool blk_mq_dispatch_rq_list(struct blk_mq_hw_ctx *hctx, struct list_head *list)
 		list_del_init(&rq->queuelist);
 
 		bd.rq = rq;
-		bd.list = dptr;
 
 		/*
 		 * Flag last if we have no more requests, or if we have more
@@ -1045,13 +1053,6 @@ bool blk_mq_dispatch_rq_list(struct blk_mq_hw_ctx *hctx, struct list_head *list)
 
 		if (ret == BLK_MQ_RQ_QUEUE_BUSY)
 			break;
-
-		/*
-		 * We've done the first request. If we have more than 1
-		 * left in the list, set dptr to defer issue.
-		 */
-		if (!dptr && list->next != list->prev)
-			dptr = &driver_list;
 	}
 
 	hctx->dispatched[queued_to_index(queued)]++;
@@ -1104,6 +1105,8 @@ static void __blk_mq_run_hw_queue(struct blk_mq_hw_ctx *hctx)
 		blk_mq_sched_dispatch_requests(hctx);
 		rcu_read_unlock();
 	} else {
+		might_sleep();
+
 		srcu_idx = srcu_read_lock(&hctx->queue_rq_srcu);
 		blk_mq_sched_dispatch_requests(hctx);
 		srcu_read_unlock(&hctx->queue_rq_srcu, srcu_idx);
@@ -1426,13 +1429,12 @@ static blk_qc_t request_to_qc_t(struct blk_mq_hw_ctx *hctx, struct request *rq)
 	return blk_tag_to_qc_t(rq->internal_tag, hctx->queue_num, true);
 }
 
-static void blk_mq_try_issue_directly(struct request *rq, blk_qc_t *cookie,
+static void __blk_mq_try_issue_directly(struct request *rq, blk_qc_t *cookie,
 				      bool may_sleep)
 {
 	struct request_queue *q = rq->q;
 	struct blk_mq_queue_data bd = {
 		.rq = rq,
-		.list = NULL,
 		.last = 1
 	};
 	struct blk_mq_hw_ctx *hctx;
@@ -1458,8 +1460,6 @@ static void blk_mq_try_issue_directly(struct request *rq, blk_qc_t *cookie,
 		return;
 	}
 
-	__blk_mq_requeue_request(rq);
-
 	if (ret == BLK_MQ_RQ_QUEUE_ERROR) {
 		*cookie = BLK_QC_T_NONE;
 		rq->errors = -EIO;
@@ -1467,22 +1467,36 @@ static void blk_mq_try_issue_directly(struct request *rq, blk_qc_t *cookie,
 		return;
 	}
 
+	__blk_mq_requeue_request(rq);
 insert:
 	blk_mq_sched_insert_request(rq, false, true, false, may_sleep);
 }
 
-/*
- * Multiple hardware queue variant. This will not use per-process plugs,
- * but will attempt to bypass the hctx queueing if we can go straight to
- * hardware for SYNC IO.
- */
+static void blk_mq_try_issue_directly(struct blk_mq_hw_ctx *hctx,
+		struct request *rq, blk_qc_t *cookie)
+{
+	if (!(hctx->flags & BLK_MQ_F_BLOCKING)) {
+		rcu_read_lock();
+		__blk_mq_try_issue_directly(rq, cookie, false);
+		rcu_read_unlock();
+	} else {
+		unsigned int srcu_idx;
+
+		might_sleep();
+
+		srcu_idx = srcu_read_lock(&hctx->queue_rq_srcu);
+		__blk_mq_try_issue_directly(rq, cookie, true);
+		srcu_read_unlock(&hctx->queue_rq_srcu, srcu_idx);
+	}
+}
+
 static blk_qc_t blk_mq_make_request(struct request_queue *q, struct bio *bio)
 {
 	const int is_sync = op_is_sync(bio->bi_opf);
 	const int is_flush_fua = op_is_flush(bio->bi_opf);
 	struct blk_mq_alloc_data data = { .flags = 0 };
 	struct request *rq;
-	unsigned int request_count = 0, srcu_idx;
+	unsigned int request_count = 0;
 	struct blk_plug *plug;
 	struct request *same_queue_rq = NULL;
 	blk_qc_t cookie;
@@ -1518,145 +1532,17 @@ static blk_qc_t blk_mq_make_request(struct request_queue *q, struct bio *bio)
 
 	cookie = request_to_qc_t(data.hctx, rq);
 
-	if (unlikely(is_flush_fua)) {
-		if (q->elevator)
-			goto elv_insert;
-		blk_mq_bio_to_request(rq, bio);
-		blk_insert_flush(rq);
-		goto run_queue;
-	}
-
 	plug = current->plug;
-	/*
-	 * If the driver supports defer issued based on 'last', then
-	 * queue it up like normal since we can potentially save some
-	 * CPU this way.
-	 */
-	if (((plug && !blk_queue_nomerges(q)) || is_sync) &&
-	    !(data.hctx->flags & BLK_MQ_F_DEFER_ISSUE)) {
-		struct request *old_rq = NULL;
-
+	if (unlikely(is_flush_fua)) {
 		blk_mq_bio_to_request(rq, bio);
-
-		/*
-		 * We do limited plugging. If the bio can be merged, do that.
-		 * Otherwise the existing request in the plug list will be
-		 * issued. So the plug list will have one request at most
-		 */
-		if (plug) {
-			/*
-			 * The plug list might get flushed before this. If that
-			 * happens, same_queue_rq is invalid and plug list is
-			 * empty
-			 */
-			if (same_queue_rq && !list_empty(&plug->mq_list)) {
-				old_rq = same_queue_rq;
-				list_del_init(&old_rq->queuelist);
-			}
-			list_add_tail(&rq->queuelist, &plug->mq_list);
-		} else /* is_sync */
-			old_rq = rq;
-		blk_mq_put_ctx(data.ctx);
-		if (!old_rq)
-			goto done;
-
-		if (!(data.hctx->flags & BLK_MQ_F_BLOCKING)) {
-			rcu_read_lock();
-			blk_mq_try_issue_directly(old_rq, &cookie, false);
-			rcu_read_unlock();
+		if (q->elevator) {
+			blk_mq_sched_insert_request(rq, false, true, true,
+					true);
 		} else {
-			srcu_idx = srcu_read_lock(&data.hctx->queue_rq_srcu);
-			blk_mq_try_issue_directly(old_rq, &cookie, true);
-			srcu_read_unlock(&data.hctx->queue_rq_srcu, srcu_idx);
+			blk_insert_flush(rq);
+			blk_mq_run_hw_queue(data.hctx, true);
 		}
-		goto done;
-	}
-
-	if (q->elevator) {
-elv_insert:
-		blk_mq_put_ctx(data.ctx);
-		blk_mq_bio_to_request(rq, bio);
-		blk_mq_sched_insert_request(rq, false, true,
-						!is_sync || is_flush_fua, true);
-		goto done;
-	}
-	if (!blk_mq_merge_queue_io(data.hctx, data.ctx, rq, bio)) {
-		/*
-		 * For a SYNC request, send it to the hardware immediately. For
-		 * an ASYNC request, just ensure that we run it later on. The
-		 * latter allows for merging opportunities and more efficient
-		 * dispatching.
-		 */
-run_queue:
-		blk_mq_run_hw_queue(data.hctx, !is_sync || is_flush_fua);
-	}
-	blk_mq_put_ctx(data.ctx);
-done:
-	return cookie;
-}
-
-/*
- * Single hardware queue variant. This will attempt to use any per-process
- * plug for merging and IO deferral.
- */
-static blk_qc_t blk_sq_make_request(struct request_queue *q, struct bio *bio)
-{
-	const int is_sync = op_is_sync(bio->bi_opf);
-	const int is_flush_fua = op_is_flush(bio->bi_opf);
-	struct blk_plug *plug;
-	unsigned int request_count = 0;
-	struct blk_mq_alloc_data data = { .flags = 0 };
-	struct request *rq;
-	blk_qc_t cookie;
-	unsigned int wb_acct;
-
-	blk_queue_bounce(q, &bio);
-
-	if (bio_integrity_enabled(bio) && bio_integrity_prep(bio)) {
-		bio_io_error(bio);
-		return BLK_QC_T_NONE;
-	}
-
-	blk_queue_split(q, &bio, q->bio_split);
-
-	if (!is_flush_fua && !blk_queue_nomerges(q)) {
-		if (blk_attempt_plug_merge(q, bio, &request_count, NULL))
-			return BLK_QC_T_NONE;
-	} else
-		request_count = blk_plug_queued_count(q);
-
-	if (blk_mq_sched_bio_merge(q, bio))
-		return BLK_QC_T_NONE;
-
-	wb_acct = wbt_wait(q->rq_wb, bio, NULL);
-
-	trace_block_getrq(q, bio, bio->bi_opf);
-
-	rq = blk_mq_sched_get_request(q, bio, bio->bi_opf, &data);
-	if (unlikely(!rq)) {
-		__wbt_done(q->rq_wb, wb_acct);
-		return BLK_QC_T_NONE;
-	}
-
-	wbt_track(&rq->issue_stat, wb_acct);
-
-	cookie = request_to_qc_t(data.hctx, rq);
-
-	if (unlikely(is_flush_fua)) {
-		if (q->elevator)
-			goto elv_insert;
-		blk_mq_bio_to_request(rq, bio);
-		blk_insert_flush(rq);
-		goto run_queue;
-	}
-
-	/*
-	 * A task plug currently exists. Since this is completely lockless,
-	 * utilize that to temporarily store requests until the task is
-	 * either done or scheduled away.
-	 */
-	plug = current->plug;
-	if (plug) {
+	} else if (plug && q->nr_hw_queues == 1) {
 		struct request *last = NULL;
 
 		blk_mq_bio_to_request(rq, bio);
@@ -1667,12 +1553,13 @@ static blk_qc_t blk_sq_make_request(struct request_queue *q, struct bio *bio)
 		 */
 		if (list_empty(&plug->mq_list))
 			request_count = 0;
+		else if (blk_queue_nomerges(q))
+			request_count = blk_plug_queued_count(q);
+
 		if (!request_count)
 			trace_block_plug(q);
 		else
 			last = list_entry_rq(plug->mq_list.prev);
-
-		blk_mq_put_ctx(data.ctx);
 
 		if (request_count >= BLK_MAX_REQUEST_COUNT || (last &&
 		    blk_rq_bytes(last) >= BLK_PLUG_FLUSH_SIZE)) {
@@ -1681,30 +1568,41 @@ static blk_qc_t blk_sq_make_request(struct request_queue *q, struct bio *bio)
 		}
 
 		list_add_tail(&rq->queuelist, &plug->mq_list);
-		return cookie;
-	}
+	} else if (plug && !blk_queue_nomerges(q)) {
+		blk_mq_bio_to_request(rq, bio);
 
-	if (q->elevator) {
-elv_insert:
+		/*
+		 * We do limited plugging. If the bio can be merged, do that.
+		 * Otherwise the existing request in the plug list will be
+		 * issued. So the plug list will have one request at most
+		 * The plug list might get flushed before this. If that happens,
+		 * the plug list is empty, and same_queue_rq is invalid.
+		 */
+		if (list_empty(&plug->mq_list))
+			same_queue_rq = NULL;
+		if (same_queue_rq)
+			list_del_init(&same_queue_rq->queuelist);
+		list_add_tail(&rq->queuelist, &plug->mq_list);
+
+		blk_mq_put_ctx(data.ctx);
+
+		if (same_queue_rq)
+			blk_mq_try_issue_directly(data.hctx, same_queue_rq,
+					&cookie);
+
+		return cookie;
+	} else if (q->nr_hw_queues > 1 && is_sync) {
 		blk_mq_put_ctx(data.ctx);
 		blk_mq_bio_to_request(rq, bio);
-		blk_mq_sched_insert_request(rq, false, true,
-						!is_sync || is_flush_fua, true);
-		goto done;
-	}
-	if (!blk_mq_merge_queue_io(data.hctx, data.ctx, rq, bio)) {
-		/*
-		 * For a SYNC request, send it to the hardware immediately. For
-		 * an ASYNC request, just ensure that we run it later on. The
-		 * latter allows for merging opportunities and more efficient
-		 * dispatching.
-		 */
-run_queue:
-		blk_mq_run_hw_queue(data.hctx, !is_sync || is_flush_fua);
-	}
+		blk_mq_try_issue_directly(data.hctx, rq, &cookie);
+		return cookie;
+	} else if (q->elevator) {
+		blk_mq_bio_to_request(rq, bio);
+		blk_mq_sched_insert_request(rq, false, true, true, true);
+	} else if (!blk_mq_merge_queue_io(data.hctx, data.ctx, rq, bio))
+		blk_mq_run_hw_queue(data.hctx, true);
 
 	blk_mq_put_ctx(data.ctx);
-done:
 	return cookie;
 }
 
@@ -2032,8 +1930,6 @@ static void blk_mq_init_cpu_queues(struct request_queue *q,
 		spin_lock_init(&__ctx->lock);
 		INIT_LIST_HEAD(&__ctx->rq_list);
 		__ctx->queue = q;
-		blk_stat_init(&__ctx->stat[BLK_STAT_READ]);
-		blk_stat_init(&__ctx->stat[BLK_STAT_WRITE]);
 
 		/* If the cpu isn't online, the cpu is mapped to first hctx */
 		if (!cpu_online(i))
@@ -2331,6 +2227,11 @@ struct request_queue *blk_mq_init_allocated_queue(struct blk_mq_tag_set *set,
 	/* mark the queue as mq asap */
 	q->mq_ops = set->ops;
 
+	q->poll_cb = blk_stat_alloc_callback(blk_mq_poll_stats_fn,
+					     blk_stat_rq_ddir, 2, q);
+	if (!q->poll_cb)
+		goto err_exit;
+
 	q->queue_ctx = alloc_percpu(struct blk_mq_ctx);
 	if (!q->queue_ctx)
 		goto err_exit;
@@ -2365,10 +2266,7 @@ struct request_queue *blk_mq_init_allocated_queue(struct blk_mq_tag_set *set,
 	INIT_LIST_HEAD(&q->requeue_list);
 	spin_lock_init(&q->requeue_lock);
 
-	if (q->nr_hw_queues > 1)
-		blk_queue_make_request(q, blk_mq_make_request);
-	else
-		blk_queue_make_request(q, blk_sq_make_request);
+	blk_queue_make_request(q, blk_mq_make_request);
 
 	/*
 	 * Do this after blk_queue_make_request() overrides it...
@@ -2423,8 +2321,6 @@ void blk_mq_free_queue(struct request_queue *q)
 	list_del_init(&q->all_q_node);
 	mutex_unlock(&all_q_mutex);
 
-	wbt_exit(q);
-
 	blk_mq_del_queue_tag_set(q);
 
 	blk_mq_exit_hw_queues(q, set, set->nr_hw_queues);
@@ -2469,7 +2365,7 @@ static void blk_mq_queue_reinit_work(void)
 	 * take place in parallel.
 	 */
 	list_for_each_entry(q, &all_q_list, all_q_node)
-		blk_mq_freeze_queue_start(q);
+		blk_freeze_queue_start(q);
 	list_for_each_entry(q, &all_q_list, all_q_node)
 		blk_mq_freeze_queue_wait(q);
 
@@ -2716,16 +2612,6 @@ void blk_mq_update_nr_hw_queues(struct blk_mq_tag_set *set, int nr_hw_queues)
 	set->nr_hw_queues = nr_hw_queues;
 	list_for_each_entry(q, &set->tag_list, tag_set_list) {
 		blk_mq_realloc_hw_ctxs(set, q);
-
-		/*
-		 * Manually set the make_request_fn as blk_queue_make_request
-		 * resets a lot of the queue settings.
-		 */
-		if (q->nr_hw_queues > 1)
-			q->make_request_fn = blk_mq_make_request;
-		else
-			q->make_request_fn = blk_sq_make_request;
-
 		blk_mq_queue_reinit(q, cpu_online_mask);
 	}
 
@@ -2734,26 +2620,51 @@ void blk_mq_update_nr_hw_queues(struct blk_mq_tag_set *set, int nr_hw_queues)
 }
 EXPORT_SYMBOL_GPL(blk_mq_update_nr_hw_queues);
 
+/* Enable polling stats and return whether they were already enabled. */
+static bool blk_poll_stats_enable(struct request_queue *q)
+{
+	if (test_bit(QUEUE_FLAG_POLL_STATS, &q->queue_flags) ||
+	    test_and_set_bit(QUEUE_FLAG_POLL_STATS, &q->queue_flags))
+		return true;
+	blk_stat_add_callback(q, q->poll_cb);
+	return false;
+}
+
+static void blk_mq_poll_stats_start(struct request_queue *q)
+{
+	/*
+	 * We don't arm the callback if polling stats are not enabled or the
+	 * callback is already active.
+	 */
+	if (!test_bit(QUEUE_FLAG_POLL_STATS, &q->queue_flags) ||
+	    blk_stat_is_active(q->poll_cb))
+		return;
+
+	blk_stat_activate_msecs(q->poll_cb, 100);
+}
+
+static void blk_mq_poll_stats_fn(struct blk_stat_callback *cb)
+{
+	struct request_queue *q = cb->data;
+
+	if (cb->stat[READ].nr_samples)
+		q->poll_stat[READ] = cb->stat[READ];
+	if (cb->stat[WRITE].nr_samples)
+		q->poll_stat[WRITE] = cb->stat[WRITE];
+}
+
 static unsigned long blk_mq_poll_nsecs(struct request_queue *q,
 				       struct blk_mq_hw_ctx *hctx,
 				       struct request *rq)
 {
-	struct blk_rq_stat stat[2];
 	unsigned long ret = 0;
 
 	/*
 	 * If stats collection isn't on, don't sleep but turn it on for
 	 * future users
 	 */
-	if (!blk_stat_enable(q))
+	if (!blk_poll_stats_enable(q))
 		return 0;
-
-	/*
-	 * We don't have to do this once per IO, should optimize this
-	 * to just use the current window of stats until it changes
-	 */
-	memset(&stat, 0, sizeof(stat));
-	blk_hctx_stat_get(hctx, stat);
 
 	/*
 	 * As an optimistic guess, use half of the mean service time
@@ -2763,10 +2674,10 @@ static unsigned long blk_mq_poll_nsecs(struct request_queue *q,
 	 * important on devices where the completion latencies are longer
 	 * than ~10 usec.
 	 */
-	if (req_op(rq) == REQ_OP_READ && stat[BLK_STAT_READ].nr_samples)
-		ret = (stat[BLK_STAT_READ].mean + 1) / 2;
-	else if (req_op(rq) == REQ_OP_WRITE && stat[BLK_STAT_WRITE].nr_samples)
-		ret = (stat[BLK_STAT_WRITE].mean + 1) / 2;
+	if (req_op(rq) == REQ_OP_READ && q->poll_stat[READ].nr_samples)
+		ret = (q->poll_stat[READ].mean + 1) / 2;
+	else if (req_op(rq) == REQ_OP_WRITE && q->poll_stat[WRITE].nr_samples)
+		ret = (q->poll_stat[WRITE].mean + 1) / 2;
 
 	return ret;
 }
