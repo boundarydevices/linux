@@ -536,7 +536,14 @@
 &lcdif1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lcd>;
-	status = "okay";
+	lcd-supply = <&reg_lcd_3v3>;
+	display = <&display0>;
+	status = "disabled";
+
+	display0: display@0 {
+		bits-per-pixel = <16>;
+		bus-width = <24>;
+	};
 
 	port {
 		display_out: endpoint {
@@ -549,7 +556,7 @@
 	display = <&display1>;
 	disp-dev = "ldb";
 	status = "okay";
-	display1: display {
+	display1: display@1 {
 		bits-per-pixel = <16>;
 		bus-width = <18>;
 	};
