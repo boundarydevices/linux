@@ -702,10 +702,8 @@ static int i40e_alloc_vsi_res(struct i40e_vf *vf, enum i40e_vsi_type type)
 			dev_info(&pf->pdev->dev,
 				 "Could not allocate VF broadcast filter\n");
 		spin_unlock_bh(&vsi->mac_filter_hash_lock);
-		i40e_write_rx_ctl(&pf->hw, I40E_VFQF_HENA1(0, vf->vf_id),
-				  (u32)hena);
-		i40e_write_rx_ctl(&pf->hw, I40E_VFQF_HENA1(1, vf->vf_id),
-				  (u32)(hena >> 32));
+		wr32(&pf->hw, I40E_VFQF_HENA1(0, vf->vf_id), (u32)hena);
+		wr32(&pf->hw, I40E_VFQF_HENA1(1, vf->vf_id), (u32)(hena >> 32));
 	}
 
 	/* program mac filter */
@@ -811,6 +809,11 @@ static void i40e_free_vf_res(struct i40e_vf *vf)
 	u32 reg_idx, reg;
 	int i, msix_vf;
 
+	/* Start by disabling VF's configuration API to prevent the OS from
+	 * accessing the VF's VSI after it's freed / invalidated.
+	 */
+	clear_bit(I40E_VF_STAT_INIT, &vf->vf_states);
+
 	/* free vsi & disconnect it from the parent uplink */
 	if (vf->lan_vsi_idx) {
 		i40e_vsi_release(pf->vsi[vf->lan_vsi_idx]);
@@ -850,7 +853,6 @@ static void i40e_free_vf_res(struct i40e_vf *vf)
 	/* reset some of the state variables keeping track of the resources */
 	vf->num_queue_pairs = 0;
 	vf->vf_states = 0;
-	clear_bit(I40E_VF_STAT_INIT, &vf->vf_states);
 }
 
 /**
@@ -941,6 +943,14 @@ void i40e_reset_vf(struct i40e_vf *vf, bool flr)
 	/* warn the VF */
 	clear_bit(I40E_VF_STAT_ACTIVE, &vf->vf_states);
 
+	/* Disable VF's configuration API during reset. The flag is re-enabled
+	 * in i40e_alloc_vf_res(), when it's safe again to access VF's VSI.
+	 * It's normally disabled in i40e_free_vf_res(), but it's safer
+	 * to do it earlier to give some time to finish to any VF config
+	 * functions that may still be running at this point.
+	 */
+	clear_bit(I40E_VF_STAT_INIT, &vf->vf_states);
+
 	/* In the case of a VFLR, the HW has already reset the VF and we
 	 * just need to clean up, so don't hit the VFRTRIG register.
 	 */
@@ -984,11 +994,6 @@ void i40e_reset_vf(struct i40e_vf *vf, bool flr)
 	if (!rsd)
 		dev_err(&pf->pdev->dev, "VF reset check timeout on VF %d\n",
 			vf->vf_id);
-	wr32(hw, I40E_VFGEN_RSTAT1(vf->vf_id), I40E_VFR_COMPLETED);
-	/* clear the reset bit in the VPGEN_VFRTRIG reg */
-	reg = rd32(hw, I40E_VPGEN_VFRTRIG(vf->vf_id));
-	reg &= ~I40E_VPGEN_VFRTRIG_VFSWR_MASK;
-	wr32(hw, I40E_VPGEN_VFRTRIG(vf->vf_id), reg);
 
 	/* On initial reset, we won't have any queues */
 	if (vf->lan_vsi_idx == 0)
@@ -996,8 +1001,24 @@ void i40e_reset_vf(struct i40e_vf *vf, bool flr)
 
 	i40e_vsi_stop_rings(pf->vsi[vf->lan_vsi_idx]);
 complete_reset:
-	/* reallocate VF resources to reset the VSI state */
+	/* free VF resources to begin resetting the VSI state */
 	i40e_free_vf_res(vf);
+
+	/* Enable hardware by clearing the reset bit in the VPGEN_VFRTRIG reg.
+	 * By doing this we allow HW to access VF memory at any point. If we
+	 * did it any sooner, HW could access memory while it was being freed
+	 * in i40e_free_vf_res(), causing an IOMMU fault.
+	 *
+	 * On the other hand, this needs to be done ASAP, because the VF driver
+	 * is waiting for this to happen and may report a timeout. It's
+	 * harmless, but it gets logged into Guest OS kernel log, so best avoid
+	 * it.
+	 */
+	reg = rd32(hw, I40E_VPGEN_VFRTRIG(vf->vf_id));
+	reg &= ~I40E_VPGEN_VFRTRIG_VFSWR_MASK;
+	wr32(hw, I40E_VPGEN_VFRTRIG(vf->vf_id), reg);
+
+	/* reallocate VF resources to finish resetting the VSI state */
 	if (!i40e_alloc_vf_res(vf)) {
 		int abs_vf_id = vf->vf_id + hw->func_caps.vf_base_id;
 		i40e_enable_vf_mappings(vf);
@@ -1008,7 +1029,11 @@ complete_reset:
 			i40e_notify_client_of_vf_reset(pf, abs_vf_id);
 		vf->num_vlan = 0;
 	}
-	/* tell the VF the reset is done */
+
+	/* Tell the VF driver the reset is done. This needs to be done only
+	 * after VF has been fully initialized, because the VF driver may
+	 * request resources immediately after setting this flag.
+	 */
 	wr32(hw, I40E_VFGEN_RSTAT1(vf->vf_id), I40E_VFR_VFACTIVE);
 
 	i40e_flush(hw);
@@ -1359,7 +1384,7 @@ static int i40e_vc_get_vf_resources_msg(struct i40e_vf *vf, u8 *msg)
 	if (!vsi->info.pvid)
 		vfres->vf_offload_flags |= I40E_VIRTCHNL_VF_OFFLOAD_VLAN;
 
-	if (i40e_vf_client_capable(pf, vf->vf_id, I40E_CLIENT_IWARP) &&
+	if (i40e_vf_client_capable(pf, vf->vf_id) &&
 	    (vf->driver_caps & I40E_VIRTCHNL_VF_OFFLOAD_IWARP)) {
 		vfres->vf_offload_flags |= I40E_VIRTCHNL_VF_OFFLOAD_IWARP;
 		set_bit(I40E_VF_STAT_IWARPENA, &vf->vf_states);
@@ -1853,7 +1878,7 @@ error_param:
 }
 
 /* If the VF is not trusted restrict the number of MAC/VLAN it can program */
-#define I40E_VC_MAX_MAC_ADDR_PER_VF 8
+#define I40E_VC_MAX_MAC_ADDR_PER_VF 12
 #define I40E_VC_MAX_VLAN_PER_VF 8
 
 /**

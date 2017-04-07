@@ -117,10 +117,8 @@ enum i40e_dyn_idx_t {
 
 /* Supported Rx Buffer Sizes (a multiple of 128) */
 #define I40E_RXBUFFER_256   256
+#define I40E_RXBUFFER_1536  1536  /* 128B aligned standard Ethernet frame */
 #define I40E_RXBUFFER_2048  2048
-#define I40E_RXBUFFER_3072  3072   /* For FCoE MTU of 2158 */
-#define I40E_RXBUFFER_4096  4096
-#define I40E_RXBUFFER_8192  8192
 #define I40E_MAX_RXBUFFER   9728  /* largest size for single descriptor */
 
 /* NOTE: netdev_alloc_skb reserves up to 64 bytes, NET_IP_ALIGN means we
@@ -132,6 +130,9 @@ enum i40e_dyn_idx_t {
  */
 #define I40E_RX_HDR_SIZE I40E_RXBUFFER_256
 #define i40e_rx_desc i40e_32byte_rx_desc
+
+#define I40E_RX_DMA_ATTR \
+	(DMA_ATTR_SKIP_CPU_SYNC | DMA_ATTR_WEAK_ORDERING)
 
 /**
  * i40e_test_staterr - tests bits in Rx descriptor status and error fields
@@ -255,7 +256,12 @@ struct i40e_tx_buffer {
 struct i40e_rx_buffer {
 	dma_addr_t dma;
 	struct page *page;
-	unsigned int page_offset;
+#if (BITS_PER_LONG > 32) || (PAGE_SIZE >= 65536)
+	__u32 page_offset;
+#else
+	__u16 page_offset;
+#endif
+	__u16 pagecnt_bias;
 };
 
 struct i40e_queue_stats {
@@ -393,13 +399,6 @@ int i40e_setup_rx_descriptors(struct i40e_ring *rx_ring);
 void i40e_free_tx_resources(struct i40e_ring *tx_ring);
 void i40e_free_rx_resources(struct i40e_ring *rx_ring);
 int i40e_napi_poll(struct napi_struct *napi, int budget);
-#ifdef I40E_FCOE
-void i40e_tx_map(struct i40e_ring *tx_ring, struct sk_buff *skb,
-		 struct i40e_tx_buffer *first, u32 tx_flags,
-		 const u8 hdr_len, u32 td_cmd, u32 td_offset);
-int i40e_tx_prepare_vlan_flags(struct sk_buff *skb,
-			       struct i40e_ring *tx_ring, u32 *flags);
-#endif
 void i40e_force_wb(struct i40e_vsi *vsi, struct i40e_q_vector *q_vector);
 u32 i40e_get_tx_pending(struct i40e_ring *ring, bool in_sw);
 int __i40e_maybe_stop_tx(struct i40e_ring *tx_ring, int size);
@@ -480,16 +479,6 @@ static inline bool i40e_chk_linearize(struct sk_buff *skb, int count)
 
 	/* we can support up to 8 data buffers for a single send */
 	return count != I40E_MAX_BUFFER_TXD;
-}
-
-/**
- * i40e_rx_is_fcoe - returns true if the Rx packet type is FCoE
- * @ptype: the packet type field from Rx descriptor write-back
- **/
-static inline bool i40e_rx_is_fcoe(u16 ptype)
-{
-	return (ptype >= I40E_RX_PTYPE_L2_FCOE_PAY3) &&
-	       (ptype <= I40E_RX_PTYPE_L2_FCOE_VFT_FCOTHER);
 }
 
 /**

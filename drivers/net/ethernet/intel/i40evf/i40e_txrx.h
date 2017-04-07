@@ -104,10 +104,8 @@ enum i40e_dyn_idx_t {
 
 /* Supported Rx Buffer Sizes (a multiple of 128) */
 #define I40E_RXBUFFER_256   256
+#define I40E_RXBUFFER_1536  1536  /* 128B aligned standard Ethernet frame */
 #define I40E_RXBUFFER_2048  2048
-#define I40E_RXBUFFER_3072  3072   /* For FCoE MTU of 2158 */
-#define I40E_RXBUFFER_4096  4096
-#define I40E_RXBUFFER_8192  8192
 #define I40E_MAX_RXBUFFER   9728  /* largest size for single descriptor */
 
 /* NOTE: netdev_alloc_skb reserves up to 64 bytes, NET_IP_ALIGN means we
@@ -119,6 +117,9 @@ enum i40e_dyn_idx_t {
  */
 #define I40E_RX_HDR_SIZE I40E_RXBUFFER_256
 #define i40e_rx_desc i40e_32byte_rx_desc
+
+#define I40E_RX_DMA_ATTR \
+	(DMA_ATTR_SKIP_CPU_SYNC | DMA_ATTR_WEAK_ORDERING)
 
 /**
  * i40e_test_staterr - tests bits in Rx descriptor status and error fields
@@ -241,7 +242,12 @@ struct i40e_tx_buffer {
 struct i40e_rx_buffer {
 	dma_addr_t dma;
 	struct page *page;
-	unsigned int page_offset;
+#if (BITS_PER_LONG > 32) || (PAGE_SIZE >= 65536)
+	__u32 page_offset;
+#else
+	__u16 page_offset;
+#endif
+	__u16 pagecnt_bias;
 };
 
 struct i40e_queue_stats {
@@ -385,20 +391,6 @@ int __i40evf_maybe_stop_tx(struct i40e_ring *tx_ring, int size);
 bool __i40evf_chk_linearize(struct sk_buff *skb);
 
 /**
- * i40e_get_head - Retrieve head from head writeback
- * @tx_ring: Tx ring to fetch head of
- *
- * Returns value of Tx ring head based on value stored
- * in head write-back location
- **/
-static inline u32 i40e_get_head(struct i40e_ring *tx_ring)
-{
-	void *head = (struct i40e_tx_desc *)tx_ring->desc + tx_ring->count;
-
-	return le32_to_cpu(*(volatile __le32 *)head);
-}
-
-/**
  * i40e_xmit_descriptor_count - calculate number of Tx descriptors needed
  * @skb:     send buffer
  * @tx_ring: ring to send buffer on
@@ -460,19 +452,7 @@ static inline bool i40e_chk_linearize(struct sk_buff *skb, int count)
 	/* we can support up to 8 data buffers for a single send */
 	return count != I40E_MAX_BUFFER_TXD;
 }
-
 /**
- * i40e_rx_is_fcoe - returns true if the Rx packet type is FCoE
- * @ptype: the packet type field from Rx descriptor write-back
- **/
-static inline bool i40e_rx_is_fcoe(u16 ptype)
-{
-	return (ptype >= I40E_RX_PTYPE_L2_FCOE_PAY3) &&
-	       (ptype <= I40E_RX_PTYPE_L2_FCOE_VFT_FCOTHER);
-}
-
-/**
- * txring_txq - Find the netdev Tx ring based on the i40e Tx ring
  * @ring: Tx ring to find the netdev equivalent of
  **/
 static inline struct netdev_queue *txring_txq(const struct i40e_ring *ring)

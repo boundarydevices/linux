@@ -45,6 +45,7 @@
 #include <linux/ethtool.h>
 #include <linux/etherdevice.h>
 #include <linux/vmalloc.h>
+#include <linux/crash_dump.h>
 #include <linux/qed/qed_if.h>
 #include <linux/qed/qed_ll2_if.h>
 
@@ -54,6 +55,8 @@
 #include "qed_dev_api.h"
 #include "qed_ll2.h"
 #include "qed_fcoe.h"
+#include "qed_iscsi.h"
+
 #include "qed_mcp.h"
 #include "qed_hw.h"
 #include "qed_selftest.h"
@@ -238,6 +241,7 @@ int qed_fill_dev_info(struct qed_dev *cdev,
 	dev_info->rdma_supported = (cdev->hwfns[0].hw_info.personality ==
 				    QED_PCI_ETH_ROCE);
 	dev_info->is_mf_default = IS_MF_DEFAULT(&cdev->hwfns[0]);
+	dev_info->dev_type = cdev->type;
 	ether_addr_copy(dev_info->hw_mac, cdev->hwfns[0].hw_info.hw_mac_addr);
 
 	if (IS_PF(cdev)) {
@@ -588,6 +592,19 @@ int qed_slowpath_irq_req(struct qed_hwfn *hwfn)
 	return rc;
 }
 
+void qed_slowpath_irq_sync(struct qed_hwfn *p_hwfn)
+{
+	struct qed_dev *cdev = p_hwfn->cdev;
+	u8 id = p_hwfn->my_id;
+	u32 int_mode;
+
+	int_mode = cdev->int_params.out.int_mode;
+	if (int_mode == QED_INT_MODE_MSIX)
+		synchronize_irq(cdev->int_params.msix_table[id].vector);
+	else
+		synchronize_irq(cdev->pdev->irq);
+}
+
 static void qed_slowpath_irq_free(struct qed_dev *cdev)
 {
 	int i;
@@ -628,19 +645,6 @@ static int qed_nic_stop(struct qed_dev *cdev)
 	qed_dbg_pf_exit(cdev);
 
 	return rc;
-}
-
-static int qed_nic_reset(struct qed_dev *cdev)
-{
-	int rc;
-
-	rc = qed_hw_reset(cdev);
-	if (rc)
-		return rc;
-
-	qed_resc_free(cdev);
-
-	return 0;
 }
 
 static int qed_nic_setup(struct qed_dev *cdev)
@@ -743,7 +747,8 @@ static int qed_slowpath_setup_int(struct qed_dev *cdev,
 	cdev->int_params.fp_msix_cnt = cdev->int_params.out.num_vectors -
 				       cdev->num_hwfns;
 
-	if (!IS_ENABLED(CONFIG_QED_RDMA))
+	if (!IS_ENABLED(CONFIG_QED_RDMA) ||
+	    QED_LEADING_HWFN(cdev)->hw_info.personality != QED_PCI_ETH_ROCE)
 		return 0;
 
 	for_each_hwfn(cdev, i)
@@ -875,7 +880,6 @@ static void qed_update_pf_params(struct qed_dev *cdev,
 		params->rdma_pf_params.num_qps = QED_ROCE_QPS;
 		params->rdma_pf_params.min_dpis = QED_ROCE_DPIS;
 		/* divide by 3 the MRs to avoid MF ILT overflow */
-		params->rdma_pf_params.num_mrs = RDMA_MAX_TIDS;
 		params->rdma_pf_params.gl_pi = QED_ROCE_PROTOCOL_INDEX;
 	}
 
@@ -900,6 +904,8 @@ static void qed_update_pf_params(struct qed_dev *cdev,
 static int qed_slowpath_start(struct qed_dev *cdev,
 			      struct qed_slowpath_params *params)
 {
+	struct qed_drv_load_params drv_load_params;
+	struct qed_hw_init_params hw_init_params;
 	struct qed_tunn_start_params tunn_info;
 	struct qed_mcp_drv_version drv_version;
 	const u8 *data = NULL;
@@ -965,9 +971,21 @@ static int qed_slowpath_start(struct qed_dev *cdev,
 	tunn_info.tunn_clss_ipgre = QED_TUNN_CLSS_MAC_VLAN;
 
 	/* Start the slowpath */
-	rc = qed_hw_init(cdev, &tunn_info, true,
-			 cdev->int_params.out.int_mode,
-			 true, data);
+	memset(&hw_init_params, 0, sizeof(hw_init_params));
+	hw_init_params.p_tunn = &tunn_info;
+	hw_init_params.b_hw_start = true;
+	hw_init_params.int_mode = cdev->int_params.out.int_mode;
+	hw_init_params.allow_npar_tx_switch = true;
+	hw_init_params.bin_fw_data = data;
+
+	memset(&drv_load_params, 0, sizeof(drv_load_params));
+	drv_load_params.is_crash_kernel = is_kdump_kernel();
+	drv_load_params.mfw_timeout_val = QED_LOAD_REQ_LOCK_TO_DEFAULT;
+	drv_load_params.avoid_eng_reset = false;
+	drv_load_params.override_force_load = QED_OVERRIDE_FORCE_LOAD_NONE;
+	hw_init_params.p_drv_load_params = &drv_load_params;
+
+	rc = qed_hw_init(cdev, &hw_init_params);
 	if (rc)
 		goto err2;
 
@@ -1042,7 +1060,8 @@ static int qed_slowpath_stop(struct qed_dev *cdev)
 	}
 
 	qed_disable_msix(cdev);
-	qed_nic_reset(cdev);
+
+	qed_resc_free(cdev);
 
 	qed_iov_wq_stop(cdev, true);
 
@@ -1653,12 +1672,17 @@ void qed_get_protocol_stats(struct qed_dev *cdev,
 	switch (type) {
 	case QED_MCP_LAN_STATS:
 		qed_get_vport_stats(cdev, &eth_stats);
-		stats->lan_stats.ucast_rx_pkts = eth_stats.rx_ucast_pkts;
-		stats->lan_stats.ucast_tx_pkts = eth_stats.tx_ucast_pkts;
+		stats->lan_stats.ucast_rx_pkts =
+					eth_stats.common.rx_ucast_pkts;
+		stats->lan_stats.ucast_tx_pkts =
+					eth_stats.common.tx_ucast_pkts;
 		stats->lan_stats.fcs_err = -1;
 		break;
 	case QED_MCP_FCOE_STATS:
 		qed_get_protocol_stats_fcoe(cdev, &stats->fcoe_stats);
+		break;
+	case QED_MCP_ISCSI_STATS:
+		qed_get_protocol_stats_iscsi(cdev, &stats->iscsi_stats);
 		break;
 	default:
 		DP_ERR(cdev, "Invalid protocol type = %d\n", type);

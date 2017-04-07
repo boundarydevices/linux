@@ -94,4 +94,8 @@
 
 #define SCM_TIMESTAMPING_OPT_STATS	54
 
+#define SO_MEMINFO		55
+
+#define SO_INCOMING_NAPI_ID	56
+
 #endif /* __ASM_GENERIC_SOCKET_H */

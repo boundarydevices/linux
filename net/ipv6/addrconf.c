@@ -224,6 +224,7 @@ static struct ipv6_devconf ipv6_devconf __read_mostly = {
 	.accept_ra_rtr_pref	= 1,
 	.rtr_probe_interval	= 60 * HZ,
 #ifdef CONFIG_IPV6_ROUTE_INFO
+	.accept_ra_rt_info_min_plen = 0,
 	.accept_ra_rt_info_max_plen = 0,
 #endif
 #endif
@@ -245,6 +246,7 @@ static struct ipv6_devconf ipv6_devconf __read_mostly = {
 #endif
 	.enhanced_dad           = 1,
 	.addr_gen_mode		= IN6_ADDR_GEN_MODE_EUI64,
+	.disable_policy		= 0,
 };
 
 static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
@@ -276,6 +278,7 @@ static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
 	.accept_ra_rtr_pref	= 1,
 	.rtr_probe_interval	= 60 * HZ,
 #ifdef CONFIG_IPV6_ROUTE_INFO
+	.accept_ra_rt_info_min_plen = 0,
 	.accept_ra_rt_info_max_plen = 0,
 #endif
 #endif
@@ -297,6 +300,7 @@ static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
 #endif
 	.enhanced_dad           = 1,
 	.addr_gen_mode		= IN6_ADDR_GEN_MODE_EUI64,
+	.disable_policy		= 0,
 };
 
 /* Check if a valid qdisc is available */
@@ -545,6 +549,9 @@ static int inet6_netconf_fill_devconf(struct sk_buff *skb, int ifindex,
 	if (nla_put_s32(skb, NETCONFA_IFINDEX, ifindex) < 0)
 		goto nla_put_failure;
 
+	if (!devconf)
+		goto out;
+
 	if ((all || type == NETCONFA_FORWARDING) &&
 	    nla_put_s32(skb, NETCONFA_FORWARDING, devconf->forwarding) < 0)
 		goto nla_put_failure;
@@ -563,6 +570,7 @@ static int inet6_netconf_fill_devconf(struct sk_buff *skb, int ifindex,
 			devconf->ignore_routes_with_linkdown) < 0)
 		goto nla_put_failure;
 
+out:
 	nlmsg_end(skb, nlh);
 	return 0;
 
@@ -571,8 +579,8 @@ nla_put_failure:
 	return -EMSGSIZE;
 }
 
-void inet6_netconf_notify_devconf(struct net *net, int type, int ifindex,
-				  struct ipv6_devconf *devconf)
+void inet6_netconf_notify_devconf(struct net *net, int event, int type,
+				  int ifindex, struct ipv6_devconf *devconf)
 {
 	struct sk_buff *skb;
 	int err = -ENOBUFS;
@@ -582,7 +590,7 @@ void inet6_netconf_notify_devconf(struct net *net, int type, int ifindex,
 		goto errout;
 
 	err = inet6_netconf_fill_devconf(skb, ifindex, devconf, 0, 0,
-					 RTM_NEWNETCONF, 0, type);
+					 event, 0, type);
 	if (err < 0) {
 		/* -EMSGSIZE implies BUG in inet6_netconf_msgsize_devconf() */
 		WARN_ON(err == -EMSGSIZE);
@@ -765,7 +773,8 @@ static void dev_forward_change(struct inet6_dev *idev)
 		else
 			addrconf_leave_anycast(ifa);
 	}
-	inet6_netconf_notify_devconf(dev_net(dev), NETCONFA_FORWARDING,
+	inet6_netconf_notify_devconf(dev_net(dev), RTM_NEWNETCONF,
+				     NETCONFA_FORWARDING,
 				     dev->ifindex, &idev->cnf);
 }
 
@@ -800,7 +809,8 @@ static int addrconf_fixup_forwarding(struct ctl_table *table, int *p, int newf)
 
 	if (p == &net->ipv6.devconf_dflt->forwarding) {
 		if ((!newf) ^ (!old))
-			inet6_netconf_notify_devconf(net, NETCONFA_FORWARDING,
+			inet6_netconf_notify_devconf(net, RTM_NEWNETCONF,
+						     NETCONFA_FORWARDING,
 						     NETCONFA_IFINDEX_DEFAULT,
 						     net->ipv6.devconf_dflt);
 		rtnl_unlock();
@@ -812,13 +822,15 @@ static int addrconf_fixup_forwarding(struct ctl_table *table, int *p, int newf)
 
 		net->ipv6.devconf_dflt->forwarding = newf;
 		if ((!newf) ^ (!old_dflt))
-			inet6_netconf_notify_devconf(net, NETCONFA_FORWARDING,
+			inet6_netconf_notify_devconf(net, RTM_NEWNETCONF,
+						     NETCONFA_FORWARDING,
 						     NETCONFA_IFINDEX_DEFAULT,
 						     net->ipv6.devconf_dflt);
 
 		addrconf_forward_change(net, newf);
 		if ((!newf) ^ (!old))
-			inet6_netconf_notify_devconf(net, NETCONFA_FORWARDING,
+			inet6_netconf_notify_devconf(net, RTM_NEWNETCONF,
+						     NETCONFA_FORWARDING,
 						     NETCONFA_IFINDEX_ALL,
 						     net->ipv6.devconf_all);
 	} else if ((!newf) ^ (!old))
@@ -843,6 +855,7 @@ static void addrconf_linkdown_change(struct net *net, __s32 newf)
 			idev->cnf.ignore_routes_with_linkdown = newf;
 			if (changed)
 				inet6_netconf_notify_devconf(dev_net(dev),
+							     RTM_NEWNETCONF,
 							     NETCONFA_IGNORE_ROUTES_WITH_LINKDOWN,
 							     dev->ifindex,
 							     &idev->cnf);
@@ -865,6 +878,7 @@ static int addrconf_fixup_linkdown(struct ctl_table *table, int *p, int newf)
 	if (p == &net->ipv6.devconf_dflt->ignore_routes_with_linkdown) {
 		if ((!newf) ^ (!old))
 			inet6_netconf_notify_devconf(net,
+						     RTM_NEWNETCONF,
 						     NETCONFA_IGNORE_ROUTES_WITH_LINKDOWN,
 						     NETCONFA_IFINDEX_DEFAULT,
 						     net->ipv6.devconf_dflt);
@@ -877,6 +891,7 @@ static int addrconf_fixup_linkdown(struct ctl_table *table, int *p, int newf)
 		addrconf_linkdown_change(net, newf);
 		if ((!newf) ^ (!old))
 			inet6_netconf_notify_devconf(net,
+						     RTM_NEWNETCONF,
 						     NETCONFA_IGNORE_ROUTES_WITH_LINKDOWN,
 						     NETCONFA_IFINDEX_ALL,
 						     net->ipv6.devconf_all);
@@ -944,6 +959,7 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr,
 	      const struct in6_addr *peer_addr, int pfxlen,
 	      int scope, u32 flags, u32 valid_lft, u32 prefered_lft)
 {
+	struct net *net = dev_net(idev->dev);
 	struct inet6_ifaddr *ifa = NULL;
 	struct rt6_info *rt;
 	unsigned int hash;
@@ -989,6 +1005,10 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr,
 		err = PTR_ERR(rt);
 		goto out;
 	}
+
+	if (net->ipv6.devconf_all->disable_policy ||
+	    idev->cnf.disable_policy)
+		rt->dst.flags |= DST_NOPOLICY;
 
 	neigh_parms_data_state_setall(idev->nd_parms);
 
@@ -4972,6 +4992,7 @@ static inline void ipv6_store_devconf(struct ipv6_devconf *cnf,
 	array[DEVCONF_RTR_PROBE_INTERVAL] =
 		jiffies_to_msecs(cnf->rtr_probe_interval);
 #ifdef CONFIG_IPV6_ROUTE_INFO
+	array[DEVCONF_ACCEPT_RA_RT_INFO_MIN_PLEN] = cnf->accept_ra_rt_info_min_plen;
 	array[DEVCONF_ACCEPT_RA_RT_INFO_MAX_PLEN] = cnf->accept_ra_rt_info_max_plen;
 #endif
 #endif
@@ -5003,6 +5024,7 @@ static inline void ipv6_store_devconf(struct ipv6_devconf *cnf,
 #endif
 	array[DEVCONF_ENHANCED_DAD] = cnf->enhanced_dad;
 	array[DEVCONF_ADDR_GEN_MODE] = cnf->addr_gen_mode;
+	array[DEVCONF_DISABLE_POLICY] = cnf->disable_policy;
 }
 
 static inline size_t inet6_ifla6_size(void)
@@ -5664,17 +5686,20 @@ int addrconf_sysctl_proxy_ndp(struct ctl_table *ctl, int write,
 			return restart_syscall();
 
 		if (valp == &net->ipv6.devconf_dflt->proxy_ndp)
-			inet6_netconf_notify_devconf(net, NETCONFA_PROXY_NEIGH,
+			inet6_netconf_notify_devconf(net, RTM_NEWNETCONF,
+						     NETCONFA_PROXY_NEIGH,
 						     NETCONFA_IFINDEX_DEFAULT,
 						     net->ipv6.devconf_dflt);
 		else if (valp == &net->ipv6.devconf_all->proxy_ndp)
-			inet6_netconf_notify_devconf(net, NETCONFA_PROXY_NEIGH,
+			inet6_netconf_notify_devconf(net, RTM_NEWNETCONF,
+						     NETCONFA_PROXY_NEIGH,
 						     NETCONFA_IFINDEX_ALL,
 						     net->ipv6.devconf_all);
 		else {
 			struct inet6_dev *idev = ctl->extra1;
 
-			inet6_netconf_notify_devconf(net, NETCONFA_PROXY_NEIGH,
+			inet6_netconf_notify_devconf(net, RTM_NEWNETCONF,
+						     NETCONFA_PROXY_NEIGH,
 						     idev->dev->ifindex,
 						     &idev->cnf);
 		}
@@ -5824,6 +5849,105 @@ int addrconf_sysctl_ignore_routes_with_linkdown(struct ctl_table *ctl,
 		ret = addrconf_fixup_linkdown(ctl, valp, val);
 	if (ret)
 		*ppos = pos;
+	return ret;
+}
+
+static
+void addrconf_set_nopolicy(struct rt6_info *rt, int action)
+{
+	if (rt) {
+		if (action)
+			rt->dst.flags |= DST_NOPOLICY;
+		else
+			rt->dst.flags &= ~DST_NOPOLICY;
+	}
+}
+
+static
+void addrconf_disable_policy_idev(struct inet6_dev *idev, int val)
+{
+	struct inet6_ifaddr *ifa;
+
+	read_lock_bh(&idev->lock);
+	list_for_each_entry(ifa, &idev->addr_list, if_list) {
+		spin_lock(&ifa->lock);
+		if (ifa->rt) {
+			struct rt6_info *rt = ifa->rt;
+			struct fib6_table *table = rt->rt6i_table;
+			int cpu;
+
+			read_lock(&table->tb6_lock);
+			addrconf_set_nopolicy(ifa->rt, val);
+			if (rt->rt6i_pcpu) {
+				for_each_possible_cpu(cpu) {
+					struct rt6_info **rtp;
+
+					rtp = per_cpu_ptr(rt->rt6i_pcpu, cpu);
+					addrconf_set_nopolicy(*rtp, val);
+				}
+			}
+			read_unlock(&table->tb6_lock);
+		}
+		spin_unlock(&ifa->lock);
+	}
+	read_unlock_bh(&idev->lock);
+}
+
+static
+int addrconf_disable_policy(struct ctl_table *ctl, int *valp, int val)
+{
+	struct inet6_dev *idev;
+	struct net *net;
+
+	if (!rtnl_trylock())
+		return restart_syscall();
+
+	*valp = val;
+
+	net = (struct net *)ctl->extra2;
+	if (valp == &net->ipv6.devconf_dflt->disable_policy) {
+		rtnl_unlock();
+		return 0;
+	}
+
+	if (valp == &net->ipv6.devconf_all->disable_policy)  {
+		struct net_device *dev;
+
+		for_each_netdev(net, dev) {
+			idev = __in6_dev_get(dev);
+			if (idev)
+				addrconf_disable_policy_idev(idev, val);
+		}
+	} else {
+		idev = (struct inet6_dev *)ctl->extra1;
+		addrconf_disable_policy_idev(idev, val);
+	}
+
+	rtnl_unlock();
+	return 0;
+}
+
+static
+int addrconf_sysctl_disable_policy(struct ctl_table *ctl, int write,
+				   void __user *buffer, size_t *lenp,
+				   loff_t *ppos)
+{
+	int *valp = ctl->data;
+	int val = *valp;
+	loff_t pos = *ppos;
+	struct ctl_table lctl;
+	int ret;
+
+	lctl = *ctl;
+	lctl.data = &val;
+	ret = proc_dointvec(&lctl, write, buffer, lenp, ppos);
+
+	if (write && (*valp != val))
+		ret = addrconf_disable_policy(ctl, valp, val);
+
+	if (ret)
+		*ppos = pos;
+
 	return ret;
 }
 
@@ -6015,6 +6139,13 @@ static const struct ctl_table addrconf_sysctl[] = {
 	},
 #ifdef CONFIG_IPV6_ROUTE_INFO
 	{
+		.procname	= "accept_ra_rt_info_min_plen",
+		.data		= &ipv6_devconf.accept_ra_rt_info_min_plen,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+	{
 		.procname	= "accept_ra_rt_info_max_plen",
 		.data		= &ipv6_devconf.accept_ra_rt_info_max_plen,
 		.maxlen		= sizeof(int),
@@ -6185,6 +6316,13 @@ static const struct ctl_table addrconf_sysctl[] = {
 		.proc_handler	= addrconf_sysctl_addr_gen_mode,
 	},
 	{
+		.procname       = "disable_policy",
+		.data           = &ipv6_devconf.disable_policy,
+		.maxlen         = sizeof(int),
+		.mode           = 0644,
+		.proc_handler   = addrconf_sysctl_disable_policy,
+	},
+	{
 		/* sentinel */
 	}
 };
@@ -6224,7 +6362,8 @@ static int __addrconf_sysctl_register(struct net *net, char *dev_name,
 		ifindex = NETCONFA_IFINDEX_DEFAULT;
 	else
 		ifindex = idev->dev->ifindex;
-	inet6_netconf_notify_devconf(net, NETCONFA_ALL, ifindex, p);
+	inet6_netconf_notify_devconf(net, RTM_NEWNETCONF, NETCONFA_ALL,
+				     ifindex, p);
 	return 0;
 
 free:
@@ -6233,7 +6372,8 @@ out:
 	return -ENOBUFS;
 }
 
-static void __addrconf_sysctl_unregister(struct ipv6_devconf *p)
+static void __addrconf_sysctl_unregister(struct net *net,
+					 struct ipv6_devconf *p, int ifindex)
 {
 	struct ctl_table *table;
 
@@ -6244,6 +6384,8 @@ static void __addrconf_sysctl_unregister(struct ipv6_devconf *p)
 	unregister_net_sysctl_table(p->sysctl_header);
 	p->sysctl_header = NULL;
 	kfree(table);
+
+	inet6_netconf_notify_devconf(net, RTM_DELNETCONF, 0, ifindex, NULL);
 }
 
 static int addrconf_sysctl_register(struct inet6_dev *idev)
@@ -6267,7 +6409,8 @@ static int addrconf_sysctl_register(struct inet6_dev *idev)
 
 static void addrconf_sysctl_unregister(struct inet6_dev *idev)
 {
-	__addrconf_sysctl_unregister(&idev->cnf);
+	__addrconf_sysctl_unregister(dev_net(idev->dev), &idev->cnf,
+				     idev->dev->ifindex);
 	neigh_sysctl_unregister(idev->nd_parms);
 }
 
@@ -6310,7 +6453,7 @@ static int __net_init addrconf_init_net(struct net *net)
 
 #ifdef CONFIG_SYSCTL
 err_reg_dflt:
-	__addrconf_sysctl_unregister(all);
+	__addrconf_sysctl_unregister(net, all, NETCONFA_IFINDEX_ALL);
 err_reg_all:
 	kfree(dflt);
 #endif
@@ -6323,8 +6466,10 @@ err_alloc_all:
 static void __net_exit addrconf_exit_net(struct net *net)
 {
 #ifdef CONFIG_SYSCTL
-	__addrconf_sysctl_unregister(net->ipv6.devconf_dflt);
-	__addrconf_sysctl_unregister(net->ipv6.devconf_all);
+	__addrconf_sysctl_unregister(net, net->ipv6.devconf_dflt,
+				     NETCONFA_IFINDEX_DEFAULT);
+	__addrconf_sysctl_unregister(net, net->ipv6.devconf_all,
+				     NETCONFA_IFINDEX_ALL);
 #endif
 	kfree(net->ipv6.devconf_dflt);
 	kfree(net->ipv6.devconf_all);

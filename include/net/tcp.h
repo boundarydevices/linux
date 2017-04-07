@@ -78,6 +78,9 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
 /* Maximal number of ACKs sent quickly to accelerate slow-start. */
 #define TCP_MAX_QUICKACKS	16U
 
+/* Maximal number of window scale according to RFC1323 */
+#define TCP_MAX_WSCALE		14U
+
 /* urg_data states */
 #define TCP_URG_VALID	0x0100
 #define TCP_URG_NOTYET	0x0200
@@ -406,11 +409,7 @@ void tcp_clear_retrans(struct tcp_sock *tp);
 void tcp_update_metrics(struct sock *sk);
 void tcp_init_metrics(struct sock *sk);
 void tcp_metrics_init(void);
-bool tcp_peer_is_proven(struct request_sock *req, struct dst_entry *dst,
-			bool paws_check, bool timestamps);
-bool tcp_remember_stamp(struct sock *sk);
-bool tcp_tw_remember_stamp(struct inet_timewait_sock *tw);
-void tcp_fetch_timewait_stamp(struct sock *sk, struct dst_entry *dst);
+bool tcp_peer_is_proven(struct request_sock *req, struct dst_entry *dst);
 void tcp_disable_fack(struct tcp_sock *tp);
 void tcp_close(struct sock *sk, long timeout);
 void tcp_init_sock(struct sock *sk);
@@ -1252,9 +1251,11 @@ void tcp_select_initial_window(int __space, __u32 mss, __u32 *rcv_wnd,
 
 static inline int tcp_win_from_space(int space)
 {
-	return sysctl_tcp_adv_win_scale<=0 ?
-		(space>>(-sysctl_tcp_adv_win_scale)) :
-		space - (space>>sysctl_tcp_adv_win_scale);
+	int tcp_adv_win_scale = sysctl_tcp_adv_win_scale;
+
+	return tcp_adv_win_scale <= 0 ?
+		(space>>(-tcp_adv_win_scale)) :
+		space - (space>>tcp_adv_win_scale);
 }
 
 /* Note: caller must be prepared to deal with negative returns */
@@ -1814,9 +1815,8 @@ struct tcp_request_sock_ops {
 				 __u16 *mss);
 #endif
 	struct dst_entry *(*route_req)(const struct sock *sk, struct flowi *fl,
-				       const struct request_sock *req,
-				       bool *strict);
-	__u32 (*init_seq)(const struct sk_buff *skb, u32 *tsoff);
+				       const struct request_sock *req);
+	__u32 (*init_seq_tsoff)(const struct sk_buff *skb, u32 *tsoff);
 	int (*send_synack)(const struct sock *sk, struct dst_entry *dst,
 			   struct flowi *fl, struct request_sock *req,
 			   struct tcp_fastopen_cookie *foc,

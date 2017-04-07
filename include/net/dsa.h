@@ -19,6 +19,7 @@
 #include <linux/workqueue.h>
 #include <linux/of.h>
 #include <linux/ethtool.h>
+#include <net/devlink.h>
 
 struct tc_action;
 struct phy_device;
@@ -182,6 +183,7 @@ struct dsa_port {
 	unsigned int		ageing_time;
 	u8			stp_state;
 	struct net_device	*bridge_dev;
+	struct devlink_port	devlink_port;
 };
 
 struct dsa_switch {
@@ -233,6 +235,13 @@ struct dsa_switch {
 	u32			phys_mii_mask;
 	struct mii_bus		*slave_mii_bus;
 
+	/* Ageing Time limits in msecs */
+	unsigned int ageing_time_min;
+	unsigned int ageing_time_max;
+
+	/* devlink used to represent this switch device */
+	struct devlink		*devlink;
+
 	/* Dynamically allocated ports, keep last */
 	size_t num_ports;
 	struct dsa_port ports[];
@@ -246,6 +255,11 @@ static inline bool dsa_is_cpu_port(struct dsa_switch *ds, int p)
 static inline bool dsa_is_dsa_port(struct dsa_switch *ds, int p)
 {
 	return !!((ds->dsa_port_mask) & (1 << p));
+}
+
+static inline bool dsa_is_normal_port(struct dsa_switch *ds, int p)
+{
+	return !dsa_is_cpu_port(ds, p) && !dsa_is_dsa_port(ds, p);
 }
 
 static inline bool dsa_is_port_initialized(struct dsa_switch *ds, int p)
@@ -442,6 +456,14 @@ struct dsa_switch_ops {
 				   bool ingress);
 	void	(*port_mirror_del)(struct dsa_switch *ds, int port,
 				   struct dsa_mall_mirror_tc_entry *mirror);
+
+	/*
+	 * Cross-chip operations
+	 */
+	int	(*crosschip_bridge_join)(struct dsa_switch *ds, int sw_index,
+					 int port, struct net_device *br);
+	void	(*crosschip_bridge_leave)(struct dsa_switch *ds, int sw_index,
+					  int port, struct net_device *br);
 };
 
 struct dsa_switch_driver {
@@ -457,6 +479,15 @@ struct net_device *dsa_dev_to_net_device(struct device *dev);
 static inline bool dsa_uses_tagged_protocol(struct dsa_switch_tree *dst)
 {
 	return dst->rcv != NULL;
+}
+
+static inline bool netdev_uses_dsa(struct net_device *dev)
+{
+#if IS_ENABLED(CONFIG_NET_DSA)
+	if (dev->dsa_ptr != NULL)
+		return dsa_uses_tagged_protocol(dev->dsa_ptr);
+#endif
+	return false;
 }
 
 struct dsa_switch *dsa_switch_alloc(struct device *dev, size_t n);

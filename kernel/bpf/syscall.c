@@ -215,7 +215,7 @@ int bpf_map_new_fd(struct bpf_map *map)
 		   offsetof(union bpf_attr, CMD##_LAST_FIELD) - \
 		   sizeof(attr->CMD##_LAST_FIELD)) != NULL
 
-#define BPF_MAP_CREATE_LAST_FIELD map_flags
+#define BPF_MAP_CREATE_LAST_FIELD inner_map_fd
 /* called via syscall */
 static int map_create(union bpf_attr *attr)
 {
@@ -352,6 +352,9 @@ static int map_lookup_elem(union bpf_attr *attr)
 		err = bpf_percpu_array_copy(map, key, value);
 	} else if (map->map_type == BPF_MAP_TYPE_STACK_TRACE) {
 		err = bpf_stackmap_copy(map, key, value);
+	} else if (map->map_type == BPF_MAP_TYPE_ARRAY_OF_MAPS ||
+		   map->map_type == BPF_MAP_TYPE_HASH_OF_MAPS) {
+		err = -ENOTSUPP;
 	} else {
 		rcu_read_lock();
 		ptr = map->ops->map_lookup_elem(map, key);
@@ -438,10 +441,16 @@ static int map_update_elem(union bpf_attr *attr)
 		err = bpf_percpu_array_update(map, key, value, attr->flags);
 	} else if (map->map_type == BPF_MAP_TYPE_PERF_EVENT_ARRAY ||
 		   map->map_type == BPF_MAP_TYPE_PROG_ARRAY ||
-		   map->map_type == BPF_MAP_TYPE_CGROUP_ARRAY) {
+		   map->map_type == BPF_MAP_TYPE_CGROUP_ARRAY ||
+		   map->map_type == BPF_MAP_TYPE_ARRAY_OF_MAPS) {
 		rcu_read_lock();
 		err = bpf_fd_array_map_update_elem(map, f.file, key, value,
 						   attr->flags);
+		rcu_read_unlock();
+	} else if (map->map_type == BPF_MAP_TYPE_HASH_OF_MAPS) {
+		rcu_read_lock();
+		err = bpf_fd_htab_map_update_elem(map, f.file, key, value,
+						  attr->flags);
 		rcu_read_unlock();
 	} else {
 		rcu_read_lock();
@@ -584,59 +593,6 @@ static int find_prog_type(enum bpf_prog_type type, struct bpf_prog *prog)
 void bpf_register_prog_type(struct bpf_prog_type_list *tl)
 {
 	list_add(&tl->list_node, &bpf_prog_types);
-}
-
-/* fixup insn->imm field of bpf_call instructions:
- * if (insn->imm == BPF_FUNC_map_lookup_elem)
- *      insn->imm = bpf_map_lookup_elem - __bpf_call_base;
- * else if (insn->imm == BPF_FUNC_map_update_elem)
- *      insn->imm = bpf_map_update_elem - __bpf_call_base;
- * else ...
- *
- * this function is called after eBPF program passed verification
- */
-static void fixup_bpf_calls(struct bpf_prog *prog)
-{
-	const struct bpf_func_proto *fn;
-	int i;
-
-	for (i = 0; i < prog->len; i++) {
-		struct bpf_insn *insn = &prog->insnsi[i];
-
-		if (insn->code == (BPF_JMP | BPF_CALL)) {
-			/* we reach here when program has bpf_call instructions
-			 * and it passed bpf_check(), means that
-			 * ops->get_func_proto must have been supplied, check it
-			 */
-			BUG_ON(!prog->aux->ops->get_func_proto);
-
-			if (insn->imm == BPF_FUNC_get_route_realm)
-				prog->dst_needed = 1;
-			if (insn->imm == BPF_FUNC_get_prandom_u32)
-				bpf_user_rnd_init_once();
-			if (insn->imm == BPF_FUNC_xdp_adjust_head)
-				prog->xdp_adjust_head = 1;
-			if (insn->imm == BPF_FUNC_tail_call) {
-				/* mark bpf_tail_call as different opcode
-				 * to avoid conditional branch in
-				 * interpeter for every normal call
-				 * and to prevent accidental JITing by
-				 * JIT compiler that doesn't support
-				 * bpf_tail_call yet
-				 */
-				insn->imm = 0;
-				insn->code |= BPF_X;
-				continue;
-			}
-
-			fn = prog->aux->ops->get_func_proto(insn->imm);
-			/* all functions that have prototype and verifier allowed
-			 * programs to call them, must be real in-kernel functions
-			 */
-			BUG_ON(!fn->func);
-			insn->imm = fn->func - __bpf_call_base;
-		}
-	}
 }
 
 /* drop refcnt on maps used by eBPF program and free auxilary data */
@@ -892,9 +848,6 @@ static int bpf_prog_load(union bpf_attr *attr)
 	if (err < 0)
 		goto free_used_maps;
 
-	/* fixup BPF_CALL->imm field */
-	fixup_bpf_calls(prog);
-
 	/* eBPF program is ready to be JITed */
 	prog = bpf_prog_select_runtime(prog, &err);
 	if (err < 0)
@@ -1020,6 +973,28 @@ static int bpf_prog_detach(const union bpf_attr *attr)
 }
 #endif /* CONFIG_CGROUP_BPF */
 
+#define BPF_PROG_TEST_RUN_LAST_FIELD test.duration
+
+static int bpf_prog_test_run(const union bpf_attr *attr,
+			     union bpf_attr __user *uattr)
+{
+	struct bpf_prog *prog;
+	int ret = -ENOTSUPP;
+
+	if (CHECK_ATTR(BPF_PROG_TEST_RUN))
+		return -EINVAL;
+
+	prog = bpf_prog_get(attr->test.prog_fd);
+	if (IS_ERR(prog))
+		return PTR_ERR(prog);
+
+	if (prog->aux->ops->test_run)
+		ret = prog->aux->ops->test_run(prog, attr, uattr);
+
+	bpf_prog_put(prog);
+	return ret;
+}
+
 SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, size)
 {
 	union bpf_attr attr = {};
@@ -1086,7 +1061,6 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 	case BPF_OBJ_GET:
 		err = bpf_obj_get(&attr);
 		break;
-
 #ifdef CONFIG_CGROUP_BPF
 	case BPF_PROG_ATTACH:
 		err = bpf_prog_attach(&attr);
@@ -1095,7 +1069,9 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 		err = bpf_prog_detach(&attr);
 		break;
 #endif
-
+	case BPF_PROG_TEST_RUN:
+		err = bpf_prog_test_run(&attr, uattr);
+		break;
 	default:
 		err = -EINVAL;
 		break;

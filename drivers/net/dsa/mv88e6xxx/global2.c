@@ -4,7 +4,8 @@
  *
  * Copyright (c) 2008 Marvell Semiconductor
  *
- * Copyright (c) 2016 Vivien Didelot <vivien.didelot@savoirfairelinux.com>
+ * Copyright (c) 2016-2017 Savoir-faire Linux Inc.
+ *	Vivien Didelot <vivien.didelot@savoirfairelinux.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,6 +13,7 @@
  * (at your option) any later version.
  */
 
+#include <linux/interrupt.h>
 #include <linux/irqdomain.h>
 #include "mv88e6xxx.h"
 #include "global2.h"
@@ -168,6 +170,50 @@ static int mv88e6xxx_g2_clear_irl(struct mv88e6xxx_chip *chip)
 	}
 
 	return err;
+}
+
+/* Offset 0x0B: Cross-chip Port VLAN (Addr) Register
+ * Offset 0x0C: Cross-chip Port VLAN Data Register
+ */
+
+static int mv88e6xxx_g2_pvt_op_wait(struct mv88e6xxx_chip *chip)
+{
+	return mv88e6xxx_g2_wait(chip, GLOBAL2_PVT_ADDR, GLOBAL2_PVT_ADDR_BUSY);
+}
+
+static int mv88e6xxx_g2_pvt_op(struct mv88e6xxx_chip *chip, int src_dev,
+			       int src_port, u16 op)
+{
+	int err;
+
+	/* 9-bit Cross-chip PVT pointer: with GLOBAL2_MISC_5_BIT_PORT cleared,
+	 * source device is 5-bit, source port is 4-bit.
+	 */
+	op |= (src_dev & 0x1f) << 4;
+	op |= (src_port & 0xf);
+
+	err = mv88e6xxx_g2_write(chip, GLOBAL2_PVT_ADDR, op);
+	if (err)
+		return err;
+
+	return mv88e6xxx_g2_pvt_op_wait(chip);
+}
+
+int mv88e6xxx_g2_pvt_write(struct mv88e6xxx_chip *chip, int src_dev,
+			   int src_port, u16 data)
+{
+	int err;
+
+	err = mv88e6xxx_g2_pvt_op_wait(chip);
+	if (err)
+		return err;
+
+	err = mv88e6xxx_g2_write(chip, GLOBAL2_PVT_DATA, data);
+	if (err)
+		return err;
+
+	return mv88e6xxx_g2_pvt_op(chip, src_dev, src_port,
+				   GLOBAL2_PVT_ADDR_OP_WRITE_PVLAN);
 }
 
 /* Offset 0x0D: Switch MAC/WoL/WoF register */
@@ -782,6 +828,31 @@ static int mv88e6xxx_g2_watchdog_setup(struct mv88e6xxx_chip *chip)
 	return err;
 }
 
+/* Offset 0x1D: Misc Register */
+
+static int mv88e6xxx_g2_misc_5_bit_port(struct mv88e6xxx_chip *chip,
+					bool port_5_bit)
+{
+	u16 val;
+	int err;
+
+	err = mv88e6xxx_g2_read(chip, GLOBAL2_MISC, &val);
+	if (err)
+		return err;
+
+	if (port_5_bit)
+		val |= GLOBAL2_MISC_5_BIT_PORT;
+	else
+		val &= ~GLOBAL2_MISC_5_BIT_PORT;
+
+	return mv88e6xxx_g2_write(chip, GLOBAL2_MISC, val);
+}
+
+int mv88e6xxx_g2_misc_4_bit_port(struct mv88e6xxx_chip *chip)
+{
+	return mv88e6xxx_g2_misc_5_bit_port(chip, false);
+}
+
 static void mv88e6xxx_g2_irq_mask(struct irq_data *d)
 {
 	struct mv88e6xxx_chip *chip = irq_data_get_irq_chip_data(d);
@@ -962,14 +1033,6 @@ int mv88e6xxx_g2_setup(struct mv88e6xxx_chip *chip)
 		err = mv88e6xxx_g2_clear_irl(chip);
 			if (err)
 				return err;
-	}
-
-	if (mv88e6xxx_has(chip, MV88E6XXX_FLAGS_PVT)) {
-		/* Initialize Cross-chip Port VLAN Table to reset defaults */
-		err = mv88e6xxx_g2_write(chip, GLOBAL2_PVT_ADDR,
-					 GLOBAL2_PVT_ADDR_OP_INIT_ONES);
-		if (err)
-			return err;
 	}
 
 	if (mv88e6xxx_has(chip, MV88E6XXX_FLAG_G2_POT)) {

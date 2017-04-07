@@ -568,8 +568,8 @@ void mlxsw_sp_fid_destroy(struct mlxsw_sp *mlxsw_sp, struct mlxsw_sp_fid *f)
 
 	list_del(&f->list);
 
-	if (f->r)
-		mlxsw_sp_rif_bridge_destroy(mlxsw_sp, f->r);
+	if (f->rif)
+		mlxsw_sp_rif_bridge_destroy(mlxsw_sp, f->rif);
 
 	kfree(f);
 
@@ -1012,7 +1012,7 @@ static int mlxsw_sp_port_smid_set(struct mlxsw_sp_port *mlxsw_sp_port, u16 mid,
 
 	mlxsw_reg_smid_pack(smid_pl, mid, mlxsw_sp_port->local_port, add);
 	if (clear_all_ports) {
-		for (i = 1; i < MLXSW_PORT_MAX_PORTS; i++)
+		for (i = 1; i < mlxsw_core_max_ports(mlxsw_sp->core); i++)
 			if (mlxsw_sp->ports[i])
 				mlxsw_reg_smid_port_mask_set(smid_pl, i, 1);
 	}

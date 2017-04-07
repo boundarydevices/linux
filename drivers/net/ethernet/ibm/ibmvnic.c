@@ -65,7 +65,6 @@
 #include <linux/irq.h>
 #include <linux/kthread.h>
 #include <linux/seq_file.h>
-#include <linux/debugfs.h>
 #include <linux/interrupt.h>
 #include <net/net_namespace.h>
 #include <asm/hvcall.h>
@@ -89,7 +88,6 @@ MODULE_VERSION(IBMVNIC_DRIVER_VERSION);
 static int ibmvnic_version = IBMVNIC_INITIAL_VERSION;
 static int ibmvnic_remove(struct vio_dev *);
 static void release_sub_crqs(struct ibmvnic_adapter *);
-static void release_sub_crqs_no_irqs(struct ibmvnic_adapter *);
 static int ibmvnic_reset_crq(struct ibmvnic_adapter *);
 static int ibmvnic_send_crq_init(struct ibmvnic_adapter *);
 static int ibmvnic_reenable_crq_queue(struct ibmvnic_adapter *);
@@ -110,6 +108,11 @@ static int ibmvnic_poll(struct napi_struct *napi, int data);
 static void send_map_query(struct ibmvnic_adapter *adapter);
 static void send_request_map(struct ibmvnic_adapter *, dma_addr_t, __be32, u8);
 static void send_request_unmap(struct ibmvnic_adapter *, u8);
+static void send_login(struct ibmvnic_adapter *adapter);
+static void send_cap_queries(struct ibmvnic_adapter *adapter);
+static int init_sub_crq_irqs(struct ibmvnic_adapter *adapter);
+static int ibmvnic_init(struct ibmvnic_adapter *);
+static void release_crq_queue(struct ibmvnic_adapter *);
 
 struct ibmvnic_stat {
 	char name[ETH_GSTRING_LEN];
@@ -159,21 +162,6 @@ static long h_reg_sub_crq(unsigned long unit_address, unsigned long token,
 	return rc;
 }
 
-/* net_device_ops functions */
-
-static void init_rx_pool(struct ibmvnic_adapter *adapter,
-			 struct ibmvnic_rx_pool *rx_pool, int num, int index,
-			 int buff_size, int active)
-{
-	netdev_dbg(adapter->netdev,
-		   "Initializing rx_pool %d, %d buffs, %d bytes each\n",
-		   index, num, buff_size);
-	rx_pool->size = num;
-	rx_pool->index = index;
-	rx_pool->buff_size = buff_size;
-	rx_pool->active = active;
-}
-
 static int alloc_long_term_buff(struct ibmvnic_adapter *adapter,
 				struct ibmvnic_long_term_buff *ltb, int size)
 {
@@ -202,45 +190,12 @@ static void free_long_term_buff(struct ibmvnic_adapter *adapter,
 {
 	struct device *dev = &adapter->vdev->dev;
 
+	if (!ltb->buff)
+		return;
+
 	dma_free_coherent(dev, ltb->size, ltb->buff, ltb->addr);
 	if (!adapter->failover)
 		send_request_unmap(adapter, ltb->map_id);
-}
-
-static int alloc_rx_pool(struct ibmvnic_adapter *adapter,
-			 struct ibmvnic_rx_pool *pool)
-{
-	struct device *dev = &adapter->vdev->dev;
-	int i;
-
-	pool->free_map = kcalloc(pool->size, sizeof(int), GFP_KERNEL);
-	if (!pool->free_map)
-		return -ENOMEM;
-
-	pool->rx_buff = kcalloc(pool->size, sizeof(struct ibmvnic_rx_buff),
-				GFP_KERNEL);
-
-	if (!pool->rx_buff) {
-		dev_err(dev, "Couldn't alloc rx buffers\n");
-		kfree(pool->free_map);
-		return -ENOMEM;
-	}
-
-	if (alloc_long_term_buff(adapter, &pool->long_term_buff,
-				 pool->size * pool->buff_size)) {
-		kfree(pool->free_map);
-		kfree(pool->rx_buff);
-		return -ENOMEM;
-	}
-
-	for (i = 0; i < pool->size; ++i)
-		pool->free_map[i] = i;
-
-	atomic_set(&pool->available, 0);
-	pool->next_alloc = 0;
-	pool->next_free = 0;
-
-	return 0;
 }
 
 static void replenish_rx_pool(struct ibmvnic_adapter *adapter,
@@ -347,93 +302,195 @@ static void replenish_pools(struct ibmvnic_adapter *adapter)
 	}
 }
 
-static void free_rx_pool(struct ibmvnic_adapter *adapter,
-			 struct ibmvnic_rx_pool *pool)
+static void release_stats_token(struct ibmvnic_adapter *adapter)
 {
-	int i;
+	struct device *dev = &adapter->vdev->dev;
 
-	kfree(pool->free_map);
-	pool->free_map = NULL;
-
-	if (!pool->rx_buff)
+	if (!adapter->stats_token)
 		return;
 
-	for (i = 0; i < pool->size; i++) {
-		if (pool->rx_buff[i].skb) {
-			dev_kfree_skb_any(pool->rx_buff[i].skb);
-			pool->rx_buff[i].skb = NULL;
-		}
-	}
-	kfree(pool->rx_buff);
-	pool->rx_buff = NULL;
+	dma_unmap_single(dev, adapter->stats_token,
+			 sizeof(struct ibmvnic_statistics),
+			 DMA_FROM_DEVICE);
+	adapter->stats_token = 0;
 }
 
-static int ibmvnic_open(struct net_device *netdev)
+static int init_stats_token(struct ibmvnic_adapter *adapter)
+{
+	struct device *dev = &adapter->vdev->dev;
+	dma_addr_t stok;
+
+	stok = dma_map_single(dev, &adapter->stats,
+			      sizeof(struct ibmvnic_statistics),
+			      DMA_FROM_DEVICE);
+	if (dma_mapping_error(dev, stok)) {
+		dev_err(dev, "Couldn't map stats buffer\n");
+		return -1;
+	}
+
+	adapter->stats_token = stok;
+	return 0;
+}
+
+static void release_rx_pools(struct ibmvnic_adapter *adapter)
+{
+	struct ibmvnic_rx_pool *rx_pool;
+	int rx_scrqs;
+	int i, j;
+
+	if (!adapter->rx_pool)
+		return;
+
+	rx_scrqs = be32_to_cpu(adapter->login_rsp_buf->num_rxadd_subcrqs);
+	for (i = 0; i < rx_scrqs; i++) {
+		rx_pool = &adapter->rx_pool[i];
+
+		kfree(rx_pool->free_map);
+		free_long_term_buff(adapter, &rx_pool->long_term_buff);
+
+		if (!rx_pool->rx_buff)
+		continue;
+
+		for (j = 0; j < rx_pool->size; j++) {
+			if (rx_pool->rx_buff[j].skb) {
+				dev_kfree_skb_any(rx_pool->rx_buff[i].skb);
+				rx_pool->rx_buff[i].skb = NULL;
+			}
+		}
+
+		kfree(rx_pool->rx_buff);
+	}
+
+	kfree(adapter->rx_pool);
+	adapter->rx_pool = NULL;
+}
+
+static int init_rx_pools(struct net_device *netdev)
+{
+	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
+	struct device *dev = &adapter->vdev->dev;
+	struct ibmvnic_rx_pool *rx_pool;
+	int rxadd_subcrqs;
+	u64 *size_array;
+	int i, j;
+
+	rxadd_subcrqs =
+		be32_to_cpu(adapter->login_rsp_buf->num_rxadd_subcrqs);
+	size_array = (u64 *)((u8 *)(adapter->login_rsp_buf) +
+		be32_to_cpu(adapter->login_rsp_buf->off_rxadd_buff_size));
+
+	adapter->rx_pool = kcalloc(rxadd_subcrqs,
+				   sizeof(struct ibmvnic_rx_pool),
+				   GFP_KERNEL);
+	if (!adapter->rx_pool) {
+		dev_err(dev, "Failed to allocate rx pools\n");
+		return -1;
+	}
+
+	for (i = 0; i < rxadd_subcrqs; i++) {
+		rx_pool = &adapter->rx_pool[i];
+
+		netdev_dbg(adapter->netdev,
+			   "Initializing rx_pool %d, %lld buffs, %lld bytes each\n",
+			   i, adapter->req_rx_add_entries_per_subcrq,
+			   be64_to_cpu(size_array[i]));
+
+		rx_pool->size = adapter->req_rx_add_entries_per_subcrq;
+		rx_pool->index = i;
+		rx_pool->buff_size = be64_to_cpu(size_array[i]);
+		rx_pool->active = 1;
+
+		rx_pool->free_map = kcalloc(rx_pool->size, sizeof(int),
+					    GFP_KERNEL);
+		if (!rx_pool->free_map) {
+			release_rx_pools(adapter);
+			return -1;
+		}
+
+		rx_pool->rx_buff = kcalloc(rx_pool->size,
+					   sizeof(struct ibmvnic_rx_buff),
+					   GFP_KERNEL);
+		if (!rx_pool->rx_buff) {
+			dev_err(dev, "Couldn't alloc rx buffers\n");
+			release_rx_pools(adapter);
+			return -1;
+		}
+
+		if (alloc_long_term_buff(adapter, &rx_pool->long_term_buff,
+					 rx_pool->size * rx_pool->buff_size)) {
+			release_rx_pools(adapter);
+			return -1;
+		}
+
+		for (j = 0; j < rx_pool->size; ++j)
+			rx_pool->free_map[j] = j;
+
+		atomic_set(&rx_pool->available, 0);
+		rx_pool->next_alloc = 0;
+		rx_pool->next_free = 0;
+	}
+
+	return 0;
+}
+
+static void release_tx_pools(struct ibmvnic_adapter *adapter)
+{
+	struct ibmvnic_tx_pool *tx_pool;
+	int i, tx_scrqs;
+
+	if (!adapter->tx_pool)
+		return;
+
+	tx_scrqs = be32_to_cpu(adapter->login_rsp_buf->num_txsubm_subcrqs);
+	for (i = 0; i < tx_scrqs; i++) {
+		tx_pool = &adapter->tx_pool[i];
+		kfree(tx_pool->tx_buff);
+		free_long_term_buff(adapter, &tx_pool->long_term_buff);
+		kfree(tx_pool->free_map);
+	}
+
+	kfree(adapter->tx_pool);
+	adapter->tx_pool = NULL;
+}
+
+static int init_tx_pools(struct net_device *netdev)
 {
 	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
 	struct device *dev = &adapter->vdev->dev;
 	struct ibmvnic_tx_pool *tx_pool;
-	union ibmvnic_crq crq;
-	int rxadd_subcrqs;
-	u64 *size_array;
 	int tx_subcrqs;
 	int i, j;
 
-	rxadd_subcrqs =
-	    be32_to_cpu(adapter->login_rsp_buf->num_rxadd_subcrqs);
-	tx_subcrqs =
-	    be32_to_cpu(adapter->login_rsp_buf->num_txsubm_subcrqs);
-	size_array = (u64 *)((u8 *)(adapter->login_rsp_buf) +
-				  be32_to_cpu(adapter->login_rsp_buf->
-					      off_rxadd_buff_size));
-	adapter->map_id = 1;
-	adapter->napi = kcalloc(adapter->req_rx_queues,
-				sizeof(struct napi_struct), GFP_KERNEL);
-	if (!adapter->napi)
-		goto alloc_napi_failed;
-	for (i = 0; i < adapter->req_rx_queues; i++) {
-		netif_napi_add(netdev, &adapter->napi[i], ibmvnic_poll,
-			       NAPI_POLL_WEIGHT);
-		napi_enable(&adapter->napi[i]);
-	}
-	adapter->rx_pool =
-	    kcalloc(rxadd_subcrqs, sizeof(struct ibmvnic_rx_pool), GFP_KERNEL);
-
-	if (!adapter->rx_pool)
-		goto rx_pool_arr_alloc_failed;
-	send_map_query(adapter);
-	for (i = 0; i < rxadd_subcrqs; i++) {
-		init_rx_pool(adapter, &adapter->rx_pool[i],
-			     adapter->req_rx_add_entries_per_subcrq, i,
-			     be64_to_cpu(size_array[i]), 1);
-		if (alloc_rx_pool(adapter, &adapter->rx_pool[i])) {
-			dev_err(dev, "Couldn't alloc rx pool\n");
-			goto rx_pool_alloc_failed;
-		}
-	}
-	adapter->tx_pool =
-	    kcalloc(tx_subcrqs, sizeof(struct ibmvnic_tx_pool), GFP_KERNEL);
-
+	tx_subcrqs = be32_to_cpu(adapter->login_rsp_buf->num_txsubm_subcrqs);
+	adapter->tx_pool = kcalloc(tx_subcrqs,
+				   sizeof(struct ibmvnic_tx_pool), GFP_KERNEL);
 	if (!adapter->tx_pool)
-		goto tx_pool_arr_alloc_failed;
+		return -1;
+
 	for (i = 0; i < tx_subcrqs; i++) {
 		tx_pool = &adapter->tx_pool[i];
-		tx_pool->tx_buff =
-		    kcalloc(adapter->req_tx_entries_per_subcrq,
-			    sizeof(struct ibmvnic_tx_buff), GFP_KERNEL);
-		if (!tx_pool->tx_buff)
-			goto tx_pool_alloc_failed;
+		tx_pool->tx_buff = kcalloc(adapter->req_tx_entries_per_subcrq,
+					   sizeof(struct ibmvnic_tx_buff),
+					   GFP_KERNEL);
+		if (!tx_pool->tx_buff) {
+			dev_err(dev, "tx pool buffer allocation failed\n");
+			release_tx_pools(adapter);
+			return -1;
+		}
 
 		if (alloc_long_term_buff(adapter, &tx_pool->long_term_buff,
 					 adapter->req_tx_entries_per_subcrq *
-					 adapter->req_mtu))
-			goto tx_ltb_alloc_failed;
+					 adapter->req_mtu)) {
+			release_tx_pools(adapter);
+			return -1;
+		}
 
-		tx_pool->free_map =
-		    kcalloc(adapter->req_tx_entries_per_subcrq,
-			    sizeof(int), GFP_KERNEL);
-		if (!tx_pool->free_map)
-			goto tx_fm_alloc_failed;
+		tx_pool->free_map = kcalloc(adapter->req_tx_entries_per_subcrq,
+					    sizeof(int), GFP_KERNEL);
+		if (!tx_pool->free_map) {
+			release_tx_pools(adapter);
+			return -1;
+		}
 
 		for (j = 0; j < adapter->req_tx_entries_per_subcrq; j++)
 			tx_pool->free_map[j] = j;
@@ -441,20 +498,153 @@ static int ibmvnic_open(struct net_device *netdev)
 		tx_pool->consumer_index = 0;
 		tx_pool->producer_index = 0;
 	}
-	adapter->bounce_buffer_size =
-	    (netdev->mtu + ETH_HLEN - 1) / PAGE_SIZE + 1;
-	adapter->bounce_buffer = kmalloc(adapter->bounce_buffer_size,
-					 GFP_KERNEL);
-	if (!adapter->bounce_buffer)
-		goto bounce_alloc_failed;
 
-	adapter->bounce_buffer_dma = dma_map_single(dev, adapter->bounce_buffer,
-						    adapter->bounce_buffer_size,
-						    DMA_TO_DEVICE);
-	if (dma_mapping_error(dev, adapter->bounce_buffer_dma)) {
-		dev_err(dev, "Couldn't map tx bounce buffer\n");
-		goto bounce_map_failed;
+	return 0;
+}
+
+static void release_bounce_buffer(struct ibmvnic_adapter *adapter)
+{
+	struct device *dev = &adapter->vdev->dev;
+
+	if (!adapter->bounce_buffer)
+		return;
+
+	if (!dma_mapping_error(dev, adapter->bounce_buffer_dma)) {
+		dma_unmap_single(dev, adapter->bounce_buffer_dma,
+				 adapter->bounce_buffer_size,
+				 DMA_BIDIRECTIONAL);
+		adapter->bounce_buffer_dma = DMA_ERROR_CODE;
 	}
+
+	kfree(adapter->bounce_buffer);
+	adapter->bounce_buffer = NULL;
+}
+
+static int init_bounce_buffer(struct net_device *netdev)
+{
+	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
+	struct device *dev = &adapter->vdev->dev;
+	char *buf;
+	int buf_sz;
+	dma_addr_t map_addr;
+
+	buf_sz = (netdev->mtu + ETH_HLEN - 1) / PAGE_SIZE + 1;
+	buf = kmalloc(adapter->bounce_buffer_size, GFP_KERNEL);
+	if (!buf)
+		return -1;
+
+	map_addr = dma_map_single(dev, buf, buf_sz, DMA_TO_DEVICE);
+	if (dma_mapping_error(dev, map_addr)) {
+		dev_err(dev, "Couldn't map bounce buffer\n");
+		kfree(buf);
+		return -1;
+	}
+
+	adapter->bounce_buffer = buf;
+	adapter->bounce_buffer_size = buf_sz;
+	adapter->bounce_buffer_dma = map_addr;
+	return 0;
+}
+
+static int ibmvnic_login(struct net_device *netdev)
+{
+	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
+	unsigned long timeout = msecs_to_jiffies(30000);
+	struct device *dev = &adapter->vdev->dev;
+
+	do {
+		if (adapter->renegotiate) {
+			adapter->renegotiate = false;
+			release_sub_crqs(adapter);
+
+			reinit_completion(&adapter->init_done);
+			send_cap_queries(adapter);
+			if (!wait_for_completion_timeout(&adapter->init_done,
+							 timeout)) {
+				dev_err(dev, "Capabilities query timeout\n");
+				return -1;
+			}
+		}
+
+		reinit_completion(&adapter->init_done);
+		send_login(adapter);
+		if (!wait_for_completion_timeout(&adapter->init_done,
+						 timeout)) {
+			dev_err(dev, "Login timeout\n");
+			return -1;
+		}
+	} while (adapter->renegotiate);
+
+	return 0;
+}
+
+static void release_resources(struct ibmvnic_adapter *adapter)
+{
+	release_bounce_buffer(adapter);
+	release_tx_pools(adapter);
+	release_rx_pools(adapter);
+
+	release_sub_crqs(adapter);
+	release_crq_queue(adapter);
+
+	release_stats_token(adapter);
+}
+
+static int ibmvnic_open(struct net_device *netdev)
+{
+	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
+	struct device *dev = &adapter->vdev->dev;
+	union ibmvnic_crq crq;
+	int rc = 0;
+	int i;
+
+	if (adapter->is_closed) {
+		rc = ibmvnic_init(adapter);
+		if (rc)
+			return rc;
+	}
+
+	rc = ibmvnic_login(netdev);
+	if (rc)
+		return rc;
+
+	rc = netif_set_real_num_tx_queues(netdev, adapter->req_tx_queues);
+	if (rc) {
+		dev_err(dev, "failed to set the number of tx queues\n");
+		return -1;
+	}
+
+	rc = init_sub_crq_irqs(adapter);
+	if (rc) {
+		dev_err(dev, "failed to initialize sub crq irqs\n");
+		return -1;
+	}
+
+	adapter->map_id = 1;
+	adapter->napi = kcalloc(adapter->req_rx_queues,
+				sizeof(struct napi_struct), GFP_KERNEL);
+	if (!adapter->napi)
+		goto ibmvnic_open_fail;
+	for (i = 0; i < adapter->req_rx_queues; i++) {
+		netif_napi_add(netdev, &adapter->napi[i], ibmvnic_poll,
+			       NAPI_POLL_WEIGHT);
+		napi_enable(&adapter->napi[i]);
+	}
+
+	send_map_query(adapter);
+
+	rc = init_rx_pools(netdev);
+	if (rc)
+		goto ibmvnic_open_fail;
+
+	rc = init_tx_pools(netdev);
+	if (rc)
+		goto ibmvnic_open_fail;
+
+	rc = init_bounce_buffer(netdev);
+	if (rc)
+		goto ibmvnic_open_fail;
+
 	replenish_pools(adapter);
 
 	/* We're ready to receive frames, enable the sub-crq interrupts and
@@ -473,48 +663,20 @@ static int ibmvnic_open(struct net_device *netdev)
 	ibmvnic_send_crq(adapter, &crq);
 
 	netif_tx_start_all_queues(netdev);
+	adapter->is_closed = false;
 
 	return 0;
 
-bounce_map_failed:
-	kfree(adapter->bounce_buffer);
-bounce_alloc_failed:
-	i = tx_subcrqs - 1;
-	kfree(adapter->tx_pool[i].free_map);
-tx_fm_alloc_failed:
-	free_long_term_buff(adapter, &adapter->tx_pool[i].long_term_buff);
-tx_ltb_alloc_failed:
-	kfree(adapter->tx_pool[i].tx_buff);
-tx_pool_alloc_failed:
-	for (j = 0; j < i; j++) {
-		kfree(adapter->tx_pool[j].tx_buff);
-		free_long_term_buff(adapter,
-				    &adapter->tx_pool[j].long_term_buff);
-		kfree(adapter->tx_pool[j].free_map);
-	}
-	kfree(adapter->tx_pool);
-	adapter->tx_pool = NULL;
-tx_pool_arr_alloc_failed:
-	i = rxadd_subcrqs;
-rx_pool_alloc_failed:
-	for (j = 0; j < i; j++) {
-		free_rx_pool(adapter, &adapter->rx_pool[j]);
-		free_long_term_buff(adapter,
-				    &adapter->rx_pool[j].long_term_buff);
-	}
-	kfree(adapter->rx_pool);
-	adapter->rx_pool = NULL;
-rx_pool_arr_alloc_failed:
+ibmvnic_open_fail:
 	for (i = 0; i < adapter->req_rx_queues; i++)
 		napi_disable(&adapter->napi[i]);
-alloc_napi_failed:
+	release_resources(adapter);
 	return -ENOMEM;
 }
 
 static int ibmvnic_close(struct net_device *netdev)
 {
 	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
-	struct device *dev = &adapter->vdev->dev;
 	union ibmvnic_crq crq;
 	int i;
 
@@ -526,45 +688,16 @@ static int ibmvnic_close(struct net_device *netdev)
 	if (!adapter->failover)
 		netif_tx_stop_all_queues(netdev);
 
-	if (adapter->bounce_buffer) {
-		if (!dma_mapping_error(dev, adapter->bounce_buffer_dma)) {
-			dma_unmap_single(&adapter->vdev->dev,
-					 adapter->bounce_buffer_dma,
-					 adapter->bounce_buffer_size,
-					 DMA_BIDIRECTIONAL);
-			adapter->bounce_buffer_dma = DMA_ERROR_CODE;
-		}
-		kfree(adapter->bounce_buffer);
-		adapter->bounce_buffer = NULL;
-	}
-
 	memset(&crq, 0, sizeof(crq));
 	crq.logical_link_state.first = IBMVNIC_CRQ_CMD;
 	crq.logical_link_state.cmd = LOGICAL_LINK_STATE;
 	crq.logical_link_state.link_state = IBMVNIC_LOGICAL_LNK_DN;
 	ibmvnic_send_crq(adapter, &crq);
 
-	for (i = 0; i < be32_to_cpu(adapter->login_rsp_buf->num_txsubm_subcrqs);
-	     i++) {
-		kfree(adapter->tx_pool[i].tx_buff);
-		free_long_term_buff(adapter,
-				    &adapter->tx_pool[i].long_term_buff);
-		kfree(adapter->tx_pool[i].free_map);
-	}
-	kfree(adapter->tx_pool);
-	adapter->tx_pool = NULL;
+	release_resources(adapter);
 
-	for (i = 0; i < be32_to_cpu(adapter->login_rsp_buf->num_rxadd_subcrqs);
-	     i++) {
-		free_rx_pool(adapter, &adapter->rx_pool[i]);
-		free_long_term_buff(adapter,
-				    &adapter->rx_pool[i].long_term_buff);
-	}
-	kfree(adapter->rx_pool);
-	adapter->rx_pool = NULL;
-
+	adapter->is_closed = true;
 	adapter->closing = false;
-
 	return 0;
 }
 
@@ -1249,49 +1382,40 @@ static void release_sub_crqs(struct ibmvnic_adapter *adapter)
 	int i;
 
 	if (adapter->tx_scrq) {
-		for (i = 0; i < adapter->req_tx_queues; i++)
-			if (adapter->tx_scrq[i]) {
+		for (i = 0; i < adapter->req_tx_queues; i++) {
+			if (!adapter->tx_scrq[i])
+				continue;
+
+			if (adapter->tx_scrq[i]->irq) {
 				free_irq(adapter->tx_scrq[i]->irq,
 					 adapter->tx_scrq[i]);
 				irq_dispose_mapping(adapter->tx_scrq[i]->irq);
-				release_sub_crq_queue(adapter,
-						      adapter->tx_scrq[i]);
+				adapter->tx_scrq[i]->irq = 0;
 			}
+
+			release_sub_crq_queue(adapter, adapter->tx_scrq[i]);
+		}
+
 		kfree(adapter->tx_scrq);
 		adapter->tx_scrq = NULL;
 	}
 
 	if (adapter->rx_scrq) {
-		for (i = 0; i < adapter->req_rx_queues; i++)
-			if (adapter->rx_scrq[i]) {
+		for (i = 0; i < adapter->req_rx_queues; i++) {
+			if (!adapter->rx_scrq[i])
+				continue;
+
+			if (adapter->rx_scrq[i]->irq) {
 				free_irq(adapter->rx_scrq[i]->irq,
 					 adapter->rx_scrq[i]);
 				irq_dispose_mapping(adapter->rx_scrq[i]->irq);
-				release_sub_crq_queue(adapter,
-						      adapter->rx_scrq[i]);
+				adapter->rx_scrq[i]->irq = 0;
 			}
+
+			release_sub_crq_queue(adapter, adapter->rx_scrq[i]);
+		}
+
 		kfree(adapter->rx_scrq);
-		adapter->rx_scrq = NULL;
-	}
-}
-
-static void release_sub_crqs_no_irqs(struct ibmvnic_adapter *adapter)
-{
-	int i;
-
-	if (adapter->tx_scrq) {
-		for (i = 0; i < adapter->req_tx_queues; i++)
-			if (adapter->tx_scrq[i])
-				release_sub_crq_queue(adapter,
-						      adapter->tx_scrq[i]);
-		adapter->tx_scrq = NULL;
-	}
-
-	if (adapter->rx_scrq) {
-		for (i = 0; i < adapter->req_rx_queues; i++)
-			if (adapter->rx_scrq[i])
-				release_sub_crq_queue(adapter,
-						      adapter->rx_scrq[i]);
 		adapter->rx_scrq = NULL;
 	}
 }
@@ -1487,7 +1611,7 @@ req_tx_irq_failed:
 		free_irq(adapter->tx_scrq[j]->irq, adapter->tx_scrq[j]);
 		irq_dispose_mapping(adapter->rx_scrq[j]->irq);
 	}
-	release_sub_crqs_no_irqs(adapter);
+	release_sub_crqs(adapter);
 	return rc;
 }
 
@@ -2242,57 +2366,6 @@ static void handle_error_info_rsp(union ibmvnic_crq *crq,
 	kfree(error_buff);
 }
 
-static void handle_dump_size_rsp(union ibmvnic_crq *crq,
-				 struct ibmvnic_adapter *adapter)
-{
-	int len = be32_to_cpu(crq->request_dump_size_rsp.len);
-	struct ibmvnic_inflight_cmd *inflight_cmd;
-	struct device *dev = &adapter->vdev->dev;
-	union ibmvnic_crq newcrq;
-	unsigned long flags;
-
-	/* allocate and map buffer */
-	adapter->dump_data = kmalloc(len, GFP_KERNEL);
-	if (!adapter->dump_data) {
-		complete(&adapter->fw_done);
-		return;
-	}
-
-	adapter->dump_data_token = dma_map_single(dev, adapter->dump_data, len,
-						  DMA_FROM_DEVICE);
-
-	if (dma_mapping_error(dev, adapter->dump_data_token)) {
-		if (!firmware_has_feature(FW_FEATURE_CMO))
-			dev_err(dev, "Couldn't map dump data\n");
-		kfree(adapter->dump_data);
-		complete(&adapter->fw_done);
-		return;
-	}
-
-	inflight_cmd = kmalloc(sizeof(*inflight_cmd), GFP_ATOMIC);
-	if (!inflight_cmd) {
-		dma_unmap_single(dev, adapter->dump_data_token, len,
-				 DMA_FROM_DEVICE);
-		kfree(adapter->dump_data);
-		complete(&adapter->fw_done);
-		return;
-	}
-
-	memset(&newcrq, 0, sizeof(newcrq));
-	newcrq.request_dump.first = IBMVNIC_CRQ_CMD;
-	newcrq.request_dump.cmd = REQUEST_DUMP;
-	newcrq.request_dump.ioba = cpu_to_be32(adapter->dump_data_token);
-	newcrq.request_dump.len = cpu_to_be32(adapter->dump_data_size);
-
-	memcpy(&inflight_cmd->crq, &newcrq, sizeof(newcrq));
-
-	spin_lock_irqsave(&adapter->inflight_lock, flags);
-	list_add_tail(&inflight_cmd->list, &adapter->inflight);
-	spin_unlock_irqrestore(&adapter->inflight_lock, flags);
-
-	ibmvnic_send_crq(adapter, &newcrq);
-}
-
 static void handle_error_indication(union ibmvnic_crq *crq,
 				    struct ibmvnic_adapter *adapter)
 {
@@ -2428,7 +2501,7 @@ static void handle_request_cap_rsp(union ibmvnic_crq *crq,
 			 *req_value,
 			 (long int)be64_to_cpu(crq->request_capability_rsp.
 					       number), name);
-		release_sub_crqs_no_irqs(adapter);
+		release_sub_crqs(adapter);
 		*req_value = be64_to_cpu(crq->request_capability_rsp.number);
 		init_sub_crqs(adapter, 1);
 		return;
@@ -2473,7 +2546,6 @@ static int handle_login_rsp(union ibmvnic_crq *login_rsp_crq,
 	struct device *dev = &adapter->vdev->dev;
 	struct ibmvnic_login_rsp_buffer *login_rsp = adapter->login_rsp_buf;
 	struct ibmvnic_login_buffer *login = adapter->login_buf;
-	union ibmvnic_crq crq;
 	int i;
 
 	dma_unmap_single(dev, adapter->login_buf_token, adapter->login_buf_sz,
@@ -2507,11 +2579,6 @@ static int handle_login_rsp(union ibmvnic_crq *login_rsp_crq,
 		return -EIO;
 	}
 	complete(&adapter->init_done);
-
-	memset(&crq, 0, sizeof(crq));
-	crq.request_ras_comp_num.first = IBMVNIC_CRQ_CMD;
-	crq.request_ras_comp_num.cmd = REQUEST_RAS_COMP_NUM;
-	ibmvnic_send_crq(adapter, &crq);
 
 	return 0;
 }
@@ -2748,442 +2815,6 @@ out:
 	}
 }
 
-static void handle_control_ras_rsp(union ibmvnic_crq *crq,
-				   struct ibmvnic_adapter *adapter)
-{
-	u8 correlator = crq->control_ras_rsp.correlator;
-	struct device *dev = &adapter->vdev->dev;
-	bool found = false;
-	int i;
-
-	if (crq->control_ras_rsp.rc.code) {
-		dev_warn(dev, "Control ras failed rc=%d\n",
-			 crq->control_ras_rsp.rc.code);
-		return;
-	}
-
-	for (i = 0; i < adapter->ras_comp_num; i++) {
-		if (adapter->ras_comps[i].correlator == correlator) {
-			found = true;
-			break;
-		}
-	}
-
-	if (!found) {
-		dev_warn(dev, "Correlator not found on control_ras_rsp\n");
-		return;
-	}
-
-	switch (crq->control_ras_rsp.op) {
-	case IBMVNIC_TRACE_LEVEL:
-		adapter->ras_comps[i].trace_level = crq->control_ras.level;
-		break;
-	case IBMVNIC_ERROR_LEVEL:
-		adapter->ras_comps[i].error_check_level =
-		    crq->control_ras.level;
-		break;
-	case IBMVNIC_TRACE_PAUSE:
-		adapter->ras_comp_int[i].paused = 1;
-		break;
-	case IBMVNIC_TRACE_RESUME:
-		adapter->ras_comp_int[i].paused = 0;
-		break;
-	case IBMVNIC_TRACE_ON:
-		adapter->ras_comps[i].trace_on = 1;
-		break;
-	case IBMVNIC_TRACE_OFF:
-		adapter->ras_comps[i].trace_on = 0;
-		break;
-	case IBMVNIC_CHG_TRACE_BUFF_SZ:
-		/* trace_buff_sz is 3 bytes, stuff it into an int */
-		((u8 *)(&adapter->ras_comps[i].trace_buff_size))[0] = 0;
-		((u8 *)(&adapter->ras_comps[i].trace_buff_size))[1] =
-		    crq->control_ras_rsp.trace_buff_sz[0];
-		((u8 *)(&adapter->ras_comps[i].trace_buff_size))[2] =
-		    crq->control_ras_rsp.trace_buff_sz[1];
-		((u8 *)(&adapter->ras_comps[i].trace_buff_size))[3] =
-		    crq->control_ras_rsp.trace_buff_sz[2];
-		break;
-	default:
-		dev_err(dev, "invalid op %d on control_ras_rsp",
-			crq->control_ras_rsp.op);
-	}
-}
-
-static ssize_t trace_read(struct file *file, char __user *user_buf, size_t len,
-			  loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	struct device *dev = &adapter->vdev->dev;
-	struct ibmvnic_fw_trace_entry *trace;
-	int num = ras_comp_int->num;
-	union ibmvnic_crq crq;
-	dma_addr_t trace_tok;
-	u32 size = be32_to_cpu(adapter->ras_comps[num].trace_buff_size);
-	ssize_t res;
-
-	if (*ppos >= size)
-		return 0;
-
-	trace = dma_alloc_coherent(dev, size, &trace_tok, GFP_KERNEL);
-	if (!trace) {
-		dev_err(dev, "Couldn't alloc trace buffer\n");
-		return 0;
-	}
-
-	memset(&crq, 0, sizeof(crq));
-	crq.collect_fw_trace.first = IBMVNIC_CRQ_CMD;
-	crq.collect_fw_trace.cmd = COLLECT_FW_TRACE;
-	crq.collect_fw_trace.correlator = adapter->ras_comps[num].correlator;
-	crq.collect_fw_trace.ioba = cpu_to_be32(trace_tok);
-	crq.collect_fw_trace.len = cpu_to_be32(size);
-
-	init_completion(&adapter->fw_done);
-	ibmvnic_send_crq(adapter, &crq);
-	wait_for_completion(&adapter->fw_done);
-
-	res = simple_read_from_buffer(user_buf, len, ppos, trace, size);
-	dma_free_coherent(dev, size, trace, trace_tok);
-	return res;
-}
-
-static const struct file_operations trace_ops = {
-	.owner		= THIS_MODULE,
-	.open		= simple_open,
-	.read		= trace_read,
-};
-
-static ssize_t paused_read(struct file *file, char __user *user_buf, size_t len,
-			   loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	char buff[5]; /*  1 or 0 plus \n and \0 */
-	int size;
-
-	size = sprintf(buff, "%d\n", adapter->ras_comp_int[num].paused);
-
-	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
-}
-
-static ssize_t paused_write(struct file *file, const char __user *user_buf,
-			    size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	union ibmvnic_crq crq;
-	unsigned long val;
-	int err;
-
-	err = kstrtoul_from_user(user_buf, len, 10, &val);
-	if (err)
-		return err;
-
-	adapter->ras_comp_int[num].paused = val ? 1 : 0;
-
-	memset(&crq, 0, sizeof(crq));
-	crq.control_ras.first = IBMVNIC_CRQ_CMD;
-	crq.control_ras.cmd = CONTROL_RAS;
-	crq.control_ras.correlator = adapter->ras_comps[num].correlator;
-	crq.control_ras.op = val ? IBMVNIC_TRACE_PAUSE : IBMVNIC_TRACE_RESUME;
-	ibmvnic_send_crq(adapter, &crq);
-
-	return len;
-}
-
-static const struct file_operations paused_ops = {
-	.owner		= THIS_MODULE,
-	.open		= simple_open,
-	.read		= paused_read,
-	.write		= paused_write,
-};
-
-static ssize_t tracing_read(struct file *file, char __user *user_buf,
-			    size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	char buff[5]; /*  1 or 0 plus \n and \0 */
-	int size;
-
-	size = sprintf(buff, "%d\n", adapter->ras_comps[num].trace_on);
-	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
-}
-
-static ssize_t tracing_write(struct file *file, const char __user *user_buf,
-			     size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	union ibmvnic_crq crq;
-	unsigned long val;
-	int err;
-
-	err = kstrtoul_from_user(user_buf, len, 10, &val);
-	if (err)
-		return err;
-
-	memset(&crq, 0, sizeof(crq));
-	crq.control_ras.first = IBMVNIC_CRQ_CMD;
-	crq.control_ras.cmd = CONTROL_RAS;
-	crq.control_ras.correlator = adapter->ras_comps[num].correlator;
-	crq.control_ras.op = val ? IBMVNIC_TRACE_ON : IBMVNIC_TRACE_OFF;
-
-	return len;
-}
-
-static const struct file_operations tracing_ops = {
-	.owner		= THIS_MODULE,
-	.open		= simple_open,
-	.read		= tracing_read,
-	.write		= tracing_write,
-};
-
-static ssize_t error_level_read(struct file *file, char __user *user_buf,
-				size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	char buff[5]; /* decimal max char plus \n and \0 */
-	int size;
-
-	size = sprintf(buff, "%d\n", adapter->ras_comps[num].error_check_level);
-	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
-}
-
-static ssize_t error_level_write(struct file *file, const char __user *user_buf,
-				 size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	union ibmvnic_crq crq;
-	unsigned long val;
-	int err;
-
-	err = kstrtoul_from_user(user_buf, len, 10, &val);
-	if (err)
-		return err;
-	if (val > 9)
-		val = 9;
-
-	memset(&crq, 0, sizeof(crq));
-	crq.control_ras.first = IBMVNIC_CRQ_CMD;
-	crq.control_ras.cmd = CONTROL_RAS;
-	crq.control_ras.correlator = adapter->ras_comps[num].correlator;
-	crq.control_ras.op = IBMVNIC_ERROR_LEVEL;
-	crq.control_ras.level = val;
-	ibmvnic_send_crq(adapter, &crq);
-
-	return len;
-}
-
-static const struct file_operations error_level_ops = {
-	.owner		= THIS_MODULE,
-	.open		= simple_open,
-	.read		= error_level_read,
-	.write		= error_level_write,
-};
-
-static ssize_t trace_level_read(struct file *file, char __user *user_buf,
-				size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	char buff[5]; /* decimal max char plus \n and \0 */
-	int size;
-
-	size = sprintf(buff, "%d\n", adapter->ras_comps[num].trace_level);
-	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
-}
-
-static ssize_t trace_level_write(struct file *file, const char __user *user_buf,
-				 size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	union ibmvnic_crq crq;
-	unsigned long val;
-	int err;
-
-	err = kstrtoul_from_user(user_buf, len, 10, &val);
-	if (err)
-		return err;
-	if (val > 9)
-		val = 9;
-
-	memset(&crq, 0, sizeof(crq));
-	crq.control_ras.first = IBMVNIC_CRQ_CMD;
-	crq.control_ras.cmd = CONTROL_RAS;
-	crq.control_ras.correlator =
-	    adapter->ras_comps[ras_comp_int->num].correlator;
-	crq.control_ras.op = IBMVNIC_TRACE_LEVEL;
-	crq.control_ras.level = val;
-	ibmvnic_send_crq(adapter, &crq);
-
-	return len;
-}
-
-static const struct file_operations trace_level_ops = {
-	.owner		= THIS_MODULE,
-	.open		= simple_open,
-	.read		= trace_level_read,
-	.write		= trace_level_write,
-};
-
-static ssize_t trace_buff_size_read(struct file *file, char __user *user_buf,
-				    size_t len, loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	int num = ras_comp_int->num;
-	char buff[9]; /* decimal max int plus \n and \0 */
-	int size;
-
-	size = sprintf(buff, "%d\n", adapter->ras_comps[num].trace_buff_size);
-	return simple_read_from_buffer(user_buf, len, ppos, buff, size);
-}
-
-static ssize_t trace_buff_size_write(struct file *file,
-				     const char __user *user_buf, size_t len,
-				     loff_t *ppos)
-{
-	struct ibmvnic_fw_comp_internal *ras_comp_int = file->private_data;
-	struct ibmvnic_adapter *adapter = ras_comp_int->adapter;
-	union ibmvnic_crq crq;
-	unsigned long val;
-	int err;
-
-	err = kstrtoul_from_user(user_buf, len, 10, &val);
-	if (err)
-		return err;
-
-	memset(&crq, 0, sizeof(crq));
-	crq.control_ras.first = IBMVNIC_CRQ_CMD;
-	crq.control_ras.cmd = CONTROL_RAS;
-	crq.control_ras.correlator =
-	    adapter->ras_comps[ras_comp_int->num].correlator;
-	crq.control_ras.op = IBMVNIC_CHG_TRACE_BUFF_SZ;
-	/* trace_buff_sz is 3 bytes, stuff an int into it */
-	crq.control_ras.trace_buff_sz[0] = ((u8 *)(&val))[5];
-	crq.control_ras.trace_buff_sz[1] = ((u8 *)(&val))[6];
-	crq.control_ras.trace_buff_sz[2] = ((u8 *)(&val))[7];
-	ibmvnic_send_crq(adapter, &crq);
-
-	return len;
-}
-
-static const struct file_operations trace_size_ops = {
-	.owner		= THIS_MODULE,
-	.open		= simple_open,
-	.read		= trace_buff_size_read,
-	.write		= trace_buff_size_write,
-};
-
-static void handle_request_ras_comps_rsp(union ibmvnic_crq *crq,
-					 struct ibmvnic_adapter *adapter)
-{
-	struct device *dev = &adapter->vdev->dev;
-	struct dentry *dir_ent;
-	struct dentry *ent;
-	int i;
-
-	debugfs_remove_recursive(adapter->ras_comps_ent);
-
-	adapter->ras_comps_ent = debugfs_create_dir("ras_comps",
-						    adapter->debugfs_dir);
-	if (!adapter->ras_comps_ent || IS_ERR(adapter->ras_comps_ent)) {
-		dev_info(dev, "debugfs create ras_comps dir failed\n");
-		return;
-	}
-
-	for (i = 0; i < adapter->ras_comp_num; i++) {
-		dir_ent = debugfs_create_dir(adapter->ras_comps[i].name,
-					     adapter->ras_comps_ent);
-		if (!dir_ent || IS_ERR(dir_ent)) {
-			dev_info(dev, "debugfs create %s dir failed\n",
-				 adapter->ras_comps[i].name);
-			continue;
-		}
-
-		adapter->ras_comp_int[i].adapter = adapter;
-		adapter->ras_comp_int[i].num = i;
-		adapter->ras_comp_int[i].desc_blob.data =
-		    &adapter->ras_comps[i].description;
-		adapter->ras_comp_int[i].desc_blob.size =
-		    sizeof(adapter->ras_comps[i].description);
-
-		/* Don't need to remember the dentry's because the debugfs dir
-		 * gets removed recursively
-		 */
-		ent = debugfs_create_blob("description", S_IRUGO, dir_ent,
-					  &adapter->ras_comp_int[i].desc_blob);
-		ent = debugfs_create_file("trace_buf_size", S_IRUGO | S_IWUSR,
-					  dir_ent, &adapter->ras_comp_int[i],
-					  &trace_size_ops);
-		ent = debugfs_create_file("trace_level",
-					  S_IRUGO |
-					  (adapter->ras_comps[i].trace_level !=
-					   0xFF  ? S_IWUSR : 0),
-					   dir_ent, &adapter->ras_comp_int[i],
-					   &trace_level_ops);
-		ent = debugfs_create_file("error_level",
-					  S_IRUGO |
-					  (adapter->
-					   ras_comps[i].error_check_level !=
-					   0xFF ? S_IWUSR : 0),
-					  dir_ent, &adapter->ras_comp_int[i],
-					  &trace_level_ops);
-		ent = debugfs_create_file("tracing", S_IRUGO | S_IWUSR,
-					  dir_ent, &adapter->ras_comp_int[i],
-					  &tracing_ops);
-		ent = debugfs_create_file("paused", S_IRUGO | S_IWUSR,
-					  dir_ent, &adapter->ras_comp_int[i],
-					  &paused_ops);
-		ent = debugfs_create_file("trace", S_IRUGO, dir_ent,
-					  &adapter->ras_comp_int[i],
-					  &trace_ops);
-	}
-}
-
-static void handle_request_ras_comp_num_rsp(union ibmvnic_crq *crq,
-					    struct ibmvnic_adapter *adapter)
-{
-	int len = adapter->ras_comp_num * sizeof(struct ibmvnic_fw_component);
-	struct device *dev = &adapter->vdev->dev;
-	union ibmvnic_crq newcrq;
-
-	adapter->ras_comps = dma_alloc_coherent(dev, len,
-						&adapter->ras_comps_tok,
-						GFP_KERNEL);
-	if (!adapter->ras_comps) {
-		if (!firmware_has_feature(FW_FEATURE_CMO))
-			dev_err(dev, "Couldn't alloc fw comps buffer\n");
-		return;
-	}
-
-	adapter->ras_comp_int = kmalloc(adapter->ras_comp_num *
-					sizeof(struct ibmvnic_fw_comp_internal),
-					GFP_KERNEL);
-	if (!adapter->ras_comp_int)
-		dma_free_coherent(dev, len, adapter->ras_comps,
-				  adapter->ras_comps_tok);
-
-	memset(&newcrq, 0, sizeof(newcrq));
-	newcrq.request_ras_comps.first = IBMVNIC_CRQ_CMD;
-	newcrq.request_ras_comps.cmd = REQUEST_RAS_COMPS;
-	newcrq.request_ras_comps.ioba = cpu_to_be32(adapter->ras_comps_tok);
-	newcrq.request_ras_comps.len = cpu_to_be32(len);
-	ibmvnic_send_crq(adapter, &newcrq);
-}
-
 static void ibmvnic_free_inflight(struct ibmvnic_adapter *adapter)
 {
 	struct ibmvnic_inflight_cmd *inflight_cmd, *tmp1;
@@ -3204,9 +2835,6 @@ static void ibmvnic_free_inflight(struct ibmvnic_adapter *adapter)
 					 DMA_BIDIRECTIONAL);
 			kfree(adapter->login_rsp_buf);
 			kfree(adapter->login_buf);
-			break;
-		case REQUEST_DUMP:
-			complete(&adapter->fw_done);
 			break;
 		case REQUEST_ERROR_INFO:
 			spin_lock_irqsave(&adapter->error_list_lock, flags2);
@@ -3367,14 +2995,6 @@ static void ibmvnic_handle_crq(union ibmvnic_crq *crq,
 		netdev_dbg(netdev, "Got Statistics Response\n");
 		complete(&adapter->stats_done);
 		break;
-	case REQUEST_DUMP_SIZE_RSP:
-		netdev_dbg(netdev, "Got Request Dump Size Response\n");
-		handle_dump_size_rsp(crq, adapter);
-		break;
-	case REQUEST_DUMP_RSP:
-		netdev_dbg(netdev, "Got Request Dump Response\n");
-		complete(&adapter->fw_done);
-		break;
 	case QUERY_IP_OFFLOAD_RSP:
 		netdev_dbg(netdev, "Got Query IP offload Response\n");
 		handle_query_ip_offload_rsp(adapter);
@@ -3387,26 +3007,7 @@ static void ibmvnic_handle_crq(union ibmvnic_crq *crq,
 		dma_unmap_single(dev, adapter->ip_offload_ctrl_tok,
 				 sizeof(adapter->ip_offload_ctrl),
 				 DMA_TO_DEVICE);
-		/* We're done with the queries, perform the login */
-		send_login(adapter);
-		break;
-	case REQUEST_RAS_COMP_NUM_RSP:
-		netdev_dbg(netdev, "Got Request RAS Comp Num Response\n");
-		if (crq->request_ras_comp_num_rsp.rc.code == 10) {
-			netdev_dbg(netdev, "Request RAS Comp Num not supported\n");
-			break;
-		}
-		adapter->ras_comp_num =
-		    be32_to_cpu(crq->request_ras_comp_num_rsp.num_components);
-		handle_request_ras_comp_num_rsp(crq, adapter);
-		break;
-	case REQUEST_RAS_COMPS_RSP:
-		netdev_dbg(netdev, "Got Request RAS Comps Response\n");
-		handle_request_ras_comps_rsp(crq, adapter);
-		break;
-	case CONTROL_RAS_RSP:
-		netdev_dbg(netdev, "Got Control RAS Response\n");
-		handle_control_ras_rsp(crq, adapter);
+		complete(&adapter->init_done);
 		break;
 	case COLLECT_FW_TRACE_RSP:
 		netdev_dbg(netdev, "Got Collect firmware trace Response\n");
@@ -3513,11 +3114,14 @@ static int ibmvnic_reset_crq(struct ibmvnic_adapter *adapter)
 	return rc;
 }
 
-static void ibmvnic_release_crq_queue(struct ibmvnic_adapter *adapter)
+static void release_crq_queue(struct ibmvnic_adapter *adapter)
 {
 	struct ibmvnic_crq_queue *crq = &adapter->crq;
 	struct vio_dev *vdev = adapter->vdev;
 	long rc;
+
+	if (!crq->msgs)
+		return;
 
 	netdev_dbg(adapter->netdev, "Releasing CRQ\n");
 	free_irq(vdev->irq, adapter);
@@ -3529,14 +3133,18 @@ static void ibmvnic_release_crq_queue(struct ibmvnic_adapter *adapter)
 	dma_unmap_single(&vdev->dev, crq->msg_token, PAGE_SIZE,
 			 DMA_BIDIRECTIONAL);
 	free_page((unsigned long)crq->msgs);
+	crq->msgs = NULL;
 }
 
-static int ibmvnic_init_crq_queue(struct ibmvnic_adapter *adapter)
+static int init_crq_queue(struct ibmvnic_adapter *adapter)
 {
 	struct ibmvnic_crq_queue *crq = &adapter->crq;
 	struct device *dev = &adapter->vdev->dev;
 	struct vio_dev *vdev = adapter->vdev;
 	int rc, retrc = -ENOMEM;
+
+	if (crq->msgs)
+		return 0;
 
 	crq->msgs = (union ibmvnic_crq *)get_zeroed_page(GFP_KERNEL);
 	/* Should we allocate more than one page? */
@@ -3599,47 +3207,9 @@ reg_crq_failed:
 	dma_unmap_single(dev, crq->msg_token, PAGE_SIZE, DMA_BIDIRECTIONAL);
 map_failed:
 	free_page((unsigned long)crq->msgs);
+	crq->msgs = NULL;
 	return retrc;
 }
-
-/* debugfs for dump */
-static int ibmvnic_dump_show(struct seq_file *seq, void *v)
-{
-	struct net_device *netdev = seq->private;
-	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
-	struct device *dev = &adapter->vdev->dev;
-	union ibmvnic_crq crq;
-
-	memset(&crq, 0, sizeof(crq));
-	crq.request_dump_size.first = IBMVNIC_CRQ_CMD;
-	crq.request_dump_size.cmd = REQUEST_DUMP_SIZE;
-
-	init_completion(&adapter->fw_done);
-	ibmvnic_send_crq(adapter, &crq);
-	wait_for_completion(&adapter->fw_done);
-
-	seq_write(seq, adapter->dump_data, adapter->dump_data_size);
-
-	dma_unmap_single(dev, adapter->dump_data_token, adapter->dump_data_size,
-			 DMA_BIDIRECTIONAL);
-
-	kfree(adapter->dump_data);
-
-	return 0;
-}
-
-static int ibmvnic_dump_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, ibmvnic_dump_show, inode->i_private);
-}
-
-static const struct file_operations ibmvnic_dump_ops = {
-	.owner          = THIS_MODULE,
-	.open           = ibmvnic_dump_open,
-	.read           = seq_read,
-	.llseek         = seq_lseek,
-	.release        = single_release,
-};
 
 static void handle_crq_init_rsp(struct work_struct *work)
 {
@@ -3668,26 +3238,6 @@ static void handle_crq_init_rsp(struct work_struct *work)
 		goto task_failed;
 	}
 
-	do {
-		if (adapter->renegotiate) {
-			adapter->renegotiate = false;
-			release_sub_crqs_no_irqs(adapter);
-
-			reinit_completion(&adapter->init_done);
-			send_cap_queries(adapter);
-			if (!wait_for_completion_timeout(&adapter->init_done,
-							 timeout)) {
-				dev_err(dev, "Passive init timeout\n");
-				goto task_failed;
-			}
-		}
-	} while (adapter->renegotiate);
-	rc = init_sub_crq_irqs(adapter);
-
-	if (rc)
-		goto task_failed;
-
-	netdev->real_num_tx_queues = adapter->req_tx_queues;
 	netdev->mtu = adapter->req_mtu - ETH_HLEN;
 
 	if (adapter->failover) {
@@ -3719,14 +3269,40 @@ task_failed:
 	dev_err(dev, "Passive initialization was not successful\n");
 }
 
+static int ibmvnic_init(struct ibmvnic_adapter *adapter)
+{
+	struct device *dev = &adapter->vdev->dev;
+	unsigned long timeout = msecs_to_jiffies(30000);
+	int rc;
+
+	rc = init_crq_queue(adapter);
+	if (rc) {
+		dev_err(dev, "Couldn't initialize crq. rc=%d\n", rc);
+		return rc;
+	}
+
+	rc = init_stats_token(adapter);
+	if (rc) {
+		release_crq_queue(adapter);
+		return rc;
+	}
+
+	init_completion(&adapter->init_done);
+	ibmvnic_send_crq_init(adapter);
+	if (!wait_for_completion_timeout(&adapter->init_done, timeout)) {
+		dev_err(dev, "Initialization sequence timed out\n");
+		release_crq_queue(adapter);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int ibmvnic_probe(struct vio_dev *dev, const struct vio_device_id *id)
 {
-	unsigned long timeout = msecs_to_jiffies(30000);
 	struct ibmvnic_adapter *adapter;
 	struct net_device *netdev;
 	unsigned char *mac_addr_p;
-	struct dentry *ent;
-	char buf[17]; /* debugfs name buf */
 	int rc;
 
 	dev_dbg(&dev->dev, "entering ibmvnic_probe for UA 0x%x\n",
@@ -3764,118 +3340,36 @@ static int ibmvnic_probe(struct vio_dev *dev, const struct vio_device_id *id)
 
 	spin_lock_init(&adapter->stats_lock);
 
-	rc = ibmvnic_init_crq_queue(adapter);
-	if (rc) {
-		dev_err(&dev->dev, "Couldn't initialize crq. rc=%d\n", rc);
-		goto free_netdev;
-	}
-
 	INIT_LIST_HEAD(&adapter->errors);
 	INIT_LIST_HEAD(&adapter->inflight);
 	spin_lock_init(&adapter->error_list_lock);
 	spin_lock_init(&adapter->inflight_lock);
 
-	adapter->stats_token = dma_map_single(&dev->dev, &adapter->stats,
-					      sizeof(struct ibmvnic_statistics),
-					      DMA_FROM_DEVICE);
-	if (dma_mapping_error(&dev->dev, adapter->stats_token)) {
-		if (!firmware_has_feature(FW_FEATURE_CMO))
-			dev_err(&dev->dev, "Couldn't map stats buffer\n");
-		rc = -ENOMEM;
-		goto free_crq;
-	}
-
-	snprintf(buf, sizeof(buf), "ibmvnic_%x", dev->unit_address);
-	ent = debugfs_create_dir(buf, NULL);
-	if (!ent || IS_ERR(ent)) {
-		dev_info(&dev->dev, "debugfs create directory failed\n");
-		adapter->debugfs_dir = NULL;
-	} else {
-		adapter->debugfs_dir = ent;
-		ent = debugfs_create_file("dump", S_IRUGO, adapter->debugfs_dir,
-					  netdev, &ibmvnic_dump_ops);
-		if (!ent || IS_ERR(ent)) {
-			dev_info(&dev->dev,
-				 "debugfs create dump file failed\n");
-			adapter->debugfs_dump = NULL;
-		} else {
-			adapter->debugfs_dump = ent;
-		}
-	}
-
-	init_completion(&adapter->init_done);
-	ibmvnic_send_crq_init(adapter);
-	if (!wait_for_completion_timeout(&adapter->init_done, timeout))
-		return 0;
-
-	do {
-		if (adapter->renegotiate) {
-			adapter->renegotiate = false;
-			release_sub_crqs_no_irqs(adapter);
-
-			reinit_completion(&adapter->init_done);
-			send_cap_queries(adapter);
-			if (!wait_for_completion_timeout(&adapter->init_done,
-							 timeout))
-				return 0;
-		}
-	} while (adapter->renegotiate);
-
-	rc = init_sub_crq_irqs(adapter);
+	rc = ibmvnic_init(adapter);
 	if (rc) {
-		dev_err(&dev->dev, "failed to initialize sub crq irqs\n");
-		goto free_debugfs;
+		free_netdev(netdev);
+		return rc;
 	}
 
-	netdev->real_num_tx_queues = adapter->req_tx_queues;
 	netdev->mtu = adapter->req_mtu - ETH_HLEN;
+	adapter->is_closed = false;
 
 	rc = register_netdev(netdev);
 	if (rc) {
 		dev_err(&dev->dev, "failed to register netdev rc=%d\n", rc);
-		goto free_sub_crqs;
+		free_netdev(netdev);
+		return rc;
 	}
 	dev_info(&dev->dev, "ibmvnic registered\n");
 
 	return 0;
-
-free_sub_crqs:
-	release_sub_crqs(adapter);
-free_debugfs:
-	if (adapter->debugfs_dir && !IS_ERR(adapter->debugfs_dir))
-		debugfs_remove_recursive(adapter->debugfs_dir);
-free_crq:
-	ibmvnic_release_crq_queue(adapter);
-free_netdev:
-	free_netdev(netdev);
-	return rc;
 }
 
 static int ibmvnic_remove(struct vio_dev *dev)
 {
 	struct net_device *netdev = dev_get_drvdata(&dev->dev);
-	struct ibmvnic_adapter *adapter = netdev_priv(netdev);
 
 	unregister_netdev(netdev);
-
-	release_sub_crqs(adapter);
-
-	ibmvnic_release_crq_queue(adapter);
-
-	if (adapter->debugfs_dir && !IS_ERR(adapter->debugfs_dir))
-		debugfs_remove_recursive(adapter->debugfs_dir);
-
-	dma_unmap_single(&dev->dev, adapter->stats_token,
-			 sizeof(struct ibmvnic_statistics), DMA_FROM_DEVICE);
-
-	if (adapter->ras_comps)
-		dma_free_coherent(&dev->dev,
-				  adapter->ras_comp_num *
-				  sizeof(struct ibmvnic_fw_component),
-				  adapter->ras_comps, adapter->ras_comps_tok);
-
-	kfree(adapter->ras_comp_int);
-
 	free_netdev(netdev);
 	dev_set_drvdata(&dev->dev, NULL);
 
