@@ -130,6 +130,17 @@ config AD799X
 	  To compile this driver as a module, choose M here: the module will be
 	  called ad799x.
 
+config ASPEED_ADC
+	tristate "Aspeed ADC"
+	depends on ARCH_ASPEED || COMPILE_TEST
+	depends on COMMON_CLK
+	help
+	  If you say yes here you get support for the ADC included in Aspeed
+	  BMC SoCs.
+
+	  To compile this driver as a module, choose M here: the module will be
+	  called aspeed_adc.
+
 config AT91_ADC
 	tristate "Atmel AT91 ADC"
 	depends on ARCH_AT91
@@ -194,6 +205,17 @@ config CC10001_ADC
 
 	  This driver can also be built as a module. If so, the module will be
 	  called cc10001_adc.
+
+config CPCAP_ADC
+	tristate "Motorola CPCAP PMIC ADC driver"
+	depends on MFD_CPCAP
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	help
+	  Say yes here to build support for Motorola CPCAP PMIC ADC.
+
+	  This driver can also be built as a module. If so, the module will be
+	  called cpcap-adc.
 
 config DA9150_GPADC
 	tristate "Dialog DA9150 GPADC driver support"
@@ -318,6 +340,18 @@ config LPC18XX_ADC
 	  To compile this driver as a module, choose M here: the module will be
 	  called lpc18xx_adc.
 
+config LPC32XX_ADC
+	tristate "NXP LPC32XX ADC"
+	depends on ARCH_LPC32XX || COMPILE_TEST
+	depends on HAS_IOMEM
+	help
+	  Say yes here to build support for the integrated ADC inside the
+	  LPC32XX SoC. Note that this feature uses the same hardware as the
+	  touchscreen driver, so you should either select only one of the two
+	  drivers (lpc32xx_adc or lpc32xx_ts) or, in the OpenFirmware case,
+	  activate only one via device tree selection.  Provides direct access
+	  via sysfs.
+
 config LTC2485
 	tristate "Linear Technology LTC2485 ADC driver"
 	depends on I2C
@@ -326,6 +360,16 @@ config LTC2485
 
 	  To compile this driver as a module, choose M here: the module will be
 	  called ltc2485.
+
+config LTC2497
+	tristate "Linear Technology LTC2497 ADC driver"
+	depends on I2C
+	help
+	  Say yes here to build support for Linear Technology LTC2497
+	  16-Bit 8-/16-Channel Delta Sigma ADC.
+
+	  To compile this driver as a module, choose M here: the module will be
+	  called ltc2497.
 
 config MAX1027
 	tristate "Maxim max1027 ADC driver"
@@ -493,6 +537,17 @@ config ROCKCHIP_SARADC
 	  To compile this driver as a module, choose M here: the
 	  module will be called rockchip_saradc.
 
+config SPEAR_ADC
+	tristate "ST SPEAr ADC"
+	depends on PLAT_SPEAR || COMPILE_TEST
+	depends on HAS_IOMEM
+	help
+	  Say yes here to build support for the integrated ADC inside the
+	  ST SPEAr SoC. Provides direct access via sysfs.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called spear_adc.
+
 config STM32_ADC_CORE
 	tristate "STMicroelectronics STM32 adc core"
 	depends on ARCH_STM32 || COMPILE_TEST
@@ -522,7 +577,7 @@ config STM32_ADC
 
 config STX104
 	tristate "Apex Embedded Systems STX104 driver"
-	depends on X86 && ISA_BUS_API
+	depends on PC104 && X86 && ISA_BUS_API
 	select GPIOLIB
 	help
 	  Say yes here to build support for the Apex Embedded Systems STX104
@@ -534,6 +589,24 @@ config STX104
 
 	  The base port addresses for the devices may be configured via the base
 	  array module parameter.
+
+config SUN4I_GPADC
+	tristate "Support for the Allwinner SoCs GPADC"
+	depends on IIO
+	depends on MFD_SUN4I_GPADC
+	depends on THERMAL || !THERMAL_OF
+	help
+	  Say yes here to build support for Allwinner (A10, A13 and A31) SoCs
+	  GPADC. This ADC provides 4 channels which can be used as an ADC or as
+	  a touchscreen input and one channel for thermal sensor.
+
+	  The thermal sensor slows down ADC readings and can be disabled by
+	  disabling CONFIG_THERMAL_OF. However, the thermal sensor should be
+	  enabled by default since the SoC temperature is usually more critical
+	  than ADC readings.
+
+	  To compile this driver as a module, choose M here: the module will be
+	  called sun4i-gpadc-iio.
 
 config TI_ADC081C
 	tristate "Texas Instruments ADC081C/ADC101C/ADC121C family"

@@ -725,10 +725,15 @@ static void dm_TXPowerTrackingCallback_ThermalMeter(struct net_device *dev)
 	} else {
 		tmpval = (u8)tmpRegA - priv->ThermalMeter[0];
 
-		if (tmpval >= 6) /* higher temperature */
-			tmpOFDMindex = tmpCCK20Mindex = 0; /* max to +6dB */
-		else
-			tmpOFDMindex = tmpCCK20Mindex = 6 - tmpval;
+		if (tmpval >= 6) {
+			/* higher temperature */
+			tmpOFDMindex = 0;
+			tmpCCK20Mindex = 0;
+		} else {
+			/* max to +6dB */
+			tmpOFDMindex = 6 - tmpval;
+			tmpCCK20Mindex = 6 - tmpval;
+		}
 		tmpCCK40Mindex = 0;
 	}
 	/*DbgPrint("%ddb, tmpOFDMindex = %d, tmpCCK20Mindex = %d, tmpCCK40Mindex = %d",
@@ -2304,10 +2309,10 @@ static void dm_check_edca_turbo(
 				/*  For Each time updating EDCA parameter, reset EDCA turbo mode status. */
 				dm_init_edca_turbo(dev);
 				u1bAIFS = qos_parameters->aifs[0] * ((mode&(IEEE_G|IEEE_N_24G)) ? 9 : 20) + aSifsTime;
-				u4bAcParam = (((u32)(qos_parameters->tx_op_limit[0])) << AC_PARAM_TXOP_LIMIT_OFFSET)|
-					(((u32)(qos_parameters->cw_max[0])) << AC_PARAM_ECW_MAX_OFFSET)|
-					(((u32)(qos_parameters->cw_min[0])) << AC_PARAM_ECW_MIN_OFFSET)|
-					((u32)u1bAIFS << AC_PARAM_AIFS_OFFSET);
+				u4bAcParam = (((le16_to_cpu(qos_parameters->tx_op_limit[0])) << AC_PARAM_TXOP_LIMIT_OFFSET)|
+					((le16_to_cpu(qos_parameters->cw_max[0])) << AC_PARAM_ECW_MAX_OFFSET)|
+					((le16_to_cpu(qos_parameters->cw_min[0])) << AC_PARAM_ECW_MIN_OFFSET)|
+					((u32)u1bAIFS << AC_PARAM_AIFS_OFFSET));
 				/*write_nic_dword(dev, WDCAPARA_ADD[i], u4bAcParam);*/
 				write_nic_dword(dev, EDCAPARA_BE,  u4bAcParam);
 

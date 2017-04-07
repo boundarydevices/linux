@@ -988,7 +988,7 @@ static int osc_extent_truncate(struct osc_extent *ext, pgoff_t trunc_index,
 	int grants = 0;
 	int nr_pages = 0;
 	int rc = 0;
-	int refcheck;
+	u16 refcheck;
 
 	LASSERT(sanity_check(ext) == 0);
 	EASSERT(ext->oe_state == OES_TRUNC, ext);
@@ -2790,7 +2790,6 @@ again:
 			 * We have to wait for this extent because we can't
 			 * truncate that page.
 			 */
-			LASSERT(!ext->oe_hp);
 			OSC_EXTENT_DUMP(D_CACHE, ext,
 					"waiting for busy extent\n");
 			waiting = osc_extent_get(ext);
