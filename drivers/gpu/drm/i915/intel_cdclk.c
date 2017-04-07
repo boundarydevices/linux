@@ -1071,9 +1071,15 @@ static int bxt_calc_cdclk(int max_pixclk)
 
 static int glk_calc_cdclk(int max_pixclk)
 {
-	if (max_pixclk > 2 * 158400)
+	/*
+	 * FIXME: Avoid using a pixel clock that is more than 99% of the cdclk
+	 * as a temporary workaround. Use a higher cdclk instead. (Note that
+	 * intel_compute_max_dotclk() limits the max pixel clock to 99% of max
+	 * cdclk.)
+	 */
+	if (max_pixclk > DIV_ROUND_UP(2 * 158400 * 99, 100))
 		return 316800;
-	else if (max_pixclk > 2 * 79200)
+	else if (max_pixclk > DIV_ROUND_UP(2 * 79200 * 99, 100))
 		return 158400;
 	else
 		return 79200;
@@ -1442,16 +1448,33 @@ static int bdw_adjust_min_pipe_pixel_rate(struct intel_crtc_state *crtc_state,
 	if (IS_BROADWELL(dev_priv) && crtc_state->ips_enabled)
 		pixel_rate = DIV_ROUND_UP(pixel_rate * 100, 95);
 
-	/* BSpec says "Do not use DisplayPort with CDCLK less than
-	 * 432 MHz, audio enabled, port width x4, and link rate
-	 * HBR2 (5.4 GHz), or else there may be audio corruption or
-	 * screen corruption."
+	/* BSpec says "Do not use DisplayPort with CDCLK less than 432 MHz,
+	 * audio enabled, port width x4, and link rate HBR2 (5.4 GHz), or else
+	 * there may be audio corruption or screen corruption." This cdclk
+	 * restriction for GLK is 316.8 MHz and since GLK can output two
+	 * pixels per clock, the pixel rate becomes 2 * 316.8 MHz.
 	 */
 	if (intel_crtc_has_dp_encoder(crtc_state) &&
 	    crtc_state->has_audio &&
 	    crtc_state->port_clock >= 540000 &&
-	    crtc_state->lane_count == 4)
-		pixel_rate = max(432000, pixel_rate);
+	    crtc_state->lane_count == 4) {
+		if (IS_GEMINILAKE(dev_priv))
+			pixel_rate = max(2 * 316800, pixel_rate);
+		else
+			pixel_rate = max(432000, pixel_rate);
+	}
+
+	/* According to BSpec, "The CD clock frequency must be at least twice
+	 * the frequency of the Azalia BCLK." and BCLK is 96 MHz by default.
+	 * The check for GLK has to be adjusted as the platform can output
+	 * two pixels per clock.
+	 */
+	if (crtc_state->has_audio && INTEL_GEN(dev_priv) >= 9) {
+		if (IS_GEMINILAKE(dev_priv))
+			pixel_rate = max(2 * 2 * 96000, pixel_rate);
+		else
+			pixel_rate = max(2 * 96000, pixel_rate);
+	}
 
 	return pixel_rate;
 }
@@ -1647,7 +1670,11 @@ static int intel_compute_max_dotclk(struct drm_i915_private *dev_priv)
 	int max_cdclk_freq = dev_priv->max_cdclk_freq;
 
 	if (IS_GEMINILAKE(dev_priv))
-		return 2 * max_cdclk_freq;
+		/*
+		 * FIXME: Limiting to 99% as a temporary workaround. See
+		 * glk_calc_cdclk() for details.
+		 */
+		return 2 * max_cdclk_freq * 99 / 100;
 	else if (INTEL_INFO(dev_priv)->gen >= 9 ||
 		 IS_HASWELL(dev_priv) || IS_BROADWELL(dev_priv))
 		return max_cdclk_freq;

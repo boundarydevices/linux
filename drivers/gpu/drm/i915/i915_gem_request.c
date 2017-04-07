@@ -191,7 +191,6 @@ i915_priotree_init(struct i915_priotree *pt)
 
 static int reset_all_global_seqno(struct drm_i915_private *i915, u32 seqno)
 {
-	struct i915_gem_timeline *timeline = &i915->gt.global_timeline;
 	struct intel_engine_cs *engine;
 	enum intel_engine_id id;
 	int ret;
@@ -203,15 +202,10 @@ static int reset_all_global_seqno(struct drm_i915_private *i915, u32 seqno)
 	if (ret)
 		return ret;
 
-	i915_gem_retire_requests(i915);
-	GEM_BUG_ON(i915->gt.active_requests > 1);
-
 	/* If the seqno wraps around, we need to clear the breadcrumb rbtree */
 	for_each_engine(engine, i915, id) {
-		struct intel_timeline *tl = &timeline->engine[id];
-
-		if (wait_for(intel_engine_is_idle(engine), 50))
-			return -EBUSY;
+		struct i915_gem_timeline *timeline;
+		struct intel_timeline *tl = engine->timeline;
 
 		if (!i915_seqno_passed(seqno, tl->seqno)) {
 			/* spin until threads are complete */
@@ -222,14 +216,10 @@ static int reset_all_global_seqno(struct drm_i915_private *i915, u32 seqno)
 		/* Finally reset hw state */
 		tl->seqno = seqno;
 		intel_engine_init_global_seqno(engine, seqno);
-	}
 
-	list_for_each_entry(timeline, &i915->gt.timelines, link) {
-		for_each_engine(engine, i915, id) {
-			struct intel_timeline *tl = &timeline->engine[id];
-
-			memset(tl->sync_seqno, 0, sizeof(tl->sync_seqno));
-		}
+		list_for_each_entry(timeline, &i915->gt.timelines, link)
+			memset(timeline->engine[id].sync_seqno, 0,
+			       sizeof(timeline->engine[id].sync_seqno));
 	}
 
 	return 0;
@@ -306,7 +296,7 @@ static void i915_gem_request_retire(struct drm_i915_gem_request *request)
 	 * completion order.
 	 */
 	list_del(&request->ring_link);
-	request->ring->last_retired_head = request->postfix;
+	request->ring->head = request->postfix;
 	if (!--request->i915->gt.active_requests) {
 		GEM_BUG_ON(!request->i915->gt.awake);
 		mod_delayed_work(request->i915->wq,

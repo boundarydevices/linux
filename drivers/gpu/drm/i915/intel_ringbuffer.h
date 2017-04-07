@@ -139,8 +139,6 @@ struct intel_ring {
 	struct i915_vma *vma;
 	void *vaddr;
 
-	struct intel_engine_cs *engine;
-
 	struct list_head request_list;
 
 	u32 head;
@@ -149,16 +147,6 @@ struct intel_ring {
 	int space;
 	int size;
 	int effective_size;
-
-	/** We track the position of the requests in the ring buffer, and
-	 * when each is retired we increment last_retired_head as the GPU
-	 * must have finished processing the request and so we know we
-	 * can advance the ringbuffer up to that position.
-	 *
-	 * last_retired_head is set to -1 after the value is consumed so
-	 * we can detect new retirements.
-	 */
-	u32 last_retired_head;
 };
 
 struct i915_gem_context;
@@ -442,18 +430,10 @@ struct intel_engine_cs {
 	u32 (*get_cmd_length_mask)(u32 cmd_header);
 };
 
-static inline unsigned
+static inline unsigned int
 intel_engine_flag(const struct intel_engine_cs *engine)
 {
-	return 1 << engine->id;
-}
-
-static inline void
-intel_flush_status_page(struct intel_engine_cs *engine, int reg)
-{
-	mb();
-	clflush(&engine->status_page.page_addr[reg]);
-	mb();
+	return BIT(engine->id);
 }
 
 static inline u32
@@ -464,14 +444,22 @@ intel_read_status_page(struct intel_engine_cs *engine, int reg)
 }
 
 static inline void
-intel_write_status_page(struct intel_engine_cs *engine,
-			int reg, u32 value)
+intel_write_status_page(struct intel_engine_cs *engine, int reg, u32 value)
 {
-	mb();
-	clflush(&engine->status_page.page_addr[reg]);
-	engine->status_page.page_addr[reg] = value;
-	clflush(&engine->status_page.page_addr[reg]);
-	mb();
+	/* Writing into the status page should be done sparingly. Since
+	 * we do when we are uncertain of the device state, we take a bit
+	 * of extra paranoia to try and ensure that the HWS takes the value
+	 * we give and that it doesn't end up trapped inside the CPU!
+	 */
+	if (static_cpu_has(X86_FEATURE_CLFLUSH)) {
+		mb();
+		clflush(&engine->status_page.page_addr[reg]);
+		engine->status_page.page_addr[reg] = value;
+		clflush(&engine->status_page.page_addr[reg]);
+		mb();
+	} else {
+		WRITE_ONCE(engine->status_page.page_addr[reg], value);
+	}
 }
 
 /*
@@ -497,7 +485,9 @@ intel_write_status_page(struct intel_engine_cs *engine,
 
 struct intel_ring *
 intel_engine_create_ring(struct intel_engine_cs *engine, int size);
-int intel_ring_pin(struct intel_ring *ring, unsigned int offset_bias);
+int intel_ring_pin(struct intel_ring *ring,
+		   struct drm_i915_private *i915,
+		   unsigned int offset_bias);
 void intel_ring_unpin(struct intel_ring *ring);
 void intel_ring_free(struct intel_ring *ring);
 
@@ -531,12 +521,23 @@ intel_ring_wrap(const struct intel_ring *ring, u32 pos)
 }
 
 static inline u32
-intel_ring_offset(struct drm_i915_gem_request *req, void *addr)
+intel_ring_offset(const struct drm_i915_gem_request *req, void *addr)
 {
 	/* Don't write ring->size (equivalent to 0) as that hangs some GPUs. */
 	u32 offset = addr - req->ring->vaddr;
 	GEM_BUG_ON(offset > req->ring->size);
 	return intel_ring_wrap(req->ring, offset);
+}
+
+static inline void
+assert_ring_tail_valid(const struct intel_ring *ring, unsigned int tail)
+{
+	/* We could combine these into a single tail operation, but keeping
+	 * them as seperate tests will help identify the cause should one
+	 * ever fire.
+	 */
+	GEM_BUG_ON(!IS_ALIGNED(tail, 8));
+	GEM_BUG_ON(tail >= ring->size);
 }
 
 void intel_ring_update_space(struct intel_ring *ring);

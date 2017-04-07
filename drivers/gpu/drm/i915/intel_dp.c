@@ -133,6 +133,34 @@ static void vlv_steal_power_sequencer(struct drm_device *dev,
 				      enum pipe pipe);
 static void intel_dp_unset_edid(struct intel_dp *intel_dp);
 
+static int intel_dp_num_rates(u8 link_bw_code)
+{
+	switch (link_bw_code) {
+	default:
+		WARN(1, "invalid max DP link bw val %x, using 1.62Gbps\n",
+		     link_bw_code);
+	case DP_LINK_BW_1_62:
+		return 1;
+	case DP_LINK_BW_2_7:
+		return 2;
+	case DP_LINK_BW_5_4:
+		return 3;
+	}
+}
+
+/* update sink rates from dpcd */
+static void intel_dp_set_sink_rates(struct intel_dp *intel_dp)
+{
+	int i, num_rates;
+
+	num_rates = intel_dp_num_rates(intel_dp->dpcd[DP_MAX_LINK_RATE]);
+
+	for (i = 0; i < num_rates; i++)
+		intel_dp->sink_rates[i] = default_rates[i];
+
+	intel_dp->num_sink_rates = num_rates;
+}
+
 static int
 intel_dp_max_link_bw(struct intel_dp  *intel_dp)
 {
@@ -205,34 +233,25 @@ intel_dp_downstream_max_dotclock(struct intel_dp *intel_dp)
 	return max_dotclk;
 }
 
-static int
-intel_dp_sink_rates(struct intel_dp *intel_dp, const int **sink_rates)
-{
-	if (intel_dp->num_sink_rates) {
-		*sink_rates = intel_dp->sink_rates;
-		return intel_dp->num_sink_rates;
-	}
-
-	*sink_rates = default_rates;
-
-	return (intel_dp->max_sink_link_bw >> 3) + 1;
-}
-
-static int
-intel_dp_source_rates(struct intel_dp *intel_dp, const int **source_rates)
+static void
+intel_dp_set_source_rates(struct intel_dp *intel_dp)
 {
 	struct intel_digital_port *dig_port = dp_to_dig_port(intel_dp);
 	struct drm_i915_private *dev_priv = to_i915(dig_port->base.base.dev);
+	const int *source_rates;
 	int size;
 
+	/* This should only be done once */
+	WARN_ON(intel_dp->source_rates || intel_dp->num_source_rates);
+
 	if (IS_GEN9_LP(dev_priv)) {
-		*source_rates = bxt_rates;
+		source_rates = bxt_rates;
 		size = ARRAY_SIZE(bxt_rates);
 	} else if (IS_GEN9_BC(dev_priv)) {
-		*source_rates = skl_rates;
+		source_rates = skl_rates;
 		size = ARRAY_SIZE(skl_rates);
 	} else {
-		*source_rates = default_rates;
+		source_rates = default_rates;
 		size = ARRAY_SIZE(default_rates);
 	}
 
@@ -240,7 +259,8 @@ intel_dp_source_rates(struct intel_dp *intel_dp, const int **source_rates)
 	if (!intel_dp_source_supports_hbr2(intel_dp))
 		size--;
 
-	return size;
+	intel_dp->source_rates = source_rates;
+	intel_dp->num_source_rates = size;
 }
 
 static int intersect_rates(const int *source_rates, int source_len,
@@ -266,33 +286,47 @@ static int intersect_rates(const int *source_rates, int source_len,
 	return k;
 }
 
+/* return index of rate in rates array, or -1 if not found */
+static int intel_dp_rate_index(const int *rates, int len, int rate)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+		if (rate == rates[i])
+			return i;
+
+	return -1;
+}
+
 static int intel_dp_common_rates(struct intel_dp *intel_dp,
 				 int *common_rates)
 {
-	const int *source_rates, *sink_rates;
-	int source_len, sink_len;
+	int max_rate = drm_dp_bw_code_to_link_rate(intel_dp->max_sink_link_bw);
+	int i, common_len;
 
-	sink_len = intel_dp_sink_rates(intel_dp, &sink_rates);
-	source_len = intel_dp_source_rates(intel_dp, &source_rates);
+	common_len = intersect_rates(intel_dp->source_rates,
+				     intel_dp->num_source_rates,
+				     intel_dp->sink_rates,
+				     intel_dp->num_sink_rates,
+				     common_rates);
 
-	return intersect_rates(source_rates, source_len,
-			       sink_rates, sink_len,
-			       common_rates);
+	/* Limit results by potentially reduced max rate */
+	for (i = 0; i < common_len; i++) {
+		if (common_rates[common_len - i - 1] <= max_rate)
+			return common_len - i;
+	}
+
+	return 0;
 }
 
 static int intel_dp_link_rate_index(struct intel_dp *intel_dp,
 				    int *common_rates, int link_rate)
 {
 	int common_len;
-	int index;
 
 	common_len = intel_dp_common_rates(intel_dp, common_rates);
-	for (index = 0; index < common_len; index++) {
-		if (link_rate == common_rates[common_len - index - 1])
-			return common_len - index - 1;
-	}
 
-	return -1;
+	return intel_dp_rate_index(common_rates, common_len, link_rate);
 }
 
 int intel_dp_get_link_train_fallback_values(struct intel_dp *intel_dp,
@@ -1486,20 +1520,19 @@ static void snprintf_int_array(char *str, size_t len,
 
 static void intel_dp_print_rates(struct intel_dp *intel_dp)
 {
-	const int *source_rates, *sink_rates;
-	int source_len, sink_len, common_len;
+	int common_len;
 	int common_rates[DP_MAX_SUPPORTED_RATES];
 	char str[128]; /* FIXME: too big for stack? */
 
 	if ((drm_debug & DRM_UT_KMS) == 0)
 		return;
 
-	source_len = intel_dp_source_rates(intel_dp, &source_rates);
-	snprintf_int_array(str, sizeof(str), source_rates, source_len);
+	snprintf_int_array(str, sizeof(str),
+			   intel_dp->source_rates, intel_dp->num_source_rates);
 	DRM_DEBUG_KMS("source rates: %s\n", str);
 
-	sink_len = intel_dp_sink_rates(intel_dp, &sink_rates);
-	snprintf_int_array(str, sizeof(str), sink_rates, sink_len);
+	snprintf_int_array(str, sizeof(str),
+			   intel_dp->sink_rates, intel_dp->num_sink_rates);
 	DRM_DEBUG_KMS("sink rates: %s\n", str);
 
 	common_len = intel_dp_common_rates(intel_dp, common_rates);
@@ -1538,17 +1571,6 @@ bool intel_dp_read_desc(struct intel_dp *intel_dp)
 	return true;
 }
 
-static int rate_to_index(int find, const int *rates)
-{
-	int i = 0;
-
-	for (i = 0; i < DP_MAX_SUPPORTED_RATES; ++i)
-		if (find == rates[i])
-			break;
-
-	return i;
-}
-
 int
 intel_dp_max_link_rate(struct intel_dp *intel_dp)
 {
@@ -1564,13 +1586,20 @@ intel_dp_max_link_rate(struct intel_dp *intel_dp)
 
 int intel_dp_rate_select(struct intel_dp *intel_dp, int rate)
 {
-	return rate_to_index(rate, intel_dp->sink_rates);
+	int i = intel_dp_rate_index(intel_dp->sink_rates,
+				    intel_dp->num_sink_rates, rate);
+
+	if (WARN_ON(i < 0))
+		i = 0;
+
+	return i;
 }
 
 void intel_dp_compute_rate(struct intel_dp *intel_dp, int port_clock,
 			   uint8_t *link_bw, uint8_t *rate_select)
 {
-	if (intel_dp->num_sink_rates) {
+	/* eDP 1.4 rate select method. */
+	if (intel_dp->use_rate_select) {
 		*link_bw = 0;
 		*rate_select =
 			intel_dp_rate_select(intel_dp, port_clock);
@@ -3695,6 +3724,11 @@ intel_edp_init_dpcd(struct intel_dp *intel_dp)
 		intel_dp->num_sink_rates = i;
 	}
 
+	if (intel_dp->num_sink_rates)
+		intel_dp->use_rate_select = true;
+	else
+		intel_dp_set_sink_rates(intel_dp);
+
 	return true;
 }
 
@@ -3704,6 +3738,10 @@ intel_dp_get_dpcd(struct intel_dp *intel_dp)
 {
 	if (!intel_dp_read_dpcd(intel_dp))
 		return false;
+
+	/* Don't clobber cached eDP rates. */
+	if (!is_edp(intel_dp))
+		intel_dp_set_sink_rates(intel_dp);
 
 	if (drm_dp_dpcd_read(&intel_dp->aux, DP_SINK_COUNT,
 			     &intel_dp->sink_count, 1) < 0)
@@ -5940,6 +5978,8 @@ intel_dp_init_connector(struct intel_digital_port *intel_dig_port,
 		 "Not enough lanes (%d) for DP on port %c\n",
 		 intel_dig_port->max_lanes, port_name(port)))
 		return false;
+
+	intel_dp_set_source_rates(intel_dp);
 
 	intel_dp->reset_link_params = true;
 	intel_dp->pps_pipe = INVALID_PIPE;

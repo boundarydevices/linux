@@ -49,13 +49,7 @@ static int __intel_ring_space(int head, int tail, int size)
 
 void intel_ring_update_space(struct intel_ring *ring)
 {
-	if (ring->last_retired_head != -1) {
-		ring->head = ring->last_retired_head;
-		ring->last_retired_head = -1;
-	}
-
-	ring->space = __intel_ring_space(ring->head & HEAD_ADDR,
-					 ring->tail, ring->size);
+	ring->space = __intel_ring_space(ring->head, ring->tail, ring->size);
 }
 
 static int
@@ -618,12 +612,8 @@ static void reset_ring_common(struct intel_engine_cs *engine,
 		}
 
 		/* If the rq hung, jump to its breadcrumb and skip the batch */
-		if (request->fence.error == -EIO) {
-			struct intel_ring *ring = request->ring;
-
-			ring->head = request->postfix;
-			ring->last_retired_head = -1;
-		}
+		if (request->fence.error == -EIO)
+			request->ring->head = request->postfix;
 	} else {
 		engine->legacy_active_context = NULL;
 	}
@@ -784,7 +774,7 @@ static void i9xx_submit_request(struct drm_i915_gem_request *request)
 
 	i915_gem_request_submit(request);
 
-	GEM_BUG_ON(!IS_ALIGNED(request->tail, 8));
+	assert_ring_tail_valid(request->ring, request->tail);
 	I915_WRITE_TAIL(request->engine, request->tail);
 }
 
@@ -796,7 +786,7 @@ static void i9xx_emit_breadcrumb(struct drm_i915_gem_request *req, u32 *cs)
 	*cs++ = MI_USER_INTERRUPT;
 
 	req->tail = intel_ring_offset(req, cs);
-	GEM_BUG_ON(!IS_ALIGNED(req->tail, 8));
+	assert_ring_tail_valid(req->ring, req->tail);
 }
 
 static const int i9xx_emit_breadcrumb_sz = 4;
@@ -835,7 +825,7 @@ static void gen8_render_emit_breadcrumb(struct drm_i915_gem_request *req,
 	*cs++ = MI_NOOP;
 
 	req->tail = intel_ring_offset(req, cs);
-	GEM_BUG_ON(!IS_ALIGNED(req->tail, 8));
+	assert_ring_tail_valid(req->ring, req->tail);
 }
 
 static const int gen8_render_emit_breadcrumb_sz = 8;
@@ -1269,6 +1259,8 @@ static int init_phys_status_page(struct intel_engine_cs *engine)
 {
 	struct drm_i915_private *dev_priv = engine->i915;
 
+	GEM_BUG_ON(engine->id != RCS);
+
 	dev_priv->status_page_dmah =
 		drm_pci_alloc(&dev_priv->drm, PAGE_SIZE, PAGE_SIZE);
 	if (!dev_priv->status_page_dmah)
@@ -1280,17 +1272,18 @@ static int init_phys_status_page(struct intel_engine_cs *engine)
 	return 0;
 }
 
-int intel_ring_pin(struct intel_ring *ring, unsigned int offset_bias)
+int intel_ring_pin(struct intel_ring *ring,
+		   struct drm_i915_private *i915,
+		   unsigned int offset_bias)
 {
-	unsigned int flags;
-	enum i915_map_type map;
+	enum i915_map_type map = HAS_LLC(i915) ? I915_MAP_WB : I915_MAP_WC;
 	struct i915_vma *vma = ring->vma;
+	unsigned int flags;
 	void *addr;
 	int ret;
 
 	GEM_BUG_ON(ring->vaddr);
 
-	map = HAS_LLC(ring->engine->i915) ? I915_MAP_WB : I915_MAP_WC;
 
 	flags = PIN_GLOBAL;
 	if (offset_bias)
@@ -1379,8 +1372,6 @@ intel_engine_create_ring(struct intel_engine_cs *engine, int size)
 	if (!ring)
 		return ERR_PTR(-ENOMEM);
 
-	ring->engine = engine;
-
 	INIT_LIST_HEAD(&ring->request_list);
 
 	ring->size = size;
@@ -1392,7 +1383,6 @@ intel_engine_create_ring(struct intel_engine_cs *engine, int size)
 	if (IS_I830(engine->i915) || IS_I845G(engine->i915))
 		ring->effective_size -= 2 * CACHELINE_BYTES;
 
-	ring->last_retired_head = -1;
 	intel_ring_update_space(ring);
 
 	vma = intel_ring_create_vma(engine->i915, size);
@@ -1492,78 +1482,70 @@ static void intel_ring_context_unpin(struct intel_engine_cs *engine,
 
 static int intel_init_ring_buffer(struct intel_engine_cs *engine)
 {
-	struct drm_i915_private *dev_priv = engine->i915;
 	struct intel_ring *ring;
-	int ret;
-
-	WARN_ON(engine->buffer);
+	int err;
 
 	intel_engine_setup_common(engine);
 
-	ret = intel_engine_init_common(engine);
-	if (ret)
-		goto error;
+	err = intel_engine_init_common(engine);
+	if (err)
+		goto err;
+
+	if (HWS_NEEDS_PHYSICAL(engine->i915))
+		err = init_phys_status_page(engine);
+	else
+		err = init_status_page(engine);
+	if (err)
+		goto err;
 
 	ring = intel_engine_create_ring(engine, 32 * PAGE_SIZE);
 	if (IS_ERR(ring)) {
-		ret = PTR_ERR(ring);
-		goto error;
-	}
-
-	if (HWS_NEEDS_PHYSICAL(dev_priv)) {
-		WARN_ON(engine->id != RCS);
-		ret = init_phys_status_page(engine);
-		if (ret)
-			goto error;
-	} else {
-		ret = init_status_page(engine);
-		if (ret)
-			goto error;
+		err = PTR_ERR(ring);
+		goto err_hws;
 	}
 
 	/* Ring wraparound at offset 0 sometimes hangs. No idea why. */
-	ret = intel_ring_pin(ring, I915_GTT_PAGE_SIZE);
-	if (ret) {
-		intel_ring_free(ring);
-		goto error;
-	}
+	err = intel_ring_pin(ring, engine->i915, I915_GTT_PAGE_SIZE);
+	if (err)
+		goto err_ring;
+
+	GEM_BUG_ON(engine->buffer);
 	engine->buffer = ring;
 
 	return 0;
 
-error:
-	intel_engine_cleanup(engine);
-	return ret;
+err_ring:
+	intel_ring_free(ring);
+err_hws:
+	if (HWS_NEEDS_PHYSICAL(engine->i915))
+		cleanup_phys_status_page(engine);
+	else
+		cleanup_status_page(engine);
+err:
+	intel_engine_cleanup_common(engine);
+	return err;
 }
 
 void intel_engine_cleanup(struct intel_engine_cs *engine)
 {
-	struct drm_i915_private *dev_priv;
+	struct drm_i915_private *dev_priv = engine->i915;
 
-	dev_priv = engine->i915;
+	WARN_ON(INTEL_GEN(dev_priv) > 2 &&
+		(I915_READ_MODE(engine) & MODE_IDLE) == 0);
 
-	if (engine->buffer) {
-		WARN_ON(INTEL_GEN(dev_priv) > 2 &&
-			(I915_READ_MODE(engine) & MODE_IDLE) == 0);
-
-		intel_ring_unpin(engine->buffer);
-		intel_ring_free(engine->buffer);
-		engine->buffer = NULL;
-	}
+	intel_ring_unpin(engine->buffer);
+	intel_ring_free(engine->buffer);
 
 	if (engine->cleanup)
 		engine->cleanup(engine);
 
-	if (HWS_NEEDS_PHYSICAL(dev_priv)) {
-		WARN_ON(engine->id != RCS);
+	if (HWS_NEEDS_PHYSICAL(dev_priv))
 		cleanup_phys_status_page(engine);
-	} else {
+	else
 		cleanup_status_page(engine);
-	}
 
 	intel_engine_cleanup_common(engine);
 
-	engine->i915 = NULL;
 	dev_priv->engine[engine->id] = NULL;
 	kfree(engine);
 }
@@ -1573,10 +1555,8 @@ void intel_legacy_submission_resume(struct drm_i915_private *dev_priv)
 	struct intel_engine_cs *engine;
 	enum intel_engine_id id;
 
-	for_each_engine(engine, dev_priv, id) {
+	for_each_engine(engine, dev_priv, id)
 		engine->buffer->head = engine->buffer->tail;
-		engine->buffer->last_retired_head = -1;
-	}
 }
 
 static int ring_request_alloc(struct drm_i915_gem_request *request)
@@ -2130,7 +2110,7 @@ int intel_init_render_ring_buffer(struct intel_engine_cs *engine)
 
 			num_rings =
 				hweight32(INTEL_INFO(dev_priv)->ring_mask) - 1;
-			engine->emit_breadcrumb_sz += num_rings * 6;
+			engine->emit_breadcrumb_sz += num_rings * 8;
 		}
 	} else if (INTEL_GEN(dev_priv) >= 6) {
 		engine->init_context = intel_rcs_ctx_init;
