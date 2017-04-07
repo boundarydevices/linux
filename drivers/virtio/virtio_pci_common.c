@@ -106,9 +106,12 @@ static void vp_remove_vqs(struct virtio_device *vdev)
 		if (vp_dev->msix_vector_map) {
 			int v = vp_dev->msix_vector_map[vq->index];
 
-			if (v != VIRTIO_MSI_NO_VECTOR)
-				free_irq(pci_irq_vector(vp_dev->pci_dev, v),
-					vq);
+			if (v != VIRTIO_MSI_NO_VECTOR) {
+				unsigned int irq;
+				irq = pci_irq_vector(vp_dev->pci_dev, v);
+				irq_set_affinity_hint(irq, NULL);
+				free_irq(irq, vq);
+			}
 		}
 		vp_dev->del_vq(vq);
 	}
@@ -138,12 +141,14 @@ void vp_del_vqs(struct virtio_device *vdev)
 	}
 
 	free_irq(pci_irq_vector(vp_dev->pci_dev, 0), vp_dev);
+	vp_dev->msix_vectors = 0;
 	pci_free_irq_vectors(vp_dev->pci_dev);
 }
 
 static int vp_find_vqs_msix(struct virtio_device *vdev, unsigned nvqs,
 		struct virtqueue *vqs[], vq_callback_t *callbacks[],
-		const char * const names[], struct irq_affinity *desc)
+		const char * const names[], const bool *ctx,
+		struct irq_affinity *desc)
 {
 	struct virtio_pci_device *vp_dev = to_vp_device(vdev);
 	const char *name = dev_name(&vp_dev->vdev.dev);
@@ -225,7 +230,8 @@ static int vp_find_vqs_msix(struct virtio_device *vdev, unsigned nvqs,
 			msix_vec = VIRTIO_MSI_NO_VECTOR;
 
 		vqs[i] = vp_dev->setup_vq(vp_dev, i, callbacks[i], names[i],
-				msix_vec);
+					  ctx ? ctx[i] : false,
+					  msix_vec);
 		if (IS_ERR(vqs[i])) {
 			err = PTR_ERR(vqs[i]);
 			goto out_remove_vqs;
@@ -263,6 +269,7 @@ static int vp_find_vqs_msix(struct virtio_device *vdev, unsigned nvqs,
 out_remove_vqs:
 	vp_remove_vqs(vdev);
 	kfree(vp_dev->msix_vector_map);
+	vp_dev->msix_vector_map = NULL;
 out_disable_config_irq:
 	vp_dev->config_vector(vp_dev, VIRTIO_MSI_NO_VECTOR);
 out_free_config_irq:
@@ -276,13 +283,14 @@ out_free_msix_affinity_masks:
 out_free_msix_names:
 	kfree(vp_dev->msix_names);
 out_free_irq_vectors:
+	vp_dev->msix_vectors = 0;
 	pci_free_irq_vectors(vp_dev->pci_dev);
 	return err;
 }
 
 static int vp_find_vqs_intx(struct virtio_device *vdev, unsigned nvqs,
 		struct virtqueue *vqs[], vq_callback_t *callbacks[],
-		const char * const names[])
+		const char * const names[], const bool *ctx)
 {
 	struct virtio_pci_device *vp_dev = to_vp_device(vdev);
 	int i, err;
@@ -298,7 +306,8 @@ static int vp_find_vqs_intx(struct virtio_device *vdev, unsigned nvqs,
 			continue;
 		}
 		vqs[i] = vp_dev->setup_vq(vp_dev, i, callbacks[i], names[i],
-				VIRTIO_MSI_NO_VECTOR);
+					  ctx ? ctx[i] : false,
+					  VIRTIO_MSI_NO_VECTOR);
 		if (IS_ERR(vqs[i])) {
 			err = PTR_ERR(vqs[i]);
 			goto out_remove_vqs;
@@ -316,14 +325,15 @@ out_remove_vqs:
 /* the config->find_vqs() implementation */
 int vp_find_vqs(struct virtio_device *vdev, unsigned nvqs,
 		struct virtqueue *vqs[], vq_callback_t *callbacks[],
-		const char * const names[], struct irq_affinity *desc)
+		const char * const names[], const bool *ctx,
+		struct irq_affinity *desc)
 {
 	int err;
 
-	err = vp_find_vqs_msix(vdev, nvqs, vqs, callbacks, names, desc);
+	err = vp_find_vqs_msix(vdev, nvqs, vqs, callbacks, names, ctx, desc);
 	if (!err)
 		return 0;
-	return vp_find_vqs_intx(vdev, nvqs, vqs, callbacks, names);
+	return vp_find_vqs_intx(vdev, nvqs, vqs, callbacks, names, ctx);
 }
 
 const char *vp_bus_name(struct virtio_device *vdev)
