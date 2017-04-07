@@ -6414,6 +6414,13 @@ F:	Documentation/ABI/testing/sysfs-bus-iio-adc-envelope-detector
 F:	Documentation/devicetree/bindings/iio/adc/envelope-detector.txt
 F:	drivers/iio/adc/envelope-detector.c
 
+IIO MULTIPLEXER
+M:	Peter Rosin <peda@axentia.se>
+L:	linux-iio@vger.kernel.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/iio/multiplexer/iio-mux.txt
+F:	drivers/iio/multiplexer/iio-mux.c
+
 IIO SUBSYSTEM AND DRIVERS
 M:	Jonathan Cameron <jic23@kernel.org>
 R:	Hartmut Knaack <knaack.h@gmx.de>
@@ -8623,6 +8630,14 @@ MULTIMEDIA CARD (MMC) ETC. OVER SPI
 S:	Orphan
 F:	drivers/mmc/host/mmc_spi.c
 F:	include/linux/spi/mmc_spi.h
+
+MULTIPLEXER SUBSYSTEM
+M:	Peter Rosin <peda@axentia.se>
+S:	Maintained
+F:	Documentation/devicetree/bindings/mux/
+F:	include/linux/dt-bindings/mux/
+F:	include/linux/mux.h
+F:	drivers/mux/
 
 MULTISOUND SOUND DRIVER
 M:	Andrew Veliath <andrewtv@usa.net>
