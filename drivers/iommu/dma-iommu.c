@@ -167,22 +167,99 @@ void iommu_put_dma_cookie(struct iommu_domain *domain)
 }
 EXPORT_SYMBOL(iommu_put_dma_cookie);
 
-static void iova_reserve_pci_windows(struct pci_dev *dev,
-		struct iova_domain *iovad)
+/**
+ * iommu_dma_get_resv_regions - Reserved region driver helper
+ * @dev: Device from iommu_get_resv_regions()
+ * @list: Reserved region list from iommu_get_resv_regions()
+ *
+ * IOMMU drivers can use this to implement their .get_resv_regions callback
+ * for general non-IOMMU-specific reservations. Currently, this covers host
+ * bridge windows for PCI devices.
+ */
+void iommu_dma_get_resv_regions(struct device *dev, struct list_head *list)
 {
-	struct pci_host_bridge *bridge = pci_find_host_bridge(dev->bus);
+	struct pci_host_bridge *bridge;
 	struct resource_entry *window;
-	unsigned long lo, hi;
 
+	if (!dev_is_pci(dev))
+		return;
+
+	bridge = pci_find_host_bridge(to_pci_dev(dev)->bus);
 	resource_list_for_each_entry(window, &bridge->windows) {
-		if (resource_type(window->res) != IORESOURCE_MEM &&
-		    resource_type(window->res) != IORESOURCE_IO)
+		struct iommu_resv_region *region;
+		phys_addr_t start;
+		size_t length;
+
+		if (resource_type(window->res) != IORESOURCE_MEM)
 			continue;
 
-		lo = iova_pfn(iovad, window->res->start - window->offset);
-		hi = iova_pfn(iovad, window->res->end - window->offset);
-		reserve_iova(iovad, lo, hi);
+		start = window->res->start - window->offset;
+		length = window->res->end - window->res->start + 1;
+		region = iommu_alloc_resv_region(start, length, 0,
+				IOMMU_RESV_RESERVED);
+		if (!region)
+			return;
+
+		list_add_tail(&region->list, list);
 	}
+}
+EXPORT_SYMBOL(iommu_dma_get_resv_regions);
+
+static int cookie_init_hw_msi_region(struct iommu_dma_cookie *cookie,
+		phys_addr_t start, phys_addr_t end)
+{
+	struct iova_domain *iovad = &cookie->iovad;
+	struct iommu_dma_msi_page *msi_page;
+	int i, num_pages;
+
+	start -= iova_offset(iovad, start);
+	num_pages = iova_align(iovad, end - start) >> iova_shift(iovad);
+
+	msi_page = kcalloc(num_pages, sizeof(*msi_page), GFP_KERNEL);
+	if (!msi_page)
+		return -ENOMEM;
+
+	for (i = 0; i < num_pages; i++) {
+		msi_page[i].phys = start;
+		msi_page[i].iova = start;
+		INIT_LIST_HEAD(&msi_page[i].list);
+		list_add(&msi_page[i].list, &cookie->msi_page_list);
+		start += iovad->granule;
+	}
+
+	return 0;
+}
+
+static int iova_reserve_iommu_regions(struct device *dev,
+		struct iommu_domain *domain)
+{
+	struct iommu_dma_cookie *cookie = domain->iova_cookie;
+	struct iova_domain *iovad = &cookie->iovad;
+	struct iommu_resv_region *region;
+	LIST_HEAD(resv_regions);
+	int ret = 0;
+
+	iommu_get_resv_regions(dev, &resv_regions);
+	list_for_each_entry(region, &resv_regions, list) {
+		unsigned long lo, hi;
+
+		/* We ARE the software that manages these! */
+		if (region->type == IOMMU_RESV_SW_MSI)
+			continue;
+
+		lo = iova_pfn(iovad, region->start);
+		hi = iova_pfn(iovad, region->start + region->length - 1);
+		reserve_iova(iovad, lo, hi);
+
+		if (region->type == IOMMU_RESV_MSI)
+			ret = cookie_init_hw_msi_region(cookie, region->start,
+					region->start + region->length);
+		if (ret)
+			break;
+	}
+	iommu_put_resv_regions(dev, &resv_regions);
+
+	return ret;
 }
 
 /**
@@ -203,7 +280,6 @@ int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
 	struct iommu_dma_cookie *cookie = domain->iova_cookie;
 	struct iova_domain *iovad = &cookie->iovad;
 	unsigned long order, base_pfn, end_pfn;
-	bool pci = dev && dev_is_pci(dev);
 
 	if (!cookie || cookie->type != IOMMU_DMA_IOVA_COOKIE)
 		return -EINVAL;
@@ -233,7 +309,7 @@ int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
 	 * leave the cache limit at the top of their range to save an rb_last()
 	 * traversal on every allocation.
 	 */
-	if (pci)
+	if (dev && dev_is_pci(dev))
 		end_pfn &= DMA_BIT_MASK(32) >> order;
 
 	/* start_pfn is always nonzero for an already-initialised domain */
@@ -248,12 +324,15 @@ int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
 		 * area cache limit down for the benefit of the smaller one.
 		 */
 		iovad->dma_32bit_pfn = min(end_pfn, iovad->dma_32bit_pfn);
-	} else {
-		init_iova_domain(iovad, 1UL << order, base_pfn, end_pfn);
-		if (pci)
-			iova_reserve_pci_windows(to_pci_dev(dev), iovad);
+
+		return 0;
 	}
-	return 0;
+
+	init_iova_domain(iovad, 1UL << order, base_pfn, end_pfn);
+	if (!dev)
+		return 0;
+
+	return iova_reserve_iommu_regions(dev, domain);
 }
 EXPORT_SYMBOL(iommu_dma_init_domain);
 
