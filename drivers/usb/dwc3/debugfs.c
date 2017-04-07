@@ -300,7 +300,7 @@ static int dwc3_mode_show(struct seq_file *s, void *unused)
 		seq_printf(s, "device\n");
 		break;
 	case DWC3_GCTL_PRTCAP_OTG:
-		seq_printf(s, "OTG\n");
+		seq_printf(s, "otg\n");
 		break;
 	default:
 		seq_printf(s, "UNKNOWN %08x\n", DWC3_GCTL_PRTCAP(reg));
@@ -446,52 +446,7 @@ static int dwc3_link_state_show(struct seq_file *s, void *unused)
 	state = DWC3_DSTS_USBLNKST(reg);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
-	switch (state) {
-	case DWC3_LINK_STATE_U0:
-		seq_printf(s, "U0\n");
-		break;
-	case DWC3_LINK_STATE_U1:
-		seq_printf(s, "U1\n");
-		break;
-	case DWC3_LINK_STATE_U2:
-		seq_printf(s, "U2\n");
-		break;
-	case DWC3_LINK_STATE_U3:
-		seq_printf(s, "U3\n");
-		break;
-	case DWC3_LINK_STATE_SS_DIS:
-		seq_printf(s, "SS.Disabled\n");
-		break;
-	case DWC3_LINK_STATE_RX_DET:
-		seq_printf(s, "Rx.Detect\n");
-		break;
-	case DWC3_LINK_STATE_SS_INACT:
-		seq_printf(s, "SS.Inactive\n");
-		break;
-	case DWC3_LINK_STATE_POLL:
-		seq_printf(s, "Poll\n");
-		break;
-	case DWC3_LINK_STATE_RECOV:
-		seq_printf(s, "Recovery\n");
-		break;
-	case DWC3_LINK_STATE_HRESET:
-		seq_printf(s, "HRESET\n");
-		break;
-	case DWC3_LINK_STATE_CMPLY:
-		seq_printf(s, "Compliance\n");
-		break;
-	case DWC3_LINK_STATE_LPBK:
-		seq_printf(s, "Loopback\n");
-		break;
-	case DWC3_LINK_STATE_RESET:
-		seq_printf(s, "Reset\n");
-		break;
-	case DWC3_LINK_STATE_RESUME:
-		seq_printf(s, "Resume\n");
-		break;
-	default:
-		seq_printf(s, "UNKNOWN %d\n", state);
-	}
+	seq_printf(s, "%s\n", dwc3_gadget_link_string(state));
 
 	return 0;
 }
@@ -689,30 +644,6 @@ out:
 	return 0;
 }
 
-static inline const char *dwc3_trb_type_string(struct dwc3_trb *trb)
-{
-	switch (DWC3_TRBCTL_TYPE(trb->ctrl)) {
-	case DWC3_TRBCTL_NORMAL:
-		return "normal";
-	case DWC3_TRBCTL_CONTROL_SETUP:
-		return "control-setup";
-	case DWC3_TRBCTL_CONTROL_STATUS2:
-		return "control-status2";
-	case DWC3_TRBCTL_CONTROL_STATUS3:
-		return "control-status3";
-	case DWC3_TRBCTL_CONTROL_DATA:
-		return "control-data";
-	case DWC3_TRBCTL_ISOCHRONOUS_FIRST:
-		return "isoc-first";
-	case DWC3_TRBCTL_ISOCHRONOUS:
-		return "isoc";
-	case DWC3_TRBCTL_LINK_TRB:
-		return "link";
-	default:
-		return "UNKNOWN";
-	}
-}
-
 static int dwc3_ep_trb_ring_show(struct seq_file *s, void *unused)
 {
 	struct dwc3_ep		*dep = s->private;
@@ -733,10 +664,11 @@ static int dwc3_ep_trb_ring_show(struct seq_file *s, void *unused)
 
 	for (i = 0; i < DWC3_TRB_NUM; i++) {
 		struct dwc3_trb *trb = &dep->trb_pool[i];
+		unsigned int type = DWC3_TRBCTL_TYPE(trb->ctrl);
 
 		seq_printf(s, "%08x%08x,%d,%s,%d,%d,%d,%d,%d,%d\n",
 				trb->bph, trb->bpl, trb->size,
-				dwc3_trb_type_string(trb),
+				dwc3_trb_type_string(type),
 				!!(trb->ctrl & DWC3_TRB_CTRL_IOC),
 				!!(trb->ctrl & DWC3_TRB_CTRL_ISP_IMI),
 				!!(trb->ctrl & DWC3_TRB_CTRL_CSP),
@@ -822,19 +754,8 @@ static void dwc3_debugfs_create_endpoint_dirs(struct dwc3 *dwc,
 {
 	int			i;
 
-	for (i = 0; i < dwc->num_in_eps; i++) {
-		u8		epnum = (i << 1) | 1;
-		struct dwc3_ep	*dep = dwc->eps[epnum];
-
-		if (!dep)
-			continue;
-
-		dwc3_debugfs_create_endpoint_dir(dep, parent);
-	}
-
-	for (i = 0; i < dwc->num_out_eps; i++) {
-		u8		epnum = (i << 1);
-		struct dwc3_ep	*dep = dwc->eps[epnum];
+	for (i = 0; i < dwc->num_eps; i++) {
+		struct dwc3_ep	*dep = dwc->eps[i];
 
 		if (!dep)
 			continue;

@@ -397,8 +397,7 @@ static void dwc3_core_num_eps(struct dwc3 *dwc)
 {
 	struct dwc3_hwparams	*parms = &dwc->hwparams;
 
-	dwc->num_in_eps = DWC3_NUM_IN_EPS(parms);
-	dwc->num_out_eps = DWC3_NUM_EPS(parms) - dwc->num_in_eps;
+	dwc->num_eps = DWC3_NUM_EPS(parms);
 }
 
 static void dwc3_cache_hwparams(struct dwc3 *dwc)
@@ -430,6 +429,12 @@ static int dwc3_phy_setup(struct dwc3 *dwc)
 	int ret;
 
 	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(0));
+
+	/*
+	 * Make sure UX_EXIT_PX is cleared as that causes issues with some
+	 * PHYs. Also, this bit is not supposed to be used in normal operation.
+	 */
+	reg &= ~DWC3_GUSB3PIPECTL_UX_EXIT_PX;
 
 	/*
 	 * Above 1.94a, it is recommended to set DWC3_GUSB3PIPECTL_SUSPHY

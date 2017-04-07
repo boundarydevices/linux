@@ -1184,8 +1184,11 @@ static void __dwc3_gadget_start_isoc(struct dwc3 *dwc,
 		return;
 	}
 
-	/* 4 micro frames in the future */
-	uf = cur_uf + dep->interval * 4;
+	/*
+	 * Schedule the first trb for one interval in the future or at
+	 * least 4 microframes.
+	 */
+	uf = cur_uf + max_t(u32, 4, dep->interval);
 
 	__dwc3_gadget_kick_transfer(dep, uf);
 }
@@ -2006,14 +2009,15 @@ static const struct usb_gadget_ops dwc3_gadget_ops = {
 
 /* -------------------------------------------------------------------------- */
 
-static int dwc3_gadget_init_hw_endpoints(struct dwc3 *dwc,
-		u8 num, u32 direction)
+static int dwc3_gadget_init_endpoints(struct dwc3 *dwc, u8 num)
 {
 	struct dwc3_ep			*dep;
-	u8				i;
+	u8				epnum;
 
-	for (i = 0; i < num; i++) {
-		u8 epnum = (i << 1) | (direction ? 1 : 0);
+	INIT_LIST_HEAD(&dwc->gadget.ep_list);
+
+	for (epnum = 0; epnum < num; epnum++) {
+		bool			direction = epnum & 1;
 
 		dep = kzalloc(sizeof(*dep), GFP_KERNEL);
 		if (!dep)
@@ -2021,12 +2025,12 @@ static int dwc3_gadget_init_hw_endpoints(struct dwc3 *dwc,
 
 		dep->dwc = dwc;
 		dep->number = epnum;
-		dep->direction = !!direction;
+		dep->direction = direction;
 		dep->regs = dwc->regs + DWC3_DEP_BASE(epnum);
 		dwc->eps[epnum] = dep;
 
 		snprintf(dep->name, sizeof(dep->name), "ep%d%s", epnum >> 1,
-				(epnum & 1) ? "in" : "out");
+				direction ? "in" : "out");
 
 		dep->endpoint.name = dep->name;
 
@@ -2053,7 +2057,7 @@ static int dwc3_gadget_init_hw_endpoints(struct dwc3 *dwc,
 			/* MDWIDTH is represented in bits, we need it in bytes */
 			mdwidth /= 8;
 
-			size = dwc3_readl(dwc->regs, DWC3_GTXFIFOSIZ(i));
+			size = dwc3_readl(dwc->regs, DWC3_GTXFIFOSIZ(epnum >> 1));
 			size = DWC3_GTXFIFOSIZ_TXFDEF(size);
 
 			/* FIFO Depth is in MDWDITH bytes. Multiply */
@@ -2103,32 +2107,11 @@ static int dwc3_gadget_init_hw_endpoints(struct dwc3 *dwc,
 			dep->endpoint.caps.type_int = true;
 		}
 
-		dep->endpoint.caps.dir_in = !!direction;
+		dep->endpoint.caps.dir_in = direction;
 		dep->endpoint.caps.dir_out = !direction;
 
 		INIT_LIST_HEAD(&dep->pending_list);
 		INIT_LIST_HEAD(&dep->started_list);
-	}
-
-	return 0;
-}
-
-static int dwc3_gadget_init_endpoints(struct dwc3 *dwc)
-{
-	int				ret;
-
-	INIT_LIST_HEAD(&dwc->gadget.ep_list);
-
-	ret = dwc3_gadget_init_hw_endpoints(dwc, dwc->num_out_eps, 0);
-	if (ret < 0) {
-		dev_err(dwc->dev, "failed to initialize OUT endpoints\n");
-		return ret;
-	}
-
-	ret = dwc3_gadget_init_hw_endpoints(dwc, dwc->num_in_eps, 1);
-	if (ret < 0) {
-		dev_err(dwc->dev, "failed to initialize IN endpoints\n");
-		return ret;
 	}
 
 	return 0;
@@ -3241,7 +3224,7 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	 * sure we're starting from a well known location.
 	 */
 
-	ret = dwc3_gadget_init_endpoints(dwc);
+	ret = dwc3_gadget_init_endpoints(dwc, dwc->num_eps);
 	if (ret)
 		goto err6;
 
