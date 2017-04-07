@@ -628,6 +628,11 @@ config SAS
 
 	   If compiled as a module, it will be named sas.ko
 
+config SAS_PARTIAL_RX
+	bool "Return received character without regard to message boundaries"
+	depends on SAS
+	default n
+
 config TILE_SROM
 	bool "Character-device access via hypervisor to the Tilera SPI ROM"
 	depends on TILE
