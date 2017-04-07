@@ -42,8 +42,10 @@
 /* Main tracing buffer and events set up */
 #ifdef CONFIG_TRACING
 void trace_init(void);
+void early_trace_init(void);
 #else
 static inline void trace_init(void) { }
+static inline void early_trace_init(void) { }
 #endif
 
 struct module;
@@ -144,6 +146,10 @@ struct ftrace_ops_hash {
 	struct ftrace_hash		*filter_hash;
 	struct mutex			regex_lock;
 };
+
+void ftrace_free_init_mem(void);
+#else
+static inline void ftrace_free_init_mem(void) { }
 #endif
 
 /*
@@ -260,6 +266,7 @@ static inline int ftrace_nr_registered_ops(void)
 }
 static inline void clear_ftrace_function(void) { }
 static inline void ftrace_kill(void) { }
+static inline void ftrace_free_init_mem(void) { }
 #endif /* CONFIG_FUNCTION_TRACER */
 
 #ifdef CONFIG_STACK_TRACER
