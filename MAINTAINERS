@@ -13840,3 +13840,8 @@ F: include/linux/amlogic/media/amvecm/*
 AMLOGIC GXL ADD SKT DTS
 M: Yun Cai <yun.cai@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_skt.dts
+
+AMLOGIC AXG ADD PXP DTS
+M: Yun Cai <yun.cai@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/axg_pxp.dts
+F: arch/arm64/boot/dts/amlogic/mesonaxg.dtsi

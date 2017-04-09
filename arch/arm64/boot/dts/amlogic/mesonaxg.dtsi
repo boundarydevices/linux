@@ -1,0 +1,149 @@
+/*
+ * arch/arm64/boot/dts/amlogic/mesonaxg.dtsi
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+/ {
+	cpus:cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
+		#cooling-cells = <2>; /* min followed by max */
+
+		cpu0:cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53","arm,armv8";
+			reg = <0x0 0x0>;
+			enable-method = "psci";
+		};
+
+		cpu1:cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53","arm,armv8";
+			reg = <0x0 0x1>;
+			enable-method = "psci";
+		};
+		cpu2:cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53","arm,armv8";
+			reg = <0x0 0x2>;
+			enable-method = "psci";
+		};
+
+		cpu3:cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53","arm,armv8";
+			reg = <0x0 0x3>;
+			enable-method = "psci";
+		};
+
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <GIC_PPI 13 0xff01>,
+			     <GIC_PPI 14 0xff01>,
+			     <GIC_PPI 11 0xff01>,
+			     <GIC_PPI 10 0xff01>;
+	};
+	timer_bc {
+		compatible = "arm, meson-bc-timer";
+		reg=   <0x0 0xffd0f190 0x0 0x4 0x0 0xffd0f194 0x0 0x4>;
+		timer_name = "Meson TimerF";
+		clockevent-rating=<300>;
+		clockevent-shift=<20>;
+		clockevent-features=<0x23>;
+		interrupts = <0 60 1>;
+		bit_enable=<16>;
+		bit_mode=<12>;
+		bit_resolution=<0>;
+	};
+	arm_pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <0 137 4>,
+			     <0 138 4>,
+			     <0 153 4>,
+			     <0 154 4>;
+	};
+
+	gic: interrupt-controller@2c001000 {
+		compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
+		#interrupt-cells = <3>;
+		#address-cells = <0>;
+		interrupt-controller;
+		reg = <0x0 0xffc01000 0 0x1000>,
+		      <0x0 0xffc02000 0 0x0100>;
+		interrupts = <GIC_PPI 9 0xf04>;
+	};
+
+	psci {
+		compatible = "arm,psci";
+		method = "smc";
+	};
+
+	secmon {
+		compatible = "amlogic, secmon";
+		memory-region = <&secmon_reserved>;
+		in_base_func = <0x82000020>;
+		out_base_func = <0x82000021>;
+	};
+
+	cpu_iomap {
+		compatible = "amlogic, iomap";
+		#address-cells=<2>;
+		#size-cells=<2>;
+		ranges;
+		io_cbus_base {
+			reg = <0x0 0xffd00000 0x0 0x100000>;
+		};
+		io_apb_base {
+			reg = <0x0 0xffe00000 0x0 0x100000>;
+		};
+		io_aobus_base {
+			reg = <0x0 0xff800000 0x0 0x100000>;
+		};
+		io_vapb_base {
+			reg = <0x0 0xff900000 0x0 0x050000>;
+		};
+	};
+
+	xtal: xtal-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <24000000>;
+		clock-output-names = "xtal";
+		#clock-cells = <0>;
+	};
+
+	cpu_info {
+		compatible = "amlogic, cpuinfo";
+		status = "okay";
+		cpuinfo_cmd = <0x82000044>;
+	};
+
+
+	cpu_version {
+		reg=<0x0 0xff800220 0x0 0x4>;
+	};
+
+	meson_clk_msr {
+		compatible = "amlogic, gxl_measure";
+		reg = <0x0 0xffd18004 0x0 0x4
+		       0x0 0xffd1800c 0x0 0x4>;
+	};
+
+
+};/* end of / */
+
