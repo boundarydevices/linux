@@ -13781,3 +13781,6 @@ F: drivers/amlogic/media/video_processor/Kconfig
 F: drivers/amlogic/media/video_processor/Makefile
 F: drivers/amlogic/media/video_processor/ionvideo/*
 
+AMLOGIC PINCTRL SUPPORT FOR M8B
+M: Xingyu Chen <xingyu.chen@amlogic.com>
+F: drivers/amlogic/pinctrl/pinctrl-meson8b.c

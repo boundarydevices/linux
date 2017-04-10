@@ -137,18 +137,16 @@ struct meson_gpio_irq_desc {
 	unsigned int hwirq;
 };
 
-/**
- *struct meson_irq_resource - describe resource for irq
+/*struct meson_irq_res - describe resource for gpio irq
  *
- *@irq_num: number of gpio irq
- *@gpio_irq: a pointer to 'struct meson_gpio_irq_desc'
- *@reg_irq: registers for gpio irq settings
+ * @irq_num: number of gpio irq
+ * @irq_res_lock:
+ * @gpio_irq: a pointer to 'struct meson_gpio_irq_desc'
  */
 struct meson_irq_resource {
 	unsigned char irq_num;
-	unsigned char init_flag;
+	spinlock_t irq_res_lock;
 	struct meson_gpio_irq_desc *gpio_irq;
-	struct regmap *reg_irq;
 };
 
 /**
@@ -158,9 +156,11 @@ struct meson_irq_resource {
  * @reg_pullen:	registers for pull-enable settings
  * @reg_pull:	registers for pull settings
  * @reg_gpio:	registers for gpio settings
+ * @reg_irq: registers for gpio irq settings
  * @chip:	gpio chip associated with the domain
- * @data;	platform data for the domain
- * @node:	device tree node for the domain
+ * @irq_res: irq resource
+ * @data: platform data for the domain
+ * @node: device tree node for the domain
  *
  * A domain represents a set of banks controlled by the same set of
  * registers.
@@ -170,8 +170,10 @@ struct meson_domain {
 	struct regmap *reg_pullen;
 	struct regmap *reg_pull;
 	struct regmap *reg_gpio;
+	struct regmap *reg_irq;
 
 	struct gpio_chip chip;
+	struct meson_irq_resource irq_res;
 	struct meson_domain_data *data;
 	struct device_node *of_node;
 };
@@ -184,6 +186,11 @@ struct meson_pinctrl_data {
 	unsigned int num_pins;
 	unsigned int num_groups;
 	unsigned int num_funcs;
+};
+
+struct meson_pinctrl_private {
+	struct meson_pinctrl_data *pinctrl_data;
+	struct irq_chip *irq_chip;
 };
 
 struct meson_pinctrl {

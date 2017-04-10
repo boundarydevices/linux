@@ -181,7 +181,6 @@
 
 		pinctrl_cbus: pinctrl@c1109880 {
 			compatible = "amlogic,meson8b-cbus-pinctrl";
-			reg = <0xc1109880 0x10>;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
@@ -190,30 +189,46 @@
 				reg = <0xc11080b0 0x28>,
 				      <0xc11080e8 0x18>,
 				      <0xc1108120 0x18>,
-				      <0xc1108030 0x38>;
+				      <0xc1108030 0x38>,
+				      <0xc1109880 0x10>;
+				interrupts = <0 64 1>,
+					<0 65 1>,
+					<0 66 1>,
+					<0 67 1>,
+					<0 68 1>,
+					<0 69 1>,
+					<0 70 1>,
+					<0 71 1>;
 				reg-names = "mux",
 					"pull",
 					"pull-enable",
-					"gpio";
+					"gpio",
+					"irq";
 				gpio-controller;
 				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
 			};
 		};
 
 		pinctrl_aobus: pinctrl@c8100084 {
 			compatible = "amlogic,meson8b-aobus-pinctrl";
-			reg = <0xc8100084 0xc>;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
 
 			gpio_ao: ao-bank@c1108030 {
 				reg = <0xc8100014 0x4>,
-				      <0xc810002c 0x4>,
-				      <0xc8100024 0x8>;
-				reg-names = "mux", "pull", "gpio";
+					  <0xc810002c 0x4>,
+				      <0xc8100024 0x8>,
+				      <0xc8100084 0x4>;
+				interrupts = <0 200 1>,
+					<0 201 1>;
+				reg-names = "mux", "pull", "gpio", "irq";
 				gpio-controller;
 				#gpio-cells = <2>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
 			};
 
 			uart_ao_a_pins: uart_ao_a {
