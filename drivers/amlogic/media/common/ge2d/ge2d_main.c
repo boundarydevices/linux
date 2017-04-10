@@ -61,6 +61,8 @@ unsigned int ge2d_log_level;
 unsigned int ge2d_dump_reg_enable;
 unsigned int ge2d_dump_reg_cnt;
 
+static int init_ge2d_device(void);
+static int remove_ge2d_device(void);
 static int ge2d_open(struct inode *inode, struct file *file);
 static long ge2d_ioctl(struct file *filp, unsigned int cmd,
 		       unsigned long args);
@@ -612,6 +614,8 @@ static int ge2d_probe(struct platform_device *pdev)
 	struct reset_control *rstc = NULL;
 	struct clk *clk_gate;
 	struct clk *clk;
+
+	init_ge2d_device();
 	/* get interrupt resource */
 	irq = platform_get_irq_byname(pdev, "ge2d");
 	if (irq == -ENXIO) {
@@ -664,7 +668,7 @@ static int ge2d_remove(struct platform_device *pdev)
 {
 	ge2d_log_info("%s\n", __func__);
 	ge2d_wq_deinit();
-
+	remove_ge2d_device();
 	return 0;
 }
 
@@ -709,12 +713,6 @@ static int init_ge2d_device(void)
 		class_unregister(ge2d_device.cla);
 		return -1;
 	}
-
-	if (platform_driver_register(&ge2d_driver)) {
-		ge2d_log_err("failed to register OSD driver!\n");
-		return -ENODEV;
-	}
-
 	return ret;
 }
 
@@ -734,13 +732,16 @@ static int remove_ge2d_device(void)
 static int __init ge2d_init_module(void)
 {
 	ge2d_log_info("%s\n", __func__);
-	return init_ge2d_device();
+	if (platform_driver_register(&ge2d_driver)) {
+		ge2d_log_err("failed to register ge2d driver!\n");
+		return -ENODEV;
+	}
+	return 0;
 }
 
 static void __exit ge2d_remove_module(void)
 {
 	platform_driver_unregister(&ge2d_driver);
-	remove_ge2d_device();
 	ge2d_log_info("%s\n", __func__);
 }
 
