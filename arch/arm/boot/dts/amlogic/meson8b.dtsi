@@ -280,5 +280,23 @@ dwc2_b {
 						"usb0";
 	};
 
+	aml_tdes {
+		compatible = "amlogic,des,tdes";
+		dev_name = "aml_tdes_blkmv";
+		status = "okay";
+		interrupts = <0 68 1>;
+		clocks = <&clkc CLKID_BLKMV>;
+		clock-names = "blkmv";
+	};
+
+	aml_aes {
+		compatible = "amlogic,aes";
+		dev_name = "aml_aes_blkmv";
+		status = "okay";
+		interrupts = <0 68 1>;
+		clocks = <&clkc CLKID_BLKMV>;
+		clock-names = "blkmv";
+	};
+
 	};
 }; /* end of / */
