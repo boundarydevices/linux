@@ -18,6 +18,7 @@
 #ifndef __EFUSE_H
 #define __EFUSE_H
 
+/* #define EFUSE_DEBUG */
 /*#define EFUSE_READ_ONLY			1*/
 
 /* #define EFUSE_NONE_ID			0 */
@@ -39,7 +40,7 @@
 
 #define EFUSE_BYTES            512  /* (EFUSE_BITS/8) */
 
-#define EFUSE_INFO_GET				_IO('f', 0x40)
+#define EFUSE_INFO_GET			_IO('f', 0x40)
 
 #define EFUSE_HAL_API_READ	0
 #define EFUSE_HAL_API_WRITE 1
@@ -59,10 +60,7 @@ struct efuseinfo_item_t {
 	char title[40];
 	unsigned int id;
 	loff_t offset;    /* write offset */
-	unsigned int enc_len;
 	unsigned int data_len;
-	int bch_en;
-	int bch_reverse;
 };
 
 struct efuseinfo_t {
@@ -88,10 +86,12 @@ struct efuse_hal_api_arg {
 
 extern struct efuseinfo_t efuseinfo[];
 #ifndef CONFIG_ARM64
-int efuse_getinfo_byID(unsigned int id, struct efuseinfo_item_t *info);
+int efuse_getinfo_byTitle(unsigned char *name, struct efuseinfo_item_t *info);
 int check_if_efused(loff_t pos, size_t count);
 int efuse_read_item(char *buf, size_t count, loff_t *ppos);
 int efuse_write_item(char *buf, size_t count, loff_t *ppos);
+extern int efuse_active_version;
+extern struct clk *efuse_clk;
 #else
 
 ssize_t efuse_get_max(void);

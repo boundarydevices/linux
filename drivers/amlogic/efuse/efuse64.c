@@ -309,7 +309,7 @@ ssize_t efuse_user_attr_store(char *name, const char *buf, size_t count)
 	if (strstr(s, c) != NULL) {
 		for (i = 0; i < info.size; i++) {
 			uint_val = 0;
-			ret = kstrtouint(s, 0, &uint_val);
+			ret = sscanf(s, "%x", &uint_val);
 			if (ret < 0) {
 				pr_err("ERROR: efuse get user data fail!\n");
 				goto error_exit;

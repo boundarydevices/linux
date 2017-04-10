@@ -591,6 +591,13 @@ dwc2_b {
 						"usb0_to_ddr",
 						"usb0";
 	};
+	efuse: efuse{
+		compatible = "amlogic, efuse";
+		reg = <0xda000000 0x14>;
+		clocks = <&clkc CLKID_EFUSE>;
+		clock-names = "efuse_clk";
+		status = "okay";
+	};
 
 	aml_tdes {
 		compatible = "amlogic,des,tdes";
