@@ -25,11 +25,10 @@
 #include <linux/mtd/partitions.h>
 #include <linux/slab.h>
 #include <linux/amlogic/sd.h>
-/*#include <linux/of_address.h>*/
-/*#include <linux/amlogic/aml_gpio_consumer.h>*/
 #include <linux/gpio/consumer.h>
 #include <linux/amlogic/amlsd.h>
 #include <linux/amlogic/cpu_version.h>
+
 unsigned int sd_emmc_debug;
 
 static const struct sd_caps host_caps[] = {
@@ -119,7 +118,8 @@ static int amlsd_get_host_caps2(struct device_node *of_node,
 	return 0;
 }
 
-int amlsd_get_platform_data(struct amlsd_platform *pdata,
+int amlsd_get_platform_data(struct platform_device *pdev,
+		struct amlsd_platform *pdata,
 		struct mmc_host *mmc, u32 index)
 {
 	struct device_node *of_node;
@@ -127,10 +127,13 @@ int amlsd_get_platform_data(struct amlsd_platform *pdata,
 	u32 i, prop;
 	const char *str = "none";
 
-	if (!mmc->parent || !mmc->parent->of_node)
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	of_node = pdev->dev.of_node;
+#else
+	if (!mmc->parent)
 		return 0;
-
 	of_node = mmc->parent->of_node;
+#endif
 	if (of_node) {
 		child = of_node->child;
 		WARN_ON(!child);
@@ -151,8 +154,8 @@ int amlsd_get_platform_data(struct amlsd_platform *pdata,
 				prop, pdata->f_min);
 		SD_PARSE_U32_PROP_DEC(child, "f_max",
 				prop, pdata->f_max);
-		SD_PARSE_U32_PROP_HEX(child, "max_req_size", prop,
-				pdata->max_req_size);
+		SD_PARSE_U32_PROP_HEX(child, "max_req_size",
+				prop, pdata->max_req_size);
 		SD_PARSE_GPIO_NUM_PROP(child, "gpio_cd",
 				str, pdata->gpio_cd);
 		SD_PARSE_GPIO_NUM_PROP(child, "gpio_ro",
@@ -177,20 +180,22 @@ int amlsd_get_platform_data(struct amlsd_platform *pdata,
 				prop, pdata->vol_switch_delay);
 		SD_PARSE_U32_PROP_DEC(child, "card_type",
 				prop, pdata->card_type);
-		if (aml_card_type_mmc(pdata)) {
-			/*tx_phase set default value first*/
-			if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB)
-				pdata->tx_phase = 1;
-			if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)
-				pdata->tx_delay = 3;
-			SD_PARSE_U32_PROP_DEC(child, "tx_phase",
-					prop, pdata->tx_phase);
-		}
-		if (aml_card_type_non_sdio(pdata)) {
-			/*card in default value*/
-			pdata->card_in_delay = 0;
-			SD_PARSE_U32_PROP_DEC(child, "card_in_delay",
-					prop, pdata->card_in_delay);
+		if (get_cpu_type() > MESON_CPU_MAJOR_ID_M8B) {
+			if (aml_card_type_mmc(pdata)) {
+				/*tx_phase set default value first*/
+				if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB)
+					pdata->tx_phase = 1;
+				if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)
+					pdata->tx_delay = 3;
+				SD_PARSE_U32_PROP_DEC(child, "tx_phase",
+						prop, pdata->tx_phase);
+			}
+			if (aml_card_type_non_sdio(pdata)) {
+				/*card in default value*/
+				pdata->card_in_delay = 0;
+				SD_PARSE_U32_PROP_DEC(child, "card_in_delay",
+						prop, pdata->card_in_delay);
+			}
 		}
 		SD_PARSE_GPIO_NUM_PROP(child, "hw_reset",
 				str, pdata->hw_reset);
@@ -208,5 +213,4 @@ int amlsd_get_platform_data(struct amlsd_platform *pdata,
 	}
 	return 0;
 }
-
 

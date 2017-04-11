@@ -159,6 +159,10 @@ struct amlsd_platform {
 #define	 PORT_SDHC_B	 4
 #define	 PORT_SDHC_C	 5
 
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	unsigned int width;
+	unsigned int tune_phase;	/* store tuning result */
+#endif
 	unsigned int caps;
 	unsigned int caps2;
 	unsigned int card_capacity;
@@ -291,6 +295,9 @@ struct amlsd_host {
 	unsigned long mux_parent_rate[MUX_CLK_NUM_PARENTS];
 	struct clk_divider cfg_div;
 	struct clk *cfg_div_clk;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct clk *div3_clk;
+#endif
 
 	struct resource		*mem;
 	struct sd_emmc_regs *sd_emmc_regs;

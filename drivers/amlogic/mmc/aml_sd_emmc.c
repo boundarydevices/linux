@@ -2779,7 +2779,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		goto free_host;
 	}
 
-	if (amlsd_get_platform_data(pdata, mmc, 0))
+	if (amlsd_get_platform_data(pdev, pdata, mmc, 0))
 		mmc_free_host(mmc);
 
 	if (aml_card_type_mmc(pdata))

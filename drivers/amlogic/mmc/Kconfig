@@ -16,4 +16,15 @@ config AMLOGIC_MMC
 	MMC 5.1 compliant and supports SD, eMMC and SDIO interfaces.
 	If you have a controller with this interface, say Y here.
 
+config AMLOGIC_M8B_MMC
+	bool "Amlogic M8B Multimedia Card support"
+	depends on AMLOGIC_MMC
+	default n
+	help
+	This selects support for the Amlogic SD/MMC Host Controller
+	found on the S805/M8B family of SoCs.  This controller is
+	MMC 5.1 compliant and supports SD, eMMC and SDIO interfaces.
+	If you have a controller with this interface, say Y here.
+
+
 endmenu

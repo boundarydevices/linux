@@ -13781,6 +13781,17 @@ F: drivers/amlogic/media/video_processor/Kconfig
 F: drivers/amlogic/media/video_processor/Makefile
 F: drivers/amlogic/media/video_processor/ionvideo/*
 
+AMLOGIC EMMC S805 DRIVER SUPPORT
+M: Nan Li <nan.li@amlogic.com>
+F: arch/arm/boot/dts/amlogic/meson8b.dtsi
+F: arch/arm/boot/dts/amlogic/meson8b_m200.dts
+F: drivers/amlogic/emmc/aml_sdhc_m8.c
+F: drivers/amlogic/emmc/aml_sdio.c
+F: drivers/amlogic/emmc/Kconfig
+F: drivers/amlogic/emmc/Makefile
+F: include/linux/amlogic/sd.h
+F: include/linux/amlogic/cpu_version.h
+
 AMLOGIC PINCTRL SUPPORT FOR M8B
 M: Xingyu Chen <xingyu.chen@amlogic.com>
 F: drivers/amlogic/pinctrl/pinctrl-meson8b.c

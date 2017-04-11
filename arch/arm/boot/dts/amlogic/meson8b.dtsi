@@ -18,6 +18,7 @@
 #include <dt-bindings/clock/meson8b-clkc.h>
 #include <dt-bindings/gpio/meson8b-gpio.h>
 #include <dt-bindings/reset/amlogic,meson8b-reset.h>
+#include <dt-bindings/gpio/gpio.h>
 #include "skeleton.dtsi"
 
 / {
@@ -208,6 +209,158 @@
 				#gpio-cells = <2>;
 				interrupt-controller;
 				#interrupt-cells = <2>;
+			};
+
+			emmc_clk_cmd_pins:emmc_clk_cmd_pins {
+				mux {
+					groups = "sd_cmd_c",
+						"sd_clk_c";
+					function = "sd_c";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			emmc_all_pins:emmc_all_pins {
+				mux {
+					groups = "sd_d0_c",
+						"sd_d1_c",
+						"sd_d2_c",
+						"sd_d3_c",
+						"sd_cmd_c",
+						"sd_clk_c";
+					function = "sd_c";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sd_clk_cmd_pins:sd_clk_cmd_pins{
+				mux {
+					groups = "sd_cmd_b",
+						"sd_clk_b";
+					function = "sd_b";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sd_1bit_pins:sd_1bit_pins{
+				mux {
+					groups = "sd_d1_b",
+						"sd_d2_b",
+						"sd_d3_b",
+						"sd_cmd_b",
+						"sd_clk_b";
+					function = "sd_b";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sd_all_pins:sd_all_pins{
+				mux {
+					groups = "sd_d0_b",
+						"sd_d1_b",
+						"sd_d2_b",
+						"sd_d3_b",
+						"sd_cmd_b",
+						"sd_clk_b";
+					function = "sd_b";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdio_clk_cmd_pins:sdio_clk_cmd_pins {
+				mux {
+					groups = "sd_clk_a",
+						"sd_cmd_a";
+					function = "sd_a";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdio_all_pins:sdio_all_pins {
+				mux {
+					groups = "sd_d0_a",
+						"sd_d1_a",
+						"sd_d2_a",
+						"sd_d3_a",
+						"sd_clk_a",
+						"sd_cmd_a";
+					function = "sd_a";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdhc_emmc_clk_cmd_pins:sdhc_emmc_clk_cmd_pins {
+				mux {
+					groups = "sdxc_clk_c",
+						"sdxc_cmd_c";
+					function = "sdxc_c";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdhc_emmc_all_pins:sdhc_emmc_all_pins {
+				mux {
+					groups = "sdxc_d0_c",
+						"sdxc_d13_c",
+						"sdxc_d47_c",
+						"sdxc_clk_c",
+						"sdxc_cmd_c";
+					function = "sdxc_c";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdhc_sd_clk_cmd_pins:sdhc_sd_clk_cmd_pins {
+				mux {
+					groups = "sdxc_clk_b",
+						"sdxc_cmd_b";
+					function = "sdxc_b";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdhc_sd_all_pins:sdhc_sd_all_pins {
+				mux {
+					groups = "sdxc_d0_b",
+						"sdxc_d13_b",
+						"sdxc_clk_b",
+						"sdxc_cmd_b";
+					function = "sdxc_b";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdhc_sdio_clk_cmd_pins:sdhc_sdio_clk_cmd_pins {
+				mux {
+					groups = "sdxc_clk_a",
+						"sdxc_cmd_a";
+					function = "sdxc_a";
+					input-enable;
+					bias-pull-up;
+				};
+			};
+
+			sdhc_sdio_all_pins:sdhc_sdio_all_pins {
+				mux {
+					groups = "sdxc_d0_1_a",
+						"sdxc_d13_1_a",
+						"sdxc_clk_a",
+						"sdxc_cmd_a";
+					function = "sdxc_a";
+					input-enable;
+					bias-pull-up;
+				};
 			};
 		};
 

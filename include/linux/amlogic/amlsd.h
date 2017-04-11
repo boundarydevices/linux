@@ -26,8 +26,8 @@
 #define AML_MMC_VER_MESSAGE \
 	"2015-01-21: fix a bug in tuning which caused eMMC data CRC error"
 
-extern unsigned int sdhc_debug;
-extern unsigned int sdio_debug;
+extern unsigned long sdhc_debug;
+extern unsigned long sdio_debug;
 extern unsigned int sd_emmc_debug;
 extern const u8 tuning_blk_pattern_4bit[64];
 extern const u8 tuning_blk_pattern_8bit[128];
@@ -49,8 +49,8 @@ extern const u8 tuning_blk_pattern_8bit[128];
 #define LDO4DAC_REG_1_8_V       0x24
 #define LDO4DAC_REG_2_8_V       0x4c
 #define LDO4DAC_REG_3_3_V       0x60
-
 #endif
+
 #define AMLSD_DBG_COMMON	(1<<0)
 #define AMLSD_DBG_REQ		(1<<1)
 #define AMLSD_DBG_RESP		(1<<2)
@@ -72,6 +72,12 @@ extern const u8 tuning_blk_pattern_8bit[128];
 
 #define EMMC_DAT3_PINMUX_CLR    0
 #define EMMC_DAT3_PINMUX_SET    1
+
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+#define P_PERIPHS_PIN_MUX_2 (0xc1100000 + (0x202e << 2))
+#define P_PREG_PAD_GPIO3_EN_N (0xc1100000 + (0x2015 << 2))
+#define P_PREG_PAD_GPIO3_O (0xc1100000 + (0x2016 << 2))
+#endif
 
 #define CHECK_RET(ret) { \
 	if (ret) \
@@ -171,10 +177,13 @@ extern void aml_sd_emmc_print_reg(struct amlsd_host *host);
 
 extern int add_part_table(struct mtd_partition *part, unsigned int nr_part);
 extern int add_emmc_partition(struct gendisk *disk);
+#endif
+#ifdef CONFIG_AMLOGIC_M8B_MMC
 extern size_t aml_sg_copy_buffer(struct scatterlist *sgl, unsigned int nents,
 		void *buf, size_t buflen, int to_buffer);
 #endif
-int amlsd_get_platform_data(struct amlsd_platform *pdata,
+int amlsd_get_platform_data(struct platform_device *pdev,
+		struct amlsd_platform *pdata,
 		struct mmc_host *mmc, u32 index);
 
 void of_amlsd_irq_init(struct amlsd_platform *pdata);
