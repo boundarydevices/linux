@@ -62,12 +62,13 @@ int cpu_hotplug_cpumask_init(void)
 
 	for (cpu = 0; cpu < num_possible_cpus(); cpu++)	{
 		clstr = topology_physical_package_id(cpu);
-		if (clstr >= 0 && clstr < MAX_CLUSTRS) {
-			cpumask_set_cpu(cpu, &hpg.cpumask[clstr]);
-			if (hpg.clusters < clstr + 1)
-				hpg.clusters = clstr + 1;
-			hpg.cpunum[clstr]++;
-		}
+		if (clstr < 0)
+			continue;
+		clstr &= (MAX_CLUSTRS - 1);
+		cpumask_set_cpu(cpu, &hpg.cpumask[clstr]);
+		if (hpg.clusters < clstr + 1)
+			hpg.clusters = clstr + 1;
+		hpg.cpunum[clstr]++;
 	}
 	return 0;
 }
@@ -301,9 +302,8 @@ static int __init cpu_hotplug_init(void)
 	mutex_unlock(&hpg.mutex);
 	wake_up_process(hpg.hotplug_thread);
 
-	if (cpufreq_global_kobject)
-		err = sysfs_create_file(cpufreq_global_kobject,
-			&hotplug_max_cpus.attr);
+	err = sysfs_create_file(&cpu_subsys.dev_root->kobj,
+		&hotplug_max_cpus.attr);
 
 	return 0;
 }
