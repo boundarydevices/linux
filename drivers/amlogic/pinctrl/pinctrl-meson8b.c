@@ -683,8 +683,12 @@ static const char * const iso7816_groups[] = {
 	"iso7816_1_clk", "iso7816_1_data", "iso7816_2_clk", "iso7816_2_data"
 };
 
-static const char * const i2c_d_groups[] = {
-	"i2c_sda_d0", "i2c_sck_d0", "i2c_sda_d1", "i2c_sck_d1"
+static const char * const i2c_d0_groups[] = {
+	"i2c_sda_d0", "i2c_sck_d0"
+};
+
+static const char * const i2c_d1_groups[] = {
+	"i2c_sda_d1", "i2c_sck_d1"
 };
 
 static const char * const xtal_groups[] = {
@@ -695,9 +699,14 @@ static const char * const uart_c_groups[] = {
 	"uart_tx_c", "uart_rx_c", "uart_cts_c", "uart_rts_c"
 };
 
-static const char * const i2c_c_groups[] = {
-	"i2c_sda_c0", "i2c_sck_c0", "i2c_sda_c1", "i2c_sck_c1"
+static const char * const i2c_c0_groups[] = {
+	"i2c_sda_c0", "i2c_sck_c0"
 };
+
+static const char * const i2c_c1_groups[] = {
+	"i2c_sda_c1", "i2c_sck_c1"
+};
+
 
 static const char * const hdmi_groups[] = {
 	"hdmi_hpd", "hdmi_sda", "hdmi_scl", "hdmi_cec_0"
@@ -724,8 +733,12 @@ static const char * const i2c_a_groups[] = {
 	"i2c_sda_a", "i2c_sck_a",
 };
 
-static const char * const i2c_b_groups[] = {
-	"i2c_sda_b0", "i2c_sck_b0", "i2c_sda_b1", "i2c_sck_b1"
+static const char * const i2c_b0_groups[] = {
+	"i2c_sda_b0", "i2c_sck_b0"
+};
+
+static const char * const i2c_b1_groups[] = {
+	"i2c_sda_b1", "i2c_sck_b1"
 };
 
 static const char * const sd_c_groups[] = {
@@ -843,15 +856,18 @@ static struct meson_pmx_func meson8b_cbus_functions[] = {
 	FUNCTION(uart_a),
 	FUNCTION(uart_b),
 	FUNCTION(iso7816),
-	FUNCTION(i2c_d),
+	FUNCTION(i2c_d0),
+	FUNCTION(i2c_d1),
 	FUNCTION(xtal),
 	FUNCTION(uart_c),
-	FUNCTION(i2c_c),
+	FUNCTION(i2c_c0),
+	FUNCTION(i2c_c1),
 	FUNCTION(hdmi),
 	FUNCTION(spi),
 	FUNCTION(ethernet),
 	FUNCTION(i2c_a),
-	FUNCTION(i2c_b),
+	FUNCTION(i2c_b0),
+	FUNCTION(i2c_b1),
 	FUNCTION(sd_c),
 	FUNCTION(sdxc_c),
 	FUNCTION(nand),

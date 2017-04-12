@@ -190,3 +190,10 @@
 	pinctrl-0 = <&uart_ao_a_pins>;
 	pinctrl-names = "default";
 };
+&i2c_a {
+	status = "ok";
+};
+&i2c_ao {
+	status = "ok";
+};
+

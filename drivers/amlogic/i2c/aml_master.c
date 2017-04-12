@@ -1161,7 +1161,7 @@ static void __exit aml_i2c_exit(void)
 	platform_driver_unregister(&aml_i2c_driver);
 }
 
-arch_initcall(aml_i2c_init);
+subsys_initcall(aml_i2c_init);
 module_exit(aml_i2c_exit);
 
 MODULE_AUTHOR("AMLOGIC");
