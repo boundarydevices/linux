@@ -29,6 +29,10 @@
 
 	aliases {
 		serial0 = &uart_AO;
+		serial1 = &uart_A;
+		serial2 = &uart_B;
+		serial3 = &uart_C;
+		serial4 = &uart_AO_B;
 	};
 
 	ion_dev {
@@ -351,17 +355,7 @@
 			};
 		};
 	};
-	uart_AO: serial@c81004c0 {
-		compatible = "amlogic, meson-uart";
-		reg = <0x0 0xc81004c0 0x0 0x18>;
-		interrupts = <0 193 1>;
-		status = "okay";
-		xtal_tick_en = <1>;
-		fifosize = < 64 >;
-		pinctrl-names = "default";
-		pinctrl-0 = <&ao_uart_pins>;
-		support-sysrq = <0>;	/* 0 not support , 1 support */
-	};
+
 	ethmac: ethernet@0xc9410000 {
 			compatible = "amlogic, gxbb-eth-dwmac";
 			reg = <0x0 0xc9410000 0x0 0x10000

@@ -24,7 +24,6 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
-#include <linux/reset.h>
 #include <linux/serial.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
@@ -1039,9 +1038,8 @@ static int meson_uart_probe(struct platform_device *pdev)
 	struct resource *res_mem, *res_irq;
 	struct uart_port *port;
 	struct meson_uart_port *mup;
-	/*struct clk *clk;*/
+	struct clk *clk;
 	const void *prop;
-	struct reset_control *uart_rst;
 	int ret = 0;
 
 	if (pdev->dev.of_node)
@@ -1070,8 +1068,9 @@ static int meson_uart_probe(struct platform_device *pdev)
 
 	spin_lock_init(&mup->wr_lock);
 	port = &mup->port;
-#if 0
-	clk = clk_get(&pdev->dev, "clk_uart");
+#ifdef CONFIG_AMLOGIC_CLK
+
+	clk = devm_clk_get(&pdev->dev, "clk_uart");
 	if (IS_ERR(clk)) {
 		pr_err("%s: clock not found\n", dev_name(&pdev->dev));
 		/* return PTR_ERR(clk); */
@@ -1083,9 +1082,6 @@ static int meson_uart_probe(struct platform_device *pdev)
 		/* return ret; */
 	}
 #endif
-	uart_rst = devm_reset_control_get(&pdev->dev, NULL);
-	if (!IS_ERR(uart_rst))
-		reset_control_deassert(uart_rst);
 
 	port->fifosize = 64;
 	prop = of_get_property(pdev->dev.of_node, "fifosize", NULL);

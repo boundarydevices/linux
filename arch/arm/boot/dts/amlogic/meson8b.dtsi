@@ -206,7 +206,8 @@
 			compatible = "amlogic, meson-uart";
 			reg = <0xc81004c0 0x18>;
 			interrupts = <0 90 1>;
-			clocks = <&clkc CLKID_CLK81>;
+			clocks = <&clkc CLKID_XTAL>;
+			clock-names = "clk_uart";
 			status = "disabled";
 		};
 
@@ -214,7 +215,8 @@
 		compatible = "amlogic, meson-uart";
 			reg = <0xc11084c0 0x18>;
 			interrupts = <0 26 1>;
-			clocks = <&clkc CLKID_CLK81>;
+			clocks = <&clkc CLKID_UART0>;
+			clock-names = "clk_uart";
 			status = "disabled";
 		};
 
@@ -222,7 +224,8 @@
 		compatible = "amlogic, meson-uart";
 			reg = <0xc11084dc 0x18>;
 			interrupts = <0 75 1>;
-			clocks = <&clkc CLKID_CLK81>;
+			clocks = <&clkc CLKID_UART1>;
+			clock-names = "clk_uart";
 			status = "disabled";
 		};
 
@@ -230,7 +233,8 @@
 		compatible = "amlogic, meson-uart";
 			reg = <0xc1108700 0x18>;
 			interrupts = <0 93 1>;
-			clocks = <&clkc CLKID_CLK81>;
+			clocks = <&clkc CLKID_UART2>;
+			clock-names = "clk_uart";
 			status = "disabled";
 		};
 

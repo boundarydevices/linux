@@ -373,6 +373,68 @@
 		device_id = <0>;
 	};
 
+	uart_AO: serial@c81004c0 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xc81004c0 0x0 0x18>;
+		interrupts = <0 193 1>;
+		status = "okay";
+		clocks = <&xtal>;
+		clock-names = "clk_uart";
+		xtal_tick_en = <1>;
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_uart_pins>;
+		support-sysrq = <0>;	/* 0 not support , 1 support */
+	};
+
+	uart_A: serial@c11084c0 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xc11084c0 0x0 0x18>;
+		interrupts = <0 26 1>;
+		status = "disable";
+		clocks = <&clkc CLKID_UART0>;
+		clock-names = "clk_uart";
+		fifosize = < 128 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&a_uart_pins>;
+	};
+
+	uart_B: serial@c11084dc {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xc11084dc 0x0 0x18>;
+		interrupts = <0 75 1>;
+		status = "disabled";
+		clocks = <&clkc CLKID_UART1>;
+		clock-names = "clk_uart";
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&b_uart_pins>;
+	};
+
+	uart_C: serial@c1108700 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xc1108700 0x0 0x18>;
+		interrupts = <0 93 1>;
+		status = "disabled";
+		clocks = <&clkc CLKID_UART2>;
+		clock-names = "clk_uart";
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&c_uart_pins>;
+	};
+
+	uart_AO_B: serial@c81004e0 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xc81004e0 0x0 0x18>;
+		interrupts = <0 197 1>;
+		status = "disable";
+		clocks = <&xtal>;
+		clock-names = "clk_uart";
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_b_uart_pins>;
+	};
+
 	i2c_ao: i2c@c8100500{ /*I2C-AO*/
 			compatible = "amlogic, meson-i2c";
 			dev_name = "i2c-AO";
@@ -667,7 +729,9 @@
 		a_uart_pins:a_uart {
 			mux {
 				groups = "uart_tx_a",
-					"uart_rx_a";
+					"uart_rx_a",
+					"uart_cts_a",
+					"uart_rts_a";
 				function = "uart_a";
 			};
 		};
@@ -675,7 +739,9 @@
 		b_uart_pins:b_uart {
 			mux {
 				groups = "uart_tx_b",
-					"uart_rx_b";
+					"uart_rx_b",
+					"uart_cts_b",
+					"uart_rts_b";
 				function = "uart_b";
 			};
 		};
@@ -683,7 +749,9 @@
 		c_uart_pins:c_uart {
 			mux {
 				groups = "uart_tx_c",
-					"uart_rx_c";
+					"uart_rx_c",
+					"uart_cts_c",
+					"uart_rts_c";
 				function = "uart_c";
 			};
 		};
