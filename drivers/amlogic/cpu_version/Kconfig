@@ -15,4 +15,12 @@ config	AMLOGIC_MESON64_VERSION
 	  cpu version driver
 	  .
 
+config	AMLOGIC_M8B_MESON32_VERSION
+	bool "Amlogic M8b Meson32 cpu version"
+	default n
+	help
+	  say y to enable
+	  Amlogic M8b
+	  cpu version driver
+
 endif

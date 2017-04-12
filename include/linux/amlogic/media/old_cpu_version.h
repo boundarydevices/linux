@@ -57,11 +57,6 @@ static inline bool is_meson_mtvd_cpu(void)
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_MTVD;
 }
 
-static inline bool is_meson_m8b_cpu(void)
-{
-	return get_cpu_type() == MESON_CPU_MAJOR_ID_M8B;
-}
-
 static inline bool is_meson_m8m2_cpu(void)
 {
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_M8M2;

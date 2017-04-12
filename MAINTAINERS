@@ -13418,6 +13418,7 @@ AMLOGIC CPU INFORMATION DRIVER
 M:      Yun Cai <yun.cai@amlogic.com>
 F:      drivers/amlogic/cpu_info/
 F:	drivers/amlogic/cpu_version/
+F:	drivers/amlogic/cpu_version/meson32_cpu.c
 
 AMLOGIC MAILBOX DRIVER
 M:      Yun Cai <yun.cai@amlogic.com>
