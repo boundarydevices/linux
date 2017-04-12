@@ -30,6 +30,7 @@
 #define SARADC_DETECT_IDLE_SW (9<<2)
 #define SARADC_DELTA_10 (10<<2)
 #define SARADC_REG11 (11<<2)
+#define P_HHI_DPLL_TOP_0	0x10c6
 
 #define SAMPLE_ENGINE_EN    bits_desc(SARADC_REG0, 0, 1)
 #define START_SAMPLE        bits_desc(SARADC_REG0, 2, 1)
@@ -39,7 +40,7 @@
 #define AVG_BUSY            bits_desc(SARADC_REG0, 29, 1)
 #define DELTA_BUSY          bits_desc(SARADC_REG0, 30, 1)
 #define ALL_BUSY            bits_desc(SARADC_REG0, 28, 3)
-#define CLK_DIV             bits_desc(SARADC_REG3, 10, 1)
+#define CLK_DIV             bits_desc(SARADC_REG3, 10, 6)
 #define ADC_EN              bits_desc(SARADC_REG3, 21, 1)
 #define CAL_CNTL            bits_desc(SARADC_REG3, 23, 3)
 #define FLAG_INITIALIZED    bits_desc(SARADC_REG3, 28, 1) /* for bl30 */
@@ -48,7 +49,16 @@
 #define FLAG_BUSY_BL30      bits_desc(SARADC_DELAY, 15, 1) /* for bl30 */
 #define IDLE_MUX            bits_desc(SARADC_DETECT_IDLE_SW, 7, 3)
 #define DETECT_MUX          bits_desc(SARADC_DETECT_IDLE_SW, 23, 3)
+#ifdef CONFIG_MACH_MESON8B
+#define BANDGAP_EN          bits_desc(SARADC_DELTA_10, 10, 1)
+#define TEMP_TRIM           bits_desc(SARADC_DELTA_10, 11, 4)
+#define TEMP_EN0            bits_desc(SARADC_DELTA_10, 15, 1)
+#define TEMP_EN1            bits_desc(SARADC_DELTA_10, 26, 1)
+#define TEMP_SELECT         bits_desc(SARADC_DELTA_10, 27, 1)
+#else
 #define BANDGAP_EN          bits_desc(SARADC_REG11, 13, 1)
+#endif
+
 /* saradc clock register */
 #define REGC_CLK_DIV        bits_desc(0, 0, 8)
 #define REGC_CLK_EN         bits_desc(0, 8, 1)

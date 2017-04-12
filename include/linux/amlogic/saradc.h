@@ -37,6 +37,10 @@ enum {
 extern int get_adc_sample(int dev_id, int ch);
 extern int get_adc_sample_12bit(int dev_id, int ch);
 
+#ifdef CONFIG_AMLOGIC_M8B_TEMP_SENSOR
+extern void temp_sensor_adc_init(int triming);
+#endif
+
 #define bits_desc(reg_offset, bits_offset, bits_len) \
 	(((bits_len)<<24)|((bits_offset)<<16)|(reg_offset))
 #define of_mem_offset(bd) ((bd)&0xffff)

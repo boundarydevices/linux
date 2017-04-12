@@ -23,6 +23,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/amlogic/saradc.h>
+#include <linux/amlogic/iomap.h>
 #include <linux/amlogic/cpu_version.h>
 #include <asm/barrier.h>
 #include "saradc_reg.h"
@@ -93,6 +94,34 @@ unsigned int getb(
 }
 EXPORT_SYMBOL(getb);
 
+#ifdef CONFIG_AMLOGIC_M8B_TEMP_SENSOR
+#ifndef CONFIG_MACH_MESON8
+void temp_set_trim(unsigned char val)
+{
+	int tmp;
+
+	tmp = aml_read_cbus(P_HHI_DPLL_TOP_0);
+	tmp = (tmp & (~(1 << 9))) | ((val & 0x1) << 9);
+	aml_write_cbus(P_HHI_DPLL_TOP_0, tmp);
+}
+#endif
+void temp_sensor_adc_init(int triming)
+{
+	struct saradc *adc = gp_saradc;
+	void __iomem *mem_base;
+
+	mem_base = adc->mem_base;
+	setb(mem_base, TEMP_SELECT, 1);
+	setb(mem_base, TEMP_TRIM, triming & 0xf);
+#ifndef CONFIG_MACH_MESON8
+	temp_set_trim(triming >> 4);
+#endif
+	setb(mem_base, TEMP_EN0, 1);
+	setb(mem_base, TEMP_EN1, 1);
+}
+EXPORT_SYMBOL(temp_sensor_adc_init);
+#endif
+
 static void saradc_power_control(struct saradc *adc, int on)
 {
 	void __iomem *mem_base = adc->mem_base;
@@ -101,11 +130,15 @@ static void saradc_power_control(struct saradc *adc, int on)
 		setb(mem_base, BANDGAP_EN, 1);
 		setb(mem_base, ADC_EN, 1);
 		udelay(5);
-		setb(mem_base, CLK_EN, 1);
-		setb(adc->clk_mem_base, REGC_CLK_EN, 1);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXBB))
+			setb(adc->clk_mem_base, REGC_CLK_EN, 1);
+		else
+			setb(mem_base, CLK_EN, 1);
 	} else {
-		setb(adc->clk_mem_base, REGC_CLK_EN, 0);
-		setb(mem_base, CLK_EN, 0);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXBB))
+			setb(adc->clk_mem_base, REGC_CLK_EN, 0);
+		else
+			setb(mem_base, CLK_EN, 0);
 		setb(mem_base, ADC_EN, 0);
 		setb(mem_base, BANDGAP_EN, 0);
 	}
@@ -140,9 +173,12 @@ static void saradc_reset(struct saradc *adc)
 
 	clk_prepare_enable(adc->clk);
 	clk_div = clk_get_rate(adc->clk) / 1200000;
-	setb(mem_base, CLK_DIV, clk_div);
-	setb(adc->clk_mem_base, REGC_CLK_DIV, clk_div);
-	setb(adc->clk_mem_base, REGC_CLK_SRC, 0);
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXBB)) {
+		setb(adc->clk_mem_base, REGC_CLK_DIV, clk_div);
+		setb(adc->clk_mem_base, REGC_CLK_SRC, 0);
+	} else {
+		setb(mem_base, CLK_DIV, clk_div);
+	}
 	saradc_info("initialized by kernel, clk_div=%d\n", clk_div);
 #ifndef ENABLE_DYNAMIC_POWER
 	saradc_power_control(adc, 1);
@@ -433,10 +469,10 @@ static int saradc_probe(struct platform_device *pdev)
 	int err;
 	struct saradc *adc;
 
-	if (is_meson_gxbb_cpu() || is_meson_gxtvbb_cpu())
-		flag_12bit = 0;
-	else
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXL))
 		flag_12bit = 1;
+	else
+		flag_12bit = 0;
 
 	adc = kzalloc(sizeof(struct saradc), GFP_KERNEL);
 	if (!adc) {
@@ -454,7 +490,9 @@ static int saradc_probe(struct platform_device *pdev)
 		err = -ENODEV;
 		goto end_free;
 	}
-	adc->clk_mem_base = saradc_get_reg_addr(pdev, 1);
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXBB))
+		adc->clk_mem_base = saradc_get_reg_addr(pdev, 1);
+
 	adc->clk = devm_clk_get(&pdev->dev, "saradc_clk");
 	if (IS_ERR(adc->clk)) {
 		err = -ENOENT;
@@ -467,9 +505,10 @@ static int saradc_probe(struct platform_device *pdev)
 	spin_lock_init(&adc->lock);
 	adc->state = SARADC_STATE_IDLE;
 	saradc_internal_cal(adc);
+
+	class_register(&saradc_class);
+
 	return 0;
-
-
 end_free:
 	kfree(adc);
 end_err:
@@ -506,6 +545,7 @@ static int saradc_remove(struct platform_device *pdev)
 	struct saradc *adc = (struct saradc *)dev_get_drvdata(&pdev->dev);
 	unsigned long flags;
 
+	class_unregister(&saradc_class);
 	spin_lock_irqsave(&adc->lock, flags);
 	saradc_power_control(adc, 0);
 	spin_unlock_irqrestore(&adc->lock, flags);
@@ -547,7 +587,6 @@ static struct platform_driver saradc_driver = {
 static int __init saradc_init(void)
 {
 	/* printk(KERN_INFO "SARADC Driver init.\n"); */
-	class_register(&saradc_class);
 	return platform_driver_register(&saradc_driver);
 }
 
@@ -555,7 +594,6 @@ static void __exit saradc_exit(void)
 {
 	/* printk(KERN_INFO "SARADC Driver exit.\n"); */
 	platform_driver_unregister(&saradc_driver);
-	class_unregister(&saradc_class);
 }
 
 module_init(saradc_init);

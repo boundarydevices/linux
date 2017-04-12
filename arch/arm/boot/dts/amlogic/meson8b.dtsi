@@ -626,5 +626,12 @@ dwc2_b {
 		/*and you can shoose it in dt-bindings/pwm/meson.h*/
 	};
 
+	saradc: saradc {
+		compatible = "amlogic, saradc";
+		status = "okay";
+		clocks = <&clkc CLKID_SAR_ADC>;
+		clock-names = "saradc_clk";
+		reg = <0xc1108680 0x30>;
+	};
 	};
 }; /* end of / */
