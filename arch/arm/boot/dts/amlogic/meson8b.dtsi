@@ -452,7 +452,7 @@ dwc2_b {
 		compatible = "amlogic,des,tdes";
 		dev_name = "aml_tdes_blkmv";
 		status = "okay";
-		interrupts = <0 68 1>;
+		interrupts = <0 36 1>;
 		clocks = <&clkc CLKID_BLKMV>;
 		clock-names = "blkmv";
 	};
@@ -461,7 +461,7 @@ dwc2_b {
 		compatible = "amlogic,aes";
 		dev_name = "aml_aes_blkmv";
 		status = "okay";
-		interrupts = <0 68 1>;
+		interrupts = <0 36 1>;
 		clocks = <&clkc CLKID_BLKMV>;
 		clock-names = "blkmv";
 	};
