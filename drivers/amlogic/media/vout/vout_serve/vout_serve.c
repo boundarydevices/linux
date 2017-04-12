@@ -36,6 +36,9 @@
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
+#ifdef CONFIG_AMLOGIC_HDMITX
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
+#endif
 
 /* Local Headers */
 #include "vout_serve.h"
@@ -49,9 +52,8 @@ static int early_suspend_flag;
 static int early_resume_flag;
 #endif
 
-
 #define VOUT_CLASS_NAME "display"
-#define	MAX_NUMBER_PARA 10
+#define MAX_NUMBER_PARA 10
 
 static struct class *vout_class;
 static DEFINE_MUTEX(vout_mutex);
@@ -62,6 +64,14 @@ static char vout_axis[64] __nosavedata;
 #endif
 static u32 vout_init_vmode = VMODE_INIT_NULL;
 static int uboot_display;
+
+static char hdmimode[64];
+static char cvbsmode[64];
+static enum vmode_e last_vmode = VMODE_MAX;
+static int tvout_monitor_flag = 1;
+
+static struct delayed_work tvout_mode_work;
+static DEFINE_MUTEX(tvout_mode_lock);
 
 void update_vout_mode(char *name)
 {
@@ -126,6 +136,7 @@ static int set_vout_init_mode(void)
 			vout_mode_uboot);
 		return -1;
 	}
+	last_vmode = vout_init_vmode;
 
 	if (uboot_display)
 		vmode = vout_init_vmode | VMODE_INIT_BIT_MASK;
@@ -329,6 +340,33 @@ static ssize_t vout_vinfo_show(struct class *class,
 	return len;
 }
 
+static ssize_t vout_mode_flag_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	int ret = 0;
+
+	ret = sprintf(buf, "%d\n", tvout_monitor_flag);
+
+	return ret;
+}
+
+static ssize_t vout_mode_flag_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+
+	ret = kstrtoint(buf, 10, &tvout_monitor_flag);
+	if (ret == 1) {
+		VOUTPR("%s: tvout_monitor_flag = %d\n",
+			 __func__, tvout_monitor_flag);
+	} else {
+		VOUTPR("%s: invalid data\n", __func__);
+		return -EINVAL;
+	}
+
+	return count;
+}
+
 static struct class_attribute vout_class_attrs[] = {
 	__ATTR(mode,      0644, vout_mode_show, vout_mode_store),
 #ifdef CONFIG_AMLOGIC_FB
@@ -337,6 +375,7 @@ static struct class_attribute vout_class_attrs[] = {
 	__ATTR(fr_policy, 0644,
 		vout_fr_policy_show, vout_fr_policy_store),
 	__ATTR(vinfo,     0644, vout_vinfo_show, NULL),
+	__ATTR(mode_flag,     0644, vout_mode_flag_show, vout_mode_flag_store),
 };
 
 static int vout_create_attr(void)
@@ -484,6 +523,75 @@ static void aml_vout_late_resume(struct early_suspend *h)
 }
 #endif
 
+/* ***************************************************** */
+/* hdmi/cvbs output mode monitor */
+/* ***************************************************** */
+static int refresh_tvout_mode(void)
+{
+	enum vmode_e cur_vmode = VMODE_MAX;
+	char *cur_mode_str;
+	int hdp_state = 0;
+
+	if (tvout_monitor_flag == 0)
+		return 0;
+
+#ifdef CONFIG_AMLOGIC_HDMITX
+	hdp_state = get_hpd_state();
+#endif
+	if (hdp_state) {
+		cur_vmode = validate_vmode(hdmimode);
+		cur_mode_str = hdmimode;
+	} else {
+		cur_vmode = validate_vmode(cvbsmode);
+		cur_mode_str = cvbsmode;
+	}
+	if (cur_vmode >= VMODE_MAX) {
+		VOUTERR("%s: no matched cur_mode: %s\n",
+			__func__, cur_mode_str);
+		return -1;
+	}
+
+	/* not box platform */
+	if ((cur_vmode != VMODE_HDMI) && (cur_vmode != VMODE_CVBS))
+		return -1;
+
+	if (cur_vmode != last_vmode) {
+		VOUTPR("%s: mode chang\n", __func__);
+		if (set_vout_mode(cur_mode_str) == 0)
+			strcpy(vout_mode, cur_mode_str);
+		last_vmode = cur_vmode;
+	}
+
+	return 0;
+}
+
+static void aml_tvout_mode_work(struct work_struct *work)
+{
+	mutex_lock(&tvout_mode_lock);
+	refresh_tvout_mode();
+	mutex_unlock(&tvout_mode_lock);
+
+	if (tvout_monitor_flag)
+		schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
+}
+
+static void aml_tvout_mode_monitor(void)
+{
+	if ((vout_init_vmode != VMODE_HDMI) && (vout_init_vmode != VMODE_CVBS))
+		return;
+
+	VOUTPR("%s\n", __func__);
+	last_vmode = vout_init_vmode;
+	tvout_monitor_flag = 1;
+	INIT_DELAYED_WORK(&tvout_mode_work, aml_tvout_mode_work);
+
+	mutex_lock(&tvout_mode_lock);
+	refresh_tvout_mode();
+	mutex_unlock(&tvout_mode_lock);
+
+	schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
+}
+
 /*****************************************************************
  **
  **	vout driver interface
@@ -509,6 +617,8 @@ static int aml_vout_probe(struct platform_device *pdev)
 		VOUTPR("create vout attribute OK\n");
 	else
 		VOUTERR("create vout attribute FAILED\n");
+
+	aml_tvout_mode_monitor();
 
 	VOUTPR("%s OK\n", __func__);
 	return ret;
@@ -652,6 +762,26 @@ static int __init get_vout_init_mode(char *str)
 	return 0;
 }
 __setup("vout=", get_vout_init_mode);
+
+static int __init get_hdmi_mode(char *str)
+{
+	strcpy(hdmimode, str);
+
+	VOUTPR("get hdmimode: %s\n", str);
+	return 1;
+}
+__setup("hdmimode=", get_hdmi_mode);
+
+static int __init get_cvbs_mode(char *str)
+{
+	if ((strncmp("480", str, 3) == 0) || (strncmp("576", str, 3) == 0))
+		strcpy(cvbsmode, str);
+	else if (strncmp("nocvbs", str, 6) == 0)
+		strcpy(cvbsmode, "invalid");
+	VOUTPR("get cvbsmode: %s\n", str);
+	return 1;
+}
+__setup("cvbsmode=", get_cvbs_mode);
 
 MODULE_AUTHOR("Platform-BJ <platform.bj@amlogic.com>");
 MODULE_DESCRIPTION("VOUT Server Module");
