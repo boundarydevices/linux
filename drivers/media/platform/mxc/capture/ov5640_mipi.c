@@ -1986,20 +1986,18 @@ static void ov5640_reset(void)
 {
 	mxc_camera_common_lock();
 
-	/* camera reset */
-	gpio_set_value(rst_gpio, 1);
+	gpio_set_value(rst_gpio, 0);	/* camera reset */
+	gpio_set_value(pwn_gpio, 1);	/* camera power down */
 
-	/* camera power dowmn */
-	gpio_set_value(pwn_gpio, 1);
+	/* >= 5 ms, Let power supply stabilize */
 	msleep(5);
-
 	gpio_set_value(pwn_gpio, 0);
-	msleep(5);
 
-	gpio_set_value(rst_gpio, 0);
+	/* >= 1ms from powerup, to reset release*/
 	msleep(1);
-
 	gpio_set_value(rst_gpio, 1);
+
+	/* >= 20 ms from reset high to SCCB initialized */
 	msleep(20);
 	pr_debug("%s(mipi): reset released\n", __func__);
 	update_device_addr(&ov5640_data);
@@ -2030,24 +2028,6 @@ static int ov5640_power_on(struct device *dev)
 		io_regulator = NULL;
 	}
 
-	core_regulator = devm_regulator_get(dev, "DVDD");
-	if (!IS_ERR(core_regulator)) {
-		regulator_set_voltage(core_regulator,
-				      OV5640_VOLTAGE_DIGITAL_CORE,
-				      OV5640_VOLTAGE_DIGITAL_CORE);
-		ret = regulator_enable(core_regulator);
-		if (ret) {
-			pr_err("%s:core set voltage error\n", __func__);
-			return ret;
-		} else {
-			dev_dbg(dev,
-				"%s:core set voltage ok\n", __func__);
-		}
-	} else {
-		core_regulator = NULL;
-		pr_err("%s: cannot get core voltage error\n", __func__);
-	}
-
 	analog_regulator = devm_regulator_get(dev, "AVDD");
 	if (!IS_ERR(analog_regulator)) {
 		regulator_set_voltage(analog_regulator,
@@ -2065,6 +2045,24 @@ static int ov5640_power_on(struct device *dev)
 	} else {
 		analog_regulator = NULL;
 		pr_err("%s: cannot get analog voltage error\n", __func__);
+	}
+
+	core_regulator = devm_regulator_get(dev, "DVDD");
+	if (!IS_ERR(core_regulator)) {
+		regulator_set_voltage(core_regulator,
+				      OV5640_VOLTAGE_DIGITAL_CORE,
+				      OV5640_VOLTAGE_DIGITAL_CORE);
+		ret = regulator_enable(core_regulator);
+		if (ret) {
+			pr_err("%s:core set voltage error\n", __func__);
+			return ret;
+		} else {
+			dev_dbg(dev,
+				"%s:core set voltage ok\n", __func__);
+		}
+	} else {
+		core_regulator = NULL;
+		pr_err("%s: cannot get core voltage error\n", __func__);
 	}
 
 	return ret;
@@ -3488,7 +3486,7 @@ static int ov5640_probe(struct i2c_client *client,
 		dev_warn(dev, "no sensor reset pin available");
 		return -EINVAL;
 	}
-	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_HIGH,
+	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_LOW,
 					"ov5640_mipi_reset");
 	if (retval < 0) {
 		dev_warn(dev, "request of ov5640_mipi_reset failed");
