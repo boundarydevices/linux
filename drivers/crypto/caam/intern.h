@@ -71,6 +71,13 @@ struct caam_drv_private {
 
 	struct device *smdev;
 
+	/*
+	 * ERA of the CAAM block,
+	 * -ENOTSUPP if no era version was supplied or detected.
+	 */
+#define IMX_ERR005766_ERA 4	/* ERA affected by i.mx AXI errata */
+	int era;
+
 	/* Physical-presence section */
 	struct caam_ctrl __iomem *ctrl; /* controller region */
 	struct caam_deco __iomem *deco; /* DECO/CCB views */
@@ -89,7 +96,6 @@ struct caam_drv_private {
 	u8 mc_en;		/* Nonzero if MC f/w is active */
 	int secvio_irq;		/* Security violation interrupt number */
 	int virt_en;		/* Virtualization enabled in CAAM */
-	int era;		/* CAAM Era (internal HW revision) */
 
 #define	RNG4_MAX_HANDLES 2
 	/* RNG4 block */
