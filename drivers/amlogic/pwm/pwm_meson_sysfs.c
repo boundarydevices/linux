@@ -24,7 +24,7 @@
 #include <linux/slab.h>
 #include <linux/pwm.h>
 #include <linux/amlogic/pwm_meson.h>
-
+#include "pwm_meson_util.h"
 
 /**
  * pwm_constant_enable()
@@ -37,11 +37,11 @@ int pwm_constant_enable(struct aml_pwm_chip *chip, int index)
 {
 	struct aml_pwm_chip *aml_chip = chip;
 	int id = index;
-	void __iomem  *reg;
-	unsigned int mask = 0;
+	struct pwm_aml_regs *aml_reg =
+	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
 	unsigned int val;
 
-	if ((id < 0) && (id > 7)) {
+	if ((id < 0) && (id > 9)) {
 		dev_err(aml_chip->chip.dev,
 				"constant,index is not within the scope!\n");
 		return -EINVAL;
@@ -49,44 +49,26 @@ int pwm_constant_enable(struct aml_pwm_chip *chip, int index)
 
 	switch (id) {
 	case PWM_A:
-		reg = aml_chip->base + REG_MISC_AB;
+	case PWM_C:
+	case PWM_E:
+	case PWM_AO_A:
+	case PWM_AO_C:
 		val = 1 << 28;
 		break;
 	case PWM_B:
-		reg = aml_chip->base + REG_MISC_AB;
-		val = 1 << 29;
-		break;
-	case PWM_C:
-		reg = aml_chip->base + REG_MISC_CD;
-		val = 1 << 28;
-		break;
 	case PWM_D:
-		reg = aml_chip->base + REG_MISC_CD;
-		val = 1 << 29;
-		break;
-	case PWM_E:
-		reg = aml_chip->base + REG_MISC_EF;
-		val = 1 << 28;
-		break;
 	case PWM_F:
-		reg = aml_chip->base + REG_MISC_EF;
-		val = 1 << 29;
-		break;
-	case PWM_AO_A:
-		reg = aml_chip->ao_base + REG_MISC_AO_AB;
-		val = 1 << 28;
-		break;
 	case PWM_AO_B:
-		reg = aml_chip->ao_base + REG_MISC_AO_AB;
+	case PWM_AO_D:
 		val = 1 << 29;
 		break;
 	default:
 		dev_err(aml_chip->chip.dev,
-				"constant,index is not legal\n");
+				"enable,index is not legal\n");
 		return -EINVAL;
 	break;
 	}
-	pwm_set_reg_bits(reg, mask, val);
+	pwm_set_reg_bits(&aml_reg->miscr, val, val);
 
 	return 0;
 }
@@ -103,65 +85,42 @@ int pwm_constant_disable(struct aml_pwm_chip *chip, int index)
 {
 	struct aml_pwm_chip *aml_chip = chip;
 	int id = index;
-	void __iomem  *reg;
-	unsigned int mask;
+	struct pwm_aml_regs *aml_reg =
+	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
 	unsigned int val;
+	unsigned int mask;
 
-	if ((id < 0) && (id > 7)) {
+	if ((id < 0) && (id > 9)) {
 		dev_err(aml_chip->chip.dev,
-				"constant,index is not within the scope!\n");
+				"constant disable,index is not within the scope!\n");
 		return -EINVAL;
 	}
 
 	switch (id) {
 	case PWM_A:
-		reg = aml_chip->base + REG_MISC_AB;
+	case PWM_C:
+	case PWM_E:
+	case PWM_AO_A:
+	case PWM_AO_C:
 		mask = 1 << 28;
 		val = 0 << 28;
 		break;
 	case PWM_B:
-		reg = aml_chip->base + REG_MISC_AB;
-		mask = 1 << 29;
-		val = 0 << 29;
-		break;
-	case PWM_C:
-		reg = aml_chip->base + REG_MISC_CD;
-		mask = 1 << 28;
-		val = 0 << 28;
-		break;
 	case PWM_D:
-		reg = aml_chip->base + REG_MISC_CD;
-		mask = 1 << 29;
-		val = 0 << 29;
-		break;
-	case PWM_E:
-		reg = aml_chip->base + REG_MISC_EF;
-		mask = 1 << 28;
-		val = 0 << 28;
-		break;
 	case PWM_F:
-		reg = aml_chip->base + REG_MISC_EF;
-		mask = 1 << 29;
-		val = 0 << 29;
-		break;
-	case PWM_AO_A:
-		reg = aml_chip->ao_base + REG_MISC_AO_AB;
-		mask = 1 << 28;
-		val = 0 << 28;
-		break;
 	case PWM_AO_B:
-		reg = aml_chip->ao_base + REG_MISC_AO_AB;
+	case PWM_AO_D:
 		mask = 1 << 29;
 		val = 0 << 29;
 		break;
 	default:
 		dev_err(aml_chip->chip.dev,
-				"constant,index is not legal\n");
+				"constant disable,index is not legal\n");
 		return -EINVAL;
 
 	break;
 	}
-	pwm_set_reg_bits(reg, mask, val);
+	pwm_set_reg_bits(&aml_reg->miscr, mask, val);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(pwm_constant_disable);
@@ -189,7 +148,7 @@ static ssize_t pwm_constant_store(struct device *child,
 		dev_err(child, "Can't parse pwm id,usage:[value index]\n");
 		return -EINVAL;
 	}
-	if ((id < 0) && (id > 7)) {
+	if ((id < 0) && (id > 9)) {
 		dev_err(chip->chip.dev,
 				"constant,index is not within the scope!\n");
 		return -EINVAL;
@@ -226,12 +185,12 @@ int pwm_set_times(struct aml_pwm_chip *chip,
 {
 	struct aml_pwm_chip *aml_chip = chip;
 	int id = index;
-	int val = value;
-	void __iomem  *reg;
+	struct pwm_aml_regs *aml_reg =
+	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
 	unsigned int clear_val;
-	unsigned int set_val;
+	unsigned int val;
 
-	if (((val <= 0) && (val > 255)) || ((id < 0) && (id > 15))) {
+	if (((val <= 0) && (val > 255)) || ((id < 0) && (id > 20))) {
 		dev_err(aml_chip->chip.dev,
 				"index or value is not within the scope!\n");
 		return -EINVAL;
@@ -239,84 +198,34 @@ int pwm_set_times(struct aml_pwm_chip *chip,
 
 	switch (id) {
 	case PWM_A:
-		reg = aml_chip->base + REG_TIME_AB;
-		clear_val = 0xff << 24;
-		set_val = val << 24;
-		break;
-	case PWM_B:
-		reg = aml_chip->base + REG_TIME_AB;
-		clear_val = 0xff << 8;
-		set_val = val << 8;
-		break;
 	case PWM_C:
-		reg = aml_chip->base + REG_TIME_CD;
-		clear_val = 0xff << 24;
-		set_val = val << 24;
-		break;
-	case PWM_D:
-		reg = aml_chip->base + REG_TIME_CD;
-		clear_val = 0xff << 8;
-		set_val = val << 8;
-		break;
 	case PWM_E:
-		reg = aml_chip->base + REG_TIME_EF;
-		clear_val = 0xff << 24;
-		set_val = val << 24;
-		break;
-	case PWM_F:
-		reg = aml_chip->base + REG_TIME_EF;
-		clear_val = 0xff << 8;
-		set_val = val << 8;
-		break;
 	case PWM_AO_A:
-		reg = aml_chip->ao_base + REG_TIME_AO_AB;
+	case PWM_AO_C:
 		clear_val = 0xff << 24;
-		set_val = val << 24;
-		break;
+		val = value << 24;
+	case PWM_B:
+	case PWM_D:
+	case PWM_F:
 	case PWM_AO_B:
-		reg = aml_chip->ao_base + REG_TIME_AO_AB;
+	case PWM_AO_D:
 		clear_val = 0xff << 8;
-		set_val = val << 8;
+		val = value << 8;
 		break;
 	case PWM_A2:
-		reg = aml_chip->base + REG_TIME_AB;
-		clear_val = 0xff << 16;
-		set_val = val << 16;
-		break;
-	case PWM_B2:
-		reg = aml_chip->base + REG_TIME_AB;
-		clear_val = 0xff;
-		set_val = val;
-		break;
 	case PWM_C2:
-		reg = aml_chip->base + REG_TIME_CD;
-		clear_val = 0xff << 16;
-		set_val = val << 16;
-		break;
-	case PWM_D2:
-		reg = aml_chip->base + REG_TIME_CD;
-		clear_val = 0xff;
-		set_val = val;
-		break;
 	case PWM_E2:
-		reg = aml_chip->base + REG_TIME_EF;
-		clear_val = 0xff << 16;
-		set_val = val << 16;
-		break;
-	case PWM_F2:
-		reg = aml_chip->base + REG_TIME_EF;
-		clear_val = 0xff;
-		set_val = val;
-		break;
 	case PWM_AO_A2:
-		reg = aml_chip->ao_base + REG_TIME_AO_AB;
+	case PWM_AO_C2:
 		clear_val = 0xff << 16;
-		set_val = val << 16;
-		break;
+		val = value << 16;
+	case PWM_B2:
+	case PWM_D2:
+	case PWM_F2:
 	case PWM_AO_B2:
-		reg = aml_chip->ao_base + REG_TIME_AO_AB;
+	case PWM_AO_D2:
 		clear_val = 0xff;
-		set_val = val;
+		val = value;
 		break;
 	default:
 		dev_err(aml_chip->chip.dev,
@@ -325,8 +234,8 @@ int pwm_set_times(struct aml_pwm_chip *chip,
 
 	break;
 	}
-	pwm_clear_reg_bits(reg, clear_val);
-	pwm_write_reg1(reg, set_val);
+	pwm_clear_reg_bits(&aml_reg->tr, clear_val);
+	pwm_write_reg1(&aml_reg->tr, val);
 
 	return 0;
 }
@@ -377,56 +286,35 @@ int pwm_blink_enable(struct aml_pwm_chip *chip, int index)
 {
 	struct aml_pwm_chip *aml_chip = chip;
 	int id = index;
-	void __iomem  *reg;
-	unsigned int mask = 0;
+	struct pwm_aml_regs *aml_reg =
+	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
 	unsigned int val;
 
-	if ((id < 0) && (id > 7)) {
+	if ((id < 0) && (id > 9)) {
 		dev_err(aml_chip->chip.dev, "index is not within the scope!\n");
 		return -EINVAL;
 	}
 
 	switch (id) {
 	case PWM_A:
-		reg = aml_chip->base + REG_BLINK_AB;
-		val = 1 << 8;
-		break;
-	case PWM_B:
-		reg = aml_chip->base + REG_BLINK_AB;
-		val = 1 << 9;
-		break;
 	case PWM_C:
-		reg = aml_chip->base + REG_BLINK_CD;
-		val = 1 << 8;
-		break;
-	case PWM_D:
-		reg = aml_chip->base + REG_BLINK_CD;
-		val = 1 << 9;
-		break;
 	case PWM_E:
-		reg = aml_chip->base + REG_BLINK_EF;
-		val = 1 << 8;
-		break;
-	case PWM_F:
-		reg = aml_chip->base + REG_BLINK_EF;
-		val = 1 << 9;
-		break;
 	case PWM_AO_A:
-		reg = aml_chip->ao_base + REG_BLINK_AO_AB;
+	case PWM_AO_C:
 		val = 1 << 8;
-		break;
+	case PWM_B:
+	case PWM_D:
+	case PWM_F:
 	case PWM_AO_B:
-		reg = aml_chip->ao_base + REG_BLINK_AO_AB;
+	case PWM_AO_D:
 		val = 1 << 9;
-		break;
 	default:
 		dev_err(aml_chip->chip.dev,
-				"blink,index is not legal\n");
+				"blink enable,index is not legal\n");
 		return -EINVAL;
-
 	break;
 	}
-	pwm_set_reg_bits(reg, mask, val);
+	pwm_set_reg_bits(&aml_reg->br, val, val);
 
 	return 0;
 }
@@ -441,64 +329,38 @@ int pwm_blink_disable(struct aml_pwm_chip *chip, int index)
 {
 	struct aml_pwm_chip *aml_chip = chip;
 	int id = index;
-	void __iomem  *reg;
-	unsigned int mask;
+	struct pwm_aml_regs *aml_reg =
+	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
 	unsigned int val;
+	unsigned int mask;
 
-	if ((id < 1) && (id > 7)) {
+	if ((id < 1) && (id > 9)) {
 		dev_err(aml_chip->chip.dev, "index is not within the scope!\n");
 		return -EINVAL;
 	}
 
 	switch (id) {
 	case PWM_A:
-		reg = aml_chip->base + REG_BLINK_AB;
-		mask = 1 << 8;
-		val = 0 << 8;
-		break;
-	case PWM_B:
-		reg = aml_chip->base + REG_BLINK_AB;
-		mask = 1 << 9;
-		val = 0 << 9;
-		break;
 	case PWM_C:
-		reg = aml_chip->base + REG_BLINK_CD;
-		mask = 1 << 8;
-		val = 0 << 8;
-		break;
-	case PWM_D:
-		reg = aml_chip->base + REG_BLINK_CD;
-		mask = 1 << 9;
-		val = 0 << 9;
-		break;
 	case PWM_E:
-		reg = aml_chip->base + REG_BLINK_EF;
-		mask = 1 << 8;
-		val = 0 << 8;
-		break;
-	case PWM_F:
-		reg = aml_chip->base + REG_BLINK_EF;
-		mask = 1 << 9;
-		val = 0 << 9;
-		break;
 	case PWM_AO_A:
-		reg = aml_chip->ao_base + REG_BLINK_AO_AB;
+	case PWM_AO_C:
 		mask = 1 << 8;
 		val = 0 << 8;
-		break;
+	case PWM_B:
+	case PWM_D:
+	case PWM_F:
 	case PWM_AO_B:
-		reg = aml_chip->ao_base + REG_BLINK_AO_AB;
+	case PWM_AO_D:
 		mask = 1 << 9;
 		val = 0 << 9;
-		break;
 	default:
 		dev_err(aml_chip->chip.dev,
-				"blink,index is not legal\n");
+				"blink enable,index is not legal\n");
 		return -EINVAL;
-
 	break;
 	}
-	pwm_set_reg_bits(reg, mask, val);
+	pwm_set_reg_bits(&aml_reg->br, mask, val);
 
 	return 0;
 }
@@ -561,68 +423,40 @@ int pwm_set_blink_times(struct aml_pwm_chip *chip,
 {
 	struct aml_pwm_chip *aml_chip = chip;
 	int id = index;
-	int val = value;
-	void __iomem  *reg;
+	struct pwm_aml_regs *aml_reg =
+	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
 	unsigned int clear_val;
-	unsigned int set_val;
+	unsigned int val;
 
-
-	if (((val <= 0) && (val > 15)) || ((id < 1) && (id > 7))) {
+	if (((val <= 0) && (val > 15)) || ((id < 1) && (id > 9))) {
 		dev_err(aml_chip->chip.dev,
 		"value or index is not within the scope!\n");
 		return -EINVAL;
 	}
-
 	switch (id) {
 	case PWM_A:
-		reg = aml_chip->base + REG_BLINK_AB;
-		clear_val = 0xf;
-		set_val = val;
-		break;
-	case PWM_B:
-		reg = aml_chip->base + REG_BLINK_AB;
-		clear_val = 0xf << 4;
-		set_val = val << 4;
-		break;
 	case PWM_C:
-		reg = aml_chip->base + REG_BLINK_CD;
-		clear_val = 0xf;
-		set_val = val;
-		break;
-	case PWM_D:
-		reg = aml_chip->base + REG_BLINK_CD;
-		clear_val = 0xf << 4;
-		set_val = val << 4;
-		break;
 	case PWM_E:
-		reg = aml_chip->base + REG_BLINK_EF;
-		clear_val = 0xf;
-		set_val = val;
-		break;
-	case PWM_F:
-		reg = aml_chip->base + REG_BLINK_EF;
-		clear_val = 0xf << 4;
-		set_val = val << 4;
-		break;
 	case PWM_AO_A:
-		reg = aml_chip->ao_base + REG_BLINK_AO_AB;
+	case PWM_AO_C:
 		clear_val = 0xf;
-		set_val = val;
-		break;
+		val = value;
+	case PWM_B:
+	case PWM_D:
+	case PWM_F:
 	case PWM_AO_B:
-		reg = aml_chip->ao_base + REG_BLINK_AO_AB;
+	case PWM_AO_D:
 		clear_val = 0xf << 4;
-		set_val = val << 4;
+		val = value << 4;
 		break;
 	default:
 		dev_err(aml_chip->chip.dev,
-				"bink times,index is not legal\n");
+				"times,index is not legal\n");
 		return -EINVAL;
-
 	break;
 	}
-	pwm_clear_reg_bits(reg, clear_val);
-	pwm_write_reg(reg, set_val);
+	pwm_clear_reg_bits(&aml_reg->tr, clear_val);
+	pwm_write_reg1(&aml_reg->tr, val);
 
 	return 0;
 }

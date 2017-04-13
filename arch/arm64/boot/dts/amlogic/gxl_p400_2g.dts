@@ -461,35 +461,6 @@
 		};
 	};
 
-	pwm {
-		compatible = "amlogic, meson-pwm";
-		status = "okay";
-		pwm-outputs = <PWM_A>,<PWM_B>,<PWM_C>,<PWM_D>,
-					<PWM_E>,<PWM_F>,<PWM_AO_A>,<PWM_AO_B>;
-		pwm-outputs-new = <PWM_A>,<PWM_B>,<PWM_C>,<PWM_D>,
-				<PWM_E>,<PWM_F>,<PWM_AO_A>,<PWM_AO_B>,
-				<PWM_A2>,<PWM_B2>,<PWM_C2>,<PWM_D2>,
-				<PWM_E2>,<PWM_F2>,<PWM_AO_A2>,<PWM_AO_B2>;
-		reg = <0x0 0xc1108550 0x0 0x30>,
-		      <0x0 0xc8100550  0x0 0x10>;
-		clocks = <&xtal>,
-			 <&clkc CLKID_VID_PLL>,
-			 /*the clock source is not supported now*/
-			 <&clkc CLKID_FCLK_DIV4>,
-			 <&clkc CLKID_FCLK_DIV3>;
-		clock-names = "xtal",
-			      "vid_pll_clk",
-			      "fclk_div4",
-			      "fclk_div3";
-		clock-select = <XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,
-				<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>;
-		clock-select-new = <XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,
-				<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,
-				<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,
-				<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>,<XTAL_CLK>;
-		/*all channels use the default clock source XTAL_CLK*/
-		/*and you can shoose it in file dt-bindings/pwm/meson.h*/
-	};
 	meson-fb {
 		compatible = "amlogic, meson-fb";
 		memory-region = <&fb_reserved>;

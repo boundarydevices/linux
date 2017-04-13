@@ -18,56 +18,29 @@
 #ifndef _PWM_MESON_H
 #define _PWM_MESON_H
 
+#include <linux/bitops.h>
+#include <linux/clk.h>
+#include <linux/export.h>
 #include <linux/err.h>
+#include <linux/io.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/platform_device.h>
+#include <linux/pwm.h>
+#include <linux/slab.h>
+#include <linux/spinlock.h>
+#include <linux/time.h>
+#include <linux/clk.h>
+#include <linux/of_address.h>
+#include <linux/amlogic/cpu_version.h>
 
 
+#define AML_PWM_M8BB_NUM		6
+#define AML_PWM_GXBB_NUM		8
+#define AML_PWM_GXTVBB_NUM		16
+#define AML_PWM_TXLX_NUM		20
 
-#define REG_PWM_A			0x0
-#define REG_PWM_B			0x4
-#define REG_MISC_AB			0x8
-#define REG_DS_A_B			0xc
-#define REG_TIME_AB			0x10
-#define REG_PWM_A2			0x14
-#define REG_PWM_B2			0x18
-#define REG_BLINK_AB		0x1c
-
-
-#define REG_PWM_C			0xf0
-#define REG_PWM_D			0xf4
-#define REG_MISC_CD			0xf8
-#define REG_DS_C_D			0xfc
-#define REG_TIME_CD			0x100
-#define REG_PWM_C2			0x104
-#define REG_PWM_D2			0x108
-#define REG_BLINK_CD		0x10c
-
-
-
-#define REG_PWM_E			0x170
-#define REG_PWM_F			0x174
-#define REG_MISC_EF			0x178
-#define REG_DS_E_F			0x17c
-#define REG_TIME_EF			0x180
-#define REG_PWM_E2			0x184
-#define REG_PWM_F2			0x188
-#define REG_BLINK_EF		0x18c
-
-
-#define REG_PWM_AO_A			0x0
-#define REG_PWM_AO_B			0x4
-#define REG_MISC_AO_AB			0x8
-#define REG_DS_AO_A_B			0xc
-#define REG_TIME_AO_AB			0x10
-#define REG_PWM_AO_A2			0x14
-#define REG_PWM_AO_B2			0x18
-#define REG_BLINK_AO_AB			0x1c
-
-
-#define FIN_FREQ			(24 * 1000)
-#define DUTY_MAX			1024
-
-#define AML_PWM_NUM			8
-#define AML_PWM_NUM_NEW		16
 
 
 enum pwm_channel {
@@ -79,6 +52,8 @@ enum pwm_channel {
 	PWM_F,
 	PWM_AO_A,
 	PWM_AO_B,
+	PWM_AO_C,
+	PWM_AO_D,
 
 	PWM_A2,
 	PWM_B2,
@@ -88,6 +63,8 @@ enum pwm_channel {
 	PWM_F2,
 	PWM_AO_A2,
 	PWM_AO_B2,
+	PWM_AO_C2,
+	PWM_AO_D2,
 };
 
 /*pwm att*/
@@ -103,8 +80,7 @@ struct aml_pwm_channel {
 
 /*pwm regiset att*/
 struct aml_pwm_variant {
-	u8 output_mask;
-	u16 output_mask_new;
+	u32 output_mask;
 /*
  *add for gxtvbb , gxl , gxm
  */
@@ -118,19 +94,43 @@ struct aml_pwm_variant {
 	unsigned int blink_times;
 };
 
+/*
+ * add addr if hardware add
+ *exam: txlx add pwm ao c/d
+ */
+struct aml_pwm_baseaddr {
+	void __iomem *ab_base;
+	void __iomem *cd_base;
+	void __iomem *ef_base;
+	void __iomem *aoab_base;
+	void __iomem *aocd_base;
+};
+
 struct aml_pwm_chip {
 	struct pwm_chip chip;
-	void __iomem *base;
-	void __iomem *ao_base;
+	struct aml_pwm_baseaddr baseaddr;
+	void __iomem *ao_blink_base;/*for txl*/
 	struct aml_pwm_variant variant;
-	u8 inverter_mask;
-
+	u32 inverter_mask;
 	unsigned int clk_mask;
 	struct clk	*xtal_clk;
 	struct clk	*vid_pll_clk;
 	struct clk	*fclk_div4_clk;
 	struct clk	*fclk_div3_clk;
+};
 
+/*there are 8 registers
+ *for each pwm group
+ */
+struct pwm_aml_regs {
+	u32 dar;/* A Duty Register */
+	u32 dbr;/* B Duty Register */
+	u32 miscr;/* misc Register */
+	u32 dsr;/*DS Register*/
+	u32 tr;/*times Register*/
+	u32 da2r;/* A2 Duty Register */
+	u32 db2r;/* B2 Duty Register */
+	u32 br;/*Blink Register*/
 };
 
 struct aml_pwm_chip *to_aml_pwm_chip(struct pwm_chip *chip);
