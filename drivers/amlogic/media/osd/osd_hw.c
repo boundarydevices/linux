@@ -3256,7 +3256,7 @@ void osd_init_hw(u32 logo_loaded)
 	osd_hw.free_src_data[OSD2].x_end = 0;
 	osd_hw.free_src_data[OSD2].y_start = 0;
 	osd_hw.free_src_data[OSD2].y_end = 0;
-	osd_hw.free_scale_mode[OSD1] = 0;
+	osd_hw.free_scale_mode[OSD1] = 1;
 	osd_hw.free_scale_mode[OSD2] = 1;
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
 		osd_reg_write(VPP_OSD_SC_DUMMY_DATA, 0x002020ff);
