@@ -1304,6 +1304,9 @@ static long sim_ioctl(struct file *file,
 	u32 delay;
 	u32 copy_cnt, val;
 	unsigned long flags;
+	unsigned char __user *atr_buffer;
+	unsigned char __user *xmt_buffer;
+	unsigned char __user *rcv_buffer;
 
 	struct sim_t *sim = (struct sim_t *) file->private_data;
 
@@ -1346,8 +1349,8 @@ static long sim_ioctl(struct file *file,
 			break;
 		}
 
-		ret = copy_to_user(((sim_atr_t *)arg)->atr_buffer, sim->rcv_buffer,
-					sim->rcv_count);
+		__get_user(atr_buffer, &((sim_atr_t __user *)arg)->atr_buffer);
+		ret = copy_to_user(atr_buffer, sim->rcv_buffer, sim->rcv_count);
 		if (ret) {
 			pr_err("ATR ACCESS buffer Error %d %d\n", sim->rcv_count, ret);
 			errval = -SIM_E_ACCESS;
@@ -1394,7 +1397,9 @@ static long sim_ioctl(struct file *file,
 			errval = -EINVAL;
 			break;
 		}
-		ret = copy_from_user(sim->xmt_buffer, (((sim_xmt_t *)arg)->xmt_buffer),
+
+		__get_user(xmt_buffer, &((sim_xmt_t *)arg)->xmt_buffer);
+		ret = copy_from_user(sim->xmt_buffer, xmt_buffer,
 				     sim->xmt_remaining);
 
 		if (ret) {
@@ -1531,8 +1536,9 @@ copy_data:
 			break;
 		}
 
-		ret = copy_to_user(((sim_rcv_t *)arg)->rcv_buffer, &sim->rcv_buffer[sim->rcv_head],
-					copy_cnt);
+		__get_user(rcv_buffer, &((sim_rcv_t *)arg)->rcv_buffer);
+		ret = copy_to_user(rcv_buffer, &sim->rcv_buffer[sim->rcv_head],
+				   copy_cnt);
 		if (ret) {
 			pr_err("ATR ACCESS Error\n");
 			errval = -SIM_E_ACCESS;
