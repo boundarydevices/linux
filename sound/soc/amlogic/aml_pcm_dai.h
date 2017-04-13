@@ -22,7 +22,6 @@ struct aml_pcm {
 	struct clk *clk_mpll;
 	struct clk *clk_pcm_mclk;
 	struct clk *clk_pcm_sync;
-	int old_samplerate;
 	int pcm_mode;
 };
 

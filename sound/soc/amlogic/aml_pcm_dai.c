@@ -46,6 +46,8 @@
 
 #define PCM_DEFAULT_SAMPLERATE 8000
 #define PCM_DEFAULT_MCLK_RATIO_SR 256
+#define PCM_24BIT_MCLK_RATIO_SR 384
+#define PCM_32BIT_MCLK_RATIO_SR 512
 
 static int aml_pcm_set_clk(struct aml_pcm *pcm, unsigned long rate)
 {
@@ -89,8 +91,20 @@ static int aml_pcm_dai_prepare(struct snd_pcm_substream *substream,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
+	struct aml_pcm *pcm = snd_soc_dai_get_drvdata(dai);
+	int mclk_rate;
 
 	pr_debug("***Entered %s\n", __func__);
+
+	/* set bclk */
+	if (runtime->format == SNDRV_PCM_FORMAT_S32_LE)
+		mclk_rate = runtime->rate * PCM_32BIT_MCLK_RATIO_SR;
+	else if (runtime->format == SNDRV_PCM_FORMAT_S24_LE)
+		mclk_rate = runtime->rate * PCM_24BIT_MCLK_RATIO_SR;
+	else
+		mclk_rate = runtime->rate * PCM_DEFAULT_MCLK_RATIO_SR;
+
+	aml_pcm_set_clk(pcm, mclk_rate);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		pr_info(
@@ -168,16 +182,6 @@ static int aml_pcm_dai_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
-	struct aml_pcm *pcm = snd_soc_dai_get_drvdata(dai);
-	int srate, mclk_rate;
-
-	srate = params_rate(params);
-	if (pcm->old_samplerate != srate) {
-		pcm->old_samplerate = srate;
-		mclk_rate = srate * PCM_DEFAULT_MCLK_RATIO_SR;
-		aml_pcm_set_clk(pcm, mclk_rate);
-	}
-
 	pr_debug("***Entered %s:%s\n", __FILE__, __func__);
 	return 0;
 }
@@ -301,7 +305,7 @@ static int aml_pcm_dai_probe(struct platform_device *pdev)
 			goto err;
 		}
 
-		/* now only 256fs is supported */
+		/* Default 256fs */
 		ret = aml_pcm_set_clk(pcm_p,
 			PCM_DEFAULT_SAMPLERATE * PCM_DEFAULT_MCLK_RATIO_SR);
 		if (ret < 0) {

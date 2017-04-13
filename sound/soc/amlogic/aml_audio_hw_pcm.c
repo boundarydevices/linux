@@ -132,9 +132,6 @@ RESET_FIFO:
 			pcm_mode = 2;
 			max_bits = 0x17;
 			valid_bits = 0x17;
-
-			//pcm_mode = 3;
-			max_bits = 0x1f;
 			break;
 		case SNDRV_PCM_FORMAT_S16_LE:
 			pcm_mode = 1;
@@ -549,10 +546,10 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		pcm_mode = 2;
-		valid_bits = 0x1f;
+		valid_bits = 0x17;
 		if (dsp_mode == SND_SOC_DAIFMT_DSP_A) {
 			bit_offset_s = 0xF;
-			slot_offset_s = 0x1F;
+			slot_offset_s = 0x17;
 			bit_offset_e = 0;
 			slot_offset_e = 0;
 		}
@@ -634,6 +631,7 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 
 		/* pcmout control2 */
 		/* FS * 16 * 16 = BCLK */
+		/* FS * 32 * 16 = BCLK */
 		aml_write_cbus(PCMOUT_CTRL2,
 			/* underrun use mute constant */
 			(0 << 29) |
