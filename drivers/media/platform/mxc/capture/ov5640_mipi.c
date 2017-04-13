@@ -106,6 +106,7 @@ struct ov5640_mode_info {
 /* AF-related registers */
 #define OV5640_REG_FW_START	0x8000
 #define OV5640_REG_SYS_RESET	0x3000
+#define OV5640_REG_CLK_EN00	0x3004
 #define OV5640_REG_AF_MODE	0x3022
 #define OV5640_REG_AF_ACK	0x3023
 #define OV5640_REG_AF_PARAM0	0x3024
@@ -1485,6 +1486,29 @@ static s32 ov5640_read_reg(u16 reg, u8 *val)
 	return buf[0];
 }
 
+int ov5640_modify_reg(u16 reg, u8 mask, u8 set)
+{
+	u8 val;
+	u8 new;
+
+	int ret = ov5640_read_reg(reg, &val);
+	if (ret < 0) {
+		pr_err("%s: modify read of %x failed(%d)\n", __func__, reg, ret);
+		return ret;
+	}
+
+	new = (val & mask) | set;
+	if (new != val) {
+		ret = ov5640_write_reg(reg, new);
+		if (ret < 0) {
+			pr_err("%s: modify write of %x failed(%d)\n", __func__, reg, ret);
+			return ret;
+		}
+	}
+
+	return new;
+}
+
 static int prev_sysclk, prev_HTS;
 static int AE_low, AE_high, AE_Target = 52;
 
@@ -2350,18 +2374,17 @@ static int ov5640_af_init(void)
 	};
 
 	/* Move microcontroller to reset */
-	ret = ov5640_read_reg(OV5640_REG_SYS_RESET, &reg);
-	if (ret < 0) {
-		pr_err("%s: microcontroller status read failed\n", __func__);
+	ret = ov5640_modify_reg(OV5640_REG_SYS_RESET, 0xff,
+				OV5640_REG_SYS_RESET_MCU);
+	if (ret < 0)
 		goto out;
-	}
+	/* Save SYS_RESET value for later */
+	reg = ret;
 
-	reg |= OV5640_REG_SYS_RESET_MCU;
-	ret = ov5640_write_reg(OV5640_REG_SYS_RESET, reg);
-	if (ret < 0) {
-		pr_err("%s: microcontroller reset failed\n", __func__);
+	/* Enable program memory and MCU clocks */
+	ret = ov5640_modify_reg(OV5640_REG_CLK_EN00, 0xff, BIT(5) | BIT(6));
+	if (ret < 0)
 		goto out;
-	}
 
 	/* Download firmware */
 	nb_groups = sizeof(ov5640_af_firmware) / (MAX_I2C_SIZE - sizeof(u16));
