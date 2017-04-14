@@ -4,7 +4,6 @@ obj-$(CONFIG_AMLOGIC_MEDIA_DRIVERS)	+=	video_sink/
 obj-$(CONFIG_AMLOGIC_VOUT)		+=	vout/
 obj-$(CONFIG_AMLOGIC_MEDIA_DRIVERS)	+=	osd/
 obj-$(CONFIG_AMLOGIC_MEDIA_DRIVERS)	+=	osd_ext/
-obj-$(CONFIG_AMLOGIC_MEDIA_DRIVERS)	+=	logo/
 obj-$(CONFIG_AMLOGIC_MEDIA_DEINTERLACE)	+=	deinterlace/
 obj-$(CONFIG_AMLOGIC_MEDIA_VIN)		+=	vin/
 obj-$(CONFIG_AMLOGIC_MEDIA_DRIVERS)	+=	video_processor/

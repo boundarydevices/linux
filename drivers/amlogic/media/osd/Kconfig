@@ -19,7 +19,7 @@ config AMLOGIC_MEDIA_FB
 		It need enable canvas.
 		It need enable vout.
 
-config AMLOGIC_MEDIAFB_OSD_SYNC_FENCE
+config AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	bool "OSD SYNC FENCE"
 	default n
 	depends on AMLOGIC_MEDIA_FB

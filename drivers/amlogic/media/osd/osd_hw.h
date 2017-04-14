@@ -145,4 +145,7 @@ extern void osd_switch_free_scale(
 	u32 next_index, u32 next_enable, u32 next_scale);
 extern void osd_get_urgent(u32 index, u32 *urgent);
 extern void osd_set_urgent(u32 index, u32 urgent);
+int logo_work_init(void);
+void set_logo_loaded(void);
+int set_osd_logo_freescaler(void);
 #endif

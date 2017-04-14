@@ -112,7 +112,6 @@ static unsigned int osd_auto_adjust_filter = 1;
 module_param(osd_auto_adjust_filter, uint, 0664);
 MODULE_PARM_DESC(osd_auto_adjust_filter, "osd_auto_adjust_filter");
 
-static int osd_init_hw_flag;
 static int osd_logo_index = 1;
 module_param(osd_logo_index, int, 0664);
 MODULE_PARM_DESC(osd_logo_index, "osd_logo_index");
@@ -3256,7 +3255,7 @@ void osd_init_hw(u32 logo_loaded)
 	osd_hw.free_src_data[OSD2].x_end = 0;
 	osd_hw.free_src_data[OSD2].y_start = 0;
 	osd_hw.free_src_data[OSD2].y_end = 0;
-	osd_hw.free_scale_mode[OSD1] = 1;
+	osd_hw.free_scale_mode[OSD1] = 0;
 	osd_hw.free_scale_mode[OSD2] = 1;
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
 		osd_reg_write(VPP_OSD_SC_DUMMY_DATA, 0x002020ff);
@@ -3294,7 +3293,6 @@ void osd_init_hw(u32 logo_loaded)
 	osd_rdma_enable(1);
 #endif
 
-	osd_init_hw_flag = 1;
 }
 
 #if defined(CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR)
@@ -3500,11 +3498,6 @@ int osd_get_logo_index(void)
 void osd_set_logo_index(int index)
 {
 	osd_logo_index = index;
-}
-
-int osd_get_init_hw_flag(void)
-{
-	return osd_init_hw_flag;
 }
 
 void osd_get_hw_para(struct hw_para_s **para)

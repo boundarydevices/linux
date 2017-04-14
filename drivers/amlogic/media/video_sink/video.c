@@ -7810,6 +7810,8 @@ static void do_vpu_delay_work(struct work_struct *work)
 /*********************************************************/
 static int __init video_early_init(void)
 {
+	const struct vinfo_s *vinfo;
+
 	/* todo: move this to clock tree, enable VPU clock */
 #if DEBUG_TMP
 	WRITE_CBUS_REG(HHI_VPU_CLK_CNTL,
@@ -7818,8 +7820,11 @@ static int __init video_early_init(void)
 	(3<<9) | (1<<8) | (0)); // fclk_div7/1 = 364M
 	//moved to vpu.c, default config by dts
 #endif
+	vinfo = get_current_vinfo();
+	if (!vinfo)
+		return -1;
 
-	if (get_logo_vmode() >= VMODE_MAX) {
+	if (vinfo->mode >= VMODE_MAX) {
 #if 1				/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 		if (is_meson_gxtvbb_cpu())
 			WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0xfff,
@@ -7851,7 +7856,7 @@ static int __init video_early_init(void)
 	if (is_meson_gxbb_cpu())
 		SET_VCBUS_REG_MASK(VPP_MISC, VPP_OUT_SATURATE);
 
-	if (get_logo_vmode() >= VMODE_MAX) {
+	if (vinfo->mode >= VMODE_MAX) {
 		CLEAR_VCBUS_REG_MASK(VPP_VSC_PHASE_CTRL,
 				     VPP_PHASECTL_TYPE_INTERLACE);
 #ifndef CONFIG_FB_AML_TCON
@@ -7860,7 +7865,7 @@ static int __init video_early_init(void)
 		WRITE_VCBUS_REG(VPP_HOLD_LINES + cur_dev->vpp_off, 0x08080808);
 	}
 #ifdef CONFIG_SUPPORT_VIDEO_ON_VPP2
-	if (get_logo_vmode() >= VMODE_MAX) {
+	if (vinfo->mode >= VMODE_MAX) {
 		CLEAR_VCBUS_REG_MASK(VPP2_VSC_PHASE_CTRL,
 				     VPP_PHASECTL_TYPE_INTERLACE);
 #ifndef CONFIG_FB_AML_TCON

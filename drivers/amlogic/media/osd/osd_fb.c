@@ -288,6 +288,8 @@ static int early_suspend_flag;
 static int early_resume_flag;
 #endif
 
+static struct delayed_work osd_dwork;
+static bool fb_map_flag;
 static int osd_shutdown_flag;
 
 unsigned int osd_log_level;
@@ -971,7 +973,35 @@ static int osd_open(struct fb_info *info, int arg)
 	fb_index = fbdev->fb_index;
 	fix = &info->fix;
 	var = &info->var;
-	if (fb_rmem.base == 0) {
+	/* read fb-reserved memory first */
+	if (fb_rmem.base &&
+		(fb_memsize[0] + fb_memsize[1]) <= fb_rmem.size) {
+		if (!fb_ion_client)
+			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
+		fb_rmem_size[fb_index] = fb_memsize[fb_index];
+		if (fb_index == DEV_OSD0)
+			fb_rmem_paddr[fb_index] = fb_rmem.base;
+		else if (fb_index == DEV_OSD1) {
+			if ((OSD_COUNT == 2) &&
+			((fb_memsize[0] + fb_memsize[1]) <= fb_rmem.size)) {
+				fb_rmem_paddr[fb_index] =
+					fb_rmem.base + fb_memsize[0];
+			}
+		}
+		if ((fb_rmem_paddr[fb_index] > 0) &&
+			(fb_rmem_size[fb_index] > 0)) {
+			if (fb_map_flag)
+				fb_rmem_vaddr[fb_index] =
+					phys_to_virt(fb_rmem_paddr[fb_index]);
+			else
+				fb_rmem_vaddr[fb_index] =
+					ioremap_wc(fb_rmem_paddr[fb_index],
+					fb_rmem_size[fb_index]);
+			if (!fb_rmem_vaddr[fb_index])
+				osd_log_err("fb[%d] ioremap error",
+						fb_index);
+		}
+	} else {
 		#ifdef CONFIG_AMLOGIC_ION
 		pr_info("use ion buffer for fb memory\n");
 		if (!fb_ion_client)
@@ -1053,26 +1083,6 @@ static int osd_open(struct fb_info *info, int arg)
 				(unsigned long)fb_rmem_size[fb_index] / SZ_1M);
 		}
 		#endif
-	} else {
-		fb_rmem_size[fb_index] = fb_memsize[fb_index];
-		if (fb_index == DEV_OSD0)
-			fb_rmem_paddr[fb_index] = fb_rmem.base;
-		else if (fb_index == DEV_OSD1) {
-			if ((OSD_COUNT == 2) &&
-			((fb_memsize[0] + fb_memsize[1]) <= fb_rmem.size)) {
-				fb_rmem_paddr[fb_index] =
-					fb_rmem.base + fb_memsize[0];
-			}
-		}
-		if ((fb_rmem_paddr[fb_index] > 0) &&
-			(fb_rmem_size[fb_index] > 0)) {
-			fb_rmem_vaddr[fb_index] =
-					ioremap_wc(fb_rmem_paddr[fb_index],
-					fb_rmem_size[fb_index]);
-			if (!fb_rmem_vaddr[fb_index])
-				osd_log_err("fb[%d] ioremap error",
-						fb_index);
-		}
 	}
 	fbdev->fb_len = fb_rmem_size[fb_index];
 	fbdev->fb_mem_paddr = fb_rmem_paddr[fb_index];
@@ -1116,6 +1126,7 @@ static int osd_open(struct fb_info *info, int arg)
 	if ((logo_index < 0) || (logo_index != fb_index)) {
 		osd_log_info("---------------clear fb%d memory %p\n",
 			fb_index, fbdev->fb_mem_vaddr);
+		set_logo_loaded();
 		memset(fbdev->fb_mem_vaddr, 0x0, fbdev->fb_len);
 		if (fb_index == DEV_OSD0 && osd_get_afbc()) {
 			for (j = 1; j < OSD_MAX_BUF_NUM; j++) {
@@ -1277,6 +1288,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 		break;
 #endif
 	case  VOUT_EVENT_MODE_CHANGE:
+		set_osd_logo_freescaler();
 		for (i = 0; i < OSD_COUNT; i++) {
 			fb_dev = gp_fbdev_list[i];
 			if (fb_dev == NULL)
@@ -2358,6 +2370,30 @@ static int osd_pm_resume(struct device *dev)
 }
 #endif
 
+static void mem_free_work(struct work_struct *work)
+{
+	long r = -EINVAL;
+	unsigned long start_addr;
+	unsigned long end_addr;
+
+	if (fb_rmem.base && fb_map_flag) {
+		if (fb_rmem.size >= (fb_memsize[0] + fb_memsize[1])) {
+			/* logo reserved memory after fb0/fb1 memory, free it*/
+			start_addr = fb_rmem.base
+				+ fb_memsize[0] + fb_memsize[1];
+			end_addr = fb_rmem.base + fb_rmem.size;
+		} else {
+			/* logo reserved only, free it*/
+			start_addr = fb_rmem.base;
+			end_addr = fb_rmem.base + fb_rmem.size;
+		}
+		osd_log_info("%s, free memory: addr:%lx\n",
+			__func__, start_addr);
+		r = free_reserved_area(__va(start_addr),
+			__va(end_addr), 0, "fb-memory");
+	}
+}
+
 static int osd_probe(struct platform_device *pdev)
 {
 	struct fb_info *fbi = NULL;
@@ -2366,8 +2402,6 @@ static int osd_probe(struct platform_device *pdev)
 	struct fb_fix_screeninfo *fix;
 	int  index, bpp;
 	struct osd_fb_dev_s *fbdev = NULL;
-	enum vmode_e current_mode = VMODE_MASK;
-	enum vmode_e logo_init = 0;
 	const void *prop;
 	int prop_idx = 0;
 	const char *str;
@@ -2388,6 +2422,13 @@ static int osd_probe(struct platform_device *pdev)
 		goto failed1;
 	}
 #endif
+	/* init osd logo */
+	ret = logo_work_init();
+	if (ret == 0)
+		osd_init_hw(1);
+	else
+		osd_init_hw(0);
+
 	/* get buffer size from dt */
 	ret = of_property_read_u32_array(pdev->dev.of_node,
 			"mem_size", fb_memsize, 2);
@@ -2416,12 +2457,6 @@ static int osd_probe(struct platform_device *pdev)
 	/* get default display mode from dt */
 	ret = of_property_read_string(pdev->dev.of_node,
 		"display_mode_default", &str);
-	if (ret)
-		current_mode = VMODE_MASK;
-	#ifdef CONFIG_AMLOGIC_TV_OUTPUT
-	else
-		current_mode = vmode_name_to_mode(str);
-	#endif
 	prop = of_get_property(pdev->dev.of_node, "pxp_mode", NULL);
 	if (prop)
 		prop_idx = of_read_ulong(prop, 1);
@@ -2434,16 +2469,7 @@ static int osd_probe(struct platform_device *pdev)
 		osd_set_urgent(1, (prop_idx != 0) ? 1 : 0);
 	}
 
-	/* if osd_init_hw is not set by logo, set vmode and init osd hw */
-	logo_init = osd_get_init_hw_flag();
-	if (logo_init == 0) {
-		if (current_mode < VMODE_MASK)
-			set_current_vmode(current_mode);
-		osd_init_hw(0);
-	}
-
 	vinfo = get_current_vinfo();
-	osd_log_info("%s vinfo:%p\n", __func__, vinfo);
 	for (index = 0; index < OSD_COUNT; index++) {
 		/* register frame buffer memory */
 		fbi = framebuffer_alloc(sizeof(struct osd_fb_dev_s),
@@ -2544,6 +2570,8 @@ static int osd_probe(struct platform_device *pdev)
 
 	/* register vout client */
 	vout_register_client(&osd_notifier_nb);
+	INIT_DELAYED_WORK(&osd_dwork, mem_free_work);
+	schedule_delayed_work(&osd_dwork, msecs_to_jiffies(60 * 1000));
 
 	osd_log_info("osd probe OK\n");
 	return 0;
@@ -2624,6 +2652,11 @@ exit:
 
 static int rmem_fb_device_init(struct reserved_mem *rmem, struct device *dev)
 {
+	if (!of_get_flat_dt_prop(rmem->fdt_node, "no-map", NULL)) {
+		fb_map_flag = true;
+		osd_log_info("momery mapped[can free]\n");
+	} else
+		fb_map_flag = false;
 	return 0;
 }
 
@@ -2708,7 +2741,7 @@ static void __exit osd_exit_module(void)
 	platform_driver_unregister(&osd_driver);
 }
 
-module_init(osd_init_module);
+subsys_initcall(osd_init_module);
 module_exit(osd_exit_module);
 
 MODULE_AUTHOR("Platform-BJ <platform.bj@amlogic.com>");
