@@ -787,6 +787,9 @@ void init_reg_map(void);
 #define ENCP_SYNC_TO_PIXEL 0x1c47	/* register.h:8399 */
 #define P_ENCP_SYNC_TO_PIXEL VCBUS_REG_ADDR(ENCP_SYNC_TO_PIXEL)
 
+#define VPP_POSTBLEND_H_SIZE 0x1d21
+#define P_VPP_POSTBLEND_H_SIZE VCBUS_REG_ADDR(VPP_POSTBLEND_H_SIZE)
+
 /* [3:2] cntl_viu2_sel_venc: 0=ENCL, 1=ENCI, 2=ENCP, 3=ENCT. */
 /* [1:0] cntl_viu1_sel_venc: 0=ENCL, 1=ENCI, 2=ENCP, 3=ENCT. */
 #define VPU_VIU_VENC_MUX_CTRL 0x271a	/* register.h:9214 */

@@ -1796,6 +1796,7 @@ static void set_tmds_clk_div40(unsigned int div40)
 static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
 {
 	unsigned char rx_ver = 0;
+	struct hdmi_format_para *para = NULL;
 
 	if (hdev->cur_video_param == NULL) /* disable HDMI */
 		return 0;
@@ -1872,7 +1873,15 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
 	if (hdev->flag_3dfp)
 		set_vmode_3dfp_enc_hw(hdev->cur_video_param->VIC);
 	else
-	set_vmode_enc_hw(hdev->cur_video_param->VIC);
+		set_vmode_enc_hw(hdev->cur_video_param->VIC);
+	para = hdmi_get_fmt_paras(hdev->cur_video_param->VIC);
+	if (para == NULL) {
+		pr_info("error at %s[%d] vic = %d\n", __func__, __LINE__,
+			hdev->cur_video_param->VIC);
+	} else {
+		hd_write_reg(P_VPP_POSTBLEND_H_SIZE, para->hdmitx_vinfo.width);
+	}
+
 	if (hdev->flag_3dfp) {
 		hd_write_reg(P_VPU_HDMI_SETTING, 0x8e);
 		goto next;
