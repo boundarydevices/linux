@@ -24,6 +24,7 @@
 #include <linux/amlogic/cpucore_cooling.h>
 #include <linux/amlogic/cpu_hotplug.h>
 #include <linux/cpumask.h>
+#include <linux/amlogic/aml_thermal_hw.h>
 
 /**
  * struct cpucore_cooling_device - data for cooling device with cpucore
