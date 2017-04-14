@@ -7911,6 +7911,11 @@ static int amvideom_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 
+	video_early_init();
+
+	DisableVideoLayer();
+	DisableVideoLayer2();
+
 	/* get interrupt resource */
 	video_vsync = platform_get_irq_byname(pdev, "vsync");
 	if (video_vsync  == -ENXIO) {
@@ -7955,7 +7960,7 @@ static int __init video_init(void)
 	   ulong clk = clk_get_rate(clk_get_sys("clk_misc_pll", NULL));
 	   #endif
 	 */
-	video_early_init();
+
 #ifdef CONFIG_ARCH_MESON1
 	no to here ulong clk =
 		clk_get_rate(clk_get_sys("clk_other_pll", NULL));
@@ -7983,10 +7988,6 @@ static int __init video_init(void)
 		pr_info("failed to amvideom driver!\n");
 		return -ENODEV;
 	}
-
-
-	DisableVideoLayer();
-	DisableVideoLayer2();
 
 	/* check super scaler support status */
 	vpp_super_scaler_support();

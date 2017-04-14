@@ -1481,10 +1481,6 @@ int tsync_pcr_init(void)
 		return r;
 	}
 
-	/* init audio pts to -1, others to 0 */
-	timestamp_apts_set(-1);
-	timestamp_vpts_set(0);
-	timestamp_pcrscr_set(0);
 	wait_pcr_count = 0;
 	pr_info("[tsync_pcr_init]init success.\n");
 	return 0;

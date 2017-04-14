@@ -66,6 +66,9 @@ MODULE_AMLOG(AMLOG_DEFAULT_LEVEL, 0, LOG_DEFAULT_LEVEL_DESC,
 #define PCR_MAINTAIN_MARGIN_SHIFT_VIDEO      1
 #define PCR_RECOVER_PCR_ADJ 15
 
+#define TSYNC_INIT_STATE (0X01)
+unsigned int tsync_flag;
+
 enum {
 	PCR_SYNC_UNSET,
 	PCR_SYNC_HI,
@@ -1130,6 +1133,34 @@ int tsync_set_apts(unsigned int pts)
 }
 EXPORT_SYMBOL(tsync_set_apts);
 
+void tsync_init(void)
+{
+	if (tsync_flag & TSYNC_INIT_STATE)
+		return;
+
+	tsync_flag |= TSYNC_INIT_STATE;
+
+	/* init audio pts to -1, others to 0 */
+	timestamp_apts_set(-1);
+	timestamp_vpts_set(0);
+	timestamp_pcrscr_set(0);
+
+	init_timer(&tsync_pcr_recover_timer);
+
+	tsync_pcr_recover_timer.function = tsync_pcr_recover_timer_func;
+	tsync_pcr_recover_timer.expires = jiffies + PCR_CHECK_INTERVAL;
+	pcr_sync_stat = PCR_SYNC_UNSET;
+	pcr_recover_trigger = 0;
+
+	add_timer(&tsync_pcr_recover_timer);
+
+	init_timer(&tsync_state_switch_timer);
+	tsync_state_switch_timer.function = tsync_state_switch_timer_fun;
+	tsync_state_switch_timer.expires = jiffies + 1;
+
+	add_timer(&tsync_state_switch_timer);
+}
+
 /*********************************************************/
 
 static ssize_t show_pcr_recover(struct class *class,
@@ -1884,8 +1915,8 @@ static struct class tsync_class = {
 		.name = "tsync",
 		.class_attrs = tsync_class_attrs,
 	};
-#if 0
-int tsync_init(void)
+
+static int __init tsync_module_init(void)
 {
 	int r;
 
@@ -1896,83 +1927,24 @@ int tsync_init(void)
 		return r;
 	}
 
-	/* init audio pts to -1, others to 0 */
-	timestamp_apts_set(-1);
-	timestamp_vpts_set(0);
-	timestamp_pcrscr_set(0);
+	tsync_pcr_init();
 
-	init_timer(&tsync_pcr_recover_timer);
-
-	tsync_pcr_recover_timer.function = tsync_pcr_recover_timer_func;
-	tsync_pcr_recover_timer.expires = jiffies + PCR_CHECK_INTERVAL;
-	pcr_sync_stat = PCR_SYNC_UNSET;
-	pcr_recover_trigger = 0;
-
-	add_timer(&tsync_pcr_recover_timer);
-
-	init_timer(&tsync_state_switch_timer);
-	tsync_state_switch_timer.function = tsync_state_switch_timer_fun;
-	tsync_state_switch_timer.expires = jiffies + 1;
-
-	add_timer(&tsync_state_switch_timer);
 	return 0;
 }
 
-void tsync_exit(void)
+static void __exit tsync_module_exit(void)
 {
-	del_timer_sync(&tsync_pcr_recover_timer);
-
-	class_unregister(&tsync_class);
-}
-#endif
-#if 1
-static int __init tsync_init(void)
-{
-	int r;
-
-	r = class_register(&tsync_class);
-
-	if (r) {
-		amlog_level(LOG_LEVEL_ERROR, "tsync class create fail.\n");
-		return r;
+	if (tsync_flag & TSYNC_INIT_STATE) {
+		del_timer_sync(&tsync_pcr_recover_timer);
+		del_timer_sync(&tsync_state_switch_timer);
 	}
 
-	/* init audio pts to -1, others to 0 */
-	timestamp_apts_set(-1);
-	timestamp_vpts_set(0);
-	timestamp_pcrscr_set(0);
-
-	init_timer(&tsync_pcr_recover_timer);
-
-	tsync_pcr_recover_timer.function = tsync_pcr_recover_timer_func;
-	tsync_pcr_recover_timer.expires = jiffies + PCR_CHECK_INTERVAL;
-	pcr_sync_stat = PCR_SYNC_UNSET;
-	pcr_recover_trigger = 0;
-
-	add_timer(&tsync_pcr_recover_timer);
-
-	init_timer(&tsync_state_switch_timer);
-	tsync_state_switch_timer.function = tsync_state_switch_timer_fun;
-	tsync_state_switch_timer.expires = jiffies + 1;
-
-	add_timer(&tsync_state_switch_timer);
-
-	tsync_pcr_init();//DEBUG_TMP
-
-	return 0;
-}
-
-static void __exit tsync_exit(void)
-{
-	del_timer_sync(&tsync_pcr_recover_timer);
-
 	class_unregister(&tsync_class);
-	tsync_pcr_exit();//DEBUG_TMP
+	tsync_pcr_exit();
 }
 
-module_init(tsync_init);
-module_exit(tsync_exit);
-#endif
+module_init(tsync_module_init);
+module_exit(tsync_module_exit);
 MODULE_DESCRIPTION("AMLOGIC time sync management driver");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tim Yao <timyao@amlogic.com>");

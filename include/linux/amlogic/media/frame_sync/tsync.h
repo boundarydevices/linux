@@ -92,6 +92,8 @@ extern void tsync_set_sync_adiscont_diff(u32 discontinue_diff);
 extern void tsync_set_sync_vdiscont_diff(u32 discontinue_diff);
 extern int tsync_set_apts(unsigned int pts);
 
+extern void tsync_init(void);
+
 extern void tsync_set_automute_on(int automute_on);
 
 extern int tsync_get_debug_pts_checkin(void);

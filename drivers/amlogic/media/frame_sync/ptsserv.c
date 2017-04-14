@@ -36,7 +36,6 @@
 #define INTERPOLATE_AUDIO_RESOLUTION 9000
 #define PTS_VALID_OFFSET_TO_CHECK      0x08000000
 
-
 #define OFFSET_DIFF(x, y)  ((int)(x - y))
 #define OFFSET_LATER(x, y) (OFFSET_DIFF(x, y) > 0)
 #define OFFSET_EQLATER(x, y) (OFFSET_DIFF(x, y) >= 0)
@@ -1121,6 +1120,9 @@ int pts_start(u8 type)
 {
 	ulong flags;
 	struct pts_table_s *pTable;
+
+	/*tsync init.*/
+	tsync_init();
 
 	if (type >= PTS_TYPE_MAX)
 		return -EINVAL;
