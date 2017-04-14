@@ -17,6 +17,11 @@
 
 #ifndef ARCH__THERMAL_H__
 #define ARCH__THERMAL_H__
+
+#ifndef mc_capable
+#define mc_capable()		0
+#endif
+
 struct thermal_cooling_device;
 extern int thermal_firmware_init(void);
 extern int get_cpu_temp(void);

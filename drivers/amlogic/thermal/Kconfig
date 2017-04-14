@@ -6,6 +6,7 @@ menu "Amlogic temperature sensor"
 
 config AMLOGIC_TEMP_SENSOR
 	bool "Amlgoic temperature sensor Support"
+	depends on THERMAL
 	default n
 	---help---
 		Thermal sensor low level support for thermal
@@ -13,6 +14,24 @@ config AMLOGIC_TEMP_SENSOR
 		And register each cooling device for thermal framework.
 
 		If you wan this driver, selest it.
+
+config AMLOGIC_M8B_TEMP_SENSOR
+	bool "Amlgoic temperature sensor Support for M8 chips"
+	depends on AMLOGIC_TEMP_SENSOR
+	depends on MACH_MESON8B
+	default n
+	help
+		this config enables thermal driver for M8/M8baby chips.
+		Say Y if you want this driver.
+
+config AMLOGIC_GX_TEMP_SENSOR
+	bool "Amlgoic temperature sensor Support for GX chips"
+	depends on AMLOGIC_TEMP_SENSOR
+	depends on ARM64
+	default y
+	help
+		this config enables thermal driver for GX/GXB/GXL/GXM chips.
+		Say Y if you want this driver.
 
 config AMLOGIC_CPUCORE_THERMAL
 	bool "generic cpu core cooling support"
