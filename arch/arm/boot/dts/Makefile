@@ -416,6 +416,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-icore-rqs.dtb \
 	imx6q-marsboard.dtb \
 	imx6q-mccmon6.dtb \
+	imx6q-mtp.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_som2.dtb \
@@ -441,6 +442,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-wandboard.dtb \
 	imx6q-wandboard-revb1.dtb \
 	imx6q-zii-rdu2.dtb \
+	imx6qp-mtp.dtb \
 	imx6qp-nitrogen6_max.dtb \
 	imx6qp-nitrogen6_som2.dtb \
 	imx6qp-sabreauto.dtb \
