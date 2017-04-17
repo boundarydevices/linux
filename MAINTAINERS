@@ -13836,3 +13836,7 @@ F: drivers/amlogic/media/enhancement/amvecm/Makefile
 F: drivers/amlogic/media/enhancement/amvecm/dolby_vision/*
 F: drivers/amlogic/media/enhancement/amvecm/arch/*
 F: include/linux/amlogic/media/amvecm/*
+
+AMLOGIC GXL ADD SKT DTS
+M: Yun Cai <yun.cai@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_skt.dts

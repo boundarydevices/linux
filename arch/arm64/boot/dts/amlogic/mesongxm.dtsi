@@ -327,8 +327,8 @@
 		compatible = "amlogic, meson_mhu";
 		reg = <0x0 0xc883c400 0x0 0x4c>,   /* MHU registers */
 		      <0x0 0xc8013000 0x0 0x800>;   /* Payload area */
-		interrupts = <0 209 8>,   /* low priority interrupt */
-			     <0 210 8>;   /* high priority interrupt */
+		interrupts = <0 209 1>,   /* low priority interrupt */
+			     <0 210 1>;   /* high priority interrupt */
 		#mbox-cells = <1>;
 		mbox-names = "cpu_to_scp_low", "cpu_to_scp_high";
 		mboxes = <&mailbox 0 &mailbox 1>;
