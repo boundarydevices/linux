@@ -2482,7 +2482,7 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 #ifndef AML_NAND_UBOOT
 	aml_chip->aml_nand_data_buf = dma_alloc_coherent(aml_chip->device,
 		(mtd->writesize + mtd->oobsize),
-		&controller->data_dma_addr, GFP_KERNEL);
+		&aml_chip->data_dma_addr, GFP_KERNEL);
 	if (aml_chip->aml_nand_data_buf == NULL) {
 		pr_info("no memory for flash data buf\n");
 		err = -ENOMEM;
@@ -2490,7 +2490,7 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 	}
 	aml_chip->user_info_buf = dma_alloc_coherent(aml_chip->device,
 		(mtd->writesize / chip->ecc.size) * PER_INFO_BYTE,
-		&controller->info_dma_addr, GFP_KERNEL);
+		&aml_chip->info_dma_addr, GFP_KERNEL);
 	if (aml_chip->user_info_buf == NULL) {
 		pr_info("no memory for flash info buf\n");
 		err = -ENOMEM;
@@ -2585,7 +2585,7 @@ exit_error:
 		dma_free_coherent(NULL,
 			(mtd->writesize / chip->ecc.size) * PER_INFO_BYTE,
 			aml_chip->user_info_buf,
-			controller->info_dma_addr);
+			aml_chip->info_dma_addr);
 #else
 		kfree(aml_chip->user_info_buf);
 #endif
@@ -2604,7 +2604,7 @@ exit_error:
 #ifndef AML_NAND_UBOOT
 		dma_free_coherent(NULL, (mtd->writesize + mtd->oobsize),
 			aml_chip->aml_nand_data_buf,
-			controller->data_dma_addr);
+			aml_chip->data_dma_addr);
 #else
 		kfree(aml_chip->aml_nand_data_buf);
 #endif

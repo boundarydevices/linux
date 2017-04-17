@@ -633,10 +633,10 @@ static int m3_nand_dma_write(struct aml_nand_chip *aml_chip,
 		count = len/chip->ecc.size;
 
 #ifndef AML_NAND_UBOOT
-	NFC_SEND_CMD_ADL(controller, controller->data_dma_addr);
-	NFC_SEND_CMD_ADH(controller, controller->data_dma_addr);
-	NFC_SEND_CMD_AIL(controller, controller->info_dma_addr);
-	NFC_SEND_CMD_AIH(controller, controller->info_dma_addr);
+	NFC_SEND_CMD_ADL(controller, aml_chip->data_dma_addr);
+	NFC_SEND_CMD_ADH(controller, aml_chip->data_dma_addr);
+	NFC_SEND_CMD_AIL(controller, aml_chip->info_dma_addr);
+	NFC_SEND_CMD_AIH(controller, aml_chip->info_dma_addr);
 #else
 	flush_dcache_range((unsigned long)buf, (unsigned long)buf + len);
 	flush_dcache_range((unsigned long)aml_chip->user_info_buf,
@@ -707,10 +707,10 @@ static int m3_nand_dma_read(struct aml_nand_chip *aml_chip,
 	smp_wmb();
 	/*wmb*/
 	wmb();
-	NFC_SEND_CMD_ADL(controller, controller->data_dma_addr);
-	NFC_SEND_CMD_ADH(controller, controller->data_dma_addr);
-	NFC_SEND_CMD_AIL(controller, controller->info_dma_addr);
-	NFC_SEND_CMD_AIH(controller, controller->info_dma_addr);
+	NFC_SEND_CMD_ADL(controller, aml_chip->data_dma_addr);
+	NFC_SEND_CMD_ADH(controller, aml_chip->data_dma_addr);
+	NFC_SEND_CMD_AIL(controller, aml_chip->info_dma_addr);
+	NFC_SEND_CMD_AIH(controller, aml_chip->info_dma_addr);
 #else
 	flush_dcache_range((unsigned long)aml_chip->user_info_buf,
 		(unsigned long)aml_chip->user_info_buf + count*PER_INFO_BYTE);
@@ -794,6 +794,36 @@ static int m3_nand_hwecc_correct(struct aml_nand_chip *aml_chip,
 		} else
 			aml_chip->ecc_cnt_cur =
 				NAND_ECC_CNT(usr_info);
+	}
+
+	return 0;
+}
+
+static int m3_nand_boot_erase_cmd(struct mtd_info *mtd, int page)
+{
+	struct aml_nand_chip *aml_chip = mtd_to_nand_chip(mtd);
+	struct nand_chip *chip = mtd->priv;
+	loff_t ofs;
+	int i, page_addr;
+
+	if (page >= BOOT_PAGES_PER_COPY)
+		return -EPERM;
+
+	if (aml_chip->valid_chip[0]) {
+		for (i = 0; i < BOOT_COPY_NUM; i++) {
+			page_addr = page + i*BOOT_PAGES_PER_COPY;
+			ofs = (page_addr << chip->page_shift);
+
+			if (chip->block_bad(mtd, ofs))
+				continue;
+
+			aml_chip->aml_nand_select_chip(aml_chip, 0);
+			aml_chip->aml_nand_command(aml_chip,
+				NAND_CMD_ERASE1, -1, page_addr, 0);
+			aml_chip->aml_nand_command(aml_chip,
+				NAND_CMD_ERASE2, -1, -1, 0);
+			chip->waitfunc(mtd, chip);
+		}
 	}
 
 	return 0;
@@ -1371,7 +1401,8 @@ static int m3_nand_probe(struct aml_nand_platform *plat, unsigned int dev_num)
 	}
 	if (!strncmp((char *)plat->name,
 		NAND_BOOT_NAME, strlen((const char *)NAND_BOOT_NAME))) {
-		/*chip->erase_cmd = m3_nand_boot_erase_cmd;*/
+		/* interface is chip->erase_cmd on 3.14*/
+		chip->erase = m3_nand_boot_erase_cmd;
 		chip->ecc.read_page = m3_nand_boot_read_page_hwecc;
 		chip->ecc.write_page = m3_nand_boot_write_page_hwecc;
 		chip->write_page = m3_nand_boot_write_page;

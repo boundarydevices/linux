@@ -258,6 +258,7 @@ struct aml_nand_flash_dev {
 	unsigned int T_REA;
 	unsigned int T_RHOH;
 	u8 onfi_mode;
+	/* store new type directly */
 	unsigned char new_type;
 	unsigned int options;
 };
@@ -514,7 +515,10 @@ struct aml_nand_chip {
 	struct new_tech_nand_t  new_nand_info;
 	/* platform info */
 	struct aml_nand_platform *platform;
-
+#ifndef AML_NAND_UBOOT
+	dma_addr_t data_dma_addr;
+	dma_addr_t info_dma_addr;
+#endif
 	/* device info */
 	struct device *device;
 
