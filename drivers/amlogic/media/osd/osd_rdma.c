@@ -131,7 +131,7 @@ static inline void reset_rdma_table(void)
 		if (item_count > 2)
 			temp_tbl = kzalloc(
 				sizeof(struct rdma_table_item)
-				* item_count, GFP_KERNEL);
+				* item_count, GFP_ATOMIC);
 		end_addr = osd_reg_read(END_ADDR) + 1;
 		if (end_addr > table_paddr)
 			old_count = (end_addr - table_paddr) >> 3;
