@@ -677,7 +677,8 @@ retry_status:
 				/* udelay(200); */
 			}
 			status[i] = (int)chip->read_byte(mtd);
-			if ((read_status++ < 3) && (status[i] != 0xe0)) {
+			if ((read_status++ < 3)
+				&& (!(status[i] & NAND_STATUS_READY))) {
 				pr_info("after write,read %d status =%d fail\n",
 					read_status, status[i]);
 				goto retry_status;
