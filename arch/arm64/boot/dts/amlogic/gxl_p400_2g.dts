@@ -519,6 +519,7 @@
 			"top_level",
 			"aoclk",
 			"aud_in";
+		i2s_pos_sync = <1>;
 		/*DMIC;*/  /* I2s Mic or Dmic, default for I2S mic */
 	};
 	dmic:snd_dmic {
@@ -594,13 +595,13 @@
 	dummy_codec:dummy{
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml_dummy_codec";
-		status = "disable";
+		status = "okay";
 	};
 	amlogic_codec:t9015{
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml_codec_T9015";
 		reg = <0x0 0xc8832000 0x0 0x14>;
-		status = "okay";
+		status = "disable";
 	};
 	aml_sound_meson {
 		compatible = "aml, meson-snd-card";
@@ -630,7 +631,7 @@
 			sound-dai = <&pcm_dai>;
 		};
 		codec0: codec0 {
-			sound-dai = <&amlogic_codec>;
+			sound-dai = <&dummy_codec>;
 		};
 		codec1: codec1 {
 			sound-dai = <&spdif_codec>;
@@ -746,3 +747,15 @@
 &efuse {
 	status = "ok";
 };
+	&audio_i2s_pins {
+		mux {
+			groups = "i2s_am_clk",
+			"i2s_ao_clk_out",
+			"i2s_lr_clk_out",
+			"i2sout_ch01",
+			"i2sin_ch23",
+			"i2sin_ch45",
+			"i2sin_ch67";
+			function = "i2s";
+		};
+	};

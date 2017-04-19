@@ -47,8 +47,6 @@
 
 struct aml_dai_info dai_info[3] = { {0} };
 
-static int i2s_pos_sync;
-
 /* extern int set_i2s_iec958_samesource(int enable);
  *
  * the I2S hw  and IEC958 PCM output initiation,958 initiation here,
@@ -152,14 +150,16 @@ static int aml_dai_i2s_prepare(struct snd_pcm_substream *substream,
 		if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
 			audio_in_i2s_set_buf(runtime->dma_addr,
 					runtime->dma_bytes * 2,
-					0, i2s_pos_sync, i2s->audin_fifo_src,
+					0, i2s->i2s_pos_sync,
+					i2s->audin_fifo_src,
 					runtime->channels);
 			memset((void *)runtime->dma_area, 0,
 					runtime->dma_bytes * 2);
 		} else {
 			audio_in_i2s_set_buf(runtime->dma_addr,
 					runtime->dma_bytes,
-					0, i2s_pos_sync, i2s->audin_fifo_src,
+					0, i2s->i2s_pos_sync,
+					i2s->audin_fifo_src,
 					runtime->channels);
 			memset((void *)runtime->dma_area, 0,
 					runtime->dma_bytes);
@@ -245,15 +245,17 @@ static int aml_dai_i2s_hw_params(struct snd_pcm_substream *substream,
 
 static int aml_dai_set_i2s_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
+	struct aml_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+
 	if (fmt & SND_SOC_DAIFMT_CBS_CFS)	/* slave mode */
 		dai_info[dai->id].i2s_mode = I2S_SLAVE_MODE;
 
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_NB_NF:
-		i2s_pos_sync = 0;
+		i2s->i2s_pos_sync = 0;
 		break;
 	case SND_SOC_DAIFMT_IB_NF:
-		i2s_pos_sync = 1;
+		i2s->i2s_pos_sync = 1;
 		break;
 	default:
 		return -EINVAL;
@@ -395,6 +397,15 @@ static int aml_i2s_dai_probe(struct platform_device *pdev)
 		i2s->audin_fifo_src = 1;
 		dev_info(&pdev->dev, "I2S Mic is in platform!\n");
 	}
+
+	ret =
+	    of_property_read_u32((&pdev->dev)->of_node, "i2s_pos_sync",
+				 &i2s->i2s_pos_sync);
+
+	if (ret < 0)
+		i2s->i2s_pos_sync = 0;
+
+	dev_info(&pdev->dev, "i2s_pos_sync is %d\n", i2s->i2s_pos_sync);
 
 	ret = snd_soc_register_component(&pdev->dev, &aml_component,
 					  aml_i2s_dai, ARRAY_SIZE(aml_i2s_dai));

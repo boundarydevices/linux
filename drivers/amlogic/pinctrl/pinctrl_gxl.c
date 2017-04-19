@@ -290,7 +290,7 @@ static const unsigned int tsin_clk_b_pins[]	= { PIN(GPIOZ_3, EE_OFF) };
 static const unsigned int dvp_clk_pins[]	= { PIN(GPIOZ_3, EE_OFF) };
 /*z4*/
 static const unsigned int eth_rxd0_pins[] = { PIN(GPIOZ_4, EE_OFF) };
-static const unsigned int i2cin_ch67_pins[] = { PIN(GPIOZ_4, EE_OFF) };
+static const unsigned int i2sin_ch67_pins[] = { PIN(GPIOZ_4, EE_OFF) };
 static const unsigned int tsin_fail_b_pins[] = { PIN(GPIOZ_4, EE_OFF) };
 static const unsigned int dvp_d2_pins[] = { PIN(GPIOZ_4, EE_OFF) };
 /*z5*/
@@ -539,7 +539,7 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(tsin_clk_b,		3,	16), /*z3*/
 	GROUP(dvp_clk,		3,	12), /*z3*/
 
-	GROUP(i2cin_ch67,	3,	27), /*z4*/
+	GROUP(i2sin_ch67,	3,	27), /*z4*/
 	GROUP(tsin_fail_b,		3,	15), /*z4*/
 	GROUP(dvp_d2,		3,	11), /*z4*/
 
@@ -713,8 +713,8 @@ static struct meson_pmx_group meson_gxl_aobus_groups[] = {
 	GROUP(uart_tx_ao_b_0, 0,	24),	/*ao4*/
 	GROUP(uart_rx_ao_b_0, 0,	23),	/*ao5*/
 
-	GROUP(spdif_out, 0,	16),
-	GROUP(pwm_ao_b, 0,	18),
+	GROUP(spdif_out, 6,	28), /*H4*/
+	GROUP(pwm_ao_b, 0,	18), /*ao6*/
 
 	GROUP(remote_input, 0,  0),	  /*ao7*/
 	GROUP(remote_output, 0, 21), /*ao7*/
@@ -855,6 +855,7 @@ static const char * const i2c_d_groups[] = {
 
 static const char * const i2s_groups[] = {
 	"i2s_am_clk", "i2s_ao_clk_out", "i2s_lr_clk_out", "i2sout_ch01",
+	"i2sin_ch23", "i2sin_ch45", "i2sin_ch67",
 };
 
 static const char * const sdio_groups[] = {

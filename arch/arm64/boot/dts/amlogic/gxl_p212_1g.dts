@@ -732,6 +732,7 @@
 			"top_level",
 			"aoclk",
 			"aud_in";
+		i2s_pos_sync = <0>;
 		/*DMIC;*/  /* I2s Mic or Dmic, default for I2S mic */
 	};
 	dmic:snd_dmic {
