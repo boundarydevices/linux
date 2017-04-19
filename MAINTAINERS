@@ -13813,3 +13813,7 @@ F: drivers/amlogic/pwm/pwm_meson_util.c
 AMLOGIC M400 BSP
 M: Peipeng Zhao <peipeng.zhao@amlogic.com>
 F: arch/arm/boot/dts/amlogic/meson8b_m400.dts
+
+AMLOGIC LOCAL TIMER
+M: Jianxin Pan <jianxin.pan@amlogic.com>
+F: drivers/amlogic/clocksource

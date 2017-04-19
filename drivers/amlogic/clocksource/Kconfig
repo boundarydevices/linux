@@ -4,6 +4,13 @@ menuconfig AMLOGIC_TIMER
     help
       This is the Amlogic Meson driver interface driver
 if AMLOGIC_TIMER
+config AMLOGIC_LOCAL_TIMER
+	bool "meson local timer support"
+	def_bool n
+	depends on AMLOGIC_TIMER
+	select CLKSRC_OF if OF
+	help
+	  This is a new clocksource driver for amlogic timer
 config AMLOGIC_BC_TIMER
 	bool "meson broadcast timer support"
 	def_bool n
