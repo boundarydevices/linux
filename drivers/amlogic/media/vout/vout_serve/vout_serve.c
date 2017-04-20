@@ -69,13 +69,17 @@ static char hdmimode[64];
 static char cvbsmode[64];
 static enum vmode_e last_vmode = VMODE_MAX;
 static int tvout_monitor_flag = 1;
+static unsigned int tvout_monitor_timeout_cnt = 20;
 
 static struct delayed_work tvout_mode_work;
 static DEFINE_MUTEX(tvout_mode_lock);
 
 void update_vout_mode(char *name)
 {
-	snprintf(vout_mode, 60, "%s", name);
+	if (name)
+		snprintf(vout_mode, 60, "%s", name);
+	else
+		VOUTERR("%s: vout mode is null\n", __func__);
 }
 EXPORT_SYMBOL(update_vout_mode);
 
@@ -570,6 +574,11 @@ static void aml_tvout_mode_work(struct work_struct *work)
 	mutex_lock(&tvout_mode_lock);
 	refresh_tvout_mode();
 	mutex_unlock(&tvout_mode_lock);
+
+	if (tvout_monitor_timeout_cnt-- == 0) {
+		tvout_monitor_flag = 0;
+		VOUTPR("%s: monitor_timeout\n", __func__);
+	}
 
 	if (tvout_monitor_flag)
 		schedule_delayed_work(&tvout_mode_work, 1*HZ/2);

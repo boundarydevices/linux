@@ -2098,8 +2098,11 @@ static struct vinfo_s *hdmitx_get_current_info(void)
 
 static int hdmitx_set_current_vmode(enum vmode_e mode)
 {
-pr_info("%s[%d]\n", __func__, __LINE__);
-	set_disp_mode_auto();
+	pr_info("%s[%d]\n", __func__, __LINE__);
+	if (!(mode & VMODE_INIT_BIT_MASK))
+		set_disp_mode_auto();
+	else
+		pr_info("hdmitx: alread display in uboot\n");
 
 	return 0;
 }
@@ -2108,24 +2111,23 @@ static enum vmode_e hdmitx_validate_vmode(char *mode)
 {
 	struct vinfo_s *info = hdmi_get_valid_vinfo(mode);
 
-pr_info("%s[%d]\n", __func__, __LINE__);
 	if (info) {
 		hdmi_info = info;
 		return VMODE_HDMI;
 	}
-pr_info("%s[%d]\n", __func__, __LINE__);
 	return VMODE_MAX;
 }
 
 static int hdmitx_vmode_is_supported(enum vmode_e mode)
-{ /* TODO */
-pr_info("%s[%d]\n", __func__, __LINE__);
-	return true;
+{
+	if ((mode & VMODE_MODE_BIT_MASK) == VMODE_HDMI)
+		return true;
+	else
+		return false;
 }
 
 static int hdmitx_module_disable(enum vmode_e cur_vmod)
 { /* TODO */
-pr_info("%s[%d]\n", __func__, __LINE__);
 	return 0;
 }
 

@@ -458,7 +458,7 @@ static const struct vinfo_s *get_valid_vinfo(char  *mode)
 	int  i, count = ARRAY_SIZE(cvbs_info);
 	int mode_name_len = 0;
 
-	cvbs_log_info("get_valid_vinfo..out.mode:%s\n", mode);
+	/*cvbs_log_info("get_valid_vinfo..out.mode:%s\n", mode);*/
 	for (i = 0; i < count; i++) {
 		if (strncmp(cvbs_info[i].name, mode,
 			    strlen(cvbs_info[i].name)) == 0) {
