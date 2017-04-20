@@ -49,7 +49,7 @@
 #include <linux/amlogic/media/video_sink/video_keeper.h>
 #include "video_priv.h"
 
-#if defined(CONFIG_AM_VECM)
+#if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #endif
 #include <linux/amlogic/media/utils/vdec_reg.h>
@@ -3671,7 +3671,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 	}
 #endif
 
-#if defined(CONFIG_AM_VECM)
+#if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 	amvecm_on_vs(vf);
 #endif
 #ifdef CONFIG_TVIN_VDIN
@@ -3876,7 +3876,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 			}
 #endif
 
-#if defined(CONFIG_AM_VECM)
+#if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 			refresh_on_vs(vf);
 #endif
 
