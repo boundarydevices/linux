@@ -836,7 +836,7 @@
 		a_i2c_master:a_i2c {
 			mux {
 				groups = "i2c_sda_a",
-					"i2c_sda_a";
+					"i2c_scl_a";
 				function = "i2c_a";
 			};
 		};
@@ -844,7 +844,7 @@
 		b_i2c_master:b_i2c {
 			mux {
 				groups = "i2c_sda_b",
-					"i2c_sda_b";
+					"i2c_scl_b";
 				function = "i2c_b";
 			};
 		};
@@ -852,7 +852,7 @@
 		c_i2c_master:c_i2c {
 			mux {
 				groups = "i2c_sda_c",
-					"i2c_sda_c";
+					"i2c_scl_c";
 				function = "i2c_c";
 			};
 		};
@@ -867,7 +867,7 @@
 		d_i2c_master:d_i2c {
 			mux {
 			groups = "i2c_sda_d",
-				"i2c_sda_d";
+				"i2c_scl_d";
 			function = "i2c_d";
 			};
 		};
