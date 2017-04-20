@@ -190,8 +190,8 @@ static const unsigned int hdmi_sda_pins[]	= { PIN(GPIOH_1, EE_OFF) };
 static const unsigned int hdmi_scl_pins[]	= { PIN(GPIOH_2, EE_OFF) };
 
 /*H4*/
-static const unsigned int spdif_out_pins[] = { PIN(GPIOH_4, EE_OFF),
-	/*PIN(GPIOAO_6, 0) */ };
+static const unsigned int spdif_out_pins[] = { PIN(GPIOH_4, EE_OFF) };
+static const unsigned int spdif_in_1_pins[] = { PIN(GPIOH_4, EE_OFF) };
 
 
 /*H6*/
@@ -488,6 +488,7 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(hdmi_scl,		6,	29),	/*H2*/
 
 	GROUP(spdif_out,		6,	28),	/*H4*/
+	GROUP(spdif_in_1,		6,	27),	/*H4*/
 
 
 	GROUP(i2s_am_clk,		6,	26),	/*H6*/
@@ -713,7 +714,6 @@ static struct meson_pmx_group meson_gxl_aobus_groups[] = {
 	GROUP(uart_tx_ao_b_0, 0,	24),	/*ao4*/
 	GROUP(uart_rx_ao_b_0, 0,	23),	/*ao5*/
 
-	GROUP(spdif_out, 6,	28), /*H4*/
 	GROUP(pwm_ao_b, 0,	18), /*ao6*/
 
 	GROUP(remote_input, 0,  0),	  /*ao7*/
@@ -809,7 +809,13 @@ static const char * const spdif_out_groups[] = {
 	"spdif_out",
 };
 
+static const char * const spdif_in_groups[] = {
+	"spdif_in",
+};
 
+static const char * const spdif_in_1_groups[] = {
+	"spdif_in_1",
+};
 static const char * const spi_groups[] = {
 	"spi_sclk_0", "spi_miso_0", "spi_mosi_0",
 	"spi_sclk_1", "spi_miso_1", "spi_mosi_1",
@@ -878,11 +884,14 @@ static struct meson_pmx_func meson_gxl_periphs_functions[] = {
 	FUNCTION(pwm_e),
 	FUNCTION(pcm_a),
 	FUNCTION(spdif_out),
+	FUNCTION(spdif_in),
+	FUNCTION(spdif_in_1),
 	FUNCTION(i2s),
 	FUNCTION(spi),
 	FUNCTION(i2c_a),
 	FUNCTION(i2c_b),
 	FUNCTION(i2c_c),
+	FUNCTION(i2c_c_1),
 	FUNCTION(i2c_d),
 	FUNCTION(hdmi_ddc),
 	FUNCTION(hdmi_hpd),

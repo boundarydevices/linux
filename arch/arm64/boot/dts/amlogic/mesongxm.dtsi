@@ -950,7 +950,7 @@
 			mux {
 				groups = "i2c_sda_c_1",
 					"i2c_scl_c_1";
-				function = "i2c_c";
+				function = "i2c_c_1";
 			};
 		};
 
@@ -1014,6 +1014,20 @@
 			mux {
 				groups = "spdif_out";
 				function = "spdif_out";
+			};
+		};
+
+		audio_spdif_in_pins:audio_spdif_in {
+			mux {
+				groups = "spdif_in";
+				function = "spdif_in";
+			};
+		};
+
+		audio_spdif_in_1_pins:audio_spdif_in_1 {
+			mux {
+				groups = "spdif_in_1";
+				function = "spdif_in_1";
 			};
 		};
 
