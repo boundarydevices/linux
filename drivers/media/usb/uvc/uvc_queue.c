@@ -442,7 +442,7 @@ static void drop_from_ready(struct uvc_video_queue *queue, int pos)
 }
 
 static int submit_ready_urbs(struct uvc_video_queue *queue,
-		struct uvc_buffer *buf, unsigned outstanding)
+		struct uvc_buffer *buf, unsigned outstanding, gfp_t mem_flags)
 {
 	int i = buf->ready_urb_index;
 
@@ -453,7 +453,7 @@ static int submit_ready_urbs(struct uvc_video_queue *queue,
 				!queue->streaming)
 			return 0;
 
-		ret = usb_submit_urb(buf->urbs[i], GFP_KERNEL);
+		ret = usb_submit_urb(buf->urbs[i], mem_flags);
 		if (ret < 0) {
 			if (queue->streaming)
 				pr_err("%s: Failed to submit URB "
@@ -469,7 +469,7 @@ static int submit_ready_urbs(struct uvc_video_queue *queue,
 	return outstanding;
 }
 
-int uvc_submit_ready_buffers(struct uvc_video_queue *queue)
+int uvc_submit_ready_buffers(struct uvc_video_queue *queue, gfp_t mem_flags)
 {
 	int buf_index;
 	struct vb2_buffer *vb;
@@ -522,7 +522,8 @@ int uvc_submit_ready_buffers(struct uvc_video_queue *queue)
 			continue;
 		}
 		outstanding += cnt;
-		outstanding = submit_ready_urbs(queue, buf, outstanding);
+		outstanding = submit_ready_urbs(queue, buf,
+						outstanding, mem_flags);
 		if (!outstanding)
 			break;
 		pos += 5;
@@ -531,13 +532,13 @@ int uvc_submit_ready_buffers(struct uvc_video_queue *queue)
 	return 0;
 }
 
-static void submit_buffers(struct uvc_video_queue *queue)
+static void submit_buffers(struct uvc_video_queue *queue, gfp_t mem_flags)
 {
 	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 
 	while (submit_buffer(queue, stream))
 		;
-	uvc_submit_ready_buffers(queue);
+	uvc_submit_ready_buffers(queue, mem_flags);
 	if (0) pr_info("%s:e submitted=%x avail=%x\n", __func__, queue->submitted, queue->available);
 }
 
@@ -630,7 +631,7 @@ static void submit_work(struct work_struct *work)
 	struct uvc_video_queue *queue = container_of(work, struct uvc_video_queue, work);
 
 	if (queue->streaming)
-		submit_buffers(queue);
+		submit_buffers(queue, GFP_KERNEL);
 }
 
 static void uvc_to_dev_work(struct work_struct *work)
@@ -822,6 +823,9 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
 	void *req_mem;
 	unsigned int req_length;
 
+	INIT_WORK(&buf->cache_work, cache_processing_work);
+	INIT_WORK(&buf->to_dev_work, uvc_to_dev_work);
+
 	if (0) pr_info("%s:buf=%p(%i) mem=%p\n", __func__, buf, buf->buf.vb2_buf.index, buf->mem);
 	if (vb->type == V4L2_BUF_TYPE_VIDEO_OUTPUT &&
 	    vb2_get_plane_payload(vb, 0) > vb2_plane_size(vb, 0)) {
@@ -832,8 +836,6 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
 	if (unlikely(queue->return_buffers))
 		return -ENODEV;
 
-	INIT_WORK(&buf->cache_work, cache_processing_work);
-	INIT_WORK(&buf->to_dev_work, uvc_to_dev_work);
 	buf->error = 0;
 	req_mem = vb2_plane_vaddr(vb, 0);
 	req_length = vb2_plane_size(vb, 0);
@@ -954,7 +956,7 @@ static void stop_queue(struct uvc_video_queue *queue)
 		struct vb2_buffer *vb;
 		struct uvc_buffer *buf;
 
-		uvc_submit_ready_buffers(queue);
+		uvc_submit_ready_buffers(queue, GFP_KERNEL);
 		if (i >= queue->queue.num_buffers)
 			break;
 		vb = queue->queue.bufs[i];
@@ -1032,6 +1034,17 @@ static const struct vb2_ops uvc_queue_qops = {
 	.stop_streaming = uvc_stop_streaming,
 };
 
+void uvc_queue_initialize(struct uvc_streaming *stream)
+{
+	struct uvc_video_queue *queue = &stream->queue;
+
+	queue->queue.lock = &queue->mutex;
+	mutex_init(&queue->ready_mutex);
+	mutex_init(&queue->mutex);
+	spin_lock_init(&queue->irqlock);
+	INIT_WORK(&queue->work, submit_work);
+}
+
 int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 		    int drop_corrupted, int dma_mode)
 {
@@ -1048,22 +1061,16 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 		&vb2_dma_contig_memops : &vb2_vmalloc_memops;
 	queue->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC
 		| V4L2_BUF_FLAG_TSTAMP_SRC_SOE;
-	queue->queue.lock = &queue->mutex;
 //	queue->queue.dma_attrs = &uvc_dma_attrs;
-	mutex_init(&queue->ready_mutex);
 	queue->queue.dev = &stream->dev->udev->dev;
 
 	ret = vb2_queue_init(&queue->queue);
 	if (ret)
 		return ret;
 
-	mutex_init(&queue->mutex);
-	spin_lock_init(&queue->irqlock);
-
 	queue->flags = drop_corrupted ? UVC_QUEUE_DROP_CORRUPTED : 0;
 	if (dma_mode == DMA_MODE_CONTIG) {
 		queue->workqueue = alloc_workqueue("uvc_queue", WQ_UNBOUND | WQ_HIGHPRI, 4);
-		INIT_WORK(&queue->work, submit_work);
 		if (!queue->workqueue)
 			return -ENOMEM;
 

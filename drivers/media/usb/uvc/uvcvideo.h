@@ -722,6 +722,9 @@ extern unsigned int uvc_hw_timestamps_param;
 /* Core driver */
 extern struct uvc_driver uvc_driver;
 
+void urb_processing_work(struct work_struct *work);
+void uvc_queue_initialize(struct uvc_streaming *stream);
+
 extern struct uvc_entity *uvc_entity_by_id(struct uvc_device *dev, int id);
 
 /* Video buffers queue management. */
@@ -729,7 +732,7 @@ void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
 struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue);
 struct uvc_buffer *uvc_get_next_pending(struct uvc_video_queue *queue);
 extern void uvc_buffer_done(struct uvc_buffer *buf, int state, const char *s);
-int uvc_submit_ready_buffers(struct uvc_video_queue *queue);
+int uvc_submit_ready_buffers(struct uvc_video_queue *queue, gfp_t mem_flags);
 extern int uvc_queue_init(struct uvc_video_queue *queue,
 		enum v4l2_buf_type type, int drop_corrupted,
 		int dma_mode);

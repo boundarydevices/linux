@@ -665,10 +665,11 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 	}
 
 	mutex_init(&streaming->mutex);
+	INIT_WORK(&streaming->work, urb_processing_work);
 	streaming->dev = dev;
 	streaming->intf = usb_get_intf(intf);
 	streaming->intfnum = intf->cur_altsetting->desc.bInterfaceNumber;
-
+	uvc_queue_initialize(streaming);
 	/* The Pico iMage webcam has its class-specific interface descriptors
 	 * after the endpoint descriptors.
 	 */

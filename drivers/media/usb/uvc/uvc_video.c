@@ -1504,7 +1504,7 @@ static void process_urb(struct urb *urb, struct uvc_streaming *stream,
 	stream->decode(urb, stream, rbuf);
 }
 
-static void urb_processing_work(struct work_struct *work)
+void urb_processing_work(struct work_struct *work)
 {
 	struct uvc_streaming *stream = container_of(work, struct uvc_streaming, work);
 	struct uvc_video_queue *queue = &stream->queue;
@@ -1645,7 +1645,7 @@ static void uvc_video_complete_contig(struct urb *urb)
 				queue->submitted_insert_shift);
 		}
 	}
-	uvc_submit_ready_buffers(queue);
+	uvc_submit_ready_buffers(queue, GFP_ATOMIC);
 }
 
 /*
@@ -2167,7 +2167,6 @@ int uvc_video_init(struct uvc_streaming *stream)
 
 	if (dma_mode == DMA_MODE_CONTIG) {
 		stream->workqueue = alloc_workqueue("uvc_urb_process", WQ_UNBOUND, 4);
-		INIT_WORK(&stream->work, urb_processing_work);
 		if (!stream->workqueue)
 			return -ENOMEM;
 	}
