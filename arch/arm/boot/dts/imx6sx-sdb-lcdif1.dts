@@ -14,10 +14,6 @@
 	};
 };
 
-&reg_lcd_3v3 {
-	status = "okay";
-};
-
 &csi1 {
 	status = "disabled";
 };
