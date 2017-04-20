@@ -26,8 +26,8 @@
 #include <linux/mxcfb.h>
 #include <linux/backlight.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
-#include <linux/reset.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 #include <video/mipi_display.h>
@@ -115,6 +115,15 @@ static const struct _mipi_dsi_phy_pll_clk mipi_dsi_phy_pll_clk_table[] = {
 #endif
 };
 
+static void mipi_device_reset(struct mipi_dsi_info *mipi_dsi)
+{
+	if (mipi_dsi->reset_gpio) {
+		gpiod_set_value_cansleep(mipi_dsi->reset_gpio, 1);
+		udelay(mipi_dsi->reset_delay_us);
+		gpiod_set_value_cansleep(mipi_dsi->reset_gpio, 0);
+	}
+}
+
 static int valid_mode(int pixel_fmt)
 {
 	return ((pixel_fmt == IPU_PIX_FMT_RGB24)  ||
@@ -139,6 +148,11 @@ static inline void mipi_dsi_write_register(struct mipi_dsi_info *mipi_dsi,
 	iowrite32(val, mipi_dsi->mmio_base + reg);
 	dev_dbg(&mipi_dsi->pdev->dev, "\t\twrite_reg:0x%02x, val:0x%08x.\n",
 			reg, val);
+}
+
+static void mipi_device_reset_assert(struct mipi_dsi_info *mipi_dsi)
+{
+	gpiod_set_value_cansleep(mipi_dsi->reset_gpio, 1);
 }
 
 static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
@@ -570,11 +584,7 @@ static int mipi_dsi_power_on(struct mxc_dispdrv_handle *disp)
 	}
 	clk_prepare_enable(mipi_dsi->dphy_clk);
 	clk_prepare_enable(mipi_dsi->cfg_clk);
-	ret = reset_control_reset(mipi_dsi->rc);
-	if (ret) {
-		dev_err(&mipi_dsi->pdev->dev, "failed to reset: %d\n", ret);
-		goto err1;
-	}
+	mipi_device_reset(mipi_dsi);
 	/*
 	 * According to RM68300 data sheet:
 	 * The display is entering blanking sequence, which maximum time is
@@ -594,7 +604,7 @@ static int mipi_dsi_power_on(struct mxc_dispdrv_handle *disp)
 	}
 	mipi_dsi_set_mode(mipi_dsi, false);
 
-	if (!mipi_dsi->rc) {
+	if (!mipi_dsi->reset_gpio) {
 		/* host send pclk/hsync/vsync for two frames before sleep-out */
 		msleep((1000/mipi_dsi->mode->refresh + 1) << 1);
 		mipi_dsi_set_mode(mipi_dsi, true);
@@ -611,7 +621,7 @@ static int mipi_dsi_power_on(struct mxc_dispdrv_handle *disp)
 	return 0;
 err1:
 	mipi_dsi_disable_controller(mipi_dsi);
-	reset_control_assert(mipi_dsi->rc);
+	mipi_device_reset_assert(mipi_dsi);
 	clk_disable_unprepare(mipi_dsi->dphy_clk);
 	clk_disable_unprepare(mipi_dsi->cfg_clk);
 	if (mipi_dsi->disp_power_on)
@@ -646,7 +656,7 @@ static void mipi_dsi_power_off(struct mxc_dispdrv_handle *disp)
 	mipi_dsi->dsi_power_on = 0;
 	clk_disable_unprepare(mipi_dsi->dphy_clk);
 	clk_disable_unprepare(mipi_dsi->cfg_clk);
-	reset_control_assert(mipi_dsi->rc);
+	mipi_device_reset_assert(mipi_dsi);
 
 	if (mipi_dsi->disp_power_on)
 		regulator_disable(mipi_dsi->disp_power_on);
@@ -864,11 +874,12 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 			of_match_device(of_match_ptr(imx_mipi_dsi_dt_ids),
 					&pdev->dev);
 	struct mipi_dsi_info *mipi_dsi;
-	struct reset_control *rc;
 	struct resource *res;
 	u32 dev_id, disp_id;
 	const char *lcd_panel;
 	int mux;
+	struct gpio_desc *reset_gpio;
+	int reset_delay_us;
 	int ret = 0;
 
 	mipi_dsi = devm_kzalloc(&pdev->dev, sizeof(*mipi_dsi), GFP_KERNEL);
@@ -945,14 +956,24 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 
 	}
 
-	rc = devm_reset_control_get_optional(&pdev->dev, NULL);
-	if (IS_ERR(rc)) {
-		if (rc != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "failed to get reset controller\n");
-		ret = PTR_ERR(rc);
-		goto dev_reset_fail;
+	reset_gpio = devm_gpiod_get_optional(&pdev->dev, "reset",
+			GPIOD_OUT_HIGH);
+	if (IS_ERR(reset_gpio)) {
+		if (PTR_ERR(reset_gpio) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "reset-gpios failed\n");
+		return PTR_ERR(reset_gpio);
 	}
-	mipi_dsi->rc = rc;
+	ret = of_property_read_u32(np, "reset-delay-us", &reset_delay_us);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "read reset-delay-us error %d\n", ret);
+		return ret;
+	}
+	if (reset_delay_us < 0 || reset_delay_us > 1000000) {
+		dev_err(&pdev->dev, "invalid reset delay %d\n", reset_delay_us);
+		return -EINVAL;
+	}
+	mipi_dsi->reset_gpio = reset_gpio;
+	mipi_dsi->reset_delay_us = reset_delay_us;
 
 	if (of_id)
 		mipi_dsi->bus_mux = of_id->data;
