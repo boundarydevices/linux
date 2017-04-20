@@ -299,7 +299,7 @@ int int_rdma = INT_RDMA;
 #endif
 struct osd_fb_dev_s *gp_fbdev_list[OSD_COUNT] = {};
 static struct reserved_mem fb_rmem = {.base = 0, .size = 0};
-static u32 fb_memsize[2];
+static u32 fb_memsize[3];
 static phys_addr_t fb_rmem_paddr[2];
 static void __iomem *fb_rmem_vaddr[OSD_COUNT];
 static size_t fb_rmem_size[OSD_COUNT];
@@ -975,17 +975,21 @@ static int osd_open(struct fb_info *info, int arg)
 	var = &info->var;
 	/* read fb-reserved memory first */
 	if (fb_rmem.base &&
-		(fb_memsize[0] + fb_memsize[1]) <= fb_rmem.size) {
+		(fb_memsize[0] + fb_memsize[1] +
+			fb_memsize[2]) <= fb_rmem.size) {
 		if (!fb_ion_client)
 			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
-		fb_rmem_size[fb_index] = fb_memsize[fb_index];
+		fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
 		if (fb_index == DEV_OSD0)
-			fb_rmem_paddr[fb_index] = fb_rmem.base;
+			fb_rmem_paddr[fb_index] = fb_rmem.base +
+			fb_memsize[0];
 		else if (fb_index == DEV_OSD1) {
 			if ((OSD_COUNT == 2) &&
-			((fb_memsize[0] + fb_memsize[1]) <= fb_rmem.size)) {
+			((fb_memsize[0] + fb_memsize[1] +
+				fb_memsize[2]) <= fb_rmem.size)) {
 				fb_rmem_paddr[fb_index] =
-					fb_rmem.base + fb_memsize[0];
+					fb_rmem.base + fb_memsize[0] +
+					fb_memsize[1];
 			}
 		}
 		if ((fb_rmem_paddr[fb_index] > 0) &&
@@ -1011,7 +1015,7 @@ static int osd_open(struct fb_info *info, int arg)
 			for (j = 0; j < OSD_MAX_BUF_NUM; j++) {
 				fb_ion_handle[fb_index][j] =
 				ion_alloc(fb_ion_client,
-					PAGE_ALIGN(fb_memsize[fb_index]/
+					PAGE_ALIGN(fb_memsize[fb_index + 1]/
 					OSD_MAX_BUF_NUM),
 					0,
 					(1 << ION_HEAP_TYPE_CARVEOUT),
@@ -1061,7 +1065,7 @@ static int osd_open(struct fb_info *info, int arg)
 		} else {
 			fb_ion_handle[fb_index][0] =
 				ion_alloc(fb_ion_client,
-					fb_memsize[fb_index],
+					fb_memsize[fb_index + 1],
 					0,
 					(1 << ION_HEAP_TYPE_CARVEOUT),
 					0);
@@ -2377,11 +2381,11 @@ static void mem_free_work(struct work_struct *work)
 	unsigned long end_addr;
 
 	if (fb_rmem.base && fb_map_flag) {
-		if (fb_rmem.size >= (fb_memsize[0] + fb_memsize[1])) {
-			/* logo reserved memory after fb0/fb1 memory, free it*/
-			start_addr = fb_rmem.base
-				+ fb_memsize[0] + fb_memsize[1];
-			end_addr = fb_rmem.base + fb_rmem.size;
+		if (fb_rmem.size >= (fb_memsize[0] + fb_memsize[1]
+			+ fb_memsize[2])) {
+			/* logo reserved memory before fb0/fb1 memory, free it*/
+			start_addr = fb_rmem.base;
+			end_addr = fb_rmem.base + fb_memsize[0];
 		} else {
 			/* logo reserved only, free it*/
 			start_addr = fb_rmem.base;
@@ -2431,7 +2435,7 @@ static int osd_probe(struct platform_device *pdev)
 
 	/* get buffer size from dt */
 	ret = of_property_read_u32_array(pdev->dev.of_node,
-			"mem_size", fb_memsize, 2);
+			"mem_size", fb_memsize, 3);
 	if (ret) {
 		osd_log_err("not found mem_size from dtd\n");
 		goto failed1;
@@ -2442,8 +2446,8 @@ static int osd_probe(struct platform_device *pdev)
 	if ((ret != 0) && ((void *)fb_rmem.base == NULL))
 		osd_log_err("failed to init reserved memory\n");
 
-	osd_log_dbg("%d, mem_size: 0x%x, 0x%x\n",
-			__LINE__, fb_memsize[0], fb_memsize[1]);
+	osd_log_dbg("%d, mem_size: 0x%x, 0x%x, 0x%x\n",
+			__LINE__, fb_memsize[0], fb_memsize[1], fb_memsize[2]);
 
 	/* get meson-fb resource from dt */
 	prop = of_get_property(pdev->dev.of_node, "scale_mode", NULL);
