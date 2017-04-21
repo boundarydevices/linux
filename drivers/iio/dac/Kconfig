@@ -200,6 +200,12 @@ config AD8801
 	  To compile this driver as a module choose M here: the module will be called
 	  ad8801.
 
+config ISL76534
+	tristate "Intersil ISL76534 DAC driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for the intersil ISL76534 DAC.
+
 config LPC18XX_DAC
 	tristate "NXP LPC18xx DAC driver"
 	depends on ARCH_LPC18XX || COMPILE_TEST
