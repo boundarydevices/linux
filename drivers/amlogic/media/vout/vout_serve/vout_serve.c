@@ -59,11 +59,10 @@ static struct class *vout_class;
 static DEFINE_MUTEX(vout_mutex);
 static char vout_mode_uboot[64] __nosavedata;
 static char vout_mode[64] __nosavedata;
-#ifdef CONFIG_AMLOGIC_FB
-static char vout_axis[64] __nosavedata;
-#endif
 static u32 vout_init_vmode = VMODE_INIT_NULL;
 static int uboot_display;
+
+static char vout_axis[64] __nosavedata;
 
 static char hdmimode[64];
 static char cvbsmode[64];
@@ -155,7 +154,6 @@ static int set_vout_init_mode(void)
 	return ret;
 }
 
-#ifdef CONFIG_AMLOGIC_FB
 static int parse_para(const char *para, int para_num, int *result)
 {
 	char *token = NULL;
@@ -212,7 +210,6 @@ static void set_vout_axis(char *para)
 			*(pt + 4), *(pt + 5), *(pt + 6), *(pt + 7));
 	vout_notifier_call_chain(VOUT_EVENT_OSD_DISP_AXIS, &disp_rect[0]);
 }
-#endif
 
 static ssize_t vout_mode_show(struct class *class,
 		struct class_attribute *attr, char *buf)
@@ -237,7 +234,6 @@ static ssize_t vout_mode_store(struct class *class,
 	return count;
 }
 
-#ifdef CONFIG_AMLOGIC_FB
 static ssize_t vout_axis_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -256,7 +252,6 @@ static ssize_t vout_axis_store(struct class *class,
 	mutex_unlock(&vout_mutex);
 	return count;
 }
-#endif
 
 static ssize_t vout_fr_policy_show(struct class *class,
 		struct class_attribute *attr, char *buf)
@@ -373,9 +368,7 @@ static ssize_t vout_mode_flag_store(struct class *class,
 
 static struct class_attribute vout_class_attrs[] = {
 	__ATTR(mode,      0644, vout_mode_show, vout_mode_store),
-#ifdef CONFIG_AMLOGIC_FB
 	__ATTR(axis,      0644, vout_axis_show, vout_axis_store),
-#endif
 	__ATTR(fr_policy, 0644,
 		vout_fr_policy_show, vout_fr_policy_store),
 	__ATTR(vinfo,     0644, vout_vinfo_show, NULL),
