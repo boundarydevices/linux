@@ -301,6 +301,12 @@ config DS4424
 	  This driver can also be built as a module.  If so, the module
 	  will be called ds4424.
 
+config ISL76534
+	tristate "Intersil ISL76534 DAC driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for the intersil ISL76534 DAC.
+
 config LPC18XX_DAC
 	tristate "NXP LPC18xx DAC driver"
 	depends on ARCH_LPC18XX || COMPILE_TEST
