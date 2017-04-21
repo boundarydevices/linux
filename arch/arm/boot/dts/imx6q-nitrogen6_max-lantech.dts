@@ -64,6 +64,17 @@
 			#size-cells = <0>;
 		};
 	};
+
+	regulators {
+		reg_isl76534: regulator@5 {
+			compatible = "regulator-fixed";
+			reg = <5>;
+			regulator-name = "reg_isl76534";
+			regulator-min-microvolt = <6000000>;
+			regulator-max-microvolt = <6000000>;
+			regulator-always-on;
+		};
+	};
 };
 
 &hdmi_core {
@@ -115,6 +126,12 @@
 		bus-adc-cfg = <2>;		/* 2 means 14-bit, 258 uSec */
 		shunt-adc-cfg = <2>;		/* 2 means 14-bit, 258 uSec */
 		rshunt = <10>;			/* ohms */
+	};
+
+	isl76534@74 {
+		compatible = "isl76534";
+		reg = <0x74>;
+		vref-supply = <&reg_isl76534>;
 	};
 };
 
