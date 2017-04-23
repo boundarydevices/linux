@@ -93,6 +93,7 @@ struct spi_imx_data {
 	struct clk *clk_ipg;
 	unsigned long spi_clk;
 	unsigned int spi_bus_clk;
+	unsigned int spi_drctl;
 
 	unsigned int count;
 	void (*tx)(struct spi_imx_data *);
@@ -240,6 +241,7 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 #define MX51_ECSPI_CTRL_XCH		(1 <<  2)
 #define MX51_ECSPI_CTRL_SMC		(1 << 3)
 #define MX51_ECSPI_CTRL_MODE_MASK	(0xf << 4)
+#define MX51_ECSPI_CTRL_DRCTL(drctl)	((drctl) << 16)
 #define MX51_ECSPI_CTRL_POSTDIV_OFFSET	8
 #define MX51_ECSPI_CTRL_PREDIV_OFFSET	12
 #define MX51_ECSPI_CTRL_CS(cs)		(((cs) & 3) << 18)
@@ -363,6 +365,12 @@ static int mx51_ecspi_config(struct spi_device *spi,
 	 * So set master mode for all channels as we do not support slave mode.
 	 */
 	ctrl |= MX51_ECSPI_CTRL_MODE_MASK;
+
+	/*
+	 * Enable SPI_RDY handling (falling edge/level triggered).
+	 */
+	if (spi->mode & SPI_READY)
+		ctrl |= MX51_ECSPI_CTRL_DRCTL(spi_imx->spi_drctl);
 
 	/* set clock speed */
 	ctrl |= mx51_ecspi_clkdiv(spi_imx, config->speed_hz, &clk);
@@ -1268,7 +1276,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	struct spi_master *master;
 	struct spi_imx_data *spi_imx;
 	struct resource *res;
-	int i, ret, num_cs, irq, idle_state;
+	int i, ret, num_cs, irq, idle_state, spi_drctl;
 
 	if (!np && !mxc_platform_info) {
 		dev_err(&pdev->dev, "can't get the platform data\n");
@@ -1276,6 +1284,12 @@ static int spi_imx_probe(struct platform_device *pdev)
 	}
 
 	master = spi_alloc_master(&pdev->dev, sizeof(struct spi_imx_data));
+	ret = of_property_read_u32(np, "fsl,spi-rdy-drctl", &spi_drctl);
+	if ((ret < 0) || (spi_drctl >= 0x3)) {
+		/* '11' is reserved */
+		spi_drctl = 0;
+	}
+
 	if (!master)
 		return -ENOMEM;
 
@@ -1328,7 +1342,9 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master->unprepare_message = spi_imx_unprepare_message;
 	spi_imx->bitbang.master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
 	if (is_imx35_cspi(spi_imx) || is_imx51_ecspi(spi_imx))
-		spi_imx->bitbang.master->mode_bits |= SPI_LOOP;
+		spi_imx->bitbang.master->mode_bits |= SPI_LOOP | SPI_READY;
+
+	spi_imx->spi_drctl = spi_drctl;
 
 	init_completion(&spi_imx->xfer_done);
 
