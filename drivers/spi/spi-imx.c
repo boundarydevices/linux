@@ -102,6 +102,7 @@ struct spi_imx_data {
 	struct clk *clk_ipg;
 	unsigned long spi_clk;
 	unsigned int spi_bus_clk;
+	unsigned int spi_drctl;
 
 	unsigned int speed_hz;
 	unsigned int bits_per_word;
@@ -1615,7 +1616,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	struct spi_master *master;
 	struct spi_imx_data *spi_imx;
 	struct resource *res;
-	int i, ret, irq, spi_drctl, num_cs, idle_state;
+	int i, ret, irq, spi_drctl, num_cs, idle_state, spi_drctl;
 	const struct spi_imx_devtype_data *devtype_data = of_id ? of_id->data :
 		(struct spi_imx_devtype_data *)pdev->id_entry->driver_data;
 	bool slave_mode;
@@ -1623,6 +1624,12 @@ static int spi_imx_probe(struct platform_device *pdev)
 	if (!np && !mxc_platform_info) {
 		dev_err(&pdev->dev, "can't get the platform data\n");
 		return -EINVAL;
+	}
+
+	ret = of_property_read_u32(np, "fsl,spi-rdy-drctl", &spi_drctl);
+	if ((ret < 0) || (spi_drctl >= 0x3)) {
+		/* '11' is reserved */
+		spi_drctl = 0;
 	}
 
 	slave_mode = devtype_data->has_slavemode &&
