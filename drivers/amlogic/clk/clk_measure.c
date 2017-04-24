@@ -43,6 +43,41 @@ void __iomem *msr_clk_reg3;
 #define CLKMSR_DEVICE_NAME	"clkmsr"
 unsigned int clk_msr_index = 0xff;
 
+static unsigned int m8b_clk_util_clk_msr(unsigned int clk_mux)
+{
+	unsigned int msr;
+	unsigned int regval = 0;
+	unsigned int val;
+
+	writel_relaxed(0, msr_clk_reg0);
+	/* Set the measurement gate to 64uS */
+	val = readl_relaxed(msr_clk_reg0);
+	val = (val & (~0xFFFF)) | (64-1);
+	writel_relaxed(val, msr_clk_reg0);
+
+	/* Disable continuous measurement */
+	/* disable interrupts */
+	val = readl_relaxed(msr_clk_reg0);
+	val = val & (~((1<<18)|(1<<17)));
+	writel_relaxed(val, msr_clk_reg0);
+	val = readl_relaxed(msr_clk_reg0);
+	val = (val & (~(0x1f<<20))) | (clk_mux<<20)|(1<<19)|(1<<16);
+	writel_relaxed(val, msr_clk_reg0);
+
+	/* Wait for the measurement to be done */
+	do {
+		regval = readl_relaxed(msr_clk_reg0);
+	} while (regval & (1 << 31));
+	/* disable measuring */
+	val = readl_relaxed(msr_clk_reg0);
+	val = val & (~(1<<16));
+	writel_relaxed(val, msr_clk_reg0);
+
+	msr = (readl_relaxed(msr_clk_reg2)+31)&0x000FFFFF;
+	/* Return value in MHz*measured_val */
+	return (msr>>6)*1000000;
+}
+
 static unsigned int gxbb_clk_util_clk_msr(unsigned int clk_mux)
 {
 	unsigned int  msr;
@@ -73,6 +108,90 @@ static unsigned int gxbb_clk_util_clk_msr(unsigned int clk_mux)
     /* Return value in MHz*measured_val */
 	return (msr>>6)*1000000;
 
+}
+
+int m8b_clk_measure(struct seq_file *s, void *what, unsigned int index)
+{
+	static const char * const clk_table[] = {
+		[63] = "CTS_MIPI_CSI_CFG_CLK(63)",
+		[62] = "VID2_PLL_CLK(62)        ",
+		[61] = "GPIO_CLK(61)            ",
+		[60] = "USB_32K_ALT(60)         ",
+		[59] = "CTS_HCODEC_CLK(59)      ",
+		[58] = "Reserved(58)            ",
+		[57] = "Reserved(57)            ",
+		[56] = "Reserved(56)            ",
+		[55] = "Reserved(55)            ",
+		[54] = "Reserved(54)            ",
+		[53] = "Reserved(53)            ",
+		[52] = "Reserved(52)            ",
+		[51] = "Reserved(51)            ",
+		[50] = "Reserved(50)            ",
+		[49] = "CTS_PWM_E_CLK(49)       ",
+		[48] = "CTS_PWM_F_CLK(48)       ",
+		[47] = "DDR_DPLL_PT_CLK(47)     ",
+		[46] = "CTS_PCM2_SCLK(46)       ",
+		[45] = "CTS_PWM_A_CLK(45)       ",
+		[44] = "CTS_PWM_B_CLK(44)       ",
+		[43] = "CTS_PWM_C_CLK(43)       ",
+		[42] = "CTS_PWM_D_CLK(42)       ",
+		[41] = "CTS_ETH_RX_TX(41)       ",
+		[40] = "CTS_PCM_MCLK(40)        ",
+		[39] = "CTS_PCM_SCLK(39)        ",
+		[38] = "CTS_VDIN_MEAS_CLK(38)   ",
+		[37] = "Reserved(37)            ",
+		[36] = "CTS_HDMI_TX_PIXEL_CLK(36)",
+		[35] = "CTS_MALI_CLK (35)       ",
+		[34] = "CTS_SDHC_SDCLK(34)      ",
+		[33] = "CTS_SDHC_RXCLK(33)      ",
+		[32] = "CTS_VDAC_CLK(32)        ",
+		[31] = "CTS_AUDAC_CLKPI(31)     ",
+		[30] = "MPLL_CLK_TEST_OUT(30)   ",
+		[29] = "Reserved(29)            ",
+		[28] = "CTS_SAR_ADC_CLK(28)     ",
+		[27] = "Reserved(27)            ",
+		[26] = "SC_CLK_INT(26)          ",
+		[25] = "Reserved(25)            ",
+		[24] = "LVDS_FIFO_CLK(24)       ",
+		[23] = "HDMI_CH0_TMDSCLK(23)    ",
+		[22] = "CLK_RMII_FROM_PAD (22)  ",
+		[21] = "I2S_CLK_IN_SRC0(21)     ",
+		[20] = "RTC_OSC_CLK_OUT(20)     ",
+		[19] = "CTS_HDMI_SYS_CLK(19)    ",
+		[18] = "A9_CLK_DIV16(18)        ",
+		[17] = "Reserved(17)            ",
+		[16] = "CTS_FEC_CLK_2(16)       ",
+		[15] = "CTS_FEC_CLK_1 (15)      ",
+		[14] = "CTS_FEC_CLK_0 (14)      ",
+		[13] = "CTS_AMCLK(13)           ",
+		[12] = "Reserved(12)            ",
+		[11] = "CTS_ETH_RMII(11)        ",
+		[10] = "Reserved(10)            ",
+		[9] = "CTS_ENCL_CLK(9)          ",
+		[8] = "CTS_ENCP_CLK(8)          ",
+		[7] = "CLK81(7)                 ",
+		[6] = "VID_PLL_CLK(6)           ",
+		[5] = "Reserved(5)              ",
+		[4] = "Reserved(4)              ",
+		[3] = "A9_RING_OSC_CLK(3)       ",
+		[2] = "AM_RING_OSC_CLK_OUT_EE2(2)",
+		[1] = "AM_RING_OSC_CLK_OUT_EE1(1)",
+		[0] = "AM_RING_OSC_CLK_OUT_EE0(0)",
+	};
+	int  i;
+	int len = sizeof(clk_table)/sizeof(char *);
+
+	if (index  == 0xff) {
+		for (i = 0; i < len; i++)
+			seq_printf(s, "[%2d][%10d]%s\n",
+				   i, m8b_clk_util_clk_msr(i),
+					clk_table[i]);
+		return 0;
+	}
+	seq_printf(s, "[%10d]%s\n", m8b_clk_util_clk_msr(index),
+		   clk_table[index]);
+	clk_msr_index = 0xff;
+	return 0;
 }
 
 int gxl_clk_measure(struct seq_file *s, void *what, unsigned int index)
@@ -285,6 +404,8 @@ int  meson_clk_measure(unsigned int clk_mux)
 	int clk_val;
 
 	switch (get_cpu_type()) {
+	case MESON_CPU_MAJOR_ID_M8B:
+		clk_val = m8b_clk_util_clk_msr(clk_mux);
 	case MESON_CPU_MAJOR_ID_GXL:
 	case MESON_CPU_MAJOR_ID_GXM:
 		clk_val = gxbb_clk_util_clk_msr(clk_mux);
@@ -301,7 +422,9 @@ EXPORT_SYMBOL(meson_clk_measure);
 
 static int dump_clk(struct seq_file *s, void *what)
 {
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXL)
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_M8B)
+		m8b_clk_measure(s, what, clk_msr_index);
+	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXL)
 		gxl_clk_measure(s, what, clk_msr_index);
 	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
 		gxm_clk_measure(s, what, clk_msr_index);
@@ -362,14 +485,14 @@ static int aml_clkmsr_probe(struct platform_device *pdev)
 
 	msr_clk_reg0 = of_iomap(np, 0);
 	msr_clk_reg2 = of_iomap(np, 1);
-	pr_info("Gxl msr_clk_reg0=%p,msr_clk_reg2=%p\n",
+	pr_info("msr_clk_reg0=%p,msr_clk_reg2=%p\n",
 		msr_clk_reg0, msr_clk_reg2);
 	return 0;
 }
 
 static const struct of_device_id meson_clkmsr_dt_match[] = {
-	{	.compatible = "amlogic, gxl_measure",
-	},
+	{	.compatible = "amlogic, gxl_measure",},
+	{	.compatible = "amlogic, m8b_measure",},
 	{},
 };
 

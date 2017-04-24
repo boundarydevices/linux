@@ -708,6 +708,7 @@ dwc2_b {
 		clock-names = "saradc_clk";
 		reg = <0xc1108680 0x30>;
 	};
+
 	remote:rc@c8100580 {
 		compatible = "amlogic, aml_remote";
 		dev_name = "meson-remote";
@@ -866,5 +867,11 @@ dwc2_b {
 				REMOTE_KEY(0xcd,121)>;
 		};
 	};
+
+	meson_clk_msr{
+				compatible = "amlogic, m8b_measure";
+				reg = <0xc110875c  0x4>,
+					<0xc1108764 0x4>;
 	};
+	}; /* end of soc*/
 }; /* end of / */
