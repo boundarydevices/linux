@@ -570,17 +570,17 @@ static const struct i2c_device_id ads7924_id[] = {
 MODULE_DEVICE_TABLE(i2c, ads7924_id);
 
 #ifdef CONFIG_OF
-static const struct of_device_id adc081c_of_match[] = {
+static const struct of_device_id ads7924_of_match[] = {
 	{ .compatible = "ti,ads7924" },
 	{ }
 };
-MODULE_DEVICE_TABLE(of, adc081c_of_match);
+MODULE_DEVICE_TABLE(of, ads7924_of_match);
 #endif
 
 static struct i2c_driver ads7924_driver = {
 	.driver = {
 		.name = KBUILD_MODNAME,
-		.of_match_table = of_match_ptr(adc081c_of_match),
+		.of_match_table = of_match_ptr(ads7924_of_match),
 	},
 	.probe = ads7924_probe,
 	.remove = ads7924_remove,
