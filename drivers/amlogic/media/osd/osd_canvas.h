@@ -24,4 +24,6 @@
 #define OSD4_CANVAS_INDEX 0x42
 #define ALLOC_CANVAS_INDEX 0x44
 
+#define EXTERN1_CANVAS 0x41
+#define EXTERN2_CANVAS 0x42
 #endif

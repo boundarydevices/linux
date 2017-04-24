@@ -142,6 +142,10 @@ static void osd_debug_dump_register_all(void)
 	osd_log_info("reg[0x%x]: 0x%08x\n", reg, osd_reg_read(reg));
 	reg = VPP_OSD_SCO_V_START_END;
 	osd_log_info("reg[0x%x]: 0x%08x\n\n", reg, osd_reg_read(reg));
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX) {
+		reg = OSD_DB_FLT_CTRL;
+		osd_log_info("reg[0x%x]: 0x%08x\n\n", reg, osd_reg_read(reg));
+	}
 
 	for (index = 0; index < 2; index++) {
 		if (index == 1)

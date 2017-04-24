@@ -55,6 +55,7 @@ struct osd_fb_dev_s {
 	u32 enable_key_flag;
 	u32 color_key;
 	u32 fb_index;
+	u32 open_count;
 	bool dis_osd_mchange;
 };
 
