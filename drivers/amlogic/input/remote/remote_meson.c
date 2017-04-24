@@ -173,7 +173,7 @@ static bool is_valid_custom(struct remote_dev *dev)
 
 static bool is_next_repeat(struct remote_dev *dev)
 {
-	unsigned int val;
+	unsigned int val = 0;
 	unsigned char fbusy = 0;
 	unsigned char cnt;
 
@@ -228,7 +228,7 @@ static void amlremote_tasklet(unsigned long data)
 static irqreturn_t ir_interrupt(int irq, void *dev_id)
 {
 	struct remote_chip *rc = (struct remote_chip *)dev_id;
-	int contr_status;
+	int contr_status = 0;
 	int val = 0;
 	u32 duration;
 	char buf[50];
