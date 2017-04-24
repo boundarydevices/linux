@@ -92,17 +92,25 @@ static int aml_pcm_dai_prepare(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
 	struct aml_pcm *pcm = snd_soc_dai_get_drvdata(dai);
-	int mclk_rate;
+	int mclk_rate, pcm_bit;
 
 	pr_debug("***Entered %s\n", __func__);
 
 	/* set bclk */
 	if (runtime->format == SNDRV_PCM_FORMAT_S32_LE)
-		mclk_rate = runtime->rate * PCM_32BIT_MCLK_RATIO_SR;
+		pcm_bit = 32;
 	else if (runtime->format == SNDRV_PCM_FORMAT_S24_LE)
-		mclk_rate = runtime->rate * PCM_24BIT_MCLK_RATIO_SR;
+		pcm_bit = 24;
 	else
-		mclk_rate = runtime->rate * PCM_DEFAULT_MCLK_RATIO_SR;
+		pcm_bit = 16;
+
+	mclk_rate = runtime->rate * pcm_bit * runtime->channels;
+	pr_info("%s rate:%d, bits:%d, channels:%d, mclk:%d\n",
+		__func__,
+		runtime->rate,
+		pcm_bit,
+		runtime->channels,
+		mclk_rate);
 
 	aml_pcm_set_clk(pcm, mclk_rate);
 
