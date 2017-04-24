@@ -670,8 +670,10 @@ static int pwm_aml_parse_dt(struct aml_pwm_chip *chip)
 	struct property *prop;
 	const __be32 *cur;
 	int ret;
-	u32 output_val;/*pwm outputs count*/
-	u32 clock_val;/*pwm outputs's clock, output_val = clock_val*/
+	u32 output_val;/*pwm channel val*/
+	u32 output_co = 0;/*pwm outputs count*/
+	u32 clock_val;/*pwm channel's clock select val*/
+	u32 clock_co = 0;/*clock outputs count*/
 	unsigned int soc_id = get_cpu_type();
 
 	match = of_match_node(aml_pwm_matches, np);
@@ -685,25 +687,27 @@ static int pwm_aml_parse_dt(struct aml_pwm_chip *chip)
 
 	of_property_for_each_u32(np, "pwm-outputs", prop, cur, output_val) {
 		chip->variant.output_mask |= BIT(output_val);
+		output_co++;
 	}
 	of_property_for_each_u32(np, "clock-select", prop, cur, clock_val) {
 		chip->clk_mask |= clock_val << (2 * i);
 		i++;
+		clock_co++;
 	}
-	chip->chip.npwm = output_val + 1;
+	chip->chip.npwm = output_co;
 
-	pr_info("output_val = %d ; clock_val = %d\n", output_val, clock_val);
+	pr_info("output_co = %d ; clock_co = %d\n", output_co, clock_co);
 	/*check socs's output num*/
 	switch (soc_id) {
 	case MESON_CPU_MAJOR_ID_M8B:
-		if ((output_val > AML_PWM_M8BB_NUM) ||
-			(clock_val > AML_PWM_M8BB_NUM)) {
+		if ((output_co > AML_PWM_M8BB_NUM) ||
+			(clock_co > AML_PWM_M8BB_NUM)) {
 			goto err;
 		}
 	break;
 	case MESON_CPU_MAJOR_ID_GXBB:
-		if ((output_val > AML_PWM_GXBB_NUM) ||
-			(clock_val > AML_PWM_GXBB_NUM)) {
+		if ((output_co > AML_PWM_GXBB_NUM) ||
+			(clock_co > AML_PWM_GXBB_NUM)) {
 			goto err;
 		}
 	break;
@@ -711,14 +715,14 @@ static int pwm_aml_parse_dt(struct aml_pwm_chip *chip)
 	case MESON_CPU_MAJOR_ID_GXL:
 	case MESON_CPU_MAJOR_ID_GXM:
 	case MESON_CPU_MAJOR_ID_TXL:
-		if ((output_val > AML_PWM_GXTVBB_NUM) ||
-			(clock_val > AML_PWM_GXTVBB_NUM)) {
+		if ((output_co > AML_PWM_GXTVBB_NUM) ||
+			(clock_co > AML_PWM_GXTVBB_NUM)) {
 			goto err;
 		}
 	break;
 	case MESON_CPU_MAJOR_ID_TXLX:
-		if ((output_val > AML_PWM_TXLX_NUM) ||
-			(clock_val > AML_PWM_TXLX_NUM)) {
+		if ((output_co > AML_PWM_TXLX_NUM) ||
+			(clock_co > AML_PWM_TXLX_NUM)) {
 			goto err;
 		}
 	break;
