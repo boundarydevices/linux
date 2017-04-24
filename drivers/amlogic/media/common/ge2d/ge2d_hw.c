@@ -888,6 +888,12 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 			  cfg->alpha_dst_blend_factor) << 0)
 		       );
 
+	/* if true, disable bug fix about the dp_out_done/
+	 * scale_out_done(test1823) hang issue when
+	 * scaling down ratio is high.
+	 */
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX)
+		ge2d_reg_set_bits(GE2D_GEN_CTRL4, cfg->hang_flag, 0, 1);
 	ge2d_reg_write(GE2D_CMD_CTRL,
 			(cfg->src2_fill_color_en << 9) |
 			(cfg->src1_fill_color_en << 8) |
@@ -933,5 +939,14 @@ void ge2d_set_gen(struct ge2d_gen_s *cfg)
 			(cfg->vfmt_onoff_en << 15) |
 			(cfg->dp_off_cnt << 0)
 		       );
-
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX) {
+		ge2d_reg_set_bits(GE2D_GEN_CTRL4,
+			(cfg->fifo_size << 26) |
+			(cfg->fifo_size << 24) |
+			(cfg->fifo_size << 22) |
+			(cfg->fifo_size << 20) |
+			(cfg->burst_ctrl << 18) |
+			(cfg->burst_ctrl << 16),
+		       16, 12);
+	}
 }

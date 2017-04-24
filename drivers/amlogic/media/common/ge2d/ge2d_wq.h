@@ -17,7 +17,11 @@
 
 #ifndef _GE2D_WQ_H_
 #define _GE2D_WQ_H_
+#ifdef CONFIG_AMLOGIC_ION
+#include <ion/ion.h>
 
+extern struct ion_client *ge2d_ion_client;
+#endif
 extern ssize_t work_queue_status_show(struct class *cla,
 		struct class_attribute *attr, char *buf);
 

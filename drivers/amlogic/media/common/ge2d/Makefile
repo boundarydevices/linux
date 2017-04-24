@@ -10,3 +10,5 @@ ge2d-objs = bitblt.o \
 obj-$(CONFIG_AMLOGIC_MEDIA_GE2D) += ge2d.o
 ccflags-y += -Iinclude/linux/media/ge2d/
 ccflags-y += -Idrivers/amlogic/media/osd/
+ccflags-y += -I$(srctree)/drivers/staging/android
+ccflags-y += -Idrivers/amlogic/media/common/ion_dev/

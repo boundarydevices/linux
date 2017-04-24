@@ -29,6 +29,7 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
+#include <linux/of_address.h>
 #include <linux/reset.h>
 #include <linux/clk.h>
 #ifdef CONFIG_COMPAT
@@ -38,7 +39,9 @@
 #include <linux/amlogic/media/ge2d/ge2d.h>
 #include <linux/amlogic/media/ge2d/ge2d_cmd.h>
 #include <linux/amlogic/cpu_version.h>
-
+#ifdef CONFIG_AMLOGIC_ION
+#include <meson_ion.h>
+#endif
 /* Local Headers */
 #include "ge2dgen.h"
 #include "ge2d_log.h"
@@ -55,11 +58,15 @@ struct ge2d_device_s {
 	struct device *dev;
 };
 
+void __iomem *ge2d_reg_map;
 static struct ge2d_device_s ge2d_device;
 static DEFINE_MUTEX(ge2d_mutex);
 unsigned int ge2d_log_level;
 unsigned int ge2d_dump_reg_enable;
 unsigned int ge2d_dump_reg_cnt;
+#ifdef CONFIG_AMLOGIC_ION
+struct ion_client *ge2d_ion_client;
+#endif
 
 static int init_ge2d_device(void);
 static int remove_ge2d_device(void);
@@ -205,10 +212,12 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	struct config_para_s ge2d_config;
 	struct ge2d_para_s para;
 	struct config_para_ex_s ge2d_config_ex;
+	struct config_para_ex_ion_s ge2d_config_ex_ion;
 	int ret = 0;
 #ifdef CONFIG_COMPAT
 	struct compat_config_para_s __user *uf;
 	struct compat_config_para_ex_s __user *uf_ex;
+	struct compat_config_para_ex_ion_s __user *uf_ex_ion;
 	int r = 0;
 	int i, j;
 #endif
@@ -217,6 +226,17 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	context = (struct ge2d_context_s *)filp->private_data;
 	memset(&ge2d_config, 0, sizeof(struct config_para_s));
 	memset(&ge2d_config_ex, 0, sizeof(struct config_para_ex_s));
+	memset(&ge2d_config_ex_ion, 0, sizeof(struct config_para_ex_ion_s));
+#ifdef CONFIG_AMLOGIC_MEDIA_GE2D_MORE_SECURITY
+	switch (cmd) {
+	case GE2D_CONFIG:
+	case GE2D_CONFIG32:
+	case GE2D_CONFIG_EX:
+	case GE2D_CONFIG_EX32:
+		pr_err("ioctl not support.\n");
+		return -EINVAL;
+	}
+#endif
 	switch (cmd) {
 	case GE2D_CONFIG:
 	case GE2D_SRCCOLORKEY:
@@ -374,6 +394,126 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 			}
 		break;
 #endif
+		case GE2D_CONFIG_EX_ION:
+			ret = copy_from_user(&ge2d_config_ex_ion, argp,
+					sizeof(struct config_para_ex_ion_s));
+			break;
+#ifdef CONFIG_COMPAT
+		case GE2D_CONFIG_EX32_ION:
+			uf_ex_ion = (struct compat_config_para_ex_ion_s *)argp;
+			r = copy_from_user(
+				&ge2d_config_ex_ion.src_para,
+				&uf_ex_ion->src_para,
+				sizeof(struct src_dst_para_ex_s));
+			r |= copy_from_user(
+				&ge2d_config_ex_ion.src2_para,
+				&uf_ex_ion->src2_para,
+				sizeof(struct src_dst_para_ex_s));
+			r |= copy_from_user(
+				&ge2d_config_ex_ion.dst_para,
+				&uf_ex_ion->dst_para,
+				sizeof(struct src_dst_para_ex_s));
+
+			r |= copy_from_user(&ge2d_config_ex_ion.src_key,
+				&uf_ex_ion->src_key,
+				sizeof(struct src_key_ctrl_s));
+			r |= copy_from_user(&ge2d_config_ex_ion.src2_key,
+				&uf_ex_ion->src2_key,
+				sizeof(struct src_key_ctrl_s));
+
+			r |= get_user(ge2d_config_ex_ion.alu_const_color,
+				&uf_ex_ion->alu_const_color);
+			r |= get_user(ge2d_config_ex_ion.src1_gb_alpha,
+				&uf_ex_ion->src1_gb_alpha);
+			r |= get_user(ge2d_config_ex_ion.op_mode,
+				&uf_ex_ion->op_mode);
+			r |= get_user(ge2d_config_ex_ion.bitmask_en,
+				&uf_ex_ion->bitmask_en);
+			r |= get_user(ge2d_config_ex_ion.bytemask_only,
+				&uf_ex_ion->bytemask_only);
+			r |= get_user(ge2d_config_ex_ion.bitmask,
+				&uf_ex_ion->bitmask);
+			r |= get_user(ge2d_config_ex_ion.dst_xy_swap,
+				&uf_ex_ion->dst_xy_swap);
+			r |= get_user(ge2d_config_ex_ion.hf_init_phase,
+				&uf_ex_ion->hf_init_phase);
+			r |= get_user(ge2d_config_ex_ion.hf_rpt_num,
+				&uf_ex_ion->hf_rpt_num);
+			r |= get_user(ge2d_config_ex_ion.hsc_start_phase_step,
+				&uf_ex_ion->hsc_start_phase_step);
+			r |= get_user(ge2d_config_ex_ion.hsc_phase_slope,
+				&uf_ex_ion->hsc_phase_slope);
+			r |= get_user(ge2d_config_ex_ion.vf_init_phase,
+				&uf_ex_ion->vf_init_phase);
+			r |= get_user(ge2d_config_ex_ion.vf_rpt_num,
+				&uf_ex_ion->vf_rpt_num);
+			r |= get_user(ge2d_config_ex_ion.vsc_start_phase_step,
+				&uf_ex_ion->vsc_start_phase_step);
+			r |= get_user(ge2d_config_ex_ion.vsc_phase_slope,
+				&uf_ex_ion->vsc_phase_slope);
+			r |= get_user(
+				ge2d_config_ex_ion.src1_vsc_phase0_always_en,
+				&uf_ex_ion->src1_vsc_phase0_always_en);
+			r |= get_user(
+				ge2d_config_ex_ion.src1_hsc_phase0_always_en,
+				&uf_ex_ion->src1_hsc_phase0_always_en);
+			r |= get_user(
+				ge2d_config_ex_ion.src1_hsc_rpt_ctrl,
+				&uf_ex_ion->src1_hsc_rpt_ctrl);
+			r |= get_user(
+				ge2d_config_ex_ion.src1_vsc_rpt_ctrl,
+				&uf_ex_ion->src1_vsc_rpt_ctrl);
+
+			for (i = 0; i < 4; i++) {
+				struct config_planes_ion_s *psrc_planes;
+
+				psrc_planes =
+					&ge2d_config_ex_ion.src_planes[i];
+				r |= get_user(psrc_planes->addr,
+					&uf_ex_ion->src_planes[i].addr);
+				r |= get_user(psrc_planes->w,
+					&uf_ex_ion->src_planes[i].w);
+				r |= get_user(psrc_planes->h,
+					&uf_ex_ion->src_planes[i].h);
+				r |= get_user(psrc_planes->shared_fd,
+					&uf_ex_ion->src_planes[i].shared_fd);
+			}
+
+			for (i = 0; i < 4; i++) {
+				struct config_planes_ion_s *psrc2_planes;
+
+				psrc2_planes =
+					&ge2d_config_ex_ion.src2_planes[i];
+				r |= get_user(psrc2_planes->addr,
+					&uf_ex_ion->src2_planes[i].addr);
+				r |= get_user(psrc2_planes->w,
+					&uf_ex_ion->src2_planes[i].w);
+				r |= get_user(psrc2_planes->h,
+					&uf_ex_ion->src2_planes[i].h);
+				r |= get_user(psrc2_planes->shared_fd,
+					&uf_ex_ion->src2_planes[i].shared_fd);
+			}
+
+			for (j = 0; j < 4; j++) {
+				struct config_planes_ion_s *pdst_planes;
+
+				pdst_planes =
+					&ge2d_config_ex_ion.dst_planes[j];
+				r |= get_user(pdst_planes->addr,
+					&uf_ex_ion->dst_planes[j].addr);
+				r |= get_user(pdst_planes->w,
+					&uf_ex_ion->dst_planes[j].w);
+				r |= get_user(pdst_planes->h,
+					&uf_ex_ion->dst_planes[j].h);
+				r |= get_user(pdst_planes->shared_fd,
+					&uf_ex_ion->dst_planes[j].shared_fd);
+			}
+			if (r) {
+				pr_err("GE2D_CONFIG_EX32 get parameter failed .\n");
+				return -EFAULT;
+				}
+			break;
+#endif
 	case GE2D_SET_COEF:
 	case GE2D_ANTIFLICKER_ENABLE:
 		break;
@@ -400,6 +540,12 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	case GE2D_CONFIG_EX32:
 #endif
 		ret = ge2d_context_config_ex(context, &ge2d_config_ex);
+		break;
+	case GE2D_CONFIG_EX_ION:
+#ifdef CONFIG_COMPAT
+	case GE2D_CONFIG_EX32_ION:
+#endif
+		ret = ge2d_context_config_ex_ion(context, &ge2d_config_ex_ion);
 		break;
 	case GE2D_SET_COEF:
 		ge2d_wq_set_scale_coef(context, args & 0xff, args >> 16);
@@ -614,7 +760,7 @@ static int ge2d_probe(struct platform_device *pdev)
 	struct reset_control *rstc = NULL;
 	struct clk *clk_gate;
 	struct clk *clk;
-
+	struct resource res;
 	init_ge2d_device();
 	/* get interrupt resource */
 	irq = platform_get_irq_byname(pdev, "ge2d");
@@ -659,7 +805,30 @@ static int ge2d_probe(struct platform_device *pdev)
 				vapb_rate/1000000);
 		}
 	}
+	ret = of_address_to_resource(pdev->dev.of_node, 0, &res);
+	if (ret == 0) {
+		ge2d_log_info("find address resource\n");
+		if (res.start != 0) {
+			ge2d_reg_map =
+				ioremap(res.start, resource_size(&res));
+			if (ge2d_reg_map) {
+				ge2d_log_info("map io source 0x%p,size=%d to 0x%p\n",
+					(void *)res.start,
+					(int)resource_size(&res),
+					ge2d_reg_map);
+			}
+		} else {
+			ge2d_reg_map = 0;
+			ge2d_log_info("ignore io source start %p,size=%d\n",
+			(void *)res.start, (int)resource_size(&res));
+		}
+	}
+
 	ret = ge2d_wq_init(pdev, irq, rstc, clk_gate);
+#ifdef CONFIG_AMLOGIC_ION
+	if (!ge2d_ion_client)
+		ge2d_ion_client = meson_ion_client_create(-1, "meson-ge2d");
+#endif
 failed1:
 	return ret;
 }

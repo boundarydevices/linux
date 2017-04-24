@@ -1,8 +1,16 @@
 #
 # GE2D Module
 #
+menu "Amlogic GE2D Module"
 config  AMLOGIC_MEDIA_GE2D
 	bool "Amlogic GE2D Module"
 	default n
 	help
 		Select to enable GE2D graphic 2D engine.
+config	AMLOGIC_MEDIA_GE2D_MORE_SECURITY
+	bool "Amlogic GE2D not use physical addr"
+	default n
+	depends on AMLOGIC_MEDIA_GE2D
+	help
+		Select to enable GE2D not use physical addr.
+endmenu
