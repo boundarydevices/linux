@@ -377,14 +377,6 @@
 		pwms = <&pwm3 0 5000000>;
 	};
 
-	clk_optics: clk-optics {
-		compatible = "pwm-clock";
-		#clock-cells = <0>;
-		clock-frequency = <3666667>;
-		clock-output-names = "optics";
-		pwms = <&pwm4 0 273>; /* 1 / 273 ns = 3.67 MHz */
-	};
-
 	fb_lcd: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
@@ -513,8 +505,6 @@
 	};
 
 	spidev@2 {
-		clocks = <&clk_optics>;
-		clock-names = "osc";
 		compatible = "lmp90079";
 		interrupts-extended = GPIRQ_LMP90079;
 		pinctrl-names = "default";
