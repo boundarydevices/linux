@@ -1517,6 +1517,12 @@ enum spi_nor_read_command_index {
 	SNOR_CMD_READ_4_4_4,
 	SNOR_CMD_READ_1_4_4_DTR,
 
+	/* Octo SPI */
+	SNOR_CMD_READ_1_1_8,
+	SNOR_CMD_READ_1_8_8,
+	SNOR_CMD_READ_8_8_8,
+	SNOR_CMD_READ_1_8_8_DTR,
+
 	SNOR_CMD_READ_MAX
 };
 
@@ -1527,6 +1533,11 @@ enum spi_nor_pp_command_index {
 	SNOR_CMD_PP_1_1_4,
 	SNOR_CMD_PP_1_4_4,
 	SNOR_CMD_PP_4_4_4,
+
+	/* Octo SPI */
+	SNOR_CMD_PP_1_1_8,
+	SNOR_CMD_PP_1_8_8,
+	SNOR_CMD_PP_8_8_8,
 
 	SNOR_CMD_PP_MAX
 };
@@ -1652,6 +1663,10 @@ static int spi_nor_hwcaps_read2cmd(u32 hwcaps)
 		{ SNOR_HWCAPS_READ_1_4_4,	SNOR_CMD_READ_1_4_4 },
 		{ SNOR_HWCAPS_READ_4_4_4,	SNOR_CMD_READ_4_4_4 },
 		{ SNOR_HWCAPS_READ_1_4_4_DTR,	SNOR_CMD_READ_1_4_4_DTR },
+		{ SNOR_HWCAPS_READ_1_1_8,	SNOR_CMD_READ_1_1_8 },
+		{ SNOR_HWCAPS_READ_1_8_8,	SNOR_CMD_READ_1_8_8 },
+		{ SNOR_HWCAPS_READ_8_8_8,	SNOR_CMD_READ_8_8_8 },
+		{ SNOR_HWCAPS_READ_1_8_8_DTR,	SNOR_CMD_READ_1_8_8_DTR },
 	};
 
 	return spi_nor_hwcaps2cmd(hwcaps, hwcaps_read2cmd,
@@ -1665,6 +1680,9 @@ static int spi_nor_hwcaps_pp2cmd(u32 hwcaps)
 		{ SNOR_HWCAPS_PP_1_1_4,		SNOR_CMD_PP_1_1_4 },
 		{ SNOR_HWCAPS_PP_1_4_4,		SNOR_CMD_PP_1_4_4 },
 		{ SNOR_HWCAPS_PP_4_4_4,		SNOR_CMD_PP_4_4_4 },
+		{ SNOR_HWCAPS_PP_1_1_8,		SNOR_CMD_PP_1_1_8 },
+		{ SNOR_HWCAPS_PP_1_8_8,		SNOR_CMD_PP_1_8_8 },
+		{ SNOR_HWCAPS_PP_8_8_8,		SNOR_CMD_PP_8_8_8 },
 	};
 
 	return spi_nor_hwcaps2cmd(hwcaps, hwcaps_pp2cmd,
@@ -1762,7 +1780,9 @@ static int spi_nor_setup(struct spi_nor *nor, const struct flash_info *info,
 	/* SPI n-n-n protocols are not supported yet. */
 	ignored_mask = (SNOR_HWCAPS_READ_2_2_2 |
 			SNOR_HWCAPS_READ_4_4_4 |
-			SNOR_HWCAPS_PP_4_4_4);
+			SNOR_HWCAPS_READ_8_8_8 |
+			SNOR_HWCAPS_PP_4_4_4 |
+			SNOR_HWCAPS_PP_8_8_8);
 	if (shared_mask & ignored_mask) {
 		dev_dbg(nor->dev,
 			"SPI n-n-n protocols are not supported yet.\n");
