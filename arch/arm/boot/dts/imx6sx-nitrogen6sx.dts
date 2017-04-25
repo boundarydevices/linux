@@ -70,16 +70,6 @@
 		>;
 	};
 
-	pinctrl_ecspi5: ecspi5grp {
-		fsl,pins = <
-			MX6SX_PAD_NAND_DATA00__ECSPI5_MISO	0x100b1
-			MX6SX_PAD_NAND_DATA01__ECSPI5_MOSI	0x100b1
-			MX6SX_PAD_NAND_DATA02__ECSPI5_SCLK	0x100b1
-#define GP_ECSPI5_CS			<&gpio4 7 GPIO_ACTIVE_LOW>
-			MX6SX_PAD_NAND_DATA03__GPIO4_IO_7	0x0b0b1
-		>;
-	};
-
 	pinctrl_enet1: enet1grp {
 		fsl,pins = <
 			MX6SX_PAD_ENET1_MDIO__ENET1_MDIO	0x1b0b0
@@ -154,7 +144,12 @@
 			MX6SX_PAD_QSPI1A_DATA1__GPIO4_IO_17	0x1b0b0
 			MX6SX_PAD_QSPI1A_DATA2__GPIO4_IO_18	0x1b0b0
 			MX6SX_PAD_QSPI1A_DATA3__GPIO4_IO_19	0x1b0b0
-			MX6SX_PAD_SD1_CMD__CCM_CLKO1		0x000b0
+#define GP_WIFI_PASS			<&gpio4 6 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_NAND_DATA02__GPIO4_IO_6	0x030b1
+#define GP_WIFI_FAIL			<&gpio4 4 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_NAND_DATA00__GPIO4_IO_4	0x030b1
+#define GP_WIFI_TEST			<&gpio4 7 GPIO_ACTIVE_LOW>
+			MX6SX_PAD_NAND_DATA03__GPIO4_IO_7	0x0b0b1
 			/* Test points */
 			MX6SX_PAD_NAND_DATA04__GPIO4_IO_8	0x1b0b0
 		>;
@@ -251,9 +246,23 @@
 		>;
 	};
 
+	pinctrl_reg_wifi_1p8v: reg-wifi-1p8vgrp {
+		fsl,pins = <
+#define GP_REG_WIFI_1P8V_EN	<&gpio4 5 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_NAND_DATA01__GPIO4_IO_5	0x030b0
+		>;
+	};
+
+	pinctrl_reg_wifi_3p3v: reg-wifi-3p3vgrp {
+		fsl,pins = <
+#define GP_REG_WIFI_3P3V_EN	<&gpio6 1 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_SD1_CMD__GPIO6_IO_1		0x030b0
+		>;
+	};
+
 	pinctrl_reg_wlan: reg-wlangrp {
 		fsl,pins = <
-#define GP_WLAN_EN	<&gpio7 6 GPIO_ACTIVE_HIGH>
+#define GP_REG_WLAN_EN	<&gpio7 6 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_SD3_DATA4__GPIO7_IO_6		0x1b0b0
 			MX6SX_PAD_GPIO1_IO11__CCM_CLKO1		0x000b0
 		>;
@@ -345,6 +354,28 @@
 			MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x17071
 #define GPIRQ_WL1271 	<&gpio7 7 IRQ_TYPE_LEVEL_HIGH>
 			MX6SX_PAD_SD3_DATA5__GPIO7_IO_7		0x1b0b0
+		>;
+	};
+
+	pinctrl_usdhc3_100mhz: usdhc3-100mhzgrp {
+		fsl,pins = <
+			MX6SX_PAD_SD3_CLK__USDHC3_CLK		0x100b9
+			MX6SX_PAD_SD3_CMD__USDHC3_CMD		0x170b9
+			MX6SX_PAD_SD3_DATA0__USDHC3_DATA0	0x170b9
+			MX6SX_PAD_SD3_DATA1__USDHC3_DATA1	0x170b9
+			MX6SX_PAD_SD3_DATA2__USDHC3_DATA2	0x170b9
+			MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x170b9
+		>;
+	};
+
+	pinctrl_usdhc3_200mhz: usdhc3-200mhzgrp {
+		fsl,pins = <
+			MX6SX_PAD_SD3_CLK__USDHC3_CLK		0x100f9
+			MX6SX_PAD_SD3_CMD__USDHC3_CMD		0x170f9
+			MX6SX_PAD_SD3_DATA0__USDHC3_DATA0	0x170f9
+			MX6SX_PAD_SD3_DATA1__USDHC3_DATA1	0x170f9
+			MX6SX_PAD_SD3_DATA2__USDHC3_DATA2	0x170f9
+			MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x170f9
 		>;
 	};
 
@@ -500,19 +531,47 @@
 			enable-active-high;
 		};
 
-		reg_wlan_en: regulator@4 {
+		reg_wifi_3p3v: regulator@4 {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_wifi_3p3v>;
+			reg = <4>;
+			regulator-name = "wifi_3P3V";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			startup-delay-us = <5000>;
+			gpio = GP_REG_WIFI_3P3V_EN;
+			enable-active-high;
+		};
+
+		reg_wifi_1p8v: regulator@5 {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_wifi_1p8v>;
+			reg = <5>;
+			regulator-name = "wifi_1P8V";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			startup-delay-us = <400000>;
+			gpio = GP_REG_WIFI_1P8V_EN;
+			enable-active-high;
+			vin-supply = <&reg_wifi_3p3v>;
+		};
+
+		reg_wlan_en: regulator@6 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_wlan>;
 			compatible = "regulator-fixed";
 			clocks = <&clks IMX6SX_CLK_CKO>;
 			clock-names = "slow";
-			reg = <4>;
+			reg = <6>;
 			regulator-name = "wlan-en";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			startup-delay-us = <70000>;
-			gpio = GP_WLAN_EN;
+			gpio = GP_REG_WLAN_EN;
 			enable-active-high;
+			vin-supply = <&reg_wifi_1p8v>;
 		};
 	};
 
@@ -902,16 +961,29 @@
 	status = "okay";
 };
 
-/* TiWi or broadcom */
+/* TiWi or broadcom or Silex */
 &usdhc3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc3_50mhz>;
 	bus-width = <4>;
-	non-removable;
-	keep-power-in-suspend;
-	vmmc-supply = <&reg_wlan_en>;
 	cap-power-off-card;
 	cap-sdio-irq;
+#if 0
+	fsl,tuning-start-tap = <20>;
+	fsl,tuning-step= <2>;
+#endif
+	keep-power-in-suspend;
+#if 1
+	max-clock = <20000000>;
+#endif
+	non-removable;
+#if 0
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+#else
+	pinctrl-names = "default";
+#endif
+	pinctrl-0 = <&pinctrl_usdhc3_50mhz>;
+	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+	vmmc-supply = <&reg_wlan_en>;
 	vqmmc-1-8-v;
 	status = "okay";
 
