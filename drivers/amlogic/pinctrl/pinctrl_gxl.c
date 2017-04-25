@@ -248,11 +248,11 @@ static const unsigned int i2c_sda_b_pins[]	= { PIN(GPIODV_26, EE_OFF) };
 static const unsigned int i2c_scl_b_pins[]	= { PIN(GPIODV_27, EE_OFF) };
 
 
-static const unsigned int i2c_sda_c_pins[]	= { PIN(GPIODV_28, EE_OFF) };
-static const unsigned int i2c_scl_c_pins[]	= { PIN(GPIODV_29, EE_OFF) };
+static const unsigned int i2c_sda_c0_pins[]	= { PIN(GPIODV_28, EE_OFF) };
+static const unsigned int i2c_scl_c0_pins[]	= { PIN(GPIODV_29, EE_OFF) };
 
-static const unsigned int i2c_sda_c_1_pins[]	= { PIN(GPIODV_18, EE_OFF) };
-static const unsigned int i2c_scl_c_1_pins[]	= { PIN(GPIODV_19, EE_OFF) };
+static const unsigned int i2c_sda_c1_pins[]	= { PIN(GPIODV_18, EE_OFF) };
+static const unsigned int i2c_scl_c1_pins[]	= { PIN(GPIODV_19, EE_OFF) };
 
 
 static const unsigned int uart_tx_c_pins[]	= { PIN(GPIOX_8, EE_OFF) };
@@ -572,7 +572,6 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(lcd_vs,	3,	4),	/* dv24 */
 	GROUP(dmic_in,	2,	7),
 	GROUP(tcon_stv1,	1,	22),
-	GROUP(i2c_sda_a,	1,	15),
 
 	GROUP(i2c_sda_a,	1,	15), /*dv24*/
 	GROUP(i2c_scl_a,	1,	14), /*dv25*/
@@ -583,11 +582,11 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(i2c_sda_b,	1,	13), /*dv26*/
 	GROUP(i2c_scl_b,	1,	12), /*dv27*/
 
-	GROUP(i2c_sda_c,	1,	11), /*dv28*/
-	GROUP(i2c_scl_c,	1,	10), /*dv29*/
+	GROUP(i2c_sda_c0,	1,	11), /*dv28*/
+	GROUP(i2c_scl_c0,	1,	10), /*dv29*/
 
-	GROUP(i2c_sda_c_1,	1,	17), /*dv18*/
-	GROUP(i2c_scl_c_1,	1,	16), /*dv19*/
+	GROUP(i2c_sda_c1,	1,	17), /*dv18*/
+	GROUP(i2c_scl_c1,	1,	16), /*dv19*/
 
 	/* Bank BOOT */
 	GROUP(emmc_nand_d07, 7,	31),
@@ -847,12 +846,12 @@ static const char * const i2c_b_groups[] = {
 	"i2c_sda_b", "i2c_scl_b",
 };
 
-static const char * const i2c_c_groups[] = {
-	"i2c_sda_c", "i2c_scl_c",
+static const char * const i2c_c0_groups[] = {
+	"i2c_sda_c0", "i2c_scl_c0",
 };
 
-static const char * const i2c_c_1_groups[] = {
-	"i2c_sda_c_1", "i2c_scl_c_1",
+static const char * const i2c_c1_groups[] = {
+	"i2c_sda_c1", "i2c_scl_c1",
 };
 
 static const char * const i2c_d_groups[] = {
@@ -890,8 +889,8 @@ static struct meson_pmx_func meson_gxl_periphs_functions[] = {
 	FUNCTION(spi),
 	FUNCTION(i2c_a),
 	FUNCTION(i2c_b),
-	FUNCTION(i2c_c),
-	FUNCTION(i2c_c_1),
+	FUNCTION(i2c_c0),
+	FUNCTION(i2c_c1),
 	FUNCTION(i2c_d),
 	FUNCTION(hdmi_ddc),
 	FUNCTION(hdmi_hpd),
