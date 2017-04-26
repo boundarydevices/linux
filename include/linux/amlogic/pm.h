@@ -17,6 +17,8 @@
 
 #ifndef __AML_PM_H__
 #define __AML_PM_H__
+#include <linux/notifier.h>
+
 /* wake up reason*/
 #define	UDEFINED_WAKEUP	0
 #define	CHARGING_WAKEUP	1
@@ -29,12 +31,24 @@
 #define	CEC_WAKEUP			8
 #define	REMOTE_CUS_WAKEUP		9
 #define ETH_PHY_WAKEUP      10
-#ifdef CONFIG_GXBB_SUSPEND
-unsigned int get_resume_method(void);
-#else
-static inline unsigned int get_resume_method(void)
-{
-	return 0;
-}
-#endif
+extern unsigned int get_resume_method(void);
+
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+enum {
+	EARLY_SUSPEND_LEVEL_BLANK_SCREEN = 50,
+	EARLY_SUSPEND_LEVEL_STOP_DRAWING = 100,
+	EARLY_SUSPEND_LEVEL_DISABLE_FB = 150,
+};
+
+struct early_suspend {
+	struct list_head link;
+	int level;
+	void (*suspend)(struct early_suspend *h);
+	void (*resume)(struct early_suspend *h);
+	void *param;
+};
+extern void register_early_suspend(struct early_suspend *handler);
+extern void unregister_early_suspend(struct early_suspend *handler);
+
+#endif //CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 #endif

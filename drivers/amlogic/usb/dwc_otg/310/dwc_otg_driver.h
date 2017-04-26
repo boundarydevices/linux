@@ -39,8 +39,8 @@
  */
 #include "dwc_otg_os_dep.h"
 #include "dwc_otg_core_if.h"
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
 #endif
 #include <linux/notifier.h>
 
@@ -80,7 +80,7 @@ typedef struct dwc_otg_device {
 	uint8_t common_irq_installed;
 
 	dwc_timer_t *id_change_timer;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	struct early_suspend usb_early_suspend;
 #endif
 

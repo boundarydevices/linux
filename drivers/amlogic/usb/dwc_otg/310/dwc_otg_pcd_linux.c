@@ -1364,13 +1364,15 @@ void pcd_remove(struct platform_device *pdev)
 	otg_dev->pcd = 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 int get_pcd_ums_state(dwc_otg_pcd_t *pcd)
 {
+#if 0 //Mark for compile error
 	if (gadget_wrapper &&
 		(pcd == gadget_wrapper->pcd) &&
 		gadget_wrapper->gadget.priv_data)
 		return *(int *)gadget_wrapper->gadget.priv_data;
+#endif
 	return 0;
 }
 #endif

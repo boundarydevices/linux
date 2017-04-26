@@ -20,7 +20,6 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
-#include <linux/clk.h>
 #include <linux/fs.h>
 #include <linux/delay.h>
 #include <linux/uaccess.h>
@@ -38,6 +37,9 @@
 #include <asm/cpuidle.h>
 #include <uapi/linux/psci.h>
 #include <linux/arm-smccc.h>
+#include <linux/amlogic/pm.h>
+#include <linux/kobject.h>
+#include <../kernel/power/power.h>
 
 typedef unsigned long (psci_fn)(unsigned long, unsigned long,
 				unsigned long, unsigned long);
@@ -64,11 +66,116 @@ static u32 psci_get_version(void)
 static void __iomem *exit_reg;
 static int max_idle_lvl;
 
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+static DEFINE_MUTEX(early_suspend_lock);
+static LIST_HEAD(early_suspend_handlers);
+
+void register_early_suspend(struct early_suspend *handler)
+{
+	struct list_head *pos;
+
+	mutex_lock(&early_suspend_lock);
+	list_for_each(pos, &early_suspend_handlers) {
+		struct early_suspend *e;
+
+		e = list_entry(pos, struct early_suspend, link);
+		if (e->level > handler->level)
+			break;
+	}
+	list_add_tail(&handler->link, pos);
+	mutex_unlock(&early_suspend_lock);
+}
+EXPORT_SYMBOL(register_early_suspend);
+
+void unregister_early_suspend(struct early_suspend *handler)
+{
+	mutex_lock(&early_suspend_lock);
+	list_del(&handler->link);
+	mutex_unlock(&early_suspend_lock);
+}
+EXPORT_SYMBOL(unregister_early_suspend);
+
+static void early_suspend(void)
+{
+	struct early_suspend *pos;
+
+	mutex_lock(&early_suspend_lock);
+
+	pr_info("early_suspend: call handlers\n");
+	list_for_each_entry(pos, &early_suspend_handlers, link) {
+		if (pos->suspend != NULL) {
+			pr_info("early_suspend: %pf\n", pos->suspend);
+			pos->suspend(pos);
+		}
+	}
+	mutex_unlock(&early_suspend_lock);
+
+	pr_info("early_suspend: done\n");
+
+}
+
+static void late_resume(void)
+{
+	struct early_suspend *pos;
+
+	mutex_lock(&early_suspend_lock);
+
+	pr_info("late_resume: call handlers\n");
+	list_for_each_entry_reverse(pos, &early_suspend_handlers, link)
+		if (pos->resume != NULL) {
+			pr_info("late_resume: %pf\n", pos->resume);
+			pos->resume(pos);
+		}
+	pr_info("late_resume: done\n");
+
+	mutex_unlock(&early_suspend_lock);
+}
+
+unsigned int early_suspend_state;
+static ssize_t early_suspend_trigger_show(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				char *buf)
+{
+	unsigned int len;
+
+	len = sprintf(buf, "%d\n", early_suspend_state);
+
+	return len;
+}
+static ssize_t early_suspend_trigger_store(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t n)
+{
+	int ret;
+
+	ret = kstrtouint(buf, 0, &early_suspend_state);
+	pr_info("early_suspend_state=%d\n", early_suspend_state);
+
+	if (ret)
+		return -EINVAL;
+
+	if (early_suspend_state == 0)
+		late_resume();
+	else if (early_suspend_state == 1)
+		early_suspend();
+
+	return n;
+}
+
+power_attr(early_suspend_trigger);
+static struct attribute *g[] = {
+	&early_suspend_trigger_attr.attr,
+	NULL,
+};
+
+static struct attribute_group attr_group = {
+	.attrs = g,
+};
+#endif //CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 /*
  *0x10000 : bit[16]=1:control cpu suspend to power down
  *cpu_suspend(0, meson_system_suspend);
  */
-
 static void meson_gx_suspend(void)
 {
 	pr_info("enter meson_pm_suspend!\n");
@@ -182,6 +289,10 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 
 	exit_reg = of_iomap(pdev->dev.of_node, 0);
 	device_create_file(&pdev->dev, &dev_attr_suspend_reason);
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+	if (sysfs_create_group(power_kobj, &attr_group))
+		return -1;
+#endif
 	pr_info("meson_pm_probe done\n");
 	return 0;
 }

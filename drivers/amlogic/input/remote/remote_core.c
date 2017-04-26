@@ -127,6 +127,8 @@ void remote_keydown(struct remote_dev *dev, int scancode, int status)
 	spin_lock_irqsave(&dev->keylock, flags);
 	if (status == REMOTE_NORMAL) {
 		keycode = dev->getkeycode(dev, scancode);
+		if (keycode == KEY_POWER)
+			pm_wakeup_event(dev->dev, 2000);
 		ir_do_keydown(dev, scancode, keycode);
 	}
 

@@ -279,8 +279,8 @@ static struct fb_fix_screeninfo fb_def_fix = {
 	.accel      = FB_ACCEL_NONE,
 };
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
 static struct early_suspend early_suspend;
 static int early_suspend_flag;
 #endif
@@ -2271,7 +2271,7 @@ static struct device_attribute osd_attrs[] = {
 #ifdef CONFIG_PM
 static int osd_suspend(struct platform_device *dev, pm_message_t state)
 {
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	if (early_suspend_flag)
 		return 0;
 #endif
@@ -2287,7 +2287,7 @@ static int osd_resume(struct platform_device *dev)
 		return 0;
 	}
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	if (early_suspend_flag)
 		return 0;
 #endif
@@ -2296,7 +2296,7 @@ static int osd_resume(struct platform_device *dev)
 }
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 static void osd_early_suspend(struct early_suspend *h)
 {
 	if (early_suspend_flag)
@@ -2317,7 +2317,7 @@ static void osd_late_resume(struct early_suspend *h)
 #ifdef CONFIG_SCREEN_ON_EARLY
 void osd_resume_early(void)
 {
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	osd_resume_hw();
 	early_suspend_flag = 0;
 #endif
@@ -2558,7 +2558,7 @@ static int osd_probe(struct platform_device *pdev)
 		for (i = 0; i < ARRAY_SIZE(osd_attrs); i++)
 			ret = device_create_file(fbi->dev, &osd_attrs[i]);
 	}
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	early_suspend.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
 	early_suspend.suspend = osd_early_suspend;
 	early_suspend.resume = osd_late_resume;
@@ -2594,7 +2594,7 @@ static int osd_remove(struct platform_device *pdev)
 	osd_log_info("osd_remove.\n");
 	if (!pdev)
 		return -ENODEV;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	unregister_early_suspend(&early_suspend);
 #endif
 	vout_unregister_client(&osd_notifier_nb);

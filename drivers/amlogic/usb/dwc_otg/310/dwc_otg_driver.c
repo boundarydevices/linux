@@ -71,6 +71,9 @@
 #include <linux/usb.h>
 #include <linux/usb/hcd.h>
 #include <linux/workqueue.h>
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
+#endif
 
 #define DWC_DRIVER_VERSION	"3.10a 12-MAY-2014"
 #define DWC_DRIVER_DESC		"HS OTG USB Controller driver"
@@ -873,7 +876,7 @@ static void dwc_otg_driver_shutdown(struct platform_device *pdev)
 #endif
 	return;
 }
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 extern int get_pcd_ums_state(dwc_otg_pcd_t *pcd);
 static void usb_early_suspend(struct early_suspend *h)
 {
@@ -1357,7 +1360,7 @@ static int dwc_otg_driver_probe(struct platform_device *pdev)
 	} else {
 		dwc_otg_enable_global_interrupts(dwc_otg_device->core_if);
 	}
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	dwc_otg_device->usb_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
 	dwc_otg_device->usb_early_suspend.suspend = usb_early_suspend;
 	dwc_otg_device->usb_early_suspend.resume = usb_early_resume;

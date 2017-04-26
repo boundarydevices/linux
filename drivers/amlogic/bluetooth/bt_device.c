@@ -37,8 +37,8 @@
 #endif
 #include "../../gpio/gpiolib.h"
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
 static struct early_suspend bt_early_suspend;
 #endif
 
@@ -158,7 +158,7 @@ static int bt_set_block(void *data, bool blocked)
 static const struct rfkill_ops bt_rfkill_ops = {
 	.set_block = bt_set_block,
 };
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 static void bt_earlysuspend(struct early_suspend *h)
 {
 
@@ -269,7 +269,7 @@ static int bt_probe(struct platform_device *pdev)
 	prdata->bt_rfk = bt_rfk;
 	prdata->pdata = pdata;
 	platform_set_drvdata(pdev, prdata);
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	bt_early_suspend.level =
 		EARLY_SUSPEND_LEVEL_DISABLE_FB;
 	bt_early_suspend.suspend = bt_earlysuspend;

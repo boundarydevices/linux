@@ -28,4 +28,15 @@ config AMLOGIC_MX_SUSPEND
 
       If you want this support, you should say Y here.
 
+config AMLOGIC_LEGACY_EARLY_SUSPEND
+    bool "A re-implement early_suspend instead of legacy ealry_suspend."
+    depends on AMLOGIC_GX_SUSPEND || AMLOGIC_MX_SUSPEND
+    depends on PM
+    default n
+    help
+      Kernel has abandoned legacy early_suspend mechanism.
+      Here re-implement a early_suspend for use driver legacy early_suspend code easily.
+
+      If you want this support, you should say Y here.
+
 endmenu

@@ -129,8 +129,8 @@ static inline void hdmitx_notify_hpd(int hpd)
 	else
 		hdmitx_event_notify(HDMITX_UNPLUG, NULL);
 }
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
 static void hdmitx_early_suspend(struct early_suspend *h)
 {
 	const struct vinfo_s *info = hdmi_get_current_vinfo();
@@ -2627,7 +2627,7 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	hdmitx_device.hdcp_mode = -1; /* no hdcp by default */
 	hdmitx_device.ready = 0;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	register_early_suspend(&hdmitx_early_suspend_handler);
 #endif
 	hdmitx_device.nb.notifier_call = hdmitx_reboot_notifier;

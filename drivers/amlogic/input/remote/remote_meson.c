@@ -43,6 +43,7 @@
 #include "remote_meson.h"
 
 #include <linux/amlogic/iomap.h>
+#include <linux/pm_wakeup.h>
 
 static void amlremote_tasklet(unsigned long data);
 
@@ -563,6 +564,8 @@ static int remote_probe(struct platform_device *pdev)
 	if (ret)
 		goto error_register_remote;
 
+	device_init_wakeup(&pdev->dev, 1);
+
 	return 0;
 
 error_register_remote:
@@ -593,14 +596,14 @@ static int remote_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int remote_resume(struct platform_device *pdev)
+static int remote_resume(struct device *dev)
 {
-	struct remote_chip *chip = platform_get_drvdata(pdev);
+	struct remote_chip *chip = dev_get_drvdata(dev);
 	unsigned int val;
 	unsigned long flags;
 	unsigned char cnt;
 
-	dev_info(chip->dev, "remote resume\n");
+	dev_info(dev, "remote resume\n");
 	/*resume register config*/
 	spin_lock_irqsave(&chip->slock, flags);
 	chip->set_register_config(chip, chip->protocol);
@@ -634,11 +637,11 @@ static int remote_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static int remote_suspend(struct platform_device *pdev, pm_message_t state)
+static int remote_suspend(struct device *dev)
 {
-	struct remote_chip *chip = platform_get_drvdata(pdev);
+	struct remote_chip *chip = dev_get_drvdata(dev);
 
-	dev_info(chip->dev, "remote suspend\n");
+	dev_info(dev, "remote suspend\n");
 	disable_irq(chip->irqno);
 	return 0;
 }
@@ -650,14 +653,22 @@ static const struct of_device_id remote_dt_match[] = {
 	{},
 };
 
+#ifdef CONFIG_PM
+static const struct dev_pm_ops remote_pm_ops = {
+	.suspend_late = remote_suspend,
+	.resume_early = remote_resume,
+};
+#endif
+
 static struct platform_driver remote_driver = {
 	.probe = remote_probe,
 	.remove = remote_remove,
-	.suspend = remote_suspend,
-	.resume = remote_resume,
 	.driver = {
 		.name = DRIVER_NAME,
 		.of_match_table = remote_dt_match,
+#ifdef CONFIG_PM
+		.pm = &remote_pm_ops,
+#endif
 	},
 };
 

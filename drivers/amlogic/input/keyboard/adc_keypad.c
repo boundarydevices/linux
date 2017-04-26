@@ -35,8 +35,8 @@
 #include <linux/amlogic/saradc.h>
 #include <linux/amlogic/adc_keypad.h>
 #include <linux/of.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
 #endif
 
 #define POLL_PERIOD_WHEN_KEY_DOWN 10 /* unit msec */
@@ -59,7 +59,7 @@ struct kp {
 	struct adc_key *key;
 	int key_num;
 	struct work_struct work_update;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	struct early_suspend early_suspend;
 #endif
 };
@@ -184,7 +184,7 @@ static int register_keypad_dev(struct kp  *kp)
 	return ret;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 static void kp_early_suspend(struct early_suspend *h)
 {
 	struct kp *kp = container_of(h, struct kp, early_suspend);
@@ -411,7 +411,7 @@ static int kp_probe(struct platform_device *pdev)
 	}
 	register_keypad_dev(gp_kp);
 	kfree(key_param);
-	#ifdef CONFIG_HAS_EARLYSUSPEND
+	#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	kp->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	kp->early_suspend.suspend = kp_early_suspend;
 	kp->early_suspend.resume = kp_late_resume;
@@ -434,7 +434,7 @@ static int kp_remove(struct platform_device *pdev)
 	struct adc_kp_platform_data *pdata = platform_get_drvdata(pdev);
 	struct kp *kp = gp_kp;
 
-	#ifdef CONFIG_HAS_EARLYSUSPEND
+	#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	unregister_early_suspend(&kp->early_suspend);
 	#endif
 	del_timer_sync(&kp->timer);

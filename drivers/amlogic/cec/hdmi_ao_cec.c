@@ -55,9 +55,8 @@
 #include <linux/reboot.h>
 #include <linux/of_address.h>
 #include <linux/random.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
+#include <linux/amlogic/pm.h>
+
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/cec_common.h>
 #include <linux/notifier.h>
@@ -142,9 +141,6 @@ struct ao_cec_dev {
 	spinlock_t cec_reg_lock;
 	struct mutex cec_mutex;
 	struct hrtimer start_bit_check;
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend aocec_suspend_handler;
-#endif
 };
 
 static struct ao_cec_dev *cec_dev;
@@ -2056,7 +2052,8 @@ static const struct file_operations hdmitx_cec_fops = {
 };
 
 /************************ cec high level code *****************************/
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+struct early_suspend aocec_suspend_handler;
 static void aocec_early_suspend(struct early_suspend *h)
 {
 	cec_dev->cec_suspend = CEC_EARLY_SUSPEND;
@@ -2067,9 +2064,9 @@ static void aocec_late_resume(struct early_suspend *h)
 {
 	cec_dev->cec_suspend = 0;
 	CEC_INFO("%s, suspend:%d\n", __func__, cec_dev->cec_suspend);
-
 }
-#endif
+
+#endif //CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 
 static int aml_cec_probe(struct platform_device *pdev)
 {
@@ -2258,13 +2255,14 @@ static int aml_cec_probe(struct platform_device *pdev)
 	}
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	aocec_suspend_handler.level   = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 20;
 	aocec_suspend_handler.suspend = aocec_early_suspend;
 	aocec_suspend_handler.resume  = aocec_late_resume;
 	aocec_suspend_handler.param   = cec_dev;
 	register_early_suspend(&aocec_suspend_handler);
 #endif
+
 	hrtimer_init(&cec_dev->start_bit_check,
 		     CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	cec_dev->start_bit_check.function = cec_line_check;
