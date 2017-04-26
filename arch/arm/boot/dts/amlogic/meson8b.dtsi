@@ -548,8 +548,21 @@
 					bias-pull-up;
 				};
 			};
+			uart_a_pins: uart_a_pins {
+				mux {
+					groups = "uart_tx_a", "uart_rx_a",
+						"uart_cts_a", "uart_rts_a";
+					function = "uart_a";
+				};
+			};
+			uart_b0_pins: uart_b0_pins {
+				mux {
+					groups = "uart_tx_b0", "uart_rx_b0",
+						"uart_cts_b0", "uart_rts_b0";
+					function = "uart_b";
+				};
+			};
 		};
-
 		pinctrl_aobus: pinctrl@c8100084 {
 			compatible = "amlogic,meson8b-aobus-pinctrl";
 			#address-cells = <1>;

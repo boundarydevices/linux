@@ -24,11 +24,28 @@
 
 	aliases {
 		serial0 = &uart_AO;
+		serial1 = &uart_A;
+		serial2 = &uart_B;
 	};
 
 	memory {
 		reg = <0x00000000 0x40000000>;
 		linux,usable-memory = <0x00200000 0x3fe00000>;
+	};
+	bt-dev{
+		compatible = "amlogic, bt-dev";
+		dev_name = "bt-dev";
+		status = "okay";
+		gpio_reset =  <&gpio       GPIOX_20       GPIO_ACTIVE_HIGH>;
+	};
+	wifi{
+		compatible = "amlogic, aml_wifi";
+		dev_name = "aml_wifi";
+		status = "okay";
+		interrupt_pin = <&gpio       GPIOX_21       GPIO_ACTIVE_HIGH>;
+		interrupts = <  0 68 4>;
+		irq_trigger_type = "GPIO_IRQ_HIGH";
+		power_on_pin = <&gpio       GPIOX_11       GPIO_ACTIVE_HIGH>;
 	};
 
 	sdio {
@@ -137,42 +154,6 @@
 			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
 			hw_reset = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
 			card_type = <1>;
-			/* 0:unknown,
-			 * 1:mmc card(include eMMC),
-			 * 2:sd card(include tSD),
-			 * 3:sdio device(ie:sdio-wifi),
-			 * 4:SD combo (IO+mem) card,
-			 * 5:NON sdio device(means sd/mmc card),
-			 * other:reserved
-			 */
-		};
-
-		sdio {
-			status = "okay";
-			port = <3>;
-			/* 0:sdio_a,
-			 * 1:sdio_b,
-			 * 2:sdio_c,
-			 * 3:sdhc_a,
-			 * 4:sdhc_b,
-			 * 5:sdhc_c
-			 */
-			pinname = "sdio";
-			ocr_avail = <0x00200080>;
-			/* 3.3:0x200000, 1.8+3.3:0x00200080 */
-			caps = "MMC_CAP_4_BIT_DATA",
-				 "MMC_CAP_MMC_HIGHSPEED",
-				 "MMC_CAP_SD_HIGHSPEED",
-				 "MMC_CAP_NONREMOVABLE",
-				 "MMC_CAP_UHS_SDR12",
-				 "MMC_CAP_UHS_SDR25",
-				 "MMC_CAP_UHS_SDR50",
-				 "MMC_CAP_UHS_SDR104",
-				 "MMC_PM_KEEP_POWER";
-			f_min = <300000>;
-			f_max = <100000000>;
-			max_req_size = <0x20000>; /* 128KB */
-			card_type = <3>;
 			/* 0:unknown,
 			 * 1:mmc card(include eMMC),
 			 * 2:sd card(include tSD),
@@ -352,6 +333,16 @@
 &uart_AO {
 	status = "okay";
 	pinctrl-0 = <&uart_ao_a_pins>;
+	pinctrl-names = "default";
+};
+&uart_A {
+	status = "okay";
+	pinctrl-0 = <&uart_a_pins>;
+	pinctrl-names = "default";
+};
+&uart_B {
+	status = "okay";
+	pinctrl-0 = <&uart_b0_pins>;
 	pinctrl-names = "default";
 };
 &i2c_a {
