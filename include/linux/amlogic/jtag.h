@@ -20,15 +20,15 @@
 
 #include <linux/types.h>
 
-#define JTAG_STATE_ON		0
-#define JTAG_STATE_OFF		1
+#define AMLOGIC_JTAG_STATE_ON		0
+#define AMLOGIC_JTAG_STATE_OFF		1
 
-#define JTAG_DISABLE		(-1)
-#define JTAG_A53_AO		2
-#define JTAG_A53_EE		3
+#define AMLOGIC_JTAG_DISABLE		(-1)
+#define AMLOGIC_JTAG_AO			2
+#define AMLOGIC_JTAG_EE			3
 
-#define JTAG_ON			0x82000040
-#define JTAG_OFF		0x82000041
+#define AMLOGIC_JTAG_ON			0x82000040
+#define AMLOGIC_JTAG_OFF		0x82000041
 
 
 #ifdef CONFIG_AMLOGIC_JTAG_MESON

@@ -30,6 +30,10 @@ struct aml_jtag_dev {
 	struct platform_device *pdev;
 	struct class cls;
 
+#ifdef CONFIG_MACH_MESON8B
+	void __iomem *base;
+#endif
+
 	struct notifier_block notifier;
 
 	unsigned int select;
