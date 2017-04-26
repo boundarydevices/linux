@@ -333,6 +333,7 @@ static const unsigned int uart_rts_ao_b_pins[]	= { PIN(GPIOAO_3, AO_OFF) };
 static const unsigned int uart_tx_ao_b1_pins[]	= { PIN(GPIOAO_4, AO_OFF) };
 static const unsigned int uart_rx_ao_b1_pins[]	= { PIN(GPIOAO_5, AO_OFF) };
 static const unsigned int spdif_out_1_pins[]	= { PIN(GPIOAO_6, AO_OFF) };
+static const unsigned int spdif_out_2_pins[]	= { PIN(GPIOAO_13, AO_OFF) };
 
 static const unsigned int i2s_in_ch01_pins[]	= { PIN(GPIOAO_6, AO_OFF) };
 static const unsigned int i2s_ao_clk_in_pins[]	= { PIN(GPIOAO_9, AO_OFF) };
@@ -616,7 +617,8 @@ static struct meson_pmx_group meson8b_aobus_groups[] = {
 	GROUP(uart_tx_ao_b1,	0,	24),
 	GROUP(uart_rx_ao_b1,	0,	23),
 	GROUP(spdif_out_1,	0,	16),
-	GROUP(i2s_in_ch01,	0,	13),
+	GROUP(spdif_out_2,	0,	3),
+	GROUP(i2s_in_ch01,	1,	13),
 	GROUP(i2s_ao_clk_in,	0,	15),
 	GROUP(i2s_lr_clk_in,	0,	14),
 };
@@ -808,6 +810,10 @@ static const char * const spdif_1_groups[] = {
 	"spdif_out_1"
 };
 
+static const char * const spdif_2_groups[] = {
+	"spdif_out_2"
+};
+
 static const char * const i2s_groups[] = {
 	"i2s_am_clk_out", "i2s_ao_clk_out", "i2s_lr_clk_out",
 	"i2s_out_01", "i2s_in_ch01", "i2s_ao_clk_in",
@@ -902,6 +908,7 @@ static struct meson_pmx_func meson8b_aobus_functions[] = {
 	FUNCTION(clk_32k),
 	FUNCTION(pwm_c_ao),
 	FUNCTION(spdif_1),
+	FUNCTION(spdif_2),
 	FUNCTION(hdmi_cec),
 };
 

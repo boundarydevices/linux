@@ -271,7 +271,7 @@ static int aml_pcm_dai_probe(struct platform_device *pdev)
 
 	pr_debug("enter %s\n", __func__);
 
-	pin_ctl = devm_pinctrl_get_select(&pdev->dev, "aml_audio_btpcm");
+	pin_ctl = devm_pinctrl_get_select(&pdev->dev, "aml_audio_pcm");
 	if (IS_ERR(pin_ctl)) {
 		pin_ctl = NULL;
 		pr_err("aml audio pcm dai pinmux set error!\n");

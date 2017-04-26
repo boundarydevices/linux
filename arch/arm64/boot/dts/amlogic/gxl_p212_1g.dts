@@ -779,7 +779,7 @@
 	pcm_dai: PCM {
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml-pcm-dai";
-		pinctrl-names = "aml_audio_btpcm";
+		pinctrl-names = "aml_audio_pcm";
 		pinctrl-0 = <&audio_pcm_pins>;
 		clocks =
 			<&clkc CLKID_MPLL0>,
@@ -835,7 +835,7 @@
 		mute_inv;
 		hp_disable;
 		hp_paraments = <800 300 0 5 1>;
-		pinctrl-names = "audio_i2s_pins";
+		pinctrl-names = "aml_audio_i2s";
 		pinctrl-0 = <&audio_i2s_pins>;
 		cpu_list = <&cpudai0 &cpudai1 &cpudai2>;
 		codec_list = <&codec0 &codec1 &codec2>;

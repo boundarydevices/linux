@@ -562,6 +562,16 @@
 					function = "uart_b";
 				};
 			};
+
+			audio_pcm_pins:audio_pcm {
+				mux {
+					groups = "pcm_out_a",
+						"pcm_in_a",
+						"pcm_fs_a",
+						"pcm_clk_a";
+					function = "pcm_a";
+				};
+			};
 		};
 		pinctrl_aobus: pinctrl@c8100084 {
 			compatible = "amlogic,meson8b-aobus-pinctrl";
@@ -606,6 +616,22 @@
 				mux {
 					groups = "hdmi_cec_1";
 					function = "hdmi_cec";
+				};
+			};
+			audio_i2s_pins:audio_i2s {
+				mux {
+					groups = "i2s_am_clk_out",
+						"i2s_ao_clk_out",
+						"i2s_lr_clk_out",
+						"i2s_in_ch01",
+						"i2s_out_01";
+					function = "i2s";
+				};
+			};
+			audio_spdif_pins:audio_spdif {
+				mux {
+					groups = "spdif_out_2";
+					function = "spdif_2";
 				};
 			};
 		};

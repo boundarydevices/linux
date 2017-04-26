@@ -553,7 +553,7 @@ static void aml_pinmux_init(struct snd_soc_card *card)
 #endif
 
 	p_aml_audio->pin_ctl = devm_pinctrl_get_select(
-		card->dev, "audio_i2s_pins");
+		card->dev, "aml_audio_i2s");
 	if (IS_ERR(p_aml_audio->pin_ctl)) {
 		pr_info("%s,aml_pinmux_init error!\n", __func__);
 		return;

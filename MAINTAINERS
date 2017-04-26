@@ -13845,3 +13845,24 @@ AMLOGIC AXG ADD PXP DTS
 M: Yun Cai <yun.cai@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/axg_pxp.dts
 F: arch/arm64/boot/dts/amlogic/mesonaxg.dtsi
+
+AMLOGIC S805 audio
+M: Xing Wang <xing.wang@amlogic.com>
+F: arch/arm/boot/dts/amlogic/meson8b.dtsi
+F: arch/arm/boot/dts/amlogic/meson8b_m200.dts
+F: arch/arm/configs/meson32_defconfig
+F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p400_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxl_p401_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
+F: drivers/amlogic/clk/m8b/clk_misc.c
+F: drivers/amlogic/pinctrl/pinctrl-meson8b.c
+F: include/dt-bindings/clock/meson8b-clkc.h
+F: sound/soc/amlogic/aml_meson.c
+F: sound/soc/amlogic/aml_pcm_dai.c
+F: sound/soc/codecs/amlogic/Kconfig
+F: sound/soc/codecs/amlogic/Makefile
+F: sound/soc/codecs/amlogic/aml_pmu3.c
+F: sound/soc/codecs/amlogic/aml_pmu3.h

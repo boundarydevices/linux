@@ -38,4 +38,13 @@ config AMLOGIC_SND_CODEC_AMLT9015
 		AMLT9015 codec,
 		this codec is internal
 
+config AMLOGIC_SND_CODEC_PMU3
+        bool "Amlogic Audio AML PMU3 codec"
+        depends on AMLOGIC_SND_SOC_CODECS
+    default n
+        help
+                Amlogic Audio codec,
+                AML PMU3 codec,
+                AML PMU3 codec,
+                this codec is internal
 #endif #AMLOGIC_SND_SOC_CODECS
