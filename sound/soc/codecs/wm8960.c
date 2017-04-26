@@ -689,13 +689,12 @@ int wm8960_configure_pll(struct snd_soc_component *component, int freq_in,
 {
 	struct wm8960_priv *wm8960 = snd_soc_component_get_drvdata(component);
 	int sysclk, bclk, lrclk, freq_out;
-	int diff, best_freq_out;
+	int diff;
 	int i, j, k;
 
 	bclk = wm8960->bclk;
 	lrclk = wm8960->lrclk;
 
-	best_freq_out = -EINVAL;
 	*sysclk_idx = *dac_idx = *bclk_idx = -1;
 
 	for (i = 0; i < ARRAY_SIZE(sysclk_divs); ++i) {
@@ -719,8 +718,7 @@ int wm8960_configure_pll(struct snd_soc_component *component, int freq_in,
 			}
 		}
 	}
-
-	return best_freq_out;
+	return -EINVAL;
 }
 static int wm8960_configure_clocking(struct snd_soc_component *component)
 {
