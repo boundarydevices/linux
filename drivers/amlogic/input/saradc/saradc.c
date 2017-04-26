@@ -43,6 +43,17 @@ static char flag_12bit;
 #define SARADC_STATE_BUSY 1
 #define SARADC_STATE_SUSPEND 2
 
+const char *ch7_vol[] = {
+	"gnd",
+	"vdd/4",
+	"vdd/2",
+	"vdd*3/4",
+	"vdd",
+	"unused",
+	"unused",
+	"unused"
+};
+
 struct saradc {
 	struct device *dev;
 	void __iomem *mem_base;
@@ -53,6 +64,7 @@ struct saradc {
 	int ref_nominal;
 	int coef;
 	int state;
+	int ch7_sel;
 };
 
 static struct saradc *gp_saradc;
@@ -209,6 +221,7 @@ static int  saradc_internal_cal(struct saradc *adc)
 cal_end:
 	saradc_info("calibration end: coef=%d\n", adc->coef);
 	setb(adc->mem_base, CAL_CNTL, 7);
+	adc->ch7_sel = 7;
 	return 0;
 }
 
@@ -447,6 +460,38 @@ static ssize_t ch7_show(struct class *cla,
 	return sprintf(buf, "%d\n", get_adc_sample(0, 7));
 }
 
+static ssize_t ch7_mux_show(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	int i;
+	int len = 0;
+	struct saradc *adc = gp_saradc;
+
+	len = sprintf(buf, "current: [%d]%s\n\n",
+			adc->ch7_sel, ch7_vol[adc->ch7_sel]);
+	for (i = 0; i < ARRAY_SIZE(ch7_vol); i++)
+		len += sprintf(buf + len, "%d: %s\n", i, ch7_vol[i]);
+
+	return len;
+}
+
+static ssize_t ch7_mux_store(struct class *cla,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+	struct saradc *adc = gp_saradc;
+
+	if (kstrtoint(buf, 0, &val) != 0)
+		return -EINVAL;
+
+	if (val >= ARRAY_SIZE(ch7_vol))
+		return -EINVAL;
+
+	setb(adc->mem_base, CAL_CNTL, val);
+	adc->ch7_sel = val;
+
+	return count;
+}
 static struct class_attribute saradc_class_attrs[] = {
 		__ATTR_RO(ch0),
 		__ATTR_RO(ch1),
@@ -456,6 +501,7 @@ static struct class_attribute saradc_class_attrs[] = {
 		__ATTR_RO(ch5),
 		__ATTR_RO(ch6),
 		__ATTR_RO(ch7),
+		__ATTR_RW(ch7_mux),
 		__ATTR_NULL
 };
 
