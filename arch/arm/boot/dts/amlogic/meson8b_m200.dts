@@ -71,38 +71,27 @@
 		clocks = <&clkc CLKID_SDIO>;
 		clock-names = "core";
 
-		sd {
+		sdio{
 			status = "okay";
-			port = <1>;
+			port = <0>;
 			/* 0:sdio_a,
-			 * 1:sdio_b,
-			 * 2:sdio_c,
-			 * 3:sdhc_a,
-			 * 4:sdhc_b,
-			 * 5:sdhc_c
-			 */
-			pinname = "sd";
-			ocr_avail = <0x200000>; /**VDD voltage 3.3 ~ 3.4 */
+			* 1:sdio_b,
+			* 2:sdio_c,
+			* 3:sdhc_a,
+			* 4:sdhc_b,
+			* 5:sdhc_c
+			*/
+			pinname = "sdio";
+			ocr_avail = <0x200000>;
+			/*VDD voltage 3.3 ~ 3.4 */
 			caps = "MMC_CAP_4_BIT_DATA",
-				 "MMC_CAP_MMC_HIGHSPEED",
-				 "MMC_CAP_SD_HIGHSPEED";
+					"MMC_CAP_MMC_HIGHSPEED",
+					"MMC_CAP_SD_HIGHSPEED",
+					"MMC_CAP_NONREMOVABLE";
 			f_min = <300000>;
 			f_max = <50000000>;
-			f_max_w = <50000000>;
-			max_req_size = <0x20000>; /*128KB*/
-			gpio_dat3 = <&gpio CARD_4 GPIO_ACTIVE_HIGH>;
-			jtag_pin = <&gpio CARD_0 GPIO_ACTIVE_HIGH>;
-			gpio_cd = <&gpio CARD_6 GPIO_ACTIVE_HIGH>;
-			gpio_ro = <&gpio GPIODV_25 GPIO_ACTIVE_HIGH>;
-			card_type = <5>;
-			/* 0:unknown,
-			 * 1:mmc card(include eMMC),
-			 * 2:sd card(include tSD),
-			 * 3:sdio device(ie:sdio-wifi),
-			 * 4:SD combo (IO+mem) card,
-			 * 5:NON sdio device(means sd/mmc card),
-			 * other:reserved
-			 */
+			max_req_size = <0x20000>;  /**128KB*/
+			card_type = <3>;
 		};
 	};
 
