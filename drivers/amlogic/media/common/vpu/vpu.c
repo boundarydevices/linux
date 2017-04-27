@@ -824,6 +824,12 @@ static void vpu_clktree_init(struct device *dev)
 	else
 		clk_prepare_enable(vpu_clktree);
 
+	vpu_clktree = devm_clk_get(dev, "vpu_intr");
+	if (IS_ERR(vpu_clktree))
+		VPUERR("%s: vpu_intr\n", __func__);
+	else
+		clk_prepare_enable(vpu_clktree);
+
 	VPUPR("%s\n", __func__);
 }
 
