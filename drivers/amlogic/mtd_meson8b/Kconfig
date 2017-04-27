@@ -1,0 +1,19 @@
+#
+# Amlogic NAND device configuration
+#
+
+menu "Meson8B NAND Device Support"
+
+config AMLOGIC_M8B_NAND
+	bool "Meson8B NAND flash device"
+	default n
+	depends on MACH_MESON8B
+	depends on MTD_BLOCK
+	depends on MTD_NAND
+	depends on MTD
+	help
+		Amlogic mtd support config.
+		Support for MTD NAND flash on Amlogic Meson platforms
+		Need open in defconfig, set CONFIG_AMLOGIC_M8B_NAND=y
+		need check
+endmenu

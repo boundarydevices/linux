@@ -54,6 +54,8 @@ obj-$(CONFIG_AMLOGIC_MMC)             += mmc/
 
 obj-$(CONFIG_AMLOGIC_NAND)	+= mtd/
 
+obj-$(CONFIG_AMLOGIC_M8B_NAND)	+= mtd_meson8b/
+
 obj-$(CONFIG_AMLOGIC_VRTC)		+= vrtc/
 
 obj-$(CONFIG_AMLOGIC_SMARTCARD)		+= smartcard/

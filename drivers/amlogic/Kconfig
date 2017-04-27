@@ -60,6 +60,8 @@ source "drivers/amlogic/mmc/Kconfig"
 
 source "drivers/amlogic/mtd/Kconfig"
 
+source "drivers/amlogic/mtd_meson8b/Kconfig"
+
 source "drivers/amlogic/vrtc/Kconfig"
 
 source "drivers/amlogic/smartcard/Kconfig"

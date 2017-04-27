@@ -930,7 +930,7 @@ static inline void nand_set_controller_data(struct nand_chip *chip, void *priv)
 #define NAND_MFR_ATO		0x9b
 
 /* add extra flash manufacturer ID Codes */
-#ifdef CONFIG_AMLOGIC_NAND
+#if defined(CONFIG_AMLOGIC_NAND) || defined(CONFIG_AMLOGIC_M8B_NAND)
 #define NAND_ID_WINBOND		0xef
 #define NAND_ID_ESMT		0xc8
 #endif

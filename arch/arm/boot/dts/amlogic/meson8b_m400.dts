@@ -92,7 +92,7 @@
 	sdhc {
 		compatible = "amlogic, aml_sdhc";
 		dev_name = "aml_sdhc.0";
-		status = "okay";
+		status = "disable";
 		interrupts = <0 78 1>;
 		reg = <0xc1108e00 0x3c>;
 		pinctrl-names = "sdhc_sd_clk_cmd_pins",
@@ -181,6 +181,67 @@
 			 * 5:NON sdio device(means sd/mmc card),
 			 * other:reserved
 			 */
+		};
+	};
+	mtd_nand{
+		compatible = "amlogic, aml_mtd_nand";
+		dev_name = "mtdnand";
+		status = "okay";
+		reg = <0xd0048600 0x24>;
+		/*interrupts = <	0 34 1 >;*/
+		pinctrl-names = "nand_rb_mod","nand_norb_mod", "nand_cs_only";
+		pinctrl-0 = <&all_nand_pins>;
+		pinctrl-1 = <&all_nand_pins>;
+		pinctrl-2 = <&nand_cs_pins>;
+		clocks = <&clkc CLKID_NAND>,
+			<&clkc CLKID_NAND_CORE_COMP>;
+		clock-names = "clk81", "core";
+		device_id = <0>;
+		plat-names = "bootloader","nandnormal";
+		plat-num = <2>;
+		plat-part-0 = <&bootloader>;
+		plat-part-1 = <&nandnormal>;
+		bootloader: bootloader{
+			enable_pad ="ce0";
+			busy_pad = "rb0";
+			timming_mode = "mode5";
+			bch_mode = "bch60_1k";
+			t_rea = <20>;
+			t_rhoh = <15>;
+			chip_num = <1>;
+			part_num = <0>;
+			rb_detect = <1>;
+		};
+		nandnormal: nandnormal{
+			enable_pad ="ce0","ce1";
+			busy_pad = "rb0","rb1";
+			timming_mode = "mode5";
+			bch_mode = "bch60_1k";
+			plane_mode = "twoplane";
+			t_rea = <20>;
+			t_rhoh = <15>;
+			chip_num = <2>;
+			part_num = <3>;
+			partition = <&nand_partitions>;
+			rb_detect = <1>;
+		};
+		nand_partitions:nand_partition{
+			boot{
+				offset=<0x0 0x0>;
+				size=<0x0 0x900000>;
+			};
+			upgrade{
+				offset=<0x0 0x0>;
+				size=<0x0 0x9800000>;
+			};
+			boot1{
+				offset=<0x0 0x0>;
+				size=<0x0 0x900000>;
+			};
+			userdata{
+				offset=<0xffffffff 0xffffffff>;
+				size=<0x0 0x0>;
+			};
 		};
 	};
 	cpufreq-meson{

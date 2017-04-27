@@ -13866,3 +13866,7 @@ F: sound/soc/codecs/amlogic/Kconfig
 F: sound/soc/codecs/amlogic/Makefile
 F: sound/soc/codecs/amlogic/aml_pmu3.c
 F: sound/soc/codecs/amlogic/aml_pmu3.h
+
+AMLOGIC MTD MESON8B DRIVER
+M:	Yonghui Yu <yonghui.yu@amlogic.com>
+F:	drivers/amlogic/mtd_meson8b/

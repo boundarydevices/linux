@@ -564,6 +564,7 @@
 					bias-pull-up;
 				};
 			};
+
 			uart_a_pins: uart_a_pins {
 				mux {
 					groups = "uart_tx_a", "uart_rx_a",
@@ -578,7 +579,6 @@
 					function = "uart_b";
 				};
 			};
-
 			audio_pcm_pins:audio_pcm {
 				mux {
 					groups = "pcm_out_a",
@@ -586,6 +586,29 @@
 						"pcm_fs_a",
 						"pcm_clk_a";
 					function = "pcm_a";
+					};
+				};
+			all_nand_pins:all_nand_pins {
+				mux {
+					groups = "nand_io",
+						"nand_io_rb0",
+						"nand_ale",
+						"nand_cle",
+						"nand_wen_clk",
+						"nand_ren_clk",
+						"nand_io_ce0",
+						"nand_io_ce1";
+					function = "nand";
+					input-enable;
+				};
+			};
+			nand_cs_pins:nand_cs_pins {
+				mux {
+					groups = "nand_io_ce0",
+						"nand_io_ce1";
+					function = "nand";
+					input-enable;
+					bias-pull-up;
 				};
 			};
 		};
