@@ -238,8 +238,18 @@ bool force_device_mode;
 module_param_named(otg_device, force_device_mode,
 		bool, S_IRUGO | S_IWUSR);
 
-MODULE_PARM_DESC(otg_device, "set otg to force device mode" " ");
-
+static char otg_mode_string[2] = "0";
+static int __init force_otg_mode(char *s)
+{
+	if (s != NULL)
+		sprintf(otg_mode_string, "%s", s);
+	if (strcmp(otg_mode_string, "0") == 0)
+		force_device_mode = 0;
+	else
+		force_device_mode = 1;
+	return 0;
+}
+__setup("otg_device=", force_otg_mode);
 
 static u64 dwc2_dmamask = DMA_BIT_MASK(32);
 
@@ -898,6 +908,8 @@ static void usb_early_resume(struct early_suspend *h)
 }
 #endif
 static const struct of_device_id dwc_otg_dt_match[] = {
+	{	.compatible	= "amlogic, dwc2",
+	},
 	{	.compatible	= "amlogic,dwc2",
 	},
 	{},
@@ -1439,6 +1451,9 @@ static const struct dev_pm_ops dwc2_dev_pm_ops = {
 #ifdef CONFIG_OF
 static const struct of_device_id of_dwc2_match[] = {
 	{
+		.compatible = "amlogic, dwc2"
+	},
+	{
 		.compatible = "amlogic,dwc2"
 	},
 	{ },
@@ -1457,7 +1472,12 @@ static struct platform_driver dwc_otg_driver = {
 	},
 };
 
-module_platform_driver(dwc_otg_driver);
+
+static int __init dwc_otg_init(void)
+{
+	return platform_driver_register(&dwc_otg_driver);
+}
+late_initcall(dwc_otg_init);
 
 MODULE_DESCRIPTION(DWC_DRIVER_DESC);
 MODULE_AUTHOR("Synopsys Inc.");
