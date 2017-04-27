@@ -2654,7 +2654,8 @@ exit:
 	return r;
 }
 
-static int rmem_fb_device_init(struct reserved_mem *rmem, struct device *dev)
+static int __init
+rmem_fb_device_init(struct reserved_mem *rmem, struct device *dev)
 {
 	if (!of_get_flat_dt_prop(rmem->fdt_node, "no-map", NULL)) {
 		fb_map_flag = true;

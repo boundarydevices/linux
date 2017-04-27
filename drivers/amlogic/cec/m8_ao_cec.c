@@ -1734,7 +1734,7 @@ static void aocec_late_resume(struct early_suspend *h)
 }
 #endif
 
-static __init int aml_cec_probe(struct platform_device *pdev)
+static int aml_cec_probe(struct platform_device *pdev)
 {
 	struct device *cdev;
 #ifdef CONFIG_OF
@@ -1935,7 +1935,7 @@ static const struct dev_pm_ops aml_cec_pm = {
 #endif
 
 #ifdef CONFIG_OF
-static const struct of_device_id aml_cec_dt_match[] __initconst = {
+static const struct of_device_id aml_cec_dt_match[] = {
 	{
 		.compatible = "amlogic, amlogic-aocec",
 	},

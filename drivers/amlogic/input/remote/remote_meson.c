@@ -613,6 +613,7 @@ static int remote_resume(struct device *dev)
 	}
 	spin_unlock_irqrestore(&chip->slock, flags);
 
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	if (get_resume_method() == REMOTE_WAKEUP) {
 		input_event(chip->r_dev->input_device,
 		    EV_KEY, KEY_POWER, 1);
@@ -628,6 +629,7 @@ static int remote_resume(struct device *dev)
 		input_event(chip->r_dev->input_device, EV_KEY, 133, 0);
 		input_sync(chip->r_dev->input_device);
 	}
+#endif
 
 	irq_set_affinity(chip->irqno, cpumask_of(chip->irq_cpumask));
 	enable_irq(chip->irqno);

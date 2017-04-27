@@ -278,7 +278,7 @@ static struct cpufreq_driver meson_cpufreq_driver = {
 	.resume  = meson_cpufreq_resume
 };
 
-static int __init meson_cpufreq_probe(struct platform_device *pdev)
+static int meson_cpufreq_probe(struct platform_device *pdev)
 {
 	int err = 0;
 	int target, size = 0;
