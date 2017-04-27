@@ -136,9 +136,6 @@ struct ao_cec_dev {
 	spinlock_t cec_reg_lock;
 	struct mutex cec_mutex;
 	struct hrtimer start_bit_check;
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-	struct early_suspend aocec_suspend_handler;
-#endif
 };
 
 static struct ao_cec_dev *cec_dev;
@@ -590,7 +587,7 @@ int cec_ll_tx(const unsigned char *msg, unsigned char len)
 	mutex_lock(&cec_dev->cec_mutex);
 	/* make sure physical address is valid before send */
 	if (len >= 2 && msg[1] == CEC_OC_REPORT_PHYSICAL_ADDRESS)
-		check_physical_addr_valid(MAX_INT);
+		check_physical_addr_valid(20);
 
 try_again:
 	reinit_completion(&cec_dev->tx_ok);
@@ -749,6 +746,7 @@ static void cec_key_report(int suspend)
 	input_sync(cec_dev->remote_cec_dev);
 	input_event(cec_dev->remote_cec_dev, EV_KEY, KEY_POWER, 0);
 	input_sync(cec_dev->remote_cec_dev);
+	pm_wakeup_event(cec_dev->dbg_dev, 2000);
 	if (!suspend)
 		CEC_INFO("== WAKE UP BY CEC ==\n")
 	else
@@ -1720,6 +1718,7 @@ static const struct file_operations hdmitx_cec_fops = {
 
 /************************ cec high level code *****************************/
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+struct early_suspend aocec_suspend_handler;
 static void aocec_early_suspend(struct early_suspend *h)
 {
 	cec_dev->cec_suspend = CEC_EARLY_SUSPEND;
@@ -1894,6 +1893,8 @@ static int aml_cec_probe(struct platform_device *pdev)
 	aocec_suspend_handler.param   = cec_dev;
 	register_early_suspend(&aocec_suspend_handler);
 #endif
+	device_init_wakeup(cec_dev->dbg_dev, 1);
+
 	hrtimer_init(&cec_dev->start_bit_check,
 		     CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	cec_dev->start_bit_check.function = cec_line_check;

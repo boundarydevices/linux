@@ -55,8 +55,9 @@
 #include <linux/reboot.h>
 #include <linux/of_address.h>
 #include <linux/random.h>
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 #include <linux/amlogic/pm.h>
-
+#endif
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/cec_common.h>
 #include <linux/notifier.h>
@@ -1079,6 +1080,7 @@ static void cec_key_report(int suspend)
 	input_sync(cec_dev->remote_cec_dev);
 	input_event(cec_dev->remote_cec_dev, EV_KEY, KEY_POWER, 0);
 	input_sync(cec_dev->remote_cec_dev);
+	pm_wakeup_event(cec_dev->dbg_dev, 2000);
 	if (!suspend)
 		CEC_INFO("== WAKE UP BY CEC ==\n")
 	else
@@ -2262,6 +2264,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 	aocec_suspend_handler.param   = cec_dev;
 	register_early_suspend(&aocec_suspend_handler);
 #endif
+	device_init_wakeup(cec_dev->dbg_dev, 1);
 
 	hrtimer_init(&cec_dev->start_bit_check,
 		     CLOCK_MONOTONIC, HRTIMER_MODE_REL);
@@ -2312,12 +2315,13 @@ static void aml_cec_pm_complete(struct device *dev)
 		cec_key_report(0);
 }
 
-static int aml_cec_suspend_noirq(struct device *dev)
+static int aml_cec_suspend_late(struct device *dev)
 {
 	struct pinctrl *p;
 	struct pinctrl_state *s;
 	int ret;
 
+	CEC_INFO("%s!\n", __func__);
 	if (cec_dev->ee_cec) {
 		p = devm_pinctrl_get(cec_dev->dbg_dev);
 		if (IS_ERR(p))
@@ -2332,11 +2336,11 @@ static int aml_cec_suspend_noirq(struct device *dev)
 	return 0;
 }
 
-static int aml_cec_resume_noirq(struct device *dev)
+static int aml_cec_resume_early(struct device *dev)
 {
 	struct pinctrl *p;
 
-	CEC_INFO("cec resume noirq!\n");
+	CEC_INFO("%s!\n", __func__);
 	cec_dev->power_status = TRANS_STANDBY_TO_ON;
 
 	/* reselect pin mux if resume */
@@ -2351,8 +2355,8 @@ static int aml_cec_resume_noirq(struct device *dev)
 static const struct dev_pm_ops aml_cec_pm = {
 	.prepare  = aml_cec_pm_prepare,
 	.complete = aml_cec_pm_complete,
-	.suspend_noirq = aml_cec_suspend_noirq,
-	.resume_noirq = aml_cec_resume_noirq,
+	.suspend_late = aml_cec_suspend_late,
+	.resume_early = aml_cec_resume_early,
 };
 #endif
 
