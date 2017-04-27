@@ -1,5 +1,3 @@
-comment "Amlogic Bt Rfkill Driver"
-
 config AMLOGIC_BT_DEVICE
     bool "BT Device support"
     depends on BT && RFKILL

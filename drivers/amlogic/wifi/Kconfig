@@ -1,6 +1,4 @@
-comment "Amlogic Wifi Driver"
-
-menuconfig AMLOGIC_WIFI
+config AMLOGIC_WIFI
 	bool "WiFi support"
 	default n
 	help
