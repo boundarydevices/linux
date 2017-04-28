@@ -472,6 +472,15 @@
 		};
 	};
 	/* END OF AUDIO board specific */
+
+	sysled {
+		compatible = "amlogic, sysled";
+		dev_name = "sysled";
+		status = "disabled";
+		led_gpio = <&gpio_ao GPIOAO_1 GPIO_ACTIVE_HIGH>;
+		led_active_low = <1>;
+	};
+
 };
 
 &uart_AO {
