@@ -25,14 +25,11 @@
 #include <linux/uaccess.h>
 #include <linux/init.h>
 #include <linux/module.h>
-#include <dt-bindings/clock/amlogic,gxl-clkc.h>
 
 #include "clkc.h"
-#include "gxl.h"
-
 
 static struct dentry *debugfs_root;
-
+#define NR_CLKS 221
 void usage(void)
 {
 	pr_info("\nclk_test:\n");

@@ -399,6 +399,136 @@ int gxm_clk_measure(struct seq_file *s, void *what, unsigned int index)
 	return 0;
 }
 
+int axg_clk_measure(struct seq_file *s, void *what, unsigned int index)
+{
+	static const char * const clk_table[] = {
+		[109] = "audio_locker_in   ",
+		[108] = "audio_locker_out  ",
+		[107] = "pcie_refclk_p     ",
+		[106] = "pcie_refclk_n     ",
+		[105] = "audio_mclk_a      ",
+		[104] = "audio_mclk_b      ",
+		[103] = "audio_mclk_c      ",
+		[102] = "audio_mclk_d      ",
+		[101] = "audio_mclk_e      ",
+		[100] = "audio_mclk_f      ",
+		[99] = "audio_sclk_a       ",
+		[98] = "audio_sclk_b       ",
+		[97] = "audio_sclk_c       ",
+		[96] = "audio_sclk_d       ",
+		[95] = "audio_sclk_e       ",
+		[94] = "audio_sclk_f       ",
+		[93] = "audio_lrclk_a      ",
+		[92] = "audio_lrclk_b      ",
+		[91] = "audio_lrclk_c      ",
+		[90] = "audio_lrclk_d      ",
+		[89] = "audio_lrclk_e      ",
+		[88] = "audio_lrclk_f      ",
+		[87] = "audio_spdifint_clk ",
+		[86] = "audio_spdifout_clk ",
+		[85] = "audio_pdm_sysclk   ",
+		[84] = "audio_resample_clk ",
+		[83] = "0                  ",
+		[82] = "Cts_ge2d_clk       ",
+		[81] = "Cts_vapbclk        ",
+		[80] = "Rng_ring_osc_clk[3]",
+		[79] = "Rng_ring_osc_clk[2]",
+		[78] = "Rng_ring_osc_clk[1]",
+		[77] = "Rng_ring_osc_clk[0]",
+		[76] = "tdmin_lb_sclk      ",
+		[75] = "tdmin_lb_lrclk     ",
+		[74] = "wifi_beacon        ",
+		[73] = "cts_pwm_C_clk      ",
+		[72] = "cts_pwm_D_clk      ",
+		[71] = "audio_slv_sclk_a   ",
+		[70] = "audio_slv_sclk_b   ",
+		[69] = "audio_slv_sclk_c   ",
+		[68] = "audio_slv_lrclk_a  ",
+		[67] = "audio_slv_lrclk_b  ",
+		[66] = "audio_slv_lrclk_c  ",
+		[65] = "0                  ",
+		[64] = "0                  ",
+		[63] = "0                  ",
+		[62] = "0                  ",
+		[61] = "gpio_clk_msr       ",
+		[60] = "0                  ",
+		[59] = "0                  ",
+		[58] = "0                  ",
+		[57] = "0                  ",
+		[56] = "0                  ",
+		[55] = "0	                 ",
+		[54] = "0                  ",
+		[53] = "0	                 ",
+		[52] = "sd_emmc_clk_B		   ",
+		[51] = "sd_emmc_clk_C      ",
+		[50] = "mp3_clk_out			   ",
+		[49] = "mp2_clk_out			   ",
+		[48] = "mp1_clk_out			   ",
+		[47] = "ddr_dpll_pt_clk		 ",
+		[46] = "cts_vpu_clk			   ",
+		[45] = "cts_pwm_A_clk		   ",
+		[44] = "cts_pwm_B_clk		   ",
+		[43] = "fclk_div5			     ",
+		[42] = "mp0_clk_out			   ",
+		[41] = "mod_eth_rx_clk_rmii",
+		[40] = "mod_eth_tx_clk     ",
+		[39] = "0	                 ",
+		[38] = "0	                 ",
+		[37] = "0	                 ",
+		[36] = "0	                 ",
+		[35] = "0	                 ",
+		[34] = "0	                 ",
+		[33] = "0	                 ",
+		[32] = "0	                 ",
+		[31] = "MPLL_CLK_TEST_OUT	 ",
+		[30] = "0	                 ",
+		[29] = "0	                 ",
+		[28] = "Cts_sar_adc_clk		 ",
+		[27] = "0	                 ",
+		[26] = "0	                 ",
+		[25] = "0	                 ",
+		[24] = "0	                 ",
+		[23] = "mmc_clk            ",
+		[22] = "0	                 ",
+		[21] = "0	                 ",
+		[20] = "rtc_osc_clk_out    ",
+		[19] = "0	                 ",
+		[18] = "sys_cpu_clk_div16  ",
+		[17] = "sys_pll_div16      ",
+		[16] = "0	                 ",
+		[15] = "0	                 ",
+		[14] = "0	                 ",
+		[13] = "0	                 ",
+		[12] = "0	                 ",
+		[11] = "0	                 ",
+		[10] = "0	                 ",
+		[9] = "0	                 ",
+		[8] = "0	                 ",
+		[7] = "clk81               ",
+		[6] = "0	                 ",
+		[5] = "gp1_pll_clk         ",
+		[4] = "gp0_pll_clk         ",
+		[3] = "A53_ring_osc_clk    ",
+		[2] = "am_ring_osc_clk_out_ee[2]",
+		[1] = "am_ring_osc_clk_out_ee[1]",
+		[0] = "am_ring_osc_clk_out_ee[0]",
+	};
+	int  i;
+	int len = sizeof(clk_table)/sizeof(char *);
+
+	if (index  == 0xff) {
+		for (i = 0; i < len; i++)
+			seq_printf(s, "[%2d][%10d]%s\n",
+				   i, gxbb_clk_util_clk_msr(i),
+					clk_table[i]);
+		return 0;
+	}
+	seq_printf(s, "[%10d]%s\n", gxbb_clk_util_clk_msr(index),
+		   clk_table[index]);
+	clk_msr_index = 0xff;
+	return 0;
+}
+
 int  meson_clk_measure(unsigned int clk_mux)
 {
 	int clk_val;
@@ -406,14 +536,16 @@ int  meson_clk_measure(unsigned int clk_mux)
 	switch (get_cpu_type()) {
 	case MESON_CPU_MAJOR_ID_M8B:
 		clk_val = m8b_clk_util_clk_msr(clk_mux);
+		break;
 	case MESON_CPU_MAJOR_ID_GXL:
 	case MESON_CPU_MAJOR_ID_GXM:
+	case MESON_CPU_MAJOR_ID_AXG:
 		clk_val = gxbb_clk_util_clk_msr(clk_mux);
-	break;
+		break;
 	default:
 		pr_info("Unsupported chip clk measure\n");
 		clk_val = 0;
-	break;
+		break;
 	}
 	return clk_val;
 
@@ -428,6 +560,8 @@ static int dump_clk(struct seq_file *s, void *what)
 		gxl_clk_measure(s, what, clk_msr_index);
 	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
 		gxm_clk_measure(s, what, clk_msr_index);
+	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		axg_clk_measure(s, what, clk_msr_index);
 	return 0;
 }
 

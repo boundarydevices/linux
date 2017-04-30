@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/clk/gxl.h
+ * drivers/amlogic/clk/gxl/gxl.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

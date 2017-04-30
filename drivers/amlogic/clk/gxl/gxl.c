@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/clk/gxl.c
+ * drivers/amlogic/clk/gxl/gxl.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -23,7 +23,7 @@
 #include <linux/slab.h>
 #include <dt-bindings/clock/amlogic,gxl-clkc.h>
 
-#include "clkc.h"
+#include "../clkc.h"
 #include "gxl.h"
 
 DEFINE_SPINLOCK(clk_lock);

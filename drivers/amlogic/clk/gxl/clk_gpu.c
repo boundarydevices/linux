@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/clk/clk_gpu.c
+ * drivers/amlogic/clk/gxl/clk_gpu.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -23,7 +23,7 @@
 #include <linux/slab.h>
 #include <dt-bindings/clock/amlogic,gxl-clkc.h>
 
-#include "clkc.h"
+#include "../clkc.h"
 #include "gxl.h"
 
 const char *gpu_parent_names[] = { "xtal", "gp0", "mpll2", "mpll1", "fclk_div7",

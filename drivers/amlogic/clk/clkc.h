@@ -102,6 +102,8 @@ struct meson_clk_mpll {
 	/* FIXME ssen gate control? */
 	u8 sdm_en;
 	u8 en_dds;
+	u16 top_misc_reg; /*after txlx*/
+	u16 top_misc_bit;
 	spinlock_t *lock;
 };
 
@@ -133,4 +135,7 @@ void amlogic_init_sdemmc(void);
 void amlogic_init_gpu(void);
 void amlogic_init_media(void);
 void amlogic_init_misc(void);
+void axg_amlogic_init_sdemmc(void);
+void axg_amlogic_init_media(void);
+void axg_amlogic_init_misc(void);
 #endif /* __CLKC_H */

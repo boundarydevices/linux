@@ -122,7 +122,14 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 			writel(readl(mpll->base + p->reg_off - 0x3c) |
 				0x1<<14, mpll->base + p->reg_off - 0x3c);
 		writel(reg, mpll->base + p->reg_off);
+		/* mpll top misc for cpu after txlx */
+		if (mpll->top_misc_reg)
+			writel(readl(mpll->base + (u64)(mpll->top_misc_reg)) |
+			(1<<mpll->top_misc_bit),
+			(mpll->base + (u64)(mpll->top_misc_reg)));
 		udelay(100);
+		pr_debug("%s: mpll->base+mpll->top_misc_reg: 0x%x\n",
+			__func__, readl(mpll->base+(u64)mpll->top_misc_reg));
 	}
 
 	if (mpll->lock)

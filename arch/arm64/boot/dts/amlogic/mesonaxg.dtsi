@@ -21,33 +21,64 @@
 	cpus:cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
-		#cooling-cells = <2>; /* min followed by max */
 
-		cpu0:cpu@0 {
+		cpu-map {
+			cluster0:cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+				core1 {
+					cpu = <&CPU1>;
+				};
+				core2 {
+					cpu = <&CPU2>;
+				};
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+		};
+		CPU0:cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
+			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
 
-		cpu1:cpu@1 {
+		CPU1:cpu@1 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
+			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
-		cpu2:cpu@2 {
+		CPU2:cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
+			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
 
-		cpu3:cpu@3 {
+		CPU3:cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
+			clocks = <&scpi_dvfs 0>;
+			clock-names = "cpu-cluster.0";
+			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			/*cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;*/
 		};
 
 	};
@@ -90,7 +121,7 @@
 	};
 
 	psci {
-		compatible = "arm,psci";
+		compatible = "arm,psci-0.2";
 		method = "smc";
 	};
 
@@ -100,6 +131,29 @@
 		in_base_func = <0x82000020>;
 		out_base_func = <0x82000021>;
 		reserve_mem_size = <0x00300000>;
+	};
+
+	mailbox: mhu@c883c400 {
+		compatible = "amlogic, meson_mhu";
+		reg = <0x0 0xff63c400 0x0 0x4c>,   /* MHU registers */
+		      <0x0 0xfffd3000 0x0 0x800>;   /* Payload area */
+		interrupts = <0 209 1>,   /* low priority interrupt */
+			     <0 210 1>;   /* high priority interrupt */
+		#mbox-cells = <1>;
+		mbox-names = "cpu_to_scp_low", "cpu_to_scp_high";
+		mboxes = <&mailbox 0 &mailbox 1>;
+	};
+
+	scpi_clocks {
+		compatible = "arm, scpi-clks";
+
+		scpi_dvfs: scpi_clocks@0 {
+			compatible = "arm, scpi-clk-indexed";
+			#clock-cells = <1>;
+			clock-indices = <0>;
+			clock-output-names = "vcpu";
+		};
+
 	};
 
 	cpu_iomap {
@@ -133,18 +187,60 @@
 		status = "okay";
 		cpuinfo_cmd = <0x82000044>;
 	};
-
-
-	cpu_version {
-		reg=<0x0 0xff800220 0x0 0x4>;
+	aml_reboot{
+		compatible = "aml, reboot";
+		sys_reset = <0x84000009>;
+		sys_poweroff = <0x84000008>;
 	};
 
-	meson_clk_msr {
-		compatible = "amlogic, gxl_measure";
-		reg = <0x0 0xffd18004 0x0 0x4
-		       0x0 0xffd1800c 0x0 0x4>;
-	};
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
 
+		cbus: cbus@ffd00000 {
+			compatible = "simple-bus";
+			reg = <0x0 0xffd00000 0x0 0x25000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0x0 0x0 0xffd00000 0x0 0x25000>;
+
+			meson_clk_msr {
+				compatible = "amlogic, gxl_measure";
+				reg = <0x0 0x18004 0x0 0x4
+		       0x0 0x1800c 0x0 0x4>;
+			};
+		}; /* end of cbus */
+
+		aobus: aobus@ff800000 {
+			compatible = "simple-bus";
+			reg = <0x0 0xff800000 0x0 0xa000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0x0 0x0 0xff800000 0x0 0xa000>;
+
+			cpu_version {
+				reg=<0x0 0x220 0x0 0x4>;
+			};
+		};/* end of aobus */
+
+		hiubus: hiubus@ff600000 {
+			compatible = "simple-bus";
+			reg = <0x0 0xff600000 0x0 0x4c000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0x0 0x0 0xff600000 0x0 0x4c000>;
+
+			clkc: clock-controller@0 {
+				compatible = "amlogic,axg-clkc";
+				#clock-cells = <1>;
+				reg = <0x0 0x3c000 0x0 0x320>;
+			};
+		};/* end of hiubus*/
+
+
+	}; /* end of soc*/
 
 };/* end of / */
 
