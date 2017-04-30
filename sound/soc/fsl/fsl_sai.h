@@ -265,6 +265,7 @@ struct fsl_sai {
 	bool slave_mode[2];
 	bool is_lsb_first;
 	bool is_dsp_mode;
+	bool i2s_xtor;
 	bool synchronous[2];
 	unsigned int dataline[2];
 
