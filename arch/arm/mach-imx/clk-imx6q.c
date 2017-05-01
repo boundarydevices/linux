@@ -296,7 +296,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	struct device_node *np;
 	void __iomem *base;
 	int i, irq;
-	u32 reg;
+	u32 reg, periph_sel;
 
 	clk[dummy] = imx_clk_fixed("dummy", 0);
 	clk[ckil] = imx_obtain_fixed_clock("ckil", 0);
@@ -637,16 +637,24 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	writel_relaxed(3 << CCM_CCGR_OFFSET(7) |
 		3 << CCM_CCGR_OFFSET(6) |
 		3 << CCM_CCGR_OFFSET(4), base + 0x78);
-	writel_relaxed(1 << CCM_CCGR_OFFSET(0), base + 0x7c);
+	writel_relaxed(1 << CCM_CCGR_OFFSET(0) |
+			3 << CCM_CCGR_OFFSET(12) |
+			3 << CCM_CCGR_OFFSET(13), base + 0x7c);
 	writel_relaxed(0, base + 0x80);
 
 	/* Make sure PFDs are disabled at boot. */
+	periph_sel = (readl_relaxed(ccm_base + 0x18) >> 18) & 3;
+
 	reg = readl_relaxed(anatop_base + 0x100);
+	reg |= 0x80008000;
 	/* Cannot disable pll2_pfd2_396M, as it is the MMDC clock in iMX6DL */
-	if (cpu_is_imx6dl())
-		reg |= 0x80008080;
-	else
-		reg |= 0x80808080;
+	if (periph_sel == 2) {
+		reg |= 0x800000;
+	} else {
+		reg |= 0x80;
+		if (!periph_sel)
+			reg |= 0x800000;
+	}
 	writel_relaxed(reg, anatop_base + 0x100);
 
 	/* Disable PLL3 PFDs. */
