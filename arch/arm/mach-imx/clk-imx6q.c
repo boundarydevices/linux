@@ -330,15 +330,20 @@ static void init_ldb_clks(struct device_node *np)
 static void disable_anatop_clocks(void)
 {
 	u32 reg;
+	struct clk *parent = clk_get_parent(clk[IMX6QDL_CLK_PERIPH_PRE]);
 
 	/* Make sure PFDs are disabled at boot. */
 	reg = readl_relaxed(anatop_base + 0x100);
+	reg |= 0x00008000;				/* Disable PFD1 */
+
 	/* Cannot gate pll2_pfd2_396m if its the parent of MMDC clock */
-	if (clk_get_parent(clk[IMX6QDL_CLK_PERIPH_PRE]) ==
-	    clk[IMX6QDL_CLK_PLL2_PFD2_396M])
-		reg |= 0x00008080;
-	else
-		reg |= 0x00808080;
+	if (parent == clk[IMX6QDL_CLK_PLL2_PFD0_352M]) {
+		reg |= 0x00800000;			/* Disable PFD2 */
+	} else {
+		reg |= 0x00000080;			/* Disable PFD0 */
+		if (parent == clk[IMX6QDL_CLK_PLL2_BUS])
+			reg |= 0x00800000;		/* Disable PFD2 */
+	}
 	writel_relaxed(reg, anatop_base + 0x100);
 
 	/* Disable PLL3 PFDs. */
