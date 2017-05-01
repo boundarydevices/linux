@@ -182,6 +182,7 @@ struct meson_pinctrl_data {
 	const struct pinctrl_pin_desc *pins;
 	struct meson_pmx_group *groups;
 	struct meson_pmx_func *funcs;
+	const struct meson_desc_pin *meson_pins;
 	struct meson_domain_data *domain_data;
 	unsigned int num_pins;
 	unsigned int num_groups;
@@ -189,6 +190,7 @@ struct meson_pinctrl_data {
 };
 
 struct meson_pinctrl_private {
+	unsigned char pinmux_type;
 	struct meson_pinctrl_data *pinctrl_data;
 	struct irq_chip *irq_chip;
 };
@@ -201,7 +203,35 @@ struct meson_pinctrl {
 	struct meson_domain *domain;
 };
 
+struct meson_desc_function {
+	const char *name;
+	unsigned char muxval;
+};
+
+struct meson_desc_pin {
+	struct pinctrl_pin_desc pin;
+	unsigned int reg;
+	unsigned int bit;
+	struct meson_desc_function *functions;
+};
+
+/* enum PINMUX_TYPE - pinmux type
+ *
+ *@PINMUX_V1: use more bits that maybe from different registers to choose
+ * function for per gpio
+ *@PINMUX_V2: use continuous 4bit to choose function for per gpio
+ *
+ */
+enum PINMUX_TYPE {
+	PINMUX_V1 = 0,
+	PINMUX_V2,
+	PINMUX_MAX,
+};
+
 #define PIN(x, b)	(b + x)
+#define MESON_MUX_V2_MASK(x) (0xf << x)
+#define MESON_MUX_V2_VAL(y, x) ((y & 0xf) << x)
+#define MESON_PIN(x, b) PINCTRL_PIN(PIN(x, b), #x)
 
 #define GROUP(grp, r, b)						\
 	{								\
@@ -241,7 +271,20 @@ struct meson_pinctrl {
 		},							\
 	}
 
-#define MESON_PIN(x, b) PINCTRL_PIN(PIN(x, b), #x)
+#define MESON_FUNCTION(_val, _name)				\
+	{							\
+		.name = _name,					\
+		.muxval = _val,					\
+	}
+
+#define MESON_PINCTRL_PIN(_pin, r, b, ...)		\
+	{							\
+		.pin = _pin,					\
+		.reg = r,				\
+		.bit = b,				\
+		.functions = (struct meson_desc_function[]){	\
+			__VA_ARGS__, { } },			\
+	}
 
 extern struct meson_pinctrl_data meson8_cbus_pinctrl_data;
 extern struct meson_pinctrl_data meson8_aobus_pinctrl_data;
@@ -249,3 +292,5 @@ extern struct meson_pinctrl_data meson8b_cbus_pinctrl_data;
 extern struct meson_pinctrl_data meson8b_aobus_pinctrl_data;
 extern struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data;
 extern struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data;
+extern struct meson_pinctrl_data meson_axg_periphs_pinctrl_data;
+extern struct meson_pinctrl_data meson_axg_aobus_pinctrl_data;

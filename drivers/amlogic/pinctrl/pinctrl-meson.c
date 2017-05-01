@@ -65,6 +65,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include "../../pinctrl/core.h"
 #include "../../pinctrl/pinctrl-utils.h"
 #include "pinctrl-meson.h"
@@ -217,7 +218,7 @@ static void meson_pmx_disable_other_groups(struct meson_pinctrl *pc,
 	}
 }
 
-static int meson_pmx_set_mux(struct pinctrl_dev *pcdev,
+static int meson_pmx_v1_set_mux(struct pinctrl_dev *pcdev,
 	unsigned int func_num, unsigned int group_num)
 {
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
@@ -282,12 +283,77 @@ static int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
 	return 0;
 }
 
-static const struct pinmux_ops meson_pmx_ops = {
-	.set_mux = meson_pmx_set_mux,
+static const struct pinmux_ops meson_pmx_v1_ops = {
+	.set_mux = meson_pmx_v1_set_mux,
 	.get_functions_count = meson_pmx_get_funcs_count,
 	.get_function_name = meson_pmx_get_func_name,
 	.get_function_groups = meson_pmx_get_groups,
 	.gpio_request_enable = meson_pmx_request_gpio,
+};
+
+static struct meson_desc_function *
+meson_pinctrl_desc_find_function_by_name(struct meson_pinctrl *pc,
+					 const char *pin_name,
+					 const char *func_name)
+{
+	int i;
+	const struct meson_desc_pin *pin;
+	struct meson_desc_function *func;
+
+	for (i = 0; i < pc->data->num_pins; i++) {
+		pin = pc->data->meson_pins + i;
+		if (!strcmp(pin->pin.name, pin_name)) {
+			func = pin->functions;
+			while (func->name) {
+				if (!strcmp(func->name, func_name))
+					return func;
+
+				func++;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+static int meson_pmx_v2_set_mux(struct pinctrl_dev *pcdev,
+	unsigned int func_num, unsigned int group_num)
+{
+	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
+	struct meson_pmx_func *func = &pc->data->funcs[func_num];
+	struct meson_pmx_group *group = &pc->data->groups[group_num];
+	struct meson_domain *domain = pc->domain;
+	struct meson_desc_function *desc;
+	int ret = 0;
+
+	dev_dbg(pc->dev, "enable function %s, group %s\n", func->name,
+		group->name);
+
+	desc = meson_pinctrl_desc_find_function_by_name(pc,
+							group->name,
+							func->name);
+	if (!desc)
+		return -EINVAL;
+
+	dev_dbg(pc->dev,
+		"group->reg = 0x%x; group->bit = %d; desc->muxval = %d\n",
+		group->reg, group->bit, desc->muxval);
+
+	/* Function 0 (GPIO) doesn't need any additional setting */
+	if (func_num && (group->bit != 0xff)) {
+		ret = regmap_update_bits(domain->reg_mux, group->reg * 4,
+				MESON_MUX_V2_MASK(group->bit),
+				MESON_MUX_V2_VAL(desc->muxval, group->bit));
+	}
+
+	return ret;
+}
+
+static const struct pinmux_ops meson_pmx_v2_ops = {
+	.set_mux = meson_pmx_v2_set_mux,
+	.get_functions_count = meson_pmx_get_funcs_count,
+	.get_function_name = meson_pmx_get_func_name,
+	.get_function_groups = meson_pmx_get_groups,
 };
 
 static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
@@ -679,11 +745,7 @@ static int meson_ee_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 						trigger_type[type_cnt] << cnt);
 
 		/*the gpio hwirq eqaul to gpio offset in gpio chip*/
-#ifdef CONFIG_ARM64
 		pin = domain->data->pin_base + irqd->hwirq;
-#else  /*for m8b platform*/
-		pin = domain->data->pin_base + irqd->hwirq + 14;
-#endif
 
 		/*set pin select register*/
 		start_bit = (cnt & 3) << 3;
@@ -793,11 +855,8 @@ static int meson_ao_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 						trigger_type[type_cnt] << cnt);
 
 		/*the gpio hwirq eqaul to gpio offset in gpio chip*/
-#ifdef CONFIG_ARM64
 		pin = domain->data->pin_base + irqd->hwirq;
-#else  /*for m8b platform*/
-		pin = irqd->hwirq;
-#endif
+
 		/*set pin select register*/
 		start_bit = cnt << 2;
 		regmap_update_bits(domain->reg_irq, 0,
@@ -856,22 +915,38 @@ static struct irq_chip meson_ao_gpio_irq_chip = {
 };
 
 struct meson_pinctrl_private meson_gxl_periphs = {
+	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_gxl_periphs_pinctrl_data,
 	.irq_chip = &meson_ee_gpio_irq_chip,
 };
 
 struct meson_pinctrl_private meson_gxl_aobus = {
+	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_gxl_aobus_pinctrl_data,
 	.irq_chip = &meson_ao_gpio_irq_chip,
 };
 
 struct meson_pinctrl_private meson_m8b_cbus = {
+	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson8b_cbus_pinctrl_data,
 	.irq_chip = &meson_ee_gpio_irq_chip,
 };
 
 struct meson_pinctrl_private meson_m8b_aobus = {
+	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson8b_aobus_pinctrl_data,
+	.irq_chip = &meson_ao_gpio_irq_chip,
+};
+
+struct meson_pinctrl_private meson_axg_periphs = {
+	.pinmux_type = PINMUX_V2,
+	.pinctrl_data = &meson_axg_periphs_pinctrl_data,
+	.irq_chip = &meson_ee_gpio_irq_chip,
+};
+
+struct meson_pinctrl_private meson_axg_aobus = {
+	.pinmux_type = PINMUX_V2,
+	.pinctrl_data = &meson_axg_aobus_pinctrl_data,
 	.irq_chip = &meson_ao_gpio_irq_chip,
 };
 
@@ -891,6 +966,14 @@ static const struct of_device_id meson_pinctrl_dt_match[] = {
 	{
 		.compatible = "amlogic,meson8b-aobus-pinctrl",
 		.data = &meson_m8b_aobus,
+	},
+	{
+		.compatible = "amlogic,meson-axg-periphs-pinctrl",
+		.data = &meson_axg_periphs,
+	},
+	{
+		.compatible = "amlogic,meson-axg-aobus-pinctrl",
+		.data = &meson_axg_aobus,
 	},
 	{ },
 };
@@ -972,33 +1055,6 @@ static struct regmap *meson_map_resource(struct meson_pinctrl *pc,
 	return devm_regmap_init_mmio(pc->dev, base, &meson_regmap_config);
 }
 
-#ifdef CONFIG_ARM64
-static struct regmap *meson_irq_map_resource(struct meson_pinctrl *pc,
-					 struct device_node *node, char *name)
-{
-	struct platform_device *pdev;
-	struct resource *res;
-	void __iomem *base;
-	pdev = of_find_device_by_node(of_get_parent(node));
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (IS_ERR(res)) {
-		dev_err(&pdev->dev, "reg: cannot obtain I/O memory region");
-		return ERR_CAST(res);
-	}
-	base = devm_ioremap_resource(pc->dev, res);
-	if (IS_ERR(base))
-		return ERR_CAST(base);
-
-	meson_regmap_config.max_register = resource_size(res) - 4;
-	meson_regmap_config.name = devm_kasprintf(pc->dev, GFP_KERNEL,
-						  "%s-%s", node->name,
-						  name);
-	if (!meson_regmap_config.name)
-		return ERR_PTR(-ENOMEM);
-
-	return devm_regmap_init_mmio(pc->dev, base, &meson_regmap_config);
-}
-#endif
 static int meson_irq_parse_and_map(struct meson_pinctrl *pc,
 					struct device_node *node)
 {
@@ -1049,14 +1105,6 @@ static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 	domain = pc->domain;
 	domain->data = pc->data->domain_data;
 
-#ifdef CONFIG_ARM64
-	domain->reg_irq = meson_irq_map_resource(pc, node, "irq");
-	if (IS_ERR(domain->reg_irq)) {
-		dev_err(pc->dev, "gpio irq registers not found\n");
-		return PTR_ERR(domain->reg_irq);
-	}
-#endif
-
 	for_each_child_of_node(node, np) {
 		if (!of_find_property(np, "gpio-controller", NULL))
 			continue;
@@ -1086,13 +1134,12 @@ static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 			return PTR_ERR(domain->reg_gpio);
 		}
 
-#ifndef CONFIG_ARM64 /*for m8b platform*/
 		domain->reg_irq = meson_map_resource(pc, np, "irq");
 		if (IS_ERR(domain->reg_irq)) {
 			dev_err(pc->dev, "gpio irq registers not found\n");
 			return PTR_ERR(domain->reg_irq);
 		}
-#endif
+
 		meson_irq_parse_and_map(pc, np);
 
 		break;
@@ -1157,13 +1204,144 @@ static int meson_irq_setup(struct meson_pinctrl *pc, struct irq_chip *irq_chip)
 
 }
 
+static int meson_pinctrl_add_function(struct meson_pinctrl *pc,
+						const char *name)
+{
+	struct meson_pmx_func *func = pc->data->funcs;
+
+	while (func->name) {
+		/* function already there */
+		if (strcmp(func->name, name) == 0) {
+			func->num_groups++;
+			return -EEXIST;
+		}
+		func++;
+	}
+
+	func->name = name;
+	func->num_groups = 1;
+
+	pc->data->num_funcs++;
+
+	return 0;
+}
+
+static struct meson_pmx_func *
+meson_pinctrl_find_function_by_name(struct meson_pinctrl *pc,
+				    const char *name)
+{
+	struct meson_pmx_func *func = pc->data->funcs;
+	int i;
+
+	for (i = 0; i < pc->data->num_funcs; i++) {
+		if (!func[i].name)
+			break;
+
+		if (!strcmp(func[i].name, name))
+			return func + i;
+	}
+
+	return NULL;
+}
+
+static int meson_pinctrl_build_state(struct meson_pinctrl *pc)
+{
+	const struct meson_desc_pin *pin;
+	struct meson_pmx_group *group;
+	struct meson_desc_function *func;
+	struct meson_pmx_func *funcs_tmp;
+	struct meson_pmx_func *func_item;
+	const char **func_grp;
+	int i;
+
+	/* Allocate pin groups */
+	pc->data->num_groups = pc->data->num_pins;
+	pc->data->groups = devm_kzalloc(pc->dev,
+		pc->data->num_groups * sizeof(*pc->data->groups),
+		GFP_KERNEL);
+	if (!pc->data->groups)
+		return -ENOMEM;
+
+	for (i = 0; i < pc->data->num_pins; i++) {
+		pin = pc->data->meson_pins + i;
+		group = pc->data->groups + i;
+		group->name = pin->pin.name;
+		group->pins = &(pin->pin.number);
+		/*per pin group only include one pin*/
+		group->num_pins = 1;
+		group->reg = pin->reg;
+		group->bit = pin->bit;
+	}
+
+	/*
+	 * We suppose that we won't have any more functions than pins,
+	 * we'll reallocate that later anyway
+	 */
+	pc->data->funcs = devm_kzalloc(pc->dev,
+			pc->data->num_pins * sizeof(*pc->data->funcs),
+			GFP_KERNEL);
+	if (!pc->data->funcs)
+		return -ENOMEM;
+
+	/* Count functions and their associated groups */
+	for (i = 0; i < pc->data->num_pins; i++) {
+		pin = pc->data->meson_pins + i;
+		func = pin->functions;
+		while (func->name) {
+			meson_pinctrl_add_function(pc, func->name);
+			func++;
+		}
+	}
+
+	funcs_tmp = krealloc(pc->data->funcs,
+		pc->data->num_funcs * sizeof(*pc->data->funcs),
+		GFP_KERNEL);
+	if (!funcs_tmp)
+		return -ENOMEM;
+
+	pc->data->funcs = funcs_tmp;
+
+	for (i = 0; i < pc->data->num_pins; i++) {
+		pin = pc->data->meson_pins + i;
+		func = pin->functions;
+
+		while (func->name) {
+			func_item = meson_pinctrl_find_function_by_name(pc,
+						func->name);
+			if (!func_item)
+				return -EINVAL;
+
+			if (!func_item->groups) {
+				func_item->groups =
+					devm_kzalloc(pc->dev,
+					func_item->num_groups *
+						sizeof(*func_item->groups),
+					GFP_KERNEL);
+				if (!func_item->groups)
+					return -ENOMEM;
+			}
+
+			func_grp = (const char **)func_item->groups;
+			while (*func_grp)
+				func_grp++;
+
+			*func_grp = pin->pin.name;
+			func++;
+		}
+	}
+
+	return 0;
+}
+
 static int meson_pinctrl_probe(struct platform_device *pdev)
 {
 	struct meson_pinctrl_private *priv;
 	const struct of_device_id *match;
+	struct pinctrl_pin_desc *pins;
 	struct device *dev = &pdev->dev;
 	struct meson_pinctrl *pc;
 	int ret;
+	int i;
 
 	pc = devm_kzalloc(dev, sizeof(struct meson_pinctrl), GFP_KERNEL);
 	if (!pc)
@@ -1178,12 +1356,29 @@ static int meson_pinctrl_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	if (priv->pinmux_type == PINMUX_V2) {
+		ret = meson_pinctrl_build_state(pc);
+		if (ret)
+			dev_err(pc->dev, "can't register pinctrl device\n");
+
+		pins = devm_kzalloc(pc->dev, pc->data->num_pins * sizeof(*pins),
+				GFP_KERNEL);
+		if (!pins)
+			return -ENOMEM;
+		for (i = 0; i < pc->data->num_pins; i++)
+			pins[i] = pc->data->meson_pins[i].pin;
+
+		pc->desc.pins   = (const struct pinctrl_pin_desc *)pins;
+		pc->desc.pmxops	= &meson_pmx_v2_ops;
+	} else {
+		pc->desc.pmxops	= &meson_pmx_v1_ops;
+		pc->desc.pins	= pc->data->pins;
+	}
+
 	pc->desc.name		= "pinctrl-meson";
 	pc->desc.owner		= THIS_MODULE;
 	pc->desc.pctlops	= &meson_pctrl_ops;
-	pc->desc.pmxops		= &meson_pmx_ops;
 	pc->desc.confops	= &meson_pinconf_ops;
-	pc->desc.pins		= pc->data->pins;
 	pc->desc.npins		= pc->data->num_pins;
 
 	pc->pcdev = pinctrl_register(&pc->desc, pc->dev, pc);

@@ -13890,3 +13890,8 @@ F: sound/soc/codecs/amlogic/Kconfig
 F: sound/soc/codecs/amlogic/Makefile
 F: sound/soc/codecs/amlogic/tas5707.c
 F: sound/soc/codecs/amlogic/tas5707.h
+
+AMLOGIC PINCTRL SUPPORT FOR AXG
+M: Xingyu Chen <xingyu.chen@amlogic.com>
+F: drivers/amlogic/pinctrl/pinctrl-mesonaxg.c
+F: include/dt-bindings/gpio/mesonaxg-gpio.h

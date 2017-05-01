@@ -193,6 +193,59 @@
 		sys_poweroff = <0x84000008>;
 	};
 
+	pinctrl_aobus: pinctrl@ff800014{
+		compatible = "amlogic,meson-axg-aobus-pinctrl";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		gpio_ao: ao-bank@ff800014{
+			reg = <0x0 0xff800014 0x0 0x8>,
+				  <0x0 0xff80002c 0x0 0x4>,
+				  <0x0 0xff800024 0x0 0x8>,
+				  <0x0 0xff800084 0x0 0x4>;
+			interrupts = <0 200 1>,
+				<0 201 1>;
+			reg-names = "mux", "pull", "gpio", "irq";
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+	};
+
+	pinctrl_periphs: pinctrl@ff634480{
+		compatible = "amlogic,meson-axg-periphs-pinctrl";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		gpio: banks@ff634480{
+			reg = <0x0 0xff634480 0x0 0x40>,
+				  <0x0 0xff6344e8 0x0 0x14>,
+				  <0x0 0xff634520 0x0 0x14>,
+				  <0x0 0xff634430 0x0 0x3c>,
+				  <0x0 0xffd0f080 0x0 0x10>;
+			interrupts = <0 64 1>,
+				<0 65 1>,
+				<0 66 1>,
+				<0 67 1>,
+				<0 68 1>,
+				<0 69 1>,
+				<0 70 1>,
+				<0 71 1>;
+			reg-names = "mux",
+				"pull",
+				"pull-enable",
+				"gpio",
+				"irq";
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
@@ -225,12 +278,21 @@
 			};
 		};/* end of aobus */
 
-		hiubus: hiubus@ff600000 {
+		periphs: periphs@ff634400 {
 			compatible = "simple-bus";
-			reg = <0x0 0xff600000 0x0 0x4c000>;
+			reg = <0x0 0xff634400 0x0 0x1c00>;
 			#address-cells = <2>;
 			#size-cells = <2>;
-			ranges = <0x0 0x0 0x0 0xff600000 0x0 0x4c000>;
+			ranges = <0x0 0x0 0x0 0xff634400 0x0 0x1c00>;
+
+		};/* end of periphs */
+
+		hiubus: hiubus@ff63c000 {
+			compatible = "simple-bus";
+			reg = <0x0 0xff63c000 0x0 0x10000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0x0 0x0 0xff63c000 0x0 0x10000>;
 
 			clkc: clock-controller@0 {
 				compatible = "amlogic,axg-clkc";
@@ -238,9 +300,32 @@
 				reg = <0x0 0x3c000 0x0 0x320>;
 			};
 		};/* end of hiubus*/
-
-
 	}; /* end of soc*/
 
 };/* end of / */
 
+&pinctrl_aobus {
+	remote_pins:remote_pin {
+		mux {
+			pins = "GPIOAO_6";
+			function = "ir_in";
+		};
+	};
+}; /* end of pinctrl_aobus */
+
+&pinctrl_periphs {
+	a_i2c_master:a_i2c {
+		mux {
+			pins = "GPIOZ_6","GPIOZ_7";
+			function = "i2c_a";
+		};
+	};
+
+	b_i2c_master:b_i2c {
+		mux {
+			pins = "GPIOZ_8","GPIOZ_9";
+			function = "i2c_b";
+		};
+
+	};
+}; /* end of pinctrl_periphs */

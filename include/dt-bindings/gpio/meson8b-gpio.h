@@ -14,8 +14,23 @@
 
 #ifndef _DT_BINDINGS_MESON8B_GPIO_H
 #define _DT_BINDINGS_MESON8B_GPIO_H
-
 /* First GPIO chip */
+#define GPIOAO_0	0
+#define GPIOAO_1	1
+#define GPIOAO_2	2
+#define GPIOAO_3	3
+#define GPIOAO_4	4
+#define GPIOAO_5	5
+#define GPIOAO_6	6
+#define GPIOAO_7	7
+#define GPIOAO_8	8
+#define GPIOAO_9	9
+#define GPIOAO_10	10
+#define GPIOAO_11	11
+#define GPIOAO_12	12
+#define GPIOAO_13	13
+
+/* Second GPIO chip */
 #define GPIOH_0		0
 #define GPIOH_1		1
 #define GPIOH_2		2
@@ -121,25 +136,6 @@
 #define GPIOX_19	102
 #define GPIOX_20	103
 #define GPIOX_21	104
-
-/* Second GPIO chip */
-#define GPIOAO_0	0
-#define GPIOAO_1	1
-#define GPIOAO_2	2
-#define GPIOAO_3	3
-#define GPIOAO_4	4
-#define GPIOAO_5	5
-#define GPIOAO_6	6
-#define GPIOAO_7	7
-#define GPIOAO_8	8
-#define GPIOAO_9	9
-#define GPIOAO_10	10
-#define GPIOAO_11	11
-#define GPIOAO_12	12
-#define GPIOAO_13	13
-#define GPIO_BSD_EN	14
-#define GPIO_TEST_N	15
-
 
 /* GPIO Bank DIF */
 #define DIF_0_P		105
