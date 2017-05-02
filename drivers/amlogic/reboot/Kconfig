@@ -8,3 +8,23 @@ config AMLOGIC_REBOOT
 		or poweroff
 		driver.
 
+config AMLOGIC_GX_REBOOT
+	bool "Amlogic reboot gx"
+	depends on AMLOGIC_REBOOT
+	default n
+    help
+		This is the Amlogic GX reboot driver.
+
+config AMLOGIC_M8B_REBOOT
+	bool "Amlogic reboot m8b"
+	depends on AMLOGIC_REBOOT
+	default n
+    help
+		This is the Amlogic M8b reboot driver.
+
+config AMLOGIC_M8B_REBOOT_UBOOT_SUSPEND
+	bool "Amlogic reboot uboot suspend"
+	depends on AMLOGIC_M8B_REBOOT
+	default n
+    help
+		This is the Amlogic M8b reboot uboot suspend driver.

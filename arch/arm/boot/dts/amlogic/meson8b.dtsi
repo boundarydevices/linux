@@ -952,5 +952,11 @@ dwc2_b {
 				reg = <0xc110875c  0x4>,
 					<0xc1108764 0x4>;
 	};
+
+	aml_reboot{
+		compatible = "aml, reboot_m8b";
+		status = "okay";
+	};
+
 	}; /* end of soc*/
 }; /* end of / */

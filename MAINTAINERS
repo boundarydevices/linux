@@ -13461,7 +13461,7 @@ M:	Yun Cai <yum.cai@amlogic.com>
 F:	drivers/amlogic/efuse/*
 F:	include/linux/amlogic/efuse.h
 
-AMLOGIC reboot
+AMLOGIC reboot for gx and M8b
 M:	Jianxin Pan <jianxin.pan@amlogic.com>
 F:	drivers/amlogic/reboot/*
 
