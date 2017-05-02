@@ -134,7 +134,14 @@ static int meson_cpufreq_target_locked(struct cpufreq_policy *policy,
 
 	/* sys pll is not locked to target */
 	if (!((unsigned long)(mfreq->sysclk) & 0x03)) {
+		/* armclk will also be updated by updating sysclk*/
+		freqs.cpu = cpu;
+		freqs.old = policy->cur;
+		freqs.new = mfreq->fixpll_target;
+
+		cpufreq_freq_transition_begin(policy, &freqs);
 		ret = clk_set_rate(mfreq->sysclk, mfreq->fixpll_target * 1000);
+		cpufreq_freq_transition_end(policy, &freqs, ret);
 		if (ret) {
 			pr_err("lock sys pll to target failed\n");
 			return -EINVAL;
