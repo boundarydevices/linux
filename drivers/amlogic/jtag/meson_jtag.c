@@ -41,21 +41,27 @@
 
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/jtag.h>
-#include <linux/amlogic/mmc_notify.h>
 
 #include "meson_jtag.h"
 
 
 #define AML_JTAG_NAME		"jtag"
 
+/* store the jtag select globaly */
+static int global_select = AMLOGIC_JTAG_DISABLE;
+
+/* whether the jtag select is setup by the boot param
+ * jtag select is setup by the boot prior to device tree.
+ */
 static bool jtag_select_setup;
 
+/* store the params that are setup by the boot param */
 static int jtag_select = AMLOGIC_JTAG_DISABLE;
 static int jtag_cluster = CLUSTER_DISABLE;
 
 bool is_jtag_disable(void)
 {
-	if (jtag_select == AMLOGIC_JTAG_DISABLE)
+	if (global_select == AMLOGIC_JTAG_DISABLE)
 		return true;
 	else
 		return false;
@@ -64,7 +70,7 @@ EXPORT_SYMBOL(is_jtag_disable);
 
 bool is_jtag_apao(void)
 {
-	if (jtag_select == AMLOGIC_JTAG_AO)
+	if (global_select == AMLOGIC_JTAG_APAO)
 		return true;
 	else
 		return false;
@@ -73,12 +79,25 @@ EXPORT_SYMBOL(is_jtag_apao);
 
 bool is_jtag_apee(void)
 {
-	if (jtag_select == AMLOGIC_JTAG_EE)
+	if (global_select == AMLOGIC_JTAG_APEE)
 		return true;
 	else
 		return false;
 }
 EXPORT_SYMBOL(is_jtag_apee);
+
+static inline char *select_to_name(int select)
+{
+	switch (select) {
+	case AMLOGIC_JTAG_APAO:
+		return "apao";
+	case AMLOGIC_JTAG_APEE:
+		return "apee";
+	default:
+		return "disable";
+	}
+
+}
 
 static void aml_jtag_option_parse(struct aml_jtag_dev *jdev, const char *s)
 {
@@ -89,14 +108,11 @@ static void aml_jtag_option_parse(struct aml_jtag_dev *jdev, const char *s)
 	if (!strncmp(s, "disable", 7))
 		jdev->select = AMLOGIC_JTAG_DISABLE;
 	else if (!strncmp(s, "apao", 4))
-		jdev->select = AMLOGIC_JTAG_AO;
+		jdev->select = AMLOGIC_JTAG_APAO;
 	else if (!strncmp(s, "apee", 4))
-		jdev->select = AMLOGIC_JTAG_EE;
+		jdev->select = AMLOGIC_JTAG_APEE;
 	else
-		pr_info("unknown select: %s", s);
-
-	jtag_select = jdev->select;
-	pr_info("jtag select %d\n", jdev->select);
+		pr_err("unknown select: %s", s);
 
 	cluster = strchr(s, ',');
 	if (cluster != NULL) {
@@ -111,9 +127,6 @@ static void aml_jtag_option_parse(struct aml_jtag_dev *jdev, const char *s)
 	} else {
 		jdev->cluster = CLUSTER_DISABLE;
 	}
-
-	jtag_cluster = jdev->cluster;
-	pr_info("cluster index %d\n", jdev->cluster);
 }
 
 static int __init setup_jtag(char *p)
@@ -127,13 +140,13 @@ static int __init setup_jtag(char *p)
 	if (!strncmp(p, "disable", 7))
 		jtag_select = AMLOGIC_JTAG_DISABLE;
 	else if (!strncmp(p, "apao", 4))
-		jtag_select = AMLOGIC_JTAG_AO;
+		jtag_select = AMLOGIC_JTAG_APAO;
 	else if (!strncmp(p, "apee", 4))
-		jtag_select = AMLOGIC_JTAG_EE;
+		jtag_select = AMLOGIC_JTAG_APEE;
 	else
 		jtag_select = AMLOGIC_JTAG_DISABLE;
 
-	pr_info("jtag select %d\n", jtag_select);
+	pr_info("jtag select %s\n", select_to_name(jtag_select));
 
 	cluster = strchr(p, ',');
 	if (cluster != NULL) {
@@ -162,80 +175,94 @@ __setup("jtag=", setup_jtag);
 
 
 /*
- * clean other pinmux except jtag register.
- * jtag register will be setup by aml_set_jtag_state().
+ * request gpios for jtag apao.
  *
- *@return: 0 success, other failed
+ * @return: 0 success, other failed
  *
  */
-static int aml_jtag_pinmux_apao(struct platform_device *pdev)
+static int aml_jtag_apao_request_gpios(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct aml_jtag_dev *jdev = platform_get_drvdata(pdev);
+	const unsigned int *gpios = jdev->ao_gpios;
 
-	int count, i, ret;
-	int gpio;
+	int ngpio, i, ret;
 
-	count = of_gpio_named_count(np, "jtagao-gpios");
+	ngpio = jdev->ao_ngpios;
 
-	for (i = 0; i < count; i++) {
-		gpio = of_get_named_gpio(dev->of_node, "jtagao-gpios", i);
-		if (!gpio_is_valid(gpio)) {
-			dev_err(dev, "gpio %d is not valid", gpio);
-			return -ENOENT;
-		}
-
-		ret = devm_gpio_request(dev, gpio, "jtagao");
+	for (i = 0; i < ngpio; i++) {
+		ret = devm_gpio_request(dev, gpios[i], "apao");
 		if (ret) {
-			dev_err(dev, "can't request gpio %d", gpio);
+			pr_err("can't request gpio %d", gpios[i]);
 			return -ENOENT;
 		}
+		pr_info("request gpio %d  for apao\n", gpios[i]);
 	}
 
 	return 0;
 }
 
-static int aml_jtag_pinmux_apee(struct platform_device *pdev)
+static int aml_jtag_apao_free_gpios(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct aml_jtag_dev *jdev = platform_get_drvdata(pdev);
+	const unsigned int *gpios = jdev->ao_gpios;
 
-	int count, i, ret;
-	int gpio;
+	int ngpio, i;
 
-	count = of_gpio_named_count(np, "jtagee-gpios");
+	ngpio = jdev->ao_ngpios;
 
-	for (i = 0; i < count; i++) {
-		gpio = of_get_named_gpio(dev->of_node, "jtagee-gpios", i);
-		if (!gpio_is_valid(gpio)) {
-			dev_err(dev, "gpio %d is not valid", gpio);
-			return -ENOENT;
-		}
-
-		ret = devm_gpio_request(dev, gpio, "jtagee");
-		if (ret) {
-			dev_err(dev, "can't request gpio %d", gpio);
-			return -ENOENT;
-		}
-	}
+	for (i = 0; i < ngpio; i++)
+		devm_gpio_free(dev, gpios[i]);
 
 	return 0;
 }
 
 
-static void aml_jtag_pinctrl(struct aml_jtag_dev *jdev)
+/*
+ * request gpios for jtag apee.
+ *
+ * @return: 0 success, other failed
+ *
+ */
+static int aml_jtag_apee_request_gpios(struct platform_device *pdev)
 {
-	switch (jdev->select) {
-	case AMLOGIC_JTAG_AO:
-		aml_jtag_pinmux_apao(jdev->pdev);
-		break;
-	case AMLOGIC_JTAG_EE:
-		aml_jtag_pinmux_apee(jdev->pdev);
-		break;
-	default:
-		break;
+	struct device *dev = &pdev->dev;
+	struct aml_jtag_dev *jdev = platform_get_drvdata(pdev);
+	const unsigned int *gpios = jdev->ee_gpios;
+
+	int ngpio, i, ret;
+
+	ngpio = jdev->ee_ngpios;
+
+	for (i = 0; i < ngpio; i++) {
+		ret = devm_gpio_request(dev, gpios[i], "apee");
+		if (ret) {
+			pr_err("can't request gpio %d", gpios[i]);
+			return -ENOENT;
+		}
+		pr_info("request gpio %d for apee\n", gpios[i]);
 	}
+
+	return 0;
 }
+
+static int aml_jtag_apee_free_gpios(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct aml_jtag_dev *jdev = platform_get_drvdata(pdev);
+	const unsigned int *gpios = jdev->ee_gpios;
+
+	int ngpio, i;
+
+	ngpio = jdev->ee_ngpios;
+
+	for (i = 0; i < ngpio; i++)
+		devm_gpio_free(dev, gpios[i]);
+
+	return 0;
+}
+
 
 #ifdef CONFIG_MACH_MESON8B
 
@@ -249,7 +276,7 @@ static int aml_jtag_select(struct platform_device *pdev)
 
 	jdev->base = of_iomap(np, 0);
 	if (!jdev->base) {
-		dev_err(dev, "failed to iomap regs");
+		pr_err("failed to iomap regs");
 		return -ENODEV;
 	}
 
@@ -257,13 +284,13 @@ static int aml_jtag_select(struct platform_device *pdev)
 	case AMLOGIC_JTAG_DISABLE:
 		writel_relaxed(0x0, jdev->base);
 		break;
-	case AMLOGIC_JTAG_AO:
+	case AMLOGIC_JTAG_APAO:
 		val = readl_relaxed(jdev->base);
 		val &= ~0x3FF;
 		val |= (2 << 0) | (1 << 8);
 		writel_relaxed(val, jdev->base);
 		break;
-	case AMLOGIC_JTAG_EE:
+	case AMLOGIC_JTAG_APEE:
 		val = readl_relaxed(jdev->base);
 		val &= ~0x3FF;
 		val |= (2 << 4) | (2 << 8);
@@ -312,15 +339,19 @@ void aml_set_jtag_state(unsigned int state, unsigned int select)
 static int aml_jtag_select(struct platform_device *pdev)
 {
 	struct aml_jtag_dev *jdev = platform_get_drvdata(pdev);
-	unsigned int sel = jdev->select;
+	unsigned int select = jdev->select;
+	unsigned int state = AMLOGIC_JTAG_STATE_OFF;
+
+	if (select != AMLOGIC_JTAG_DISABLE)
+		state = AMLOGIC_JTAG_STATE_ON;
 
 	if (jdev->cluster != CLUSTER_DISABLE)
-		sel |= jdev->cluster << CLUSTER_BIT;
+		select |= jdev->cluster << CLUSTER_BIT;
 
-	pr_info("set state %u\n", sel);
+	pr_info("set state %u\n", select);
 
 	set_cpus_allowed_ptr(current, cpumask_of(0));
-	aml_set_jtag_state(AMLOGIC_JTAG_STATE_ON, sel);
+	aml_set_jtag_state(AMLOGIC_JTAG_STATE_ON, select);
 	set_cpus_allowed_ptr(current, cpu_all_mask);
 
 	return 0;
@@ -330,8 +361,41 @@ static int aml_jtag_select(struct platform_device *pdev)
 
 static void aml_jtag_setup(struct aml_jtag_dev *jdev)
 {
-	aml_jtag_pinctrl(jdev);
+	struct platform_device *pdev = jdev->pdev;
+	unsigned int old_select = jdev->old_select;
+	unsigned int select = jdev->select;
+
+	if (old_select == select)
+		return;
+
+	/* free gpios */
+	switch (old_select) {
+	case AMLOGIC_JTAG_APAO:
+		aml_jtag_apao_free_gpios(pdev);
+		break;
+	case AMLOGIC_JTAG_APEE:
+		aml_jtag_apee_free_gpios(pdev);
+		break;
+	default:
+		break;
+	}
+
+	/* free gpios */
+	switch (select) {
+	case AMLOGIC_JTAG_APAO:
+		aml_jtag_apao_request_gpios(pdev);
+		break;
+	case AMLOGIC_JTAG_APEE:
+		aml_jtag_apee_request_gpios(pdev);
+		break;
+	default:
+		break;
+	}
+
 	aml_jtag_select(jdev->pdev);
+
+	jdev->old_select = select;
+
 }
 
 static ssize_t jtag_select_show(struct class *cls,
@@ -339,6 +403,8 @@ static ssize_t jtag_select_show(struct class *cls,
 {
 	unsigned int len = 0;
 
+	len += sprintf(buf + len, "current select: %s\n\n",
+			select_to_name(global_select));
 	len += sprintf(buf + len, "usage:\n");
 	len += sprintf(buf + len, "    echo [apao|apee] > select\n");
 	len += sprintf(buf + len, "    echo [apao|apee]{,[0|1]} > select\n");
@@ -354,6 +420,10 @@ static ssize_t jtag_select_store(struct class *cls,
 
 	jdev = container_of(cls, struct aml_jtag_dev, cls);
 	aml_jtag_option_parse(jdev, buffer);
+
+	/* save to global */
+	global_select = jdev->select;
+
 	aml_jtag_setup(jdev);
 
 	return count;
@@ -365,51 +435,62 @@ static struct class_attribute aml_jtag_attrs[] = {
 };
 
 
-static int jtag_notify_callback(struct notifier_block *block,
-			unsigned long event, void *data)
-{
-	struct aml_jtag_dev *jdev;
-
-	jdev = container_of(block, struct aml_jtag_dev, notifier);
-
-
-	/* @todo need mmc driver to implement notify calling */
-	pr_info("%s %lu\n", __func__, event);
-	switch (event) {
-	case MMC_EVENT_JTAG_IN:
-		jdev->select = AMLOGIC_JTAG_EE;
-		jtag_select = jdev->select;
-		break;
-
-	case MMC_EVENT_JTAG_OUT:
-		jdev->select = AMLOGIC_JTAG_AO;
-		jtag_select = jdev->select;
-		break;
-
-	default:
-		return NOTIFY_DONE;
-	}
-
-	aml_jtag_setup(jdev);
-
-	return NOTIFY_OK;
-}
-
-
 static int aml_jtag_dt_parse(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 	struct aml_jtag_dev *jdev = platform_get_drvdata(pdev);
 	const char *tmp;
-	int ret;
 
-	/* if jtag= param is setup, set select with jtag= param */
-	if (jtag_select_setup) {
-		jdev->select = jtag_select;
-		jdev->cluster = jtag_cluster;
-		return 0;
+	int ao_ngpios, ee_ngpios;
+	unsigned int *ao_gpios, *ee_gpios;
+	int ret, i, gpio;
+
+
+	ao_ngpios = of_gpio_named_count(np, "jtagao-gpios");
+	if (ao_ngpios <= 0) {
+		pr_err("ao gpios not specified\n");
+		return -EINVAL;
 	}
+
+	ee_ngpios = of_gpio_named_count(np, "jtagee-gpios");
+	if (ee_ngpios <= 0) {
+		pr_err("ee gpios not specified\n");
+		return -EINVAL;
+	}
+
+	jdev->ao_ngpios = ao_ngpios;
+	jdev->ee_ngpios = ee_ngpios;
+
+	ao_gpios = devm_kzalloc(dev, sizeof(unsigned int) * ao_ngpios,
+				GFP_KERNEL);
+	ee_gpios = devm_kzalloc(dev, sizeof(unsigned int) * ee_ngpios,
+				GFP_KERNEL);
+	if (!ao_gpios || !ee_gpios) {
+		pr_err("failed to allocate memory for gpios\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < ao_ngpios; i++) {
+		gpio = of_get_named_gpio(dev->of_node, "jtagao-gpios", i);
+		if (!gpio_is_valid(gpio)) {
+			pr_err("gpio %d is not valid", gpio);
+			return -EINVAL;
+		}
+		ao_gpios[i] = gpio;
+	}
+
+	for (i = 0; i < ee_ngpios; i++) {
+		gpio = of_get_named_gpio(dev->of_node, "jtagee-gpios", i);
+		if (!gpio_is_valid(gpio)) {
+			pr_err("gpio %d is not valid", gpio);
+			return -EINVAL;
+		}
+		ee_gpios[i] = gpio;
+	}
+
+	jdev->ao_gpios = ao_gpios;
+	jdev->ee_gpios = ee_gpios;
 
 	/* otherwise set select with dt */
 	ret = of_property_read_string(np, "select", &tmp);
@@ -422,11 +503,11 @@ static int aml_jtag_dt_parse(struct platform_device *pdev)
 	if (!strcmp(tmp, "disable"))
 		jdev->select = AMLOGIC_JTAG_DISABLE;
 	else if (!strcmp(tmp, "apao"))
-		jdev->select = AMLOGIC_JTAG_AO;
+		jdev->select = AMLOGIC_JTAG_APAO;
 	else if (!strcmp(tmp, "apee"))
-		jdev->select = AMLOGIC_JTAG_EE;
+		jdev->select = AMLOGIC_JTAG_APEE;
 	else
-		dev_warn(dev, "unknown select: %s", tmp);
+		pr_err("unknown select: %s", tmp);
 
 	return 0;
 }
@@ -445,17 +526,26 @@ static int aml_jtag_probe(struct platform_device *pdev)
 	jdev->pdev = pdev;
 	platform_set_drvdata(pdev, jdev);
 
-	aml_jtag_dt_parse(pdev);
+	ret = aml_jtag_dt_parse(pdev);
+	if (ret)
+		return -EINVAL;
+
+	jdev->old_select = AMLOGIC_JTAG_DISABLE;
+	/* if jtag= param is setup, use select with jtag= param */
+	if (jtag_select_setup) {
+		jdev->select = jtag_select;
+		jdev->cluster = jtag_cluster;
+		pr_info("select is replaced by boot param\n");
+	}
+
+	/* save to global */
+	global_select = jdev->select;
 
 	/* create class attributes */
 	jdev->cls.name = AML_JTAG_NAME;
 	jdev->cls.owner = THIS_MODULE;
 	jdev->cls.class_attrs = aml_jtag_attrs;
 	class_register(&jdev->cls);
-
-	/* register mmc notify */
-	jdev->notifier.notifier_call = jtag_notify_callback;
-	ret = mmc_register_client(&jdev->notifier);
 
 	/* setup jtag */
 	aml_jtag_setup(jdev);

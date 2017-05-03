@@ -226,10 +226,16 @@
 
 	jtag {
 		compatible = "amlogic, jtag";
-		status = "disabled";
-		pinctrl-names = "jtag_apao_pins", "jtag_apee_pins";
-		pinctrl-0 = <&jtag_apao_pins>;
-		pinctrl-1 = <&jtag_apee_pins>;
+		status = "okay";
+		select = "apao"; /* disable/apao/apee */
+		jtagao-gpios = <&gpio   GPIOH_6         0
+				&gpio   GPIOH_7         0
+				&gpio   GPIOH_8         0
+				&gpio   GPIOH_9         0>;
+		jtagee-gpios = <&gpio   CARD_0          0
+				&gpio   CARD_1          0
+				&gpio   CARD_2          0
+				&gpio   CARD_3          0>;
 	};
 
 	mailbox: mhu@c883c400 {
@@ -617,26 +623,6 @@
 					"eth_txd2",
 					"eth_txd3";
 				function = "eth";
-			};
-		};
-
-		jtag_apao_pins:jtag_apao_pin {
-			mux {
-				groups = "jtag_tdi_0",
-					"jtag_tdo_0",
-					"jtag_clk_0",
-					"jtag_tms_0";
-				function = "jtag";
-			};
-		};
-
-		jtag_apee_pins:jtag_apee_pin {
-			mux {
-				groups ="jtag_tdi_1",
-					"jtag_tdo_1",
-					"jtag_clk_1",
-					"jtag_tms_1";
-				function = "jtag";
 			};
 		};
 

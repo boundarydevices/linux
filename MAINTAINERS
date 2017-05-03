@@ -13755,6 +13755,8 @@ F: drivers/amlogic/led/*
 AMLOGIC JTAG DRIVER SUPPORT
 M: Bo Yang <bo.yang@amlogic.com>
 F: drivers/amlogic/jtag/*
+X: include/linux/amlogic/mmc_notify.h
+
 
 AMLOGIC AMLVIDEO DRIVER
 M: Guosong Zhou <guosong.zhou@amlogic.com>

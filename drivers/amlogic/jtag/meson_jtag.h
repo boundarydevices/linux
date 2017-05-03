@@ -25,7 +25,6 @@
 #define CLUSTER_BIT		2
 #define	CLUSTER_DISABLE		(-1)
 
-
 struct aml_jtag_dev {
 	struct platform_device *pdev;
 	struct class cls;
@@ -36,8 +35,16 @@ struct aml_jtag_dev {
 
 	struct notifier_block notifier;
 
+	unsigned int old_select;
 	unsigned int select;
 	unsigned int cluster;
+
+	const unsigned int *ao_gpios;
+	const unsigned int *ee_gpios;
+
+	int ao_ngpios;
+	int ee_ngpios;
+
 };
 
 #endif
