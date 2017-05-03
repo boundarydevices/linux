@@ -1853,6 +1853,9 @@ static int do_test(const char *alg, u32 type, u32 mask, int m, u32 num_mb)
 		ret += tcrypt_test("cfb(aria)");
 		ret += tcrypt_test("ctr(aria)");
 		break;
+	case 193:
+		ret += tcrypt_test("tls10(hmac(sha1),cbc(aes))");
+		break;
 	case 200:
 		test_cipher_speed("ecb(aes)", ENCRYPT, sec, NULL, 0,
 				speed_template_16_24_32);
