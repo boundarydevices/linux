@@ -348,6 +348,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-hummingboard.dtb \
 	imx6dl-hl.dtb \
 	imx6dl-hp.dtb \
+	imx6dl-lshore.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
