@@ -262,7 +262,7 @@ struct fsl_sai {
 	struct clk *bus_clk;
 	struct clk *mclk_clk[FSL_SAI_MCLK_MAX];
 
-	bool is_slave_mode;
+	bool slave_mode[2];
 	bool is_lsb_first;
 	bool is_dsp_mode;
 	bool synchronous[2];
