@@ -346,6 +346,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-gw553x.dtb \
 	imx6dl-hp.dtb \
 	imx6dl-hummingboard.dtb \
+	imx6dl-lshore.dtb \
 	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
 	imx6dl-nit6xlite.dtb \
