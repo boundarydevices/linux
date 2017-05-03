@@ -2003,7 +2003,7 @@ static int serial_imx_resume(struct platform_device *dev)
 
 	/* disable wakeup from i.MX UART */
 	val = readl(sport->port.membase + UCR3);
-	val &= ~(UCR3_AWAKEN | UCR3_AIRINTEN);
+	val &= ~UCR3_AWAKEN;
 	writel(val, sport->port.membase + UCR3);
 	val = readl(sport->port.membase + USR1);
 	if (val & USR1_AWAKE)
