@@ -2030,7 +2030,7 @@ static ssize_t store_rs485_en(struct device *dev,
 	unsigned long value;
 	int ret;
 
-	ret = strict_strtoul(buf, count, &value);
+	ret = kstrtoul(buf, count, &value);
 	if (ret)
 		return ret;
 
