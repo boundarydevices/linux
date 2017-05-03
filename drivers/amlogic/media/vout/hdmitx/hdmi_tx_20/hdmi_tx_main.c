@@ -2472,20 +2472,14 @@ static int hdmi_task_handle(void *data)
 		hdmitx_internal_intr_handler);
 
 	hdmitx_device->tx_aud_cfg = 1; /* default audio configure is on */
-	if (init_flag & INIT_FLAG_POWERDOWN) {
-		/* power down */
-		hdmitx_device->unplug_powerdown = 1;
-		hdmitx_device->HWOp.Cntl(hdmitx_device,
-			HDMITX_HWCMD_TURNOFF_HDMIHW, (hpdmode != 0)?1:0);
-	} else
-		hdmitx_device->HWOp.Cntl(hdmitx_device,
-			HDMITX_HWCMD_MUX_HPD, 0);
-
-	hdmitx_device->HWOp.Cntl(hdmitx_device, HDMITX_IP_INTR_MASN_RST, 0);
-	hdmitx_device->HWOp.Cntl(hdmitx_device,
-		HDMITX_HWCMD_MUX_HPD_IF_PIN_HIGH, 0);
 
 	hdmitx_device->HWOp.SetupIRQ(hdmitx_device);
+
+	/* Trigger */
+	hdmitx_device->HWOp.CntlMisc(hdmitx_device, MISC_HPD_MUX_OP, PIN_UNMUX);
+	mdelay(20);
+	hdmitx_device->HWOp.CntlMisc(hdmitx_device, MISC_HPD_MUX_OP, PIN_MUX);
+
 	hdmi_init = 1;
 	return 0;
 }
