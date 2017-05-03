@@ -159,6 +159,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-bt.dtb \
 	imx6dl-cubox-i.dtb \
 	imx6dl-hummingboard.dtb \
+	imx6dl-hl.dtb \
 	imx6dl-hp.dtb \
 	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
