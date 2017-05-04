@@ -67,8 +67,11 @@
 			no-map;
 		};
 		fb_reserved:linux,meson-fb {
-			compatible = "amlogic, fb-memory";
-			reg = <0x0 0x7e000000 0x0 0x2000000>;
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x2000000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x7e000000 0x0 0x2000000>;
 		};
 
 		di_reserved:linux,di {

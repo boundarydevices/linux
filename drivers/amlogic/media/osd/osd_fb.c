@@ -43,6 +43,8 @@
 #include <ion/ion.h>
 #include <meson_ion.h>
 #include <linux/fs.h>
+#include <linux/cma.h>
+#include <linux/dma-contiguous.h>
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -289,7 +291,6 @@ static int early_resume_flag;
 #endif
 
 static struct delayed_work osd_dwork;
-static bool fb_map_flag;
 static int osd_shutdown_flag;
 
 unsigned int osd_log_level;
@@ -298,8 +299,8 @@ int int_viu_vsync = -ENXIO;
 int int_rdma = INT_RDMA;
 #endif
 struct osd_fb_dev_s *gp_fbdev_list[OSD_COUNT] = {};
-static struct reserved_mem fb_rmem = {.base = 0, .size = 0};
 static u32 fb_memsize[3];
+struct page *osd_page[3];
 static phys_addr_t fb_rmem_paddr[2];
 static void __iomem *fb_rmem_vaddr[OSD_COUNT];
 static size_t fb_rmem_size[OSD_COUNT];
@@ -311,6 +312,7 @@ struct ion_client *fb_ion_client;
 struct ion_handle *fb_ion_handle[OSD_COUNT][OSD_MAX_BUF_NUM] = {
 	{NULL, NULL, NULL}, {NULL, NULL, NULL}
 };
+
 
 phys_addr_t get_fb_rmem_paddr(int index)
 {
@@ -1011,48 +1013,68 @@ static int osd_open(struct fb_info *info, int arg)
 	struct fb_fix_screeninfo *fix = NULL;
 	struct fb_var_screeninfo *var = NULL;
 	struct platform_device *pdev = NULL;
+#ifdef CONFIG_CMA
+	struct cma *cma;
+#endif
+	phys_addr_t base = 0;
+	unsigned long size = 0;
 
+#ifdef CONFIG_CMA
+	cma = dev_get_cma_area(info->device);
+	base = cma_get_base(cma);
+	size = cma_get_size(cma);
+#endif
 	fbdev = (struct osd_fb_dev_s *)info->par;
 	fbdev->open_count++;
 	osd_log_info("osd_open index=%d,open_count=%d\n",
 		fbdev->fb_index, fbdev->open_count);
 	if (info->screen_base != NULL)
 		return 0;
+	osd_log_dbg("%s, %d, base:%llx, size:%ld\n",
+		__func__, __LINE__, base, size);
 	pdev = fbdev->dev;
 	fb_index = fbdev->fb_index;
 	fix = &info->fix;
 	var = &info->var;
 	/* read fb-reserved memory first */
-	if (fb_rmem.base &&
+	if ((cma && base != 0) &&
 		(fb_memsize[0] + fb_memsize[1] +
-			fb_memsize[2]) <= fb_rmem.size) {
+			fb_memsize[2]) <= size) {
 		if (!fb_ion_client)
 			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
 		fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
 		if (fb_index == DEV_OSD0)
-			fb_rmem_paddr[fb_index] = fb_rmem.base +
-			fb_memsize[0];
+			fb_rmem_paddr[fb_index] = base +
+				fb_memsize[0];
 		else if (fb_index == DEV_OSD1) {
 			if ((OSD_COUNT == 2) &&
 			((fb_memsize[0] + fb_memsize[1] +
-				fb_memsize[2]) <= fb_rmem.size)) {
+				fb_memsize[2]) <= size))
 				fb_rmem_paddr[fb_index] =
-					fb_rmem.base + fb_memsize[0] +
+					base + fb_memsize[0] +
 					fb_memsize[1];
-			}
 		}
+		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
+			__func__, __LINE__, fb_index, fb_rmem_size[fb_index]);
 		if ((fb_rmem_paddr[fb_index] > 0) &&
 			(fb_rmem_size[fb_index] > 0)) {
-			if (fb_map_flag)
-				fb_rmem_vaddr[fb_index] =
-					phys_to_virt(fb_rmem_paddr[fb_index]);
-			else
-				fb_rmem_vaddr[fb_index] =
-					ioremap_wc(fb_rmem_paddr[fb_index],
+#ifdef CONFIG_CMA
+			osd_page[fb_index+1] =
+				dma_alloc_from_contiguous(info->device,
+				fb_rmem_size[fb_index] >> PAGE_SHIFT, 0);
+			if (!osd_page[fb_index+1]) {
+				pr_err("allocate buffer failed:%ld\n",
 					fb_rmem_size[fb_index]);
+				return -ENOMEM;
+			}
+			fb_rmem_vaddr[fb_index] =
+				page_address(osd_page[fb_index+1]);
 			if (!fb_rmem_vaddr[fb_index])
 				osd_log_err("fb[%d] ioremap error",
 						fb_index);
+			osd_log_dbg("fb_index=%d dma_alloc=%ld\n",
+				fb_index, fb_rmem_size[fb_index]);
+#endif
 		}
 	} else {
 		#ifdef CONFIG_AMLOGIC_ION
@@ -1227,10 +1249,10 @@ static int osd_release(struct fb_info *info, int arg)
 		osd_log_info("osd already released. index=%d\n",
 			fbdev->fb_index);
 		goto done;
-	}
+	} else if (fbdev->open_count == 1) {
 	osd_log_info("osd_release now.index=%d,open_count=%d\n",
 		fbdev->fb_index, fbdev->open_count);
-
+	}
 	fbdev->open_count--;
 done:
 	return err;
@@ -2472,25 +2494,12 @@ static int osd_pm_resume(struct device *dev)
 
 static void mem_free_work(struct work_struct *work)
 {
-	long r = -EINVAL;
-	unsigned long start_addr;
-	unsigned long end_addr;
-
-	if (fb_rmem.base && fb_map_flag) {
-		if (fb_rmem.size >= (fb_memsize[0] + fb_memsize[1]
-			+ fb_memsize[2])) {
-			/* logo reserved memory before fb0/fb1 memory, free it*/
-			start_addr = fb_rmem.base;
-			end_addr = fb_rmem.base + fb_memsize[0];
-		} else {
-			/* logo reserved only, free it*/
-			start_addr = fb_rmem.base;
-			end_addr = fb_rmem.base + fb_rmem.size;
-		}
-		osd_log_info("%s, free memory: addr:%lx\n",
-			__func__, start_addr);
-		r = free_reserved_area(__va(start_addr),
-			__va(end_addr), 0, "fb-memory");
+	if (fb_memsize[0] > 0) {
+		osd_log_info("%s, free memory: addr:%x\n",
+			__func__, fb_memsize[0]);
+		dma_release_from_contiguous(&(gp_fbdev_list[0]->dev->dev),
+			osd_page[0],
+			fb_memsize[0] >> PAGE_SHIFT);
 	}
 }
 
@@ -2505,6 +2514,9 @@ static int osd_probe(struct platform_device *pdev)
 	const void *prop;
 	int prop_idx = 0;
 	const char *str;
+	#ifdef CONFIG_CMA
+	struct cma *cma;
+	#endif
 	int i;
 	int ret = 0;
 
@@ -2536,14 +2548,35 @@ static int osd_probe(struct platform_device *pdev)
 		osd_log_err("not found mem_size from dtd\n");
 		goto failed1;
 	}
+	osd_log_dbg("%d, mem_size: 0x%x, 0x%x, 0x%x\n",
+			__LINE__, fb_memsize[0], fb_memsize[1], fb_memsize[2]);
 
 	/* init reserved memory */
 	ret = of_reserved_mem_device_init(&pdev->dev);
-	if ((ret != 0) && ((void *)fb_rmem.base == NULL))
+	if (ret != 0)
 		osd_log_err("failed to init reserved memory\n");
+#ifdef CONFIG_CMA
+	cma = dev_get_cma_area(&pdev->dev);
+	if (cma) {
+		pr_info("reserved memory base:%llx, size:%lx\n",
+			cma_get_base(cma), cma_get_size(cma));
+	} else {
+		pr_info("------ NO CMA\n");
+		return -ENOMEM;
+	}
 
-	osd_log_dbg("%d, mem_size: 0x%x, 0x%x, 0x%x\n",
-			__LINE__, fb_memsize[0], fb_memsize[1], fb_memsize[2]);
+	if (fb_memsize[0] > 0) {
+		osd_page[0] = dma_alloc_from_contiguous(&pdev->dev,
+			fb_memsize[0] >> PAGE_SHIFT,
+			0);
+		if (!osd_page[0]) {
+			pr_err("allocate buffer failed:%d\n",
+				fb_memsize[0]);
+			return -ENOMEM;
+		}
+		osd_log_dbg("logo dma_alloc=%d\n", fb_memsize[0]);
+	}
+#endif
 
 	/* get meson-fb resource from dt */
 	prop = of_get_property(pdev->dev.of_node, "scale_mode", NULL);
@@ -2750,38 +2783,6 @@ exit:
 	return r;
 }
 
-static int __init
-rmem_fb_device_init(struct reserved_mem *rmem, struct device *dev)
-{
-	if (!of_get_flat_dt_prop(rmem->fdt_node, "no-map", NULL)) {
-		fb_map_flag = true;
-		osd_log_info("momery mapped[can free]\n");
-	} else
-		fb_map_flag = false;
-	return 0;
-}
-
-static const struct reserved_mem_ops rmem_fb_ops = {
-	.device_init = rmem_fb_device_init,
-};
-
-static int __init rmem_fb_setup(struct reserved_mem *rmem)
-{
-	phys_addr_t align = PAGE_SIZE;
-	phys_addr_t mask = align - 1;
-
-	if ((rmem->base & mask) || (rmem->size & mask)) {
-		pr_err("Reserved memory: incorrect alignment of region\n");
-		return -EINVAL;
-	}
-	fb_rmem.base = rmem->base;
-	fb_rmem.size = rmem->size;
-	rmem->ops = &rmem_fb_ops;
-	osd_log_dbg("Reserved memory: created fb at 0x%p, size %ld MiB\n",
-		     (void *)rmem->base, (unsigned long)rmem->size / SZ_1M);
-	return 0;
-}
-RESERVEDMEM_OF_DECLARE(fb, "amlogic, fb-memory", rmem_fb_setup);
 
 static const struct of_device_id meson_fb_dt_match[] = {
 	{.compatible = "amlogic, meson-fb",},
