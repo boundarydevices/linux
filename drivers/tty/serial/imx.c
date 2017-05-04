@@ -701,6 +701,16 @@ static void imx_start_tx(struct uart_port *port)
 	}
 
 	if (sport->dma_is_enabled) {
+		if (sport->port.x_char) {
+			/* We have X-char to send, so enable TX IRQ and
+			 * disable TX DMA to let TX interrupt to send X-char */
+			temp = readl(sport->port.membase + UCR1);
+			temp &= ~UCR1_TDMAEN;
+			temp |= UCR1_TXMPTYEN;
+			writel(temp, sport->port.membase + UCR1);
+			return;
+		}
+
 		if (!sport->dma_is_txing)
 			schedule_delayed_work(&sport->tsk_dma_tx, 0);
 	} else {
