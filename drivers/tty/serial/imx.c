@@ -1533,7 +1533,6 @@ static void imx_flush_buffer(struct uart_port *port)
 		return;
 
 	sport->tx_bytes = 0;
-	sport->dma_is_txing = 0;
 	dmaengine_terminate_all(sport->dma_chan_tx);
 	if (sport->dma_is_txing) {
 		dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents,
