@@ -24,6 +24,7 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
+#include <linux/dma-contiguous.h>
 #include <asm/compiler.h>
 #ifndef CONFIG_ARM64
 #include <asm/opcodes-sec.h>
@@ -45,12 +46,18 @@ static DEFINE_MUTEX(sharemem_mutex);
 #ifdef CONFIG_ARM64
 static long get_sharemem_info(unsigned int function_id)
 {
-	asm volatile(
-		__asmeq("%0", "x0")
-		"smc	#0\n"
-		: "+r" (function_id));
+	long ret;
 
-	return function_id;
+	asm volatile(
+		"mov	x0, %[function_id]	\n"
+		"smc	#0			\n"
+		"mov	%[ret], x0		\n"
+		: [ret] "=r" (ret)
+		: [function_id] "r" (function_id)
+		: "memory", "cc", "x0"
+	);
+
+	return ret;
 }
 #else
 static long get_sharemem_info(unsigned int function_id)
@@ -66,11 +73,15 @@ static long get_sharemem_info(unsigned int function_id)
 	return r0;
 }
 #endif
+
+#define RESERVE_MEM_SIZE	0x300000
 static int secmon_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	unsigned int id;
 	int ret;
+	int mem_size;
+	struct page *page;
 
 	if (!of_property_read_u32(np, "in_base_func", &id))
 		phy_in_base = get_sharemem_info(id);
@@ -78,9 +89,39 @@ static int secmon_probe(struct platform_device *pdev)
 	if (!of_property_read_u32(np, "out_base_func", &id))
 		phy_out_base = get_sharemem_info(id);
 
+	if (of_property_read_u32(np, "reserve_mem_size", &mem_size)) {
+		pr_err("can't get reserve_mem_size, use default value\n");
+		mem_size = RESERVE_MEM_SIZE;
+	} else
+		pr_debug("reserve_mem_size:0x%x\n", mem_size);
+
 	ret = of_reserved_mem_device_init(&pdev->dev);
-	if (ret == 0)
-		pr_info("probe done\n");
+	if (ret) {
+		pr_info("reserve memory init fail:%d\n", ret);
+		return ret;
+	}
+
+	page = dma_alloc_from_contiguous(&pdev->dev, mem_size >> PAGE_SHIFT, 0);
+	if (!page) {
+		pr_err("alloc page failed, ret:%p\n", page);
+		return -ENOMEM;
+	}
+	pr_debug("get page:%p, %lx\n", page, page_to_pfn(page));
+
+	sharemem_in_base = ioremap_cache(phy_in_base, IN_SIZE);
+	if (!sharemem_in_base) {
+		pr_info("secmon share mem in buffer remap fail!\n");
+		return -ENOMEM;
+	}
+	sharemem_out_base = ioremap_cache(phy_out_base, OUT_SIZE);
+	if (!sharemem_out_base) {
+		pr_info("secmon share mem out buffer remap fail!\n");
+		return -ENOMEM;
+	}
+	pr_info("share in base: 0x%lx, share out base: 0x%lx\n",
+		(long)sharemem_in_base, (long)sharemem_out_base);
+	pr_info("phy_in_base: 0x%lx, phy_out_base: 0x%lx\n",
+		phy_in_base, phy_out_base);
 
 	return ret;
 }
@@ -122,33 +163,3 @@ void __iomem *get_secmon_sharemem_output_base(void)
 {
 	return sharemem_out_base;
 }
-
-static int secmon_mem_device_init(struct reserved_mem *rmem, struct device *dev)
-{
-	sharemem_in_base = ioremap_cache(phy_in_base, IN_SIZE);
-	if (!sharemem_in_base) {
-		pr_info("secmon share mem in buffer remap fail!\n");
-		return -ENOMEM;
-	}
-	sharemem_out_base = ioremap_cache(phy_out_base, OUT_SIZE);
-	if (!sharemem_out_base) {
-		pr_info("secmon share mem out buffer remap fail!\n");
-		return -ENOMEM;
-	}
-	pr_info("share in base: 0x%lx, share out base: 0x%lx\n",
-			(long)sharemem_in_base, (long)sharemem_out_base);
-	return 0;
-}
-static const struct reserved_mem_ops rmem_secmon_ops = {
-	.device_init = secmon_mem_device_init,
-};
-static int __init secmon_mem_setup(struct reserved_mem *rmem)
-{
-	rmem->ops = &rmem_secmon_ops;
-	pr_debug("share mem setup\n");
-
-	return 0;
-}
-
-RESERVEDMEM_OF_DECLARE(secmonmem, "amlogic, aml_secmon_memory",
-					   secmon_mem_setup);

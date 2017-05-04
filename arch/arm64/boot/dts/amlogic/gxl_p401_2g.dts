@@ -47,9 +47,11 @@
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
 		secmon_reserved:linux,secmon {
-			compatible = "amlogic, aml_secmon_memory";
-			reg = <0x0 0x10000000 0x0 0x200000>;
-			no-map;
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x400000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x400000>;
 		};
 		secos_reserved:linux,secos {
 			status = "disable";
