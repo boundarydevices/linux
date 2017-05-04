@@ -554,6 +554,7 @@ static void dma_tx_callback(void *data)
 	struct scatterlist *sgl = &sport->tx_sgl[0];
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	unsigned long flags;
+	unsigned long temp;
 	unsigned pending;
 
 	/* update the stat */
@@ -563,6 +564,11 @@ static void dma_tx_callback(void *data)
 		spin_unlock_irqrestore(&sport->port.lock, flags);
 		return;
 	}
+
+	temp = readl(sport->port.membase + UCR1);
+	temp &= ~UCR1_TDMAEN;
+	writel(temp, sport->port.membase + UCR1);
+
 	sport->dma_is_txing = 0;
 
 	xmit->tail = (xmit->tail + sport->tx_bytes) & (UART_XMIT_SIZE - 1);
