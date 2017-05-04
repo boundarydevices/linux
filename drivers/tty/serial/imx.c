@@ -935,8 +935,9 @@ static irqreturn_t imx_int(int irq, void *dev_id)
 	if (sts & USR1_RTSD)
 		imx_rtsint(irq, dev_id);
 
-	if (sts & USR1_AWAKE)
-		writel(USR1_AWAKE, sport->port.membase + USR1);
+	sts &= USR1_AWAKE | USR1_AIRINT;
+	if (sts)
+		writel(sts, sport->port.membase + USR1);
 
 	if (sts2 & USR2_ORE) {
 		sport->port.icount.overrun++;
