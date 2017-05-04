@@ -210,6 +210,7 @@ struct imx_dma_rxbuf {
 	dma_addr_t		dmaaddr;
 	unsigned int		cur_idx;
 	unsigned int		pending_idx;
+	dma_cookie_t		cookie;
 	struct imx_dma_bufinfo	buf_info[IMX_RXBD_NUM];
 };
 
@@ -996,7 +997,7 @@ static void dma_rx_callback(void *data)
 		return;
 	}
 
-	status = dmaengine_tx_status(chan, (dma_cookie_t)0, &state);
+	status = dmaengine_tx_status(chan, sport->rx_buf.cookie, &state);
 	count = RX_BUF_SIZE - state.residue;
 
 	i = sport->rx_buf.cur_idx;
@@ -1033,7 +1034,7 @@ static int start_rx_dma(struct imx_port *sport)
 	desc->callback_param = sport;
 
 	dev_dbg(sport->port.dev, "RX: prepare for the DMA.\n");
-	dmaengine_submit(desc);
+	sport->rx_buf.cookie = dmaengine_submit(desc);
 	dma_async_issue_pending(chan);
 
 	sport->dma_is_rxing = 1;
