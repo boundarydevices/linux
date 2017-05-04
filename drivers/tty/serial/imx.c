@@ -1087,8 +1087,9 @@ static irqreturn_t imx_uart_int(int irq, void *dev_id)
 		ret = IRQ_HANDLED;
 	}
 
-	if (usr1 & USR1_AWAKE) {
-		imx_uart_writel(sport, USR1_AWAKE, USR1);
+	usr1 &= USR1_AWAKE | USR1_AIRINT;
+	if (usr1) {
+		imx_uart_writel(sport, usr1, USR1);
 		ret = IRQ_HANDLED;
 	}
 
