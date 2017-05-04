@@ -551,21 +551,18 @@ static void dma_tx_callback(void *data)
 	unsigned long temp;
 	unsigned pending;
 
-	spin_lock_irqsave(&sport->port.lock, flags);
 	dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 
+	spin_lock_irqsave(&sport->port.lock, flags);
 	temp = readl(sport->port.membase + UCR1);
 	temp &= ~UCR1_TDMAEN;
 	writel(temp, sport->port.membase + UCR1);
 
+	sport->dma_is_txing = 0;
+
 	/* update the stat */
 	xmit->tail = (xmit->tail + sport->tx_bytes) & (UART_XMIT_SIZE - 1);
 	sport->port.icount.tx += sport->tx_bytes;
-
-	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
-
-	sport->dma_is_txing = 0;
-
 	pending = uart_circ_chars_pending(xmit);
 	if (!pending && sport->txing &&
 			(sport->port.rs485.flags & SER_RS485_ENABLED)) {
@@ -574,6 +571,8 @@ static void dma_tx_callback(void *data)
 		writel(temp, sport->port.membase + UCR4);
 	}
 	spin_unlock_irqrestore(&sport->port.lock, flags);
+
+	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
 
 	if (pending < WAKEUP_CHARS)
 		uart_write_wakeup(&sport->port);
