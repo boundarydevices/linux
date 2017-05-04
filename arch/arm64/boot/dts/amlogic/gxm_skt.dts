@@ -74,11 +74,18 @@
 			alloc-ranges = <0x0 0x3e000000 0x0 0x2000000>;
 		};
 
-		di_reserved:linux,di {
-			compatible = "amlogic, di-mem";
+		//di_reserved:linux,di {
+		//	compatible = "amlogic, di-mem";
 			/** 10x3133440=30M(0x1e) support 8bit **/
-			size = <0x0 0x1e00000>;
+		//	size = <0x0 0x1e00000>;
 			//no-map;
+		//};
+		di_cma_reserved:linux,di_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/** 10x3133440=30M(0x1e) support 8bit **/
+			size = <0x0 0x2000000>;
+			alignment = <0x0 0x400000>;
 		};
 
 		ion_reserved:linux,ion-dev {
@@ -965,8 +972,9 @@
 	deinterlace {
 		compatible = "amlogic, deinterlace";
 		status = "okay";
-		flag_cma = <0>;/*0:use reserved;1:use cma*/
-		memory-region = <&di_reserved>;
+		flag_cma = <1>;/*0:use reserved;1:use cma*/
+		//memory-region = <&di_reserved>;
+		memory-region = <&di_cma_reserved>;
 		interrupts = <0 46 1 0 6 1>;
 		interrupt-names = "de_irq",	"timerc";
 		/*
