@@ -351,7 +351,7 @@ static int aml_jtag_select(struct platform_device *pdev)
 	pr_info("set state %u\n", select);
 
 	set_cpus_allowed_ptr(current, cpumask_of(0));
-	aml_set_jtag_state(AMLOGIC_JTAG_STATE_ON, select);
+	aml_set_jtag_state(state, select);
 	set_cpus_allowed_ptr(current, cpu_all_mask);
 
 	return 0;
