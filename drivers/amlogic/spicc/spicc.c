@@ -41,7 +41,6 @@
 #ifdef CONFIG_SPICC_LOG
 struct my_log {
 	struct timeval tv;
-	unsigned int irq_data;
 	unsigned int reg_val[13];
 	unsigned int param[8];
 	unsigned int param_count;
@@ -71,6 +70,7 @@ struct spicc {
 	int device_id;
 	struct reset_control *rst;
 	struct clk *clk;
+	struct clk *hclk;
 	void __iomem *regs;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pullup;
@@ -92,6 +92,7 @@ struct spicc {
 	u8 test_data;
 	unsigned int delay_control;
 	unsigned int cs_delay;
+	unsigned int enhance_dlyctl;
 	int remain;
 	u8 *txp;
 	u8 *rxp;
@@ -158,17 +159,12 @@ static void spicc_log(
 	int comment_id)
 {
 	struct my_log *log;
-	struct irq_desc *desc;
 	int i;
 
 	if (IS_ERR_OR_NULL(spicc->log))
 		return;
 	log = &spicc->log[spicc->log_count];
 	log->tv = ktime_to_timeval(ktime_get());
-	if (spicc->irq) {
-		desc = irq_to_desc(spicc->irq);
-		log->irq_data = desc->irq_data.state_use_accessors;
-	}
 	for (i = 0; i < ARRAY_SIZE(log->reg_val); i++)
 		log->reg_val[i] = readl(spicc->regs + ((i+2)<<2));
 
@@ -200,7 +196,6 @@ static void spicc_log_print(struct spicc *spicc)
 				(unsigned int)log->tv.tv_sec,
 				(unsigned int)log->tv.tv_usec,
 				i, log->comment);
-		pr_info("irq_data=0x%x\n", log->irq_data);
 		p = log->reg_val;
 		for (j = 0; j < ARRAY_SIZE(log->reg_val); j++)
 			if (*p)
@@ -297,7 +292,12 @@ static void spicc_set_clk(struct spicc *spicc, int speed)
 	sys_clk_rate = clk_get_rate(spicc->clk);
 
 	if (spicc_get_flag(spicc, FLAG_ENHANCE)) {
-		div = (sys_clk_rate/speed)-1;
+		div = sys_clk_rate/speed;
+		if (div < 2)
+			div = 2;
+		div = (div >> 1) - 1;
+		if (div > 0xff)
+			div = 0xff;
 		setb(spicc->regs, ENHANCE_CLK_DIV, div);
 		setb(spicc->regs, ENHANCE_CLK_DIV_SELECT, 1);
 	} else {
@@ -612,6 +612,8 @@ static void spicc_hw_init(struct spicc *spicc)
 		setb(mem_base, CS_OEN, 1);
 		setb(mem_base, CS_DELAY, spicc->cs_delay);
 		setb(mem_base, CS_DELAY_EN, 1);
+		writel(spicc->enhance_dlyctl,
+			spicc->regs + SPICC_REG_ENHANCE_CNTL1);
 	}
 	/* spicc_enable(spicc, 0); */
 }
@@ -987,10 +989,27 @@ static int of_spicc_get_data(
 		return PTR_ERR(spicc->regs);
 	}
 
+	spicc->rst = devm_reset_control_get(&pdev->dev, "spicc_rst");
+	if (IS_ERR_OR_NULL(spicc->rst))
+		dev_err(&pdev->dev, "get reset failed\n");
+	else
+		reset_control_deassert(spicc->rst);
+
 	spicc->clk = devm_clk_get(&pdev->dev, "spicc_clk");
 	if (IS_ERR_OR_NULL(spicc->clk)) {
 		dev_err(&pdev->dev, "get clk fail\n");
 		return PTR_ERR(spicc->clk);
+	} else {
+
+	}
+	spicc->hclk = devm_clk_get(&pdev->dev, "cts_spicc_hclk");
+	if (IS_ERR_OR_NULL(spicc->hclk)) {
+		dev_err(&pdev->dev, "get cts_spicc_hclk failed\n");
+	} else {
+		err = of_property_read_u32(np, "enhance_dlyctl", &value);
+		spicc->enhance_dlyctl = err ? 0 : value;
+		dev_info(&pdev->dev, "enhance_dlyctl=0x%x\n",
+			spicc->enhance_dlyctl);
 	}
 	return 0;
 }
@@ -1086,6 +1105,28 @@ static int spicc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int spicc_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct spicc *spicc;
+	unsigned long flags;
+
+	spicc = (struct spicc *)dev_get_drvdata(&pdev->dev);
+	spin_lock_irqsave(&spicc->lock, flags);
+	spin_unlock_irqrestore(&spicc->lock, flags);
+	return 0;
+}
+
+static int spicc_resume(struct platform_device *pdev)
+{
+	struct spicc *spicc;
+	unsigned long flags;
+
+	spicc = (struct spicc *)dev_get_drvdata(&pdev->dev);
+	spin_lock_irqsave(&spicc->lock, flags);
+	spin_unlock_irqrestore(&spicc->lock, flags);
+	return 0;
+}
+
 #ifdef CONFIG_OF
 static const struct of_device_id spicc_of_match[] = {
 	{	.compatible = "amlogic, spicc", },
@@ -1098,6 +1139,8 @@ static const struct of_device_id spicc_of_match[] = {
 static struct platform_driver spicc_driver = {
 	.probe = spicc_probe,
 	.remove = spicc_remove,
+	.suspend = spicc_suspend,
+	.resume = spicc_resume,
 	.driver = {
 			.name = "spicc",
 			.of_match_table = spicc_of_match,

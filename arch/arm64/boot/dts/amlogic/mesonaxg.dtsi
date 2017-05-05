@@ -334,6 +334,46 @@
 		/*and you can shoose it in file dt-bindings/pwm/meson.h*/
 	};
 
+	spicc_a:spicc_a {
+		compatible = "amlogic, spicc";
+		status = "disabled";
+		reg = <0x0 0xffd13000 0x0 0x3c>;
+		clocks = <&clkc CLKID_SPICC0>,
+			<&clkc CLKID_SPICC_COMP>;
+		clock-names = "spicc_clk",
+			"cts_spicc_hclk";
+		interrupts = <0 81 1>;
+		device_id = <0>;
+		enhance = <1>;
+		pinctrl-names= "default";
+		pinctrl-0=<&spicc_a_pins>;
+		dma_tx_threshold = <3>;
+		dma_rx_threshold = <3>;
+		dma_num_per_read_burst = <3>;
+		dma_num_per_write_burst = <3>;
+		ssctl = <0>;
+	};
+
+	spicc_b:spicc_b {
+		compatible = "amlogic, spicc";
+		status = "disabled";
+		reg = <0x0 0xffd15000 0x0 0x3c>;
+		clocks = <&clkc CLKID_SPICC1>,
+			<&clkc CLKID_SPICC_COMP>;
+		clock-names = "spicc_clk",
+			"cts_spicc_hclk";
+		interrupts = <0 82 1>;
+		device_id = <1>;
+		enhance = <1>;
+		pinctrl-names= "default";
+		pinctrl-0=<&spicc_b_pins_X>;
+		dma_tx_threshold = <3>;
+		dma_rx_threshold = <3>;
+		dma_num_per_read_burst = <3>;
+		dma_num_per_write_burst = <3>;
+		ssctl = <0>;
+	};
+
 	i2c_ao: i2c@ff805000{ /*I2C-AO*/
 		compatible = "amlogic, meson-i2c";
 		dev_name = "i2c-AO";
@@ -533,6 +573,26 @@
 			function = "i2c_d";
 		};
 	};
+
+	spicc_a_pins: spicc_a_pins{
+		mux {
+			pins = "GPIOZ_0","GPIOZ_1","GPIOZ_2","GPIOZ_3";
+			function = "spi_a";
+		};
+	};
+	spicc_b_pins_A: spicc_b_pins_A{
+		mux {
+			pins="GPIOA_2","GPIOA_3","GPIOA_4","GPIOA_5";
+			function = "spi_b";
+		};
+	};
+	spicc_b_pins_X: spicc_b_pins_X{
+		mux {
+			pins = "GPIOX_16","GPIOX_17","GPIOX_18","GPIOX_19";
+			function = "spi_b";
+		};
+	};
+
 }; /* end of pinctrl_periphs */
 
 &aobus{
