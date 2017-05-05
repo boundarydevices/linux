@@ -57,20 +57,5 @@
 
 	};
 
-
-	uart_AO: serial@ff803000 {
-		compatible = "amlogic, meson-uart";
-		reg = <0x0 0xff803000 0x0 0x18>;
-		interrupts = <0 193 1>;
-		status = "okay";
-		clocks = <&xtal>;
-		clock-names = "clk_uart";
-		xtal_tick_en = <1>;
-		fifosize = < 64 >;
-//		pinctrl-names = "default";
-//		pinctrl-0 = <&uart_ao_a_pins>;
-		support-sysrq = <0>;	/* 0 not support , 1 support */
-	};
-
 }; /* end of / */
 

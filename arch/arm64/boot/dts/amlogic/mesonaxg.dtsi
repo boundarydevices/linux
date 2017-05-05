@@ -16,6 +16,8 @@
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/amlogic,axg-clkc.h>
+#include <dt-bindings/gpio/mesonaxg-gpio.h>
 
 / {
 	cpus:cpus {
@@ -297,7 +299,7 @@
 			clkc: clock-controller@0 {
 				compatible = "amlogic,axg-clkc";
 				#clock-cells = <1>;
-				reg = <0x0 0x3c000 0x0 0x320>;
+				reg = <0x0 0x0 0x0 0x320>;
 			};
 		};/* end of hiubus*/
 	}; /* end of soc*/
@@ -311,6 +313,14 @@
 			function = "ir_in";
 		};
 	};
+
+	ao_uart_pins:ao_uart {
+			mux {
+				pins = "GPIOAO_0",
+					"GPIOAO_1";
+				function = "uart_ao_a";
+			};
+		};
 }; /* end of pinctrl_aobus */
 
 &pinctrl_periphs {
@@ -329,3 +339,19 @@
 
 	};
 }; /* end of pinctrl_periphs */
+
+&aobus{
+	uart_AO: serial@3000 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0x3000 0x0 0x18>;
+		interrupts = <0 193 1>;
+		status = "okay";
+		clocks = <&xtal>;
+		clock-names = "clk_uart";
+		xtal_tick_en = <1>;
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_uart_pins>;
+		support-sysrq = <0>;	/* 0 not support , 1 support */
+	};
+};
