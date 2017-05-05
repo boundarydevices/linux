@@ -451,6 +451,7 @@ static int pwm_meson_config_ext(struct aml_pwm_chip *aml_chip,
 		clk_mask = (0x7f << 16)|(1 << 23);
 		clk_val = (our_chan->pwm_pre_div << 16)|(1 << 23);
 		duty_reg = &aml_reg->db2r;
+		break;
 	default:
 		dev_err(aml_chip->chip.dev,
 				"config_ext,index is not legal\n");
@@ -634,25 +635,51 @@ static int pwm_aml_parse_addr_txlx(struct aml_pwm_chip *chip)
 	return 0;
 }
 
+static int pwm_aml_parse_addr_axg(struct aml_pwm_chip *chip)
+{
+	struct device_node *np = chip->chip.dev->of_node;
+
+	chip->baseaddr.ab_base = of_iomap(np, 0);
+	if (IS_ERR(chip->baseaddr.ab_base))
+		return PTR_ERR(chip->baseaddr.ab_base);
+
+	chip->baseaddr.cd_base = of_iomap(np, 1);
+	if (IS_ERR(chip->baseaddr.cd_base))
+		return PTR_ERR(chip->baseaddr.cd_base);
+
+	chip->baseaddr.aoab_base = of_iomap(np, 3);
+	if (IS_ERR(chip->baseaddr.aoab_base))
+		return PTR_ERR(chip->baseaddr.aoab_base);
+
+	chip->baseaddr.aocd_base = of_iomap(np, 4);
+	if (IS_ERR(chip->baseaddr.aocd_base))
+		return PTR_ERR(chip->baseaddr.aocd_base);
+
+	return 0;
+}
+
 static int pwm_aml_parse_addr(struct aml_pwm_chip *chip)
 {
 	unsigned int soc_id = get_cpu_type();
 
 	switch (soc_id) {
-	case MESON_CPU_MAJOR_ID_M8B:
+	case MESON_CPU_MAJOR_ID_M8B:/*3 group pwms*/
 		pwm_aml_parse_addr_m8b(chip);
 	break;
 	case MESON_CPU_MAJOR_ID_GXBB:
 	case MESON_CPU_MAJOR_ID_GXTVBB:
 	case MESON_CPU_MAJOR_ID_GXL:
-	case MESON_CPU_MAJOR_ID_GXM:
+	case MESON_CPU_MAJOR_ID_GXM:/*4 group pwms*/
 		pwm_aml_parse_addr_gxbb(chip);
 	break;
-	case MESON_CPU_MAJOR_ID_TXL:
+	case MESON_CPU_MAJOR_ID_TXL:/*5 group pwms,ao blink reg special*/
 		pwm_aml_parse_addr_txl(chip);
 	break;
-	case MESON_CPU_MAJOR_ID_TXLX:
+	case MESON_CPU_MAJOR_ID_TXLX:/*5 group pwms*/
 		pwm_aml_parse_addr_txlx(chip);
+	break;
+	case MESON_CPU_MAJOR_ID_AXG:/*4 group pwms*/
+		pwm_aml_parse_addr_axg(chip);
 	break;
 	default:
 		dev_err(chip->chip.dev, "not support soc\n");
@@ -725,6 +752,11 @@ static int pwm_aml_parse_dt(struct aml_pwm_chip *chip)
 			(clock_co > AML_PWM_TXLX_NUM)) {
 			goto err;
 		}
+	case MESON_CPU_MAJOR_ID_AXG:
+		if ((output_co > AML_PWM_AXG_NUM) ||
+			(clock_co > AML_PWM_AXG_NUM)) {
+			goto err;
+		}
 	break;
 	default:
 		dev_err(chip->chip.dev, "%s not support\n", __func__);
@@ -785,8 +817,6 @@ static int pwm_aml_probe(struct platform_device *pdev)
 	pr_info("npwm= %d\n", chip->chip.npwm);
 	switch (soc_id) {
 	case MESON_CPU_MAJOR_ID_M8B:
-		chip->inverter_mask = BIT(chip->chip.npwm) - 1;
-		break;
 	case MESON_CPU_MAJOR_ID_GXBB:
 		chip->inverter_mask = BIT(chip->chip.npwm) - 1;
 		break;
@@ -794,9 +824,8 @@ static int pwm_aml_probe(struct platform_device *pdev)
 	case MESON_CPU_MAJOR_ID_GXL:
 	case MESON_CPU_MAJOR_ID_GXM:
 	case MESON_CPU_MAJOR_ID_TXL:
-		chip->inverter_mask = BIT(chip->chip.npwm/2) - 1;
-		break;
 	case MESON_CPU_MAJOR_ID_TXLX:
+	case MESON_CPU_MAJOR_ID_AXG:
 		chip->inverter_mask = BIT(chip->chip.npwm/2) - 1;
 		break;
 	default:

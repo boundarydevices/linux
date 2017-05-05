@@ -40,6 +40,7 @@
 #define AML_PWM_GXBB_NUM		8
 #define AML_PWM_GXTVBB_NUM		16
 #define AML_PWM_TXLX_NUM		20
+#define AML_PWM_AXG_NUM			16
 
 
 

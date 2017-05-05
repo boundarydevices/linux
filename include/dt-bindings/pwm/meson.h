@@ -28,6 +28,9 @@
 #define	PWM_AO_A		6
 #define	PWM_AO_B		7
 
+/*
+ * Addtional 8 channels for gxtvbb , gxl ,gxm and txl
+ */
 #define	PWM_A2			8
 #define	PWM_B2			9
 #define	PWM_C2			10
