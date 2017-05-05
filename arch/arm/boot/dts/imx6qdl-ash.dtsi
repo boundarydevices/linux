@@ -682,9 +682,11 @@
 
 &i2c2 {
 	clock-frequency = <100000>;
+	inter-byte-delay = <170>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+	stop-delay = <30>;
 
 	ar1021@4d {
 		compatible = "ar1020_i2c";
