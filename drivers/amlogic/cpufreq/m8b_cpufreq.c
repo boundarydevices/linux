@@ -239,6 +239,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 		return -1;
 	}
 
+	cpumask_setall(policy->cpus);
 	/* build and add opp table */
 	build_fixpll_freqtable(mfreq->table,
 			       mfreq->fixpll_target, mfreq->opp_table,

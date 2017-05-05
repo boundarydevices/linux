@@ -254,6 +254,7 @@ int  clockevent_local_timer(unsigned int cpu)
 		if (cpuidx)
 			irq_force_affinity(mclk->irq.irq, cpumask_of(cpuidx));
 		enable_percpu_irq(mclk->irq.irq, 0);
+		aml_set_reg32_mask(mclk->mux_reg, (1 << mclk->bit_enable));
 		return 0;
 	}
 
