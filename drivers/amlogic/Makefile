@@ -70,7 +70,7 @@ obj-$(CONFIG_AMLOGIC_TEMP_SENSOR)	+= thermal/
 
 obj-$(CONFIG_AMLOGIC_AUDIO_DSP)	+= audiodsp/
 
-obj-$(CONFIG_AMLOGIC_GX_SUSPEND)	+= pm/
+obj-$(CONFIG_AMLOGIC_SUSPEND)	+= pm/
 
 obj-$(CONFIG_AMLOGIC_LED)		+= led/
 

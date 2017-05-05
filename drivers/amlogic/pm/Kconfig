@@ -2,10 +2,22 @@
 
 menu "Meson core pm driver"
 
+config AMLOGIC_SUSPEND
+    bool "Meson chips pm driver"
+    depends on PM
+    default n
+    help
+      This is the Amlogic core pm driver for meson family chips
+      AMLOGIC_GX_SUSPEND provides pm driver for GX family chips
+      AMLOGIC_M8B_SUSPEND provides pm driver for m8b (32bit) chip.
+      If you want this support, you should say Y here.
+
 config AMLOGIC_GX_SUSPEND
     bool "Meson gx chips pm driver"
+    depends on AMLOGIC_SUSPEND
     depends on CPU_IDLE
     depends on PM_WAKELOCKS
+    depends on PM
     depends on ARM64
     default n
     help
@@ -15,10 +27,11 @@ config AMLOGIC_GX_SUSPEND
 
       If you want this support, you should say Y here.
 
-config AMLOGIC_MX_SUSPEND
+config AMLOGIC_M8B_SUSPEND
     bool "Meson mx chips pm driver"
-    depends on CPU_IDLE
+    depends on AMLOGIC_SUSPEND
     depends on PM_WAKELOCKS
+    depends on PM
     depends on ARM
     default n
     help
@@ -30,7 +43,7 @@ config AMLOGIC_MX_SUSPEND
 
 config AMLOGIC_LEGACY_EARLY_SUSPEND
     bool "A re-implement early_suspend instead of legacy ealry_suspend."
-    depends on AMLOGIC_GX_SUSPEND || AMLOGIC_MX_SUSPEND
+    depends on AMLOGIC_GX_SUSPEND || AMLOGIC_M8B_SUSPEND
     depends on PM
     default n
     help

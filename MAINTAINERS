@@ -13872,3 +13872,8 @@ F: sound/soc/codecs/amlogic/aml_pmu3.h
 AMLOGIC MTD MESON8B DRIVER
 M:	Yonghui Yu <yonghui.yu@amlogic.com>
 F:	drivers/amlogic/mtd_meson8b/
+
+AMLOGIC PM/SLEEP M8B DRIVER SUPPORT
+M: Qiufang Dai <qiufang.dai@amlogic.com>
+F: drivers/amlogic/pm/m8b_pm.c
+F: drivers/amlogic/pm/lgcy_early_suspend.c

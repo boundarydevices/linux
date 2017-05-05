@@ -958,5 +958,10 @@ dwc2_b {
 		status = "okay";
 	};
 
+	meson_suspend:pm{
+		compatible = "amlogic, pm-m8b";
+		device_name = "aml_pm";
+	};
+
 	}; /* end of soc*/
 }; /* end of / */

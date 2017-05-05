@@ -31,6 +31,17 @@
 		linux,usable-memory = <0x00200000 0x1fe00000>;
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		pm_reserved:linux,pm {
+			compatible = "amlogic, pm-m8b-reserve";
+			reg = <0x04f00000 0x100000>;
+		};
+	};
+
 	sdio {
 		compatible = "amlogic, aml_sdio";
 		dev_name = "aml_sdio.0";

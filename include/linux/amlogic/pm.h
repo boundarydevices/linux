@@ -49,6 +49,36 @@ struct early_suspend {
 };
 extern void register_early_suspend(struct early_suspend *handler);
 extern void unregister_early_suspend(struct early_suspend *handler);
-
+extern unsigned int create_early_suspend_sysfs(void);
 #endif //CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-#endif
+
+#ifdef CONFIG_AMLOGIC_M8B_SUSPEND
+/*l2c virtual addr*/
+#define IO_PL310_BASE 0xfe000000
+
+/*IR, power key, low power,
+ *adapter plug in/out and so on,
+ *are all use this flag.
+ */
+#define FLAG_WAKEUP_PWRKEY		0x1234abcd
+#define FLAG_WAKEUP_ALARM		0x12345678
+#define FLAG_WAKEUP_WIFI		0x12340001
+#define FLAG_WAKEUP_BT			0x12340002
+#define FLAG_WAKEUP_PWROFF		0x12340003
+
+/*AOBUS*/
+#define AO_RTI_STATUS_REG2 0x0008
+#define AO_RTC_ADDR0 0x0740
+#define AO_RTC_ADDR1 0x0744
+#define AO_RTC_ADDR2 0x0748
+#define AO_RTC_ADDR3 0x074c
+#define AO_UART_STATUS 0x04cc
+#define AO_UART_REG5   0x04d4
+
+/*CBUS*/
+#define HHI_SYS_PLL_CNTL  0x10c0
+#define HHI_MPEG_CLK_CNTL 0x105d
+
+#endif //CONFIG_AMLOGIC_M8B_SUSPEND
+
+#endif //__AML_PM_H__

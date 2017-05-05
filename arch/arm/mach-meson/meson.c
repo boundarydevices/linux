@@ -17,6 +17,8 @@
 
 #include <linux/of_platform.h>
 #include <asm/mach/arch.h>
+#include <asm/mach/map.h>
+#include <linux/amlogic/pm.h>
 
 static const char * const meson_common_board_compat[] = {
 	"amlogic,meson6",
@@ -25,8 +27,30 @@ static const char * const meson_common_board_compat[] = {
 	NULL,
 };
 
+#ifdef CONFIG_AMLOGIC_M8B_SUSPEND
+static void __init meson_map_io(void)
+{
+	struct map_desc map;
+
+	map.pfn = __phys_to_pfn(0x4f00000);
+	map.virtual = 0xc4d00000;
+	map.length = 0x100000;
+	map.type = MT_MEMORY_RWX_NONCACHED;
+	iotable_init(&map, 1);
+
+	map.pfn = __phys_to_pfn(0xc4200000);
+	map.virtual = IO_PL310_BASE;
+	map.length = 0x1000;
+	map.type = MT_DEVICE;
+	iotable_init(&map, 1);
+}
+#endif
+
 DT_MACHINE_START(MESON, "Amlogic Meson platform")
 	.dt_compat	= meson_common_board_compat,
 	.l2c_aux_val	= 0,
 	.l2c_aux_mask	= ~0,
+#ifdef CONFIG_AMLOGIC_M8B_SUSPEND
+	.map_io         = meson_map_io,
+#endif
 MACHINE_END
