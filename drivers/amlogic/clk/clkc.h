@@ -128,6 +128,9 @@ extern const struct clk_ops meson_clk_cpu_ops;
 extern const struct clk_ops meson_clk_mpll_ro_ops;
 extern const struct clk_ops meson_clk_mpll_ops;
 extern const struct clk_ops meson_clk_mux_ops;
+extern const struct clk_ops meson_axg_pll_ro_ops;
+extern const struct clk_ops meson_axg_pll_ops;
+
 extern spinlock_t clk_lock;
 extern void __iomem *clk_base;
 extern struct clk **clks;

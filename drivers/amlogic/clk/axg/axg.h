@@ -31,6 +31,8 @@
 #define HHI_HIFI_PLL_CNTL		0x80 /* 0x20 offset in data sheet */
 
 #define HHI_PCIE_PLL_CNTL		0xd8 /* 0x36 offset in data sheet */
+#define HHI_PCIE_PLL_CNTL1		0xdc /* 0x37 offset in data sheet */
+#define HHI_PCIE_PLL_CNTL6	0xf0 /* 0x3c offset in data sheet */
 
 #define HHI_GCLK_MPEG0			0x140 /* 0x50 offset in data sheet */
 #define HHI_GCLK_MPEG1			0x144 /* 0x51 offset in data sheet */
@@ -263,6 +265,11 @@ static const struct pll_rate_table axg_gp0_pll_rate_table[] = {
 	PLL_RATE(1584000000, 66, 1, 0),
 	PLL_RATE(1608000000, 67, 1, 0),
 	PLL_RATE(1632000000, 68, 1, 0),
+	{ /* sentinel */ },
+};
+
+static const struct pll_rate_table axg_pcie_pll_rate_table[] = {
+	PLL_FRAC_RATE(100000000, 66, 1, 1, 3, 683),
 	{ /* sentinel */ },
 };
 #endif /* __AXG_H */

@@ -63,7 +63,7 @@ static struct meson_clk_pll axg_fixed_pll = {
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "fixed_pll",
-		.ops = &meson_clk_pll_ro_ops,
+		.ops = &meson_axg_pll_ro_ops,
 		.parent_names = (const char *[]){ "xtal" },
 		.num_parents = 1,
 		.flags = CLK_GET_RATE_NOCACHE,
@@ -91,7 +91,7 @@ static struct meson_clk_pll axg_sys_pll = {
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "sys_pll",
-		.ops = &meson_clk_pll_ops,
+		.ops = &meson_axg_pll_ops,
 		.parent_names = (const char *[]){ "xtal" },
 		.num_parents = 1,
 		.flags = CLK_GET_RATE_NOCACHE,
@@ -119,7 +119,7 @@ static struct meson_clk_pll axg_gp0_pll = {
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "gp0_pll",
-		.ops = &meson_clk_pll_ops,
+		.ops = &meson_axg_pll_ops,
 		.parent_names = (const char *[]){ "xtal" },
 		.num_parents = 1,
 		.flags = CLK_GET_RATE_NOCACHE,
@@ -147,7 +147,7 @@ static struct meson_clk_pll axg_hifi_pll = {
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "hifi_pll",
-		.ops = &meson_clk_pll_ops,
+		.ops = &meson_axg_pll_ops,
 		.parent_names = (const char *[]){ "xtal" },
 		.num_parents = 1,
 		.flags = CLK_GET_RATE_NOCACHE,
@@ -305,7 +305,7 @@ static struct meson_clk_mpll axg_mpll3 = {
 	},
 };
 
-static struct meson_clk_pll axg_pcierefpll = {
+static struct meson_clk_pll axg_pcie_pll = {
 	.m = {
 		.reg_off = HHI_PCIE_PLL_CNTL,
 		.shift   = 0,
@@ -321,15 +321,68 @@ static struct meson_clk_pll axg_pcierefpll = {
 		.shift   = 16,
 		.width   = 2,
 	},
-	//.rate_table = axg_gp0_pll_rate_table,
-	//.rate_count = ARRAY_SIZE(axg_gp0_pll_rate_table),
+	.od2 = {
+		.reg_off = HHI_PCIE_PLL_CNTL6,
+		.shift   = 6,
+		.width   = 2,
+	},
+	.frac = {
+		.reg_off = HHI_PCIE_PLL_CNTL1,
+		.shift   = 0,
+		.width   = 12,
+	},
+	.rate_table = axg_pcie_pll_rate_table,
+	.rate_count = ARRAY_SIZE(axg_pcie_pll_rate_table),
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
-		.name = "pcierefpll",
-		.ops = &meson_clk_pll_ops,
-		.parent_names = (const char *[]){ "mpll3" },
+		.name = "pcie_pll",
+		.ops = &meson_axg_pll_ops,
+		.parent_names = (const char *[]){ "xtal" },
 		.num_parents = 1,
 		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux axg_pcie_mux = {
+	.reg = (void *)HHI_PCIE_PLL_CNTL6,
+	.mask = 0x1,
+	.shift = 2,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "axg_pcie_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = (const char *[]){ "mpll3", "pcie_pll" },
+		.num_parents = 2,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+#if 0
+static struct clk_gate axg_pcie_input_gate = {
+	.reg = (void *)HHI_PCIE_PLL_CNTL6,
+	.bit_idx = 1,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "axg_pcie_input_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "pcie_input" },
+		.num_parents = 1,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+#endif
+static struct clk_mux axg_pcie_ref = {
+	.reg = (void *)HHI_PCIE_PLL_CNTL6,
+	.mask = 0x1,
+	.shift = 1,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "axg_pcie_ref",
+		.ops = &clk_mux_ops,
+		//.parent_names = (const char *[]){ "axg_pcie_input_gate",
+		.parent_names = (const char *[]){ "NULL",
+			"axg_pcie_mux" },
+		.num_parents = 2,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
 	},
 };
 
@@ -644,7 +697,10 @@ static struct clk_hw *axg_clk_hws[] = {
 	[CLKID_CPU_FCLK_P1]		= &axg_cpu_fixedpll_p1.hw,
 	[CLKID_CPU_FCLK_P]		= &axg_cpu_fixedpll_p.hw,
 	[CLKID_CPU_CLK]		    = &axg_cpu_clk.mux.hw,
-	[CLKID_PCIE_REFPLL]		= &axg_pcierefpll.hw,
+	[CLKID_PCIE_PLL]		= &axg_pcie_pll.hw,
+	[CLKID_PCIE_MUX]			= &axg_pcie_mux.hw,
+	[CLKID_PCIE_REF]			= &axg_pcie_ref.hw,
+//	[CLKID_PCIE_INPUT_GATE]	= &axg_pcie_input_gate.hw,
 };
 /* Convenience tables to populate base addresses in .probe */
 
@@ -653,7 +709,7 @@ static struct meson_clk_pll *const axg_clk_plls[] = {
 	&axg_sys_pll,
 	&axg_gp0_pll,
 	&axg_hifi_pll,
-	&axg_pcierefpll,
+	&axg_pcie_pll,
 };
 
 static struct meson_clk_mpll *const axg_clk_mplls[] = {
@@ -747,6 +803,9 @@ static void __init axg_clkc_init(struct device_node *np)
 	axg_mpeg_clk_sel.reg = clk_base + (u64)axg_mpeg_clk_sel.reg;
 	axg_mpeg_clk_div.reg = clk_base + (u64)axg_mpeg_clk_div.reg;
 
+	axg_pcie_mux.reg = clk_base + (u64)axg_pcie_mux.reg;
+	axg_pcie_ref.reg = clk_base + (u64)axg_pcie_ref.reg;
+
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(axg_clk_gates); i++)
 		axg_clk_gates[i]->reg = clk_base +
@@ -766,9 +825,14 @@ static void __init axg_clkc_init(struct device_node *np)
 	 */
 
 	for (clkid = 0; clkid < OTHER_BASE; clkid++) {
+		if (axg_clk_hws[clkid]) {
 		clks[clkid] = clk_register(NULL, axg_clk_hws[clkid]);
 		WARN_ON(IS_ERR(clks[clkid]));
+		}
 	}
+
+	clk_set_parent(clks[CLKID_PCIE_MUX], clks[CLKID_PCIE_PLL]);
+	clk_set_parent(clks[CLKID_PCIE_REF], clks[CLKID_PCIE_MUX]);
 
 	axg_amlogic_init_sdemmc();
 	axg_amlogic_init_media();

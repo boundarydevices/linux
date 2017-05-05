@@ -20,6 +20,7 @@
 #include <dt-bindings/gpio/mesonaxg-gpio.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
+
 / {
 	cpus:cpus {
 		#address-cells = <2>;

@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/clk/clk-pll.c
+ * drivers/amlogic/clk/axg/axg_clk-pll.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -41,7 +41,7 @@
 #include <linux/amlogic/cpu_version.h>
 
 #ifdef CONFIG_ARM64
-#include "clkc.h"
+#include "../clkc.h"
 #else
 #include "m8b/clkc.h"
 #endif
@@ -50,26 +50,36 @@
 #define MESON_PLL_ENABLE			BIT(30)
 #define MESON_PLL_LOCK				BIT(31)
 
-/* GXBB GXTVBB */
-#define GXBB_GP0_CNTL2 0x69c80000
-#define GXBB_GP0_CNTL3 0x0a674a21
-#define GXBB_GP0_CNTL4 0xc000000d
-
 /* GXL TXL */
 #define GXL_GP0_CNTL1 0xc084a000
 #define GXL_GP0_CNTL2 0xb75020be
 #define GXL_GP0_CNTL3 0x0a59a288
 #define GXL_GP0_CNTL4 0xc000004d
 #define GXL_GP0_CNTL5 0x00078000
+/* AXG */
+#define AXG_MIPI_CNTL0 0xa5b80000
+#define AXG_PCIE_PLL_CNTL 0x40010242
+#define AXG_PCIE_PLL_CNTL1 0xc084b2ab
+#define AXG_PCIE_PLL_CNTL2 0xb75020be
+#define AXG_PCIE_PLL_CNTL3 0x0a5aaa88
+#define AXG_PCIE_PLL_CNTL4 0xc000004d
+#define AXG_PCIE_PLL_CNTL5 0x00078000
+#define AXG_PCIE_PLL_CNTL6 0x003303de
+
+#define AXG_HIFI_PLL_CNTL1 0xc084b000
+#define AXG_HIFI_PLL_CNTL2 0xb75020be
+#define AXG_HIFI_PLL_CNTL3 0x0a6a3a88
+#define AXG_HIFI_PLL_CNTL4 0xc000004d
+#define AXG_HIFI_PLL_CNTL5 0x000581eb
 
 #define to_meson_clk_pll(_hw) container_of(_hw, struct meson_clk_pll, hw)
 
-static unsigned long meson_clk_pll_recalc_rate(struct clk_hw *hw,
+static unsigned long meson_axg_pll_recalc_rate(struct clk_hw *hw,
 						unsigned long parent_rate)
 {
 	struct meson_clk_pll *pll = to_meson_clk_pll(hw);
 	struct parm *p;
-	unsigned long parent_rate_mhz = parent_rate / 1000000;
+	unsigned long parent_rate_mhz = parent_rate;
 	unsigned long rate_mhz;
 	u16 n, m, frac = 0, od, od2 = 0;
 	u32 reg;
@@ -98,15 +108,15 @@ static unsigned long meson_clk_pll_recalc_rate(struct clk_hw *hw,
 		reg = readl(pll->base + p->reg_off);
 		frac = PARM_GET(p->width, p->shift, reg);
 		rate_mhz = (parent_rate_mhz * m +
-				(parent_rate_mhz * frac >> 12)) * 2 / n;
+				(parent_rate_mhz * frac >> 12)) / n;
 		rate_mhz = rate_mhz >> od >> od2;
 	} else
 		rate_mhz = (parent_rate_mhz * m / n) >> od >> od2;
 
-	return rate_mhz * 1000000;
+	return rate_mhz;
 }
 
-static long meson_clk_pll_round_rate(struct clk_hw *hw, unsigned long rate,
+static long meson_axg_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 				     unsigned long *parent_rate)
 {
 	struct meson_clk_pll *pll = to_meson_clk_pll(hw);
@@ -122,7 +132,7 @@ static long meson_clk_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	return rate_table[0].rate;
 }
 
-static const struct pll_rate_table *meson_clk_get_pll_settings
+static const struct pll_rate_table *meson_axg_get_pll_settings
 	(struct meson_clk_pll *pll, unsigned long rate)
 {
 	const struct pll_rate_table *rate_table = pll->rate_table;
@@ -135,7 +145,7 @@ static const struct pll_rate_table *meson_clk_get_pll_settings
 	return NULL;
 }
 
-static int meson_clk_pll_wait_lock(struct meson_clk_pll *pll,
+static int meson_axg_pll_wait_lock(struct meson_clk_pll *pll,
 				   struct parm *p_n)
 {
 	int delay = 24000000;
@@ -151,7 +161,7 @@ static int meson_clk_pll_wait_lock(struct meson_clk_pll *pll,
 	return -ETIMEDOUT;
 }
 
-static int meson_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
+static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 				  unsigned long parent_rate)
 {
 	struct meson_clk_pll *pll = to_meson_clk_pll(hw);
@@ -166,32 +176,43 @@ static int meson_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	old_rate = rate;
 
-	rate_set = meson_clk_get_pll_settings(pll, rate);
+	rate_set = meson_axg_get_pll_settings(pll, rate);
 	if (!rate_set)
 		return -EINVAL;
 
 	p = &pll->n;
 
-	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")) {
+	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
+		|| !strcmp(clk_hw_get_name(hw), "hifi_pll")
+		|| !strcmp(clk_hw_get_name(hw), "pcie_pll")) {
 		void *cntlbase = pll->base + p->reg_off;
 
-		if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXBB) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB)) {
-			writel(GXBB_GP0_CNTL2, cntlbase + (u64)1*4);
-			writel(GXBB_GP0_CNTL3, cntlbase + (u64)2*4);
-			writel(GXBB_GP0_CNTL4, cntlbase + (u64)3*4);
-		}
-		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL) {
+		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+			writel(AXG_MIPI_CNTL0, pll->base);
+			writel(AXG_PCIE_PLL_CNTL, cntlbase + (u64)(0*4));
+			writel(AXG_PCIE_PLL_CNTL1, cntlbase + (u64)(1*4));
+			writel(AXG_PCIE_PLL_CNTL2, cntlbase + (u64)(2*4));
+			writel(AXG_PCIE_PLL_CNTL3, cntlbase + (u64)(3*4));
+			writel(AXG_PCIE_PLL_CNTL4, cntlbase + (u64)(4*4));
+			writel(AXG_PCIE_PLL_CNTL5, cntlbase + (u64)(5*4));
+			writel(AXG_PCIE_PLL_CNTL6, cntlbase + (u64)(6*4));
+		} else if (!strcmp(clk_hw_get_name(hw), "hifi_pll")) {
+			writel(AXG_HIFI_PLL_CNTL1, cntlbase + (u64)6*4);
+			writel(AXG_HIFI_PLL_CNTL2, cntlbase + (u64)1*4);
+			writel(AXG_HIFI_PLL_CNTL3, cntlbase + (u64)2*4);
+			writel(AXG_HIFI_PLL_CNTL4, cntlbase + (u64)3*4);
+			writel(AXG_HIFI_PLL_CNTL5, cntlbase + (u64)4*4);
+		} else {
 			writel(GXL_GP0_CNTL1, cntlbase + (u64)6*4);
 			writel(GXL_GP0_CNTL2, cntlbase + (u64)1*4);
 			writel(GXL_GP0_CNTL3, cntlbase + (u64)2*4);
 			writel(GXL_GP0_CNTL4, cntlbase + (u64)3*4);
 			writel(GXL_GP0_CNTL5, cntlbase + (u64)4*4);
-
-			reg = readl(pll->base + p->reg_off);
-			writel(((reg | (MESON_PLL_ENABLE)) &
-				(~MESON_PLL_RESET)), pll->base + p->reg_off);
 		}
+
+		reg = readl(pll->base + p->reg_off);
+		writel(((reg | (MESON_PLL_ENABLE)) &
+			(~MESON_PLL_RESET)), pll->base + p->reg_off);
 	}
 
 	reg = readl(pll->base + p->reg_off);
@@ -227,27 +248,27 @@ static int meson_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	/* PLL reset */
 	reg = readl(pll->base + p->reg_off);
-
 	writel(reg | MESON_PLL_RESET, pll->base + p->reg_off);
 	udelay(10);
 	writel(reg & (~MESON_PLL_RESET), pll->base + p->reg_off);
 
-	ret = meson_clk_pll_wait_lock(pll, p);
+	ret = meson_axg_pll_wait_lock(pll, p);
 	if (ret) {
 		pr_warn("%s: pll did not lock, trying to restore old rate %lu\n",
 			__func__, old_rate);
-		meson_clk_pll_set_rate(hw, old_rate, parent_rate);
+		meson_axg_pll_set_rate(hw, old_rate, parent_rate);
 	}
 
 	return ret;
 }
 
-const struct clk_ops meson_clk_pll_ops = {
-	.recalc_rate	= meson_clk_pll_recalc_rate,
-	.round_rate	= meson_clk_pll_round_rate,
-	.set_rate	= meson_clk_pll_set_rate,
+const struct clk_ops meson_axg_pll_ops = {
+	.recalc_rate	= meson_axg_pll_recalc_rate,
+	.round_rate	= meson_axg_pll_round_rate,
+	.set_rate	= meson_axg_pll_set_rate,
 };
 
-const struct clk_ops meson_clk_pll_ro_ops = {
-	.recalc_rate	= meson_clk_pll_recalc_rate,
+const struct clk_ops meson_axg_pll_ro_ops = {
+	.recalc_rate	= meson_axg_pll_recalc_rate,
 };
+
