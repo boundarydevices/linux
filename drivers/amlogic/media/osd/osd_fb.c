@@ -46,6 +46,7 @@
 #include <linux/cma.h>
 #include <linux/dma-contiguous.h>
 /* Amlogic Headers */
+#include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #ifdef CONFIG_INSTABOOT
@@ -57,7 +58,7 @@
 #include "osd_hw.h"
 #include "osd_log.h"
 #include "osd_sync.h"
-
+#include "osd_io.h"
 static __u32 var_screeninfo[5];
 
 struct osd_info_s osd_info = {
@@ -312,12 +313,18 @@ static void __iomem *fb_rmem_afbc_vaddr[OSD_COUNT][OSD_MAX_BUF_NUM];
 static size_t fb_rmem_afbc_size[OSD_COUNT][OSD_MAX_BUF_NUM];
 
 struct ion_client *fb_ion_client;
+
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
 struct ion_handle *fb_ion_handle[OSD_COUNT][OSD_MAX_BUF_NUM] = {
 	{NULL, NULL, NULL}, {NULL, NULL, NULL}
 };
-#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR
 static int osd_cursor(struct fb_info *fbi, struct fb_cursor *var);
+#else
+struct ion_handle *fb_ion_handle[OSD_COUNT][OSD_MAX_BUF_NUM] = {
+	{NULL, NULL, NULL}
+};
 #endif
+
 phys_addr_t get_fb_rmem_paddr(int index)
 {
 	if (index < 0 || index > 1)
@@ -1060,6 +1067,13 @@ static int osd_open(struct fb_info *info, int arg)
 		__func__, __LINE__, base, size);
 	pdev = fbdev->dev;
 	fb_index = fbdev->fb_index;
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		if (fb_index >= 1)
+		return -1;
+	#ifndef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
+	if (fb_index >= 1)
+		return -1;
+	#endif
 	fix = &info->fix;
 	var = &info->var;
 	/* read cma/fb-reserved memory first */
@@ -2606,12 +2620,20 @@ static int osd_probe(struct platform_device *pdev)
 	} else
 		osd_log_info("viu vsync irq: %d\n", int_viu_vsync);
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	int_rdma = platform_get_irq_byname(pdev, "rdma");
-	if (int_viu_vsync  == -ENXIO) {
-		osd_log_err("cannot get osd rdma irq resource\n");
-		goto failed1;
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		int_rdma = platform_get_irq_byname(pdev, "rdma");
+		if (int_viu_vsync  == -ENXIO) {
+			osd_log_err("cannot get osd rdma irq resource\n");
+			goto failed1;
+		}
 	}
 #endif
+	ret = osd_io_remap();
+	if (!ret) {
+		osd_log_err("osd_io_remap failed\n");
+		goto failed1;
+	}
+
 	/* init osd logo */
 	ret = logo_work_init();
 	if (ret == 0)
@@ -2706,6 +2728,7 @@ static int osd_probe(struct platform_device *pdev)
 			fb_def_var[index].width = vinfo->screen_real_width;
 			fb_def_var[index].height = vinfo->screen_real_height;
 		}
+
 		/* setup fb0 display size */
 		if (index == DEV_OSD0) {
 			ret = of_property_read_u32_array(pdev->dev.of_node,

@@ -125,6 +125,7 @@ static void osd_debug_dump_register_all(void)
 	u32 reg = 0;
 	u32 offset = 0;
 	u32 index = 0;
+	u32 count = 2;
 
 	reg = VPU_VIU_VENC_MUX_CTRL;
 	osd_log_info("reg[0x%x]: 0x%08x\n", reg, osd_reg_read(reg));
@@ -142,14 +143,18 @@ static void osd_debug_dump_register_all(void)
 	osd_log_info("reg[0x%x]: 0x%08x\n", reg, osd_reg_read(reg));
 	reg = VPP_OSD_SCO_V_START_END;
 	osd_log_info("reg[0x%x]: 0x%08x\n\n", reg, osd_reg_read(reg));
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX) {
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX) {
 		reg = OSD_DB_FLT_CTRL;
 		osd_log_info("reg[0x%x]: 0x%08x\n\n", reg, osd_reg_read(reg));
 	}
 
-	for (index = 0; index < 2; index++) {
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		count = 1;
+
+	for (index = 0; index < count; index++) {
 		if (index == 1)
 			offset = REG_OFFSET;
+
 		reg = offset + VIU_OSD1_FIFO_CTRL_STAT;
 		osd_log_info("reg[0x%x]: 0x%08x\n", reg, osd_reg_read(reg));
 		reg = offset + VIU_OSD1_CTRL_STAT;
@@ -180,6 +185,16 @@ static void osd_debug_dump_register_all(void)
 			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 	}
+
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) {
+		reg = VIU_OSD1_BLK1_CFG_W4;
+		osd_log_info("reg[0x%x]: 0x%08x\n",
+			reg, osd_reg_read(reg));
+
+		reg = VIU_OSD1_BLK2_CFG_W4;
+		osd_log_info("reg[0x%x]: 0x%08x\n",
+			reg, osd_reg_read(reg));
+	}
 }
 
 static void osd_debug_dump_register_region(u32 start, u32 end)
@@ -195,7 +210,8 @@ static void osd_debug_dump_register(int argc, char **argv)
 	int ret;
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	read_rdma_table();
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+		read_rdma_table();
 #endif
 	if ((argc == 3) && argv[1] && argv[2]) {
 		ret = kstrtoint(argv[1], 16, &reg_start);
@@ -241,12 +257,12 @@ static void osd_test_colorbar(void)
 	u32 gclk_other = 0;
 	u32 encp_video_adv = 0;
 
-	gclk_other = aml_read_cbus(HHI_GCLK_OTHER);
+	gclk_other = osd_cbus_read(HHI_GCLK_OTHER);
 	encp_video_adv = osd_reg_read(ENCP_VIDEO_MODE_ADV);
 
 	/* start test mode */
 	osd_log_info("--- OSD TEST COLORBAR ---\n");
-	aml_write_cbus(HHI_GCLK_OTHER, 0xFFFFFFFF);
+	osd_cbus_write(HHI_GCLK_OTHER, 0xFFFFFFFF);
 	osd_reg_write(ENCP_VIDEO_MODE_ADV, 0);
 	osd_reg_write(VENC_VIDEO_TST_EN, 1);
 	/* TST_MODE COLORBAR */
@@ -264,7 +280,7 @@ static void osd_test_colorbar(void)
 	msleep(OSD_TEST_DURATION);
 
 	/* stop test mode */
-	aml_write_cbus(HHI_GCLK_OTHER, gclk_other);
+	osd_cbus_write(HHI_GCLK_OTHER, gclk_other);
 	osd_reg_write(ENCP_VIDEO_MODE_ADV, encp_video_adv);
 	osd_reg_write(VENC_VIDEO_TST_EN, 0);
 	osd_reg_write(VENC_VIDEO_TST_MDSEL, 0);
@@ -300,12 +316,27 @@ static void osd_test_rect(void)
 	u32 w = 0;
 	u32 h = 0;
 	u32 color = 0;
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 	struct canvas_s cs;
+#endif
+	u32 cs_addr, cs_width, cs_height;
 	struct config_para_s *cfg = &ge2d_config;
 	struct config_para_ex_s *cfg_ex = &ge2d_config_ex;
 	struct ge2d_context_s *context = ge2d_context;
 
-	canvas_read(OSD1_CANVAS_INDEX, &cs);
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		canvas_read(OSD1_CANVAS_INDEX, &cs);
+		cs_addr = cs.addr;
+		cs_width = cs.width;
+		cs_height = cs.height;
+	} else
+		osd_get_info(0, &cs_addr,
+			&cs_width, &cs_height);
+#else
+	osd_get_info(0, &cs_addr,
+		&cs_width, &cs_height);
+#endif
 	context = create_ge2d_work_queue();
 	if (!context) {
 		osd_log_err("create work queue error\n");
@@ -315,12 +346,12 @@ static void osd_test_rect(void)
 	memset(cfg, 0, sizeof(struct config_para_s));
 	cfg->src_dst_type = OSD0_OSD0;
 	cfg->src_format = GE2D_FORMAT_S32_ARGB;
-	cfg->src_planes[0].addr = cs.addr;
-	cfg->src_planes[0].w = cs.width / 4;
-	cfg->src_planes[0].h = cs.height;
-	cfg->dst_planes[0].addr = cs.addr;
-	cfg->dst_planes[0].w = cs.width / 4;
-	cfg->dst_planes[0].h = cs.height;
+	cfg->src_planes[0].addr = cs_addr;
+	cfg->src_planes[0].w = cs_width / 4;
+	cfg->src_planes[0].h = cs_height;
+	cfg->dst_planes[0].addr = cs_addr;
+	cfg->dst_planes[0].w = cs_width / 4;
+	cfg->dst_planes[0].h = cs_height;
 
 	if (ge2d_context_config(context, cfg) < 0) {
 		osd_log_err("ge2d config error.\n");
@@ -329,8 +360,8 @@ static void osd_test_rect(void)
 
 	x = 0;
 	y = 0;
-	w = cs.width / 4;
-	h = cs.height;
+	w = cs_width / 4;
+	h = cs_height;
 	color = 0x0;
 	osd_log_info("- BLACK -");
 	osd_log_info("- (%d, %d)-(%d, %d) -\n", x, y, w, h);
@@ -362,12 +393,12 @@ static void osd_test_rect(void)
 	msleep(OSD_TEST_DURATION);
 
 	memset(cfg_ex, 0, sizeof(struct config_para_ex_s));
-	cfg_ex->src_planes[0].addr = cs.addr;
-	cfg_ex->src_planes[0].w = cs.width / 4;
-	cfg_ex->src_planes[0].h = cs.height;
-	cfg_ex->dst_planes[0].addr = cs.addr;
-	cfg_ex->dst_planes[0].w = cs.width / 4;
-	cfg_ex->dst_planes[0].h = cs.height;
+	cfg_ex->src_planes[0].addr = cs_addr;
+	cfg_ex->src_planes[0].w = cs_width / 4;
+	cfg_ex->src_planes[0].h = cs_height;
+	cfg_ex->dst_planes[0].addr = cs_addr;
+	cfg_ex->dst_planes[0].w = cs_width / 4;
+	cfg_ex->dst_planes[0].h = cs_height;
 
 	cfg_ex->src_para.canvas_index = OSD1_CANVAS_INDEX;
 	cfg_ex->src_para.mem_type = CANVAS_OSD0;
@@ -379,16 +410,16 @@ static void osd_test_rect(void)
 	cfg_ex->src_para.color = 0xffffffff;
 	cfg_ex->src_para.top = 0;
 	cfg_ex->src_para.left = 0;
-	cfg_ex->src_para.width = cs.width / 4;
-	cfg_ex->src_para.height = cs.height;
+	cfg_ex->src_para.width = cs_width / 4;
+	cfg_ex->src_para.height = cs_height;
 
 	cfg_ex->dst_para.canvas_index = OSD1_CANVAS_INDEX;
 	cfg_ex->dst_para.mem_type = CANVAS_OSD0;
 	cfg_ex->dst_para.format = GE2D_FORMAT_S32_ARGB;
 	cfg_ex->dst_para.top = 0;
 	cfg_ex->dst_para.left = 0;
-	cfg_ex->dst_para.width = cs.width / 4;
-	cfg_ex->dst_para.height = cs.height;
+	cfg_ex->dst_para.width = cs_width / 4;
+	cfg_ex->dst_para.height = cs_height;
 	cfg_ex->dst_para.fill_color_en = 0;
 	cfg_ex->dst_para.fill_mode = 0;
 	cfg_ex->dst_para.color = 0;
@@ -409,7 +440,8 @@ static void osd_test_rect(void)
 
 static void osd_debug_auto_test(void)
 {
-	osd_test_colorbar();
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+		osd_test_colorbar();
 
 	osd_test_dummydata();
 

@@ -151,6 +151,7 @@ extern void osd_get_urgent(u32 index, u32 *urgent);
 extern void osd_set_urgent(u32 index, u32 urgent);
 void osd_get_deband(u32 *osd_deband_enable);
 void osd_set_deband(u32 osd_deband_enable);
+extern void osd_get_info(u32 index, u32 *addr, u32 *width, u32 *height);
 int logo_work_init(void);
 void set_logo_loaded(void);
 int set_osd_logo_freescaler(void);

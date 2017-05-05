@@ -623,7 +623,6 @@
 			mask = <4>;
 		};
 	};
-
 }; /* end of / */
 
 /* Audio Related start */

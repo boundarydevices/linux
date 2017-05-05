@@ -26,6 +26,7 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/canvas/canvas.h>
 #include <linux/amlogic/media/canvas/canvas_mgr.h>
+#include <linux/amlogic/cpu_version.h>
 
 #include "osd_canvas.h"
 #include "osd_fb.h"
@@ -156,10 +157,16 @@ int osd_init_progress_bar(void)
 	struct src_dst_info_s  *op_info = &progress_bar.op_info;
 	const struct vinfo_s *vinfo = progress_bar.vinfo;
 	struct osd_fb_dev_s *fb_dev;
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 	struct canvas_s cs;
+#endif
+	u32 cs_addr, cs_width, cs_height;
 	struct config_para_s *cfg = &ge2d_config;
 	struct ge2d_context_s *context = ge2d_context;
 	u32 step = 1;
+
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		return 0;
 
 	memset(&progress_bar, 0, sizeof(struct osd_progress_bar_s));
 
@@ -182,8 +189,16 @@ int osd_init_progress_bar(void)
 			pr_debug("fb1 should exit!!!");
 			return -EFAULT;
 		}
-
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 		canvas_read(OSD2_CANVAS_INDEX, &cs);
+		cs_addr = cs.addr;
+		cs_width = cs.width / 4;
+		cs_height = cs.height;
+#else
+		cs_addr = 0;
+		cs_width = 0;
+		cs_height = 0;
+#endif
 		context = create_ge2d_work_queue();
 		if (!context) {
 			pr_debug("create work queue error\n");
@@ -193,12 +208,12 @@ int osd_init_progress_bar(void)
 		memset(cfg, 0, sizeof(struct config_para_s));
 		cfg->src_dst_type = OSD1_OSD1;
 		cfg->src_format = GE2D_FORMAT_S32_ARGB;
-		cfg->src_planes[0].addr = cs.addr;
-		cfg->src_planes[0].w = cs.width / 4;
-		cfg->src_planes[0].h = cs.height;
-		cfg->dst_planes[0].addr = cs.addr;
-		cfg->dst_planes[0].w = cs.width / 4;
-		cfg->dst_planes[0].h = cs.height;
+		cfg->src_planes[0].addr = cs_addr;
+		cfg->src_planes[0].w = cs_width;
+		cfg->src_planes[0].h = cs_height;
+		cfg->dst_planes[0].addr = cs_addr;
+		cfg->dst_planes[0].w = cs_width;
+		cfg->dst_planes[0].h = cs_height;
 
 		if (ge2d_context_config(context, cfg) < 0) {
 			pr_debug("ge2d config error.\n");

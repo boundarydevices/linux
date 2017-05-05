@@ -483,6 +483,7 @@ int osd_sync_request_render(u32 index, u32 yres,
 }
 #endif
 
+
 void osd_update_3d_mode(void)
 {
 	/* only called by vsync irq or rdma irq */
@@ -507,6 +508,92 @@ void osd_update_vsync_hit(void)
 		wait_vsync_wakeup();
 #endif
 	}
+}
+
+/* the return stride unit is 128bit(16bytes) */
+static u32 line_stride_calc(
+		u32 fmt_mode,
+		u32 hsize,
+		u32 stride_align_32bytes)
+{
+	u32 line_stride = 0;
+
+	switch (fmt_mode) {
+	/* 2-bit LUT */
+	case COLOR_INDEX_02_PAL4:
+		line_stride = ((hsize<<1)+127)>>7;
+		break;
+	/* 4-bit LUT */
+	case COLOR_INDEX_04_PAL16:
+		line_stride = ((hsize<<2)+127)>>7;
+		break;
+	/* 8-bit LUT */
+	case COLOR_INDEX_08_PAL256:
+		line_stride = ((hsize<<3)+127)>>7;
+		break;
+	/* 4:2:2, 32-bit per 2 pixels */
+	case COLOR_INDEX_YUV_422:
+		line_stride = ((((hsize+1)>>1)<<5)+127)>>7;
+		break;
+	/* 16-bit LUT */
+	case COLOR_INDEX_16_655:
+	case COLOR_INDEX_16_844:
+	case COLOR_INDEX_16_6442:
+	case COLOR_INDEX_16_4444_R:
+	case COLOR_INDEX_16_4642_R:
+	case COLOR_INDEX_16_1555_A:
+	case COLOR_INDEX_16_4444_A:
+	case COLOR_INDEX_16_565:
+		line_stride = ((hsize<<4)+127)>>7;
+		break;
+	/* 32-bit LUT */
+	case COLOR_INDEX_32_BGRX:
+	case COLOR_INDEX_32_XBGR:
+	case COLOR_INDEX_32_RGBX:
+	case COLOR_INDEX_32_XRGB:
+	case COLOR_INDEX_32_BGRA:
+	case COLOR_INDEX_32_ABGR:
+	case COLOR_INDEX_32_RGBA:
+	case COLOR_INDEX_32_ARGB:
+		line_stride = ((hsize<<5)+127)>>7;
+		break;
+	/* 24-bit LUT */
+	case COLOR_INDEX_24_6666_A:
+	case COLOR_INDEX_24_6666_R:
+	case COLOR_INDEX_24_8565:
+	case COLOR_INDEX_24_5658:
+	case COLOR_INDEX_24_888_B:
+	case COLOR_INDEX_24_RGB:
+		line_stride = ((hsize<<4)+(hsize<<3)+127)>>7;
+		break;
+	}
+	/* need wr ddr is 32bytes aligned */
+	if (stride_align_32bytes)
+		line_stride = ((line_stride+1)>>1)<<1;
+	else
+		line_stride = line_stride;
+	return line_stride;
+}
+
+
+static void osd_update_phy_addr(u32 index)
+{
+	u32 line_stride, bpp;
+	u32 fmt_mode = COLOR_INDEX_32_BGRX;
+
+	if (osd_hw.color_info[index])
+		fmt_mode =
+			osd_hw.color_info[index]->color_index;
+	bpp = osd_hw.color_info[index]->bpp / 8;
+	line_stride = line_stride_calc(fmt_mode,
+		osd_hw.fb_gem[index].width / bpp, 1);
+	VSYNCOSD_WR_MPEG_REG(
+		VIU_OSD1_BLK1_CFG_W4,
+		osd_hw.fb_gem[index].addr);
+	VSYNCOSD_WR_MPEG_REG_BITS(
+		VIU_OSD1_BLK2_CFG_W4,
+		line_stride,
+		0, 12);
 }
 
 static void osd_update_interlace_mode(void)
@@ -550,9 +637,10 @@ static void osd_update_interlace_mode(void)
 		}
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	/* when RDMA enabled, top/bottom fields changed in next vsync */
-	odd_even = (odd_even == OSD_TYPE_TOP_FIELD) ?
-		OSD_TYPE_BOT_FIELD : OSD_TYPE_TOP_FIELD;
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+		/* when RDMA enabled, top/bottom fields changed in next vsync */
+		odd_even = (odd_even == OSD_TYPE_TOP_FIELD) ?
+			OSD_TYPE_BOT_FIELD : OSD_TYPE_TOP_FIELD;
 #endif
 	fb0_cfg_w0 &= ~1;
 	fb1_cfg_w0 &= ~1;
@@ -709,7 +797,8 @@ void osd_hw_reset(void)
 		}
 	}
 #else
-	osd_rdma_reset_and_flush(reset_bit);
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+		osd_rdma_reset_and_flush(reset_bit);
 #endif
 	spin_unlock_irqrestore(&osd_lock, lock_flags);
 	/* maybe change reset bit */
@@ -726,10 +815,11 @@ static int notify_to_amvideo(void)
 		"osd notify_to_amvideo vpp misc:0x%08x, mask:0x%08x\n",
 		para[0], para[1]);
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
-	amvideo_notifier_call_chain(
-		AMVIDEO_UPDATE_OSD_MODE,
-		(void *)&para[0]);
+#ifdef CONFIG_AMLOGIC_VIDEO
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+		amvideo_notifier_call_chain(
+			AMVIDEO_UPDATE_OSD_MODE,
+			(void *)&para[0]);
 #endif
 #endif
 	return 0;
@@ -756,7 +846,16 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 	osd_update_vsync_hit();
 	osd_hw_reset();
 #else
-	osd_rdma_interrupt_done_clear();
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+		osd_rdma_interrupt_done_clear();
+	else {
+		osd_update_scan_mode();
+		/* go through update list */
+		walk_through_update_list();
+		osd_update_3d_mode();
+		osd_update_vsync_hit();
+		osd_hw_reset();
+	}
 #endif
 #ifndef FIQ_VSYNC
 	return IRQ_HANDLED;
@@ -1081,7 +1180,7 @@ void osd_setup_hw(u32 index,
 	int update_color_mode = 0;
 	int update_geometry = 0;
 	u32 w = (color->bpp * xres_virtual + 7) >> 3;
-	u32 i;
+	u32 i, cpu_type;
 
 	pan_data.x_start = xoffset;
 	pan_data.y_start = yoffset;
@@ -1104,6 +1203,14 @@ void osd_setup_hw(u32 index,
 		disp_data.x_end = disp_end_x;
 		disp_data.y_end = disp_end_y;
 	}
+
+	/* need always set color mode for osd2 */
+	if ((color != osd_hw.color_info[index]) || (index == OSD2)) {
+		update_color_mode = 1;
+		osd_hw.color_info[index] = color;
+		osd_hw.color_backup[index] = color;
+	}
+
 	if (osd_hw.fb_gem[index].addr != fbmem
 		|| osd_hw.fb_gem[index].width != w
 		|| osd_hw.fb_gem[index].height != yres_virtual) {
@@ -1159,21 +1266,21 @@ void osd_setup_hw(u32 index,
 			index, osd_hw.fb_gem[index].xres);
 		osd_log_info("osd[%d] frame.height=%d\n",
 			index, osd_hw.fb_gem[index].yres);
+
+		cpu_type = get_cpu_type();
+		if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+			osd_update_phy_addr(0);
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-		canvas_config(osd_hw.fb_gem[index].canvas_idx,
-			osd_hw.fb_gem[index].addr,
-			osd_hw.fb_gem[index].width,
-			osd_hw.fb_gem[index].height,
-			CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		else {
+			canvas_config(osd_hw.fb_gem[index].canvas_idx,
+				osd_hw.fb_gem[index].addr,
+				osd_hw.fb_gem[index].width,
+				osd_hw.fb_gem[index].height,
+				CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		}
 #endif
 	}
 
-	/* need always set color mode for osd2 */
-	if ((color != osd_hw.color_info[index]) || (index == OSD2)) {
-		update_color_mode = 1;
-		osd_hw.color_info[index] = color;
-		osd_hw.color_backup[index] = color;
-	}
 	/* osd blank only control by /sys/class/graphcis/fbx/blank */
 #if 0
 	if (osd_hw.enable[index] == DISABLE) {
@@ -1265,6 +1372,8 @@ static void osd_set_free_scale_enable_mode1(u32 index, u32 enable)
 	unsigned int v_enable = 0;
 	int ret = 0;
 
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		return;
 	h_enable = (enable & 0xffff0000 ? 1 : 0);
 	v_enable = (enable & 0xffff ? 1 : 0);
 	osd_hw.free_scale[index].h_enable = h_enable;
@@ -2258,6 +2367,13 @@ void osd_pan_display_hw(u32 index, unsigned int xoffset, unsigned int yoffset)
 		    osd_hw.pandata[index].x_end,
 		    osd_hw.pandata[index].y_start,
 		    osd_hw.pandata[index].y_end);
+}
+
+void osd_get_info(u32 index, u32 *addr, u32 *width, u32 *height)
+{
+	*addr = osd_hw.fb_gem[index].addr;
+	*width = osd_hw.fb_gem[index].width;
+	*height = osd_hw.fb_gem[index].height;
 }
 
 static  void  osd1_update_disp_scale_enable(void)
@@ -3583,7 +3699,6 @@ void osd_init_hw(u32 logo_loaded)
 	int err_num = 0;
 
 	osd_vpu_power_on();
-
 	if (get_cpu_type() ==
 		MESON_CPU_MAJOR_ID_GXTVBB)
 		backup_regs_init(HW_RESET_AFBCD_REGS);
@@ -3609,7 +3724,6 @@ void osd_init_hw(u32 logo_loaded)
 	osd_hdr_on = false;
 #endif
 	osd_hw.hw_reset_flag = HW_RESET_NONE;
-
 	/* here we will init default value ,these value only set once . */
 	if (!logo_loaded) {
 		/* init vpu fifo control register */
@@ -3617,6 +3731,8 @@ void osd_init_hw(u32 logo_loaded)
 		if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB) ||
 			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM))
 			data32 |= 0xfff;
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+			data32 |= 0x400;
 		else
 			data32 |= 0x77f;
 		osd_reg_write(VPP_OFIFO_SIZE, data32);
@@ -3674,6 +3790,7 @@ void osd_init_hw(u32 logo_loaded)
 	osd_reg_clr_mask(VPP_MISC, VPP_POST_FG_OSD2 | VPP_PRE_FG_OSD2);
 	osd_hw.order = OSD_ORDER_01;
 #endif
+
 	osd_hw.enable[OSD2] = osd_hw.enable[OSD1] = DISABLE;
 	osd_hw.fb_gem[OSD1].canvas_idx = OSD1_CANVAS_INDEX;
 	osd_hw.fb_gem[OSD2].canvas_idx = OSD2_CANVAS_INDEX;
@@ -3746,7 +3863,6 @@ void osd_init_hw(u32 logo_loaded)
 	 * osd_hw.osd_afbcd[OSD2].enable = 0;
 	 */
 	/* memset(osd_hw.rotate, 0, sizeof(struct osd_rotate_s)); */
-
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	INIT_LIST_HEAD(&post_fence_list);
 	mutex_init(&post_fence_list_lock);
@@ -3768,9 +3884,9 @@ void osd_init_hw(u32 logo_loaded)
 #endif
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	osd_rdma_enable(1);
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+		osd_rdma_enable(1);
 #endif
-
 }
 
 #if defined(CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR)
@@ -3881,11 +3997,16 @@ void osd_resume_hw(void)
 
 void osd_shutdown_hw(void)
 {
+	int cpu_type;
+
+	cpu_type = get_cpu_type();
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-	enable_rdma(0);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+		enable_rdma(0);
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	osd_rdma_enable(0);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+		osd_rdma_enable(0);
 #endif
 	pr_info("osd_shutdown\n");
 }
@@ -3908,15 +4029,22 @@ void osd_realdata_restore_hw(void)
 
 void  osd_freeze_hw(void)
 {
+	int cpu_type;
+
+	cpu_type = get_cpu_type();
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-	enable_rdma(0);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+		enable_rdma(0);
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	osd_rdma_enable(0);
-	if (get_backup_reg(VIU_OSD1_BLK0_CFG_W0,
-		&fb0_cfg_w0_save) != 0)
-		fb0_cfg_w0_save =
-			osd_reg_read(VIU_OSD1_BLK0_CFG_W0);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG) {
+		osd_rdma_enable(0);
+		if (get_backup_reg(VIU_OSD1_BLK0_CFG_W0,
+			&fb0_cfg_w0_save) != 0)
+			fb0_cfg_w0_save =
+				osd_reg_read(VIU_OSD1_BLK0_CFG_W0);
+	} else
+		fb0_cfg_w0_save = osd_reg_read(VIU_OSD1_BLK0_CFG_W0);
 #else
 	fb0_cfg_w0_save = osd_reg_read(VIU_OSD1_BLK0_CFG_W0);
 #endif
@@ -3924,28 +4052,46 @@ void  osd_freeze_hw(void)
 }
 void osd_thaw_hw(void)
 {
+	int cpu_type;
+
 	pr_debug("osd_thawed\n");
+	cpu_type = get_cpu_type();
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	osd_rdma_enable(2);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+		osd_rdma_enable(2);
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-	enable_rdma(1);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+		enable_rdma(1);
 #endif
 }
 void osd_restore_hw(void)
 {
+	int cpu_type;
+
+	cpu_type = get_cpu_type();
 	osd_reg_write(VIU_OSD1_BLK0_CFG_W0, fb0_cfg_w0_save);
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	osd_rdma_enable(2);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+		osd_rdma_enable(2);
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-	enable_rdma(1);
+	if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+		enable_rdma(1);
 #endif
-	canvas_config(osd_hw.fb_gem[0].canvas_idx,
+
+
+	if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+		osd_update_phy_addr(0);
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
+	else {
+		canvas_config(osd_hw.fb_gem[0].canvas_idx,
 			osd_hw.fb_gem[0].addr,
 			osd_hw.fb_gem[0].width,
 			osd_hw.fb_gem[0].height,
 			CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+	}
+#endif
 	pr_debug("osd_restored\n");
 }
 #endif

@@ -266,5 +266,4 @@ int query_video_status(int type, int *value);
 int get_video0_frame_info(struct vframe_s *vf);
 int amvideo_notifier_call_chain(unsigned long val, void *v);
 struct device *get_video_device(void);
-
 #endif /* VIDEO_H */

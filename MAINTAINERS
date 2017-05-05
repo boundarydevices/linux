@@ -13944,3 +13944,7 @@ AMLOGIC unifykey driver
 M: Jiamin Ma <jiamin.ma@amlogic.com>
 F: drivers/amlogic/unifykey/*
 F: include/linux/amlogic/unifykey/*
+
+AMLOGIC AXG ADD OSD DRIVER
+M:	Pengcheng Chen <pengcheng.chen@amlogic.com>
+F:	drivers/amlogic/media/osd/osd_io.c

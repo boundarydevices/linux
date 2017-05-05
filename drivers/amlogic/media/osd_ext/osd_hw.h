@@ -95,4 +95,6 @@ extern void osd_ext_get_angle_hw(u32 index, u32 *angle);
 extern void osd_ext_set_angle_hw(u32 index, u32 angle);
 extern void osd_ext_get_clone_hw(u32 index, u32 *clone);
 extern void osd_ext_set_clone_hw(u32 index, u32 clone);
+extern void osd_ext_get_info(u32 index, u32 *addr, u32 *width, u32 *height);
+
 #endif

@@ -41,7 +41,7 @@
 #include <osd/osd_log.h>
 #include <osd/osd_canvas.h>
 #include "osd_clone.h"
-
+#include "osd_hw.h"
 
 #ifdef OSD_EXT_GE2D_CLONE_SUPPORT
 struct osd_ext_clone_s {
@@ -57,7 +57,12 @@ static struct osd_ext_clone_s s_osd_ext_clone;
 
 static void osd_clone_process(void)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 	struct canvas_s cs, cd;
+#endif
+	u32 cs_addr  = 0, cs_width = 0, cs_height = 0;
+	u32 cd_addr = 0, cd_width = 0, cd_height = 0;
+
 	u32 x0 = 0;
 	u32 y0 = 0;
 	u32 y1 = 0;
@@ -66,13 +71,31 @@ static void osd_clone_process(void)
 	unsigned char xy_swap = 0;
 	struct config_para_ex_s *ge2d_config = &s_osd_ext_clone.ge2d_config;
 	struct ge2d_context_s *context = s_osd_ext_clone.ge2d_context;
-
-	canvas_read(OSD1_CANVAS_INDEX, &cs);
-	canvas_read(OSD3_CANVAS_INDEX, &cd);
-
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		canvas_read(OSD1_CANVAS_INDEX, &cs);
+		canvas_read(OSD2_CANVAS_INDEX, &cd);
+		cs_addr = cs.addr;
+		cs_width = cs.width;
+		cs_height = cs.height;
+		cd_addr = cd.addr;
+		cd_width = cd.width;
+		cd_height = cd.height;
+	} else {
+		osd_ext_get_info(OSD1, &cs_addr,
+			&cs_width, &cs_height);
+		osd_ext_get_info(OSD2, &cs_addr,
+			&cs_width, &cs_height);
+	}
+#else
+	osd_ext_get_info(OSD1, &cs_addr,
+		&cs_width, &cs_height);
+	osd_ext_get_info(OSD2, &cs_addr,
+		&cs_width, &cs_height);
+#endif
 	if (s_osd_ext_clone.pan == 1) {
-		y0 = cs.height / 2;
-		y1 = cd.height / 2;
+		y0 = cs_height / 2;
+		y1 = cd_height / 2;
 	}
 
 	if (s_osd_ext_clone.angle == 1) {
@@ -92,13 +115,13 @@ static void osd_clone_process(void)
 	ge2d_config->src1_gb_alpha = 0;
 	ge2d_config->dst_xy_swap = 0;
 
-	ge2d_config->src_planes[0].addr = cs.addr;
-	ge2d_config->src_planes[0].w = cs.width / 4;
-	ge2d_config->src_planes[0].h = cs.height;
+	ge2d_config->src_planes[0].addr = cs_addr;
+	ge2d_config->src_planes[0].w = cs_width / 4;
+	ge2d_config->src_planes[0].h = cs_height;
 
-	ge2d_config->dst_planes[0].addr = cd.addr;
-	ge2d_config->dst_planes[0].w = cd.width / 4;
-	ge2d_config->dst_planes[0].h = cd.height;
+	ge2d_config->dst_planes[0].addr = cd_addr;
+	ge2d_config->dst_planes[0].w = cd_width / 4;
+	ge2d_config->dst_planes[0].h = cd_height;
 
 	ge2d_config->src_para.canvas_index = OSD1_CANVAS_INDEX;
 	ge2d_config->src_para.mem_type = CANVAS_OSD0;
@@ -111,16 +134,16 @@ static void osd_clone_process(void)
 	ge2d_config->src_para.color = 0xffffffff;
 	ge2d_config->src_para.top = 0;
 	ge2d_config->src_para.left = 0;
-	ge2d_config->src_para.width = cs.width / 4;
-	ge2d_config->src_para.height = cs.height;
+	ge2d_config->src_para.width = cs_width / 4;
+	ge2d_config->src_para.height = cs_height;
 
 	ge2d_config->dst_para.canvas_index = OSD3_CANVAS_INDEX;
 	ge2d_config->dst_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config->dst_para.format = GE2D_FORMAT_S32_ARGB;
 	ge2d_config->dst_para.top = 0;
 	ge2d_config->dst_para.left = 0;
-	ge2d_config->dst_para.width = cd.width / 4;
-	ge2d_config->dst_para.height = cd.height;
+	ge2d_config->dst_para.width = cd_width / 4;
+	ge2d_config->dst_para.height = cd_height;
 	ge2d_config->dst_para.fill_color_en = 0;
 	ge2d_config->dst_para.fill_mode = 0;
 	ge2d_config->dst_para.color = 0;
@@ -133,8 +156,8 @@ static void osd_clone_process(void)
 		return;
 	}
 
-	stretchblt(context, x0, y0, cs.width / 4, cs.height / 2,
-			x0, y1, cd.width / 4, cd.height / 2);
+	stretchblt(context, x0, y0, cs_width / 4, cs_height / 2,
+			x0, y1, cd_width / 4, cd_height / 2);
 }
 
 void osd_ext_clone_update_pan(int pan)

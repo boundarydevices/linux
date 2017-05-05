@@ -55,7 +55,6 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
-
 	};
 	mtd_nand {
 		compatible = "amlogic, aml_mtd_nand";

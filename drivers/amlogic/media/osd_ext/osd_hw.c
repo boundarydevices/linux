@@ -546,6 +546,61 @@ s32 osd_ext_wait_vsync_event(void)
 	return 0;
 }
 
+/* the return stride unit is 128bit(16bytes) */
+static u32 line_stride_calc(
+		u32 fmt_mode,
+		u32 hsize,
+		u32 stride_align_32bytes)
+{
+	u32 line_stride = 0;
+
+	/* 2-bit LUT */
+	if (fmt_mode == 0)
+		line_stride = ((hsize<<1)+127)>>7;
+	/* 4-bit LUT */
+	else if (fmt_mode == 1)
+		line_stride = ((hsize<<2)+127)>>7;
+	/* 8-bit LUT */
+	else if (fmt_mode == 2)
+		line_stride = ((hsize<<3)+127)>>7;
+	/* 4:2:2, 32-bit per 2 pixels */
+	else if (fmt_mode == 3)
+		line_stride = ((((hsize+1)>>1)<<5)+127)>>7;
+	/* 16-bit LUT */
+	else if (fmt_mode == 4)
+		line_stride = ((hsize<<4)+127)>>7;
+	/* 32-bit LUT */
+	else if (fmt_mode == 5)
+		line_stride = ((hsize<<5)+127)>>7;
+	/* 24-bit LUT */
+	else if (fmt_mode == 7)
+		line_stride = ((hsize<<4)+(hsize<<3)+127)>>7;
+	/* need wr ddr is 32bytes aligned */
+	if (stride_align_32bytes)
+		line_stride = ((line_stride+1)>>1)<<1;
+	else
+		line_stride = line_stride;
+	return line_stride;
+}
+
+static void osd_ext_update_phy_addr(u32 index)
+{
+	u32 line_stride, fmt_mode;
+
+	fmt_mode =
+		osd_ext_hw.color_info[index]->hw_colormat << 2;
+	line_stride = line_stride_calc(fmt_mode,
+		osd_ext_hw.fb_gem[index].width, 1);
+	VSYNCOSD_WR_MPEG_REG(
+		VIU_OSD1_BLK1_CFG_W4,
+		osd_ext_hw.fb_gem[index].addr);
+	VSYNCOSD_WR_MPEG_REG_BITS(
+		VIU_OSD1_BLK2_CFG_W4,
+		line_stride,
+		0, 12);
+}
+
+
 void osd_ext_set_gbl_alpha_hw(u32 index, u32 gbl_alpha)
 {
 	if (osd_ext_hw.gbl_alpha[index] != gbl_alpha) {
@@ -678,6 +733,7 @@ void osd_ext_setup(struct osd_ctl_s *osd_ext_ctl,
 		   const struct color_bit_define_s *color,
 		   int index)
 {
+	int cpu_type;
 	u32 w = (color->bpp * xres_virtual + 7) >> 3;
 	struct pandata_s disp_data;
 	struct pandata_s pan_data;
@@ -707,7 +763,17 @@ void osd_ext_setup(struct osd_ctl_s *osd_ext_ctl,
 		osd_ext_hw.fb_gem[index].width = w;
 		osd_ext_hw.fb_gem[index].height = yres_virtual;
 
+	if (color != osd_ext_hw.color_info[index]) {
+		osd_ext_hw.color_info[index] = color;
+		add_to_update_list(index, OSD_COLOR_MODE);
+	}
+
+	cpu_type = get_cpu_type();
+	if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+		osd_ext_update_phy_addr(0);
+
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
+	else {
 		if (fbmem == 0) {
 			canvas_config(osd_ext_hw.fb_gem[index].canvas_idx,
 				osd_hw->fb_gem[index].addr,
@@ -721,12 +787,8 @@ void osd_ext_setup(struct osd_ctl_s *osd_ext_ctl,
 				osd_ext_hw.fb_gem[index].height,
 				CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
 		}
-#endif
 	}
-
-	if (color != osd_ext_hw.color_info[index]) {
-		osd_ext_hw.color_info[index] = color;
-		add_to_update_list(index, OSD_COLOR_MODE);
+#endif
 	}
 
 	/* osd blank only control by /sys/class/graphcis/fbx/blank */
@@ -1230,6 +1292,13 @@ void osd_ext_pan_display_hw(u32 index, unsigned int xoffset,
 			     osd_ext_hw.pandata[index].y_start,
 			     osd_ext_hw.pandata[index].y_end);
 	}
+}
+
+void osd_ext_get_info(u32 index, u32 *addr, u32 *width, u32 *height)
+{
+	*addr = osd_ext_hw.fb_gem[index].addr;
+	*width = osd_ext_hw.fb_gem[index].width;
+	*height = osd_ext_hw.fb_gem[index].height;
 }
 
 static void osd1_update_disp_scale_enable(void)
@@ -2496,7 +2565,9 @@ void osd_ext_set_clone_hw(u32 index, u32 clone)
 			memcpy(&pandata, &osd_ext_hw.pandata[index],
 					sizeof(struct pandata_s));
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_update_addr(osd_ext_hw.fb_gem[index].canvas_idx,
+			if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+				canvas_update_addr(
+					osd_ext_hw.fb_gem[index].canvas_idx,
 					osd_hw->fb_gem[index].addr);
 #endif
 		}
@@ -2506,7 +2577,9 @@ void osd_ext_set_clone_hw(u32 index, u32 clone)
 		else {
 			color_info[index] = osd_ext_hw.color_info[index];
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_update_addr(osd_ext_hw.fb_gem[index].canvas_idx,
+			if (cpu_type != MESON_CPU_MAJOR_ID_AXG)
+				canvas_update_addr(
+					osd_ext_hw.fb_gem[index].canvas_idx,
 					osd_ext_hw.fb_gem[index].addr);
 #endif
 			osd_ext_hw.color_info[index] = color_info[index];

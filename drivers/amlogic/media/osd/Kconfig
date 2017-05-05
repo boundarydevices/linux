@@ -9,7 +9,7 @@ config AMLOGIC_MEDIA_FB
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
-	depends on AMLOGIC_MEDIA_CANVAS
+#	depends on AMLOGIC_MEDIA_CANVAS
 #	depends on AMLOGIC_VOUT_SERVE
 	default n
 	help

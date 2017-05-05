@@ -41,6 +41,7 @@
 #include "osd_antiflicker.h"
 #include "osd_log.h"
 #include "osd_io.h"
+#include "osd_hw.h"
 
 
 #ifdef OSD_GE2D_ANTIFLICKER_SUPPORT
@@ -63,7 +64,11 @@ void osd_antiflicker_enable(u32 enable)
 static int osd_antiflicker_process(void)
 {
 	int ret = -1;
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 	struct canvas_s cs, cd;
+#endif
+	u32 cs_addr = 0, cs_width = 0, cs_height = 0;
+	u32 cd_addr = 0, cd_width = 0, cd_height = 0;
 	u32 x0 = 0;
 	u32 y0 = 0;
 	u32 y1 = 0;
@@ -75,28 +80,47 @@ static int osd_antiflicker_process(void)
 	context = ge2d_osd_antiflicker.ge2d_context;
 
 	mutex_lock(&osd_antiflicker_mutex);
-
-	canvas_read(OSD1_CANVAS_INDEX, &cs);
-	canvas_read(OSD1_CANVAS_INDEX, &cd);
+#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		canvas_read(OSD1_CANVAS_INDEX, &cs);
+		canvas_read(OSD1_CANVAS_INDEX, &cd);
+		cs_addr = cs.addr;
+		cs_width = cs.width;
+		cs_height = cs.height;
+		cd_addr = cd.addr;
+		cd_width = cd.width;
+		cd_height = cd.height;
+	} else {
+		osd_get_info(OSD1, &cs_addr,
+			&cs_width, &cs_height);
+		osd_get_info(OSD2, &cs_addr,
+			&cs_width, &cs_height);
+	}
+#else
+	osd_get_info(OSD1, &cs_addr,
+		&cs_width, &cs_height);
+	osd_get_info(OSD2, &cs_addr,
+		&cs_width, &cs_height);
+#endif
 
 	if (ge2d_osd_antiflicker.yoffset > 0) {
 		y0 = ge2d_osd_antiflicker.yoffset;
 		y1 = ge2d_osd_antiflicker.yoffset;
 	}
 
-	yres = cs.height / ge2d_osd_antiflicker.yres;
+	yres = cs_height / ge2d_osd_antiflicker.yres;
 	memset(ge2d_config, 0, sizeof(struct config_para_ex_s));
 	ge2d_config->alu_const_color = 0;
 	ge2d_config->bitmask_en = 0;
 	ge2d_config->src1_gb_alpha = 0;
 
-	ge2d_config->src_planes[0].addr = cs.addr;
-	ge2d_config->src_planes[0].w = cs.width / 4;
-	ge2d_config->src_planes[0].h = cs.height;
+	ge2d_config->src_planes[0].addr = cs_addr;
+	ge2d_config->src_planes[0].w = cs_width / 4;
+	ge2d_config->src_planes[0].h = cs_height;
 
-	ge2d_config->dst_planes[0].addr = cd.addr;
-	ge2d_config->dst_planes[0].w = cd.width / 4;
-	ge2d_config->dst_planes[0].h = cd.height;
+	ge2d_config->dst_planes[0].addr = cd_addr;
+	ge2d_config->dst_planes[0].w = cd_width / 4;
+	ge2d_config->dst_planes[0].h = cd_height;
 
 	ge2d_config->src_para.canvas_index = OSD1_CANVAS_INDEX;
 	ge2d_config->src_para.mem_type = CANVAS_OSD0;
@@ -108,16 +132,16 @@ static int osd_antiflicker_process(void)
 	ge2d_config->src_para.color = 0xffffffff;
 	ge2d_config->src_para.top = 0;
 	ge2d_config->src_para.left = 0;
-	ge2d_config->src_para.width = cs.width / 4;
-	ge2d_config->src_para.height = cs.height;
+	ge2d_config->src_para.width = cs_width / 4;
+	ge2d_config->src_para.height = cs_height;
 
 	ge2d_config->dst_para.canvas_index = OSD1_CANVAS_INDEX;
 	ge2d_config->dst_para.mem_type = CANVAS_OSD0;
 	ge2d_config->dst_para.format = GE2D_FORMAT_S32_ARGB;
 	ge2d_config->dst_para.top = 0;
 	ge2d_config->dst_para.left = 0;
-	ge2d_config->dst_para.width = cd.width / 4;
-	ge2d_config->dst_para.height = cd.height;
+	ge2d_config->dst_para.width = cd_width / 4;
+	ge2d_config->dst_para.height = cd_height;
 	ge2d_config->dst_para.fill_color_en = 0;
 	ge2d_config->dst_para.fill_mode = 0;
 	ge2d_config->dst_para.color = 0;
@@ -133,8 +157,8 @@ static int osd_antiflicker_process(void)
 		return ret;
 	}
 
-	stretchblt(context, x0, y0, cs.width / 4, (cs.height / yres), x0, y1,
-		   cd.width / 4, (cd.height / yres));
+	stretchblt(context, x0, y0, cs_width / 4, (cs_height / yres), x0, y1,
+		   cd_width / 4, (cd_height / yres));
 	return ret;
 }
 
