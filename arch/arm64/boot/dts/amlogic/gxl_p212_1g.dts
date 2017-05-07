@@ -118,7 +118,7 @@
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0xc000000>;
+			size = <0x0 0x10400000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
@@ -132,7 +132,7 @@
 		/* codec shared reserved */
 		codec_mm_reserved:linux,codec_mm_reserved {
 			compatible = "amlogic, codec-mm-reserved";
-			size = <0x0 0x4100000>;
+			size = <0x0 0x0>;
 			alignment = <0x0 0x100000>;
 			//no-map;
 		};
