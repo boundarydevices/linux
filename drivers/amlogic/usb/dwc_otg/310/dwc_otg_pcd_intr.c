@@ -2453,11 +2453,16 @@ static void complete_ep(dwc_otg_pcd_ep_t *ep)
 			req->actual = ep->dwc_ep.xfer_count;
 
 		if (req->dw_align_buf) {
+			struct device *dev = &ep->pcd->otg_dev->
+				os_dep.pldev->dev;
+
+			dma_unmap_single(dev,
+				req->dw_align_buf_dma, req->length,
+				ep->dwc_ep.is_in ? DMA_TO_DEVICE :
+				DMA_FROM_DEVICE);
 			if (!ep->dwc_ep.is_in)
 				dwc_memcpy(req->buf, req->dw_align_buf, req->length);
-
-			DWC_DMA_FREE(req->length, req->dw_align_buf,
-				     req->dw_align_buf_dma);
+			DWC_FREE(req->dw_align_buf);
 		}
 
 		dwc_otg_request_done(ep, req, 0);

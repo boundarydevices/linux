@@ -2198,9 +2198,25 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
 	req->priv = req_handle;
 	req->dw_align_buf = NULL;
 	if ((dma_buf & 0x3) && GET_CORE_IF(pcd)->dma_enable
-			&& !GET_CORE_IF(pcd)->dma_desc_enable && buflen)
-		req->dw_align_buf = DWC_DMA_ALLOC_ATOMIC(buflen,
-				 &req->dw_align_buf_dma);
+			&& !GET_CORE_IF(pcd)->dma_desc_enable && buflen) {
+		struct device *dev = &pcd->otg_dev->os_dep.pldev->dev;
+
+		if (atomic_alloc)
+			req->dw_align_buf = DWC_ALLOC_ATOMIC(buflen);
+		else
+			req->dw_align_buf = DWC_ALLOC(buflen);
+		if (!req->dw_align_buf) {
+			DWC_FREE(req);
+			return -DWC_E_NO_MEMORY;
+		}
+
+		if (ep->dwc_ep.is_in)
+			dwc_memcpy(req->dw_align_buf, buf, buflen);
+		req->dw_align_buf_dma = dma_map_single(dev,
+			req->dw_align_buf, buflen,
+			ep->dwc_ep.is_in ? DMA_TO_DEVICE :
+			DMA_FROM_DEVICE);
+	}
 	DWC_SPINLOCK_IRQSAVE(pcd->lock, &flags);
 #if 0
 	/*
@@ -2300,8 +2316,6 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
 
 				/* Setup and start the Transfer */
 				if (req->dw_align_buf) {
-					if (ep->dwc_ep.is_in)
-						dwc_memcpy(req->dw_align_buf, buf, buflen);
 					ep->dwc_ep.dma_addr = req->dw_align_buf_dma;
 					ep->dwc_ep.start_xfer_buff = req->dw_align_buf;
 					ep->dwc_ep.xfer_buff = req->dw_align_buf;

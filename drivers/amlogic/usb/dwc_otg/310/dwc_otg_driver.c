@@ -1200,11 +1200,13 @@ static int dwc_otg_driver_probe(struct platform_device *pdev)
 			dwc_otg_module_params.host_nperio_tx_fifo_size = -1;
 			dwc_otg_module_params.host_perio_tx_fifo_size = -1;
 			dwc_otg_module_params.host_channels = -1;
-			dwc_otg_module_params.dev_rx_fifo_size = 164;
-			dwc_otg_module_params.dev_nperio_tx_fifo_size = 144;
-			dwc_otg_module_params.dev_tx_fifo_size[0] = 144;
+			dwc_otg_module_params.dev_rx_fifo_size = 192;
+			dwc_otg_module_params.dev_nperio_tx_fifo_size = 128;
+			dwc_otg_module_params.dev_tx_fifo_size[0] = 128;
 			dwc_otg_module_params.dev_tx_fifo_size[1] = 128;
 			dwc_otg_module_params.dev_tx_fifo_size[2] = 128;
+			dwc_otg_module_params.dev_tx_fifo_size[3] = 16;
+			dwc_otg_module_params.dev_tx_fifo_size[4] = 16;
 		} else {
 			dwc_otg_module_params.data_fifo_size = -1;
 			dwc_otg_module_params.host_rx_fifo_size = -1;

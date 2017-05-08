@@ -466,6 +466,10 @@
 		compatible = "amlogic, amlogic-new-usb3";
 		portnum = <0>;
 		reg = <0x0 0xd0078080 0x0 0x20>;
+		interrupts = <0 16 4>;
+		otg = <1>;
+		gpio-vbus-power = "GPIOAO_5";
+		gpios = <&gpio_ao GPIOAO_5 GPIO_ACTIVE_HIGH>;
 	};
 
 	dwc2_a {
@@ -484,7 +488,7 @@
 		port-id-mode = <0>; /** 0: hardware, 1: sw_host, 2: sw_slave*/
 		usb-fifo = <728>;
 		cpu-type = "gxl";
-		controller-type = <1>; /** 0: normal, 1: host, 2: device*/
+		controller-type = <3>; /** 0: normal,1:host,2:device,3:otg*/
 		phy-reg = <0xd0078000>;
 		phy-reg-size = <0xa0>;
 		clocks = <&clkc CLKID_USB_GENERAL

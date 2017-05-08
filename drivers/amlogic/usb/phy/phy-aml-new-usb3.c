@@ -252,13 +252,11 @@ static int amlogic_new_usb3_probe(struct platform_device *pdev)
 
 	gpio_name = of_get_property(dev->of_node, "gpio-vbus-power", NULL);
 	if (gpio_name) {
-#if 0
 		gpio_vbus_power_pin = 1;
 		usb_gd = gpiod_get_index(&pdev->dev,
-				 NULL, 0);
+				 NULL, 0, GPIOD_OUT_LOW);
 		if (IS_ERR(usb_gd))
 			return -1;
-#endif
 	}
 
 	prop = of_get_property(dev->of_node, "portnum", NULL);
