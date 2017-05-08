@@ -123,7 +123,6 @@
 			MX6SX_PAD_LCD1_DATA11__GPIO3_IO_12	0x30b0
 			/* Test points */
 			MX6SX_PAD_QSPI1A_SS0_B__GPIO4_IO_22	0x30b0
-			MX6SX_PAD_QSPI1B_SS0_B__GPIO4_IO_30	0x30b0
 			MX6SX_PAD_QSPI1B_SCLK__GPIO4_IO_29	0x30b0
 			MX6SX_PAD_QSPI1B_DATA0__GPIO4_IO_24	0x30b0
 		>;
@@ -133,6 +132,13 @@
 		fsl,pins = <
 			MX6SX_PAD_GPIO1_IO00__I2C1_SCL		0x4001b8b1
 			MX6SX_PAD_GPIO1_IO01__I2C1_SDA		0x4001b8b1
+		>;
+	};
+
+	pinctrl_i2c1_rv4162: i2c1-rv4162grp {
+		fsl,pins = <
+#define GPIRQ_RTC_RV4162		<&gpio4 30 IRQ_TYPE_LEVEL_LOW>
+			MX6SX_PAD_QSPI1B_SS0_B__GPIO4_IO_30	0x1b0b0
 		>;
 	};
 
@@ -489,6 +495,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
 	status = "okay";
+
+	rv4162@68 {
+		compatible = "mcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RTC_RV4162;
+	};
 };
 
 &i2c2 {
