@@ -62,7 +62,7 @@ fw-shipped-$(CONFIG_DRM_RADEON) += radeon/R100_cp.bin radeon/R200_cp.bin \
 				   radeon/RV730_pfp.bin radeon/RV730_me.bin \
 				   radeon/RV710_pfp.bin radeon/RV710_me.bin
 ifdef CONFIG_SOC_IMX6Q
-fw-shipped-$(CONFIG_IMX_SDMA) += imx/sdma/sdma-imx6q.bin
+# fw-shipped-$(CONFIG_IMX_SDMA) += imx/sdma/sdma-imx6q.bin
 endif
 ifdef CONFIG_SOC_IMX7D
 fw-shipped-$(CONFIG_IMX_SDMA) += imx/sdma/sdma-imx7d.bin
