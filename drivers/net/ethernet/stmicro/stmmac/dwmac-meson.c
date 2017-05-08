@@ -36,7 +36,9 @@ static void meson6_dwmac_fix_mac_speed(void *priv, unsigned int speed)
 {
 	struct meson_dwmac *dwmac = priv;
 	unsigned int val;
-
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	return;
+#endif
 	val = readl(dwmac->reg);
 
 	switch (speed) {
