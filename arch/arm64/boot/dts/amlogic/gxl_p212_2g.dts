@@ -85,7 +85,7 @@
 
 		ion_reserved:linux,ion-dev {
 			compatible = "amlogic, idev-mem";
-			size = <0x0 0x2000000>;
+			size = <0x0 0x0>;
 		};
 
 		/*  vdin0 CMA pool */
