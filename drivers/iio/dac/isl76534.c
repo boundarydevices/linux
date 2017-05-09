@@ -312,11 +312,17 @@ static int isl76534_probe(struct i2c_client *client,
 		goto exit1;
 	msleep(10);
 
+
+	ret = iio_device_register(iio);
+	if (ret) {
+		dev_err(&client->dev, "Failed to register iio device\n");
+		goto exit1;
+	}
 	if (device_create_file(&iio->dev, &dev_attr_isl76534_reg))
 		dev_err(&iio->dev, "Error on creating sysfs file for isl76534_reg\n");
 	else
 		dev_err(&iio->dev, "created sysfs entry for reading regs\n");
-	return iio_device_register(iio);
+	return 0;
 
 exit1:
 	regulator_disable(isl->vref_reg);
