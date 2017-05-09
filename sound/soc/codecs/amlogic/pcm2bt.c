@@ -54,6 +54,13 @@ static int pcm2bt_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	return 0;
 }
 
+static int pcm2bt_set_tdm_slot(struct snd_soc_dai *dai,
+		unsigned int tx_mask, unsigned int rx_mask,
+		int slots, int slot_width)
+{
+	return 0;
+}
+
 static int pcm2bt_set_sysclk(struct snd_soc_dai *dai, int clk_id,
 			     unsigned int freq, int dir)
 {
@@ -69,6 +76,7 @@ static int pcm2bt_set_bias_level(struct snd_soc_codec *codec,
 struct snd_soc_dai_ops pcm2bt_dai_ops = {
 	.hw_params = pcm2bt_hw_params,
 	.set_fmt = pcm2bt_set_fmt,
+	.set_tdm_slot = pcm2bt_set_tdm_slot,
 	.set_sysclk = pcm2bt_set_sysclk,
 	.set_sysclk = pcm2bt_set_sysclk,
 };

@@ -249,8 +249,15 @@ aml_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
 	int ret = 0;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	int channels, width;
 
-	pr_info("enter %s\n", __func__);
+	pr_info("enter %s cpu_dai->name: %s cpu_dai->id: %d\n", __func__,
+			cpu_dai->name, cpu_dai->id);
+	pr_info("enter %s codec_dai->name: %s codec_dai->id: %d\n", __func__,
+			codec_dai->name, codec_dai->id);
 
 	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
 	runtime->dma_bytes = params_buffer_bytes(params);
@@ -258,7 +265,37 @@ aml_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->buffer_start = runtime->dma_addr;
 	prtd->buffer_size = runtime->dma_bytes;
 
-	return ret;
+	channels = params_channels(params);
+	width = snd_pcm_format_physical_width(params_format(params));
+
+	pr_info("%s:channels=0x%04x, width:0x%04x\n",
+		__func__, channels, width);
+
+	/* set cpu DAI configuration */
+	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_NB_IF | SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0) {
+		pr_err("set cpu dai fmt wrong\n");
+		return ret;
+	}
+
+	/* set codec DAI configuration */
+	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A |
+			SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0) {
+		pr_err("set codec dai fmt wrong\n");
+		return ret;
+	}
+
+	/* each codec set its slot offset itself */
+	ret = snd_soc_dai_set_tdm_slot(codec_dai, 0xff, 0xff, channels, width);
+	if (ret < 0) {
+		pr_err("set codec dai tdm slot wrong\n");
+		return ret;
+	}
+
+	return 0;
+
 }
 
 static int aml_pcm_hw_free(struct snd_pcm_substream *substream)

@@ -199,6 +199,9 @@ static int aml_pcm_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	pr_debug("***Entered %s\n", __func__);
 	if (fmt & SND_SOC_DAIFMT_CBS_CFS)
 		snd_soc_dai_get_drvdata(dai);
+
+	aml_set_pcm_format(fmt & SND_SOC_DAIFMT_FORMAT_MASK);
+
 	return 0;
 }
 

@@ -23,6 +23,7 @@
 
 #include "aml_audio_hw.h"
 
+void aml_set_pcm_format(int pcm_mode);
 void pcm_in_enable(struct snd_pcm_substream *substream, int flag);
 void pcm_in_set_buf(unsigned int addr, unsigned int size);
 int  pcm_in_is_enable(void);
