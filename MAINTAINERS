@@ -13877,3 +13877,7 @@ AMLOGIC PM/SLEEP M8B DRIVER SUPPORT
 M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: drivers/amlogic/pm/m8b_pm.c
 F: drivers/amlogic/pm/lgcy_early_suspend.c
+
+AMLOGIC MESON8B ADD SKT DTS
+M:	Yun Cai <yun.cai@amlogic.com>
+F:	arch/arm/boot/dts/amlogic/meson8b_skt.dts

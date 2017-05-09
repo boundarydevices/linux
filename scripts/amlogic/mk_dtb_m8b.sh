@@ -9,3 +9,6 @@ make ARCH=arm meson8b_m200.dtb \
 
 make ARCH=arm meson8b_m400.dtb \
 	|| echo "Compile dtb Fail !!"
+
+make ARCH=arm meson8b_skt.dtb \
+	|| echo "Compile dtb Fail !!"
