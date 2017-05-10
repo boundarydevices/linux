@@ -481,6 +481,8 @@ static int ads7924_probe(struct i2c_client *client,
 		return PTR_ERR(ads->reset_gpio);
 	}
 	gpiod_direction_output(ads->reset_gpio, 0);
+	/* wait a little after reset released */
+	msleep(2);
 
 	/* Initialize all the structures */
 	i2c_set_clientdata(client, iio);
