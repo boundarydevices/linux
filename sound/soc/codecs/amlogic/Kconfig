@@ -39,12 +39,25 @@ config AMLOGIC_SND_CODEC_AMLT9015
 		this codec is internal
 
 config AMLOGIC_SND_CODEC_PMU3
-        bool "Amlogic Audio AML PMU3 codec"
-        depends on AMLOGIC_SND_SOC_CODECS
-    default n
-        help
-                Amlogic Audio codec,
-                AML PMU3 codec,
-                AML PMU3 codec,
-                this codec is internal
+	bool "Amlogic Audio AML PMU3 codec"
+	depends on AMLOGIC_SND_SOC_CODECS
+	default n
+	help
+		Amlogic Audio codec,
+		AML PMU3 codec,
+		AML PMU3 codec,
+		this codec is internal
+
+# Amlogic add Third part codec
+config AMLOGIC_SND_SOC_TAS5707
+	bool "Texas Instruments TAS5707 amplifier"
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable support for Texas Instruments TAS5707 CODEC.
+		Select this if your TAS5707 is connected via an I2C bus.
+                Enable support for Texas Instruments TAS5707 CODEC.
+                Select this if your TAS5707 is connected via an I2C bus.
+
 #endif #AMLOGIC_SND_SOC_CODECS

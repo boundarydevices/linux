@@ -13881,3 +13881,12 @@ F: drivers/amlogic/pm/lgcy_early_suspend.c
 AMLOGIC MESON8B ADD SKT DTS
 M:	Yun Cai <yun.cai@amlogic.com>
 F:	arch/arm/boot/dts/amlogic/meson8b_skt.dts
+
+AMLOGIC Audio codec driver
+M: Xing Wang <xing.wang@amlogic.com>
+F: arch/arm64/configs/meson64_defconfig
+F: include/sound/tas57xx.h
+F: sound/soc/codecs/amlogic/Kconfig
+F: sound/soc/codecs/amlogic/Makefile
+F: sound/soc/codecs/amlogic/tas5707.c
+F: sound/soc/codecs/amlogic/tas5707.h
