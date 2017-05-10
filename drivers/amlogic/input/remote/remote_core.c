@@ -185,7 +185,9 @@ int remote_register_device(struct remote_dev *dev)
 	}
 
 	__set_bit(EV_KEY, dev->input_device->evbit);
-	for (i = 0; i < KEY_MAX; i++)
+	for (i = KEY_RESERVED; i < BTN_MISC; i++)
+		__set_bit(i, dev->input_device->keybit);
+	for (i = KEY_OK; i < BTN_TRIGGER_HAPPY; i++)
 		__set_bit(i, dev->input_device->keybit);
 
 	dev->input_device->keycodesize = sizeof(unsigned short);
