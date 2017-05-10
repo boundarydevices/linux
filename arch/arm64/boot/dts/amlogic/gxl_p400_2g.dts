@@ -827,3 +827,12 @@
 		function = "i2s";
 	};
 };
+
+&i2c_ao {
+	status = "okay";
+	pca9557:pca9557@0x1f{
+		compatible = "nxp,pca9557";
+		reg = <0x1f>;
+		status = "okay";
+	};
+};
