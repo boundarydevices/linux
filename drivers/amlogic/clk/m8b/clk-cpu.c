@@ -68,7 +68,7 @@ static int meson_clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 {
 	struct meson_clk_cpu *clk_cpu = to_meson_clk_cpu_hw(hw);
 	unsigned int div, sel, N = 0;
-	u32 reg;
+	u32 reg, reg1, sel_first = 0;
 
 	div = DIV_ROUND_UP(parent_rate, rate);
 
@@ -81,11 +81,24 @@ static int meson_clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	reg = readl(clk_cpu->base + clk_cpu->reg_off + MESON_CPU_CLK_CNTL1);
 	reg = PARM_SET(MESON_N_WIDTH, MESON_N_SHIFT, reg, N);
-	writel(reg, clk_cpu->base + clk_cpu->reg_off + MESON_CPU_CLK_CNTL1);
 
-	reg = readl(clk_cpu->base + clk_cpu->reg_off + MESON_CPU_CLK_CNTL);
-	reg = PARM_SET(MESON_SEL_WIDTH, MESON_SEL_SHIFT, reg, sel);
-	writel(reg, clk_cpu->base + clk_cpu->reg_off + MESON_CPU_CLK_CNTL);
+	reg1 = readl(clk_cpu->base + clk_cpu->reg_off + MESON_CPU_CLK_CNTL);
+	if ((N == 0) && (((reg1>>2)&0x3) == 0x3))
+		sel_first = 1;
+
+	reg1 = PARM_SET(MESON_SEL_WIDTH, MESON_SEL_SHIFT, reg1, sel);
+
+	if (sel_first) {
+		writel(reg1, clk_cpu->base + clk_cpu->reg_off +
+			MESON_CPU_CLK_CNTL);
+		writel(reg, clk_cpu->base + clk_cpu->reg_off +
+			MESON_CPU_CLK_CNTL1);
+	} else {
+		writel(reg, clk_cpu->base + clk_cpu->reg_off +
+			MESON_CPU_CLK_CNTL1);
+		writel(reg1, clk_cpu->base + clk_cpu->reg_off +
+			MESON_CPU_CLK_CNTL);
+	}
 
 	return 0;
 }
