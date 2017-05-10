@@ -57,11 +57,6 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
-		pstore:aml_pstore {
-			compatible = "amlogic, pstore";
-			reg = <0x0 0x07300000 0x0 0x100000>;
-			no-map;
-		};
 		fb_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
 			reusable;

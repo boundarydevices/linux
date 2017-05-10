@@ -53,11 +53,6 @@
 			no-map;
 		};
 
-		pstore:aml_pstore {
-			compatible = "amlogic, pstore";
-			reg = <0x0 0x07300000 0x0 0x100000>;
-			no-map;
-		};
 	};
 
 
