@@ -71,6 +71,7 @@ extern bool pre_scaler_en;
 #define VD1_FMT_CHROMA_WIDTH_BIT        0
 
 #define VIU_MISC_AFBC_VD1           (1 << 20)
+#define VPP_CM_ENABLE               (1 << 28)
 
 #define VPP_VD2_ALPHA_WID           9
 #define VPP_VD2_ALPHA_MASK          0x1ff
@@ -263,5 +264,5 @@ extern enum vmode_e get_logo_vmode(void);
 
 int query_video_status(int type, int *value);
 int get_video0_frame_info(struct vframe_s *vf);
-
+int amvideo_notifier_call_chain(unsigned long val, void *v);
 #endif /* VIDEO_H */

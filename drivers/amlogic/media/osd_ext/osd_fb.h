@@ -23,7 +23,6 @@
 #include <linux/fb.h>
 
 /* Amlogic Headers */
-#include <linux/amlogic/display/vinfo.h>
 
 /* Local Headers */
 #include <osd/osd.h>

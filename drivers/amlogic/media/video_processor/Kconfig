@@ -4,14 +4,14 @@
 
 menu "Amlogic Video Processor Support"
 
-config AMLOGIC_VIDEO_PROCESSOR
+config AMLOGIC_MEDIA_VIDEO_PROCESSOR
 	bool "Amlogic Video Processor Driver"
 	default n
 	help
 		Amlogic Video Processor module support.
 		Video Processor module includes ION_VIDEO, PPMGR, VIDEO_DEV and etc.
 
-if AMLOGIC_VIDEO_PROCESSOR
+if AMLOGIC_MEDIA_VIDEO_PROCESSOR
 
 source "drivers/amlogic/media/video_processor/video_dev/Kconfig"
 source "drivers/amlogic/media/video_processor/ppmgr/Kconfig"

@@ -439,7 +439,7 @@ int get_video_debug_flags(void)
 static int vsync_enter_line_max;
 static int vsync_exit_line_max;
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 static int vsync_rdma_line_max;
 #endif
 static u32 framepacking_support __nosavedata;
@@ -603,7 +603,7 @@ bool to_notify_trick_wait;
 /* display canvas */
 #define DISPLAY_CANVAS_BASE_INDEX 0x60
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 static struct vframe_s *cur_rdma_buf;
 /*
 void vsync_rdma_config(void);
@@ -1967,7 +1967,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 			}
 		} else {
 			new_frame_count++;
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 			if (is_vsync_rdma_enable()) {
 #ifdef RDMA_RECYCLE_ORDERED_VFRAMES
 				if (dispbuf_to_put_num < DISPBUF_TO_PUT_MAX) {
@@ -2031,7 +2031,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 	}
 	if ((vf->canvas0Addr != 0) &&
 	(VSYNC_RD_MPEG_REG(DI_IF1_GEN_REG) & 0x1) == 0) {
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		if (vf->canvas0Addr != (u32)-1) {
 			canvas_copy(vf->canvas0Addr & 0xff,
 				disp_canvas_index[rdma_canvas_id][0]);
@@ -3118,7 +3118,7 @@ static int detect_vout_type(void)
 		default:
 			break;
 		}
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		if (is_vsync_rdma_enable()) {
 			if (vout_type == VOUT_TYPE_TOP_FIELD)
 				vout_type = VOUT_TYPE_BOT_FIELD;
@@ -3506,7 +3506,7 @@ void set_vsync_pts_inc_mode(int inc)
 }
 EXPORT_SYMBOL(set_vsync_pts_inc_mode);
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 void vsync_rdma_process(void)
 {
 	vsync_rdma_config();
@@ -3651,7 +3651,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 	if (enc_line > vsync_enter_line_max)
 		vsync_enter_line_max = enc_line;
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	vsync_rdma_config_pre();
 
 	if (to_notify_trick_wait) {
@@ -3744,7 +3744,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 		goto exit;
 	if (atomic_read(&video_pause_flag))
 		goto exit;
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	if (is_vsync_rdma_enable())
 		rdma_canvas_id = next_rdma_canvas_id;
 	else {
@@ -3942,7 +3942,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 
 			if (trickmode_fffb == 1) {
 				trickmode_vpts = vf->pts;
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 				if ((VSYNC_RD_MPEG_REG(DI_IF1_GEN_REG) & 0x1)
 					== 0)
 					to_notify_trick_wait = true;
@@ -4535,7 +4535,7 @@ cur_dev->vpp_off,0,VPP_VD2_ALPHA_BIT,9);//vd2 alpha must set
 
 	if (cur_dispbuf && cur_dispbuf->process_fun) {
 		/* for new deinterlace driver */
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		if (debug_flag & DEBUG_FLAG_PRINT_RDMA) {
 			if (enable_rdma_log_count > 0)
 				pr_info("call process_fun\n");
@@ -4552,7 +4552,7 @@ cur_dev->vpp_off,0,VPP_VD2_ALPHA_BIT,9);//vd2 alpha must set
  exit:
 	vpp_misc_save = READ_VCBUS_REG(VPP_MISC + cur_dev->vpp_off);
 	vpp_misc_set = vpp_misc_save;
-#ifdef CONFIG_AM_VECM
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 	vpp_misc_set |= VPP_CM_ENABLE;
 #endif
 	if (update_osd_vpp_misc) {
@@ -4732,7 +4732,7 @@ cur_dev->vpp_off,0,VPP_VD2_ALPHA_BIT,9);//vd2 alpha must set
 		VSYNC_WR_MPEG_REG(AFBC_ENABLE, 0);
 	}
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	cur_rdma_buf = cur_dispbuf;
 	/* vsync_rdma_config(); */
 	vsync_rdma_process();
@@ -4892,7 +4892,7 @@ static void video_vf_unreg_provider(void)
 	atomic_set(&video_unreg_flag, 1);
 	spin_lock_irqsave(&lock, flags);
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	dispbuf_to_put_num = DISPBUF_TO_PUT_MAX;
 	while (dispbuf_to_put_num > 0) {
 		dispbuf_to_put_num--;
@@ -4951,7 +4951,7 @@ static void video_vf_light_unreg_provider(void)
 	ulong flags;
 
 	spin_lock_irqsave(&lock, flags);
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	dispbuf_to_put_num = DISPBUF_TO_PUT_MAX;
 	while (dispbuf_to_put_num > 0) {
 		dispbuf_to_put_num--;
@@ -8085,7 +8085,7 @@ static int __init video_init(void)
 	vout_hook();
 #endif
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	dispbuf_to_put_num = DISPBUF_TO_PUT_MAX;
 	while (dispbuf_to_put_num > 0) {
 		dispbuf_to_put_num--;
@@ -8208,7 +8208,7 @@ module_param(vsync_enter_line_max, uint, 0664);
 MODULE_PARM_DESC(vsync_exit_line_max, "\n vsync_exit_line_max\n");
 module_param(vsync_exit_line_max, uint, 0664);
 
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 MODULE_PARM_DESC(vsync_rdma_line_max, "\n vsync_rdma_line_max\n");
 module_param(vsync_rdma_line_max, uint, 0664);
 #endif

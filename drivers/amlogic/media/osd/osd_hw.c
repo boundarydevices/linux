@@ -41,12 +41,12 @@
 #ifdef CONFIG_AMLOGIC_VPU
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
-#ifdef CONFIG_AMLOGIC_VECM
-#include <linux/amlogic/amvecm/ve.h>
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+#include <linux/amlogic/media/amvecm/ve.h>
 #endif
 
-#ifdef CONFIG_AMLOGIC_VIDEO
-#include <linux/amlogic/amports/video.h>
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
+#include <linux/amlogic/media/video_sink/video.h>
 #endif
 /* Local Headers */
 #include "osd_canvas.h"
@@ -241,7 +241,7 @@ static unsigned int *filter_table[] = {
 	osd_filter_coefs_3point_bspline
 };
 
-#ifdef CONFIG_AMLOGIC_VECM
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 static bool osd_hdr_on;
 #endif
 
@@ -620,7 +620,7 @@ u32 osd_get_hw_reset_flag(void)
 		/* same bit, but gxm only reset hardware, not top reg*/
 		if (osd_hw.osd_afbcd[OSD1].enable)
 			hw_reset_flag |= HW_RESET_AFBCD_HARDWARE;
-#ifndef CONFIG_AMLOGIC_VECM
+#ifndef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 		break;
 #else
 	case MESON_CPU_MAJOR_ID_GXL:
@@ -725,7 +725,7 @@ static int notify_to_amvideo(void)
 		"osd notify_to_amvideo vpp misc:0x%08x, mask:0x%08x\n",
 		para[0], para[1]);
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 	amvideo_notifier_call_chain(
 		AMVIDEO_UPDATE_OSD_MODE,
 		(void *)&para[0]);
@@ -1204,7 +1204,7 @@ void osd_setup_hw(u32 index,
 		osd_antiflicker_update_pan(yoffset, yres);
 	if (osd_hw.clone[index])
 		osd_clone_pan(index, yoffset, 0);
-#ifdef CONFIG_AM_FB_EXT
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_EXT
 	osd_ext_clone_pan(index);
 #endif
 	osd_wait_vsync_hw();
@@ -2214,7 +2214,7 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 		else
 			osd_log_err("------NOT signal out_fence ERROR\n");
 	}
-#ifdef CONFIG_AM_FB_EXT
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_EXT
 	if (ret)
 		osd_ext_clone_pan(index);
 #endif
@@ -2248,7 +2248,7 @@ void osd_pan_display_hw(u32 index, unsigned int xoffset, unsigned int yoffset)
 		add_to_update_list(index, DISP_GEOMETRY);
 		osd_wait_vsync_hw();
 	}
-#ifdef CONFIG_AM_FB_EXT
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_EXT
 	osd_ext_clone_pan(index);
 #endif
 	osd_log_dbg2("offset[%d-%d]x[%d-%d]y[%d-%d]\n",
@@ -3604,7 +3604,7 @@ void osd_init_hw(u32 logo_loaded)
 	osd_hw.updated[OSD2] = 0;
 	osd_hw.urgent[OSD1] = 1;
 	osd_hw.urgent[OSD2] = 1;
-#ifdef CONFIG_AMLOGIC_VECM
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 	osd_hdr_on = false;
 #endif
 	osd_hw.hw_reset_flag = HW_RESET_NONE;
@@ -3880,7 +3880,7 @@ void osd_resume_hw(void)
 
 void osd_shutdown_hw(void)
 {
-#ifdef CONFIG_VSYNC_RDMA
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	enable_rdma(0);
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA

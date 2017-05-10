@@ -1,6 +1,26 @@
+#
+# Amlogic video Sink configuation
+#
+
+menu "Amlogic Video Sink Driver Support"
+
+config AMLOGIC_MEDIA_VIDEO
+	bool "Amlogic Video Sink Driver"
+	default n
+	help
+		Amlogic Video Sink module support.
+		This module driver include basic
+		video, vpp etc.
+
+if AMLOGIC_MEDIA_VIDEO
+
 config  AMLOGIC_MEDIA_VSYNC_RDMA
 	bool "VSYNC CBUS RDMA"
 	default n
     depends on AMLOGIC_MEDIA_RDMA
 	help
 		Select to enable VSYNC CBUS RDMA.
+
+endif
+
+endmenu

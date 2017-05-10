@@ -44,8 +44,8 @@
 #include "osd_backup.h"
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 #include <linux/amlogic/media/rdma/rdma_mgr.h>
-#ifdef CONFIG_AMLOGIC_VECM
-#include <linux/amlogic/amvecm/ve.h>
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+#include <linux/amlogic/media/amvecm/ve.h>
 #endif
 #endif
 
@@ -504,7 +504,7 @@ void set_reset_rdma_trigger_line(void)
 	aml_write_vcbus(VPP_INT_LINE_NUM, trigger_line);
 }
 
-#ifdef CONFIG_AMLOGIC_VECM
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 static void hdr_restore_osd_csc(void)
 {
 	u32 i = 0;
@@ -696,7 +696,7 @@ static void osd_reset_rdma_func(u32 reset_bit)
 			VIU_SW_RESET, 1);
 		rdma_write_reg(osd_reset_rdma_handle,
 			VIU_SW_RESET, 0);
-#ifdef CONFIG_AMLOGIC_VECM
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 		hdr_restore_osd_csc();
 #endif
 		set_reset_rdma_trigger_line();

@@ -27,7 +27,6 @@
 #define PAT_VAL	0x00000000
 #define PAT_START_PTR  1
 #define PAT_END_PTR	1
-#define HOLD_LINES	28
 #define Y_STEP		0
 
 extern int osd_ext_set_prot(unsigned char   x_rev,

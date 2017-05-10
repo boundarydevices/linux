@@ -26,8 +26,6 @@
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/kthread.h>
-#include <sw_sync.h>
-#include <sync.h>
 
 /* Android Headers */
 #include <sw_sync.h>
@@ -40,8 +38,8 @@
 #include <linux/amlogic/media/canvas/canvas.h>
 #include <linux/amlogic/media/canvas/canvas_mgr.h>
 #endif
-#ifdef CONFIG_AMLOGIC_VIDEO
-#include <linux/amlogic/amports/vframe_receiver.h>
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
+#include <linux/amlogic/media/amports/vframe_receiver.h>
 #endif
 
 /* Local Headers */
@@ -81,14 +79,14 @@ struct mutex ext_post_fence_list_lock;
 static void osd_ext_pan_display_fence(struct osd_fence_map_s *fence_map);
 #endif
 
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 #define PROVIDER_NAME "osd_ext"
 static struct vframe_s vf;
 static struct vframe_provider_s osd_ext_vf_prov;
 static unsigned char osd_ext_vf_prov_init;
 #endif
 
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 static int g_vf_visual_width;
 static int g_vf_width;
 static int g_vf_height;
@@ -368,7 +366,7 @@ int osd_ext_sync_request(u32 index, u32 yres, u32 xoffset, u32 yoffset,
 }
 #endif
 
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 static struct vframe_s *osd_ext_vf_peek(void *arg)
 {
 	if ((osd_ext_vf_need_update && (vf.width > 0) && (vf.height > 0)))
@@ -799,7 +797,7 @@ void osd_ext_enable_hw(u32 index, int enable)
 static void osd_ext_set_free_scale_enable_mode0(u32 index, u32 enable)
 {
 	static struct pandata_s save_disp_data = { 0, 0, 0, 0 };
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 #ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER
 	int mode_changed = 0;
 
@@ -815,7 +813,7 @@ static void osd_ext_set_free_scale_enable_mode0(u32 index, u32 enable)
 	if (index == OSD1) {
 		if (enable) {
 			osd_ext_vf_need_update = true;
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 			if ((osd_ext_hw.free_src_data[OSD1].x_end > 0)
 			    && (osd_ext_hw.free_src_data[OSD1].x_end > 0)) {
 				vf.width =
@@ -875,7 +873,7 @@ static void osd_ext_set_free_scale_enable_mode0(u32 index, u32 enable)
 
 			add_to_update_list(OSD1, DISP_GEOMETRY);
 			add_to_update_list(OSD1, OSD_COLOR_MODE);
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 			vf_unreg_provider(&osd_ext_vf_prov);
 #endif
 
@@ -886,7 +884,7 @@ static void osd_ext_set_free_scale_enable_mode0(u32 index, u32 enable)
 	}
 
 	osd_ext_enable_hw(osd_ext_hw.enable[index], index);
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 #ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER
 	if (mode_changed) {
 		/* extern void vf_ppmgr_reset(int type); */
