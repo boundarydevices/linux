@@ -239,7 +239,7 @@ struct imx_port {
 	unsigned		rxing;
 	struct delayed_work	rxact_work;
 
-	int			gpios[32];
+	int			imx_gpios[32];
 	unsigned		off_levels;
 	unsigned		rxact_mask;
 	unsigned		rxact_levels;
@@ -355,7 +355,7 @@ static void imx_port_ucrs_restore(struct uart_port *port,
 
 void imx_set_gpios(struct imx_port *sport, unsigned mask, unsigned levels, unsigned ascending)
 {
-	unsigned *gpios = sport->gpios;
+	unsigned *gpios = sport->imx_gpios;
 
 	while (mask) {
 		int i = ascending ? __ffs(mask) : __fls(mask);
@@ -2067,8 +2067,8 @@ static int serial_imx_probe_dt(struct imx_port *sport,
 
 	of_property_read_u32(np, "off_levels", &off_levels);
 
-	for (i = 0 ; i < ARRAY_SIZE(sport->gpios); i++) {
-		sport->gpios[i] = -1;
+	for (i = 0 ; i < ARRAY_SIZE(sport->imx_gpios); i++) {
+		sport->imx_gpios[i] = -1;
 		gpio = of_get_named_gpio(np, "control-gpios", i);
 		if (gpio < 0)
 			break;
@@ -2084,7 +2084,7 @@ static int serial_imx_probe_dt(struct imx_port *sport,
 			dev_err(&pdev->dev, "can't request gpio %d(%d)", gpio, ret);
 			break;
 		}
-		sport->gpios[i] = gpio;
+		sport->imx_gpios[i] = gpio;
 		gpios_mask |= (1 << i);
 	}
 	sport->gpios_mask = gpios_mask;
