@@ -389,8 +389,6 @@ void switch_vpu_clk_gate_vmod(unsigned int vmod, int flag)
 			(vpu_chip_type == VPU_CHIP_GXL) ||
 			(vpu_chip_type == VPU_CHIP_GXM) ||
 			(vpu_chip_type == VPU_CHIP_TXL)) {
-			vpu_vcbus_setb(VPU_CLK_GATE, val, 8, 1); /* clkb_gen */
-			vpu_vcbus_setb(VPU_CLK_GATE, val, 9, 1); /* clkb_gen */
 			/* clkb_gen_en */
 			vpu_vcbus_setb(VPU_CLK_GATE, val, 17, 1);
 		}

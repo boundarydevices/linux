@@ -810,7 +810,7 @@ static int get_vpu_config(struct platform_device *pdev)
 
 static void vpu_clktree_init(struct device *dev)
 {
-	static struct clk *vpu_clktree;
+	struct clk *vpu_clktree;
 
 	vpu_clktree = devm_clk_get(dev, "vapb_clk");
 	if (IS_ERR(vpu_clktree))
