@@ -35,14 +35,16 @@
 /*
  * ADC081C registers definition
  */
-#define ADC081C_RESULT			0x00
-#define ADC081C_ALERT			0x01
-#define ADC081C_CONFIG			0x02
-#define ADC081C_LOW_LIMIT		0x03
-#define ADC081C_HIGH_LIMIT		0x04
-#define ADC081C_HYSTERESIS		0x05
-#define ADC081C_LOWEST_CNV		0x06
-#define ADC081C_HIGHEST_CNV		0x07
+#define ADC081C_RESULT			0x00	/* 2 bytes */
+#define ADC081C_ALERT			0x01	/* 1 byte */
+#define ADC081C_CONFIG			0x02	/* 1 byte */
+#define ADC081C_LOW_LIMIT		0x03	/* 2 bytes */
+#define ADC081C_HIGH_LIMIT		0x04	/* 2 bytes */
+#define ADC081C_HYSTERESIS		0x05	/* 2 bytes */
+#define ADC081C_LOWEST_CNV		0x06	/* 2 bytes */
+#define ADC081C_HIGHEST_CNV		0x07	/* 2 bytes */
+
+#define SINGLE_BYTE_REGS	(BIT(ADC081C_ALERT) | BIT(ADC081C_CONFIG))
 
 struct adc081c {
 	struct i2c_client *i2c;
@@ -254,6 +256,38 @@ static int adc081c_read_raw(struct iio_dev *iio,
 	return -EINVAL;
 }
 
+static int adc081c_debugfs_reg_access(struct iio_dev *iio,
+				      unsigned reg, unsigned writeval,
+				      unsigned *readval)
+{
+	struct adc081c *adc = iio_priv(iio);
+	int ret;
+
+	if (reg > ADC081C_HIGHEST_CNV)
+		return -EINVAL;
+
+	if (readval) {
+		ret = (BIT(reg) & SINGLE_BYTE_REGS) ?
+			i2c_smbus_read_byte_data(adc->i2c, reg) :
+			i2c_smbus_read_word_swapped(adc->i2c, reg);
+		if (ret >= 0) {
+			*readval = ret;
+			ret = 0;
+		}
+	} else {
+		if (BIT(reg) & SINGLE_BYTE_REGS) {
+			if (writeval > 0xff)
+				return -EINVAL;
+			ret = i2c_smbus_write_byte_data(adc->i2c, reg, writeval);
+		} else {
+			if (writeval > 0xffff)
+				return -EINVAL;
+			ret = i2c_smbus_write_word_swapped(adc->i2c, reg, writeval);
+		}
+	}
+	return ret;
+}
+
 static const struct iio_event_spec adc081c_events[] = {
 	{
 		.type = IIO_EV_TYPE_THRESH,
@@ -325,6 +359,7 @@ static const struct iio_info adc081c_info = {
 	.write_event_config = &adc081c_write_event_config,
 	.read_event_value = &adc081c_read_event_value,
 	.write_event_value = &adc081c_write_event_value,
+	.debugfs_reg_access = &adc081c_debugfs_reg_access,
 	.driver_module = THIS_MODULE,
 };
 
