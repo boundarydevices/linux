@@ -312,8 +312,9 @@ struct ion_client *fb_ion_client;
 struct ion_handle *fb_ion_handle[OSD_COUNT][OSD_MAX_BUF_NUM] = {
 	{NULL, NULL, NULL}, {NULL, NULL, NULL}
 };
-
-
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR
+static int osd_cursor(struct fb_info *fbi, struct fb_cursor *var);
+#endif
 phys_addr_t get_fb_rmem_paddr(int index)
 {
 	if (index < 0 || index > 1)
@@ -654,6 +655,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	struct fb_sync_request_s sync_request;
 	struct fb_sync_request_render_s sync_request_render;
 	struct fb_dmabuf_export dmaexp;
+	struct fb_cursor cursor;
 
 	switch (cmd) {
 	case  FBIOPUT_OSD_SRCKEY_ENABLE:
@@ -710,6 +712,9 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		break;
 	case FBIOPUT_OSD_WINDOW_AXIS:
 		ret = copy_from_user(&osd_dst_axis, argp, 4 * sizeof(s32));
+		break;
+	case FBIOPUT_OSD_CURSOR:
+		ret = copy_from_user(&cursor, argp, sizeof(cursor));
 		break;
 	default:
 		osd_log_err("command 0x%x not supported (%s)\n",
@@ -930,6 +935,14 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		osd_wait_vsync_event();
 		ret = copy_to_user(argp, &ret, sizeof(u32));
 		break;
+	case FBIOPUT_OSD_CURSOR:
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR
+		osd_cursor(info, &cursor);
+		ret = copy_to_user(argp, &cursor, sizeof(cursor));
+#else
+		ret = EINVAL;
+#endif
+		break;
 	default:
 		break;
 	}
@@ -1026,7 +1039,7 @@ static int osd_open(struct fb_info *info, int arg)
 #endif
 	fbdev = (struct osd_fb_dev_s *)info->par;
 	fbdev->open_count++;
-	osd_log_info("osd_open index=%d,open_count=%d\n",
+	osd_log_dbg("osd_open index=%d,open_count=%d\n",
 		fbdev->fb_index, fbdev->open_count);
 	if (info->screen_base != NULL)
 		return 0;

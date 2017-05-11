@@ -94,7 +94,7 @@ enum color_index_e {
 #define FBIOPUT_OSD_ROTATE_ANGLE         0x4517
 #define FBIOPUT_OSD_SYNC_ADD             0x4518
 #define FBIOPUT_OSD_SYNC_RENDER_ADD      0x4519
-
+#define FBIOPUT_OSD_CURSOR               0x451a
 /* OSD color definition */
 #define KEYCOLOR_FLAG_TARGET  1
 #define KEYCOLOR_FLAG_ONHOLD  2
