@@ -181,7 +181,7 @@
 
 	pinctrl_i2c2_adc081c: i2c2-adc081cgrp {
 		fsl,pins = <
-#define GPIRQ_PRINT_ALERT	<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_PRINT_ALERT	<&gpio5 20 IRQ_TYPE_EDGE_BOTH>
 			MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20	0x1b0b0
 		>;
 	};
@@ -571,6 +571,7 @@
 	status = "okay";
 
 	adc081c@54 {
+		samples-per-sec = <400>;
 		compatible = "ti,adc081c";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_adc081c>;
