@@ -373,6 +373,21 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&b_uart_pins>;
 	};
+
+	vpu {
+		compatible = "amlogic, vpu";
+		dev_name = "vpu";
+		status = "ok";
+		clocks = <&clkc CLKID_VPU_MUX
+			&clkc CLKID_VAPB_MUX
+			&clkc CLKID_VPU_INTR>;
+		clock-names = "vpu_clk",
+			"vapb_clk",
+			"vpu_intr";
+		clk_level = <3>;
+		/* 0: 100.0M    1: 166.7M    2: 200.0M    3: 250.0M */
+	};
+
 	/* Sound iomap */
 	aml_snd_iomap {
 		compatible = "amlogic, snd_iomap";

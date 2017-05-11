@@ -34,7 +34,8 @@
 #include "vpu_module.h"
 
 /* v01: initial version */
-#define VPU_VERION        "v01"
+/* v02: add axg support */
+#define VPU_VERION        "v02"
 
 enum vpu_chip_e vpu_chip_type;
 int vpu_debug_print_flag;
@@ -65,7 +66,7 @@ int vpu_chip_valid_check(void)
 
 static void vpu_chip_detect(void)
 {
-#if 0
+#if 1
 	unsigned int cpu_type;
 
 	cpu_type = get_cpu_type();
@@ -90,6 +91,11 @@ static void vpu_chip_detect(void)
 		vpu_chip_type = VPU_CHIP_TXL;
 		vpu_conf.clk_level_dft = CLK_LEVEL_DFT_TXL;
 		vpu_conf.clk_level_max = CLK_LEVEL_MAX_TXL;
+		break;
+	case MESON_CPU_MAJOR_ID_AXG:
+		vpu_chip_type = VPU_CHIP_AXG;
+		vpu_conf.clk_level_dft = CLK_LEVEL_DFT_AXG;
+		vpu_conf.clk_level_max = CLK_LEVEL_MAX_AXG;
 		break;
 	default:
 		vpu_chip_type = VPU_CHIP_MAX;
@@ -583,12 +589,16 @@ static ssize_t vpu_mem_debug(struct class *class, struct class_attribute *attr,
 	_reg2 = HHI_VPU_MEM_PD_REG2;
 	switch (buf[0]) {
 	case 'r':
-		VPUPR("mem_pd0: 0x%08x\n", vpu_hiu_read(_reg0));
-		VPUPR("mem_pd1: 0x%08x\n", vpu_hiu_read(_reg1));
-		if ((vpu_chip_type == VPU_CHIP_GXL) ||
-			(vpu_chip_type == VPU_CHIP_GXM) ||
-			(vpu_chip_type == VPU_CHIP_TXL)) {
-			VPUPR("mem_pd2: 0x%08x\n", vpu_hiu_read(_reg2));
+		if (vpu_chip_type == VPU_CHIP_AXG) {
+			VPUPR("mem_pd0: 0x%08x\n", vpu_hiu_read(_reg0));
+		} else {
+			VPUPR("mem_pd0: 0x%08x\n", vpu_hiu_read(_reg0));
+			VPUPR("mem_pd1: 0x%08x\n", vpu_hiu_read(_reg1));
+			if ((vpu_chip_type == VPU_CHIP_GXL) ||
+				(vpu_chip_type == VPU_CHIP_GXM) ||
+				(vpu_chip_type == VPU_CHIP_TXL)) {
+				VPUPR("mem_pd2: 0x%08x\n", vpu_hiu_read(_reg2));
+			}
 		}
 		break;
 	case 'w':

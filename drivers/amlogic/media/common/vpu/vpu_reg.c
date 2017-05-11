@@ -43,7 +43,7 @@ struct reg_map_s {
 static struct reg_map_s *vpu_map;
 static int vpu_map_num;
 
-static struct reg_map_s vpu_reg_maps[] = {
+static struct reg_map_s vpu_reg_maps_gx[] = {
 	{ /* HIU */
 		.base_addr = 0xc883c000,
 		.size = 0x400,
@@ -54,13 +54,41 @@ static struct reg_map_s vpu_reg_maps[] = {
 	},
 };
 
+static struct reg_map_s vpu_reg_maps_axg[] = {
+	{ /* HIU */
+		.base_addr = 0xff63c000,
+		.size = 0x400,
+	},
+	{ /* VCBUS */
+		.base_addr = 0xff900000,
+		.size = 0xa000,
+	},
+};
+
 int vpu_ioremap(void)
 {
 	int i;
 	int ret = 0;
 
-	vpu_map = vpu_reg_maps;
-	vpu_map_num = ARRAY_SIZE(vpu_reg_maps);
+	switch (vpu_chip_type) {
+	case VPU_CHIP_GXBB:
+	case VPU_CHIP_GXTVBB:
+	case VPU_CHIP_GXL:
+	case VPU_CHIP_GXM:
+	case VPU_CHIP_TXL:
+		vpu_map = vpu_reg_maps_gx;
+		vpu_map_num = ARRAY_SIZE(vpu_reg_maps_gx);
+		break;
+	case VPU_CHIP_AXG:
+		vpu_map = vpu_reg_maps_axg;
+		vpu_map_num = ARRAY_SIZE(vpu_reg_maps_axg);
+		break;
+	default:
+		vpu_map = NULL;
+		vpu_map_num = 0;
+		VPUERR("%s: invalid chip type\n", __func__);
+		break;
+	}
 
 	for (i = 0; i < vpu_map_num; i++) {
 		vpu_map[i].p = ioremap(vpu_map[i].base_addr, vpu_map[i].size);

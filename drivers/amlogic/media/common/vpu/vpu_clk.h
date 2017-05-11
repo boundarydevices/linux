@@ -28,24 +28,28 @@
 
 /* GXBB */
 /* freq max=666M, default=666M */
-#define CLK_LEVEL_DFT_GXBB     3
+#define CLK_LEVEL_DFT_GXBB     7
 #define CLK_LEVEL_MAX_GXBB     8
 /* GXTVBB */
 /* freq max=666M, default=666M */
-#define CLK_LEVEL_DFT_GXTVBB     3
+#define CLK_LEVEL_DFT_GXTVBB     7
 #define CLK_LEVEL_MAX_GXTVBB     8
 /* GXL */
 /* freq max=666M, default=666M */
-#define CLK_LEVEL_DFT_GXL     3
+#define CLK_LEVEL_DFT_GXL     7
 #define CLK_LEVEL_MAX_GXL     8
 /* GXM */
 /* freq max=666M, default=666M */
-#define CLK_LEVEL_DFT_GXM     3
+#define CLK_LEVEL_DFT_GXM     7
 #define CLK_LEVEL_MAX_GXM     8
 /* TXL */
 /* freq max=666M, default=666M */
-#define CLK_LEVEL_DFT_TXL     3
+#define CLK_LEVEL_DFT_TXL     7
 #define CLK_LEVEL_MAX_TXL     8
+/* AXG */
+/* freq max=250M, default=250M */
+#define CLK_LEVEL_DFT_AXG     3
+#define CLK_LEVEL_MAX_AXG     4
 
 /* vpu clk setting */
 enum vpu_mux_e {
@@ -67,7 +71,7 @@ static unsigned int fclk_div_table[] = {
 	2, /* invalid */
 };
 
-/* gxbb, gxtvbb, gxl, gxm, txl, fpll=2000M */
+/* gxbb, gxtvbb, gxl, gxm, txl, axg, fpll=2000M */
 static unsigned int vpu_clk_table[10][3] = {
 	/* frequency   clk_mux       div */
 	{100000000,    FCLK_DIV5,    3}, /* 0 */

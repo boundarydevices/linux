@@ -48,16 +48,11 @@ static spinlock_t vpu_clk_gate_lock;
  *      switch_vpu_mem_pd_vmod(VPU_VIU_OSD1, VPU_MEM_POWER_DOWN);
  *
  */
-void switch_vpu_mem_pd_vmod(unsigned int vmod, int flag)
+static void switch_vpu_mem_pd_gx(unsigned int vmod, int flag)
 {
 	unsigned long flags = 0;
 	unsigned int _reg0, _reg1, _reg2;
 	unsigned int val;
-	int ret = 0;
-
-	ret = vpu_chip_valid_check();
-	if (ret)
-		return;
 
 	spin_lock_irqsave(&vpu_mem_lock, flags);
 
@@ -177,11 +172,61 @@ void switch_vpu_mem_pd_vmod(unsigned int vmod, int flag)
 		}
 		break;
 	default:
-		VPUPR("switch_vpu_mem_pd: unsupport vpu mod\n");
+		VPUPR("switch_vpu_mem_pd: unsupport vpu mod: %d\n", vmod);
 		break;
 	}
 
 	spin_unlock_irqrestore(&vpu_mem_lock, flags);
+}
+
+static void switch_vpu_mem_pd_axg(unsigned int vmod, int flag)
+{
+	unsigned long flags = 0;
+	unsigned int _reg0;
+	unsigned int val;
+
+	spin_lock_irqsave(&vpu_mem_lock, flags);
+
+	val = (flag == VPU_MEM_POWER_ON) ? 0 : 3;
+	_reg0 = HHI_VPU_MEM_PD_REG0;
+
+	switch (vmod) {
+	case VPU_VIU_OSD1:
+		vpu_hiu_setb(_reg0, val, 0, 2);
+		break;
+	case VPU_VIU_OFIFO:
+		vpu_hiu_setb(_reg0, val, 2, 2);
+		break;
+	case VPU_VPU_ARB:
+		vpu_hiu_setb(_reg0, val, 4, 2);
+		break;
+	case VPU_VENCI:
+		vpu_hiu_setb(_reg0, val, 6, 2);
+		break;
+	default:
+		VPUPR("switch_vpu_mem_pd: unsupport vpu mod: %d\n", vmod);
+		break;
+	}
+
+	spin_unlock_irqrestore(&vpu_mem_lock, flags);
+}
+
+void switch_vpu_mem_pd_vmod(unsigned int vmod, int flag)
+{
+	int ret = 0;
+
+	ret = vpu_chip_valid_check();
+	if (ret)
+		return;
+
+	switch (vpu_chip_type) {
+	case VPU_CHIP_AXG:
+		switch_vpu_mem_pd_axg(vmod, flag);
+		break;
+	default:
+		switch_vpu_mem_pd_gx(vmod, flag);
+		break;
+	}
 
 	if (vpu_debug_print_flag) {
 		VPUPR("switch_vpu_mem_pd: %s %s\n",
@@ -208,15 +253,11 @@ void switch_vpu_mem_pd_vmod(unsigned int vmod, int flag)
  *
  */
 #define VPU_MEM_PD_ERR        0xffff
-int get_vpu_mem_pd_vmod(unsigned int vmod)
+
+static int get_vpu_mem_pd_gx(unsigned int vmod)
 {
 	unsigned int _reg0, _reg1, _reg2;
-	unsigned int val;
-	int ret = 0;
-
-	ret = vpu_chip_valid_check();
-	if (ret)
-		return -1;
+	unsigned int val = VPU_MEM_PD_ERR;
 
 	_reg0 = HHI_VPU_MEM_PD_REG0;
 	_reg1 = HHI_VPU_MEM_PD_REG1;
@@ -339,9 +380,57 @@ int get_vpu_mem_pd_vmod(unsigned int vmod)
 		break;
 	}
 
-	if (val == 0)
+	return val;
+}
+
+static int get_vpu_mem_pd_axg(unsigned int vmod)
+{
+	unsigned int _reg0;
+	unsigned int val = VPU_MEM_PD_ERR;
+
+	_reg0 = HHI_VPU_MEM_PD_REG0;
+
+	switch (vmod) {
+	case VPU_VIU_OSD1:
+		val = vpu_hiu_getb(_reg0, 0, 2);
+		break;
+	case VPU_VIU_OFIFO:
+		val = vpu_hiu_getb(_reg0, 2, 2);
+		break;
+	case VPU_VPU_ARB:
+		val = vpu_hiu_getb(_reg0, 4, 2);
+		break;
+	case VPU_VENCL:
+		val = vpu_hiu_getb(_reg0, 6, 2);
+		break;
+	default:
+		val = VPU_MEM_PD_ERR;
+		break;
+	}
+
+	return val;
+}
+
+int get_vpu_mem_pd_vmod(unsigned int vmod)
+{
+	int ret = 0;
+
+	ret = vpu_chip_valid_check();
+	if (ret)
+		return -1;
+
+	switch (vpu_chip_type) {
+	case VPU_CHIP_AXG:
+		ret = get_vpu_mem_pd_axg(vmod);
+		break;
+	default:
+		ret = get_vpu_mem_pd_gx(vmod);
+		break;
+	}
+
+	if (ret == 0)
 		return VPU_MEM_POWER_ON;
-	else if ((val == 0x3) || (val == 0xf))
+	else if ((ret == 0x3) || (ret == 0xf))
 		return VPU_MEM_POWER_DOWN;
 	else
 		return -1;
