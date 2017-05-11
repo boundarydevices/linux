@@ -7708,22 +7708,22 @@ static struct notifier_block amvideo_notifier = {
 	.notifier_call = amvideo_notify_callback,
 };
 
-static BLOCKING_NOTIFIER_HEAD(amvideo_notifier_list);
+static RAW_NOTIFIER_HEAD(amvideo_notifier_list);
 int amvideo_register_client(struct notifier_block *nb)
 {
-	return blocking_notifier_chain_register(&amvideo_notifier_list, nb);
+	return raw_notifier_chain_register(&amvideo_notifier_list, nb);
 }
 EXPORT_SYMBOL(amvideo_register_client);
 
 int amvideo_unregister_client(struct notifier_block *nb)
 {
-	return blocking_notifier_chain_unregister(&amvideo_notifier_list, nb);
+	return raw_notifier_chain_unregister(&amvideo_notifier_list, nb);
 }
 EXPORT_SYMBOL(amvideo_unregister_client);
 
 int amvideo_notifier_call_chain(unsigned long val, void *v)
 {
-	return blocking_notifier_call_chain(&amvideo_notifier_list, val, v);
+	return raw_notifier_call_chain(&amvideo_notifier_list, val, v);
 }
 EXPORT_SYMBOL_GPL(amvideo_notifier_call_chain);
 
