@@ -18,6 +18,8 @@
 #ifndef __CLKC_H
 #define __CLKC_H
 
+#include <linux/hrtimer.h>
+
 #define CLK_PARENT_ALTERNATE BIT(5)
 #define PMASK(width)			GENMASK(width - 1, 0)
 #define SETPMASK(width, shift)		GENMASK(shift + width - 1, shift)
@@ -123,8 +125,10 @@ extern const struct clk_ops meson_clk_mux_ops;
 extern spinlock_t clk_lock;
 extern void __iomem *clk_base;
 extern struct clk **clks;
+extern struct hrtimer cpu_hrtimer;
 void amlogic_init_store(void);
 void amlogic_init_gpu(void);
 void amlogic_init_media(void);
 void amlogic_init_misc(void);
+enum hrtimer_restart virtual_clock_work(struct hrtimer *hrtimer);
 #endif /* __CLKC_H */

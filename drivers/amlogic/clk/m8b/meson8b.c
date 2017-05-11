@@ -776,6 +776,8 @@ static void __init meson8b_clkc_init(struct device_node *np)
 		goto iounmap;
 	}
 	pr_debug("%s: cpu clk register notifier ok!", __func__);
+	hrtimer_init(&cpu_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	cpu_hrtimer.function = virtual_clock_work;
 
 	ret = of_clk_add_provider(np, of_clk_src_onecell_get,
 			&clk_data);

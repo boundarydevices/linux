@@ -54,50 +54,132 @@
 #define to_meson_clk_cpu_hw(_hw) container_of(_hw, struct meson_clk_cpu, hw)
 #define to_meson_clk_cpu_nb(_nb) container_of(_nb, struct meson_clk_cpu, clk_nb)
 
+struct hrtimer cpu_hrtimer;
+DEFINE_SPINLOCK(pll_changing);
+static int swing_inteval = 25000;
+static unsigned long long cnt;
+static unsigned int index;
+static unsigned long cpu_prate;
+static unsigned int *cpu_vbase;
+
+enum hrtimer_restart virtual_clock_work(struct hrtimer *hrtimer)
+{
+	unsigned long flag;
+	u32 reg;
+	static unsigned int bitmap[][4] = {
+		{1, 0, 1, 1},
+		{0, 1, 0, 1},
+		{0, 1, 0, 0}
+	};
+
+	if (!spin_trylock_irqsave(&pll_changing, flag))
+		return HRTIMER_NORESTART;
+
+	cnt++;
+	reg = readl(cpu_vbase);
+
+	if (bitmap[index-1][cnt&0x3]) {
+		writel((reg&(~(0x1<<7)))|(0x0<<7), cpu_vbase); /*xtal*/
+		reg = readl(cpu_vbase);
+		udelay(100);
+		writel((reg&(~(0x3<<2)))|(0x1<<2), cpu_vbase); /*sys_pll/2*/
+		reg = readl(cpu_vbase);
+		udelay(100);
+		writel((reg&(~(0x1<<7)))|(0x1<<7), cpu_vbase); /*sys_pll*/
+		pr_debug("MESON_CPU_CLK_CNTL: 0x%x\n", readl(cpu_vbase));
+	} else {
+		writel((reg&(~(0x1<<7)))|(0x0<<7), cpu_vbase); /*xtal*/
+		reg = readl(cpu_vbase);
+		udelay(100);
+		writel((reg&(~(0x3<<2)))|(0x0<<2), cpu_vbase); /*sys_pll*/
+		reg = readl(cpu_vbase);
+		udelay(100);
+		writel((reg&(~(0x1<<7)))|(0x1<<7), cpu_vbase); /*sys_pll*/
+		pr_debug("MESON_CPU_CLK_CNTL: 0x%x\n", readl(cpu_vbase));
+	}
+	hrtimer_start(&cpu_hrtimer, ktime_set(0, swing_inteval * 1000),
+		HRTIMER_MODE_REL);
+	spin_unlock_irqrestore(&pll_changing, flag);
+	return HRTIMER_NORESTART;
+}
+
 static long meson_clk_cpu_round_rate(struct clk_hw *hw, unsigned long rate,
 				     unsigned long *prate)
 {
 	struct meson_clk_cpu *clk_cpu = to_meson_clk_cpu_hw(hw);
+	unsigned long long parent_rate = *prate;
 
-	return divider_round_rate(hw, rate, prate, clk_cpu->div_table,
+	index = 0;
+
+	if (rate <= parent_rate/2)
+		rate = divider_round_rate(hw, rate, prate, clk_cpu->div_table,
 				  MESON_N_WIDTH, CLK_DIVIDER_ROUND_CLOSEST);
+	else if (rate < parent_rate*5/8)
+		rate = parent_rate/2;
+	else if (rate < parent_rate*6/8) {
+		rate = parent_rate*5/8;
+		index = 1;
+	} else if (rate < parent_rate*7/8) {
+		rate = parent_rate*6/8;
+		index = 2;
+	} else if (rate < parent_rate) {
+		rate = parent_rate*7/8;
+		index = 3;
+	}
+
+	return rate;
 }
 
 static int meson_clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 				  unsigned long parent_rate)
 {
 	struct meson_clk_cpu *clk_cpu = to_meson_clk_cpu_hw(hw);
-	unsigned int div, sel, N = 0;
+	unsigned int div;
 	u32 reg, reg1, sel_first = 0;
 
 	div = DIV_ROUND_UP(parent_rate, rate);
 
-	if (div <= 3) {
-		sel = div - 1;
+	if ((div == 2) && (parent_rate != rate)) {
+		cpu_prate = parent_rate;
+		cpu_vbase = clk_cpu->base + clk_cpu->reg_off +
+			MESON_CPU_CLK_CNTL;
+
+		hrtimer_start(&cpu_hrtimer, ktime_set(0, swing_inteval * 1000),
+			HRTIMER_MODE_REL);
 	} else {
-		sel = 3;
-		N = div / 2;
-	}
+		unsigned int sel, N = 0;
 
-	reg = readl(clk_cpu->base + clk_cpu->reg_off + MESON_CPU_CLK_CNTL1);
-	reg = PARM_SET(MESON_N_WIDTH, MESON_N_SHIFT, reg, N);
+		hrtimer_try_to_cancel(&cpu_hrtimer);
+		if (div <= 3) {
+			sel = div - 1;
+		} else {
+			sel = 3;
+			N = div / 2;
+		}
 
-	reg1 = readl(clk_cpu->base + clk_cpu->reg_off + MESON_CPU_CLK_CNTL);
-	if ((N == 0) && (((reg1>>2)&0x3) == 0x3))
-		sel_first = 1;
-
-	reg1 = PARM_SET(MESON_SEL_WIDTH, MESON_SEL_SHIFT, reg1, sel);
-
-	if (sel_first) {
-		writel(reg1, clk_cpu->base + clk_cpu->reg_off +
-			MESON_CPU_CLK_CNTL);
-		writel(reg, clk_cpu->base + clk_cpu->reg_off +
+		reg = readl(clk_cpu->base + clk_cpu->reg_off +
 			MESON_CPU_CLK_CNTL1);
-	} else {
-		writel(reg, clk_cpu->base + clk_cpu->reg_off +
-			MESON_CPU_CLK_CNTL1);
-		writel(reg1, clk_cpu->base + clk_cpu->reg_off +
+		reg = PARM_SET(MESON_N_WIDTH, MESON_N_SHIFT, reg, N);
+
+		reg1 = readl(clk_cpu->base + clk_cpu->reg_off +
 			MESON_CPU_CLK_CNTL);
+		if (((N == 0) && (((reg1>>2)&0x3)) == 0x3))
+			sel_first = 1;
+
+		reg1 = PARM_SET(MESON_SEL_WIDTH, MESON_SEL_SHIFT,
+			reg1, sel);
+
+		if (sel_first) {
+			writel(reg1, clk_cpu->base + clk_cpu->reg_off +
+				MESON_CPU_CLK_CNTL);
+			writel(reg, clk_cpu->base + clk_cpu->reg_off +
+				MESON_CPU_CLK_CNTL1);
+		} else {
+			writel(reg, clk_cpu->base + clk_cpu->reg_off +
+				MESON_CPU_CLK_CNTL1);
+			writel(reg1, clk_cpu->base + clk_cpu->reg_off +
+				MESON_CPU_CLK_CNTL);
+		}
 	}
 
 	return 0;
