@@ -332,6 +332,86 @@
 		/*and you can shoose it in file dt-bindings/pwm/meson.h*/
 	};
 
+	i2c_ao: i2c@ff805000{ /*I2C-AO*/
+		compatible = "amlogic, meson-i2c";
+		dev_name = "i2c-AO";
+		status = "disabled";
+		reg = <0x0 0xff805000 0x0 0x1d>;
+		device_id = <0>;
+		pinctrl-names="default";
+		pinctrl-0=<&ao_i2c_master>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		use_pio = <0>;
+		master_i2c_speed = <300000>;
+		clocks = <&clkc CLKID_AO_I2C>;
+		clock-names = "clk_i2c";
+	};
+
+	i2c_a: i2c@ffd1f000 { /*I2C-A*/
+		compatible = "amlogic, meson-i2c";
+		dev_name = "i2c-A";
+		status = "disabled";
+		reg = <0x0 0xffd1f000 0x0 0x20>;
+		device_id = <1>;
+		pinctrl-names="default";
+		pinctrl-0=<&a_i2c_master>;/*p200 i2c-A multiplex with usb PWR*/
+		#address-cells = <1>;
+		#size-cells = <0>;
+		use_pio = <0>;
+		master_i2c_speed = <300000>;
+		clocks = <&clkc CLKID_I2C>;
+		clock-names = "clk_i2c";
+	};
+
+	i2c_b: i2c@ffd1e000 { /*I2C-B*/
+		compatible = "amlogic, meson-i2c";
+		dev_name = "i2c-B";
+		status = "disabled";
+		reg = <0x0 0xffd1e000 0x0 0x20>;
+		device_id = <2>;
+		pinctrl-names="default";
+		pinctrl-0=<&b_i2c_master>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		use_pio = <0>;
+		master_i2c_speed = <300000>;
+		clocks = <&clkc CLKID_I2C>;
+		clock-names = "clk_i2c";
+	};
+
+	i2c_c: i2c@ffd1d000 { /*I2C-C*/
+		compatible = "amlogic, meson-i2c";
+		dev_name = "i2c-C";
+		status = "disabled";
+		reg = <0x0 0xffd1d000 0x0 0x20>;
+		device_id = <3>;
+		pinctrl-names="default";
+		pinctrl-0=<&c_i2c_master>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		use_pio = <0>;
+		master_i2c_speed = <300000>;
+		clocks = <&clkc CLKID_I2C>;
+		clock-names = "clk_i2c";
+	};
+
+	i2c_d: i2c@ffd1c000 { /*I2C-D*/
+		compatible = "amlogic, meson-i2c";
+		dev_name = "i2c-D";
+		status = "disabled";
+		reg = <0x0 0xffd1c000 0x0 0x20>;
+		device_id = <4>;
+		pinctrl-names="default";
+		pinctrl-0=<&d_i2c_master>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		use_pio = <0>;
+		master_i2c_speed = <300000>;
+		clocks = <&clkc CLKID_I2C>;
+		clock-names = "clk_i2c";
+	};
+
 };/* end of / */
 
 &pinctrl_aobus {
@@ -349,6 +429,27 @@
 				function = "uart_ao_a";
 			};
 		};
+
+	ao_i2c_master:ao_i2c{
+		mux {
+			pins = "GPIOAO_4","GPIOAO_5";
+			function = "i2c_ao";
+		};
+	};
+
+	ao_i2c_master_pin1:ao_i2c_pin1{
+		mux {
+			pins = "GPIOAO_8","GPIOAO_9";
+			function = "i2c_ao";
+		};
+	};
+
+	ao_i2c_master_pin2:ao_i2c_pin2{
+		mux {
+			pins = "GPIOAO_10","GPIOAO_11";
+			function = "i2c_ao";
+		};
+	};
 }; /* end of pinctrl_aobus */
 
 &pinctrl_periphs {
@@ -364,7 +465,48 @@
 			pins = "GPIOZ_8","GPIOZ_9";
 			function = "i2c_b";
 		};
+	};
 
+	b_i2c_master_pin1:b_i2c_pin1 {
+		mux {
+			pins = "GPIOX_16","GPIOX_17";
+			function = "i2c_b";
+		};
+	};
+
+	c_i2c_master:c_i2c {
+		mux {
+			pins = "GPIOX_18","GPIOX_19";
+			function = "i2c_c";
+		};
+	};
+
+	c_i2c_master_pin1:c_i2c_pin1 {
+		mux {
+			pins = "GPIOA_17","GPIOA_18";
+			function = "i2c_c";
+		};
+	};
+
+	d_i2c_master:d_i2c {
+		mux {
+			pins = "GPIOA_6","GPIOA_7";
+			function = "i2c_d";
+		};
+	};
+
+	d_i2c_master_pin1:d_i2c_pin1 {
+		mux {
+			pins = "GPIOA_12","GPIOA_13";
+			function = "i2c_d";
+		};
+	};
+
+	d_i2c_master_pin2:d_i2c_pin2 {
+		mux {
+			pins = "GPIOA_19","GPIOA_20";
+			function = "i2c_d";
+		};
 	};
 }; /* end of pinctrl_periphs */
 
