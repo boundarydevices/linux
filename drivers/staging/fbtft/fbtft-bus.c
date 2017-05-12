@@ -226,6 +226,57 @@ int fbtft_write_vmem16_bus9(struct fbtft_par *par, size_t offset, size_t len)
 }
 EXPORT_SYMBOL(fbtft_write_vmem16_bus9);
 
+/* 18/24 bit pixel over 9-bit SPI bus: dc + high byte, dc + low byte */
+int fbtft_write_vmem24_bus9(struct fbtft_par *par, size_t offset, size_t len)
+{
+	u8 *vmem8;
+	u8 *txbuf16 = par->txbuf.buf;
+	size_t remain;
+	size_t to_copy;
+	size_t tx_array_size;
+	int i;
+	int ret = 0;
+
+	fbtft_par_dbg(DEBUG_WRITE_VMEM, par, "%s(offset=%zu, len=%zu)\n",
+		__func__, offset, len);
+
+	if (!par->txbuf.buf) {
+		dev_err(par->info->device, "%s: txbuf.buf is NULL\n", __func__);
+		return -1;
+	}
+
+	remain = len;
+	vmem8 = par->info->screen_base + offset;
+
+	tx_array_size = (par->txbuf.len / 6) * 3;
+
+	while (remain) {
+		to_copy = remain > tx_array_size ? tx_array_size : remain;
+		dev_dbg(par->info->device, "    to_copy=%zu, remain=%zu\n",
+						to_copy, remain - to_copy);
+
+#ifdef __LITTLE_ENDIAN
+		for (i = 0; i < to_copy; i += 3) {
+			txbuf16[i]   = 0x0100 | vmem8[i+2];
+			txbuf16[i+1] = 0x0100 | vmem8[i+1];
+			txbuf16[i+2] = 0x0100 | vmem8[i+0];
+		}
+#else
+		for (i = 0; i < to_copy; i++) {
+			txbuf16[i]   = 0x0100 | vmem8[i];
+		}
+#endif
+		vmem8 = vmem8 + to_copy;
+		ret = par->fbtftops.write(par, par->txbuf.buf, to_copy*2);
+		if (ret < 0)
+			return ret;
+		remain -= to_copy;
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(fbtft_write_vmem24_bus9);
+
 int fbtft_write_vmem8_bus8(struct fbtft_par *par, size_t offset, size_t len)
 {
 	dev_err(par->info->device, "%s: function not implemented\n", __func__);
