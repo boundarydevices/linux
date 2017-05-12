@@ -142,6 +142,7 @@ static int init_tearing_effect_line(struct fbtft_par *par)
  */
 static int init_display(struct fbtft_par *par)
 {
+	struct fbtft_platform_data *pdata = par->pdata;
 	int rc;
 
 	par->fbtftops.reset(par);
@@ -155,7 +156,9 @@ static int init_display(struct fbtft_par *par)
 	mdelay(120);
 
 	/* set pixel format to RGB-565 */
-	write_reg(par, MIPI_DCS_SET_PIXEL_FORMAT, MIPI_DCS_PIXEL_FMT_16BIT);
+	write_reg(par, MIPI_DCS_SET_PIXEL_FORMAT,
+		(pdata->display.bpp == 16) ? MIPI_DCS_PIXEL_FMT_16BIT :
+				MIPI_DCS_PIXEL_FMT_18BIT);
 	if (HSD20_IPS)
 		write_reg(par, PORCTRL, 0x05, 0x05, 0x00, 0x33, 0x33);
 
