@@ -229,6 +229,7 @@ enum vframe_secam_phase_e {
 #define FULL_PACK_422_MODE		0x2
 struct vframe_s {
 	u32 index;
+	u32 index_disp;
 	u32 type;
 	u32 type_backup;
 	u32 type_original;
@@ -322,6 +323,8 @@ struct vframe_s {
 	 * used by memory owner.
 	 */
 	void *mem_handle;
+	/*for MMU H265/VP9 compress header*/
+	void *mem_head_handle;
 } /*vframe_t */;
 
 #if 0

@@ -7808,6 +7808,11 @@ static void do_vpu_delay_work(struct work_struct *work)
 #endif
 
 /*********************************************************/
+struct device *get_video_device(void)
+{
+	return amvideo_dev;
+}
+
 static int __init video_early_init(void)
 {
 	const struct vinfo_s *vinfo;

@@ -64,6 +64,7 @@
 static unsigned long keep_y_addr, keep_u_addr, keep_v_addr;
 static int keep_video_on;
 static int keep_id;
+static int keep_head_id;
 
 #define Y_BUFFER_SIZE   0x400000	/* for 1920*1088 */
 #define U_BUFFER_SIZE   0x100000	/* compatible with NV21 */
@@ -173,7 +174,7 @@ static int ge2d_store_frame_YUV444(u32 cur_index)
 	ge2d_config.src_para.left = 0;
 	ge2d_config.src_para.width = cs.width;
 	ge2d_config.src_para.height = cs.height;
-
+	ge2d_config.src2_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config.dst_para.canvas_index = des_index;
 	ge2d_config.dst_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config.dst_para.format = GE2D_FORMAT_M24_YUV444;
@@ -259,7 +260,7 @@ static int ge2d_store_frame_NV21(u32 cur_index)
 	ge2d_config.src_para.left = 0;
 	ge2d_config.src_para.width = cs0.width;
 	ge2d_config.src_para.height = cs0.height;
-
+	ge2d_config.src2_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config.dst_para.canvas_index = des_index;
 	ge2d_config.dst_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config.dst_para.format = GE2D_FORMAT_M24_NV21;
@@ -348,7 +349,7 @@ static int ge2d_store_frame_YUV420(u32 cur_index)
 	ge2d_config.src_para.left = 0;
 	ge2d_config.src_para.width = cs.width;
 	ge2d_config.src_para.height = cs.height;
-
+	ge2d_config.src2_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config.dst_para.canvas_index = ydupindex;
 	ge2d_config.dst_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config.dst_para.format = GE2D_FMT_S8_Y;
@@ -577,29 +578,25 @@ static void ge2d_keeplastframe_block(int cur_index, int format)
 }
 
 #endif
+#define FETCHBUF_SIZE (64*1024) /*DEBUG_TMP*/
+
 static int canvas_dup(ulong dst, ulong src_paddr, ulong size)
 {
 	void *src_addr = codec_mm_phys_to_virt(src_paddr);
 	void *dst_addr = codec_mm_phys_to_virt(dst);
 
 	if (src_paddr && dst && src_addr && dst_addr) {
-		/*dma_addr_t dma_addr = 0;*/
-
+		dma_addr_t dma_addr = 0;
 		memcpy(dst_addr, src_addr, size);
-#if 0//DEBUG_TMP
-		dma_addr = dma_map_single(
-					amports_get_dma_device(), dst_addr,
-					size, DMA_TO_DEVICE);
-		dma_unmap_single(amports_get_dma_device(), dma_addr,
-					FETCHBUF_SIZE, DMA_TO_DEVICE);
-#endif
+		dma_addr = dma_map_single(get_video_device(), dst_addr,
+			size, DMA_TO_DEVICE);
+		dma_unmap_single(get_video_device(), dma_addr,
+			FETCHBUF_SIZE, DMA_TO_DEVICE);
 		return 1;
 	}
 
 	return 0;
 }
-
-
 
 #ifdef RESERVE_CLR_FRAME
 static int free_alloced_keep_buffer(void)
@@ -635,6 +632,10 @@ static int alloc_keep_buffer(void)
 	flags = CODEC_MM_FLAGS_DMA_CPU |
 	CODEC_MM_FLAGS_FOR_VDECODER;
 #endif
+	if ((flags & CODEC_MM_FLAGS_FOR_VDECODER) &&
+			codec_mm_video_tvp_enabled())/*TVP TODO for MULTI*/
+		flags |= CODEC_MM_FLAGS_TVP;
+
 	if (!keep_y_addr) {
 		keep_y_addr = codec_mm_alloc_for_dma(
 				MEM_NAME,
@@ -703,6 +704,11 @@ void try_free_keep_video(int flags)
 		codec_mm_keeper_unmask_keeper(keep_id, 0);
 		keep_id = -1;
 	}
+	if (free_scatter_keeper && keep_head_id > 0) {
+		pr_info("try_free_keep_video keep_head_id\n");
+		codec_mm_keeper_unmask_keeper(keep_head_id, 0);
+		keep_head_id = -1;
+	}
 	free_alloced_keep_buffer();
 }
 EXPORT_SYMBOL(try_free_keep_video);
@@ -744,6 +750,13 @@ void video_keeper_new_frame_notify(void)
 		codec_mm_keeper_unmask_keeper(keep_id, 120);
 		keep_id = -1;
 	}
+	if (keep_head_id > 0) {
+		/*wait 80 ms for vsync post.*/
+		pr_info("new frame show, free keeper head\n");
+		codec_mm_keeper_unmask_keeper(keep_head_id, 120);
+		keep_head_id = -1;
+	}
+	return;
 }
 unsigned int vf_keep_current(struct vframe_s *cur_dispbuf)
 {
@@ -782,10 +795,16 @@ unsigned int vf_keep_current(struct vframe_s *cur_dispbuf)
 		pr_info("keep exit is skip VPP_VD1_POSTBLEND\n");
 		return 0;
 	}
-	if (cur_dispbuf->type & VIDTYPE_SCATTER) {
+	if (1) {
+		int ret;
 		int old_keep = keep_id;
-		int ret = codec_mm_keeper_mask_keep_mem(cur_dispbuf->mem_handle,
-			MEM_TYPE_CODEC_MM_SCATTER);
+		int old_head_keep = keep_head_id;
+		int type = MEM_TYPE_CODEC_MM;
+
+		if (cur_dispbuf->type & VIDTYPE_SCATTER)
+			type = MEM_TYPE_CODEC_MM_SCATTER;
+		ret = codec_mm_keeper_mask_keep_mem(cur_dispbuf->mem_handle,
+			type);
 		if (ret > 0) {
 			keep_id = ret;
 			if (old_keep > 0 && keep_id != old_keep) {
@@ -793,7 +812,18 @@ unsigned int vf_keep_current(struct vframe_s *cur_dispbuf)
 				codec_mm_keeper_unmask_keeper(old_keep, 120);
 			}
 		}
-		return 0;
+		ret = codec_mm_keeper_mask_keep_mem(
+			cur_dispbuf->mem_head_handle,
+			MEM_TYPE_CODEC_MM);
+		if (ret > 0) {
+			keep_head_id = ret;
+			if (old_head_keep > 0 &&
+					 keep_head_id != old_head_keep) {
+				/*wait 80 ms for vsync post.*/
+				codec_mm_keeper_unmask_keeper(old_head_keep,
+					 120);
+			}
+		}
 	}
 	if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB) &&
 		(cur_dispbuf->type & VIDTYPE_COMPRESS)) {
