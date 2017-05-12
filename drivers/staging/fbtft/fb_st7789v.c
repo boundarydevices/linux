@@ -85,12 +85,16 @@ enum st7789v_command {
  */
 static int init_display(struct fbtft_par *par)
 {
+	struct fbtft_platform_data *pdata = par->pdata;
+
 	/* turn off sleep mode */
 	write_reg(par, MIPI_DCS_EXIT_SLEEP_MODE);
 	mdelay(120);
 
 	/* set pixel format to RGB-565 */
-	write_reg(par, MIPI_DCS_SET_PIXEL_FORMAT, MIPI_DCS_PIXEL_FMT_16BIT);
+	write_reg(par, MIPI_DCS_SET_PIXEL_FORMAT,
+		(pdata->display.bpp == 16) ? MIPI_DCS_PIXEL_FMT_16BIT :
+				MIPI_DCS_PIXEL_FMT_18BIT);
 
 	write_reg(par, PORCTRL, 0x08, 0x08, 0x00, 0x22, 0x22);
 
@@ -128,6 +132,7 @@ static int init_display(struct fbtft_par *par)
 	 */
 	write_reg(par, PWCTRL1, 0xA4, 0xA1);
 
+	write_reg(par, MIPI_DCS_ENTER_INVERT_MODE);
 	write_reg(par, MIPI_DCS_SET_DISPLAY_ON);
 	return 0;
 }
