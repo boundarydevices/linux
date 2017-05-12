@@ -462,3 +462,15 @@ bool cma_release(struct cma *cma, const struct page *pages, unsigned int count)
 
 	return true;
 }
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+bool cma_suitable(gfp_t gfp_mask)
+{
+	if (gfp_mask & (__GFP_RECLAIMABLE | __GFP_BDEV | __GFP_WRITE))
+		return false;
+	if (!(gfp_mask & __GFP_MOVABLE))
+		return false;
+	return true;
+}
+#endif /* CONFIG_AMLOGIC_MODIFY */
+

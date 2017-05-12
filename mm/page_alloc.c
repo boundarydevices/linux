@@ -64,6 +64,9 @@
 #include <linux/page_owner.h>
 #include <linux/kthread.h>
 #include <linux/memcontrol.h>
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <linux/cma.h>
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -2183,6 +2186,27 @@ static struct page *__rmqueue(struct zone *zone, unsigned int order,
 	return page;
 }
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+/*
+ * get page but not cma
+ */
+static struct page *rmqueue_no_cma(struct zone *zone, unsigned int order,
+			 int migratetype)
+{
+	struct page *page;
+
+	spin_lock(&zone->lock);
+	page = __rmqueue_smallest(zone, order, migratetype);
+	if (unlikely(!page))
+		if (!page)
+			page = __rmqueue_fallback(zone, order, migratetype);
+	WARN_ON(page && is_migrate_cma(get_pcppage_migratetype(page)));
+	__mod_zone_page_state(zone, NR_FREE_PAGES, -(1 << order));
+	spin_unlock(&zone->lock);
+	return page;
+}
+#endif /* CONFIG_AMLOGIC_MODIFY */
+
 /*
  * Obtain a specified number of elements from the buddy allocator, all under
  * a single hold of the lock, for efficiency.  Add them to the supplied list.
@@ -2438,10 +2462,18 @@ void free_hot_cold_page(struct page *page, bool cold)
 	 * excessively into the page allocator
 	 */
 	if (migratetype >= MIGRATE_PCPTYPES) {
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		if (unlikely(is_migrate_isolate(migratetype)) ||
+		    unlikely(is_migrate_cma(migratetype))) {
+			free_one_page(zone, page, pfn, 0, migratetype);
+			goto out;
+		}
+	#else
 		if (unlikely(is_migrate_isolate(migratetype))) {
 			free_one_page(zone, page, pfn, 0, migratetype);
 			goto out;
 		}
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		migratetype = MIGRATE_MOVABLE;
 	}
 
@@ -2616,6 +2648,16 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 				page = list_last_entry(list, struct page, lru);
 			else
 				page = list_first_entry(list, struct page, lru);
+
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			if (!cma_suitable(gfp_flags) &&
+			    is_migrate_cma_page(page)) {
+				page = rmqueue_no_cma(zone, order, migratetype);
+				if (page)
+					break;
+				goto failed;
+			}
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 
 			list_del(&page->lru);
 			pcp->count--;
