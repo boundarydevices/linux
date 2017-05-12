@@ -414,6 +414,17 @@ static struct meson_pmx_group meson8b_cbus_groups[] = {
 	GPIO_GROUP(DIF_4_P, 0),
 	GPIO_GROUP(DIF_4_N, 0),
 
+	GPIO_GROUP(BOOT_0, 0),
+	GPIO_GROUP(BOOT_1, 0),
+	GPIO_GROUP(BOOT_2, 0),
+	GPIO_GROUP(BOOT_3, 0),
+	GPIO_GROUP(BOOT_4, 0),
+	GPIO_GROUP(BOOT_5, 0),
+	GPIO_GROUP(BOOT_6, 0),
+	GPIO_GROUP(BOOT_7, 0),
+	GPIO_GROUP(BOOT_8, 0),
+	GPIO_GROUP(BOOT_10, 0),
+
 	/* bank X */
 	GROUP(sd_d0_a,		8,	5),
 	GROUP(sd_d1_a,		8,	4),

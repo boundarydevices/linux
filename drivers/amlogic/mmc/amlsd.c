@@ -829,8 +829,48 @@ bool is_emmc_exist(struct amlsd_host *host) // is eMMC/tSD exist
 	return false;
 }
 
-/*-------------------debug---------------------*/
+/*----sdhc----*/
+void aml_sdhc_print_reg_(u32 *buf)
+{
+	pr_info("***********SDHC_REGS***********\n");
+	pr_info("SDHC_ARGU: 0x%08x\n", buf[SDHC_ARGU/4]);
+	pr_info("SDHC_SEND: 0x%08x\n", buf[SDHC_SEND/4]);
+	pr_info("SDHC_CTRL: 0x%08x\n", buf[SDHC_CTRL/4]);
+	pr_info("SDHC_STAT: 0x%08x\n", buf[SDHC_STAT/4]);
+	pr_info("SDHC_CLKC: 0x%08x\n", buf[SDHC_CLKC/4]);
+	pr_info("SDHC_ADDR: 0x%08x\n", buf[SDHC_ADDR/4]);
+	pr_info("SDHC_PDMA: 0x%08x\n", buf[SDHC_PDMA/4]);
+	pr_info("SDHC_MISC: 0x%08x\n", buf[SDHC_MISC/4]);
+	pr_info("SDHC_DATA: 0x%08x\n", buf[SDHC_DATA/4]);
+	pr_info("SDHC_ICTL: 0x%08x\n", buf[SDHC_ICTL/4]);
+	pr_info("SDHC_ISTA: 0x%08x\n", buf[SDHC_ISTA/4]);
+	pr_info("SDHC_SRST: 0x%08x\n", buf[SDHC_SRST/4]);
+	pr_info("SDHC_ESTA: 0x%08x\n", buf[SDHC_ESTA/4]);
+	pr_info("SDHC_ENHC: 0x%08x\n", buf[SDHC_ENHC/4]);
+	pr_info("SDHC_CLK2: 0x%08x\n", buf[SDHC_CLK2/4]);
+}
 
+void aml_sdhc_print_reg(struct amlsd_host *host)
+{
+	u32 buf[16];
+
+	memcpy_fromio(buf, host->base, 0x3C);
+	aml_sdhc_print_reg_(buf);
+}
+
+void aml_dbg_print_pinmux(void)
+{
+	pr_info("Pinmux:\n");
+	pr_info("REG2 = 0x%08x\n", aml_read_cbus(PERIPHS_PIN_MUX_2));
+	pr_info("REG3 = 0x%08x\n", aml_read_cbus(PERIPHS_PIN_MUX_3));
+	pr_info("REG4 = 0x%08x\n", aml_read_cbus(PERIPHS_PIN_MUX_4));
+	pr_info("REG5 = 0x%08x\n", aml_read_cbus(PERIPHS_PIN_MUX_5));
+	pr_info("REG6 = 0x%08x\n", aml_read_cbus(PERIPHS_PIN_MUX_6));
+	pr_info("REG7 = 0x%08x\n", aml_read_cbus(PERIPHS_PIN_MUX_7));
+	pr_info("REG8 = 0x%08x\n", aml_read_cbus(PERIPHS_PIN_MUX_8));
+}
+
+/*-------------------debug---------------------*/
 unsigned long sdhc_debug; // 0xffffffff;
 static int __init sdhc_debug_setup(char *str)
 {

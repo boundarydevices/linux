@@ -1000,15 +1000,15 @@ static void aml_sdhc_print_err(struct amlsd_host *host)
 				"Error: SDHC is gated clock,HHI_GCLK_MPEG0=%#x, bit14 is 0\n",
 				tmp_reg);
 	}
-	/*	aml_dbg_print_pinmux();*/
 
 #ifdef CONFIG_MMC_AML_DEBUG
+	aml_dbg_print_pinmux();
 	if (xfer_step == XFER_TIMER_TIMEOUT) { /* by aml_sdhc_timeout() */
 		sdhc_err("old sdhc reg:\n");
 		aml_sdhc_print_reg_(host->reg_buf);
 	}
+	aml_sdhc_print_reg(host);
 #endif
-	/*	aml_sdhc_print_reg(host);*/
 }
 
 /*error handler*/
@@ -1323,7 +1323,9 @@ static irqreturn_t aml_sdhc_irq(int irq, void *dev_id)
 			return IRQ_HANDLED;
 		}
 		WARN_ON(!mrq);
-		/*	aml_sdhc_print_reg(host);*/
+#ifdef CONFIG_MMC_AML_DEBUG
+		aml_sdhc_print_reg(host);
+#endif
 		spin_unlock_irqrestore(&host->mrq_lock, flags);
 		return IRQ_HANDLED;
 	}

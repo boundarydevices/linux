@@ -175,6 +175,42 @@
 			 * other:reserved
 			 */
 		};
+
+		sdio {
+			status = "okay";
+			port = <3>;
+			/* 0:sdio_a,
+			 * 1:sdio_b,
+			 * 2:sdio_c,
+			 * 3:sdhc_a,
+			 * 4:sdhc_b,
+			 * 5:sdhc_c
+			 */
+			pinname = "sdio";
+			ocr_avail = <0x00200080>;
+			/* 3.3:0x200000, 1.8+3.3:0x00200080 */
+			caps = "MMC_CAP_4_BIT_DATA",
+				 "MMC_CAP_MMC_HIGHSPEED",
+				 "MMC_CAP_SD_HIGHSPEED",
+				 "MMC_CAP_NONREMOVABLE",
+				 "MMC_CAP_UHS_SDR12",
+				 "MMC_CAP_UHS_SDR25",
+				 "MMC_CAP_UHS_SDR50",
+				 "MMC_CAP_UHS_SDR104",
+				 "MMC_PM_KEEP_POWER";
+			f_min = <300000>;
+			f_max = <100000000>;
+			max_req_size = <0x20000>; /* 128KB */
+			card_type = <3>;
+			/* 0:unknown,
+			 * 1:mmc card(include eMMC),
+			 * 2:sd card(include tSD),
+			 * 3:sdio device(ie:sdio-wifi),
+			 * 4:SD combo (IO+mem) card,
+			 * 5:NON sdio device(means sd/mmc card),
+			 * other:reserved
+			 */
+		};
 	};
 
 	cpufreq-meson{

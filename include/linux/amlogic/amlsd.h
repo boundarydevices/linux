@@ -168,8 +168,6 @@ extern int storage_flag;
 extern void aml_debug_print_buf(char *buf, int size);
 extern int aml_buf_verify(int *buf, int blocks, int lba);
 extern void aml_sdhc_init_debugfs(struct mmc_host *mmc);
-void aml_sdhc_print_reg_(u32 *buf);
-extern void aml_sdhc_print_reg(struct amlsd_host *host);
 extern void aml_sdio_init_debugfs(struct mmc_host *mmc);
 extern void aml_sd_emmc_init_debugfs(struct mmc_host *mmc);
 extern void aml_sdio_print_reg(struct amlsd_host *host);
@@ -179,6 +177,10 @@ extern int add_part_table(struct mtd_partition *part, unsigned int nr_part);
 extern int add_emmc_partition(struct gendisk *disk);
 #endif
 #ifdef CONFIG_AMLOGIC_M8B_MMC
+void aml_sdhc_print_reg_(u32 *buf);
+extern void aml_sdhc_print_reg(struct amlsd_host *host);
+void aml_dbg_print_pinmux(void);
+
 extern size_t aml_sg_copy_buffer(struct scatterlist *sgl, unsigned int nents,
 		void *buf, size_t buflen, int to_buffer);
 #endif
@@ -214,7 +216,6 @@ bool is_emmc_exist(struct amlsd_host *host);
 void aml_devm_pinctrl_put(struct amlsd_host *host);
 /* void of_init_pins (struct amlsd_platform* pdata); */
 
-void aml_dbg_print_pinmux(void);
 #ifdef CONFIG_MMC_AML_DEBUG
 void aml_dbg_verify_pull_up(struct amlsd_platform *pdata);
 int aml_dbg_verify_pinmux(struct amlsd_platform *pdata);

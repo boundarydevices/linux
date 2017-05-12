@@ -545,7 +545,7 @@ timeout_handle:
 	aml_dbg_verify_pinmux(pdata);
 	aml_dbg_verify_pull_up(pdata);
 	aml_sdio_print_reg(host);
-	/* aml_dbg_print_pinmux(); */
+	aml_dbg_print_pinmux();
 #endif
 
 	if (host->mrq->stop && aml_card_type_mmc(pdata) && !host->cmd_is_stop) {
