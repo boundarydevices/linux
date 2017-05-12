@@ -13930,3 +13930,12 @@ M: Peifu Jiang <peifu.jiang@amlogic.com>
 F: include/linux/amlogic/meson-secure.h
 F: arch/arm/mach-meson/meson-smc.S
 F: arch/arm/mach-meson/meson-secure.c
+
+AMLOGIC Audio codec driver
+M: Peipeng Zhao <peipeng.zhao@amlogic.com>
+F: sound/soc/codecs/amlogic/pcm186x-i2c.c
+F: sound/soc/codecs/amlogic/pcm186x-spi.c
+F: sound/soc/codecs/amlogic/pcm186x.c
+F: sound/soc/codecs/amlogic/pcm186x.h
+F: sound/soc/codecs/amlogic/ssm3515.c
+F: sound/soc/codecs/amlogic/ssm3525.c

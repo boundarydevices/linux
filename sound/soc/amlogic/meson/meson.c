@@ -574,16 +574,32 @@ static int aml_card_dai_parse_of(struct device *dev,
 	if (ret < 0)
 		goto parse_error;
 
-	/* get codec dai->name */
-	ret = snd_soc_of_get_dai_name(codec_node, &dai_link->codec_dai_name);
-	if (ret < 0)
-		goto parse_error;
+	ret = of_count_phandle_with_args(codec_node, "sound-dai",
+		"#sound-dai-cells");
+	pr_info("%s codec_node count:%d\n", __func__, ret);
+	if (ret <= 1) {
+		ret = snd_soc_of_get_dai_name(codec_node,
+			&dai_link->codec_dai_name);
+		if (ret < 0)
+			goto parse_error;
 
-	dai_link->name = dai_link->stream_name = dai_link->cpu_dai_name;
-	dai_link->codec_of_node = of_parse_phandle(codec_node, "sound-dai", 0);
-	dai_link->platform_of_node = plat_node;
-	dai_link->init = init;
-
+		dai_link->name = dai_link->stream_name =
+			dai_link->cpu_dai_name;
+		dai_link->codec_of_node =
+			of_parse_phandle(codec_node, "sound-dai", 0);
+		dai_link->platform_of_node = plat_node;
+		dai_link->init = init;
+	} else {
+		ret = snd_soc_of_get_dai_link_codecs(dev, codec_node, dai_link);
+		if (ret < 0) {
+			pr_err("failed get_dai_link_codecs from codec_node\n");
+			goto parse_error;
+		}
+		dai_link->init = init;
+		dai_link->platform_of_node = plat_node;
+		/*"multicodec";*/
+		dai_link->name = dai_link->stream_name = dai_link->cpu_dai_name;
+	}
 	return 0;
 
  parse_error:

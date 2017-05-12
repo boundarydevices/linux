@@ -78,5 +78,40 @@ config AMLOGIC_SND_SOC_TLV320ADC3101
 	help
 		Enable Support for Texas INstruments TLV320ADC3101 CODEC.
 		Select this if your TLV320ADC3101 is connected via an I2C bus.
+		Enable Support for Texas INstruments TLV320ADC3101 CODEC.
+		Select this if your TLV320ADC3101 is connected via an I2C bus.
+
+config AMLOGIC_SND_SOC_PCM186X
+	bool "Texas Instruments PCM186X "
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable support for Texas Instruments PCM186X CODEC.
+		Select this if your PCM186X is connected via an I2C bus.
+		Enable support for Texas Instruments PCM186X CODEC.
+		Select this if your PCM186X is connected via an I2C bus.
+
+config AMLOGIC_SND_SOC_SSM3525
+	bool "Analog Devices SSM3525 "
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable support for SSM3525 CODEC.
+		Select this if your SSM3525 is connected via an I2C bus.
+		Enable support for SSM3525 CODEC.
+		Select this if your SSM3525 is connected via an I2C bus.
+
+config AMLOGIC_SND_SOC_SSM3515
+	bool "Analog Devices SSM3515 "
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable support for SSM3515 CODEC.
+		Select this if SSM3515 is connected via an I2C bus.
+		Enable support for SSM3515 CODEC.
+		Select this if SSM3515 is connected via an I2C bus.
 
 #endif #AMLOGIC_SND_SOC_CODECS

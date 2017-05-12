@@ -304,6 +304,7 @@ static const unsigned int i2sout_ch45_pins[]	= { PIN(GPIOZ_6, EE_OFF) };
 static const unsigned int dvp_d4_pins[]	= { PIN(GPIOZ_6, EE_OFF) };
 
 
+static const unsigned int i2sout_ch67_pins[]	= { PIN(GPIOZ_7, EE_OFF) };
 static const unsigned int eth_rxd3_pins[]	= { PIN(GPIOZ_7, EE_OFF) };
 static const unsigned int eth_rgmii_tx_clk_pins[] = { PIN(GPIOZ_8, EE_OFF) };
 static const unsigned int eth_tx_en_pins[]	= { PIN(GPIOZ_9, EE_OFF) };
@@ -551,6 +552,7 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(i2sout_ch45,	3,	25),	/*z6*/
 	GROUP(dvp_d4,		3,	11),	/*z6*/
 
+	GROUP(i2sout_ch67,	3,	24),	/*z7*/
 
 	GROUP(spi_sclk_0,		4,	4),/*z11*/
 	GROUP(spi_miso_0,	4,	3),/*z12*/
@@ -859,8 +861,13 @@ static const char * const i2c_d_groups[] = {
 };
 
 static const char * const i2s_groups[] = {
-	"i2s_am_clk", "i2s_ao_clk_out", "i2s_lr_clk_out", "i2sout_ch01",
+	"i2s_am_clk", "i2s_ao_clk_out", "i2s_lr_clk_out",
+	"i2sout_ch01", "i2sout_ch23_z5", "i2sout_ch45", "i2sout_ch67",
 	"i2sin_ch23", "i2sin_ch45", "i2sin_ch67",
+};
+
+static const char * const pdm_groups[] = {
+	"pdm_in", "pdm_clk",
 };
 
 static const char * const sdio_groups[] = {
@@ -886,6 +893,7 @@ static struct meson_pmx_func meson_gxl_periphs_functions[] = {
 	FUNCTION(spdif_in),
 	FUNCTION(spdif_in_1),
 	FUNCTION(i2s),
+	FUNCTION(pdm),
 	FUNCTION(spi),
 	FUNCTION(i2c_a),
 	FUNCTION(i2c_b),
