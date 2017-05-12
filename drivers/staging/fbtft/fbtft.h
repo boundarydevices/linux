@@ -291,6 +291,7 @@ extern int fbtft_write_vmem8_bus8(struct fbtft_par *par, size_t offset, size_t l
 extern int fbtft_write_vmem16_bus16(struct fbtft_par *par, size_t offset, size_t len);
 extern int fbtft_write_vmem16_bus8(struct fbtft_par *par, size_t offset, size_t len);
 extern int fbtft_write_vmem16_bus9(struct fbtft_par *par, size_t offset, size_t len);
+extern int fbtft_write_vmem24_bus9(struct fbtft_par *par, size_t offset, size_t len);
 extern void fbtft_write_reg8_bus8(struct fbtft_par *par, int len, ...);
 extern void fbtft_write_reg8_bus9(struct fbtft_par *par, int len, ...);
 extern void fbtft_write_reg16_bus8(struct fbtft_par *par, int len, ...);
