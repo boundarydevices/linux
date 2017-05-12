@@ -556,7 +556,7 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	unsigned int width;
 	unsigned int height;
 	int txbuflen = display->txbuflen;
-	unsigned int bpp = display->bpp;
+	unsigned int bpp;
 	unsigned int fps = display->fps;
 	int vmem_size;
 	const s16 *init_sequence = display->init_sequence;
@@ -574,8 +574,6 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	/* defaults */
 	if (!fps)
 		fps = 20;
-	if (!bpp)
-		bpp = 16;
 
 	if (!pdata) {
 		dev_err(dev, "platform data is missing\n");
@@ -603,6 +601,12 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 		display->buswidth = pdata->display.buswidth;
 	if (pdata->display.regwidth)
 		display->regwidth = pdata->display.regwidth;
+	if (pdata->display.bpp)
+		display->bpp = pdata->display.bpp;
+	bpp = display->bpp;
+	if (!bpp) {
+		display->bpp = pdata->display.bpp = bpp = 16;
+	}
 
 	display->debug |= debug;
 	fbtft_expand_debug_value(&display->debug);
@@ -1260,13 +1264,15 @@ int fbtft_probe_common(struct fbtft_display *display,
 			 display->regwidth, display->buswidth);
 
 	/* write_vmem() functions */
-	if (display->buswidth == 8)
+	if (display->buswidth == 8) {
 		par->fbtftops.write_vmem = fbtft_write_vmem16_bus8;
-	else if (display->buswidth == 9)
-		par->fbtftops.write_vmem = fbtft_write_vmem16_bus9;
-	else if (display->buswidth == 16)
+	} else if (display->buswidth == 9) {
+		par->fbtftops.write_vmem = (display->bpp == 16) ?
+				fbtft_write_vmem16_bus9 :
+				fbtft_write_vmem24_bus9;
+	} else if (display->buswidth == 16) {
 		par->fbtftops.write_vmem = fbtft_write_vmem16_bus16;
-
+	}
 	/* GPIO write() functions */
 	if (par->pdev) {
 		if (display->buswidth == 8)
