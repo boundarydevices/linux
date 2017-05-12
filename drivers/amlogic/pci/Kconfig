@@ -1,0 +1,14 @@
+menu "Multimedia Card support"
+
+config AMLOGIC_PCIE
+	bool "Amlogic Multimedia Card support"
+	depends on PCI
+	depends on PCI_MSI_IRQ_DOMAIN
+	help
+	This selects support for the Amlogic PCIE Host Controller
+	found on the A113 family of SoCs.  This controller is
+	GEN2 compliant.
+	If you have a controller with this interface, say Y here.
+
+
+endmenu

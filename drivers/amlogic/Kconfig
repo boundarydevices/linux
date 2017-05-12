@@ -100,5 +100,7 @@ source "drivers/amlogic/dvb/Kconfig"
 
 source "drivers/amlogic/power/Kconfig"
 
+source "drivers/amlogic/pci/Kconfig"
+
 endmenu
 endif

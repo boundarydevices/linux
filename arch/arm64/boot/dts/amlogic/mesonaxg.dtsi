@@ -20,6 +20,7 @@
 #include <dt-bindings/gpio/mesonaxg-gpio.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	cpus:cpus {
