@@ -57,6 +57,15 @@
 		>;
 	};
 
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT8__ECSPI2_SCLK	0x000b1
+			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1
+#define GP_ECSPI2_DISPLAY_CS	<&gpio5 29 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x0b0b1
+		>;
+	};
+
 	pinctrl_enet: enetgrp {
 		fsl,pins = <
 			MX6QDL_PAD_ENET_MDIO__ENET_MDIO		0x1b0b0
@@ -749,6 +758,31 @@
 			label = "splash";
 			reg = <0xC2000 0x13e000>;
 		};
+	};
+};
+
+&ecspi2 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI2_DISPLAY_CS;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	status = "okay";
+#if 0
+	dma-names = "", "";
+#endif
+
+	st7789h2@0{
+		bpp = <16>;
+		compatible = "sitronix,st7789v";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		width = <240>;
+		height = <204>;
+		rotate = <0>;
+		regwidth = <8>;
+		bgr;
+		buswidth = <9>;
+		txbuflen = <32768>;
 	};
 };
 
