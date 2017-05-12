@@ -52,8 +52,6 @@ enum pwm_channel {
 	PWM_F,
 	PWM_AO_A,
 	PWM_AO_B,
-	PWM_AO_C,
-	PWM_AO_D,
 
 	PWM_A2,
 	PWM_B2,
@@ -63,6 +61,9 @@ enum pwm_channel {
 	PWM_F2,
 	PWM_AO_A2,
 	PWM_AO_B2,
+	/* add another four channels for txlx*/
+	PWM_AO_C,
+	PWM_AO_D,
 	PWM_AO_C2,
 	PWM_AO_D2,
 };

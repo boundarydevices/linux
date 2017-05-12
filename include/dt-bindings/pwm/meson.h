@@ -27,21 +27,19 @@
 #define	PWM_F			5
 #define	PWM_AO_A		6
 #define	PWM_AO_B		7
-#define	PWM_AO_C		8
-#define	PWM_AO_D		9
 
-/*
- * Addtional 8 channels for txl
- */
-#define	PWM_A2			10
-#define	PWM_B2			11
-#define	PWM_C2			12
-#define	PWM_D2			13
-#define	PWM_E2			14
-#define	PWM_F2			15
-#define	PWM_AO_A2		16
-#define	PWM_AO_B2		17
-/*add another two channel for txlx*/
+#define	PWM_A2			8
+#define	PWM_B2			9
+#define	PWM_C2			10
+#define	PWM_D2			11
+#define	PWM_E2			12
+#define	PWM_F2			13
+#define	PWM_AO_A2		14
+#define	PWM_AO_B2		15
+/*add another four channels for txlx*/
+#define	PWM_AO_C		16
+#define	PWM_AO_D		17
+
 #define	PWM_AO_C2		18
 #define	PWM_AO_D2		19
 
