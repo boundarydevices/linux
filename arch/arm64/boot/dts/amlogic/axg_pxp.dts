@@ -136,3 +136,19 @@
 	cs_delay = <10>;
 	enhance_dlyctl = <0>;
 };
+
+&aobus{
+	uart_AO: serial@3000 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0x3000 0x0 0x18>;
+		interrupts = <0 193 1>;
+		status = "okay";
+		clocks = <&xtal>;
+		clock-names = "clk_uart";
+		xtal_tick_en = <1>;
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_uart_pins>;
+		support-sysrq = <0>;	/* 0 not support , 1 support */
+	};
+};

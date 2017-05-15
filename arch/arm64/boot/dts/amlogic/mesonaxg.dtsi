@@ -495,6 +495,14 @@
 			};
 		};
 
+	ao_b_1_uart_pins:ao_b_1_uart {
+		mux {
+				pins = "GPIOAO_4",
+					"GPIOAO_5";
+				function = "uart_ao_b";
+		};
+	};
+
 	ao_i2c_master:ao_i2c{
 		mux {
 			pins = "GPIOAO_4","GPIOAO_5";
@@ -518,6 +526,30 @@
 }; /* end of pinctrl_aobus */
 
 &pinctrl_periphs {
+	ao_b_uart_pins:ao_b_uart {
+		mux {
+				pins = "GPIOZ_8",
+					"GPIOZ_9";
+				function = "uart_ao_b";
+		};
+	};
+
+	a_uart_pins:a_uart {
+		mux {
+			pins = "GPIOX_8",
+				"GPIOX_9";
+			function = "uart_a";
+		};
+	};
+
+	b_uart_pins:b_uart {
+		mux {
+			pins = "GPIOZ_2",
+				"GPIOZ_3";
+			function = "uart_b";
+		};
+	};
+
 	a_i2c_master:a_i2c {
 		mux {
 			pins = "GPIOZ_6","GPIOZ_7";
@@ -646,18 +678,3 @@
 
 }; /* end of pinctrl_periphs */
 
-&aobus{
-	uart_AO: serial@3000 {
-		compatible = "amlogic, meson-uart";
-		reg = <0x0 0x3000 0x0 0x18>;
-		interrupts = <0 193 1>;
-		status = "okay";
-		clocks = <&xtal>;
-		clock-names = "clk_uart";
-		xtal_tick_en = <1>;
-		fifosize = < 64 >;
-		pinctrl-names = "default";
-		pinctrl-0 = <&ao_uart_pins>;
-		support-sysrq = <0>;	/* 0 not support , 1 support */
-	};
-};
