@@ -244,6 +244,18 @@
 		pinctrl-1 = <&all_nand_pins>;
 		pinctrl-2 = <&nand_cs_pins>;
 		device_id = <0>;
+
+		/*fip/tpl configurations, must be same
+		 * with uboot if bl_mode was set as 1
+		 * bl_mode: 0 compact mode; 1 descrete mode
+		 * if bl_mode was set as 1, fip configeration will work
+		 */
+		bl_mode = <1>;
+		/*copy count of fip*/
+		fip_copies = <4>;
+		/*size of each fip copy */
+		fip_size = <0x200000>;
+		nand_clk_ctrl = <0xd0074000>;
 		plat-names = "bootloader","nandnormal";
 		plat-num = <2>;
 		plat-part-0 = <&bootloader>;
@@ -273,6 +285,19 @@
 			rb_detect = <1>;
 		};
 		nand_partitions:nand_partition{
+			/*
+			 * if bl_mode is 1, tpl size was generate by
+			 * fip_copies * fip_size which
+			 * will not skip bad when calculating
+			 * the partition size;
+			 *
+			 * if bl_mode is 0,
+			 * tpl partition must be comment out.
+			 */
+			tpl{
+				offset=<0x0 0x0>;
+				size=<0x0 0x0>;
+			};
 			logo{
 				offset=<0x0 0x0>;
 				size=<0x0 0x200000>;

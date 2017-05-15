@@ -194,6 +194,38 @@ static int prase_get_dtb_nand_parameter(struct aml_nand_device *aml_nand_dev,
 			of_node_put(np_config);
 			}
 		}
+
+		ret = of_property_read_u32(np,
+			"bl_mode", (u32 *)&aml_nand_dev->bl_mode);
+		if (ret) {
+			pr_info("%s:%d,please config bl_mode item\n",
+				__func__, __LINE__);
+		}
+		pr_info("bl mode %s\n",
+			aml_nand_dev->bl_mode?"descrete":"compact");
+
+		ret = of_property_read_u32(np,
+			"fip_copies", (u32 *)&aml_nand_dev->fip_copies);
+		if (ret) {
+			pr_info("%s:%d,please config fip_copies item\n",
+				__func__, __LINE__);
+		}
+		pr_info("fip_copies %d\n", aml_nand_dev->fip_copies);
+		ret = of_property_read_u32(np,
+			"fip_size", (u32 *)&aml_nand_dev->fip_size);
+		pr_info("fip_size 0x%x\n", aml_nand_dev->fip_size);
+		if (ret) {
+			pr_info("%s:%d,please config fip_size item\n",
+				__func__, __LINE__);
+		}
+		ret = of_property_read_u32(np,
+			"nand_clk_ctrl", (u32 *)&aml_nand_dev->nand_clk_ctrl);
+		pr_info("nand_clk_ctrl 0x%x\n", aml_nand_dev->nand_clk_ctrl);
+		if (ret) {
+			aml_nand_dev->nand_clk_ctrl = NAND_CLK_CNTL;
+			pr_info("%s:%d, using default nand_clk_ctrl 0x%x\n",
+				__func__, __LINE__, NAND_CLK_CNTL);
+		}
 	};
 	pr_info("%s:%d,parse dts end\n", __func__, __LINE__);
 	return 0;

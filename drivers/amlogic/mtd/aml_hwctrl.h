@@ -53,8 +53,8 @@ struct hw_controller {
 	void __iomem *nand_clk_reg;
 	u32 irq;
 #ifndef AML_NAND_UBOOT
-	dma_addr_t data_dma_addr;
-	dma_addr_t info_dma_addr;
+	/*dma_addr_t data_dma_addr;*/
+	/*dma_addr_t info_dma_addr;*/
 	struct pinctrl *nand_pinctrl;
 	struct pinctrl_state *nand_pinstate;
 	struct pinctrl_state *nand_rbstate;
@@ -92,7 +92,9 @@ struct hw_controller {
 #endif /* 0 */
 
 /* gx, for pxp and ic. */
-#define SD_EMMC_BASE_C	(0xd0074000)
+//#define SD_EMMC_BASE_C	(0xd0074000)
+/* axg */
+#define SD_EMMC_BASE_C 0xFFE07000
 #define P_NAND_BASE	(SD_EMMC_BASE_C | (1<<11))
 #define NAND_BASE_APB	(P_NAND_BASE)
 #define NAND_CLK_CNTL	(SD_EMMC_BASE_C)
@@ -101,9 +103,10 @@ struct hw_controller {
 
 #define A0_GP_CFG0	(0xc8100240)
 #define A0_GP_CFG2	(0xc8100248)
-#define NAND_CLK_CNTL	(0xd0074000)
+#define SD_EMMC_BASE_C 0xFFE07000
+#define NAND_CLK_CNTL	(SD_EMMC_BASE_C)
 #define PINMUX_BASE	(0xc8834400 + (0x2c << 2))
-#define P_NAND_BASE	(0xd0074000 | (1<<11))
+#define P_NAND_BASE	(SD_EMMC_BASE_C | (1<<11))
 #define NAND_BASE_APB	(P_NAND_BASE)
 
 /* NAND Write Command And Read Status Register */

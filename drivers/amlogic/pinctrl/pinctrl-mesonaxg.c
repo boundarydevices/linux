@@ -67,32 +67,40 @@ static const struct meson_desc_pin mesonaxg_periphs_pins[] = {
 		MESON_FUNCTION(0x0, "gpio")),
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_0, EE_OFF), 0x0, 0,
 		MESON_FUNCTION(0x0, "gpio"),
-		MESON_FUNCTION(0x1, "emmc")),		/*EMMC_D0*/
+		MESON_FUNCTION(0x1, "emmc"),		/*EMMC_D0*/
+		MESON_FUNCTION(0x1, "nandflash")),		/*EMMC_D0*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_1, EE_OFF), 0x0, 4,
 		MESON_FUNCTION(0x0, "gpio"),
-		MESON_FUNCTION(0x1, "emmc")),		/*EMMC_D1*/
+		MESON_FUNCTION(0x1, "emmc"),
+		MESON_FUNCTION(0x1, "nandflash")),		/*EMMC_D1*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_2, EE_OFF), 0x0, 8,
 		MESON_FUNCTION(0x0, "gpio"),
-		MESON_FUNCTION(0x1, "emmc")),		/*EMMC_D2*/
+		MESON_FUNCTION(0x1, "emmc"),
+		MESON_FUNCTION(0x1, "nandflash")),		/*EMMC_D2*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_3, EE_OFF), 0x0, 12,
 		MESON_FUNCTION(0x0, "gpio"),
 		MESON_FUNCTION(0x1, "emmc"),		/*EMMC_D3*/
+		MESON_FUNCTION(0x1, "nandflash"),
 		MESON_FUNCTION(0x3, "norflash")),	/*NOR_HOLD*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_4, EE_OFF), 0x0, 16,
 		MESON_FUNCTION(0x0, "gpio"),
 		MESON_FUNCTION(0x1, "emmc"),		/*EMMC_D4*/
+		MESON_FUNCTION(0x1, "nandflash"),
 		MESON_FUNCTION(0x3, "norflash")),	/*NOR_D*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_5, EE_OFF), 0x0, 20,
 		MESON_FUNCTION(0x0, "gpio"),
 		MESON_FUNCTION(0x1, "emmc"),		/*EMMC_D5*/
+		MESON_FUNCTION(0x1, "nandflash"),
 		MESON_FUNCTION(0x3, "norflash")),	/*NOR_Q*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_6, EE_OFF), 0x0, 24,
 		MESON_FUNCTION(0x0, "gpio"),
 		MESON_FUNCTION(0x1, "emmc"),		/*EMMC_D6*/
+		MESON_FUNCTION(0x1, "nandflash"),
 		MESON_FUNCTION(0x3, "norflash")),	/*NOR_C*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_7, EE_OFF), 0x0, 28,
 		MESON_FUNCTION(0x0, "gpio"),
-		MESON_FUNCTION(0x1, "emmc")),		/*EMMC_D7*/
+		MESON_FUNCTION(0x1, "emmc"),
+		MESON_FUNCTION(0x1, "nandflash")),		/*EMMC_D7*/
 	MESON_PINCTRL_PIN(MESON_PIN(BOOT_8, EE_OFF), 0x1, 0,
 		MESON_FUNCTION(0x0, "gpio"),
 		MESON_FUNCTION(0x1, "emmc"),		/*EMMC_CLK*/

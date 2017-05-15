@@ -1281,7 +1281,7 @@ static int aml_nand_scan_ident(struct mtd_info *mtd, int maxchips)
 
 	/* overide bootloader's size consdering info page */
 	if (!strcmp(mtd->name, NAND_BOOT_NAME))
-		mtd->size =  BOOT_PAGES_PER_COPY * mtd->writesize;
+		mtd->size =  BOOT_TOTAL_PAGES * mtd->writesize;
 
 	chip->cmdfunc = aml_nand_command;
 	chip->waitfunc = aml_nand_wait;

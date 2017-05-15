@@ -57,6 +57,9 @@
 /*#include "partition_table.h"*/
 
 #define CONFIG_MTD_PARTITIONS 1
+#define NAND_MAX_DEVICE	4
+extern struct mtd_info *nand_info[NAND_MAX_DEVICE];
+extern unsigned char pagelist_hynix256[128];
 #define CONFIG_ENV_SIZE  (64*1024U)
 
 /*
@@ -117,10 +120,27 @@ struct _ext_info {
 	uint32_t page_per_blk;
 	uint32_t xlc;
 	uint32_t ce_mask;
+	/* copact mode: boot means whole uboot
+	 * it's easy to understood that copies of
+	 * bl2 and fip are the same.
+	 * discrete mode, boot means the fip only
+	 */
 	uint32_t boot_num;
 	uint32_t each_boot_pages;
-	uint32_t rsv[2];
-	/* add new below, */
+	/* for comptible reason */
+	uint32_t bbt_occupy_pages;
+	uint32_t bbt_start_block;
+};
+#define NAND_FIPMODE_COMPACT    (0)
+#define NAND_FIPMODE_DISCRETE   (1)
+
+struct _fip_info {
+	/* version */
+	uint16_t version;
+	/* compact or discrete */
+	uint16_t mode;
+	/* fip start, pages */
+	uint32_t fip_start;
 };
 
 /*max size is 384 bytes*/
@@ -129,6 +149,8 @@ struct _nand_page0 {
 	unsigned char page_list[16];
 	struct _nand_cmd retry_usr[32];
 	struct _ext_info ext_info;
+	/* added for slc */
+	struct _fip_info fip_info;
 };
 
 
@@ -476,6 +498,8 @@ struct aml_nand_chip {
 	unsigned int rbpin_mode;
 	unsigned int rbpin_detect;
 	unsigned int short_pgsz;
+	/* bch for infopage on short mode */
+	unsigned int bch_info;
 
 	unsigned int bch_mode;
 	u8 user_byte_mode;
@@ -497,6 +521,10 @@ struct aml_nand_chip {
 	/*add property field for key private data*/
 	int dtbsize;
 	int keysize;
+	int boot_copy_num; /*tell how many bootloader copies*/
+	unsigned int  bl_mode;
+	unsigned int fip_copies;
+	unsigned int fip_size;
 
 	u8 key_protect;
 	unsigned char *rsv_data_buf;
@@ -553,6 +581,8 @@ struct aml_nand_chip {
 	int (*aml_nand_block_bad_scrub)(struct mtd_info *mtd);
 };
 
+struct aml_nand_device;
+
 struct aml_nand_platform {
 	struct aml_nand_flash_dev *nand_flash_dev;
 	char *name;
@@ -567,8 +597,9 @@ struct aml_nand_platform {
 	unsigned int rbpin_mode;	/*may get from romboot*/
 	unsigned int rbpin_detect;
 	unsigned int short_pgsz;	/*zero means no short*/
-
 	struct aml_nand_chip *aml_chip;
+	/* back pointer to the device*/
+	struct aml_nand_device *aml_nand_device;
 	struct platform_nand_data platform_nand_data;
 };
 
@@ -577,6 +608,11 @@ struct aml_nand_device {
 	u8 dev_num;
 #ifndef AML_NAND_UBOOT
 	struct notifier_block nb;
+	u32 bl_mode;
+	u32 fip_copies;
+	u32 fip_size;
+	/* for mapping regsters */
+	u32 nand_clk_ctrl;
 #endif
 };
 
@@ -803,7 +839,20 @@ void aml_nand_command(struct mtd_info *mtd,
 int aml_nand_wait(struct mtd_info *mtd, struct nand_chip *chip);
 
 int aml_nand_erase_cmd(struct mtd_info *mtd, int page);
+/* for boot operations */
+int m3_nand_boot_erase_cmd(struct mtd_info *mtd, int page);
 
+int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
+	struct nand_chip *chip, uint8_t *buf, int oob_required, int page);
+
+int m3_nand_boot_write_page_hwecc(struct mtd_info *mtd,
+	struct nand_chip *chip, const uint8_t *buf, int oob_required, int page);
+
+int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,
+	uint32_t offset, int data_len, const uint8_t *buf,
+	int oob_required, int page, int cached, int raw);
+
+int boot_device_register(struct aml_nand_chip *aml_chip);
 int add_mtd_partitions(struct mtd_info *mtd,
 	const struct mtd_partition *part, int num);
 
