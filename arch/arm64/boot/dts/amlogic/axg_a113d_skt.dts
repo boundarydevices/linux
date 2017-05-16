@@ -286,6 +286,130 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&b_uart_pins>;
 	};
+
+	sd_emmc_c: emmc@ffe07000 {
+		status = "okay";
+		compatible = "amlogic, meson-aml-mmc";
+		reg = <0x0 0xffe07000 0x0 0x2000>;
+		interrupts = <0 218 1>;
+		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
+		pinctrl-0 = <&emmc_clk_cmd_pins>;
+		pinctrl-1 = <&emmc_conf_pull_up &emmc_conf_pull_done>;
+		clocks = <&clkc CLKID_SD_EMMC_C>,
+			   <&clkc CLKID_SD_EMMC_C_P0_COMP>,
+			   <&clkc CLKID_FCLK_DIV2>;
+		clock-names = "core", "clkin0", "clkin1";
+
+		bus-width = <8>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+
+		max-frequency = <200000000>;
+		non-removable;
+		disable-wp;
+		emmc {
+			status = "disabled";
+			pinname = "emmc";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			caps = "MMC_CAP_8_BIT_DATA",
+				 "MMC_CAP_MMC_HIGHSPEED",
+				 "MMC_CAP_SD_HIGHSPEED",
+				 "MMC_CAP_NONREMOVABLE",
+				 "MMC_CAP_1_8V_DDR",
+				 "MMC_CAP_HW_RESET",
+				 "MMC_CAP_ERASE",
+				 "MMC_CAP_CMD23";
+			/*caps2 = "MMC_CAP2_HS200", "MMC_CAP2_HS400";*/
+			f_min = <300000>;
+			f_max = <100000000>;
+			max_req_size = <0x20000>; /**128KB*/
+			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
+			hw_reset = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
+			pinmux_base = <0xff634400>;
+			card_type = <1>;
+			/* 1:mmc card(include eMMC),
+			 * 2:sd card(include tSD)
+			 */
+		};
+	};
+
+	partitions: partitions{
+		parts = <11>;
+		part-0 = <&logo>;
+		part-1 = <&recovery>;
+		part-2 = <&rsv>;
+		part-3 = <&tee>;
+		part-4 = <&crypt>;
+		part-5 = <&misc>;
+		part-6 = <&instaboot>;
+		part-7 = <&boot>;
+		part-8 = <&system>;
+		part-9 = <&cache>;
+		part-10 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		recovery:recovery{
+			pname = "recovery";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		rsv:rsv{
+			pname = "rsv";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		crypt:crypt{
+			pname = "crypt";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		instaboot:instaboot{
+			pname = "instaboot";
+			size = <0x0 0x400000>;
+			mask = <1>;
+		};
+		boot:boot
+		{
+			pname = "boot";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		system:system
+		{
+			pname = "system";
+			size = <0x0 0x80000000>;
+			mask = <1>;
+		};
+		cache:cache
+		{
+			pname = "cache";
+			size = <0x0 0x20000000>;
+			mask = <2>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
+		};
+	};
+
 }; /* end of / */
 
 

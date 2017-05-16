@@ -13910,3 +13910,9 @@ F: drivers/amlogic/pci/pcie-amlogic.c
 F: drivers/amlogic/pci/pcie-amlogic.h
 F: drivers/amlogic/pci/Kconfig
 F: drivers/amlogic/pci/Makefile
+
+AMLOGIC AXG ADD EMMC AND SDIO SUPPORT FOR NEW HOST CONTROLLER
+M:	Long Yu <long.yu@amlogic.com>
+F:	drivers/amlogic/mmc/aml_sd_emmc_v3.c
+F:	include/linux/amlogic/aml_sd_emmc_internal.h
+F:	include/linux/amlogic/aml_sd_emmc_v3.h

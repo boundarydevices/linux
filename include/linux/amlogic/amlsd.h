@@ -19,12 +19,12 @@
 #define AMLSD_H
 #include <linux/of_gpio.h>
 
-#define AML_MMC_MAJOR_VERSION   1
-#define AML_MMC_MINOR_VERSION   07
+#define AML_MMC_MAJOR_VERSION   3
+#define AML_MMC_MINOR_VERSION   02
 #define AML_MMC_VERSION \
 	((AML_MMC_MAJOR_VERSION << 8) | AML_MMC_MINOR_VERSION)
 #define AML_MMC_VER_MESSAGE \
-	"2015-01-21: fix a bug in tuning which caused eMMC data CRC error"
+	"2017-05-15: New Emmc Host Controller"
 
 extern unsigned long sdhc_debug;
 extern unsigned long sdio_debug;

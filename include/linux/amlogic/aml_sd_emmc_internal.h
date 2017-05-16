@@ -1,0 +1,32 @@
+/*
+ * include/linux/amlogic/aml_sd_emmc_internal.h
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#ifndef __AML_SD_EMMC_INTERNAL_H__
+
+#define __AML_SD_EMMC_INTERNAL_H__
+extern int aml_emmc_clktree_init(struct amlsd_host *host);
+
+extern int meson_mmc_clk_init_v3(struct amlsd_host *host);
+
+extern void meson_mmc_set_ios_v3(struct mmc_host *mmc, struct mmc_ios *ios);
+
+extern int aml_sd_emmc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
+		struct aml_tuning_data *tuning_data, u32 adj_win_start);
+
+extern void aml_sd_emmc_set_buswidth(struct amlsd_host *host, u32 busw_ios);
+
+#endif

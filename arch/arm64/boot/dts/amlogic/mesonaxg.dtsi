@@ -676,5 +676,60 @@
 		};
 	};
 
+	emmc_clk_cmd_pins:emmc_clk_cmd_pins {
+		mux {
+			pins = "BOOT_8",
+				"BOOT_10";
+			function = "emmc";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+
+	emmc_conf_pull_up:emmc_conf_pull_up {
+		mux {
+			pins = "BOOT_0","BOOT_1","BOOT_2",
+				"BOOT_3","BOOT_4","BOOT_5","BOOT_6",
+				"BOOT_7","BOOT_8","BOOT_10";
+			function = "emmc";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	emmc_conf_pull_done:emmc_conf_pull_done {
+		mux {
+			groups = "BOOT_13";
+			function = "emmc";
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	sdio_clk_cmd_pins:sdio_clk_cmd_pins {
+		mux {
+			groups = "GPIOX_4",
+				"GPIOX_5";
+			function = "sdio";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	sdio_all_pins:sdio_all_pins {
+		mux {
+			groups = "GPIOX_0",
+				"GPIOX_1",
+				"GPIOX_2",
+				"GPIOX_3",
+				"GPIOX_4",
+				"GPIOX_5";
+			function = "sdio";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
 }; /* end of pinctrl_periphs */
 
