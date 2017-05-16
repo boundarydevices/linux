@@ -764,5 +764,12 @@
 		};
 	};
 
+	wifi_32k_pins:wifi_32k_pins {
+		mux {
+			groups ="GPIOX_20";
+			function = "pwm_a";
+		};
+	};
+
 }; /* end of pinctrl_periphs */
 

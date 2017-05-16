@@ -461,14 +461,14 @@ int pwm_double_channel_conf_dt(struct wifi_plat_info *plat)
 	if (ret) {
 		pr_err("not match wifi_pwm_config node\n");
 		return -1;
+	} else {
+		pwm_phandle = val;
+		np_wifi_pwm_conf = of_find_node_by_phandle(pwm_phandle);
+		if (!np_wifi_pwm_conf) {
+			pr_err("can't find wifi_pwm_config node\n");
+			return -1;
+		}
 	}
-	pwm_phandle = val;
-	np_wifi_pwm_conf = of_find_node_by_phandle(pwm_phandle);
-	if (!np_wifi_pwm_conf) {
-		pr_err("can't find wifi_pwm_config node\n");
-		return -1;
-	}
-
 
 	ret = of_property_read_u32(np_wifi_pwm_conf, "pwm_channel1",
 		  &(plat->gxtv_conf.pwm_channel1));
@@ -648,36 +648,12 @@ static int wifi_dev_probe(struct platform_device *pdev)
 		if (of_get_property(pdev->dev.of_node,
 			"pinctrl-names", NULL)) {
 			unsigned int pwm_misc;
-			unsigned int pwm_time_count;
-
 			if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) {
-				WIFI_INFO("set pwm as 32k output");
-				aml_write_cbus(0x21b0, 0x16d016e);
-				aml_write_cbus(0x21b5, 0x16d016d);
-
-				pwm_time_count = aml_read_cbus(0x21b4);
-				pwm_time_count &= ~(0xffff << 16);
-				pwm_time_count |= ((3 << 16) | (2 << 24));
-				aml_write_cbus(0x21b4, pwm_time_count);
-
-				pwm_misc = aml_read_cbus(0x21b2);
-				pwm_misc &= ~((0x7f << 8) | (3 << 4) |
-					(1 << 2) | (1 << 0));
-				pwm_misc |= ((3 << 24) | (1 << 15) |
-					(0 << 8) | (0 << 4));
-				aml_write_cbus(0x21b2, (pwm_misc | (1 << 0)));
-
+				pwm_double_channel_conf_dt(plat);
+				pwm_double_channel_conf(plat);
 			} else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXBB) {
-
-				WIFI_INFO("set pwm as 32k output");
-				aml_write_cbus(0x21b0, 0x7f107f2);
-				pwm_misc = aml_read_cbus(0x21b2);
-				pwm_misc &= ~((0x7f << 8) | (3 << 4) |
-					(1 << 2) | (1 << 0));
-				pwm_misc |= ((1 << 15) | (4 << 8) | (3 << 4));
-				aml_write_cbus(0x21b2, pwm_misc);
-				aml_write_cbus(0x21b2, (pwm_misc | (1 << 0)));
-
+				pwm_single_channel_conf_dt(plat);
+				pwm_single_channel_conf(plat);
 			} else if (get_cpu_type() == MESON_CPU_MAJOR_ID_M8B) {
 
 				WIFI_INFO("set pwm as 32k output");

@@ -145,15 +145,15 @@
 		power_on_pin = <&gpio       GPIOX_6       GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "wifi_32k_pins";
 		pinctrl-0 = <&wifi_32k_pins>;
-//		pwm_config = <&wifi_pwm_conf>;
+		pwm_config = <&wifi_pwm_conf>;
 	};
 
-//	wifi_pwm_conf:wifi_pwm_conf{
-//		pwm_channel1 = <PWM_E>;
-//		pwm_channel2 = <PWM_E2>;
-//		pwm_channel1_conf = <30541 15270 6>;
-//		pwm_channel2_conf = <30518 15259 9>;
-//	};
+	wifi_pwm_conf:wifi_pwm_conf{
+		pwm_channel1 = <PWM_E>;
+		pwm_channel2 = <PWM_E2>;
+		pwm_channel1_conf = <30541 15270 6>;
+		pwm_channel2_conf = <30518 15259 9>;
+	};
 
 	sd_emmc_c: emmc@d0074000 {
 		status = "okay";
