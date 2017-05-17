@@ -198,6 +198,27 @@
 					&gpio		CARD_3		0>;
 		};
 
+		securitykey {
+			compatible = "aml, securitykey";
+			storage_free = <0x82000029>;
+			storage_query = <0x82000060>;
+			storage_read = <0x82000061>;
+			storage_write = <0x82000062>;
+			storage_tell = <0x82000063>;
+			storage_verify = <0x82000064>;
+			storage_status = <0x82000065>;
+			storage_list = <0x82000067>;
+			storage_remove = <0x82000068>;
+			storage_notify_ex = <0x82000069>;
+			storage_in_func = <0x82000023>;
+			storage_out_func = <0x82000024>;
+			storage_block_func = <0x82000025>;
+			storage_size_func = <0x82000027>;
+			storage_set_enctype = <0x8200006A>;
+			storage_get_enctype = <0x8200006B>;
+			storage_version = <0x8200006C>;
+		};
+
 		cpu_iomap {
 			compatible = "amlogic, iomap";
 			#address-cells = <1>;

@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/securitykey/securitykey.c
+ * drivers/amlogic/unifykey/v7/securitykey.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -18,6 +18,7 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/of.h>
+#include <linux/slab.h>
 #include <linux/of_fdt.h>
 #include <linux/module.h>
 #include <linux/libfdt_env.h>
@@ -26,21 +27,17 @@
 #include <linux/platform_device.h>
 /*#include <asm/compiler.h>*/
 #include <linux/spinlock.h>
-#include <linux/amlogic/security_key.h>
+#include <linux/mutex.h>
+#include <linux/amlogic/unifykey/security_key.h>
+#include <linux/amlogic/unifykey/v7/key_service_routine.h>
 #undef pr_fmt
 #define pr_fmt(fmt) "storage: " fmt
 
-#define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
-static void __iomem *storage_in_base;
-static void __iomem *storage_out_base;
-static void __iomem *storage_block_base;
-
-static long phy_storage_in_base;
-static long phy_storage_out_base;
-static long phy_storage_block_base;
+static void *storage_block_base;
 static long storage_block_size;
 
+static unsigned long storage_free_func;
 static unsigned long storage_read_func;
 static unsigned long storage_write_func;
 static unsigned long storage_query_func;
@@ -49,10 +46,14 @@ static unsigned long storage_status_func;
 static unsigned long storage_verify_func;
 static unsigned long storage_list_func;
 static unsigned long storage_remove_func;
+static unsigned long storage_notify_ex_func;
 static unsigned long storage_set_enctype_func;
 static unsigned long storage_get_enctype_func;
 static unsigned long storage_version_func;
 
+static DEFINE_MUTEX(storage_lock);
+
+#if 0
 static DEFINE_SPINLOCK(storage_lock);
 static unsigned long lockflags;
 
@@ -80,6 +81,25 @@ static uint64_t storage_smc_ops2(uint64_t func, uint64_t arg1)
 	return x0;
 }
 
+uint64_t storage_smc_ops3(uint64_t func, uint64_t arg1, uint32_t arg2)
+{
+	register unsigned long x0 asm("x0") = func;
+	register unsigned long x1 asm("x1") = arg1;
+	register unsigned long x2 asm("x2") = arg2;
+	asm volatile(
+		__asmeq("%0", "x0")
+		__asmeq("%1", "x1")
+		__asmeq("%2", "x2")
+		"smc    #0\n"
+		: "+r" (x0)
+		: "r"(x1), "r"(x2));
+
+
+	return x0;
+}
+#endif
+
+
 static inline int32_t smc_to_linux_errno(uint64_t errno)
 {
 	int32_t ret = (int32_t)(errno & 0xffffffff);
@@ -92,142 +112,233 @@ void *secure_storage_getbuffer(uint32_t *size)
 	return (void *)storage_block_base;
 }
 
+void secure_storage_notifier_ex(uint32_t storagesize)
+{
+	mutex_lock(&storage_lock);
+	storage_service_routine(storage_notify_ex_func,
+				storagesize, NULL, NULL);
+	mutex_unlock(&storage_lock);
+}
+
 int32_t secure_storage_write(uint8_t *keyname, uint8_t *keybuf,
 			uint32_t keylen, uint32_t keyattr)
 {
-	uint32_t *input;
+	uint32_t *input = NULL;
+	uint32_t *input_start = NULL;
+	uint32_t in_len = 0;
 	uint32_t namelen;
-	uint8_t *keydata, *name;
+	uint8_t  *keydata, *name;
 	uint64_t ret;
 
-	spin_lock_irqsave(&storage_lock, lockflags);
+	mutex_lock(&storage_lock);
 	namelen = strlen((const char *)keyname);
-	input = (uint32_t *)storage_in_base;
-	*input++ = namelen;
-	*input++ = keylen;
-	*input++ = keyattr;
-	name = (uint8_t *)input;
-	memcpy(name, keyname, namelen);
-	keydata = name + namelen;
-	memcpy(keydata, keybuf, keylen);
-	ret = storage_smc_ops(storage_write_func);
-	spin_unlock_irqrestore(&storage_lock, lockflags);
+	in_len = sizeof(namelen) + sizeof(keylen) + sizeof(keyattr)
+		     + namelen + keylen;
+	input = kmalloc(in_len, GFP_KERNEL);
+	if (input == NULL)
+		ret = RET_EMEM;
+	else {
+		input_start = input;
+		*input++ = namelen;
+		*input++ = keylen;
+		*input++ = keyattr;
+		name = (uint8_t *)input;
+		memcpy(name, keyname, namelen);
+		keydata = name + namelen;
+		memcpy(keydata, keybuf, keylen);
+		ret = storage_service_routine(storage_write_func,
+					      0, input_start, NULL);
+	}
+	if (input_start != NULL)
+		kfree(input_start);
+	mutex_unlock(&storage_lock);
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_read(uint8_t *keyname, uint8_t *keybuf,
 				uint32_t keylen, uint32_t *readlen)
 {
-	uint32_t *input = (uint32_t *)storage_in_base;
-	uint32_t *output = (uint32_t *)storage_out_base;
+	uint32_t *input = NULL;
+	uint32_t *input_start = NULL;
+	uint32_t in_len = 0;
+	uint32_t *output = NULL;
 	uint32_t namelen;
-	uint8_t *name, *buf;
+	uint8_t  *name, *buf;
 	uint64_t ret;
 
-	spin_lock_irqsave(&storage_lock, lockflags);
+	mutex_lock(&storage_lock);
 	namelen = strlen((const char *)keyname);
-	*input++ = namelen;
-	*input++ = keylen;
-	name = (uint8_t *)input;
-	memcpy(name, keyname, namelen);
-	ret = storage_smc_ops(storage_read_func);
-	if (ret == RET_OK) {
-		*readlen = *output;
-		buf = (uint8_t *)(output + 1);
-		memcpy(keybuf, buf, *readlen);
+	in_len = sizeof(namelen)+sizeof(keylen)+namelen;
+	input = kmalloc(in_len, GFP_KERNEL);
+	if (input == NULL)
+		ret = RET_EMEM;
+	else {
+		input_start = input;
+		*input++ = namelen;
+		*input++ = keylen;
+		name = (uint8_t *)input;
+		memcpy(name, keyname, namelen);
+		ret = storage_service_routine(storage_read_func, 0,
+					      input_start, (void **)(&output));
+		if (ret == RET_OK) {
+			*readlen = *output;
+			buf = (uint8_t *)(output + 1);
+			memcpy(keybuf, buf, *readlen);
+		}
 	}
-	spin_unlock_irqrestore(&storage_lock, lockflags);
+	if (input_start != NULL)
+		kfree(input_start);
+	if (output != NULL)
+		kfree(output);
+	mutex_unlock(&storage_lock);
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_verify(uint8_t *keyname, uint8_t *hashbuf)
 {
-	uint32_t *input = (uint32_t *)storage_in_base;
-	uint32_t *output = (uint32_t *)storage_out_base;
+	uint32_t *input = NULL;
+	uint32_t *input_start = NULL;
+	uint32_t in_len = 0;
+	uint32_t *output = NULL;
 	uint32_t namelen;
 	uint8_t *name;
-	uint64_t ret;
+	uint64_t ret = 0;
 
-	spin_lock_irqsave(&storage_lock, lockflags);
+	mutex_lock(&storage_lock);
 	namelen = strlen((const char *)keyname);
-	*input++ = namelen;
-	name = (uint8_t *)input;
-	memcpy(name, keyname, namelen);
-	ret = storage_smc_ops(storage_verify_func);
-	if (ret == RET_OK)
-		memcpy(hashbuf, (uint8_t *)output, 32);
-	spin_unlock_irqrestore(&storage_lock, lockflags);
-
+	in_len = sizeof(namelen) + namelen;
+	input = kmalloc(in_len, GFP_KERNEL);
+	if (input == NULL)
+		ret = RET_EMEM;
+	else {
+		input_start = input;
+		*input++ = namelen;
+		name = (uint8_t *)input;
+		memcpy(name, keyname, namelen);
+		ret = storage_service_routine(storage_verify_func, 0,
+					      input_start, (void **)(&output));
+		if (ret == RET_OK)
+			memcpy(hashbuf, (uint8_t *)output, 32);
+	}
+	if (input_start != NULL)
+		kfree(input_start);
+	if (output != NULL)
+		kfree(output);
+	mutex_unlock(&storage_lock);
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_query(uint8_t *keyname, uint32_t *retval)
 {
-	uint32_t *input = (uint32_t *)storage_in_base;
-	uint32_t *output = (uint32_t *)storage_out_base;
+	uint32_t *input = NULL;
+	uint32_t *input_start = NULL;
+	uint32_t  in_len = 0;
+	uint32_t *output = NULL;
 	uint32_t namelen;
-	uint8_t *name;
-	uint64_t ret;
+	uint8_t  *name;
+	uint64_t ret = 0;
 
-	spin_lock_irqsave(&storage_lock, lockflags);
+	mutex_lock(&storage_lock);
 	namelen = strlen((const char *)keyname);
-	*input++ = namelen;
-	name = (uint8_t *)input;
-	memcpy(name, keyname, namelen);
-	ret = storage_smc_ops(storage_query_func);
-	if (ret == RET_OK)
-		*retval = *output;
-	spin_unlock_irqrestore(&storage_lock, lockflags);
-
+	in_len = sizeof(namelen) + namelen;
+	input = kmalloc(in_len, GFP_KERNEL);
+	if (input == NULL)
+		ret = RET_EMEM;
+	else {
+		input_start = input;
+		*input++ = namelen;
+		name = (uint8_t *)input;
+		memcpy(name, keyname, namelen);
+		ret = storage_service_routine(storage_query_func, 0,
+					      input_start, (void **)(&output));
+		if (ret == RET_OK)
+			*retval = *output;
+	}
+	if (input_start != NULL)
+		kfree(input_start);
+	if (output != NULL)
+		kfree(output);
+	mutex_unlock(&storage_lock);
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_tell(uint8_t *keyname, uint32_t *retval)
 {
-	uint32_t *input = (uint32_t *)storage_in_base;
-	uint32_t *output = (uint32_t *)storage_out_base;
+	uint32_t *input = NULL;
+	uint32_t *input_start = NULL;
+	uint32_t in_len = 0;
+	uint32_t *output = NULL;
 	uint32_t namelen;
 	uint8_t *name;
-	uint64_t ret;
+	uint64_t ret = 0;
 
-	spin_lock_irqsave(&storage_lock, lockflags);
+	mutex_lock(&storage_lock);
 	namelen = strlen((const char *)keyname);
-	*input++ = namelen;
-	name = (uint8_t *)input;
-	memcpy(name, keyname, namelen);
-	ret = storage_smc_ops(storage_tell_func);
-	if (ret == RET_OK)
-		*retval = *output;
-	spin_unlock_irqrestore(&storage_lock, lockflags);
+	in_len = sizeof(namelen) + namelen;
+	input = kmalloc(in_len, GFP_KERNEL);
+	if (input == NULL)
+		ret = RET_EMEM;
+	else {
+		input_start = input;
+		*input++ = namelen;
+		name = (uint8_t *)input;
+		memcpy(name, keyname, namelen);
+		ret = storage_service_routine(storage_tell_func, 0,
+					      input_start, (void **)(&output));
+		if (ret == RET_OK)
+			*retval = *output;
+	}
+	if (input_start != NULL)
+		kfree(input_start);
+	if (output != NULL)
+		kfree(output);
+	mutex_unlock(&storage_lock);
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_status(uint8_t *keyname, uint32_t *retval)
 {
-	uint32_t *input = (uint32_t *)storage_in_base;
-	uint32_t *output = (uint32_t *)storage_out_base;
+	uint32_t *input = NULL;
+	uint32_t *input_start = NULL;
+	uint32_t in_len = 0;
+	uint32_t *output = NULL;
 	uint32_t namelen;
 	uint8_t *name;
-	uint64_t ret;
+	uint64_t ret = 0;
 
-	spin_lock_irqsave(&storage_lock, lockflags);
+	mutex_lock(&storage_lock);
 	namelen = strlen((const char *)keyname);
-	*input++ = namelen;
-	name = (uint8_t *)input;
-	memcpy(name, keyname, namelen);
-	ret = storage_smc_ops(storage_status_func);
-	if (ret == RET_OK)
-		*retval = *output;
-	spin_unlock_irqrestore(&storage_lock, lockflags);
+	in_len = sizeof(namelen) + namelen;
+	input = kmalloc(in_len, GFP_KERNEL);
+	if (input == NULL)
+		ret = RET_EMEM;
+	else {
+		input_start = input;
+		*input++ = namelen;
+		name = (uint8_t *)input;
+		memcpy(name, keyname, namelen);
+		ret = storage_service_routine(storage_status_func, 0,
+					      input_start, (void **)(&output));
+		if (ret == RET_OK)
+			*retval = *output;
+	}
+	if (input_start != NULL)
+		kfree(input_start);
+	if (output != NULL)
+		kfree(output);
+	mutex_unlock(&storage_lock);
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_list(uint8_t *listbuf,
 		uint32_t buflen, uint32_t *readlen)
 {
+#if 0
 	uint32_t *output = (uint32_t *)storage_out_base;
-	uint64_t ret;
+#endif
+	uint64_t ret = 0;
 
+#if 0
 	spin_lock_irqsave(&storage_lock, lockflags);
 	ret = storage_smc_ops(storage_list_func);
 	if (ret == RET_OK) {
@@ -238,16 +349,20 @@ int32_t secure_storage_list(uint8_t *listbuf,
 		memcpy(listbuf, (uint8_t *)(output+1), *readlen);
 	}
 	spin_unlock_irqrestore(&storage_lock, lockflags);
+#endif
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_remove(uint8_t *keyname)
 {
+#if 0
 	uint32_t *input = (uint32_t *)storage_in_base;
 	uint32_t namelen;
 	uint8_t *name;
-	uint64_t ret;
+#endif
+	uint64_t ret = 0;
 
+#if 0
 	spin_lock_irqsave(&storage_lock, lockflags);
 	namelen = strlen((const char *)keyname);
 	*input++ = namelen;
@@ -255,34 +370,39 @@ int32_t secure_storage_remove(uint8_t *keyname)
 	memcpy(name, keyname, namelen);
 	ret = storage_smc_ops(storage_remove_func);
 	spin_unlock_irqrestore(&storage_lock, lockflags);
+#endif
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_set_enctype(uint32_t type)
 {
-	uint64_t ret;
+	uint64_t ret = 0;
 
-	spin_lock_irqsave(&storage_lock, lockflags);
-	ret = storage_smc_ops2(storage_set_enctype_func, type);
-	spin_unlock_irqrestore(&storage_lock, lockflags);
+	mutex_lock(&storage_lock);
+	ret = storage_service_routine(storage_set_enctype_func,
+				      type, NULL, NULL);
+	mutex_unlock(&storage_lock);
+
 	return smc_to_linux_errno(ret);
 }
 int32_t secure_storage_get_enctype(void)
 {
-	uint64_t ret;
-
+	uint64_t ret = 0;
+#if 0
 	spin_lock_irqsave(&storage_lock, lockflags);
 	ret = storage_smc_ops(storage_get_enctype_func);
 	spin_unlock_irqrestore(&storage_lock, lockflags);
+#endif
 	return smc_to_linux_errno(ret);
 }
 int32_t secure_storage_version(void)
 {
-	uint64_t ret;
-
+	uint64_t ret = 0;
+#if 0
 	spin_lock_irqsave(&storage_lock, lockflags);
 	ret = storage_smc_ops(storage_version_func);
 	spin_unlock_irqrestore(&storage_lock, lockflags);
+#endif
 	return smc_to_linux_errno(ret);
 }
 
@@ -292,20 +412,16 @@ static int storage_probe(struct platform_device *pdev)
 	unsigned int id;
 	int ret;
 
-	phy_storage_in_base = 0;
-	phy_storage_out_base = 0;
-	phy_storage_block_base = 0;
 	storage_block_size = 0;
 
-	if (!of_property_read_u32(np, "storage_in_func", &id))
-		phy_storage_in_base = storage_smc_ops(id);
-	if (!of_property_read_u32(np, "storage_out_func", &id))
-		phy_storage_out_base = storage_smc_ops(id);
 	if (!of_property_read_u32(np, "storage_block_func", &id))
-		phy_storage_block_base = storage_smc_ops(id);
+		storage_block_base = (void *)(uint32_t)storage_service_routine(
+							id, 0, NULL, NULL);
 	if (!of_property_read_u32(np, "storage_size_func", &id))
-		storage_block_size = storage_smc_ops(id);
+		storage_block_size = storage_service_routine(id, 0, NULL, NULL);
 
+	if (!of_property_read_u32(np, "storage_free", &id))
+		storage_free_func = id;
 	if (!of_property_read_u32(np, "storage_read", &id))
 		storage_read_func = id;
 	if (!of_property_read_u32(np, "storage_write", &id))
@@ -322,6 +438,8 @@ static int storage_probe(struct platform_device *pdev)
 		storage_list_func = id;
 	if (!of_property_read_u32(np, "storage_remove", &id))
 		storage_remove_func = id;
+	if (!of_property_read_u32(np, "storage_notify_ex", &id))
+		storage_notify_ex_func = id;
 	if (!of_property_read_u32(np, "storage_set_enctype", &id))
 		storage_set_enctype_func = id;
 	if (!of_property_read_u32(np, "storage_get_enctype", &id))
@@ -329,25 +447,13 @@ static int storage_probe(struct platform_device *pdev)
 	if (!of_property_read_u32(np, "storage_version", &id))
 		storage_version_func = id;
 
-	if (!phy_storage_in_base || !phy_storage_out_base
-			|| !phy_storage_block_base || !storage_block_size) {
+	if (!storage_block_base || !storage_block_size) {
+		storage_service_routine(storage_free_func, 0, NULL, NULL);
 		pr_info("probe fail!\n");
 		return -1;
 	}
 
-	storage_in_base = ioremap_cache(phy_storage_in_base,
-					storage_block_size);
-	storage_out_base = ioremap_cache(phy_storage_out_base,
-					storage_block_size);
-	storage_block_base = ioremap_cache(phy_storage_block_base,
-					storage_block_size);
-	pr_info("storage in base: 0x%lx\n", (long)storage_in_base);
-	pr_info("storage out base: 0x%lx\n", (long)storage_out_base);
-	pr_info("storage block base: 0x%lx\n", (long)storage_block_base);
-
 	ret = 0;
-	if (!storage_in_base || !storage_out_base || !storage_block_base)
-		ret = -1;
 	pr_info("probe done!\n");
 	return ret;
 }

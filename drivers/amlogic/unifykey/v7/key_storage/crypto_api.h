@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/key_manage.h
+ * drivers/amlogic/unifykey/v7/key_storage/crypto_api.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,23 +15,13 @@
  *
  */
 
-#ifndef __KEYMANAGE1__
-#define __KEYMANAGE1__
+#ifndef _CRYPTO_API_H_
+#define _CRYPTO_API_H_
 
-typedef int32_t (*store_key_ops)(uint8_t *buf,
-					uint32_t len, uint32_t *actual_length);
+#define AES_BLOCK_SIZE 16
 
-#ifdef CONFIG_AMLOGIC_KEY_MANAGE
-void storage_ops_read(store_key_ops read);
-void storage_ops_write(store_key_ops write);
-#else
-void storage_ops_read(store_key_ops read)
-{
-}
+int do_aes_internal(unsigned char bEncryptFlag, unsigned char *pIN,
+		int nINLen, unsigned char *pOUT, int *pOUTLen);
+int sha256(uint8_t *in, uint32_t len, unsigned char output[32]);
 
-void storage_ops_write(store_key_ops read)
-{
-}
-#endif /*CONFIG_KEY_MANAGE*/
-
-#endif /*__KEYMANAGE1__*/
+#endif

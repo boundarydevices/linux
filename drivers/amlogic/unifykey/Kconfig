@@ -1,0 +1,33 @@
+#
+# Amlogic key device configuration
+#
+
+menu "unifykey Support"
+
+config AMLOGIC_UNIFYKEY
+	bool "Amlogic unifykey driver support"
+	default n
+	help
+	    platform independent part of unifykey driver
+	    y here, means select unifykey
+	    n here, means don't use unifykey
+
+config AMLOGIC_V8_UNIFYKEY
+	bool "Amlogic unifykey driver support for armv8"
+	default n
+	depends on AMLOGIC_UNIFYKEY
+	help
+	    Support for unifykey on S905 devices
+	    y here, means select unifykey for gx
+	    n here, means don't use unifykey for gx
+
+config AMLOGIC_V7_UNIFYKEY
+	bool "Amlogic unifykey driver support for armv7"
+	default n
+	depends on AMLOGIC_UNIFYKEY
+	help
+	    Support for unifykey on S805 devices
+	    y here, means select unifykey for m8b
+	    n here, means don't use unifykey for m8b
+
+endmenu

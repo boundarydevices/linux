@@ -18,7 +18,7 @@
 #include "aml_mtd.h"
 
 #ifndef AML_NAND_UBOOT
-#include <linux/amlogic/key_manage.h>
+#include <linux/amlogic/unifykey/key_manage.h>
 #endif
 
 

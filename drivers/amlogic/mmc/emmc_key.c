@@ -22,7 +22,7 @@
 #include <linux/slab.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/emmc_partitions.h>
-#include <linux/amlogic/key_manage.h>
+#include <linux/amlogic/unifykey/key_manage.h>
 #include "emmc_key.h"
 
 #define		EMMC_BLOCK_SIZE		(0x100)

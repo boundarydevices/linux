@@ -1,7 +1,0 @@
-# Amlogic security key driver
-
-
-config AMLOGIC_SECURITY_KEY
-    bool "Amlogic security key driver support"
-    help
-      This is the Amlogic security key driver

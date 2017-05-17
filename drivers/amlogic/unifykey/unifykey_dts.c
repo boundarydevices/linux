@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/key_manage/unifykey_dts.c
+ * drivers/amlogic/unifykey/unifykey_dts.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -24,6 +24,7 @@
 #include <linux/err.h>
 #include <linux/scatterlist.h>
 #include <linux/of.h>
+#include <linux/amlogic/cpu_version.h>
 #include "unifykey.h"
 
 /* storages where key stored */
@@ -40,7 +41,8 @@
 #define KEY_ATTR_TRUE		"true"
 #define KEY_ATTR_FALSE		"false"
 
-static struct key_info_t unify_key_info = {.key_num = 0, .key_flag = 0};
+static struct key_info_t unify_key_info = {.key_num = 0, .key_flag = 0,
+					   .encrypt_type = 0};
 static struct key_item_t *unifykey_item;
 
 int unifykey_item_verify_check(struct key_item_t *key_item)
@@ -230,10 +232,24 @@ static int unifykey_item_create(struct platform_device *pdev, int num)
 	return 0;
 }
 
+int unifykey_get_encrypt_type(void)
+{
+	return unify_key_info.encrypt_type;
+}
+
+
 int unifykey_dt_create(struct platform_device *pdev)
 {
 	int ret =  -1;
 	int key_num;
+
+	if (is_meson_m8b_cpu()) {
+		/* do not care whether unifykey-encrypt really exists*/
+		unify_key_info.encrypt_type = -1;
+		ret = of_property_read_u32(pdev->dev.of_node,
+			"unifykey-encrypt",
+			&unify_key_info.encrypt_type);
+	}
 
 	ret = of_property_read_u32(pdev->dev.of_node,
 		"unifykey-num", &key_num);

@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/key_manage/storagekey.c
+ * drivers/amlogic/unifykey/storagekey.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -35,9 +35,10 @@
 #include <linux/uaccess.h>
 #include <linux/kallsyms.h>
 #include <linux/amlogic/efuse.h>
-#include <linux/amlogic/security_key.h>
-#include <linux/amlogic/key_manage.h>
+#include <linux/amlogic/unifykey/security_key.h>
+#include <linux/amlogic/unifykey/key_manage.h>
 #include <linux/of.h>
+#include <linux/amlogic/cpu_version.h>
 #include "unifykey.h"
 #include "amlkey_if.h"
 /* #include <amlogic/storage_if.h> */
@@ -110,7 +111,7 @@ EXPORT_SYMBOL(storage_ops_write);
  *1.init
  * return ok 0, fail 1
  */
-int32_t amlkey_init(uint8_t *seed, uint32_t len)
+int32_t amlkey_init(uint8_t *seed, uint32_t len, int encrypt_type)
 {
 	int32_t ret = 0;
 	uint32_t buffer_size, actual_size;
@@ -139,6 +140,12 @@ int32_t amlkey_init(uint8_t *seed, uint32_t len)
 		goto _out;
 	}
 
+	if (is_meson_m8b_cpu()) {
+		if (encrypt_type == -1)
+			encrypt_type = 0;
+		secure_storage_set_enctype(encrypt_type);
+	}
+
 	/* full fill key infos from storage. */
 	if (store_key_read)
 		ret = store_key_read(storagekey_info.buffer,
@@ -156,6 +163,12 @@ int32_t amlkey_init(uint8_t *seed, uint32_t len)
 		ret = 0;
 		goto _out;
 	}
+
+	if (is_meson_m8b_cpu()) {
+		storagekey_info.size = actual_size;
+		secure_storage_notifier_ex(actual_size);
+	}
+
 _out:
 	return ret;
 }

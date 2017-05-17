@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/key_manage/amlkey_if.h
+ * drivers/amlogic/unifykey/amlkey_if.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -23,7 +23,7 @@
 /*
  * init
  */
-int32_t amlkey_init(uint8_t *seed, uint32_t len);
+int32_t amlkey_init(uint8_t *seed, uint32_t len, int encrypt_type);
 /*
  * query if the key already programmed
  * exsit 1, non 0

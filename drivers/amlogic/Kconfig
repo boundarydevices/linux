@@ -76,9 +76,7 @@ source "drivers/amlogic/smartcard/Kconfig"
 
 source "drivers/amlogic/cec/Kconfig"
 
-source "drivers/amlogic/securitykey/Kconfig"
-
-source "drivers/amlogic/key_manage/Kconfig"
+source "drivers/amlogic/unifykey/Kconfig"
 
 source "drivers/amlogic/thermal/Kconfig"
 

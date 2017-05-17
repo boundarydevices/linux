@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/key_manage/unifykey.c
+ * drivers/amlogic/unifykey/unifykey.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -63,8 +63,11 @@ static int lock_flag;
 
 static int key_storage_init(char *buf, unsigned int len)
 {
+	int encrypt_type;
+
+	encrypt_type = unifykey_get_encrypt_type();
 	/* fixme, todo. */
-	return amlkey_init((uint8_t *)buf, len);
+	return amlkey_init((uint8_t *)buf, len, encrypt_type);
 
 }
 
@@ -440,6 +443,7 @@ int key_unify_size(char *keyname, unsigned int *reallen)
 
 	if (unifykey->permit & KEY_M_PERMIT_READ) {
 		switch (unifykey->dev) {
+#ifdef CONFIG_EFUSE
 		case KEY_M_EFUSE:
 		{
 			struct efusekey_info info;
@@ -449,6 +453,7 @@ int key_unify_size(char *keyname, unsigned int *reallen)
 			*reallen = info.size;
 			break;
 		}
+#endif
 		case KEY_M_SECURE:
 			*reallen = key_storage_size(keyname);
 			break;

@@ -13939,3 +13939,8 @@ F: sound/soc/codecs/amlogic/pcm186x.c
 F: sound/soc/codecs/amlogic/pcm186x.h
 F: sound/soc/codecs/amlogic/ssm3515.c
 F: sound/soc/codecs/amlogic/ssm3525.c
+
+AMLOGIC unifykey driver
+M: Jiamin Ma <jiamin.ma@amlogic.com>
+F: drivers/amlogic/unifykey/*
+F: include/linux/amlogic/unifykey/*

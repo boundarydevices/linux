@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/key_manage/unifykey.h
+ * drivers/amlogic/unifykey/unifykey.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -78,6 +78,7 @@ struct key_info_t {
 	int key_num;
 	int efuse_version;
 	int key_flag;
+	int encrypt_type;
 };
 
 struct unifykey_dev_t {
@@ -92,6 +93,7 @@ extern struct key_item_t *unifykey_find_item_by_id(int id);
 extern int unifykey_item_verify_check(struct key_item_t *key_item);
 extern int unifykey_count_key(void);
 extern char unifykey_get_efuse_version(void);
+extern int unifykey_get_encrypt_type(void);
 
 #endif
 
