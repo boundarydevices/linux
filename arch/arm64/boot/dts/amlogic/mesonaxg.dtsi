@@ -526,6 +526,25 @@
 }; /* end of pinctrl_aobus */
 
 &pinctrl_periphs {
+	external_eth_pins:external_eth_pins {
+		mux {
+			groups = "GPIOY_0",
+				"GPIOY_1",
+				"GPIOY_2",
+				"GPIOY_3",
+				"GPIOY_4",
+				"GPIOY_5",
+				"GPIOY_6",
+				"GPIOY_7",
+				"GPIOY_8",
+				"GPIOY_9",
+				"GPIOY_10",
+				"GPIOY_11",
+				"GPIOY_12",
+				"GPIOY_13";
+			function = "eth";
+		};
+	};
 	ao_b_uart_pins:ao_b_uart {
 		mux {
 				pins = "GPIOZ_8",
