@@ -811,13 +811,19 @@ static void __init axg_clkc_init(struct device_node *np)
 		axg_clk_gates[i]->reg = clk_base +
 			(u64)axg_clk_gates[i]->reg;
 
+#if 0
 	clks = kzalloc(NR_CLKS*sizeof(struct clk *), GFP_KERNEL);
 	if (!clks) {
 		/* pr_err("%s: alloc clks fail!", __func__); */
 		/* return -ENOMEM; */
 		return;
 	}
-	/* pr_debug("%s: kzalloc clks ok!", __func__); */
+#endif
+	if (NULL == clks) {
+		pr_err("%s: error: not kzalloc clks in aoclk!", __func__);
+		return;
+	}
+
 	clk_data.clks = clks;
 	clk_data.clk_num = NR_CLKS;
 	/*

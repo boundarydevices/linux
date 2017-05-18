@@ -13956,3 +13956,8 @@ F: drivers/amlogic/media/vout/lcd/*
 F: include/linux/amlogic/media/vout/lcd/*
 F: arch/arm64/boot/dts/amlogic/mesongxm_q200-panel.dtsi
 F: arch/arm64/boot/dts/amlogic/mesonaxg_s400-panel.dtsi
+
+AMLOGIC AXG ADD AO CLK
+M:	Yun Cai <yun.cai@amlogic.com>
+F:	drivers/amlogic/clk/axg/axg_ao.c
+

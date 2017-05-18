@@ -80,6 +80,10 @@
 #define HHI_SYS_PLL_CNTL4		0x30c /* 0xc3 offset in data sheet */
 #define HHI_SYS_PLL_CNTL5		0x310 /* 0xc4 offset in data sheet */
 
+/* AO registers*/
+#define AO_RTI_PWR_CNTL_REG0 0x10 /* 0x4 offset in data sheet */
+#define AO_SAR_CLK		0x90 /* 0x24 offset in data sheet */
+
 static const struct pll_rate_table sys_pll_rate_table[] = {
 	PLL_RATE(24000000, 56, 1, 2),
 	PLL_RATE(48000000, 64, 1, 2),

@@ -302,6 +302,12 @@
 			cpu_version {
 				reg=<0x0 0x220 0x0 0x4>;
 			};
+
+			aoclkc: clock-controller@0 {
+				compatible = "amlogic,axg-aoclkc";
+				#clock-cells = <1>;
+				reg = <0x0 0x0 0x0 0x320>;
+			};
 		};/* end of aobus */
 
 		periphs: periphs@ff634400 {
