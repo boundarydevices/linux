@@ -1708,7 +1708,6 @@ static struct dma_async_tx_descriptor *sdma_prep_dma_cyclic(
 	if (sdmac->peripheral_type == IMX_DMATYPE_HDMI)
 		return vchan_tx_prep(&sdmac->vc, &desc->vd, flags);
 
-	desc->buf_tail = 0;
 	desc->vd.overide_callback = (void *)sdma_handle_channel_loop;
 	desc->vd.overide_param = sdmac;
 
