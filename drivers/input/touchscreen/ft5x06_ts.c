@@ -312,7 +312,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 		if (ret != ARRAY_SIZE(readpkt)) {
 			dev_err(&ts->client->dev,
 				"i2c_transfer failed(%d)\n", ret);
-			msleep(1000);
+			msleep(100);
 			continue;
 		}
 		p = buf+3;
