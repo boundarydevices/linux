@@ -290,7 +290,6 @@ struct sdma_context_data {
 	u32  scratch7;
 } __attribute__ ((packed));
 
-#define NUM_BD (int)(PAGE_SIZE / sizeof(struct sdma_buffer_descriptor))
 #define SDMA_BD_MAX_CNT	0xfffc /* align with 4 bytes */
 
 struct sdma_engine;
