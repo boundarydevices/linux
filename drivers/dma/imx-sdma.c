@@ -1822,6 +1822,10 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 		spin_lock_irqsave(&sdmac->vc.lock, flags);
 		txstate->residue = sdmac->chn_count - sdmac->chn_real_count;
 		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+		pr_debug("0 residue=%d, "
+			"period_len=%d, chn_count=%d, chn_real_count=%d\n",
+			txstate->residue,
+			sdmac->period_len, sdmac->chn_count, sdmac->chn_real_count);
 		return ret;
 	}
 
@@ -1829,17 +1833,42 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 	vd = vchan_find_desc(&sdmac->vc, cookie);
 	desc = to_sdma_desc(&vd->tx);
 	if (vd) {
-		if ((sdmac->flags & IMX_DMA_SG_LOOP)) {
-			if (sdmac->peripheral_type != IMX_DMATYPE_UART)
+		if (sdmac->flags & IMX_DMA_SG_LOOP) {
+			if (sdmac->peripheral_type != IMX_DMATYPE_UART) {
 				residue = (desc->num_bd - desc->buf_tail) * sdmac->period_len;
-			else
+			} else {
 				residue = desc->des_count - desc->des_real_count;
-		} else
+			}
+			pr_debug("1 residue=%d, num_bd=%d, buf_tail=%d, "
+				"period_len=%d, des_count=%d, des_real_count=%d, "
+				"chn_count=%d, chn_real_count=%d\n",
+				residue, desc->num_bd, desc->buf_tail,
+				sdmac->period_len, desc->des_count, desc->des_real_count,
+				sdmac->chn_count, sdmac->chn_real_count);
+		} else {
 			residue = desc->des_count;
-	} else if (sdmac->desc && sdmac->desc->vd.tx.cookie == cookie)
+			pr_debug("2 residue=%d, num_bd=%d, buf_tail=%d, "
+				"period_len=%d, des_count=%d, des_real_count=%d, "
+				"chn_count=%d, chn_real_count=%d\n",
+				residue, desc->num_bd, desc->buf_tail,
+				sdmac->period_len, desc->des_count, desc->des_real_count,
+				sdmac->chn_count, sdmac->chn_real_count);
+		}
+	} else if (sdmac->desc && sdmac->desc->vd.tx.cookie == cookie) {
 		residue = sdmac->desc->des_count - sdmac->desc->des_real_count;
-	else
+		pr_debug("3 residue=%d, num_bd=%d, buf_tail=%d, "
+			"period_len=%d, des_count=%d, des_real_count=%d,"
+			"chn_count=%d, chn_real_count=%d\n",
+			residue, sdmac->desc->num_bd, sdmac->desc->buf_tail,
+			sdmac->period_len , sdmac->desc->des_count, sdmac->desc->des_real_count,
+			sdmac->chn_count, sdmac->chn_real_count);
+	} else {
 		residue = 0;
+		pr_debug("4 residue=%d, "
+			"period_len=%d, chn_count=%d, chn_real_count=%d\n",
+			residue,
+			sdmac->period_len, sdmac->chn_count, sdmac->chn_real_count);
+	}
 
 	txstate->residue = residue;
 	ret = sdmac->status;
