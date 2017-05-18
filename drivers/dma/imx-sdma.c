@@ -301,6 +301,7 @@ struct sdma_desc {
 	unsigned int			des_count;
 	unsigned int			des_real_count;
 	unsigned int			num_bd;
+	u32				alloc_size;
 	dma_addr_t			bd_phys;
 	bool				bd_iram;
 	unsigned int                    buf_tail;
@@ -1176,20 +1177,31 @@ static int sdma_set_channel_priority(struct sdma_channel *sdmac,
 	return 0;
 }
 
+static void sdma_free_bd(struct sdma_desc *desc);
+
 static int sdma_alloc_bd(struct sdma_desc *desc)
 {
+	struct sdma_buffer_descriptor *bd = desc->bd;
 	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
 	int ret = -ENOMEM;
 	unsigned long flags;
 
-	desc->bd_iram = true;
-	desc->bd = gen_pool_dma_alloc(desc->sdmac->sdma->iram_pool, bd_size,
-				      &desc->bd_phys);
-	if (!desc->bd) {
-		desc->bd_iram = false;
-		desc->bd = dma_alloc_coherent(NULL, bd_size, &desc->bd_phys, GFP_ATOMIC);
-		if (!desc->bd)
-			return ret;
+	if (bd && (bd_size > desc->alloc_size)) {
+		sdma_free_bd(desc);
+		bd = NULL;
+	}
+
+	if (!bd) {
+		desc->alloc_size = bd_size;
+		desc->bd_iram = true;
+		desc->bd = gen_pool_dma_alloc(desc->sdmac->sdma->iram_pool,
+				bd_size, &desc->bd_phys);
+		if (!desc->bd) {
+			desc->bd_iram = false;
+			desc->bd = dma_alloc_coherent(NULL, bd_size, &desc->bd_phys, GFP_ATOMIC);
+			if (!desc->bd)
+				return ret;
+		}
 	}
 	spin_lock_irqsave(&desc->sdmac->vc.lock, flags);
 	desc->sdmac->bd_size_sum += bd_size;
@@ -1202,16 +1214,17 @@ static int sdma_alloc_bd(struct sdma_desc *desc)
 
 static void sdma_free_bd(struct sdma_desc *desc)
 {
-	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
+	u32 bd_size = desc->alloc_size;
+	struct sdma_buffer_descriptor *bd = desc->bd;
 	unsigned long flags;
 
-	if (desc->bd) {
+	if (bd) {
+		desc->bd = NULL;
 		if (desc->bd_iram)
 			gen_pool_free(desc->sdmac->sdma->iram_pool,
-				     (unsigned long)desc->bd, bd_size);
+				     (unsigned long)bd, bd_size);
 		else
-			dma_free_coherent(NULL, bd_size, desc->bd,
-					  desc->bd_phys);
+			dma_free_coherent(NULL, bd_size, bd, desc->bd_phys);
 		spin_lock_irqsave(&desc->sdmac->vc.lock, flags);
 		desc->sdmac->bd_size_sum -= bd_size;
 		spin_unlock_irqrestore(&desc->sdmac->vc.lock, flags);
