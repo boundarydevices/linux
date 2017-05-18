@@ -1270,6 +1270,20 @@ static struct sdma_desc *to_sdma_desc(struct dma_async_tx_descriptor *t)
 	return container_of(t, struct sdma_desc, vd.tx);
 }
 
+static void sdma_free_channel0(struct sdma_engine *sdma)
+{
+	struct sdma_buffer_descriptor *bd = sdma->bd0;
+
+	if (bd) {
+		sdma->bd0 = NULL;
+		if (sdma->bd0_iram)
+			gen_pool_free(sdma->iram_pool,
+					(unsigned long)bd, PAGE_SIZE);
+		else
+			dma_free_coherent(NULL, PAGE_SIZE, bd, sdma->bd0_phys);
+	}
+}
+
 static void sdma_desc_free(struct virt_dma_desc *vd)
 {
 	struct sdma_desc *desc = container_of(vd, struct sdma_desc, vd);
@@ -2354,6 +2368,7 @@ static int sdma_remove(struct platform_device *pdev)
 		sdma_free_chan_resources(&sdmac->vc.chan);
 	}
 
+	sdma_free_channel0(sdma);
 	platform_set_drvdata(pdev, NULL);
 	return 0;
 }
