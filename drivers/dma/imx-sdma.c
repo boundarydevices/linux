@@ -777,17 +777,25 @@ static void sdma_handle_channel_loop(struct sdma_channel *sdmac)
 		sdmac->chn_real_count = bd->mode.count;
 		bd->mode.status |= BD_DONE;
 		bd->mode.count = sdmac->period_len;
-		desc->buf_tail++;
-		desc->buf_tail %= desc->num_bd;
+
 		if (sdmac->peripheral_type == IMX_DMATYPE_UART) {
 			/* restore mode.count after counter readed */
 			desc->des_real_count = bd->mode.count;
 			bd->mode.count = desc->des_count;
 		}
-
+		/*
+		 * The callback is called from the interrupt context in order
+		 * to reduce latency and to avoid the risk of altering the
+		 * SDMA transaction status by the time the client tasklet is
+		 * executed.
+		 */
 		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 		desc->vd.tx.callback(desc->vd.tx.callback_param);
 		spin_lock_irqsave(&sdmac->vc.lock, flags);
+
+		desc->buf_tail++;
+		desc->buf_tail %= desc->num_bd;
+
 		if (error)
 			sdmac->status = old_status;
 	}
