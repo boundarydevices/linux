@@ -1739,7 +1739,7 @@ static struct dma_async_tx_descriptor *sdma_prep_dma_cyclic(
 	}
 
 	if (sdmac->peripheral_type == IMX_DMATYPE_UART)
-		desc->des_count = period_len;
+		sdmac->chn_count = desc->des_count = period_len;
 
 	while (buf < buf_len) {
 		struct sdma_buffer_descriptor *bd = &desc->bd[i];
