@@ -1810,7 +1810,6 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 	u32 residue;
 	struct virt_dma_desc *vd;
-	struct sdma_desc *desc;
 	enum dma_status ret;
 	unsigned long flags;
 
@@ -1830,8 +1829,9 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 
 	spin_lock_irqsave(&sdmac->vc.lock, flags);
 	vd = vchan_find_desc(&sdmac->vc, cookie);
-	desc = to_sdma_desc(&vd->tx);
 	if (vd) {
+		struct sdma_desc *desc = to_sdma_desc(&vd->tx);
+
 		if (sdmac->flags & IMX_DMA_SG_LOOP) {
 			if (sdmac->peripheral_type != IMX_DMATYPE_UART) {
 				residue = (desc->num_bd - desc->buf_tail) * sdmac->period_len;
