@@ -1526,7 +1526,7 @@ static struct dma_async_tx_descriptor *sdma_prep_memcpy(
 	dev_dbg(sdma->dev, "memcpy: %pad->%pad, len=%zu, channel=%d.\n",
 		&dma_src, &dma_dst, len, channel);
 
-	desc = sdma_transfer_init(sdmac, DMA_MEM_TO_MEM, len / SDMA_BD_MAX_CNT + 1);
+	desc = sdma_transfer_init(sdmac, DMA_MEM_TO_MEM, (len - 1) / SDMA_BD_MAX_CNT + 1);
 	if (!desc)
 		goto err_out;
 
