@@ -203,10 +203,6 @@ struct imx_uart_data {
 	enum imx_uart_type devtype;
 };
 
-struct imx_dma_bufinfo {
-	unsigned int rx_bytes;
-};
-
 struct imx_dma_rxbuf {
 	unsigned int		periods;
 	unsigned int		period_len;
@@ -214,10 +210,7 @@ struct imx_dma_rxbuf {
 
 	void			*buf;
 	dma_addr_t		dmaaddr;
-	unsigned int		cur_idx;
-	unsigned int		pending_idx;
 	dma_cookie_t		cookie;
-	struct imx_dma_bufinfo	buf_info[IMX_RXBD_NUM];
 };
 
 struct imx_port {
@@ -825,6 +818,7 @@ out:
 	return IRQ_HANDLED;
 }
 
+static void clear_rx_errors(struct imx_port *sport);
 /*
  * We have a modem side uart, so the meanings of RTS and CTS are inverted.
  */
@@ -1026,31 +1020,6 @@ static void imx_timeout(unsigned long data)
 
 #define RX_BUF_SIZE	(PAGE_SIZE)
 
-static void dma_rx_work(struct imx_port *sport)
-{
-	unsigned int i = sport->rx_buf.pending_idx;
-	unsigned int end = sport->rx_buf.cur_idx;
-	struct tty_port *port = &sport->port.state->port;
-
-	while (i != end) {
-		int count = sport->rx_buf.buf_info[i].rx_bytes;
-		if (count) {
-			if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ)) {
-				int bytes = tty_insert_flip_string(port,
-					sport->rx_buf.buf + (i * RX_BUF_SIZE),
-					count);
-
-				if (bytes != count)
-					sport->port.icount.buf_overrun++;
-			}
-			tty_flip_buffer_push(port);
-			sport->port.icount.rx += count;
-		}
-		i = (i + 1) % IMX_RXBD_NUM;
-		sport->rx_buf.pending_idx = i;
-	}
-}
-
 static void imx_rx_dma_done(struct imx_port *sport)
 {
 	sport->dma_is_rxing = 0;
@@ -1072,11 +1041,13 @@ static void dma_rx_callback(void *data)
 {
 	struct imx_port *sport = data;
 	struct dma_chan	*chan = sport->dma_chan_rx;
-	struct tty_struct *tty = sport->port.state->port.tty;
+	struct tty_port *port = &sport->port.state->port;
+	struct tty_struct *tty = port->tty;
 	struct dma_tx_state state;
 	enum dma_status status;
 	unsigned int count;
-	unsigned int i;
+	unsigned head, tail;
+	unsigned int bd_size;
 
 	/* If we have finish the reading. we will not accept any more data. */
 	if (tty->closing) {
@@ -1085,18 +1056,47 @@ static void dma_rx_callback(void *data)
 	}
 
 	status = dmaengine_tx_status(chan, sport->rx_buf.cookie, &state);
-	count = RX_BUF_SIZE - state.residue;
 
-	i = sport->rx_buf.cur_idx;
-	sport->rx_buf.buf_info[i++].rx_bytes = count;
-	i %= IMX_RXBD_NUM;
-	sport->rx_buf.cur_idx = i;
-	dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
+	if (status == DMA_ERROR) {
+		dev_err(sport->port.dev, "DMA transaction error.\n");
+		clear_rx_errors(sport);
+		return;
+	}
 
-	if (i == sport->rx_buf.pending_idx)
-		dev_err(sport->port.dev, "overwrite!\n");
+	if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ)) {
 
-	dma_rx_work(sport);
+		/*
+		 * The state-residue variable represents the empty space
+		 * relative to the entire buffer. Taking this in consideration
+		 * the head is always calculated base on the buffer total
+		 * length - DMA transaction residue. The UART script from the
+		 * SDMA firmware will jump to the next buffer descriptor,
+		 * once a DMA transaction if finalized (IMX53 RM - A.4.1.2.4).
+		 * Taking this in consideration the tail is always at the
+		 * beginning of the buffer descriptor that contains the head.
+		 */
+
+		bd_size = sport->rx_buf.period_len;
+		/* Calculate the head */
+		head = (sport->rx_buf.periods * bd_size) - state.residue;
+
+		/* Calculate the tail. */
+		tail = ((head - 1) / bd_size) * bd_size;
+
+		count = head - tail;
+
+		dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
+
+		if (count) {
+			int bytes = tty_insert_flip_string(port,
+					sport->rx_buf.buf + tail, count);
+
+			if (bytes != count)
+				sport->port.icount.buf_overrun++;
+			tty_flip_buffer_push(port);
+			sport->port.icount.rx += count;
+		}
+	}
 }
 
 static int start_rx_dma(struct imx_port *sport)
@@ -1107,8 +1107,6 @@ static int start_rx_dma(struct imx_port *sport)
 	sport->rx_buf.periods = IMX_RXBD_NUM;
 	sport->rx_buf.period_len = RX_BUF_SIZE;
 	sport->rx_buf.buf_len = IMX_RXBD_NUM * RX_BUF_SIZE;
-	sport->rx_buf.cur_idx = 0;
-	sport->rx_buf.pending_idx = 0;
 	desc = dmaengine_prep_dma_cyclic(chan, sport->rx_buf.dmaaddr,
 		sport->rx_buf.buf_len, sport->rx_buf.period_len,
 		DMA_DEV_TO_MEM, DMA_PREP_INTERRUPT);
@@ -1126,6 +1124,31 @@ static int start_rx_dma(struct imx_port *sport)
 
 	sport->dma_is_rxing = 1;
 	return 0;
+}
+
+static void clear_rx_errors(struct imx_port *sport)
+{
+	unsigned int status_usr1, status_usr2;
+
+	status_usr1 = readl(sport->port.membase + USR1);
+	status_usr2 = readl(sport->port.membase + USR2);
+
+	if (status_usr2 & USR2_BRCD) {
+		sport->port.icount.brk++;
+		writel(USR2_BRCD, sport->port.membase + USR2);
+	} else if (status_usr1 & USR1_FRAMERR) {
+		sport->port.icount.frame++;
+		writel(USR1_FRAMERR, sport->port.membase + USR1);
+	} else if (status_usr1 & USR1_PARITYERR) {
+		sport->port.icount.parity++;
+		writel(USR1_PARITYERR, sport->port.membase + USR1);
+	}
+
+	if (status_usr2 & USR2_ORE) {
+		sport->port.icount.overrun++;
+		writel(USR2_ORE, sport->port.membase + USR2);
+	}
+
 }
 
 #define TXTL_DEFAULT 2 /* reset default */
@@ -1170,7 +1193,7 @@ static int imx_uart_dma_init(struct imx_port *sport)
 {
 	struct dma_slave_config slave_config = {};
 	struct device *dev = sport->port.dev;
-	int ret, i;
+	int ret;
 
 	/* Prepare for RX : */
 	sport->dma_chan_rx = dma_request_slave_channel(dev, "rx");
@@ -1197,10 +1220,6 @@ static int imx_uart_dma_init(struct imx_port *sport)
 		dev_err(dev, "cannot alloc DMA buffer.\n");
 		ret = -ENOMEM;
 		goto err;
-	}
-
-	for (i = 0; i < IMX_RXBD_NUM; i++) {
-		sport->rx_buf.buf_info[i].rx_bytes = 0;
 	}
 
 	/* Prepare for TX : */

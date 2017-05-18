@@ -1854,12 +1854,8 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 		struct sdma_desc *desc = to_sdma_desc(&vd->tx);
 
 		if (sdmac->flags & IMX_DMA_SG_LOOP) {
-			if (sdmac->peripheral_type != IMX_DMATYPE_UART) {
-				residue = (desc->num_bd - desc->buf_tail) *
-					sdmac->period_len - sdmac->chn_real_count;
-			} else {
-				residue = desc->des_count - sdmac->chn_real_count;
-			}
+			residue = (desc->num_bd - desc->buf_tail) * sdmac->period_len
+					- sdmac->chn_real_count;
 			pr_debug("1 residue=%d, num_bd=%d, buf_tail=%d, "
 				"period_len=%d, des_count=%d, des_real_count=%d, "
 				"chn_count=%d, chn_real_count=%d\n",
