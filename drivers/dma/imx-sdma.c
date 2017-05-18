@@ -820,23 +820,29 @@ static irqreturn_t sdma_int_handler(int irq, void *dev_id)
 	while (stat) {
 		int channel = fls(stat) - 1;
 		struct sdma_channel *sdmac = &sdma->channel[channel];
-		struct sdma_desc *desc;
 
-		spin_lock(&sdmac->vc.lock);
-		desc = sdmac->desc;
-		if (desc) {
-			if (sdmac->flags & IMX_DMA_SG_LOOP) {
-				vchan_cyclic_callback(&desc->vd);
-			} else {
-				mxc_sdma_handle_channel_normal(sdmac);
-				vchan_cookie_complete(&desc->vd);
-				if (!list_empty(&sdmac->pending))
-					list_del(&desc->node);
-				sdma_start_desc(sdmac);
+		if ((sdmac->flags & IMX_DMA_SG_LOOP) &&
+			(sdmac->peripheral_type != IMX_DMATYPE_HDMI))
+			sdma_handle_channel_loop(sdmac);
+		else {
+			struct sdma_desc *desc;
+
+			spin_lock(&sdmac->vc.lock);
+			desc = sdmac->desc;
+			if (desc) {
+				if (sdmac->flags & IMX_DMA_SG_LOOP) {
+					vchan_cyclic_callback(&desc->vd);
+				} else {
+					mxc_sdma_handle_channel_normal(sdmac);
+					vchan_cookie_complete(&desc->vd);
+					if (!list_empty(&sdmac->pending))
+						list_del(&desc->node);
+					sdma_start_desc(sdmac);
+				}
 			}
+			spin_unlock(&sdmac->vc.lock);
 		}
 		__clear_bit(channel, &stat);
-		spin_unlock(&sdmac->vc.lock);
 	}
 
 	return IRQ_HANDLED;
