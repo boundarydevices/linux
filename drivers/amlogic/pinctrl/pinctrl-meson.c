@@ -348,12 +348,41 @@ static int meson_pmx_v2_set_mux(struct pinctrl_dev *pcdev,
 
 	return ret;
 }
+static int meson_pmx_v2_request_gpio(struct pinctrl_dev *pcdev,
+				  struct pinctrl_gpio_range *range,
+				  unsigned int offset)
+{
+
+	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
+	const struct meson_desc_pin *pin;
+	struct meson_domain *domain;
+	int i;
+
+	for (i = 0; i < pc->data->num_pins; i++) {
+		pin = pc->data->meson_pins + i;
+		if (pin->pin.number == offset) {
+			dev_dbg(pc->dev,
+				"pin->name = %s; pin->number = %d; "
+				"pin->reg = 0x%x; pin->bit = %d\n",
+				pin->pin.name, pin->pin.number,
+				pin->reg, pin->bit);
+			domain = pc->domain;
+			regmap_update_bits(domain->reg_mux, pin->reg * 4,
+				MESON_MUX_V2_MASK(pin->bit),
+				MESON_MUX_V2_VAL(0, pin->bit));
+			break;
+		}
+	}
+
+	return 0;
+}
 
 static const struct pinmux_ops meson_pmx_v2_ops = {
 	.set_mux = meson_pmx_v2_set_mux,
 	.get_functions_count = meson_pmx_get_funcs_count,
 	.get_function_name = meson_pmx_get_func_name,
 	.get_function_groups = meson_pmx_get_groups,
+	.gpio_request_enable = meson_pmx_v2_request_gpio,
 };
 
 static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,

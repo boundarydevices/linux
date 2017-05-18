@@ -470,8 +470,12 @@ static int reset_tas5707_GPIO(struct snd_soc_codec *codec)
 {
 	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
 	struct tas57xx_platform_data *pdata = tas5707->pdata;
+	int ret = 0;
 
-	int ret = devm_gpio_request_one(codec->dev, pdata->reset_pin,
+	if (pdata->reset_pin < 0)
+		return 0;
+
+	ret = devm_gpio_request_one(codec->dev, pdata->reset_pin,
 					    GPIOF_OUT_INIT_LOW,
 					    "tas5707-reset-pin");
 	if (ret < 0)
@@ -645,17 +649,17 @@ static int tas5707_parse_dt(
 	struct device_node *np)
 {
 	int ret = 0;
-	int reset_pin = 0;
+	int reset_pin = -1;
 
 	reset_pin = of_get_named_gpio(np, "reset_pin", 0);
 	if (reset_pin < 0) {
 		pr_err("%s fail to get reset pin from dts!\n", __func__);
 		ret = -1;
 	} else {
-		tas5707->pdata->reset_pin = reset_pin;
 		pr_info("%s pdata->reset_pin = %d!\n", __func__,
 				tas5707->pdata->reset_pin);
 	}
+	tas5707->pdata->reset_pin = reset_pin;
 
 	return ret;
 }

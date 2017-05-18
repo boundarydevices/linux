@@ -412,7 +412,6 @@
 
 }; /* end of / */
 
-
 &spicc_a{
 	status = "okay";
 	num_chipselect = <1>;
