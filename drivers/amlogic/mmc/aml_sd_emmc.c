@@ -1240,6 +1240,8 @@ int aml_emmc_clktree_init(struct amlsd_host *host)
 		ret = PTR_ERR(host->core_clk);
 		return ret;
 	}
+	pr_info("core->rate: %lu\n", clk_get_rate(host->core_clk));
+	pr_info("core->name: %s\n", __clk_get_name(host->core_clk));
 	ret = clk_prepare_enable(host->core_clk);
 	if (ret)
 		return ret;
@@ -1257,6 +1259,8 @@ int aml_emmc_clktree_init(struct amlsd_host *host)
 		}
 		host->mux_parent_rate[i] = clk_get_rate(host->mux_parent[i]);
 		mux_parent_names[i] = __clk_get_name(host->mux_parent[i]);
+		pr_info("rate: %lu, name: %s\n",
+			host->mux_parent_rate[i], mux_parent_names[i]);
 		mux_parent_count++;
 		if (host->mux_parent_rate[i] < f_min)
 			f_min = host->mux_parent_rate[i];
@@ -1272,6 +1276,7 @@ int aml_emmc_clktree_init(struct amlsd_host *host)
 
 	/* create the mux */
 	snprintf(clk_name, sizeof(clk_name), "%s#mux", dev_name(host->dev));
+	pr_info("clk_name: %s\n", clk_name);
 	init.name = clk_name;
 	init.ops = &clk_mux_ops;
 	init.flags = 0;
@@ -1306,7 +1311,8 @@ int aml_emmc_clktree_init(struct amlsd_host *host)
 		return PTR_ERR(host->cfg_div_clk);
 
 	ret = clk_prepare_enable(host->cfg_div_clk);
-
+	pr_info("[%s] clock: 0x%x\n",
+		__func__, readl(host->base + SD_EMMC_CLOCK_V3));
 	return ret;
 }
 
@@ -1324,6 +1330,7 @@ static int meson_mmc_clk_init(struct amlsd_host *host)
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	struct amlsd_platform *pdata = host->pdata;
 
+	writel(0, host->base + SD_EMMC_CLOCK);
 	ret = aml_emmc_clktree_init(host);
 	if (ret)
 		return ret;
@@ -1662,7 +1669,7 @@ err_exit:
  *a linear buffer and an SG list  for amlogic,
  * We don't disable irq in this function
  **/
-static int aml_sd_emmc_post_dma(struct amlsd_host *host,
+int aml_sd_emmc_post_dma(struct amlsd_host *host,
 		struct mmc_request *mrq)
 {
 	struct mmc_data *data = NULL;
@@ -1718,7 +1725,7 @@ static void aml_sd_emmc_check_sdio_irq(struct amlsd_host *host)
 		}
 	}
 }
-static int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
+int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct amlsd_host *host = mmc_priv(mmc);
 	struct amlsd_platform *pdata = host->pdata;
@@ -2023,7 +2030,7 @@ static void meson_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
 }
 
-static int meson_mmc_read_resp(struct mmc_host *mmc, struct mmc_command *cmd)
+int meson_mmc_read_resp(struct mmc_host *mmc, struct mmc_command *cmd)
 {
 	struct amlsd_host *host = mmc_priv(mmc);
 	struct sd_emmc_desc_info *desc_info =
@@ -2694,6 +2701,7 @@ static const struct mmc_host_ops meson_mmc_ops_v3 = {
 	.card_busy = aml_sd_emmc_card_busy,
 	.execute_tuning = aml_mmc_execute_tuning_v3,
 	.hw_reset = aml_emmc_hw_reset,
+	.post_hs400_timming = aml_post_hs400_timming,
 };
 
 static void aml_reg_print(struct amlsd_host *host)
@@ -2746,8 +2754,12 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto free_host;
 	}
-
-	ret = devm_request_threaded_irq(&pdev->dev, host->irq,
+	if (host->ctrl_ver >= 3)
+		ret = devm_request_threaded_irq(&pdev->dev, host->irq,
+			meson_mmc_irq, meson_mmc_irq_thread_v3,
+			IRQF_SHARED, "meson-aml-mmc", host);
+	else
+		ret = devm_request_threaded_irq(&pdev->dev, host->irq,
 			meson_mmc_irq, meson_mmc_irq_thread,
 			IRQF_SHARED, "meson-aml-mmc", host);
 	if (ret)

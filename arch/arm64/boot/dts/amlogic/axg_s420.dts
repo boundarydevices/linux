@@ -388,8 +388,9 @@
 		pinctrl-1 = <&emmc_conf_pull_up &emmc_conf_pull_done>;
 		clocks = <&clkc CLKID_SD_EMMC_C>,
 			   <&clkc CLKID_SD_EMMC_C_P0_COMP>,
-			   <&clkc CLKID_FCLK_DIV2>;
-		clock-names = "core", "clkin0", "clkin1";
+			   <&clkc CLKID_FCLK_DIV2>,
+			   <&clkc CLKID_FCLK_DIV5>;
+		clock-names = "core", "clkin0", "clkin1", "clkin2";
 
 		bus-width = <8>;
 		cap-sd-highspeed;

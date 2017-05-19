@@ -39,7 +39,7 @@
 #ifdef AML_CALIBRATION
 #define MAX_CALI_RETRY	3
 #define MAX_DELAY_CNT	16
-#define CALI_BLK_CNT	10
+#define CALI_BLK_CNT	80
 #endif
 
 #define SD_EMMC_CLOCK 0x0
@@ -58,7 +58,7 @@
 #define SD_EMMC_CLOCK_V3 0x0
 #define SD_EMMC_DELAY1_V3 0x4
 #define SD_EMMC_DELAY2_V3 0x8
-#define SD_EMMC_ADJUST_V3 0X10
+#define SD_EMMC_ADJUST_V3 0xc
 #define SD_EMMC_ADJ_IDX_LOG 0x20
 #define SD_EMMC_CLKTEST_LOG	0x24
 #define SD_EMMC_CLKTEST_OUT	0x28
@@ -224,6 +224,13 @@ struct amlsd_platform {
 	unsigned char caling;
 	unsigned char calout[20][20];
 #endif
+	u64 align[10];
+	int base_line;
+	unsigned int count;
+	unsigned int delay_cell;
+	unsigned int ds_core;
+	/* int order; */
+	unsigned int rx_err;
 	/* 0:unknown, 1:mmc card(include eMMC), 2:sd card(include tSD),
 	 * 3:sdio device(ie:sdio-wifi), 4:SD combo (IO+mem) card,
 	 * 5:NON sdio device(means sd/mmc card), other:reserved
@@ -327,6 +334,7 @@ struct amlsd_host {
 	dma_addr_t		dma_gping; /* 0x400 */
 	dma_addr_t		dma_gpong; /* 0x800 */
 	char is_tunning;
+	char is_timming;
 	char tuning_mode;
 	unsigned int irq;
 	unsigned int irq_in;

@@ -155,6 +155,7 @@ struct mmc_host_ops {
 					 int card_drv, int *drv_type);
 	void	(*hw_reset)(struct mmc_host *host);
 	void	(*card_event)(struct mmc_host *host);
+	int (*post_hs400_timming)(struct mmc_host *host);
 
 	/*
 	 * Optional callback to support controllers with HW issues for multiple

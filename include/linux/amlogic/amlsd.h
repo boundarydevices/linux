@@ -109,6 +109,11 @@ extern const u8 tuning_blk_pattern_8bit[128];
 #define sd_emmc_err(fmt, args...) \
 	pr_warn("[%s] " fmt, __func__, ##args)
 
+#define emmc_dbg(emmc_timming_dbg, fmt, args...) do {\
+	if (emmc_timming_dbg)	\
+		pr_warn("[%s]" fmt, __func__, ##args);	\
+} while (0)
+
 #define SD_PARSE_U32_PROP_HEX(node, prop_name, prop, value) do { \
 	if (!of_property_read_u32(node, prop_name, &prop)) {\
 		value = prop;\

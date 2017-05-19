@@ -27,6 +27,7 @@
 #include "sd_ops.h"
 
 #define DEFAULT_CMD6_TIMEOUT_MS	500
+#define AMLOGIC_HS400_TIMING 1
 
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
@@ -1500,7 +1501,23 @@ static int mmc_hs200_tuning(struct mmc_card *card)
 
 	return mmc_execute_tuning(card);
 }
+#ifdef AMLOGIC_HS400_TIMING
+static int mmc_hs400_timming(struct mmc_card *card)
+{
+	struct mmc_host *host = card->host;
+	int err = 0;
 
+	if ((card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS400)
+			&&  (host->ops->post_hs400_timming)) {
+		err = host->ops->post_hs400_timming(host);
+		if (err)
+			pr_warn("%s: refix HS400 timming failed\n",
+				mmc_hostname(host));
+	}
+
+	return err;
+}
+#endif
 /*
  * Handle the detection and initialisation of a card.
  *
@@ -1742,6 +1759,11 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_select_hs400(card);
 		if (err)
 			goto free_card;
+#ifdef AMLOGIC_HS400_TIMING
+		err = mmc_hs400_timming(card);
+		if (err)
+			goto err;
+#endif
 	} else {
 		/* Select the desired bus width optionally */
 		err = mmc_select_bus_width(card);
