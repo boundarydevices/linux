@@ -109,11 +109,6 @@ static void ftp628_motor_next_phase(struct ftp628_data *pdata)
 		ARRAY_SIZE(mt_phases);
 }
 
-static void ftp628_motor_next_line(struct ftp628_data *pdata)
-{
-	ftp628_motor_next_phase(pdata);
-}
-
 static void ftp628_toggle_gpio(struct gpio_desc *gpio, int state, int delay_us)
 {
 	udelay(1);
@@ -148,7 +143,11 @@ static ssize_t ftp628_write(struct file *file, const char __user *data,
 	/* Handle carriage return command */
 	if (size == 1) {
 		if (buffer[0] == '\r') {
-			ftp628_motor_next_line(pdata);
+			if (gpiod_get_value(pdata->mt_fault_gpio))
+				return -EFAULT;
+			if (gpiod_get_value(pdata->paper_out_gpio))
+				return -ENOSPC;
+			ftp628_motor_next_phase(pdata);
 		} else if (buffer[0] == 'B') {
 			ftp628_suspend_motors(pdata, 0);
 		} else {
