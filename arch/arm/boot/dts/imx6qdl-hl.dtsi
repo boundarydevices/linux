@@ -301,28 +301,6 @@
 		>;
 	};
 
-	pinctrl_usdhc2_100mhz: usdhc2grp-100mhz {
-		fsl,pins = <
-			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170B9
-			MX6QDL_PAD_SD2_CLK__SD2_CLK		0x100B9
-			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170B9
-			MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170B9
-			MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170B9
-			MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170B9
-		>;
-	};
-
-	pinctrl_usdhc2_200mhz: usdhc2grp-200mhz {
-		fsl,pins = <
-			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170F9
-			MX6QDL_PAD_SD2_CLK__SD2_CLK 		0x100F9
-			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170F9
-			MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170F9
-			MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170F9
-			MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170F9
-		>;
-	};
-
 	/* USDHC3 - micro sd */
 	pinctrl_usdhc3_50mhz: usdhc3_50mhzgrp {
 		fsl,pins = <
@@ -336,7 +314,6 @@
 			MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x1b0b0
 		>;
 	};
-
 };
 
 / {
@@ -379,13 +356,18 @@
 		pwms = <&pwm4 0 5000000>;
 	};
 
-	bt_rfkill {
-		compatible = "net,rfkill-gpio";
+	btwilink {
+		compatible = "btwilink";
+	};
+
+	kim {
+		compatible = "kim";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
-		type = <2>;	/* bluetooth */
-		reset-gpios = GP_BT_RFKILL_RESET;
+		nshutdown_gpio = GP_BT_RFKILL_RESET;
+		dev_name = "/dev/ttymxc2";
+		flow_cntrl = <1>;
+		baud_rate = <3000000>;
 	};
 
 	fb_lvds: fb@0 {
@@ -517,6 +499,20 @@
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
+
+	wlan {
+		compatible = "ti,wilink6";
+		interrupt-parent = <&gpio6>;
+		interrupts = <14 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&refclock>;
+		clock-names = "refclock";
+
+		refclock: refclock {
+			compatible = "ti,wilink-clock";
+			#clock-cells = <0>;
+			clock-frequency = <38400000>;
+		};
+	};
 };
 
 &ecspi1 {
@@ -549,25 +545,22 @@
 };
 
 &fec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_enet>;
 	interrupts-extended = GPIRQ_ENET,
 			      <&gpc 0 119 IRQ_TYPE_LEVEL_HIGH>;
-	phy-handle = <&ethphy>;
 	phy-mode = "rgmii";
 #if 0
 	phy-reset-gpios = GP_ENET_PHY_RESET;
 #endif
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_enet>;
 	status = "okay";
 
-	mdio {
-		#address-cells = <0>;
-		#size-cells = <1>;
-
-		ethphy: ethernet-phy@6 {
-			reg = <6>;
-			interrupts-extended = GPIRQ_ENET_PHY;
-		};
+	#address-cells = <0>;
+	#size-cells = <1>;
+	phy_int {
+		reg = <0x6>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <28 IRQ_TYPE_LEVEL_LOW>;
 	};
 };
 
@@ -589,7 +582,7 @@
 		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ov5640_mipi>;
-		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		clocks = <&clks 200>;
 		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
@@ -609,23 +602,9 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	egalax_ts@04 {
-		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
-		interrupts-extended = GPIRQ_I2C3_J7;
-		wakeup-gpios = GP_I2C3_J7;
-	};
-
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
-		interrupts-extended = GPIRQ_I2C3_J7;
-		wakeup-gpios = GP_I2C3_J7;
-	};
-
-	ili210x@41 {
-		compatible = "ili210x";
-		reg = <0x41>;
 		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
@@ -739,10 +718,8 @@
 };
 
 &usdhc2 {	/* uSDHC2, TiWi wl1271 */
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2_50mhz>;
-	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	pinctrl-names = "default";
 	bus-width = <4>;
 	non-removable;
@@ -751,15 +728,6 @@
 	cap-power-off-card;
 	keep-power-in-suspend;
 	status = "okay";
-
-	#address-cells = <1>;
-	#size-cells = <0>;
-	wlcore: wlcore@2 {
-		compatible = "ti,wl1271";
-		interrupts-extended = GPIRQ_WL1271;
-		reg = <2>;
-		ref-clock-frequency = <38400000>;
-	};
 };
 
 &usdhc3 {
