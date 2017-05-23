@@ -112,7 +112,7 @@
 			gpio_dat3 = <&gpio CARD_4 GPIO_ACTIVE_HIGH>;
 			jtag_pin = <&gpio CARD_0 GPIO_ACTIVE_HIGH>;
 			gpio_cd = <&gpio CARD_6 GPIO_ACTIVE_HIGH>;
-			gpio_ro = <&gpio GPIODV_25 GPIO_ACTIVE_HIGH>;
+			/*gpio_ro = <&gpio GPIODV_25 GPIO_ACTIVE_HIGH>;*/
 			card_type = <5>;
 			/* 0:unknown,
 			 * 1:mmc card(include eMMC),
@@ -558,5 +558,96 @@
 };
 &i2c_ao {
 	status = "ok";
+};
+&pinctrl_cbus {
+	sdhc_emmc_clk_cmd_pins:sdhc_emmc_clk_cmd_pins {
+		mux {
+			groups = "sdxc_clk_c",
+				"sdxc_cmd_c";
+			function = "sdxc_c";
+			input-enable;
+			bias-pull-up;
+		};
+		mux1 {
+			groups = "GPIOX_0",
+				"GPIOX_1",
+				"GPIOX_2",
+				"GPIOX_3",
+				"GPIOX_8",
+				"GPIOX_9";
+			function = "gpio";
+		};
+	};
+
+	sdhc_emmc_all_pins:sdhc_emmc_all_pins {
+		mux {
+			groups = "sdxc_d0_c",
+				"sdxc_d13_c",
+				"sdxc_d47_c",
+				"sdxc_clk_c",
+				"sdxc_cmd_c";
+			function = "sdxc_c";
+			input-enable;
+			bias-pull-up;
+		};
+		mux1 {
+			groups = "GPIOX_0",
+				"GPIOX_1",
+				"GPIOX_2",
+				"GPIOX_3",
+				"GPIOX_8",
+				"GPIOX_9";
+			function = "gpio";
+		};
+	};
+
+	sdhc_sdio_clk_cmd_pins:sdhc_sdio_clk_cmd_pins {
+		mux {
+			groups = "sdxc_clk_a",
+				"sdxc_cmd_a";
+			function = "sdxc_a";
+			input-enable;
+			bias-pull-up;
+		};
+		mux1 {
+			groups = "BOOT_0",
+				"BOOT_1",
+				"BOOT_2",
+				"BOOT_3",
+				"BOOT_4",
+				"BOOT_5",
+				"BOOT_6",
+				"BOOT_7",
+				"BOOT_8",
+				"BOOT_10";
+			function = "gpio";
+		};
+
+	};
+
+	sdhc_sdio_all_pins:sdhc_sdio_all_pins {
+		mux {
+			groups = "sdxc_d0_1_a",
+				"sdxc_d13_1_a",
+				"sdxc_clk_a",
+				"sdxc_cmd_a";
+			function = "sdxc_a";
+			input-enable;
+			bias-pull-up;
+		};
+		mux1 {
+			groups = "BOOT_0",
+				"BOOT_1",
+				"BOOT_2",
+				"BOOT_3",
+				"BOOT_4",
+				"BOOT_5",
+				"BOOT_6",
+				"BOOT_7",
+				"BOOT_8",
+				"BOOT_10";
+			function = "gpio";
+		};
+	};
 };
 

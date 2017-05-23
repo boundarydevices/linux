@@ -160,6 +160,8 @@ extern const u8 tuning_blk_pattern_8bit[128];
 
 #define SD_CAPS(a, b) { .caps = a, .name = b }
 
+#define WAIT_UNTIL_REQ_DONE msecs_to_jiffies(10000)
+
 struct sd_caps {
 	unsigned int caps;
 	const char *name;

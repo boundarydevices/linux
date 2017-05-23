@@ -94,7 +94,7 @@
 			gpio_dat3 = <&gpio CARD_4 GPIO_ACTIVE_HIGH>;
 			jtag_pin = <&gpio CARD_0 GPIO_ACTIVE_HIGH>;
 			gpio_cd = <&gpio CARD_6 GPIO_ACTIVE_HIGH>;
-			gpio_ro = <&gpio GPIODV_25 GPIO_ACTIVE_HIGH>;
+			/*gpio_ro = <&gpio GPIODV_25 GPIO_ACTIVE_HIGH>;*/
 			card_type = <5>;
 			/* 0:unknown,
 			 * 1:mmc card(include eMMC),
@@ -110,7 +110,7 @@
 	sdhc {
 		compatible = "amlogic, aml_sdhc";
 		dev_name = "aml_sdhc.0";
-		status = "disable";
+		status = "okay";
 		interrupts = <0 78 1>;
 		reg = <0xc1108e00 0x3c>;
 		pinctrl-names = "sdhc_sd_clk_cmd_pins",
@@ -128,42 +128,6 @@
 		clocks = <&clkc CLKID_SDHC>,
 			   <&clkc CLKID_FCLK_DIV3>;
 		clock-names = "core", "div3";
-
-		emmc {
-			status = "okay";
-			port = <5>;
-			/* 0:sdio_a,
-			 * 1:sdio_b,
-			 * 2:sdio_c,
-			 * 3:sdhc_a,
-			 * 4:sdhc_b,
-			 * 5:sdhc_c
-			 */
-			pinname = "emmc";
-			ocr_avail = <0x00200080>;
-			/* 3.3:0x200000, 1.8+3.3:0x00200080 */
-			caps = "MMC_CAP_8_BIT_DATA",
-				 "MMC_CAP_MMC_HIGHSPEED",
-				 "MMC_CAP_SD_HIGHSPEED",
-				 "MMC_CAP_NONREMOVABLE",
-				 "MMC_CAP_ERASE",
-				 "MMC_CAP_HW_RESET";
-			caps2 = "MMC_CAP2_HS200_1_8V_SDR";
-			f_min = <300000>;
-			f_max = <100000000>;
-			max_req_size = <0x20000>; /* 128KB */
-			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
-			hw_reset = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
-			card_type = <1>;
-			/* 0:unknown,
-			 * 1:mmc card(include eMMC),
-			 * 2:sd card(include tSD),
-			 * 3:sdio device(ie:sdio-wifi),
-			 * 4:SD combo (IO+mem) card,
-			 * 5:NON sdio device(means sd/mmc card),
-			 * other:reserved
-			 */
-		};
 
 		sdio {
 			status = "okay";
@@ -581,4 +545,3 @@
 &i2c_ao {
 	status = "ok";
 };
-
