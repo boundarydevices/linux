@@ -584,7 +584,9 @@
 	a_uart_pins:a_uart {
 		mux {
 			pins = "GPIOX_8",
-				"GPIOX_9";
+				"GPIOX_9",
+				"GPIOX_10",
+				"GPIOX_11";
 			function = "uart_a";
 		};
 	};

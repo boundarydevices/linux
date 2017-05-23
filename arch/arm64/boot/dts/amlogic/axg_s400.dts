@@ -28,6 +28,7 @@
 
 	aliases {
 		serial0 = &uart_AO;
+		serial1 = &uart_A;
 	};
 
 	memory@00000000 {
@@ -280,7 +281,7 @@
 		compatible = "amlogic, meson-uart";
 		reg = <0x0 0xffd24000 0x0 0x18>;
 		interrupts = <0 26 1>;
-		status = "disable";
+		status = "okay";
 		clocks = <&xtal>;
 		clock-names = "clk_uart";
 		fifosize = < 128 >;
@@ -422,6 +423,13 @@
 				sound-dai = <&dummy_codec>;
 			};
 		};
+	};
+
+	bt-dev{
+		compatible = "amlogic, bt-dev";
+		dev_name = "bt-dev";
+		status = "okay";
+		gpio_reset = <&gpio       GPIOX_21       GPIO_ACTIVE_HIGH>;
 	};
 
 	wifi{
