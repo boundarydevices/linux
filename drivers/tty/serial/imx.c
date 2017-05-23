@@ -496,7 +496,7 @@ static void imx_enable_ms(struct uart_port *port)
 	mctrl_gpio_enable_ms(sport->gpios);
 }
 
-static inline void imx_transmit_buffer(struct imx_port *sport)
+static inline int imx_transmit_buffer(struct imx_port *sport)
 {
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	unsigned long temp;
@@ -510,7 +510,7 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 
 	if (uart_circ_empty(xmit) || uart_tx_stopped(&sport->port)) {
 		imx_stop_tx(&sport->port);
-		return;
+		return 0;
 	}
 	if (sport->dma_is_enabled) {
 		/*
@@ -524,9 +524,7 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 		temp = readl(sport->port.membase + UCR4);
 		temp &= ~UCR4_TCEN;
 		writel(temp, sport->port.membase + UCR4);
-		if (!sport->dma_is_txing)
-			schedule_work(&sport->tsk_dma_tx);
-		return;
+		return 1;
 	}
 
 	while (!uart_circ_empty(xmit) &&
@@ -543,7 +541,10 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 
 	if (uart_circ_empty(xmit))
 		imx_stop_tx(&sport->port);
+	return 0;
 }
+
+static void imx_dma_tx(struct imx_port *sport);
 
 static void dma_tx_callback(void *data)
 {
@@ -586,8 +587,7 @@ static void dma_tx_callback(void *data)
 	if (pending < WAKEUP_CHARS)
 		uart_write_wakeup(&sport->port);
 
-	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&sport->port))
-		schedule_work(&sport->tsk_dma_tx);
+	imx_dma_tx(sport);
 
 	if (waitqueue_active(&sport->dma_wait)) {
 		wake_up(&sport->dma_wait);
@@ -599,6 +599,11 @@ static void dma_tx_callback(void *data)
 static void dma_tx_work(struct work_struct *w)
 {
 	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_tx);
+	imx_dma_tx(sport);
+}
+
+static void imx_dma_tx(struct imx_port *sport)
+{
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	struct scatterlist *sgl = sport->tx_sgl;
 	struct dma_async_tx_descriptor *desc;
@@ -756,10 +761,13 @@ static irqreturn_t imx_txint(int irq, void *dev_id)
 {
 	struct imx_port *sport = dev_id;
 	unsigned long flags;
+	int ret;
 
 	spin_lock_irqsave(&sport->port.lock, flags);
-	imx_transmit_buffer(sport);
+	ret = imx_transmit_buffer(sport);
 	spin_unlock_irqrestore(&sport->port.lock, flags);
+	if (ret && !sport->dma_is_txing)
+		imx_dma_tx(sport);
 	return IRQ_HANDLED;
 }
 
