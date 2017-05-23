@@ -584,7 +584,7 @@ static void imx_uart_enable_ms(struct uart_port *port)
 static void imx_uart_dma_tx(struct imx_port *sport);
 
 /* called with port.lock taken and irqs off */
-static inline void imx_uart_transmit_buffer(struct imx_port *sport)
+static inline int imx_uart_transmit_buffer(struct imx_port *sport)
 {
 	struct circ_buf *xmit = &sport->port.state->xmit;
 
@@ -597,7 +597,7 @@ static inline void imx_uart_transmit_buffer(struct imx_port *sport)
 
 	if (uart_circ_empty(xmit) || uart_tx_stopped(&sport->port)) {
 		imx_uart_stop_tx(&sport->port);
-		return;
+		return 0;
 	}
 	if (sport->dma_is_enabled) {
 		u32 ucr1, ucr4;
@@ -614,7 +614,7 @@ static inline void imx_uart_transmit_buffer(struct imx_port *sport)
 		imx_uart_writel(sport, ucr4, UCR4);
 		if (!sport->dma_is_txing)
 			imx_uart_dma_tx(sport);
-		return;
+		return 1;
 	}
 
 	while (!uart_circ_empty(xmit) &&
@@ -631,6 +631,7 @@ static inline void imx_uart_transmit_buffer(struct imx_port *sport)
 
 	if (uart_circ_empty(xmit))
 		imx_uart_stop_tx(&sport->port);
+	return 0;
 }
 
 static void imx_uart_dma_tx_callback(void *data)
@@ -669,13 +670,7 @@ static void imx_uart_dma_tx_callback(void *data)
 	if (pending < WAKEUP_CHARS)
 		uart_write_wakeup(&sport->port);
 
-	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&sport->port))
-		imx_uart_dma_tx(sport);
-	else if (sport->port.rs485.flags & SER_RS485_ENABLED) {
-		u32 ucr4 = imx_uart_readl(sport, UCR4);
-		ucr4 |= UCR4_TCEN;
-		imx_uart_writel(sport, ucr4, UCR4);
-	}
+	imx_uart_dma_tx(sport);
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
@@ -865,10 +860,13 @@ static irqreturn_t imx_uart_rtsint(int irq, void *dev_id)
 static irqreturn_t imx_uart_txint(int irq, void *dev_id)
 {
 	struct imx_port *sport = dev_id;
+	int ret;
 
 	spin_lock(&sport->port.lock);
-	imx_uart_transmit_buffer(sport);
+	ret = imx_uart_transmit_buffer(sport);
 	spin_unlock(&sport->port.lock);
+	if (ret && !sport->dma_is_txing)
+		imx_uart_dma_tx(sport);
 	return IRQ_HANDLED;
 }
 
