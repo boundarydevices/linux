@@ -42,6 +42,13 @@
 			compatible = "amlogic, pm-m8b-reserve";
 			reg = <0x04f00000 0x100000>;
 		};
+
+		secos_reserved:linux,secos {
+			status = "disabled";
+			compatible = "amlogic, aml_secos_memory";
+			reg = <0x06100000 0x3000000>;
+			no-map;
+		};
 	};
 
 	bt-dev{

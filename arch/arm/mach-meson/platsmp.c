@@ -33,6 +33,7 @@
 #include <asm/cache.h>
 #include <asm/cacheflush.h>
 #include <asm/cp15.h>
+#include <linux/amlogic/meson-secure.h>
 
 static DEFINE_SPINLOCK(boot_lock);
 static DEFINE_SPINLOCK(clockfw_lock);
@@ -47,42 +48,39 @@ void meson_set_cpu_ctrl_addr(uint32_t cpu, const uint32_t addr)
 {
 	spin_lock(&clockfw_lock);
 
-#ifdef CONFIG_MESON_TRUSTZONE
-	meson_auxcoreboot_addr(cpu, addr);
-#else
-	writel(addr, (void *)(CPU1_CONTROL_ADDR_REG + ((cpu-1) << 2)));
-#endif
+	if (meson_secure_enabled())
+		meson_auxcoreboot_addr(cpu, addr);
+	else
+		writel(addr, (void *)(CPU1_CONTROL_ADDR_REG + ((cpu-1) << 2)));
+
 	spin_unlock(&clockfw_lock);
 }
 
 void meson_set_cpu_ctrl_reg(int cpu, int is_on)
 {
-#ifdef CONFIG_MESON_TRUSTZONE
 	uint32_t value = 0;
-#endif
+
 	spin_lock(&clockfw_lock);
 
-#ifdef CONFIG_MESON_TRUSTZONE
-	value = meson_read_corectrl();
-	value = (value & ~(1U << cpu)) | (is_on << cpu);
-	value |= 1;
-	meson_modify_corectrl(value);
-#else
-	aml_set_reg32_bits(CPU_CONTROL_REG, is_on, cpu, 1);
-	aml_set_reg32_bits(CPU_CONTROL_REG, 1, 0, 1);
-#endif
+	if (meson_secure_enabled()) {
+		value = meson_read_corectrl();
+		value = (value & ~(1U << cpu)) | (is_on << cpu);
+		value |= 1;
+		meson_modify_corectrl(value);
+	} else {
+		aml_set_reg32_bits(CPU_CONTROL_REG, is_on, cpu, 1);
+		aml_set_reg32_bits(CPU_CONTROL_REG, 1, 0, 1);
+	}
 
 	spin_unlock(&clockfw_lock);
 }
 
 int meson_get_cpu_ctrl_addr(int cpu)
 {
-#ifdef CONFIG_MESON_TRUSTZONE
-	return 0;
-#else
-	return readl((void *)(CPU1_CONTROL_ADDR_REG + ((cpu-1) << 2)));
-#endif
-
+	if (meson_secure_enabled())
+		return 0;
+	else
+		return readl((void *)(CPU1_CONTROL_ADDR_REG + ((cpu-1) << 2)));
 }
 
 void meson_set_cpu_power_ctrl(uint32_t cpu, int is_power_on)
@@ -200,17 +198,17 @@ static int meson_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 */
 	write_pen_release(cpu_logical_map(cpu));
 
-#ifndef CONFIG_MESON_TRUSTZONE
-	meson_set_cpu_ctrl_addr(cpu,
-		(const uint32_t)virt_to_phys(meson_secondary_startup));
-	meson_set_cpu_power_ctrl(cpu, 1);
-	timeout = jiffies + (10 * HZ);
+	if (!meson_secure_enabled()) {
+		meson_set_cpu_ctrl_addr(cpu,
+			(const uint32_t)virt_to_phys(meson_secondary_startup));
+		meson_set_cpu_power_ctrl(cpu, 1);
+		timeout = jiffies + (10 * HZ);
 
-	while (meson_get_cpu_ctrl_addr(cpu))
-		;
-	if (!time_before(jiffies, timeout))
-		return -EPERM;
-#endif
+		while (meson_get_cpu_ctrl_addr(cpu))
+			;
+		if (!time_before(jiffies, timeout))
+			return -EPERM;
+	}
 
 	meson_secondary_set(cpu);
 	dsb_sev();

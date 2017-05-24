@@ -24,10 +24,7 @@
 #include <linux/of_address.h>
 #include <linux/io.h>
 #include <linux/amlogic/iomap.h>
-
-#ifdef CONFIG_MESON_TRUSTZONE
-#include <mach/meson-secure.h>
-#endif
+#include <linux/amlogic/meson-secure.h>
 
 #define IO_REGS_BASE		0xFE000000
 #define IO_BOOTROM_BASE	(IO_REGS_BASE + 0x010000) /*64K*/
@@ -40,9 +37,7 @@ int __init meson_cpu_version_init(void)
 	void __iomem  *assist_hw_rev0;
 	void __iomem  *assist_hw_rev1;
 	void __iomem  *assist_hw_rev2;
-#ifndef CONFIG_MESON_TRUSTZONE
 	unsigned int  *version_map;
-#endif
 
 	cpu_version = of_find_node_by_name(NULL, "cpu_version");
 	if (!cpu_version) {
@@ -62,12 +57,13 @@ int __init meson_cpu_version_init(void)
 
 	meson_cpu_version[MESON_CPU_VERSION_LVL_MAJOR] = readl(assist_hw_rev0);
 
-#ifndef CONFIG_MESON_TRUSTZONE
-	version_map = (unsigned int *)assist_hw_rev2;
-	meson_cpu_version[MESON_CPU_VERSION_LVL_MISC] = version_map[1];
-#else
-	meson_cpu_version[MESON_CPU_VERSION_LVL_MISC] = meson_read_socrev1();
-#endif
+	if (meson_secure_enabled()) {
+		meson_cpu_version[MESON_CPU_VERSION_LVL_MISC] =
+			meson_read_socrev1();
+	} else {
+		version_map = (unsigned int *)assist_hw_rev2;
+		meson_cpu_version[MESON_CPU_VERSION_LVL_MISC] = version_map[1];
+	}
 
 	version = readl(assist_hw_rev1);
 	switch (version) {

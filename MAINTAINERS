@@ -13925,3 +13925,8 @@ F: sound/soc/amlogic/auge/*
 F: sound/soc/codecs/amlogic/*
 F: include/dt-bindings/clock/amlogic,axg-audio-clk.h
 
+AMLOGIC Security Support
+M: Peifu Jiang <peifu.jiang@amlogic.com>
+F: include/linux/amlogic/meson-secure.h
+F: arch/arm/mach-meson/meson-smc.S
+F: arch/arm/mach-meson/meson-secure.c

@@ -30,9 +30,12 @@
 #ifndef CONFIG_ARM64
 #include <asm/opcodes-sec.h>
 #endif
+#include <linux/amlogic/meson-secure.h>
 #include <linux/amlogic/efuse.h>
 #include "efuse_regs.h"
 #include "efuse.h"
+
+
 int efuse_active_version = -1;
 
 #ifdef EFUSE_DEBUG
@@ -51,22 +54,6 @@ static void __efuse_read_dword_debug(unsigned long addr, unsigned long *data)
 }
 #endif
 
-/* to do meson_efuse_fn_smc */
-
-int meson_trustzone_efuse(struct efuse_hal_api_arg *arg)
-{
-	int ret;
-
-	if (!arg)
-		return -1;
-
-	set_cpus_allowed_ptr(current, cpumask_of(0));
-	//ret = meson_efuse_fn_smc(arg);
-	set_cpus_allowed_ptr(current, cpu_all_mask);
-	return ret;
-}
-
-#ifndef CONFIG_MESON_TRUSTZONE
 #ifndef EFUSE_DEBUG
 static void __efuse_write_byte(unsigned long addr, unsigned long data)
 {
@@ -122,8 +109,10 @@ static void __efuse_write_byte(unsigned long addr, unsigned long data)
 	 * then disable it upon exit
 	 */
 	if (auto_wr_is_enabled == 0) {
-		aml_set_reg32_bits(P_EFUSE_CNTL1, CNTL1_AUTO_WR_ENABLE_OFF,
-	    CNTL1_AUTO_WR_ENABLE_BIT, CNTL1_AUTO_WR_ENABLE_SIZE);
+		aml_set_reg32_bits(P_EFUSE_CNTL1,
+				CNTL1_AUTO_WR_ENABLE_OFF,
+				CNTL1_AUTO_WR_ENABLE_BIT,
+				CNTL1_AUTO_WR_ENABLE_SIZE);
 	}
 
 	//set efuse PD=1
@@ -188,22 +177,20 @@ static void __efuse_read_dword(unsigned long addr, unsigned long *data)
 	pr_debug("__efuse_read_dword: addr=%ld, data=0x%lx\n", addr, *data);
 }
 #endif
-#endif
+
 static ssize_t __efuse_read(char *buf, size_t count, loff_t *ppos)
 {
 	unsigned long *contents = kzalloc(sizeof(unsigned long)*EFUSE_DWORDS,
 		GFP_KERNEL);
 	unsigned int pos = *ppos;
-#ifndef CONFIG_MESON_TRUSTZONE
 	unsigned long *pdw;
 	char *tmp_p;
 	/*pos may not align to 4*/
 	unsigned int dwsize = (count + 3 +  pos%4) >> 2;
-#else
 	struct efuse_hal_api_arg arg;
 	unsigned long retcnt;
 	int ret;
-#endif
+
 	if (!contents) {
 		pr_info("memory not enough\n");
 		return -ENOMEM;
@@ -217,66 +204,65 @@ static ssize_t __efuse_read(char *buf, size_t count, loff_t *ppos)
 	if (count > EFUSE_BYTES)
 		return -EFAULT;
 
-#ifndef CONFIG_MESON_TRUSTZONE
-	clk_prepare_enable(efuse_clk);
-	aml_set_reg32_bits(P_EFUSE_CNTL1, CNTL1_AUTO_RD_ENABLE_ON,
-		CNTL1_AUTO_RD_ENABLE_BIT, CNTL1_AUTO_RD_ENABLE_SIZE);
-
-	for (pdw = contents + pos/4;
-		dwsize-- > 0 && pos < EFUSE_BYTES;
-		pos += 4, ++pdw) {
-		#ifdef EFUSE_DEBUG
-		__efuse_read_dword_debug(pos, pdw);
-		#else
-		/* if pos does not align to 4,  __efuse_read_dword
-		 * read from next dword, so, discount this un-aligned
-		 * partition
-		 */
-		__efuse_read_dword((pos - pos%4), pdw);
-		#endif
-	}
-
-	aml_set_reg32_bits(P_EFUSE_CNTL1, CNTL1_AUTO_RD_ENABLE_OFF,
+	if (!meson_secure_enabled()) {
+		clk_prepare_enable(efuse_clk);
+		aml_set_reg32_bits(P_EFUSE_CNTL1, CNTL1_AUTO_RD_ENABLE_ON,
 			CNTL1_AUTO_RD_ENABLE_BIT, CNTL1_AUTO_RD_ENABLE_SIZE);
 
-	clk_disable_unprepare(efuse_clk);
-	tmp_p = (char *)contents;
-	tmp_p += *ppos;
+		for (pdw = contents + pos/4;
+			dwsize-- > 0 && pos < EFUSE_BYTES;
+			pos += 4, ++pdw) {
+			#ifdef EFUSE_DEBUG
+			__efuse_read_dword_debug(pos, pdw);
+			#else
+			/* if pos does not align to 4,  __efuse_read_dword
+			 * read from next dword, so, discount this un-aligned
+			 * partition
+			 */
+			__efuse_read_dword((pos - pos%4), pdw);
+			#endif
+		}
 
-	memcpy(buf, tmp_p, count);
+		aml_set_reg32_bits(P_EFUSE_CNTL1,
+				CNTL1_AUTO_RD_ENABLE_OFF,
+				CNTL1_AUTO_RD_ENABLE_BIT,
+				CNTL1_AUTO_RD_ENABLE_SIZE);
 
-	*ppos += count;
-#else
-	arg.cmd = EFUSE_HAL_API_READ;
-	arg.offset = pos;
-	arg.size = count;
-	arg.buffer = (unsigned long)contents;
-	arg.retcnt = (unsigned long)(&retcnt);
-	ret = meson_trustzone_efuse(&arg);
+		clk_disable_unprepare(efuse_clk);
+		tmp_p = (char *)contents;
+		tmp_p += *ppos;
 
-	if (ret == 0) {
-		count = retcnt;
-		*ppos += retcnt;
-		memcpy(buf, contents, retcnt);
-	} else
-		count = 0;
-#endif /* CONFIG_MESON_TRUSTZONE */
+		memcpy(buf, tmp_p, count);
+
+		*ppos += count;
+	} else {
+		arg.cmd = EFUSE_HAL_API_READ;
+		arg.offset = pos;
+		arg.size = count;
+		arg.buffer = virt_to_phys(contents);
+		arg.retcnt = virt_to_phys(&retcnt);
+		ret = meson_trustzone_efuse((void *)&arg);
+		if (ret == 0) {
+			count = retcnt;
+			*ppos += retcnt;
+			memcpy(buf, contents, retcnt);
+		} else
+			count = 0;
+	}
 
 	/*if (contents)*/
 		kfree(contents);
+
 	return count;
 }
 
 static ssize_t __efuse_write(const char *buf, size_t count, loff_t *ppos)
 {
 	unsigned int pos = *ppos;
-#ifndef CONFIG_MESON_TRUSTZONE
 	unsigned char *pc;
-#else
 	struct efuse_hal_api_arg arg;
 	unsigned int retcnt;
 	int ret;
-#endif
 
 	if (pos >= EFUSE_BYTES)
 		return 0;       /* Past EOF */
@@ -285,29 +271,31 @@ static ssize_t __efuse_write(const char *buf, size_t count, loff_t *ppos)
 	if (count > EFUSE_BYTES)
 		return -EFAULT;
 
-#ifndef CONFIG_MESON_TRUSTZONE
-	for (pc = (char *)buf; count--; ++pos, ++pc)
-	#ifdef EFUSE_DEBUG
-		__efuse_write_byte_debug(pos, *pc);
-	#else
-		__efuse_write_byte(pos, *pc);
-	#endif
+	if (!meson_secure_enabled()) {
+		for (pc = (char *)buf; count--; ++pos, ++pc)
+		#ifdef EFUSE_DEBUG
+			__efuse_write_byte_debug(pos, *pc);
+		#else
+			__efuse_write_byte(pos, *pc);
+		#endif
 
-	*ppos = pos;
-	return (const char *)pc - buf;
-#else
-	arg.cmd = EFUSE_HAL_API_WRITE;
-	arg.offset = pos;
-	arg.size = count;
-	arg.buffer = (unsigned long)buf;
-	arg.retcnt = (unsigned long)(&retcnt);
-	ret = meson_trustzone_efuse(&arg);
-	if (ret == 0) {
-		*ppos = pos+retcnt;
-		return retcnt;
-	} else
-		return 0;
-#endif
+		*ppos = pos;
+		ret = (const char *)pc - buf;
+	} else {
+		arg.cmd = EFUSE_HAL_API_WRITE;
+		arg.offset = pos;
+		arg.size = count;
+		arg.buffer = virt_to_phys(buf);
+		arg.retcnt = virt_to_phys(&retcnt);
+		ret = meson_trustzone_efuse((void *)&arg);
+		if (ret == 0) {
+			*ppos = pos+retcnt;
+			ret = retcnt;
+		} else
+			ret = 0;
+	}
+
+	return ret;
 }
 
 ssize_t aml__efuse_read(char *buf, size_t count, loff_t *ppos)

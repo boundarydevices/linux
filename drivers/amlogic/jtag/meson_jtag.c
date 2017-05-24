@@ -41,6 +41,9 @@
 
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/jtag.h>
+#ifdef CONFIG_MACH_MESON8B
+#include <linux/amlogic/meson-secure.h>
+#endif
 
 #include "meson_jtag.h"
 
@@ -266,7 +269,34 @@ static int aml_jtag_apee_free_gpios(struct platform_device *pdev)
 
 #ifdef CONFIG_MACH_MESON8B
 
-static int aml_jtag_select(struct platform_device *pdev)
+static int aml_jtag_select_tee(struct platform_device *pdev)
+{
+	struct aml_jtag_dev *jdev = platform_get_drvdata(pdev);
+	uint32_t select = jdev->select;
+
+	pr_info("set state %u\n", select);
+	set_cpus_allowed_ptr(current, cpumask_of(0));
+	switch (select) {
+	case AMLOGIC_JTAG_DISABLE:
+		meson_secure_jtag_disable();
+		break;
+	case AMLOGIC_JTAG_APAO:
+		meson_secure_jtag_apao();
+		break;
+	case AMLOGIC_JTAG_APEE:
+		meson_secure_jtag_apao();
+		break;
+
+	default:
+		writel_relaxed(0x0, jdev->base);
+		break;
+	}
+	set_cpus_allowed_ptr(current, cpu_all_mask);
+
+	return 0;
+}
+
+static int aml_jtag_select_ree(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
@@ -300,6 +330,16 @@ static int aml_jtag_select(struct platform_device *pdev)
 		writel_relaxed(0x0, jdev->base);
 		break;
 	}
+
+	return 0;
+}
+
+static int aml_jtag_select(struct platform_device *pdev)
+{
+	if (meson_secure_enabled())
+		aml_jtag_select_tee(pdev);
+	else
+		aml_jtag_select_ree(pdev);
 
 	return 0;
 }
@@ -616,4 +656,3 @@ module_exit(aml_jtag_exit);
 MODULE_DESCRIPTION("Meson JTAG Driver");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Amlogic, Inc.");
-
