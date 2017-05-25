@@ -1,0 +1,131 @@
+/*
+ * Copyright 2013-2016 Boundary Devices, Inc.
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-nitrogen6x.dtsi"
+
+&iomuxc_imx6q_nitrogen6x {
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT8__ECSPI2_SCLK	0x000b1
+			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1
+#define GP_ECSPI2_DISPLAY_CS   <&gpio5 29 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x0b0b1
+		>;
+	};
+};
+
+/ {
+	model = "Freescale i.MX6 Quad Nitrogen6x-st7789 Board";
+	compatible = "fsl,imx6q-nitrogen6x", "fsl,imx6q";
+};
+
+&adv7180 {
+	ipu_id = <1>;
+	csi_id = <1>;
+};
+
+&ecspi2 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI2_DISPLAY_CS;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	status = "okay";
+#if 0
+	dma-names = "", "";
+#endif
+
+	st7789h2@0{
+		bpp = <16>;
+		compatible = "sitronix,st7789v";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		width = <240>;
+		height = <204>;
+		rotate = <0>;
+		regwidth = <8>;
+		buswidth = <9>;
+		txbuflen = <32768>;
+	};
+};
+
+&hdmi_core {
+	ipu_id = <1>;
+};
+
+&ov5640 {
+	ipu_id = <1>;
+};
+
+&ov5640_mipi {
+	ipu_id = <1>;
+	csi_id = <0>;
+};
+
+&pinctrl_i2c3_adv7180 {
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK	0xb0b1
+       >;
+};
+
+&pinctrl_i2c3_adv7180_cea861 {
+	fsl,pins = <
+		MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC	0xb0b1
+	>;
+};
+
+&pinctrl_i2c3_ov5640 { /* parallel camera */
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK	0xb0b1
+		MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC	0xb0b1
+	>;
+};
+
+&sata {
+	status = "okay";
+};
+
+/* ov5640_mipi */
+&v4l2_cap_1 {
+	ipu_id = <1>;
+	csi_id = <0>;
+	mipi_camera = <1>;
+};
+
+/* adv7180, ov5640 */
+&v4l2_cap_2 {
+	ipu_id = <1>;
+	csi_id = <1>;
+};
