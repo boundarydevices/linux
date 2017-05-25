@@ -19,7 +19,7 @@
 	compatible = "fsl,imx6q-nitrogen6x", "fsl,imx6q";
 };
 
-&iomuxc_imx6q_nitrogen6x {
+&iomuxc {
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			MX6QDL_PAD_DISP0_DAT19__ECSPI2_SCLK	0x000b1
@@ -109,6 +109,7 @@
 };
 
 &fec {
+	fsl,err006687-workaround-present;
 	interrupts-extended = GPIRQ_ENET,
 			      <&gpc 0 119 IRQ_TYPE_LEVEL_HIGH>;
 	pinctrl-0 = <&pinctrl_enet>, <&pinctrl_enet_gpio6>;
