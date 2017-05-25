@@ -502,8 +502,7 @@
 
 	wlan {
 		compatible = "ti,wilink6";
-		interrupt-parent = <&gpio6>;
-		interrupts = <14 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts-extended = GPIRQ_WL1271;
 		clocks = <&refclock>;
 		clock-names = "refclock";
 
