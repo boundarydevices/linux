@@ -32,6 +32,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/amlogic/cpu_version.h>
+#include <linux/amlogic/iomap.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "clkmsr: " fmt
@@ -42,6 +43,10 @@ void __iomem *msr_clk_reg3;
 
 #define CLKMSR_DEVICE_NAME	"clkmsr"
 unsigned int clk_msr_index = 0xff;
+#define AUDIO_FLAG	BIT(16)
+#define HHI_GEN_CLK_CNTL	0x8a
+#define AO_RTI_PIN_MUX_REG1	0x18
+unsigned int audio_index;
 
 static unsigned int m8b_clk_util_clk_msr(unsigned int clk_mux)
 {
@@ -110,6 +115,35 @@ static unsigned int gxbb_clk_util_clk_msr(unsigned int clk_mux)
 
 }
 
+static unsigned int axg_clk_util_clk_msr(unsigned int clk_mux)
+{
+	unsigned int clk_val;
+
+	if (clk_mux&AUDIO_FLAG) {
+		/*for audio*/
+		/*set gen_clk_out: cts_msr_clk*/
+		aml_write_hiubus(HHI_GEN_CLK_CNTL, 0xc800);
+		/*msr_clk_mux_sel*/
+		writel_relaxed(((clk_mux&0xff)<<20)|(1<<19), msr_clk_reg0);
+		/*pinmux for GEN_CLK_EE*/
+		aml_write_aobus(AO_RTI_PIN_MUX_REG1, 0x402230);
+		audio_index = clk_mux;
+	} else {
+		/*clear gen_clk_out: cts_msr_clk*/
+		aml_write_hiubus(HHI_GEN_CLK_CNTL, 0x0);
+		/*measure clk*/
+		clk_val = gxbb_clk_util_clk_msr(clk_mux);
+		/*for audio*/
+		/*set gen_clk_out: cts_msr_clk*/
+		aml_write_hiubus(HHI_GEN_CLK_CNTL, 0xc800);
+		/*msr_clk_mux_sel*/
+		writel_relaxed(((audio_index&0xff)<<20)|(1<<19), msr_clk_reg0);
+		/*pinmux for GEN_CLK_EE*/
+		aml_write_aobus(AO_RTI_PIN_MUX_REG1, 0x402230);
+		return clk_val;
+	}
+	return 0;
+}
 int m8b_clk_measure(struct seq_file *s, void *what, unsigned int index)
 {
 	static const char * const clk_table[] = {
@@ -519,11 +553,11 @@ int axg_clk_measure(struct seq_file *s, void *what, unsigned int index)
 	if (index  == 0xff) {
 		for (i = 0; i < len; i++)
 			seq_printf(s, "[%2d][%10d]%s\n",
-				   i, gxbb_clk_util_clk_msr(i),
+				   i, axg_clk_util_clk_msr(i),
 					clk_table[i]);
 		return 0;
 	}
-	seq_printf(s, "[%10d]%s\n", gxbb_clk_util_clk_msr(index),
+	seq_printf(s, "[%10d]%s\n", axg_clk_util_clk_msr(index),
 		   clk_table[index]);
 	clk_msr_index = 0xff;
 	return 0;
@@ -539,8 +573,10 @@ int  meson_clk_measure(unsigned int clk_mux)
 		break;
 	case MESON_CPU_MAJOR_ID_GXL:
 	case MESON_CPU_MAJOR_ID_GXM:
-	case MESON_CPU_MAJOR_ID_AXG:
 		clk_val = gxbb_clk_util_clk_msr(clk_mux);
+		break;
+	case MESON_CPU_MAJOR_ID_AXG:
+		clk_val = axg_clk_util_clk_msr(clk_mux);
 		break;
 	default:
 		pr_info("Unsupported chip clk measure\n");

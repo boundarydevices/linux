@@ -181,6 +181,9 @@
 		io_vapb_base {
 			reg = <0x0 0xff900000 0x0 0x050000>;
 		};
+		io_hiu_base {
+			reg = <0x0 0xff63c000 0x0 0x010000>;
+		};
 	};
 
 	xtal: xtal-clk {
