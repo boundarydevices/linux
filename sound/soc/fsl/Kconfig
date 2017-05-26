@@ -235,6 +235,25 @@ config SND_SOC_IMX_SGTL5000
 	  Say Y if you want to add support for SoC audio on an i.MX board with
 	  a sgtl5000 codec.
 
+config SND_SOC_IMX_CS42L52
+	tristate "SoC Audio support for i.MX boards with cs42l52"
+	depends on OF && I2C
+	select SND_SOC_CS42L52
+	select SND_SOC_IMX_PCM_DMA
+	select SND_SOC_IMX_AUDMUX
+	select SND_SOC_FSL_SSI
+	select SND_KCTL_JACK
+	help
+	  Say Y if you want to add support for SoC audio on an i.MX board with
+	  a cs42l52 codec.
+
+config SND_SOC_IMX_CS42L52_ANDROID
+	tristate "SoC Audio support for i.MX boards with cs42l52 in android"
+	depends on SWITCH=y && SND_SOC_IMX_CS42L52=y
+	help
+	  Say Y if you want to add support for SoC audio on an i.MX board with
+	  a cs42l52 codec in android.
+
 config SND_SOC_IMX_MQS
 	tristate "SoC Audio support for i.MX boards with MQS"
 	depends on OF
