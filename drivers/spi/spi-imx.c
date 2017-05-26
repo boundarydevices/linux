@@ -976,18 +976,26 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	}
 
 	if (rx) {
-		struct scatterlist *sgl_last = &rx->sgl[rx->nents - 1];
-		unsigned int	orig_length = sgl_last->length;
-		int	wml_mask = ~(spi_imx->rx_wml - 1);
+		unsigned nents = rx->nents;
+		int rem;
 		/*
 		 * Adjust the transfer lenth of the last scattlist if there are
 		 * some tail data, use PIO read to get the tail data since DMA
 		 * sometimes miss the last tail interrupt.
 		 */
-		left = transfer->len % spi_imx->rx_wml;
-		if (left)
-			sgl_last->length = orig_length & wml_mask;
+		left = rem = transfer->len % spi_imx->rx_wml;
+		while (rem) {
+			struct scatterlist *sgl_last = &rx->sgl[nents - 1];
 
+			if (sgl_last->length > rem) {
+				sgl_last->length -= rem;
+				break;
+			}
+			rem -= sgl_last->length;
+			sgl_last->length = 0;
+			nents--;
+			rx->nents--;
+		}
 		desc_rx = dmaengine_prep_slave_sg(master->dma_rx,
 					rx->sgl, rx->nents, DMA_DEV_TO_MEM,
 					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
