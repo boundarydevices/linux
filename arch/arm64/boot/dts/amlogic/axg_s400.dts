@@ -357,10 +357,10 @@
 			format = "i2s";
 			mclk-fs = <256>;
 			continuous-clock;
-			bitclock-inversion;
-			frame-inversion;
-			//bitclock-master = <&aml_tdmb>;
-			//frame-master = <&aml_tdmb>;
+			//bitclock-inversion;
+			//frame-inversion;
+			bitclock-master = <&aml_tdmb>;
+			frame-master = <&aml_tdmb>;
 			cpu {
 				sound-dai = <&aml_tdmb>;
 				dai-tdm-slot-tx-mask = <1 1>;
@@ -370,7 +370,8 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
-				sound-dai = <&dummy_codec &dummy_codec>;
+				sound-dai = <&tlv320adc3101_32 &tlv320adc3101_30
+					&tlv320adc3101_34 &tlv320adc3101_36>;
 			};
 		};
 
@@ -630,11 +631,11 @@
 	status = "okay";
 	//pinctrl-names="default";
 	//pinctrl-0=<&b_i2c_master>;
-	tlv320adc3101_32: tlv320adc3101_32@30 {
+	tlv320adc3101_32: tlv320adc3101_32@32 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
-		reg = <0x32>;
-		status = "disabled";
+		reg = <0x19>;
+		status = "okay";
 	};
 
 	tas5707_36: tas5707_36@36 {
@@ -662,19 +663,19 @@
 	tlv320adc3101_30: tlv320adc3101_30@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
-		reg = <0x30>;
+		reg = <0x18>;
 		status = "okay";
 	};
 	tlv320adc3101_34: tlv320adc3101_34@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
-		reg = <0x34>;
+		reg = <0x1a>;
 		status = "okay";
 	};
 	tlv320adc3101_36: tlv320adc3101_36@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
-		reg = <0x36>;
+		reg = <0x1b>;
 		status = "okay";
 	};
 };
@@ -713,7 +714,7 @@
 				GIC_SPI 89 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmb_mclk &tdmout_b>;
+		pinctrl-0 = <&tdmb_mclk &tdmout_b &tdmin_b>;
 	};
 
 	aml_tdmc: tdmc {
@@ -801,20 +802,18 @@
 
 	tdmout_b: tdmout_b {
 		mux {
-			pins = "GPIOA_8", "GPIOA_9", "GPIOA_10",
-				"GPIOA_11", "GPIOA_12", "GPIOA_13";
+			pins = "GPIOA_8", "GPIOA_9";
+			/*"GPIOA_10","GPIOA_11", "GPIOA_12", "GPIOA_13";*/
 			function = "tdmb_out";
 		};
 	};
 	// tdmin and tdmout are the same pins. can't use at same time
-	/*
-	 *tdmin_b:tdmin_b {
-	 *	mux {
-	 *		pins = "GPIOA_10", "GPIOA_11", "GPIOA_12", "GPIOA_13";
-	 *		function = "tdmb_in";
-	 *	};
-	 *};
-	 */
+	tdmin_b:tdmin_b {
+		mux {
+			pins = "GPIOA_10", "GPIOA_11", "GPIOA_12", "GPIOA_13";
+			function = "tdmb_in";
+		};
+	};
 
 	tdmc_mclk: tdmc_mclk {
 		mux {
