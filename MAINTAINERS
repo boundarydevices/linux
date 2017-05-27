@@ -13895,3 +13895,9 @@ AMLOGIC PINCTRL SUPPORT FOR AXG
 M: Xingyu Chen <xingyu.chen@amlogic.com>
 F: drivers/amlogic/pinctrl/pinctrl-mesonaxg.c
 F: include/dt-bindings/gpio/mesonaxg-gpio.h
+
+AMLOGIC AXG ADD DTS FOR A113D SOCKET AND DEVELOPMENT BOARDS
+M:	Yun Cai <yun.cai@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/axg_a113d_skt.dts
+F:      arch/arm64/boot/dts/amlogic/axg_s400.dts
+F:      arch/arm64/boot/dts/amlogic/axg_s420.dts
