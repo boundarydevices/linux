@@ -143,20 +143,7 @@
 			};
 		};
 	};
-	ethmac: ethernet@0xff3f0000 {
-			compatible = "amlogic, gxbb-eth-dwmac";
-			reg = <0x0 0xff3f0000 0x0 0x10000
-			0x0 0xff634540 0x0 0x8>;
-			interrupts = <0 8 1>;
-			pinctrl-names = "external_eth_pins";
-			pinctrl-0 = <&external_eth_pins>;
-			mc_val_internal_phy = <0x1800>;
-			mc_val_external_phy = <0x1621>;
-			interrupt-names = "macirq";
-			clocks = <&clkc CLKID_ETH_CORE>;
-			clock-names = "ethclk81";
-			internal_phy=<0>;
-	};
+
 	dwc3: dwc3@ff500000 {
 		compatible = "synopsys, dwc3";
 		status = "okay";
