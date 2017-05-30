@@ -929,6 +929,8 @@
 	assigned-clocks = <&clks IMX7D_UART3_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_OSC_24M_CLK>;
 	control-gpios = <&gpio2 4 GPIO_ACTIVE_HIGH>;
+	rs485_txen_mask = <0x1>;
+	rs485_txen_levels = <0x1>;
 	uart-has-rs485-half-duplex;
 	rs485-mode = <1>;
 	status = "okay";
