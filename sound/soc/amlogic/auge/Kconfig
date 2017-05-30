@@ -1,0 +1,7 @@
+menuconfig AMLOGIC_SND_SOC_AUGE
+	bool "Amlogic Auge ASoC"
+	default n
+	help
+		Say Y or M if you want to add support for codecs attached to
+		the Amlogic Asoc interface. You will also need
+		to select the audio interfaces to support below.

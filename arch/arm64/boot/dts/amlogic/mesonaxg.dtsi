@@ -17,6 +17,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/amlogic,axg-clkc.h>
+#include <dt-bindings/clock/amlogic,axg-audio-clk.h>
 #include <dt-bindings/gpio/mesonaxg-gpio.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
@@ -320,6 +321,19 @@
 				reg = <0x0 0x0 0x0 0x320>;
 			};
 		};/* end of hiubus*/
+
+		audiobus: audiobus@0xff642000 {
+			compatible = "amlogic, audio-controller", "simple-bus";
+			reg = <0x0 0xff642000 0x0 0x2000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0x0 0x0 0xff642000 0x0 0x2000>;
+			clkaudio: audio_clocks {
+				compatible = "amlogic, audio_clocks";
+				#clock-cells = <1>;
+				reg = <0x0 0x0 0x0 0xb0>;
+			};
+		};/* end of audiobus*/
 	}; /* end of soc*/
 
 	pwm:meson-pwm {

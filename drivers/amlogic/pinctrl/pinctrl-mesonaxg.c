@@ -128,12 +128,12 @@ static const struct meson_desc_pin mesonaxg_periphs_pins[] = {
 		MESON_FUNCTION(0x3, "norflash")),	/*NOR_CS */
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOA_0, EE_OFF), 0xb, 0,
 		MESON_FUNCTION(0x0, "gpio"),
-		MESON_FUNCTION(0x1, "mclk_a"),		/*MCLK_A*/
+		MESON_FUNCTION(0x1, "mclk"),		/*MCLK_A*/
 		MESON_FUNCTION(0x2, "pwm_vs"),		/*PWM_VS*/
 		MESON_FUNCTION(0x5, "wifi")),		/*WIFI_BEACON*/
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOA_1, EE_OFF), 0xb, 4,
 		MESON_FUNCTION(0x0, "gpio"),
-		MESON_FUNCTION(0x1, "mclk_a"),		/*MCLK_A*/
+		MESON_FUNCTION(0x1, "mclk"),		/*MCLK_B*/
 		MESON_FUNCTION(0x3, "spdif_in"),	/*SPDIF_IN*/
 		MESON_FUNCTION(0x4, "spdif_out"),	/*SPDIF_OUT*/
 		MESON_FUNCTION(0x5, "wifi")),		/*WIFI_BEACON*/
@@ -286,15 +286,24 @@ static const struct meson_desc_pin mesonaxg_periphs_pins[] = {
 		MESON_FUNCTION(0x3, "pwm_d")),		/*PWM_D*/
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOX_12, EE_OFF), 0x5, 16,
 		MESON_FUNCTION(0x0, "gpio"),
+		MESON_FUNCTION(0x1, "tdma_out"),	/*TDMA_OUT*/
+		MESON_FUNCTION(0x2, "tdma_in"),		/*TDMA_IN*/
 		MESON_FUNCTION(0x4, "eth")),		/*ETH_RGMII_RX_CLK*/
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOX_13, EE_OFF), 0x5, 20,
 		MESON_FUNCTION(0x0, "gpio"),
+		MESON_FUNCTION(0x1, "tdma_out"),	/*TDMA_OUT*/
+		MESON_FUNCTION(0x2, "tdma_in"),		/*TDMA_IN*/
 		MESON_FUNCTION(0x4, "eth")),		/*ETH_RXD0*/
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOX_14, EE_OFF), 0x5, 24,
 		MESON_FUNCTION(0x0, "gpio"),
+		MESON_FUNCTION(0x1, "tdma_in"),		/*TDMA_IN*/
+		MESON_FUNCTION(0x2, "tdma_out"),	/*TDMA_OUT*/
 		MESON_FUNCTION(0x4, "eth")),		/*ETH_RXD1*/
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOX_15, EE_OFF), 0x5, 28,
 		MESON_FUNCTION(0x0, "gpio"),
+		MESON_FUNCTION(0x1, "tdma_out"),	/*TDMA_OUT*/
+		MESON_FUNCTION(0x2, "tdma_out1"),	/*TDMA_OUT1*/
+		MESON_FUNCTION(0x3, "tdma_in"),		/*TDMA_IN*/
 		MESON_FUNCTION(0x4, "eth")),		/*ETH_RX_DV*/
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOX_16, EE_OFF), 0x6, 0,
 		MESON_FUNCTION(0x0, "gpio"),
