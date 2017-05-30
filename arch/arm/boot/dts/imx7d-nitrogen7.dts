@@ -959,6 +959,8 @@
 	control-gpios = <&gpio2 4 GPIO_ACTIVE_HIGH>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
+	rs485_txen_mask = <0x1>;
+	rs485_txen_levels = <0x1>;
 	rs485-mode = <1>;
 	uart-has-rs485-half-duplex;
 	status = "okay";
