@@ -502,6 +502,7 @@
 	display1: display {
 		bits-per-pixel = <32>;
 		bus-width = <18>;
+		fbpix = "ABGR32";
 	};
 };
 
