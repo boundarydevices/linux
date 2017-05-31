@@ -1194,6 +1194,7 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 
 	return  0;
 }
+EXPORT_SYMBOL(ge2d_context_config_ex);
 
 int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 			   struct config_para_ex_ion_s *ge2d_config)
@@ -1511,6 +1512,7 @@ struct ge2d_context_s *create_ge2d_work_queue(void)
 	spin_unlock(&ge2d_manager.event.sem_lock);
 	return ge2d_work_queue; /* find it */
 }
+EXPORT_SYMBOL(create_ge2d_work_queue);
 
 int  destroy_ge2d_work_queue(struct ge2d_context_s *ge2d_work_queue)
 {
@@ -1557,6 +1559,7 @@ int  destroy_ge2d_work_queue(struct ge2d_context_s *ge2d_work_queue)
 
 	return  -1;
 }
+EXPORT_SYMBOL(destroy_ge2d_work_queue);
 
 int ge2d_wq_init(struct platform_device *pdev,
 	int irq, struct reset_control *rstc, struct clk *clk)
