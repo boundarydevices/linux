@@ -1350,6 +1350,8 @@ static int drm_atomic_connector_set_property(struct drm_connector *connector,
 {
 	struct drm_device *dev = connector->dev;
 	struct drm_mode_config *config = &dev->mode_config;
+	bool replaced = false;
+	int ret;
 
 	if (property == config->prop_crtc_id) {
 		struct drm_crtc *crtc = drm_crtc_find(dev, NULL, val);
@@ -1398,6 +1400,15 @@ static int drm_atomic_connector_set_property(struct drm_connector *connector,
 		 */
 		if (state->link_status != DRM_LINK_STATUS_GOOD)
 			state->link_status = val;
+	} else if (property == config->hdr_source_metadata_property) {
+		ret = drm_atomic_replace_property_blob_from_id(dev,
+				&state->hdr_source_metadata_blob_ptr,
+				val,
+				sizeof(struct hdr_static_metadata),
+				-1,
+				&replaced);
+		state->hdr_metadata_changed |= replaced;
+		return ret;
 	} else if (property == config->aspect_ratio_property) {
 		state->picture_aspect_ratio = val;
 	} else if (property == config->content_type_property) {
@@ -1516,6 +1527,9 @@ drm_atomic_connector_get_property(struct drm_connector *connector,
 		*val = 0;
 	} else if (property == config->writeback_out_fence_ptr_property) {
 		*val = 0;
+	} else if (property == config->hdr_source_metadata_property) {
+		*val = (state->hdr_source_metadata_blob_ptr) ?
+			state->hdr_source_metadata_blob_ptr->base.id : 0;
 	} else if (connector->funcs->atomic_get_property) {
 		return connector->funcs->atomic_get_property(connector,
 				state, property, val);
