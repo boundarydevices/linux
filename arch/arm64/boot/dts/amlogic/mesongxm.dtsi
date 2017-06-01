@@ -780,9 +780,9 @@
 */
 		ao_to_sd_uart_pins:ao_to_sd_uart_pins {
 			mux {
-				groups = "uart_tx_ao_a_1",
-						"uart_rx_ao_a_1";
-				function = "uart_ao_a_1";
+				groups = "uart_tx_ao_a_card4",
+						"uart_rx_ao_a_card5";
+				function = "uart_ao_a_card";
 				bias-pull-up;
 				input-enable;
 			};
@@ -944,16 +944,16 @@
 	/* c_i2c_master_pin1: dv18 dv19 */
 	c_i2c_master:c_i2c {
 		mux {
-			groups = "i2c_sda_c0",
-				"i2c_scl_c0";
-			function = "i2c_c0";
+			groups = "i2c_sda_c_dv28",
+				"i2c_scl_c_dv29";
+			function = "i2c_c";
 		};
 	};
 	c_i2c_master_pin1:c_i2c_pin1{
 		mux {
-			groups = "i2c_sda_c1",
-				"i2c_scl_c1";
-			function = "i2c_c1";
+			groups = "i2c_sda_c_dv18",
+				"i2c_scl_c_dv19";
+			function = "i2c_c";
 		};
 	};
 
@@ -1022,15 +1022,15 @@
 
 	audio_spdif_in_pins:audio_spdif_in {
 		mux {
-			groups = "spdif_in";
+			groups = "spdif_in_z14";
 			function = "spdif_in";
 		};
 	};
 
 	audio_spdif_in_1_pins:audio_spdif_in_1 {
 		mux {
-			groups = "spdif_in_1";
-			function = "spdif_in_1";
+			groups = "spdif_in_h4";
+			function = "spdif_in";
 		};
 	};
 
@@ -1045,9 +1045,9 @@
 	};
 	aml_dmic_pins:audio_dmic {
 		mux {
-			groups = "pdm_in",
-					"pdm_clk";
-			function = "pdm";
+			groups = "dmic_in_dv24",
+					"dmic_clk_dv25";
+			function = "dmic";
 		};
 	};
 
