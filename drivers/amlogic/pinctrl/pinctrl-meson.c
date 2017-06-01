@@ -709,6 +709,7 @@ static void meson_gpio_irq_shutdown(struct irq_data *irqd)
 static int meson_ee_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 {
 	struct meson_domain *domain = to_meson_domain(irqd->chip_data);
+	struct meson_bank *bank;
 	struct irq_data *parent_data;
 	unsigned long flags;
 	unsigned int trigger_type[2];
@@ -718,6 +719,8 @@ static int meson_ee_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 	unsigned int gpio_virq;
 	unsigned char cnt;
 	unsigned char pin;
+	unsigned char irq_pin;
+	int ret;
 
 	type = type & IRQ_TYPE_SENSE_MASK;
 
@@ -776,12 +779,21 @@ static int meson_ee_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 		/*the gpio hwirq eqaul to gpio offset in gpio chip*/
 		pin = domain->data->pin_base + irqd->hwirq;
 
+		ret = meson_get_bank(domain, pin, &bank);
+		if (ret)
+			return ret;
+
+		if (bank->irq < 0)
+			return -EINVAL;
+
+		irq_pin = bank->irq + pin - bank->first;
+
 		/*set pin select register*/
 		start_bit = (cnt & 3) << 3;
 		regmap_update_bits(domain->reg_irq,
 			(cnt < 4)?(GPIO_IRQ_MUX_0_3 * 4):(GPIO_IRQ_MUX_4_7 * 4),
 			0xff << start_bit,
-			pin << start_bit);
+			irq_pin << start_bit);
 		/**
 		 *TODO: support to configure the  filter registers by
 		 * the func interface.
@@ -818,6 +830,7 @@ static int meson_ee_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 static int meson_ao_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 {
 	struct meson_domain *domain = to_meson_domain(irqd->chip_data);
+	struct meson_bank *bank;
 	struct irq_data *parent_data;
 	unsigned long flags;
 	unsigned int trigger_type[2];
@@ -827,6 +840,8 @@ static int meson_ao_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 	unsigned int gpio_virq;
 	unsigned char cnt;
 	unsigned char pin;
+	unsigned char irq_pin;
+	int ret;
 
 	type = type & IRQ_TYPE_SENSE_MASK;
 
@@ -886,11 +901,20 @@ static int meson_ao_gpio_irq_type(struct irq_data *irqd, unsigned int type)
 		/*the gpio hwirq eqaul to gpio offset in gpio chip*/
 		pin = domain->data->pin_base + irqd->hwirq;
 
+		ret = meson_get_bank(domain, pin, &bank);
+		if (ret)
+			return ret;
+
+		if (bank->irq < 0)
+			return -EINVAL;
+
+		irq_pin = bank->irq + pin - bank->first;
+
 		/*set pin select register*/
 		start_bit = cnt << 2;
 		regmap_update_bits(domain->reg_irq, 0,
 			0xf << start_bit,
-			pin << start_bit);
+			irq_pin << start_bit);
 		/**
 		 *TODO: support to configure the  filter registers by
 		 * the func interface.
@@ -947,36 +971,42 @@ struct meson_pinctrl_private meson_gxl_periphs = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_gxl_periphs_pinctrl_data,
 	.irq_chip = &meson_ee_gpio_irq_chip,
+	.init = meson_gxl_periphs_init,
 };
 
 struct meson_pinctrl_private meson_gxl_aobus = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_gxl_aobus_pinctrl_data,
 	.irq_chip = &meson_ao_gpio_irq_chip,
+	.init = meson_gxl_aobus_init,
 };
 
 struct meson_pinctrl_private meson_m8b_cbus = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson8b_cbus_pinctrl_data,
 	.irq_chip = &meson_ee_gpio_irq_chip,
+	.init = NULL,
 };
 
 struct meson_pinctrl_private meson_m8b_aobus = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson8b_aobus_pinctrl_data,
 	.irq_chip = &meson_ao_gpio_irq_chip,
+	.init = NULL,
 };
 
 struct meson_pinctrl_private meson_axg_periphs = {
 	.pinmux_type = PINMUX_V2,
 	.pinctrl_data = &meson_axg_periphs_pinctrl_data,
 	.irq_chip = &meson_ee_gpio_irq_chip,
+	.init = NULL,
 };
 
 struct meson_pinctrl_private meson_axg_aobus = {
 	.pinmux_type = PINMUX_V2,
 	.pinctrl_data = &meson_axg_aobus_pinctrl_data,
 	.irq_chip = &meson_ao_gpio_irq_chip,
+	.init = meson_axg_aobus_init,
 };
 
 static const struct of_device_id meson_pinctrl_dt_match[] = {
@@ -1421,6 +1451,9 @@ static int meson_pinctrl_probe(struct platform_device *pdev)
 		pinctrl_unregister(pc->pcdev);
 		return ret;
 	}
+
+	if (priv->init)
+		priv->init(pc);
 
 	meson_irq_setup(pc, priv->irq_chip);
 

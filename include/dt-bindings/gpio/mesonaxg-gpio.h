@@ -33,6 +33,7 @@
 #define GPIOAO_11	11
 #define GPIOAO_12	12
 #define GPIOAO_13	13
+#define GPIO_TEST_N 14
 
 /* Second GPIO chip */
 #define GPIOZ_0		0

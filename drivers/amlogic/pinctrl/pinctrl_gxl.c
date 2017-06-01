@@ -16,9 +16,11 @@
  */
 
 #include "pinctrl-meson.h"
+#include <linux/arm-smccc.h>
 #include <dt-bindings/gpio/gxl.h>
 
-#define EE_OFF	10
+#define EE_OFF	11
+#define HHI_XTAL_DIVN_CNTL_GPIO (0xc883c000 + (0x2f << 2))
 
 static const struct pinctrl_pin_desc meson_gxl_periphs_pins[] = {
 	MESON_PIN(GPIOZ_0, EE_OFF),
@@ -121,8 +123,6 @@ static const struct pinctrl_pin_desc meson_gxl_periphs_pins[] = {
 	MESON_PIN(GPIOX_18, EE_OFF),
 	MESON_PIN(GPIOCLK_0, EE_OFF),
 	MESON_PIN(GPIOCLK_1, EE_OFF),
-
-	MESON_PIN(GPIO_TEST_N, EE_OFF),
 };
 
 static const unsigned int emmc_nand_d07_pins[] = {
@@ -439,8 +439,6 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GPIO_GROUP(GPIOCLK_0, EE_OFF),
 	GPIO_GROUP(GPIOCLK_1, EE_OFF),
 
-	GPIO_GROUP(GPIO_TEST_N, EE_OFF),
-
 	/* Bank X */
 	GROUP(uart_tx_a,	 5,	19),
 	GROUP(uart_rx_a,	 5,	18),
@@ -646,6 +644,7 @@ static const struct pinctrl_pin_desc meson_gxl_aobus_pins[] = {
 	MESON_PIN(GPIOAO_7, 0),
 	MESON_PIN(GPIOAO_8, 0),
 	MESON_PIN(GPIOAO_9, 0),
+	MESON_PIN(GPIO_TEST_N, 0),
 };
 
 
@@ -694,6 +693,7 @@ static struct meson_pmx_group meson_gxl_aobus_groups[] = {
 	GPIO_GROUP(GPIOAO_7, 0),
 	GPIO_GROUP(GPIOAO_8, 0),
 	GPIO_GROUP(GPIOAO_9, 0),
+	GPIO_GROUP(GPIO_TEST_N, 0),
 
 	/* bank AO */
 	GROUP(uart_tx_ao_b_1, 0,	26),
@@ -759,7 +759,7 @@ static const char * const gpio_periphs_groups[] = {
 	"GPIOX_10", "GPIOX_11", "GPIOX_12", "GPIOX_13", "GPIOX_14",
 	"GPIOX_15", "GPIOX_16", "GPIOX_17", "GPIOX_18",
 
-	"GPIO_TEST_N",
+	"GPIOCLK_0", "GPIOCLK_1",
 };
 
 static const char * const emmc_groups[] = {
@@ -911,6 +911,7 @@ static struct meson_pmx_func meson_gxl_periphs_functions[] = {
 static const char * const gpio_aobus_groups[] = {
 	"GPIOAO_0", "GPIOAO_1", "GPIOAO_2", "GPIOAO_3", "GPIOAO_4",
 	"GPIOAO_5", "GPIOAO_6", "GPIOAO_7", "GPIOAO_8", "GPIOAO_9",
+	"GPIO_TEST_N",
 };
 
 static const char * const uart_ao_groups[] = {
@@ -953,37 +954,59 @@ static struct meson_pmx_func meson_gxl_aobus_functions[] = {
 	FUNCTION(ao_cec),
 };
 
+/*To use Bank CLK as normal pin, and have to set the register
+ *HHI_XTAL_DIVN_CNTL[0xc883c000 + (0x2f << 2)], as follows:
+ *
+ *bit[10] = 0
+ *bit[11] = 0
+ *bit[12] = 0
+ *
+ */
 static struct meson_bank meson_gxl_periphs_banks[] = {
 	/*   name    first   last     pullen  pull    dir     out     in  */
-	BANK("X",    PIN(GPIOX_0, EE_OFF),	PIN(GPIOX_18, EE_OFF),
+	BANK("X", PIN(GPIOX_0, EE_OFF), PIN(GPIOX_18, EE_OFF), 89,
 		4,  0,  4,  0,  12, 0,  13, 0,  14, 0),
 
-	BANK("DV",   PIN(GPIODV_0, EE_OFF),	PIN(GPIODV_29, EE_OFF),
+	BANK("DV", PIN(GPIODV_0, EE_OFF), PIN(GPIODV_29, EE_OFF), 59,
 		0,  0,  0,  0,  0,  0,  1,  0,  2,  0),
-	BANK("H",    PIN(GPIOH_0, EE_OFF),	PIN(GPIOH_9, EE_OFF),
+	BANK("H", PIN(GPIOH_0, EE_OFF), PIN(GPIOH_9, EE_OFF), 26,
 		1, 20,  1, 20,  3, 20,  4, 20,  5, 20),
-	BANK("Z",    PIN(GPIOZ_0, EE_OFF),	PIN(GPIOZ_15, EE_OFF),
+	BANK("Z", PIN(GPIOZ_0, EE_OFF), PIN(GPIOZ_15, EE_OFF), 10,
 		3,  0,  3,  0,  9,  0,  10, 0, 11,  0),
-	BANK("CARD", PIN(CARD_0, EE_OFF),	PIN(CARD_6, EE_OFF),
+	BANK("CARD", PIN(CARD_0, EE_OFF), PIN(CARD_6, EE_OFF), 52,
 		2, 20,  2, 20,  6, 20,  7, 20,  8, 20),
-	BANK("BOOT", PIN(BOOT_0, EE_OFF),	PIN(BOOT_15, EE_OFF),
+	BANK("BOOT", PIN(BOOT_0, EE_OFF), PIN(BOOT_15, EE_OFF), 36,
 		2,  0,  2,  0,  6,  0,  7,  0,  8,  0),
-	BANK("CLK",  PIN(GPIOCLK_0, EE_OFF),	PIN(GPIOCLK_1, EE_OFF),
+	BANK("CLK", PIN(GPIOCLK_0, EE_OFF), PIN(GPIOCLK_1, EE_OFF), 108,
 		3, 28,  3, 28,  9, 28, 10, 28, 11, 28),
 };
 
+/*  TEST_N is special pin, only used as gpio output at present.
+ *  the direction control bit from AO_SEC_REG0 bit[0], it
+ *  configured to output when pinctrl driver is initialized.
+ *  to make the api of gpiolib work well, the reserved bit(bit[14])
+ *  seen as direction control bit.
+ *
+ * AO_GPIO_O_EN_N       0x09<<2=0x24     bit[31]     output level
+ * AO_GPIO_I            0x0a<<2=0x28     bit[31]     input level
+ * AO_SEC_REG0          0x50<<2=0x140    bit[0]      input enable
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[30]     pull-up/down
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[14]     pull-up enable
+ */
 static struct meson_bank meson_gxl_aobus_banks[] = {
 	/* name    first   last   pullen  pull    dir     out     in  */
-	BANK("AO",   PIN(GPIOAO_0, 0),  PIN(GPIOAO_9, 0),
+	BANK("AO", PIN(GPIOAO_0, 0), PIN(GPIOAO_9, 0), 0,
 		0,  0,  0, 16,  0,  0,  0, 16,  1,  0),
+	BANK("TEST", PIN(GPIO_TEST_N, 0), PIN(GPIO_TEST_N, 0), -1,
+	0, 14, 0, 30, 0, 14, 0, 31, 1, 31),
 };
 
 static struct meson_domain_data meson_gxl_periphs_domain_data = {
 	.name		= "periphs-banks",
 	.banks		= meson_gxl_periphs_banks,
 	.num_banks	= ARRAY_SIZE(meson_gxl_periphs_banks),
-	.pin_base	= 10,
-	.num_pins	= 101,
+	.pin_base	= 11,
+	.num_pins	= 100,
 };
 
 static struct meson_domain_data meson_gxl_aobus_domain_data = {
@@ -991,7 +1014,7 @@ static struct meson_domain_data meson_gxl_aobus_domain_data = {
 	.banks		= meson_gxl_aobus_banks,
 	.num_banks	= ARRAY_SIZE(meson_gxl_aobus_banks),
 	.pin_base	= 0,
-	.num_pins	= 10,
+	.num_pins	= 11,
 };
 
 struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data = {
@@ -1013,3 +1036,36 @@ struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data = {
 	.num_groups	= ARRAY_SIZE(meson_gxl_aobus_groups),
 	.num_funcs	= ARRAY_SIZE(meson_gxl_aobus_functions),
 };
+
+int meson_gxl_aobus_init(struct meson_pinctrl *pc)
+{
+	struct arm_smccc_res res;
+	/*set TEST_N to output*/
+	arm_smccc_smc(CMD_TEST_N_DIR, TEST_N_OUTPUT, 0, 0, 0, 0, 0, 0, &res);
+
+	return 0;
+}
+
+int meson_gxl_periphs_init(struct meson_pinctrl *pc)
+{
+	void __iomem *reg;
+
+	if (!request_mem_region(HHI_XTAL_DIVN_CNTL_GPIO, 4, "gpioclk")) {
+		dev_err(pc->dev, "could not get region 0x%x - 0x%x\n",
+			HHI_XTAL_DIVN_CNTL_GPIO,
+			HHI_XTAL_DIVN_CNTL_GPIO + 4);
+		return -EBUSY;
+	}
+
+	reg = ioremap(HHI_XTAL_DIVN_CNTL_GPIO, 4);
+	if (!reg) {
+		dev_err(pc->dev, "could not remap register memory\n");
+		return -ENOMEM;
+	}
+	writel(readl(reg) & (~(7 << 10)), reg);
+
+	iounmap(reg);
+	release_mem_region(HHI_XTAL_DIVN_CNTL_GPIO, 4);
+
+	return 0;
+}

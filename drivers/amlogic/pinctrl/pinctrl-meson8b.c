@@ -920,26 +920,26 @@ static struct meson_pmx_func meson8b_aobus_functions[] = {
 };
 
 static struct meson_bank meson8b_cbus_banks[] = {
-	/*   name   first   last   pullen  pull    dir     out     in  */
-	BANK("X",    PIN(GPIOX_0, EE_OFF),		PIN(GPIOX_21, EE_OFF),
+	/*   name   first   last   irq  pullen  pull    dir     out     in  */
+	BANK("X", PIN(GPIOX_0, EE_OFF), PIN(GPIOX_21, EE_OFF), 97,
 	4,  0,  4,  0,  0,  0,  1,  0,  2,  0),
-	BANK("Y",    PIN(GPIOY_0, EE_OFF),		PIN(GPIOY_16, EE_OFF),
+	BANK("Y", PIN(GPIOY_0, EE_OFF), PIN(GPIOY_16, EE_OFF), 80,
 	3,  0,  3,  0,  3,  0,  4,  0,  5,  0),
-	BANK("DV",   PIN(GPIODV_0, EE_OFF),		PIN(GPIODV_29, EE_OFF),
+	BANK("DV", PIN(GPIODV_0, EE_OFF), PIN(GPIODV_29, EE_OFF), 50,
 	0,  0,  0,  0,  6,  0,  7,  0,  8,  0),
-	BANK("H",    PIN(GPIOH_0, EE_OFF),		PIN(GPIOH_9, EE_OFF),
+	BANK("H", PIN(GPIOH_0, EE_OFF), PIN(GPIOH_9, EE_OFF), 14,
 	1, 16,  1, 16,  9, 19, 10, 19, 11, 19),
-	BANK("CARD", PIN(CARD_0, EE_OFF),		PIN(CARD_6, EE_OFF),
+	BANK("CARD", PIN(CARD_0, EE_OFF), PIN(CARD_6, EE_OFF), 43,
 	2, 20,  2, 20,  0, 22,  1, 22,  2, 22),
-	BANK("BOOT", PIN(BOOT_0, EE_OFF),		PIN(BOOT_18, EE_OFF),
+	BANK("BOOT", PIN(BOOT_0, EE_OFF), PIN(BOOT_18, EE_OFF), 24,
 	2,  0,  2,  0,  9,  0, 10,  0, 11,  0),
-	BANK("DIF",  PIN(DIF_0_P, EE_OFF),		PIN(DIF_4_N, EE_OFF),
+	BANK("DIF", PIN(DIF_0_P, EE_OFF), PIN(DIF_4_N, EE_OFF), -1,
 	5,  8,  5,  8, 12, 12, 13, 12, 14, 12),
 };
 
 static struct meson_bank meson8b_aobus_banks[] = {
-	/*   name  first  last  pullen  pull    dir     out     in  */
-	BANK("AO",   PIN(GPIOAO_0, 0), PIN(GPIOAO_13, 0),
+	/*   name  first  last  irq  pullen  pull    dir     out     in  */
+	BANK("AO", PIN(GPIOAO_0, 0), PIN(GPIOAO_13, 0), -1,
 	0,  0,  0, 16,  0,  0,  0, 16,  1,  0),
 };
 

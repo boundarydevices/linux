@@ -16,9 +16,10 @@
  */
 
 #include <dt-bindings/gpio/mesonaxg-gpio.h>
+#include <linux/arm-smccc.h>
 #include "pinctrl-meson.h"
 
-#define EE_OFF	14
+#define EE_OFF	15
 
 static const struct meson_desc_pin mesonaxg_periphs_pins[] = {
 	MESON_PINCTRL_PIN(MESON_PIN(GPIOZ_0, EE_OFF), 0x2, 0,
@@ -448,33 +449,49 @@ static const struct meson_desc_pin mesonaxg_aobus_pins[] = {
 		MESON_FUNCTION(0x2, "gen_clk_ao"),	/*GEN_CLK_AO */
 		MESON_FUNCTION(0x3, "pwm_ao_c"),	/*PWMAO_C */
 		MESON_FUNCTION(0x4, "gen_clk")),	/*GEN_CLK_EE*/
+	MESON_PINCTRL_PIN(MESON_PIN(GPIO_TEST_N, 0), 0x1, 24,
+		MESON_FUNCTION(0x0, "gpio_ao")),
 };
 
 static struct meson_bank mesonaxg_periphs_banks[] = {
-	/* name   first   last   pullen  pull    dir  out  in */
-	BANK("A", PIN(GPIOA_0, EE_OFF),		PIN(GPIOA_20, EE_OFF),
+	/* name   first   last   irq  pullen  pull    dir  out  in */
+	BANK("A", PIN(GPIOA_0, EE_OFF), PIN(GPIOA_20, EE_OFF), 40,
 	0, 0,  0,  0,  0,  0,  1, 0,  2, 0),
-	BANK("Y",    PIN(GPIOY_0, EE_OFF),		PIN(GPIOY_15, EE_OFF),
+	BANK("Y", PIN(GPIOY_0, EE_OFF), PIN(GPIOY_15, EE_OFF), 84,
 	1, 0,  1,  0,  3,  0,  4, 0,  5, 0),
-	BANK("X",    PIN(GPIOX_0, EE_OFF),		PIN(GPIOX_22, EE_OFF),
+	BANK("X", PIN(GPIOX_0, EE_OFF), PIN(GPIOX_22, EE_OFF), 61,
 	2, 0,  2,  0,  6,  0,  7, 0,  8, 0),
-	BANK("Z",    PIN(GPIOZ_0, EE_OFF),		PIN(GPIOZ_10, EE_OFF),
+	BANK("Z", PIN(GPIOZ_0, EE_OFF), PIN(GPIOZ_10, EE_OFF), 14,
 	3, 0,  3,  0,  9,  0, 10, 0, 11, 0),
-	BANK("BOOT", PIN(BOOT_0, EE_OFF),		PIN(BOOT_14, EE_OFF),
+	BANK("BOOT", PIN(BOOT_0, EE_OFF), PIN(BOOT_14, EE_OFF), 25,
 	4, 0,  4,  0,  12, 0, 13, 0, 14, 0),
 };
 
+/*  TEST_N is special pin, only used as gpio output at present.
+ *  the direction control bit from AO_SEC_REG0 bit[0], it
+ *  configured to output when pinctrl driver is initialized.
+ *  to make the api of gpiolib work well, the reserved bit(bit[14])
+ *  seen as direction control bit.
+ *
+ * AO_GPIO_O_EN_N       0x09<<2=0x24     bit[31]     output level
+ * AO_GPIO_I            0x0a<<2=0x28     bit[31]     input level
+ * AO_SEC_REG0          0x50<<2=0x140    bit[0]      input enable
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[14]     pull-up/down
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[30]     pull-up enable
+ */
 static struct meson_bank mesonaxg_aobus_banks[] = {
-	/*   name  first  last  pullen  pull    dir     out     in  */
-	BANK("AO",   PIN(GPIOAO_0, 0), PIN(GPIOAO_13, 0),
+	/*   name  first  last  irq  pullen  pull    dir     out     in  */
+	BANK("AO", PIN(GPIOAO_0, 0), PIN(GPIOAO_13, 0), 0,
 	0,  16,  0,  0,  0,  0,  0, 16,  1,  0),
+	BANK("TEST", PIN(GPIO_TEST_N, 0), PIN(GPIO_TEST_N, 0), -1,
+	0, 30, 0, 14, 0, 14, 0, 31, 1, 31),
 };
 
 static struct meson_domain_data mesonaxg_periphs_domain_data = {
 	.name		= "periphs-banks",
 	.banks		= mesonaxg_periphs_banks,
 	.num_banks	= ARRAY_SIZE(mesonaxg_periphs_banks),
-	.pin_base	= 14,
+	.pin_base	= 15,
 	.num_pins	= 85,
 };
 
@@ -483,7 +500,7 @@ static struct meson_domain_data mesonaxg_aobus_domain_data = {
 	.banks		= mesonaxg_aobus_banks,
 	.num_banks	= ARRAY_SIZE(mesonaxg_aobus_banks),
 	.pin_base	= 0,
-	.num_pins	= 14,
+	.num_pins	= 15,
 };
 
 struct meson_pinctrl_data  meson_axg_periphs_pinctrl_data = {
@@ -497,3 +514,12 @@ struct meson_pinctrl_data  meson_axg_aobus_pinctrl_data = {
 	.domain_data = &mesonaxg_aobus_domain_data,
 	.num_pins = ARRAY_SIZE(mesonaxg_aobus_pins),
 };
+
+int meson_axg_aobus_init(struct meson_pinctrl *pc)
+{
+	struct arm_smccc_res res;
+	/*set TEST_N to output*/
+	arm_smccc_smc(CMD_TEST_N_DIR, TEST_N_OUTPUT, 0, 0, 0, 0, 0, 0, &res);
+
+	return 0;
+}

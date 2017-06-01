@@ -28,6 +28,7 @@
 #define	GPIOAO_7	7
 #define	GPIOAO_8	8
 #define	GPIOAO_9	9
+#define	GPIO_TEST_N 10
 
 #define	GPIOZ_0		0
 #define	GPIOZ_1		1
@@ -129,7 +130,6 @@
 #define	GPIOX_18    97
 #define	GPIOCLK_0    98
 #define	GPIOCLK_1    99
-#define	GPIO_TEST_N    100
 
 #define AO 0x10
 #define AO2 0x11

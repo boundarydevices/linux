@@ -85,6 +85,7 @@ enum meson_reg_type {
  * @name:	bank name
  * @first:	first pin of the bank
  * @last:	last pin of the bank
+ * @irq:	irq base number of the bank
  * @regs:	array of register descriptors
  *
  * A bank represents a set of pins controlled by a contiguous set of
@@ -96,6 +97,7 @@ struct meson_bank {
 	const char *name;
 	unsigned int first;
 	unsigned int last;
+	int irq;
 	struct meson_reg_desc regs[NUM_REG];
 };
 
@@ -189,18 +191,19 @@ struct meson_pinctrl_data {
 	unsigned int num_funcs;
 };
 
-struct meson_pinctrl_private {
-	unsigned char pinmux_type;
-	struct meson_pinctrl_data *pinctrl_data;
-	struct irq_chip *irq_chip;
-};
-
 struct meson_pinctrl {
 	struct device *dev;
 	struct pinctrl_dev *pcdev;
 	struct pinctrl_desc desc;
 	struct meson_pinctrl_data *data;
 	struct meson_domain *domain;
+};
+
+struct meson_pinctrl_private {
+	unsigned char pinmux_type;
+	struct meson_pinctrl_data *pinctrl_data;
+	struct irq_chip *irq_chip;
+	int (*init)(struct meson_pinctrl *pc);
 };
 
 struct meson_desc_function {
@@ -227,6 +230,9 @@ enum PINMUX_TYPE {
 	PINMUX_V2,
 	PINMUX_MAX,
 };
+
+#define CMD_TEST_N_DIR 0x82000046
+#define TEST_N_OUTPUT  1
 
 #define PIN(x, b)	(b + x)
 #define MESON_MUX_V2_MASK(x) (0xf << x)
@@ -257,11 +263,12 @@ enum PINMUX_TYPE {
 		.num_groups = ARRAY_SIZE(fn ## _groups),		\
 	}
 
-#define BANK(n, f, l, per, peb, pr, pb, dr, db, or, ob, ir, ib)		\
+#define BANK(n, f, l, i, per, peb, pr, pb, dr, db, or, ob, ir, ib)\
 	{								\
 		.name	= n,						\
 		.first	= f,						\
 		.last	= l,						\
+		.irq    = i,						\
 		.regs	= {						\
 			[REG_PULLEN]	= { per, peb },			\
 			[REG_PULL]	= { pr, pb },			\
@@ -294,3 +301,7 @@ extern struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data;
 extern struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data;
 extern struct meson_pinctrl_data meson_axg_periphs_pinctrl_data;
 extern struct meson_pinctrl_data meson_axg_aobus_pinctrl_data;
+
+extern int meson_gxl_aobus_init(struct meson_pinctrl *pc);
+extern int meson_gxl_periphs_init(struct meson_pinctrl *pc);
+extern int meson_axg_aobus_init(struct meson_pinctrl *pc);
