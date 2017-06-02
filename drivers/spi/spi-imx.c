@@ -213,25 +213,22 @@ out:
 	return i;
 }
 
-static u32 get_bytes_per_word(struct spi_device *spi,
-			 struct spi_transfer *transfer)
+static int spi_imx_bytes_per_word(const int bits_per_word)
 {
-	u32 bpw = transfer ? transfer->bits_per_word : 0;
-
-	if (!bpw)
-		bpw = spi->bits_per_word;
-
-	return (bpw + 7) >> 3;
+	return DIV_ROUND_UP(bits_per_word, BITS_PER_BYTE);
 }
 
 static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 			 struct spi_transfer *transfer)
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
-	u32 bpw = get_bytes_per_word(spi, transfer);
+	u32 bpw;
 
-	if (master->dma_rx &&
-			(transfer->len > spi_imx_get_fifosize(spi_imx) * bpw))
+	if (!master->dma_rx)
+		return false;
+
+	bpw = spi_imx_bytes_per_word(transfer->bits_per_word);
+	if (transfer->len > spi_imx_get_fifosize(spi_imx) * bpw)
 		return true;
 	return false;
 }
@@ -904,11 +901,6 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 
 	config.bpw = t->bits_per_word;
 	config.speed_hz  = t->speed_hz;
-
-	if (!config.speed_hz)
-		config.speed_hz = spi->max_speed_hz;
-	if (!config.bpw)
-		config.bpw = spi->bits_per_word;
 
 	/* Initialize the functions for transfer */
 	if (config.bpw <= 8) {
