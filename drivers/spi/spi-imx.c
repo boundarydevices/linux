@@ -92,6 +92,7 @@ struct spi_imx_data {
 
 	unsigned int speed_hz;
 	unsigned int bits_per_word;
+	unsigned int prev_bits_per_word;
 	unsigned int spi_drctl;
 
 	unsigned int count;
@@ -105,7 +106,6 @@ struct spi_imx_data {
 	unsigned int dma_finished;
 	bool usedma;
 	u32 wml;
-	u32 prev_bpw;
 	struct completion dma_rx_completion;
 	struct completion dma_tx_completion;
 	struct dma_slave_config rx_config;
@@ -221,13 +221,13 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 			 struct spi_transfer *transfer)
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
-	u32 bpw;
+	unsigned int bytes_per_word;
 
 	if (!master->dma_rx)
 		return false;
 
-	bpw = spi_imx_bytes_per_word(transfer->bits_per_word);
-	if (transfer->len > spi_imx_get_fifosize(spi_imx) * bpw)
+	bytes_per_word = spi_imx_bytes_per_word(transfer->bits_per_word);
+	if (transfer->len > spi_imx_get_fifosize(spi_imx) * bytes_per_word)
 		return true;
 	return false;
 }
@@ -922,8 +922,8 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	else
 		spi_imx->usedma = 0;
 
-	if (spi_imx->bitbang.master->dma_rx && (spi_imx->prev_bpw != spi_imx->bits_per_word)) {
-		spi_imx->prev_bpw = spi_imx->bits_per_word;
+	if (spi_imx->bitbang.master->dma_rx && (spi_imx->prev_bits_per_word != spi_imx->bits_per_word)) {
+		spi_imx->prev_bits_per_word = spi_imx->bits_per_word;
 
 		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_tx,
 						&spi_imx->tx_config);
