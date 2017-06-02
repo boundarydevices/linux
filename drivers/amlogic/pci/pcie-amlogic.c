@@ -27,6 +27,7 @@
 #include <linux/resource.h>
 #include <linux/signal.h>
 #include <linux/types.h>
+#include <linux/module.h>
 #include "../drivers/pci/host/pcie-designware.h"
 #include "pcie-amlogic.h"
 
@@ -45,6 +46,7 @@ struct amlogic_pcie {
 
 #define to_amlogic_pcie(x)	container_of(x, struct amlogic_pcie, pp)
 struct amlogic_pcie *g_amlogic_pcie;
+struct pcie_phy_aml_regs pcie_aml_regs;
 
 static void amlogic_elb_writel(struct amlogic_pcie *amlogic_pcie, u32 val,
 								u32 reg)
@@ -67,6 +69,177 @@ static u32 amlogic_cfg_readl(struct amlogic_pcie *amlogic_pcie, u32 reg)
 {
 	return readl(amlogic_pcie->cfg_base + reg);
 }
+
+static void cr_bus_addr(unsigned int addr)
+{
+	union phy_r4 phy_r4 = {.d32 = 0};
+	union phy_r5 phy_r5 = {.d32 = 0};
+
+	phy_r4.b.phy_cr_data_in = addr;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	phy_r4.b.phy_cr_cap_addr = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+	phy_r4.b.phy_cr_cap_addr = 1;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 0);
+
+	phy_r4.b.phy_cr_cap_addr = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 1);
+}
+
+static int cr_bus_read(unsigned int addr)
+{
+	int data;
+	union phy_r4 phy_r4 = {.d32 = 0};
+	union phy_r5 phy_r5 = {.d32 = 0};
+
+	cr_bus_addr(addr);
+
+	phy_r4.b.phy_cr_read = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+	phy_r4.b.phy_cr_read = 1;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 0);
+
+	data = phy_r5.b.phy_cr_data_out;
+
+	phy_r4.b.phy_cr_read = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 1);
+
+	return data;
+}
+
+static void cr_bus_write(unsigned int addr, unsigned int data)
+{
+	union phy_r4 phy_r4 = {.d32 = 0};
+	union phy_r5 phy_r5 = {.d32 = 0};
+
+	cr_bus_addr(addr);
+
+	phy_r4.b.phy_cr_data_in = data;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	phy_r4.b.phy_cr_cap_data = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+	phy_r4.b.phy_cr_cap_data = 1;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 0);
+
+	phy_r4.b.phy_cr_cap_data = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 1);
+
+	phy_r4.b.phy_cr_write = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+	phy_r4.b.phy_cr_write = 1;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 0);
+
+	phy_r4.b.phy_cr_write = 0;
+	writel(phy_r4.d32, pcie_aml_regs.pcie_phy_r[4]);
+
+	do {
+		phy_r5.d32 = readl(pcie_aml_regs.pcie_phy_r[5]);
+	} while (phy_r5.b.phy_cr_ack == 1);
+}
+
+
+static void amlogic_phy_cr_writel(u32 val, u32 reg)
+{
+	cr_bus_write(reg, val);
+}
+
+static u32 amlogic_phy_cr_readl(u32 reg)
+{
+	return cr_bus_read(reg);
+}
+
+static ssize_t show_pcie_cr_read(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	u32 status = 0;
+
+	return sprintf(buf, "%d\n", status);
+}
+
+
+static ssize_t store_pcie_cr_read(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	u32 reg;
+	u32 val;
+
+	if (sscanf(buf, "%x", &reg) != 1)
+		return -EINVAL;
+
+	val = amlogic_phy_cr_readl(reg);
+	dev_info(dev, "reg 0x%x value is 0x%x\n", reg, val);
+
+	return count;
+}
+DEVICE_ATTR(phyread, 0644, show_pcie_cr_read, store_pcie_cr_read);
+
+static ssize_t show_pcie_cr_write(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	u32 status = 0;
+
+	return sprintf(buf, "%d\n", status);
+}
+
+static ssize_t store_pcie_cr_write(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf_p, size_t count)
+{
+	unsigned reg, val;
+	char buf[80];
+	int ret;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	strncpy(buf, buf_p, (u32)count);
+
+	buf[count] = 0;
+
+	ret = sscanf(buf, "%x %x", &reg, &val);
+
+	switch (ret) {
+	case 2:
+		amlogic_phy_cr_writel(val, reg);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return count;
+}
+DEVICE_ATTR(phywrite, 0644, show_pcie_cr_write, store_pcie_cr_write);
 
 static void amlogic_pcie_assert_reset(struct amlogic_pcie *amlogic_pcie)
 {
@@ -363,6 +536,7 @@ int amlogic_pcie_link_up(struct pcie_port *pp)
 
 	while (smlh_up == 0 || rdlh_up == 0
 		|| ltssm_up == 0 || speed_okay == 0) {
+		udelay(20);
 		smlh_up = amlogic_cfg_readl(amlogic_pcie, PCIE_CFG_STATUS12);
 		smlh_up = (smlh_up >> 6) & 0x1;
 
@@ -394,7 +568,7 @@ int amlogic_pcie_link_up(struct pcie_port *pp)
 			return 0;
 		}
 
-		udelay(2);
+		udelay(20);
 	}
 
 	if (current_data_rate == PCIE_GEN2)
@@ -484,6 +658,7 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	int board_type = 0;
 	unsigned long rate = 100000000;
 	int err;
+	int j = 0;
 
 	dev_info(&pdev->dev, "amlogic_pcie_probe!\n");
 
@@ -555,6 +730,9 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 			ret = PTR_ERR(amlogic_pcie->phy_base);
 			goto fail_bus_clk;
 		}
+		for (j = 0; j < 7; j++)
+			pcie_aml_regs.pcie_phy_r[j] = (void __iomem *)
+				((unsigned long)amlogic_pcie->phy_base + 4*j);
 	} else {
 		amlogic_pcie->phy_base = g_amlogic_pcie->phy_base;
 	}
@@ -584,6 +762,8 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 		goto fail_bus_clk;
 
 	platform_set_drvdata(pdev, amlogic_pcie);
+	device_create_file(&pdev->dev, &dev_attr_phyread);
+	device_create_file(&pdev->dev, &dev_attr_phywrite);
 	return 0;
 
 fail_bus_clk:
@@ -597,6 +777,9 @@ fail_clk:
 static int __exit amlogic_pcie_remove(struct platform_device *pdev)
 {
 	struct amlogic_pcie *amlogic_pcie = platform_get_drvdata(pdev);
+
+	device_remove_file(&pdev->dev, &dev_attr_phywrite);
+	device_remove_file(&pdev->dev, &dev_attr_phyread);
 
 	clk_disable_unprepare(amlogic_pcie->bus_clk);
 	clk_disable_unprepare(amlogic_pcie->clk);

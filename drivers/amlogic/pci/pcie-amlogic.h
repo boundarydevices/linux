@@ -45,4 +45,110 @@ enum pcie_data_rate {
 #define PCIE_CAP_OFFSET	0x70
 #define PCIE_DEV_CTRL_DEV_STUS	(PCIE_CAP_OFFSET + 0x08)
 
+union phy_r0 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_test_powerdown:1;
+		unsigned phy_ref_use_pad:1;
+		unsigned pipe_port_sel:2;
+		unsigned pcs_common_clocks:1;
+		unsigned reserved:27;
+	} b;
+};
+
+union phy_r1 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_tx1_term_offset:5;
+		unsigned phy_tx0_term_offset:5;
+		unsigned phy_rx1_eq:3;
+		unsigned phy_rx0_eq:3;
+		unsigned phy_los_level:5;
+		unsigned phy_los_bias:3;
+		unsigned phy_ref_clkdiv2:1;
+		unsigned phy_mpll_multiplier:7;
+	} b;
+};
+
+union phy_r2 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned pcs_tx_deemph_gen2_6db:6;
+		unsigned pcs_tx_deemph_gen2_3p5db:6;
+		unsigned pcs_tx_deemph_gen1:6;
+		unsigned phy_tx_vboost_lvl:3;
+		unsigned reserved:11;
+	} b;
+};
+
+union phy_r3 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned pcs_tx_swing_low:7;
+		unsigned pcs_tx_swing_full:7;
+		unsigned reserved:18;
+	} b;
+};
+
+union phy_r4 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_cr_write:1;
+		unsigned phy_cr_read:1;
+		unsigned phy_cr_data_in:16;
+		unsigned phy_cr_cap_data:1;
+		unsigned phy_cr_cap_addr:1;
+		unsigned reserved:12;
+	} b;
+};
+
+union phy_r5 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_cr_data_out:16;
+		unsigned phy_cr_ack:1;
+		unsigned phy_bs_out:1;
+		unsigned reserved:14;
+	} b;
+};
+
+union phy_r6 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_bs_update_dr:1;
+		unsigned phy_bs_shift_dr:1;
+		unsigned phy_bs_preload:1;
+		unsigned phy_bs_invert:1;
+		unsigned phy_bs_init:1;
+		unsigned phy_bs_in:1;
+		unsigned phy_bs_highz:1;
+		unsigned phy_bs_extest_ac:1;
+		unsigned phy_bs_extest:1;
+		unsigned phy_bs_clk:1;
+		unsigned phy_bs_clamp:1;
+		unsigned phy_bs_capture_dr:1;
+		unsigned phy_acjt_level:5;
+		unsigned reserved:15;
+	} b;
+};
+
+struct pcie_phy_aml_regs {
+	void __iomem    *pcie_phy_r[7];
+};
+
+
 #endif
