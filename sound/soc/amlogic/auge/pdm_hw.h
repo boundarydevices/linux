@@ -19,19 +19,11 @@
 #define __AML_PDM_HW_H__
 #include "audio_io.h"
 
-extern void aml_pdm_enable(
-	struct aml_audio_controller *actrl,
-	bool is_enalbe);
-
 extern void aml_pdm_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitdepth, int channels);
 
 extern void aml_pdm_arb_config(struct aml_audio_controller *actrl);
-
-extern void aml_pdm_set_clk(
-	struct aml_audio_controller *actrl,
-	int is_enable);
 
 extern void aml_pdm_set_bclk_ratio(
 	struct aml_audio_controller *actrl,

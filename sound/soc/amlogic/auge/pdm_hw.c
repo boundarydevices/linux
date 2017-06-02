@@ -25,12 +25,7 @@
 #include "iomap.h"
 #include "pdm_hw_coeff.c"
 
-void aml_pdm_enable(
-	struct aml_audio_controller *actrl,
-	bool is_enalbe)
-{
-	aml_pdm_update_bits(PDM_CTRL, 1 << 31, is_enalbe << 31);
-}
+extern int pdm_hcic_shift_gain;
 
 void aml_pdm_ctrl(
 	struct aml_audio_controller *actrl,
@@ -50,8 +45,9 @@ void aml_pdm_ctrl(
 
 	aml_pdm_write(PDM_CTRL, 0);
 
+	/* must be sure that clk and pdm is enable */
 	aml_pdm_write(PDM_CTRL,
-				(0 << 31) |
+				(1 << 31) |
 				/* invert the PDM_DCLK or not */
 				(0 << 30) |
 				/* output mode:  1: 24bits. 0: 32 bits */
@@ -86,17 +82,6 @@ void aml_pdm_arb_config(struct aml_audio_controller *actrl)
 {
 	/* config ddr arb */
 	aml_audiobus_write(actrl, EE_AUDIO_ARB_CTRL, 1<<31|0xff<<0);
-}
-
-void aml_pdm_set_clk(
-	struct aml_audio_controller *actrl,
-	int is_enable)
-{
-	return;
-	aml_audiobus_update_bits(actrl,
-			EE_AUDIO_CLK_PDMIN_CTRL0, 1 << 31, is_enable << 31);
-	aml_audiobus_update_bits(actrl,
-			EE_AUDIO_CLK_PDMIN_CTRL1, 1 << 31, is_enable << 31);
 }
 
 void aml_pdm_set_bclk_ratio(
@@ -187,9 +172,9 @@ static void aml_pdm_filters_config(int osr,
 	}
 
 	/* TODO: fixed hcic_shift 'cause of Dmic */
-#if 0
-	hcic_shift -= 0x4;
-#endif
+	if (pdm_hcic_shift_gain)
+		hcic_shift -= 0x4;
+
 
 	hcic_tap_num = 0x0007;
 	f1_tap_num	 = lpf1_len;

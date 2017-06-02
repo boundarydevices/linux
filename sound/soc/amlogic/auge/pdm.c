@@ -104,6 +104,35 @@ static int aml_pdm_filter_mode_set_enum(
 	return 0;
 }
 
+int pdm_hcic_shift_gain = 1;
+
+static const char *const pdm_hcic_shift_gain_texts[] = {
+	"keep with coeff",
+	"shift with -0x4",
+};
+
+static const struct soc_enum pdm_hcic_shift_gain_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(pdm_hcic_shift_gain_texts),
+			pdm_hcic_shift_gain_texts);
+
+static int pdm_hcic_shift_gain_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = pdm_hcic_shift_gain;
+
+	return 0;
+}
+
+static int pdm_hcic_shift_gain_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	pdm_hcic_shift_gain = ucontrol->value.enumerated.item[0];
+
+	return 0;
+}
+
 static int aml_pdm_cntrl_get_reg(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol) {
 	struct soc_mixer_control *mixcntrl =
@@ -158,6 +187,11 @@ static const struct snd_kcontrol_new snd_pdm_controls[] = {
 			 aml_pdm_cntrl_get_reg,
 			 aml_pdm_cntrl_set_reg
 			 ),
+
+	SOC_ENUM_EXT("HCIC shift gain from coeff",
+		     pdm_hcic_shift_gain_enum,
+		     pdm_hcic_shift_gain_get_enum,
+		     pdm_hcic_shift_gain_set_enum),
 };
 
 static irqreturn_t aml_pdm_isr_handler(int irq, void *data)
@@ -497,8 +531,6 @@ static int aml_pdm_dai_prepare(
 		aml_pdm_filter_ctrl(osr, p_pdm->filter_mode);
 	}
 
-	pr_info("%s\n", __func__);
-
 	return 0;
 }
 
@@ -507,7 +539,6 @@ static int aml_pdm_dai_trigger(
 		struct snd_soc_dai *dai)
 {
 	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(dai);
-	struct aml_audio_controller *actrl = p_pdm->actrl;
 
 	pr_info("%s\n", __func__);
 
@@ -515,11 +546,6 @@ static int aml_pdm_dai_trigger(
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		/* TODO */
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-			aml_pdm_set_clk(actrl, 1);
-			aml_pdm_enable(actrl, true);
-		}
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 			dev_info(substream->pcm->card->dev, "pdm capture enable\n");
 			aml_toddr_enable(p_pdm->tddr, 1);
@@ -530,12 +556,6 @@ static int aml_pdm_dai_trigger(
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-			/* do not disable pdm clk */
-			/*aml_pdm_set_clk(actrl, 0);*/
-
-			aml_pdm_enable(actrl, false);
-		}
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 			dev_info(substream->pcm->card->dev, "pdm capture enable\n");
 			aml_toddr_enable(p_pdm->tddr, 0);
 		}
@@ -545,7 +565,7 @@ static int aml_pdm_dai_trigger(
 		return -EINVAL;
 	}
 
-return 0;
+	return 0;
 }
 
 
