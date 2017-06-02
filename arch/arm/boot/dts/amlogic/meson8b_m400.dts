@@ -49,6 +49,22 @@
 		};
 	};
 
+	bt-dev{
+		compatible = "amlogic, bt-dev";
+		dev_name = "bt-dev";
+		status = "okay";
+		gpio_reset =  <&gpio       GPIOX_20       GPIO_ACTIVE_HIGH>;
+	};
+	wifi{
+		compatible = "amlogic, aml_wifi";
+		dev_name = "aml_wifi";
+		status = "okay";
+		interrupt_pin = <&gpio       GPIOX_21       GPIO_ACTIVE_HIGH>;
+		interrupts = <  0 68 4>;
+		irq_trigger_type = "GPIO_IRQ_HIGH";
+		power_on_pin = <&gpio       GPIOX_11       GPIO_ACTIVE_HIGH>;
+	};
+
 	sdio {
 		compatible = "amlogic, aml_sdio";
 		dev_name = "aml_sdio.0";
