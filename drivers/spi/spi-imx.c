@@ -93,6 +93,7 @@ struct spi_imx_data {
 
 	unsigned int speed_hz;
 	unsigned int bits_per_word;
+	unsigned int prev_bits_per_word;
 	unsigned int spi_drctl;
 
 	unsigned int bytes_per_word;
@@ -216,20 +217,20 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 			 struct spi_transfer *transfer)
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
-	unsigned int bpw;
+	unsigned int bytes_per_word;
 
 	if (!master->dma_rx)
 		return false;
 
-	bpw = spi_imx_bytes_per_word(transfer->bits_per_word);
+	bytes_per_word = spi_imx_bytes_per_word(transfer->bits_per_word);
 
-	if (bpw != 1 && bpw != 2 && bpw != 4)
+	if (bytes_per_word != 1 && bytes_per_word != 2 && bytes_per_word != 4)
 		return false;
 
-	if (transfer->len < spi_imx->wml * bpw)
+	if (transfer->len < spi_imx->wml * bytes_per_word)
 		return false;
 
-	if (transfer->len % (spi_imx->wml * bpw))
+	if (transfer->len % (spi_imx->wml * bytes_per_word))
 		return false;
 
 	return true;
@@ -971,7 +972,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 
 	if (spi_imx->usedma) {
 		ret = spi_imx_dma_configure(spi->master,
-					    spi_imx_bytes_per_word(config.bpw));
+			    spi_imx_bytes_per_word(spi_imx->bits_per_word));
 		if (ret)
 			return ret;
 	}
