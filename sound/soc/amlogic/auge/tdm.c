@@ -119,7 +119,7 @@ static irqreturn_t aml_tdmin_isr(int irq, void *devid)
 
 	return IRQ_HANDLED;
 }
-
+#if 0
 /* get counts of '1's in val */
 static unsigned int pop_count(unsigned int val)
 {
@@ -132,7 +132,7 @@ static unsigned int pop_count(unsigned int val)
 
 	return count;
 }
-
+#endif
 static int snd_soc_of_get_slot_mask(struct device_node *np,
 				    const char *prop_name,
 				    unsigned int *mask)
@@ -484,34 +484,52 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 {
 	struct pcm_setting *setting = &p_tdm->setting;
 	unsigned int lanes, swap_val;
+	unsigned int lane_mask;
+	unsigned int set_num = 0;
 	unsigned int i;
 
 	pr_info("asoc debug: %d-%d\n", channels, setting->slots);
 
 	swap_val = 0;
-	// assume mask channels one lane
+	// calc lanes by channels and slots
 	lanes = (channels - 1) / setting->slots + 1;
-
-	pr_info("asoc debug: lanes_ddr = %d\n", lanes);
-
-	// set channels swap
-	for (i = 0; i < channels; i++)
-		swap_val |= i << (i * 4);
-	aml_tdm_set_lane_channel_swap(p_tdm->actrl,
-		stream, p_tdm->id, swap_val);
+	if (lanes > 4) {
+		pr_err("lanes setting error\n");
+		return -EINVAL;
+	}
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		aml_tdm_set_channel_mask(p_tdm->actrl,
-			stream, p_tdm->id, lanes, setting->tx_mask);
+		// set lanes mask acordingly
+		lane_mask = setting->lane_mask_out;
+		for (i = 0; i < 4; i++) {
+			unsigned int ch = i * 2;
 
-		if (pop_count(setting->tx_mask) > 2)
-			swap_val = 1 << 4;
+			if (i < lanes)
+				aml_tdm_set_channel_mask(p_tdm->actrl,
+					stream, p_tdm->id, i, setting->tx_mask);
 
+			if ((1 << i) & lane_mask) {
+				// each lane only L/R swap
+				swap_val |= set_num++ << (ch++ * 4);
+				swap_val |= set_num++ << (ch * 4);
+			}
+		}
 		aml_tdm_set_lane_channel_swap(p_tdm->actrl,
 			stream, p_tdm->id, swap_val);
 	} else {
-		aml_tdm_set_channel_mask(p_tdm->actrl,
-			stream, p_tdm->id, lanes, setting->rx_mask);
+		lane_mask = setting->lane_mask_in;
+
+		for (i = 0; i < 4; i++) {
+			if (i < lanes)
+				aml_tdm_set_channel_mask(p_tdm->actrl,
+					stream, p_tdm->id, i, setting->rx_mask);
+			if ((1 << i) & lane_mask) {
+				// each lane only L/R masked
+				pr_info("tdmin set lane %d\n", i);
+				swap_val |= (i * 2) << (set_num++ * 4);
+				swap_val |= (i * 2 + 1) << (set_num++ * 4);
+			}
+		}
 
 		aml_tdm_set_lane_channel_swap(p_tdm->actrl,
 			stream, p_tdm->id, swap_val);
@@ -560,9 +578,11 @@ static int aml_dai_tdm_hw_free(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *cpu_dai)
 {
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	int i;
 
-	aml_tdm_set_channel_mask(p_tdm->actrl,
-		substream->stream, p_tdm->id, 4, 0);
+	for (i = 0; i < 4; i++)
+		aml_tdm_set_channel_mask(p_tdm->actrl,
+			substream->stream, p_tdm->id, i, 0);
 
 	return 0;
 }

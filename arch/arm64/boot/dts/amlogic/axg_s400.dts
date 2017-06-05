@@ -391,7 +391,8 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
-				sound-dai = <&tas5707_36 &tas5707_3a>;
+				sound-dai = <&tas5707_36 &tas5707_3a
+						&dummy_codec>;
 			};
 		};
 
@@ -730,7 +731,7 @@
 				GIC_SPI 90 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmc_mclk &tdmout_c>;// &tdmin_c>;
+		pinctrl-0 = <&tdmc_mclk &tdmout_c &tdmin_c>;
 	};
 
 	aml_spdif: spdif {
@@ -825,18 +826,18 @@
 	tdmout_c:tdmout_c {
 		mux {
 			pins = "GPIOA_2", "GPIOA_3", "GPIOA_4",
-				"GPIOA_5", "GPIOA_6", "GPIOA_7";
+				"GPIOA_6", "GPIOA_7";
 			function = "tdmc_out";
 		};
 	};
 
 
-	//tdmin_c:tdmin_c {
-	//	mux {
-	//		pins = "GPIOA_4", "GPIOA_5", "GPIOA_6", "GPIOA_7";
-	//		function = "tdmc_in";
-	//	};
-	//};
+	tdmin_c:tdmin_c {
+		mux {
+			pins = "GPIOA_5";
+			function = "tdmc_in";
+		};
+	};
 
 	spdifout: spidfout {
 		mux {

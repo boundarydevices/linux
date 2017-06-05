@@ -164,7 +164,7 @@ void aml_tdm_set_format(
 	case SND_SOC_DAIFMT_I2S:
 		if (master_mode) {
 			bclkout_skew = 1;
-			bclkin_skew = 5;
+			bclkin_skew = 3;
 		} else {
 			bclkout_skew = 2;
 			bclkin_skew = 3;
@@ -273,10 +273,9 @@ void aml_tdm_set_slot(
 
 void aml_tdm_set_channel_mask(
 	struct aml_audio_controller *actrl,
-	int stream, int index, int lanes, int mask)
+	int stream, int index, int lane, int mask)
 {
 	unsigned int offset, reg;
-	int i;
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		offset = EE_AUDIO_TDMOUT_B_MASK0 - EE_AUDIO_TDMOUT_A_MASK0;
@@ -286,10 +285,7 @@ void aml_tdm_set_channel_mask(
 		reg = EE_AUDIO_TDMIN_A_MASK0 + offset * index;
 	}
 
-	/* mask 0~3 */
-	for (i = 0; i < lanes; i++)
-		aml_audiobus_write(actrl, reg + i, mask);
-
+	aml_audiobus_write(actrl, reg + lane, mask);
 }
 
 void aml_tdm_set_lane_channel_swap(
