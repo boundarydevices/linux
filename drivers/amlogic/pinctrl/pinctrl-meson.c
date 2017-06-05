@@ -249,9 +249,31 @@ static int meson_pmx_request_gpio(struct pinctrl_dev *pcdev,
 				  struct pinctrl_gpio_range *range,
 				  unsigned int offset)
 {
+	struct pin_desc *desc;
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
 
+	desc = pin_desc_get(pcdev, offset);
+	if (desc->mux_owner) {
+		pr_info("%s is using the pin %s as pinmux\n",
+				desc->mux_owner, desc->name);
+		return -EINVAL;
+	}
+
 	meson_pmx_disable_other_groups(pc, offset, -1);
+
+	return 0;
+}
+
+static int meson_pmx_request(struct pinctrl_dev *pcdev, unsigned int offset)
+{
+	struct pin_desc *desc;
+
+	desc = pin_desc_get(pcdev, offset);
+	if (desc->gpio_owner) {
+		pr_info("%s is using the pin %s as gpio\n",
+				desc->gpio_owner, desc->name);
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -289,6 +311,7 @@ static const struct pinmux_ops meson_pmx_v1_ops = {
 	.get_function_name = meson_pmx_get_func_name,
 	.get_function_groups = meson_pmx_get_groups,
 	.gpio_request_enable = meson_pmx_request_gpio,
+	.request = meson_pmx_request,
 };
 
 static struct meson_desc_function *
@@ -356,7 +379,15 @@ static int meson_pmx_v2_request_gpio(struct pinctrl_dev *pcdev,
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
 	const struct meson_desc_pin *pin;
 	struct meson_domain *domain;
+	struct pin_desc *desc;
 	int i;
+
+	desc = pin_desc_get(pcdev, offset);
+	if (desc->mux_owner) {
+		pr_info("%s is using the pin %s as pinmux\n",
+				desc->mux_owner, desc->name);
+		return -EINVAL;
+	}
 
 	for (i = 0; i < pc->data->num_pins; i++) {
 		pin = pc->data->meson_pins + i;
@@ -383,6 +414,7 @@ static const struct pinmux_ops meson_pmx_v2_ops = {
 	.get_function_name = meson_pmx_get_func_name,
 	.get_function_groups = meson_pmx_get_groups,
 	.gpio_request_enable = meson_pmx_v2_request_gpio,
+	.request = meson_pmx_request,
 };
 
 static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
