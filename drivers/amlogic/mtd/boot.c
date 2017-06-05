@@ -229,7 +229,8 @@ int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
 	if (aml_chip->support_new_nand == 1)
 		en_slc = ((type < 10) && type) ? 1:0;
 	if (aml_chip->bl_mode)
-		boot_num = 4;
+		boot_num =
+			(get_cpu_type() < MESON_CPU_MAJOR_ID_AXG) ? 4 : 8;
 	else
 		boot_num = (!aml_chip->boot_copy_num) ?
 			1 : aml_chip->boot_copy_num;
@@ -404,7 +405,8 @@ int m3_nand_boot_write_page_hwecc(struct mtd_info *mtd,
 	int each_boot_pages, boot_num;
 
 	if (aml_chip->bl_mode)
-		boot_num = 4;
+		boot_num =
+			(get_cpu_type() < MESON_CPU_MAJOR_ID_AXG) ? 4 : 8;
 	else
 		boot_num = (!aml_chip->boot_copy_num) ?
 			1 : aml_chip->boot_copy_num;
@@ -471,8 +473,10 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 
 	new_nand_info = &aml_chip->new_nand_info;
 	slc_program_info = &new_nand_info->slc_program_info;
+	/* check cpuid, */
 	if (aml_chip->bl_mode)
-		boot_num = 4;
+		boot_num =
+			(get_cpu_type() < MESON_CPU_MAJOR_ID_AXG) ? 4 : 8;
 	else
 		boot_num = (!aml_chip->boot_copy_num) ?
 			1 : aml_chip->boot_copy_num;
