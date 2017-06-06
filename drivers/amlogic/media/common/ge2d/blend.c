@@ -14,8 +14,11 @@
  * more details.
  *
  */
+/* Linux Headers */
+#include <linux/types.h>
 
 /* Amlogic Headers */
+#include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/ge2d/ge2d.h>
 
 void blend(struct ge2d_context_s *wq,
@@ -62,12 +65,13 @@ void blend(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->alpha_src_blend_factor = (op >>  4) & 0xf;
 	ge2d_cmd_cfg->alpha_dst_blend_factor = (op >>  0) & 0xf;
 
-	if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
-		ge2d_cmd_cfg->color_logic_op =
-			ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
-		ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
+			ge2d_cmd_cfg->color_logic_op =
+				ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
+			ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+		}
 	}
-
 	ge2d_cmd_cfg->alpha_blend_mode = (op >> 8) & 0xff;
 	if (ge2d_cmd_cfg->alpha_blend_mode >= BLENDOP_LOGIC) {
 		ge2d_cmd_cfg->alpha_logic_op =
@@ -124,13 +128,13 @@ void blend_noblk(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->color_dst_blend_factor = (op >> 16) & 0xf;
 	ge2d_cmd_cfg->alpha_src_blend_factor = (op >>  4) & 0xf;
 	ge2d_cmd_cfg->alpha_dst_blend_factor = (op >>  0) & 0xf;
-
-	if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
-		ge2d_cmd_cfg->color_logic_op =
-			ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
-		ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
+			ge2d_cmd_cfg->color_logic_op =
+				ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
+			ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+		}
 	}
-
 	ge2d_cmd_cfg->alpha_blend_mode = (op >> 8) & 0xff;
 	if (ge2d_cmd_cfg->alpha_blend_mode >= BLENDOP_LOGIC) {
 		ge2d_cmd_cfg->alpha_logic_op =
@@ -187,10 +191,12 @@ void blend_noalpha(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->alpha_src_blend_factor = (op >>  4) & 0xf;
 	ge2d_cmd_cfg->alpha_dst_blend_factor = (op >>  0) & 0xf;
 
-	if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
-		ge2d_cmd_cfg->color_logic_op =
-			ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
-		ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
+			ge2d_cmd_cfg->color_logic_op =
+				ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
+			ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+		}
 	}
 	ge2d_cmd_cfg->alpha_blend_mode = OPERATION_LOGIC;
 	ge2d_cmd_cfg->alpha_logic_op   = LOGIC_OPERATION_SET;
@@ -246,10 +252,12 @@ void blend_noalpha_noblk(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->alpha_src_blend_factor = (op >>  4) & 0xf;
 	ge2d_cmd_cfg->alpha_dst_blend_factor = (op >>  0) & 0xf;
 
-	if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
-		ge2d_cmd_cfg->color_logic_op =
-			ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
-		ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_cmd_cfg->color_blend_mode >= BLENDOP_LOGIC) {
+			ge2d_cmd_cfg->color_logic_op =
+				ge2d_cmd_cfg->color_blend_mode - BLENDOP_LOGIC;
+			ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
+		}
 	}
 	ge2d_cmd_cfg->alpha_blend_mode = OPERATION_LOGIC;
 	ge2d_cmd_cfg->alpha_logic_op   = LOGIC_OPERATION_SET;

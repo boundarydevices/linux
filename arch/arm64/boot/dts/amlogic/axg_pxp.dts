@@ -230,6 +230,21 @@
 		logo_addr = "0x3e000000";
 		pxp_mode = <1>; /** 0:normal mode 1:pxp mode */
 	};
+
+	ge2d {
+		compatible = "amlogic, ge2d";
+		dev_name = "ge2d";
+		status = "okay";
+		interrupts = <0 150 1>;
+		interrupt-names = "ge2d";
+		clocks = <&clkc CLKID_VAPB_MUX>,
+			<&clkc CLKID_GE2D_GATE>,
+			<&clkc CLKID_G2D>;
+		clock-names = "clk_vapb_0",
+			"clk_ge2d",
+			"clk_ge2d_gate";
+		reg = <0x0 0xff940000 0x0 0x10000>;
+	};
 }; /* end of / */
 
 &spicc_a{

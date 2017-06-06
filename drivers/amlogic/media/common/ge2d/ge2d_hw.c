@@ -26,6 +26,11 @@
 #include "ge2d_log.h"
 #include "ge2d_io.h"
 #include "ge2d_reg.h"
+
+#define GE2D_DST1_INDEX 0
+#define GE2D_SRC1_INDEX 1
+#define GE2D_SRC2_INDEX 2
+
 static const  unsigned int filt_coef_gau1[] = { /* gau1+phase */
 	0x20402000,
 	0x203f2001,
@@ -279,6 +284,20 @@ static const        unsigned int filt_coef3[] = { /* 3 point triangle */
 	0x00
 };
 
+void ge2d_canv_config(u32 index, u32 addr, u32 stride)
+{
+	ge2d_log_dbg("ge2d_canv_config:index=%d,addr=%x,stride=%d\n",
+		index, addr, stride);
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) {
+		if (index <= 2) {
+			ge2d_reg_write(GE2D_DST1_BADDR_CTRL
+				+ index * 2, ((addr + 7) >> 3));
+			ge2d_reg_write(GE2D_DST1_STRIDE_CTRL
+				+ index * 2, ((stride + 7) >> 3));
+		}
+	}
+}
+
 void ge2d_set_src1_data(struct ge2d_src1_data_s *cfg)
 {
 	ge2d_reg_set_bits(GE2D_GEN_CTRL1, cfg->urgent_en,  10, 1);
@@ -287,10 +306,16 @@ void ge2d_set_src1_data(struct ge2d_src1_data_s *cfg)
 	ge2d_reg_set_bits(GE2D_GEN_CTRL1, cfg->ddr_burst_size_cb, 18, 2);
 	ge2d_reg_set_bits(GE2D_GEN_CTRL1, cfg->ddr_burst_size_cr, 16, 2);
 
-	ge2d_reg_write(GE2D_SRC1_CANVAS,
-			((cfg->canaddr & 0xff) << 24) |
-			(((cfg->canaddr >> 8) & 0xff) << 16) |
-			(((cfg->canaddr >> 16) & 0xff) << 8));
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) {
+		ge2d_canv_config(GE2D_SRC1_INDEX,
+			cfg->phy_addr,
+			cfg->stride);
+	} else {
+		ge2d_reg_write(GE2D_SRC1_CANVAS,
+				((cfg->canaddr & 0xff) << 24) |
+				(((cfg->canaddr >> 8) & 0xff) << 16) |
+				(((cfg->canaddr >> 16) & 0xff) << 8));
+	}
 
 	ge2d_reg_set_bits(GE2D_GEN_CTRL0,
 			((cfg->x_yc_ratio << 1) | cfg->y_yc_ratio),
@@ -301,6 +326,13 @@ void ge2d_set_src1_data(struct ge2d_src1_data_s *cfg)
 	ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->format, 0, 2);
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXL)
 		ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->deep_color, 2, 1);
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) {
+		ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->mult_rounding, 18, 1);
+		ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->alpha_conv_mode0, 31, 1);
+		ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->alpha_conv_mode1, 10, 1);
+		ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->color_conv_mode0, 30, 1);
+		ge2d_reg_set_bits(GE2D_GEN_CTRL1, cfg->color_conv_mode1, 26, 1);
+	}
 	ge2d_reg_set_bits(GE2D_GEN_CTRL0, cfg->mode_8b_sel, 5, 2);
 	ge2d_reg_set_bits(GE2D_GEN_CTRL0, cfg->lut_en, 3, 1);
 
@@ -400,11 +432,20 @@ void ge2d_set_src2_dst_data(struct ge2d_src2_dst_data_s *cfg)
 	ge2d_reg_set_bits(GE2D_GEN_CTRL1, cfg->urgent_en,  9, 1);
 	ge2d_reg_set_bits(GE2D_GEN_CTRL1, cfg->ddr_burst_size, 22, 2);
 
-	/* only for m6 and later chips. */
-	ge2d_reg_write(GE2D_SRC2_DST_CANVAS, (cfg->src2_canaddr << 8) |
-			((cfg->dst_canaddr & 0xff) << 0) |
-			((cfg->dst_canaddr & 0xff00) << 8)
-		       );
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) {
+		ge2d_canv_config(GE2D_SRC2_INDEX,
+			cfg->src2_phyaddr,
+			cfg->src2_stride);
+		ge2d_canv_config(GE2D_DST1_INDEX,
+			cfg->dst_phyaddr,
+			cfg->dst_stride);
+	} else {
+		/* only for m6 and later chips. */
+		ge2d_reg_write(GE2D_SRC2_DST_CANVAS, (cfg->src2_canaddr << 8) |
+				((cfg->dst_canaddr & 0xff) << 0) |
+				((cfg->dst_canaddr & 0xff00) << 8)
+			       );
+	}
 
 	ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->src2_endian, 15, 1);
 	ge2d_reg_set_bits(GE2D_GEN_CTRL2, cfg->src2_color_map, 11, 4);
@@ -892,7 +933,7 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 	 * scale_out_done(test1823) hang issue when
 	 * scaling down ratio is high.
 	 */
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX)
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX)
 		ge2d_reg_set_bits(GE2D_GEN_CTRL4, cfg->hang_flag, 0, 1);
 	ge2d_reg_write(GE2D_CMD_CTRL,
 			(cfg->src2_fill_color_en << 9) |
@@ -939,7 +980,7 @@ void ge2d_set_gen(struct ge2d_gen_s *cfg)
 			(cfg->vfmt_onoff_en << 15) |
 			(cfg->dp_off_cnt << 0)
 		       );
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX) {
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX) {
 		ge2d_reg_set_bits(GE2D_GEN_CTRL4,
 			(cfg->fifo_size << 26) |
 			(cfg->fifo_size << 24) |

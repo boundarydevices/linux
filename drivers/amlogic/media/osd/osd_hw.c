@@ -2373,7 +2373,7 @@ void osd_get_info(u32 index, u32 *addr, u32 *width, u32 *height)
 {
 	*addr = osd_hw.fb_gem[index].addr;
 	*width = osd_hw.fb_gem[index].width;
-	*height = osd_hw.fb_gem[index].height;
+	*height = osd_hw.fb_gem[index].yres;
 }
 
 static  void  osd1_update_disp_scale_enable(void)

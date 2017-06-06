@@ -382,8 +382,15 @@ struct ge2d_src1_data_s {
 	unsigned char     mode_8b_sel;
 	unsigned char     lut_en;
 	unsigned char     deep_color;
+	unsigned char     mult_rounding;
+	unsigned char     alpha_conv_mode0;
+	unsigned char     alpha_conv_mode1;
+	unsigned char     color_conv_mode0;
+	unsigned char     color_conv_mode1;
 	unsigned int      def_color;
 	unsigned int      format_all;
+	unsigned int      phy_addr;
+	unsigned int      stride;
 };
 
 struct ge2d_src1_gen_s {
@@ -432,6 +439,10 @@ struct ge2d_src2_dst_data_s {
 	unsigned char	dst2_discard_mode;
 	unsigned char	dst2_enable;
 
+	unsigned int src2_phyaddr;
+	unsigned int src2_stride;
+	unsigned int dst_phyaddr;
+	unsigned int dst_stride;
 };
 
 struct ge2d_src2_dst_gen_s {
@@ -654,6 +665,8 @@ struct src_dst_para_s {
 	int  canvas_index;
 	int  bpp;
 	int  ge2d_color_index;
+	int  phy_addr;
+	int  stride;
 };
 
 enum ge2d_op_type_e {
@@ -968,7 +981,7 @@ extern struct ge2d_src2_dst_gen_s
 extern struct ge2d_dp_gen_s *ge2d_wq_get_dp_gen(struct ge2d_context_s *wq);
 extern struct ge2d_cmd_s *ge2d_wq_get_cmd(struct ge2d_context_s *wq);
 extern int ge2d_wq_add_work(struct ge2d_context_s *wq);
-
+void ge2d_canv_config(u32 index, u32 addr, u32 stride);
 
 #include "ge2d_func.h"
 
