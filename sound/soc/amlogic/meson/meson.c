@@ -68,7 +68,6 @@ static void aml_i2s_play(void)
 	audio_out_i2s_enable(1);
 
 }
-
 static void aml_audio_start_timer(struct aml_audio_private_data *p_aml_audio,
 				  unsigned long delay)
 {
@@ -764,8 +763,11 @@ static int aml_audio_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	aml_i2s_play();
-
+	ret = of_property_read_bool(np, "i2sclk_disable_startup");
+	if (!ret) {
+		pr_info("enable i2sclk in startup\n");
+		aml_i2s_play();
+	}
 	p_aml_audio->data = (void *)card;
 	INIT_WORK(&p_aml_audio->pinmux_work, aml_pinmux_work_func);
 	schedule_work(&p_aml_audio->pinmux_work);
