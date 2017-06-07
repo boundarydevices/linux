@@ -114,4 +114,13 @@ config AMLOGIC_SND_SOC_SSM3515
 		Enable support for SSM3515 CODEC.
 		Select this if SSM3515 is connected via an I2C bus.
 
+config AMLOGIC_SND_SOC_TAS575X
+	bool "Texas Instruments TAS575X"
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable Support for Texas INstruments TAS575X CODEC.
+		Select this if your TAS575X is connected via an I2C bus.
+
 #endif #AMLOGIC_SND_SOC_CODECS

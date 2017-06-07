@@ -31,24 +31,24 @@ struct aml_dai {
 };
 
 int aml_card_parse_daifmt(struct device *dev,
-				  struct device_node *node,
-				  struct device_node *codec,
-				  char *prefix,
-				  unsigned int *retfmt);
+				struct device_node *node,
+				struct device_node *codec,
+				char *prefix,
+				unsigned int *retfmt);
 __printf(3, 4)
 int aml_card_set_dailink_name(struct device *dev,
-				      struct snd_soc_dai_link *dai_link,
-				      const char *fmt, ...);
+				struct snd_soc_dai_link *dai_link,
+				const char *fmt, ...);
 int aml_card_parse_card_name(struct snd_soc_card *card,
-				     char *prefix);
+				char *prefix);
 
 #define aml_card_parse_clk_cpu(node, dai_link, aml_dai)		\
 	aml_card_parse_clk(node, dai_link->cpu_of_node, aml_dai)
 #define aml_card_parse_clk_codec(node, dai_link, aml_dai)		\
 	aml_card_parse_clk(node, dai_link->codec_of_node, aml_dai)
 int aml_card_parse_clk(struct device_node *node,
-			       struct device_node *dai_of_node,
-			       struct aml_dai *aml_dai);
+				struct device_node *dai_of_node,
+				struct aml_dai *aml_dai);
 
 #define aml_card_parse_cpu(node, dai_link,				\
 			list_name, cells_name, is_single_link)	\
@@ -61,18 +61,20 @@ int aml_card_parse_clk(struct device_node *node,
 	aml_card_parse_dai(node, &dai_link->platform_of_node,		\
 		NULL, list_name, cells_name, NULL)
 int aml_card_parse_dai(struct device_node *node,
-				  struct device_node **endpoint_np,
-				  const char **dai_name,
-				  const char *list_name,
-				  const char *cells_name,
-				  int *is_single_links);
+				struct device_node **endpoint_np,
+				const char **dai_name,
+				const char *list_name,
+				const char *cells_name,
+				int *is_single_links);
+int aml_card_parse_codec_confs(struct device_node *codec_np,
+				struct snd_soc_card *card);
 
 int aml_card_init_dai(struct snd_soc_dai *dai,
-			      struct aml_dai *aml_dai);
+				struct aml_dai *aml_dai);
 
 int aml_card_canonicalize_dailink(struct snd_soc_dai_link *dai_link);
 void aml_card_canonicalize_cpu(struct snd_soc_dai_link *dai_link,
-				      int is_single_links);
+				int is_single_links);
 
 int aml_card_clean_reference(struct snd_soc_card *card);
 

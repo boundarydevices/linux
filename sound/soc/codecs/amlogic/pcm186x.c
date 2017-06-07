@@ -773,7 +773,6 @@ static int pcm186x_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct pcm186x_priv *priv = snd_soc_codec_get_drvdata(codec);
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	unsigned int rate = params_rate(params);
 	unsigned int format = params_format(params);
 	unsigned int width = params_width(params);
@@ -786,7 +785,6 @@ static int pcm186x_hw_params(struct snd_pcm_substream *substream,
 	unsigned int tdm_offset;
 	unsigned int tdm_tx_sel;
 	int ret;
-	unsigned int fmt;
 
 	dev_dbg(codec->dev, "%s() rate=%u format=0x%x width=%u channels=%u\n",
 		__func__, rate, format, width, channels);
@@ -821,14 +819,6 @@ static int pcm186x_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	fmt = SND_SOC_DAIFMT_DSP_A |
-		SND_SOC_DAIFMT_CBS_CFS |
-		SND_SOC_DAIFMT_NB_NF |
-		SND_SOC_DAIFMT_CONT;
-
-	ret = snd_soc_runtime_set_dai_fmt(rtd, fmt);
-	if (ret)
-		return ret;
 	/*
 	 * In DSP/TDM mode, the LRCLK divider must be 256 as per datasheet.
 	 * Also, complete the codec serial audio interface format configuration

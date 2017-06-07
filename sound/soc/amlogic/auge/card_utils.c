@@ -21,10 +21,10 @@
 #include "card_utils.h"
 
 int aml_card_parse_daifmt(struct device *dev,
-				  struct device_node *node,
-				  struct device_node *codec,
-				  char *prefix,
-				  unsigned int *retfmt)
+			struct device_node *node,
+			struct device_node *codec,
+			char *prefix,
+			unsigned int *retfmt)
 {
 	struct device_node *bitclkmaster = NULL;
 	struct device_node *framemaster = NULL;
@@ -63,8 +63,8 @@ int aml_card_parse_daifmt(struct device *dev,
 }
 
 int aml_card_set_dailink_name(struct device *dev,
-				      struct snd_soc_dai_link *dai_link,
-				      const char *fmt, ...)
+			struct snd_soc_dai_link *dai_link,
+			const char *fmt, ...)
 {
 	va_list ap;
 	char *name = NULL;
@@ -85,7 +85,7 @@ int aml_card_set_dailink_name(struct device *dev,
 }
 
 int aml_card_parse_card_name(struct snd_soc_card *card,
-				     char *prefix)
+			char *prefix)
 {
 	char prop[128];
 	int ret;
@@ -104,8 +104,8 @@ int aml_card_parse_card_name(struct snd_soc_card *card,
 }
 
 int aml_card_parse_clk(struct device_node *node,
-			       struct device_node *dai_of_node,
-			       struct aml_dai *aml_dai)
+			struct device_node *dai_of_node,
+			struct aml_dai *aml_dai)
 {
 	struct clk *clk;
 	u32 val;
@@ -133,11 +133,11 @@ int aml_card_parse_clk(struct device_node *node,
 }
 
 int aml_card_parse_dai(struct device_node *node,
-				    struct device_node **dai_of_node,
-				    const char **dai_name,
-				    const char *list_name,
-				    const char *cells_name,
-				    int *is_single_link)
+			struct device_node **dai_of_node,
+			const char **dai_name,
+			const char *list_name,
+			const char *cells_name,
+			int *is_single_link)
 {
 	struct of_phandle_args args;
 	int ret;
@@ -168,8 +168,50 @@ int aml_card_parse_dai(struct device_node *node,
 	return 0;
 }
 
+int aml_card_parse_codec_confs(struct device_node *codec_np,
+			struct snd_soc_card *card)
+{
+	struct snd_soc_codec_conf *confs;
+	int num_confs;
+	int i = 0, ret = 0;
+
+	num_confs = of_property_count_strings(codec_np, "prefix-names");
+	if (num_confs <= 0)
+		return 0;
+
+	confs = devm_kzalloc(card->dev,
+			sizeof(*confs) * num_confs, GFP_KERNEL);
+	if (!confs) {
+		ret = -ENOMEM;
+		goto codec_confs_end;
+	}
+
+	card->codec_conf = confs;
+	card->num_configs = num_confs;
+	/*
+	 * parse "prefix-names" and "sound-dai" pair
+	 * add codec_conf by these two items
+	 */
+	for (i = 0; i < num_confs; i++) {
+		ret = of_property_read_string_index(codec_np, "prefix-names", i,
+					&confs[i].name_prefix);
+		if (ret < 0)
+			goto codec_confs_end;
+
+		confs[i].of_node = of_parse_phandle(codec_np, "sound-dai", i);
+		if (!confs[i].of_node) {
+			ret = -ENODATA;
+			goto codec_confs_end;
+		}
+	}
+
+codec_confs_end:
+
+	return ret;
+}
+
 int aml_card_init_dai(struct snd_soc_dai *dai,
-			      struct aml_dai *aml_dai)
+			struct aml_dai *aml_dai)
 {
 	int ret;
 
@@ -210,7 +252,7 @@ int aml_card_canonicalize_dailink(struct snd_soc_dai_link *dai_link)
 }
 
 void aml_card_canonicalize_cpu(struct snd_soc_dai_link *dai_link,
-				       int is_single_links)
+			int is_single_links)
 {
 	/*
 	 * In soc_bind_dai_link() will check cpu name after
@@ -228,7 +270,8 @@ void aml_card_canonicalize_cpu(struct snd_soc_dai_link *dai_link,
 int aml_card_clean_reference(struct snd_soc_card *card)
 {
 	struct snd_soc_dai_link *dai_link;
-	int num_links;
+	struct snd_soc_codec_conf *codec_conf;
+	int num_links, num_confs;
 
 	for (num_links = 0, dai_link = card->dai_link;
 	     num_links < card->num_links;
@@ -236,5 +279,12 @@ int aml_card_clean_reference(struct snd_soc_card *card)
 		of_node_put(dai_link->cpu_of_node);
 		of_node_put(dai_link->codec_of_node);
 	}
+
+	for (num_confs = 0, codec_conf = card->codec_conf;
+		num_confs < card->num_configs;
+		num_confs++, codec_conf++) {
+		of_node_put(codec_conf->of_node);
+	}
+
 	return 0;
 }

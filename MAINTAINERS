@@ -13925,6 +13925,7 @@ M: xing wang <xing.wang@amlogic.com>
 F: sound/soc/amlogic/meson/*
 F: sound/soc/amlogic/auge/*
 F: sound/soc/codecs/amlogic/*
+F: sound/soc/codecs/amlogic/tas575x.c
 F: include/dt-bindings/clock/amlogic,axg-audio-clk.h
 
 AMLOGIC Security Support
@@ -13969,3 +13970,7 @@ F: drivers/amlogic/irblaster/irblaster.c
 F: drivers/amlogic/irblaster/irblaster.h
 F: drivers/amlogic/irblaster/Kconfig
 F: drivers/amlogic/irblaster/Makefile
+
+AMLOGIC AXG ADD CLKMSR INTERFACE
+M:	wang xing <xing.wang@amlogic.com>
+F:	include/linux/amlogic/clk_measure.h

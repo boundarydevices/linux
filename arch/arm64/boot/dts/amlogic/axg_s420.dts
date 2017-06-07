@@ -330,7 +330,7 @@
 		//aml-audio-card,mclk-fs = <256>;
 
 		aml-audio-card,dai-link@0 {
-			format = "i2s";//"dsp_a";
+			format = "dsp_a";
 			mclk-fs = <256>;//512
 			continuous-clock;
 			bitclock-inversion;
@@ -354,8 +354,8 @@
 			format = "i2s";
 			mclk-fs = <256>;
 			continuous-clock;
-			bitclock-inversion;
-			//frame-inversion;
+			//bitclock-inversion;
+			frame-inversion;
 			bitclock-master = <&aml_tdmb>;
 			frame-master = <&aml_tdmb>;
 			cpu {
@@ -367,8 +367,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
-				//sound-dai = <&dummy_codec &dummy_codec>;
-				sound-dai = <&tas5707_36>;
+				sound-dai = <&tas5707_36 &tlv320adc3101_32>;
 			};
 		};
 
@@ -376,8 +375,9 @@
 			format = "i2s";
 			mclk-fs = <256>;
 			continuous-clock;
-			bitclock-inversion;
-			//frame-inversion;
+			/* tdmb clk using tdmc so no bclk-inv */
+			//bitclock-inversion;
+			frame-inversion;
 			bitclock-master = <&aml_tdmc>;
 			frame-master = <&aml_tdmc>;
 			cpu {
@@ -389,8 +389,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
-				//sound-dai = <&tas5707_36 &tas5707_3a>;
-				sound-dai = <&dummy_codec &dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
@@ -629,7 +628,7 @@
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
 		reg = <0x19>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	tas5707_36: tas5707_36@36 {
@@ -663,19 +662,19 @@
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
 		reg = <0x18>;
-		status = "okay";
+		status = "disable";
 	};
 	tlv320adc3101_34: tlv320adc3101_34@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
 		reg = <0x1a>;
-		status = "okay";
+		status = "disable";
 	};
 	tlv320adc3101_36: tlv320adc3101_36@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
 		reg = <0x1b>;
-		status = "okay";
+		status = "disable";
 	};
 };
 
@@ -703,7 +702,8 @@
 	aml_tdmb: tdmb {
 		compatible = "amlogic, snd-tdmb";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask = <1 1 1 1>;
+		dai-tdm-lane-slot-mask-out = <1 0>;
+		dai-tdm-lane-slot-mask-in = <0 1>;
 		dai-tdm-clk-sel = <2>;
 		tdm_from_ddr = <1>;
 		tdm_to_ddr = <1>;
@@ -714,13 +714,14 @@
 				GIC_SPI 89 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmb_mclk &tdmout_b>;
+		pinctrl-0 = <&tdmb_mclk &tdmout_b &tdmin_b>;
 	};
 
 	aml_tdmc: tdmc {
 		compatible = "amlogic, snd-tdmc";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask = <1 1 1 1>;
+		dai-tdm-lane-slot-mask-out = <1 0>;
+		dai-tdm-lane-slot-mask-in = <0 1>;
 		dai-tdm-clk-sel = <2>;
 		tdm_from_ddr = <2>;
 		tdm_to_ddr = <2>;
@@ -731,7 +732,7 @@
 				GIC_SPI 90 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmc_mclk &tdmout_c>;
+		pinctrl-0 = <&tdmc_mclk &tdmout_c &tdmin_c>;
 	};
 
 	aml_spdif: spdif {
@@ -801,8 +802,7 @@
 
 	tdmout_b: tdmout_b {
 		mux {
-			pins = "GPIOA_8", "GPIOA_9", "GPIOA_10",
-				"GPIOA_11";
+			pins = "GPIOA_8", "GPIOA_9", "GPIOA_10";
 			function = "tdmb_out";
 		};
 	};
@@ -815,6 +815,12 @@
 	 *	};
 	 *};
 	 */
+	tdmin_b: tdmin_b {
+		mux {
+			pins = "GPIOA_11";
+			function = "tdmb_in";
+		};
+	};
 
 	tdmc_mclk: tdmc_mclk {
 		mux {
@@ -825,20 +831,17 @@
 
 	tdmout_c:tdmout_c {
 		mux {
-			pins = "GPIOA_2", "GPIOA_3", "GPIOA_4",
-				"GPIOA_5";
+			pins = "GPIOA_2", "GPIOA_3", "GPIOA_4";
 			function = "tdmc_out";
 		};
 	};
 
-	/*
-	 *tdmin_c:tdmin_c {
-	 *	mux {
-	 *		pins = "GPIOA_4", "GPIOA_5", "GPIOA_6", "GPIOA_7";
-	 *		function = "tdmc_in";
-	 *	};
-	 *};
-	 */
+	tdmin_c:tdmin_c {
+		mux {
+			pins = "GPIOA_5";
+			function = "tdmc_in";
+		};
+	};
 
 	spdifout: spidfout {
 		mux {

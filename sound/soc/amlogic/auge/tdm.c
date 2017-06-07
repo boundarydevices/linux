@@ -31,6 +31,8 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 
+#include <linux/amlogic/clk_measure.h>
+
 #include "ddr_mngr.h"
 #include "tdm_hw.h"
 
@@ -91,10 +93,10 @@ static const struct snd_pcm_hardware aml_tdm_hardware = {
 	    SNDRV_PCM_FMTBIT_S32_LE,
 
 	.period_bytes_min = 64,
-	.period_bytes_max = 128 * 1024,
+	.period_bytes_max = 256 * 1024,
 	.periods_min = 2,
 	.periods_max = 1024,
-	.buffer_bytes_max = 256 * 1024,
+	.buffer_bytes_max = 512 * 1024,
 
 	.rate_min = 8000,
 	.rate_max = 48000,
@@ -142,7 +144,7 @@ static int snd_soc_of_get_slot_mask(struct device_node *np,
 	int i;
 
 	if (!of_slot_mask)
-		return 0;
+		return -EINVAL;
 
 	val /= sizeof(u32);
 	for (i = 0; i < val; i++)
@@ -330,10 +332,6 @@ struct snd_soc_platform_driver aml_tdm_platform = {
 static int aml_dai_tdm_startup(struct snd_pcm_substream *substream,
 			       struct snd_soc_dai *cpu_dai)
 {
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-
-	aml_tdm_fifo_reset(p_tdm->actrl, substream->stream, p_tdm->id);
-
 	return 0;
 }
 
@@ -434,8 +432,11 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		aml_tdm_enable(p_tdm->actrl,
-			substream->stream, p_tdm->id, true);
+		/* reset fifo here.
+		 * If not, xrun will cause channel mapping mismatch
+		 */
+		aml_tdm_fifo_reset(p_tdm->actrl, substream->stream, p_tdm->id);
+
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			dev_info(substream->pcm->card->dev, "tdm playback enable\n");
 			aml_frddr_enable(p_tdm->fddr, 1);
@@ -444,6 +445,9 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 			aml_toddr_enable(p_tdm->tddr, 1);
 		}
 
+		aml_tdm_enable(p_tdm->actrl,
+			substream->stream, p_tdm->id, true);
+
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
@@ -451,10 +455,10 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 		aml_tdm_enable(p_tdm->actrl,
 			substream->stream, p_tdm->id, false);
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			dev_info(substream->pcm->card->dev, "tdm playback enable\n");
+			dev_info(substream->pcm->card->dev, "tdm playback stop\n");
 			aml_frddr_enable(p_tdm->fddr, 0);
 		} else {
-			dev_info(substream->pcm->card->dev, "tdm capture enable\n");
+			dev_info(substream->pcm->card->dev, "tdm capture stop\n");
 			aml_toddr_enable(p_tdm->tddr, 0);
 		}
 		break;
@@ -468,14 +472,21 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 static int pcm_setting_init(struct pcm_setting *setting, unsigned int rate,
 			unsigned int channels)
 {
-
+	unsigned int ratio = 0;
 	setting->lrclk = rate;
 	setting->bclk_lrclk_ratio = setting->slots * setting->slot_width;
 	setting->bclk = setting->lrclk * setting->bclk_lrclk_ratio;
 
 	/* calculate mclk */
-	setting->sysclk_bclk_ratio = 4;
-	setting->sysclk = 4 * setting->bclk;
+	if (setting->pcm_mode == SND_SOC_DAIFMT_DSP_A ||
+		setting->pcm_mode == SND_SOC_DAIFMT_DSP_B) {
+		/* for some TDM codec, mclk limites */
+		ratio = 2;
+	} else {
+		ratio = 4;
+	}
+	setting->sysclk_bclk_ratio = ratio;
+	setting->sysclk = ratio * setting->bclk;
 
 	return 0;
 }
@@ -600,11 +611,31 @@ static int aml_dai_set_tdm_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	return 0;
 }
 
+/* mpll clk range from 5M to 500M */
+#define AML_MPLL_FREQ_MIN	5000000
+static unsigned int aml_mpll_mclk_ratio(unsigned int freq)
+{
+	unsigned int i, ratio = 2;
+	unsigned int mpll_freq = 0;
+
+	for (i = 1; i < 15; i++) {
+		ratio = 1 << i;
+		mpll_freq = freq * ratio;
+
+		if (mpll_freq > AML_MPLL_FREQ_MIN)
+			break;
+	}
+
+	pr_info("TDM mpll/mclk = %d\n", ratio);
+
+	return ratio;
+}
+
 static void aml_tdm_set_mclk(struct aml_tdm *p_tdm)
 {
 	struct aml_audio_controller *actrl = p_tdm->actrl;
 	unsigned int clk_id, offset;
-	unsigned int mpll_freq = 0;
+	unsigned int mpll_freq = 0, sysclk_freq = 0;
 
 	offset = p_tdm->clk_sel;
 
@@ -613,25 +644,17 @@ static void aml_tdm_set_mclk(struct aml_tdm *p_tdm)
 		return;
 
 	clk_id = p_tdm->id;
+	sysclk_freq = p_tdm->setting.sysclk;
 
-	if (p_tdm->setting.sysclk) {
-		unsigned int mul = 4;
+	if (sysclk_freq) {
+		unsigned int mul = aml_mpll_mclk_ratio(sysclk_freq);
 
-		mpll_freq = p_tdm->setting.sysclk * mul;
+		mpll_freq = sysclk_freq * mul;
 		clk_set_rate(p_tdm->clk, mpll_freq);
 		aml_audiobus_write(actrl, EE_AUDIO_MCLK_A_CTRL + offset,
 						1 << 31 | //clk enable
 						clk_id << 24 | // clk src
 						(mul - 1)); //clk_div mclk
-
-		if (offset == 2) {
-			//enable another mclka also;
-			offset = 0;
-			aml_audiobus_write(actrl, EE_AUDIO_MCLK_A_CTRL + offset,
-					1 << 31 | //clk enable
-					clk_id << 24 | // clk src
-					(mul - 1)); //clk_div mclk
-		}
 	}
 }
 
@@ -912,6 +935,9 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	} else {
 		return -EINVAL;
 	}
+
+	/* complete mclk for tdm */
+	meson_clk_measure((1<<16) | 0x67);
 
 	/* parse DTS configured ddr */
 	ret = of_property_read_u32(node, "tdm_from_ddr",

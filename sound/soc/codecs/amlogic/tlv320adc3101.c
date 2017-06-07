@@ -322,6 +322,18 @@ static int adc3101_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 		pr_err("adc3101: invalid DAI master/slave interface\n");
 		return -EINVAL;
 	}
+	/* set lrclk/bclk invertion */
+	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
+	case SND_SOC_DAIFMT_IB_IF:
+	case SND_SOC_DAIFMT_IB_NF:
+		iface_reg_2 |= (1 << 3); /* invert bit clock */
+		break;
+	case SND_SOC_DAIFMT_NB_IF:
+	case SND_SOC_DAIFMT_NB_NF:
+		break;
+	default:
+		break;
+	}
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:

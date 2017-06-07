@@ -471,7 +471,7 @@
 			mclk-fs = <256>;
 			continuous-clock;
 			//bitclock-inversion;
-			//frame-inversion;
+			frame-inversion;
 			bitclock-master = <&aml_tdmb>;
 			frame-master = <&aml_tdmb>;
 			cpu {
@@ -483,6 +483,8 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
+				prefix-names = "3101_A", "3101_B",
+					"3101_C", "3101_D";
 				sound-dai = <&tlv320adc3101_32 &tlv320adc3101_30
 					&tlv320adc3101_34 &tlv320adc3101_36>;
 			};
@@ -492,7 +494,7 @@
 			format = "i2s";
 			mclk-fs = <256>;
 			continuous-clock;
-			bitclock-inversion;
+			//bitclock-inversion;
 			frame-inversion;
 			//bitclock-master = <&aml_tdmc>;
 			//frame-master = <&aml_tdmc>;
@@ -505,6 +507,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
+				prefix-names = "5707_A", "5707_B";
 				sound-dai = <&tas5707_36 &tas5707_3a
 						&dummy_codec>;
 			};
@@ -835,7 +838,8 @@
 	aml_tdma: tdma {
 		compatible = "amlogic, snd-tdma";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask = <1>;
+		dai-tdm-lane-slot-mask-in = <1>;
+		dai-tdm-lane-slot-mask-out = <1>;
 		dai-tdm-clk-sel = <0>;
 		tdm_from_ddr = <0>;
 		tdm_to_ddr = <0>;
@@ -854,7 +858,7 @@
 	aml_tdmb: tdmb {
 		compatible = "amlogic, snd-tdmb";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask = <1 1 1 1>;
+		dai-tdm-lane-slot-mask-in = <1 1 1 1>;
 		dai-tdm-clk-sel = <1>;
 		tdm_from_ddr = <1>;
 		tdm_to_ddr = <1>;

@@ -227,7 +227,9 @@ void aml_tdm_set_format(
 	// sclk_ph0 (pad) invert
 	off_set = EE_AUDIO_MST_B_SCLK_CTRL1 - EE_AUDIO_MST_A_SCLK_CTRL1;
 	reg_out = EE_AUDIO_MST_A_SCLK_CTRL1 + off_set * id;
-	aml_audiobus_update_bits(actrl, reg_out, 0x3f, binv);
+	aml_audiobus_update_bits(actrl, reg_out, 0x3f, !binv);
+	if (!binv)
+		bclkin_skew = 4;
 
 	off_set = EE_AUDIO_TDMOUT_B_CTRL0 - EE_AUDIO_TDMOUT_A_CTRL0;
 	reg_out = EE_AUDIO_TDMOUT_A_CTRL0 + off_set * id;

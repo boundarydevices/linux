@@ -45,11 +45,15 @@ struct aml_card_data {
 	struct aml_jack hp_jack;
 	struct aml_jack mic_jack;
 	struct snd_soc_dai_link *dai_link;
+	int spk_mute_gpio;
+	bool spk_mute_active_low;
 };
 
 #define aml_priv_to_dev(priv) ((priv)->snd_card.dev)
 #define aml_priv_to_link(priv, i) ((priv)->snd_card.dai_link + (i))
 #define aml_priv_to_props(priv, i) ((priv)->dai_props + (i))
+#define aml_card_to_priv(card) \
+	(container_of(card, struct aml_card_data, snd_card))
 
 #define DAI	"sound-dai"
 #define CELL	"#sound-dai-cells"
@@ -151,6 +155,7 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 				      struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct aml_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
 	struct aml_dai_props *dai_props =
@@ -158,7 +163,6 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 	unsigned int mclk, mclk_fs = 0;
 	int i = 0, ret = 0;
 
-	pr_info("%s ..numcodec:%d\n", __func__, rtd->num_codecs);
 	if (priv->mclk_fs)
 		mclk_fs = priv->mclk_fs;
 	else if (dai_props->mclk_fs)
@@ -168,7 +172,7 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 		mclk = params_rate(params) * mclk_fs;
 
 		for (i = 0; i < rtd->num_codecs; i++) {
-			struct snd_soc_dai *codec_dai = rtd->codec_dais[i];
+			codec_dai = rtd->codec_dais[i];
 
 			ret = snd_soc_dai_set_sysclk(codec_dai, 0, mclk,
 				SND_SOC_CLOCK_IN);
@@ -176,6 +180,7 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 			if (ret && ret != -ENOTSUPP)
 				goto err;
 		}
+
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk,
 					     SND_SOC_CLOCK_OUT);
 		if (ret && ret != -ENOTSUPP)
@@ -199,11 +204,15 @@ static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_dai *cpu = rtd->cpu_dai;
 	struct aml_dai_props *dai_props =
 		aml_priv_to_props(priv, rtd->num);
-	int ret;
+	int ret, i;
 
-	ret = aml_card_init_dai(codec, &dai_props->codec_dai);
-	if (ret < 0)
-		return ret;
+	for (i = 0; i < rtd->num_codecs; i++) {
+		codec = rtd->codec_dais[i];
+
+		ret = aml_card_init_dai(codec, &dai_props->codec_dai);
+		if (ret < 0)
+			return ret;
+	}
 
 	ret = aml_card_init_dai(cpu, &dai_props->cpu_dai);
 	if (ret < 0)
@@ -294,6 +303,10 @@ static int aml_card_dai_link_of(struct device_node *node,
 	if (ret < 0)
 		goto dai_link_of_err;
 
+	ret = aml_card_parse_codec_confs(codec, &priv->snd_card);
+	if (ret < 0)
+		goto dai_link_of_err;
+
 	ret = aml_card_parse_clk_cpu(cpu, dai_link, cpu_dai);
 	if (ret < 0)
 		goto dai_link_of_err;
@@ -363,6 +376,78 @@ static int aml_card_parse_aux_devs(struct device_node *node,
 	}
 
 	priv->snd_card.num_aux_devs = n;
+	return 0;
+}
+
+static int spk_mute_set(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *soc_card = snd_kcontrol_chip(kcontrol);
+	struct aml_card_data *priv = aml_card_to_priv(soc_card);
+	int gpio = priv->spk_mute_gpio;
+	bool active_low = priv->spk_mute_active_low;
+	bool mute = ucontrol->value.integer.value[0];
+
+	if (gpio_is_valid(gpio)) {
+		bool value = active_low ? !mute : mute;
+
+		gpio_set_value(gpio, value);
+		pr_info("spk_mute_set: mute flag = %d\n", mute);
+	}
+
+	return 0;
+}
+
+static int spk_mute_get(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *soc_card = snd_kcontrol_chip(kcontrol);
+	struct aml_card_data *priv = aml_card_to_priv(soc_card);
+	int gpio = priv->spk_mute_gpio;
+	bool active_low = priv->spk_mute_active_low;
+
+	if (gpio_is_valid(gpio)) {
+		bool value = gpio_get_value(gpio);
+		bool mute = active_low ? !value : value;
+
+		ucontrol->value.integer.value[0] = mute;
+	}
+
+	return 0;
+}
+
+static const struct snd_kcontrol_new card_controls[] = {
+	SOC_SINGLE_BOOL_EXT("SPK mute", 0,
+			    spk_mute_get,
+			    spk_mute_set),
+};
+
+static int aml_card_parse_gpios(struct device_node *node,
+					   struct aml_card_data *priv)
+{
+	struct device *dev = aml_priv_to_dev(priv);
+	struct snd_soc_card *soc_card = &priv->snd_card;
+	enum of_gpio_flags flags;
+	int gpio;
+	bool active_low;
+	int ret;
+
+	gpio = of_get_named_gpio_flags(node, "spk_mute", 0, &flags);
+	priv->spk_mute_gpio = gpio;
+
+	if (gpio_is_valid(gpio)) {
+		active_low = !!(flags & OF_GPIO_ACTIVE_LOW);
+		flags = active_low ? GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW;
+		priv->spk_mute_active_low = active_low;
+
+		ret = devm_gpio_request_one(dev, gpio, flags, "spk_mute");
+		if (ret < 0)
+			return ret;
+
+		ret = snd_soc_add_card_controls(soc_card, card_controls,
+					ARRAY_SIZE(card_controls));
+	}
+
 	return 0;
 }
 
@@ -512,6 +597,11 @@ static int aml_card_probe(struct platform_device *pdev)
 	snd_soc_card_set_drvdata(&priv->snd_card, priv);
 
 	ret = devm_snd_soc_register_card(&pdev->dev, &priv->snd_card);
+	if (ret < 0) {
+		goto err;
+	}
+
+	ret = aml_card_parse_gpios(np, priv);
 	if (ret >= 0)
 		return ret;
 err:

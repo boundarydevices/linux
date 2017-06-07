@@ -33,6 +33,7 @@
 #include <linux/platform_device.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/iomap.h>
+#include <linux/amlogic/clk_measure.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "clkmsr: " fmt
