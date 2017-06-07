@@ -2727,7 +2727,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 
 		/* Clear selected interrupts. */
 		mask = intmask & (SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK |
-				  SDHCI_INT_BUS_POWER);
+				  SDHCI_INT_BUS_POWER | SDHCI_INT_RETUNE);
 		sdhci_writel(host, mask, SDHCI_INT_STATUS);
 
 		if (intmask & (SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE)) {
