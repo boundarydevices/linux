@@ -249,6 +249,8 @@ struct pltfm_imx_data {
 		WAIT_FOR_INT,        /* sent CMD12, waiting for response INT */
 	} multiblock_status;
 	u32 is_ddr;
+	u32 disable_caps;
+	u32 enable_caps;
 	struct pm_qos_request pm_qos_req;
 	unsigned max_clock;
 };
@@ -344,6 +346,8 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 			val &= ~SDHCI_CAN_DO_ADMA1;
 			val |= SDHCI_CAN_DO_ADMA2;
 		}
+		val &= ~imx_data->disable_caps;
+		val |= imx_data->enable_caps;
 	}
 
 	if (unlikely(reg == SDHCI_CAPABILITIES_1)) {
@@ -1157,6 +1161,29 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "fsl,tuning-start-tap",
 			     &boarddata->tuning_start_tap);
 	of_property_read_u32(np, "max-clock", &boarddata->max_clock);
+
+	if (of_find_property(np, "disable-adma2", NULL))
+		imx_data->disable_caps |= SDHCI_CAN_DO_ADMA2;
+
+	if (of_find_property(np, "disable-adma1", NULL))
+		imx_data->disable_caps |= SDHCI_CAN_DO_ADMA1;
+
+	if (of_find_property(np, "disable-sdma", NULL))
+		imx_data->disable_caps |= SDHCI_CAN_DO_SDMA;
+
+	if (of_find_property(np, "enable-adma2", NULL))
+		imx_data->enable_caps |= SDHCI_CAN_DO_ADMA2;
+
+	if (of_find_property(np, "enable-adma1", NULL))
+		imx_data->enable_caps |= SDHCI_CAN_DO_ADMA1;
+
+	if (of_find_property(np, "enable-sdma", NULL))
+		imx_data->enable_caps |= SDHCI_CAN_DO_SDMA;
+
+	if (imx_data->disable_caps | imx_data->enable_caps) {
+		dev_info(mmc_dev(host->mmc), "disable_caps=%x enable_caps=%x\n",
+				imx_data->disable_caps, imx_data->enable_caps);
+	}
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		boarddata->support_vsel = false;
