@@ -350,6 +350,30 @@ static ssize_t active_low_store(struct device *dev,
 }
 static DEVICE_ATTR_RW(active_low);
 
+#ifdef CONFIG_AMLOGIC_PINCTRL
+static ssize_t pull_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct gpiod_data  *data = dev_get_drvdata(dev);
+	struct gpio_desc *desc = data->desc;
+	ssize_t    status;
+
+	mutex_lock(&data->mutex);
+	if (sysfs_streq(buf, "disable"))
+		status = gpiod_set_pull(desc, GPIOD_PULL_DIS);
+	else if (sysfs_streq(buf, "down"))
+		status = gpiod_set_pull(desc, GPIOD_PULL_DOWN);
+	else if (sysfs_streq(buf, "up"))
+		status = gpiod_set_pull(desc, GPIOD_PULL_UP);
+	else
+		status = -EINVAL;
+	mutex_unlock(&data->mutex);
+
+	return status ? : size;
+}
+static DEVICE_ATTR_WO(pull);
+#endif
+
 static umode_t gpio_is_visible(struct kobject *kobj, struct attribute *attr,
 			       int n)
 {
@@ -377,6 +401,9 @@ static struct attribute *gpio_attrs[] = {
 	&dev_attr_edge.attr,
 	&dev_attr_value.attr,
 	&dev_attr_active_low.attr,
+#ifdef CONFIG_AMLOGIC_PINCTRL
+	&dev_attr_pull.attr,
+#endif
 	NULL,
 };
 

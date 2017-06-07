@@ -58,6 +58,7 @@ enum single_ended_mode {
  *	if a consumer request this. The driver may return -ENOTSUPP if e.g.
  *	it supports just open drain but not open source and is called
  *	with LINE_MODE_OPEN_SOURCE as mode argument.
+ * @set_pull: set the current pull configuration for the GPIO.
  * @to_irq: optional hook supporting non-static gpio_to_irq() mappings;
  *	implementation may not sleep
  * @dbg_show: optional routine to show contents in debugfs; default code
@@ -156,7 +157,10 @@ struct gpio_chip {
 	int			(*set_single_ended)(struct gpio_chip *chip,
 						unsigned offset,
 						enum single_ended_mode mode);
-
+#ifdef CONFIG_AMLOGIC_PINCTRL
+	int			(*set_pull)(struct gpio_chip *chip,
+						unsigned int offset, int value);
+#endif
 	int			(*to_irq)(struct gpio_chip *chip,
 						unsigned offset);
 

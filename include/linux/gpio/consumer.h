@@ -41,6 +41,14 @@ enum gpiod_flags {
 			  GPIOD_FLAGS_BIT_DIR_VAL,
 };
 
+#ifdef CONFIG_AMLOGIC_PINCTRL
+enum gpiod_pull_type {
+	GPIOD_PULL_DIS = 0,
+	GPIOD_PULL_DOWN = 1,
+	GPIOD_PULL_UP = 2,
+};
+#endif
+
 #ifdef CONFIG_GPIOLIB
 
 /* Return the number of GPIOs associated with a device / function */
@@ -100,6 +108,9 @@ int gpiod_direction_output_raw(struct gpio_desc *desc, int value);
 /* Value get/set from non-sleeping context */
 int gpiod_get_value(const struct gpio_desc *desc);
 void gpiod_set_value(struct gpio_desc *desc, int value);
+#ifdef CONFIG_AMLOGIC_PINCTRL
+int gpiod_set_pull(struct gpio_desc *desc, int value);
+#endif
 void gpiod_set_array_value(unsigned int array_size,
 			   struct gpio_desc **desc_array, int *value_array);
 int gpiod_get_raw_value(const struct gpio_desc *desc);
@@ -111,6 +122,9 @@ void gpiod_set_raw_array_value(unsigned int array_size,
 /* Value get/set from sleeping context */
 int gpiod_get_value_cansleep(const struct gpio_desc *desc);
 void gpiod_set_value_cansleep(struct gpio_desc *desc, int value);
+#ifdef CONFIG_AMLOGIC_PINCTRL
+int gpiod_set_pull_scansleep(struct gpio_desc *desc, int value);
+#endif
 void gpiod_set_array_value_cansleep(unsigned int array_size,
 				    struct gpio_desc **desc_array,
 				    int *value_array);
@@ -323,6 +337,15 @@ static inline void gpiod_set_raw_value(struct gpio_desc *desc, int value)
 	/* GPIO can never have been requested */
 	WARN_ON(1);
 }
+
+#ifdef CONFIG_AMLOGIC_PINCTRL
+static inline int gpiod_set_pull(struct gpio_desc *desc, int value)
+{
+	WARN_ON(1);
+	return -EINVAL;
+}
+#endif
+
 static inline void gpiod_set_raw_array_value(unsigned int array_size,
 					     struct gpio_desc **desc_array,
 					     int *value_array)
@@ -342,6 +365,15 @@ static inline void gpiod_set_value_cansleep(struct gpio_desc *desc, int value)
 	/* GPIO can never have been requested */
 	WARN_ON(1);
 }
+
+#ifdef CONFIG_AMLOGIC_PINCTRL
+static inline int gpiod_set_pull_cansleep(struct gpio_desc *desc, int value)
+{
+	WARN_ON(1);
+	return -EINVAL;
+}
+#endif
+
 static inline void gpiod_set_array_value_cansleep(unsigned int array_size,
 					    struct gpio_desc **desc_array,
 					    int *value_array)

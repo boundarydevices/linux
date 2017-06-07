@@ -658,6 +658,41 @@ static void meson_gpio_set(struct gpio_chip *chip, unsigned int gpio,
 			   value ? BIT(bit) : 0);
 }
 
+static int meson_gpio_pull_set(struct gpio_chip *chip, unsigned int gpio,
+	int value)
+{
+	struct meson_domain *domain = to_meson_domain(chip);
+	unsigned int reg, bit, pin;
+	struct meson_bank *bank;
+	int ret;
+
+	if ((value != GPIOD_PULL_DIS) && (value != GPIOD_PULL_DOWN)
+		&& (value != GPIOD_PULL_UP))
+		return -EINVAL;
+
+	pin = domain->data->pin_base + gpio;
+	ret = meson_get_bank(domain, pin, &bank);
+	if (ret)
+		return ret;
+
+	meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
+				&reg, &bit);
+	ret = regmap_update_bits(domain->reg_pullen, reg,
+				BIT(bit),
+				(value == GPIOD_PULL_DIS) ? 0 : BIT(bit));
+	if (ret)
+		return ret;
+
+	meson_calc_reg_and_bit(bank, pin, REG_PULL, &reg, &bit);
+	ret = regmap_update_bits(domain->reg_pull, reg,
+				BIT(bit),
+				(value == GPIOD_PULL_DOWN) ? 0 : BIT(bit));
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
 static int meson_gpio_get(struct gpio_chip *chip, unsigned int gpio)
 {
 	struct meson_domain *domain = to_meson_domain(chip);
@@ -1088,6 +1123,7 @@ static int meson_gpiolib_register(struct meson_pinctrl *pc)
 	domain->chip.direction_output = meson_gpio_direction_output;
 	domain->chip.get = meson_gpio_get;
 	domain->chip.set = meson_gpio_set;
+	domain->chip.set_pull = meson_gpio_pull_set;
 	domain->chip.base = domain->data->pin_base;
 	domain->chip.ngpio = domain->data->num_pins;
 	domain->chip.can_sleep = false;
