@@ -1136,15 +1136,15 @@ static struct meson_bank meson_gxl_periphs_banks[] = {
  * AO_GPIO_O_EN_N       0x09<<2=0x24     bit[31]     output level
  * AO_GPIO_I            0x0a<<2=0x28     bit[31]     input level
  * AO_SEC_REG0          0x50<<2=0x140    bit[0]      input enable
- * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[30]     pull-up/down
- * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[14]     pull-up enable
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[14]     pull-up/down
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[30]     pull-up enable
  */
 static struct meson_bank meson_gxl_aobus_banks[] = {
 	/* name    first   last  irq  pullen  pull    dir     out     in  */
 	BANK("AO", PIN(GPIOAO_0, 0), PIN(GPIOAO_9, 0), 0,
-		0,  0,  0, 16,  0,  0,  0, 16,  1,  0),
+		0,  16,  0,  0,  0,  0,  0, 16,  1,  0),
 	BANK("TEST", PIN(GPIO_TEST_N, 0), PIN(GPIO_TEST_N, 0), -1,
-	0, 14, 0, 30, 0, 14, 0, 31, 1, 31),
+		0, 30, 0, 14, 0, 14, 0, 31, 1, 31),
 };
 
 static struct meson_domain_data meson_gxl_periphs_domain_data = {
