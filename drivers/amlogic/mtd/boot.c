@@ -389,6 +389,23 @@ exit:
 	return error;
 }
 
+/*
+ * read oob only.
+ */
+int m3_nand_boot_read_oob(struct mtd_info *mtd,
+	struct nand_chip *chip, int page)
+{
+	int ret = 0;
+	struct aml_nand_chip *aml_chip = mtd_to_nand_chip(mtd);
+	/* send cmd 00-addr-30 */
+	aml_chip->aml_nand_command(aml_chip, NAND_CMD_READ0,
+				0, page, 0);
+	ret = m3_nand_boot_read_page_hwecc(mtd,
+		chip, aml_chip->aml_nand_data_buf, 0, page);
+
+	return ret;
+}
+
 /* mtd support interface:
  * chip->ecc.write_page
  * function:int (*write_page)(struct mtd_info *mtd, struct nand_chip *chip,

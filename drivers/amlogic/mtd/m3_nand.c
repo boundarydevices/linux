@@ -690,6 +690,7 @@ static int m3_nand_dma_read(struct aml_nand_chip *aml_chip,
 		0, count*PER_INFO_BYTE);
 
 #ifndef AML_NAND_UBOOT
+	WARN_ON(count == 0);
 	info_buf =
 (u32 *)&(aml_chip->user_info_buf[(count-1)*info_times_int_len]);
 	/*smp_wmb*/
@@ -935,6 +936,7 @@ static int m3_nand_probe(struct aml_nand_platform *plat, unsigned int dev_num)
 		NAND_BOOT_NAME, strlen((const char *)NAND_BOOT_NAME))) {
 		/* interface is chip->erase_cmd on 3.14*/
 		chip->erase = m3_nand_boot_erase_cmd;
+		chip->ecc.read_oob  = m3_nand_boot_read_oob;
 		chip->ecc.read_page = m3_nand_boot_read_page_hwecc;
 		chip->ecc.write_page = m3_nand_boot_write_page_hwecc;
 		chip->write_page = m3_nand_boot_write_page;
