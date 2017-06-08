@@ -156,7 +156,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
-		return -ENODEV;
+		return irq;
 
 #ifdef CONFIG_AMLOGIC_USB
 	of_dma_configure(&pdev->dev, pdev->dev.of_node);
