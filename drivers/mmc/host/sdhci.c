@@ -2574,7 +2574,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 	do {
 		/* Clear selected interrupts. */
 		mask = intmask & (SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK |
-				  SDHCI_INT_BUS_POWER);
+				  SDHCI_INT_BUS_POWER | SDHCI_INT_RETUNE);
 		sdhci_writel(host, mask, SDHCI_INT_STATUS);
 
 		DBG("*** %s got interrupt: 0x%08x\n",
@@ -2637,7 +2637,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		intmask &= ~(SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE |
 			     SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK |
 			     SDHCI_INT_ERROR | SDHCI_INT_BUS_POWER |
-			     SDHCI_INT_CARD_INT);
+			     SDHCI_INT_RETUNE | SDHCI_INT_CARD_INT);
 
 		if (intmask) {
 			unexpected |= intmask;
