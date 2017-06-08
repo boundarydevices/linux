@@ -1059,10 +1059,11 @@ static const struct sdhci_pltfm_data sdhci_esdhc_imx_pdata = {
 #ifdef CONFIG_OF
 static int
 sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
-			 struct esdhc_platform_data *boarddata)
+			 struct pltfm_imx_data *imx_data)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct sdhci_host *host = platform_get_drvdata(pdev);
+	struct esdhc_platform_data *boarddata = &imx_data->boarddata;
 
 	if (!np)
 		return -ENODEV;
@@ -1143,7 +1144,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 #else
 static inline int
 sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
-			 struct esdhc_platform_data *boarddata)
+			 struct pltfm_imx_data *imx_data)
 {
 	return -ENODEV;
 }
@@ -1257,7 +1258,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		host->quirks2 |= SDHCI_QUIRK2_CAPS_BIT63_FOR_HS400;
 
 	boarddata = &imx_data->boarddata;
-	if (sdhci_esdhc_imx_probe_dt(pdev, boarddata) < 0) {
+	if (sdhci_esdhc_imx_probe_dt(pdev, imx_data) < 0) {
 		if (!host->mmc->parent->platform_data) {
 			dev_err(mmc_dev(host->mmc), "no board data!\n");
 			err = -EINVAL;
