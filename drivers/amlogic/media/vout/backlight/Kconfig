@@ -1,0 +1,19 @@
+
+menu "Amlogic Backlight Support"
+
+config AMLOGIC_BACKLIGHT
+	bool "Amlogic backlight support"
+	depends on BACKLIGHT_LCD_SUPPORT
+	depends on BACKLIGHT_CLASS_DEVICE
+	default n
+	help
+		Say Y here if you want to use the Amlogic backlight management.
+		Backlight have five ways, including gpio, pwm, pwm_combo,
+		local dimming, extern.
+
+if AMLOGIC_BACKLIGHT
+source "drivers/amlogic/media/vout/backlight/bl_extern/Kconfig"
+source "drivers/amlogic/media/vout/backlight/aml_ldim/Kconfig"
+endif
+
+endmenu

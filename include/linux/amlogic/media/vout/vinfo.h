@@ -19,6 +19,7 @@
 #define _VINFO_H_
 #include <linux/amlogic/media/vfm/video_common.h>
 
+
 /* the MSB is represent vmode set by vmode_init */
 #define	VMODE_INIT_BIT_MASK	0x8000
 #define	VMODE_MODE_BIT_MASK	0xff
@@ -57,6 +58,7 @@ struct hdr_info {
 	u32 lumi_max; /* RX EDID Lumi Max value */
 	u32 lumi_avg; /* RX EDID Lumi Avg value */
 	u32 lumi_min; /* RX EDID Lumi Min value */
+	u8 sink_flag; /*0 = hdmi, 1 = panel*/
 };
 enum eotf_type {
 	EOTF_T_NULL = 0,

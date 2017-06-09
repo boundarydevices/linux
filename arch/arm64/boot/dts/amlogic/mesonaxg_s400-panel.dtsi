@@ -1,0 +1,159 @@
+/*
+ * arch/arm64/boot/dts/amlogic/mesongxm_q200-panel.dtsi
+ *
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/ {
+	lcd{
+		compatible = "amlogic, lcd";
+		dev_name = "lcd";
+		mode = "tablet";
+		status = "okay";
+		key_valid = <0>;
+		clocks = <&clkc CLKID_MIPI_DSI_HOST
+			&clkc CLKID_MIPI_DSI_PHY
+			&clkc CLKID_DSI_MEAS_COMP>;
+		clock-names = "dsi_host",
+			"dsi_phy",
+			"dsi_meas";
+		pinctrl_version = <1>; /* for uboot */
+
+		/* power type:
+		 *    (0=cpu_gpio, 1=pmu_gpio, 2=signal,3=extern, 0xff=ending)
+		 * power index:
+		 *    (point gpios_index, or extern_index,0xff=invalid)
+		 * power value:(0=output low, 1=output high, 2=input)
+		 * power delay:(unit in ms)
+		 */
+		lcd_cpu-gpios = <&gpio GPIOZ_6 GPIO_ACTIVE_HIGH>;
+		lcd_cpu_gpio_names = "GPIOZ_6";
+
+		lcd_0{
+			model_name = "B080XAN01";
+				/*interface(ttl,lvds,mipi)*/
+			interface = "mipi";
+				/* basic_setting:
+				 * h_active,v_active,h_period,v_period,
+				 * lcd_bits,screen_widht,screen_height
+				 */
+			basic_setting = <768 1024 948 1140 8 119 159>;
+				/* lcd_timing:
+				 * hs_width,hs_bp,hs_pol,vs_width,vs_bp,vs_pol
+				 */
+			lcd_timing = <64 56 0 50 30 0>;
+				/* clk_attr:
+				 * fr_adj_type(0=clock,1=htotal,2=vtotal),
+				 * clk_ss_level,clk_auto_generate,
+				 * pixel_clk(unit in Hz)
+				 */
+			clk_attr = <0 0 1 64843200>;
+				/* mipi_attr:
+				 * lane_num, bit_rate_max(MHz),
+				 * factor(*100, default 0 for auto),
+				 * operation_mode_init(0=video, 1=command),
+				 * operation_mode_display(0=video, 1=command),
+				 * video_mode_type
+				 *     (0=sync_pulse,1=sync_event,2=burst),
+				 * clk_lp_continuous(0=stop,1=continue),
+				 * phy_stop_wait(0=auto,1=standard,2=slow)
+				 */
+			mipi_attr = <4 550 0 1 0 2 1 0>;
+				/* dsi_init: data_type, num, data... */
+			dsi_init_on = <0x05 1 0x11
+					0xff 20     /* delay(ms) */
+					0x05 1 0x29
+					0xff 20     /* delay(ms) */
+					0xff 0xff>; /* ending flag */
+			dsi_init_off = <0x05 1 0x28
+					0xff 10     /* delay(ms) */
+					0x05 1 0x10
+					0xff 10     /* delay(ms) */
+					0xff 0xff>; /* ending flag */
+				/* extern_init: 0xff for invalid */
+			extern_init = <0xff>;
+				/* power step: type,index,value,delay(ms) */
+			power_on_step = <0 0 1 10
+					0 0 0 20
+					0 0 1 20
+					2 0 0 0
+					0xff 0 0 0>;
+			power_off_step = <2 0 0 50
+					0 0 0 100
+					0xff 0 0 0>;
+			backlight_index = <0>;
+		};
+	};
+
+	lcd_extern{
+		compatible = "amlogic, lcd_extern";
+		dev_name = "lcd_extern";
+		status = "okay";
+		key_valid = <0>;
+
+		extern_1{
+			index = <1>;
+			extern_name = "mipi_KD080D13";
+			status = "disabled";
+			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
+		};
+	};
+
+	backlight{
+		compatible = "amlogic, backlight";
+		dev_name = "backlight";
+		status = "okay";
+		key_valid = <0>;
+		pinctrl-names = "pwm_on";
+		pinctrl-0 = <&bl_pwm_on_pins>;
+		pinctrl_version = <1>; /* for uboot */
+		/* power index:(point gpios_index, 0xff=invalid)
+		 * power value:(0=output low, 1=output high, 2=input)
+		 * power delay:(unit in ms)
+		 */
+		bl-gpios = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH
+			&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
+		bl_gpio_names = "GPIOZ_4","GPIOZ_5";
+
+		backlight_0{
+			index = <0>;
+			bl_name = "backlight_pwm";
+			bl_level_default_uboot_kernel = <100 100>;
+				/* level_attr: max, min, mid, mid_mapping */
+			bl_level_attr = <255 10 128 102>;
+
+			bl_ctrl_method = <1>; /* 1=pwm, 2=pwm_combo, 3=extern */
+				/* power_attr:
+				 * en_gpio_index, on_value, off_value,
+				 * on_delay(ms), off_delay(ms)
+				 */
+			bl_power_attr = <1 1 0 200 200>;
+				/* pwm_port: PWM_A,PWM_B,PWM_C,PWM_D,PWM_VS */
+			bl_pwm_port = "PWM_B";
+				/* pwm_attr:
+				 * pwm_method: 0=negative, 1=positive
+				 * pwm_freq: pwm_vs: 1~4(vfreq multiple),
+				 *           other pwm: real freq(Hz)
+				 * duty_max(%), duty_min(%)
+				 */
+			bl_pwm_attr = <0 180 100 25>;
+				/* pwm_power:
+				 * pwm_gpio_index, pwm_gpio_off,
+				 * pwm_on_delay(ms), pwm_off_delay(ms)
+				 */
+			bl_pwm_power = <0 0 10 10>;
+		};
+	};
+};/* end of panel */
+

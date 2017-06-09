@@ -39,8 +39,8 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/io.h>
 
-#ifdef CONFIG_AML_LCD
-#include <linux/amlogic/media/vout/lcd_notify.h>
+#ifdef CONFIG_AMLOGIC_LCD
+#include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 #endif
 
 #include "arch/vpp_regs.h"
@@ -2923,7 +2923,7 @@ static void aml_vecm_dt_parse(struct platform_device *pdev)
 	/* WRITE_VPP_REG_BITS(VPP_MISC, cm_en, 28, 1); */
 }
 
-#ifdef CONFIG_AML_LCD
+#ifdef CONFIG_AMLOGIC_LCD
 static int aml_lcd_gamma_notifier(struct notifier_block *nb,
 		unsigned long event, void *data)
 {
@@ -2983,7 +2983,7 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	}
 
 	spin_lock_init(&vpp_lcd_gamma_lock);
-#ifdef CONFIG_AML_LCD
+#ifdef CONFIG_AMLOGIC_LCD
 	ret = aml_lcd_notifier_register(&aml_lcd_gamma_nb);
 	if (ret)
 		pr_info("register aml_lcd_gamma_notifier failed\n");
@@ -3047,7 +3047,7 @@ static int __exit aml_vecm_remove(struct platform_device *pdev)
 	class_destroy(devp->clsp);
 	unregister_chrdev_region(devp->devno, 1);
 	kfree(devp);
-#ifdef CONFIG_AML_LCD
+#ifdef CONFIG_AMLOGIC_LCD
 	aml_lcd_notifier_unregister(&aml_lcd_gamma_nb);
 #endif
 	probe_ok = 0;

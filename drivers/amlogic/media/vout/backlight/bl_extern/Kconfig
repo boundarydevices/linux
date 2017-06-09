@@ -1,0 +1,40 @@
+
+config AMLOGIC_BL_EXTERN
+	bool "Amlogic backlight extern driver support"
+	default n
+	help
+		Say Y if you want to use Amlogic backlight external controller.
+		Amlogic backlight external driver support,
+		such as i2c or mipi initial
+		According to choose the corresponding bl_extern inside index bl_extern driver
+
+config AMLOGIC_BL_EXTERN_PMU_AML1218
+	bool "Amlogic backlight pmu aml1218"
+	depends on AMLOGIC_BL_EXTERN
+	default n
+	help
+		pmu aml1218 backlight controller support.
+		Once the backlight power on, according to the timing requirements,
+		through the aml1218 to write data to the backlight,
+		make its initialization
+
+
+config AMLOGIC_BL_EXTERN_I2C_LP8556
+	bool "Amlogic backlight i2c lp8556"
+	depends on AMLOGIC_BL_EXTERN
+	default n
+	help
+		i2c lp8556 backlight controller support.
+		Once the backlight power on, according to the timing requirements,
+		through the i2c_lp8556 to write data to the backlight,
+		make its initialization
+
+config AMLOGIC_BL_EXTERN_MIPI_LT070ME05
+	bool "Amlogic backlight mipi LT070ME05"
+	depends on AMLOGIC_BL_EXTERN
+	default n
+	help
+		mipi LT070ME05 backlight controller support.
+		Once the backlight power on, according to the timing requirements,
+		through the mipi_LT070ME05 to write data to the backlight,
+		make its initialization

@@ -1,0 +1,1 @@
+obj-y += lcd_tablet.o lcd_drv.o mipi_dsi_util.o

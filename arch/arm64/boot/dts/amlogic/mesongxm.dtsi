@@ -1051,6 +1051,50 @@
 		};
 	};
 
+	lcd_ttl_rgb_6bit_pins_on:lcd_ttl_rgb_6bit_on{
+		mux {
+			groups = "lcd_r2_7",
+				"lcd_g2_7",
+				"lcd_b2_7";
+			function = "lcd_ttl";
+		};
+	};
+
+	lcd_ttl_rgb_8bit_pins_on:lcd_ttl_rgb_8bit_on{
+		mux {
+			groups = "lcd_r0_1", "lcd_r2_7",
+				"lcd_g0_1", "lcd_g2_7",
+				"lcd_b0_1", "lcd_b2_7";
+			function = "lcd_ttl";
+		};
+	};
+		 /* DE + clk */
+	lcd_ttl_de_on_pins:lcd_ttl_de_on_pin{
+		mux {
+			groups = "tcon_cph", /* clk */
+				"tcon_oeh";  /* DE */
+			function = "lcd_ttl";
+		};
+	};
+		 /* hvsync + clk */
+	lcd_ttl_hvsync_on_pins:lcd_ttl_hvsync_on_pin{
+		mux {
+			groups = "tcon_cph", /* clk */
+				"tcon_stv1", /* vs */
+				"tcon_sth1"; /* hs */
+			function = "lcd_ttl";
+		};
+	};
+		 /* DE + hvsync + clk */
+	lcd_ttl_de_hvsync_on_pins:lcd_ttl_de_hvsync_on_pin{
+		mux {
+			groups = "tcon_cph", /* clk */
+				"tcon_oeh",  /* DE */
+				"tcon_stv1", /* vs */
+				"tcon_sth1"; /* hs */
+			function = "lcd_ttl";
+		};
+	};
 }; /* end of pinctrl_periphs */
 
 &periphs {

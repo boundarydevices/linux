@@ -18,7 +18,7 @@
 /dts-v1/;
 
 #include "mesonaxg.dtsi"
-
+#include "mesonaxg_s400-panel.dtsi"
 / {
 	model = "Amlogic";
 	compatible = "amlogic, axg";
@@ -397,6 +397,12 @@
 			"vpu_intr";
 		clk_level = <3>;
 		/* 0: 100.0M    1: 166.7M    2: 200.0M    3: 250.0M */
+	};
+
+	vout {
+		compatible = "amlogic, vout";
+		dev_name = "vout";
+		status = "okay";
 	};
 
 	/* Sound iomap */
@@ -973,6 +979,13 @@
 			pins = "GPIOA_14", "GPIOA_15", "GPIOA_16",
 				"GPIOA_17", "GPIOA_18";
 			function = "pdm";
+		};
+	};
+
+	bl_pwm_on_pins: bl_pwm_on_pin {
+		mux {
+			groups = "GPIOZ_4";
+			function = "pwm_b";
 		};
 	};
 }; /* end of pinctrl_periphs */

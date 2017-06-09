@@ -1,0 +1,77 @@
+
+menuconfig AMLOGIC_LCD_EXTERN
+	bool "LCD external driver support"
+	default n
+	help
+		Amlogic LCD external driver support, such as i2c initial
+
+config AMLOGIC_LCD_EXTERN_I2C_T5800Q
+	bool "lcd external i2c T5800Q init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external i2c_T5800Q init driver support
+		Once the power on, according to the timing requirements,
+		through the i2c interface to write data to the LCD,
+		make its initialization
+
+config AMLOGIC_LCD_EXTERN_I2C_DLPC3439
+	bool "lcd external i2c DLPC3439 init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external i2c_DLPC3439 init driver support
+		Once the power on, according to the timing requirements,
+		through the i2c interface to write data to the LCD,
+		make its initialization
+
+config AMLOGIC_LCD_EXTERN_I2C_ANX6345
+	bool "lcd external i2c ANX6345 init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external i2c_ANX6345 init driver support
+		Once the power on, according to the timing requirements,
+		through the i2c interface to write data to the LCD,
+		make its initialization
+
+config AMLOGIC_LCD_EXTERN_I2C_TC101
+	bool "lcd external i2c TC101 init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external i2c_TC101 init driver support
+		Once the power on, according to the timing requirements,
+		through the i2c interface to write data to the LCD,
+		make its initialization
+
+config AMLOGIC_LCD_EXTERN_SPI_LD070WS2
+	bool "lcd external spi LD070WS2 init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external spi_LD070WS2 init driver support
+		Once the power on, according to the timing requirements,
+		through the spi interface to write data to the LCD,
+		make its initialization
+
+config AMLOGIC_LCD_EXTERN_MIPI_KD080D13
+	bool "lcd external mipi KD080D13 init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external mipi_KD080D13 init driver support
+		Once the power on, according to the timing requirements,
+		through the mipi interface to write data to the LCD,
+		make its initialization
+
+config AMLOGIC_LCD_EXTERN_MIPI_N070ICN
+	bool "lcd external mipi N070ICN init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external mipi_N070ICN init driver support
+		Once the power on, according to the timing requirements,
+		through the mipi interface to write data to the LCD,
+		make its initialization
+

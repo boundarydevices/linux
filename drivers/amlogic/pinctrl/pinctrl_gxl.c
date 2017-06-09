@@ -354,6 +354,7 @@ static const unsigned int tcon_stv1_pins[]	= { PIN(GPIODV_24, EE_OFF) };
 static const unsigned int tcon_sth1_pins[]	= { PIN(GPIODV_25, EE_OFF) };
 static const unsigned int tcon_cph_pins[]	= { PIN(GPIODV_26, EE_OFF) };
 static const unsigned int tcon_vcom_pins[]	= { PIN(GPIODV_27, EE_OFF) };
+static const unsigned int tcon_oeh_pins[]	= { PIN(GPIODV_27, EE_OFF) };
 
 /*i2c_a*/
 static const unsigned int i2c_sda_a_pins[]	= { PIN(GPIODV_24, EE_OFF) };
@@ -612,19 +613,23 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(tsout_clk, 1, 27),     /*dv15*/
 	GROUP(tsout_d0, 1, 26),      /*dv16*/
 	GROUP(tsout_d1_7, 1, 25),  /*dv17-23*/
-	GROUP(lcd_r0_1, 3, 10),    /*dv0-1*/
-	GROUP(lcd_r2_7, 3, 9),     /*dv2-7*/
-	GROUP(lcd_g0_1, 3, 8),     /*dv8-9*/
-	GROUP(lcd_g2_7, 3, 7),     /*dv10-15*/
-	GROUP(lcd_b0_1, 3, 6),     /*dv16-17*/
-	GROUP(lcd_b2_7, 3, 5),     /*dv18-23*/
+	GROUP(lcd_r0_1,  3, 10), /*dv0-1*/
+	GROUP(lcd_r2_7,  3, 9),  /*dv2-7*/
+	GROUP(lcd_g0_1,  3, 8),  /*dv8-9*/
+	GROUP(lcd_g2_7,  3, 7),  /*dv10-15*/
+	GROUP(lcd_b0_1,  3, 6),  /*dv16-17*/
+	GROUP(lcd_b2_7,  3, 5),  /*dv18-23*/
+	GROUP(lcd_vs,    3, 4),  /*dv24*/
+	GROUP(lcd_hs,    3, 3),  /*dv25*/
+	GROUP(tcon_stv1, 1, 22), /*dv24*/
+	GROUP(tcon_sth1, 1, 21), /*dv25*/
+	GROUP(tcon_cph,  1, 20), /*dv26*/
+	GROUP(tcon_vcom, 1, 19), /*dv27*/
+	GROUP(tcon_oeh,  1, 18), /*dv27*/
 	GROUP(uart_tx_b,	 2,	16),
 	GROUP(uart_rx_b,	 2,	15),
 	GROUP(uart_cts_b, 2,	14),
 	GROUP(uart_rts_b, 2,	13),
-	GROUP(lcd_vs,	3,	4),	/*dv24*/
-	GROUP(lcd_hs, 3, 3),    /*dv25*/
-	GROUP(tcon_stv1,	1,	22),
 	GROUP(i2c_sda_a,	1,	15), /*dv24*/
 	GROUP(i2c_scl_a,	1,	14), /*dv25*/
 	GROUP(dmic_in_dv24, 2,  7),  /*dv24*/
@@ -969,11 +974,12 @@ static const char * const tsout_a_groups[] = {
 	"tsout_d0", "tsout_d1_7",
 };
 
-static const char * const lcd_groups[] = {
+static const char * const lcd_ttl_groups[] = {
 	"lcd_r0_1", "lcd_r2_7",
 	"lcd_g0_1", "lcd_g2_7",
 	"lcd_b0_1", "lcd_b2_7",
-	"lcd_vs",   "lcd_hs",
+	"tcon_stv1", "tcon_sth1",
+	"tcon_cph", "tcon_oeh",
 };
 
 static const char *const nor_groups[] = {
@@ -1022,7 +1028,7 @@ static struct meson_pmx_func meson_gxl_periphs_functions[] = {
 	FUNCTION(tsin_a),
 	FUNCTION(tsin_b),
 	FUNCTION(tsout_a),
-	FUNCTION(lcd),
+	FUNCTION(lcd_ttl),
 	FUNCTION(nor),
 	FUNCTION(dvp),
 	FUNCTION(dmic),

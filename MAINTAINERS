@@ -13948,3 +13948,11 @@ F: include/linux/amlogic/unifykey/*
 AMLOGIC AXG ADD OSD DRIVER
 M:	Pengcheng Chen <pengcheng.chen@amlogic.com>
 F:	drivers/amlogic/media/osd/osd_io.c
+
+AMLOGIC LCD driver
+M: Weiming Liu <weiming.liu@amlogic.com>
+F: drivers/amlogic/media/vout/backlight/*
+F: drivers/amlogic/media/vout/lcd/*
+F: include/linux/amlogic/media/vout/lcd/*
+F: arch/arm64/boot/dts/amlogic/mesongxm_q200-panel.dtsi
+F: arch/arm64/boot/dts/amlogic/mesonaxg_s400-panel.dtsi

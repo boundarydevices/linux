@@ -57,7 +57,8 @@
 #define GXL_GP0_CNTL4 0xc000004d
 #define GXL_GP0_CNTL5 0x00078000
 /* AXG */
-#define AXG_MIPI_CNTL0 0xa5b80000
+#define AXG_MIPI_CNTL0_ENABLE   BIT(29)
+#define AXG_MIPI_CNTL0_BANDGAP  BIT(26)
 #define AXG_PCIE_PLL_CNTL 0x40010242
 #define AXG_PCIE_PLL_CNTL1 0xc084b2ab
 #define AXG_PCIE_PLL_CNTL2 0xb75020be
@@ -188,7 +189,9 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		void *cntlbase = pll->base + p->reg_off;
 
 		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-			writel(AXG_MIPI_CNTL0, pll->base);
+			reg = readl(pll->base);
+			reg |= (AXG_MIPI_CNTL0_ENABLE | AXG_MIPI_CNTL0_BANDGAP);
+			writel(reg, pll->base);
 			writel(AXG_PCIE_PLL_CNTL, cntlbase + (u64)(0*4));
 			writel(AXG_PCIE_PLL_CNTL1, cntlbase + (u64)(1*4));
 			writel(AXG_PCIE_PLL_CNTL2, cntlbase + (u64)(2*4));

@@ -97,7 +97,7 @@ struct vdin_stat_s {
 	unsigned int   sum_pixel; /* VDIN_HIST_PIX_CNT_REG */
 };
 
-#ifdef CONFIG_AML_LOCAL_DIMMING
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 struct ldim_max_s {
     /* general parameters */
 	int ld_pic_rowmax;

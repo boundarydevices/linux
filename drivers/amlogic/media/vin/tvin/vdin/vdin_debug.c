@@ -360,7 +360,7 @@ static void vdin_write_mem(struct vdin_dev_s *devp, char *type, char *path)
 			NULL);
 }
 
-#ifdef CONFIG_AML_LOCAL_DIMMING
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 
 static void vdin_dump_histgram_ldim(struct vdin_dev_s *devp,
 	unsigned int hnum, unsigned int vnum)
@@ -682,7 +682,7 @@ start_chk:
 	} else if (!strcmp(parm[0], "histgram")) {
 		vdin_dump_histgram(devp);
 	}
-#ifdef CONFIG_AML_LOCAL_DIMMING
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 	else if (!strcmp(parm[0], "histgram_ldim")) {
 		unsigned int hnum, vnum;
 

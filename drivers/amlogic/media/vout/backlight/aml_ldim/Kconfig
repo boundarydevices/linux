@@ -1,0 +1,12 @@
+#
+# LDIM Device Driver Configuration
+#
+config AMLOGIC_LOCAL_DIMMING
+	bool "Amlogic Local dimming"
+	default n
+	help
+	  Say Y if you want to use Amlogic Local dimming.
+	  The role of local dimming is according to each
+	  image information, calculate the corresponding
+	  brightness values, to improve the effect of image quality,
+

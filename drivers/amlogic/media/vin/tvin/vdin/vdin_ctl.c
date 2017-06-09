@@ -1553,7 +1553,7 @@ void vdin_set_def_wr_canvas(struct vdin_dev_s *devp)
 		wr(offset, VDIN_WR_CTRL, (0x0bc01000 | def_canvas));
 }
 
-#ifdef CONFIG_AML_LOCAL_DIMMING
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 void vdin_set_ldim_max_init(unsigned int offset,
 		int pic_h, int pic_v, int blk_vnum, int blk_hnum)
 {
@@ -1660,7 +1660,7 @@ void vdin_set_vframe_prop_info(struct vframe_s *vf,
 {
 	unsigned int offset = devp->addr_offset;
 	struct vframe_bbar_s bbar = {0};
-#ifdef CONFIG_AML_LOCAL_DIMMING
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 	/*int i;*/
 #endif
 	/* fetch hist info */
@@ -1854,7 +1854,7 @@ void vdin_set_vframe_prop_info(struct vframe_s *vf,
 	vf->prop.meas.vs_stamp = devp->stamp;
 	vf->prop.meas.vs_cycle = devp->cycle;
 #if 0
-/*#ifdef CONFIG_AML_LOCAL_DIMMING*/
+/*#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING*/
 	/* get ldim max */
 	if (vdin_ldim_max_en && is_meson_gxtvbb_cpu()) {
 		wr_bits(offset, VDIN_LDIM_STTS_HIST_REGION_IDX, 0,
@@ -1884,7 +1884,7 @@ void vdin_set_all_regs(struct vdin_dev_s *devp)
 
 	/* bbar sub-module */
 	vdin_set_bbar(devp->addr_offset, devp->v_active, devp->h_active);
-#ifdef CONFIG_AML_LOCAL_DIMMING
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 	/* ldim sub-module */
 	/* vdin_set_ldim_max_init(devp->addr_offset, 1920, 1080, 8, 2); */
 	vdin_set_ldim_max_init(devp->addr_offset, devp->h_active,
