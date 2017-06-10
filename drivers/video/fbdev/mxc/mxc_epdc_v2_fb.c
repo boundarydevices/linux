@@ -1827,6 +1827,7 @@ static int mxc_epdc_fb_set_par(struct fb_info *info)
 		}
 	}
 	pxp_conf->s0_param.width = screeninfo->xres_virtual;
+	pxp_conf->s0_param.stride = (screeninfo->bits_per_pixel * pxp_conf->s0_param.width) >> 3;
 	pxp_conf->s0_param.height = screeninfo->yres;
 	pxp_conf->s0_param.color_key = -1;
 	pxp_conf->s0_param.color_key_enable = false;
@@ -5502,6 +5503,7 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 	 */
 	pxp_conf->s0_param.pixel_fmt = PXP_PIX_FMT_RGB565;
 	pxp_conf->s0_param.width = fb_data->info.var.xres_virtual;
+	pxp_conf->s0_param.stride = (var_info->bits_per_pixel * pxp_conf->s0_param.width) >> 3;
 	pxp_conf->s0_param.height = fb_data->info.var.yres;
 	pxp_conf->s0_param.color_key = -1;
 	pxp_conf->s0_param.color_key_enable = false;
@@ -6030,6 +6032,7 @@ static int pxp_legacy_process(struct mxc_epdc_fb_data *fb_data,
 	struct dma_async_tx_descriptor *txd;
 	struct pxp_config_data *pxp_conf = &fb_data->pxp_conf;
 	struct pxp_proc_data *proc_data = &fb_data->pxp_conf.proc_data;
+	struct fb_var_screeninfo *screeninfo = &fb_data->info.var;
 	int i, ret;
 	int length;
 
@@ -6083,6 +6086,7 @@ static int pxp_legacy_process(struct mxc_epdc_fb_data *fb_data,
 	 * probe() and should not need to be changed.
 	 */
 	pxp_conf->s0_param.width = src_width;
+	pxp_conf->s0_param.stride = (screeninfo->bits_per_pixel * src_width) >> 3;
 	pxp_conf->s0_param.height = src_height;
 	proc_data->srect.top = update_region->top;
 	proc_data->srect.left = update_region->left;
