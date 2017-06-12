@@ -819,6 +819,12 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 			devp->prop.ve = devp->debug.cutwin.ve;
 		}
 	}
+	/*gxbb/gxl/gxm use clkb as vdin clk,
+	 *for clkb is low speed,wich is enough for 1080p process,
+	 *gxtvbb/txl use vpu clk for process 4k
+	 */
+	if (is_meson_gxl_cpu() || is_meson_gxm_cpu() || is_meson_gxbb_cpu())
+		switch_vpu_clk_gate_vmod(VPU_VPU_CLKB, VPU_CLK_GATE_ON);
 
 	vdin_get_format_convert(devp);
 	devp->curr_wr_vfe = NULL;
@@ -886,10 +892,8 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	devp->curr_field_type = vdin_get_curr_field_type(devp);
 	/* pr_info("start clean_counter is %d\n",clean_counter); */
 	/* configure regs and enable hw */
-#ifdef CONFIG_AML_VPU
 	switch_vpu_mem_pd_vmod(devp->addr_offset?VPU_VIU_VDIN1:VPU_VIU_VDIN0,
 			VPU_MEM_POWER_ON);
-#endif
 
 	vdin_hw_enable(devp->addr_offset);
 	vdin_set_all_regs(devp);
@@ -972,10 +976,8 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	vdin_cma_release(devp);
 #endif
 
-#ifdef CONFIG_AML_VPU
 	switch_vpu_mem_pd_vmod(devp->addr_offset?VPU_VIU_VDIN1:VPU_VIU_VDIN0,
 			VPU_MEM_POWER_DOWN);
-#endif
 	memset(&devp->prop, 0, sizeof(struct tvin_sig_property_s));
 #ifdef CONFIG_AML_RDMA
 	rdma_clear(devp->rdma_handle);
