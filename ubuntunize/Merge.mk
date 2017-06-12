@@ -10,7 +10,7 @@ OFFSET     = $(shell expr 2048 \* 512)
 UBUNTUNIZE = $(TOPDIR)
 KERNEL_REL = $(shell cat $(BUILD_DIR)/include/config/kernel.release)
 PBUILDERSATISFYDEPENDSCMD = $(TOPDIR)/pbuilder-satisfydepends-gdebi
-PB_CONFIG  = $(UBUNTUNIZE)/.pbuilderrc
+PB_CONFIG  = $(UBUNTUNIZE)/pbuilderrc
 PB_EXEC    = sudo pbuilder --execute --configfile $(PB_CONFIG) --no-targz --buildplace $(IMG_MOUNT) --bindmounts "/tmp $(UBUNTUNIZE)"
 
 ifneq ($(MAKECMDGOALS),clean)
