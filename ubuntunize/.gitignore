@@ -1,2 +1,3 @@
 /linux-staging/
 /linux-*.tar.gz
+/create-initrd.sh
