@@ -115,12 +115,14 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 		reg = PARM_SET(p->width, p->shift, reg, n2);
 		reg = PARM_SET(1, mpll->sdm_en, reg, 1);
 		reg = PARM_SET(1, mpll->en_dds, reg, 1);
+		#if 0
 		if (!strcmp(clk_hw_get_name(hw), "mpll3"))
 			/* MPLL_CNTL10 bit14 should be set together
 			 * with MPLL3_CNTL0 bit0
 			 */
 			writel(readl(mpll->base + p->reg_off - 0x3c) |
 				0x1<<14, mpll->base + p->reg_off - 0x3c);
+		#endif
 		writel(reg, mpll->base + p->reg_off);
 		/* mpll top misc for cpu after txlx */
 		if (mpll->top_misc_reg)
