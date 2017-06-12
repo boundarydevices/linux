@@ -1,67 +1,52 @@
-# kernel ubuntunizer v1.4
+#!/usr/bin/make -f
+# -*- indent-tabs-mode: t; tab-width: 3 -*-
 
-#message colors
-COLOR_BLACK=30
-COLOR_RED=31
-COLOR_GREEN=32
-COLOR_YELLOW=33
-COLOR_BLUE=34
-COLOR_MAGENTA=35
-COLOR_CYAN=36
-COLOR_WHITE=97
-COLOR_DEFAULT=39
-INVERSE=1
-NONINVERSE=0
+# kernel customizer v1.5
 
-#usage: $(call message,<text>,<tabs>,<color>,<inverse>)
-define message
-	( if [ -z $(NOCOLOR) ] ; then echo -ne "\e[$(3)m" ; fi ; \
-	if [ "$(4)" = "$(INVERSE)" ] ; then if [ -z $(NOCOLOR) ] ; then echo -ne "\e[7m" ; fi ; echo -n ">>>" ; fi ; \
-	if [ "$(2)" -gt 0 ] && [ "$(2)" -lt 10 ] ; then for a in `seq "$(2)"` ; do echo -n "   " ; done ; fi ; \
- 	echo -n " $(1) " ; \
-	if [ "$(4)" = "$(INVERSE)" ] ; then echo -n "<<<" ; if [ -z $(NOCOLOR) ] ; then echo -ne "\e[27m" ; fi ; fi ; \
-	echo ; \
-	if [ -z $(NOCOLOR) ] ; then echo -ne "\e[39m" ; fi ; \
-	)
-endef
-
-#usage: $(call patch_source,<patch_dir>,<source_dir>)
-define patch_source
-	(for PATCH_FILE in `find $(1) -maxdepth 1 -name '*.patch' | sort 2>/dev/null` ; do \
-	    patch -p1 -d $(2) < $${PATCH_FILE} ; \
-	  done \
-	)
-endef
-
-#############
-
-SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
-	else if [ -x /bin/bash ]; then echo /bin/bash; \
-	else echo sh; fi; fi)
-	
-TOPDIR := $(shell pwd)
-
-BUILD_DIR ?= $(TOPDIR)/..
-IMAGE_DIR = $(TOPDIR)/linux-staging
-BOOT_DIR  = $(IMAGE_DIR)/boot
-CROSS_COMPILE ?= arm-linux-gnueabihf-
-INSTALL_MOD_PATH ?= $(IMAGE_DIR)
-LOADADDR ?= 10008000
-
-export ARCH = arm
-export CROSS_COMPILE
-export INSTALL_MOD_PATH
-export LOADADDR
-
-JOBS := $(shell echo $$((`getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1`)))
-
-.DEFAULT_GOAL := all
+include common.mk
 
 #############
 
 $(BOOT_DIR):
 	@mkdir -p $(IMAGE_DIR)/boot
-	
+
+arm-cross-toolchain:
+	@$(call message,"installing arm-cross-toolchain",0,$(COLOR_BLUE),$(INVERSE))
+	if [ -f /etc/alternatives/cpp ] ; then sudo update-alternatives --remove  cpp  /usr/bin/cpp ; fi
+ifeq ($(DISTRO),trusty)
+	sudo apt-get install g++-4.8-arm-linux-gnueabihf
+	sudo apt-get install gcc-4.8-multilib-arm-linux-gnueabihf
+	$(call upd-alternatives,4.8,90,$(CROSS_COMPILE))
+else ifeq ($(DISTRO),xenial)
+	sudo apt install g++-4.8-arm-linux-gnueabihf
+	sudo apt install gcc-4.8-multilib-arm-linux-gnueabihf
+	$(call upd-alternatives,4.8,90,$(CROSS_COMPILE))
+	sudo apt install g++-4.9-arm-linux-gnueabihf
+	sudo apt install gcc-4.9-multilib-arm-linux-gnueabihf
+	$(call upd-alternatives,4.9,100,$(CROSS_COMPILE))
+	sudo apt install g++-5-arm-linux-gnueabihf
+	sudo apt install gcc-5-multilib-arm-linux-gnueabihf
+	$(call upd-alternatives,5,110,$(CROSS_COMPILE))
+else ifeq ($(DISTRO),jessie)
+	sudo apt-get install libc6-dev-i386 lib32stdc++-4.9-dev
+	sudo apt-get install g++-4.9-arm-linux-gnueabihf
+	$(call upd-alternatives,4.9,100,$(CROSS_COMPILE))
+else ifeq ($(DISTRO),stretch)
+	sudo apt install libc6-dev-i386 lib32stdc++-6-dev
+	sudo apt install g++-6-arm-linux-gnueabihf
+	$(call upd-alternatives,6,110,$(CROSS_COMPILE))
+else
+	$(error unknown DISTRO=$(DISTRO))
+endif
+
+
+
+prerequisites: arm-cross-toolchain
+	@$(call message,"installing prerequisites",0,$(COLOR_BLUE),$(INVERSE))
+	@sudo apt-get -y install build-essential dpkg-cross git git-svn gzip pigz pixz
+	@echo prerequisites installed
+
+
 kernel:
 	@$(call message,"building kernel",0,$(COLOR_BLUE),$(INVERSE))
 	@(if [ -d $(BUILD_DIR)/arch/arm/boot/dts ] ; then \
@@ -69,6 +54,7 @@ kernel:
 	  else \
 		$(MAKE) -C $(BUILD_DIR) zImage modules -j$(JOBS) ; \
 	fi)
+
 
 all: $(BOOT_DIR)
 	@$(call message,"installing modules",0,$(COLOR_BLUE),$(INVERSE))
@@ -91,17 +77,21 @@ all: $(BOOT_DIR)
 	 )
 
 
-tarball: all
+targz:
+	@$(call message,"creating tarball",0,$(COLOR_BLUE),$(INVERSE))
 	@(cd $(BUILD_DIR) && \
 	  KR=`cat $(BUILD_DIR)/include/config/kernel.release` && \
 	  cd $(IMAGE_DIR) && tar -czf ../linux-$${KR}.tar.gz * && \
-	  $(call message,"Tarball linux-$${KR}.tar.gz has been created.",0,$(COLOR_GREEN),$(NONINVERSE)) ; \
+	  $(call message,"tarball linux-$${KR}.tar.gz has been created.",0,$(COLOR_GREEN),$(NONINVERSE)) ; \
 	 )
+
+
+tarball: all targz
 
 
 clean:
 	@$(call message,"cleaning...",0,$(COLOR_BLUE),$(INVERSE))
 	@rm -rf $(IMAGE_DIR)
-	@rm -f *.tar.gz
+	@rm -f *.tar.gz create-initrd.sh
 
 .PHONY: clean
