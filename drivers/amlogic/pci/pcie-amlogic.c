@@ -678,6 +678,23 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	if (amlogic_pcie->pcie_num == 1)
 		g_amlogic_pcie = amlogic_pcie;
 
+	if (amlogic_pcie->pcie_num == 1) {
+		phy_base = platform_get_resource_byname(
+			pdev, IORESOURCE_MEM, "phy");
+		amlogic_pcie->phy_base = devm_ioremap_resource(dev, phy_base);
+		if (IS_ERR(amlogic_pcie->phy_base)) {
+			ret = PTR_ERR(amlogic_pcie->phy_base);
+			return ret;
+		}
+		for (j = 0; j < 7; j++)
+			pcie_aml_regs.pcie_phy_r[j] = (void __iomem *)
+				((unsigned long)amlogic_pcie->phy_base + 4*j);
+		writel(0x1c, pcie_aml_regs.pcie_phy_r[0]);
+	} else {
+		amlogic_pcie->phy_base = g_amlogic_pcie->phy_base;
+	}
+
+
 	ret = of_property_read_u32(np, "board-type", &board_type);
 	amlogic_pcie->board_type = board_type;
 
@@ -720,21 +737,6 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	if (IS_ERR(amlogic_pcie->elbi_base)) {
 		ret = PTR_ERR(amlogic_pcie->elbi_base);
 		goto fail_bus_clk;
-	}
-
-	if (amlogic_pcie->pcie_num == 1) {
-		phy_base = platform_get_resource_byname(
-			pdev, IORESOURCE_MEM, "phy");
-		amlogic_pcie->phy_base = devm_ioremap_resource(dev, phy_base);
-		if (IS_ERR(amlogic_pcie->phy_base)) {
-			ret = PTR_ERR(amlogic_pcie->phy_base);
-			goto fail_bus_clk;
-		}
-		for (j = 0; j < 7; j++)
-			pcie_aml_regs.pcie_phy_r[j] = (void __iomem *)
-				((unsigned long)amlogic_pcie->phy_base + 4*j);
-	} else {
-		amlogic_pcie->phy_base = g_amlogic_pcie->phy_base;
 	}
 
 	cfg_base = platform_get_resource_byname(pdev, IORESOURCE_MEM, "cfg");
