@@ -53,6 +53,11 @@ config FB_MXC_ADV7535
 	help
 	  Driver support for the ADV7535 DSI-to-HDMI module
 
+config FB_MXC_MIPI_RM68200
+	tristate "mipi RM68200 controller panels"
+	depends on FB_MXC_SYNC_PANEL
+	depends on FB_MXC_MIPI_DSI
+
 config FB_MXC_TRULY_PANEL_TFT3P5581E
 	tristate "TRULY Panel TFT3P5581E"
 	depends on FB_MXC_DISP_FRAMEWORK
