@@ -22,6 +22,7 @@
 #include <linux/device.h>
 
 #define ENV_NAME "nand_env"
+static DEFINE_MUTEX(env_mutex);
 static dev_t uboot_env_no;
 struct cdev uboot_env;
 struct device *uboot_dev;
@@ -151,12 +152,13 @@ ssize_t env_store(struct class *class, struct class_attribute *attr,
 	int ret = 0;
 	u8 *env_ptr = NULL;
 
-	pr_info("env_store : #####\n");
 
 	env_ptr = kzalloc(CONFIG_ENV_SIZE, GFP_KERNEL);
 	if (env_ptr == NULL)
 		return -ENOMEM;
 
+	mutex_lock(&env_mutex);
+	pr_info("env_store : #####\n");
 	ret = amlnf_env_read(env_ptr, CONFIG_ENV_SIZE);
 	if (ret) {
 		pr_info("nand_env_read: nand env read failed\n");
@@ -172,6 +174,7 @@ ssize_t env_store(struct class *class, struct class_attribute *attr,
 	}
 
 	pr_info("env_store : OK #####\n");
+	mutex_unlock(&env_mutex);
 	return count;
 }
 
@@ -202,6 +205,7 @@ ssize_t uboot_env_read(struct file *file,
 	env_ptr = vmalloc(CONFIG_ENV_SIZE + 2048);
 	if (env_ptr == NULL)
 		return -ENOMEM;
+	mutex_lock(&env_mutex);
 
 	/*amlnand_get_device(aml_chip_env, CHIP_READING);*/
 	ret = amlnf_env_read((u8 *)env_ptr, CONFIG_ENV_SIZE);
@@ -220,6 +224,7 @@ ssize_t uboot_env_read(struct file *file,
 	ret = copy_to_user(buf, (env_ptr + *ppos), read_size);
 	*ppos += read_size;
 exit:
+	mutex_unlock(&env_mutex);
 	/*amlnand_release_device(aml_chip_env);*/
 	vfree(env_ptr);
 	return read_size;
@@ -245,6 +250,7 @@ ssize_t uboot_env_write(struct file *file,
 	if (env_ptr == NULL)
 		return -ENOMEM;
 
+	mutex_lock(&env_mutex);
 	/*not need nand_get_device here, mtd->_read_xx will done with it*/
 	/*nand_get_device(mtd, FL_WRITING);*/
 	ret = amlnf_env_read((u8 *)env_ptr, CONFIG_ENV_SIZE);
@@ -270,6 +276,7 @@ ssize_t uboot_env_write(struct file *file,
 
 	*ppos += write_size;
 exit:
+	mutex_unlock(&env_mutex);
 	/*nand_release_device(mtd);*/
 	vfree(env_ptr);
 	return write_size;

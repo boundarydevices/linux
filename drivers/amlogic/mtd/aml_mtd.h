@@ -310,6 +310,9 @@ struct aml_nandrsv_info_t {
 	u_char part_num_before_sys;
 };
 
+/*define abnormal state for reserved area*/
+#define POWER_ABNORMAL_FLAG	0x01
+#define ECC_ABNORMAL_FLAG	0x02
 struct valid_node_t {
 	int16_t ec;
 	int16_t	phy_blk_addr;
