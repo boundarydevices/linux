@@ -469,7 +469,7 @@
 		compatible = "fsl,imx6q-h4-wm8960",
 			     "fsl,imx-audio-wm8960";
 		model = "wm8960-audio";
-		ssi-controller = <&ssi1>;
+		cpu-dai = <&ssi1>;
 		audio-codec = <&wm8960>;
 #if 0
 		asrc-controller = <&asrc>;
