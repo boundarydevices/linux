@@ -31,12 +31,12 @@
 
 /* DPI interface pixel color coding map */
 enum mipi_dsi_dpi_fmt {
-	MIPI_RGB565_PACKED = 0,
-	MIPI_RGB565_LOOSELY,
-	MIPI_RGB565_CONFIG3,
-	MIPI_RGB666_PACKED,
-	MIPI_RGB666_LOOSELY,
-	MIPI_RGB888,
+	MIPI_RGB565_PACKED = 0,	/* 16 bit config1, D15-D11, D10-D5, D4-D0 */
+	MIPI_RGB565_LOOSELY,	/* 16 bit config2, D20-D16, D13-D8, D4-D0  */
+	MIPI_RGB565_CONFIG3,	/* 16 bit config3, D21-D17, D13-D8, D5-D1 */
+	MIPI_RGB666_PACKED,	/* 18 bit config1, D17-D12, D11-D6, D5-D0 */
+	MIPI_RGB666_LOOSELY,	/* 18 bit config2, D21-D16, D14-D8, D5-D0 */
+	MIPI_RGB888,		/* 24 bit, D23-D0 */
 };
 
 struct mipi_lcd_config {
@@ -118,7 +118,13 @@ void mipid_hx8363_get_lcd_videomode(struct fb_videomode **mode, int *size,
 int mipid_hx8363_lcd_setup(struct mipi_dsi_info *);
 #endif
 
-#ifndef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
+#ifdef CONFIG_FB_MXC_MIPI_RM68200
+void mipid_rm68200_get_lcd_videomode(struct fb_videomode **mode, int *size,
+		struct mipi_lcd_config **data);
+int mipid_rm68200_lcd_setup(struct mipi_dsi_info *mipi_dsi);
+#endif
+
+#if !defined(CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL) && !defined(CONFIG_FB_MXC_MIPI_RM68200)
 #error "Please configure MIPI LCD panel, we cannot find one!"
 #endif
 
