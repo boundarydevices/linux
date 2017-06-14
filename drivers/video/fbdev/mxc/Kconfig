@@ -45,6 +45,11 @@ config FB_MXC_MIPI_DSI_NORTHWEST
 	depends on FB_MXC_SYNC_PANEL
 	depends on FB_MXS
 
+config FB_MXC_MIPI_RM68200
+	tristate "mipi RM68200 controller panels"
+	depends on FB_MXC_SYNC_PANEL
+	depends on FB_MXC_MIPI_DSI
+
 config FB_MXC_TRULY_WVGA_SYNC_PANEL
 	tristate "TRULY WVGA Panel"
 	depends on FB_MXC_SYNC_PANEL
