@@ -55,6 +55,12 @@ static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 	 {mipid_hx8369_get_lcd_videomode, mipid_hx8369_lcd_setup}
 	},
 #endif
+#ifdef CONFIG_FB_MXC_MIPI_RM68200
+	{
+	 "OSD050T2844",
+	 {mipid_rm68200_get_lcd_videomode, mipid_rm68200_lcd_setup}
+	},
+#endif
 	{
 	"", {NULL, NULL}
 	}
