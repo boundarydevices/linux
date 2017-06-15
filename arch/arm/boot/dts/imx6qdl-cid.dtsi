@@ -239,11 +239,11 @@
 
 	pinctrl_i2c2_touch: i2c2-touchgrp {
 		fsl,pins = <
-#define GPIRQ_TOUCH	<&gpio4 7 IRQ_TYPE_EDGE_FALLING>
-#define GP_TOUCH_IRQ	<&gpio4 7 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x1b0b0
+#define GPIRQ_TOUCH	<&gpio4 15 IRQ_TYPE_EDGE_FALLING>
+#define GP_TOUCH_IRQ	<&gpio4 15 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x1b0b0
 #define GP_TOUCH_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x1b0b0
+			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x130b0
 		>;
 	};
 
@@ -833,16 +833,16 @@
 		reg = <0x68>;
 		interrupts-extended = GPIRQ_RTC;
 	};
-#if 0
-	touch@38 {
-		/* TODO */
+
+	atmel_maxtouch@4a {
+		compatible = "atmel,maxtouch";
+		interrupts-extended = GPIRQ_TOUCH;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_touch>;
-		interrupts-extended = GPIRQ_TOUCH;
-		irq-gpios = GP_TOUCH_IRQ;
+		reg = <0x4a>;
 		reset-gpios = GP_TOUCH_RESET;
+		wakeup-gpios = GP_TOUCH_IRQ;
 	};
-#endif
 };
 
 &i2c3 {
