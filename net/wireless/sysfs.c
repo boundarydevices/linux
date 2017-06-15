@@ -105,8 +105,13 @@ static int wiphy_suspend(struct device *dev)
 	rtnl_lock();
 	if (rdev->wiphy.registered) {
 		if (!rdev->wiphy.wowlan_config) {
+#ifdef CONFIG_AMLOGIC_WIFI
+			printk_ratelimited(KERN_INFO
+				"force to skip cfg80211_leave_all due to wifi suspend/resume issue\n");
+#else
 			cfg80211_leave_all(rdev);
 			cfg80211_process_rdev_events(rdev);
+#endif
 		}
 		if (rdev->ops->suspend)
 			ret = rdev_suspend(rdev, rdev->wiphy.wowlan_config);
