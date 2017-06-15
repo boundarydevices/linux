@@ -742,9 +742,8 @@
 		clock-names = "mclk";
 		wlf,shared-lrclk;
 		clocks = <&clks IMX6QDL_CLK_CKO>;
-		assigned-clocks =        <&clks IMX6QDL_CLK_CKO1_SEL>,  <&clks IMX6QDL_CLK_CKO1_PODF>, <&clks IMX6QDL_CLK_CKO>;
-		assigned-clock-parents = <&clks IMX6QDL_CLK_PLL4_AUDIO_DIV>, <&clks IMX6QDL_CLK_CKO1_SEL>, <&clks IMX6QDL_CLK_CKO1>;
-		assigned-clock-rates = <0>, <12000000>;
+		assigned-clocks =        <&clks IMX6QDL_CLK_CKO>;
+		assigned-clock-parents = <&clks IMX6QDL_CLK_CKO2>;
 	};
 };
 
