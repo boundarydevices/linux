@@ -690,6 +690,7 @@ static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
 	unsigned int freq;
 	bool baudclk_is_used;
 	int ret;
+	snd_pcm_format_t sample_format = params_format(hw_params);
 
 	/* Override slots and slot_width if being specifically set... */
 	if (ssi->slots)
@@ -700,6 +701,15 @@ static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
 
 	/* Generate bit clock based on the slot number and slot width */
 	freq = slots * slot_width * params_rate(hw_params);
+
+	if (params_channels(hw_params) == 1) {
+		freq = 2 * params_width(hw_params) *
+				params_rate(hw_params);
+
+		if (sample_format == SNDRV_PCM_FORMAT_S20_3LE)
+			freq = 2 * params_physical_width(hw_params) *
+						params_rate(hw_params);
+	}
 
 	/* Don't apply it to any non-baudclk circumstance */
 	if (IS_ERR(ssi->baudclk))
