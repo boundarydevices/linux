@@ -293,20 +293,21 @@ static struct snd_pcm_hw_constraint_list imx_wm8960_rate_constraints = {
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+//	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_card *card = rtd->card;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
-	struct fsl_sai *sai = dev_get_drvdata(cpu_dai->dev);
+//	struct fsl_sai *sai = dev_get_drvdata(cpu_dai->dev);
 	int ret = 0;
 
 	data->is_stream_opened[tx] = true;
+#if 0
 	if (data->is_stream_opened[tx] != sai->is_stream_opened[tx] ||
 	    data->is_stream_opened[!tx] != sai->is_stream_opened[!tx]) {
 		data->is_stream_opened[tx] = false;
 		return -EBUSY;
 	}
-
+#endif
 	if (!data->is_codec_master) {
 		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
 				SNDRV_PCM_HW_PARAM_RATE, &imx_wm8960_rate_constraints);
