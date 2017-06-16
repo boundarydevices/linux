@@ -1157,7 +1157,7 @@ static int osd_open(struct fb_info *info, int arg)
 					PAGE_ALIGN(fb_memsize[fb_index + 1]/
 					OSD_MAX_BUF_NUM),
 					0,
-					(1 << ION_HEAP_TYPE_CARVEOUT),
+					(1 << ION_HEAP_TYPE_DMA),
 					0);
 				ret = ion_phys(fb_ion_client,
 					fb_ion_handle[fb_index][j],
@@ -1206,7 +1206,7 @@ static int osd_open(struct fb_info *info, int arg)
 				ion_alloc(fb_ion_client,
 					fb_memsize[fb_index + 1],
 					0,
-					(1 << ION_HEAP_TYPE_CARVEOUT),
+					(1 << ION_HEAP_TYPE_DMA),
 					0);
 			ret = ion_phys(fb_ion_client,
 				fb_ion_handle[fb_index][0],
