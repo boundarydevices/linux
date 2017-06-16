@@ -318,7 +318,8 @@
 		&clkc CLKID_PCIE_A>;
 		clock-names = "pcie_refpll",
 				"pcie_a";
-		board-type = <0>;/*0:skt 1:s400*/
+		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
+		gpio-type = <2>;
 		status = "okay";
 	};
 
@@ -348,7 +349,8 @@
 			&clkc CLKID_PCIE_B>;
 		clock-names = "pcie_refpll",
 			"pcie_b";
-		board-type = <0>;/*0:skt 1:s400*/
+		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
+		gpio-type = <0>;
 		status = "okay";
 	};
 

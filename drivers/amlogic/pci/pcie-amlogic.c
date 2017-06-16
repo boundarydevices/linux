@@ -41,7 +41,7 @@ struct amlogic_pcie {
 	struct clk		*clk;
 	struct clk		*bus_clk;
 	int			pcie_num;
-	int			board_type;
+	int			gpio_type;
 };
 
 #define to_amlogic_pcie(x)	container_of(x, struct amlogic_pcie, pp)
@@ -246,59 +246,45 @@ static void amlogic_pcie_assert_reset(struct amlogic_pcie *amlogic_pcie)
 	struct pcie_port *pp = &amlogic_pcie->pp;
 	struct device *dev = pp->dev;
 
-	if (amlogic_pcie->board_type == 1) {
-		if (amlogic_pcie->pcie_num == 2) {
-			if (amlogic_pcie->reset_gpio >= 0) {
+	if (amlogic_pcie->gpio_type == 0) {
+		dev_info(amlogic_pcie->pp.dev,
+				"gpio multiplex, don't reset!\n");
+	} else if (amlogic_pcie->gpio_type == 1) {
+		dev_info(amlogic_pcie->pp.dev, "pad gpio\n");
+		if (amlogic_pcie->reset_gpio >= 0) {
 				devm_gpio_request_one(dev,
 					 amlogic_pcie->reset_gpio,
 					GPIOF_OUT_INIT_HIGH, "RESET");
-			}
+		}
 
-			if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
-				dev_info(amlogic_pcie->pp.dev,
-					"GPIOZ_10: amlogic_pcie_assert_reset\n");
-				gpio_direction_output(
-					amlogic_pcie->reset_gpio, 0);
-				msleep(100);
-				gpio_direction_input(
-					amlogic_pcie->reset_gpio);
-			}
-		} else {
-			if (amlogic_pcie->reset_gpio >= 0) {
-				devm_gpio_request_one(dev,
-					 amlogic_pcie->reset_gpio,
-					GPIOF_OUT_INIT_HIGH, "RESET");
-			}
-
-			if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
-				dev_info(amlogic_pcie->pp.dev,
-					"GPIOX_19: amlogic_pcie_assert_reset\n");
-				gpio_set_value_cansleep(
-					amlogic_pcie->reset_gpio, 0);
-				msleep(100);
-				gpio_set_value_cansleep(
-					amlogic_pcie->reset_gpio, 1);
-			}
+		if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
+			dev_info(amlogic_pcie->pp.dev,
+				"GPIO pad: amlogic_pcie_assert_reset\n");
+			gpio_direction_output(
+				amlogic_pcie->reset_gpio, 0);
+			msleep(5);
+			gpio_direction_input(
+				amlogic_pcie->reset_gpio);
 		}
 	} else {
-		if (amlogic_pcie->pcie_num == 1) {
-			if (amlogic_pcie->reset_gpio >= 0) {
+		dev_info(amlogic_pcie->pp.dev, "normal gpio\n");
+		if (amlogic_pcie->reset_gpio >= 0) {
 				devm_gpio_request_one(dev,
 					 amlogic_pcie->reset_gpio,
 					GPIOF_OUT_INIT_HIGH, "RESET");
-			}
+		}
 
-			if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
-				dev_info(amlogic_pcie->pp.dev,
-					"GPIOX_19: amlogic_pcie_assert_reset\n");
-				gpio_set_value_cansleep(
-					amlogic_pcie->reset_gpio, 0);
-				msleep(100);
-				gpio_set_value_cansleep(
-					amlogic_pcie->reset_gpio, 1);
-			}
+		if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
+			dev_info(amlogic_pcie->pp.dev,
+				"GPIO normal: amlogic_pcie_assert_reset\n");
+			gpio_set_value_cansleep(
+				amlogic_pcie->reset_gpio, 0);
+			msleep(5);
+			gpio_set_value_cansleep(
+				amlogic_pcie->reset_gpio, 1);
 		}
 	}
+
 }
 
 void amlogic_set_max_payload(struct amlogic_pcie *amlogic_pcie, int size)
@@ -442,14 +428,14 @@ static int amlogic_pcie_establish_link(struct amlogic_pcie *amlogic_pcie)
 {
 	struct pcie_port *pp = &amlogic_pcie->pp;
 
-	amlogic_pcie_assert_reset(amlogic_pcie);
-
 	amlogic_pcie_init_dw(amlogic_pcie);
 	amlogic_set_max_payload(amlogic_pcie, 256);
 	amlogic_set_max_rd_req_size(amlogic_pcie, 256);
 
 	dw_pcie_setup_rc(pp);
 	amlogic_enable_memory_space(amlogic_pcie);
+
+	amlogic_pcie_assert_reset(amlogic_pcie);
 
 	/* check if the link is up or not */
 	if (!dw_pcie_wait_for_link(pp))
@@ -655,7 +641,7 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	struct resource *reset_base;
 	int ret;
 	int pcie_num = 0;
-	int board_type = 0;
+	int gpio_type = 0;
 	unsigned long rate = 100000000;
 	int err;
 	int j = 0;
@@ -678,6 +664,7 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	if (amlogic_pcie->pcie_num == 1)
 		g_amlogic_pcie = amlogic_pcie;
 
+
 	if (amlogic_pcie->pcie_num == 1) {
 		phy_base = platform_get_resource_byname(
 			pdev, IORESOURCE_MEM, "phy");
@@ -694,9 +681,8 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 		amlogic_pcie->phy_base = g_amlogic_pcie->phy_base;
 	}
 
-
-	ret = of_property_read_u32(np, "board-type", &board_type);
-	amlogic_pcie->board_type = board_type;
+	ret = of_property_read_u32(np, "gpio-type", &gpio_type);
+	amlogic_pcie->gpio_type = gpio_type;
 
 	amlogic_pcie->reset_gpio = of_get_named_gpio(np, "reset-gpio", 0);
 
