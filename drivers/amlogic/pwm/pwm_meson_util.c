@@ -56,7 +56,7 @@ struct pwm_aml_regs *pwm_id_to_reg
 	case PWM_AO_D:
 	case PWM_AO_C2:
 	case PWM_AO_D2:
-		baseaddr = aml_chip->baseaddr.aoab_base;
+		baseaddr = aml_chip->baseaddr.aocd_base;
 		break;
 	default:
 		pr_err("unknown pwm id: %d\n", pwm_id);
