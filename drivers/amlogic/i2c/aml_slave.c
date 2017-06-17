@@ -22,6 +22,10 @@
 #include <linux/interrupt.h>
 #include <linux/amlogic/iomap.h>
 
+/*uboot i2c_auto_test: open/disable*/
+static char i2c_auto_test_mode[10] = "disable";
+static char i2c_auto_test_flag;
+
 void i2c_slave_dts_parse(struct platform_device *pdev,
 struct aml_i2c_slave *slave)
 {
@@ -45,7 +49,7 @@ struct aml_i2c_slave *slave)
 	slave->slave_regs->s_reg_ctrl |= (1<<28);/*send en*/
 	slave->slave_regs->s_reg_ctrl |= (1<<27);/*recv en*/
 	slave->slave_regs->s_reg_ctrl |= (0x40<<16);   /*slave addr*/
-	slave->slave_regs->s_reg_ctrl |= (0x27<<8); /*hold time*/
+	slave->slave_regs->s_reg_ctrl |= (0x0<<8); /*hold time*/
 	slave->slave_regs->s_reg_ctrl |= (0x6); /*sampling rate*/
 }
 
@@ -88,7 +92,8 @@ struct class_attribute *attr, const char *buf, size_t count)
 
 	if (!strcmp(attr->attr.name, "addr")) {
 		mutex_lock(i2c->lock);
-		i2c->slave_regs->s_reg_ctrl |= ((val&0xff)<<16);
+		i2c->slave_regs->s_reg_ctrl &= ~(0xff<<16);
+		i2c->slave_regs->s_reg_ctrl |= (val&0xff)<<16;
 		mutex_unlock(i2c->lock);
 	} else if (!strcmp(attr->attr.name, "control_reg")) {
 		mutex_lock(i2c->lock);
@@ -116,8 +121,12 @@ struct aml_i2c_slave_reg_ctrl *slave_ctrl)
 
 	rev_data = (slave->slave_regs->s_rev_reg);
 
-	pr_info("data:0x%8x\n", rev_data);
+	pr_info("slave receive data:0x%8x\n", rev_data);
 
+	if (i2c_auto_test_flag) {
+		if (rev_data == 0x998855aa)
+			slave->slave_regs->s_send_reg = rev_data&0xffffffff;
+	}
 	slave->slave_regs->s_reg_ctrl |= (1<<27);
 
 	return  0;
@@ -149,13 +158,12 @@ static irqreturn_t i2c_slave_xfer_isr(int irq, void *dev_id)
 	slave = (struct aml_i2c_slave *)dev_id;
 	slave_ctrl = (struct aml_i2c_slave_reg_ctrl *)&
 		(slave->slave_regs->s_reg_ctrl);
-
 	if (((slave->slave_regs->s_reg_ctrl>>27)&(0x1)) == 0x0)
 		if (!i2c_slave_read_data(slave, slave_ctrl))
 			return IRQ_HANDLED;
 
 	if  (((slave->slave_regs->s_reg_ctrl>>28)&(0x1)) == 0x0)
-		pr_info("send:\n");
+		pr_info("\n");
 #ifdef CONFIG_I2C_SLAVE_TIMER
 	slave->timer.data = (unsigned long)slave;
 	mod_timer(&slave->timer,  jiffies +
@@ -169,6 +177,10 @@ static int i2c_slave_probe(struct platform_device *pdev)
 	resource_size_t *res_start;
 	int ret;
 	struct aml_i2c_slave *slave;
+
+	i2c_auto_test_flag = 0;
+	if (!strcmp(i2c_auto_test_mode, "open"))
+		i2c_auto_test_flag = 1;
 
 	slave =	kzalloc(sizeof(struct aml_i2c_slave), GFP_KERNEL);
 
@@ -200,7 +212,7 @@ static int i2c_slave_probe(struct platform_device *pdev)
 
 	slave->cls.name = kzalloc(8, GFP_KERNEL);
 
-	sprintf((char *)slave->cls.name, "aml_slave");
+	sprintf((char *)slave->cls.name, "i2c_slave");
 
 	slave->cls.class_attrs = slave_class_attrs;
 
@@ -216,6 +228,16 @@ static int i2c_slave_probe(struct platform_device *pdev)
 
 	return 0;
 }
+
+static int __init i2c_auto_test_setup(char *s)
+{
+	if (s != NULL)
+		sprintf(i2c_auto_test_mode, "%s", s);
+
+	return 0;
+}
+__setup("i2c_auto_test=", i2c_auto_test_setup);
+
 static int i2c_slave_remove(struct platform_device *pdev)
 {
 	struct aml_i2c_slave *slave;
@@ -252,17 +274,14 @@ static int i2c_slave_resume(struct device *dev)
 	enable_irq(slave->irq);
 	mutex_unlock(slave->lock);
 	pr_info("%s: enable #%d irq\n", __func__, slave->irq);
-
 	return 0;
 }
-
 
 #ifdef CONFIG_OF
 static const struct of_device_id i2c_slave_matches[] = {
 	{ .compatible = "amlogic, meson-i2c-slave", },
 	{},
 };
-
 
 #endif
 static const struct dev_pm_ops i2c_slave_pm_ops = {
@@ -272,7 +291,7 @@ static const struct dev_pm_ops i2c_slave_pm_ops = {
 
 static struct platform_driver i2c_slave_driver = {
 	.driver     = {
-		.name   = "aml-i2c-slave",
+		.name   = "aml_i2c_slave",
 		.owner  = THIS_MODULE,
 		.of_match_table = of_match_ptr(i2c_slave_matches),
 		.pm = &i2c_slave_pm_ops,
