@@ -13961,3 +13961,9 @@ AMLOGIC AXG ADD AO CLK
 M:	Yun Cai <yun.cai@amlogic.com>
 F:	drivers/amlogic/clk/axg/axg_ao.c
 
+AMLOGIC Irblaster driver
+M: Zan Peng <zan.peng@amlogic.com>
+F: drivers/amlogic/irblaster/irblaster.c
+F: drivers/amlogic/irblaster/irblaster.h
+F: drivers/amlogic/irblaster/Kconfig
+F: drivers/amlogic/irblaster/Makefile

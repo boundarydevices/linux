@@ -694,6 +694,13 @@
 		};
 	};
 
+	irblaster_pins:irblaster_pin {
+		mux {
+			pins = "GPIOAO_7";
+			function = "ir_out";
+		};
+	};
+
 	ao_uart_pins:ao_uart {
 			mux {
 				pins = "GPIOAO_0",
@@ -975,4 +982,3 @@
 	};
 
 }; /* end of pinctrl_periphs */
-

@@ -1,0 +1,11 @@
+#
+# Input core configuration
+#
+config AMLOGIC_IRBLASTER
+	bool "Amlogic irblaster device surport"
+	default n
+	help
+	  Say Y here if you want to use the amlogic irblaster.
+
+
+
