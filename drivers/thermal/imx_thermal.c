@@ -240,6 +240,7 @@ struct imx_thermal_data {
 
 static struct imx_thermal_data *imx_thermal_data;
 static int skip_finish_check;
+static u32 imx7_lpsr_save[2];
 
 static void imx_set_panic_temp(struct imx_thermal_data *data,
 			       int panic_temp)
@@ -1033,6 +1034,16 @@ static int imx_thermal_suspend(struct device *dev)
 		     data->socdata->measure_temp_mask);
 	regmap_write(map, data->socdata->sensor_ctrl + REG_SET,
 		     data->socdata->power_down_mask);
+
+	/*
+	 * Save the temp sensor registers of i.MX7D as the tempmon
+	 * will lost power in LPSR mode
+	 */
+	if (data->socdata->version == TEMPMON_IMX7) {
+		regmap_read(map, data->socdata->sensor_ctrl, &imx7_lpsr_save[0]);
+		regmap_read(map, data->socdata->high_alarm_ctrl, &imx7_lpsr_save[1]);
+	}
+
 	data->mode = THERMAL_DEVICE_DISABLED;
 	clk_disable_unprepare(data->thermal_clk);
 
@@ -1048,6 +1059,16 @@ static int imx_thermal_resume(struct device *dev)
 	ret = clk_prepare_enable(data->thermal_clk);
 	if (ret)
 		return ret;
+
+	/*
+	 * restore the temp sensor registers of i.MX7D as the tempmon
+	 * will lost power in LPSR mode
+	 */
+	if (data->socdata->version == TEMPMON_IMX7) {
+		regmap_write(map, data->socdata->sensor_ctrl, imx7_lpsr_save[0]);
+		regmap_write(map, data->socdata->high_alarm_ctrl, imx7_lpsr_save[1]);
+	}
+
 	/* Enabled thermal sensor after resume */
 	regmap_write(map, data->socdata->sensor_ctrl + REG_CLR,
 		     data->socdata->power_down_mask);
