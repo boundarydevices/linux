@@ -82,13 +82,6 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			/* GPS */
-#define GP_GPS_HEARTBEAT	<&gpio7 1 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0
-#define GP_GPS_INT		<&gpio7 13 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x0b0b0
-#define GP_GPS_RESET		<&gpio4 5 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0
 			/* Modem pins */
 #define GP_SLEEP_STAT		<&gpio4 22 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT1__GPIO4_IO22	0x1b0b0
@@ -357,6 +350,13 @@
 		fsl,pins = <
 			MX6QDL_PAD_KEY_COL1__UART5_TX_DATA	0x1b0b1
 			MX6QDL_PAD_KEY_ROW1__UART5_RX_DATA	0x1b0b1
+			/* GPS - MAX-7W */
+#define GP_GPS_HEARTBEAT	<&gpio7 1 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0
+#define GP_GPS_INT		<&gpio7 13 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x0b0b0
+#define GP_GPS_RESET		<&gpio4 5 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0
 		>;
 	};
 
@@ -1068,6 +1068,7 @@
 };
 
 &uart5 {
+	/* GPS - max-7w */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
 	status = "okay";
