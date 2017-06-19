@@ -150,6 +150,7 @@
 #define VPP_VE_DEMO_CENTER_BAR 0x1da3
 #define VPP_VE_H_V_SIZE 0x1da4
 #define VPP_PSR_H_V_SIZE 0x1da5
+#define VPP_OUT_H_V_SIZE 0x1da5
 #define VPP_IN_H_V_SIZE 0x1da6
 #define VPP_VDO_MEAS_CTRL 0x1da8
 #define VPP_VDO_MEAS_VS_COUNT_HI 0x1da9

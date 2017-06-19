@@ -25,7 +25,7 @@
 #include <linux/mm.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
-#include <linux/amlogic/media/old_cpu_version.h>
+#include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/utils/log.h>
 
 #include <linux/amlogic/media/registers/register_ops.h>

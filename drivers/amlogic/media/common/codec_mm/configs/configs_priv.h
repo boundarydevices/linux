@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/media/video_sink/ionvideo_ext.h
+ * drivers/amlogic/media/common/codec_mm/configs/configs_priv.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,13 +15,20 @@
  *
  */
 
-#ifndef IONVIDEO_EXT_H
-#define IONVIDEO_EXT_H
+#ifndef AMLOGIC_MEDIA_CONFIG_HEADER_PRIV__
+#define AMLOGIC_MEDIA_CONFIG_HEADER_PRIV__
 
-extern int ionvideo_assign_map(char **receiver_name, int *inst);
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+int configs_config_system_init(void);
+int configs_inc_node_ref_locked(
+	struct mconfig_node *node);
+int configs_dec_node_ref_locked(
+	struct mconfig_node *node);
+int config_dump(void *buf, int size);
+int configs_config_setstr(const char *buf);
 
-extern int ionvideo_alloc_map(int *inst);
+#endif
 
-extern void ionvideo_release_map(int inst);
-
-#endif /* IONVIDEO_EXT_H */

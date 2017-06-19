@@ -223,6 +223,94 @@ void codecio_write_dmcbus(unsigned int reg, unsigned int val)
 		return;
 }
 
+int codecio_read_parsbus(unsigned int reg)
+{
+	int ret, val;
+
+	ret = codecio_reg_read(CODECIO_CBUS_BASE, reg << 2, &val);
+	if (ret) {
+		pr_err("read parser reg %x error %d\n", reg, ret);
+		return -1;
+	}
+
+	return val;
+}
+
+void codecio_write_parsbus(unsigned int reg, unsigned int val)
+{
+	int ret;
+
+	ret = codecio_reg_write(CODECIO_CBUS_BASE, reg << 2, val);
+	if (ret)
+		pr_err("write parser reg %x error %d\n", reg, ret);
+}
+
+int codecio_read_aiubus(unsigned int reg)
+{
+	int ret, val;
+
+	ret = codecio_reg_read(CODECIO_CBUS_BASE, reg << 2, &val);
+	if (ret) {
+		pr_err("read aiu reg %x error %d\n", reg, ret);
+		return -1;
+	}
+
+	return val;
+}
+
+void codecio_write_aiubus(unsigned int reg, unsigned int val)
+{
+	int ret;
+
+	ret = codecio_reg_write(CODECIO_CBUS_BASE, reg << 2, val);
+	if (ret)
+		pr_err("write aiu reg %x error %d\n", reg, ret);
+}
+
+int codecio_read_demuxbus(unsigned int reg)
+{
+	int ret, val;
+
+	ret = codecio_reg_read(CODECIO_CBUS_BASE, reg << 2, &val);
+	if (ret) {
+		pr_err("read demux reg %x error %d\n", reg, ret);
+		return -1;
+	}
+
+	return val;
+}
+
+void codecio_write_demuxbus(unsigned int reg, unsigned int val)
+{
+	int ret;
+
+	ret = codecio_reg_write(CODECIO_CBUS_BASE, reg << 2, val);
+	if (ret)
+		pr_err("write demux reg %x error %d\n", reg, ret);
+}
+
+int codecio_read_resetbus(unsigned int reg)
+{
+	int ret, val;
+
+	ret = codecio_reg_read(CODECIO_CBUS_BASE, reg << 2, &val);
+	if (ret) {
+		pr_err("read reset reg %x error %d\n", reg, ret);
+		return -1;
+	}
+
+	return val;
+}
+
+void codecio_write_resetbus(unsigned int reg, unsigned int val)
+{
+	int ret;
+
+	ret = codecio_reg_write(CODECIO_CBUS_BASE, reg << 2, val);
+	if (ret)
+		pr_err("write reset reg %x error %d\n", reg, ret);
+}
+
 static int codec_io_probe(struct platform_device *pdev)
 {
 	int i = 0;

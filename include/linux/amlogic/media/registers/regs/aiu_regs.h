@@ -18,6 +18,13 @@
 #ifndef _AML_AIU_REGS_H
 #define _AML_AIU_REGS_H
 
+/*
+ * pay attention : the regs range has
+ * changed to 0x14xx in txlx, it was
+ * converted automatically based on
+ * the platform at init.
+ * #define AIU_958_BPF 0x1400
+ */
 
 #define AIU_958_BPF			0x1500
 #define AIU_958_BRST		0x1501

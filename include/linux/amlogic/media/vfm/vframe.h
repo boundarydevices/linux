@@ -70,15 +70,8 @@
 #define VFRAME_FLAG_NO_DISCONTINUE      1
 #define VFRAME_FLAG_SWITCHING_FENSE     2
 #define VFRAME_FLAG_HIGH_BANDWIDTH	4
-
-#define TB_DETECT_MASK					0x00000040
-#define TB_DETECT_MASK_BIT				6
-#define TB_DETECT_NONE					0
-#define TB_DETECT_INVERT				1
-#define TB_DETECT_NC					0
-#define TB_DETECT_TFF					1
-#define TB_DETECT_BFF					2
-#define TB_DETECT_TBF					3
+#define VFRAME_FLAG_ERROR_RECOVERY		8
+#define VFRAME_FLAG_SYNCFRAME			0x10
 
 enum pixel_aspect_ratio_e {
 	PIXEL_ASPECT_RATIO_1_1,
@@ -204,6 +197,12 @@ enum vframe_source_mode_e {
 enum vframe_secam_phase_e {
 	VFRAME_PHASE_DB = 0,
 	VFRAME_PHASE_DR,
+};
+enum vframe_disp_mode_e {
+	VFRAME_DISP_MODE_NULL = 0,
+	VFRAME_DISP_MODE_UNKNOWN,
+	VFRAME_DISP_MODE_SKIP,
+	VFRAME_DISP_MODE_OK,
 };
 
 #define BITDEPTH_Y_SHIFT 8

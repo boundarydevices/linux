@@ -58,8 +58,8 @@ struct canvas_config_s {
 /*for progressive mjpeg (nv21 output)use*/
 #define PPMGR_DEINTERLACE_BUF_NV21_CANVAS 0x7e
 
-#define PPMGR2_MAX_CANVAS 8
-#define PPMGR2_CANVAS_INDEX 0x70	/* 0x70-0x7f for PPMGR2 (IONVIDEO)/ */
+#define PPMGR2_MAX_CANVAS 16
+#define PPMGR2_CANVAS_INDEX 0x70    /* 0x70-0x7f for PPMGR2 (IONVIDEO)/ */
 
 /*
  *the following reserved canvas index value

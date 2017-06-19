@@ -18,6 +18,8 @@
 #ifndef CANVAS_MGR_HEADER_
 #define CANVAS_MGR_HEADER_
 
+#include <linux/types.h>
+
 #define CANVAS_MAX_NUM 256
 
 struct canvas_info {
@@ -34,7 +36,7 @@ struct canvas_pool {
 	int canvas_max;
 	int free_num;
 	struct canvas_info info[CANVAS_MAX_NUM];
-	unsigned long canvas_map[CANVAS_MAX_NUM / sizeof(unsigned long)];
+	unsigned long canvas_map[(CANVAS_MAX_NUM / BITS_PER_LONG) + 1];
 	int next_alloced_index;
 	int next_dump_index;
 	unsigned long last_cat_map;

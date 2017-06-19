@@ -35,6 +35,10 @@ config AMLOGIC_MEDIA_DRIVERS
 		module, video decoder management module and post
 		processing of the frame.
 
+config AMLOGIC_MEDIA_MULTI_DEC
+	bool "Support multi-instance decoding"
+	default n
+
 if AMLOGIC_MEDIA_COMMON
 source "drivers/amlogic/media/common/Kconfig"
 endif

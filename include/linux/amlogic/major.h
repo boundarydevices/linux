@@ -27,7 +27,8 @@
 #define AMAUDIO_MAJOR		(11+(AML_BASE))
 #define AMVIDEO2_MAJOR		(12+(AML_BASE))
 #define AMAUDIO2_MAJOR		(13+(AML_BASE))
-
+#define VFM_MAJOR               (14+(AML_BASE))
+#define IONVIDEO_MAJOR		(15+(AML_BASE))
 /*
  *#define UIO_MAJOR			4+(AML_BASE)
  *#define USB_DEV_EP_MAJOR	5+(AML_BASE)

@@ -4680,17 +4680,52 @@ static int vidiocgmbuf(struct file *file, void *priv, struct video_mbuf *mbuf)
 	return videobuf_cgmbuf(&fh->vb_vidq, mbuf, 8);
 }
 #endif
-
-static enum tvin_scan_mode_e vmode2scan_mode(const struct vinfo_s *vinfo)
+static enum tvin_scan_mode_e vmode2scan_mode(enum vmode_e mode)
 {
 	enum tvin_scan_mode_e scan_mode =
 		TVIN_SCAN_MODE_NULL;/* 1: progressive 2:interlaced */
 
-	if (vinfo->height == vinfo->field_height)
-		scan_mode = TVIN_SCAN_MODE_PROGRESSIVE;
-	else
+#if 0 //DEBUG_TMP
+	switch (mode) {
+	case VMODE_480I:
+	case VMODE_480CVBS:
+	case VMODE_NTSC_M:
+	case VMODE_576I:
+	case VMODE_576CVBS:
+	case VMODE_PAL_M:
+	case VMODE_PAL_N:
+	case VMODE_1080I:
+	case VMODE_1080I_50HZ:
 		scan_mode = TVIN_SCAN_MODE_INTERLACED;
-
+		break;
+	case VMODE_480P:
+	case VMODE_576P:
+	case VMODE_720P:
+	case VMODE_1080P:
+	case VMODE_720P_50HZ:
+	case VMODE_1080P_50HZ:
+	case VMODE_1080P_24HZ:
+	case VMODE_4K2K_30HZ:
+	case VMODE_4K2K_25HZ:
+	case VMODE_4K2K_24HZ:
+	case VMODE_4K2K_SMPTE:
+	case VMODE_VGA:
+	case VMODE_SVGA:
+	case VMODE_XGA:
+	case VMODE_SXGA:
+	case VMODE_LCD:
+	case VMODE_4K2K_50HZ:
+	case VMODE_4K2K_50HZ_Y420:
+	case VMODE_4K2K_60HZ:
+	case VMODE_4K2K_60HZ_Y420:
+		scan_mode = TVIN_SCAN_MODE_PROGRESSIVE;
+		break;
+	default:
+		pr_err("unknown mode=%d\n", mode);
+		break;
+	}
+	/* pr_err("mode=%d, scan_mode=%d\n", mode, scan_mode); */
+#endif
 	return scan_mode;
 }
 
@@ -4751,7 +4786,7 @@ static int amlvideo2_start_tvin_service(struct amlvideo2_node *node)
 	para.vs_bp = 0;
 	para.dfmt = TVIN_NV21;/* TVIN_YUV422; */
 	para.scan_mode = vmode2scan_mode(
-		vinfo);/* TVIN_SCAN_MODE_PROGRESSIVE; */
+		vinfo->mode);/* TVIN_SCAN_MODE_PROGRESSIVE; */
 	if (para.scan_mode == TVIN_SCAN_MODE_INTERLACED)
 		para.v_active = para.v_active / 2;
 
@@ -4868,8 +4903,7 @@ int amlvideo2_notify_callback(struct notifier_block *block, unsigned long cmd,
 		}
 		/*debug provider vf state*/
 		if (amlvideo2_dbg_en) {
-			if (vfp && vfp->ops && vfp->ops->vf_states)
-				ret = vfp->ops->vf_states(&states, vfp->op_arg);
+			ret = vf_get_states(vfp, &states);
 			if (ret == 0) {
 				pr_info("vf_pool_size = %d, buf_free_num = %d .\n",
 				states.vf_pool_size, states.buf_free_num);
@@ -4992,7 +5026,7 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	para.vs_bp = 0;
 	para.dfmt = TVIN_NV21;/* TVIN_YUV422; */
 	para.scan_mode = vmode2scan_mode(
-		vinfo);/* TVIN_SCAN_MODE_PROGRESSIVE; */
+		vinfo->mode);/* TVIN_SCAN_MODE_PROGRESSIVE; */
 	if (para.scan_mode == TVIN_SCAN_MODE_INTERLACED)
 		para.v_active = para.v_active / 2;
 
@@ -5453,6 +5487,7 @@ static int amlvideo2_open(struct file *file)
 			pr_err("alloc amlvideo2.0 cma buffer failed.\n");
 		else
 			pr_err("alloc amlvideo2.1 cma buffer failed.\n");
+		node->users--;
 		mutex_unlock(&node->mutex);
 		return -ENOMEM;
 	}
@@ -5461,6 +5496,7 @@ static int amlvideo2_open(struct file *file)
 	if (fh == NULL) {
 		node->users--;
 		/* node->provider  = NULL; */
+		amlvideo2_cma_buf_uninit(node->vid_dev, node->vid);
 		mutex_unlock(&node->mutex);
 		return -ENOMEM;
 	}
@@ -5469,6 +5505,8 @@ static int amlvideo2_open(struct file *file)
 		reserve = &node->vid_dev->memobj;
 		if (!reserve) {
 			pr_err("alloc reserve buffer failed !\n");
+			node->users--;
+			amlvideo2_cma_buf_uninit(node->vid_dev, node->vid);
 			mutex_unlock(&node->mutex);
 			return -ENOMEM;
 		}
@@ -5631,15 +5669,11 @@ static struct video_device amlvideo2_template = {
 /* .current_norm = V4L2_STD_NTSC_M, */
 };
 
-static int vf_get_states(struct vframe_states *states, int node_index)
+static int amlvideo2_vf_get_states(struct vframe_states *states, int node_index)
 {
 	int ret = -1;
-	struct vframe_provider_s *vfp;
 	const char *name = (node_index == 0) ? DEVICE_NAME0 : DEVICE_NAME1;
-
-	vfp = vf_get_provider(name);
-	if (vfp && vfp->ops && vfp->ops->vf_states)
-		ret = vfp->ops->vf_states(states, vfp->op_arg);
+	ret = vf_get_states_by_name(name, states);
 	return ret;
 }
 
@@ -5720,7 +5754,7 @@ static int amlvideo2_receiver_event_fun(int type, void *data,
 		node->amlvideo2_pool_ready = NULL;
 		node->amlvideo2_pool_size = 0;
 		node->video_blocking = false;
-		if (vf_get_states(&frame_states, node->vid) == 0)
+		if (amlvideo2_vf_get_states(&frame_states, node->vid) == 0)
 			node->amlvideo2_pool_size = frame_states.vf_pool_size;
 		else
 			node->amlvideo2_pool_size = 4;

@@ -65,9 +65,6 @@
 #include "deinterlace_mtn.h"
 #include "deinterlace_dbg.h"
 #include <linux/amlogic/media/video_sink/video.h>
-#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-#include "rdma.h"
-#endif
 #if defined(NEW_DI_TV)
 #define ENABLE_SPIN_LOCK_ALWAYS
 #endif

@@ -52,10 +52,6 @@
 
 
 extern void dma_clear_buffer(struct page *page, size_t size);
-struct codec_mm_s *codec_mm_alloc(const char *owner, int size,
-	int align2n, int memflags);
-void codec_mm_release(struct codec_mm_s *mem, const char *owner);
-u32 get_codec_mm_profiles(void);
 
 u32 codec_mm_get_sc_debug_mode(void);
 u32 codec_mm_get_keep_debug_mode(void);

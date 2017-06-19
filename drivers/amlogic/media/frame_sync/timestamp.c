@@ -49,31 +49,31 @@ void set_timestamp_inc_factor(u32 factor)
 
 u32 timestamp_vpts_get(void)
 {
-	return (u32) READ_MPEG_REG(VIDEO_PTS);
+	return (u32) READ_PARSER_REG(VIDEO_PTS);
 }
 EXPORT_SYMBOL(timestamp_vpts_get);
 
 void timestamp_vpts_set(u32 pts)
 {
-	WRITE_MPEG_REG(VIDEO_PTS, pts);
+	WRITE_PARSER_REG(VIDEO_PTS, pts);
 }
 EXPORT_SYMBOL(timestamp_vpts_set);
 
 void timestamp_vpts_inc(s32 val)
 {
-	WRITE_MPEG_REG(VIDEO_PTS, READ_MPEG_REG(VIDEO_PTS) + val);
+	WRITE_PARSER_REG(VIDEO_PTS, READ_PARSER_REG(VIDEO_PTS) + val);
 }
 EXPORT_SYMBOL(timestamp_vpts_inc);
 
 u32 timestamp_apts_get(void)
 {
-	return (u32) READ_MPEG_REG(AUDIO_PTS);
+	return (u32) READ_PARSER_REG(AUDIO_PTS);
 }
 EXPORT_SYMBOL(timestamp_apts_get);
 
 void timestamp_apts_set(u32 pts)
 {
-	WRITE_MPEG_REG(AUDIO_PTS, pts);
+	WRITE_PARSER_REG(AUDIO_PTS, pts);
 }
 EXPORT_SYMBOL(timestamp_apts_set);
 
@@ -83,7 +83,7 @@ void timestamp_apts_inc(s32 inc)
 #ifdef MODIFY_TIMESTAMP_INC_WITH_PLL
 		inc = inc * timestamp_inc_factor / PLL_FACTOR;
 #endif
-		WRITE_MPEG_REG(AUDIO_PTS, READ_MPEG_REG(AUDIO_PTS) + inc);
+		WRITE_PARSER_REG(AUDIO_PTS, READ_PARSER_REG(AUDIO_PTS) + inc);
 	}
 }
 EXPORT_SYMBOL(timestamp_apts_inc);

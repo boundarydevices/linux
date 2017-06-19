@@ -18,6 +18,13 @@
 #ifndef PARSER_REGS_HEADER_
 #define PARSER_REGS_HEADER_
 
+/*
+ * pay attention : the regs range has
+ * changed to 0x38xx in txlx, it was
+ * converted automatically based on
+ * the platform at init.
+ * #define PARSER_CONTROL 0x3860
+ */
 #define PARSER_CONTROL 0x2960
 #define PARSER_FETCH_ADDR 0x2961
 #define PARSER_FETCH_CMD 0x2962

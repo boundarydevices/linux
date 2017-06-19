@@ -26,7 +26,7 @@
 #include <linux/amlogic/media/frame_sync/ptsserv.h>
 
 #include <linux/amlogic/media/frame_sync/tsync_pcr.h>
-#include <linux/amlogic/media/old_cpu_version.h>
+#include <linux/amlogic/cpu_version.h>
 
 #ifdef CONFIG_AM_PCRSYNC_LOG
 #define AMLOG
@@ -120,8 +120,8 @@ static u32 tsync_pcr_discontinue_threshold = (TIME_UNIT90K * 1.5);
 static u32 tsync_pcr_ref_latency = (TIME_UNIT90K * 0.3);
 
 /* use for pcr valid mode */
-static u32 tsync_pcr_max_cache_time = TIME_UNIT90K * 1.5;
-static u32 tsync_pcr_up_cache_time = TIME_UNIT90K * 1.2;
+static u32 tsync_pcr_max_cache_time = TIME_UNIT90K * 2.4;
+static u32 tsync_pcr_up_cache_time = TIME_UNIT90K * 2.2;
 /* modify it by dolby av sync */
 static u32 tsync_pcr_down_cache_time = TIME_UNIT90K * 0.8;   /* 0.6 */
 static u32 tsync_pcr_min_cache_time = TIME_UNIT90K * 0.4;    /* 0.2 */
@@ -193,6 +193,18 @@ static DEFINE_SPINLOCK(tsync_pcr_lock);
 
 #define LTRACE() pr_info("[%s:%d]\n", __func__, __LINE__)
 
+module_param(tsync_pcr_max_cache_time, uint, 0664);
+MODULE_PARM_DESC(tsync_pcr_max_cache_time, "\n tsync pcr max cache time\n");
+
+module_param(tsync_pcr_up_cache_time, uint, 0664);
+MODULE_PARM_DESC(tsync_pcr_up_cache_time, "\n tsync pcr up cache time\n");
+
+module_param(tsync_pcr_down_cache_time, uint, 0664);
+MODULE_PARM_DESC(tsync_pcr_down_cache_time, "\n tsync pcr down cache time\n");
+
+module_param(tsync_pcr_min_cache_time, uint, 0664);
+MODULE_PARM_DESC(tsync_pcr_min_cache_time, "\n tsync pcr min cache time\n");
+
 u32 get_stbuf_rp(int type)
 {
 #if 0//DEBUG_TMP
@@ -211,7 +223,7 @@ u32 get_stbuf_rp(int type)
 
 		pbuf = get_buf_by_type(PTS_TYPE_VIDEO);
 		if (pbuf != NULL && pbuf->flag & BUF_FLAG_IN_USE)
-			return stbuf_rp(pbuf)
+			return stbuf_rp(pbuf);
 	} else {
 		/* audio */
 		pbuf = get_buf_by_type(PTS_TYPE_AUDIO);
@@ -517,7 +529,7 @@ void tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 
 	case VIDEO_TSTAMP_DISCONTINUITY: {
 		/* unsigned oldpts=timestamp_vpts_get(); */
-		/*u32 tsdemux_pcr = 0;*//*tsdemux_pcrscr_get();*///DEBUG_TMP
+		/*u32 tsdemux_pcr = 0;*//*tsdemux_pcrscr_get();*//*DEBUG_TMP*/
 		/* if((abs(param-oldpts)>AV_DISCONTINUE_THREDHOLD_MIN) &&
 		 *(!get_vsync_pts_inc_mode())){
 		 */
@@ -695,18 +707,18 @@ void tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 	case VIDEO_START:
 	case AUDIO_START:
 	case AUDIO_RESUME:
-		/*amvdev_resume();*///DEBUG_TMP
+		/*amvdev_resume();*//*DEBUG_TMP*/
 		break;
 	case VIDEO_STOP:
 	case AUDIO_STOP:
 	case AUDIO_PAUSE:
-		/*amvdev_pause();*///DEBUG_TMP
+		/*amvdev_pause();*//*DEBUG_TMP*/
 		break;
 	case VIDEO_PAUSE:
 		/*if (tsync_pcr_vpause_flag)*/
-			/*amvdev_pause();*///DEBUG_TMP
+			/*amvdev_pause();*//*DEBUG_TMP*/
 		/*else*/
-			/*amvdev_resume();*///DEBUG_TMP
+			/*amvdev_resume();*//*DEBUG_TMP*/
 		break;
 	default:
 		break;
@@ -734,7 +746,7 @@ static unsigned long tsync_pcr_check(void)
 		|| tsync_pcr_freerun_mode == 1)
 		return res;
 
-	tsdemux_pcr = 0;/*tsdemux_pcrscr_get();*///DEBUG_TMP
+	tsdemux_pcr = 0;/*tsdemux_pcrscr_get();*//*DEBUG_TMP*/
 	if (tsync_pcr_usepcr == 1) {
 		/* To monitor the pcr discontinue */
 		tsdemux_pcr_diff = abs(tsdemux_pcr - tsync_pcr_last_tsdemuxpcr);
@@ -755,12 +767,17 @@ static unsigned long tsync_pcr_check(void)
 				tsync_pcr_discontinue_waited = TIME_UNIT90K * 5;
 
 			pr_info
-			("[tsync_pcr_check] refpcr_discontinue. ");
+			("[tsync_pcr_check] refpcr_discontinue.\n");
 			pr_info
-			("tsdemux_pcr_diff=%x, last refpcr=%x, ",
+			("tsdemux_pcr_diff=%x, last refpcr=%x,\n",
 			 tsdemux_pcr_diff, tsync_pcr_last_tsdemuxpcr);
 			pr_info("repcr=%x,waited=%x\n",
 			 tsdemux_pcr, tsync_pcr_discontinue_waited);
+			pr_info("last checkin vpts:%d\n",
+			 (u32)get_last_checkin_pts(PTS_TYPE_VIDEO));
+			pr_info("last checkin apts:%d\n",
+			 (u32)get_last_checkin_pts(PTS_TYPE_AUDIO));
+
 			tsync_pcr_discontinue_local_point =
 				timestamp_pcrscr_get();
 			tsync_pcr_discontinue_point =
@@ -777,6 +794,12 @@ static unsigned long tsync_pcr_check(void)
 				pr_info
 				(" discontinue didn't happen, waited=%x\n",
 				 tsync_pcr_discontinue_waited);
+				pr_info
+				(" timestamp_pcrscr_get() =%x\n",
+				 timestamp_pcrscr_get());
+				pr_info
+				(" tsync_pcr_discontinue_local_point =%x\n",
+				 tsync_pcr_discontinue_local_point);
 				/* the v-discontinue did'n happen */
 				tsync_pcr_tsdemuxpcr_discontinue = 0;
 				tsync_pcr_discontinue_point = 0;
@@ -858,17 +881,18 @@ static unsigned long tsync_pcr_check(void)
 	cur_vpts = timestamp_vpts_get();
 
 	/*set pcr after discontinue according to apts and vpts*/
-	if (tsync_pcr_tsdemuxpcr_discontinue &
+	if ((tsync_pcr_tsdemuxpcr_discontinue &
+		(AUDIO_DISCONTINUE | VIDEO_DISCONTINUE)) ==
 		(AUDIO_DISCONTINUE | VIDEO_DISCONTINUE)) {
 		if (cur_apts < cur_vpts && cur_vpts - cur_apts < 3 * 90000
 			&& last_checkin_minpts - cur_apts > 54000)
 			timestamp_pcrscr_set(cur_apts + 6300);
 		else
 			timestamp_pcrscr_set(cur_apts);
-/*
- *		pr_info("after discontinue, pcr = 0x%x,apts=0x%x,vpts=0x%x\n",
- *			timestamp_pcrscr_get(), cur_apts, cur_vpts);
- */
+
+		pr_info("after discontinue, pcr = 0x%x,apts=0x%x,vpts=0x%x\n",
+			timestamp_pcrscr_get(), cur_apts, cur_vpts);
+
 	}
 
 	if (tsync_pcr_reset_flag == 0) {
@@ -1064,7 +1088,8 @@ static unsigned long tsync_pcr_check(void)
 		u64 ref_pcr = (u64)  tsdemux_pcr;
 		u64 cur_pcr = (u64) timestamp_pcrscr_get();
 		int64_t cur_delta = (int64_t) ref_pcr - (int64_t) cur_pcr;
-		int64_t diff = (cur_delta - tsync_pcr_stream_delta);
+		/* int64_t diff = (cur_delta - tsync_pcr_stream_delta); */
+		int64_t diff = cur_delta;
 
 		/* if(diff > OPEN_RECOVERY_THRESHOLD && cur_pcr<ref_pcr
 		 *   && play_mode!=PLAY_MODE_SPEED && need_recovery){
@@ -1244,7 +1269,7 @@ int tsync_pcr_start(void)
 
 		first_time_record = (jiffies * TIME_UNIT90K) / HZ;
 		tsync_pcr_started = 1;
-		/*if (tsdemux_pcrscr_valid() == 0) {*///DEBUG_TMP
+		/*if (tsdemux_pcrscr_valid() == 0) {*//*DEBUG_TMP*/
 		if (0) {
 			tsync_pcr_usepcr = 0;
 			tsync_pcr_inited_mode = INIT_PRIORITY_AUDIO;

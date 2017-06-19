@@ -33,7 +33,6 @@
 #include <linux/of_gpio.h>
 #include <linux/gpio.h>
 #include <linux/amlogic/cpu_version.h>
-#include <linux/amlogic/media/old_cpu_version.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>

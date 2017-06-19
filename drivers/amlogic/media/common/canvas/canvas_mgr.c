@@ -25,6 +25,7 @@
 
 #include <linux/amlogic/media/canvas/canvas.h>
 #include <linux/amlogic/media/canvas/canvas_mgr.h>
+#include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/old_cpu_version.h>
 
 /*ignore canvas 0,
@@ -63,11 +64,13 @@ canvas_pool_map_alloc_canvas_in(struct canvas_pool *pool, const char *owner)
 
 	do {
 		i = find_next_zero_bit(pool->canvas_map,
-			sizeof(pool->canvas_map), start_index);
+			pool->canvas_max,
+			start_index);
 		if (!VALID_CANVAS(i)) {
 			if (!looped) {
 				start_index = 1;
 				looped = 1;
+				continue;
 			} else
 				return -1;
 		}
@@ -105,7 +108,8 @@ int canvas_pool_map_alloc_canvas(const char *owner)
  */
 static int
 canvas_pool_map_alloc_canvas_continue_set(struct canvas_pool *pool,
-	const char *owner, u32 *canvas, enum canvas_map_type_e type)
+					  const char *owner, u32 *canvas,
+					  enum canvas_map_type_e type)
 {
 	int found_retry = 0;
 	int found = 0;
@@ -395,11 +399,12 @@ canvas_pool_map_show(struct class *class,
 			test_bit(i, pool->canvas_map),
 			info.fixed_onwer, o1, o2, info.alloc_time);
 		size += snprintf(buf + size, PAGE_SIZE - size,
-			"\taddr=%08x,\ts=%d X %d,\trap=%d,\tmod=%d\n",
-			(unsigned int)canvas.addr,
-			(int)canvas.width,
-			(int)canvas.height,
-			(int)canvas.wrap, (int)canvas.blkmode);
+				"\taddr=%08x,\ts=%d X %d,\trap=%d,\tmod=%d\n",
+				(unsigned int)canvas.addr,
+				(int)canvas.width,
+				(int)canvas.height,
+				(int)canvas.wrap,
+				(int)canvas.blkmode);
 	}
 	pool->next_dump_index = i;
 	if (pool->next_dump_index >= pool->canvas_max)
@@ -415,18 +420,23 @@ canvas_pool_states_show(struct class *class,
 	ssize_t size = 0;
 	int i;
 	struct canvas_pool *pool = get_canvas_pool();
-
-	size += snprintf(buf + size, PAGE_SIZE - size, "canvas tatol num: %d\n",
-		pool->canvas_max);
-	size += snprintf(buf + size, PAGE_SIZE - size,
-		"canvas next_dump_index: %d\n", pool->next_dump_index);
-	size += snprintf(buf + size, PAGE_SIZE - size,
-		"canvas next_alloced_index: %d\n", pool->next_alloced_index);
+	size += snprintf(buf + size, PAGE_SIZE - size, "canvas total num: %d\n",
+			 pool->canvas_max);
+	size +=
+	    snprintf(buf + size, PAGE_SIZE - size,
+		     "canvas next_dump_index: %d\n", pool->next_dump_index);
+	size +=
+	    snprintf(buf + size, PAGE_SIZE - size,
+		     "canvas next_alloced_index: %d\n",
+		     pool->next_alloced_index);
 	size += snprintf(buf + size, PAGE_SIZE - size, "canvas map:\n");
-	for (i = 0; i < sizeof(pool->canvas_map) / (8 * sizeof(u32)); i++)
-		size += snprintf(buf + size, PAGE_SIZE - size,
-			"% 3d - % 3d : %08x\n", i * 32, (i + 1) * 32 - 1,
-			(u32) pool->canvas_map[i]);
+	for (i = 0; i < CANVAS_MAX_NUM / BITS_PER_LONG; i++)
+		size +=
+		    snprintf(buf + size, PAGE_SIZE - size,
+			     "% 3d - % 3d : %0lx\n",
+			     i * BITS_PER_LONG,
+			     (i + 1) * BITS_PER_LONG - 1,
+			     (ulong) pool->canvas_map[i]);
 	return size;
 }
 
@@ -439,14 +449,15 @@ canvas_pool_debug_show(struct class *class,
 	size += snprintf(buf + size, PAGE_SIZE - size,
 		"help: echo n > canvas_pool_debug\n");
 	size += snprintf(buf + size, PAGE_SIZE - size, "1:next_dump_index=0\n");
-	size += snprintf(buf + size, PAGE_SIZE - size,
-		"2:next_alloced_index=0\n");
+	size +=
+	    snprintf(buf + size, PAGE_SIZE - size, "2:next_alloced_index=0\n");
 	return size;
 }
 
 static ssize_t
 canvas_pool_debug_store(struct class *class,
-	struct class_attribute *attr, const char *buf, size_t size)
+			struct class_attribute *attr, const char *buf,
+			size_t size)
 {
 	unsigned int val;
 	ssize_t ret = 0;
@@ -507,10 +518,13 @@ static void canvas_pool_config(void)
 	canvas_pool_register_const_canvas(0x26, 0x39, "vdin");
 	canvas_pool_register_const_canvas(0x78, 0xbf, "amvdec");
 	canvas_pool_register_const_canvas(0x60, 0x65, "display");
+	canvas_pool_register_const_canvas(0x66, 0x6b, "display2");
 	canvas_pool_register_const_canvas(0x70, 0x77, "ppmgr");
 	canvas_pool_register_const_canvas(0xe4, 0xef, "encoder");
 	canvas_pool_register_const_canvas(0x40, 0x48, "osd");
+#ifdef CONFIG_AMLOGIC_VIDEOIN_MANAGER
 	canvas_pool_register_const_canvas(0x4e, 0x5f, "vm");
+#endif
 	canvas_pool_register_const_canvas(0xc0, 0xd7, "amlvideo2");
 	/*please add static canvas later. */
 }

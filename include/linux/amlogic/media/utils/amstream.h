@@ -86,6 +86,9 @@
 #define AMSTREAM_IOC_TS_SKIPBYTE _IOW((_A_M), 0x1d, int)
 #define AMSTREAM_IOC_SUB_TYPE    _IOW((_A_M), 0x1e, int)
 #define AMSTREAM_IOC_CLEAR_VIDEO _IOW((_A_M), 0x1f, int)
+#define AMSTREAM_IOC_VDECINFO _IOR((_A_M), 0x20, int)
+#define AMSTREAM_IOC_GLOBAL_GET_VIDEO_OUTPUT  _IOR((_A_M), 0x21, int)
+#define AMSTREAM_IOC_GLOBAL_SET_VIDEO_OUTPUT  _IOW((_A_M), 0x22, int)
 
 #define AMSTREAM_IOC_APTS             _IOR((_A_M), 0x40, int)
 #define AMSTREAM_IOC_VPTS             _IOR((_A_M), 0x41, int)
@@ -115,6 +118,7 @@
 #define AMSTREAM_IOC_SET_BLACKOUT_POLICY   _IOW((_A_M), 0x53, int)
 #define AMSTREAM_IOC_UD_LENGTH _IOR((_A_M), 0x54, int)
 #define AMSTREAM_IOC_UD_POC _IOR((_A_M), 0x55, int)
+#define AMSTREAM_IOC_UD_FLUSH_USERDATA _IOR((_A_M), 0x56, int)
 #define AMSTREAM_IOC_GET_SCREEN_MODE _IOR((_A_M), 0x58, int)
 #define AMSTREAM_IOC_SET_SCREEN_MODE _IOW((_A_M), 0x59, int)
 #define AMSTREAM_IOC_GET_VIDEO_DISCONTINUE_REPORT _IOR((_A_M), 0x5a, int)
@@ -255,6 +259,26 @@ struct vdec_status {
 	unsigned int status;
 };
 
+struct vdec_info {
+	char vdec_name[16];
+	unsigned int ver;
+	unsigned int frame_width;
+	unsigned int frame_height;
+	unsigned int frame_rate;
+	unsigned int bit_rate;
+	unsigned int frame_dur;
+	unsigned int frame_data;
+	unsigned int error_count;
+	unsigned int status;
+	unsigned int frame_count;
+	unsigned int error_frame_count;
+	unsigned int drop_frame_count;
+	unsigned long long total_data;
+	unsigned int samp_cnt;
+	unsigned int offset;
+	char reserved[32];
+};
+
 struct adec_status {
 	unsigned int channels;
 	unsigned int sample_rate;
@@ -280,6 +304,19 @@ struct am_io_param {
 		struct adec_status astatus;
 	};
 };
+
+struct am_io_info {
+	union {
+		int data;
+		int id;
+	};
+	int len;
+	union {
+		char buf[1];
+		struct vdec_info vinfo;
+	};
+};
+
 struct audio_info {
 
 	int valid;
@@ -412,6 +449,9 @@ struct userdata_poc_info_t {
 #define AMSTREAM_SET_VSYNC_UPINT 0x172
 #define AMSTREAM_SET_VSYNC_SLOW_FACTOR 0x173
 #define AMSTREAM_SET_FRAME_BASE_PATH 0x174
+#define AMSTREAM_SET_EOS 0x175
+#define AMSTREAM_SET_RECEIVE_ID 0x176
+
 /*  video set ex cmd */
 #define AMSTREAM_SET_EX_VIDEO_AXIS 0x260
 #define AMSTREAM_SET_EX_VIDEO_CROP 0x261
@@ -440,7 +480,7 @@ struct userdata_poc_info_t {
 #define AMSTREAM_GET_AUDIO_AVG_BITRATE_BPS 0x810
 #define AMSTREAM_GET_VIDEO_AVG_BITRATE_BPS 0x811
 #define AMSTREAM_GET_ION_ID 0x812
-
+#define AMSTREAM_GET_NEED_MORE_DATA 0x813
 /*  video get cmd */
 #define AMSTREAM_GET_OMX_VPTS 0x860
 #define AMSTREAM_GET_TRICK_STAT 0x861
@@ -547,12 +587,13 @@ struct tsdemux_ops {
 void tsdemux_set_ops(struct tsdemux_ops *ops);
 int tsdemux_set_reset_flag(void);
 
-void set_adec_func(int (*adec_func) (struct adec_status *));
+void set_adec_func(int (*adec_func)(struct adec_status *));
 void wakeup_sub_poll(void);
-void set_userdata_poc(struct userdata_poc_info_t poc);
 void init_userdata_fifo(void);
-int wakeup_userdata_poll(int wp, unsigned long start_phyaddr, int buf_size,
-	int data_length);
+void reset_userdata_fifo(int bInit);
+int wakeup_userdata_poll(struct userdata_poc_info_t poc,
+			int wp, unsigned long start_phyaddr,
+			int buf_size, int data_length);
 int get_sub_type(void);
 
 #endif				/**/

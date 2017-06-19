@@ -14047,3 +14047,8 @@ F: drivers/amlogic/media/vout/backlight/bl_extern/pmu_aml1218.c
 AMLOGIC MESONGXL ADD A113X 128m DTS
 M:	Yuegui He <yuegui.he@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/axg_s420_128m.dts
+
+AMLOGIC multimedia
+M:  Nanxin Qin <nanxin.qin@amlogic.com>
+F: drivers/amlogic/media/common/codec_mm/configs/*
+

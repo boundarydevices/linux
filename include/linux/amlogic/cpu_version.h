@@ -18,7 +18,7 @@
 #ifndef __PLAT_MESON_CPU_H
 #define __PLAT_MESON_CPU_H
 
-#define MESON_CPU_MAJOR_ID_M8B      0x1B
+#define MESON_CPU_MAJOR_ID_M8B		0x1B
 #define MESON_CPU_MAJOR_ID_GXBB		0x1F
 #define MESON_CPU_MAJOR_ID_GXTVBB	0x20
 #define MESON_CPU_MAJOR_ID_GXL		0x21
@@ -145,4 +145,13 @@ static inline bool cpu_after_eq(unsigned int id)
 	return get_cpu_type() >= id;
 }
 
+static inline bool is_meson_txlx_package_962X(void)
+{
+	return is_meson_txlx_cpu() && package_id_is(0x10);
+}
+
+static inline bool is_meson_txlx_package_962E(void)
+{
+	return is_meson_txlx_cpu() && package_id_is(0x20);
+}
 #endif

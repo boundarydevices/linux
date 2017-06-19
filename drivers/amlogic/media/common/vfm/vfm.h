@@ -40,4 +40,17 @@ extern int vfm_debug_flag;
 extern int vfm_trace_enable;	/* 1; */
 extern int vfm_trace_num;	/*  */
 
+struct vfmctl {
+	char name[10];
+	char val[300];
+};
+
+#define VFM_IOC_MAGIC  'V'
+#define VFM_IOCTL_CMD_ADD   _IOW(VFM_IOC_MAGIC, 0x00, struct vfmctl)
+#define VFM_IOCTL_CMD_RM    _IOW(VFM_IOC_MAGIC, 0x01, struct vfmctl)
+#define VFM_IOCTL_CMD_DUMP   _IOW(VFM_IOC_MAGIC, 0x02, struct vfmctl)
+#define VFM_IOCTL_CMD_ADDDUMMY    _IOW(VFM_IOC_MAGIC, 0x03, struct vfmctl)
+#define VFM_IOCTL_CMD_SET   _IOW(VFM_IOC_MAGIC, 0x04, struct vfmctl)
+#define VFM_IOCTL_CMD_GET   _IOWR(VFM_IOC_MAGIC, 0x05, struct vfmctl)
+
 #endif

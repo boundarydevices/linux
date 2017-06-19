@@ -254,7 +254,8 @@ extern void set_clone_frame_rate(unsigned int frame_rate, unsigned int delay);
 #endif
 
 extern void prot_get_parameter(u32 wide_mode, struct vframe_s *vf,
-	struct vpp_frame_par_s *next_frame_par, const struct vinfo_s *vinfo);
+			       struct vpp_frame_par_s *next_frame_par,
+			       const struct vinfo_s *vinfo);
 u32 get_blackout_policy(void);
 int get_video0_frame_info(struct vframe_s *vf);
 

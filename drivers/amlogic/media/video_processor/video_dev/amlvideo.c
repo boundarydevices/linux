@@ -85,7 +85,7 @@ static unsigned int video_nr_base = 10;
 /* module_param(video_nr_base, uint, 0644); */
 /* MODULE_PARM_DESC(video_nr_base, "videoX start number, 10 is defaut"); */
 
-#ifdef CONFIG_MULTI_DEC
+#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 static unsigned int n_devs = 1;
 #else
 static unsigned int n_devs = 1;
@@ -226,6 +226,8 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 	struct vivi_dev *dev = (struct vivi_dev *)private_data;
 
 	if (type == VFRAME_EVENT_PROVIDER_UNREG) {
+		if (dev->index != 8)
+			mutex_lock(&dev->vfpMutex);
 		AMLVIDEO_DBG("AML:VFRAME_EVENT_PROVIDER_UNREG\n");
 		if (vf_get_receiver(dev->vf_provider_name)) {
 			AMLVIDEO_DBG("unreg:amlvideo\n");
@@ -241,17 +243,20 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 
 		dev->vf = NULL;
 		dev->first_frame = 0;
+		mutex_unlock(&dev->vfpMutex);
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
 		amlvideo_vf_states(&states, dev);
-		if (states.buf_avail_num > 0)
+		if (states.buf_avail_num > 0) {
 			return RECEIVER_ACTIVE;
-		if (vf_notify_receiver(
-			dev->vf_provider_name,
-			VFRAME_EVENT_PROVIDER_QUREY_STATE,
-			NULL) == RECEIVER_ACTIVE)
-			return RECEIVER_ACTIVE;
-		return RECEIVER_INACTIVE;
-
+		} else {
+			if (vf_notify_receiver(
+				dev->vf_provider_name,
+				VFRAME_EVENT_PROVIDER_QUREY_STATE,
+				NULL)
+			== RECEIVER_ACTIVE)
+				return RECEIVER_ACTIVE;
+			return RECEIVER_INACTIVE;
+		}
 		/*break;*/
 	} else if (type == VFRAME_EVENT_PROVIDER_START) {
 		AMLVIDEO_DBG("AML:VFRAME_EVENT_PROVIDER_START\n");
@@ -270,6 +275,12 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 						VFRAME_EVENT_PROVIDER_START,
 						NULL);
 		}
+	} else if (type == VFRAME_EVENT_PROVIDER_FR_HINT) {
+		vf_notify_receiver(dev->vf_provider_name,
+			VFRAME_EVENT_PROVIDER_FR_HINT, data);
+	} else if (type == VFRAME_EVENT_PROVIDER_FR_END_HINT) {
+		vf_notify_receiver(dev->vf_provider_name,
+		VFRAME_EVENT_PROVIDER_FR_END_HINT, data);
 	}
 	return 0;
 }
@@ -507,6 +518,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	dev->vf = vf_get(dev->vf_receiver_name);
 	if (!dev->vf) {
 		/* printk("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__); */
+		mutex_unlock(&dev->vfpMutex);
 		return -EAGAIN;
 	}
 
@@ -593,6 +605,7 @@ static int amlvideo_open(struct file *file)
 
 	dev->vf = NULL;
 	dev->index = 0;
+	mutex_unlock(&dev->vfpMutex);
 	mutex_lock(&dev->mutex);
 	dev->users++;
 	if (dev->users > 1) {
@@ -605,15 +618,15 @@ static int amlvideo_open(struct file *file)
 		dev->users--;
 		mutex_unlock(&dev->mutex);
 		return -ENOMEM;
+	} else {
+		fh = kzalloc(sizeof(*fh), GFP_KERNEL);
+		if (fh == NULL) {
+			kfree(res);
+			dev->users--;
+			mutex_unlock(&dev->mutex);
+			retval = -ENOMEM;
+		}
 	}
-	fh = kzalloc(sizeof(*fh), GFP_KERNEL);
-	if (fh == NULL) {
-		kfree(res);
-		dev->users--;
-		mutex_unlock(&dev->mutex);
-		retval = -ENOMEM;
-	}
-
 	mutex_unlock(&dev->mutex);
 
 	file->private_data = fh;
@@ -677,6 +690,7 @@ static int amlvideo_close(struct file *file)
 	videobuf_mmap_free(&fh->vb_vidq);
 	kfree(fh);
 	dev->index = 8;
+	mutex_unlock(&dev->vfpMutex);
 /* if (dev->res) { */
 	kfree(dev->res);
 	dev->res = NULL;
@@ -802,6 +816,7 @@ static int __init amlvideo_create_instance(int inst)
 	/* initialize locks */
 	spin_lock_init(&dev->slock);
 	mutex_init(&dev->mutex);
+	mutex_init(&dev->vfpMutex);
 
 	ret = -ENOMEM;
 	vfd = video_device_alloc();
@@ -862,7 +877,16 @@ free_dev: kfree(dev);
 	return ret;
 }
 
-static int amlvideo_driver_probe(struct platform_device *pdev)
+#undef NORM_MAXW
+#undef NORM_MAXH
+/* #define __init */
+/* This routine allocates from 1 to n_devs virtual drivers.*/
+/*
+ *The real maximum number of virtual drivers will depend on how many drivers
+ *will succeed. This is limited to the maximum number of devices that
+ *videodev supports, which is equal to VIDEO_NUM_DEVICES.
+ */
+static int __init amlvideo_init(void)
 {
 	int ret = 0, i;
 
@@ -899,51 +923,10 @@ static int amlvideo_driver_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int amlvideo_drv_remove(struct platform_device *pdev)
+static void __exit amlvideo_exit(void)
 {
 	/*vf_unreg_receiver(&video_vf_recv);*/
 	amlvideo_release();
-	return 0;
-}
-
-static const struct of_device_id amlvideo_dt_match[] = {
-	{
-		.compatible = "amlogic, amlvideo",
-	},
-};
-
-/* general interface for a linux driver .*/
-static struct platform_driver amlvideo_drv = {
-.probe = amlvideo_driver_probe,
-.remove = amlvideo_drv_remove,
-.driver = {
-		.name = "amlvideo",
-		.owner = THIS_MODULE,
-		.of_match_table = amlvideo_dt_match,
-	}
-};
-
-#undef NORM_MAXW
-#undef NORM_MAXH
-/* #define __init */
-/* This routine allocates from 1 to n_devs virtual drivers.
- * The real maximum number of virtual drivers will depend on how many drivers
- * will succeed. This is limited to the maximum number of devices that
- * videodev supports, which is equal to VIDEO_NUM_DEVICES.
- */
-static int __init amlvideo_init(void)
-{
-	if (platform_driver_register(&amlvideo_drv)) {
-		pr_err("Failed to register amlvideo driver\n");
-		return -ENODEV;
-	}
-
-	return 0;
-}
-
-static void __exit amlvideo_exit(void)
-{
-	platform_driver_unregister(&amlvideo_drv);
 }
 
 module_init(amlvideo_init);

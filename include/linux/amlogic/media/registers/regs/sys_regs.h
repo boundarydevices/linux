@@ -18,6 +18,14 @@
 #ifndef SYS_REGS_HEADER_
 #define SYS_REGS_HEADER_
 
+/*
+ * pay attention : the regs range has
+ * changed to 0x04xx in txlx, it was
+ * converted automatically based on
+ * the platform at init.
+ * #define RESET0_REGISTER 0x0401
+ */
+
 #define RESET0_REGISTER 0x1101
 #define RESET1_REGISTER 0x1102
 #define RESET2_REGISTER 0x1103

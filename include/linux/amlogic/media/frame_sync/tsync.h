@@ -34,7 +34,8 @@ enum avevent_e {
 	AUDIO_RESUME,
 	AUDIO_STOP,
 	AUDIO_TSTAMP_DISCONTINUITY,
-	AUDIO_PRE_START
+	AUDIO_PRE_START,
+	AUDIO_WAIT
 };
 
 enum tsync_mode_e {

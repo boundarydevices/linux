@@ -205,5 +205,7 @@
 #define VD2_AFBC_PIXEL_VER_SCOPE 0x3190
 #define VD2_AFBC_VD_CFMT_H 0x3191
 
+#define VD2_IF0_GEN_REG3 0x1aa8
+
 #endif
 

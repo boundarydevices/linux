@@ -139,7 +139,8 @@ int vf_notify_receiver_by_name(const char *receiver_name, int event_type,
 EXPORT_SYMBOL(vf_notify_receiver_by_name);
 
 void vf_receiver_init(struct vframe_receiver_s *recv,
-	const char *name, const struct vframe_receiver_op_s *ops, void *op_arg)
+		const char *name,
+		const struct vframe_receiver_op_s *ops, void *op_arg)
 {
 	if (!recv)
 		return;

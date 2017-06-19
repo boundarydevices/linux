@@ -54,6 +54,8 @@ extern int pts_set_resolution(u8 type, u32 level);
 
 extern int pts_set_rec_size(u8 type, u32 val);
 
+extern int pts_get_rec_num(u8 type, u32 val);
+
 extern int pts_start(u8 type);
 
 extern int pts_stop(u8 type);

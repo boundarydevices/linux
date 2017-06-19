@@ -111,7 +111,10 @@ static void vftrace_dump_trace_info(struct trace_info *info, int i)
 		i,
 		info->vf,
 		info->index,
-		info->type, info->pts, info->duration, info->in_time_us);
+		info->type,
+		info->pts,
+		info->duration,
+		info->in_time_us);
 }
 
 void vftrace_dump_trace_infos(void *vhandle)

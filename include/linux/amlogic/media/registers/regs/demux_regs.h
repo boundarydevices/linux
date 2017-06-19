@@ -17,6 +17,13 @@
 
 #ifndef DEMUX_REGS_HEADER_
 #define DEMUX_REGS_HEADER_
+/*
+ * pay attention : the regs range has
+ * changed to 0x18xx in txlx, it was
+ * converted automatically based on
+ * the platform at init.
+ * #define FEC_INPUT_CONTROL 0x1802
+ */
 
 #define FEC_INPUT_CONTROL 0x1602
 #define FEC_INPUT_CONTROL_2 0x1652

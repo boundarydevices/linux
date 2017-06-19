@@ -38,6 +38,7 @@ struct vframe_states {
 #define VFRAME_EVENT_RECEIVER_RESET				0x20
 #define VFRAME_EVENT_RECEIVER_FORCE_UNREG			0x40
 #define VFRAME_EVENT_RECEIVER_GET_AUX_DATA			0x80
+#define VFRAME_EVENT_RECEIVER_DISP_MODE				0x100
 
 	/* for VFRAME_EVENT_RECEIVER_GET_AUX_DATA*/
 struct provider_aux_req_s {
@@ -48,6 +49,13 @@ struct provider_aux_req_s {
 	char *aux_buf;
 	int aux_size;
 	int dv_enhance_exist;
+};
+struct provider_disp_mode_req_s {
+	/*input*/
+	struct vframe_s *vf;
+	unsigned int req_mode;/*0:peak;1:get*/
+	/*output*/
+	enum vframe_disp_mode_e disp_mode;
 };
 
 struct vframe_operations_s {
@@ -63,6 +71,7 @@ struct vframe_provider_s {
 	const struct vframe_operations_s *ops;
 	void *op_arg;
 	struct list_head list;
+	atomic_t use_cnt;
 	void *traceget;
 	void *traceput;
 } /*vframe_provider_t */;
@@ -88,6 +97,10 @@ struct vframe_provider_s *vf_get_provider(const char *name);
 struct vframe_s *vf_peek(const char *receiver);
 struct vframe_s *vf_get(const char *receiver);
 void vf_put(struct vframe_s *vf, const char *receiver);
+int vf_get_states(struct vframe_provider_s *vfp,
+	struct vframe_states *states);
+int vf_get_states_by_name(const char *receiver_name,
+	struct vframe_states *states);
 
 unsigned int get_post_canvas(void);
 

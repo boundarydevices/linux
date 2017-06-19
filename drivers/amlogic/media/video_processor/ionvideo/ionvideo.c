@@ -40,7 +40,7 @@ MODULE_PARM_DESC(video_nr_base, "videoX start number, 13 is the base nr");
 static int scaling_rate = 100;
 static int ionvideo_seek_flag;
 
-#ifdef CONFIG_MULTI_DEC
+#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 static unsigned int n_devs = 9;
 #else
 static unsigned int n_devs = 1;

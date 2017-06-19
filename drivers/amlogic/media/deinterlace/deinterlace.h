@@ -55,15 +55,6 @@
 #define	DET3D
 #undef SUPPORT_MPEG_TO_VDIN /* for all ic after m6c@20140731 */
 
-#ifndef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-#ifndef VSYNC_WR_MPEG_REG
-#define VSYNC_WR_MPEG_REG(adr, val) aml_write_vcbus(adr, val)
-#define VSYNC_WR_MPEG_REG_BITS(adr, val, start, len)  \
-		aml_vcbus_update_bits(adr, ((1<<len)-1)<<start, val<<start)
-#define VSYNC_RD_MPEG_REG(adr) aml_read_vcbus(adr)
-#endif
-#endif
-
 /************************************
  *	 di hardware level interface
  *************************************/
@@ -421,6 +412,21 @@ void DI_Wr_reg_bits(unsigned int adr, unsigned int val,
 void DI_VSYNC_WR_MPEG_REG(unsigned int addr, unsigned int val);
 void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr, unsigned int val,
 	unsigned int start, unsigned int len);
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
+extern void enable_rdma(int enable_flag);
+extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
+extern int VSYNC_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
+extern u32 VSYNC_RD_MPEG_REG(u32 adr);
+extern bool is_vsync_rdma_enable(void);
+#else
+#ifndef VSYNC_WR_MPEG_REG
+#define VSYNC_WR_MPEG_REG(adr, val) aml_write_vcbus(adr, val)
+#define VSYNC_WR_MPEG_REG_BITS(adr, val, start, len)  \
+		aml_vcbus_update_bits(adr, ((1<<len)-1)<<start, val<<start)
+#define VSYNC_RD_MPEG_REG(adr) aml_read_vcbus(adr)
+#endif
+#endif
+
 
 #define DI_COUNT   1
 #define DI_MAP_FLAG	0x1

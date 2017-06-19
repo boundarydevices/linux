@@ -23,6 +23,7 @@
 #include <linux/spinlock.h>
 #include <linux/major.h>
 #include <linux/io.h>
+#include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/old_cpu_version.h>
 #include <linux/kernel.h>
 
@@ -158,8 +159,11 @@ static void canvas_config_locked(u32 index, struct canvas_s *p)
 	u32 reg_add = 0;
 
 	canvas_lut_data_build(p->addr,
-		p->width,
-		p->height, p->wrap, p->blkmode, p->endian, &datal, &datah);
+			p->width,
+			p->height,
+			p->wrap,
+			p->blkmode,
+			p->endian, &datal, &datah);
 
 	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_M8M2) ||
 		(get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB))
@@ -202,29 +206,25 @@ int canvas_read_hw(u32 index, struct canvas_s *canvas)
 }
 EXPORT_SYMBOL(canvas_read_hw);
 
-static inline void canvas_lock(void)
-{
-	struct canvas_device_info *info = &canvas_info;
+#define canvas_lock(info, f, f2) do {\
+		spin_lock_irqsave(&info->lock, f);\
+		raw_local_save_flags(f2);\
+		local_fiq_disable();\
+	} while (0)
 
-	raw_local_save_flags(info->fiq_flag);
-	local_fiq_disable();
-	spin_lock_irqsave(&info->lock, info->flags);
-}
+#define canvas_unlock(info, f, f2) do {\
+		raw_local_irq_restore(f2);\
+		spin_unlock_irqrestore(&info->lock, f);\
+	} while (0)
 
-static inline void canvas_unlock(void)
-{
-	struct canvas_device_info *info = &canvas_info;
 
-	spin_unlock_irqrestore(&info->lock, info->flags);
-	raw_local_irq_restore(info->fiq_flag);
-}
 
 void canvas_config_ex(u32 index, ulong addr, u32 width, u32 height, u32 wrap,
 	u32 blkmode, u32 endian)
 {
 	struct canvas_device_info *info = &canvas_info;
 	struct canvas_s *canvas;
-
+	unsigned long flags, fiqflags;
 	if (!CANVAS_VALID(index))
 		return;
 
@@ -233,7 +233,7 @@ void canvas_config_ex(u32 index, ulong addr, u32 width, u32 height, u32 wrap,
 		dump_stack();
 		return;
 	}
-	canvas_lock();
+	canvas_lock(info, flags, fiqflags);
 	canvas = &info->canvasPool[index];
 	canvas->addr = addr;
 	canvas->width = width;
@@ -242,7 +242,7 @@ void canvas_config_ex(u32 index, ulong addr, u32 width, u32 height, u32 wrap,
 	canvas->blkmode = blkmode;
 	canvas->endian = endian;
 	canvas_config_locked(index, canvas);
-	canvas_unlock();
+	canvas_unlock(info, flags, fiqflags);
 }
 EXPORT_SYMBOL(canvas_config_ex);
 
@@ -275,6 +275,7 @@ void canvas_copy(u32 src, u32 dst)
 	struct canvas_device_info *info = &canvas_info;
 	struct canvas_s *canvas_src = &info->canvasPool[src];
 	struct canvas_s *canvas_dst = &info->canvasPool[dst];
+	unsigned long flags, fiqflags;
 
 	if (!CANVAS_VALID(src) || !CANVAS_VALID(dst))
 		return;
@@ -287,7 +288,7 @@ void canvas_copy(u32 src, u32 dst)
 		return;
 	}
 
-	canvas_lock();
+	canvas_lock(info, flags, fiqflags);
 	canvas_dst->addr = canvas_src->addr;
 	canvas_dst->width = canvas_src->width;
 	canvas_dst->height = canvas_src->height;
@@ -297,7 +298,7 @@ void canvas_copy(u32 src, u32 dst)
 	canvas_dst->dataH = canvas_src->dataH;
 	canvas_dst->dataL = canvas_src->dataL;
 	canvas_config_locked(dst, canvas_dst);
-	canvas_unlock();
+	canvas_unlock(info, flags, fiqflags);
 }
 EXPORT_SYMBOL(canvas_copy);
 
@@ -305,6 +306,7 @@ void canvas_update_addr(u32 index, u32 addr)
 {
 	struct canvas_device_info *info = &canvas_info;
 	struct canvas_s *canvas;
+	unsigned long flags, fiqflags;
 
 	if (!CANVAS_VALID(index))
 		return;
@@ -315,11 +317,12 @@ void canvas_update_addr(u32 index, u32 addr)
 		dump_stack();
 		return;
 	}
-	canvas_lock();
+	canvas_lock(info, flags, fiqflags);
 	canvas->addr = addr;
 	canvas_config_locked(index, canvas);
-	canvas_unlock();
+	canvas_unlock(info, flags, fiqflags);
 
+	return;
 }
 EXPORT_SYMBOL(canvas_update_addr);
 
@@ -495,7 +498,8 @@ static int canvas_probe(struct platform_device *pdev)
 	}
 	info->res = *res;
 	size = (int)resource_size(res);
-	pr_info("canvas_probe reg=%p,size=%x\n", (void *)res->start, size);
+	pr_info("canvas_probe reg=%p,size=%x\n",
+			(void *)res->start, size);
 	if (!devm_request_mem_region(&pdev->dev,
 		res->start, size, pdev->name)) {
 		dev_err(&pdev->dev, "Memory region busy\n");
@@ -514,7 +518,8 @@ static int canvas_probe(struct platform_device *pdev)
 	for (i = 0; i < info->max_canvas_num; i++) {
 		info->canvasPool[i].index = i;
 		r = kobject_init_and_add(&info->canvasPool[i].kobj,
-			&canvas_attr_type, &pdev->dev.kobj, "%d", i);
+				&canvas_attr_type,
+				&pdev->dev.kobj, "%d", i);
 		if (r) {
 			pr_error("Unable to create canvas objects %d\n", i);
 			goto err2;
@@ -545,7 +550,8 @@ static int canvas_remove(struct platform_device *pdev)
 	amcanvas_manager_exit();
 	devm_iounmap(&pdev->dev, info->reg_base);
 	devm_release_mem_region(&pdev->dev,
-		info->res.start, resource_size(&info->res));
+				info->res.start,
+				resource_size(&info->res));
 	pr_error("Canvas driver removed.\n");
 
 	return 0;
