@@ -269,13 +269,13 @@ struct mxc_isi_cap_dev {
 
 	struct mxc_isi_frame	src_f;
 	struct mxc_isi_frame	dst_f;
-	u32						frame_count;
+	u32				frame_count;
 
 	u32 buf_index;
 };
 
 struct mxc_isi_dev {
-	spinlock_t				slock;
+	spinlock_t			slock;
 	struct mutex			lock;
 	struct mutex			m2m_lock;
 	wait_queue_head_t		irq_queue;
