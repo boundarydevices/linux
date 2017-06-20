@@ -747,6 +747,92 @@ err_arg:
 	return -1;
 }
 
+static int aml_i2c_auto_test(struct aml_i2c *i2c, unsigned int val)
+{
+	struct i2c_msg msgs, *msgp =  &msgs;
+	struct i2c_msg msgx[2], *msgz =  &msgx[0];
+	int msg_num = 0;
+	unsigned int addr = 0, wnum = 0, rnum = 0;
+	char wbuf1[5] = {0, 0xaa, 0x55, 0x88, 0x99};
+	char wbufdef[5] = {0, 0xff, 0xff, 0xff, 0xff};
+	char rbuf[4] = {0};
+	char wbuf2 = 0;
+	int i;
+
+	if ((val) && (val <= 0x7f))
+		addr = val;
+	else
+		addr = 0x20;
+
+	wnum = 5;
+	if (wnum) {
+		msgp->flags = !I2C_M_RD;
+		msgp->addr	= addr;
+		msgp->len	= wnum;
+		msgp->buf	= wbuf1;
+		msg_num++;
+	}
+
+	if (i2c_transfer(&i2c->adap, &msgs, msg_num) != msg_num) {
+		pr_info("i2c auto test failed at speed %d KHZ!\n",
+			(i2c->master_i2c_speed)/1000);
+		return -1;
+	}
+
+	msleep(200);
+	msg_num = 0;
+	wnum = 1;
+	rnum = 4;
+	if (wnum) {
+		msgz->flags = !I2C_M_RD;
+		msgz->addr	= addr;
+		msgz->len	= wnum;
+		msgz->buf	= &wbuf2;
+		msg_num++;
+		msgz++;
+	}
+	if (rnum) {
+		msgz->flags = I2C_M_RD;
+		msgz->addr	= addr;
+		msgz->len	= rnum;
+		msgz->buf	= rbuf;
+		msg_num++;
+		msgz++;
+	}
+
+	if (i2c_transfer(&i2c->adap, &msgx[0], msg_num) == msg_num) {
+		for (i = 0; i < rnum; i++) {
+			if (wbuf1[i+1] != rbuf[i]) {
+				pr_info("i2c auto test failed 1 at speed %d KHZ!\n",
+					(i2c->master_i2c_speed)/1000);
+				return -1;
+			}
+		}
+	} else {
+		pr_info("i2c auto test failed 2 at speed %d KHZ!\n",
+			(i2c->master_i2c_speed)/1000);
+		return -1;
+	}
+
+	msleep(200);
+	/* fill up default date*/
+	wnum = 5;
+	if (wnum) {
+		msgp->flags = !I2C_M_RD;
+		msgp->addr	= addr;
+		msgp->len	= wnum;
+		msgp->buf	= wbufdef;
+		msg_num++;
+	}
+	if (i2c_transfer(&i2c->adap, &msgs, msg_num) != msg_num)
+		return -1;
+
+	msleep(100);
+	pr_info("I2C auto test master and slave ok! speed = %d KHZ!\n",
+		(i2c->master_i2c_speed)/1000);
+	return 0;
+}
+
 #ifdef ENABLE_GPIO_TRIGGER
 static int aml_i2c_set_trig_gpio(struct aml_i2c *i2c, char *gpio_name)
 {
@@ -850,6 +936,14 @@ static ssize_t store_aml_i2c(struct class *class,
 			"enable" : "disable");
 	}
 
+	else if (!strcmp(attr->attr.name, "auto_test")) {
+		mutex_lock(i2c->lock);
+		i2c->master_i2c_speed = val;
+		mutex_unlock(i2c->lock);
+		//pr_info("set speed: %d\n", i2c->master_i2c_speed);
+		aml_i2c_auto_test(i2c, val2);
+	}
+
 	else if (!strcmp(attr->attr.name, "slave")) {
 		aml_i2c_test_slave(i2c, argn, argv);
 	}
@@ -867,6 +961,7 @@ static struct class_attribute i2c_class_attrs[] = {
 	__ATTR(mode, 0644, show_aml_i2c, store_aml_i2c),
 	__ATTR(debug, 0644, show_aml_i2c, store_aml_i2c),
 	__ATTR(slave, 0644, show_aml_i2c, store_aml_i2c),
+	__ATTR(auto_test, 0644, show_aml_i2c, store_aml_i2c),
 #ifdef ENABLE_GPIO_TRIGGER
 	__ATTR(trig_gpio, 0644, show_aml_i2c, store_aml_i2c),
 #endif

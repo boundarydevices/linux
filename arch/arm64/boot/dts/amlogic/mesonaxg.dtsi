@@ -652,6 +652,15 @@
 		clock-names = "clk_i2c";
 	};
 
+	i2c_slave:i2c_slave@ff806000{
+		compatible = "amlogic, meson-i2c-slave";
+		status = "disabled";
+		reg = <0x0 0xff806000 0x0 0x20>;
+		interrupts = <0 194 1>;
+		pinctrl-names="default";
+		pinctrl-0=<&i2c_slave_pin>;
+	};
+
 	aml_aes {
 		compatible = "amlogic,aes_dma";
 		dev_name = "aml_aes_dma";
@@ -721,6 +730,14 @@
 			function = "i2c_ao";
 		};
 	};
+
+	i2c_slave_pin:s_i2c{
+		mux {
+			pins = "GPIOAO_10","GPIOAO_11";
+			function = "i2c_slave_ao";
+		};
+	};
+
 }; /* end of pinctrl_aobus */
 
 &pinctrl_periphs {
