@@ -54,6 +54,7 @@ int amlmmc_dtb_write(struct mmc_card *card,
 	int ret = 0, start_blk, size, blk_cnt;
 	int bit = card->csd.read_blkbits;
 	unsigned char *src = NULL;
+	unsigned char *buffer = NULL;
 
 	if (len > CONFIG_DTB_SIZE) {
 		pr_err("%s dtb data len too much", __func__);
@@ -64,22 +65,34 @@ int amlmmc_dtb_write(struct mmc_card *card,
 		ret = -EINVAL;
 		return ret;
 	}
+
+	buffer = kmalloc(DTB_CELL_SIZE, GFP_KERNEL);
+	if (buffer == NULL) {
+		pr_err("%s kmalloc dtb cell failed\n", __func__);
+		buffer = kmalloc(DTB_CELL_SIZE, GFP_DMA);
+		if (buffer == NULL) {
+			pr_err("%s retry kmalloc dtb cell failed\n", __func__);
+			return -ENOMEM;
+		}
+	}
 	start_blk >>= bit;
 	size = CONFIG_DTB_SIZE;
 	blk_cnt = size>>bit;
-	src = (unsigned char *)buf;
-	do {
-		ret = mmc_write_internal(card, start_blk, EMMC_BLOCK_SIZE, src);
+	src = (unsigned char *)buffer;
+	while (blk_cnt != 0) {
+		memcpy(src, buf, DTB_CELL_SIZE);
+		ret = mmc_write_internal(card, start_blk, (DTB_CELL_SIZE>>bit), src);
 		if (ret) {
 			pr_err("%s: save dtb error", __func__);
 			ret = -EFAULT;
+			kfree(buffer);
 			return ret;
 		}
-		start_blk += EMMC_BLOCK_SIZE;
-		blk_cnt -= EMMC_BLOCK_SIZE;
-		src = (unsigned char *)buf + MAX_EMMC_BLOCK_SIZE;
-	} while (blk_cnt != 0);
-
+		start_blk += (DTB_CELL_SIZE>>bit);
+		blk_cnt -= (DTB_CELL_SIZE>>bit);
+		buf += DTB_CELL_SIZE;
+	}
+	kfree(buffer);
 	return ret;
 }
 
@@ -89,6 +102,7 @@ int amlmmc_dtb_read(struct mmc_card *card,
 	int ret = 0, start_blk, size, blk_cnt;
 	int bit = card->csd.read_blkbits;
 	unsigned char *dst = NULL;
+	unsigned char *buffer = NULL;
 
 	if (len > CONFIG_DTB_SIZE) {
 		pr_err("%s dtb data len too much", __func__);
@@ -102,21 +116,34 @@ int amlmmc_dtb_read(struct mmc_card *card,
 		return ret;
 	}
 
+	buffer = kmalloc(DTB_CELL_SIZE, GFP_KERNEL);
+	if (buffer == NULL) {
+		pr_err("%s kmalloc dtb cell failed\n", __func__);
+		buffer = kmalloc(DTB_CELL_SIZE, GFP_DMA);
+		if (buffer == NULL) {
+			pr_err("%s retry kmalloc dtb cell failed\n", __func__);
+			return -ENOMEM;
+		}
+	}
 	start_blk >>= bit;
 	size = CONFIG_DTB_SIZE;
 	blk_cnt = size>>bit;
-	dst = (unsigned char *)buf;
-	do {
-		ret = mmc_read_internal(card, start_blk, EMMC_BLOCK_SIZE, dst);
+	dst = (unsigned char *)buffer;
+	while (blk_cnt != 0) {
+		memset(buffer, 0x0, DTB_CELL_SIZE);
+		ret = mmc_read_internal(card, start_blk, (DTB_CELL_SIZE>>bit), dst);
 		if (ret) {
 			pr_err("%s read dtb error", __func__);
 			ret = -EFAULT;
+			kfree(buffer);
 			return ret;
 		}
-		start_blk += EMMC_BLOCK_SIZE;
-		blk_cnt -= EMMC_BLOCK_SIZE;
-		dst = (unsigned char *)buf + MAX_EMMC_BLOCK_SIZE;
-	} while (blk_cnt != 0);
+		start_blk += (DTB_CELL_SIZE>>bit);
+		blk_cnt -= (DTB_CELL_SIZE>>bit);
+		memcpy(buf, dst, DTB_CELL_SIZE);
+		buf += DTB_CELL_SIZE;
+	}
+	kfree(buffer);
 	return ret;
 }
 static CLASS_ATTR(emmcdtb, 0644, NULL, NULL);

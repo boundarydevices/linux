@@ -11,6 +11,7 @@
 /* #include <mach/register.h> */
 /* #include <mach/am_regs.h> */
 #define CONFIG_DTB_SIZE  (256*1024U)
+#define DTB_CELL_SIZE	(16*1024U)
 #define	STORE_CODE				1
 #define	STORE_CACHE				(1<<1)
 #define	STORE_DATA				(1<<2)

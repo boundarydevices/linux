@@ -450,7 +450,7 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 				part_size = ext_csd[EXT_CSD_BOOT_MULT] << 17;
 				mmc_part_add(card, part_size,
 					EXT_CSD_PART_CONFIG_ACC_BOOT0 + idx,
-					"boot%d", idx, true,
+					"boot%d", idx, false,
 					MMC_BLK_DATA_AREA_BOOT);
 			}
 		}
