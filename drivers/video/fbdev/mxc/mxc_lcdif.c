@@ -163,10 +163,49 @@ static struct fb_videomode lcdif_modedb[] = {
 	  * hsync = 260 * vsync = 15.6 Khz
 	  * pixclk = 800 * hsync = 12.48 MHz
 	  */
-	 "hitachi_hvga", 60, 640, 240, 1000000000 / (640+34+1+125) * 1000 / (240+8+3+9) / 60,	//80128, (12.48 MHz)
+	 "hitachi_hvga", 60, 640, 240, 1000000000000ULL / (640+34+1+125) / (240+8+3+9) / 60,	//80128, (12.48 MHz)
 	 .left_margin = 34, .right_margin = 1,
 	 .upper_margin = 8, .lower_margin = 3,
 	 .hsync_len = 125, .vsync_len = 9,
+	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
+	{
+	 /*
+	  * hitachi 640x240
+	  * vsync = 60
+	  * hsync = 260 * vsync = 15.6 Khz
+	  * pixclk = 800 * hsync = 12.48 MHz
+	  */
+	 "hitachi_hvga565", 60, 640, 240, 1000000000000ULL / (640+34+1+125) / (240+8+3+9) / 60,	//80128, (12.48 MHz)
+	 .left_margin = 34, .right_margin = 1,
+	 .upper_margin = 8, .lower_margin = 3,
+	 .hsync_len = 125, .vsync_len = 9,
+	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
+	{
+	 /*
+	  * hitachi 640x240
+	  * vsync = 60
+	  * hsync = 260 * vsync = 15.6 Khz
+	  * pixclk = 800 * hsync = 12.48 MHz
+	  */
+	 "NeonTouch640x240", 60, 640, 240, 1000000000000ULL / (640+34+1+125) / (240+8+3+9) / 60,	//80128, (12.48 MHz)
+	 .left_margin = 34, .right_margin = 1,
+	 .upper_margin = 8, .lower_margin = 3,
+	 .hsync_len = 125, .vsync_len = 9,
+	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
+	{
+	 /*
+	  * 800x300rgb565:m18x0,38:17990141,800,300,50,1,8,3,110,1
+	  */
+	 "800x300rgb565", 60, 800, 300, 1000000000000ULL / (800+50+1+110) / (300+8+3+1) / 60,	//55586 ps, (17.98 MHz)
+	 .left_margin = 50, .right_margin = 1,
+	 .upper_margin = 8, .lower_margin = 3,
+	 .hsync_len = 110, .vsync_len = 1,
 	 .sync = FB_SYNC_CLK_LAT_FALL,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
