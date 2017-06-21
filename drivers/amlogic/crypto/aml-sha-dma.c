@@ -657,13 +657,30 @@ static void aml_sha_state_restore(struct ahash_request *req)
 	dma_ctx = dma_map_single(dd->dev, tctx->state,
 			sizeof(tctx->state), DMA_TO_DEVICE);
 
-	dsc->src_addr = (uint32_t)dma_ctx;
-	dsc->tgt_addr = 0;
-	dsc->dsc_cfg.d32 = 0;
-	dsc->dsc_cfg.b.length = sizeof(tctx->state);
-	dsc->dsc_cfg.b.mode = MODE_KEY;
-	dsc->dsc_cfg.b.eoc = 1;
-	dsc->dsc_cfg.b.owner = 1;
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG)) {
+		uint32_t i = 0;
+		int32_t len = sizeof(tctx->state);
+		while (len > 0) {
+			dsc[i].src_addr = (uint32_t)dma_ctx + i * 16;
+			dsc[i].tgt_addr = i * 16;
+			dsc[i].dsc_cfg.d32 = 0;
+			dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
+			dsc[i].dsc_cfg.b.mode = MODE_KEY;
+			dsc[i].dsc_cfg.b.eoc = 0;
+			dsc[i].dsc_cfg.b.owner = 1;
+			i++;
+			len -= 16;
+		}
+		dsc[i - 1].dsc_cfg.b.eoc = 1;
+	} else {
+		dsc->src_addr = (uint32_t)dma_ctx;
+		dsc->tgt_addr = 0;
+		dsc->dsc_cfg.d32 = 0;
+		dsc->dsc_cfg.b.length = sizeof(tctx->state);
+		dsc->dsc_cfg.b.mode = MODE_KEY;
+		dsc->dsc_cfg.b.eoc = 1;
+		dsc->dsc_cfg.b.owner = 1;
+	}
 
 	ctx->dma_descript_tab = dma_map_single(dd->dev, ctx->descriptor,
 			PAGE_SIZE, DMA_TO_DEVICE);
@@ -825,13 +842,30 @@ static int aml_sha_import(struct ahash_request *req, const void *in)
 	dma_ctx = dma_map_single(dd->dev, tctx->state,
 			sizeof(tctx->state), DMA_TO_DEVICE);
 
-	dsc->src_addr = (uint32_t)dma_ctx;
-	dsc->tgt_addr = 0;
-	dsc->dsc_cfg.d32 = 0;
-	dsc->dsc_cfg.b.length = sizeof(tctx->state);
-	dsc->dsc_cfg.b.mode = MODE_KEY;
-	dsc->dsc_cfg.b.eoc = 1;
-	dsc->dsc_cfg.b.owner = 1;
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG)) {
+		uint32_t i = 0;
+		int32_t len = sizeof(tctx->state);
+		while (len > 0) {
+			dsc[i].src_addr = (uint32_t)dma_ctx + i * 16;
+			dsc[i].tgt_addr = i * 16;
+			dsc[i].dsc_cfg.d32 = 0;
+			dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
+			dsc[i].dsc_cfg.b.mode = MODE_KEY;
+			dsc[i].dsc_cfg.b.eoc = 0;
+			dsc[i].dsc_cfg.b.owner = 1;
+			i++;
+			len -= 16;
+		}
+		dsc[i - 1].dsc_cfg.b.eoc = 1;
+	} else {
+		dsc->src_addr = (uint32_t)dma_ctx;
+		dsc->tgt_addr = 0;
+		dsc->dsc_cfg.d32 = 0;
+		dsc->dsc_cfg.b.length = sizeof(tctx->state);
+		dsc->dsc_cfg.b.mode = MODE_KEY;
+		dsc->dsc_cfg.b.eoc = 1;
+		dsc->dsc_cfg.b.owner = 1;
+	}
 
 	ctx->dma_descript_tab = dma_map_single(dd->dev, ctx->descriptor,
 			PAGE_SIZE, DMA_TO_DEVICE);

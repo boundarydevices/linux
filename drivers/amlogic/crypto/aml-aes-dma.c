@@ -131,7 +131,7 @@ static void set_aes_key_iv(struct aml_aes_dev *dd, u32 *key,
 	struct dma_dsc *dsc = dd->descriptor;
 	uint32_t key_iv[12];
 	uint32_t *piv = key_iv + 8;
-	uint32_t len = keylen;
+	int32_t len = keylen;
 	dma_addr_t dma_addr_key;
 
 	memset(key_iv, 0, sizeof(key_iv));
@@ -151,13 +151,29 @@ static void set_aes_key_iv(struct aml_aes_dev *dd, u32 *key,
 	dma_addr_key = dma_map_single(dd->dev, key_iv,
 			sizeof(key_iv), DMA_TO_DEVICE);
 
-	dsc->src_addr = (uint32_t)dma_addr_key;
-	dsc->tgt_addr = 0;
-	dsc->dsc_cfg.d32 = 0;
-	dsc->dsc_cfg.b.length = len;
-	dsc->dsc_cfg.b.mode = MODE_KEY;
-	dsc->dsc_cfg.b.eoc = 1;
-	dsc->dsc_cfg.b.owner = 1;
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG)) {
+		uint32_t i = 0;
+		while (len > 0) {
+			dsc[i].src_addr = (uint32_t)dma_addr_key + i * 16;
+			dsc[i].tgt_addr = i * 16;
+			dsc[i].dsc_cfg.d32 = 0;
+			dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
+			dsc[i].dsc_cfg.b.mode = MODE_KEY;
+			dsc[i].dsc_cfg.b.eoc = 0;
+			dsc[i].dsc_cfg.b.owner = 1;
+			i++;
+			len -= 16;
+		}
+		dsc[i - 1].dsc_cfg.b.eoc = 1;
+	} else {
+		dsc->src_addr = (uint32_t)dma_addr_key;
+		dsc->tgt_addr = 0;
+		dsc->dsc_cfg.d32 = 0;
+		dsc->dsc_cfg.b.length = len;
+		dsc->dsc_cfg.b.mode = MODE_KEY;
+		dsc->dsc_cfg.b.eoc = 1;
+		dsc->dsc_cfg.b.owner = 1;
+	}
 
 	dma_sync_single_for_device(dd->dev, dd->dma_descript_tab,
 			PAGE_SIZE, DMA_TO_DEVICE);

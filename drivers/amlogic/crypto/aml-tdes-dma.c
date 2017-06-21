@@ -142,13 +142,29 @@ static void set_tdes_key_iv(struct aml_tdes_dev *dd,
 	dma_addr_key = dma_map_single(dd->dev, key_iv,
 			sizeof(key_iv), DMA_TO_DEVICE);
 
-	dsc->src_addr = (uintptr_t)dma_addr_key;
-	dsc->tgt_addr = 0;
-	dsc->dsc_cfg.d32 = 0;
-	dsc->dsc_cfg.b.length = len;
-	dsc->dsc_cfg.b.mode = MODE_KEY;
-	dsc->dsc_cfg.b.eoc = 1;
-	dsc->dsc_cfg.b.owner = 1;
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG)) {
+		uint32_t i = 0;
+		while (len > 0) {
+			dsc[i].src_addr = (uint32_t)dma_addr_key + i * 16;
+			dsc[i].tgt_addr = i * 16;
+			dsc[i].dsc_cfg.d32 = 0;
+			dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
+			dsc[i].dsc_cfg.b.mode = MODE_KEY;
+			dsc[i].dsc_cfg.b.eoc = 0;
+			dsc[i].dsc_cfg.b.owner = 1;
+			i++;
+			len -= 16;
+		}
+		dsc[i - 1].dsc_cfg.b.eoc = 1;
+	} else {
+		dsc->src_addr = (uintptr_t)dma_addr_key;
+		dsc->tgt_addr = 0;
+		dsc->dsc_cfg.d32 = 0;
+		dsc->dsc_cfg.b.length = len;
+		dsc->dsc_cfg.b.mode = MODE_KEY;
+		dsc->dsc_cfg.b.eoc = 1;
+		dsc->dsc_cfg.b.owner = 1;
+	}
 
 	dma_sync_single_for_device(dd->dev, dd->dma_descript_tab,
 			PAGE_SIZE, DMA_TO_DEVICE);
@@ -793,17 +809,31 @@ static irqreturn_t aml_tdes_irq(int irq, void *dev_id)
 
 static void aml_tdes_unregister_algs(struct aml_tdes_dev *dd)
 {
-	int i;
+	int i = 0;
 
-	for (i = 0; i < ARRAY_SIZE(tdes_algs); i++)
+	/*
+	 * AXG and beyond does not support DES
+	 * and thus we start from 2
+	 */
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG))
+		i = 2;
+
+	for (; i < ARRAY_SIZE(tdes_algs); i++)
 		crypto_unregister_alg(&tdes_algs[i]);
 }
 
 static int aml_tdes_register_algs(struct aml_tdes_dev *dd)
 {
-	int err, i, j;
+	int err = 0, i = 0, j = 0;
 
-	for (i = 0; i < ARRAY_SIZE(tdes_algs); i++) {
+	/*
+	 * AXG and beyond does not support DES
+	 * and thus we start from 2
+	 */
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG))
+		i = 2;
+
+	for (; i < ARRAY_SIZE(tdes_algs); i++) {
 		err = crypto_register_alg(&tdes_algs[i]);
 		if (err)
 			goto err_tdes_algs;

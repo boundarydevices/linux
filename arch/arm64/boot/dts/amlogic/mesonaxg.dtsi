@@ -723,14 +723,6 @@
 		reg = <0x0 0xff63e000 0x0 0x48>;
 	};
 
-	aml_tdes {
-		compatible = "amlogic,des_dma,tdes_dma";
-		dev_name = "aml_tdes_dma";
-		status = "okay";
-		interrupts = <0 180 1 0 181 1>;
-		reg = <0x0 0xff63e000 0x0 0x48>;
-	};
-
 	aml_sha {
 		compatible = "amlogic,sha_dma";
 		dev_name = "aml_sha_dma";
