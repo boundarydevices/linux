@@ -82,7 +82,6 @@
 			reusable;
 			size = <0x0 0x2000000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x7e000000 0x0 0x2000000>;
 		};
 
 		/*  vdin0 CMA pool */
