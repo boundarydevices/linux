@@ -40,7 +40,7 @@
 #define AML_PWM_GXBB_NUM		8
 #define AML_PWM_GXTVBB_NUM		16
 #define AML_PWM_TXLX_NUM		20
-#define AML_PWM_AXG_NUM			16
+#define AML_PWM_AXG_NUM			20
 
 
 
@@ -49,6 +49,8 @@ enum pwm_channel {
 	PWM_B,
 	PWM_C,
 	PWM_D,
+	PWM_E,
+	PWM_F,
 	PWM_AO_A,
 	PWM_AO_B,
 	PWM_AO_C,
@@ -58,16 +60,13 @@ enum pwm_channel {
 	PWM_B2,
 	PWM_C2,
 	PWM_D2,
+	PWM_E2,
+	PWM_F2,
 	PWM_AO_A2,
 	PWM_AO_B2,
 	PWM_AO_C2,
 	PWM_AO_D2,
 	/* add another four channels for txlx*/
-	PWM_E,
-	PWM_F,
-	PWM_E2,
-	PWM_F2,
-
 
 };
 

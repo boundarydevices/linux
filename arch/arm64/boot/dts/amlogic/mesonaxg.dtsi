@@ -352,8 +352,9 @@
 		status = "okay";
 		#pwm-cells = <2>;
 		pwm-outputs = <PWM_A>,<PWM_B>,<PWM_C>,<PWM_D>,
-		<PWM_AO_A>,<PWM_AO_B>,<PWM_AO_C>,<PWM_AO_D>,
-		<PWM_A2>,<PWM_B2>,<PWM_C2>,<PWM_D2>,<PWM_AO_A2>,
+		<PWM_E>,<PWM_F>,<PWM_AO_A>,<PWM_AO_B>,
+		<PWM_AO_C>,<PWM_AO_D>,<PWM_A2>,<PWM_B2>,
+		<PWM_C2>,<PWM_D2>,<PWM_E2>,<PWM_F2>,<PWM_AO_A2>,
 		<PWM_AO_B2>,<PWM_AO_C2>,<PWM_AO_D2>;
 		reg = <0x0 0xffd1b000  0x0 0x20>,
 				<0x0 0xffd1a000  0x0 0x20>,
@@ -368,7 +369,8 @@
 					"fclk_div4",
 					"fclk_div3";
 		clock-select = <XTAL>,<XTAL>,<XTAL>,<XTAL>,
-						<XTAL>,<XTAL>,<XTAL>,<XTAL>;
+						<XTAL>,<XTAL>,<XTAL>,<XTAL>,
+						<XTAL>,<XTAL>;
 		/*all channels use the default clock source XTAL_CLK*/
 		/*and you can shoose it in file dt-bindings/pwm/meson.h*/
 	};
