@@ -171,6 +171,7 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long old_rate;
 	int ret = 0;
 	u32 reg;
+	unsigned long flags = 0;
 
 	if (parent_rate == 0 || rate == 0)
 		return -EINVAL;
@@ -182,6 +183,9 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		return -EINVAL;
 
 	p = &pll->n;
+
+	if (pll->lock)
+		spin_lock_irqsave(pll->lock, flags);
 
 	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
 		|| !strcmp(clk_hw_get_name(hw), "hifi_pll")
@@ -256,6 +260,10 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	writel(reg & (~MESON_PLL_RESET), pll->base + p->reg_off);
 
 	ret = meson_axg_pll_wait_lock(pll, p);
+
+	if (pll->lock)
+		spin_unlock_irqrestore(pll->lock, flags);
+
 	if (ret) {
 		pr_warn("%s: pll did not lock, trying to restore old rate %lu\n",
 			__func__, old_rate);
@@ -265,10 +273,31 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	return ret;
 }
 
+static void meson_axg_pll_disable(struct clk_hw *hw)
+{
+	struct meson_clk_pll *pll = to_meson_clk_pll(hw);
+	struct parm *p = &pll->n;
+	unsigned long flags = 0;
+
+	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
+			|| !strcmp(clk_hw_get_name(hw), "hifi_pll")
+			|| !strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+		if (pll->lock)
+			spin_lock_irqsave(pll->lock, flags);
+
+		writel(readl(pll->base + p->reg_off) & (~MESON_PLL_ENABLE),
+			pll->base + p->reg_off);
+
+		if (pll->lock)
+			spin_unlock_irqrestore(pll->lock, flags);
+	}
+}
+
 const struct clk_ops meson_axg_pll_ops = {
 	.recalc_rate	= meson_axg_pll_recalc_rate,
 	.round_rate	= meson_axg_pll_round_rate,
 	.set_rate	= meson_axg_pll_set_rate,
+	.disable	= meson_axg_pll_disable,
 };
 
 const struct clk_ops meson_axg_pll_ro_ops = {

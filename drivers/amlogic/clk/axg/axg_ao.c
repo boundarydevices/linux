@@ -118,11 +118,13 @@ static void __init axg_aoclkc_init(struct device_node *np)
 	axg_saradc_div.reg = ao_clk_base + (u64)axg_saradc_div.reg;
 	axg_saradc_gate.reg = ao_clk_base + (u64)axg_saradc_gate.reg;
 
-	clks = kzalloc(NR_CLKS*sizeof(struct clk *), GFP_KERNEL);
 	if (!clks) {
-		/* pr_err("%s: alloc clks fail!", __func__); */
-		/* return -ENOMEM; */
-		return;
+		clks = kzalloc(NR_CLKS*sizeof(struct clk *), GFP_KERNEL);
+		if (!clks) {
+			/* pr_err("%s: alloc clks fail!", __func__); */
+			/* return -ENOMEM; */
+			return;
+		}
 	}
 
 	for (clkid = CLKID_AO_BASE; clkid < NR_CLKS; clkid++) {

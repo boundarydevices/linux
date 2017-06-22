@@ -98,16 +98,16 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	old_rate = (parent_rate * SDM_MAX) / ((SDM_MAX * old_n2) + old_sdm);
 	pr_debug("%s: old_sdm: %lu old_n2: %lu old_rate: %lu\n", __func__,
 		old_sdm, old_n2, old_rate);
-
-	if (old_rate == rate)
-		return 0;
-
+/*
+ *	if (old_rate == rate)
+ *		return 0;
+ */
 	/* calculate new n2 and sdm */
 	n2 = parent_rate / rate;
 	sdm = DIV_ROUND_UP((parent_rate - n2 * rate) * SDM_MAX, rate);
 	pr_debug("%s: sdm: %lu n2: %lu rate: %lu\n", __func__, sdm, n2, rate);
 
-	if (old_n2 != n2 || old_sdm != sdm) {
+	/*if (old_n2 != n2 || old_sdm != sdm)*/ {
 		p = &mpll->sdm;
 		reg = readl(mpll->base + p->reg_off);
 		reg = PARM_SET(p->width, p->shift, reg, sdm);
@@ -140,10 +140,30 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	return 0;
 }
 
+void mpll_disable(struct clk_hw *hw)
+{
+	struct meson_clk_mpll *mpll = to_meson_clk_mpll(hw);
+	struct parm *p = &mpll->sdm;
+	unsigned long reg;
+	unsigned long flags = 0;
+
+	if (mpll->lock)
+		spin_lock_irqsave(mpll->lock, flags);
+
+	reg = readl(mpll->base + p->reg_off);
+	reg = PARM_SET(1, mpll->sdm_en, reg, 0);
+	reg = PARM_SET(1, mpll->en_dds, reg, 0);
+	writel(reg, mpll->base + p->reg_off);
+
+	if (mpll->lock)
+		spin_unlock_irqrestore(mpll->lock, flags);
+}
+
 const struct clk_ops meson_clk_mpll_ops = {
 	.recalc_rate = mpll_recalc_rate,
 	.round_rate	= meson_clk_pll_round_rate,
 	.set_rate = mpll_set_rate,
+	.disable = mpll_disable,
 };
 
 const struct clk_ops meson_clk_mpll_ro_ops = {
