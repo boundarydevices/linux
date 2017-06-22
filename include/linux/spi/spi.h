@@ -669,6 +669,15 @@ struct spi_controller {
 
 	/* gpio chip select */
 	struct gpio_desc	**cs_gpiods;
+	/*
+	 * if idle_state given, then the cs_gpiods array are used to encode
+	 * binary numbers that may go to a decoder chip to give the right chip
+	 * select
+	 */
+	u32			idle_state_provided;
+	u32			idle_state;
+	u32			current_state;
+
 	bool			use_gpio_descriptors;
 	s8			unused_native_cs;
 	s8			max_native_cs;
