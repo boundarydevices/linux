@@ -43,13 +43,13 @@ struct hw_enc_clk_val_group {
 	enum hdmi_vic group[GROUP_MAX];
 	unsigned int hpll_clk_out; /* Unit: kHz */
 	unsigned int od1;
-	unsigned int  od2; /* HDMI_CLK_TODIG */
-	unsigned int  od3;
-	unsigned int  vid_pll_div;
-	unsigned int  vid_clk_div;
-	unsigned int  hdmi_tx_pixel_div;
-	unsigned int  encp_div;
-	unsigned int  enci_div;
+	unsigned int od2; /* HDMI_CLK_TODIG */
+	unsigned int od3;
+	unsigned int vid_pll_div;
+	unsigned int vid_clk_div;
+	unsigned int hdmi_tx_pixel_div;
+	unsigned int encp_div;
+	unsigned int enci_div;
 };
 
 void hdmitx_set_clk(struct hdmitx_dev *hdev);

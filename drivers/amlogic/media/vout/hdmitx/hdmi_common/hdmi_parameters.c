@@ -1322,12 +1322,9 @@ struct hdmi_format_para *hdmi_match_dtd_paras(struct dtd *t)
 	if (!t)
 		return NULL;
 	for (i = 0; all_fmt_paras[i]; i++) {
-		/*
-		 * struct hdmi_format_para.timing.pixel_freq must divide 10
-		 * to match with t->pixel_clock
-		 */
-		if ((t->pixel_clock == all_fmt_paras[i]->timing.pixel_freq / 10)
-		    && (t->h_active == all_fmt_paras[i]->timing.h_active) &&
+		if ((abs(all_fmt_paras[i]->timing.frac_freq / 10
+		    - t->pixel_clock) <= (t->pixel_clock + 1000) / 1000) &&
+		    (t->h_active == all_fmt_paras[i]->timing.h_active) &&
 		    (t->h_blank == all_fmt_paras[i]->timing.h_blank) &&
 		    (t->v_active == all_fmt_paras[i]->timing.v_active) &&
 		    (t->v_blank == all_fmt_paras[i]->timing.v_blank) &&

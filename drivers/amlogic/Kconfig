@@ -90,6 +90,8 @@ source "drivers/amlogic/jtag/Kconfig"
 
 source "drivers/amlogic/watchdog/Kconfig"
 
+source "drivers/amlogic/esm/Kconfig"
+
 source "drivers/amlogic/wifi/Kconfig"
 
 source "drivers/amlogic/bluetooth/Kconfig"

@@ -13485,6 +13485,7 @@ S:	Maintained
 F:	drivers/amlogic/media/vout/hdmitx/*
 F:	drivers/amlogic/media/vout/hdmitx/hdcp/*
 F:	include/linux/amlogic/media/vout/hdmi_tx/*
+F:	drivers/amlogic/esm/*
 
 AMLOGIC DWC_OTG USB
 M: Yue Wang <yue.wang@amlogic.com>

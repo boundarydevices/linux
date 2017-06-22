@@ -61,12 +61,12 @@ static uint32_t ddc_write_1byte(uint8_t slave, uint8_t offset_addr,
 	return st;
 }
 
+#if 0
 static uint32_t ddc_readext_8byte(uint8_t slave, uint8_t offset_addr,
 	uint8_t *data)
 {
 	uint32_t st = 0;
 	int32_t i;
-
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SLAVE, slave);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_ADDRESS, offset_addr);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SEGADDR,  EDIDSEG_ADR);
@@ -84,6 +84,7 @@ static uint32_t ddc_readext_8byte(uint8_t slave, uint8_t offset_addr,
 		data[i] = hdmitx_rd_reg(HDMITX_DWC_I2CM_READ_BUFF0 + i);
 	return st;
 }
+#endif
 
 static uint32_t ddc_read_8byte(uint8_t slave, uint8_t offset_addr,
 	uint8_t *data)
@@ -107,12 +108,13 @@ static uint32_t ddc_read_8byte(uint8_t slave, uint8_t offset_addr,
 	return st;
 }
 
+#if 0
 static uint32_t ddc_readext_1byte(uint8_t slave, uint8_t address, uint8_t *data)
 {
 	uint32_t st = 0;
-
+	int32_t i;
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SLAVE, slave);
-	hdmitx_wr_reg(HDMITX_DWC_I2CM_ADDRESS, address);
+	hdmitx_wr_reg(HDMITX_DWC_I2CM_ADDRESS, offset_addr);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SEGADDR,  EDIDSEG_ADR);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SEGPTR, 0x00);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_OPERATION, 1 << 1);
@@ -120,13 +122,14 @@ static uint32_t ddc_readext_1byte(uint8_t slave, uint8_t address, uint8_t *data)
 	if (hdmitx_rd_reg(HDMITX_DWC_IH_I2CM_STAT0) & (1 << 0)) {
 		st = 0;
 		pr_info("hdmitx: ddc rd8b error 0x%02x 0x%02x\n",
-			slave, address);
+			slave, offset_addr);
 	} else
 		st = 1;
 	hdmitx_wr_reg(HDMITX_DWC_IH_I2CM_STAT0, 0x7);
 	*data = hdmitx_rd_reg(HDMITX_DWC_I2CM_DATAI);
 	return st;
 }
+#endif
 
 static uint32_t ddc_read_1byte(uint8_t slave, uint8_t offset_addr,
 	uint8_t *data)
@@ -150,19 +153,12 @@ static uint32_t ddc_read_1byte(uint8_t slave, uint8_t offset_addr,
 
 static uint32_t hdcp_rd_bksv(uint8_t *data)
 {
-	if (0)
-		ddc_readext_8byte(HDCP_SLAVE, HDCP14_BKSV, data);
-
 	return ddc_read_8byte(HDCP_SLAVE, HDCP14_BKSV, data);
 }
 
 void scdc_rd_sink(uint8_t adr, uint8_t *val)
 {
 	hdmitx_ddc_hw_op(DDC_MUX_DDC);
-
-	if (0)
-		ddc_readext_1byte(SCDC_SLAVE, adr, val);
-
 	ddc_read_1byte(SCDC_SLAVE, adr, val);
 }
 

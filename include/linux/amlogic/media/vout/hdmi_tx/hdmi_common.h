@@ -243,6 +243,7 @@ enum hdmi_color_depth {
 	COLORDEPTH_30B = 5,
 	COLORDEPTH_36B = 6,
 	COLORDEPTH_48B = 7,
+	COLORDEPTH_RESERVED,
 };
 
 enum hdmi_color_space {

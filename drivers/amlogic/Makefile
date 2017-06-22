@@ -76,6 +76,8 @@ obj-$(CONFIG_AMLOGIC_JTAG)		+= jtag/
 
 obj-$(CONFIG_AMLOGIC_WDT)		+= watchdog/
 
+obj-$(CONFIG_AMLOGIC_ESM) += esm/
+
 obj-$(CONFIG_AMLOGIC_BT_DEVICE)		+= bluetooth/
 
 obj-$(CONFIG_AMLOGIC_WIFI)      += wifi/

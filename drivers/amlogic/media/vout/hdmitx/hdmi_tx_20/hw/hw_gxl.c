@@ -40,11 +40,11 @@
 #undef P_HHI_HDMI_PLL_CNTL6
 #endif
 
-#define P_HHI_HDMI_PLL_CNTL1 (0xc883c000 + (0xc9 << 2))
-#define P_HHI_HDMI_PLL_CNTL2 (0xc883c000 + (0xca << 2))
-#define P_HHI_HDMI_PLL_CNTL3 (0xc883c000 + (0xcb << 2))
-#define P_HHI_HDMI_PLL_CNTL4 (0xc883c000 + (0xcc << 2))
-#define P_HHI_HDMI_PLL_CNTL5 (0xc883c000 + (0xcd << 2))
+#define P_HHI_HDMI_PLL_CNTL1 HHI_REG_ADDR(0xc9)
+#define P_HHI_HDMI_PLL_CNTL2 HHI_REG_ADDR(0xca)
+#define P_HHI_HDMI_PLL_CNTL3 HHI_REG_ADDR(0xcb)
+#define P_HHI_HDMI_PLL_CNTL4 HHI_REG_ADDR(0xcc)
+#define P_HHI_HDMI_PLL_CNTL5 HHI_REG_ADDR(0xcd)
 
 /*
  * NAME		PAD		PINMUX		GPIO

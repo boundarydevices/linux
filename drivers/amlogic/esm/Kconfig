@@ -1,0 +1,11 @@
+menu "ESM Support"
+
+if AMLOGIC_HDMITX || TVIN_HDMI
+config AMLOGIC_ESM
+        bool "Embedded Security Module Enable"
+        default y
+        help
+                Embedded Security Module(ESM) for HDCP22
+endif
+
+endmenu
