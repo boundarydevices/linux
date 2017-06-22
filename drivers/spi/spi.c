@@ -870,6 +870,19 @@ int spi_register_board_info(struct spi_board_info const *info, unsigned n)
 }
 
 /*-------------------------------------------------------------------------*/
+static void set_binary_cs(struct spi_controller *ctlr, u32 chip_select, bool enable)
+{
+	u32 change = ctlr->current_state ^ chip_select;
+	u32 i, val;
+
+	ctlr->current_state = chip_select;
+	while (change) {
+		i = enable ? __ffs(change) : __fls(change);
+		change &= ~(1 << i);
+		val = (chip_select >> i) & 1;
+		gpiod_set_value_cansleep(ctlr->cs_gpiods[i], val);
+	}
+}
 
 /* Core methods for SPI resource management */
 
@@ -990,9 +1003,18 @@ static void spi_set_cs(struct spi_device *spi, bool enable, bool force)
 			 */
 			if (has_acpi_companion(&spi->dev))
 				gpiod_set_value_cansleep(spi->cs_gpiod, !enable);
-			else
+			else {
 				/* Polarity handled by GPIO library */
-				gpiod_set_value_cansleep(spi->cs_gpiod, activate);
+				if (spi->controller->idle_state_provided) {
+					set_binary_cs(spi->controller,
+						activate ? spi->chip_select :
+						spi->controller->idle_state,
+						activate);
+				} else {
+					gpiod_set_value_cansleep(
+						spi->cs_gpiod, activate);
+				}
+			}
 		}
 		/* Some SPI masters need both GPIO CS & slave_select */
 		if ((spi->controller->flags & SPI_MASTER_GPIO_SS) &&
@@ -2986,6 +3008,8 @@ static int spi_get_gpio_descs(struct spi_controller *ctlr)
 	struct device *dev = &ctlr->dev;
 	unsigned long native_cs_mask = 0;
 	unsigned int num_cs_gpios = 0;
+	u32 idle_state;
+	int ret;
 
 	nb = gpiod_count(dev, "cs");
 	if (nb < 0) {
@@ -3002,6 +3026,20 @@ static int spi_get_gpio_descs(struct spi_controller *ctlr)
 	if (!cs)
 		return -ENOMEM;
 	ctlr->cs_gpiods = cs;
+
+	ret = of_property_read_u32(dev->of_node, "idle-state", &idle_state);
+	if (ret >= 0) {
+		if (idle_state >= (1 << ctlr->num_chipselect)) {
+			dev_err(dev, "error: idle-state(0x%x) >= 0x%x, num_cs=%d\n",
+				idle_state, 1 << ctlr->num_chipselect,
+				ctlr->num_chipselect);
+			idle_state = 0;
+		}
+		ctlr->idle_state = idle_state;
+		ctlr->idle_state_provided = 1;
+		ctlr->current_state = ~ctlr->idle_state &
+			((1 << ctlr->num_chipselect) - 1);
+	}
 
 	for (i = 0; i < nb; i++) {
 		/*
@@ -3037,6 +3075,9 @@ static int spi_get_gpio_descs(struct spi_controller *ctlr)
 			return -EINVAL;
 		}
 		native_cs_mask |= BIT(i);
+	}
+	if (ctlr->idle_state_provided) {
+		set_binary_cs(ctlr, ctlr->idle_state, 0);
 	}
 
 	ctlr->unused_native_cs = ffs(~native_cs_mask) - 1;
