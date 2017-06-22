@@ -204,11 +204,36 @@ static ssize_t show_debug(struct device *device,
 static struct device_attribute debug_device_attr = \
 	__ATTR(debug, 0660, show_debug, store_debug);
 
+static ssize_t show_scanline(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	struct fb_info *fb_info = dev_get_drvdata(dev);
+	struct fbtft_par *par = fb_info->par;
+	int ret;
+
+	if (!par->fbtftops.read_scanline)
+		return 0;
+
+	ret = par->fbtftops.read_scanline(par);
+	if (ret < 0)
+		return ret;
+	return sprintf(buf, "%d\n", ret);
+}
+
+static DEVICE_ATTR(scanline, S_IRUGO, show_scanline, NULL);
+
 void fbtft_sysfs_init(struct fbtft_par *par)
 {
 	device_create_file(par->info->dev, &debug_device_attr);
 	if (par->gamma.curves && par->fbtftops.set_gamma)
 		device_create_file(par->info->dev, &gamma_device_attrs[0]);
+
+	if (par->fbtftops.read_scanline) {
+		if (device_create_file(par->info->dev, &dev_attr_scanline))
+			dev_err(par->info->dev, "Error on creating sysfs file for scanline\n");
+		else
+			dev_err(par->info->dev, "created sysfs entry for reading scanline\n");
+	}
 }
 
 void fbtft_sysfs_exit(struct fbtft_par *par)
@@ -216,4 +241,5 @@ void fbtft_sysfs_exit(struct fbtft_par *par)
 	device_remove_file(par->info->dev, &debug_device_attr);
 	if (par->gamma.curves && par->fbtftops.set_gamma)
 		device_remove_file(par->info->dev, &gamma_device_attrs[0]);
+	device_remove_file(par->info->dev, &dev_attr_scanline);
 }
