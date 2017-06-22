@@ -13533,9 +13533,12 @@ F: drivers/amlogic/cpu_hotplug/*
 
 AMLOGIC PWM DRIVER
 M: Jian Hu <jian.hu@amlogic.com>
-F: drivers/amlogic/pwm/*
+F: drivers/amlogic/pwm/Kconfig
+F: drivers/amlogic/pwm/Makefile
+F: drivers/amlogic/pwm/pwm_meson.c
+F: drivers/amlogic/pwm/pwm_meson_sysfs.c
 F: include/linux/amlogic/pwm_meson.h
-F: include/dt-bindings/pwm/meosn.h
+F: Documentation/devicetree/bindings/amlogic/pwm-meson.txt
 F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
 F: arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
 F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
@@ -13820,11 +13823,6 @@ F: include/linux/amlogic/cpu_version.h
 AMLOGIC PINCTRL SUPPORT FOR M8B
 M: Xingyu Chen <xingyu.chen@amlogic.com>
 F: drivers/amlogic/pinctrl/pinctrl-meson8b.c
-
-AMLOGIC PWM DRIVER NEW FILES
-M: jian.hu <jian.hu@amlogic.com>
-F: drivers/amlogic/pwm/pwm_meson_util.h
-F: drivers/amlogic/pwm/pwm_meson_util.c
 
 AMLOGIC M400 BSP
 M: Peipeng Zhao <peipeng.zhao@amlogic.com>

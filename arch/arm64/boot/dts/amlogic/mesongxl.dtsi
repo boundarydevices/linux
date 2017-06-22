@@ -21,7 +21,6 @@
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/gpio/gxl.h>
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
 #include <dt-bindings/pwm/pwm.h>
@@ -1238,30 +1237,37 @@ i2c_ao: i2c@c8100500{ /*I2C-AO*/
 		status = "okay";
 	};
 
-	pwm:meson-pwm {
-		compatible = "amlogic, meson-pwm";
-		status = "okay";
-		#pwm-cells = <2>;
-		pwm-outputs = <PWM_A>,<PWM_B>,<PWM_C>,<PWM_D>,
-				<PWM_E>,<PWM_F>,<PWM_AO_A>,<PWM_AO_B>,
-				<PWM_A2>,<PWM_B2>,<PWM_C2>,<PWM_D2>,
-				<PWM_E2>,<PWM_F2>,<PWM_AO_A2>,<PWM_AO_B2>;
-		reg = <0x0 0xc1108550  0x0 0x1c>,
-		      <0x0 0xc1108650  0x0 0x1c>,
-		      <0x0 0xc11086c0  0x0 0x1c>,
-		      <0x0 0xc8100550  0x0 0x1c>;
-		clocks = <&xtal>,
-				<&clkc CLKID_PLL_VID_NOT>,
-				<&clkc CLKID_FCLK_DIV4>,
-				<&clkc CLKID_FCLK_DIV3>;
-		clock-names = "xtal",
-					"vid_pll_clk",
-					"fclk_div4",
-					"fclk_div3";
-		clock-select = <XTAL>,<XTAL>,<XTAL>,<XTAL>,
-						<XTAL>,<XTAL>,<XTAL>,<XTAL>;
-		/*all channels use the default clock source XTAL_CLK*/
-		/*and you can shoose it in dt-bindings/pwm/meson.h*/
+    pwm_ab: pwm@c1108550 {
+		compatible = "amlogic,gx-ee-pwm";
+		reg = <0x0 0xc1108550 0x0 0x1c>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		status = "disabled";
+	};
+    pwm_cd: pwm@c1108650 {
+		compatible = "amlogic,gx-ee-pwm";
+		reg = <0x0 0xc1108650 0x0 0x1c>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		status = "disabled";
+	};
+    pwm_ef: pwm@c11086c0 {
+		compatible = "amlogic,gx-ee-pwm";
+		reg = <0x0 0xc11086c0 0x0 0x1c>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		status = "disabled";
+	};
+    pwm_aoab: pwm@c8100550 {
+		compatible = "amlogic,gx-ao-pwm";
+		reg = <0x0 0xc8100550 0x0 0x1c>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		status = "disabled";
 	};
 };
 

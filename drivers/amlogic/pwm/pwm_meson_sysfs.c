@@ -14,7 +14,6 @@
  * more details.
  *
  */
-
 #undef pr_fmt
 #define pr_fmt(fmt) "pwm: " fmt
 
@@ -24,120 +23,74 @@
 #include <linux/slab.h>
 #include <linux/pwm.h>
 #include <linux/amlogic/pwm_meson.h>
-#include "pwm_meson_util.h"
 
 /**
  * pwm_constant_enable()
  *	- start a constant PWM output toggling
- *	  txl only support 8 channel constant output
  * @chip: aml_pwm_chip struct
  * @index: pwm channel to choose,like PWM_A or PWM_B
  */
-int pwm_constant_enable(struct aml_pwm_chip *chip, int index)
+int pwm_constant_enable(struct meson_pwm *meson, int index)
 {
-	struct aml_pwm_chip *aml_chip = chip;
-	int id = index;
-	struct pwm_aml_regs *aml_reg =
-	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
-	unsigned int val;
+	u32 enable;
 
-	if ((id < 0) && (id > 9)) {
-		dev_err(aml_chip->chip.dev,
-				"constant,index is not within the scope!\n");
-		return -EINVAL;
-	}
-
-	switch (id) {
-	case PWM_A:
-	case PWM_C:
-	case PWM_E:
-	case PWM_AO_A:
-	case PWM_AO_C:
-		val = 1 << 28;
+	switch (index) {
+	case MESON_PWM_0:
+		enable = MISC_A_CONSTANT;
 		break;
-	case PWM_B:
-	case PWM_D:
-	case PWM_F:
-	case PWM_AO_B:
-	case PWM_AO_D:
-		val = 1 << 29;
+	case MESON_PWM_1:
+		enable = MISC_B_CONSTANT;
 		break;
 	default:
-		dev_err(aml_chip->chip.dev,
-				"enable,index is not legal\n");
 		return -EINVAL;
 	}
-	pwm_set_reg_bits(&aml_reg->miscr, val, val);
+	pwm_set_reg_bits(meson->base + REG_MISC_AB, enable, enable);
 
 	return 0;
 }
 EXPORT_SYMBOL_GPL(pwm_constant_enable);
-
 
 /**
  * pwm_constant_disable() - stop a constant PWM output toggling
  * @chip: aml_pwm_chip struct
  * @index: pwm channel to choose,like PWM_A or PWM_B
  */
-
-int pwm_constant_disable(struct aml_pwm_chip *chip, int index)
+int pwm_constant_disable(struct meson_pwm *meson, int index)
 {
-	struct aml_pwm_chip *aml_chip = chip;
-	int id = index;
-	struct pwm_aml_regs *aml_reg =
-	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
-	unsigned int val;
-	unsigned int mask;
+	u32 enable;
 
-	if ((id < 0) && (id > 9)) {
-		dev_err(aml_chip->chip.dev,
-				"constant disable,index is not within the scope!\n");
-		return -EINVAL;
-	}
+	switch (index) {
+	case MESON_PWM_0:
+		enable = BIT(28);
+		break;
 
-	switch (id) {
-	case PWM_A:
-	case PWM_C:
-	case PWM_E:
-	case PWM_AO_A:
-	case PWM_AO_C:
-		mask = 1 << 28;
-		val = 0 << 28;
+	case MESON_PWM_1:
+		enable = BIT(29);
 		break;
-	case PWM_B:
-	case PWM_D:
-	case PWM_F:
-	case PWM_AO_B:
-	case PWM_AO_D:
-		mask = 1 << 29;
-		val = 0 << 29;
-		break;
+
 	default:
-		dev_err(aml_chip->chip.dev,
-				"constant disable,index is not legal\n");
 		return -EINVAL;
 	}
-	pwm_set_reg_bits(&aml_reg->miscr, mask, val);
+	pwm_clear_reg_bits(meson->base + REG_MISC_AB, enable);
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(pwm_constant_disable);
 
-
 static ssize_t pwm_constant_show(struct device *child,
 			       struct device_attribute *attr, char *buf)
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
-	return sprintf(buf, "%d\n", chip->variant.constant);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
+	return sprintf(buf, "%d\n", meson->variant.constant);
 }
 
 static ssize_t pwm_constant_store(struct device *child,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size)
-
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
 	int val, ret, id, res;
 
 	res = sscanf(buf, "%d %d", &val, &id);
@@ -145,20 +98,15 @@ static ssize_t pwm_constant_store(struct device *child,
 		dev_err(child, "Can't parse pwm id,usage:[value index]\n");
 		return -EINVAL;
 	}
-	if ((id < 0) && (id > 9)) {
-		dev_err(chip->chip.dev,
-				"constant,index is not within the scope!\n");
-		return -EINVAL;
-	}
 
 	switch (val) {
 	case 0:
-		ret = pwm_constant_disable(chip, id);
-		chip->variant.constant = 0;
+		ret = pwm_constant_disable(meson, id);
+		meson->variant.constant = 0;
 		break;
 	case 1:
-		ret = pwm_constant_enable(chip, id);
-		chip->variant.constant = 1;
+		ret = pwm_constant_enable(meson, id);
+		meson->variant.constant = 1;
 		break;
 	default:
 		ret = -EINVAL;
@@ -176,63 +124,39 @@ static ssize_t pwm_constant_store(struct device *child,
  * @index: pwm channel to choose,like PWM_A or PWM_B,range from 1 to 15
  * @value: blink times to set,range from 1 to 255
  */
-
-int pwm_set_times(struct aml_pwm_chip *chip,
+int pwm_set_times(struct meson_pwm *meson,
 						int index, int value)
 {
-	struct aml_pwm_chip *aml_chip = chip;
-	int id = index;
-	struct pwm_aml_regs *aml_reg =
-	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
-	unsigned int clear_val;
-	unsigned int val;
+	unsigned int clear_val, val;
 
-	if (((val <= 0) && (val > 255)) || ((id < 0) && (id > 20))) {
-		dev_err(aml_chip->chip.dev,
+	if ((value < 0) && (value > 255)) {
+		dev_err(meson->chip.dev,
 				"index or value is not within the scope!\n");
 		return -EINVAL;
 	}
 
-	switch (id) {
-	case PWM_A:
-	case PWM_C:
-	case PWM_E:
-	case PWM_AO_A:
-	case PWM_AO_C:
+	switch (index) {
+	case MESON_PWM_0:
 		clear_val = 0xff << 24;
 		val = value << 24;
 		break;
-	case PWM_B:
-	case PWM_D:
-	case PWM_F:
-	case PWM_AO_B:
-	case PWM_AO_D:
+	case MESON_PWM_1:
 		clear_val = 0xff << 8;
 		val = value << 8;
 		break;
-	case PWM_A2:
-	case PWM_C2:
-	case PWM_E2:
-	case PWM_AO_A2:
-	case PWM_AO_C2:
+	case MESON_PWM_2:
 		clear_val = 0xff << 16;
 		val = value << 16;
 		break;
-	case PWM_B2:
-	case PWM_D2:
-	case PWM_F2:
-	case PWM_AO_B2:
-	case PWM_AO_D2:
+	case MESON_PWM_3:
 		clear_val = 0xff;
 		val = value;
 		break;
 	default:
-		dev_err(aml_chip->chip.dev,
-				"times,index is not legal\n");
 		return -EINVAL;
 	}
-	pwm_clear_reg_bits(&aml_reg->tr, clear_val);
-	pwm_write_reg1(&aml_reg->tr, val);
+	pwm_clear_reg_bits(meson->base + REG_TIME_AB, clear_val);
+	pwm_write_reg1(meson->base + REG_TIME_AB, val);
 
 	return 0;
 }
@@ -241,17 +165,17 @@ EXPORT_SYMBOL_GPL(pwm_set_times);
 static ssize_t pwm_times_show(struct device *child,
 			       struct device_attribute *attr, char *buf)
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
-	return sprintf(buf, "%d\n", chip->variant.times);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
+	return sprintf(buf, "%d\n", meson->variant.times);
 }
 
 static ssize_t pwm_times_store(struct device *child,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size)
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
 	int val, ret, id, res;
 
 	res = sscanf(buf, "%d %d", &val, &id);
@@ -260,14 +184,8 @@ static ssize_t pwm_times_store(struct device *child,
 		"Can't parse pwm id and value,usage:[value index]\n");
 		return -EINVAL;
 	}
-	if (((val <= 0) && (val > 255)) || ((id < 0) && (id > 15))) {
-		dev_err(chip->chip.dev,
-		"index or value is not within the scope!\n");
-		return -EINVAL;
-	}
-
-	ret = pwm_set_times(chip, id, val);
-	chip->variant.times = val;
+	ret = pwm_set_times(meson, id, val);
+	meson->variant.times = val;
 
 	return ret ? : size;
 }
@@ -279,40 +197,21 @@ static ssize_t pwm_times_store(struct device *child,
  * @chip: aml_pwm_chip struct
  * @index: pwm channel to choose,like PWM_A or PWM_B
  */
-int pwm_blink_enable(struct aml_pwm_chip *chip, int index)
+int pwm_blink_enable(struct meson_pwm *meson, int index)
 {
-	struct aml_pwm_chip *aml_chip = chip;
-	int id = index;
-	struct pwm_aml_regs *aml_reg =
-	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
-	unsigned int val;
+	u32 enable;
 
-	if ((id < 0) && (id > 9)) {
-		dev_err(aml_chip->chip.dev, "index is not within the scope!\n");
-		return -EINVAL;
-	}
-
-	switch (id) {
-	case PWM_A:
-	case PWM_C:
-	case PWM_E:
-	case PWM_AO_A:
-	case PWM_AO_C:
-		val = 1 << 8;
+	switch (index) {
+	case MESON_PWM_0:
+		enable = BLINK_A;
 		break;
-	case PWM_B:
-	case PWM_D:
-	case PWM_F:
-	case PWM_AO_B:
-	case PWM_AO_D:
-		val = 1 << 9;
+	case MESON_PWM_1:
+		enable = BLINK_B;
 		break;
 	default:
-		dev_err(aml_chip->chip.dev,
-				"blink enable,index is not legal\n");
 		return -EINVAL;
 	}
-	pwm_set_reg_bits(&aml_reg->br, val, val);
+	pwm_set_reg_bits(meson->base + REG_BLINK_AB, enable, enable);
 
 	return 0;
 }
@@ -323,43 +222,23 @@ EXPORT_SYMBOL_GPL(pwm_blink_enable);
  * @chip: aml_pwm_chip struct
  * @index: pwm channel to choose,like PWM_A or PWM_B
  */
-int pwm_blink_disable(struct aml_pwm_chip *chip, int index)
+int pwm_blink_disable(struct meson_pwm *meson, int index)
 {
-	struct aml_pwm_chip *aml_chip = chip;
-	int id = index;
-	struct pwm_aml_regs *aml_reg =
-	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
-	unsigned int val;
-	unsigned int mask;
+	u32 enable;
 
-	if ((id < 1) && (id > 9)) {
-		dev_err(aml_chip->chip.dev, "index is not within the scope!\n");
-		return -EINVAL;
-	}
+	switch (index) {
+	case MESON_PWM_0:
+		enable = BLINK_A;
+		break;
 
-	switch (id) {
-	case PWM_A:
-	case PWM_C:
-	case PWM_E:
-	case PWM_AO_A:
-	case PWM_AO_C:
-		mask = 1 << 8;
-		val = 0 << 8;
+	case MESON_PWM_1:
+		enable = BLINK_B;
 		break;
-	case PWM_B:
-	case PWM_D:
-	case PWM_F:
-	case PWM_AO_B:
-	case PWM_AO_D:
-		mask = 1 << 9;
-		val = 0 << 9;
-		break;
+
 	default:
-		dev_err(aml_chip->chip.dev,
-				"blink enable,index is not legal\n");
 		return -EINVAL;
 	}
-	pwm_set_reg_bits(&aml_reg->br, mask, val);
+	pwm_clear_reg_bits(meson->base + REG_BLINK_AB, enable);
 
 	return 0;
 }
@@ -368,17 +247,17 @@ EXPORT_SYMBOL_GPL(pwm_blink_disable);
 static ssize_t pwm_blink_enable_show(struct device *child,
 			       struct device_attribute *attr, char *buf)
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
-	return sprintf(buf, "%d\n", chip->variant.blink_enable);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
+	return sprintf(buf, "%d\n", meson->variant.blink_enable);
 }
 
 static ssize_t pwm_blink_enable_store(struct device *child,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size)
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
 	int val, ret, id, res;
 
 	res = sscanf(buf, "%d %d", &val, &id);
@@ -387,19 +266,15 @@ static ssize_t pwm_blink_enable_store(struct device *child,
 		"blink enable,Can't parse pwm id,usage:[value index]\n");
 		return -EINVAL;
 	}
-	if ((id < 1) && (id > 7)) {
-		dev_err(chip->chip.dev, "index is not within the scope!\n");
-		return -EINVAL;
-	}
 
 	switch (val) {
 	case 0:
-		ret = pwm_blink_disable(chip, id);
-		chip->variant.blink_enable = 0;
+		ret = pwm_blink_disable(meson, id);
+		meson->variant.blink_enable = 0;
 		break;
 	case 1:
-		ret = pwm_blink_enable(chip, id);
-		chip->variant.blink_enable = 1;
+		ret = pwm_blink_enable(meson, id);
+		meson->variant.blink_enable = 1;
 		break;
 	default:
 		ret = -EINVAL;
@@ -416,46 +291,33 @@ static ssize_t pwm_blink_enable_store(struct device *child,
  * @index: pwm channel to choose,like PWM_A or PWM_B
  * @value: blink times to set,range from 1 to 15
  */
-int pwm_set_blink_times(struct aml_pwm_chip *chip,
+int pwm_set_blink_times(struct meson_pwm *meson,
 								int index,
 								int value)
 {
-	struct aml_pwm_chip *aml_chip = chip;
-	int id = index;
-	struct pwm_aml_regs *aml_reg =
-	(struct pwm_aml_regs *)pwm_id_to_reg(id, aml_chip);
-	unsigned int clear_val;
-	unsigned int val;
+	unsigned int clear_val, val;
 
-	if (((val <= 0) && (val > 15)) || ((id < 1) && (id > 9))) {
-		dev_err(aml_chip->chip.dev,
+	if ((value < 0) && (value > 15)) {
+		dev_err(meson->chip.dev,
 		"value or index is not within the scope!\n");
 		return -EINVAL;
 	}
-	switch (id) {
-	case PWM_A:
-	case PWM_C:
-	case PWM_E:
-	case PWM_AO_A:
-	case PWM_AO_C:
+	switch (index) {
+	case MESON_PWM_0:
 		clear_val = 0xf;
 		val = value;
 		break;
-	case PWM_B:
-	case PWM_D:
-	case PWM_F:
-	case PWM_AO_B:
-	case PWM_AO_D:
+
+	case MESON_PWM_1:
 		clear_val = 0xf << 4;
 		val = value << 4;
 		break;
+
 	default:
-		dev_err(aml_chip->chip.dev,
-				"times,index is not legal\n");
 		return -EINVAL;
 	}
-	pwm_clear_reg_bits(&aml_reg->br, clear_val);
-	pwm_write_reg1(&aml_reg->br, val);
+	pwm_clear_reg_bits(meson->base + REG_BLINK_AB, clear_val);
+	pwm_write_reg1(meson->base + REG_BLINK_AB, val);
 
 	return 0;
 }
@@ -464,17 +326,17 @@ EXPORT_SYMBOL_GPL(pwm_set_blink_times);
 static ssize_t pwm_blink_times_show(struct device *child,
 			       struct device_attribute *attr, char *buf)
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
-	return sprintf(buf, "%d\n", chip->variant.blink_times);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
+	return sprintf(buf, "%d\n", meson->variant.blink_times);
 }
 
 static ssize_t pwm_blink_times_store(struct device *child,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size)
 {
-	struct aml_pwm_chip *chip =
-		(struct aml_pwm_chip *)dev_get_drvdata(child);
+	struct meson_pwm *meson =
+		(struct meson_pwm *)dev_get_drvdata(child);
 	int val, ret, id, res;
 
 	res = sscanf(buf, "%d %d", &val, &id);
@@ -483,18 +345,24 @@ static ssize_t pwm_blink_times_store(struct device *child,
 		"Can't parse pwm id and value,usage:[value index]\n");
 		return -EINVAL;
 	}
-	if (((val <= 0) && (val > 15)) || ((id < 0) && (id > 7))) {
-		dev_err(chip->chip.dev,
-		"value or index is not within the scope!\n");
-		return -EINVAL;
-	}
-
-	ret = pwm_set_blink_times(chip, id, val);
-	chip->variant.blink_times = val;
+	ret = pwm_set_blink_times(meson, id, val);
+	meson->variant.blink_times = val;
 
 	return ret ? : size;
 }
 
+int pwm_register_debug(struct meson_pwm *meson)
+{
+	int i, value;
+
+	for (i = 0; i < 8; i++) {
+		value = readl(meson->base + 4*i);
+		pr_info("[base+%x] = %x\n", 4*i, value);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(pwm_register_debug);
 
 static DEVICE_ATTR(constant, 0644,
 						pwm_constant_show,
@@ -526,5 +394,16 @@ int meson_pwm_sysfs_init(struct device *dev)
 	int retval;
 
 	retval = sysfs_create_group(&dev->kobj, &pwm_attr_group);
-	return retval;
+	if (retval) {
+		dev_err(dev,
+		"pwm sysfs group creation failed: %d\n", retval);
+		return retval;
+	}
+
+	return 0;
+}
+
+void meson_pwm_sysfs_exit(struct device *dev)
+{
+	sysfs_remove_group(&dev->kobj, &pwm_attr_group);
 }

@@ -551,16 +551,22 @@
 		interrupts = <	0 67 4>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
 		power_on_pin = <&gpio       GPIOX_7       GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "wifi_32k_pins";
+		pinctrl-names = "default";
 		pinctrl-0 = <&wifi_32k_pins>;
 		pwm_config = <&wifi_pwm_conf>;
 	};
 
 	wifi_pwm_conf:wifi_pwm_conf{
-		pwm_channel1 = <PWM_A>;
-		pwm_channel2 = <PWM_A2>;
-		pwm_channel1_conf = <30541 15270 6>;
-		pwm_channel2_conf = <30518 15259 9>;
+		pwm_channel1_conf {
+			pwms = <&pwm_ab MESON_PWM_0 30040 0>;
+			duty-cycle = <15020>;
+			times = <10>;
+		};
+		pwm_channel2_conf {
+			pwms = <&pwm_ab MESON_PWM_2 30030 0>;
+			duty-cycle = <15015>;
+			times = <12>;
+		};
 	};
 
 	sd_emmc_c: emmc@ffe07000 {
@@ -831,6 +837,9 @@
 	status = "ok";
 };
 
+&pwm_ab {
+	status = "okay";
+};
 /* Audio Related start */
 /* for spk board */
 &i2c_b {

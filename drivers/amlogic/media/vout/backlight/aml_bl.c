@@ -388,7 +388,7 @@ static void bl_pwm_request(struct bl_pwm_config_s *bl_pwm)
 			return;
 		}
 
-		bl_pwm->bl_pwm_chip = to_aml_pwm_chip(bl_pwm->bl_pwm_ch->chip);
+		bl_pwm->meson = to_meson_pwm(bl_pwm->bl_pwm_ch->chip);
 		pwm_enable(bl_pwm->bl_pwm_ch);
 		break;
 	default:
@@ -795,11 +795,11 @@ static void bl_set_pwm(struct bl_pwm_config_s *bl_pwm)
 			pwm_config(bl_pwm->bl_pwm_ch, pwm_duty, pwm_period);
 			pwm_set_polarity(bl_pwm->bl_pwm_ch, pol);
 			if (out_level == 0xff) {
-				pwm_constant_disable(bl_pwm->bl_pwm_chip,
+				pwm_constant_disable(bl_pwm->meson,
 					bl_pwm->pwm_port);
 			} else {
 				/* pwm duty 100% or 0% special control */
-				pwm_constant_enable(bl_pwm->bl_pwm_chip,
+				pwm_constant_enable(bl_pwm->meson,
 					bl_pwm->pwm_port);
 			}
 		} else {

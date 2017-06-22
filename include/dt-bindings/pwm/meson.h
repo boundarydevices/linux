@@ -18,62 +18,25 @@
 #ifndef _DT_BINDINGS_PWM_MESON_H
 #define _DT_BINDINGS_PWM_MESON_H
 
-
-#define	PWM_A			0
-#define	PWM_B			1
-#define	PWM_C			2
-#define	PWM_D			3
-#define	PWM_E			4
-#define	PWM_F			5
-#define	PWM_AO_A		6
-#define	PWM_AO_B		7
-#define	PWM_AO_C		8
-#define	PWM_AO_D		9
-
-/*
- * Addtional 8 channels for gxtvbb , gxl ,gxm and txl
+/*defination for meson pwm channel index
+ *for example:
+ *	1.there are four pwm controllers for axg:
+ *	pwm A/B ,pwm C/D, pwm AOA/AOB, pwm AOC/AOD.
+ *  each controller has four pwm channels:
+ *  MESON_PWM_0,MESON_PWM_1,MESON_PWM_2,MESON_PWM_3
+ *  when double pwm channels used, pwm channel
+ *		[ MESON_PWM_0 and MESON_PWM_2 ],
+ *		[ MESON_PWM_1 and MESON_PWM_3 ],
+ *  should be used together.
+ *
+ *	2.there are two three pwm controllers for m8b:
+ *	pwm A/B,pwm C/D,pwm E/F.
+ *	each controllere has two pwm channels:
+ *	MESON_PWM_0 and MESON_PWM_1.
  */
-#define	PWM_A2			10
-#define	PWM_B2			11
-#define	PWM_C2			12
-#define	PWM_D2			13
-#define	PWM_E2			14
-#define	PWM_F2			15
-#define	PWM_AO_A2		16
-#define	PWM_AO_B2		17
-#define	PWM_AO_C2		18
-#define	PWM_AO_D2		19
-/*add another four channels for txlx*/
-
-
-
-
-
-#define CLKID_PLL_VID_NOT  /*for gxl gxm not support it*/
-
-
-
-/* fclk_div4
- *--------------|\
- * fclk_div3	| \
- *--------------|  \    get clock source
- * vid_pll_clk	|  |---------------------
- *--------------|  |
- *	XTAL		| /
- *--------------|/
- * vid_pll_clk is not defined and described now,
- *waiting for  CLKID_VID_PLL is suportted in the future,
- * the macro is used for compiling passed.
- */
-//#define CLKID_VID_PLL
-
-/*
- * 4 clock sources to choose
- * keep the same order with pwm_aml_clk function in pwm driver
- */
-#define	XTAL			0
-#define	VID_PLL			1
-#define	FCLK_DIV4		2
-#define	FCLK_DIV3		3
+#define		MESON_PWM_0  0
+#define		MESON_PWM_1  1
+#define		MESON_PWM_2  2
+#define		MESON_PWM_3  3
 
 #endif

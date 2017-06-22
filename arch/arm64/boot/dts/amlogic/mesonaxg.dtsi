@@ -373,32 +373,41 @@
 		};/* end of audiobus*/
 	}; /* end of soc*/
 
-	pwm:meson-pwm {
-		compatible = "amlogic, meson-pwm";
-		status = "okay";
-		#pwm-cells = <2>;
-		pwm-outputs = <PWM_A>,<PWM_B>,<PWM_C>,<PWM_D>,
-		<PWM_E>,<PWM_F>,<PWM_AO_A>,<PWM_AO_B>,
-		<PWM_AO_C>,<PWM_AO_D>,<PWM_A2>,<PWM_B2>,
-		<PWM_C2>,<PWM_D2>,<PWM_E2>,<PWM_F2>,<PWM_AO_A2>,
-		<PWM_AO_B2>,<PWM_AO_C2>,<PWM_AO_D2>;
-		reg = <0x0 0xffd1b000  0x0 0x20>,
-				<0x0 0xffd1a000  0x0 0x20>,
-				<0x0 0xff807000  0x0 0x20>,
-				<0x0 0xff802000  0x0 0x20>;
-		clocks = <&xtal>,
-				<&clkc CLKID_PLL_VID_NOT>,
-				<&clkc CLKID_FCLK_DIV4>,
-				<&clkc CLKID_FCLK_DIV3>;
-		clock-names = "xtal",
-					"vid_pll_clk",
-					"fclk_div4",
-					"fclk_div3";
-		clock-select = <XTAL>,<XTAL>,<XTAL>,<XTAL>,
-						<XTAL>,<XTAL>,<XTAL>,<XTAL>,
-						<XTAL>,<XTAL>;
-		/*all channels use the default clock source XTAL_CLK*/
-		/*and you can shoose it in file dt-bindings/pwm/meson.h*/
+    pwm_ab: pwm@ffd1b000 {
+		compatible = "amlogic,axg-ee-pwm";
+		reg = <0x0 0xffd1b000  0x0 0x20>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		/*default xtal 24M  clkin0-clkin2 and clkin1-clkin3
+		 *should be set the same
+		 */
+		status = "disabled";
+	};
+    pwm_cd: pwm@ffd1a000 {
+		compatible = "amlogic,axg-ee-pwm";
+		reg = <0x0 0xffd1a000  0x0 0x20>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		status = "disabled";
+	};
+    pwm_aoab: pwm@ff807000 {
+		compatible = "amlogic,axg-ao-pwm";
+		reg = <0x0 0xff807000  0x0 0x20>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		status = "disabled";
+	};
+
+	pwm_aocd: pwm@ff802000 {
+		compatible = "amlogic,axg-ao-pwm";
+		reg = <0x0 0xff802000  0x0 0x20>;
+		#pwm-cells = <3>;
+		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
+		clock-names = "clkin0","clkin1","clkin2","clkin3";
+		status = "disabled";
 	};
 
 	spicc_a:spicc_a {

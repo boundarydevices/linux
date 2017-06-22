@@ -23,6 +23,7 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
 #include <dt-bindings/pwm/meson.h>
+#include <dt-bindings/pwm/pwm.h>
 #include "skeleton.dtsi"
 
 / {
@@ -777,29 +778,6 @@ dwc2_b {
 		interrupts = <0 36 1>;
 		clocks = <&clkc CLKID_BLKMV>;
 		clock-names = "blkmv";
-	};
-
-	pwm:meson-pwm {
-		compatible = "amlogic, meson-pwm";
-		status = "okay";
-		#pwm-cells = <2>;
-		pwm-outputs = <PWM_A>,<PWM_B>,<PWM_C>,
-					<PWM_D>,<PWM_E>,<PWM_F>;
-		reg = <0xc1108550 0x10>,
-			<0xc1108650 0x10>,
-			<0xc11086c0 0x10>;
-		clocks = <&clkc CLKID_XTAL>,
-				<&clkc CLKID_PLL_VID>,
-				<&clkc CLKID_FCLK_DIV4>,
-				<&clkc CLKID_FCLK_DIV3>;
-		clock-names = "xtal",
-					"vid_pll_clk",
-					"fclk_div4",
-					"fclk_div3";
-		clock-select = <XTAL>,<XTAL>,<XTAL>,
-						<XTAL>,<XTAL>,<XTAL>;
-		/*all channels use the default clock source XTAL_CLK*/
-		/*and you can shoose it in dt-bindings/pwm/meson.h*/
 	};
 
 	saradc: saradc {

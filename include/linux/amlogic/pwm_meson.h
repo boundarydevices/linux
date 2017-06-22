@@ -34,109 +34,96 @@
 #include <linux/clk.h>
 #include <linux/of_address.h>
 #include <linux/amlogic/cpu_version.h>
+#include <linux/clk-provider.h>
+/* for pwm channel index*/
+#include <dt-bindings/pwm/meson.h>
 
-
-#define AML_PWM_M8BB_NUM		6
-#define AML_PWM_GXBB_NUM		8
-#define AML_PWM_GXTVBB_NUM		16
-#define AML_PWM_TXLX_NUM		20
-#define AML_PWM_AXG_NUM			20
-
-
-
-enum pwm_channel {
-	PWM_A = 0,
-	PWM_B,
-	PWM_C,
-	PWM_D,
-	PWM_E,
-	PWM_F,
-	PWM_AO_A,
-	PWM_AO_B,
-	PWM_AO_C,
-	PWM_AO_D,
-
-	PWM_A2,
-	PWM_B2,
-	PWM_C2,
-	PWM_D2,
-	PWM_E2,
-	PWM_F2,
-	PWM_AO_A2,
-	PWM_AO_B2,
-	PWM_AO_C2,
-	PWM_AO_D2,
-	/* add another four channels for txlx*/
-
-};
-
-/*pwm att*/
-struct aml_pwm_channel {
-	unsigned int pwm_hi;
-	unsigned int pwm_lo;
-	unsigned int pwm_pre_div;
-
-	unsigned int period_ns;
-	unsigned int duty_ns;
-	unsigned int pwm_freq;
-};
-
-/*pwm regiset att*/
-struct aml_pwm_variant {
-	u32 output_mask;
-/*
- *add for gxtvbb , gxl , gxm
+/*a group pwm registers offset address
+ * for example:
+ * PWM A B
+ * PWM C D
+ * PWM E F
+ * PWM AO A
+ * PWM AO B
  */
+#define REG_PWM_A				0x0
+#define REG_PWM_B				0x4
+#define REG_MISC_AB				0x8
+#define REG_DS_AB				0xc
+#define REG_TIME_AB				0x10
+#define REG_PWM_A2				0x14
+#define REG_PWM_B2				0x18
+#define REG_BLINK_AB			0x1c
 
+/* pwm output enable */
+#define MISC_A_EN				BIT(0)
+#define MISC_B_EN				BIT(1)
+#define MISC_A2_EN				BIT(25)
+#define MISC_B2_EN				BIT(24)
+/* pwm polarity enable */
+#define MISC_A_INVERT			BIT(26)
+#define MISC_B_INVERT			BIT(27)
+/* when you want 0% or 100% waveform
+ * constant bit should be set.
+ */
+#define MISC_A_CONSTANT			BIT(28)
+#define MISC_B_CONSTANT			BIT(29)
+/*
+ * pwm a and b clock enable/disable
+ */
+#define MISC_A_CLK_EN			BIT(15)
+#define MISC_B_CLK_EN			BIT(23)
+/*
+ * blink control bit
+ */
+#define BLINK_A					BIT(8)
+#define BLINK_B					BIT(9)
+
+
+#define PWM_HIGH_SHIFT			16
+#define MISC_CLK_DIV_MASK		0x7f
+#define MISC_B_CLK_DIV_SHIFT	16
+#define MISC_A_CLK_DIV_SHIFT	8
+#define MISC_B_CLK_SEL_SHIFT	6
+#define MISC_A_CLK_SEL_SHIFT	4
+#define MISC_CLK_SEL_WIDTH		2
+#define PWM_CHANNELS_PER_GROUP	2
+
+static const unsigned int mux_reg_shifts[] = {
+	MISC_A_CLK_SEL_SHIFT,
+	MISC_B_CLK_SEL_SHIFT
+};
+
+/*pwm register att*/
+struct meson_pwm_variant {
 	unsigned int times;
-/*
- *include above and add for txl
- */
 	unsigned int constant;
 	unsigned int blink_enable;
 	unsigned int blink_times;
 };
 
-/*
- * add addr if hardware add
- *exam: txlx add pwm ao c/d
+/*for soc data:
+ *double channel enable
+ * double_channel = false ,could use PWM A
+ * double_channel = true , could use PWM A and PWM A2
  */
-struct aml_pwm_baseaddr {
-	void __iomem *ab_base;
-	void __iomem *cd_base;
-	void __iomem *ef_base;
-	void __iomem *aoab_base;
-	void __iomem *aocd_base;
+struct meson_pwm_data {
+	bool double_channel;
+	const char * const *parent_names;
 };
 
-struct aml_pwm_chip {
+struct meson_pwm {
 	struct pwm_chip chip;
-	struct aml_pwm_baseaddr baseaddr;
-	void __iomem *ao_blink_base;/*for txl*/
-	struct aml_pwm_variant variant;
+	void __iomem *base;
+	struct meson_pwm_data *data;
+	struct meson_pwm_variant variant;
 	u32 inverter_mask;
+	spinlock_t lock;
+
 	unsigned int clk_mask;
-	struct clk	*xtal_clk;
-	struct clk	*vid_pll_clk;
-	struct clk	*fclk_div4_clk;
-	struct clk	*fclk_div3_clk;
 };
 
-/*there are 8 registers
- *for each pwm group
- */
-struct pwm_aml_regs {
-	u32 dar;/* A Duty Register */
-	u32 dbr;/* B Duty Register */
-	u32 miscr;/* misc Register */
-	u32 dsr;/*DS Register*/
-	u32 tr;/*times Register*/
-	u32 da2r;/* A2 Duty Register */
-	u32 db2r;/* B2 Duty Register */
-	u32 br;/*Blink Register*/
-};
-
-struct aml_pwm_chip *to_aml_pwm_chip(struct pwm_chip *chip);
+/*the functions only use for meson pwm driver*/
 void pwm_set_reg_bits(void __iomem  *reg,
 						unsigned int mask,
 						const unsigned int val);
@@ -148,25 +135,38 @@ void pwm_clear_reg_bits(void __iomem *reg, const unsigned int  val);
 
 void pwm_write_reg1(void __iomem *reg, const unsigned int  val);
 
-
 int meson_pwm_sysfs_init(struct device *dev);
+void meson_pwm_sysfs_exit(struct device *dev);
+
 
 #if IS_ENABLED(CONFIG_AMLOGIC_PWM)
-int pwm_constant_enable(struct aml_pwm_chip *chip, int index);
-int pwm_constant_disable(struct aml_pwm_chip *chip, int index);
-
-int pwm_blink_enable(struct aml_pwm_chip *chip, int index);
-int pwm_blink_disable(struct aml_pwm_chip *chip, int index);
-
-int pwm_set_times(struct aml_pwm_chip *chip,
-						int index, int value);
-int pwm_set_blink_times(struct aml_pwm_chip *chip,
+int pwm_register_debug(struct meson_pwm *meson);
+struct meson_pwm *to_meson_pwm(struct pwm_chip *chip);
+int pwm_constant_enable(struct meson_pwm *meson, int index);
+int pwm_constant_disable(struct meson_pwm *meson, int index);
+int pwm_blink_enable(struct meson_pwm *meson, int index);
+int pwm_blink_disable(struct meson_pwm *meson, int index);
+int pwm_set_blink_times(struct meson_pwm *meson,
 								int index,
 								int value);
+int pwm_set_times(struct meson_pwm *meson,
+						int index, int value);
+
 
 #else
+static inline int pwm_register_debug
+				(struct meson_pwm *meson)
+{
+	return -EINVAL;
+}
+
+struct meson_pwm *to_meson_pwm(struct pwm_chip *chip)
+{
+	return NULL;
+}
+
 static inline int pwm_constant_enable
-				(struct aml_pwm_chip *chip, int index)
+				(struct meson_pwm *meson, int index)
 {
 	return -EINVAL;
 }
@@ -178,26 +178,26 @@ static inline int pwm_constant_disable
 }
 
 static inline int pwm_blink_enable
-				(struct aml_pwm_chip *chip, int index)
+				(struct meson_pwm *meson, int index)
 {
 	return -EINVAL;
 }
 
 static inline int pwm_blink_disable
-				(struct aml_pwm_chip *chip, int index)
+				(struct meson_pwm *meson, int index)
 {
 	return -EINVAL;
 }
 
-static inline int pwm_set_times(struct aml_pwm_chip *chip,
-						int index, int value)
-{
-	return -EINVAL;
-}
-
-static inline int pwm_set_blink_times(struct aml_pwm_chip *chip,
+static inline int pwm_set_blink_times(struct meson_pwm *meson,
 								int index,
-								int value)
+								int value);
+{
+	return -EINVAL;
+}
+static inline int pwm_set_times(struct meson_pwm *meson,
+							int index, int value)
+
 {
 	return -EINVAL;
 }

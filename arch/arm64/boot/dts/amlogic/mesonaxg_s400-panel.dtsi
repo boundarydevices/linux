@@ -113,7 +113,7 @@
 	backlight{
 		compatible = "amlogic, backlight";
 		dev_name = "backlight";
-		status = "okay";
+		status = "disabled";
 		key_valid = <0>;
 		pinctrl-names = "pwm_on";
 		pinctrl-0 = <&bl_pwm_on_pins>;

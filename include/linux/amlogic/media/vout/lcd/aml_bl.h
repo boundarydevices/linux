@@ -98,7 +98,7 @@ struct bl_gpio_s {
 struct bl_pwm_config_s {
 	unsigned int index;
 	struct pwm_device *bl_pwm_ch;
-	struct aml_pwm_chip *bl_pwm_chip;
+	struct meson_pwm *meson;
 	enum bl_pwm_method_e pwm_method;
 	enum bl_pwm_port_e pwm_port;
 	unsigned int level_max;
