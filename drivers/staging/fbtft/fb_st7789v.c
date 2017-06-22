@@ -69,6 +69,10 @@ enum st7789v_command {
 #define MADCTL_MX BIT(6) /* bitmask for column address order */
 #define MADCTL_MY BIT(7) /* bitmask for page address order */
 
+#define FMT16 (MIPI_DCS_PIXEL_FMT_16BIT | (MIPI_DCS_PIXEL_FMT_16BIT << 4))
+#define FMT18 (MIPI_DCS_PIXEL_FMT_18BIT | (MIPI_DCS_PIXEL_FMT_18BIT << 4))
+
+
 /**
  * init_display() - initialize the display controller
  *
@@ -93,9 +97,9 @@ static int init_display(struct fbtft_par *par)
 
 	/* set pixel format to RGB-565 */
 	write_reg(par, MIPI_DCS_SET_PIXEL_FORMAT,
-		(pdata->display.bpp == 16) ? MIPI_DCS_PIXEL_FMT_16BIT :
-				MIPI_DCS_PIXEL_FMT_18BIT);
+		(pdata->display.bpp == 16) ? FMT16 : FMT18);
 
+	/* Back porch=8, Front porch = 8 */
 	write_reg(par, PORCTRL, 0x08, 0x08, 0x00, 0x22, 0x22);
 
 	/*
@@ -243,6 +247,44 @@ static int blank(struct fbtft_par *par, bool on)
 	return 0;
 }
 
+static int read_scanline(struct fbtft_par *par)
+{
+	u32 *p = (u32 *)par->scanline_cmd;
+	u32 *r = (u32 *)par->scanline_result;
+	int ret;
+
+#if 0
+	/* RDID1 0x85, RDID2 0x85, RDID3 0x52 */
+	p[0] = 0x04;
+	r[0] = 0xffffffff;
+	fbtft_read_reg_n(par, p, 2, r, 25);
+	pr_info("%s:%x\n", __func__, r[0]);
+
+	p[0] = 0xda;
+	r[0] = 0xffffffff;
+	fbtft_read_reg_n(par, p, 2, r, 8);
+	pr_info("%s:%x\n", __func__, r[0]);
+
+	p[0] = 0xdb;
+	r[0] = 0xffffffff;
+	fbtft_read_reg_n(par, p, 2, r, 8);
+	pr_info("%s:%x\n", __func__, r[0]);
+
+	p[0] = 0xdc;
+	r[0] = 0xffffffff;
+	fbtft_read_reg_n(par, p, 2, r, 8);
+	pr_info("%s:%x\n", __func__, r[0]);
+#endif
+
+	p[0] = 0x45;
+	r[0] = 0xffffffff;
+	ret = fbtft_read_reg_n(par, p, 2, r, 17);
+	if (ret)
+		return ret;
+	pr_debug("%s:%x\n", __func__, r[0]);
+	return r[0] & 0xffff;
+}
+
 static struct fbtft_display display = {
 	.regwidth = 8,
 	.width = 240,
@@ -255,6 +297,7 @@ static struct fbtft_display display = {
 		.set_var = set_var,
 		.set_gamma = set_gamma,
 		.blank = blank,
+		.read_scanline = read_scanline,
 	},
 };
 
