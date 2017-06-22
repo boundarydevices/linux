@@ -825,6 +825,19 @@ static int max77823_chg_property_is_writeable(struct power_supply *psy,
 	return 0;
 }
 
+static int max77823_otg_property_is_writeable(struct power_supply *psy,
+                                                enum power_supply_property psp)
+{
+	pr_info("%s:%d\n", __func__, psp);
+	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		return 1;
+	default:
+		break;
+	}
+	return 0;
+}
+
 static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long event, void *data)
 {
 	struct max77823_charger_data *charger = container_of(nb, struct max77823_charger_data, otg_regulator_nb);
@@ -1389,11 +1402,13 @@ static void max77823_chgin_init_work(struct work_struct *work)
 
 	pr_info("%s \n", __func__);
 	queue_work(charger->wqueue, &charger->chgin_work);
+	charger->irq_chgin = charger->irq_base + MAX77823_CHG_IRQ_CHGIN_I;
 	ret = request_threaded_irq(charger->irq_chgin, NULL,
 			max77823_chgin_irq, 0, "chgin-irq", charger);
 	if (ret < 0) {
 		pr_err("%s: fail to request chgin IRQ: %d: %d\n",
 				__func__, charger->irq_chgin, ret);
+		charger->irq_chgin = 0;
 	}
 	value.intval = POWER_SUPPLY_TYPE_HV_MAINS;
 	psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
@@ -1489,6 +1504,7 @@ const struct power_supply_desc psy_otg_desc = {
 	.num_properties = ARRAY_SIZE(max77823_otg_props),
 	.get_property = max77823_otg_get_property,
 	.set_property = max77823_otg_set_property,
+	.property_is_writeable  = max77823_otg_property_is_writeable,
 };
 
 struct power_supply_config psy_otg_config = {
@@ -1519,6 +1535,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	charger->dev = &pdev->dev;
 	charger->i2c = max77823->charger;
 	charger->pdata = pdata->charger_data;
+	charger->irq_base = pdata->irq_base;
 	charger->aicl_on = false;
 	charger->siop_level = 100;
 
@@ -1591,7 +1608,8 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	if (charger->pdata->chg_irq) {
 		INIT_DELAYED_WORK(&charger->isr_work, max77823_chg_isr_work);
 
-		ret = request_threaded_irq(charger->pdata->chg_irq,
+		charger->chg_irq = charger->pdata->chg_irq;
+		ret = request_threaded_irq(charger->chg_irq,
 				NULL, max77823_chg_irq_thread,
 				charger->pdata->chg_irq_attr,
 				"charger-irq", charger);
@@ -1600,11 +1618,11 @@ static int max77823_charger_probe(struct platform_device *pdev)
 			goto err_irq;
 		}
 
-			ret = enable_irq_wake(charger->pdata->chg_irq);
-			if (ret < 0)
-				pr_err("%s: Failed to Enable Wakeup Source(%d)\n",
-					__func__, ret);
-		}
+		ret = enable_irq_wake(charger->chg_irq);
+		if (ret < 0)
+			pr_err("%s: Failed to Enable Wakeup Source(%d)\n",
+				__func__, ret);
+	}
 
 	charger->wc_w_irq = pdata->irq_base + MAX77823_CHG_IRQ_WCIN_I;
 	ret = request_threaded_irq(charger->wc_w_irq,
@@ -1621,7 +1639,6 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	charger->wc_w_state = (reg_data & MAX77823_WCIN_OK)
 		>> MAX77823_WCIN_OK_SHIFT;
 
-	charger->irq_chgin = pdata->irq_base + MAX77823_CHG_IRQ_CHGIN_I;
 	/* enable chgin irq after sec_battery_probe */
 	queue_delayed_work(charger->wqueue, &charger->chgin_init_work,
 			msecs_to_jiffies(3000));
@@ -1629,17 +1646,19 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	charger->irq_bypass = pdata->irq_base + MAX77823_CHG_IRQ_BYP_I;
 	ret = request_threaded_irq(charger->irq_bypass, NULL,
 			max77823_bypass_irq, 0, "bypass-irq", charger);
-	if (ret < 0)
+	if (ret < 0) {
 		pr_err("%s: fail to request bypass IRQ: %d: %d\n",
 				__func__, charger->irq_bypass, ret);
+		charger->irq_bypass = 0;
+	}
 
 	pr_info("%s: MAX77823 Charger Driver Loaded\n", __func__);
 
 	return 0;
 
 err_wc_irq:
-	if (charger->pdata->chg_irq)
-		free_irq(charger->pdata->chg_irq, NULL);
+	if (charger->chg_irq)
+		free_irq(charger->chg_irq, charger);
 err_irq:
 	power_supply_unregister(charger->psy_chg);
 err_psy_unreg_otg:
@@ -1659,8 +1678,14 @@ static int max77823_charger_remove(struct platform_device *pdev)
 //	int i;
 
 	destroy_workqueue(charger->wqueue);
-	free_irq(charger->wc_w_irq, NULL);
-	free_irq(charger->pdata->chg_irq, NULL);
+	if (charger->wc_w_irq)
+		free_irq(charger->wc_w_irq, charger);
+	if (charger->chg_irq)
+		free_irq(charger->chg_irq, charger);
+	if (charger->irq_chgin)
+		free_irq(charger->irq_chgin, charger);
+	if (charger->irq_bypass)
+		free_irq(charger->irq_bypass, charger);
 	power_supply_unregister(charger->psy_chg);
 	power_supply_unregister(charger->psy_otg);
 //	for (i = 0; i < ARRAY_SIZE(charger->psy_ref); i++)
