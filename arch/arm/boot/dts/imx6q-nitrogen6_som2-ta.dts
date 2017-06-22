@@ -1,0 +1,347 @@
+/*
+ * Copyright 2015 Boundary Devices
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-nitrogen6_som2.dtsi"
+
+/ {
+	model = "Freescale i.MX6 Quad Nitrogen6 SOM2 ta Board";
+	compatible = "fsl,imx6q-nitrogen6_som2", "fsl,imx6q";
+	/delete-node/ sound;
+	/delete-node/ gpio-keys;
+};
+
+&sata {
+	status = "okay";
+};
+
+&v4l2_cap_2 {
+	ipu_id = <1>;
+};
+
+&iomuxc_imx6q_nitrogen6_som2 {
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT10__ECSPI2_MISO	0x100b1
+			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1
+			MX6QDL_PAD_CSI0_DAT8__ECSPI2_SCLK	0x000b1
+
+#undef GP_ECSPI2_SS0
+#define GP_ECSPI2_SS0		<&gpio5 29 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x0b0b1
+
+#define GP_ECSPI2_MUX0		<&gpio3 23 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x030b0
+#define GP_ECSPI2_MUX1		<&gpio3 24 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D24__GPIO3_IO24		0x030b0
+#define GP_ECSPI2_MUX2		<&gpio3 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D25__GPIO3_IO25		0x030b0
+		>;
+	};
+
+	pinctrl_gpio_keys: gpio-keysgrp {
+		fsl,pins = <
+#define GP_GPIOKEY_MOTOR1		<&gpio2 1 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x1b0b0
+#define GP_GPIOKEY_MOTOR2		<&gpio2 2 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x1b0b0
+#define GP_GPIOKEY_MOTOR3		<&gpio2 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D3__GPIO2_IO03		0x1b0b0
+#define GP_GPIOKEY_MOTOR4		<&gpio2 4 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x1b0b0
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			/* LCD Display (4 Lines x 20 Characters) using GPIO */
+#define GP_DISP_DB0		<&gpio3 0 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x0b0b0
+#define GP_DISP_DB1		<&gpio3 1 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x0b0b0
+#define GP_DISP_DB2		<&gpio3 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x0b0b0
+#define GP_DISP_DB3		<&gpio3 3 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x0b0b0
+#define GP_DISP_DB4		<&gpio3 4 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x0b0b0
+#define GP_DISP_DB5		<&gpio3 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x0b0b0
+#define GP_DISP_DB6		<&gpio3 6 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x0b0b0
+#define GP_DISP_DB7		<&gpio3 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x0b0b0
+#define GP_DISP_E		<&gpio3 8 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x0b0b0
+#define GP_DISP_RS		<&gpio3 9 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x0b0b0
+#define GP_DISP_RWn		<&gpio4 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0
+
+			/* Stepper Motor Control Digital I/O */
+#define GP_MOTOR_START		<&gpio2 6 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x0b0b0
+#define GP_MOTOR_STOPL		<&gpio2 23 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x0b0b0
+#define GP_MOTOR_STOPR		<&gpio2 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x0b0b0
+#define GP_MOTOR_N		<&gpio2 26 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x0b0b0
+
+#define GP_MOTOR_DIRECTION	<&gpio3 11 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x0b0b0
+#define GP_MOTOR_HOME		<&gpio3 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x0b0b0
+#define GP_MOTOR_FULL_STEP	<&gpio3 20 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D20__GPIO3_IO20		0x0b0b0
+
+			/* Heater Control Digital I/O */
+#define GP_HEATER_A_1		<&gpio1 16 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x0b0b0
+#define GP_HEATER_A_2		<&gpio1 3 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
+#define GP_HEATER_B_1		<&gpio1 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD2_CLK__GPIO1_IO10		0x0b0b0
+#define GP_HEATER_B_2		<&gpio1 14 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD2_DAT1__GPIO1_IO14		0x0b0b0
+#define GP_HEATER_C_1		<&gpio5 30 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x0b0b0
+#define GP_HEATER_C_2		<&gpio5 31 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT13__GPIO5_IO31	0x0b0b0
+
+			/* Gas Valve Control Digital I/O */
+#define GP_GAS_PURGE		<&gpio3 12 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x0b0b0
+
+			/* Status LEDs Digital I/O */
+#define GP_LED_RED		<&gpio5 18 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_PIXCLK__GPIO5_IO18	0x0b0b0
+#define GP_LED_GREEN		<&gpio5 19 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_MCLK__GPIO5_IO19	0x0b0b0
+#define GP_LED_YELLOW		<&gpio5 20 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20	0x0b0b0
+
+			/* Auto Feeder Digital I/O */
+#define GP_AF_1			<&gpio6 0 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT14__GPIO6_IO00	0x0b0b0
+#define GP_AF_2			<&gpio6 1 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT15__GPIO6_IO01	0x0b0b0
+#define GP_AF_3			<&gpio6 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT16__GPIO6_IO02	0x0b0b0
+#define GP_AF_4			<&gpio6 3 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03	0x0b0b0
+#define GP_AF_5			<&gpio6 4 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04	0x0b0b0
+#define GP_AF_6			<&gpio6 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05	0x0b0b0
+#define GP_AF_7			<&gpio6 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x0b0b0
+#define GP_AF_EN		<&gpio6 9 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0
+		>;
+	};
+
+	pinctrl_keypad: keypadgrp {
+		fsl,pins = <
+				MX6QDL_PAD_KEY_COL3__KEY_COL3		0x1b0b0
+				MX6QDL_PAD_KEY_COL4__KEY_COL4		0x1b0b0
+				MX6QDL_PAD_GPIO_0__KEY_COL5		0x1b0b0
+				MX6QDL_PAD_SD2_DAT3__KEY_COL6		0x1b0b0
+				MX6QDL_PAD_SD2_CMD__KEY_ROW5		0x1b0b0
+				MX6QDL_PAD_SD2_DAT2__KEY_ROW6		0x1b0b0
+				MX6QDL_PAD_SD2_DAT0__KEY_ROW7		0x1b0b0
+		>;
+	};
+
+	pinctrl_keypad_sleep: keypad_sleepgrp {
+		fsl,pins = <
+				MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x030b0
+				MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x030b0
+				MX6QDL_PAD_GPIO_0__GPIO1_IO00		0x030b0
+				MX6QDL_PAD_SD2_DAT3__GPIO1_IO12		0x030b0
+				MX6QDL_PAD_SD2_CMD__GPIO1_IO11		0x030b0
+				MX6QDL_PAD_SD2_DAT2__GPIO1_IO13		0x030b0
+				MX6QDL_PAD_SD2_DAT0__GPIO1_IO15		0x030b0
+		>;
+	};
+
+	pinctrl_usbh1: usbh1grp {
+		fsl,pins = <
+			MX6QDL_PAD_EIM_D30__USB_H1_OC	0x1b0b0
+		>;
+	};
+
+	pinctrl_usbotg: usbotggrp {
+		fsl,pins = <
+			MX6QDL_PAD_GPIO_1__USB_OTG_ID		0x17059
+		>;
+	};
+
+};
+
+/ {
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		event1 {
+			label = "event1";
+			gpios = GP_GPIOKEY_MOTOR1;
+			linux,code = <KEY_NUMERIC_1>;
+			gpio-key,wakeup;
+		};
+
+		event2 {
+			label = "event2";
+			gpios = GP_GPIOKEY_MOTOR2;
+			linux,code = <KEY_NUMERIC_2>;
+			gpio-key,wakeup;
+		};
+
+		event3 {
+			label = "event3";
+			gpios = GP_GPIOKEY_MOTOR3;
+			linux,code = <KEY_NUMERIC_3>;
+			gpio-key,wakeup;
+		};
+
+		event4 {
+			label = "event4";
+			gpios = GP_GPIOKEY_MOTOR4;
+			linux,code = <KEY_NUMERIC_4>;
+			gpio-key,wakeup;
+		};
+	};
+
+};
+
+&ecspi2 {
+	cs-gpios = GP_ECSPI2_MUX0, GP_ECSPI2_MUX1, GP_ECSPI2_MUX2, GP_ECSPI2_SS0;
+	fsl,spi-num-chipselects = <4>;
+	idle-state = <15>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	status = "okay";
+
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <0>;
+	};
+	spidev@1 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <1>;
+	};
+	spidev@2 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <2>;
+	};
+	spidev@3 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <3>;
+	};
+	spidev@4 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <4>;
+	};
+	spidev@5 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <5>;
+	};
+	spidev@6 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <6>;
+	};
+};
+
+&i2c1 {
+	/delete-node/ sgtl5000@0a;
+	/delete-node/ rv4162@68;
+#if 0
+	max5813@1f {
+		/* adc converter, To do */
+		compatible = "max5813";
+		reg = <0x1f>;
+	};
+#endif
+};
+
+&i2c2 {
+	status = "disabled";
+	/delete-node/ edid@50;
+	/delete-node/ ov5640_mipi@3d;
+	/delete-node/ ov5642@3e;
+	/delete-node/ tc358743_mipi@0f;
+};
+
+&i2c3 {
+	/delete-node/ gt911@14;
+	/delete-node/ gt911@5d;
+	/delete-node/ ili210x@41;
+	/delete-node/ tsc2004@48;
+};
+
+&pcie {
+	status = "disabled";
+};
+
+&kpp {
+	compatible = "fsl,imx6q-kpp", "fsl,imx21-kpp";
+	clocks = <&clks IMX6QDL_CLK_IPG>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_keypad>;
+	pinctrl-1 = <&pinctrl_keypad_sleep>;
+	linux,keymap = <
+		0x05030201	/* KEY_NUMERIC_1(0x201) */
+		0x05040202	/* KEY_NUMERIC_2 */
+		0x05050203	/* KEY_NUMERIC_3 */
+		0x05060204	/* KEY_NUMERIC_4 */
+		0x06030205	/* KEY_NUMERIC_5 */
+		0x06040206	/* KEY_NUMERIC_6 */
+		0x06050207	/* KEY_NUMERIC_7 */
+		0x06060208	/* KEY_NUMERIC_8 */
+		0x07030209	/* KEY_NUMERIC_9 */
+		0x07040200	/* KEY_NUMERIC_0 */
+		0x07050001	/* KEY_ESC */
+		0x0706001c	/* KEY_ENTER(28)(0x1c) */
+         >;
+        status = "okay";
+};
+
+&uart3 {
+	status = "disabled";
+};
+
+&usbh1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbh1>;
+	/delete-property/ reset-gpios;
+};
+
+&usbotg {
+	disable-over-current;
+};
+
+&usdhc2 {
+	status = "disabled";
+};
