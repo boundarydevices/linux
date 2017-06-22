@@ -93,6 +93,7 @@ struct fbtft_ops {
 
 	int (*set_var)(struct fbtft_par *par);
 	int (*set_gamma)(struct fbtft_par *par, unsigned long *curves);
+	int (*read_scanline)(struct fbtft_par *par);
 };
 
 /**
@@ -241,6 +242,9 @@ struct fbtft_par {
 	ktime_t update_time;
 	bool bgr;
 	void *extra;
+	unsigned char scanline_cmd[64] ____cacheline_aligned;
+	unsigned char scanline_result[64] ____cacheline_aligned;
+	unsigned char tx_high[64] ____cacheline_aligned;
 };
 
 #define NUMARGS(...)  (sizeof((int[]){__VA_ARGS__})/sizeof(int))
@@ -282,6 +286,7 @@ void fbtft_write_reg8_bus8(struct fbtft_par *par, int len, ...);
 void fbtft_write_reg8_bus9(struct fbtft_par *par, int len, ...);
 void fbtft_write_reg16_bus8(struct fbtft_par *par, int len, ...);
 void fbtft_write_reg16_bus16(struct fbtft_par *par, int len, ...);
+int fbtft_read_reg_n(struct fbtft_par *par, void *tbuf1, size_t len, void *rbuf2, int bits);
 
 #define FBTFT_REGISTER_DRIVER(_name, _compatible, _display)                \
 									   \
