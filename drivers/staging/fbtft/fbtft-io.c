@@ -125,6 +125,38 @@ int fbtft_read_spi(struct fbtft_par *par, void *buf, size_t len)
 }
 EXPORT_SYMBOL(fbtft_read_spi);
 
+int fbtft_read_reg_n(struct fbtft_par *par, void *tbuf1, size_t len, void *rbuf2, int bits)
+{
+	int ret;
+	struct spi_transfer	t1 = {
+			.tx_buf		= tbuf1,
+			.len		= len,
+		};
+	struct spi_transfer	t2 = {
+			.tx_buf		= par->tx_high,
+			.rx_buf		= rbuf2,
+			.len		= (bits > 16) ? 4 : (bits > 8) ? 2 : 1,
+			.bits_per_word	= bits,
+			//.read_setup	= 1,
+		};
+	struct spi_message	m;
+
+	if (!par->spi) {
+		dev_err(par->info->device,
+			"%s: par->spi is unexpectedly NULL\n", __func__);
+		return -ENODEV;
+	}
+
+	spi_message_init(&m);
+	spi_message_add_tail(&t1, &m);
+	spi_message_add_tail(&t2, &m);
+	ret = spi_sync(par->spi, &m);
+	return ret;
+}
+EXPORT_SYMBOL(fbtft_read_reg_n);
+
+
+
 /*
  * Optimized use of gpiolib is twice as fast as no optimization
  * only one driver can use the optimized version at a time
