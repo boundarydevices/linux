@@ -187,6 +187,8 @@ struct max77823_charger_data {
 	struct notifier_block otg_regulator_nb;
 
 
+	int		chg_irq;
+	int		irq_base;
 	int		irq_bypass;
 	int		irq_batp;
 
