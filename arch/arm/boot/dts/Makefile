@@ -761,6 +761,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-mtp.dtb \
 	imx6q-neol.dtb \
 	imx6q-neol-test.dtb \
+	imx6q-nitrogen6_som2-ta.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6qp-mtp.dtb \
