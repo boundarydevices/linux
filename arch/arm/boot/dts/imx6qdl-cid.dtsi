@@ -82,22 +82,16 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			/* Modem pins */
-#define GP_SLEEP_STAT		<&gpio4 22 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT1__GPIO4_IO22	0x1b0b0
-#define GP_MODEM_RESET		<&gpio4 23 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT2__GPIO4_IO23	0x1b0b0
-#define GP_STAT_LED2		<&gpio4 25 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
-#define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_HIGH>
+			/* Blue Led */
+#define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1b0b0
-#define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_HIGH>
+			/* Green Led */
+#define GP_STAT_LED2		<&gpio4 25 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
+			/* Red Led */
+#define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x1b0b0
-#define GP_MODEM_ON_OFF		<&gpio4 29 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x1b0b0
-			/* SIM */
-#define GP_SIM_DETECT		<&gpio2 18 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_A19__GPIO2_IO19		0x1b0b0
+
 			/* Regulators */
 #define GP_3P7_BYPASS_EN	<&gpio2 18 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_A20__GPIO2_IO18		0x1b0b0
@@ -441,6 +435,27 @@
 			MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x100b0
 		>;
 	};
+
+	pinctrl_wwan_rfkill: wwan_rfkillgrp {
+		fsl,pins = <
+			/* HL7588 - Modem pins */
+#define GP_MODEM_RESET		<&gpio4 23 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT2__GPIO4_IO23	0x030b0
+/*
+ * This signal can only turn the modem on,
+ * pull low for 2 seconds, then release,
+ * when signal goes low again, the device is ready.
+ * Use AT*PSCPOF to power off.
+ */
+#define GP_MODEM_PULSE_ON	<&gpio4 29 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x4001b8b0	/* Open drain, bidirectional signal */
+#define GP_SLEEP_STAT		<&gpio4 22 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT1__GPIO4_IO22	0x1b0b0
+			/* SIM */
+#define GP_SIM_DETECT		<&gpio2 19 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_A19__GPIO2_IO19		0x1b0b0
+		>;
+	};
 };
 
 / {
@@ -640,11 +655,23 @@
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
+
+	wwan_rfkill: wwan_rfkill {
+		compatible = "net,rfkill-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wwan_rfkill>;
+		name = "wwan_rfkill";
+		type = <5>;     /* WWAN */
+		reset-gpios = GP_MODEM_RESET;
+		pulse-on-gpios = GP_MODEM_PULSE_ON;
+		pulse-duration = <2000>;
+		status = "okay";
+	};
 };
 
 &audmux {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_audmux3>;
+	pinctrl-0 = <&pinctrl_audmux3>, <&pinctrl_audmux4>;
 	status = "okay";
 };
 
@@ -1062,6 +1089,7 @@
 };
 
 &uart4 {
+	/* USB Modem */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	status = "okay";
