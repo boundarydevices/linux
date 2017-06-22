@@ -599,6 +599,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-nitrogen6_max-lantech.dtb \
 	imx6q-nitrogen6_max-st7789.dtb \
 	imx6q-nitrogen6_som2.dtb \
+	imx6q-nitrogen6_som2-ta.dtb \
 	imx6q-novena.dtb \
 	imx6q-phytec-mira-rdk-emmc.dtb \
 	imx6q-phytec-mira-rdk-nand.dtb \
