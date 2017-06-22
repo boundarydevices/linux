@@ -21,9 +21,21 @@
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT8__ECSPI2_SCLK	0x000b1
-			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1
+			MX6QDL_PAD_CSI0_DAT10__ECSPI2_MISO	0x100b1
 #define GP_ECSPI2_DISPLAY_CS   <&gpio5 29 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x0b0b1
+		>;
+	};
+
+	pinctrl_ecspi2_read: ecspi2_readgrp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x108b1		/* ODE, so that display can drive low */
+		>;
+	};
+
+	pinctrl_ecspi2_write: ecspi2_writegrp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1		/* Can write faster without ODE */
 		>;
 	};
 };
@@ -41,18 +53,22 @@
 &ecspi2 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = GP_ECSPI2_DISPLAY_CS;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi2>;
+	pinctrl-names = "default", "write", "read";
+	pinctrl-0 = <&pinctrl_ecspi2>, <&pinctrl_ecspi2_write>;
+	pinctrl-1 = <&pinctrl_ecspi2_write>;
+	pinctrl-2 = <&pinctrl_ecspi2_read>;
 	status = "okay";
 #if 0
 	dma-names = "", "";
 #endif
 
 	st7789h2@0{
-		bpp = <16>;
+		bpp = <16>;	/* 16 or 24 */
 		compatible = "sitronix,st7789v";
 		reg = <0>;
+		/* SCLK - write cycle 16 ns(62.5Mhz), read cycle 150 ns(6.6 MHz) */
 		spi-max-frequency = <20000000>;
+		spi-max-read-frequency = <6600000>;
 		width = <240>;
 		height = <204>;
 		rotate = <0>;
