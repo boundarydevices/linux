@@ -16,6 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -36,6 +37,8 @@ struct rfkill_gpio_data {
 	enum rfkill_type	type;
 	struct gpio_desc	*reset_gpio;
 	struct gpio_desc	*shutdown_gpio;
+	struct gpio_desc	*pulse_on_gpio;
+	unsigned		pulse_duration;
 
 	struct rfkill		*rfkill_dev;
 	struct clk		*clk;
@@ -56,6 +59,12 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 	} else {
 		gpiod_set_value_cansleep(rfkill->reset_gpio, 0);
 		gpiod_set_value_cansleep(rfkill->shutdown_gpio, 0);
+		if (rfkill->pulse_on_gpio) {
+			gpiod_set_value_cansleep(rfkill->pulse_on_gpio, 1);
+			msleep(rfkill->pulse_duration);
+			pr_info("%s:msleep %d\n", __func__, rfkill->pulse_duration);
+			gpiod_set_value_cansleep(rfkill->pulse_on_gpio, 0);
+		}
 	}
 
 	if (blocked && !IS_ERR(rfkill->clk) && rfkill->clk_enabled)
@@ -157,6 +166,17 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 		gpiod_set_value_cansleep(gpio, 1);
 		rfkill->shutdown_gpio = gpio;
 	}
+
+	gpio = devm_gpiod_get(&pdev->dev, "pulse-on");
+	if (!IS_ERR(gpio)) {
+		ret = gpiod_direction_output(gpio, 0);
+		if (ret)
+			return ret;
+		gpiod_set_value_cansleep(gpio, 0);
+		rfkill->pulse_on_gpio = gpio;
+	}
+	ret = of_property_read_u32(pdev->dev.of_node, "pulse-duration",
+			&rfkill->pulse_duration);
 
 	/* Make sure at-least one of the GPIO is defined and that
 	 * a name is specified for this instance
