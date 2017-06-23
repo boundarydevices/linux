@@ -411,8 +411,8 @@ KBUILD_CFLAGS_MODULE  := -DMODULE
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
-KERNELRELEASE = $(shell head -1 include/config/kernel.release 2> /dev/null)
-KERNELRELEASE_FULL = $(shell tail -1 include/config/kernel.release 2> /dev/null)
+KERNELRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
+KERNELRELEASE_FULL = $(shell cat include/config/kernel.release_full 2> /dev/null)
 KERNELVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
 
 export VERSION PATCHLEVEL SUBLEVEL KERNELRELEASE KERNELVERSION
@@ -993,12 +993,20 @@ $(vmlinux-dirs): prepare scripts
 	$(Q)$(MAKE) $(build)=$@
 
 define filechk_kernel.release
-	echo "$(KERNELVERSION)\n$(KERNELVERSION)$$($(CONFIG_SHELL) $(srctree)/scripts/setlocalversion $(srctree))"
+	echo "$(KERNELVERSION)"
 endef
+
+define filechk_kernel.release_full
+	echo "$(KERNELVERSION)$$($(CONFIG_SHELL) $(srctree)/scripts/setlocalversion $(srctree))"
+endef
+
 
 # Store (new) KERNELRELEASE string in include/config/kernel.release
 include/config/kernel.release: include/config/auto.conf FORCE
 	$(call filechk,kernel.release)
+
+include/config/kernel.release_full: include/config/auto.conf FORCE
+	$(call filechk,kernel.release_full)
 
 
 # Things we need to do before we recursively start building the kernel
@@ -1013,7 +1021,7 @@ PHONY += prepare archprepare prepare0 prepare1 prepare2 prepare3
 # prepare3 is used to check if we are building in a separate output directory,
 # and if so do:
 # 1) Check that make has not been executed in the kernel src $(srctree)
-prepare3: include/config/kernel.release
+prepare3: include/config/kernel.release include/config/kernel.release_full
 ifneq ($(KBUILD_SRC),)
 	@$(kecho) '  Using $(srctree) as source for kernel'
 	$(Q)if [ -f $(srctree)/.config -o -d $(srctree)/include/config ]; then \
