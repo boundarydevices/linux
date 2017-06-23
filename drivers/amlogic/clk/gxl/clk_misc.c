@@ -323,6 +323,55 @@ static struct clk_gate pcm_sclk_gate = {
 	},
 };
 
+/* cts_sar_adc_clk */
+const char *saradc_parent_names[] = { "xtal", "clk81" };
+static struct clk_mux gxl_saradc_mux = {
+	.reg = (void *)HHI_SAR_CLK_CNTL,
+	.mask = 0x3,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "gxl_saradc_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = saradc_parent_names,
+		.num_parents = 2,
+		.flags = (CLK_GET_RATE_NOCACHE),
+	},
+};
+
+static struct clk_divider gxl_saradc_div = {
+	.reg = (void *)HHI_SAR_CLK_CNTL,
+	.shift = 0,
+	.width = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "gxl_saradc_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "gxl_saradc_mux" },
+		.num_parents = 1,
+		.flags = (CLK_DIVIDER_ROUND_CLOSEST),
+	},
+};
+
+static struct clk_gate gxl_saradc_gate = {
+	.reg = (void *)HHI_SAR_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "gxl_saradc_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "gxl_saradc_div" },
+		.num_parents = 1,
+		.flags = (CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED),
+	},
+};
+
+static struct clk_hw *saradc_hws[] = {
+[CLKID_SARADC_MUX - CLKID_SARADC_MUX] = &gxl_saradc_mux.hw,
+[CLKID_SARADC_DIV - CLKID_SARADC_MUX] = &gxl_saradc_div.hw,
+[CLKID_SARADC_GATE - CLKID_SARADC_MUX] = &gxl_saradc_gate.hw,
+};
+
 void amlogic_init_misc(void)
 {
 	/* cts_vdin_meas_clk */
@@ -356,6 +405,11 @@ void amlogic_init_misc(void)
 	/* cts_pclk_sclk */
 	pcm_sclk_div.reg = clk_base + (u64)(pcm_sclk_div.reg);
 	pcm_sclk_gate.reg = clk_base + (u64)(pcm_sclk_gate.reg);
+
+	/* cts_sar_adc_clk */
+	gxl_saradc_mux.reg = clk_base + (u64)(gxl_saradc_mux.reg);
+	gxl_saradc_div.reg = clk_base + (u64)(gxl_saradc_div.reg);
+	gxl_saradc_gate.reg = clk_base + (u64)(gxl_saradc_gate.reg);
 
 	clks[CLKID_VDIN_MEAS_COMP] = clk_register_composite(NULL,
 		"vdin_meas_composite",
@@ -420,6 +474,19 @@ void amlogic_init_misc(void)
 		&clk_gate_ops, 0);
 	if (IS_ERR(clks[CLKID_PCM_MCLK_COMP]))
 		pr_err("%s: %d clk_register_composite pcm_mclk_composite error\n",
+		__func__, __LINE__);
+
+	clks[CLKID_SARADC_COMP] = clk_register_composite(NULL,
+		"saradc_composite",
+		saradc_parent_names, 2,
+		saradc_hws[CLKID_SARADC_MUX - CLKID_SARADC_MUX],
+		&clk_mux_ops,
+		saradc_hws[CLKID_SARADC_DIV - CLKID_SARADC_MUX],
+		&clk_divider_ops,
+		saradc_hws[CLKID_SARADC_GATE - CLKID_SARADC_MUX],
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_PDM_COMP]))
+		pr_err("%s: %d clk_register_composite saradc_composite error\n",
 		__func__, __LINE__);
 
 	clks[CLKID_PCM_SCLK_DIV] = clk_register(NULL, &pcm_sclk_div.hw);
