@@ -461,6 +461,7 @@
 &fec {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet>;
+	phy-handle = <&ethphy>;
 	phy-mode = "rgmii";
 #if 0
 	phy-reset-gpios = GP_ENET_PHY_RESET;
