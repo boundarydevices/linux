@@ -49,14 +49,6 @@
 	} \
 	} while (0)
 
-union unused {
-		struct{
-		unsigned int unused:1;	/*[27]*/
-		unsigned int clk_delay_ext:2;	/*[29:28]*/
-		unsigned int unused2:2;	/*[31:30]*/
-		} b;
-		unsigned int unused:5;	/*[31:27]*/
-	} unused;
 /*I2C_CONTROL_REG	0x2140*/
 struct aml_i2c_reg_ctrl {
 	unsigned int start:1;		/*[0] */
@@ -134,7 +126,9 @@ struct aml_i2c_reg_ctrl {
 	 */
 	unsigned int rdscl:1;		/*[25] Read back level of the SCL line*/
 	unsigned int rdsda:1;		/*[26] Read back level of the SDA line*/
-	union unused unused;
+	unsigned int unused:1;	/*[27]*/
+	unsigned int clk_delay_ext:2;	/*[29:28]*/
+	unsigned int unused2:2;	/*[31:30]*/
 };
 
 union unused2 {

@@ -50,7 +50,7 @@ struct aml_i2c_slave *slave)
 	slave->slave_regs->s_reg_ctrl |= (1<<27);/*recv en*/
 	slave->slave_regs->s_reg_ctrl |= (0x40<<16);   /*slave addr*/
 	slave->slave_regs->s_reg_ctrl |= (0x0<<8); /*hold time*/
-	slave->slave_regs->s_reg_ctrl |= (0x6); /*sampling rate*/
+	slave->slave_regs->s_reg_ctrl |= (0x0<<0); /*sampling rate*/
 }
 
 static ssize_t show_i2c_slave(struct class *class,
