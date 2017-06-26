@@ -41,6 +41,15 @@
 
 #define FUNCTIONFS_MAGIC	0xa647361 /* Chosen by a honest dice roll ;) */
 
+#ifdef CONFIG_AMLOGIC_USB
+/*The actual maximum length will depend on the version of the shell
+ * protocol being used. This should be able to be raised to 16K for
+ * devices
+ */
+#define MAX_PAYLOAD_EP0		(1024)
+#define MAX_PAYLOAD_EPS		(4096*4)
+#endif
+
 /* Reference counter handling */
 static void ffs_data_get(struct ffs_data *ffs);
 static void ffs_data_put(struct ffs_data *ffs);
@@ -278,7 +287,13 @@ static int __ffs_ep0_queue_wait(struct ffs_data *ffs, char *data, size_t len)
 
 	spin_unlock_irq(&ffs->ev.waitq.lock);
 
+#ifdef CONFIG_AMLOGIC_USB
+	memcpy(ffs->data_ep0, data, len);
+
+	req->buf      = ffs->data_ep0;
+#else
 	req->buf      = data;
+#endif
 	req->length   = len;
 
 	/*
@@ -874,10 +889,17 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 {
 	struct ffs_epfile *epfile = file->private_data;
 	struct usb_request *req;
+#ifdef CONFIG_AMLOGIC_USB
+	struct ffs_ep *ep = epfile->ep;
+#else
 	struct ffs_ep *ep;
+#endif
 	char *data = NULL;
 	ssize_t ret, data_len = -EINVAL;
 	int halt;
+#ifdef CONFIG_AMLOGIC_USB
+	DECLARE_COMPLETION_ONSTACK(done);
+#endif
 
 	/* Are we still active? */
 	if (WARN_ON(epfile->ffs->state != FFS_ACTIVE))
@@ -980,11 +1002,44 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		WARN(1, "%s: data_len == -EINVAL\n", __func__);
 		ret = -EINVAL;
 	} else if (!io_data->aio) {
+#ifndef CONFIG_AMLOGIC_USB
 		DECLARE_COMPLETION_ONSTACK(done);
+#endif
 		bool interrupted = false;
-
 		req = ep->req;
+#ifdef CONFIG_AMLOGIC_USB
+		/* Fire the request */
+		/*Avoid kernel panic caused by race condition. For example,
+		* 1. In the ffs_epfile_io function, data buffer is allocated
+		* for non-halt requests and the address of this buffer is
+		* writed to usb controller registers.
+		* 2. After adb process be killed, data buffer is freed and
+		* this memory is allocated for the other. But the address
+		* is hold by the controller.
+		* 3. Adbd in PC is running. So, the controller receive the
+		* data and write to this memory.
+		* 4. The value of this memory is modified by the controller.
+		*This could cause the kernel panic.
+
+		* To avoid this, during FunctionFS mount, we allocated the
+		* data buffer for requests. And the memory resources has
+		* been released in kill_sb.
+		*/
+		if (data) {
+			if (ep->num == 0)
+				memcpy(epfile->ffs->data_ep_in, data, data_len);
+			else
+				memcpy(epfile->ffs->data_ep_out, data,
+					data_len);
+		}
+
+		if (ep->num == 0)
+			req->buf      = epfile->ffs->data_ep_in;
+		else
+			req->buf      = epfile->ffs->data_ep_out;
+#else
 		req->buf      = data;
+#endif
 		req->length   = data_len;
 
 		req->context  = &done;
@@ -1009,9 +1064,22 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 
 		if (interrupted)
 			ret = -EINTR;
+#ifdef CONFIG_AMLOGIC_USB
+		else if (io_data->read && ep->status > 0) {
+			if (ep->num == 0)
+					memcpy(data, epfile->ffs->data_ep_in,
+						 min_t(size_t, ep->status, data_len));
+				else
+					memcpy(data, epfile->ffs->data_ep_out,
+						 min_t(size_t, ep->status, data_len));
+			ret = __ffs_epfile_read_data(epfile, data, ep->status,
+						     &io_data->data);
+		}
+#else
 		else if (io_data->read && ep->status > 0)
 			ret = __ffs_epfile_read_data(epfile, data, ep->status,
 						     &io_data->data);
+#endif
 		else
 			ret = ep->status;
 		goto error_mutex;
@@ -1497,6 +1565,19 @@ ffs_fs_mount(struct file_system_type *t, int flags,
 		return ERR_PTR(-ENOMEM);
 	}
 
+#ifdef CONFIG_AMLOGIC_USB
+	ffs->data_ep0 = kmalloc(MAX_PAYLOAD_EP0, GFP_KERNEL);
+	if (unlikely(!ffs->data_ep0))
+		return ERR_PTR(-ENOMEM);
+
+	ffs->data_ep_in = kmalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
+	if (unlikely(!ffs->data_ep_in))
+		return ERR_PTR(-ENOMEM);
+
+	ffs->data_ep_out = kmalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
+	if (unlikely(!ffs->data_ep_out))
+		return ERR_PTR(-ENOMEM);
+#endif
 	ffs_dev = ffs_acquire_dev(dev_name);
 	if (IS_ERR(ffs_dev)) {
 		ffs_data_put(ffs);
@@ -1516,10 +1597,22 @@ ffs_fs_mount(struct file_system_type *t, int flags,
 static void
 ffs_fs_kill_sb(struct super_block *sb)
 {
+#ifdef CONFIG_AMLOGIC_USB
+	struct ffs_data *ffs = sb->s_fs_info;
+#endif
+
 	ENTER();
 
 	kill_litter_super(sb);
 	if (sb->s_fs_info) {
+#ifdef CONFIG_AMLOGIC_USB
+		kfree(ffs->data_ep0);
+		ffs->data_ep0 = NULL;
+		kfree(ffs->data_ep_in);
+		ffs->data_ep_in = NULL;
+		kfree(ffs->data_ep_out);
+		ffs->data_ep_out = NULL;
+#endif
 		ffs_release_dev(sb->s_fs_info);
 		ffs_data_closed(sb->s_fs_info);
 		ffs_data_put(sb->s_fs_info);
