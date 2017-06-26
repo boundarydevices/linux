@@ -1114,7 +1114,7 @@ $(version_h): $(srctree)/Makefile FORCE
 	$(call filechk,version.h)
 	$(Q)rm -f $(old_version_h)
 
-include/generated/utsrelease.h: include/config/kernel.release FORCE
+include/generated/utsrelease.h: include/config/kernel.release include/config/kernel.release_full FORCE
 	$(call filechk,utsrelease.h)
 
 PHONY += headerdep
