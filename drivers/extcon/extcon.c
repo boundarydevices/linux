@@ -1075,6 +1075,20 @@ int extcon_dev_register(struct extcon_dev *edev)
 	edev->dev.class = extcon_class;
 	edev->dev.release = extcon_dev_release;
 
+#ifdef AMLOGIC_MODIFY
+	if (!edev->name) {
+		edev->name = dev_name(edev->dev.parent);
+		if (IS_ERR_OR_NULL(edev->name)) {
+			dev_err(&edev->dev,
+				"extcon device name is null\n");
+			return -EINVAL;
+		}
+	}
+	if (!dev_name(&edev->dev))	{
+		dev_set_name(&edev->dev, "extcon%lu",
+				(unsigned long)atomic_inc_return(&edev_no));
+	}
+#else
 	edev->name = dev_name(edev->dev.parent);
 	if (IS_ERR_OR_NULL(edev->name)) {
 		dev_err(&edev->dev,
@@ -1083,6 +1097,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 	}
 	dev_set_name(&edev->dev, "extcon%lu",
 			(unsigned long)atomic_inc_return(&edev_no));
+#endif
 
 	if (edev->max_supported) {
 		char buf[10];
