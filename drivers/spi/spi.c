@@ -19,6 +19,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi-mem.h>
 #include <linux/gpio/consumer.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/pm_domain.h>
 #include <linux/property.h>
@@ -750,7 +751,7 @@ struct spi_device *spi_new_device(struct spi_controller *ctlr,
 	WARN_ON(strlen(chip->modalias) >= sizeof(proxy->modalias));
 
 	proxy->chip_select = chip->chip_select;
-	proxy->max_speed_hz = chip->max_speed_hz;
+	proxy->max_read_speed_hz = proxy->max_speed_hz = chip->max_speed_hz;
 	proxy->mode = chip->mode;
 	proxy->irq = chip->irq;
 	strscpy(proxy->modalias, chip->modalias, sizeof(proxy->modalias));
@@ -2297,6 +2298,11 @@ static int of_spi_parse_dt(struct spi_controller *ctlr, struct spi_device *spi,
 	if (!of_property_read_u32(nc, "spi-max-frequency", &value))
 		spi->max_speed_hz = value;
 
+	rc = of_property_read_u32(nc, "spi-max-read-frequency", &value);
+	if (!rc)
+		spi->max_read_speed_hz = value;
+	if (!spi->max_read_speed_hz)
+		spi->max_read_speed_hz = spi->max_speed_hz;
 	return 0;
 }
 
@@ -2837,6 +2843,8 @@ static struct class spi_slave_class = {
 extern struct class spi_slave_class;	/* dummy */
 #endif
 
+static int of_spi_get_pinctrl(struct spi_master *master, struct device *dev);
+
 /**
  * __spi_alloc_controller - allocate an SPI master or slave controller
  * @dev: the controller, possibly using the platform_bus
@@ -2892,6 +2900,7 @@ struct spi_controller *__spi_alloc_controller(struct device *dev,
 	ctlr->dev.parent = dev;
 	pm_suspend_ignore_children(&ctlr->dev, true);
 	spi_controller_set_devdata(ctlr, (void *)ctlr + ctlr_size);
+	of_spi_get_pinctrl(ctlr, dev);
 
 	return ctlr;
 }
@@ -2940,6 +2949,31 @@ struct spi_controller *__devm_spi_alloc_controller(struct device *dev,
 	return ctlr;
 }
 EXPORT_SYMBOL_GPL(__devm_spi_alloc_controller);
+
+static int of_spi_get_pinctrl(struct spi_controller *ctlr, struct device *dev)
+{
+	int ret;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_read;
+	struct pinctrl_state *pins_write;
+
+	pinctrl = devm_pinctrl_get(dev);
+	if (!IS_ERR(pinctrl)) {
+		ctlr->pinctrl = pinctrl;
+		pins_read = pinctrl_lookup_state(pinctrl, "read");
+		if (!IS_ERR(pins_read))
+			ctlr->pins_read = pins_read;
+
+		pins_write = pinctrl_lookup_state(pinctrl, "write");
+		if (!IS_ERR(pins_write)) {
+			ctlr->pins_write = pins_write;
+			ret = pinctrl_select_state(pinctrl, pins_write);
+			if (ret)
+				return ret;
+		}
+	}
+	return 0;
+}
 
 /**
  * spi_get_gpio_descs() - grab chip select GPIOs for the master
@@ -3675,6 +3709,10 @@ int spi_setup(struct spi_device *spi)
 	    (!spi->max_speed_hz ||
 	     spi->max_speed_hz > spi->controller->max_speed_hz))
 		spi->max_speed_hz = spi->controller->max_speed_hz;
+	if (!spi->max_read_speed_hz)
+		spi->max_read_speed_hz = spi->controller->max_read_speed_hz;
+	if (!spi->max_read_speed_hz)
+		spi->max_read_speed_hz = spi->max_speed_hz;
 
 	mutex_lock(&spi->controller->io_mutex);
 
@@ -3829,7 +3867,8 @@ static int __spi_validate(struct spi_device *spi, struct spi_message *message)
 			xfer->bits_per_word = spi->bits_per_word;
 
 		if (!xfer->speed_hz)
-			xfer->speed_hz = spi->max_speed_hz;
+			xfer->speed_hz = xfer->read_setup ?
+				spi->max_read_speed_hz : spi->max_speed_hz;
 
 		if (ctlr->max_speed_hz && xfer->speed_hz > ctlr->max_speed_hz)
 			xfer->speed_hz = ctlr->max_speed_hz;
