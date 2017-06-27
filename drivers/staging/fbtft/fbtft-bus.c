@@ -226,15 +226,20 @@ int fbtft_write_vmem16_bus9(struct fbtft_par *par, size_t offset, size_t len)
 }
 EXPORT_SYMBOL(fbtft_write_vmem16_bus9);
 
+#define MIN(a, b) ((a) <= (b)) ? (a) : (b)
+
 /* 18/24 bit pixel over 9-bit SPI bus: dc + high byte, dc + low byte */
 int fbtft_write_vmem24_bus9(struct fbtft_par *par, size_t offset, size_t len)
 {
 	u8 *vmem8;
-	u8 *txbuf16 = par->txbuf.buf;
+	u16 *txbuf16 = par->txbuf.buf;
 	size_t remain;
 	size_t to_copy;
 	size_t tx_array_size;
-	int i;
+	int line_len = par->info->fix.line_length;
+	int active_len = (par->info->var.xres * 3);
+	int pad = line_len - active_len;
+	int i, row_offset;
 	int ret = 0;
 
 	fbtft_par_dbg(DEBUG_WRITE_VMEM, par, "%s(offset=%zu, len=%zu)\n",
@@ -250,27 +255,46 @@ int fbtft_write_vmem24_bus9(struct fbtft_par *par, size_t offset, size_t len)
 
 	tx_array_size = (par->txbuf.len / 6) * 3;
 
+	i = 0;
+	row_offset = 0;
 	while (remain) {
-		to_copy = remain > tx_array_size ? tx_array_size : remain;
-		dev_dbg(par->info->device, "    to_copy=%zu, remain=%zu\n",
-						to_copy, remain - to_copy);
+		to_copy = MIN(remain, tx_array_size - i);
+		if (pad) {
+			if (to_copy > active_len - row_offset)
+				to_copy = active_len - row_offset;
+		}
+		dev_dbg(par->info->device, "to_copy=%zu, remain=%zu i=%d row_offset=%d\n",
+			to_copy, remain, i, row_offset);
 
 #ifdef __LITTLE_ENDIAN
-		for (i = 0; i < to_copy; i += 3) {
+		for (; i < to_copy; i += 3) {
 			txbuf16[i]   = 0x0100 | vmem8[i+2];
 			txbuf16[i+1] = 0x0100 | vmem8[i+1];
 			txbuf16[i+2] = 0x0100 | vmem8[i+0];
 		}
 #else
-		for (i = 0; i < to_copy; i++) {
+		for (; i < to_copy; i++) {
 			txbuf16[i]   = 0x0100 | vmem8[i];
 		}
 #endif
 		vmem8 = vmem8 + to_copy;
-		ret = par->fbtftops.write(par, par->txbuf.buf, to_copy*2);
+		row_offset += to_copy;
+		remain -= to_copy;
+		if (row_offset >= active_len) {
+			vmem8 += pad;
+			if (remain >= pad)
+				remain -= pad;
+			else
+				remain = 0;
+			row_offset = 0;
+			if (remain  && (i < tx_array_size))
+				continue;
+		}
+
+		ret = par->fbtftops.write(par, txbuf16, i * 2);
 		if (ret < 0)
 			return ret;
-		remain -= to_copy;
+		i = 0;
 	}
 
 	return ret;
