@@ -9,6 +9,7 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
@@ -294,8 +295,18 @@ static int spi_bitbang_transfer_one(struct spi_master *master,
 			goto out;
 	}
 
-	if (transfer->len)
+	if (transfer->len) {
+		if (transfer->read_setup && master->pins_read)
+			pinctrl_select_state(master->pinctrl,
+					master->pins_read);
+
 		status = bitbang->txrx_bufs(spi, transfer);
+
+		if (transfer->read_setup && master->pins_read
+				&& master->pins_write)
+			pinctrl_select_state(master->pinctrl,
+					master->pins_write);
+	}
 
 	if (status == transfer->len)
 		status = 0;
