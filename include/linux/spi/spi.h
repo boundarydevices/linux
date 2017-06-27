@@ -142,6 +142,7 @@ struct spi_device {
 	struct spi_controller	*controller;
 	struct spi_controller	*master;	/* compatibility layer */
 	u32			max_speed_hz;
+	u32			max_read_speed_hz;
 	u8			chip_select;
 	u8			bits_per_word;
 	bool			rt;
@@ -455,6 +456,7 @@ struct spi_controller {
 	/* limits on transfer speed */
 	u32			min_speed_hz;
 	u32			max_speed_hz;
+	u32			max_read_speed_hz;
 
 	/* other constraints relevant to this driver */
 	u16			flags;
@@ -604,6 +606,9 @@ struct spi_controller {
 	void			*dummy_tx;
 
 	int (*fw_translate_cs)(struct spi_controller *ctlr, unsigned cs);
+	struct pinctrl		*pinctrl;
+	struct pinctrl_state	*pins_write;
+	struct pinctrl_state	*pins_read;
 };
 
 static inline void *spi_controller_get_devdata(struct spi_controller *ctlr)
@@ -829,6 +834,7 @@ struct spi_transfer {
 #define	SPI_NBITS_SINGLE	0x01 /* 1bit transfer */
 #define	SPI_NBITS_DUAL		0x02 /* 2bits transfer */
 #define	SPI_NBITS_QUAD		0x04 /* 4bits transfer */
+	unsigned	read_setup:1;
 	u8		bits_per_word;
 	u8		word_delay_usecs;
 	u16		delay_usecs;
