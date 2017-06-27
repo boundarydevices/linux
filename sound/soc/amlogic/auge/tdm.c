@@ -332,12 +332,31 @@ struct snd_soc_platform_driver aml_tdm_platform = {
 static int aml_dai_tdm_startup(struct snd_pcm_substream *substream,
 			       struct snd_soc_dai *cpu_dai)
 {
-	return 0;
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	int ret;
+
+	aml_tdm_fifo_reset(p_tdm->actrl, substream->stream, p_tdm->id);
+
+	ret = clk_prepare_enable(p_tdm->clk);
+	if (ret) {
+		pr_err("Can't enable mpll clock: %d\n", ret);
+		goto err;
+	}
+
+	return ret;
+err:
+	pr_err("failed enable clock\n");
+	return ret;
 }
 
 static void aml_dai_tdm_shutdown(struct snd_pcm_substream *substream,
-				 struct snd_soc_dai *dai)
+				 struct snd_soc_dai *cpu_dai)
 {
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	/* disable clock and gate */
+	clk_disable_unprepare(p_tdm->clk);
+
 }
 
 static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
@@ -731,26 +750,16 @@ static int aml_dai_set_tdm_slot(struct snd_soc_dai *cpu_dai,
 static int aml_dai_tdm_probe(struct snd_soc_dai *cpu_dai)
 {
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-	struct device *dev = p_tdm->dev;
-	int ret;
 
 	/* config ddr arb */
 	aml_tdm_arb_config(p_tdm->actrl);
-
-	ret = clk_prepare_enable(p_tdm->clk);
-	if (ret) {
-		dev_err(dev, "Can't enable mpll clock: %d\n", ret);
-		return ret;
-	}
 
 	return 0;
 }
 
 static int aml_dai_tdm_remove(struct snd_soc_dai *cpu_dai)
 {
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 
-	clk_disable_unprepare(p_tdm->clk);
 	return 0;
 }
 

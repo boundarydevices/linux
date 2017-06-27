@@ -32,4 +32,11 @@ extern void aml_pdm_write(unsigned int reg, unsigned int val);
 extern void aml_pdm_update_bits(unsigned int reg,
 	unsigned int mask, unsigned int val);
 
+extern int audiobus_read(unsigned int reg);
+
+extern void audiobus_write(unsigned int reg, unsigned int val);
+
+extern void audiobus_update_bits(unsigned int reg,
+	unsigned int mask, unsigned int val);
+
 #endif

@@ -161,6 +161,16 @@ static int aml_spdif_open(struct snd_pcm_substream *substream)
 						p_spdif->irq_toddr);
 			return ret;
 		}
+
+		ret = request_irq(p_spdif->irq_spdifin,
+				aml_spdifin_status_isr, 0, "irq_spdifin",
+				p_spdif);
+		if (ret) {
+			dev_err(p_spdif->dev, "failed to claim irq_spdifin %u\n",
+						p_spdif->irq_spdifin);
+			//return ret;
+		}
+
 	}
 
 	runtime->private_data = p_spdif;
@@ -182,6 +192,7 @@ static int aml_spdif_close(struct snd_pcm_substream *substream)
 	} else {
 		aml_audio_unregister_toddr(p_spdif->dev, p_spdif->to_ddr_num);
 		free_irq(p_spdif->irq_toddr, substream);
+		free_irq(p_spdif->irq_spdifin, p_spdif);
 	}
 
 	runtime->private_data = NULL;
@@ -301,73 +312,14 @@ struct snd_soc_platform_driver aml_spdif_platform = {
 
 static int aml_dai_spdif_probe(struct snd_soc_dai *cpu_dai)
 {
-	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
-	struct device *dev = p_spdif->dev;
-	int ret;
-
-	/* gate on */
-	clk_prepare_enable(p_spdif->gate_spdifin);
-	clk_prepare_enable(p_spdif->gate_spdifout);
-
-	ret = clk_set_parent(p_spdif->clk_spdifin, p_spdif->fixed_clk);
-	if (ret) {
-		dev_err(dev,
-			"Can't set clk_spdifin parent clock\n");
-		ret = PTR_ERR(p_spdif->clk_spdifin);
-		return ret;
-	}
-
-	clk_set_rate(p_spdif->clk_spdifin, 250000000);
-	ret = clk_prepare_enable(p_spdif->clk_spdifin);
-	if (ret) {
-		dev_err(dev,
-			"Can't enable pcm clk_spdifin clock: %d\n", ret);
-		return ret;
-	}
-
-	ret = clk_set_parent(p_spdif->clk_spdifout, p_spdif->sysclk);
-	if (ret) {
-		dev_err(dev,
-			"Can't set clk_spdifout parent clock\n");
-		ret = PTR_ERR(p_spdif->clk_spdifout);
-		return ret;
-	}
-
-	/* enable clock */
-	ret = clk_prepare_enable(p_spdif->clk_spdifout);
-	if (ret) {
-		dev_err(dev,
-			"Can't enable pcm clk_spdifout clock: %d\n", ret);
-		return ret;
-	}
-
-	ret = request_irq(p_spdif->irq_spdifin,
-			aml_spdifin_status_isr, 0, "irq_spdifin", p_spdif);
-	if (ret) {
-		dev_err(p_spdif->dev, "failed to claim irq_spdifin %u\n",
-					p_spdif->irq_spdifin);
-		return ret;
-	}
+	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
 
 	return 0;
 }
 
 static int aml_dai_spdif_remove(struct snd_soc_dai *cpu_dai)
 {
-	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
-
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
-
-	free_irq(p_spdif->irq_spdifin, p_spdif);
-	free_irq(p_spdif->irq_frddr, p_spdif);
-	free_irq(p_spdif->irq_toddr, p_spdif);
-
-	clk_disable_unprepare(p_spdif->clk_spdifin);
-	clk_disable_unprepare(p_spdif->clk_spdifout);
-	clk_disable_unprepare(p_spdif->sysclk);
-	clk_disable_unprepare(p_spdif->fixed_clk);
-	clk_disable_unprepare(p_spdif->gate_spdifin);
-	clk_disable_unprepare(p_spdif->gate_spdifout);
 
 	return 0;
 }
@@ -377,19 +329,69 @@ static int aml_dai_spdif_startup(
 	struct snd_soc_dai *cpu_dai)
 {
 	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+	int ret;
 
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
 
 	aml_spdif_fifo_reset(p_spdif->actrl, substream->stream);
 
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		/* enable clock gate */
+
+		ret = clk_prepare_enable(p_spdif->gate_spdifout);
+		/* enable clock */
+		ret = clk_prepare_enable(p_spdif->sysclk);
+		if (ret) {
+			pr_err("Can't enable pcm sysclk clock: %d\n", ret);
+			goto err;
+		}
+		ret = clk_prepare_enable(p_spdif->clk_spdifout);
+		if (ret) {
+			pr_err("Can't enable pcm clk_spdifout clock: %d\n",
+				ret);
+			goto err;
+		}
+
+	} else {
+		/* enable clock gate */
+		ret = clk_prepare_enable(p_spdif->gate_spdifin);
+		/* enable clock */
+		ret = clk_prepare_enable(p_spdif->fixed_clk);
+		if (ret) {
+			pr_err("Can't enable pcm fixed_clk clock: %d\n", ret);
+			goto err;
+		}
+		ret = clk_prepare_enable(p_spdif->clk_spdifin);
+		if (ret) {
+			pr_err("Can't enable pcm clk_spdifin clock: %d\n", ret);
+			goto err;
+		}
+	}
+
 	return 0;
+err:
+	pr_err("failed enable clock\n");
+	return -EINVAL;
 }
 
 static void aml_dai_spdif_shutdown(
 	struct snd_pcm_substream *substream,
-	struct snd_soc_dai *dai)
+	struct snd_soc_dai *cpu_dai)
 {
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+
+	/* disable clock and gate */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		clk_disable_unprepare(p_spdif->clk_spdifout);
+		clk_disable_unprepare(p_spdif->sysclk);
+		clk_disable_unprepare(p_spdif->gate_spdifout);
+	} else {
+		clk_disable_unprepare(p_spdif->clk_spdifin);
+		clk_disable_unprepare(p_spdif->fixed_clk);
+		clk_disable_unprepare(p_spdif->gate_spdifin);
+	}
 }
+
 
 static int aml_dai_spdif_prepare(
 	struct snd_pcm_substream *substream,
@@ -491,13 +493,19 @@ static int aml_dai_spdif_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
 				struct snd_soc_dai *cpu_dai)
 {
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
 	unsigned int rate = params_rate(params);
 	int ret = 0;
 
 	pr_info("%s\n", __func__);
-	rate *= 128;
-	snd_soc_dai_set_sysclk(cpu_dai,
-			0, rate, SND_SOC_CLOCK_OUT);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		rate *= 128;
+
+		snd_soc_dai_set_sysclk(cpu_dai,
+				0, rate, SND_SOC_CLOCK_OUT);
+	} else {
+		clk_set_rate(p_spdif->clk_spdifin, 250000000);
+	}
 
 	return ret;
 }
@@ -515,7 +523,8 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 {
 	unsigned int mpll_freq = 0;
 
-	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
+	pr_info("asoc debug: %s-%d, sys freq:%d\n", __func__, __LINE__,
+		p_spdif->sysclk_freq);
 	if (p_spdif->sysclk_freq) {
 		unsigned int mul = 4;
 
@@ -534,6 +543,7 @@ static int aml_dai_set_spdif_sysclk(struct snd_soc_dai *cpu_dai,
 	p_spdif->sysclk_freq = freq;
 	pr_info("aml_dai_set_spdif_sysclk, %d, %d, %d\n",
 			clk_id, freq, dir);
+
 	aml_set_spdifclk(p_spdif);
 
 	return 0;
@@ -580,6 +590,7 @@ static const struct snd_soc_component_driver aml_spdif_component = {
 static int aml_spdif_clks_parse_of(struct aml_spdif *p_spdif)
 {
 	struct device *dev = p_spdif->dev;
+	int ret = 0;
 
 	/* clock gate */
 	p_spdif->gate_spdifin = devm_clk_get(dev, "gate_spdifin");
@@ -616,6 +627,22 @@ static int aml_spdif_clks_parse_of(struct aml_spdif *p_spdif)
 	if (IS_ERR(p_spdif->clk_spdifout)) {
 		dev_err(dev, "Can't retrieve spdifout clock\n");
 		return PTR_ERR(p_spdif->clk_spdifout);
+	}
+
+	ret = clk_set_parent(p_spdif->clk_spdifin, p_spdif->fixed_clk);
+	if (ret) {
+		dev_err(dev,
+			"Can't set clk_spdifin parent clock\n");
+		ret = PTR_ERR(p_spdif->clk_spdifin);
+		return ret;
+	}
+
+	ret = clk_set_parent(p_spdif->clk_spdifout, p_spdif->sysclk);
+	if (ret) {
+		dev_err(dev,
+			"Can't set clk_spdifout parent clock\n");
+		ret = PTR_ERR(p_spdif->clk_spdifout);
+		return ret;
 	}
 
 	return 0;

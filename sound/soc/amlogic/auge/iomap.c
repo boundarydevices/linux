@@ -93,6 +93,33 @@ void aml_pdm_update_bits(unsigned int reg,
 }
 EXPORT_SYMBOL(aml_pdm_update_bits);
 
+int audiobus_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_AUDIO_BUS, reg, &val);
+
+	if (ret) {
+		pr_err("read audio reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(audiobus_read);
+
+void audiobus_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_AUDIO_BUS, reg, val);
+}
+EXPORT_SYMBOL(audiobus_write);
+
+void audiobus_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_AUDIO_BUS, reg, mask, val);
+}
+EXPORT_SYMBOL(audiobus_update_bits);
+
 static int snd_iomap_probe(struct platform_device *pdev)
 {
 	struct resource res;

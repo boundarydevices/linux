@@ -133,47 +133,6 @@ static int pdm_hcic_shift_gain_set_enum(
 	return 0;
 }
 
-static int aml_pdm_cntrl_get_reg(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol) {
-	struct soc_mixer_control *mixcntrl =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mixcntrl->reg;
-	unsigned int shift = mixcntrl->shift;
-	unsigned int max = mixcntrl->max;
-	unsigned int invert = mixcntrl->invert;
-	unsigned int value = (((unsigned int)
-		aml_pdm_read(reg))
-		>> shift) & max;
-
-	if (invert)
-		value = (~value) & max;
-	ucontrol->value.integer.value[0] = value;
-
-	return 0;
-}
-
-static int aml_pdm_cntrl_set_reg(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol) {
-	struct soc_mixer_control *mixcntrl =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mixcntrl->reg;
-	unsigned int shift = mixcntrl->shift;
-	unsigned int max = mixcntrl->max;
-	unsigned int invert = mixcntrl->invert;
-	unsigned int value = ucontrol->value.integer.value[0];
-	unsigned int reg_value = (unsigned int)
-		aml_pdm_read(reg);
-
-	if (invert)
-		value = (~value) & mixcntrl->max;
-	max = ~(max << shift);
-	reg_value &= max;
-	reg_value |= (value << shift);
-	aml_pdm_write(reg, reg_value);
-
-	return 0;
-}
-
 static const struct snd_kcontrol_new snd_pdm_controls[] = {
 	/* which set */
 	SOC_ENUM_EXT("PDM Filter Mode",
@@ -181,13 +140,7 @@ static const struct snd_kcontrol_new snd_pdm_controls[] = {
 		     aml_pdm_filter_mode_get_enum,
 		     aml_pdm_filter_mode_set_enum),
 
-	/* hcis gain controls */
-	SOC_SINGLE_EXT("HCIC shift gain",
-			 PDM_HCIC_CTRL1, 24, 0x3F, 0,
-			 aml_pdm_cntrl_get_reg,
-			 aml_pdm_cntrl_set_reg
-			 ),
-
+	/* fix HCIC shift gain according current dmic */
 	SOC_ENUM_EXT("HCIC shift gain from coeff",
 		     pdm_hcic_shift_gain_enum,
 		     pdm_hcic_shift_gain_get_enum,
@@ -455,13 +408,13 @@ EXPORT_SYMBOL_GPL(aml_soc_platform_pdm);
 static int aml_pdm_dai_hw_params(
 	struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params,
-	struct snd_soc_dai *dai)
+	struct snd_soc_dai *cpu_dai)
 {
 	return 0;
 }
 
 static int aml_pdm_dai_set_fmt(
-	struct snd_soc_dai *dai, unsigned int fmt)
+	struct snd_soc_dai *cpu_dai, unsigned int fmt)
 {
 	return 0;
 }
@@ -469,9 +422,9 @@ static int aml_pdm_dai_set_fmt(
 
 static int aml_pdm_dai_prepare(
 	struct snd_pcm_substream *substream,
-	struct snd_soc_dai *dai)
+	struct snd_soc_dai *cpu_dai)
 {
-	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(dai);
+	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	unsigned int bitwidth;
 	unsigned int toddr_type, lsb;
@@ -536,9 +489,9 @@ static int aml_pdm_dai_prepare(
 
 static int aml_pdm_dai_trigger(
 	struct snd_pcm_substream *substream, int cmd,
-		struct snd_soc_dai *dai)
+		struct snd_soc_dai *cpu_dai)
 {
-	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(dai);
+	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
 
 	pr_info("%s\n", __func__);
 
@@ -589,23 +542,11 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
-static int aml_pdm_dai_set_bclk_ratio(struct snd_soc_dai *cpu_dai,
-						unsigned int ratio)
-{
-	/* struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
-	 *
-	 * pr_info("%s ratio:%d\n", __func__, ratio);
-	 * aml_pdm_set_bclk_ratio(p_pdm->actrl, ratio);
-	 */
-
-	return 0;
-}
-
-static int aml_pdm_dai_probe(struct snd_soc_dai *dai)
+static int aml_pdm_dai_probe(struct snd_soc_dai *cpu_dai)
 {
 	int ret = 0;
 
-	ret = snd_soc_add_dai_controls(dai, snd_pdm_controls,
+	ret = snd_soc_add_dai_controls(cpu_dai, snd_pdm_controls,
 				ARRAY_SIZE(snd_pdm_controls));
 	if (ret < 0) {
 		pr_err("%s, failed add snd pdm controls\n", __func__);
@@ -617,13 +558,63 @@ static int aml_pdm_dai_probe(struct snd_soc_dai *dai)
 	return 0;
 }
 
+int aml_pdm_dai_startup(struct snd_pcm_substream *substream,
+	struct snd_soc_dai *cpu_dai)
+{
+	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
+	int ret;
+
+	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
+		return -EINVAL;
+
+	/* enable clock gate */
+	ret = clk_prepare_enable(p_pdm->clk_gate);
+
+	/* enable clock */
+	ret = clk_prepare_enable(p_pdm->clk_pll);
+	if (ret) {
+		pr_err("Can't enable pcm clk_pll clock: %d\n", ret);
+		goto err;
+	}
+
+	ret = clk_prepare_enable(p_pdm->clk_pdm_sysclk);
+	if (ret) {
+		pr_err("Can't enable pcm clk_pdm_sysclk clock: %d\n", ret);
+		goto err;
+	}
+
+	ret = clk_prepare_enable(p_pdm->clk_pdm_dclk);
+	if (ret) {
+		pr_err("Can't enable pcm clk_pdm_dclk clock: %d\n", ret);
+		goto err;
+	}
+
+	return 0;
+err:
+	pr_err("failed enable clock\n");
+	return -EINVAL;
+}
+
+void aml_pdm_dai_shutdown(struct snd_pcm_substream *substream,
+	struct snd_soc_dai *cpu_dai)
+{
+	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	/* disable clock and gate */
+	clk_disable_unprepare(p_pdm->clk_pdm_dclk);
+	clk_disable_unprepare(p_pdm->clk_pdm_sysclk);
+	clk_disable_unprepare(p_pdm->clk_pll);
+	clk_disable_unprepare(p_pdm->clk_gate);
+}
+
 static struct snd_soc_dai_ops aml_pdm_dai_ops = {
 	.set_fmt        = aml_pdm_dai_set_fmt,
 	.hw_params      = aml_pdm_dai_hw_params,
 	.prepare        = aml_pdm_dai_prepare,
 	.trigger        = aml_pdm_dai_trigger,
 	.set_sysclk     = aml_pdm_dai_set_sysclk,
-	.set_bclk_ratio = aml_pdm_dai_set_bclk_ratio,
+	.startup = aml_pdm_dai_startup,
+	.shutdown = aml_pdm_dai_shutdown,
 };
 
 struct snd_soc_dai_driver aml_pdm_dai[] = {
@@ -691,7 +682,6 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 			"Can't get pdm gate\n");
 		return PTR_ERR(p_pdm->clk_gate);
 	}
-	clk_prepare_enable(p_pdm->clk_gate);
 
 	/* pinmux */
 	p_pdm->pdm_pins = devm_pinctrl_get_select(&pdev->dev, "pdm_pins");
@@ -750,27 +740,6 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	/* enable clock */
-	ret = clk_prepare_enable(p_pdm->clk_pll);
-	if (ret) {
-		dev_err(&pdev->dev,
-			"Can't enable pcm clk_pll clock: %d\n", ret);
-		goto err;
-	}
-
-	ret = clk_prepare_enable(p_pdm->clk_pdm_sysclk);
-	if (ret) {
-		dev_err(&pdev->dev,
-			"Can't enable pcm clk_pdm_sysclk clock: %d\n", ret);
-		goto err;
-	}
-
-	ret = clk_prepare_enable(p_pdm->clk_pdm_dclk);
-	if (ret) {
-		dev_err(&pdev->dev,
-			"Can't enable pcm clk_pdm_dclk clock: %d\n", ret);
-		goto err;
-	}
 
 	ret = of_property_read_u32(node, "filter_mode",
 			&p_pdm->filter_mode);

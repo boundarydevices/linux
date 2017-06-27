@@ -84,36 +84,6 @@ void aml_pdm_arb_config(struct aml_audio_controller *actrl)
 	aml_audiobus_write(actrl, EE_AUDIO_ARB_CTRL, 1<<31|0xff<<0);
 }
 
-void aml_pdm_set_bclk_ratio(
-	struct aml_audio_controller *actrl,
-	int ratio)
-{
-	unsigned int clk_id;
-	unsigned int mul;
-	unsigned int sample_count = ratio / 2;
-
-	pr_info("%s, ratio:%d, count:%d\n", __func__, ratio, sample_count);
-
-	clk_id = 2; /* according to dts, mpll2 */
-
-	/* sysclk */
-	mul = 1;
-	aml_audiobus_write(actrl, EE_AUDIO_CLK_PDMIN_CTRL1,
-					1 << 31 | /* clk enable */
-					clk_id << 24 | /* clk src */
-					(mul - 1)/* clk_div */
-					);
-	/* dclk */
-	mul = ratio;
-	aml_audiobus_write(actrl, EE_AUDIO_CLK_PDMIN_CTRL0,
-					1 << 31 | /* clk enable */
-					clk_id << 24 | /* clk src */
-					(mul - 1)); /* clk_div */
-
-
-}
-
-
 /* config for hcic, lpf1,2,3, hpf */
 static void aml_pdm_filters_config(int osr,
 	int lpf1_len, int lpf2_len, int lpf3_len)

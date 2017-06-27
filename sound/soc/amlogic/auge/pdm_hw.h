@@ -25,10 +25,6 @@ extern void aml_pdm_ctrl(
 
 extern void aml_pdm_arb_config(struct aml_audio_controller *actrl);
 
-extern void aml_pdm_set_bclk_ratio(
-	struct aml_audio_controller *actrl,
-	int ratio);
-
 extern int aml_pmd_set_HPF_filter_parameters(void *array);
 
 extern void aml_pdm_filter_ctrl(int osr, int set);

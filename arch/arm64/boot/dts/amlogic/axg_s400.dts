@@ -459,7 +459,6 @@
 							<1 1 1 1 1 1 1 1>;
 				dai-tdm-slot-num = <8>;
 				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <24576000>;
 			};
 			tdmacodec: codec {
 				sound-dai = <&dummy_codec &dummy_codec>;
@@ -480,7 +479,6 @@
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
 				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <12288000>;
 			};
 			codec {
 				prefix-names = "3101_A", "3101_B",
@@ -504,7 +502,6 @@
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
 				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <12288000>;
 			};
 			codec {
 				prefix-names = "5707_A", "5707_B";
@@ -514,13 +511,7 @@
 		};
 
 		aml-audio-card,dai-link@3 {
-			format = "i2s";
 			mclk-fs = <256>;
-			continuous-clock;
-			//bitclock-inversion;
-			//frame-inversion;
-			bitclock-master = <&aml_pdm>;
-			frame-master = <&aml_pdm>;
 			cpu {
 				sound-dai = <&aml_pdm>;
 			};
@@ -530,12 +521,9 @@
 		};
 
 		aml-audio-card,dai-link@4 {
-			//format = "i2s";
 			mclk-fs = <128>;
-			continuous-clock;
 			cpu {
 				sound-dai = <&aml_spdif>;
-				system-clock-frequency = <12288000>;
 			};
 			codec {
 				sound-dai = <&dummy_codec>;
