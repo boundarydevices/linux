@@ -596,7 +596,7 @@ struct spi_device *spi_new_device(struct spi_controller *ctlr,
 	WARN_ON(strlen(chip->modalias) >= sizeof(proxy->modalias));
 
 	proxy->chip_select = chip->chip_select;
-	proxy->max_speed_hz = chip->max_speed_hz;
+	proxy->max_read_speed_hz = proxy->max_speed_hz = chip->max_speed_hz;
 	proxy->mode = chip->mode;
 	proxy->irq = chip->irq;
 	strlcpy(proxy->modalias, chip->modalias, sizeof(proxy->modalias));
@@ -1619,6 +1619,11 @@ static int of_spi_parse_dt(struct spi_controller *ctlr, struct spi_device *spi,
 	}
 	spi->max_speed_hz = value;
 
+	rc = of_property_read_u32(nc, "spi-max-read-frequency", &value);
+	if (!rc)
+		spi->max_read_speed_hz = value;
+	if (!spi->max_read_speed_hz)
+		spi->max_read_speed_hz = spi->max_speed_hz;
 	return 0;
 }
 
@@ -1755,7 +1760,7 @@ static int acpi_spi_add_resource(struct acpi_resource *ares, void *data)
 				spi->chip_select = sb->device_selection;
 			}
 
-			spi->max_speed_hz = sb->connection_speed;
+			spi->max_read_speed_hz = spi->max_speed_hz = sb->connection_speed;
 
 			if (sb->clock_phase == ACPI_SPI_SECOND_PHASE)
 				spi->mode |= SPI_CPHA;
@@ -1973,6 +1978,8 @@ static struct class spi_slave_class = {
 extern struct class spi_slave_class;	/* dummy */
 #endif
 
+static int of_spi_get_pinctrl(struct spi_master *master, struct device *dev);
+
 /**
  * __spi_alloc_controller - allocate an SPI master or slave controller
  * @dev: the controller, possibly using the platform_bus
@@ -2019,6 +2026,7 @@ struct spi_controller *__spi_alloc_controller(struct device *dev,
 	ctlr->dev.parent = dev;
 	pm_suspend_ignore_children(&ctlr->dev, true);
 	spi_controller_set_devdata(ctlr, &ctlr[1]);
+	of_spi_get_pinctrl(master, dev);
 
 	return ctlr;
 }
@@ -2057,8 +2065,38 @@ static int of_spi_register_master(struct spi_controller *ctlr)
 
 	return 0;
 }
+
+static int of_spi_get_pinctrl(struct spi_master *master, struct device *dev)
+{
+	int ret;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_read;
+	struct pinctrl_state *pins_write;
+
+	pinctrl = devm_pinctrl_get(dev);
+	if (!IS_ERR(pinctrl)) {
+		master->pinctrl = pinctrl;
+		pins_read = pinctrl_lookup_state(pinctrl, "read");
+		if (!IS_ERR(pins_read))
+			master->pins_read = pins_read;
+
+		pins_write = pinctrl_lookup_state(pinctrl, "write");
+		if (!IS_ERR(pins_write)) {
+			master->pins_write = pins_write;
+			ret = pinctrl_select_state(pinctrl, pins_write);
+			if (ret)
+				return ret;
+		}
+	}
+	return 0;
+}
 #else
 static int of_spi_register_master(struct spi_controller *ctlr)
+{
+	return 0;
+}
+
+static int of_spi_get_pinctrl(struct spi_master *master, struct device *dev)
 {
 	return 0;
 }
@@ -2769,6 +2807,10 @@ int spi_setup(struct spi_device *spi)
 
 	if (!spi->max_speed_hz)
 		spi->max_speed_hz = spi->controller->max_speed_hz;
+	if (!spi->max_read_speed_hz)
+		spi->max_read_speed_hz = spi->controller->max_read_speed_hz;
+	if (!spi->max_read_speed_hz)
+		spi->max_read_speed_hz = spi->max_speed_hz;
 
 	if (spi->controller->setup)
 		status = spi->controller->setup(spi);
@@ -2829,7 +2871,8 @@ static int __spi_validate(struct spi_device *spi, struct spi_message *message)
 			xfer->bits_per_word = spi->bits_per_word;
 
 		if (!xfer->speed_hz)
-			xfer->speed_hz = spi->max_speed_hz;
+			xfer->speed_hz = xfer->read_setup ?
+				spi->max_read_speed_hz : spi->max_speed_hz;
 		if (!xfer->speed_hz)
 			xfer->speed_hz = ctlr->max_speed_hz;
 
