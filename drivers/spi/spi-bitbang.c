@@ -326,13 +326,23 @@ static int spi_bitbang_transfer_one(struct spi_master *master,
 		 * us dma-safe buffers.
 		 */
 		if (t->len) {
+			if (t->read_setup && master->pins_read)
+				pinctrl_select_state(master->pinctrl,
+						master->pins_read);
+
 			/* REVISIT dma API still needs a designated
 			 * DMA_ADDR_INVALID; ~0 might be better.
 			 */
 			if (!m->is_dma_mapped)
 				t->rx_dma = t->tx_dma = 0;
 			status = bitbang->txrx_bufs(spi, t);
+
+			if (t->read_setup && master->pins_read
+					&& master->pins_write)
+				pinctrl_select_state(master->pinctrl,
+						master->pins_write);
 		}
+
 		if (status > 0)
 			m->actual_length += status;
 		if (status != t->len) {
