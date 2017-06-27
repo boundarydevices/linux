@@ -48,6 +48,18 @@ int fbtft_write_buf_dc(struct fbtft_par *par, void *buf, size_t len, int dc)
 }
 EXPORT_SYMBOL(fbtft_write_buf_dc);
 
+static int bytes_per_pixel(int bpp)
+{
+	return (bpp + 7) >> 3;
+}
+
+static int line_length(int bpp, int width)
+{
+	int line_len = bytes_per_pixel(bpp) * width;
+
+	return (line_len + 3) & ~3;
+}
+
 void fbtft_dbg_hex(const struct device *dev, int groupsize,
 		   const void *buf, size_t len, const char *fmt, ...)
 {
@@ -509,6 +521,8 @@ static void fbtft_merge_fbtftops(struct fbtft_ops *dst, struct fbtft_ops *src)
 		dst->set_var = src->set_var;
 	if (src->set_gamma)
 		dst->set_gamma = src->set_gamma;
+	if (src->read_scanline)
+		dst->read_scanline = src->read_scanline;
 }
 
 /**
@@ -546,7 +560,7 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	int txbuflen = display->txbuflen;
 	unsigned int bpp;
 	unsigned int fps = display->fps;
-	int vmem_size;
+	int vmem_size, i;
 	const s16 *init_sequence = display->init_sequence;
 	char *gamma = display->gamma;
 	u32 *gamma_curves = NULL;
@@ -610,7 +624,7 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 		height = display->height;
 	}
 
-	vmem_size = display->width * display->height * bpp / 8;
+	vmem_size = line_length(bpp, display->width) * display->height;
 	vmem = vzalloc(vmem_size);
 	if (!vmem)
 		goto alloc_fail;
@@ -665,7 +679,7 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	info->fix.xpanstep =	   0;
 	info->fix.ypanstep =	   0;
 	info->fix.ywrapstep =	   0;
-	info->fix.line_length =    width * bpp / 8;
+	info->fix.line_length =    line_length(bpp, width);
 	info->fix.accel =          FB_ACCEL_NONE;
 	info->fix.smem_len =       vmem_size;
 	fb_deferred_io_init(info);
@@ -704,6 +718,8 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	par->gamma.num_values = display->gamma_len;
 	mutex_init(&par->gamma.lock);
 	info->pseudo_palette = par->pseudo_palette;
+	for (i = 0; i < ARRAY_SIZE(par->tx_high); i++)
+		par->tx_high[i] = ~0;
 
 	if (par->gamma.curves && gamma) {
 		if (fbtft_gamma_parse_str(par, par->gamma.curves, gamma,
