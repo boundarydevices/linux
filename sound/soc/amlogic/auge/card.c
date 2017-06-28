@@ -158,6 +158,7 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct aml_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_dai_link *dai_link = aml_priv_to_link(priv, rtd->num);
 	struct aml_dai_props *dai_props =
 		aml_priv_to_props(priv, rtd->num);
 	unsigned int mclk, mclk_fs = 0;
@@ -194,6 +195,10 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk,
 					     SND_SOC_CLOCK_OUT);
+		if (ret && ret != -ENOTSUPP)
+			goto err;
+
+		ret = snd_soc_dai_set_fmt(cpu_dai, dai_link->dai_fmt);
 		if (ret && ret != -ENOTSUPP)
 			goto err;
 
