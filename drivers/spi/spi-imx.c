@@ -402,7 +402,7 @@ static int __maybe_unused mx51_ecspi_config(struct spi_imx_data *spi_imx,
 	 * and enable DMA request.
 	 */
 	if (spi_imx->dma_is_inited) {
-		if (spi_imx->devtype_data->devtype == IMX6UL_ECSPI)
+		if (spi_imx->devtype_data->devtype != IMX6UL_ECSPI)
 			spi_imx->tx_wml = 1;
 		dma = (spi_imx->rx_wml - 1) << MX51_ECSPI_DMA_RX_WML_OFFSET
 		      | (spi_imx->tx_wml - 1) << MX51_ECSPI_DMA_TX_WML_OFFSET
