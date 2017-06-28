@@ -164,7 +164,7 @@ static const struct adc3101_rate_divs adc3101_divs[] = {
 	{ADC3101_FREQ_25000000, 48000, 2, 7, 8643, 128, 8, 2, 64, 8, 4, 4},
 
 	{ADC3101_FREQ_2048000, 8000, 1, 4, 0, 128, 1, 1, 128, 1, 2, 1},
-	{ADC3101_FREQ_4096000, 1, 4, 0, 128, 1, 1, 128, 1, 2, 1},
+	{ADC3101_FREQ_4096000, 16000, 4, 0, 128, 1, 1, 128, 1, 2, 1},
 	{ADC3101_FREQ_8192000, 32000, 1, 4, 0, 128, 1, 1, 128, 1, 2, 1},
 	{ADC3101_FREQ_11289600, 44100, 1, 4, 0, 128, 1, 1, 128, 1, 2, 1},
 	{ADC3101_FREQ_12288000, 48000, 1, 4, 0, 128, 2, 1, 128, 2, 1, 1},
@@ -514,6 +514,7 @@ static int adc3101_hw_params(struct snd_pcm_substream *substream,
 		data |= (ADC3101_WORD_LEN_20BITS << ADC3101_DOSRMSB_SHIFT);
 		break;
 	case SNDRV_PCM_FORMAT_S24_3LE:
+	case SNDRV_PCM_FORMAT_S24_LE:
 		data |= (ADC3101_WORD_LEN_24BITS << ADC3101_DOSRMSB_SHIFT);
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
@@ -629,8 +630,8 @@ static int adc3101_set_bias_level(struct snd_soc_codec *codec,
 }
 
 #define ADC3101_RATES	SNDRV_PCM_RATE_8000_96000
-#define ADC3101_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE \
-			 | SNDRV_PCM_FMTBIT_S24_3LE | SNDRV_PCM_FMTBIT_S32_LE)
+#define ADC3101_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_3LE \
+			 | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
 static const struct snd_soc_dai_ops adc3101_ops = {
 	.hw_params = adc3101_hw_params,
