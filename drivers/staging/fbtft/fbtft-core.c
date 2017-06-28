@@ -19,6 +19,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
+#include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
 #include <linux/backlight.h>
 #include <linux/platform_device.h>
@@ -33,6 +34,12 @@
 static unsigned long debug;
 module_param(debug, ulong, 0000);
 MODULE_PARM_DESC(debug, "override device debug level");
+
+#ifdef CONFIG_HAS_DMA
+static bool dma = true;
+module_param(dma, bool, 0);
+MODULE_PARM_DESC(dma, "Use DMA buffer");
+#endif
 
 int fbtft_write_buf_dc(struct fbtft_par *par, void *buf, size_t len, int dc)
 {
@@ -525,6 +532,23 @@ static void fbtft_merge_fbtftops(struct fbtft_ops *dst, struct fbtft_ops *src)
 		dst->read_scanline = src->read_scanline;
 }
 
+int alloc_txbuf(struct txbuf *txbuf, struct device *dev, struct fbtft_par *par, int len, bool dma)
+{
+	void *buf = NULL;
+
+	if (dma) {
+		dev->coherent_dma_mask = ~0;
+		buf = dmam_alloc_coherent(dev, len, &txbuf->dma, GFP_DMA);
+	} else {
+		buf = devm_kzalloc(dev, len, GFP_KERNEL);
+	}
+	if (!buf)
+		return -ENOMEM;
+	txbuf->buf = buf;
+	txbuf->len = len;
+	return 0;
+}
+
 /**
  * fbtft_framebuffer_alloc - creates a new frame buffer info structure
  *
@@ -553,7 +577,6 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	struct fb_ops *fbops = NULL;
 	struct fb_deferred_io *fbdefio = NULL;
 	u8 *vmem = NULL;
-	void *txbuf = NULL;
 	void *buf = NULL;
 	unsigned int width;
 	unsigned int height;
@@ -739,11 +762,11 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 #endif
 
 	if (txbuflen > 0) {
-		txbuf = devm_kzalloc(par->info->device, txbuflen, GFP_KERNEL);
-		if (!txbuf)
+		/* allow double buffering */
+		if (alloc_txbuf(&par->txbuf, dev, par, txbuflen, dma))
 			goto release_framebuf;
-		par->txbuf.buf = txbuf;
-		par->txbuf.len = txbuflen;
+		if (alloc_txbuf(&par->txbuf2, dev, par, txbuflen, dma))
+			goto release_framebuf;
 	}
 
 	/* default fbtft operations */
