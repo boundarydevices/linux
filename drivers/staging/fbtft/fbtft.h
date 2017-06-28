@@ -144,6 +144,12 @@ struct fbtft_platform_data {
 	void *extra;
 };
 
+struct txbuf {
+	void *buf;
+	dma_addr_t dma;
+	size_t len;
+};
+
 /**
  * struct fbtft_par - Main FBTFT data structure
  *
@@ -196,10 +202,8 @@ struct fbtft_par {
 	struct fbtft_platform_data *pdata;
 	u16 *ssbuf;
 	u32 pseudo_palette[16];
-	struct {
-		void *buf;
-		size_t len;
-	} txbuf;
+	struct txbuf txbuf;
+	struct txbuf txbuf2;
 	u8 *buf;
 	u8 startbyte;
 	struct fbtft_ops fbtftops;
