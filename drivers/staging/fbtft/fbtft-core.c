@@ -639,6 +639,23 @@ static void fbtft_merge_fbtftops(struct fbtft_ops *dst, struct fbtft_ops *src)
 		dst->read_scanline = src->read_scanline;
 }
 
+int alloc_txbuf(struct txbuf *txbuf, struct device *dev, struct fbtft_par *par, int len, bool dma)
+{
+	void *buf = NULL;
+
+	if (dma) {
+		dev->coherent_dma_mask = ~0;
+		buf = dmam_alloc_coherent(dev, len, &txbuf->dma, GFP_DMA);
+	} else {
+		buf = devm_kzalloc(dev, len, GFP_KERNEL);
+	}
+	if (!buf)
+		return -ENOMEM;
+	txbuf->buf = buf;
+	txbuf->len = len;
+	return 0;
+}
+
 /**
  * fbtft_framebuffer_alloc - creates a new frame buffer info structure
  *
@@ -666,7 +683,6 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	struct fb_ops *fbops = NULL;
 	struct fb_deferred_io *fbdefio = NULL;
 	u8 *vmem = NULL;
-	void *txbuf = NULL;
 	void *buf = NULL;
 	unsigned int width;
 	unsigned int height;
@@ -849,19 +865,11 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 #endif
 
 	if (txbuflen > 0) {
-#ifdef CONFIG_HAS_DMA
-		if (dma) {
-			dev->coherent_dma_mask = ~0;
-			txbuf = dmam_alloc_coherent(dev, txbuflen, &par->txbuf.dma, GFP_DMA);
-		} else
-#endif
-		{
-			txbuf = devm_kzalloc(par->info->device, txbuflen, GFP_KERNEL);
-		}
-		if (!txbuf)
+		/* allow double buffering */
+		if (alloc_txbuf(&par->txbuf, dev, par, txbuflen, dma))
 			goto alloc_fail;
-		par->txbuf.buf = txbuf;
-		par->txbuf.len = txbuflen;
+		if (alloc_txbuf(&par->txbuf2, dev, par, txbuflen, dma))
+			goto alloc_fail;
 	}
 
 	/* Initialize gpios to disabled */

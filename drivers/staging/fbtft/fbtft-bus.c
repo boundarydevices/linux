@@ -177,52 +177,188 @@ int fbtft_write_vmem16_bus8(struct fbtft_par *par, size_t offset, size_t len)
 }
 EXPORT_SYMBOL(fbtft_write_vmem16_bus8);
 
+struct vars {
+	u8 *vmem8;
+	size_t rem_tx;
+	size_t rem;
+	int status;
+};
+
+struct message_transfer_par {
+	struct spi_message m;
+	struct spi_transfer t;
+	struct fbtft_par *par;
+	size_t max_tx;
+	struct vars *vars;
+	struct completion complete;
+	int queued;
+};
+
+int fill_txbuffer(struct message_transfer_par *mtp)
+{
+	u32 *txbuf32 = (u32 *)mtp->t.tx_buf;
+	struct vars *v = mtp->vars;
+	size_t to_copy;
+	u8 *vmem8;
+	int ret;
+	int i;
+
+	to_copy = v->rem_tx > mtp->max_tx ? mtp->max_tx : v->rem_tx;
+	vmem8 = v->vmem8;
+	dev_dbg(mtp->par->info->device, "to_copy=%zu, rem_tx=%zu\n",
+			to_copy, v->rem_tx);
+	v->rem_tx -= to_copy;
+
+	for (i = 0; i < to_copy; i++, vmem8 += 6) {
+		*txbuf32++ = BIT(8) | BIT(17) | BIT(26) |
+			(vmem8[1] << 18) | (vmem8[0] << 9) |
+			vmem8[3];
+		*txbuf32++ = BIT(8) | BIT(17) | BIT(26) |
+			(vmem8[2] << 18) | (vmem8[5] << 9) |
+			vmem8[4];
+	}
+	if (v->rem && (i < mtp->max_tx)) {
+		if (v->rem >= 4) {
+			*txbuf32++ = BIT(8) | BIT(17) | BIT(26) |
+				(vmem8[1] << 18) | (vmem8[0] << 9) |
+				vmem8[3];
+			*txbuf32++ = BIT(8) | BIT(17) | BIT(26) |
+				(vmem8[2] << 18);
+		} else {
+			*txbuf32++ = BIT(8) | BIT(17) | BIT(26) |
+				(vmem8[1] << 18) | (vmem8[0] << 9);
+		}
+		v->rem = 0;
+	}
+	mtp->t.len = (unsigned char *)txbuf32 - (unsigned char *)mtp->t.tx_buf;
+	if (!mtp->t.len) {
+		return 0;
+	}
+	v->vmem8 = vmem8;
+	mtp->queued = 1;
+	ret = spi_async(mtp->par->spi, &mtp->m);
+	if (ret < 0) {
+		v->rem = 0;
+		v->rem_tx = 0;
+		v->status = ret;
+	}
+	return ret;
+}
+
+void bus9_complete(void *context)
+{
+	struct message_transfer_par *mtp = (struct message_transfer_par *)context;
+
+	mtp->queued = 0;
+	complete(&mtp->complete);
+}
+
 /* 16 bit pixel over 9-bit SPI bus: dc + high byte, dc + low byte */
 int fbtft_write_vmem16_bus9(struct fbtft_par *par, size_t offset, size_t len)
 {
-	u8 *vmem8;
-	u16 *txbuf16 = par->txbuf.buf;
-	size_t remain;
-	size_t to_copy;
-	size_t tx_array_size;
-	int i;
+	struct vars vars;
+	struct message_transfer_par mtp[] = {
+		[0] = {
+			.t = {
+				.tx_buf = par->txbuf.buf,
+				.tx_dma = par->txbuf.dma,
+				.bits_per_word = 27,
+			},
+			.par = par,
+			.max_tx = par->txbuf.len / 8,
+			.vars = &vars,
+			.queued = 0,
+		},
+		[1] = {
+			.t = {
+				.tx_buf = par->txbuf2.buf,
+				.tx_dma = par->txbuf2.dma,
+				.bits_per_word = 27,
+			},
+			.par = par,
+			.max_tx = par->txbuf2.len / 8,
+			.vars = &vars,
+			.queued = 0,
+		},
+	};
+	struct message_transfer_par *mtpp;
 	int ret = 0;
+	int i = 0;
 
-	fbtft_par_dbg(DEBUG_WRITE_VMEM, par, "%s(offset=%zu, len=%zu)\n",
-		__func__, offset, len);
+#if 0
+	long duration, duration_ms, duration_us;
+	long fps;
+	struct timespec ts_start, ts_end, ts_duration;
+	getnstimeofday(&ts_start);
+#endif
 
-	if (!par->txbuf.buf) {
+	if (!par->spi) {
+		dev_err(par->info->device,
+			"%s: par->spi is unexpectedly NULL\n", __func__);
+		return -1;
+	}
+
+	if (!par->txbuf.buf || !par->txbuf2.buf) {
 		dev_err(par->info->device, "%s: txbuf.buf is NULL\n", __func__);
 		return -1;
 	}
 
-	remain = len;
-	vmem8 = par->info->screen_buffer + offset;
+	fbtft_par_dbg(DEBUG_WRITE_VMEM, par, "%s(offset=%zu, len=%zu)\n",
+		__func__, offset, len);
 
-	tx_array_size = par->txbuf.len / 2;
+	/* process 3 pixels at a time */
+	vars.rem_tx = (len / 6);
+	vars.rem = len - (vars.rem_tx * 6);
+	vars.vmem8 = par->info->screen_base + offset;
+	vars.status = 0;
+	mtpp = &mtp[0];
+	spi_message_init(&mtpp->m);
+	mtpp->m.complete = bus9_complete;
+	mtpp->m.is_dma_mapped = !!par->txbuf.dma;
+	mtpp->m.context = mtpp;
 
-	while (remain) {
-		to_copy = min(tx_array_size, remain);
-		dev_dbg(par->info->device, "    to_copy=%zu, remain=%zu\n",
-						to_copy, remain - to_copy);
+	spi_message_add_tail(&mtpp->t, &mtpp->m);
 
-#ifdef __LITTLE_ENDIAN
-		for (i = 0; i < to_copy; i += 2) {
-			txbuf16[i]     = 0x0100 | vmem8[i + 1];
-			txbuf16[i + 1] = 0x0100 | vmem8[i];
-		}
-#else
-		for (i = 0; i < to_copy; i++)
-			txbuf16[i]   = 0x0100 | vmem8[i];
-#endif
-		vmem8 = vmem8 + to_copy;
-		ret = par->fbtftops.write(par, par->txbuf.buf, to_copy * 2);
+	mtpp = &mtp[1];
+	spi_message_init(&mtpp->m);
+	mtpp->m.complete = bus9_complete;
+	mtpp->m.is_dma_mapped = !!par->txbuf2.dma;
+	mtpp->m.context = mtpp;
+	spi_message_add_tail(&mtpp->t, &mtpp->m);
+
+	while (1) {
+		mtpp = &mtp[i];
+		i ^= 1;
+		if (mtpp->queued)
+			wait_for_completion(&mtpp->complete);
+
+		if (!vars.rem && !vars.rem_tx)
+			break;
+		init_completion(&mtpp->complete);
+		ret = fill_txbuffer(mtpp);
 		if (ret < 0)
-			return ret;
-		remain -= to_copy;
+			break;
 	}
+	mtpp = &mtp[i];
+	if (mtpp->queued)
+		wait_for_completion(&mtpp->complete);
+#if 0
+	getnstimeofday(&ts_end);
+//	ts_fps = timespec_sub(ts_start, par->update_time);
+//	fps_ms = (ts_fps.tv_sec * 1000) + ((ts_fps.tv_nsec / 1000000) % 1000);
+//	fps_us = (ts_fps.tv_nsec / 1000) % 1000;
 
-	return ret;
+	ts_duration = timespec_sub(ts_end, ts_start);
+	duration_ms = (ts_duration.tv_sec * 1000) + ((ts_duration.tv_nsec / 1000000) % 1000);
+	duration_us = (ts_duration.tv_nsec / 1000) % 1000;
+	duration = duration_ms * 1000 + duration_us;
+	fps = duration ? 1000000000 / duration : 0;
+
+	dev_info(par->info->device,
+		"Display update: (%ld.%.3ld ms), fps=%ld.%.3ld\n",
+		duration_ms, duration_us, fps / 1000, fps % 1000);
+#endif
+	return vars.status;
 }
 EXPORT_SYMBOL(fbtft_write_vmem16_bus9);
 
