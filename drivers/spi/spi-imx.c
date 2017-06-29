@@ -1053,16 +1053,18 @@ static void spi_imx_dma_tx_callback(void *cookie)
 
 static int spi_imx_calculate_timeout(struct spi_imx_data *spi_imx, int size)
 {
-	unsigned long timeout = 0;
+	uint64_t timeout = 0;
 
 	/* Time with actual data transfer and CS change delay related to HW */
-	timeout = (8 + 4) * size / spi_imx->spi_bus_clk;
+	timeout = ((8 + 4) * size);
+	timeout *= MSEC_PER_SEC;
+	do_div(timeout, spi_imx->spi_bus_clk);
 
 	/* Add extra second for scheduler related activities */
-	timeout += 1;
+	timeout += MSEC_PER_SEC;
 
 	/* Double calculated timeout */
-	return msecs_to_jiffies(2 * timeout * MSEC_PER_SEC);
+	return msecs_to_jiffies(timeout * 2);
 }
 
 static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
@@ -1112,7 +1114,11 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	timeout = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
 						transfer_timeout);
 	if (!timeout) {
-		dev_err(spi_imx->dev, "I/O Error in DMA TX\n");
+		dev_err(spi_imx->dev, "I/O Error in DMA TX:%x %x %x %x\n",
+				transfer->len,
+				readl(spi_imx->base + MX51_ECSPI_STAT),
+				readl(spi_imx->base + MX51_ECSPI_TESTREG),
+				readl(spi_imx->base + MX51_ECSPI_DMA));
 		dmaengine_terminate_all(master->dma_tx);
 		dmaengine_terminate_all(master->dma_rx);
 		return -ETIMEDOUT;
