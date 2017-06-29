@@ -438,8 +438,6 @@ static int aml_pdm_dai_prepare(
 		toddr_type = 2;
 		break;
 	case 24:
-		toddr_type = 3;
-		break;
 	case 32:
 		toddr_type = 4;
 		break;

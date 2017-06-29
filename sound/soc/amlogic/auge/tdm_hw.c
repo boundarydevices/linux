@@ -270,7 +270,7 @@ void aml_tdm_set_slot(
 	offset = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
 	reg = EE_AUDIO_TDMIN_A_CTRL + offset * index;
 	aml_audiobus_update_bits(actrl, reg,
-		0xf<<20|0x7<<16|0x1f, index<<20|(slot_width-1));
+		0xf<<20|0x1f, index<<20|(slot_width-1));
 }
 
 void aml_tdm_set_channel_mask(
