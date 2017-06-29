@@ -280,8 +280,10 @@
 		reg = <0x0 0xffd24000 0x0 0x18>;
 		interrupts = <0 26 1>;
 		status = "okay";
-		clocks = <&xtal>;
-		clock-names = "clk_uart";
+		clocks = <&xtal
+			&clkc CLKID_UART0>;
+		clock-names = "clk_uart",
+			"clk_gate";
 		fifosize = < 128 >;
 		pinctrl-names = "default";
 		pinctrl-0 = <&a_uart_pins>;
@@ -292,8 +294,10 @@
 		reg = <0x0 0xffd23000 0x0 0x18>;
 		interrupts = <0 75 1>;
 		status = "disable";
-		clocks = <&xtal>;
-		clock-names = "clk_uart";
+		clocks = <&xtal
+			&clkc CLKID_UART1>;
+		clock-names = "clk_uart",
+			"clk_gate";
 		fifosize = < 64 >;
 		pinctrl-names = "default";
 		pinctrl-0 = <&b_uart_pins>;

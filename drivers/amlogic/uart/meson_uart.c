@@ -550,14 +550,15 @@ static void meson_uart_change_speed(struct uart_port *port, unsigned long baud)
 			dev_info(&pdev->dev, "ttyS%d use xtal(24M) %d change %ld to %ld\n",
 				port->line, port->uartclk,
 				mup->baud, baud);
-			val = (port->uartclk) / baud  - 1;
+			val = (port->uartclk + baud / 2) / baud  - 1;
 			val |= (AML_UART_BAUD_USE|AML_UART_BAUD_XTAL
 				|AML_UART_BAUD_XTAL_TICK);
 		} else {
 			dev_info(&pdev->dev, "ttyS%d use xtal(8M) %d change %ld to %ld\n",
 				port->line, port->uartclk,
 				mup->baud, baud);
-			val = (port->uartclk / 3) / baud  - 1;
+			val = ((port->uartclk / 3) + baud / 2) / baud  - 1;
+			val &= (~AML_UART_BAUD_XTAL_TICK);
 			val |= (AML_UART_BAUD_USE|AML_UART_BAUD_XTAL);
 		}
 	} else {
@@ -565,6 +566,7 @@ static void meson_uart_change_speed(struct uart_port *port, unsigned long baud)
 			port->line, port->uartclk,
 			mup->baud, baud);
 		val = ((port->uartclk * 10 / (baud * 4) + 5) / 10) - 1;
+		val &= (~(AML_UART_BAUD_XTAL|AML_UART_BAUD_XTAL_TICK));
 		val |= AML_UART_BAUD_USE;
 	}
 	writel(val, port->membase + AML_UART_REG5);
@@ -1069,18 +1071,26 @@ static int meson_uart_probe(struct platform_device *pdev)
 	spin_lock_init(&mup->wr_lock);
 	port = &mup->port;
 #ifdef CONFIG_AMLOGIC_CLK
+	clk = devm_clk_get(&pdev->dev, "clk_gate");
+	if (IS_ERR(clk)) {
+		pr_err("%s: clock gate not found\n", dev_name(&pdev->dev));
+		/* return PTR_ERR(clk); */
+	} else {
+		ret = clk_prepare_enable(clk);
+		if (ret) {
+			pr_err("uart: clock failed to prepare+enable: %d\n",
+				ret);
+			clk_put(clk);
+			/* return ret; */
+		}
+	}
 
 	clk = devm_clk_get(&pdev->dev, "clk_uart");
 	if (IS_ERR(clk)) {
-		pr_err("%s: clock not found\n", dev_name(&pdev->dev));
+		pr_err("%s: clock source not found\n", dev_name(&pdev->dev));
 		/* return PTR_ERR(clk); */
 	}
-	ret = clk_prepare_enable(clk);
-	if (ret) {
-		pr_err("uart: clock failed to prepare+enable: %d\n", ret);
-		clk_put(clk);
-		/* return ret; */
-	}
+	port->uartclk = clk_get_rate(clk);
 #endif
 
 	port->fifosize = 64;
@@ -1094,7 +1104,7 @@ static int meson_uart_probe(struct platform_device *pdev)
 			xtal_tick_en = of_read_ulong(prop, 1);
 	}
 	xtal_tick_en = 0;
-	port->uartclk = 24000000;
+
 	port->iotype = UPIO_MEM;
 	port->mapbase = res_mem->start;
 	port->irq = res_irq->start;
