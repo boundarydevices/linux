@@ -95,6 +95,7 @@ struct spi_imx_data {
 	unsigned int spi_bus_clk;
 
 	unsigned int bits_per_word;
+	unsigned int prev_width;
 	unsigned int spi_drctl;
 
 	unsigned int count, remainder;
@@ -1272,6 +1273,8 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 				 struct spi_transfer *t)
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
+	int bits_per_word;
+	int width;
 
 	if (!t)
 		return 0;
@@ -1286,7 +1289,13 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	} else
 		spi_imx->spi_bus_clk = t->speed_hz;
 
-	spi_imx->bits_per_word = t->bits_per_word;
+	if (spi_imx_can_dma(spi_imx->bitbang.master, spi, t))
+		spi_imx->usedma = true;
+	else
+		spi_imx->usedma = false;
+
+	bits_per_word = t->bits_per_word;
+	spi_imx->bits_per_word = bits_per_word;
 
 	/*
 	 * Initialize the functions for transfer. To transfer non byte-aligned
@@ -1303,23 +1312,23 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 		spi_imx->dynamic_burst = 1;
 
 	} else {
-		if (spi_imx->bits_per_word <= 8) {
+		if (bits_per_word <= 8) {
 			spi_imx->rx = spi_imx_buf_rx_u8;
 			spi_imx->tx = spi_imx_buf_tx_u8;
-		} else if (spi_imx->bits_per_word <= 16) {
+			width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+		} else if (bits_per_word <= 16) {
 			spi_imx->rx = spi_imx_buf_rx_u16;
 			spi_imx->tx = spi_imx_buf_tx_u16;
+			width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		} else {
 			spi_imx->rx = spi_imx_buf_rx_u32;
 			spi_imx->tx = spi_imx_buf_tx_u32;
+			width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		}
 		spi_imx->dynamic_burst = 0;
+		spi_imx->rx_config.src_addr_width = width;
+		spi_imx->tx_config.dst_addr_width = width;
 	}
-
-	if (spi_imx_can_dma(spi_imx->bitbang.master, spi, t))
-		spi_imx->usedma = true;
-	else
-		spi_imx->usedma = false;
 
 	if (spi_imx->slave_mode) {
 		spi_imx->rx = mx53_ecspi_rx_slave;
@@ -1379,6 +1388,18 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	spi_imx->bitbang.master->flags = SPI_MASTER_MUST_RX |
 					 SPI_MASTER_MUST_TX;
 
+
+	/*
+	 * I have no idea why this is needed, but a dma error
+	 * happens on 1st dma without it
+	 */
+	spi_imx->tx_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_tx,
+			&spi_imx->tx_config);
+	if (ret) {
+		dev_err(spi_imx->dev, "error(%d) in TX dma configuration.\n", ret);
+		goto err;
+	}
 	return 0;
 err:
 	spi_imx_sdma_exit(spi_imx);
@@ -1491,11 +1512,12 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	timeout = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
 						transfer_timeout);
 	if (!timeout) {
-		dev_err(spi_imx->dev, "I/O Error in DMA TX:%x %x %x %x\n",
+		dev_err(spi_imx->dev, "I/O Error in DMA TX:%x %x %x %x %x\n",
 				transfer->len,
 				readl(spi_imx->base + MX51_ECSPI_STAT),
 				readl(spi_imx->base + MX51_ECSPI_TESTREG),
-				readl(spi_imx->base + MX51_ECSPI_DMA));
+				readl(spi_imx->base + MX51_ECSPI_DMA),
+				readl(spi_imx->base + MX51_ECSPI_CTRL));
 		dmaengine_terminate_all(master->dma_tx);
 		dmaengine_terminate_all(master->dma_rx);
 		return -ETIMEDOUT;
