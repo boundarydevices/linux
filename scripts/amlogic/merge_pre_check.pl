@@ -67,6 +67,7 @@ sub check_msg_common
 	if( (length($line) > ($MAX_LEN + 4) ) && ($lnum > 4) )
 	{	#Line over 80 characters is not allowed.
 		$line =~ s/^(\s){4}//;
+		$err_cnt += 1;
 		$err_msg .= "    $err_cnt: Line over $MAX_LEN characters: <$line>\n";
 	}
 
@@ -89,19 +90,19 @@ sub check_msg_49
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "    $err_cnt: This line should be <[module: message>, but <$line>\n";
+			$err_msg .= "    $err_cnt: <module: message>, but <$line>\n";
 		}
 		elsif ( $line =~ /PD\#/i )
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "    $err_cnt: PD#XXXX should not in the first line for 4.9, but <$line>\n";
+			$err_msg .= "    $err_cnt: No PD#XXXX in the first line for 4.9, but <$line>\n";
 		}
 		elsif ( $line =~ /(kernel)/i)
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "    $err_cnt: No 'kernel' in this line, but <$line>\n";
+			$err_msg .= "    $err_cnt: No 'kernel' in kernel commit message, but <$line>\n";
 		}
 	}
 
@@ -121,7 +122,7 @@ sub check_msg_49
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "    $err_cnt: PD#xxxx: detailed description, but <$line>\n";
+			$err_msg .= "    $err_cnt: <PD#xxxx: detailed description>, but <$line>\n";
 		}
 	}
 }
@@ -137,13 +138,13 @@ sub check_msg_314
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "  $err_cnt: This line should be PD#XXXX: <module_id: commit message>, but <$line>\n";
+			$err_msg .= "    $err_cnt: <PD#XXXX: module_id: commit message>, but <$line>\n";
 		}
 		elsif ( $line =~ /(kernel)/i)
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "  $err_cnt: No 'kerenl' in this line, but <$line>\n";
+			$err_msg .= "    $err_cnt: No 'kerenl' in this line, but <$line>\n";
 		}
 	}
 
