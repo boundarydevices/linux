@@ -150,6 +150,7 @@ struct fbtft_platform_data {
 	unsigned int rotate;
 	bool bgr;
 	unsigned int fps;
+	int txbuf_cnt;
 	int txbuflen;
 	u8 startbyte;
 	char *gamma;
@@ -161,6 +162,28 @@ struct txbuf {
 	dma_addr_t dma;
 	size_t len;
 };
+
+//#define USE_WORKQ
+#ifdef USE_WORKQ
+struct txbuf_work_struct {
+	struct work_struct work;
+	u8 *vmem8;
+	size_t group_cnt;
+	size_t rem;
+};
+#endif
+
+struct message_transfer_par {
+	struct spi_message m;
+	struct spi_transfer t;
+	size_t max_tx;
+	struct completion complete;
+	int queued;
+#ifdef USE_WORKQ
+	struct txbuf_work_struct txbuf_work;
+#endif
+};
+
 
 /**
  * struct fbtft_par - Main FBTFT data structure
@@ -214,8 +237,9 @@ struct fbtft_par {
 	struct fbtft_platform_data *pdata;
 	u16 *ssbuf;
 	u32 pseudo_palette[16];
-	struct txbuf txbuf;
-	struct txbuf txbuf2;
+#define MAX_TXBUF_CNT	4
+	int txbuf_cnt;
+	struct txbuf txbuf[MAX_TXBUF_CNT];
 	u8 *buf;
 	u8 startbyte;
 	struct fbtft_ops fbtftops;
@@ -245,6 +269,7 @@ struct fbtft_par {
 	ktime_t update_time;
 	bool bgr;
 	void *extra;
+	struct message_transfer_par _mtp[MAX_TXBUF_CNT];
 	unsigned char scanline_cmd[64] ____cacheline_aligned;
 	unsigned char scanline_result[64] ____cacheline_aligned;
 	unsigned char tx_high[64] ____cacheline_aligned;
