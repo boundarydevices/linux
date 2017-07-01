@@ -763,10 +763,20 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 
 	if (txbuflen > 0) {
 		/* allow double buffering */
-		if (alloc_txbuf(&par->txbuf, dev, par, txbuflen, dma))
-			goto release_framebuf;
-		if (alloc_txbuf(&par->txbuf2, dev, par, txbuflen, dma))
-			goto release_framebuf;
+		par->txbuf_cnt = pdata->txbuf_cnt;
+		if (!par->txbuf_cnt)
+			par->txbuf_cnt = 1;
+		else if (par->txbuf_cnt > MAX_TXBUF_CNT)
+			par->txbuf_cnt = MAX_TXBUF_CNT;
+		for (i = 0; i < par->txbuf_cnt; i++) {
+			if (alloc_txbuf(&par->txbuf[i], dev, par,
+					txbuflen, dma)) {
+				if (!i)
+					goto release_framebuf;
+				par->txbuf_cnt = i;
+				break;
+			}
+		}
 	}
 
 	/* default fbtft operations */
@@ -879,8 +889,9 @@ int fbtft_register_framebuffer(struct fb_info *fb_info)
 
 	fbtft_sysfs_init(par);
 
-	if (par->txbuf.buf && par->txbuf.len >= 1024)
-		sprintf(text1, ", %zu KiB buffer memory", par->txbuf.len >> 10);
+	if (par->txbuf[0].buf && par->txbuf[0].len >= 1024)
+		sprintf(text1, ", %dx%zu KiB %sbuffer(s)",
+			par->txbuf_cnt, par->txbuf[0].len >> 10, par->txbuf[0].dma ? "DMA " : "");
 	if (spi)
 		sprintf(text2, ", spi%d.%d at %d MHz", spi->master->bus_num,
 			spi->chip_select, spi->max_speed_hz / 1000000);
@@ -1207,6 +1218,7 @@ static struct fbtft_platform_data *fbtft_properties_read(struct device *dev)
 	pdata->bgr = device_property_read_bool(dev, "bgr");
 	pdata->fps = fbtft_property_value(dev, "fps");
 	pdata->txbuflen = fbtft_property_value(dev, "txbuflen");
+	pdata->txbuf_cnt = fbtft_property_value(dev, "txbufcnt");
 	pdata->startbyte = fbtft_property_value(dev, "startbyte");
 	device_property_read_string(dev, "gamma", (const char **)&pdata->gamma);
 
@@ -1312,8 +1324,8 @@ int fbtft_probe_common(struct fbtft_display *display,
 				 "9-bit SPI not available, emulating using 8-bit.\n");
 			/* allocate buffer with room for dc bits */
 			par->extra = devm_kzalloc(par->info->device,
-						  par->txbuf.len +
-						  (par->txbuf.len / 8) + 8,
+						  par->txbuf[0].len +
+						  (par->txbuf[0].len / 8) + 8,
 						  GFP_KERNEL);
 			if (!par->extra) {
 				ret = -ENOMEM;
