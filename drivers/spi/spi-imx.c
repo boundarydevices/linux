@@ -350,7 +350,7 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	u32 ctrl = MX51_ECSPI_CTRL_ENABLE;
 	u32 clk = spi_imx->speed_hz, delay, reg;
 	u32 cfg = readl(spi_imx->base + MX51_ECSPI_CONFIG);
-	int tx_wml = is_imx6ul_ecspi(spi_imx) ? spi_imx->wml : 1;
+	int tx_wml;
 
 	/*
 	 * The hardware seems to have a race condition when changing modes. The
@@ -432,8 +432,17 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	 * and enable DMA request.
 	 */
 
+	/*
+	 * work around for
+	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
+	 * FIFO transfer to be sent twice
+	 */
+	tx_wml = is_imx6ul_ecspi(spi_imx) ?
+		spi_imx_get_fifosize(spi_imx) - spi_imx->tx_config.dst_maxburst :
+		0;
+
 	writel(MX51_ECSPI_DMA_RX_WML(spi_imx->wml - 1) |
-		MX51_ECSPI_DMA_TX_WML(tx_wml - 1) |
+		MX51_ECSPI_DMA_TX_WML(tx_wml) |
 		MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN,
 		spi_imx->base + MX51_ECSPI_DMA);
 
@@ -897,6 +906,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	int bits_per_word;
 	int width;
 	int ret;
+	int burst;
 
 	if (!t)
 		return 0;
@@ -924,12 +934,20 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 		spi_imx->tx = spi_imx_buf_tx_u32;
 		width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	}
-
+	/*
+	 * Try to improve performance for workaround
+	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
+	 * FIFO transfer to be sent twice
+	 */
+	burst = (is_imx6ul_ecspi(spi_imx) || (spi_imx->speed_hz > 40000000)) ?
+			spi_imx->wml : spi_imx_get_fifosize(spi_imx);
 	spi_imx->rx_config.src_addr_width = width;
 	spi_imx->tx_config.dst_addr_width = width;
 
-	if (spi_imx->usedma && spi_imx->prev_width != width) {
+	if (spi_imx->usedma && (spi_imx->prev_width != width ||
+			spi_imx->tx_config.dst_maxburst != burst)) {
 		spi_imx->prev_width = width;
+		spi_imx->tx_config.dst_maxburst = burst;
 
 		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_rx,
 						&spi_imx->rx_config);
@@ -969,8 +987,9 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 			     const struct resource *res)
 {
 	int ret;
+	int fifosize = spi_imx_get_fifosize(spi_imx);
 
-	spi_imx->wml = spi_imx_get_fifosize(spi_imx) / 2;
+	spi_imx->wml = fifosize / 2;
 
 	/* Prepare for TX DMA: */
 	master->dma_tx = dma_request_slave_channel_reason(dev, "tx");
@@ -985,7 +1004,9 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 
 	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
 	spi_imx->tx_config.dst_addr = res->start + MXC_CSPITXDATA;
-	spi_imx->tx_config.dst_maxburst = spi_imx->wml;
+	spi_imx->tx_config.dst_maxburst = (is_imx6ul_ecspi(spi_imx) ||
+		(spi_imx->speed_hz > 40000000)) ? spi_imx->wml : fifosize;
+
 	/* Prepare for RX : */
 	master->dma_rx = dma_request_slave_channel_reason(dev, "rx");
 	if (IS_ERR(master->dma_rx)) {
@@ -1091,13 +1112,13 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	spi_imx->dma_finished = 0;
 
 	nents = rx->nents;
-	bpw = spi_imx->rx_config.src_addr_width;
+	bpw = spi_imx->tx_config.dst_addr_width;
 	/*
 	 * Adjust the transfer lenth of the last scattlist if there are
 	 * some tail data, use PIO read to get the tail data since DMA
 	 * sometimes miss the last tail interrupt.
 	 */
-	left = rem = transfer->len % (spi_imx->wml * bpw);
+	left = rem = transfer->len % (spi_imx->tx_config.dst_maxburst * bpw);
 	while (rem) {
 		struct scatterlist *sgl_last = &rx->sgl[nents - 1];
 
@@ -1281,6 +1302,22 @@ spi_imx_unprepare_message(struct spi_master *master, struct spi_message *msg)
 	return 0;
 }
 
+static int get_default_speed(struct device_node *np)
+{
+	struct device_node *nc;
+	int speed_hz;
+
+	if (np) {
+		for_each_available_child_of_node(np, nc) {
+			int ret = of_property_read_u32(nc, "spi-max-frequency", &speed_hz);
+
+			if (ret >= 0)
+				return speed_hz;
+		}
+	}
+	return 20000000;
+}
+
 static int spi_imx_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -1292,6 +1329,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	struct spi_imx_data *spi_imx;
 	struct resource *res;
 	int i, ret, num_cs, irq, idle_state, spi_drctl;
+	u32 speed_hz;
 
 	if (!np && !mxc_platform_info) {
 		dev_err(&pdev->dev, "can't get the platform data\n");
@@ -1307,6 +1345,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 		/* '11' is reserved */
 		spi_drctl = 0;
 	}
+	speed_hz = get_default_speed(np);
 
 	platform_set_drvdata(pdev, master);
 
@@ -1317,6 +1356,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
 	num_cs = master->num_chipselect;
+	spi_imx->speed_hz = speed_hz;
 
 	ret = of_property_read_u32(np, "idle-state", &idle_state);
 	if (ret >= 0) {
