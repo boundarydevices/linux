@@ -371,7 +371,10 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	/* set chip select to use */
 	ctrl |= MX51_ECSPI_CTRL_CS(spi->chip_select);
 
-	ctrl |= (spi_imx->bits_per_word - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
+	ctrl |= (spi_imx->bits_per_word == 32) ?
+/* 6 is highest number that works, don't know why */
+		((6 << 5) - 1) << MX51_ECSPI_CTRL_BL_OFFSET :
+		(spi_imx->bits_per_word - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
 
 	cfg |= MX51_ECSPI_CONFIG_SBBCTRL(spi->chip_select);
 
