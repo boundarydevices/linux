@@ -67,7 +67,7 @@
 		compatible = "sitronix,st7789v";
 		reg = <0>;
 		/* SCLK - write cycle 16 ns(62.5Mhz), read cycle 150 ns(6.6 MHz) */
-		spi-max-frequency = <60000000>;
+		spi-max-frequency = <40000000>;
 		spi-max-read-frequency = <6600000>;
 		width = <240>;
 		height = <204>;
