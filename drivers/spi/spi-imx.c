@@ -103,6 +103,7 @@ struct spi_imx_data {
 
 	unsigned int speed_hz;
 	unsigned int bits_per_word;
+	unsigned int len;
 	unsigned int prev_width;
 	unsigned int spi_drctl;
 
@@ -518,6 +519,7 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	u32 ctrl = MX51_ECSPI_CTRL_ENABLE;
 	u32 clk = spi_imx->speed_hz, delay, reg;
 	u32 cfg = readl(spi_imx->base + MX51_ECSPI_CONFIG);
+	u32 bits = spi_imx->bits_per_word;
 
 	/* set Master or Slave mode */
 	if (spi_imx->slave_mode)
@@ -538,12 +540,28 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	/* set chip select to use */
 	ctrl |= MX51_ECSPI_CTRL_CS(spi->chip_select);
 
-	if (spi_imx->slave_mode)
-		ctrl |= (spi_imx->slave_burst * 8 - 1)
-			<< MX51_ECSPI_CTRL_BL_OFFSET;
-	else
-		ctrl |= (spi_imx->bits_per_word - 1)
-			<< MX51_ECSPI_CTRL_BL_OFFSET;
+	if (spi_imx->slave_mode) {
+		bits = spi_imx->slave_burst * 8;
+	}  else {
+		if (bits == 32) {
+			unsigned len = spi_imx->len / 4;
+
+			while (len > 128) {
+				if (len & 1)
+					break;
+				len >>= 1;
+			}
+			while (len > 128) {
+				if (len % 3)
+					break;
+				len /= 3;
+			}
+			if ((len > 128) || !len)
+				len = 1;
+			bits = len << 5;
+		}
+	}
+	ctrl |= (bits - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
 
 	/*
 	 * eCSPI burst completion by Chip Select signal in Slave mode
@@ -1194,6 +1212,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	bits_per_word = t->bits_per_word;
 	spi_imx->bits_per_word = bits_per_word;
 	spi_imx->speed_hz  = t->speed_hz;
+	spi_imx->len  = t->len;
 
 	/* Initialize the functions for transfer */
 	if (spi_imx->devtype_data->dynamic_burst && !spi_imx->slave_mode) {
