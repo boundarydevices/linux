@@ -38,7 +38,7 @@
 #define MAX_CRTC	4
 
 #if IS_ENABLED(CONFIG_DRM_FBDEV_EMULATION)
-static int legacyfb_depth = 16;
+static int legacyfb_depth = 32;
 module_param(legacyfb_depth, int, 0444);
 #endif
 
@@ -350,8 +350,8 @@ static int imx_drm_bind(struct device *dev)
 	 */
 #if IS_ENABLED(CONFIG_DRM_FBDEV_EMULATION)
 	if (legacyfb_depth != 16 && legacyfb_depth != 32) {
-		dev_warn(dev, "Invalid legacyfb_depth.  Defaulting to 16bpp\n");
-		legacyfb_depth = 16;
+		dev_warn(dev, "Invalid legacyfb_depth.  Defaulting to 32bpp\n");
+		legacyfb_depth = 32;
 	}
 
 	if (legacyfb_depth == 16 && has_dcss(dev))
