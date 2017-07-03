@@ -13974,3 +13974,9 @@ F: drivers/amlogic/irblaster/Makefile
 AMLOGIC AXG ADD CLKMSR INTERFACE
 M:	wang xing <xing.wang@amlogic.com>
 F:	include/linux/amlogic/clk_measure.h
+
+AMLOGIC AXG ADD DDR WINDOW DRIVER
+M:	jiaxing.ye <jiaxing.ye@amlogic.com>
+F:	driver/amlogic/ddr_window/Makefile
+F:	driver/amlogic/ddr_window/ddr_window.c
+F:	driver/amlogic/ddr_window/Kconfig
