@@ -61,9 +61,9 @@
 			//reg = <0x0 0x3e000000 0x0 0x1f00000>;
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x1000000>;
+			size = <0x0 0x2000000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x3f000000 0x0 0x1000000>;
+			alloc-ranges = <0x0 0x3e000000 0x0 0x2000000>;
 		};
 	};
 	mtd_nand {
@@ -738,14 +738,14 @@
 		interrupts = <0 3 1
 			0 89 1>;
 		interrupt-names = "viu-vsync", "rdma";
-		mem_size = <0x00300000 0x600000 0x00000000>;
+		mem_size = <0x00300000 0x1800000 0x00000000>;
 		/* uboot logo,fb0/fb1 memory size */
 		display_mode_default = "1080p60hz";
 		scale_mode = <0>;
 		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		display_size_default = <768 1024 768 2048 32>;
 		/*768*1024*4*2 = 0x600000*/
-		logo_addr = "0x3f000000";
+		logo_addr = "0x3e000000";
 		pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 	};
 

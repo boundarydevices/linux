@@ -97,7 +97,10 @@ static update_func_t hw_func_array[HW_OSD_COUNT][HW_REG_INDEX_MAX] = {
 		spin_lock_irqsave(&osd_lock, lock_flags); \
 		raw_local_save_flags(fiq_flag); \
 		local_fiq_disable(); \
-		osd_hw.reg[osd_idx][cmd_idx].update_func(); \
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) \
+			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
+		else \
+			osd_hw.reg[osd_idx][cmd_idx].update_func(); \
 		raw_local_irq_restore(fiq_flag); \
 		spin_unlock_irqrestore(&osd_lock, lock_flags); \
 	} while (0)
@@ -105,7 +108,10 @@ static update_func_t hw_func_array[HW_OSD_COUNT][HW_REG_INDEX_MAX] = {
 #define add_to_update_list(osd_idx, cmd_idx) \
 	do { \
 		spin_lock_irqsave(&osd_lock, lock_flags); \
-		osd_hw.reg[osd_idx][cmd_idx].update_func(); \
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) \
+			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
+		else \
+			osd_hw.reg[osd_idx][cmd_idx].update_func(); \
 		spin_unlock_irqrestore(&osd_lock, lock_flags); \
 	} while (0)
 #endif
@@ -131,7 +137,11 @@ static update_func_t hw_func_array[HW_OSD_COUNT][HW_REG_INDEX_MAX] = {
 #endif
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-#define remove_from_update_list(osd_idx, cmd_idx)
+#define remove_from_update_list(osd_idx, cmd_idx) \
+	do { \
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) \
+			(osd_hw.updated[osd_idx] &= ~(1<<cmd_idx)); \
+	} while (0)
 #else
 #define remove_from_update_list(osd_idx, cmd_idx) \
 	(osd_hw.updated[osd_idx] &= ~(1<<cmd_idx))

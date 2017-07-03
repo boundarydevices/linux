@@ -357,6 +357,8 @@ struct hw_para_s {
 	struct afbcd_data_s osd_afbcd[HW_OSD_COUNT];
 	u32 urgent[HW_OSD_COUNT];
 	u32 osd_deband_enable;
+	u32 osd_fps;
+	u32 osd_fps_start;
 };
 
 #endif /* _OSD_H_ */

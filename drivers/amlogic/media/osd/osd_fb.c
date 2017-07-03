@@ -1266,7 +1266,8 @@ static int osd_open(struct fb_info *info, int arg)
 	if (osd_check_fbsize(var, info))
 		return -ENOMEM;
 	/* clear osd buffer if not logo layer */
-	if ((logo_index < 0) || (logo_index != fb_index)) {
+	if (((logo_index < 0) || (logo_index != fb_index)) ||
+		(get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)) {
 		osd_log_info("---------------clear fb%d memory %p\n",
 			fb_index, fbdev->fb_mem_vaddr);
 		set_logo_loaded();
@@ -2270,6 +2271,83 @@ static ssize_t store_osd_deband(struct device *device,
 
 	return count;
 }
+
+static ssize_t show_osd_fps(struct device *device,
+				struct device_attribute *attr,
+				char *buf)
+{
+	u32 osd_fps;
+
+	osd_get_fps(&osd_fps);
+	return snprintf(buf, 40, "%d\n",
+		osd_fps);
+}
+
+static ssize_t store_osd_fps(struct device *device,
+			   struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	osd_set_fps(res);
+
+	return count;
+}
+
+static void parse_param(char *buf_orig, char **parm)
+{
+	char *ps, *token;
+	unsigned int n = 0;
+	char delim1[3] = " ";
+	char delim2[2] = "\n";
+
+	ps = buf_orig;
+	strcat(delim1, delim2);
+	while (1) {
+		token = strsep(&ps, delim1);
+		if (token == NULL)
+			break;
+		if (*token == '\0')
+			continue;
+		parm[n++] = token;
+	}
+}
+
+
+
+static ssize_t store_osd_reg(struct device *device,
+			   struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	char *buf_orig, *parm[8] = {NULL};
+	long val = 0;
+	unsigned int reg_addr, reg_val;
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	parse_param(buf_orig, (char **)&parm);
+	if (!strcmp(parm[0], "rv")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		reg_val = osd_reg_read(reg_addr);
+		pr_info("reg[0x%04x]=0x%08x\n", reg_addr, reg_val);
+	} else if (!strcmp(parm[0], "wv")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0)
+			return -EINVAL;
+		reg_val = val;
+		osd_reg_write(reg_addr, reg_val);
+	}
+	return count;
+}
+
+
 static inline  int str2lower(char *str)
 {
 	while (*str != '\0') {
@@ -2452,6 +2530,10 @@ static struct device_attribute osd_attrs[] = {
 			NULL, free_scale_switch),
 	__ATTR(osd_deband, 0644,
 			show_osd_deband, store_osd_deband),
+	__ATTR(osd_fps, 0644,
+			show_osd_fps, store_osd_fps),
+	__ATTR(osd_reg, 0220,
+			NULL, store_osd_reg),
 };
 
 #ifdef CONFIG_PM

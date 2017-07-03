@@ -1950,6 +1950,32 @@ void osd_set_deband(u32 osd_deband_enable)
 		}
 	}
 }
+
+
+void osd_get_fps(u32 *osd_fps)
+{
+	*osd_fps = osd_hw.osd_fps;
+}
+
+void osd_set_fps(u32 osd_fps_start)
+{
+	static int stime, etime;
+
+	osd_hw.osd_fps_start = osd_fps_start;
+	if (osd_fps_start) {
+		/* start to calc fps */
+		stime = ktime_to_us(ktime_get());
+		osd_hw.osd_fps = 0;
+	} else {
+		/* stop to calc fps */
+		etime = ktime_to_us(ktime_get());
+		osd_hw.osd_fps = (osd_hw.osd_fps * 1000000)
+			/ (etime - stime);
+		osd_log_info("osd fps:=%d\n", osd_hw.osd_fps);
+	}
+}
+
+
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 enum {
 	HAL_PIXEL_FORMAT_RGBA_8888 = 1,
@@ -2157,6 +2183,8 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 			osd_log_dbg("fence wait ret %d\n", ret);
 	}
 	if (ret) {
+		if (osd_hw.osd_fps_start)
+			osd_hw.osd_fps++;
 		if (fence_map->op == 0xffffffff)
 			skip = true;
 		else
@@ -2356,6 +2384,8 @@ void osd_pan_display_hw(u32 index, unsigned int xoffset, unsigned int yoffset)
 		osd_hw.pandata[index].y_start += diff_y;
 		osd_hw.pandata[index].y_end   += diff_y;
 		add_to_update_list(index, DISP_GEOMETRY);
+		if (osd_hw.osd_fps_start)
+			osd_hw.osd_fps++;
 		osd_wait_vsync_hw();
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_EXT
@@ -3858,6 +3888,11 @@ void osd_init_hw(u32 logo_loaded)
 		osd_reg_write(VPP_OSD_SC_DUMMY_DATA, 0xff);
 	else
 		osd_reg_write(VPP_OSD_SC_DUMMY_DATA, 0x008080ff);
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) {
+		data32 = osd_reg_read(VIU_OSD1_FIFO_CTRL_STAT);
+		data32 |= 0x18 << 5;
+		osd_reg_write(VIU_OSD1_FIFO_CTRL_STAT, data32);
+	}
 	osd_set_deband(osd_hw.osd_deband_enable);
 	/* osd_hw.osd_afbcd[OSD1].enable = 0;
 	 * osd_hw.osd_afbcd[OSD2].enable = 0;
