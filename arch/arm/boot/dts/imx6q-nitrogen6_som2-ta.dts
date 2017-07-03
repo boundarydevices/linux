@@ -48,12 +48,12 @@
 			MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b1
 #endif
 
-#define GP_ECSPI2_MUX0		<&gpio3 22 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x030b0
-#define GP_ECSPI2_MUX1		<&gpio3 23 GPIO_ACTIVE_HIGH>
+#define GP_ECSPI2_MUX0		<&gpio3 23 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x030b0
-#define GP_ECSPI2_MUX2		<&gpio3 24 GPIO_ACTIVE_HIGH>
+#define GP_ECSPI2_MUX1		<&gpio3 24 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_D24__GPIO3_IO24		0x030b0
+#define GP_ECSPI2_MUX2		<&gpio3 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D25__GPIO3_IO25		0x030b0
 		>;
 	};
 
@@ -97,8 +97,15 @@
 			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0
 
 			/* Stepper Motor Control Digital I/O */
-#define GP_MOTOR_NFREEZE	<&gpio2 6 GPIO_ACTIVE_HIGH>
+#define GP_MOTOR_START		<&gpio2 6 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x0b0b0
+#define GP_MOTOR_STOPL		<&gpio2 23 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x0b0b0
+#define GP_MOTOR_STOPR		<&gpio2 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x0b0b0
+#define GP_MOTOR_N		<&gpio2 26 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x0b0b0
+
 #define GP_MOTOR_DIRECTION	<&gpio3 11 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x0b0b0
 #define GP_MOTOR_HOME		<&gpio3 10 GPIO_ACTIVE_HIGH>
@@ -107,8 +114,8 @@
 			MX6QDL_PAD_EIM_D20__GPIO3_IO20		0x0b0b0
 
 			/* Heater Control Digital I/O */
-#define GP_HEATER_A_1		<&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_GPIO_1__GPIO1_IO01		0x0b0b0
+#define GP_HEATER_A_1		<&gpio1 16 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x0b0b0
 #define GP_HEATER_A_2		<&gpio1 3 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
 #define GP_HEATER_B_1		<&gpio1 10 GPIO_ACTIVE_HIGH>
@@ -181,6 +188,13 @@
 			MX6QDL_PAD_EIM_D30__USB_H1_OC	0x1b0b0
 		>;
 	};
+
+	pinctrl_usbotg: usbotggrp {
+		fsl,pins = <
+			MX6QDL_PAD_GPIO_1__USB_OTG_ID		0x17059
+		>;
+	};
+
 };
 
 / {
@@ -319,10 +333,6 @@
         status = "okay";
 };
 
-&reg_usbotg_vbus {
-	status = "disabled";
-};
-
 &uart3 {
 	status = "disabled";
 };
@@ -334,9 +344,7 @@
 };
 
 &usbotg {
-	/delete-property/ vbus-supply;
-	/delete-property/ pinctrl-names;
-	/delete-property/ pinctrl-0;
+	disable-over-current;
 };
 
 &usdhc2 {
