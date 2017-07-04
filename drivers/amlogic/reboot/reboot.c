@@ -50,6 +50,8 @@ static u32 parse_reason(const char *cmd)
 			reboot_reason = MESON_FASTBOOT_REBOOT;
 		else if (strcmp(cmd, "bootloader") == 0)
 			reboot_reason = MESON_BOOTLOADER_REBOOT;
+		else if (strcmp(cmd, "rpmbp") == 0)
+			reboot_reason = MESON_RPMBP_REBOOT;
 		else if (strcmp(cmd, "report_crash") == 0)
 			reboot_reason = MESON_CRASH_REBOOT;
 		else if (strcmp(cmd, "uboot_suspend") == 0)
