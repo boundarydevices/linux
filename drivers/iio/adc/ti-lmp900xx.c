@@ -524,25 +524,36 @@ static irqreturn_t lmp900xx_irq_handler(int irq, void *data)
 	int current_scan_mask = st->current_scan_mask;
 	int rx_index;
 	int cycle_complete = 0;
+	int repeat = 0;
 
-	current_scan_mask >>= (chan + 1);
-	if (!current_scan_mask) {
-		st->timestamp = iio_get_time_ns();
-		cycle_complete = 1;
-		if (iio_buffer_enabled(iio)) {
-			current_scan_mask = st->current_scan_mask;
-			chan = -1;
+	int next = st->result_index + 2;
+
+	if (next >= ARRAY_SIZE(st->result_buf))
+		next = 0;
+	if (st->get_index == next) {
+		/* no space to store current result, repeat read */
+		repeat = 1;
+	}
+
+	if (!repeat) {
+		current_scan_mask >>= (chan + 1);
+		if (!current_scan_mask) {
+			st->timestamp = iio_get_time_ns();
+			cycle_complete = 1;
+			if (iio_buffer_enabled(iio)) {
+				current_scan_mask = st->current_scan_mask;
+				chan = -1;
+			}
+		} else if (!st->trigger_on && iio_buffer_enabled(iio)) {
+			current_scan_mask = 0;
 		}
-	} else if (!st->trigger_on && iio_buffer_enabled(iio)) {
-		current_scan_mask = 0;
+		if (current_scan_mask) {
+			chan += ffs(current_scan_mask);
+			p[6] = chan | (chan << 3) | (1 << 6);
+		} else {
+			len -= 6;
+		}
 	}
-	if (current_scan_mask) {
-		chan += ffs(current_scan_mask);
-		p[6] = chan | (chan << 3) | (1 << 6);
-	} else {
-		len -= 6;
-	}
-
 	mutex_lock(&st->uar_lock);
 	if (st->uar == (LMP_ADC_DOUT >> 4)) {
 		p += 2;
@@ -562,7 +573,7 @@ static irqreturn_t lmp900xx_irq_handler(int irq, void *data)
 	if (!current_scan_mask)
 		st->adc_pending = 0;
 
-	if (ret >= 0) {
+	if (ret >= 0 && !repeat) {
 		if (!st->current_scan_mask) {
 			mutex_unlock(&st->uar_lock);
 			/*
@@ -581,11 +592,6 @@ static irqreturn_t lmp900xx_irq_handler(int irq, void *data)
 			st->result_buf[i++] = st->adc_buf[rx_index];
 			if (i >= ARRAY_SIZE(st->result_buf))
 				i = 0;
-			if (st->get_index == i) {
-				i -= st->bytes_per_cycle;
-				if (i < 0)
-					i += ARRAY_SIZE(st->result_buf);
-			}
 			st->result_index = i;
 		}
 		mutex_unlock(&st->uar_lock);
