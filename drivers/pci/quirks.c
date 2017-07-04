@@ -1117,6 +1117,23 @@ DECLARE_PCI_FIXUP_RESUME_EARLY(PCI_VENDOR_ID_AMD, PCI_DEVICE_ID_AMD_HUDSON2_SATA
 DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_AMD, 0x7900, quirk_amd_ide_mode);
 DECLARE_PCI_FIXUP_RESUME_EARLY(PCI_VENDOR_ID_AMD, 0x7900, quirk_amd_ide_mode);
 
+#ifdef CONFIG_AMLOGIC_PCIE
+/*
+ *	set broadcom wifi ap6356p bar2 to 2MB
+ */
+static void quirk_broadcom_ap6356p(struct pci_dev *pdev)
+{
+	unsigned short rbarctrl = 0;
+	unsigned short rbarctrln = 0;
+
+	pci_read_config_word(pdev, 0x228, &rbarctrl);
+	pci_write_config_word(pdev, 0x228, ((rbarctrl & 0xff) | 0x100));
+	pci_read_config_word(pdev, 0x228, &rbarctrln);
+	dev_printk(KERN_DEBUG, &pdev->dev, "change 0x228, rbarctrl=%x->%x\n", rbarctrl, rbarctrln);
+}
+DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_AP6356P, PCI_DEVICE_ID_AP6356P, quirk_broadcom_ap6356p);
+#endif
+
 /*
  *	Serverworks CSB5 IDE does not fully support native mode
  */

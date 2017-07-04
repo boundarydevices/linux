@@ -298,7 +298,7 @@
 				0x0 0xff644000 0x0 0x2000
 				0x0 0xff646000 0x0 0x2000
 				0x0 0xffd01080 0x0 0x10
-				0x0 0xf9c00000 0x0 0x100000>;
+				0x0 0xf9f00000 0x0 0x100000>;
 		reg-names = "elbi", "phy", "cfg", "reset", "config";
 		reset-gpio = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 		interrupts = <0 177 0>, <0 179 0>;
@@ -307,9 +307,7 @@
 		#address-cells = <3>;
 		#size-cells = <2>;
 		device_type = "pci";
-		ranges = <0x81000000 0 0	  0 0xf9d00000  0x0 0x10000
-			/*downstream I/O */
-			  0x82000000 0 0xf9d10000 0x0 0xf9d10000 0 0x002f0000>;
+		ranges = <0x82000000 0 0 0x0 0xf9c00000 0 0x00300000>;
 			/* non-prefetchable memory */
 		num-lanes = <1>;
 		pcie-num = <1>;
@@ -338,7 +336,7 @@
 		#address-cells = <3>;
 		#size-cells = <2>;
 		device_type = "pci";
-		ranges = <0x81000000 0 0	  0  0xfa500000 0x0 0x10000
+		ranges = <0x81000000 0 0 0 0xfa500000 0x0 0x10000
 			/* downstream I/O */
 			0x82000000 0 0xfa510000 0x0 0xfa510000 0 0x002f0000>;
 			/* non-prefetchable memory */
