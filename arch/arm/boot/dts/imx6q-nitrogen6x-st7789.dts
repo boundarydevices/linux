@@ -38,6 +38,17 @@
 			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1		/* Can write faster without ODE */
 		>;
 	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0		/* Spare */
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0		/* Spare */
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0		/* Spare */
+			MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03	0x1b0b0
+			MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04	0x1b0b0
+			MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05	0x1b0b0
+		>;
+	};
 };
 
 / {
@@ -81,6 +92,10 @@
 
 &hdmi_core {
 	ipu_id = <1>;
+};
+
+&i2c2 {
+	/delete-node/ ov5642@3d;
 };
 
 &ov5640 {
