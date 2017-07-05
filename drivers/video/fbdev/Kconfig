@@ -6,7 +6,7 @@ menuconfig FB
 	tristate "Support for frame buffer devices"
 	select FB_CMDLINE
 	select FB_NOTIFY
-	---help---
+	help
 	  The frame buffer device provides an abstraction for the graphics
 	  hardware. It represents the frame buffer of some video hardware and
 	  allows application software to access the graphics hardware through
@@ -38,11 +38,28 @@ menuconfig FB
 	  (e.g. an accelerated X server) and that are not frame buffer
 	  device-aware may cause unexpected results. If unsure, say N.
 
+config FB_IMX64
+	bool "Enable framebuffer support for 64 bit platforms"
+	depends on FB && ARM64
+	default n
+	help
+	  Add framebuffer device support for 64 bit platforms. This is needed
+	  only if you specifically need FBDEV support on your 64bit platform,
+	  since it will soon become deprecated.
+
+config FB_IMX64_DEBUG
+	bool "Enable debug messages and operations for 64bit framebuffer devices"
+	depends on FB_IMX64
+	default n
+	help
+	  Select this option if you need to debug 64bit platforms specific
+	  operations.
+
 config FIRMWARE_EDID
        bool "Enable firmware EDID"
        depends on FB
        default n
-       ---help---
+       help
          This enables access to the EDID transferred from the firmware.
 	 On the i386, this is from the Video BIOS. Enable this if DDC/I2C
 	 transfers do not work for your driver and if you are using
