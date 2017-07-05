@@ -32,11 +32,9 @@
 #define MESON_CPU_VERSION_LVL_PACK	2
 #define MESON_CPU_VERSION_LVL_MISC	3
 #define MESON_CPU_VERSION_LVL_MAX	MESON_CPU_VERSION_LVL_MISC
-extern unsigned int system_serial_low0;
-extern unsigned int system_serial_low1;
-extern unsigned int system_serial_high0;
-extern unsigned int system_serial_high1;
 
+#define CHIPID_LEN 16
+void cpuinfo_get_chipid(unsigned char *cid, unsigned int size);
 int  meson_cpu_version_init(void);
 #ifdef CONFIG_AMLOGIC_CPU_VERSION
 int get_meson_cpu_version(int level);
