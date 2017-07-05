@@ -29,11 +29,6 @@ struct fsl_asrc_m2m {
 	spinlock_t lock;
 };
 
-static struct miscdevice asrc_miscdev = {
-	.name	= "mxc_asrc",
-	.minor	= MISC_DYNAMIC_MINOR,
-};
-
 static void fsl_asrc_get_status(struct fsl_asrc_pair *pair,
 				struct asrc_status_flags *flags)
 {
@@ -862,7 +857,8 @@ static long fsl_asrc_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 
 static int fsl_asrc_open(struct inode *inode, struct file *file)
 {
-	struct fsl_asrc *asrc_priv = dev_get_drvdata(asrc_miscdev.this_device);
+	struct miscdevice *asrc_miscdev = file->private_data;
+	struct fsl_asrc *asrc_priv = dev_get_drvdata(asrc_miscdev->parent);
 	struct device *dev = &asrc_priv->pdev->dev;
 	struct fsl_asrc_pair *pair;
 	struct fsl_asrc_m2m *m2m;
@@ -971,20 +967,24 @@ static int fsl_asrc_m2m_init(struct fsl_asrc *asrc_priv)
 	struct device *dev = &asrc_priv->pdev->dev;
 	int ret;
 
-	asrc_miscdev.fops = &asrc_fops,
-	ret = misc_register(&asrc_miscdev);
+	asrc_priv->asrc_miscdev.fops = &asrc_fops;
+	asrc_priv->asrc_miscdev.parent = dev;
+	asrc_priv->asrc_miscdev.name = asrc_priv->name;
+	asrc_priv->asrc_miscdev.minor = MISC_DYNAMIC_MINOR;
+	ret = misc_register(&asrc_priv->asrc_miscdev);
 	if (ret) {
 		dev_err(dev, "failed to register char device %d\n", ret);
 		return ret;
 	}
-	dev_set_drvdata(asrc_miscdev.this_device, asrc_priv);
 
 	return 0;
 }
 
 static int fsl_asrc_m2m_remove(struct platform_device *pdev)
 {
-	misc_deregister(&asrc_miscdev);
+	struct fsl_asrc *asrc_priv = dev_get_drvdata(&pdev->dev);
+
+	misc_deregister(&asrc_priv->asrc_miscdev);
 	return 0;
 }
 
