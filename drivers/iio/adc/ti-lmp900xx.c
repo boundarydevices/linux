@@ -67,6 +67,11 @@
 #define PWRCN_POWER_DOWN	1
 #define PWRCN_STANDBY		3
 
+#define SCANMODE_SINGLE_CH_CONTINUOUS		0
+#define SCANMODE_MULTI_CH_ONCE			1
+#define SCANMODE_MULTI_CH_CONTINUOUS		2
+#define SCANMODE_MULTI_CH_CONTINUOUS_BURN	3
+
 struct lmp900xx_gpio {
 	struct gpio_chip	chip;
 	struct mutex		lock;
@@ -96,6 +101,8 @@ struct lmp900xx_state {
 	unsigned char		active_scan_mask;
 	unsigned char		bytes_per_cycle;
 	unsigned char		current_scan_mask;
+	unsigned char		pending_chan;
+	unsigned char		scanmode;
 	unsigned char		uar;
 	unsigned char		last_reg;
 	unsigned char		result_index;
@@ -263,6 +270,7 @@ static int lmp900xx_spi_read_reg(struct lmp900xx_state *st, unsigned reg)
 			ret = (st->reg_read_rx[rx_index] << 8) | st->reg_read_rx[rx_index + 1];
 	}
 	mutex_unlock(&st->uar_lock);
+	pr_debug("%s:reg(%x)=%x\n", __func__, reg, ret);
 	return ret;
 }
 
@@ -273,6 +281,7 @@ static int lmp900xx_spi_write_reg(struct lmp900xx_state *st, unsigned reg, unsig
 	unsigned bytes;
 	int ret;
 
+	pr_debug("%s:reg(%x)=%x\n", __func__, reg, value);
 	if (reg >= ARRAY_SIZE(reg_bytes))
 		return -EINVAL;
 	bytes = reg_bytes[reg];
@@ -324,13 +333,40 @@ static void wait_adc_idle(struct lmp900xx_state *st)
 	} while (1);
 }
 
+void setup_continue_scan(unsigned char *p)
+{
+	p[0] = 0x10;
+	p[1] = LMP_SENDIAG_FLAGS >> 4;
+	p[2] = 0x80 | (2 << 5) | (LMP_SENDIAG_FLAGS & 0xf);
+#define CS_SENDIAG_FLAGS	3
+	p[3] = 0xff;
+#define CS_ADC_OUT		4
+	p[4] = 0xff;
+	p[5] = 0xff;
+#define CS_LEN			6
+}
+
+void setup_start_scan(unsigned char *p)
+{
+	p[0] = 0x10;
+	p[1] = LMP_CH_SCAN >> 4;
+	p[2] = 0x00 | (0 << 5) | (LMP_CH_SCAN & 0xf);
+#define SS_CHAN		3
+	p[3] = 0;
+	p[4] = 0x10;
+	p[5] = LMP_PWRCN >> 4;
+	p[6] = 0x00 | (0 << 5) | (LMP_PWRCN & 0xf);
+	p[7] = PWRCN_ACTIVE;
+#define SS_LEN		8
+}
+
 /*  **********************  trigger functions ********************** */
-static int start_scan(struct lmp900xx_state *st, unsigned mask)
+static int start_scan(struct lmp900xx_state *st, unsigned mask, unsigned scanmode)
 {
 	unsigned char *p = &st->start_scan[0];
-	int len = 8;
+	int len = SS_LEN;
 	int ret;
-	int chan;
+	int first_chan, last_chan;
 
 	if (!mask || (mask & 0xffffff80)) {
 		pr_err("%s: mask=%x\n", __func__, mask);
@@ -339,12 +375,15 @@ static int start_scan(struct lmp900xx_state *st, unsigned mask)
 	if (st->current_scan_mask)
 		return -EBUSY;
 
-	chan = __ffs(mask);
+	first_chan = __ffs(mask);
+	last_chan = __fls(mask);
 
-	st->continue_scan[6] = p[3] = chan | (chan << 3) | (1 << 6);
 
 	wait_adc_idle(st);
 	mutex_lock(&st->uar_lock);
+	st->scanmode = scanmode;
+	p[SS_CHAN] = first_chan | (last_chan << 3) | (scanmode << 6);
+	st->pending_chan = first_chan;
 	if (st->uar == (LMP_CH_SCAN >> 4)) {
 		p += 2;
 		len -= 2;
@@ -376,7 +415,7 @@ static int lmp900xx_set_trigger_state(struct iio_trigger *trig, bool state)
 
 	st->trigger_on = state;
 	if (state) {
-		ret = start_scan(st, st->active_scan_mask);
+		ret = start_scan(st, st->active_scan_mask, SCANMODE_MULTI_CH_CONTINUOUS);
 		if (ret < 0)
 			st->trigger_on = 0;
 	} else {
@@ -519,12 +558,15 @@ static irqreturn_t lmp900xx_irq_handler(int irq, void *data)
 	unsigned char *p = &st->continue_scan[0];
 	int ret;
 	int i;
-	int len = 11;
-	int chan = p[6] & 7;
+	int len = CS_LEN;
+	int pending_chan = st->pending_chan;
+	int next_pending_chan = pending_chan;
 	int current_scan_mask = st->current_scan_mask;
 	int rx_index;
 	int cycle_complete = 0;
 	int repeat = 0;
+	unsigned char *pdiag;
+	int diag;
 
 	int next = st->result_index + 2;
 
@@ -536,82 +578,111 @@ static irqreturn_t lmp900xx_irq_handler(int irq, void *data)
 	}
 
 	if (!repeat) {
-		current_scan_mask >>= (chan + 1);
+		current_scan_mask >>= (pending_chan + 1);
 		if (!current_scan_mask) {
-			st->timestamp = iio_get_time_ns();
-			cycle_complete = 1;
-			if (iio_buffer_enabled(iio)) {
-				current_scan_mask = st->current_scan_mask;
-				chan = -1;
+			current_scan_mask = st->current_scan_mask;
+			next_pending_chan = -1;
+			if (current_scan_mask) {
+				st->timestamp = iio_get_time_ns();
+				cycle_complete = 1;
 			}
-		} else if (!st->trigger_on && iio_buffer_enabled(iio)) {
-			current_scan_mask = 0;
 		}
 		if (current_scan_mask) {
-			chan += ffs(current_scan_mask);
-			p[6] = chan | (chan << 3) | (1 << 6);
-		} else {
-			len -= 6;
+			if ((next_pending_chan >= 0) || st->trigger_on)
+				next_pending_chan += ffs(current_scan_mask);
 		}
 	}
 	mutex_lock(&st->uar_lock);
-	if (st->uar == (LMP_ADC_DOUT >> 4)) {
+	if (st->uar == (LMP_SENDIAG_FLAGS >> 4)) {
 		p += 2;
 		len -= 2;
-		rx_index = 1;
+		rx_index = CS_SENDIAG_FLAGS - 2;
 	} else {
-		st->uar = (LMP_ADC_DOUT >> 4);
-		rx_index = 3;
+		st->uar = (LMP_SENDIAG_FLAGS >> 4);
+		rx_index = CS_SENDIAG_FLAGS;
 	}
-	if (current_scan_mask)
-		st->uar = (LMP_PWRCN >> 4);
 
 	st->scan_xfer.tx_buf = p;
 	st->scan_xfer.len = len;
 	ret = spi_sync(st->spi, &st->scan_msg);
 	i = st->result_index;
-	if (!current_scan_mask)
+
+	if (ret < 0 || repeat)
+		goto exit1;
+
+	if (!current_scan_mask) {
+		mutex_unlock(&st->uar_lock);
+		if (st->scanmode != SCANMODE_MULTI_CH_ONCE) {
+			st->scanmode = SCANMODE_MULTI_CH_ONCE;
+			lmp900xx_spi_write_reg(st, LMP_CH_SCAN, pending_chan |
+					(pending_chan << 3) | (SCANMODE_MULTI_CH_ONCE << 6));
+		}
 		st->adc_pending = 0;
+		/*
+		 * Unexpected interrupt, let us hope reading adc
+		 * clears it, but sleep to slow them down in case
+		 * it doesn't
+		 */
+		msleep(10);
+		return IRQ_HANDLED;
+	}
 
-	if (ret >= 0 && !repeat) {
-		if (!st->current_scan_mask) {
-			mutex_unlock(&st->uar_lock);
-			/*
-			 * Unexpected interrupt, let us hope reading adc
-			 * clears it, but sleep to slow them down in case
-			 * it doesn't
-			 */
-			msleep(10);
-			return IRQ_HANDLED;
-		}
-		if (st->trigger_on || !iio_buffer_enabled(iio)) {
-			pr_debug("%s: i=%x %x [6]=%x %x\n", __func__,
-					i, st->bytes_per_cycle,
-					st->continue_scan[6], st->current_scan_mask);
-			st->result_buf[i++] = st->adc_buf[rx_index++];
-			st->result_buf[i++] = st->adc_buf[rx_index];
-			if (i >= ARRAY_SIZE(st->result_buf))
-				i = 0;
-			st->result_index = i;
-		}
-		mutex_unlock(&st->uar_lock);
+	pdiag = &st->adc_buf[rx_index];
+	diag = pdiag[0];
+	pr_debug("%s: i=%x %x diag=%x %x\n", __func__,
+			i, st->bytes_per_cycle,
+			diag, st->current_scan_mask);
+	if ((diag & 7) != pending_chan) {
+		/*
+		 * either a conversion was missed,
+		 * or we don't care about this channel
+		 */
+		goto exit1;
+	}
+	st->result_buf[i++] = pdiag[LMP_ADC_DOUT - LMP_SENDIAG_FLAGS];
+	st->result_buf[i++] = pdiag[LMP_ADC_DOUT + 1 - LMP_SENDIAG_FLAGS];
+	if (i >= ARRAY_SIZE(st->result_buf))
+		i = 0;
+	st->result_index = i;
+	mutex_unlock(&st->uar_lock);
 
-		if (cycle_complete) {
-			pr_debug("%s: result_index=%x %x [6]=%x %x\n", __func__,
-					st->result_index, st->bytes_per_cycle,
-					st->continue_scan[6], st->current_scan_mask);
-			if (iio_buffer_enabled(iio)) {
-				if (st->trigger_on)
-					iio_trigger_poll_chained(iio->trig);
-				else
-					pr_err("%s:trigger off, %x\n", __func__,
-							st->result_index);
-			} else {
-				complete(&st->completion);
-			}
-		}
+	if (next_pending_chan >= 0) {
+		st->pending_chan = next_pending_chan;
 	} else {
-		mutex_unlock(&st->uar_lock);
+		/* We can stop the conversions */
+		if (st->scanmode != SCANMODE_MULTI_CH_ONCE) {
+			st->scanmode = SCANMODE_MULTI_CH_ONCE;
+			lmp900xx_spi_write_reg(st, LMP_CH_SCAN, pending_chan |
+				(pending_chan << 3) | (SCANMODE_MULTI_CH_ONCE << 6));
+			msleep(2);
+			lmp900xx_spi_read_reg(st, LMP_ADC_DOUT);
+			lmp900xx_spi_read_reg(st, LMP_ADC_DOUT);
+		}
+		st->adc_pending = 0;
+	}
+
+	if (cycle_complete) {
+		pr_debug("%s: result_index=%x %x, %d %x\n", __func__,
+				st->result_index, st->bytes_per_cycle,
+				pending_chan, st->current_scan_mask);
+		if (iio_buffer_enabled(iio)) {
+			if (st->trigger_on)
+				iio_trigger_poll_chained(iio->trig);
+			else
+				pr_err("%s:trigger off, %x\n", __func__,
+						st->result_index);
+		} else {
+			complete(&st->completion);
+		}
+	}
+	return IRQ_HANDLED;
+exit1:
+	mutex_unlock(&st->uar_lock);
+	if (st->scanmode == SCANMODE_MULTI_CH_ONCE) {
+		lmp900xx_spi_write_reg(st, LMP_CH_SCAN, pending_chan |
+				(pending_chan << 3) | (SCANMODE_MULTI_CH_ONCE << 6));
+		if (st->adc_pending)
+			lmp900xx_spi_write_reg(st, LMP_PWRCN, PWRCN_ACTIVE);
 	}
 	return IRQ_HANDLED;
 }
@@ -673,7 +744,7 @@ out:
 
 static int lmp900xx_scan_direct(struct lmp900xx_state *st, unsigned int chan)
 {
-	int ret = start_scan(st, 1 << chan);
+	int ret = start_scan(st, 1 << chan, SCANMODE_MULTI_CH_ONCE);
 
 	if (ret < 0)
 		return ret;
@@ -751,6 +822,7 @@ static ssize_t show_reg(struct device *dev, struct device_attribute *attr,
 	struct lmp900xx_state *st = iio_priv(iio);
 	s32 rval;
 
+	pr_debug("%s:last_reg=%x\n", __func__, st->last_reg);
 	if (!st->last_reg) {
 		int reg;
 		int cnt = 0;
@@ -831,27 +903,8 @@ static int lmp900xx_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, iio);
 
 	st->spi = spi;
-	st->continue_scan[0] = 0x10;
-	st->continue_scan[1] = LMP_ADC_DOUT >> 4;
-	st->continue_scan[2] = 0x80 | (1 << 5) | (LMP_ADC_DOUT & 0xf);
-	st->continue_scan[3] = 0xff;
-	st->continue_scan[4] = 0xff;
-	st->continue_scan[5] = 0x00 | (0 << 5) | (LMP_CH_SCAN & 0xf);
-	st->continue_scan[6] = 0;
-	st->continue_scan[7] = 0x10;
-	st->continue_scan[8] = LMP_PWRCN >> 4;
-	st->continue_scan[9] = 0x00 | (0 << 5) | (LMP_PWRCN & 0xf);
-	st->continue_scan[10] = PWRCN_ACTIVE;
-
-	st->start_scan[0] = 0x10;
-	st->start_scan[1] = LMP_CH_SCAN >> 4;
-	st->start_scan[2] = 0x00 | (0 << 5) | (LMP_CH_SCAN & 0xf);
-	st->start_scan[3] = 0;
-	st->start_scan[4] = 0x10;
-	st->start_scan[5] = LMP_PWRCN >> 4;
-	st->start_scan[6] = 0x00 | (0 << 5) | (LMP_PWRCN & 0xf);
-	st->start_scan[7] = PWRCN_ACTIVE;
-
+	setup_continue_scan(st->continue_scan);
+	setup_start_scan(st->start_scan);
 	st->scan_xfer.rx_buf = &st->adc_buf[0];
 	spi_message_init_with_transfers(&st->scan_msg,
 					&st->scan_xfer, 1);
@@ -912,7 +965,8 @@ static int lmp900xx_probe(struct spi_device *spi)
 	msleep(2);
 	/* Take out of continuous scan mode */
 	lmp900xx_spi_read_reg(st, LMP_ADC_DOUT);
-	lmp900xx_spi_write_reg(st, LMP_CH_SCAN, 0 | (0 << 3) | (1 << 6));
+	lmp900xx_spi_write_reg(st, LMP_CH_SCAN, 0 | (0 << 3) |
+			(SCANMODE_MULTI_CH_ONCE << 6));
 
 	lmp900xx_spi_write_reg(st, LMP_SPI_CRC_CN, 0);
 	lmp900xx_spi_write_reg(st, LMP_GPIO_DIRCN, 0);
