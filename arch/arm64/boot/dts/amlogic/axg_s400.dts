@@ -21,6 +21,7 @@
 #include "mesonaxg_s400-panel.dtsi"
 / {
 	model = "Amlogic";
+	amlogic-dt-id= "axg_s400_1g";
 	compatible = "amlogic, axg";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
