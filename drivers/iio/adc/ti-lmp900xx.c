@@ -679,10 +679,11 @@ static irqreturn_t lmp900xx_irq_handler(int irq, void *data)
 exit1:
 	mutex_unlock(&st->uar_lock);
 	if (st->scanmode == SCANMODE_MULTI_CH_ONCE) {
-		lmp900xx_spi_write_reg(st, LMP_CH_SCAN, pending_chan |
+		if (st->adc_pending) {
+			lmp900xx_spi_write_reg(st, LMP_CH_SCAN, pending_chan |
 				(pending_chan << 3) | (SCANMODE_MULTI_CH_ONCE << 6));
-		if (st->adc_pending)
 			lmp900xx_spi_write_reg(st, LMP_PWRCN, PWRCN_ACTIVE);
+		}
 	}
 	return IRQ_HANDLED;
 }
@@ -967,6 +968,7 @@ static int lmp900xx_probe(struct spi_device *spi)
 	lmp900xx_spi_read_reg(st, LMP_ADC_DOUT);
 	lmp900xx_spi_write_reg(st, LMP_CH_SCAN, 0 | (0 << 3) |
 			(SCANMODE_MULTI_CH_ONCE << 6));
+	st->scanmode = SCANMODE_MULTI_CH_ONCE;
 
 	lmp900xx_spi_write_reg(st, LMP_SPI_CRC_CN, 0);
 	lmp900xx_spi_write_reg(st, LMP_GPIO_DIRCN, 0);
@@ -985,8 +987,9 @@ static int lmp900xx_probe(struct spi_device *spi)
 		lmp900xx_spi_read_reg(st, LMP_ADC_DOUT);
 		/* read just finished conversion */
 		ret = lmp900xx_spi_read_reg(st, LMP_CH_STS);
-		if (ret & 1)
-			break;
+		if (!(ret & 2))
+			if (ret & 1)
+				break;
 		if (loop++ > 10)
 			break;
 	}
