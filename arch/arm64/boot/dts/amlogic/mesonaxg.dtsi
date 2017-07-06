@@ -230,7 +230,7 @@
 		sys_poweroff = <0x84000008>;
 	};
 
-	watchdog {
+	wdt_ee: watchdog@0xffd0f0d0 {
 		compatible = "amlogic, meson-wdt";
 		status = "disabled";
 		default_timeout=<10>;
