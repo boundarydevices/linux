@@ -47,11 +47,11 @@ static struct snd_pcm_hardware aml_pdm_hardware = {
 					SNDRV_PCM_FMTBIT_S24 |
 					SNDRV_PCM_FMTBIT_S32,
 
-	.rate_min		=	8000,
-	.rate_max		=	48000,
+	.rate_min			=	8000,
+	.rate_max			=	48000,
 
-	.channels_min		=	1,
-	.channels_max		=	8,
+	.channels_min		=	PDM_CHANNELS_MIN,
+	.channels_max		=	PDM_CHANNELS_MAX,
 
 	.buffer_bytes_max	=	32 * 1024,
 	.period_bytes_max	=	16 * 1024,
@@ -473,10 +473,10 @@ static int aml_pdm_dai_prepare(
 
 	switch (bitwidth) {
 	case 16:
-		toddr_type = 2;
+	case 32:
+		toddr_type = 0;
 		break;
 	case 24:
-	case 32:
 		toddr_type = 4;
 		break;
 	default:

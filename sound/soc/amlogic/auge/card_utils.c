@@ -18,6 +18,8 @@
 #include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/kernel.h>
+
 #include "card_utils.h"
 
 int aml_card_parse_daifmt(struct device *dev,
@@ -284,6 +286,19 @@ int aml_card_clean_reference(struct snd_soc_card *card)
 		num_confs < card->num_configs;
 		num_confs++, codec_conf++) {
 		of_node_put(codec_conf->of_node);
+	}
+
+	return 0;
+}
+
+int aml_card_add_controls(struct snd_soc_card *card)
+{
+	int ret;
+
+	ret = snd_card_add_kcontrols(card);
+	if (ret < 0) {
+		pr_info("failed register kcontrols\n");
+		return ret;
 	}
 
 	return 0;

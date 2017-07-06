@@ -19,6 +19,7 @@
 #define __AML_CARD_CORE_H
 
 #include <sound/soc.h>
+#include "audio_utils.h"
 
 struct aml_dai {
 	const char *name;
@@ -77,5 +78,7 @@ void aml_card_canonicalize_cpu(struct snd_soc_dai_link *dai_link,
 				int is_single_links);
 
 int aml_card_clean_reference(struct snd_soc_card *card);
+
+extern int aml_card_add_controls(struct snd_soc_card *card);
 
 #endif /* __AML_CARD_CORE_H */

@@ -13994,3 +13994,11 @@ F:	driver/amlogic/ddr_window/Kconfig
 AMLOGIC AUDIO INFO
 M:	wang xing <xing.wang@amlogic.com>
 F: drivers/amlogic/audioinfo/
+
+AMLOGIC AXG ADD LOOPBACK INTERFACE
+M: wang xing <xing.wang@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/axg_s400.dts
+F: sound/soc/amlogic/auge/*
+F: sound/soc/codecs/amlogic/pdm_dummy.c
+F: sound/soc/codecs/amlogic/tlv320adc3101.c
+

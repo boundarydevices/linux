@@ -403,13 +403,11 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 
 		switch (bit_depth) {
 		case 8:
+		case 16:
+		case 32:
 			toddr_type = 0;
 			break;
-		case 16:
-			toddr_type = 2;
-			break;
 		case 24:
-		case 32:
 			toddr_type = 4;
 			break;
 		default:
@@ -816,7 +814,7 @@ static struct snd_soc_dai_driver aml_tdm_dai[] = {
 	},
 	.capture = {
 	     .channels_min = 1,
-	     .channels_max = 8,
+	     .channels_max = 32,
 	     .rates = AML_DAI_TDM_RATES,
 	     .formats = AML_DAI_TDM_FORMATS,
 	},
@@ -836,7 +834,7 @@ static struct snd_soc_dai_driver aml_tdm_dai[] = {
 	},
 	.capture = {
 	     .channels_min = 1,
-	     .channels_max = 8,
+	     .channels_max = 32,
 	     .rates = AML_DAI_TDM_RATES,
 	     .formats = AML_DAI_TDM_FORMATS,
 	},

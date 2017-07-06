@@ -565,7 +565,7 @@ static int adc3101_mute(struct snd_soc_dai *dai, int mute)
 static int adc3101_set_bias_level(struct snd_soc_codec *codec,
 				  enum snd_soc_bias_level level)
 {
-	pr_info("%s ..\n", __func__);
+	pr_debug("%s ..\n", __func__);
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 		/* Switch on PLL */

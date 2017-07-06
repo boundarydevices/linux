@@ -47,6 +47,7 @@ struct aml_card_data {
 	struct snd_soc_dai_link *dai_link;
 	int spk_mute_gpio;
 	bool spk_mute_active_low;
+	struct loopback_cfg lb_cfg;
 };
 
 #define aml_priv_to_dev(priv) ((priv)->snd_card.dev)
@@ -217,10 +218,21 @@ err:
 	return ret;
 }
 
+int aml_card_prepare(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct aml_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
+
+	loopback_prepare(substream, &priv->lb_cfg);
+
+	return 0;
+}
+
 static struct snd_soc_ops aml_card_ops = {
-	.startup = aml_card_startup,
-	.shutdown = aml_card_shutdown,
-	.hw_params = aml_card_hw_params,
+	.startup    = aml_card_startup,
+	.shutdown   = aml_card_shutdown,
+	.hw_params  = aml_card_hw_params,
+	.prepare    = aml_card_prepare,
 };
 
 static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -466,6 +478,7 @@ static int aml_card_parse_of(struct device_node *node,
 {
 	struct device *dev = aml_priv_to_dev(priv);
 	struct device_node *dai_link;
+	struct device_node *lb_link;
 	int ret;
 
 	if (!node)
@@ -491,6 +504,14 @@ static int aml_card_parse_of(struct device_node *node,
 
 	/* Factor to mclk, used in hw_params() */
 	of_property_read_u32(node, PREFIX "mclk-fs", &priv->mclk_fs);
+
+	/* Loopback */
+	lb_link = of_parse_phandle(node, PREFIX "loopback", 0);
+	if (lb_link) {
+		ret = loopback_parse_of(lb_link, &priv->lb_cfg);
+		if (ret < 0)
+			pr_err("failed parse loopback, ignore it\n");
+	}
 
 	/* Single/Muti DAI link(s) & New style of DT node */
 	if (dai_link) {
@@ -522,6 +543,7 @@ static int aml_card_parse_of(struct device_node *node,
 
 card_parse_end:
 	of_node_put(dai_link);
+	of_node_put(lb_link);
 
 	return ret;
 }
@@ -608,6 +630,14 @@ static int aml_card_probe(struct platform_device *pdev)
 
 	ret = devm_snd_soc_register_card(&pdev->dev, &priv->snd_card);
 	if (ret < 0) {
+		dev_err(dev, "failed to register sound card\n");
+		goto err;
+	}
+
+	/* Add controls */
+	ret = aml_card_add_controls(&priv->snd_card);
+	if (ret < 0) {
+		dev_err(dev, "failed to register mixer kcontrols\n");
 		goto err;
 	}
 

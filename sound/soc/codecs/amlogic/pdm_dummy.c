@@ -20,7 +20,11 @@
 #include <linux/of.h>
 #include <sound/soc.h>
 
-#define DUMMY_RATES			SNDRV_PCM_RATE_8000_48000
+#define DUMMY_RATES			(SNDRV_PCM_RATE_48000 |\
+						SNDRV_PCM_RATE_32000 |\
+						SNDRV_PCM_RATE_16000 |\
+						SNDRV_PCM_RATE_8000)
+
 #define DUMMY_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE |\
 						SNDRV_PCM_FMTBIT_S24_LE |\
 						SNDRV_PCM_FMTBIT_S32_LE)
@@ -59,7 +63,7 @@ struct snd_soc_dai_driver pdm_dummy_dai = {
 	.capture = {
 		.stream_name = "PDM Capture",
 		.channels_min = 1,
-		.channels_max = 8,
+		.channels_max = 16,
 		.rates = DUMMY_RATES,
 		.formats = DUMMY_FORMATS,
 	},

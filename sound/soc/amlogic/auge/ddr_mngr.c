@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include "regs.h"
 #include "ddr_mngr.h"
+#include "audio_utils.h"
 
 static DEFINE_MUTEX(ddr_mutex);
 
@@ -217,6 +218,10 @@ void aml_toddr_select_src(struct toddr *to, enum toddr_src src)
 	struct aml_audio_controller *actrl = to->actrl;
 	unsigned int reg_base = to->reg_base;
 	unsigned int reg;
+
+	/* check whether loopback enable */
+	if (loopback_is_enable())
+		src = LOOPBACK;
 
 	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl,	reg, 0x7, src & 0x7);
