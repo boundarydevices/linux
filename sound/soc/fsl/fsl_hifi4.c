@@ -926,6 +926,7 @@ static long fsl_hifi4_decode_frame_compat32(struct fsl_hifi4 *hifi4_priv,
 	decode_info.in_buf_off = codec_iobuf_info->inp_cur_offset;
 	decode_info.out_buf_off = codec_iobuf_info->out_cur_offset;
 	decode_info.cycles = codec_iobuf_info->cycles;
+	decode_info.input_over = codec_iobuf_info->input_over;
 
 	ret = put_decode_info_compat32(&decode_info, user);
 	if (ret) {
