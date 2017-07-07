@@ -268,9 +268,10 @@ static int aml_wtd_reboot_notify(struct notifier_block *nb,
 {
 	struct aml_wdt_dev *wdev;
 
-	wdev = container_of(nb, struct aml_wdt_dev, reboot_notifier);
-
-	disable_watchdog(wdev);
+	if (event == SYS_DOWN || event == SYS_HALT) {
+		wdev = container_of(nb, struct aml_wdt_dev, reboot_notifier);
+		disable_watchdog(wdev);
+	}
 	pr_info("disable watchdog\n");
 	return NOTIFY_OK;
 }
@@ -324,10 +325,10 @@ static int aml_wdt_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	wdev->reboot_notifier = aml_wdt_pm_notifier;
+	wdev->pm_notifier = aml_wdt_pm_notifier;
 	wdev->reboot_notifier = aml_wdt_reboot_notifier;
-	register_pm_notifier(&aml_wdt_pm_notifier);
-	register_reboot_notifier(&aml_wdt_reboot_notifier);
+	register_pm_notifier(&wdev->pm_notifier);
+	register_reboot_notifier(&wdev->reboot_notifier);
 	dev_info(wdev->dev, "AML Watchdog Timer probed done\n");
 
 	return 0;
