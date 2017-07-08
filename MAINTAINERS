@@ -13456,7 +13456,8 @@ F:	Documentation/devicetree/bindings/iio/adc/amlogic,meson-saradc.txt
 
 AMLOGIC adc_keypad
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
-F:	drivers/amlogic/input/keyboard/*
+F:	drivers/amlogic/input/keyboard/adc_keypad.c
+F:	drivers/amlogic/input/keyboard/adc_keypad.h
 
 AMLOGIC EFUSE DRIVER
 M:	Yun Cai <yum.cai@amlogic.com>

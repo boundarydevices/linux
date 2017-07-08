@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/adc_keypad.h
+ * drivers/amlogic/input/keyboard/adc_keypad.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -56,13 +56,11 @@ struct meson_adc_kp {
 	unsigned char chan_num;   /*number of channel exclude duplicate*/
 	unsigned char count;
 	unsigned int report_code;
-	unsigned int code;
+	unsigned int prev_code;
 	unsigned int poll_period; /*key scan period*/
 	struct mutex kp_lock;
 	struct list_head adckey_head;
-	struct input_dev *input;
-	struct timer_list timer;
-	struct work_struct work_update;
+	struct input_polled_dev *poll_dev;
 	struct iio_channel *pchan[SARADC_CH_NUM];
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	struct early_suspend early_suspend;
