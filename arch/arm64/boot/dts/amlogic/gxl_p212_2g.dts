@@ -1180,3 +1180,6 @@
 &efuse {
 	status = "ok";
 };
+&audio_data{
+	status = "okay";
+};

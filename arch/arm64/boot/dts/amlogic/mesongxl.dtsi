@@ -1010,6 +1010,12 @@ i2c_ao: i2c@c8100500{ /*I2C-AO*/
 		reg = <0x0 0xc883e000 0x0 0x28>;
 	};
 
+	audio_data:audio_data {
+	   compatible = "amlogic, audio_data";
+	   query_licence_cmd = <0x82000050>;
+	   status = "disabled";
+	};
+
 	saradc: saradc {
 		compatible = "amlogic,meson-gxl-saradc";
 		status = "okay";

@@ -1180,7 +1180,9 @@
 &efuse {
 	status = "ok";
 };
-
+&audio_data{
+	status = "okay";
+};
 &spicc{
 	status = "disabled";
 	pinctrl-names = "spicc_pulldown","spicc_pullup";

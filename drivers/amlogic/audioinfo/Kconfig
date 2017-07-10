@@ -1,0 +1,11 @@
+# audio info  configuration
+#
+menu "AMLOGIC Audio Info"
+
+config AMLOGIC_AUDIO_INFO
+	tristate "audio info"
+	default n
+	help
+		support the amlogic audio info;
+
+endmenu

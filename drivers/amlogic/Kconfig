@@ -82,6 +82,8 @@ source "drivers/amlogic/thermal/Kconfig"
 
 source "drivers/amlogic/audiodsp/Kconfig"
 
+source "drivers/amlogic/audioinfo/Kconfig"
+
 source "drivers/amlogic/pm/Kconfig"
 
 source "drivers/amlogic/led/Kconfig"
