@@ -492,7 +492,7 @@ static struct meson_domain_data mesonaxg_periphs_domain_data = {
 	.banks		= mesonaxg_periphs_banks,
 	.num_banks	= ARRAY_SIZE(mesonaxg_periphs_banks),
 	.pin_base	= 15,
-	.num_pins	= 85,
+	.num_pins	= 86,
 };
 
 static struct meson_domain_data mesonaxg_aobus_domain_data = {
