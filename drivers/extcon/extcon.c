@@ -1075,7 +1075,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 	edev->dev.class = extcon_class;
 	edev->dev.release = extcon_dev_release;
 
-#ifdef AMLOGIC_MODIFY
+#ifdef CONFIG_AMLOGIC_MODIFY
 	if (!edev->name) {
 		edev->name = dev_name(edev->dev.parent);
 		if (IS_ERR_OR_NULL(edev->name)) {
