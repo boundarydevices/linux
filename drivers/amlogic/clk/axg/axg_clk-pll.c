@@ -31,6 +31,7 @@
  */
 
 #include <linux/clk-provider.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
@@ -39,7 +40,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/amlogic/cpu_version.h>
-#include <linux/clk.h>
+#include <dt-bindings/clock/amlogic,axg-clkc.h>
 
 #ifdef CONFIG_ARM64
 #include "../clkc.h"
@@ -206,9 +207,6 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		void *cntlbase = pll->base + p->reg_off;
 
 		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-			reg = readl(pll->base);
-			reg |= (AXG_MIPI_CNTL0_ENABLE | AXG_MIPI_CNTL0_BANDGAP);
-			writel(reg, pll->base);
 			writel(AXG_PCIE_PLL_CNTL, cntlbase + (u64)(0*4));
 			writel(AXG_PCIE_PLL_CNTL1, cntlbase + (u64)(1*4));
 			writel(AXG_PCIE_PLL_CNTL2, cntlbase + (u64)(2*4));
@@ -313,6 +311,8 @@ static int meson_axg_pll_enable(struct clk_hw *hw)
 		void *cntlbase = pll->base + p->reg_off;
 
 		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+			clk_prepare_enable(clks[CLKID_MIPI_ENABLE_GATE]);
+			clk_prepare_enable(clks[CLKID_MIPI_BANDGAP_GATE]);
 			if (readl(cntlbase + (u64)(6*4)) == AXG_PCIE_PLL_CNTL6)
 				first_set = 0;
 		} else if (!strcmp(clk_hw_get_name(hw), "hifi_pll")) {
@@ -356,6 +356,11 @@ static void meson_axg_pll_disable(struct clk_hw *hw)
 
 		writel(readl(pll->base + p->reg_off) & (~MESON_PLL_ENABLE),
 			pll->base + p->reg_off);
+
+		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+			clk_disable_unprepare(clks[CLKID_MIPI_ENABLE_GATE]);
+			clk_disable_unprepare(clks[CLKID_MIPI_BANDGAP_GATE]);
+		};
 
 		if (pll->lock)
 			spin_unlock_irqrestore(pll->lock, flags);

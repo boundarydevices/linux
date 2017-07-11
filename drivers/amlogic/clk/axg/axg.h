@@ -26,6 +26,7 @@
  * to get the right value
  */
 
+#define HHI_MIPI_CNTL0			0x0 /* 0x0 offset in data sheet */
 #define HHI_GP0_PLL_CNTL		0x40 /* 0x10 offset in data sheet */
 
 #define HHI_HIFI_PLL_CNTL		0x80 /* 0x20 offset in data sheet */

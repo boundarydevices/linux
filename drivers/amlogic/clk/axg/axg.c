@@ -356,20 +356,7 @@ static struct clk_mux axg_pcie_mux = {
 		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
 	},
 };
-#if 0
-static struct clk_gate axg_pcie_input_gate = {
-	.reg = (void *)HHI_PCIE_PLL_CNTL6,
-	.bit_idx = 1,
-	.lock = &clk_lock,
-	.hw.init = &(struct clk_init_data) {
-		.name = "axg_pcie_input_gate",
-		.ops = &clk_gate_ops,
-		.parent_names = (const char *[]){ "pcie_input" },
-		.num_parents = 1,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
-	},
-};
-#endif
+
 static struct clk_mux axg_pcie_ref = {
 	.reg = (void *)HHI_PCIE_PLL_CNTL6,
 	.mask = 0x1,
@@ -411,6 +398,33 @@ static struct clk_gate axg_pcie_cml_en1 = {
 		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
 	},
 };
+
+static struct clk_gate axg_mipi_enable_gate = {
+	.reg = (void *)HHI_MIPI_CNTL0,
+	.bit_idx = 29,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "axg_mipi_enable_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "NULL" },
+		.num_parents = 0,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+
+static struct clk_gate axg_mipi_bandgap_gate = {
+	.reg = (void *)HHI_MIPI_CNTL0,
+	.bit_idx = 26,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "axg_mipi_bandgap_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "NULL" },
+		.num_parents = 0,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+
 /*
  * FIXME cpu clocks and the legacy composite clocks (e.g. clk81) are both PLL
  * post-dividers and should be modelled with their respective PLLs via the
@@ -727,6 +741,8 @@ static struct clk_hw *axg_clk_hws[] = {
 	[CLKID_PCIE_REF]			= &axg_pcie_ref.hw,
 	[CLKID_PCIE_CML_EN0]	= &axg_pcie_cml_en0.hw,
 	[CLKID_PCIE_CML_EN1]	= &axg_pcie_cml_en1.hw,
+	[CLKID_MIPI_ENABLE_GATE]	= &axg_mipi_enable_gate.hw,
+	[CLKID_MIPI_BANDGAP_GATE]	= &axg_mipi_bandgap_gate.hw,
 };
 /* Convenience tables to populate base addresses in .probe */
 
@@ -791,6 +807,8 @@ static struct clk_gate *axg_clk_gates[] = {
 	&axg_ao_ahb_bus,
 	&axg_ao_iface,
 	&axg_ao_i2c,
+	&axg_mipi_enable_gate,
+	&axg_mipi_bandgap_gate,
 };
 
 static void __init axg_clkc_init(struct device_node *np)

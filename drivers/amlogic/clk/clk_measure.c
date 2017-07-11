@@ -537,7 +537,7 @@ int axg_clk_measure(struct seq_file *s, void *what, unsigned int index)
 		[12] = "0	                 ",
 		[11] = "0	                 ",
 		[10] = "0	                 ",
-		[9] = "0	                 ",
+		[9] = "cts_encl_clk          ",
 		[8] = "0	                 ",
 		[7] = "clk81               ",
 		[6] = "0	                 ",
