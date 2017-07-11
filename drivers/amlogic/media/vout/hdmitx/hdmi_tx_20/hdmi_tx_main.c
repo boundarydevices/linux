@@ -2920,7 +2920,7 @@ void hdmitx_hdcp_status(int hdmi_authenticated)
 							hdmi_authenticated);
 }
 
-void hdmitx_extcon_register(struct platform_device *pdev)
+void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 {
 	struct extcon_dev *edev;
 	int ret;
@@ -2931,6 +2931,7 @@ void hdmitx_extcon_register(struct platform_device *pdev)
 		hdmi_print(IMP, SYS "failed to allocate hdmitx extcon hdmi\n");
 		return;
 	}
+	edev->dev.parent = dev;
 	edev->name = "hdmitx_extcon_hdmi";
 	dev_set_name(&edev->dev, "hdmi");
 	ret = extcon_dev_register(edev);
@@ -2947,6 +2948,7 @@ void hdmitx_extcon_register(struct platform_device *pdev)
 		return;
 	}
 
+	edev->dev.parent = dev;
 	edev->name = "hdmitx_excton_audio";
 	dev_set_name(&edev->dev, "hdmi_audio");
 	ret = extcon_dev_register(edev);
@@ -2963,6 +2965,7 @@ void hdmitx_extcon_register(struct platform_device *pdev)
 		return;
 	}
 
+	edev->dev.parent = dev;
 	edev->name = "hdmitx_excton_power";
 	dev_set_name(&edev->dev, "hdmi_power");
 	ret = extcon_dev_register(edev);
@@ -2979,6 +2982,7 @@ void hdmitx_extcon_register(struct platform_device *pdev)
 		return;
 	}
 
+	edev->dev.parent = dev;
 	edev->name = "hdmitx_excton_hdr";
 	dev_set_name(&edev->dev, "hdmi_hdr");
 	ret = extcon_dev_register(edev);
@@ -2995,6 +2999,7 @@ void hdmitx_extcon_register(struct platform_device *pdev)
 		return;
 	}
 
+	edev->dev.parent = dev;
 	edev->name = "hdmitx_excton_rxsense";
 	dev_set_name(&edev->dev, "hdmi_rxsense");
 	ret = extcon_dev_register(edev);
@@ -3011,6 +3016,7 @@ void hdmitx_extcon_register(struct platform_device *pdev)
 		return;
 	}
 
+	edev->dev.parent = dev;
 	edev->name = "hdmitx_excton_hdcp";
 	dev_set_name(&edev->dev, "hdcp");
 	ret = extcon_dev_register(edev);
@@ -3221,7 +3227,7 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	}
 	pr_info("hdmitx hpd irq = %d\n", hdmitx_device.irq_hpd);
 
-	hdmitx_extcon_register(pdev);
+	hdmitx_extcon_register(pdev, dev);
 
 	hdmitx_init_parameters(&hdmitx_device.hdmi_info);
 	HDMITX_Meson_Init(&hdmitx_device);
