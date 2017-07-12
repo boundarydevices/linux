@@ -251,11 +251,9 @@ static void amlogic_pcie_assert_reset(struct amlogic_pcie *amlogic_pcie)
 				"gpio multiplex, don't reset!\n");
 	} else if (amlogic_pcie->gpio_type == 1) {
 		dev_info(amlogic_pcie->pp.dev, "pad gpio\n");
-		if (amlogic_pcie->reset_gpio >= 0) {
-				devm_gpio_request_one(dev,
-					 amlogic_pcie->reset_gpio,
-					GPIOF_OUT_INIT_HIGH, "RESET");
-		}
+		if (amlogic_pcie->reset_gpio >= 0)
+			devm_gpio_request(dev,
+				amlogic_pcie->reset_gpio, "RESET");
 
 		if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
 			dev_info(amlogic_pcie->pp.dev,
@@ -268,11 +266,9 @@ static void amlogic_pcie_assert_reset(struct amlogic_pcie *amlogic_pcie)
 		}
 	} else {
 		dev_info(amlogic_pcie->pp.dev, "normal gpio\n");
-		if (amlogic_pcie->reset_gpio >= 0) {
-				devm_gpio_request_one(dev,
-					 amlogic_pcie->reset_gpio,
-					GPIOF_OUT_INIT_HIGH, "RESET");
-		}
+		if (amlogic_pcie->reset_gpio >= 0)
+			devm_gpio_request(dev,
+				amlogic_pcie->reset_gpio, "RESET");
 
 		if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
 			dev_info(amlogic_pcie->pp.dev,
