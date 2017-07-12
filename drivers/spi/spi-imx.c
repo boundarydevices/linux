@@ -1372,7 +1372,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx = spi_master_get_devdata(master);
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
-	num_cs = master->num_chipselect;
+	num_cs = of_gpio_named_count(np, "cs-gpios");
 	spi_imx->speed_hz = speed_hz;
 
 	ret = of_property_read_u32(np, "idle-state", &idle_state);
@@ -1380,6 +1380,8 @@ static int spi_imx_probe(struct platform_device *pdev)
 		spi_imx->idle_state = idle_state;
 		spi_imx->idle_state_provided = 1;
 		if (idle_state >= (1 << num_cs)) {
+			dev_err(&pdev->dev, "idle-state(0x%x) > 0x%x, num_cs=%d\n",
+				idle_state, 1 << num_cs, num_cs);
 			ret = -EINVAL;
 			goto out_master_put;
 		}
@@ -1400,11 +1402,6 @@ static int spi_imx_probe(struct platform_device *pdev)
 			master->cs_gpios[i] = mxc_platform_info->chipselect[i];
  	}
 
-	if (spi_imx->idle_state_provided) {
-		spi_imx->current_state = ~spi_imx->idle_state &
-			((1 << num_cs) - 1);
-		spi_imx_chip_select(spi_imx, BITBANG_CS_INACTIVE, 0, 0, 1);
-	}
 	spi_imx->bitbang.chipselect = spi_imx_chipselect;
 	spi_imx->bitbang.setup_transfer = spi_imx_setupxfer;
 	spi_imx->bitbang.txrx_bufs = spi_imx_transfer;
@@ -1504,6 +1501,11 @@ static int spi_imx_probe(struct platform_device *pdev)
 				master->cs_gpios[i]);
 			goto out_clk_put;
 		}
+	}
+	if (spi_imx->idle_state_provided) {
+		spi_imx->current_state = ~spi_imx->idle_state &
+			((1 << num_cs) - 1);
+		spi_imx_chip_select(spi_imx, BITBANG_CS_INACTIVE, 0, 0, 1);
 	}
 
 	dev_info(&pdev->dev, "probed\n");
