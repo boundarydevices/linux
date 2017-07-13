@@ -3,7 +3,8 @@
  *
  * Author: Timur Tabi <timur@freescale.com>
  *
- * Copyright 2007-2015 Freescale Semiconductor, Inc.
+ * Copyright 2007-2015, Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -847,16 +848,6 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	int enabled;
 	u8 i2smode = ssi_private->i2s_mode;
 
-	regmap_read(regs, CCSR_SSI_SCR, &scr_val);
-	enabled = scr_val & CCSR_SSI_SCR_SSIEN;
-
-	/*
-	 * If we're in synchronous mode, and the SSI is already enabled,
-	 * then STCCR is already set properly.
-	 */
-	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates)
-		return 0;
-
 	if (fsl_ssi_is_i2s_master(ssi_private)) {
 		ret = fsl_ssi_set_bclk(substream, cpu_dai, hw_params);
 		if (ret)
@@ -871,6 +862,16 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 			ssi_private->baudclk_streams |= BIT(substream->stream);
 		}
 	}
+
+	regmap_read(regs, CCSR_SSI_SCR, &scr_val);
+	enabled = scr_val & CCSR_SSI_SCR_SSIEN;
+
+	/*
+	 * If we're in synchronous mode, and the SSI is already enabled,
+	 * then STCCR is already set properly.
+	 */
+	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates)
+		return 0;
 
 	if (!fsl_ssi_is_ac97(ssi_private)) {
 		/*
@@ -944,7 +945,7 @@ static int _fsl_ssi_set_dai_fmt(struct device *dev,
 	fsl_ssi_setup_reg_vals(ssi_private);
 
 	regmap_read(regs, CCSR_SSI_SCR, &scr);
-	scr &= ~(CCSR_SSI_SCR_SYN | CCSR_SSI_SCR_I2S_MODE_MASK);
+	scr &= ~CCSR_SSI_SCR_SYN;
 	scr |= CCSR_SSI_SCR_SYNC_TX_FS;
 
 	mask = CCSR_SSI_STCR_TXBIT0 | CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR |

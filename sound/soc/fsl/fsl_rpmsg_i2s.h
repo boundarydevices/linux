@@ -243,6 +243,13 @@
 #define		I2S_RESP_SUCCESS	0x2
 #define		I2S_RESP_FAILED		0x3
 
+#define		RPMSG_S16_LE		0x0
+#define		RPMSG_S24_LE		0x1
+
+#define		RPMSG_CH_LEFT		0x0
+#define		RPMSG_CH_RIGHT		0x1
+#define		RPMSG_CH_STEREO		0x2
+
 struct i2s_param_s {
 	unsigned char audioindex;
 	unsigned char format;
@@ -290,6 +297,7 @@ struct i2s_info {
 
 	struct workqueue_struct  *rpmsg_wq;
 	struct work_of_rpmsg	 work_list[WORK_MAX_NUM];
+	int                      work_index;
 	int                      num_period[2];
 	void                     *callback_param[2];
 	int (*send_message)(struct i2s_rpmsg_s *msg, struct i2s_info *info);

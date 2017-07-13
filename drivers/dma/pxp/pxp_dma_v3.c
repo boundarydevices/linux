@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2010-2016 Freescale Semiconductor, Inc.
  *
+ * Copyright 2017 NXP
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -1263,6 +1265,8 @@ static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 
 		if ((proc_data->engine_enable & PXP_ENABLE_WFE_A) == PXP_ENABLE_WFE_A)
 		{
+			pxp_luts_deactivate(pxp, proc_data->lut_sels);
+
 			if (proc_data->lut_cleanup == 0) {
 				/* We should enable histogram in standard mode
 				 * in wfe_a processing for waveform mode selection
@@ -1282,8 +1286,6 @@ static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 				pxp->devdata->pxp_wfe_a_configure(pxp);
 			if (pxp->devdata && pxp->devdata->pxp_wfe_a_process)
 				pxp->devdata->pxp_wfe_a_process(pxp);
-
-			pxp_luts_deactivate(pxp, proc_data->lut_sels);
 		}
 
 		if ((proc_data->engine_enable & PXP_ENABLE_WFE_B) == PXP_ENABLE_WFE_B) {
@@ -1300,13 +1302,25 @@ static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 	pxp_set_s0crop(pxp);
 	pxp_set_scaling(pxp);
 	ol_nr = pxp_conf_data->layer_nr - 2;
-	while (ol_nr > 0) {
-		i = pxp_conf_data->layer_nr - 2 - ol_nr;
-		pxp_set_oln(i, pxp);
-		pxp_set_olparam(i, pxp);
-		/* only the color key in higher overlay will take effect. */
-		pxp_set_olcolorkey(i, pxp);
-		ol_nr--;
+
+	if (ol_nr == 0) {
+		/* disable AS engine */
+		__raw_writel(BF_PXP_OUT_AS_ULC_X(1) |
+				BF_PXP_OUT_AS_ULC_Y(1),
+				pxp->base + HW_PXP_OUT_AS_ULC);
+
+		__raw_writel(BF_PXP_OUT_AS_LRC_X(0) |
+				BF_PXP_OUT_AS_LRC_Y(0),
+				pxp->base + HW_PXP_OUT_AS_LRC);
+	} else {
+		while (ol_nr > 0) {
+			i = pxp_conf_data->layer_nr - 2 - ol_nr;
+			pxp_set_oln(i, pxp);
+			pxp_set_olparam(i, pxp);
+			/* only the color key in higher overlay will take effect. */
+			pxp_set_olcolorkey(i, pxp);
+			ol_nr--;
+		}
 	}
 	pxp_set_s0colorkey(pxp);
 	pxp_set_csc(pxp);
@@ -5198,9 +5212,6 @@ static int pxp_probe(struct platform_device *pdev)
 	if (err)
 		goto exit;
 
-	/* enable all the possible irq raised by PXP */
-	__raw_writel(0xffff, pxp->base + HW_PXP_IRQ_MASK);
-
 	/* Initialize DMA engine */
 	err = pxp_dma_init(pxp);
 	if (err < 0)
@@ -5214,6 +5225,12 @@ static int pxp_probe(struct platform_device *pdev)
 
 	device_create_file(&pdev->dev, &dev_attr_block_size);
 	pxp_clk_enable(pxp);
+	pxp_soft_reset(pxp);
+	if (pxp->devdata && pxp->devdata->pxp_data_path_config)
+		pxp->devdata->pxp_data_path_config(pxp);
+	/* enable all the possible irq raised by PXP */
+	__raw_writel(0xffff, pxp->base + HW_PXP_IRQ_MASK);
+
 	dump_pxp_reg(pxp);
 	pxp_clk_disable(pxp);
 
@@ -5307,7 +5324,11 @@ static int pxp_resume(struct device *dev)
 
 	pxp_clk_enable(pxp);
 	/* Pull PxP out of reset */
-	__raw_writel(0, pxp->base + HW_PXP_CTRL);
+	pxp_soft_reset(pxp);
+	if (pxp->devdata && pxp->devdata->pxp_data_path_config)
+		pxp->devdata->pxp_data_path_config(pxp);
+	/* enable all the possible irq raised by PXP */
+	__raw_writel(0xffff, pxp->base + HW_PXP_IRQ_MASK);
 	pxp_clk_disable(pxp);
 
 	return 0;

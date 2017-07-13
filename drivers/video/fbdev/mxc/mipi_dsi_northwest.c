@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2017 NXP.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,11 +35,13 @@
 #include <linux/backlight.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
+#include <linux/of_graph.h>
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 #include <video/mipi_display.h>
+#include <video/mxc_edid.h>
 #include <linux/mfd/syscon.h>
 
 #include "mipi_dsi.h"
@@ -86,6 +89,12 @@ enum mipi_dsi_payload {
 	DSI_PAYLOAD_VIDEO,
 };
 
+struct pll_divider {
+	unsigned int cm;  /* multiplier */
+	unsigned int cn;  /* predivider */
+	unsigned int co;  /* outdivider */
+};
+
 static DECLARE_COMPLETION(dsi_rx_done);
 static DECLARE_COMPLETION(dsi_tx_done);
 
@@ -97,10 +106,47 @@ static int mipi_dsi_dcs_cmd(struct mipi_dsi_info *mipi_dsi,
 static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 			     struct mxc_dispdrv_setting *setting)
 {
-	int i, size, err;
+	u32 data_lane_num, max_data_rate;
+	int i, size, err = 0;
 	struct fb_videomode *mipi_lcd_modedb;
 	struct fb_videomode mode;
 	struct device *dev = &mipi_dsi->pdev->dev;
+
+	if (mipi_dsi->encoder) {
+		err = of_property_read_u32(dev->of_node,
+					   "data-lanes-num", &data_lane_num);
+		if (err)
+			goto err0;
+
+		err = of_property_read_u32(dev->of_node,
+					   "max-data-rate", &max_data_rate);
+		if (err)
+			goto err0;
+
+		mipi_dsi->lcd_config->virtual_ch = 0;
+		mipi_dsi->lcd_config->data_lane_num = data_lane_num;
+		mipi_dsi->lcd_config->max_phy_clk = max_data_rate;
+		mipi_dsi->lcd_config->dpi_fmt = MIPI_RGB888;
+		setting->fbi->var.bits_per_pixel = 32;
+
+		/* TODO Add bandwidth check */
+
+		if (setting->fbi->fbops->fb_check_var)
+			err = setting->fbi->fbops->fb_check_var(&setting->fbi->var,
+								setting->fbi);
+		if (err)
+			goto err0;
+
+		err = fb_add_videomode(mipi_dsi->mode,
+				       &setting->fbi->modelist);
+		if (err)
+			goto err0;
+
+		fb_videomode_to_var(&setting->fbi->var, mipi_dsi->mode);
+		setting->fbi->mode = mipi_dsi->mode;
+	err0:
+		return err;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(mipi_dsi_lcd_db); i++) {
 		if (!strcmp(mipi_dsi->lcd_panel,
@@ -144,6 +190,8 @@ static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 		dev_err(dev, "failed to add videomode.\n");
 		return err;
 	}
+
+	setting->fbi->mode = mipi_dsi->mode;
 
 	return 0;
 }
@@ -228,9 +276,9 @@ static void dphy_calc_dividers(int *cm, int *cn, int *co)
 static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 {
 	uint32_t bpp, time_out = 100;
-	uint32_t CN, CM, CO;
 	uint32_t lock;
 	uint32_t req_bit_clk;
+	struct pll_divider div;
 	struct fb_videomode *mode = mipi_dsi->mode;
 	struct mipi_lcd_config *lcd_config = mipi_dsi->lcd_config;
 
@@ -254,17 +302,29 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 		return -EINVAL;
 	}
 
-	/* PLL out clock = refclk * CM / (CN * CO)
-	 * refclock = 24MHz
-	 * pll vco = 24 * 40 / (3 * 1) = 320MHz
-	 */
-	CN = 0x10; /* 3  */
-	CM = 0xc8; /* 40 */
-	CO = 0x0;  /* 1  */
+	if (mipi_dsi->encoder) {
+		if (req_bit_clk > lcd_config->max_phy_clk)
+			return -EINVAL;
+	}
 
-	writel(CN, mipi_dsi->mmio_base + DPHY_CN);
-	writel(CM, mipi_dsi->mmio_base + DPHY_CM);
-	writel(CO, mipi_dsi->mmio_base + DPHY_CO);
+	if (!mipi_dsi->encoder) {
+		/* PLL out clock = refclk * CM / (CN * CO)
+		 * refclock = 24MHz
+		 * pll vco = 24 * 40 / (3 * 1) = 320MHz
+		 */
+		div.cn = 0x10; /* 3  */
+		div.cm = 0xc8; /* 40 */
+		div.co = 0x0;  /* 1  */
+	} else {
+		/* pll vco = 24 * 63 / (5 * 1) = 302.4MHz */
+		div.cn = 0x1C; /* 5  */
+		div.cm = 0xDF; /* 63 */
+		div.co = 0x0;  /* 1  */
+	}
+
+	writel(div.cn, mipi_dsi->mmio_base + DPHY_CN);
+	writel(div.cm, mipi_dsi->mmio_base + DPHY_CM);
+	writel(div.co, mipi_dsi->mmio_base + DPHY_CO);
 
 	writel(0x25, mipi_dsi->mmio_base + DPHY_TST);
 	writel(0x0, mipi_dsi->mmio_base + DPHY_PD_PLL);
@@ -315,11 +375,13 @@ static int mipi_dsi_host_init(struct mipi_dsi_info *mipi_dsi)
 	}
 
 	writel(lane_num, mipi_dsi->mmio_base + HOST_CFG_NUM_LANES);
-	writel(0x1, mipi_dsi->mmio_base + HOST_CFG_NONCONTINUOUS_CLK);
+	writel(mipi_dsi->encoder ? 0x0 : 0x1,
+	       mipi_dsi->mmio_base + HOST_CFG_NONCONTINUOUS_CLK);
 	writel(0x1, mipi_dsi->mmio_base + HOST_CFG_T_PRE);
 	writel(52, mipi_dsi->mmio_base + HOST_CFG_T_POST);
 	writel(13, mipi_dsi->mmio_base + HOST_CFG_TX_GAP);
-	writel(0x1, mipi_dsi->mmio_base + HOST_CFG_AUTOINSERT_EOTP);
+	writel(mipi_dsi->encoder ? 0x0 : 0x1,
+	       mipi_dsi->mmio_base + HOST_CFG_AUTOINSERT_EOTP);
 	writel(0x0, mipi_dsi->mmio_base + HOST_CFG_EXTRA_CMDS_AFTER_EOTP);
 	writel(0x0, mipi_dsi->mmio_base + HOST_CFG_HTX_TO_COUNT);
 	writel(0x0, mipi_dsi->mmio_base + HOST_CFG_LRX_H_TO_COUNT);
@@ -354,11 +416,18 @@ static int mipi_dsi_dpi_init(struct mipi_dsi_info *mipi_dsi)
 	writel(pixel_fmt, mipi_dsi->mmio_base + DPI_PIXEL_FORMAT);
 	writel(0x0, mipi_dsi->mmio_base + DPI_VSYNC_POLARITY);
 	writel(0x0, mipi_dsi->mmio_base + DPI_HSYNC_POLARITY);
-	writel(0x2, mipi_dsi->mmio_base + DPI_VIDEO_MODE);
+	writel(mipi_dsi->encoder ? 0x0 : 0x2,
+	       mipi_dsi->mmio_base + DPI_VIDEO_MODE);
 
-	writel(mode->right_margin * (bpp >> 3), mipi_dsi->mmio_base + DPI_HFP);
-	writel(mode->left_margin * (bpp >> 3), mipi_dsi->mmio_base + DPI_HBP);
-	writel(mode->hsync_len * (bpp >> 3), mipi_dsi->mmio_base + DPI_HSA);
+	writel(mipi_dsi->encoder ?
+	       0x10 : mode->right_margin * (bpp >> 3),
+	       mipi_dsi->mmio_base + DPI_HFP);
+	writel(mipi_dsi->encoder ?
+	       0x60 : mode->left_margin * (bpp >> 3),
+	       mipi_dsi->mmio_base + DPI_HBP);
+	writel(mipi_dsi->encoder ?
+	       0xf0 : mode->hsync_len * (bpp >> 3),
+	       mipi_dsi->mmio_base + DPI_HSA);
 	writel(0x0, mipi_dsi->mmio_base + DPI_ENABLE_MULT_PKTS);
 
 	writel(mode->upper_margin, mipi_dsi->mmio_base + DPI_VBP);
@@ -454,7 +523,7 @@ static int mipi_dsi_enable(struct mxc_dispdrv_handle *disp,
 		pm_runtime_get_sync(&mipi_dsi->pdev->dev);
 
 	if (!mipi_dsi->lcd_inited) {
-		ret = clk_set_rate(mipi_dsi->esc_clk, 60000000);
+		ret = clk_set_rate(mipi_dsi->esc_clk, 80000000);
 		if (ret) {
 			dev_err(&mipi_dsi->pdev->dev,
 					"clk enable error: %d!\n", ret);
@@ -486,23 +555,25 @@ static int mipi_dsi_enable(struct mxc_dispdrv_handle *disp,
 				   DSI_CM, 0x0);
 		msleep(20);
 
-		ret = device_reset(&mipi_dsi->pdev->dev);
-		if (ret) {
-			dev_err(&mipi_dsi->pdev->dev,
-				"failed to reset device: %d\n", ret);
-			return -EINVAL;
-		}
-		msleep(60);
+		if (!mipi_dsi->encoder) {
+			ret = device_reset(&mipi_dsi->pdev->dev);
+			if (ret) {
+				dev_err(&mipi_dsi->pdev->dev,
+						"failed to reset device: %d\n", ret);
+				return -EINVAL;
+			}
+			msleep(60);
 
-		mipi_dsi_init_interrupt(mipi_dsi);
+			mipi_dsi_init_interrupt(mipi_dsi);
 
-		ret = mipi_dsi->lcd_callback->mipi_lcd_setup(mipi_dsi);
-		if (ret < 0) {
-			dev_err(&mipi_dsi->pdev->dev,
-				"failed to init mipi lcd.\n");
-			return ret;
+			ret = mipi_dsi->lcd_callback->mipi_lcd_setup(mipi_dsi);
+			if (ret < 0) {
+				dev_err(&mipi_dsi->pdev->dev,
+						"failed to init mipi lcd.\n");
+				return ret;
+			}
+			mipi_dsi_set_mode(mipi_dsi, DSI_HS_MODE);
 		}
-		mipi_dsi_set_mode(mipi_dsi, DSI_HS_MODE);
 
 		mipi_dsi->lcd_inited = 1;
 	} else {
@@ -515,10 +586,12 @@ static int mipi_dsi_enable(struct mxc_dispdrv_handle *disp,
 
 		reset_dsi_domains(mipi_dsi, 0);
 
-		ret = mipi_display_exit_sleep(mipi_dsi->disp_mipi);
-		if (ret) {
-			dev_err(&mipi_dsi->pdev->dev, "exit sleep failed\n");
-			return -EINVAL;
+		if (!mipi_dsi->encoder) {
+			ret = mipi_display_exit_sleep(mipi_dsi->disp_mipi);
+			if (ret) {
+				dev_err(&mipi_dsi->pdev->dev, "exit sleep failed\n");
+				return -EINVAL;
+			}
 		}
 	}
 
@@ -696,14 +769,8 @@ static void mipi_dsi_disable(struct mxc_dispdrv_handle *disp,
 {
 	struct mipi_dsi_info *mipi_dsi = mxc_dispdrv_getdata(disp);
 
-	mipi_display_enter_sleep(mipi_dsi->disp_mipi);
-
-	if (fbi->state == FBINFO_STATE_SUSPENDED) {
-		writel(0x1, mipi_dsi->mmio_base + DPHY_PD_PLL);
-		writel(0x1, mipi_dsi->mmio_base + DPHY_PD_DPHY);
-
-		mipi_dsi->lcd_inited = 0;
-	}
+	if (!mipi_dsi->encoder)
+		mipi_display_enter_sleep(mipi_dsi->disp_mipi);
 
 	clk_disable_unprepare(mipi_dsi->esc_clk);
 
@@ -783,9 +850,11 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct mipi_dsi_info *mipi_dsi;
+	struct device_node *endpoint = NULL, *remote;
 	struct resource *res;
 	const char *lcd_panel;
 	int ret = 0;
+	u32 vmode_index;
 
 	mipi_dsi = devm_kzalloc(&pdev->dev, sizeof(*mipi_dsi), GFP_KERNEL);
 	if (!mipi_dsi)
@@ -826,6 +895,37 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 	if (IS_ERR(mipi_dsi->regmap)) {
 		dev_err(&pdev->dev, "failed to get parent regmap\n");
 		return -EINVAL;
+	}
+
+	/* check whether an encoder exists */
+	endpoint = of_graph_get_next_endpoint(np, NULL);
+	if (endpoint) {
+		remote = of_graph_get_remote_port_parent(endpoint);
+		if (!remote)
+			return -EINVAL;
+
+		ret = of_property_read_u32(remote, "video-mode", &vmode_index);
+		if ((ret < 0) || (vmode_index >= ARRAY_SIZE(mxc_cea_mode)))
+			return -EINVAL;
+
+		mipi_dsi->mode = devm_kzalloc(&pdev->dev,
+					      sizeof(struct fb_videomode),
+					      GFP_KERNEL);
+		if (!mipi_dsi->mode)
+			return -ENOMEM;
+
+		memcpy(mipi_dsi->mode, &mxc_cea_mode[vmode_index],
+		       sizeof(struct fb_videomode));
+
+		mipi_dsi->lcd_config = devm_kzalloc(&pdev->dev,
+						sizeof(struct mipi_lcd_config),
+						GFP_KERNEL);
+		if (!mipi_dsi->lcd_config) {
+			kfree(mipi_dsi->mode);
+			return -ENOMEM;
+		}
+
+		mipi_dsi->encoder = 1;
 	}
 
 	ret = of_property_read_string(np, "lcd_panel", &lcd_panel);
@@ -885,7 +985,8 @@ static void mipi_dsi_shutdown(struct platform_device *pdev)
 
 	if (mipi_dsi->lcd_inited) {
 		clk_prepare_enable(mipi_dsi->esc_clk);
-		mipi_display_enter_sleep(mipi_dsi->disp_mipi);
+		if (!mipi_dsi->encoder)
+			mipi_display_enter_sleep(mipi_dsi->disp_mipi);
 
 		writel(0x1, mipi_dsi->mmio_base + DPHY_PD_PLL);
 		writel(0x1, mipi_dsi->mmio_base + DPHY_PD_DPHY);
@@ -931,7 +1032,36 @@ static int mipi_dsi_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static int mipi_dsi_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct mipi_dsi_info *mipi_dsi = dev_get_drvdata(&pdev->dev);
+
+	if (unlikely(mipi_dsi->lcd_inited)) {
+		clk_prepare_enable(mipi_dsi->esc_clk);
+
+		writel(0x1, mipi_dsi->mmio_base + DPHY_PD_PLL);
+		writel(0x1, mipi_dsi->mmio_base + DPHY_PD_DPHY);
+
+		clk_disable_unprepare(mipi_dsi->esc_clk);
+		mipi_dsi->lcd_inited = 0;
+	}
+
+	pinctrl_pm_select_sleep_state(dev);
+
+	return 0;
+}
+
+static int mipi_dsi_resume(struct device *dev)
+{
+	pinctrl_pm_select_default_state(dev);
+
+	return 0;
+}
+
 static const struct dev_pm_ops mipi_dsi_pm_ops = {
+	.suspend = mipi_dsi_suspend,
+	.resume  = mipi_dsi_resume,
 	.runtime_suspend = mipi_dsi_runtime_suspend,
 	.runtime_resume  = mipi_dsi_runtime_resume,
 	.runtime_idle	 = NULL,

@@ -31,7 +31,7 @@ static const char *ddr_sels[]		= { "apll_pfd_sel", "upll", };
 static const char *nic_sels[]		= { "firc", "ddr_div", };
 static const char *periph_plat_sels[]	= { "dummy", "nic1_bus", "nic1_div", "ddr_div", "apll_pfd2", "apll_pfd1", "apll_pfd0", "upll", };
 /* the dummy in only a space holder of spll_bus clk */
-static const char *periph_slow_sels[]	= { "dummy", "osc", "mpll", "firc", "ckil", "nic1_bus", "nic1_div", "dummy", };
+static const char *periph_slow_sels[]	= { "dummy", "osc", "dummy", "firc", "ckil", "nic1_bus", "nic1_div", "dummy", };
 static struct clk *clks[IMX7ULP_CLK_END];
 static struct clk_onecell_data clk_data;
 
@@ -183,6 +183,7 @@ static void __init imx7ulp_clocks_init(struct device_node *scg_node)
 		imx_clk_prepare_enable(clks[clks_init_on[i]]);
         imx_clk_set_parent(clks[IMX7ULP_CLK_GPU2D], clks[IMX7ULP_CLK_APLL_PFD2]);
         imx_clk_set_parent(clks[IMX7ULP_CLK_GPU3D], clks[IMX7ULP_CLK_APLL_PFD2]);
+        imx_clk_set_rate(clks[IMX7ULP_CLK_APLL_PFD2], 350000000);
 
 	pr_info("i.MX7ULP clock tree init done.\n");
 }

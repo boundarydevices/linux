@@ -2,6 +2,7 @@
  * Freescale ASRC ALSA SoC Digital Audio Interface (DAI) driver
  *
  * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP
  *
  * Author: Nicolin Chen <nicoleotsuka@gmail.com>
  *
@@ -26,6 +27,9 @@
 
 #define pair_err(fmt, ...) \
 	dev_err(&asrc_priv->pdev->dev, "Pair %c: " fmt, 'A' + index, ##__VA_ARGS__)
+
+#define pair_warn(fmt, ...) \
+	dev_warn(&asrc_priv->pdev->dev, "Pair %c: " fmt, 'A' + index, ##__VA_ARGS__)
 
 #define pair_dbg(fmt, ...) \
 	dev_dbg(&asrc_priv->pdev->dev, "Pair %c: " fmt, 'A' + index, ##__VA_ARGS__)
@@ -352,6 +356,11 @@ static int fsl_asrc_config_pair(struct fsl_asrc_pair *pair, bool p2p_in, bool p2
 		pair_err("failed to support output sample rate %dHz by asrck_%x\n",
 				outrate, clk_index[OUT]);
 		return -EINVAL;
+	}
+
+	if (div[IN] > 1024 && div[OUT] > 1024) {
+		pair_warn("both divider (%d, %d) are larger than threshold\n",
+							div[IN], div[OUT]);
 	}
 
 	if (div[IN] > 1024)
@@ -840,22 +849,24 @@ static bool fsl_asrc_check_xrun(struct snd_pcm_substream *substream)
 	return ret;
 }
 
-static int stop_lock_stream(struct snd_pcm_substream *substream)
+static int stop_lock_stream(struct snd_pcm_substream *substream,
+			    unsigned long *flags)
 {
 	if (substream) {
-		snd_pcm_stream_lock_irq(substream);
+		snd_pcm_stream_lock_irqsave(substream, *flags);
 		if (substream->runtime->status->state == SNDRV_PCM_STATE_RUNNING)
 			substream->ops->trigger(substream, SNDRV_PCM_TRIGGER_STOP);
 	}
 	return 0;
 }
 
-static int start_unlock_stream(struct snd_pcm_substream *substream)
+static int start_unlock_stream(struct snd_pcm_substream *substream,
+			       unsigned long *flags)
 {
 	if (substream) {
 		if (substream->runtime->status->state == SNDRV_PCM_STATE_RUNNING)
 			substream->ops->trigger(substream, SNDRV_PCM_TRIGGER_START);
-		snd_pcm_stream_unlock_irq(substream);
+		snd_pcm_stream_unlock_irqrestore(substream, *flags);
 	}
 	return 0;
 }
@@ -868,10 +879,11 @@ static void fsl_asrc_reset(struct snd_pcm_substream *substream, bool stop)
 	struct snd_dmaengine_dai_dma_data *dma_params_be = NULL;
 	struct snd_soc_dpcm *dpcm;
 	struct snd_pcm_substream *be_substream;
+	unsigned long flags0, flags1;
 
 	if (stop) {
-		stop_lock_stream(asrc_priv->substream[0]);
-		stop_lock_stream(asrc_priv->substream[1]);
+		stop_lock_stream(asrc_priv->substream[0], &flags0);
+		stop_lock_stream(asrc_priv->substream[1], &flags1);
 	}
 
 	/* find the be for this fe stream */
@@ -889,8 +901,8 @@ static void fsl_asrc_reset(struct snd_pcm_substream *substream, bool stop)
 	}
 
 	if (stop) {
-		start_unlock_stream(asrc_priv->substream[1]);
-		start_unlock_stream(asrc_priv->substream[0]);
+		start_unlock_stream(asrc_priv->substream[1], &flags1);
+		start_unlock_stream(asrc_priv->substream[0], &flags0);
 	}
 }
 
