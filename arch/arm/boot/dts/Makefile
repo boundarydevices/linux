@@ -727,6 +727,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-lshore-r1.dtb \
 	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
+	imx6dl-neol.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-acl.dtb \
@@ -750,6 +751,8 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-ltch.dtb \
 	imx6q-mcs.dtb \
 	imx6q-mtp.dtb \
+	imx6q-neol.dtb \
+	imx6q-neol-test.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6qp-mtp.dtb \
