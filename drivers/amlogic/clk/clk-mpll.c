@@ -140,6 +140,27 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	return 0;
 }
 
+static int mpll_enable(struct clk_hw *hw)
+{
+	struct meson_clk_mpll *mpll = to_meson_clk_mpll(hw);
+	struct parm *p = &mpll->sdm;
+	unsigned long reg;
+	unsigned long flags = 0;
+
+	if (mpll->lock)
+		spin_lock_irqsave(mpll->lock, flags);
+
+	reg = readl(mpll->base + p->reg_off);
+	reg = PARM_SET(1, mpll->sdm_en, reg, 1);
+	reg = PARM_SET(1, mpll->en_dds, reg, 1);
+	writel(reg, mpll->base + p->reg_off);
+
+	if (mpll->lock)
+		spin_unlock_irqrestore(mpll->lock, flags);
+
+	return 0;
+}
+
 void mpll_disable(struct clk_hw *hw)
 {
 	struct meson_clk_mpll *mpll = to_meson_clk_mpll(hw);
@@ -163,6 +184,7 @@ const struct clk_ops meson_clk_mpll_ops = {
 	.recalc_rate = mpll_recalc_rate,
 	.round_rate	= meson_clk_pll_round_rate,
 	.set_rate = mpll_set_rate,
+	.enable = mpll_enable,
 	.disable = mpll_disable,
 };
 

@@ -39,6 +39,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/amlogic/cpu_version.h>
+#include <linux/clk.h>
 
 #ifdef CONFIG_ARM64
 #include "../clkc.h"
@@ -273,6 +274,62 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	return ret;
 }
 
+static int meson_axg_pll_enable(struct clk_hw *hw)
+{
+	struct meson_clk_pll *pll = to_meson_clk_pll(hw);
+	struct parm *p;
+	int ret = 0;
+	unsigned long flags = 0;
+	unsigned long first_set = 1;
+	struct clk *parent;
+	unsigned long rate;
+
+	p = &pll->n;
+
+	if (pll->lock)
+		spin_lock_irqsave(pll->lock, flags);
+
+	if (readl(pll->base + p->reg_off) & MESON_PLL_ENABLE) {
+		if (pll->lock)
+			spin_unlock_irqrestore(pll->lock, flags);
+		return ret;
+	}
+
+	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
+		|| !strcmp(clk_hw_get_name(hw), "hifi_pll")
+		|| !strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+		void *cntlbase = pll->base + p->reg_off;
+
+		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+			if (readl(cntlbase + (u64)(6*4)) == AXG_PCIE_PLL_CNTL6)
+				first_set = 0;
+		} else if (!strcmp(clk_hw_get_name(hw), "hifi_pll")) {
+			if (readl(cntlbase + (u64)(4*4)) == AXG_HIFI_PLL_CNTL5)
+				first_set = 0;
+		} else {
+			if (readl(cntlbase + (u64)(4*4)) == GXL_GP0_CNTL5)
+				first_set = 0;
+		}
+	}
+
+	parent = clk_get_parent(hw->clk);
+
+	/*First init, just set minimal rate.*/
+	if (first_set)
+		rate = pll->rate_table[0].rate;
+	else {
+		rate = meson_axg_pll_recalc_rate(hw, clk_get_rate(parent));
+		rate = meson_axg_pll_round_rate(hw, rate, NULL);
+	}
+
+	if (pll->lock)
+		spin_unlock_irqrestore(pll->lock, flags);
+
+	ret = meson_axg_pll_set_rate(hw, rate, clk_get_rate(parent));
+
+	return ret;
+}
+
 static void meson_axg_pll_disable(struct clk_hw *hw)
 {
 	struct meson_clk_pll *pll = to_meson_clk_pll(hw);
@@ -297,6 +354,7 @@ const struct clk_ops meson_axg_pll_ops = {
 	.recalc_rate	= meson_axg_pll_recalc_rate,
 	.round_rate	= meson_axg_pll_round_rate,
 	.set_rate	= meson_axg_pll_set_rate,
+	.enable		= meson_axg_pll_enable,
 	.disable	= meson_axg_pll_disable,
 };
 
