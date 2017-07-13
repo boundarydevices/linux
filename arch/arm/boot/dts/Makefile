@@ -389,6 +389,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-lshore-r0.dtb \
 	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
+	imx6dl-neol.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
@@ -484,6 +485,8 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-mccmon6.dtb \
 	imx6q-mcs.dtb \
 	imx6q-mtp.dtb \
+	imx6q-neol.dtb \
+	imx6q-neol-test.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_som2.dtb \
