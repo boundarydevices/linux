@@ -32,6 +32,7 @@
 #include <sound/pcm_params.h>
 
 #include <linux/amlogic/clk_measure.h>
+#include <linux/amlogic/cpu_version.h>
 
 #include "ddr_mngr.h"
 #include "tdm_hw.h"
@@ -946,7 +947,8 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	}
 
 	/* complete mclk for tdm */
-	meson_clk_measure((1<<16) | 0x67);
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xa)
+		meson_clk_measure((1<<16) | 0x67);
 
 	/* parse DTS configured ddr */
 	ret = of_property_read_u32(node, "tdm_from_ddr",
