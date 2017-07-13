@@ -350,6 +350,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-lshore.dtb \
 	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
+	imx6dl-neol.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nit6xlite-access.dtb \
 	imx6dl-nitrogen6_max.dtb \
@@ -439,6 +440,8 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-marsboard.dtb \
 	imx6q-mcs.dtb \
 	imx6q-mtp.dtb \
+	imx6q-neol.dtb \
+	imx6q-neol-test.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_max-apex.dtb \
 	imx6q-nitrogen6_max-lantech.dtb \
