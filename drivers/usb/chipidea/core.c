@@ -574,22 +574,11 @@ static int ci_cable_notifier(struct notifier_block *nb, unsigned long event,
 {
 	struct ci_hdrc_cable *cbl = container_of(nb, struct ci_hdrc_cable, nb);
 	struct ci_hdrc *ci = cbl->ci;
-	struct extcon_dev *dev = ptr;
-	int ret;
 
-	/* Only support ID extcon now */
+	cbl->connected = event;
+	cbl->changed = true;
 
-	ret = extcon_get_cable_state_(dev, EXTCON_USB_HOST);
-	if (ret && !cbl->connected) {
-		cbl->connected = true;
-		cbl->changed = true;
-		ci_irq(ci->irq, ci);
-	} else if (!ret && cbl->connected) {
-		cbl->connected = false;
-		cbl->changed = true;
-		ci_irq(ci->irq, ci);
-	}
-
+	ci_irq(ci->irq, ci);
 	return NOTIFY_DONE;
 }
 
@@ -700,7 +689,7 @@ static int ci_get_platdata(struct device *dev,
 	cable->edev = ext_vbus;
 
 	if (!IS_ERR(ext_vbus)) {
-		ret = extcon_get_cable_state_(cable->edev, EXTCON_USB);
+		ret = extcon_get_state(cable->edev, EXTCON_USB);
 		if (ret)
 			cable->connected = true;
 		else
@@ -712,7 +701,7 @@ static int ci_get_platdata(struct device *dev,
 	cable->edev = ext_id;
 
 	if (!IS_ERR(ext_id)) {
-		ret = extcon_get_cable_state_(cable->edev, EXTCON_USB_HOST);
+		ret = extcon_get_state(cable->edev, EXTCON_USB_HOST);
 		if (ret)
 			cable->connected = true;
 		else
@@ -729,8 +718,8 @@ static int ci_extcon_register(struct ci_hdrc *ci)
 	id = &ci->platdata->id_extcon;
 	id->ci = ci;
 	if (!IS_ERR(id->edev)) {
-		ret = extcon_register_notifier(id->edev, EXTCON_USB_HOST,
-					       &id->nb);
+		ret = devm_extcon_register_notifier(ci->dev, id->edev,
+						EXTCON_USB_HOST, &id->nb);
 		if (ret < 0) {
 			dev_err(ci->dev, "register ID failed\n");
 			return ret;
@@ -740,31 +729,15 @@ static int ci_extcon_register(struct ci_hdrc *ci)
 	vbus = &ci->platdata->vbus_extcon;
 	vbus->ci = ci;
 	if (!IS_ERR(vbus->edev)) {
-		ret = extcon_register_notifier(vbus->edev, EXTCON_USB,
-					       &vbus->nb);
+		ret = devm_extcon_register_notifier(ci->dev, vbus->edev,
+						EXTCON_USB, &vbus->nb);
 		if (ret < 0) {
-			extcon_unregister_notifier(id->edev, EXTCON_USB_HOST,
-						   &id->nb);
 			dev_err(ci->dev, "register VBUS failed\n");
 			return ret;
 		}
 	}
 
 	return 0;
-}
-
-static void ci_extcon_unregister(struct ci_hdrc *ci)
-{
-	struct ci_hdrc_cable *cable;
-
-	cable = &ci->platdata->id_extcon;
-	if (!IS_ERR(cable->edev))
-		extcon_unregister_notifier(cable->edev, EXTCON_USB_HOST,
-					   &cable->nb);
-
-	cable = &ci->platdata->vbus_extcon;
-	if (!IS_ERR(cable->edev))
-		extcon_unregister_notifier(cable->edev, EXTCON_USB, &cable->nb);
 }
 
 static DEFINE_IDA(ci_ida);
@@ -1073,7 +1046,6 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	if (!ret)
 		return 0;
 
-	ci_extcon_unregister(ci);
 stop:
 	ci_role_destroy(ci);
 deinit_phy:
@@ -1093,7 +1065,6 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	}
 
 	dbg_remove_files(ci);
-	ci_extcon_unregister(ci);
 	ci_role_destroy(ci);
 	ci_hdrc_enter_lpm(ci, true);
 	ci_usb_phy_exit(ci);
