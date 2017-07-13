@@ -27,6 +27,13 @@
 		>;
 	};
 
+	pinctrl_ecspi2_st7789: ecspi2_st7789grp {
+		fsl,pins = <
+#define GPIRQ_ST7789_TEARING_EFFECT   <&gpio5 30 IRQ_TYPE_EDGE_RISING>
+			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x0b0b1
+		>;
+	};
+
 	pinctrl_ecspi2_read: ecspi2_readgrp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x108b1		/* ODE, so that display can drive low */
@@ -82,18 +89,25 @@
 
 	st7789h2@0{
 		bpp = <16>;	/* 16 or 24 */
+		buswidth = <9>;
 		compatible = "sitronix,st7789v";
+		display_fps = <40>;
+		height = <204>;
+#if 0
+		interrupts-extended = GPIRQ_ST7789_TEARING_EFFECT;
+#endif
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_st7789>;
 		reg = <0>;
+		regwidth = <8>;
+		rotate = <0>;
 		/* SCLK - write cycle 16 ns(62.5Mhz), read cycle 150 ns(6.6 MHz) */
 		spi-max-frequency = <40000000>;
 		spi-max-read-frequency = <6600000>;
-		width = <240>;
-		height = <204>;
-		rotate = <0>;
-		regwidth = <8>;
-		buswidth = <9>;
+		te-line = <320>;
 		txbufcnt = <4>;
 		txbuflen = <27648>;
+		width = <240>;
 	};
 };
 
