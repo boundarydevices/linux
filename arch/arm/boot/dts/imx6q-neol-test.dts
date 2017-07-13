@@ -1,0 +1,123 @@
+/*
+ * Copyright 2017 Boundary Devices
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-neol.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX6 Quad neol test Board";
+	compatible = "fsl,imx6q-neol", "fsl,imx6q";
+};
+
+&hdmi_core {
+	ipu_id = <1>;
+};
+
+&pinctrl_hog {
+	fsl,pins = <
+#define GP_5V_DLP_EN	<&gpio3 7 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x130b0
+#define GP_STDBY_MODE	<&gpio2 24 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_CS1__GPIO2_IO24		0x1b0b0
+#define GP_DLPC_BOOTED	<&gpio2 22 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_A16__GPIO2_IO22		0x1b0b0
+#define GP_INIT_DONE	<&gpio2 21 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_A17__GPIO2_IO21		0x1b0b0
+#define GP_RESET	<&gpio1 2 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x1b0b0
+#define GP_KILL		<&gpio1 3 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x1b0b0
+#define GP_MICRO_RESET	<&gpio7 13 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x1b0b0
+
+#define GP_KEY_IO01	<&gpio4 7 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x1b0b0
+#define GP_KEY_IO02	<&gpio4 10 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0
+#define GP_KEY_IO03	<&gpio4 11 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x1b0b0
+
+#define GP_KEY_IO07	<&gpio1 8 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x1b0b0
+#define GP_KEY_IO08	<&gpio2 31 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x1b0b0
+#define GP_KEY_IO09	<&gpio6 31 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_BCLK__GPIO6_IO31		0x1b0b0
+#define GP_KEY_IO10	<&gpio2 30 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x1b0b0
+#define GP_KEY_IO11	<&gpio5 0 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
+
+#define GP_TP71		<&gpio1 30 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_ENET_TXD0__GPIO1_IO30	0x1b0b0
+#define GP_TP72		<&gpio1 0 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_0__GPIO1_IO00		0x1b0b0
+#define GP_TP74		<&gpio2 7 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0
+#define GP_TP76		<&gpio4 9 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_KEY_ROW1__GPIO4_IO09		0x1b0b0
+#define GP_TP113	<&gpio2 27 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0
+#define GP_TP114	<&gpio3 6 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x1b0b0
+#define GP_TP116	<&gpio2 20 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_A18__GPIO2_IO20		0x1b0b0
+#define GP_TP118        <&gpio1 16 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x1b0b0
+#define GP_TP121	<&gpio3 30 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x1b0b0
+#define GP_TP122	<&gpio1 18 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_SD1_CMD__GPIO1_IO18		0x1b0b0
+
+	/* extra taken from disabled devices */
+#define GP_I2C2_SCL		<&gpio4 12 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x1b0b0
+#define GP_I2C2_SDA		<&gpio4 13 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_KEY_ROW3__GPIO4_IO13		0x1b0b0
+#define GP_I2C2_J14_PIN3	<&gpio4 5 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x1b0b0
+#define GP_I2C2_J14_PIN4	<&gpio1 7 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x1b0b0
+#define GP_I2C2_J14_PIN5	<&gpio1 4 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0
+#define GP_UART4_TXD		<&gpio5 30 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x1b0b0
+#define GP_UART4_RXD		<&gpio5 31 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_CSI0_DAT13__GPIO5_IO31	0x1b0b0
+
+#define GP_ESCPI2_MISO		<&gpio5 28 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_CSI0_DAT10__GPIO5_IO28	0x100b0
+#define GP_ESCPI2_MOSI		<&gpio5 27 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_CSI0_DAT9__GPIO5_IO27	0x100b0
+#define GP_ESCPI2_SCLK		<&gpio5 26 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_CSI0_DAT8__GPIO5_IO26	0x100b0
+#define GP_ECSPI2_CS0		<&gpio5 29 GPIO_ACTIVE_HIGH>
+		MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x1b0b0
+
+#define GP_I2C3_J7	<&gpio1 9 GPIO_ACTIVE_LOW>
+		MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
+	>;
+};
+
+&ecspi2 {
+	status = "disabled";
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "disabled";
+};
