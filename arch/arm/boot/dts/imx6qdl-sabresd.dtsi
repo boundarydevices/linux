@@ -293,13 +293,6 @@
 		status = "okay";
 	};
 
-	mipi_dsi_reset: mipi-dsi-reset {
-		compatible = "gpio-reset";
-		reset-gpios = <&gpio6 11 GPIO_ACTIVE_LOW>;
-		reset-delay-us = <50>;
-		#reset-cells = <0>;
-	};
-
 	bt_rfkill {
 		compatible = "fsl,mxc_bt_rfkill";
 		bt-power-gpios = <&gpio1 2 0>;
@@ -984,7 +977,8 @@
 	disp_id = <1>;
 	lcd_panel = "TRULY-WVGA";
 	disp-power-on-supply = <&reg_mipi_dsi_pwr_on>;
-	resets = <&mipi_dsi_reset>;
+	reset-gpios = <&gpio6 11 GPIO_ACTIVE_LOW>;
+	reset-delay-us = <50>;
 	status = "okay";
 };
 
@@ -1024,7 +1018,7 @@
 	assigned-clock-parents = <&clks IMX6QDL_CLK_OSC>,
 				 <&clks IMX6QDL_CLK_PLL4>,
 				 <&clks IMX6QDL_CLK_PLL4_AUDIO_DIV>;
-	assigned-clock-rates = <786432000>, <0>, <0>;
+	assigned-clock-rates = <1179648000>, <0>, <0>;
 	status = "okay";
 };
 

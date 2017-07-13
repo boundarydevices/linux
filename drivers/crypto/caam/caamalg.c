@@ -1755,6 +1755,33 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 	return ret;
 }
 
+
+static int ablkcipher_des_setkey(struct crypto_ablkcipher *ablkcipher,
+				 const u8 *key, unsigned int keylen)
+{
+	u32 tmp[DES_EXPKEY_WORDS];
+	u32 flags;
+	int ret;
+
+	if (keylen != DES_KEY_SIZE) {
+		crypto_ablkcipher_set_flags(ablkcipher,
+					    CRYPTO_TFM_RES_BAD_KEY_LEN);
+		return -EINVAL;
+	}
+
+	ret = des_ekey(tmp, key);
+
+	flags = crypto_ablkcipher_get_flags(ablkcipher);
+	if (!ret && (flags & CRYPTO_TFM_REQ_WEAK_KEY)) {
+		crypto_ablkcipher_set_flags(ablkcipher,
+					    CRYPTO_TFM_RES_WEAK_KEY);
+		return -EINVAL;
+	}
+
+	return ablkcipher_setkey(ablkcipher, key, keylen);
+}
+
+
 static int xts_ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 				 const u8 *key, unsigned int keylen)
 {
@@ -2014,10 +2041,13 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 {
 	struct ablkcipher_request *req = context;
 	struct ablkcipher_edesc *edesc;
-#ifdef DEBUG
 	struct crypto_ablkcipher *ablkcipher = crypto_ablkcipher_reqtfm(req);
+	struct caam_ctx *ctx = crypto_ablkcipher_ctx(ablkcipher);
+	int bsize = crypto_ablkcipher_blocksize(ablkcipher);
 	int ivsize = crypto_ablkcipher_ivsize(ablkcipher);
+	size_t ivcopy = min_t(size_t, bsize, ivsize);
 
+#ifdef DEBUG
 	dev_err(jrdev, "%s %d: err 0x%x\n", __func__, __LINE__, err);
 #endif
 
@@ -2038,6 +2068,12 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	ablkcipher_unmap(jrdev, edesc, req);
 	kfree(edesc);
+
+	/* Pass IV along for cbc */
+	if ((ctx->class1_alg_type & OP_ALG_AAI_MASK) == OP_ALG_AAI_CBC) {
+		scatterwalk_map_and_copy(req->info, req->dst,
+					 req->nbytes - bsize, ivcopy, 0);
+	}
 
 	ablkcipher_request_complete(req, err);
 }
@@ -3012,7 +3048,7 @@ static struct caam_alg_template driver_algs[] = {
 		.blocksize = DES_BLOCK_SIZE,
 		.type = CRYPTO_ALG_TYPE_ABLKCIPHER,
 		.template_ablkcipher = {
-			.setkey = ablkcipher_setkey,
+			.setkey = ablkcipher_des_setkey,
 			.encrypt = ablkcipher_encrypt,
 			.decrypt = ablkcipher_decrypt,
 			.geniv = "eseqiv",

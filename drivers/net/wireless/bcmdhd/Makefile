@@ -114,6 +114,12 @@ else
   DHDCFLAGS += -DNO_SDIO_RESET
 endif
 
+ifeq ($(CONFIG_BCMDHD_SDIO), y)
+  DHDCFLAGS += -DENABLE_INSMOD_NO_FW_LOAD
+else
+  DHDCFLAGS += -DNO_SDIO_RESET
+endif
+
 #########################
 # Chip dependent feature
 #########################

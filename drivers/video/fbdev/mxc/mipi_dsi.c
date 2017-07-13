@@ -26,8 +26,8 @@
 #include <linux/mxcfb.h>
 #include <linux/backlight.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
-#include <linux/reset.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 #include <video/mipi_display.h>
@@ -728,6 +728,52 @@ static struct mxc_dispdrv_driver mipi_dsi_drv = {
 	.setup	= mipi_dsi_setup,
 };
 
+static int device_reset(struct device *dev)
+{
+	struct device_node *np = dev->of_node;
+	enum of_gpio_flags flags;
+	unsigned long gpio_flags;
+	unsigned int gpio;
+	bool initially_in_reset;
+	bool active_low;
+	s32 delay_us;
+	int ret;
+
+	gpio = of_get_named_gpio_flags(np, "reset-gpios", 0, &flags);
+	if (gpio == -EPROBE_DEFER) {
+		return gpio;
+	} else if (!gpio_is_valid(gpio)) {
+		dev_err(dev, "invalid reset gpio: %d\n", gpio);
+		return gpio;
+	}
+
+	active_low = flags & OF_GPIO_ACTIVE_LOW;
+
+	ret = of_property_read_u32(np, "reset-delay-us", &delay_us);
+	if (ret < 0 || delay_us < 0) {
+		dev_err(dev, "invalid reset delay\n");
+		return -EINVAL;
+	}
+
+	initially_in_reset = of_property_read_bool(np, "initially-in-reset");
+	if (active_low ^ initially_in_reset)
+		gpio_flags = GPIOF_OUT_INIT_HIGH;
+	else
+		gpio_flags = GPIOF_OUT_INIT_LOW;
+
+	ret = devm_gpio_request_one(dev, gpio, gpio_flags, NULL);
+	if (ret < 0) {
+		dev_err(dev, "failed to request gpio %d: %d\n", gpio, ret);
+		return ret;
+	}
+
+	gpio_set_value_cansleep(gpio, active_low ? 0 : 1);
+	udelay(delay_us);
+	gpio_set_value_cansleep(gpio, active_low ? 1 : 0);
+
+	return 0;
+}
+
 static int imx6q_mipi_dsi_get_mux(int dev_id, int disp_id)
 {
 	if (dev_id > 1 || disp_id > 1)
@@ -792,6 +838,11 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 	const char *lcd_panel;
 	int mux;
 	int ret = 0;
+
+	if (!np) {
+		dev_err(&pdev->dev, "failed to find device tree node\n");
+		return -ENODEV;
+	}
 
 	mipi_dsi = devm_kzalloc(&pdev->dev, sizeof(*mipi_dsi), GFP_KERNEL);
 	if (!mipi_dsi)

@@ -306,7 +306,7 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 		return -EINVAL;
 	}
 
-	sai->is_slave_mode = false;
+	sai->slave_mode[tx] = false;
 
 	/* DAI clock master masks */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -315,14 +315,14 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 		val_cr4 |= FSL_SAI_CR4_FSD_MSTR;
 		break;
 	case SND_SOC_DAIFMT_CBM_CFM:
-		sai->is_slave_mode = true;
+		sai->slave_mode[tx] = true;
 		break;
 	case SND_SOC_DAIFMT_CBS_CFM:
 		val_cr2 |= FSL_SAI_CR2_BCD_MSTR;
 		break;
 	case SND_SOC_DAIFMT_CBM_CFS:
 		val_cr4 |= FSL_SAI_CR4_FSD_MSTR;
-		sai->is_slave_mode = true;
+		sai->slave_mode[tx] = true;
 		break;
 	default:
 		return -EINVAL;
@@ -339,13 +339,22 @@ static int fsl_sai_set_dai_fmt_tr(struct snd_soc_dai *cpu_dai,
 
 static int fsl_sai_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 {
+	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret;
+
+	if (sai->i2s_xtor)
+		fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+		      SND_SOC_DAIFMT_CBS_CFS;
 
 	ret = fsl_sai_set_dai_fmt_tr(cpu_dai, fmt, FSL_FMT_TRANSMITTER);
 	if (ret) {
 		dev_err(cpu_dai->dev, "Cannot set tx format: %d\n", ret);
 		return ret;
 	}
+
+	if (sai->i2s_xtor)
+		fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+		      SND_SOC_DAIFMT_CBM_CFM;
 
 	ret = fsl_sai_set_dai_fmt_tr(cpu_dai, fmt, FSL_FMT_RECEIVER);
 	if (ret)
@@ -363,7 +372,7 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 	int ret = 0;
 
 	/* Don't apply to slave mode */
-	if (sai->is_slave_mode)
+	if (sai->slave_mode[tx])
 		return 0;
 
 	for (id = 0; id < FSL_SAI_MCLK_MAX; id++) {
@@ -458,7 +467,7 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 	if (sai->slot_width)
 		slot_width = sai->slot_width;
 
-	if (!sai->is_slave_mode) {
+	if (!sai->slave_mode[tx]) {
 		ret = fsl_sai_set_bclk(cpu_dai, tx,
 				slots * slot_width * params_rate(params));
 		if (ret)
@@ -494,36 +503,7 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 	 * error.
 	 */
 
-	if (!sai->is_slave_mode) {
-		if (!sai->synchronous[TX] && sai->synchronous[RX] && !tx) {
-			regmap_update_bits(sai->regmap, FSL_SAI_TCR4,
-				FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
-				val_cr4);
-			regmap_update_bits(sai->regmap, FSL_SAI_TCR5,
-				FSL_SAI_CR5_WNW_MASK | FSL_SAI_CR5_W0W_MASK |
-				FSL_SAI_CR5_FBT_MASK, val_cr5);
-			regmap_write(sai->regmap, FSL_SAI_TMR,
-				~0UL - ((1 << channels) - 1));
-		} else if (!sai->synchronous[RX] && sai->synchronous[TX] && tx) {
-			regmap_update_bits(sai->regmap, FSL_SAI_RCR4,
-				FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
-				val_cr4);
-			regmap_update_bits(sai->regmap, FSL_SAI_RCR5,
-				FSL_SAI_CR5_WNW_MASK | FSL_SAI_CR5_W0W_MASK |
-				FSL_SAI_CR5_FBT_MASK, val_cr5);
-			regmap_write(sai->regmap, FSL_SAI_RMR,
-				~0UL - ((1 << channels) - 1));
-		}
-	}
-
-	/*
-	 * For SAI master mode, when Tx(Rx) sync with Rx(Tx) clock, Rx(Tx) will
-	 * generate bclk and frame clock for Tx(Rx), we should set RCR4(TCR4),
-	 * RCR5(TCR5) and RMR(TMR) for playback(capture), or there will be sync
-	 * error.
-	 */
-
-	if (!sai->is_slave_mode) {
+	if (!sai->slave_mode[tx]) {
 		if (!sai->synchronous[TX] && sai->synchronous[RX] && !tx) {
 			regmap_update_bits(sai->regmap, FSL_SAI_TCR4,
 				FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
@@ -581,7 +561,7 @@ static int fsl_sai_hw_free(struct snd_pcm_substream *substream,
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 
-	if (!sai->is_slave_mode &&
+	if (!sai->slave_mode[tx] &&
 			sai->mclk_streams & BIT(substream->stream)) {
 		clk_disable_unprepare(sai->mclk_clk[sai->mclk_id[tx]]);
 		sai->mclk_streams &= ~BIT(substream->stream);
@@ -676,7 +656,7 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 			 * This is a hardware bug, and will be fix in the
 			 * next sai version.
 			 */
-			if (!sai->is_slave_mode) {
+			if (!sai->slave_mode[tx]) {
 				/* Software Reset for both Tx and Rx */
 				regmap_write(sai->regmap,
 					     FSL_SAI_TCSR, FSL_SAI_CSR_SR);
@@ -779,7 +759,7 @@ static struct snd_soc_dai_driver fsl_sai_dai = {
 	.playback = {
 		.stream_name = "CPU-Playback",
 		.channels_min = 1,
-		.channels_max = 2,
+		.channels_max = 32,
 		.rate_min = 8000,
 		.rate_max = 192000,
 		.rates = SNDRV_PCM_RATE_KNOT,
@@ -788,7 +768,7 @@ static struct snd_soc_dai_driver fsl_sai_dai = {
 	.capture = {
 		.stream_name = "CPU-Capture",
 		.channels_min = 1,
-		.channels_max = 2,
+		.channels_max = 32,
 		.rate_min = 8000,
 		.rate_max = 192000,
 		.rates = SNDRV_PCM_RATE_KNOT,
@@ -924,6 +904,7 @@ static int fsl_sai_probe(struct platform_device *pdev)
 	int irq, ret, i;
 	int index;
 	u32 buffer_size;
+	unsigned long irqflag = 0;
 
 	sai = devm_kzalloc(&pdev->dev, sizeof(*sai), GFP_KERNEL);
 	if (!sai)
@@ -987,13 +968,21 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	/* I2S XTOR mode */
+	sai->i2s_xtor = (of_find_property(np, "fsl,i2s-xtor", NULL) != NULL);
+
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		dev_err(&pdev->dev, "no irq for node %s\n", pdev->name);
 		return irq;
 	}
 
-	ret = devm_request_irq(&pdev->dev, irq, fsl_sai_isr, 0, np->name, sai);
+	/* SAI shared interrupt */
+	if (of_property_read_bool(np, "shared-interrupt"))
+		irqflag = IRQF_SHARED;
+
+	ret = devm_request_irq(&pdev->dev, irq, fsl_sai_isr, irqflag,
+				np->name, sai);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to claim irq %u\n", irq);
 		return ret;
@@ -1042,6 +1031,8 @@ static int fsl_sai_probe(struct platform_device *pdev)
 				   MCLK_DIR(index));
 	}
 
+	sai->dma_params_rx.filter_data = "rx";
+	sai->dma_params_tx.filter_data = "tx";
 	sai->dma_params_rx.addr = res->start + FSL_SAI_RDR0;
 	sai->dma_params_tx.addr = res->start + FSL_SAI_TDR0;
 	sai->dma_params_rx.maxburst = FSL_SAI_MAXBURST_RX;
@@ -1060,7 +1051,7 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		buffer_size = IMX_SAI_DMABUF_SIZE;
 
 	if (sai->soc->imx)
-		return imx_pcm_dma_init(pdev, buffer_size);
+		return imx_pcm_platform_register(&pdev->dev);
 	else
 		return devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
 }
