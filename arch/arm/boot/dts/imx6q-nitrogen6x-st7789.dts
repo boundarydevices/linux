@@ -39,6 +39,13 @@
 		>;
 	};
 
+	pinctrl_enet_gpio6: enet_gpio6grp {
+		fsl,pins = <
+#define GPIRQ_ENET		<&gpio1 6 IRQ_TYPE_LEVEL_HIGH>
+			MX6QDL_PAD_GPIO_6__ENET_IRQ		0x000b1
+		>;
+	};
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0		/* Spare */
@@ -88,6 +95,12 @@
 		txbufcnt = <4>;
 		txbuflen = <27648>;
 	};
+};
+
+&fec {
+	interrupts-extended = GPIRQ_ENET,
+			      <&gpc 0 119 IRQ_TYPE_LEVEL_HIGH>;
+	pinctrl-0 = <&pinctrl_enet>, <&pinctrl_enet_gpio6>;
 };
 
 &hdmi_core {
