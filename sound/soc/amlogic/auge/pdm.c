@@ -133,6 +133,37 @@ static int pdm_hcic_shift_gain_set_enum(
 	return 0;
 }
 
+int pdm_dclk;
+
+static const char *const pdm_dclk_texts[] = {
+	"pdm dclk 3.072m, support 8k/16k/32k/48k",
+	"pdm dclk 1.024m, support 8k/16k",
+	"pdm dclk   768k, support 8k/16k",
+};
+
+static const struct soc_enum pdm_dclk_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(pdm_dclk_texts),
+			pdm_dclk_texts);
+
+static int pdm_dclk_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = pdm_dclk;
+
+	return 0;
+}
+
+static int pdm_dclk_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	pdm_dclk = ucontrol->value.enumerated.item[0];
+
+	return 0;
+}
+
+
 static const struct snd_kcontrol_new snd_pdm_controls[] = {
 	/* which set */
 	SOC_ENUM_EXT("PDM Filter Mode",
@@ -145,6 +176,13 @@ static const struct snd_kcontrol_new snd_pdm_controls[] = {
 		     pdm_hcic_shift_gain_enum,
 		     pdm_hcic_shift_gain_get_enum,
 		     pdm_hcic_shift_gain_set_enum),
+
+
+	SOC_ENUM_EXT("pdm dclk",
+		     pdm_dclk_enum,
+		     pdm_dclk_get_enum,
+		     pdm_dclk_set_enum),
+
 };
 
 static irqreturn_t aml_pdm_isr_handler(int irq, void *data)
@@ -467,17 +505,38 @@ static int aml_pdm_dai_prepare(
 			bitwidth, runtime->channels);
 
 		/* filter for pdm */
-		if (runtime->rate == 48000)
-			osr = 64;
-		else if (runtime->rate == 32000)
-			osr = 96;
-		else if (runtime->rate == 16000)
-			osr = 192;
-		else if (runtime->rate == 8000)
-			osr = 384;
-		else
-			pr_err("Not support rate:%d\n", runtime->rate);
-
+		if (pdm_dclk == 1) {
+			if (runtime->rate == 16000)
+				osr = 64;
+			else if (runtime->rate == 8000)
+				osr = 128;
+			else {
+				pr_err("Not support rate:%d\n", runtime->rate);
+				return -EINVAL;
+			}
+		} else if (pdm_dclk == 2) {
+			if (runtime->rate == 16000)
+				osr = 48;
+			else if (runtime->rate == 8000)
+				osr = 96;
+			else {
+				pr_err("Not support rate:%d\n", runtime->rate);
+				return -EINVAL;
+			}
+		} else {
+			if (runtime->rate == 48000)
+				osr = 64;
+			else if (runtime->rate == 32000)
+				osr = 96;
+			else if (runtime->rate == 16000)
+				osr = 192;
+			else if (runtime->rate == 8000)
+				osr = 384;
+			else {
+				pr_err("Not support rate:%d\n", runtime->rate);
+				return -EINVAL;
+			}
+		}
 		p_pdm->filter_mode = s_pdm_filter_mode;
 		aml_pdm_filter_ctrl(osr, p_pdm->filter_mode);
 	}
@@ -535,7 +594,13 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 
 	clk_set_rate(p_pdm->clk_pll, pll_freq);
 	clk_set_rate(p_pdm->clk_pdm_sysclk, pll_freq);
-	clk_set_rate(p_pdm->clk_pdm_dclk, pll_freq / 64);
+
+	if (pdm_dclk == 1)
+		clk_set_rate(p_pdm->clk_pdm_dclk, pll_freq / (64 * 3));
+	else if (pdm_dclk == 2)
+		clk_set_rate(p_pdm->clk_pdm_dclk, pll_freq / (64 * 4));
+	else
+		clk_set_rate(p_pdm->clk_pdm_dclk, pll_freq / 64);
 
 	return 0;
 }

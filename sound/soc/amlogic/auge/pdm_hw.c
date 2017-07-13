@@ -106,8 +106,27 @@ static void aml_pdm_filters_config(int osr,
 	int32_t hpf_out_factor;
 	int32_t pdm_out_mode;
 
-	/* current Dclk: 3072000*/
 	switch (osr) {
+	case 32:
+		hcic_dn_rate = 0x4;
+		hcic_gain	 = 0x80;
+		hcic_shift	 = 0xa;
+		break;
+	case 40:
+		hcic_dn_rate = 0x5;
+		hcic_gain	 = 0x54;
+		hcic_shift	 = 0xb;
+		break;
+	case 48:
+		hcic_dn_rate = 0x6;
+		hcic_gain	 = 0x43;
+		hcic_shift	 = 0xc;
+		break;
+	case 56:
+		hcic_dn_rate = 0x7;
+		hcic_gain	 = 0x7d;
+		hcic_shift	 = 0xe;
+		break;
 	case 64:
 		hcic_dn_rate = 0x0008;
 		hcic_gain	 = 0x80;
@@ -297,6 +316,10 @@ void aml_pdm_filter_ctrl(int osr, int mode)
 	case 384:
 		lpf2_coeff = lpf2_osr384;
 		break;
+	case 32:
+	case 40:
+	case 48:
+	case 56:
 	default:
 		pr_info("default mode 1, osr 64, 48k\n");
 		lpf2_coeff = lpf2_osr64;
