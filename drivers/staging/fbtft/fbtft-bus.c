@@ -121,7 +121,7 @@ EXPORT_SYMBOL(fbtft_write_reg8_bus9);
 int fbtft_write_vmem16_bus8(struct fbtft_par *par, size_t offset, size_t len)
 {
 	u16 *vmem16;
-	__be16 *txbuf16 = (__be16 *)par->txbuf[0].buf;
+	__be16 *txbuf16 = par->txbuf[0].buf;
 	size_t remain;
 	size_t to_copy;
 	size_t tx_array_size;
@@ -145,7 +145,7 @@ int fbtft_write_vmem16_bus8(struct fbtft_par *par, size_t offset, size_t len)
 	tx_array_size = par->txbuf[0].len / 2;
 
 	if (par->startbyte) {
-		txbuf16 = (u16 *)(par->txbuf[0].buf + 1);
+		txbuf16 = par->txbuf[0].buf + 1;
 		tx_array_size -= 2;
 		*(u8 *)(par->txbuf[0].buf) = par->startbyte | 0x2;
 		startbyte_size = 1;
