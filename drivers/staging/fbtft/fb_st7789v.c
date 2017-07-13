@@ -52,13 +52,19 @@
  * out as well to avoid duplicate entries.
  */
 enum st7789v_command {
+	TEOFF = 0x34,
+	TEON = 0x35,
+	STE = 0x44,
+	RGBCTRL = 0xB1,
 	PORCTRL = 0xB2,
+	FRCTRL1 = 0xB3,
 	GCTRL = 0xB7,
 	VCOMS = 0xBB,
 	VDVVRHEN = 0xC2,
 	VRHS = 0xC3,
 	VDVS = 0xC4,
 	VCMOFSET = 0xC5,
+	FRCTRL2 = 0xC6,
 	PWCTRL1 = 0xD0,
 	PVGAMCTRL = 0xE0,
 	NVGAMCTRL = 0xE1,
@@ -90,6 +96,9 @@ enum st7789v_command {
 static int init_display(struct fbtft_par *par)
 {
 	struct fbtft_platform_data *pdata = par->pdata;
+	unsigned fps = par->display_fps;
+	unsigned rtna;
+	unsigned te_line = par->te_line;
 
 	/* turn off sleep mode */
 	write_reg(par, MIPI_DCS_EXIT_SLEEP_MODE);
@@ -99,7 +108,7 @@ static int init_display(struct fbtft_par *par)
 	write_reg(par, MIPI_DCS_SET_PIXEL_FORMAT,
 		(pdata->display.bpp == 16) ? FMT16 : FMT18);
 
-	/* Back porch=8, Front porch = 8 */
+	/* vertical Back porch=8, vertical Front porch = 8 */
 	write_reg(par, PORCTRL, 0x08, 0x08, 0x00, 0x22, 0x22);
 
 	/*
@@ -135,7 +144,39 @@ static int init_display(struct fbtft_par *par)
 	 * VDS = 2.3V
 	 */
 	write_reg(par, PWCTRL1, 0xA4, 0xA1);
-
+	write_reg(par, FRCTRL1, 0x00, 0x0F, 0x0F);
+	/*
+	 * fps = 10 MHz / ((320 + VFPA + VBPA + VSYNC) * (240 + 2 + 4 + 2 + RTNA * 16))
+	 * fps = 10 MHz / ((320 + 8 + 8 + 1) * (240 + 2 + 4 + 2 + RTNA * 16))
+	 * fps = 10 MHz / 337 / (248 + RTNA * 16)
+	 * fps = 10000000000 / 337 / (248 + RTNA * 16) / 1000
+	 * fps = 29673591 / (248 + RTNA * 16) / 1000
+	 * 248 + RTNA * 16 = 10 MHz / (337 * fps)
+	 * RTNA * 16 = (10 MHz / (337 * fps)) - 248
+	 * RTNA = ((10 MHz / (337 * fps)) - 248) / 16
+	 * RTNA = ((10 MHz / (16 * 337 * fps)) - 15.5)
+	 * RTNA = 1854.6 / fps - 15.5
+	 * RTNA = (474778 / fps - 3968) >> 8
+	 *
+	 * fps == 61, rtna = 14.9
+	 * fps == 60, rtna = 15.4
+	 * fps == 40, rtna = 30.8
+	 * rtna == 15, fps = 10000000/337/(248 + 240) = 10000000/337/488 = 60.8 (measured 61.7 FPS)
+	 * rtna == 16, fps = 10000000/337/(248 + 256) = 10000000/337/504 = 58.8
+	 * rtna == 21, fps = 10000000/337/(248 + 336) = 10000000/337/584 = 50.81 (measured 51.5 FPS)
+	 * rtna == 31, fps = 10000000/337/(248 + 496) = 10000000/337/744 = 39.88 (measured 40.4 FPS)
+	 */
+	rtna = (474778 / fps - 3968 + 255) >> 8;
+	if (rtna > 0x1f)
+		rtna = 0x1f;
+	fps = 29673591 / (248 + (rtna << 4));
+	pr_info("%s: rtna=%d fps=%d.%.3d, te-line=%d irq=%d\n", __func__, rtna,
+			fps / 1000, fps % 1000, te_line, par->irq);
+	write_reg(par, FRCTRL2, 0x1f);
+	if (par->irq) {
+		write_reg(par, TEON, 0x00);		/* Turn on TE output */
+		write_reg(par, STE, (te_line >> 8), (te_line & 0xff));	/* Trial & error to get best starting  */
+	}
 	write_reg(par, MIPI_DCS_ENTER_INVERT_MODE);
 	write_reg(par, MIPI_DCS_SET_DISPLAY_ON);
 	return 0;
