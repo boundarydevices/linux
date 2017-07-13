@@ -124,7 +124,6 @@ struct fbtft_display {
 	struct fbtft_ops fbtftops;
 	unsigned int bpp;
 	unsigned int fps;
-	int txbuf_cnt;
 	int txbuflen;
 	int *init_sequence;
 	char *gamma;
@@ -151,6 +150,9 @@ struct fbtft_platform_data {
 	unsigned int rotate;
 	bool bgr;
 	unsigned int fps;
+	int gpio_int;
+	unsigned int display_fps;
+	unsigned int te_line;
 	int txbuf_cnt;
 	int txbuflen;
 	u8 startbyte;
@@ -247,6 +249,15 @@ struct fbtft_par {
 	spinlock_t dirty_lock;
 	unsigned int dirty_lines_start;
 	unsigned int dirty_lines_end;
+	unsigned long irq_enabled;
+	unsigned int irq;
+	int gpio_int;
+	unsigned int dls;
+	unsigned int dle;
+	unsigned int display_fps;
+	unsigned int te_line;
+#define FB_IDLE_DISABLE_CNT	6
+	unsigned int fb_idle_cnt;
 	struct {
 		int reset;
 		int dc;

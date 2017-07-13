@@ -26,6 +26,7 @@
 #include <linux/init.h>
 #include <linux/fb.h>
 #include <linux/gpio.h>
+#include <linux/interrupt.h>
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
 #include <linux/uaccess.h>
@@ -421,6 +422,35 @@ static void fbtft_update_display(struct fbtft_par *par, unsigned int start_line,
 	}
 }
 
+static irqreturn_t frame_sync_interrupt(int irq, void *id)
+{
+	struct fb_info *info = id;
+	struct fbtft_par *par = info->par;
+	unsigned dirty_lines_start, dirty_lines_end;
+
+	if (!par->fb_idle_cnt) {
+		par->fb_idle_cnt = 1;
+		return IRQ_HANDLED;
+	}
+	dirty_lines_start = par->dls;
+	dirty_lines_end = par->dle;
+	if (dirty_lines_start <= dirty_lines_end) {
+		/* set display line markers as clean */
+		par->dls = par->info->var.yres - 1;
+		par->dle = 0;
+		par->fb_idle_cnt = 1;
+		par->fbtftops.update_display(info->par,
+			dirty_lines_start, dirty_lines_end);
+		return IRQ_HANDLED;
+	}
+	if (par->fb_idle_cnt++ > FB_IDLE_DISABLE_CNT) {
+		par->fb_idle_cnt = 0;
+		par->irq_enabled = 0;
+		disable_irq_nosync(irq);
+	}
+	return IRQ_HANDLED;
+}
+
 static void fbtft_mkdirty(struct fb_info *info, int y, int height)
 {
 	struct fbtft_par *par = info->par;
@@ -478,8 +508,17 @@ static void fbtft_deferred_io(struct fb_info *info, struct list_head *pagelist)
 			dirty_lines_end = y_high;
 	}
 
-	par->fbtftops.update_display(info->par,
+	if (par->irq) {
+		if (par->dls > dirty_lines_start)
+			par->dls = dirty_lines_start;
+		if (par->dle < dirty_lines_end)
+			par->dle = dirty_lines_end;
+		if (!test_and_set_bit(0, &par->irq_enabled))
+			enable_irq(par->irq);
+	} else {
+		par->fbtftops.update_display(info->par,
 					dirty_lines_start, dirty_lines_end);
+	}
 }
 
 static void fbtft_fb_fillrect(struct fb_info *info,
@@ -643,10 +682,13 @@ int alloc_txbuf(struct txbuf *txbuf, struct device *dev, struct fbtft_par *par, 
 {
 	void *buf = NULL;
 
+#ifdef CONFIG_HAS_DMA
 	if (dma) {
 		dev->coherent_dma_mask = ~0;
 		buf = dmam_alloc_coherent(dev, len, &txbuf->dma, GFP_DMA);
-	} else {
+	} else
+#endif
+	{
 		buf = devm_kzalloc(dev, len, GFP_KERNEL);
 	}
 	if (!buf)
@@ -837,6 +879,8 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	par->buf = buf;
 	spin_lock_init(&par->dirty_lock);
 	par->bgr = pdata->bgr;
+	par->display_fps = pdata->display_fps;
+	par->te_line = pdata->te_line;
 	par->startbyte = pdata->startbyte;
 	par->init_sequence = init_sequence;
 	par->gamma.curves = gamma_curves;
@@ -881,7 +925,6 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 			}
 		}
 	}
-
 	/* Initialize gpios to disabled */
 	par->gpio.reset = -1;
 	par->gpio.dc = -1;
@@ -1310,6 +1353,7 @@ static struct fbtft_platform_data *fbtft_probe_dt(struct device *dev)
 {
 	struct device_node *node = dev->of_node;
 	struct fbtft_platform_data *pdata;
+	int gpio;
 
 	if (!node) {
 		dev_err(dev, "Missing platform data or DT\n");
@@ -1330,6 +1374,10 @@ static struct fbtft_platform_data *fbtft_probe_dt(struct device *dev)
 	pdata->rotate = fbtft_of_value(node, "rotate");
 	pdata->bgr = of_property_read_bool(node, "bgr");
 	pdata->fps = fbtft_of_value(node, "fps");
+	pdata->display_fps = fbtft_of_value(node, "display_fps");
+	if (!pdata->display_fps)
+		pdata->display_fps = 60;
+	pdata->te_line = fbtft_of_value(node, "te-line");
 	pdata->txbuflen = fbtft_of_value(node, "txbuflen");
 	pdata->txbuf_cnt = fbtft_of_value(node, "txbufcnt");
 
@@ -1341,6 +1389,9 @@ static struct fbtft_platform_data *fbtft_probe_dt(struct device *dev)
 	if (of_find_property(node, "init", NULL))
 		pdata->display.fbtftops.init_display = fbtft_init_display_dt;
 	pdata->display.fbtftops.request_gpios = fbtft_request_gpios_dt;
+	gpio = of_get_named_gpio(node, "interrupts-extended", 0);
+	if (gpio_is_valid(gpio))
+		pdata->gpio_int = gpio;
 
 	return pdata;
 }
@@ -1467,6 +1518,20 @@ int fbtft_probe_common(struct fbtft_display *display,
 	/* use platform_data provided functions above all */
 	fbtft_merge_fbtftops(&par->fbtftops, &pdata->display.fbtftops);
 
+	if (sdev->irq) {
+		par->irq_enabled = 1;
+		ret = devm_request_threaded_irq(info->device, sdev->irq, NULL,
+				frame_sync_interrupt,
+				IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+				"fbtft", info);
+		if (!ret) {
+			par->irq = sdev->irq;
+			par->gpio_int = pdata->gpio_int;
+			pr_debug("%s:irq=%d gpio=%d\n", __func__, sdev->irq, pdata->gpio_int);
+		} else {
+			pr_err("%s: failed request of irq=%d\n", __func__, sdev->irq);
+		}
+	}
 	ret = fbtft_register_framebuffer(info);
 	if (ret < 0)
 		goto out_release;

@@ -137,7 +137,7 @@ int fbtft_read_reg_n(struct fbtft_par *par, void *tbuf1, size_t len, void *rbuf2
 			.rx_buf		= rbuf2,
 			.len		= (bits > 16) ? 4 : (bits > 8) ? 2 : 1,
 			.bits_per_word	= bits,
-			//.read_setup	= 1,
+			.read_setup	= 1,
 		};
 	struct spi_message	m;
 
