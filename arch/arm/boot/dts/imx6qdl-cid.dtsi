@@ -618,7 +618,7 @@
 		model = "wm8960-audio";
 		cpu-dai = <&ssi1>;
 		audio-codec = <&wm8960>;
-#if 0
+#ifdef USE_ASRC
 		asrc-controller = <&asrc>;
 #endif
 		codec-master;
@@ -631,7 +631,7 @@
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Main MIC",
 			"Main MIC", "MICB"
-#if 0
+#ifdef USE_ASRC
 			,"CPU-Playback", "ASRC-Playback",
 			"Playback", "CPU-Playback",
 			"ASRC-Capture", "CPU-Capture",
@@ -668,6 +668,12 @@
 		status = "okay";
 	};
 };
+
+#ifdef USE_ASRC
+&asrc {
+	status = "okay";
+};
+#endif
 
 &audmux {
 	pinctrl-names = "default";
