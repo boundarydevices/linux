@@ -188,6 +188,18 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	if (pll->lock)
 		spin_lock_irqsave(pll->lock, flags);
 
+	if (readl(pll->base + p->reg_off) & MESON_PLL_ENABLE) {
+		old_rate = meson_axg_pll_recalc_rate(hw,
+			clk_get_rate(clk_get_parent(hw->clk)));
+		old_rate = meson_axg_pll_round_rate(hw, old_rate, NULL);
+
+		if (old_rate == rate) {
+			if (pll->lock)
+				spin_unlock_irqrestore(pll->lock, flags);
+			return ret;
+		}
+	}
+
 	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
 		|| !strcmp(clk_hw_get_name(hw), "hifi_pll")
 		|| !strcmp(clk_hw_get_name(hw), "pcie_pll")) {
@@ -266,9 +278,9 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		spin_unlock_irqrestore(pll->lock, flags);
 
 	if (ret) {
-		pr_warn("%s: pll did not lock, trying to restore old rate %lu\n",
-			__func__, old_rate);
-		meson_axg_pll_set_rate(hw, old_rate, parent_rate);
+		pr_warn("%s: pll did not lock, trying to lock rate %lu again\n",
+			__func__, rate);
+		meson_axg_pll_set_rate(hw, rate, parent_rate);
 	}
 
 	return ret;
