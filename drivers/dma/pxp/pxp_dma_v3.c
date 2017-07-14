@@ -993,7 +993,6 @@ static void dump_pxp_reg2(struct pxps *pxp)
 	for (i=0; i< ((0x33C0/0x10) + 1);i++) {
 		printk("0x%08x: 0x%08x\n", 0x10*i, __raw_readl(pxp->base + 0x10*i));
 	}
-j++;
 #endif
 }
 
@@ -1372,12 +1371,16 @@ static uint32_t pxp_store_ctrl_config(struct pxp_pixmap *out, uint8_t mode,
 			ctrl.store_memory_en = 1;
 		}
 	} else {
-		if (fill_en)
+		if (fill_en) {
 			ctrl.fill_data_en = 1;
+			ctrl.wr_num_bytes = 2;
+		}
 		ctrl.store_memory_en = 1;
 	}
 
-	ctrl.block_en = 1;
+	if (out->rotate || out->flip)
+		ctrl.block_en = 1;
+
 	ctrl.ch_en = 1;
 
 	return *(uint32_t *)&ctrl;
@@ -2310,23 +2313,27 @@ static int pxp_fetch_config(struct pxp_pixmap *input,
 		shift_bypass = (flags & FETCH_SHIFT) ? 0 : 1;
 		expand_en    = (flags & FETCH_EXPAND) ? 1 : 0;
 
-		if (!shift_bypass && expand_en) {
-			if (is_yuv(input->format)) {
-				in_fmt  = PXP_PIX_FMT_YVU444;
-				out_fmt = PXP_PIX_FMT_YUV444;
+		if (!shift_bypass) {
+			if (expand_en) {
+				if (is_yuv(input->format)) {
+					in_fmt  = PXP_PIX_FMT_YVU444;
+					out_fmt = PXP_PIX_FMT_YUV444;
+				} else {
+					in_fmt  = PXP_PIX_FMT_ABGR32;
+					out_fmt = PXP_PIX_FMT_ARGB32;
+				}
 			} else {
-				in_fmt  = PXP_PIX_FMT_ABGR32;
-				out_fmt = PXP_PIX_FMT_ARGB32;
+				in_fmt  = input->format;
+				out_fmt = is_yuv(input->format) ?
+						 PXP_PIX_FMT_YUV444 :
+						 PXP_PIX_FMT_ARGB32;
 			}
-		} else if  (!shift_bypass) {
-			in_fmt  = input->format;
-			out_fmt = is_yuv(input->format) ? PXP_PIX_FMT_YUV444 :
-							  PXP_PIX_FMT_ARGB32;
+
+			shift_offset = pxp_fetch_shift_calc(in_fmt, out_fmt,
+							    &shift_width);
 		}
 	}
 	shift_ctrl = pxp_fetch_shift_ctrl_config(input, shift_bypass, expand_en);
-	if (!shift_bypass)
-		shift_offset = pxp_fetch_shift_calc(in_fmt, out_fmt, &shift_width);
 
 	offset = input->crop.y * input->pitch +
 		 input->crop.x * (input->bpp >> 3);
@@ -2546,8 +2553,16 @@ static int pxp_store_config(struct pxp_pixmap *output,
 	pxp_writel(shift_ctrl, HW_PXP_INPUT_STORE_SHIFT_CTRL_CH0);
 	pxp_writel(store_size, HW_PXP_INPUT_STORE_SIZE_CH0);
 	pxp_writel(store_pitch, HW_PXP_INPUT_STORE_PITCH);
-	if (op->fill_en)
+	if (op->fill_en) {
+		uint32_t lrc;
+
+		lrc = (output->width - 1) | ((output->height - 1) << 16);
 		pxp_writel(op->fill_data, HW_PXP_INPUT_STORE_FILL_DATA_CH0);
+
+		pxp_writel(0x1, HW_PXP_INPUT_FETCH_CTRL_CH0);
+		pxp_writel(0, HW_PXP_INPUT_FETCH_ACTIVE_SIZE_ULC_CH0);
+		pxp_writel(lrc, HW_PXP_INPUT_FETCH_ACTIVE_SIZE_LRC_CH0);
+	}
 
 	offset = output->crop.y * output->pitch +
 		 output->crop.x * (output->bpp >> 3);
@@ -2631,6 +2646,7 @@ static int pxp_2d_task_config(struct pxp_pixmap *input,
 			      uint32_t nodes_used)
 {
 	uint8_t position = 0;
+
 
 	do {
 		position = find_next_bit((unsigned long *)&nodes_used, 32, position);
@@ -2792,8 +2808,11 @@ reparse:
 		if (!input->pitch)
 			return -EINVAL;
 
-		if (input->rotate || input->flip)
+		if (input->rotate || input->flip) {
 			input->flags |= IN_NEED_ROTATE_FLIP;
+			output->rotate = input->rotate;
+			output->flip = input->flip;
+		}
 
 		if (!is_yuv(input->format) != !is_yuv(output->format))
 			input->flags |= IN_NEED_CSC;
@@ -3216,13 +3235,13 @@ static int convert_param_to_pixmap(struct pxp_pixmap *pixmap,
 	pixmap->height = param->height;
 	pixmap->format = param->pixel_fmt;
 	pixmap->paddr  = param->paddr;
-	pixmap->pitch  = param->stride;
 	pixmap->bpp    = get_bpp_from_fmt(pixmap->format);
+	pixmap->pitch  = param->width * pixmap->bpp >> 3;
 
-	pixmap->crop.x = param->left;
-	pixmap->crop.y = param->top;
-	pixmap->crop.width  = param->width;
-	pixmap->crop.height = param->height;
+	pixmap->crop.x = param->crop.left;
+	pixmap->crop.y = param->crop.top;
+	pixmap->crop.width  = param->crop.width;
+	pixmap->crop.height = param->crop.height;
 
 	return 0;
 }
@@ -3406,6 +3425,12 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 		 pxp->pxp_conf_state.s0_param.width,
 		 pxp->pxp_conf_state.s0_param.height,
 		 pxp->pxp_conf_state.s0_param.paddr);
+	pr_debug("%s:%d S0 crop (top, left)=(%d, %d), (width, height)=(%d, %d)\n",
+		__func__, __LINE__,
+		pxp->pxp_conf_state.s0_param.crop.top,
+		pxp->pxp_conf_state.s0_param.crop.left,
+		pxp->pxp_conf_state.s0_param.crop.width,
+		pxp->pxp_conf_state.s0_param.crop.height);
 	pr_debug("%s:%d OUT w/h %d/%d paddr %08x\n", __func__, __LINE__,
 		 pxp->pxp_conf_state.out_param.width,
 		 pxp->pxp_conf_state.out_param.height,

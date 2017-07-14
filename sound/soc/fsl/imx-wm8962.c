@@ -373,7 +373,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	if (sample_format == SNDRV_PCM_FORMAT_S24_LE
 		|| sample_format == SNDRV_PCM_FORMAT_S20_3LE)
-		pll_out = sample_rate * 384;
+		pll_out = sample_rate * 192;
 	else
 		pll_out = sample_rate * 256;
 
@@ -727,6 +727,7 @@ audmux_bypass:
 		data->dai[1].ignore_pmdown_time = 1;
 		data->dai[1].dpcm_playback = 1;
 		data->dai[1].dpcm_capture = 1;
+		data->dai[1].dpcm_merged_chan = 1;
 
 		data->dai[2].name = "HiFi-ASRC-BE";
 		data->dai[2].stream_name = "HiFi-ASRC-BE";

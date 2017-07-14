@@ -66,9 +66,9 @@ struct imx7_cpuidle_pm_info {
 	u32 ttbr;
 	u32 cpu1_wfi;
 	u32 lpi_enter;
-	u32 val;
-	u32 flag0;
-	u32 flag1;
+	atomic_t val;
+	atomic_t flag0;
+	atomic_t flag1;
 	struct imx7_pm_base ddrc_base;
 	struct imx7_pm_base ccm_base;
 	struct imx7_pm_base anatop_base;
@@ -84,10 +84,55 @@ static atomic_t master_wait = ATOMIC_INIT(0);
 static void (*imx7d_wfi_in_iram_fn)(void __iomem *iram_vbase);
 static struct imx7_cpuidle_pm_info *cpuidle_pm_info;
 
+/* Mapped for the kernel, unlike cpuidle_pm_info->gic_dist_base.vbase */
+static void __iomem *imx7d_cpuidle_gic_base;
+
+static void imx_pen_lock(int cpu)
+{
+	if (cpu == 0) {
+		atomic_set(&cpuidle_pm_info->flag0, 1);
+		dsb();
+		atomic_set(&cpuidle_pm_info->val, cpu);
+		do {
+			dsb();
+		} while (atomic_read(&cpuidle_pm_info->flag1) == 1
+			&& atomic_read(&cpuidle_pm_info->val) == cpu)
+			;
+	} else {
+		atomic_set(&cpuidle_pm_info->flag1, 1);
+		dsb();
+		atomic_set(&cpuidle_pm_info->val, cpu);
+		do {
+			dsb();
+		} while (atomic_read(&cpuidle_pm_info->flag0) == 1
+			&& atomic_read(&cpuidle_pm_info->val) == cpu)
+			;
+	}
+}
+
+static void imx_pen_unlock(int cpu)
+{
+	dsb();
+	if (cpu == 0)
+		atomic_set(&cpuidle_pm_info->flag0, 0);
+	else
+		atomic_set(&cpuidle_pm_info->flag1, 0);
+}
+
 static int imx7d_idle_finish(unsigned long val)
 {
 	imx7d_wfi_in_iram_fn(wfi_iram_base);
 	return 0;
+}
+
+static bool imx7d_gic_sgis_pending(void)
+{
+	void __iomem *sgip_base = imx7d_cpuidle_gic_base + 0x1f20;
+
+	return (readl_relaxed(sgip_base + 0x0) |
+		readl_relaxed(sgip_base + 0x4) |
+		readl_relaxed(sgip_base + 0x8) |
+		readl_relaxed(sgip_base + 0xc));
 }
 
 static int imx7d_enter_low_power_idle(struct cpuidle_device *dev,
@@ -105,28 +150,45 @@ static int imx7d_enter_low_power_idle(struct cpuidle_device *dev,
 		atomic_dec(&master_wait);
 		imx_gpcv2_set_lpm_mode(WAIT_CLOCKED);
 	} else {
+		imx_pen_lock(dev->cpu);
 		cpu_pm_enter();
 		if (atomic_inc_return(&master_lpi) == num_online_cpus() &&
 			cpuidle_pm_info->last_cpu == -1) {
+			/*
+			 * GPC will not wake on SGIs so check for them
+			 * manually here. At this point we know the other cpu
+			 * is in wfi or waiting for the lock and can't send
+			 * any additional IPIs.
+			 */
+			if (imx7d_gic_sgis_pending()) {
+				atomic_dec(&master_lpi);
+				index = -1;
+				goto skip_lpi_flow;
+			}
 			imx_gpcv2_set_lpm_mode(WAIT_UNCLOCKED);
 			imx_gpcv2_set_cpu_power_gate_in_idle(true);
 			cpu_cluster_pm_enter();
 
 			cpuidle_pm_info->last_cpu = dev->cpu;
-			cpu_suspend(0, imx7d_idle_finish);
 
-			cpu_cluster_pm_exit();
-			imx_gpcv2_set_cpu_power_gate_in_idle(false);
-			/* initialize the last cpu id to invalid here */
-			cpuidle_pm_info->last_cpu = -1;
 		} else {
 			imx_set_cpu_jump(dev->cpu, ca7_cpu_resume);
-			cpu_suspend(0, imx7d_idle_finish);
 		}
-		atomic_dec(&master_lpi);
 
+		cpu_suspend(0, imx7d_idle_finish);
+
+		if (atomic_dec_return(&master_lpi) == (num_online_cpus() - 1)) {
+			cpu_cluster_pm_exit();
+			imx_gpcv2_set_cpu_power_gate_in_idle(false);
+			imx_gpcv2_set_lpm_mode(WAIT_CLOCKED);
+		}
+
+		if (cpuidle_pm_info->last_cpu == dev->cpu)
+			cpuidle_pm_info->last_cpu = -1;
+
+skip_lpi_flow:
 		cpu_pm_exit();
-		imx_gpcv2_set_lpm_mode(WAIT_CLOCKED);
+		imx_pen_unlock(dev->cpu);
 	}
 
 	return index;
@@ -149,8 +211,8 @@ static struct cpuidle_driver imx7d_cpuidle_driver = {
 		},
 		/* LOW POWER IDLE */
 		{
-			.exit_latency = 500,
-			.target_residency = 800,
+			.exit_latency = 10000,
+			.target_residency = 20000,
 			.flags = CPUIDLE_FLAG_TIMER_STOP,
 			.enter = imx7d_enter_low_power_idle,
 			.name = "LOW-POWER-IDLE",
@@ -290,6 +352,8 @@ int __init imx7d_cpuidle_init(void)
 	cpuidle_pm_info->gic_dist_base.pbase = MX7D_GIC_BASE_ADDR;
 	cpuidle_pm_info->gic_dist_base.vbase =
 		(void __iomem *)IMX_IO_P2V(MX7D_GIC_BASE_ADDR);
+
+	imx7d_cpuidle_gic_base = ioremap(MX7D_GIC_BASE_ADDR, MX7D_GIC_SIZE);
 
 	imx7d_enable_rcosc();
 
