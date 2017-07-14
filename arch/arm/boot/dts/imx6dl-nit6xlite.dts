@@ -21,7 +21,3 @@
 	model = "Freescale i.MX6 Solo Nit6x-Lite Board";
 	compatible = "fsl,imx6dl-nit6xlite", "fsl,imx6dl", "fsl,imx6q";
 };
-
-&pxp {
-	status = "okay";
-};
