@@ -283,6 +283,10 @@
 	};
 };
 
+&asrc {
+	status = "okay";
+};
+
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
