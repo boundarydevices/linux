@@ -471,7 +471,7 @@
 		model = "wm8960-audio";
 		cpu-dai = <&ssi1>;
 		audio-codec = <&wm8960>;
-#if 0
+#ifdef USE_ASRC
 		asrc-controller = <&asrc>;
 #endif
 		codec-master;
@@ -479,7 +479,7 @@
 		audio-routing =
 			"Ext Spk", "SPK_LP",
 			"Ext Spk", "SPK_LN"
-#if 0
+#ifdef USE_ASRC
 			,"CPU-Playback", "ASRC-Playback",
 			"Playback", "CPU-Playback",
 			"ASRC-Capture", "CPU-Capture",
@@ -511,6 +511,12 @@
 		interrupts-extended = GPIRQ_WLAN; 
 	};
 };
+
+#ifdef USE_ASRC
+&asrc {
+	status = "okay";
+};
+#endif
 
 &audmux {
 	pinctrl-names = "default";
