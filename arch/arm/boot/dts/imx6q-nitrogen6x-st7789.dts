@@ -93,7 +93,7 @@
 		compatible = "sitronix,st7789v";
 		display_fps = <40>;
 		height = <204>;
-#if 0
+#if 1
 		interrupts-extended = GPIRQ_ST7789_TEARING_EFFECT;
 #endif
 		pinctrl-names = "default";
