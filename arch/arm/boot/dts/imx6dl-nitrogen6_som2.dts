@@ -23,7 +23,3 @@
 &hdmi_core {
 	ipu_id = <0>;
 };
-
-&pxp {
-	status = "okay";
-};
