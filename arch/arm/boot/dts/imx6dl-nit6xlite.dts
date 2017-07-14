@@ -47,7 +47,3 @@
 	model = "Boundary Devices i.MX6 Solo Nitrogen6_Lite Board";
 	compatible = "boundary,imx6dl-nit6xlite", "fsl,imx6dl";
 };
-
-&pxp {
-	status = "okay";
-};
