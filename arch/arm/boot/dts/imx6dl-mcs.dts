@@ -19,7 +19,3 @@
 	model = "Freescale i.MX6 DualLite MCS Board";
 	compatible = "fsl,imx6dl-mcs", "fsl,imx6dl";
 };
-
-&pxp {
-	status = "okay";
-};
