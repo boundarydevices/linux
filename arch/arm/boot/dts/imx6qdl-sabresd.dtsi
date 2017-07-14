@@ -254,6 +254,10 @@
 	};
 };
 
+&asrc {
+	status = "okay";
+};
+
 &ipu1_csi0_from_ipu1_csi0_mux {
 	bus-width = <8>;
 	data-shift = <12>; /* Lines 19:12 used */
