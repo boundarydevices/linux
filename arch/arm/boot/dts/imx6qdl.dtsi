@@ -474,7 +474,7 @@
 							"txa", "txb", "txc";
 					fsl,asrc-rate  = <48000>;
 					fsl,asrc-width = <16>;
-					status = "okay";
+					status = "disabled";
 				};
 
 				spba@0203c000 {
