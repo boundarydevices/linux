@@ -21,7 +21,3 @@
 	model = "Freescale i.MX6 Solo Nitrogen6_vm Board";
 	compatible = "fsl,imx6dl-nitrogen6_vm", "fsl,imx6dl", "fsl,imx6q";
 };
-
-&pxp {
-	status = "okay";
-};
