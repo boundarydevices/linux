@@ -82,6 +82,7 @@ snd-soc-imx-si476x-objs := imx-si476x.o
 snd-soc-imx-hdmi-objs := imx-hdmi.o
 snd-soc-imx-cdnhdmi-objs := imx-cdnhdmi.o
 snd-soc-imx-rpmsg-objs := imx-rpmsg.o
+snd-soc-imx-amix-objs := imx-amix.o
 
 obj-$(CONFIG_SND_SOC_EUKREA_TLV320) += snd-soc-eukrea-tlv320.o
 obj-$(CONFIG_SND_SOC_PHYCORE_AC97) += snd-soc-phycore-ac97.o
