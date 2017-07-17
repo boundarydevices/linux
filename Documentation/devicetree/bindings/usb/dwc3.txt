@@ -94,6 +94,9 @@ Optional properties:
 			this and tx-thr-num-pkt-prd to a valid, non-zero value
 			1-16 (DWC_usb31 programming guide section 1.2.3) to
 			enable periodic ESS TX threshold.
+- snps,power-down-scale: Value for number of scale(16kHz) of suspend clock if
+        the default value is not correct, valid range is 2~8000, means suspend
+        clock is from 32KHz to 125MHz.
 
  - <DEPRECATED> tx-fifo-resize: determines if the FIFO *has* to be reallocated.
  - snps,incr-burst-type-adjustment: Value for INCR burst type of GSBUSCFG0
