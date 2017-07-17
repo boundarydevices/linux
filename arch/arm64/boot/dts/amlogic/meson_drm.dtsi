@@ -1,0 +1,65 @@
+/*
+ * arch/arm64/boot/dts/amlogic/meson_drm.dtsi
+ *
+ * Copyright (C) 2015 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+*/
+
+/ {
+	venc-cvbs {
+		status = "okay";
+		compatible = "amlogic,meson-gxbb-cvbs";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			enc_cvbs_in: port@0 {
+				 #address-cells = <1>;
+				 #size-cells = <0>;
+				 reg = <0>;
+
+				 venc_cvbs_in_vpu: endpoint@0 {
+					 reg = <0>;
+					 remote-endpoint = <&vpu_out_venc_cvbs>;
+				};
+			};
+		};
+	};
+
+	drm_vpu@d0100000 {
+		status = "okay";
+		compatible = "amlogic,meson-gxbb-vpu";
+		reg = <0x0 0xd0100000 0x0 0x100000>,
+			  <0x0 0xc883c000 0x0 0x1000>,
+			  <0x0 0xc8838000 0x0 0x1000>;
+		reg-names = "base", "hhi", "dmc";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
+		dma-coherent;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			vpu_out: port@1 {
+				 #address-cells = <1>;
+				 #size-cells = <0>;
+				 reg = <1>;
+
+				 vpu_out_venc_cvbs: endpoint@0 {
+					 reg = <0>;
+					 remote-endpoint = <&venc_cvbs_in_vpu>;
+				 };
+			 };
+		};
+	};
+};
