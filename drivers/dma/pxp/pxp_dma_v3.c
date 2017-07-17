@@ -2665,7 +2665,7 @@ static int pxp_2d_task_config(struct pxp_pixmap *input,
 			pxp_fetch_config(input, position);
 			break;
 		case PXP_2D_CSC1:
-			pxp_csc1_config(input, false);
+			pxp_csc1_config(input, true);
 			break;
 		case PXP_2D_ROTATION1:
 			pxp_rotation1_config(input);
