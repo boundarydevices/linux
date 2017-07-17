@@ -150,5 +150,12 @@ struct pcie_phy_aml_regs {
 	void __iomem    *pcie_phy_r[7];
 };
 
+struct pcie_phy {
+	u32 power_state;
+	u32 reset_state;
+	void __iomem		*phy_base;	/* DT 1st resource */
+	void __iomem		*reset_base;/* DT 3nd resource */
+};
+
 
 #endif

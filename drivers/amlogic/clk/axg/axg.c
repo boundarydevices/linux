@@ -386,6 +386,31 @@ static struct clk_mux axg_pcie_ref = {
 	},
 };
 
+static struct clk_gate axg_pcie_cml_en0 = {
+	.reg = (void *)HHI_PCIE_PLL_CNTL6,
+	.bit_idx = 4,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "axg_pcie_cml_en0",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "axg_pcie_ref" },
+		.num_parents = 1,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+
+static struct clk_gate axg_pcie_cml_en1 = {
+	.reg = (void *)HHI_PCIE_PLL_CNTL6,
+	.bit_idx = 3,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "axg_pcie_cml_en1",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "axg_pcie_ref" },
+		.num_parents = 1,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
 /*
  * FIXME cpu clocks and the legacy composite clocks (e.g. clk81) are both PLL
  * post-dividers and should be modelled with their respective PLLs via the
@@ -700,7 +725,8 @@ static struct clk_hw *axg_clk_hws[] = {
 	[CLKID_PCIE_PLL]		= &axg_pcie_pll.hw,
 	[CLKID_PCIE_MUX]			= &axg_pcie_mux.hw,
 	[CLKID_PCIE_REF]			= &axg_pcie_ref.hw,
-//	[CLKID_PCIE_INPUT_GATE]	= &axg_pcie_input_gate.hw,
+	[CLKID_PCIE_CML_EN0]	= &axg_pcie_cml_en0.hw,
+	[CLKID_PCIE_CML_EN1]	= &axg_pcie_cml_en1.hw,
 };
 /* Convenience tables to populate base addresses in .probe */
 
@@ -805,6 +831,9 @@ static void __init axg_clkc_init(struct device_node *np)
 
 	axg_pcie_mux.reg = clk_base + (u64)axg_pcie_mux.reg;
 	axg_pcie_ref.reg = clk_base + (u64)axg_pcie_ref.reg;
+
+	axg_pcie_cml_en0.reg = clk_base + (u64)axg_pcie_cml_en0.reg;
+	axg_pcie_cml_en1.reg = clk_base + (u64)axg_pcie_cml_en1.reg;
 
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(axg_clk_gates); i++)

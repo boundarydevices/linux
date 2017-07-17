@@ -295,11 +295,11 @@
 	pcie_A: pcieA@f9800000 {
 		compatible = "amlogic, amlogic-pcie", "snps,dw-pcie";
 		reg = <0x0 0xf9800000 0x0 0x400000
-				0x0 0xff644000 0x0 0x2000
 				0x0 0xff646000 0x0 0x2000
-				0x0 0xffd01080 0x0 0x10
-				0x0 0xf9f00000 0x0 0x100000>;
-		reg-names = "elbi", "phy", "cfg", "reset", "config";
+				0x0 0xf9f00000 0x0 0x100000
+				0x0 PCIE_PHY_REG 0x0 PCIE_PHY_SIZE
+				0x0 PCIE_RESET_REG 0x0 PCIE_RESET_SIZE>;
+		reg-names = "elbi", "cfg", "config", "phy", "reset";
 		reset-gpio = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 		interrupts = <0 177 0>, <0 179 0>;
 		#interrupt-cells = <1>;
@@ -313,9 +313,11 @@
 		pcie-num = <1>;
 
 		clocks = <&clkc CLKID_PCIE_PLL
-		&clkc CLKID_PCIE_A>;
+		&clkc CLKID_PCIE_A
+		&clkc CLKID_PCIE_CML_EN0>;
 		clock-names = "pcie_refpll",
-				"pcie_a";
+				"pcie",
+				"port";
 		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
 		gpio-type = <2>;
 		status = "okay";
@@ -324,11 +326,11 @@
 	pcie_B: pcieB@fa000000 {
 		compatible = "amlogic, amlogic-pcie", "snps,dw-pcie";
 		reg = <0x0 0xfa000000 0x0 0x400000
-				0x0 0xff644000 0x0 0x2000
 				0x0 0xff648000 0x0 0x2000
-				0x0 0xffd01080 0x0 0x10
-				0x0 0xfa400000 0x0 0x100000>;
-		reg-names = "elbi", "phy", "cfg", "reset", "config";
+				0x0 0xfa400000 0x0 0x100000
+				0x0 PCIE_PHY_REG 0x0 PCIE_PHY_SIZE
+				0x0 PCIE_RESET_REG 0x0 PCIE_RESET_SIZE>;
+		reg-names = "elbi", "cfg", "config", "phy", "reset";
 		reset-gpio = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 		interrupts = <0 167 0>, <0 169 0>;
 		#interrupt-cells = <1>;
@@ -344,9 +346,11 @@
 		pcie-num = <2>;
 
 		clocks = <&clkc CLKID_PCIE_PLL
-			&clkc CLKID_PCIE_B>;
+			&clkc CLKID_PCIE_B
+			&clkc CLKID_PCIE_CML_EN1>;
 		clock-names = "pcie_refpll",
-			"pcie_b";
+			"pcie",
+			"port";
 		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
 		gpio-type = <0>;
 		status = "okay";
