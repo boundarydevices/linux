@@ -217,9 +217,14 @@ static enum dvbv3_emulation_type dvbv3_type(u32 delivery_system)
 		return DVBV3_UNKNOWN;
 	}
 }
-
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+void dvb_frontend_add_event(struct dvb_frontend *fe,
+				   enum fe_status status)
+#else
 static void dvb_frontend_add_event(struct dvb_frontend *fe,
 				   enum fe_status status)
+
+#endif
 {
 	struct dvb_frontend_private *fepriv = fe->frontend_priv;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
@@ -250,7 +255,9 @@ static void dvb_frontend_add_event(struct dvb_frontend *fe,
 
 	wake_up_interruptible (&events->wait_queue);
 }
-
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+EXPORT_SYMBOL(dvb_frontend_add_event);
+#endif
 static int dvb_frontend_get_event(struct dvb_frontend *fe,
 			    struct dvb_frontend_event *event, int flags)
 {
@@ -1037,7 +1044,19 @@ static struct dtv_cmds_h dtv_cmds[DTV_MAX_COMMAND + 1] = {
 	_DTV_CMD(DTV_STREAM_ID, 1, 0),
 	_DTV_CMD(DTV_DVBT2_PLP_ID_LEGACY, 1, 0),
 	_DTV_CMD(DTV_LNA, 1, 0),
-
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	/*set blind scan cmd*/
+	_DTV_CMD(DTV_START_BLIND_SCAN, 1, 0),
+	_DTV_CMD(DTV_CANCEL_BLIND_SCAN, 1, 0),
+	_DTV_CMD(DTV_BLIND_SCAN_MIN_FRE, 1, 0),
+	_DTV_CMD(DTV_BLIND_SCAN_MAX_FRE, 1, 0),
+	_DTV_CMD(DTV_BLIND_SCAN_MIN_SRATE, 1, 0),
+	_DTV_CMD(DTV_BLIND_SCAN_MAX_SRATE, 1, 0),
+	_DTV_CMD(DTV_BLIND_SCAN_FRE_RANGE, 1, 0),
+	_DTV_CMD(DTV_BLIND_SCAN_FRE_STEP, 1, 0),
+	_DTV_CMD(DTV_BLIND_SCAN_TIMEOUT, 1, 0),
+	/*set blind scan cmd end*/
+#endif
 	/* Get */
 	_DTV_CMD(DTV_DISEQC_SLAVE_REPLY, 0, 1),
 	_DTV_CMD(DTV_API_VERSION, 0, 0),
@@ -1492,6 +1511,12 @@ static int dtv_property_process_get(struct dvb_frontend *fe,
 	case DTV_STAT_TOTAL_BLOCK_COUNT:
 		tvp->u.st = c->block_count;
 		break;
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	case DTV_DELIVERY_SUB_SYSTEM:
+		r = 0;
+		//printk("dvb-core get sub sys\r\n");
+		break;
+#endif
 	default:
 		dev_dbg(fe->dvb->device,
 			"%s: FE property %d doesn't exist\n",
@@ -1795,6 +1820,11 @@ static int dtv_property_process_set(struct dvb_frontend *fe,
 	case DTV_DELIVERY_SYSTEM:
 		r = dvbv5_set_delivery_system(fe, tvp->u.data);
 		break;
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	case DTV_DELIVERY_SUB_SYSTEM:
+		r = 0;
+		break;
+#endif
 	case DTV_VOLTAGE:
 		c->voltage = tvp->u.data;
 		r = dvb_frontend_ioctl_legacy(file, FE_SET_VOLTAGE,
@@ -1901,7 +1931,19 @@ static int dtv_property_process_set(struct dvb_frontend *fe,
 		if (r < 0)
 			c->lna = LNA_AUTO;
 		break;
-
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	case DTV_START_BLIND_SCAN:
+	case DTV_CANCEL_BLIND_SCAN:
+	case DTV_BLIND_SCAN_MIN_FRE:
+	case DTV_BLIND_SCAN_MAX_FRE:
+	case DTV_BLIND_SCAN_MIN_SRATE:
+	case DTV_BLIND_SCAN_MAX_SRATE:
+	case DTV_BLIND_SCAN_FRE_RANGE:
+	case DTV_BLIND_SCAN_FRE_STEP:
+	case DTV_BLIND_SCAN_TIMEOUT:
+		r = 0;
+		break;
+#endif
 	default:
 		return -EINVAL;
 	}

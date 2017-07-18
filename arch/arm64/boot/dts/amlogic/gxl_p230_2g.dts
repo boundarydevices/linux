@@ -1171,6 +1171,47 @@
 			key-permit = "read","write","del";
 		};
 	};//End unifykey
+//	dvb {
+//		compatible = "amlogic, dvb";
+//		dev_name = "dvb";
+//		ts0 = "parallel";
+//		ts0_control = <0>;
+//		ts0_invert = <0>;
+//		interrupts = <0 23 1
+//		0 5 1
+//		0 53 1
+//		0 19 1
+//		0 25 1
+//		0 18 1
+//		0 24 1>;
+//		interrupt-names = "demux0_irq",
+//		"demux1_irq",
+//		"demux2_irq",
+//		"dvr0_irq",
+//		"dvr1_irq",
+//		"dvrfill0_fill",
+//		"dvrfill1_flush";
+//		pinctrl-names = "p_ts0", "s_ts0";
+//		pinctrl-0 = <&dvb_p_ts0_pins>;
+//		pinctrl-1 = <&dvb_s_ts0_pins>;
+//		clocks = <&clkc CLKID_DEMUX
+//		&clkc CLKID_ASYNC_FIFO
+//		&clkc CLKID_AHB_ARB0
+//		&clkc CLKID_HIU_IFACE>;
+//		clock-names = "demux", "asyncfifo", "ahbarb0", "uparsertop";
+//	};
+//	dvbfe {
+//		compatible = "amlogic, dvbfe";
+//		dev_name = "dvbfe";
+//		dtv_demod0 = "Avl6211";
+//		dtv_demod0_i2c_adap_id = <2>;
+//		dtv_demod0_i2c_addr = <0xc6>;
+//		dtv_demod0_reset_value = <0>;
+//		dtv_demod0_reset_gpio = <&gpio GPIODV_14 GPIO_ACTIVE_HIGH>;
+//		fe0_dtv_demod = <0>;
+//		fe0_ts = <0>;
+//		fe0_dev = <0>;
+//	};
 };
 &efuse {
 	status = "ok";
@@ -1183,3 +1224,9 @@
 &audio_data{
 	status = "okay";
 };
+//&i2c_a {
+//  status = "disabled";
+//};
+//&i2c_b {
+//  status = "okay";
+//};

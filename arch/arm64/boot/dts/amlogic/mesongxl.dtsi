@@ -966,6 +966,25 @@ i2c_ao: i2c@c8100500{ /*I2C-AO*/
 			function = "dmic";
 		};
 	};
+	dvb_p_ts0_pins: dvb_p_ts0_pins {
+			tsin_a {
+				groups = "tsin_sop_a_dv9",
+				"tsin_d_valid_a_dv10",
+				"tsin_d0_a_dv0",
+				"tsin_d1_7_a_dv1_7",
+				"tsin_clk_a_dv8";
+				function = "tsin_a";
+			};
+		};
+	dvb_s_ts0_pins: dvb_s_ts0_pins {
+			tsin_a {
+				groups = "tsin_sop_a_dv9",
+					"tsin_d_valid_a_dv10",
+					"tsin_clk_a_dv8",
+					"tsin_d0_a_dv0";
+				function = "tsin_a";
+			};
+		};
 
 }; /* end of pinctrl_periphs */
 
