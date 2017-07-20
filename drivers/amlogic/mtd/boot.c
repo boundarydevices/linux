@@ -279,8 +279,7 @@ int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
 			}
 			error = aml_chip->aml_nand_dma_read(aml_chip,
 				buf, nand_page_size, bch_mode);
-			if (en_slc == 0)
-				aml_chip->ran_mode = ran_mode;
+
 			if (error)
 				pr_info(" page0 aml_nand_dma_read failed\n");
 
@@ -289,10 +288,18 @@ int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
 			stat = aml_chip->aml_nand_hwecc_correct(aml_chip,
 				buf, nand_page_size, oob_buf);
 			if (stat < 0) {
-				mtd->ecc_stats.failed++;
-				pr_info("page0 read ecc fail at blk0 chip0\n");
+				if(aml_chip->ran_mode
+					&& (aml_chip->zero_cnt <  aml_chip->ecc_max)) {
+					memset(buf, 0xff, nand_page_size);
+					memset(oob_buf, 0xff, user_byte_num);
+				} else {
+					mtd->ecc_stats.failed++;
+					pr_info("page0 read ecc fail at blk0 chip0\n");
+				}
 			} else
 				mtd->ecc_stats.corrected += stat;
+			if (en_slc == 0)
+				aml_chip->ran_mode = ran_mode;
 		} else {
 			pr_info("nand boot page 0 no valid chip failed\n");
 			error = -ENODEV;
