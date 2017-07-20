@@ -32,7 +32,7 @@
 #include <linux/amlogic/scpi_protocol.h>
 #include "adc_keypad.h"
 
-#define POLL_INTERVAL_DEFAULT 20
+#define POLL_INTERVAL_DEFAULT 25
 #define KEY_JITTER_COUNT  1
 #define TMP_BUF_MAX 128
 

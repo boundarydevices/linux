@@ -13,6 +13,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * The sar adc is work in polling mode by default, or work in IRQ mode
+ * by defining the macro MESON_SAR_ADC_IRQ_MODE.
  */
 
 #include <linux/bitfield.h>
@@ -32,6 +34,7 @@
 #include <linux/iio/sysfs.h>
 #include <linux/amlogic/iomap.h>
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
+#include <asm/barrier.h>
 
 #define MESON_SAR_ADC_REG0					0x00
 	#define MESON_SAR_ADC_REG0_PANEL_DETECT			BIT(31)
@@ -337,6 +340,7 @@ static int meson_sar_adc_calib_val(struct iio_dev *indio_dev, int val)
 	return clamp(tmp, 0, (1 << priv->data->resolution) - 1);
 }
 
+#ifndef MESON_SAR_ADC_IRQ_MODE
 static int meson_sar_adc_wait_busy_clear(struct iio_dev *indio_dev)
 {
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
@@ -357,6 +361,7 @@ static int meson_sar_adc_wait_busy_clear(struct iio_dev *indio_dev)
 
 	return 0;
 }
+#endif
 
 static int meson_sar_adc_read_raw_sample(struct iio_dev *indio_dev,
 					 const struct iio_chan_spec *chan,
@@ -365,9 +370,14 @@ static int meson_sar_adc_read_raw_sample(struct iio_dev *indio_dev,
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
 	int regval, fifo_chan, fifo_val, count;
 
+#ifdef MESON_SAR_ADC_IRQ_MODE
 	if (!wait_for_completion_timeout(&priv->done,
 				msecs_to_jiffies(MESON_SAR_ADC_TIMEOUT)))
 		return -ETIMEDOUT;
+#else
+	if (meson_sar_adc_wait_busy_clear(indio_dev))
+		return -ETIMEDOUT;
+#endif
 
 	count = meson_sar_adc_get_fifo_count(indio_dev);
 	if (count != 1) {
@@ -490,12 +500,15 @@ static void meson_sar_adc_start_sample_engine(struct iio_dev *indio_dev)
 {
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
 
+#ifdef MESON_SAR_ADC_IRQ_MODE
 	reinit_completion(&priv->done);
+#endif
 
+#ifdef MESON_SAR_ADC_IRQ_MODE
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG0,
 			   MESON_SAR_ADC_REG0_FIFO_IRQ_EN,
 			   MESON_SAR_ADC_REG0_FIFO_IRQ_EN);
-
+#endif
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG0,
 			   MESON_SAR_ADC_REG0_SAMPLE_ENGINE_ENABLE,
 			   MESON_SAR_ADC_REG0_SAMPLE_ENGINE_ENABLE);
@@ -509,15 +522,13 @@ static void meson_sar_adc_stop_sample_engine(struct iio_dev *indio_dev)
 {
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
 
+#ifdef MESON_SAR_ADC_IRQ_MODE
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG0,
 			   MESON_SAR_ADC_REG0_FIFO_IRQ_EN, 0);
-
+#endif
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG0,
 			   MESON_SAR_ADC_REG0_SAMPLING_STOP,
 			   MESON_SAR_ADC_REG0_SAMPLING_STOP);
-
-	/* wait until all modules are stopped */
-	meson_sar_adc_wait_busy_clear(indio_dev);
 
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG0,
 			   MESON_SAR_ADC_REG0_SAMPLE_ENGINE_ENABLE, 0);
@@ -531,11 +542,6 @@ static int meson_sar_adc_lock(struct iio_dev *indio_dev)
 	mutex_lock(&indio_dev->mlock);
 
 	if (priv->data->has_bl30_integration) {
-		/* prevent BL30 from using the SAR ADC while we are using it */
-		regmap_update_bits(priv->regmap, MESON_SAR_ADC_DELAY,
-				   MESON_SAR_ADC_DELAY_KERNEL_BUSY,
-				   MESON_SAR_ADC_DELAY_KERNEL_BUSY);
-
 		/* wait until BL30 releases it's lock (so we can use
 		 * the SAR ADC)
 		 */
@@ -545,6 +551,17 @@ static int meson_sar_adc_lock(struct iio_dev *indio_dev)
 		} while (val & MESON_SAR_ADC_DELAY_BL30_BUSY && timeout--);
 
 		if (timeout < 0)
+			return -ETIMEDOUT;
+
+		/* prevent BL30 from using the SAR ADC while we are using it */
+		regmap_update_bits(priv->regmap, MESON_SAR_ADC_DELAY,
+				   MESON_SAR_ADC_DELAY_KERNEL_BUSY,
+				   MESON_SAR_ADC_DELAY_KERNEL_BUSY);
+		isb();
+		dsb(sy);
+		udelay(1);
+		regmap_read(priv->regmap, MESON_SAR_ADC_DELAY, &val);
+		if (val & MESON_SAR_ADC_DELAY_BL30_BUSY)
 			return -ETIMEDOUT;
 	}
 
@@ -566,10 +583,14 @@ static void meson_sar_adc_unlock(struct iio_dev *indio_dev)
 static void meson_sar_adc_clear_fifo(struct iio_dev *indio_dev)
 {
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
-	unsigned int tmp;
+	unsigned int count, tmp;
 
-	while (meson_sar_adc_get_fifo_count(indio_dev))
+	for (count = 0; count < MESON_SAR_ADC_MAX_FIFO_SIZE; count++) {
+		if (!meson_sar_adc_get_fifo_count(indio_dev))
+			break;
+
 		regmap_read(priv->regmap, MESON_SAR_ADC_FIFO_RD, &tmp);
+	}
 }
 
 static int meson_sar_adc_get_sample(struct iio_dev *indio_dev,
@@ -579,10 +600,11 @@ static int meson_sar_adc_get_sample(struct iio_dev *indio_dev,
 				    int *val)
 {
 	int ret;
-
 	ret = meson_sar_adc_lock(indio_dev);
-	if (ret)
+	if (ret) {
+		meson_sar_adc_unlock(indio_dev);
 		return ret;
+	}
 
 	/* clear the FIFO to make sure we're not reading old values */
 	meson_sar_adc_clear_fifo(indio_dev);
@@ -603,7 +625,6 @@ static int meson_sar_adc_get_sample(struct iio_dev *indio_dev,
 			 chan->channel, ret);
 		return ret;
 	}
-
 	return IIO_VAL_INT;
 }
 
@@ -818,15 +839,17 @@ static int meson_sar_adc_hw_enable(struct iio_dev *indio_dev)
 {
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
 	int ret;
-	u32 regval;
 
 	ret = meson_sar_adc_lock(indio_dev);
-	if (ret)
-		goto err_lock;
-
-	regval = FIELD_PREP(MESON_SAR_ADC_REG0_FIFO_CNT_IRQ_MASK, 1);
+	if (ret) {
+		meson_sar_adc_unlock(indio_dev);
+		return ret;
+	}
+#ifdef MESON_SAR_ADC_IRQ_MODE
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG0,
-			   MESON_SAR_ADC_REG0_FIFO_CNT_IRQ_MASK, regval);
+			   MESON_SAR_ADC_REG0_FIFO_CNT_IRQ_MASK,
+			   FIELD_PREP(MESON_SAR_ADC_REG0_FIFO_CNT_IRQ_MASK, 1));
+#endif
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG11,
 			   MESON_SAR_ADC_REG11_BANDGAP_EN,
 			   MESON_SAR_ADC_REG11_BANDGAP_EN);
@@ -860,7 +883,7 @@ err_adc_clk:
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG11,
 			   MESON_SAR_ADC_REG11_BANDGAP_EN, 0);
 	meson_sar_adc_unlock(indio_dev);
-err_lock:
+
 	return ret;
 }
 
@@ -870,9 +893,10 @@ static int meson_sar_adc_hw_disable(struct iio_dev *indio_dev)
 	int ret;
 
 	ret = meson_sar_adc_lock(indio_dev);
-	if (ret)
+	if (ret) {
+		meson_sar_adc_unlock(indio_dev);
 		return ret;
-
+	}
 	clk_disable_unprepare(priv->adc_clk);
 
 	if (priv->clk81_gate)
@@ -887,7 +911,7 @@ static int meson_sar_adc_hw_disable(struct iio_dev *indio_dev)
 
 	return 0;
 }
-
+#ifdef MESON_SAR_ADC_IRQ_MODE
 static irqreturn_t meson_sar_adc_irq(int irq, void *data)
 {
 	struct iio_dev *indio_dev = data;
@@ -906,7 +930,7 @@ static irqreturn_t meson_sar_adc_irq(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-
+#endif
 static int meson_sar_adc_calib(struct iio_dev *indio_dev)
 {
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
@@ -1068,7 +1092,10 @@ static int meson_sar_adc_probe(struct platform_device *pdev)
 	struct resource *res;
 	void __iomem *base;
 	const struct of_device_id *match;
-	int irq, ret;
+	int ret;
+#ifdef MESON_SAR_ADC_IRQ_MODE
+	int irq;
+#endif
 
 	indio_dev = devm_iio_device_alloc(&pdev->dev, sizeof(*priv));
 	if (!indio_dev) {
@@ -1077,8 +1104,9 @@ static int meson_sar_adc_probe(struct platform_device *pdev)
 	}
 
 	priv = iio_priv(indio_dev);
+#ifdef MESON_SAR_ADC_IRQ_MODE
 	init_completion(&priv->done);
-
+#endif
 	match = of_match_device(meson_sar_adc_of_match, &pdev->dev);
 	priv->data = match->data;
 
@@ -1095,7 +1123,7 @@ static int meson_sar_adc_probe(struct platform_device *pdev)
 	base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
-
+#ifdef MESON_SAR_ADC_IRQ_MODE
 	irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
 	if (!irq)
 		return -EINVAL;
@@ -1104,7 +1132,7 @@ static int meson_sar_adc_probe(struct platform_device *pdev)
 			       dev_name(&pdev->dev), indio_dev);
 	if (ret)
 		return ret;
-
+#endif
 	priv->regmap = devm_regmap_init_mmio(&pdev->dev, base,
 					     &meson_sar_adc_regmap_config);
 	if (IS_ERR(priv->regmap))
