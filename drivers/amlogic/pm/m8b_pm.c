@@ -279,7 +279,7 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 
 	suspend_set_ops(&meson_pm_ops);
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-	if (create_early_suspend_sysfs())
+	if (lgcy_early_suspend_init())
 		return -1;
 #endif
 	pr_info("meson_pm_probe done !\n");

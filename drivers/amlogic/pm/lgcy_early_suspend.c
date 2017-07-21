@@ -39,7 +39,22 @@
 #include <../kernel/power/power.h>
 
 static DEFINE_MUTEX(early_suspend_lock);
+static DEFINE_MUTEX(sysfs_trigger_lock);
 static LIST_HEAD(early_suspend_handlers);
+
+/* In order to handle legacy early_suspend driver,
+ * here we export sysfs interface
+ * for user space to write /sys/power/early_suspend_trigger to trigger
+ * early_suspend/late resume call back. If user space do not trigger
+ * early_suspend/late_resume, this op will be done
+ * by PM_SUSPEND_PREPARE notify.
+ */
+unsigned int sysfs_trigger;
+unsigned int early_suspend_state;
+/*
+ * Avoid run early_suspend/late_resume repeatly.
+ */
+unsigned int already_early_suspend;
 
 void register_early_suspend(struct early_suspend *handler)
 {
@@ -66,30 +81,42 @@ void unregister_early_suspend(struct early_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_early_suspend);
 
-static void early_suspend(void)
+static inline void early_suspend(void)
 {
 	struct early_suspend *pos;
 
 	mutex_lock(&early_suspend_lock);
 
+	if (!already_early_suspend)
+		already_early_suspend = 1;
+	else
+		goto end_early_suspend;
+
 	pr_info("early_suspend: call handlers\n");
-	list_for_each_entry(pos, &early_suspend_handlers, link) {
+	list_for_each_entry(pos, &early_suspend_handlers, link)
 		if (pos->suspend != NULL) {
 			pr_info("early_suspend: %pf\n", pos->suspend);
 			pos->suspend(pos);
 		}
-	}
-	mutex_unlock(&early_suspend_lock);
 
 	pr_info("early_suspend: done\n");
 
+end_early_suspend:
+	mutex_unlock(&early_suspend_lock);
+
+
 }
 
-static void late_resume(void)
+static inline void late_resume(void)
 {
 	struct early_suspend *pos;
 
 	mutex_lock(&early_suspend_lock);
+
+	if (already_early_suspend)
+		already_early_suspend = 0;
+	else
+		goto end_late_resume;
 
 	pr_info("late_resume: call handlers\n");
 	list_for_each_entry_reverse(pos, &early_suspend_handlers, link)
@@ -99,10 +126,10 @@ static void late_resume(void)
 		}
 	pr_info("late_resume: done\n");
 
+end_late_resume:
 	mutex_unlock(&early_suspend_lock);
 }
 
-unsigned int early_suspend_state;
 static ssize_t early_suspend_trigger_show(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				char *buf)
@@ -125,10 +152,14 @@ static ssize_t early_suspend_trigger_store(struct kobject *kobj,
 	if (ret)
 		return -EINVAL;
 
+	mutex_lock(&sysfs_trigger_lock);
+	sysfs_trigger = 1;
+
 	if (early_suspend_state == 0)
 		late_resume();
 	else if (early_suspend_state == 1)
 		early_suspend();
+	mutex_unlock(&sysfs_trigger_lock);
 
 	return n;
 }
@@ -143,11 +174,51 @@ static struct attribute_group attr_group = {
 	.attrs = g,
 };
 
-unsigned int create_early_suspend_sysfs(void)
+void lgcy_early_suspend(void)
 {
-	if (sysfs_create_group(power_kobj, &attr_group))
-		return -1;
+	mutex_lock(&sysfs_trigger_lock);
 
-	return 0;
+	if (!sysfs_trigger)
+		early_suspend();
+
+	mutex_unlock(&sysfs_trigger_lock);
 }
 
+void lgcy_late_resume(void)
+{
+	mutex_lock(&sysfs_trigger_lock);
+
+	if (!sysfs_trigger)
+		late_resume();
+
+	mutex_unlock(&sysfs_trigger_lock);
+}
+
+
+static int lgcy_early_suspend_notify(struct notifier_block *nb,
+	unsigned long event, void *dummy)
+{
+	if (event == PM_SUSPEND_PREPARE)
+		lgcy_early_suspend();
+
+	if (event == PM_POST_SUSPEND)
+		lgcy_late_resume();
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block lgcy_early_suspend_notifier = {
+	.notifier_call = lgcy_early_suspend_notify,
+};
+
+unsigned int lgcy_early_suspend_init(void)
+{
+	int ret;
+
+	ret = sysfs_create_group(power_kobj, &attr_group);
+	if (ret)
+		return ret;
+
+	ret = register_pm_notifier(&lgcy_early_suspend_notifier);
+	return ret;
+}

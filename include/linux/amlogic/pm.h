@@ -49,7 +49,8 @@ struct early_suspend {
 };
 extern void register_early_suspend(struct early_suspend *handler);
 extern void unregister_early_suspend(struct early_suspend *handler);
-extern unsigned int create_early_suspend_sysfs(void);
+extern unsigned int lgcy_early_suspend_init(void);
+
 #endif //CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 
 #ifdef CONFIG_AMLOGIC_M8B_SUSPEND

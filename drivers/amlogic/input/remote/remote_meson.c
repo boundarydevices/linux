@@ -37,12 +37,10 @@
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/pm.h>
 #include <linux/of_address.h>
-
-
 #include "remote_meson.h"
-
 #include <linux/amlogic/iomap.h>
 #include <linux/pm_wakeup.h>
+#include <linux/pm_wakeirq.h>
 
 static void amlremote_tasklet(unsigned long data);
 
@@ -564,6 +562,7 @@ static int remote_probe(struct platform_device *pdev)
 		goto error_register_remote;
 
 	device_init_wakeup(&pdev->dev, 1);
+	dev_pm_set_wake_irq(&pdev->dev, chip->irqno);
 
 	return 0;
 
