@@ -18,7 +18,7 @@
 #include <linux/miscdevice.h>
 #include <linux/input.h>
 #include <linux/spinlock.h>
-#include <linux/mpu.h>
+#include <linux/mpu_iio.h>
 
 #include "iio.h"
 #include "buffer.h"
