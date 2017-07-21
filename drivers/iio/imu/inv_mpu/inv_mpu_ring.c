@@ -1743,9 +1743,6 @@ static int inv_preenable(struct iio_dev *indio_dev)
 	int result;
 
 	result = inv_check_conflict_sysfs(indio_dev);
-	if (result)
-		return result;
-	result = iio_sw_buffer_preenable(indio_dev);
 
 	return result;
 }
