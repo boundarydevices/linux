@@ -2736,12 +2736,6 @@ msleep(100);
 		pr_err("configure ring buffer fail\n");
 		goto out_free;
 	}
-	result = iio_buffer_register(indio_dev, indio_dev->channels,
-					indio_dev->num_channels);
-	if (result) {
-		pr_err("ring buffer register fail\n");
-		goto out_unreg_ring;
-	}
 	st->irq = client->irq;
 	result = inv_mpu_probe_trigger(indio_dev);
 	if (result) {
@@ -2786,8 +2780,6 @@ out_remove_trigger:
 	if (indio_dev->modes & INDIO_BUFFER_TRIGGERED)
 		inv_mpu_remove_trigger(indio_dev);
 out_remove_ring:
-	iio_buffer_unregister(indio_dev);
-out_unreg_ring:
 	inv_mpu_unconfigure_ring(indio_dev);
 out_free:
 	iio_device_free(indio_dev);
@@ -2833,7 +2825,6 @@ static int inv_mpu_remove(struct i2c_client *client)
 	iio_device_unregister(indio_dev);
 	if (indio_dev->modes & INDIO_BUFFER_TRIGGERED)
 		inv_mpu_remove_trigger(indio_dev);
-	iio_buffer_unregister(indio_dev);
 	inv_mpu_unconfigure_ring(indio_dev);
 	iio_device_free(indio_dev);
 
