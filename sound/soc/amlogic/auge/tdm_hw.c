@@ -18,6 +18,13 @@
 
 #include "tdm_hw.h"
 
+#define MST_CLK_INVERT_PH0_PAD_BCLK       (1 << 0)
+#define MST_CLK_INVERT_PH0_PAD_FCLK       (1 << 1)
+#define MST_CLK_INVERT_PH1_TDMIN_BCLK     (1 << 2)
+#define MST_CLK_INVERT_PH1_TDMIN_FCLK     (1 << 3)
+#define MST_CLK_INVERT_PH2_TDMOUT_BCLK    (1 << 4)
+#define MST_CLK_INVERT_PH2_TDMOUT_FCLK    (1 << 5)
+
 void aml_tdm_enable(
 	struct aml_audio_controller *actrl,
 	int stream, int index,
@@ -80,22 +87,19 @@ void aml_tdm_fifo_ctrl(
 	int bitwidth, int stream,
 	int index)
 {
-	unsigned int frddr_type, toddr_type;
+	unsigned int frddr_type;
 	unsigned int reg, offset;
 
 	switch (bitwidth) {
 	case 8:
 		frddr_type = 0;
-		toddr_type = 0;
 		break;
 	case 16:
 		frddr_type = 2;
-		toddr_type = 2;
 		break;
 	case 24:
 	case 32:
 		frddr_type = 4;
-		toddr_type = 4;
 		break;
 	default:
 		pr_err("invalid bit_depth: %d\n",
@@ -123,20 +127,26 @@ void aml_tdm_set_format(
 	struct pcm_setting *p_config,
 	unsigned int clk_sel,
 	unsigned int index,
-	unsigned int fmt)
+	unsigned int fmt,
+	unsigned int capture_active,
+	unsigned int playback_active)
 {
 	unsigned int binv, finv, id;
 	unsigned int valb, valf;
 	unsigned int reg_in, reg_out, off_set;
 	int bclkin_skew, bclkout_skew;
 	int master_mode;
+	unsigned int clkctl = 0;
 
 	id = index;
+
+	binv = 0;
+	finv = 0;
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBM_CFM:
 		valb = SLAVE_A + id;
-		valf = SLAVE_A;
+		valf = SLAVE_A + id;
 		master_mode = 0;
 		break;
 	case SND_SOC_DAIFMT_CBS_CFS:
@@ -162,28 +172,47 @@ void aml_tdm_set_format(
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
+		bclkout_skew = 1;
+		bclkin_skew = 3;
+
+		clkctl |= MST_CLK_INVERT_PH0_PAD_FCLK;
+		if (!master_mode)
+			finv = 1;
+
 		if (master_mode) {
-			bclkout_skew = 1;
-			bclkin_skew = 3;
+			clkctl |= MST_CLK_INVERT_PH0_PAD_BCLK;
+			if (capture_active)
+				binv |= 1;
 		} else {
-			bclkout_skew = 2;
-			bclkin_skew = 3;
+			if (playback_active)
+				binv |= 1;
 		}
+
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
-		if (master_mode) {
-			bclkout_skew = 1;
-			bclkin_skew = 4;
-		} else {
-			bclkout_skew = 2;
-			bclkin_skew = 3;
-		}
+		/*
+		 * Frame high, 1clk before data, one bit for frame sync,
+		 * frame sync starts one serial clock cycle earlier,
+		 * that is, together with the last bit of the previous
+		 * data word.
+		 */
+		bclkout_skew = 1;
+		bclkin_skew = 3;
+
+		if (capture_active)
+			binv |= 1;
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 	case SND_SOC_DAIFMT_DSP_B:
-		//TODO: need test
+		/*
+		 * Frame high, one bit for frame sync,
+		 * frame sync asserts with the first bit of the frame.
+		 */
 		bclkout_skew = 2;
 		bclkin_skew = 2;
+
+		if (capture_active)
+			binv |= 1;
 		break;
 	default:
 		return;
@@ -191,69 +220,91 @@ void aml_tdm_set_format(
 
 	p_config->pcm_mode = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
 
+	pr_info("pad clk ctl value:%x\n", clkctl);
 	/* set lrclk/bclk invertion */
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_IB_IF:
 		/* Invert both clocks */
-		binv = 1;
-		finv = 1;
+		if (!master_mode)
+			binv ^= 1;
+
+		finv |= 1;
+		clkctl ^= MST_CLK_INVERT_PH0_PAD_BCLK;
+		clkctl ^= MST_CLK_INVERT_PH0_PAD_FCLK;
 		break;
 	case SND_SOC_DAIFMT_IB_NF:
 		/* Invert bit clock */
-		binv = 1;
-		finv = 0;
+		if (!master_mode)
+			binv ^= 1;
+		clkctl ^= MST_CLK_INVERT_PH0_PAD_BCLK;
 		break;
 	case SND_SOC_DAIFMT_NB_IF:
 		/* Invert frame clock */
-		binv = 0;
-		finv = 1;
+		finv ^= 1;
+		clkctl ^= MST_CLK_INVERT_PH0_PAD_FCLK;
 		break;
 	case SND_SOC_DAIFMT_NB_NF:
 		/* normal cases */
-		binv = 0;
-		finv = 0;
 		break;
 	default:
 		return;
+	}
+	pr_info("sclk_ph0 (pad) clk ctl set:%x\n", clkctl);
+	/* clk ctrl: delay line and invert clk */
+	/*clkctl |= 0x88880000;*/
+	if (master_mode) {
+		off_set = EE_AUDIO_MST_B_SCLK_CTRL1 - EE_AUDIO_MST_A_SCLK_CTRL1;
+		reg_out = EE_AUDIO_MST_A_SCLK_CTRL1 + off_set * id;
+
+		aml_audiobus_update_bits(actrl, reg_out, 0x3f, clkctl);
 	}
 
 	pr_info("master_mode(%d), binv(%d), finv(%d) out_skew(%d), in_skew(%d)\n",
 			master_mode, binv, finv, bclkout_skew, bclkin_skew);
 
 	/* TDM out */
-	reg_out = EE_AUDIO_CLK_TDMOUT_A_CTRL + id;
-	aml_audiobus_update_bits(actrl, reg_out,
-		0x3<<30|0x1<<29, 0x3<<30/*|binv<<29*/);
-	// sclk_ph0 (pad) invert
-	off_set = EE_AUDIO_MST_B_SCLK_CTRL1 - EE_AUDIO_MST_A_SCLK_CTRL1;
-	reg_out = EE_AUDIO_MST_A_SCLK_CTRL1 + off_set * id;
-	aml_audiobus_update_bits(actrl, reg_out, 0x3f, !binv);
-	if (!binv)
-		bclkin_skew = 4;
+	if (playback_active) {
 
-	off_set = EE_AUDIO_TDMOUT_B_CTRL0 - EE_AUDIO_TDMOUT_A_CTRL0;
-	reg_out = EE_AUDIO_TDMOUT_A_CTRL0 + off_set * id;
-	aml_audiobus_update_bits(actrl, reg_out, 0x1f<<15, bclkout_skew<<15);
+		reg_out = EE_AUDIO_CLK_TDMOUT_A_CTRL + id;
+		aml_audiobus_update_bits(actrl, reg_out,
+			0x3<<30, 0x3<<30);
 
-	off_set = EE_AUDIO_TDMOUT_B_CTRL1 - EE_AUDIO_TDMOUT_A_CTRL1;
-	reg_out = EE_AUDIO_TDMOUT_A_CTRL1 + off_set * id;
-	aml_audiobus_update_bits(actrl, reg_out, 0x1<<28, finv<<28);
+		aml_audiobus_update_bits(actrl, reg_out,
+			0x1<<29, binv<<29);
+
+		off_set = EE_AUDIO_TDMOUT_B_CTRL1 - EE_AUDIO_TDMOUT_A_CTRL1;
+		reg_out = EE_AUDIO_TDMOUT_A_CTRL1 + off_set * id;
+		aml_audiobus_update_bits(actrl, reg_out, 0x1<<28, finv<<28);
+
+		off_set = EE_AUDIO_TDMOUT_B_CTRL0 - EE_AUDIO_TDMOUT_A_CTRL0;
+		reg_out = EE_AUDIO_TDMOUT_A_CTRL0 + off_set * id;
+		aml_audiobus_update_bits(actrl, reg_out,
+			0x1f<<15, bclkout_skew<<15);
+	}
 
 	/* TDM in */
-	reg_in = EE_AUDIO_CLK_TDMIN_A_CTRL + id;
-	aml_audiobus_update_bits(actrl, reg_in,
-				0x3<<30|0x1<<29, 0x3<<30|binv<<29);
-
-	off_set = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
-	reg_in = EE_AUDIO_TDMIN_A_CTRL + off_set * id;
-	if (p_config->pcm_mode == SND_SOC_DAIFMT_I2S)
+	if (capture_active) {
+		reg_in = EE_AUDIO_CLK_TDMIN_A_CTRL + id;
 		aml_audiobus_update_bits(actrl, reg_in,
-			1<<30|3<<26|0x1<<25|0x7<<16,
-			1<<30|3<<26|1<<25|bclkin_skew<<16);
-	else
+			0x3<<30, 0x3<<30);
+
+		if (master_mode)
+			aml_audiobus_update_bits(actrl, reg_in,
+				0x1<<29, binv<<29);
+
+		off_set = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
+		reg_in = EE_AUDIO_TDMIN_A_CTRL + off_set * id;
 		aml_audiobus_update_bits(actrl, reg_in,
 			3<<26|0x7<<16, 3<<26|bclkin_skew<<16);
 
+		aml_audiobus_update_bits(actrl, reg_in,
+			0x1<<25, finv<<25);
+
+		if (p_config->pcm_mode == SND_SOC_DAIFMT_I2S)
+			aml_audiobus_update_bits(actrl, reg_in,
+				1<<30,
+				1<<30);
+	}
 }
 
 void aml_tdm_set_slot(

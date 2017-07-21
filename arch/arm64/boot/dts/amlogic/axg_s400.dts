@@ -480,7 +480,7 @@
 			mclk-fs = <256>;
 			continuous-clock;
 			//bitclock-inversion;
-			frame-inversion;
+			//frame-inversion;
 			bitclock-master = <&aml_tdmb>;
 			frame-master = <&aml_tdmb>;
 			cpu {
@@ -506,7 +506,7 @@
 			mclk-fs = <256>;
 			continuous-clock;
 			//bitclock-inversion;
-			frame-inversion;
+			//frame-inversion;
 			//bitclock-master = <&aml_tdmc>;
 			//frame-master = <&aml_tdmc>;
 			cpu {
@@ -912,8 +912,8 @@
 	aml_tdma: tdma {
 		compatible = "amlogic, snd-tdma";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask-in = <1>;
-		dai-tdm-lane-slot-mask-out = <1>;
+		dai-tdm-lane-slot-mask-in = <1 0>;
+		dai-tdm-lane-slot-mask-out = <0 1>;
 		dai-tdm-clk-sel = <0>;
 		tdm_from_ddr = <0>;
 		tdm_to_ddr = <0>;

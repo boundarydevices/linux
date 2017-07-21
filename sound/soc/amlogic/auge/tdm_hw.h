@@ -59,7 +59,9 @@ extern void aml_tdm_set_format(
 	struct pcm_setting *p_config,
 	unsigned int clk_sel,
 	unsigned int index,
-	unsigned int fmt);
+	unsigned int fmt,
+	unsigned int capture_active,
+	unsigned int playback_active);
 
 extern void aml_tdm_set_slot(
 	struct aml_audio_controller *actrl,

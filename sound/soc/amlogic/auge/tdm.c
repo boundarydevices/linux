@@ -336,8 +336,6 @@ static int aml_dai_tdm_startup(struct snd_pcm_substream *substream,
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret;
 
-	aml_tdm_fifo_reset(p_tdm->actrl, substream->stream, p_tdm->id);
-
 	ret = clk_prepare_enable(p_tdm->clk);
 	if (ret) {
 		pr_err("Can't enable mpll clock: %d\n", ret);
@@ -624,7 +622,9 @@ static int aml_dai_set_tdm_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 		fmt, p_tdm, p_tdm->id, p_tdm->clk_sel);
 
 	aml_tdm_set_format(p_tdm->actrl,
-		&(p_tdm->setting), p_tdm->clk_sel, p_tdm->id, fmt);
+		&(p_tdm->setting), p_tdm->clk_sel, p_tdm->id, fmt,
+		cpu_dai->capture_active,
+		cpu_dai->playback_active);
 
 	return 0;
 }

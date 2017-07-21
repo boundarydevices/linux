@@ -440,8 +440,8 @@
 			format = "i2s";
 			mclk-fs = <256>;
 			continuous-clock;
-			bitclock-inversion;
-			frame-inversion;
+			//bitclock-inversion;
+			//frame-inversion;
 			//bitclock-master = <&aml_tdmb>;
 			//frame-master = <&aml_tdmb>;
 			cpu {
@@ -461,8 +461,8 @@
 			format = "i2s";
 			mclk-fs = <256>;
 			continuous-clock;
-			bitclock-inversion;
-			frame-inversion;
+			//bitclock-inversion;
+			//frame-inversion;
 			//bitclock-master = <&aml_tdmc>;
 			//frame-master = <&aml_tdmc>;
 			cpu {
@@ -479,13 +479,7 @@
 		};
 
 		aml-audio-card,dai-link@3 {
-			format = "i2s";
 			mclk-fs = <256>;
-			continuous-clock;
-			//bitclock-inversion;
-			//frame-inversion;
-			bitclock-master = <&aml_pdm>;
-			frame-master = <&aml_pdm>;
 			cpu {
 				sound-dai = <&aml_pdm>;
 			};
@@ -495,12 +489,9 @@
 		};
 
 		aml-audio-card,dai-link@4 {
-			//format = "i2s";
 			mclk-fs = <128>;
-			continuous-clock;
 			cpu {
 				sound-dai = <&aml_spdif>;
-				system-clock-frequency = <12288000>;
 			};
 			codec {
 				sound-dai = <&dummy_codec>;
