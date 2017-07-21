@@ -993,12 +993,28 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	return devm_snd_soc_register_platform(dev, &aml_tdm_platform);
 }
 
+static int aml_tdm_platform_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	return 0;
+}
+static int aml_tdm_platform_resume(struct platform_device *pdev)
+{
+	/* complete mclk for tdm */
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xa)
+		meson_clk_measure((1<<16) | 0x67);
+
+	return 0;
+}
+
 struct platform_driver aml_tdm_driver = {
 	.driver = {
 		.name = DRV_NAME,
 		.of_match_table = aml_tdm_device_id,
 	},
-	.probe = aml_tdm_platform_probe,
+	.probe   = aml_tdm_platform_probe,
+	.suspend = aml_tdm_platform_suspend,
+	.resume  = aml_tdm_platform_resume,
 };
 module_platform_driver(aml_tdm_driver);
 
