@@ -1833,7 +1833,7 @@ int inv_mpu_configure_ring(struct iio_dev *indio_dev)
 	struct inv_mpu_state *st = iio_priv(indio_dev);
 	struct iio_buffer *ring;
 
-	ring = iio_kfifo_allocate(indio_dev);
+	ring = iio_kfifo_allocate();
 	if (!ring)
 		return -ENOMEM;
 	indio_dev->buffer = ring;
