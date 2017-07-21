@@ -493,10 +493,6 @@ static int inv_ak89xx_probe(struct i2c_client *client,
 	result = inv_ak89xx_configure_ring(indio_dev);
 	if (result)
 		goto out_free;
-	result = iio_buffer_register(indio_dev, indio_dev->channels,
-					indio_dev->num_channels);
-	if (result)
-		goto out_unreg_ring;
 	result = inv_ak89xx_probe_trigger(indio_dev);
 	if (result)
 		goto out_remove_ring;
@@ -511,8 +507,6 @@ out_remove_trigger:
 	if (indio_dev->modes & INDIO_BUFFER_TRIGGERED)
 		inv_ak89xx_remove_trigger(indio_dev);
 out_remove_ring:
-	iio_buffer_unregister(indio_dev);
-out_unreg_ring:
 	inv_ak89xx_unconfigure_ring(indio_dev);
 out_free:
 	iio_free_device(indio_dev);
@@ -531,7 +525,6 @@ static int inv_ak89xx_remove(struct i2c_client *client)
 	cancel_delayed_work_sync(&st->work);
 	iio_device_unregister(indio_dev);
 	inv_ak89xx_remove_trigger(indio_dev);
-	iio_buffer_unregister(indio_dev);
 	inv_ak89xx_unconfigure_ring(indio_dev);
 	iio_free_device(indio_dev);
 
