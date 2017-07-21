@@ -75,13 +75,13 @@ The following files are included in this package:
 - dmpDefaultMPU6050.c
 - dmpkey.h
 - dmpmap.h
-- mpu.h
+- mpu_iio.h
 
 
 Integrating the Driver in the Linux Kernel
 ==========================================
 Please add the files as follows:
-- Add mpu.h to "kernel/include/linux".
+- Add mpu_iio.h to "kernel/include/linux".
 - Add all other files to drivers/staging/iio/imu/inv_mpu
 (another directory is acceptable, but this is the recommended destination)
 

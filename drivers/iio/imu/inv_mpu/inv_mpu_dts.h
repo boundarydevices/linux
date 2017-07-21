@@ -15,7 +15,7 @@
 #define _INV_MPU_DTS_H_
 
 #include <linux/i2c.h>
-#include <linux/mpu.h>
+#include <linux/mpu_iio.h>
 
 int inv_mpu_power_on(struct mpu_platform_data *pdata);
 int inv_mpu_power_off(struct mpu_platform_data *pdata);

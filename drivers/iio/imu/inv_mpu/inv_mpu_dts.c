@@ -5,7 +5,7 @@
 #include <linux/regulator/consumer.h>
 
 #include <linux/i2c.h>
-#include <linux/mpu.h>
+#include <linux/mpu_iio.h>
 #include "inv_mpu_dts.h"
 
 int inv_mpu_power_on(struct mpu_platform_data *pdata)
