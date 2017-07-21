@@ -121,7 +121,7 @@ int inv_ak89xx_configure_ring(struct iio_dev *indio_dev)
 	int ret = 0;
 	struct iio_buffer *ring;
 
-	ring = iio_kfifo_allocate(indio_dev);
+	ring = iio_kfifo_allocate();
 	if (!ring) {
 		ret = -ENOMEM;
 		return ret;
