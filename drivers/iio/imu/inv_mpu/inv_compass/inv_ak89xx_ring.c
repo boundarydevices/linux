@@ -112,7 +112,6 @@ static int inv_ak89xx_predisable(struct iio_dev *indio_dev)
 }
 
 static const struct iio_buffer_setup_ops inv_ak89xx_ring_setup_ops = {
-	.preenable  = &iio_sw_buffer_preenable,
 	.postenable = &inv_ak89xx_postenable,
 	.predisable = &inv_ak89xx_predisable,
 };

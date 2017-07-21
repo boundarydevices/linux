@@ -136,7 +136,6 @@ static int inv_yas53x_predisable(struct iio_dev *indio_dev)
 }
 
 static const struct iio_buffer_setup_ops inv_yas53x_ring_setup_ops = {
-	.preenable = &iio_sw_buffer_preenable,
 	.postenable = &inv_yas53x_postenable,
 	.predisable = &inv_yas53x_predisable,
 };
