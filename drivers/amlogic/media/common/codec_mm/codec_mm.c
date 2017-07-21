@@ -617,9 +617,10 @@ struct codec_mm_s *codec_mm_alloc(const char *owner, int size,
 	spin_unlock_irqrestore(&mgt->lock, flags);
 	mem->alloced_jiffies = get_jiffies_64();
 	if (debug_mode & 0x20)
-		pr_err("%s alloc mem size %d at %lx from %d,flags:%d\n",
+		pr_err("%s alloc size %d at %lx from %d,2n:%d,flags:%d\n",
 			owner, size, mem->phy_addr,
 			mem->from_flags,
+			align2n,
 			memflags);
 	return mem;
 }
@@ -840,7 +841,7 @@ int codec_mm_extpool_pool_alloc(
 			size - alloced_size, try_alloced_size);
 		mem = codec_mm_alloc(TVP_POOL_NAME,
 					try_alloced_size,
-					0,
+					RESERVE_MM_ALIGNED_2N,
 					CODEC_MM_FLAGS_FOR_LOCAL_MGR |
 					CODEC_MM_FLAGS_RESERVED);
 
@@ -872,7 +873,7 @@ int codec_mm_extpool_pool_alloc(
 						TVP_POOL_NAME :
 						CMA_RES_POOL_NAME,
 					try_alloced_size,
-					0,
+					RESERVE_MM_ALIGNED_2N,
 					CODEC_MM_FLAGS_FOR_LOCAL_MGR |
 					CODEC_MM_FLAGS_CMA);
 

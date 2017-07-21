@@ -60,6 +60,7 @@
 #include <linux/amlogic/media/utils/vdec_reg.h>
 
 #define MEM_NAME "video-keeper"
+static DEFINE_MUTEX(video_keeper_mutex);
 
 static unsigned long keep_y_addr, keep_u_addr, keep_v_addr;
 static int keep_video_on;
@@ -710,34 +711,14 @@ void try_free_keep_video(int flags)
 		codec_mm_keeper_unmask_keeper(keep_head_id, 0);
 		keep_head_id = -1;
 	}
+	mutex_lock(&video_keeper_mutex);
 	free_alloced_keep_buffer();
+	mutex_unlock(&video_keeper_mutex);
+
 }
 EXPORT_SYMBOL(try_free_keep_video);
 
 #endif
-
-void get_video_keep_buffer(ulong *addr, ulong *phys_addr)
-{
-#if 1
-	if (addr) {
-		addr[0] = (ulong) 0;
-		addr[1] = (ulong) 0;
-		addr[2] = (ulong) 0;
-	}
-
-	if (phys_addr) {
-		if (!keep_y_addr || !keep_u_addr || !keep_v_addr)
-			alloc_keep_buffer();
-		phys_addr[0] = keep_y_addr;
-		phys_addr[1] = keep_u_addr;
-		phys_addr[2] = keep_v_addr;
-	}
-#endif
-	if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT) {
-		pr_info("%s: y=%lx u=%lx v=%lx\n", __func__, phys_addr[0],
-		       phys_addr[1], phys_addr[2]);
-	}
-}
 
 void video_keeper_new_frame_notify(void)
 {
@@ -759,7 +740,7 @@ void video_keeper_new_frame_notify(void)
 	}
 	return;
 }
-unsigned int vf_keep_current(struct vframe_s *cur_dispbuf)
+static unsigned int vf_keep_current_locked(struct vframe_s *cur_dispbuf)
 {
 	u32 cur_index;
 	u32 y_index, u_index, v_index;
@@ -1017,6 +998,15 @@ unsigned int vf_keep_current(struct vframe_s *cur_dispbuf)
 	pr_info("%s: keep video on with keep\n", __func__);
 	return 0;
 
+}
+unsigned int vf_keep_current(struct vframe_s *cur_dispbuf)
+{
+	unsigned int ret;
+
+	mutex_lock(&video_keeper_mutex);
+	ret = vf_keep_current_locked(cur_dispbuf);
+	mutex_unlock(&video_keeper_mutex);
+	return ret;
 }
 
 int __init video_keeper_init(void)

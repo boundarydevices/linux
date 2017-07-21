@@ -29,7 +29,7 @@
 #include "codec_mm_priv.h"
 #include "codec_mm_scatter_priv.h"
 #define KEEP_NAME "keeper"
-#define MAX_KEEP_FRAME 8
+#define MAX_KEEP_FRAME 16
 #define START_KEEP_ID 0x9
 #define MAX_KEEP_ID    (INT_MAX - 1)
 

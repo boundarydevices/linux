@@ -1342,18 +1342,14 @@ static int codec_mm_scatter_free_on_nouser(
 /*
 *mask for other use it.
 */
-static int codec_mm_scatter_inc_user_in(struct codec_mm_scatter *mms,
+static int codec_mm_scatter_inc_user_in1(
+	struct codec_mm_scatter_mgt *smgt,
+	struct codec_mm_scatter *mms,
 	int cnt)
 {
-	struct codec_mm_scatter_mgt *smgt;
 	int ret = -1;
 	int old_user;
 
-	if (!mms)
-		return -1;
-	smgt = (struct codec_mm_scatter_mgt *)mms->manager;
-	if (smgt->tag != SMGT_IDENTIFY_TAG)
-		return -2;/*not valid tag*/
 	codec_mm_list_lock(smgt);
 	if (!codec_mm_scatter_valid_locked(smgt, mms)) {
 		codec_mm_list_unlock(smgt);
@@ -1369,19 +1365,35 @@ static int codec_mm_scatter_inc_user_in(struct codec_mm_scatter *mms,
 	return ret <= 0 ? ret : 0;	/*must add before user cnt >= 0 */
 }
 
-/*mask scatter's to free.*/
-static int codec_mm_scatter_dec_user_in(
-		struct codec_mm_scatter *mms,
-		int delay_free_ms, int cnt)
+static int codec_mm_scatter_inc_user_in(
+	struct codec_mm_scatter *mms,
+	int cnt)
 {
 	struct codec_mm_scatter_mgt *smgt;
-	int after_users = 1;
+	int ret;
 
 	if (!mms)
 		return -1;
-	smgt = (struct codec_mm_scatter_mgt *)mms->manager;
-	if (smgt->tag != SMGT_IDENTIFY_TAG)
-		return -2;/*not valid tag*/
+	smgt = codec_mm_get_scatter_mgt(0);
+	ret = codec_mm_scatter_inc_user_in1(smgt,
+			mms,
+			cnt);
+	if (ret < 0) {
+		smgt = codec_mm_get_scatter_mgt(1);
+		ret = codec_mm_scatter_inc_user_in1(smgt,
+			mms,
+			cnt);
+	}
+	return ret;
+}
+
+/*mask scatter's to free.*/
+static int codec_mm_scatter_dec_user_in1(
+		struct codec_mm_scatter_mgt *smgt,
+		struct codec_mm_scatter *mms,
+		int delay_free_ms, int cnt)
+{
+	int after_users = 1;
 	codec_mm_list_lock(smgt);
 	if (!codec_mm_scatter_valid_locked(smgt, mms)) {
 		codec_mm_list_unlock(smgt);
@@ -1390,10 +1402,10 @@ static int codec_mm_scatter_dec_user_in(
 	if (atomic_read(&mms->user_cnt) >= 1) {
 		after_users = atomic_sub_return(cnt, &mms->user_cnt);
 		if (after_users == 0) {
-			/*is free time */
+			/*is free time*/
 			if (delay_free_ms > 0)
-				mms->tofree_jiffies = jiffies +
-					delay_free_ms * HZ / 1000;
+				mms->tofree_jiffies  = jiffies +
+					delay_free_ms * HZ/1000;
 			else {
 				mms->page_used = 0;
 				mms->tofree_jiffies = 0;
@@ -1405,7 +1417,29 @@ static int codec_mm_scatter_dec_user_in(
 		codec_mm_schedule_delay_work(smgt, 0, 1);
 	return 0;
 }
-
+/*mask scatter's to free.*/
+static int codec_mm_scatter_dec_user_in(
+		struct codec_mm_scatter *mms,
+		int delay_free_ms, int cnt)
+{
+	struct codec_mm_scatter_mgt *smgt;
+	int ret;
+	if (!mms)
+		return -1;
+	smgt = codec_mm_get_scatter_mgt(0);
+	ret = codec_mm_scatter_dec_user_in1(smgt,
+			mms,
+			delay_free_ms,
+			cnt);
+	if (ret < 0) {
+		smgt = codec_mm_get_scatter_mgt(1);
+		ret = codec_mm_scatter_dec_user_in1(smgt,
+			mms,
+			delay_free_ms,
+			cnt);
+	}
+	return ret;
+}
 /*
 *maybe a render/sink.video/osd/
 */

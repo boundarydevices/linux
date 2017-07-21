@@ -5583,17 +5583,17 @@ static void video_vf_unreg_provider(void)
 		to_notify_trick_wait = false;
 	}
 
-	if (blackout | force_blackout) {
-		safe_disble_videolayer();
-		try_free_keep_video(1);
-	}
-
 	vsync_pts_100 = 0;
 	vsync_pts_112 = 0;
 	vsync_pts_125 = 0;
 	vsync_freerun = 0;
 	video_prot.video_started = 0;
 	spin_unlock_irqrestore(&lock, flags);
+
+	if (blackout | force_blackout) {
+		safe_disble_videolayer();
+		try_free_keep_video(1);
+	}
 
 #ifdef CONFIG_GE2D_KEEP_FRAME
 	if (cur_dispbuf) {
