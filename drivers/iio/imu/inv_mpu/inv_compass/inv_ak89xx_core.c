@@ -26,7 +26,7 @@
 #include <linux/spinlock.h>
 
 #include "inv_ak89xx_iio.h"
-#include "sysfs.h"
+#include <linux/iio/sysfs.h>
 #include "inv_test/inv_counters.h"
 
 static s64 get_time_ns(void)

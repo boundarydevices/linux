@@ -38,7 +38,7 @@
 #include <linux/spinlock.h>
 
 #include "inv_ami306_iio.h"
-#include "sysfs.h"
+#include <linux/iio/sysfs.h>
 #include "inv_test/inv_counters.h"
 
 static unsigned char late_initialize = true;

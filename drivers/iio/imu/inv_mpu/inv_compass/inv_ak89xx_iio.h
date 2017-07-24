@@ -20,9 +20,9 @@
 #include <linux/spinlock.h>
 #include <linux/mpu_iio.h>
 
-#include "iio.h"
-#include "buffer.h"
-#include "trigger.h"
+#include <linux/iio/iio.h>
+#include <linux/iio/buffer.h>
+#include <linux/iio/trigger.h>
 
 /**
  *  struct inv_ak89xx_state_s - Driver state variables.

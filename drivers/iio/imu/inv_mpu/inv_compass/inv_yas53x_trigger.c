@@ -37,9 +37,9 @@
 #include <linux/miscdevice.h>
 #include <linux/spinlock.h>
 
-#include "iio.h"
-#include "sysfs.h"
-#include "trigger.h"
+#include <linux/iio/iio.h>
+#include <linux/iio/sysfs.h>
+#include <linux/iio/trigger.h>
 
 #include "inv_yas53x_iio.h"
 
