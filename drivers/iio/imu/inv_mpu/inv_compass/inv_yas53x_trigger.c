@@ -61,7 +61,7 @@ int inv_yas53x_probe_trigger(struct iio_dev *indio_dev)
 	}
 	/* select default trigger */
 	st->trig->dev.parent = &st->client->dev;
-	st->trig->private_data = indio_dev;
+	iio_trigger_set_drvdata(st->trig, indio_dev);
 	st->trig->ops = &inv_yas53x_trigger_ops;
 	ret = iio_trigger_register(st->trig);
 
