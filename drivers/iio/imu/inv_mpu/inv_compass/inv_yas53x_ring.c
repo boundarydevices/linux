@@ -88,7 +88,7 @@ void inv_read_yas53x_fifo(struct iio_dev *indio_dev)
 						INV_YAS53X_SCAN_MAGN_X);
 		if (ring->scan_timestamp)
 			tmp_buf[(d_ind + 7) / 8] = get_time_ns();
-		ring->access->store_to(indio_dev->buffer, tmp, 0);
+		ring->access->store_to(indio_dev->buffer, tmp);
 
 		if (overunderflow) {
 			yas53x_resume(st);
