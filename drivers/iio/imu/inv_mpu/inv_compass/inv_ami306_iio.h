@@ -32,9 +32,9 @@
 #include <linux/spinlock.h>
 #include <linux/mpu_iio.h>
 
-#include "iio.h"
-#include "buffer.h"
-#include "trigger.h"
+#include <linux/iio/iio.h>
+#include <linux/iio/buffer.h>
+#include <linux/iio/trigger.h>
 
 /** axis sensitivity(gain) calibration parameter information  */
 struct ami_vector3d {

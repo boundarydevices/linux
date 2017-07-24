@@ -36,10 +36,10 @@
 #include <linux/poll.h>
 #include <linux/miscdevice.h>
 
-#include "iio.h"
-#include "kfifo_buf.h"
-#include "trigger_consumer.h"
-#include "sysfs.h"
+#include <linux/iio/iio.h>
+#include <linux/iio/kfifo_buf.h>
+#include <linux/iio/trigger_consumer.h>
+#include <linux/iio/sysfs.h>
 
 #include "inv_ami306_iio.h"
 
