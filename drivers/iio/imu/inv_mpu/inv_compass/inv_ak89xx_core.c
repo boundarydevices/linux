@@ -44,7 +44,7 @@ static s64 get_time_ns(void)
  *  @data:   Data read from device.
  *  NOTE:    The slave register will not increment when reading from the FIFO.
  */
-int inv_serial_read(struct inv_ak89xx_state_s *st, u8 reg, u16 length, u8 *data)
+static int inv_serial_read(struct inv_ak89xx_state_s *st, u8 reg, u16 length, u8 *data)
 {
 	int result;
 	INV_I2C_INC_COMPASSWRITE(3);
@@ -66,7 +66,7 @@ int inv_serial_read(struct inv_ak89xx_state_s *st, u8 reg, u16 length, u8 *data)
  *  @reg:	Device register to be written to.
  *  @data:	Byte to write to device.
  */
-int inv_serial_single_write(struct inv_ak89xx_state_s *st, u8 reg, u8 data)
+static int inv_serial_single_write(struct inv_ak89xx_state_s *st, u8 reg, u8 data)
 {
 	u8 d[1];
 	d[0] = data;
