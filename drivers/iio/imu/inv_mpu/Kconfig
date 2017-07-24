@@ -4,7 +4,10 @@
 
 config INV_MPU_IIO
 	tristate "Invensense MPU devices"
-	depends on I2C && SYSFS && IIO && IIO_KFIFO_BUF && IIO_TRIGGER && !INV_MPU
+	depends on I2C && SYSFS
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	select I2C_MUX
 	default n
 	help
 	  This driver supports the Invensense MPU devices.
@@ -30,3 +33,6 @@ config DTS_INV_MPU_IIO
 	  This enables Invensense MPU devices to use Device Tree Structure.
 	  DTS must be enabled in the system.
 
+if INV_MPU_IIO
+source "drivers/iio/imu/inv_mpu/inv_compass/Kconfig"
+endif
