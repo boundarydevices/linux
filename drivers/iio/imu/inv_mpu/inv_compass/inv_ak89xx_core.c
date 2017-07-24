@@ -403,21 +403,33 @@ static const struct iio_chan_spec compass_channels[] = {
 		.channel2 = IIO_MOD_X,
 		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),
 		.scan_index = INV_AK89XX_SCAN_MAGN_X,
-		.scan_type = IIO_ST('s', 16, 16, 0)
+		.scan_type = {			\
+			.sign = 's',		\
+			.realbits = 16,		\
+			.storagebits = 16,	\
+		},
 	}, {
 		.type = IIO_MAGN,
 		.modified = 1,
 		.channel2 = IIO_MOD_Y,
 		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),
 		.scan_index = INV_AK89XX_SCAN_MAGN_Y,
-		.scan_type = IIO_ST('s', 16, 16, 0)
+		.scan_type = {			\
+			.sign = 's',		\
+			.realbits = 16,		\
+			.storagebits = 16,	\
+		},
 	}, {
 		.type = IIO_MAGN,
 		.modified = 1,
 		.channel2 = IIO_MOD_Z,
 		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),
 		.scan_index = INV_AK89XX_SCAN_MAGN_Z,
-		.scan_type = IIO_ST('s', 16, 16, 0)
+		.scan_type = {			\
+			.sign = 's',		\
+			.realbits = 16,		\
+			.storagebits = 16,	\
+		},
 	},
 	IIO_CHAN_SOFT_TIMESTAMP(INV_AK89XX_SCAN_TIMESTAMP)
 };
