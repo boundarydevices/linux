@@ -2440,20 +2440,26 @@ static int inv_check_chip_type(struct inv_mpu_state *st,
 		st->chip_type = INV_MPU6050;
 	} else if (!strcmp(id->name, "mpu9150")) {
 		st->chip_type = INV_MPU6050;
+#ifndef CONFIG_DTS_INV_MPU_IIO
 		plat->sec_slave_type = SECONDARY_SLAVE_TYPE_COMPASS;
 		plat->sec_slave_id = COMPASS_ID_AK8975;
+#endif
 	} else if (!strcmp(id->name, "mpu6500")) {
 		st->chip_type = INV_MPU6500;
 	} else if (!strcmp(id->name, "mpu9250")) {
 		st->chip_type = INV_MPU6500;
+#ifndef CONFIG_DTS_INV_MPU_IIO
 		plat->sec_slave_type = SECONDARY_SLAVE_TYPE_COMPASS;
 		plat->sec_slave_id = COMPASS_ID_AK8963;
+#endif
 	} else if (!strcmp(id->name, "mpu6xxx")) {
 		st->chip_type = INV_MPU6050;
 	} else if (!strcmp(id->name, "mpu9350")) {
 		st->chip_type = INV_MPU6500;
+#ifndef CONFIG_DTS_INV_MPU_IIO
 		plat->sec_slave_type = SECONDARY_SLAVE_TYPE_COMPASS;
 		plat->sec_slave_id = COMPASS_ID_MLX90399;
+#endif
 		/* block use of MPU9350 in this build
 		   since it's not production ready */
 		pr_err("MPU9350 support is not officially available yet.\n");
