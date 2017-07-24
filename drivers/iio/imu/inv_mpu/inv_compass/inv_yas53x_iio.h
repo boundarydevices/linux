@@ -32,9 +32,9 @@
 #include <linux/spinlock.h>
 #include <linux/mpu_iio.h>
 
-#include "iio.h"
-#include "buffer.h"
-#include "trigger.h"
+#include <linux/iio/iio.h>
+#include <linux/iio/buffer.h>
+#include <linux/iio/trigger.h>
 
 #define YAS_MAG_MAX_FILTER_LEN			30
 struct yas_adaptive_filter {

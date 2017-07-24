@@ -38,7 +38,7 @@
 #include <linux/spinlock.h>
 
 #include "inv_yas53x_iio.h"
-#include "sysfs.h"
+#include <linux/iio/sysfs.h>
 #include "inv_test/inv_counters.h"
 
 /* -------------------------------------------------------------------------- */
