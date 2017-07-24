@@ -25,7 +25,7 @@
 static LIST_HEAD(nodelist);
 static int32_t aesfrom = -1;
 static int32_t aesfrom_outer = -1;
-static int32_t version;
+//static int32_t version;
 static uint8_t *storage_shar_in_block;
 static uint8_t *storage_shar_out_block;
 static uint8_t *storage_share_block;

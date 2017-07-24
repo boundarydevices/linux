@@ -25,7 +25,13 @@ void *storage_malloc(int32_t size)
 	return kmalloc(size, GFP_KERNEL);
 }
 
+void *storage_zalloc(int32_t size)
+{
+	return kzalloc(size, GFP_KERNEL);
+}
+
 void storage_free(void *ptr)
 {
-	kfree(ptr);
+	if (ptr != NULL)
+		kfree(ptr);
 }

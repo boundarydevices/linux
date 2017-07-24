@@ -21,6 +21,7 @@
 #include <linux/types.h>
 
 void *storage_malloc(int32_t size);
+void *storage_zalloc(int32_t size);
 void storage_free(void *ptr);
 
 #endif

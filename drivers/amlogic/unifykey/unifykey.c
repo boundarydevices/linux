@@ -28,6 +28,7 @@
 #include <linux/amlogic/efuse.h>
 #include <linux/of.h>
 #include <linux/ctype.h>
+#include <linux/amlogic/cpu_version.h>
 
 #include "unifykey.h"
 #include "amlkey_if.h"
@@ -60,6 +61,30 @@ typedef int (*key_unify_dev_uninit)(void);
 static int init_flag;
 static int module_init_flag;
 static int lock_flag;
+
+static char hex_to_asc(char para)
+{
+	if (para >= 0 && para <= 9)
+		para = para+'0';
+	else if (para >= 0xa && para <= 0xf)
+		para = para+'a'-0xa;
+
+	return para;
+}
+
+static char asc_to_hex(char para)
+{
+	if (para >= '0' && para <= '9')
+		para = para-'0';
+	else if (para >= 'a' && para <= 'f')
+		para = para-'a'+0xa;
+	else if (para >= 'A' && para <= 'F')
+		para = para-'A'+0xa;
+
+	return para;
+}
+
+
 
 static int key_storage_init(char *buf, unsigned int len)
 {
@@ -315,6 +340,8 @@ int key_unify_write(char *keyname, unsigned char *keydata,
 	int err = 0;
 	int attr;
 	struct key_item_t *unifykey;
+	unsigned char *fmt_data;
+	int i, j;
 
 	unifykey = unifykey_find_item_by_name(keyname);
 	if (unifykey == NULL) {
@@ -340,8 +367,24 @@ int key_unify_write(char *keyname, unsigned char *keydata,
 				KEY_UNIFY_ATTR_SECURE : 0);
 			attr |= (unifykey->attr & KEY_UNIFY_ATTR_ENCRYPT_MASK) ?
 				KEY_UNIFY_ATTR_ENCRYPT : 0;
-			err = key_storage_write(keyname, keydata,
-				datalen, attr);
+			if (is_meson_m8b_cpu() &&
+				(unifykey->df != KEY_M_HEXASCII)) {
+				fmt_data = kmalloc(datalen*2+1, GFP_KERNEL);
+				if (!fmt_data)
+					return -ENOMEM;
+				memset(fmt_data, 0x00, datalen*2+1);
+				for (i = 0, j = 0; i < datalen; i++) {
+					fmt_data[j++] = hex_to_asc((
+						keydata[i]>>4) & 0x0f);
+					fmt_data[j++] = hex_to_asc((
+						keydata[i]) & 0x0f);
+				}
+				err = key_storage_write(keyname, fmt_data,
+					strlen(fmt_data), attr);
+				kfree(fmt_data);
+			} else
+				err = key_storage_write(keyname, keydata,
+					datalen, attr);
 			break;
 		case KEY_M_UNKNOWN_DEV:
 		default:
@@ -367,6 +410,8 @@ int key_unify_read(char *keyname, unsigned char *keydata,
 {
 	int err = 0;
 	struct key_item_t *unifykey;
+	unsigned char *fmt_data;
+	int i, j;
 
 	if (!keydata) {
 		pr_err("%s:%d, keydata is NULL\n",
@@ -398,8 +443,26 @@ int key_unify_read(char *keyname, unsigned char *keydata,
 				datalen, reallen, 1);
 			break;
 		case KEY_M_NORMAL:
-			err = key_storage_read(keyname, keydata,
-				datalen, reallen, 0);
+			if (is_meson_m8b_cpu() &&
+				(unifykey->df != KEY_M_HEXASCII)) {
+				fmt_data = kmalloc(datalen*2+1, GFP_KERNEL);
+				if (!fmt_data)
+					return -ENOMEM;
+				memset(fmt_data, 0x00, datalen*2+1);
+				err = key_storage_read(keyname, fmt_data,
+					datalen*2, reallen, 0);
+				if (err != 0) {
+					kfree(fmt_data);
+					return err;
+				}
+				for (i = 0, j = 0; i < *reallen/2; i++, j += 2)
+					keydata[i] = (((asc_to_hex(fmt_data[j]
+				))<<4) | (asc_to_hex(fmt_data[j+1])));
+				*reallen = *reallen/2;
+				kfree(fmt_data);
+			} else
+				err = key_storage_read(keyname, keydata,
+					datalen, reallen, 0);
 			break;
 		case KEY_M_UNKNOWN_DEV:
 		default:
@@ -459,6 +522,9 @@ int key_unify_size(char *keyname, unsigned int *reallen)
 			break;
 		case KEY_M_NORMAL:
 			*reallen = key_storage_size(keyname);
+			if (is_meson_m8b_cpu() &&
+				(unifykey->df != KEY_M_HEXASCII))
+				*reallen = *reallen/2;
 			break;
 		case KEY_M_UNKNOWN_DEV:
 		default:
@@ -1105,6 +1171,7 @@ static ssize_t write_store(struct class *cla,
 	int ret;
 	unsigned char *keydata = NULL;
 	size_t key_len = 0;
+
 
 	if (curkey != NULL) {
 		keydata = kzalloc(count, GFP_KERNEL);

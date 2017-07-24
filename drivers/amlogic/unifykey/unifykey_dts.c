@@ -32,6 +32,11 @@
 #define KEY_DEV_NORMAL		"normal"
 #define KEY_DEV_SECURE		"secure"
 
+/* compatibility for old names */
+#define KEY_COMP_DEV_EFUSE		"efusekey"
+#define KEY_COMP_DEV_NORMAL		"nandkey"
+#define KEY_COMP_DEV_SECURE		"secureskey"
+
 /* permision */
 #define KEY_PERMIT_READ		"read"
 #define KEY_PERMIT_WRITE	"write"
@@ -172,11 +177,14 @@ static int unifykey_item_parse_dt(struct device_node *node, int id)
 		goto exit;
 	}
 	if (propname) {
-		if (strcmp(propname, KEY_DEV_EFUSE) == 0)
+		if (strcmp(propname, KEY_DEV_EFUSE) == 0 ||
+			strcmp(propname, KEY_COMP_DEV_EFUSE) == 0)
 			temp_item->dev = KEY_M_EFUSE;
-		else if (strcmp(propname, KEY_DEV_NORMAL) == 0)
+		else if (strcmp(propname, KEY_DEV_NORMAL) == 0 ||
+			strcmp(propname, KEY_COMP_DEV_NORMAL) == 0)
 			temp_item->dev = KEY_M_NORMAL;
-		else if (strcmp(propname, KEY_DEV_SECURE) == 0)
+		else if (strcmp(propname, KEY_DEV_SECURE) == 0 ||
+			strcmp(propname, KEY_COMP_DEV_SECURE))
 			temp_item->dev = KEY_M_SECURE;
 		else
 			temp_item->dev = KEY_M_UNKNOWN_DEV;
@@ -190,6 +198,26 @@ static int unifykey_item_parse_dt(struct device_node *node, int id)
 	if (of_property_match_string(node, "key-permit", KEY_PERMIT_DEL) >= 0)
 		temp_item->permit |= KEY_M_PERMIT_DEL;
 	temp_item->id = id;
+
+	if (is_meson_m8b_cpu()) {
+		temp_item->df = KEY_M_MAX_DF;
+		ret = of_property_read_string(node, "key-dataformat",
+					&propname);
+		if (ret < 0) {
+			ret = -EINVAL;
+			goto exit;
+		}
+		if (propname) {
+			if (strcmp(propname, "hexdata") == 0)
+				temp_item->df = KEY_M_HEXDATA;
+			else if (strcmp(propname, "hexascii") == 0)
+				temp_item->df = KEY_M_HEXASCII;
+			else if (strcmp(propname, "allascii") == 0)
+				temp_item->df = KEY_M_ALLASCII;
+			else
+				temp_item->df = KEY_M_MAX_DF;
+		}
+	}
 
 	temp_item->attr = 0;
 	ret = of_property_read_string(node, "key-encrypt", &propname);

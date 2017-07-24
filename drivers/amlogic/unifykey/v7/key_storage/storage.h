@@ -22,7 +22,11 @@
 #include <linux/list.h>
 #include <linux/string.h>
 
-#define MAX_OBJ_NAME_LEN	80
+#define KEY_MAX_COUNT  32
+
+
+#define MAX_OBJ_NAME_LEN	16
+#define MAX_MAGIC_STR_LEN       16
 
 /*Attribute*/
 #define OBJ_ATTR_SECURE	(1<<0)
@@ -33,13 +37,21 @@
 #define OBJ_TYPE_GENERIC	0xA00000BF
 
 struct storage_object {
-	char name[MAX_OBJ_NAME_LEN];
+	char     name[MAX_OBJ_NAME_LEN];
+	uint16_t slot;
+	uint16_t type1;
+	uint16_t valid_size;
+	uint16_t storage_size;
+	uint16_t state;
+	uint16_t checksum;
+	char     hashptr[36];
 	uint32_t namesize;
 	uint32_t attribute; /*secure, OTP*/
 	uint32_t type; /*AES, RSA, GENERIC, ...*/
 	uint32_t datasize;
-	uint8_t *dataptr;
-	uint8_t hashptr[32];
+	char	 reserve[40];
+	uint8_t  *storage_data;
+	uint8_t  *dataptr;
 };
 
 #define OBJ_STATUS_FREE 0
@@ -57,6 +69,31 @@ struct storage_node {
 #define ENC_TYPE_FIXED	2
 #define STORAGE_BLOCK_RAW_HEAD_SIZE 512
 #define BLOCK_VERSION	0
+
+struct emmc_key_head {
+	uint8_t   mark[MAX_MAGIC_STR_LEN];
+	uint32_t  mark_checksum;
+	uint32_t  checksum;
+	uint32_t  reserve;
+};
+
+struct key_head_item {
+	uint32_t position;
+	uint32_t state;
+	uint32_t reserve;
+};
+struct key_storage_head {
+	char     mark[MAX_MAGIC_STR_LEN];
+	uint32_t version;
+	uint32_t inver; //inver = ~version + 1
+	uint32_t tag;
+	uint32_t size; //tatol size
+	uint32_t item_cnt;
+	struct key_head_item item[KEY_MAX_COUNT];
+	char     reserve[92];
+};
+
+
 struct storage_block_raw_head {
 	uint8_t mark[16]; /* AMLSECURITY*/
 	uint32_t version;

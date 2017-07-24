@@ -36,6 +36,14 @@ enum key_manager_dev_e {
 		KEY_M_MAX_DEV,
 };
 
+/*key data format*/
+enum key_manager_df_e {
+	KEY_M_HEXDATA = 0,
+	KEY_M_HEXASCII = 1,
+	KEY_M_ALLASCII = 2,
+	KEY_M_MAX_DF = 0xff,
+};
+
 enum key_manager_permit_e {
 		KEY_M_PERMIT_READ = (1<<0),
 		KEY_M_PERMIT_WRITE = (1<<1),
@@ -47,7 +55,13 @@ enum key_manager_flag_e {
 	KEY_M_FLAG_EMPTY = (0<<0),
 	KEY_M_FLAG_EXSIT = (1<<0),
 };
+
+#ifdef CONFIG_MACH_MESON8B
+#define KEY_UNIFY_NAME_LEN	16
+#else
 #define KEY_UNIFY_NAME_LEN	48
+#endif
+
 /* for ioctrl transfer parameters. */
 struct key_item_info_t {
 	unsigned int id;
@@ -67,7 +81,7 @@ struct key_item_t {
 	char name[KEY_UNIFY_NAME_LEN];
 	int id;
 	unsigned int dev; /* key save in device //efuse, */
-	/* unsigned int df; */
+	unsigned int df;
 	unsigned int permit;
 	int attr;
 	int reserve;

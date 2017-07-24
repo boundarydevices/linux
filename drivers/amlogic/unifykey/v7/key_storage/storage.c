@@ -17,11 +17,16 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/slab.h>
+#include <linux/kallsyms.h>
 #include "storage.h"
 #include "storage_util.h"
 #include "storage_data.h"
 #include "storage_def.h"
 #include "crypto_api.h"
+
+static int emmc_key_transfer(u8 *buf, u32 *value, u32 len, u32 direct);
+static uint32_t emmckey_checksum(uint8_t *buf, uint32_t length);
 
 
 static void storage_hash(uint8_t *input, uint32_t insize, uint8_t *output)
@@ -29,9 +34,10 @@ static void storage_hash(uint8_t *input, uint32_t insize, uint8_t *output)
 	sha256(input, insize, output);
 }
 
-
 static int32_t check_object_valid(struct storage_object *object)
 {
+	/* uboot does not support hash checking */
+#if 0
 	uint8_t temp[32];
 
 	storage_hash(object->dataptr, object->datasize, temp);
@@ -39,104 +45,83 @@ static int32_t check_object_valid(struct storage_object *object)
 		return 0;
 	else
 		return -1;
+#endif
+	return 0;
 }
 
 int32_t storage_writeToFlash(void)
 {
-	uint8_t *internal_storage = NULL;
-	uint8_t *penchead, *pcontent, *pcontent_bak;
-	uint8_t *pns_rawhead, *pns_enchead, *pns_content;
-	struct storage_block_raw_head *rawhead_t;
-	struct storage_block_enc_head enchead_t;
-	struct storage_node *node;
-	struct storage_object *obj;
+	uint8_t			 *pblock =
+		(uint8_t *)get_share_storage_block_base();
+	struct emmc_key_head     *pemmc_key_head;
+	struct key_storage_head  *pstorage_key_head;
+	uint8_t                  *pkey_data;
+	struct storage_node	 *node;
+	struct storage_object    *obj;
+	uint32_t                 pos = 0;
 
-	uint32_t datasize;
-	uint32_t outlen;
-	uint32_t sumsize;
-	int32_t ret = 0;
-
-
-	internal_storage = (uint8_t *)get_internal_storage_base();
-	if (!internal_storage)
-		goto storage_writeflash_err;
-
-	penchead = internal_storage + STORAGE_BLOCK_RAW_HEAD_SIZE;
-	pcontent = penchead + STORAGE_BLOCK_ENC_HEAD_SIZE;
-	pcontent_bak = pcontent;
-	pns_rawhead = (uint8_t *)get_share_storage_block_base();
-	pns_enchead = pns_rawhead + STORAGE_BLOCK_RAW_HEAD_SIZE;
-	pns_content = pns_enchead + STORAGE_BLOCK_ENC_HEAD_SIZE;
-
-	/* internal: raw head */
-	memset(pns_rawhead, 0, STORAGE_BLOCK_RAW_HEAD_SIZE);
-	rawhead_t = (struct storage_block_raw_head *)pns_rawhead;
-	memcpy(rawhead_t->mark, "AMLSECURITY", 11);
-	rawhead_t->version = BLOCK_VERSION;
-	rawhead_t->enctype = storage_chose_enctype();
-	/*fixme: no enc support now*/
-	//set_encryptkeyfrom(rawhead_t->enctype);
-
-	/* internal: storage */
-	datasize = 0;
-	list_for_each_entry(node, &nodelist, list)
-		if (datasize < STORAGE_BLOCK_SIZE -
-			STORAGE_BLOCK_RAW_HEAD_SIZE -
-			STORAGE_BLOCK_ENC_HEAD_SIZE) {
-			obj = &(node->object);
-			if ((node->status & OBJ_STATUS_VALID)
-			    && (obj->dataptr)) {
-				Tlv_WriteObject(obj, pcontent, &outlen);
-				datasize += outlen;
-				pcontent += outlen;
-			}
-		}
-	sumsize = (((datasize+15)/16)*16);
-	sumsize += STORAGE_BLOCK_RAW_HEAD_SIZE;
-	sumsize += STORAGE_BLOCK_ENC_HEAD_SIZE;
-	if (sumsize > flash_storage_size) {
-		//ERROR("storage size is larger than flash!\n");
-		goto storage_writeflash_err;
+	/* for emmc , there is an extra header to be handled */
+	/* the below check is ugly, someone should move the
+	 * related code to emmc key
+	 */
+	if (kallsyms_lookup_name("emmc_key_read")) {
+		pemmc_key_head = (struct emmc_key_head *)pblock;
+		pstorage_key_head = (struct key_storage_head *)
+			(pblock + sizeof(struct emmc_key_head));
+	} else {
+		pemmc_key_head = NULL;
+		pstorage_key_head = (struct key_storage_head *)pblock;
 	}
-	memset(&enchead_t, 0, sizeof(enchead_t));
-	enchead_t.blocksize = datasize;
-	enchead_t.flashsize = flash_storage_size;
-	Tlv_WriteHead(&enchead_t, penchead);
-#if 1
-	ret = do_aes_internal(1, penchead,
-				STORAGE_BLOCK_ENC_HEAD_SIZE,
-				pns_enchead, (int *)&outlen);
-	if (ret)
-		goto storage_writeflash_err;
-#else
-	ret = 0;
-	memcpy(pns_enchead, penchead,
-				STORAGE_BLOCK_ENC_HEAD_SIZE);
-#endif
 
-#if 1
-	ret = do_aes_internal(1, pcontent_bak,
-				((datasize+15)/16)*16,
-				pns_content, (int *)&outlen);
-	if (ret)
-		goto storage_writeflash_err;
-#else
-	ret = 0;
-	memcpy(pns_content, pcontent_bak, ((datasize+15)/16)*16);
-#endif
-	/* write message*/
-	//msg->cmd = MSG_CMD_WRITEKEY;
-	//msg->state += 1;
-	ret = 0;
-	version = BLOCK_VERSION;
-	aesfrom = storage_chose_enctype();
-	goto storage_writeflash_exit;
+	/* fill storage key header */
+	memset(pstorage_key_head, 0x00, sizeof(struct key_storage_head));
+	memcpy(pstorage_key_head->mark, "keyexist", 8);
+	pstorage_key_head->version = 2;
+	pstorage_key_head->item_cnt = 0;
+	pstorage_key_head->size = 0;
 
-storage_writeflash_err:
-		ret = -1;
-storage_writeflash_exit:
-	return ret;
+	pstorage_key_head->size += sizeof(struct key_storage_head);
+	pkey_data = (uint8_t *)pstorage_key_head +
+		sizeof(struct key_storage_head);
+
+	//list_for_each_entry(node, &nodelist, list)
+	list_for_each_entry_reverse(node, &nodelist, list)
+		if (node->status & OBJ_STATUS_VALID) {
+			obj = &(node->object);
+			pstorage_key_head->item[pstorage_key_head->
+				item_cnt].position = pos;
+			memcpy(&pkey_data[pos],
+				obj, sizeof(struct storage_object));
+			pos += sizeof(struct storage_object);
+			memcpy(&pkey_data[pos],
+				obj->storage_data, obj->storage_size);
+			pos += obj->storage_size;
+
+
+			pstorage_key_head->size +=
+				sizeof(struct storage_object);
+			pstorage_key_head->size += obj->storage_size;
+			pstorage_key_head->item_cnt++;
+		}
+
+	if (pemmc_key_head != NULL) {
+		/* fill the extra emmc key header */
+		memset(pemmc_key_head, 0x00, sizeof(struct emmc_key_head));
+		memcpy(pemmc_key_head->mark, "emmckeys", 8);
+		emmc_key_transfer(pemmc_key_head->mark,
+			&pemmc_key_head->mark_checksum, 8, 1);
+		/*
+		 *   do not blame me for the magic number 128*1024-28,
+		 * only to be compatible for old next-dev
+		 */
+		pemmc_key_head->checksum =
+			emmckey_checksum((uint8_t *)pstorage_key_head,
+				128*1024-28);
+	}
+
+	return RET_OK;
 }
+
 
 static void __storage_add(struct storage_node *node)
 {
@@ -148,6 +133,8 @@ static void __storage_del(struct storage_node *node)
 	list_del(&node->list);
 	if (node->object.dataptr != NULL)
 		storage_free(node->object.dataptr);
+	if (node->object.storage_data != NULL)
+		storage_free(node->object.storage_data);
 	storage_free(node);
 }
 
@@ -173,7 +160,7 @@ static struct storage_node *storage_create_empty(void)
 {
 	struct storage_node *node;
 
-	node = storage_malloc(sizeof(*node));
+	node = storage_zalloc(sizeof(*node));
 	if (node == NULL)
 		return NULL;
 	memset(node, 0, sizeof(struct storage_node));
@@ -181,6 +168,7 @@ static struct storage_node *storage_create_empty(void)
 	__storage_add(node);
 	return node;
 }
+
 
 static struct storage_node *storage_create(uint8_t *name, uint32_t namelen)
 {
@@ -198,6 +186,12 @@ static struct storage_node *storage_create(uint8_t *name, uint32_t namelen)
 	return node;
 }
 
+static void storage_del(struct storage_node *node)
+{
+	__storage_del(node);
+}
+
+
 static void storage_reset(void)
 {
 	struct storage_node *node;
@@ -205,6 +199,7 @@ static void storage_reset(void)
 	list_for_each_entry(node, &nodelist, list)
 		__storage_del(node);
 }
+
 
 static int32_t storage_infocheck(struct storage_node *node, uint32_t attr)
 {
@@ -216,54 +211,177 @@ static int32_t storage_infocheck(struct storage_node *node, uint32_t attr)
 		return -1;
 }
 
+
+static uint16_t aml_key_checksum(char *data, int length)
+{
+	uint16_t checksum;
+	uint8_t  *pdata;
+	int      i;
+
+	checksum = 0;
+	pdata = (uint8_t *)data;
+	for (i = 0; i < length; i++)
+		checksum += pdata[i];
+
+	return checksum;
+}
+
+
+static uint32_t emmckey_checksum(uint8_t *buf, uint32_t length)
+{
+	uint32_t checksum = 0;
+	uint32_t cnt;
+
+	for (cnt = 0; cnt < length; cnt++)
+		checksum += buf[cnt];
+
+	return checksum;
+}
+
+
+
+static int is_hex_str(uint8_t *buf, uint32_t len)
+{
+	uint32_t i;
+
+	for (i = 0; i < len; i++)
+		switch (buf[i]) {
+		case '0' ... '9':
+		case 'a' ... 'f':
+		case 'A' ... 'F':
+			break;
+		default:
+			return 0;
+		}
+	return 1;
+}
+
+static char asc_to_hex(char para)
+{
+	if (para >= '0' && para <= '9')
+		para = para-'0';
+	else if (para >= 'a' && para <= 'f')
+		para = para - 'a'+0xa;
+	else if (para >= 'A' && para <= 'F')
+		para = para-'A'+0xa;
+
+	return para;
+}
+
+
+uint32_t to_storage_data(uint8_t *data, uint32_t valid_size,
+			uint8_t *storage_data, uint16_t storage_size,
+			uint16_t *checksum)
+{
+	uint8_t               *tmp_buf;
+	uint8_t               *data_clone;
+	uint8_t               chr;
+	int                   i;
+	uint32_t              valid_comp_size = 0;
+	int                   enc_data_len = 0;
+
+
+	if (!is_hex_str(data, valid_size))
+		return RET_EINVAL;
+
+	data_clone = storage_zalloc(valid_size);
+	if (!data_clone)
+		return RET_EMEM;
+	memcpy(data_clone, data, valid_size);
+
+	for (i = 0; i < valid_size; i++) {
+		chr = data_clone[i];
+		if (i%2 == 0)
+			data_clone[i/2] = 0x00;
+		data_clone[i/2] |= (i%2 == 0) ?
+			(asc_to_hex(chr) << 4):(asc_to_hex(chr) & 0xf);
+	}
+
+
+	valid_comp_size = (valid_size+1)>>1;
+	*checksum = aml_key_checksum(data_clone, valid_comp_size);
+
+	tmp_buf = storage_zalloc(storage_size);
+	if (!tmp_buf) {
+		storage_free(data_clone);
+		return RET_EMEM;
+	}
+	memcpy(tmp_buf, &valid_comp_size, 4);
+	memcpy(tmp_buf+4, data_clone, valid_comp_size);
+
+	do_aes_internal(1, tmp_buf, storage_size, storage_data, &enc_data_len);
+
+	storage_free(tmp_buf);
+	storage_free(data_clone);
+
+	return RET_OK;
+}
+
+
 uint32_t storage_write(uint8_t *name, uint32_t namelen,
 			uint8_t *writebuf, uint32_t bufsize, uint32_t attr)
 {
-	struct storage_node *node;
+	struct storage_node   *node;
 	struct storage_object *object;
+	int                   is_new = 0;
 
-	if (namelen >= MAX_OBJ_NAME_LEN)
+
+	if ((namelen >= MAX_OBJ_NAME_LEN) ||
+		!is_hex_str(writebuf, bufsize))
 		return RET_EINVAL;
+
+	/* update key node */
 	node = storage_find(name, namelen);
 	if (node == NULL) { /*it's new object*/
+		is_new = 1;
 		node = storage_create(name, namelen);
 		if (node == NULL)
 			return RET_EMEM;
 		object = &(node->object);
-		object->dataptr = storage_malloc((int32_t)bufsize);
-		if (!object->dataptr)
-			return RET_EMEM;
 		node->status |= OBJ_STATUS_VALID;
 		object->attribute = attr;
+		object->namesize = namelen;
 		object->type = OBJ_TYPE_GENERIC;
-		memcpy(object->dataptr, writebuf, bufsize);
-		object->datasize = bufsize;
-		storage_hash(object->dataptr,
-			object->datasize, object->hashptr);
+		object->type1 = 0x41c; /* be compatible with old unifykey */
 	} else {  /* the object is existed*/
+		/* TODO: check whether attr is updated correctly */
 		if (storage_infocheck(node, attr) < 0)
 			return RET_EINVAL;
 		object = &(node->object);
-		if (object->datasize < bufsize) {
-			storage_free(object->dataptr);
-			object->dataptr = storage_malloc(bufsize);
-			if (!object->dataptr)
-				return RET_EMEM;
-			memcpy(object->dataptr, writebuf, bufsize);
-			object->datasize = bufsize;
-			storage_hash(object->dataptr,
-				object->datasize, object->hashptr);
-		} else {
-			memcpy(object->dataptr, writebuf, bufsize);
-			object->datasize = bufsize;
-			storage_hash(object->dataptr,
-				object->datasize, object->hashptr);
-		}
+		storage_free(object->dataptr);
+		storage_free(object->storage_data);
 	}
-	if (!storage_writeToFlash())
-		return RET_OK;
-	else
+	object->datasize = bufsize;
+	object->valid_size = bufsize;
+	object->storage_size = (((((object->valid_size+1)>>1)+4)+15)>>4)<<4;
+	object->dataptr = storage_zalloc(object->valid_size);
+	if (!object->dataptr) {
+		if (is_new)
+			storage_del(node);
+		return RET_EMEM;
+	}
+	object->storage_data = storage_zalloc(object->storage_size);
+	if (!object->storage_data) {
+		if (is_new)
+			storage_del(node);
+		return RET_EMEM;
+	}
+	memcpy(object->dataptr, writebuf, object->valid_size);
+
+	if (to_storage_data(object->dataptr, object->valid_size,
+		object->storage_data, object->storage_size,
+		&object->checksum) != RET_OK) {
+		if (is_new)
+			storage_del(node);
 		return RET_EFAIL;
+	}
+
+	storage_hash(object->dataptr,
+		object->datasize, object->hashptr);
+
+	storage_writeToFlash();
+
+	return RET_OK;
 }
 
 static int32_t storage_read_permit(struct storage_node *node)
@@ -385,101 +503,151 @@ uint32_t storage_status(uint8_t *name, uint32_t namelen, uint32_t *retval)
 	return RET_OK;
 }
 
+static int emmc_key_transfer(u8 *buf, u32 *value, u32 len, u32 direct)
+{
+	u8 checksum = 0;
+	u32 i;
+
+	if (direct) {
+		for (i = 0; i < len; i++)
+			checksum += buf[i];
+		for (i = 0; i < len; i++)
+			buf[i] ^= checksum;
+		*value = checksum;
+	} else {
+		checksum = *value;
+		for (i = 0; i < len; i++)
+			buf[i] ^= checksum;
+		checksum = 0;
+		for (i = 0; i < len; i++)
+			checksum += buf[i];
+		if (checksum == *value)
+			return 0;
+		return -1;
+	}
+
+	return 0;
+}
+
+
 
 /* initialize nodelist from internal storage block*/
 void storage_init(uint32_t flashsize)
 {
-	uint8_t *internal_storage;
-	struct storage_block_raw_head *prawhead;
-	struct storage_block_enc_head enchead;
-	uint8_t *pcontent, *prawcontent;
-	uint8_t *pblock = (uint8_t *)get_share_storage_block_base();
+	uint8_t                  *pblock =
+		(uint8_t *)get_share_storage_block_base();
+	struct emmc_key_head     *pemmc_key_head;
+	struct key_storage_head  *pstorage_key_head;
+	int			 key_count;
+	int                      i, j, n;
+	struct storage_node      *node;
+	struct storage_object    *tmp_obj;
+	char			 *tmp_content;
+	uint8_t                  *tmp;
+	int                      out_len;
+	int                      key_hex_len;
 
-	int32_t ret;
-	uint32_t outlen, sum;
-	struct storage_node *node;
+	/* we should handle an extra header for emmc key */
+	if (kallsyms_lookup_name("emmc_key_read")) {
+		pemmc_key_head = (struct emmc_key_head *)pblock;
+		pstorage_key_head = (struct key_storage_head *)
+			(pblock + sizeof(struct emmc_key_head));
+	} else {
+		pemmc_key_head = NULL;
+		pstorage_key_head = (struct key_storage_head *)pblock;
+	}
 
+	if (pemmc_key_head != NULL) {
+		if (!emmc_key_transfer(pemmc_key_head->mark,
+			&pemmc_key_head->mark_checksum, 8, 0)) {
+			if (memcmp(pemmc_key_head->mark,
+				"emmckeys", 8) != 0) {
+				flash_storage_size = flashsize;
+				goto storage_init_err;
+			}
+		} else {
+			flash_storage_size = flashsize;
+			goto storage_init_err;
+		}
+	}
 
-	/* reset */
-	storage_reset();
-	internal_storage = (uint8_t *)get_internal_storage_base();
-	if (!internal_storage)
-		goto storage_init_err;
-
-	aesfrom = -1;
-	version = -1;
-	prawhead = (struct storage_block_raw_head *)pblock;
-	if (strcmp((const char *)(prawhead->mark), "AMLSECURITY") != 0) {
+	if (memcmp(pstorage_key_head->mark, "keyexist", 8) != 0) {
 		flash_storage_size = flashsize;
 		goto storage_init_err;
 	}
-	aesfrom = prawhead->enctype;
-	/*fixme: no enc support now*/
-#if 0
-	set_encryptkeyfrom(aesfrom);
-#endif
-	version = prawhead->version;
 
-#if 1
-	ret = do_aes_internal(0,
-			pblock+STORAGE_BLOCK_RAW_HEAD_SIZE,
-			STORAGE_BLOCK_ENC_HEAD_SIZE,
-			internal_storage, (int *)&outlen);
-	if (ret) {
-		flash_storage_size = flashsize;
-		goto storage_init_err;
-	}
-#else
-	memcpy(internal_storage, pblock + STORAGE_BLOCK_RAW_HEAD_SIZE,
-					 STORAGE_BLOCK_ENC_HEAD_SIZE);
-#endif
-
-	memset(&enchead, 0, sizeof(enchead));
-	ret = Tlv_ReadHead(internal_storage, &enchead);
-	if (ret || (enchead.blocksize == 0)) {
-		flash_storage_size = flashsize;
-		goto storage_init_err;
-	}
-	if (enchead.flashsize != 0)
-		flash_storage_size = enchead.flashsize;
-	if (flash_storage_size != flashsize)
-		goto storage_init_err;
-
-	pcontent = pblock+STORAGE_BLOCK_RAW_HEAD_SIZE
-				+ STORAGE_BLOCK_ENC_HEAD_SIZE;
-	prawcontent = internal_storage + STORAGE_BLOCK_ENC_HEAD_SIZE;
-#if 1
-	ret = do_aes_internal(0, pcontent, ((enchead.blocksize+15)/16)*16,
-				prawcontent, (int *)&outlen);
-	if (ret)
-		goto storage_init_err;
-#else
-	memcpy(prawcontent, pcontent, ((enchead.blocksize+15)/16)*16);
-#endif
-	sum = enchead.blocksize;
-	while (sum > 0) {
+	/* parse each key */
+	tmp_content = (char *)&pstorage_key_head[1]; // skip storage key header
+	key_count = pstorage_key_head->item_cnt;
+	for (i = 0; i < key_count; i++) {
 		node = storage_create_empty();
 		if (node == NULL)
 			goto storage_init_err;
-		ret = Tlv_ReadObject(prawcontent, node, &outlen);
-		if (ret)
+
+		tmp_obj = (struct storage_object *)
+			&tmp_content[pstorage_key_head->item[i].position];
+		node->object.slot = tmp_obj->slot;
+		node->object.state = tmp_obj->state;
+		node->object.storage_size = tmp_obj->storage_size;
+		node->object.valid_size = tmp_obj->valid_size;
+		node->object.type1 = tmp_obj->type1;
+		node->object.checksum = tmp_obj->checksum;
+		node->object.type = tmp_obj->type;
+		node->object.attribute = tmp_obj->attribute;
+		node->object.datasize = tmp_obj->valid_size;
+		strcpy(node->object.name, tmp_obj->name);
+		node->object.namesize = strlen(node->object.name);
+
+		node->object.storage_data =
+			storage_malloc(node->object.storage_size);
+		if (node->object.storage_data == NULL)
 			goto storage_init_err;
-		ret = check_object_valid(&(node->object));
-		if (!ret)
+		node->object.dataptr = storage_malloc(node->object.valid_size);
+		if (node->object.dataptr == NULL)
+			goto storage_init_err;
+		memcpy(node->object.storage_data,
+			&tmp_content[pstorage_key_head->item[i].position+
+			sizeof(struct storage_object)],
+			node->object.storage_size);
+		memcpy(node->object.hashptr, tmp_obj->hashptr,
+			sizeof(tmp_obj->hashptr));
+
+		/* decrypt each key */
+		tmp = storage_malloc(node->object.storage_size);
+		if (tmp == NULL)
+			goto storage_init_err;
+
+		do_aes_internal(0, node->object.storage_data,
+			node->object.storage_size, tmp, &out_len);
+		memcpy(&key_hex_len, tmp, 4);
+		tmp = tmp + 4;
+
+		/* switch to ascii form */
+		/* TODO: add checksum validation(refer to key_core_show) */
+		memset(node->object.dataptr, 0x00, node->object.valid_size);
+		n = 0;
+		for (j = 0; j < node->object.valid_size>>1; j++)
+			n += sprintf(&node->object.dataptr[n], "%02x", tmp[j]);
+		if (node->object.valid_size % 2)
+			n += sprintf(&node->object.dataptr[n], "%x",
+				(tmp[j]&0xf0)>>4);
+		tmp = tmp - 4;
+		storage_free(tmp);
+
+		if (check_object_valid(&(node->object)) == 0)
 			node->status = OBJ_STATUS_VALID;
 		else
 			node->status = OBJ_STATUS_INVALID;
-		sum -= outlen;
-		prawcontent += outlen;
 	}
+
 	goto storage_init_exit;
 
 storage_init_err:
-		storage_reset();
-		free_share_storage();
-		free_internal_storage();
+	storage_reset();
+	free_share_storage();
+	free_internal_storage();
 storage_init_exit:
-		return;
+	return;
 }
 
 uint32_t get_share_storage_block_base(void)
