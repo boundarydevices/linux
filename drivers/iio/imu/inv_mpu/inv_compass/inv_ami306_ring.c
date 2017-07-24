@@ -85,7 +85,7 @@ int inv_read_ami306_fifo(struct iio_dev *indio_dev)
 						INV_AMI306_SCAN_MAGN_X);
 		if (ring->scan_timestamp)
 			tmp_buf[(d_ind + 7)/8] = st->timestamp;
-		ring->access->store_to(indio_dev->buffer, tmp, st->timestamp);
+		ring->access->store_to(indio_dev->buffer, tmp);
 	} else if (b & AMI_STA1_DOR_BIT)
 		pr_err("not ready\n");
 end_session:
