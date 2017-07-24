@@ -51,7 +51,7 @@ int inv_ami306_probe_trigger(struct iio_dev *indio_dev)
 	int ret;
 	struct inv_ami306_state_s *st = iio_priv(indio_dev);
 
-	st->trig = iio_allocate_trigger("%s-dev%d",
+	st->trig = iio_trigger_alloc("%s-dev%d",
 					indio_dev->name,
 					indio_dev->id);
 	if (st->trig == NULL) {
@@ -72,7 +72,7 @@ int inv_ami306_probe_trigger(struct iio_dev *indio_dev)
 	return 0;
 
 error_free_trig:
-	iio_free_trigger(st->trig);
+	iio_trigger_free(st->trig);
 error_ret:
 	return ret;
 }
@@ -82,7 +82,7 @@ void inv_ami306_remove_trigger(struct iio_dev *indio_dev)
 	struct inv_ami306_state_s *st = iio_priv(indio_dev);
 
 	iio_trigger_unregister(st->trig);
-	iio_free_trigger(st->trig);
+	iio_trigger_free(st->trig);
 }
 /**
  *  @}
