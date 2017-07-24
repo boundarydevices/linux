@@ -261,6 +261,59 @@ static void ffs_release_dev(struct ffs_data *ffs_data);
 static int ffs_ready(struct ffs_data *ffs);
 static void ffs_closed(struct ffs_data *ffs);
 
+#ifdef CONFIG_AMLOGIC_USB
+static int ffs_malloc_buffer(struct ffs_data *ffs)
+{
+	int i;
+
+	for (i = 0; i < FFS_BUFFER_MAX; i++) {
+		ffs->buffer[i].data_ep = kzalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
+		if (!ffs->buffer[i].data_ep)
+			return -ENOMEM;
+		ffs->buffer[i].data_state = 0;
+	}
+
+	return 0;
+}
+
+static void ffs_free_buffer(struct ffs_data *ffs)
+{
+	int i;
+
+	for (i = 0; i < FFS_BUFFER_MAX; i++) {
+		kfree(ffs->buffer[i].data_ep);
+		ffs->buffer[i].data_ep = NULL;
+		ffs->buffer[i].data_state = 0;
+	}
+}
+
+static struct ffs_data_buffer *assign_ffs_buffer(struct ffs_data *ffs)
+{
+	int i;
+
+	for (i = 0; i < FFS_BUFFER_MAX; i++) {
+		if (ffs->buffer[i].data_state == 0) {
+			ffs->buffer[i].data_state = 1;
+			return &(ffs->buffer[i]);
+		}
+	}
+
+	pr_info("assign_ffs_buffer failed!!!\n");
+	return NULL;
+}
+
+static void release_ffs_buffer(struct ffs_data *ffs,
+				struct ffs_data_buffer *buffer)
+{
+	struct ffs_data_buffer *buffer_temp = buffer;
+
+	spin_lock_irq(&ffs->eps_lock);
+	memset(buffer_temp->data_ep, 0, MAX_PAYLOAD_EPS);
+	buffer_temp->data_state = 0;
+	spin_unlock_irq(&ffs->eps_lock);
+}
+#endif
+
 /* Misc helper functions ****************************************************/
 
 static int ffs_mutex_lock(struct mutex *mutex, unsigned nonblock)
@@ -316,6 +369,9 @@ static int __ffs_ep0_queue_wait(struct ffs_data *ffs, char *data, size_t len)
 		return -EINTR;
 	}
 
+#ifdef CONFIG_AMLOGIC_USB
+	memcpy(data, ffs->data_ep0, len);
+#endif
 	ffs->setup_state = FFS_NO_SETUP;
 	return req->status ? req->status : req->actual;
 }
@@ -891,6 +947,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 	struct usb_request *req;
 #ifdef CONFIG_AMLOGIC_USB
 	struct ffs_ep *ep = epfile->ep;
+	struct ffs_data_buffer *buffer = NULL;
 #else
 	struct ffs_ep *ep;
 #endif
@@ -963,13 +1020,43 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		 */
 		if (io_data->read)
 			data_len = usb_ep_align_maybe(gadget, ep->ep, data_len);
-		spin_unlock_irq(&epfile->ffs->eps_lock);
 
+#ifndef CONFIG_AMLOGIC_USB
+		spin_unlock_irq(&epfile->ffs->eps_lock);
 		data = kmalloc(data_len, GFP_KERNEL);
 		if (unlikely(!data)) {
 			ret = -ENOMEM;
 			goto error_mutex;
 		}
+#else
+		/* Fire the request */
+		/*
+		 * Avoid kernel panic caused by race condition. For example,
+		 * 1. In the ffs_epfile_io function, data buffer is allocated
+		 * for non-halt requests and the address of this buffer is
+		 * writed to usb controller registers.
+		 * 2. After adb process be killed, data buffer is freed and
+		 * this memory is allocated for the other. But the address
+		 * is hold by the controller.
+		 * 3. Adbd in PC is running. So, the controller receive the
+		 * data and write to this memory.
+		 * 4. The value of this memory is modified by the controller.
+		 * This could cause the kernel panic.
+
+		 * To avoid this, during FunctionFS mount, we allocated the
+		 * data buffer for requests. And the memory resources has
+		 * been released in kill_sb.
+		 */
+		buffer = assign_ffs_buffer(epfile->ffs);
+		if (unlikely(!buffer)) {
+			ret = -ENOMEM;
+			spin_unlock_irq(&epfile->ffs->eps_lock);
+			goto error_mutex;
+		}
+		data = buffer->data_ep;
+		spin_unlock_irq(&epfile->ffs->eps_lock);
+#endif
+
 		if (!io_data->read &&
 		    copy_from_iter(data, data_len, &io_data->data) != data_len) {
 			ret = -EFAULT;
@@ -1007,39 +1094,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 #endif
 		bool interrupted = false;
 		req = ep->req;
-#ifdef CONFIG_AMLOGIC_USB
-		/* Fire the request */
-		/*Avoid kernel panic caused by race condition. For example,
-		* 1. In the ffs_epfile_io function, data buffer is allocated
-		* for non-halt requests and the address of this buffer is
-		* writed to usb controller registers.
-		* 2. After adb process be killed, data buffer is freed and
-		* this memory is allocated for the other. But the address
-		* is hold by the controller.
-		* 3. Adbd in PC is running. So, the controller receive the
-		* data and write to this memory.
-		* 4. The value of this memory is modified by the controller.
-		*This could cause the kernel panic.
-
-		* To avoid this, during FunctionFS mount, we allocated the
-		* data buffer for requests. And the memory resources has
-		* been released in kill_sb.
-		*/
-		if (data) {
-			if (ep->num == 0)
-				memcpy(epfile->ffs->data_ep_in, data, data_len);
-			else
-				memcpy(epfile->ffs->data_ep_out, data,
-					data_len);
-		}
-
-		if (ep->num == 0)
-			req->buf      = epfile->ffs->data_ep_in;
-		else
-			req->buf      = epfile->ffs->data_ep_out;
-#else
 		req->buf      = data;
-#endif
 		req->length   = data_len;
 
 		req->context  = &done;
@@ -1064,22 +1119,10 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 
 		if (interrupted)
 			ret = -EINTR;
-#ifdef CONFIG_AMLOGIC_USB
-		else if (io_data->read && ep->status > 0) {
-			if (ep->num == 0)
-					memcpy(data, epfile->ffs->data_ep_in,
-						 min_t(size_t, ep->status, data_len));
-				else
-					memcpy(data, epfile->ffs->data_ep_out,
-						 min_t(size_t, ep->status, data_len));
-			ret = __ffs_epfile_read_data(epfile, data, ep->status,
-						     &io_data->data);
-		}
-#else
+
 		else if (io_data->read && ep->status > 0)
 			ret = __ffs_epfile_read_data(epfile, data, ep->status,
 						     &io_data->data);
-#endif
 		else
 			ret = ep->status;
 		goto error_mutex;
@@ -1116,7 +1159,12 @@ error_lock:
 error_mutex:
 	mutex_unlock(&epfile->mutex);
 error:
+#ifdef CONFIG_AMLOGIC_USB
+	if (buffer)
+		release_ffs_buffer(epfile->ffs, buffer);
+#else
 	kfree(data);
+#endif
 	return ret;
 }
 
@@ -1566,17 +1614,14 @@ ffs_fs_mount(struct file_system_type *t, int flags,
 	}
 
 #ifdef CONFIG_AMLOGIC_USB
-	ffs->data_ep0 = kmalloc(MAX_PAYLOAD_EP0, GFP_KERNEL);
+	ffs->data_ep0 = kzalloc(MAX_PAYLOAD_EP0, GFP_KERNEL);
 	if (unlikely(!ffs->data_ep0))
 		return ERR_PTR(-ENOMEM);
 
-	ffs->data_ep_in = kmalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
-	if (unlikely(!ffs->data_ep_in))
-		return ERR_PTR(-ENOMEM);
+	ret = ffs_malloc_buffer(ffs);
+	if (ret < 0)
+		return ERR_PTR(ret);
 
-	ffs->data_ep_out = kmalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
-	if (unlikely(!ffs->data_ep_out))
-		return ERR_PTR(-ENOMEM);
 #endif
 	ffs_dev = ffs_acquire_dev(dev_name);
 	if (IS_ERR(ffs_dev)) {
@@ -1608,10 +1653,7 @@ ffs_fs_kill_sb(struct super_block *sb)
 #ifdef CONFIG_AMLOGIC_USB
 		kfree(ffs->data_ep0);
 		ffs->data_ep0 = NULL;
-		kfree(ffs->data_ep_in);
-		ffs->data_ep_in = NULL;
-		kfree(ffs->data_ep_out);
-		ffs->data_ep_out = NULL;
+		ffs_free_buffer(ffs);
 #endif
 		ffs_release_dev(sb->s_fs_info);
 		ffs_data_closed(sb->s_fs_info);
