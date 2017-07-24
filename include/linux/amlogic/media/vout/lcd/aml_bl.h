@@ -95,10 +95,17 @@ struct bl_gpio_s {
 	int flag;
 };
 
+struct pwm_data_s {
+	unsigned int meson_index;
+	unsigned int port_index;
+	struct pwm_state state;
+	struct pwm_device *pwm;
+	struct meson_pwm *meson;
+};
+
 struct bl_pwm_config_s {
 	unsigned int index;
-	struct pwm_device *bl_pwm_ch;
-	struct meson_pwm *meson;
+	struct pwm_data_s pwm_data;
 	enum bl_pwm_method_e pwm_method;
 	enum bl_pwm_port_e pwm_port;
 	unsigned int level_max;

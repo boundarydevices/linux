@@ -113,7 +113,7 @@
 	backlight{
 		compatible = "amlogic, backlight";
 		dev_name = "backlight";
-		status = "disabled";
+		status = "okay";
 		key_valid = <0>;
 		pinctrl-names = "pwm_on";
 		pinctrl-0 = <&bl_pwm_on_pins>;
@@ -125,6 +125,7 @@
 		bl-gpios = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH
 			&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
 		bl_gpio_names = "GPIOZ_4","GPIOZ_5";
+		bl_pwm_config = <&bl_pwm_conf>;
 
 		backlight_0{
 			index = <0>;
@@ -153,6 +154,13 @@
 				 * pwm_on_delay(ms), pwm_off_delay(ms)
 				 */
 			bl_pwm_power = <0 0 10 10>;
+		};
+	};
+
+	bl_pwm_conf:bl_pwm_conf{
+		pwm_channel_0 {
+			pwm_port_index = <1>;
+			pwms = <&pwm_ab MESON_PWM_1 30040 0>;
 		};
 	};
 };/* end of panel */

@@ -172,7 +172,7 @@ static inline int pwm_constant_enable
 }
 
 static inline int pwm_constant_disable
-				(struct aml_pwm_chip *chip, int index)
+				(struct meson_pwm *meson, int index)
 {
 	return -EINVAL;
 }

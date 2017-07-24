@@ -371,30 +371,6 @@ static void bl_pwm_pinmux_set(struct bl_config_s *bconf)
 	}
 }
 
-static void bl_pwm_request(struct bl_pwm_config_s *bl_pwm)
-{
-	unsigned int pwm_num = bl_pwm->pwm_port;
-
-	switch (bl_pwm->pwm_port) {
-	case BL_PWM_A:
-	case BL_PWM_B:
-	case BL_PWM_C:
-	case BL_PWM_D:
-	case BL_PWM_E:
-	case BL_PWM_F:
-		bl_pwm->bl_pwm_ch = pwm_request(pwm_num, NULL);
-		if (IS_ERR(bl_pwm->bl_pwm_ch)) {
-			BLERR("request pwm %d failed\n", bl_pwm->pwm_port);
-			return;
-		}
-
-		bl_pwm->meson = to_meson_pwm(bl_pwm->bl_pwm_ch->chip);
-		pwm_enable(bl_pwm->bl_pwm_ch);
-		break;
-	default:
-		break;
-	}
-}
 /* ****************************************************** */
 
 static int bl_pwm_out_level_check(struct bl_pwm_config_s *bl_pwm)
@@ -452,6 +428,8 @@ static void bl_set_pwm_vs(struct bl_pwm_config_s *bl_pwm, int out_level)
 	} else {
 		if (bl_pwm->pwm_method == BL_PWM_NEGATIVE)
 			pol = 1;
+		bl_pwm->pwm_level =
+		(((bl_pwm->pwm_cnt * bl_pwm->pwm_duty / 10) + 5) / 10);
 		pwm_hi = bl_pwm->pwm_level;
 		n = bl_pwm->pwm_freq;
 		sw = (bl_pwm->pwm_cnt * 10 / n + 5) / 10;
@@ -490,9 +468,74 @@ static void bl_set_pwm_vs(struct bl_pwm_config_s *bl_pwm, int out_level)
 	}
 }
 
+static void bl_set_pwm(struct bl_pwm_config_s *bl_pwm)
+{
+	unsigned int port = bl_pwm->pwm_port;
+	unsigned int pol = 0;
+	unsigned int pwm_period, pwm_duty, out_level = 0xff;
+	struct pwm_device *pwm = bl_pwm->pwm_data.pwm;
+
+	out_level = bl_pwm_out_level_check(bl_pwm);
+	if (bl_pwm->pwm_method == BL_PWM_NEGATIVE)
+		pol = 1;
+	if (bl_debug_print_flag) {
+		BLPR("port %d: pwm_duty=%d, out_level=%d, pol=%s\n",
+			port, bl_pwm->pwm_duty, out_level,
+			(pol ? "negative":"positive"));
+	}
+
+	switch (port) {
+	case BL_PWM_A:
+	case BL_PWM_B:
+	case BL_PWM_C:
+	case BL_PWM_D:
+	case BL_PWM_E:
+	case BL_PWM_F:
+		pwm_period = 1000000000 / bl_pwm->pwm_freq;
+		pwm_duty = (pwm_period * bl_pwm->pwm_duty) / 100;
+		if ((!IS_ERR(bl_pwm->pwm_data.pwm)) &&
+			((bl_pwm->pwm_data.port_index % 2) ==
+			bl_pwm->pwm_data.meson_index) &&
+			(bl_pwm->pwm_data.port_index ==
+			bl_pwm->pwm_port)) {
+			bl_pwm->pwm_data.state.polarity = pol;
+			bl_pwm->pwm_data.state.duty_cycle = pwm_duty;
+			bl_pwm->pwm_data.state.period = pwm_period;
+			bl_pwm->pwm_data.state.enabled = true;
+			if (bl_debug_print_flag) {
+				BLPR("polarity=%d\n",
+					bl_pwm->pwm_data.state.polarity);
+				BLPR("duty_cycle=%d\n",
+					bl_pwm->pwm_data.state.duty_cycle);
+				BLPR("period=%d\n",
+					bl_pwm->pwm_data.state.period);
+				BLPR("enabled=%d\n",
+					bl_pwm->pwm_data.state.enabled);
+				}
+			if (out_level == 0xff) {
+				pwm_constant_disable(bl_pwm->pwm_data.meson,
+					bl_pwm->pwm_data.meson_index);
+			} else {
+				/* pwm duty 100% or 0% special control */
+				pwm_constant_enable(bl_pwm->pwm_data.meson,
+					bl_pwm->pwm_data.meson_index);
+			}
+			pwm_apply_state(pwm, &(bl_pwm->pwm_data.state));
+		} else {
+			BLERR("%s: invalid bl_pwm_ch\n", __func__);
+		}
+		break;
+	case BL_PWM_VS:
+		bl_set_pwm_vs(bl_pwm, out_level);
+		break;
+	default:
+		break;
+	}
+}
+
 void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status)
 {
-	int out_level;
+	struct pwm_state pstate;
 
 	if (status) {
 		/* enable pwm */
@@ -503,14 +546,8 @@ void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status)
 		case BL_PWM_D:
 		case BL_PWM_E:
 		case BL_PWM_F:
-			if (!IS_ERR(bl_pwm->bl_pwm_ch))
-				pwm_enable(bl_pwm->bl_pwm_ch);
-			else
-				BLERR("%s: invalid bl_pwm_ch\n", __func__);
-			break;
 		case BL_PWM_VS:
-			out_level = bl_pwm_out_level_check(bl_pwm);
-			bl_set_pwm_vs(bl_pwm, out_level);
+			bl_set_pwm(bl_pwm);
 			break;
 		default:
 			break;
@@ -524,13 +561,36 @@ void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status)
 		case BL_PWM_D:
 		case BL_PWM_E:
 		case BL_PWM_F:
-			if (!IS_ERR(bl_pwm->bl_pwm_ch))
-				pwm_disable(bl_pwm->bl_pwm_ch);
-			else
-				BLERR("%s: invalid bl_pwm_ch\n", __func__);
+			if (!IS_ERR(bl_pwm->pwm_data.pwm)) {
+				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
+				pwm_constant_enable(bl_pwm->pwm_data.meson,
+					bl_pwm->pwm_data.meson_index);
+				if (bl_pwm->pwm_method)
+					pstate.polarity = 0;
+				else
+					pstate.polarity = 1;
+				pstate.duty_cycle = 0;
+				pstate.enabled = 1;
+				pstate.period = bl_pwm->pwm_data.state.period;
+				if (bl_debug_print_flag) {
+					BLPR("polarity=%d\n",
+						pstate.polarity);
+					BLPR("duty_cycle=%d\n",
+						pstate.duty_cycle);
+					BLPR("period=%d\n",
+						pstate.period);
+					BLPR("enabled=%d\n",
+						pstate.enabled);
+					}
+				pwm_apply_state(bl_pwm->pwm_data.pwm,
+					&(pstate));
+				}
 			break;
 		case BL_PWM_VS:
-			bl_set_pwm_vs(bl_pwm, 0);
+			if (bl_pwm->pwm_method == BL_PWM_NEGATIVE)
+				bl_set_pwm_vs(bl_pwm, 1);
+			else
+				bl_set_pwm_vs(bl_pwm, 0);
 		default:
 			break;
 		}
@@ -766,53 +826,6 @@ static unsigned int bl_level_mapping(unsigned int level)
 	return level;
 }
 
-static void bl_set_pwm(struct bl_pwm_config_s *bl_pwm)
-{
-	unsigned int port = bl_pwm->pwm_port;
-	unsigned int pol = 0;
-	unsigned int pwm_period, pwm_duty, out_level = 0xff;
-
-	out_level = bl_pwm_out_level_check(bl_pwm);
-	if (bl_pwm->pwm_method == BL_PWM_NEGATIVE)
-		pol = 1;
-	if (bl_debug_print_flag) {
-		BLPR("port %d: pwm_duty=%d, out_level=%d, pol=%s\n",
-			port, bl_pwm->pwm_duty, out_level,
-			(pol ? "negative":"positive"));
-	}
-
-	switch (port) {
-	case BL_PWM_A:
-	case BL_PWM_B:
-	case BL_PWM_C:
-	case BL_PWM_D:
-	case BL_PWM_E:
-	case BL_PWM_F:
-		pwm_period = 1000000000 / bl_pwm->pwm_freq;
-		pwm_duty = (pwm_period * bl_pwm->pwm_duty) / 100;
-		if (!IS_ERR(bl_pwm->bl_pwm_ch)) {
-			pwm_set_period(bl_pwm->bl_pwm_ch, pwm_period);
-			pwm_config(bl_pwm->bl_pwm_ch, pwm_duty, pwm_period);
-			pwm_set_polarity(bl_pwm->bl_pwm_ch, pol);
-			if (out_level == 0xff) {
-				pwm_constant_disable(bl_pwm->meson,
-					bl_pwm->pwm_port);
-			} else {
-				/* pwm duty 100% or 0% special control */
-				pwm_constant_enable(bl_pwm->meson,
-					bl_pwm->pwm_port);
-			}
-		} else {
-			BLERR("%s: invalid bl_pwm_ch\n", __func__);
-		}
-		break;
-	case BL_PWM_VS:
-		bl_set_pwm_vs(bl_pwm, out_level);
-		break;
-	default:
-		break;
-	}
-}
 
 static void bl_set_duty_pwm(struct bl_pwm_config_s *bl_pwm)
 {
@@ -840,10 +853,8 @@ static void bl_set_duty_pwm(struct bl_pwm_config_s *bl_pwm)
 		}
 	}
 
-	bl_pwm->pwm_level =
-		(((bl_pwm->pwm_cnt * bl_pwm->pwm_duty / 10) + 5) / 10);
 	if (bl_debug_print_flag) {
-		BLPR("pwm port %d: duty=%d%%, duty_max=%d, duty_min=%d\n",
+		BLPR("pwm port %d: duty=%d%%, duty_max=%d%%, duty_min=%d%%\n",
 			bl_pwm->pwm_port, bl_pwm->pwm_duty,
 			bl_pwm->pwm_duty_max, bl_pwm->pwm_duty_min);
 	}
@@ -854,8 +865,8 @@ static void bl_set_level_pwm(struct bl_pwm_config_s *bl_pwm, unsigned int level)
 {
 	unsigned int min = bl_pwm->level_min;
 	unsigned int max = bl_pwm->level_max;
-	unsigned int pwm_max = bl_pwm->pwm_max;
-	unsigned int pwm_min = bl_pwm->pwm_min;
+	unsigned int pwm_max = bl_pwm->pwm_duty_max;
+	unsigned int pwm_min = bl_pwm->pwm_duty_min;
 
 	if (bl_pwm_bypass)
 		return;
@@ -864,21 +875,17 @@ static void bl_set_level_pwm(struct bl_pwm_config_s *bl_pwm, unsigned int level)
 	max = bl_level_mapping(max);
 	min = bl_level_mapping(min);
 	if ((max <= min) || (level < min)) {
-		bl_pwm->pwm_level = pwm_min;
+		bl_pwm->pwm_duty = pwm_min;
 	} else {
-		bl_pwm->pwm_level = ((pwm_max - pwm_min) * (level - min) /
-			(max - min)) + pwm_min;
+		bl_pwm->pwm_duty = ((pwm_max - pwm_min) * (level - min) *
+			10 / (max - min) + 5) / 10 + pwm_min;
 	}
 
-	bl_pwm->pwm_duty =
-		(((bl_pwm->pwm_level * 1000 / bl_pwm->pwm_cnt) + 5) / 10);
 	if (bl_debug_print_flag) {
 		BLPR("port %d mapping: level=%d, level_max=%d, level_min=%d\n",
 			bl_pwm->pwm_port, level, max, min);
-		BLPR("port %d: pwm_max=%d, pwm_min=%d, pwm_level=%d\n",
+		BLPR("port %d: duty=%d%%, duty_max=%d%%, duty_min=%d%%\n",
 			bl_pwm->pwm_port, pwm_max, pwm_min, bl_pwm->pwm_level);
-		BLPR("port %d: duty=%d%%\n",
-			bl_pwm->pwm_port, bl_pwm->pwm_duty);
 	}
 
 	bl_set_pwm(bl_pwm);
@@ -1082,41 +1089,29 @@ enum bl_pwm_port_e bl_pwm_str_to_pwm(const char *str)
 
 void bl_pwm_config_init(struct bl_pwm_config_s *bl_pwm)
 {
-	unsigned int freq, cnt, pre_div;
-	int i;
+	unsigned int cnt;
 
 	if (bl_debug_print_flag) {
 		BLPR("%s pwm_port %d: freq = %u\n",
 			__func__, bl_pwm->pwm_port, bl_pwm->pwm_freq);
 	}
-	freq = bl_pwm->pwm_freq;
+
 	switch (bl_pwm->pwm_port) {
 	case BL_PWM_VS:
 		cnt = bl_vcbus_read(ENCL_VIDEO_MAX_LNCNT) + 1;
 		bl_pwm->pwm_cnt = cnt;
-		bl_pwm->pwm_pre_div = 0;
+		bl_pwm->pwm_max = (bl_pwm->pwm_cnt *
+			bl_pwm->pwm_duty_max / 100);
+		bl_pwm->pwm_min = (bl_pwm->pwm_cnt *
+			bl_pwm->pwm_duty_min / 100);
 		if (bl_debug_print_flag)
-			BLPR("pwm_cnt = %u\n", bl_pwm->pwm_cnt);
+			BLPR("pwm_cnt = %u, pwm_max = %u, pwm_min = %u\n",
+				bl_pwm->pwm_cnt,
+				bl_pwm->pwm_max,
+				bl_pwm->pwm_min);
 		break;
 	default:
-		for (i = 0; i < 0x7f; i++) {
-			pre_div = i;
-			cnt = XTAL_FREQ_HZ / (freq * (pre_div + 1)) - 2;
-			if (cnt <= 0xffff)
-				break;
-		}
-		bl_pwm->pwm_cnt = cnt;
-		bl_pwm->pwm_pre_div = pre_div;
-		if (bl_debug_print_flag)
-			BLPR("pwm_cnt = %u, pwm_pre_div = %u\n", cnt, pre_div);
 		break;
-	}
-	bl_pwm->pwm_max = (bl_pwm->pwm_cnt * bl_pwm->pwm_duty_max / 100);
-	bl_pwm->pwm_min = (bl_pwm->pwm_cnt * bl_pwm->pwm_duty_min / 100);
-
-	if (bl_debug_print_flag) {
-		BLPR("pwm_max = %u, pwm_min = %u\n",
-			bl_pwm->pwm_max, bl_pwm->pwm_min);
 	}
 }
 
@@ -1784,6 +1779,84 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 	return 0;
 }
 
+static int pwm_channel_conf(struct bl_config_s *bconf,
+		struct platform_device *pdev)
+{
+	int ret = 0;
+	int index0 = BL_PWM_MAX;
+	int index1 = BL_PWM_MAX;
+	phandle pwm_phandle;
+	struct device_node *blnode = pdev->dev.of_node;
+	struct device_node *pnode = NULL;
+	struct device_node *child;
+	struct bl_pwm_config_s *bl_pwm = NULL;
+
+	ret = of_property_read_u32(blnode, "bl_pwm_config", &pwm_phandle);
+	if (ret) {
+		BLERR("not match bl_pwm_config node\n");
+	} else {
+		pnode = of_find_node_by_phandle(pwm_phandle);
+		if (!pnode) {
+			BLERR("can't find bl_pwm_config node\n");
+			return -1;
+		}
+	}
+
+	/*request for pwm device */
+	for_each_child_of_node(pnode, child) {
+		ret = of_property_read_u32(child, "pwm_port_index", &index0);
+		if (ret) {
+			BLERR("invalid %d pwm_port_index parameters\n", index0);
+			return ret;
+		}
+		ret = of_property_read_u32_index(child, "pwms", 1, &index1);
+		if (ret) {
+			BLERR("invalid %d meson_pwm_index\n", index1);
+			return ret;
+			}
+
+		if (index0 >= BL_PWM_VS)
+			continue;
+
+		switch (bconf->method) {
+		case BL_CTRL_PWM:
+			if ((index0 == bconf->bl_pwm->pwm_port) &&
+				((index0 % 2) == index1))
+				bl_pwm = bconf->bl_pwm;
+			break;
+		case BL_CTRL_PWM_COMBO:
+			if ((index0 == bconf->bl_pwm_combo0->pwm_port) &&
+				((index0 % 2) == index1))
+				bl_pwm = bconf->bl_pwm_combo0;
+			if ((index0 == bconf->bl_pwm_combo1->pwm_port) &&
+				((index0 % 2) == index1))
+				bl_pwm = bconf->bl_pwm_combo1;
+			break;
+		default:
+			break;
+			}
+		if (bl_pwm == NULL)
+			continue;
+		bl_pwm->pwm_data.port_index = index0;
+		bl_pwm->pwm_data.meson_index = index1;
+		bl_pwm->pwm_data.pwm = devm_of_pwm_get(
+			bl_drv->dev, child, NULL);
+		if (IS_ERR(bl_pwm->pwm_data.pwm)) {
+			ret = PTR_ERR(bl_pwm->pwm_data.pwm);
+			BLERR("unable to request bl_pwm\n");
+			return ret;
+		}
+		bl_pwm->pwm_data.meson = to_meson_pwm(
+			bl_pwm->pwm_data.pwm->chip);
+		pwm_init_state(bl_pwm->pwm_data.pwm, &(bl_pwm->pwm_data.state));
+	}
+
+	BLPR(" bl pwm config ok\n");
+
+	return ret;
+
+}
+
 static int aml_bl_config_load(struct bl_config_s *bconf,
 		struct platform_device *pdev)
 {
@@ -1826,12 +1899,8 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 
 	switch (bconf->method) {
 	case BL_CTRL_PWM:
-		bl_pwm_request(bconf->bl_pwm);
-		bl_pwm_pinmux_set(bconf);
-		break;
 	case BL_CTRL_PWM_COMBO:
-		bl_pwm_request(bconf->bl_pwm_combo0);
-		bl_pwm_request(bconf->bl_pwm_combo1);
+		ret = pwm_channel_conf(bconf, pdev);
 		bl_pwm_pinmux_set(bconf);
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
@@ -2168,6 +2237,7 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 {
 	struct bl_config_s *bconf = bl_drv->bconf;
 	struct bl_pwm_config_s *bl_pwm;
+	struct pwm_state pstate;
 	unsigned int value;
 	ssize_t len = 0;
 
@@ -2200,6 +2270,16 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 			case BL_PWM_D:
 			case BL_PWM_E:
 			case BL_PWM_F:
+				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
+				len += sprintf(buf+len,
+					"\n"
+					"pwm state:\n"
+					"period:             %d\n"
+					"duty_cycle:         %d\n"
+					"polarity:           %d\n"
+					"enabled:            %d\n",
+					pstate.period, pstate.duty_cycle,
+					pstate.polarity, pstate.enabled);
 				value = bl_cbus_read(pwm_reg[bl_pwm->pwm_port]);
 				len += sprintf(buf+len,
 					"pwm_reg:            0x%08x\n",
@@ -2248,6 +2328,16 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 			case BL_PWM_D:
 			case BL_PWM_E:
 			case BL_PWM_F:
+				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
+				len += sprintf(buf+len,
+					"\n"
+					"pwm state:\n"
+					"period:             %d\n"
+					"duty_cycle:         %d\n"
+					"polarity:           %d\n"
+					"enabled:            %d\n",
+					pstate.period, pstate.duty_cycle,
+					pstate.polarity, pstate.enabled);
 				value = bl_cbus_read(pwm_reg[bl_pwm->pwm_port]);
 				len += sprintf(buf+len,
 					"pwm_0_reg:          0x%08x\n",
@@ -2290,6 +2380,16 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 			case BL_PWM_D:
 			case BL_PWM_E:
 			case BL_PWM_F:
+				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
+				len += sprintf(buf+len,
+					"\n"
+					"pwm state:\n"
+					"period:             %d\n"
+					"duty_cycle:         %d\n"
+					"polarity:           %d\n"
+					"enabled:            %d\n",
+					pstate.period, pstate.duty_cycle,
+					pstate.polarity, pstate.enabled);
 				value = bl_cbus_read(pwm_reg[bl_pwm->pwm_port]);
 				len += sprintf(buf+len,
 					"pwm_1_reg:          0x%08x\n",
