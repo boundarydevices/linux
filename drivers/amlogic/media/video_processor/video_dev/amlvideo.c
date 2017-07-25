@@ -404,8 +404,11 @@ static int vidioc_querycap(struct file *file, void *priv,
 	strcpy(cap->card, "amlvideo");
 	strlcpy(cap->bus_info, dev->v4l2_dev.name, sizeof(cap->bus_info));
 	cap->version = AMLVIDEO_VERSION;
-	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING
-				| V4L2_CAP_READWRITE;
+	cap->device_caps = V4L2_CAP_VIDEO_CAPTURE;
+	cap->capabilities = cap->device_caps
+		| V4L2_CAP_DEVICE_CAPS
+		| V4L2_CAP_STREAMING
+		| V4L2_CAP_READWRITE;
 	return 0;
 }
 
