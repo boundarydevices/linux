@@ -731,6 +731,9 @@
 	status = "okay";
 
 	i2cmux@70 {
+		clocks = <&fp_mclk>;
+		clock-names = "fp_mclk";
+
 		compatible = "pca9546";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_pca9546>;
