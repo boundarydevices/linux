@@ -2312,6 +2312,63 @@ static int lpuart_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM_SLEEP
+static void serial_lpuart_enable_wakeup(struct lpuart_port *sport, bool on)
+{
+	unsigned int val;
+
+	if (sport->lpuart32) {
+		val = lpuart32_read(sport->port.membase + UARTCTRL);
+		if (on)
+			val |= (UARTCTRL_RIE | UARTCTRL_ILIE);
+		else
+			val &= ~(UARTCTRL_RIE | UARTCTRL_ILIE);
+		lpuart32_write(val, sport->port.membase + UARTCTRL);
+	} else {
+		val = readb(sport->port.membase + UARTCR2);
+		if (on)
+			val |= UARTCR2_RIE;
+		else
+			val &= ~UARTCR2_RIE;
+		writeb(val, sport->port.membase + UARTCR2);
+	}
+}
+
+static int lpuart_suspend_noirq(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct lpuart_port *sport = platform_get_drvdata(pdev);
+
+	serial_lpuart_enable_wakeup(sport, true);
+
+	clk_disable(sport->ipg_clk);
+	pinctrl_pm_select_sleep_state(dev);
+
+	return 0;
+}
+
+static int lpuart_resume_noirq(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct lpuart_port *sport = platform_get_drvdata(pdev);
+	unsigned int val;
+	int ret;
+
+	pinctrl_pm_select_default_state(dev);
+	ret = clk_enable(sport->ipg_clk);
+	if (ret)
+		return ret;
+
+	serial_lpuart_enable_wakeup(sport, false);
+
+	/* clear the wakeup flags */
+	if (sport->lpuart32) {
+		val = lpuart32_read(sport->port.membase + UARTSTAT);
+		lpuart32_write(val, sport->port.membase + UARTSTAT);
+	}
+
+	return 0;
+}
+
 static int lpuart_suspend(struct device *dev)
 {
 	struct lpuart_port *sport = dev_get_drvdata(dev);
@@ -2329,17 +2386,11 @@ static int lpuart_suspend(struct device *dev)
 		/* disable Rx/Tx and interrupts */
 		temp = lpuart32_read(sport->port.membase + UARTCTRL);
 		temp &= ~(UARTCTRL_TE | UARTCTRL_TIE | UARTCTRL_TCIE);
-		if (!console_suspend_enabled && uart_console(&sport->port) &&
-			!sport->port.irq_wake)
-			temp &= ~(UARTCTRL_RIE | UARTCTRL_ILIE);
 		lpuart32_write(temp, sport->port.membase + UARTCTRL);
 	} else {
 		/* disable Rx/Tx and interrupts */
 		temp = readb(sport->port.membase + UARTCR2);
 		temp &= ~(UARTCR2_TE | UARTCR2_TIE | UARTCR2_TCIE);
-		if (!console_suspend_enabled && uart_console(&sport->port) &&
-			!sport->port.irq_wake)
-			temp &= ~UARTCR2_RIE;
 		writeb(temp, sport->port.membase + UARTCR2);
 	}
 
@@ -2367,9 +2418,6 @@ static int lpuart_suspend(struct device *dev)
 		sport->dma_tx_in_progress = false;
 		dmaengine_terminate_all(sport->dma_tx_chan);
 	}
-
-	clk_disable_unprepare(sport->ipg_clk);
-	pinctrl_pm_select_sleep_state(dev);
 
 	return 0;
 }
@@ -2482,9 +2530,6 @@ static int lpuart_resume(struct device *dev)
 {
 	struct lpuart_port *sport = dev_get_drvdata(dev);
 
-	pinctrl_pm_select_default_state(dev);
-	clk_prepare_enable(sport->ipg_clk);
-
 	if (sport->lpuart32)
 		lpuart32_resume_init(sport);
 	else
@@ -2496,9 +2541,19 @@ static int lpuart_resume(struct device *dev)
 
 	return 0;
 }
-#endif
 
-static SIMPLE_DEV_PM_OPS(lpuart_pm_ops, lpuart_suspend, lpuart_resume);
+static const struct dev_pm_ops lpuart_pm_ops = {
+	.suspend_noirq = lpuart_suspend_noirq,
+	.resume_noirq = lpuart_resume_noirq,
+	.suspend = lpuart_suspend,
+	.resume = lpuart_resume,
+};
+#define SERIAL_LPUART_PM_OPS	(&lpuart_pm_ops)
+
+#else /* !CONFIG_PM_SLEEP */
+
+#define SERIAL_LPUART_PM_OPS	NULL
+#endif /* CONFIG_PM_SLEEP */
 
 static struct platform_driver lpuart_driver = {
 	.probe		= lpuart_probe,
@@ -2506,7 +2561,7 @@ static struct platform_driver lpuart_driver = {
 	.driver		= {
 		.name	= "fsl-lpuart",
 		.of_match_table = lpuart_dt_ids,
-		.pm	= &lpuart_pm_ops,
+		.pm	= SERIAL_LPUART_PM_OPS,
 	},
 };
 
