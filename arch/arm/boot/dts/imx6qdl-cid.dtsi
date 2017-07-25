@@ -781,6 +781,33 @@
 };
 
 &i2c1b {
+#if 1
+	mpu9250@69 {
+		compatible = "invensense,mpu9250";
+		interrupts-extended = GPIRQ_MPU9250_INT;
+		mount-matrix =	"-1",		/* x0 */
+				"0",		/* y0 */
+				"0",		/* z0 */
+				"0",		/* x1 */
+				"1",		/* y1 */
+				"0",		/* z1 */
+				"0",		/* x2 */
+				"0",		/* y2 */
+				"1";		/* z2 */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_mpu9250>;
+		reg = <0x69>;
+
+		i2c-gate {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			ax8975@c {
+				compatible = "ak,ak8975";
+				reg = <0x0c>;
+			};
+		};
+	};
+#else
 	mpu9250@69 {
 		/* TODO */
 		compatible = "invn,mpu9250";
@@ -807,6 +834,7 @@
 		inven,secondary_negate_z = <0>;
 		interrupts-extended = GPIRQ_MPU9250_INT;
 	};
+#endif
 };
 
 &i2c1c {
