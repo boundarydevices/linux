@@ -19,6 +19,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "mesongxl.dtsi"
+#include "meson_drm.dtsi"
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxl_p231_2g";
