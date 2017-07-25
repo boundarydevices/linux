@@ -185,20 +185,6 @@ err_skb_alloc:
 }
 EXPORT_SYMBOL(bcmdhd_init_wlan_mem);
 #endif /* CONFIG_BROADCOM_WIFI_RESERVED_MEM */
-#if 0
-static int __init bcmdhd_wlan_init(void)
-{
-	pr_info("%s()\n", __func__);
-
-#ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
-	bcmdhd_init_wlan_mem();
-#endif
-
-	return 0;
-}
-
-device_initcall(bcmdhd_wlan_init);
-#endif
-MODULE_DESCRIPTION("Amlogic S912/wifi driver");
-MODULE_AUTHOR("Kevin Hilman <khilman@baylibre.com>");
-MODULE_LICENSE("GPL")
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("AMLOGIC");
+MODULE_DESCRIPTION("wifi device tree driver");

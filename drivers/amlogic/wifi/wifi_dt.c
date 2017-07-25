@@ -16,9 +16,7 @@
  */
 
 #include <linux/amlogic/wifi_dt.h>
-#ifdef CONFIG_BCMDHD_USE_STATIC_BUF
 #include <linux/amlogic/dhd_buf.h>
-#endif
 
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -609,13 +607,11 @@ static int wifi_dev_probe(struct platform_device *pdev)
 			aml_write_cbus(0x21b2, pwm_misc);
 			aml_write_cbus(0x21b2, (pwm_misc | (1 << 0)));
 		}
-#ifdef CONFIG_BCMDHD_USE_STATIC_BUF
 		if (of_get_property(pdev->dev.of_node,
 			"dhd_static_buf", NULL)) {
 			WIFI_INFO("dhd_static_buf setup\n");
 			bcmdhd_init_wlan_mem();
 		}
-#endif
 
 		plat->plat_info_valid = 1;
 
