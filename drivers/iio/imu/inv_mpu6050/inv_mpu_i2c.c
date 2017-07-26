@@ -53,15 +53,14 @@ static int inv_mpu6050_write_reg_unlocked(struct i2c_client *client,
 
 static int inv_mpu6050_select_bypass(struct i2c_mux_core *muxc, u32 chan_id)
 {
-	struct i2c_client *client = i2c_mux_priv(muxc);
-	struct iio_dev *indio_dev = dev_get_drvdata(&client->dev);
+	struct iio_dev *indio_dev = i2c_mux_priv(muxc);
 	struct inv_mpu6050_state *st = iio_priv(indio_dev);
 	int ret = 0;
 
 	/* Use the same mutex which was used everywhere to protect power-op */
 	mutex_lock(&indio_dev->mlock);
 	if (!st->powerup_count) {
-		ret = inv_mpu6050_write_reg_unlocked(client,
+		ret = inv_mpu6050_write_reg_unlocked(st->client,
 						     st->reg->pwr_mgmt_1, 0);
 		if (ret)
 			goto write_error;
@@ -71,7 +70,7 @@ static int inv_mpu6050_select_bypass(struct i2c_mux_core *muxc, u32 chan_id)
 	}
 	if (!ret) {
 		st->powerup_count++;
-		ret = inv_mpu6050_write_reg_unlocked(client,
+		ret = inv_mpu6050_write_reg_unlocked(st->client,
 						     st->reg->int_pin_cfg,
 						     INV_MPU6050_INT_PIN_CFG |
 						     INV_MPU6050_BIT_BYPASS_EN);
@@ -84,17 +83,16 @@ write_error:
 
 static int inv_mpu6050_deselect_bypass(struct i2c_mux_core *muxc, u32 chan_id)
 {
-	struct i2c_client *client = i2c_mux_priv(muxc);
-	struct iio_dev *indio_dev = dev_get_drvdata(&client->dev);
+	struct iio_dev *indio_dev = i2c_mux_priv(muxc);
 	struct inv_mpu6050_state *st = iio_priv(indio_dev);
 
 	mutex_lock(&indio_dev->mlock);
 	/* It doesn't really mattter, if any of the calls fails */
-	inv_mpu6050_write_reg_unlocked(client, st->reg->int_pin_cfg,
+	inv_mpu6050_write_reg_unlocked(st->client, st->reg->int_pin_cfg,
 				       INV_MPU6050_INT_PIN_CFG);
 	st->powerup_count--;
 	if (!st->powerup_count)
-		inv_mpu6050_write_reg_unlocked(client, st->reg->pwr_mgmt_1,
+		inv_mpu6050_write_reg_unlocked(st->client, st->reg->pwr_mgmt_1,
 					       INV_MPU6050_BIT_SLEEP);
 	mutex_unlock(&indio_dev->mlock);
 
@@ -157,6 +155,8 @@ static int inv_mpu_probe(struct i2c_client *client,
 		return result;
 
 	st = iio_priv(dev_get_drvdata(&client->dev));
+	st->client = client;
+
 	st->muxc = i2c_mux_alloc(client->adapter, &client->dev,
 				 1, 0, 0,
 				 inv_mpu6050_select_bypass,
