@@ -155,10 +155,6 @@
 			MX6QDL_PAD_EIM_RW__GPIO2_IO26			0x0b0b0
 #define GP_FP_LE_EN		<&gpio2 25 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_OE__GPIO2_IO25			0x0b0b0
-#define GP_FP_LE_5V_EN		<&gpio2 24 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_CS1__GPIO2_IO24			0x0b0b0
-#define GP_FP_CSI_3P3V_EN	<&gpio2 23 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_CS0__GPIO2_IO23			0x0b0b0
 		>;
 	};
 
@@ -307,6 +303,20 @@
 		fsl,pins = <
 #define GP_REG_2P8V_EN	<&gpio3 9 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x030b0
+		>;
+	};
+
+	pinctrl_reg_csi_3p3v: reg-csi-3p3grp {
+		fsl,pins = <
+#define GP_REG_CSI_3P3V_EN	<&gpio2 23 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x030b0
+		>;
+	};
+
+	pinctrl_reg_csi_5v: reg-csi-5vgrp {
+		fsl,pins = <
+#define GP_REG_CSI_5V_EN	<&gpio2 24 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_CS1__GPIO2_IO24		0x030b0
 		>;
 	};
 
@@ -586,23 +596,47 @@
 			regulator-always-on;
 		};
 
-		reg_usbotg_vbus: regulator@4 {
+		reg_csi_3p3v: regulator@4 {
+			compatible = "regulator-fixed";
+			enable-active-high;
+			gpio = GP_REG_CSI_3P3V_EN;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_csi_3p3v>;
+			reg = <4>;
+			regulator-name = "csi_3p3vbus";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		reg_csi_5v: regulator@5 {
+			compatible = "regulator-fixed";
+			enable-active-high;
+			gpio = GP_REG_CSI_5V_EN;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_csi_5v>;
+			reg = <5>;
+			regulator-name = "csi_5vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
+
+		reg_usbotg_vbus: regulator@6 {
 			compatible = "regulator-fixed";
 			enable-active-high;
 			gpio = GP_REG_USBOTG;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
-			reg = <4>;
+			reg = <6>;
 			regulator-name = "usb_otg_vbus";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 		};
 
-		reg_wlan_en: regulator@5 {
+		reg_wlan_en: regulator@7 {
 			compatible = "regulator-fixed";
 			enable-active-high;
 			gpio = GP_REG_WLAN_EN;
-			reg = <5>;
+			reg = <7>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_wlan_en>;
 			regulator-name = "wlan-en";
@@ -810,13 +844,20 @@
 };
 
 &i2c1c {
-#if 0
-	finger_sensor: finger-sensor@3d {
+#if 1
+	finger-sensor@33 {
 		/* TODO */
+		compatible = "dummy_i2c_device";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_finger_sensor>;
+		/* not really 0x33, chose this to let i2cdetect probe the real address */
+		reg = <0x33>;
 		clocks = <&fp_mclk>;
 		clock-names = "fp_mclk";
+		c1-supply = <&reg_csi_3p3v>;
+		c2-supply = <&reg_csi_5v>;
+		reset-gpios = GP_FP_CSI0_RESET_N;
+		enable-gpios = GP_FP_LE_EN;
 	};
 #endif
 };
@@ -979,6 +1020,7 @@
 
 &max77823_charger {
 	battery,charger_name = "max77823-charger";
+	boost = <1>;
 	battery,chg_gpio_en = <0>;
 	battery,chg_polarity_en = <0>;
 	battery,chg_gpio_status = <0>;
