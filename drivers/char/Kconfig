@@ -451,6 +451,10 @@ config ADI
 
 source "drivers/char/imx_amp/Kconfig"
 
+config DUMMY_I2C_DEVICE
+	tristate "dummy clock/regulator/gpio consumer"
+	depends on I2C
+
 config RANDOM_TRUST_CPU
 	bool "Initialize RNG using CPU RNG instructions"
 	default y
