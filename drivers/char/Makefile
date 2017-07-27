@@ -67,3 +67,4 @@ js-rtc-y = rtc.o
 obj-$(CONFIG_TILE_SROM)		+= tile-srom.o
 obj-$(CONFIG_XILLYBUS)		+= xillybus/
 obj-$(CONFIG_HAVE_IMX_AMP)      += imx_amp/
+obj-$(CONFIG_DUMMY_I2C_DEVICE)	+= dummy_i2c_device.o
