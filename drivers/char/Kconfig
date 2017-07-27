@@ -647,5 +647,10 @@ config TILE_SROM
 source "drivers/char/xillybus/Kconfig"
 
 source "drivers/char/imx_amp/Kconfig"
+
+config DUMMY_I2C_DEVICE
+	tristate "dummy clock/regulator/gpio consumer"
+	depends on I2C
+
 endmenu
 
