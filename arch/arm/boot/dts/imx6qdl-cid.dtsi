@@ -844,7 +844,7 @@
 };
 
 &i2c1c {
-#if 1
+#if 0
 	finger-sensor@33 {
 		/* TODO */
 		compatible = "dummy_i2c_device";
