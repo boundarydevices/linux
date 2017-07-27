@@ -562,6 +562,11 @@ config ADI
 	  driver include crash and makedumpfile.
 
 source "drivers/char/imx_amp/Kconfig"
+
+config DUMMY_I2C_DEVICE
+	tristate "dummy clock/regulator/gpio consumer"
+	depends on I2C
+
 endmenu
 
 config RANDOM_TRUST_CPU
