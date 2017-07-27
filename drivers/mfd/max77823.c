@@ -154,6 +154,8 @@ int max77823_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 		u8 old_val = ret & 0xff;
 		u8 new_val = (val & mask) | (old_val & (~mask));
 		ret = i2c_smbus_write_byte_data(i2c, reg, new_val);
+		if (ret >= 0)
+			ret = new_val;
 	}
 	mutex_unlock(&max77823->i2c_lock);
 	return ret;
