@@ -23,7 +23,7 @@ int32_t MU_SetFn(void __iomem *base, uint32_t Fn)
 	if (reg > 0)
 		return -EINVAL;
 
-	offset = unlikely((readl_relaxed(base) >> 16) == MU_VER_ID_V10)
+	offset = unlikely(version == MU_VER_ID_V10)
 			  ? MU_V10_ACR_OFFSET1 : MU_ACR_OFFSET1;
 
 	reg = readl_relaxed(base + offset);
@@ -42,7 +42,7 @@ uint32_t MU_ReadStatus(void __iomem *base)
 {
 	uint32_t reg, offset;
 
-	offset = unlikely((readl_relaxed(base) >> 16) == MU_VER_ID_V10)
+	offset = unlikely(version == MU_VER_ID_V10)
 			  ? MU_V10_ASR_OFFSET1 : MU_ASR_OFFSET1;
 
 	reg = readl_relaxed(base + offset);
@@ -57,7 +57,7 @@ void MU_EnableRxFullInt(void __iomem *base, uint32_t index)
 {
 	uint32_t reg, offset;
 
-	offset = unlikely((readl_relaxed(base) >> 16) == MU_VER_ID_V10)
+	offset = unlikely(version == MU_VER_ID_V10)
 			  ? MU_V10_ACR_OFFSET1 : MU_ACR_OFFSET1;
 
 	reg = readl_relaxed(base + offset);
@@ -73,7 +73,7 @@ void MU_EnableGeneralInt(void __iomem *base, uint32_t index)
 {
 	uint32_t reg, offset;
 
-	offset = unlikely((readl_relaxed(base) >> 16) == MU_VER_ID_V10)
+	offset = unlikely(version == MU_VER_ID_V10)
 			  ? MU_V10_ACR_OFFSET1 : MU_ACR_OFFSET1;
 
 	reg = readl_relaxed(base + offset);
@@ -89,7 +89,7 @@ void MU_SendMessage(void __iomem *base, uint32_t regIndex, uint32_t msg)
 {
 	uint32_t mask = MU_SR_TE0_MASK1 >> regIndex;
 
-	if (unlikely((readl_relaxed(base) >> 16) == MU_VER_ID_V10)) {
+	if (unlikely(version == MU_VER_ID_V10)) {
 		/* Wait TX register to be empty. */
 		while (!(readl_relaxed(base + MU_V10_ASR_OFFSET1) & mask))
 			;
@@ -141,7 +141,7 @@ void MU_ReceiveMsg(void __iomem *base, uint32_t regIndex, uint32_t *msg)
 {
 	uint32_t mask = MU_SR_RF0_MASK1 >> regIndex;
 
-	if (unlikely((readl_relaxed(base) >> 16) == MU_VER_ID_V10)) {
+	if (unlikely(version == MU_VER_ID_V10)) {
 		/* Wait RX register to be full. */
 		while (!(readl_relaxed(base + MU_V10_ASR_OFFSET1) & mask))
 			;
@@ -161,9 +161,10 @@ void MU_Init(void __iomem *base)
 {
 	uint32_t reg, offset;
 
-	offset = unlikely((readl_relaxed(base) >> 16) == MU_VER_ID_V10)
-			  ? MU_V10_ACR_OFFSET1 : MU_ACR_OFFSET1;
+	version = readl_relaxed(base) >> 16;
 
+	offset = unlikely(version == MU_VER_ID_V10)
+			  ? MU_V10_ACR_OFFSET1 : MU_ACR_OFFSET1;
 
 	reg = readl_relaxed(base + offset);
 	/* Clear GIEn, RIEn, TIEn, GIRn and ABFn. */
