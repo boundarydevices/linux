@@ -361,6 +361,8 @@ struct aml_lcd_drv_s {
 	struct clk *dsi_host;
 	struct clk *dsi_phy;
 	struct clk *dsi_meas;
+	struct clk *mipi_enable_gate;
+	struct clk *mipi_bandgap_gate;
 
 	struct device *dev;
 	struct lcd_config_s *lcd_config;
