@@ -30,6 +30,7 @@
 #include <linux/pwm.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/mutex.h>
 #include <linux/time.h>
 #include <linux/clk.h>
 #include <linux/of_address.h>
@@ -118,8 +119,8 @@ struct meson_pwm {
 	struct meson_pwm_data *data;
 	struct meson_pwm_variant variant;
 	u32 inverter_mask;
-	spinlock_t lock;
-
+	struct mutex lock;
+	spinlock_t pwm_lock;
 	unsigned int clk_mask;
 };
 
