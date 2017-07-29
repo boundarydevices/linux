@@ -1,0 +1,22 @@
+#
+# Amlogic secure monitor configuration
+#
+
+menuconfig AMLOGIC_SM
+	bool "Amlogic SM(secure monitor) Support"
+	default n
+	help
+		Say Y here to enable SM support.
+		This option alone does not add any kernel code.
+
+
+if AMLOGIC_SM
+config	AMLOGIC_M8B_SM
+	bool "Amlogic meson8b SM(secure monitor) driver"
+	default n
+	depends on AMLOGIC_SM
+	help
+		This option enables support SM.
+		choose y to enable secure monitor.
+		choose n to disable secure monitor
+endif

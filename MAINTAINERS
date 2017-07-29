@@ -14024,3 +14024,8 @@ AMLOGIC MESONGXL ADD A113D & A113X SKT DTS
 M:	Yuegui He <yuegui.he@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/axg_a113d_skt.dts
 F:	arch/arm64/boot/dts/amlogic/axg_a113x_skt.dts
+
+SECURE MONITOR DRIVERS FOR AMLOGIC MESON8B
+M:      Jiamin Ma <jiamin.ma@amlogic.com>
+F:      drivers/amlogic/secure_monitor/*
+

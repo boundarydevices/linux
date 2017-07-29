@@ -36,6 +36,13 @@
 		#size-cells = <1>;
 		ranges;
 
+		sm_reserved:linux,sm {
+			compatible = "amlogic, aml_secure_monitor_memory";
+			reg = <0x61dfc00 0x20400>;
+			no-map;
+		};
+
+
 		pm_reserved:linux,pm {
 			compatible = "amlogic, pm-m8b-reserve";
 			reg = <0x04f00000 0x100000>;
@@ -181,6 +188,56 @@
 			 */
 		};
 	};
+
+	unifykey{
+		compatible = "amlogic, unifykey";
+		status = "ok";
+
+		unifykey-num = <6>;
+		unifykey-index-0 = <&keysn_0>;
+		unifykey-index-1 = <&keysn_1>;
+		unifykey-index-2 = <&keysn_2>;
+		unifykey-index-3 = <&keysn_3>;
+		unifykey-index-4 = <&keysn_4>;
+		unifykey-index-5 = <&keysn_5>;
+
+		keysn_0: key_0{
+			key-name = "usid";
+			key-device = "nandkey";
+			key-dataformat = "allascii";
+			key-permit = "read","write","del";
+		};
+		keysn_1:key_1{
+			key-name = "mac";
+			key-device  = "nandkey";
+			key-dataformat = "hexdata";
+			key-permit = "read","write","del";
+		};
+		keysn_2:key_2{
+			key-name = "hdcp";
+			key-device = "nandkey";
+			key-dataformat = "hexdata";
+			key-permit = "read","write","del";
+		};
+		keysn_3:key_3{
+			key-name = "secure_boot_set";
+			key-device = "efusekey";
+			key-dataformat = "hexdata";
+			key-permit = "read","write";
+		};
+		keysn_4:key_4{
+			key-name = "mac_bt";
+			key-device = "nandkey";
+			key-dataformat = "hexdata";
+			key-permit = "read","write","del";
+		};
+		keysn_5:key_5{
+			key-name = "mac_wifi";
+			key-device = "nandkey";
+			key-dataformat = "hexdata";
+			key-permit = "read","write","del";
+		};
+	};//End unifykey
 	mtd_nand{
 		compatible = "amlogic, aml_mtd_nand";
 		dev_name = "mtdnand";
