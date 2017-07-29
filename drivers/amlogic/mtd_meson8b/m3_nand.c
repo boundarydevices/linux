@@ -1022,20 +1022,32 @@ void __attribute__((unused)) nand_info_page_prepare(
 	 **/
 	u32 devops_len = (BOOT_PAGES_PER_COPY-1) * aml_chip->page_size;
 	/* struct hw_controller *controller = &(aml_chip->controller); */
-	int i, nand_read_info;
+	int i, nand_read_info, ran_mode = 0;
 	u32 en_slc, configure_data;
-	u32 boot_num = 1, each_boot_pages;
+	u32 boot_num = 1;
 	u32 valid_pages = BOOT_TOTAL_PAGES;
 
+	unsigned char chip_num = 0, plane_num = 0, micron_nand = 0;
+	int k, secure_block, valid_chip_num = 0;
 	struct _nand_page0 *p_nand_page0 = NULL;
 	struct _ext_info *p_ext_info = NULL;
 	struct nand_setup *p_nand_setup = NULL;
+	struct aml_nand_chip *aml_chip_device1 = NULL;
+	struct aml_nand_platform *plat = NULL;
 
 	p_nand_page0 = (struct _nand_page0 *) page0_buf;
 	p_nand_setup = &p_nand_page0->nand_setup;
 	p_ext_info = &p_nand_page0->ext_info;
 
 
+	for (i = 0; i < aml_nand_mid_device.dev_num; i++) {
+		plat = &aml_nand_mid_device.aml_nand_platform[i];
+		if (!strncmp((char *)plat->name, NAND_NORMAL_NAME,
+		strlen((const char *)NAND_NORMAL_NAME))) {
+			aml_chip_device1 = plat->aml_chip;
+			break;
+		}
+	}
 	configure_data = NFC_CMD_N2M(aml_chip->ran_mode,
 			aml_chip->bch_mode, 0, (chip->ecc.size >> 3),
 			chip->ecc.steps);
@@ -1059,8 +1071,8 @@ void __attribute__((unused)) nand_info_page_prepare(
 		0,
 		NAND_PAGELIST_CNT);
 	/* chip_num occupy the lowest 2 bit */
-	nand_read_info = controller->chip_num;
-
+	/* nand_read_info = controller->chip_num; */
+	nand_read_info = 1;
 	/*
 	 *make it
 	 *1)calu the number of boot saved and pages each boot needs.
@@ -1078,21 +1090,50 @@ void __attribute__((unused)) nand_info_page_prepare(
 		else
 			break;
 	}
-	each_boot_pages = valid_pages/boot_num;
+	/* each_boot_pages = valid_pages/boot_num; */
 
 	p_ext_info->read_info = nand_read_info;
 	p_ext_info->page_per_blk = aml_chip->block_size / aml_chip->page_size;
 	/* fixme, only ce0 is enabled! */
 	p_ext_info->ce_mask = 0x01;
+	p_ext_info->new_type = aml_chip->new_nand_info.type;
 	/* xlc is not in using for now */
-	p_ext_info->xlc = 1;
-	p_ext_info->boot_num = boot_num;
-	p_ext_info->each_boot_pages = each_boot_pages;
+	/* p_ext_info->xlc = 1; */
+	/* p_ext_info->boot_num = boot_num; */
+	/* p_ext_info->each_boot_pages = each_boot_pages; */
+#if 1
+	if (meson_secure_enabled()) {
+		p_ext_info->secure_start_blk =
+		aml_chip_device1->aml_nandsecure_info->start_block;
+		p_ext_info->secure_end_blk =
+		aml_chip_device1->aml_nandsecure_info->end_block;
 
+		valid_chip_num = 0;
+		for (k = 0; k < 0; k++) {
+			if (aml_chip_device1->valid_chip[k])
+				valid_chip_num++;
+		}
+		chip_num = valid_chip_num;
+		if (aml_chip_device1->plane_num == 2)
+			plane_num = 1;
+		ran_mode = aml_chip_device1->ran_mode;
+		if ((aml_chip_device1->mfr_type == NAND_MFR_MICRON) ||
+		(aml_chip_device1->mfr_type == NAND_MFR_INTEL))
+			micron_nand = 1;
+		nand_read_info = chip_num | (plane_num << 2) |
+			(ran_mode << 3) | (micron_nand << 4);
+		p_ext_info->read_info = nand_read_info;
+		secure_block =
+			aml_chip_device1->aml_nandsecure_info->start_block;
+		p_ext_info->secure_block = secure_block;
+	}
+#endif
 	/* pr_info("new_type = 0x%x\n", p_ext_info->new_type); */
 	pr_info("page_per_blk = 0x%x\n", p_ext_info->page_per_blk);
-	pr_info("boot_num = %d each_boot_pages = %d", boot_num,
-		each_boot_pages);
+	/*
+	 *pr_info("boot_num = %d each_boot_pages = %d", boot_num,
+	 *	each_boot_pages);
+	 */
 }
 
 static int m3_nand_boot_write_page_hwecc(struct mtd_info *mtd,

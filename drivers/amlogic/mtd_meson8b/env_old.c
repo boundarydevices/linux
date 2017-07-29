@@ -58,8 +58,9 @@ int aml_nand_rsv_erase_protect(struct mtd_info *mtd, unsigned int block_addr)
 {
 	if (!_aml_rsv_isprotect())
 		return 0;
-	pr_err(" %s() %d: fixme\n", __func__, __LINE__);
 #if 0
+	pr_err(" %s() %d: fixme\n", __func__, __LINE__);
+
 	if (aml_chip->aml_nandkey_info != NULL) {
 		if (aml_chip->aml_nandkey_info->valid)
 		if ((block_addr >= aml_chip->aml_nandkey_info->start_block)

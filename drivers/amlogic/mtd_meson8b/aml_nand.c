@@ -306,6 +306,7 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 	unsigned int bad_blk_addr[128];
 #ifdef CONFIG_AMLOGIC_M8B_NANDKEY
 	uint64_t key_block;
+	uint64_t secure_block = 0;
 #endif
 
 	mini_part_size =
@@ -340,6 +341,10 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 #ifdef CONFIG_AMLOGIC_M8B_NANDKEY
 		key_block = aml_chip->aml_nandkey_info->end_block
 			- aml_chip->aml_nandkey_info->start_block + 1;
+		if (meson_secure_enabled())
+			secure_block =
+			aml_chip->aml_nandsecure_info->end_block
+			- aml_chip->aml_nandsecure_info->start_block + 1;
 
 #endif
 
@@ -457,6 +462,8 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 		} else {
 			temp_parts->size -= key_block*mtd->erasesize;
 		}
+		if (meson_secure_enabled())
+			temp_parts->size -= secure_block*mtd->erasesize;
 
 #endif
 	}
@@ -2617,7 +2624,11 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 	err = aml_key_init(aml_chip);
 	if (err)
 		pr_err("invalid nand key\n");
-
+	if (meson_secure_enabled()) {
+		err = secure_device_init(mtd);
+		if (err)
+			pr_err("invalid secure device\n");
+	}
 #endif /* CONFIG_AMLOGIC_M8B_NANDKEY */
 #endif /* CONFIG_AMLOGIC_M8B_NAND */
 

@@ -117,19 +117,23 @@ struct _ext_info {
 	uint32_t read_info;
 	uint32_t new_type;
 	uint32_t page_per_blk;
-	uint32_t xlc;
+	uint32_t secure_block;
+	uint32_t secure_start_blk;
+	//uint32_t xlc;
 	uint32_t ce_mask;
-	uint32_t boot_num;
-	uint32_t each_boot_pages;
-	uint32_t rsv[2];
+	//uint32_t boot_num;
+	//uint32_t each_boot_pages;
+	//uint32_t rsv[2];
+	uint32_t secure_end_blk;
 	/* add new below, */
+	uint32_t reserved;
 };
 
 /*max size is 384 bytes*/
 struct _nand_page0 {
 	struct nand_setup nand_setup;
 	unsigned char page_list[16];
-	struct _nand_cmd retry_usr[32];
+	struct _nand_cmd retry_usr[164];
 	struct _ext_info ext_info;
 };
 
@@ -416,6 +420,9 @@ struct aml_nand_bch_desc {
 
 #define NAND_MINI_PART_BLOCKNUM	2
 
+#define NAND_KEY_SAVE_MULTI_BLOCK  //key save in multi block same time
+
+
 struct aml_nand_read_retry {
 	u8 flag;
 	u8 reg_cnt;
@@ -484,7 +491,16 @@ struct aml_nandkey_info_t {
 	int start_block;
 	int end_block;
 };
-
+struct aml_nandsecure_info_t {
+	struct mtd_info *mtd;
+	struct env_valid_node_t *secure_valid_node;
+	struct env_free_node_t *secure_free_node;
+	u_char secure_valid;
+	u_char secure_init;
+	u_char part_num_before_sys;
+	int start_block;
+	int end_block;
+};
 struct aml_nand_chip {
 	struct mtd_info *mtd;
 	struct nand_chip chip;
@@ -541,6 +557,8 @@ struct aml_nand_chip {
 	struct aml_nandenv_info_t *aml_nandenv_info;
 	unsigned int update_env_flag;
 	struct aml_nandkey_info_t *aml_nandkey_info;
+	struct aml_nandsecure_info_t *aml_nandsecure_info;
+	unsigned int secure_protect;
 #else
 	struct aml_nandrsv_info_t *aml_nandbbt_info;
 	struct aml_nandrsv_info_t *aml_nandenv_info;
@@ -800,11 +818,11 @@ int aml_key_init(struct aml_nand_chip *aml_chip);
 
 int aml_nand_rsv_erase_protect(struct mtd_info *mtd, unsigned int block_addr);
 
-int aml_nand_save_key(struct mtd_info *mtd, u_char *buf);
+//int aml_nand_save_key(struct mtd_info *mtd, u_char *buf);
 
-int aml_nand_read_key(struct mtd_info *mtd, size_t offset, u_char *buf);
+//int aml_nand_read_key(struct mtd_info *mtd, size_t offset, u_char *buf);
 
-int aml_nand_key_check(struct mtd_info *mtd);
+//int aml_nand_key_check(struct mtd_info *mtd);
 
 /*int aml_nand_free_valid_env(struct mtd_info *mtd);*/
 
@@ -859,6 +877,8 @@ extern uint8_t nand_boot_flag;
 /*external defined variable*/
 extern int info_disprotect;
 extern struct aml_nand_flash_dev aml_nand_flash_ids[];
+extern int secure_device_init(struct mtd_info *mtd);
+extern bool meson_secure_enabled(void);
 
 void aml_nand_new_nand_param_init(struct mtd_info *mtd,
 	struct aml_nand_flash_dev *type);
