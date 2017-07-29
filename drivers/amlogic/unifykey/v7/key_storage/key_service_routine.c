@@ -42,6 +42,9 @@ uint64_t storage_service_routine(uint32_t fid,
 	case SECURITY_KEY_NOTIFY_EX:
 		storage_api_notify_ex(x1);
 		break;
+	case SECURITY_KEY_STORAGE_TYPE:
+		storage_api_storage_type(x1);
+		break;
 	case SECURITY_KEY_QUERY:
 		ret = storage_api_query(in, out);
 		break;

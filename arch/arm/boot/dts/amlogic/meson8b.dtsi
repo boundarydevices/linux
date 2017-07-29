@@ -219,6 +219,7 @@
 			storage_set_enctype = <0x8200006A>;
 			storage_get_enctype = <0x8200006B>;
 			storage_version = <0x8200006C>;
+			storage_set_type = <0x8200006D>;
 		};
 
 		cpu_iomap {

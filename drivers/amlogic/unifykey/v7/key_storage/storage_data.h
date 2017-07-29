@@ -30,6 +30,5 @@ static uint8_t *storage_shar_in_block;
 static uint8_t *storage_shar_out_block;
 static uint8_t *storage_share_block;
 static uint8_t *internal_storage_block;
-static uint32_t flash_storage_size = STORAGE_BLOCK_SIZE;
 
 #endif

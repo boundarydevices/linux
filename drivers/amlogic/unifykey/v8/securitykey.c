@@ -98,6 +98,10 @@ void secure_storage_notifier_ex(uint32_t storagesize)
 {
 }
 
+void secure_storage_type(uint32_t is_emmc)
+{
+}
+
 int32_t secure_storage_write(uint8_t *keyname, uint8_t *keybuf,
 			uint32_t keylen, uint32_t keyattr)
 {

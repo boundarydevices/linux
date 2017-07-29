@@ -47,9 +47,13 @@ static unsigned long storage_verify_func;
 static unsigned long storage_list_func;
 static unsigned long storage_remove_func;
 static unsigned long storage_notify_ex_func;
+static unsigned long storage_type_func;
 static unsigned long storage_set_enctype_func;
 static unsigned long storage_get_enctype_func;
 static unsigned long storage_version_func;
+
+static unsigned int block_base_func_id;
+static unsigned int block_size_func_id;
 
 static DEFINE_MUTEX(storage_lock);
 
@@ -108,6 +112,11 @@ static inline int32_t smc_to_linux_errno(uint64_t errno)
 
 void *secure_storage_getbuffer(uint32_t *size)
 {
+	storage_block_size = storage_service_routine(
+		block_size_func_id, 0, NULL, NULL);
+	storage_block_base = (void *)(uint32_t)storage_service_routine(
+		block_base_func_id, 0, NULL, NULL);
+
 	*size = storage_block_size;
 	return (void *)storage_block_base;
 }
@@ -119,6 +128,15 @@ void secure_storage_notifier_ex(uint32_t storagesize)
 				storagesize, NULL, NULL);
 	mutex_unlock(&storage_lock);
 }
+
+void secure_storage_type(uint32_t is_emmc)
+{
+	mutex_lock(&storage_lock);
+	storage_service_routine(storage_type_func,
+				is_emmc, NULL, NULL);
+	mutex_unlock(&storage_lock);
+}
+
 
 int32_t secure_storage_write(uint8_t *keyname, uint8_t *keybuf,
 			uint32_t keylen, uint32_t keyattr)
@@ -415,10 +433,9 @@ static int storage_probe(struct platform_device *pdev)
 	storage_block_size = 0;
 
 	if (!of_property_read_u32(np, "storage_block_func", &id))
-		storage_block_base = (void *)(uint32_t)storage_service_routine(
-							id, 0, NULL, NULL);
+		block_base_func_id = id;
 	if (!of_property_read_u32(np, "storage_size_func", &id))
-		storage_block_size = storage_service_routine(id, 0, NULL, NULL);
+		block_size_func_id = id;
 
 	if (!of_property_read_u32(np, "storage_free", &id))
 		storage_free_func = id;
@@ -440,6 +457,8 @@ static int storage_probe(struct platform_device *pdev)
 		storage_remove_func = id;
 	if (!of_property_read_u32(np, "storage_notify_ex", &id))
 		storage_notify_ex_func = id;
+	if (!of_property_read_u32(np, "storage_set_type", &id))
+		storage_type_func = id;
 	if (!of_property_read_u32(np, "storage_set_enctype", &id))
 		storage_set_enctype_func = id;
 	if (!of_property_read_u32(np, "storage_get_enctype", &id))

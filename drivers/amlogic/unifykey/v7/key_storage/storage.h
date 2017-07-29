@@ -159,7 +159,6 @@ struct storage_ns_message {
 /* internal apis*/
 uint32_t get_share_storage_block_base(void);
 void free_share_storage(void);
-uint32_t get_internal_storage_base(void);
 void free_internal_storage(void);
 uint64_t get_share_storage_block_size(void);
 
@@ -182,6 +181,7 @@ int64_t storage_version(void);
 
 /*exported APIs*/
 void storage_init(uint32_t flashsize);
+void storage_set_type(uint32_t is_emmc);
 uint64_t storage_api_write(void *in);
 uint64_t storage_api_read(void *in, void **out);
 uint64_t storage_api_tell(void *in, void **out);
@@ -190,6 +190,7 @@ uint64_t storage_api_verify(void *in, void **out);
 uint64_t storage_api_status(void *in, void **out);
 void storage_api_notify(void);
 void storage_api_notify_ex(uint32_t flashsize);
+void storage_api_storage_type(uint32_t is_emmc);
 uint64_t storage_api_list(void);
 uint64_t storage_api_remove(void);
 int64_t storage_api_get_enctype(void);

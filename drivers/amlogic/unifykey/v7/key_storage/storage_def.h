@@ -18,6 +18,10 @@
 #ifndef __STORAGE_DEF_H_
 #define __STORAGE_DEF_H_
 
+/* for emmc */
+//#define STORAGE_BLOCK_SIZE	(128*1024 - 28)
 #define STORAGE_BLOCK_SIZE	(256*1024)
+/* for nand */
+#define STORAGE_BLOCK_SIZE_2 (60620)
 
 #endif

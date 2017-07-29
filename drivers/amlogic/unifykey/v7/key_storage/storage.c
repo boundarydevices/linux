@@ -27,7 +27,8 @@
 
 static int emmc_key_transfer(u8 *buf, u32 *value, u32 len, u32 direct);
 static uint32_t emmckey_checksum(uint8_t *buf, uint32_t length);
-
+/* static var is initialized to be 0 by default */
+static uint32_t storage_is_emmc;
 
 static void storage_hash(uint8_t *input, uint32_t insize, uint8_t *output)
 {
@@ -64,7 +65,7 @@ int32_t storage_writeToFlash(void)
 	/* the below check is ugly, someone should move the
 	 * related code to emmc key
 	 */
-	if (kallsyms_lookup_name("emmc_key_read")) {
+	if (storage_is_emmc) {
 		pemmc_key_head = (struct emmc_key_head *)pblock;
 		pstorage_key_head = (struct key_storage_head *)
 			(pblock + sizeof(struct emmc_key_head));
@@ -529,7 +530,10 @@ static int emmc_key_transfer(u8 *buf, u32 *value, u32 len, u32 direct)
 	return 0;
 }
 
-
+void storage_set_type(uint32_t is_emmc)
+{
+	storage_is_emmc = is_emmc;
+}
 
 /* initialize nodelist from internal storage block*/
 void storage_init(uint32_t flashsize)
@@ -548,7 +552,7 @@ void storage_init(uint32_t flashsize)
 	int                      key_hex_len;
 
 	/* we should handle an extra header for emmc key */
-	if (kallsyms_lookup_name("emmc_key_read")) {
+	if (storage_is_emmc) {
 		pemmc_key_head = (struct emmc_key_head *)pblock;
 		pstorage_key_head = (struct key_storage_head *)
 			(pblock + sizeof(struct emmc_key_head));
@@ -561,20 +565,14 @@ void storage_init(uint32_t flashsize)
 		if (!emmc_key_transfer(pemmc_key_head->mark,
 			&pemmc_key_head->mark_checksum, 8, 0)) {
 			if (memcmp(pemmc_key_head->mark,
-				"emmckeys", 8) != 0) {
-				flash_storage_size = flashsize;
+				"emmckeys", 8) != 0)
 				goto storage_init_err;
-			}
-		} else {
-			flash_storage_size = flashsize;
+		} else
 			goto storage_init_err;
-		}
 	}
 
-	if (memcmp(pstorage_key_head->mark, "keyexist", 8) != 0) {
-		flash_storage_size = flashsize;
+	if (memcmp(pstorage_key_head->mark, "keyexist", 8) != 0)
 		goto storage_init_err;
-	}
 
 	/* parse each key */
 	tmp_content = (char *)&pstorage_key_head[1]; // skip storage key header
@@ -653,17 +651,10 @@ storage_init_exit:
 uint32_t get_share_storage_block_base(void)
 {
 	if (storage_share_block == NULL)
-		storage_share_block = storage_malloc(STORAGE_BLOCK_SIZE);
+		storage_share_block = storage_malloc(
+		(int32_t)get_share_storage_block_size());
 
 	return (uint32_t)storage_share_block;
-}
-
-uint32_t get_internal_storage_base(void)
-{
-	if (internal_storage_block == NULL)
-		internal_storage_block = storage_malloc(STORAGE_BLOCK_SIZE/4);
-
-	return (uint32_t)internal_storage_block;
 }
 
 void free_share_storage(void)
@@ -684,7 +675,10 @@ void free_internal_storage(void)
 
 uint64_t get_share_storage_block_size(void)
 {
-	return flash_storage_size;
+	if (storage_is_emmc)
+		return STORAGE_BLOCK_SIZE;
+	else
+		return STORAGE_BLOCK_SIZE_2;
 }
 
 int64_t storage_get_enctype(void)

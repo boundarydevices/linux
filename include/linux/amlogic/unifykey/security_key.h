@@ -35,6 +35,7 @@ int32_t secure_storage_tell(uint8_t *keyname, uint32_t *retval);
 int32_t secure_storage_status(uint8_t *keyname, uint32_t *retval);
 void *secure_storage_getbuffer(uint32_t *size);
 void secure_storage_notifier_ex(uint32_t storagesize);
+void secure_storage_type(uint32_t is_emmc);
 int32_t secure_storage_set_enctype(uint32_t type);
 int32_t secure_storage_get_enctype(void);
 int32_t secure_storage_version(void);

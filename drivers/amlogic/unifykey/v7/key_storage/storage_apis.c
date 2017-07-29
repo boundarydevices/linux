@@ -138,10 +138,16 @@ uint64_t storage_api_status(void *in, void **out)
 
 void storage_api_notify_ex(uint32_t flashsize)
 {
-	if (flashsize > STORAGE_BLOCK_SIZE) {
-		//ERROR("flash size is too large!\n");
+	if (flashsize > get_share_storage_block_size()) {
+		pr_err("flash size is too large!\n");
 		return;
 	}
 	storage_init(flashsize);
 }
+
+void storage_api_storage_type(uint32_t is_emmc)
+{
+	storage_set_type(is_emmc);
+}
+
 
