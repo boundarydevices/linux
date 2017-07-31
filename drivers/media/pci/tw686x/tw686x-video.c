@@ -1160,7 +1160,7 @@ void tw686x_video_free(struct tw686x_dev *dev)
 
 		video_unregister_device(vc->device);
 
-		if (dev->dma_ops->free)
+		if (dev->dma_ops->free && vc->dev)
 			for (pb = 0; pb < 2; pb++)
 				dev->dma_ops->free(vc, pb);
 	}
