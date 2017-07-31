@@ -936,6 +936,29 @@ void lcd_clk_gate_switch(int status)
 
 	switch (lcd_drv->chip_type) {
 	case LCD_CHIP_AXG:
+		if (status) {
+			if (IS_ERR(lcd_drv->mipi_enable_gate))
+				LCDERR("%s: mipi_enable_gate\n", __func__);
+			else
+				clk_prepare_enable(lcd_drv->mipi_enable_gate);
+
+			if (IS_ERR(lcd_drv->mipi_bandgap_gate))
+				LCDERR("%s: mipi_bandgap_gate\n", __func__);
+			else
+				clk_prepare_enable(lcd_drv->mipi_bandgap_gate);
+		} else {
+			if (IS_ERR(lcd_drv->mipi_enable_gate))
+				LCDERR("%s: mipi_enable_gate\n", __func__);
+			else
+				clk_disable_unprepare(
+					lcd_drv->mipi_enable_gate);
+
+			if (IS_ERR(lcd_drv->mipi_bandgap_gate))
+				LCDERR("%s: mipi_bandgap_gate\n", __func__);
+			else
+				clk_disable_unprepare(
+					lcd_drv->mipi_bandgap_gate);
+		}
 		break;
 	default:
 		if (status) {
@@ -986,6 +1009,20 @@ void lcd_clktree_probe(void)
 			LCDERR("%s: clk dsi_meas\n", __func__);
 		else
 			clk_prepare_enable(lcd_drv->dsi_meas);
+
+		lcd_drv->mipi_enable_gate = devm_clk_get(
+			lcd_drv->dev, "mipi_enable_gate");
+		if (IS_ERR(lcd_drv->mipi_enable_gate))
+			LCDERR("%s: clk mipi_enable_gate\n", __func__);
+		else
+			clk_prepare_enable(lcd_drv->mipi_enable_gate);
+
+		lcd_drv->mipi_bandgap_gate = devm_clk_get(
+			lcd_drv->dev, "mipi_bandgap_gate");
+		if (IS_ERR(lcd_drv->mipi_bandgap_gate))
+			LCDERR("%s: clk mipi_bandgap_gate\n", __func__);
+		else
+			clk_prepare_enable(lcd_drv->mipi_bandgap_gate);
 		break;
 	default:
 		lcd_drv->vencl_top = devm_clk_get(lcd_drv->dev, "vencl_top");

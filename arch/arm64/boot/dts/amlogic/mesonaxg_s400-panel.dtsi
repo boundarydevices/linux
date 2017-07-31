@@ -24,10 +24,14 @@
 		key_valid = <0>;
 		clocks = <&clkc CLKID_MIPI_DSI_HOST
 			&clkc CLKID_MIPI_DSI_PHY
-			&clkc CLKID_DSI_MEAS_COMP>;
+			&clkc CLKID_DSI_MEAS_COMP
+			&clkc CLKID_MIPI_ENABLE_GATE
+			&clkc CLKID_MIPI_BANDGAP_GATE>;
 		clock-names = "dsi_host",
 			"dsi_phy",
-			"dsi_meas";
+			"dsi_meas",
+			"mipi_enable_gate",
+			"mipi_bandgap_gate";
 		pinctrl_version = <1>; /* for uboot */
 
 		/* power type:
