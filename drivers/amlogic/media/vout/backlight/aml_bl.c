@@ -996,7 +996,7 @@ static void aml_bl_set_level(unsigned int level)
 		bl_set_level_ldim(level);
 		break;
 #endif
-#ifdef CONFIG_AML_BL_TABLET_EXTERN
+#ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
 		bl_set_level_extern(level);
 		break;
@@ -1524,8 +1524,18 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 	case BL_CTRL_LOCAL_DIMING:
 		break;
 #endif
+#ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
+	/* get bl_extern_index from dts */
+	ret = of_property_read_u32(child, "bl_extern_index", &bl_para[0]);
+	if (ret)
+		BLERR("failed to get bl_extern_index\n");
+	else {
+		bconf->bl_extern_index = bl_para[0];
+		BLPR("get bl_extern_index = %d\n", bconf->bl_extern_index);
+		}
 		break;
+#endif
 	default:
 		break;
 	}
@@ -1908,6 +1918,12 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 		aml_ldim_probe(pdev);
 		break;
 #endif
+#ifdef CONFIG_AMLOGIC_BL_EXTERN
+	case BL_CTRL_EXTERN:
+		aml_bl_extern_device_load(bconf->bl_extern_index);
+		break;
+#endif
+
 	default:
 		break;
 	}
@@ -2139,6 +2155,10 @@ static ssize_t bl_status_read(struct class *class,
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 #endif
+#ifdef CONFIG_AMLOGIC_BL_EXTERN
+	struct aml_bl_extern_driver_s *bl_extern = aml_bl_extern_get_driver();
+#endif
+
 	ssize_t len = 0;
 
 	len = sprintf(buf, "read backlight status:\n"
@@ -2223,8 +2243,12 @@ static ssize_t bl_status_read(struct class *class,
 			ldim_drv->config_print();
 		break;
 #endif
+#ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
+		if (bl_extern->config_print)
+			bl_extern->config_print();
 		break;
+#endif
 	default:
 		len += sprintf(buf+len, "wrong backlight control method\n");
 		break;

@@ -1,0 +1,40 @@
+/*
+ * drivers/amlogic/media/vout/backlight/bl_extern/bl_extern.dts
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+bl_extern{
+	compatible = "amlogic, bl_extern";
+	dev_name = "bl_extern";
+	status = "okay";
+
+	extern_0{
+		index = <0>;
+		extern_name = "i2c_lp8556";
+		type = <1>; /** bl_extern_driver type: 1=i2c, 2=spi, 3=mipi */
+		i2c_address = <0x2c>; /** 7bit i2c address */
+		i2c_bus = "i2c_bus_d";
+		dim_max_min = <255 10>;
+	};
+
+	extern_1{
+		index = <1>;
+		extern_name = "mipi_lt070me05";
+		type = <3>; /** bl_extern_driver type: 1=i2c, 2=spi, 3=mipi */
+		dim_max_min = <255 10>;
+	};
+
+};
+

@@ -15,62 +15,70 @@
  *
  */
 
-#ifndef __AMLOGIC_BL_EXTERN_H_
-#define __AMLOGIC_BL_EXTERN_H_
-
-#include <linux/amlogic/aml_gpio_consumer.h>
-#include <linux/pinctrl/consumer.h>
+#ifndef _INC_AML_BL_EXTERN_H_
+#define _INC_AML_BL_EXTERN_H_
 
 enum bl_extern_type_e {
 	BL_EXTERN_I2C = 0,
 	BL_EXTERN_SPI,
-	BL_EXTERN_OTHER,
+	BL_EXTERN_MIPI,
 	BL_EXTERN_MAX,
 };
 
-struct bl_extern_config_s {
-	const char *name;
-	enum bl_extern_type_e type;
-	struct gpio_desc *gpio;
-	unsigned char gpio_on;
-	unsigned char gpio_off;
+enum bl_extern_i2c_bus_e {
+	BL_EXTERN_I2C_BUS_AO = 0,
+	BL_EXTERN_I2C_BUS_A,
+	BL_EXTERN_I2C_BUS_B,
+	BL_EXTERN_I2C_BUS_C,
+	BL_EXTERN_I2C_BUS_D,
+	BL_EXTERN_I2C_BUS_MAX,
+};
+#define BL_EXTERN_I2C_BUS_INVALID   0xff
 
-	int i2c_addr;
-	int i2c_bus;
-	struct gpio_desc *spi_cs;
-	struct gpio_desc *spi_clk;
-	struct gpio_desc *spi_data;
+#define BL_EXTERN_SPI_CLK_FREQ_DFT  10000 /* default 10k */
+
+#define BL_EXTERN_INIT_TABLE_MAX    500
+
+#define BL_EXTERN_INIT_CMD          0x00
+#define BL_EXTERN_INIT_NONE         0xf0
+#define BL_EXTERN_INIT_END          0xff
+
+#define BL_EXTERN_DYNAMIC_LEN		0xff
+
+#define BL_EXTERN_GPIO_NUM_MAX      6
+#define BL_EXTERN_INDEX_INVALID     0xff
+#define BL_EXTERN_NAME_LEN_MAX      30
+struct bl_extern_config_s {
+	unsigned char index;
+	char name[BL_EXTERN_NAME_LEN_MAX];
+	enum bl_extern_type_e type;
+	unsigned char i2c_addr;
+	unsigned char i2c_bus;
 	unsigned int dim_min;
 	unsigned int dim_max;
-	/* unsigned int level_min; */
-	/* unsigned int level_max; */
 };
 
-/*******global API******/
-struct aml_bl_extern_driver_t {
-	const char *name;
-	enum bl_extern_type_e type;
+/* global API */
+#define BL_EXT_DRIVER_MAX    10
+struct aml_bl_extern_driver_s {
 	int (*power_on)(void);
 	int (*power_off)(void);
 	int (*set_level)(unsigned int level);
+	void (*config_print)(void);
+	int (*device_power_on)(void);
+	int (*device_power_off)(void);
+	int (*device_bri_update)(unsigned int level);
+	struct bl_extern_config_s config;
+	struct device *dev;
 };
 
-#define BL_EXTERN_DRIVER		"bl_extern"
+extern struct aml_bl_extern_driver_s *aml_bl_extern_get_driver(void);
+extern int aml_bl_extern_device_load(int index);
 
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+extern int dsi_write_cmd(unsigned char *payload);
+#endif
 
-#define bl_extern_gpio_free(gpio)	gpiod_free(gpio, BL_EXTERN_DRIVER)
-#define bl_extern_gpio_input(gpio)        gpiod_direction_input(gpio)
-#define bl_extern_gpio_output(gpio, val)  gpiod_direction_output(gpio, val)
-#define bl_extern_gpio_get_value(gpio)              gpiod_get_value(gpio)
-#define bl_extern_gpio_set_value(gpio, val)         gpiod_set_value(gpio, val)
-
-
-extern struct aml_bl_extern_driver_t *aml_bl_extern_get_driver(void);
-extern int bl_extern_driver_check(void);
-extern int get_bl_extern_dt_data(struct device dev,
-					struct bl_extern_config_s *pdata);
-
-extern void get_bl_ext_level(struct bl_extern_config_s *bl_ext_cfg);
 
 #endif
 

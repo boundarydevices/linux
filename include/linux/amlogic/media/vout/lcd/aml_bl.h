@@ -20,6 +20,8 @@
 #include <linux/workqueue.h>
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/pwm.h>
+#include <linux/amlogic/pwm_meson.h>
 
 #define BLPR(fmt, args...)      pr_info("bl: "fmt"", ## args)
 #define BLERR(fmt, args...)      pr_err("bl error: "fmt"", ## args)
@@ -147,6 +149,7 @@ struct bl_config_s {
 	struct bl_gpio_s bl_gpio[BL_GPIO_NUM_MAX];
 	struct pinctrl *pin;
 	unsigned int pinmux_flag;
+	unsigned int bl_extern_index;
 };
 
 #define BL_INDEX_DEFAULT     0

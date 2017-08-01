@@ -14034,3 +14034,11 @@ M:	Alex Deng <alex.deng@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/axg_s400_v03.dts
 F:	arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
 
+AMLOGIC BL_EXTERN driver
+M: Weiming Liu <weiming.liu@amlogic.com>
+F: drivers/amlogic/media/vout/backlight/bl_extern/bl_extern.dts
+F: drivers/amlogic/media/vout/backlight/bl_extern/bl_extern.h
+F: drivers/amlogic/media/vout/backlight/bl_extern/mipi_lt070me05.c
+F: drivers/amlogic/media/vout/backlight/bl_extern/aml_bl_extern.dts
+F: drivers/amlogic/media/vout/backlight/bl_extern/mipi_LT070ME05.c
+F: drivers/amlogic/media/vout/backlight/bl_extern/pmu_aml1218.c
