@@ -191,6 +191,9 @@ static int aml_cali_auto(struct mmc_host *mmc, struct cali_data *c_data)
 		pdata->c_ctrl.line_x = line_x;
 		/* for each delay index! */
 		for (dly_tmp = 0; dly_tmp < MAX_DELAY_CNT; dly_tmp++) {
+			max_cali_count = 0;
+			max_cali_i = 0;
+			line_delay = 0;
 			line_delay = dly_tmp << (4 * line_x);
 			writel(line_delay, host->base + SD_EMMC_DELAY);
 			pdata->caling = 1;
@@ -492,7 +495,6 @@ static int aml_sd_emmc_execute_calibration(struct mmc_host *mmc,
 	u8 i;
 #endif
 
-	memset(&c_data, 0, sizeof(struct cali_data));
 #ifdef SD_EMMC_CLK_CTRL
 	vclk = readl(host->base + SD_EMMC_CLOCK);
 	clk_div_tmp = clkc->div;
@@ -509,6 +511,7 @@ static int aml_sd_emmc_execute_calibration(struct mmc_host *mmc,
 	pdata->c_ctrl.max_index = (vclk & 0x3f) - 1;
 
 _cali_retry:
+	memset(&c_data, 0, sizeof(struct cali_data));
 	c_data.base_index_min = pdata->c_ctrl.max_index + 1;
 	c_data.base_index_max = 0;
 	pr_info("%s: trying cali %d-th time(s)\n",
