@@ -88,8 +88,8 @@
 				/* extern_init: 0xff for invalid */
 			extern_init = <0xff>;
 				/* power step: type,index,value,delay(ms) */
-			power_on_step = <0 0 1 10
-					0 0 0 20
+			power_on_step = <
+					0 0 0 10
 					0 0 1 20
 					2 0 0 0
 					0xff 0 0 0>;
