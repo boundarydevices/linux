@@ -481,6 +481,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-tx6q-11x0-mb7.dtb \
 	imx6q-udoo.dtb \
 	imx6q-usd.dtb \
+	imx6q-usd_mr2.dtb \
 	imx6q-utc.dtb \
 	imx6q-utilite-pro.dtb \
 	imx6q-vp.dtb \
