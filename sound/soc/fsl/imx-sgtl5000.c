@@ -285,31 +285,35 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 			    SND_SOC_DAIFMT_CBM_CFM;
 
 	data->limit_16bit_samples = of_property_read_bool(pdev->dev.of_node, "limit-to-16-bit-samples");
-	gd = devm_gpiod_get_index(&pdev->dev, "mute", 0);
-	if (!IS_ERR(gd)) {
-		gpiod_direction_output(gd, 0);
-		gpiod_set_value(gd, 1);
-		data->mute_hp = gd;
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "mute", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
 	}
-	gd = devm_gpiod_get_index(&pdev->dev, "line-out-mute", 0);
-	if (!IS_ERR(gd)) {
-		gpiod_direction_output(gd, 0);
-		gpiod_set_value(gd, 1);
-		data->mute_lo = gd;
-		data->mute_hp_value = 1;
+	data->mute_hp = gd;
+	data->mute_hp_value = 1;
+
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "line-out-mute", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
 	}
-	gd = devm_gpiod_get_index(&pdev->dev, "amp-standby", 0);
-	if (!IS_ERR(gd)) {
-		gpiod_direction_output(gd, 0);
-		gpiod_set_value(gd, 1);
-		data->amp_standby = gd;
+	data->mute_lo = gd;
+
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-standby", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
 	}
+	data->amp_standby = gd;
+
 	for (i = 0; i < 2; i++) {
-		gd = devm_gpiod_get_index(&pdev->dev, "amp-gain", i);
-		if (!IS_ERR(gd)) {
-			gpiod_direction_output(gd, 0);
-			data->amp_gain[i] = gd;
+		gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-gain", i, GPIOD_OUT_LOW);
+		if (IS_ERR(gd)) {
+			ret = PTR_ERR(gd);
+			goto fail;
 		}
+		data->amp_gain[i] = gd;
 	}
 
 	data->card.dev = &pdev->dev;
