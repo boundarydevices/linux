@@ -155,9 +155,8 @@
 	pinctrl_i2c3_gslx680: i2c3_gslx680grp {
 		fsl,pins = <
 #define GPIRQ_GSLX680			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
-#define GP_GSLX680_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
 /*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x130b0		*/
-#define GP_GSLX680_SHUTDOWN		<&gpio7 12 GPIO_ACTIVE_LOW>
+#define GP_GSLX680_POWER		<&gpio7 12 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x1b0b0
 		>;
 	};
@@ -748,15 +747,18 @@
 		interrupts-extended = GPIRQ_TOUCH;
 		wakeup-gpios = GP_TOUCH;
 	};
+
 	gslx680_ts@40 {
-		compatible = "gslx680";
+		compatible = "silead,gsl1680";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_gslx680>;
 		reg = <0x40>;
 		interrupts-extended = GPIRQ_GSLX680;
-		wakeup-gpios = GP_GSLX680_IRQ;
-		shutdown-gpios = GP_GSLX680_SHUTDOWN;
+		power-gpios = GP_GSLX680_POWER;
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <480>;
 	};
+
 	ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
