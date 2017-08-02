@@ -780,6 +780,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-snap.dtb \
 	imx6q-ta.dtb \
 	imx6q-usd.dtb \
+	imx6q-usd_mr2.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6qp-mtp.dtb \
