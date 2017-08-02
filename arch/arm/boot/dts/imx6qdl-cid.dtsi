@@ -97,8 +97,6 @@
 			MX6QDL_PAD_EIM_A20__GPIO2_IO18		0x1b0b0
 #define GP_3P7_EN		<&gpio5 11 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x1b0b0
-			/* Vibrator */
-			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x1b0b0
 			/* TODO Wireless control pins */
 			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x1b0b0
 			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x1b0b0
@@ -258,6 +256,13 @@
 			MX6QDL_PAD_EIM_A17__GPIO2_IO21		0x1b0b0
 #define GPIRQ_MAX77818_CHG_INT		<&gpio2 20 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_A18__GPIO2_IO20		0x1b0b0
+		>;
+	};
+
+	pinctrl_leds: ledsgrp {
+		fsl,pins = <
+#define GP_LED_VIBRATOR		<&gpio5 8 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x030b0
 		>;
 	};
 
@@ -529,6 +534,18 @@
 			gpios = GP_GPIOKEY_POWER;
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
+		};
+	};
+
+	leds: leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+
+		vibrator {
+			gpios = GP_LED_VIBRATOR;
+			default-state = "off";
+			linux,default-trigger = "transient";
 		};
 	};
 
