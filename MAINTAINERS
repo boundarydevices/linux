@@ -14029,3 +14029,8 @@ SECURE MONITOR DRIVERS FOR AMLOGIC MESON8B
 M:      Jiamin Ma <jiamin.ma@amlogic.com>
 F:      drivers/amlogic/secure_monitor/*
 
+AMLOGIC MESONGXL ADD S400 & S420 v03 DTS
+M:	Alex Deng <alex.deng@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/axg_s400_v03.dts
+F:	arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
+
