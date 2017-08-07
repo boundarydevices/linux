@@ -64,6 +64,7 @@ extern const u8 tuning_blk_pattern_8bit[128];
 #define AMLSD_DBG_IRQ		(1<<10)
 #define AMLSD_DBG_CLKC		(1<<11)
 #define AMLSD_DBG_TUNING	(1<<12)
+#define AMLSD_DBG_V3		(1<<13)
 
 #define     DETECT_CARD_IN          1
 #define     DETECT_CARD_OUT         2
@@ -109,8 +110,8 @@ extern const u8 tuning_blk_pattern_8bit[128];
 #define sd_emmc_err(fmt, args...) \
 	pr_warn("[%s] " fmt, __func__, ##args)
 
-#define emmc_dbg(emmc_timming_dbg, fmt, args...) do {\
-	if (emmc_timming_dbg)	\
+#define emmc_dbg(dbg_level, fmt, args...) do {\
+	if (dbg_level & sd_emmc_debug)	\
 		pr_warn("[%s]" fmt, __func__, ##args);	\
 } while (0)
 

@@ -182,6 +182,8 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 				prop, pdata->card_type);
 		SD_PARSE_U32_PROP_HEX(child, "pinmux_base",
 				prop, pdata->base);
+		SD_PARSE_U32_PROP_DEC(child, "tx_delay",
+						prop, pdata->tx_delay);
 		if (get_cpu_type() > MESON_CPU_MAJOR_ID_M8B) {
 			if (aml_card_type_mmc(pdata)) {
 				/*tx_phase set default value first*/

@@ -24,10 +24,6 @@ extern int meson_mmc_clk_init_v3(struct amlsd_host *host);
 
 extern void meson_mmc_set_ios_v3(struct mmc_host *mmc, struct mmc_ios *ios);
 
-/*extern int aml_sd_emmc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
- *		struct aml_tuning_data *tuning_data, u32 adj_win_start);
- */
-
 extern void aml_sd_emmc_set_buswidth(struct amlsd_host *host, u32 busw_ios);
 
 extern int meson_mmc_request_done(struct mmc_host *mmc,
@@ -40,5 +36,8 @@ extern void aml_sd_emmc_send_stop(struct amlsd_host *host);
 
 extern int aml_sd_emmc_post_dma(struct amlsd_host *host,
 		struct mmc_request *mrq);
+
+extern u32 aml_sd_emmc_tuning_transfer(struct mmc_host *mmc,
+	u32 opcode, const u8 *blk_pattern, u8 *blk_test, u32 blksz);
 
 #endif

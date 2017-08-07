@@ -577,7 +577,7 @@ _cali_retry:
 }
 #endif
 
-static u32 aml_sd_emmc_tuning_transfer(struct mmc_host *mmc,
+u32 aml_sd_emmc_tuning_transfer(struct mmc_host *mmc,
 	u32 opcode, const u8 *blk_pattern, u8 *blk_test, u32 blksz)
 {
 	struct amlsd_host *host = mmc_priv(mmc);
