@@ -290,6 +290,13 @@
 		>;
 	};
 
+	pinctrl_reg_gps_en: reg-gps-engrp {
+		fsl,pins = <
+#define GP_REG_GPS_EN	<&gpio4 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0
+		>;
+	};
+
 	pinctrl_reg_usbotg_vbus: reg-usbotg-vbusgrp {
 		fsl,pins = <
 #define GP_REG_USBOTG	<&gpio3 22 GPIO_ACTIVE_HIGH>
@@ -364,8 +371,6 @@
 			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0
 #define GP_GPS_INT		<&gpio7 13 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x0b0b0
-#define GP_GPS_RESET		<&gpio4 5 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0
 		>;
 	};
 
@@ -637,23 +642,36 @@
 			regulator-max-microvolt = <5000000>;
 		};
 
-		reg_usbotg_vbus: regulator@6 {
+		reg_gps_en: regulator@6 {
+			compatible = "regulator-fixed";
+			enable-active-high;
+			gpio = GP_REG_GPS_EN;
+			reg = <6>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_gps_en>;
+			regulator-name = "gps-en";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		reg_usbotg_vbus: regulator@7 {
 			compatible = "regulator-fixed";
 			enable-active-high;
 			gpio = GP_REG_USBOTG;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
-			reg = <6>;
+			reg = <7>;
 			regulator-name = "usb_otg_vbus";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 		};
 
-		reg_wlan_en: regulator@7 {
+		reg_wlan_en: regulator@8 {
 			compatible = "regulator-fixed";
 			enable-active-high;
 			gpio = GP_REG_WLAN_EN;
-			reg = <7>;
+			reg = <8>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_wlan_en>;
 			regulator-name = "wlan-en";
