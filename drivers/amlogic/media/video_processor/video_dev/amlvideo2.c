@@ -326,8 +326,8 @@ unsigned int buffer_size;
 struct page *cma_pages;
 struct resource memobj;
 int cma_mode;
+int node_id;
 bool use_reserve;
-
 };
 
 struct crop_info_s {
@@ -4822,14 +4822,21 @@ int amlvideo2_notify_callback(struct notifier_block *block, unsigned long cmd,
 	int ret = 0;
 
 	for (i = 0; i < AMLVIDEO2_MAX_NODE; i++) {
-		if (gAmlvideo2_Node[i]->r_type == AML_RECEIVER_NONE)
+		if ((gAmlvideo2_Node[i] != NULL) &&
+			(gAmlvideo2_Node[i]->r_type == AML_RECEIVER_NONE))
 			index = 1;
 	}
+
 	if (amlvideo2_dbg_en)
 		pr_info("%s , index = %d\n", __func__, index);
+
 	if (index != 1)
 		return ret;
+
 	node = gAmlvideo2_Node[index];
+	if ((node != NULL) && (!node->users))
+		return ret;
+
 	mutex_lock(&node->mutex);
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
@@ -5805,124 +5812,123 @@ static int amlvideo2_release_node(struct amlvideo2_device *vid_dev)
 }
 
 /* static struct resource memobj; */
-static int amlvideo2_create_node(struct platform_device *pdev)
+static int amlvideo2_create_node(struct platform_device *pdev, int node_id)
 {
-	int ret = 0, i = 0, j = 0;
+	int ret = 0, j = 0;
 	struct video_device *vfd = NULL;
 	struct amlvideo2_node *vid_node = NULL;
 	struct amlvideo2_fh *fh = NULL;
 	struct resource *res = NULL;
 	struct v4l2_device *v4l2_dev = platform_get_drvdata(pdev);
 	struct amlvideo2_device *vid_dev = container_of(v4l2_dev,
-							struct amlvideo2_device,
-							v4l2_dev);
+		struct amlvideo2_device,
+		v4l2_dev);
 	pr_info("amlvideo2_create_node");
 	vid_dev->node_num = pdev->num_resources;
 	if (vid_dev->node_num > MAX_SUB_DEV_NODE)
 		vid_dev->node_num = MAX_SUB_DEV_NODE;
 
-	for (i = 0; i < vid_dev->node_num; i++) {
-		vid_dev->node[i] = NULL;
-		ret = -ENOMEM;
-	#if 0
-		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
-	#else
+	vid_dev->node[node_id] = NULL;
+	ret = -ENOMEM;
+#if 0
+	res = platform_get_resource(pdev, IORESOURCE_MEM, i);
+#else
 
 	res = &vid_dev->memobj;
-		/*
-		 * ret = find_reserve_block(pdev->dev.of_node->name,i);
-		 * if(ret < 0){
-		 *   pr_err("\namlvideo2 memory resource undefined.\n");
-		 *   return -EFAULT;
-		 * }
-		 * res->start = (phys_addr_t)get_reserve_block_addr(ret);
-		 * res->end = res->start +
-		 * (phys_addr_t)get_reserve_block_size(ret)-1;
-		 */
-	#endif
-		if (!res)
-			break;
+/*
+ * ret = find_reserve_block(pdev->dev.of_node->name,i);
+ * if(ret < 0){
+ *   pr_err("\namlvideo2 memory resource undefined.\n");
+ *   return -EFAULT;
+ * }
+ * res->start = (phys_addr_t)get_reserve_block_addr(ret);
+ * res->end = res->start +
+ * (phys_addr_t)get_reserve_block_size(ret)-1;
+ */
+#endif
+	if (!res)
+		return ret;
 
-		vid_node = kzalloc(sizeof(struct amlvideo2_node), GFP_KERNEL);
-		if (!vid_node)
-			break;
+	vid_node = kzalloc(sizeof(struct amlvideo2_node), GFP_KERNEL);
+	if (!vid_node)
+		return ret;
 
-		vid_node->res.magic = MAGIC_RE_MEM;
-		vid_node->res.priv = NULL;
-		vid_node->context = create_ge2d_work_queue();
-		if (!vid_node->context) {
-			kfree(vid_node);
-			break;
-		}
-		/* init video dma queues */
-		INIT_LIST_HEAD(&vid_node->vidq.active);
-		init_waitqueue_head(&vid_node->vidq.wq);
-
-		/* initialize locks */
-		spin_lock_init(&vid_node->slock);
-		mutex_init(&vid_node->mutex);
-		init_completion(&vid_node->plug_sema);
-
-		vfd = video_device_alloc();
-		if (!vfd) {
-			destroy_ge2d_work_queue(vid_node->context);
-			kfree(vid_node);
-			break;
-		}
-		*vfd = amlvideo2_template;
-		vfd->dev_debug = debug;
-		vfd->v4l2_dev = v4l2_dev;
-		ret = video_register_device(vfd, VFL_TYPE_GRABBER, video_nr);
-		if (ret < 0) {
-			ret = -ENODEV;
-			video_device_release(vfd);
-			destroy_ge2d_work_queue(vid_node->context);
-			kfree(vid_node);
-			break;
-		}
-
-		fh = kzalloc(sizeof(*fh), GFP_KERNEL);
-		if (!fh)
-			break;
-
-		vid_node->fh = fh;
-		video_set_drvdata(vfd, vid_node);
-
-		/* Set all controls to their default value. */
-		for (j = 0; j < ARRAY_SIZE(amlvideo2_node_qctrl); j++)
-			vid_node->qctl_regs[j] =
-				amlvideo2_node_qctrl[j].default_value;
-
-		vid_node->vfd = vfd;
-		vid_node->vid = i;
-		vid_node->users = 0;
-		vid_node->vid_dev = vid_dev;
-		video_nr++;
-	#ifdef MULTI_NODE
-		vf_receiver_init(&vid_node->recv,
-			(i == 0) ? DEVICE_NAME0 : DEVICE_NAME1,
-			&video_vf_receiver, (void *)vid_node);
-	#else
-		vf_receiver_init(&vid_node->recv,
-		RECEIVER_NAME,
-					&video_vf_receiver, (void *)vid_node);
-	#endif
-		vf_reg_receiver(&vid_node->recv);
-		vf_provider_init(&vid_node->amlvideo2_vf_prov,
-		(i == 0) ? DEVICE_NAME0 : DEVICE_NAME1,
-					&amlvideo2_vf_provider,
-					(void *)vid_node);
-		vid_node->pflag = false;
-		vid_node->field_flag = false;
-		vid_node->field_condition_flag = false;
-		vid_node->ge2d_multi_process_flag = false;
-		vid_node->r_type = AML_RECEIVER_NONE;
-		vid_dev->node[i] = vid_node;
-		v4l2_info(&vid_dev->v4l2_dev, "V4L2 device registered as %s\n",
-				video_device_node_name(vfd));
-		gAmlvideo2_Node[i] = vid_node;
-		ret = 0;
+	vid_node->res.magic = MAGIC_RE_MEM;
+	vid_node->res.priv = NULL;
+	vid_node->context = create_ge2d_work_queue();
+	if (!vid_node->context) {
+		kfree(vid_node);
+		return ret;
 	}
+	/* init video dma queues */
+	INIT_LIST_HEAD(&vid_node->vidq.active);
+	init_waitqueue_head(&vid_node->vidq.wq);
+
+	/* initialize locks */
+	spin_lock_init(&vid_node->slock);
+	mutex_init(&vid_node->mutex);
+	init_completion(&vid_node->plug_sema);
+
+	vfd = video_device_alloc();
+	if (!vfd) {
+		destroy_ge2d_work_queue(vid_node->context);
+		kfree(vid_node);
+		return ret;
+	}
+	*vfd = amlvideo2_template;
+	vfd->dev_debug = debug;
+	vfd->v4l2_dev = v4l2_dev;
+	ret = video_register_device(vfd, VFL_TYPE_GRABBER, video_nr);
+	if (ret < 0) {
+		ret = -ENODEV;
+		video_device_release(vfd);
+		destroy_ge2d_work_queue(vid_node->context);
+		kfree(vid_node);
+		return ret;
+	}
+
+	fh = kzalloc(sizeof(*fh), GFP_KERNEL);
+	if (!fh)
+		return ret;
+
+	vid_node->fh = fh;
+	video_set_drvdata(vfd, vid_node);
+
+	/* Set all controls to their default value. */
+	for (j = 0; j < ARRAY_SIZE(amlvideo2_node_qctrl); j++) {
+		vid_node->qctl_regs[j] =
+		amlvideo2_node_qctrl[j].default_value;
+	}
+
+	vid_node->vfd = vfd;
+	vid_node->vid = node_id;
+	vid_node->users = 0;
+	vid_node->vid_dev = vid_dev;
+	video_nr++;
+#ifdef MULTI_NODE
+	vf_receiver_init(&vid_node->recv,
+		(node_id == 0) ? DEVICE_NAME0 : DEVICE_NAME1,
+		&video_vf_receiver, (void *)vid_node);
+#else
+	vf_receiver_init(&vid_node->recv,
+		RECEIVER_NAME,
+		&video_vf_receiver, (void *)vid_node);
+#endif
+	vf_reg_receiver(&vid_node->recv);
+	vf_provider_init(&vid_node->amlvideo2_vf_prov,
+	(node_id == 0) ? DEVICE_NAME0 : DEVICE_NAME1,
+		&amlvideo2_vf_provider,
+		(void *)vid_node);
+	vid_node->pflag = false;
+	vid_node->field_flag = false;
+	vid_node->field_condition_flag = false;
+	vid_node->ge2d_multi_process_flag = false;
+	vid_node->r_type = AML_RECEIVER_NONE;
+	vid_dev->node[node_id] = vid_node;
+	v4l2_info(&vid_dev->v4l2_dev, "V4L2 device registered as %s\n",
+		video_device_node_name(vfd));
+	gAmlvideo2_Node[node_id] = vid_node;
+	ret = 0;
 
 	if (ret)
 		amlvideo2_release_node(vid_dev);
@@ -5959,6 +5965,10 @@ static int amlvideo2_driver_probe(struct platform_device *pdev)
 		pr_err("don't find  match cma_mode\n");
 		dev->cma_mode = 1;
 	}
+	ret = of_property_read_u32(pdev->dev.of_node,
+				   "amlvideo2_id", &(dev->node_id));
+	if (ret)
+		pr_err("don't find amlvideo2 node id.\n");
 	dev->pdev = pdev;
 
 	if (v4l2_device_register(&pdev->dev, &dev->v4l2_dev) < 0) {
@@ -5970,12 +5980,13 @@ static int amlvideo2_driver_probe(struct platform_device *pdev)
 	mutex_init(&dev->mutex);
 	video_nr = 11;
 
-	ret = amlvideo2_create_node(pdev);
+	ret = amlvideo2_create_node(pdev, dev->node_id);
 	if (ret)
 		goto probe_err1;
 
 	/* register vout client */
-	vout_register_client(&amlvideo2_notifier_nb);
+	if (dev->node_id == 1)
+		vout_register_client(&amlvideo2_notifier_nb);
 	return 0;
 
 probe_err1: v4l2_device_unregister(&dev->v4l2_dev);
@@ -6066,7 +6077,9 @@ static int amlvideo2_drv_remove(struct platform_device *pdev)
 							struct amlvideo2_device,
 							v4l2_dev);
 	/* unregister vout client */
-	vout_unregister_client(&amlvideo2_notifier_nb);
+	video_nr = 11;
+	if (vid_dev->node_id == 1)
+		vout_unregister_client(&amlvideo2_notifier_nb);
 	amlvideo2_release_node(vid_dev);
 	v4l2_device_unregister(v4l2_dev);
 	platform_set_drvdata(pdev, NULL);
