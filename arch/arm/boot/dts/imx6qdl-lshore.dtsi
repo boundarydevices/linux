@@ -257,16 +257,10 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
-#define GP_TOUCH_IRQ			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
-		>;
-	};
-
-	pinctrl_i2c3_gslx680: i2c3_gslx680grp {
-		fsl,pins = <
 #define GPIRQ_GSLX680			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
-#define GP_GSLX680_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x130b0
+#define GPIRQ_TOUCH			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
+#define GP_TOUCH			<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
 		>;
 	};
 
@@ -560,24 +554,24 @@
 	egalax_ts@04 {
 		compatible = "eeti,egalax_ts";
 		reg = <0x04>;
-		interrupts-extended = GP_TOUCH_IRQ;
-		wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GP_TOUCH;
 	};
 
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts,ft5x06-ts";
 		reg = <0x38>;
-		interrupts-extended = GP_TOUCH_IRQ;
-		wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GP_TOUCH;
 	};
 
 	gslx680_ts@40 {
-		compatible = "gslx680";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_gslx680>;
+		compatible = "silead,gsl1680";
 		reg = <0x40>;
 		interrupts-extended = GPIRQ_GSLX680;
-		wakeup-gpios = GP_GSLX680_IRQ;
+		touchscreen-size-x = <480>;	/* swapped below */
+		touchscreen-size-y = <800>;
+		touchscreen-swapped-x-y;
 	};
 };
 
