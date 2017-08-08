@@ -717,6 +717,7 @@
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000>;
 		reg = <0x0a>;
 		clocks = <&clks IMX6QDL_CLK_CKO>;
+		micbias-voltage-m-volts = <2250>;
 		VDDA-supply = <&reg_2p5v>;
 		VDDIO-supply = <&reg_3p3v>;
 	};
