@@ -755,8 +755,9 @@
 		reg = <0x40>;
 		interrupts-extended = GPIRQ_GSLX680;
 		power-gpios = GP_GSLX680_POWER;
-		touchscreen-size-x = <800>;
-		touchscreen-size-y = <480>;
+		touchscreen-size-x = <480>;	/* swapped below */
+		touchscreen-size-y = <800>;
+		touchscreen-swapped-x-y;
 	};
 
 	ili210x@41 {
