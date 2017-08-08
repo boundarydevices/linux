@@ -1576,6 +1576,7 @@ static void lcd_clk_generate_axg(struct lcd_config_s *pconf)
 				LCDPR("fout=%d, xd=%d\n", cConf->fout, xd);
 
 			pconf->lcd_control.mipi_config->bit_rate = pll_fout * 1000;
+			pconf->lcd_control.mipi_config->clk_factor = xd;
 			cConf->xd = xd;
 			done = check_pll_axg(cConf, pll_fout);
 			if (done)

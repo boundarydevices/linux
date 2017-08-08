@@ -42,7 +42,7 @@
  *    non-burst sync pulse; non-burst sync event; or burst.
  */
 
-#define MIPI_DSI_COLOR_18BIT            COLOR_18BIT_CFG_1
+#define MIPI_DSI_COLOR_18BIT            COLOR_18BIT_CFG_2
 #define MIPI_DSI_COLOR_24BIT            COLOR_24BIT
 #define MIPI_DSI_TEAR_SWITCH            MIPI_DCS_DISABLE_TEAR
 #define CMD_TIMEOUT_CNT                 3000
@@ -145,47 +145,62 @@ static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
 	}
 }
 
-static void mipi_dsi_print_dphy_info(struct dsi_config_s *dconf)
+static void mipi_dsi_dphy_print_info(struct dsi_config_s *dconf)
 {
 	unsigned int temp;
 
 	temp = ((1000000 * 100) / (dconf->bit_rate / 1000)) * 8;
 	pr_info("MIPI DSI DPHY timing (unit: ns)\n"
-	"  UI:                %d.%02d\n"
-	"  LP LPX:            %d\n"
-	"  LP TA_SURE:        %d\n"
-	"  LP TA_GO:          %d\n"
-	"  LP TA_GET:         %d\n"
-	"  HS EXIT:           %d\n"
-	"  HS TRAIL:          %d\n"
-	"  HS ZERO:           %d\n"
-	"  HS PREPARE:        %d\n"
-	"  CLK TRAIL:         %d\n"
-	"  CLK POST:          %d\n"
-	"  CLK ZERO:          %d\n"
-	"  CLK PREPARE:       %d\n"
-	"  CLK PRE:           %d\n"
-	"  INIT:              %d\n"
-	"  WAKEUP:            %d\n\n",
-	(temp / 8 / 100), ((temp / 8) % 100),
-	(temp * dsi_phy_config.lp_lpx / 100),
-	(temp * dsi_phy_config.lp_ta_sure / 100),
-	(temp * dsi_phy_config.lp_ta_go / 100),
-	(temp * dsi_phy_config.lp_ta_get / 100),
-	(temp * dsi_phy_config.hs_exit / 100),
-	(temp * dsi_phy_config.hs_trail / 100),
-	(temp * dsi_phy_config.hs_zero / 100),
-	(temp * dsi_phy_config.hs_prepare / 100),
-	(temp * dsi_phy_config.clk_trail / 100),
-	(temp * dsi_phy_config.clk_post / 100),
-	(temp * dsi_phy_config.clk_zero / 100),
-	(temp * dsi_phy_config.clk_prepare / 100),
-	(temp * dsi_phy_config.clk_pre / 100),
-	(temp * dsi_phy_config.init / 100),
-	(temp * dsi_phy_config.wakeup / 100));
+		"  UI:                %d.%02d\n"
+		"  LP LPX:            %d\n"
+		"  LP TA_SURE:        %d\n"
+		"  LP TA_GO:          %d\n"
+		"  LP TA_GET:         %d\n"
+		"  HS EXIT:           %d\n"
+		"  HS TRAIL:          %d\n"
+		"  HS ZERO:           %d\n"
+		"  HS PREPARE:        %d\n"
+		"  CLK TRAIL:         %d\n"
+		"  CLK POST:          %d\n"
+		"  CLK ZERO:          %d\n"
+		"  CLK PREPARE:       %d\n"
+		"  CLK PRE:           %d\n"
+		"  INIT:              %d\n"
+		"  WAKEUP:            %d\n\n",
+		(temp / 8 / 100), ((temp / 8) % 100),
+		(temp * dsi_phy_config.lp_lpx / 100),
+		(temp * dsi_phy_config.lp_ta_sure / 100),
+		(temp * dsi_phy_config.lp_ta_go / 100),
+		(temp * dsi_phy_config.lp_ta_get / 100),
+		(temp * dsi_phy_config.hs_exit / 100),
+		(temp * dsi_phy_config.hs_trail / 100),
+		(temp * dsi_phy_config.hs_zero / 100),
+		(temp * dsi_phy_config.hs_prepare / 100),
+		(temp * dsi_phy_config.clk_trail / 100),
+		(temp * dsi_phy_config.clk_post / 100),
+		(temp * dsi_phy_config.clk_zero / 100),
+		(temp * dsi_phy_config.clk_prepare / 100),
+		(temp * dsi_phy_config.clk_pre / 100),
+		(temp * dsi_phy_config.init / 100),
+		(temp * dsi_phy_config.wakeup / 100));
 }
 
-void mipi_dsi_print_info(struct lcd_config_s *pconf)
+static void mipi_dsi_video_print_info(struct dsi_config_s *dconf)
+{
+	if (dconf->video_mode_type != BURST_MODE) {
+		pr_info("MIPI DSI NON-BURST setting:\n"
+			"  multi_pkt_en:          %d\n"
+			"  vid_num_chunks:        %d\n"
+			"  pixel_per_chunk:       %d\n"
+			"  byte_per_chunk:        %d\n"
+			"  vid_null_size:         %d\n\n",
+			dsi_vconf.multi_pkt_en, dsi_vconf.vid_num_chunks,
+			dsi_vconf.pixel_per_chunk, dsi_vconf.byte_per_chunk,
+			dsi_vconf.vid_null_size);
+	}
+}
+
+static void mipi_dsi_host_print_info(struct lcd_config_s *pconf)
 {
 	unsigned int esc_clk, factor;
 	struct dsi_config_s *dconf;
@@ -227,8 +242,14 @@ void mipi_dsi_print_info(struct lcd_config_s *pconf)
 	mipi_dsi_init_table_print(dconf, 0); /* dsi_init_off table */
 
 	pr_info("extern init:             %d\n\n", dconf->extern_init);
+}
 
-	mipi_dsi_print_dphy_info(dconf);
+void mipi_dsi_print_info(struct lcd_config_s *pconf)
+{
+	mipi_dsi_host_print_info(pconf);
+
+	mipi_dsi_dphy_print_info(pconf->lcd_control.mipi_config);
+	mipi_dsi_video_print_info(pconf->lcd_control.mipi_config);
 }
 
 int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
@@ -577,19 +598,16 @@ static void set_mipi_dsi_host(unsigned int vcid, unsigned int chroma_subsample,
 			(1 << BIT_LP_VFP_EN)  |       /* enalbe lp */
 			(1 << BIT_LP_VBP_EN)  |       /* enalbe lp */
 			(1 << BIT_LP_VSA_EN)  |       /* enalbe lp */
-			(1 << BIT_FRAME_BTA_ACK_EN) |
-				/* enable BTA after one
-				 *	frame, TODO, need check
-				 */
+			(0 << BIT_FRAME_BTA_ACK_EN) |
+			    /* enable BTA after one frame, TODO, need check */
 			/* (1 << BIT_LP_CMD_EN) |  */
-			     /* enable the command*/
-				/* transmission only in lp mode */
+			   /* enable the command transmission only in lp mode */
 			(vid_mode_type << BIT_VID_MODE_TYPE));
 					/* burst non burst mode */
 		/* [23:16]outvact, [7:0]invact */
 		dsi_host_write(MIPI_DSI_DWC_DPI_LP_CMD_TIM_OS,
 			(4 << 16) | (4 << 0));
-
+#if 0
 		/* 3.2   Configure video packet size settings */
 		if (vid_mode_type == BURST_MODE) {
 			/* should be one line in pixels, such as 480/240... */
@@ -613,12 +631,20 @@ static void set_mipi_dsi_host(unsigned int vcid, unsigned int chroma_subsample,
 		} else {  /* non burst mode */
 			/* HACT/VID_PKT_SIZE */
 			dsi_host_write(MIPI_DSI_DWC_VID_NUM_CHUNKS_OS,
-				dsi_vconf.num_of_chunk);
+				dsi_vconf.vid_num_chunks);
 			/* video null size */
 			dsi_host_write(MIPI_DSI_DWC_VID_NULL_SIZE_OS,
 				dsi_vconf.vid_null_size);
 		}
-
+#else
+		/* 3.2   Configure video packet size settings */
+		dsi_host_write(MIPI_DSI_DWC_VID_PKT_SIZE_OS,
+			dsi_vconf.pixel_per_chunk);
+		dsi_host_write(MIPI_DSI_DWC_VID_NUM_CHUNKS_OS,
+			dsi_vconf.vid_num_chunks);
+		dsi_host_write(MIPI_DSI_DWC_VID_NULL_SIZE_OS,
+			dsi_vconf.vid_null_size);
+#endif
 		/* 4 Configure the video relative parameters according to
 		 *	   the output type
 		 */
@@ -1318,7 +1344,7 @@ static void mipi_dsi_phy_config(struct dsi_phy_s *dphy, unsigned int dsi_ui)
 			"clk_prepare = 0x%02x\n"
 			"clk_pre     = 0x%02x\n"
 			"init        = 0x%02x\n"
-			"wakeup      = 0x%02x\n",
+			"wakeup      = 0x%02x\n\n",
 			__func__,
 			dphy->lp_tesc, dphy->lp_lpx, dphy->lp_ta_sure,
 			dphy->lp_ta_go, dphy->lp_ta_get, dphy->hs_exit,
@@ -1355,81 +1381,160 @@ static void mipi_dsi_video_config(struct lcd_config_s *pconf)
 	dsi_vconf.vact = v_active;
 
 	if (lcd_debug_print_flag) {
-		LCDPR(" ============= VIDEO TIMING SETTING =============\n");
-		LCDPR(" HLINE        = %d\n", dsi_vconf.hline);
-		LCDPR(" HSA          = %d\n", dsi_vconf.hsa);
-		LCDPR(" HBP          = %d\n", dsi_vconf.hbp);
-		LCDPR(" VSA          = %d\n", dsi_vconf.vsa);
-		LCDPR(" VBP          = %d\n", dsi_vconf.vbp);
-		LCDPR(" VFP          = %d\n", dsi_vconf.vfp);
-		LCDPR(" VACT         = %d\n", dsi_vconf.vact);
-		LCDPR(" ================================================\n");
+		LCDPR("MIPI DSI video timing:\n"
+			"  HLINE     = %d\n"
+			"  HSA       = %d\n"
+			"  HBP       = %d\n"
+			"  VSA       = %d\n"
+			"  VBP       = %d\n"
+			"  VFP       = %d\n"
+			"  VACT      = %d\n\n",
+			dsi_vconf.hline, dsi_vconf.hsa, dsi_vconf.hbp,
+			dsi_vconf.vsa, dsi_vconf.vbp, dsi_vconf.vfp,
+			dsi_vconf.vact);
 	}
 }
 
 #define DSI_PACKET_HEADER_CRC      6 /* 4(header)+2(CRC) */
-static void mipi_dsi_non_burst_chunk_config(struct lcd_config_s *pconf)
+static void mipi_dsi_non_burst_packet_config(struct lcd_config_s *pconf)
 {
-	int pixel_per_chunk = 0, num_of_chunk = 0, vid_null_size = 0;
-	int byte_per_chunk = 0, total_bytes_per_chunk = 0, chunk_overhead = 0;
-	int bit_rate_pclk_factor;
-	int lane_num;
-	int i, done;
+	struct dsi_config_s *dconf = pconf->lcd_control.mipi_config;
+	int lane_num, clk_factor, hactive, multi_pkt_en, bit_rate_required;
+	int pixel_per_chunk = 0, vid_num_chunks = 0;
+	int byte_per_chunk = 0, vid_pkt_byte_per_chunk = 0;
+	int total_bytes_per_chunk = 0, chunk_overhead = 0, vid_null_size = 0;
+	int i = 1, done = 0;
 
-	i = 1;
-	done = 0;
-	lane_num = (int)(pconf->lcd_control.mipi_config->lane_num);
-	bit_rate_pclk_factor = pconf->lcd_control.mipi_config->bit_rate /
-		pconf->lcd_timing.lcd_clk;
-	while ((i <= (pconf->lcd_basic.h_active/8)) && (done == 0)) {
-		pixel_per_chunk = i * 8;
-		if (pconf->lcd_control.mipi_config->dpi_data_format ==
-			COLOR_18BIT_CFG_1) {
+	lane_num = (int)(dconf->lane_num);
+	clk_factor = dconf->clk_factor;
+	hactive = pconf->lcd_basic.h_active;
+	bit_rate_required = pconf->lcd_timing.lcd_clk * 3 * dsi_vconf.data_bits;
+	bit_rate_required = bit_rate_required / lane_num;
+	if (dconf->bit_rate > bit_rate_required)
+		multi_pkt_en = 1;
+	else
+		multi_pkt_en = 0;
+	if (lcd_debug_print_flag) {
+		LCDPR("non-burst: bit_rate_required=%d, bit_rate=%d\n",
+			bit_rate_required, dconf->bit_rate);
+	}
+
+	if (multi_pkt_en == 0) {
+		pixel_per_chunk = hactive;
+		if (dconf->dpi_data_format == COLOR_18BIT_CFG_1) {
 			/* 18bit (4*18/8=9byte) */
 			byte_per_chunk = pixel_per_chunk * 9/4;
 		} else {
 			/* 24bit or 18bit-loosely */
 			byte_per_chunk = pixel_per_chunk * 3;
 		}
+		vid_pkt_byte_per_chunk = 4 + byte_per_chunk + 2;
 		total_bytes_per_chunk =
-			(lane_num * pixel_per_chunk * bit_rate_pclk_factor) / 8;
-		num_of_chunk = pconf->lcd_basic.h_active / pixel_per_chunk;
-		/* byte_per_chunk+6=valid_payload */
-		chunk_overhead = total_bytes_per_chunk -
-			(byte_per_chunk + DSI_PACKET_HEADER_CRC);
-		if (chunk_overhead >= DSI_PACKET_HEADER_CRC) {
-			/* if room for null_vid's head(4)+crc(2) */
-			/* chunk_overhead-null_vid's head(4)+crc(2) =
-			 *   null_vid's payload
-			 */
-			vid_null_size = chunk_overhead - DSI_PACKET_HEADER_CRC;
-			done = 1;
-		} else if (chunk_overhead >= 0) {
-			vid_null_size = 0;
-			done = 1;
-		} else {
-			vid_null_size = 0;
+			(lane_num * pixel_per_chunk * clk_factor) / 8;
+
+		vid_num_chunks = 0;
+		vid_null_size = 0;
+	} else {
+#if 0
+		i = hactive/8;
+		while ((i >= 1) && (done == 0)) {
+			pixel_per_chunk = i * 4;
+			if (dconf->dpi_data_format == COLOR_18BIT_CFG_1) {
+				/* 18bit (4*18/8=9byte) */
+				byte_per_chunk = pixel_per_chunk * 9/4;
+			} else {
+				/* 24bit or 18bit-loosely */
+				byte_per_chunk = pixel_per_chunk * 3;
+			}
+			vid_pkt_byte_per_chunk = 4 + byte_per_chunk + 2;
+			total_bytes_per_chunk =
+				(lane_num * pixel_per_chunk * clk_factor) / 8;
+			vid_num_chunks = hactive / pixel_per_chunk;
+
+			chunk_overhead =
+				total_bytes_per_chunk - vid_pkt_byte_per_chunk;
+			if (chunk_overhead >= 12) {
+				vid_null_size = chunk_overhead - 12;
+				done = 1;
+			} else if (chunk_overhead >= 6) {
+				vid_null_size = 0;
+				done = 1;
+			}
+			i--;
 		}
-		i++;
-	}
-	if (done == 0) {
-		LCDPR(" No room packet header & CRC, chunk_overhead is %d\n",
-			chunk_overhead);
+#else
+		i = 2;
+		while ((i < hactive) && (done == 0)) {
+			vid_num_chunks = i;
+			pixel_per_chunk = hactive / vid_num_chunks;
+
+			if (dconf->dpi_data_format == COLOR_18BIT_CFG_1) {
+				if ((pixel_per_chunk % 4) > 0)
+					continue;
+				/* 18bit (4*18/8=9byte) */
+				byte_per_chunk = pixel_per_chunk * 9/4;
+			} else {
+				/* 24bit or 18bit-loosely */
+				byte_per_chunk = pixel_per_chunk * 3;
+			}
+			vid_pkt_byte_per_chunk = 4 + byte_per_chunk + 2;
+			total_bytes_per_chunk =
+				(lane_num * pixel_per_chunk * clk_factor) / 8;
+
+			chunk_overhead =
+				total_bytes_per_chunk - vid_pkt_byte_per_chunk;
+			if (chunk_overhead >= 12) {
+				vid_null_size = chunk_overhead - 12;
+				done = 1;
+			} else if (chunk_overhead >= 6) {
+				vid_null_size = 0;
+				done = 1;
+			}
+			i += 2;
+		}
+#endif
+		if (done == 0) {
+			LCDERR("Packet no room for chunk_overhead\n");
+			//pixel_per_chunk = hactive;
+			//vid_num_chunks = 0;
+			//vid_null_size = 0;
+		}
 	}
 
 	dsi_vconf.pixel_per_chunk = pixel_per_chunk;
-	dsi_vconf.num_of_chunk = num_of_chunk;
+	dsi_vconf.vid_num_chunks = vid_num_chunks;
 	dsi_vconf.vid_null_size = vid_null_size;
+	dsi_vconf.byte_per_chunk = byte_per_chunk;
+	dsi_vconf.multi_pkt_en = multi_pkt_en;
+
 	if (lcd_debug_print_flag) {
-		LCDPR(" ============== NON_BURST SETTINGS =============\n");
-		LCDPR(" pixel_per_chunk       = %d\n", pixel_per_chunk);
-		LCDPR(" num_of_chunk          = %d\n", num_of_chunk);
-		LCDPR(" total_bytes_per_chunk = %d\n", total_bytes_per_chunk);
-		LCDPR(" byte_per_chunk        = %d\n", byte_per_chunk);
-		LCDPR(" chunk_overhead        = %d\n", chunk_overhead);
-		LCDPR(" vid_null_size         = %d\n", vid_null_size);
-		LCDPR(" ===============================================\n");
+		LCDPR("MIPI DSI NON-BURST setting:\n"
+			"  multi_pkt_en             = %d\n"
+			"  vid_num_chunks           = %d\n"
+			"  pixel_per_chunk          = %d\n"
+			"  byte_per_chunk           = %d\n"
+			"  vid_pkt_byte_per_chunk   = %d\n"
+			"  total_bytes_per_chunk    = %d\n"
+			"  chunk_overhead           = %d\n"
+			"  vid_null_size            = %d\n\n",
+			multi_pkt_en, vid_num_chunks,
+			pixel_per_chunk, byte_per_chunk,
+			vid_pkt_byte_per_chunk, total_bytes_per_chunk,
+			chunk_overhead, vid_null_size);
 	}
+}
+
+static void mipi_dsi_vid_mode_config(struct lcd_config_s *pconf)
+{
+	if (pconf->lcd_control.mipi_config->video_mode_type == BURST_MODE) {
+		dsi_vconf.pixel_per_chunk = pconf->lcd_basic.h_active;
+		dsi_vconf.vid_num_chunks = 0;
+		dsi_vconf.vid_null_size = 0;
+	} else {
+		mipi_dsi_non_burst_packet_config(pconf);
+	}
+
+	mipi_dsi_video_config(pconf);
 }
 
 static void mipi_dsi_host_init(struct lcd_config_s *pconf)
@@ -1553,6 +1658,7 @@ void lcd_mipi_dsi_config_set(struct lcd_config_s *pconf)
 		dconf->dpi_data_format  = MIPI_DSI_COLOR_24BIT;
 		lcd_bits = 8;
 	}
+	dsi_vconf.data_bits = lcd_bits;
 
 	/* bit rate max */
 	if (dconf->bit_rate_max == 0) { /* auto calculate */
@@ -1625,30 +1731,33 @@ void lcd_mipi_dsi_config_post(struct lcd_config_s *pconf)
 			(pclk / 1000), (pclk % 1000),
 			(dconf->bit_rate / 1000000),
 			((dconf->bit_rate / 1000) % 1000));
+#if 0
 		dconf->factor_numerator = pclk;
 		dconf->factor_denominator = lanebyteclk;
+#else
+		dconf->factor_numerator = 8;
+		dconf->factor_denominator = dconf->clk_factor;
+#endif
 	}
 	num = dconf->factor_numerator;
 	den = dconf->factor_denominator;
-	LCDPR("num=%d, den=%d, factor=%d.%02d\n",
-		num, den, (den / num), ((den % num) * 100 / num));
-
-	/* video config */
-	if (dconf->operation_mode_display == OPERATION_VIDEO_MODE) {
-		mipi_dsi_video_config(pconf);
-		if (dconf->video_mode_type != BURST_MODE)
-			mipi_dsi_non_burst_chunk_config(pconf);
+	if (lcd_debug_print_flag) {
+		LCDPR("num=%d, den=%d, factor=%d.%02d\n",
+			num, den, (den / num), ((den % num) * 100 / num));
 	}
+
+	if (dconf->operation_mode_display == OPERATION_VIDEO_MODE)
+		mipi_dsi_vid_mode_config(pconf);
 
 	/* phy config */
 	mipi_dsi_phy_config(&dsi_phy_config, dconf->bit_rate);
+
+	if (lcd_debug_print_flag)
+		mipi_dsi_host_print_info(pconf);
 }
 
 static void mipi_dsi_host_on(struct lcd_config_s *pconf)
 {
-	if (lcd_debug_print_flag)
-		mipi_dsi_print_info(pconf);
-
 	startup_mipi_dsi_host();
 	mipi_dsi_host_init(pconf);
 	dsi_phy_config_set(pconf);

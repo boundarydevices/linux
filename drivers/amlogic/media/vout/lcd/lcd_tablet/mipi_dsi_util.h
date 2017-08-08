@@ -511,6 +511,15 @@ struct dsi_phy_s {
 };
 
 struct dsi_vid_s {
+	int data_bits;
+	/* vid packet */
+	int vid_num_chunks;
+	int pixel_per_chunk; /* pkt_size */
+	int vid_null_size;
+
+	int byte_per_chunk; /* internal usage */
+	int multi_pkt_en;   /* internal usage */
+
 	unsigned int hline;
 	unsigned int hsa;
 	unsigned int hbp;
@@ -518,11 +527,6 @@ struct dsi_vid_s {
 	unsigned int vbp;
 	unsigned int vfp;
 	unsigned int vact;
-
-	/* for non-burst chunk overhead */
-	unsigned int pixel_per_chunk;
-	unsigned int num_of_chunk;
-	unsigned int vid_null_size;
 };
 
 #define DSI_CMD_SIZE_MAX		2000

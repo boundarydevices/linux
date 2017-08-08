@@ -245,6 +245,7 @@ struct dsi_config_s {
 	unsigned int bit_rate_max; /* MHz */
 	unsigned int bit_rate_min; /* MHz*/
 	unsigned int bit_rate; /* Hz */
+	unsigned int clk_factor; /* bit_rate/pclk */
 	unsigned int factor_numerator;
 	unsigned int factor_denominator; /* 100 */
 	unsigned char operation_mode_init; /* 0=video mode, 1=command mode */
