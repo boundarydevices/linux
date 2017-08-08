@@ -125,8 +125,10 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 		} else {
 			/* Get mec mode & ting value  set it in cbus2050 */
 			if (of_property_read_u32(np, "mc_val_external_phy",
-						 &mc_val))
+						 &mc_val)) {
+			} else {
 				writel(mc_val, PREG_ETH_REG0);
+			}
 			if (!of_property_read_u32(np, "cali_val", &cali_val))
 				writel(cali_val, PREG_ETH_REG1);
 			if (res) {
