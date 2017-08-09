@@ -780,13 +780,13 @@
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
 		status = "okay";
-		key_name = "voice", "vol-", "vol+", "wifi", "<<", ">>";
+		key_name = "power", "vol-", "vol+", "wifi", "<<", ">>";
 		key_num = <6>;
 		io-channels = <&saradc SARADC_CH0>;
 		io-channel-names = "key-chan-0";
 		key_chan = <SARADC_CH0 SARADC_CH0 SARADC_CH0
 					SARADC_CH0 SARADC_CH0 SARADC_CH0>;
-		key_code = <164 114 115 139 105 106>;
+		key_code = <116 114 115 139 105 106>;
 		key_val = <0 143 266 389 512 635>; //val=voltage/1800mV*1023
 		key_tolerance = <40 40 40 40 40 40>;
 	};
