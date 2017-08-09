@@ -725,7 +725,7 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 			goto fail_pcie;
 		}
 
-		if (clk_get_rate(amlogic_pcie->bus_clk) == rate) {
+		if (clk_get_rate(amlogic_pcie->bus_clk) != rate) {
 			ret = -ENODEV;
 			goto fail_pcie;
 		}

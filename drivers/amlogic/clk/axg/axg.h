@@ -274,7 +274,7 @@ static const struct pll_rate_table axg_gp0_pll_rate_table[] = {
 };
 
 static const struct pll_rate_table axg_pcie_pll_rate_table[] = {
-	PLL_FRAC_RATE(100000000, 66, 1, 1, 3, 683),
+	PLL_FRAC_RATE(100000000, 200, 3, 1, 3, 0),
 	{ /* sentinel */ },
 };
 #endif /* __AXG_H */
