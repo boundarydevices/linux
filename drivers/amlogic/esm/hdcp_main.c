@@ -35,6 +35,8 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/delay.h>
+#include <linux/of_device.h>
+#include <linux/debugfs.h>
 
 #include "host_lib_driver_linux_if.h"
 
@@ -61,9 +63,11 @@ struct esm_device {
 	dma_addr_t data_base;
 	uint32_t data_size;
 	uint8_t *data;
-
+	struct debugfs_blob_wrapper blob;
 	struct resource *hpi_resource;
 	uint8_t __iomem *hpi;
+	struct device esm_code_dev;
+	struct device esm_data_dev;
 };
 
 static struct esm_device esm_devices[MAX_ESM_DEVICES];
@@ -228,6 +232,9 @@ static struct esm_device *alloc_esm_slot(const struct esm_ioc_meminfo *info)
 	return NULL;
 }
 
+static struct dentry *esm_debugfs;
+static struct dentry *esm_blob;
+
 static void free_dma_areas(struct esm_device *esm)
 {
 	if (!esm->code_is_phys_mem && esm->code) {
@@ -241,6 +248,8 @@ static void free_dma_areas(struct esm_device *esm)
 			esm->data_base);
 		esm->data = NULL;
 	}
+
+	debugfs_remove_recursive(esm_debugfs);
 }
 
 static int alloc_dma_areas(struct esm_device *esm,
@@ -254,10 +263,14 @@ static int alloc_dma_areas(struct esm_device *esm,
 		esm->code_base = info->code_base;
 		esm->code = phys_to_virt(esm->code_base);
 	} else {
-		esm->code = dma_alloc_coherent((struct device *)esm,
+		of_dma_configure(&esm->esm_code_dev, esm->esm_code_dev.of_node);
+		esm->code = dma_alloc_coherent(&esm->esm_code_dev,
 			esm->code_size, &esm->code_base, GFP_KERNEL);
-		if (!esm->code)
+		pr_info("the esm code address is %p\n", esm->code);
+		if (!esm->code) {
+			free_dma_areas(esm);
 			return -ENOMEM;
+		}
 	}
 
 	esm->data_size = info->data_size;
@@ -267,13 +280,23 @@ static int alloc_dma_areas(struct esm_device *esm,
 		esm->data_base = info->data_base;
 		esm->data = phys_to_virt(esm->data_base);
 	} else {
-		esm->data = dma_alloc_coherent((struct device *)esm,
+		of_dma_configure(&esm->esm_data_dev, esm->esm_data_dev.of_node);
+		esm->data = dma_alloc_coherent(&esm->esm_data_dev,
 			esm->data_size, &esm->data_base, GFP_KERNEL);
+		pr_info("the esm data address is %p\n", esm->data);
 		if (!esm->data) {
 			free_dma_areas(esm);
 			return -ENOMEM;
 		}
 	}
+	/* add blob note to show esm feature and debug*/
+	esm_debugfs = debugfs_create_dir("esm", NULL);
+	if (!esm_debugfs)
+		return -ENOENT;
+
+	esm->blob.data = (void *)esm->code;
+	esm->blob.size = esm->code_size;
+	esm_blob = debugfs_create_blob("blob", 0644, esm_debugfs, &esm->blob);
 
 	if (randomize_mem) {
 		prandom_bytes(esm->code, esm->code_size);
