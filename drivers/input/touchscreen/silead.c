@@ -21,7 +21,8 @@
 #include <linux/module.h>
 #include <linux/acpi.h>
 #include <linux/interrupt.h>
-#include <linux/gpio/consumer.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/firmware.h>
 #include <linux/input.h>
@@ -72,7 +73,7 @@ enum silead_ts_power {
 
 struct silead_ts_data {
 	struct i2c_client *client;
-	struct gpio_desc *gpio_power;
+	unsigned gpio_power;
 	struct input_dev *input;
 	struct regulator_bulk_data regulators[2];
 	char fw_name[64];
@@ -127,8 +128,8 @@ static void silead_ts_set_power(struct i2c_client *client,
 {
 	struct silead_ts_data *data = i2c_get_clientdata(client);
 
-	if (data->gpio_power) {
-		gpiod_set_value_cansleep(data->gpio_power, state);
+	if (gpio_is_valid(data->gpio_power)) {
+		gpio_set_value(data->gpio_power, state);
 		msleep(SILEAD_POWER_SLEEP);
 	}
 }
@@ -165,7 +166,7 @@ static void silead_ts_read_data(struct i2c_client *client)
 			get_unaligned_le16(&bufp[SILEAD_POINT_Y_OFF]) & 0xfff);
 	}
 
-	input_mt_assign_slots(input, data->slots, data->pos, touch_nr, 0);
+	input_mt_assign_slots(input, data->slots, data->pos, touch_nr);
 
 	for (i = 0; i < touch_nr; i++) {
 		input_mt_slot(input, data->slots[i]);
@@ -382,17 +383,18 @@ static void silead_ts_read_props(struct i2c_client *client)
 {
 	struct silead_ts_data *data = i2c_get_clientdata(client);
 	struct device *dev = &client->dev;
+	struct device_node *np = dev->of_node;
 	const char *str;
 	int error;
 
-	error = device_property_read_u32(dev, "silead,max-fingers",
-					 &data->max_fingers);
+	error = of_property_read_u32(np, "silead,max-fingers",
+				     &data->max_fingers);
 	if (error) {
 		dev_dbg(dev, "Max fingers read error %d\n", error);
 		data->max_fingers = 5; /* Most devices handle up-to 5 fingers */
 	}
 
-	error = device_property_read_string(dev, "firmware-name", &str);
+	error = of_property_read_string(np, "firmware-name", &str);
 	if (!error)
 		snprintf(data->fw_name, sizeof(data->fw_name),
 			 "silead/%s", str);
@@ -447,6 +449,7 @@ static int silead_ts_probe(struct i2c_client *client,
 {
 	struct silead_ts_data *data;
 	struct device *dev = &client->dev;
+	struct device_node *np = dev->of_node;
 	int error;
 
 	if (!i2c_check_functionality(client->adapter,
@@ -495,11 +498,15 @@ static int silead_ts_probe(struct i2c_client *client,
 		return error;
 
 	/* Power GPIO pin */
-	data->gpio_power = devm_gpiod_get_optional(dev, "power", GPIOD_OUT_LOW);
-	if (IS_ERR(data->gpio_power)) {
-		if (PTR_ERR(data->gpio_power) != -EPROBE_DEFER)
-			dev_err(dev, "Shutdown GPIO request failed\n");
-		return PTR_ERR(data->gpio_power);
+	data->gpio_power = of_get_named_gpio(np, "power-gpios", 0);
+	if (gpio_is_valid(data->gpio_power)) {
+		error = devm_gpio_request_one(dev, data->gpio_power,
+					      GPIOF_OUT_INIT_LOW,
+					      "silead_power");
+		if (error)
+			return -EPROBE_DEFER;
+	} else {
+		dev_info(dev, "No power gpio provided\n");
 	}
 
 	error = silead_ts_setup(client);
