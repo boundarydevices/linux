@@ -9,20 +9,21 @@
  *
  */
 
-#include <linux/property.h>
 #include <linux/input.h>
 #include <linux/input/mt.h>
 #include <linux/input/touchscreen.h>
+#include <linux/of.h>
 
 static bool touchscreen_get_prop_u32(struct device *dev,
 				     const char *property,
 				     unsigned int default_value,
 				     unsigned int *value)
 {
+	struct device_node *np = dev->of_node;
 	u32 val;
 	int error;
 
-	error = device_property_read_u32(dev, property, &val);
+	error = of_property_read_u32(np, property, &val);
 	if (error) {
 		*value = default_value;
 		return false;
@@ -67,6 +68,7 @@ void touchscreen_parse_properties(struct input_dev *input, bool multitouch,
 				  struct touchscreen_properties *prop)
 {
 	struct device *dev = input->dev.parent;
+	struct device_node *np = dev->of_node;
 	unsigned int axis;
 	unsigned int maximum, fuzz;
 	bool data_present;
@@ -116,12 +118,9 @@ void touchscreen_parse_properties(struct input_dev *input, bool multitouch,
 
 	prop->max_x = input_abs_get_max(input, axis);
 	prop->max_y = input_abs_get_max(input, axis + 1);
-	prop->invert_x =
-		device_property_read_bool(dev, "touchscreen-inverted-x");
-	prop->invert_y =
-		device_property_read_bool(dev, "touchscreen-inverted-y");
-	prop->swap_x_y =
-		device_property_read_bool(dev, "touchscreen-swapped-x-y");
+	prop->invert_x = of_property_read_bool(np, "touchscreen-inverted-x");
+	prop->invert_y = of_property_read_bool(np, "touchscreen-inverted-y");
+	prop->swap_x_y = of_property_read_bool(np, "touchscreen-swapped-x-y");
 
 	if (prop->swap_x_y)
 		swap(input->absinfo[axis], input->absinfo[axis + 1]);
