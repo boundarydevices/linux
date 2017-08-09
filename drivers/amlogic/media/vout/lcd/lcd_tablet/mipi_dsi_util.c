@@ -86,13 +86,6 @@ static char *phy_stop_wait_table[] = {
 
 static struct dsi_phy_s dsi_phy_config;
 static struct dsi_vid_s dsi_vconf;
-static unsigned char dsi_init_on_table_dft[] = {
-	0x05, 1, 0x11,
-	0xff, 50,
-	0x05, 1, 0x29,
-	0xff, 20,
-	0xff, 0xff,
-};
 static unsigned short dsi_rx_n;
 
 static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
@@ -1464,7 +1457,6 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
 	struct aml_lcd_extern_driver_s *lcd_ext;
 #endif
-	unsigned int temp = 0;
 
 	if (lcd_debug_print_flag)
 		LCDPR("%s\n", __func__);
@@ -1480,7 +1472,7 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 			LCDPR("no lcd_extern driver\n");
 		} else {
 			if (lcd_ext->config.table_init_on) {
-				temp += dsi_write_cmd(
+				dsi_write_cmd(
 					lcd_ext->config.table_init_on);
 				LCDPR("[extern]%s dsi init on\n",
 					lcd_ext->config.name);
@@ -1490,13 +1482,8 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 #endif
 
 	if (dconf->dsi_init_on) {
-		temp += dsi_write_cmd(dconf->dsi_init_on);
+		dsi_write_cmd(dconf->dsi_init_on);
 		LCDPR("dsi init on\n");
-	}
-
-	if (temp == 0) {
-		LCDPR("[warning]: no init command, use default\n");
-		dsi_write_cmd(dsi_init_on_table_dft);
 	}
 
 	if (op_mode_disp != op_mode_init) {
