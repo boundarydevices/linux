@@ -21,7 +21,7 @@
 #include "mesonaxg_s400-panel.dtsi"
 / {
 	model = "Amlogic";
-	amlogic-dt-id= "axg_s400_v03";
+	amlogic-dt-id = "axg_s400_v03";
 	compatible = "amlogic, axg";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
@@ -480,7 +480,7 @@
 			mclk-fs = <256>;
 			continuous-clock;
 			//bitclock-inversion;
-			frame-inversion;
+			//frame-inversion;
 			bitclock-master = <&aml_tdmb>;
 			frame-master = <&aml_tdmb>;
 			cpu {
@@ -491,10 +491,13 @@
 				dai-tdm-slot-width = <32>;
 			};
 			codec {
-				prefix-names = "3101_A", "3101_B",
-					"3101_C", "3101_D";
-				sound-dai = <&tlv320adc3101_32 &tlv320adc3101_30
-					&tlv320adc3101_34 &tlv320adc3101_36>;
+				sound-dai = <&tlv320adc3101_32 &dummy_codec>;
+				/*prefix-names = "3101_A", "3101_B",*/
+					/*"3101_C", "3101_D";*/
+				/*sound-dai = <&tlv320adc3101_32*/
+					/*&tlv320adc3101_30*/
+					/*&tlv320adc3101_34*/
+					/*&tlv320adc3101_36>;*/
 			};
 		};
 
@@ -503,7 +506,7 @@
 			mclk-fs = <256>;
 			continuous-clock;
 			//bitclock-inversion;
-			frame-inversion;
+			//frame-inversion;
 			//bitclock-master = <&aml_tdmc>;
 			//frame-master = <&aml_tdmc>;
 			cpu {
@@ -889,19 +892,19 @@
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
 		reg = <0x18>;
-		status = "okay";
+		status = "disable";
 	};
 	tlv320adc3101_34: tlv320adc3101_34@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
 		reg = <0x1a>;
-		status = "okay";
+		status = "disable";
 	};
 	tlv320adc3101_36: tlv320adc3101_36@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
 		reg = <0x1b>;
-		status = "okay";
+		status = "disable";
 	};
 };
 
@@ -909,8 +912,8 @@
 	aml_tdma: tdma {
 		compatible = "amlogic, snd-tdma";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask-in = <1>;
-		dai-tdm-lane-slot-mask-out = <1>;
+		dai-tdm-lane-slot-mask-in = <1 0>;
+		dai-tdm-lane-slot-mask-out = <0 1>;
 		dai-tdm-clk-sel = <0>;
 		tdm_from_ddr = <0>;
 		tdm_to_ddr = <0>;
@@ -929,7 +932,8 @@
 	aml_tdmb: tdmb {
 		compatible = "amlogic, snd-tdmb";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask-in = <1 1 1 1>;
+		/*dai-tdm-lane-slot-mask-in = <1 1 1 1>;*/
+		dai-tdm-lane-slot-mask-in = <0 0 0 1>;
 		dai-tdm-clk-sel = <1>;
 		tdm_from_ddr = <1>;
 		tdm_to_ddr = <1>;
@@ -947,7 +951,7 @@
 		compatible = "amlogic, snd-tdmc";
 		#sound-dai-cells = <0>;
 		dai-tdm-lane-slot-mask-in = <0 1 0 0>;
-		dai-tdm-lane-slot-mask-out = <1 0 1 1>;
+		dai-tdm-lane-slot-mask-out = <0 0 1 1>;
 		dai-tdm-clk-sel = <2>;
 		tdm_from_ddr = <2>;
 		tdm_to_ddr = <2>;

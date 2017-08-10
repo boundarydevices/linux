@@ -21,7 +21,7 @@
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id= "axg_s420_1g";
+	amlogic-dt-id = "axg_s420_1g";
 	compatible = "amlogic, axg";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
