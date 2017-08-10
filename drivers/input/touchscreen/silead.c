@@ -249,6 +249,9 @@ static void silead_ts_read_data(struct i2c_client *client)
 	int touch_nr, softbutton, error, i;
 	bool softbutton_pressed = false;
 
+	if (!input)
+		return;
+
 	error = i2c_smbus_read_i2c_block_data(client, SILEAD_REG_DATA,
 					      SILEAD_TS_DATA_LEN, buf);
 	if (error < 0) {
@@ -393,13 +396,120 @@ static int silead_ts_startup(struct i2c_client *client)
 	return 0;
 }
 
+static u32 silead_ts_get_status(struct i2c_client *client)
+{
+	int error;
+	__le32 status;
+
+	error = i2c_smbus_read_i2c_block_data(client, SILEAD_REG_STATUS,
+					      sizeof(status), (u8 *)&status);
+	if (error < 0) {
+		dev_err(&client->dev, "Status read error %d\n", error);
+		return error;
+	}
+
+	return le32_to_cpu(status);
+}
+
+static int silead_ts_get_id(struct i2c_client *client)
+{
+	struct silead_ts_data *data = i2c_get_clientdata(client);
+	__le32 chip_id;
+	int error;
+
+	error = i2c_smbus_read_i2c_block_data(client, SILEAD_REG_ID,
+					      sizeof(chip_id), (u8 *)&chip_id);
+	if (error < 0) {
+		dev_err(&client->dev, "Chip ID read error %d\n", error);
+		return error;
+	}
+
+	data->chip_id = le32_to_cpu(chip_id);
+	dev_info(&client->dev, "Silead chip ID: 0x%8X", data->chip_id);
+
+	return 0;
+}
+
+int silead_firmware_complete(const struct firmware *fw, struct silead_ts_data *data)
+{
+	struct i2c_client *client = data->client;
+	struct silead_fw_data *fw_data = (struct silead_fw_data *)fw->data;
+	unsigned int fw_size = fw->size / sizeof(*fw_data);
+	unsigned int i;
+	int error = 0;
+
+	for (i = 0; i < fw_size; i++) {
+		error = i2c_smbus_write_i2c_block_data(client,
+						       fw_data[i].offset,
+						       4,
+						       (u8 *)&fw_data[i].val);
+		if (error) {
+			dev_err(&client->dev,
+				"Firmware load error %d\n", error);
+			break;
+		}
+	}
+
+	release_firmware(fw);
+
+	error = silead_ts_startup(client);
+	if (error)
+		return error;
+
+	error = silead_ts_get_status(client);
+	if (error != SILEAD_STATUS_OK) {
+		dev_err(&client->dev,
+			"Initialization error, status: 0x%X\n", error);
+		return error;
+	}
+
+	error = silead_ts_request_input_dev(data);
+	if (error)
+		return error;
+
+	error = silead_ts_request_pen_input_dev(data);
+	if (error)
+		return error;
+
+	enable_irq(client->irq);
+	return error;
+}
+
+static void silead_fw_cb(const struct firmware *fw, void *ctx)
+{
+	struct silead_ts_data *data = ctx;
+	struct i2c_client *client = data->client;
+	struct device *dev = &client->dev;
+	int error;
+
+	if (!fw) {
+		dev_err(dev, "Firmware %s not found\n", data->fw_name);
+		return;
+	}
+
+
+	error = device_property_read_u32_array(dev, "silead,efi-fw-min-max",
+					       data->efi_fw_min_max,
+					       ARRAY_SIZE(data->efi_fw_min_max));
+	if (!error)
+		data->efi_fw_min_max_set = true;
+
+	/* The EFI (platform) embedded fw does not have pen support */
+	if (data->pen_supported) {
+		dev_warn(dev, "Warning loading '%s' from filesystem failed, using EFI embedded copy.\n",
+			 data->fw_name);
+		dev_warn(dev, "Warning pen support is known to be broken in the EFI embedded fw version\n");
+		data->pen_supported = false;
+	}
+
+	silead_firmware_complete(fw, data);
+}
+
 static int silead_ts_load_fw(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct silead_ts_data *data = i2c_get_clientdata(client);
 	const struct firmware *fw = NULL;
-	struct silead_fw_data *fw_data;
-	unsigned int fw_size, i;
 	int error;
 
 	dev_dbg(dev, "Firmware file name: %s", data->fw_name);
@@ -428,81 +538,19 @@ static int silead_ts_load_fw(struct i2c_client *client)
 	 */
 	error = firmware_request_nowarn(&fw, data->fw_name, dev);
 	if (error) {
-		error = firmware_request_platform(&fw, data->fw_name, dev);
-		if (error) {
+		error = request_firmware_nowait(THIS_MODULE, true, data->fw_name,
+					dev, GFP_KERNEL, data, silead_fw_cb);
+		if (error)
 			dev_err(dev, "Firmware request error %d\n", error);
-			return error;
-		}
-
-		error = device_property_read_u32_array(dev, "silead,efi-fw-min-max",
-						       data->efi_fw_min_max,
-						       ARRAY_SIZE(data->efi_fw_min_max));
-		if (!error)
-			data->efi_fw_min_max_set = true;
-
-		/* The EFI (platform) embedded fw does not have pen support */
-		if (data->pen_supported) {
-			dev_warn(dev, "Warning loading '%s' from filesystem failed, using EFI embedded copy.\n",
-				 data->fw_name);
-			dev_warn(dev, "Warning pen support is known to be broken in the EFI embedded fw version\n");
-			data->pen_supported = false;
-		}
+		return error;
 	}
-
-	fw_size = fw->size / sizeof(*fw_data);
-	fw_data = (struct silead_fw_data *)fw->data;
-
-	for (i = 0; i < fw_size; i++) {
-		error = i2c_smbus_write_i2c_block_data(client,
-						       fw_data[i].offset,
-						       4,
-						       (u8 *)&fw_data[i].val);
-		if (error) {
-			dev_err(dev, "Firmware load error %d\n", error);
-			break;
-		}
-	}
-
-	release_firmware(fw);
+	error = silead_firmware_complete(fw, data);
 	return error ?: 0;
-}
-
-static u32 silead_ts_get_status(struct i2c_client *client)
-{
-	int error;
-	__le32 status;
-
-	error = i2c_smbus_read_i2c_block_data(client, SILEAD_REG_STATUS,
-					      sizeof(status), (u8 *)&status);
-	if (error < 0) {
-		dev_err(&client->dev, "Status read error %d\n", error);
-		return error;
-	}
-
-	return le32_to_cpu(status);
-}
-
-static int silead_ts_get_id(struct i2c_client *client)
-{
-	struct silead_ts_data *data = i2c_get_clientdata(client);
-	__le32 chip_id;
-	int error;
-
-	error = i2c_smbus_read_i2c_block_data(client, SILEAD_REG_ID,
-					      sizeof(chip_id), (u8 *)&chip_id);
-	if (error < 0)
-		return error;
-
-	data->chip_id = le32_to_cpu(chip_id);
-	dev_info(&client->dev, "Silead chip ID: 0x%8X", data->chip_id);
-
-	return 0;
 }
 
 static int silead_ts_setup(struct i2c_client *client)
 {
 	int error;
-	u32 status;
 
 	/*
 	 * Some buggy BIOS-es bring up the chip in a stuck state where it
@@ -559,17 +607,6 @@ static int silead_ts_setup(struct i2c_client *client)
 	error = silead_ts_load_fw(client);
 	if (error)
 		return error;
-
-	error = silead_ts_startup(client);
-	if (error)
-		return error;
-
-	status = silead_ts_get_status(client);
-	if (status != SILEAD_STATUS_OK) {
-		dev_err(&client->dev,
-			"Initialization error, status: 0x%X\n", status);
-		return -ENODEV;
-	}
 
 	return 0;
 }
@@ -712,28 +749,16 @@ static int silead_ts_probe(struct i2c_client *client,
 		return PTR_ERR(data->gpio_power);
 	}
 
-	error = silead_ts_setup(client);
-	if (error)
-		return error;
-
-	error = silead_ts_request_input_dev(data);
-	if (error)
-		return error;
-
-	error = silead_ts_request_pen_input_dev(data);
-	if (error)
-		return error;
-
 	error = devm_request_threaded_irq(dev, client->irq,
 					  NULL, silead_ts_threaded_irq_handler,
-					  IRQF_ONESHOT, client->name, data);
+					  IRQF_ONESHOT | IRQF_NO_AUTOEN, client->name, data);
 	if (error) {
 		if (error != -EPROBE_DEFER)
 			dev_err(dev, "IRQ request failed %d\n", error);
 		return error;
 	}
 
-	return 0;
+	return silead_ts_setup(client);
 }
 
 static int __maybe_unused silead_ts_suspend(struct device *dev)
