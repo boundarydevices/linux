@@ -171,22 +171,26 @@ int aml_card_parse_dai(struct device_node *node,
 }
 
 /* new allocated size must greater than older size */
-static void *aml_devm_krealloc(struct device *dev,
-			void *p, size_t new_size)
+static void *aml_card_confs_krealloc(struct snd_soc_card *card,
+			size_t new_size)
 {
-	void *ret;
-	size_t ks = 0;
+	void *ret, *p;
+	size_t old_size = 0;
+	struct device *dev = card->dev;
 
-	if (p)
-		ks = ksize(p);
+	p = card->codec_conf;
+	old_size = card->num_configs * sizeof(*card->codec_conf);
+	if (new_size < old_size)
+		return NULL;
 
 	ret = devm_kzalloc(dev, new_size, GFP_KERNEL);
 
 	if (ret && p) {
-		if (new_size >= ks)
-			memcpy(ret, p, ks);
+		memcpy(ret, p, old_size);
 		if (p != ret)
 			devm_kfree(dev, p);
+
+		card->codec_conf = ret;
 	}
 
 	return ret;
@@ -196,15 +200,16 @@ int aml_card_parse_codec_confs(struct device_node *codec_np,
 			struct snd_soc_card *card)
 {
 	struct snd_soc_codec_conf *confs;
-	int num_confs, new_size;
+	int num_new_confs, num_saved_confs, new_size;
 	int i = 0, ret = 0;
 
-	num_confs = of_property_count_strings(codec_np, "prefix-names");
-	if (num_confs <= 0)
+	num_new_confs = of_property_count_strings(codec_np, "prefix-names");
+	if (num_new_confs <= 0)
 		return 0;
 
-	new_size = sizeof(*confs) * (num_confs + card->num_configs);
-	confs = aml_devm_krealloc(card->dev, card->codec_conf, new_size);
+	num_saved_confs = card->num_configs;
+	new_size = sizeof(*confs) * (num_new_confs + num_saved_confs);
+	confs = aml_card_confs_krealloc(card, new_size);
 	if (!confs) {
 		ret = -ENOMEM;
 		goto codec_confs_end;
@@ -214,22 +219,22 @@ int aml_card_parse_codec_confs(struct device_node *codec_np,
 	 * parse "prefix-names" and "sound-dai" pair
 	 * add codec_conf by these two items
 	 */
-	for (i = 0; i < num_confs; i++) {
+	for (i = 0; i < num_new_confs; i++) {
 		ret = of_property_read_string_index(codec_np, "prefix-names", i,
-				&confs[card->num_configs + i].name_prefix);
+				&confs[num_saved_confs + i].name_prefix);
 		if (ret < 0)
 			goto codec_confs_end;
 
-		confs[card->num_configs + i].of_node =
+		confs[num_saved_confs + i].of_node =
 				of_parse_phandle(codec_np, "sound-dai", i);
-		if (!confs[card->num_configs + i].of_node) {
+		if (!confs[num_saved_confs + i].of_node) {
 			ret = -ENODATA;
 			goto codec_confs_end;
 		}
 	}
 
 	card->codec_conf = confs;
-	card->num_configs += num_confs;
+	card->num_configs += num_new_confs;
 
 codec_confs_end:
 
