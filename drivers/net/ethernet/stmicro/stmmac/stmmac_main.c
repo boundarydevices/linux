@@ -3457,7 +3457,13 @@ int stmmac_suspend(struct device *dev)
 	netif_device_detach(ndev);
 	netif_stop_queue(ndev);
 
+	/**
+	 *napi_disable call might_sleep,if not irq restore
+	 *It will warning bug
+	 */
+	spin_unlock_irqrestore(&priv->lock, flags);
 	napi_disable(&priv->napi);
+	spin_lock_irqsave(&priv->lock, flags);
 
 	/* Stop TX/RX DMA */
 	priv->hw->dma->stop_tx(priv->ioaddr);
@@ -3534,7 +3540,10 @@ int stmmac_resume(struct device *dev)
 
 	stmmac_clear_descriptors(priv);
 
+	spin_unlock_irqrestore(&priv->lock, flags);
 	stmmac_hw_setup(ndev, false);
+	spin_lock_irqsave(&priv->lock, flags);
+
 	stmmac_init_tx_coalesce(priv);
 	stmmac_set_rx_mode(ndev);
 
