@@ -3247,6 +3247,8 @@ static int dcss_probe(struct platform_device *pdev)
 	/* Pull DCSS out of resets */
 	writel(0xffffffff, info->blkctl_base + 0x0);
 
+	dcss_interrupts_init(info);
+
 	/* register channel 0: graphic */
 	ret = dcss_register_one_ch(0, info);
 	if (ret)
@@ -3256,8 +3258,6 @@ static int dcss_probe(struct platform_device *pdev)
 	ret = dcss_register_one_fb(&info->chans.chan_info[0]);
 	if (ret)
 		goto unregister_ch0;
-
-	dcss_interrupts_init(info);
 
 	/* enable encoder if exists */
 	dcss_enable_encoder(info);
