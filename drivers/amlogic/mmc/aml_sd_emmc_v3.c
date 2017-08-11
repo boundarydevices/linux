@@ -905,7 +905,7 @@ tunning:
 	vctrl = readl(host->base + SD_EMMC_CFG);
 	clk_div = clkc->div;
 	clock = clk_rate / clk_div;/*200MHz, bus_clk */
-	pdata->mmc->actual_clock = ctrl->ddr ?
+	mmc->actual_clock = ctrl->ddr ?
 				(clock / 2) : clock;/*100MHz in ddr */
 
 	if (ctrl->ddr == 1) {
@@ -1028,9 +1028,6 @@ tunning:
 			readl(host->base + SD_EMMC_CLOCK_V3),
 			readl(host->base + SD_EMMC_ADJUST_V3));
 	kfree(blk_test);
-	/* do not dynamical tuning for no emmc device */
-	if ((pdata->is_in) && !aml_card_type_mmc(pdata))
-		schedule_delayed_work(&pdata->retuning, 15*HZ);
 	return ret;
 #endif
 	return 0;
