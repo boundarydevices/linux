@@ -230,6 +230,7 @@ static const char *dac_mux_text[] = {
 static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
+#if 0
 	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
 	unsigned int val = 0;
 
@@ -243,6 +244,7 @@ static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
 		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
 				SGTL5000_VAG_POWERUP, val);
 	}
+#endif
 	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
 }
 
