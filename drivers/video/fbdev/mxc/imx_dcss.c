@@ -2407,7 +2407,7 @@ static void dcss_ctxld_config(struct work_struct *work)
 		writel(cfifo->dma_handle + cc->fifo_in * kfifo_esize(&cfifo->fifo),
 		       info->base + chans->ctxld_addr + CTXLD_SB_BASE_ADDR);
 		writel(cc->sb_hp_data_len |
-		       (cc->sb_data_len - cc->sb_hp_data_len),
+		       ((cc->sb_data_len - cc->sb_hp_data_len) << 16),
 		       info->base + chans->ctxld_addr + CTXLD_SB_COUNT);
 	}
 
@@ -2491,6 +2491,7 @@ static int commit_to_fifo(uint32_t channel,
 			count = kfifo_out(&cfifo->fifo, cb->sb_addr, count);
 			BUG_ON(1);
 		}
+		cc->sb_hp_data_len = count;
 		cc->sb_data_len = count;
 	}
 
