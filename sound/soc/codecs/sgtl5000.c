@@ -230,10 +230,10 @@ static const char *dac_mux_text[] = {
 static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
+#if 0
 	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
 	unsigned int val = 0;
 
-#if 0
 	const u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP;
 
 	if (ucontrol->value.enumerated.item[0])
