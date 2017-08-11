@@ -493,6 +493,10 @@
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 		mute-gpios = GP_CODEC_A_MUTE_N;
+		/* delay between mute and standby enter */
+		amp-standby-enter-wait-ms = <1>;
+		/* delay between standby exit and unmute */
+		amp-standby-exit-delay-ms = <1100>;
 		amp-standby-gpios = GP_CODEC_A_SHTDN_N;
 		amp-gain-gpios = GP_CODEC_A_G1, GP_CODEC_A_G2;
 	};
@@ -512,6 +516,10 @@
 		mux-int-port = <2>;
 		mux-ext-port = <4>;
 		mute-gpios = GP_CODEC_B_MUTE_N;
+		/* delay between mute and standby enter */
+		amp-standby-enter-wait-ms = <1>;
+		/* delay between standby exit and unmute */
+		amp-standby-exit-delay-ms = <1100>;
 		amp-standby-gpios = GP_CODEC_B_SHTDN_N;
 		amp-gain-gpios = GP_CODEC_B_G1, GP_CODEC_B_G2;
 	};
