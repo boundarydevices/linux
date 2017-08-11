@@ -233,6 +233,7 @@ static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
 	unsigned int val = 0;
 
+#if 0
 	const u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP;
 
 	if (ucontrol->value.enumerated.item[0])
@@ -243,6 +244,7 @@ static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
 		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
 				SGTL5000_VAG_POWERUP, val);
 	}
+#endif
 	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
 }
 
