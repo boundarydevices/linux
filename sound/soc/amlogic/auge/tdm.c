@@ -529,18 +529,12 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 		// set lanes mask acordingly
 		lane_mask = setting->lane_mask_out;
 		for (i = 0; i < 4; i++) {
-			unsigned int ch = i * 2;
-
-			if (i < lanes)
+			if (((1 << i) & lane_mask) && lanes--) {
 				aml_tdm_set_channel_mask(p_tdm->actrl,
 					stream, p_tdm->id, i, setting->tx_mask);
-
-			if ((1 << i) & lane_mask) {
-				// each lane only L/R swap
-				swap_val |= set_num++ << (ch++ * 4);
-				swap_val |= set_num++ << (ch * 4);
 			}
 		}
+		swap_val = 0x76543210;
 		aml_tdm_set_lane_channel_swap(p_tdm->actrl,
 			stream, p_tdm->id, swap_val);
 	} else {
