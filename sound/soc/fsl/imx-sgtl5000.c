@@ -16,6 +16,7 @@
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <sound/soc.h>
 
 #include "../codecs/sgtl5000.h"
@@ -38,6 +39,8 @@ struct imx_sgtl5000_data {
 	int mute_hp_value;
 	int hp_disabled;
 	bool limit_16bit_samples;
+	unsigned amp_standby_enter_wait_ms;
+	unsigned amp_standby_exit_delay_ms;
 };
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -77,9 +80,11 @@ static int event_hp(struct snd_soc_dapm_widget *w,
 	data->hp_disabled = data->mute_hp_value = mute;
 	if (mute) {
 		do_mute(data->mute_hp, mute);
+		msleep(data->amp_standby_enter_wait_ms);
 		return do_mute(data->amp_standby, mute);
 	}
 	do_mute(data->amp_standby, mute);
+	msleep(data->amp_standby_exit_delay_ms);
 	return do_mute(data->mute_hp, mute);
 }
 
@@ -198,6 +203,8 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	struct imx_sgtl5000_data *data = NULL;
 	struct gpio_desc *gd = NULL;
 	int int_port, ext_port;
+	unsigned amp_standby_enter_wait_ms = 0;
+	unsigned amp_standby_exit_delay_ms = 0;
 	const struct snd_kcontrol_new *kcontrols = more_controls;
 	int kcontrols_cnt = ARRAY_SIZE(more_controls);
 	int ret;
@@ -213,6 +220,8 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "mux-ext-port missing or invalid\n");
 		return ret;
 	}
+	of_property_read_u32(np, "amp-standby-enter-wait-ms", &amp_standby_enter_wait_ms);
+	of_property_read_u32(np, "amp-standby-exit-delay-ms", &amp_standby_exit_delay_ms);
 
 	/*
 	 * The port numbering in the hardware manual starts at 1, while
@@ -265,6 +274,8 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	data->amp_standby_enter_wait_ms = amp_standby_enter_wait_ms;
+	data->amp_standby_exit_delay_ms = amp_standby_exit_delay_ms;
 	data->codec_clk = clk_get(&codec_dev->dev, NULL);
 	if (IS_ERR(data->codec_clk)) {
 		ret = PTR_ERR(data->codec_clk);
