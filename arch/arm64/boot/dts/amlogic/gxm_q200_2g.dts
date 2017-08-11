@@ -18,6 +18,7 @@
 /dts-v1/;
 
 #include "mesongxm.dtsi"
+#include "partition_mbox_normal.dtsi"
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxm_q200_2g";
@@ -921,80 +922,6 @@
 		};
 	};
 
-	partitions: partitions{
-		parts = <11>;
-		part-0 = <&logo>;
-		part-1 = <&recovery>;
-		part-2 = <&rsv>;
-		part-3 = <&tee>;
-		part-4 = <&crypt>;
-		part-5 = <&misc>;
-		part-6 = <&instaboot>;
-		part-7 = <&boot>;
-		part-8 = <&system>;
-		part-9 = <&cache>;
-		part-10 = <&data>;
-
-		logo:logo{
-			pname = "logo";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		recovery:recovery{
-			pname = "recovery";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		rsv:rsv{
-			pname = "rsv";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		tee:tee{
-			pname = "tee";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		crypt:crypt{
-			pname = "crypt";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		misc:misc{
-			pname = "misc";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		instaboot:instaboot{
-			pname = "instaboot";
-			size = <0x0 0x400000>;
-			mask = <1>;
-		};
-		boot:boot
-		{
-			pname = "boot";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		system:system
-		{
-			pname = "system";
-			size = <0x0 0x80000000>;
-			mask = <1>;
-		};
-		cache:cache
-		{
-			pname = "cache";
-			size = <0x0 0x20000000>;
-			mask = <2>;
-		};
-		data:data
-		{
-			pname = "data";
-			size = <0xffffffff 0xffffffff>;
-			mask = <4>;
-		};
-	};
 
 	ppmgr {
 		compatible = "amlogic, ppmgr";

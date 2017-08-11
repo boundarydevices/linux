@@ -14052,3 +14052,7 @@ AMLOGIC multimedia
 M:  Nanxin Qin <nanxin.qin@amlogic.com>
 F: drivers/amlogic/media/common/codec_mm/configs/*
 
+AMLOGIC ADD PARTITION NORMAL & AB DTS
+M: Xindong Xu <xindong.xu@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/partition_mbox_ab.dtsi
+F: arch/arm64/boot/dts/amlogic/partition_mbox_normal.dtsi

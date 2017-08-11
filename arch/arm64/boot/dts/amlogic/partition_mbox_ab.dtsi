@@ -1,0 +1,112 @@
+/*
+ * Amlogic partition set for normal
+ *
+ * Copyright (c) 2017-2017 Amlogic Ltd
+ *
+ * This file is licensed under a dual GPLv2 or BSD license.
+ *
+ */
+/ {
+    partitions: partitions{
+		parts = <15>;
+		part-0 = <&logo>;
+		part-1 = <&boot_a>;
+		part-2 = <&rsv>;
+		part-3 = <&tee>;
+		part-4 = <&param>
+		part-5 = <&misc>;
+		part-6 = <&boot_b>;
+		part-7 = <&system_a>;
+		part-8 = <&system_b>;
+		part-9 = <&vendor_a>;
+		part-10 = <&vendor_b>;
+		part-11 = <&odm>;
+		part-12 = <&cache>;
+		part-13 = <&cri_data>;
+		part-14 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		boot_a:boot_a{
+			pname = "boot_a";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		rsv:rsv{
+			pname = "rsv";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		param:param{
+			pname = "param";
+			size = <0x0 0x1000000>;
+			mask = <2>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		boot_b:boot_b
+		{
+			pname = "boot_b";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		system_a:system_a
+		{
+			pname = "system_a";
+			size = <0x0 0x80000000>;
+			mask = <1>;
+		};
+		system_b:system_b
+		{
+			pname = "system_b";
+			size = <0x0 0x80000000>;
+			mask = <1>;
+		};
+		vendor_a:vendor_a
+		{
+			pname = "vendor_a";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		vendor_b:vendor_b
+		{
+			pname = "vendor_b";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		odm:odm
+		{
+			pname = "odm";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		cache:cache{
+			pname = "cache";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		cri_data:cri_data
+		{
+			pname = "cri_data";
+			size = <0x0 0x800000>;
+			mask = <2>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
+		};
+	};
+};/* end of / */
