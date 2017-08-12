@@ -36,13 +36,6 @@
 		#size-cells = <1>;
 		ranges;
 
-		sm_reserved:linux,sm {
-			compatible = "amlogic, aml_secure_monitor_memory";
-			reg = <0x61dfc00 0x20400>;
-			no-map;
-		};
-
-
 		pm_reserved:linux,pm {
 			compatible = "amlogic, pm-m8b-reserve";
 			reg = <0x04f00000 0x100000>;

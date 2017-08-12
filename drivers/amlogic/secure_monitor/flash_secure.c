@@ -52,8 +52,8 @@
 #define SECURE_MONITOR_CLASS_NAME "secure_monitor"
 
 
-static ulong sm_share_mem_addr;
-static ulong sm_share_mem_size;
+static uint32_t sm_share_mem_addr;
+static uint32_t sm_share_mem_size;
 
 /*
  * SHARE MEM:
@@ -93,7 +93,12 @@ static int secure_monitor_start(void)
 {
 	int ret = 0;
 
+	sm_share_mem_addr = meson_secure_mem_flash_start();
+	sm_share_mem_size = meson_secure_mem_flash_size();
+
 	pr_info("%s:%d\n", __func__, __LINE__);
+	pr_info("sm share mem start: 0x%x, size: 0x%x\r\n",
+		sm_share_mem_addr, sm_share_mem_size);
 	secure_monitor_buf.pfbuf = kmalloc(FLASH_BUF_SIZE, GFP_KERNEL);
 	if (!secure_monitor_buf.pfbuf) {
 		pr_err("nandbuf create fail!\n");
@@ -101,8 +106,8 @@ static int secure_monitor_start(void)
 		goto flash_monitor_probe_exit;
 	}
 	secure_monitor_buf.psbuf = ioremap_cached(
-					(unsigned int)sm_share_mem_addr,
-					(unsigned int)sm_share_mem_size);
+					sm_share_mem_addr,
+					sm_share_mem_size);
 	if (!secure_monitor_buf.psbuf) {
 		pr_err("ioremap share memory fail\n");
 		ret = -ENOMEM;
@@ -243,15 +248,6 @@ static void __exit secure_monitor_exit(void)
 
 	pr_info("**************flash_secure_remove end!\n");
 }
-
-static int __init rmem_sm_setup(struct reserved_mem *rmem)
-{
-	sm_share_mem_addr = (ulong)rmem->base;
-	sm_share_mem_size = (ulong)rmem->size;
-	return 0;
-}
-RESERVEDMEM_OF_DECLARE(sm_meson,
-"amlogic, aml_secure_monitor_memory", rmem_sm_setup);
 
 
 module_init(secure_monitor_init);
