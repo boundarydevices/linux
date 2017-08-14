@@ -409,7 +409,9 @@ static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 	chip->write_buf = aml_nand_dma_write_buf;
 	chip->read_buf = aml_nand_dma_read_buf;
 
-	if (mtd->writesize <= 2048)
+	/* axg only suport bch8/512 & bch8/1k */
+	if ((mtd->writesize <= 2048)
+		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG))
 		options_support = NAND_ECC_BCH8_MODE;
 
 	switch (options_support) {
