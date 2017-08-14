@@ -4633,6 +4633,7 @@ int nand_scan_tail(struct mtd_info *mtd)
 			break;
 		case 64:
 		case 128:
+		case 256:
 			mtd_set_ooblayout(mtd, &nand_ooblayout_lp_hamming_ops);
 			break;
 		default:
