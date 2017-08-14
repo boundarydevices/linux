@@ -14042,3 +14042,7 @@ F: drivers/amlogic/media/vout/backlight/bl_extern/mipi_lt070me05.c
 F: drivers/amlogic/media/vout/backlight/bl_extern/aml_bl_extern.dts
 F: drivers/amlogic/media/vout/backlight/bl_extern/mipi_LT070ME05.c
 F: drivers/amlogic/media/vout/backlight/bl_extern/pmu_aml1218.c
+
+AMLOGIC MESONGXL ADD A113X 128m DTS
+M:	Yuegui He <yuegui.he@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/axg_s420_128m.dts
