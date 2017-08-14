@@ -2,10 +2,9 @@
  * linux/sound/soc/codecs/tlv320adc3101.c
  *
  * Copyright 2011 Amlogic
- *
  * Author: Alex Deng <alex.deng@amlogic.com>
- *
- * Based on sound/soc/codecs/tlv320aic320x and TI driver for kernel 2.6.27.
+ * Based on sound/soc/codecs/tlv320aic320x and
+ * TI driver for kernel 2.6.27.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,7 +76,6 @@ enum{
 	MASK_4 = 1 << 3
 };
 
-struct adc3101_priv *g_adc3101_priv;
 static int	lr_gain = 0x20;
 module_param(lr_gain, int, 0664);
 MODULE_PARM_DESC(lr_gain, "PGA Level Volume");
@@ -825,16 +823,8 @@ static int adc3101_i2c_probe(struct i2c_client *i2c,
 		}
 	}
 	pr_info("%s i2c:%p\n", __func__, i2c);
-	if (g_adc3101_priv == NULL) {
-		g_adc3101_priv = adc3101;
-		ret = snd_soc_register_codec(&i2c->dev,
+	ret = snd_soc_register_codec(&i2c->dev,
 				&soc_codec_dev_adc3101, adc3101_dai, 1);
-	} else {
-		ret = snd_soc_register_codec(&i2c->dev,
-				&soc_codec_dev_adc3101_2,
-				adc3101_dai + g_adc3101_priv->codec_cnt,
-				1);
-	}
 
 	pr_info("%s %x done\n", __func__, i2c->addr);
 
