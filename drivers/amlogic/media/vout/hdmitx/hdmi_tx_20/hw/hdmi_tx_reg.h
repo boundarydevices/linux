@@ -31,8 +31,6 @@ void hdmitx_rd_check_reg(unsigned int addr, unsigned int exp_data,
 	unsigned int mask);
 unsigned long aocec_rd_reg(unsigned long addr);
 void aocec_wr_reg(unsigned long addr, unsigned long data);
-void hdcp22_wr_reg(uint32_t addr, uint32_t data);
-uint32_t hdcp22_rd_reg(uint32_t addr);
 int hdmitx_hdcp_opr(unsigned int val);
 
 /* TOP-level wrapper registers addresses

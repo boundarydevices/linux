@@ -3120,10 +3120,6 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 			hdmitx_wr_reg((unsigned int)adr, (unsigned int)value);
 			read_back = hdmitx_rd_reg(adr);
 		}
-		if (buf[1] == 'c') {
-			hdcp22_wr_reg((uint32_t)adr, (uint32_t)value);
-			read_back = hdcp22_rd_reg((uint32_t)adr);
-		}
 		hdmi_print(INF, "write %x to %s reg[%x]\n", value, "HDMI", adr);
 /* Add read back function in order to judge writing is OK or NG. */
 		hdmi_print(INF, "Read Back %s reg[%x]=%x\n", "HDMI",
@@ -3132,8 +3128,6 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 		ret = kstrtoul(tmpbuf+2, 16, &adr);
 		if (buf[1] == 'h')
 			value = hdmitx_rd_reg(adr);
-		if (buf[1] == 'c')
-			value = hdcp22_rd_reg((uint32_t)adr);
 		hdmi_print(INF, "%s reg[%x]=%x\n", "HDMI", adr, value);
 	}
 }

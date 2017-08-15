@@ -3028,6 +3028,16 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 
 }
 
+static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)
+{
+	if (hdmi_dev == NULL)
+		return 1;
+
+	hdmi_dev->hdtx_dev = NULL;
+
+	return 0;
+}
+
 static int amhdmitx_probe(struct platform_device *pdev)
 {
 	int r, ret = 0;
@@ -3039,6 +3049,11 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	phandle phandle;
 	struct device_node *init_data;
 #endif
+
+	hdmi_print(IMP, SYS "amhdmitx_init\n");
+	hdmi_print(IMP, SYS "Ver: %s\n", HDMITX_VER);
+
+	amhdmitx_device_init(&hdmitx_device);
 
 	hdmitx_device.hdtx_dev = &pdev->dev;
 	hdmitx_device.physical_addr = 0xffff;
@@ -3438,25 +3453,10 @@ static struct platform_driver amhdmitx_driver = {
 	}
 };
 
-static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)
-{
-	if (hdmi_dev == NULL)
-		return 1;
-
-	hdmi_dev->hdtx_dev = NULL;
-
-	return 0;
-}
-
 static int  __init amhdmitx_init(void)
 {
 	if (init_flag&INIT_FLAG_NOT_LOAD)
 		return 0;
-
-	hdmi_print(IMP, SYS "amhdmitx_init\n");
-	hdmi_print(IMP, SYS "Ver: %s\n", HDMITX_VER);
-
-	amhdmitx_device_init(&hdmitx_device);
 
 	if (platform_driver_register(&amhdmitx_driver)) {
 		hdmi_print(ERR, SYS
