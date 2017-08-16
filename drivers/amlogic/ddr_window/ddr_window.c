@@ -259,7 +259,6 @@ static int ddr_window_probe(struct platform_device *pdev)
 {
 	int r;
 
-	pr_err("ddr_window,module_VER_:%s\n", DDR_WINDOW_KO_VER);
 	r = class_register(&ddr_window_class);
 	if (r) {
 		pr_err("%s, class regist failed\n", __func__);
