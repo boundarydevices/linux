@@ -252,6 +252,7 @@ static const struct file_operations dtb_ops = {
 	.read = mmc_dtb_read,
 	.write = mmc_dtb_write,
 	.unlocked_ioctl = mmc_dtb_ioctl,
+	.release = single_release,
 };
 
 int amlmmc_dtb_init(struct mmc_card *card)
@@ -737,7 +738,7 @@ static const struct file_operations card_proc_fops = {
 	.open = card_proc_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
-	.release = seq_release,
+	.release = single_release,
 };
 
 static int add_emmc_partition(struct gendisk *disk,

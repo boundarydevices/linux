@@ -636,6 +636,7 @@ static const struct file_operations clkmsr_file_ops = {
 	.read		= seq_read,
 	.write		= clkmsr_write,
 	.llseek		= seq_lseek,
+	.release	= single_release,
 };
 
 static int aml_clkmsr_probe(struct platform_device *pdev)

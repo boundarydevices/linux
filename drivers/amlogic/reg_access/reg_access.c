@@ -178,6 +178,7 @@ static const struct file_operations dump_file_ops = {
 	.read		= seq_read,
 	.write		= dump_write_file,
 	.llseek		= seq_lseek,
+	.release	= single_release,
 };
 static int __init aml_debug_init(void)
 {
