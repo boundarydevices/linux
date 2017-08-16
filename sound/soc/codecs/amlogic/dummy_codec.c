@@ -84,14 +84,14 @@ struct snd_soc_dai_driver dummy_codec_dai = {
 	.playback = {
 		     .stream_name = "HIFI Playback",
 		     .channels_min = 1,
-		     .channels_max = 8,
+		     .channels_max = 32,
 		     .rates = DUMMY_CODEC_RATES,
 		     .formats = DUMMY_CODEC_FORMATS,
 		     },
 	.capture = {
 		    .stream_name = "HIFI Capture",
 		    .channels_min = 1,
-		    .channels_max = 8,
+		    .channels_max = 32,
 		    .rates = DUMMY_CODEC_RATES,
 		    .formats = DUMMY_CODEC_FORMATS,
 		    },

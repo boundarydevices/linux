@@ -223,7 +223,8 @@ int aml_card_prepare(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct aml_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
 
-	loopback_prepare(substream, &priv->lb_cfg);
+	if (loopback_is_enable())
+		loopback_prepare(substream, &priv->lb_cfg);
 
 	return 0;
 }

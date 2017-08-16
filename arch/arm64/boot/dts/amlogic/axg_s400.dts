@@ -491,13 +491,15 @@
 				dai-tdm-slot-width = <32>;
 			};
 			codec {
+				/*
+				 * prefix-names = "3101_A", "3101_B",
+				 * "3101_C", "3101_D";
+				 * sound-dai = <&tlv320adc3101_32
+				 * &tlv320adc3101_30
+				 * &tlv320adc3101_34
+				 * &tlv320adc3101_36>;
+				 */
 				sound-dai = <&tlv320adc3101_32 &dummy_codec>;
-				/*prefix-names = "3101_A", "3101_B",*/
-					/*"3101_C", "3101_D";*/
-				/*sound-dai = <&tlv320adc3101_32*/
-					/*&tlv320adc3101_30*/
-					/*&tlv320adc3101_34*/
-					/*&tlv320adc3101_36>;*/
 			};
 		};
 

@@ -20,6 +20,7 @@
 
 #include <linux/types.h>
 #include <sound/soc.h>
+#include <sound/tlv.h>
 
 /* datain src
  * [4]: pdmin;

@@ -101,7 +101,7 @@ static const struct snd_pcm_hardware aml_tdm_hardware = {
 
 	.rate_min = 8000,
 	.rate_max = 48000,
-	.channels_min = 2,
+	.channels_min = 1,
 	.channels_max = 32,
 };
 

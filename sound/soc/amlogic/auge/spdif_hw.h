@@ -38,4 +38,10 @@ extern void aml_spdif_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth,
 	int stream);
+
+extern int spdifin_get_mode(void);
+
+extern int spdif_get_channel_status(int reg);
+
+extern void spdifin_set_channel_status(int ch, int bits);
 #endif

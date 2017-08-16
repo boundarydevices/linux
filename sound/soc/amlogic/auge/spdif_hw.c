@@ -17,6 +17,7 @@
 
 #include <sound/soc.h>
 
+#include "iomap.h"
 #include "spdif_hw.h"
 
 void aml_spdif_enable(
@@ -174,4 +175,29 @@ void aml_spdif_fifo_ctrl(
 			3<<24|1<<12);
 	}
 
+}
+
+int spdifin_get_mode(void)
+{
+	int mode_val = audiobus_read(EE_AUDIO_SPDIFIN_STAT0);
+
+	mode_val >>= 28;
+	mode_val &= 0x7;
+
+	return mode_val;
+}
+
+int spdif_get_channel_status(int reg)
+{
+	return audiobus_read(reg);
+}
+
+void spdifin_set_channel_status(int ch, int bits)
+{
+	int ch_status_sel = (ch << 3 | bits) & 0xf;
+
+	/*which channel status would be got*/
+	audiobus_update_bits(EE_AUDIO_SPDIFIN_CTRL0,
+		0xf << 8,
+		ch_status_sel << 8);
 }
