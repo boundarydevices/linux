@@ -182,9 +182,10 @@ static void cec_set_reg_bits(unsigned int addr, unsigned int value,
 static unsigned int aocec_rd_reg(unsigned long addr)
 {
 	unsigned int data32;
+	unsigned long flags;
 
 	waiting_aocec_free();
-	spin_lock(&cec_dev->cec_reg_lock);
+	spin_lock_irqsave(&cec_dev->cec_reg_lock, flags);
 	data32 = 0;
 	data32 |= 0 << 16; /* [16]	 cec_reg_wr */
 	data32 |= 0 << 8; /* [15:8]   cec_reg_wrdata */
@@ -193,22 +194,23 @@ static unsigned int aocec_rd_reg(unsigned long addr)
 
 	waiting_aocec_free();
 	data32 = ((readl(cec_dev->cec_reg + AO_CEC_RW_REG)) >> 24) & 0xff;
-	spin_unlock(&cec_dev->cec_reg_lock);
+	spin_unlock_irqrestore(&cec_dev->cec_reg_lock, flags);
 	return data32;
 } /* aocec_rd_reg */
 
 static void aocec_wr_reg(unsigned long addr, unsigned long data)
 {
 	unsigned long data32;
+	unsigned long flags;
 
 	waiting_aocec_free();
-	spin_lock(&cec_dev->cec_reg_lock);
+	spin_lock_irqsave(&cec_dev->cec_reg_lock, flags);
 	data32 = 0;
 	data32 |= 1 << 16; /* [16]	 cec_reg_wr */
 	data32 |= data << 8; /* [15:8]   cec_reg_wrdata */
 	data32 |= addr << 0; /* [7:0]	cec_reg_addr */
 	writel(data32, cec_dev->cec_reg + AO_CEC_RW_REG);
-	spin_unlock(&cec_dev->cec_reg_lock);
+	spin_unlock_irqrestore(&cec_dev->cec_reg_lock, flags);
 } /* aocec_wr_only_reg */
 
 /*----------------- low level for EE cec rx/tx support ----------------*/
