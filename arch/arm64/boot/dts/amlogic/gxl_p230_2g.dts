@@ -139,6 +139,8 @@
 		interrupts = <	0 68 4>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
 		power_on_pin = <&gpio       GPIOX_6       GPIO_ACTIVE_HIGH>;
+		//if use bcm wifi, config dhd_static_buf and 32k as bellow
+		dhd_static_buf;
 		pinctrl-names = "default";
 		pinctrl-0 = <&wifi_32k_pins>;
 		pwm_config = <&wifi_pwm_conf>;
