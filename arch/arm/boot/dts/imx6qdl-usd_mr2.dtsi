@@ -488,7 +488,7 @@
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
 			"LINE_IN", "Line In Jack",
-			"Headphone Jack", "HP_OUT",
+			"Ext Spk", "HP_OUT",
 			"Line Out Jack", "LINE_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
@@ -511,7 +511,7 @@
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
 			"LINE_IN", "Line In Jack",
-			"Headphone Jack", "HP_OUT",
+			"Ext Spk", "HP_OUT",
 			"Line Out Jack", "LINE_OUT";
 		mux-int-port = <2>;
 		mux-ext-port = <4>;
