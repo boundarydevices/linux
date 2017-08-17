@@ -443,6 +443,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_max-apex.dtb \
 	imx6q-nitrogen6_max-lantech.dtb \
+	imx6q-nitrogen6_max-st7789.dtb \
 	imx6q-novena.dtb \
 	imx6q-phytec-pbab01.dtb \
 	imx6q-rex-pro.dtb \
