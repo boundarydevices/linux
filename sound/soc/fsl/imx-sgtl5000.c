@@ -35,7 +35,9 @@ struct imx_sgtl5000_data {
 	struct gpio_desc *mute_hp;
 	struct gpio_desc *mute_lo;
 	struct gpio_desc *amp_standby;
-	struct gpio_desc *amp_gain[2];
+#define AMP_GAIN_CNT 2
+	struct gpio_desc *amp_gain[AMP_GAIN_CNT];
+	unsigned char amp_gain_seq[1 << AMP_GAIN_CNT];
 	int amp_gain_value;
 	int mute_hp_value;
 	int hp_disabled;
@@ -230,15 +232,18 @@ static int amp_gain_set(struct snd_kcontrol *kcontrol,
 	int value = ucontrol->value.integer.value[0];
 	int i;
 
-	if (value > 3)
+	if (value >= (1 << AMP_GAIN_CNT))
 		return -EINVAL;
 
 	data->amp_gain_value = value;
-	for (i = 0; i < 2; i++) {
+	value = data->amp_gain_seq[value];
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
 		struct gpio_desc *gd = data->amp_gain[i];
 
-		if (gd)
-			gpiod_set_value(gd, value & 1);
+		if (!gd)
+			break;
+		gpiod_set_value(gd, value & 1);
 		value >>= 1;
 	}
 	return 0;
@@ -284,7 +289,7 @@ static int amp_hp_get(struct snd_kcontrol *kcontrol,
 }
 
 static const struct snd_kcontrol_new more_controls[] = {
-	SOC_SINGLE_EXT("amp_gain", 0, 0, 3, 0,
+	SOC_SINGLE_EXT("amp_gain", 0, 0, (1 << AMP_GAIN_CNT) - 1, 0,
 		       amp_gain_get, amp_gain_set),
 	SOC_SINGLE_EXT("amp_hp", 0, 0, 1, 0,
 		       amp_hp_get, amp_hp_set),
@@ -418,14 +423,21 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	}
 	data->amp_standby = gd;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < (1 << AMP_GAIN_CNT); i++)
+		data->amp_gain_seq[i] = i;
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
 		gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-gain", i, GPIOD_OUT_LOW);
 		if (IS_ERR(gd)) {
 			ret = PTR_ERR(gd);
 			goto fail;
 		}
 		data->amp_gain[i] = gd;
+		if (!gd)
+			break;
 	}
+	of_property_read_u8_array(np, "amp-gain-seq", data->amp_gain_seq,
+			(1 << i));
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
@@ -490,7 +502,7 @@ static int imx_sgtl5000_remove(struct platform_device *pdev)
 		gpiod_set_value(data->mute_lo, 1);
 	if (data->mute_hp)
 		gpiod_set_value(data->mute_hp, 1);
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
 		struct gpio_desc *gd = data->amp_gain[i];
 
 		if (gd)
