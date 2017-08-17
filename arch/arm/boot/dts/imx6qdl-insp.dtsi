@@ -109,7 +109,7 @@
 			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
 #define GP_SGTL5000_MUTE		<&gpio1 29 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_ENET_TXD1__GPIO1_IO29	0x030b0
-#define GP_HEADPHONE_DET		<&gpio7 8 GPIO_ACTIVE_LOW>
+			/* no headphone detect */
 			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
 		>;
 	};
@@ -617,7 +617,7 @@
 		audio-routing =
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
-			"Headphone Jack", "HP_OUT";
+			"Ext Spk", "HP_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 		mute-gpios = GP_SGTL5000_MUTE;
