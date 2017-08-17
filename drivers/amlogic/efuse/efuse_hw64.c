@@ -203,6 +203,8 @@ ssize_t efuse_read_usr(char *buf, size_t count, loff_t *ppos)
 	ssize_t ret;
 	loff_t pos;
 
+	if (count > EFUSE_BYTES)
+		count = EFUSE_BYTES;
 	memset(data, 0, count);
 
 	pdata = data;
@@ -225,6 +227,8 @@ ssize_t efuse_write_usr(char *buf, size_t count, loff_t *ppos)
 		pr_info("data length: 0 is error!\n");
 		return -1;
 	}
+	if (count > EFUSE_BYTES)
+		count = EFUSE_BYTES;
 
 	memset(data, 0, EFUSE_BYTES);
 

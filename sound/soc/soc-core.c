@@ -324,7 +324,7 @@ static void soc_init_codec_debugfs(struct snd_soc_component *component)
 {
 	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 
-	codec->debugfs_reg = debugfs_create_file("codec_reg", 0644,
+	codec->debugfs_reg = debugfs_create_file("codec_reg", 0440,
 						 codec->component.debugfs_root,
 						 codec, &codec_reg_fops);
 	if (!codec->debugfs_reg)
