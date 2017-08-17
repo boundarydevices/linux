@@ -144,8 +144,8 @@
 			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
 #define GP_SGTL5000_HP_MUTE	<&gpio3 29 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x130b0		/* amplifier mute, weak pull-down */
-#define GP_SGTL5000_HP_DET	<&gpio3 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x130b0
+#define GP_SGTL5000_HP_DET	<&gpio3 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x100b0
 #define GP_SGTL5000_MIC_DET	<&gpio1 24 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_ENET_RX_ER__GPIO1_IO24	0x130b0
 		>;
@@ -648,10 +648,17 @@
 		audio-routing =
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
-			"Headphone Jack", "HP_OUT";
+			"Headphone Jack", "HP_OUT",
+			"Ext Spk", "HP_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 		mute-gpios = GP_SGTL5000_HP_MUTE;
+		hp-detect-gpios = GP_SGTL5000_HP_DET;
+		/*
+		 * mute the amplifier on the hp outputs
+		 * when hp jack detected
+		 */
+		spk-mute-on-hp-detect;
 	};
 
 	sound-hdmi {
