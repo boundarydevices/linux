@@ -539,7 +539,7 @@
 		audio-routing =
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
-			"Headphone Jack", "HP_OUT";
+			"Ext Spk", "HP_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 		mute-gpios = GP_TDA7491P_MUTE;
