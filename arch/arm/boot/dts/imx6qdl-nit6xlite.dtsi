@@ -123,6 +123,12 @@
 		>;
 	};
 
+	pinctrl_hdmi_cec: hdmi-cecgrp {
+		fsl,pins = <
+			MX6QDL_PAD_EIM_A25__HDMI_TX_CEC_LINE	0x1f8b0
+		>;
+	};
+
 	pinctrl_i2c1: i2c1grp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D21__I2C1_SCL		0x4001b8b1
@@ -257,8 +263,6 @@
 	pinctrl_sgtl5000: sgtl5000grp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
-#define GP_SGTL5000_MUTE		<&gpio5 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_A25__GPIO5_IO02		0x030b0
 		>;
 	};
 
@@ -585,7 +589,6 @@
 			"Headphone Jack", "HP_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
-		mute-gpios = GP_SGTL5000_MUTE;
 	};
 
 	sound-hdmi {
@@ -685,6 +688,12 @@
 };
 
 &hdmi_audio {
+	status = "okay";
+};
+
+&hdmi_cec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_cec>;
 	status = "okay";
 };
 
