@@ -30,7 +30,7 @@ static struct aml_nand_chip *aml_chip_key;
 int32_t amlnf_key_read(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 {
 	struct aml_nand_chip *aml_chip = aml_chip_key;
-	struct nand_menson_key *key_ptr = NULL;
+	uint8_t *key_ptr = NULL;
 	u32 keysize = aml_chip->keysize - sizeof(u32);
 	size_t offset = 0;
 	struct mtd_info *mtd = aml_chip->mtd;
@@ -57,9 +57,8 @@ int32_t amlnf_key_read(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 	if (key_ptr == NULL)
 		return -ENOMEM;
 
-	aml_nand_read_key(mtd, offset, (u8 *)key_ptr->data);
-
-	memcpy(buf, key_ptr->data, keysize);
+	aml_nand_read_key(mtd, offset, key_ptr);
+	memcpy(buf, key_ptr, keysize);
 
 	kfree(key_ptr);
 	return 0;
@@ -72,10 +71,11 @@ int32_t amlnf_key_write(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 {
 	struct aml_nand_chip *aml_chip = aml_chip_key;
 	struct mtd_info *mtd = aml_chip->mtd;
-	struct nand_menson_key *key_ptr = NULL;
+	uint8_t *key_ptr = NULL;
 	u32 keysize = aml_chip->keysize - sizeof(u32);
 	int error = 0;
 
+	*actual_length = keysize;
 	if (aml_chip == NULL) {
 		pr_info("%s(): amlnf key not ready yet!", __func__);
 		return -EFAULT;
@@ -94,8 +94,9 @@ int32_t amlnf_key_write(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 	if (key_ptr == NULL)
 		return -ENOMEM;
 
-	memcpy(key_ptr->data + 0, buf, keysize);
-	aml_nand_save_key(mtd, buf);
+	memset(key_ptr, 0, aml_chip->keysize);
+	memcpy(key_ptr, buf, keysize);
+	error = aml_nand_save_key(mtd, key_ptr);
 
 	kfree(key_ptr);
 	return error;

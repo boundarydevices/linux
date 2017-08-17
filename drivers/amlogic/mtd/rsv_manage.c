@@ -470,6 +470,7 @@ int aml_nand_read_rsv_info(struct mtd_info *mtd,
 #endif
 	/* if(data_buf) */
 	/* kfree(data_buf); */
+
 	return 0;
 }
 
@@ -499,6 +500,7 @@ int aml_nand_read_key(struct mtd_info *mtd, size_t offset, u_char *buf)
 			aml_chip->aml_nandkey_info->name);
 		return 1;
 	}
+
 	if (aml_nand_read_rsv_info(mtd,
 		aml_chip->aml_nandkey_info, offset, (u_char *)buf))
 		return 1;
