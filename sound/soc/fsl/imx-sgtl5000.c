@@ -17,6 +17,7 @@
 #include <linux/of_gpio.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <sound/jack.h>
 #include <sound/soc.h>
 
 #include "../codecs/sgtl5000.h"
@@ -38,10 +39,95 @@ struct imx_sgtl5000_data {
 	int amp_gain_value;
 	int mute_hp_value;
 	int hp_disabled;
+	int hp_det_status;
+	int standby_state;
 	bool limit_16bit_samples;
 	unsigned amp_standby_enter_wait_ms;
 	unsigned amp_standby_exit_delay_ms;
+	int spk_mute_on_hp_detect;
+	struct snd_soc_jack hp_jack;
+	struct snd_soc_jack_pin hp_jack_pins;
+	struct snd_soc_jack_gpio hp_jack_gpio;
 };
+
+static ssize_t show_headphone(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+	struct snd_soc_card *card = dev_get_drvdata(dev);
+	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(card);
+	int hp_det_status;
+
+	if (data->hp_jack_gpio.desc) {
+		/* Check if headphone is plugged in */
+		hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
+
+		if (hp_det_status)
+			strcpy(buf, "headphone\n");
+		else
+			strcpy(buf, "speaker\n");
+	} else {
+		strcpy(buf, "no detect gpio connected\n");
+	}
+	return strlen(buf);
+}
+
+static DEVICE_ATTR(headphone, S_IRUGO, show_headphone, NULL);
+
+static int hpjack_status_check(void *_data)
+{
+	struct imx_sgtl5000_data *data = _data;
+	int hp_det_status, ret;
+
+	if (!data->hp_jack_gpio.desc)
+		return 0;
+
+	hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
+	if (data->spk_mute_on_hp_detect) {
+		if (hp_det_status && !data->hp_disabled) {
+			int i;
+
+			for (i = 0; i < 5; i++) {
+				hp_det_status = gpiod_get_value_cansleep(
+						data->hp_jack_gpio.desc);
+				if (!hp_det_status)
+					break;
+				msleep(1);
+			}
+		}
+		gpiod_set_value_cansleep(data->mute_hp,
+			hp_det_status | data->hp_disabled);
+	}
+	data->hp_det_status = hp_det_status;
+	if (!hp_det_status)
+		ret = 0;
+	else
+		ret = data->hp_jack_gpio.report;
+	return ret;
+}
+
+static int hp_init(struct device *dev, struct imx_sgtl5000_data *data)
+{
+	int ret;
+
+	data->hp_jack_pins.pin = "Headphone Jack";
+	data->hp_jack_pins.mask = SND_JACK_HEADPHONE;
+	data->hp_jack_gpio.name = "headphone detect";
+	data->hp_jack_gpio.report = SND_JACK_HEADPHONE;
+	data->hp_jack_gpio.debounce_time = 250;
+
+	data->hp_jack_gpio.gpiod_dev = dev;
+	data->hp_jack_gpio.name = "hp-detect";
+	data->hp_jack_gpio.jack_status_check = hpjack_status_check;
+	data->hp_jack_gpio.data = data;
+
+	ret = snd_soc_card_jack_new(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
+		&data->hp_jack, &data->hp_jack_pins, 1);
+
+	ret = snd_soc_jack_add_gpios(&data->hp_jack, 1, &data->hp_jack_gpio);
+	if (!ret)
+		data->hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
+	return ret;
+}
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
@@ -68,23 +154,33 @@ int do_mute(struct gpio_desc *gd, int mute)
 	return 0;
 }
 
-static int event_hp(struct snd_soc_dapm_widget *w,
+static int event_spk(struct snd_soc_dapm_widget *w,
 		    struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
 	struct snd_soc_card *card = dapm->card;
 	struct imx_sgtl5000_data *data = container_of(card,
 			struct imx_sgtl5000_data, card);
-	int mute = SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1;
+	int on = SND_SOC_DAPM_EVENT_ON(event) ? 1 : 0;
+	int mute = !on;
 
 	data->hp_disabled = data->mute_hp_value = mute;
-	if (mute) {
+	if (!mute && data->spk_mute_on_hp_detect && data->hp_det_status)
+		mute = 1;
+	if (!on) {
 		do_mute(data->mute_hp, mute);
-		msleep(data->amp_standby_enter_wait_ms);
-		return do_mute(data->amp_standby, mute);
+		if (!data->standby_state) {
+			msleep(data->amp_standby_enter_wait_ms);
+			data->standby_state = 1;
+			return do_mute(data->amp_standby, 1);
+		}
+		return 0;
 	}
-	do_mute(data->amp_standby, mute);
-	msleep(data->amp_standby_exit_delay_ms);
+	if (data->standby_state) {
+		do_mute(data->amp_standby, 0);
+		data->standby_state = 0;
+		msleep(data->amp_standby_exit_delay_ms);
+	}
 	return do_mute(data->mute_hp, mute);
 }
 
@@ -102,9 +198,9 @@ static int event_lo(struct snd_soc_dapm_widget *w,
 static const struct snd_soc_dapm_widget imx_sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In Jack", NULL),
-	SND_SOC_DAPM_HP("Headphone Jack", event_hp),
+	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_SPK("Line Out Jack", event_lo),
-	SND_SOC_DAPM_SPK("Ext Spk", NULL),
+	SND_SOC_DAPM_SPK("Ext Spk", event_spk),
 };
 
 static int imx_sgtl_startup(struct snd_pcm_substream *substream)
@@ -205,6 +301,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	int int_port, ext_port;
 	unsigned amp_standby_enter_wait_ms = 0;
 	unsigned amp_standby_exit_delay_ms = 0;
+	int spk_mute_on_hp_detect;
 	const struct snd_kcontrol_new *kcontrols = more_controls;
 	int kcontrols_cnt = ARRAY_SIZE(more_controls);
 	int ret;
@@ -220,6 +317,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "mux-ext-port missing or invalid\n");
 		return ret;
 	}
+	spk_mute_on_hp_detect = of_property_read_bool(np, "spk-mute-on-hp-detect");
 	of_property_read_u32(np, "amp-standby-enter-wait-ms", &amp_standby_enter_wait_ms);
 	of_property_read_u32(np, "amp-standby-exit-delay-ms", &amp_standby_exit_delay_ms);
 
@@ -274,6 +372,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	data->spk_mute_on_hp_detect = spk_mute_on_hp_detect;
 	data->amp_standby_enter_wait_ms = amp_standby_enter_wait_ms;
 	data->amp_standby_exit_delay_ms = amp_standby_exit_delay_ms;
 	data->codec_clk = clk_get(&codec_dev->dev, NULL);
@@ -303,6 +402,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	}
 	data->mute_hp = gd;
 	data->mute_hp_value = 1;
+	data->standby_state = 1;
 
 	gd = devm_gpiod_get_index_optional(&pdev->dev, "line-out-mute", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd)) {
@@ -361,6 +461,11 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 
 	of_node_put(ssi_np);
 	of_node_put(codec_np);
+	if (!hp_init(&pdev->dev, data)) {
+		ret = device_create_file(&pdev->dev, &dev_attr_headphone);
+		if (ret)
+			dev_err(&pdev->dev, "create hp attr failed (%d)\n", ret);
+	}
 
 	return 0;
 
@@ -392,6 +497,7 @@ static int imx_sgtl5000_remove(struct platform_device *pdev)
 			gpiod_set_value(gd, 0);
 	}
 	clk_put(data->codec_clk);
+	device_remove_file(&pdev->dev, &dev_attr_headphone);
 
 	return 0;
 }
