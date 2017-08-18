@@ -111,21 +111,39 @@ static int lcd_extern_reg_write(unsigned char reg, unsigned char value)
 	return ret;
 }
 
-static int lcd_extern_power_cmd(unsigned char *init_table)
+static int lcd_extern_power_cmd(unsigned char *init_table, int flag)
 {
-	int i = 0, len;
+	int i = 0, max_len = 0, step = 0;
+	unsigned char cmd_size;
 	int ret = 0;
 
-	len = ext_config->cmd_size;
-	if (len < 1) {
-		EXTERR("%s: cmd_size %d is invalid\n", __func__, len);
+	cmd_size = ext_config->cmd_size;
+	if (cmd_size < 1) {
+		EXTERR("%s: cmd_size %d is invalid\n", __func__, cmd_size);
+		return -1;
+	}
+	if (cmd_size == LCD_EXTERN_CMD_SIZE_DYNAMIC) {
+		EXTPR("%s: cmd_size dynamic length is not support\n", __func__);
+		return -1;
+	}
+	if (init_table == NULL) {
+		EXTERR("%s: init_table %d is NULL\n", __func__, flag);
 		return -1;
 	}
 
-	while (i <= LCD_EXTERN_INIT_TABLE_MAX) {
-		if (init_table[i] == LCD_EXTERN_INIT_END) {
+	if (flag)
+		max_len = LCD_EXTERN_INIT_ON_MAX;
+	else
+		max_len = LCD_EXTERN_INIT_OFF_MAX;
+
+	while (i <= max_len) {
+		if (init_table[i] == LCD_EXTERN_INIT_END)
 			break;
-		} else if (init_table[i] == LCD_EXTERN_INIT_NONE) {
+		if (lcd_debug_print_flag) {
+			EXTPR("%s: step %d: type=0x%02x, cmd_size=%d\n",
+				__func__, step, init_table[i], cmd_size);
+		}
+		if (init_table[i] == LCD_EXTERN_INIT_NONE) {
 			/* do nothing, only for delay */
 		} else if (init_table[i] == LCD_EXTERN_INIT_GPIO) {
 			if (init_table[i+1] < LCD_GPIO_MAX) {
@@ -134,15 +152,16 @@ static int lcd_extern_power_cmd(unsigned char *init_table)
 			}
 		} else if (init_table[i] == LCD_EXTERN_INIT_CMD) {
 			ret = lcd_extern_i2c_write(aml_T5800Q_i2c_client,
-				&init_table[i+1], (len-2));
+				&init_table[i+1], (cmd_size-2));
 		} else {
 			EXTERR("%s(%d: %s): power_type %d is invalid\n",
 				__func__, ext_config->index,
 				ext_config->name, ext_config->type);
 		}
-		if (init_table[i+len-1] > 0)
-			mdelay(init_table[i+len-1]);
-		i += len;
+		if (init_table[i+cmd_size-1] > 0)
+			mdelay(init_table[i+cmd_size-1]);
+		step++;
+		i += cmd_size;
 	}
 
 	return ret;
@@ -153,9 +172,9 @@ static int lcd_extern_power_ctrl(int flag)
 	int ret = 0;
 
 	if (flag)
-		ret = lcd_extern_power_cmd(ext_config->table_init_on);
+		ret = lcd_extern_power_cmd(ext_config->table_init_on, 1);
 	else
-		ret = lcd_extern_power_cmd(ext_config->table_init_off);
+		ret = lcd_extern_power_cmd(ext_config->table_init_off, 0);
 
 	EXTPR("%s(%d: %s): %d\n",
 		__func__, ext_config->index, ext_config->name, flag);

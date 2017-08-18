@@ -1646,7 +1646,7 @@ static void lcd_set_pll_axg(struct lcd_clk_config_s *cConf)
 	lcd_hiu_write(HHI_GP0_PLL_CNTL2, pll_ctrl2);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL3, 0x0a59a288);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL4, 0xc000004d);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL5, 0x00058000);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL5, 0x00078000);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL, 1, LCD_PLL_RST_AXG, 1);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL, 0, LCD_PLL_RST_AXG, 1);
 
