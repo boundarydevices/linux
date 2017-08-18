@@ -221,7 +221,7 @@ static const u32 *filter_table[] = {
 };
 
 static int chroma_filter_table[] = {
-	COEF_4POINT_TRIANGLE, /* bicubic */
+	COEF_BICUBIC, /* bicubic */
 	COEF_3POINT_TRIANGLE,
 	COEF_4POINT_TRIANGLE,
 	COEF_4POINT_TRIANGLE, /* bilinear */
@@ -240,6 +240,10 @@ module_param(sharpness1_sr2_ctrl_32d7, uint, 0664);
 static unsigned int sharpness1_sr2_ctrl_3280 = 0xffffffff;
 MODULE_PARM_DESC(sharpness1_sr2_ctrl_3280, "sharpness1_sr2_ctrl_3280");
 module_param(sharpness1_sr2_ctrl_3280, uint, 0664);
+
+static unsigned int vpp_filter_fix;
+MODULE_PARM_DESC(vpp_filter_fix, "vpp_filter_fix");
+module_param(vpp_filter_fix, uint, 0664);
 
 #define MAX_COEFF_LEVEL 5
 uint num_coeff_level = MAX_COEFF_LEVEL;
@@ -283,7 +287,8 @@ uint horz_coeff_settings[MAX_COEFF_LEVEL] = {
 	/* this setting is most smooth */
 };
 
-static uint coeff(uint *settings, uint ratio, uint phase, bool interlace)
+static uint coeff(uint *settings, uint ratio, uint phase,
+	bool interlace, int combing_lev)
 {
 	uint coeff_select = 0;
 	uint coeff_type = 0;
@@ -311,8 +316,11 @@ static uint coeff(uint *settings, uint ratio, uint phase, bool interlace)
 		 *gxtvbb use dejaggy in SR0 to reduce intelace combing
 		 *other chip no dejaggy, need swtich to more blur filter
 		 */
-		if (interlace && (coeff_select < 3))
+		if (interlace && (coeff_select < 3) && vpp_filter_fix)
 			coeff_type = COEF_4POINT_BSPLINE;
+		/* use bicubic for static scene */
+		if (combing_lev == 0)
+			coeff_type = COEF_BICUBIC;
 	}
 	return coeff_type;
 }
@@ -365,6 +373,14 @@ static u32 skip_policy = 0x81;
 module_param(skip_policy, uint, 0664);
 MODULE_PARM_DESC(skip_policy, "\n skip_policy\n");
 
+unsigned int scaler_filter_cnt_limit = 10;
+MODULE_PARM_DESC(scaler_filter_cnt_limit, "scaler_filter_cnt_limit");
+module_param(scaler_filter_cnt_limit, uint, 0664);
+
+static uint last_vert_filter;
+static uint last_horz_filter;
+static uint scaler_filter_cnt;
+
 static u32 vpp_wide_mode;
 static u32 vpp_zoom_ratio = 100;
 static s32 vpp_zoom_center_x, vpp_zoom_center_y;
@@ -410,6 +426,10 @@ MODULE_PARM_DESC(bypass_spscl1, "bypass_spscl1");
 static unsigned int vert_scaler_filter = 0xff;
 module_param(vert_scaler_filter, uint, 0664);
 MODULE_PARM_DESC(vert_scaler_filter, "vert_scaler_filter");
+
+static unsigned int vert_chroma_scaler_filter = 0xff;
+module_param(vert_chroma_scaler_filter, uint, 0664);
+MODULE_PARM_DESC(vert_chroma_scaler_filter, "vert_chroma_scaler_filter");
 
 static unsigned int horz_scaler_filter = 0xff;
 module_param(horz_scaler_filter, uint, 0664);
@@ -1289,7 +1309,8 @@ RESTART:
 				(next_frame_par->vscale_skip_count + 1),
 			1,
 			((vf->type_original & VIDTYPE_TYPEMASK)
-				!= VIDTYPE_PROGRESSIVE));
+				!= VIDTYPE_PROGRESSIVE),
+			vf->combing_cur_lev);
 	filter->vpp_vert_coeff =
 		filter_table[filter->vpp_vert_filter];
 
@@ -1316,7 +1337,8 @@ RESTART:
 			filter->vpp_hf_start_phase_step,
 			next_frame_par->VPP_hf_ini_phase_,
 			((vf->type_original & VIDTYPE_TYPEMASK)
-				!= VIDTYPE_PROGRESSIVE));
+				!= VIDTYPE_PROGRESSIVE),
+			vf->combing_cur_lev);
 	/*for gxl cvbs out index*/
 	if ((vinfo->mode == VMODE_CVBS) &&
 		(vinfo->height == 576) &&
@@ -1370,16 +1392,17 @@ RESTART:
 		(vert_scaler_filter <= COEF_3D_FILTER)) {
 		filter->vpp_vert_coeff = filter_table[vert_scaler_filter];
 		filter->vpp_vert_filter = vert_scaler_filter;
-		if (vert_chroma_filter_force_en) {
-			cur_vert_chroma_filter
-				= chroma_filter_table[vert_scaler_filter];
+	}
+	if (vert_chroma_filter_force_en &&
+		(vert_chroma_scaler_filter >= COEF_BICUBIC) &&
+		(vert_chroma_scaler_filter <= COEF_3D_FILTER)) {
+		cur_vert_chroma_filter = vert_chroma_scaler_filter;
 			filter->vpp_vert_chroma_coeff
 				= filter_table[cur_vert_chroma_filter];
 			filter->vpp_vert_chroma_filter_en = true;
-		} else {
-			cur_vert_chroma_filter = COEF_NULL;
-			filter->vpp_vert_chroma_filter_en = false;
-		}
+	} else {
+		cur_vert_chroma_filter = COEF_NULL;
+		filter->vpp_vert_chroma_filter_en = false;
 	}
 
 	if ((horz_scaler_filter >= COEF_BICUBIC) &&
@@ -1395,9 +1418,22 @@ RESTART:
 		filter->vpp_vert_filter = COEF_3D_FILTER;
 	}
 #endif
-
-	cur_vert_filter = filter->vpp_vert_filter;
-	cur_horz_filter = filter->vpp_horz_filter;
+	if ((last_vert_filter != filter->vpp_vert_filter) ||
+		(last_horz_filter != filter->vpp_horz_filter)) {
+		last_vert_filter = filter->vpp_vert_filter;
+		last_horz_filter = filter->vpp_horz_filter;
+		scaler_filter_cnt = 0;
+	} else {
+		scaler_filter_cnt++;
+	}
+	if ((scaler_filter_cnt >= scaler_filter_cnt_limit) &&
+		((cur_vert_filter != filter->vpp_vert_filter) ||
+		(cur_horz_filter != filter->vpp_horz_filter))) {
+		video_property_notify(1);
+		cur_vert_filter = filter->vpp_vert_filter;
+		cur_horz_filter = filter->vpp_horz_filter;
+		scaler_filter_cnt = scaler_filter_cnt_limit;
+	}
 	cur_skip_line = next_frame_par->vscale_skip_count;
 
 #if HAS_VPU_PROT

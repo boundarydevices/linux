@@ -263,6 +263,7 @@ extern void vpp2_set_zoom_ratio(u32 r);
 
 extern u32 vpp2_get_zoom_ratio(void);
 #endif
+extern int video_property_notify(int flag);
 
 extern int vpp_set_super_scaler_regs(int scaler_path_sel,
 	int reg_srscl0_enable,

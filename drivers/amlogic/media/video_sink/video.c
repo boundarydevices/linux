@@ -3094,30 +3094,16 @@ static void vd2_set_dcu(struct vframe_s *vf)
 static int detect_vout_type(void)
 {
 	int vout_type = VOUT_TYPE_PROG;
-#if DEBUG_TMP
 	if ((vinfo) && (vinfo->field_height != vinfo->height)) {
-		switch (vinfo->mode) {
-		case VMODE_480I:
-		case VMODE_480CVBS:
-		case VMODE_576I:
-		case VMODE_576CVBS:
+		if ((vinfo->height == 576) || (vinfo->height == 480))
 			vout_type = (READ_VCBUS_REG(ENCI_INFO_READ) &
 				(1 << 29)) ?
 				VOUT_TYPE_BOT_FIELD : VOUT_TYPE_TOP_FIELD;
-			break;
-
-		case VMODE_1080I:
-		case VMODE_1080I_50HZ:
-			/* vout_type = (((READ_VCBUS_REG(ENCI_INFO_READ)*/
-			/*>> 16) & 0x1fff) < 562) ? */
+		else if (vinfo->height == 1080)
 			vout_type = (((READ_VCBUS_REG(ENCP_INFO_READ) >> 16) &
 				0x1fff) < 562) ?
 				VOUT_TYPE_TOP_FIELD : VOUT_TYPE_BOT_FIELD;
-			break;
 
-		default:
-			break;
-		}
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		if (is_vsync_rdma_enable()) {
 			if (vout_type == VOUT_TYPE_TOP_FIELD)
@@ -3127,7 +3113,6 @@ static int detect_vout_type(void)
 		}
 #endif
 	}
-#endif
 	return vout_type;
 }
 

@@ -2745,6 +2745,98 @@ static ssize_t amvecm_dv_mode_store(struct class *cla,
 	return count;
 }
 
+static const char *amvecm_reg_usage_str = {
+	"Usage:\n"
+	"echo rv addr(H) > /sys/class/amvecm/reg;\n"
+	"echo rc addr(H) > /sys/class/amvecm/reg;\n"
+	"echo rh addr(H) > /sys/class/amvecm/reg; read hiu reg\n"
+	"echo wv addr(H) value(H) > /sys/class/amvecm/reg; write vpu reg\n"
+	"echo wc addr(H) value(H) > /sys/class/amvecm/re; write cbus reg\n"
+	"echo wh addr(H) value(H) > /sys/class/amvecm/re; write hiu reg\n"
+	"echo dv|c|h addr(H) num > /sys/class/amvecm/reg; dump reg from addr\n"
+};
+static ssize_t amvecm_reg_show(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%s\n", amvecm_reg_usage_str);
+}
+
+static ssize_t amvecm_reg_store(struct class *cla,
+			struct class_attribute *attr,
+			const char *buf, size_t count)
+{
+	char *buf_orig, *parm[8] = {NULL};
+	long val = 0;
+	unsigned int reg_addr, reg_val, i;
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	parse_param_amvecm(buf_orig, (char **)&parm);
+	if (!strcmp(parm[0], "rv")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		reg_val = READ_VPP_REG(reg_addr);
+		pr_info("VPU[0x%04x]=0x%08x\n", reg_addr, reg_val);
+	} else if (!strcmp(parm[0], "rc")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		reg_val = aml_read_cbus(reg_addr);
+		pr_info("CBUS[0x%04x]=0x%08x\n", reg_addr, reg_val);
+	} else if (!strcmp(parm[0], "rh")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		amvecm_hiu_reg_read(reg_addr, &reg_val);
+		pr_info("HIU[0x%04x]=0x%08x\n", reg_addr, reg_val);
+	} else if (!strcmp(parm[0], "wv")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0)
+			return -EINVAL;
+		reg_val = val;
+		WRITE_VPP_REG(reg_addr, reg_val);
+	} else if (!strcmp(parm[0], "wc")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0)
+			return -EINVAL;
+		reg_val = val;
+		aml_write_cbus(reg_addr, reg_val);
+	} else if (!strcmp(parm[0], "wh")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0)
+			return -EINVAL;
+		reg_val = val;
+		amvecm_hiu_reg_write(reg_addr, reg_val);
+	} else if (parm[0][0] == 'd') {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0)
+			return -EINVAL;
+		for (i = 0; i < val; i++) {
+			if (parm[0][1] == 'v')
+				reg_val = READ_VPP_REG(reg_addr+i);
+			else if (parm[0][1] == 'c')
+				reg_val = aml_read_cbus(reg_addr+i);
+			else if (parm[0][1] == 'h')
+				amvecm_hiu_reg_read((reg_addr+i),
+					&reg_val);
+			pr_info("REG[0x%04x]=0x%08x\n", (reg_addr+i), reg_val);
+		}
+	} else
+		pr_info("unsupprt cmd!\n");
+
+	return count;
+}
+
 /* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
 void init_sharpness(void)
 {
@@ -2874,6 +2966,8 @@ static struct class_attribute amvecm_class_attrs[] = {
 		amvecm_vpp_demo_show, amvecm_vpp_demo_store),
 	__ATTR(dv_mode, 0644,
 		amvecm_dv_mode_show, amvecm_dv_mode_store),
+	__ATTR(reg, 0644,
+		amvecm_reg_show, amvecm_reg_store),
 	__ATTR_NULL
 };
 
