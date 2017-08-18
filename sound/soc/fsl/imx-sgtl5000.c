@@ -156,34 +156,42 @@ int do_mute(struct gpio_desc *gd, int mute)
 	return 0;
 }
 
-static int event_spk(struct snd_soc_dapm_widget *w,
+static int event_spk_mute(struct imx_sgtl5000_data *data, int mute)
+{
+	data->hp_disabled = data->mute_hp_value = mute;
+	if (!mute && data->spk_mute_on_hp_detect && data->hp_det_status)
+		mute = 1;
+	return do_mute(data->mute_hp, mute);
+}
+
+static int event_spk_stdby(struct imx_sgtl5000_data *data, int stdby)
+{
+	if (!data->amp_standby)
+		return 0;
+	if (stdby == data->standby_state)
+		return 0;
+
+	if (stdby)
+		msleep(data->amp_standby_enter_wait_ms);
+	data->standby_state = stdby;
+	gpiod_set_value(data->amp_standby, stdby);
+	if (!stdby)
+		msleep(data->amp_standby_exit_delay_ms);
+	return 0;
+}
+
+static int event_spk2(struct snd_soc_dapm_widget *w,
 		    struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
 	struct snd_soc_card *card = dapm->card;
 	struct imx_sgtl5000_data *data = container_of(card,
 			struct imx_sgtl5000_data, card);
-	int on = SND_SOC_DAPM_EVENT_ON(event) ? 1 : 0;
-	int mute = !on;
+	int stdby = SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1;
 
-	data->hp_disabled = data->mute_hp_value = mute;
-	if (!mute && data->spk_mute_on_hp_detect && data->hp_det_status)
-		mute = 1;
-	if (!on) {
-		do_mute(data->mute_hp, mute);
-		if (!data->standby_state) {
-			msleep(data->amp_standby_enter_wait_ms);
-			data->standby_state = 1;
-			return do_mute(data->amp_standby, 1);
-		}
-		return 0;
-	}
-	if (data->standby_state) {
-		do_mute(data->amp_standby, 0);
-		data->standby_state = 0;
-		msleep(data->amp_standby_exit_delay_ms);
-	}
-	return do_mute(data->mute_hp, mute);
+	if (event & (SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD))
+		return event_spk_stdby(data, stdby);
+	return event_spk_mute(data, stdby);
 }
 
 static int event_lo(struct snd_soc_dapm_widget *w,
@@ -197,12 +205,18 @@ static int event_lo(struct snd_soc_dapm_widget *w,
 	return do_mute(data->mute_lo, SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1);
 }
 
+#define SND_SOC_DAPM_SPK2(wname, wevent) \
+{	.id = snd_soc_dapm_spk, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags =  SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU | \
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD}
+
 static const struct snd_soc_dapm_widget imx_sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In Jack", NULL),
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_SPK("Line Out Jack", event_lo),
-	SND_SOC_DAPM_SPK("Ext Spk", event_spk),
+	SND_SOC_DAPM_SPK2("Ext Spk", event_spk2),
 };
 
 static int imx_sgtl_startup(struct snd_pcm_substream *substream)
