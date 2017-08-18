@@ -180,9 +180,9 @@
 #define GP_CODEC_A_SHTDN_N	<&gpio1 15 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_SD2_DAT0__GPIO1_IO15		0x030b0
 #define GP_CODEC_A_FS1		<&gpio4 30 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30	0x030b0
+			MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30	0x0b0b0
 #define GP_CODEC_A_FS2		<&gpio4 29 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x030b0
+			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x0b0b0
 #define GPIRQ_CODEC_A_MIC_DET	<&gpio7 8 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
 #define GP_CODEC_A_SYNC		<&gpio1 19 GPIO_ACTIVE_LOW>
@@ -203,9 +203,9 @@
 #define GP_CODEC_B_SHTDN_N	<&gpio3 3 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x030b0
 #define GP_CODEC_B_FS1		<&gpio5 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x030b0
+			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x0b0b0
 #define GP_CODEC_B_FS2		<&gpio5 7 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x030b0
+			MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x0b0b0
 #define GPIRQ_CODEC_B_MIC_DET	<&gpio5 12 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x1b0b0
 		>;
@@ -494,11 +494,12 @@
 		mux-ext-port = <3>;
 		mute-gpios = GP_CODEC_A_MUTE_N;
 		/* delay between mute and standby enter */
-		amp-standby-enter-wait-ms = <1>;
+		amp-standby-enter-wait-ms = <50>;
 		/* delay between standby exit and unmute */
 		amp-standby-exit-delay-ms = <1100>;
 		amp-standby-gpios = GP_CODEC_A_SHTDN_N;
 		amp-gain-gpios = GP_CODEC_A_G1, GP_CODEC_A_G2;
+		amp-gain-seq = /bits/ 8 <1 0 2 3>;
 	};
 
 	sound_b {
@@ -517,11 +518,12 @@
 		mux-ext-port = <4>;
 		mute-gpios = GP_CODEC_B_MUTE_N;
 		/* delay between mute and standby enter */
-		amp-standby-enter-wait-ms = <1>;
+		amp-standby-enter-wait-ms = <50>;
 		/* delay between standby exit and unmute */
 		amp-standby-exit-delay-ms = <1100>;
 		amp-standby-gpios = GP_CODEC_B_SHTDN_N;
 		amp-gain-gpios = GP_CODEC_B_G1, GP_CODEC_B_G2;
+		amp-gain-seq = /bits/ 8 <1 0 2 3>;
 	};
 
 	sound-hdmi {
