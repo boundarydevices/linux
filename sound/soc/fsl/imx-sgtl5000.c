@@ -128,6 +128,9 @@ static int hp_init(struct device *dev, struct imx_sgtl5000_data *data)
 	ret = snd_soc_jack_add_gpios(&data->hp_jack, 1, &data->hp_jack_gpio);
 	if (!ret)
 		data->hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
+	else
+		snd_soc_jack_report(&data->hp_jack, SND_JACK_HEADPHONE, SND_JACK_HEADPHONE);
+
 	return ret;
 }
 
