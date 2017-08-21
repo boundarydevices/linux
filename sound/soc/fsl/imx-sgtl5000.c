@@ -38,11 +38,15 @@ struct imx_sgtl5000_data {
 #define AMP_GAIN_CNT 2
 	struct gpio_desc *amp_gain[AMP_GAIN_CNT];
 	unsigned char amp_gain_seq[1 << AMP_GAIN_CNT];
-	int amp_gain_value;
-	int mute_hp_value;
-	int hp_disabled;
-	int hp_det_status;
-	int standby_state;
+	char amp_gain_value;
+	char mute_hp_value;
+	char hp_disabled;
+	char hp_det_status;
+	char standby_state;
+#ifdef MUTE_OFF_LAST
+	char standby_set_pending;
+	char mute_clear_pending;
+#endif
 	bool limit_16bit_samples;
 	unsigned amp_standby_enter_wait_ms;
 	unsigned amp_standby_exit_delay_ms;
@@ -159,15 +163,16 @@ int do_mute(struct gpio_desc *gd, int mute)
 	return 0;
 }
 
-static int event_spk_mute(struct imx_sgtl5000_data *data, int mute)
+static int spk_mute(struct imx_sgtl5000_data *data, int mute)
 {
 	data->hp_disabled = data->mute_hp_value = mute;
 	if (!mute && data->spk_mute_on_hp_detect && data->hp_det_status)
 		mute = 1;
+	pr_debug("mute=%x\n", mute);
 	return do_mute(data->mute_hp, mute);
 }
 
-static int event_spk_stdby(struct imx_sgtl5000_data *data, int stdby)
+static int spk_stdby(struct imx_sgtl5000_data *data, int stdby)
 {
 	if (!data->amp_standby)
 		return 0;
@@ -177,25 +182,68 @@ static int event_spk_stdby(struct imx_sgtl5000_data *data, int stdby)
 	if (stdby)
 		msleep(data->amp_standby_enter_wait_ms);
 	data->standby_state = stdby;
+	pr_debug("stdby=%x\n", stdby);
 	gpiod_set_value(data->amp_standby, stdby);
 	if (!stdby)
 		msleep(data->amp_standby_exit_delay_ms);
 	return 0;
 }
 
-static int event_spk2(struct snd_soc_dapm_widget *w,
+static int event_spk(struct snd_soc_dapm_widget *w,
 		    struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
 	struct snd_soc_card *card = dapm->card;
 	struct imx_sgtl5000_data *data = container_of(card,
 			struct imx_sgtl5000_data, card);
-	int stdby = SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1;
 
-	if (event & (SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD))
-		return event_spk_stdby(data, stdby);
-	return event_spk_mute(data, stdby);
+	if (event & SND_SOC_DAPM_POST_PMU) {
+		spk_stdby(data, 0);
+#ifdef MUTE_OFF_LAST
+		data->mute_clear_pending = 1;
+#else
+		spk_mute(data, 0);
+#endif
+		return 0;
+	}
+	if (event & SND_SOC_DAPM_PRE_PMD) {
+		spk_mute(data, 1);
+#ifdef MUTE_OFF_LAST
+		data->standby_set_pending = 1;
+#else
+		spk_stdby(data, 1);
+#endif
+		return 0;
+	}
+	return 0;
 }
+
+#ifdef MUTE_OFF_LAST
+static int event_spk_last(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	if ((event & SND_SOC_DAPM_POST_PMD) && data->standby_set_pending) {
+		data->standby_set_pending = 0;
+		return spk_stdby(data, 1);
+	}
+	if ((event & SND_SOC_DAPM_POST_PMU) && data->mute_clear_pending) {
+		data->mute_clear_pending = 0;
+		return spk_mute(data, 0);
+	}
+	return 0;
+}
+#define SND_SOC_DAPM_POST2(wname, wevent) \
+{	.id = snd_soc_dapm_post, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD, \
+	.subseq = 1}
+
+#endif
 
 static int event_lo(struct snd_soc_dapm_widget *w,
 		    struct snd_kcontrol *k, int event)
@@ -208,18 +256,15 @@ static int event_lo(struct snd_soc_dapm_widget *w,
 	return do_mute(data->mute_lo, SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1);
 }
 
-#define SND_SOC_DAPM_SPK2(wname, wevent) \
-{	.id = snd_soc_dapm_spk, .name = wname, .kcontrol_news = NULL, \
-	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
-	.event_flags =  SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU | \
-			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD}
-
 static const struct snd_soc_dapm_widget imx_sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In Jack", NULL),
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_SPK("Line Out Jack", event_lo),
-	SND_SOC_DAPM_SPK2("Ext Spk", event_spk2),
+	SND_SOC_DAPM_SPK("Ext Spk", event_spk),
+#ifdef MUTE_OFF_LAST
+	SND_SOC_DAPM_POST2("SPK_POST", event_spk_last),
+#endif
 };
 
 static int imx_sgtl_startup(struct snd_pcm_substream *substream)
