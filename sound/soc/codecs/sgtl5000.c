@@ -133,6 +133,8 @@ struct sgtl5000_priv {
 	u8 micbias_resistor;
 	u8 micbias_voltage;
 	u8 lrclk_strength;
+	u8 ana_power_pending;
+	u8 ana_ctrl_pending;
 };
 
 /*
@@ -168,45 +170,78 @@ static int mic_bias_event(struct snd_soc_dapm_widget *w,
 
 /*
  * As manual described, ADC/DAC only works when VAG powerup,
- * So enabled VAG before ADC/DAC up.
+ * So enabled VAG after ADC/DAC up.
  * In power down case, we need wait 400ms when vag fully ramped down.
  */
 static int power_vag_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
-	const u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP;
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+	u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP |
+			 SGTL5000_LINE_OUT_POWERUP | SGTL5000_HP_POWERUP;
+
+	pr_debug("vag %x(%x) %x(%x)\n", sgtl5000->ana_power_pending,
+		snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER),
+		sgtl5000->ana_ctrl_pending, snd_soc_read(codec, SGTL5000_CHIP_ANA_CTRL));
+
+	if ((sgtl5000->ana_power_pending & mask) || sgtl5000->ana_ctrl_pending) {
+		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_CTRL,
+			SGTL5000_HP_SEL_MASK, sgtl5000->ana_ctrl_pending);
+
+		if (!(sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP)) {
+			mask |= SGTL5000_VAG_POWERUP;
+			sgtl5000->ana_power_pending |= SGTL5000_VAG_POWERUP;
+			snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+					mask, sgtl5000->ana_power_pending);
+			msleep(400);
+			pr_debug("vag on\n");
+		}
+		return 0;
+	}
+	if (sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP) {
+		pr_debug("vag off\n");
+		sgtl5000->ana_power_pending &= ~SGTL5000_VAG_POWERUP;
+		mask |= SGTL5000_VAG_POWERUP;
+		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+			SGTL5000_VAG_POWERUP, 0);
+		msleep(400);
+	}
+	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+		mask, sgtl5000->ana_power_pending);
+	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_CTRL,
+		SGTL5000_HP_SEL_MASK, sgtl5000->ana_ctrl_pending);
+	return 0;
+}
+
+int ana_power_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+	unsigned int m = 1 << w->shift;
 
 	switch (event) {
-	case SND_SOC_DAPM_POST_PMU:
-		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-			SGTL5000_VAG_POWERUP, SGTL5000_VAG_POWERUP);
-		msleep(400);
-		break;
-
-	case SND_SOC_DAPM_PRE_PMD:
-		/*
-		 * Keep VAG powered if Line In is selected (codec bypass mode)
-		 */
-		if (snd_soc_read(codec, SGTL5000_CHIP_ANA_CTRL) &
-				SGTL5000_HP_SEL_MASK)
-			break;
-		/*
-		 * Don't clear VAG_POWERUP, when both DAC and ADC are
-		 * operational to prevent inadvertently starving the
-		 * other one of them.
-		 */
-		if ((snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER) &
-				mask) != mask) {
+	case SND_SOC_DAPM_PRE_PMU:
+		sgtl5000->ana_power_pending |= m;
+		if (sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP) {
+			/* vag already powered */
 			snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-				SGTL5000_VAG_POWERUP, 0);
-			msleep(400);
+				m, m);
 		}
 		break;
-	default:
+	case SND_SOC_DAPM_PRE_PMD:
+		sgtl5000->ana_power_pending &= ~m;
+		if (!(sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP)) {
+			/* vag already off */
+			snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+				m, 0);
+		}
 		break;
 	}
-
+	pr_debug("event %s, %x(evt %x) %x(%x)\n", SND_SOC_DAPM_EVENT_ON(event) ? "on" : "off",
+		m, event, sgtl5000->ana_power_pending,
+		snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER));
 	return 0;
 }
 
@@ -230,32 +265,26 @@ static const char *dac_mux_text[] = {
 static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-#if 0
 	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
-	unsigned int val = 0;
-
-	const u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP;
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
 
 	if (ucontrol->value.enumerated.item[0])
-		val = SGTL5000_VAG_POWERUP;
-
-	if (val || !(snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER)
-			& mask)) {
-		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-				SGTL5000_VAG_POWERUP, val);
-	}
-#endif
+		sgtl5000->ana_ctrl_pending |= SGTL5000_HP_SEL_MASK;
+	else
+		sgtl5000->ana_ctrl_pending &= ~SGTL5000_HP_SEL_MASK;
 	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
 }
 
 static SOC_ENUM_SINGLE_DECL(dac_enum,
-			    SGTL5000_CHIP_ANA_CTRL, 6,
+			    SND_SOC_NOPM, 6,
 			    dac_mux_text);
 
 static const struct snd_kcontrol_new dac_mux =
 	SOC_DAPM_ENUM_EXT("Headphone Mux", dac_enum,
 			snd_soc_dapm_get_enum_double,
 			sgtl5000_hp_select);
+
+#define SND_SOC_DAPM_PRE_PMUD	(SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD)
 
 static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("LINE_IN"),
@@ -268,8 +297,10 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 			    mic_bias_event,
 			    SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 
-	SND_SOC_DAPM_PGA("HP", SGTL5000_CHIP_ANA_POWER, 4, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("LO", SGTL5000_CHIP_ANA_POWER, 0, 0, NULL, 0),
+	SND_SOC_DAPM_PGA_E("HP", SND_SOC_NOPM, 4, 0, NULL, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
+	SND_SOC_DAPM_PGA_E("LO", SND_SOC_NOPM, 0, 0, NULL, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
 
 	SND_SOC_DAPM_MUX("Capture Mux", SND_SOC_NOPM, 0, 0, &adc_mux),
 	SND_SOC_DAPM_MUX("Headphone Mux", SND_SOC_NOPM, 0, 0, &dac_mux),
@@ -284,11 +315,13 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 				0, SGTL5000_CHIP_DIG_POWER,
 				1, 0),
 
-	SND_SOC_DAPM_ADC("ADC", "Capture", SGTL5000_CHIP_ANA_POWER, 1, 0),
-	SND_SOC_DAPM_DAC("DAC", "Playback", SGTL5000_CHIP_ANA_POWER, 3, 0),
+	SND_SOC_DAPM_ADC_E("ADC", "Capture", SND_SOC_NOPM, 1, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
+	SND_SOC_DAPM_DAC_E("DAC", "Playback", SND_SOC_NOPM, 3, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
 
-	SND_SOC_DAPM_PRE("VAG_POWER_PRE", power_vag_event),
-	SND_SOC_DAPM_POST("VAG_POWER_POST", power_vag_event),
+	SND_SOC_DAPM_POST_E("VAG_POWER", power_vag_event, SND_SOC_DAPM_POST_PMU
+		| SND_SOC_DAPM_POST_PMD | SND_SOC_DAPM_POST_NOP),
 };
 
 /* routes for sgtl5000 */
