@@ -1513,6 +1513,7 @@ static void dapm_seq_run(struct snd_soc_card *card,
 	struct snd_soc_dapm_context *cur_dapm = NULL;
 	int ret, i;
 	int *sort;
+	int evt;
 
 	if (power_up)
 		sort = dapm_up_seq;
@@ -1553,11 +1554,15 @@ static void dapm_seq_run(struct snd_soc_card *card,
 								  power_list);
 
 			if (event == SND_SOC_DAPM_STREAM_START)
-				ret = w->event(w,
-					       NULL, SND_SOC_DAPM_PRE_PMU);
+				evt = SND_SOC_DAPM_PRE_PMU;
 			else if (event == SND_SOC_DAPM_STREAM_STOP)
-				ret = w->event(w,
-					       NULL, SND_SOC_DAPM_PRE_PMD);
+				evt = SND_SOC_DAPM_PRE_PMD;
+			else if (event == SND_SOC_DAPM_STREAM_NOP)
+				evt = SND_SOC_DAPM_PRE_NOP;
+			else
+				break;
+			if (w->event_flags & evt)
+				ret = w->event(w, NULL, evt);
 			break;
 
 		case snd_soc_dapm_post:
@@ -1566,11 +1571,15 @@ static void dapm_seq_run(struct snd_soc_card *card,
 								  power_list);
 
 			if (event == SND_SOC_DAPM_STREAM_START)
-				ret = w->event(w,
-					       NULL, SND_SOC_DAPM_POST_PMU);
+				evt = SND_SOC_DAPM_POST_PMU;
 			else if (event == SND_SOC_DAPM_STREAM_STOP)
-				ret = w->event(w,
-					       NULL, SND_SOC_DAPM_POST_PMD);
+				evt = SND_SOC_DAPM_POST_PMD;
+			else if (event == SND_SOC_DAPM_STREAM_NOP)
+				evt = SND_SOC_DAPM_POST_NOP;
+			else
+				break;
+			if (w->event_flags & evt)
+				ret = w->event(w, NULL, evt);
 			break;
 
 		default:
