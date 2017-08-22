@@ -47,7 +47,6 @@
 #define Wr_reg_bits(adr, val, start, len) \
 			WRITE_VCBUS_REG_BITS(adr, val, start, len)
 
-#define RDMA_TABLE_SIZE                    (8 * (PAGE_SIZE))
 static int vsync_rdma_handle;
 static int irq_count;
 static int enable;
@@ -246,14 +245,21 @@ void enable_rdma(int enable_flag)
 }
 EXPORT_SYMBOL(enable_rdma);
 
+struct rdma_op_s *get_rdma_ops(void)
+{
+	return &vsync_rdma_op;
+}
+
+void set_rdma_handle(int handle)
+{
+	vsync_rdma_handle = handle;
+	pr_info("%s video rdma handle = %d.\n", __func__,
+		vsync_rdma_handle);
+}
+
 static int  __init rdma_init(void)
 
 {
-	vsync_rdma_handle =
-		rdma_register(&vsync_rdma_op,
-		NULL, RDMA_TABLE_SIZE);
-	pr_info("%s video rdma handle = %d.\n", __func__,
-		vsync_rdma_handle);
 	cur_enable = 0;
 	enable = 1;
 	force_rdma_config = 1;

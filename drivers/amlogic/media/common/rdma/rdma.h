@@ -25,4 +25,7 @@ void enable_rdma_log(int flag);
 void enable_rdma(int enable_flag);
 extern int rdma_watchdog_setting(int flag);
 int rdma_init2(void);
+struct rdma_op_s *get_rdma_ops(void);
+void set_rdma_handle(int handle);
+
 #endif

@@ -39,6 +39,7 @@
 
 #include <linux/amlogic/media/utils/vdec_reg.h>
 #include <linux/amlogic/media/rdma/rdma_mgr.h>
+#include "rdma.h"
 
 #define DRIVER_NAME "amlogic-rdma"
 #define MODULE_NAME "amlogic-rdma"
@@ -67,6 +68,8 @@ static int rdma_force_reset = -1;
 static u16 trace_reg;
 
 #define RDMA_NUM 8
+#define RDMA_TABLE_SIZE (8 * (PAGE_SIZE))
+
 struct rdma_regadr_s {
 	u32 rdma_ahb_start_addr;
 	u32 rdma_ahb_end_addr;
@@ -762,6 +765,7 @@ static int rdma_probe(struct platform_device *pdev)
 	int i;
 	u32 data32;
 	int int_rdma;
+	int handle;
 	struct rdma_device_info *info = &rdma_info;
 
 	int_rdma = platform_get_irq_byname(pdev, "rdma");
@@ -809,6 +813,10 @@ static int rdma_probe(struct platform_device *pdev)
 	WRITE_VCBUS_REG(RDMA_CTRL, data32);
 
 	info->rdma_dev = pdev;
+
+	handle = rdma_register(get_rdma_ops(), NULL, RDMA_TABLE_SIZE);
+	set_rdma_handle(handle);
+
 	return 0;
 
 }
