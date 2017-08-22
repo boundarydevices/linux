@@ -29,8 +29,7 @@
 #include <linux/list.h>
 #include <linux/kthread.h>
 /* Android Headers */
-#include <sw_sync.h>
-#include <sync.h>
+
 /* Amlogic Headers */
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vinfo.h>
