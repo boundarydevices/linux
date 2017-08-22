@@ -967,11 +967,14 @@
 	};
 
 	lm3643@63 {
-		/* TODO */
-		compatible = "lm3643";
+		compatible = "ti,leds-lm3643";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_lm3643>;
 		reg = <0x63>;
+		flash-gpios = GP_FLASH_TX;
+		hwen-gpios = GP_FLASH_HW_EN;
+		strobe-gpios = GP_FLASH_STROBE;
+		torch-gpios = GP_TORCH_EN;
 	};
 
 	max77818@66 {
