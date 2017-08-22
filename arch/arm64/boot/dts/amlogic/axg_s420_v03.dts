@@ -758,7 +758,8 @@
 	aml_tdma: tdma {
 		compatible = "amlogic, snd-tdma";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask = <1 1 1 1>;
+		dai-tdm-lane-slot-mask-in = <1 0>;
+		dai-tdm-lane-slot-mask-out = <0 1>;
 		/* select tdm lr/bclk src, see aml_axg_tdm.c */
 		dai-tdm-clk-sel = <0>;
 		tdm_from_ddr = <0>;
@@ -772,7 +773,7 @@
 				GIC_SPI 88 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmin_a &tdmout_a>;
+		pinctrl-0 = <&tdmout_a &tdmin_a &tdmout_a_data>;
 	};
 
 	aml_tdmb: tdmb {
@@ -856,18 +857,23 @@
 &pinctrl_periphs {
 	tdmout_a: tdmout_a {
 		mux {
-			pins = "GPIOX_12", "GPIOX_13", "GPIOX_15";
-				//pins = "GPIOX_15";//slave
-				function = "tdma_out";
+			pins = "GPIOX_12", "GPIOX_13";
+			function = "tdma_out";
+		};
+	};
+
+	tdmout_a_data: tdmout_a_data {
+		mux {
+			pins = "GPIOX_15";
+			function = "tdma_out1";
 		};
 	};
 
 	tdmin_a: tdmin_a {
 		mux {
 			pins = "GPIOX_14";
-			//pins = "GPIOX_12", "GPIOX_13", "GPIOX_14";//slave
-				function = "tdma_in";
-			};
+			function = "tdma_in";
+		};
 	};
 	tdmb_mclk: tdmb_mclk {
 		mux {
