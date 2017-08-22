@@ -210,10 +210,18 @@ struct soc_enum;
 {	.id = snd_soc_dapm_pre, .name = wname, .kcontrol_news = NULL, \
 	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
 	.event_flags = SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD}
+#define SND_SOC_DAPM_PRE_E(wname, wevent, wflags) \
+{	.id = snd_soc_dapm_pre, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags = wflags}
 #define SND_SOC_DAPM_POST(wname, wevent) \
 {	.id = snd_soc_dapm_post, .name = wname, .kcontrol_news = NULL, \
 	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
 	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD}
+#define SND_SOC_DAPM_POST_E(wname, wevent, wflags) \
+{	.id = snd_soc_dapm_post, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags = wflags}
 
 /* stream domain */
 #define SND_SOC_DAPM_AIF_IN(wname, stname, wchan, wreg, wshift, winvert) \
@@ -353,6 +361,8 @@ struct soc_enum;
 #define SND_SOC_DAPM_POST_REG	0x20	/* after audio path setup */
 #define SND_SOC_DAPM_WILL_PMU   0x40    /* called at start of sequence */
 #define SND_SOC_DAPM_WILL_PMD   0x80    /* called at start of sequence */
+#define SND_SOC_DAPM_PRE_NOP	0x100
+#define SND_SOC_DAPM_POST_NOP	0x200
 #define SND_SOC_DAPM_PRE_POST_PMD \
 				(SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD)
 #define SND_SOC_DAPM_PRE_POST_PMU \
