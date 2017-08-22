@@ -322,6 +322,9 @@ struct pxps {
 #define to_pxp_channel(d) container_of(d, struct pxp_channel, dma_chan)
 #define to_pxp(id) container_of(id, struct pxps, pxp_dma)
 
+#define to_pxp_task_info(op) container_of((op), struct pxp_task_info, op_info)
+#define to_pxp_from_task(task) container_of((task), struct pxps, task)
+
 #define PXP_DEF_BUFS	2
 #define PXP_MIN_PIX	8
 
@@ -1356,6 +1359,22 @@ static uint32_t pxp_parse_out_fmt(uint32_t format)
 	return fmt_ctrl;
 }
 
+static void set_mux(struct mux_config *path_ctrl)
+{
+	struct mux_config *mux = path_ctrl;
+
+	*(uint32_t *)path_ctrl = 0xFFFFFFFF;
+
+	mux->mux0_sel = 0;
+	mux->mux3_sel = 1;
+	mux->mux6_sel = 1;
+	mux->mux8_sel = 0;
+	mux->mux9_sel = 1;
+	mux->mux11_sel = 0;
+	mux->mux12_sel = 1;
+	mux->mux14_sel = 0;
+}
+
 static void set_mux_val(struct mux_config *muxes,
 			uint32_t mux_id,
 			uint32_t mux_val)
@@ -1797,7 +1816,10 @@ static uint32_t pxp_fetch_shift_calc(uint32_t in_fmt, uint32_t out_fmt,
 
 static int pxp_start(struct pxps *pxp)
 {
-	__raw_writel(BM_PXP_CTRL_ENABLE, pxp->base + HW_PXP_CTRL_SET);
+	__raw_writel(BM_PXP_CTRL_ENABLE_ROTATE1 | BM_PXP_CTRL_ENABLE |
+		BM_PXP_CTRL_ENABLE_CSC2 | BM_PXP_CTRL_ENABLE_LUT |
+		BM_PXP_CTRL_ENABLE_PS_AS_OUT | BM_PXP_CTRL_ENABLE_ROTATE0,
+			pxp->base + HW_PXP_CTRL_SET);
 	dump_pxp_reg(pxp);
 
 	return 0;
@@ -2275,9 +2297,6 @@ static uint32_t ps_calc_scaling(struct pxp_pixmap *input,
 					output->crop.height;
 	}
 
-	if ((input->rotate == 90) || (input->rotate == 270))
-		swap(output->crop.width, output->crop.height);
-
 	return *(uint32_t *)&scale;
 }
 
@@ -2291,9 +2310,37 @@ static int pxp_ps_config(struct pxp_pixmap *input,
 	memset((void*)&ctrl, 0x0, sizeof(ctrl));
 
 	ctrl.format = pxp_parse_ps_fmt(input->format);
-	out_ps_ulc.x = out_ps_ulc.y = 0;
-	out_ps_lrc.x = output->crop.width - 1;
-	out_ps_lrc.y = output->crop.height - 1;
+
+	switch (output->rotate) {
+	case 0:
+		out_ps_ulc.x = output->crop.x;
+		out_ps_ulc.y = output->crop.y;
+		out_ps_lrc.x = output->crop.width - 1;
+		out_ps_lrc.y = output->crop.height - 1;
+		break;
+	case 90:
+		out_ps_ulc.x = output->crop.y;
+		out_ps_ulc.y = output->width - (output->crop.x + output->crop.width);
+		out_ps_lrc.x = out_ps_ulc.x + output->crop.height - 1;
+		out_ps_lrc.y = out_ps_ulc.y + output->crop.width - 1;
+		break;
+	case 180:
+		out_ps_ulc.x = output->width - (output->crop.x + output->crop.width);
+		out_ps_ulc.y = output->height - (output->crop.y + output->crop.height);
+		out_ps_lrc.x = out_ps_ulc.x + output->crop.width - 1;
+		out_ps_lrc.y = out_ps_ulc.y + output->crop.height - 1;
+		break;
+	case 270:
+		out_ps_ulc.x = output->height - (output->crop.y + output->crop.height);
+		out_ps_ulc.y = output->crop.x;
+		out_ps_lrc.x = out_ps_ulc.x + output->crop.height - 1;
+		out_ps_lrc.y = out_ps_ulc.y + output->crop.width - 1;
+		break;
+	default:
+		pr_err("PxP only support rotate 0 90 180 270\n");
+		return -EINVAL;
+		break;
+	}
 
 	if ((input->format == PXP_PIX_FMT_YUYV) ||
 	    (input->format == PXP_PIX_FMT_YVYU))
@@ -2542,12 +2589,15 @@ static int pxp_rotation1_config(struct pxp_pixmap *input)
 
 static int pxp_rotation0_config(struct pxp_pixmap *input)
 {
+	uint8_t rotate;
+
 	if (input->flip == PXP_H_FLIP)
 		pxp_writel(BF_PXP_CTRL_HFLIP0(1), HW_PXP_CTRL_SET);
 	else if (input->flip == PXP_V_FLIP)
 		pxp_writel(BF_PXP_CTRL_VFLIP0(1), HW_PXP_CTRL_SET);
 
-	pxp_writel(BF_PXP_CTRL_ROTATE0(input->rotate), HW_PXP_CTRL_SET);
+	rotate = rotate_map(input->rotate);
+	pxp_writel(BF_PXP_CTRL_ROTATE0(rotate), HW_PXP_CTRL_SET);
 
 	pxp_writel(BF_PXP_CTRL_ENABLE_ROTATE0(1), HW_PXP_CTRL_SET);
 
@@ -2596,8 +2646,14 @@ static int pxp_out_config(struct pxp_pixmap *output)
 			pxp_writel(UV + (offset >> 1), HW_PXP_OUT_BUF2);
 	}
 
-	out_lrc.x = output->crop.width - 1;
-	out_lrc.y = output->crop.height - 1;
+	if (output->rotate == 90 || output->rotate == 270) {
+		out_lrc.y = output->width - 1;
+		out_lrc.x = output->height - 1;
+	} else {
+		out_lrc.x = output->width - 1;
+		out_lrc.y = output->height - 1;
+	}
+
 	pxp_writel(*(uint32_t *)&out_lrc, HW_PXP_OUT_LRC);
 
 	pxp_writel(output->pitch, HW_PXP_OUT_PITCH);
@@ -2746,6 +2802,134 @@ static int pxp_alpha_config(struct pxp_op_info *op,
 	return 0;
 }
 
+static void pxp_lut_config(struct pxp_op_info *op)
+{
+	struct pxp_task_info *task = to_pxp_task_info(op);
+	struct pxps *pxp = to_pxp_from_task(task);
+	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
+	int lut_op = proc_data->lut_transform;
+	u32 reg_val;
+	int i;
+	bool use_cmap = (lut_op & PXP_LUT_USE_CMAP) ? true : false;
+	u8 *cmap = proc_data->lut_map;
+	u32 entry_src;
+	u32 pix_val;
+	u8 entry[4];
+
+	/*
+	 * If LUT already configured as needed, return...
+	 * Unless CMAP is needed and it has been updated.
+	 */
+	if ((pxp->lut_state == lut_op) &&
+		!(use_cmap && proc_data->lut_map_updated))
+		return;
+
+	if (lut_op == PXP_LUT_NONE) {
+		__raw_writel(BM_PXP_LUT_CTRL_BYPASS,
+			     pxp->base + HW_PXP_LUT_CTRL);
+	} else if (((lut_op & PXP_LUT_INVERT) != 0)
+		&& ((lut_op & PXP_LUT_BLACK_WHITE) != 0)) {
+		/* Fill out LUT table with inverted monochromized values */
+
+		/* clear bypass bit, set lookup mode & out mode */
+		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
+				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
+				BF_PXP_LUT_CTRL_OUT_MODE
+				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
+				pxp->base + HW_PXP_LUT_CTRL);
+
+		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
+		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
+
+		/* LUT address pointer auto-increments after each data write */
+		for (pix_val = 0; pix_val < 256; pix_val += 4) {
+			for (i = 0; i < 4; i++) {
+				entry_src = use_cmap ?
+					cmap[pix_val + i] : pix_val + i;
+				entry[i] = (entry_src < 0x80) ? 0xFF : 0x00;
+			}
+			reg_val = (entry[3] << 24) | (entry[2] << 16) |
+				(entry[1] << 8) | entry[0];
+			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
+		}
+	} else if ((lut_op & PXP_LUT_INVERT) != 0) {
+		/* Fill out LUT table with 8-bit inverted values */
+
+		/* clear bypass bit, set lookup mode & out mode */
+		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
+				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
+				BF_PXP_LUT_CTRL_OUT_MODE
+				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
+				pxp->base + HW_PXP_LUT_CTRL);
+
+		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
+		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
+
+		/* LUT address pointer auto-increments after each data write */
+		for (pix_val = 0; pix_val < 256; pix_val += 4) {
+			for (i = 0; i < 4; i++) {
+				entry_src = use_cmap ?
+					cmap[pix_val + i] : pix_val + i;
+				entry[i] = ~entry_src & 0xFF;
+			}
+			reg_val = (entry[3] << 24) | (entry[2] << 16) |
+				(entry[1] << 8) | entry[0];
+			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
+		}
+	} else if ((lut_op & PXP_LUT_BLACK_WHITE) != 0) {
+		/* Fill out LUT table with 8-bit monochromized values */
+
+		/* clear bypass bit, set lookup mode & out mode */
+		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
+				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
+				BF_PXP_LUT_CTRL_OUT_MODE
+				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
+				pxp->base + HW_PXP_LUT_CTRL);
+
+		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
+		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
+
+		/* LUT address pointer auto-increments after each data write */
+		for (pix_val = 0; pix_val < 256; pix_val += 4) {
+			for (i = 0; i < 4; i++) {
+				entry_src = use_cmap ?
+					cmap[pix_val + i] : pix_val + i;
+				entry[i] = (entry_src < 0x80) ? 0x00 : 0xFF;
+			}
+			reg_val = (entry[3] << 24) | (entry[2] << 16) |
+				(entry[1] << 8) | entry[0];
+			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
+		}
+	} else if (use_cmap) {
+		/* Fill out LUT table using colormap values */
+
+		/* clear bypass bit, set lookup mode & out mode */
+		__raw_writel(BF_PXP_LUT_CTRL_LOOKUP_MODE
+				(BV_PXP_LUT_CTRL_LOOKUP_MODE__DIRECT_Y8) |
+				BF_PXP_LUT_CTRL_OUT_MODE
+				(BV_PXP_LUT_CTRL_OUT_MODE__Y8),
+				pxp->base + HW_PXP_LUT_CTRL);
+
+		/* Initialize LUT address to 0 and set NUM_BYTES to 0 */
+		__raw_writel(0, pxp->base + HW_PXP_LUT_ADDR);
+
+		/* LUT address pointer auto-increments after each data write */
+		for (pix_val = 0; pix_val < 256; pix_val += 4) {
+			for (i = 0; i < 4; i++)
+				entry[i] = cmap[pix_val + i];
+			reg_val = (entry[3] << 24) | (entry[2] << 16) |
+				(entry[1] << 8) | entry[0];
+			__raw_writel(reg_val, pxp->base + HW_PXP_LUT_DATA);
+		}
+	}
+
+	pxp_writel(BM_PXP_CTRL_ENABLE_ROTATE1 | BM_PXP_CTRL_ENABLE_ROTATE0 |
+			BM_PXP_CTRL_ENABLE_CSC2 | BM_PXP_CTRL_ENABLE_LUT,
+			HW_PXP_CTRL_SET);
+
+	pxp->lut_state = lut_op;
+}
+
 static int pxp_2d_task_config(struct pxp_pixmap *input,
 			      struct pxp_pixmap *output,
 			      struct pxp_op_info *op,
@@ -2787,7 +2971,7 @@ static int pxp_2d_task_config(struct pxp_pixmap *input,
 			pxp_csc2_config(output);
 			break;
 		case PXP_2D_LUT:
-			pxp_writel(BF_PXP_CTRL_ENABLE_LUT(1), HW_PXP_CTRL_SET);
+			pxp_lut_config(op);
 			break;
 		case PXP_2D_ROTATION0:
 			pxp_rotation0_config(input);
@@ -2872,6 +3056,7 @@ static void pxp_2d_calc_mux(uint32_t nodes, struct mux_config *path_ctrl)
 static int pxp_2d_op_handler(struct pxps *pxp)
 {
 	struct mux_config path_ctrl0;
+	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
 	struct pxp_task_info *task = &pxp->task;
 	struct pxp_op_info *op = &task->op_info;
 	struct pxp_pixmap *input, *output, *input_s0, *input_s1;
@@ -2951,9 +3136,23 @@ reparse:
 			return -EINVAL;
 		}
 
+		if (proc_data->lut_transform)
+			nodes_used |= (1 << PXP_2D_LUT);
+
 		nodes_in_path = find_best_path(possible_inputs,
 					       possible_outputs,
 					       input, &nodes_used);
+
+		if (nodes_in_path & (1 << PXP_2D_ROTATION1)) {
+			clear_bit(PXP_2D_ROTATION1, (unsigned long *)&nodes_in_path);
+			set_bit(PXP_2D_ROTATION0, (unsigned long *)&nodes_in_path);
+		}
+
+		if (nodes_used & (1 << PXP_2D_ROTATION1)) {
+			clear_bit(PXP_2D_ROTATION1, (unsigned long *)&nodes_used);
+			set_bit(PXP_2D_ROTATION0, (unsigned long *)&nodes_used);
+		}
+
 		pr_debug("%s: nodes_in_path = 0x%x, nodes_used = 0x%x\n",
 			  __func__, nodes_in_path, nodes_used);
 		if (!nodes_used) {
@@ -3182,6 +3381,9 @@ config:
 	default:
 		break;
 	}
+
+	if (proc_data->lut_transform && pxp_is_v3(pxp))
+		set_mux(&path_ctrl0);
 
 	pr_debug("%s: path_ctrl0 = 0x%x\n",
 		 __func__, *(uint32_t *)&path_ctrl0);
