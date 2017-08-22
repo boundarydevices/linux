@@ -248,6 +248,16 @@ config LEDS_LM3601X
 	  This option enables support for the TI LM3601x family
 	  of flash, torch and indicator classes.
 
+config LEDS_LM3643
+	tristate "LED support for LM3643 Chip"
+	depends on LEDS_CLASS && I2C
+	select REGMAP_I2C
+	help
+	  This option enables support for LEDs connected to LM3643.
+	  The LM3643 is a 2-MHz or 4-MHz fixed-frequency synchronous
+	  boost converter to provide power to the dual 1.5-A constant
+	  current LED sources.
+
 config LEDS_LOCOMO
 	tristate "LED Support for Locomo device"
 	depends on LEDS_CLASS
