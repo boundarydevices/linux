@@ -170,44 +170,44 @@
 
 	pinctrl_i2c1_sgtl5000a: i2c1-sgtl5000agrp {
 		fsl,pins = <
-			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
-#define GP_CODEC_A_G1		<&gpio4 19 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x0b0b0
-#define GP_CODEC_A_G2		<&gpio4 18 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x0b0b0
-#define GP_CODEC_A_MUTE_N	<&gpio3 4 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x030b0
-#define GP_CODEC_A_SHTDN_N	<&gpio1 15 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_SD2_DAT0__GPIO1_IO15		0x030b0
-#define GP_CODEC_A_FS1		<&gpio4 30 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30	0x0b0b0
-#define GP_CODEC_A_FS2		<&gpio4 29 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x0b0b0
-#define GPIRQ_CODEC_A_MIC_DET	<&gpio7 8 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
-#define GP_CODEC_A_SYNC		<&gpio1 19 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_SD1_DAT2__GPIO1_IO19		0x030b0
-#define GP_CODEC_A_SYNC_CHAIN	<&gpio1 17 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_SD1_DAT1__GPIO1_IO17		0x030b0
+#define GP_CODEC_A_G1		<&gpio3 1 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x0b0b0
+#define GP_CODEC_A_G2		<&gpio3 0 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x0b0b0
+#define GP_CODEC_A_MUTE_N	<&gpio3 2 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x030b0
+#define GP_CODEC_A_SHTDN_N	<&gpio3 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x030b0
+#define GP_CODEC_A_FS1		<&gpio5 8 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x0b0b0
+#define GP_CODEC_A_FS2		<&gpio5 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x0b0b0
+#define GPIRQ_CODEC_A_MIC_DET	<&gpio5 12 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x1b0b0
 		>;
 	};
 
 	pinctrl_i2c1_sgtl5000b: i2c1-sgtl5000bgrp {
 		fsl,pins = <
-#define GP_CODEC_B_G1		<&gpio3 1 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x0b0b0
-#define GP_CODEC_B_G2		<&gpio3 0 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x0b0b0
-#define GP_CODEC_B_MUTE_N	<&gpio3 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x030b0
-#define GP_CODEC_B_SHTDN_N	<&gpio3 3 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x030b0
-#define GP_CODEC_B_FS1		<&gpio5 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x0b0b0
-#define GP_CODEC_B_FS2		<&gpio5 7 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x0b0b0
-#define GPIRQ_CODEC_B_MIC_DET	<&gpio5 12 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x1b0b0
+			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
+#define GP_CODEC_B_G1		<&gpio4 19 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x0b0b0
+#define GP_CODEC_B_G2		<&gpio4 18 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x0b0b0
+#define GP_CODEC_B_MUTE_N	<&gpio3 4 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x030b0
+#define GP_CODEC_B_SHTDN_N	<&gpio1 15 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD2_DAT0__GPIO1_IO15		0x030b0
+#define GP_CODEC_B_FS1		<&gpio4 30 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30	0x0b0b0
+#define GP_CODEC_B_FS2		<&gpio4 29 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x0b0b0
+#define GPIRQ_CODEC_B_MIC_DET	<&gpio7 8 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
+#define GP_CODEC_B_SYNC		<&gpio1 19 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD1_DAT2__GPIO1_IO19		0x030b0
+#define GP_CODEC_B_SYNC_CHAIN	<&gpio1 17 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD1_DAT1__GPIO1_IO17		0x030b0
 		>;
 	};
 
@@ -491,7 +491,7 @@
 			"Ext Spk", "HP_OUT",
 			"Line Out Jack", "LINE_OUT";
 		mux-int-port = <1>;
-		mux-ext-port = <3>;
+		mux-ext-port = <4>;
 		mute-gpios = GP_CODEC_A_MUTE_N;
 		/* delay between mute and standby enter */
 		amp-standby-enter-wait-ms = <50>;
@@ -515,7 +515,7 @@
 			"Ext Spk", "HP_OUT",
 			"Line Out Jack", "LINE_OUT";
 		mux-int-port = <2>;
-		mux-ext-port = <4>;
+		mux-ext-port = <3>;
 		mute-gpios = GP_CODEC_B_MUTE_N;
 		/* delay between mute and standby enter */
 		amp-standby-enter-wait-ms = <50>;
@@ -648,21 +648,21 @@
 	pinctrl-0 = <&pinctrl_i2c1>;
 	status = "okay";
 
-	sgtl5000a: sgtl5000@0a {
+	sgtl5000a: sgtl5000@2a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000a>;
-		reg = <0x0a>;
+		reg = <0x2a>;
 		clocks = <&clks IMX6QDL_CLK_CKO>;
 		VDDA-supply = <&reg_2p5v>;
 		VDDIO-supply = <&reg_3p3v>;
 	};
 
-	sgtl5000b: sgtl5000@2a {
+	sgtl5000b: sgtl5000@0a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000b>;
-		reg = <0x2a>;
+		reg = <0x0a>;
 		clocks = <&clks IMX6QDL_CLK_CKO>;
 		VDDA-supply = <&reg_2p5v>;
 		VDDIO-supply = <&reg_3p3v>;
