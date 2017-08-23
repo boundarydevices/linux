@@ -33,7 +33,7 @@
 #define PCIE_CFG_STATUS12	0x30
 #define PCIE_CFG_STATUS17	0x44
 
-#define    WAIT_LINKUP_TIMEOUT         5000
+#define    WAIT_LINKUP_TIMEOUT         2000
 
 enum pcie_data_rate {
 	PCIE_GEN1,
@@ -152,6 +152,7 @@ struct pcie_phy_aml_regs {
 
 struct pcie_phy {
 	u32 power_state;
+	u32 device_attch;
 	u32 reset_state;
 	void __iomem		*phy_base;	/* DT 1st resource */
 	void __iomem		*reset_base;/* DT 3nd resource */

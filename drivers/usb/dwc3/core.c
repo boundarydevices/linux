@@ -1056,6 +1056,14 @@ static int dwc3_probe(struct platform_device *pdev)
 
 	res->start += DWC3_GLOBALS_REGS_START;
 
+#ifdef CONFIG_AMLOGIC_USB
+	dwc->general_clk = devm_clk_get(dev, "dwc_general");
+	if (IS_ERR(dwc->general_clk))
+		ret = PTR_ERR(dwc->general_clk);
+	else
+		clk_prepare_enable(dwc->general_clk);
+#endif
+
 	/*
 	 * Request memory region but exclude xHCI regs,
 	 * since it will be requested by the xhci-plat driver.
@@ -1422,6 +1430,13 @@ static int dwc3_suspend(struct device *dev)
 	if (ret)
 		return ret;
 
+#ifdef CONFIG_AMLOGIC_USB
+	if (IS_ERR(dwc->general_clk))
+		ret = PTR_ERR(dwc->general_clk);
+	else
+		clk_disable_unprepare(dwc->general_clk);
+#endif
+
 	pinctrl_pm_select_sleep_state(dev);
 
 	return 0;
@@ -1433,6 +1448,13 @@ static int dwc3_resume(struct device *dev)
 	int		ret;
 
 	pinctrl_pm_select_default_state(dev);
+
+#ifdef CONFIG_AMLOGIC_USB
+	if (IS_ERR(dwc->general_clk))
+		ret = PTR_ERR(dwc->general_clk);
+	else
+		clk_prepare_enable(dwc->general_clk);
+#endif
 
 	ret = dwc3_resume_common(dwc);
 	if (ret)

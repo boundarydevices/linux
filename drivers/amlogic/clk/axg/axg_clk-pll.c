@@ -311,8 +311,6 @@ static int meson_axg_pll_enable(struct clk_hw *hw)
 		void *cntlbase = pll->base + p->reg_off;
 
 		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-			clk_prepare_enable(clks[CLKID_MIPI_ENABLE_GATE]);
-			clk_prepare_enable(clks[CLKID_MIPI_BANDGAP_GATE]);
 			if (readl(cntlbase + (u64)(6*4)) == AXG_PCIE_PLL_CNTL6)
 				first_set = 0;
 		} else if (!strcmp(clk_hw_get_name(hw), "hifi_pll")) {
@@ -336,6 +334,11 @@ static int meson_axg_pll_enable(struct clk_hw *hw)
 
 	if (pll->lock)
 		spin_unlock_irqrestore(pll->lock, flags);
+	/*pcie pll: mipi enable and bandgap share with mipi clk */
+	if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+		clk_prepare_enable(clks[CLKID_MIPI_ENABLE_GATE]);
+		clk_prepare_enable(clks[CLKID_MIPI_BANDGAP_GATE]);
+	}
 
 	ret = meson_axg_pll_set_rate(hw, rate, clk_get_rate(parent));
 
@@ -357,14 +360,14 @@ static void meson_axg_pll_disable(struct clk_hw *hw)
 		writel(readl(pll->base + p->reg_off) & (~MESON_PLL_ENABLE),
 			pll->base + p->reg_off);
 
-		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-			clk_disable_unprepare(clks[CLKID_MIPI_ENABLE_GATE]);
-			clk_disable_unprepare(clks[CLKID_MIPI_BANDGAP_GATE]);
-		};
-
 		if (pll->lock)
 			spin_unlock_irqrestore(pll->lock, flags);
 	}
+	/*pcie pll: mipi enable and bandgap share with mipi clk */
+	if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+		clk_disable_unprepare(clks[CLKID_MIPI_ENABLE_GATE]);
+		clk_disable_unprepare(clks[CLKID_MIPI_BANDGAP_GATE]);
+	};
 }
 
 const struct clk_ops meson_axg_pll_ops = {

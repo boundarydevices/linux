@@ -33,6 +33,9 @@
 #include <linux/ulpi/interface.h>
 
 #include <linux/phy/phy.h>
+#ifdef CONFIG_AMLOGIC_USB
+#include <linux/clk.h>
+#endif
 
 #define DWC3_MSG_MAX	500
 
@@ -978,6 +981,9 @@ struct dwc3 {
 
 	unsigned		tx_de_emphasis_quirk:1;
 	unsigned		tx_de_emphasis:2;
+#ifdef CONFIG_AMLOGIC_USB
+	struct clk		*general_clk;
+#endif
 };
 
 /* -------------------------------------------------------------------------- */

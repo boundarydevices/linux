@@ -251,6 +251,8 @@
 		usb-phy = <&usb2_phy>, <&usb3_phy>;
 		cpu-type = "gxl";
 		clock-src = "usb3.0";
+		clocks = <&clkc CLKID_USB_GENERAL>;
+		clock-names = "dwc_general";
 	};
 
 	usb2_phy: usb2phy@ffe09000 {
@@ -320,10 +322,12 @@
 		num-lanes = <1>;
 		pcie-num = <1>;
 
-		clocks = <&clkc CLKID_PCIE_PLL
+		clocks = <&clkc CLKID_USB_GENERAL
+		&clkc CLKID_PCIE_PLL
 		&clkc CLKID_PCIE_A
 		&clkc CLKID_PCIE_CML_EN0>;
-		clock-names = "pcie_refpll",
+		clock-names = "pcie_general",
+				"pcie_refpll",
 				"pcie",
 				"port";
 		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
@@ -353,10 +357,12 @@
 		num-lanes = <1>;
 		pcie-num = <2>;
 
-		clocks = <&clkc CLKID_PCIE_PLL
+		clocks = <&clkc CLKID_USB_GENERAL
+				&clkc CLKID_PCIE_PLL
 				&clkc CLKID_PCIE_B
 				&clkc CLKID_PCIE_CML_EN1>;
-		clock-names = "pcie_refpll",
+		clock-names = "pcie_general",
+				"pcie_refpll",
 				"pcie",
 				"port";
 		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
