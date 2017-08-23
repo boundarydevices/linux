@@ -2313,8 +2313,7 @@ static int pxp_ps_config(struct pxp_pixmap *input,
 
 	switch (output->rotate) {
 	case 0:
-		out_ps_ulc.x = output->crop.x;
-		out_ps_ulc.y = output->crop.y;
+		out_ps_ulc.x = out_ps_ulc.y = 0;
 		out_ps_lrc.x = output->crop.width - 1;
 		out_ps_lrc.y = output->crop.height - 1;
 		break;
