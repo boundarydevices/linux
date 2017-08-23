@@ -1317,6 +1317,10 @@ int pts_stop(u8 type)
 
 		if (type == PTS_TYPE_AUDIO)
 			timestamp_apts_set(-1);
+
+		if (type == PTS_TYPE_VIDEO || type == PTS_TYPE_HEVC)
+			timestamp_checkin_firstvpts_set(0xffffffff);
+
 		tsync_mode_reinit();
 		return 0;
 

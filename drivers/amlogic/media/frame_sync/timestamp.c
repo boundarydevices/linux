@@ -32,7 +32,7 @@ static u32 system_time_up;
 static u32 audio_pts_up;
 static u32 audio_pts_started;
 static u32 first_vpts;
-static u32 first_checkin_vpts;
+static u32 first_checkin_vpts = 0xffffffff;
 static u32 first_apts;
 
 static u32 system_time_scale_base = 1;
