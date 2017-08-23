@@ -837,14 +837,6 @@
 				status = "disabled";
 				power-domains = <&pd_disp>;
 			};
-
-			dcp: dcp@20fc000 {
-				compatible = "fsl,imx6sl-dcp", "fsl,imx28-dcp";
-				reg = <0x020fc000 0x4000>;
-				interrupts = <0 99 IRQ_TYPE_LEVEL_HIGH>,
-					     <0 100 IRQ_TYPE_LEVEL_HIGH>,
-					     <0 101 IRQ_TYPE_LEVEL_HIGH>;
-			};
 		};
 
 		aips2: aips-bus@2100000 {
