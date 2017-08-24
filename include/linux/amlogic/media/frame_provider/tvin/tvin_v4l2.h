@@ -802,6 +802,7 @@ struct vdin_parm_s {
 	unsigned char vsync_phase;	/* 1: inverted 0: origianl */
 	unsigned short hs_bp; /* the horizontal start postion of bt656 window */
 	unsigned short vs_bp; /* the vertical start postion of bt656 window */
+	unsigned short fid_check_cnt; /* vs check hs timeout cnt */
 	/*for isp tell different frontends such as bt656/mipi */
 	enum tvin_port_e isp_fe_port;
 	/*for vdin cfmt convert & scale&skip */

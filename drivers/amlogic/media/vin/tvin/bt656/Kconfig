@@ -1,0 +1,10 @@
+#
+# BT656 Device Driver Configuration
+#
+config  AMLOGIC_MEDIA_TVIN_BT656
+	bool "Amlogic bt656 device driver"
+	default n
+	help
+		This option is used to configure Amlogic drivers
+		of the multimedia input of BT656, which can support
+		bt601/bt656 signals input.

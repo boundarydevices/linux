@@ -1,0 +1,9 @@
+#
+# Hdmirx external SII9135 Device Driver Configuration
+#
+
+config AMLOGIC_MEDIA_TVIN_HDMI_EXT_SII9135
+	bool "external hdmirx chip sii9135 support"
+	default n
+	help
+		sii9135 is input with hdmi siganl, and output dvp signal.

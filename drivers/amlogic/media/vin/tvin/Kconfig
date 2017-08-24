@@ -17,4 +17,6 @@ config AMLOGIC_MEDIA_TVIN
 if AMLOGIC_MEDIA_TVIN
 source "drivers/amlogic/media/vin/tvin/vdin/Kconfig"
 source "drivers/amlogic/media/vin/tvin/viu/Kconfig"
+source "drivers/amlogic/media/vin/tvin/bt656/Kconfig"
+source "drivers/amlogic/media/vin/tvin/hdmirx_ext/Kconfig"
 endif

@@ -1,0 +1,17 @@
+#
+# Amlogic external hdmirx chips configuration
+#
+
+menuconfig AMLOGIC_MEDIA_TVIN_HDMI_EXT
+	bool "External hdmirx chips support"
+	default n
+	help
+		This option is used to configure Amlogic drivers
+		of the multimedia input of external hdmirx,
+		which can support HDMI signals input.
+
+if AMLOGIC_MEDIA_TVIN_HDMI_EXT
+
+source "drivers/amlogic/media/vin/tvin/hdmirx_ext/hw_sii9135/Kconfig"
+
+endif

@@ -1009,6 +1009,41 @@
 		 */
 		tv_bit_mode = <1>;
 	};
+	amvdec_656in {
+		compatible = "amlogic, amvdec_656in";
+		dev_name = "amvdec_656in";
+		status = "disabled";
+		reg = <0x0 0xd0048000 0x0 0x7c>,
+			<0x0 0xd0050000 0x0 0x7c>;
+		clocks = <&clkc CLKID_BT656_CLK1_COMP>,
+			<&clkc CLKID_BT656>,
+			<&clkc CLKID_BT656_PCLK1>;
+		clock-names = "cts_bt656_clk1",
+			"clk_gate_bt656",
+			"clk_gate_bt656_pclk1";
+
+		/* bt656in1, bt656in2 */
+		bt656in1 {
+			bt656_id = <1>;
+			status = "okay";
+		};
+	};
+	hdmirx_ext {
+		compatible = "amlogic, hdmirx_ext";
+		dev_name = "hdmirx_ext";
+		status = "disabled";
+		pinctrl-names = "default";
+		pinctrl-0 = <&hdmirx_ext_pins>;
+		vdin_sel = <0>;
+		bt656_sel = <1>;
+		reset-gpios = <&gpio GPIODV_20 GPIO_ACTIVE_HIGH>;
+		reset_gpio_name = "GPIODV_20";
+		reset_gpio_val = <0 1>; /* reset_on, reset_off */
+
+		ext_dev_name = "sii9135";
+		i2c_addr = <0x30>; /* pull_up: 0x31, pull_down: 0x30 */
+		i2c_bus = "i2c_bus_c";
+	};
 
 	amlvecm {
 		compatible = "amlogic, vecm";
@@ -1172,3 +1207,20 @@
 //&i2c_b {
 //  status = "okay";
 //};
+
+//&i2c_c {
+//	status = "okay";
+//	pinctrl-0=<&c_i2c_master_pin1>;
+//};
+
+&pinctrl_periphs {
+	hdmirx_ext_pins: hdmirx_ext_pins {
+		mux {
+			groups = "dvp_vs",
+				"dvp_hs",
+				"dvp_clk",
+				"dvp_d2_9";
+			function = "dvp";
+		};
+	};
+}; /* end of pinctrl_periphs */

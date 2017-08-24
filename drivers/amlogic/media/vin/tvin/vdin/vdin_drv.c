@@ -538,7 +538,9 @@ static inline void vdin_set_source_type(struct vdin_dev_s *devp,
 	case TVIN_PORT_HDMI5:
 	case TVIN_PORT_HDMI6:
 	case TVIN_PORT_HDMI7:
-	case TVIN_PORT_DVIN0:/* external hdmiin used default */
+	case TVIN_PORT_DVIN0:/* hdmirx_ext used */
+	case TVIN_PORT_BT656_HDMI:/* hdmirx_ext used */
+	case TVIN_PORT_BT601_HDMI:/* hdmirx_ext used */
 		vf->source_type = VFRAME_SOURCE_TYPE_HDMI;
 		break;
 	default:
@@ -1070,11 +1072,11 @@ int start_tvin_service(int no, struct vdin_parm_s  *para)
 		return -1;
 	}
 
-	if ((is_meson_gxbb_cpu()) && (para->bt_path == BT_PATH_GPIO_B)) {
+	if (para->bt_path == BT_PATH_GPIO_B) {
 		devp->bt_path = para->bt_path;
-		fe = tvin_get_frontend(para->port, 1);
+		fe = tvin_get_frontend(para->port, 2);
 	} else
-		fe = tvin_get_frontend(para->port, 0);
+		fe = tvin_get_frontend(para->port, 1);
 	if (fe) {
 		fe->private_data = para;
 		fe->port         = para->port;

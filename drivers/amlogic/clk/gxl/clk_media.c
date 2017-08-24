@@ -595,6 +595,57 @@ static struct clk_gate ge2d_gate = {
 	},
 };
 
+/* cts_bt656_clk */
+const char *bt656_parent_names[] = { "fclk_div2", "fclk_div3", "fclk_div5",
+	"fclk_div7"};
+
+static struct clk_mux bt656_clk1_mux = {
+	.reg = (void *)HHI_BT656_CLK_CNTL,
+	.mask = 0x3,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "bt656_clk1_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = bt656_parent_names,
+		.num_parents = 4,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+
+static struct clk_divider bt656_clk1_div = {
+	.reg = (void *)HHI_BT656_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "bt656_clk1_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "bt656_clk1_mux" },
+		.num_parents = 1,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+
+static struct clk_gate bt656_clk1_gate = {
+	.reg = (void *)HHI_BT656_CLK_CNTL,
+	.bit_idx = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "bt656_clk1_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "bt656_clk1_div" },
+		.num_parents = 1,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+	},
+};
+
+static struct clk_hw *bt656_clk1_hws[] = {
+	[CLKID_BT656_CLK1_MUX - CLKID_BT656_CLK1_MUX]  = &bt656_clk1_mux.hw,
+	[CLKID_BT656_CLK1_DIV - CLKID_BT656_CLK1_MUX]  = &bt656_clk1_div.hw,
+	[CLKID_BT656_CLK1_GATE - CLKID_BT656_CLK1_MUX] = &bt656_clk1_gate.hw,
+};
+
 void amlogic_init_media(void)
 {
 	/* cts_vdec_clk */
@@ -639,6 +690,10 @@ void amlogic_init_media(void)
 	vapb_mux.reg = clk_base + (u64)(vapb_mux.reg);
 	/* cts_ge2d_clk */
 	ge2d_gate.reg = clk_base + (u64)(ge2d_gate.reg);
+	/* cts_bt656_clk1 */
+	bt656_clk1_mux.reg = clk_base + (u64)(bt656_clk1_mux.reg);
+	bt656_clk1_div.reg = clk_base + (u64)(bt656_clk1_div.reg);
+	bt656_clk1_gate.reg = clk_base + (u64)(bt656_clk1_gate.reg);
 
 	/* cts_vdec_clk */
 	clks[CLKID_VDEC_P0_COMP] = clk_register_composite(NULL,
@@ -800,6 +855,20 @@ void amlogic_init_media(void)
 	clks[CLKID_GE2D_GATE] = clk_register(NULL,
 		&ge2d_gate.hw);
 	WARN_ON(IS_ERR(clks[CLKID_GE2D_GATE]));
+
+	/* cts_bt656_clk1 */
+	clks[CLKID_BT656_CLK1_COMP] = clk_register_composite(NULL,
+		"bt656_clk1_composite",
+		bt656_parent_names, 4,
+		bt656_clk1_hws[CLKID_BT656_CLK1_MUX - CLKID_BT656_CLK1_MUX],
+		&clk_mux_ops,
+		bt656_clk1_hws[CLKID_BT656_CLK1_DIV - CLKID_BT656_CLK1_MUX],
+		&clk_divider_ops,
+		bt656_clk1_hws[CLKID_BT656_CLK1_GATE - CLKID_BT656_CLK1_MUX],
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_BT656_CLK1_COMP]))
+		pr_err("%s: %d clk_register_composite bt656_clk1_composite error\n",
+		__func__, __LINE__);
 
 	pr_info("%s: register meson media clk\n", __func__);
 }

@@ -14066,3 +14066,8 @@ M:  JinTao Xu <jintao.xu@amlogic.com>
 F: drivers/amlogic/media/video_processor/ionvideo/ion_priv.h
 F: drivers/amlogic/media/video_processor/ionvideo/videobuf2-ion.c
 F: drivers/amlogic/media/video_processor/ionvideo/videobuf2-ion.h
+
+AMLOGIC TVIN add bt656_in and hdmirx_ext support
+M: Evoke Zhang <evoke.zhang@amlogic.com>
+F: drivers/amlogic/media/vin/tvin/bt656/*
+F: drivers/amlogic/media/vin/tvin/hdmirx_ext/*
