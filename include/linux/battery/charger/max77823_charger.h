@@ -89,8 +89,6 @@
 #define CHG_CNFG_00_OTG_MASK		        (1 << CHG_CNFG_00_OTG_SHIFT)
 #define CHG_CNFG_00_BUCK_MASK		        (1 << CHG_CNFG_00_BUCK_SHIFT)
 #define CHG_CNFG_00_BOOST_MASK		        (1 << CHG_CNFG_00_BOOST_SHIFT)
-#define CHG_CNFG_00_OTG_CTRL		\
-	(CHG_CNFG_00_OTG_MASK | CHG_CNFG_00_BOOST_MASK)
 
 #define MAX77823_MODE_DEFAULT                   0x04
 #define MAX77823_MODE_CHGR                      0x01
@@ -150,7 +148,6 @@ struct max77823_charger_data {
 	struct mutex            charger_mutex;
 
 	struct power_supply	*psy_chg;
-	struct power_supply	*psy_otg;
 	struct power_supply	*psy_ref[PS_MAX];
 
 	struct workqueue_struct *wqueue;
@@ -218,6 +215,9 @@ struct max77823_charger_data {
 	int input_curr_limit_step;
 	int wpc_input_curr_limit_step;
 	int charging_curr_step;
+#define REG_OTG		0
+	struct		regulator_desc reg_descs[1];
+	struct		regulator_dev *regulators[1];
 
 	sec_battery_platform_data_t	*pdata;
 };
