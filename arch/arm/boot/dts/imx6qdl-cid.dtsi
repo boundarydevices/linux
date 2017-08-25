@@ -77,6 +77,9 @@
 		fsl,pins = <
 #define GP_GPIOKEY_POWER	<&gpio3 1 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x1b0b0
+			/* Goes low when USB_OTG_VBUS goes high */
+#define GP_GPIOKEY_OTG_VBUS_STATUS	<&gpio3 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x1b0b0
 		>;
 	};
 
@@ -103,26 +106,48 @@
 			MX6QDL_PAD_NANDF_D3__GPIO2_IO03		0x1b0b0
 			/* main power on/ use pmic_on_req instead */
 			MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x1b0b0
+			/* TP68 */
+			MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x1b0b0
+			/* TP71 */
+			MX6QDL_PAD_ENET_TXD0__GPIO1_IO30	0x1b0b0
+			/* TP72 */
+			MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x1b0b0
 			/* TP74 */
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0
+			/* TP84 */
+			MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x1b0b0
 			/* TP85 */
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
 			/* TP86 */
 			MX6QDL_PAD_DISP0_DAT10__GPIO4_IO31	0x1b0b0
 			/* TP87 */
 			MX6QDL_PAD_DISP0_DAT19__GPIO5_IO13	0x1b0b0
+			/* TP91 */
+			MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x1b0b0
+			/* TP92 */
+			MX6QDL_PAD_SD1_DAT1__GPIO1_IO17		0x1b0b0
 			/* TP93 */
 			MX6QDL_PAD_EIM_A21__GPIO2_IO17		0x1b0b0
 			/* TP94 */
 			MX6QDL_PAD_EIM_A22__GPIO2_IO16		0x1b0b0
+			/* TP95 */
+			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x1b0b0
 			/* TP96 */
 			MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x1b0b0
 			/* TP97 */
-			MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x1b0b0
-			/* TP105 */
 			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
+			/* TP105 */
+			MX6QDL_PAD_EIM_A24__GPIO5_IO04		0x1b0b0
 			/* TP106 */
 			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x1b0b0
+			/* TP110 */
+			MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0
+			/* Let max77818 control this directly by turning on/off CHGIN */
+			/*
+			 * TP111 on rev 1,
+			 * power enable on rev 0 that should not be used, so keep pull down
+			 */
+			MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x130b0
 			/* TP131 */
 			MX6QDL_PAD_EIM_A25__GPIO5_IO02		0x1b0b0
 		>;
@@ -135,7 +160,34 @@
 		>;
 	};
 
-	pinctrl_i2c1_finger_sensor: i2c1-finger-sensorgrp {
+	pinctrl_i2c1_pca9546: i2c1_pca9546grp {
+		fsl,pins = <
+			/* Select addr 0x70 for pca9546 */
+			MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x030b0
+			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x030b0
+#define GP_I2C1MUX_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x030b0
+		>;
+	};
+
+	pinctrl_i2c1a_wm8960: i2c1-wm8960grp {
+		fsl,pins = <
+			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0
+#define GP_WM8960_MIC_DET		<&gpio7 8 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
+#define GP_WM8960_HP_DET		<&gpio4 10 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0
+		>;
+	};
+
+	pinctrl_i2c1b_mpu9250: i2c3_mpu9250grp {
+		fsl,pins = <
+#define GPIRQ_MPU9250_INT	<&gpio6 11 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x1b0b0
+		>;
+	};
+
+	pinctrl_i2c1c_finger_sensor: i2c1-finger-sensorgrp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT12__IPU1_CSI0_DATA12		0x1b0b0
 			MX6QDL_PAD_CSI0_DAT13__IPU1_CSI0_DATA13		0x1b0b0
@@ -158,40 +210,13 @@
 		>;
 	};
 
-	pinctrl_i2c1_mpu9250: i2c3_mpu9250grp {
-		fsl,pins = <
-#define GPIRQ_MPU9250_INT	<&gpio6 11 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x1b0b0
-		>;
-	};
-
-	pinctrl_i2c1_pca9546: i2c1_pca9546grp {
-		fsl,pins = <
-			/* Select addr 0x70 for pca9546 */
-			MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x030b0
-			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x030b0
-#define GP_I2C1MUX_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x030b0
-		>;
-	};
-
-	pinctrl_i2c1_ov5640_mipi: i2c1-ov5640-mipigrp {
+	pinctrl_i2c1d_ov5640_mipi: i2c1-ov5640-mipigrp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x000b0
 #define GP_OV5640_MIPI_POWER_DOWN	<&gpio6 10 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_RB0__GPIO6_IO10	0x0b0b0
 #define GP_OV5640_MIPI_RESET		<&gpio2 5 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x030b0
-		>;
-	};
-
-	pinctrl_i2c1_wm8960: i2c1-wm8960grp {
-		fsl,pins = <
-			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0
-#define GP_WM8960_MIC_DET		<&gpio7 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
-#define GP_WM8960_HP_DET		<&gpio4 10 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0
 		>;
 	};
 
@@ -280,12 +305,14 @@
 		>;
 	};
 
+	/* Backlight (MIPI display)*/
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
 			MX6QDL_PAD_SD1_DAT3__PWM1_OUT		0x030b1
 		>;
 	};
 
+	/* Fingerprint MCLK */
 	pinctrl_pwm2: pwm2grp {
 		fsl,pins = <
 			MX6QDL_PAD_SD1_DAT2__PWM2_OUT		0x030b1
@@ -299,10 +326,10 @@
 		>;
 	};
 
-	pinctrl_reg_usbotg_vbus: reg-usbotg-vbusgrp {
+	pinctrl_reg_nfc: reg-nfcgrp {
 		fsl,pins = <
-#define GP_REG_USBOTG	<&gpio3 22 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x030b0
+#define GP_NFC_PWR_EN	<&gpio4 21 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x030b0
 		>;
 	};
 
@@ -542,6 +569,13 @@
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
 		};
+
+		otg_vbus_status {
+			label = "OTG VBUS status";
+			gpios = GP_GPIOKEY_OTG_VBUS_STATUS;
+			linux,code = <KEY_F1>;
+			gpio-key,wakeup;
+		};
 	};
 
 	leds: leds {
@@ -657,14 +691,14 @@
 			regulator-always-on;
 		};
 
-		reg_usbotg_vbus: regulator@7 {
+		reg_nfc: regulator@7 {
 			compatible = "regulator-fixed";
 			enable-active-high;
-			gpio = GP_REG_USBOTG;
+			gpio = GP_NFC_PWR_EN;
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
+			pinctrl-0 = <&pinctrl_reg_nfc>;
 			reg = <7>;
-			regulator-name = "usb_otg_vbus";
+			regulator-name = "nfc";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 		};
@@ -841,7 +875,7 @@
 	wm8960: wm8960@1a {
 		compatible = "wlf,wm8960";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1_wm8960>;
+		pinctrl-0 = <&pinctrl_i2c1a_wm8960>;
 		reg = <0x1a>;
 		clock-names = "mclk";
 		wlf,shared-lrclk;
@@ -856,7 +890,7 @@
 		compatible = "invn,mpu9250";
 		reg = <0x69>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1_mpu9250>;
+		pinctrl-0 = <&pinctrl_i2c1b_mpu9250>;
 		inven,vdd_ana-supply = <&reg_3p3v>;
 		inven,vcc_i2c-supply = <&reg_3p3v>;
 		axis_map_x = <1>;
@@ -885,7 +919,7 @@
 		/* TODO */
 		compatible = "dummy_i2c_device";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1_finger_sensor>;
+		pinctrl-0 = <&pinctrl_i2c1c_finger_sensor>;
 		/* not really 0x33, chose this to let i2cdetect probe the real address */
 		reg = <0x33>;
 		clocks = <&fp_mclk>;
@@ -905,7 +939,7 @@
 		compatible = "ovti,ov5640_mipi";
 		reg = <0x3c>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1_ov5640_mipi>;
+		pinctrl-0 = <&pinctrl_i2c1d_ov5640_mipi>;
 		clocks = <&clks IMX6QDL_CLK_CKO2>;
 		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_1p8v>;
@@ -1072,7 +1106,13 @@
 	battery,fast_charging_current  = <2100   0  460 2100  460 1200 1000  460   0 1200  900 2100 2100   0 1300  300  700 1300 1800  300   80 2100   0 1000 2800 1000 1000 1000>;
 	battery,full_check_current_1st = <200    0  200  200  200  200  200  200   0  200  200  200  200   0  200  200  200  200  200  200  200  200   0  200  200  200  200  200>;
 	battery,full_check_current_2nd = <2400   0 2400 2400 2400 2400 2400 2400   0 2400 2400 2400 2400   0 2400 2400 2400 2400 2400 2400 2400 2400   0 2400 2400 2400 2400 2400>;
-	usbotg-supply = <&reg_usbotg_vbus>;
+
+	regulators {
+		reg_usbotg_vbus: otg {
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
+	};
 };
 
 &max77823_fuelgauge {
@@ -1202,10 +1242,10 @@
 };
 
 &usbotg {
-	vbus-supply = <&reg_usbotg_vbus>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
+	vbus-supply = <&reg_usbotg_vbus>;
 	status = "okay";
 };
 
