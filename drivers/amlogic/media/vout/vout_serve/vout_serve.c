@@ -71,7 +71,6 @@ static int tvout_monitor_flag = 1;
 static unsigned int tvout_monitor_timeout_cnt = 20;
 
 static struct delayed_work tvout_mode_work;
-static DEFINE_MUTEX(tvout_mode_lock);
 
 void update_vout_mode(char *name)
 {
@@ -227,6 +226,7 @@ static ssize_t vout_mode_store(struct class *class,
 	char mode[64];
 
 	mutex_lock(&vout_mutex);
+	tvout_monitor_flag = 0;
 	snprintf(mode, 64, "%s", buf);
 	if (set_vout_mode(mode) == 0)
 		strcpy(vout_mode, mode);
@@ -527,15 +527,15 @@ static int refresh_tvout_mode(void)
 {
 	enum vmode_e cur_vmode = VMODE_MAX;
 	char *cur_mode_str;
-	int hdp_state = 0;
+	int hpd_state = 0;
 
 	if (tvout_monitor_flag == 0)
 		return 0;
 
 #ifdef CONFIG_AMLOGIC_HDMITX
-	hdp_state = get_hpd_state();
+	hpd_state = get_hpd_state();
 #endif
-	if (hdp_state) {
+	if (hpd_state) {
 		cur_vmode = validate_vmode(hdmimode);
 		cur_mode_str = hdmimode;
 	} else {
@@ -564,17 +564,20 @@ static int refresh_tvout_mode(void)
 
 static void aml_tvout_mode_work(struct work_struct *work)
 {
-	mutex_lock(&tvout_mode_lock);
-	refresh_tvout_mode();
-	mutex_unlock(&tvout_mode_lock);
-
 	if (tvout_monitor_timeout_cnt-- == 0) {
 		tvout_monitor_flag = 0;
 		VOUTPR("%s: monitor_timeout\n", __func__);
+		return;
 	}
+
+	mutex_lock(&vout_mutex);
+	refresh_tvout_mode();
+	mutex_unlock(&vout_mutex);
 
 	if (tvout_monitor_flag)
 		schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
+	else
+		VOUTPR("%s: monitor stop\n", __func__);
 }
 
 static void aml_tvout_mode_monitor(void)
@@ -587,9 +590,9 @@ static void aml_tvout_mode_monitor(void)
 	tvout_monitor_flag = 1;
 	INIT_DELAYED_WORK(&tvout_mode_work, aml_tvout_mode_work);
 
-	mutex_lock(&tvout_mode_lock);
+	mutex_lock(&vout_mutex);
 	refresh_tvout_mode();
-	mutex_unlock(&tvout_mode_lock);
+	mutex_unlock(&vout_mutex);
 
 	schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
 }
