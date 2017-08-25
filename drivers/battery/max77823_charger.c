@@ -14,6 +14,8 @@
 #include <linux/mfd/max77823-private.h>
 #include <linux/debugfs.h>
 #include <linux/regulator/consumer.h>
+#include <linux/regulator/driver.h>
+#include <linux/regulator/of_regulator.h>
 #include <linux/seq_file.h>
 //#include <linux/usb_notify.h>
 #include <linux/battery/charger/max77823_charger.h>
@@ -42,9 +44,6 @@ static enum power_supply_property max77823_charger_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_AVG,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
-};
-static enum power_supply_property max77823_otg_props[] = {
-	POWER_SUPPLY_PROP_ONLINE,
 };
 
 static const char* const psy_names[] = {
@@ -365,7 +364,7 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 //				(chg_cnfg_00 & MAX77823_MODE_BUCK) &&
 //				(chg_cnfg_00 & MAX77823_MODE_CHGR) &&
 				(charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)) {
-			pr_info("%s: vbus is under\n", __func__);
+			pr_debug("%s: vbus is under\n", __func__);
 			state = POWER_SUPPLY_HEALTH_UNDERVOLTAGE;
 		}
 	}
@@ -618,8 +617,8 @@ static void max77823_charger_function_control(
 
 		ret = max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
 			charger->pdata->boost ? CHG_CNFG_00_BOOST_MASK : 0,
-			CHG_CNFG_00_CHG_MASK | CHG_CNFG_00_OTG_MASK | CHG_CNFG_00_BUCK_MASK
-			| CHG_CNFG_00_BOOST_MASK);
+			CHG_CNFG_00_CHG_MASK | CHG_CNFG_00_BUCK_MASK |
+			CHG_CNFG_00_BOOST_MASK);
 		pr_debug("%s: CHG_CNFG_00(0x%02x)%d\n", __func__, ret, charger->pdata->boost);
 	} else {
 		charger->is_charging = true;
@@ -811,19 +810,6 @@ static int max77823_chg_property_is_writeable(struct power_supply *psy,
 	return 0;
 }
 
-static int max77823_otg_property_is_writeable(struct power_supply *psy,
-                                                enum power_supply_property psp)
-{
-	pr_info("%s:%d\n", __func__, psp);
-	switch (psp) {
-	case POWER_SUPPLY_PROP_ONLINE:
-		return 1;
-	default:
-		break;
-	}
-	return 0;
-}
-
 static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long event, void *data)
 {
 	struct max77823_charger_data *charger = container_of(nb, struct max77823_charger_data, otg_regulator_nb);
@@ -841,16 +827,23 @@ static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long ev
 static void max77823_set_online(struct max77823_charger_data *charger, int type)
 {
 	union power_supply_propval value;
+	u8 chg_cnfg_00;
 
 	if (type == POWER_SUPPLY_TYPE_POWER_SHARING) {
-		int enable_mask;
+		int enable_mask = 0;
 
 		psy_get_prop(charger, PS_PS, POWER_SUPPLY_PROP_STATUS, &value);
-		enable_mask = (value.intval) ? CHG_CNFG_00_OTG_CTRL : 0;
-		if (charger->pdata->boost)
-			enable_mask |= CHG_CNFG_00_BOOST_MASK;
+
+		if (value.intval | charger->pdata->boost) {
+			enable_mask |=  CHG_CNFG_00_BOOST_MASK;
+		} else {
+			max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_00,
+					&chg_cnfg_00);
+			if (chg_cnfg_00 & CHG_CNFG_00_OTG_MASK)
+				enable_mask |= CHG_CNFG_00_BOOST_MASK;
+		}
 		max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
-				enable_mask, CHG_CNFG_00_OTG_CTRL);
+			enable_mask, CHG_CNFG_00_BOOST_MASK);
 		return;
 	}
 	charger->cable_type = type;
@@ -940,90 +933,6 @@ static int max77823_chg_set_property(struct power_supply *psy,
 	default:
 		return -EINVAL;
 	}
-	return 0;
-}
-
-static int max77823_otg_get_property(struct power_supply *psy,
-				enum power_supply_property psp,
-				union power_supply_propval *val)
-{
-	struct max77823_charger_data *charger = psy->drv_data;
-	u8 data;
-
-	val->intval = 0;
-	switch (psp) {
-	case POWER_SUPPLY_PROP_ONLINE:
-		max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_00, &data);
-		val->intval = (0xc400 >> (data & 0x0f)) & 1;
-		break;
-	default:
-		return -EINVAL;
-	}
-	return 0;
-}
-
-static int max77823_otg_set_property(struct power_supply *psy,
-				enum power_supply_property psp,
-				const union power_supply_propval *val)
-{
-	struct max77823_charger_data *charger = psy->drv_data;
-	static u8 chg_int_state;
-	u8 chg_cnfg_00;
-
-	switch (psp) {
-	case POWER_SUPPLY_PROP_ONLINE:
-		pr_info("%s: OTG %s\n", __func__, val->intval > 0 ? "on" : "off");
-
-		if (val->intval) {
-			max77823_read_reg(charger->i2c, MAX77823_CHG_INT_MASK,
-				&chg_int_state);
-
-			/* disable charger interrupt: CHG_I, CHGIN_I */
-			/* enable charger interrupt: BYP_I */
-			max77823_update_reg(charger->i2c, MAX77823_CHG_INT_MASK,
-				MAX77823_CHG_IM | MAX77823_CHGIN_IM,
-				MAX77823_CHG_IM | MAX77823_CHGIN_IM | MAX77823_BYP_IM);
-			/* disable charger detection */
-#ifdef CONFIG_EXTCON_MAX77828
-			max77828_muic_set_chgdeten(DISABLE);
-#endif
-			/* OTG on, boost on */
-			max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
-				CHG_CNFG_00_OTG_CTRL, CHG_CNFG_00_OTG_CTRL);
-
-			/* Update CHG_CNFG_11 to 0x54(5.1V) */
-			max77823_write_reg(charger->i2c,
-				MAX77823_CHG_CNFG_11, 0x54);
-		} else {
-			int enable_mask = CHG_CNFG_00_BUCK_MASK;
-			if (charger->pdata->boost)
-				enable_mask |= CHG_CNFG_00_BOOST_MASK;
-			/* OTG off, boost on/off, (buck on) */
-			max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
-				enable_mask, CHG_CNFG_00_BUCK_MASK | CHG_CNFG_00_OTG_CTRL);
-
-			/* Update CHG_CNFG_11 to 0x54(5.1V) */
-			max77823_write_reg(charger->i2c,
-				MAX77823_CHG_CNFG_11, 0x54);
-			mdelay(50);
-#ifdef CONFIG_EXTCON_MAX77828
-			max77828_muic_set_chgdeten(ENABLE);
-#endif
-			/* enable charger interrupt */
-			max77823_write_reg(charger->i2c,
-				MAX77823_CHG_INT_MASK, chg_int_state);
-		}
-		max77823_read_reg(charger->i2c, MAX77823_CHG_INT_MASK,
-			&chg_int_state);
-		max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_00,
-			&chg_cnfg_00);
-		pr_debug("%s: INT_MASK(0x%x), CHG_CNFG_00(0x%x)\n",
-			__func__, chg_int_state, chg_cnfg_00);
-		break;
-	default:
-		return -EINVAL;
-	}
-
 	return 0;
 }
 
@@ -1405,6 +1314,198 @@ static void max77823_chgin_init_work(struct work_struct *work)
 }
 
 #ifdef CONFIG_OF
+static int max77823_otg_enable(struct max77823_charger_data *charger)
+{
+	u8 chg_int_state;
+	u8 chg_cnfg_00;
+
+	pr_info("%s:\n", __func__);
+
+	/* Disable charging from CHRG_IN when we are supplying power */
+	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
+			0, 0x20);
+
+	/* disable charger interrupt: CHG_I, CHGIN_I */
+	/* enable charger interrupt: BYP_I */
+	max77823_update_reg(charger->i2c, MAX77823_CHG_INT_MASK,
+		MAX77823_CHG_IM | MAX77823_CHGIN_IM,
+		MAX77823_CHG_IM | MAX77823_CHGIN_IM | MAX77823_BYP_IM);
+			/* disable charger detection */
+#ifdef CONFIG_EXTCON_MAX77828
+	max77828_muic_set_chgdeten(DISABLE);
+#endif
+	/* Update CHG_CNFG_11 to 0x54(5.1V) */
+	max77823_write_reg(charger->i2c,
+		MAX77823_CHG_CNFG_11, 0x54);
+
+	/* OTG on, boost on */
+	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
+		CHG_CNFG_00_OTG_MASK | CHG_CNFG_00_BOOST_MASK,
+		CHG_CNFG_00_OTG_MASK | CHG_CNFG_00_BOOST_MASK);
+
+	max77823_read_reg(charger->i2c, MAX77823_CHG_INT_MASK,
+		&chg_int_state);
+	max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_00,
+		&chg_cnfg_00);
+	pr_debug("%s: INT_MASK(0x%x), CHG_CNFG_00(0x%x)\n",
+		__func__, chg_int_state, chg_cnfg_00);
+	return 0;
+}
+
+static int max77823_otg_disable(struct max77823_charger_data *charger)
+{
+	u8 chg_int_state;
+	u8 chg_cnfg_00;
+	int enable_mask = CHG_CNFG_00_CHG_MASK | CHG_CNFG_00_BUCK_MASK;
+
+	pr_info("%s:\n", __func__);
+	if (charger->pdata->boost)
+		enable_mask |= CHG_CNFG_00_BOOST_MASK;
+	/* chrg on, OTG off, boost on/off, (buck on) */
+	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
+		enable_mask, CHG_CNFG_00_CHG_MASK | CHG_CNFG_00_BUCK_MASK |
+		CHG_CNFG_00_OTG_MASK | CHG_CNFG_00_BOOST_MASK);
+
+	mdelay(50);
+#ifdef CONFIG_EXTCON_MAX77828
+	max77828_muic_set_chgdeten(ENABLE);
+#endif
+	/* enable charger interrupt */
+	max77823_update_reg(charger->i2c, MAX77823_CHG_INT_MASK,
+		0, MAX77823_CHG_IM | MAX77823_CHGIN_IM | MAX77823_BYP_IM);
+
+	/* Allow charging from CHRG_IN when we are not supplying power */
+	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
+			0x20, 0x20);
+
+	max77823_read_reg(charger->i2c, MAX77823_CHG_INT_MASK,
+		&chg_int_state);
+	max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_00,
+		&chg_cnfg_00);
+	pr_debug("%s: INT_MASK(0x%x), CHG_CNFG_00(0x%x)\n",
+		__func__, chg_int_state, chg_cnfg_00);
+	return 0;
+}
+
+int max77823_regulator_enable(struct regulator_dev *rdev)
+{
+	int ret = 0;
+
+	if (rdev_get_id(rdev) == REG_OTG) {
+		ret = max77823_otg_enable(rdev_get_drvdata(rdev));
+	}
+	return (ret < 0) ? ret : 0;
+}
+
+int max77823_regulator_disable(struct regulator_dev *rdev)
+{
+	int ret = 0;
+
+	if (rdev_get_id(rdev) == REG_OTG) {
+		ret = max77823_otg_disable(rdev_get_drvdata(rdev));
+	}
+	return (ret < 0) ? ret : 0;
+}
+
+int max77823_regulator_is_enabled(struct regulator_dev *rdev)
+{
+	struct max77823_charger_data *charger = rdev_get_drvdata(rdev);
+	int ret;
+	u8 val;
+
+	ret = max77823_read_reg(charger->i2c, rdev->desc->enable_reg, &val);
+	if (ret < 0)
+		return ret;
+
+	val &= rdev->desc->enable_mask;
+	return val != 0;
+}
+
+int max77823_regulator_list_voltage_linear(struct regulator_dev *rdev,
+				  unsigned int selector)
+{
+	if (selector >= rdev->desc->n_voltages)
+		return -EINVAL;
+	if (selector < rdev->desc->linear_min_sel)
+		return 0;
+
+	selector -= rdev->desc->linear_min_sel;
+
+	return rdev->desc->min_uV + (rdev->desc->uV_step * selector);
+}
+
+static struct regulator_ops max77823_regulator_ops = {
+	.enable = max77823_regulator_enable,
+	.disable = max77823_regulator_disable,
+	.is_enabled = max77823_regulator_is_enabled,
+	.list_voltage = max77823_regulator_list_voltage_linear,
+};
+
+static struct regulator_desc regulators_ds[] = {
+	{
+		.name = "otg",
+		.n_voltages = 1,
+		.ops = &max77823_regulator_ops,
+		.type = REGULATOR_VOLTAGE,
+		.id = REG_OTG,
+		.owner = THIS_MODULE,
+		.min_uV = 5000000,
+		.enable_reg = MAX77823_CHG_CNFG_00,
+		.enable_mask = CHG_CNFG_00_OTG_MASK,
+	},
+};
+
+static struct of_regulator_match reg_matches[] = {
+	{ .name = "otg",	},
+};
+
+static int parse_regulators_dt(struct device *dev, const struct device_node *np,
+		struct max77823_charger_data *charger)
+{
+	struct regulator_config config = { };
+	struct device_node *parent;
+	int ret;
+	int i;
+
+	parent = of_get_child_by_name(np, "regulators");
+	if (!parent) {
+		dev_err(dev, "regulators node not found\n");
+		return -EINVAL;
+	}
+
+	ret = of_regulator_match(dev, parent, reg_matches,
+				 ARRAY_SIZE(reg_matches));
+
+	of_node_put(parent);
+	if (ret < 0) {
+		dev_err(dev, "Error parsing regulator init data: %d\n",
+			ret);
+		return ret;
+	}
+
+	memcpy(charger->reg_descs, regulators_ds,
+		sizeof(charger->reg_descs));
+
+	for (i = 0; i < ARRAY_SIZE(reg_matches); i++) {
+		struct regulator_desc *desc = &charger->reg_descs[i];
+
+		config.dev = dev;
+		config.init_data = reg_matches[i].init_data;
+		config.driver_data = charger;
+		config.of_node = reg_matches[i].of_node;
+		config.ena_gpio = -EINVAL;
+
+		charger->regulators[i] =
+			devm_regulator_register(dev, desc, &config);
+		if (IS_ERR(charger->regulators[i])) {
+			dev_err(dev, "register regulator%s failed\n",
+				desc->name);
+			return PTR_ERR(charger->regulators[i]);
+		}
+	}
+	return 0;
+}
+
 static int sec_charger_read_u32_index_dt(const struct device_node *np,
 				       const char *propname,
 				       u32 index, u32 *out_value)
@@ -1496,19 +1597,6 @@ const struct power_supply_desc psy_chg_desc = {
 struct power_supply_config psy_chg_config = {
 };
 
-const struct power_supply_desc psy_otg_desc = {
-	.name = "otg",
-	.type = POWER_SUPPLY_TYPE_OTG,
-	.properties = max77823_otg_props,
-	.num_properties = ARRAY_SIZE(max77823_otg_props),
-	.get_property = max77823_otg_get_property,
-	.set_property = max77823_otg_set_property,
-	.property_is_writeable  = max77823_otg_property_is_writeable,
-};
-
-struct power_supply_config psy_otg_config = {
-};
-
 static int max77823_charger_probe(struct platform_device *pdev)
 {
 	struct max77823_dev *max77823 = dev_get_drvdata(pdev->dev.parent);
@@ -1542,6 +1630,11 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	ret = max77823_charger_parse_dt(charger, pdev->dev.of_node);
 	if (ret < 0) {
 		pr_err("%s:dt error! ret[%d]\n", __func__, ret);
+		goto err_free;
+	}
+	ret = parse_regulators_dt(&pdev->dev, pdev->dev.of_node, charger);
+	if (ret < 0) {
+		pr_err("%s:reg dt error! ret[%d]\n", __func__, ret);
 		goto err_free;
 	}
 #endif
@@ -1589,19 +1682,12 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	wake_lock_init(&charger->wpc_wake_lock, WAKE_LOCK_SUSPEND,
 					       "charger-wpc");
 	INIT_DELAYED_WORK(&charger->wpc_work, wpc_detect_work);
-	psy_otg_config.drv_data = charger;
-	charger->psy_otg = power_supply_register(&pdev->dev, &psy_otg_desc, &psy_otg_config);
-	if (IS_ERR(charger->psy_otg)) {
-		pr_err("%s: Failed to Register psy_otg\n", __func__);
-		ret = PTR_ERR(charger->psy_otg);
-		goto err_workqueue;
-	}
 	psy_chg_config.drv_data = charger;
 	charger->psy_chg = power_supply_register(&pdev->dev, &psy_chg_desc, &psy_chg_config);
 	if (IS_ERR(charger->psy_chg)) {
 		pr_err("%s: Failed to Register psy_chg\n", __func__);
 		ret = PTR_ERR(charger->psy_chg);
-		goto err_psy_unreg_otg;
+		goto err_workqueue;
 	}
 
 	if (charger->pdata->chg_irq) {
@@ -1668,8 +1754,6 @@ err_wc_irq:
 		free_irq(charger->chg_irq, charger);
 err_irq:
 	power_supply_unregister(charger->psy_chg);
-err_psy_unreg_otg:
-	power_supply_unregister(charger->psy_otg);
 err_workqueue:
 	destroy_workqueue(charger->wqueue);
 err_free:
@@ -1694,7 +1778,6 @@ static int max77823_charger_remove(struct platform_device *pdev)
 	if (charger->irq_bypass)
 		free_irq(charger->irq_bypass, charger);
 	power_supply_unregister(charger->psy_chg);
-	power_supply_unregister(charger->psy_otg);
 //	for (i = 0; i < ARRAY_SIZE(charger->psy_ref); i++)
 //		power_supply_put(charger->psy_ref[i]);
 	kfree(charger);
