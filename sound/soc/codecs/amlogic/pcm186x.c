@@ -149,7 +149,8 @@ static int pcm186x_dsp_access_enable(struct device *dev, struct regmap *map)
 static int pcm186x_dsp_coefficients_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 	struct device *dev = codec->dev;
 	struct pcm186x_priv *priv = snd_soc_codec_get_drvdata(codec);
 	struct regmap *map = priv->regmap;
@@ -222,7 +223,8 @@ static int pcm186x_dsp_coefficients_get(struct snd_kcontrol *kcontrol,
 static int pcm186x_dsp_coefficients_put(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 	struct device *dev = codec->dev;
 	struct pcm186x_priv *priv = snd_soc_codec_get_drvdata(codec);
 	struct regmap *map = priv->regmap;

@@ -145,6 +145,8 @@ struct tas5707_priv {
 	unsigned char Ch2_vol;
 	unsigned char master_vol;
 	unsigned int mclk;
+	unsigned int EQ_enum_value;
+	unsigned int DRC_enum_value;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
@@ -413,17 +415,17 @@ static int tas5707_set_eq(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static bool EQ_enum_value = 1;
 static int tas5707_set_EQ_enum(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
 	u8 tas5707_eq_ctl_table[] = { 0x00, 0x00, 0x00, 0x80 };
 
-	EQ_enum_value = ucontrol->value.integer.value[0];
+	tas5707->EQ_enum_value = ucontrol->value.integer.value[0];
 
-	if (EQ_enum_value == 1)
+	if (tas5707->EQ_enum_value == 1)
 		tas5707_set_eq(codec);
 	else
 		regmap_raw_write(tas5707->regmap,
@@ -435,22 +437,26 @@ static int tas5707_set_EQ_enum(struct snd_kcontrol *kcontrol,
 static int tas5707_get_EQ_enum(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = EQ_enum_value;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = tas5707->EQ_enum_value;
 
 	return 0;
 }
 
-static bool DRC_enum_value = 1;
 static int tas5707_set_DRC_enum(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
 	u8 tas5707_drc_ctl_table[] = { 0x00, 0x00, 0x00, 0x00 };
 
-	DRC_enum_value = ucontrol->value.integer.value[0];
+	tas5707->DRC_enum_value = ucontrol->value.integer.value[0];
 
-	if (DRC_enum_value == 1)
+	if (tas5707->DRC_enum_value == 1)
 		tas5707_set_drc(codec);
 	else
 		regmap_raw_write(tas5707->regmap, DDX_DRC_CTL,
@@ -461,7 +467,11 @@ static int tas5707_set_DRC_enum(struct snd_kcontrol *kcontrol,
 static int tas5707_get_DRC_enum(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = DRC_enum_value;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = tas5707->DRC_enum_value;
 
 	return 0;
 }
@@ -514,9 +524,9 @@ static int tas5707_init(struct snd_soc_codec *codec)
 	regmap_raw_write(tas5707->regmap, DDX_PWM_MUX, burst_data[2], 4);
 
 	/*drc */
-	tas5707_set_drc(codec);
+	//tas5707_set_drc(codec);
 	/*eq */
-	tas5707_set_eq(codec);
+	//tas5707_set_eq(codec);
 
 	snd_soc_write(codec, DDX_VOLUME_CONFIG, 0xD1);
 	snd_soc_write(codec, DDX_SYS_CTL_2, 0x84);
