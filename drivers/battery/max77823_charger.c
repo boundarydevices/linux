@@ -323,7 +323,7 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 			    MAX77823_CHG_DTLS_SHIFT);
 
 		/* print the log at the abnormal case */
-		if((charger->is_charging == 1) && (chg_dtls & 0x08)) {
+		if (charger->is_charging && (chg_dtls & 0x08)) {
 			pr_info("%s: CHG_DTLS_00(0x%x), CHG_DTLS_01(0x%x), CHG_CNFG_00(0x%x)\n",
 				__func__,
 				max77823_read_reg(charger->i2c, MAX77823_CHG_DETAILS_00),
@@ -610,7 +610,10 @@ static void max77823_charger_function_control(
 			CHG_CNFG_00_BOOST_MASK);
 		pr_debug("%s: CHG_CNFG_00(0x%02x)%d\n", __func__, ret, charger->pdata->boost);
 	} else {
-		charger->is_charging = true;
+		int ret = max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_12);
+
+		if ((ret >= 0) && (ret & 0x20))
+			charger->is_charging = true;
 		charger->charging_current_max =
 			get_charging_info(charger, charger->cable_type)->input_current_limit;
 		charger->charging_current =
@@ -1305,6 +1308,7 @@ static int max77823_otg_enable(struct max77823_charger_data *charger)
 {
 	pr_info("%s:\n", __func__);
 
+	charger->is_charging = false;
 	/* Disable charging from CHRG_IN when we are supplying power */
 	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
 			0, 0x20);
@@ -1357,6 +1361,8 @@ static int max77823_otg_disable(struct max77823_charger_data *charger)
 	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
 			0x20, 0x20);
 
+	if (charger->cable_type != POWER_SUPPLY_TYPE_BATTERY)
+		charger->is_charging = true;
 	pr_debug("%s: INT_MASK(0x%x), CHG_CNFG_00(0x%x)\n", __func__,
 		max77823_read_reg(charger->i2c, MAX77823_CHG_INT_MASK),
 		max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_00));
