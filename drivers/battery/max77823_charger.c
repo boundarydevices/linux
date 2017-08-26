@@ -1615,7 +1615,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, charger);
 
-	reg_otg = devm_regulator_get(&pdev->dev, "usbotg");
+	reg_otg = devm_regulator_get_optional(&pdev->dev, "usbotg");
 	if (PTR_ERR(reg_otg) == -EPROBE_DEFER) {
 		dev_err(&pdev->dev, "usbotg not ready, retry\n");
 		ret = PTR_ERR(reg_otg);
