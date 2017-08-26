@@ -113,7 +113,7 @@ struct max77823_dev {
 };
 
 /* MAX77823 shared i2c API function */
-extern int max77823_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest);
+extern int max77823_read_reg(struct i2c_client *i2c, u8 reg);
 extern int max77823_bulk_read(struct i2c_client *i2c, u8 reg, int count,
 				u8 *buf);
 extern int max77823_write_reg(struct i2c_client *i2c, u8 reg, u8 value);
