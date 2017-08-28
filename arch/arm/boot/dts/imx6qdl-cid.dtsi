@@ -920,7 +920,7 @@
 		compatible = "dummy_i2c_device";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1c_finger_sensor>;
-		/* not really 0x33, chose this to let i2cdetect probe the real address */
+		/* not really 0x33, chose this to let i2cdetect probe the real addresses(0x37/0x60) */
 		reg = <0x33>;
 		clocks = <&fp_mclk>;
 		clock-names = "fp_mclk";
