@@ -8,41 +8,53 @@
  */
 / {
     partitions: partitions{
-		parts = <15>;
+		parts = <16>;
 		part-0 = <&logo>;
 		part-1 = <&boot_a>;
-		part-2 = <&rsv>;
-		part-3 = <&tee>;
-		part-4 = <&param>
-		part-5 = <&misc>;
+		part-2 = <&misc>;
+		part-3 = <&dto>;
+		part-4 = <&cri_data>;
+		part-5 = <&param>;
 		part-6 = <&boot_b>;
-		part-7 = <&system_a>;
-		part-8 = <&system_b>;
+		part-7 = <&rsv>;
+		part-8 = <&tee>;
 		part-9 = <&vendor_a>;
 		part-10 = <&vendor_b>;
-		part-11 = <&odm>;
-		part-12 = <&cache>;
-		part-13 = <&cri_data>;
-		part-14 = <&data>;
+		part-11 = <&odm_a>;
+		part-12 = <&odm_b>;
+		part-13 = <&system_a>;
+		part-14 = <&system_b>;
+		part-15 = <&data>;
 
 		logo:logo{
 			pname = "logo";
-			size = <0x0 0x2000000>;
+			size = <0x0 0x800000>;
 			mask = <1>;
 		};
 		boot_a:boot_a{
 			pname = "boot_a";
-			size = <0x0 0x2000000>;
+			size = <0x0 0x1000000>;
 			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		dto:dto{
+			pname = "dto";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		cri_data:cri_data
+		{
+			pname = "cri_data";
+			size = <0x0 0x800000>;
+			mask = <2>;
 		};
 		rsv:rsv{
 			pname = "rsv";
 			size = <0x0 0x1000000>;
-			mask = <1>;
-		};
-		tee:tee{
-			pname = "tee";
-			size = <0x0 0x2000000>;
 			mask = <1>;
 		};
 		param:param{
@@ -50,27 +62,15 @@
 			size = <0x0 0x1000000>;
 			mask = <2>;
 		};
-		misc:misc{
-			pname = "misc";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
 		boot_b:boot_b
 		{
 			pname = "boot_b";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
 			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		system_a:system_a
-		{
-			pname = "system_a";
-			size = <0x0 0x80000000>;
-			mask = <1>;
-		};
-		system_b:system_b
-		{
-			pname = "system_b";
-			size = <0x0 0x80000000>;
 			mask = <1>;
 		};
 		vendor_a:vendor_a
@@ -85,22 +85,29 @@
 			size = <0x0 0x10000000>;
 			mask = <1>;
 		};
-		odm:odm
+		odm_a:odm_a
 		{
-			pname = "odm";
+			pname = "odm_a";
 			size = <0x0 0x10000000>;
 			mask = <1>;
 		};
-		cache:cache{
-			pname = "cache";
+		odm_b:odm_b
+		{
+			pname = "odm_b";
 			size = <0x0 0x10000000>;
 			mask = <1>;
 		};
-		cri_data:cri_data
+		system_a:system_a
 		{
-			pname = "cri_data";
-			size = <0x0 0x800000>;
-			mask = <2>;
+			pname = "system_a";
+			size = <0x0 0x74000000>;
+			mask = <1>;
+		};
+		system_b:system_b
+		{
+			pname = "system_b";
+			size = <0x0 0x74000000>;
+			mask = <1>;
 		};
 		data:data
 		{
