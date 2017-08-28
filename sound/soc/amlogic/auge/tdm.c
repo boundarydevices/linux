@@ -122,7 +122,7 @@ static irqreturn_t aml_tdmin_isr(int irq, void *devid)
 
 	return IRQ_HANDLED;
 }
-#if 0
+
 /* get counts of '1's in val */
 static unsigned int pop_count(unsigned int val)
 {
@@ -135,7 +135,7 @@ static unsigned int pop_count(unsigned int val)
 
 	return count;
 }
-#endif
+
 static int snd_soc_of_get_slot_mask(struct device_node *np,
 				    const char *prop_name,
 				    unsigned int *mask)
@@ -529,9 +529,10 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 		// set lanes mask acordingly
 		lane_mask = setting->lane_mask_out;
 		for (i = 0; i < 4; i++) {
-			if (((1 << i) & lane_mask) && lanes--) {
+			if (((1 << i) & lane_mask) && lanes) {
 				aml_tdm_set_channel_mask(p_tdm->actrl,
 					stream, p_tdm->id, i, setting->tx_mask);
+				lanes--;
 			}
 		}
 		swap_val = 0x76543210;
@@ -727,15 +728,21 @@ static int aml_dai_set_tdm_slot(struct snd_soc_dai *cpu_dai,
 				int slots, int slot_width)
 {
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct snd_soc_dai_driver *drv = cpu_dai->driver;
+	unsigned int lanes_cnt = 0;
 
-	pr_info("aml_dai_set_tdm_slot, %x, %x, %d, %d\n",
-			tx_mask, rx_mask, slots, slot_width);
+	lanes_cnt = pop_count(p_tdm->setting.lane_mask_out);
+	pr_info("%s(), txmask(%#x), rxmask(%#x)\n",
+		__func__, tx_mask, rx_mask);
+	pr_info("\tslots(%d), slot_width(%d), lanes(%d)\n",
+		slots, slot_width, lanes_cnt);
 	p_tdm->setting.tx_mask = tx_mask;
 	p_tdm->setting.rx_mask = rx_mask;
 	p_tdm->setting.slots = slots;
 	p_tdm->setting.slot_width = slot_width;
-
 	aml_tdm_set_slot(p_tdm->actrl, slots, slot_width, p_tdm->id);
+	/* constrains hw channels_max by DTS configs */
+	drv->playback.channels_max = slots * lanes_cnt;
 
 	return 0;
 }
