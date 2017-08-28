@@ -367,8 +367,11 @@ static int max77823_irq_init(struct max77823_dev *max77823)
 
 		if (max77823_mask_reg[i] == MAX77823_REG_INVALID)
 			continue;
-		if (i == CHG_IRQ)
+		if (i == CHG_IRQ) {
+			max77823->irq_masks_cur[i] = 0x9a;
+			max77823->irq_masks_cache[i] = 0x9a;
 			max77823_write_reg(max77823->charger, max77823_mask_reg[i], 0x9a);
+		}
 	}
 
 	/* Register with genirq */
