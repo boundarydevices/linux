@@ -324,10 +324,14 @@
 
 		clocks = <&clkc CLKID_USB_GENERAL
 		&clkc CLKID_PCIE_PLL
+		&clkc CLKID_MIPI_ENABLE_GATE
+		&clkc CLKID_MIPI_BANDGAP_GATE
 		&clkc CLKID_PCIE_A
 		&clkc CLKID_PCIE_CML_EN0>;
 		clock-names = "pcie_general",
 				"pcie_refpll",
+				"pcie_mipi_enable_gate",
+				"pcie_mipi_bandgap_gate",
 				"pcie",
 				"port";
 		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
@@ -359,10 +363,14 @@
 
 		clocks = <&clkc CLKID_USB_GENERAL
 				&clkc CLKID_PCIE_PLL
+				&clkc CLKID_MIPI_ENABLE_GATE
+				&clkc CLKID_MIPI_BANDGAP_GATE
 				&clkc CLKID_PCIE_B
 				&clkc CLKID_PCIE_CML_EN1>;
 		clock-names = "pcie_general",
 				"pcie_refpll",
+				"pcie_mipi_enable_gate",
+				"pcie_mipi_bandgap_gate",
 				"pcie",
 				"port";
 		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/

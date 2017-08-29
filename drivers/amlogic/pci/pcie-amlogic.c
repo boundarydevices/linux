@@ -31,6 +31,9 @@
 #include "../drivers/pci/host/pcie-designware.h"
 #include "pcie-amlogic.h"
 
+#include <dt-bindings/clock/amlogic,axg-clkc.h>
+#include <linux/clk-provider.h>
+#include "../clk/clkc.h"
 
 
 struct amlogic_pcie {
@@ -41,6 +44,8 @@ struct amlogic_pcie {
 	int			reset_gpio;
 	struct clk		*clk;
 	struct clk		*bus_clk;
+	struct clk		*mipi_gate;
+	struct clk		*mipi_bandgap_gate;
 	struct clk		*port_clk;
 	struct clk		*general_clk;
 	int			pcie_num;
@@ -635,6 +640,8 @@ static int __init amlogic_add_pcie_port(struct amlogic_pcie *amlogic_pcie,
 		dev_err(pp->dev, "link timeout, disable PCIE PLL\n");
 		clk_disable_unprepare(amlogic_pcie->port_clk);
 		clk_disable_unprepare(amlogic_pcie->general_clk);
+		clk_disable_unprepare(amlogic_pcie->mipi_bandgap_gate);
+		clk_disable_unprepare(amlogic_pcie->mipi_gate);
 		clk_disable_unprepare(amlogic_pcie->bus_clk);
 		clk_disable_unprepare(amlogic_pcie->clk);
 		if (amlogic_pcie->pcie_num == 2) {
@@ -778,6 +785,28 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail_pcie;
 
+	amlogic_pcie->mipi_gate = devm_clk_get(dev, "pcie_mipi_enable_gate");
+	if (IS_ERR(amlogic_pcie->mipi_gate)) {
+		dev_err(dev, "Failed to get pcie mipi gate clock\n");
+		ret = PTR_ERR(amlogic_pcie->mipi_gate);
+		goto fail_bus_clk;
+	}
+	/*pcie pll: mipi enable and bandgap share with mipi clk */
+	ret = clk_prepare_enable(amlogic_pcie->mipi_gate);
+	if (ret)
+		goto fail_bus_clk;
+
+	amlogic_pcie->mipi_bandgap_gate = devm_clk_get(dev,
+											"pcie_mipi_bandgap_gate");
+	if (IS_ERR(amlogic_pcie->mipi_bandgap_gate)) {
+		dev_err(dev, "Failed to get pcie mipi bandgap gate clock\n");
+		ret = PTR_ERR(amlogic_pcie->mipi_bandgap_gate);
+		goto fail_mipi_gate;
+	}
+	/*pcie pll: mipi enable and bandgap share with mipi clk */
+	ret = clk_prepare_enable(amlogic_pcie->mipi_bandgap_gate);
+	if (ret)
+		goto fail_mipi_gate;
 
 	/*RESET0[6,7] = 1*/
 	if (!amlogic_pcie->phy->reset_state) {
@@ -791,12 +820,12 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	if (IS_ERR(amlogic_pcie->general_clk)) {
 		dev_err(dev, "Failed to get pcie general clock\n");
 		ret = PTR_ERR(amlogic_pcie->general_clk);
-		goto fail_bus_clk;
+		goto fail_mipi_bandgap_gate;
 	}
 
 	ret = clk_prepare_enable(amlogic_pcie->general_clk);
 	if (ret)
-		goto fail_bus_clk;
+		goto fail_mipi_bandgap_gate;
 
 	amlogic_pcie->clk = devm_clk_get(dev, "pcie");
 	if (IS_ERR(amlogic_pcie->clk)) {
@@ -864,10 +893,15 @@ fail_clk:
 	clk_disable_unprepare(amlogic_pcie->clk);
 fail_general_clk:
 	clk_disable_unprepare(amlogic_pcie->general_clk);
+fail_mipi_bandgap_gate:
+	clk_disable_unprepare(amlogic_pcie->mipi_bandgap_gate);
+fail_mipi_gate:
+	clk_disable_unprepare(amlogic_pcie->mipi_gate);
 fail_bus_clk:
 	clk_disable_unprepare(amlogic_pcie->bus_clk);
 fail_pcie:
 	port_num--;
+
 	return ret;
 }
 
@@ -886,6 +920,8 @@ static int __exit amlogic_pcie_remove(struct platform_device *pdev)
 	clk_disable_unprepare(amlogic_pcie->port_clk);
 	clk_disable_unprepare(amlogic_pcie->clk);
 	clk_disable_unprepare(amlogic_pcie->general_clk);
+	clk_disable_unprepare(amlogic_pcie->mipi_bandgap_gate);
+	clk_disable_unprepare(amlogic_pcie->mipi_gate);
 	clk_disable_unprepare(amlogic_pcie->bus_clk);
 
 	return 0;
@@ -975,6 +1011,8 @@ static int amlogic_pcie_suspend_noirq(struct device *dev)
 	clk_disable_unprepare(amlogic_pcie->port_clk);
 	clk_disable_unprepare(amlogic_pcie->clk);
 	clk_disable_unprepare(amlogic_pcie->general_clk);
+	clk_disable_unprepare(amlogic_pcie->mipi_bandgap_gate);
+	clk_disable_unprepare(amlogic_pcie->mipi_gate);
 	clk_disable_unprepare(amlogic_pcie->bus_clk);
 	amlogic_pcie->phy->reset_state = 0;
 
@@ -1020,6 +1058,8 @@ static int amlogic_pcie_resume_noirq(struct device *dev)
 	amlogic_pcie->phy->reset_state = 1;
 
 	clk_prepare_enable(amlogic_pcie->bus_clk);
+	clk_prepare_enable(amlogic_pcie->mipi_gate);
+	clk_prepare_enable(amlogic_pcie->mipi_bandgap_gate);
 	clk_prepare_enable(amlogic_pcie->general_clk);
 	clk_prepare_enable(amlogic_pcie->clk);
 	clk_prepare_enable(amlogic_pcie->port_clk);
