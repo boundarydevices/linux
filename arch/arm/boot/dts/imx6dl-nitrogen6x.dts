@@ -22,15 +22,15 @@
 	compatible = "fsl,imx6dl-nitrogen6x", "fsl,imx6dl";
 };
 
-&lvds_display {
+&fb_hdmi {
 	status = "okay";
 };
 
-&hdmi_display {
+&fb_lcd {
 	status = "okay";
 };
 
-&lcd_display {
+&fb_lvds {
 	status = "okay";
 };
 
