@@ -585,7 +585,11 @@ static int aml_jtag_probe(struct platform_device *pdev)
 	jdev->cls.name = AML_JTAG_NAME;
 	jdev->cls.owner = THIS_MODULE;
 	jdev->cls.class_attrs = aml_jtag_attrs;
-	class_register(&jdev->cls);
+	ret = class_register(&jdev->cls);
+	if (ret) {
+		pr_err("couldn't register sysfs class\n");
+		return ret;
+	}
 
 	/* setup jtag */
 	aml_jtag_setup(jdev);
