@@ -57,7 +57,7 @@ extern void datain_config(struct data_in *datain);
 
 extern void datalb_config(struct data_lb *datalb);
 
-extern void datalb_ctrl(int lb_src, int bitdepth);
+extern void datalb_ctrl(int lb_src);
 
 extern void lb_enable_ex(int mode, bool is_enable);
 

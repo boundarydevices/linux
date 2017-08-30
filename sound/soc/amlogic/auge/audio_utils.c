@@ -1047,7 +1047,7 @@ int loopback_prepare(
 	datain_config(&datain);
 	datalb_config(&datalb);
 
-	datalb_ctrl(lb_cfg->datalb_src, bitwidth);
+	datalb_ctrl(lb_cfg->datalb_src);
 	lb_enable_ex(lb_cfg->lb_mode, true);
 
 	return 0;

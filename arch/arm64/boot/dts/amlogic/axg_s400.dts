@@ -1050,7 +1050,7 @@
 		 * 5: PAD_tdminC
 		 */
 		datalb_src = <2>;
-		datalb_chnum = <8>;
+		datalb_chnum = <2>;
 		datalb_chmask = <0x3>;
 
 		status = "okay";

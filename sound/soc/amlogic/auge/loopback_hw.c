@@ -47,16 +47,19 @@ void datalb_config(struct data_lb *datalb)
 		);
 }
 
-void datalb_ctrl(int lb_src, int bitdepth)
+void datalb_ctrl(int lb_src)
 {
+	int id = lb_src;
+	int offset = 0;
+	int reg, reg_base;
+
 	//tdmin lb,  same as tdm out
 	audiobus_update_bits(
 		EE_AUDIO_CLK_TDMIN_LB_CTRL,
-		0x3 << 30 | 0 << 29 | 0xf << 24 | 0xf << 20,
-		0x3 << 30 | 0 << 29 | 2 << 24 | 2 << 20
+		0x3 << 30 | 1 << 29 | 0xf << 24 | 0xf << 20,
+		0x3 << 30 | 1 << 29 | 2 << 24 | 2 << 20
 		);
-	//tdmin ctrl, from tdmout
-	//reset
+
 	audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 3<<28, 0);
 	audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 1<<29, 1<<29);
 	audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 1<<28, 1<<28);
@@ -64,17 +67,58 @@ void datalb_ctrl(int lb_src, int bitdepth)
 	audiobus_write(
 		EE_AUDIO_TDMIN_LB_CTRL,
 		1 << 31 |
-		0 << 30 | /*0:tdm mode; 1: i2s mode;*/
+		/*0:tdm mode; 1: i2s mode;*/
+		1 << 30 |
 		1 << 29 |
 		1 << 28 |
 		lb_src << 20|
-		4 << 16|
-		(bitdepth - 1) << 0
+		3 << 16|
+		31 << 0
 		);
+
+	if (id >= 0 && id <= 2) {
+		/* tdmout_a, tdmout_b, tdmout_c */
+		reg_base = EE_AUDIO_TDMOUT_A_SWAP;
+		offset = EE_AUDIO_TDMOUT_B_SWAP - EE_AUDIO_TDMOUT_A_SWAP;
+	} else if (id < 6) {
+		/* pad from tdmin_a, tdmin_b, tdmin_c */
+		id -= 3; /*id offset from tdmin_a */
+		reg_base = EE_AUDIO_TDMIN_A_SWAP;
+		offset = EE_AUDIO_TDMIN_B_SWAP - EE_AUDIO_TDMIN_A_SWAP;
+	} else {
+		pr_err("unsupport datalb_src\n");
+		return;
+	}
+
+	/*swap same as tdmout */
+	reg = reg_base + offset * id;
+	audiobus_write(EE_AUDIO_TDMIN_LB_SWAP,
+		audiobus_read(reg));
+
+	/*mask same as datalb*/
+	/* mask 0 */
+	reg += 1;
 	audiobus_write(
 		EE_AUDIO_TDMIN_LB_MASK0,
-		0xff);
+		audiobus_read(reg));
 
+	/* mask 0 */
+	reg += 1;
+	audiobus_write(
+		EE_AUDIO_TDMIN_LB_MASK1,
+		audiobus_read(reg));
+
+	/* mask 0 */
+	reg += 1;
+	audiobus_write(
+		EE_AUDIO_TDMIN_LB_MASK2,
+		audiobus_read(reg));
+
+	/* mask 0 */
+	reg += 1;
+	audiobus_write(
+		EE_AUDIO_TDMIN_LB_MASK3,
+		audiobus_read(reg));
 }
 
 void lb_enable_ex(int mode, bool is_enable)

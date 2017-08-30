@@ -344,6 +344,8 @@
 		aml-audio-card,name = "AML-AXGSOUND";
 		//aml-audio-card,mclk-fs = <256>;
 
+		aml-audio-card,loopback = <&aml_loopback>;
+
 		aml-audio-card,dai-link@0 {
 			format = "dsp_a";
 			mclk-fs = <256>;//512
@@ -853,6 +855,40 @@
 		pinctrl-names = "pdm_pins";
 		pinctrl-0 = <&pdmin>;
 		filter_mode = <1>; /* mode 0~4, defalut:1 */
+		status = "okay";
+	};
+
+	aml_loopback: loopback {
+		compatible = "amlogic, snd-loopback";
+		/*
+		 * 0: out rate = in data rate;
+		 * 1: out rate = loopback data rate;
+		 */
+		lb_mode = <0>;
+
+		/* datain src
+		 * 0: tdmin_a;
+		 * 1: tdmin_b;
+		 * 2: tdmin_c;
+		 * 3: spdifin;
+		 * 4: pdmin;
+		 */
+		datain_src = <4>;
+		datain_chnum = <8>;
+		datain_chmask = <0xfc>;
+
+		/* tdmin_lb src
+		 * 0: tdmoutA
+		 * 1: tdmoutB
+		 * 2: tdmoutC
+		 * 3: PAD_tdminA
+		 * 4: PAD_tdminB
+		 * 5: PAD_tdminC
+		 */
+		datalb_src = <2>;
+		datalb_chnum = <2>;
+		datalb_chmask = <0x3>;
+
 		status = "okay";
 	};
 }; /* end of audiobus */
