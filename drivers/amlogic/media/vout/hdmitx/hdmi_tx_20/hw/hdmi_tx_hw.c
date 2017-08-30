@@ -522,10 +522,10 @@ static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 			}
 		}
 		return;
-	} else {
-		hdev->para->cd = COLORDEPTH_RESERVED;
-		hdev->para->cs = COLORSPACE_RESERVED;
 	}
+
+	hdev->para->cd = COLORDEPTH_RESERVED;
+	hdev->para->cs = COLORSPACE_RESERVED;
 	/* reset HDMITX APB & TX & PHY */
 	hd_set_reg_bits(P_RESET0_REGISTER, 1, 19, 1);
 	hd_set_reg_bits(P_RESET2_REGISTER, 1, 15, 1);
@@ -1866,25 +1866,17 @@ static void set_tmds_clk_div40(unsigned int div40)
 	hdmitx_wr_reg(HDMITX_TOP_TMDS_CLK_PTTN_CNTL, 0x2);
 }
 
-static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
+static void hdmitx_set_scdc(struct hdmitx_dev *hdev)
 {
 	unsigned char rx_ver = 0;
-	struct hdmi_format_para *para = NULL;
-
-	if (hdev->cur_video_param == NULL) /* disable HDMI */
-		return 0;
-	else
-		if (!hdmitx_edid_VIC_support(hdev->cur_video_param->VIC))
-			return -1;
-	hdev->cur_VIC = hdev->cur_video_param->VIC;
 
 	scdc_rd_sink(SINK_VER, &rx_ver);
 	if (rx_ver != 1)
 		scdc_rd_sink(SINK_VER, &rx_ver);	/* Recheck */
-	pr_info("hdmirx version is %s\n",
+	hdmi_print(IMP, SYS "hdmirx version is %s\n",
 		(rx_ver == 1) ? "2.0" : "1.4 or below");
 
-	switch (hdev->cur_VIC) {
+	switch (hdev->cur_video_param->VIC) {
 	case HDMI_3840x2160p50_16x9:
 	case HDMI_3840x2160p60_16x9:
 	case HDMI_4096x2160p50_256x135:
@@ -1908,10 +1900,13 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
 		break;
 	case HDMI_3840x2160p24_16x9:
 	case HDMI_3840x2160p24_64x27:
+	case HDMI_4096x2160p24_256x135:
 	case HDMI_3840x2160p25_16x9:
 	case HDMI_3840x2160p25_64x27:
+	case HDMI_4096x2160p25_256x135:
 	case HDMI_3840x2160p30_16x9:
 	case HDMI_3840x2160p30_64x27:
+	case HDMI_4096x2160p30_256x135:
 		if ((hdev->para->cs == COLORSPACE_YUV422)
 			|| (hdev->para->cd == COLORDEPTH_24B))
 			hdev->para->tmds_clk_div40 = 0;
@@ -1924,6 +1919,19 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
 	}
 	set_tmds_clk_div40(hdev->para->tmds_clk_div40);
 	scdc_config(hdev);
+}
+
+static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
+{
+	struct hdmi_format_para *para = NULL;
+
+	if (hdev->cur_video_param == NULL) /* disable HDMI */
+		return 0;
+	if (!hdmitx_edid_VIC_support(hdev->cur_video_param->VIC))
+		return -1;
+	hdev->cur_VIC = hdev->cur_video_param->VIC;
+
+	hdmitx_set_scdc(hdev);
 
 	if (color_depth_f == 24)
 		hdev->cur_video_param->color_depth = COLORDEPTH_24B;
@@ -3564,7 +3572,6 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 		return hdmitx_hdcp_opr(0xa);
 	case DDC_HDCP_22_LSTORE:
 		return hdmitx_hdcp_opr(0xb);
-		break;
 	case DDC_SCDC_DIV40_SCRAMB:
 		if (argv == 1) {
 			scdc_wr_sink(TMDS_CFG, 0x3); /* TMDS 1/40 & Scramble */
