@@ -7401,7 +7401,9 @@ static int di_probe(struct platform_device *pdev)
 	}
 	dev_set_drvdata(di_devp->dev, di_devp);
 	platform_set_drvdata(pdev, di_devp);
-	of_reserved_mem_device_init(&pdev->dev);
+	ret = of_reserved_mem_device_init(&pdev->dev);
+	if (ret != 0)
+		pr_info("DI no reserved mem.\n");
 	ret = of_property_read_u32(pdev->dev.of_node,
 		"flag_cma", &(di_devp->flag_cma));
 	if (ret)
