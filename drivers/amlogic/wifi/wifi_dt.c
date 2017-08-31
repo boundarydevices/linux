@@ -37,6 +37,7 @@
 #include <linux/io.h>
 #include <linux/uaccess.h>
 #include <linux/pwm.h>
+#include <linux/pci.h>
 #include <linux/amlogic/pwm_meson.h>
 #include "../../gpio/gpiolib.h"
 #define OWNER_NAME "sdio_wifi"
@@ -92,8 +93,8 @@ struct wifi_plat_info {
 
 #define USB_POWER_UP    _IO('m', 1)
 #define USB_POWER_DOWN  _IO('m', 2)
-#define SDIO_POWER_UP    _IO('m', 3)
-#define SDIO_POWER_DOWN  _IO('m', 4)
+#define WIFI_POWER_UP    _IO('m', 3)
+#define WIFI_POWER_DOWN  _IO('m', 4)
 #define SDIO_GET_DEV_TYPE  _IO('m', 5)
 static struct wifi_plat_info wifi_info;
 static dev_t wifi_power_devno;
@@ -242,6 +243,68 @@ static int  wifi_power_release(struct inode *inode, struct file *file)
 {
 	return 0;
 }
+
+
+void pci_reinit(void)
+{
+	struct pci_bus *bus = NULL;
+	int cnt = 20;
+
+	WIFI_INFO("pci wifi reinit!\n");
+
+	pci_lock_rescan_remove();
+	while ((bus = pci_find_next_bus(bus)) != NULL) {
+		pci_rescan_bus(bus);
+		WIFI_INFO("rescanning pci device\n");
+		cnt--;
+		if (cnt <= 0)
+			break;
+	}
+	pci_unlock_rescan_remove();
+
+}
+EXPORT_SYMBOL(pci_reinit);
+
+void pci_remove_reinit(unsigned int vid, unsigned int pid, unsigned int delBus)
+{
+	struct pci_bus *bus = NULL;
+	struct pci_dev *devDevice, *devBus;
+	int cnt = 20;
+
+	WIFI_INFO("pci wifi remove and reinit\n");
+	devDevice = pci_get_device(vid, pid, NULL);
+
+	if (devDevice != NULL) {
+		WIFI_INFO("device 0x%x:0x%x found, remove it\n", vid, pid);
+		devBus = devDevice->bus->self;
+		pci_stop_and_remove_bus_device_locked(devDevice);
+
+		if ((devBus > 0) && (devBus != NULL)) {
+			WIFI_INFO("remove ths bus this device on!\n");
+			pci_stop_and_remove_bus_device_locked(devBus);
+		}
+	} else {
+		WIFI_INFO("target pci device not found 0x%x:0x%x\n", vid, pid);
+	}
+
+	extern_wifi_set_enable(0);
+	msleep(200);
+	extern_wifi_set_enable(1);
+	msleep(200);
+
+	pci_lock_rescan_remove();
+	while ((bus = pci_find_next_bus(bus)) != NULL) {
+		pci_rescan_bus(bus);
+		WIFI_INFO("rescanning pci device\n");
+		cnt--;
+		if (cnt <= 0)
+			break;
+	}
+	pci_unlock_rescan_remove();
+
+}
+EXPORT_SYMBOL(pci_remove_reinit);
+
 static long wifi_power_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -255,17 +318,18 @@ static long wifi_power_ioctl(struct file *filp,
 		break;
 	case USB_POWER_DOWN:
 		set_usb_wifi_power(0);
-		WIFI_INFO(KERN_INFO "Set usb_sdio wifi power down!\n");
+		WIFI_INFO("Set usb_sdio wifi power down!\n");
 		break;
-	case SDIO_POWER_UP:
+	case WIFI_POWER_UP:
 		extern_wifi_set_enable(0);
 		mdelay(200);
 		extern_wifi_set_enable(1);
 		mdelay(200);
 		sdio_reinit();
+		pci_reinit();
 		WIFI_INFO("Set sdio wifi power up!\n");
 		break;
-	case SDIO_POWER_DOWN:
+	case WIFI_POWER_DOWN:
 		extern_wifi_set_enable(0);
 		break;
 	case SDIO_GET_DEV_TYPE:

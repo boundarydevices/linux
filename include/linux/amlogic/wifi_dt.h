@@ -20,7 +20,17 @@
 
 extern void sdio_reinit(void);
 extern char *get_wifi_inf(void);
+
 void extern_wifi_set_enable(int is_on);
 int wifi_irq_num(void);
+
+/*amlogic 4.9 kernel support pci interface wifi*/
+extern void pci_lock_rescan_remove(void);
+extern struct pci_bus *pci_find_next_bus(const struct pci_bus *from);
+extern unsigned int pci_rescan_bus(struct pci_bus *bus);
+extern void pci_unlock_rescan_remove(void);
+extern struct pci_dev *pci_get_device(unsigned int vendor, unsigned int device,
+			       struct pci_dev *from);
+extern void pci_stop_and_remove_bus_device_locked(struct pci_dev *dev);
 
 #endif /* _wifi_dt_h_ */
