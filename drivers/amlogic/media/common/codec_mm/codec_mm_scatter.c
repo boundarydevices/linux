@@ -2076,7 +2076,7 @@ int codec_mm_scatter_mgt_delay_free_swith(
 		}
 	}
 	codec_mm_list_unlock(smgt);
-	if (on && wait_size_M > 0) {
+	if (on && wait_size_M > 0 && !is_tvp) {
 		u64 start_time = get_jiffies_64();
 		int try_max = 1000;
 
