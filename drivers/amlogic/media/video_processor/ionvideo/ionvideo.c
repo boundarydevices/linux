@@ -23,14 +23,16 @@
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-v4l2.h>
 #include <linux/platform_device.h>
+#include <linux/amlogic/major.h>
 
 #define IONVIDEO_MODULE_NAME "ionvideo"
 
 #define IONVIDEO_VERSION "1.0"
 #define RECEIVER_NAME "ionvideo"
+#define IONVIDEO_DEVICE_NAME   "ionvideo"
 
 #define V4L2_CID_USER_AMLOGIC_IONVIDEO_BASE  (V4L2_CID_USER_BASE + 0x1100)
-
+#define SCALE_4K_TO_1080P 1
 static struct mutex ppmgr2_ge2d_canvas_mutex;
 
 static unsigned int video_nr_base = 13;
@@ -226,13 +228,10 @@ static int canvas_is_valid(struct ionvideo_dev *dev, int index)
 #endif
 
 static int ionvideo_fillbuff(struct ionvideo_dev *dev,
-				struct ionvideo_buffer *buf)
+				struct v4l2_buffer *buf)
 {
 
 	struct vframe_s *vf;
-#ifdef IONVIDEO_DEBUG
-	struct vb2_buffer *vb = &(buf->vb);
-#endif
 	int ret = 0;
 	/* ------------------------------------------------------- */
 #if 0
@@ -256,26 +255,7 @@ static int ionvideo_fillbuff(struct ionvideo_dev *dev,
 
 	}
 	if (dev->freerun_mode == 0) {
-		if ((vf->type & 0x1) == VIDTYPE_INTERLACE) {
-			if ((dev->ppmgr2_dev.bottom_first
-				&& (vf->type & 0x2)) || (dev
-				->ppmgr2_dev
-				.bottom_first
-				== 0
-				&& ((vf
-				->type
-				& 0x2)
-				== 0))) {
-				buf->pts = vf->pts;
-				buf->duration = vf->duration;
-			}
-		} else {
-			buf->pts = vf->pts;
-			buf->duration = vf->duration;
-		}
-#ifdef IONVIDEO_DEBUG
-		ret = ppmgr2_process(vf, &dev->ppmgr2_dev, vb->v4l2_buf.index);
-#endif
+		ret = ppmgr2_process(vf, &dev->ppmgr2_dev, buf->index);
 		if (ret) {
 			vf_put(vf, dev->vf_receiver_name);
 			return ret;
@@ -300,7 +280,19 @@ static int ionvideo_fillbuff(struct ionvideo_dev *dev,
 			dev->ppmgr2_dev.dst_width = vf->width;
 		if (vf->height <= dev->height)
 			dev->ppmgr2_dev.dst_height = vf->height;
-
+#if SCALE_4K_TO_1080P
+		if (vf->width > dev->width || vf->height > dev->height) {
+			if (vf->width*dev->height >= dev->width*vf->height) {
+				dev->ppmgr2_dev.dst_width = dev->width;
+				dev->ppmgr2_dev.dst_height = vf->height
+					* dev->width / vf->width;
+		} else {
+				dev->ppmgr2_dev.dst_width = vf->width
+					* dev->height / vf->height;
+				dev->ppmgr2_dev.dst_height = dev->height;
+			}
+		}
+#endif
 		if ((dev->ppmgr2_dev.dst_width >= 1920) && (dev->ppmgr2_dev
 			.dst_height
 			>= 1080)
@@ -312,21 +304,22 @@ static int ionvideo_fillbuff(struct ionvideo_dev *dev,
 				* scaling_rate
 							/ 100;
 		}
-#ifdef IONVIDEO_DEBUG
-		ret = ppmgr2_process(vf, &dev->ppmgr2_dev, vb->v4l2_buf.index);
-#endif
+		ret = ppmgr2_process(vf, &dev->ppmgr2_dev, buf->index);
 		if (ret) {
 			vf_put(vf, dev->vf_receiver_name);
 			return ret;
 		}
 		videoc_omx_compute_pts(dev, vf);
+		buf->timecode.frames = 0;
+		if (vf->flag & VFRAME_FLAG_ERROR_RECOVERY)
+			buf->timecode.frames |= 1;
+		if (vf->flag & VFRAME_FLAG_SYNCFRAME)
+			buf->timecode.frames |= 2;
 		vf_put(vf, dev->vf_receiver_name);
-#ifdef IONVIDEO_DEBUG
-		buf->vb.v4l2_buf.timestamp.tv_sec = dev->pts >> 32;
-		buf->vb.v4l2_buf.timestamp.tv_usec = dev->pts & 0xFFFFFFFF;
-		buf->vb.v4l2_buf.timecode.type = dev->ppmgr2_dev.dst_width;
-		buf->vb.v4l2_buf.timecode.flags = dev->ppmgr2_dev.dst_height;
-#endif
+		buf->timestamp.tv_sec = dev->pts >> 32;
+		buf->timestamp.tv_usec = dev->pts & 0xFFFFFFFF;
+		buf->timecode.type = dev->ppmgr2_dev.dst_width;
+		buf->timecode.flags = dev->ppmgr2_dev.dst_height;
 	}
 	/* ------------------------------------------------------- */
 	return 0;
@@ -348,8 +341,7 @@ static int ionvideo_size_changed(struct ionvideo_dev *dev, int aw, int ah)
 static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 {
 	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
-	struct ionvideo_buffer *buf;
-	unsigned long flags = 0;
+	struct v4l2_buffer *buf;
 	struct vframe_s *vf;
 
 	int w, h;
@@ -358,6 +350,14 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 	/* video seekTo clear list */
 
 	if (!dev)
+		return;
+
+	if (dev->active_state == ION_INACTIVE_REQ) {
+		dev->active_state = ION_INACTIVE;
+		complete(&dev->inactive_done);
+	}
+
+	if (dev->active_state == ION_INACTIVE)
 		return;
 
 	vf = vf_peek(dev->vf_receiver_name);
@@ -384,28 +384,25 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 		usleep_range(4000, 5000);
 		return;
 	}
-	spin_lock_irqsave(&dev->slock, flags);
-	if (list_empty(&dma_q->active)) {
+	mutex_lock(&dev->mutex_input);
+	if (v4l2q_empty(&dev->input_queue)) {
 		dprintk(dev, 3, "No active queue to serve\n");
-		spin_unlock_irqrestore(&dev->slock, flags);
+		mutex_unlock(&dev->mutex_input);
 		schedule_timeout_interruptible(msecs_to_jiffies(20));
 		return;
 	}
-	buf = list_entry(dma_q->active.next, struct ionvideo_buffer, list);
-	spin_unlock_irqrestore(&dev->slock, flags);
+	buf = v4l2q_pop(&dev->input_queue);
+	mutex_unlock(&dev->mutex_input);
 	/* Fill buffer */
 	if (ionvideo_fillbuff(dev, buf))
 		return;
 	dev->vf_wait_cnt = 0;
 
-	spin_lock_irqsave(&dev->slock, flags);
-	list_del(&buf->list);
-	spin_unlock_irqrestore(&dev->slock, flags);
-	vb2_buffer_done(&buf->vb, VB2_BUF_STATE_DONE);
+	mutex_lock(&dev->mutex_output);
+	v4l2q_push(&dev->output_queue, buf);
 	dma_q->vb_ready++;
-#ifdef IONVIDEO_DEBUG
-	dprintk(dev, 4, "[%p/%d] done\n", buf, buf->vb.v4l2_buf.index);
-#endif
+	mutex_unlock(&dev->mutex_output);
+	dprintk(dev, 4, "[%p/%d] done\n", buf, buf->index);
 }
 
 #define frames_to_ms(frames)					\
@@ -455,11 +452,13 @@ static int ionvideo_thread(void *data)
 	return 0;
 }
 
-static int ionvideo_start_generating(struct ionvideo_dev *dev)
+static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 {
+	struct ionvideo_dev *dev = video_drvdata(file);
 	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
 
 	dev->is_omx_video_started = 1;
+	dma_q->vb_ready = 0;
 
 	dprintk(dev, 2, "%s\n", __func__);
 
@@ -483,8 +482,9 @@ static int ionvideo_start_generating(struct ionvideo_dev *dev)
 	return 0;
 }
 
-static void ionvideo_stop_generating(struct ionvideo_dev *dev)
+static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 {
+	struct ionvideo_dev *dev = video_drvdata(file);
 	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
 
 	dprintk(dev, 2, "%s\n", __func__);
@@ -500,157 +500,8 @@ static void ionvideo_stop_generating(struct ionvideo_dev *dev)
 	 * Typical driver might need to wait here until dma engine stops.
 	 * In this case we can abort imiedetly, so it's just a noop.
 	 */
-
-	/* Release all active buffers */
-	while (!list_empty(&dma_q->active)) {
-		struct ionvideo_buffer *buf;
-
-		buf = list_entry(dma_q->active.next, struct ionvideo_buffer,
-					list);
-		list_del(&buf->list);
-		vb2_buffer_done(&buf->vb, VB2_BUF_STATE_ERROR);
-#ifdef IONVIDEO_DEBUG
-		dprintk(dev, 2, "[%p/%d] done\n", buf, buf->vb.v4l2_buf.index);
-#endif
-	}
-}
-/* ------------------------------------------------------------------
- * Videobuf operations
- * ------------------------------------------------------------------
- */
-#ifdef IONVIDEO_DEBUG
-static int queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
-			unsigned int *nbuffers, unsigned int *nplanes,
-			unsigned int sizes[], void *alloc_ctxs[])
-{
-	struct ionvideo_dev *dev = vb2_get_drv_priv(vq);
-	unsigned long size;
-
-	if (fmt)
-		size = fmt->fmt.pix.sizeimage;
-	else
-		size = (dev->width * dev->height * dev->pixelsize) >> 3;
-
-	if (size == 0)
-		return -EINVAL;
-
-	if (*nbuffers == 0)
-		*nbuffers = 32;
-
-	while (size * *nbuffers > vid_limit * MAX_WIDTH * MAX_HEIGHT)
-		(*nbuffers)--;
-
-	*nplanes = 1;
-
-	sizes[0] = size;
-
-	/*
-	 * videobuf2-vmalloc allocator is context-less so no need to set
-	 * alloc_ctxs array.
-	 */
-
-	dprintk(dev, 2, "%s, count=%d, size=%ld\n", __func__, *nbuffers, size);
-
 	return 0;
 }
-#endif
-
-static int buffer_prepare(struct vb2_buffer *vb)
-{
-	struct ionvideo_dev *dev = vb2_get_drv_priv(vb->vb2_queue);
-	struct ionvideo_buffer *buf = container_of(vb, struct ionvideo_buffer,
-							vb);
-	unsigned long size;
-#ifdef IONVIDEO_DEBUG
-	dprintk(dev, 2, "%s, field=%d\n", __func__, vb->v4l2_buf.field);
-#endif
-	WARN_ON(dev->fmt == NULL);
-
-	/*
-	 * Theses properties only change when queue is idle, see s_fmt.
-	 * The below checks should not be performed here, on each
-	 * buffer_prepare (i.e. on each qbuf). Most of the code in this function
-	 * should thus be moved to buffer_init and s_fmt.
-	 */
-	if (dev->width < 48 || dev->width > MAX_WIDTH
-		|| dev->height < 32 || dev->height > MAX_HEIGHT)
-		return -EINVAL;
-
-	size = (dev->width * dev->height * dev->pixelsize) >> 3;
-	if (vb2_plane_size(vb, 0) < size) {
-		dprintk(dev, 1, "%s data will not fit into plane (%lu < %lu)\n",
-			__func__, vb2_plane_size(vb, 0), size);
-		return -EINVAL;
-	}
-
-	vb2_set_plane_payload(&buf->vb, 0, size);
-
-	buf->fmt = dev->fmt;
-
-	return 0;
-}
-
-static void buffer_queue(struct vb2_buffer *vb)
-{
-	struct ionvideo_dev *dev = vb2_get_drv_priv(vb->vb2_queue);
-	struct ionvideo_buffer *buf = container_of(vb, struct ionvideo_buffer,
-							vb);
-	struct ionvideo_dmaqueue *vidq = &dev->vidq;
-	unsigned long flags = 0;
-
-	dprintk(dev, 2, "%s\n", __func__);
-
-	spin_lock_irqsave(&dev->slock, flags);
-	list_add_tail(&buf->list, &vidq->active);
-	spin_unlock_irqrestore(&dev->slock, flags);
-}
-
-static int start_streaming(struct vb2_queue *vq, unsigned int count)
-{
-	struct ionvideo_dev *dev = vb2_get_drv_priv(vq);
-	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
-
-	dev->is_actived = 1;
-	dma_q->vb_ready = 0;
-	dprintk(dev, 2, "%s\n", __func__);
-	return ionvideo_start_generating(dev);
-}
-
-/* abort streaming and wait for last buffer */
-static void stop_streaming(struct vb2_queue *vq)
-{
-	struct ionvideo_dev *dev = vb2_get_drv_priv(vq);
-
-	dev->is_actived = 0;
-	dprintk(dev, 2, "%s\n", __func__);
-	ionvideo_stop_generating(dev);
-}
-
-static void ionvideo_lock(struct vb2_queue *vq)
-{
-	struct ionvideo_dev *dev = vb2_get_drv_priv(vq);
-
-	mutex_lock(&dev->mutex);
-}
-
-static void ionvideo_unlock(struct vb2_queue *vq)
-{
-	struct ionvideo_dev *dev = vb2_get_drv_priv(vq);
-
-	mutex_unlock(&dev->mutex);
-}
-
-static const struct vb2_ops ionvideo_video_qops = {
-#ifdef IONVIDEO_DEBUG
-	.queue_setup = queue_setup,
-#endif
-	.buf_prepare = buffer_prepare,
-	.buf_queue = buffer_queue,
-	.start_streaming = start_streaming,
-	.stop_streaming = stop_streaming,
-	.wait_prepare = ionvideo_unlock,
-	.wait_finish = ionvideo_lock,
-};
 
 /* ------------------------------------------------------------------
  * IOCTL vidioc handling
@@ -678,23 +529,22 @@ static int vidioc_open(struct file *file)
 	dprintk(dev, 2, "vidioc_open\n");
 	IONVID_INFO("ionvideo open\n");
 	init_waitqueue_head(&dev->wq);
-	return v4l2_fh_open(file);
+	return 0;
 }
 
-static int vidioc_release(struct file *file)
+static int vidioc_close(struct file *file)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
 
-	ionvideo_stop_generating(dev);
-	IONVID_INFO("ionvideo_stop_generating!!!!\n");
+	IONVID_INFO("vidioc_close!!!!\n");
 	ppmgr2_release(&(dev->ppmgr2_dev));
-	dprintk(dev, 2, "vidioc_release\n");
-	IONVID_INFO("ionvideo release\n");
+	dprintk(dev, 2, "vidioc_close\n");
+	IONVID_INFO("vidioc_close\n");
 	if (dev->fd_num > 0)
 		dev->fd_num--;
 
 	dev->once_record = 0;
-	return vb2_fop_release(file);
+	return 0;
 }
 
 static int vidioc_querycap(struct file *file, void *priv,
@@ -731,9 +581,6 @@ static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
 				struct v4l2_format *f)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
-	struct vb2_queue *q = &dev->vb_vidq;
-	int ret = 0;
-	unsigned long flags;
 
 	if (dev->freerun_mode == 0) {
 		if (dev->c_width == 0 || dev->c_height == 0)
@@ -741,11 +588,6 @@ static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
 
 		f->fmt.pix.width = dev->c_width;
 		f->fmt.pix.height = dev->c_height;
-		spin_lock_irqsave(&q->done_lock, flags);
-		ret = list_empty(&q->done_list);
-		spin_unlock_irqrestore(&q->done_lock, flags);
-		if (!ret)
-			return -EAGAIN;
 
 	} else {
 		f->fmt.pix.width = dev->width;
@@ -793,17 +635,12 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 				struct v4l2_format *f)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
-	struct vb2_queue *q = &dev->vb_vidq;
 
 	int ret = vidioc_try_fmt_vid_cap(file, priv, f);
 
 	if (ret < 0)
 		return ret;
 
-	if (vb2_is_busy(q)) {
-		dprintk(dev, 1, "%s device busy\n", __func__);
-		return -EBUSY;
-	}
 	dev->fmt = get_format(f);
 	dev->pixelsize = dev->fmt->depth;
 	dev->width = f->fmt.pix.width;
@@ -814,46 +651,31 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
-static int vidioc_enum_framesizes(struct file *file, void *fh,
-					struct v4l2_frmsizeenum *fsize)
-{
-	static const struct v4l2_frmsize_stepwise sizes = {
-		48, MAX_WIDTH, 4, 32, MAX_HEIGHT, 1};
-	int i;
-
-	if (fsize->index)
-		return -EINVAL;
-	for (i = 0; i < ARRAY_SIZE(formats); i++)
-		if (formats[i].fourcc == fsize->pixel_format)
-			break;
-	if (i == ARRAY_SIZE(formats))
-		return -EINVAL;
-	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
-	fsize->stepwise = sizes;
-	return 0;
-}
-
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
 	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
 	struct ppmgr2_device *ppmgr2_dev = &(dev->ppmgr2_dev);
-	int ret = 0;
+	struct dma_buf *dbuf = NULL;
+	struct ion_buffer *buffer = NULL;
+	struct sg_table *table = NULL;
+	struct page *page = NULL;
+	void *phy_addr = NULL;
 
-	p->length = 0;
-	ret = vb2_ioctl_qbuf(file, priv, p);
-	if (ret != 0)
-		return ret;
+	dev->ionvideo_input[p->index] = *p;
 
+	mutex_lock(&dev->mutex_input);
+	v4l2q_push(&dev->input_queue, &(dev->ionvideo_input[p->index]));
+	mutex_unlock(&dev->mutex_input);
 
 	if (!ppmgr2_dev->phy_addr[p->index]) {
-		struct vb2_buffer *vb;
-		struct vb2_queue *q;
-		void *phy_addr = NULL;
+		dbuf = dma_buf_get(p->m.fd);
+		buffer = dbuf->priv;
+		table = buffer->sg_table;
+		page = sg_page(table->sgl);
+		phy_addr = (void *)PFN_PHYS(page_to_pfn(page));
+		dma_buf_put(dbuf);
 
-		q = dev->vdev.queue;
-		vb = q->bufs[p->index];
-		phy_addr = vb2_plane_cookie(vb, 0);
 		ppmgr2_dev->phy_addr[p->index] = phy_addr;
 		ppmgr2_dev->dst_buffer_width = ALIGN(dev->width, 32);
 		ppmgr2_dev->dst_buffer_height = dev->height;
@@ -870,9 +692,10 @@ static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		}
 	}
 	wake_up_interruptible(&dma_q->wq);
-	return ret;
+	return 0;
 }
 
+/*
 static int vidioc_synchronization_dqbuf(struct file *file, void *priv,
 					struct v4l2_buffer *p)
 {
@@ -886,7 +709,6 @@ static int vidioc_synchronization_dqbuf(struct file *file, void *priv,
 
 	q = dev->vdev.queue;
 	if (dev->receiver_register) {
-		/* clear the frame buffer queue */
 		while (!list_empty(&q->done_list)) {
 			ret = vb2_ioctl_dqbuf(file, priv, p);
 			if (ret)
@@ -983,65 +805,43 @@ static int vidioc_synchronization_dqbuf(struct file *file, void *priv,
 
 	return 0;
 }
+*/
 
 static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
 	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
-	int ret = 0;
+	struct v4l2_buffer *out_put = NULL;
 
+/*
 	if (dev->freerun_mode == 0)
 		return vidioc_synchronization_dqbuf(file, priv, p);
+*/
 
-	ret = vb2_ioctl_dqbuf(file, priv, p);
-	if (ret == 0)
+	mutex_lock(&dev->mutex_output);
+	out_put = v4l2q_pop(&dev->output_queue);
+
+	if (out_put != NULL) {
 		dma_q->vb_ready--;
-	return ret;
+		*p = *out_put;
+	} else {
+		mutex_unlock(&dev->mutex_output);
+		return -EAGAIN;
+	}
+	mutex_unlock(&dev->mutex_output);
+	return 0;
 }
 
 #define NUM_INPUTS 10
-/* only one input in this sample driver */
-static int vidioc_enum_input(struct file *file, void *priv,
-				struct v4l2_input *inp)
-{
-	if (inp->index >= NUM_INPUTS)
-		return -EINVAL;
-
-	inp->type = V4L2_INPUT_TYPE_CAMERA;
-	sprintf(inp->name, "Camera %u", inp->index);
-	return 0;
-}
-
-static int vidioc_g_input(struct file *file, void *priv, unsigned int *i)
-{
-	struct ionvideo_dev *dev = video_drvdata(file);
-
-	*i = dev->input;
-	return 0;
-}
-
-static int vidioc_s_input(struct file *file, void *priv, unsigned int i)
-{
-	struct ionvideo_dev *dev = video_drvdata(file);
-
-	if (i >= NUM_INPUTS)
-		return -EINVAL;
-
-	if (i == dev->input)
-		return 0;
-
-	dev->input = i;
-	return 0;
-}
 
 /* ------------------------------------------------------------------
  * File operations for the device
  * ------------------------------------------------------------------
  */
-static const struct v4l2_file_operations ionvideo_fops = {
+static const struct v4l2_file_operations ionvideo_v4l2_fops = {
 	.owner = THIS_MODULE,
 	.open = vidioc_open,
-	.release = vidioc_release,
+	.release = vidioc_close,
 	.read = vb2_fop_read,
 	.poll = vb2_fop_poll,
 	.unlocked_ioctl = video_ioctl2,/* V4L2 ioctl handler */
@@ -1054,29 +854,18 @@ static const struct v4l2_ioctl_ops ionvideo_ioctl_ops = {
 	.vidioc_g_fmt_vid_cap = vidioc_g_fmt_vid_cap,
 	.vidioc_try_fmt_vid_cap = vidioc_try_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap = vidioc_s_fmt_vid_cap,
-	.vidioc_enum_framesizes = vidioc_enum_framesizes,
-	.vidioc_reqbufs = vb2_ioctl_reqbufs,
-	.vidioc_create_bufs = vb2_ioctl_create_bufs,
-	.vidioc_prepare_buf = vb2_ioctl_prepare_buf,
-	.vidioc_querybuf = vb2_ioctl_querybuf,
 	.vidioc_qbuf = vidioc_qbuf,
 	.vidioc_dqbuf = vidioc_dqbuf,
-	.vidioc_enum_input = vidioc_enum_input,
-	.vidioc_g_input = vidioc_g_input,
-	.vidioc_s_input = vidioc_s_input,
-	.vidioc_streamon = vb2_ioctl_streamon,
-	.vidioc_streamoff = vb2_ioctl_streamoff,
-	.vidioc_log_status = v4l2_ctrl_log_status,
-	.vidioc_subscribe_event = v4l2_ctrl_subscribe_event,
-	.vidioc_unsubscribe_event = v4l2_event_unsubscribe,
+	.vidioc_streamon = vidioc_streamon,
+	.vidioc_streamoff = vidioc_streamoff,
 	.vidioc_s_ctrl = vidioc_s_ctrl,
 };
 
 static const struct video_device ionvideo_template = {
 	.name = "ionvideo",
-	.fops = &ionvideo_fops,
+	.fops = &ionvideo_v4l2_fops,
 	.ioctl_ops = &ionvideo_ioctl_ops,
-	.release = video_device_release_empty,
+	.release = video_device_release,
 };
 
 /* -----------------------------------------------------------------
@@ -1084,7 +873,7 @@ static const struct video_device ionvideo_template = {
  * -----------------------------------------------------------------
  */
 /* struct vb2_dc_conf * ionvideo_dma_ctx = NULL; */
-static int ionvideo_release(void)
+static int ionvideo_v4l2_release(void)
 {
 	struct ionvideo_dev *dev;
 	struct list_head *list;
@@ -1116,49 +905,45 @@ static int ionvideo_release(void)
 
 static int video_receiver_event_fun(int type, void *data, void *private_data)
 {
-#ifdef CONFIG_AM_VOUT
-	char *configured[2];
-	char framerate[20] = {0};
-#endif
 	struct ionvideo_dev *dev = (struct ionvideo_dev *)private_data;
 
 	if (type == VFRAME_EVENT_PROVIDER_UNREG) {
 		dev->receiver_register = 0;
 		dev->is_omx_video_started = 0;
+		if (dev->active_state == ION_ACTIVE) {
+			/*if player killed thread may have exit.*/
+			dev->active_state = ION_INACTIVE_REQ;
+			wait_for_completion_timeout(&dev->inactive_done,
+				msecs_to_jiffies(100));
+		}
+
 		/*tsync_avevent(VIDEO_STOP, 0);*/
 		IONVID_INFO("unreg:ionvideo\n");
 	} else if (type == VFRAME_EVENT_PROVIDER_REG) {
 		dev->receiver_register = 1;
 		dev->is_omx_video_started = 1;
 		dev->ppmgr2_dev.interlaced_num = 0;
+		dev->active_state = ION_ACTIVE;
+		init_completion(&dev->inactive_done);
+
+		v4l2q_init(&dev->input_queue, IONVIDEO_POOL_SIZE + 1,
+				&dev->ionvideo_input_queue[0]);
+		v4l2q_init(&dev->output_queue, IONVIDEO_POOL_SIZE + 1,
+				&dev->ionvideo_output_queue[0]);
 		IONVID_INFO("reg:ionvideo\n");
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
 		if (dev->vf_wait_cnt > 1)
 			return RECEIVER_INACTIVE;
 		return RECEIVER_ACTIVE;
 	} else if (type == VFRAME_EVENT_PROVIDER_FR_HINT) {
-		if ((data != NULL) && (ionvideo_seek_flag == 0)) {
 #ifdef CONFIG_AM_VOUT
-			/*set_vframe_rate_hint((unsigned long)(data));*/
-			sprintf(framerate, "FRAME_RATE_HINT=%lu",
-			(unsigned long)data);
-			configured[0] = framerate;
-			configured[1] = NULL;
-			kobject_uevent_env(&(dev->vdev.dev.kobj),
-				KOBJ_CHANGE, configured);
-			pr_info("%s: sent uevent %s\n",
-					__func__, configured[0]);
+		if ((data != NULL) && (ionvideo_seek_flag == 0))
+			set_vframe_rate_hint((unsigned long)(data));
 #endif
-		}
 	} else if (type == VFRAME_EVENT_PROVIDER_FR_END_HINT) {
 #ifdef CONFIG_AM_VOUT
 		if (ionvideo_seek_flag == 0) {
-			configured[0] = "FRAME_RATE_END_HINT";
-			configured[1] = NULL;
-			kobject_uevent_env(&(dev->vdev.dev.kobj),
-					KOBJ_CHANGE, configured);
-			pr_info("%s: sent uevent %s\n",
-				__func__, configured[0]);
+			set_vframe_rate_end_hint();
 		}
 #endif
 	}
@@ -1174,7 +959,6 @@ static int __init ionvideo_create_instance(int inst)
 {
 	struct ionvideo_dev *dev;
 	struct video_device *vfd;
-	struct vb2_queue *q;
 	int ret;
 	unsigned long flags;
 
@@ -1199,26 +983,6 @@ static int __init ionvideo_create_instance(int inst)
 	/* initialize locks */
 	spin_lock_init(&dev->slock);
 
-	/* initialize queue */
-	q = &dev->vb_vidq;
-	q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_DMABUF | VB2_READ;
-	q->drv_priv = dev;
-	q->buf_struct_size = sizeof(struct ionvideo_buffer);
-	q->ops = &ionvideo_video_qops;
-	q->mem_ops = &vb2_ion_memops;
-#ifdef IONVIDEO_DEBUG
-	q->timestamp_type = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
-#else
-	q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
-#endif
-
-#ifdef IONVIDEO_DEBUG
-	ret = vb2_queue_init(q);
-	if (ret)
-		goto unreg_dev;
-#endif
-
 	mutex_init(&dev->mutex);
 
 	/* init video dma queues */
@@ -1230,22 +994,18 @@ static int __init ionvideo_create_instance(int inst)
 	*vfd = ionvideo_template;
 	vfd->dev_debug = debug;
 	vfd->v4l2_dev = &dev->v4l2_dev;
-	vfd->queue = q;
-#ifdef IONVIDEO_DEBUG
-	set_bit(V4L2_FL_USE_FH_PRIO, &vfd->flags);
-#endif
 
 	/*
 	 * Provide a mutex to v4l2 core. It will be used to protect
 	 * all fops and v4l2 ioctls.
 	 */
-	vfd->lock = &dev->mutex;
-	video_set_drvdata(vfd, dev);
 
 	ret = video_register_device(vfd, VFL_TYPE_GRABBER,
 				inst + video_nr_base);
 	if (ret < 0)
 		goto unreg_dev;
+
+	video_set_drvdata(vfd, dev);
 
 	dev->inst = inst;
 	snprintf(dev->vf_receiver_name, ION_VF_RECEIVER_NAME_SIZE,
@@ -1263,6 +1023,9 @@ static int __init ionvideo_create_instance(int inst)
 	flags = ionvideo_devlist_lock();
 	list_add_tail(&dev->ionvideo_devlist, &ionvideo_devlist);
 	ionvideo_devlist_unlock(flags);
+
+	mutex_init(&dev->mutex_input);
+	mutex_init(&dev->mutex_output);
 
 	return 0;
 
@@ -1284,9 +1047,7 @@ int ionvideo_assign_map(char **receiver_name, int *inst)
 	list_for_each(p, &ionvideo_devlist) {
 		dev = list_entry(p, struct ionvideo_dev, ionvideo_devlist);
 
-		if ((dev->inst == *inst) && (!dev->mapped)) {
-			dev->mapped = true;
-			*inst = dev->inst;
+		if (dev->inst == *inst) {
 			*receiver_name = dev->vf_receiver_name;
 			ionvideo_devlist_unlock(flags);
 			return 0;
@@ -1297,8 +1058,9 @@ int ionvideo_assign_map(char **receiver_name, int *inst)
 
 	return -ENODEV;
 }
+EXPORT_SYMBOL(ionvideo_assign_map);
 
-int ionvideo_alloc_map(char **receiver_name, int *inst)
+int ionvideo_alloc_map(int *inst)
 {
 	unsigned long flags;
 	struct ionvideo_dev *dev = NULL;
@@ -1312,7 +1074,6 @@ int ionvideo_alloc_map(char **receiver_name, int *inst)
 		if ((dev->inst >= 0) && (!dev->mapped)) {
 			dev->mapped = true;
 			*inst = dev->inst;
-			*receiver_name = dev->vf_receiver_name;
 			ionvideo_devlist_unlock(flags);
 			return 0;
 		}
@@ -1424,6 +1185,67 @@ __ATTR_NULL };
 static struct class ionvideo_class = {.name = "ionvideo", .class_attrs =
 ion_video_class_attrs, };
 
+static int ionvideo_open(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static int ionvideo_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static long ionvideo_ioctl(struct file *file,
+			    unsigned int cmd,
+			    ulong arg)
+{
+	long ret = 0;
+	void __user *argp = (void __user *)arg;
+
+	switch (cmd) {
+	case IONVIDEO_IOCTL_ALLOC_ID:{
+			u32 ionvideo_id = 0;
+
+			ret = ionvideo_alloc_map(&ionvideo_id);
+			if (ret != 0)
+				break;
+			put_user(ionvideo_id, (u32 __user *)argp);
+		}
+		break;
+	case IONVIDEO_IOCTL_FREE_ID:{
+			u32 ionvideo_id;
+
+			get_user(ionvideo_id, (u32 __user *)argp);
+			ionvideo_release_map(ionvideo_id);
+		}
+		break;
+	default:
+		return -EINVAL;
+	}
+	return ret;
+}
+
+#ifdef CONFIG_COMPAT
+static long ionvideo_compat_ioctl(struct file *file,
+				unsigned int cmd,
+				ulong arg)
+{
+	long ret = 0;
+
+	ret = ionvideo_ioctl(file, cmd, (ulong)compat_ptr(arg));
+	return ret;
+}
+#endif
+static const struct file_operations ionvideo_fops = {
+	.owner = THIS_MODULE,
+	.open = ionvideo_open,
+	.release = ionvideo_release,
+	.unlocked_ioctl = ionvideo_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = ionvideo_compat_ioctl,
+#endif
+	.poll = NULL,
+};
 /* This routine allocates from 1 to n_devs virtual drivers.
  * The real maximum number of virtual drivers will depend on how many drivers
  * will succeed. This is limited to the maximum number of devices that
@@ -1433,9 +1255,6 @@ static int ionvideo_driver_probe(struct platform_device *pdev)
 {
 	int ret = 0, i;
 
-	ret = class_register(&ionvideo_class);
-	if (ret < 0)
-		return ret;
 	if (n_devs <= 0)
 		n_devs = 1;
 
@@ -1468,8 +1287,7 @@ static int ionvideo_driver_probe(struct platform_device *pdev)
 
 static int ionvideo_drv_remove(struct platform_device *pdev)
 {
-	ionvideo_release();
-	class_unregister(&ionvideo_class);
+	ionvideo_v4l2_release();
 	return 0;
 }
 
@@ -1492,17 +1310,49 @@ static struct platform_driver ionvideo_drv = {
 
 static int __init ionvideo_init(void)
 {
+	int ret = -1;
+	struct device *devp;
+
+	ret = class_register(&ionvideo_class);
+	if (ret < 0)
+		return ret;
+
+	ret = register_chrdev(IONVIDEO_MAJOR, "ionvideo", &ionvideo_fops);
+	if (ret < 0) {
+		pr_err("Can't allocate major for ionvideo device\n");
+		goto error1;
+	}
+
+	devp = device_create(&ionvideo_class,
+				NULL,
+				MKDEV(IONVIDEO_MAJOR, 0),
+				NULL,
+				IONVIDEO_DEVICE_NAME);
+	if (IS_ERR(devp)) {
+		pr_err("failed to create ionvideo device node\n");
+		ret = PTR_ERR(devp);
+		return ret;
+	}
+
 	if (platform_driver_register(&ionvideo_drv)) {
 		pr_err("Failed to register ionvideo driver\n");
 		return -ENODEV;
 	}
-
 	return 0;
+
+error1:
+	unregister_chrdev(IONVIDEO_MAJOR, "ionvideo");
+	class_unregister(&ionvideo_class);
+	return ret;
+
 }
 
 static void __exit ionvideo_exit(void)
 {
 	platform_driver_unregister(&ionvideo_drv);
+	device_destroy(&ionvideo_class, MKDEV(IONVIDEO_MAJOR, 0));
+	unregister_chrdev(IONVIDEO_MAJOR, IONVIDEO_DEVICE_NAME);
+	class_unregister(&ionvideo_class);
 }
 
 MODULE_DESCRIPTION("Video Technology Magazine Ion Video Capture Board");

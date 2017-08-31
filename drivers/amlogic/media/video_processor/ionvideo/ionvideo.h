@@ -35,7 +35,6 @@
 #include <media/v4l2-fh.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-common.h>
-#include <media/videobuf2-core.h>
 
 #include <linux/mm.h>
 /* #include <mach/mod_gate.h> */
@@ -48,7 +47,6 @@
 
 #include <linux/amlogic/media/frame_sync/timestamp.h>
 #include <linux/amlogic/media/frame_sync/tsync.h>
-#include "videobuf2-ion.h"
 
 /* Wake up at about 30 fps */
 #define WAKE_NUMERATOR 30
@@ -56,6 +54,8 @@
 
 #define MAX_WIDTH 4096
 #define MAX_HEIGHT 4096
+
+#define IONVIDEO_POOL_SIZE 16
 
 #define IONVID_INFO(fmt, args...) pr_info("ionvid: info: "fmt"", ## args)
 #define IONVID_DBG(fmt, args...) pr_debug("ionvid: dbg: "fmt"", ## args)
@@ -74,6 +74,92 @@ do {                                                    \
 
 #define PPMGR2_CANVAS_INDEX_SRC (PPMGR2_CANVAS_INDEX + 3)
 
+struct v4l2q_s {
+	int rp;
+	int wp;
+	int size;
+	int pre_rp;
+	int pre_wp;
+	struct v4l2_buffer **pool;
+};
+
+static inline void v4l2q_lookup_start(struct v4l2q_s *q)
+{
+	q->pre_rp = q->rp;
+	q->pre_wp = q->wp;
+}
+static inline void v4l2q_lookup_end(struct v4l2q_s *q)
+{
+	q->rp = q->pre_rp;
+	q->wp = q->pre_wp;
+}
+
+static inline void v4l2q_init(struct v4l2q_s *q, u32 size,
+		struct v4l2_buffer **pool)
+{
+	q->rp = q->wp = 0;
+	q->size = size;
+	q->pool = pool;
+}
+
+static inline bool v4l2q_empty(struct v4l2q_s *q)
+{
+	return q->rp == q->wp;
+}
+
+static inline void v4l2q_push(struct v4l2q_s *q, struct v4l2_buffer *vf)
+{
+	int wp = q->wp;
+
+	/*ToDo*/
+	smp_mb();
+
+	q->pool[wp] = vf;
+
+	/*ToDo*/
+	smp_wmb();
+
+	q->wp = (wp == (q->size - 1)) ? 0 : (wp + 1);
+}
+
+static inline struct v4l2_buffer *v4l2q_pop(struct v4l2q_s *q)
+{
+	struct v4l2_buffer *vf;
+	int rp;
+
+	if (v4l2q_empty(q))
+		return NULL;
+
+	rp = q->rp;
+
+	/*ToDo*/
+	smp_rmb();
+
+	vf = q->pool[rp];
+
+	/*ToDo*/
+	smp_mb();
+
+	q->rp = (rp == (q->size - 1)) ? 0 : (rp + 1);
+
+	return vf;
+}
+
+static inline struct v4l2_buffer *v4l2q_peek(struct v4l2q_s *q)
+{
+	return (v4l2q_empty(q)) ? NULL : q->pool[q->rp];
+}
+
+static inline int v4l2q_level(struct v4l2q_s *q)
+{
+	int level = q->wp - q->rp;
+
+	if (level < 0)
+		level += q->size;
+
+	return level;
+}
+
 /* ------------------------------------------------------------------
  * Basic structures
  * ------------------------------------------------------------------
@@ -89,7 +175,6 @@ struct ionvideo_fmt {
 /* buffer for one video frame */
 struct ionvideo_buffer {
 	/* common v4l buffer stuff -- must be first */
-	struct vb2_buffer vb;
 	struct list_head list;
 	const struct ionvideo_fmt *fmt;
 	u64 pts;
@@ -131,6 +216,35 @@ struct ppmgr2_device {
 
 #define ION_VF_RECEIVER_NAME_SIZE 32
 
+#define ION_ACTIVE 0
+#define ION_INACTIVE_REQ 1
+#define ION_INACTIVE 2
+
+struct ion_buffer {
+	struct kref ref;
+	union {
+		struct rb_node node;
+		struct list_head list;
+	};
+	struct ion_device *dev;
+	struct ion_heap *heap;
+	unsigned long flags;
+	unsigned long private_flags;
+	size_t size;
+	void *priv_virt;
+	struct mutex lock;
+	int kmap_cnt;
+	void *vaddr;
+	int dmap_cnt;
+	struct sg_table *sg_table;
+	struct page **pages;
+	struct list_head vmas;
+	/* used to track orphaned buffers */
+	int handle_count;
+	char task_comm[TASK_COMM_LEN];
+	pid_t pid;
+};
+
 struct ionvideo_dev {
 	struct list_head ionvideo_devlist;
 	struct v4l2_device v4l2_dev;
@@ -154,7 +268,6 @@ struct ionvideo_dev {
 	const struct ionvideo_fmt *fmt;
 	unsigned int width, height;
 	unsigned int c_width, c_height;
-	struct vb2_queue vb_vidq;
 	unsigned int field_count;
 
 	unsigned int pixelsize;
@@ -179,6 +292,16 @@ struct ionvideo_dev {
 	bool mapped;
 	bool thread_stopped;
 	int vf_wait_cnt;
+	int active_state;
+	struct completion inactive_done;
+
+	struct v4l2q_s input_queue;
+	struct v4l2q_s output_queue;
+	struct v4l2_buffer *ionvideo_input_queue[IONVIDEO_POOL_SIZE + 1];
+	struct v4l2_buffer *ionvideo_output_queue[IONVIDEO_POOL_SIZE + 1];
+	struct mutex mutex_input;
+	struct mutex mutex_output;
+	struct v4l2_buffer ionvideo_input[IONVIDEO_POOL_SIZE + 1];
 };
 
 unsigned int get_ionvideo_debug(void);
@@ -195,5 +318,9 @@ void ppmgr2_set_angle(struct ppmgr2_device *ppd, int angle);
 void ppmgr2_set_mirror(struct ppmgr2_device *ppd, int mirror);
 void ppmgr2_set_paint_mode(struct ppmgr2_device *ppd, int paint_mode);
 int v4l_to_ge2d_format(int v4l2_format);
+
+#define IONVIDEO_IOC_MAGIC  'I'
+#define IONVIDEO_IOCTL_ALLOC_ID   _IOW(IONVIDEO_IOC_MAGIC, 0x00, int)
+#define IONVIDEO_IOCTL_FREE_ID    _IOW(IONVIDEO_IOC_MAGIC, 0x01, int)
 
 #endif

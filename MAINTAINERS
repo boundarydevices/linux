@@ -14056,3 +14056,9 @@ AMLOGIC ADD PARTITION NORMAL & AB DTS
 M: Xindong Xu <xindong.xu@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/partition_mbox_ab.dtsi
 F: arch/arm64/boot/dts/amlogic/partition_mbox_normal.dtsi
+
+AMLOGIC multimedia
+M:  JinTao Xu <jintao.xu@amlogic.com>
+F: drivers/amlogic/media/video_processor/ionvideo/ion_priv.h
+F: drivers/amlogic/media/video_processor/ionvideo/videobuf2-ion.c
+F: drivers/amlogic/media/video_processor/ionvideo/videobuf2-ion.h
