@@ -136,6 +136,12 @@
 		/* JD2: hp detect high for headphone*/
 		hp-det = <2 0>;
 		audio-routing =
+			"Headphone Jack", "HP_L",
+			"Headphone Jack", "HP_R",
+			"Ext Spk", "SPK_LP",
+			"Ext Spk", "SPK_LN",
+			"Ext Spk", "SPK_RP",
+			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Main MIC",
 			"Main MIC", "MICB";
 		assigned-clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_SRC>,
