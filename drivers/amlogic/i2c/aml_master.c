@@ -223,8 +223,11 @@ static void aml_i2c_get_read_data(struct aml_i2c *i2c, unsigned char *buf,
 	for (i = 0; i < min_t(size_t, len, AML_I2C_MAX_TOKENS>>1); i++)
 		*buf++ = (rdata0 >> (i*8)) & 0xff;
 
-	for (; i < min_t(size_t, len, AML_I2C_MAX_TOKENS); i++)
-		*buf++ = (rdata1 >> ((i - (AML_I2C_MAX_TOKENS>>1))*8)) & 0xff;
+	if (len > 4) {
+		for (i = 4; i < min_t(size_t, len, AML_I2C_MAX_TOKENS); i++)
+			*buf++ = (rdata1 >> ((i - (AML_I2C_MAX_TOKENS>>1))*8))
+					& 0xff;
+	}
 }
 
 static void aml_i2c_fill_data(struct aml_i2c *i2c, unsigned char *buf,
@@ -237,8 +240,10 @@ static void aml_i2c_fill_data(struct aml_i2c *i2c, unsigned char *buf,
 	for (i = 0; i < min_t(size_t, len, AML_I2C_MAX_TOKENS>>1); i++)
 		wdata0 |= (*buf++) << (i*8);
 
-	for (; i < min_t(size_t, len, AML_I2C_MAX_TOKENS); i++)
-		wdata1 |= (*buf++) << ((i - (AML_I2C_MAX_TOKENS>>1))*8);
+	if (len > 4) {
+		for (i = 4; i < min_t(size_t, len, AML_I2C_MAX_TOKENS); i++)
+			wdata1 |= (*buf++) << ((i - (AML_I2C_MAX_TOKENS>>1))*8);
+	}
 
 	i2c->master_regs->i2c_token_wdata_0 = wdata0;
 	i2c->master_regs->i2c_token_wdata_1 = wdata1;
@@ -277,6 +282,7 @@ static long aml_i2c_do_address(struct aml_i2c *i2c, unsigned int addr)
 static void aml_i2c_stop(struct aml_i2c *i2c)
 {
 	struct aml_i2c_reg_ctrl *ctrl;
+	int ret;
 
 	ctrl = (struct aml_i2c_reg_ctrl *)&(i2c->master_regs->i2c_ctrl);
 
@@ -290,8 +296,11 @@ static void aml_i2c_stop(struct aml_i2c *i2c)
 		aml_i2c_set_token_list(i2c);
 		aml_i2c_start_token_xfer(i2c);
 		if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
-			> MESON_CPU_MAJOR_ID_GXBB)
-			aml_i2c_wait_ack(i2c);
+			> MESON_CPU_MAJOR_ID_GXBB) {
+			ret = aml_i2c_wait_ack(i2c);
+			if (ret < 0)
+				return;
+		}
 		else
 			udelay(i2c->wait_xfer_interval);
 	}
