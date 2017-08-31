@@ -287,10 +287,13 @@ int unifykey_dt_create(struct platform_device *pdev)
 			__LINE__);
 		return ret;
 	}
-	/* set default efuse version info */
-	unify_key_info.efuse_version = -1;
-	of_property_read_u32(pdev->dev.of_node, "efuse-version",
+
+	ret = of_property_read_u32(pdev->dev.of_node, "efuse-version",
 		&unify_key_info.efuse_version);
+	if (ret != 0) {
+		pr_info("no efuse-version set, use default value: -1\n");
+		unify_key_info.efuse_version = -1;
+	}
 
 	pr_info("key unify config unifykey-num is %d\n", key_num);
 	unify_key_info.key_num = key_num;
