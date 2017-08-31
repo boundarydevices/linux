@@ -634,6 +634,7 @@
 			f_max = <200000000>;
 			max_req_size = <0x20000>; /**128KB*/
 			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
+			tx_delay = <8>;
 			hw_reset = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
 			pinmux_base = <0xff634400>;
 			card_type = <1>;

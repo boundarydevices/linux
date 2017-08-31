@@ -778,7 +778,7 @@
 				GIC_SPI 88 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmout_a &tdmin_a &tdmout_a_data>;
+		pinctrl-0 = <&tdmin_a &tdmout_a  &tdmout_a_data>;
 	};
 
 	aml_tdmb: tdmb {

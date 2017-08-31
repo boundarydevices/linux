@@ -342,6 +342,8 @@
 		aml-audio-card,name = "AML-AXGSOUND";
 		//aml-audio-card,mclk-fs = <256>;
 
+		aml-audio-card,loopback = <&aml_loopback>;
+
 		aml-audio-card,dai-link@0 {
 			format = "dsp_a";
 			mclk-fs = <256>;//512
@@ -367,7 +369,7 @@
 			mclk-fs = <256>;
 			continuous-clock;
 			//bitclock-inversion;
-			frame-inversion;
+			//frame-inversion;
 			bitclock-master = <&aml_tdmb>;
 			frame-master = <&aml_tdmb>;
 			cpu {
@@ -378,7 +380,8 @@
 				dai-tdm-slot-width = <32>;
 			};
 			codec {
-				sound-dai = <&tas5707_36 &tlv320adc3101_32>;
+				sound-dai = <&tlv320adc3101_32>;
+					/*&tlv320adc3101_30>;*/
 			};
 		};
 
@@ -388,7 +391,7 @@
 			continuous-clock;
 			/* tdmb clk using tdmc so no bclk-inv */
 			//bitclock-inversion;
-			frame-inversion;
+			//frame-inversion;
 			bitclock-master = <&aml_tdmc>;
 			frame-master = <&aml_tdmc>;
 			cpu {
@@ -399,7 +402,7 @@
 				dai-tdm-slot-width = <32>;
 			};
 			codec {
-				sound-dai = <&dummy_codec>;
+				sound-dai = <&tas5707_36 &dummy_codec>;
 			};
 		};
 
@@ -764,7 +767,7 @@
 		dai-tdm-clk-sel = <0>;
 		tdm_from_ddr = <0>;
 		tdm_to_ddr = <0>;
-		clocks = <&clkc CLKID_MPLL2>;
+		clocks = <&clkc CLKID_MPLL0>;
 					//&clkaudio CLKID_AUDIO_TDMOUTA
 					//&clkaudio CLKID_AUDIO_MCLK_A>;
 		clock-names = "mpll0", "gate", "mclk";
@@ -773,7 +776,7 @@
 				GIC_SPI 88 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmout_a &tdmin_a &tdmout_a_data>;
+		pinctrl-0 = <&tdmin_a &tdmout_a  &tdmout_a_data>;
 	};
 
 	aml_tdmb: tdmb {
@@ -781,7 +784,7 @@
 		#sound-dai-cells = <0>;
 		dai-tdm-lane-slot-mask-out = <1 0>;
 		dai-tdm-lane-slot-mask-in = <0 1>;
-		dai-tdm-clk-sel = <2>;
+		dai-tdm-clk-sel = <1>;
 		tdm_from_ddr = <1>;
 		tdm_to_ddr = <1>;
 		clocks = <&clkc CLKID_MPLL1>;
@@ -852,6 +855,40 @@
 		filter_mode = <1>; /* mode 0~4, defalut:1 */
 		status = "okay";
 	};
+
+	aml_loopback: loopback {
+		compatible = "amlogic, snd-loopback";
+		/*
+		 * 0: out rate = in data rate;
+		 * 1: out rate = loopback data rate;
+		 */
+		lb_mode = <0>;
+
+		/* datain src
+		 * 0: tdmin_a;
+		 * 1: tdmin_b;
+		 * 2: tdmin_c;
+		 * 3: spdifin;
+		 * 4: pdmin;
+		 */
+		datain_src = <4>;
+		datain_chnum = <8>;
+		datain_chmask = <0xfc>;
+
+		/* tdmin_lb src
+		 * 0: tdmoutA
+		 * 1: tdmoutB
+		 * 2: tdmoutC
+		 * 3: PAD_tdminA
+		 * 4: PAD_tdminB
+		 * 5: PAD_tdminC
+		 */
+		datalb_src = <2>;
+		datalb_chnum = <2>;
+		datalb_chmask = <0x3>;
+
+		status = "okay";
+	};
 }; /* end of audiobus */
 
 &pinctrl_periphs {
@@ -875,7 +912,6 @@
 			function = "tdma_in";
 		};
 	};
-
 	tdmb_mclk: tdmb_mclk {
 		mux {
 			pins = "GPIOA_1";
@@ -885,7 +921,7 @@
 
 	tdmout_b: tdmout_b {
 		mux {
-			pins = "GPIOA_8", "GPIOA_9", "GPIOA_10";
+			pins = "GPIOA_8", "GPIOA_9";
 			function = "tdmb_out";
 		};
 	};
@@ -900,7 +936,7 @@
 	 */
 	tdmin_b: tdmin_b {
 		mux {
-			pins = "GPIOA_11";
+			pins = "GPIOA_10","GPIOA_11";
 			function = "tdmb_in";
 		};
 	};
