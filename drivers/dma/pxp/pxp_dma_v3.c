@@ -3381,6 +3381,9 @@ config:
 		break;
 	}
 
+	__raw_writel(proc_data->bgcolor,
+		     pxp->base + HW_PXP_PS_BACKGROUND_0);
+
 	if (proc_data->lut_transform && pxp_is_v3(pxp))
 		set_mux(&path_ctrl0);
 
