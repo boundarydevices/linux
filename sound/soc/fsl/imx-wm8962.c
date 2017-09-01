@@ -262,6 +262,8 @@ static int imx_wm8962_set_bias_level(struct snd_soc_card *card,
 	if (dapm->dev != codec_dai->dev)
 		return 0;
 
+	data->clk_frequency = clk_get_rate(data->codec_clk);
+
 	switch (level) {
 	case SND_SOC_BIAS_PREPARE:
 		if (dapm->bias_level == SND_SOC_BIAS_STANDBY) {
@@ -341,6 +343,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		/* We suppose the two substream are using same params */
 		return 0;
 	}
+
+	data->clk_frequency = clk_get_rate(data->codec_clk);
 
 	if (data->is_codec_master)
 		dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
@@ -532,6 +536,9 @@ static int imx_wm8962_late_probe(struct snd_soc_card *card)
 	struct device *dev = &priv->pdev->dev;
 	int ret;
 
+	data->clk_frequency = clk_get_rate(data->codec_clk);
+	rtd = snd_soc_get_pcm_runtime(card, card->dai_link[0].name);
+	codec_dai = rtd->codec_dai;
 	ret = snd_soc_dai_set_sysclk(codec_dai, WM8962_SYSCLK_MCLK,
 			data->clk_frequency, SND_SOC_CLOCK_IN);
 	if (ret < 0)
@@ -668,17 +675,10 @@ audmux_bypass:
 	priv->first_stream = NULL;
 	priv->second_stream = NULL;
 
-	codec_clk = clk_get(&codec_dev->dev, NULL);
-	if (IS_ERR(codec_clk)) {
-		ret = PTR_ERR(codec_clk);
+	data->codec_clk = clk_get(&codec_dev->dev, NULL);
+	if (IS_ERR(data->codec_clk)) {
+		ret = PTR_ERR(data->codec_clk);
 		dev_err(&codec_dev->dev, "failed to get codec clk: %d\n", ret);
-		goto fail;
-	}
-
-	data->clk_frequency = clk_get_rate(data->codec_clk);
-	ret = clk_prepare_enable(data->codec_clk);
-	if (ret) {
-		dev_err(&codec_dev->dev, "failed to enable codec clk: %d\n", ret);
 		goto fail;
 	}
 
