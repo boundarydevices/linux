@@ -462,6 +462,7 @@
 
 	aliases {
 		fb_lcd = &lcdif;
+		lcd = &display0;
 		mmc0 = &usdhc1;
 		mmc1 = &usdhc3;
 		mmc2 = &usdhc2;
