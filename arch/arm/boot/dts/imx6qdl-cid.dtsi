@@ -526,7 +526,7 @@
 		enable-gpios = GP_BACKLIGHT_MIPI_EN;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_mipi>;
-		pwms = <&pwm1 0 5000000>;
+		pwms = <&pwm1 0 30000>;
 	};
 
 	bt_rfkill: bt_rfkill {
