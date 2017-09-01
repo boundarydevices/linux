@@ -895,16 +895,20 @@ static void usb_early_suspend(struct early_suspend *h)
 	dwc_otg_device = (dwc_otg_device_t *)h->param;
 	is_mount = get_pcd_ums_state(dwc_otg_device->pcd);
 	DWC_DEBUG("DWC_OTG: going early suspend! is_mount=%d\n", is_mount);
+	if (dwc_otg_device->core_if->controller_type == 0) {
 	if (dwc_otg_is_device_mode(dwc_otg_device->core_if) && !is_mount)
 		DWC_MODIFY_REG32(&dwc_otg_device->core_if->dev_if->dev_global_regs->dctl, 0, 2);
+	}
 }
 static void usb_early_resume(struct early_suspend *h)
 {
 	dwc_otg_device_t *dwc_otg_device;
 	DWC_DEBUG("DWC_OTG: going early resume\n");
 	dwc_otg_device = (dwc_otg_device_t *)h->param;
+	if (dwc_otg_device->core_if->controller_type == 0) {
 	if (dwc_otg_is_device_mode(dwc_otg_device->core_if))
 		DWC_MODIFY_REG32(&dwc_otg_device->core_if->dev_if->dev_global_regs->dctl, 2, 0);
+	}
 }
 #endif
 static const struct of_device_id dwc_otg_dt_match[] = {
