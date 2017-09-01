@@ -1716,6 +1716,9 @@ static unsigned char is_input2pre(void)
 #ifdef DI_USE_FIXED_CANVAS_IDX
 static int di_post_idx[2][6];
 static int di_pre_idx[2][10];
+#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
+static unsigned int di_inp_idx[3];
+#endif
 static int di_get_canvas(void)
 {
 	int pre_num = 7, post_num = 6, i = 0;
@@ -1770,6 +1773,16 @@ static int di_get_canvas(void)
 	for (i = 0; i < post_num; i++)
 		pr_info("\t [%d] [%d]", di_post_idx[0][i], di_post_idx[1][i]);
 	pr_info("\n");
+
+#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
+	if (canvas_pool_alloc_canvas_table("di_inp", &di_inp_idx[0], 3,
+			CANVAS_MAP_TYPE_1)) {
+		pr_err("%s allocat di inp canvas error.\n", __func__);
+		return 1;
+	}
+	pr_info("DI: support multi decoding %u~%u~%u.\n",
+		di_inp_idx[0], di_inp_idx[1], di_inp_idx[2]);
+#endif
 	return 0;
 }
 static void config_canvas_idx(struct di_buf_s *di_buf, int nr_canvas_idx,
@@ -3695,6 +3708,27 @@ static struct di_buf_s *get_free_linked_buf(int idx)
 	return di_buf;
 }
 
+#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
+static void pre_inp_canvas_config(struct vframe_s *vf)
+{
+	if (vf->canvas0Addr == (u32)-1) {
+		canvas_config_config(di_inp_idx[0],
+			&vf->canvas0_config[0]);
+		canvas_config_config(di_inp_idx[1],
+			&vf->canvas0_config[1]);
+		vf->canvas0Addr = (di_inp_idx[1]<<8)|(di_inp_idx[0]);
+		if (vf->plane_num == 2) {
+			vf->canvas0Addr |= (di_inp_idx[1]<<16);
+		} else if (vf->plane_num == 3) {
+			canvas_config_config(di_inp_idx[2],
+			&vf->canvas0_config[2]);
+			vf->canvas0Addr |= (di_inp_idx[2]<<16);
+		}
+		vf->canvas1Addr = vf->canvas0Addr;
+	}
+}
+#endif
+
 static bool pre_de_proc(void)
 {
 	int in_buf_num = 0, i = 0;
@@ -3792,10 +3826,14 @@ static unsigned char pre_de_buf_config(void)
 
 		if (vframe == NULL)
 			return 0;
-		di_print("DI: get vframe[0x%p] from frontend %u ms.\n",
+		else {
+			#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
+			pre_inp_canvas_config(vframe);
+			#endif
+			di_print("DI: get vframe[0x%p] from frontend %u ms.\n",
 			vframe,
-		jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
-
+			jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
+		}
 		vframe->prog_proc_config = (prog_proc_config&0x20) >> 5;
 		di_pre_stru.source_trans_fmt = vframe->trans_fmt;
 		di_pre_stru.left_right = di_pre_stru.left_right ? 0 : 1;
