@@ -33,6 +33,9 @@
 
 #include <asm/setup.h>
 #include <crypto/hash.h>
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <crypto/hash_info.h>
+#endif
 #include <crypto/public_key.h>
 #include <crypto/sha.h>
 #include <keys/asymmetric-type.h>
@@ -96,11 +99,12 @@ static int __init verity_buildvariant(char *line)
 
 __setup("buildvariant=", verity_buildvariant);
 
+#ifndef CONFIG_AMLOGIC_MODIFY
 static inline bool default_verity_key_id(void)
 {
 	return veritykeyid[0] != '\0';
 }
-
+#endif
 static inline bool is_eng(void)
 {
 	static const char typeeng[]  = "eng";
@@ -122,6 +126,7 @@ static inline bool is_unlocked(void)
 	return !strncmp(verifiedbootstate, unlocked, sizeof(unlocked));
 }
 
+#ifndef CONFIG_AMLOGIC_MODIFY
 static int table_extract_mpi_array(struct public_key_signature *pks,
 				const void *data, size_t len)
 {
@@ -190,6 +195,7 @@ error:
 	crypto_free_shash(tfm);
 	return ERR_PTR(ret);
 }
+#endif
 
 static int read_block_dev(struct bio_read *payload, struct block_device *bdev,
 		sector_t offset, int length)
@@ -230,7 +236,11 @@ static int read_block_dev(struct bio_read *payload, struct block_device *bdev,
 		}
 	}
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (!submit_bio_wait(bio))
+#else
 	if (!submit_bio_wait(READ, bio))
+#endif
 		/* success */
 		goto free_bio;
 	DMERR("bio read failed");
@@ -567,6 +577,7 @@ static int verity_mode(void)
 	return DM_VERITY_MODE_EIO;
 }
 
+#ifndef CONFIG_AMLOGIC_MODIFY
 static int verify_verity_signature(char *key_id,
 		struct android_metadata *metadata)
 {
@@ -611,6 +622,7 @@ error:
 
 	return retval;
 }
+#endif
 
 static void handle_error(void)
 {
@@ -694,8 +706,13 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	dev_t uninitialized_var(dev);
 	struct android_metadata *metadata = NULL;
 	int err = 0, i, mode;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	char *table_ptr, dummy, *target_device,
+	*verity_table_args[VERITY_TABLE_ARGS + 2 + VERITY_TABLE_OPT_FEC_ARGS];
+#else
 	char *key_id, *table_ptr, dummy, *target_device,
 	*verity_table_args[VERITY_TABLE_ARGS + 2 + VERITY_TABLE_OPT_FEC_ARGS];
+#endif
 	/* One for specifying number of opt args and one for mode */
 	sector_t data_sectors;
 	u32 data_block_size;
@@ -705,6 +722,14 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	char buf[FEC_ARG_LENGTH], *buf_ptr;
 	unsigned long long tmpll;
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	DMERR("come to android_verity_ctr in dm-android-verity.c");
+	if (argc < 10) {
+		DMERR("Incorrect number of arguments");
+		handle_error();
+		return -EINVAL;
+	}
+#else
 	if (argc == 1) {
 		/* Use the default keyid */
 		if (default_verity_key_id())
@@ -721,10 +746,16 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		handle_error();
 		return -EINVAL;
 	}
+#endif
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	target_device = argv[1];
+	dev = dm_get_dev_t(argv[1]);
+#else
 	target_device = argv[0];
 
 	dev = name_to_dev_t(target_device);
+#endif
 	if (!dev) {
 		DMERR("no dev found for %s", target_device);
 		handle_error();
@@ -734,9 +765,11 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	if (is_eng())
 		return create_linear_device(ti, dev, target_device);
 
+#ifndef CONFIG_AMLOGIC_MODIFY
 	strreplace(key_id, '#', ' ');
 
 	DMINFO("key:%s dev:%s", key_id, target_device);
+#endif
 
 	if (extract_fec_header(dev, &fec, &ecc)) {
 		DMERR("Error while extracting fec header");
@@ -757,6 +790,7 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		goto free_metadata;
 	}
 
+#ifndef CONFIG_AMLOGIC_MODIFY
 	if (verity_enabled) {
 		err = verify_verity_signature(key_id, metadata);
 
@@ -767,6 +801,7 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		} else
 			DMINFO("Signature verification success");
 	}
+#endif
 
 	table_ptr = metadata->verity_table;
 
