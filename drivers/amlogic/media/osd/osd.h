@@ -273,9 +273,7 @@ struct osd_fence_map_s {
 	u32 xoffset;
 	u32 yoffset;
 	u32 yres;
-	s32 in_fd;
 	s32 out_fd;
-	u32 val;
 	u32 ext_addr;
 	u32 format;
 	u32 width;
@@ -289,7 +287,7 @@ struct osd_fence_map_s {
 	int byte_stride;
 	int pxiel_stride;
 	u32 reserve;
-	struct sync_fence *in_fence;
+	struct fence *in_fence;
 };
 
 struct afbcd_data_s {

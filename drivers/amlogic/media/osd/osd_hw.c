@@ -30,6 +30,9 @@
 #include <linux/kthread.h>
 /* Android Headers */
 
+/* Amlogic sync headers */
+#include <linux/amlogic/aml_sync_api.h>
+
 /* Amlogic Headers */
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vinfo.h>
@@ -71,6 +74,7 @@
 #define OSD_TYPE_BOT_FIELD 1
 
 #define WAIT_AFBC_READY_COUNT 100
+#define osd_tprintk(...)
 
 struct hw_para_s osd_hw;
 static DEFINE_MUTEX(osd_mutex);
@@ -84,7 +88,7 @@ static void osd_clone_pan(u32 index, u32 yoffset, int debug_flag);
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 /* sync fence relative varible. */
 static int timeline_created;
-static struct sw_sync_timeline *timeline;
+static void *osd_timeline;
 static u32 cur_streamline_val;
 /* thread control part */
 struct kthread_worker buffer_toggle_worker;
@@ -93,6 +97,67 @@ struct kthread_work buffer_toggle_work;
 struct list_head post_fence_list;
 struct mutex post_fence_list_lock;
 static void osd_pan_display_fence(struct osd_fence_map_s *fence_map);
+
+static void *osd_timeline_create(void)
+{
+	const char *tlName = "osd_timeline";
+
+	if (osd_timeline == NULL) {
+		osd_timeline = aml_sync_create_timeline(tlName);
+		osd_tprintk("osd timeline create\n");
+	}
+
+	return osd_timeline;
+}
+
+static int osd_timeline_create_fence(void)
+{
+	int out_fence_fd = -1;
+	u32 pt_val = 0;
+
+	pt_val = cur_streamline_val + 1;
+	out_fence_fd = aml_sync_create_fence(osd_timeline, pt_val);
+	osd_tprintk("osd created out pt:%d, fence_fd:%d\n",
+			pt_val, out_fence_fd);
+
+	if (out_fence_fd >= 0)
+		cur_streamline_val++;
+	else
+		pr_debug("create fence returned %d", out_fence_fd);
+	return out_fence_fd;
+}
+
+static void  osd_timeline_increase(void)
+{
+	aml_sync_inc_timeline(osd_timeline, 1);
+	osd_tprintk("osd out timeline inc\n");
+}
+
+static struct fence *osd_get_fenceobj(int fencefd)
+{
+	struct fence *syncobj = NULL;
+
+	if (fencefd < 0)
+		return NULL;
+
+	syncobj = aml_sync_get_fence(fencefd);
+	osd_tprintk("osd get in fence%p, fd:%d\n", syncobj, fencefd);
+
+	return syncobj;
+}
+
+static int osd_wait_fenceobj(struct fence *fence, long timeout)
+{
+	osd_tprintk("osd wait in fence%p\n", fence);
+	return aml_sync_wait_fence(fence, timeout);
+}
+
+static void osd_put_fenceobj(struct fence *fence)
+{
+	osd_tprintk("osd put fence\n");
+	aml_sync_put_fence(fence);
+}
+
 #endif
 
 static int pxp_mode;
@@ -303,7 +368,7 @@ static void osd_toggle_buffer(struct kthread_work *work)
 	list_for_each_entry_safe(data, next, &saved_list, list) {
 		osd_pan_display_fence(data);
 		if (data->in_fence)
-			sync_fence_put(data->in_fence);
+			osd_put_fenceobj(data->in_fence);
 		list_del(&data->list);
 		kfree(data);
 	}
@@ -311,55 +376,36 @@ static void osd_toggle_buffer(struct kthread_work *work)
 
 static int out_fence_create(int *release_fence_fd, u32 *val, u32 buf_num)
 {
-	/* the first time create out_fence_fd==0 */
-	/* sw_sync_timeline_inc  will release fence and it's sync point */
-	struct sync_pt *outer_sync_pt;
-	struct sync_fence *outer_fence;
 	int out_fence_fd = -1;
 
-	out_fence_fd = get_unused_fd_flags(O_CLOEXEC);
-	/* no file descriptor could be used. Error. */
-	if (out_fence_fd < 0)
-		return -1;
-	if (!timeline_created) { /* timeline has not been created */
-		timeline = sw_sync_timeline_create("osd_timeline");
-		cur_streamline_val = 1;
-		if (timeline == NULL)
+	if (!timeline_created) {
+		if (osd_timeline_create() == NULL)
 			return -1;
+
 		kthread_init_worker(&buffer_toggle_worker);
 		buffer_toggle_thread = kthread_run(kthread_worker_fn,
-				&buffer_toggle_worker, "aml_buf_toggle");
+			&buffer_toggle_worker, "aml_buf_toggle");
 		kthread_init_work(&buffer_toggle_work, osd_toggle_buffer);
 		timeline_created = 1;
 	}
-	/* install fence map; first ,the simplest. */
-	cur_streamline_val++;
-	*val = cur_streamline_val;
-	outer_sync_pt = sw_sync_pt_create(timeline, *val);
-	if (outer_sync_pt == NULL)
-		goto error_ret;
-	/* fence object will be released when no point */
-	outer_fence = sync_fence_create("osd_fence_out", outer_sync_pt);
-	if (outer_fence == NULL) {
-		sync_pt_free(outer_sync_pt); /* free sync point. */
-		goto error_ret;
-	}
-	sync_fence_install(outer_fence, out_fence_fd);
-	*release_fence_fd = out_fence_fd;
-	return out_fence_fd;
 
-error_ret:
-	cur_streamline_val--; /* pt or fence fail,restore timeline value. */
-	osd_log_err("fence obj create fail\n");
-	put_unused_fd(out_fence_fd);
-	return -1;
+	out_fence_fd = osd_timeline_create_fence();
+	if (out_fence_fd < 0) {
+		osd_log_err("fence obj create fail\n");
+		out_fence_fd = -1;
+	}
+	*release_fence_fd = out_fence_fd;
+
+	return out_fence_fd;
 }
 
 int osd_sync_request(u32 index, u32 yres, u32 xoffset, u32 yoffset,
-		     s32 in_fence_fd)
+	   s32 in_fence_fd)
 {
 	int out_fence_fd = -1;
 	int buf_num = 0;
+	u32 val;
+
 	struct osd_fence_map_s *fence_map =
 		kzalloc(sizeof(struct osd_fence_map_s), GFP_KERNEL);
 	buf_num = find_buf_num(yres, yoffset);
@@ -374,14 +420,13 @@ int osd_sync_request(u32 index, u32 yres, u32 xoffset, u32 yoffset,
 	fence_map->yoffset = yoffset;
 	fence_map->xoffset = xoffset;
 	fence_map->yres = yres;
-	fence_map->in_fd = in_fence_fd;
-	fence_map->in_fence = sync_fence_fdget(in_fence_fd);
+	osd_tprintk("request fence fd:%d\n", in_fence_fd);
+	fence_map->in_fence = osd_get_fenceobj(in_fence_fd);
 	fence_map->out_fd =
-		out_fence_create(&out_fence_fd, &fence_map->val, buf_num);
+		out_fence_create(&out_fence_fd, &val, buf_num);
 	list_add_tail(&fence_map->list, &post_fence_list);
 	mutex_unlock(&post_fence_list_lock);
 	kthread_queue_work(&buffer_toggle_worker, &buffer_toggle_work);
-	__close_fd(current->files, in_fence_fd);
 	return  out_fence_fd;
 }
 
@@ -393,6 +438,7 @@ int osd_sync_request_render(u32 index, u32 yres,
 	int buf_num = 0;
 	u32 xoffset, yoffset;
 	s32 in_fence_fd;
+	u32 val;
 	struct osd_fence_map_s *fence_map =
 		kzalloc(sizeof(struct osd_fence_map_s), GFP_KERNEL);
 
@@ -411,7 +457,6 @@ int osd_sync_request_render(u32 index, u32 yres,
 	fence_map->yoffset = yoffset;
 	fence_map->xoffset = xoffset;
 	fence_map->yres = yres;
-	fence_map->in_fd = in_fence_fd;
 	fence_map->ext_addr = phys_addr;
 	if (fence_map->ext_addr) {
 		fence_map->format = request->format;
@@ -427,32 +472,26 @@ int osd_sync_request_render(u32 index, u32 yres,
 	}
 	fence_map->compose_type = request->type;
 	fence_map->op = request->op;
-	fence_map->in_fence = sync_fence_fdget(in_fence_fd);
+	osd_tprintk("direct render fence fd:%d\n", in_fence_fd);
+	fence_map->in_fence = osd_get_fenceobj(in_fence_fd);
 	fence_map->out_fd =
-		out_fence_create(&out_fence_fd, &fence_map->val, buf_num);
+		out_fence_create(&out_fence_fd, &val, buf_num);
 	list_add_tail(&fence_map->list, &post_fence_list);
 	mutex_unlock(&post_fence_list_lock);
 	kthread_queue_work(&buffer_toggle_worker, &buffer_toggle_work);
 	request->out_fen_fd = out_fence_fd;
-	__close_fd(current->files, in_fence_fd);
 	return  out_fence_fd;
 }
 
 static int osd_wait_buf_ready(struct osd_fence_map_s *fence_map)
 {
 	s32 ret = -1;
-	struct sync_fence *buf_ready_fence = NULL;
-
-	if (fence_map->in_fd <= 0) {
-		ret = -1;
-		return ret;
-	}
-	buf_ready_fence = fence_map->in_fence;
+	struct fence *buf_ready_fence = fence_map->in_fence;
 	if (buf_ready_fence == NULL) {
 		ret = -1;/* no fence ,output directly. */
 		return ret;
 	}
-	ret = sync_fence_wait(buf_ready_fence, -1);
+	ret = osd_wait_fenceobj(buf_ready_fence, 4000);
 	if (ret < 0) {
 		osd_log_err("Sync Fence wait error:%d\n", ret);
 		osd_log_err("-----wait buf idx:[%d] ERROR\n"
@@ -466,7 +505,7 @@ static int osd_wait_buf_ready(struct osd_fence_map_s *fence_map)
 
 #else
 int osd_sync_request(u32 index, u32 yres, u32 xoffset, u32 yoffset,
-		     s32 in_fence_fd)
+	   s32 in_fence_fd)
 {
 	osd_log_err("osd_sync_request not supported\n");
 	return -5566;
@@ -2347,7 +2386,7 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 	}
 	if (timeline_created) {
 		if (ret)
-			sw_sync_timeline_inc(timeline, 1);
+			osd_timeline_increase();
 		else
 			osd_log_err("------NOT signal out_fence ERROR\n");
 	}
