@@ -843,6 +843,8 @@ static void cvbs_debug_store(char *buf)
 		}
 
 		func_type_map(argv[1]);
+		if (func_read == NULL)
+			goto DEBUG_END;
 		ret = kstrtoul(argv[2], 16, &addr);
 
 		print_info("read %s[0x%x] = 0x%x\n",
@@ -859,6 +861,8 @@ static void cvbs_debug_store(char *buf)
 		}
 
 		func_type_map(argv[1]);
+		if (func_read == NULL)
+			goto DEBUG_END;
 		ret = kstrtoul(argv[2], 16, &addr);
 		ret = kstrtoul(argv[3], 10, &start);
 		ret = kstrtoul(argv[4], 10, &length);
@@ -885,7 +889,8 @@ static void cvbs_debug_store(char *buf)
 		}
 
 		func_type_map(argv[1]);
-
+		if (func_read == NULL)
+			goto DEBUG_END;
 		ret = kstrtoul(argv[2], 16, &start);
 		ret = kstrtoul(argv[3], 16, &end);
 
@@ -903,7 +908,8 @@ static void cvbs_debug_store(char *buf)
 		}
 
 		func_type_map(argv[2]);
-
+		if (func_write == NULL)
+			goto DEBUG_END;
 		ret = kstrtoul(argv[1], 16, &value);
 		ret = kstrtoul(argv[3], 16, &addr);
 
@@ -921,7 +927,8 @@ static void cvbs_debug_store(char *buf)
 		}
 
 		func_type_map(argv[2]);
-
+		if (func_read == NULL)
+			goto DEBUG_END;
 		ret = kstrtoul(argv[1], 16, &value);
 		ret = kstrtoul(argv[3], 16, &addr);
 		ret = kstrtoul(argv[4], 10, &start);

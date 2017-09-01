@@ -584,7 +584,6 @@ fail_create_device:
 	cdev_del(&devp->cdev);
 fail_add_cdev:
 	pr_err("%s: add device error\n", __func__);
-	kfree(devp);
 fail_create_class:
 	pr_err("%s: class create error\n", __func__);
 	class_destroy(devp->clsp);
@@ -603,7 +602,6 @@ static int __exit aml_vdac_remove(struct platform_device *pdev)
 	cdev_del(&devp->cdev);
 	class_destroy(devp->clsp);
 	unregister_chrdev_region(devp->devno, 1);
-	kfree(devp);
 	pr_info("%s: amvdac_exit.\n", __func__);
 
 	return 0;
