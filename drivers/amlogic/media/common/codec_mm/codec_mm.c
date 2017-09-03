@@ -638,7 +638,7 @@ void codec_mm_release(struct codec_mm_s *mem, const char *owner)
 	if (!mem)
 		return;
 
-	spin_lock_irqsave(&mem->lock, flags);
+	spin_lock_irqsave(&mgt->lock, flags);
 	index = atomic_dec_return(&mem->use_cnt);
 	max_owner = mem->owner[index];
 	for (i = 0; i < index; i++) {
@@ -651,13 +651,13 @@ void codec_mm_release(struct codec_mm_s *mem, const char *owner)
 			mem->from_flags, index);
 	mem->owner[index] = NULL;
 	if (index == 0) {
-		spin_unlock_irqrestore(&mem->lock, flags);
-		codec_mm_free_in(mgt, mem);
 		list_del(&mem->list);
+		spin_unlock_irqrestore(&mgt->lock, flags);
+		codec_mm_free_in(mgt, mem);
 		kfree(mem);
 		return;
 	}
-	spin_unlock_irqrestore(&mem->lock, flags);
+	spin_unlock_irqrestore(&mgt->lock, flags);
 }
 EXPORT_SYMBOL(codec_mm_release);
 

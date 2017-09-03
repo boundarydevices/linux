@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/media/video_sink/video_keeper.h
+ * include/linux/amlogic/tee.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,18 +15,11 @@
  *
  */
 
-#ifndef VIDEO_KEEPER_HEADER___
-#define VIDEO_KEEPER_HEADER___
+#ifndef __TEE_H__
+#define __TEE_H__
 
-#include <linux/amlogic/media/vfm/vframe.h>
+extern bool tee_enabled(void);
+extern int is_secload_get(void);
+extern int tee_load_video_fw(uint32_t index);
+#endif /* __TEE_H__ */
 
-void video_keeper_new_frame_notify(void);
-void try_free_keep_video(int flags);
-
-int __init video_keeper_init(void);
-void __exit video_keeper_exit(void);
-unsigned int vf_keep_current(
-	struct vframe_s *cur_dispbuf,
-	struct vframe_s *cur_dispbuf2);
-
-#endif

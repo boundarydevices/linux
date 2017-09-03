@@ -1803,6 +1803,11 @@ static void vpp_set_scaler(u32 process_3d_type, u32 src_width,
 			next_frame_par->supsc1_hori_ratio = 0;
 		else
 			next_frame_par->supsc1_hori_ratio = 1;
+		/* disble sp1 for this case */
+		if ((vpp_wide_mode == VIDEO_WIDEOPTION_NONLINEAR)
+			&& (next_frame_par->supscl_path
+			== sup0_pp_sp1_scpath))
+			next_frame_par->supsc1_hori_ratio = 0;
 		next_frame_par->supsc0_enable =
 			(next_frame_par->supsc0_hori_ratio ||
 			next_frame_par->supsc0_enable) ? 1 : 0;
@@ -1965,6 +1970,21 @@ static void vpp_set_scaler(u32 process_3d_type, u32 src_width,
 			next_frame_par->supsc1_vert_ratio;
 	}
 
+	if ((vpp_wide_mode == VIDEO_WIDEOPTION_NONLINEAR) &&
+		(next_frame_par->VPP_hsc_endp >
+		next_frame_par->VPP_hsc_startp)) {
+		s32 start, end;
+		struct vppfilter_mode_s *filter =
+			&next_frame_par->vpp_filter;
+		start = next_frame_par->VPP_hsc_startp;
+		end = next_frame_par->VPP_hsc_endp;
+		calculate_non_linear_ratio(
+			(filter->vpp_hsc_start_phase_step >> 6),
+			end - start,
+			next_frame_par);
+		next_frame_par->VPP_hsc_linear_startp =
+		next_frame_par->VPP_hsc_linear_endp = (start + end) / 2;
+	}
 	if (h_crop_enable) {
 		next_frame_par->VPP_hd_start_lines_ += video_source_crop_left;
 		next_frame_par->VPP_hd_end_lines_ += video_source_crop_left;

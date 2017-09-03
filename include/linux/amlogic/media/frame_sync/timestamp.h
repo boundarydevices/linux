@@ -48,6 +48,8 @@ extern u32 timestamp_pcrscr_enable_state(void);
 
 extern void timestamp_pcrscr_set_adj(s32 inc);
 
+extern void timestamp_pcrscr_set_adj_pcr(s32 inc);
+
 extern void timestamp_apts_enable(u32 enable);
 
 extern void timestamp_apts_start(u32 enable);

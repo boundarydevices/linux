@@ -252,6 +252,8 @@ extern int power_key_pressed;
 #ifdef CONFIG_AM_VIDEO2
 extern void set_clone_frame_rate(unsigned int frame_rate, unsigned int delay);
 #endif
+extern struct vframe_provider_s *vf_get_provider_by_name(
+	const char *provider_name);
 
 extern void prot_get_parameter(u32 wide_mode, struct vframe_s *vf,
 			       struct vpp_frame_par_s *next_frame_par,

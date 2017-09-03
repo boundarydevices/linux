@@ -104,3 +104,5 @@ obj-$(CONFIG_AMLOGIC_DDR_WINDOW_TOOL)       += ddr_window/
 obj-$(CONFIG_DRM_MESON)	+= drm/
 
 obj-$(CONFIG_AMLOGIC_M8B_SM) += secure_monitor/
+
+obj-$(CONFIG_AMLOGIC_TEE) += tee/

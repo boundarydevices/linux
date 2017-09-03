@@ -1,0 +1,8 @@
+config AMLOGIC_TEE
+	tristate "TEE Support for Amlogic"
+	default n
+	help
+	  Amlogic TEE driver
+
+	  Provide TEE APIs and Debug interface in sysfs, depends on the
+	  tee os.

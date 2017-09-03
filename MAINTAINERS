@@ -14079,3 +14079,8 @@ F: arch/arm64/configs/meson64_smarthome_defconfig
 AMLOGIC MESONGXL ADD P241 DTS
 M:	Lianghu Su <lianghu.su@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/gxl_p241_1g_buildroot.dts
+
+AMLOGIC tee
+M:  Nanxin Qin <nanxin.qin@amlogic.com>
+F: drivers/amlogic/tee/*
+F: include/linux/amlogic/tee.h

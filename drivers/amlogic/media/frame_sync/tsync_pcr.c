@@ -330,7 +330,7 @@ u32 tsync_pcr_get_min_checkinpts(void)
 	u32 last_checkin_vpts = get_last_checkin_pts(PTS_TYPE_VIDEO);
 	u32 last_checkin_apts = get_last_checkin_pts(PTS_TYPE_AUDIO);
 
-	if (last_checkin_apts > 0 && last_checkin_apts > 0)
+	if (last_checkin_vpts > 0 && last_checkin_apts > 0)
 		return min(last_checkin_vpts, last_checkin_apts);
 	else if (last_checkin_apts > 0)
 		return last_checkin_apts;
@@ -407,7 +407,9 @@ void tsync_pcr_pcrscr_set(void)
 	if (cur_pcr && !(tsync_pcr_inited_flag & complete_init_flag)
 		&& (min_checkinpts != 0)) {
 		tsync_pcr_inited_flag |= TSYNC_PCR_INITCHECK_PCR;
-		ref_pcr = cur_pcr - tsync_pcr_adj_value * 15;
+		if (cur_pcr > tsync_pcr_adj_value * 15)
+			ref_pcr = cur_pcr - tsync_pcr_adj_value * 15;
+
 		timestamp_pcrscr_set(ref_pcr);
 		tsync_pcr_usepcr = 1;
 
@@ -431,12 +433,14 @@ void tsync_pcr_pcrscr_set(void)
 		ref_pcr = first_apts;
 
 		/* add it for dolby av sync */
-		if (cur_pcr > 0)
+		if (cur_pcr > tsync_apts_adj_value)
 			ref_pcr = cur_pcr - tsync_apts_adj_value;
 
 		timestamp_pcrscr_set(ref_pcr);
 		if (cur_pcr > 0)
 			tsync_pcr_usepcr = 1;
+		else
+			tsync_pcr_usepcr = 0;
 
 		timestamp_pcrscr_enable(1);
 		pr_info
@@ -456,10 +460,14 @@ void tsync_pcr_pcrscr_set(void)
 	if (first_vpts && !(tsync_pcr_inited_flag & complete_init_flag)
 		&& (min_checkinpts != 0)) {
 		tsync_pcr_inited_flag |= TSYNC_PCR_INITCHECK_VPTS;
-		ref_pcr = first_vpts - tsync_pcr_ref_latency * 15;
+		if (first_vpts > tsync_pcr_ref_latency * 15)
+			ref_pcr = first_vpts - tsync_pcr_ref_latency * 15;
+
 		timestamp_pcrscr_set(ref_pcr);
 		if (cur_pcr > 0)
 			tsync_pcr_usepcr = 1;
+		else
+			tsync_pcr_usepcr = 0;
 
 		timestamp_pcrscr_enable(1);
 		pr_info
@@ -1181,19 +1189,16 @@ static unsigned long tsync_pcr_check(void)
 	}
 
 	if (need_recovery && !tsync_pcr_vpause_flag) {
-		if (play_mode == PLAY_MODE_SLOW) {
-			timestamp_pcrscr_set(timestamp_pcrscr_get() -
-					tsync_pcr_recovery_span);
-		} else if (play_mode == PLAY_MODE_FORCE_SLOW) {
-			timestamp_pcrscr_set(timestamp_pcrscr_get() -
-					FORCE_RECOVERY_SPAN);
-		} else if (play_mode == PLAY_MODE_SPEED) {
-			timestamp_pcrscr_set(timestamp_pcrscr_get() +
-					tsync_pcr_recovery_span);
-		} else if (play_mode == PLAY_MODE_FORCE_SPEED) {
-			timestamp_pcrscr_set(timestamp_pcrscr_get() +
-					FORCE_RECOVERY_SPAN);
-		}
+		if (play_mode == PLAY_MODE_SLOW)
+			timestamp_pcrscr_set_adj_pcr(-1);
+		else if (play_mode == PLAY_MODE_FORCE_SLOW)
+			timestamp_pcrscr_set_adj_pcr(-2);
+		else if (play_mode == PLAY_MODE_SPEED)
+			timestamp_pcrscr_set_adj_pcr(1);
+		else if (play_mode == PLAY_MODE_FORCE_SPEED)
+			timestamp_pcrscr_set_adj_pcr(2);
+		else if (play_mode == PLAY_MODE_NORMAL)
+			timestamp_pcrscr_set_adj_pcr(0);
 	}
 	/* } */
 
@@ -1294,6 +1299,7 @@ void tsync_pcr_stop(void)
 		del_timer_sync(&tsync_pcr_check_timer);
 		pr_info("[tsync_pcr_stop]PCRMASTER stop success.\n");
 	}
+	timestamp_pcrscr_set(0);
 	tsync_pcr_freerun_mode = 0;
 	tsync_pcr_started = 0;
 }

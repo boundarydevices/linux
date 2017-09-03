@@ -114,5 +114,6 @@ source "drivers/amlogic/drm/Kconfig"
 
 source "drivers/amlogic/secure_monitor/Kconfig"
 
+source "drivers/amlogic/tee/Kconfig"
 endmenu
 endif
