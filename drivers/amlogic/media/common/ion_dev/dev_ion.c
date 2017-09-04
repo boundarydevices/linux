@@ -105,14 +105,25 @@ int meson_ion_share_fd_to_phys(struct ion_client *client,
 		int share_fd, ion_phys_addr_t *addr, size_t *len)
 {
 	struct ion_handle *handle = NULL;
+	int ret;
 
 	handle = ion_import_dma_buf_fd(client, share_fd);
 	if (IS_ERR_OR_NULL(handle)) {
-		dprintk(0, "EINVAL, client=%p, share_fd=%d\n",
-				client, share_fd);
+		/* pr_err("%s,EINVAL, client=%p, share_fd=%d\n",
+		 *	 __func__, client, share_fd);
+		 */
+		return PTR_ERR(handle);
 	}
 
-	return ion_phys(client, handle, addr, len);
+	ret = ion_phys(client, handle, addr, (size_t *)len);
+	pr_debug("ion_phys ret=%d, phys=0x%lx\n", ret, *addr);
+	ion_free(client, handle);
+	if (ret < 0) {
+		pr_err("ion_get_phys error, ret=%d\n", ret);
+		return ret;
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(meson_ion_share_fd_to_phys);
 
@@ -139,10 +150,12 @@ static int meson_ion_get_phys(
 
 	ret = ion_phys(client, handle, &addr, (size_t *)&len);
 	dprintk(1, "ret=%d, phys=0x%lX\n", ret, addr);
+	ion_free(client, handle);
 	if (ret < 0) {
 		dprintk(0, "meson_ion_get_phys error, ret=%d\n", ret);
 		return ret;
 	}
+
 	data.phys_addr = (unsigned int)addr;
 	data.size = (unsigned int)len;
 	if (copy_to_user((void __user *)arg, &data,

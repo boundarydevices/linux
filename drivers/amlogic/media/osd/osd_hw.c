@@ -103,6 +103,7 @@ static void *osd_timeline_create(void)
 	const char *tlName = "osd_timeline";
 
 	if (osd_timeline == NULL) {
+		cur_streamline_val = 1;
 		osd_timeline = aml_sync_create_timeline(tlName);
 		osd_tprintk("osd timeline create\n");
 	}
