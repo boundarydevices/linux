@@ -136,7 +136,7 @@ static int lcd_extern_power_cmd(unsigned char *init_table, int flag)
 	else
 		max_len = LCD_EXTERN_INIT_OFF_MAX;
 
-	while (i <= max_len) {
+	while ((i + cmd_size) <= max_len) {
 		if (init_table[i] == LCD_EXTERN_INIT_END)
 			break;
 		if (lcd_debug_print_flag) {
@@ -216,7 +216,10 @@ static int lcd_extern_driver_update(struct aml_lcd_extern_driver_s *ext_drv)
 	return 0;
 }
 
-/* debug function */
+/* *********************************************************
+ * debug function
+ * *********************************************************
+ */
 static const char *lcd_extern_debug_usage_str = {
 "Usage:\n"
 "    echo <reg> <> ... <> > write ; T5800Q i2c command write, 7 parameters without address\n"
@@ -301,10 +304,12 @@ static int aml_T5800Q_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 
-	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
+	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		EXTERR("%s: functionality check failed\n", __func__);
-	else
-		aml_T5800Q_i2c_client = client;
+		return -ENODEV;
+	}
+
+	aml_T5800Q_i2c_client = client;
 
 	EXTPR("%s OK\n", __func__);
 	return 0;
@@ -348,6 +353,7 @@ int aml_lcd_extern_i2c_T5800Q_probe(struct aml_lcd_extern_driver_s *ext_drv)
 	}
 
 	strncpy(i2c_info.type, ext_drv->config.name, I2C_NAME_SIZE);
+	i2c_info.type[I2C_NAME_SIZE-1] = '\0';
 	i2c_info.addr = ext_drv->config.i2c_addr;
 	i2c_info.platform_data = &ext_drv->config;
 	i2c_info.flags = 0;
@@ -359,12 +365,10 @@ int aml_lcd_extern_i2c_T5800Q_probe(struct aml_lcd_extern_driver_s *ext_drv)
 	i2c_client = i2c_new_device(adapter, &i2c_info);
 	if (!i2c_client) {
 		EXTERR("%s failed to new i2c device\n", ext_drv->config.name);
-	} else {
-		if (lcd_debug_print_flag) {
-			EXTPR("%s new i2c device succeed\n",
-				ext_drv->config.name);
-		}
+		return -1;
 	}
+	if (lcd_debug_print_flag)
+		EXTPR("%s new i2c device succeed\n", ext_drv->config.name);
 
 	if (!aml_T5800Q_i2c_client) {
 		ret = i2c_add_driver(&aml_T5800Q_i2c_driver);

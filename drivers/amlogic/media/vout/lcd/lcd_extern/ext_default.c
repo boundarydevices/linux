@@ -181,7 +181,7 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *init_table,
 
 	switch (ext_config->type) {
 	case LCD_EXTERN_I2C:
-		while (i <= max_len) {
+		while ((i + 2) < max_len) {
 			type = init_table[i];
 			if (type == LCD_EXTERN_INIT_END)
 				break;
@@ -191,6 +191,9 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *init_table,
 					init_table[i], init_table[i+1]);
 			}
 			cmd_size = init_table[i+1];
+			if ((i + 2 + cmd_size) > max_len)
+				break;
+
 			if (type == LCD_EXTERN_INIT_NONE) {
 				if (cmd_size < 1) {
 					EXTERR("step %d: invalid cmd_size %d\n",
@@ -238,7 +241,7 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *init_table,
 		}
 		break;
 	case LCD_EXTERN_SPI:
-		while (i <= max_len) {
+		while ((i + 2) < max_len) {
 			type = init_table[i];
 			if (type == LCD_EXTERN_INIT_END)
 				break;
@@ -248,6 +251,9 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *init_table,
 					init_table[i], init_table[i+1]);
 			}
 			cmd_size = init_table[i+1];
+			if ((i + 2 + cmd_size) > max_len)
+				break;
+
 			if (type == LCD_EXTERN_INIT_NONE) {
 				if (cmd_size < 1) {
 					EXTERR("step %d: invalid cmd_size %d\n",
@@ -311,7 +317,7 @@ static int lcd_extern_power_cmd_fixed_size(unsigned char *init_table, int flag)
 	cmd_size = ext_config->cmd_size;
 	switch (ext_config->type) {
 	case LCD_EXTERN_I2C:
-		while (i <= max_len) {
+		while ((i + cmd_size) <= max_len) {
 			type = init_table[i];
 			if (type == LCD_EXTERN_INIT_END)
 				break;
@@ -346,7 +352,7 @@ static int lcd_extern_power_cmd_fixed_size(unsigned char *init_table, int flag)
 		}
 		break;
 	case LCD_EXTERN_SPI:
-		while (i <= max_len) {
+		while ((i + cmd_size) <= max_len) {
 			type = init_table[i];
 			if (type == LCD_EXTERN_INIT_END)
 				break;
@@ -494,10 +500,12 @@ static int aml_default_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 
-	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
+	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		EXTERR("%s: functionality check failed\n", __func__);
-	else
-		aml_default_i2c_client = client;
+		return -ENODEV;
+	}
+
+	aml_default_i2c_client = client;
 
 	EXTPR("%s OK\n", __func__);
 	return 0;
@@ -546,6 +554,7 @@ int aml_lcd_extern_default_probe(struct aml_lcd_extern_driver_s *ext_drv)
 		}
 
 		strncpy(i2c_info.type, ext_drv->config.name, I2C_NAME_SIZE);
+		i2c_info.type[I2C_NAME_SIZE-1] = '\0';
 		i2c_info.addr = ext_drv->config.i2c_addr;
 		i2c_info.platform_data = &ext_drv->config;
 		i2c_info.flags = 0;
@@ -558,11 +567,11 @@ int aml_lcd_extern_default_probe(struct aml_lcd_extern_driver_s *ext_drv)
 		if (!i2c_client) {
 			EXTERR("%s failed to new i2c device\n",
 				ext_drv->config.name);
-		} else {
-			if (lcd_debug_print_flag) {
-				EXTPR("%s new i2c device succeed\n",
-					ext_drv->config.name);
-			}
+			return -1;
+		}
+		if (lcd_debug_print_flag) {
+			EXTPR("%s new i2c device succeed\n",
+				ext_drv->config.name);
 		}
 
 		if (!aml_default_i2c_client) {
