@@ -7,6 +7,13 @@
 ## Do not change.
 ##########################################
 
+KBUILD_CFLAGS += -Wlarger-than=28792
+KBUILD_CFLAGS += -Wstack-usage=1856
+
+# These 2 marked sentence is just for generate warning messages
+#KBUILD_CFLAGS += -Wno-error=larger-than=28792
+#KBUILD_CFLAGS += -Wno-error=stack-usage=1856
+
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq/
 
 obj-$(CONFIG_AMLOGIC_UART)	+= uart/
