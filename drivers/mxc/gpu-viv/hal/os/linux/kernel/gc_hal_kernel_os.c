@@ -1150,10 +1150,15 @@ gckOS_MapMemory(
     {
         allocator = mdl->allocator;
 
-        gcmkONERROR(
-            allocator->ops->MapUser(allocator,
-                                    mdl, gcvFALSE,
-                                    &mdlMap->vmaAddr));
+        status = allocator->ops->MapUser(allocator, mdl, gcvFALSE, &mdlMap->vmaAddr);
+
+        if (gcmIS_ERROR(status))
+        {
+            mutex_unlock(&mdl->mapsMutex);
+
+            gcmkFOOTER_ARG("*status=%d", status);
+            return status;
+        }
     }
 
     mutex_unlock(&mdl->mapsMutex);
@@ -1162,10 +1167,6 @@ gckOS_MapMemory(
 
     gcmkFOOTER_ARG("*Logical=0x%X", *Logical);
     return gcvSTATUS_OK;
-
-OnError:
-    gcmkFOOTER();
-    return status;
 }
 
 /*******************************************************************************
