@@ -2181,7 +2181,7 @@ static ssize_t show_hdcp_ver(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	int pos = 0;
-	uint32_t ver = 0;
+	uint32_t ver = 0U;
 
 	if (check_fbc_special(&hdmitx_device.EDID_buf[0])
 	    || check_fbc_special(&hdmitx_device.EDID_buf1[0])) {
@@ -2203,13 +2203,10 @@ static ssize_t show_hdcp_ver(struct device *dev,
 	}
 next:	/* Detect RX support HDCP14 */
 	/* Here, must assume RX support HDCP14, otherwise affect 1A-03 */
-	if (ver == 0) {
+	if (ver == 0U) {
 		pos += snprintf(buf+pos, PAGE_SIZE, "14\n\r");
 		return pos;
 	}
-
-	/* RX NOT support HDCP */
-	pos += snprintf(buf+pos, PAGE_SIZE, "00\n\r");
 	return pos;
 }
 
@@ -2247,7 +2244,7 @@ static ssize_t store_ready(struct device *dev,
 {
 	if (strncmp(buf, "0", 1) == 0)
 		hdmitx_device.ready = 0;
-	if (strncmp(buf, "1", 1) == 1)
+	if (strncmp(buf, "1", 1) == 0)
 		hdmitx_device.ready = 1;
 	return count;
 }
