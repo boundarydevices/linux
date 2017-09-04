@@ -24,6 +24,9 @@
 #define RET_EINVAL	2	/*name length*/
 #define RET_EMEM	3	/*no enough memory*/
 
+#define RET_EUND	-1
+#define SMC_UNK		0xffffffff
+
 /* keyattr: 0: normal, 1: secure*/
 int32_t secure_storage_write(uint8_t *keyname, uint8_t *keybuf,
 			uint32_t keylen, uint32_t keyattr);
