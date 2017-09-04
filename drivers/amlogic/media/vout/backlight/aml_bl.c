@@ -328,6 +328,7 @@ static char *bl_pinmux_str[] = {
 	"pwm_combo_0_1_on",     /* 2 */
 	"pwm_combo_0_vs_1_on",  /* 3 */
 	"pwm_combo_0_1_vs_on",  /* 4 */
+	"none",
 };
 
 static void bl_pwm_pinmux_set(struct bl_config_s *bconf)
@@ -1070,6 +1071,7 @@ static char *bl_pwm_name[] = {
 	"PWM_E",
 	"PWM_F",
 	"PWM_VS",
+	"invalid",
 };
 
 enum bl_pwm_port_e bl_pwm_str_to_pwm(const char *str)
@@ -1271,7 +1273,9 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 		BLERR("failed to get bl_name\n");
 		str = "backlight";
 	}
-	strcpy(bconf->name, str);
+	strncpy(bconf->name, str, BL_NAME_MAX);
+	/* ensure string ending */
+	bconf->name[BL_NAME_MAX-1] = '\0';
 
 	ret = of_property_read_u32_array(child, "bl_level_default_uboot_kernel",
 		&bl_para[0], 2);
@@ -1591,9 +1595,10 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 
 	/* basic: 30byte */
 	p = para + LCD_UKEY_HEAD_SIZE;
-	*(p + LCD_UKEY_BL_NAME - 1) = '\0'; /* ensure string ending */
 	str = (const char *)p;
-	strcpy(bconf->name, str);
+	strncpy(bconf->name, str, BL_NAME_MAX);
+	/* ensure string ending */
+	bconf->name[BL_NAME_MAX-1] = '\0';
 	p += LCD_UKEY_BL_NAME;
 
 	/* level: 6byte */
@@ -2531,33 +2536,61 @@ static ssize_t bl_debug_pwm_store(struct class *class,
 	case 'f':
 		if (buf[3] == 'q') { /* frequency */
 			ret = sscanf(buf, "freq %d %d", &index, &val);
-			bl_debug_pwm_set(index, val, BL_DEBUG_PWM_FREQ);
+			if (ret == 2)
+				bl_debug_pwm_set(index, val, BL_DEBUG_PWM_FREQ);
+			else
+				BLERR("invalid parameters\n");
 		} else if (buf[3] == 'e') { /* duty free */
 			ret = sscanf(buf, "free %d", &val);
-			bl_pwm_duty_free = (unsigned char)val;
-			BLPR("set bl_pwm_duty_free: %d\n", bl_pwm_duty_free);
+			if (ret == 1) {
+				bl_pwm_duty_free = (unsigned char)val;
+				BLPR("set bl_pwm_duty_free: %d\n",
+					bl_pwm_duty_free);
+			} else {
+				BLERR("invalid parameters\n");
+			}
 		}
 		break;
 	case 'd': /* duty */
 		ret = sscanf(buf, "duty %d %d", &index, &val);
-		bl_debug_pwm_set(index, val, BL_DEBUG_PWM_DUTY);
+		if (ret == 2)
+			bl_debug_pwm_set(index, val, BL_DEBUG_PWM_DUTY);
+		else
+			BLERR("invalid parameters\n");
 		break;
 	case 'p': /* polarity */
 		ret = sscanf(buf, "pol %d %d", &index, &val);
-		bl_debug_pwm_set(index, val, BL_DEBUG_PWM_POL);
+		if (ret == 2)
+			bl_debug_pwm_set(index, val, BL_DEBUG_PWM_POL);
+		else
+			BLERR("invalid parameters\n");
 		break;
 	case 'b': /* bypass */
 		ret = sscanf(buf, "bypass %d", &val);
-		bl_pwm_bypass = (unsigned char)val;
-		BLPR("set bl_pwm_bypass: %d\n", bl_pwm_bypass);
+		if (ret == 1) {
+			bl_pwm_bypass = (unsigned char)val;
+			BLPR("set bl_pwm_bypass: %d\n", bl_pwm_bypass);
+		} else {
+			BLERR("invalid parameters\n");
+		}
 		break;
 	case 'm':
 		if (buf[1] == 'a') { /* max */
 			ret = sscanf(buf, "max %d %d", &index, &val);
-			bl_debug_pwm_set(index, val, BL_DEBUG_PWM_DUTY_MAX);
+			if (ret == 2) {
+				bl_debug_pwm_set(index, val,
+					BL_DEBUG_PWM_DUTY_MAX);
+			} else {
+				BLERR("invalid parameters\n");
+			}
 		} else if (buf[1] == 'i') { /* min */
 			ret = sscanf(buf, "min %d %d", &index, &val);
-			bl_debug_pwm_set(index, val, BL_DEBUG_PWM_DUTY_MIN);
+			if (ret == 2) {
+				bl_debug_pwm_set(index, val,
+					BL_DEBUG_PWM_DUTY_MIN);
+			} else {
+				BLERR("invalid parameters\n");
+			}
 		}
 		break;
 	default:
@@ -2591,8 +2624,10 @@ static ssize_t bl_debug_power_store(struct class *class,
 	unsigned int temp = 0;
 
 	ret = kstrtouint(buf, 10, &temp);
-	if (ret != 0)
+	if (ret != 0) {
+		BLERR("invalid data\n");
 		return -EINVAL;
+	}
 
 	BLPR("power control: %u\n", temp);
 	if ((bl_drv->state & BL_STATE_LCD_ON) == 0) {
@@ -2680,19 +2715,14 @@ static ssize_t bl_debug_print_store(struct class *class,
 }
 
 static struct class_attribute bl_debug_class_attrs[] = {
-	__ATTR(help, 0644, bl_debug_help, NULL),
-	__ATTR(status, 0644, bl_status_read, NULL),
-	__ATTR(pwm, 0644, bl_debug_pwm_show,
-			bl_debug_pwm_store),
-	__ATTR(power, 0644, bl_debug_power_show,
-			bl_debug_power_store),
-	__ATTR(delay, 0644, bl_debug_delay_show,
-			bl_debug_delay_store),
-	__ATTR(key_valid,   0644, bl_debug_key_valid_show, NULL),
-	__ATTR(config_load, 0644,
-		bl_debug_config_load_show, NULL),
-	__ATTR(print, 0644, bl_debug_print_show,
-			bl_debug_print_store),
+	__ATTR(help, 0444, bl_debug_help, NULL),
+	__ATTR(status, 0444, bl_status_read, NULL),
+	__ATTR(pwm, 0644, bl_debug_pwm_show, bl_debug_pwm_store),
+	__ATTR(power, 0644, bl_debug_power_show, bl_debug_power_store),
+	__ATTR(delay, 0644, bl_debug_delay_show, bl_debug_delay_store),
+	__ATTR(key_valid,   0444, bl_debug_key_valid_show, NULL),
+	__ATTR(config_load, 0444, bl_debug_config_load_show, NULL),
+	__ATTR(print, 0644, bl_debug_print_show, bl_debug_print_store),
 };
 
 static int aml_bl_creat_class(void)

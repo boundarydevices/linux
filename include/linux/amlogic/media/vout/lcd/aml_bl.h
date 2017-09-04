@@ -123,8 +123,9 @@ struct bl_pwm_config_s {
 	unsigned int pwm_level; /* internal used for pwm control */
 };
 
+#define BL_NAME_MAX    30
 struct bl_config_s {
-	char name[30];
+	char name[BL_NAME_MAX];
 	unsigned int level_default;
 	unsigned int level_min;
 	unsigned int level_max;
