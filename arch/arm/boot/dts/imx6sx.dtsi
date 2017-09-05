@@ -894,13 +894,21 @@
 					 <&clks IMX6SX_CLK_LCDIF2_SEL>,
 					 <&clks IMX6SX_CLK_LDB_DI0_DIV_3_5>,
 					 <&clks IMX6SX_CLK_LDB_DI0_DIV_7>,
-					 <&clks IMX6SX_CLK_LDB_DI0_DIV_SEL>;
+					 <&clks IMX6SX_CLK_LDB_DI0_DIV_SEL>,
+					 <&clks IMX6SX_CLK_PLL2_PFD2>,
+					 <&clks IMX6SX_CLK_PLL2_PFD0>,
+					 <&clks IMX6SX_CLK_PLL2_PFD2>,
+					 <&clks IMX6SX_CLK_PLL3_PFD3>;
 				clock-names = "ldb_di0",
 					      "di0_sel",
 					      "di1_sel",
 					      "ldb_di0_div_3_5",
 					      "ldb_di0_div_7",
-					      "ldb_di0_div_sel";
+					      "ldb_di0_div_sel",
+					      "",
+					      "choice1",
+					      "choice2",
+					      "choice3";
 				lvds-channel@0 {
 					reg = <0>;
 					status = "disabled";
