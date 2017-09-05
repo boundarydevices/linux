@@ -677,6 +677,12 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 
+	/*
+	 * the pixel clock should be disabled before
+	 * trying to set its clock rate successfully.
+	 */
+	clk_disable_pix(host);
+
 	if (host->dispdrv && host->dispdrv->drv->setup) {
 		ret = host->dispdrv->drv->setup(host->dispdrv, fb_info);
 		if (ret < 0) {
@@ -703,10 +709,6 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 				"dispdrv:%s\n", host->dispdrv->drv->name);
 	}
 
-	/* the pixel clock should be disabled before
-	 * trying to set its clock rate successfully.
-	 */
-	clk_disable_pix(host);
 	ret = clk_set_rate(host->clk_pix,
 			 PICOS2KHZ(fb_info->var.pixclock) * 1000U);
 	if (ret) {
