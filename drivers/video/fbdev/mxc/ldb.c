@@ -489,8 +489,15 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 	}
 
 	if (best_parent && (best_parent != ldb_di_sel_parent)) {
-		clk_set_parent(ldb_di_sel, best_parent);
-		ldb_di_sel_parent = best_parent;
+		int ret = clk_set_parent(ldb_di_sel, best_parent);
+
+		if (ret) {
+			dev_err(dev, "failed(%d) to set parent of %pC to %pC\n",
+				ret, ldb_di_sel, best_parent);
+			best_i = 0;
+		} else {
+			ldb_di_sel_parent = best_parent;
+		}
 	}
 	if ((best_i <= 1) && (ldb->chan[other_chno].parent_choice_index != best_i))
 		clk_set_rate(ldb_di_sel_parent, serial_clk);
