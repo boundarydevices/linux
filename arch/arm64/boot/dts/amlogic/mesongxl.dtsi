@@ -304,7 +304,7 @@
 		xtal_tick_en = <1>;
 		fifosize = < 64 >;
 		pinctrl-names = "default";
-		pinctrl-0 = <&ao_uart_pins>;
+		/*pinctrl-0 = <&ao_uart_pins>;*/
 		support-sysrq = <0>;	/* 0 not support , 1 support */
 	};
 
@@ -554,6 +554,14 @@ i2c_ao: i2c@c8100500{ /*I2C-AO*/
 		};
 	};
 
+	sd_to_ao_uart_clr_pins:sd_to_ao_uart_clr_pins {
+		mux {
+			groups = "GPIOAO_0",
+					"GPIOAO_1";
+			function = "gpio_aobus";
+		};
+	};
+
 	sd_to_ao_uart_pins:sd_to_ao_uart_pins {
 		mux {
 			groups = "uart_tx_ao_a_0",
@@ -685,24 +693,43 @@ i2c_ao: i2c@c8100500{ /*I2C-AO*/
 * };
 * sd_all_pins:sd_all_pins {
 *  };
-* sd_1bit_pins:sd_1bit_pins{
+* sd_1bit_uart_pins:sd_1bit_uart_pins{
 *  };
 *  sd_clk_cmd_uart_pins:sd_clk_cmd_uart_pins {
 * };
-* sd_1bit_uart_pins:sd_1bit_uart_pins {
-*  };
 * sd_to_ao_jtag_pins:sd_to_ao_jtag_pins{
 * };
 */
-	ao_to_sd_uart_pins:ao_to_sd_uart_pins {
-			mux {
-				groups = "uart_tx_ao_a_card4",
-						"uart_rx_ao_a_card5";
-				function = "uart_ao_a_card";
-				bias-pull-up;
-				input-enable;
-			};
+	ao_to_sd_uart_clr_pins:ao_to_sd_uart_clr_pins {
+		mux {
+			groups = "sdcard_d2",
+					"sdcard_d3";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
 		};
+	};
+
+	sd_1bit_pins:sd_1bit_pins {
+		mux {
+			groups = "sdcard_d0",
+					"sdcard_cmd",
+					"sdcard_clk";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	ao_to_sd_uart_pins:ao_to_sd_uart_pins {
+		mux {
+			groups = "uart_tx_ao_a_card4",
+					"uart_rx_ao_a_card5";
+			function = "uart_ao_a_card";
+			bias-pull-up;
+			input-enable;
+		};
+	};
 
 	emmc_clk_cmd_pins:emmc_clk_cmd_pins {
 		mux {

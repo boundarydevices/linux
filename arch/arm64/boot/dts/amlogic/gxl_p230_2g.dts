@@ -195,7 +195,7 @@
 				 "MMC_CAP_ERASE",
 				 "MMC_CAP_CMD23";
 			caps2 = "MMC_CAP2_HS200", "MMC_CAP2_HS400";
-			f_min = <300000>;
+			f_min = <400000>;
 			f_max = <100000000>;
 			max_req_size = <0x20000>; /**128KB*/
 			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
@@ -214,14 +214,24 @@
 		interrupts = <0 217 1>;
 		pinctrl-names = "sd_all_pins",
 			"sd_clk_cmd_pins",
+			"sd_1bit_pins",
 			"sd_clk_cmd_uart_pins",
+			"sd_1bit_uart_pins",
 			"sd_to_ao_uart_pins",
-			"ao_to_sd_uart_pins";
+			"ao_to_sd_uart_pins",
+			"ao_to_sd_jtag_pins",
+			"sd_to_ao_jtag_pins";
 		pinctrl-0 = <&sd_all_pins>;
 		pinctrl-1 = <&sd_clk_cmd_pins>;
-		pinctrl-2 = <&sd_clk_cmd_pins &ao_to_sd_uart_pins>;
-		pinctrl-3 = <&sd_to_ao_uart_pins>;
-		pinctrl-4 = <&ao_to_sd_uart_pins>;
+		pinctrl-2 = <&sd_1bit_pins>;
+		pinctrl-3 = <&sd_to_ao_uart_clr_pins
+			&sd_clk_cmd_pins &ao_to_sd_uart_pins>;
+		pinctrl-4 = <&sd_to_ao_uart_clr_pins
+			&sd_1bit_pins &ao_to_sd_uart_pins>;
+		pinctrl-5 = <&sd_all_pins &sd_to_ao_uart_pins>;
+		pinctrl-6 = <&sd_to_ao_uart_clr_pins &ao_to_sd_uart_pins>;
+		pinctrl-7 = <&sd_to_ao_uart_clr_pins &ao_to_sd_uart_pins>;
+		pinctrl-8 = <&sd_all_pins &sd_to_ao_uart_pins>;
 		clocks = <&clkc CLKID_SD_EMMC_B>,
 			   <&clkc CLKID_SD_EMMC_B_P0_COMP>,
 			   <&clkc CLKID_FCLK_DIV2>;

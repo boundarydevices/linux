@@ -34,8 +34,10 @@
 #include <linux/amlogic/sd.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/cpu_version.h>
+#include <linux/amlogic/jtag.h>
 #include <linux/highmem.h>
 #include <linux/of.h>
+#include <linux/arm-smccc.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/amlogic/amlsd.h>
 #ifdef CONFIG_AMLOGIC_M8B_MMC
@@ -82,123 +84,6 @@ void aml_mmc_ver_msg_show(void)
 
 	one_time_flag = true;
 	}
-}
-
-
-
-static int aml_is_card_insert(struct amlsd_platform *pdata)
-{
-	int ret = 0, in_count = 0, out_count = 0, i;
-
-	if (pdata->gpio_cd) {
-		mdelay(pdata->card_in_delay);
-		for (i = 0; i < 200; i++) {
-			ret = gpio_get_value(pdata->gpio_cd);
-			if (ret)
-				out_count++;
-			in_count++;
-			if ((out_count > 100) || (in_count > 100))
-				break;
-		}
-		if (out_count > 100)
-			ret = 1;
-		else if (in_count > 100)
-			ret = 0;
-	}
-	sdio_err("card %s\n", ret?"OUT":"IN");
-	if (!pdata->gpio_cd_level)
-		ret = !ret; /* reverse, so ---- 0: no inserted  1: inserted */
-
-	return ret;
-}
-
-#ifdef CONFIG_AMLOGIC_M8B_MMC
-int aml_sd_uart_detect(struct amlsd_platform *pdata)
-#else
-int aml_sd_uart_detect(struct amlsd_host *host)
-#endif
-{
-#ifdef CONFIG_AMLOGIC_M8B_MMC
-	struct mmc_host *mmc  = pdata->mmc;
-#else
-	struct amlsd_platform *pdata = host->pdata;
-	struct mmc_host *mmc  = host->mmc;
-#endif
-
-	if (aml_is_card_insert(pdata)) {
-		if (pdata->is_in)
-			return 1;
-		pdata->is_in = true;
-		pr_info("normal card in\n");
-		if (pdata->caps & MMC_CAP_4_BIT_DATA)
-			mmc->caps |= MMC_CAP_4_BIT_DATA;
-	} else {
-		if (!pdata->is_in)
-			return 1;
-		pdata->is_in = false;
-		pr_info("card out\n");
-
-		pdata->is_tuned = false;
-		if (mmc && mmc->card)
-			mmc_card_set_removed(mmc->card);
-		/* switch to 3.3V */
-		aml_sd_voltage_switch(mmc,
-				MMC_SIGNAL_VOLTAGE_330);
-
-		if (pdata->caps & MMC_CAP_4_BIT_DATA)
-			mmc->caps |= MMC_CAP_4_BIT_DATA;
-	}
-	return 0;
-}
-
-static int card_dealed;
-irqreturn_t aml_irq_cd_thread(int irq, void *data)
-{
-#ifdef CONFIG_AMLOGIC_M8B_MMC
-	struct amlsd_platform *pdata = (struct amlsd_platform *)data;
-	struct mmc_host *mmc = pdata->mmc;
-	struct amlsd_host *host = pdata->host;
-#else
-	struct amlsd_host *host = (struct amlsd_host *)data;
-	struct amlsd_platform *pdata = host->pdata;
-	struct mmc_host *mmc = host->mmc;
-#endif
-	int ret = 0;
-
-	mutex_lock(&pdata->in_out_lock);
-	if (card_dealed == 1) {
-		card_dealed = 0;
-		mutex_unlock(&pdata->in_out_lock);
-		return IRQ_HANDLED;
-	}
-#ifdef CONFIG_AMLOGIC_M8B_MMC
-	ret = aml_sd_uart_detect(pdata);
-#else
-	ret = aml_sd_uart_detect(host);
-#endif
-	if (ret == 1) {/* the same as the last*/
-		mutex_unlock(&pdata->in_out_lock);
-		return IRQ_HANDLED;
-	}
-	card_dealed = 1;
-	if ((pdata->is_in == 0) && aml_card_type_non_sdio(pdata))
-		host->init_flag = 0;
-	mutex_unlock(&pdata->in_out_lock);
-
-	/* mdelay(500); */
-	if (pdata->is_in)
-		mmc_detect_change(mmc, msecs_to_jiffies(100));
-	else
-		mmc_detect_change(mmc, msecs_to_jiffies(0));
-
-	card_dealed = 0;
-	return IRQ_HANDLED;
-}
-
-irqreturn_t aml_sd_irq_cd(int irq, void *dev_id)
-{
-	/* pr_info("cd dev_id %x\n", (unsigned)dev_id); */
-	return IRQ_WAKE_THREAD;
 }
 
 static int aml_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
@@ -449,6 +334,22 @@ void sdio_reinit(void)
 }
 EXPORT_SYMBOL(sdio_reinit);
 
+void of_amlsd_pwr_prepare(struct amlsd_platform *pdata)
+{
+}
+
+void of_amlsd_pwr_on(struct amlsd_platform *pdata)
+{
+	if (pdata->gpio_power)
+		gpio_set_value(pdata->gpio_power, pdata->power_level);
+}
+
+void of_amlsd_pwr_off(struct amlsd_platform *pdata)
+{
+	if (pdata->gpio_power)
+		gpio_set_value(pdata->gpio_power, !pdata->power_level);
+}
+
 void of_amlsd_irq_init(struct amlsd_platform *pdata)
 {
 	if (aml_card_type_non_sdio(pdata))
@@ -568,13 +469,22 @@ void of_amlsd_xfer_pre(struct mmc_host *mmc)
 		|| (strcmp(pdata->pinname, "sd"))
 		|| (mmc->caps & MMC_CAP_8_BIT_DATA))
 			aml_snprint(&p, &size, "%s_all_pins", pdata->pinname);
+		else {
+			if (pdata->is_sduart && (!strcmp(pdata->pinname, "sd")))
+				aml_snprint(&p, &size,
+						"%s_1bit_uart_pins",
+						pdata->pinname);
+			else
+				aml_snprint(&p, &size,
+						"%s_1bit_pins", pdata->pinname);
+		}
 	} else { /* MMC_CS_HIGH */
 		if (pdata->is_sduart && (!strcmp(pdata->pinname, "sd"))) {
 			aml_snprint(&p, &size,
-				"%s_clk_cmd_uart_pins", pdata->pinname);
+					"%s_clk_cmd_uart_pins", pdata->pinname);
 		} else {
 			aml_snprint(&p, &size,
-				"%s_clk_cmd_pins", pdata->pinname);
+					"%s_clk_cmd_pins", pdata->pinname);
 		}
 	}
 
@@ -663,11 +573,13 @@ void aml_cs_high(struct mmc_host *mmc) /* chip select high */
 			ret = gpio_direction_output(pdata->gpio_dat3, 1);
 			CHECK_RET(ret);
 		}
+		gpio_free(pdata->gpio_dat3);
 	}
 }
 
 void aml_cs_dont_care(struct mmc_host *mmc)
 {
+#if 0
 #ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 #else
@@ -679,22 +591,359 @@ void aml_cs_dont_care(struct mmc_host *mmc)
 			&& (pdata->gpio_dat3 != 0)
 			&& (gpio_get_value(pdata->gpio_dat3) >= 0))
 		gpio_free(pdata->gpio_dat3);
+#endif
 }
 
-void of_amlsd_pwr_prepare(struct amlsd_platform *pdata)
+static int aml_is_card_insert(struct amlsd_platform *pdata)
 {
+	int ret = 0, in_count = 0, out_count = 0, i;
+
+	if (pdata->gpio_cd) {
+		mdelay(pdata->card_in_delay);
+		for (i = 0; i < 200; i++) {
+			ret = gpio_get_value(pdata->gpio_cd);
+			if (ret)
+				out_count++;
+			in_count++;
+			if ((out_count > 100) || (in_count > 100))
+				break;
+		}
+		if (out_count > 100)
+			ret = 1;
+		else if (in_count > 100)
+			ret = 0;
+	}
+	sdio_err("card %s\n", ret?"OUT":"IN");
+	if (!pdata->gpio_cd_level)
+		ret = !ret; /* reverse, so ---- 0: no inserted  1: inserted */
+
+	return ret;
 }
 
-void of_amlsd_pwr_on(struct amlsd_platform *pdata)
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+static int aml_is_sdjtag(struct amlsd_platform *pdata)
+#else
+static int aml_is_sdjtag(struct amlsd_host *host)
+#endif
 {
-	if (pdata->gpio_power)
-		gpio_set_value(pdata->gpio_power, pdata->power_level);
+	int in = 0, i;
+	int high_cnt = 0, low_cnt = 0;
+	u32 vstat = 0;
+	struct sd_emmc_status *ista = (struct sd_emmc_status *)&vstat;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct amlsd_host *host = pdata->host;
+#endif
+
+	for (i = 0; ; i++) {
+		mdelay(1);
+		vstat = readl(host->base + SD_EMMC_STATUS) & 0xffffffff;
+		if (ista->dat_i & 0x2) {
+			high_cnt++;
+			low_cnt = 0;
+		} else {
+			low_cnt++;
+			high_cnt = 0;
+		}
+		if ((high_cnt > 50) || (low_cnt > 50))
+			break;
+	}
+
+	if (low_cnt > 50)
+		in = 1;
+	return !in;
 }
 
-void of_amlsd_pwr_off(struct amlsd_platform *pdata)
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+static int aml_is_sduart(struct amlsd_platform *pdata)
+#else
+static int aml_is_sduart(struct amlsd_host *host)
+#endif
 {
-	if (pdata->gpio_power)
-		gpio_set_value(pdata->gpio_power, !pdata->power_level);
+#ifdef CONFIG_MESON_CPU_EMULATOR
+	return 0;
+#else
+	int in = 0, i;
+	int high_cnt = 0, low_cnt = 0;
+	struct pinctrl *pc;
+	u32 vstat = 0;
+	struct sd_emmc_status *ista = (struct sd_emmc_status *)&vstat;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct amlsd_host *host = pdata->host;
+#endif
+
+	mutex_lock(&host->pinmux_lock);
+	pc = aml_devm_pinctrl_get_select(host, "sd_to_ao_uart_pins");
+
+	mdelay(1);
+	for (i = 0; ; i++) {
+		mdelay(1);
+		vstat = readl(host->base + SD_EMMC_STATUS) & 0xffffffff;
+		if (ista->dat_i & 0x8) {
+			high_cnt++;
+			low_cnt = 0;
+		} else {
+			low_cnt++;
+			high_cnt = 0;
+		}
+		if ((high_cnt > 100) || (low_cnt > 100))
+			break;
+	}
+	if (low_cnt > 100)
+		in = 1;
+	mutex_unlock(&host->pinmux_lock);
+	return in;
+#endif
+}
+
+/* int n=0; */
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+static int aml_uart_switch(struct amlsd_platform *pdata, bool on)
+#else
+static int aml_uart_switch(struct amlsd_host *host, bool on)
+#endif
+{
+	struct pinctrl *pc;
+	char *name[2] = {
+		"sd_to_ao_uart_pins",
+		"ao_to_sd_uart_pins",
+	};
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct amlsd_host *host = pdata->host;
+#else
+	struct amlsd_platform *pdata = host->pdata;
+#endif
+
+	pdata->is_sduart = on;
+	mutex_lock(&host->pinmux_lock);
+	pc = aml_devm_pinctrl_get_select(host, name[on]);
+	mutex_unlock(&host->pinmux_lock);
+	return on;
+}
+/* #endif */
+
+/* clear detect information */
+void aml_sd_uart_detect_clr(struct amlsd_platform *pdata)
+{
+	pdata->is_sduart = 0;
+	pdata->is_in = 0;
+}
+
+/*
+ * setup jtag on/off, and setup ao/ee jtag
+ *
+ * @state: must be JTAG_STATE_ON/JTAG_STATE_OFF
+ * @select: mest be JTAG_DISABLE/JTAG_A53_AO/JTAG_A53_EE
+ */
+#ifdef CONFIG_ARM64
+void jtag_set_state(unsigned int state, unsigned int select)
+{
+	unsigned int command;
+	struct arm_smccc_res res;
+
+	if (state == AMLOGIC_JTAG_STATE_ON)
+		command = AMLOGIC_JTAG_ON;
+	else
+		command = AMLOGIC_JTAG_OFF;
+	asm __volatile__("" : : : "memory");
+
+	arm_smccc_smc(command, select, 0, 0, 0, 0, 0, 0, &res);
+}
+
+void jtag_select_ao(void)
+{
+	set_cpus_allowed_ptr(current, cpumask_of(0));
+	jtag_set_state(AMLOGIC_JTAG_STATE_ON, AMLOGIC_JTAG_APAO);
+	set_cpus_allowed_ptr(current, cpu_all_mask);
+}
+
+void jtag_select_sd(void)
+{
+	set_cpus_allowed_ptr(current, cpumask_of(0));
+	jtag_set_state(AMLOGIC_JTAG_STATE_ON, AMLOGIC_JTAG_APEE);
+	set_cpus_allowed_ptr(current, cpu_all_mask);
+}
+#endif
+
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+static void aml_jtag_switch_sd(struct amlsd_platform *pdata)
+#else
+static void aml_jtag_switch_sd(struct amlsd_host *host)
+#endif
+{
+	struct pinctrl *pc;
+	int i;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct amlsd_host *host = pdata->host;
+#endif
+
+	for (i = 0; i < 100; i++) {
+		mutex_lock(&host->pinmux_lock);
+		pc = aml_devm_pinctrl_get_select(host,
+			"ao_to_sd_jtag_pins");
+		mutex_unlock(&host->pinmux_lock);
+		if (!IS_ERR(pc))
+			break;
+		mdelay(1);
+	}
+	if (is_jtag_apee()) {
+#ifdef CONFIG_ARM64
+		jtag_select_sd();
+#endif
+		pr_info("setup apee\n");
+	}
+}
+
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+static void aml_jtag_switch_ao(struct amlsd_platform *pdata)
+#else
+static void aml_jtag_switch_ao(struct amlsd_host *host)
+#endif
+{
+	struct pinctrl *pc;
+	int i;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct amlsd_host *host = pdata->host;
+#endif
+
+	for (i = 0; i < 100; i++) {
+		mutex_lock(&host->pinmux_lock);
+		pc = aml_devm_pinctrl_get_select(host,
+			"sd_to_ao_jtag_pins");
+		mutex_unlock(&host->pinmux_lock);
+		if (!IS_ERR(pc))
+			break;
+		mdelay(1);
+	}
+}
+
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+int aml_sd_uart_detect(struct amlsd_platform *pdata)
+#else
+int aml_sd_uart_detect(struct amlsd_host *host)
+#endif
+{
+	static bool is_jtag;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct mmc_host *mmc  = pdata->mmc;
+#else
+	struct amlsd_platform *pdata = host->pdata;
+	struct mmc_host *mmc  = host->mmc;
+#endif
+
+	if (aml_is_card_insert(pdata)) {
+		if (pdata->is_in)
+			return 1;
+		pdata->is_in = true;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+		if (aml_is_sduart(pdata)) {
+			aml_uart_switch(pdata, 1);
+#else
+		if (aml_is_sduart(host)) {
+			aml_uart_switch(host, 1);
+#endif
+			pr_info("Uart in\n");
+			mmc->caps &= ~MMC_CAP_4_BIT_DATA;
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+			if (aml_is_sdjtag(pdata)) {
+				aml_jtag_switch_sd(pdata);
+#else
+			if (aml_is_sdjtag(host)) {
+				aml_jtag_switch_sd(host);
+#endif
+				is_jtag = true;
+				pdata->is_in = false;
+				pr_info("JTAG in\n");
+				return 0;
+			}
+		} else {
+			pr_info("normal card in\n");
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+			aml_uart_switch(pdata, 0);
+			aml_jtag_switch_ao(pdata);
+#else
+			aml_uart_switch(host, 0);
+			aml_jtag_switch_ao(host);
+#endif
+			if (pdata->caps & MMC_CAP_4_BIT_DATA)
+				mmc->caps |= MMC_CAP_4_BIT_DATA;
+		}
+	} else {
+		if ((!pdata->is_in) && (pdata->is_sduart == false))
+			return 1;
+		pdata->is_in = false;
+		if (is_jtag) {
+			is_jtag = false;
+			pr_info("JTAG OUT\n");
+		} else
+			pr_info("card out\n");
+
+		pdata->is_tuned = false;
+		if (mmc && mmc->card)
+			mmc_card_set_removed(mmc->card);
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+		aml_uart_switch(pdata, 0);
+		aml_jtag_switch_ao(pdata);
+#else
+		aml_uart_switch(host, 0);
+		aml_jtag_switch_ao(host);
+#endif
+		/* switch to 3.3V */
+		aml_sd_voltage_switch(mmc,
+				MMC_SIGNAL_VOLTAGE_330);
+
+		if (pdata->caps & MMC_CAP_4_BIT_DATA)
+			mmc->caps |= MMC_CAP_4_BIT_DATA;
+	}
+	return 0;
+}
+
+static int card_dealed;
+irqreturn_t aml_irq_cd_thread(int irq, void *data)
+{
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	struct amlsd_platform *pdata = (struct amlsd_platform *)data;
+	struct mmc_host *mmc = pdata->mmc;
+	struct amlsd_host *host = pdata->host;
+#else
+	struct amlsd_host *host = (struct amlsd_host *)data;
+	struct amlsd_platform *pdata = host->pdata;
+	struct mmc_host *mmc = host->mmc;
+#endif
+	int ret = 0;
+
+	mutex_lock(&pdata->in_out_lock);
+	if (card_dealed == 1) {
+		card_dealed = 0;
+		mutex_unlock(&pdata->in_out_lock);
+		return IRQ_HANDLED;
+	}
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+	ret = aml_sd_uart_detect(pdata);
+#else
+	ret = aml_sd_uart_detect(host);
+#endif
+	if (ret == 1) {/* the same as the last*/
+		mutex_unlock(&pdata->in_out_lock);
+		return IRQ_HANDLED;
+	}
+	card_dealed = 1;
+	if ((pdata->is_in == 0) && aml_card_type_non_sdio(pdata))
+		host->init_flag = 0;
+	mutex_unlock(&pdata->in_out_lock);
+	/* mdelay(500); */
+	if (pdata->is_in)
+		mmc_detect_change(mmc, msecs_to_jiffies(100));
+	else
+		mmc_detect_change(mmc, msecs_to_jiffies(0));
+
+	card_dealed = 0;
+	return IRQ_HANDLED;
+}
+
+irqreturn_t aml_sd_irq_cd(int irq, void *dev_id)
+{
+	/* pr_info("cd dev_id %x\n", (unsigned)dev_id); */
+	return IRQ_WAKE_THREAD;
 }
 
 #ifdef CONFIG_AMLOGIC_M8B_MMC
