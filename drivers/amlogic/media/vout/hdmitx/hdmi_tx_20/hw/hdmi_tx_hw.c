@@ -887,7 +887,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	unsigned long TOTAL_PIXELS = 4400, PIXEL_REPEAT_HDMI = 0,
 		PIXEL_REPEAT_VENC = 0, ACTIVE_PIXELS = 3840;
 	unsigned int FRONT_PORCH = 1020, HSYNC_PIXELS = 0, ACTIVE_LINES = 2160,
-		INTERLACE_MODE = 0, TOTAL_LINES = 0, SOF_LINES = 0,
+		INTERLACE_MODE = 0U, TOTAL_LINES = 0, SOF_LINES = 0,
 		VSYNC_LINES = 0;
 	unsigned int LINES_F0 = 2250, LINES_F1 = 2250, BACK_PORCH = 0,
 		EOF_LINES = 8, TOTAL_FRAMES = 0;
@@ -898,19 +898,17 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	unsigned long hsync_pixels_venc = 0;
 
 	unsigned long de_h_begin = 0, de_h_end = 0;
-	unsigned long de_v_begin_even = 0, de_v_end_even = 0,
-		de_v_begin_odd = 0, de_v_end_odd = 0;
+	unsigned long de_v_begin_even = 0, de_v_end_even = 0;
 	unsigned long hs_begin = 0, hs_end = 0;
 	unsigned long vs_adjust = 0;
-	unsigned long vs_bline_evn = 0, vs_eline_evn = 0, vs_bline_odd = 0,
-		vs_eline_odd = 0;
-	unsigned long vso_begin_evn = 0, vso_begin_odd = 0;
+	unsigned long vs_bline_evn = 0, vs_eline_evn  = 0;
+	unsigned long vso_begin_evn = 0;
 
 	switch (param->VIC) {
 	case HDMI_4k2k_30:
 	case HDMI_3840x2160p60_16x9:
 	case HDMI_3840x2160p60_16x9_Y420:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (3840*(1+PIXEL_REPEAT_HDMI));
@@ -928,7 +926,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	case HDMI_4k2k_25:
 	case HDMI_3840x2160p50_16x9:
 	case HDMI_3840x2160p50_16x9_Y420:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (3840*(1+PIXEL_REPEAT_HDMI));
@@ -944,7 +942,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 3;
 		break;
 	case HDMI_4k2k_24:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (3840*(1+PIXEL_REPEAT_HDMI));
@@ -960,7 +958,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 3;
 		break;
 	case HDMI_4k2k_smpte_24:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (4096*(1+PIXEL_REPEAT_HDMI));
@@ -978,7 +976,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	case HDMI_4096x2160p25_256x135:
 	case HDMI_4096x2160p50_256x135:
 	case HDMI_4096x2160p50_256x135_Y420:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (4096*(1+PIXEL_REPEAT_HDMI));
@@ -996,7 +994,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	case HDMI_4096x2160p30_256x135:
 	case HDMI_4096x2160p60_256x135:
 	case HDMI_4096x2160p60_256x135_Y420:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (4096*(1+PIXEL_REPEAT_HDMI));
@@ -1038,16 +1036,6 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	de_v_end_even  = modulo(de_v_begin_even + ACTIVE_LINES, TOTAL_LINES);
 	hd_write_reg(P_ENCP_DE_V_BEGIN_EVEN, de_v_begin_even);
 	hd_write_reg(P_ENCP_DE_V_END_EVEN,  de_v_end_even);
-	/* Program DE timing for odd field if needed */
-	if (INTERLACE_MODE) {
-		de_v_begin_odd = to_signed(
-			(hd_read_reg(P_ENCP_VIDEO_OFLD_VOAV_OFST) & 0xf0)>>4)
-			+ de_v_begin_even + (TOTAL_LINES-1)/2;
-		de_v_end_odd = modulo(de_v_begin_odd + ACTIVE_LINES,
-			TOTAL_LINES);
-		hd_write_reg(P_ENCP_DE_V_BEGIN_ODD, de_v_begin_odd);
-		hd_write_reg(P_ENCP_DE_V_END_ODD, de_v_end_odd);
-	}
 
 	/* Program Hsync timing */
 	if (de_h_end + front_porch_venc >= total_pixels_venc) {
@@ -1074,17 +1062,6 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	vso_begin_evn = hs_begin;
 	hd_write_reg(P_ENCP_DVI_VSO_BEGIN_EVN, vso_begin_evn);
 	hd_write_reg(P_ENCP_DVI_VSO_END_EVN, vso_begin_evn);
-	/* Program Vsync timing for odd field if needed */
-	if (INTERLACE_MODE) {
-		vs_bline_odd = de_v_begin_odd-1 - SOF_LINES - VSYNC_LINES;
-		vs_eline_odd = de_v_begin_odd-1 - SOF_LINES;
-		vso_begin_odd  = modulo(hs_begin + (total_pixels_venc>>1),
-			total_pixels_venc);
-		hd_write_reg(P_ENCP_DVI_VSO_BLINE_ODD, vs_bline_odd);
-		hd_write_reg(P_ENCP_DVI_VSO_ELINE_ODD, vs_eline_odd);
-		hd_write_reg(P_ENCP_DVI_VSO_BEGIN_ODD, vso_begin_odd);
-		hd_write_reg(P_ENCP_DVI_VSO_END_ODD, vso_begin_odd);
-	}
 	hd_write_reg(P_VPU_HDMI_SETTING, (0 << 0) |
 			(0 << 1) |
 			(HSYNC_POLARITY << 2) |
@@ -1285,7 +1262,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	unsigned long TOTAL_PIXELS = 0, PIXEL_REPEAT_HDMI = 0,
 		PIXEL_REPEAT_VENC = 0, ACTIVE_PIXELS = 0;
 	unsigned int FRONT_PORCH = 0, HSYNC_PIXELS = 0, ACTIVE_LINES = 0,
-		INTERLACE_MODE = 0, TOTAL_LINES = 0, SOF_LINES = 0,
+		INTERLACE_MODE = 0U, TOTAL_LINES = 0, SOF_LINES = 0,
 		VSYNC_LINES = 0;
 	unsigned int LINES_F0 = 0, LINES_F1 = 0, BACK_PORCH = 0,
 		EOF_LINES = 0, TOTAL_FRAMES = 0;
@@ -1296,17 +1273,15 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	unsigned long hsync_pixels_venc = 0;
 
 	unsigned long de_h_begin = 0, de_h_end = 0;
-	unsigned long de_v_begin_even = 0, de_v_end_even = 0,
-		de_v_begin_odd = 0, de_v_end_odd = 0;
+	unsigned long de_v_begin_even = 0, de_v_end_even = 0;
 	unsigned long hs_begin = 0, hs_end = 0;
 	unsigned long vs_adjust = 0;
-	unsigned long vs_bline_evn = 0, vs_eline_evn = 0,
-		vs_bline_odd = 0, vs_eline_odd = 0;
-	unsigned long vso_begin_evn = 0, vso_begin_odd = 0;
+	unsigned long vs_bline_evn = 0, vs_eline_evn = 0;
+	unsigned long vso_begin_evn = 0;
 
 	switch (param->VIC) {
 	case HDMI_3840x1080p120hz:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= 3840;
@@ -1322,7 +1297,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 0;
 		break;
 	case HDMI_3840x1080p100hz:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= 3840;
@@ -1338,7 +1313,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 0;
 		break;
 	case HDMI_3840x540p240hz:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= 3840;
@@ -1354,7 +1329,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 0;
 		break;
 	case HDMI_3840x540p200hz:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= 3840;
@@ -1372,7 +1347,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	case HDMI_480p60:
 	case HDMI_480p60_16x9:
 	case HDMI_480p60_16x9_rpt:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 1;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (720*(1+PIXEL_REPEAT_HDMI));
@@ -1390,7 +1365,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	case HDMI_576p50:
 	case HDMI_576p50_16x9:
 	case HDMI_576p50_16x9_rpt:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 1;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (720*(1+PIXEL_REPEAT_HDMI));
@@ -1406,7 +1381,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 4;
 		break;
 	case HDMI_720p60:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 1;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (1280*(1+PIXEL_REPEAT_HDMI));
@@ -1422,7 +1397,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 4;
 		break;
 	case HDMI_720p50:
-		INTERLACE_MODE = 0;
+		INTERLACE_MODE = 0U;
 		PIXEL_REPEAT_VENC = 1;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (1280*(1+PIXEL_REPEAT_HDMI));
@@ -1439,7 +1414,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		break;
 	case HDMI_1080p50:
 	case HDMI_1080p25:
-		INTERLACE_MODE	= 0;
+		INTERLACE_MODE	= 0U;
 		PIXEL_REPEAT_VENC  = 0;
 		PIXEL_REPEAT_HDMI  = 0;
 		ACTIVE_PIXELS = (1920*(1+PIXEL_REPEAT_HDMI));
@@ -1455,7 +1430,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 4;
 		break;
 	case HDMI_1080p24:
-		INTERLACE_MODE	= 0;
+		INTERLACE_MODE	= 0U;
 		PIXEL_REPEAT_VENC  = 0;
 		PIXEL_REPEAT_HDMI  = 0;
 		ACTIVE_PIXELS = (1920*(1+PIXEL_REPEAT_HDMI));
@@ -1472,7 +1447,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		break;
 	case HDMI_1080p60:
 	case HDMI_1080p30:
-		INTERLACE_MODE	= 0;
+		INTERLACE_MODE	= 0U;
 		PIXEL_REPEAT_VENC  = 0;
 		PIXEL_REPEAT_HDMI  = 0;
 		ACTIVE_PIXELS = (1920*(1+PIXEL_REPEAT_HDMI));
@@ -1515,15 +1490,6 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	de_v_end_even  = de_v_begin_even + ACTIVE_LINES;
 	hd_write_reg(P_ENCP_DE_V_BEGIN_EVEN, de_v_begin_even);
 	hd_write_reg(P_ENCP_DE_V_END_EVEN,  de_v_end_even);	/* 522 */
-	/* Program DE timing for odd field if needed */
-	if (INTERLACE_MODE) {
-		de_v_begin_odd = to_signed(
-			(hd_read_reg(P_ENCP_VIDEO_OFLD_VOAV_OFST)
-			& 0xf0)>>4) + de_v_begin_even + (TOTAL_LINES-1)/2;
-		de_v_end_odd = de_v_begin_odd + ACTIVE_LINES;
-		hd_write_reg(P_ENCP_DE_V_BEGIN_ODD, de_v_begin_odd);
-		hd_write_reg(P_ENCP_DE_V_END_ODD, de_v_end_odd);
-	}
 
 	/* Program Hsync timing */
 	if (de_h_end + front_porch_venc >= total_pixels_venc) {
@@ -1550,17 +1516,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	vso_begin_evn = hs_begin; /* 1692 */
 	hd_write_reg(P_ENCP_DVI_VSO_BEGIN_EVN, vso_begin_evn);  /* 1692 */
 	hd_write_reg(P_ENCP_DVI_VSO_END_EVN, vso_begin_evn);  /* 1692 */
-	/* Program Vsync timing for odd field if needed */
-	if (INTERLACE_MODE) {
-		vs_bline_odd = de_v_begin_odd-1 - SOF_LINES - VSYNC_LINES;
-		vs_eline_odd = de_v_begin_odd-1 - SOF_LINES;
-		vso_begin_odd  = modulo(hs_begin + (total_pixels_venc>>1),
-			total_pixels_venc);
-		hd_write_reg(P_ENCP_DVI_VSO_BLINE_ODD, vs_bline_odd);
-		hd_write_reg(P_ENCP_DVI_VSO_ELINE_ODD, vs_eline_odd);
-		hd_write_reg(P_ENCP_DVI_VSO_BEGIN_ODD, vso_begin_odd);
-		hd_write_reg(P_ENCP_DVI_VSO_END_ODD, vso_begin_odd);
-	}
+
 	if ((param->VIC == HDMI_3840x540p240hz) ||
 		(param->VIC == HDMI_3840x540p200hz))
 		hd_write_reg(P_ENCP_DE_V_END_EVEN, 0x230);

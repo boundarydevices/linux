@@ -3060,11 +3060,6 @@ static int amhdmitx_probe(struct platform_device *pdev)
 
 	r = alloc_chrdev_region(&hdmitx_id, 0, HDMI_TX_COUNT,
 		DEVICE_NAME);
-	if (r < 0) {
-		hdmi_print(INF, SYS
-			"Can't register major for amhdmitx device\n");
-		return r;
-	}
 
 	hdmitx_class = class_create(THIS_MODULE, DEVICE_NAME);
 	if (IS_ERR(hdmitx_class)) {
@@ -3247,11 +3242,6 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	pr_info("hdmitx: attr %s\n", fmt_attr);
 	hdmitx_device.task = kthread_run(hdmi_task_handle,
 		&hdmitx_device, "kthread_hdmi");
-
-	if (r < 0) {
-		hdmi_print(INF, SYS "register switch dev failed\n");
-		return r;
-	}
 	return r;
 }
 
