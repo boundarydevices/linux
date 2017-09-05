@@ -1292,6 +1292,7 @@ static uint32_t pxp_parse_as_fmt(uint32_t format)
 	uint32_t fmt_ctrl;
 
 	switch (format) {
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_ARGB32:
 		fmt_ctrl = BV_PXP_AS_CTRL_FORMAT__ARGB8888;
 		break;
@@ -1336,6 +1337,7 @@ static uint32_t pxp_parse_out_fmt(uint32_t format)
 	uint32_t fmt_ctrl;
 
 	switch (format) {
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_ARGB32:
 		fmt_ctrl = BV_PXP_OUT_CTRL_FORMAT__ARGB8888;
 		break;
@@ -1889,6 +1891,7 @@ static bool fmt_as_support(uint32_t format)
 	case PXP_PIX_FMT_ARGB32:
 	case PXP_PIX_FMT_RGBA32:
 	case PXP_PIX_FMT_XRGB32:
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_ARGB555:
 	case PXP_PIX_FMT_ARGB444:
 	case PXP_PIX_FMT_RGBA555:
@@ -1907,6 +1910,7 @@ static bool fmt_out_support(uint32_t format)
 	switch (format) {
 	case PXP_PIX_FMT_ARGB32:
 	case PXP_PIX_FMT_XRGB32:
+	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_RGB24:
 	case PXP_PIX_FMT_ARGB555:
 	case PXP_PIX_FMT_ARGB444:
