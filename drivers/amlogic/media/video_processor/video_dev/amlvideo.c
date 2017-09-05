@@ -538,8 +538,14 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	p->timestamp.tv_sec = pts_us64 >> 32;
 	p->timestamp.tv_usec = pts_us64 & 0xFFFFFFFF;
 	dev->last_pts_us64 = pts_us64;
-	p->timecode.type = dev->vf->width;
-	p->timecode.flags = dev->vf->height;
+
+	if ((dev->vf->type & VIDTYPE_COMPRESS) != 0) {
+		p->timecode.type = dev->vf->compWidth;
+		p->timecode.flags = dev->vf->compHeight;
+	} else {
+		p->timecode.type = dev->vf->width;
+		p->timecode.flags = dev->vf->height;
+	}
 
 	vf_notify_receiver(
 			dev->vf_provider_name,
