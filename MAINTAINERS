@@ -13539,8 +13539,8 @@ F: driver/amlogic/i2c/*
 F: Documentation/devicetree/bindings/amlogic/i2c-meson.txt
 
 AMLOGIC internal phy driver for ethernet
-M: Yizhou Jiang <yizhou.jiang@amlogic.com
-F: drivers/amlogic/ethernet/*
+M: Zhuo Wang <zhuo.wang@amlogic.com>
+F: drivers/amlogic/ethernet/
 
 AMLOGIC CPU hotplug for dvfs and IPA
 M: Jianxin Pan <jianxin.pan@amlogic.com>
