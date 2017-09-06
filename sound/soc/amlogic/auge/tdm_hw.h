@@ -52,7 +52,7 @@ extern void aml_tdm_fifo_reset(
 extern void aml_tdm_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth, int stream,
-	int index);
+	int index, unsigned int fifo_id);
 
 extern void aml_tdm_set_format(
 	struct aml_audio_controller *actrl,

@@ -75,10 +75,6 @@ struct aml_tdm {
 	unsigned int id;
 	/* bclk src selection */
 	unsigned int clk_sel;
-	int irq_tdmout;
-	int irq_tdmin;
-	unsigned int from_ddr_num;
-	unsigned int to_ddr_num;
 	struct toddr *tddr;
 	struct frddr *fddr;
 };
@@ -105,16 +101,7 @@ static const struct snd_pcm_hardware aml_tdm_hardware = {
 	.channels_max = 32,
 };
 
-static irqreturn_t aml_tdmout_isr(int irq, void *devid)
-{
-	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)devid;
-
-	snd_pcm_period_elapsed(substream);
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t aml_tdmin_isr(int irq, void *devid)
+static irqreturn_t aml_tdm_ddr_isr(int irq, void *devid)
 {
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)devid;
 
@@ -181,7 +168,6 @@ static int aml_tdm_open(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct device *dev = rtd->platform->dev;
 	struct aml_tdm *p_tdm;
-	int ret = 0;
 
 	p_tdm = (struct aml_tdm *)dev_get_drvdata(dev);
 
@@ -189,38 +175,17 @@ static int aml_tdm_open(struct snd_pcm_substream *substream)
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		p_tdm->fddr = aml_audio_register_frddr(dev,
-			p_tdm->actrl, p_tdm->from_ddr_num);
+			p_tdm->actrl, aml_tdm_ddr_isr, substream);
 		if (p_tdm->fddr == NULL) {
-			dev_err(dev, "failed to claim from ddr %u\n",
-					p_tdm->from_ddr_num);
+			dev_err(dev, "failed to claim from ddr\n");
 			return -ENXIO;
-		}
-
-		ret = request_irq(p_tdm->irq_tdmout,
-			aml_tdmout_isr, 0, "tdmout", substream);
-		if (ret) {
-			aml_audio_unregister_frddr(dev,
-				p_tdm->from_ddr_num);
-			dev_err(p_tdm->dev, "failed to claim irq %u\n",
-					p_tdm->irq_tdmout);
-			return ret;
 		}
 	} else {
 		p_tdm->tddr = aml_audio_register_toddr(dev,
-			p_tdm->actrl, p_tdm->to_ddr_num);
+			p_tdm->actrl, aml_tdm_ddr_isr, substream);
 		if (p_tdm->tddr == NULL) {
-			dev_err(dev, "failed to claim to ddr %u\n",
-					p_tdm->to_ddr_num);
+			dev_err(dev, "failed to claim to ddr\n");
 			return -ENXIO;
-		}
-
-		ret = request_irq(p_tdm->irq_tdmin,
-				aml_tdmin_isr, 0, "tdmin", substream);
-		if (ret) {
-			aml_audio_unregister_toddr(dev, p_tdm->to_ddr_num);
-			dev_err(p_tdm->dev, "failed to claim irq %u\n",
-						p_tdm->irq_tdmin);
-			return ret;
 		}
 	}
 
@@ -233,16 +198,12 @@ static int aml_tdm_close(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_tdm *p_tdm = runtime->private_data;
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		aml_audio_unregister_frddr(p_tdm->dev,
-				p_tdm->from_ddr_num);
-		free_irq(p_tdm->irq_tdmout, substream);
-	} else {
+				substream);
+	else
 		aml_audio_unregister_toddr(p_tdm->dev,
-				p_tdm->to_ddr_num);
-
-		free_irq(p_tdm->irq_tdmin, substream);
-	}
+				substream);
 
 	return 0;
 }
@@ -367,14 +328,18 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 
 	bit_depth = snd_pcm_format_width(runtime->format);
 
-	aml_tdm_fifo_ctrl(p_tdm->actrl,
-		bit_depth,
-		substream->stream,
-		p_tdm->id);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		struct frddr *fr = p_tdm->fddr;
 		enum frddr_dest dst;
+		unsigned int fifo_id;
+
+		fifo_id = aml_frddr_get_fifo_id(fr);
+		aml_tdm_fifo_ctrl(p_tdm->actrl,
+			bit_depth,
+			substream->stream,
+			p_tdm->id,
+			fifo_id);
 
 		switch (p_tdm->id) {
 		case 0:
@@ -948,30 +913,6 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	/* complete mclk for tdm */
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xa)
 		meson_clk_measure((1<<16) | 0x67);
-
-	/* parse DTS configured ddr */
-	ret = of_property_read_u32(node, "tdm_from_ddr",
-			&p_tdm->from_ddr_num);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Can't retrieve tdm_from_ddr\n");
-		return -ENXIO;
-	}
-
-	ret = of_property_read_u32(node, "tdm_to_ddr",
-			&p_tdm->to_ddr_num);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Can't retrieve tdm_to_ddr\n");
-		return -ENXIO;
-	}
-
-	/* irqs */
-	p_tdm->irq_tdmout = platform_get_irq_byname(pdev, "tdmout");
-	if (p_tdm->irq_tdmout < 0)
-		dev_err(dev, "platform_get_irq_byname failed\n");
-
-	p_tdm->irq_tdmin = platform_get_irq_byname(pdev, "tdmin");
-	if (p_tdm->irq_tdmin < 0)
-		dev_err(dev, "platform_get_irq_byname failed\n");
 
 	p_tdm->pin_ctl = devm_pinctrl_get_select(dev, "tdm_pins");
 	if (IS_ERR(p_tdm->pin_ctl)) {

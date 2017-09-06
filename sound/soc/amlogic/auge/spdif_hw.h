@@ -37,7 +37,8 @@ extern void aml_spdif_fifo_reset(
 extern void aml_spdif_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth,
-	int stream);
+	int stream,
+	unsigned int fifo_id);
 
 extern int spdifin_get_mode(void);
 

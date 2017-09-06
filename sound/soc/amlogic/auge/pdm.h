@@ -47,8 +47,6 @@ struct aml_pdm {
 	struct clk *clk_pll;
 	struct clk *clk_pdm_sysclk;
 	struct clk *clk_pdm_dclk;
-	int irq_pdmin;
-	unsigned int to_ddr_num;
 	struct toddr *tddr;
 	/*
 	 * filter mode:0~4,

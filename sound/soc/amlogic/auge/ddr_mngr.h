@@ -19,6 +19,7 @@
 #define __AML_AUDIO_DDR_MANAGER_H_
 
 #include <linux/device.h>
+#include <linux/interrupt.h>
 #include "audio_io.h"
 
 enum ddr_num {
@@ -55,8 +56,9 @@ enum frddr_dest {
 
 /* to ddrs */
 struct toddr *aml_audio_register_toddr(struct device *dev,
-		struct aml_audio_controller *actrl, enum ddr_num);
-int aml_audio_unregister_toddr(struct device *dev, enum ddr_num);
+		struct aml_audio_controller *actrl,
+		irq_handler_t handler, void *data);
+int aml_audio_unregister_toddr(struct device *dev, void *data);
 int aml_toddr_set_buf(struct toddr *to, unsigned int start,
 			unsigned int end);
 int aml_toddr_set_intrpt(struct toddr *to, unsigned int intrpt);
@@ -69,8 +71,9 @@ void aml_toddr_set_format(struct toddr *to,
 
 /* from ddrs */
 struct frddr *aml_audio_register_frddr(struct device *dev,
-		struct aml_audio_controller *actrl, enum ddr_num);
-int aml_audio_unregister_frddr(struct device *dev, enum ddr_num);
+		struct aml_audio_controller *actrl,
+		irq_handler_t handler, void *data);
+int aml_audio_unregister_frddr(struct device *dev, void *data);
 int aml_frddr_set_buf(struct frddr *fr, unsigned int start,
 			unsigned int end);
 int aml_frddr_set_intrpt(struct frddr *fr, unsigned int intrpt);
@@ -79,6 +82,7 @@ void aml_frddr_enable(struct frddr *fr, bool enable);
 void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest);
 void aml_frddr_set_fifos(struct frddr *fr,
 		unsigned int depth, unsigned int thresh);
+unsigned int aml_frddr_get_fifo_id(struct frddr *fr);
 
 #endif
 

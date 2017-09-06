@@ -16,13 +16,17 @@
  */
 
 #include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/init.h>
 #include <linux/slab.h>
 #include "regs.h"
 #include "ddr_mngr.h"
 #include "audio_utils.h"
 
-static DEFINE_MUTEX(ddr_mutex);
+#define DRV_NAME "aml_audio_ddr_manager"
 
+static DEFINE_MUTEX(ddr_mutex);
+#if 0
 struct ddr_desc {
 	/* start address of DDR */
 	unsigned int start;
@@ -41,9 +45,9 @@ struct ddr_desc {
 	struct clk *ddr;
 	struct clk *ddr_arb;
 };
-
+#endif
 struct toddr {
-	struct ddr_desc dscrpt;
+	//struct ddr_desc dscrpt;
 	struct device *dev;
 	unsigned int resample: 1;
 	unsigned int ext_signed: 1;
@@ -51,76 +55,88 @@ struct toddr {
 	unsigned int lsb_bit;
 	unsigned int reg_base;
 	enum toddr_src src;
+	int irq;
+	bool in_use: 1;
 	struct aml_audio_controller *actrl;
 };
 
 struct frddr {
-	struct ddr_desc dscrpt;
+	//struct ddr_desc dscrpt;
 	struct device *dev;
 	enum frddr_dest dest;
 	struct aml_audio_controller *actrl;
 	unsigned int reg_base;
+	unsigned int fifo_id;
+	int irq;
+	bool in_use;
 };
 
 #define DDRMAX 3
-static struct frddr *frddrs[DDRMAX];
-static struct toddr *toddrs[DDRMAX];
+static struct frddr frddrs[DDRMAX];
+static struct toddr toddrs[DDRMAX];
 
 /* to DDRS */
 static struct toddr *register_toddr_l(struct device *dev,
-	struct aml_audio_controller *actrl, enum ddr_num id)
+	struct aml_audio_controller *actrl,
+	irq_handler_t handler, void *data)
 {
 	struct toddr *to;
 	unsigned int mask_bit;
+	int i, ret;
 
-	if (toddrs[id] != NULL)
-		return NULL;
-
-	to = kzalloc(sizeof(struct toddr), GFP_KERNEL);
-	if (!to)
-		return NULL;
-
-	switch (id) {
-	case DDR_A:
-		to->reg_base = EE_AUDIO_TODDR_A_CTRL0;
-		break;
-	case DDR_B:
-		to->reg_base = EE_AUDIO_TODDR_B_CTRL0;
-		break;
-	case DDR_C:
-		to->reg_base = EE_AUDIO_TODDR_C_CTRL0;
-		break;
-	default:
-		return NULL;
+	/* lookup unused toddr */
+	for (i = 0; i < DDRMAX; i++) {
+		if (!toddrs[i].in_use)
+			break;
 	}
 
+	if (i >= DDRMAX)
+		return NULL;
+
+	to = &toddrs[i];
+
+	/* irqs request */
+	ret = request_irq(to->irq, handler,
+		0, dev_name(dev), data);
+	if (ret) {
+		dev_err(dev, "failed to claim irq %u\n", to->irq);
+		return NULL;
+	}
 	/* enable audio ddr arb */
-	mask_bit = id;
+	mask_bit = i;
 	aml_audiobus_update_bits(actrl, EE_AUDIO_ARB_CTRL,
 			1<<31|1<<mask_bit, 1<<31|1<<mask_bit);
+
 	to->dev = dev;
 	to->actrl = actrl;
-	toddrs[id] = to;
-	pr_info("toddrs[%d] occupied by device %s\n", id, dev_name(dev));
+	to->in_use = true;
+	pr_info("toddrs[%d] registered by device %s\n", i, dev_name(dev));
 	return to;
 }
 
-static int unregister_toddr_l(struct device *dev, enum ddr_num id)
+static int unregister_toddr_l(struct device *dev, void *data)
 {
 	struct toddr *to;
 	struct aml_audio_controller *actrl;
 	unsigned int mask_bit;
 	unsigned int value;
+	int i;
 
 	if (dev == NULL)
 		return -EINVAL;
 
-	to = toddrs[id];
-	if (to->dev != dev)
+	for (i = 0; i < DDRMAX; i++) {
+		if ((toddrs[i].dev) == dev && toddrs[i].in_use)
+			break;
+	}
+
+	if (i >= DDRMAX)
 		return -EINVAL;
 
+	to = &toddrs[i];
+
 	/* disable audio ddr arb */
-	mask_bit = id;
+	mask_bit = i;
 	actrl = to->actrl;
 	aml_audiobus_update_bits(actrl, EE_AUDIO_ARB_CTRL,
 			1<<mask_bit, 0<<mask_bit);
@@ -130,30 +146,34 @@ static int unregister_toddr_l(struct device *dev, enum ddr_num id)
 		aml_audiobus_update_bits(actrl, EE_AUDIO_ARB_CTRL,
 				1<<31, 0<<31);
 
-	kfree(to);
-	toddrs[id] = NULL;
-	pr_info("toddrs[%d] released by device %s\n", id, dev_name(dev));
+	free_irq(to->irq, data);
+	to->dev = NULL;
+	to->actrl = NULL;
+	to->in_use = false;
+	pr_info("toddrs[%d] released by device %s\n", i, dev_name(dev));
 
 	return 0;
 }
 
 struct toddr *aml_audio_register_toddr(struct device *dev,
-	struct aml_audio_controller *actrl, enum ddr_num id)
+	struct aml_audio_controller *actrl,
+	irq_handler_t handler, void *data)
 {
 	struct toddr *to = NULL;
 
 	mutex_lock(&ddr_mutex);
-	to = register_toddr_l(dev, actrl, id);
+	to = register_toddr_l(dev, actrl,
+		handler, data);
 	mutex_unlock(&ddr_mutex);
 	return to;
 }
 
-int aml_audio_unregister_toddr(struct device *dev, enum ddr_num id)
+int aml_audio_unregister_toddr(struct device *dev, void *data)
 {
 	int ret;
 
 	mutex_lock(&ddr_mutex);
-	ret = unregister_toddr_l(dev, id);
+	ret = unregister_toddr_l(dev, data);
 	mutex_unlock(&ddr_mutex);
 	return ret;
 }
@@ -251,59 +271,66 @@ void aml_toddr_set_format(struct toddr *to,
 
 /* from DDRS */
 static struct frddr *register_frddr_l(struct device *dev,
-	struct aml_audio_controller *actrl, enum ddr_num id)
+	struct aml_audio_controller *actrl,
+	irq_handler_t handler, void *data)
 {
 	struct frddr *from;
 	unsigned int mask_bit;
+	int i, ret;
 
-	if (frddrs[id] != NULL)
-		return NULL;
-
-	from = kzalloc(sizeof(struct frddr), GFP_KERNEL);
-	if (!from)
-		return NULL;
-
-	switch (id) {
-	case DDR_A:
-		from->reg_base = EE_AUDIO_FRDDR_A_CTRL0;
-		break;
-	case DDR_B:
-		from->reg_base = EE_AUDIO_FRDDR_B_CTRL0;
-		break;
-	case DDR_C:
-		from->reg_base = EE_AUDIO_FRDDR_C_CTRL0;
-		break;
-	default:
-		return NULL;
+	/* lookup unused frddr */
+	for (i = 0; i < DDRMAX; i++) {
+		if (!frddrs[i].in_use)
+			break;
 	}
 
+	if (i >= DDRMAX)
+		return NULL;
+
+	from = &frddrs[i];
+
 	/* enable audio ddr arb */
-	mask_bit = id + 4;
+	mask_bit = i + 4;
 	aml_audiobus_update_bits(actrl, EE_AUDIO_ARB_CTRL,
 			1<<31|1<<mask_bit, 1<<31|1<<mask_bit);
+
+	/* irqs request */
+	ret = request_irq(from->irq, handler,
+		0, dev_name(dev), data);
+	if (ret) {
+		dev_err(dev, "failed to claim irq %u\n", from->irq);
+		return NULL;
+	}
 	from->dev = dev;
 	from->actrl = actrl;
-	frddrs[id] = from;
-	pr_info("frddrs[%d] claimed by device %s\n", id, dev_name(dev));
+	from->in_use = true;
+	pr_info("frddrs[%d] registered by device %s\n", i, dev_name(dev));
 	return from;
 }
 
-static int unregister_frddr_l(struct device *dev, enum ddr_num id)
+static int unregister_frddr_l(struct device *dev, void *data)
 {
 	struct frddr *from;
 	struct aml_audio_controller *actrl;
 	unsigned int mask_bit;
 	unsigned int value;
+	int i;
 
 	if (dev == NULL)
 		return -EINVAL;
 
-	from = frddrs[id];
-	if (from->dev != dev)
+	for (i = 0; i < DDRMAX; i++) {
+		if ((frddrs[i].dev) == dev && frddrs[i].in_use)
+			break;
+	}
+
+	if (i >= DDRMAX)
 		return -EINVAL;
 
+	from = &frddrs[i];
+
 	/* disable audio ddr arb */
-	mask_bit = id + 4;
+	mask_bit = i + 4;
 	actrl = from->actrl;
 	aml_audiobus_update_bits(actrl, EE_AUDIO_ARB_CTRL,
 			1<<mask_bit, 0<<mask_bit);
@@ -313,29 +340,32 @@ static int unregister_frddr_l(struct device *dev, enum ddr_num id)
 		aml_audiobus_update_bits(actrl, EE_AUDIO_ARB_CTRL,
 				1<<31, 0<<31);
 
-	kfree(from);
-	frddrs[id] = NULL;
-	pr_info("frddrs[%d] released by device %s\n", id, dev_name(dev));
+	free_irq(from->irq, data);
+	from->dev = NULL;
+	from->actrl = NULL;
+	from->in_use = false;
+	pr_info("frddrs[%d] released by device %s\n", i, dev_name(dev));
 	return 0;
 }
 
 struct frddr *aml_audio_register_frddr(struct device *dev,
-	struct aml_audio_controller *actrl, enum ddr_num id)
+	struct aml_audio_controller *actrl,
+	irq_handler_t handler, void *data)
 {
 	struct frddr *fr = NULL;
 
 	mutex_lock(&ddr_mutex);
-	fr = register_frddr_l(dev, actrl, id);
+	fr = register_frddr_l(dev, actrl, handler, data);
 	mutex_unlock(&ddr_mutex);
 	return fr;
 }
 
-int aml_audio_unregister_frddr(struct device *dev, enum ddr_num id)
+int aml_audio_unregister_frddr(struct device *dev, void *data)
 {
 	int ret;
 
 	mutex_lock(&ddr_mutex);
-	ret = unregister_frddr_l(dev, id);
+	ret = unregister_frddr_l(dev, data);
 	mutex_unlock(&ddr_mutex);
 	return ret;
 }
@@ -417,6 +447,62 @@ void aml_frddr_set_fifos(struct frddr *fr,
 			0xffff<<16 | 0xf<<8,
 			(depth - 1)<<24 | (thresh - 1)<<16 | 2<<8);
 }
+
+unsigned int aml_frddr_get_fifo_id(struct frddr *fr)
+{
+	return fr->fifo_id;
+}
+
+static int aml_ddr_mngr_platform_probe(struct platform_device *pdev)
+{
+	int i;
+
+	/* irqs */
+	toddrs[DDR_A].irq = platform_get_irq_byname(pdev, "toddr_a");
+	toddrs[DDR_B].irq = platform_get_irq_byname(pdev, "toddr_b");
+	toddrs[DDR_C].irq = platform_get_irq_byname(pdev, "toddr_c");
+
+	frddrs[DDR_A].irq = platform_get_irq_byname(pdev, "frddr_a");
+	frddrs[DDR_B].irq = platform_get_irq_byname(pdev, "frddr_b");
+	frddrs[DDR_C].irq = platform_get_irq_byname(pdev, "frddr_c");
+
+	for (i = 0; i < DDRMAX; i++) {
+		pr_info("%d, irqs toddr %d, frddr %d\n",
+			i, toddrs[i].irq, frddrs[i].irq);
+		if (toddrs[i].irq <= 0 || frddrs[i].irq <= 0) {
+			dev_err(&pdev->dev, "platform_get_irq_byname failed\n");
+			return -ENXIO;
+		}
+	}
+
+	/* inits */
+	toddrs[DDR_A].reg_base = EE_AUDIO_TODDR_A_CTRL0;
+	toddrs[DDR_B].reg_base = EE_AUDIO_TODDR_B_CTRL0;
+	toddrs[DDR_C].reg_base = EE_AUDIO_TODDR_C_CTRL0;
+	frddrs[DDR_A].reg_base = EE_AUDIO_FRDDR_A_CTRL0;
+	frddrs[DDR_B].reg_base = EE_AUDIO_FRDDR_B_CTRL0;
+	frddrs[DDR_C].reg_base = EE_AUDIO_FRDDR_C_CTRL0;
+	frddrs[DDR_A].fifo_id = DDR_A;
+	frddrs[DDR_B].fifo_id = DDR_B;
+	frddrs[DDR_C].fifo_id = DDR_C;
+
+	return 0;
+}
+
+static const struct of_device_id aml_ddr_mngr_device_id[] = {
+	{ .compatible = "amlogic, audio-ddr-manager", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, aml_ddr_mngr_device_id);
+
+struct platform_driver aml_audio_ddr_manager = {
+	.driver = {
+		.name = DRV_NAME,
+		.of_match_table = aml_ddr_mngr_device_id,
+	},
+	.probe   = aml_ddr_mngr_platform_probe,
+};
+module_platform_driver(aml_audio_ddr_manager);
 
 /* Module information */
 MODULE_AUTHOR("Amlogic, Inc.");

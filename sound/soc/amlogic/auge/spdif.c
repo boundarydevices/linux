@@ -50,11 +50,7 @@ struct aml_spdif {
 	struct clk *clk_spdifout;
 	unsigned int sysclk_freq;
 	/* bclk src selection */
-	int irq_toddr;
-	int irq_frddr;
 	int irq_spdifin;
-	unsigned int from_ddr_num;
-	unsigned int to_ddr_num;
 	struct toddr *tddr;
 	struct frddr *fddr;
 };
@@ -81,17 +77,7 @@ static const struct snd_pcm_hardware aml_spdif_hardware = {
 	.channels_max = 32,
 };
 
-static irqreturn_t aml_spdifout_isr(int irq, void *devid)
-{
-	struct snd_pcm_substream *substream =
-		(struct snd_pcm_substream *)devid;
-
-	snd_pcm_period_elapsed(substream);
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t aml_spdifin_isr(int irq, void *devid)
+static irqreturn_t aml_spdif_ddr_isr(int irq, void *devid)
 {
 	struct snd_pcm_substream *substream =
 		(struct snd_pcm_substream *)devid;
@@ -128,38 +114,18 @@ static int aml_spdif_open(struct snd_pcm_substream *substream)
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		p_spdif->fddr = aml_audio_register_frddr(dev,
 			p_spdif->actrl,
-			p_spdif->from_ddr_num);
+			aml_spdif_ddr_isr, substream);
 		if (p_spdif->fddr == NULL) {
-			dev_err(dev, "failed to claim from ddr %u\n",
-					p_spdif->from_ddr_num);
+			dev_err(dev, "failed to claim from ddr\n");
 			return -ENXIO;
-		}
-
-		ret = request_irq(p_spdif->irq_frddr,
-			aml_spdifout_isr, 0, "spdifout", substream);
-		if (ret) {
-			aml_audio_unregister_frddr(dev, p_spdif->from_ddr_num);
-			dev_err(p_spdif->dev, "failed to claim irq %u\n",
-					p_spdif->irq_frddr);
-			return ret;
 		}
 	} else {
 		p_spdif->tddr = aml_audio_register_toddr(dev,
 			p_spdif->actrl,
-			p_spdif->to_ddr_num);
+			aml_spdif_ddr_isr, substream);
 		if (p_spdif->tddr == NULL) {
-			dev_err(dev, "failed to claim to ddr %u\n",
-					p_spdif->to_ddr_num);
+			dev_err(dev, "failed to claim to ddr\n");
 			return -ENXIO;
-		}
-
-		ret = request_irq(p_spdif->irq_toddr,
-				aml_spdifin_isr, 0, "spdifin", substream);
-		if (ret) {
-			aml_audio_unregister_toddr(dev, p_spdif->to_ddr_num);
-			dev_err(p_spdif->dev, "failed to claim irq %u\n",
-						p_spdif->irq_toddr);
-			return ret;
 		}
 
 		ret = request_irq(p_spdif->irq_spdifin,
@@ -168,7 +134,7 @@ static int aml_spdif_open(struct snd_pcm_substream *substream)
 		if (ret) {
 			dev_err(p_spdif->dev, "failed to claim irq_spdifin %u\n",
 						p_spdif->irq_spdifin);
-			//return ret;
+			return ret;
 		}
 
 	}
@@ -187,11 +153,9 @@ static int aml_spdif_close(struct snd_pcm_substream *substream)
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		aml_audio_unregister_frddr(p_spdif->dev, p_spdif->from_ddr_num);
-		free_irq(p_spdif->irq_frddr, substream);
+		aml_audio_unregister_frddr(p_spdif->dev, substream);
 	} else {
-		aml_audio_unregister_toddr(p_spdif->dev, p_spdif->to_ddr_num);
-		free_irq(p_spdif->irq_toddr, substream);
+		aml_audio_unregister_toddr(p_spdif->dev, substream);
 		free_irq(p_spdif->irq_spdifin, p_spdif);
 	}
 
@@ -400,6 +364,7 @@ static int aml_dai_spdif_prepare(
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
 	unsigned int bit_depth = 0;
+	unsigned int fifo_id = 0;
 
 	pr_info("%s stream:%d\n", __func__, substream->stream);
 
@@ -408,6 +373,7 @@ static int aml_dai_spdif_prepare(
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		struct frddr *fr = p_spdif->fddr;
 
+		fifo_id = aml_frddr_get_fifo_id(fr);
 		aml_frddr_select_dst(fr, SPDIFOUT);
 		aml_frddr_set_fifos(fr, 0x40, 0x20);
 	} else {
@@ -464,7 +430,8 @@ static int aml_dai_spdif_prepare(
 		aml_toddr_set_fifos(to, 0x40);
 	}
 
-	aml_spdif_fifo_ctrl(p_spdif->actrl, bit_depth, substream->stream);
+	aml_spdif_fifo_ctrl(p_spdif->actrl, bit_depth,
+			substream->stream, fifo_id);
 
 	return 0;
 }
@@ -696,21 +663,6 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 				platform_get_drvdata(pdev_parent);
 	aml_spdif->actrl = actrl;
 
-	/* parse DTS configured ddr */
-	ret = of_property_read_u32(node, "spdif_from_ddr",
-			&aml_spdif->from_ddr_num);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Can't retrieve spdif_from_ddr\n");
-		return -ENXIO;
-	}
-
-	ret = of_property_read_u32(node, "spdif_to_ddr",
-			&aml_spdif->to_ddr_num);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Can't retrieve spdif_to_ddr\n");
-		return -ENXIO;
-	}
-
 	ret = aml_spdif_clks_parse_of(aml_spdif);
 	if (ret)
 		return -EINVAL;
@@ -718,14 +670,6 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 	/* irqs */
 	aml_spdif->irq_spdifin = platform_get_irq_byname(pdev, "irq_spdifin");
 	if (aml_spdif->irq_spdifin < 0)
-		dev_err(dev, "platform_get_irq_byname failed\n");
-
-	aml_spdif->irq_toddr = platform_get_irq_byname(pdev, "irq_toddr");
-	if (aml_spdif->irq_toddr < 0)
-		dev_err(dev, "platform_get_irq_byname failed\n");
-
-	aml_spdif->irq_frddr = platform_get_irq_byname(pdev, "irq_frddr");
-	if (aml_spdif->irq_frddr < 0)
 		dev_err(dev, "platform_get_irq_byname failed\n");
 
 	/* spdif pinmux */

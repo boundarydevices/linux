@@ -85,7 +85,7 @@ void aml_tdm_fifo_reset(
 void aml_tdm_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth, int stream,
-	int index)
+	int index, unsigned int fifo_id)
 {
 	unsigned int frddr_type;
 	unsigned int reg, offset;
@@ -115,7 +115,7 @@ void aml_tdm_fifo_ctrl(
 		reg = EE_AUDIO_TDMOUT_A_CTRL1 + offset * index;
 		aml_audiobus_update_bits(actrl, reg,
 				0x3<<24|0x1f<<8|0x7<<4,
-				index<<24|(bitwidth-1)<<8|frddr_type<<4);
+				fifo_id<<24|(bitwidth-1)<<8|frddr_type<<4);
 	} else {
 		pr_info("tdm prepare----capture\n");
 	}

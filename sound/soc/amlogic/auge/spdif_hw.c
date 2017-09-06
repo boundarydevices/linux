@@ -87,7 +87,8 @@ void aml_spdif_fifo_reset(
 void aml_spdif_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth,
-	int stream)
+	int stream,
+	unsigned int fifo_id)
 {
 	unsigned int frddr_type, toddr_type;
 
@@ -127,7 +128,7 @@ void aml_spdif_fifo_ctrl(
 		aml_audiobus_update_bits(actrl,
 			EE_AUDIO_SPDIFOUT_CTRL1,
 			0x3 << 24 | 0x1f << 8 | 0x7 << 4,
-			0 << 24 | (bitwidth - 1) << 8 | frddr_type<<4);
+			fifo_id << 24 | (bitwidth - 1) << 8 | frddr_type<<4);
 
 		aml_audiobus_write(actrl,
 			EE_AUDIO_SPDIFOUT_SWAP,

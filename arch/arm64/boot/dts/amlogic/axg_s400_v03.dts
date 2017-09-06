@@ -935,16 +935,10 @@
 		dai-tdm-lane-slot-mask-in = <1 0>;
 		dai-tdm-lane-slot-mask-out = <0 1>;
 		dai-tdm-clk-sel = <0>;
-		tdm_from_ddr = <0>;
-		tdm_to_ddr = <0>;
 		clocks = <&clkc CLKID_MPLL0>;
 					//&clkaudio CLKID_AUDIO_TDMOUTA
 					//&clkaudio CLKID_AUDIO_MCLK_A>;
 		clock-names = "mpll0", "gate", "mclk";
-		interrupts =
-			<GIC_SPI 84 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 88 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmout_a &tdmin_a &tdmout_a_data>;
 	};
@@ -955,14 +949,8 @@
 		/*dai-tdm-lane-slot-mask-in = <1 1 1 1>;*/
 		dai-tdm-lane-slot-mask-in = <0 0 0 1>;
 		dai-tdm-clk-sel = <1>;
-		tdm_from_ddr = <1>;
-		tdm_to_ddr = <1>;
 		clocks = <&clkc CLKID_MPLL1>;
 		clock-names = "mpll1";
-		interrupts =
-			<GIC_SPI 85 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 89 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmb_mclk &tdmout_b &tdmin_b>;
 	};
@@ -973,14 +961,8 @@
 		dai-tdm-lane-slot-mask-in = <0 1 0 0>;
 		dai-tdm-lane-slot-mask-out = <0 0 1 1>;
 		dai-tdm-clk-sel = <2>;
-		tdm_from_ddr = <2>;
-		tdm_to_ddr = <2>;
 		clocks = <&clkc CLKID_MPLL2>;
 		clock-names = "mpll2";
-		interrupts =
-			<GIC_SPI 86 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 90 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "tdmin", "tdmout";
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmc_mclk &tdmout_c &tdmin_c>;
 	};
@@ -988,8 +970,6 @@
 	aml_spdif: spdif {
 		compatible = "amlogic, snd-spdif";
 		#sound-dai-cells = <0>;
-		spdif_from_ddr = <0>;
-		spdif_to_ddr = <0>;
 		clocks = <&clkc CLKID_MPLL0
 				&clkc CLKID_FCLK_DIV4
 				&clkaudio CLKID_AUDIO_SPDIFIN
@@ -999,11 +979,9 @@
 		clock-names = "sysclk", "fixed_clk", "gate_spdifin",
 				"gate_spdifout", "clk_spdifin", "clk_spdifout";
 		interrupts =
-				<GIC_SPI 87 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 84 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 88 IRQ_TYPE_EDGE_RISING>;
+				<GIC_SPI 87 IRQ_TYPE_EDGE_RISING>;
 
-		interrupt-names = "irq_spdifin", "irq_toddr", "irq_frddr";
+		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
 		pinctrl-0 = <&spdifout &spdifin>;
 		status = "okay";
@@ -1011,14 +989,11 @@
 	aml_pdm: pdm {
 		compatible = "amlogic, snd-pdm";
 		#sound-dai-cells = <0>;
-		to_ddr = <2>;
 		clocks = <&clkaudio CLKID_AUDIO_PDM
 					&clkc CLKID_MPLL3
 					&clkaudio CLKID_AUDIO_PDMIN0
 					&clkaudio CLKID_AUDIO_PDMIN1>;
 		clock-names = "gate", "pll_clk", "pdm_dclk", "pdm_sysclk";
-		interrupts = <GIC_SPI 86 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "pdmin_irq";
 		pinctrl-names = "pdm_pins";
 		pinctrl-0 = <&pdmin>;
 		filter_mode = <1>; /* mode 0~4, defalut:1 */

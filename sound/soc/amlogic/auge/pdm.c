@@ -206,8 +206,8 @@ static int aml_pdm_open(struct snd_pcm_substream *substream)
 							dev_get_drvdata(dev);
 	int ret;
 
-	pr_info("%s, stream:%d, irq :%d\n",
-		__func__, substream->stream, p_pdm->irq_pdmin);
+	pr_info("%s, stream:%d\n",
+		__func__, substream->stream);
 
 	snd_soc_set_runtime_hwparams(substream, &aml_pdm_hardware);
 
@@ -239,26 +239,10 @@ static int aml_pdm_open(struct snd_pcm_substream *substream)
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 
 		p_pdm->tddr = aml_audio_register_toddr
-					(dev, p_pdm->actrl, p_pdm->to_ddr_num);
+			(dev, p_pdm->actrl, aml_pdm_isr_handler, substream);
 		if (p_pdm->tddr == NULL) {
-			dev_err(dev, "failed to claim to ddr %u\n",
-					p_pdm->to_ddr_num);
+			dev_err(dev, "failed to claim to ddr\n");
 			return -ENXIO;
-		}
-
-		ret = request_irq(p_pdm->irq_pdmin,
-				aml_pdm_isr_handler,
-				IRQF_SHARED,
-				"pdmin_irq",
-				substream);
-
-		if (ret) {
-			aml_audio_unregister_toddr(p_pdm->dev,
-				p_pdm->to_ddr_num);
-			dev_err(p_pdm->dev,
-				"failed to claim irq %u\n",
-				p_pdm->irq_pdmin);
-			return ret;
 		}
 	}
 
@@ -271,11 +255,10 @@ static int aml_pdm_close(struct snd_pcm_substream *substream)
 	struct device *dev = rtd->platform->dev;
 	struct aml_pdm *p_pdm = (struct aml_pdm *)dev_get_drvdata(dev);
 
-	pr_info("enter %s type: %d, irq:%d\n",
-		__func__, substream->stream, p_pdm->irq_pdmin);
+	pr_info("enter %s type: %d\n",
+		__func__, substream->stream);
 
-	aml_audio_unregister_toddr(p_pdm->dev, p_pdm->to_ddr_num);
-	free_irq(p_pdm->irq_pdmin, substream);
+	aml_audio_unregister_toddr(p_pdm->dev, substream);
 
 	return 0;
 }
@@ -589,8 +572,8 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 	if (pll_freq > 196608000)
 		pll_freq = 196608000;
 
-	pr_info("%s irq:%d freq:%d, pll_freq:%d\n",
-		__func__, p_pdm->irq_pdmin, freq, pll_freq);
+	pr_info("%s freq:%d, pll_freq:%d\n",
+		__func__, freq, pll_freq);
 
 	clk_set_rate(p_pdm->clk_pll, pll_freq);
 	clk_set_rate(p_pdm->clk_pdm_sysclk, pll_freq);
@@ -729,15 +712,6 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 	actrl = (struct aml_audio_controller *)
 				platform_get_drvdata(pdev_parent);
 	p_pdm->actrl = actrl;
-
-	/* parse DTS configured ddr */
-	ret = of_property_read_u32(node, "to_ddr",
-			&p_pdm->to_ddr_num);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Can't retrieve tdm_to_ddr\n");
-		return -ENXIO;
-	}
-
 	/* clock gate */
 	p_pdm->clk_gate = devm_clk_get(&pdev->dev, "gate");
 	if (IS_ERR(p_pdm->clk_gate)) {
@@ -753,14 +727,6 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Can't get pdm pinmux\n");
 		return PTR_ERR(p_pdm->pdm_pins);
-	}
-
-	/* irq */
-	p_pdm->irq_pdmin = platform_get_irq_byname(pdev, "pdmin_irq");
-	if (p_pdm->irq_pdmin < 0) {
-		dev_err(&pdev->dev,
-			"Can't get pdmin irq number\n");
-		return -EINVAL;
 	}
 
 	p_pdm->clk_pll = devm_clk_get(&pdev->dev, "pll_clk");
