@@ -53,6 +53,7 @@ struct master_display_info_s {
 	u32 max_content;		/* Maximum Content Light Level */
 	u32 max_frame_average;	/* Maximum Frame-average Light Level */
 };
+
 struct hdr_info {
 	u32 hdr_support; /* RX EDID hdr support types */
 	u32 lumi_max; /* RX EDID Lumi Max value */
@@ -60,6 +61,7 @@ struct hdr_info {
 	u32 lumi_min; /* RX EDID Lumi Min value */
 	u8 sink_flag; /*0 = hdmi, 1 = panel*/
 };
+
 enum eotf_type {
 	EOTF_T_NULL = 0,
 	EOTF_T_DOLBYVISION,
@@ -67,6 +69,7 @@ enum eotf_type {
 	EOTF_T_SDR,
 	EOTF_T_MAX,
 };
+
 struct dv_info {
 	uint32_t ieeeoui;
 	uint8_t ver; /* 0 or 1 */
@@ -117,6 +120,8 @@ struct vinfo_s {
 	u32 sync_duration_num;
 	u32 sync_duration_den;
 	u32 video_clk;
+	u32 htotal;
+	u32 vtotal;
 	enum color_fmt_e viu_color_fmt;
 	enum viu_mux_e viu_mux;
 	struct master_display_info_s master_display_info;

@@ -235,9 +235,9 @@ EXPORT_SYMBOL(get_vframe_match);
 int set_vframe_rate_hint(int duration)
 {
 	int r = -1;
-	struct vout_server_s  *p_server;
+	struct vout_server_s *p_server = vout_module.curr_vout_server;
 
-	list_for_each_entry(p_server, &vout_module.vout_server_list, list) {
+	if (p_server) {
 		if ((p_server->op.set_vframe_rate_hint != NULL) &&
 			(p_server->op.set_vframe_rate_hint(duration) == 0)) {
 			return 0;
@@ -254,9 +254,9 @@ EXPORT_SYMBOL(set_vframe_rate_hint);
 int set_vframe_rate_end_hint(void)
 {
 	int ret = -1;
-	struct vout_server_s  *p_server;
+	struct vout_server_s *p_server = vout_module.curr_vout_server;
 
-	list_for_each_entry(p_server, &vout_module.vout_server_list, list) {
+	if (p_server) {
 		if ((p_server->op.set_vframe_rate_end_hint != NULL) &&
 			(p_server->op.set_vframe_rate_end_hint() == 0)) {
 			return 0;
@@ -273,9 +273,9 @@ EXPORT_SYMBOL(set_vframe_rate_end_hint);
 int set_vframe_rate_policy(int policy)
 {
 	int ret = -1;
-	struct vout_server_s  *p_server;
+	struct vout_server_s *p_server = vout_module.curr_vout_server;
 
-	list_for_each_entry(p_server, &vout_module.vout_server_list, list) {
+	if (p_server) {
 		if ((p_server->op.set_vframe_rate_policy != NULL) &&
 			(p_server->op.set_vframe_rate_policy(policy) == 0)) {
 			return 0;
@@ -292,9 +292,9 @@ EXPORT_SYMBOL(set_vframe_rate_policy);
 int get_vframe_rate_policy(void)
 {
 	int ret = -1;
-	struct vout_server_s  *p_server;
+	struct vout_server_s *p_server = vout_module.curr_vout_server;
 
-	list_for_each_entry(p_server, &vout_module.vout_server_list, list) {
+	if (p_server) {
 		if (p_server->op.get_vframe_rate_policy != NULL) {
 			ret = p_server->op.get_vframe_rate_policy();
 			return ret;
@@ -422,6 +422,23 @@ enum vmode_e validate_vmode(char *name)
 	return ret;
 }
 EXPORT_SYMBOL(validate_vmode);
+
+/*
+*interface export to client who want to shutdown.
+*/
+int vout_shutdown(void)
+{
+	int ret = -1;
+	struct vout_server_s *p_server;
+
+	list_for_each_entry(p_server, &vout_module.vout_server_list, list) {
+		if (p_server->op.vout_shutdown)
+			ret = p_server->op.vout_shutdown();
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(vout_shutdown);
 
 /*
  *here we offer two functions to get and register vout module server

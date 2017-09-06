@@ -45,6 +45,7 @@ struct vout_op_s {
 	int (*get_vframe_rate_policy)(void);
 	int (*vout_suspend)(void);
 	int (*vout_resume)(void);
+	int (*vout_shutdown)(void);
 };
 
 struct vout_server_s {
@@ -80,6 +81,7 @@ extern int get_vframe_rate_policy(void);
 extern void vdac_enable(bool on, unsigned int module_sel);
 extern int vout_suspend(void);
 extern int vout_resume(void);
+extern int vout_shutdown(void);
 
 #define VOUT_EVENT_MODE_CHANGE_PRE     0x00010000
 #define VOUT_EVENT_MODE_CHANGE         0x00020000

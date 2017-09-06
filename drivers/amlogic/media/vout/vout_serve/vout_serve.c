@@ -52,20 +52,23 @@ static int early_suspend_flag;
 static int early_resume_flag;
 #endif
 
+#define VOUT_CDEV_NAME  "display"
 #define VOUT_CLASS_NAME "display"
 #define MAX_NUMBER_PARA 10
 
+#define VMODE_NAME_LEN_MAX    64
 static struct class *vout_class;
 static DEFINE_MUTEX(vout_mutex);
-static char vout_mode_uboot[64] __nosavedata;
-static char vout_mode[64] __nosavedata;
+static char vout_mode_uboot[VMODE_NAME_LEN_MAX] __nosavedata;
+static char vout_mode[VMODE_NAME_LEN_MAX] __nosavedata;
+static char local_name[VMODE_NAME_LEN_MAX] = {0};
 static u32 vout_init_vmode = VMODE_INIT_NULL;
 static int uboot_display;
 
 static char vout_axis[64] __nosavedata;
 
-static char hdmimode[64];
-static char cvbsmode[64];
+static char hdmimode[VMODE_NAME_LEN_MAX];
+static char cvbsmode[VMODE_NAME_LEN_MAX];
 static enum vmode_e last_vmode = VMODE_MAX;
 static int tvout_monitor_flag = 1;
 static unsigned int tvout_monitor_timeout_cnt = 20;
@@ -75,7 +78,7 @@ static struct delayed_work tvout_mode_work;
 void update_vout_mode(char *name)
 {
 	if (name)
-		snprintf(vout_mode, 60, "%s", name);
+		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", name);
 	else
 		VOUTERR("%s: vout mode is null\n", __func__);
 }
@@ -93,8 +96,6 @@ char *get_vout_mode_uboot(void)
 }
 EXPORT_SYMBOL(get_vout_mode_uboot);
 
-static char local_name[32] = {0};
-
 static int set_vout_mode(char *name)
 {
 	enum vmode_e mode;
@@ -102,19 +103,18 @@ static int set_vout_mode(char *name)
 
 	VOUTPR("vmode set to %s\n", name);
 
-	mode = validate_vmode(name);
-	if (mode == VMODE_MAX) {
-		VOUTERR("no matched vout mode\n");
-		return -1;
-	}
-
 	if (strcmp(name, local_name) == 0) {
 		VOUTPR("don't set the same mode as current\n");
 		return -1;
 	}
 
+	mode = validate_vmode(name);
+	if (mode == VMODE_MAX) {
+		VOUTERR("no matched vout mode\n");
+		return -1;
+	}
 	memset(local_name, 0, sizeof(local_name));
-	strcpy(local_name, name);
+	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", name);
 
 	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE_PRE, &mode);
 	ret = set_current_vmode(mode);
@@ -146,7 +146,7 @@ static int set_vout_init_mode(void)
 		vmode = vout_init_vmode;
 
 	memset(local_name, 0, sizeof(local_name));
-	strcpy(local_name, vout_mode_uboot);
+	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", vout_mode_uboot);
 	ret = set_current_vmode(vmode);
 	VOUTPR("init mode %s\n", vout_mode_uboot);
 
@@ -194,17 +194,19 @@ static int parse_para(const char *para, int para_num, int *result)
 static void set_vout_axis(char *para)
 {
 	static struct disp_rect_s disp_rect[OSD_COUNT];
-	char count = OSD_COUNT * 4;
+	/* char count = OSD_COUNT * 4; */
 	int *pt = &disp_rect[0].x;
 	int parsed[MAX_NUMBER_PARA] = {};
 
 	/* parse window para */
 	if (parse_para(para, 8, parsed) >= 4)
 		memcpy(pt, parsed, sizeof(struct disp_rect_s) * OSD_COUNT);
-	if ((count >= 4) && (count < 8))
-		disp_rect[1] = disp_rect[0];
+	/* if ((count >= 4) && (count < 8))
+	 *	disp_rect[1] = disp_rect[0];
+	 */
 
-	VOUTPR("osd0=> x:%d,y:%d,w:%d,h:%d\nosd1=> x:%d,y:%d,w:%d,h:%d\n",
+	VOUTPR("osd0=> x:%d,y:%d,w:%d,h:%d\n"
+		"osd1=> x:%d,y:%d,w:%d,h:%d\n",
 			*pt, *(pt + 1), *(pt + 2), *(pt + 3),
 			*(pt + 4), *(pt + 5), *(pt + 6), *(pt + 7));
 	vout_notifier_call_chain(VOUT_EVENT_OSD_DISP_AXIS, &disp_rect[0]);
@@ -215,7 +217,7 @@ static ssize_t vout_mode_show(struct class *class,
 {
 	int ret = 0;
 
-	ret = snprintf(buf, 64, "%s\n", vout_mode);
+	ret = snprintf(buf, VMODE_NAME_LEN_MAX, "%s\n", vout_mode);
 
 	return ret;
 }
@@ -227,9 +229,9 @@ static ssize_t vout_mode_store(struct class *class,
 
 	mutex_lock(&vout_mutex);
 	tvout_monitor_flag = 0;
-	snprintf(mode, 64, "%s", buf);
+	snprintf(mode, VMODE_NAME_LEN_MAX, "%s", buf);
 	if (set_vout_mode(mode) == 0)
-		strcpy(vout_mode, mode);
+		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s\n", mode);
 	mutex_unlock(&vout_mutex);
 	return count;
 }
@@ -273,15 +275,16 @@ static ssize_t vout_fr_policy_store(struct class *class,
 
 	mutex_lock(&vout_mutex);
 	ret = kstrtoint(buf, 10, &policy);
-	if (ret == 1) {
-		ret = set_vframe_rate_policy(policy);
-		if (ret)
-			pr_info("%s: %d failed\n", __func__, policy);
-	} else {
+	if (ret) {
 		pr_info("%s: invalid data\n", __func__);
+		mutex_unlock(&vout_mutex);
 		return -EINVAL;
 	}
+	ret = set_vframe_rate_policy(policy);
+	if (ret)
+		pr_info("%s: %d failed\n", __func__, policy);
 	mutex_unlock(&vout_mutex);
+
 	return count;
 }
 
@@ -316,7 +319,7 @@ static ssize_t vout_vinfo_show(struct class *class,
 		info->sync_duration_num, info->sync_duration_den,
 		info->screen_real_width, info->screen_real_height,
 		info->video_clk, info->viu_color_fmt, info->viu_mux);
-	len += sprintf(buf+len, "hdr_info:\n"
+	len += sprintf(buf+len, "master_display_info:\n"
 		"    present_flag          %d\n"
 		"    features              0x%x\n"
 		"    primaries             0x%x, 0x%x\n"
@@ -355,13 +358,11 @@ static ssize_t vout_mode_flag_store(struct class *class,
 	int ret = 0;
 
 	ret = kstrtoint(buf, 10, &tvout_monitor_flag);
-	if (ret == 1) {
-		VOUTPR("%s: tvout_monitor_flag = %d\n",
-			 __func__, tvout_monitor_flag);
-	} else {
+	if (ret) {
 		VOUTPR("%s: invalid data\n", __func__);
 		return -EINVAL;
 	}
+	VOUTPR("%s: tvout_monitor_flag = %d\n", __func__, tvout_monitor_flag);
 
 	return count;
 }
@@ -371,8 +372,8 @@ static struct class_attribute vout_class_attrs[] = {
 	__ATTR(axis,      0644, vout_axis_show, vout_axis_store),
 	__ATTR(fr_policy, 0644,
 		vout_fr_policy_show, vout_fr_policy_store),
-	__ATTR(vinfo,     0644, vout_vinfo_show, NULL),
-	__ATTR(mode_flag,     0644, vout_mode_flag_show, vout_mode_flag_store),
+	__ATTR(vinfo,     0444, vout_vinfo_show, NULL),
+	__ATTR(mode_flag, 0644, vout_mode_flag_show, vout_mode_flag_store),
 };
 
 static int vout_create_attr(void)
@@ -399,7 +400,7 @@ static int vout_create_attr(void)
 	/* init /sys/class/display/mode */
 	init_mode = get_current_vinfo();
 	if (init_mode)
-		strcpy(vout_mode, init_mode->name);
+		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", init_mode->name);
 
 	return ret;
 }
@@ -554,8 +555,10 @@ static int refresh_tvout_mode(void)
 
 	if (cur_vmode != last_vmode) {
 		VOUTPR("%s: mode chang\n", __func__);
-		if (set_vout_mode(cur_mode_str) == 0)
-			strcpy(vout_mode, cur_mode_str);
+		if (set_vout_mode(cur_mode_str) == 0) {
+			snprintf(vout_mode, VMODE_NAME_LEN_MAX,
+				"%s", cur_mode_str);
+		}
 		last_vmode = cur_vmode;
 	}
 
@@ -639,6 +642,12 @@ static int aml_vout_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void aml_vout_shutdown(struct platform_device *pdev)
+{
+	VOUTPR("%s\n", __func__);
+	vout_shutdown();
+}
+
 static const struct of_device_id aml_vout_dt_match[] = {
 	{ .compatible = "amlogic, vout",},
 	{ },
@@ -657,6 +666,7 @@ const struct dev_pm_ops vout_pm = {
 static struct platform_driver vout_driver = {
 	.probe     = aml_vout_probe,
 	.remove    = aml_vout_remove,
+	.shutdown   = aml_vout_shutdown,
 #ifdef CONFIG_PM
 	.suspend   = aml_vout_suspend,
 	.resume    = aml_vout_resume,
@@ -674,8 +684,6 @@ static int __init vout_init_module(void)
 {
 	int ret = 0;
 
-	/*VOUTPR("%s\n", __func__);*/
-
 	if (platform_driver_register(&vout_driver)) {
 		VOUTERR("failed to register VOUT driver\n");
 		ret = -ENODEV;
@@ -686,7 +694,6 @@ static int __init vout_init_module(void)
 
 static __exit void vout_exit_module(void)
 {
-	/*VOUTPR("%s\n", __func__);*/
 	platform_driver_unregister(&vout_driver);
 }
 
@@ -715,7 +722,8 @@ static void vout_init_mode_parse(char *str)
 		uboot_display = 1;
 		VOUTPR("%s: %d\n", str, uboot_display);
 		return;
-	} else if (strncmp(str, "dis", 3) == 0) { /* disable */
+	}
+	if (strncmp(str, "dis", 3) == 0) { /* disable */
 		uboot_display = 0;
 		VOUTPR("%s: %d\n", str, uboot_display);
 		return;
@@ -725,12 +733,8 @@ static void vout_init_mode_parse(char *str)
 	 * just save the vmode_name,
 	 * convert to vmode when vout sever registered
 	 */
-	strcpy(vout_mode_uboot, str);
+	snprintf(vout_mode_uboot, VMODE_NAME_LEN_MAX, "%s", str);
 	VOUTPR("%s\n", str);
-
-	return;
-
-	VOUTERR("%s: %s\n", __func__, str);
 }
 
 static int __init get_vout_init_mode(char *str)
@@ -770,21 +774,21 @@ __setup("vout=", get_vout_init_mode);
 
 static int __init get_hdmi_mode(char *str)
 {
-	strcpy(hdmimode, str);
+	snprintf(hdmimode, VMODE_NAME_LEN_MAX, "%s", str);
 
-	VOUTPR("get hdmimode: %s\n", str);
-	return 1;
+	VOUTPR("get hdmimode: %s\n", hdmimode);
+	return 0;
 }
 __setup("hdmimode=", get_hdmi_mode);
 
 static int __init get_cvbs_mode(char *str)
 {
 	if ((strncmp("480", str, 3) == 0) || (strncmp("576", str, 3) == 0))
-		strcpy(cvbsmode, str);
+		snprintf(cvbsmode, VMODE_NAME_LEN_MAX, "%s", str);
 	else if (strncmp("nocvbs", str, 6) == 0)
-		strcpy(cvbsmode, "invalid");
-	VOUTPR("get cvbsmode: %s\n", str);
-	return 1;
+		snprintf(cvbsmode, VMODE_NAME_LEN_MAX, "invalid");
+	VOUTPR("get cvbsmode: %s\n", cvbsmode);
+	return 0;
 }
 __setup("cvbsmode=", get_cvbs_mode);
 
