@@ -21,7 +21,10 @@
 #include <linux/types.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 
-/* clk config */
+/* **********************************
+ * clk config
+ * **********************************
+ */
 struct lcd_clk_config_s { /* unit: kHz */
 	/* IN-OUT parameters */
 	unsigned int fin;
@@ -69,9 +72,13 @@ struct lcd_clk_config_s { /* unit: kHz */
 	unsigned int div_out_fmax; /* g9tv, g9bb, gxbb */
 	unsigned int xd_out_fmax;
 	unsigned int err_fmin;
+	unsigned int pll_mode;
 };
 
-/* pll & clk parameter */
+/* **********************************
+ * pll & clk parameter
+ * **********************************
+ */
 /* ******** clk calculation ******** */
 #define PLL_WAIT_LOCK_CNT           200
  /* frequency unit: kHz */
@@ -110,7 +117,10 @@ enum div_sel_e {
 };
 
 
-/* GXTVBB */
+/* **********************************
+ * GXTVBB
+ * **********************************
+ */
 /* ******** register bit ******** */
 /* PLL_CNTL 0x10c8 */
 #define LCD_PLL_LOCK_GXTVBB         31
@@ -143,7 +153,10 @@ enum div_sel_e {
 #define CRT_VID_CLK_IN_MAX_GXTVBB   (3100 * 1000)
 #define ENCL_CLK_IN_MAX_GXTVBB      (620 * 1000)
 
-/* GXL */
+/* **********************************
+ * GXL
+ * **********************************
+ */
 /* ******** register bit ******** */
 /* PLL_CNTL 0x10c8 */
 #define LCD_PLL_LOCK_GXL            31
@@ -176,7 +189,10 @@ enum div_sel_e {
 #define CRT_VID_CLK_IN_MAX_GXL      (3100 * 1000)
 #define ENCL_CLK_IN_MAX_GXL         (620 * 1000)
 
-/* GXM */
+/* **********************************
+ * GXM
+ * **********************************
+ */
 /* ******** register bit ******** */
 /* PLL_CNTL 0x10c8 */
 #define LCD_PLL_LOCK_GXM            31
@@ -209,7 +225,10 @@ enum div_sel_e {
 #define CRT_VID_CLK_IN_MAX_GXM      (3100 * 1000)
 #define ENCL_CLK_IN_MAX_GXM         (620 * 1000)
 
-/* TXL */
+/* **********************************
+ * TXL
+ * **********************************
+ */
 /* ******** register bit ******** */
 /* PLL_CNTL 0x10c8 */
 #define LCD_PLL_LOCK_TXL            31
@@ -242,7 +261,10 @@ enum div_sel_e {
 #define CRT_VID_CLK_IN_MAX_TXL      (3100 * 1000)
 #define ENCL_CLK_IN_MAX_TXL         (620 * 1000)
 
-/*  TXLX */
+/* **********************************
+ * TXLX
+ * **********************************
+ */
 /* ******** register bit ******** */
 /* PLL_CNTL 0x10c8 */
 #define LCD_PLL_LOCK_TXLX            31
@@ -275,7 +297,10 @@ enum div_sel_e {
 #define CRT_VID_CLK_IN_MAX_TXLX      (3100 * 1000)
 #define ENCL_CLK_IN_MAX_TXLX         (620 * 1000)
 
-/* AXG */
+/* **********************************
+ * AXG
+ * **********************************
+ */
 /* ******** register bit ******** */
 /* PLL_CNTL */
 #define LCD_PLL_LOCK_AXG            31

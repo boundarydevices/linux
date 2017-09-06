@@ -51,8 +51,13 @@ struct aml_lcd_unifykey_header_s {
 	unsigned short reserved;
 };
 
-/*  lcd */
-#define LCD_UKEY_LCD_SIZE          265
+/* ********************************
+ * lcd
+ * *********************************
+ */
+/* V1: 265 */
+/* V2: 319 */
+#define LCD_UKEY_LCD_SIZE          319
 
 /* header (10Byte) */
 /* LCD_UKEY_HEAD_SIZE */
@@ -97,13 +102,49 @@ struct aml_lcd_unifykey_header_s {
 #define LCD_UKEY_IF_ATTR_7         2
 #define LCD_UKEY_IF_ATTR_8         2
 #define LCD_UKEY_IF_ATTR_9         2
+/* ctrl (44Byte) */ /* V2 */
+#define LCD_UKEY_CTRL_FLAG         4
+#define LCD_UKEY_CTRL_ATTR_0       2
+#define LCD_UKEY_CTRL_ATTR_1       2
+#define LCD_UKEY_CTRL_ATTR_2       2
+#define LCD_UKEY_CTRL_ATTR_3       2
+#define LCD_UKEY_CTRL_ATTR_4       2
+#define LCD_UKEY_CTRL_ATTR_5       2
+#define LCD_UKEY_CTRL_ATTR_6       2
+#define LCD_UKEY_CTRL_ATTR_7       2
+#define LCD_UKEY_CTRL_ATTR_8       2
+#define LCD_UKEY_CTRL_ATTR_9       2
+#define LCD_UKEY_CTRL_ATTR_10      2
+#define LCD_UKEY_CTRL_ATTR_11      2
+#define LCD_UKEY_CTRL_ATTR_12      2
+#define LCD_UKEY_CTRL_ATTR_13      2
+#define LCD_UKEY_CTRL_ATTR_14      2
+#define LCD_UKEY_CTRL_ATTR_15      2
+#define LCD_UKEY_CTRL_ATTR_16      2
+#define LCD_UKEY_CTRL_ATTR_17      2
+#define LCD_UKEY_CTRL_ATTR_18      2
+#define LCD_UKEY_CTRL_ATTR_19      2
+/* phy (10Byte) */ /* V2 */
+#define LCD_UKEY_PHY_ATTR_0        1
+#define LCD_UKEY_PHY_ATTR_1        1
+#define LCD_UKEY_PHY_ATTR_2        1
+#define LCD_UKEY_PHY_ATTR_3        1
+#define LCD_UKEY_PHY_ATTR_4        1
+#define LCD_UKEY_PHY_ATTR_5        1
+#define LCD_UKEY_PHY_ATTR_6        1
+#define LCD_UKEY_PHY_ATTR_7        1
+#define LCD_UKEY_PHY_ATTR_8        1
+#define LCD_UKEY_PHY_ATTR_9        1
 /* power (5Byte * n) */
 #define LCD_UKEY_PWR_TYPE          1
 #define LCD_UKEY_PWR_INDEX         1
 #define LCD_UKEY_PWR_VAL           1
 #define LCD_UKEY_PWR_DELAY         2
 
-/* lcd extern */
+/* ********************************
+ * lcd extern
+ * *********************************
+ */
 #define LCD_UKEY_LCD_EXT_SIZE       550
 
 /* header (10Byte) */
@@ -129,8 +170,13 @@ struct aml_lcd_unifykey_header_s {
 /*#define LCD_UKEY_EXT_INIT_VAL        1   //not defined */
 #define LCD_UKEY_EXT_INIT_DELAY      1
 
-/* backlight */
-#define LCD_UKEY_BL_SIZE            92
+/* ********************************
+ * backlight
+ * *********************************
+ */
+/* V1: 92 */
+/* V2: 102 */
+#define LCD_UKEY_BL_SIZE            102
 
 /* header (10Byte) */
 /* LCD_UKEY_HEAD_SIZE */
@@ -171,9 +217,17 @@ struct aml_lcd_unifykey_header_s {
 #define LCD_UKEY_BL_PWM_LEVEL_MIN   2
 #define LCD_UKEY_BL_PWM2_LEVEL_MAX  2
 #define LCD_UKEY_BL_PWM2_LEVEL_MIN  2
+/* customer(10Byte) */ /* V2 */
+#define LCD_UKEY_BL_CUST_VAL_0      2
+#define LCD_UKEY_BL_CUST_VAL_1      2
+#define LCD_UKEY_BL_CUST_VAL_2      2
+#define LCD_UKEY_BL_CUST_VAL_3      2
+#define LCD_UKEY_BL_CUST_VAL_4      2
 
-
-/* API */
+/* ********************************
+ * API
+ * *********************************
+ */
 extern int lcd_unifykey_len_check(int key_len, int len);
 extern int lcd_unifykey_check(char *key_name);
 extern int lcd_unifykey_header_check(unsigned char *buf,

@@ -356,8 +356,6 @@ static void lcd_lvds_control_set(struct lcd_config_s *pconf)
 	switch (pconf->lcd_basic.lcd_bits) {
 	case 10:
 		bit_num = 0;
-		if (lvds_repack == 1)
-			lvds_repack = 2;
 		break;
 	case 8:
 		bit_num = 1;
@@ -734,7 +732,6 @@ static void lcd_vbyone_config_set(struct lcd_config_s *pconf)
 {
 	unsigned int band_width, bit_rate, pclk, phy_div;
 	unsigned int byte_mode, lane_count, minlane;
-	unsigned int lcd_bits;
 	unsigned int temp, i;
 
 	if (lcd_debug_print_flag)
@@ -742,8 +739,7 @@ static void lcd_vbyone_config_set(struct lcd_config_s *pconf)
 
 	/* auto calculate bandwidth, clock */
 	lane_count = pconf->lcd_control.vbyone_config->lane_count;
-	lcd_bits = 10; /* pconf->lcd_basic.lcd_bits */
-	byte_mode = (lcd_bits == 10) ? 4 : 3;
+	byte_mode = pconf->lcd_control.vbyone_config->byte_mode;
 	/* byte_mode * byte2bit * 8/10_encoding * pclk =
 	   byte_mode * 8 * 10 / 8 * pclk */
 	pclk = pconf->lcd_timing.lcd_clk / 1000; /* kHz */

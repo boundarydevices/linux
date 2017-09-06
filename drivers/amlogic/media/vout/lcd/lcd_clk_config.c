@@ -229,14 +229,16 @@ void lcd_clk_config_print(void)
 			"div_sel:      %s(index %d)\n"
 			"xd:           %d\n"
 			"fout:         %dkHz\n"
-			"ss_level:     %d\n\n",
+			"ss_level:     %d\n"
+			"pll_mode:     %d\n\n",
 			clk_conf.pll_m, clk_conf.pll_n,
 			clk_conf.pll_frac, clk_conf.pll_fvco,
 			clk_conf.pll_od1_sel, clk_conf.pll_od2_sel,
 			clk_conf.pll_od3_sel, clk_conf.pll_fout,
 			lcd_clk_div_sel_table[clk_conf.div_sel],
 			clk_conf.div_sel, clk_conf.xd,
-			clk_conf.fout, clk_conf.ss_level);
+			clk_conf.fout, clk_conf.ss_level,
+			clk_conf.pll_mode);
 		break;
 	}
 }
@@ -587,7 +589,10 @@ static void lcd_set_pll_txl(struct lcd_clk_config_s *cConf)
 	lcd_hiu_write(HHI_HDMI_PLL_CNTL, pll_ctrl);
 	lcd_hiu_write(HHI_HDMI_PLL_CNTL2, pll_ctrl2);
 	lcd_hiu_write(HHI_HDMI_PLL_CNTL3, pll_ctrl3);
-	lcd_hiu_write(HHI_HDMI_PLL_CNTL4, 0x0c8e0000);
+	if (cConf->pll_mode)
+		lcd_hiu_write(HHI_HDMI_PLL_CNTL4, 0x0d160000);
+	else
+		lcd_hiu_write(HHI_HDMI_PLL_CNTL4, 0x0c8e0000);
 	lcd_hiu_write(HHI_HDMI_PLL_CNTL5, 0x001fa729);
 	lcd_hiu_write(HHI_HDMI_PLL_CNTL6, 0x01a31500);
 	lcd_hiu_setb(HHI_HDMI_PLL_CNTL, 1, LCD_PLL_RST_TXL, 1);
@@ -1285,6 +1290,11 @@ static void lcd_clk_generate_txl(struct lcd_config_s *pconf)
 			__func__, cConf->fout);
 		goto generate_clk_done_txl;
 	}
+
+	if (pconf->lcd_timing.clk_auto == 2)
+		cConf->pll_mode = 1;
+	else
+		cConf->pll_mode = 0;
 
 	switch (pconf->lcd_basic.lcd_type) {
 	case LCD_TTL:

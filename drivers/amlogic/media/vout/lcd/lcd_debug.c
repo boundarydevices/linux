@@ -349,37 +349,37 @@ static void lcd_ttl_reg_print(void)
 		reg, lcd_vcbus_read(reg));
 	reg = L_STH1_HE_ADDR;
 	pr_info("STH1_HE_ADDR        [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_STH1_VS_ADDR;
 	pr_info("STH1_VS_ADDR        [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_STH1_VE_ADDR;
 	pr_info("STH1_VE_ADDR        [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_STV1_HS_ADDR;
 	pr_info("STV1_HS_ADDR        [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_STV1_HE_ADDR;
 	pr_info("STV1_HE_ADDR        [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_STV1_VS_ADDR;
 	pr_info("STV1_VS_ADDR        [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_STV1_VE_ADDR;
 	pr_info("STV1_VE_ADDR        [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_OEH_HS_ADDR;
 	pr_info("OEH_HS_ADDR         [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_OEH_HE_ADDR;
 	pr_info("OEH_HE_ADDR         [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_OEH_VS_ADDR;
 	pr_info("OEH_VS_ADDR         [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 	reg = L_OEH_VE_ADDR;
 	pr_info("OEH_VE_ADDR         [0x%04x] = 0x%08x\n",
-		reg, lcd_hiu_read(reg));
+		reg, lcd_vcbus_read(reg));
 }
 
 static void lcd_lvds_reg_print(void)
@@ -407,14 +407,37 @@ static void lcd_lvds_reg_print(void)
 static void lcd_vbyone_reg_print(void)
 {
 	unsigned int reg;
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	pr_info("\nvbyone registers:\n");
-	reg = PERIPHS_PIN_MUX_7;
-	pr_info("VX1_PINMUX          [0x%04x] = 0x%08x\n",
-		reg, lcd_periphs_read(reg));
+	switch (lcd_drv->chip_type) {
+	case LCD_CHIP_GXTVBB:
+		reg = PERIPHS_PIN_MUX_7;
+		pr_info("VX1_PINMUX          [0x%04x] = 0x%08x\n",
+			reg, lcd_periphs_read(reg));
+		break;
+	case LCD_CHIP_TXL:
+	case LCD_CHIP_TXLX:
+		reg = PERIPHS_PIN_MUX_0;
+		pr_info("VX1_PINMUX          [0x%04x] = 0x%08x\n",
+			reg, lcd_periphs_read(reg));
+		break;
+	default:
+		break;
+	}
 	reg = VBO_STATUS_L;
 	pr_info("VX1_STATUS          [0x%04x] = 0x%08x\n",
 		reg, lcd_vcbus_read(reg));
+	switch (lcd_drv->chip_type) {
+	case LCD_CHIP_TXL:
+	case LCD_CHIP_TXLX:
+		reg = VBO_INSGN_CTRL;
+		pr_info("VBO_INSGN_CTRL      [0x%04x] = 0x%08x\n",
+			reg, lcd_vcbus_read(reg));
+		break;
+	default:
+		break;
+	}
 	reg = VBO_FSM_HOLDER_L;
 	pr_info("VX1_FSM_HOLDER_L    [0x%04x] = 0x%08x\n",
 		reg, lcd_vcbus_read(reg));
@@ -505,7 +528,7 @@ static void lcd_reg_print(void)
 	struct lcd_config_s *pconf;
 
 	pconf = lcd_drv->lcd_config;
-	pr_info("clk registers:\n");
+	LCDPR("clk registers:\n");
 	switch (lcd_drv->chip_type) {
 	case LCD_CHIP_AXG:
 		for (i = 0; i < ARRAY_SIZE(lcd_reg_dump_clk_axg); i++) {
@@ -616,20 +639,19 @@ static void lcd_debug_test(unsigned int num)
 
 	h_active = lcd_drv->lcd_config->lcd_basic.h_active;
 	video_on_pixel = lcd_drv->lcd_config->lcd_timing.video_on_pixel;
-	if (num >= 0) {
-		lcd_vcbus_write(ENCL_VIDEO_RGBIN_CTRL, lcd_enc_tst[num][6]);
-		lcd_vcbus_write(ENCL_TST_MDSEL, lcd_enc_tst[num][0]);
-		lcd_vcbus_write(ENCL_TST_Y, lcd_enc_tst[num][1]);
-		lcd_vcbus_write(ENCL_TST_CB, lcd_enc_tst[num][2]);
-		lcd_vcbus_write(ENCL_TST_CR, lcd_enc_tst[num][3]);
-		lcd_vcbus_write(ENCL_TST_CLRBAR_STRT, video_on_pixel);
-		lcd_vcbus_write(ENCL_TST_CLRBAR_WIDTH, (h_active / 9));
-		lcd_vcbus_write(ENCL_TST_EN, lcd_enc_tst[num][4]);
-		lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV, lcd_enc_tst[num][5], 3, 1);
+	lcd_vcbus_write(ENCL_VIDEO_RGBIN_CTRL, lcd_enc_tst[num][6]);
+	lcd_vcbus_write(ENCL_TST_MDSEL, lcd_enc_tst[num][0]);
+	lcd_vcbus_write(ENCL_TST_Y, lcd_enc_tst[num][1]);
+	lcd_vcbus_write(ENCL_TST_CB, lcd_enc_tst[num][2]);
+	lcd_vcbus_write(ENCL_TST_CR, lcd_enc_tst[num][3]);
+	lcd_vcbus_write(ENCL_TST_CLRBAR_STRT, video_on_pixel);
+	lcd_vcbus_write(ENCL_TST_CLRBAR_WIDTH, (h_active / 9));
+	lcd_vcbus_write(ENCL_TST_EN, lcd_enc_tst[num][4]);
+	lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV, lcd_enc_tst[num][5], 3, 1);
+	if (num > 0)
 		LCDPR("show test pattern: %s\n", lcd_enc_tst_str[num]);
-	} else {
+	else
 		LCDPR("disable test pattern\n");
-	}
 }
 
 static void lcd_mute_setting(unsigned char flag)
@@ -680,11 +702,37 @@ static void lcd_test_check(void)
 	}
 }
 
+static void lcd_vinfo_update(void)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	struct vinfo_s *vinfo;
+	struct lcd_config_s *pconf;
+
+	vinfo = lcd_drv->lcd_info;
+	pconf = lcd_drv->lcd_config;
+	if (vinfo) {
+		vinfo->width = pconf->lcd_basic.h_active;
+		vinfo->height = pconf->lcd_basic.v_active;
+		vinfo->field_height = pconf->lcd_basic.v_active;
+		vinfo->aspect_ratio_num = pconf->lcd_basic.screen_width;
+		vinfo->aspect_ratio_den = pconf->lcd_basic.screen_height;
+		vinfo->screen_real_width = pconf->lcd_basic.screen_width;
+		vinfo->screen_real_height = pconf->lcd_basic.screen_height;
+		vinfo->sync_duration_num = pconf->lcd_timing.sync_duration_num;
+		vinfo->sync_duration_den = pconf->lcd_timing.sync_duration_den;
+		vinfo->video_clk = pconf->lcd_timing.lcd_clk;
+	}
+	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE,
+		&lcd_drv->lcd_info->mode);
+}
+
 static void lcd_debug_config_update(void)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	lcd_drv->module_reset();
+
+	lcd_vinfo_update();
 }
 
 static void lcd_debug_clk_change(unsigned int pclk)
@@ -697,6 +745,7 @@ static void lcd_debug_clk_change(unsigned int pclk)
 	sync_duration = pclk / pconf->lcd_basic.h_period;
 	sync_duration = sync_duration * 100 / pconf->lcd_basic.v_period;
 	pconf->lcd_timing.lcd_clk = pclk;
+	pconf->lcd_timing.lcd_clk_dft = pconf->lcd_timing.lcd_clk;
 	pconf->lcd_timing.sync_duration_num = sync_duration;
 	pconf->lcd_timing.sync_duration_den = 100;
 
@@ -761,6 +810,8 @@ static ssize_t lcd_debug_store(struct class *class,
 				pconf->lcd_basic.v_active = val[1];
 				pconf->lcd_basic.h_period = val[2];
 				pconf->lcd_basic.v_period = val[3];
+				pconf->lcd_timing.h_period_dft = val[2];
+				pconf->lcd_timing.v_period_dft = val[3];
 				pr_info("set h_active=%d, v_active=%d\n",
 					val[0], val[1]);
 				pr_info("set h_period=%d, v_period=%d\n",
@@ -772,6 +823,8 @@ static ssize_t lcd_debug_store(struct class *class,
 				pconf->lcd_basic.v_active = val[1];
 				pconf->lcd_basic.h_period = val[2];
 				pconf->lcd_basic.v_period = val[3];
+				pconf->lcd_timing.h_period_dft = val[2];
+				pconf->lcd_timing.v_period_dft = val[3];
 				pconf->lcd_basic.lcd_bits = val[4];
 				pr_info("set h_active=%d, v_active=%d\n",
 					val[0], val[1]);
@@ -916,6 +969,15 @@ static ssize_t lcd_debug_store(struct class *class,
 	return count;
 }
 
+static ssize_t lcd_debug_enable_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	return sprintf(buf, "lcd_status: %d\n",
+		lcd_drv->lcd_status);
+}
+
 static ssize_t lcd_debug_enable_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
@@ -923,6 +985,10 @@ static ssize_t lcd_debug_enable_store(struct class *class,
 	unsigned int temp = 1;
 
 	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		LCDERR("invalid data\n");
+		return -EINVAL;
+	}
 	if (temp) {
 		mutex_lock(&lcd_power_mutex);
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
@@ -932,6 +998,34 @@ static ssize_t lcd_debug_enable_store(struct class *class,
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_OFF, NULL);
 		mutex_unlock(&lcd_power_mutex);
 	}
+
+	return count;
+}
+
+static ssize_t lcd_debug_resume_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	return sprintf(buf, "lcd resume flag: %d(%s)\n",
+		lcd_drv->lcd_resume_flag,
+		lcd_drv->lcd_resume_flag ? "workqueue" : "directly");
+}
+
+static ssize_t lcd_debug_resume_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	unsigned int temp = 1;
+
+	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		LCDERR("invalid data\n");
+		return -EINVAL;
+	}
+	lcd_drv->lcd_resume_flag = (unsigned char)temp;
+	LCDPR("set lcd resume flag: %d\n", lcd_drv->lcd_resume_flag);
 
 	return count;
 }
@@ -1064,6 +1158,10 @@ static ssize_t lcd_debug_fr_policy_store(struct class *class,
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		pr_info("invalid data\n");
+		return -EINVAL;
+	}
 	lcd_drv->fr_auto_policy = temp;
 	pr_info("set fr_auto_policy: %d\n", temp);
 
@@ -1085,6 +1183,10 @@ static ssize_t lcd_debug_ss_store(struct class *class,
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		pr_info("invalid data\n");
+		return -EINVAL;
+	}
 	lcd_drv->lcd_config->lcd_timing.ss_level = temp;
 	lcd_set_spread_spectrum();
 
@@ -1106,6 +1208,10 @@ static ssize_t lcd_debug_test_store(struct class *class,
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		pr_info("invalid data\n");
+		return -EINVAL;
+	}
 	lcd_drv->lcd_test_flag = (unsigned char)temp;
 	lcd_debug_test(temp);
 
@@ -1128,6 +1234,10 @@ static ssize_t lcd_debug_mute_store(struct class *class,
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		pr_info("invalid data\n");
+		return -EINVAL;
+	}
 	lcd_drv->lcd_mute = (unsigned char)temp;
 	lcd_mute_setting(lcd_drv->lcd_mute);
 
@@ -1483,6 +1593,10 @@ static ssize_t lcd_debug_print_store(struct class *class,
 	unsigned int temp = 0;
 
 	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		pr_info("invalid data\n");
+		return -EINVAL;
+	}
 	lcd_debug_print_flag = (unsigned char)temp;
 	LCDPR("set debug print flag: %d\n", lcd_debug_print_flag);
 
@@ -1490,19 +1604,22 @@ static ssize_t lcd_debug_print_store(struct class *class,
 }
 
 static struct class_attribute lcd_debug_class_attrs[] = {
-	__ATTR(help,        0644, lcd_debug_common_help, NULL),
+	__ATTR(help,        0444, lcd_debug_common_help, NULL),
 	__ATTR(debug,       0644, lcd_debug_show, lcd_debug_store),
-	__ATTR(enable,      0644, NULL, lcd_debug_enable_store),
+	__ATTR(enable,      0644,
+		lcd_debug_enable_show, lcd_debug_enable_store),
+	__ATTR(resume,      0644,
+		lcd_debug_resume_show, lcd_debug_resume_store),
 	__ATTR(power,       0644, lcd_debug_power_show, lcd_debug_power_store),
 	__ATTR(frame_rate,  0644,
 		lcd_debug_frame_rate_show, lcd_debug_frame_rate_store),
 	__ATTR(fr_policy,   0644,
 		lcd_debug_fr_policy_show, lcd_debug_fr_policy_store),
 	__ATTR(ss,          0644, lcd_debug_ss_show, lcd_debug_ss_store),
-	__ATTR(clk,         0644, lcd_debug_clk_show, NULL),
-	__ATTR(test,        0644, NULL, lcd_debug_test_store),
+	__ATTR(clk,         0444, lcd_debug_clk_show, NULL),
+	__ATTR(test,        0200, NULL, lcd_debug_test_store),
 	__ATTR(mute,        0644, lcd_debug_mute_show, lcd_debug_mute_store),
-	__ATTR(reg,         0644, NULL, lcd_debug_reg_store),
+	__ATTR(reg,         0200, NULL, lcd_debug_reg_store),
 	__ATTR(dither,      0644,
 		lcd_debug_dither_show, lcd_debug_dither_store),
 	__ATTR(print,       0644, lcd_debug_print_show, lcd_debug_print_store),
@@ -1524,7 +1641,7 @@ static const char *lcd_lvds_debug_usage_str = {
 "Usage:\n"
 "    echo <repack> <dual_port> <pn_swap> <port_swap> <lane_reverse> > lvds ; set lvds config\n"
 "data format:\n"
-"    <repack>    : 0=JEIDA mode, 1=VESA mode\n"
+"    <repack>    : 0=JEIDA mode, 1=VESA mode(8bit), 2=VESA mode(10bit)\n"
 "    <dual_port> : 0=single port, 1=dual port\n"
 "    <pn_swap>   : 0=normal, 1=swap p/n channels\n"
 "    <port_swap> : 0=normal, 1=swap A/B port\n"
@@ -1673,17 +1790,22 @@ static ssize_t lcd_lvds_debug_store(struct class *class,
 	return count;
 }
 
+#ifdef CONFIG_AMLOGIC_LCD_TV
 static int vx1_intr_state = 1;
+#endif
 static ssize_t lcd_vx1_debug_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct vbyone_config_s *vx1_conf;
+#ifdef CONFIG_AMLOGIC_LCD_TV
 	int val[2];
+#endif
 
 	vx1_conf = lcd_drv->lcd_config->lcd_control.vbyone_config;
 	if (buf[0] == 'i') { /* intr */
+#ifdef CONFIG_AMLOGIC_LCD_TV
 		ret = sscanf(buf, "intr %d %d", &val[0], &val[1]);
 		if (ret == 1) {
 			pr_info("set vbyone interrupt enable: %d\n", val[0]);
@@ -1700,7 +1822,11 @@ static ssize_t lcd_vx1_debug_store(struct class *class,
 				vx1_intr_state, vx1_conf->intr_en);
 			return -EINVAL;
 		}
+#else
+		return -EINVAL;
+#endif
 	} else if (buf[0] == 'v') { /* vintr */
+#ifdef CONFIG_AMLOGIC_LCD_TV
 		ret = sscanf(buf, "vintr %d", &val[0]);
 		if (ret == 1) {
 			pr_info("set vbyone vsync interrupt enable: %d\n",
@@ -1712,6 +1838,9 @@ static ssize_t lcd_vx1_debug_store(struct class *class,
 				vx1_conf->vsync_intr_en);
 			return -EINVAL;
 		}
+#else
+		return -EINVAL;
+#endif
 	} else {
 		ret = sscanf(buf, "%d %d %d", &vx1_conf->lane_count,
 			&vx1_conf->region_num, &vx1_conf->byte_mode);

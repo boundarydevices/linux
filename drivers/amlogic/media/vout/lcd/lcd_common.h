@@ -23,7 +23,8 @@
 #include "lcd_clk_config.h"
 
 /* 20170505: add a113 support to linux4.9 */
-#define LCD_DRV_VERSION    "20170505"
+/* 20170905: fix coverity errors */
+#define LCD_DRV_VERSION    "20170905"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 

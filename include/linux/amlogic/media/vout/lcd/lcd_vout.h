@@ -23,15 +23,20 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 
-/* debug print define */
+/* **********************************
+ * debug print define
+ * **********************************
+ */
 /* #define LCD_DEBUG_INFO */
 extern unsigned char lcd_debug_print_flag;
 #define LCDPR(fmt, args...)     pr_info("lcd: "fmt"", ## args)
 #define LCDERR(fmt, args...)    pr_err("lcd: error: "fmt"", ## args)
 
-/* clk parameter bit define */
-/* pll_ctrl, div_ctrl, clk_ctrl */
-
+/* **********************************
+ * clk parameter bit define
+ * pll_ctrl, div_ctrl, clk_ctrl
+ * **********************************
+ */
 /* ******** pll_ctrl ******** */
 #define PLL_CTRL_OD3                20 /* [21:20] */
 #define PLL_CTRL_OD2                18 /* [19:18] */
@@ -51,7 +56,10 @@ extern unsigned char lcd_debug_print_flag;
 #define CLK_CTRL_LEVEL              12 /* [14:12] */
 #define CLK_CTRL_FRAC               0  /* [11:0] */
 
-/* VENC to TCON sync delay */
+/* **********************************
+ * VENC to TCON sync delay
+ * **********************************
+ */
 #define TTL_DELAY                   13
 
 /* ******** AXG ******** */
@@ -73,7 +81,10 @@ extern unsigned char lcd_debug_print_flag;
 					DSI_LANE_1 | DSI_LANE_2 | DSI_LANE_3)
 
 
-/* global control define */
+/* **********************************
+ * global control define
+ * **********************************
+ */
 enum lcd_mode_e {
 	LCD_MODE_TV = 0,
 	LCD_MODE_TABLET,
@@ -169,7 +180,10 @@ struct lcd_timing_s {
 	unsigned short vs_ve_addr;
 };
 
-/*  HDR info define */
+/* **********************************
+ * HDR info define
+ * **********************************
+ */
 struct lcd_hdr_info_s {
 	unsigned int hdr_support;
 	unsigned int features;
@@ -270,7 +284,10 @@ struct lcd_control_config_s {
 	struct dsi_config_s *mipi_config;
 };
 
-/* power control define */
+/* **********************************
+ * power control define
+ * **********************************
+ */
 enum lcd_power_type_e {
 	LCD_POWER_TYPE_CPU = 0,
 	LCD_POWER_TYPE_PMU,
@@ -355,6 +372,7 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_key_valid;
 	unsigned char lcd_config_load;
 	unsigned char lcd_test_flag;
+	unsigned char lcd_resume_flag; /* 0=directly, 1=workqueue */
 	unsigned char lcd_mute;
 
 	struct clk *vencl_top;
@@ -393,7 +411,11 @@ struct aml_lcd_drv_s {
 
 extern struct aml_lcd_drv_s *aml_lcd_get_driver(void);
 
-/*  IOCTL define  */
+
+/* **********************************
+ * IOCTL define
+ * **********************************
+ */
 #define LCD_IOC_TYPE               'C'
 #define LCD_IOC_NR_GET_HDR_INFO    0x0
 #define LCD_IOC_NR_SET_HDR_INFO    0x1
