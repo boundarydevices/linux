@@ -2174,7 +2174,12 @@ static int mmc_reset(struct mmc_host *host)
 	 * In the case of recovery, we can't expect flushing the cache to work
 	 * always, but we have a go and ignore errors.
 	 */
+#ifdef CONFIG_AMLOGIC_MMC
+	if (!mmc_card_suspended(host->card))
+		mmc_flush_cache(host->card);
+#else
 	mmc_flush_cache(host->card);
+#endif
 
 	if ((host->caps & MMC_CAP_HW_RESET) && host->ops->hw_reset &&
 	     mmc_can_reset(card)) {

@@ -357,6 +357,7 @@ struct amlsd_host {
 
 	unsigned long		clk_rate;
 
+	u8 *blk_test;
 	char *desc_buf;
 	dma_addr_t		desc_dma_addr;
 	unsigned int dma_sts;

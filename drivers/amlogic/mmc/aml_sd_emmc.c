@@ -168,12 +168,7 @@ static int aml_cali_auto(struct mmc_host *mmc, struct cali_data *c_data)
 	u8 bus_width = 8;
 	struct sd_emmc_adjust *gadjust = (struct sd_emmc_adjust *)&adjust;
 	u32 blksz = 512;
-	u8 *blk_test;
 	int ret = 0;
-
-	blk_test = kmalloc(blksz * CALI_BLK_CNT, GFP_KERNEL);
-	if (!blk_test)
-		return -ENOMEM;
 
 	if (mmc->ios.bus_width == 0)
 		bus_width = 1;
@@ -199,7 +194,7 @@ static int aml_cali_auto(struct mmc_host *mmc, struct cali_data *c_data)
 			pdata->caling = 1;
 			aml_sd_emmc_cali_transfer(mmc,
 					MMC_READ_MULTIPLE_BLOCK,
-					blk_test, blksz);
+					host->blk_test, blksz);
 			for (i = 0; i < 4; i++) {
 				cali_tmp[i]	= readl(host->base
 						+ SD_EMMC_CALOUT + i*4);
@@ -253,8 +248,6 @@ static int aml_cali_auto(struct mmc_host *mmc, struct cali_data *c_data)
 		pr_info("\n");
 #endif
 	}
-	kfree(blk_test);
-	blk_test = NULL;
 	return ret;
 }
 
@@ -274,12 +267,7 @@ static int aml_cali_index(struct mmc_host *mmc, struct cali_data *c_data)
 	u8 cal_per_line_num = 8;
 	struct sd_emmc_adjust *gadjust = (struct sd_emmc_adjust *)&adjust;
 	u32 blksz = 512;
-	u8 *blk_test;
 	int ret = 0;
-
-	blk_test = kmalloc(blksz * CALI_BLK_CNT, GFP_KERNEL);
-	if (!blk_test)
-		return -ENOMEM;
 
 	if (mmc->ios.bus_width == 0)
 		bus_width = 1;
@@ -312,7 +300,7 @@ static int aml_cali_index(struct mmc_host *mmc, struct cali_data *c_data)
 				pdata->caling = 1;
 				aml_sd_emmc_cali_transfer(mmc,
 					MMC_READ_MULTIPLE_BLOCK,
-					blk_test, blksz);
+					host->blk_test, blksz);
 				pdata->calout[dly_tmp][cal_time]
 					= readl(host->base + SD_EMMC_CALOUT)
 					& 0x3f;
@@ -371,8 +359,6 @@ static int aml_cali_index(struct mmc_host *mmc, struct cali_data *c_data)
 		}
 #endif
 	}
-	kfree(blk_test);
-	blk_test = NULL;
 	return ret;
 }
 
@@ -628,7 +614,6 @@ static int aml_tuning_adj(struct mmc_host *mmc, u32 opcode,
 	int adj_delay = 0;
 	const u8 *blk_pattern = tuning_data->blk_pattern;
 	unsigned int blksz = tuning_data->blksz;
-	u8 *blk_test;
 	int wrap_win_start = -1, wrap_win_size = 0;
 	int best_win_start = -1, best_win_size = 0;
 	int curr_win_start = -1, curr_win_size = 0;
@@ -643,9 +628,6 @@ static int aml_tuning_adj(struct mmc_host *mmc, u32 opcode,
 		blksz = 512;
 		opcode = 17;
 	}
-	blk_test = kmalloc(blksz, GFP_KERNEL);
-	if (!blk_test)
-		return -ENOMEM;
 
 	pr_info("%s: clk %d %s tuning start\n",
 		mmc_hostname(mmc), (ctrl->ddr ? (clock / 2) : clock),
@@ -658,7 +640,7 @@ static int aml_tuning_adj(struct mmc_host *mmc, u32 opcode,
 		gadjust->cali_rise = 0;
 		writel(adjust, host->base + SD_EMMC_ADJUST);
 		nmatch = aml_sd_emmc_tuning_transfer(mmc, opcode,
-				blk_pattern, blk_test, blksz);
+				blk_pattern, host->blk_test, blksz);
 		/*get a ok adjust point!*/
 		if (nmatch == TUNING_NUM_PER_POINT) {
 			if (adj_delay == 0)
@@ -708,7 +690,6 @@ static int aml_tuning_adj(struct mmc_host *mmc, u32 opcode,
 	}
 	*best_start = best_win_start;
 	*best_size = best_win_size;
-	kfree(blk_test);
 	return 0;
 }
 
@@ -894,7 +875,6 @@ static int aml_sd_emmc_execute_tuning_rxclk(struct mmc_host *mmc, u32 opcode,
 	u8 steps, nmatch;
 	u8 rx_phase, rx_delay;
 	struct aml_emmc_rxclk *emmc_rxclk = &host->emmc_rxclk;
-	u8 *blk_test;
 	u32 clock;
 	int rxclk_find;
 	u8 rx_tuning_result[25] = {0};
@@ -915,9 +895,6 @@ static int aml_sd_emmc_execute_tuning_rxclk(struct mmc_host *mmc, u32 opcode,
 		blksz = 512;
 		opcode = 17;
 	}
-	blk_test = kmalloc(blksz, GFP_KERNEL);
-	if (!blk_test)
-		return -ENOMEM;
 
 	host->is_tunning = 1;
 	pr_info("%s: clk %d %s tuning start\n",
@@ -935,7 +912,7 @@ static int aml_sd_emmc_execute_tuning_rxclk(struct mmc_host *mmc, u32 opcode,
 			writel(vclk, host->base + SD_EMMC_CLOCK);
 			pdata->clkc = vclk;
 			nmatch = aml_sd_emmc_tuning_transfer(mmc, opcode,
-				blk_pattern, blk_test, blksz);
+				blk_pattern, host->blk_test, blksz);
 			rx_tuning_result[rx_phase * 5 + rx_delay] = nmatch;
 		}
 	}
@@ -946,7 +923,6 @@ static int aml_sd_emmc_execute_tuning_rxclk(struct mmc_host *mmc, u32 opcode,
 
 	if (rxclk_find < 0) {
 		pr_info("%s: tuning failed\n", mmc_hostname(host->mmc));
-		kfree(blk_test);
 		return -1;
 	} else if (rxclk_find < 10) {
 		rx_phase = 0;
@@ -971,7 +947,6 @@ static int aml_sd_emmc_execute_tuning_rxclk(struct mmc_host *mmc, u32 opcode,
 	emmc_rxclk->rxclk_rx_delay = rx_delay;
 	emmc_rxclk->rxclk_point = rxclk_find;
 
-	kfree(blk_test);
 	return 0;
 }
 
@@ -2278,9 +2253,6 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 			sd_emmc_err("%s: warning... response crc,vstat:0x%x,virqc:%x\n",
 					mmc_hostname(host->mmc),
 					vstat, virqc);
-		pr_info("%s %d cmd:%d arg:0x%x ",
-				__func__, __LINE__,
-				mrq->cmd->opcode, mrq->cmd->arg);
 		host->status = HOST_RSP_CRC_ERR;
 		mrq->cmd->error = -EILSEQ;
 	} else if (ista->resp_timeout) {
@@ -2300,10 +2272,11 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 	}
 
 	if (err) {
-		if (host->is_tunning == 0)
+		if (host->is_tunning == 0) {
 			aml_host_bus_fsm_show(host, ista->bus_fsm);
-		if (aml_card_type_mmc(pdata))
-			mmc_cmd_LBA_show(mmc, mrq);
+			if (aml_card_type_mmc(pdata))
+				mmc_cmd_LBA_show(mmc, mrq);
+		}
 	}
 
 	if (host->xfer_step == XFER_IRQ_UNKNOWN_IRQ)
@@ -2768,6 +2741,11 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_host;
 
+	host->blk_test = kzalloc((512 * CALI_BLK_CNT), GFP_KERNEL);
+	if (host->blk_test == NULL) {
+		ret = -ENOMEM;
+		goto free_host;
+	}
 	/* data desc buffer */
 	host->desc_buf =
 		dma_alloc_coherent(host->dev,
@@ -2777,7 +2755,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	if (host->desc_buf == NULL) {
 		dev_err(host->dev, "Unable to map allocate DMA desc buffer.\n");
 		ret = -ENOMEM;
-		goto free_host;
+		goto free_cali;
 	}
 
 	/* data bounce buffer */
@@ -2787,7 +2765,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	if (host->bn_buf == NULL) {
 		dev_err(host->dev, "Unable to map allocate DMA bounce buffer.\n");
 		ret = -ENOMEM;
-		goto free_host;
+		goto free_cali;
 	}
 
 	host->pdata = pdata;
@@ -2802,12 +2780,12 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	else
 		ret = meson_mmc_clk_init(host);
 	if (ret)
-		goto free_host;
+		goto free_cali;
 
 	ret = mmc_of_parse(mmc);
 	if (ret) {
 		dev_warn(&pdev->dev, "error parsing DT: %d\n", ret);
-		goto free_host;
+		goto free_cali;
 	}
 
 	if (amlsd_get_platform_data(pdev, pdata, mmc, 0))
@@ -2880,7 +2858,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	ret = mmc_add_host(mmc);
 	if (ret) { /* error */
 		sd_emmc_err("Failed to add mmc host.\n");
-		goto free_host;
+		goto free_cali;
 	}
 	if (aml_card_type_sdio(pdata)) /* if sdio_wifi */
 		sdio_host = mmc;
@@ -2897,12 +2875,14 @@ static int meson_mmc_probe(struct platform_device *pdev)
 				"amlsd_cd", host);
 		if (ret) {
 			sd_emmc_err("Failed to request SD IN detect\n");
-			goto free_host;
+			goto free_cali;
 		}
 	}
 	pr_info("%s() : success!\n", __func__);
 	return 0;
 
+free_cali:
+	kfree(host->blk_test);
 free_host:
 	mmc_free_host(mmc);
 	kfree(pdata);
@@ -2930,6 +2910,7 @@ static int meson_mmc_remove(struct platform_device *pdev)
 	if (host->core_clk)
 		clk_disable_unprepare(host->core_clk);
 
+	kfree(host->blk_test);
 	mmc_free_host(host->mmc);
 	kfree(pdata);
 	return 0;
