@@ -731,15 +731,23 @@ static long unifykey_unlocked_ioctl(struct file *file,
 	unsigned int cmd,
 	unsigned long arg)
 {
+	void __user *argp = (void __user *)arg;
+
 	switch (cmd) {
 	case KEYUNIFY_ATTACH:
 		{
-			struct key_item_t *appitem;
+			struct key_item_t appitem;
 			char initvalue[KEY_UNIFY_NAME_LEN];
 			int ret;
 
-			appitem = (struct key_item_t *)arg;
-			memcpy(initvalue, appitem->name, KEY_UNIFY_NAME_LEN);
+			ret = copy_from_user(&appitem, argp, sizeof(appitem));
+			if (ret != 0) {
+				pr_err("%s:%d,copy_from_user fail\n",
+					__func__, __LINE__);
+				return ret;
+			}
+			//appitem = (struct key_item_t *)arg;
+			memcpy(initvalue, appitem.name, KEY_UNIFY_NAME_LEN);
 			ret = key_unify_init(initvalue, KEY_UNIFY_NAME_LEN);
 			if (ret < 0) {
 				pr_err("%s:%d,key unify init fail\n",
@@ -754,13 +762,20 @@ static long unifykey_unlocked_ioctl(struct file *file,
 			unsigned int index, reallen;
 			unsigned int keypermit, keystate;
 			struct key_item_t *kkey;
-			struct key_item_info_t *key_item_info;
+			struct key_item_info_t key_item_info;
 			char *keyname;
 			int ret;
 
-			key_item_info = (struct key_item_info_t *)arg;
-			index = key_item_info->id;
-			keyname = key_item_info->name;
+			ret = copy_from_user(&key_item_info,
+				argp, sizeof(key_item_info));
+			if (ret != 0) {
+				pr_err("%s:%d,copy_from_user fail\n",
+					__func__, __LINE__);
+				return ret;
+			}
+			//key_item_info = (struct key_item_info_t *)arg;
+			index = key_item_info.id;
+			keyname = key_item_info.name;
 			if (strlen(keyname))
 				kkey = unifykey_find_item_by_name(keyname);
 			else
@@ -780,10 +795,10 @@ static long unifykey_unlocked_ioctl(struct file *file,
 					__func__, __LINE__);
 				return -EFAULT;
 			}
-			key_item_info->permit = keypermit;
-			key_item_info->flag = keystate;
-			key_item_info->id = kkey->id;
-			strncpy(key_item_info->name,
+			key_item_info.permit = keypermit;
+			key_item_info.flag = keystate;
+			key_item_info.id = kkey->id;
+			strncpy(key_item_info.name,
 					kkey->name, strlen(kkey->name));
 			ret = key_unify_size(kkey->name, &reallen);
 			if (ret < 0) {
@@ -792,7 +807,15 @@ static long unifykey_unlocked_ioctl(struct file *file,
 				return -EFAULT;
 			}
 			/* set key info */
-			key_item_info->size = reallen;
+			key_item_info.size = reallen;
+
+			ret = copy_to_user(argp,
+				&key_item_info, sizeof(key_item_info));
+			if (ret != 0) {
+				pr_err("%s:%d,copy_to_user fail\n",
+					__func__, __LINE__);
+				return ret;
+			}
 
 			return 0;
 		}

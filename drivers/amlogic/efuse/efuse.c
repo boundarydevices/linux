@@ -101,13 +101,30 @@ loff_t efuse_llseek(struct file *filp, loff_t off, int whence)
 static long efuse_unlocked_ioctl(struct file *file, unsigned int cmd,
 	unsigned long arg)
 {
-	struct efuseinfo_item_t *info;
+	void __user		*argp = (void __user *)arg;
+	struct efuseinfo_item_t info;
+	int			ret;
+
 
 	switch (cmd) {
 	case EFUSE_INFO_GET:
-		info = (struct efuseinfo_item_t *)arg;
-		if (efuse_getinfo_byTitle(info->title, info) < 0)
+		ret = copy_from_user(&info, argp, sizeof(info));
+		if (ret != 0) {
+			pr_err("%s:%d,copy_from_user fail\n",
+				__func__, __LINE__);
+			return ret;
+		}
+
+		if (efuse_getinfo_byTitle(info.title, &info) < 0)
 			return  -EFAULT;
+
+		ret = copy_to_user(argp, &info, sizeof(info));
+		if (ret != 0) {
+			pr_err("%s:%d,copy_to_user fail\n",
+				__func__, __LINE__);
+			return ret;
+		}
+
 		break;
 
 	default:

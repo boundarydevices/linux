@@ -169,14 +169,29 @@ loff_t efuse_llseek(struct file *filp, loff_t off, int whence)
 static long efuse_unlocked_ioctl(struct file *file, unsigned int cmd,
 	unsigned long arg)
 {
-	struct efusekey_info *info;
+	void __user	     *argp = (void __user *)arg;
+	struct efusekey_info info;
+	int		     ret;
+
 
 	switch (cmd) {
 	case EFUSE_INFO_GET:
-		info = (struct efusekey_info *)arg;
-		if (efuse_getinfo(info->keyname, info) < 0) {
-			pr_err("%s if not found\n", info->keyname);
+		ret = copy_from_user(&info, argp, sizeof(info));
+		if (ret != 0) {
+			pr_err("%s:%d,copy_from_user fail\n",
+				__func__, __LINE__);
+			return ret;
+		}
+		if (efuse_getinfo(info.keyname, &info) < 0) {
+			pr_err("%s if not found\n", info.keyname);
 			return -EFAULT;
+		}
+
+		ret = copy_to_user(argp, &info, sizeof(info));
+		if (ret != 0) {
+			pr_err("%s:%d,copy_to_user fail\n",
+				__func__, __LINE__);
+			return ret;
 		}
 		break;
 

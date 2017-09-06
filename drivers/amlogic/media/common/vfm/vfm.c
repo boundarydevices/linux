@@ -170,7 +170,11 @@ int vfm_map_add(char *id, char *name_chain)
 		return -ENOMEM;
 	}
 	memset(p, 0, sizeof(struct vfm_map_s));
-	memcpy(p->id, id, strlen(id));
+	if (strlen(id) >= sizeof(p->id)) {
+		memcpy(p->id, id, sizeof(p->id));
+		p->id[sizeof(p->id)-1] = '\0';
+	} else
+		memcpy(p->id, id, strlen(id));
 	p->valid = 1;
 	ptr = name_chain;
 
@@ -180,7 +184,13 @@ int vfm_map_add(char *id, char *name_chain)
 			break;
 		if (*token == '\0')
 			continue;
-		memcpy(p->name[p->vfm_map_size], token, strlen(token));
+		if (strlen(token) >= sizeof(p->name[p->vfm_map_size])) {
+			memcpy(p->name[p->vfm_map_size], token,
+				sizeof(p->name[p->vfm_map_size]));
+			p->name[p->vfm_map_size][
+				sizeof(p->name[p->vfm_map_size])-1] = '\0';
+		} else
+			memcpy(p->name[p->vfm_map_size], token, strlen(token));
 		p->vfm_map_size++;
 	} while (token && cnt--);
 
