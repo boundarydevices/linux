@@ -31,5 +31,6 @@ extern bool cma_release(struct cma *cma, const struct page *pages, unsigned int 
 
 #ifdef CONFIG_AMLOGIC_MODIFY
 extern bool cma_suitable(gfp_t gfp_mask);
+extern unsigned long get_driver_alloc_cma(void);
 #endif	/* CONFIG_AMLOGIC_MODIFY */
 #endif

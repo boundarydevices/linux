@@ -137,7 +137,19 @@ enum zone_stat_item {
 	NUMA_LOCAL,		/* allocation from local node */
 	NUMA_OTHER,		/* allocation from other node */
 #endif
+#ifdef CONFIG_AMLOGIC_MODIFY /* get free pages according migrate type */
+	NR_FREE_UNMOVABLE,
+	NR_FREE_MOVABLE,
+	NR_FREE_RECLAIMABLE,
+	NR_FREE_HIGHATOMIC,
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	NR_FREE_CMA_PAGES,
+#ifdef CONFIG_AMLOGIC_MODIFY
+	/* This is in order with MIGRATE_TYPES */
+#ifdef CONFIG_MEMORY_ISOLATION
+	NR_FREE_ISOLATE,
+#endif
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	NR_VM_ZONE_STAT_ITEMS };
 
 enum node_stat_item {

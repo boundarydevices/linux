@@ -806,6 +806,9 @@ static inline void __free_one_page(struct page *page,
 	unsigned long uninitialized_var(buddy_idx);
 	struct page *buddy;
 	unsigned int max_order;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	int buddy_mg;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	max_order = min_t(unsigned int, MAX_ORDER, pageblock_order + 1);
 
@@ -834,6 +837,19 @@ continue_merging:
 		if (page_is_guard(buddy)) {
 			clear_page_guard(zone, buddy, order, migratetype);
 		} else {
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			/*
+			 * Kernel have provided some information about it in
+			 * /proc/pagetypeinfo, /proc/buddyinfo. But both of them
+			 * do not have a summary of free pages of each migrate
+			 * type.
+			 * Update zone free migrate type change according
+			 * free_area's nr_free, this information is helpful and
+			 * can be shown in echo m > /proc/sysrq-trigger.
+			 */
+			buddy_mg = get_pcppage_migratetype(buddy);
+			__mod_zone_migrate_state(zone, -(1 << order), buddy_mg);
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 			list_del(&buddy->lru);
 			zone->free_area[order].nr_free--;
 			rmv_page_order(buddy);
@@ -895,6 +911,10 @@ done_merging:
 	list_add(&page->lru, &zone->free_area[order].free_list[migratetype]);
 out:
 	zone->free_area[order].nr_free++;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	set_pcppage_migratetype(page, migratetype);
+	__mod_zone_migrate_state(zone, (1 << order), migratetype);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 }
 
 /*
@@ -1663,6 +1683,10 @@ static inline void expand(struct zone *zone, struct page *page,
 
 		list_add(&page[size].lru, &area->free_list[migratetype]);
 		area->nr_free++;
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		set_pcppage_migratetype(&page[size], migratetype);
+		__mod_zone_migrate_state(zone, (1 << high), migratetype);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		set_page_order(&page[size], high);
 	}
 }
@@ -1817,6 +1841,10 @@ struct page *__rmqueue_smallest(struct zone *zone, unsigned int order,
 		list_del(&page->lru);
 		rmv_page_order(page);
 		area->nr_free--;
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		__mod_zone_migrate_state(zone, -(1 << current_order),
+					 migratetype);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		expand(zone, page, order, current_order, area, migratetype);
 		set_pcppage_migratetype(page, migratetype);
 		return page;
@@ -1865,6 +1893,9 @@ int move_freepages(struct zone *zone,
 	struct page *page;
 	unsigned int order;
 	int pages_moved = 0;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	int list_type;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 #ifndef CONFIG_HOLES_IN_ZONE
 	/*
@@ -1894,6 +1925,12 @@ int move_freepages(struct zone *zone,
 		order = page_order(page);
 		list_move(&page->lru,
 			  &zone->free_area[order].free_list[migratetype]);
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		list_type = get_pcppage_migratetype(page);
+		__mod_zone_migrate_state(zone, -(1 << order), list_type);
+		__mod_zone_migrate_state(zone, (1 << order), migratetype);
+		set_pcppage_migratetype(page, migratetype);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		page += 1 << order;
 		pages_moved += 1 << order;
 	}
@@ -2152,6 +2189,10 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 
 		/* Remove the page from the freelists */
 		area->nr_free--;
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		__mod_zone_migrate_state(zone, -(1 << current_order),
+					 fallback_mt);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		list_del(&page->lru);
 		rmv_page_order(page);
 
@@ -2184,10 +2225,24 @@ static struct page *__rmqueue(struct zone *zone, unsigned int order,
 {
 	struct page *page;
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	/* use CMA first */
+	if (migratetype == MIGRATE_MOVABLE) {
+		page = __rmqueue_cma_fallback(zone, order);
+		if (page) {
+			trace_mm_page_alloc_zone_locked(page, order,
+							MIGRATE_CMA);
+			return page;
+		}
+	}
+#endif /* CONFIG_AMLOGIC_MODIFY */
+
 	page = __rmqueue_smallest(zone, order, migratetype);
 	if (unlikely(!page)) {
+	#ifndef CONFIG_AMLOGIC_MODIFY	/* no need to try again */
 		if (migratetype == MIGRATE_MOVABLE)
 			page = __rmqueue_cma_fallback(zone, order);
+	#endif /* !CONFIG_AMLOGIC_MODIFY */
 
 		if (!page)
 			page = __rmqueue_fallback(zone, order, migratetype);
@@ -2253,9 +2308,11 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 			list_add_tail(&page->lru, list);
 		list = &page->lru;
 		alloced++;
+	#ifndef CONFIG_AMLOGIC_MODIFY
 		if (is_migrate_cma(get_pcppage_migratetype(page)))
 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 					      -(1 << order));
+	#endif /* !CONFIG_AMLOGIC_MODIFY */
 	}
 
 	/*
@@ -2575,6 +2632,10 @@ int __isolate_free_page(struct page *page, unsigned int order)
 	/* Remove page from free list */
 	list_del(&page->lru);
 	zone->free_area[order].nr_free--;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	__mod_zone_migrate_state(zone, -(1 << order),
+				 get_pcppage_migratetype(page));
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	rmv_page_order(page);
 
 	/*
@@ -2660,15 +2721,45 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 			else
 				page = list_first_entry(list, struct page, lru);
 
-		#ifdef CONFIG_AMLOGIC_MODIFY
+#ifdef CONFIG_AMLOGIC_MODIFY
+			/*
+			 * USING CMA FIRST POLICY situations:
+			 * 1. CMA pages may return to pcp and allocated next
+			 *    but gfp mask is not suitable for CMA;
+			 * 2. MOVABLE pages may return to pcp and allocated next
+			 *    but gfp mask is suitable for CMA
+			 *
+			 * For 1, we should replace a none-CMA page
+			 * For 2, we should replace with a cma page
+			 * before page is deleted from PCP list.
+			 */
 			if (!cma_suitable(gfp_flags) &&
 			    is_migrate_cma_page(page)) {
+				/* case 1 */
 				page = rmqueue_no_cma(zone, order, migratetype);
 				if (page)
 					break;
 				goto failed;
+			} else if ((migratetype == MIGRATE_MOVABLE) &&
+			    (get_pcppage_migratetype(page) != MIGRATE_CMA) &&
+			    cma_suitable(gfp_flags)) {
+				struct page *tmp_page;
+
+				spin_lock(&zone->lock);
+				tmp_page = __rmqueue_cma_fallback(zone, order);
+				/* can't alloc cma pages or not ready */
+				if (!tmp_page || check_new_pcp(page)) {
+					spin_unlock(&zone->lock);
+					goto use_pcp;
+				}
+				page = tmp_page;
+				__mod_zone_freepage_state(zone, -(1 << order),
+					get_pcppage_migratetype(page));
+				spin_unlock(&zone->lock);
+				goto alloc_success;
 			}
-		#endif /* CONFIG_AMLOGIC_MODIFY */
+use_pcp:
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 			list_del(&page->lru);
 			pcp->count--;
@@ -2699,6 +2790,9 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 					  get_pcppage_migratetype(page));
 	}
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+alloc_success:
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	__count_zid_vm_events(PGALLOC, page_zonenum(page), 1 << order);
 	zone_statistics(preferred_zone, zone, gfp_flags);
 	local_irq_restore(flags);
@@ -4344,6 +4438,9 @@ void show_free_areas(unsigned int filter)
 		" unevictable:%lu dirty:%lu writeback:%lu unstable:%lu\n"
 		" slab_reclaimable:%lu slab_unreclaimable:%lu\n"
 		" mapped:%lu shmem:%lu pagetables:%lu bounce:%lu\n"
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		" driver_cma:%lu"
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		" free:%lu free_pcp:%lu free_cma:%lu\n",
 		global_node_page_state(NR_ACTIVE_ANON),
 		global_node_page_state(NR_INACTIVE_ANON),
@@ -4361,6 +4458,9 @@ void show_free_areas(unsigned int filter)
 		global_node_page_state(NR_SHMEM),
 		global_page_state(NR_PAGETABLE),
 		global_page_state(NR_BOUNCE),
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		get_driver_alloc_cma(),
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		global_page_state(NR_FREE_PAGES),
 		free_pcp,
 		global_page_state(NR_FREE_CMA_PAGES));
@@ -4445,6 +4545,15 @@ void show_free_areas(unsigned int filter)
 			" bounce:%lukB"
 			" free_pcp:%lukB"
 			" local_pcp:%ukB"
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			" free_unmovable:%lukB"
+			" free_movable:%lukB"
+			" free_reclaimable:%lukB"
+			" free_highatomic:%lukB"
+		#ifdef CONFIG_MEMORY_ISOLATION
+			" free_isolate:%lukB"
+		#endif
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 			" free_cma:%lukB"
 			"\n",
 			zone->name,
@@ -4468,6 +4577,15 @@ void show_free_areas(unsigned int filter)
 			K(zone_page_state(zone, NR_BOUNCE)),
 			K(free_pcp),
 			K(this_cpu_read(zone->pageset->pcp.count)),
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			K(zone_page_state(zone, NR_FREE_UNMOVABLE)),
+			K(zone_page_state(zone, NR_FREE_MOVABLE)),
+			K(zone_page_state(zone, NR_FREE_RECLAIMABLE)),
+			K(zone_page_state(zone, NR_FREE_HIGHATOMIC)),
+		#ifdef CONFIG_MEMORY_ISOLATION
+			K(zone_page_state(zone, NR_FREE_ISOLATE)),
+		#endif
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 			K(zone_page_state(zone, NR_FREE_CMA_PAGES)));
 		printk("lowmem_reserve[]:");
 		for (i = 0; i < MAX_NR_ZONES; i++)
@@ -7499,6 +7617,10 @@ __offline_isolated_pages(unsigned long start_pfn, unsigned long end_pfn)
 		list_del(&page->lru);
 		rmv_page_order(page);
 		zone->free_area[order].nr_free--;
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		__mod_zone_migrate_state(zone, -(1 << order),
+					 get_pcppage_migratetype(page));
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		for (i = 0; i < (1 << order); i++)
 			SetPageReserved((page+i));
 		pfn += (1 << order);

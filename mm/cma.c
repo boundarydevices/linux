@@ -42,6 +42,14 @@
 struct cma cma_areas[MAX_CMA_AREAS];
 unsigned cma_area_count;
 static DEFINE_MUTEX(cma_mutex);
+#ifdef CONFIG_AMLOGIC_MODIFY
+/* how many cma pages used by driver */
+static atomic_long_t driver_alloc_cma;
+unsigned long get_driver_alloc_cma(void)
+{
+	return atomic_long_read(&driver_alloc_cma);
+}
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 phys_addr_t cma_get_base(const struct cma *cma)
 {
@@ -152,6 +160,9 @@ static int __init cma_init_reserved_areas(void)
 		if (ret)
 			return ret;
 	}
+#ifdef CONFIG_AMLOGIC_MODIFY
+	atomic_long_set(&driver_alloc_cma, 0);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	return 0;
 }
@@ -426,6 +437,10 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 
 	trace_cma_alloc(pfn, page, count, align);
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (page)
+		atomic_long_add(count, &driver_alloc_cma);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
 }
@@ -460,6 +475,9 @@ bool cma_release(struct cma *cma, const struct page *pages, unsigned int count)
 	cma_clear_bitmap(cma, pfn, count);
 	trace_cma_release(pfn, pages, count);
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	atomic_long_sub(count, &driver_alloc_cma);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	return true;
 }
 
