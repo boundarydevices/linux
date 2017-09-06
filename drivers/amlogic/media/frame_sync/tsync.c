@@ -647,7 +647,7 @@ static void tsync_state_switch_timer_fun(unsigned long arg)
 		tsync_av_dynamic_timeout_ms =
 			jiffies_ms + tsync_av_dynamic_duration_ms;
 	}
-	tsync_state_switch_timer.expires = jiffies + 20;
+	tsync_state_switch_timer.expires = jiffies + msecs_to_jiffies(200);
 	add_timer(&tsync_state_switch_timer);
 }
 
@@ -1161,7 +1161,7 @@ void tsync_init(void)
 
 	init_timer(&tsync_state_switch_timer);
 	tsync_state_switch_timer.function = tsync_state_switch_timer_fun;
-	tsync_state_switch_timer.expires = jiffies + 1;
+	tsync_state_switch_timer.expires = jiffies + msecs_to_jiffies(10);
 
 	add_timer(&tsync_state_switch_timer);
 }
