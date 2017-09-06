@@ -311,7 +311,7 @@ int	FlmModsDet(struct sFlmDatSt *pRDat, int nDif01, int nDif02)
 					aXMI02[tT3] = aXId02[tT3];
 					nT4 += (16 - aMax02[tT3]);
 				}
-				nT4 /= nLen1;
+				nT4 /= nLen2;
 				tModLvl -= nT4;
 			} else {
 				nLen2 = -nMxMn[tT0][1];
