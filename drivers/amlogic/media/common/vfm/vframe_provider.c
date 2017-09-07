@@ -106,8 +106,11 @@ static inline int use_provider(struct vframe_provider_s *prov)
 
 	if (prov) {
 		ret = atomic_inc_return(&prov->use_cnt);
-		if (ret <= 0)
+		if (ret <= 0) {
 			atomic_dec_return(&prov->use_cnt);
+			pr_err("%s: Error, provider error-%d\n",
+				prov->name, atomic_read(&prov->use_cnt));
+		}
 	}
 	return ret > 0;
 }
@@ -204,6 +207,7 @@ int vf_reg_provider(struct vframe_provider_s *prov)
 		return -1;
 	prov->traceget = NULL;
 	prov->traceput = NULL;
+	atomic_set(&prov->use_cnt, 0);/*set it ready for use.*/
 	for (i = 0; i < MAX_PROVIDER_NUM; i++) {
 		p = provider_table[i];
 		if (p) {
@@ -232,7 +236,6 @@ int vf_reg_provider(struct vframe_provider_s *prov)
 	} else {
 		pr_err("%s: Error, provider_table full\n", __func__);
 	}
-	atomic_set(&prov->use_cnt, 0);/*set it ready for use.*/
 	if (vfm_trace_enable & 1)
 		prov->traceget = vftrace_alloc_trace(prov->name, 1,
 				vfm_trace_num);
