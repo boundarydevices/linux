@@ -246,9 +246,6 @@ static int viuin_isr(struct tvin_frontend_s *fe, unsigned int hcnt64)
 
 	struct viuin_s *devp = container_of(fe, struct viuin_s, frontend);
 
-	if (!devp)
-		return -ENODEV;
-
 	curr_port = rd_bits_viu(VPU_VIU_VENC_MUX_CTRL, 0, 2);
 
 	vsync_enter_line_curr = (rd_viu(devp->enc_info_addr)>>16)&0x1fff;
