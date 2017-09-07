@@ -1262,9 +1262,11 @@ int dwc_usb_change(struct notifier_block *nb,
 
 	if (value) {
 		DWC_DEBUGPL(DBG_PCDV, "start usb device\n");
+		dwc_otg_enable_global_interrupts(otg_dev->core_if);
 		otg_dev->pcd->core_if->pcd_cb->start(otg_dev->pcd);
 	} else {
 		DWC_DEBUGPL(DBG_PCDV, "stop usb device\n");
+		dwc_otg_disable_global_interrupts(otg_dev->core_if);
 		otg_dev->pcd->core_if->pcd_cb->stop(otg_dev->pcd);
 	}
 
