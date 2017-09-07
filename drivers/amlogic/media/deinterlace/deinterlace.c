@@ -358,7 +358,7 @@ static struct vframe_provider_s di_vf_prov;
 static int di_sema_init_flag;
 static struct semaphore di_sema;
 
-void trigger_pre_di_process(char idx)
+void trigger_pre_di_process(unsigned char idx)
 {
 	if (di_sema_init_flag == 0)
 		return;
