@@ -969,8 +969,7 @@
 	};
 
 	rtc@68 {
-		/* TODO */
-		compatible = "m41st87";
+		compatible = "mcrystal,rv4162";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_rtc>;
 		reg = <0x68>;
