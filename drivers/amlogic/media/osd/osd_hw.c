@@ -1221,6 +1221,7 @@ void osd_setup_hw(u32 index,
 	u32 w = (color->bpp * xres_virtual + 7) >> 3;
 	u32 i, cpu_type;
 
+	osd_hw.buffer_alloc[index] = 1;
 	pan_data.x_start = xoffset;
 	pan_data.y_start = yoffset;
 	disp_data.x_start = disp_start_x;
@@ -2222,6 +2223,7 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 			osd_log_dbg("fence wait ret %d\n", ret);
 	}
 	if (ret) {
+		osd_hw.buffer_alloc[index] = 1;
 		if (osd_hw.osd_fps_start)
 			osd_hw.osd_fps++;
 		if (fence_map->op == 0xffffffff)
@@ -2971,6 +2973,8 @@ static void osd2_update_color_mode(void)
 
 static void osd1_update_enable(void)
 {
+	if (!osd_hw.buffer_alloc[OSD1])
+		return;
 	if (((get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB) ||
 		(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)) &&
 		(osd_hw.enable[OSD1] == ENABLE)) {
@@ -3039,6 +3043,8 @@ static void osd1_update_enable(void)
 
 static void osd2_update_enable(void)
 {
+	if (!osd_hw.buffer_alloc[OSD2])
+		return;
 	if (osd_hw.enable[OSD2] == ENABLE)
 		osd_vpp_misc |= VPP_OSD2_POSTBLEND;
 	else
@@ -3919,6 +3925,8 @@ void osd_init_hw(u32 logo_loaded)
 	osd_hw.free_src_data_backup[OSD2].y_end = 0;
 	osd_hw.free_scale_mode[OSD1] = 0;
 	osd_hw.free_scale_mode[OSD2] = 1;
+	osd_hw.buffer_alloc[OSD1] = 0;
+	osd_hw.buffer_alloc[OSD2] = 0;
 	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
 		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX))
 		osd_reg_write(VPP_OSD_SC_DUMMY_DATA, 0x002020ff);

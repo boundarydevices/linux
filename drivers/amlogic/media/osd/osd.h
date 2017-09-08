@@ -316,6 +316,7 @@ struct hw_para_s {
 	struct pandata_s free_dst_data_backup[HW_OSD_COUNT];
 	/* struct pandata_s rotation_pandata[HW_OSD_COUNT]; */
 	struct pandata_s cursor_dispdata[HW_OSD_COUNT];
+	u32 buffer_alloc[HW_OSD_COUNT];
 
 	u32 gbl_alpha[HW_OSD_COUNT];
 	u32 color_key[HW_OSD_COUNT];

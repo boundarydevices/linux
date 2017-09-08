@@ -349,23 +349,25 @@ size_t get_fb_rmem_size(int index)
 
 static void osddev_setup(struct osd_fb_dev_s *fbdev)
 {
-	mutex_lock(&fbdev->lock);
-	osd_setup_hw(fbdev->fb_info->node,
-		     &fbdev->osd_ctl,
-		     fbdev->fb_info->var.xoffset,
-		     fbdev->fb_info->var.yoffset,
-		     fbdev->fb_info->var.xres,
-		     fbdev->fb_info->var.yres,
-		     fbdev->fb_info->var.xres_virtual,
-		     fbdev->fb_info->var.yres_virtual,
-		     fbdev->osd_ctl.disp_start_x,
-		     fbdev->osd_ctl.disp_start_y,
-		     fbdev->osd_ctl.disp_end_x,
-		     fbdev->osd_ctl.disp_end_y,
-		     fbdev->fb_mem_paddr, /*phys_addr_t -> u32*/
-		     fbdev->fb_mem_afbc_paddr, /* afbc phys_addr_t* */
-		     fbdev->color);
-	mutex_unlock(&fbdev->lock);
+	if (fbdev->fb_mem_paddr) {
+		mutex_lock(&fbdev->lock);
+		osd_setup_hw(fbdev->fb_info->node,
+			     &fbdev->osd_ctl,
+			     fbdev->fb_info->var.xoffset,
+			     fbdev->fb_info->var.yoffset,
+			     fbdev->fb_info->var.xres,
+			     fbdev->fb_info->var.yres,
+			     fbdev->fb_info->var.xres_virtual,
+			     fbdev->fb_info->var.yres_virtual,
+			     fbdev->osd_ctl.disp_start_x,
+			     fbdev->osd_ctl.disp_start_y,
+			     fbdev->osd_ctl.disp_end_x,
+			     fbdev->osd_ctl.disp_end_y,
+			     fbdev->fb_mem_paddr, /*phys_addr_t -> u32*/
+			     fbdev->fb_mem_afbc_paddr, /* afbc phys_addr_t* */
+			     fbdev->color);
+		mutex_unlock(&fbdev->lock);
+	}
 }
 
 static void osddev_update_disp_axis(struct osd_fb_dev_s *fbdev,
@@ -1028,6 +1030,37 @@ static int osd_compat_ioctl(struct fb_info *info,
 
 static int osd_open(struct fb_info *info, int arg)
 {
+	u32 fb_index;
+	struct osd_fb_dev_s *fbdev;
+	struct fb_fix_screeninfo *fix = NULL;
+
+	fbdev = (struct osd_fb_dev_s *)info->par;
+	fbdev->open_count++;
+	osd_log_dbg("osd_open index=%d,open_count=%d\n",
+		fbdev->fb_index, fbdev->open_count);
+	fb_index = fbdev->fb_index;
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		if (fb_index >= 1)
+		return -1;
+	#ifndef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
+	if (fb_index >= 1)
+		return -1;
+	#endif
+	fix = &info->fix;
+
+	fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
+	pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
+		__func__, __LINE__, fb_index, fb_rmem_size[fb_index]);
+
+	fix->smem_start = 0;
+	fix->smem_len = fb_rmem_size[fb_index];
+	if (!fb_ion_client)
+		fb_ion_client = meson_ion_client_create(-1, "meson-fb");
+	return 0;
+}
+
+static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
+{
 	int j;
 	int ret = 0;
 	u32 fb_index;
@@ -1038,7 +1071,9 @@ static int osd_open(struct fb_info *info, int arg)
 	struct platform_device *pdev = NULL;
 	phys_addr_t base = 0;
 	unsigned long size = 0;
-
+	unsigned long mmio_pgoff;
+	unsigned long start;
+	u32 len;
 #ifdef CONFIG_CMA
 	struct cma *cma = NULL;
 
@@ -1058,12 +1093,10 @@ static int osd_open(struct fb_info *info, int arg)
 	size = fb_rmem.size;
 #endif
 	fbdev = (struct osd_fb_dev_s *)info->par;
-	fbdev->open_count++;
-	osd_log_dbg("osd_open index=%d,open_count=%d\n",
-		fbdev->fb_index, fbdev->open_count);
+
 	if (info->screen_base != NULL)
 		return 0;
-	osd_log_dbg("%s, %d, base:%llx, size:%ld\n",
+	osd_log_info("%s, %d, base:%llx, size:%ld\n",
 		__func__, __LINE__, base, size);
 	pdev = fbdev->dev;
 	fb_index = fbdev->fb_index;
@@ -1080,8 +1113,6 @@ static int osd_open(struct fb_info *info, int arg)
 	if ((b_reserved_mem == true) &&
 		(fb_memsize[0] + fb_memsize[1] +
 			fb_memsize[2]) <= size) {
-		if (!fb_ion_client)
-			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
 		fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
 		if (fb_index == DEV_OSD0)
 			fb_rmem_paddr[fb_index] = base +
@@ -1147,8 +1178,6 @@ static int osd_open(struct fb_info *info, int arg)
 	} else {
 		#ifdef CONFIG_AMLOGIC_ION
 		pr_info("use ion buffer for fb memory\n");
-		if (!fb_ion_client)
-			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
 		if (fb_index == DEV_OSD0 && osd_get_afbc()) {
 			pr_info("OSD0 as afbcd mode\n");
 			for (j = 0; j < OSD_MAX_BUF_NUM; j++) {
@@ -1294,15 +1323,26 @@ static int osd_open(struct fb_info *info, int arg)
 		}
 		/* setup osd if not logo layer */
 		osddev_setup(fbdev);
-	} else {
-		/* memset(fb_rmem_vaddr[fb_index],
-		 *		0x0,
-		 *		fb_rmem_size[fb_index]);
-		 */
-		osd_log_info("fb%d open, logo index:%d\n",
-			fb_index, logo_index);
 	}
-	return 0;
+
+	start = info->fix.smem_start;
+	len = info->fix.smem_len;
+	mmio_pgoff = PAGE_ALIGN((start & ~PAGE_MASK) + len) >> PAGE_SHIFT;
+	if (vma->vm_pgoff >= mmio_pgoff) {
+		if (info->var.accel_flags) {
+			mutex_unlock(&info->mm_lock);
+			return -EINVAL;
+		}
+
+		vma->vm_pgoff -= mmio_pgoff;
+		start = info->fix.mmio_start;
+		len = info->fix.mmio_len;
+	}
+	mutex_unlock(&info->mm_lock);
+
+	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
+	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	return vm_iomap_memory(vma, start, len);
 }
 
 
@@ -1399,6 +1439,7 @@ static struct fb_ops osd_ops = {
 	.fb_compat_ioctl = osd_compat_ioctl,
 #endif
 	.fb_open        = osd_open,
+	.fb_mmap        = osd_mmap,
 	.fb_blank       = osd_blank,
 	.fb_pan_display = osd_pan_display,
 	.fb_sync        = osd_sync,
