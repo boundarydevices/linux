@@ -755,12 +755,16 @@ struct platform_device *ci_hdrc_add_device(struct device *dev,
 {
 	struct platform_device *pdev;
 	int id, ret;
+	u32 start;
 
 	ret = ci_get_platdata(dev, platdata);
 	if (ret)
 		return ERR_PTR(ret);
 
-	id = ida_simple_get(&ci_ida, 0, 0, GFP_KERNEL);
+	if (of_property_read_u32(dev->of_node, "id", &start) != 0)
+		start = 0;
+
+	id = ida_simple_get(&ci_ida, start, 0, GFP_KERNEL);
 	if (id < 0)
 		return ERR_PTR(id);
 
