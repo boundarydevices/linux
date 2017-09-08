@@ -52,6 +52,14 @@
 
 #define ACCESS_ONCE(x) (*(volatile typeof(x) *)&(x))
 
+#ifndef __fallthrough
+# if defined(__GNUC__) && __GNUC__ >= 7
+#  define __fallthrough __attribute__ ((fallthrough))
+# else
+#  define __fallthrough
+# endif
+#endif
+
 #include <linux/types.h>
 
 /*
