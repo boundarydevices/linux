@@ -212,6 +212,9 @@ static int sec_bat_set_charge(
 	ktime_t current_time;
 	struct timespec ts;
 
+	if (battery->enable_state == enable)
+		return 0;
+	battery->enable_state = enable;
 	if (battery->cable_type == POWER_SUPPLY_TYPE_OTG)
 		return 0;
 	val.intval = battery->status;
@@ -273,6 +276,41 @@ static int sec_bat_set_charge(
 		POWER_SUPPLY_PROP_ONLINE, val);
 
 	return 0;
+}
+
+static int evaluate_charge(struct sec_battery_info *battery)
+{
+	bool enable = false;
+
+	if (battery->store_mode && battery->cable_type != POWER_SUPPLY_TYPE_BATTERY) {
+		dev_info(battery->dev,
+			"%s: @battery->capacity = (%d), battery->status= (%d), battery->store_mode=(%d)\n",
+			__func__, battery->capacity, battery->status, battery->store_mode);
+
+		if ((battery->capacity >= 35) && (battery->status == POWER_SUPPLY_STATUS_CHARGING)) {
+			battery->store_mode_enable = false;
+		} else if ((battery->capacity <= 30) && (battery->status == POWER_SUPPLY_STATUS_DISCHARGING)) {
+			battery->store_mode_enable = true;
+		}
+	}
+
+	if ((battery->health == POWER_SUPPLY_HEALTH_GOOD) &&
+	    (battery->charger_health == POWER_SUPPLY_HEALTH_GOOD))
+		enable = true;
+
+	if (battery->store_mode && !battery->store_mode_enable)
+		enable = false;
+
+	if (battery->capacity >= 100)
+		battery->status = POWER_SUPPLY_STATUS_FULL;
+	else if (enable)
+		battery->status = POWER_SUPPLY_STATUS_CHARGING;
+	else if (battery->charger_health != POWER_SUPPLY_HEALTH_GOOD)
+		battery->status = POWER_SUPPLY_STATUS_DISCHARGING;
+	else
+		battery->status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+
+	return sec_bat_set_charge(battery, enable);
 }
 
 static int sec_bat_get_adc_data(struct sec_battery_info *battery,
@@ -581,13 +619,7 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 				"%s: Battery Disconnected\n", __func__);
 			battery->present = false;
 			battery->health = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
-
-			if (battery->status !=
-				POWER_SUPPLY_STATUS_DISCHARGING) {
-				battery->status =
-					POWER_SUPPLY_STATUS_NOT_CHARGING;
-				sec_bat_set_charge(battery, false);
-			}
+			evaluate_charge(battery);
 
 			if (battery->pdata->check_battery_result_callback)
 				battery->pdata->
@@ -601,12 +633,7 @@ static bool sec_bat_battery_cable_check(struct sec_battery_info *battery)
 
 	if (battery->health == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE) {
 		battery->health = POWER_SUPPLY_HEALTH_GOOD;
-
-		if (battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-			battery->status = POWER_SUPPLY_STATUS_CHARGING;
-
-			sec_bat_set_charge(battery, true);
-		}
+		evaluate_charge(battery);
 	}
 
 	dev_dbg(battery->dev, "%s: Battery Connected\n", __func__);
@@ -652,27 +679,23 @@ ovp_uvlo_check_error:
 }
 
 static bool sec_bat_ovp_uvlo_result(
-		struct sec_battery_info *battery, int health)
+		struct sec_battery_info *battery, int charger_health)
 {
-	if (battery->health != health) {
-		battery->health = health;
-		switch (health) {
+	if (battery->charger_health != charger_health) {
+		battery->charger_health = charger_health;
+		switch (charger_health) {
 		case POWER_SUPPLY_HEALTH_GOOD:
 			dev_info(battery->dev, "%s: Safe voltage\n", __func__);
 			dev_info(battery->dev, "%s: is_recharging : %d\n", __func__, battery->is_recharging);
-			battery->status =
-				POWER_SUPPLY_STATUS_CHARGING;
+			evaluate_charge(battery);
 			battery->charging_mode = SEC_BATTERY_CHARGING_1ST;
-			sec_bat_set_charge(battery, true);
 			break;
 		case POWER_SUPPLY_HEALTH_OVERVOLTAGE:
 		case POWER_SUPPLY_HEALTH_UNDERVOLTAGE:
 			dev_info(battery->dev,
 				"%s: Unsafe voltage (%d)\n",
-				__func__, health);
-			battery->status =
-				POWER_SUPPLY_STATUS_NOT_CHARGING;
-			sec_bat_set_charge(battery, false);
+				__func__, charger_health);
+			evaluate_charge(battery);
 			battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 			battery->is_recharging = false;
 			/* Take the wakelock during 10 seconds
@@ -689,7 +712,7 @@ static bool sec_bat_ovp_uvlo_result(
 
 static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 {
-	int health;
+	int charger_health;
 
 	if (battery->factory_mode || sec_bat_check_jig_status()) {
 		dev_dbg(battery->dev, "%s: No need to check in factory mode\n", __func__);
@@ -700,23 +723,23 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 		return false;
 	}
 
-	if (battery->health != POWER_SUPPLY_HEALTH_GOOD &&
-		battery->health != POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
-		battery->health != POWER_SUPPLY_HEALTH_UNDERVOLTAGE) {
+	if (battery->charger_health != POWER_SUPPLY_HEALTH_GOOD &&
+		battery->charger_health != POWER_SUPPLY_HEALTH_OVERVOLTAGE &&
+		battery->charger_health != POWER_SUPPLY_HEALTH_UNDERVOLTAGE) {
 		dev_dbg(battery->dev, "%s: No need to check\n", __func__);
 		return false;
 	}
 
-	health = battery->health;
+	charger_health = battery->charger_health;
 
 	switch (battery->pdata->ovp_uvlo_check_type) {
 	case SEC_BATTERY_OVP_UVLO_CALLBACK:
 		if (battery->pdata->ovp_uvlo_callback)
-			health = battery->pdata->ovp_uvlo_callback();
+			charger_health = battery->pdata->ovp_uvlo_callback();
 		break;
 	case SEC_BATTERY_OVP_UVLO_PMICPOLLING:
 	case SEC_BATTERY_OVP_UVLO_CHGPOLLING:
-		health = sec_bat_ovp_uvlo_by_psy(battery);
+		charger_health = sec_bat_ovp_uvlo_by_psy(battery);
 		break;
 	case SEC_BATTERY_OVP_UVLO_PMICINT:
 	case SEC_BATTERY_OVP_UVLO_CHGINT:
@@ -725,7 +748,31 @@ static bool sec_bat_ovp_uvlo(struct sec_battery_info *battery)
 		break;
 	}
 
-	return sec_bat_ovp_uvlo_result(battery, health);
+	return sec_bat_ovp_uvlo_result(battery, charger_health);
+}
+
+static void update_charger_health(struct sec_battery_info *battery)
+{
+	int charger_health = battery->charger_health;
+
+	switch (battery->pdata->ovp_uvlo_check_type) {
+	case SEC_BATTERY_OVP_UVLO_CALLBACK:
+		if (!battery->pdata->ovp_uvlo_callback)
+			return;
+		charger_health = battery->pdata->ovp_uvlo_callback();
+		break;
+	case SEC_BATTERY_OVP_UVLO_PMICPOLLING:
+	case SEC_BATTERY_OVP_UVLO_CHGPOLLING:
+	case SEC_BATTERY_OVP_UVLO_PMICINT:
+	case SEC_BATTERY_OVP_UVLO_CHGINT:
+		charger_health = sec_bat_ovp_uvlo_by_psy(battery);
+		break;
+	default:
+		return;
+	}
+
+	sec_bat_ovp_uvlo_result(battery, charger_health);
+	return;
 }
 
 static bool sec_bat_check_recharge(struct sec_battery_info *battery)
@@ -810,7 +857,7 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 	if (sec_bat_ovp_uvlo(battery)) {
 		if (battery->pdata->ovp_uvlo_result_callback)
 			battery->pdata->
-				ovp_uvlo_result_callback(battery->health);
+				ovp_uvlo_result_callback(battery->charger_health);
 		return false;
 	}
 
@@ -822,7 +869,7 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 		else
 			battery->charging_mode = SEC_BATTERY_CHARGING_2ND;
 		battery->is_recharging = true;
-		sec_bat_set_charge(battery, true);
+		evaluate_charge(battery);
 		if (battery->status == POWER_SUPPLY_STATUS_FULL) {
 			if (battery->capacity <
 				battery->pdata->full_condition_soc &&
@@ -1047,7 +1094,7 @@ static void sec_bat_swelling_check(struct sec_battery_info *battery, int tempera
 				(temperature >= BATT_SWELLING_LOW_TEMP_RECOV)) {*/
 			if (temperature <= BATT_SWELLING_HIGH_TEMP_RECOV) {
 				pr_info("%s: swelling mode end. restart charging\n", __func__);
-				sec_bat_set_charge(battery, true);
+				evaluate_charge(battery);
 				battery->swelling_block = false;
 				battery->swelling_mode = false;
 				/* restore 4.4V float voltage */
@@ -1061,7 +1108,7 @@ static void sec_bat_swelling_check(struct sec_battery_info *battery, int tempera
 				val.intval = MV_TO_UV(4250);
 				psy_do_property(battery->pdata->charger_name, set,
 						POWER_SUPPLY_PROP_VOLTAGE_MAX, val);
-				sec_bat_set_charge(battery, true);
+				evaluate_charge(battery);
 				battery->swelling_block = false;
 			}
 		}
@@ -1201,26 +1248,19 @@ static bool sec_bat_temperature_check(
 		if (battery->status != POWER_SUPPLY_STATUS_NOT_CHARGING) {
 			dev_info(battery->dev,
 				"%s: Unsafe Temperature\n", __func__);
-			battery->status = POWER_SUPPLY_STATUS_NOT_CHARGING;
 			/* change charging current to battery (default 0mA) */
-			sec_bat_set_charge(battery, false);
+			evaluate_charge(battery);
 			return false;
 		}
 	} else {
 		/* if recovered from not charging */
 		if ((battery->health == POWER_SUPPLY_HEALTH_GOOD) &&
-			(battery->status ==
-			 POWER_SUPPLY_STATUS_NOT_CHARGING)) {
+		    (battery->charger_health == POWER_SUPPLY_HEALTH_GOOD) &&
+		    (battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING)) {
 			dev_info(battery->dev,
 					"%s: Safe Temperature\n", __func__);
-			if (battery->capacity >= 100)
-				battery->status =
-					POWER_SUPPLY_STATUS_FULL;
-			else	/* Normal Charging */
-				battery->status =
-					POWER_SUPPLY_STATUS_CHARGING;
 			/* turn on charger by cable type */
-			sec_bat_set_charge(battery, true);
+			evaluate_charge(battery);
 			return false;
 		}
 	}
@@ -1552,7 +1592,7 @@ static bool sec_bat_time_management(
 				dev_dbg(battery->dev,
 					"%s: Reset charging current\n",
 					__func__);
-				if (sec_bat_set_charge(battery, true)) {
+				if (evaluate_charge(battery)) {
 					dev_err(battery->dev,
 						"%s: Fail to Set Charger\n",
 						__func__);
@@ -1760,7 +1800,7 @@ static void sec_bat_do_fullcharged(
 		battery->charging_mode = SEC_BATTERY_CHARGING_2ND;
 		battery->charging_fullcharged_time =
 			battery->charging_passed_time;
-		sec_bat_set_charge(battery, true);
+		evaluate_charge(battery);
 	} else {
 		battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 		battery->is_recharging = false;
@@ -2233,21 +2273,7 @@ continue_monitor:
 			__func__, battery->stability_test, battery->eng_not_full_status,
 			battery->slate_mode);
 
-	if (battery->store_mode && battery->cable_type != POWER_SUPPLY_TYPE_BATTERY) {
-
-		dev_info(battery->dev,
-			"%s: @battery->capacity = (%d), battery->status= (%d), battery->store_mode=(%d)\n",
-			__func__, battery->capacity, battery->status, battery->store_mode);
-
-		if ((battery->capacity >= 35) && (battery->status == POWER_SUPPLY_STATUS_CHARGING)) {
-			battery->status = POWER_SUPPLY_STATUS_DISCHARGING;
-			sec_bat_set_charge(battery, false);
-		}
-		if ((battery->capacity <= 30) && (battery->status == POWER_SUPPLY_STATUS_DISCHARGING)) {
-			battery->status = POWER_SUPPLY_STATUS_CHARGING;
-			sec_bat_set_charge(battery, true);
-		}
-	}
+	evaluate_charge(battery);
 
 	power_supply_changed(battery->psy_bat);
 
@@ -2374,7 +2400,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 #if defined(CONFIG_BATTERY_SWELLING)
 		battery->swelling_mode = false;
 #endif
-		if (sec_bat_set_charge(battery, false))
+		if (evaluate_charge(battery))
 			goto end_of_cable_work;
 	} else if ((battery->slate_mode == true) &&
 		 (battery->cable_type == POWER_SUPPLY_TYPE_USB)) {
@@ -2414,7 +2440,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 #if defined(CONFIG_BATTERY_SWELLING)
 		if (!battery->swelling_block)
 #endif
-		if (sec_bat_set_charge(battery, true))
+		if (evaluate_charge(battery))
 			goto end_of_cable_work;
 
 #if defined(ANDROID_ALARM_ACTIVATED)
@@ -3267,7 +3293,7 @@ static int sec_bat_set_property(struct power_supply *psy,
 		battery->status = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
-		sec_bat_ovp_uvlo_result(battery, val->intval);
+		battery->health = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 			current_cable_type = val->intval;
@@ -3441,6 +3467,7 @@ static int sec_bat_get_property(struct power_supply *psy,
 		}
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
+		update_charger_health(battery);
 		val->intval = battery->health;
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
@@ -4426,6 +4453,9 @@ static int sec_battery_probe(struct platform_device *pdev)
 	/* initialization of battery info */
 	battery->status = POWER_SUPPLY_STATUS_DISCHARGING;
 	battery->health = POWER_SUPPLY_HEALTH_GOOD;
+	battery->charger_health = POWER_SUPPLY_HEALTH_GOOD;
+	battery->store_mode_enable = true;
+	battery->enable_state = 2;
 	battery->present = true;
 
 	battery->polling_count = 1;	/* initial value = 1 */
