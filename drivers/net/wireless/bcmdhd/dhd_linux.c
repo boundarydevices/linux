@@ -3130,7 +3130,18 @@ dhd_stop(struct net_device *net)
 					dhd_remove_if(&dhd->pub, i, FALSE);
 				dhd_net_if_unlock_local(dhd);
 			}
-			cancel_work_sync(dhd->dhd_deferred_wq);
+
+			unsigned int need_relock = false;
+			if (rtnl_is_locked()) {
+				//add some log to confirm whether you will run into this
+				printk("dhd_stop:Do release rtnl_lock.");
+				need_relock = true;
+				rtnl_unlock();
+			}
+                        cancel_work_sync(dhd->dhd_deferred_wq);
+			if (need_relock)
+				rtnl_lock();
+
 		}
 	}
 #endif /* WL_CFG80211 */
