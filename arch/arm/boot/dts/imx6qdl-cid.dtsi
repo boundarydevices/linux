@@ -1238,6 +1238,7 @@
 	disable-over-current;
 	reset-gpios = GP_USBH1_HUB_RESET;
 	status = "okay";
+	id = <1>;
 };
 
 &usbotg {
