@@ -1802,7 +1802,7 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 		des_cmd_cur->owner = 1;
 		des_cmd_cur->end_of_chain = 0;
 
-		desc_cur->cmd_arg = mrq->cmd->data->blocks;
+		desc_cur->cmd_arg = mrq->sbc->arg;
 		/* response save into resp_addr itself */
 		des_cmd_cur->resp_num = 1;
 		desc_cur->resp_addr = 0;
@@ -1907,8 +1907,7 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 #ifdef SD_EMMC_MANUAL_CMD23
 		if (((mrq->cmd->opcode == MMC_WRITE_MULTIPLE_BLOCK)
 			|| (mrq->cmd->opcode == MMC_READ_MULTIPLE_BLOCK))
-			&& (!host->cmd_is_stop) && (!mrq->sbc)
-			&& !(mrq->cmd->flags & (1 << 30))) {
+			&& (!host->cmd_is_stop) && (!mrq->sbc)) {
 
 			/* pr_info("Send stop command here\n"); */
 

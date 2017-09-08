@@ -707,11 +707,25 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_AMLOGIC_MMC
+static void aml_mmc_set_blockcount(struct mmc_request *p_mrq,
+		struct mmc_command *p_sbc)
+{
+	p_sbc->opcode = MMC_SET_BLOCK_COUNT;
+	p_sbc->arg = p_mrq->data->blocks | (1 << 31);
+	p_sbc->flags = MMC_RSP_R1 | MMC_CMD_AC;
+	p_mrq->sbc = p_sbc;
+}
+#endif
+
 static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 			       struct mmc_blk_ioc_data *idata)
 {
 	struct mmc_command cmd = {0};
 	struct mmc_data data = {0};
+#ifdef CONFIG_AMLOGIC_MMC
+	struct mmc_command sbc = {0};
+#endif
 	struct mmc_request mrq = {NULL};
 	struct scatterlist sg;
 	int err;
@@ -777,10 +791,14 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 	}
 
 	if (is_rpmb) {
+#ifdef CONFIG_AMLOGIC_MMC
+		aml_mmc_set_blockcount(&mrq, &sbc);
+#else
 		err = mmc_set_blockcount(card, data.blocks,
 			idata->ic.write_flag & (1 << 31));
 		if (err)
 			return err;
+#endif
 	}
 
 	if ((MMC_EXTRACT_INDEX_FROM_ARG(cmd.arg) == EXT_CSD_SANITIZE_START) &&
