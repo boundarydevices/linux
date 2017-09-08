@@ -29,12 +29,12 @@
 extern int pdm_hcic_shift_gain;
 void pdm_enable(int is_enable)
 {
-	if (is_enable) {
+	if (is_enable)
 		aml_pdm_update_bits(
 			PDM_CTRL,
 			0x1 << 31,
 			is_enable << 31);
-	} else {
+	else {
 		aml_pdm_update_bits(
 			PDM_CTRL,
 			0x1 << 31 | 0x1 << 16,
@@ -49,7 +49,6 @@ void pdm_fifo_reset(void)
 	/* PDM Asynchronous FIFO soft reset.
 	 * write 1 to soft reset AFIFO
 	 */
-
 	aml_pdm_update_bits(
 		PDM_CTRL,
 		0x1 << 16,

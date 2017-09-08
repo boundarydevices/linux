@@ -118,10 +118,12 @@ struct loopback_cfg {
 	enum datain_src datain_src;
 	unsigned int datain_chnum;
 	unsigned int datain_chmask;
+	unsigned int toddr_index;
 
 	enum tdmin_lb_src datalb_src;
 	unsigned int datalb_chnum;
 	unsigned int datalb_chmask;
+	unsigned int frddr_index;
 };
 
 extern int loopback_is_enable(void);
@@ -133,6 +135,11 @@ extern int loopback_parse_of(struct device_node *node,
 
 extern int loopback_prepare(
 	struct snd_pcm_substream *substream,
+	struct loopback_cfg *lb_cfg);
+
+extern int loopback_trigger(
+	struct snd_pcm_substream *substream,
+	int cmd,
 	struct loopback_cfg *lb_cfg);
 
 #endif

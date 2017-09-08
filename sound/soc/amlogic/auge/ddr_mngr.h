@@ -55,6 +55,7 @@ enum frddr_dest {
 };
 
 /* to ddrs */
+int fetch_toddr_index_by_src(int toddr_src);
 struct toddr *aml_audio_register_toddr(struct device *dev,
 		struct aml_audio_controller *actrl,
 		irq_handler_t handler, void *data);
@@ -70,6 +71,8 @@ void aml_toddr_set_format(struct toddr *to,
 		unsigned int type, unsigned int msb, unsigned int lsb);
 
 /* from ddrs */
+int fetch_frddr_index_by_src(int frddr_src);
+
 struct frddr *aml_audio_register_frddr(struct device *dev,
 		struct aml_audio_controller *actrl,
 		irq_handler_t handler, void *data);

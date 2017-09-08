@@ -22,8 +22,11 @@
 
 void datain_config(struct data_in *datain)
 {
-	audiobus_write(
+	audiobus_update_bits(
 		EE_AUDIO_LB_CTRL0,
+		1 << 29 | 0x7 << 24 | 0xff << 16 |
+		0x7 << 13 | 0x1f << 8 | 0x1f << 3 |
+		0x7 << 0,
 		datain->config->ext_signed  << 29 |
 		(datain->config->chnum - 1) << 24 |
 		datain->config->chmask      << 16 |
@@ -53,25 +56,15 @@ void datalb_ctrl(int lb_src)
 	int offset = 0;
 	int reg, reg_base;
 
-	//tdmin lb,  same as tdm out
 	audiobus_update_bits(
-		EE_AUDIO_CLK_TDMIN_LB_CTRL,
-		0x3 << 30 | 1 << 29 | 0xf << 24 | 0xf << 20,
-		0x3 << 30 | 1 << 29 | 2 << 24 | 2 << 20
-		);
-
-	audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 3<<28, 0);
-	audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 1<<29, 1<<29);
-	audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 1<<28, 1<<28);
-
-	audiobus_write(
 		EE_AUDIO_TDMIN_LB_CTRL,
+		0xf << 28 | 0xf << 20 | 0x7 << 16 | 0x1f << 0,
 		1 << 31 |
 		/*0:tdm mode; 1: i2s mode;*/
 		1 << 30 |
 		1 << 29 |
 		1 << 28 |
-		lb_src << 20|
+		lb_src << 20 |
 		3 << 16|
 		31 << 0
 		);
@@ -121,14 +114,42 @@ void datalb_ctrl(int lb_src)
 		audiobus_read(reg));
 }
 
-void lb_enable_ex(int mode, bool is_enable)
+void lb_mode(int mode)
 {
 	audiobus_update_bits(
 		EE_AUDIO_LB_CTRL0,
-		0x3 << 30,
-		is_enable << 31 |
+		0x1 << 30,
 		mode << 30
 		);
+}
+
+void tdmin_lb_clk_enalbe(int is_enable)
+{
+	audiobus_update_bits(
+		EE_AUDIO_CLK_TDMIN_LB_CTRL,
+		0x3 << 30 | 1 << 29 | 0xf << 24 | 0xf << 20,
+		0x3 << 30 | 1 << 29 | 2 << 24 | 2 << 20
+		);
+}
+
+void tdmin_lb_enable(int is_enable)
+{
+	if (is_enable)
+		tdmin_lb_clk_enalbe(is_enable);
+
+	audiobus_update_bits(
+		EE_AUDIO_TDMIN_LB_CTRL,
+		0x1 << 31,
+		is_enable << 31);
+}
+
+void tdmin_lb_fifo_enable(int is_enable)
+{
+	if (is_enable) {
+		audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 1<<29, 1<<29);
+		audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 1<<28, 1<<28);
+	} else
+		audiobus_update_bits(EE_AUDIO_TDMIN_LB_CTRL, 3<<28, 0);
 }
 
 
@@ -144,18 +165,18 @@ void lb_set_tdminlb_enable(bool is_enable)
 {
 }
 
+int lb_is_enable(void)
+{
+	return (audiobus_read(EE_AUDIO_LB_CTRL0) & 0x80000000) >> 31;
+}
+
 void lb_enable(bool is_enable)
 {
-	if (is_enable)
-		audiobus_update_bits(
-			EE_AUDIO_LB_CTRL0,
-			0x1           << 31,
-			is_enable     << 31
-			);
-	else
-		audiobus_write(
-			EE_AUDIO_LB_CTRL0,
-			0);
+	audiobus_update_bits(
+		EE_AUDIO_LB_CTRL0,
+		0x1           << 31,
+		is_enable     << 31
+		);
 }
 
 void lb_set_mode(int mode)

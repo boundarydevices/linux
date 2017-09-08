@@ -155,6 +155,22 @@ static int unregister_toddr_l(struct device *dev, void *data)
 	return 0;
 }
 
+int fetch_toddr_index_by_src(int toddr_src)
+{
+	int i;
+
+	for (i = 0; i < DDRMAX; i++) {
+		if (toddrs[i].in_use
+			&& (toddrs[i].src == toddr_src)) {
+			return i;
+		}
+	}
+
+	pr_err("invalid toddr src\n");
+
+	return -1;
+}
+
 struct toddr *aml_audio_register_toddr(struct device *dev,
 	struct aml_audio_controller *actrl,
 	irq_handler_t handler, void *data)
@@ -238,6 +254,9 @@ void aml_toddr_select_src(struct toddr *to, enum toddr_src src)
 	struct aml_audio_controller *actrl = to->actrl;
 	unsigned int reg_base = to->reg_base;
 	unsigned int reg;
+
+	/* store to check toddr num */
+	to->src = src;
 
 	/* check whether loopback enable */
 	if (loopback_is_enable())
@@ -348,6 +367,21 @@ static int unregister_frddr_l(struct device *dev, void *data)
 	return 0;
 }
 
+int fetch_frddr_index_by_src(int frddr_src)
+{
+	int i;
+
+	for (i = 0; i < DDRMAX; i++) {
+		if (frddrs[i].in_use
+			&& (frddrs[i].dest == frddr_src)) {
+			return i;
+		}
+	}
+
+	pr_err("invalid frdd_src\n");
+	return -1;
+}
+
 struct frddr *aml_audio_register_frddr(struct device *dev,
 	struct aml_audio_controller *actrl,
 	irq_handler_t handler, void *data)
@@ -430,6 +464,8 @@ void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest dst)
 	struct aml_audio_controller *actrl = fr->actrl;
 	unsigned int reg_base = fr->reg_base;
 	unsigned int reg;
+
+	fr->dest = dst;
 
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl,	reg, 0x7, dst & 0x7);

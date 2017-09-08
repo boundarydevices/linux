@@ -83,4 +83,7 @@ extern void aml_tdm_set_lrclkdiv(
 	struct aml_audio_controller *actrl,
 	int clk_sel, int ratio);
 
+extern void tdm_enable(int tdm_index, int is_enable);
+
+extern void tdm_fifo_enable(int tdm_index, int is_enable);
 #endif

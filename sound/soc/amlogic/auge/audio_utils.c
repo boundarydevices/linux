@@ -20,6 +20,9 @@
 #include "iomap.h"
 #include "loopback_hw.h"
 #include "spdif_hw.h"
+#include "pdm_hw.h"
+#include "tdm_hw.h"
+#include "ddr_mngr.h"
 
 struct snd_elem_info {
 	struct soc_enum *ee;
@@ -942,7 +945,6 @@ int loopback_parse_of(struct device_node *node,
 		goto fail;
 	}
 
-
 	loopback_datain = lb_cfg->datain_src;
 	loopback_tdminlb = lb_cfg->datalb_src;
 
@@ -977,6 +979,8 @@ int loopback_prepare(
 
 	if (!lb_cfg)
 		return -EINVAL;
+
+	pr_info("%s\n", __func__);
 
 	bitwidth = snd_pcm_format_width(runtime->format);
 	switch (lb_cfg->datain_src) {
@@ -1048,7 +1052,159 @@ int loopback_prepare(
 	datalb_config(&datalb);
 
 	datalb_ctrl(lb_cfg->datalb_src);
-	lb_enable_ex(lb_cfg->lb_mode, true);
+	lb_mode(lb_cfg->lb_mode);
+
+	return 0;
+}
+
+void toddr_enable(int is_enable, int toddr_index)
+{
+	int offset = EE_AUDIO_TODDR_B_CTRL0 - EE_AUDIO_TODDR_A_CTRL0;
+	int reg = EE_AUDIO_TODDR_A_CTRL0 + offset * toddr_index;
+
+	audiobus_update_bits(
+		reg,
+		0x1 << 31,
+		is_enable << 31);
+}
+
+void frddr_enable(int is_enable, int frddr_index)
+{
+	int offset = EE_AUDIO_FRDDR_B_CTRL0 - EE_AUDIO_FRDDR_A_CTRL0;
+	int reg = EE_AUDIO_FRDDR_A_CTRL0 + offset * frddr_index;
+
+	audiobus_update_bits(
+		reg,
+		0x1 << 31,
+		is_enable << 31);
+}
+
+static void loopback_modules_disable(
+	int tdm_index,
+	int frddr_index, int toddr_index)
+{
+	/* tdminLB */
+	tdmin_lb_fifo_enable(0);
+	tdmin_lb_enable(0);
+
+	/* pdmin */
+	pdm_enable(0);
+
+	/* loopback */
+	lb_enable(0);
+
+	/* toddr */
+	if (toddr_index >= 0)
+		toddr_enable(0, toddr_index);
+
+	/* frddr */
+	if (frddr_index >= 3)
+		toddr_enable(0, frddr_index - 3);
+	else
+		frddr_enable(0, frddr_index);
+
+	/* tdmout */
+	tdm_fifo_enable(tdm_index, 0);
+	tdm_enable(tdm_index, 0);
+}
+
+static void loopback_modules_enable(
+	int tdm_index,
+	int frddr_index, int toddr_index)
+{
+	/*
+	 * Loopback enable in sequence:
+	 * tdmout->frddr->toddr->loopback->pdmin->tdminLB
+	 */
+
+	/* tdmout */
+	tdm_fifo_enable(tdm_index, 1);
+	tdm_enable(tdm_index, 1);
+
+	/* frddr */
+	if (frddr_index >= 3)
+		toddr_enable(1, frddr_index - 3);
+	else
+		frddr_enable(1, frddr_index);
+
+	/* toddr */
+	if (toddr_index >= 0)
+		toddr_enable(1, toddr_index);
+
+	/* loopback */
+	lb_enable(1);
+
+	/* pdmin */
+	pdm_enable(1);
+
+	/*tdminLB*/
+	tdmin_lb_fifo_enable(1);
+	tdmin_lb_enable(1);
+}
+
+int loopback_trigger(
+	struct snd_pcm_substream *substream,
+	int cmd,
+	struct loopback_cfg *lb_cfg)
+{
+	pr_info("%s\n", __func__);
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+			/*
+			 * toddr/frdd is selected in dai_prepare already.
+			 * check toddr index of datain
+			 * check frddr index of datalb
+			 */
+			lb_cfg->toddr_index = fetch_toddr_index_by_src(
+							lb_cfg->datain_src);
+			/* check datalb is from tdmout or tdmin */
+			if (lb_cfg->datalb_src >= 3)
+				lb_cfg->frddr_index = fetch_toddr_index_by_src(
+							lb_cfg->datalb_src - 3);
+			else
+				lb_cfg->frddr_index = fetch_frddr_index_by_src(
+							lb_cfg->datalb_src);
+
+			pr_info("loopback toddr index:%d, frddr index:%d\n",
+				lb_cfg->toddr_index,
+				lb_cfg->frddr_index);
+
+			if (loopback_enable
+				&& (lb_cfg->toddr_index >= 0)
+				&& (lb_cfg->frddr_index >= 0)) {
+				pr_info("loopback modules in sequence!\n");
+				/*if pdm overrun, re-set up the sequence*/
+				if (lb_cfg->frddr_index >= 0)
+					loopback_modules_disable(
+						lb_cfg->datalb_src,
+						lb_cfg->frddr_index,
+						lb_cfg->toddr_index);
+
+				loopback_modules_enable(
+						lb_cfg->datalb_src,
+						lb_cfg->frddr_index,
+						lb_cfg->toddr_index);
+			}
+		}
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+			if (loopback_enable) {
+				pr_info("loopback disable\n");
+				lb_enable(0);
+				tdmin_lb_enable(0);
+			}
+		}
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	return 0;
 }

@@ -208,11 +208,23 @@ int aml_card_prepare(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+int aml_card_trigger(struct snd_pcm_substream *substream, int cmd)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct aml_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
+
+	if (loopback_is_enable())
+		loopback_trigger(substream, cmd, &priv->lb_cfg);
+
+	return 0;
+}
+
 static struct snd_soc_ops aml_card_ops = {
 	.startup    = aml_card_startup,
 	.shutdown   = aml_card_shutdown,
 	.hw_params  = aml_card_hw_params,
 	.prepare    = aml_card_prepare,
+	.trigger    = aml_card_trigger,
 };
 
 static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)

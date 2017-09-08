@@ -17,6 +17,7 @@
 #include <sound/soc.h>
 
 #include "tdm_hw.h"
+#include "iomap.h"
 
 #define MST_CLK_INVERT_PH0_PAD_BCLK       (1 << 0)
 #define MST_CLK_INVERT_PH0_PAD_FCLK       (1 << 1)
@@ -25,6 +26,7 @@
 #define MST_CLK_INVERT_PH2_TDMOUT_BCLK    (1 << 4)
 #define MST_CLK_INVERT_PH2_TDMOUT_FCLK    (1 << 5)
 
+/* without audio handler, it should be improved */
 void aml_tdm_enable(
 	struct aml_audio_controller *actrl,
 	int stream, int index,
@@ -80,6 +82,60 @@ void aml_tdm_fifo_reset(
 		aml_audiobus_update_bits(actrl, reg, 1<<28, 1<<28);
 	}
 
+}
+
+
+void tdm_enable(int tdm_index, int is_enable)
+{
+	unsigned int offset, reg;
+
+	if (tdm_index < 3) {
+		pr_info("tdmout is_enable:%d\n", is_enable);
+
+		offset = EE_AUDIO_TDMOUT_B_CTRL0
+			- EE_AUDIO_TDMOUT_A_CTRL0;
+		reg = EE_AUDIO_TDMOUT_A_CTRL0 + offset * tdm_index;
+
+		audiobus_update_bits(reg, 1<<31, is_enable<<31);
+	} else if (tdm_index < 6) {
+		pr_info("tdmin is_enable:%d\n", is_enable);
+
+		tdm_index -= 3;
+		offset = EE_AUDIO_TDMIN_B_CTRL
+			- EE_AUDIO_TDMIN_A_CTRL;
+		reg = EE_AUDIO_TDMIN_A_CTRL + offset * tdm_index;
+
+		audiobus_update_bits(reg, 1<<31, is_enable<<31);
+	}
+}
+
+void tdm_fifo_enable(int tdm_index, int is_enable)
+{
+	unsigned int reg, offset;
+
+	if (tdm_index < 3) {
+		offset = EE_AUDIO_TDMOUT_B_CTRL0
+			- EE_AUDIO_TDMOUT_A_CTRL0;
+		reg = EE_AUDIO_TDMOUT_A_CTRL0 + offset * tdm_index;
+
+		if (is_enable) {
+			audiobus_update_bits(reg, 1<<29, 1<<29);
+			audiobus_update_bits(reg, 1<<28, 1<<28);
+		} else
+			audiobus_update_bits(reg, 3<<28, 0);
+
+	} else if (tdm_index < 6) {
+		tdm_index -= 3;
+		offset = EE_AUDIO_TDMIN_B_CTRL
+				- EE_AUDIO_TDMIN_A_CTRL;
+		reg = EE_AUDIO_TDMIN_A_CTRL + offset * tdm_index;
+
+		if (is_enable) {
+			audiobus_update_bits(reg, 1<<29, 1<<29);
+			audiobus_update_bits(reg, 1<<28, 1<<28);
+		} else
+			audiobus_update_bits(reg, 3<<28, 0);
+	}
 }
 
 void aml_tdm_fifo_ctrl(

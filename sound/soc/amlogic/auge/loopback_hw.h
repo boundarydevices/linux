@@ -59,6 +59,13 @@ extern void datalb_config(struct data_lb *datalb);
 
 extern void datalb_ctrl(int lb_src);
 
-extern void lb_enable_ex(int mode, bool is_enable);
+extern int lb_is_enable(void);
 
+extern void lb_enable(bool is_enable);
+
+extern void lb_mode(int mode);
+
+extern void tdmin_lb_enable(int in_enable);
+
+extern void tdmin_lb_fifo_enable(int is_enable);
 #endif

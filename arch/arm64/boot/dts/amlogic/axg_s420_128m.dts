@@ -856,7 +856,7 @@
 		 */
 		datain_src = <4>;
 		datain_chnum = <8>;
-		datain_chmask = <0xfc>;
+		datain_chmask = <0x3f>;
 
 		/* tdmin_lb src
 		 * 0: tdmoutA
