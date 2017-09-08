@@ -1098,7 +1098,7 @@
 	battery,chg_gpio_status = <0>;
 	battery,chg_polarity_status = <0>;
 	battery,chg_float_voltage = <4400>;
-	battery,ovp_uvlo_check_type = <3>; /* SEC_BATTERY_OVP_UVLO_CHGPOLLING */
+	battery,ovp_uvlo_check_type = <4>; /* SEC_BATTERY_OVP_UVLO_CHGINT */
 	battery,full_check_type = <7>; /* SEC_BATTERY_FULLCHARGED_CHGPSY */
 
 	battery,input_current_limit    = <1800 460  460 4000  460  900 1000  460 460 1000  760 1800 1800 460 1300  300  700 1300 1800  300   80 1800 460 1000 1633 1000 1000 4000>;
