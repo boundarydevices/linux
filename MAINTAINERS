@@ -14071,3 +14071,7 @@ AMLOGIC TVIN add bt656_in and hdmirx_ext support
 M: Evoke Zhang <evoke.zhang@amlogic.com>
 F: drivers/amlogic/media/vin/tvin/bt656/*
 F: drivers/amlogic/media/vin/tvin/hdmirx_ext/*
+
+AMLOGIC add smarthome defconfig for audio product
+M: Peipeng Zhao <peipeng.zhao@amlogic.com>
+F: arch/arm64/configs/meson64_smarthome_defconfig
