@@ -3465,6 +3465,9 @@ int stmmac_suspend(struct device *dev)
 	napi_disable(&priv->napi);
 	spin_lock_irqsave(&priv->lock, flags);
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	del_timer_sync(&priv->txtimer);
+#endif
 	/* Stop TX/RX DMA */
 	priv->hw->dma->stop_tx(priv->ioaddr);
 	priv->hw->dma->stop_rx(priv->ioaddr);
@@ -3525,8 +3528,9 @@ int stmmac_resume(struct device *dev)
 			stmmac_mdio_reset(priv->mii);
 	}
 
+#ifndef CONFIG_AMLOGIC_ETH_PRIVE
 	netif_device_attach(ndev);
-
+#endif
 	spin_lock_irqsave(&priv->lock, flags);
 
 	priv->cur_rx = 0;
@@ -3547,6 +3551,9 @@ int stmmac_resume(struct device *dev)
 	stmmac_init_tx_coalesce(priv);
 	stmmac_set_rx_mode(ndev);
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	netif_device_attach(ndev);
+#endif
 	napi_enable(&priv->napi);
 
 	netif_start_queue(ndev);
