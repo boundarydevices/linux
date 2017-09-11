@@ -374,6 +374,9 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 
 	max77823_test_read(charger);
 
+	/* If we are supplying power, mark as undervoltage */
+	if ((state == POWER_SUPPLY_HEALTH_GOOD) && charger->otg_vbus_enabled)
+		state = POWER_SUPPLY_HEALTH_UNDERVOLTAGE;
 	return (int)state;
 }
 
@@ -1304,6 +1307,7 @@ static int max77823_otg_enable(struct max77823_charger_data *charger)
 {
 	pr_info("%s:\n", __func__);
 
+	charger->otg_vbus_enabled = true;
 	charger->is_charging = false;
 	/* Disable charging from CHRG_IN when we are supplying power */
 	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
@@ -1338,6 +1342,7 @@ static int max77823_otg_disable(struct max77823_charger_data *charger)
 	int enable_mask = CHG_CNFG_00_CHG_MASK | CHG_CNFG_00_BUCK_MASK;
 
 	pr_info("%s:\n", __func__);
+	charger->otg_vbus_enabled = false;
 	if (charger->pdata->boost)
 		enable_mask |= CHG_CNFG_00_BOOST_MASK;
 	/* chrg on, OTG off, boost on/off, (buck on) */
