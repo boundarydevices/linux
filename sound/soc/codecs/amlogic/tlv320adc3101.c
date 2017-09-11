@@ -67,6 +67,11 @@ struct adc3101_priv {
 	int codec_mask;
 	struct i2c_client *client[4];
 	u8 page_no;
+	/* differential_pair
+	 * 0: Single-ended;
+	 * 1: Differential Pair;
+	 */
+	unsigned int differential_pair;
 };
 
 enum{
@@ -523,14 +528,20 @@ static int adc3101_hw_params(struct snd_pcm_substream *substream,
 	pr_info("%s iface1 = %02x\n", __func__, data);
 
 	snd_soc_write(codec, ADC3101_MICBIAS, 0x50);
-	/* 0x3f: differential, 0xFC:single input */
-	snd_soc_write(codec, ADC3101_LMICPGANIN, 0x3F);
-	/* 0x3f: differential input */
-	snd_soc_write(codec, ADC3101_RMICPGANIN, 0x3F);
-	/* 0x3f: differential, 0xFC:single input */
-	snd_soc_write(codec, ADC3101_LMICPGAPIN, 0x3F);
-	/* 0x3f: differential input */
-	snd_soc_write(codec, ADC3101_RMICPGAPIN, 0x3F);
+
+	if (adc3101->differential_pair == 1) {
+		pr_info("%s differential pair\n", __func__);
+		snd_soc_write(codec, ADC3101_LMICPGANIN, 0x33); //54
+		snd_soc_write(codec, ADC3101_RMICPGANIN, 0x33); //57
+		snd_soc_write(codec, ADC3101_LMICPGAPIN, 0x3F); //52
+		snd_soc_write(codec, ADC3101_RMICPGAPIN, 0x3F); //55
+	} else {
+		pr_info("%s single end\n", __func__);
+		snd_soc_write(codec, ADC3101_LMICPGANIN, 0x3F); //54
+		snd_soc_write(codec, ADC3101_RMICPGANIN, 0x3F); //57
+		snd_soc_write(codec, ADC3101_LMICPGAPIN, 0xCF); //52
+		snd_soc_write(codec, ADC3101_RMICPGAPIN, 0xCF); //55
+	}
 	snd_soc_write(codec, ADC3101_LMICPGAVOL, lr_gain);
 	snd_soc_write(codec, ADC3101_RMICPGAVOL, lr_gain);
 	snd_soc_write(codec, ADC3101_ADCSETUP, 0xc2);
@@ -821,6 +832,13 @@ static int adc3101_i2c_probe(struct i2c_client *i2c,
 			dev_err(&i2c->dev, "not able to acquire gpio\n");
 			return ret;
 		}
+	}
+	ret = of_property_read_u32(i2c->dev.of_node, "differential_pair",
+		&adc3101->differential_pair);
+	if (ret) {
+		pr_err("failed to get differential_pair, set it default\n");
+		adc3101->differential_pair = 0;
+		ret = 0;
 	}
 	pr_info("%s i2c:%p\n", __func__, i2c);
 	ret = snd_soc_register_codec(&i2c->dev,
