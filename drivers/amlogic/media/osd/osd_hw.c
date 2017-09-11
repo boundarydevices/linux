@@ -428,6 +428,7 @@ int osd_sync_request(u32 index, u32 yres, u32 xoffset, u32 yoffset,
 	list_add_tail(&fence_map->list, &post_fence_list);
 	mutex_unlock(&post_fence_list_lock);
 	kthread_queue_work(&buffer_toggle_worker, &buffer_toggle_work);
+	__close_fd(current->files, in_fence_fd);
 	return  out_fence_fd;
 }
 
@@ -481,6 +482,7 @@ int osd_sync_request_render(u32 index, u32 yres,
 	mutex_unlock(&post_fence_list_lock);
 	kthread_queue_work(&buffer_toggle_worker, &buffer_toggle_work);
 	request->out_fen_fd = out_fence_fd;
+	__close_fd(current->files, in_fence_fd);
 	return  out_fence_fd;
 }
 
