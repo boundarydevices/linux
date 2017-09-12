@@ -62,9 +62,9 @@
 		fb_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x2000000>;
+			size = <0x0 0x2400000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x7e000000 0x0 0x2000000>;
+			alloc-ranges = <0x0 0x7dc00000 0x0 0x2400000>;
 		};
 
 
@@ -560,14 +560,14 @@
 		interrupts = <0 3 1
 			0 89 1>;
 		interrupt-names = "viu-vsync", "rdma";
-		mem_size = <0x006AF000 0x01851000 0x00100000>;
-		/* uboot logo,fb0/fb1 memory size */
+		mem_size = <0x00800000 0x01800000 0x00100000>;
+		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x01851000 */
 		display_mode_default = "1080p60hz";
 		scale_mode = <1>;
 		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		display_size_default = <1920 1080 1920 3240 32>;
 		/*1920*1080*4*3 = 0x17BB000*/
-		logo_addr = "0x7e000000";
+		logo_addr = "0x7dc00000";
 	};
 
 	ge2d {

@@ -35,11 +35,6 @@
 		serial4 = &uart_AO_B;
 	};
 
-	ion_dev {
-		compatible = "amlogic, ion_dev";
-		memory-region = <&ion_reserved>;
-	};
-
 	memory@00000000 {
 		device_type = "memory";
 		linux,usable-memory = <0x0 0x0100000 0x0 0x3ff00000>;
@@ -77,14 +72,13 @@
 			size = <0x0 0x2000000>;
 			alignment = <0x0 0x400000>;
 		};
-
-		ion_reserved:linux,ion-dev {
+		fb_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x7000000>;
+			size = <0x0 0x2400000>;
 			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x3dc00000 0x0 0x2400000>;
 		};
-
 		/*  vdin0 CMA pool */
 		//vdin0_cma_reserved:linux,vdin0_cma {
 		//	compatible = "shared-dma-pool";
@@ -693,19 +687,20 @@
 
 	meson-fb {
 		compatible = "amlogic, meson-fb";
+		memory-region = <&fb_reserved>;
 		dev_name = "meson-fb";
 		status = "okay";
 		interrupts = <0 3 1
 			0 89 1>;
 		interrupt-names = "viu-vsync", "rdma";
-		mem_size = <0x006AF000 0x01851000 0x00100000>;
-		/* uboot logo,fb0/fb1 memory size */
+		mem_size = <0x00800000 0x1800000 0x00100000>;
+		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x01851000 */
 		display_mode_default = "1080p60hz";
 		scale_mode = <1>;
 		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		display_size_default = <1920 1080 1920 3240 32>;
 		/*1920*1080*4*3 = 0x17BB000*/
-		logo_addr = "0x3e000000";
+		logo_addr = "0x3dc00000";
 	};
 	ge2d {
 		compatible = "amlogic, ge2d";

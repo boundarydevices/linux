@@ -1112,8 +1112,9 @@ static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
 		var = &info->var;
 		/* read cma/fb-reserved memory first */
 		if ((b_reserved_mem == true) &&
-			(fb_memsize[0] + fb_memsize[1] +
-				fb_memsize[2]) <= size) {
+			((fb_memsize[0] + fb_memsize[1] +
+			fb_memsize[2] <= size) &&
+			(fb_memsize[fb_index + 1] > 0))) {
 			fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
 			if (fb_index == DEV_OSD0)
 				fb_rmem_paddr[fb_index] = base +
@@ -3051,7 +3052,7 @@ static int __init rmem_fb_setup(struct reserved_mem *rmem)
 	fb_rmem.base = rmem->base;
 	fb_rmem.size = rmem->size;
 	rmem->ops = &rmem_fb_ops;
-	osd_log_dbg("Reserved memory: created fb at 0x%p, size %ld MiB\n",
+	osd_log_info("Reserved memory: created fb at 0x%p, size %ld MiB\n",
 		     (void *)rmem->base, (unsigned long)rmem->size / SZ_1M);
 	return 0;
 }
