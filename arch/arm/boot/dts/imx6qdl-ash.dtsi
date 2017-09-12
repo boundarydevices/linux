@@ -352,6 +352,8 @@
 		mxcfb2 = &fb_lcd;
 		pwm_lcd = &pwm1;
 		pwm_lvds = &pwm4;
+		serial2 = &uart4;
+		serial3 = &uart3;
 		t_lvds = &t_lvds;
 		uart1 = &uart1;
 	};
