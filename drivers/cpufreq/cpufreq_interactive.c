@@ -55,7 +55,7 @@ struct interactive_tunables {
 	unsigned int hispeed_freq;
 
 	/* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 99
+#define DEFAULT_GO_HISPEED_LOAD 95
 	unsigned long go_hispeed_load;
 
 	/* Target load. Lower values result in higher CPU speeds. */
@@ -143,8 +143,9 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
 /* Target load. Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 90
-static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
+/* #define DEFAULT_TARGET_LOAD 50,900000,70 */
+static unsigned int default_target_loads[] = {50, 900000, 70};
+#define HIGH_SPEED	1000000
 
 #define DEFAULT_SAMPLING_RATE (20 * USEC_PER_MSEC)
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_SAMPLING_RATE
@@ -1187,7 +1188,7 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 		goto free_int_policy;
 	}
 
-	tunables->hispeed_freq = policy->max;
+	tunables->hispeed_freq = HIGH_SPEED;
 	tunables->above_hispeed_delay = default_above_hispeed_delay;
 	tunables->nabove_hispeed_delay =
 		ARRAY_SIZE(default_above_hispeed_delay);
