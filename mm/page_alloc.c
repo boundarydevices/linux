@@ -3888,6 +3888,31 @@ got_pg:
 	return page;
 }
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static inline void should_wakeup_kswap(gfp_t gfp_mask, int order,
+				       struct alloc_context *ac)
+{
+	unsigned long free_pages;
+	struct zoneref *z = ac->preferred_zoneref;
+	struct zone *zone;
+
+	if (!(gfp_mask & __GFP_RECLAIM))	/* not allowed */
+		return;
+
+	for_next_zone_zonelist_nodemask(zone, z, ac->zonelist, ac->high_zoneidx,
+								ac->nodemask) {
+		free_pages = zone_page_state(zone, NR_FREE_PAGES);
+		/*
+		 * wake up kswapd before get pages from buddy, this help to
+		 * fast reclaim process and can avoid memory become too low
+		 * some times
+		 */
+		if (free_pages <= high_wmark_pages(zone))
+			wakeup_kswapd(zone, order, ac->high_zoneidx);
+	}
+}
+#endif
+
 /*
  * This is the 'heart' of the zoned buddy allocator.
  */
@@ -3951,6 +3976,9 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 		 */
 		goto no_zone;
 	}
+#ifdef CONFIG_AMLOGIC_MODIFY
+	should_wakeup_kswap(gfp_mask, order, &ac);
+#endif
 
 	/* First allocation attempt */
 	page = get_page_from_freelist(alloc_mask, order, alloc_flags, &ac);
