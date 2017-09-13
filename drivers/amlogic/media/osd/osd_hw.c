@@ -2574,7 +2574,7 @@ static void osd1_update_disp_freescale_enable(void)
 	hsc_ini_rcv_num = hf_bank_len;
 	vsc_ini_rcv_num = vf_bank_len;
 	hsc_ini_rpt_p0_num =
-		(hf_bank_len / 2 - 1) > 0 ? (hf_bank_len / 2 - 1) : 0;
+		hf_bank_len / 2 - 1;
 	vsc_ini_rpt_p0_num =
 		(vf_bank_len / 2 - 1) > 0 ? (vf_bank_len / 2 - 1) : 0;
 
@@ -2727,7 +2727,7 @@ static void osd2_update_disp_freescale_enable(void)
 	hsc_ini_rcv_num = hf_bank_len;
 	vsc_ini_rcv_num = vf_bank_len;
 	hsc_ini_rpt_p0_num =
-		(hf_bank_len / 2 - 1) > 0 ? (hf_bank_len / 2 - 1) : 0;
+		hf_bank_len / 2 - 1;
 	vsc_ini_rpt_p0_num =
 		(vf_bank_len / 2 - 1) > 0 ? (vf_bank_len / 2 - 1) : 0;
 
