@@ -22,11 +22,11 @@
 	compatible = "fsl,imx6dl-lshore", "fsl,imx6dl", "fsl,imx6q";
 };
 
-&lvds_display {
+&fb_lvds {
 	status = "okay";
 };
 
-&lcd_display {
+&fb_lcd {
 	status = "okay";
 };
 

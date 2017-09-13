@@ -13,12 +13,22 @@
 
 / {
 	aliases {
-                mxcfb0 = &lcd_display;
-                mxcfb1 = &lvds_display;
-		lcd_display = &lcd_display;
-		lvds_display = &lvds_display;
+		backlight_lcd = &backlight_lcd;
+		backlight_lvds = &backlight_lvds;
+		fb_lcd = &fb_lcd;
+		fb_lvds = &fb_lvds;
+		lcd = &lcd;
+		ldb = &ldb;
+		mxcfb0 = &fb_lcd;
+		mxcfb1 = &fb_lvds;
+		pwm_lcd = &pwm1;
+		pwm_lvds = &pwm4;
+		t_lvds = &t_lvds;
+		/* obsolete below */
+		lvds_display = &fb_lvds;
+		lcd_display = &fb_lcd;
 		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
+		lg1280x800 = &t_lvds;
 		okaya1024x600 = &okaya1024x600;
 	};
 
@@ -86,7 +96,7 @@
 		mux-ext-port = <3>;
 	};
 
-	lcd_display: fb@0 {
+	fb_lcd: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB24";
@@ -97,7 +107,7 @@
 		status = "disabled";
 	};
 
-	lvds_display: fb@1 {
+	fb_lvds: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -107,7 +117,7 @@
 		status = "disabled";
 	};
 
-	lcd0: lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
@@ -124,7 +134,7 @@
 		default-brightness-level = <10>;
 	};
 
-	backlight_lvds {
+	backlight_lvds: backlight_lvds {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
@@ -576,7 +586,8 @@
 		primary;
 
 		display-timings {
-			lg1280x800: lp101wx1 {
+			t_lvds: t_lvds_default {
+				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
