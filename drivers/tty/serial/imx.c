@@ -2343,6 +2343,8 @@ static int serial_imx_probe_dt(struct imx_port *sport,
 	i = 0;
 	of_property_read_u32(np, "uart-has-rs485-half-duplex", &i);
 	sport->rs485_half_duplex = i ? 1 : 0;
+	if (!i)
+		sport->port.rs485.flags |= SER_RS485_RX_DURING_TX;
 	i = 0;
 	of_property_read_u32(np, "rs485-mode", &i);
 	if (i)
@@ -2385,8 +2387,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	sport->port.rs485_config = imx_rs485_config;
-	sport->port.rs485.flags =
-		SER_RS485_RTS_ON_SEND | SER_RS485_RX_DURING_TX;
+	sport->port.rs485.flags = SER_RS485_RTS_ON_SEND;
 	ret = serial_imx_probe_dt(sport, pdev);
 	if (ret > 0)
 		serial_imx_probe_pdata(sport, pdev);
