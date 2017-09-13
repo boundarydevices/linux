@@ -59,6 +59,7 @@ struct meson_adc_kp {
 	unsigned int prev_code;
 	unsigned int poll_period; /*key scan period*/
 	struct mutex kp_lock;
+	struct class kp_class;
 	struct list_head adckey_head;
 	struct input_polled_dev *poll_dev;
 	struct iio_channel *pchan[SARADC_CH_NUM];

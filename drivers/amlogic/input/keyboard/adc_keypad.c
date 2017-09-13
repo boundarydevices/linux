@@ -320,11 +320,11 @@ static void meson_adc_kp_list_free(struct meson_adc_kp *kp)
 	mutex_unlock(&kp->kp_lock);
 }
 
-static ssize_t table_show(struct device *dev, struct device_attribute *attr,
+static ssize_t table_show(struct class *cls, struct class_attribute *attr,
 			char *buf)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct meson_adc_kp *kp = platform_get_drvdata(pdev);
+	struct meson_adc_kp *kp = container_of(cls,
+					struct meson_adc_kp, kp_class);
 	struct adc_key *key;
 	unsigned char key_num = 1;
 	int len = 0;
@@ -346,11 +346,12 @@ static ssize_t table_show(struct device *dev, struct device_attribute *attr,
 	return len;
 }
 
-static ssize_t table_store(struct device *dev, struct device_attribute *attr,
+static ssize_t table_store(struct class *cls, struct class_attribute *attr,
 			 const char *buf, size_t count)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct meson_adc_kp *kp = platform_get_drvdata(pdev);
+	struct meson_adc_kp *kp = container_of(cls,
+					struct meson_adc_kp, kp_class);
+	struct device *dev = kp->poll_dev->input->dev.parent;
 	struct adc_key *dkey;
 	struct adc_key *key;
 	struct adc_key *key_tmp;
@@ -482,7 +483,10 @@ err:
 	return state;
 }
 
-static DEVICE_ATTR_RW(table);
+struct class_attribute meson_adckey_attrs[] = {
+	__ATTR_RW(table),
+	__ATTR_NULL
+};
 
 static void meson_adc_kp_init_keybit(struct meson_adc_kp *kp)
 
@@ -555,9 +559,14 @@ static int meson_adc_kp_probe(struct platform_device *pdev)
 	kp->early_suspend.resume = meson_adc_kp_late_resume;
 	register_early_suspend(&kp->early_suspend);
 #endif
-	ret = sysfs_create_file(&pdev->dev.kobj, &dev_attr_table.attr);
+
+	/*init class*/
+	kp->kp_class.name = DRIVE_NAME;
+	kp->kp_class.owner = THIS_MODULE;
+	kp->kp_class.class_attrs = meson_adckey_attrs;
+	ret = class_register(&kp->kp_class);
 	if (ret) {
-		dev_err(&pdev->dev, "create sysfs file failed!\n");
+		dev_err(&pdev->dev, "fail to create adc keypad class.\n");
 		goto err;
 	}
 
@@ -566,11 +575,13 @@ static int meson_adc_kp_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev,
 			 "unable to register keypad input poll device.\n");
-		goto err;
+		goto err1;
 	}
 
 	return ret;
 
+err1:
+	class_unregister(&kp->kp_class);
 err:
 	meson_adc_kp_list_free(kp);
 	kfree(kp);
@@ -581,7 +592,7 @@ static int meson_adc_kp_remove(struct platform_device *pdev)
 {
 	struct meson_adc_kp *kp = platform_get_drvdata(pdev);
 
-	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_table.attr);
+	class_unregister(&kp->kp_class);
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	unregister_early_suspend(&kp->early_suspend);
 #endif
