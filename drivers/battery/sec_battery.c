@@ -209,29 +209,32 @@ static int sec_bat_set_charge(
 				bool enable)
 {
 	union power_supply_propval val;
-	ktime_t current_time;
-	struct timespec ts;
 
-	if (battery->enable_state == enable)
-		return 0;
-	battery->enable_state = enable;
 	if (battery->cable_type == POWER_SUPPLY_TYPE_OTG)
 		return 0;
-	val.intval = battery->status;
-	psy_do_property(battery->pdata->charger_name, set,
-		POWER_SUPPLY_PROP_STATUS, val);
-#if defined(ANDROID_ALARM_ACTIVATED)
-	current_time = alarm_get_elapsed_realtime();
-	ts = ktime_to_timespec(current_time);
-#else
-	current_time = ktime_get_boottime();
-	ts = ktime_to_timespec(current_time);
-#endif
+	if (battery->prev_status != battery->status) {
+		val.intval = battery->prev_status = battery->status;
+		psy_do_property(battery->pdata->charger_name, set,
+				POWER_SUPPLY_PROP_STATUS, val);
+	}
 
+	val.intval = enable ? battery->cable_type : POWER_SUPPLY_TYPE_BATTERY;
+	if (battery->prev_online == val.intval)
+		return 0;
+	battery->prev_online = val.intval;
 	if (enable) {
-		val.intval = battery->cable_type;
 		/*Reset charging start time only in initial charging start */
 		if (battery->charging_start_time == 0) {
+			ktime_t current_time;
+			struct timespec ts;
+
+#if defined(ANDROID_ALARM_ACTIVATED)
+			current_time = alarm_get_elapsed_realtime();
+			ts = ktime_to_timespec(current_time);
+#else
+			current_time = ktime_get_boottime();
+			ts = ktime_to_timespec(current_time);
+#endif
 			if (ts.tv_sec < 1)
 				ts.tv_sec = 1;
 			battery->charging_start_time = ts.tv_sec;
@@ -239,7 +242,6 @@ static int sec_bat_set_charge(
 				battery->pdata->charging_reset_time;
 		}
 	} else {
-		val.intval = POWER_SUPPLY_TYPE_BATTERY;
 		battery->charging_start_time = 0;
 		battery->charging_passed_time = 0;
 		battery->charging_next_time = 0;
@@ -4455,7 +4457,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->health = POWER_SUPPLY_HEALTH_GOOD;
 	battery->charger_health = POWER_SUPPLY_HEALTH_GOOD;
 	battery->store_mode_enable = true;
-	battery->enable_state = 2;
+	battery->prev_online = battery->prev_status = -1;
 	battery->present = true;
 
 	battery->polling_count = 1;	/* initial value = 1 */
