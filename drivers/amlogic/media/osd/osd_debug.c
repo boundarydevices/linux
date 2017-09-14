@@ -66,13 +66,13 @@ static void osd_debug_dump_value(void)
 		return;
 
 	osd_log_info("--- OSD ---\n");
-	osd_log_info("scan_mode: %d\n", hwpara->scan_mode);
 	osd_log_info("order: %d\n", hwpara->order);
 	osd_log_info("bot_type: %d\n", hwpara->bot_type);
 	osd_log_info("field_out_en: %d\n", hwpara->field_out_en);
 
 	for (index = 0; index < HW_OSD_COUNT; index++) {
 		osd_log_info("\n--- OSD%d ---\n", index);
+		osd_log_info("scan_mode: %d\n", hwpara->scan_mode[index]);
 		osd_log_info("enable: %d\n", hwpara->enable[index]);
 		osd_log_info("2x-scale enable.h:%d .v: %d\n",
 				hwpara->scale[index].h_enable,

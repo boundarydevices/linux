@@ -273,6 +273,7 @@ struct osd_fence_map_s {
 	u32 xoffset;
 	u32 yoffset;
 	u32 yres;
+	s32 in_fd;
 	s32 out_fd;
 	u32 ext_addr;
 	u32 format;
@@ -334,7 +335,7 @@ struct hw_para_s {
 	struct fb_geometry_s fb_gem[HW_OSD_COUNT];
 	const struct color_bit_define_s *color_info[HW_OSD_COUNT];
 	const struct color_bit_define_s *color_backup[HW_OSD_COUNT];
-	u32 scan_mode;
+	u32 scan_mode[HW_OSD_COUNT];
 	u32 order;
 	struct osd_3d_mode_s mode_3d[HW_OSD_COUNT];
 	u32 updated[HW_OSD_COUNT];
@@ -355,9 +356,17 @@ struct hw_para_s {
 	u32 hw_reset_flag;
 	struct afbcd_data_s osd_afbcd[HW_OSD_COUNT];
 	u32 urgent[HW_OSD_COUNT];
+	u32 osd_fifo[HW_OSD_COUNT];
 	u32 osd_deband_enable;
 	u32 osd_fps;
 	u32 osd_fps_start;
+	u32 osd_display_debug;
+	char __iomem *screen_base[HW_OSD_COUNT];
+	u32 screen_size[HW_OSD_COUNT];
+	char __iomem *screen_base_backup[HW_OSD_COUNT];
+	u32 screen_size_backup[HW_OSD_COUNT];
+	u32 vinfo_width;
+	u32 vinfo_height;
 };
 
 #endif /* _OSD_H_ */

@@ -157,4 +157,14 @@ extern void osd_get_info(u32 index, u32 *addr, u32 *width, u32 *height);
 int logo_work_init(void);
 void set_logo_loaded(void);
 int set_osd_logo_freescaler(void);
+void osd_get_display_debug(u32 *osd_display_debug_enable);
+void osd_set_display_debug(u32 osd_display_debug_enable);
+void osd_backup_screen_info(
+	u32 index,
+	char __iomem *screen_base,
+	u32 screen_size);
+void osd_restore_screen_info(
+	u32 index,
+	char __iomem **screen_base,
+	unsigned long *screen_size);
 #endif
