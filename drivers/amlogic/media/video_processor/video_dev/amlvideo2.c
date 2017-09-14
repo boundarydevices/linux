@@ -132,6 +132,7 @@ static unsigned int debug;
 /* MODULE_PARM_DESC(debug, "activates debug info"); */
 
 #define DEF_FRAMERATE 30
+static unsigned int mirror_value;
 
 static unsigned int vid_limit = 32;
 module_param(vid_limit, uint, 0644);
@@ -856,7 +857,7 @@ struct amlvideo2_node *node)
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
-	int current_mirror = 0;
+	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = vf->canvas0Addr;
 
@@ -942,7 +943,7 @@ struct amlvideo2_node *node)
 	dst_width = output->width;
 	dst_height = output->height;
 
-	current_mirror = 0;
+	current_mirror = mirror_value;
 	cur_angle = output->angle;
 	if (current_mirror == 1)
 		cur_angle = (360 - cur_angle % 360);
@@ -1307,7 +1308,7 @@ struct amlvideo2_node *node)
 	dst_width = output->width;
 	dst_height = output->height;
 
-	current_mirror = 0;
+	current_mirror = mirror_value;
 	cur_angle = output->angle;
 	if (current_mirror == 1)
 		cur_angle = (360 - cur_angle % 360);
@@ -1600,7 +1601,7 @@ struct amlvideo2_node *node)
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
-	int current_mirror = 0;
+	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = output->canvas_id;
 
@@ -1681,7 +1682,7 @@ struct amlvideo2_node *node)
 	dst_width = output->width;
 	dst_height = output->height;
 
-	current_mirror = 0;
+	current_mirror = mirror_value;
 	cur_angle = output->angle;
 	if (current_mirror == 1)
 		cur_angle = (360 - cur_angle % 360);
@@ -2001,7 +2002,7 @@ struct amlvideo2_node *node)
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
-	int current_mirror = 0;
+	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = output->canvas_id;
 
@@ -2083,7 +2084,7 @@ struct amlvideo2_node *node)
 	dst_width = output->width;
 	dst_height = output->height;
 
-	current_mirror = 0;
+	current_mirror = mirror_value;
 	cur_angle = output->angle;
 	if (current_mirror == 1)
 		cur_angle = (360 - cur_angle % 360);
@@ -2401,7 +2402,7 @@ struct amlvideo2_node *node)
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
-	int current_mirror = 0;
+	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = output->canvas_id;
 
@@ -2483,7 +2484,7 @@ struct amlvideo2_node *node)
 	dst_width = output->width;
 	dst_height = output->height;
 
-	current_mirror = 0;
+	current_mirror = mirror_value;
 	cur_angle = output->angle;
 	if (current_mirror == 1)
 		cur_angle = (360 - cur_angle % 360);
@@ -2802,7 +2803,7 @@ int amlvideo2_ge2d_multi_pre_process(struct vframe_s *vf,
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
-	int current_mirror = 0;
+	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = output->canvas_id;
 	int temp_canvas = AMLVIDEO2_1_RES_CANVAS + 8;
@@ -2851,7 +2852,7 @@ int amlvideo2_ge2d_multi_pre_process(struct vframe_s *vf,
 	dst_width = output->width;
 	dst_height = output->height;
 
-	current_mirror = 0;
+	current_mirror = mirror_value;
 	cur_angle = 0;
 
 
@@ -3010,7 +3011,7 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
-	int current_mirror = 0;
+	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = output->canvas_id;
 
@@ -3091,7 +3092,7 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 	dst_width = output->width;
 	dst_height = output->height;
 
-	current_mirror = 0;
+	current_mirror = mirror_value;
 	cur_angle = output->angle;
 	if (current_mirror == 1)
 		cur_angle = (360 - cur_angle % 360);
@@ -3400,11 +3401,6 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 	return output_canvas;
 }
 
-int amlvideo2_sw_post_process(int canvas, void *addr)
-{
-	return 0;
-}
-
 static int amlvideo2_fillbuff(struct amlvideo2_fh *fh,
 				struct amlvideo2_node_buffer *buf,
 				struct vframe_s *vf)
@@ -3414,9 +3410,7 @@ static int amlvideo2_fillbuff(struct amlvideo2_fh *fh,
 	struct amlvideo2_node *node = fh->node;
 	void *vbuf = NULL;
 	int src_canvas = -1;
-	int magic = 0;
 	int ge2d_proc = 0;
-	int sw_proc = 0;
 
 	vbuf = (void *)videobuf_to_res(&buf->vb);
 
@@ -3438,43 +3432,12 @@ static int amlvideo2_fillbuff(struct amlvideo2_fh *fh,
 	memcpy(&output.info.display_info, &(node->display_info),
 			sizeof(struct vdisplay_info_s));
 
-	magic = MAGIC_RE_MEM;
-	switch (magic) {
-	case MAGIC_RE_MEM:
-		/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
-	#if 1
-		if (output.canvas_id == 0) {
-			output.canvas_id = get_amlvideo2_canvas_index(
+	if (output.canvas_id == 0) {
+		output.canvas_id = get_amlvideo2_canvas_index(
 				&output, (node->vid == 0) ?
 				(AMLVIDEO2_RES0_CANVAS_INDEX + buf->vb.i * 3) :
 				(AMLVIDEO2_RES1_CANVAS_INDEX + buf->vb.i * 3));
-			buf->canvas_id = output.canvas_id;
-		}
-	#else
-	#ifdef MULTI_NODE
-		output.canvas_id =
-			get_amlvideo2_canvas_index(
-				&output, (node->vid == 0)
-				? AMLVIDEO2_RES0_CANVAS_INDEX
-				: AMLVIDEO2_RES1_CANVAS_INDEX);
-	#else
-		output.canvas_id =
-			get_amlvideo2_canvas_index(
-				&output, AMLVIDEO2_RES0_CANVAS_INDEX);
-	#endif
-	#endif
-		break;
-	case MAGIC_VMAL_MEM:
-		/* canvas_index =
-		 * get_amlvideo2_canvas_index(
-		 * v4l2_format,&depth);
-		 */
-		/* sw_proc = 1; */
-		/* break; */
-	case MAGIC_DC_MEM:
-	case MAGIC_SG_MEM:
-	default:
-		return -1;
+		buf->canvas_id = output.canvas_id;
 	}
 
 	switch (output.v4l2_format) {
@@ -3533,9 +3496,6 @@ static int amlvideo2_fillbuff(struct amlvideo2_fh *fh,
 				&ge2d_config, &output, node);
 		}
 	}
-
-	if ((sw_proc) && (src_canvas > 0))
-		amlvideo2_sw_post_process(src_canvas, vbuf);
 
 	buf->vb.state = VIDEOBUF_DONE;
 	/* do_gettimeofday(&buf->vb.ts); */
@@ -4184,10 +4144,9 @@ enum aml_provider_type_e get_provider_type(const char *name)
 	return type;
 }
 
-enum aml_provider_type_e get_sub_receiver_type(const char *name)
+enum aml_receiver_type_e get_sub_receiver_type(const char *name)
 {
-	enum aml_provider_type_e type = AML_RECEIVER_NONE;
-
+	enum aml_receiver_type_e type = AML_RECEIVER_NONE;
 	if (!name)
 		return type;
 	if (strncasecmp(name, "ppmgr", 5) == 0) {
@@ -4855,6 +4814,7 @@ int amlvideo2_notify_callback(struct notifier_block *block, unsigned long cmd,
 	int i;
 	int index = 0;
 	int ret = 0;
+	int i_ret = 0;
 
 	for (i = 0; i < AMLVIDEO2_MAX_NODE; i++) {
 		if ((gAmlvideo2_Node[i] != NULL) &&
@@ -4869,7 +4829,9 @@ int amlvideo2_notify_callback(struct notifier_block *block, unsigned long cmd,
 		return ret;
 
 	node = gAmlvideo2_Node[index];
-	if ((node != NULL) && (!node->users))
+	if (node == NULL)
+		return ret;
+	if (!(node->users))
 		return ret;
 
 	mutex_lock(&node->mutex);
@@ -4877,15 +4839,17 @@ int amlvideo2_notify_callback(struct notifier_block *block, unsigned long cmd,
 	case  VOUT_EVENT_MODE_CHANGE:
 		pr_info("mode changed in amlvideo2 .\n");
 		vfp = vf_get_provider(node->recv.name);
-		if ((node == NULL) || (vfp == NULL) ||
+		if ((vfp == NULL) ||
 			(!node->fh->is_streamed_on)) {
 			pr_info("driver is not ready or not need to screencap.\n");
 			mutex_unlock(&node->mutex);
 			return ret;
 		}
 		node->pflag = true;
-		wait_for_completion_timeout(&node->plug_sema,
+		i_ret = wait_for_completion_timeout(&node->plug_sema,
 			msecs_to_jiffies(150));
+		if (i_ret == 0)
+			return 0;
 		if (amlvideo2_dbg_en)
 			pr_info("finish wait plug sema .\n");
 		/* if local queue have vf , should give back to provider */
@@ -5327,7 +5291,7 @@ static int vidioc_s_output(struct file *file, void *fh,
 {
 	struct amlvideo2_node *node = video_drvdata(file);
 
-	if ((mode < AML_SCREEN_MODE_RATIO) || (mode > AML_SCREEN_MODE_MAX))
+	if (mode > AML_SCREEN_MODE_MAX)
 		return -1;
 	node->mode = (enum aml_screen_mode_e)mode;
 	return 0;
@@ -5688,6 +5652,9 @@ static int amlvideo2_receiver_event_fun(int type, void *data,
 	struct vframe_states states;
 	struct vframe_states frame_states;
 	const char *name = (node->vid == 0) ? DEVICE_NAME0 : DEVICE_NAME1;
+
+	memset(&states, 0, sizeof(struct vframe_states));
+	memset(&frame_states, 0, sizeof(struct vframe_states));
 
 	switch (type) {
 	case VFRAME_EVENT_PROVIDER_VFRAME_READY:
