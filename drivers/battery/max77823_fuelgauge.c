@@ -480,9 +480,11 @@ static int fg_read_temp(struct max77823_fuelgauge_data *fuelgauge)
 		temper = (ret * 10) >> 8;
 	}
 
+#ifdef DEBUG
 	if (!(fuelgauge->info.pr_cnt % PRINT_COUNT))
 		pr_info("%s: TEMPERATURE(%d)\n",
 			__func__, temper);
+#endif
 	return temper;
 }
 #endif
@@ -525,54 +527,59 @@ static int fg_read_power(struct max77823_fuelgauge_data *fuelgauge, int reg)
 }
 #endif
 
+#ifdef DEBUG
+static void dbg_current_avg(struct max77823_fuelgauge_data *fuelgauge, s32 i_current)
+{
+	s32 avg_current;
+	int ret = max77823_read_word(fuelgauge->i2c, AVG_CURRENT_REG);
+
+	if (ret < 0) {
+		pr_err("%s: Failed to read AVERAGE CURRENT\n", __func__);
+		return;
+	}
+
+	ret <<= 16;	/* extend sign bit */
+	ret >>= 16;
+
+	/* 1.5625uV/0.01Ohm(Rsense) = 156.25uA */
+	avg_current = (ret * 15625) / 100;
+
+	if (!(fuelgauge->info.pr_cnt++ % PRINT_COUNT)) {
+		fg_test_print(fuelgauge);
+		pr_debug("%s: CURRENT(%duA), AVG_CURRENT(%duA)\n", __func__,
+				i_current, avg_current);
+		/* Read max77823's all registers every 5 minute. */
+		fg_periodic_read(fuelgauge);
+		fuelgauge->info.pr_cnt = 1;
+	}
+}
+#endif
+
 static int fg_read_current(struct max77823_fuelgauge_data *fuelgauge)
 {
-	u32 temp;
 	s32 i_current;
-	s32 avg_current;
-	int ret;
+	int ret = max77823_read_word(fuelgauge->i2c, CURRENT_REG);
 
-	ret = max77823_read_word(fuelgauge->i2c, CURRENT_REG);
 	if (ret < 0) {
 		pr_err("%s: Failed to read CURRENT\n", __func__);
 		return ret;
 	}
-	temp = ret << 15;	/* extend sign bit */
-	temp >>= 15;
+
+	ret <<= 16;	/* extend sign bit */
+	ret >>= 16;
 
 	/* 1.5625uV / 0.01Ohm(Rsense) = 156.25uA */
-	i_current = temp * 15625;
-	i_current /= 100;
+	i_current = (ret * 15625) / 100;
 
-	ret = max77823_read_word(fuelgauge->i2c, AVG_CURRENT_REG);
-	if (ret < 0) {
-		pr_err("%s: Failed to read AVERAGE CURRENT\n", __func__);
-		return ret;
-	}
-
-	temp = ret << 15;	/* extend sign bit */
-	temp >>= 15;
-
-	/* 1.5625uV/0.01Ohm(Rsense) = 156.25uA */
-	avg_current = (temp * 15625) / 100000;
-
-	if (!(fuelgauge->info.pr_cnt++ % PRINT_COUNT)) {
 #ifdef DEBUG
-		fg_test_print(fuelgauge);
-		pr_debug("%s: CURRENT(%dmA), AVG_CURRENT(%dmA)\n", __func__,
-				i_current, avg_current);
-		/* Read max77823's all registers every 5 minute. */
-		fg_periodic_read(fuelgauge);
+	dbg_current_avg(fuelgauge, i_current);
 #endif
-		fuelgauge->info.pr_cnt = 1;
-	}
 
 	return i_current;
 }
 
 static int fg_read_avg_current(struct max77823_fuelgauge_data *fuelgauge)
 {
-	u32 temp;
 	s32 avg_current;
 	int ret;
 
@@ -583,11 +590,11 @@ static int fg_read_avg_current(struct max77823_fuelgauge_data *fuelgauge)
 		return 0;
 	}
 
-	temp = ret << 15;	/* extend sign bit */
-	temp >>= 15;
+	ret <<= 16;	/* extend sign bit */
+	ret >>= 16;
+
 	/* 1.5625uV/0.01Ohm(Rsense) = 156.25uA */
-	avg_current = temp * 15625;
-	avg_current /= 100;
+	avg_current = (ret * 15625) / 100;
 	return avg_current;
 }
 
