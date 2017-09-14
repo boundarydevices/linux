@@ -1725,6 +1725,49 @@ int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 	return 0;
 }
 
+static void __attribute__((unused))aml_sd_emmc_mrq_print_info(
+	struct mmc_request *mrq, unsigned int desc_cnt)
+{
+	pr_info("*mmc_request desc_cnt:%d cmd:%d, arg:0x%x, flags:0x%x",
+	desc_cnt, mrq->cmd->opcode, mrq->cmd->arg, mrq->cmd->flags);
+
+	if (mrq->cmd->data)
+		pr_info(", blksz:%d, blocks:0x%x",
+			mrq->data->blksz, mrq->data->blocks);
+
+	pr_info("\n");
+
+}
+
+static void __attribute__((unused))
+	aml_sd_emmc_desc_print_info(struct sd_emmc_desc_info *desc_info)
+{
+	struct cmd_cfg *des_cmd_cur =
+		(struct cmd_cfg *)&(desc_info->cmd_info);
+
+	pr_info("#####desc_info check, desc_info:0x%p\n",
+		desc_info);
+
+	pr_info("\tlength:%d\n", des_cmd_cur->length);
+	pr_info("\tblock_mode:%d\n", des_cmd_cur->block_mode);
+	pr_info("\tr1b:%d\n", des_cmd_cur->r1b);
+	pr_info("\tend_of_chain:%d\n", des_cmd_cur->end_of_chain);
+	pr_info("\ttimeout:%d\n", des_cmd_cur->timeout);
+	pr_info("\tno_resp:%d\n", des_cmd_cur->no_resp);
+	pr_info("\tno_cmd:%d\n", des_cmd_cur->no_cmd);
+	pr_info("\tdata_io:%d\n", des_cmd_cur->data_io);
+	pr_info("\tdata_wr:%d\n", des_cmd_cur->data_wr);
+	pr_info("\tresp_nocrc:%d\n", des_cmd_cur->resp_nocrc);
+	pr_info("\tresp_128:%d\n", des_cmd_cur->resp_128);
+	pr_info("\tresp_num:%d\n", des_cmd_cur->resp_num);
+	pr_info("\tdata_num:%d\n", des_cmd_cur->data_num);
+	pr_info("\tcmd_index:%d\n", des_cmd_cur->cmd_index);
+	pr_info("\tcmd_arg:0x%x\n", desc_info->cmd_arg);
+	pr_info("\tdata_addr:0x%x\n", desc_info->data_addr);
+	pr_info("\tresp_addr:0x%x\n", desc_info->resp_addr);
+
+}
+
 static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct amlsd_host *host = mmc_priv(mmc);
@@ -1957,6 +2000,20 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 	desc_start->busy = 1;
 	desc_start->addr = host->desc_dma_addr >> 2;
 
+#if 0  /* debug */
+	desc_cur = (struct sd_emmc_desc_info *)host->desc_buf;
+	des_cmd_cur = (struct cmd_cfg *)&(desc_cur->cmd_info);
+
+	aml_sd_emmc_mrq_print_info(mrq, desc_cnt);
+
+	while (desc_cnt) {
+		aml_sd_emmc_desc_print_info(desc_cur);
+		desc_cur++;
+		des_cmd_cur = (struct cmd_cfg *)&(desc_cur->cmd_info);
+		desc_cnt--;
+	}
+
+#endif
 	dma_rmb();
 	wmb(); /* ensure descriptor is written before kicked */
 #ifdef AML_CALIBRATION

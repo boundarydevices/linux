@@ -104,6 +104,7 @@ static int aml_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
 	return -EINVAL;
 }
 
+#if 0
 static int aml_rpmb_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 #ifdef CONFIG_AMLOGIC_M8B_MMC
@@ -123,6 +124,7 @@ static int aml_rpmb_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
 	mmc_request_done(mmc, mrq);
 	return -EINVAL;
 }
+#endif
 
 int aml_check_unsupport_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 {
@@ -139,24 +141,6 @@ int aml_check_unsupport_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 	/* CMD3 means the first time initialized flow is running */
 	if (opcode == 3)
 		mmc->first_init_flag = false;
-
-	if (aml_card_type_mmc(pdata)) {
-		if (opcode == 6) {
-			if (arg == 0x3B30301)
-				pdata->rmpb_cmd_flag = 1;
-			else
-				pdata->rmpb_cmd_flag = 0;
-		}
-		if (pdata->rmpb_cmd_flag && (!pdata->rpmb_valid_command)) {
-			if ((opcode == 18)
-				|| (opcode == 25))
-				return aml_rpmb_cmd_invalid(mmc, mrq);
-		}
-		if (pdata->rmpb_cmd_flag && (opcode == 23))
-			pdata->rpmb_valid_command = 1;
-		else
-			pdata->rpmb_valid_command = 0;
-	}
 
 	if (mmc->caps & MMC_CAP_NONREMOVABLE) { /* nonremovable device */
 		if (mmc->first_init_flag) { /* init for the first time */

@@ -709,11 +709,13 @@ out:
 
 #ifdef CONFIG_AMLOGIC_MMC
 static void aml_mmc_set_blockcount(struct mmc_request *p_mrq,
-		struct mmc_command *p_sbc)
+		struct mmc_command *p_sbc, bool is_rel_write)
 {
 	p_sbc->opcode = MMC_SET_BLOCK_COUNT;
-	p_sbc->arg = p_mrq->data->blocks | (1 << 31);
-	p_sbc->flags = MMC_RSP_R1 | MMC_CMD_AC;
+	p_sbc->arg = p_mrq->data->blocks;
+	if (is_rel_write)
+		p_sbc->arg |= (1 << 31);
+	p_sbc->flags = MMC_RSP_SPI_R1 | MMC_RSP_R1 | MMC_CMD_AC;
 	p_mrq->sbc = p_sbc;
 }
 #endif
@@ -792,7 +794,8 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 
 	if (is_rpmb) {
 #ifdef CONFIG_AMLOGIC_MMC
-		aml_mmc_set_blockcount(&mrq, &sbc);
+		aml_mmc_set_blockcount(&mrq, &sbc,
+			idata->ic.write_flag & (1 << 31));
 #else
 		err = mmc_set_blockcount(card, data.blocks,
 			idata->ic.write_flag & (1 << 31));
@@ -800,7 +803,6 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 			return err;
 #endif
 	}
-
 	if ((MMC_EXTRACT_INDEX_FROM_ARG(cmd.arg) == EXT_CSD_SANITIZE_START) &&
 	    (cmd.opcode == MMC_SWITCH)) {
 		err = ioctl_do_sanitize(card);
