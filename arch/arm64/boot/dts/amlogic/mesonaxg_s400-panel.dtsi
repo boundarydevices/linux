@@ -230,6 +230,7 @@
 				 * pwm_on_delay(ms), pwm_off_delay(ms)
 				 */
 			bl_pwm_power = <0 0 10 10>;
+			bl_pwm_en_sequence_reverse = <0>; /* 1 for reverse */
 		};
 		backlight_1{
 			index = <1>;
@@ -245,6 +246,7 @@
 				 * on_delay(ms), off_delay(ms)
 				 */
 			bl_power_attr = <1 1 0 200 200>;
+			bl_pwm_en_sequence_reverse = <0>; /* 1 for reverse */
 			bl_extern_index = <1>;
 		};
 	};

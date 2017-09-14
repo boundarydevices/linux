@@ -100,6 +100,11 @@ static struct vbyone_config_s lcd_vbyone_config = {
 	.phy_preem = VX1_PHY_PREEM_DFT,
 	.intr_en = 1,
 	.vsync_intr_en = 1,
+
+	.ctrl_flag = 0,
+	.power_on_reset_delay = VX1_PWR_ON_RESET_DLY_DFT,
+	.hpd_data_delay = VX1_HPD_DATA_DELAY_DFT,
+	.cdr_training_hold = VX1_CDR_TRAINING_HOLD_DFT,
 };
 
 static unsigned char dsi_init_on_table[DSI_INIT_ON_MAX] = {0xff, 0xff};

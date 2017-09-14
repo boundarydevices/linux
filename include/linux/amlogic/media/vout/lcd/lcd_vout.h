@@ -224,8 +224,13 @@ struct lvds_config_s {
 	unsigned int phy_clk_preem;
 };
 
-#define VX1_PHY_VSWING_DFT    3
-#define VX1_PHY_PREEM_DFT     0
+#define VX1_PHY_VSWING_DFT        3
+#define VX1_PHY_PREEM_DFT         0
+
+#define VX1_PWR_ON_RESET_DLY_DFT  500 /* 500ms */
+#define VX1_HPD_DATA_DELAY_DFT    10 /* 10ms */
+#define VX1_CDR_TRAINING_HOLD_DFT 200 /* 200ms */
+
 struct vbyone_config_s {
 	unsigned int lane_count;
 	unsigned int region_num;
@@ -237,6 +242,24 @@ struct vbyone_config_s {
 	unsigned int phy_preem;
 	unsigned int intr_en;
 	unsigned int vsync_intr_en;
+
+	unsigned int ctrl_flag;
+		/*  bit[0]:power_on_reset_en
+		 *  bit[1]:hpd_data_delay_en
+		 *  bit[2]:cdr_training_hold_en
+		 *  bit[3]:hw_filter_en
+		 *  bit[5:4]:sw_filter
+		 */
+
+	/* ctrl timing */
+	unsigned int power_on_reset_delay; /* ms */
+	unsigned int hpd_data_delay; /* ms */
+	unsigned int cdr_training_hold; /* ms */
+	/* hw filter */
+	unsigned int hpd_hw_filter_time; /* ms */
+	unsigned int hpd_hw_filter_cnt;
+	unsigned int lockn_hw_filter_time; /* ms */
+	unsigned int lockn_hw_filter_cnt;
 };
 
 /* mipi-dsi config */

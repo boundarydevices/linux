@@ -157,6 +157,7 @@ static void lcd_info_print(void)
 	unsigned int lcd_clk, sync_duration;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct lcd_config_s *pconf;
+	struct vbyone_config_s *vx1_conf;
 
 	pconf = lcd_drv->lcd_config;
 	lcd_clk = (pconf->lcd_timing.lcd_clk / 1000);
@@ -242,6 +243,7 @@ static void lcd_info_print(void)
 			pconf->lcd_control.lvds_config->phy_clk_preem);
 		break;
 	case LCD_VBYONE:
+		vx1_conf = pconf->lcd_control.vbyone_config;
 		pr_info("lane_count        %u\n"
 			"region_num        %u\n"
 			"byte_mode         %u\n"
@@ -250,7 +252,8 @@ static void lcd_info_print(void)
 			"phy_vswing        0x%x\n"
 			"phy_preemphasis   0x%x\n"
 			"intr_en           %u\n"
-			"vsync_intr_en     %u\n\n",
+			"vsync_intr_en     %u\n"
+			"ctrl_flag         0x%x\n\n",
 			pconf->lcd_control.vbyone_config->lane_count,
 			pconf->lcd_control.vbyone_config->region_num,
 			pconf->lcd_control.vbyone_config->byte_mode,
@@ -259,7 +262,26 @@ static void lcd_info_print(void)
 			pconf->lcd_control.vbyone_config->phy_vswing,
 			pconf->lcd_control.vbyone_config->phy_preem,
 			pconf->lcd_control.vbyone_config->intr_en,
-			pconf->lcd_control.vbyone_config->vsync_intr_en);
+			pconf->lcd_control.vbyone_config->vsync_intr_en,
+			pconf->lcd_control.vbyone_config->ctrl_flag);
+		if (vx1_conf->ctrl_flag & 0x1) {
+			pr_info("power_on_reset_en      %u\n"
+				"power_on_reset_delay   %ums\n\n",
+				(vx1_conf->ctrl_flag & 0x1),
+				vx1_conf->power_on_reset_delay);
+		}
+		if (vx1_conf->ctrl_flag & 0x2) {
+			pr_info("hpd_data_delay_en      %u\n"
+				"hpd_data_delay         %ums\n\n",
+				((vx1_conf->ctrl_flag >> 1) & 0x1),
+				vx1_conf->hpd_data_delay);
+		}
+		if (vx1_conf->ctrl_flag & 0x4) {
+			pr_info("cdr_training_hold_en   %u\n"
+				"cdr_training_hold      %ums\n\n",
+				((vx1_conf->ctrl_flag >> 2) & 0x1),
+				vx1_conf->cdr_training_hold);
+		}
 		break;
 	case LCD_MIPI:
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
@@ -1677,6 +1699,11 @@ static const char *lcd_vbyone_debug_usage_str = {
 "data format:\n"
 "    <en>    : 0=disable vsync monitor intr, 1=enable vsync monitor intr\n"
 "\n"
+"    echo ctrl <ctrl_flag> <power_on_reset_delay> <hpd_data_delay> <cdr_training_hold> > vbyone; set ctrl adjust\n"
+"data format:\n"
+"    <ctrl_flag>    : bit[0]:power_on_reset_en, bit[1]:hpd_data_delay_en, bit[2]:cdr_training_hold_en\n"
+"    others         : unit in ms\n"
+"\n"
 };
 
 static const char *lcd_mipi_debug_usage_str = {
@@ -1800,7 +1827,7 @@ static ssize_t lcd_vx1_debug_store(struct class *class,
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct vbyone_config_s *vx1_conf;
 #ifdef CONFIG_AMLOGIC_LCD_TV
-	int val[2];
+	int val[5];
 #endif
 
 	vx1_conf = lcd_drv->lcd_config->lcd_control.vbyone_config;
@@ -1836,6 +1863,34 @@ static ssize_t lcd_vx1_debug_store(struct class *class,
 		} else {
 			pr_info("vx1_vsync_intr_enable: %d\n",
 				vx1_conf->vsync_intr_en);
+			return -EINVAL;
+		}
+#else
+		return -EINVAL;
+#endif
+	} else if (buf[0] == 'c') { /* ctrl */
+#ifdef CONFIG_AMLOGIC_LCD_TV
+		ret = sscanf(buf, "ctrl %x %d %d %d",
+			&val[0], &val[1], &val[2], &val[3]);
+		if (ret == 4) {
+			pr_info("set vbyone ctrl_flag: 0x%x\n", val[0]);
+			pr_info("power_on_reset_delay: %dms\n", val[1]);
+			pr_info("hpd_data_delay: %dms\n", val[2]);
+			pr_info("cdr_training_hold: %dms\n", val[3]);
+			vx1_conf->ctrl_flag = val[0];
+			vx1_conf->power_on_reset_delay = val[1];
+			vx1_conf->hpd_data_delay = val[2];
+			vx1_conf->cdr_training_hold = val[3];
+			lcd_debug_config_update();
+		} else {
+			pr_info("set vbyone ctrl_flag: 0x%x\n",
+				vx1_conf->ctrl_flag);
+			pr_info("power_on_reset_delay: %dms\n",
+				vx1_conf->power_on_reset_delay);
+			pr_info("hpd_data_delay: %dms\n",
+				vx1_conf->hpd_data_delay);
+			pr_info("cdr_training_hold: %dms\n",
+				vx1_conf->cdr_training_hold);
 			return -EINVAL;
 		}
 #else

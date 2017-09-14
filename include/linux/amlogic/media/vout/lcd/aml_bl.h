@@ -146,6 +146,7 @@ struct bl_config_s {
 	struct bl_pwm_config_s *bl_pwm_combo1;
 	unsigned int pwm_on_delay;
 	unsigned int pwm_off_delay;
+	unsigned int pwm_en_sequence_reverse;
 
 	struct bl_gpio_s bl_gpio[BL_GPIO_NUM_MAX];
 	struct pinctrl *pin;
