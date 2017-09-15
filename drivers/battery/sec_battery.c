@@ -1603,6 +1603,9 @@ static bool sec_bat_time_management(
 			}
 		}
 		break;
+	case POWER_SUPPLY_STATUS_DISCHARGING:
+	case POWER_SUPPLY_STATUS_NOT_CHARGING:
+		break;
 	default:
 		dev_err(battery->dev,
 			"%s: Undefine Battery Status\n", __func__);
