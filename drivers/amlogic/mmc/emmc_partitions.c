@@ -653,6 +653,8 @@ static struct hd_struct *add_emmc_each_part(struct gendisk *disk, int partno,
 	p->nr_sects = len;
 	p->partno = partno;
 	p->policy = get_disk_ro(disk);
+	p->info = alloc_part_info(disk);
+	sprintf(p->info->volname, "%s", pname);
 
 	dname = dev_name(ddev);
 	dev_set_name(pdev, "%s", pname);
