@@ -1031,7 +1031,7 @@ static int build_ge2d_config_ex_ion(struct config_planes_ion_s *plane,
 #endif
 		}
 		if (plane[2].addr) {
-			plane[2].addr += plane[1].addr;
+			plane[2].addr += plane[0].addr;
 			*canvas_index |= index << 16;
 			*r_offset += 1;
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
@@ -1043,7 +1043,7 @@ static int build_ge2d_config_ex_ion(struct config_planes_ion_s *plane,
 #endif
 		}
 		if (plane[3].addr) {
-			plane[3].addr += plane[2].addr;
+			plane[3].addr += plane[0].addr;
 			*canvas_index |= index << 24;
 			*r_offset += 1;
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
