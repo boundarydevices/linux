@@ -187,7 +187,14 @@ bool pm_suspended_storage(void)
 unsigned int pageblock_order __read_mostly;
 #endif
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+/*
+ * should return merged order to for quick free
+ */
+static int __free_pages_ok(struct page *page, unsigned int order);
+#else
 static void __free_pages_ok(struct page *page, unsigned int order);
+#endif
 
 /*
  * results with 256, 32 in the lowmem_reserve sysctl:
@@ -796,10 +803,17 @@ static inline int page_is_buddy(struct page *page, struct page *buddy,
  * -- nyc
  */
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static inline int __free_one_page(struct page *page,
+		unsigned long pfn,
+		struct zone *zone, unsigned int order,
+		int migratetype)
+#else
 static inline void __free_one_page(struct page *page,
 		unsigned long pfn,
 		struct zone *zone, unsigned int order,
 		int migratetype)
+#endif /* CONFIG_AMLOGIC_MODIFY */
 {
 	unsigned long page_idx;
 	unsigned long combined_idx;
@@ -914,6 +928,7 @@ out:
 #ifdef CONFIG_AMLOGIC_MODIFY
 	set_pcppage_migratetype(page, migratetype);
 	__mod_zone_migrate_state(zone, (1 << order), migratetype);
+	return order;
 #endif /* CONFIG_AMLOGIC_MODIFY */
 }
 
@@ -1176,12 +1191,23 @@ static void free_pcppages_bulk(struct zone *zone, int count,
 	spin_unlock(&zone->lock);
 }
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static int free_one_page(struct zone *zone,
+				struct page *page, unsigned long pfn,
+				unsigned int order,
+				int migratetype)
+#else
 static void free_one_page(struct zone *zone,
 				struct page *page, unsigned long pfn,
 				unsigned int order,
 				int migratetype)
+#endif /* CONFIG_AMLOGIC_MODIFY */
 {
 	unsigned long nr_scanned;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	int free_order;
+#endif /* CONFIG_AMLOGIC_MODIFY */
+
 	spin_lock(&zone->lock);
 	nr_scanned = node_page_state(zone->zone_pgdat, NR_PAGES_SCANNED);
 	if (nr_scanned)
@@ -1191,8 +1217,15 @@ static void free_one_page(struct zone *zone,
 		is_migrate_isolate(migratetype))) {
 		migratetype = get_pfnblock_migratetype(page, pfn);
 	}
+#ifdef CONFIG_AMLOGIC_MODIFY
+	free_order = __free_one_page(page, pfn, zone, order, migratetype);
+#else
 	__free_one_page(page, pfn, zone, order, migratetype);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	spin_unlock(&zone->lock);
+#ifdef CONFIG_AMLOGIC_MODIFY
+	return free_order;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 }
 
 static void __meminit __init_single_page(struct page *page, unsigned long pfn,
@@ -1268,20 +1301,40 @@ void __meminit reserve_bootmem_region(phys_addr_t start, phys_addr_t end)
 	}
 }
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static int __free_pages_ok(struct page *page, unsigned int order)
+#else
 static void __free_pages_ok(struct page *page, unsigned int order)
+#endif /* CONFIG_AMLOGIC_MODIFY */
 {
 	unsigned long flags;
 	int migratetype;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	int free_order;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	unsigned long pfn = page_to_pfn(page);
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (!free_pages_prepare(page, order, true))
+		return -1;
+#else
 	if (!free_pages_prepare(page, order, true))
 		return;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	migratetype = get_pfnblock_migratetype(page, pfn);
 	local_irq_save(flags);
 	__count_vm_events(PGFREE, 1 << order);
+#ifdef CONFIG_AMLOGIC_MODIFY
+	free_order = free_one_page(page_zone(page), page,
+				   pfn, order, migratetype);
+#else
 	free_one_page(page_zone(page), page, pfn, order, migratetype);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	local_irq_restore(flags);
+#ifdef CONFIG_AMLOGIC_MODIFY
+	return free_order;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 }
 
 static void __init __free_pages_boot_core(struct page *page, unsigned int order)
@@ -4059,6 +4112,26 @@ void __free_pages(struct page *page, unsigned int order)
 }
 
 EXPORT_SYMBOL(__free_pages);
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+int __free_pages_cma(struct page *page, unsigned int order, unsigned int *cnt)
+{
+	int i;
+	int ref = 0;
+
+	/* clear ref count first */
+	for (i = 0; i < (1 << order); i++) {
+		if (!put_page_testzero(page + i))
+			ref++;
+	}
+	if (ref) {
+		pr_info("%s, %d pages are still in use\n", __func__, ref);
+		*cnt += ref;
+		return -1;
+	}
+	return __free_pages_ok(page, order);
+}
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 void free_pages(unsigned long addr, unsigned int order)
 {
@@ -7378,6 +7451,9 @@ static int __alloc_contig_migrate_range(struct compact_control *cc,
 	while (pfn < end || !list_empty(&cc->migratepages)) {
 		if (fatal_signal_pending(current)) {
 			ret = -EINTR;
+		#ifdef CONFIG_AMLOGIC_MODIFY /* for debug */
+			pr_err("cma %s %d, ret:%d\n", __func__, __LINE__, ret);
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 			break;
 		}
 
@@ -7386,11 +7462,18 @@ static int __alloc_contig_migrate_range(struct compact_control *cc,
 			pfn = isolate_migratepages_range(cc, pfn, end);
 			if (!pfn) {
 				ret = -EINTR;
+			#ifdef CONFIG_AMLOGIC_MODIFY /* for debug */
+				pr_err("cma %s %d, ret:%d\n",
+					__func__, __LINE__, ret);
+			#endif /* CONFIG_AMLOGIC_MODIFY */
 				break;
 			}
 			tries = 0;
 		} else if (++tries == 5) {
 			ret = ret < 0 ? ret : -EBUSY;
+		#ifdef CONFIG_AMLOGIC_MODIFY /* for debug */
+			pr_err("cma %s %d, ret:%d\n", __func__, __LINE__, ret);
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 			break;
 		}
 
@@ -7403,10 +7486,93 @@ static int __alloc_contig_migrate_range(struct compact_control *cc,
 	}
 	if (ret < 0) {
 		putback_movable_pages(&cc->migratepages);
+	#ifdef CONFIG_AMLOGIC_MODIFY /* for debug */
+		pr_err("cma %s %d, ret:%d\n", __func__, __LINE__, ret);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		return ret;
 	}
 	return 0;
 }
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+struct cma_pcp_work {
+	unsigned long pfn;
+	unsigned long count;
+	void *data;
+	struct work_struct work;
+};
+
+static DEFINE_PER_CPU(struct cma_pcp_work, cma_all_work);
+
+static void cma_boost_work_func(struct work_struct *work)
+{
+	struct cma_pcp_work *c_work;
+	unsigned long pfn, end;
+	int ret = -1;
+	atomic_t *ok;
+	int this_cpu = smp_processor_id();
+	struct compact_control cc = {
+		.nr_migratepages = 0,
+		.order = -1,
+		.mode = MIGRATE_SYNC,
+		.reason = MR_CMA,
+		.ignore_skip_hint = true,
+	};
+	INIT_LIST_HEAD(&cc.migratepages);
+
+	c_work  = container_of(work, struct cma_pcp_work, work);
+	pfn     = c_work->pfn;
+	cc.zone = page_zone(pfn_to_page(pfn));
+	end     = pfn + c_work->count;
+	ret     = __alloc_contig_migrate_range(&cc, pfn, end);
+	if (!ret) {
+		ok = (atomic_t *)c_work->data;
+		atomic_inc(ok);
+		lru_add_drain();
+		drain_pages(this_cpu);
+	} else
+		pr_err("%s, failed, ret:%d\n", __func__, ret);
+}
+
+int alloc_contig_boost(unsigned long start_pfn, unsigned long count)
+{
+	static struct cpumask has_work;
+	int cpu, cpus, i = 0;
+	atomic_t ok;
+	unsigned long delta;
+	unsigned long cnt;
+	struct cma_pcp_work *work;
+
+	cpumask_clear(&has_work);
+
+	cpus  = num_online_cpus();
+	cnt   = count;
+	delta = count / cpus;
+	atomic_set(&ok, 0);
+	for_each_online_cpu(cpu) {
+		work = &per_cpu(cma_all_work, cpu);
+		work->data  = &ok;
+		work->pfn   = start_pfn + i * delta;
+		work->count = delta;
+		if (i == cpus - 1)
+			work->count = count - i * delta;
+		INIT_WORK(&work->work, cma_boost_work_func);
+		schedule_work_on(cpu, &work->work);
+		cpumask_set_cpu(cpu, &has_work);
+		i++;
+	}
+
+	for_each_cpu(cpu, &has_work) {
+		work = &per_cpu(cma_all_work, cpu);
+		flush_work(&work->work);
+	}
+
+	if (atomic_read(&ok) == cpus)
+		return 0;
+	else
+		return -EINVAL;
+}
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 /**
  * alloc_contig_range() -- tries to allocate given range of pages
@@ -7434,6 +7600,9 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	unsigned long outer_start, outer_end;
 	unsigned int order;
 	int ret = 0;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	int cpus = 0;
+#endif
 
 	struct compact_control cc = {
 		.nr_migratepages = 0,
@@ -7441,6 +7610,9 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 		.zone = page_zone(pfn_to_page(start)),
 		.mode = MIGRATE_SYNC,
 		.ignore_skip_hint = true,
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		.reason = MR_CMA,
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 	};
 	INIT_LIST_HEAD(&cc.migratepages);
 
@@ -7467,13 +7639,39 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	 * aligned range but not in the unaligned, original range are
 	 * put back to page allocator so that buddy can use them.
 	 */
-
 	ret = start_isolate_page_range(pfn_max_align_down(start),
 				       pfn_max_align_up(end), migratetype,
 				       false);
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (ret) { /* for debug */
+		pr_err("cma %s %d, ret:%d\n", __func__, __LINE__, ret);
+		return ret;
+	}
+#else
 	if (ret)
 		return ret;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	/*
+	 * try to use more cpu to do this job when alloc count is large
+	 */
+	if ((num_online_cpus() > 1) &&
+		((end - start) >= pageblock_nr_pages / 2)) {
+		get_online_cpus();
+		ret = alloc_contig_boost(start, end - start);
+		put_online_cpus();
+		cpus = !ret ? 1 : 0;
+	} else
+		ret = __alloc_contig_migrate_range(&cc, start, end);
+
+	if (ret && ret != -EBUSY)
+		goto done;
+	if (!cpus) {
+		lru_add_drain_all();
+		drain_all_pages(cc.zone);
+	}
+#else
 	/*
 	 * In case of -EBUSY, we'd like to know which page causes problem.
 	 * So, just fall through. We will check it in test_pages_isolated().
@@ -7501,6 +7699,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	lru_add_drain_all();
 	drain_all_pages(cc.zone);
+#endif	/* CONFIG_AMLOGIC_MODIFY */
 
 	order = 0;
 	outer_start = start;
@@ -7537,6 +7736,9 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	outer_end = isolate_freepages_range(&cc, outer_start, end);
 	if (!outer_end) {
 		ret = -EBUSY;
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		pr_err("cma %s %d, ret:%d\n", __func__, __LINE__, ret);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		goto done;
 	}
 
@@ -7555,13 +7757,49 @@ done:
 void free_contig_range(unsigned long pfn, unsigned nr_pages)
 {
 	unsigned int count = 0;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	struct page *page;
+	int free_order, start_order = 0;
+	int batch;
+#endif	/* CONFIG_AMLOGIC_MODIFY */
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	while (nr_pages) {
+		page = pfn_to_page(pfn);
+		batch = (1 << start_order);
+		free_order = __free_pages_cma(page, start_order, &count);
+		pr_debug("pages:%4d, free:%2d, start:%2d, batch:%4d, pfn:%ld\n",
+			nr_pages, free_order,
+			start_order, batch, pfn);
+		nr_pages -= batch;
+		pfn += batch;
+		/*
+		 * since pages are contigunous, and it's buddy already has large
+		 * order, we can try to free same oder as free_order to get more
+		 * quickly free speed.
+		 */
+		if (free_order < 0) {
+			start_order = 0;
+			continue;
+		}
+		if (nr_pages >= (1 << free_order)) {
+			start_order = free_order;
+		} else {
+			/* remain pages is not enough */
+			start_order = 0;
+			while (nr_pages >= (1 << start_order))
+				start_order++;
+			start_order--;
+		}
+	}
+#else
 	for (; nr_pages--; pfn++) {
 		struct page *page = pfn_to_page(pfn);
 
 		count += page_count(page) != 1;
 		__free_page(page);
 	}
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	WARN(count != 0, "%d pages are still in use!\n", count);
 }
 #endif

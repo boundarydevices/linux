@@ -45,6 +45,7 @@ static DEFINE_MUTEX(cma_mutex);
 #ifdef CONFIG_AMLOGIC_MODIFY
 /* how many cma pages used by driver */
 static atomic_long_t driver_alloc_cma;
+static atomic_t cma_alloc_ref = ATOMIC_INIT(0);
 unsigned long get_driver_alloc_cma(void)
 {
 	return atomic_long_read(&driver_alloc_cma);
@@ -399,6 +400,9 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	if (bitmap_count > bitmap_maxno)
 		return NULL;
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	atomic_inc(&cma_alloc_ref);
+#endif
 	for (;;) {
 		mutex_lock(&cma->lock);
 		bitmap_no = bitmap_find_next_zero_area_off(cma->bitmap,
@@ -406,6 +410,11 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 				offset);
 		if (bitmap_no >= bitmap_maxno) {
 			mutex_unlock(&cma->lock);
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			/* for debug */
+			pr_err("can't find zero bit map for %lx, cnt:%ld\n",
+				cma->base_pfn, count);
+		#endif
 			break;
 		}
 		bitmap_set(cma->bitmap, bitmap_no, bitmap_count);
@@ -438,8 +447,11 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	trace_cma_alloc(pfn, page, count, align);
 
 #ifdef CONFIG_AMLOGIC_MODIFY
+	atomic_dec(&cma_alloc_ref);
 	if (page)
 		atomic_long_add(count, &driver_alloc_cma);
+	WARN_ONCE(!page, "can't alloc from %lx with size:%ld, ret:%d\n",
+		  cma->base_pfn, count, ret);
 #endif /* CONFIG_AMLOGIC_MODIFY */
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
@@ -488,6 +500,11 @@ bool cma_suitable(gfp_t gfp_mask)
 		return false;
 	if (!(gfp_mask & __GFP_MOVABLE))
 		return false;
+
+	/* try to reduce page lock wait for read */
+	if (atomic_read(&cma_alloc_ref) && (gfp_mask & __GFP_COLD))
+		return false;
+
 	return true;
 }
 #endif /* CONFIG_AMLOGIC_MODIFY */

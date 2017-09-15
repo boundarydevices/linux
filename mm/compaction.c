@@ -868,7 +868,13 @@ isolate_success:
 			cc->last_migrated_pfn = low_pfn;
 
 		/* Avoid isolating too much */
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		/* for cma, try to isolate more pages each time */
+		if (cc->reason != MR_CMA &&
+		    cc->nr_migratepages == COMPACT_CLUSTER_MAX) {
+	#else
 		if (cc->nr_migratepages == COMPACT_CLUSTER_MAX) {
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 			++low_pfn;
 			break;
 		}
