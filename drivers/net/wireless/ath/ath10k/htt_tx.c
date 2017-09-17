@@ -409,6 +409,9 @@ int ath10k_htt_tx_start(struct ath10k_htt *htt)
 	if (htt->tx_mem_allocated)
 		return 0;
 
+	if (ar->is_high_latency)
+		return 0;
+
 	ret = ath10k_htt_tx_alloc_buf(htt);
 	if (ret)
 		goto free_idr_pending_tx;
@@ -445,7 +448,8 @@ void ath10k_htt_tx_destroy(struct ath10k_htt *htt)
 		return;
 
 	ath10k_htt_tx_free_cont_txbuf(htt);
-	ath10k_htt_tx_free_txq(htt);
+	if (!htt->ar->is_high_latency)
+		ath10k_htt_tx_free_txq(htt);
 	ath10k_htt_tx_free_cont_frag_desc(htt);
 	ath10k_htt_tx_free_txdone_fifo(htt);
 	htt->tx_mem_allocated = false;
@@ -934,7 +938,8 @@ int ath10k_htt_mgmt_tx(struct ath10k_htt *htt, struct sk_buff *msdu)
 	return 0;
 
 err_unmap_msdu:
-	dma_unmap_single(dev, skb_cb->paddr, msdu->len, DMA_TO_DEVICE);
+	if (!ar->is_high_latency)
+		dma_unmap_single(dev, skb_cb->paddr, msdu->len, DMA_TO_DEVICE);
 err_free_txdesc:
 	dev_kfree_skb_any(txdesc);
 err_free_msdu_id:
