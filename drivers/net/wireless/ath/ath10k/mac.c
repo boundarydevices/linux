@@ -3493,7 +3493,10 @@ static int ath10k_mac_tx_submit(struct ath10k *ar,
 
 	switch (txpath) {
 	case ATH10K_MAC_TX_HTT:
-		ret = ath10k_htt_tx(htt, txmode, skb);
+		if (ar->is_high_latency)
+			ret = ath10k_htt_tx_hl(htt, txmode, skb);
+		else
+			ret = ath10k_htt_tx_ll(htt, txmode, skb);
 		break;
 	case ATH10K_MAC_TX_HTT_MGMT:
 		ret = ath10k_htt_mgmt_tx(htt, skb);
