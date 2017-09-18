@@ -116,4 +116,66 @@
 			mask = <4>;
 		};
 	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "boot,system,vendor";
+				by_name_prefix="/dev/block";
+			};
+		fstab {
+			compatible = "android,fstab";
+			system {
+				compatible = "android,system";
+				dev = "/dev/block/system_a";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+
+			system_b {
+				compatible = "android,system";
+				dev = "/dev/block/system_b";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/vendor_a";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+
+			vendor_b {
+				compatible = "android,vendor";
+				dev = "/dev/block/vendor_b";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+
+			odm {
+				compatible = "android,odm";
+				dev = "/dev/block/odm_a";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+
+			odm_b {
+				compatible = "android,odm";
+				dev = "/dev/block/odm_b";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+			};
+		};
+	};
+
 };/* end of / */
