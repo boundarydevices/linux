@@ -1299,7 +1299,8 @@ static void max77823_chgin_init_work(struct work_struct *work)
 	}
 	value.intval = POWER_SUPPLY_TYPE_HV_MAINS;
 	psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
-	max77823_set_online(charger, value.intval);
+	/* Have the battery reevaluate charging */
+	psy_get_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 }
 
 #ifdef CONFIG_OF
