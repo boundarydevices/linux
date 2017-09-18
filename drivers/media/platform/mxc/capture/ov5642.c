@@ -6239,13 +6239,13 @@ static int ov5642_probe(struct i2c_client *client,
 
 	retval = ov5642_read_reg(OV5642_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
-		pr_warning("camera ov5642 is not found\n");
+		pr_warning("camera ov5642 is not found(%d) %x\n", retval, chip_id_high);
 		clk_disable_unprepare(ov5642_data.sensor_clk);
 		return -ENODEV;
 	}
 	retval = ov5642_read_reg(OV5642_CHIP_ID_LOW_BYTE, &chip_id_low);
 	if (retval < 0 || chip_id_low != 0x42) {
-		pr_warning("camera ov5642 is not found\n");
+		pr_warning("camera ov5642 is not found(%d) low %x\n", retval, chip_id_low);
 		clk_disable_unprepare(ov5642_data.sensor_clk);
 		return -ENODEV;
 	}
