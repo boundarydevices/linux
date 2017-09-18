@@ -19,7 +19,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "mesongxl.dtsi"
-#include "partition_mbox_normal.dtsi"
+#include "partition_mbox_ab.dtsi"
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxl_p230_2g";
