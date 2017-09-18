@@ -3592,6 +3592,9 @@ static int ov5640_remove(struct i2c_client *client)
 	if (io_regulator)
 		regulator_disable(io_regulator);
 
+	device_remove_file(&client->dev,
+		&dev_attr_ov5640_reg);
+
 	return 0;
 }
 
