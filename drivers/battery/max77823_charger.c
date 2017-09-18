@@ -810,6 +810,7 @@ static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long ev
 	struct max77823_charger_data *charger = container_of(nb, struct max77823_charger_data, otg_regulator_nb);
 
 	if (event & (REGULATOR_EVENT_DISABLE | REGULATOR_EVENT_AFT_DO_ENABLE | REGULATOR_EVENT_PRE_DO_ENABLE)) {
+		charger->otg_vbus_enabled = (event & REGULATOR_EVENT_DISABLE) ? false : true;
 		max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
 			(event & REGULATOR_EVENT_DISABLE) ? 0x20 : 0, 0x20);
 		if (event & REGULATOR_EVENT_DISABLE)
