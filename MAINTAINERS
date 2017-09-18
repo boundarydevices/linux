@@ -13523,14 +13523,10 @@ AMLOGIC driver for cec
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/cec/*
 
-AMLOGIC driver for i2c
-M: Xuhua Zhang <xuhua.zhang@amlogic.com>
-F: drivers/amlogic/i2c/aml_i2c.c
-F: drivers/amlogic/i2c/aml_i2c.h
-F: drivers/amlogic/i2c/aml_slave.c
-F: drivers/amlogic/i2c/aml_slave.h
-F: drivers/amlogic/i2c/Kconfig
-F: drivers/amlogic/i2c/Makefile
+AMLOGIC I2C
+M: Jian Hu <jian.hu@amlogic.com>
+F: driver/amlogic/i2c/*
+F: Documentation/devicetree/bindings/amlogic/i2c-meson.txt
 
 AMLOGIC internal phy driver for ethernet
 M: Yizhou Jiang <yizhou.jiang@amlogic.com
