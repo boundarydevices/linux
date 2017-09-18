@@ -567,6 +567,7 @@ static s32 ov5640_read_reg(u16 reg, u8 *val);
 static s32 ov5640_write_reg(u16 reg, u8 val);
 
 static const struct i2c_device_id ov5640_id[] = {
+	{"ov5640_int", 0},
 	{"ov564x", 0},
 	{},
 };
@@ -587,7 +588,7 @@ static inline void ov5640_power_down(int enable)
 {
 	gpio_set_value(pwn_gpio, enable);
 
-	msleep(2);
+	msleep(100);
 }
 
 static inline void ov5640_reset(void)
@@ -667,15 +668,17 @@ static int ov5640_regulator_enable(struct device *dev)
 
 static s32 ov5640_write_reg(u16 reg, u8 val)
 {
+	int ret;
 	u8 au8Buf[3] = {0};
 
 	au8Buf[0] = reg >> 8;
 	au8Buf[1] = reg & 0xff;
 	au8Buf[2] = val;
 
-	if (i2c_master_send(ov5640_data.i2c_client, au8Buf, 3) < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x\n",
-			__func__, reg, val);
+	ret = i2c_master_send(ov5640_data.i2c_client, au8Buf, 3);
+	if (ret < 0) {
+		pr_err("%s:error(%d):reg=%x,val=%x\n",
+			__func__, ret, reg, val);
 		return -1;
 	}
 
@@ -684,28 +687,40 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 
 static s32 ov5640_read_reg(u16 reg, u8 *val)
 {
-	u8 au8RegBuf[2] = {0};
-	u8 u8RdVal = 0;
+	struct sensor_data *sensor = &ov5640_data;
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msgs[2];
+	u8 buf[2];
+	int ret;
+	int retry = 0;
 
-	au8RegBuf[0] = reg >> 8;
-	au8RegBuf[1] = reg & 0xff;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = buf;
 
-	if (2 != i2c_master_send(ov5640_data.i2c_client, au8RegBuf, 2)) {
-		pr_err("%s:write reg error:reg=%x\n",
-				__func__, reg);
-		return -1;
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = 1;
+	msgs[1].buf = buf;
+
+	while (1) {
+		ret = i2c_transfer(client->adapter, msgs, 2);
+		if (ret >= 0)
+			break;
+		if (++retry >= 3) {
+			pr_err("%s:reg=%x ret=%d\n", __func__, reg, ret);
+			return ret;
+		}
+		msleep(1);
 	}
-
-	if (1 != i2c_master_recv(ov5640_data.i2c_client, &u8RdVal, 1)) {
-		pr_err("%s:read reg error:reg=%x,val=%x\n",
-				__func__, reg, u8RdVal);
-		return -1;
-	}
-
-	*val = u8RdVal;
-
-	return u8RdVal;
+	*val = buf[0];
+	pr_debug("%s:reg=%x,val=%x\n", __func__, reg, buf[0]);
+	return buf[0];
 }
+
 
 static void ov5640_soft_reset(void)
 {
@@ -1917,7 +1932,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	ov5640_data.streamcap.timeperframe.numerator = 1;
 
-	ov5640_regulator_enable(&client->dev);
+	ov5640_regulator_enable(dev);
 
 	ov5640_reset();
 
@@ -1926,13 +1941,13 @@ static int ov5640_probe(struct i2c_client *client,
 	retval = ov5640_read_reg(OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
 		clk_disable_unprepare(ov5640_data.sensor_clk);
-		pr_warning("camera ov5640 is not found\n");
+		pr_warning("camera ov5640 is not found, (%x)\n", retval);
 		return -ENODEV;
 	}
 	retval = ov5640_read_reg(OV5640_CHIP_ID_LOW_BYTE, &chip_id_low);
 	if (retval < 0 || chip_id_low != 0x40) {
 		clk_disable_unprepare(ov5640_data.sensor_clk);
-		pr_warning("camera ov5640 is not found\n");
+		pr_warning("camera ov5640 is not found, low(%x)\n", retval);
 		return -ENODEV;
 	}
 
