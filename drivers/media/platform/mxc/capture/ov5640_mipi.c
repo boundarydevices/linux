@@ -3574,6 +3574,9 @@ static int ov5640_remove(struct i2c_client *client)
 
 	ov5640_power_off();
 
+	device_remove_file(&client->dev,
+		&dev_attr_ov5640_reg);
+
 	return 0;
 }
 
