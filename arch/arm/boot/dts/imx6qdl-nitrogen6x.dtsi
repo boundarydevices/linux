@@ -961,7 +961,7 @@
 	};
 
 	ov5640: ov5640@3c {
-		compatible = "ovti,ov5640";
+		compatible = "ov5640_int";
 		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_ov5640 &pinctrl_i2c3_ov5640_gpios>;
