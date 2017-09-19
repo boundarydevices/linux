@@ -35,7 +35,9 @@
 		serial3 = &uart_C;
 		serial4 = &uart_AO_B;
 	};
-
+	ion_dev {
+		compatible = "amlogic, ion_dev";
+	};
 	memory@00000000 {
 		device_type = "memory";
 		linux,usable-memory = <0x0 0x0100000 0x0 0x7ff00000>;
@@ -59,6 +61,14 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
+		fb_reserved:linux,meson-fb {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x2400000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x7dc00000 0x0 0x2400000>;
+		};
+		//don't put other dts in front of fb_reserved
 
 		//di_reserved:linux,di {
 		//	compatible = "amlogic, di-mem";
@@ -73,13 +83,7 @@
 			size = <0x0 0x2000000>;
 			alignment = <0x0 0x400000>;
 		};
-		fb_reserved:linux,meson-fb {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0x0 0x2400000>;
-			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x7dc00000 0x0 0x2400000>;
-		};
+
 
 		/*  vdin0 CMA pool */
 		//vdin0_cma_reserved:linux,vdin0_cma {

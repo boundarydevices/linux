@@ -64,6 +64,14 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
+		logo_reserved:linux,meson-fb {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x800000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
+		};
+		//don't put other dts in front of logo_reserved
 
 		//di_reserved:linux,di {
 		//	compatible = "amlogic, di-mem";
@@ -77,13 +85,6 @@
 			/** 10x3133440=30M(0x1e) support 8bit **/
 			size = <0x0 0x2000000>;
 			alignment = <0x0 0x400000>;
-		};
-		logo_reserved:linux,meson-fb {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0x0 0x800000>;
-			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
 		};
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
