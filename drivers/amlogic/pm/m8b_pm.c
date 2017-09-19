@@ -87,6 +87,7 @@ unsigned int arc_serial_disable;
 
 static ulong suspend_firm_addr;
 static ulong suspend_firm_size;
+static suspend_state_t pm_state;
 
 #if 0
 static void ao_uart_change_buad(unsigned int reg, unsigned int clk_rate)
@@ -264,6 +265,32 @@ static const struct platform_suspend_ops meson_pm_ops = {
 	.valid        = suspend_valid_only_mem,
 };
 
+unsigned int is_pm_freeze_mode(void)
+{
+	if (pm_state == PM_SUSPEND_FREEZE)
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(is_pm_freeze_mode);
+
+static int frz_begin(void)
+{
+	pm_state = PM_SUSPEND_FREEZE;
+
+	return 0;
+}
+
+static void frz_end(void)
+{
+	pm_state = PM_SUSPEND_ON;
+}
+
+static const struct platform_freeze_ops meson_m8b_frz_ops = {
+	.begin = frz_begin,
+	.end = frz_end,
+};
+
 static int __init meson_pm_probe(struct platform_device *pdev)
 {
 	pr_info("enter meson_pm_probe!\n");
@@ -282,6 +309,8 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 	if (lgcy_early_suspend_init())
 		return -1;
 #endif
+	freeze_set_ops(&meson_m8b_frz_ops);
+
 	pr_info("meson_pm_probe done !\n");
 
 #ifdef CONFIG_AO_TRIG_CLK

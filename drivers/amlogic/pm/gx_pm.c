@@ -65,6 +65,7 @@ static u32 psci_get_version(void)
 
 static void __iomem *exit_reg;
 static int max_idle_lvl;
+static suspend_state_t pm_state;
 
 
 /*
@@ -120,6 +121,32 @@ static const struct platform_suspend_ops meson_gx_ops = {
 	.prepare = meson_pm_prepare,
 	.finish = meson_pm_finish,
 	.valid = suspend_valid_only_mem,
+};
+
+unsigned int is_pm_freeze_mode(void)
+{
+	if (pm_state == PM_SUSPEND_FREEZE)
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(is_pm_freeze_mode);
+
+static int frz_begin(void)
+{
+	pm_state = PM_SUSPEND_FREEZE;
+
+	return 0;
+}
+
+static void frz_end(void)
+{
+	pm_state = PM_SUSPEND_ON;
+}
+
+static const struct platform_freeze_ops meson_gx_frz_ops = {
+	.begin = frz_begin,
+	.end = frz_end,
 };
 
 static unsigned int suspend_reason;
@@ -188,6 +215,8 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 	if (lgcy_early_suspend_init())
 		return -1;
 #endif
+	freeze_set_ops(&meson_gx_frz_ops);
+
 	pr_info("meson_pm_probe done\n");
 	return 0;
 }
