@@ -140,7 +140,6 @@
 		dev_name = "aml_wifi";
 		status = "okay";
 		interrupt_pin = <&gpio       GPIOX_7       GPIO_ACTIVE_HIGH>;
-		interrupts = <	0 68 4>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
 		power_on_pin = <&gpio       GPIOX_6       GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
