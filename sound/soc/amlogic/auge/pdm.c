@@ -566,24 +566,23 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 				int clk_id, unsigned int freq, int dir)
 {
 	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
-	unsigned int pll_freq = 0;
+	unsigned int pll_freq = 0, src_dclk_freq = 0;
 
-	pll_freq = freq * 50;
-	if (pll_freq > 196608000)
-		pll_freq = 196608000;
+	pll_freq = clk_get_rate(p_pdm->clk_pll);
+	src_dclk_freq = clk_get_rate(p_pdm->src_dclk);
+	pr_info("%s freq:%d, pll_freq:%d, src_dclk_freq=%d\n",
+		__func__, freq, pll_freq, src_dclk_freq);
+	if (src_dclk_freq == 0)
+		clk_set_rate(p_pdm->src_dclk, 24576000);
 
-	pr_info("%s freq:%d, pll_freq:%d\n",
-		__func__, freq, pll_freq);
-
-	clk_set_rate(p_pdm->clk_pll, pll_freq);
-	clk_set_rate(p_pdm->clk_pdm_sysclk, pll_freq);
+	clk_set_rate(p_pdm->clk_pdm_sysclk, pll_freq/3);
 
 	if (pdm_dclk == 1)
-		clk_set_rate(p_pdm->clk_pdm_dclk, pll_freq / (64 * 3));
+		clk_set_rate(p_pdm->clk_pdm_dclk, 1024000);
 	else if (pdm_dclk == 2)
-		clk_set_rate(p_pdm->clk_pdm_dclk, pll_freq / (64 * 4));
+		clk_set_rate(p_pdm->clk_pdm_dclk, 768000);
 	else
-		clk_set_rate(p_pdm->clk_pdm_dclk, pll_freq / 64);
+		clk_set_rate(p_pdm->clk_pdm_dclk, 3072000);
 
 	return 0;
 }
@@ -729,7 +728,7 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		return PTR_ERR(p_pdm->pdm_pins);
 	}
 
-	p_pdm->clk_pll = devm_clk_get(&pdev->dev, "pll_clk");
+	p_pdm->clk_pll = devm_clk_get(&pdev->dev, "src_sysclk");
 	if (IS_ERR(p_pdm->clk_pll)) {
 		dev_err(&pdev->dev,
 			"Can't retrieve pll clock\n");
@@ -742,6 +741,14 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Can't retrieve clk_pdm_sysclk clock\n");
 		ret = PTR_ERR(p_pdm->clk_pdm_sysclk);
+		goto err;
+	}
+
+	p_pdm->src_dclk = devm_clk_get(&pdev->dev, "src_dclk");
+	if (IS_ERR(p_pdm->src_dclk)) {
+		dev_err(&pdev->dev,
+			"Can't retrieve data src clock\n");
+		ret = PTR_ERR(p_pdm->src_dclk);
 		goto err;
 	}
 
@@ -761,7 +768,7 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	ret = clk_set_parent(p_pdm->clk_pdm_dclk, p_pdm->clk_pll);
+	ret = clk_set_parent(p_pdm->clk_pdm_dclk, p_pdm->src_dclk);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"Can't set clk_pdm_dclk parent clock\n");

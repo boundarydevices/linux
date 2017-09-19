@@ -72,6 +72,7 @@ struct aml_tdm {
 	struct clk *clk;
 	struct clk *clk_gate;
 	struct clk *mclk;
+	bool contns_clk;
 	unsigned int id;
 	/* bclk src selection */
 	unsigned int clk_sel;
@@ -297,9 +298,9 @@ static int aml_dai_tdm_startup(struct snd_pcm_substream *substream,
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret;
 
-	ret = clk_prepare_enable(p_tdm->clk);
+	ret = clk_prepare_enable(p_tdm->mclk);
 	if (ret) {
-		pr_err("Can't enable mpll clock: %d\n", ret);
+		pr_err("Can't enable mclk: %d\n", ret);
 		goto err;
 	}
 
@@ -315,8 +316,7 @@ static void aml_dai_tdm_shutdown(struct snd_pcm_substream *substream,
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 
 	/* disable clock and gate */
-	clk_disable_unprepare(p_tdm->clk);
-
+	clk_disable_unprepare(p_tdm->mclk);
 }
 
 static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
@@ -535,7 +535,6 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 	unsigned int channels = params_channels(params);
 	int ret;
 
-
 	ret = pcm_setting_init(setting, rate, channels);
 	if (ret)
 		return ret;
@@ -580,6 +579,16 @@ static int aml_dai_set_tdm_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 
 	pr_info("asoc aml_dai_set_tdm_fmt, %#x, %p, id(%d), clksel(%d)\n",
 		fmt, p_tdm, p_tdm->id, p_tdm->clk_sel);
+	switch (fmt & SND_SOC_DAIFMT_CLOCK_MASK) {
+	case SND_SOC_DAIFMT_CONT:
+		p_tdm->contns_clk = true;
+		break;
+	case SND_SOC_DAIFMT_GATED:
+		p_tdm->contns_clk = false;
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	aml_tdm_set_format(p_tdm->actrl,
 		&(p_tdm->setting), p_tdm->clk_sel, p_tdm->id, fmt,
@@ -604,47 +613,21 @@ static unsigned int aml_mpll_mclk_ratio(unsigned int freq)
 			break;
 	}
 
-	pr_info("TDM mpll/mclk = %d\n", ratio);
-
 	return ratio;
-}
-
-static void aml_tdm_set_mclk(struct aml_tdm *p_tdm)
-{
-	struct aml_audio_controller *actrl = p_tdm->actrl;
-	unsigned int clk_id, offset;
-	unsigned int mpll_freq = 0, sysclk_freq = 0;
-
-	offset = p_tdm->clk_sel;
-
-	/* slave mode */
-	if (offset > MASTER_F)
-		return;
-
-	clk_id = p_tdm->id;
-	sysclk_freq = p_tdm->setting.sysclk;
-
-	if (sysclk_freq) {
-		unsigned int mul = aml_mpll_mclk_ratio(sysclk_freq);
-
-		mpll_freq = sysclk_freq * mul;
-		clk_set_rate(p_tdm->clk, mpll_freq);
-		aml_audiobus_write(actrl, EE_AUDIO_MCLK_A_CTRL + offset,
-						1 << 31 | //clk enable
-						clk_id << 24 | // clk src
-						(mul - 1)); //clk_div mclk
-	}
 }
 
 static int aml_dai_set_tdm_sysclk(struct snd_soc_dai *cpu_dai,
 				int clk_id, unsigned int freq, int dir)
 {
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	unsigned int ratio = aml_mpll_mclk_ratio(freq);
+
+	pr_info("aml_dai_set_tdm_sysclk freq(%d), mpll/mclk(%d)\n",
+		freq, ratio);
 
 	p_tdm->setting.sysclk = freq;
-	pr_info("aml_dai_set_tdm_sysclk, %d, %d, %d\n",
-			clk_id, freq, dir);
-	aml_tdm_set_mclk(p_tdm);
+	clk_set_rate(p_tdm->clk, freq * ratio);
+	clk_set_rate(p_tdm->mclk, freq);
 
 	return 0;
 }
@@ -837,12 +820,11 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	if (!p_tdm)
 		return -ENOMEM;
 
-
 	/* get tdm device id */
 	id = of_match_device(of_match_ptr(aml_tdm_device_id), dev);
-	pr_info("id = %lu\n", (unsigned long)id->data);
 	iddata = (unsigned long)id->data;
 	p_tdm->id = (unsigned int)iddata;
+	pr_info("%s, tdm ID = %u\n", __func__, p_tdm->id);
 
 	/* get audio controller */
 	node_prt = of_get_parent(node);
@@ -874,41 +856,19 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	if (ret < 0)
 		p_tdm->setting.lane_mask_out = 0x1;
 
-	/* get sysclk source */
-	if (iddata == TDM_A) {
-		p_tdm->clk = devm_clk_get(&pdev->dev, "mpll0");
-		if (IS_ERR(p_tdm->clk)) {
-			dev_err(&pdev->dev, "Can't retrieve mpll0 clock\n");
-			return PTR_ERR(p_tdm->clk);
-		}
-#if 0
-		p_tdm->clk_gate = devm_clk_get(&pdev->dev, "gate");
-		if (IS_ERR(p_tdm->clk_gate)) {
-			dev_err(&pdev->dev, "Can't retrieve clockgate\n");
-			return PTR_ERR(p_tdm->clk_gate);
-		}
-
-		p_tdm->mclk = devm_clk_get(&pdev->dev, "mclk");
-		if (IS_ERR(p_tdm->mclk)) {
-			dev_err(&pdev->dev, "Can't retrieve mclk\n");
-			return PTR_ERR(p_tdm->mclk);
-		}
-#endif
-	} else if (iddata == TDM_B) {
-		p_tdm->clk = devm_clk_get(&pdev->dev, "mpll1");
-		if (IS_ERR(p_tdm->clk)) {
-			dev_err(&pdev->dev, "Can't retrieve mpll1 clock\n");
-			return PTR_ERR(p_tdm->clk);
-		}
-	} else if (iddata == TDM_C) {
-		p_tdm->clk = devm_clk_get(&pdev->dev, "mpll2");
-		if (IS_ERR(p_tdm->clk)) {
-			dev_err(&pdev->dev, "Can't retrieve mpll2 clock\n");
-			return PTR_ERR(p_tdm->clk);
-		}
-	} else {
-		return -EINVAL;
+	p_tdm->clk = devm_clk_get(&pdev->dev, "clk_srcpll");
+	if (IS_ERR(p_tdm->clk)) {
+		dev_err(&pdev->dev, "Can't retrieve mpll2 clock\n");
+		return PTR_ERR(p_tdm->clk);
 	}
+
+	p_tdm->mclk = devm_clk_get(&pdev->dev, "mclk");
+	if (IS_ERR(p_tdm->mclk)) {
+		dev_err(&pdev->dev, "Can't retrieve mclk\n");
+		return PTR_ERR(p_tdm->mclk);
+	}
+
+	clk_set_parent(p_tdm->mclk, p_tdm->clk);
 
 	/* complete mclk for tdm */
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xa)
@@ -929,8 +889,6 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 		dev_err(dev, "devm_snd_soc_register_component failed\n");
 		return ret;
 	}
-
-	pr_info("%s, try register soc platform\n", __func__);
 
 	return devm_snd_soc_register_platform(dev, &aml_tdm_platform);
 }

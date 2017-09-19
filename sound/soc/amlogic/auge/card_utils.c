@@ -110,25 +110,25 @@ int aml_card_parse_clk(struct device_node *node,
 			struct aml_dai *aml_dai)
 {
 	struct clk *clk;
-	u32 val;
+	u32 val = 0;
 
 	/*
 	 * Parse dai->sysclk come from "clocks = <&xxx>"
 	 * (if system has common clock)
-	 *  or "system-clock-frequency = <xxx>"
-	 *  or device's module clock.
+	 *  and "system-clock-frequency = <xxx>".
 	 */
 	clk = of_clk_get(node, 0);
-	if (!IS_ERR(clk)) {
-		aml_dai->sysclk = clk_get_rate(clk);
-		aml_dai->clk = clk;
-	} else if (!of_property_read_u32(node,
-			"system-clock-frequency", &val)) {
-		aml_dai->sysclk = val;
-	} else {
+	if (IS_ERR(clk))
 		clk = of_clk_get(dai_of_node, 0);
-		if (!IS_ERR(clk))
-			aml_dai->sysclk = clk_get_rate(clk);
+
+	if (!IS_ERR(clk)) {
+		of_property_read_u32(node,
+			"system-clock-frequency", &val);
+		if (val == 0)
+			val = clk_get_rate(clk);
+
+		aml_dai->clk = clk;
+		aml_dai->sysclk = val;
 	}
 
 	return 0;

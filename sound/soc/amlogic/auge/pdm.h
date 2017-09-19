@@ -45,6 +45,7 @@ struct aml_pdm {
 	struct pinctrl *pdm_pins;
 	struct clk *clk_gate;
 	struct clk *clk_pll;
+	struct clk *src_dclk;
 	struct clk *clk_pdm_sysclk;
 	struct clk *clk_pdm_dclk;
 	struct toddr *tddr;

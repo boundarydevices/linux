@@ -340,14 +340,13 @@
 	meson_sound {
 		compatible = "amlogic, sound-card";
 		aml-audio-card,name = "AML-AXGSOUND";
-		//aml-audio-card,mclk-fs = <256>;
 
 		aml-audio-card,loopback = <&aml_loopback>;
 
 		aml-audio-card,dai-link@0 {
 			format = "dsp_a";
 			mclk-fs = <256>;//512
-			continuous-clock;
+			//continuous-clock;
 			bitclock-inversion;
 			//frame-inversion;
 			bitclock-master = <&aml_tdma>;
@@ -358,6 +357,7 @@
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
 				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
 			};
 			codec {
 				sound-dai = <&dummy_codec &dummy_codec>;
@@ -367,7 +367,7 @@
 		aml-audio-card,dai-link@1 {
 			format = "i2s";
 			mclk-fs = <256>;
-			continuous-clock;
+			//continuous-clock;
 			//bitclock-inversion;
 			//frame-inversion;
 			bitclock-master = <&aml_tdmb>;
@@ -378,6 +378,7 @@
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
 				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
 			};
 			codec {
 				sound-dai = <&tlv320adc3101_32>;
@@ -400,6 +401,7 @@
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
 				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
 			};
 			codec {
 				sound-dai = <&tas5707_36 &dummy_codec>;
@@ -765,10 +767,9 @@
 		dai-tdm-lane-slot-mask-out = <0 1>;
 		/* select tdm lr/bclk src, see aml_axg_tdm.c */
 		dai-tdm-clk-sel = <0>;
-		clocks = <&clkc CLKID_MPLL0>;
-					//&clkaudio CLKID_AUDIO_TDMOUTA
-					//&clkaudio CLKID_AUDIO_MCLK_A>;
-		clock-names = "mpll0", "gate", "mclk";
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
+				&clkc CLKID_MPLL0>;
+		clock-names = "mclk", "clk_srcpll";
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmin_a &tdmout_a  &tdmout_a_data>;
 	};
@@ -779,8 +780,9 @@
 		dai-tdm-lane-slot-mask-out = <1 0>;
 		dai-tdm-lane-slot-mask-in = <0 1>;
 		dai-tdm-clk-sel = <1>;
-		clocks = <&clkc CLKID_MPLL1>;
-		clock-names = "mpll1";
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
+				&clkc CLKID_MPLL1>;
+		clock-names = "mclk", "clk_srcpll";
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmb_mclk &tdmout_b &tdmin_b>;
 	};
@@ -791,8 +793,9 @@
 		dai-tdm-lane-slot-mask-out = <1 0>;
 		dai-tdm-lane-slot-mask-in = <0 1>;
 		dai-tdm-clk-sel = <2>;
-		clocks = <&clkc CLKID_MPLL2>;
-		clock-names = "mpll2";
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
+				&clkc CLKID_MPLL2>;
+		clock-names = "mclk", "clk_srcpll";
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmc_mclk &tdmout_c &tdmin_c>;
 	};
@@ -821,10 +824,15 @@
 		compatible = "amlogic, snd-pdm";
 		#sound-dai-cells = <0>;
 		clocks = <&clkaudio CLKID_AUDIO_PDM
-					&clkc CLKID_MPLL3
-					&clkaudio CLKID_AUDIO_PDMIN0
-					&clkaudio CLKID_AUDIO_PDMIN1>;
-		clock-names = "gate", "pll_clk", "pdm_dclk", "pdm_sysclk";
+			&clkc CLKID_FCLK_DIV4
+			&clkc CLKID_MPLL3
+			&clkaudio CLKID_AUDIO_PDMIN0
+			&clkaudio CLKID_AUDIO_PDMIN1>;
+		clock-names = "gate",
+			"src_sysclk",
+			"src_dclk",
+			"pdm_dclk",
+			"pdm_sysclk";
 		pinctrl-names = "pdm_pins";
 		pinctrl-0 = <&pdmin>;
 		filter_mode = <1>; /* mode 0~4, defalut:1 */

@@ -31,7 +31,7 @@ void aml_pdm_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitdepth, int channels)
 {
-	int mode, i, ch_mask = 0, sample_count = 28;
+	int mode, i, ch_mask = 0, sample_count = 23;
 
 	if (bitdepth == 32)
 		mode = 0;

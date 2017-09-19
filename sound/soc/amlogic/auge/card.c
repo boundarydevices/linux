@@ -171,8 +171,6 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 		mclk_fs = dai_props->mclk_fs;
 
 	if (mclk_fs) {
-		struct aml_dai *aml_codec_dai = &dai_props->codec_dai;
-		struct aml_dai *aml_cpu_dai = &dai_props->cpu_dai;
 		mclk = params_rate(params) * mclk_fs;
 
 		for (i = 0; i < rtd->num_codecs; i++) {
@@ -183,15 +181,6 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 
 			if (ret && ret != -ENOTSUPP)
 				goto err;
-			ret = snd_soc_dai_set_tdm_slot(codec_dai,
-					aml_codec_dai->tx_slot_mask,
-					aml_codec_dai->rx_slot_mask,
-					aml_codec_dai->slots,
-					aml_codec_dai->slot_width);
-			if (ret && ret != -ENOTSUPP) {
-				pr_err("aml-card: set_tdm_slot error\n");
-				goto err;
-			}
 		}
 
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk,
@@ -202,16 +191,6 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 		ret = snd_soc_dai_set_fmt(cpu_dai, dai_link->dai_fmt);
 		if (ret && ret != -ENOTSUPP)
 			goto err;
-
-		ret = snd_soc_dai_set_tdm_slot(cpu_dai,
-					       aml_cpu_dai->tx_slot_mask,
-					       aml_cpu_dai->rx_slot_mask,
-					       aml_cpu_dai->slots,
-					       aml_cpu_dai->slot_width);
-		if (ret && ret != -ENOTSUPP) {
-			pr_err("aml-card: set_tdm_slot error\n");
-			goto err;
-		}
 	}
 	return 0;
 err:
@@ -239,7 +218,24 @@ static struct snd_soc_ops aml_card_ops = {
 static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct aml_card_data *priv =	snd_soc_card_get_drvdata(rtd->card);
-	int ret;
+	struct snd_soc_dai *codec = rtd->codec_dai;
+	struct snd_soc_dai *cpu = rtd->cpu_dai;
+	struct aml_dai_props *dai_props =
+		aml_priv_to_props(priv, rtd->num);
+	bool idle_clk = false;
+	int ret, i;
+
+	for (i = 0; i < rtd->num_codecs; i++) {
+		codec = rtd->codec_dais[i];
+
+		ret = aml_card_init_dai(codec, &dai_props->codec_dai);
+		if (ret < 0)
+			return ret;
+	}
+
+	ret = aml_card_init_dai(cpu, &dai_props->cpu_dai);
+	if (ret < 0)
+		return ret;
 
 	ret = aml_card_init_hp(rtd->card, &priv->hp_jack, PREFIX);
 	if (ret < 0)
@@ -248,6 +244,15 @@ static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 	ret = aml_card_init_mic(rtd->card, &priv->hp_jack, PREFIX);
 	if (ret < 0)
 		return ret;
+
+	/* enable dai-link mclk when CONTINUOUS clk setted */
+	idle_clk = !!(rtd->dai_link->dai_fmt & SND_SOC_DAIFMT_CONT);
+	if (idle_clk && dai_props->cpu_dai.clk) {
+		clk_set_rate(dai_props->cpu_dai.clk, dai_props->cpu_dai.sysclk);
+		ret = clk_prepare_enable(dai_props->cpu_dai.clk);
+		if (ret)
+			return ret;
+	}
 
 	return 0;
 }
