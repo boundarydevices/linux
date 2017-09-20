@@ -214,8 +214,7 @@ int clockevent_init_and_register(struct device_node *np)
 
 	timer = np;
 	if (!timer) {
-		pr_info(" * %s missing timer phandle\n",
-				     timer->full_name);
+		pr_info(" * missing timer phandle\n");
 		return -1;
 	}
 	if (of_property_read_string(timer, "timer_name",
