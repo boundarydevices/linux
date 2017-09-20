@@ -233,10 +233,10 @@ struct vdin_dev_s {
 	/*cma_config_flag:1:share with codec_mm;0:cma alone*/
 	unsigned int			cma_config_flag;
 #ifdef CONFIG_CMA
-	struct platform_device	*this_pdev[2];
-	struct page			*venc_pages[2];
-	unsigned int			cma_mem_size[2];/*BYTE*/
-	unsigned int			cma_mem_alloc[2];
+	struct platform_device	*this_pdev;
+	struct page			*venc_pages;
+	unsigned int			cma_mem_size;/*BYTE*/
+	unsigned int			cma_mem_alloc;
 #endif
 	/* bit0: enable/disable; bit4: luma range info */
 	unsigned int            csc_cfg;

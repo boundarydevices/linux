@@ -55,7 +55,8 @@ int tvin_reg_frontend(struct tvin_frontend_s *fe)
 	ulong flags;
 	struct tvin_frontend_s *f, *t;
 
-	if (!fe->name || !fe->dec_ops || !fe->dec_ops->support || !fe->sm_ops)
+	if (!strlen(fe->name) || !fe->dec_ops ||
+		!fe->dec_ops->support || !fe->sm_ops)
 		return -1;
 
 	/* check whether the frontend is registered already */

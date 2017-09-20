@@ -292,7 +292,7 @@ static const struct vframe_operations_s vdin_vf_ops = {
 #ifdef CONFIG_CMA
 void vdin_cma_alloc(struct vdin_dev_s *devp)
 {
-	char vdin_name[5];
+	char vdin_name[6];
 	unsigned int mem_size, h_size;
 	int flags = CODEC_MM_FLAGS_CMA_FIRST|CODEC_MM_FLAGS_CMA_CLEAR|
 		CODEC_MM_FLAGS_CPU;
@@ -324,13 +324,13 @@ void vdin_cma_alloc(struct vdin_dev_s *devp)
 	mem_size = h_size * devp->v_active;
 	mem_size = PAGE_ALIGN(mem_size)*max_buf_num;
 	mem_size = (mem_size/PAGE_SIZE + 1)*PAGE_SIZE;
-	if (mem_size > devp->cma_mem_size[devp->index])
-		mem_size = devp->cma_mem_size[devp->index];
+	if (mem_size > devp->cma_mem_size)
+		mem_size = devp->cma_mem_size;
 	if (devp->cma_config_en == 0)
 		return;
-	if (devp->cma_mem_alloc[devp->index] == 1)
+	if (devp->cma_mem_alloc == 1)
 		return;
-	devp->cma_mem_alloc[devp->index] = 1;
+	devp->cma_mem_alloc = 1;
 	if (devp->cma_config_flag == 1) {
 		if (devp->index == 0)
 			strcpy(vdin_name, "vdin0");
@@ -348,12 +348,12 @@ void vdin_cma_alloc(struct vdin_dev_s *devp)
 			pr_info("vdin%d codec cma alloc ok!\n", devp->index);
 		}
 	} else if (devp->cma_config_flag == 0) {
-		devp->venc_pages[devp->index] = dma_alloc_from_contiguous(
-			&(devp->this_pdev[devp->index]->dev),
-			devp->cma_mem_size[devp->index] >> PAGE_SHIFT, 0);
+		devp->venc_pages = dma_alloc_from_contiguous(
+			&(devp->this_pdev->dev),
+			devp->cma_mem_size >> PAGE_SHIFT, 0);
 		if (devp->venc_pages) {
 			devp->mem_start =
-				page_to_phys(devp->venc_pages[devp->index]);
+				page_to_phys(devp->venc_pages);
 			devp->mem_size  = mem_size;
 			pr_info("vdin%d mem_start = 0x%x, mem_size = 0x%x\n",
 				devp->index, devp->mem_start, devp->mem_size);
@@ -367,12 +367,12 @@ void vdin_cma_alloc(struct vdin_dev_s *devp)
 
 void vdin_cma_release(struct vdin_dev_s *devp)
 {
-	char vdin_name[5];
+	char vdin_name[6];
 
 	if (devp->cma_config_en == 0)
 		return;
 	if ((devp->cma_config_flag == 1) && devp->mem_start
-		&& (devp->cma_mem_alloc[devp->index] == 1)) {
+		&& (devp->cma_mem_alloc == 1)) {
 		if (devp->index == 0)
 			strcpy(vdin_name, "vdin0");
 		else if (devp->index == 1)
@@ -380,17 +380,17 @@ void vdin_cma_release(struct vdin_dev_s *devp)
 		codec_mm_free_for_dma(vdin_name, devp->mem_start);
 		devp->mem_start = 0;
 		devp->mem_size = 0;
-		devp->cma_mem_alloc[devp->index] = 0;
+		devp->cma_mem_alloc = 0;
 		pr_info("vdin%d codec cma release ok!\n", devp->index);
-	} else if (devp->venc_pages[devp->index]
-		&& devp->cma_mem_size[devp->index]
-		&& (devp->cma_mem_alloc[devp->index] == 1)
+	} else if (devp->venc_pages
+		&& devp->cma_mem_size
+		&& (devp->cma_mem_alloc == 1)
 		&& (devp->cma_config_flag == 0)) {
-		devp->cma_mem_alloc[devp->index] = 0;
+		devp->cma_mem_alloc = 0;
 		dma_release_from_contiguous(
-			&(devp->this_pdev[devp->index]->dev),
-			devp->venc_pages[devp->index],
-			devp->cma_mem_size[devp->index] >> PAGE_SHIFT);
+			&(devp->this_pdev->dev),
+			devp->venc_pages,
+			devp->cma_mem_size >> PAGE_SHIFT);
 		pr_info("vdin%d cma release ok!\n", devp->index);
 	}
 }
@@ -901,6 +901,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_set_all_regs(devp);
 
 	if (!(devp->parm.flag & TVIN_PARM_FLAG_CAP) &&
+		(devp->frontend) &&
 		devp->frontend->dec_ops &&
 		devp->frontend->dec_ops->start &&
 		(devp->parm.port != TVIN_PORT_CVBS3))
@@ -1502,8 +1503,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 /* char provider_name[] = "deinterlace"; */
 /* char provider_vdin0[] = "vdin0"; */
 
-	isr_log(devp->vfp);
-	irq_cnt++;
 	/* debug interrupt interval time
 	 *
 	 * this code about system time must be outside of spinlock.
@@ -2289,7 +2288,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 	case TVIN_IOC_G_BUF_INFO: {
 		struct tvin_buf_info_s buf_info;
-
+		memset(&buf_info, 0, sizeof(buf_info));
 		buf_info.buf_count	= devp->canvas_max_num;
 		buf_info.buf_width	= devp->canvas_w;
 		buf_info.buf_height = devp->canvas_h;
@@ -2306,7 +2305,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case TVIN_IOC_GET_BUF: {
 		struct tvin_video_buf_s tvbuf;
 		struct vf_entry *vfe;
-
+		memset(&tvbuf, 0, sizeof(tvbuf));
 		vfe = list_entry(devp->vfp->wr_next, struct vf_entry, list);
 		devp->vfp->wr_next = devp->vfp->wr_next->next;
 		if (devp->vfp->wr_next != &devp->vfp->wr_list)
@@ -2612,19 +2611,19 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		if (vdevp->cma_config_flag == 1) {
 			ret = of_property_read_u32(pdev->dev.of_node,
 				"cma_size",
-				&(vdevp->cma_mem_size[vdevp->index]));
+				&(vdevp->cma_mem_size));
 			if (ret)
 				pr_err("don't find  match cma_size\n");
 			else
-				vdevp->cma_mem_size[vdevp->index] *= SZ_1M;
+				vdevp->cma_mem_size *= SZ_1M;
 		} else if (vdevp->cma_config_flag == 0)
-			vdevp->cma_mem_size[vdevp->index] =
+			vdevp->cma_mem_size =
 				dma_get_cma_size_int_byte(&pdev->dev);
-		vdevp->this_pdev[vdevp->index] = pdev;
-		vdevp->cma_mem_alloc[vdevp->index] = 0;
+		vdevp->this_pdev = pdev;
+		vdevp->cma_mem_alloc = 0;
 		vdevp->cma_config_en = 1;
 		pr_info("vdin%d cma_mem_size = %d MB\n", vdevp->index,
-				(u32)vdevp->cma_mem_size[vdevp->index]/SZ_1M);
+				(u32)vdevp->cma_mem_size/SZ_1M);
 	}
 #endif
 	use_reserved_mem = 0;
@@ -2821,12 +2820,12 @@ static int vdin_drv_remove(struct platform_device *pdev)
 	vdin_delete_device(vdevp->index);
 	cdev_del(&vdevp->cdev);
 	vdin_devp[vdevp->index] = NULL;
-	kfree(vdevp);
 
 	/* free drvdata */
 	dev_set_drvdata(vdevp->dev, NULL);
 	platform_set_drvdata(pdev, NULL);
 
+	kfree(vdevp);
 	pr_info("%s: driver removed ok\n", __func__);
 	return 0;
 }

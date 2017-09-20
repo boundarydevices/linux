@@ -162,7 +162,7 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 	struct file *filp = NULL;
 	loff_t pos = 0;
 	void *buf = NULL;
-	int i = 0;
+	loff_t i = 0;
 	unsigned int canvas_real_size = devp->canvas_h * devp->canvas_w;
 	mm_segment_t old_fs = get_fs();
 
@@ -174,7 +174,7 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 		return;
 	}
 	if ((devp->cma_config_flag == 1) &&
-		(devp->cma_mem_alloc[devp->index] == 0)) {
+		(devp->cma_mem_alloc == 0)) {
 		pr_info("%s:no cma alloc mem!!!\n", __func__);
 		return;
 	}
@@ -188,7 +188,7 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 			buf = phys_to_virt(devp->mem_start +
 				devp->canvas_max_size*i);
 		vfs_write(filp, buf, canvas_real_size, &pos);
-		pr_info("write buffer %2d of %2u  to %s.\n",
+		pr_info("write buffer %lld of %2u  to %s.\n",
 				i, devp->canvas_max_num, path);
 	}
 	vfs_fsync(filp, 0);
@@ -427,11 +427,15 @@ static ssize_t vdin_attr_store(struct device *dev,
 			/* start = simple_strtol(parm[2], NULL, 16); */
 			/* offset = simple_strtol(parm[3], NULL, 16); */
 
-			if (kstrtol(parm[2], 16, &val) < 0)
+			if (kstrtol(parm[2], 16, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			start = val;
-			if (kstrtol(parm[3], 16, &val) < 0)
+			if (kstrtol(parm[3], 16, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			offset = val;
 			dump_other_mem(parm[1], start, offset);
 		} else if (parm[1] != NULL) {
@@ -480,8 +484,10 @@ static ssize_t vdin_attr_store(struct device *dev,
 			break;
 		}
 		/* fmt = simple_strtol(parm[2], NULL, 16); */
-		if (kstrtol(parm[2], 16, &val) < 0)
+		if (kstrtol(parm[2], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		fmt = val;
 
 		/* devp->flags |= VDIN_FLAG_FS_OPENED; */
@@ -563,6 +569,7 @@ start_chk:
 			pr_err("fps cfmt > /sys/class/vdin/vdinx/attr.\n");
 			pr_err("port mybe bt656 or viuin,");
 			pr_err("fps the frame rate of input.\n");
+			kfree(buf_orig);
 			return len;
 		}
 		memset(&param, 0, sizeof(struct vdin_parm_s));
@@ -584,14 +591,20 @@ start_chk:
 		/* param.h_active = simple_strtol(parm[2], NULL, 10); */
 		/* param.v_active = simple_strtol(parm[3], NULL, 10); */
 		/* param.frame_rate = simple_strtol(parm[4], NULL, 10); */
-		if (kstrtol(parm[2], 10, &val) < 0)
+		if (kstrtol(parm[2], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		param.h_active = val;
-		if (kstrtol(parm[3], 10, &val) < 0)
+		if (kstrtol(parm[3], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		param.v_active = val;
-		if (kstrtol(parm[4], 10, &val) < 0)
+		if (kstrtol(parm[4], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		param.frame_rate = val;
 		pr_info(" hactive:%d,vactive:%d, rate:%d\n",
 				param.h_active,
@@ -601,8 +614,10 @@ start_chk:
 			param.cfmt = TVIN_YUV422;
 		else {
 			/* param.cfmt = simple_strtol(parm[5], NULL, 10); */
-			if (kstrtol(parm[5], 10, &val) < 0)
+			if (kstrtol(parm[5], 10, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			param.cfmt = val;
 		}
 		pr_info(" cfmt:%d\n", param.cfmt);
@@ -610,8 +625,10 @@ start_chk:
 			param.dfmt = TVIN_YUV422;
 		else {
 			/* param.dfmt = simple_strtol(parm[6], NULL, 10); */
-			if (kstrtol(parm[6], 10, &val) < 0)
+			if (kstrtol(parm[6], 10, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			param.dfmt = val;
 		}
 		pr_info(" dfmt:%d\n", param.dfmt);
@@ -621,8 +638,10 @@ start_chk:
 			/* param.scan_mode =
 			 * simple_strtol(parm[7], NULL, 10);
 			 */
-			if (kstrtol(parm[7], 10, &val) < 0)
+			if (kstrtol(parm[7], 10, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			param.scan_mode = val;
 		}
 		pr_info(" scan_mode:%d\n", param.scan_mode);
@@ -634,16 +653,20 @@ start_chk:
 	} else if (!strcmp(parm[0], "disablesm"))
 		del_timer_sync(&devp->timer);
 	else if (!strcmp(parm[0], "freeze")) {
-		if (!(devp->flags & VDIN_FLAG_DEC_STARTED))
+		if (!(devp->flags & VDIN_FLAG_DEC_STARTED)) {
+			kfree(buf_orig);
 			return len;
+		}
 		if (devp->fmt_info_p->scan_mode == TVIN_SCAN_MODE_PROGRESSIVE)
 			vdin_vf_freeze(devp->vfp, 1);
 		else
 			vdin_vf_freeze(devp->vfp, 2);
 
 	} else if (!strcmp(parm[0], "unfreeze")) {
-		if (!(devp->flags & VDIN_FLAG_DEC_STARTED))
+		if (!(devp->flags & VDIN_FLAG_DEC_STARTED)) {
+			kfree(buf_orig);
 			return len;
+		}
 		vdin_vf_unfreeze(devp->vfp);
 	} else if (!strcmp(parm[0], "conversion")) {
 		if (parm[1] &&
@@ -655,14 +678,20 @@ start_chk:
 			/* simple_strtoul(parm[2], NULL, 10); */
 			/* devp->debug.dest_cfmt = */
 			/* simple_strtoul(parm[3], NULL, 10); */
-			if (kstrtoul(parm[1], 10, &val) < 0)
+			if (kstrtoul(parm[1], 10, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			devp->debug.scaler4w = val;
-			if (kstrtoul(parm[2], 10, &val) < 0)
+			if (kstrtoul(parm[2], 10, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			devp->debug.scaler4h = val;
-			if (kstrtoul(parm[3], 10, &val) < 0)
+			if (kstrtoul(parm[3], 10, &val) < 0) {
+				kfree(buf_orig);
 				return -EINVAL;
+			}
 			devp->debug.dest_cfmt = val;
 
 			devp->flags |= VDIN_FLAG_MANUAL_CONVERSION;
@@ -715,11 +744,15 @@ start_chk:
 	} else if (!strcmp(parm[0], "rgb_xy")) {
 		unsigned int x, y;
 
-		if (kstrtoul(parm[1], 10, &val) < 0)
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		x = val;
-		if (kstrtoul(parm[2], 10, &val) < 0)
+		if (kstrtoul(parm[2], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		y = val;
 		vdin_set_prob_xy(devp->addr_offset, x, y, devp);
 	} else if (!strcmp(parm[0], "rgb_info")) {
@@ -728,11 +761,15 @@ start_chk:
 		vdin_get_prob_rgb(devp->addr_offset, &r, &g, &b);
 		pr_info("rgb_info-->r:%d,g:%d,b:%d\n", r, g, b);
 	} else if (!strcmp(parm[0], "mpeg2vdin")) {
-		if (kstrtoul(parm[1], 10, &val) < 0)
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		devp->h_active = val;
-		if (kstrtoul(parm[2], 10, &val) < 0)
+		if (kstrtoul(parm[2], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		devp->v_active = val;
 		vdin_set_mpegin(devp);
 		pr_info("mpeg2vdin:h_active:%d,v_active:%d\n",
@@ -747,19 +784,24 @@ start_chk:
 	} else if (!strcmp(parm[0], "mat0_xy")) {
 		unsigned int x, y;
 
-		if (kstrtoul(parm[1], 10, &val) < 0)
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		x = val;
-		if (kstrtoul(parm[2], 10, &val) < 0)
+		if (kstrtoul(parm[2], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		y = val;
 		pr_info("pos x  :%d, pos y  :%d\n", x, y);
 		vdin_set_prob_matrix0_xy(devp->addr_offset, x, y, devp);
 	} else if (!strcmp(parm[0], "mat0_set")) {
 		unsigned int x;
-
-		if (kstrtoul(parm[1], 10, &val) < 0)
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		x = val;
 		pr_info("matrix set : %d\n", x);
 		vdin_set_before_after_mat0(devp->addr_offset, x, devp);
@@ -862,14 +904,18 @@ start_chk:
 		vdin_resume_dec(devp);
 		pr_info("resume_dec(%d) ok\n\n", devp->index);
 	} else if (!strcmp(parm[0], "color_depth")) {
-		if (kstrtoul(parm[1], 10, &val) < 0)
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		devp->color_depth_config = val;
 		pr_info("color_depth(%d):%d\n\n", devp->index,
 			devp->color_depth_config);
 	} else if (!strcmp(parm[0], "color_depth_mode")) {
-		if (kstrtoul(parm[1], 10, &val) < 0)
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		devp->color_depth_mode = val;
 		pr_info("color_depth_mode(%d):%d\n\n", devp->index,
 			devp->color_depth_mode);
@@ -1033,21 +1079,29 @@ struct device_attribute *attr, const char *buf, size_t count)
 	/* crop->vs = simple_strtol(parm[2], NULL, 10); */
 	/* crop->ve = simple_strtol(parm[3], NULL, 10); */
 
-	if (kstrtol(parm[0], 10, &val) < 0)
+	if (kstrtol(parm[0], 10, &val) < 0) {
+		kfree(buf_orig);
 		return -EINVAL;
+	}
 	crop->hs = val;
-	if (kstrtol(parm[1], 10, &val) < 0)
+	if (kstrtol(parm[1], 10, &val) < 0) {
+		kfree(buf_orig);
 		return -EINVAL;
+	}
 	crop->he = val;
-	if (kstrtol(parm[2], 10, &val) < 0)
+	if (kstrtol(parm[2], 10, &val) < 0) {
+		kfree(buf_orig);
 		return -EINVAL;
+	}
 	crop->vs = val;
-	if (kstrtol(parm[3], 10, &val) < 0)
+	if (kstrtol(parm[3], 10, &val) < 0) {
+		kfree(buf_orig);
 		return -EINVAL;
+	}
 	crop->ve = val;
-
 	pr_info("hs_offset %u, he_offset %u, vs_offset %u, ve_offset %u.\n",
 				crop->hs, crop->he, crop->vs, crop->ve);
+	kfree(buf_orig);
 	return count;
 }
 
@@ -1111,7 +1165,11 @@ static ssize_t vdin_cm2_store(struct device *dev,
 			continue;
 		parm[n++] = token;
 	}
-
+	if (n == 0) {
+		pr_info("parm[] not initialized.\n");
+		kfree(buf_orig);
+		return count;
+	}
 	if ((parm[0][0] == 'w') && parm[0][1] == 'm') {
 		if (n != 7) {
 			pr_info("read : invalid parameter\n");
@@ -1120,8 +1178,10 @@ static ssize_t vdin_cm2_store(struct device *dev,
 			return count;
 		}
 		/* addr = simple_strtol(parm[1], NULL, 16); */
-		if (kstrtol(parm[1], 16, &val) < 0)
+		if (kstrtol(parm[1], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		addr = val;
 		addr = addr - addr%8;
 		/* data[0] = simple_strtol(parm[2], NULL, 16); */
@@ -1129,20 +1189,30 @@ static ssize_t vdin_cm2_store(struct device *dev,
 		/* data[2] = simple_strtol(parm[4], NULL, 16); */
 		/* data[3] = simple_strtol(parm[5], NULL, 16); */
 		/* data[4] = simple_strtol(parm[6], NULL, 16); */
-		if (kstrtol(parm[2], 16, &val) < 0)
+		if (kstrtol(parm[2], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		data[0] = val;
-		if (kstrtol(parm[3], 16, &val) < 0)
+		if (kstrtol(parm[3], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		data[1] = val;
-		if (kstrtol(parm[4], 16, &val) < 0)
+		if (kstrtol(parm[4], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		data[2] = val;
-		if (kstrtol(parm[5], 16, &val) < 0)
+		if (kstrtol(parm[5], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		data[3] = val;
-		if (kstrtol(parm[6], 16, &val) < 0)
+		if (kstrtol(parm[6], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		data[4] = val;
 		aml_write_vcbus(addr_port, addr);
 		aml_write_vcbus(data_port, data[0]);
@@ -1164,8 +1234,10 @@ static ssize_t vdin_cm2_store(struct device *dev,
 			return count;
 		}
 		/* addr = simple_strtol(parm[1], NULL, 16); */
-		if (kstrtol(parm[1], 16, &val) < 0)
+		if (kstrtol(parm[1], 16, &val) < 0) {
+			kfree(buf_orig);
 			return -EINVAL;
+		}
 		addr = val;
 		addr = addr - addr%8;
 		aml_write_vcbus(addr_port, addr);
