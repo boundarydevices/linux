@@ -14084,3 +14084,7 @@ AMLOGIC tee
 M:  Nanxin Qin <nanxin.qin@amlogic.com>
 F: drivers/amlogic/tee/*
 F: include/linux/amlogic/tee.h
+
+AMLOGIC remove audio_defconfig
+M: Ao Xu <ao.xu@amlogic.com>
+F: scripts/amlogic/configs/meson64_audio_defconfig
