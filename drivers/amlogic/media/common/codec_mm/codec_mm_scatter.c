@@ -2443,13 +2443,13 @@ static int codec_mm_scatter_free_all_ignorecache_in(
 	} while ((smgt->scatters_cnt > 0) && (retry_num++ < 1000));
 	if (need_retry || smgt->scatters_cnt > 0) {
 		pr_info("can't free all scatter, because some have used!!\n");
-		codec_mm_dump_all_scatters();
+		/*codec_mm_dump_all_scatters();*/
 	}
 	codec_mm_free_all_free_slots_in(smgt);
 	if (smgt->total_page_num > 0) {
 		/*have some not free,dump tables for debug */
 		pr_info("Some slots have not free!!\n\n");
-		codec_mm_dump_all_hash_table();
+		/*codec_mm_dump_all_hash_table();*/
 	}
 	mutex_unlock(&smgt->monitor_lock);
 	return smgt->total_page_num;
