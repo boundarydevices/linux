@@ -360,7 +360,8 @@ config TOUCHSCREEN_ELAN_TS
 
 config TOUCHSCREEN_FT5X06
 	tristate "Focaltech FT5X06 5 point touchscreen"
-	select I2C
+	depends on I2C
+	select REGMAP_I2C
 	help
 	  If you say yes here you get touchscreen support through
 	  FocalTech's FT5X06 controller.
