@@ -14088,3 +14088,7 @@ F: include/linux/amlogic/tee.h
 AMLOGIC remove audio_defconfig
 M: Ao Xu <ao.xu@amlogic.com>
 F: scripts/amlogic/configs/meson64_audio_defconfig
+
+AMLOGIC gpio key wakeup function
+M: Hong Guo <hong.guo@amlogic.com>
+F: drivers/amlogic/input/keyboard/*

@@ -20,4 +20,10 @@ config AMLOGIC_ADC_KEYPADS
 	help
 	  Say Y here if you want to use the Meson ADC keypad.
 
+config AMLOGIC_GPIO_KEY
+        tristate "Amlogic gpio key device surport"
+        default n
+        help
+          Say Y here if you want to use the amlogic hold key.
+
 endif # AMLOGIC_INPUT_KEYBOARD
