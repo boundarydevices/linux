@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/gpio.h>
 #include <linux/module.h>
@@ -32,7 +33,9 @@ struct pwm_bl_data {
 	unsigned int		*levels;
 	bool			enabled;
 	struct regulator	*power_supply;
-	struct gpio_desc	*enable_gpio;
+	struct gpio_descs	*enable_gpios;
+	struct gpio_descs	legacy_enable;
+	struct gpio_desc	*legacy_desc;	/* part of above struct gpio_descs */
 	unsigned int		scale;
 	bool			legacy;
 	int			disp_cnt;
@@ -45,6 +48,25 @@ struct pwm_bl_data {
 	void			(*exit)(struct device *);
 };
 
+static void set_gpios(struct gpio_descs *d, int active)
+{
+	int i;
+
+	if (active) {
+		for (i = 0; i < d->ndescs; i++) {
+			if (i)
+				msleep(10);
+			gpiod_set_value_cansleep(d->desc[i], active);
+		}
+	} else {
+		for (i = d->ndescs - 1; i >= 0 ; i--) {
+			gpiod_set_value_cansleep(d->desc[i], active);
+			if (i)
+				msleep(10);
+		}
+	}
+}
+
 static void pwm_backlight_power_on(struct pwm_bl_data *pb, int brightness)
 {
 	int err;
@@ -56,8 +78,8 @@ static void pwm_backlight_power_on(struct pwm_bl_data *pb, int brightness)
 	if (err < 0)
 		dev_err(pb->dev, "failed to enable power supply\n");
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 1);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 1);
 
 	pwm_enable(pb->pwm);
 	pb->enabled = true;
@@ -71,8 +93,8 @@ static void pwm_backlight_power_off(struct pwm_bl_data *pb)
 	pwm_config(pb->pwm, 0, pb->period);
 	pwm_disable(pb->pwm);
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 0);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 0);
 
 	regulator_disable(pb->power_supply);
 	pb->enabled = false;
@@ -263,10 +285,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->dev = &pdev->dev;
 	pb->enabled = false;
 
-	pb->enable_gpio = devm_gpiod_get_optional(&pdev->dev, "enable",
-						  GPIOD_ASIS);
-	if (IS_ERR(pb->enable_gpio)) {
-		ret = PTR_ERR(pb->enable_gpio);
+	pb->enable_gpios = devm_gpiod_get_array_optional(&pdev->dev, "enable",
+							 GPIOD_OUT_LOW);
+	if (IS_ERR(pb->enable_gpios)) {
+		ret = PTR_ERR(pb->enable_gpios);
 		goto err_alloc;
 	}
 
@@ -274,7 +296,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	 * Compatibility fallback for drivers still using the integer GPIO
 	 * platform data. Must go away soon.
 	 */
-	if (!pb->enable_gpio && gpio_is_valid(data->enable_gpio)) {
+	if (!pb->enable_gpios && gpio_is_valid(data->enable_gpio)) {
 		ret = devm_gpio_request_one(&pdev->dev, data->enable_gpio,
 					    GPIOF_OUT_INIT_HIGH, "enable");
 		if (ret < 0) {
@@ -283,22 +305,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			goto err_alloc;
 		}
 
-		pb->enable_gpio = gpio_to_desc(data->enable_gpio);
-	}
-
-	if (pb->enable_gpio) {
-		/*
-		 * If the driver is probed from the device tree and there is a
-		 * phandle link pointing to the backlight node, it is safe to
-		 * assume that another driver will enable the backlight at the
-		 * appropriate time. Therefore, if it is disabled, keep it so.
-		 */
-		if (node && node->phandle &&
-		    gpiod_get_direction(pb->enable_gpio) == GPIOF_DIR_OUT &&
-		    gpiod_get_value(pb->enable_gpio) == 0)
-			initial_blank = FB_BLANK_POWERDOWN;
-		else
-			gpiod_direction_output(pb->enable_gpio, 1);
+		pb->legacy_enable.desc[0] = gpio_to_desc(data->enable_gpio);
+		pb->legacy_enable.ndescs = 1;
+		pb->enable_gpios = &pb->legacy_enable;
+		gpiod_direction_output(pb->legacy_enable.desc[0], 1);
 	}
 
 	pb->power_supply = devm_regulator_get(&pdev->dev, "power");
