@@ -26,7 +26,9 @@ struct pwm_bl_data {
 	unsigned int		*levels;
 	bool			enabled;
 	struct regulator	*power_supply;
-	struct gpio_desc	*enable_gpio;
+	struct gpio_descs	*enable_gpios;
+	struct gpio_descs	legacy_enable;
+	struct gpio_desc	*legacy_desc;	/* part of above struct gpio_descs */
 	unsigned int		scale;
 	bool			legacy;
 	unsigned int		post_pwm_on_delay;
@@ -40,6 +42,37 @@ struct pwm_bl_data {
 	int			(*check_fb)(struct device *, struct fb_info *);
 	void			(*exit)(struct device *);
 };
+
+static void set_gpios(struct gpio_descs *d, int active)
+{
+	int i;
+
+	if (active) {
+		for (i = 0; i < d->ndescs; i++) {
+			if (i)
+				msleep(10);
+			gpiod_set_value_cansleep(d->desc[i], active);
+		}
+	} else {
+		for (i = d->ndescs - 1; i >= 0 ; i--) {
+			gpiod_set_value_cansleep(d->desc[i], active);
+			if (i)
+				msleep(10);
+		}
+	}
+}
+
+/* return 0 if any gpio is disabled, otherwise 1 */
+static int check_gpios_enabled(struct gpio_descs *d)
+{
+	int i;
+
+	for (i = 0; i < d->ndescs; i++) {
+		if (gpiod_get_value_cansleep(d->desc[i]) == 0)
+			return 0;
+	}
+	return 1;
+}
 
 static void pwm_backlight_power_on(struct pwm_bl_data *pb)
 {
@@ -60,8 +93,8 @@ static void pwm_backlight_power_on(struct pwm_bl_data *pb)
 	if (pb->post_pwm_on_delay)
 		msleep(pb->post_pwm_on_delay);
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 1);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 1);
 
 	pb->enabled = true;
 }
@@ -74,8 +107,8 @@ static void pwm_backlight_power_off(struct pwm_bl_data *pb)
 	if (!pb->enabled)
 		return;
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 0);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 0);
 
 	if (pb->pwm_off_delay)
 		msleep(pb->pwm_off_delay);
@@ -437,8 +470,9 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 	 * If the enable GPIO is present, observable (either as input
 	 * or output) and off then the backlight is not currently active.
 	 * */
-	if (pb->enable_gpio && gpiod_get_value_cansleep(pb->enable_gpio) == 0)
-		active = false;
+	if (pb->enable_gpios)
+		if (!check_gpios_enabled(pb->enable_gpios))
+			active = false;
 
 	if (!regulator_is_enabled(pb->power_supply))
 		active = false;
@@ -447,11 +481,11 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 		active = false;
 
 	/*
-	 * Synchronize the enable_gpio with the observed state of the
+	 * Synchronize the enable_gpios with the observed state of the
 	 * hardware.
 	 */
-	if (pb->enable_gpio)
-		gpiod_direction_output(pb->enable_gpio, active);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, active);
 
 	/*
 	 * Do not change pb->enabled here! pb->enabled essentially
@@ -513,10 +547,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->post_pwm_on_delay = data->post_pwm_on_delay;
 	pb->pwm_off_delay = data->pwm_off_delay;
 
-	pb->enable_gpio = devm_gpiod_get_optional(&pdev->dev, "enable",
-						  GPIOD_ASIS);
-	if (IS_ERR(pb->enable_gpio)) {
-		ret = PTR_ERR(pb->enable_gpio);
+	pb->enable_gpios = devm_gpiod_get_array_optional(&pdev->dev, "enable",
+							 GPIOD_OUT_LOW);
+	if (IS_ERR(pb->enable_gpios)) {
+		ret = PTR_ERR(pb->enable_gpios);
 		goto err_alloc;
 	}
 
