@@ -27,7 +27,9 @@ struct pwm_bl_data {
 	unsigned int		*levels;
 	bool			enabled;
 	struct regulator	*power_supply;
-	struct gpio_desc	*enable_gpio;
+	struct gpio_descs	*enable_gpios;
+	struct gpio_descs	legacy_enable;
+	struct gpio_desc	*legacy_desc;	/* part of above struct gpio_descs */
 	unsigned int		scale;
 	bool			legacy;
 	unsigned int		post_pwm_on_delay;
@@ -41,6 +43,25 @@ struct pwm_bl_data {
 	int			(*check_fb)(struct device *, struct fb_info *);
 	void			(*exit)(struct device *);
 };
+
+static void set_gpios(struct gpio_descs *d, int active)
+{
+	int i;
+
+	if (active) {
+		for (i = 0; i < d->ndescs; i++) {
+			if (i)
+				msleep(10);
+			gpiod_set_value_cansleep(d->desc[i], active);
+		}
+	} else {
+		for (i = d->ndescs - 1; i >= 0 ; i--) {
+			gpiod_set_value_cansleep(d->desc[i], active);
+			if (i)
+				msleep(10);
+		}
+	}
+}
 
 static void pwm_backlight_power_on(struct pwm_bl_data *pb)
 {
@@ -61,8 +82,8 @@ static void pwm_backlight_power_on(struct pwm_bl_data *pb)
 	if (pb->post_pwm_on_delay)
 		msleep(pb->post_pwm_on_delay);
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 1);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 1);
 
 	pb->enabled = true;
 }
@@ -75,8 +96,8 @@ static void pwm_backlight_power_off(struct pwm_bl_data *pb)
 	if (!pb->enabled)
 		return;
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 0);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 0);
 
 	if (pb->pwm_off_delay)
 		msleep(pb->pwm_off_delay);
@@ -443,17 +464,6 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 	if (!node || !node->phandle)
 		return FB_BLANK_UNBLANK;
 
-	/*
-	 * If the driver is probed from the device tree and there is a
-	 * phandle link pointing to the backlight node, it is safe to
-	 * assume that another driver will enable the backlight at the
-	 * appropriate time. Therefore, if it is disabled, keep it so.
-	 */
-
-	/* if the enable GPIO is disabled, do not enable the backlight */
-	if (pb->enable_gpio && gpiod_get_value_cansleep(pb->enable_gpio) == 0)
-		return FB_BLANK_POWERDOWN;
-
 	/* The regulator is disabled, do not enable the backlight */
 	if (!regulator_is_enabled(pb->power_supply))
 		return FB_BLANK_POWERDOWN;
@@ -506,10 +516,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->post_pwm_on_delay = data->post_pwm_on_delay;
 	pb->pwm_off_delay = data->pwm_off_delay;
 
-	pb->enable_gpio = devm_gpiod_get_optional(&pdev->dev, "enable",
-						  GPIOD_ASIS);
-	if (IS_ERR(pb->enable_gpio)) {
-		ret = PTR_ERR(pb->enable_gpio);
+	pb->enable_gpios = devm_gpiod_get_array_optional(&pdev->dev, "enable",
+							 GPIOD_OUT_LOW);
+	if (IS_ERR(pb->enable_gpios)) {
+		ret = PTR_ERR(pb->enable_gpios);
 		goto err_alloc;
 	}
 
@@ -517,7 +527,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	 * Compatibility fallback for drivers still using the integer GPIO
 	 * platform data. Must go away soon.
 	 */
-	if (!pb->enable_gpio && gpio_is_valid(data->enable_gpio)) {
+	if (!pb->enable_gpios && gpio_is_valid(data->enable_gpio)) {
 		ret = devm_gpio_request_one(&pdev->dev, data->enable_gpio,
 					    GPIOF_OUT_INIT_HIGH, "enable");
 		if (ret < 0) {
@@ -526,20 +536,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			goto err_alloc;
 		}
 
-		pb->enable_gpio = gpio_to_desc(data->enable_gpio);
+		pb->legacy_enable.desc[0] = gpio_to_desc(data->enable_gpio);
+		pb->legacy_enable.ndescs = 1;
+		pb->enable_gpios = &pb->legacy_enable;
+		gpiod_direction_output(pb->legacy_enable.desc[0], 1);
 	}
-
-	/*
-	 * If the GPIO is not known to be already configured as output, that
-	 * is, if gpiod_get_direction returns either 1 or -EINVAL, change the
-	 * direction to output and set the GPIO as active.
-	 * Do not force the GPIO to active when it was already output as it
-	 * could cause backlight flickering or we would enable the backlight too
-	 * early. Leave the decision of the initial backlight state for later.
-	 */
-	if (pb->enable_gpio &&
-	    gpiod_get_direction(pb->enable_gpio) != 0)
-		gpiod_direction_output(pb->enable_gpio, 1);
 
 	pb->power_supply = devm_regulator_get(&pdev->dev, "power");
 	if (IS_ERR(pb->power_supply)) {
