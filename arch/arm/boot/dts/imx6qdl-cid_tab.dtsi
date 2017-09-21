@@ -46,10 +46,12 @@
 		fsl,pins = <
 #define GP_BACKLIGHT_LVDS_EN	<&gpio1 2 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x030b0
-#define GP_LVDS_PIN27		<&gpio1 17 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_SD1_DAT1__GPIO1_IO17		0x1b0b0
-#define GP_LVDS_PIN28		<&gpio4 19 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x1b0b0
+#define GP_BACKLIGHT_LVDS_PWM1	<&gpio1 21 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD1_DAT3__GPIO1_IO21		0x030b0
+#define GP_LVDS_LED_EN		<&gpio4 19 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x030b0
+#define GP_LVDS_BIST		<&gpio5 9 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09	0x030b0
 		>;
 	};
 
@@ -139,8 +141,6 @@
 #define GP_3P7_BYPASS_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
 
-#define GP_BIST			<&gpio5 9 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09	0x1b0b0
 #define GPIRQ_TAMPER		<&gpio4 18 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x1b0b0
 			/* TODO Wireless control pins */
@@ -319,17 +319,17 @@
 		>;
 	};
 
-	/* Backlight (LVDS display)*/
-	pinctrl_pwm1: pwm1grp {
-		fsl,pins = <
-			MX6QDL_PAD_SD1_DAT3__PWM1_OUT		0x030b1
-		>;
-	};
-
 	/* Fingerprint MCLK */
 	pinctrl_pwm2: pwm2grp {
 		fsl,pins = <
 			MX6QDL_PAD_SD1_DAT2__PWM2_OUT		0x030b1
+		>;
+	};
+
+	/* Backlight (LVDS display)*/
+	pinctrl_pwm3: pwm3grp {
+		fsl,pins = <
+			MX6QDL_PAD_SD1_DAT1__PWM3_OUT		0x030b0
 		>;
 	};
 
@@ -540,7 +540,7 @@
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
 		mxcfb0 = &fb_lvds;
-		pwm_lvds = &pwm1;
+		pwm_lvds = &pwm3;
 		t_lvds = &t_lvds;
 	};
 
@@ -549,10 +549,10 @@
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
 		display = <&fb_lvds>;
-		enable-gpios = GP_BACKLIGHT_LVDS_EN;
+		enable-gpios = GP_BACKLIGHT_LVDS_EN, GP_BACKLIGHT_LVDS_PWM1, GP_LVDS_LED_EN;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds>;
-		pwms = <&pwm1 0 30000>;
+		pwms = <&pwm3 0 50000>;
 	};
 
 	bt_rfkill: bt_rfkill {
@@ -1257,15 +1257,15 @@
 	status = "okay";
 };
 
-&pwm1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "okay";
-};
-
 &pwm2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+&pwm3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm3>;
 	status = "okay";
 };
 
