@@ -98,7 +98,7 @@ module_param_named(combing_dejaggy_enable, dejaggy_enable, int, 0664);
 static uint num_dejaggy_setting = 5;
 /* 0:off 1:1-14-1 2:1-6-1 3:3-10-3 4:100% */
 /* current setting dejaggy always on when interlace source */
-static int combing_dejaggy_setting[5] = {1, 1, 1, 2, 3};
+static int combing_dejaggy_setting[6] = {1, 1, 1, 2, 3, 3};
 module_param_array(combing_dejaggy_setting, uint,
 	&num_dejaggy_setting, 0664);
 #ifdef CONFIG_AM_ATVDEMOD

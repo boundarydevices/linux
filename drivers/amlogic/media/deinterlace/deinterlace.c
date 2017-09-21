@@ -752,11 +752,8 @@ show_vframe_status(struct device *dev,
 {
 	int ret = 0;
 	struct vframe_states states;
-	struct vframe_provider_s *vfp;
 
-	vfp = vf_get_provider(VFM_NAME);
-	if (vfp && vfp->ops && vfp->ops->vf_states)
-		ret = vfp->ops->vf_states(&states, vfp->op_arg);
+	ret = vf_get_states_by_name(VFM_NAME, &states);
 
 	if (ret == 0) {
 		ret += sprintf(buf + ret, "vframe_pool_size=%d\n",
@@ -768,6 +765,7 @@ show_vframe_status(struct device *dev,
 		ret += sprintf(buf + ret, "vframe buf_avail_num=%d\n",
 			states.buf_avail_num);
 	} else {
+		ret = 0;
 		ret += sprintf(buf + ret, "vframe no states\n");
 	}
 
@@ -2181,7 +2179,10 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 		di_post_mem = de_devp->mem_start + di_buf_size*local_buf_num;
 		di_post_buf_size = width * canvas_height*2;
 		/* pre buffer must 2 more than post buffer */
-		di_post_stru.di_post_num = local_buf_num - 2;
+		if ((local_buf_num - 2) > MAX_POST_BUF_NUM)
+			di_post_stru.di_post_num = MAX_POST_BUF_NUM;
+		else
+			di_post_stru.di_post_num = (local_buf_num - 2);
 		pr_info("DI: di post buffer size %u byte.\n", di_post_buf_size);
 	} else {
 		di_post_stru.di_post_num = MAX_POST_BUF_NUM;
@@ -3440,9 +3441,14 @@ static void pre_de_done_buf_config(void)
 					}
 				}
 			} else if ((pldn_cmb0 == 6) && (pldn_cmb1 == 6)) {
-				di_pre_stru.di_post_wr_buf->reg1_s = 60;
-				di_pre_stru.di_post_wr_buf->reg1_e = 180;
-				di_pre_stru.di_post_wr_buf->reg1_bmode = 0;
+				if (!IS_ERR_OR_NULL(
+					di_pre_stru.di_post_wr_buf)) {
+					di_pre_stru.di_post_wr_buf->reg1_s = 60;
+					di_pre_stru.di_post_wr_buf->reg1_e
+						= 180;
+					di_pre_stru.di_post_wr_buf->reg1_bmode
+						= 0;
+				}
 			}
 		}
 		field_count++;
@@ -3561,7 +3567,6 @@ static void pre_de_done_buf_config(void)
 						queue_in(
 							di_buf_tmp,
 							QUEUE_PRE_READY);
-					}
 #ifdef DI_BUFFER_DEBUG
 					di_print(
 					"%s: dummy %s[%d] => pre_ready_list\n",
@@ -3569,6 +3574,7 @@ static void pre_de_done_buf_config(void)
 					vframe_type_name[di_buf_tmp->type],
 					di_buf_tmp->index);
 #endif
+					}
 				}
 			}
 			di_pre_stru.di_wr_buf->seq =
@@ -3703,6 +3709,8 @@ static struct di_buf_s *get_free_linked_buf(int idx)
 				queue_out(di_buf_linked);
 			}
 		}
+		if (IS_ERR_OR_NULL(di_buf))
+			return NULL;
 		di_buf->di_wr_linked_buf = di_buf_linked;
 	}
 	return di_buf;
@@ -4668,12 +4676,13 @@ static void inc_post_ref_count(struct di_buf_s *di_buf)
 {
 /* int post_blend_mode; */
 
-	if (di_buf == NULL) {
+	if (IS_ERR_OR_NULL(di_buf)) {
 		pr_dbg("%s: Error\n", __func__);
 		if (recovery_flag == 0)
 			recovery_log_reason = 13;
 
 		recovery_flag++;
+		return;
 	}
 
 	if (di_buf->di_buf_dup_p[1])
@@ -4688,12 +4697,13 @@ static void inc_post_ref_count(struct di_buf_s *di_buf)
 
 static void dec_post_ref_count(struct di_buf_s *di_buf)
 {
-	if (di_buf == NULL) {
+	if (IS_ERR_OR_NULL(di_buf)) {
 		pr_dbg("%s: Error\n", __func__);
 		if (recovery_flag == 0)
 			recovery_log_reason = 14;
 
 		recovery_flag++;
+		return;
 	}
 	if (di_buf->pulldown_mode == PULL_DOWN_BUF1)
 		return;
@@ -4966,7 +4976,7 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 		unsigned int zoom_end_y_lines, vframe_t *disp_vf)
 {
 	struct di_buf_s *di_buf = (struct di_buf_s *)arg;
-	struct di_buf_s *di_pldn_buf = di_buf->di_buf_dup_p[pldn_dly];
+	struct di_buf_s *di_pldn_buf = NULL;
 	unsigned int di_width, di_height, di_start_x, di_end_x;
 	unsigned int di_start_y, di_end_y, hold_line = post_hold_line;
 	unsigned int post_blend_en = 0, post_blend_mode = 0,
@@ -4986,8 +4996,11 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 	    ((force_update_post_reg & 0x10) == 0))
 		return 0;
 
-	if ((di_buf == NULL) || (di_buf->di_buf_dup_p[0] == NULL))
+	if (IS_ERR_OR_NULL(di_buf))
 		return 0;
+	else if (IS_ERR_OR_NULL(di_buf->di_buf_dup_p[0]))
+		return 0;
+	di_pldn_buf = di_buf->di_buf_dup_p[pldn_dly];
 
 	if (di_post_stru.toggle_flag && di_buf->di_buf_dup_p[1])
 		top_bot_config(di_buf->di_buf_dup_p[1]);
@@ -6296,7 +6309,9 @@ static void di_rdma_irq(void *arg)
 {
 	struct di_dev_s *di_devp = (struct di_dev_s *)arg;
 
-	if (!di_devp || (di_devp->rdma_handle <= 0)) {
+	if (IS_ERR_OR_NULL(di_devp))
+		return;
+	if (di_devp->rdma_handle <= 0) {
 		pr_err("%s rdma handle %d error.\n", __func__,
 			di_devp->rdma_handle);
 		return;
@@ -7054,6 +7069,7 @@ get_vframe:
 				vframe_ret->early_process_fun = NULL;
 				vframe_ret->process_fun = NULL;
 			}
+			atomic_set(&di_buf->di_cnt, 1);
 		}
 		disp_frame_count++;
 		if (run_flag == DI_RUN_FLAG_STEP)
@@ -7077,7 +7093,6 @@ get_vframe:
 			vframe_ret->early_process_fun(
 				vframe_ret->private_data, vframe_ret);
 	}
-	atomic_set(&di_buf->di_cnt, 1);
 	return vframe_ret;
 }
 

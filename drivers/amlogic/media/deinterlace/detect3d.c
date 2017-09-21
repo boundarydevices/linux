@@ -133,8 +133,7 @@ DET3D_INTR_EN_BIT, DET3D_INTR_EN_WID);
 int read_cbus_reg_signed_bits(unsigned int reg, unsigned int startbit,
 							unsigned int length)
 {
-	int val;
-	int tmp = 1;
+	unsigned int val, tmp = 1;
 
 	if (length > 31)
 		length = 31;
@@ -145,7 +144,7 @@ int read_cbus_reg_signed_bits(unsigned int reg, unsigned int startbit,
 	 * signed value = %d",length,val,((val >= tmp )?
 	 * (val - (tmp << 1)):val));
 	 */
-	return (val >= tmp)?(val - (tmp << 1)):val;
+	return (int)((val >= tmp)?(val - (tmp << 1)):val);
 }
 
 /*
@@ -413,7 +412,6 @@ chessbd_ver_thrd);
 		det3d_info.tfw_det3d_fmt = TVIN_TFMT_2D;
 	} else{
 		/* keep previous status */
-		det3d_info.tfw_det3d_fmt = det3d_info.tfw_det3d_fmt;
 
 		if ((det3d_info.score_3d_lr > LR_SCORE_LOWER_LIMIT) &&
 (det3d_info.score_3d_tb > TB_SCORE_LOWER_LIMIT)) {
