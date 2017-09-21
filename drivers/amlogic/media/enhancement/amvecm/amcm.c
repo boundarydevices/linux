@@ -148,6 +148,15 @@ void am_set_regmap(struct am_regs_s *p)
 					__func__, p->am_reg[i].addr);
 				break;
 			}
+
+			if (!cm_en) {
+				if (p->am_reg[i].addr == 0x208)
+					p->am_reg[i].val =
+						p->am_reg[i].val & 0xfffffffd;
+				pr_amcm_dbg("[amcm]:%s REG_TYPE_INDEX_VPPCHROMA addr:0x%x",
+					__func__, p->am_reg[i].addr);
+			}
+
 			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
 					p->am_reg[i].addr);
 			if (p->am_reg[i].mask == 0xffffffff)
@@ -221,6 +230,7 @@ void am_set_regmap(struct am_regs_s *p)
 			break;
 		}
 	}
+	return;
 }
 
 void amcm_disable(void)
@@ -363,6 +373,7 @@ void cm_latch_process(void)
 	} else if ((cm_en == 0) && (cm_level_last != 0xff)) {
 		cm_level_last = 0xff;
 		amcm_disable();/* CM manage disable */
+		pr_amcm_dbg("\n[amcm..] set cm disable!!!\n");
 	}
 }
 

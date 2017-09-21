@@ -94,6 +94,20 @@ struct matrix_s {
 	u16 right_shift;
 };
 
+enum mtx_en_e {
+	POST_MTX_EN = 0,
+	VD2_MTX_EN = 4,
+	VD1_MTX_EN,
+	XVY_MTX_EN,
+	OSD1_MTX_EN
+};
+
+#define POST_MTX_EN_MASK (1 << POST_MTX_EN)
+#define VD2_MTX_EN_MASK  (1 << VD2_MTX_EN)
+#define VD1_MTX_EN_MASK  (1 << VD1_MTX_EN)
+#define XVY_MTX_EN_MASK  (1 << XVY_MTX_EN)
+#define OSD1_MTX_EN_MASK (1 << OSD1_MTX_EN)
+
 #define LUT_289_SIZE	289
 extern unsigned int lut_289_mapping[LUT_289_SIZE];
 extern int dnlp_en;
@@ -106,7 +120,8 @@ extern uint sdr_mode;
 extern uint hdr_flag;
 extern int video_rgb_ogo_xvy_mtx_latch;
 
-extern void amvecm_matrix_process(struct vframe_s *vf);
+extern int amvecm_matrix_process(
+	struct vframe_s *vf, struct vframe_s *vf_rpt, int flags);
 extern int amvecm_hdr_dbg(u32 sel);
 #ifndef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 #define VSYNC_WR_MPEG_REG(adr, val) WRITE_VPP_REG(adr, val)
@@ -118,6 +133,8 @@ extern int VSYNC_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
 extern u32 VSYNC_RD_MPEG_REG(u32 adr);
 extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 #endif
+
+extern u32 get_video_enabled(void);
 
 #endif /* AM_CSC_H */
 

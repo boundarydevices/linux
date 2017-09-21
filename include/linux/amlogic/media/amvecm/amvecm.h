@@ -68,6 +68,28 @@
 #define VPP_DEMO_CM_DIS             (1 << 1)
 #define VPP_DEMO_CM_EN              (1 << 0)
 
+/*PQ USER LATCH*/
+#define PQ_USER_SR1_DERECTION_DIS  (1 << 19)
+#define PQ_USER_SR1_DERECTION_EN   (1 << 18)
+#define PQ_USER_SR0_DERECTION_DIS  (1 << 17)
+#define PQ_USER_SR0_DERECTION_EN   (1 << 16)
+#define PQ_USER_SR1_DEJAGGY_DIS    (1 << 15)
+#define PQ_USER_SR1_DEJAGGY_EN     (1 << 14)
+#define PQ_USER_SR0_DEJAGGY_DIS    (1 << 13)
+#define PQ_USER_SR0_DEJAGGY_EN     (1 << 12)
+#define PQ_USER_SR1_DERING_DIS     (1 << 11)
+#define PQ_USER_SR1_DERING_EN      (1 << 10)
+#define PQ_USER_SR0_DERING_DIS     (1 << 9)
+#define PQ_USER_SR0_DERING_EN      (1 << 8)
+#define PQ_USER_SR1_PK_DIS         (1 << 7)
+#define PQ_USER_SR1_PK_EN          (1 << 6)
+#define PQ_USER_SR0_PK_DIS         (1 << 5)
+#define PQ_USER_SR0_PK_EN          (1 << 4)
+#define PQ_USER_BLK_SLOPE          (1 << 3)
+#define PQ_USER_BLK_START          (1 << 2)
+#define PQ_USER_BLK_DIS            (1 << 1)
+#define PQ_USER_BLK_EN             (1 << 0)
+
 /*white balance latch*/
 #define MTX_BYPASS_RGB_OGO			(1 << 0)
 #define MTX_RGB2YUVL_RGB_OGO		(1 << 1)
@@ -160,9 +182,16 @@ static inline uint32_t READ_VPP_REG_BITS(uint32_t reg,
 extern signed int vd1_brightness, vd1_contrast;
 extern bool gamma_en;
 
-extern void amvecm_on_vs(struct vframe_s *vf);
+#define CSC_FLAG_TOGGLE_FRAME	1
+#define CSC_FLAG_CHECK_OUTPUT	2
+
+extern int amvecm_on_vs(
+	struct vframe_s *display_vf,
+	struct vframe_s *toggle_vf,
+	int flags);
 extern void refresh_on_vs(struct vframe_s *vf);
 extern void pc_mode_process(void);
+extern void pq_user_latch_process(void);
 
 /* master_display_info for display device */
 struct hdr_metadata_info_s {
@@ -195,5 +224,6 @@ extern struct vframe_s *dolby_vision_vf_peek_el(struct vframe_s *vf);
 extern void dolby_vision_dump_setting(int debug_flag);
 extern void dolby_vision_dump_struct(void);
 extern void enable_osd_path(int on);
+extern void amvecm_wakeup_queue(void);
 #endif /* AMVECM_H */
 

@@ -149,6 +149,7 @@
 #define VPP_VE_DEMO_CENTER_BAR 0x1da3
 #define VPP_VE_H_V_SIZE 0x1da4
 #define VPP_PSR_H_V_SIZE 0x1da5
+#define VPP_OUT_H_V_SIZE 0x1da5
 #define VPP_VDO_MEAS_CTRL 0x1da8
 #define VPP_VDO_MEAS_VS_COUNT_HI 0x1da9
 #define VPP_VDO_MEAS_VS_COUNT_LO 0x1daa
@@ -202,6 +203,14 @@
 #define VPP_VD1_CLIP_MISC1 0x1de2
 #define VPP_VD2_CLIP_MISC0 0x1de3
 #define VPP_VD2_CLIP_MISC1 0x1de4
+
+/*txlx new add*/
+#define VPP_DAT_CONV_PARA0 0x1d94
+#define VPP_DAT_CONV_PARA1 0x1d95
+
+#define VD1_IF0_GEN_REG3 0x1aa7
+#define VD2_IF0_GEN_REG3 0x1aa8
+
 
 #define VPP2_DUMMY_DATA 0x1900
 #define VPP2_LINE_IN_LENGTH 0x1901
@@ -442,16 +451,15 @@
 #define VIU_EOTF_COEF11_12 0x31d3
 #define VIU_EOTF_COEF20_21 0x31d4
 #define VIU_EOTF_COEF22_RS 0x31d5
-#define VIU_EOTF_LUT_ADDR_PORT 0x31d6
-#define VIU_EOTF_LUT_DATA_PORT 0x31d7
+#define VIU_EOTF_LUT_ADDR_PORT  0x31d6
+#define VIU_EOTF_LUT_DATA_PORT  0x31d7
+#define VIU_EOTF_3X3_OFST_0     0x31d8
+#define VIU_EOTF_3X3_OFST_1     0x31d9
 
 /* sharpness */
 #define SRSHARP0_PK_FINALGAIN_HP_BP 0x3222
-#define SRSHARP0_SHARP_PK_NR_ENABLE 0x3227
+#define SRSHARP0_PK_NR_ENABLE 0x3227
 #define SRSHARP0_SHARP_DNLP_EN 0x3245
-#define SRSHARP1_PK_FINALGAIN_HP_BP 0x32a2
-#define SRSHARP1_SHARP_PK_NR_ENABLE 0x32a7
-#define SRSHARP1_SHARP_DNLP_EN 0x32c5
 
 /*sr0 sr1 ybic cbic*/
 #define SRSHARP0_SHARP_SR2_YBIC_HCOEF0 0x3258
@@ -459,30 +467,167 @@
 #define SRSHARP0_SHARP_SR2_YBIC_VCOEF0 0x325c
 #define SRSHARP0_SHARP_SR2_CBIC_VCOEF0 0x325e
 
-#define SRSHARP1_SHARP_SR2_YBIC_HCOEF0 0x32d8
-#define SRSHARP1_SHARP_SR2_CBIC_HCOEF0 0x32da
-#define SRSHARP1_SHARP_SR2_YBIC_VCOEF0 0x32dc
-#define SRSHARP1_SHARP_SR2_CBIC_VCOEF0 0x32de
-
 /*sr0 sr1 lti cti*/
 #define SRSHARP0_HCTI_FLT_CLP_DC     0x322e/*bit28*/
 #define SRSHARP0_HLTI_FLT_CLP_DC     0x3234
 #define SRSHARP0_VLTI_FLT_CON_CLP     0x323a/*bit14*/
 #define SRSHARP0_VCTI_FLT_CON_CLP     0x323f
 
-#define SRSHARP1_HCTI_FLT_CLP_DC     0x32ae/*bit28*/
-#define SRSHARP1_HLTI_FLT_CLP_DC     0x32b4
-#define SRSHARP1_VLTI_FLT_CON_CLP     0x32ba/*bit14*/
-#define SRSHARP1_VCTI_FLT_CON_CLP     0x32bf
-
 /*sr0 sr1 dejaggy/direction/dering*/
 #define SRSHARP0_DEJ_CTRL				0x3264/*bit 0*/
 #define SRSHARP0_SR3_DRTLPF_EN			0x3266/*bit 0-2*/
 #define SRSHARP0_SR3_DERING_CTRL		0x326b/*bit 28-30*/
 
-#define SRSHARP1_DEJ_CTRL				0x32e4/*bit 0*/
-#define SRSHARP1_SR3_DRTLPF_EN			0x32e6/*bit 0-2*/
-#define SRSHARP1_SR3_DERING_CTRL		0x32eb/*bit 28-30*/
+/*sr4 add*/
+#define SRSHARP0_SR3_DRTLPF_THETA             0x3273
+#define SRSHARP0_SATPRT_CTRL                  0x3274
+#define SRSHARP0_SATPRT_DIVM                  0x3275
+#define SRSHARP0_SATPRT_LMT_RGB               0x3276
+#define SRSHARP0_DB_FLT_CTRL                  0x3277
+#define SRSHARP0_DB_FLT_YC_THRD               0x3278
+#define SRSHARP0_DB_FLT_RANDLUT               0x3279
+#define SRSHARP0_DB_FLT_PXI_THRD              0x327a
+#define SRSHARP0_DB_FLT_SEED_Y                0x327b
+#define SRSHARP0_DB_FLT_SEED_U                0x327c
+#define SRSHARP0_DB_FLT_SEED_V                0x327d
+#define SRSHARP0_PKGAIN_VSLUMA_LUT_L          0x327e
+#define SRSHARP0_PKGAIN_VSLUMA_LUT_H          0x327f
+#define SRSHARP0_PKOSHT_VSLUMA_LUT_L          0x3203
+#define SRSHARP0_PKOSHT_VSLUMA_LUT_H          0x3204
+
+
+/*sharpness reg*/
+#define SRSHARP1_SHARP_HVSIZE                 0x3280
+#define SRSHARP1_SHARP_HVBLANK_NUM            0x3281
+#define SRSHARP1_NR_GAUSSIAN_MODE             0x3282
+#define SRSHARP1_PK_CON_2CIRHPGAIN_TH_RATE    0x3285
+#define SRSHARP1_PK_CON_2CIRHPGAIN_LIMIT      0x3286
+#define SRSHARP1_PK_CON_2CIRBPGAIN_TH_RATE    0x3287
+#define SRSHARP1_PK_CON_2CIRBPGAIN_LIMIT      0x3288
+#define SRSHARP1_PK_CON_2DRTHPGAIN_TH_RATE    0x3289
+#define SRSHARP1_PK_CON_2DRTHPGAIN_LIMIT      0x328a
+#define SRSHARP1_PK_CON_2DRTBPGAIN_TH_RATE    0x328b
+#define SRSHARP1_PK_CON_2DRTBPGAIN_LIMIT      0x328c
+#define SRSHARP1_PK_CIRFB_LPF_MODE            0x328d
+#define SRSHARP1_PK_DRTFB_LPF_MODE            0x328e
+#define SRSHARP1_PK_CIRFB_HP_CORING           0x328f
+#define SRSHARP1_PK_CIRFB_BP_CORING           0x3290
+#define SRSHARP1_PK_DRTFB_HP_CORING           0x3291
+#define SRSHARP1_PK_DRTFB_BP_CORING           0x3292
+#define SRSHARP1_PK_CIRFB_BLEND_GAIN          0x3293
+#define SRSHARP1_NR_ALPY_SSD_GAIN_OFST        0x3294
+#define SRSHARP1_NR_ALP0Y_ERR2CURV_TH_RATE    0x3295
+#define SRSHARP1_NR_ALP0Y_ERR2CURV_LIMIT      0x3296
+#define SRSHARP1_NR_ALP0C_ERR2CURV_TH_RATE    0x3297
+#define SRSHARP1_NR_ALP0C_ERR2CURV_LIMIT      0x3298
+#define SRSHARP1_NR_ALP0_MIN_MAX              0x3299
+#define SRSHARP1_NR_ALP1_MIERR_CORING         0x329a
+#define SRSHARP1_NR_ALP1_ERR2CURV_TH_RATE     0x329b
+#define SRSHARP1_NR_ALP1_ERR2CURV_LIMIT       0x329c
+#define SRSHARP1_NR_ALP1_MIN_MAX              0x329d
+#define SRSHARP1_PK_ALP2_MIERR_CORING         0x329e
+#define SRSHARP1_PK_ALP2_ERR2CURV_TH_RATE     0x329f
+#define SRSHARP1_PK_ALP2_ERR2CURV_LIMIT       0x32a0
+#define SRSHARP1_PK_ALP2_MIN_MAX              0x32a1
+#define SRSHARP1_PK_FINALGAIN_HP_BP           0x32a2
+#define SRSHARP1_PK_OS_HORZ_CORE_GAIN         0x32a3
+#define SRSHARP1_PK_OS_VERT_CORE_GAIN         0x32a4
+#define SRSHARP1_PK_OS_ADPT_MISC              0x32a5
+#define SRSHARP1_PK_OS_STATIC                 0x32a6
+#define SRSHARP1_PK_NR_ENABLE                 0x32a7
+#define SRSHARP1_PK_DRT_SAD_MISC              0x32a8
+#define SRSHARP1_NR_TI_DNLP_BLEND             0x32a9
+#define SRSHARP1_TI_DIR_CORE_ALPHA            0x32aa
+#define SRSHARP1_CTI_DIR_ALPHA                0x32ab
+#define SRSHARP1_LTI_CTI_DF_GAIN              0x32ac
+#define SRSHARP1_LTI_CTI_DIR_AC_DBG           0x32ad
+#define SRSHARP1_HCTI_FLT_CLP_DC              0x32ae
+#define SRSHARP1_HCTI_BST_GAIN                0x32af
+#define SRSHARP1_HCTI_BST_CORE                0x32b0
+#define SRSHARP1_HCTI_CON_2_GAIN_0            0x32b1
+#define SRSHARP1_HCTI_CON_2_GAIN_1            0x32b2
+#define SRSHARP1_HCTI_OS_MARGIN               0x32b3
+#define SRSHARP1_HLTI_FLT_CLP_DC              0x32b4
+#define SRSHARP1_HLTI_BST_GAIN                0x32b5
+#define SRSHARP1_HLTI_BST_CORE                0x32b6
+#define SRSHARP1_HLTI_CON_2_GAIN_0            0x32b7
+#define SRSHARP1_HLTI_CON_2_GAIN_1            0x32b8
+#define SRSHARP1_HLTI_OS_MARGIN               0x32b9
+#define SRSHARP1_VLTI_FLT_CON_CLP             0x32ba
+#define SRSHARP1_VLTI_BST_GAIN                0x32bb
+#define SRSHARP1_VLTI_BST_CORE                0x32bc
+#define SRSHARP1_VLTI_CON_2_GAIN_0            0x32bd
+#define SRSHARP1_VLTI_CON_2_GAIN_1            0x32be
+#define SRSHARP1_VCTI_FLT_CON_CLP             0x32bf
+#define SRSHARP1_VCTI_BST_GAIN                0x32c0
+#define SRSHARP1_VCTI_BST_CORE                0x32c1
+#define SRSHARP1_VCTI_CON_2_GAIN_0            0x32c2
+#define SRSHARP1_VCTI_CON_2_GAIN_1            0x32c3
+#define SRSHARP1_SHARP_3DLIMIT                0x32c4
+#define SRSHARP1_DNLP_EN                      0x32c5
+#define SRSHARP1_DNLP_00                      0x32c6
+#define SRSHARP1_DNLP_01                      0x32c7
+#define SRSHARP1_DNLP_02                      0x32c8
+#define SRSHARP1_DNLP_03                      0x32c9
+#define SRSHARP1_DNLP_04                      0x32ca
+#define SRSHARP1_DNLP_05                      0x32cb
+#define SRSHARP1_DNLP_06                      0x32cc
+#define SRSHARP1_DNLP_07                      0x32cd
+#define SRSHARP1_DNLP_08                      0x32ce
+#define SRSHARP1_DNLP_09                      0x32cf
+#define SRSHARP1_DNLP_10                      0x32d0
+#define SRSHARP1_DNLP_11                      0x32d1
+#define SRSHARP1_DNLP_12                      0x32d2
+#define SRSHARP1_DNLP_13                      0x32d3
+#define SRSHARP1_DNLP_14                      0x32d4
+#define SRSHARP1_DNLP_15                      0x32d5
+#define SRSHARP1_DEMO_CRTL                    0x32d6
+#define SRSHARP1_SHARP_SR2_CTRL               0x32d7
+#define SRSHARP1_SHARP_SR2_YBIC_HCOEF0        0x32d8
+#define SRSHARP1_SHARP_SR2_YBIC_HCOEF1        0x32d9
+#define SRSHARP1_SHARP_SR2_CBIC_HCOEF0        0x32da
+#define SRSHARP1_SHARP_SR2_CBIC_HCOEF1        0x32db
+#define SRSHARP1_SHARP_SR2_YBIC_VCOEF0        0x32dc
+#define SRSHARP1_SHARP_SR2_YBIC_VCOEF1        0x32dd
+#define SRSHARP1_SHARP_SR2_CBIC_VCOEF0        0x32de
+#define SRSHARP1_SHARP_SR2_CBIC_VCOEF1        0x32df
+#define SRSHARP1_SHARP_SR2_MISC               0x32e0
+#define SRSHARP1_SR3_SAD_CTRL                 0x32e1
+#define SRSHARP1_SR3_PK_CTRL0                 0x32e2
+#define SRSHARP1_SR3_PK_CTRL1                 0x32e3
+#define SRSHARP1_DEJ_CTRL                     0x32e4
+#define SRSHARP1_DEJ_ALPHA                    0x32e5
+#define SRSHARP1_SR3_DRTLPF_EN                0x32e6
+#define SRSHARP1_SR3_DRTLPF_ALPHA_0           0x32e7
+#define SRSHARP1_SR3_DRTLPF_ALPHA_1           0x32e8
+#define SRSHARP1_SR3_DRTLPF_ALPHA_2           0x32e9
+#define SRSHARP1_SR3_DRTLPF_ALPHA_OFST        0x32ea
+#define SRSHARP1_SR3_DERING_CTRL              0x32eb
+#define SRSHARP1_SR3_DERING_LUMA2PKGAIN_0TO3  0x32ec
+#define SRSHARP1_SR3_DERING_LUMA2PKGAIN_4TO6  0x32ed
+#define SRSHARP1_SR3_DERING_LUMA2PKOS_0TO3    0x32ee
+#define SRSHARP1_SR3_DERING_LUMA2PKOS_4TO6    0x32ef
+#define SRSHARP1_SR3_DERING_GAINVS_MADSAD     0x32f0
+#define SRSHARP1_SR3_DERING_GAINVS_VR2MAX     0x32f1
+#define SRSHARP1_SR3_DERING_PARAM0            0x32f2
+#define SRSHARP1_SR3_DRTLPF_THETA             0x32f3
+#define SRSHARP1_SATPRT_CTRL                  0x32f4
+#define SRSHARP1_SATPRT_DIVM                  0x32f5
+#define SRSHARP1_SATPRT_LMT_RGB               0x32f6
+#define SRSHARP1_DB_FLT_CTRL                  0x32f7
+#define SRSHARP1_DB_FLT_YC_THRD               0x32f8
+#define SRSHARP1_DB_FLT_RANDLUT               0x32f9
+#define SRSHARP1_DB_FLT_PXI_THRD              0x32fa
+#define SRSHARP1_DB_FLT_SEED_Y                0x32fb
+#define SRSHARP1_DB_FLT_SEED_U                0x32fc
+#define SRSHARP1_DB_FLT_SEED_V                0x32fd
+#define SRSHARP1_PKGAIN_VSLUMA_LUT_L          0x32fe
+#define SRSHARP1_PKGAIN_VSLUMA_LUT_H          0x32ff
+#define SRSHARP1_PKOSHT_VSLUMA_LUT_L          0x3283
+#define SRSHARP1_PKOSHT_VSLUMA_LUT_H          0x3284
+
+/*ve dither*/
+#define VPP_VE_DITHER_CTRL		0x3120
 
 /* for pll bug */
 #define HHI_HDMI_PLL_CNTL			    0x10c8

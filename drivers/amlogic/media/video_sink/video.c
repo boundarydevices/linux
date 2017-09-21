@@ -4603,7 +4603,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			amlog_mask_if(toggle_cnt > 0, LOG_MASK_FRAMESKIP,
 				      "skipped\n");
 
-#if DEBUG_TMP
+
 
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 			refresh_on_vs(vf);
@@ -4613,7 +4613,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 				vf, CSC_FLAG_CHECK_OUTPUT) == 1)
 				break;
 #endif
-
+#if DEBUG_TMP
 			if (is_dolby_vision_enable()
 			&& dolby_vision_need_wait())
 				break;
@@ -4724,6 +4724,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 					if (is_dolby_vision_enable()
 					&& dolby_vision_need_wait())
 						break;
+#endif
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 					refresh_on_vs(vf);
 					if (amvecm_on_vs(
@@ -4731,7 +4732,6 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 						? cur_dispbuf : NULL,
 						vf, CSC_FLAG_CHECK_OUTPUT) == 1)
 						break;
-#endif
 #endif
 					vf = video_vf_get();
 					if (!vf)
@@ -4810,13 +4810,11 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 #endif
 
 SET_FILTER:
-#if DEBUG_TMP
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 	amvecm_on_vs(
 		(cur_dispbuf != &vf_local) ? cur_dispbuf : NULL,
 		toggle_frame,
 		toggle_frame ? CSC_FLAG_TOGGLE_FRAME : 0);
-#endif
 #endif
 	/* filter setting management */
 	if ((frame_par_ready_to_set) || (frame_par_force_to_set)) {

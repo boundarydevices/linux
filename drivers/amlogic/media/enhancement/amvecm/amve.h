@@ -61,14 +61,12 @@ enum vlock_param_e {
 	VLOCK_ADAPT,
 	VLOCK_MODE,
 	VLOCK_DIS_CNT_LIMIT,
-	VLOCK_DELTA_LIMIT_FRAC,
-	VLOCK_DELTA_LIMIT_M,
+	VLOCK_DELTA_LIMIT,
 	VLOCK_DEBUG,
 	VLOCK_DYNAMIC_ADJUST,
 	VLOCK_STATE,
 	VLOCK_SYNC_LIMIT_FLAG,
-	VLOCK_DIS_CNT_STEP1_LIMIT,
-	VLOCK_EN_CNT_STEP1_LIMIT,
+	VLOCK_DIS_CNT_NO_VF_LIMIT,
 	VLOCK_PARAM_MAX,
 };
 
@@ -83,6 +81,20 @@ extern struct tcon_gamma_table_s video_gamma_table_r_adj;
 extern struct tcon_gamma_table_s video_gamma_table_g_adj;
 extern struct tcon_gamma_table_s video_gamma_table_b_adj;
 extern struct tcon_rgb_ogo_s     video_rgb_ogo;
+
+extern int glb_scurve[65];
+extern int glb_clash_curve[65];
+extern int glb_pst_gamma[65];
+
+extern int gma_scurve0[65];
+extern int gma_scurve1[65];
+extern int gma_scurvet[65];
+extern int clash_curve[65];
+extern int clsh_scvbld[65];
+extern int blk_gma_crv[65];
+extern int blk_gma_bld[65];
+extern int blkwht_ebld[65];
+
 
 extern spinlock_t vpp_lcd_gamma_lock;
 
@@ -105,7 +117,7 @@ extern void ve_disable_dnlp(void);
 extern void vpp_enable_lcd_gamma_table(void);
 extern void vpp_disable_lcd_gamma_table(void);
 extern void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask);
-extern void init_write_gamma_table(u16 *data, u32 rgb_mask);
+extern void amve_write_gamma_table(u16 *data, u32 rgb_mask);
 extern void vpp_set_rgb_ogo(struct tcon_rgb_ogo_s *p);
 extern void vpp_phase_lock_on_vs(unsigned int cycle,
 				 unsigned int stamp,
@@ -134,6 +146,9 @@ extern void amve_vlock_resume(void);
 extern void vlock_param_set(unsigned int val, enum vlock_param_e sel);
 extern void vlock_status(void);
 extern void vlock_reg_dump(void);
+extern void vlock_log_start(void);
+extern void vlock_log_stop(void);
+extern void vlock_log_print(void);
 
 int amvecm_hiu_reg_read(unsigned int reg, unsigned int *val);
 int amvecm_hiu_reg_write(unsigned int reg, unsigned int val);
@@ -161,6 +176,7 @@ extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 /* #if defined(CONFIG_ARCH_MESON2) */
 /* unsigned long long ve_get_vs_cnt(void); */
 /* #endif */
+extern int video_rgb_ogo_xvy_mtx;
 
 #define VLOCK_STATE_NULL 0
 #define VLOCK_STATE_ENABLE_STEP1_DONE 1
@@ -168,8 +184,16 @@ extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 #define VLOCK_STATE_DISABLE_STEP1_DONE 3
 #define VLOCK_STATE_DISABLE_STEP2_DONE 4
 #define VLOCK_STATE_ENABLE_FORCE_RESET 5
-#define VLOCK_STATE_ENABLE_STEP1 6
-#define VLOCK_STATE_DISABLE_STEP1 7
+
+/* video lock */
+#define VLOCK_MODE_ENC         0
+#define VLOCK_MODE_AUTO_PLL    1
+#define VLOCK_MODE_MANUAL_PLL  2
+#define XTAL_VLOCK_CLOCK   24000000/*vlock use xtal clock*/
+
+/* 0:enc;1:pll;2:manual pll */
+extern unsigned int vlock_mode;
+extern unsigned int vlock_en;
 
 #endif
 

@@ -19,6 +19,7 @@
 #include <linux/spinlock.h>
 #include <linux/module.h>
 #include <linux/delay.h>
+#include <linux/slab.h>
 /* #include <mach/am_regs.h> */
 #include <linux/amlogic/media/utils/amstream.h>
 #include <linux/amlogic/media/amvecm/ve.h>
@@ -55,7 +56,7 @@ unsigned long flags;
 #define NEW_DNLP_IN_SHARPNESS 2
 #define NEW_DNLP_IN_VPP 1
 
-unsigned int dnlp_sel = NEW_DNLP_IN_VPP;
+unsigned int dnlp_sel = NEW_DNLP_IN_SHARPNESS;
 module_param(dnlp_sel, int, 0664);
 MODULE_PARM_DESC(dnlp_sel, "dnlp_sel");
 /* #endif */
@@ -147,6 +148,42 @@ MODULE_PARM_DESC(ve_dnlp_ankle, "ve_dnlp_ankle");
 module_param(ve_dnlp_strength, int, 0664);
 MODULE_PARM_DESC(ve_dnlp_strength, "ve_dnlp_strength");
 
+/*static int debug_add_curve_en;*/
+int glb_scurve[65];
+int glb_clash_curve[65];
+/*static int glb_scurve_bld_rate;*/
+/*static int glb_clash_curve_bld_rate;*/
+int glb_pst_gamma[65];
+/*static int glb_pst_gamma_bld_rate;*/
+
+static int debug_add_curve_en;
+module_param(debug_add_curve_en, int, 0664);
+MODULE_PARM_DESC(debug_add_curve_en, "debug_add_curve_en");
+
+static int ve_usr_defined_test_s_mode;
+module_param(ve_usr_defined_test_s_mode, int, 0664);
+MODULE_PARM_DESC(ve_usr_defined_test_s_mode, "ve_usr_defined_test_s_mode");
+
+static int ve_usr_defined_test_c_mode;
+module_param(ve_usr_defined_test_c_mode, int, 0664);
+MODULE_PARM_DESC(ve_usr_defined_test_c_mode, "ve_usr_defined_test_c_mode");
+
+static int ve_usr_defined_test_g_mode;
+module_param(ve_usr_defined_test_g_mode, int, 0664);
+MODULE_PARM_DESC(ve_usr_defined_test_g_mode, "ve_usr_defined_test_g_mode");
+
+static int glb_scurve_bld_rate;
+module_param(glb_scurve_bld_rate, int, 0664);
+MODULE_PARM_DESC(glb_scurve_bld_rate, "glb_scurve_bld_rate");
+
+static int glb_clash_curve_bld_rate;
+module_param(glb_clash_curve_bld_rate, int, 0664);
+MODULE_PARM_DESC(glb_clash_curve_bld_rate, "glb_clash_curve_bld_rate");
+
+static int glb_pst_gamma_bld_rate;
+module_param(glb_pst_gamma_bld_rate, int, 0664);
+MODULE_PARM_DESC(glb_pst_gamma_bld_rate, "glb_pst_gamma_bld_rate");
+
 static int dnlp_respond;
 module_param(dnlp_respond, int, 0664);
 MODULE_PARM_DESC(dnlp_respond, "dnlp_respond");
@@ -209,7 +246,7 @@ module_param(video_rgb_ogo_mode_sw, int, 0664);
 MODULE_PARM_DESC(video_rgb_ogo_mode_sw,
 		"enable/disable video_rgb_ogo_mode_sw");
 
-static int video_rgb_ogo_xvy_mtx = 1;
+int video_rgb_ogo_xvy_mtx;
 module_param(video_rgb_ogo_xvy_mtx, int, 0664);
 MODULE_PARM_DESC(video_rgb_ogo_xvy_mtx,
 		"enable/disable video_rgb_ogo_xvy_mtx");
@@ -680,22 +717,15 @@ static unsigned int assist_cnt;/* ASSIST_SPARE8_REG1; */
 static unsigned int assist_cnt2;/* ASSIST_SPARE8_REG2; */
 
 /* video lock */
-#define VLOCK_MODE_ENC          0
-#define VLOCK_MODE_PLL		1
-#define VLOCK_MODE_MANUAL_PLL	2
-#define XTAL_VLOCK_CLOCK   24000000/*vlock use xtal clock*/
-
 /* 0:enc;1:pll;2:manual pll */
-static unsigned int vlock_mode = VLOCK_MODE_MANUAL_PLL;
-static unsigned int vlock_en = 1;
+unsigned int vlock_mode = VLOCK_MODE_MANUAL_PLL;
+unsigned int vlock_en = 1;
 
 /*0:only support 50->50;60->60;24->24;30->30;*/
 /*1:support 24/30/50/60/100/120 mix,such as 50->60;*/
 static unsigned int vlock_adapt;
 static unsigned int vlock_dis_cnt_limit = 2;
-/*4k@60hz test case: delta 200 is close to 500K*/
-static unsigned int vlock_delta_limit_frac = 100;
-static unsigned int vlock_delta_limit_m;
+static unsigned int vlock_delta_limit = 2;
 /*vlock_debug:bit0:disable info;bit1:format change info;bit2:force reset*/
 static unsigned int vlock_debug;
 static unsigned int vlock_dynamic_adjust = 1;
@@ -714,10 +744,39 @@ static char pre_vout_mode[64];
 static bool vlock_vmode_changed;
 static unsigned int pre_hiu_reg_m;
 static unsigned int pre_hiu_reg_frac;
-static unsigned int vlock_dis_cnt_step1;
-static unsigned int vlock_dis_cnt_step1_limit = 300;
-static unsigned int vlock_en_cnt_step1_limit = 300;
+static unsigned int vlock_dis_cnt_no_vf;
+static unsigned int vlock_dis_cnt_no_vf_limit = 5;
 
+static unsigned int vlock_log_cnt;/*cnt base: vlock_log_s*/
+static unsigned int vlock_log_size = 60;/*size base: vlock_log_s*/
+static unsigned int vlock_log_delta_frac = 100;
+static unsigned int vlock_log_delta_ivcnt = 0xff;
+static unsigned int vlock_log_delta_ovcnt = 0xff;
+static unsigned int vlock_log_delta_vcnt = 0xff;
+static unsigned int vlock_log_last_ivcnt;
+static unsigned int vlock_log_last_ovcnt;
+static unsigned int vlock_log_delta_m;
+static unsigned int vlock_log_delta_en;
+module_param(vlock_log_size, uint, 0664);
+MODULE_PARM_DESC(vlock_log_size, "\n vlock_log_size\n");
+module_param(vlock_log_cnt, uint, 0664);
+MODULE_PARM_DESC(vlock_log_cnt, "\n vlock_log_cnt\n");
+module_param(vlock_log_delta_frac, uint, 0664);
+MODULE_PARM_DESC(vlock_log_delta_frac, "\n vlock_log_delta_frac\n");
+module_param(vlock_log_delta_m, uint, 0664);
+MODULE_PARM_DESC(vlock_log_delta_m, "\n vlock_log_delta_m\n");
+module_param(vlock_log_delta_en, uint, 0664);
+MODULE_PARM_DESC(vlock_log_delta_en, "\n vlock_log_delta_en\n");
+
+module_param(vlock_log_delta_ivcnt, uint, 0664);
+MODULE_PARM_DESC(vlock_log_delta_ivcnt, "\n vlock_log_delta_ivcnt\n");
+
+module_param(vlock_log_delta_ovcnt, uint, 0664);
+MODULE_PARM_DESC(vlock_log_delta_ovcnt, "\n vlock_log_delta_ovcnt\n");
+
+module_param(vlock_log_delta_vcnt, uint, 0664);
+MODULE_PARM_DESC(vlock_log_delta_vcnt, "\n vlock_log_delta_vcnt\n");
+static unsigned int vlock_log_en;
 /* 3d sync parts begin */
 unsigned int sync_3d_h_start;
 unsigned int sync_3d_h_end;
@@ -1730,10 +1789,19 @@ void clash_fun(unsigned int *oMap, unsigned int *iHst,
 		oMap[i+1] = j + (hstBgn << 4);
 	}
 
+	if (debug_add_curve_en)	{
+		for (i = 0; i < 65; i++) {
+			oMap[i] = ((128 - glb_clash_curve_bld_rate) * oMap[i] +
+			glb_clash_curve_bld_rate * (glb_clash_curve[i] << 2) +
+			64) >> 7;
+		}
+	}
+
+
 	if (prt_flg)
 		for (i = hstBgn; i < hstEnd; i++)
 			pr_info("#CL: [%02d: %5d]: %4d => %4d]\n",
-				i, iHst[i], i<<4, oMap[i]);
+				i, iHst[i], i << 4, oMap[i]);
 }
 
 /*xhu*/
@@ -2257,6 +2325,11 @@ static void dnlp_gmma_cuvs(unsigned int gmma_rate,
 			nTmp = (nTmp*(64 - hgh_alpha) +
 				(hgh_alpha*i<<4) + 8)>>4;
 
+		if (debug_add_curve_en)	{
+			nTmp = ((128 - glb_scurve_bld_rate) * nTmp +
+			glb_scurve_bld_rate * (glb_scurve[i] << 4) + 64) >> 7;
+		}
+
 		if (nTmp < 0)
 			nTmp = 0;
 		else if (nTmp > 4095)
@@ -2339,6 +2412,13 @@ static void dnlp_blkgma_bld(unsigned int *blk_gma_rat)
 		nTmp0 = blk_gma_crv[i]*nT1 + nTmp0*(64 - nT1);
 		nTmp0 = (nTmp0+32)>>6; /* 0~1024 */
 		blk_gma_bld[i] = nTmp0;
+
+		if (debug_add_curve_en)	{
+			blk_gma_bld[i] =
+			((128 - glb_pst_gamma_bld_rate) * blk_gma_bld[i] +
+			glb_pst_gamma_bld_rate *
+			(glb_pst_gamma[i] << 2) + 64) >> 7;
+		}
 
 		if ((dnlp_printk >> 2) & 0x1)
 			pr_info("sc%04d, gm%04d * rat%04d => %04d\n",
@@ -3349,6 +3429,7 @@ static void ve_dnlp_calculate_tgtx_new(struct vframe_s *vf)
 	/* print debug log once */
 	if (ve_dnlp_ponce == 1 && dnlp_printk)
 		dnlp_printk = 0;
+
 }
 
 static void ve_dnlp_calculate_tgt(struct vframe_s *vf)
@@ -3660,7 +3741,7 @@ void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask)
 	spin_unlock_irqrestore(&vpp_lcd_gamma_lock, flags);
 }
 
-void init_write_gamma_table(u16 *data, u32 rgb_mask)
+void amve_write_gamma_table(u16 *data, u32 rgb_mask)
 {
 	int i;
 	int cnt = 0;
@@ -4544,14 +4625,20 @@ static unsigned int vlock_check_output_hz(unsigned int sync_duration_num)
 }
 static void vlock_enable(bool enable)
 {
-	if (is_meson_gxtvbb_cpu() ||
-		is_meson_gxbb_cpu() || is_meson_txl_cpu()) {
-		if (vlock_mode == VLOCK_MODE_MANUAL_PLL)
+	unsigned int tmp_value;
+
+	amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL6, &tmp_value);
+	if (is_meson_gxtvbb_cpu()) {
+		if (vlock_mode == VLOCK_MODE_MANUAL_PLL) {
 			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6, 0, 20, 1);
-		else
+			if (is_meson_gxtvbb_cpu() &&
+				(((tmp_value >> 21) & 0x3) != 2))
+				amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6,
+					2, 21, 2);
+		} else
 			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6,
 				enable, 20, 1);
-	} else if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL) {
+	} else if (is_meson_txl_cpu() || is_meson_txlx_cpu()) {
 		if (vlock_mode == VLOCK_MODE_MANUAL_PLL)
 			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL5, 0, 3, 1);
 		else
@@ -4582,10 +4669,11 @@ static void vlock_setting(struct vframe_s *vf,
 		/*clear accum0 value*/
 		WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 1, 5, 1);
 	}
-	if ((vlock_mode == VLOCK_MODE_PLL) ||
+	if ((vlock_mode == VLOCK_MODE_AUTO_PLL) ||
 		(vlock_mode == VLOCK_MODE_MANUAL_PLL)) {
 		/* av pal in,1080p60 hdmi out as default */
-		am_set_regmap(&vlock_pll_in50hz_out60hz);
+		if ((vlock_debug & 0x1000) == 0)
+			am_set_regmap(&vlock_pll_in50hz_out60hz);
 		/*set input & output freq*/
 		/*bit0~7:input freq*/
 		/*bit8~15:output freq*/
@@ -4604,7 +4692,7 @@ static void vlock_setting(struct vframe_s *vf,
 		amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL, &hiu_reg_value);
 		amvecm_hiu_reg_read(hiu_reg_value_2_addr,
 			&hiu_reg_value_2);
-		if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu()) {
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) {
 			hiu_m_val = hiu_reg_value & 0x1FF;
 			hiu_frac_val = hiu_reg_value_2 & 0x3FF;
 			if (hiu_reg_value_2 & 0x800) {
@@ -4701,7 +4789,7 @@ static void vlock_disable_step1(void)
 	amvecm_hiu_reg_read(hiu_reg_addr, &tmp_value);
 	m_reg_value = tmp_value & 0xfff;
 	if ((m_reg_value != pre_hiu_reg_frac) &&
-		(pre_hiu_reg_frac != 0)) {
+		(pre_hiu_reg_m != 0)) {
 		tmp_value = (tmp_value & 0xfffff000) |
 			(pre_hiu_reg_frac & 0xfff);
 		amvecm_hiu_reg_write(hiu_reg_addr, tmp_value);
@@ -4715,6 +4803,7 @@ static void vlock_disable_step1(void)
 		amvecm_hiu_reg_write(HHI_HDMI_PLL_CNTL, tmp_value);
 	}
 	vlock_dis_cnt = vlock_dis_cnt_limit;
+	memset(pre_vout_mode, 0, sizeof(pre_vout_mode));
 	pre_vmode = VMODE_INIT_NULL;
 	pre_source_type = VFRAME_SOURCE_TYPE_OTHERS;
 	pre_source_mode = VFRAME_SOURCE_MODE_OTHERS;
@@ -4725,6 +4814,7 @@ static void vlock_disable_step1(void)
 
 static void vlock_disable_step2(void)
 {
+	unsigned int temp_val;
 	/* need delay to disable follow regs(vlsi suggest!!!) */
 	if (vlock_dis_cnt > 0)
 		vlock_dis_cnt--;
@@ -4739,6 +4829,9 @@ static void vlock_disable_step2(void)
 		/* disable vid_lock_en */
 		WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 0, 31, 1);
 		vlock_state = VLOCK_STATE_DISABLE_STEP2_DONE;
+		amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL6, &temp_val);
+		if (is_meson_gxtvbb_cpu() && (((temp_val >> 21) & 0x3) != 0))
+			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6, 0, 21, 2);
 	}
 }
 static void vlock_enable_step1(struct vframe_s *vf, struct vinfo_s *vinfo,
@@ -4763,19 +4856,112 @@ static void vlock_enable_step1(struct vframe_s *vf, struct vinfo_s *vinfo,
 	vlock_vmode_changed = 0;
 	vlock_dis_cnt = 0;
 	vlock_state = VLOCK_STATE_ENABLE_STEP1_DONE;
-
+	vlock_log_cnt = 0;
 }
+#define VLOCK_REG_NUM	33
+struct vlock_log_s {
+	unsigned int pll_m;
+	unsigned int pll_frac;
+	unsigned int vlock_regs[VLOCK_REG_NUM];
+};
+struct vlock_log_s *vlock_log;
+
+void vlock_log_start(void)
+{
+	unsigned int size_mem;
+
+	size_mem = vlock_log_size * sizeof(struct vlock_log_s);
+	vlock_log = kzalloc(size_mem, GFP_KERNEL);
+
+	if (vlock_log == NULL) {
+		kfree(vlock_log);
+		return;
+	}
+
+	vlock_log_en = 1;
+	pr_info("%s done\n", __func__);
+}
+void vlock_log_stop(void)
+{
+	if (vlock_log != NULL)
+		kfree(vlock_log);
+	vlock_log_en = 0;
+	pr_info("%s done\n", __func__);
+}
+void vlock_log_print(void)
+{
+	unsigned int i, j;
+
+	for (i = 0; i < vlock_log_size; i++) {
+		pr_info("\n*******[%d]pll_m:0x%x,pll_frac:0x%x*******\n",
+			i, vlock_log[i].pll_m, vlock_log[i].pll_frac);
+		for (j = 0; j < VLOCK_REG_NUM;) {
+			if ((j%8 == 0) && ((j + 7) < VLOCK_REG_NUM)) {
+				pr_info("0x%08x\t0x%08x\t0x%08x\t0x%08x\t0x%08x\t0x%08x\t0x%08x\t0x%08x\n",
+					vlock_log[i].vlock_regs[j],
+					vlock_log[i].vlock_regs[j+1],
+					vlock_log[i].vlock_regs[j+2],
+					vlock_log[i].vlock_regs[j+3],
+					vlock_log[i].vlock_regs[j+4],
+					vlock_log[i].vlock_regs[j+5],
+					vlock_log[i].vlock_regs[j+6],
+					vlock_log[i].vlock_regs[j+7]);
+				j += 8;
+			} else {
+				pr_info("0x%08x\t",
+					vlock_log[i].vlock_regs[j]);
+				j++;
+			}
+
+		}
+	}
+	pr_info("%s done\n", __func__);
+}
+
 static void vlock_enable_step3(void)
 {
 	unsigned int m_reg_value, tmp_value, abs_val;
-	unsigned int hiu_reg_addr;
+	unsigned int hiu_reg_addr, i;
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL)
 		hiu_reg_addr = HHI_HDMI_PLL_CNTL1;
 	else
 		hiu_reg_addr = HHI_HDMI_PLL_CNTL2;
 
+	/*vs_i*/
+	tmp_value = READ_VPP_REG(VPU_VLOCK_RO_VS_I_DIST);
+	abs_val = abs(vlock_log_last_ivcnt - tmp_value);
+	if ((abs_val > vlock_log_delta_ivcnt) &&
+		(vlock_log_delta_en & (1 << 0)))
+		pr_info("%s: abs_ivcnt over 0x%x:0x%x(last:0x%x,cur:0x%x)\n",
+			__func__, vlock_log_delta_ivcnt,
+			abs_val, vlock_log_last_ivcnt, tmp_value);
+	vlock_log_last_ivcnt = tmp_value;
+	/*vs_o*/
+	tmp_value = READ_VPP_REG(VPU_VLOCK_RO_VS_O_DIST);
+	abs_val = abs(vlock_log_last_ovcnt - tmp_value);
+	if ((abs_val > vlock_log_delta_ovcnt) &&
+		(vlock_log_delta_en & (1 << 1)))
+		pr_info("%s: abs_ovcnt over 0x%x:0x%x(last:0x%x,cur:0x%x)\n",
+			__func__, vlock_log_delta_ovcnt,
+			abs_val, vlock_log_last_ivcnt, tmp_value);
+	vlock_log_last_ovcnt = tmp_value;
+	/*delta_vs*/
+	abs_val = abs(vlock_log_last_ovcnt - vlock_log_last_ivcnt);
+	if ((abs_val > vlock_log_delta_vcnt) && (vlock_log_delta_en & (1 << 2)))
+		pr_info("%s: abs_vcnt over 0x%x:0x%x(ivcnt:0x%x,ovcnt:0x%x)\n",
+			__func__, vlock_log_delta_vcnt,
+			abs_val, vlock_log_last_ivcnt, vlock_log_last_ovcnt);
+
 	m_reg_value = READ_VPP_REG(VPU_VLOCK_RO_M_INT_FRAC);
+	if (vlock_log_en && (vlock_log_cnt < vlock_log_size)) {
+		vlock_log[vlock_log_cnt].pll_frac = (m_reg_value & 0xfff) >> 2;
+		vlock_log[vlock_log_cnt].pll_m = (m_reg_value >> 16) & 0x1ff;
+		for (i = 0; i < VLOCK_REG_NUM; i++)
+			vlock_log[vlock_log_cnt].vlock_regs[i] =
+				READ_VPP_REG(0x3000 + i);
+		vlock_log_cnt++;
+	}
 	if (m_reg_value == 0) {
 		vlock_state = VLOCK_STATE_ENABLE_FORCE_RESET;
 		if (vlock_debug & 0x100)
@@ -4783,18 +4969,33 @@ static void vlock_enable_step3(void)
 				__func__);
 		return;
 	}
+	/*vlsi suggest config:don't enable load signal,*/
+	/*on gxtvbb this load signal will effect SSG,*/
+	/*which may result in flashes black*/
+	amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL6, &tmp_value);
+	if (is_meson_gxtvbb_cpu() && (((tmp_value >> 21) & 0x3) != 2))
+		amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6, 2, 21, 2);
 	/*frac*/
 	amvecm_hiu_reg_read(hiu_reg_addr, &tmp_value);
 	abs_val = abs(((m_reg_value & 0xfff) >> 2) - (tmp_value & 0xfff));
-	if ((abs_val < vlock_delta_limit_frac) && (abs_val > 2)) {
+	if ((abs_val > vlock_log_delta_frac) &&
+		(vlock_log_delta_en & (1 << 3)))
+		pr_info("vlock frac delta:%d(0x%x,0x%x)\n",
+			abs_val, ((m_reg_value & 0xfff) >> 2),
+			(tmp_value & 0xfff));
+	if (abs_val > vlock_delta_limit) {
 		tmp_value = (tmp_value & 0xfffff000) |
 			((m_reg_value & 0xfff) >> 2);
 		amvecm_hiu_reg_write(hiu_reg_addr, tmp_value);
 	}
-	/*M*/
+	/*m*/
 	amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL, &tmp_value);
 	abs_val = abs(((m_reg_value >> 16) & 0x1ff) - (tmp_value & 0x1ff));
-	if (abs_val <= vlock_delta_limit_m) {
+	if ((abs_val > vlock_log_delta_m) && (vlock_log_delta_en & (1 << 4)))
+		pr_info("vlock m delta:%d(0x%x,0x%x)\n",
+			abs_val, ((m_reg_value >> 16) & 0x1ff),
+			(tmp_value & 0x1ff));
+	if (((m_reg_value >> 16) & 0x1ff) != (tmp_value & 0x1ff)) {
 		tmp_value = (tmp_value & 0xfffffe00) |
 			((m_reg_value >> 16) & 0x1ff);
 		amvecm_hiu_reg_write(HHI_HDMI_PLL_CNTL, tmp_value);
@@ -4818,6 +5019,7 @@ void amve_vlock_process(struct vframe_s *vf)
 	vinfo = get_current_vinfo();
 	input_hz = vlock_check_input_hz(vf);
 	output_hz = vlock_check_output_hz(vinfo->sync_duration_num);
+	vlock_dis_cnt_no_vf = 0;
 	if (vecm_latch_flag & FLAG_VLOCK_EN) {
 		vlock_enable_step1(vf, vinfo, input_hz, output_hz);
 		vlock_en = 1;
@@ -4829,23 +5031,18 @@ void amve_vlock_process(struct vframe_s *vf)
 	}
 	if (vlock_en == 1) {
 		if (((input_hz != output_hz) && (vlock_adapt == 0)) ||
-			(input_hz == 0) || (output_hz == 0)) {
-			vlock_dis_cnt_step1++;
+			(input_hz == 0) || (output_hz == 0) ||
+			(((vf->type_original & VIDTYPE_TYPEMASK)
+				!= VIDTYPE_PROGRESSIVE) &&
+				is_meson_txlx_package_962E())) {
 			if ((vlock_state != VLOCK_STATE_DISABLE_STEP2_DONE) &&
-				(vlock_dis_cnt_step1 >
-				vlock_dis_cnt_step1_limit) &&
-				(vlock_state != VLOCK_STATE_NULL)) {
+				(vlock_state != VLOCK_STATE_NULL))
 				vlock_disable_step1();
-				if (vlock_debug & 0x1)
-					pr_info("[%s]auto disable vlock module for no support case!!!\n",
-						__func__);
-			} else
-				vlock_state = VLOCK_STATE_DISABLE_STEP1;
+			if (vlock_debug & 0x1)
+				pr_info("[%s]auto disable vlock module for no support case!!!\n",
+					__func__);
 			return;
 		}
-		vlock_dis_cnt_step1 = 0;
-		if (vlock_state == VLOCK_STATE_ENABLE_STEP1)
-			vlock_state = VLOCK_STATE_ENABLE_FORCE_RESET;
 		vlock_vmode_check();
 		if ((vinfo->mode != pre_vmode) ||
 			(vf->source_type != pre_source_type) ||
@@ -4853,16 +5050,13 @@ void amve_vlock_process(struct vframe_s *vf)
 			(input_hz != pre_input_freq) ||
 			(output_hz != pre_output_freq) ||
 			vlock_vmode_changed ||
-			(vlock_state == VLOCK_STATE_ENABLE_FORCE_RESET) ||
-			(vlock_state == VLOCK_STATE_ENABLE_STEP1)) {
-			if (vlock_sync_limit_flag++ > vlock_en_cnt_step1_limit)
-				vlock_enable_step1(vf, vinfo,
-					input_hz, output_hz);
-			else
-				vlock_state = VLOCK_STATE_ENABLE_STEP1;
-			return;
-		}
-		if (vlock_state == VLOCK_STATE_ENABLE_STEP1_DONE) {
+			(vlock_state == VLOCK_STATE_ENABLE_FORCE_RESET))
+			vlock_enable_step1(vf, vinfo, input_hz, output_hz);
+		if ((vlock_sync_limit_flag < 10) &&
+			(vlock_state >= VLOCK_STATE_ENABLE_STEP1_DONE))
+			vlock_sync_limit_flag++;
+		if ((vlock_sync_limit_flag == 5) &&
+			(vlock_state == VLOCK_STATE_ENABLE_STEP1_DONE)) {
 			/*input_vs_cnt =*/
 			/*READ_VPP_REG_BITS(VPU_VLOCK_RO_VS_I_DIST,*/
 			/*	0, 28);*/
@@ -4876,20 +5070,18 @@ void amve_vlock_process(struct vframe_s *vf)
 			/*cal accum0 value*/
 			WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 0, 5, 1);
 			vlock_state = VLOCK_STATE_ENABLE_STEP2_DONE;
-			return;
 		} else if (vlock_dynamic_adjust &&
+			(vlock_sync_limit_flag > 5) &&
 			(vlock_state == VLOCK_STATE_ENABLE_STEP2_DONE) &&
-			(is_meson_gxtvbb_cpu() || is_meson_txl_cpu()) &&
+			(cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) &&
 			(vlock_mode == VLOCK_MODE_MANUAL_PLL)) {
 			vlock_enable_step3();
-			return;
 		}
 	}
 }
 
 void amve_vlock_resume(void)
 {
-	vlock_sync_limit_flag = 0;
 	if ((vlock_en == 0) || (vlock_state ==
 		VLOCK_STATE_DISABLE_STEP2_DONE) ||
 		(vlock_state == VLOCK_STATE_NULL))
@@ -4898,11 +5090,11 @@ void amve_vlock_resume(void)
 		vlock_disable_step2();
 		return;
 	}
-	vlock_dis_cnt_step1++;
+	vlock_dis_cnt_no_vf++;
 	if ((vlock_state != VLOCK_STATE_DISABLE_STEP2_DONE) &&
-		(vlock_dis_cnt_step1 > vlock_dis_cnt_step1_limit)) {
+		(vlock_dis_cnt_no_vf > vlock_dis_cnt_no_vf_limit)) {
 		vlock_disable_step1();
-		vlock_dis_cnt_step1 = 0;
+		vlock_dis_cnt_no_vf = 0;
 		if (vlock_debug & 0x1)
 			pr_info("[%s]auto disable vlock module for no vframe & run disable step1.!!!\n",
 				__func__);
@@ -4910,6 +5102,12 @@ void amve_vlock_resume(void)
 	if (vlock_debug & 0x1)
 		pr_info("[%s]auto disable vlock module for no vframe!!!\n",
 			__func__);
+	if (vlock_dynamic_adjust &&
+		(vlock_sync_limit_flag > 5) &&
+		(vlock_state == VLOCK_STATE_ENABLE_STEP2_DONE) &&
+		(cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) &&
+		(vlock_mode == VLOCK_MODE_MANUAL_PLL))
+		vlock_enable_step3();
 }
 
 void vlock_param_set(unsigned int val, enum vlock_param_e sel)
@@ -4927,11 +5125,8 @@ void vlock_param_set(unsigned int val, enum vlock_param_e sel)
 	case VLOCK_DIS_CNT_LIMIT:
 		vlock_dis_cnt_limit = val;
 		break;
-	case VLOCK_DELTA_LIMIT_FRAC:
-		vlock_delta_limit_frac = val;
-		break;
-	case VLOCK_DELTA_LIMIT_M:
-		vlock_delta_limit_m = val;
+	case VLOCK_DELTA_LIMIT:
+		vlock_delta_limit = val;
 		break;
 	case VLOCK_DEBUG:
 		vlock_debug = val;
@@ -4939,11 +5134,8 @@ void vlock_param_set(unsigned int val, enum vlock_param_e sel)
 	case VLOCK_DYNAMIC_ADJUST:
 		vlock_dynamic_adjust = val;
 		break;
-	case VLOCK_DIS_CNT_STEP1_LIMIT:
-		vlock_dis_cnt_step1_limit = val;
-		break;
-	case VLOCK_EN_CNT_STEP1_LIMIT:
-		vlock_en_cnt_step1_limit = val;
+	case VLOCK_DIS_CNT_NO_VF_LIMIT:
+		vlock_dis_cnt_no_vf_limit = val;
 		break;
 	default:
 		pr_info("%s:unknown vlock param:%d\n", __func__, sel);
@@ -4958,8 +5150,7 @@ void vlock_status(void)
 	pr_info("vlock_en:%d\n", vlock_en);
 	pr_info("vlock_adapt:%d\n", vlock_adapt);
 	pr_info("vlock_dis_cnt_limit:%d\n", vlock_dis_cnt_limit);
-	pr_info("vlock_delta_limit_frac:%d\n", vlock_delta_limit_frac);
-	pr_info("vlock_delta_limit_m:%d\n", vlock_delta_limit_m);
+	pr_info("vlock_delta_limit:%d\n", vlock_delta_limit);
 	pr_info("vlock_debug:0x%x\n", vlock_debug);
 	pr_info("vlock_dynamic_adjust:%d\n", vlock_dynamic_adjust);
 	pr_info("vlock_state:%d\n", vlock_state);
@@ -4969,9 +5160,8 @@ void vlock_status(void)
 	pr_info("pre_hiu_reg_frac:0x%x\n", pre_hiu_reg_frac);
 	pr_info("vlock_dis_cnt:%d\n", vlock_dis_cnt);
 	pr_info("pre_vout_mode:%s\n", pre_vout_mode);
-	pr_info("vlock_dis_cnt_step1:%d\n", vlock_dis_cnt_step1);
-	pr_info("vlock_dis_cnt_step1_limit:%d\n", vlock_dis_cnt_step1_limit);
-	pr_info("vlock_en_cnt_step1_limit:%d\n", vlock_en_cnt_step1_limit);
+	pr_info("vlock_dis_cnt_no_vf:%d\n", vlock_dis_cnt_no_vf);
+	pr_info("vlock_dis_cnt_no_vf_limit:%d\n", vlock_dis_cnt_no_vf_limit);
 }
 void vlock_reg_dump(void)
 {
@@ -4988,6 +5178,7 @@ void vlock_reg_dump(void)
 /* sharpness process begin */
 void sharpness_process(struct vframe_s *vf)
 {
+	return;
 }
 /* sharpness process end */
 
