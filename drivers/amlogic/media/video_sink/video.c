@@ -194,7 +194,7 @@ static DEFINE_SPINLOCK(video_onoff_lock);
 static int video_onoff_state = VIDEO_ENABLE_STATE_IDLE;
 static DEFINE_SPINLOCK(video2_onoff_lock);
 static int video2_onoff_state = VIDEO_ENABLE_STATE_IDLE;
-static u32 hdmiin_frame_check = 1;
+static u32 hdmiin_frame_check;
 static u32 hdmiin_frame_check_cnt;
 
 #ifdef FIQ_VSYNC
