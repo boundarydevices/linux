@@ -2418,9 +2418,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 	sport->port.fifosize = 32;
 	sport->port.ops = &imx_pops;
 	sport->port.flags = UPF_BOOT_AUTOCONF;
-	init_timer(&sport->timer);
-	sport->timer.function = imx_timeout;
-	sport->timer.data     = (unsigned long)sport;
+	setup_timer(&sport->timer, imx_timeout, (unsigned long)sport);
 	INIT_DELAYED_WORK(&sport->rxact_work, rxact_work_func);
 
 	sport->gpios = mctrl_gpio_init(&sport->port, 0);
