@@ -63,6 +63,7 @@ static u32 psci_get_version(void)
 #undef pr_fmt
 #define pr_fmt(fmt) "gxbb_pm: " fmt
 
+static void __iomem *debug_reg;
 static void __iomem *exit_reg;
 static int max_idle_lvl;
 static suspend_state_t pm_state;
@@ -178,6 +179,37 @@ ssize_t suspend_reason_store(struct device *dev, struct device_attribute *attr,
 
 DEVICE_ATTR(suspend_reason, 0664, suspend_reason_show, suspend_reason_store);
 
+ssize_t time_out_show(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	unsigned int val = 0, len;
+
+	val = readl(debug_reg);
+	len = sprintf(buf, "%d\n", val);
+
+	return len;
+}
+
+ssize_t time_out_store(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	unsigned int time_out;
+	int ret;
+
+	ret = kstrtouint(buf, 10, &time_out);
+	switch (ret) {
+	case 0:
+		writel(time_out, debug_reg);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return count;
+}
+
+DEVICE_ATTR(time_out, 0664, time_out_show, time_out_store);
+
 static int __init meson_pm_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_node;
@@ -209,8 +241,12 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 		suspend_set_ops(&meson_gx_ops);
 	}
 
-	exit_reg = of_iomap(pdev->dev.of_node, 0);
+	debug_reg = of_iomap(pdev->dev.of_node, 0);
+	exit_reg = of_iomap(pdev->dev.of_node, 1);
+	writel(0x0, debug_reg);
 	device_create_file(&pdev->dev, &dev_attr_suspend_reason);
+	device_create_file(&pdev->dev, &dev_attr_time_out);
+	device_rename(&pdev->dev, "aml_pm");
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	if (lgcy_early_suspend_init())
 		return -1;
