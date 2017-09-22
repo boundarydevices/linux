@@ -252,7 +252,6 @@ static const struct file_operations dtb_ops = {
 	.read = mmc_dtb_read,
 	.write = mmc_dtb_write,
 	.unlocked_ioctl = mmc_dtb_ioctl,
-	.release = single_release,
 };
 
 int amlmmc_dtb_init(struct mmc_card *card)
