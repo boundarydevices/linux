@@ -3597,7 +3597,9 @@ static int sec_ac_get_property(struct power_supply *psy,
 		return -EINVAL;
 
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
-			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE) ||
+			(battery->charger_health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
+			(battery->charger_health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
 		val->intval = 0;
 		return 0;
 	}
