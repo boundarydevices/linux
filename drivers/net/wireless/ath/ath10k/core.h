@@ -435,8 +435,6 @@ struct ath10k_ce_crash_hdr {
 
 /* used for crash-dump storage, protected by data-lock */
 struct ath10k_fw_crash_data {
-	bool crashed_since_read;
-
 	uuid_le uuid;
 	struct timespec timestamp;
 	__le32 registers[REG_DUMP_COUNT_QCA988X];
@@ -467,8 +465,6 @@ struct ath10k_debug {
 	u32 reg_addr;
 	u32 nf_cal_period;
 	void *cal_data;
-
-	struct ath10k_fw_crash_data *fw_crash_data;
 };
 
 enum ath10k_state {
@@ -906,6 +902,12 @@ struct ath10k {
 		enum ath10k_spectral_mode mode;
 		struct ath10k_spec_scan config;
 	} spectral;
+#endif
+
+#ifdef CONFIG_DEV_COREDUMP
+	struct {
+		struct ath10k_fw_crash_data *fw_crash_data;
+	} coredump;
 #endif
 
 	struct {
