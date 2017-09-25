@@ -580,10 +580,8 @@ static int __maybe_unused imx_controller_resume(struct device *dev,
 
 	dev_dbg(dev, "at %s\n", __func__);
 
-	if (!data->in_lpm) {
-		WARN_ON(1);
+	if (!data->in_lpm)
 		return 0;
-	}
 
 	if (data->plat_data->flags & CI_HDRC_PMQOS)
 		cpu_latency_qos_add_request(&data->pm_qos_req, 0);
@@ -647,10 +645,8 @@ static int __maybe_unused ci_hdrc_imx_runtime_suspend(struct device *dev)
 {
 	struct ci_hdrc_imx_data *data = dev_get_drvdata(dev);
 
-	if (data->in_lpm) {
-		WARN_ON(1);
+	if (data->in_lpm)
 		return 0;
-	}
 
 	return imx_controller_suspend(dev, PMSG_AUTO_SUSPEND);
 }
