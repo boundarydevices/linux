@@ -6,3 +6,31 @@ config DRM_MESON
 	select DRM_GEM_CMA_HELPER
 	select VIDEOMODE_HELPERS
 	select REGMAP_MMIO
+
+config DRM_MESON_BYPASS_MODE
+	bool "use the drm display path, but all the implements in other drivers."
+	default y
+	depends on DRM_MESON
+	help
+		The MESON DRM want to rewrite all the display component,its a big job,
+		and will meet a lot of bugs which are already handled before.
+		We add bypass mode to implment drm based on amlogic existing driver,
+		it should be easier and more robust.
+
+config DRM_MESON_USE_ION
+	bool "gem use ion to alloc/free graphic buffer."
+	default y
+	depends on DRM_MESON
+	help
+		MESON DRM use CMA HELPER to manage framebuffer.
+		It need reserve memory in CMA pool.
+		We implement GEM to allocate/free framebuffer from ion.
+		For dumb used by displaycontrol we alloc from the ION CMA HEAP.
+		For dumb used by app, we can alloc from the ION.
+		SYSTEM HEAP which dont need reserve memory.
+
+config DRM_MESON_EMULATE_FBDEV
+	bool "emulate framebuffer dev by drm."
+	default n
+	help
+		Emulate framebuffer device for device which need use fbdev api.

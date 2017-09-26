@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/drm/meson_dmabuf.h
+ * drivers/amlogic/drm/am_meson_fb.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,13 +15,21 @@
  *
  */
 
-#ifndef _MESON_DRM_DMABUF_H_
-#define _MESON_DRM_DMABUF_H_
+#ifndef __AM_MESON_FB_H
+#define __AM_MESON_FB_H
+#include <drm/drmP.h>
+#include <drm/drm_gem.h>
+#include <drm/drm_framebuffer.h>
+#include <drm/drm_modeset_helper.h>
 
-struct dma_buf *meson_dmabuf_prime_export(struct drm_device *drm_dev,
-				struct drm_gem_object *obj, int flags);
+#include "am_meson_gem.h"
 
-struct drm_gem_object *meson_dmabuf_prime_import(struct drm_device *drm_dev,
-						struct dma_buf *dma_buf);
+struct am_meson_fb {
+	struct drm_framebuffer base;
+	struct am_meson_gem_object *bufp;
+};
 
-#endif /* MESON_DRM_DMABUF_H */
+struct drm_framebuffer *am_meson_fb_create(struct drm_device *dev,
+				     struct drm_file *file_priv,
+				     const struct drm_mode_fb_cmd2 *mode_cmd);
+#endif

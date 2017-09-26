@@ -37,6 +37,7 @@
 	};
 	ion_dev {
 		compatible = "amlogic, ion_dev";
+		memory-region = <&ion_reserved>;
 	};
 	memory@00000000 {
 		device_type = "memory";
@@ -61,12 +62,11 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
-		fb_reserved:linux,meson-fb {
+		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x2400000>;
+			size = <0x0 0x8000000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x7dc00000 0x0 0x2400000>;
 		};
 		//don't put other dts in front of fb_reserved
 
@@ -692,7 +692,6 @@
 
 	meson-fb {
 		compatible = "amlogic, meson-fb";
-		memory-region = <&fb_reserved>;
 		dev_name = "meson-fb";
 		status = "okay";
 		interrupts = <0 3 1

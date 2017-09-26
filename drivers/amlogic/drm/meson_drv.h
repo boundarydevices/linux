@@ -23,19 +23,28 @@
 #include <linux/regmap.h>
 #include <linux/of.h>
 #include <drm/drmP.h>
+#ifdef CONFIG_DRM_MESON_USE_ION
+#include <ion/ion_priv.h>
+#endif
 
 struct meson_drm {
 	struct device *dev;
+
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	void __iomem *io_base;
 	struct regmap *hhi;
 	struct regmap *dmc;
+#endif
+
 	int vsync_irq;
 
 	struct drm_device *drm;
 	struct drm_crtc *crtc;
 	struct drm_fbdev_cma *fbdev;
 	struct drm_plane *primary_plane;
+	struct drm_plane *cursor_plane;
 
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	/* Components Data */
 	struct {
 		bool osd1_enabled;
@@ -48,6 +57,11 @@ struct meson_drm {
 	struct {
 		unsigned int current_mode;
 	} venc;
+#endif
+
+#ifdef CONFIG_DRM_MESON_USE_ION
+	struct ion_client *gem_client;
+#endif
 };
 
 static inline int meson_vpu_is_compatible(struct meson_drm *priv,

@@ -14110,3 +14110,7 @@ M: Guosong Zhou <guosong.zhou@amlogic.com>
 F: drivers/amlogic/media/video_processor/Kconfig
 F: drivers/amlogic/media/video_processor/Makefile
 F: drivers/amlogic/media/video_processor/pic_dev/*
+
+AMLOGIC DRM DRIVER
+M: Sky Zhou <sky.zhou@amlogic.com>
+F: driver/amlogic/drm/*

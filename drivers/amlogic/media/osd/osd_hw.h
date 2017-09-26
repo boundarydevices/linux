@@ -21,6 +21,7 @@
 #include <linux/amlogic/media/vout/vinfo.h>
 #include "osd.h"
 #include "osd_sync.h"
+#include "osd_drm.h"
 
 #define REG_OFFSET (0x20)
 #define OSD_RELATIVE_BITS 0x33330
@@ -125,7 +126,7 @@ extern void osd_init_scan_mode(void);
 extern void osd_suspend_hw(void);
 extern void osd_resume_hw(void);
 extern void osd_shutdown_hw(void);
-extern void osd_init_hw(u32 logo_loaded);
+extern void osd_init_hw(u32 logo_loaded, u32 osd_probe);
 extern void osd_init_scan_mode(void);
 extern void osd_set_logo_index(int index);
 extern int osd_get_logo_index(void);
@@ -167,4 +168,8 @@ void osd_restore_screen_info(
 	u32 index,
 	char __iomem **screen_base,
 	unsigned long *screen_size);
+void osd_set_clear(u32 index, u32 osd_clear);
+void osd_page_flip(struct osd_plane_map_s *plane_map);
+void walk_through_update_list(void);
+
 #endif

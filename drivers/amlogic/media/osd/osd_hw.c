@@ -63,6 +63,7 @@
 
 #include "osd_hw.h"
 #include "osd_hw_def.h"
+#include "osd_fb.h"
 
 #ifdef CONFIG_AMLOGIC_VSYNC_FIQ_ENABLE
 #define FIQ_VSYNC
@@ -83,6 +84,9 @@ static DECLARE_WAIT_QUEUE_HEAD(osd_vsync_wq);
 static bool vsync_hit;
 static bool osd_update_window_axis;
 static int osd_afbc_dec_enable;
+static u32 extern_canvas[2] = {EXTERN1_CANVAS, EXTERN2_CANVAS};
+static int ext_canvas_id;
+
 static void osd_clone_pan(u32 index, u32 yoffset, int debug_flag);
 static void osd_set_dummy_data(u32 alpha);
 
@@ -738,7 +742,7 @@ void osd_update_scan_mode(void)
 		osd_update_interlace_mode(index);
 }
 
-static inline void walk_through_update_list(void)
+void walk_through_update_list(void)
 {
 	u32  i, j;
 
@@ -887,7 +891,6 @@ static int notify_to_amvideo(void)
 	return 0;
 }
 /*************** end of GXL/GXM hardware alpha bug workaround ***************/
-
 #ifdef FIQ_VSYNC
 static irqreturn_t vsync_isr(int irq, void *dev_id)
 {
@@ -924,7 +927,6 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 #endif
 }
 
-
 void osd_set_pxp_mode(u32 mode)
 {
 	pxp_mode = mode;
@@ -949,14 +951,16 @@ u32 osd_get_reset_status(void)
 void osd_wait_vsync_hw(void)
 {
 	unsigned long timeout;
+	if (osd_hw.fb_drvier_probe) {
+		vsync_hit = false;
 
-	vsync_hit = false;
-
-	if (pxp_mode)
-		timeout = msecs_to_jiffies(50);
-	else
-		timeout = HZ;
-	wait_event_interruptible_timeout(osd_vsync_wq, vsync_hit, timeout);
+		if (pxp_mode)
+			timeout = msecs_to_jiffies(50);
+		else
+			timeout = HZ;
+		wait_event_interruptible_timeout(
+				osd_vsync_wq, vsync_hit, timeout);
+	}
 }
 
 s32 osd_wait_vsync_event(void)
@@ -2041,6 +2045,7 @@ void osd_set_display_debug(u32 osd_display_debug_enable)
 	osd_hw.osd_display_debug = osd_display_debug_enable;
 }
 
+
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 enum {
 	HAL_PIXEL_FORMAT_RGBA_8888 = 1,
@@ -2050,8 +2055,6 @@ enum {
 	HAL_PIXEL_FORMAT_BGRA_8888 = 5,
 };
 
-static u32 extern_canvas[2] = {EXTERN1_CANVAS, EXTERN2_CANVAS};
-static int ext_canvas_id;
 static bool use_ext;
 const struct color_bit_define_s extern_color_format_array[] = {
 	/*32 bit color RGBA */
@@ -3918,11 +3921,12 @@ void osd_init_scan_mode(void)
 	}
 }
 
-void osd_init_hw(u32 logo_loaded)
+void osd_init_hw(u32 logo_loaded, u32 osd_probe)
 {
 	u32 group, idx, data32, data2;
 	int err_num = 0;
 
+	osd_hw.fb_drvier_probe = osd_probe;
 	osd_vpu_power_on();
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB)
 		backup_regs_init(HW_RESET_AFBCD_REGS);
@@ -4081,6 +4085,8 @@ void osd_init_hw(u32 logo_loaded)
 	osd_hw.free_scale_mode[OSD2] = 1;
 	osd_hw.buffer_alloc[OSD1] = 0;
 	osd_hw.buffer_alloc[OSD2] = 0;
+	osd_hw.osd_clear[OSD1] = 0;
+	osd_hw.osd_clear[OSD2] = 0;
 	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
 		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX))
 		osd_reg_write(VPP_OSD_SC_DUMMY_DATA, 0x002020ff);
@@ -4103,22 +4109,24 @@ void osd_init_hw(u32 logo_loaded)
 	INIT_LIST_HEAD(&post_fence_list);
 	mutex_init(&post_fence_list_lock);
 #endif
-#ifdef FIQ_VSYNC
-	osd_hw.fiq_handle_item.handle = vsync_isr;
-	osd_hw.fiq_handle_item.key = (u32)vsync_isr;
-	osd_hw.fiq_handle_item.name = "osd_vsync";
-	if (register_fiq_bridge_handle(&osd_hw.fiq_handle_item))
-#else
-	err_num = request_irq(int_viu_vsync, &vsync_isr,
-				IRQF_SHARED, "osd-vsync", osd_setup_hw);
-	if (err_num)
-#endif
-		osd_log_err("can't request irq for vsync,err_num=%d\n",
-			-err_num);
-#ifdef FIQ_VSYNC
-	request_fiq(INT_VIU_VSYNC, &osd_fiq_isr);
-#endif
 
+	if (osd_hw.fb_drvier_probe) {
+#ifdef FIQ_VSYNC
+		osd_hw.fiq_handle_item.handle = vsync_isr;
+		osd_hw.fiq_handle_item.key = (u32)vsync_isr;
+		osd_hw.fiq_handle_item.name = "osd_vsync";
+		if (register_fiq_bridge_handle(&osd_hw.fiq_handle_item))
+#else
+		err_num = request_irq(int_viu_vsync, &vsync_isr,
+					IRQF_SHARED, "osd-vsync", osd_setup_hw);
+		if (err_num)
+#endif
+			osd_log_err("can't request irq for vsync,err_num=%d\n",
+				-err_num);
+#ifdef FIQ_VSYNC
+		request_fiq(INT_VIU_VSYNC, &osd_fiq_isr);
+#endif
+	}
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
 		osd_rdma_enable(1);
@@ -4370,3 +4378,464 @@ void osd_restore_screen_info(
 	*screen_size = (unsigned long)osd_hw.screen_size[index];
 
 }
+
+void osd_set_clear(u32 index, u32 osd_clear)
+{
+	osd_hw.osd_clear[index] = osd_clear;
+}
+
+static const struct color_bit_define_s *convert_panel_format(u32 format)
+{
+	const struct color_bit_define_s *color = NULL;
+
+	switch (format) {
+	case COLOR_INDEX_02_PAL4:
+	case COLOR_INDEX_04_PAL16:
+	case COLOR_INDEX_08_PAL256:
+	case COLOR_INDEX_16_655:
+	case COLOR_INDEX_16_844:
+	case COLOR_INDEX_16_6442:
+	case COLOR_INDEX_16_4444_R:
+	case COLOR_INDEX_16_4642_R:
+	case COLOR_INDEX_16_1555_A:
+	case COLOR_INDEX_16_4444_A:
+	case COLOR_INDEX_16_565:
+	case COLOR_INDEX_24_6666_A:
+	case COLOR_INDEX_24_6666_R:
+	case COLOR_INDEX_24_8565:
+	case COLOR_INDEX_24_5658:
+	case COLOR_INDEX_24_888_B:
+	case COLOR_INDEX_24_RGB:
+	case COLOR_INDEX_32_BGRX:
+	case COLOR_INDEX_32_XBGR:
+	case COLOR_INDEX_32_RGBX:
+	case COLOR_INDEX_32_XRGB:
+	case COLOR_INDEX_32_BGRA:
+	case COLOR_INDEX_32_ABGR:
+	case COLOR_INDEX_32_RGBA:
+	case COLOR_INDEX_32_ARGB:
+	case COLOR_INDEX_YUV_422:
+		color = &default_color_format_array[format];
+		break;
+	}
+	return color;
+}
+
+static bool osd_direct_render(struct osd_plane_map_s *plane_map)
+{
+	u32 index = plane_map->plane_index;
+	u32 phy_addr = plane_map->phy_addr;
+	u32 width_src, width_dst, height_src, height_dst;
+	u32 x_start, x_end, y_start, y_end;
+	bool freescale_update = false;
+	struct pandata_s freescale_dst[HW_OSD_COUNT];
+	void *vaddr = NULL;
+
+	phy_addr = phy_addr + plane_map->byte_stride * plane_map->src_y;
+	if (osd_hw.osd_clear[index]) {
+		vaddr = phys_to_virt(phy_addr);
+		if (vaddr)
+			memset(vaddr, 0x0,
+				plane_map->byte_stride*plane_map->src_h);
+	}
+	canvas_config(osd_hw.fb_gem[index].canvas_idx,
+		phy_addr,
+		plane_map->byte_stride,
+		plane_map->src_h,
+		CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+
+	width_dst = osd_hw.free_dst_data_backup[index].x_end -
+		osd_hw.free_dst_data_backup[index].x_start + 1;
+	width_src = osd_hw.free_src_data_backup[index].x_end -
+		osd_hw.free_src_data_backup[index].x_start + 1;
+
+	height_dst = osd_hw.free_dst_data_backup[index].y_end -
+		osd_hw.free_dst_data_backup[index].y_start + 1;
+	height_src = osd_hw.free_src_data_backup[index].y_end -
+		osd_hw.free_src_data_backup[index].y_start + 1;
+	osd_hw.free_scale_enable[index] = 1;
+
+	if (osd_hw.free_scale_enable[index] ||
+		(width_src != width_dst) ||
+		(height_src != height_dst) ||
+		(plane_map->src_w != plane_map->dst_w) ||
+		(plane_map->src_h != plane_map->dst_h)) {
+		osd_hw.free_scale[index].h_enable = 1;
+		osd_hw.free_scale[index].v_enable = 1;
+		osd_hw.free_scale_enable[index] = 0x10001;
+		osd_hw.free_scale_mode[index] = 1;
+		if (osd_hw.free_scale_enable[index] !=
+			osd_hw.free_scale_enable_backup[index]) {
+			osd_set_scan_mode(OSD1);
+			freescale_update = true;
+		}
+
+		osd_hw.pandata[index].x_start = plane_map->src_x;
+		osd_hw.pandata[index].x_end =
+			plane_map->src_x + plane_map->src_w - 1;
+		osd_hw.pandata[index].y_start = 0;
+		osd_hw.pandata[index].y_end = plane_map->src_h - 1;
+
+		freescale_dst[index].x_start =
+			osd_hw.free_dst_data_backup[index].x_start +
+			(plane_map->dst_x * width_dst) / width_src;
+		freescale_dst[index].x_end =
+			osd_hw.free_dst_data_backup[index].x_start +
+			((plane_map->dst_x + plane_map->dst_w) *
+			width_dst) / width_src - 1;
+
+		freescale_dst[index].y_start =
+			osd_hw.free_dst_data_backup[index].y_start +
+			(plane_map->dst_y * height_dst) / height_src;
+		freescale_dst[index].y_end =
+			osd_hw.free_dst_data_backup[index].y_start +
+			((plane_map->dst_y + plane_map->dst_h) *
+			height_dst) / height_src - 1;
+		if (osd_hw.osd_reverse[OSD1] == REVERSE_TRUE) {
+			x_start = osd_hw.vinfo_width
+				- freescale_dst[index].x_end - 1;
+			y_start = osd_hw.vinfo_height
+				- freescale_dst[index].y_end - 1;
+			x_end = osd_hw.vinfo_width
+				- freescale_dst[index].x_start - 1;
+			y_end = osd_hw.vinfo_height
+				- freescale_dst[index].y_start - 1;
+			freescale_dst[index].x_start = x_start;
+			freescale_dst[index].y_start = y_start;
+			freescale_dst[index].x_end = x_end;
+			freescale_dst[index].y_end = y_end;
+		} else if (osd_hw.osd_reverse[OSD1] == REVERSE_X) {
+			x_start = osd_hw.vinfo_width
+				- freescale_dst[index].x_end - 1;
+			x_end = osd_hw.vinfo_width
+				- freescale_dst[index].x_start - 1;
+			freescale_dst[index].x_start = x_start;
+			freescale_dst[index].x_end = x_end;
+
+		} else if (osd_hw.osd_reverse[OSD1] == REVERSE_Y) {
+			y_start = osd_hw.vinfo_height
+				- freescale_dst[index].y_end - 1;
+			y_end = osd_hw.vinfo_height
+				- freescale_dst[index].y_start - 1;
+			freescale_dst[index].y_start = y_start;
+			freescale_dst[index].y_end = y_end;
+		}
+		if (memcmp(&(osd_hw.free_src_data[index]),
+			&osd_hw.pandata[index],
+			sizeof(struct pandata_s)) != 0 ||
+			memcmp(&(osd_hw.free_dst_data[index]),
+			&freescale_dst[index],
+			sizeof(struct pandata_s)) != 0) {
+			memcpy(&(osd_hw.free_src_data[index]),
+				&osd_hw.pandata[index],
+				sizeof(struct pandata_s));
+			memcpy(&(osd_hw.free_dst_data[index]),
+				&freescale_dst[index],
+				sizeof(struct pandata_s));
+			freescale_update = true;
+
+			if ((height_dst != height_src) ||
+				(width_dst != width_src))
+				osd_set_dummy_data(0);
+			else
+				osd_set_dummy_data(0xff);
+		}
+		osd_log_dbg2("pandata x=%d,x_end=%d,y=%d,y_end=%d\n",
+			osd_hw.pandata[index].x_start,
+			osd_hw.pandata[index].x_end,
+			osd_hw.pandata[index].y_start,
+			osd_hw.pandata[index].y_end);
+		osd_log_dbg2("plane_map:src_x=%d,src_y=%d,src_w=%d,src_h=%d\n",
+			plane_map->src_x,
+			plane_map->src_y,
+			plane_map->src_w,
+			plane_map->src_h);
+		osd_log_dbg2("fence_map:dst_x=%d,dst_y=%d,dst_w=%d,dst_h=%d\n",
+			plane_map->dst_x,
+			plane_map->dst_y,
+			plane_map->dst_w,
+			plane_map->dst_h);
+	} else {
+		osd_hw.pandata[index].x_start = 0;
+		osd_hw.pandata[index].x_end = plane_map->src_w - 1;
+		osd_hw.pandata[index].y_start = 0;
+		osd_hw.pandata[index].y_end = plane_map->src_h - 1;
+
+		osd_hw.dispdata[index].x_start = plane_map->dst_x;
+		osd_hw.dispdata[index].x_end =
+			plane_map->dst_x + plane_map->dst_w - 1;
+		osd_hw.dispdata[index].y_start = plane_map->dst_y;
+		osd_hw.dispdata[index].y_end =
+			plane_map->dst_y + plane_map->dst_h - 1;
+		if (osd_hw.osd_reverse[OSD1] == REVERSE_TRUE) {
+			x_start = osd_hw.vinfo_width
+				- osd_hw.dispdata[index].x_end - 1;
+			y_start = osd_hw.vinfo_height
+				- osd_hw.dispdata[index].y_end - 1;
+			x_end = osd_hw.vinfo_width
+				- osd_hw.dispdata[index].x_start - 1;
+			y_end = osd_hw.vinfo_height
+				- osd_hw.dispdata[index].y_start - 1;
+			osd_hw.dispdata[index].x_start = x_start;
+			osd_hw.dispdata[index].y_start = y_start;
+			osd_hw.dispdata[index].x_end = x_end;
+			osd_hw.dispdata[index].y_end = y_end;
+		} else if (osd_hw.osd_reverse[OSD1] == REVERSE_X) {
+			x_start = osd_hw.vinfo_width
+				- osd_hw.dispdata[index].x_end - 1;
+			x_end = osd_hw.vinfo_width
+				- osd_hw.dispdata[index].x_start - 1;
+			osd_hw.dispdata[index].x_start = x_start;
+			osd_hw.dispdata[index].x_end = x_end;
+
+		} else if (osd_hw.osd_reverse[OSD1] == REVERSE_Y) {
+			y_start = osd_hw.vinfo_height
+				- osd_hw.dispdata[index].y_end - 1;
+			y_end = osd_hw.vinfo_height
+				- osd_hw.dispdata[index].y_start - 1;
+			osd_hw.dispdata[index].y_start = y_start;
+			osd_hw.dispdata[index].y_end = y_end;
+		}
+	}
+	return freescale_update;
+}
+
+static void osd_cursor_move(struct osd_plane_map_s *plane_map)
+{
+	u32 index = plane_map->plane_index;
+	u32 phy_addr = plane_map->phy_addr;
+	u32 x_start, x_end, y_start, y_end;
+	u32 x, y;
+	void *vaddr = NULL;
+	struct pandata_s disp_tmp;
+	struct pandata_s free_dst_data_backup;
+
+	if (index != OSD2)
+		return;
+	phy_addr = phy_addr + plane_map->byte_stride * plane_map->src_y;
+	if (osd_hw.osd_clear[index]) {
+		vaddr = phys_to_virt(phy_addr);
+		if (vaddr)
+			memset(vaddr, 0x0,
+				plane_map->byte_stride*plane_map->src_h);
+	}
+	canvas_config(osd_hw.fb_gem[index].canvas_idx,
+		phy_addr,
+		plane_map->byte_stride,
+		plane_map->src_h,
+		CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+
+
+	osd_hw.pandata[index].x_start = plane_map->src_x;
+	osd_hw.pandata[index].x_end = plane_map->src_w - 1;
+	osd_hw.pandata[index].y_start = plane_map->src_y;
+	osd_hw.pandata[index].y_end = plane_map->src_h - 1;
+
+	if (osd_hw.free_scale_mode[OSD1]) {
+		if (osd_hw.free_scale_enable[OSD1])
+			memcpy(&disp_tmp, &osd_hw.cursor_dispdata[OSD1],
+					sizeof(struct pandata_s));
+		else
+			memcpy(&disp_tmp, &osd_hw.dispdata[OSD1],
+					sizeof(struct pandata_s));
+	} else
+		memcpy(&disp_tmp, &osd_hw.dispdata[OSD1],
+				sizeof(struct pandata_s));
+	memcpy(&free_dst_data_backup,
+		&osd_hw.free_dst_data_backup[OSD1],
+		sizeof(struct pandata_s));
+	#if 0
+	if (osd_hw.free_scale[OSD1].h_enable)
+		free_dst_data_backup.x_end =
+			osd_hw.free_dst_data_backup[OSD1].x_end * 2;
+	if (osd_hw.free_scale[OSD1].v_enable)
+		free_dst_data_backup.y_end =
+			osd_hw.free_dst_data_backup[OSD1].y_end * 2;
+	#endif
+	x = plane_map->dst_x;
+	y = plane_map->dst_y;
+	if (osd_hw.free_src_data_backup[OSD1].x_end > 0 &&
+		free_dst_data_backup.x_end > 0) {
+		x = x * free_dst_data_backup.x_end /
+			osd_hw.free_src_data_backup[OSD1].x_end;
+	}
+	if (osd_hw.free_src_data_backup[OSD1].y_end > 0 &&
+		free_dst_data_backup.y_end > 0) {
+		y = y * free_dst_data_backup.y_end /
+			osd_hw.free_src_data_backup[OSD1].y_end;
+	}
+
+	/*
+	 * Use pandata to show a partial cursor when it is at the edge because
+	 * the registers can't have negative values and because we need to
+	 * manually clip the cursor when it is past the edge.  The edge is
+	 * hardcoded to the OSD0 area.
+	 */
+	osd_hw.dispdata[OSD2].x_start = x;
+	osd_hw.dispdata[OSD2].y_start = y;
+	if (x <  disp_tmp.x_start) {
+		/* if negative position, set osd to 0,y and pan. */
+		if ((disp_tmp.x_start - x) < plane_map->src_w) {
+			osd_hw.pandata[OSD2].x_start = disp_tmp.x_start - x;
+			osd_hw.pandata[OSD2].x_end = plane_map->src_w - 1;
+		}
+		osd_hw.dispdata[OSD2].x_start = 0;
+	} else {
+		osd_hw.pandata[OSD2].x_start = 0;
+		if (x + plane_map->src_w > disp_tmp.x_end) {
+			/*
+			 * if past positive edge,
+			 * set osd to inside of the edge and pan.
+			 */
+			if (x < disp_tmp.x_end)
+				osd_hw.pandata[OSD2].x_end = disp_tmp.x_end - x;
+		} else
+			osd_hw.pandata[OSD2].x_end = plane_map->src_w - 1;
+	}
+	if (y < disp_tmp.y_start) {
+		if ((disp_tmp.y_start - y) < plane_map->src_h) {
+			osd_hw.pandata[OSD2].y_start = disp_tmp.y_start - y;
+			osd_hw.pandata[OSD2].y_end = plane_map->src_h - 1;
+		}
+		osd_hw.dispdata[OSD2].y_start = 0;
+	} else {
+		osd_hw.pandata[OSD2].y_start = 0;
+		if (y + plane_map->src_h > disp_tmp.y_end) {
+			if (y < disp_tmp.y_end)
+				osd_hw.pandata[OSD2].y_end = disp_tmp.y_end - y;
+		} else
+			osd_hw.pandata[OSD2].y_end = plane_map->src_h - 1;
+	}
+	osd_hw.dispdata[OSD2].x_end = osd_hw.dispdata[OSD2].x_start +
+		osd_hw.pandata[OSD2].x_end - osd_hw.pandata[OSD2].x_start;
+	osd_hw.dispdata[OSD2].y_end = osd_hw.dispdata[OSD2].y_start +
+		osd_hw.pandata[OSD2].y_end - osd_hw.pandata[OSD2].y_start;
+
+	if (osd_hw.osd_reverse[OSD2] == REVERSE_TRUE) {
+		x_start = osd_hw.vinfo_width
+			- osd_hw.dispdata[index].x_end - 1;
+		y_start = osd_hw.vinfo_height
+			- osd_hw.dispdata[index].y_end - 1;
+		x_end = osd_hw.vinfo_width
+			- osd_hw.dispdata[index].x_start - 1;
+		y_end = osd_hw.vinfo_height
+			- osd_hw.dispdata[index].y_start - 1;
+		osd_hw.dispdata[index].x_start = x_start;
+		osd_hw.dispdata[index].y_start = y_start;
+		osd_hw.dispdata[index].x_end = x_end;
+		osd_hw.dispdata[index].y_end = y_end;
+	} else if (osd_hw.osd_reverse[OSD2] == REVERSE_X) {
+		x_start = osd_hw.vinfo_width
+			- osd_hw.dispdata[index].x_end - 1;
+		x_end = osd_hw.vinfo_width
+			- osd_hw.dispdata[index].x_start - 1;
+		osd_hw.dispdata[index].x_start = x_start;
+		osd_hw.dispdata[index].x_end = x_end;
+		} else if (osd_hw.osd_reverse[OSD2] == REVERSE_Y) {
+		y_start = osd_hw.vinfo_height
+			- osd_hw.dispdata[index].y_end - 1;
+		y_end = osd_hw.vinfo_height
+			- osd_hw.dispdata[index].y_start - 1;
+		osd_hw.dispdata[index].y_start = y_start;
+		osd_hw.dispdata[index].y_end = y_end;
+	}
+	osd_log_dbg2("plane_map:src_x=%d,src_y=%d,src_w=%d,src_h=%d\n",
+		plane_map->src_x,
+		plane_map->src_y,
+		plane_map->src_w,
+		plane_map->src_h);
+	osd_log_dbg2("fence_map:dst_x=%d,dst_y=%d,dst_w=%d,dst_h=%d\n",
+		plane_map->dst_x,
+		plane_map->dst_y,
+		plane_map->dst_w,
+		plane_map->dst_h);
+	osd_log_dbg2("cursor pandata x=%d,x_end=%d,y=%d,y_end=%d\n",
+		osd_hw.pandata[index].x_start,
+		osd_hw.pandata[index].x_end,
+		osd_hw.pandata[index].y_start,
+		osd_hw.pandata[index].y_end);
+	osd_log_dbg2("cursor dispdata x=%d,x_end=%d,y=%d,y_end=%d\n",
+		osd_hw.dispdata[index].x_start,
+		osd_hw.dispdata[index].x_end,
+		osd_hw.dispdata[index].y_start,
+		osd_hw.dispdata[index].y_end);
+}
+
+void osd_page_flip(struct osd_plane_map_s *plane_map)
+{
+	u32 index = plane_map->plane_index;
+	const struct color_bit_define_s *color = NULL;
+	bool freescale_update = false;
+	u32 osd_enable = 0;
+	const struct vinfo_s *vinfo;
+
+	if (index >= 2)
+		return;
+
+	osd_hw.buffer_alloc[index] = 1;
+	if (osd_hw.osd_fps_start)
+		osd_hw.osd_fps++;
+
+	osd_enable = (plane_map->enable & 1) ? ENABLE : DISABLE;
+	vinfo = get_current_vinfo();
+	if (vinfo) {
+		osd_hw.vinfo_width = vinfo->width;
+		osd_hw.vinfo_height = vinfo->height;
+	}
+	if (plane_map->phy_addr && plane_map->src_w
+			&& plane_map->src_h && index == OSD1) {
+		osd_hw.fb_gem[index].canvas_idx =
+			extern_canvas[ext_canvas_id];
+		ext_canvas_id ^= 1;
+		color = convert_panel_format(plane_map->format);
+		if (color) {
+			osd_hw.color_info[index] = color;
+		} else
+			osd_log_err("fence color format error %d\n",
+				plane_map->format);
+
+		freescale_update = osd_direct_render(plane_map);
+
+		if (index == OSD1 &&
+			osd_hw.osd_afbcd[index].enable == ENABLE)
+			osd_hw.osd_afbcd[index].phy_addr =
+				plane_map->phy_addr;
+		osd_hw.reg[index][OSD_COLOR_MODE].update_func();
+		osd_hw.reg[index][DISP_GEOMETRY].update_func();
+		if ((osd_hw.free_scale_enable[index]
+			&& osd_update_window_axis)
+			|| freescale_update) {
+			if (!osd_hw.osd_display_debug)
+				osd_hw.reg[index][DISP_FREESCALE_ENABLE]
+				.update_func();
+			osd_update_window_axis = false;
+		}
+		if ((osd_hw.osd_afbcd[index].enable == DISABLE)
+			&& (osd_enable != osd_hw.enable[index])) {
+			osd_hw.enable[index] = osd_enable;
+			if (!osd_hw.osd_display_debug)
+				osd_hw.reg[index][OSD_ENABLE]
+					.update_func();
+		}
+		osd_wait_vsync_hw();
+	} else if (plane_map->phy_addr && plane_map->src_w
+			&& plane_map->src_h && index == OSD2) {
+		color = convert_panel_format(plane_map->format);
+		if (color) {
+			osd_hw.color_info[index] = color;
+		} else
+			osd_log_err("fence color format error %d\n",
+				plane_map->format);
+		osd_cursor_move(plane_map);
+		osd_hw.reg[index][OSD_COLOR_MODE].update_func();
+		osd_hw.reg[index][DISP_GEOMETRY].update_func();
+		if (osd_enable != osd_hw.enable[index]) {
+			osd_hw.enable[index] = osd_enable;
+			if (!osd_hw.osd_display_debug)
+				osd_hw.reg[index][OSD_ENABLE]
+					.update_func();
+		}
+
+	}
+}
+

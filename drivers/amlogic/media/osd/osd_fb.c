@@ -2807,9 +2807,9 @@ static int osd_probe(struct platform_device *pdev)
 	/* init osd logo */
 	ret = logo_work_init();
 	if (ret == 0)
-		osd_init_hw(1);
+		osd_init_hw(1, 1);
 	else
-		osd_init_hw(0);
+		osd_init_hw(0, 1);
 
 	/* get buffer size from dt */
 	ret = of_property_read_u32_array(pdev->dev.of_node,

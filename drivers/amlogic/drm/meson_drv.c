@@ -27,16 +27,11 @@
 #include <linux/of_graph.h>
 
 #include <drm/drmP.h>
-
-/* #define MUSE */
-#ifdef MUSE
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_flip_work.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_plane_helper.h>
-#endif
-
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_rect.h>
@@ -46,14 +41,20 @@
 #include "meson_plane.h"
 #include "meson_crtc.h"
 #include "meson_venc_cvbs.h"
-
+#ifdef CONFIG_DRM_MESON_BYPASS_MODE
+#include "am_meson_hdmi.h"
+#include "osd_drm.h"
+#else
 #include "meson_vpp.h"
 #include "meson_viu.h"
 #include "meson_venc.h"
 #include "meson_canvas.h"
 #include "meson_registers.h"
-#include "meson_gem.h"
-#include "meson_dmabuf.h"
+#endif
+#ifdef CONFIG_DRM_MESON_USE_ION
+#include "am_meson_gem.h"
+#include "am_meson_fb.h"
+#endif
 
 #define DRIVER_NAME "meson"
 #define DRIVER_DESC "Amlogic Meson DRM driver"
@@ -71,35 +72,42 @@
  * - Powering up video processing HW blocks
  * - Powering Up HDMI controller and PHY
  */
-
-#ifdef MUSE
 static void meson_fb_output_poll_changed(struct drm_device *dev)
 {
+#ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
 	struct meson_drm *priv = dev->dev_private;
-
 	drm_fbdev_cma_hotplug_event(priv->fbdev);
+#endif
 }
+
 static const struct drm_mode_config_funcs meson_mode_config_funcs = {
 	.output_poll_changed = meson_fb_output_poll_changed,
 	.atomic_check        = drm_atomic_helper_check,
 	.atomic_commit       = drm_atomic_helper_commit,
+#ifdef CONFIG_DRM_MESON_USE_ION
+	.fb_create           = am_meson_fb_create,
+#else
 	.fb_create           = drm_fb_cma_create,
+#endif
 };
 
 static int meson_enable_vblank(struct drm_device *dev, unsigned int crtc)
 {
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	struct meson_drm *priv = dev->dev_private;
 
 	meson_venc_enable_vsync(priv);
-
+#endif
 	return 0;
 }
 
 static void meson_disable_vblank(struct drm_device *dev, unsigned int crtc)
 {
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	struct meson_drm *priv = dev->dev_private;
 
 	meson_venc_disable_vsync(priv);
+#endif
 }
 
 static irqreturn_t meson_irq(int irq, void *arg)
@@ -107,13 +115,14 @@ static irqreturn_t meson_irq(int irq, void *arg)
 	struct drm_device *dev = arg;
 	struct meson_drm *priv = dev->dev_private;
 
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	(void)readl_relaxed(priv->io_base + _REG(VENC_INTFLAG));
+#endif
 
 	meson_crtc_irq(priv);
 
 	return IRQ_HANDLED;
 }
-#endif
 
 static const struct file_operations fops = {
 	.owner		= THIS_MODULE,
@@ -126,16 +135,18 @@ static const struct file_operations fops = {
 	.poll		= drm_poll,
 	.read		= drm_read,
 	.llseek		= no_llseek,
+#ifdef CONFIG_DRM_MESON_USE_ION
+	.mmap		= am_meson_gem_mmap,
+#else
 	.mmap		= drm_gem_cma_mmap,
+#endif
 };
 
 static struct drm_driver meson_driver = {
-	.driver_features	=  DRIVER_GEM | DRIVER_PRIME,
 
-#ifdef MUSE
 	.driver_features	= DRIVER_HAVE_IRQ | DRIVER_GEM |
 				  DRIVER_MODESET | DRIVER_PRIME |
-				  DRIVER_ATOMIC,
+				  DRIVER_ATOMIC | DRIVER_IRQ_SHARED,
 
 	/* Vblank */
 	.enable_vblank		= meson_enable_vblank,
@@ -144,22 +155,40 @@ static struct drm_driver meson_driver = {
 
 	/* IRQ */
 	.irq_handler		= meson_irq,
-#endif
 
+#ifdef CONFIG_DRM_MESON_USE_ION
 	/* PRIME Ops */
 	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
 	.prime_fd_to_handle	= drm_gem_prime_fd_to_handle,
-	.gem_prime_import	= meson_dmabuf_prime_import,
-	.gem_prime_export	= meson_dmabuf_prime_export,
+	.gem_prime_import	= am_meson_gem_prime_import,
+	.gem_prime_export	= am_meson_gem_prime_export,
 
 	/* GEM Ops */
-	.open				= meson_drm_gem_open,
-	.postclose			= meson_drm_gem_close,
-	.dumb_create		= meson_drm_gem_dumb_create,
-	.dumb_destroy		= meson_drm_gem_dumb_destroy,
-	.dumb_map_offset	= meson_drm_gem_dumb_map_offset,
-	.gem_free_object	= meson_drm_gem_free_object,
+	.dumb_create			= am_meson_gem_dumb_create,
+	.dumb_destroy		= am_meson_gem_dumb_destroy,
+	.dumb_map_offset		= am_meson_gem_dumb_map_offset,
+
+	.gem_free_object_unlocked	= am_meson_gem_object_free,
 	.gem_vm_ops			= &drm_gem_cma_vm_ops,
+#else
+	/* PRIME Ops */
+	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
+	.prime_fd_to_handle	= drm_gem_prime_fd_to_handle,
+	.gem_prime_import	= drm_gem_prime_import,
+	.gem_prime_export	= drm_gem_prime_export,
+	.gem_prime_get_sg_table	= drm_gem_cma_prime_get_sg_table,
+	.gem_prime_import_sg_table = drm_gem_cma_prime_import_sg_table,
+	.gem_prime_vmap		= drm_gem_cma_prime_vmap,
+	.gem_prime_vunmap	= drm_gem_cma_prime_vunmap,
+	.gem_prime_mmap		= drm_gem_cma_prime_mmap,
+
+	/* GEM Ops */
+	.dumb_create		= drm_gem_cma_dumb_create,
+	.dumb_destroy		= drm_gem_dumb_destroy,
+	.dumb_map_offset	= drm_gem_cma_dumb_map_offset,
+	.gem_free_object_unlocked = drm_gem_cma_free_object,
+	.gem_vm_ops		= &drm_gem_cma_vm_ops,
+#endif
 
 	/* Misc */
 	.fops			= &fops,
@@ -170,7 +199,7 @@ static struct drm_driver meson_driver = {
 	.minor			= 0,
 };
 
-#ifdef MUSE
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 static bool meson_vpu_has_available_connectors(struct device *dev)
 {
 	struct device_node *ep, *remote;
@@ -201,7 +230,7 @@ static int meson_drv_probe(struct platform_device *pdev)
 	struct drm_device *drm;
 	int ret;
 
-#ifdef MUSE
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	struct resource *res;
 	void __iomem *regs;
 
@@ -225,7 +254,7 @@ static int meson_drv_probe(struct platform_device *pdev)
 	priv->drm = drm;
 	priv->dev = dev;
 
-#ifdef MUSE
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "vpu");
 	regs = devm_ioremap_resource(dev, res);
 	if (IS_ERR(regs))
@@ -258,14 +287,20 @@ static int meson_drv_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Couldn't create the DMC regmap\n");
 		return PTR_ERR(priv->dmc);
 	}
+#endif
+
+#ifdef CONFIG_DRM_MESON_USE_ION
+	am_meson_gem_create(priv);
+#endif
 
 	priv->vsync_irq = platform_get_irq(pdev, 0);
-
 	drm_vblank_init(drm, 1);
 	drm_mode_config_init(drm);
 
+#ifdef CONFIG_DRM_MESON_BYPASS_MODE
+	am_hdmi_connector_create(priv);
+#else
 	/* Encoder Initialization */
-
 	ret = meson_venc_cvbs_create(priv);
 	if (ret)
 		goto free_drm;
@@ -275,6 +310,7 @@ static int meson_drv_probe(struct platform_device *pdev)
 	meson_venc_init(priv);
 	meson_vpp_init(priv);
 	meson_viu_init(priv);
+#endif
 
 	ret = meson_plane_create(priv);
 	if (ret)
@@ -293,6 +329,7 @@ static int meson_drv_probe(struct platform_device *pdev)
 	drm->mode_config.max_height = 8192;
 	drm->mode_config.funcs = &meson_mode_config_funcs;
 
+#ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
 	priv->fbdev = drm_fbdev_cma_init(drm, 32,
 					 drm->mode_config.num_crtc,
 					 drm->mode_config.num_connector);
@@ -300,9 +337,9 @@ static int meson_drv_probe(struct platform_device *pdev)
 		ret = PTR_ERR(priv->fbdev);
 		goto free_drm;
 	}
+#endif
 
 	drm_kms_helper_poll_init(drm);
-#endif
 
 	platform_set_drvdata(pdev, priv);
 
@@ -310,14 +347,15 @@ static int meson_drv_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_drm;
 
+#ifdef CONFIG_DRM_MESON_BYPASS_MODE
+	osd_drm_debugfs_init();
+#endif
+
 	return 0;
 
 free_drm:
 	DRM_DEBUG("free-drm");
-
-#ifdef MUSE
 	drm_dev_unref(drm);
-#endif
 
 	return ret;
 }
@@ -325,18 +363,22 @@ free_drm:
 static int meson_drv_remove(struct platform_device *pdev)
 {
 	struct drm_device *drm = dev_get_drvdata(&pdev->dev);
-#ifdef MUSE
 	struct meson_drm *priv = drm->dev_private;
-#endif
 
+#ifdef CONFIG_DRM_MESON_BYPASS_MODE
+	osd_drm_debugfs_exit();
+#endif
 	drm_dev_unregister(drm);
-#ifdef MUSE
 	drm_kms_helper_poll_fini(drm);
+#ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
 	drm_fbdev_cma_fini(priv->fbdev);
+#endif
 	drm_mode_config_cleanup(drm);
 	drm_vblank_cleanup(drm);
-	drm_dev_unref(drm);
+#ifdef CONFIG_DRM_MESON_USE_ION
+	am_meson_gem_cleanup(priv);
 #endif
+	drm_dev_unref(drm);
 
 	return 0;
 }
@@ -363,5 +405,6 @@ module_platform_driver(meson_drm_platform_driver);
 
 MODULE_AUTHOR("Jasper St. Pierre <jstpierre@mecheye.net>");
 MODULE_AUTHOR("Neil Armstrong <narmstrong@baylibre.com>");
+MODULE_AUTHOR("MultiMedia Amlogic <multimedia-sh@amlogic.com>");
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE("GPL");
