@@ -378,6 +378,7 @@ static void meson_transmit_chars(struct uart_port *port)
 	unsigned int ch;
 	int count = 256;
 
+	spin_lock(&port->lock);
 	if (port->x_char) {
 		writel(port->x_char, port->membase + AML_UART_WFIFO);
 		port->icount.tx++;
@@ -405,6 +406,7 @@ static void meson_transmit_chars(struct uart_port *port)
 		uart_write_wakeup(port);
 
  clear_and_return:
+	spin_unlock(&port->lock);
 	return;
 
 }
