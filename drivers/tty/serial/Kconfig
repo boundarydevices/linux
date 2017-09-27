@@ -1597,6 +1597,14 @@ config SERIAL_MILBEAUT_USIO_CONSOLE
 	  receives all kernel messages and warnings and which allows logins in
 	  single user mode).
 
+config SERIAL_XR20M117X
+	tristate "SERIAL_XR20M117X serial support"
+	depends on I2C
+	select SERIAL_CORE
+	select REGMAP_I2C if I2C
+	help
+	  This selects support for SERIAL_XR20M117X serial ports.
+
 endmenu
 
 config SERIAL_MCTRL_GPIO
