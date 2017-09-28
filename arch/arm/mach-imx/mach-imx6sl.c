@@ -48,9 +48,11 @@ static void __init imx6sl_init_late(void)
 		platform_device_register_simple("imx6q-cpufreq", -1, NULL, 0);
 
 	/* cpuidle will be enabled later for i.MX6SLL */
+#if defined(CONFIG_SOC_IMX6SLL)
 	if (cpu_is_imx6sll())
 		imx6sll_cpuidle_init();
 	else
+#endif
 		imx6sl_cpuidle_init();
 }
 
