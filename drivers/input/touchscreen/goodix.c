@@ -267,11 +267,6 @@ static void goodix_ts_report_touch(struct goodix_ts_data *ts, u8 *coor_data)
 	int input_y = get_unaligned_le16(&coor_data[3]);
 	int input_w = get_unaligned_le16(&coor_data[5]);
 
-	input_report_abs(ts->input_dev, ABS_X, input_x);
-	input_report_abs(ts->input_dev, ABS_Y, input_y);
-	input_report_abs(ts->input_dev, ABS_PRESSURE, 1);
-	input_report_key(ts->input_dev, BTN_TOUCH, 1);
-
 	/* Inversions have to happen before axis swapping */
 	if (ts->inverted_x)
 		input_x = ts->abs_x_max - input_x;
@@ -305,11 +300,6 @@ static void goodix_process_events(struct goodix_ts_data *ts)
 	touch_num = goodix_ts_read_input_report(ts, point_data);
 	if (touch_num < 0)
 		return;
-
-	if (touch_num == 0) {
-		input_report_abs(ts->input_dev, ABS_PRESSURE, 0);
-		input_report_key(ts->input_dev, BTN_TOUCH, 0);
-	}
 
 	for (i = 0; i < touch_num; i++)
 		goodix_ts_report_touch(ts,
@@ -877,12 +867,6 @@ static int goodix_request_input_dev(struct goodix_ts_data *ts)
 		dev_err(&ts->client->dev, "Failed to allocate input device.");
 		return -ENOMEM;
 	}
-
-	set_bit(EV_ABS, ts->input_dev->evbit);
-	set_bit(EV_KEY, ts->input_dev->evbit);
-	input_set_abs_params(ts->input_dev, ABS_X, 0, ts->abs_x_max - 1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_Y, 0, ts->abs_y_max - 1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 1, 0 , 0);
 
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X,
 			     0, ts->abs_x_max - 1, 0, 0);
