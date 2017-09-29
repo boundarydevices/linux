@@ -15,3 +15,4 @@ obj-$(CONFIG_DRM_IMX_NWL_DSI) += nwl_dsi-imx.o
 obj-$(CONFIG_DRM_IMX_SEC_DSIM) += sec_mipi_dsim-imx.o
 obj-$(CONFIG_DRM_IMX_LCDIF) += lcdif/
 obj-$(CONFIG_DRM_IMX_DCSS) += dcss/
+obj-$(CONFIG_DRM_IMX_HDP) += hdp/

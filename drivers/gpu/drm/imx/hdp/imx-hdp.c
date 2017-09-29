@@ -910,7 +910,7 @@ static int imx_hdp_imx_bind(struct device *dev, struct device *master,
 			   &imx_hdp_connector_funcs,
 			   DRM_MODE_CONNECTOR_HDMIA);
 
-	drm_mode_connector_attach_encoder(connector, encoder);
+	drm_connector_attach_encoder(connector, encoder);
 
 	dev_set_drvdata(dev, hdp);
 
