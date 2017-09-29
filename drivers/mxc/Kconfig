@@ -16,6 +16,7 @@ config MXC_SIM
 source "drivers/mxc/mlb/Kconfig"
 source "drivers/mxc/sim/Kconfig"
 source "drivers/mxc/vpu/Kconfig"
+source "drivers/mxc/hdp/Kconfig"
 
 config MXC_IPU
 	bool "Image Processing Unit Driver"
