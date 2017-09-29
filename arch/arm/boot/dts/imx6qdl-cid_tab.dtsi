@@ -1026,6 +1026,7 @@
 		pinctrl-0 = <&pinctrl_i2c2_gt928>;
 		reg = <0x14>;
 		reset-gpios = GP_GT928_RESET;
+		touchscreen-swapped-x-y;
 	};
 
 	lightsensor@29 {
