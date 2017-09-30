@@ -28,6 +28,7 @@
 #include "core.h"
 #include "bmi.h"
 #include "debug.h"
+#include "coredump.h"
 #include "hif.h"
 #include "htc.h"
 #include "targaddrs.h"
@@ -37,6 +38,8 @@
 #define ATH10K_SDIO_DMA_BUF_SIZE	(32 * 1024)
 #define ATH10K_SDIO_VSG_BUF_SIZE	(32 * 1024)
 
+static int ath10k_sdio_hif_diag_read(struct ath10k *ar, u32 address, void *buf,
+				     size_t buf_len);
 static int ath10k_sdio_read(struct ath10k *ar, u32 addr, void *buf,
 			    u32 len, bool incr);
 static int ath10k_sdio_write(struct ath10k *ar, u32 addr, const void *buf,
@@ -810,6 +813,86 @@ static int ath10k_sdio_mbox_rxmsg_pending_handler(struct ath10k *ar,
 	return ret;
 }
 
+static int __ath10k_sdio_diag_read_hi(struct ath10k *ar, void *dest, u32 src,
+				      u32 len)
+{
+	u32 host_addr, addr;
+	int ret;
+
+	host_addr = host_interest_item_address(src);
+
+	ret = ath10k_sdio_hif_diag_read(ar, host_addr, &addr, sizeof(addr));
+	if (ret != 0) {
+		ath10k_warn(ar, "failed to get firmware hi address %d: %d\n",
+			    src, ret);
+		return ret;
+	}
+
+	ret = ath10k_sdio_hif_diag_read(ar, addr, dest, len);
+	if (ret != 0) {
+		ath10k_warn(ar, "failed to copy memory from %d (%d B): %d\n",
+			    addr, len, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+#define ath10k_sdio_diag_read_hi(ar, dest, src, len)		\
+	__ath10k_sdio_diag_read_hi(ar, dest, HI_ITEM(src), len)
+
+static void ath10k_sdio_dump_registers(struct ath10k *ar,
+				       struct ath10k_fw_crash_data *crash_data)
+{
+	__le32 reg_dump_values[REG_DUMP_COUNT_QCA988X] = {};
+	int i, ret;
+
+	ret = ath10k_sdio_diag_read_hi(ar, &reg_dump_values[0],
+				       hi_failure_state,
+				       sizeof(reg_dump_values));
+	if (ret) {
+		ath10k_err(ar, "failed to read firmware dump area: %d\n", ret);
+		return;
+	}
+
+	BUILD_BUG_ON(REG_DUMP_COUNT_QCA988X % 4);
+
+	ath10k_err(ar, "firmware register dump:\n");
+	for (i = 0; i < REG_DUMP_COUNT_QCA988X; i += 4)
+		ath10k_err(ar, "[%02d]: 0x%08X 0x%08X 0x%08X 0x%08X\n",
+			   i,
+			   __le32_to_cpu(reg_dump_values[i]),
+			   __le32_to_cpu(reg_dump_values[i + 1]),
+			   __le32_to_cpu(reg_dump_values[i + 2]),
+			   __le32_to_cpu(reg_dump_values[i + 3]));
+
+	if (!crash_data)
+		return;
+
+	for (i = 0; i < REG_DUMP_COUNT_QCA988X; i++)
+		crash_data->registers[i] = reg_dump_values[i];
+}
+
+static void ath10k_sdio_fw_crashed_dump(struct ath10k *ar)
+{
+	struct ath10k_fw_crash_data *crash_data;
+	char guid[UUID_STRING_LEN + 1];
+
+	ar->stats.fw_crash_counter++;
+	crash_data = ath10k_coredump_new(ar);
+
+	if (crash_data)
+		scnprintf(guid, sizeof(guid), "%pUl", &crash_data->uuid);
+	else
+		scnprintf(guid, sizeof(guid), "n/a");
+
+	ath10k_err(ar, "firmware crashed! (guid %s)\n", guid);
+	ath10k_print_driver_info(ar);
+	ath10k_sdio_dump_registers(ar, crash_data);
+
+	queue_work(ar->workqueue, &ar->restart_work);
+}
+
 static int ath10k_sdio_mbox_proc_dbg_intr(struct ath10k *ar)
 {
 	u32 val;
@@ -932,6 +1015,9 @@ static int ath10k_sdio_mbox_proc_cpu_intr(struct ath10k *ar)
 			    ret);
 		goto out;
 	}
+
+	if (cpu_int_status & 0x1)
+		ath10k_sdio_fw_crashed_dump(ar);
 
 out:
 	mutex_unlock(&irq_data->mtx);
