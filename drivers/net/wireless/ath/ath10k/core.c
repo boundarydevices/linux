@@ -435,11 +435,25 @@ static void ath10k_init_sdio(struct ath10k *ar)
 	ath10k_bmi_write32(ar, hi_mbox_isr_yield_limit, 99);
 	ath10k_bmi_read32(ar, hi_acs_flags, &param);
 
-	param |= (HI_ACS_FLAGS_SDIO_SWAP_MAILBOX_SET |
-		  HI_ACS_FLAGS_SDIO_REDUCE_TX_COMPL_SET |
-		  HI_ACS_FLAGS_ALT_DATA_CREDIT_SIZE);
+	/* Data transfer is not initiated, when reduced Tx completion
+	 * is used for SDIO. disable it until fixed
+	 */
+	param &= ~HI_ACS_FLAGS_SDIO_REDUCE_TX_COMPL_SET;
 
+	/* Alternate credit size of 1544 as used by SDIO firmware is
+	 * not big enough for mac80211 / native wifi frames. disable it
+	 */
+	param &= ~HI_ACS_FLAGS_ALT_DATA_CREDIT_SIZE;
+
+	param |= HI_ACS_FLAGS_SDIO_SWAP_MAILBOX_SET;
 	ath10k_bmi_write32(ar, hi_acs_flags, param);
+
+	/* Explicitly set fwlog prints to zero as target may turn it on
+	 * based on scratch registers.
+	 */
+	ath10k_bmi_read32(ar, hi_option_flag, &param);
+	param |= HI_OPTION_DISABLE_DBGLOG;
+	ath10k_bmi_write32(ar, hi_option_flag, param);
 }
 
 static int ath10k_init_configure_target(struct ath10k *ar)

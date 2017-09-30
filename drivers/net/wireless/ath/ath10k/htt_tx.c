@@ -153,7 +153,7 @@ void ath10k_htt_tx_txq_update(struct ieee80211_hw *hw,
 
 void ath10k_htt_tx_dec_pending(struct ath10k_htt *htt)
 {
-	if (htt->ar->is_high_latency)
+	if (htt->ar->hif.bus == ATH10K_BUS_USB)
 		return;
 
 	lockdep_assert_held(&htt->tx_lock);
@@ -165,7 +165,7 @@ void ath10k_htt_tx_dec_pending(struct ath10k_htt *htt)
 
 int ath10k_htt_tx_inc_pending(struct ath10k_htt *htt)
 {
-	if (htt->ar->is_high_latency)
+	if (htt->ar->hif.bus == ATH10K_BUS_USB)
 		return 0;
 
 	lockdep_assert_held(&htt->tx_lock);
@@ -454,7 +454,7 @@ void ath10k_htt_tx_destroy(struct ath10k_htt *htt)
 		return;
 
 	ath10k_htt_tx_free_cont_txbuf(htt);
-	if (!htt->ar->is_high_latency)
+	if (!(htt->ar->hif.bus == ATH10K_BUS_USB))
 		ath10k_htt_tx_free_txq(htt);
 	ath10k_htt_tx_free_cont_frag_desc(htt);
 	ath10k_htt_tx_free_txdone_fifo(htt);
@@ -475,7 +475,8 @@ void ath10k_htt_tx_free(struct ath10k_htt *htt)
 
 void ath10k_htt_htc_tx_complete(struct ath10k *ar, struct sk_buff *skb)
 {
-	dev_kfree_skb_any(skb);
+	if (!(ar->hif.bus == ATH10K_BUS_SDIO))
+		dev_kfree_skb_any(skb);
 }
 
 void ath10k_htt_hif_tx_complete(struct ath10k *ar, struct sk_buff *skb)
@@ -974,6 +975,7 @@ int ath10k_htt_tx_hl(struct ath10k_htt *htt, enum ath10k_hw_txrx_mode txmode,
 	u8 tid = ath10k_htt_tx_get_tid(msdu, is_eth);
 	u8 flags0 = 0;
 	u16 flags1 = 0;
+	u16 msdu_id = 0;
 
 	data_len = msdu->len;
 
@@ -1021,6 +1023,18 @@ int ath10k_htt_tx_hl(struct ath10k_htt *htt, enum ath10k_hw_txrx_mode txmode,
 		}
 	}
 
+	if (ar->hif.bus == ATH10K_BUS_SDIO) {
+		flags1 |= HTT_DATA_TX_DESC_FLAGS1_POSTPONED;
+		spin_lock_bh(&htt->tx_lock);
+		res = ath10k_htt_tx_alloc_msdu_id(htt, msdu);
+		spin_unlock_bh(&htt->tx_lock);
+		if (res < 0) {
+			ath10k_err(ar, "msdu_id allocation failed %d\n", res);
+			goto out;
+		}
+		msdu_id = res;
+	}
+
 	skb_push(msdu, sizeof(*cmd_hdr));
 	skb_push(msdu, sizeof(*tx_desc));
 	cmd_hdr = (struct htt_cmd_hdr *)msdu->data;
@@ -1030,7 +1044,7 @@ int ath10k_htt_tx_hl(struct ath10k_htt *htt, enum ath10k_hw_txrx_mode txmode,
 	tx_desc->flags0 = flags0;
 	tx_desc->flags1 = __cpu_to_le16(flags1);
 	tx_desc->len = __cpu_to_le16(data_len);
-	tx_desc->id = 0;
+	tx_desc->id = __cpu_to_le16(msdu_id);
 	tx_desc->frags_paddr = 0; /* always zero */
 	/* Initialize peer_id to INVALID_PEER because this is NOT
 	 * Reinjection path
