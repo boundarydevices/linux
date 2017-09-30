@@ -207,6 +207,11 @@ struct ath10k_sdio {
 	struct ath10k *ar;
 	struct ath10k_sdio_irq_data irq_data;
 
+	u8 *dma_buffer;
+
+	/* protects access to dma_buffer */
+	struct mutex dma_buffer_mutex;
+
 	/* temporary buffer for BMI requests */
 	u8 *bmi_buf;
 
