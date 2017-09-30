@@ -1549,8 +1549,15 @@ static int ath10k_init_uart(struct ath10k *ar)
 		return ret;
 	}
 
-	if (!uart_print)
+	if (!uart_print) {
+		/* Hack: override dbg TX pin to avoid side effects of default
+		 * GPIO_6 in QCA9377 WB396 reference card
+		 */
+		if (ar->hif.bus == ATH10K_BUS_SDIO)
+			ath10k_bmi_write32(ar, hi_dbg_uart_txpin,
+					   ar->hw_params.uart_pin);
 		return 0;
+	}
 
 	ret = ath10k_bmi_write32(ar, hi_dbg_uart_txpin, ar->hw_params.uart_pin);
 	if (ret) {
