@@ -2255,6 +2255,12 @@ static void ath10k_sdio_remove(struct sdio_func *func)
 	cancel_work_sync(&ar_sdio->wr_async_work);
 	ath10k_core_unregister(ar);
 	ath10k_core_destroy(ar);
+
+	if (ar->is_started && ar->hw_params.start_once) {
+		ath10k_hif_stop(ar);
+		ath10k_hif_power_down(ar);
+	}
+
 	kfree(ar_sdio->dma_buffer);
 	kfree(ar_sdio->vsg_buffer);
 }
