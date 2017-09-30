@@ -279,15 +279,10 @@
 		gpio_ao: ao-bank@ff800014{
 			reg = <0x0 0xff800014 0x0 0x8>,
 				  <0x0 0xff80002c 0x0 0x4>,
-				  <0x0 0xff800024 0x0 0x8>,
-				  <0x0 0xff800084 0x0 0x4>;
-			interrupts = <0 200 1>,
-				<0 201 1>;
-			reg-names = "mux", "pull", "gpio", "irq";
+				  <0x0 0xff800024 0x0 0x8>;
+			reg-names = "mux", "pull", "gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
-			interrupt-controller;
-			#interrupt-cells = <2>;
 		};
 	};
 
@@ -301,25 +296,13 @@
 			reg = <0x0 0xff634480 0x0 0x40>,
 				  <0x0 0xff6344e8 0x0 0x14>,
 				  <0x0 0xff634520 0x0 0x14>,
-				  <0x0 0xff634430 0x0 0x3c>,
-				  <0x0 0xffd0f080 0x0 0x10>;
-			interrupts = <0 64 1>,
-				<0 65 1>,
-				<0 66 1>,
-				<0 67 1>,
-				<0 68 1>,
-				<0 69 1>,
-				<0 70 1>,
-				<0 71 1>;
+				  <0x0 0xff634430 0x0 0x3c>;
 			reg-names = "mux",
 				"pull",
 				"pull-enable",
-				"gpio",
-				"irq";
+				"gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
-			interrupt-controller;
-			#interrupt-cells = <2>;
 		};
 	};
 
@@ -336,6 +319,17 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xffd00000 0x0 0x25000>;
+
+			gpio_intc: interrupt-controller@f080 {
+				compatible = "amlogic,meson-gpio-intc",
+						"amlogic,meson-axg-gpio-intc";
+				reg = <0x0 0xf080 0x0 0x10>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				amlogic,channel-interrupts =
+					<64 65 66 67 68 69 70 71>;
+				status = "okay";
+			};
 
 			meson_clk_msr {
 				compatible = "amlogic, gxl_measure";

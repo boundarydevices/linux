@@ -117,50 +117,13 @@ struct meson_domain_data {
 };
 
 /**
-  *enum meson_irq_register - registers offset of gpio irq
-  */
-enum meson_irq_register {
-	GPIO_IRQ_EDGE_OFFSET,
-	GPIO_IRQ_MUX_0_3,
-	GPIO_IRQ_MUX_4_7,
-	GPIO_IRQ_FILTER_OFFSET,
-};
-
-/**
- * struct meson_gpio_irq_desc - describe the gpio irq
- *
- * @used_flag: indicate the 'parent_virq' whether be used or not
- * @parent_virq: gpio virtual interrupt number
- * @hwirq: hw irq for gpio
- */
-struct meson_gpio_irq_desc {
-	unsigned char used_flag;
-	unsigned int parent_virq;
-	unsigned int hwirq;
-};
-
-/*struct meson_irq_res - describe resource for gpio irq
- *
- * @irq_num: number of gpio irq
- * @irq_res_lock:
- * @gpio_irq: a pointer to 'struct meson_gpio_irq_desc'
- */
-struct meson_irq_resource {
-	unsigned char irq_num;
-	spinlock_t irq_res_lock;
-	struct meson_gpio_irq_desc *gpio_irq;
-};
-
-/**
  * struct meson_domain
  *
  * @reg_mux:	registers for mux settings
  * @reg_pullen:	registers for pull-enable settings
  * @reg_pull:	registers for pull settings
  * @reg_gpio:	registers for gpio settings
- * @reg_irq: registers for gpio irq settings
  * @chip:	gpio chip associated with the domain
- * @irq_res: irq resource
  * @data: platform data for the domain
  * @node: device tree node for the domain
  *
@@ -172,11 +135,10 @@ struct meson_domain {
 	struct regmap *reg_pullen;
 	struct regmap *reg_pull;
 	struct regmap *reg_gpio;
-	struct regmap *reg_irq;
 
 	struct gpio_chip chip;
-	struct meson_irq_resource irq_res;
 	struct meson_domain_data *data;
+	struct device_node *of_irq;
 	struct device_node *of_node;
 };
 
@@ -202,7 +164,6 @@ struct meson_pinctrl {
 struct meson_pinctrl_private {
 	unsigned char pinmux_type;
 	struct meson_pinctrl_data *pinctrl_data;
-	struct irq_chip *irq_chip;
 	int (*init)(struct meson_pinctrl *pc);
 };
 

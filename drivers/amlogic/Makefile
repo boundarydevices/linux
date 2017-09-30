@@ -114,3 +114,5 @@ obj-$(CONFIG_AMLOGIC_TEE) += tee/
 obj-$(CONFIG_AMLOGIC_MEMORY_EXTEND) += memory_ext/
 
 obj-$(CONFIG_AMLOGIC_LEDRING) += ledring/
+
+obj-$(CONFIG_AMLOGIC_GPIO_IRQ) += irqchip/

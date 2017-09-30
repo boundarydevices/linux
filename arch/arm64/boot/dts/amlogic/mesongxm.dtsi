@@ -461,15 +461,10 @@
 		gpio_ao: bank@14 {
 			reg = <0x0 0xc8100014 0x0 0x8>,
 			      <0x0 0xc810002c 0x0 0x4>,
-			      <0x0 0xc8100024 0x0 0x8>,
-				  <0x0 0xc8100084 0x0 0x4>;
-			interrupts = <0 200 IRQ_TYPE_EDGE_RISING>,
-				<0 201 IRQ_TYPE_EDGE_RISING>;
-			reg-names = "mux", "pull", "gpio", "irq";
+			      <0x0 0xc8100024 0x0 0x8>;
+			reg-names = "mux", "pull", "gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
-			interrupt-controller;
-			#interrupt-cells = <2>;
 		};
 	};
 
@@ -483,22 +478,11 @@
 			reg = <0x0 0xc88344b0 0x0 0x28>,
 			      <0x0 0xc88344e8 0x0 0x14>,
 			      <0x0 0xc8834520 0x0 0x14>,
-			      <0x0 0xc8834430 0x0 0x40>,
-				  <0x0 0xc1109880 0x0 0x10>;
-			interrupts = <0 64 IRQ_TYPE_EDGE_RISING>,
-				<0 65 IRQ_TYPE_EDGE_RISING>,
-				<0 66 IRQ_TYPE_EDGE_RISING>,
-				<0 67 IRQ_TYPE_EDGE_RISING>,
-				<0 68 IRQ_TYPE_EDGE_RISING>,
-				<0 69 IRQ_TYPE_EDGE_RISING>,
-				<0 70 IRQ_TYPE_EDGE_RISING>,
-				<0 71 IRQ_TYPE_EDGE_RISING>;
+			      <0x0 0xc8834430 0x0 0x40>;
 			reg-names = "mux", "pull",
-				"pull-enable", "gpio", "irq";
+				"pull-enable", "gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
-			interrupt-controller;
-			#interrupt-cells = <2>;
 		};
 	};
 
@@ -514,6 +498,17 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xc1100000 0x0 0x100000>;
+
+			gpio_intc: interrupt-controller@9880 {
+				compatible = "amlogic,meson-gpio-intc",
+						"amlogic,meson-gxl-gpio-intc";
+				reg = <0x0 0x9880 0x0 0x10>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				amlogic,channel-interrupts =
+					<64 65 66 67 68 69 70 71>;
+				status = "okay";
+			};
 
 			meson_clk_msr{
 				compatible = "amlogic, gxl_measure";

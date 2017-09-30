@@ -711,383 +711,84 @@ static int meson_gpio_get(struct gpio_chip *chip, unsigned int gpio)
 	return !!(val & BIT(bit));
 }
 
-/*
- * NOP functions
- */
-static void noop(struct irq_data *irqd) { }
-
-static void	meson_gpio_irq_enable(struct irq_data *irqd)
+static int meson_gpio_to_irq(struct gpio_chip *chip, unsigned int offset)
 {
-	struct meson_domain *domain = to_meson_domain(irqd->chip_data);
-	struct irq_data *parent_data;
-	unsigned long flags;
-	unsigned char cnt;
-
-	spin_lock_irqsave(&domain->irq_res.irq_res_lock, flags);
-	for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-		if (domain->irq_res.gpio_irq[cnt].hwirq == irqd->hwirq) {
-			parent_data =
-				irq_get_irq_data(
-				domain->irq_res.gpio_irq[cnt].parent_virq);
-			/*enable the interrupt line of gpio in GIC controller*/
-			parent_data->chip->irq_unmask(parent_data);
-		}
-	}
-	spin_unlock_irqrestore(&domain->irq_res.irq_res_lock, flags);
-
-}
-
-static void	meson_gpio_irq_disable(struct irq_data *irqd)
-{
-	struct meson_domain *domain = to_meson_domain(irqd->chip_data);
-	struct irq_data *parent_data;
-	unsigned long flags;
-	unsigned char cnt;
-
-	spin_lock_irqsave(&domain->irq_res.irq_res_lock, flags);
-	for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-		if (domain->irq_res.gpio_irq[cnt].hwirq == irqd->hwirq) {
-			parent_data =
-				irq_get_irq_data(
-				domain->irq_res.gpio_irq[cnt].parent_virq);
-			/*disable the interrupt line of gpio in GIC controller*/
-			parent_data->chip->irq_mask(parent_data);
-		}
-	}
-	spin_unlock_irqrestore(&domain->irq_res.irq_res_lock, flags);
-}
-
-/**
- *free gpio irq when free_irq() is called, and another pin can use it again.
- */
-static void meson_gpio_irq_shutdown(struct irq_data *irqd)
-{
-	struct meson_domain *domain = to_meson_domain(irqd->chip_data);
-	unsigned long flags;
-	unsigned char cnt;
-
-	spin_lock_irqsave(&domain->irq_res.irq_res_lock, flags);
-	for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-		if (domain->irq_res.gpio_irq[cnt].hwirq == irqd->hwirq)
-			domain->irq_res.gpio_irq[cnt].used_flag = 0;
-	}
-	spin_unlock_irqrestore(&domain->irq_res.irq_res_lock, flags);
-}
-
-static int meson_ee_gpio_irq_type(struct irq_data *irqd, unsigned int type)
-{
-	struct meson_domain *domain = to_meson_domain(irqd->chip_data);
+	struct meson_domain *domain = to_meson_domain(chip);
 	struct meson_bank *bank;
-	struct irq_data *parent_data;
-	unsigned long flags;
-	unsigned int trigger_type[2];
-	unsigned char type_num;
-	unsigned char type_cnt;
-	unsigned char start_bit;
-	unsigned int gpio_virq;
-	unsigned char cnt;
-	unsigned char pin;
-	unsigned char irq_pin;
-	int ret;
+	struct irq_fwspec fwspec;
+	int hwirq;
+	int gpio;
 
-	type = type & IRQ_TYPE_SENSE_MASK;
+	gpio = chip->base + offset;
 
-	switch (type) {
-	case IRQ_TYPE_LEVEL_LOW:
-		trigger_type[0] = 0x10000;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_LEVEL_HIGH:
-		trigger_type[0] = 0x0;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_EDGE_RISING:
-		trigger_type[0] = 0x1;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_EDGE_FALLING:
-		trigger_type[0] = 0x10001;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_EDGE_BOTH:
-		trigger_type[0] = 0x1;
-		trigger_type[1] = 0x10001;
-		type_num = 2;
-		break;
-	default:
+	if (meson_get_bank(domain, gpio, &bank))
+		return -EINVAL;
+
+	if (bank->irq < 0) {
+		pr_warn("pinctrl-meson: no support irq for pin[%d]\n", gpio);
 		return -EINVAL;
 	}
 
-	for (type_cnt = 0; type_cnt < type_num; type_cnt++) {
-		/* dynamic allocate gpio irq for request pin*/
-		spin_lock_irqsave(&domain->irq_res.irq_res_lock, flags);
-		for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-			if (domain->irq_res.gpio_irq[cnt].used_flag)
-				continue;
-			else {
-				domain->irq_res.gpio_irq[cnt].used_flag = 1;
-				domain->irq_res.gpio_irq[cnt].hwirq =
-					irqd->hwirq;
-				break;
-			}
-		}
-		spin_unlock_irqrestore(&domain->irq_res.irq_res_lock, flags);
-
-		if (domain->irq_res.irq_num == cnt) {
-			pr_err("meson_pinctrl: no more gpio irq available in EE GPIO INTC, allocate gpio irq for pin[%ld] failed.\n",
-				irqd->hwirq);
-			return -EINVAL;
-		}
-
-		regmap_update_bits(domain->reg_irq,
-						(GPIO_IRQ_EDGE_OFFSET * 4),
-						0x10001 << cnt,
-						trigger_type[type_cnt] << cnt);
-
-		/*the gpio hwirq eqaul to gpio offset in gpio chip*/
-		pin = domain->data->pin_base + irqd->hwirq;
-
-		ret = meson_get_bank(domain, pin, &bank);
-		if (ret)
-			return ret;
-
-		if (bank->irq < 0)
-			return -EINVAL;
-
-		irq_pin = bank->irq + pin - bank->first;
-
-		/*set pin select register*/
-		start_bit = (cnt & 3) << 3;
-		regmap_update_bits(domain->reg_irq,
-			(cnt < 4)?(GPIO_IRQ_MUX_0_3 * 4):(GPIO_IRQ_MUX_4_7 * 4),
-			0xff << start_bit,
-			irq_pin << start_bit);
-		/**
-		 *TODO: support to configure the  filter registers by
-		 * the func interface.
-		 * all filter registers for gpio will been set 0x7.
-		 */
-		start_bit = cnt << 2;
-		regmap_update_bits(domain->reg_irq,
-					(GPIO_IRQ_FILTER_OFFSET * 4),
-					0x7 << start_bit, 0x7 << start_bit);
-
-		parent_data =
-			irq_get_irq_data(
-				domain->irq_res.gpio_irq[cnt].parent_virq);
-
-		/*set trigger type of gpio in GIC controller*/
-		if (type & IRQ_TYPE_EDGE_BOTH)
-			parent_data->chip->irq_set_type(parent_data,
-				IRQ_TYPE_EDGE_RISING);
-		else
-			parent_data->chip->irq_set_type(parent_data,
-				IRQ_TYPE_LEVEL_HIGH);
-
-		gpio_virq = irq_find_mapping(domain->chip.irqdomain,
-			domain->irq_res.gpio_irq[cnt].hwirq);
-
-		pr_info("meson_pinctrl: gpio virq[%d] connect to GIC hwirq[%ld]\n",
-			gpio_virq,
-			parent_data->hwirq);
-	}
-
-	return 0;
-}
-
-static int meson_ao_gpio_irq_type(struct irq_data *irqd, unsigned int type)
-{
-	struct meson_domain *domain = to_meson_domain(irqd->chip_data);
-	struct meson_bank *bank;
-	struct irq_data *parent_data;
-	unsigned long flags;
-	unsigned int trigger_type[2];
-	unsigned char type_num;
-	unsigned char type_cnt;
-	unsigned char start_bit;
-	unsigned int gpio_virq;
-	unsigned char cnt;
-	unsigned char pin;
-	unsigned char irq_pin;
-	int ret;
-
-	type = type & IRQ_TYPE_SENSE_MASK;
-
-	switch (type) {
-	case IRQ_TYPE_LEVEL_LOW:
-		trigger_type[0] = 0x10000;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_LEVEL_HIGH:
-		trigger_type[0] = 0x0;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_EDGE_RISING:
-		trigger_type[0] = 0x40000;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_EDGE_FALLING:
-		trigger_type[0] = 0x50000;
-		type_num = 1;
-		break;
-	case IRQ_TYPE_EDGE_BOTH:
-		trigger_type[0] = 0x40000;
-		trigger_type[1] = 0x50000;
-		type_num = 2;
-		break;
-	default:
+	if (!domain->of_irq) {
+		pr_err("pinctrl-meson: invalid device node of gpio INTC\n");
 		return -EINVAL;
 	}
 
+	hwirq = gpio - bank->first + bank->irq;
 
-	for (type_cnt = 0; type_cnt < type_num; type_cnt++) {
-		/* dynamic allocate gpio irq for request pin*/
-		spin_lock_irqsave(&domain->irq_res.irq_res_lock, flags);
-		for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-			if (domain->irq_res.gpio_irq[cnt].used_flag)
-				continue;
-			else {
-				domain->irq_res.gpio_irq[cnt].used_flag = 1;
-				domain->irq_res.gpio_irq[cnt].hwirq =
-					irqd->hwirq;
-				break;
-			}
-		}
-		spin_unlock_irqrestore(&domain->irq_res.irq_res_lock, flags);
+	fwspec.fwnode = of_node_to_fwnode(domain->of_irq);
+	fwspec.param_count = 2;
+	fwspec.param[0] = hwirq;
+	fwspec.param[1] = IRQ_TYPE_NONE;
 
-		if (domain->irq_res.irq_num == cnt) {
-			pr_err("meson_pinctrl: no more gpio irq available in AO GPIO INTC, allocate gpio irq for pin[%ld] failed.\n",
-				irqd->hwirq);
-			return -EINVAL;
-		}
-
-		/*set trigger type*/
-		regmap_update_bits(domain->reg_irq, 0,
-						0x50000 << cnt,
-						trigger_type[type_cnt] << cnt);
-
-		/*the gpio hwirq eqaul to gpio offset in gpio chip*/
-		pin = domain->data->pin_base + irqd->hwirq;
-
-		ret = meson_get_bank(domain, pin, &bank);
-		if (ret)
-			return ret;
-
-		if (bank->irq < 0)
-			return -EINVAL;
-
-		irq_pin = bank->irq + pin - bank->first;
-
-		/*set pin select register*/
-		start_bit = cnt << 2;
-		regmap_update_bits(domain->reg_irq, 0,
-			0xf << start_bit,
-			irq_pin << start_bit);
-		/**
-		 *TODO: support to configure the  filter registers by
-		 * the func interface.
-		 * all filter registers for gpio will been set 0x7.
-		 */
-		start_bit = cnt << 2;
-		regmap_update_bits(domain->reg_irq, 0,
-					0x700 << start_bit, 0x700 << start_bit);
-
-		parent_data =
-			irq_get_irq_data(
-				domain->irq_res.gpio_irq[cnt].parent_virq);
-
-		/*set trigger type of gpio in GIC controller*/
-		if (type & IRQ_TYPE_EDGE_BOTH)
-			parent_data->chip->irq_set_type(parent_data,
-				IRQ_TYPE_EDGE_RISING);
-		else
-			parent_data->chip->irq_set_type(parent_data,
-				IRQ_TYPE_LEVEL_HIGH);
-
-		gpio_virq = irq_find_mapping(domain->chip.irqdomain,
-			domain->irq_res.gpio_irq[cnt].hwirq);
-
-		pr_info("meson_pinctrl: gpio virq[%d] connect to GIC hwirq[%ld]\n",
-			gpio_virq,
-			parent_data->hwirq);
-	}
-
-	return 0;
-
+	return irq_create_fwspec_mapping(&fwspec);
 }
-static struct irq_chip meson_ee_gpio_irq_chip = {
-	.name = "GPIO-EE",
-	.irq_enable	= meson_gpio_irq_enable,
-	.irq_disable	= meson_gpio_irq_disable,
-	.irq_set_type = meson_ee_gpio_irq_type,
-	.irq_mask = noop,
-	.irq_unmask = noop,
-	.irq_shutdown = meson_gpio_irq_shutdown,
-};
-
-static struct irq_chip meson_ao_gpio_irq_chip = {
-	.name = "GPIO-AO",
-	.irq_enable	= meson_gpio_irq_enable,
-	.irq_disable	= meson_gpio_irq_disable,
-	.irq_set_type = meson_ao_gpio_irq_type,
-	.irq_mask = noop,
-	.irq_unmask = noop,
-	.irq_shutdown = meson_gpio_irq_shutdown,
-};
 
 struct meson_pinctrl_private meson_gxl_periphs = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_gxl_periphs_pinctrl_data,
-	.irq_chip = &meson_ee_gpio_irq_chip,
 	.init = meson_gxl_periphs_init,
 };
 
 struct meson_pinctrl_private meson_gxl_aobus = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_gxl_aobus_pinctrl_data,
-	.irq_chip = &meson_ao_gpio_irq_chip,
 	.init = meson_gxl_aobus_init,
 };
 
 struct meson_pinctrl_private meson_m8b_cbus = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson8b_cbus_pinctrl_data,
-	.irq_chip = &meson_ee_gpio_irq_chip,
 	.init = NULL,
 };
 
 struct meson_pinctrl_private meson_m8b_aobus = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson8b_aobus_pinctrl_data,
-	.irq_chip = &meson_ao_gpio_irq_chip,
 	.init = NULL,
 };
 
 struct meson_pinctrl_private meson_axg_periphs = {
 	.pinmux_type = PINMUX_V2,
 	.pinctrl_data = &meson_axg_periphs_pinctrl_data,
-	.irq_chip = &meson_ee_gpio_irq_chip,
 	.init = NULL,
 };
 
 struct meson_pinctrl_private meson_axg_aobus = {
 	.pinmux_type = PINMUX_V2,
 	.pinctrl_data = &meson_axg_aobus_pinctrl_data,
-	.irq_chip = &meson_ao_gpio_irq_chip,
 	.init = meson_axg_aobus_init,
 };
 
 struct meson_pinctrl_private meson_txlx_periphs = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_txlx_periphs_pinctrl_data,
-	.irq_chip = &meson_ee_gpio_irq_chip,
 	.init = NULL,
 };
 
 struct meson_pinctrl_private meson_txlx_aobus = {
 	.pinmux_type = PINMUX_V1,
 	.pinctrl_data = &meson_txlx_aobus_pinctrl_data,
-	.irq_chip = &meson_ao_gpio_irq_chip,
 	.init = meson_txlx_aobus_init,
 };
 
@@ -1145,6 +846,7 @@ static int meson_gpiolib_register(struct meson_pinctrl *pc)
 	domain->chip.direction_output = meson_gpio_direction_output;
 	domain->chip.get = meson_gpio_get;
 	domain->chip.set = meson_gpio_set;
+	domain->chip.to_irq = meson_gpio_to_irq;
 	domain->chip.set_pull = meson_gpio_pull_set;
 	domain->chip.base = domain->data->pin_base;
 	domain->chip.ngpio = domain->data->num_pins;
@@ -1205,30 +907,6 @@ static struct regmap *meson_map_resource(struct meson_pinctrl *pc,
 	return devm_regmap_init_mmio(pc->dev, base, &meson_regmap_config);
 }
 
-static int meson_irq_parse_and_map(struct meson_pinctrl *pc,
-					struct device_node *node)
-{
-	struct meson_domain *domain = pc->domain;
-	int cnt;
-
-	domain->irq_res.irq_num = of_irq_count(node);
-	if (!domain->irq_res.irq_num) {
-		dev_err(pc->dev, "meson_pinctrl: can't find valid property 'interrupts'\n");
-		return -EINVAL;
-	}
-	domain->irq_res.gpio_irq = devm_kzalloc(pc->dev,
-		sizeof(struct meson_gpio_irq_desc)*(domain->irq_res.irq_num),
-		GFP_KERNEL);
-	if (IS_ERR_OR_NULL(domain->irq_res.gpio_irq))
-		return -ENOMEM;
-
-	for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-		domain->irq_res.gpio_irq[cnt].parent_virq =
-					irq_of_parse_and_map(node, cnt);
-	}
-	return 0;
-}
-
 static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 				  struct device_node *node)
 {
@@ -1254,6 +932,9 @@ static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 
 	domain = pc->domain;
 	domain->data = pc->data->domain_data;
+
+	domain->of_irq = of_find_compatible_node(NULL,
+					NULL, "amlogic,meson-gpio-intc");
 
 	for_each_child_of_node(node, np) {
 		if (!of_find_property(np, "gpio-controller", NULL))
@@ -1284,74 +965,9 @@ static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 			return PTR_ERR(domain->reg_gpio);
 		}
 
-		domain->reg_irq = meson_map_resource(pc, np, "irq");
-		if (IS_ERR(domain->reg_irq)) {
-			dev_err(pc->dev, "gpio irq registers not found\n");
-			return PTR_ERR(domain->reg_irq);
-		}
-
-		meson_irq_parse_and_map(pc, np);
-
 		break;
 	}
 	return 0;
-}
-
-void meson_gpio_irq_handler(struct irq_desc *desc)
-{
-	struct irq_chip *chip = irq_desc_get_chip(desc);
-	struct gpio_chip *gpio_chip = irq_desc_get_handler_data(desc);
-	struct meson_domain *domain = to_meson_domain(gpio_chip);
-	unsigned char cnt;
-	unsigned int parent_virq;
-
-	parent_virq = irq_desc_get_irq(desc);
-
-	chained_irq_enter(chip, desc);
-	for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-		if (parent_virq == domain->irq_res.gpio_irq[cnt].parent_virq &&
-				domain->irq_res.gpio_irq[cnt].used_flag)
-		generic_handle_irq(irq_find_mapping(gpio_chip->irqdomain,
-				domain->irq_res.gpio_irq[cnt].hwirq));
-	}
-	chained_irq_exit(chip, desc);
-}
-
-static int meson_irq_setup(struct meson_pinctrl *pc, struct irq_chip *irq_chip)
-{
-	struct meson_domain *domain = pc->domain;
-	struct irq_data *parent_data;
-	unsigned char cnt;
-	unsigned char ret;
-
-	spin_lock_init(&domain->irq_res.irq_res_lock);
-
-	ret = gpiochip_irqchip_add(&domain->chip,
-				   irq_chip,
-				   0,
-				   handle_simple_irq,
-				   IRQ_TYPE_NONE);
-	if (ret) {
-		dev_err(pc->dev, "couldn't add irqchip to gpiochip.\n");
-		return ret;
-	}
-
-	/* Then register the chain on the parent IRQ */
-	for (cnt = 0; cnt < domain->irq_res.irq_num; cnt++) {
-		gpiochip_set_chained_irqchip(&domain->chip,
-				irq_chip,
-				domain->irq_res.gpio_irq[cnt].parent_virq,
-				meson_gpio_irq_handler);
-
-	  /*disable the interrupt line of gpio in GIC controller*/
-		parent_data =
-			irq_get_irq_data(
-				domain->irq_res.gpio_irq[cnt].parent_virq);
-		parent_data->chip->irq_mask(parent_data);
-	}
-
-	return 0;
-
 }
 
 static int meson_pinctrl_add_function(struct meson_pinctrl *pc,
@@ -1545,8 +1161,6 @@ static int meson_pinctrl_probe(struct platform_device *pdev)
 
 	if (priv->init)
 		priv->init(pc);
-
-	meson_irq_setup(pc, priv->irq_chip);
 
 	return 0;
 }

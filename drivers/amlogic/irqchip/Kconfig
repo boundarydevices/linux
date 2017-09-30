@@ -1,0 +1,7 @@
+config AMLOGIC_GPIO_IRQ
+	bool "Meson GPIO Interrupt Multiplexer"
+	depends on IRQ_DOMAIN
+	depends on IRQ_DOMAIN_HIERARCHY
+	default n
+	help
+	  Support Meson SoC Family GPIO Interrupt Multiplexer
