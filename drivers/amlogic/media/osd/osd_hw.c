@@ -1084,7 +1084,7 @@ int osd_set_scan_mode(u32 index)
 	}
 	if (osd_hw.free_scale_enable[index])
 		osd_hw.scan_mode[index] = SCAN_MODE_PROGRESSIVE;
-	if (osd_hw.osd_afbcd[OSD1].enable)
+	if (osd_hw.osd_afbcd[index].enable)
 		osd_hw.scan_mode[index] = SCAN_MODE_PROGRESSIVE;
 	if (index == OSD2) {
 		if (osd_hw.scan_mode[OSD2] == SCAN_MODE_INTERLACE)
@@ -1745,7 +1745,11 @@ void osd_get_flush_rate_hw(u32 *break_rate)
 
 void osd_set_antiflicker_hw(u32 index, struct vinfo_s *vinfo, u32 yres)
 {
-	if (is_interlaced(vinfo)) {
+	bool osd_need_antiflicker = false;
+
+	if (is_interlaced(vinfo))
+		osd_need_antiflicker = false;
+	if (osd_need_antiflicker) {
 		osd_hw.antiflicker_mode = 1;
 		osd_antiflicker_task_start();
 		osd_antiflicker_enable(1);
@@ -3749,7 +3753,8 @@ static void osd2_update_disp_geometry(void)
 	data32 = (osd_hw.dispdata[OSD2].x_start & 0xfff)
 		| (osd_hw.dispdata[OSD2].x_end & 0xfff) << 16;
 	VSYNCOSD_WR_MPEG_REG(VIU_OSD2_BLK0_CFG_W3, data32);
-	if (osd_hw.scan_mode[OSD2] == SCAN_MODE_INTERLACE)
+	if ((osd_hw.scan_mode[OSD2] == SCAN_MODE_INTERLACE) &&
+		osd_hw.dispdata[OSD2].y_start > 0)
 		data32 = (osd_hw.dispdata[OSD2].y_start & 0xfff)
 			| ((((osd_hw.dispdata[OSD2].y_end + 1
 			- osd_hw.dispdata[OSD2].y_start) >> 1)
