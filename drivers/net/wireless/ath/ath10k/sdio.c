@@ -35,6 +35,7 @@
 #include "sdio.h"
 
 #define ATH10K_SDIO_DMA_BUF_SIZE	(32 * 1024)
+#define ATH10K_SDIO_VSG_BUF_SIZE	(32 * 1024)
 
 static int ath10k_sdio_read(struct ath10k *ar, u32 addr, void *buf,
 			    u32 len, bool incr);
@@ -430,6 +431,7 @@ static int ath10k_sdio_mbox_rx_process_packet(struct ath10k *ar,
 	int ret;
 
 	payload_len = le16_to_cpu(htc_hdr->len);
+	skb->len = payload_len + sizeof(struct ath10k_htc_hdr);
 
 	if (trailer_present) {
 		trailer = skb->data + sizeof(*htc_hdr) +
@@ -468,12 +470,13 @@ static int ath10k_sdio_mbox_rx_process_packets(struct ath10k *ar,
 	enum ath10k_htc_ep_id id;
 	int ret, i, *n_lookahead_local;
 	u32 *lookaheads_local;
+	int lookahd_idx = 0;
 
 	for (i = 0; i < ar_sdio->n_rx_pkts; i++) {
 		lookaheads_local = lookaheads;
 		n_lookahead_local = n_lookahead;
 
-		id = ((struct ath10k_htc_hdr *)&lookaheads[i])->eid;
+		id = ((struct ath10k_htc_hdr *)&lookaheads[lookahd_idx++])->eid;
 
 		if (id >= ATH10K_HTC_EP_COUNT) {
 			ath10k_warn(ar, "invalid endpoint in look-ahead: %d\n",
@@ -496,6 +499,7 @@ static int ath10k_sdio_mbox_rx_process_packets(struct ath10k *ar,
 			/* Only read lookahead's from RX trailers
 			 * for the last packet in a bundle.
 			 */
+			lookahd_idx--;
 			lookaheads_local = NULL;
 			n_lookahead_local = NULL;
 		}
@@ -529,11 +533,11 @@ out:
 	return ret;
 }
 
-static int ath10k_sdio_mbox_alloc_pkt_bundle(struct ath10k *ar,
-					     struct ath10k_sdio_rx_data *rx_pkts,
-					     struct ath10k_htc_hdr *htc_hdr,
-					     size_t full_len, size_t act_len,
-					     size_t *bndl_cnt)
+static int ath10k_sdio_mbox_alloc_bundle(struct ath10k *ar,
+					 struct ath10k_sdio_rx_data *rx_pkts,
+					 struct ath10k_htc_hdr *htc_hdr,
+					 size_t full_len, size_t act_len,
+					 size_t *bndl_cnt)
 {
 	int ret, i;
 
@@ -574,6 +578,7 @@ static int ath10k_sdio_mbox_rx_alloc(struct ath10k *ar,
 	size_t full_len, act_len;
 	bool last_in_bundle;
 	int ret, i;
+	int pkt_cnt = 0;
 
 	if (n_lookaheads > ATH10K_SDIO_MAX_RX_MSGS) {
 		ath10k_warn(ar,
@@ -616,16 +621,22 @@ static int ath10k_sdio_mbox_rx_alloc(struct ath10k *ar,
 			 * optimally fetched as a full bundle.
 			 */
 			size_t bndl_cnt;
+			struct ath10k_sdio_rx_data *rx_pkts =
+				&ar_sdio->rx_pkts[pkt_cnt];
 
-			ret = ath10k_sdio_mbox_alloc_pkt_bundle(ar,
-								&ar_sdio->rx_pkts[i],
-								htc_hdr,
-								full_len,
-								act_len,
-								&bndl_cnt);
+			ret = ath10k_sdio_mbox_alloc_bundle(ar,
+							    rx_pkts,
+							    htc_hdr,
+							    full_len,
+							    act_len,
+							    &bndl_cnt);
 
-			n_lookaheads += bndl_cnt;
-			i += bndl_cnt;
+			if (ret) {
+				ath10k_warn(ar, "alloc_bundle error %d\n", ret);
+				goto err;
+			}
+
+			pkt_cnt += bndl_cnt;
 			/*Next buffer will be the last in the bundle */
 			last_in_bundle = true;
 		}
@@ -634,14 +645,18 @@ static int ath10k_sdio_mbox_rx_alloc(struct ath10k *ar,
 		 * ATH10K_HTC_FLAG_BUNDLE_MASK flag set, all bundled
 		 * packet skb's have been allocated in the previous step.
 		 */
-		ret = ath10k_sdio_mbox_alloc_rx_pkt(&ar_sdio->rx_pkts[i],
+		if (htc_hdr->flags & ATH10K_HTC_FLAGS_RECV_1MORE_BLOCK)
+			full_len += ATH10K_HIF_MBOX_BLOCK_SIZE;
+
+		ret = ath10k_sdio_mbox_alloc_rx_pkt(&ar_sdio->rx_pkts[pkt_cnt],
 						    act_len,
 						    full_len,
 						    last_in_bundle,
 						    last_in_bundle);
+		pkt_cnt++;
 	}
 
-	ar_sdio->n_rx_pkts = i;
+	ar_sdio->n_rx_pkts = pkt_cnt;
 
 	return 0;
 
@@ -655,40 +670,70 @@ err:
 	return ret;
 }
 
-static int ath10k_sdio_mbox_rx_packet(struct ath10k *ar,
-				      struct ath10k_sdio_rx_data *pkt)
+static int ath10k_sdio_mbox_rx_fetch(struct ath10k *ar)
 {
 	struct ath10k_sdio *ar_sdio = ath10k_sdio_priv(ar);
-	struct sk_buff *skb = pkt->skb;
+	struct ath10k_sdio_rx_data *pkt = &ar_sdio->rx_pkts[0];
+	struct sk_buff *skb;
 	int ret;
 
+	skb = pkt->skb;
 	ret = ath10k_sdio_read(ar, ar_sdio->mbox_info.htc_addr,
 			       skb->data, pkt->alloc_len, false);
-	pkt->status = ret;
-	if (!ret)
+	if (ret) {
+		ar_sdio->n_rx_pkts = 0;
+		ath10k_sdio_mbox_free_rx_pkt(pkt);
+	} else {
+		pkt->status = ret;
 		skb_put(skb, pkt->act_len);
+	}
 
 	return ret;
 }
 
-static int ath10k_sdio_mbox_rx_fetch(struct ath10k *ar)
+static int ath10k_sdio_mbox_rx_fetch_bundle(struct ath10k *ar)
 {
 	struct ath10k_sdio *ar_sdio = ath10k_sdio_priv(ar);
+	struct ath10k_sdio_rx_data *pkt;
 	int ret, i;
+	u32 pkt_offset, virt_pkt_len;
 
+	virt_pkt_len = 0;
 	for (i = 0; i < ar_sdio->n_rx_pkts; i++) {
-		ret = ath10k_sdio_mbox_rx_packet(ar,
-						 &ar_sdio->rx_pkts[i]);
-		if (ret)
+		virt_pkt_len += ar_sdio->rx_pkts[i].alloc_len;
+	}
+	if (virt_pkt_len < ATH10K_SDIO_DMA_BUF_SIZE) {
+		ret = ath10k_sdio_read(ar, ar_sdio->mbox_info.htc_addr,
+				       ar_sdio->vsg_buffer, virt_pkt_len,
+				       false);
+		if (ret) {
+			i = 0;
 			goto err;
+		}
+	} else {
+		ath10k_err(ar, "size exceeding limit %d\n", virt_pkt_len);
+	}
+
+	pkt_offset = 0;
+	for (i = 0; i < ar_sdio->n_rx_pkts; i++) {
+		struct sk_buff *skb = ar_sdio->rx_pkts[i].skb;
+
+		pkt = &ar_sdio->rx_pkts[i];
+		memcpy(skb->data, ar_sdio->vsg_buffer + pkt_offset,
+		       pkt->alloc_len);
+		pkt->status = 0;
+		skb_put(skb, pkt->act_len);
+		pkt_offset += pkt->alloc_len;
 	}
 
 	return 0;
 
 err:
 	/* Free all packets that was not successfully fetched. */
-	for (; i < ar_sdio->n_rx_pkts; i++)
+	for (i = 0; i < ar_sdio->n_rx_pkts; i++)
 		ath10k_sdio_mbox_free_rx_pkt(&ar_sdio->rx_pkts[i]);
+
+	ar_sdio->n_rx_pkts = 0;
 
 	return ret;
 }
@@ -732,7 +777,10 @@ static int ath10k_sdio_mbox_rxmsg_pending_handler(struct ath10k *ar,
 			 */
 			*done = false;
 
-		ret = ath10k_sdio_mbox_rx_fetch(ar);
+		if (ar_sdio->n_rx_pkts > 1)
+			ret = ath10k_sdio_mbox_rx_fetch_bundle(ar);
+		else
+			ret = ath10k_sdio_mbox_rx_fetch(ar);
 
 		/* Process fetched packets. This will potentially update
 		 * n_lookaheads depending on if the packets contain lookahead
@@ -1136,7 +1184,7 @@ static int ath10k_sdio_bmi_get_rx_lookahead(struct ath10k *ar)
 					 MBOX_HOST_INT_STATUS_ADDRESS,
 					 &rx_word);
 		if (ret) {
-			ath10k_warn(ar, "unable to read RX_LOOKAHEAD_VALID: %d\n", ret);
+			ath10k_warn(ar, "unable to read rx_lookahd: %d\n", ret);
 			return ret;
 		}
 
@@ -1480,7 +1528,7 @@ static int ath10k_sdio_hif_tx_sg(struct ath10k *ar, u8 pipe_id,
 		skb = items[i].transfer_context;
 		padded_len = ath10k_sdio_calc_txrx_padded_len(ar_sdio,
 							      skb->len);
-		skb_trim(skb, padded_len);
+		skb->len = padded_len;
 
 		/* Write TX data to the end of the mbox address space */
 		address = ar_sdio->mbox_addr[eid] + ar_sdio->mbox_size[eid] -
@@ -1508,7 +1556,8 @@ static int ath10k_sdio_hif_enable_intrs(struct ath10k *ar)
 	/* Enable all but CPU interrupts */
 	regs->int_status_en = FIELD_PREP(MBOX_INT_STATUS_ENABLE_ERROR_MASK, 1) |
 			      FIELD_PREP(MBOX_INT_STATUS_ENABLE_CPU_MASK, 1) |
-			      FIELD_PREP(MBOX_INT_STATUS_ENABLE_COUNTER_MASK, 1);
+			      FIELD_PREP(MBOX_INT_STATUS_ENABLE_COUNTER_MASK,
+					 1);
 
 	/* NOTE: There are some cases where HIF can do detection of
 	 * pending mbox messages which is disabled now.
@@ -2024,6 +2073,12 @@ static int ath10k_sdio_probe(struct sdio_func *func,
 		goto err_free_bmi_buf;
 	}
 
+	ar_sdio->vsg_buffer = kzalloc(ATH10K_SDIO_VSG_BUF_SIZE, GFP_KERNEL);
+	if (!ar_sdio->vsg_buffer) {
+		ret = -ENOMEM;
+		goto err_free_bmi_buf;
+	}
+
 	ar_sdio->func = func;
 	sdio_set_drvdata(func, ar_sdio);
 
@@ -2081,7 +2136,7 @@ static int ath10k_sdio_probe(struct sdio_func *func,
 	}
 
 	/* TODO: remove this once SDIO support is fully implemented */
-	ath10k_warn(ar, "WARNING: ath10k SDIO support is incomplete, don't expect anything to work!\n");
+	ath10k_warn(ar, "WARNING: ath10k SDIO support is experimental\n");
 
 	return 0;
 
@@ -2115,6 +2170,7 @@ static void ath10k_sdio_remove(struct sdio_func *func)
 	ath10k_core_unregister(ar);
 	ath10k_core_destroy(ar);
 	kfree(ar_sdio->dma_buffer);
+	kfree(ar_sdio->vsg_buffer);
 }
 
 static const struct sdio_device_id ath10k_sdio_devices[] = {
