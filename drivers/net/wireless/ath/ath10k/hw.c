@@ -525,6 +525,8 @@ static int ath10k_hw_qca6174_enable_pll_clock(struct ath10k *ar)
 	if (ret)
 		return -EINVAL;
 
+	reg_val &= ~(WLAN_PLL_CONTROL_REFDIV_MASK | WLAN_PLL_CONTROL_DIV_MASK |
+		     WLAN_PLL_CONTROL_NOPWD_MASK);
 	reg_val |= (SM(hw_clk->refdiv, WLAN_PLL_CONTROL_REFDIV) |
 		    SM(hw_clk->div, WLAN_PLL_CONTROL_DIV) |
 		    SM(1, WLAN_PLL_CONTROL_NOPWD));
