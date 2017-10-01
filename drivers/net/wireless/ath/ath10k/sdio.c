@@ -41,9 +41,9 @@
 static int ath10k_sdio_hif_diag_read(struct ath10k *ar, u32 address, void *buf,
 				     size_t buf_len);
 static int ath10k_sdio_read(struct ath10k *ar, u32 addr, void *buf,
-			    u32 len, bool incr);
+			    size_t len, bool incr);
 static int ath10k_sdio_write(struct ath10k *ar, u32 addr, const void *buf,
-			     u32 len, bool incr);
+			     size_t len, bool incr);
 
 /* inlined helper functions */
 
