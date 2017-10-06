@@ -251,7 +251,7 @@ struct imx_port {
 	struct imx_dma_rxbuf	rx_buf;
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
-	struct delayed_work	tsk_dma_tx;
+	struct work_struct	tsk_dma_tx;
 	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[10];
 };
@@ -583,8 +583,7 @@ static void dma_tx_callback(void *data)
 
 static void dma_tx_work(struct work_struct *w)
 {
-	struct delayed_work *delay_work = to_delayed_work(w);
-	struct imx_port *sport = container_of(delay_work, struct imx_port, tsk_dma_tx);
+	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_tx);
 	imx_dma_tx(sport);
 }
 
@@ -716,7 +715,7 @@ static void imx_start_tx(struct uart_port *port)
 		}
 
 		if (!sport->dma_is_txing)
-			schedule_delayed_work(&sport->tsk_dma_tx, 0);
+			schedule_work(&sport->tsk_dma_tx);
 	} else {
 		temp = readl(sport->port.membase + UCR1);
 		writel(temp | UCR1_TXMPTYEN, sport->port.membase + UCR1);
@@ -1274,7 +1273,7 @@ static int imx_startup(struct uart_port *port)
 		imx_uart_dma_init(sport);
 
 	if (sport->dma_is_inited)
-		INIT_DELAYED_WORK(&sport->tsk_dma_tx, dma_tx_work);
+		INIT_WORK(&sport->tsk_dma_tx, dma_tx_work);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	/* Reset fifo's and state machines */
@@ -1350,7 +1349,7 @@ static void imx_shutdown(struct uart_port *port)
 			dmaengine_terminate_all(sport->dma_chan_rx);
 		}
 
-		cancel_delayed_work_sync(&sport->tsk_dma_tx);
+		cancel_work_sync(&sport->tsk_dma_tx);
 
 		spin_lock_irqsave(&sport->port.lock, flags);
 		imx_stop_tx(port);
