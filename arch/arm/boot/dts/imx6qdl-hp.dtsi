@@ -587,6 +587,7 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = GP_REG_USBOTG;
 			enable-active-high;
+			regulator-always-on;
 		};
 
 		reg_wlan_en: regulator@4 {
@@ -968,7 +969,6 @@
 };
 
 &usbotg {
-	vbus-supply = <&reg_usbotg_vbus>;
 #if 1
 	/* Always used as peripheral */
 	dr_mode = "peripheral";
