@@ -206,12 +206,12 @@ struct imx_uart_data {
 };
 
 struct imx_dma_rxbuf {
+	struct scatterlist	sgl;
 	unsigned int		periods;
 	unsigned int		period_len;
 	unsigned int		buf_len;
 
 	void			*buf;
-	dma_addr_t		dmaaddr;
 	unsigned int		pending_idx;
 	dma_cookie_t		cookie;
 };
@@ -1092,8 +1092,9 @@ static void dma_rx_callback(void *data)
 {
 	struct imx_port *sport = data;
 	struct dma_chan	*chan = sport->dma_chan_rx;
+	struct scatterlist *sgl = &sport->rx_buf.sgl;
 	struct tty_port *port = &sport->port.state->port;
-	struct tty_struct *tty = sport->port.state->port.tty;
+	struct tty_struct *tty = port->tty;
 	struct dma_tx_state state;
 	enum dma_status status;
 	unsigned int count;
@@ -1124,9 +1125,19 @@ static void dma_rx_callback(void *data)
 	i = sport->rx_buf.pending_idx;
 	if (count) {
 		if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ)) {
-			int bytes = tty_insert_flip_string(port,
+			int bytes;
+
+			/* CPU claims ownership of RX DMA buffer */
+			dma_sync_sg_for_cpu(sport->port.dev, sgl, 1,
+				DMA_FROM_DEVICE);
+
+			bytes = tty_insert_flip_string(port,
 					sport->rx_buf.buf + (i * RX_BUF_SIZE),
 					count);
+
+			/* UART retrieves ownership of RX DMA buffer */
+			dma_sync_sg_for_device(sport->port.dev, sgl, 1,
+				DMA_FROM_DEVICE);
 
 			if (bytes != count)
 				sport->port.icount.buf_overrun++;
@@ -1140,17 +1151,30 @@ static void dma_rx_callback(void *data)
 
 static int start_rx_dma(struct imx_port *sport)
 {
+	struct scatterlist *sgl = &sport->rx_buf.sgl;
 	struct dma_chan	*chan = sport->dma_chan_rx;
+	struct device *dev = sport->port.dev;
 	struct dma_async_tx_descriptor *desc;
+	int ret;
 
 	sport->rx_buf.periods = IMX_RXBD_NUM;
 	sport->rx_buf.period_len = RX_BUF_SIZE;
 	sport->rx_buf.buf_len = IMX_RXBD_NUM * RX_BUF_SIZE;
 	sport->rx_buf.pending_idx = 0;
-	desc = dmaengine_prep_dma_cyclic(chan, sport->rx_buf.dmaaddr,
-		sport->rx_buf.buf_len, sport->rx_buf.period_len,
+
+	sg_init_one(sgl, sport->rx_buf.buf, sport->rx_buf.buf_len);
+	ret = dma_map_sg(dev, sgl, 1, DMA_FROM_DEVICE);
+	if (ret == 0) {
+		dev_err(dev, "DMA mapping error for RX.\n");
+		return -EINVAL;
+	}
+
+	desc = dmaengine_prep_dma_cyclic(chan, sg_dma_address(sgl),
+		sg_dma_len(sgl), sg_dma_len(sgl) / sport->rx_buf.periods,
 		DMA_DEV_TO_MEM, DMA_PREP_INTERRUPT);
+
 	if (!desc) {
+		dma_unmap_sg(dev, sgl, 1, DMA_FROM_DEVICE);
 		dev_err(sport->port.dev, "Prepare for the RX slave dma failed!\n");
 		return -EINVAL;
 	}
@@ -1184,14 +1208,16 @@ static void imx_setup_ufcr(struct imx_port *sport,
 
 static void imx_uart_dma_exit(struct imx_port *sport)
 {
+	struct device *dev = sport->port.dev;
+
 	if (sport->dma_chan_rx) {
 		dma_release_channel(sport->dma_chan_rx);
 		sport->dma_chan_rx = NULL;
 
 		if (sport->rx_buf.buf) {
-			dma_free_coherent(sport->port.dev, IMX_RXBD_NUM * RX_BUF_SIZE,
-						(void *)sport->rx_buf.buf,
-						sport->rx_buf.dmaaddr);
+			dma_unmap_sg(dev, &sport->rx_buf.sgl, 1,
+					DMA_FROM_DEVICE);
+			kfree(sport->rx_buf.buf);
 			sport->rx_buf.buf = NULL;
 		}
 	}
@@ -1229,8 +1255,7 @@ static int imx_uart_dma_init(struct imx_port *sport)
 		goto err;
 	}
 
-	sport->rx_buf.buf = dma_alloc_coherent(sport->port.dev, IMX_RXBD_NUM * RX_BUF_SIZE,
-					&sport->rx_buf.dmaaddr, GFP_KERNEL);
+	sport->rx_buf.buf = kzalloc(IMX_RXBD_NUM * RX_BUF_SIZE, GFP_KERNEL);
 	if (!sport->rx_buf.buf) {
 		dev_err(dev, "cannot alloc DMA buffer.\n");
 		ret = -ENOMEM;
