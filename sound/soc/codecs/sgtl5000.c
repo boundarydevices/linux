@@ -525,6 +525,11 @@ static const DECLARE_TLV_DB_RANGE(mic_gain_tlv,
 	1, 3, TLV_DB_SCALE_ITEM(2000, 1000, 0)
 );
 
+static const DECLARE_TLV_DB_RANGE(bass_high_filter_freq,
+	0, 0, TLV_DB_SCALE_ITEM(80, 0, 0),
+	1, 6, TLV_DB_SCALE_ITEM(100, 25, 0)
+);
+
 /* tlv for hp volume, -51.5db to 12.0db, step .5db */
 static const DECLARE_TLV_DB_SCALE(headphone_volume, -5150, 50, 0);
 
@@ -585,6 +590,14 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	SOC_SINGLE_EXT_TLV("AVC Threshold Volume", SGTL5000_DAP_AVC_THRESHOLD,
 			0, 96, 0, avc_get_threshold, avc_put_threshold,
 			avc_threshold),
+
+	SOC_SINGLE("Bass Enable", SGTL5000_DAP_BASS_ENHANCE, 0, 1, 0),
+	SOC_SINGLE_TLV("Bass Filter Feq", SGTL5000_DAP_BASS_ENHANCE,
+			6, 7, 0, bass_high_filter_freq),
+	SOC_SINGLE("Bass Volume", SGTL5000_DAP_BASS_ENHANCE_CTRL,
+			8, 0x3f, 1),
+	SOC_SINGLE("Bass Level", SGTL5000_DAP_BASS_ENHANCE_CTRL,
+			0, 0x7f, 1),
 };
 
 /* mute the codec used by alsa core */
