@@ -174,10 +174,8 @@ static void add_fence(struct fence **fences, int *i, struct fence *fence)
 {
 	fences[*i] = fence;
 
-	if (!fence_is_signaled(fence)) {
 		fence_get(fence);
 		(*i)++;
-	}
 }
 
 /**
@@ -363,7 +361,7 @@ err_put_fd:
 	return err;
 }
 
-static void sync_fill_fence_info(struct fence *fence,
+static int sync_fill_fence_info(struct fence *fence,
 				 struct sync_fence_info *info)
 {
 	strlcpy(info->obj_name, fence->ops->get_timeline_name(fence),
@@ -375,6 +373,7 @@ static void sync_fill_fence_info(struct fence *fence,
 	else
 		info->status = 0;
 	info->timestamp_ns = ktime_to_ns(fence->timestamp);
+	return info->status;
 }
 
 static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
@@ -384,7 +383,7 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 	struct sync_fence_info *fence_info = NULL;
 	struct fence **fences;
 	__u32 size;
-	int num_fences, ret, i;
+	int num_fences, ret, i, fences_status = 1;
 
 	if (copy_from_user(&info, (void __user *)arg, sizeof(info)))
 		return -EFAULT;
@@ -400,8 +399,10 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 	 * sync_fence_info and return the actual number of fences on
 	 * info->num_fences.
 	 */
-	if (!info.num_fences)
+	if (!info.num_fences) {
+		fences_status = fence_is_signaled(sync_file->fence);
 		goto no_fences;
+	}
 
 	if (info.num_fences < num_fences)
 		return -EINVAL;
@@ -411,8 +412,11 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 	if (!fence_info)
 		return -ENOMEM;
 
-	for (i = 0; i < num_fences; i++)
-		sync_fill_fence_info(fences[i], &fence_info[i]);
+	for (i = 0; i < num_fences; i++) {
+		int status = sync_fill_fence_info(fences[i], &fence_info[i]);
+
+		fences_status = fences_status <= 0 ? fences_status : status;
+	}
 
 	if (copy_to_user(u64_to_user_ptr(info.sync_fence_info), fence_info,
 			 size)) {
@@ -422,7 +426,7 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 
 no_fences:
 	strlcpy(info.name, sync_file->name, sizeof(info.name));
-	info.status = fence_is_signaled(sync_file->fence);
+	info.status = fences_status;
 	info.num_fences = num_fences;
 
 	if (copy_to_user((void __user *)arg, &info, sizeof(info)))
