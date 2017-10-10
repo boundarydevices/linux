@@ -1116,6 +1116,7 @@
 
 &max77823_fuelgauge {
 	compatible = "samsung,max77823-fuelgauge";
+	fuelgauge,capacity_mAh = <6400>;
 	fuelgauge,capacity_max = <990>;
 	fuelgauge,capacity_max_margin = <50>;
 	fuelgauge,capacity_min = <0>;
