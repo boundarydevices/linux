@@ -1208,6 +1208,7 @@
 	empty_detect_voltage = <2900>;
 	empty_recovery_voltage = <3100>;
 	fuelgauge,capacity_calculation_type = <0x17>;
+	fuelgauge,capacity_mAh = <8000>;
 	fuelgauge,capacity_max = <990>;
 	fuelgauge,capacity_max_margin = <50>;
 	fuelgauge,capacity_min = <0>;
