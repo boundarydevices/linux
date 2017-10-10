@@ -1567,7 +1567,7 @@ static int max77823_fg_calculate_dynamic_scale(
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
 	raw_soc_val.intval = max77823_get_soc(fuelgauge) / 10;
 #else
-	raw_soc_val.intval = fg_read_percent(fuelgauge, SOCREP_REG) / 10;
+	raw_soc_val.intval = fg_read_percent(fuelgauge, SOCREP_REG);
 #endif
 
 	if (raw_soc_val.intval <
@@ -2403,7 +2403,7 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
 	raw_soc_val.intval = max77823_get_soc(fuelgauge) / 10;
 #else
-	raw_soc_val.intval = fg_read_percent(fuelgauge, SOCREP_REG) / 10;
+	raw_soc_val.intval = fg_read_percent(fuelgauge, SOCREP_REG);
 #endif
 
 	if(raw_soc_val.intval > fuelgauge->pdata->capacity_max)
