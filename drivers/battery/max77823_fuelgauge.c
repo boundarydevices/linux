@@ -2300,6 +2300,14 @@ static int max77823_fuelgauge_parse_dt(
 		return -1;
 	}
 
+	/* Overwrite battery capacity if provided (default is 2600mAh) */
+	ret = of_property_read_u32(np, "fuelgauge,capacity_mAh", &pairs[0]);
+	if (ret >= 0) {
+		/* Cap register = X mAh * 10 mohms / 5 uVh*/
+		fuelgauge->battery_data->Capacity = pairs[0] * 2;
+		pr_info("%s: fuelgauge,capacity_mAh=%d\n", __func__, pairs[0]);
+	}
+
 	while (dtd->field) {
 		u32 *p = (u32 *)(((void *)pdata) + dtd->offset);
 		ret = of_property_read_u32(np, dtd->field, p);
@@ -2389,6 +2397,8 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 	fuelgauge->i2c = max77823->fuelgauge;
 	fuelgauge->max77823_pdata = pdata;
 
+	board_fuelgauge_init((void *)fuelgauge);
+
 #if defined(CONFIG_OF)
 	ret = max77823_fuelgauge_parse_dt(fuelgauge, pdev->dev.of_node);
 	if (ret < 0) {
@@ -2396,7 +2406,6 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 		goto err_free;
 	}
 #endif
-	board_fuelgauge_init((void *)fuelgauge);
 
 	platform_set_drvdata(pdev, fuelgauge);
 
