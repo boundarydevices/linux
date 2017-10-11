@@ -1,0 +1,27 @@
+/*
+ * Copyright 2017 Boundary Devices
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-ap.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX6 Quad ap Board";
+	compatible = "fsl,imx6q-ap", "fsl,imx6q";
+};
+
+&hdmi_core {
+	ipu_id = <1>;
+};
