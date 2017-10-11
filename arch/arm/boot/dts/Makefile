@@ -328,6 +328,7 @@ dtb-$(CONFIG_SOC_IMX53) += \
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-a.dtb \
 	imx6dl-acl.dtb \
+	imx6dl-ap.dtb \
 	imx6dl-apf6dev.dtb \
 	imx6dl-aristainetos_4.dtb \
 	imx6dl-aristainetos_7.dtb \
@@ -401,6 +402,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dqscm-1gb-qwks-rev3-hdcp-fix-ldo.dtb \
 	imx6dqscm-1gb-qwks-rev3-btwifi-fix-ldo.dtb \
 	imx6q-acl.dtb \
+	imx6q-ap.dtb \
 	imx6q-apalis-ixora.dtb \
 	imx6q-apf6dev.dtb \
 	imx6q-arm2.dtb \
