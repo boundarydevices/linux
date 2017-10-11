@@ -498,7 +498,7 @@
 	};
 
 	rv4162@68 {
-		compatible = "mcrystal,rv4162";
+		compatible = "microcrystal,rv4162";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_rv4162>;
 		reg = <0x68>;
