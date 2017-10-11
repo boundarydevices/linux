@@ -1277,7 +1277,7 @@ static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
 		fbdev->fb_mem_vaddr = fb_rmem_vaddr[fb_index];
 		if (!fbdev->fb_mem_vaddr) {
 			osd_log_err("failed to ioremap frame buffer\n");
-			ret = -ENOMEM;
+			return -ENOMEM;
 		}
 		osd_log_info("Frame buffer memory assigned at");
 		osd_log_info(" %d, phy: 0x%p, vir:0x%p, size=%dK\n\n",
@@ -1318,7 +1318,8 @@ static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
 			osd_log_info("---------------clear fb%d memory %p\n",
 				fb_index, fbdev->fb_mem_vaddr);
 			set_logo_loaded();
-			memset(fbdev->fb_mem_vaddr, 0x0, fbdev->fb_len);
+			if (fbdev->fb_mem_vaddr)
+				memset(fbdev->fb_mem_vaddr, 0x0, fbdev->fb_len);
 			if (fb_index == DEV_OSD0 && osd_get_afbc()) {
 				for (j = 1; j < OSD_MAX_BUF_NUM; j++) {
 					osd_log_info(
@@ -1334,10 +1335,10 @@ static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
 				 * 1. the big buffer ion alloc
 				 * 2. reserved memory
 				 */
-
-				memset(fb_rmem_vaddr[fb_index],
-						0x0,
-						fb_rmem_size[fb_index]);
+				if (fb_rmem_vaddr[fb_index])
+					memset(fb_rmem_vaddr[fb_index],
+							0x0,
+							fb_rmem_size[fb_index]);
 			}
 			/* setup osd if not logo layer */
 			osddev_setup(fbdev);
