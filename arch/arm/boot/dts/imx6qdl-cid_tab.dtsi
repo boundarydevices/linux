@@ -1073,7 +1073,7 @@
 	};
 
 	rtc@68 {
-		compatible = "mcrystal,rv4162";
+		compatible = "microcrystal,rv4162";
 		interrupts-extended = GPIRQ_RTC;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_rtc>;
