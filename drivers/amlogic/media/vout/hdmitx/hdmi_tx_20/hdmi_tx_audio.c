@@ -210,8 +210,10 @@ static void hdmi_tx_construct_aud_packet(
 	} else {
 		;
 	}
-	AUD_DB[0] = AUD_DB[0] & 0xf;/*bit[7:4] always set to 0 in HDMI*/
-	AUD_DB[1] = 0;		/*always set to 0 in HDMI*/
+	if (AUD_DB) {
+		AUD_DB[0] = AUD_DB[0] & 0xf;/*bit[7:4] always set to 0 in HDMI*/
+		AUD_DB[1] = 0;		/*always set to 0 in HDMI*/
+	}
 #endif
 }
 
