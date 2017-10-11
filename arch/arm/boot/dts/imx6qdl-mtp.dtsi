@@ -435,7 +435,7 @@
 	status = "okay";
 
 	rv4162@68 {
-		compatible = "mcrystal,rv4162";
+		compatible = "microcrystal,rv4162";
 		reg = <0x68>;
 		interrupts-extended = GPIRQ_RTC_RV4162;
 		pinctrl-names = "default";
