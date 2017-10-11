@@ -155,6 +155,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx53-qsb.dtb \
 	imx53-smd.dtb \
 	imx6dl-a.dtb \
+	imx6dl-ap.dtb \
 	imx6dl-ash.dtb \
 	imx6dl-ash2.dtb \
 	imx6dl-bt.dtb \
@@ -185,6 +186,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-sabresd-hdcp.dtb \
 	imx6dl-sp.dtb \
 	imx6dl-wandboard.dtb \
+	imx6q-ap.dtb \
 	imx6q-arm2.dtb \
 	imx6q-bt.dtb \
 	imx6q-bt2.dtb \
