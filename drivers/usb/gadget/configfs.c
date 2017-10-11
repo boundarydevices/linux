@@ -34,6 +34,29 @@ struct device *create_function_device(char *name)
 EXPORT_SYMBOL_GPL(create_function_device);
 #endif
 
+#ifdef CONFIG_AMLOGIC_USB
+struct gadget_lock {
+	struct wakeup_source wakesrc;
+	bool held;
+};
+static struct gadget_lock Gadget_Lock;
+
+static void gadget_hold(struct gadget_lock *lock)
+{
+	if (!lock->held) {
+		__pm_stay_awake(&lock->wakesrc);
+		lock->held = true;
+	}
+}
+
+static void gadget_drop(struct gadget_lock *lock)
+{
+	if (lock->held) {
+		__pm_relax(&lock->wakesrc);
+		lock->held = false;
+	}
+}
+#endif
 int check_user_usb_string(const char *name,
 		struct usb_gadget_strings *stringtab_dev)
 {
@@ -1272,6 +1295,9 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
 	/* the gi->lock is hold by the caller */
 	cdev->gadget = gadget;
 	set_gadget_data(gadget, cdev);
+#ifdef CONFIG_AMLOGIC_USB
+	wakeup_source_init(&Gadget_Lock.wakesrc, "gadget-connect");
+#endif
 	ret = composite_dev_prepare(composite, cdev);
 	if (ret)
 		return ret;
@@ -1436,6 +1462,9 @@ static void android_work(struct work_struct *data)
 					KOBJ_CHANGE, configured);
 		pr_info("%s: sent uevent %s\n", __func__, configured[0]);
 		uevent_sent = true;
+#ifdef CONFIG_AMLOGIC_USB
+		gadget_hold(&Gadget_Lock);
+#endif
 	}
 
 	if (status[2]) {
@@ -1443,6 +1472,9 @@ static void android_work(struct work_struct *data)
 					KOBJ_CHANGE, disconnected);
 		pr_info("%s: sent uevent %s\n", __func__, disconnected[0]);
 		uevent_sent = true;
+#ifdef CONFIG_AMLOGIC_USB
+		gadget_drop(&Gadget_Lock);
+#endif
 	}
 
 	if (!uevent_sent) {
@@ -1467,6 +1499,9 @@ static void configfs_composite_unbind(struct usb_gadget *gadget)
 	purge_configs_funcs(gi);
 	composite_dev_cleanup(cdev);
 	usb_ep_autoconfig_reset(cdev->gadget);
+#ifdef CONFIG_AMLOGIC_USB
+	wakeup_source_trash(&Gadget_Lock.wakesrc);
+#endif
 	cdev->gadget = NULL;
 	set_gadget_data(gadget, NULL);
 }
