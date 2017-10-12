@@ -587,6 +587,11 @@ static inline int imx_uart_transmit_buffer(struct imx_port *sport)
 	struct circ_buf *xmit = &sport->port.state->xmit;
 
 	if (sport->port.x_char) {
+		if (!sport->txing && sport->txen_mask) {
+			imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
+			sport->txing = 1;
+		}
+
 		/* Send next char */
 		imx_uart_writel(sport, sport->port.x_char, URTX0);
 		sport->port.icount.tx++;
@@ -597,6 +602,12 @@ static inline int imx_uart_transmit_buffer(struct imx_port *sport)
 		imx_uart_stop_tx(&sport->port);
 		return 0;
 	}
+
+	if (!sport->txing && sport->txen_mask) {
+		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
+		sport->txing = 1;
+	}
+
 	if (sport->dma_is_enabled) {
 		u32 ucr1, ucr4;
 		/*
@@ -694,7 +705,7 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
-	if (uart_tx_stopped(&sport->port)) {
+	if (!sport->tx_bytes || uart_tx_stopped(&sport->port)) {
 		sport->dma_is_txing = 0;
 		if ((sport->port.rs485.flags & SER_RS485_ENABLED) && sport->txing) {
 			ucr4 = imx_uart_readl(sport, UCR4);
@@ -703,6 +714,11 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 		}
 		return;
 	}
+	if (!sport->txing && sport->txen_mask) {
+		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
+		sport->txing = 1;
+	}
+
 	if (xmit->tail < xmit->head || xmit->head == 0) {
 		sport->dma_tx_nents = 1;
 		sg_init_one(sgl, xmit->buf + xmit->tail, sport->tx_bytes);
@@ -765,10 +781,6 @@ static void imx_uart_start_tx(struct uart_port *port)
 		imx_uart_writel(sport, ucr1, UCR1);
 	}
 
-	if (!sport->txing && sport->txen_mask) {
-		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
-		sport->txing = 1;
-	}
 	/*
 	 * We cannot simply do nothing here if sport->tx_state == SEND already
 	 * because UCR1_TXMPTYEN might already have been cleared in
@@ -2046,7 +2058,7 @@ static int imx_uart_rs485_config(struct uart_port *port,
 	u32 ucr2;
 
 	/* RTS is required to control the transmitter */
-	if (!sport->have_rtscts && !sport->have_rtsgpio)
+	if (!sport->rs485_txen_mask && !sport->have_rtscts && !sport->have_rtsgpio)
 		rs485conf->flags &= ~SER_RS485_ENABLED;
 
 	if (rs485conf->flags & SER_RS485_ENABLED) {
