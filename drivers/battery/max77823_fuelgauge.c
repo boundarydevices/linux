@@ -1427,6 +1427,7 @@ bool max77823_fg_init(struct max77823_fuelgauge_data *fuelgauge)
 	vempty <<= 7;
 	vempty |= (fuelgauge->pdata->empty_recovery_voltage / 40) & 0x7f;
 	max77823_write_word(fuelgauge->i2c, MAX77823_V_EMPTY, vempty);
+	fg_reset_soc(fuelgauge);
 
 	/* Clear POR condition */
 	max77823_write_word(fuelgauge->i2c, MAX77823_REG_STATUS, ret & ~2);
