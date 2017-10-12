@@ -495,6 +495,11 @@ static inline int imx_transmit_buffer(struct imx_port *sport)
 	unsigned long temp;
 
 	if (sport->port.x_char) {
+		if (!sport->txing && sport->txen_mask) {
+			imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
+			sport->txing = 1;
+		}
+
 		/* Send next char */
 		writel(sport->port.x_char, sport->port.membase + URTX0);
 		sport->port.icount.tx++;
@@ -505,6 +510,12 @@ static inline int imx_transmit_buffer(struct imx_port *sport)
 		imx_stop_tx(&sport->port);
 		return 0;
 	}
+
+	if (!sport->txing && sport->txen_mask) {
+		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
+		sport->txing = 1;
+	}
+
 	if (sport->dma_is_enabled) {
 		/*
 		 * We've just sent a X-char Ensure the TX DMA is enabled
@@ -618,6 +629,11 @@ static void imx_dma_tx(struct imx_port *sport)
 	if (sport->tx_bytes > 0) {
 		if (uart_tx_stopped(&sport->port))
 			goto out2;
+
+		if (!sport->txing && sport->txen_mask) {
+			imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
+			sport->txing = 1;
+		}
 		if (xmit->tail > xmit->head && xmit->head > 0) {
 			sport->dma_tx_nents = 2;
 			sg_init_table(sgl, 2);
@@ -688,11 +704,6 @@ static void imx_start_tx(struct uart_port *port)
 		temp = readl(sport->port.membase + UCR1);
 		temp &= ~(UCR1_RRDYEN);
 		writel(temp, sport->port.membase + UCR1);
-	}
-
-	if (!sport->txing && sport->txen_mask) {
-		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
-		sport->txing = 1;
 	}
 
 	if (port->rs485.flags & SER_RS485_ENABLED) {
@@ -1880,7 +1891,7 @@ static int imx_rs485_config(struct uart_port *port,
 	rs485conf->delay_rts_after_send = 0;
 
 	/* RTS is required to control the transmitter */
-	if (!sport->have_rtscts)
+	if (!sport->rs485_txen_mask && !sport->have_rtscts)
 		rs485conf->flags &= ~SER_RS485_ENABLED;
 
 	if (rs485conf->flags & SER_RS485_ENABLED) {
