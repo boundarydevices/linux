@@ -613,7 +613,7 @@ int fg_reset_soc(struct max77823_fuelgauge_data *fuelgauge)
 		__func__, fg_read_current(fuelgauge),
 		fg_read_avg_current(fuelgauge));
 
-	if (fuelgauge->pdata->check_jig_status ||
+	if (fuelgauge->pdata->check_jig_status &&
 	    !fuelgauge->pdata->check_jig_status()) {
 		pr_info("%s : Return by No JIG_ON signal\n", __func__);
 		return 0;
