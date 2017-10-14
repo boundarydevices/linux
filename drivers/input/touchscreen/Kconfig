@@ -558,6 +558,16 @@ config TOUCHSCREEN_ELAN_TS
 	  To compile this driver as a module, choose M here: the
 	  module will be called elan-touch.
 
+config TOUCHSCREEN_EXC3000
+	tristate "EETI EXC3000 multi-touch panel support"
+	depends on I2C
+	help
+	  Say Y here to enable support for I2C connected EETI
+	  EXC3000 multi-touch panels.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called exc3000.
+
 config TOUCHSCREEN_FT5X06
 	tristate "Focaltech FT5X06 5 point touchscreen"
 	depends on I2C
