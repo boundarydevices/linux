@@ -15,6 +15,7 @@
  *
  */
 
+#define DEBUG
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/vfm/vframe_provider.h>
@@ -121,7 +122,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 	if (ctrl->id == V4L2_CID_USER_AMLOGIC_IONVIDEO_BASE) {
 		if (ctrl->value) {
 			dev->freerun_mode = 1;
-			IONVID_INFO("ionvideo: set freerun mode\n");
+			IONVID_DBG("ionvideo: set freerun mode\n");
 		}
 	}
 	return 0;
@@ -526,8 +527,8 @@ static int vidioc_open(struct file *file)
 	dev->vf_wait_cnt = 0;
 	/*for libplayer osd*/
 	dev->freerun_mode = freerun_mode;
-	dprintk(dev, 2, "vidioc_open\n");
-	IONVID_INFO("ionvideo open\n");
+	//dprintk(dev, 2, "vidioc_open\n");
+	IONVID_DBG("ionvideo open\n");
 	init_waitqueue_head(&dev->wq);
 	return 0;
 }
@@ -536,10 +537,10 @@ static int vidioc_close(struct file *file)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
 
-	IONVID_INFO("vidioc_close!!!!\n");
+	IONVID_DBG("vidioc_close!!!!\n");
 	ppmgr2_release(&(dev->ppmgr2_dev));
-	dprintk(dev, 2, "vidioc_close\n");
-	IONVID_INFO("vidioc_close\n");
+	//dprintk(dev, 2, "vidioc_close\n");
+	IONVID_DBG("vidioc_close\n");
 	if (dev->fd_num > 0)
 		dev->fd_num--;
 
@@ -1095,7 +1096,7 @@ void ionvideo_release_map(int inst)
 		dev = list_entry(p, struct ionvideo_dev, ionvideo_devlist);
 		if ((dev->inst == inst) && (dev->mapped)) {
 			dev->mapped = false;
-			pr_info("ionvideo_release_map %d OK\n", dev->inst);
+			pr_debug("ionvideo_release_map %d OK\n", dev->inst);
 			break;
 		}
 	}
