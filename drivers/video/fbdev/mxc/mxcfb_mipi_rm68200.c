@@ -102,10 +102,7 @@
 #define P0_SETVGP2	0x55
 
 static const u32 init_commands[] = {
-	DELAY, 200,
-	DELAY, 200,
 	B(0xFE, 0x01),	/* CMD Mode Switch, manufacturer command set page 0 */
-
 
 	B(P0_RGBCTR, VBP),	/* Vertical back porch*/
 	B(P0_DPRSLCTR, 0x21),	/* 720 horizontal */
