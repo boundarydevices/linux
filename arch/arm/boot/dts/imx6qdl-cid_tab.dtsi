@@ -1188,11 +1188,11 @@
 	battery,chg_gpio_status = <0>;
 	battery,chg_polarity_en = <0>;
 	battery,chg_polarity_status = <0>;
-	battery,fast_charging_current  = <2100   0  460 2100  460 1200 1000  460   0 1200  900 2100 2100   0 1300  300  700 1300 1800  300   80 2100   0 1000 2800 1000 1000 1000>;
+	battery,fast_charging_current  = <2100   0  460 2100  460 1200 1000  460   0 1200 2100 2100 2100   0 1300  300  700 1300 1800  300   80 2100   0 1000 2800 1000 1000 2100>;
 	battery,full_check_current_1st = <200    0  200  200  200  200  200  200   0  200  200  200  200   0  200  200  200  200  200  200  200  200   0  200  200  200  200  200>;
 	battery,full_check_current_2nd = <2400   0 2400 2400 2400 2400 2400 2400   0 2400 2400 2400 2400   0 2400 2400 2400 2400 2400 2400 2400 2400   0 2400 2400 2400 2400 2400>;
 	battery,full_check_type = <7>; /* SEC_BATTERY_FULLCHARGED_CHGPSY */
-	battery,input_current_limit    = <1800 460  460 4000  460  900 1000  460 460 1000  760 1800 1800 460 1300  300  700 1300 1800  300   80 1800 460 1000 1633 1000 1000 4000>;
+	battery,input_current_limit    = <1800 460  460 4000  460  900 1000  460 460 1000 4000 1800 1800 460 1300  300  700 1300 1800  300   80 1800 460 1000 1633 1000 1000 4000>;
 	battery,ovp_uvlo_check_type = <4>; /* SEC_BATTERY_OVP_UVLO_CHGINT */
 	boost = <1>;
 
