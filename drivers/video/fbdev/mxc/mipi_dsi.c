@@ -45,8 +45,8 @@
 #define DSI_GEN_PLD_DATA_BUF_ENTRY	(0x10)
 #define	MIPI_MUX_CTRL(v)		(((v) & 0x3) << 4)
 #define	MIPI_LCD_SLEEP_MODE_DELAY	(120)
-#define	MIPI_DSI_REG_RW_TIMEOUT		(20)
-#define	MIPI_DSI_PHY_TIMEOUT		(10)
+#define	MIPI_DSI_REG_RW_TIMEOUT		(200)
+#define	MIPI_DSI_PHY_TIMEOUT		(100)
 
 static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 #ifdef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
@@ -143,7 +143,7 @@ static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 				MIPI_DSI_CMD_PKT_STATUS, &status);
 			while ((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) ==
 					 DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) {
-				msleep(1);
+				udelay(100);
 				timeout++;
 				if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 					return -EIO;
@@ -155,7 +155,7 @@ static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 		if (len > 0) {
 			while ((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) ==
 					 DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) {
-				msleep(1);
+				udelay(100);
 				timeout++;
 				if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 					return -EIO;
@@ -177,7 +177,7 @@ static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_CMD_PKT_STATUS, &status);
 	while ((status & DSI_CMD_PKT_STATUS_GEN_CMD_FULL) ==
 			 DSI_CMD_PKT_STATUS_GEN_CMD_FULL) {
-		msleep(1);
+		udelay(100);
 		timeout++;
 		if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 			return -EIO;
@@ -191,7 +191,7 @@ static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 			 DSI_CMD_PKT_STATUS_GEN_CMD_EMPTY) ||
 			!((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_EMPTY) ==
 			DSI_CMD_PKT_STATUS_GEN_PLD_W_EMPTY)) {
-		msleep(1);
+		udelay(100);
 		timeout++;
 		if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 			return -EIO;
@@ -223,7 +223,7 @@ static int mipi_dsi_pkt_read(struct mipi_dsi_info *mipi_dsi,
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_CMD_PKT_STATUS, &val);
 	while ((val & DSI_CMD_PKT_STATUS_GEN_RD_CMD_BUSY) !=
 			 DSI_CMD_PKT_STATUS_GEN_RD_CMD_BUSY) {
-		msleep(1);
+		udelay(100);
 		timeout++;
 		if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 			return -EIO;
@@ -233,7 +233,7 @@ static int mipi_dsi_pkt_read(struct mipi_dsi_info *mipi_dsi,
 	/* wait for entire response stroed in FIFO */
 	while ((val & DSI_CMD_PKT_STATUS_GEN_RD_CMD_BUSY) ==
 			 DSI_CMD_PKT_STATUS_GEN_RD_CMD_BUSY) {
-		msleep(1);
+		udelay(100);
 		timeout++;
 		if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 			return -EIO;
@@ -312,7 +312,7 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_PHY_STATUS, &val);
 	while ((val & DSI_PHY_STATUS_LOCK) != DSI_PHY_STATUS_LOCK) {
-		msleep(1);
+		udelay(100);
 		timeout++;
 		if (timeout == MIPI_DSI_PHY_TIMEOUT) {
 			dev_err(&mipi_dsi->pdev->dev,
@@ -324,7 +324,7 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 	timeout = 0;
 	while ((val & DSI_PHY_STATUS_STOPSTATE_CLK_LANE) !=
 			DSI_PHY_STATUS_STOPSTATE_CLK_LANE) {
-		msleep(1);
+		udelay(100);
 		timeout++;
 		if (timeout == MIPI_DSI_PHY_TIMEOUT) {
 			dev_err(&mipi_dsi->pdev->dev,
