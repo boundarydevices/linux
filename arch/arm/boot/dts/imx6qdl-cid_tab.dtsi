@@ -125,16 +125,6 @@
 			MX6QDL_PAD_EIM_D20__GPIO3_IO20		0x1b0b0
 #define GP_GPIO_B		<&gpio4 21 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x1b0b0
-			/* Blue Led */
-#define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1b0b0
-			/* Green Led */
-#define GP_STAT_LED2		<&gpio4 25 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
-			/* Red Led */
-#define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x1b0b0
-
 			/* WWAN 3.7V Regulator */
 #define GP_3P7_EN		<&gpio5 11 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x1b0b0
@@ -316,6 +306,15 @@
 		fsl,pins = <
 #define GP_LED_VIBRATOR		<&gpio5 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x030b0
+			/* Blue Led */
+#define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1b0b0
+			/* Green Led */
+#define GP_STAT_LED2		<&gpio4 25 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
+			/* Red Led */
+#define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x1b0b0
 		>;
 	};
 
@@ -604,6 +603,21 @@
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_leds>;
+
+		blue {
+			gpios = GP_STAT_LED1;
+			default-state = "off";
+		};
+
+		green {
+			gpios = GP_STAT_LED2;
+			default-state = "off";
+		};
+
+		red {
+			gpios = GP_STAT_LED3;
+			default-state = "off";
+		};
 
 		vibrator {
 			gpios = GP_LED_VIBRATOR;
