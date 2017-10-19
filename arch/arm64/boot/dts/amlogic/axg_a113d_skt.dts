@@ -253,7 +253,8 @@
 		compatible = "amlogic, amlogic-new-usb2";
 		status = "okay";
 		portnum = <4>;
-		reg = <0x0 0xffe09000 0x0 0x80>;
+		reg = <0x0 0xffe09000 0x0 0x80
+					0x0 0xffd01008 0x0 0x4>;
 	};
 	usb3_phy: usb3phy@ffe09080 {
 		compatible = "amlogic, amlogic-new-usb3";

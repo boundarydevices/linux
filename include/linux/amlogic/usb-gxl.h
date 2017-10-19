@@ -241,7 +241,7 @@ struct amlogic_usb {
 	struct usb_phy		phy;
 	struct device		*dev;
 	void __iomem	*regs;
-
+	void __iomem	*reset_regs;
 	/* Set VBus Power though GPIO */
 	int vbus_power_pin;
 	int vbus_power_pin_work_mask;

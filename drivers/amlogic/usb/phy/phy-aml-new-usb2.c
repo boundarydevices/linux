@@ -54,7 +54,7 @@ static int amlogic_new_usb2_init(struct usb_phy *x)
 		return 0;
 	}
 
-	amlogic_new_usbphy_reset();
+	amlogic_new_usbphy_reset(phy);
 
 	for (i = 0; i < phy->portnum; i++) {
 		for (j = 0; j < 3; j++) {
@@ -112,7 +112,9 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	struct amlogic_usb			*phy;
 	struct device *dev = &pdev->dev;
 	struct resource *phy_mem;
+	struct resource *reset_mem;
 	void __iomem	*phy_base;
+	void __iomem	*reset_base = NULL;
 	int portnum = 0;
 	const void *prop;
 
@@ -129,6 +131,15 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	phy_base = devm_ioremap_resource(dev, phy_mem);
 	if (IS_ERR(phy_base))
 		return PTR_ERR(phy_base);
+
+	reset_mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (reset_mem) {
+		reset_base = ioremap(reset_mem->start,
+			resource_size(reset_mem));
+		if (IS_ERR(reset_base))
+			return PTR_ERR(reset_base);
+	}
+
 	phy = devm_kzalloc(&pdev->dev, sizeof(*phy), GFP_KERNEL);
 	if (!phy) {
 		dev_err(&pdev->dev, "unable to allocate memory for USB2 PHY\n");
@@ -140,6 +151,7 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 
 	phy->dev		= dev;
 	phy->regs		= phy_base;
+	phy->reset_regs = reset_base;
 	phy->portnum      = portnum;
 	phy->suspend_flag = 0;
 	phy->phy.dev		= phy->dev;
