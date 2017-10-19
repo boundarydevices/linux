@@ -6491,6 +6491,10 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		put_user(video_global_output, (u32 __user *)argp);
 		break;
 
+	case AMSTREAM_IOC_GET_VIDEO_LAYER1_ON:
+		put_user(video_onoff_state, (u32 __user *)argp);
+		break;
+
 	default:
 		return -EINVAL;
 	}
@@ -6528,6 +6532,7 @@ static long amvideo_compat_ioctl(struct file *file, unsigned int cmd, ulong arg)
 	case AMSTREAM_IOC_GET_SOURCE_VIDEO_3D_TYPE:
 	case AMSTREAM_IOC_GET_VSYNC_SLOW_FACTOR:
 	case AMSTREAM_IOC_GLOBAL_GET_VIDEO_OUTPUT:
+	case AMSTREAM_IOC_GET_VIDEO_LAYER1_ON:
 		arg = (unsigned long) compat_ptr(arg);
 	case AMSTREAM_IOC_TRICKMODE:
 	case AMSTREAM_IOC_VPAUSE:

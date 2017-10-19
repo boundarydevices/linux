@@ -89,6 +89,7 @@
 #define AMSTREAM_IOC_VDECINFO _IOR((_A_M), 0x20, int)
 #define AMSTREAM_IOC_GLOBAL_GET_VIDEO_OUTPUT  _IOR((_A_M), 0x21, int)
 #define AMSTREAM_IOC_GLOBAL_SET_VIDEO_OUTPUT  _IOW((_A_M), 0x22, int)
+#define AMSTREAM_IOC_GET_VIDEO_LAYER1_ON  _IOR((_A_M), 0x23, int)
 
 #define AMSTREAM_IOC_APTS             _IOR((_A_M), 0x40, int)
 #define AMSTREAM_IOC_VPTS             _IOR((_A_M), 0x41, int)
