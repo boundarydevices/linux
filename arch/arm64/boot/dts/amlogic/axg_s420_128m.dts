@@ -346,8 +346,8 @@
 		aml-audio-card,dai-link@0 {
 			format = "dsp_a";
 			mclk-fs = <256>;//512
-			//continuous-clock;
-			bitclock-inversion;
+			continuous-clock;
+			//bitclock-inversion;
 			//frame-inversion;
 			bitclock-master = <&aml_tdma>;
 			frame-master = <&aml_tdma>;
@@ -378,7 +378,6 @@
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
 				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <12288000>;
 			};
 			codec {
 				sound-dai = <&tlv320adc3101_32>;

@@ -349,7 +349,7 @@
 			format = "dsp_a";
 			mclk-fs = <256>;//512
 			continuous-clock;
-			bitclock-inversion;
+			//bitclock-inversion;
 			//frame-inversion;
 			bitclock-master = <&aml_tdma>;
 			frame-master = <&aml_tdma>;
@@ -804,8 +804,6 @@
 	aml_spdif: spdif {
 		compatible = "amlogic, snd-spdif";
 		#sound-dai-cells = <0>;
-		spdif_from_ddr = <0>;
-		spdif_to_ddr = <0>;
 		clocks = <&clkc CLKID_MPLL0
 				&clkc CLKID_FCLK_DIV4
 				&clkaudio CLKID_AUDIO_SPDIFIN
