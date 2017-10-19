@@ -388,6 +388,19 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *);
 void ion_cma_heap_destroy(struct ion_heap *);
 
 /**
+ * The codec_mm heap returns physical addresses, since 0 may be a valid
+ * physical address, this is used to indicate allocation failed
+ */
+#define ION_CODEC_MM_ALLOCATE_FAIL -1
+
+/*
+ * Amlogic:
+ * Alloc from codec_mm support
+ */
+struct ion_heap *ion_codec_mm_heap_create(struct ion_platform_heap *heap_data);
+void ion_codec_mm_heap_destroy(struct ion_heap *heap);
+
+/**
  * functions for creating and destroying a heap pool -- allows you
  * to keep a pool of pre allocated memory to use from your heap.  Keeping
  * a pool of memory that is ready for dma, ie any cached mapping have been

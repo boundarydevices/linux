@@ -14092,3 +14092,7 @@ F: scripts/amlogic/configs/meson64_audio_defconfig
 AMLOGIC gpio key wakeup function
 M: Hong Guo <hong.guo@amlogic.com>
 F: drivers/amlogic/input/keyboard/*
+
+AMLOGIC ION_DEV ADD CODEC_MM
+M: JinTao Xu <jintao.xu@amlogic.com>
+F: drivers/staging/android/ion/ion_codec_mm_heap.c
