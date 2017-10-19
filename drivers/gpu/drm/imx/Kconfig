@@ -5,7 +5,6 @@ config DRM_IMX
 	select DRM_GEM_CMA_HELPER
 	select DRM_KMS_CMA_HELPER
 	depends on DRM && (ARCH_MXC || ARCH_MULTIPLATFORM)
-	depends on IMX_LCDIF_CORE
 	help
 	  enable i.MX graphics support
 
@@ -64,3 +63,4 @@ config DRM_IMX_SEC_DSIM
           found on i.MX platform.
 
 source "drivers/gpu/drm/imx/lcdif/Kconfig"
+source "drivers/gpu/drm/imx/dcss/Kconfig"
