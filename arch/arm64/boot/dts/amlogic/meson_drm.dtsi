@@ -63,3 +63,24 @@
 		};
 	};
 };
+
+&gpu{
+	/*gpu max freq is 750M*/
+	tbl = <&clk285_cfg &clk666_cfg &clk750_cfg &clk750_cfg>;
+
+	clk285_cfg:clk285_cfg {
+		 keep_count = <2>;
+		 threshold = <100 200>;
+	};
+
+	clk666_cfg:clk666_cfg {
+		 keep_count = <1>;
+		 threshold = <85 200>;
+	};
+
+	clk750_cfg:clk750_cfg {
+		 keep_count = <1>;
+		 threshold = <179 255>;
+	};
+
+};
