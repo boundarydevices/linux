@@ -29,6 +29,7 @@
 #include <drm/drm_of.h>
 #include <video/imx-ipu-v3.h>
 #include <video/imx-lcdif.h>
+#include <video/imx-dcss.h>
 
 #include "imx-drm.h"
 #include "ipuv3-plane.h"
@@ -129,6 +130,10 @@ static int compare_of(struct device *dev, void *data)
 		if (pdata->of_node == np)
 			legacyfb_depth = 32;
 #endif
+
+		return pdata->of_node == np;
+	}  else if (strcmp(dev->driver->name, "imx-dcss-crtc") == 0) {
+		struct dcss_client_platformdata *pdata = dev->platform_data;
 
 		return pdata->of_node == np;
 	}
