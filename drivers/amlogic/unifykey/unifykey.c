@@ -736,24 +736,19 @@ static long unifykey_unlocked_ioctl(struct file *file,
 	switch (cmd) {
 	case KEYUNIFY_ATTACH:
 		{
-			struct key_item_t *appitem;
+			struct key_item_t appitem;
+			char initvalue[KEY_UNIFY_NAME_LEN];
 			int ret;
 
-			appitem = kmalloc(sizeof(struct key_item_t),
-				GFP_KERNEL);
-			if (!appitem)
-				return -ENOMEM;
-			ret = copy_from_user(appitem, argp,
-				sizeof(struct key_item_t));
+			ret = copy_from_user(&appitem, argp, sizeof(appitem));
 			if (ret != 0) {
 				pr_err("%s:%d,copy_from_user fail\n",
 					__func__, __LINE__);
-				kfree(appitem);
 				return ret;
 			}
-			ret = key_unify_init(appitem->name,
-				KEY_UNIFY_NAME_LEN);
-			kfree(appitem);
+			//appitem = (struct key_item_t *)arg;
+			memcpy(initvalue, appitem.name, KEY_UNIFY_NAME_LEN);
+			ret = key_unify_init(initvalue, KEY_UNIFY_NAME_LEN);
 			if (ret < 0) {
 				pr_err("%s:%d,key unify init fail\n",
 					__func__, __LINE__);
@@ -767,31 +762,20 @@ static long unifykey_unlocked_ioctl(struct file *file,
 			unsigned int index, reallen;
 			unsigned int keypermit, keystate;
 			struct key_item_t *kkey;
-			struct key_item_info_t *key_item_info;
+			struct key_item_info_t key_item_info;
 			char *keyname;
 			int ret;
 
-
-			key_item_info = kmalloc(sizeof(struct key_item_info_t),
-				GFP_KERNEL);
-			if (!key_item_info)
-				return -ENOMEM;
-			ret = copy_from_user(key_item_info, argp,
-				sizeof(struct key_item_info_t));
+			ret = copy_from_user(&key_item_info,
+				argp, sizeof(key_item_info));
 			if (ret != 0) {
 				pr_err("%s:%d,copy_from_user fail\n",
 					__func__, __LINE__);
-				kfree(key_item_info);
 				return ret;
 			}
-			index = key_item_info->id;
-			keyname = key_item_info->name;
-			if (strlen(keyname) > KEY_UNIFY_NAME_LEN - 1) {
-				pr_err("%s()  keyname invalid\n", __func__);
-				kfree(key_item_info);
-				return -EINVAL;
-			}
-
+			//key_item_info = (struct key_item_info_t *)arg;
+			index = key_item_info.id;
+			keyname = key_item_info.name;
 			if (strlen(keyname))
 				kkey = unifykey_find_item_by_name(keyname);
 			else
@@ -799,8 +783,7 @@ static long unifykey_unlocked_ioctl(struct file *file,
 			if (kkey == NULL) {
 				pr_err("%s() %d, find name fail\n",
 					__func__, __LINE__);
-				kfree(key_item_info);
-				return -EINVAL;
+				return -ENOTTY;
 			}
 			pr_err("%s() %d, %d, %s\n", __func__,
 				__LINE__, kkey->id, kkey->name);
@@ -810,40 +793,36 @@ static long unifykey_unlocked_ioctl(struct file *file,
 			if (ret < 0) {
 				pr_err("%s() %d, get size fail\n",
 					__func__, __LINE__);
-				kfree(key_item_info);
 				return -EFAULT;
 			}
-			key_item_info->permit = keypermit;
-			key_item_info->flag = keystate;
-			key_item_info->id = kkey->id;
-			strncpy(key_item_info->name,
-					kkey->name, KEY_UNIFY_NAME_LEN);
+			key_item_info.permit = keypermit;
+			key_item_info.flag = keystate;
+			key_item_info.id = kkey->id;
+			strncpy(key_item_info.name,
+					kkey->name, strlen(kkey->name));
 			ret = key_unify_size(kkey->name, &reallen);
 			if (ret < 0) {
 				pr_err("%s() %d, get size fail\n",
 					__func__, __LINE__);
-				kfree(key_item_info);
 				return -EFAULT;
 			}
 			/* set key info */
-			key_item_info->size = reallen;
+			key_item_info.size = reallen;
 
-			ret = copy_to_user(argp, key_item_info,
-				sizeof(struct key_item_info_t));
+			ret = copy_to_user(argp,
+				&key_item_info, sizeof(key_item_info));
 			if (ret != 0) {
 				pr_err("%s:%d,copy_to_user fail\n",
 					__func__, __LINE__);
-				kfree(key_item_info);
 				return ret;
 			}
 
-			kfree(key_item_info);
 			return 0;
 		}
 		break;
 	default:
 		pr_err("%s() %d\n", __func__, __LINE__);
-		return -EINVAL;
+		return -ENOTTY;
 	}
 	return 0;
 }
@@ -1103,11 +1082,6 @@ static ssize_t name_store(struct class *cla,
 	if (count >= KEY_UNIFY_NAME_LEN)
 		count = KEY_UNIFY_NAME_LEN - 1;
 
-	if (count <= 0) {
-		pr_err(" count=%ld is invalid in %s\n", count, __func__);
-		return -EINVAL;
-	}
-
 	key_cnt = unifykey_count_key();
 	name = kzalloc(count, GFP_KERNEL);
 	if (!name) {
@@ -1221,10 +1195,6 @@ static ssize_t write_store(struct class *cla,
 	unsigned char *keydata = NULL;
 	size_t key_len = 0;
 
-	if (count <= 0) {
-		pr_err(" count=%ld is invalid in %s\n", count, __func__);
-		return -EINVAL;
-	}
 
 	if (curkey != NULL) {
 		keydata = kzalloc(count, GFP_KERNEL);
@@ -1304,11 +1274,6 @@ static ssize_t lock_store(struct class *cla,
 		size_t count)
 {
 	unsigned int state, len;
-
-	if (count <= 0) {
-		pr_err(" count=%ld is invalid in %s\n", count, __func__);
-		return -EINVAL;
-	}
 
 	/* check '\n' and del */
 	if (buf[count - 1] == '\n')
