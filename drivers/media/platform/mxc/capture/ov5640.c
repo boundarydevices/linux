@@ -47,6 +47,11 @@
 #define OV5640_CHIP_ID_HIGH_BYTE        0x300A
 #define OV5640_CHIP_ID_LOW_BYTE         0x300B
 
+#define OV5640_TIMING_TC_REG20		0x3820
+#define OV5640_TIMING_TC_REG20_VFLIP	0x06
+#define OV5640_TIMING_TC_REG21		0x3821
+#define OV5640_TIMING_TC_REG21_MIRROR	0x06
+
 enum ov5640_mode {
 	ov5640_mode_MIN = 0,
 	ov5640_mode_VGA_640_480 = 0,
@@ -1025,6 +1030,7 @@ static void ov5640_turn_on_AE_AG(int enable)
 /* download ov5640 settings to sensor through i2c */
 static int ov5640_download_firmware(struct reg_value *pModeSetting, s32 ArySize)
 {
+	struct sensor_data *sensor = &ov5640_data;
 	register u32 Delay_ms = 0;
 	register u16 RegAddr = 0;
 	register u8 Mask = 0;
@@ -1046,6 +1052,24 @@ static int ov5640_download_firmware(struct reg_value *pModeSetting, s32 ArySize)
 			RegVal &= ~(u8)Mask;
 			Val &= Mask;
 			Val |= RegVal;
+		}
+
+		/* Overwrite vflip value if provided in device tree */
+		if ((RegAddr == OV5640_TIMING_TC_REG20) &&
+		    (sensor->vflip != -1)) {
+			if (sensor->vflip)
+				Val |= OV5640_TIMING_TC_REG20_VFLIP;
+			else
+				Val &= ~(OV5640_TIMING_TC_REG20_VFLIP);
+		}
+
+		/* Overwrite mirror value if provided in device tree */
+		if ((RegAddr == OV5640_TIMING_TC_REG21) &&
+		    (sensor->mirror != -1)) {
+			if (sensor->mirror)
+				Val |= OV5640_TIMING_TC_REG21_MIRROR;
+			else
+				Val &= ~(OV5640_TIMING_TC_REG21_MIRROR);
 		}
 
 		retval = ov5640_write_reg(RegAddr, Val);
@@ -1918,6 +1942,15 @@ static int ov5640_probe(struct i2c_client *client,
 		dev_err(dev, "csi_id invalid\n");
 		return retval;
 	}
+
+	/* Get optional mirror/vflip values */
+	retval = of_property_read_u32(dev->of_node, "mirror", &sensor->mirror);
+	if (retval)
+		sensor->mirror = -1;
+
+	retval = of_property_read_u32(dev->of_node, "vflip", &sensor->vflip);
+	if (retval)
+		sensor->vflip= -1;
 
 	clk_prepare_enable(ov5640_data.sensor_clk);
 
