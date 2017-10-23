@@ -7507,6 +7507,7 @@ static int __alloc_contig_migrate_range(struct compact_control *cc,
 }
 
 #ifdef CONFIG_AMLOGIC_MODIFY
+#define BOOST_BUSY		(0xffff)
 struct cma_pcp_work {
 	unsigned long pfn;
 	unsigned long count;
@@ -7537,19 +7538,24 @@ static void cma_boost_work_func(struct work_struct *work)
 	cc.zone = page_zone(pfn_to_page(pfn));
 	end     = pfn + c_work->count;
 	ret     = __alloc_contig_migrate_range(&cc, pfn, end);
+	ok      = (atomic_t *)c_work->data;
 	if (!ret) {
-		ok = (atomic_t *)c_work->data;
 		atomic_inc(ok);
 		lru_add_drain();
 		drain_pages(this_cpu);
-	} else
-		pr_err("%s, failed, ret:%d\n", __func__, ret);
+	} else if (ret == -EBUSY)
+		atomic_add(BOOST_BUSY, ok); /* tell caller busy */
+
+	if (ret) {
+		pr_err("%s, failed, ret:%d, ok:%d\n",
+			__func__, ret, atomic_read(ok));
+	}
 }
 
 int alloc_contig_boost(unsigned long start_pfn, unsigned long count)
 {
 	static struct cpumask has_work;
-	int cpu, cpus, i = 0;
+	int cpu, cpus, i = 0, ret;
 	atomic_t ok;
 	unsigned long delta;
 	unsigned long cnt;
@@ -7580,9 +7586,18 @@ int alloc_contig_boost(unsigned long start_pfn, unsigned long count)
 	}
 
 	if (atomic_read(&ok) == cpus)
-		return 0;
+		ret = 0;
+	else if (atomic_read(&ok) >= BOOST_BUSY)
+		ret = -EBUSY;
 	else
-		return -EINVAL;
+		ret = -EINVAL;
+
+	if (ret) {
+		pr_err("%s, failed, ret:%d, ok:%d\n",
+			__func__, ret, atomic_read(&ok));
+	}
+
+	return ret;
 }
 #endif /* CONFIG_AMLOGIC_MODIFY */
 
