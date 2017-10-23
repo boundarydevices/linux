@@ -13476,6 +13476,10 @@ AMLOGIC driver for cpufreq
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/cpufreq/*
 
+AMLOGIC driver for memory extend
+M: Tao Zeng <tao.zeng@amlogic.com>
+F: drivers/amlogic/memory_ext/*
+
 AMLOGIC driver for pmu
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/power/*

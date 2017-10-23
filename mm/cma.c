@@ -36,6 +36,9 @@
 #include <linux/highmem.h>
 #include <linux/io.h>
 #include <trace/events/cma.h>
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <linux/amlogic/page_trace.h>
+#endif
 
 #include "cma.h"
 
@@ -49,6 +52,19 @@ static atomic_t cma_alloc_ref = ATOMIC_INIT(0);
 unsigned long get_driver_alloc_cma(void)
 {
 	return atomic_long_read(&driver_alloc_cma);
+}
+
+static void update_cma_page_trace(struct page *page, unsigned long cnt)
+{
+	long i;
+
+	if (page == NULL)
+		return;
+
+	for (i = 0; i < cnt; i++) {
+		set_page_trace(page, 0, __GFP_BDEV);
+		page++;
+	}
 }
 #endif /* CONFIG_AMLOGIC_MODIFY */
 
@@ -448,8 +464,10 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 
 #ifdef CONFIG_AMLOGIC_MODIFY
 	atomic_dec(&cma_alloc_ref);
-	if (page)
+	if (page) {
 		atomic_long_add(count, &driver_alloc_cma);
+		update_cma_page_trace(page, count);
+	}
 	WARN_ONCE(!page, "can't alloc from %lx with size:%ld, ret:%d\n",
 		  cma->base_pfn, count, ret);
 #endif /* CONFIG_AMLOGIC_MODIFY */
