@@ -253,6 +253,9 @@ struct sensor_data {
 	int green;
 	int blue;
 	int ae_mode;
+	int mirror;
+	int vflip;
+	int wb;
 
 	u32 mclk;
 	u8 mclk_source;
