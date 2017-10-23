@@ -1615,7 +1615,11 @@ int mtd_block_isbad(struct mtd_info *mtd, loff_t ofs)
 		return -EINVAL;
 	if (!mtd->_block_isbad)
 		return 0;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	return (mtd->_block_isbad(mtd, ofs) == 0 ? 0 : 1);
+#else
 	return mtd->_block_isbad(mtd, ofs);
+#endif
 }
 EXPORT_SYMBOL_GPL(mtd_block_isbad);
 
