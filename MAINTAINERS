@@ -14120,3 +14120,8 @@ AMLOGIC ADD S400EMMC DTS
 M: Yue Gui <yuegui.he@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/axg_s400emmc.dts
 F: arch/arm64/boot/dts/amlogic/axg_s400emmc_v03.dts
+
+AMLOGIC ADD PARTITION OLD DTS
+M: Xindong Xu <xindong.xu@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/partition_mbox_old.dtsi
+F: arch/arm64/boot/dts/amlogic/partition_tv_old.dtsi

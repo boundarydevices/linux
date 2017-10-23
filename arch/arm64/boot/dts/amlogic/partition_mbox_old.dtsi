@@ -1,0 +1,78 @@
+/*
+ * Amlogic partition set for normal
+ *
+ * Copyright (c) 2017-2017 Amlogic Ltd
+ *
+ * This file is licensed under a dual GPLv2 or BSD license.
+ *
+ */
+/ {
+    partitions: partitions{
+		parts = <10>;
+		part-0 = <&logo>;
+		part-1 = <&recovery>;
+		part-2 = <&cri_data>;
+		part-3 = <&tee>;
+		part-4 = <&param>;
+		part-5 = <&misc>;
+		part-6 = <&boot>;
+		part-7 = <&system>;
+		part-8 = <&cache>;
+		part-9 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		recovery:recovery{
+			pname = "recovery";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		cri_data:cri_data{
+			pname = "cri_data";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		param:param{
+			pname = "param";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		boot:boot
+		{
+			pname = "boot";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		system:system
+		{
+			pname = "system";
+			size = <0x0 0x80000000>;
+			mask = <1>;
+		};
+		cache:cache
+		{
+			pname = "cache";
+			size = <0x0 0x20000000>;
+			mask = <2>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
+		};
+	};
+};/* end of / */
