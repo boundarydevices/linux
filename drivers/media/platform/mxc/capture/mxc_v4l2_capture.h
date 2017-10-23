@@ -260,6 +260,8 @@ struct sensor_data {
 	int blue;
 	int ae_mode;
 	int wb;
+	int mirror;
+	int vflip;
 
 	u32 mclk;
 	u8 mclk_source;
