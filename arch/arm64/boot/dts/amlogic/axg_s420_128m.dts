@@ -134,7 +134,7 @@
 			};
 			system{
 				offset=<0x0 0x0>;
-				size=<0x0 0xDC40000>;
+				size=<0x0 0x11800000>;
 			};
 			data{
 				offset=<0xffffffff 0xffffffff>;
