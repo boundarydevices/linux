@@ -1,0 +1,14 @@
+#
+# Amlogic picture decoder device configuation
+#
+
+menu "Amlogic picture decoder support"
+
+config AMLOGIC_PIC_DEC
+		tristate "Amlogic picture decoder"
+		default n
+		select AM_PTSSERVER
+		help
+				Driver for picture decoder.
+
+endmenu
