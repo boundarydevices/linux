@@ -29,4 +29,7 @@ extern int aml_pmd_set_HPF_filter_parameters(void *array);
 
 extern void aml_pdm_filter_ctrl(int osr, int set);
 
+extern void pdm_enable(int is_enable);
+
+extern void pdm_fifo_reset(void);
 #endif /*__AML_PDM_HW_H__*/

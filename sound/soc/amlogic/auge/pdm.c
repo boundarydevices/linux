@@ -539,9 +539,12 @@ static int aml_pdm_dai_trigger(
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		pdm_fifo_reset();
+
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 			dev_info(substream->pcm->card->dev, "pdm capture enable\n");
 			aml_toddr_enable(p_pdm->tddr, 1);
+			pdm_enable(1);
 		}
 
 		break;
@@ -550,6 +553,7 @@ static int aml_pdm_dai_trigger(
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 			dev_info(substream->pcm->card->dev, "pdm capture enable\n");
+			pdm_enable(0);
 			aml_toddr_enable(p_pdm->tddr, 0);
 		}
 

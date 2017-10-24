@@ -19,6 +19,7 @@
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/string.h>
+/*#include <linux/delay.h>*/
 
 #include "pdm_hw.h"
 #include "regs.h"
@@ -26,6 +27,39 @@
 #include "pdm_hw_coeff.c"
 
 extern int pdm_hcic_shift_gain;
+void pdm_enable(int is_enable)
+{
+	if (is_enable) {
+		aml_pdm_update_bits(
+			PDM_CTRL,
+			0x1 << 31,
+			is_enable << 31);
+	} else {
+		aml_pdm_update_bits(
+			PDM_CTRL,
+			0x1 << 31 | 0x1 << 16,
+			0 << 31 | 0 << 16);
+
+		/*udelay(1000);*/
+	}
+}
+
+void pdm_fifo_reset(void)
+{
+	/* PDM Asynchronous FIFO soft reset.
+	 * write 1 to soft reset AFIFO
+	 */
+
+	aml_pdm_update_bits(
+		PDM_CTRL,
+		0x1 << 16,
+		0 << 16);
+
+	aml_pdm_update_bits(
+		PDM_CTRL,
+		0x1 << 16,
+		0x1 << 16);
+}
 
 void aml_pdm_ctrl(
 	struct aml_audio_controller *actrl,
@@ -43,11 +77,12 @@ void aml_pdm_ctrl(
 
 	pr_info("%s, channels mask:%x\n", __func__, ch_mask);
 
-	aml_pdm_write(PDM_CTRL, 0);
+	aml_pdm_write(PDM_CLKG_CTRL, 1);
 
 	/* must be sure that clk and pdm is enable */
-	aml_pdm_write(PDM_CTRL,
-				(1 << 31) |
+	aml_pdm_update_bits(PDM_CTRL,
+				(0x7 << 28 | 0xff << 8 | 0xff << 0),
+				/*(1 << 31) |*/
 				/* invert the PDM_DCLK or not */
 				(0 << 30) |
 				/* output mode:  1: 24bits. 0: 32 bits */
@@ -56,10 +91,6 @@ void aml_pdm_ctrl(
 				 * 1: bypass all filter. 0: normal mode.
 				 */
 				(0 << 28) |
-				/* PDM Asynchronous FIFO soft reset.
-				 * write 1 to soft reset AFIFO
-				 */
-				(1 << 16) |
 				/* PDM channel reset. */
 				(ch_mask << 8) |
 				/* PDM channel enable */
@@ -384,5 +415,4 @@ void aml_pdm_filter_ctrl(int osr, int mode)
 		lpf3_len, lpf3_coeff
 		);
 
-	aml_pdm_update_bits(PDM_CTRL, 1 << 31, 1 << 31);
 }
