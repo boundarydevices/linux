@@ -1054,8 +1054,8 @@ static int osd_open(struct fb_info *info, int arg)
 	pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
 		__func__, __LINE__, fb_index, fb_rmem_size[fb_index]);
 
-	//fix->smem_start = 0;
-	//fix->smem_len = fb_rmem_size[fb_index];
+	fix->smem_start = 0;
+	fix->smem_len = fb_rmem_size[fb_index];
 	if (!fb_ion_client)
 		fb_ion_client = meson_ion_client_create(-1, "meson-fb");
 	return 0;
