@@ -374,6 +374,7 @@ static int dac_updown_depop(struct snd_soc_dapm_widget *w,
 	return vag_and_mute_control(component, event, DAC_POWER_EVENT);
 }
 
+/* ******************************************/
 /* input sources for ADC */
 static const char *adc_mux_text[] = {
 	"MIC_IN", "LINE_IN"
@@ -457,6 +458,12 @@ static SOC_ENUM_SINGLE_DECL(dapmix_enum,
 static const struct snd_kcontrol_new dapmix_mux =
 SOC_DAPM_ENUM("DAP MIX Mux", dapmix_enum);
 
+static SOC_ENUM_SINGLE_DECL(aifout_enum,
+		SGTL5000_CHIP_SSS_CTRL, SGTL5000_I2S_OUT_SEL_SHIFT,
+		dac_mux_text);
+
+static const struct snd_kcontrol_new aifout_mux =
+SOC_DAPM_ENUM("AIFOUT Mux", aifout_enum);
 
 static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("LINE_IN"),
@@ -482,6 +489,7 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_MUX("DAP MIX Mux", SGTL5000_DAP_CTRL, 4, 0, &dapmix_mux),
 	SND_SOC_DAPM_MIXER("DAP", SGTL5000_CHIP_DIG_POWER, 4, 0, NULL, 0),
 
+	SND_SOC_DAPM_MUX("AIFOUT Mux", SND_SOC_NOPM, 0, 0, &aifout_mux),
 
 	/* aif for i2s input */
 	SND_SOC_DAPM_AIF_IN("AIFIN", "Playback",
@@ -507,7 +515,6 @@ static const struct snd_soc_dapm_route sgtl5000_dapm_routes[] = {
 	{"Capture Mux", "MIC_IN", "MIC_IN"},	/* mic_in --> adc_mux */
 
 	{"ADC", NULL, "Capture Mux"},		/* adc_mux --> adc */
-	{"AIFOUT", NULL, "ADC"},		/* adc --> i2s_out */
 
 	{"DAP Mux", "ADC", "ADC"},		/* adc --> DAP mux */
 	{"DAP Mux", NULL, "AIFIN"},		/* i2s --> DAP mux */
@@ -519,11 +526,16 @@ static const struct snd_soc_dapm_route sgtl5000_dapm_routes[] = {
 
 	{"Digital Input Mux", "ADC", "ADC"},	/* adc --> audio mux */
 	{"Digital Input Mux", NULL, "AIFIN"},	/* i2s --> audio mux */
-	{"Digital Input Mux", NULL, "DAP"},	/* dap --> audio mux */
+	{"Digital Input Mux", "DAP", "DAP"},	/* dap --> audio mux */
 	{"DAC", NULL, "Digital Input Mux"},	/* audio mux --> dac */
 
 	{"Headphone Mux", "DAC", "DAC"},	/* dac --> hp_mux */
 	{"LO", NULL, "DAC"},			/* dac --> line_out */
+
+	{"AIFOUT Mux", "ADC", "ADC"},
+	{"AIFOUT Mux", NULL, "AIFIN"},
+	{"AIFOUT Mux", "DAP", "DAP"},
+	{"AIFOUT", NULL, "AIFOUT Mux"},
 
 	{"Headphone Mux", "LINE_IN", "LINE_IN"},/* line_in --> hp_mux */
 	{"HP", NULL, "Headphone Mux"},		/* hp_mux --> hp */
@@ -807,6 +819,10 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	SOC_SINGLE_TLV("BASS 4", SGTL5000_DAP_EQ_BASS_BAND4,
 	0, 0x5F, 0, bass_band),
 
+	SOC_SINGLE("Surround Enable", SGTL5000_DAP_SURROUND, 1, 1, 0),
+	SOC_SINGLE("Surround Stereo Enable", SGTL5000_DAP_SURROUND, 0, 1, 0),
+	SOC_SINGLE("Surround Width", SGTL5000_DAP_SURROUND, 4, 0x7, 0),
+
 	SOC_SINGLE("Bass Enable", SGTL5000_DAP_BASS_ENHANCE, 0, 1, 0),
 	SOC_SINGLE_TLV("Bass Filter Feq", SGTL5000_DAP_BASS_ENHANCE,
 			6, 7, 0, bass_high_filter_freq),
@@ -814,7 +830,31 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 			8, 0x3f, 1),
 	SOC_SINGLE("Bass Level", SGTL5000_DAP_BASS_ENHANCE_CTRL,
 			0, 0x7f, 1),
+
+	SOC_SINGLE("DAP Mixer Swap LR", SGTL5000_CHIP_SSS_CTRL, 14, 1, 0),
+	SOC_SINGLE("DAP Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 13, 1, 0),
+	SOC_SINGLE("DAC Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 12, 1, 0),
+	SOC_SINGLE("I2S output Swap LR", SGTL5000_CHIP_SSS_CTRL, 10, 1, 0),
 };
+
+static int test_for_adc_direct(struct snd_soc_component *component)
+{
+	int sss;
+	int dap;
+
+	sss = snd_soc_component_read(component, SGTL5000_CHIP_SSS_CTRL);
+	if (!((sss >> 4) & 3))
+		return 1;	/* DAC is from ADC, powerup vag */
+	if (((sss >> 4) & 3) == 3) {
+		/* DAC is from DAP */
+		if (!((sss >> 6) & 3))
+			return 1;	/* DAP source is ADC */
+		dap = snd_soc_component_read(component, SGTL5000_DAP_CTRL);
+		if  ((dap & SGTL5000_DAP_MIX_EN) && !((sss >> 8) & 3))
+			return 1;	/* DAP mixer source is ADC */
+	}
+	return 0;
+}
 
 /* mute the codec used by alsa core */
 static int sgtl5000_mute_stream(struct snd_soc_dai *codec_dai, int mute, int direction)
@@ -822,6 +862,10 @@ static int sgtl5000_mute_stream(struct snd_soc_dai *codec_dai, int mute, int dir
 	struct snd_soc_component *component = codec_dai->component;
 	u16 i2s_pwr = SGTL5000_I2S_IN_POWERUP;
 
+	if (mute) {
+		if (test_for_adc_direct(component))
+			mute = 0;
+	}
 	/*
 	 * During 'digital mute' do not mute DAC
 	 * because LINE_IN would be muted aswell. We want to mute
