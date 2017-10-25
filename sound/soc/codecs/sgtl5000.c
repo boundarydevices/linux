@@ -245,6 +245,7 @@ int ana_power_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+/* ******************************************/
 /* input sources for ADC */
 static const char *adc_mux_text[] = {
 	"MIC_IN", "LINE_IN"
@@ -257,8 +258,9 @@ static SOC_ENUM_SINGLE_DECL(adc_enum,
 static const struct snd_kcontrol_new adc_mux =
 SOC_DAPM_ENUM("Capture Mux", adc_enum);
 
-/* input sources for DAC */
-static const char *dac_mux_text[] = {
+/* ******************************************/
+/* input sources for Headphone */
+static const char *headphone_mux_text[] = {
 	"DAC", "LINE_IN"
 };
 
@@ -275,14 +277,66 @@ static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
 	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
 }
 
-static SOC_ENUM_SINGLE_DECL(dac_enum,
+static SOC_ENUM_SINGLE_DECL(headphone_enum,
 			    SND_SOC_NOPM, 6,
-			    dac_mux_text);
+			    headphone_mux_text);
 
-static const struct snd_kcontrol_new dac_mux =
-	SOC_DAPM_ENUM_EXT("Headphone Mux", dac_enum,
+static const struct snd_kcontrol_new headphone_mux =
+	SOC_DAPM_ENUM_EXT("Headphone Mux", headphone_enum,
 			snd_soc_dapm_get_enum_double,
 			sgtl5000_hp_select);
+
+/* ******************************************/
+
+static const char *dap_mux_text[] = {
+	"ADC", "AIFIN"
+};
+
+/* input sources for DAP Mixer */
+static SOC_ENUM_SINGLE_DECL(dap_mixer_enum,
+		SGTL5000_CHIP_SSS_CTRL, 8,
+		dap_mux_text);
+
+static const struct snd_kcontrol_new dap_mixer_mux =
+SOC_DAPM_ENUM("DAP mixer Mux", dap_mixer_enum);
+
+/* ******************************************/
+/* input sources for DAP */
+static SOC_ENUM_SINGLE_DECL(dap_enum,
+		SGTL5000_CHIP_SSS_CTRL, 6,
+		dap_mux_text);
+
+static const struct snd_kcontrol_new dap_mux =
+SOC_DAPM_ENUM("DAP Mux", dap_enum);
+
+/* ******************************************/
+
+static const char *dac_aifout_mux_text[] = {
+	"ADC", "AIFIN", "reserved", "DAP"
+};
+
+/* input sources for DAC */
+static SOC_ENUM_SINGLE_DECL(dac_enum,
+		SGTL5000_CHIP_SSS_CTRL, 4,
+		dac_aifout_mux_text);
+
+static const struct snd_kcontrol_new dac_mux =
+SOC_DAPM_ENUM("DAC Mux", dac_enum);
+
+/* ******************************************/
+/* input sources for I2S_DOUT */
+static SOC_ENUM_SINGLE_DECL(aifout_enum,
+		SGTL5000_CHIP_SSS_CTRL, 0,
+		dac_aifout_mux_text);
+
+static const struct snd_kcontrol_new aifout_mux =
+SOC_DAPM_ENUM("AIFOUT Mux", aifout_enum);
+
+/* ******************************************/
+/* DAP Mixer */
+static const struct snd_kcontrol_new dap_mixer_controls[] = {
+	SOC_DAPM_SINGLE("DAP mix", SGTL5000_DAP_CTRL, 4, 1, 0),
+};
 
 #define SND_SOC_DAPM_PRE_PMUD	(SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD)
 
@@ -303,7 +357,11 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
 
 	SND_SOC_DAPM_MUX("Capture Mux", SND_SOC_NOPM, 0, 0, &adc_mux),
-	SND_SOC_DAPM_MUX("Headphone Mux", SND_SOC_NOPM, 0, 0, &dac_mux),
+	SND_SOC_DAPM_MUX("Headphone Mux", SND_SOC_NOPM, 0, 0, &headphone_mux),
+	SND_SOC_DAPM_MUX("DAP mixer Mux", SND_SOC_NOPM, 0, 0, &dap_mixer_mux),
+	SND_SOC_DAPM_MUX("DAP Mux", SND_SOC_NOPM, 0, 0, &dap_mux),
+	SND_SOC_DAPM_MUX("DAC Mux", SND_SOC_NOPM, 0, 0, &dac_mux),
+	SND_SOC_DAPM_MUX("AIFOUT Mux", SND_SOC_NOPM, 0, 0, &aifout_mux),
 
 	/* aif for i2s input */
 	SND_SOC_DAPM_AIF_IN("AIFIN", "Playback",
@@ -314,6 +372,9 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_AIF_OUT("AIFOUT", "Capture",
 				0, SGTL5000_CHIP_DIG_POWER,
 				1, 0),
+
+	SND_SOC_DAPM_MIXER("DAP Mixer", SGTL5000_DAP_CTRL, 0, 0, dap_mixer_controls, ARRAY_SIZE(dap_mixer_controls)),
+	SND_SOC_DAPM_MIXER("DAP", SGTL5000_CHIP_DIG_POWER, 4, 0, NULL, 0),
 
 	SND_SOC_DAPM_ADC_E("ADC", "Capture", SND_SOC_NOPM, 1, 0,
 		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
@@ -328,19 +389,35 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 static const struct snd_soc_dapm_route sgtl5000_dapm_routes[] = {
 	{"Capture Mux", "LINE_IN", "LINE_IN"},	/* line_in --> adc_mux */
 	{"Capture Mux", "MIC_IN", "MIC_IN"},	/* mic_in --> adc_mux */
-
 	{"ADC", NULL, "Capture Mux"},		/* adc_mux --> adc */
-	{"AIFOUT", NULL, "ADC"},		/* adc --> i2s_out */
 
-	{"DAC", NULL, "AIFIN"},			/* i2s-->dac,skip audio mux */
+	{"DAC Mux", "ADC", "ADC"},
+	{"DAC Mux", "AIFIN", "AIFIN"},
+	{"DAC Mux", "DAP", "DAP"},
+	{"DAC", NULL, "DAC Mux"},
+
+	{"AIFOUT Mux", "ADC", "ADC"},
+	{"AIFOUT Mux", "AIFIN", "AIFIN"},
+	{"AIFOUT Mux", "DAP", "DAP"},
+	{"AIFOUT", NULL, "AIFOUT Mux"},
+
 	{"Headphone Mux", "DAC", "DAC"},	/* dac --> hp_mux */
-	{"LO", NULL, "DAC"},			/* dac --> line_out */
-
 	{"Headphone Mux", "LINE_IN", "LINE_IN"},/* line_in --> hp_mux */
 	{"HP", NULL, "Headphone Mux"},		/* hp_mux --> hp */
-
-	{"LINE_OUT", NULL, "LO"},
 	{"HP_OUT", NULL, "HP"},
+
+	{"LO", NULL, "DAC"},			/* dac --> line_out */
+	{"LINE_OUT", NULL, "LO"},
+
+	{"DAP mixer Mux", "ADC", "ADC"},
+	{"DAP mixer Mux", "AIFIN", "AIFIN"},
+
+	{"DAP Mux", "ADC", "ADC"},
+	{"DAP Mux", "AIFIN", "AIFIN"},
+
+	{"DAP Mixer", "DAP mix", "DAP mixer Mux"},
+	{"DAP Mixer", NULL, "DAP Mux"},
+	{"DAP", NULL, "DAP Mixer"},
 };
 
 /* custom function to fetch info of PCM playback volume */
@@ -581,6 +658,9 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 			lineout_volume),
 	SOC_SINGLE("Lineout Playback Switch", SGTL5000_CHIP_ANA_CTRL, 8, 1, 1),
 
+	SOC_SINGLE("DAP Main Volume", SGTL5000_DAP_MAIN_CHAN, 0, 0xffff, 0),
+	SOC_SINGLE("DAP Mix Volume", SGTL5000_DAP_MIX_CHAN, 0, 0xffff, 0),
+
 	/* Automatic Volume Control (DAP AVC) */
 	SOC_SINGLE("AVC Switch", SGTL5000_DAP_AVC_CTRL, 0, 1, 0),
 	SOC_SINGLE("AVC Hard Limiter Switch", SGTL5000_DAP_AVC_CTRL, 5, 1, 0),
@@ -591,6 +671,10 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 			0, 96, 0, avc_get_threshold, avc_put_threshold,
 			avc_threshold),
 
+	SOC_SINGLE("Surround Enable", SGTL5000_DAP_SURROUND, 1, 1, 0),
+	SOC_SINGLE("Surround Stereo Enable", SGTL5000_DAP_SURROUND, 0, 1, 0),
+	SOC_SINGLE("Surround Width", SGTL5000_DAP_SURROUND, 4, 0x7, 0),
+
 	SOC_SINGLE("Bass Enable", SGTL5000_DAP_BASS_ENHANCE, 0, 1, 0),
 	SOC_SINGLE_TLV("Bass Filter Feq", SGTL5000_DAP_BASS_ENHANCE,
 			6, 7, 0, bass_high_filter_freq),
@@ -598,7 +682,31 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 			8, 0x3f, 1),
 	SOC_SINGLE("Bass Level", SGTL5000_DAP_BASS_ENHANCE_CTRL,
 			0, 0x7f, 1),
+
+	SOC_SINGLE("DAP Mixer Swap LR", SGTL5000_CHIP_SSS_CTRL, 14, 1, 0),
+	SOC_SINGLE("DAP Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 13, 1, 0),
+	SOC_SINGLE("DAC Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 12, 1, 0),
+	SOC_SINGLE("I2S output Swap LR", SGTL5000_CHIP_SSS_CTRL, 10, 1, 0),
 };
+
+static int test_for_adc_direct(struct snd_soc_codec *codec)
+{
+	int sss;
+	int dap;
+
+	sss = snd_soc_read(codec, SGTL5000_CHIP_SSS_CTRL);
+	if (!((sss >> 4) & 3))
+		return 1;	/* DAC is from ADC, powerup vag */
+	if (((sss >> 4) & 3) == 3) {
+		/* DAC is from DAP */
+		if (!((sss >> 6) & 3))
+			return 1;	/* DAP source is ADC */
+		dap = snd_soc_read(codec, SGTL5000_DAP_CTRL);
+		if  ((dap & SGTL5000_DAP_MIX_EN) && !((sss >> 8) & 3))
+			return 1;	/* DAP mixer source is ADC */
+	}
+	return 0;
+}
 
 /* mute the codec used by alsa core */
 static int sgtl5000_digital_mute(struct snd_soc_dai *codec_dai, int mute)
@@ -606,6 +714,10 @@ static int sgtl5000_digital_mute(struct snd_soc_dai *codec_dai, int mute)
 	struct snd_soc_codec *codec = codec_dai->codec;
 	u16 adcdac_ctrl = SGTL5000_DAC_MUTE_LEFT | SGTL5000_DAC_MUTE_RIGHT;
 
+	if (mute) {
+		if (test_for_adc_direct(codec))
+			mute = 0;
+	}
 	snd_soc_update_bits(codec, SGTL5000_CHIP_ADCDAC_CTRL,
 			adcdac_ctrl, mute ? adcdac_ctrl : 0);
 
@@ -1305,13 +1417,6 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, SGTL5000_CHIP_MIC_CTRL,
 			SGTL5000_BIAS_VOLT_MASK,
 			sgtl5000->micbias_voltage << SGTL5000_BIAS_VOLT_SHIFT);
-	/*
-	 * disable DAP
-	 * TODO:
-	 * Enable DAP in kcontrol and dapm.
-	 */
-	snd_soc_write(codec, SGTL5000_DAP_CTRL, 0);
-
 	return 0;
 
 err:
