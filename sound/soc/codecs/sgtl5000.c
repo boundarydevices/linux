@@ -677,7 +677,8 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 
 	SOC_SINGLE("Bass Enable", SGTL5000_DAP_BASS_ENHANCE, 0, 1, 0),
 	SOC_SINGLE_TLV("Bass Filter Feq", SGTL5000_DAP_BASS_ENHANCE,
-			6, 7, 0, bass_high_filter_freq),
+			4, 7, 0, bass_high_filter_freq),
+	SOC_SINGLE("Bass HPF", SGTL5000_DAP_BASS_ENHANCE, 8, 1, 1),
 	SOC_SINGLE("Bass Volume", SGTL5000_DAP_BASS_ENHANCE_CTRL,
 			8, 0x3f, 1),
 	SOC_SINGLE("Bass Level", SGTL5000_DAP_BASS_ENHANCE_CTRL,
