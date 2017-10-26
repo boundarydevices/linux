@@ -528,34 +528,37 @@ EXPORT_SYMBOL(reset_page_trace);
 static void __init page_trace_pre_work(struct page *start_page,
 				       unsigned long size)
 {
-	int i, order, j, tailed = 0;
-	struct page *page, *last_page;
+	int i, order, page_free = 0, tailed = 0;
+	struct page *page, *last_page, *next_page;
 
 	size = PAGE_ALIGN(size);
 	size >>= PAGE_SHIFT;
 
 	page = start_page;
+	next_page = page;
 	last_page = page + size;
-	for (i = 0; i < size;) {
+	for (i = 0; i < size; i++) {
 		order = page_private(page);
-		pr_debug("page:%p, order:%d\n", page, order);
-		list_del(&page->lru);	/* del from buddy */;
-		set_page_private(page, 0);
-		for (j = 0; j < ((1 << order) - 1); j++) {
-			if (i < size)
-				set_init_page_trace(page, 0, GFP_KERNEL);
-			page++;
-			i++;
+		if (!list_empty(&page->lru))
+			list_del(&page->lru);	/* del from buddy */
+		if (next_page <= page) {
+			page_free += (1 << order);
+			next_page += (1 << order);
 		}
+		set_page_private(page, 0);
+		set_init_page_trace(page, 0, GFP_KERNEL);
+		page++;
 	}
 
 	/* free tailed pages */
-	while (page >= last_page) {
+	while (i < page_free) {
 		__free_pages(page, 0);
-		page--;
+		page++;
+		i++;
 		tailed++;
 	}
-	pr_info("%s, %d, tailed:%d\n", __func__, __LINE__, tailed);
+	pr_info("%s, %d, tailed:%d, page:%lx\n",
+		__func__, __LINE__, tailed, page_to_pfn(page));
 }
 
 #define SHOW_CNT	1024
