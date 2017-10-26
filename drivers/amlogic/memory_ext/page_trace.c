@@ -167,8 +167,8 @@ static void push_ip(struct page_trace *base, struct page_trace *ip)
 
 	/* debug check */
 	check_trace_valid(base);
-	end = ((unsigned long)trace_buffer + ptrace_size);
-	WARN_ON(((unsigned long)base) >= end);
+	end = (((unsigned long)trace_buffer) + ptrace_size);
+	WARN_ON((unsigned long)(base + trace_step - 1) >= end);
 
 	base[0] = *ip;
 }
@@ -482,10 +482,12 @@ void set_page_trace(struct page *page, int order, gfp_t gfp_flags)
 			trace.migrate_type = gfpflags_to_migratetype(gfp_flags);
 		trace.order = order;
 		base = find_page_base(page);
+	#if DEBUG_PAGE_TRACE
 		pr_debug("%s, base:%p, page:%lx, _ip:%x, o:%d, f:%x, ip:%lx\n",
 			 __func__, base, page_to_pfn(page),
 			 (*((unsigned int *)&trace)), order,
 			 gfp_flags, ip);
+	#endif
 		push_ip(base, &trace);
 	}
 }
@@ -494,12 +496,20 @@ EXPORT_SYMBOL(set_page_trace);
 void reset_page_trace(struct page *page, int order)
 {
 	struct page_trace *base;
-	int i;
+	int i, cnt;
+#if DEBUG_PAGE_TRACE
+	unsigned long end;
+#endif
 
 	if (page && trace_buffer) {
 		base = find_page_base(page);
+		cnt = 1 << order;
+	#if DEBUG_PAGE_TRACE
 		check_trace_valid(base);
-		for (i = 0; i < (1 << order); i++) {
+		end = ((unsigned long)trace_buffer + ptrace_size);
+		WARN_ON((unsigned long)(base + cnt * trace_step - 1) >= end);
+	#endif
+		for (i = 0; i < cnt; i++) {
 			base->order = IP_INVALID;
 			base += (trace_step);
 		}
@@ -522,23 +532,25 @@ static void __init page_trace_pre_work(struct page *start_page,
 	struct page *page, *last_page;
 
 	size = PAGE_ALIGN(size);
+	size >>= PAGE_SHIFT;
 
 	page = start_page;
-	last_page = page + (size >> PAGE_SHIFT);
-	for (i = 0; i < size >> PAGE_SHIFT;) {
+	last_page = page + size;
+	for (i = 0; i < size;) {
 		order = page_private(page);
 		pr_debug("page:%p, order:%d\n", page, order);
 		list_del(&page->lru);	/* del from buddy */;
 		set_page_private(page, 0);
-		for (j = 0; j < (1 << order); j++) {
-			set_init_page_trace(page, 0, GFP_KERNEL);
+		for (j = 0; j < ((1 << order) - 1); j++) {
+			if (i < size)
+				set_init_page_trace(page, 0, GFP_KERNEL);
 			page++;
 			i++;
 		}
 	}
 
 	/* free tailed pages */
-	while (page > last_page) {
+	while (page >= last_page) {
 		__free_pages(page, 0);
 		page--;
 		tailed++;
