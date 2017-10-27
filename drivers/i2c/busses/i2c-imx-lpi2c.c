@@ -578,7 +578,8 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 	if (ret)
 		lpi2c_imx->bitrate = I2C_MAX_STANDARD_MODE_FREQ;
 
-	ret = devm_request_irq(&pdev->dev, irq, lpi2c_imx_isr, 0,
+	ret = devm_request_irq(&pdev->dev, irq, lpi2c_imx_isr,
+			       IRQF_NO_SUSPEND,
 			       pdev->name, lpi2c_imx);
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "can't claim irq %d\n", irq);
@@ -592,27 +593,24 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 
 	pm_runtime_set_autosuspend_delay(&pdev->dev, I2C_PM_TIMEOUT);
 	pm_runtime_use_autosuspend(&pdev->dev);
-	pm_runtime_get_noresume(&pdev->dev);
-	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 
+	pm_runtime_get_sync(&pdev->dev);
 	temp = readl(lpi2c_imx->base + LPI2C_PARAM);
 	lpi2c_imx->txfifosize = 1 << (temp & 0x0f);
 	lpi2c_imx->rxfifosize = 1 << ((temp >> 8) & 0x0f);
 
+	pm_runtime_put(&pdev->dev);
+
 	ret = i2c_add_adapter(&lpi2c_imx->adapter);
 	if (ret)
 		goto rpm_disable;
-
-	pm_runtime_mark_last_busy(&pdev->dev);
-	pm_runtime_put_autosuspend(&pdev->dev);
 
 	dev_info(&lpi2c_imx->adapter.dev, "LPI2C adapter registered\n");
 
 	return 0;
 
 rpm_disable:
-	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 
@@ -634,7 +632,7 @@ static int __maybe_unused lpi2c_runtime_suspend(struct device *dev)
 	struct lpi2c_imx_struct *lpi2c_imx = dev_get_drvdata(dev);
 
 	clk_bulk_disable(lpi2c_imx->num_clks, lpi2c_imx->clks);
-	pinctrl_pm_select_sleep_state(dev);
+	pinctrl_pm_select_idle_state(dev);
 
 	return 0;
 }
@@ -654,9 +652,27 @@ static int __maybe_unused lpi2c_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static int lpi2c_suspend_noirq(struct device *dev)
+{
+	int ret;
+
+	ret = pm_runtime_force_suspend(dev);
+	if (ret)
+		return ret;
+
+	pinctrl_pm_select_sleep_state(dev);
+
+	return 0;
+}
+
+static int lpi2c_resume_noirq(struct device *dev)
+{
+	return pm_runtime_force_resume(dev);
+}
+
 static const struct dev_pm_ops lpi2c_pm_ops = {
-	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				      pm_runtime_force_resume)
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(lpi2c_suspend_noirq,
+				     lpi2c_resume_noirq)
 	SET_RUNTIME_PM_OPS(lpi2c_runtime_suspend,
 			   lpi2c_runtime_resume, NULL)
 };
