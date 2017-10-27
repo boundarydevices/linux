@@ -445,12 +445,6 @@ static int mxs_dma_alloc_chan_resources(struct dma_chan *chan)
 	if (ret)
 		goto err_clk;
 
-	if (mxs_dma->dev_id == IMX7D_DMA) {
-		ret = clk_prepare_enable(mxs_dma->clk_io);
-		if (ret)
-			goto err_clk_unprepare;
-	}
-
 	mxs_dma_reset_chan(chan);
 
 	dma_async_tx_descriptor_init(&mxs_chan->desc, chan);
@@ -461,7 +455,6 @@ static int mxs_dma_alloc_chan_resources(struct dma_chan *chan)
 
 	return 0;
 
-err_clk_unprepare:
 	clk_disable_unprepare(mxs_dma->clk);
 err_clk:
 	free_irq(mxs_chan->chan_irq, mxs_dma);
@@ -483,9 +476,6 @@ static void mxs_dma_free_chan_resources(struct dma_chan *chan)
 
 	dma_free_coherent(mxs_dma->dma_device.dev, CCW_BLOCK_SIZE,
 			mxs_chan->ccw, mxs_chan->ccw_phys);
-
-	if (mxs_dma->dev_id == IMX7D_DMA)
-		clk_disable_unprepare(mxs_dma->clk_io);
 
 	clk_disable_unprepare(mxs_dma->clk);
 }
@@ -717,15 +707,9 @@ static int mxs_dma_init(struct mxs_dma_engine *mxs_dma)
 	if (ret)
 		return ret;
 
-	if (mxs_dma->dev_id == IMX7D_DMA) {
-		ret = clk_prepare_enable(mxs_dma->clk_io);
-		if (ret)
-			goto err_clk_bch;
-	}
-
 	ret = stmp_reset_block(mxs_dma->base);
 	if (ret)
-		goto err_clk_io;
+		goto err_clk;
 
 	/* enable apbh burst */
 	if (dma_is_apbh(mxs_dma)) {
@@ -739,11 +723,9 @@ static int mxs_dma_init(struct mxs_dma_engine *mxs_dma)
 	writel(MXS_DMA_CHANNELS_MASK << MXS_DMA_CHANNELS,
 		mxs_dma->base + HW_APBHX_CTRL1 + STMP_OFFSET_REG_SET);
 
-err_clk_io:
-	if (mxs_dma->dev_id == IMX7D_DMA)
-		clk_disable_unprepare(mxs_dma->clk_io);
-err_clk_bch:
+err_clk:
 	clk_disable_unprepare(mxs_dma->clk);
+
 	return ret;
 }
 
@@ -828,19 +810,9 @@ static int __init mxs_dma_probe(struct platform_device *pdev)
 	if (IS_ERR(mxs_dma->base))
 		return PTR_ERR(mxs_dma->base);
 
-	if (mxs_dma->dev_id == IMX7D_DMA) {
-		mxs_dma->clk = devm_clk_get(&pdev->dev, "dma_apbh_bch");
-		if (IS_ERR(mxs_dma->clk))
-			return PTR_ERR(mxs_dma->clk);
-		mxs_dma->clk_io = devm_clk_get(&pdev->dev, "dma_apbh_io");
-		if (IS_ERR(mxs_dma->clk_io))
-			return PTR_ERR(mxs_dma->clk_io);
-
-	} else {
-		mxs_dma->clk = devm_clk_get(&pdev->dev, NULL);
-		if (IS_ERR(mxs_dma->clk))
-			return PTR_ERR(mxs_dma->clk);
-	}
+	mxs_dma->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(mxs_dma->clk))
+		return PTR_ERR(mxs_dma->clk);
 
 	dma_cap_set(DMA_SLAVE, mxs_dma->dma_device.cap_mask);
 	dma_cap_set(DMA_CYCLIC, mxs_dma->dma_device.cap_mask);
