@@ -40,8 +40,8 @@
 			&dvfs666_cfg
 			&dvfs666_cfg>;
 
-		clocks = <&clkc CLKID_GPU_MUX>;
-		clock-names = "gpu_mux";
+		clocks = <&clkc CLKID_GPU_MUX &clkc CLKID_GP0_PLL>;
+		clock-names = "gpu_mux","gp0_pll";
 
 		dvfs125_cfg:clk125_cfg {
 			clk_freq = <125000000>;

@@ -26,8 +26,8 @@
 #include "../clkc.h"
 #include "gxl.h"
 
-const char *gpu_parent_names[] = { "xtal", "gp0", "mpll2", "mpll1", "fclk_div7",
-	"fclk_div4", "fclk_div3", "fclk_div5"};
+const char *gpu_parent_names[] = { "xtal", "gp0_pll", "mpll2", "mpll1",
+	"fclk_div7", "fclk_div4", "fclk_div3", "fclk_div5"};
 
 static struct clk_mux gpu_p0_mux = {
 	.reg = (void *)HHI_MALI_CLK_CNTL,

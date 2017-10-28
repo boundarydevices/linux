@@ -27,7 +27,7 @@
 				     0x0 0x0 0x0 0x1 0x2 0x0>;
 		pmu_switch_delay = <0xffff> ;
 		num_of_pp = <3> ;
-		def_clk = <2> ;
+		def_clk = <4> ;
 		sc_mpp = <3>;/* number of pp used most of time.*/
 		tbl =  <&clk125_cfg
 			&clk285_cfg
@@ -36,8 +36,8 @@
 			&clk666_cfg
 			&clk800_cfg>;
 
-		clocks = <&clkc CLKID_GPU_MUX>;
-		clock-names = "gpu_mux";
+		clocks = <&clkc CLKID_GPU_MUX &clkc CLKID_GP0_PLL>;
+		clock-names = "gpu_mux","gp0_pll";
 
 		  /*control_interval x keep_count == 900 - 1000ms */
 		  control_interval = <200>;
