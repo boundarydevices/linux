@@ -45,7 +45,7 @@ static bool merge_function;
 struct page_trace *trace_buffer;
 static unsigned long ptrace_size;
 static struct proc_dir_entry *dentry;
-static bool page_trace_disable __initdata;
+static bool page_trace_disable __initdata = 1;
 
 struct alloc_caller {
 	unsigned long func_start_addr;
@@ -89,10 +89,12 @@ static int early_page_trace_param(char *buf)
 	if (!buf)
 		return -EINVAL;
 
-	if (strcmp(buf, "off") == 0) {
+	if (strcmp(buf, "off") == 0)
 		page_trace_disable = true;
-		pr_info("page_trace_disable disabled\n");
-	}
+	else if (strcmp(buf, "on") == 0)
+		page_trace_disable = false;
+
+	pr_info("page_trace %sabled\n", page_trace_disable ? "dis" : "en");
 
 	return 0;
 }
