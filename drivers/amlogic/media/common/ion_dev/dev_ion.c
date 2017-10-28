@@ -194,7 +194,7 @@ int dev_ion_probe(struct platform_device *pdev)
 	my_ion_heap[num_heaps].name = "codec_mm_ion";
 	my_ion_heap[num_heaps].base = (ion_phys_addr_t) NULL;
 	/* limit the maximum alloc total size 80M */
-	my_ion_heap[num_heaps].size = 80 * 1024 * 1024;
+	my_ion_heap[num_heaps].size = 96 * 1024 * 1024;
 	num_heaps++;
 
 	/*add CMA ion heap*/
