@@ -527,6 +527,12 @@ static int vidioc_open(struct file *file)
 	dev->vf_wait_cnt = 0;
 	/*for libplayer osd*/
 	dev->freerun_mode = freerun_mode;
+
+	v4l2q_init(&dev->input_queue, IONVIDEO_POOL_SIZE + 1,
+			&dev->ionvideo_input_queue[0]);
+	v4l2q_init(&dev->output_queue, IONVIDEO_POOL_SIZE + 1,
+			&dev->ionvideo_output_queue[0]);
+
 	//dprintk(dev, 2, "vidioc_open\n");
 	IONVID_DBG("ionvideo open\n");
 	init_waitqueue_head(&dev->wq);
@@ -927,10 +933,6 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		dev->active_state = ION_ACTIVE;
 		init_completion(&dev->inactive_done);
 
-		v4l2q_init(&dev->input_queue, IONVIDEO_POOL_SIZE + 1,
-				&dev->ionvideo_input_queue[0]);
-		v4l2q_init(&dev->output_queue, IONVIDEO_POOL_SIZE + 1,
-				&dev->ionvideo_output_queue[0]);
 		IONVID_INFO("reg:ionvideo\n");
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
 		if (dev->vf_wait_cnt > 1)
