@@ -703,6 +703,7 @@
 		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		display_size_default = <1920 1080 1920 3240 32>;
 		/*1920*1080*4*3 = 0x17BB000*/
+		mem_alloc = <1>;
 		logo_addr = "0x3dc00000";
 	};
 	ge2d {

@@ -784,6 +784,7 @@
 		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		display_size_default = <768 1024 768 2048 32>;
 		/*768*1024*4*2 = 0x600000*/
+		mem_alloc = <1>;
 		logo_addr = "0x3e000000";
 		pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 	};

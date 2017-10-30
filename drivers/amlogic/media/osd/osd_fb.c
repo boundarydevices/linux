@@ -290,6 +290,7 @@ static int early_suspend_flag;
 #ifdef CONFIG_SCREEN_ON_EARLY
 static int early_resume_flag;
 #endif
+static bool b_alloc_mem;
 static bool b_reserved_mem;
 static bool fb_map_flag;
 static struct reserved_mem fb_rmem = {.base = 0, .size = 0};
@@ -1030,38 +1031,7 @@ static int osd_compat_ioctl(struct fb_info *info,
 }
 #endif
 
-static int osd_open(struct fb_info *info, int arg)
-{
-	u32 fb_index;
-	struct osd_fb_dev_s *fbdev;
-	struct fb_fix_screeninfo *fix = NULL;
-
-	fbdev = (struct osd_fb_dev_s *)info->par;
-	fbdev->open_count++;
-	osd_log_dbg("osd_open index=%d,open_count=%d\n",
-		fbdev->fb_index, fbdev->open_count);
-	fb_index = fbdev->fb_index;
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
-		if (fb_index >= 1)
-		return -1;
-	#ifndef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
-	if (fb_index >= 1)
-		return -1;
-	#endif
-	fix = &info->fix;
-
-	fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
-	pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
-		__func__, __LINE__, fb_index, fb_rmem_size[fb_index]);
-
-	fix->smem_start = 0;
-	fix->smem_len = fb_rmem_size[fb_index];
-	if (!fb_ion_client)
-		fb_ion_client = meson_ion_client_create(-1, "meson-fb");
-	return 0;
-}
-
-static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
+static int malloc_osd_memory(struct fb_info *info)
 {
 	int j;
 	int ret = 0;
@@ -1073,103 +1043,65 @@ static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	struct platform_device *pdev = NULL;
 	phys_addr_t base = 0;
 	unsigned long size = 0;
-	unsigned long mmio_pgoff;
-	unsigned long start;
-	u32 len;
 #ifdef CONFIG_CMA
 	struct cma *cma = NULL;
 #endif
 
-	if (info->screen_base == NULL) {
 #ifdef CONFIG_CMA
-		if (fb_rmem.base) {
-			base = fb_rmem.base;
-			size = fb_rmem.size;
-		} else {
-			cma = dev_get_cma_area(info->device);
-			if (cma) {
-				base = cma_get_base(cma);
-				size = cma_get_size(cma);
-				pr_info("%s, cma:%p\n", __func__, cma);
-			}
-		}
-#else
+	if (fb_rmem.base) {
 		base = fb_rmem.base;
 		size = fb_rmem.size;
+	} else {
+		cma = dev_get_cma_area(info->device);
+		if (cma) {
+			base = cma_get_base(cma);
+			size = cma_get_size(cma);
+			pr_info("%s, cma:%p\n", __func__, cma);
+		}
+	}
+#else
+	base = fb_rmem.base;
+	size = fb_rmem.size;
 #endif
 
-		osd_log_info("%s, %d, base:%llx, size:%ld\n",
-			__func__, __LINE__, base, size);
-		fbdev = (struct osd_fb_dev_s *)info->par;
-		pdev = fbdev->dev;
-		fb_index = fbdev->fb_index;
-		if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
-			if (fb_index >= 1)
-			return -1;
-		#ifndef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
+	osd_log_info("%s, %d, base:%llx, size:%ld\n",
+		__func__, __LINE__, base, size);
+	fbdev = (struct osd_fb_dev_s *)info->par;
+	pdev = fbdev->dev;
+	fb_index = fbdev->fb_index;
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		if (fb_index >= 1)
+		return -1;
+	#ifndef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
 		if (fb_index >= 1)
 			return -1;
-		#endif
-		fix = &info->fix;
-		var = &info->var;
-		/* read cma/fb-reserved memory first */
-		if ((b_reserved_mem == true) &&
-			((fb_memsize[0] + fb_memsize[1] +
-			fb_memsize[2] <= size) &&
-			(fb_memsize[fb_index + 1] > 0))) {
-			fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
-			if (fb_index == DEV_OSD0)
-				fb_rmem_paddr[fb_index] = base +
-					fb_memsize[0];
-			else if (fb_index == DEV_OSD1) {
-				if ((OSD_COUNT == 2) &&
+	#endif
+	fix = &info->fix;
+	var = &info->var;
+	if (!fb_ion_client)
+		fb_ion_client = meson_ion_client_create(-1, "meson-fb");
+	/* read cma/fb-reserved memory first */
+	if ((b_reserved_mem == true) &&
+		((fb_memsize[0] + fb_memsize[1] +
+		fb_memsize[2] <= size) &&
+		(fb_memsize[fb_index + 1] > 0))) {
+		fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
+		if (fb_index == DEV_OSD0)
+			fb_rmem_paddr[fb_index] = base + fb_memsize[0];
+		else if (fb_index == DEV_OSD1) {
+			if ((OSD_COUNT == 2) &&
 				((fb_memsize[0] + fb_memsize[1] +
-					fb_memsize[2]) <= size))
-					fb_rmem_paddr[fb_index] =
-						base + fb_memsize[0] +
-						fb_memsize[1];
-			}
-			pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
-				__func__, __LINE__, fb_index,
-				fb_rmem_size[fb_index]);
-			if ((fb_rmem_paddr[fb_index] > 0) &&
-				(fb_rmem_size[fb_index] > 0)) {
+				fb_memsize[2]) <= size))
+				fb_rmem_paddr[fb_index] =
+					base + fb_memsize[0] + fb_memsize[1];
+		}
+		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
+			__func__, __LINE__, fb_index,
+			fb_rmem_size[fb_index]);
+		if ((fb_rmem_paddr[fb_index] > 0) &&
+			(fb_rmem_size[fb_index] > 0)) {
 #ifdef CONFIG_CMA
-				if (fb_rmem.base) {
-					if (fb_map_flag)
-						fb_rmem_vaddr[fb_index] =
-						phys_to_virt(
-						fb_rmem_paddr[fb_index]);
-					else
-						fb_rmem_vaddr[fb_index] =
-						ioremap_wc(
-							fb_rmem_paddr[fb_index],
-							fb_rmem_size[fb_index]);
-					if (!fb_rmem_vaddr[fb_index])
-						osd_log_err("fb[%d] ioremap error",
-								fb_index);
-					pr_info("%s, reserved mem\n", __func__);
-				} else {
-					osd_page[fb_index+1] =
-						dma_alloc_from_contiguous(
-						info->device,
-						fb_rmem_size[fb_index]
-						>> PAGE_SHIFT,
-						0);
-					if (!osd_page[fb_index+1]) {
-						pr_err("allocate buffer failed:%ld\n",
-							fb_rmem_size[fb_index]);
-						return -ENOMEM;
-					}
-					fb_rmem_vaddr[fb_index] =
-						page_address(
-						osd_page[fb_index+1]);
-					if (!fb_rmem_vaddr[fb_index])
-						osd_log_err("fb[%d] ioremap error",
-								fb_index);
-					pr_info("%s, cma mem\n", __func__);
-				}
-#else
+			if (fb_rmem.base) {
 				if (fb_map_flag)
 					fb_rmem_vaddr[fb_index] =
 						phys_to_virt(
@@ -1181,170 +1113,265 @@ static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
 						fb_rmem_size[fb_index]);
 				if (!fb_rmem_vaddr[fb_index])
 					osd_log_err("fb[%d] ioremap error",
-							fb_index);
+					fb_index);
 				pr_info("%s, reserved mem\n", __func__);
-#endif
-				osd_log_dbg("fb_index=%d dma_alloc=%ld\n",
-					fb_index, fb_rmem_size[fb_index]);
+			} else {
+				osd_page[fb_index+1] =
+					dma_alloc_from_contiguous(
+					info->device,
+					fb_rmem_size[fb_index]
+					>> PAGE_SHIFT,
+					0);
+				if (!osd_page[fb_index+1]) {
+					pr_err("allocate buffer failed:%ld\n",
+						fb_rmem_size[fb_index]);
+					return -ENOMEM;
+				}
+				fb_rmem_vaddr[fb_index] =
+					page_address(osd_page[fb_index+1]);
+				if (!fb_rmem_vaddr[fb_index])
+					osd_log_err("fb[%d] ioremap error",
+					fb_index);
+				pr_info("%s, cma mem\n", __func__);
 			}
-		} else {
-			#ifdef CONFIG_AMLOGIC_ION
-			pr_info("use ion buffer for fb memory\n");
-			if (fb_index == DEV_OSD0 && osd_get_afbc()) {
-				pr_info("OSD0 as afbcd mode\n");
-				for (j = 0; j < OSD_MAX_BUF_NUM; j++) {
-					fb_ion_handle[fb_index][j] =
-					ion_alloc(fb_ion_client,
-						PAGE_ALIGN(
-						fb_memsize[fb_index + 1]/
-						OSD_MAX_BUF_NUM),
-						0,
-						(1 << ION_HEAP_TYPE_DMA),
-						0);
-					ret = ion_phys(fb_ion_client,
+#else
+			if (fb_map_flag)
+				fb_rmem_vaddr[fb_index] =
+					phys_to_virt(fb_rmem_paddr[fb_index]);
+			else
+				fb_rmem_vaddr[fb_index] =
+					ioremap_wc(
+					fb_rmem_paddr[fb_index],
+					fb_rmem_size[fb_index]);
+			if (!fb_rmem_vaddr[fb_index])
+				osd_log_err("fb[%d] ioremap error", fb_index);
+			pr_info("%s, reserved mem\n", __func__);
+#endif
+			osd_log_dbg("fb_index=%d dma_alloc=%ld\n",
+				fb_index, fb_rmem_size[fb_index]);
+		}
+	} else {
+#ifdef CONFIG_AMLOGIC_ION
+		pr_info("use ion buffer for fb memory\n");
+		if (fb_index == DEV_OSD0 && osd_get_afbc()) {
+			pr_info("OSD0 as afbcd mode\n");
+			for (j = 0; j < OSD_MAX_BUF_NUM; j++) {
+				fb_ion_handle[fb_index][j] =
+				ion_alloc(fb_ion_client,
+					PAGE_ALIGN(
+					fb_memsize[fb_index + 1]/
+					OSD_MAX_BUF_NUM),
+					0,
+					(1 << ION_HEAP_TYPE_DMA),
+					0);
+				ret = ion_phys(fb_ion_client,
 					fb_ion_handle[fb_index][j],
 					(ion_phys_addr_t *)
 					&fb_rmem_afbc_paddr[fb_index][j],
 					(size_t *)
 					&fb_rmem_afbc_size[fb_index][j]);
-					fb_rmem_afbc_vaddr[fb_index][j] =
-						ion_map_kernel(fb_ion_client,
-						fb_ion_handle[fb_index][j]);
-					dev_alert(&pdev->dev,
-						"create ion_client %p, handle=%p\n",
-						fb_ion_client,
-						fb_ion_handle[fb_index][j]);
-					dev_alert(&pdev->dev,
-						"ion memory(%d): created fb at 0x%p, size %ld MiB\n",
-						fb_index,
-						(void *)fb_rmem_afbc_paddr
-						[fb_index][j],
-						(unsigned long)fb_rmem_afbc_size
-						[fb_index][j] / SZ_1M);
-					fbdev->fb_afbc_len[j] =
-						fb_rmem_afbc_size[fb_index][j];
-					fbdev->fb_mem_afbc_paddr[j] =
-						fb_rmem_afbc_paddr[fb_index][j];
-					fbdev->fb_mem_afbc_vaddr[j] =
-						fb_rmem_afbc_vaddr[fb_index][j];
-					if  (!fbdev->fb_mem_afbc_vaddr[j]) {
-						osd_log_err("failed to ioremap afbc frame buffer\n");
-						return -1;
-					}
-					osd_log_info(" %d, phy: 0x%p, vir:0x%p, size=%dK\n\n",
-						fb_index,
-						(void *)
-						fbdev->fb_mem_afbc_paddr[j],
-						fbdev->fb_mem_afbc_vaddr[j],
-						fbdev->fb_afbc_len[j] >> 10);
-				}
-				fb_rmem_paddr[fb_index] =
-						fb_rmem_afbc_paddr[fb_index][0];
-				fb_rmem_vaddr[fb_index] =
-						fb_rmem_afbc_vaddr[fb_index][0];
-				fb_rmem_size[fb_index] =
-						fb_rmem_afbc_size[fb_index][0];
-			} else {
-				fb_ion_handle[fb_index][0] =
-					ion_alloc(fb_ion_client,
-						fb_memsize[fb_index + 1],
-						0,
-						(1 << ION_HEAP_TYPE_DMA),
-						0);
-				ret = ion_phys(fb_ion_client,
-					fb_ion_handle[fb_index][0],
-					(ion_phys_addr_t *)
-					&fb_rmem_paddr[fb_index],
-					(size_t *)&fb_rmem_size[fb_index]);
-				fb_rmem_vaddr[fb_index] =
+				fb_rmem_afbc_vaddr[fb_index][j] =
 					ion_map_kernel(fb_ion_client,
-					fb_ion_handle[fb_index][0]);
-				dev_notice(&pdev->dev,
+						fb_ion_handle[fb_index][j]);
+				dev_alert(&pdev->dev,
 					"create ion_client %p, handle=%p\n",
 					fb_ion_client,
-					fb_ion_handle[fb_index][0]);
-				dev_notice(&pdev->dev,
+					fb_ion_handle[fb_index][j]);
+				dev_alert(&pdev->dev,
 					"ion memory(%d): created fb at 0x%p, size %ld MiB\n",
 					fb_index,
-					(void *)fb_rmem_paddr[fb_index],
-					(unsigned long)
-					fb_rmem_size[fb_index] / SZ_1M);
-			}
-			#endif
-		}
-		fbdev->fb_len = fb_rmem_size[fb_index];
-		fbdev->fb_mem_paddr = fb_rmem_paddr[fb_index];
-		fbdev->fb_mem_vaddr = fb_rmem_vaddr[fb_index];
-		if (!fbdev->fb_mem_vaddr) {
-			osd_log_err("failed to ioremap frame buffer\n");
-			return -ENOMEM;
-		}
-		osd_log_info("Frame buffer memory assigned at");
-		osd_log_info(" %d, phy: 0x%p, vir:0x%p, size=%dK\n\n",
-			fb_index, (void *)fbdev->fb_mem_paddr,
-			fbdev->fb_mem_vaddr, fbdev->fb_len >> 10);
-		if (fb_index == DEV_OSD0 && osd_get_afbc()) {
-			for (j = 0; j < OSD_MAX_BUF_NUM; j++) {
+					(void *)fb_rmem_afbc_paddr
+					[fb_index][j],
+					(unsigned long)fb_rmem_afbc_size
+					[fb_index][j] / SZ_1M);
 				fbdev->fb_afbc_len[j] =
 					fb_rmem_afbc_size[fb_index][j];
 				fbdev->fb_mem_afbc_paddr[j] =
 					fb_rmem_afbc_paddr[fb_index][j];
 				fbdev->fb_mem_afbc_vaddr[j] =
 					fb_rmem_afbc_vaddr[fb_index][j];
-				if (!fbdev->fb_mem_afbc_vaddr[j]) {
+				if	(!fbdev->fb_mem_afbc_vaddr[j]) {
 					osd_log_err("failed to ioremap afbc frame buffer\n");
-					return -ENOMEM;
+					return -1;
 				}
 				osd_log_info(" %d, phy: 0x%p, vir:0x%p, size=%dK\n\n",
-						fb_index,
-						(void *)
-						fbdev->fb_mem_afbc_paddr[j],
-						fbdev->fb_mem_afbc_vaddr[j],
-						fbdev->fb_afbc_len[j] >> 10);
+					fb_index,
+					(void *)
+					fbdev->fb_mem_afbc_paddr[j],
+					fbdev->fb_mem_afbc_vaddr[j],
+					fbdev->fb_afbc_len[j] >> 10);
 			}
+			fb_rmem_paddr[fb_index] =
+				fb_rmem_afbc_paddr[fb_index][0];
+			fb_rmem_vaddr[fb_index] =
+				fb_rmem_afbc_vaddr[fb_index][0];
+			fb_rmem_size[fb_index] =
+				fb_rmem_afbc_size[fb_index][0];
+		} else {
+			fb_ion_handle[fb_index][0] =
+				ion_alloc(fb_ion_client,
+					fb_memsize[fb_index + 1],
+					0,
+					(1 << ION_HEAP_TYPE_DMA),
+					0);
+			ret = ion_phys(fb_ion_client,
+				fb_ion_handle[fb_index][0],
+				(ion_phys_addr_t *)
+				&fb_rmem_paddr[fb_index],
+				(size_t *)&fb_rmem_size[fb_index]);
+			fb_rmem_vaddr[fb_index] =
+				ion_map_kernel(fb_ion_client,
+					fb_ion_handle[fb_index][0]);
+			dev_notice(&pdev->dev,
+				"create ion_client %p, handle=%p\n",
+				fb_ion_client,
+				fb_ion_handle[fb_index][0]);
+			dev_notice(&pdev->dev,
+				"ion memory(%d): created fb at 0x%p, size %ld MiB\n",
+				fb_index,
+				(void *)fb_rmem_paddr[fb_index],
+				(unsigned long)
+				fb_rmem_size[fb_index] / SZ_1M);
 		}
-		fix->smem_start = fbdev->fb_mem_paddr;
-		fix->smem_len = fbdev->fb_len;
-		info->screen_base = (char __iomem *)fbdev->fb_mem_vaddr;
-		info->screen_size = fix->smem_len;
-		osd_backup_screen_info(fb_index,
-			info->screen_base, info->screen_size);
-		logo_index = osd_get_logo_index();
-		if (osd_check_fbsize(var, info))
-			return -ENOMEM;
-		/* clear osd buffer if not logo layer */
-		if (((logo_index < 0) || (logo_index != fb_index)) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)) {
-			osd_log_info("---------------clear fb%d memory %p\n",
-				fb_index, fbdev->fb_mem_vaddr);
-			set_logo_loaded();
-			if (fbdev->fb_mem_vaddr)
-				memset(fbdev->fb_mem_vaddr, 0x0, fbdev->fb_len);
-			if (fb_index == DEV_OSD0 && osd_get_afbc()) {
-				for (j = 1; j < OSD_MAX_BUF_NUM; j++) {
-					osd_log_info(
-						"---------------clear fb%d memory %p\n",
-						fb_index,
-						fbdev->fb_mem_afbc_vaddr[j]);
-					memset(fbdev->fb_mem_afbc_vaddr[j],
-						0x0,
-						fbdev->fb_afbc_len[j]);
-				}
-			} else {
-				/* two case in one
-				 * 1. the big buffer ion alloc
-				 * 2. reserved memory
-				 */
-				if (fb_rmem_vaddr[fb_index])
-					memset(fb_rmem_vaddr[fb_index],
-							0x0,
-							fb_rmem_size[fb_index]);
+#endif
+	}
+	fbdev->fb_len = fb_rmem_size[fb_index];
+	fbdev->fb_mem_paddr = fb_rmem_paddr[fb_index];
+	fbdev->fb_mem_vaddr = fb_rmem_vaddr[fb_index];
+	if (!fbdev->fb_mem_vaddr) {
+		osd_log_err("failed to ioremap frame buffer\n");
+		return -ENOMEM;
+	}
+	osd_log_info("Frame buffer memory assigned at");
+	osd_log_info(" %d, phy: 0x%p, vir:0x%p, size=%dK\n\n",
+		fb_index, (void *)fbdev->fb_mem_paddr,
+		fbdev->fb_mem_vaddr, fbdev->fb_len >> 10);
+	if (fb_index == DEV_OSD0 && osd_get_afbc()) {
+		for (j = 0; j < OSD_MAX_BUF_NUM; j++) {
+			fbdev->fb_afbc_len[j] =
+				fb_rmem_afbc_size[fb_index][j];
+				fbdev->fb_mem_afbc_paddr[j] =
+					fb_rmem_afbc_paddr[fb_index][j];
+			fbdev->fb_mem_afbc_vaddr[j] =
+				fb_rmem_afbc_vaddr[fb_index][j];
+			if (!fbdev->fb_mem_afbc_vaddr[j]) {
+				osd_log_err("failed to ioremap afbc frame buffer\n");
+				return -ENOMEM;
 			}
-			/* setup osd if not logo layer */
-			osddev_setup(fbdev);
+			osd_log_info(" %d, phy: 0x%p, vir:0x%p, size=%dK\n\n",
+				fb_index,
+				(void *)
+				fbdev->fb_mem_afbc_paddr[j],
+				fbdev->fb_mem_afbc_vaddr[j],
+				fbdev->fb_afbc_len[j] >> 10);
 		}
 	}
+	fix->smem_start = fbdev->fb_mem_paddr;
+	fix->smem_len = fbdev->fb_len;
+	info->screen_base = (char __iomem *)fbdev->fb_mem_vaddr;
+	info->screen_size = fix->smem_len;
+	osd_backup_screen_info(fb_index,
+		info->screen_base, info->screen_size);
+	logo_index = osd_get_logo_index();
+	if (osd_check_fbsize(var, info))
+		return -ENOMEM;
+	/* clear osd buffer if not logo layer */
+	if (((logo_index < 0) || (logo_index != fb_index)) ||
+		(get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)) {
+		osd_log_info("---------------clear fb%d memory %p\n",
+			fb_index, fbdev->fb_mem_vaddr);
+		set_logo_loaded();
+		if (fbdev->fb_mem_vaddr)
+			memset(fbdev->fb_mem_vaddr, 0x0, fbdev->fb_len);
+		if (fb_index == DEV_OSD0 && osd_get_afbc()) {
+			for (j = 1; j < OSD_MAX_BUF_NUM; j++) {
+				osd_log_info(
+					"---------------clear fb%d memory %p\n",
+					fb_index,
+					fbdev->fb_mem_afbc_vaddr[j]);
+				memset(fbdev->fb_mem_afbc_vaddr[j],
+					0x0,
+					fbdev->fb_afbc_len[j]);
+			}
+		} else {
+			/* two case in one
+			 * 1. the big buffer ion alloc
+			 * 2. reserved memory
+			 */
+			if (fb_rmem_vaddr[fb_index])
+				memset(fb_rmem_vaddr[fb_index],
+					0x0,
+					fb_rmem_size[fb_index]);
+		}
+		/* setup osd if not logo layer */
+		osddev_setup(fbdev);
+	}
+	return 0;
+}
 
+static int osd_open(struct fb_info *info, int arg)
+{
+	u32 fb_index;
+	struct osd_fb_dev_s *fbdev;
+	struct fb_fix_screeninfo *fix = NULL;
+	int ret = 0;
+
+	fbdev = (struct osd_fb_dev_s *)info->par;
+	fbdev->open_count++;
+	osd_log_dbg("osd_open index=%d,open_count=%d\n",
+		fbdev->fb_index, fbdev->open_count);
+	if (info->screen_base != NULL)
+		return 0;
+
+	fb_index = fbdev->fb_index;
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+		if (fb_index >= 1)
+		return -1;
+	#ifndef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
+	if (fb_index >= 1)
+		return -1;
+	#endif
+
+	if (b_alloc_mem) {
+		/* alloc mem when osd_open */
+		if (info->screen_base == NULL) {
+			ret = malloc_osd_memory(info);
+			if (ret < 0)
+				return ret;
+		}
+
+	} else {
+		/* move alloc mem when osd_mmap */
+		fix = &info->fix;
+
+		fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
+		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
+			__func__, __LINE__, fb_index, fb_rmem_size[fb_index]);
+
+		fix->smem_start = 0;
+		fix->smem_len = fb_rmem_size[fb_index];
+		if (!fb_ion_client)
+			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
+	}
+	return 0;
+}
+
+static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
+{
+	unsigned long mmio_pgoff;
+	unsigned long start;
+	u32 len;
+	int ret = 0;
+
+	if (!b_alloc_mem) {
+		/* alloc mem when osd_open */
+		if (info->screen_base == NULL) {
+			ret = malloc_osd_memory(info);
+			if (ret < 0)
+				return ret;
+		}
+
+	}
 	start = info->fix.smem_start;
 	len = info->fix.smem_len;
 	mmio_pgoff = PAGE_ALIGN((start & ~PAGE_MASK) + len) >> PAGE_SHIFT;
@@ -2873,6 +2900,9 @@ static int osd_probe(struct platform_device *pdev)
 		osd_set_urgent(0, (prop_idx != 0) ? 1 : 0);
 		osd_set_urgent(1, (prop_idx != 0) ? 1 : 0);
 	}
+	prop = of_get_property(pdev->dev.of_node, "mem_alloc", NULL);
+	if (prop)
+		b_alloc_mem = of_read_ulong(prop, 1);
 
 	vinfo = get_current_vinfo();
 	for (index = 0; index < OSD_COUNT; index++) {
