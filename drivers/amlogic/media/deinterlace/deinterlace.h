@@ -514,6 +514,8 @@ struct di_pre_stru_s {
  * progressive source: top field 1, bot field 0
  */
 	int	source_change_flag;
+/* true: bypass di all logic, false: not bypass */
+	bool bypass_flag;
 
 	unsigned char prog_proc_type;
 /* set by prog_proc_config when source is vdin,0:use 2 i

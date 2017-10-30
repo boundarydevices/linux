@@ -133,9 +133,7 @@ static int receiver_is_amvideo = 1;
 
 static unsigned char new_keep_last_frame_enable;
 static int bypass_state = 1;
-static int bypass_4K;
 static int bypass_all;
-static bool bypass_direct;
 /*1:enable bypass pre,ei only;
  * 2:debug force bypass pre,ei for post
  */
@@ -1898,11 +1896,6 @@ static void config_canvas(struct di_buf_s *di_buf)
 void di_cma_alloc(void)
 {
 	unsigned int i, start_time, end_time, delta_time;
-
-	if (bypass_4K == 1) {
-		pr_dbg("%s:di don't need alloc mem for 4k input\n", __func__);
-		return;
-	}
 	start_time = jiffies_to_msecs(jiffies);
 	for (i = 0; (i < local_buf_num); i++) {
 		struct di_buf_s *di_buf = &(di_buf_local[i]);
@@ -3807,8 +3800,11 @@ static unsigned char pre_de_buf_config(void)
 		}
 	}
 
-	if (!pre_de_proc())
+	if (!pre_de_proc()) {
+		pr_err("%s%d bypass pre process.\n",
+			__func__, __LINE__);
 		return 0;
+	}
 
 	if (di_pre_stru.di_inp_buf_next) {
 		di_pre_stru.di_inp_buf = di_pre_stru.di_inp_buf_next;
@@ -6298,6 +6294,7 @@ static void di_reg_process(void)
 	vf_reg_provider(&di_vf_prov);
 	vf_notify_receiver(VFM_NAME, VFRAME_EVENT_PROVIDER_START, NULL);
 	reg_flag = 1;
+	di_pre_stru.bypass_flag = false;
 	reg_cnt++;
 	if (reg_cnt > 0x3fffffff)
 		reg_cnt = 0;
@@ -6326,6 +6323,29 @@ static struct rdma_op_s di_rdma_op = {
 	NULL
 };
 #endif
+static bool need_bypass(struct vframe_s *vf)
+{
+	if (vf->source_type & VIDTYPE_MVC)
+		return true;
+
+	if (vf->source_type == VFRAME_SOURCE_TYPE_PPMGR)
+		return true;
+
+	if (vf->source_type & VIDTYPE_VIU_444)
+		return true;
+
+	if (vf->type & VIDTYPE_PIC)
+		return true;
+
+	if (vf->type & VIDTYPE_COMPRESS)
+		return true;
+
+	if ((vf->width > default_width) ||
+			(vf->height > (default_height + 8)))
+		return true;
+
+	return false;
+}
 static void di_reg_process_irq(void)
 {
 	ulong flags = 0, fiq_flag = 0, irq_flag2 = 0;
@@ -6343,13 +6363,15 @@ static void di_reg_process_irq(void)
 	vframe = vf_peek(VFM_NAME);
 
 	if (vframe) {
-		#ifdef CONFIG_CMA
-		if ((vframe->width > default_width) ||
-			(vframe->height > (default_height + 8)))
-			bypass_4K = 1;
-		else
-			bypass_4K = 0;
-		#endif
+		if (need_bypass(vframe) || ((di_debug_flag>>20) & 0x1)) {
+			if (!di_pre_stru.bypass_flag) {
+				pr_info("DI bypass all %ux%u-0x%x.",
+				vframe->width, vframe->height, vframe->type);
+			}
+			di_pre_stru.bypass_flag = true;
+			return;
+		}
+		di_pre_stru.bypass_flag = false;
 		/* patch for vdin progressive input */
 		if (((vframe->type & VIDTYPE_VIU_422) &&
 		    ((vframe->type & VIDTYPE_PROGRESSIVE) == 0))
@@ -6506,7 +6528,7 @@ static void di_process(void)
 		while (check_recycle_buf() & 1)
 			;
 		di_unlock_irqfiq_restore(irq_flag2, fiq_flag);
-		if (!bypass_direct) {
+
 			if ((di_pre_stru.pre_de_busy == 0) &&
 				(di_pre_stru.pre_de_process_done == 0)) {
 				if ((pre_run_flag == DI_RUN_FLAG_RUN) ||
@@ -6520,7 +6542,7 @@ static void di_process(void)
 			}
 			while (process_post_vframe())
 				;
-		}
+
 		if ((post_wr_en && post_wr_surpport)) {
 			if (di_post_stru.post_de_busy == 0 &&
 			di_post_stru.de_post_process_done) {
@@ -6539,7 +6561,8 @@ static unsigned int nr_done_check_cnt = 5;
 module_param_named(nr_done_check_cnt, nr_done_check_cnt, uint, 0644);
 void di_timer_handle(struct work_struct *work)
 {
-
+	if (di_pre_stru.bypass_flag)
+		return;
 	if (di_pre_stru.pre_de_busy) {
 		di_pre_stru.pre_de_busy_timer_count++;
 		if (di_pre_stru.pre_de_busy_timer_count >= nr_done_check_cnt) {
@@ -6737,6 +6760,9 @@ light_unreg:
 		spin_unlock_irqrestore(&plist_lock, flags);
 	} else if (type == VFRAME_EVENT_PROVIDER_VFRAME_READY) {
 		provider_vframe_level++;
+		if (di_pre_stru.bypass_flag)
+			vf_notify_receiver(VFM_NAME,
+				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 		trigger_pre_di_process(TRIGGER_PRE_BY_VFRAME_READY);
 
 #ifdef RUN_DI_PROCESS_IN_IRQ
@@ -6943,7 +6969,9 @@ static vframe_t *di_vf_peek(void *arg)
 	struct di_buf_s *di_buf = NULL;
 
 	video_peek_cnt++;
-	if ((init_flag == 0) || (mem_flag == 0) || recovery_flag ||
+	if (di_pre_stru.bypass_flag)
+		return vf_peek(VFM_NAME);
+	if ((init_flag == 0) || recovery_flag ||
 		di_blocking || di_pre_stru.unreg_req_flag || dump_state_flag)
 		return NULL;
 	if ((run_flag == DI_RUN_FLAG_PAUSE) ||
@@ -6951,9 +6979,6 @@ static vframe_t *di_vf_peek(void *arg)
 		return NULL;
 
 	log_buffer_state("pek");
-
-	if (bypass_direct)
-		return vf_peek(VFM_NAME);
 
 	fast_process();
 #ifdef SUPPORT_START_FRAME_HOLD
@@ -7024,17 +7049,16 @@ static vframe_t *di_vf_get(void *arg)
 	struct di_buf_s *di_buf = NULL;
 	ulong flags = 0, fiq_flag = 0, irq_flag2 = 0;
 
-	if ((init_flag == 0) || (mem_flag == 0) || recovery_flag ||
+	if (di_pre_stru.bypass_flag)
+		return vf_get(VFM_NAME);
+
+	if ((init_flag == 0) || recovery_flag ||
 		di_blocking || di_pre_stru.unreg_req_flag || dump_state_flag)
 		return NULL;
 
 	if ((run_flag == DI_RUN_FLAG_PAUSE) ||
 	    (run_flag == DI_RUN_FLAG_STEP_DONE))
 		return NULL;
-
-	if (bypass_direct)
-		return vf_get(VFM_NAME);
-
 
 #ifdef SUPPORT_START_FRAME_HOLD
 	if ((disp_frame_count == 0) && (is_bypass(NULL) == 0)) {
@@ -7101,6 +7125,14 @@ static void di_vf_put(vframe_t *vf, void *arg)
 	struct di_buf_s *di_buf = (struct di_buf_s *)vf->private_data;
 	ulong flags = 0, fiq_flag = 0, irq_flag2 = 0;
 
+	if (di_pre_stru.bypass_flag) {
+		vf_put(vf, VFM_NAME);
+		vf_notify_provider(VFM_NAME,
+			VFRAME_EVENT_RECEIVER_PUT, NULL);
+		if (used_post_buf_index != -1)
+			recycle_keep_buffer();
+		return;
+	}
 /* struct di_buf_s *p = NULL; */
 /* int itmp = 0; */
 	if ((init_flag == 0) || (mem_flag == 0) || recovery_flag || !vf) {
@@ -7800,7 +7832,6 @@ static int __init di_boot_para_setup(char *s)
 
 __setup("di=", di_boot_para_setup);
 
-module_param_named(bypass_direct, bypass_direct, bool, 0664);
 module_param_named(bypass_all, bypass_all, int, 0664);
 module_param_named(bypass_3d, bypass_3d, int, 0664);
 module_param_named(bypass_trick_mode, bypass_trick_mode, int, 0664);
