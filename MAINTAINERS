@@ -14115,3 +14115,8 @@ AMLOGIC DRM DRIVER
 M: Sky Zhou <sky.zhou@amlogic.com>
 F: driver/amlogic/drm/*
 F: driver/amlogic/drm/am_meson_fbdev.c
+
+AMLOGIC ADD S400EMMC DTS
+M: Yue Gui <yuegui.he@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/axg_s400emmc.dts
+F: arch/arm64/boot/dts/amlogic/axg_s400emmc_v03.dts
