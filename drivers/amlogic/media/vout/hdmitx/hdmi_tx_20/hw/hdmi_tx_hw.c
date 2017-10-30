@@ -3124,7 +3124,7 @@ static void hdmitx_read_edid(unsigned char *rx_edid)
 	/* Read complete EDID data sequentially */
 	while (byte_num < 128 * blk_no) {
 		hdmitx_wr_reg(HDMITX_DWC_I2CM_ADDRESS,  byte_num&0xff);
-		if (((byte_num == 256) || (byte_num == 384)) && (blk_no > 2)) {
+		if ((byte_num >= 256) && (byte_num < 512) && (blk_no > 2)) {
 			/* Program SEGMENT/SEGPTR */
 			hdmitx_wr_reg(HDMITX_DWC_I2CM_SEGADDR, 0x30);
 			hdmitx_wr_reg(HDMITX_DWC_I2CM_SEGPTR, 0x1);
