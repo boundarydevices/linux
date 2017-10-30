@@ -14114,3 +14114,4 @@ F: drivers/amlogic/media/video_processor/pic_dev/*
 AMLOGIC DRM DRIVER
 M: Sky Zhou <sky.zhou@amlogic.com>
 F: driver/amlogic/drm/*
+F: driver/amlogic/drm/am_meson_fbdev.c

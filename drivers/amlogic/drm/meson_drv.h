@@ -41,6 +41,8 @@ struct meson_drm {
 	struct drm_device *drm;
 	struct drm_crtc *crtc;
 	struct drm_fbdev_cma *fbdev;
+	struct drm_fb_helper *fbdev_helper;
+	struct drm_gem_object *fbdev_bo;
 	struct drm_plane *primary_plane;
 	struct drm_plane *cursor_plane;
 

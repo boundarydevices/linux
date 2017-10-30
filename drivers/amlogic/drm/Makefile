@@ -12,4 +12,8 @@ ifeq ($(CONFIG_DRM_MESON_USE_ION),y)
 	ccflags-y += -Idrivers/staging/android/
 endif
 
+ifeq ($(CONFIG_DRM_MESON_EMULATE_FBDEV),y)
+        meson-y += am_meson_fbdev.o
+endif
+
 obj-$(CONFIG_DRM_MESON) += meson.o

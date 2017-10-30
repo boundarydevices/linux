@@ -81,7 +81,7 @@ static void am_meson_gem_free_ion_buf(
 	}
 }
 
-static struct am_meson_gem_object *am_meson_gem_object_create(
+struct am_meson_gem_object *am_meson_gem_object_create(
 	struct drm_device *dev,
 	unsigned int flags,
 	unsigned long size,
@@ -207,7 +207,7 @@ int am_meson_gem_mmap(
 
 	obj = vma->vm_private_data;
 	meson_gem_obj = to_am_meson_gem_obj(obj);
-	DRM_ERROR("am_meson_gem_mmap %p.\n", meson_gem_obj);
+	DRM_DEBUG("am_meson_gem_mmap %p.\n", meson_gem_obj);
 
 	ret = am_meson_gem_object_mmap(meson_gem_obj, vma);
 
@@ -220,6 +220,11 @@ int am_meson_gem_object_get_phyaddr(
 {
 	int addr;
 	size_t len;
+
+	if (!meson_gem->handle) {
+		DRM_INFO("%s handle null\n", __func__);
+		return -1;
+	}
 
 	ion_phys(drm->gem_client, meson_gem->handle,
 						(ion_phys_addr_t *)&addr, &len);

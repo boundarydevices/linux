@@ -86,7 +86,7 @@ void am_osd_do_display(
 	dma_addr_t phyaddr;
 	unsigned long flags;
 
-	//DRM_INFO("am_osd_do_display osd %d.\n", osd_plane->osd_idx);
+	//DRM_INFO("%s osd %d.\n", __func__, osd_plane->osd_idx);
 
 	switch (fb->pixel_format) {
 	case DRM_FORMAT_XRGB8888:
@@ -174,7 +174,7 @@ int am_osd_check(struct drm_plane *plane, struct drm_plane_state *state)
 {
 	struct am_osd_plane *osd_plane = to_am_osd_plane(plane);
 
-	DRM_DEBUG("am_osd_check osd %d.\n", osd_plane->osd_idx);
+	DRM_DEBUG("%s osd %d.\n", __func__, osd_plane->osd_idx);
 	return 0;
 }
 
@@ -182,7 +182,7 @@ void am_osd_blank(struct drm_plane *plane, struct drm_plane_state *old_state)
 {
 	struct am_osd_plane *osd_plane = to_am_osd_plane(plane);
 
-	DRM_DEBUG("am_osd_blank osd %d.\n", osd_plane->osd_idx);
+	DRM_DEBUG("%s osd %d.\n", __func__, osd_plane->osd_idx);
 }
 
 static const struct drm_plane_helper_funcs am_osd_helper_funcs = {
@@ -238,7 +238,7 @@ int meson_plane_create(struct meson_drm *priv)
 {
 	struct am_osd_plane *plane;
 
-	DRM_DEBUG("amlogic meson_plane_create. enter\n");
+	DRM_DEBUG("%s. enter\n", __func__);
 	/*crate primary plane*/
 	plane = am_osd_plane_create(priv, DRM_PLANE_TYPE_PRIMARY);
 	if (plane == NULL)

@@ -14,16 +14,18 @@
  * more details.
  *
  */
+#include <drm/drm_atomic_helper.h>
+
 #include "am_meson_fb.h"
 
 #define to_am_meson_fb(x) container_of(x, struct am_meson_fb, base)
 
-void am_meson_fb_destroy(struct drm_framebuffer *framebuffer)
+void am_meson_fb_destroy(struct drm_framebuffer *fb)
 {
-	struct am_meson_fb *meson_fb = to_am_meson_fb(framebuffer);
+	struct am_meson_fb *meson_fb = to_am_meson_fb(fb);
 
 	drm_gem_object_unreference_unlocked(&meson_fb->bufp->base);
-	drm_framebuffer_cleanup(framebuffer);
+	drm_framebuffer_cleanup(fb);
 	kfree(meson_fb);
 }
 
@@ -31,14 +33,49 @@ int am_meson_fb_create_handle(struct drm_framebuffer *fb,
 	     struct drm_file *file_priv,
 	     unsigned int *handle)
 {
-	DRM_INFO("ERROR: am_meson_fb_create_handle NOT implement.\n");
-	return 0;
+	struct am_meson_fb *meson_fb = to_am_meson_fb(fb);
+
+	return drm_gem_handle_create(file_priv,
+				     &meson_fb->bufp->base, handle);
 }
 
 struct drm_framebuffer_funcs am_meson_fb_funcs = {
 	.create_handle = am_meson_fb_create_handle, //must for fbdev emulate
 	.destroy = am_meson_fb_destroy,
 };
+
+struct drm_framebuffer *
+am_meson_fb_alloc(struct drm_device *dev,
+		  struct drm_mode_fb_cmd2 *mode_cmd,
+		  struct drm_gem_object *obj)
+{
+	struct am_meson_fb *meson_fb;
+	struct am_meson_gem_object *meson_gem;
+	int ret = 0;
+
+	meson_fb = kzalloc(sizeof(*meson_fb), GFP_KERNEL);
+	if (!meson_fb)
+		return ERR_PTR(-ENOMEM);
+
+	meson_gem = container_of(obj, struct am_meson_gem_object, base);
+	meson_fb->bufp = meson_gem;
+
+	drm_helper_mode_fill_fb_struct(&meson_fb->base, mode_cmd);
+
+	ret = drm_framebuffer_init(dev, &meson_fb->base,
+				   &am_meson_fb_funcs);
+	if (ret) {
+		dev_err(dev->dev, "Failed to initialize framebuffer: %d\n",
+			ret);
+		goto err_free_fb;
+	}
+
+	return &meson_fb->base;
+
+err_free_fb:
+	kfree(meson_fb);
+	return ERR_PTR(ret);
+}
 
 struct drm_framebuffer *am_meson_fb_create(struct drm_device *dev,
 				     struct drm_file *file_priv,
@@ -77,4 +114,18 @@ struct drm_framebuffer *am_meson_fb_create(struct drm_device *dev,
 	}
 
 	return &meson_fb->base;
+}
+
+struct drm_framebuffer *
+am_meson_drm_framebuffer_init(struct drm_device *dev,
+			      struct drm_mode_fb_cmd2 *mode_cmd,
+			      struct drm_gem_object *obj)
+{
+	struct drm_framebuffer *fb;
+
+	fb = am_meson_fb_alloc(dev, mode_cmd, obj);
+	if (IS_ERR(fb))
+		return NULL;
+
+	return fb;
 }

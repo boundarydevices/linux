@@ -55,6 +55,9 @@
 #include "am_meson_gem.h"
 #include "am_meson_fb.h"
 #endif
+#ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
+#include "am_meson_fbdev.h"
+#endif
 
 #define DRIVER_NAME "meson"
 #define DRIVER_DESC "Amlogic Meson DRM driver"
@@ -328,19 +331,13 @@ static int meson_drv_probe(struct platform_device *pdev)
 	drm->mode_config.max_width = 8192;
 	drm->mode_config.max_height = 8192;
 	drm->mode_config.funcs = &meson_mode_config_funcs;
-
-#ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
-	priv->fbdev = drm_fbdev_cma_init(drm, 32,
-					 drm->mode_config.num_crtc,
-					 drm->mode_config.num_connector);
-	if (IS_ERR(priv->fbdev)) {
-		ret = PTR_ERR(priv->fbdev);
-		goto free_drm;
-	}
-#endif
-
 	drm_kms_helper_poll_init(drm);
-
+#ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
+	ret = meson_drm_fbdev_init(drm);
+	if (ret)
+		goto free_drm;
+	drm->mode_config.allow_fb_modifiers = true;
+#endif
 	platform_set_drvdata(pdev, priv);
 
 	ret = drm_dev_register(drm, 0);
@@ -369,10 +366,10 @@ static int meson_drv_remove(struct platform_device *pdev)
 	osd_drm_debugfs_exit();
 #endif
 	drm_dev_unregister(drm);
-	drm_kms_helper_poll_fini(drm);
 #ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
-	drm_fbdev_cma_fini(priv->fbdev);
+	meson_drm_fbdev_fini(drm);
 #endif
+	drm_kms_helper_poll_fini(drm);
 	drm_mode_config_cleanup(drm);
 	drm_vblank_cleanup(drm);
 #ifdef CONFIG_DRM_MESON_USE_ION

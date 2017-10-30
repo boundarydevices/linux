@@ -60,7 +60,15 @@ int am_meson_gem_dumb_map_offset(
 	uint64_t *offset);
 
 /* GEM OBJECT OPERATIONS */
+struct am_meson_gem_object *am_meson_gem_object_create(
+		struct drm_device *dev, unsigned int flags,
+		unsigned long size, struct ion_client *client);
+
 void am_meson_gem_object_free(struct drm_gem_object *gem_obj);
+
+int am_meson_gem_object_mmap(
+	struct am_meson_gem_object *obj,
+	struct vm_area_struct *vma);
 
 int am_meson_gem_object_get_phyaddr(
 	struct meson_drm *drm,
