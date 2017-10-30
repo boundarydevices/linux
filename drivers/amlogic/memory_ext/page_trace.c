@@ -144,7 +144,7 @@ static bool check_trace_valid(struct page_trace *trace)
 	    trace->migrate_type >= MIGRATE_TYPES ||
 	    !range_ok(trace)) {
 		offset = (unsigned long)((trace - trace_buffer));
-		pr_err("bad trace:%p, %x, pfn:%ld, ip:%pf\n", trace,
+		pr_err("bad trace:%p, %x, pfn:%lx, ip:%pf\n", trace,
 			*((unsigned int *)trace),
 			offset / sizeof(struct page_trace),
 			(void *)_RET_IP_);
@@ -527,40 +527,45 @@ EXPORT_SYMBOL(reset_page_trace);
  * before call this functions, memory for page trace buffer are
  * freed to buddy.
  */
-static void __init page_trace_pre_work(struct page *start_page,
-				       unsigned long size)
+static int __init page_trace_pre_work(unsigned long size)
 {
-	int i, order, page_free = 0, tailed = 0;
-	struct page *page, *last_page, *next_page;
+	unsigned int order = get_order(size);
+	unsigned long addr;
+	unsigned long used, end;
+	struct page *page;
 
-	size = PAGE_ALIGN(size);
-	size >>= PAGE_SHIFT;
+	if (order >= MAX_ORDER) {
+		pr_err("trace buffer size %lx is too large\n", size);
+		return -1;
+	}
+	addr = __get_free_pages(GFP_KERNEL, order);
+	if (!addr)
+		return -ENOMEM;
 
-	page = start_page;
-	next_page = page;
-	last_page = page + size;
-	for (i = 0; i < size; i++) {
-		order = page_private(page);
-		if (!list_empty(&page->lru))
-			list_del(&page->lru);	/* del from buddy */
-		if (next_page <= page) {
-			page_free += (1 << order);
-			next_page += (1 << order);
+	trace_buffer = (struct page_trace *)addr;
+	end  = addr + (PAGE_SIZE << order);
+	used = addr + size;
+	pr_info("%s, trace buffer:%p, size:%lx, used:%lx, end:%lx\n",
+		__func__, trace_buffer, size, used, end);
+	memset((void *)addr, 0, size);
+
+	for (; addr < end; addr += PAGE_SIZE) {
+		if (addr < used) {
+			page = virt_to_page((void *)addr);
+			set_init_page_trace(page, 0, GFP_KERNEL);
+		#if DEBUG_PAGE_TRACE
+			pr_info("%s, trace page:%p, %lx\n",
+				__func__, page, page_to_pfn(page));
+		#endif
+		} else {
+			free_page(addr);
+		#if DEBUG_PAGE_TRACE
+			pr_info("%s, free page:%lx, %lx\n", __func__,
+				addr, page_to_pfn(virt_to_page(addr)));
+		#endif
 		}
-		set_page_private(page, 0);
-		set_init_page_trace(page, 0, GFP_KERNEL);
-		page++;
 	}
-
-	/* free tailed pages */
-	while (i < page_free) {
-		__free_pages(page, 0);
-		page++;
-		i++;
-		tailed++;
-	}
-	pr_info("%s, %d, tailed:%d, page:%lx\n",
-		__func__, __LINE__, tailed, page_to_pfn(page));
+	return 0;
 }
 
 #define SHOW_CNT	1024
@@ -832,33 +837,23 @@ void __init page_trace_mem_init(void)
 {
 	struct zone *zone;
 	unsigned long total_page = 0;
-	phys_addr_t mem_add;
-	struct page *page;
 
 	if (page_trace_disable)
 		return;
 
 	for_each_populated_zone(zone) {
 		total_page += zone->spanned_pages;
-		pr_debug("zone:%s, spaned pages:%ld, total:%ld\n",
+		pr_info("zone:%s, spaned pages:%ld, total:%ld\n",
 			zone->name, zone->spanned_pages, total_page);
 	}
 	ptrace_size = total_page * sizeof(struct page_trace) * trace_step;
 	ptrace_size = PAGE_ALIGN(ptrace_size);
-	mem_add = memblock_alloc(ptrace_size, (pageblock_nr_pages) * PAGE_SIZE);
-	if (mem_add != 0) {
-		page = pfn_to_page(__phys_to_pfn(mem_add));
-		trace_buffer = (struct page_trace *)page_address(page);
-		pr_info("%s, ptrace len:%ld, mem_add:%p, step:%d, page:%ld\n",
-			__func__, ptrace_size, trace_buffer,
-			trace_step, sizeof(struct page));
-		memset(trace_buffer, 0, ptrace_size);
-		page_trace_pre_work(page, ptrace_size);
-		find_static_common_symbol();
-	} else {
+	if (page_trace_pre_work(ptrace_size)) {
 		trace_buffer = NULL;
 		ptrace_size = 0;
 		pr_err("%s reserve memory failed\n", __func__);
+		return;
 	}
+	find_static_common_symbol();
 }
 
