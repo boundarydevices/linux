@@ -19,4 +19,8 @@ config SOC_IMX8M
 	  support, it will provide the SoC info like SoC family,
 	  ID and revision etc.
 
+config IMX8M_BUSFREQ
+	bool "i.MX8M busfreq"
+	depends on SOC_IMX8M
+
 endmenu
