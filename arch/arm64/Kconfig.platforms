@@ -345,6 +345,9 @@ config ARCH_FSL_IMX8QXP
 config HAVE_IMX_SRC
 	bool
 
+config HAVE_IMX_BUSFREQ
+	bool
+
 config ARCH_FSL_IMX8MQ
 	bool "Freescale i.MX8MQ SOC"
 	select SERIAL_IMX
@@ -354,6 +357,7 @@ config ARCH_FSL_IMX8MQ
 	select HAVE_IMX8_SOC
 	select HAVE_IMX_SRC
 	select HAVE_IMX_GPC_PSCI
+	select HAVE_IMX_BUSFREQ
 	select HAVE_IMX_MU
 	select HAVE_IMX_RPMSG
 	select PM
@@ -371,6 +375,7 @@ config ARCH_FSL_IMX8MM
 	select HAVE_IMX8_SOC
 	select HAVE_IMX_SRC
 	select HAVE_IMX_GPC_PSCI
+	select HAVE_IMX_BUSFREQ
 	select HAVE_IMX_MU
 	select HAVE_IMX_RPMSG
 	select PM
