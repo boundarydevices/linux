@@ -7,5 +7,6 @@ obj-$(CONFIG_IMX_GPCV2_PM_DOMAINS) += gpcv2.o
 obj-$(CONFIG_SOC_IMX8M) += soc-imx8m.o
 obj-$(CONFIG_SOC_IMX8M) += imx8m-blk-ctrl.o
 obj-$(CONFIG_SOC_IMX8M) += imx8mp-blk-ctrl.o
+obj-$(CONFIG_IMX8M_BUSFREQ) += busfreq-imx8mq.o
 obj-$(CONFIG_SOC_IMX9) += imx93-src.o imx93-pd.o
 obj-$(CONFIG_SOC_IMX9) += imx93-blk-ctrl.o
