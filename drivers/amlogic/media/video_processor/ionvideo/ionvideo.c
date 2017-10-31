@@ -386,17 +386,20 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 		return;
 	}
 	mutex_lock(&dev->mutex_input);
-	if (v4l2q_empty(&dev->input_queue)) {
+	buf = v4l2q_peek(&dev->input_queue);
+	if (buf == NULL) {
 		dprintk(dev, 3, "No active queue to serve\n");
 		mutex_unlock(&dev->mutex_input);
 		schedule_timeout_interruptible(msecs_to_jiffies(20));
 		return;
 	}
-	buf = v4l2q_pop(&dev->input_queue);
 	mutex_unlock(&dev->mutex_input);
 	/* Fill buffer */
 	if (ionvideo_fillbuff(dev, buf))
 		return;
+	mutex_lock(&dev->mutex_input);
+	buf = v4l2q_pop(&dev->input_queue);
+	mutex_unlock(&dev->mutex_input);
 	dev->vf_wait_cnt = 0;
 
 	mutex_lock(&dev->mutex_output);
