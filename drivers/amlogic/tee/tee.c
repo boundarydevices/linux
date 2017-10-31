@@ -146,6 +146,7 @@ bool tee_enabled(void)
 {
 	struct arm_smccc_res res;
 
+	return false; /*disable tee load temporary*/
 	arm_smccc_smc(TEE_SMC_CALLS_UID, 0, 0, 0, 0, 0, 0, 0, &res);
 
 	if (res.a0 == TEE_MSG_UID_0 && res.a1 == TEE_MSG_UID_1 &&
