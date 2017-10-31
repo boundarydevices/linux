@@ -453,6 +453,9 @@ struct userdata_poc_info_t {
 #define AMSTREAM_SET_EOS 0x175
 #define AMSTREAM_SET_RECEIVE_ID 0x176
 #define AMSTREAM_SET_IS_RESET 0x177
+#define AMSTREAM_SET_NO_POWERDOWN   0x178
+#define AMSTREAM_SET_DV_META_WITH_EL 0x179
+
 
 /*  video set ex cmd */
 #define AMSTREAM_SET_EX_VIDEO_AXIS 0x260
