@@ -202,8 +202,6 @@ static ssize_t blank_write_file(struct file *file, const char __user *userbuf,
 		return -EFAULT;
 	buf[count] = 0;
 	ret = kstrtoint(buf, 0, &osd_enable[osd_id]);
-	if (ret <= 0)
-		return -EFAULT;
 	osd_enable_hw(osd_id, (osd_enable[osd_id] != 0) ? 0 : 1);
 	return count;
 }
