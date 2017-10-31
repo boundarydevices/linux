@@ -173,7 +173,6 @@ static void hdmitx_late_resume(struct early_suspend *h)
 	const struct vinfo_s *info = hdmi_get_current_vinfo();
 	struct hdmitx_dev *phdmi = (struct hdmitx_dev *)h->param;
 
-	hdcp_tst_sig = 0;
 	if (info && (strncmp(info->name, "panel", 5) == 0 ||
 		strncmp(info->name, "null", 4) == 0)) {
 		hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
@@ -1973,6 +1972,11 @@ static ssize_t show_hdcp_clkdis(struct device *dev,
 static ssize_t store_hdcp_pwr(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
+	if (buf[0] == '1') {
+		hdcp_tst_sig = 1;
+		pr_info("set hdcp_pwr 1\n");
+	}
+
 	return count;
 }
 
@@ -1980,6 +1984,12 @@ static ssize_t show_hdcp_pwr(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	int pos = 0;
+
+	if (hdcp_tst_sig == 1) {
+		pos += snprintf(buf + pos, PAGE_SIZE, "%d\n", hdcp_tst_sig);
+		hdcp_tst_sig = 0;
+		pr_info("restore hdcp_pwr 0\n");
+	}
 
 	return pos;
 }
@@ -3317,7 +3327,6 @@ static int amhdmitx_suspend(struct platform_device *pdev,
 
 static int amhdmitx_resume(struct platform_device *pdev)
 {
-	hdcp_tst_sig = 0;
 	pr_info("amhdmitx: resume module %d\n", __LINE__);
 	return 0;
 }
