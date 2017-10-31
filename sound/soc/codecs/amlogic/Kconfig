@@ -122,5 +122,16 @@ config AMLOGIC_SND_SOC_TAS575X
 	help
 		Enable Support for Texas INstruments TAS575X CODEC.
 		Select this if your TAS575X is connected via an I2C bus.
-
+		Enable Support for Texas INstruments TAS575X CODEC.
+		Select this if your TAS575X is connected via an I2C bus.
+config AMLOGIC_SND_SOC_ES7243
+	bool "EVEREST SEMI ES7243"
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable Support for EVEREST SEMI ES7243 CODEC.
+		Select this if your ES7243 is connected via an I2C bus.
+		Enable Support for EVEREST SEMI ES7243 CODEC.
+		Select this if your ES7243 is connected via an I2C bus.
 #endif #AMLOGIC_SND_SOC_CODECS

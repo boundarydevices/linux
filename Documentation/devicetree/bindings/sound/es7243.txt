@@ -1,0 +1,36 @@
+ALSA SoC ES7243 adc driver
+
+The ES7243 serial control bus communicates through the I2C protocol only. The
+serial bus is also used for periodic codec fault checking/reporting during
+audio playback. For more product information please see the links below:
+
+Required properties:
+
+- compatible : "MicArray_0";
+- reg : I2C slave address
+
+Example:
+es7243_10: es7243_10@10 {
+	compatible = "MicArray_0";
+	#sound-dai-cells = <0>;
+	reg = <0x10>;
+	status = "okay";
+};
+es7243_12: es7243_12@12 {
+	compatible = "MicArray_1";
+	#sound-dai-cells = <0>;
+	reg = <0x12>;
+	status = "okay";
+};
+es7243_13: es7243_13@13 {
+	compatible = "MicArray_2";
+	#sound-dai-cells = <0>;
+	reg = <0x13>;
+	status = "okay";
+};
+es7243_11: es7243_11@11 {
+	compatible = "MicArray_3";
+	#sound-dai-cells = <0>;
+	reg = <0x11>;
+	status = "okay";
+};

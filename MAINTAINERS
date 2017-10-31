@@ -14133,3 +14133,9 @@ F: arch/arm64/boot/dts/amlogic/gxl_p241_1g.dts
 AMLOGIC ADD P230 BUILDROOT DTS
 M: liangzhuo Xie <liangzhuo.xie@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p230_2g_buildroot.dts
+
+AMLOGIC sound codec
+M: Peipeng Zhao <peipeng.zhao@amlogic.com>
+F: sound/soc/codec/amlogic/es7243.c
+F: sound/soc/codec/amlogic/es7243.h
+F: Documentation/devicetree/bindings/sound/es7243.txt
