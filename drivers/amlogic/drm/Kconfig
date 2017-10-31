@@ -20,7 +20,7 @@ config DRM_MESON_BYPASS_MODE
 config DRM_MESON_USE_ION
 	bool "gem use ion to alloc/free graphic buffer."
 	default y
-	depends on DRM_MESON
+	depends on DRM_MESON && DRM_MESON_BYPASS_MODE
 	help
 		MESON DRM use CMA HELPER to manage framebuffer.
 		It need reserve memory in CMA pool.
@@ -32,5 +32,6 @@ config DRM_MESON_USE_ION
 config DRM_MESON_EMULATE_FBDEV
 	bool "emulate framebuffer dev by drm."
 	default n
+	depends on DRM_MESON && DRM_MESON_BYPASS_MODE && DRM_MESON_USE_ION
 	help
 		Emulate framebuffer device for device which need use fbdev api.

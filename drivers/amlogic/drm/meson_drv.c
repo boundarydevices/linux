@@ -146,11 +146,8 @@ static const struct file_operations fops = {
 };
 
 static struct drm_driver meson_driver = {
-
-	.driver_features	= DRIVER_HAVE_IRQ | DRIVER_GEM |
-				  DRIVER_MODESET | DRIVER_PRIME |
-				  DRIVER_ATOMIC | DRIVER_IRQ_SHARED,
-
+	/*driver_features setting move to probe functions*/
+	.driver_features	= 0,
 	/* Vblank */
 	.enable_vblank		= meson_enable_vblank,
 	.disable_vblank		= meson_disable_vblank,
@@ -170,7 +167,6 @@ static struct drm_driver meson_driver = {
 	.dumb_create			= am_meson_gem_dumb_create,
 	.dumb_destroy		= am_meson_gem_dumb_destroy,
 	.dumb_map_offset		= am_meson_gem_dumb_map_offset,
-
 	.gem_free_object_unlocked	= am_meson_gem_object_free,
 	.gem_vm_ops			= &drm_gem_cma_vm_ops,
 #else
@@ -226,23 +222,111 @@ static struct regmap_config meson_regmap_config = {
 };
 #endif
 
-static int meson_drv_probe(struct platform_device *pdev)
+static bool meson_drv_use_osd(void)
+{
+	struct device_node *node;
+	const  char *str;
+	int ret;
+
+	node = of_find_node_by_path("/meson-fb");
+	if (node) {
+		ret = of_property_read_string(node, "status", &str);
+		if (ret) {
+			DRM_INFO("get 'status' failed:%d\n", ret);
+			return false;
+		}
+
+		if (strcmp(str, "okay") && strcmp(str, "ok")) {
+			DRM_INFO("device %s status is %s\n",
+				node->name, str);
+		} else {
+			DRM_INFO("device %s status is %s\n",
+				node->name, str);
+			return true;
+		}
+	}
+	return false;
+}
+
+static int meson_drv_probe_prune(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct meson_drm *priv;
 	struct drm_device *drm;
 	int ret;
 
+	/*driver_features reset to DRIVER_GEM | DRIVER_PRIME, for prune drm*/
+	meson_driver.driver_features = DRIVER_GEM | DRIVER_PRIME;
+
+	drm = drm_dev_alloc(&meson_driver, dev);
+	if (IS_ERR(drm))
+		return PTR_ERR(drm);
+
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv) {
+		ret = -ENOMEM;
+		goto free_drm;
+	}
+	drm->dev_private = priv;
+	priv->drm = drm;
+	priv->dev = dev;
+
+#ifdef CONFIG_DRM_MESON_USE_ION
+	am_meson_gem_create(priv);
+#endif
+
+	platform_set_drvdata(pdev, priv);
+
+	ret = drm_dev_register(drm, 0);
+	if (ret)
+		goto free_drm;
+
+	return 0;
+
+free_drm:
+	DRM_DEBUG("free-drm");
+	drm_dev_unref(drm);
+	return ret;
+}
+
+static int meson_drv_remove_prune(struct platform_device *pdev)
+{
+	struct drm_device *drm = dev_get_drvdata(&pdev->dev);
+
+	drm_dev_unregister(drm);
+#ifdef CONFIG_DRM_MESON_USE_ION
+	am_meson_gem_cleanup(drm->dev_private);
+#endif
+	drm_dev_unref(drm);
+
+	return 0;
+}
+
+static int meson_drv_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct meson_drm *priv;
+	struct drm_device *drm;
+	int ret;
 #ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	struct resource *res;
 	void __iomem *regs;
+#endif
 
+	if (meson_drv_use_osd())
+		return meson_drv_probe_prune(pdev);
+
+#ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	/* Checks if an output connector is available */
 	if (!meson_vpu_has_available_connectors(dev)) {
 		dev_err(dev, "No output connector available\n");
 		return -ENODEV;
 	}
 #endif
+
+	meson_driver.driver_features = DRIVER_HAVE_IRQ | DRIVER_GEM |
+		DRIVER_MODESET | DRIVER_PRIME |
+		DRIVER_ATOMIC | DRIVER_IRQ_SHARED;
 
 	drm = drm_dev_alloc(&meson_driver, dev);
 	if (IS_ERR(drm))
@@ -360,7 +444,9 @@ free_drm:
 static int meson_drv_remove(struct platform_device *pdev)
 {
 	struct drm_device *drm = dev_get_drvdata(&pdev->dev);
-	struct meson_drm *priv = drm->dev_private;
+
+	if (meson_drv_use_osd())
+		return meson_drv_remove_prune(pdev);
 
 #ifdef CONFIG_DRM_MESON_BYPASS_MODE
 	osd_drm_debugfs_exit();
@@ -373,7 +459,7 @@ static int meson_drv_remove(struct platform_device *pdev)
 	drm_mode_config_cleanup(drm);
 	drm_vblank_cleanup(drm);
 #ifdef CONFIG_DRM_MESON_USE_ION
-	am_meson_gem_cleanup(priv);
+	am_meson_gem_cleanup(drm->dev_private);
 #endif
 	drm_dev_unref(drm);
 
