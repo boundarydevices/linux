@@ -192,6 +192,12 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 			if (aml_chip->plane_num == 2) {
 				chip->select_chip(mtd, i);
 				aml_chip->aml_nand_wait_devready(aml_chip, i);
+				if (aml_nand_get_fbb_issue()) {
+					chip->cmd_ctrl(mtd,
+						NAND_CMD_SEQIN, NAND_CTRL_CLE);
+					chip->cmd_ctrl(mtd,
+						0, NAND_CTRL_ALE);
+				}
 				aml_chip->aml_nand_command(aml_chip,
 					NAND_CMD_READ0,
 					0x00, aml_chip->page_addr, i);
@@ -232,6 +238,12 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 				chip->select_chip(mtd, i);
 				/* nand_get_chip(); */
 				/*aml_chip->aml_nand_select_chip(aml_chip, i);*/
+				if (aml_nand_get_fbb_issue()) {
+					chip->cmd_ctrl(mtd,
+						NAND_CMD_SEQIN, NAND_CTRL_CLE);
+					chip->cmd_ctrl(mtd,
+						0, NAND_CTRL_ALE);
+				}
 				aml_chip->aml_nand_command(aml_chip,
 					NAND_CMD_READ0, 0x00,
 					aml_chip->page_addr, i);

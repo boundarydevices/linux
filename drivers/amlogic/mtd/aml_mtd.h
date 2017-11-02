@@ -878,5 +878,9 @@ extern struct aml_nand_flash_dev aml_nand_flash_ids[];
 void aml_nand_new_nand_param_init(struct mtd_info *mtd,
 	struct aml_nand_flash_dev *type);
 
+int aml_nand_get_fbb_issue(void);
+
+void aml_nand_check_fbb_issue(u8 *dev_id);
+
 #endif
 

@@ -17,6 +17,7 @@
 
 #include "aml_mtd.h"
 
+int nand_fbb_issue_flag;
 struct aml_nand_flash_dev aml_nand_flash_ids[] = {
 	{"A revision NAND 2GiB H27UAG8T2A",
 		{NAND_MFR_HYNIX, 0xd5, 0x94, 0x25, 0x44, 0x41},
@@ -1041,6 +1042,21 @@ struct aml_nand_flash_dev aml_nand_flash_ids[] = {
 	{NULL,}
 };
 
+int aml_nand_get_fbb_issue(void)
+{
+	return nand_fbb_issue_flag;
+}
+
+void aml_nand_check_fbb_issue(u8 *dev_id)
+{
+	u8 samsung_nand_id[MAX_ID_LEN] = {
+	NAND_MFR_SAMSUNG, 0xdc, 0x10, 0x95, 0x56};
+
+	if (!strncmp((char *)samsung_nand_id, (char *)dev_id,
+		     strlen((const char *)samsung_nand_id)))
+		nand_fbb_issue_flag = 1;
+}
+
 /* ******************** */
 #ifdef CONFIG_PARAMETER_PAGE
 struct parameter_page para_page;
@@ -1241,6 +1257,7 @@ static struct aml_nand_flash_dev *aml_nand_get_flash_type(struct mtd_info *mtd,
 		if (!type)
 			return ERR_PTR(-ENODEV);
 	}
+	aml_nand_check_fbb_issue(dev_id);
 
 	if (type->new_type) {
 		pr_info("new nand support!!!\n");
