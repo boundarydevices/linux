@@ -536,13 +536,15 @@ void osd_ext_wait_vsync_hw(void)
 {
 	vsync_hit = false;
 
-	wait_event_interruptible_timeout(osd_ext_vsync_wq, vsync_hit, HZ);
+	wait_event_interruptible_timeout(osd_ext_vsync_wq,
+		vsync_hit, msecs_to_jiffies(1000));
 }
 
 s32 osd_ext_wait_vsync_event(void)
 {
 	vsync_hit = false;
-	wait_event_interruptible_timeout(osd_ext_vsync_wq, vsync_hit, 1);
+	wait_event_interruptible_timeout(osd_ext_vsync_wq,
+		vsync_hit, msecs_to_jiffies(1000));
 	return 0;
 }
 

@@ -319,7 +319,7 @@ static int ge2d_process_work_queue(struct ge2d_context_s *wq)
 			timeout = wait_event_interruptible_timeout(
 					ge2d_manager.event.cmd_complete,
 					!ge2d_is_busy(),
-					100);
+					msecs_to_jiffies(1000));
 			if (timeout == 0) {
 				ge2d_log_err("ge2d timeout!!!\n");
 				ge2d_dump_cmd(&pitem->cmd);

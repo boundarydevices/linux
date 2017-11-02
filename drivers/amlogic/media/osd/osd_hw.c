@@ -957,7 +957,7 @@ void osd_wait_vsync_hw(void)
 		if (pxp_mode)
 			timeout = msecs_to_jiffies(50);
 		else
-			timeout = HZ;
+		timeout = msecs_to_jiffies(1000);
 		wait_event_interruptible_timeout(
 				osd_vsync_wq, vsync_hit, timeout);
 	}
@@ -965,9 +965,12 @@ void osd_wait_vsync_hw(void)
 
 s32 osd_wait_vsync_event(void)
 {
+	unsigned long timeout;
+
 	vsync_hit = false;
-	/* waiting for 10ms. */
-	wait_event_interruptible_timeout(osd_vsync_wq, vsync_hit, 1);
+	/* waiting for 1000ms. */
+	timeout = msecs_to_jiffies(1000);
+	wait_event_interruptible_timeout(osd_vsync_wq, vsync_hit, timeout);
 
 	return 0;
 }
