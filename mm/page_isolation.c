@@ -242,7 +242,7 @@ __test_page_isolated_in_pageblock(unsigned long pfn, unsigned long end_pfn,
 			pfn++;
 	#ifdef CONFIG_AMLOGIC_MODIFY
 		else { /* for debug */
-			pr_err("%s, pfn:%lx, flag:%lx, map_cnt:%d\n",
+			pr_debug("%s, pfn:%lx, flag:%lx, map_cnt:%d\n",
 				__func__, pfn, page->flags,
 				atomic_read(&page->_mapcount));
 			break;
