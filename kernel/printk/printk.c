@@ -1755,6 +1755,8 @@ static size_t cont_print_text(char *text, size_t size)
 	return textlen;
 }
 
+#define AML_LOSE_CONTLINE_DEF 1
+
 static size_t log_output(int facility, int level, enum log_flags lflags, const char *dict, size_t dictlen, char *text, size_t text_len)
 {
 	/*
@@ -1762,7 +1764,11 @@ static size_t log_output(int facility, int level, enum log_flags lflags, const c
 	 * write from the same process, try to add it to the buffer.
 	 */
 	if (cont.len) {
+#if (AML_LOSE_CONTLINE_DEF == 1)
+		if (cont.owner == current && !(lflags & LOG_PREFIX)) {
+#else
 		if (cont.owner == current && (lflags & LOG_CONT)) {
+#endif
 			if (cont_add(facility, level, lflags, text, text_len))
 				return text_len;
 		}
