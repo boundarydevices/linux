@@ -895,7 +895,15 @@ void safe_disble_videolayer(void)
 /*********************************************************/
 static inline struct vframe_s *video_vf_peek(void)
 {
-	return vf_peek(RECEIVER_NAME);
+	struct vframe_s *vf = vf_peek(RECEIVER_NAME);
+
+	if (vf && vf->disp_pts && vf->disp_pts_us64) {
+		vf->pts = vf->disp_pts;
+		vf->pts_us64 = vf->disp_pts_us64;
+		vf->disp_pts = 0;
+		vf->disp_pts_us64 = 0;
+	}
+	return vf;
 }
 
 static inline struct vframe_s *video_vf_get(void)
@@ -905,6 +913,12 @@ static inline struct vframe_s *video_vf_get(void)
 	vf = vf_get(RECEIVER_NAME);
 
 	if (vf) {
+		if (vf->disp_pts && vf->disp_pts_us64) {
+			vf->pts = vf->disp_pts;
+			vf->pts_us64 = vf->disp_pts_us64;
+			vf->disp_pts = 0;
+			vf->disp_pts_us64 = 0;
+		}
 		video_notify_flag |= VIDEO_NOTIFY_PROVIDER_GET;
 		atomic_set(&vf->use_cnt, 1);
 		/*always to 1,for first get from vfm provider */
