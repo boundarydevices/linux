@@ -66,6 +66,7 @@
 
 &gpu{
 	/*gpu max freq is 750M*/
+	def_clk = <1>;
 	tbl = <&clk285_cfg &clk666_cfg &clk750_cfg &clk750_cfg>;
 
 	clk285_cfg:clk285_cfg {
