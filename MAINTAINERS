@@ -14125,3 +14125,7 @@ AMLOGIC ADD PARTITION OLD DTS
 M: Xindong Xu <xindong.xu@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/partition_mbox_old.dtsi
 F: arch/arm64/boot/dts/amlogic/partition_tv_old.dtsi
+
+AMLOGIC ADD P241 DTS
+M: Xindong Xu <xindong.xu@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p241_1g.dts
