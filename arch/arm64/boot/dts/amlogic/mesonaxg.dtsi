@@ -720,20 +720,22 @@
 		pinctrl-0=<&i2c_slave_pin>;
 	};
 
-	aml_aes {
-		compatible = "amlogic,aes_dma";
-		dev_name = "aml_aes_dma";
-		status = "okay";
-		interrupts = <0 180 1 0 181 1>;
+	aml_dma {
+		compatible = "amlogic,aml_txlx_dma";
 		reg = <0x0 0xff63e000 0x0 0x48>;
-	};
+		interrupts = <0 180 1>;
 
-	aml_sha {
-		compatible = "amlogic,sha_dma";
-		dev_name = "aml_sha_dma";
-		status = "okay";
-		interrupts = <0 180 1 0 181 1>;
-		reg = <0x0 0xff63e000 0x0 0x48>;
+		aml_aes {
+			compatible = "amlogic,aes_dma";
+			dev_name = "aml_aes_dma";
+			status = "okay";
+		};
+
+		aml_sha {
+			compatible = "amlogic,sha_dma";
+			dev_name = "aml_sha_dma";
+			status = "okay";
+		};
 	};
 
 	saradc:saradc {

@@ -60,22 +60,29 @@ aml_sha{
 };
 
 * New DMA for GXL and beyond
+* Dma engine for crypto operations
+Required properties:
+- compatible : Should be "amlogic,aml_gxl_dma" or "amlogic,aml_txlx_dma".
+- reg:  Should contain the base address of regs
+- interrupts: Should contain the IRQ line for DMA.
+
+Example:
+aml_dma {
+	compatible = "amlogic,aml_gxl_dma";
+	reg = <0x0 0xff63e000 0x0 0x48>;
+	interrupts = <0 180 1>;
+};
+
 * Advanced Encryption Standard (AES)
 
 Required properties:
 - compatible : Should be "amlogic,aes".
 - dev_name : Should be "aml_aes"
-- interrupts: Should contain the IRQ line for the AES.
-- resets: Should contain the clock to enable the module
-- reg:  Should contain the base address of regs
 
 Example:
 aml_aes{
 	compatible = "amlogic,aes_dma";
 	dev_name = "aml_aes_dma";
-	interrupts = <0 188 1
-		0 189 1>;
-	reg = <0x0 0xc883e000 0x0 0x28>;
 };
 
 
@@ -84,33 +91,21 @@ aml_aes{
 Required properties:
 - compatible : Should be "amlogic,des,tdes".
 - dev_name : Should be "aml_aes"
-- interrupts: Should contain the IRQ line for the TDES.
-- resets: Should contain the clock to enable the module
-- reg:  Should contain the base address of regs
 
 Example:
 aml_tdes{
 	compatible = "amlogic,des_dma,tdes_dma";
 	dev_name = "aml_tdes_dma";
-	interrupts = <0 188 1
-		0 189 1>;
-	reg = <0x0 0xc883e000 0x0 0x28>;
 };
 * Secure Hash Algorithm (SHA1/SHA224/SHA256/HMAC)
 
 Required properties:
 - compatible : Should be "amlogic,sha".
 - dev_name : Should be "aml_sha"
-- interrupts: Should contain the IRQ line for the SHA.
-- resets: Should contain the clock to enable the module
-- reg:  Should contain the base address of regs
 
 Example:
 aml_sha{
 	compatible = "amlogic,sha_dma";
 	dev_name = "aml_sha_dma";
-	interrupts = <0 188 1
-		0 189 1>;
-	reg = <0x0 0xc883e000 0x0 0x28>;
 };
 

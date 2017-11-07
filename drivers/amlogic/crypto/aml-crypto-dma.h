@@ -19,8 +19,6 @@
 #define _AML_CRYPTO_H_
 #include <linux/io.h>
 
-#define AML_CRYPTO_DEBUG    0
-
  /* Reserved 4096 bytes and table is 12 bytes each */
 #define MAX_NUM_TABLES 341
 
@@ -90,12 +88,6 @@ enum TXLX_DMA_REG_OFFSETS {
 #define MODE_TDES_2K 0xe
 #define MODE_TDES_3K 0xf
 
-/* Thread 2, 3 are for secure threads */
-#define AES_THREAD_INDEX 0
-#define TDES_THREAD_INDEX 0
-#define SHA_THREAD_INDEX 0
-#define HMAC_THREAD_INDEX 0
-
 struct dma_dsc {
 	union {
 		uint32_t d32;
@@ -118,14 +110,22 @@ struct dma_dsc {
 	uint32_t tgt_addr;
 };
 
-extern void __iomem *cryptoreg_offset;
-extern u32 secure_cryptoreg_offset;
+struct aml_dma_dev {
+	spinlock_t dma_lock;
+	uint32_t thread;
+	uint32_t status;
+	int	irq;
+	uint8_t dma_busy;
+};
 
 u32 swap_ulong32(u32 val);
 void aml_write_crypto_reg(u32 addr, u32 data);
 u32 aml_read_crypto_reg(u32 addr);
-void aml_dma_debug(struct dma_dsc *dsc, u32 nents, const char *msg);
+void aml_dma_debug(struct dma_dsc *dsc, u32 nents, const char *msg,
+		u32 thread, u32 status);
 
 u32 get_dma_t0_offset(void);
 u32 get_dma_sts0_offset(void);
+
+extern void __iomem *cryptoreg;
 #endif

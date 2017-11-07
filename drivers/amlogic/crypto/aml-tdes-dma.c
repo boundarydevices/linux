@@ -40,7 +40,6 @@
 #include <crypto/hash.h>
 #include <crypto/internal/hash.h>
 #include <linux/amlogic/iomap.h>
-#include <linux/amlogic/cpu_version.h>
 #include "aml-crypto-dma.h"
 
 /* TDES flags */
@@ -54,10 +53,6 @@
 #define TDES_FLAGS_BUSY         BIT(11)
 
 #define AML_TDES_QUEUE_LENGTH	50
-
-#define DMA_THREAD_REG (get_dma_t0_offset() + TDES_THREAD_INDEX)
-#define DMA_STATUS_REG (get_dma_sts0_offset() + TDES_THREAD_INDEX)
-u8 map_in_tdes_dma;
 
 struct aml_tdes_dev;
 
@@ -84,7 +79,9 @@ struct aml_tdes_dev {
 	unsigned long		flags;
 	int	err;
 
-	spinlock_t		lock;
+	struct aml_dma_dev      *dma;
+	uint32_t thread;
+	uint32_t status;
 	struct crypto_queue	queue;
 
 	struct tasklet_struct	done_task;
@@ -123,7 +120,7 @@ static struct aml_tdes_drv aml_tdes = {
 	.lock = __SPIN_LOCK_UNLOCKED(aml_tdes.lock),
 };
 
-static void set_tdes_key_iv(struct aml_tdes_dev *dd,
+static int set_tdes_key_iv(struct aml_tdes_dev *dd,
 		u32 *key, u32 keylen, u32 *iv)
 {
 	struct dma_dsc *dsc = dd->descriptor;
@@ -131,6 +128,7 @@ static void set_tdes_key_iv(struct aml_tdes_dev *dd,
 	uint32_t *piv = key_iv + 8;
 	uint32_t len = keylen;
 	dma_addr_t dma_addr_key;
+	uint32_t i = 0;
 
 	memset(key_iv, 0, sizeof(key_iv));
 	memcpy(key_iv, key, keylen);
@@ -139,43 +137,42 @@ static void set_tdes_key_iv(struct aml_tdes_dev *dd,
 		len = 48; /* full key storage */
 	}
 
+	if (!len)
+		return -EPERM;
+
 	dma_addr_key = dma_map_single(dd->dev, key_iv,
 			sizeof(key_iv), DMA_TO_DEVICE);
 
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG)) {
-		uint32_t i = 0;
-		while (len > 0) {
-			dsc[i].src_addr = (uint32_t)dma_addr_key + i * 16;
-			dsc[i].tgt_addr = i * 16;
-			dsc[i].dsc_cfg.d32 = 0;
-			dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
-			dsc[i].dsc_cfg.b.mode = MODE_KEY;
-			dsc[i].dsc_cfg.b.eoc = 0;
-			dsc[i].dsc_cfg.b.owner = 1;
-			i++;
-			len -= 16;
-		}
-		dsc[i - 1].dsc_cfg.b.eoc = 1;
-	} else {
-		dsc->src_addr = (uintptr_t)dma_addr_key;
-		dsc->tgt_addr = 0;
-		dsc->dsc_cfg.d32 = 0;
-		dsc->dsc_cfg.b.length = len;
-		dsc->dsc_cfg.b.mode = MODE_KEY;
-		dsc->dsc_cfg.b.eoc = 1;
-		dsc->dsc_cfg.b.owner = 1;
+	if (dma_mapping_error(dd->dev, dma_addr_key)) {
+		dev_err(dd->dev, "error mapping dma_addr_key\n");
+		return -EINVAL;
 	}
+
+	while (len > 0) {
+		dsc[i].src_addr = (uint32_t)dma_addr_key + i * 16;
+		dsc[i].tgt_addr = i * 16;
+		dsc[i].dsc_cfg.d32 = 0;
+		dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
+		dsc[i].dsc_cfg.b.mode = MODE_KEY;
+		dsc[i].dsc_cfg.b.eoc = 0;
+		dsc[i].dsc_cfg.b.owner = 1;
+		i++;
+		len -= 16;
+	}
+	dsc[i - 1].dsc_cfg.b.eoc = 1;
 
 	dma_sync_single_for_device(dd->dev, dd->dma_descript_tab,
 			PAGE_SIZE, DMA_TO_DEVICE);
-	aml_write_crypto_reg(DMA_THREAD_REG,
+	aml_write_crypto_reg(dd->thread,
 			(uintptr_t) dd->dma_descript_tab | 2);
-	aml_dma_debug(dsc, 1, __func__);
-	while (aml_read_crypto_reg(DMA_STATUS_REG) == 0)
+	aml_dma_debug(dsc, i, __func__, dd->thread, dd->status);
+	while (aml_read_crypto_reg(dd->status) == 0)
 		;
-	aml_write_crypto_reg(DMA_STATUS_REG, 0xf);
+	aml_write_crypto_reg(dd->status, 0xf);
 	dma_unmap_single(dd->dev, dma_addr_key,
 			sizeof(key_iv), DMA_TO_DEVICE);
+
+	return 0;
 }
 
 
@@ -294,6 +291,7 @@ static void aml_tdes_finish_req(struct aml_tdes_dev *dd, int err)
 	struct ablkcipher_request *req = dd->req;
 
 	dd->flags &= ~TDES_FLAGS_BUSY;
+	dd->dma->dma_busy = 0;
 	req->base.complete(&req->base, err);
 }
 
@@ -322,8 +320,8 @@ static int aml_tdes_crypt_dma(struct aml_tdes_dev *dd, struct dma_dsc *dsc,
 	dma_sync_single_for_device(dd->dev, dd->dma_descript_tab,
 			PAGE_SIZE, DMA_TO_DEVICE);
 
-	aml_dma_debug(dsc, nents, __func__);
-	aml_write_crypto_reg(DMA_THREAD_REG,
+	aml_dma_debug(dsc, nents, __func__, dd->thread, dd->status);
+	aml_write_crypto_reg(dd->thread,
 			(uintptr_t) dd->dma_descript_tab | 2);
 	return 0;
 }
@@ -388,10 +386,10 @@ static int aml_tdes_write_ctrl(struct aml_tdes_dev *dd)
 		return err;
 
 	if (dd->flags & TDES_FLAGS_CBC)
-		set_tdes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
+		err = set_tdes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
 				dd->req->info);
 	else
-		set_tdes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
+		err = set_tdes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
 				NULL);
 
 	return err;
@@ -406,19 +404,21 @@ static int aml_tdes_handle_queue(struct aml_tdes_dev *dd,
 	unsigned long flags;
 	int err, ret = 0;
 
-	spin_lock_irqsave(&dd->lock, flags);
+	spin_lock_irqsave(&dd->dma->dma_lock, flags);
 	if (req)
 		ret = ablkcipher_enqueue_request(&dd->queue, req);
 
-	if (dd->flags & TDES_FLAGS_BUSY) {
-		spin_unlock_irqrestore(&dd->lock, flags);
+	if (dd->flags & TDES_FLAGS_BUSY || dd->dma->dma_busy) {
+		spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 		return ret;
 	}
 	backlog = crypto_get_backlog(&dd->queue);
 	async_req = crypto_dequeue_request(&dd->queue);
-	if (async_req)
+	if (async_req) {
 		dd->flags |= TDES_FLAGS_BUSY;
-	spin_unlock_irqrestore(&dd->lock, flags);
+		dd->dma->dma_busy = 1;
+	}
+	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 
 	if (!async_req)
 		return ret;
@@ -662,7 +662,7 @@ static void aml_tdes_cra_exit(struct crypto_tfm *tfm)
 {
 }
 
-static struct crypto_alg tdes_algs[] = {
+static struct crypto_alg des_algs[] = {
 	{
 		.cra_name        = "ecb(des)",
 		.cra_driver_name = "ecb-des-aml",
@@ -686,7 +686,7 @@ static struct crypto_alg tdes_algs[] = {
 	{
 		.cra_name        =  "cbc(des)",
 		.cra_driver_name =  "cbc-des-aml",
-		.cra_priority  =  300,
+		.cra_priority  =  100,
 		.cra_flags     =  CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize =  DES_BLOCK_SIZE,
 		.cra_ctxsize   =  sizeof(struct aml_tdes_ctx),
@@ -704,10 +704,13 @@ static struct crypto_alg tdes_algs[] = {
 			.decrypt	=    aml_tdes_cbc_decrypt,
 		}
 	},
+};
+
+static struct crypto_alg tdes_algs[] = {
 	{
 		.cra_name        = "ecb(des3_ede)",
 		.cra_driver_name = "ecb-tdes-aml",
-		.cra_priority   = 300,
+		.cra_priority   = 100,
 		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize  = DES_BLOCK_SIZE,
 		.cra_ctxsize    = sizeof(struct aml_tdes_ctx),
@@ -727,7 +730,7 @@ static struct crypto_alg tdes_algs[] = {
 	{
 		.cra_name        = "cbc(des3_ede)",
 		.cra_driver_name = "cbc-tdes-aml",
-		.cra_priority  = 300,
+		.cra_priority  = 100,
 		.cra_flags     = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = DES_BLOCK_SIZE,
 		.cra_ctxsize   = sizeof(struct aml_tdes_ctx),
@@ -762,7 +765,7 @@ static void aml_tdes_done_task(unsigned long data)
 	err = aml_tdes_crypt_dma_stop(dd);
 
 	aml_dma_debug(dd->descriptor, dd->fast_nents ?
-			dd->fast_nents : 1, __func__);
+			dd->fast_nents : 1, __func__, dd->thread, dd->status);
 	err = dd->err ? : err;
 
 	if (dd->total && !err) {
@@ -790,13 +793,13 @@ static void aml_tdes_done_task(unsigned long data)
 static irqreturn_t aml_tdes_irq(int irq, void *dev_id)
 {
 	struct aml_tdes_dev *tdes_dd = dev_id;
-	uint8_t status = aml_read_crypto_reg(DMA_STATUS_REG);
+	uint8_t status = aml_read_crypto_reg(tdes_dd->status);
 
 	if (status) {
 		if (status == 0x1)
 			pr_err("irq overwrite\n");
 		if (TDES_FLAGS_DMA & tdes_dd->flags) {
-			aml_write_crypto_reg(DMA_STATUS_REG, 0xf);
+			aml_write_crypto_reg(tdes_dd->status, 0xf);
 			tasklet_schedule(&tdes_dd->done_task);
 			return IRQ_HANDLED;
 		} else {
@@ -811,12 +814,8 @@ static void aml_tdes_unregister_algs(struct aml_tdes_dev *dd)
 {
 	int i = 0;
 
-	/*
-	 * AXG and beyond does not support DES
-	 * and thus we start from 2
-	 */
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG))
-		i = 2;
+	for (; i < ARRAY_SIZE(des_algs); i++)
+		crypto_unregister_alg(&des_algs[i]);
 
 	for (; i < ARRAY_SIZE(tdes_algs); i++)
 		crypto_unregister_alg(&tdes_algs[i]);
@@ -824,17 +823,16 @@ static void aml_tdes_unregister_algs(struct aml_tdes_dev *dd)
 
 static int aml_tdes_register_algs(struct aml_tdes_dev *dd)
 {
-	int err = 0, i = 0, j = 0;
+	int err = 0, i = 0, j = 0, k = 0;
 
-	/*
-	 * AXG and beyond does not support DES
-	 * and thus we start from 2
-	 */
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG))
-		i = 2;
+	for (; i < ARRAY_SIZE(des_algs); i++) {
+		err = crypto_register_alg(&des_algs[i]);
+		if (err)
+			goto err_des_algs;
+	}
 
-	for (; i < ARRAY_SIZE(tdes_algs); i++) {
-		err = crypto_register_alg(&tdes_algs[i]);
+	for (; k < ARRAY_SIZE(tdes_algs); k++) {
+		err = crypto_register_alg(&tdes_algs[k]);
 		if (err)
 			goto err_tdes_algs;
 	}
@@ -842,8 +840,12 @@ static int aml_tdes_register_algs(struct aml_tdes_dev *dd)
 	return 0;
 
 err_tdes_algs:
-	for (j = 0; j < i; j++)
+	for (j = 0; j < k; j++)
 		crypto_unregister_alg(&tdes_algs[j]);
+
+err_des_algs:
+	for (j = 0; j < i; j++)
+		crypto_unregister_alg(&des_algs[j]);
 
 	return err;
 }
@@ -852,8 +854,6 @@ static int aml_tdes_probe(struct platform_device *pdev)
 {
 	struct aml_tdes_dev *tdes_dd;
 	struct device *dev = &pdev->dev;
-	struct resource *res_irq = 0;
-	struct resource *res_base = 0;
 	int err = -EPERM;
 
 	tdes_dd = kzalloc(sizeof(struct aml_tdes_dev), GFP_KERNEL);
@@ -863,22 +863,12 @@ static int aml_tdes_probe(struct platform_device *pdev)
 	}
 
 	tdes_dd->dev = dev;
+	tdes_dd->dma = dev_get_drvdata(dev->parent);
+	tdes_dd->thread = tdes_dd->dma->thread;
+	tdes_dd->status = tdes_dd->dma->status;
+	tdes_dd->irq = tdes_dd->dma->irq;
 
 	platform_set_drvdata(pdev, tdes_dd);
-	res_irq = platform_get_resource(pdev, IORESOURCE_IRQ,
-			TDES_THREAD_INDEX);
-
-	res_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res_base) {
-		dev_err(dev, "error to get normal IORESOURCE_MEM.\n");
-		goto tdes_dd_err;
-	} else {
-		if (!cryptoreg_offset) {
-			cryptoreg_offset = ioremap(res_base->start,
-				resource_size(res_base));
-			map_in_tdes_dma = 1;
-		}
-	}
 
 	INIT_LIST_HEAD(&tdes_dd->list);
 
@@ -888,8 +878,6 @@ static int aml_tdes_probe(struct platform_device *pdev)
 			(unsigned long)tdes_dd);
 
 	crypto_init_queue(&tdes_dd->queue, AML_TDES_QUEUE_LENGTH);
-
-	tdes_dd->irq = res_irq->start;
 	err = request_irq(tdes_dd->irq, aml_tdes_irq, IRQF_SHARED, "aml-tdes",
 			tdes_dd);
 	if (err) {
@@ -926,11 +914,6 @@ err_tdes_buff:
 	free_irq(tdes_dd->irq, tdes_dd);
 tdes_irq_err:
 
-	if (map_in_tdes_dma) {
-		iounmap(cryptoreg_offset);
-		map_in_tdes_dma = 0;
-	}
-
 	tasklet_kill(&tdes_dd->done_task);
 	tasklet_kill(&tdes_dd->queue_task);
 	kfree(tdes_dd);
@@ -956,11 +939,6 @@ static int aml_tdes_remove(struct platform_device *pdev)
 
 	tasklet_kill(&tdes_dd->done_task);
 	tasklet_kill(&tdes_dd->queue_task);
-
-	if (map_in_tdes_dma) {
-		iounmap(cryptoreg_offset);
-		map_in_tdes_dma = 0;
-	}
 
 	if (tdes_dd->irq > 0)
 		free_irq(tdes_dd->irq, tdes_dd);

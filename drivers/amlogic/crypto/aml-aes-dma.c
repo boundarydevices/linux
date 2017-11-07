@@ -40,7 +40,6 @@
 #include <crypto/hash.h>
 #include <crypto/internal/hash.h>
 #include <linux/amlogic/iomap.h>
-#include <linux/amlogic/cpu_version.h>
 #include "aml-crypto-dma.h"
 
 /* AES flags */
@@ -57,10 +56,6 @@
 #define AML_AES_QUEUE_LENGTH	50
 #define AML_AES_DMA_THRESHOLD		16
 
-#define DMA_THREAD_REG (get_dma_t0_offset() + AES_THREAD_INDEX)
-#define DMA_STATUS_REG (get_dma_sts0_offset() + AES_THREAD_INDEX)
-
-u8 map_in_aes_dma;
 struct aml_aes_dev;
 
 struct aml_aes_ctx {
@@ -86,7 +81,9 @@ struct aml_aes_dev {
 	unsigned long		flags;
 	int	err;
 
-	spinlock_t		lock;
+	struct aml_dma_dev      *dma;
+	uint32_t thread;
+	uint32_t status;
 	struct crypto_queue	queue;
 
 	struct tasklet_struct	done_task;
@@ -125,14 +122,15 @@ static struct aml_aes_drv aml_aes = {
 	.lock = __SPIN_LOCK_UNLOCKED(aml_aes.lock),
 };
 
-static void set_aes_key_iv(struct aml_aes_dev *dd, u32 *key,
+static int set_aes_key_iv(struct aml_aes_dev *dd, u32 *key,
 		uint32_t keylen, u32 *iv, uint8_t swap)
 {
 	struct dma_dsc *dsc = dd->descriptor;
 	uint32_t key_iv[12];
 	uint32_t *piv = key_iv + 8;
 	int32_t len = keylen;
-	dma_addr_t dma_addr_key;
+	dma_addr_t dma_addr_key = 0;
+	uint32_t i = 0;
 
 	memset(key_iv, 0, sizeof(key_iv));
 	memcpy(key_iv, key, keylen);
@@ -148,43 +146,42 @@ static void set_aes_key_iv(struct aml_aes_dev *dd, u32 *key,
 		len = 48; /* full key storage */
 	}
 
+	if (!len)
+		return -EPERM;
+
 	dma_addr_key = dma_map_single(dd->dev, key_iv,
 			sizeof(key_iv), DMA_TO_DEVICE);
 
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_AXG)) {
-		uint32_t i = 0;
-		while (len > 0) {
-			dsc[i].src_addr = (uint32_t)dma_addr_key + i * 16;
-			dsc[i].tgt_addr = i * 16;
-			dsc[i].dsc_cfg.d32 = 0;
-			dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
-			dsc[i].dsc_cfg.b.mode = MODE_KEY;
-			dsc[i].dsc_cfg.b.eoc = 0;
-			dsc[i].dsc_cfg.b.owner = 1;
-			i++;
-			len -= 16;
-		}
-		dsc[i - 1].dsc_cfg.b.eoc = 1;
-	} else {
-		dsc->src_addr = (uint32_t)dma_addr_key;
-		dsc->tgt_addr = 0;
-		dsc->dsc_cfg.d32 = 0;
-		dsc->dsc_cfg.b.length = len;
-		dsc->dsc_cfg.b.mode = MODE_KEY;
-		dsc->dsc_cfg.b.eoc = 1;
-		dsc->dsc_cfg.b.owner = 1;
+	if (dma_mapping_error(dd->dev, dma_addr_key)) {
+		dev_err(dd->dev, "error mapping dma_addr_key\n");
+		return -EINVAL;
 	}
+
+	while (len > 0) {
+		dsc[i].src_addr = (uint32_t)dma_addr_key + i * 16;
+		dsc[i].tgt_addr = i * 16;
+		dsc[i].dsc_cfg.d32 = 0;
+		dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
+		dsc[i].dsc_cfg.b.mode = MODE_KEY;
+		dsc[i].dsc_cfg.b.eoc = 0;
+		dsc[i].dsc_cfg.b.owner = 1;
+		i++;
+		len -= 16;
+	}
+	dsc[i - 1].dsc_cfg.b.eoc = 1;
 
 	dma_sync_single_for_device(dd->dev, dd->dma_descript_tab,
 			PAGE_SIZE, DMA_TO_DEVICE);
-	aml_write_crypto_reg(DMA_THREAD_REG,
+	aml_write_crypto_reg(dd->thread,
 			(uintptr_t) dd->dma_descript_tab | 2);
-	aml_dma_debug(dsc, 1, __func__);
-	while (aml_read_crypto_reg(DMA_STATUS_REG) == 0)
+	aml_dma_debug(dsc, i, __func__, dd->thread, dd->status);
+	while (aml_read_crypto_reg(dd->status) == 0)
 		;
-	aml_write_crypto_reg(DMA_STATUS_REG, 0xf);
+	aml_write_crypto_reg(dd->status, 0xf);
 	dma_unmap_single(dd->dev, dma_addr_key,
 			sizeof(key_iv), DMA_TO_DEVICE);
+
+	return 0;
 }
 
 static size_t aml_aes_sg_copy(struct scatterlist **sg, size_t *offset,
@@ -302,6 +299,7 @@ static void aml_aes_finish_req(struct aml_aes_dev *dd, int32_t err)
 	struct ablkcipher_request *req = dd->req;
 
 	dd->flags &= ~AES_FLAGS_BUSY;
+	dd->dma->dma_busy = 0;
 	req->base.complete(&req->base, err);
 }
 
@@ -333,8 +331,8 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 	dma_sync_single_for_device(dd->dev, dd->dma_descript_tab,
 			PAGE_SIZE, DMA_TO_DEVICE);
 
-	aml_dma_debug(dsc, nents, __func__);
-	aml_write_crypto_reg(DMA_THREAD_REG, dd->dma_descript_tab | 2);
+	aml_dma_debug(dsc, nents, __func__, dd->thread, dd->status);
+	aml_write_crypto_reg(dd->thread, dd->dma_descript_tab | 2);
 	return 0;
 }
 
@@ -405,13 +403,14 @@ static int aml_aes_write_ctrl(struct aml_aes_dev *dd)
 		return err;
 
 	if (dd->flags & AES_FLAGS_CBC)
-		set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
+		err = set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
 				dd->req->info, 0);
 	else if  (dd->flags & AES_FLAGS_CTR)
-		set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
+		err = set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
 				dd->req->info, 1);
 	else
-		set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen, NULL, 0);
+		err = set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
+				NULL, 0);
 
 	return err;
 }
@@ -425,19 +424,21 @@ static int aml_aes_handle_queue(struct aml_aes_dev *dd,
 	unsigned long flags;
 	int32_t err, ret = 0;
 
-	spin_lock_irqsave(&dd->lock, flags);
+	spin_lock_irqsave(&dd->dma->dma_lock, flags);
 	if (req)
 		ret = ablkcipher_enqueue_request(&dd->queue, req);
 
-	if (dd->flags & AES_FLAGS_BUSY) {
-		spin_unlock_irqrestore(&dd->lock, flags);
+	if (dd->flags & AES_FLAGS_BUSY || dd->dma->dma_busy) {
+		spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 		return ret;
 	}
 	backlog = crypto_get_backlog(&dd->queue);
 	async_req = crypto_dequeue_request(&dd->queue);
-	if (async_req)
+	if (async_req) {
 		dd->flags |= AES_FLAGS_BUSY;
-	spin_unlock_irqrestore(&dd->lock, flags);
+		dd->dma->dma_busy = 1;
+	}
+	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 
 	if (!async_req)
 		return ret;
@@ -700,7 +701,7 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name         = "cbc(aes)",
 		.cra_driver_name  = "cbc-aes-aml",
-		.cra_priority   = 300,
+		.cra_priority   = 100,
 		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize  = AES_BLOCK_SIZE,
 		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
@@ -721,7 +722,7 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name        = "ctr(aes)",
 		.cra_driver_name = "ctr-aes-aml",
-		.cra_priority    = 300,
+		.cra_priority    = 100,
 		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize  = AES_BLOCK_SIZE,
 		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
@@ -756,7 +757,7 @@ static void aml_aes_done_task(unsigned long data)
 	err = aml_aes_crypt_dma_stop(dd);
 
 	aml_dma_debug(dd->descriptor, dd->fast_nents ?
-			dd->fast_nents : 1, __func__);
+			dd->fast_nents : 1, __func__, dd->thread, dd->status);
 
 	err = dd->err ? : err;
 
@@ -785,13 +786,13 @@ static void aml_aes_done_task(unsigned long data)
 static irqreturn_t aml_aes_irq(int irq, void *dev_id)
 {
 	struct aml_aes_dev *aes_dd = dev_id;
-	uint8_t status = aml_read_crypto_reg(DMA_STATUS_REG);
+	uint8_t status = aml_read_crypto_reg(aes_dd->status);
 
 	if (status) {
 		if (status == 0x1)
 			pr_err("irq overwrite\n");
 		if (AES_FLAGS_DMA & aes_dd->flags) {
-			aml_write_crypto_reg(DMA_STATUS_REG, 0xf);
+			aml_write_crypto_reg(aes_dd->status, 0xf);
 			tasklet_schedule(&aes_dd->done_task);
 			return IRQ_HANDLED;
 		} else {
@@ -833,8 +834,6 @@ static int aml_aes_probe(struct platform_device *pdev)
 {
 	struct aml_aes_dev *aes_dd;
 	struct device *dev = &pdev->dev;
-	struct resource *res_irq = 0;
-	struct resource *res_base = 0;
 	int err = -EPERM;
 
 	aes_dd = kzalloc(sizeof(struct aml_aes_dev), GFP_KERNEL);
@@ -844,19 +843,11 @@ static int aml_aes_probe(struct platform_device *pdev)
 	}
 
 	aes_dd->dev = dev;
+	aes_dd->dma = dev_get_drvdata(dev->parent);
+	aes_dd->thread = aes_dd->dma->thread;
+	aes_dd->status = aes_dd->dma->status;
+	aes_dd->irq = aes_dd->dma->irq;
 	platform_set_drvdata(pdev, aes_dd);
-	res_irq = platform_get_resource(pdev, IORESOURCE_IRQ, AES_THREAD_INDEX);
-	res_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res_base) {
-		dev_err(dev, "error to get normal IORESOURCE_MEM.\n");
-		goto aes_dd_err;
-	} else {
-		if (!cryptoreg_offset) {
-			cryptoreg_offset = ioremap(res_base->start,
-					resource_size(res_base));
-			map_in_aes_dma = 1;
-		}
-	}
 
 	INIT_LIST_HEAD(&aes_dd->list);
 
@@ -866,9 +857,6 @@ static int aml_aes_probe(struct platform_device *pdev)
 			(unsigned long)aes_dd);
 
 	crypto_init_queue(&aes_dd->queue, AML_AES_QUEUE_LENGTH);
-
-	aes_dd->irq = res_irq->start;
-
 	err = request_irq(aes_dd->irq, aml_aes_irq, IRQF_SHARED, "aml-aes",
 			aes_dd);
 	if (err) {
@@ -905,11 +893,6 @@ err_aes_buff:
 	free_irq(aes_dd->irq, aes_dd);
 aes_irq_err:
 
-	if (map_in_aes_dma) {
-		iounmap(cryptoreg_offset);
-		map_in_aes_dma = 0;
-	}
-
 	tasklet_kill(&aes_dd->done_task);
 	tasklet_kill(&aes_dd->queue_task);
 	kfree(aes_dd);
@@ -935,12 +918,6 @@ static int aml_aes_remove(struct platform_device *pdev)
 
 	tasklet_kill(&aes_dd->done_task);
 	tasklet_kill(&aes_dd->queue_task);
-
-	if (map_in_aes_dma) {
-		iounmap(cryptoreg_offset);
-		map_in_aes_dma = 0;
-	}
-
 
 	if (aes_dd->irq > 0)
 		free_irq(aes_dd->irq, aes_dd);

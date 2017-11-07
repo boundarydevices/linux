@@ -13446,7 +13446,16 @@ F:	scripts/amlogic/configs/
 
 AMLOGIC CRYPTO DMA BLKMV
 M:	Matthew Shyu <matthew.shyu@amlogic.com>
-F:	drivers/amlogic/crypto/*
+F:	drivers/amlogic/crypto/aml-aes-blkmv.c
+F:	drivers/amlogic/crypto/aml-aes-dma.c
+F:	drivers/amlogic/crypto/aml-crypto-blkmv.c
+F:	drivers/amlogic/crypto/aml-crypto-blkmv.h
+F:	drivers/amlogic/crypto/aml-crypto-dma.c
+F:	drivers/amlogic/crypto/aml-crypto-dma.h
+F:	drivers/amlogic/crypto/aml-dma.c
+F:	drivers/amlogic/crypto/aml-sha-dma.c
+F:	drivers/amlogic/crypto/aml-tdes-blkmv.c
+F:	drivers/amlogic/crypto/aml-tdes-dma.c
 
 AMLOGIC saradc
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
