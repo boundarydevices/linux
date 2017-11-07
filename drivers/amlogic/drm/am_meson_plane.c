@@ -90,7 +90,11 @@ void am_osd_do_display(
 
 	switch (fb->pixel_format) {
 	case DRM_FORMAT_XRGB8888:
-		format = COLOR_INDEX_32_XRGB;
+		/*
+		 *force convert to ARGB8888 format,
+		 *because overlay layer needs to display
+		 */
+		format = COLOR_INDEX_32_ARGB;
 		break;
 	case DRM_FORMAT_XBGR8888:
 		format = COLOR_INDEX_32_XBGR;
