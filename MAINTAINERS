@@ -14129,3 +14129,7 @@ F: arch/arm64/boot/dts/amlogic/partition_tv_old.dtsi
 AMLOGIC ADD P241 DTS
 M: Xindong Xu <xindong.xu@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p241_1g.dts
+
+AMLOGIC ADD P230 BUILDROOT DTS
+M: liangzhuo Xie <liangzhuo.xie@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p230_2g_buildroot.dts
