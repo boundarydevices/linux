@@ -32,4 +32,8 @@ extern void aml_pdm_filter_ctrl(int osr, int set);
 extern void pdm_enable(int is_enable);
 
 extern void pdm_fifo_reset(void);
+
+extern int pdm_hcic_shift_gain;
+extern int pdm_dclk;
+
 #endif /*__AML_PDM_HW_H__*/

@@ -993,13 +993,13 @@
 		compatible = "amlogic, snd-pdm";
 		#sound-dai-cells = <0>;
 		clocks = <&clkaudio CLKID_AUDIO_PDM
-			&clkc CLKID_FCLK_DIV4
+			&clkc CLKID_FCLK_DIV3
 			&clkc CLKID_MPLL3
 			&clkaudio CLKID_AUDIO_PDMIN0
 			&clkaudio CLKID_AUDIO_PDMIN1>;
 		clock-names = "gate",
-			"src_sysclk",
-			"src_dclk",
+			"sysclk_srcpll",
+			"dclk_srcpll",
 			"pdm_dclk",
 			"pdm_sysclk";
 		pinctrl-names = "pdm_pins";

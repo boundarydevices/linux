@@ -26,7 +26,6 @@
 #include "iomap.h"
 #include "pdm_hw_coeff.c"
 
-extern int pdm_hcic_shift_gain;
 void pdm_enable(int is_enable)
 {
 	if (is_enable)
@@ -64,7 +63,15 @@ void aml_pdm_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitdepth, int channels)
 {
-	int mode, i, ch_mask = 0, sample_count = 23;
+	int mode, i, ch_mask = 0, sample_count;
+
+	/* sameple count */
+	if (pdm_dclk == 1)
+		sample_count = 38;
+	else if (pdm_dclk == 2)
+		sample_count = 48;
+	else
+		sample_count = 18;
 
 	if (bitdepth == 32)
 		mode = 0;

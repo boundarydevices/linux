@@ -570,16 +570,15 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 				int clk_id, unsigned int freq, int dir)
 {
 	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
-	unsigned int pll_freq = 0, src_dclk_freq = 0;
+	unsigned int sysclk_srcpll_freq, dclk_srcpll_freq;
 
-	pll_freq = clk_get_rate(p_pdm->clk_pll);
-	src_dclk_freq = clk_get_rate(p_pdm->src_dclk);
-	pr_info("%s freq:%d, pll_freq:%d, src_dclk_freq=%d\n",
-		__func__, freq, pll_freq, src_dclk_freq);
-	if (src_dclk_freq == 0)
-		clk_set_rate(p_pdm->src_dclk, 24576000);
+	sysclk_srcpll_freq = clk_get_rate(p_pdm->sysclk_srcpll);
+	dclk_srcpll_freq = clk_get_rate(p_pdm->dclk_srcpll);
 
-	clk_set_rate(p_pdm->clk_pdm_sysclk, pll_freq/3);
+	clk_set_rate(p_pdm->clk_pdm_sysclk,
+		sysclk_srcpll_freq / 5);
+	if (dclk_srcpll_freq == 0)
+		clk_set_rate(p_pdm->dclk_srcpll, 24576000);
 
 	if (pdm_dclk == 1)
 		clk_set_rate(p_pdm->clk_pdm_dclk, 1024000);
@@ -620,9 +619,15 @@ int aml_pdm_dai_startup(struct snd_pcm_substream *substream,
 	ret = clk_prepare_enable(p_pdm->clk_gate);
 
 	/* enable clock */
-	ret = clk_prepare_enable(p_pdm->clk_pll);
+	ret = clk_prepare_enable(p_pdm->sysclk_srcpll);
 	if (ret) {
-		pr_err("Can't enable pcm clk_pll clock: %d\n", ret);
+		pr_err("Can't enable pcm sysclk_srcpll clock: %d\n", ret);
+		goto err;
+	}
+
+	ret = clk_prepare_enable(p_pdm->dclk_srcpll);
+	if (ret) {
+		pr_err("Can't enable pcm dclk_srcpll clock: %d\n", ret);
 		goto err;
 	}
 
@@ -652,7 +657,8 @@ void aml_pdm_dai_shutdown(struct snd_pcm_substream *substream,
 	/* disable clock and gate */
 	clk_disable_unprepare(p_pdm->clk_pdm_dclk);
 	clk_disable_unprepare(p_pdm->clk_pdm_sysclk);
-	clk_disable_unprepare(p_pdm->clk_pll);
+	clk_disable_unprepare(p_pdm->sysclk_srcpll);
+	clk_disable_unprepare(p_pdm->dclk_srcpll);
 	clk_disable_unprepare(p_pdm->clk_gate);
 }
 
@@ -732,11 +738,19 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		return PTR_ERR(p_pdm->pdm_pins);
 	}
 
-	p_pdm->clk_pll = devm_clk_get(&pdev->dev, "src_sysclk");
-	if (IS_ERR(p_pdm->clk_pll)) {
+	p_pdm->sysclk_srcpll = devm_clk_get(&pdev->dev, "sysclk_srcpll");
+	if (IS_ERR(p_pdm->sysclk_srcpll)) {
 		dev_err(&pdev->dev,
 			"Can't retrieve pll clock\n");
-		ret = PTR_ERR(p_pdm->clk_pll);
+		ret = PTR_ERR(p_pdm->sysclk_srcpll);
+		goto err;
+	}
+
+	p_pdm->dclk_srcpll = devm_clk_get(&pdev->dev, "dclk_srcpll");
+	if (IS_ERR(p_pdm->dclk_srcpll)) {
+		dev_err(&pdev->dev,
+			"Can't retrieve data src clock\n");
+		ret = PTR_ERR(p_pdm->dclk_srcpll);
 		goto err;
 	}
 
@@ -748,14 +762,6 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	p_pdm->src_dclk = devm_clk_get(&pdev->dev, "src_dclk");
-	if (IS_ERR(p_pdm->src_dclk)) {
-		dev_err(&pdev->dev,
-			"Can't retrieve data src clock\n");
-		ret = PTR_ERR(p_pdm->src_dclk);
-		goto err;
-	}
-
 	p_pdm->clk_pdm_dclk = devm_clk_get(&pdev->dev, "pdm_dclk");
 	if (IS_ERR(p_pdm->clk_pdm_dclk)) {
 		dev_err(&pdev->dev,
@@ -764,7 +770,7 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	ret = clk_set_parent(p_pdm->clk_pdm_sysclk, p_pdm->clk_pll);
+	ret = clk_set_parent(p_pdm->clk_pdm_sysclk, p_pdm->sysclk_srcpll);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"Can't set clk_pdm_sysclk parent clock\n");
@@ -772,7 +778,7 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	ret = clk_set_parent(p_pdm->clk_pdm_dclk, p_pdm->src_dclk);
+	ret = clk_set_parent(p_pdm->clk_pdm_dclk, p_pdm->dclk_srcpll);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"Can't set clk_pdm_dclk parent clock\n");
@@ -821,7 +827,7 @@ static int aml_pdm_platform_remove(struct platform_device *pdev)
 {
 	struct aml_pdm *pdm_priv = dev_get_drvdata(&pdev->dev);
 
-	clk_disable_unprepare(pdm_priv->clk_pll);
+	clk_disable_unprepare(pdm_priv->sysclk_srcpll);
 	clk_disable_unprepare(pdm_priv->clk_pdm_dclk);
 
 	snd_soc_unregister_component(&pdev->dev);

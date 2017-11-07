@@ -38,14 +38,15 @@
 						SNDRV_PCM_FMTBIT_S24_LE |\
 						SNDRV_PCM_FMTBIT_S32_LE)
 
-#if 1
 struct aml_pdm {
 	struct device *dev;
 	struct aml_audio_controller *actrl;
 	struct pinctrl *pdm_pins;
 	struct clk *clk_gate;
-	struct clk *clk_pll;
-	struct clk *src_dclk;
+	/* sel: fclk_div3(666M) */
+	struct clk *sysclk_srcpll;
+	/* consider same source with tdm, 48k(24576000) */
+	struct clk *dclk_srcpll;
 	struct clk *clk_pdm_sysclk;
 	struct clk *clk_pdm_dclk;
 	struct toddr *tddr;
@@ -56,6 +57,5 @@ struct aml_pdm {
 	 */
 	int filter_mode;
 };
-#endif
 
 #endif /*__AML_PDM_H__*/
