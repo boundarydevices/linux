@@ -1,5 +1,6 @@
 /*
  * Copyright 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2017 NXP
  *
  * Refer to drivers/dma/imx-sdma.c
  *
@@ -720,8 +721,8 @@ static int mxs_dma_init_rpm(struct mxs_dma_engine *mxs_dma)
 
 static int mxs_dma_init(struct mxs_dma_engine *mxs_dma)
 {
-	int ret;
 	struct device *dev = &mxs_dma->pdev->dev;
+	int ret;
 
 	ret = mxs_dma_init_rpm(mxs_dma);
 	if (ret)
@@ -749,10 +750,10 @@ static int mxs_dma_init(struct mxs_dma_engine *mxs_dma)
 	writel(MXS_DMA_CHANNELS_MASK << MXS_DMA_CHANNELS,
 		mxs_dma->base + HW_APBHX_CTRL1 + STMP_OFFSET_REG_SET);
 
-err_clk:
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
 
+err_clk:
 	return ret;
 }
 
@@ -923,13 +924,10 @@ static int mxs_dma_pm_resume(struct device *dev)
 	struct mxs_dma_engine *mxs_dma = dev_get_drvdata(dev);
 	int ret;
 
-	ret = pm_runtime_force_resume(dev);
-	if (ret)
-		return ret;
-
 	ret = mxs_dma_init(mxs_dma);
 	if (ret)
 		return ret;
+
 	return 0;
 }
 
