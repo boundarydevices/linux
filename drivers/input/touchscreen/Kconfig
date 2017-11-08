@@ -1071,6 +1071,17 @@ config TOUCHSCREEN_TSC2004
 	  To compile this driver as a module, choose M here: the
 	  module will be called tsc2004.
 
+config TOUCHSCREEN_TSC2004_BD
+	tristate "TSC2004 based touchscreens(BD)"
+	depends on I2C
+	help
+	  Say Y here if you have a TSC2004 based touchscreen.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called tsc2004_bd.
+
 config TOUCHSCREEN_TSC2005
 	tristate "TSC2005 based touchscreens"
 	depends on SPI_MASTER
