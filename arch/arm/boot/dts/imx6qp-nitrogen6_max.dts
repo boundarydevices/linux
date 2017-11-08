@@ -48,6 +48,10 @@
 / {
 	model = "Boundary Devices i.MX6 Quad Plus Nitrogen6_MAX Board";
 	compatible = "boundary,imx6qp-nitrogen6_max", "fsl,imx6qp";
+
+	memory: memory {
+		reg = <0x10000000 0xeffffc00>;
+	};
 };
 
 &ov5640 {
