@@ -1578,16 +1578,6 @@ static int spi_imx_probe(struct platform_device *pdev)
 	else
 		master = spi_alloc_master(&pdev->dev,
 					  sizeof(struct spi_imx_data));
-
-	ret = of_property_read_u32(np, "fsl,spi-num-chipselects", &num_cs);
-	if (ret < 0) {
-		if (mxc_platform_info)
-			num_cs = mxc_platform_info->num_chipselect;
-		else
-			return ret;
-	}
-
-	master = spi_alloc_master(&pdev->dev, sizeof(struct spi_imx_data));
 	if (!master)
 		return -ENOMEM;
 
