@@ -1,0 +1,111 @@
+dts config  for lm3556
+
+========================
+
+&i2c_ao {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&ao_i2c_master_pin2>;
+
+	is31fl3236a: is31f3236a@0x78 {
+		 compatible = "issi,is31fl3236";
+		 reg = <0x3c>;
+		 status = "okay";
+		 led1_r {
+			label="LED1_R";
+			reg_offset = <24>;
+		 };
+		 led1_g {
+			label="LED1_G";
+			reg_offset = <23>;
+		 };
+		 led1_b {
+			label="LED1_B";
+			reg_offset = <22>;
+		 };
+		 led2_r {
+			label="LED2_R";
+			reg_offset = <21>;
+		 };
+		 led2_g {
+			label="LED2_G";
+			reg_offset = <20>;
+		 };
+		 led2_b {
+			label="LED2_B";
+			reg_offset = <19>;
+		 };
+		 led3_r {
+			label="LED3_R";
+			reg_offset = <18>;
+		 };
+		 led3_g {
+			label="LED3_G";
+			reg_offset = <17>;
+		 };
+		 led3_b {
+			label="LED3_B";
+			reg_offset = <16>;
+		 };
+		 led4_r {
+			label="LED4_R";
+			reg_offset = <15>;
+		 };
+		 led4_g {
+			label="LED4_G";
+			reg_offset = <14>;
+		 };
+		 led4_b {
+			label="LED4_B";
+			reg_offset = <13>;
+		 };
+		 led5_r {
+			label="LED5_R";
+			reg_offset = <36>;
+		 };
+		 led5_g {
+			label="LED5_G";
+			reg_offset = <35>;
+		 };
+		 led5_b {
+			label="LED5_B";
+			reg_offset = <34>;
+		 };
+		 led6_r {
+			label="LED6_R";
+			reg_offset = <33>;
+		 };
+		 led6_g {
+			label="LED6_G";
+			reg_offset = <32>;
+		 };
+		 led6_b {
+			label="LED6_B";
+			reg_offset = <31>;
+		 };
+		 led7_r {
+			label="LED7_R";
+			reg_offset = <30>;
+		 };
+		 led7_g {
+			label="LED7_G";
+			reg_offset = <29>;
+		 };
+		 led7_b {
+			label="LED7_B";
+			reg_offset = <28>;
+		 };
+		 led8_r {
+			label="LED8_R";
+			reg_offset = <27>;
+		 };
+		 led8_g {
+			label="LED8_G";
+			reg_offset = <26>;
+		 };
+		 led8_b {
+			label="LED8_B";
+			reg_offset = <25>;
+		 };
+	};
+}

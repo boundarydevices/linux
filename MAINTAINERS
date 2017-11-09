@@ -14139,3 +14139,7 @@ M: Peipeng Zhao <peipeng.zhao@amlogic.com>
 F: sound/soc/codec/amlogic/es7243.c
 F: sound/soc/codec/amlogic/es7243.h
 F: Documentation/devicetree/bindings/sound/es7243.txt
+
+AMLOGIC LED DRVIER
+M: Peipeng Zhao <peipeng.zhao@amlogic.com>
+F: Documentation/leds/leds-is31fl32xx.txt
