@@ -45,15 +45,18 @@ static DEFINE_MUTEX(provider_table_mutex);
 #define VFPROVIER_DEBUG
 #ifdef VFPROVIER_DEBUG
 static DEFINE_SPINLOCK(provider_lock);
-static const char *last_receiver;
-static const char *last_provider;
-void provider_update_caller(const char *receiver, const char *provider)
+static char last_receiver[32];
+static char last_provider[32];
+void provider_update_caller(
+	const char *receiver,
+	const char *provider)
 {
 	unsigned long flags;
-
 	spin_lock_irqsave(&provider_lock, flags);
-	last_receiver = receiver;
-	last_provider = provider;
+	if (receiver)
+		strncpy(last_receiver, receiver, 31);
+	if (provider)
+		strncpy(last_provider, provider, 31);
 	spin_unlock_irqrestore(&provider_lock, flags);
 }
 
@@ -65,9 +68,9 @@ void provider_print_last_info(void)
 
 	spin_lock_irqsave(&provider_lock, flags);
 	pr_info("last receiver: %s\n",
-		last_receiver ? last_receiver : "null");
+		last_receiver[0] ? last_receiver : "null");
 	pr_info("last provider: %s\n",
-		last_provider ? last_provider : "null");
+		last_provider[0] ? last_provider : "null");
 	pr_info("register provider:\n");
 	for (i = 0; i < MAX_PROVIDER_NUM; i++) {
 		p = provider_table[i];
