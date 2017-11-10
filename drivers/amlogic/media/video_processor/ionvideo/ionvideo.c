@@ -504,6 +504,10 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 	 * Typical driver might need to wait here until dma engine stops.
 	 * In this case we can abort imiedetly, so it's just a noop.
 	 */
+	v4l2q_init(&dev->input_queue, IONVIDEO_POOL_SIZE + 1,
+			&dev->ionvideo_input_queue[0]);
+	v4l2q_init(&dev->output_queue, IONVIDEO_POOL_SIZE + 1,
+			&dev->ionvideo_output_queue[0]);
 	return 0;
 }
 
