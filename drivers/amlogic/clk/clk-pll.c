@@ -62,6 +62,11 @@
 #define GXL_GP0_CNTL4 0xc000004d
 #define GXL_GP0_CNTL5 0x00078000
 
+/* TXLX */
+/* CNTL2-5 the same to GXL*/
+#define TXLL_GP0_CNTL5 0x00058000
+
+
 #define to_meson_clk_pll(_hw) container_of(_hw, struct meson_clk_pll, hw)
 
 static unsigned long meson_clk_pll_recalc_rate(struct clk_hw *hw,
@@ -180,8 +185,7 @@ static int meson_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			writel(GXBB_GP0_CNTL2, cntlbase + (u64)1*4);
 			writel(GXBB_GP0_CNTL3, cntlbase + (u64)2*4);
 			writel(GXBB_GP0_CNTL4, cntlbase + (u64)3*4);
-		}
-		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL) {
+		} else if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL) {
 			writel(GXL_GP0_CNTL1, cntlbase + (u64)6*4);
 			writel(GXL_GP0_CNTL2, cntlbase + (u64)1*4);
 			writel(GXL_GP0_CNTL3, cntlbase + (u64)2*4);
@@ -191,7 +195,18 @@ static int meson_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			reg = readl(pll->base + p->reg_off);
 			writel(((reg | (MESON_PLL_ENABLE)) &
 				(~MESON_PLL_RESET)), pll->base + p->reg_off);
+		} else if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX) {
+			writel(GXL_GP0_CNTL1, cntlbase + (u64)6*4);
+			writel(GXL_GP0_CNTL2, cntlbase + (u64)1*4);
+			writel(GXL_GP0_CNTL3, cntlbase + (u64)2*4);
+			writel(GXL_GP0_CNTL4, cntlbase + (u64)3*4);
+			writel(TXLL_GP0_CNTL5, cntlbase + (u64)4*4);
+
+			reg = readl(pll->base + p->reg_off);
+			writel(((reg | (MESON_PLL_ENABLE)) &
+				(~MESON_PLL_RESET)), pll->base + p->reg_off);
 		}
+
 	}
 
 	reg = readl(pll->base + p->reg_off);

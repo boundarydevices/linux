@@ -32,6 +32,9 @@
 
 #define MESON_PARM_APPLICABLE(p)		(!!((p)->width))
 
+#define PNAME(x) \
+static const char *x[] __initconst
+
 struct parm {
 	u16	reg_off;
 	u8	shift;
@@ -121,6 +124,84 @@ struct clk_gate _name = {						\
 	},								\
 }
 
+
+/*mux/div/gate macro*/
+#define GATE(_name, _reg, _bit, _pname, _flags)			\
+struct clk_gate _name = {				\
+	.reg = (void __iomem *) _reg,		\
+	.bit_idx = (_bit),					\
+	.lock = &clk_lock,					\
+	.hw.init = &(struct clk_init_data) {\
+		.name = #_name,					\
+		.ops = &clk_gate_ops,			\
+		.parent_names = (const char *[]){ _pname },	\
+		.num_parents = 1,			\
+		.flags = (_flags),\
+	},		\
+}
+
+#define DIV(_name, _reg, _shift, _width, _pname, _flags)	\
+struct clk_divider _name = {			\
+	.reg = (void __iomem *) _reg,		\
+	.shift = _shift,					\
+	.width = _width,					\
+	.lock = &clk_lock,					\
+	.hw.init = &(struct clk_init_data) {\
+		.name = #_name,					\
+		.ops = &clk_divider_ops,		\
+		.parent_names = (const char *[]){ _pname },	\
+		.num_parents = 1,			\
+		.flags = (_flags),\
+	},		\
+}
+
+#define MUX(_name, _reg, _mask, _shift, _pname, _flags)		\
+struct clk_mux _name = {				\
+	.reg = (void __iomem *) _reg,		\
+	.mask = _mask,						\
+	.shift = _shift,					\
+	.hw.init = &(struct clk_init_data) {\
+		.name = #_name,					\
+		.ops = &clk_mux_ops,			\
+		.parent_names =  _pname,		\
+		.num_parents = ARRAY_SIZE(_pname),	\
+		.flags = (_flags),\
+	},		\
+}
+
+#define MESON_MUX(_name, _reg, _mask, _shift, _pname, _flags)\
+struct clk_mux _name = {				\
+	.reg = (void __iomem *) _reg,		\
+	.mask = _mask,						\
+	.shift = _shift,					\
+	.flags = CLK_PARENT_ALTERNATE,		\
+	.hw.init = &(struct clk_init_data) {\
+		.name = #_name,					\
+		.ops = &meson_clk_mux_ops,		\
+		.parent_names =  _pname,		\
+		.num_parents = ARRAY_SIZE(_pname),	\
+		.flags = (_flags),\
+	},		\
+}
+
+/*composite clock*/
+struct meson_composite {
+	unsigned int composite_id;
+	const char		*name;
+	const char * const *parent_names;
+	int num_parents;
+	struct clk_hw *mux_hw;
+	struct clk_hw *rate_hw;
+	struct clk_hw *gate_hw;
+	unsigned long flags;
+};
+
+/*single clock,mux/div/gate*/
+struct meson_hw {
+	unsigned int hw_id;
+	struct clk_hw *hw;
+};
+
 /* clk_ops */
 extern const struct clk_ops meson_clk_pll_ro_ops;
 extern const struct clk_ops meson_clk_pll_ops;
@@ -130,6 +211,13 @@ extern const struct clk_ops meson_clk_mpll_ops;
 extern const struct clk_ops meson_clk_mux_ops;
 extern const struct clk_ops meson_axg_pll_ro_ops;
 extern const struct clk_ops meson_axg_pll_ops;
+
+extern void meson_clk_register_composite(struct clk **soc_clks,
+			struct meson_composite *composite,
+			unsigned int length);
+extern void meson_hw_clk_register(struct clk **soc_clks,
+				struct meson_hw *m,
+				unsigned int length);
 
 extern spinlock_t clk_lock;
 extern void __iomem *clk_base;
@@ -141,4 +229,10 @@ void amlogic_init_misc(void);
 void axg_amlogic_init_sdemmc(void);
 void axg_amlogic_init_media(void);
 void axg_amlogic_init_misc(void);
+
+/*txlx*/
+void meson_txlx_sdemmc_init(void);
+void meson_txlx_media_init(void);
+void meson_init_gpu(void);
+
 #endif /* __CLKC_H */

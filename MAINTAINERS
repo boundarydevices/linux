@@ -14169,3 +14169,9 @@ F:	scripts/amlogic/mkimage_64.sh
 AMLOGIC ledring driver
 M: Renjun Xu <renjun.xu@amlogic.com>
 F: drivers/amlogic/ledring/ledring.c
+
+AMLOGIC TXLX CLK
+M:	Jian Hu <jian.hu@amlogic.com>
+F:	drivers/amlogic/clk/*
+F:	drivers/amlogic/clk/txlx/*
+
