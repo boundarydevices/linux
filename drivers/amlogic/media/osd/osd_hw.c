@@ -4435,8 +4435,11 @@ static bool osd_direct_render(struct osd_plane_map_s *plane_map)
 	void *vaddr = NULL;
 
 	phy_addr = phy_addr + plane_map->byte_stride * plane_map->src_y;
+	vaddr = phys_to_virt(phy_addr);
+	osd_hw.screen_base[index] = vaddr;
+	osd_hw.screen_size[index] =
+		plane_map->byte_stride * plane_map->src_h;
 	if (osd_hw.osd_clear[index]) {
-		vaddr = phys_to_virt(phy_addr);
 		if (vaddr)
 			memset(vaddr, 0x0,
 				plane_map->byte_stride*plane_map->src_h);
@@ -4616,8 +4619,11 @@ static void osd_cursor_move(struct osd_plane_map_s *plane_map)
 	if (index != OSD2)
 		return;
 	phy_addr = phy_addr + plane_map->byte_stride * plane_map->src_y;
+	vaddr = phys_to_virt(phy_addr);
+	osd_hw.screen_base[index] = vaddr;
+	osd_hw.screen_size[index] =
+		plane_map->byte_stride * plane_map->src_h;
 	if (osd_hw.osd_clear[index]) {
-		vaddr = phys_to_virt(phy_addr);
 		if (vaddr)
 			memset(vaddr, 0x0,
 				plane_map->byte_stride*plane_map->src_h);

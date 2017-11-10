@@ -437,6 +437,28 @@ static ssize_t osd_clear_write_file(struct file *file,
 	return count;
 }
 
+static ssize_t osd_dump_read_file(struct file *file,
+				char __user *userbuf,
+				size_t count, loff_t *ppos)
+{
+	char __iomem *buf;
+	struct seq_file *s = file->private_data;
+	int osd_id = *(int *)s;
+	ssize_t len;
+
+	osd_restore_screen_info(osd_id, &buf, &len);
+	if (buf && len)
+		return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+	else
+		return 0;
+}
+
+static ssize_t osd_dump_write_file(struct file *file,
+				const char __user *userbuf,
+				size_t count, loff_t *ppos)
+{
+	return 0;
+}
 
 
 static const struct file_operations loglevel_file_ops = {
@@ -509,6 +531,11 @@ static const struct file_operations osd_clear_file_ops = {
 	.write		= osd_clear_write_file,
 };
 
+static const struct file_operations osd_dump_file_ops = {
+	.open		= simple_open,
+	.read		= osd_dump_read_file,
+	.write		= osd_dump_write_file,
+};
 
 
 struct osd_drm_debugfs_files_s {
@@ -530,6 +557,7 @@ static struct osd_drm_debugfs_files_s osd_drm_debugfs_files[] = {
 	{"order", S_IFREG | 0640, &osd_order_file_ops},
 	{"osd_afbcd", S_IFREG | 0640, &osd_afbcd_file_ops},
 	{"osd_clear", S_IFREG | 0220, &osd_clear_file_ops},
+	{"osd_dump", S_IFREG | 0640, &osd_dump_file_ops},
 };
 
 void osd_drm_debugfs_add(
