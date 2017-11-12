@@ -14175,3 +14175,9 @@ M:	Jian Hu <jian.hu@amlogic.com>
 F:	drivers/amlogic/clk/*
 F:	drivers/amlogic/clk/txlx/*
 
+AMLOGIC TXLX PLATFORM SUPPORT
+M:	Xingyu Chen <xingyu.chen@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/mesontxlx.dtsi
+F:	arch/arm64/boot/dts/amlogic/txlx_t962e_r321.dts
+F:	arch/arm64/boot/dts/amlogic/txlx_t962e_r311.dts
+
