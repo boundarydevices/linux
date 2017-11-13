@@ -15,6 +15,7 @@
  *
  */
 
+#define DEBUG
 #include <linux/module.h>
 #include <linux/amlogic/media/frame_sync/tsync.h>
 #include <linux/amlogic/media/utils/vdec_reg.h>
@@ -124,7 +125,7 @@ EXPORT_SYMBOL(timestamp_pcrscr_set);
 void timestamp_firstvpts_set(u32 pts)
 {
 	first_vpts = pts;
-	pr_info("video first pts = %x\n", first_vpts);
+	pr_debug("video first pts = %x\n", first_vpts);
 }
 EXPORT_SYMBOL(timestamp_firstvpts_set);
 
@@ -137,7 +138,7 @@ EXPORT_SYMBOL(timestamp_firstvpts_get);
 void timestamp_checkin_firstvpts_set(u32 pts)
 {
 	first_checkin_vpts = pts;
-	pr_info("video first checkin pts = %x\n", first_checkin_vpts);
+	pr_debug("video first checkin pts = %x\n", first_checkin_vpts);
 }
 EXPORT_SYMBOL(timestamp_checkin_firstvpts_set);
 

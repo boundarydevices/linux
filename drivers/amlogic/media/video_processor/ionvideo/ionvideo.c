@@ -932,7 +932,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		}
 
 		/*tsync_avevent(VIDEO_STOP, 0);*/
-		IONVID_INFO("unreg:ionvideo\n");
+		IONVID_DBG("unreg:ionvideo\n");
 	} else if (type == VFRAME_EVENT_PROVIDER_REG) {
 		dev->receiver_register = 1;
 		dev->is_omx_video_started = 1;
@@ -940,7 +940,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		dev->active_state = ION_ACTIVE;
 		init_completion(&dev->inactive_done);
 
-		IONVID_INFO("reg:ionvideo\n");
+		IONVID_DBG("reg:ionvideo\n");
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
 		if (dev->vf_wait_cnt > 1)
 			return RECEIVER_INACTIVE;

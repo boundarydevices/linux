@@ -15,6 +15,7 @@
  *
  */
 
+#define DEBUG
 #include <linux/module.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
@@ -439,7 +440,8 @@ static int pts_checkin_offset_inline(u8 type, u32 offset, u32 val, u64 uS64)
 			 *if(tsync_get_debug_pts_checkin() &&
 			 * tsync_get_debug_vpts()) {
 			 */
-			pr_info("first check in vpts <0x%x:0x%x> ok!\n", offset,
+			pr_debug("first check in vpts <0x%x:0x%x> ok!\n",
+					offset,
 					val);
 			/* } */
 		}
