@@ -573,6 +573,7 @@ struct dpaa2_eth_priv {
 	struct devlink_port devlink_port;
 
 	u32 rx_copybreak;
+	bool ceetm_en;
 };
 
 struct dpaa2_eth_devlink_priv {
@@ -712,6 +713,11 @@ static inline bool dpaa2_eth_is_type_phy(struct dpaa2_eth_priv *priv)
 static inline bool dpaa2_eth_has_mac(struct dpaa2_eth_priv *priv)
 {
 	return priv->mac ? true : false;
+}
+
+static inline int dpaa2_eth_ch_count(struct dpaa2_eth_priv *priv)
+{
+	return 1;
 }
 
 int dpaa2_eth_set_hash(struct net_device *net_dev, u64 flags);
