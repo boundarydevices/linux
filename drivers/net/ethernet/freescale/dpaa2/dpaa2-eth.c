@@ -20,6 +20,7 @@
 #include <net/sock.h>
 
 #include "dpaa2-eth.h"
+#include "dpaa2-eth-ceetm.h"
 
 /* CREATE_TRACE_POINTS only needs to be defined once. Other dpa files
  * using trace events only need to #include <trace/events/sched.h>
@@ -1075,7 +1076,7 @@ static netdev_tx_t __dpaa2_eth_tx(struct sk_buff *skb,
 	unsigned int needed_headroom;
 	u32 fd_len;
 	u8 prio = 0;
-	int err, i;
+	int err, i, ch_id = 0;
 	void *swa;
 
 	percpu_stats = this_cpu_ptr(priv->percpu_stats);
@@ -1139,6 +1140,15 @@ static netdev_tx_t __dpaa2_eth_tx(struct sk_buff *skb,
 		queue_mapping %= dpaa2_eth_queue_count(priv);
 	}
 	fq = &priv->fq[queue_mapping];
+
+	if (dpaa2_eth_ceetm_is_enabled(priv)) {
+		err = dpaa2_ceetm_classify(skb, net_dev->qdisc, &ch_id, &prio);
+		if (err) {
+			dpaa2_eth_free_tx_fd(priv, fq, &fd, false);
+			percpu_stats->tx_dropped++;
+			return NETDEV_TX_OK;
+		}
+	}
 
 	fd_len = dpaa2_fd_get_len(&fd);
 	nq = netdev_get_tx_queue(net_dev, queue_mapping);
@@ -2489,6 +2499,8 @@ static int dpaa2_eth_setup_tc(struct net_device *net_dev,
 		return dpaa2_eth_setup_mqprio(net_dev, type_data);
 	case TC_SETUP_QDISC_TBF:
 		return dpaa2_eth_setup_tbf(net_dev, type_data);
+	case TC_SETUP_BLOCK:
+		return 0;
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -4454,18 +4466,27 @@ static int __init dpaa2_eth_driver_init(void)
 
 	dpaa2_eth_dbg_init();
 	err = fsl_mc_driver_register(&dpaa2_eth_driver);
-	if (err) {
-		dpaa2_eth_dbg_exit();
-		return err;
-	}
+	if (err)
+		goto out_debugfs_err;
+
+	err = dpaa2_ceetm_register();
+	if (err)
+		goto out_ceetm_err;
 
 	return 0;
+
+out_ceetm_err:
+	fsl_mc_driver_unregister(&dpaa2_eth_driver);
+out_debugfs_err:
+	dpaa2_eth_dbg_exit();
+	return err;
 }
 
 static void __exit dpaa2_eth_driver_exit(void)
 {
-	dpaa2_eth_dbg_exit();
+	dpaa2_ceetm_unregister();
 	fsl_mc_driver_unregister(&dpaa2_eth_driver);
+	dpaa2_eth_dbg_exit();
 }
 
 module_init(dpaa2_eth_driver_init);
