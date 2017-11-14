@@ -33,6 +33,14 @@ static const char *fence_array_get_timeline_name(struct fence *fence)
 	return "unbound";
 }
 
+static void irq_fence_array_work(struct irq_work *wrk)
+{
+	struct fence_array *array = container_of(wrk, typeof(*array), work);
+
+	fence_signal(&array->base);
+	fence_put(&array->base);
+}
+
 static void fence_array_cb_func(struct fence *f, struct fence_cb *cb)
 {
 	struct fence_array_cb *array_cb =
@@ -40,8 +48,9 @@ static void fence_array_cb_func(struct fence *f, struct fence_cb *cb)
 	struct fence_array *array = array_cb->array;
 
 	if (atomic_dec_and_test(&array->num_pending))
-		fence_signal(&array->base);
-	fence_put(&array->base);
+		irq_work_queue(&array->work);
+	else
+		fence_put(&array->base);
 }
 
 static bool fence_array_enable_signaling(struct fence *fence)
@@ -135,6 +144,7 @@ struct fence_array *fence_array_create(int num_fences, struct fence **fences,
 	spin_lock_init(&array->lock);
 	fence_init(&array->base, &fence_array_ops, &array->lock,
 		   context, seqno);
+	init_irq_work(&array->work, irq_fence_array_work);
 
 	array->num_fences = num_fences;
 	atomic_set(&array->num_pending, signal_on_any ? 1 : num_fences);

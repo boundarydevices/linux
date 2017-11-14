@@ -21,6 +21,7 @@
 #define __LINUX_FENCE_ARRAY_H
 
 #include <linux/fence.h>
+#include <linux/irq_work.h>
 
 /**
  * struct fence_array_cb - callback helper for fence array
@@ -47,6 +48,8 @@ struct fence_array {
 	unsigned num_fences;
 	atomic_t num_pending;
 	struct fence **fences;
+
+	struct irq_work work;
 };
 
 extern const struct fence_ops fence_array_ops;
