@@ -81,7 +81,7 @@ struct rx_cap {
 	unsigned int hdr_sup_eotf_sdr:1;
 	unsigned int hdr_sup_eotf_hdr:1;
 	unsigned int hdr_sup_eotf_smpte_st_2084:1;
-	unsigned int hdr_sup_eotf_future:1;
+	unsigned int hdr_sup_eotf_hlg:1;
 	unsigned int hdr_sup_SMD_type1:1;
 	unsigned char hdr_lum_max;
 	unsigned char hdr_lum_avg;
@@ -157,6 +157,41 @@ struct frac_rate_table {
 	u32 sync_den_int;
 	u32 sync_num_dec;
 	u32 sync_den_dec;
+};
+
+enum hdmi_hdr_transfer {
+	T_UNKNOWN = 0,
+	T_BT709,
+	T_UNDEF,
+	T_BT601,
+	T_BT470M,
+	T_BT470BG,
+	T_SMPTE170M,
+	T_SMPTE240M,
+	T_LINEAR,
+	T_LOG100,
+	T_LOG316,
+	T_IEC61966_2_4,
+	T_BT1361E,
+	T_IEC61966_2_1,
+	T_BT2020_10,
+	T_BT2020_12,
+	T_SMPTE_ST_2084,
+	T_SMPTE_ST_28,
+	T_HLG,
+};
+
+enum hdmi_hdr_color {
+	C_UNKNOWN = 0,
+	C_BT709,
+	C_UNDEF,
+	C_BT601,
+	C_BT470M,
+	C_BT470BG,
+	C_SMPTE170M,
+	C_SMPTE240M,
+	C_FILM,
+	C_BT2020,
 };
 
 #define EDID_MAX_BLOCK              4
@@ -277,7 +312,9 @@ struct hdmitx_dev {
 	/* configure for I2S: 8ch in, 2ch out */
 	/* 0: default setting  1:ch0/1  2:ch2/3  3:ch4/5  4:ch6/7 */
 	unsigned int aud_output_ch;
-	unsigned int hdr_src_feature;
+	enum hdmi_hdr_transfer hdr_transfer_feature;
+	enum hdmi_hdr_color hdr_color_feature;
+	unsigned int sdr_hdr_feature;
 	unsigned int flag_3dfp:1;
 	unsigned int flag_3dtb:1;
 	unsigned int flag_3dss:1;
