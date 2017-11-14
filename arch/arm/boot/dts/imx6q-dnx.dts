@@ -23,3 +23,7 @@
 &fb_lvds {
 	status = "okay";
 };
+
+&sata {
+	status = "okay";
+};
