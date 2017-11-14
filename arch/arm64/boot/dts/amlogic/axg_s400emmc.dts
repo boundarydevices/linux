@@ -417,15 +417,19 @@
 	};
 
 	vpu {
-		compatible = "amlogic, vpu";
+		compatible = "amlogic, vpu-axg";
 		dev_name = "vpu";
-		status = "ok";
-		clocks = <&clkc CLKID_VPU_MUX
-			&clkc CLKID_VAPB_MUX
-			&clkc CLKID_VPU_INTR>;
-		clock-names = "vpu_clk",
-			"vapb_clk",
-			"vpu_intr";
+		status = "okay";
+		clocks = <&clkc CLKID_VAPB_MUX>,
+			<&clkc CLKID_VPU_INTR>,
+			<&clkc CLKID_VPU_P0_COMP>,
+			<&clkc CLKID_VPU_P1_COMP>,
+			<&clkc CLKID_VPU_MUX>;
+		clock-names = "vapb_clk",
+			"vpu_intr",
+			"vpu_clk0",
+			"vpu_clk1",
+			"vpu_clk";
 		clk_level = <3>;
 		/* 0: 100.0M    1: 166.7M    2: 200.0M    3: 250.0M */
 	};

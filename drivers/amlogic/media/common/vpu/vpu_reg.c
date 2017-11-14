@@ -21,7 +21,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/amlogic/cpu_version.h>
+#include <linux/amlogic/iomap.h>
 #include "vpu_reg.h"
 #include "vpu.h"
 
@@ -30,156 +30,14 @@
  * *********************************
  */
 
-#define VPU_MAP_HIUBUS    0
-#define VPU_MAP_VCBUS     1
-
-struct reg_map_s {
-	unsigned int base_addr;
-	unsigned int size;
-	void __iomem *p;
-	int flag;
-};
-
-static struct reg_map_s *vpu_map;
-static int vpu_map_num;
-
-static struct reg_map_s vpu_reg_maps_gx[] = {
-	{ /* HIU */
-		.base_addr = 0xc883c000,
-		.size = 0x400,
-	},
-	{ /* VCBUS */
-		.base_addr = 0xd0100000,
-		.size = 0xa000,
-	},
-};
-
-static struct reg_map_s vpu_reg_maps_axg[] = {
-	{ /* HIU */
-		.base_addr = 0xff63c000,
-		.size = 0x400,
-	},
-	{ /* VCBUS */
-		.base_addr = 0xff900000,
-		.size = 0xa000,
-	},
-};
-
-int vpu_ioremap(void)
-{
-	int i;
-	int ret = 0;
-
-	switch (vpu_chip_type) {
-	case VPU_CHIP_GXBB:
-	case VPU_CHIP_GXTVBB:
-	case VPU_CHIP_GXL:
-	case VPU_CHIP_GXM:
-	case VPU_CHIP_TXL:
-		vpu_map = vpu_reg_maps_gx;
-		vpu_map_num = ARRAY_SIZE(vpu_reg_maps_gx);
-		break;
-	case VPU_CHIP_AXG:
-		vpu_map = vpu_reg_maps_axg;
-		vpu_map_num = ARRAY_SIZE(vpu_reg_maps_axg);
-		break;
-	default:
-		vpu_map = NULL;
-		vpu_map_num = 0;
-		VPUERR("%s: invalid chip type\n", __func__);
-		break;
-	}
-
-	for (i = 0; i < vpu_map_num; i++) {
-		vpu_map[i].p = ioremap(vpu_map[i].base_addr, vpu_map[i].size);
-		if (vpu_map[i].p == NULL) {
-			vpu_map[i].flag = 0;
-			VPUERR("VPU reg map failed: 0x%x\n",
-				vpu_map[i].base_addr);
-			ret = -1;
-		} else {
-			vpu_map[i].flag = 1;
-#if 0
-			VPUPR("VPU reg mapped: 0x%x -> %p\n",
-				vpu_map[i].base_addr, vpu_map[i].p);
-#endif
-		}
-	}
-	return ret;
-}
-
-static int vpu_ioremap_check(int n)
-{
-	if (vpu_map == NULL)
-		return -1;
-	if (n >= vpu_map_num)
-		return -1;
-
-	if (vpu_map[n].flag == 0) {
-		VPUERR("reg 0x%x mapped error\n", vpu_map[n].base_addr);
-		return -1;
-	}
-	return 0;
-}
-
-static void __iomem *vpu_hiu_reg_check(unsigned int _reg)
-{
-	void __iomem *p = NULL;
-	int reg_bus;
-	unsigned int reg_offset;
-
-	reg_bus = VPU_MAP_HIUBUS;
-	if (vpu_ioremap_check(reg_bus))
-		return NULL;
-
-	reg_offset = REG_OFFSET_HIU(_reg);
-	if (reg_offset > vpu_map[reg_bus].size) {
-		VPUERR("invalid reg offset: 0x%02x\n", _reg);
-		return NULL;
-	}
-	p = vpu_map[reg_bus].p + reg_offset;
-
-	return p;
-}
-
-static void __iomem *vpu_vcbus_reg_check(unsigned int _reg)
-{
-	void __iomem *p = NULL;
-	int reg_bus;
-	unsigned int reg_offset;
-
-	reg_bus = VPU_MAP_VCBUS;
-	if (vpu_ioremap_check(reg_bus))
-		return NULL;
-
-	reg_offset = REG_OFFSET_VCBUS(_reg);
-	if (reg_offset > vpu_map[reg_bus].size) {
-		VPUERR("invalid reg offset: 0x%04x\n", _reg);
-		return NULL;
-	}
-	p = vpu_map[reg_bus].p + reg_offset;
-
-	return p;
-}
-
 unsigned int vpu_hiu_read(unsigned int _reg)
 {
-	void __iomem *p;
-
-	p = vpu_hiu_reg_check(_reg);
-	if (p)
-		return readl(p);
-	else
-		return 0;
+	return aml_read_hiubus(_reg);
 };
 
 void vpu_hiu_write(unsigned int _reg, unsigned int _value)
 {
-	void __iomem *p;
-
-	p = vpu_hiu_reg_check(_reg);
-	if (p)
-		writel(_value, p);
+	aml_write_hiubus(_reg, _value);
 };
 
 void vpu_hiu_setb(unsigned int _reg, unsigned int _value,
@@ -208,22 +66,12 @@ void vpu_hiu_clr_mask(unsigned int _reg, unsigned int _mask)
 
 unsigned int vpu_vcbus_read(unsigned int _reg)
 {
-	void __iomem *p;
-
-	p = vpu_vcbus_reg_check(_reg);
-	if (p)
-		return readl(p);
-	else
-		return 0;
+	return aml_read_vcbus(_reg);
 };
 
 void vpu_vcbus_write(unsigned int _reg, unsigned int _value)
 {
-	void __iomem *p;
-
-	p = vpu_vcbus_reg_check(_reg);
-	if (p)
-		writel(_value, p);
+	aml_write_vcbus(_reg, _value);
 };
 
 void vpu_vcbus_setb(unsigned int _reg, unsigned int _value,

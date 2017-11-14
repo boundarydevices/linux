@@ -360,7 +360,7 @@ static struct clk_hw *hevc_clk_hws[] = {
 };
 
 const char *vpu_parent_names[] = { "fclk_div4", "fclk_div3", "fclk_div5",
-	"fclk_div7", "mpll1", "vid_pll_clk", "mpll2",  "gp1_pll"};
+	"fclk_div7", "null", "null", "null",  "gp1_pll"};
 
 /* cts_vpu_clk */
 static struct clk_mux vpu_p0_mux = {

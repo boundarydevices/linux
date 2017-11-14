@@ -17,6 +17,8 @@
 
 #ifndef __VPU_PARA_H__
 #define __VPU_PARA_H__
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 
 /*#define VPU_DEBUG_PRINT*/
 
@@ -28,38 +30,55 @@ enum vpu_chip_e {
 	VPU_CHIP_GXTVBB,
 	VPU_CHIP_GXL,
 	VPU_CHIP_GXM,
-	VPU_CHIP_TXL,
+	VPU_CHIP_TXLX,
 	VPU_CHIP_AXG,
 	VPU_CHIP_MAX,
 };
 
-/*
- * static char *vpu_chip_name[] = {
- *	"gxbb",
- *	"gxtvbb",
- *	"gxl",
- *	"gxm",
- *	"txl",
- *	"invalid",
- * };
- */
+struct vpu_ctrl_s {
+	unsigned int vmod;
+	unsigned int reg;
+	unsigned int bit;
+	unsigned int len;
+};
+
+struct vpu_data_s {
+	enum vpu_chip_e chip_type;
+	const char *chip_name;
+	unsigned char clk_level_dft;
+	unsigned char clk_level_max;
+
+	unsigned char gp_pll_valid;
+	unsigned char mem_pd_reg1_valid;
+	unsigned char mem_pd_reg2_valid;
+
+	unsigned int mem_pd_table_cnt;
+	unsigned int clk_gate_table_cnt;
+	struct vpu_ctrl_s *mem_pd_table;
+	struct vpu_ctrl_s *clk_gate_table;
+};
 
 struct vpu_conf_s {
-	unsigned int     clk_level_dft;
-	unsigned int     clk_level_max;
-	unsigned int     clk_level;
-	unsigned int     fclk_type;
-	unsigned int     mem_pd0;
-	unsigned int     mem_pd1;
+	struct vpu_data_s *data;
+	unsigned int clk_level;
+	unsigned int mem_pd0;
+	unsigned int mem_pd1;
+	unsigned int mem_pd2;
+
+	/* clktree */
+	struct clk *gp_pll;
+	struct clk *vpu_clk0;
+	struct clk *vpu_clk1;
+	struct clk *vpu_clk;
+
+	unsigned int *clk_vmod;
 };
 
 /* ************************************************ */
+extern struct vpu_conf_s vpu_conf;
 
-
-extern enum vpu_chip_e vpu_chip_type;
 extern int vpu_debug_print_flag;
 
-extern int vpu_ioremap(void);
 extern int vpu_chip_valid_check(void);
 extern void vpu_ctrl_probe(void);
 

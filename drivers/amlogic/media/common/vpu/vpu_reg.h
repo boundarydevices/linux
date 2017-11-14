@@ -27,22 +27,7 @@
  * register define
  * *********************************
  */
-/* base & offset */
-#define REG_BASE_AOBUS               (0xc8100000L)
-#define REG_BASE_CBUS                (0xc1100000L)
-#define REG_BASE_HIU                 (0xc883c000L)
-#define REG_BASE_VCBUS               (0xd0100000L)
-#define REG_OFFSET_AOBUS(reg)        ((reg))
-#define REG_OFFSET_CBUS(reg)         ((reg << 2))
-#define REG_OFFSET_HIU(reg)          (((reg & 0xff) << 2))
-#define REG_OFFSET_VCBUS(reg)        ((reg << 2))
-/* memory mapping */
-#define REG_ADDR_AOBUS(reg)          (REG_BASE_AOBUS + REG_OFFSET_AOBUS(reg))
-#define REG_ADDR_CBUS(reg)           (REG_BASE_CBUS + REG_OFFSET_CBUS(reg))
-#define REG_ADDR_HIU(reg)            (REG_BASE_HIU + REG_OFFSET_HIU(reg))
-#define REG_ADDR_VCBUS(reg)          (REG_BASE_VCBUS + REG_OFFSET_VCBUS(reg))
 
-/* offset address */
 #define AO_RTI_GEN_PWR_SLEEP0        ((0x00 << 10) | (0x3a << 2))
 
 /* HHI bus */

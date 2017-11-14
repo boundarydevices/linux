@@ -14147,6 +14147,10 @@ AMLOGIC LED DRVIER
 M: Peipeng Zhao <peipeng.zhao@amlogic.com>
 F: Documentation/leds/leds-is31fl32xx.txt
 
+AMLOGIC VPU DRIVER
+M: Evoke Zhang <evoke.zhang@amlogic.com>
+F: drivers/amlogic/media/common/vpu/*
+
 AMLOGIC ADD P241 V2 DTS
 M: Siming Chen <siming.chen@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p241_v2-1g.dts

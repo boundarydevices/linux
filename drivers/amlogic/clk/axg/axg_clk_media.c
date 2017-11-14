@@ -79,8 +79,8 @@ static struct clk_hw *dsi_meas_clk_hws[] = {
 };
 
 static const char * const vpu_parent_names[] = { "fclk_div4",
-	"fclk_div3", "fclk_div5", "fclk_div7", "mpll1", "null",
-	"mpll2",  "null"};
+	"fclk_div3", "fclk_div5", "fclk_div7", "null", "null",
+	"null",  "null"};
 
 /* cts_vpu_clk */
 static struct clk_mux vpu_p0_mux = {
