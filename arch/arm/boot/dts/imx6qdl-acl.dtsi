@@ -179,6 +179,15 @@
 		>;
 	};
 
+	pinctrl_i2c2_1: i2c2_1grp {
+		fsl,pins = <
+#define GP_I2C2_SCL	<&gpio4 12 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x4001b8b1
+#define GP_I2C2_SDA	<&gpio4 13 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_KEY_ROW3__GPIO4_IO13		0x4001b8b1
+		>;
+	};
+
 	pinctrl_i2c2_adc081c: i2c2-adc081cgrp {
 		fsl,pins = <
 #define GPIRQ_PRINT_ALERT	<&gpio5 20 IRQ_TYPE_EDGE_BOTH>
@@ -190,6 +199,22 @@
 		fsl,pins = <
 #define GPIRQ_RTC_RV4162	<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0
+		>;
+	};
+
+	pinctrl_i2c3: i2c3grp {
+		fsl,pins = <
+			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
+			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
+		>;
+	};
+
+	pinctrl_i2c3_1: i2c3_1grp {
+		fsl,pins = <
+#define GP_I2C3_SCL	<&gpio1 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_5__GPIO1_IO05		0x4001b8b1
+#define GP_I2C3_SDA	<&gpio7 11 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_16__GPIO7_IO11		0x4001b8b1
 		>;
 	};
 
@@ -216,13 +241,6 @@
 			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x130b0
 #define GP_GSLX680_SHUTDOWN		<&gpio4 11 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x1b0b0
-		>;
-	};
-
-	pinctrl_i2c3: i2c3grp {
-		fsl,pins = <
-			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
-			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
 		>;
 	};
 
@@ -566,8 +584,11 @@
 
 &i2c2 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-1 = <&pinctrl_i2c2_1>;
+	scl-gpios = GP_I2C2_SCL;
+	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
 	adc081c@54 {
@@ -601,8 +622,11 @@
 
 &i2c3 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-1 = <&pinctrl_i2c3_1>;
+	scl-gpios = GP_I2C3_SCL;
+	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
 	ads7924_adc@48 {
