@@ -301,7 +301,10 @@ extern struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data;
 extern struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data;
 extern struct meson_pinctrl_data meson_axg_periphs_pinctrl_data;
 extern struct meson_pinctrl_data meson_axg_aobus_pinctrl_data;
+extern struct meson_pinctrl_data meson_txlx_periphs_pinctrl_data;
+extern struct meson_pinctrl_data meson_txlx_aobus_pinctrl_data;
 
 extern int meson_gxl_aobus_init(struct meson_pinctrl *pc);
 extern int meson_gxl_periphs_init(struct meson_pinctrl *pc);
 extern int meson_axg_aobus_init(struct meson_pinctrl *pc);
+extern int meson_txlx_aobus_init(struct meson_pinctrl *pc);

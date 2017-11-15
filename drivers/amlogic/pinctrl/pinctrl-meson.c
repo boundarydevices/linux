@@ -1077,6 +1077,20 @@ struct meson_pinctrl_private meson_axg_aobus = {
 	.init = meson_axg_aobus_init,
 };
 
+struct meson_pinctrl_private meson_txlx_periphs = {
+	.pinmux_type = PINMUX_V1,
+	.pinctrl_data = &meson_txlx_periphs_pinctrl_data,
+	.irq_chip = &meson_ee_gpio_irq_chip,
+	.init = NULL,
+};
+
+struct meson_pinctrl_private meson_txlx_aobus = {
+	.pinmux_type = PINMUX_V1,
+	.pinctrl_data = &meson_txlx_aobus_pinctrl_data,
+	.irq_chip = &meson_ao_gpio_irq_chip,
+	.init = meson_txlx_aobus_init,
+};
+
 static const struct of_device_id meson_pinctrl_dt_match[] = {
 	{
 		.compatible = "amlogic,meson-gxl-periphs-pinctrl",
@@ -1101,6 +1115,14 @@ static const struct of_device_id meson_pinctrl_dt_match[] = {
 	{
 		.compatible = "amlogic,meson-axg-aobus-pinctrl",
 		.data = &meson_axg_aobus,
+	},
+	{
+		.compatible = "amlogic,meson-txlx-periphs-pinctrl",
+		.data = &meson_txlx_periphs,
+	},
+	{
+		.compatible = "amlogic,meson-txlx-aobus-pinctrl",
+		.data = &meson_txlx_aobus,
 	},
 	{ },
 };

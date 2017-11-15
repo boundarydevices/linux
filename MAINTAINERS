@@ -13829,9 +13829,10 @@ F: drivers/amlogic/emmc/Makefile
 F: include/linux/amlogic/sd.h
 F: include/linux/amlogic/cpu_version.h
 
-AMLOGIC PINCTRL SUPPORT FOR M8B
+AMLOGIC PINCTRL SUPPORT
 M: Xingyu Chen <xingyu.chen@amlogic.com>
 F: drivers/amlogic/pinctrl/pinctrl-meson8b.c
+F: drivers/amlogic/pinctrl/pinctrl-meson-txlx.c
 
 AMLOGIC M400 BSP
 M: Peipeng Zhao <peipeng.zhao@amlogic.com>
