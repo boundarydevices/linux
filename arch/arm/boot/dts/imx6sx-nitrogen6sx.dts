@@ -162,10 +162,28 @@
 		>;
 	};
 
+	pinctrl_i2c1_1: i2c1_1grp {
+		fsl,pins = <
+#define GP_I2C1_SCL	<&gpio1 0 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_GPIO1_IO00__GPIO1_IO_0	0x4001b8b1
+#define GP_I2C1_SDA	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_GPIO1_IO01__GPIO1_IO_1	0x4001b8b1
+		>;
+	};
+
 	pinctrl_i2c2: i2c2grp {
 		fsl,pins = <
 			MX6SX_PAD_GPIO1_IO02__I2C2_SCL		0x4001b8b1
 			MX6SX_PAD_GPIO1_IO03__I2C2_SDA		0x4001b8b1
+		>;
+	};
+
+	pinctrl_i2c2_1: i2c2_1grp {
+		fsl,pins = <
+#define GP_I2C2_SCL	<&gpio1 2 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_GPIO1_IO02__GPIO1_IO_2	0x4001b8b1
+#define GP_I2C2_SDA	<&gpio1 3 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_GPIO1_IO03__GPIO1_IO_3	0x4001b8b1
 		>;
 	};
 
@@ -185,6 +203,15 @@
 #define GPIRQ_I2C3_J18	<&gpio4 25 IRQ_TYPE_EDGE_FALLING>
 #define GP_I2C3_J18	<&gpio4 25 GPIO_ACTIVE_LOW>
 			MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25	0x1b0b0
+		>;
+	};
+
+	pinctrl_i2c3_1: i2c3_1grp {
+		fsl,pins = <
+#define GP_I2C3_SCL	<&gpio2 14 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_KEY_COL4__GPIO2_IO_14		0x4001b8b1
+#define GP_I2C3_SDA	<&gpio2 19 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_KEY_ROW4__GPIO2_IO_19		0x4001b8b1
 		>;
 	};
 
@@ -722,8 +749,11 @@
 
 &i2c1 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c1>;
+	pinctrl-1 = <&pinctrl_i2c1_1>;
+	scl-gpios = GP_I2C1_SCL;
+	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
 	codec: sgtl5000@0a {
@@ -743,8 +773,11 @@
 
 &i2c2 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-1 = <&pinctrl_i2c2_1>;
+	scl-gpios = GP_I2C2_SCL;
+	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 	tfp410@38 {
 		compatible = "tfp410";
@@ -761,8 +794,11 @@
 
 &i2c3 {
         clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-1 = <&pinctrl_i2c3_1>;
+	scl-gpios = GP_I2C3_SCL;
+	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
         egalax_ts@04 {
