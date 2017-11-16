@@ -34,6 +34,7 @@
 #include <linux/dma-mapping.h>
 
 #include <asm/irq.h>
+#include <linux/busfreq-imx.h>
 #include <linux/platform_data/serial-imx.h>
 #include <linux/platform_data/dma-imx.h>
 
@@ -1246,6 +1247,11 @@ static void imx_uart_dma_exit(struct imx_port *sport)
 		dma_release_channel(sport->dma_chan_tx);
 		sport->dma_chan_tx = NULL;
 	}
+
+	if (sport->dma_is_inited)
+		release_bus_freq(BUS_FREQ_HIGH);
+
+	sport->dma_is_inited = 0;
 }
 
 static int imx_uart_dma_init(struct imx_port *sport)
@@ -1302,6 +1308,9 @@ static int imx_uart_dma_init(struct imx_port *sport)
 		dev_err(dev, "error in TX dma configuration.");
 		goto err;
 	}
+
+	sport->dma_is_inited = 1;
+	request_bus_freq(BUS_FREQ_HIGH);
 
 	return 0;
 err:
