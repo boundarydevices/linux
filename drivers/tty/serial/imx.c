@@ -854,25 +854,6 @@ out:
 	return IRQ_HANDLED;
 }
 
-static void imx_disable_rx_int(struct imx_port *sport)
-{
-	unsigned long temp;
-
-	/* disable the receiver ready and aging timer interrupts */
-	temp = readl(sport->port.membase + UCR1);
-	temp &= ~(UCR1_RRDYEN);
-	writel(temp, sport->port.membase + UCR1);
-
-	temp = readl(sport->port.membase + UCR2);
-	temp &= ~(UCR2_ATEN);
-	writel(temp, sport->port.membase + UCR2);
-
-	/* disable the rx errors interrupts */
-	temp = readl(sport->port.membase + UCR4);
-	temp &= ~UCR4_OREN;
-	writel(temp, sport->port.membase + UCR4);
-}
-
 /*
  * We have a modem side uart, so the meanings of RTS and CTS are inverted.
  */
@@ -1461,9 +1442,14 @@ static int imx_startup(struct uart_port *port)
 	writel(USR1_RTSD | USR1_DTRD, sport->port.membase + USR1);
 	writel(USR2_ORE, sport->port.membase + USR2);
 
-	temp = readl(sport->port.membase + UCR1);
-	if (!sport->dma_is_inited)
+	if (sport->dma_is_inited && !sport->dma_is_enabled)
+		imx_enable_dma(sport);
+
+	temp = readl(sport->port.membase + UCR1) & ~UCR1_RRDYEN;
+	if (!sport->dma_is_enabled)
 		temp |= UCR1_RRDYEN;
+	temp |= UCR1_UARTEN;
+
 	if (sport->have_rtscts)
 		temp |= UCR1_RTSDEN;
 	else
@@ -1471,12 +1457,12 @@ static int imx_startup(struct uart_port *port)
 	temp |= UCR1_UARTEN;
 	writel(temp, sport->port.membase + UCR1);
 
-	if (!sport->dma_is_inited) {
-		temp = readl(sport->port.membase + UCR4);
+	temp = readl(sport->port.membase + UCR4) & ~UCR4_OREN;
+	if (!sport->dma_is_enabled)
 		temp |= UCR4_OREN;
-		writel(temp, sport->port.membase + UCR4);
-	}
-	temp = readl(sport->port.membase + UCR2);
+	writel(temp, sport->port.membase + UCR4);
+
+	temp = readl(sport->port.membase + UCR2) & ~UCR2_ATEN;
 	temp |= (UCR2_RXEN | UCR2_TXEN);
 	if (!sport->have_rtscts)
 		temp |= UCR2_IRTS;
@@ -1510,10 +1496,8 @@ static int imx_startup(struct uart_port *port)
 	 * In our iMX53 the average delay for the first reception dropped from
 	 * approximately 35000 microseconds to 1000 microseconds.
 	 */
-	if (sport->dma_is_enabled) {
-		imx_disable_rx_int(sport);
+	if (sport->dma_is_enabled)
 		start_rx_dma(sport);
-	}
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 
