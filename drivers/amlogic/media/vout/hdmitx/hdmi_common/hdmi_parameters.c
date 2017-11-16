@@ -60,7 +60,10 @@ static struct hdmi_format_para fmt_para_1920x1080p60_16x9 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -105,7 +108,10 @@ static struct hdmi_format_para fmt_para_1920x1080p30_16x9 = {
 		.sync_duration_num = 30,
 		.sync_duration_den = 1,
 		.video_clk         = 74250000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -149,7 +155,10 @@ static struct hdmi_format_para fmt_para_1920x1080p50_16x9 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 148500000,
+		.htotal            = 2640,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -193,7 +202,10 @@ static struct hdmi_format_para fmt_para_1920x1080p25_16x9 = {
 		.sync_duration_num = 25,
 		.sync_duration_den = 1,
 		.video_clk         = 74250000,
+		.htotal            = 2640,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -238,7 +250,10 @@ static struct hdmi_format_para fmt_para_1920x1080p24_16x9 = {
 		.sync_duration_num = 24,
 		.sync_duration_den = 1,
 		.video_clk         = 74250000,
+		.htotal            = 2750,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -283,7 +298,10 @@ static struct hdmi_format_para fmt_para_3840x2160p30_16x9 = {
 		.sync_duration_num = 30,
 		.sync_duration_den = 1,
 		.video_clk         = 297000000,
+		.htotal            = 4400,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -328,7 +346,10 @@ static struct hdmi_format_para fmt_para_3840x2160p60_16x9 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 4400,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -372,7 +393,10 @@ static struct hdmi_format_para fmt_para_3840x2160p50_16x9 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 5280,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -416,7 +440,10 @@ static struct hdmi_format_para fmt_para_3840x2160p25_16x9 = {
 		.sync_duration_num = 25,
 		.sync_duration_den = 1,
 		.video_clk         = 297000000,
+		.htotal            = 5280,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -461,7 +488,10 @@ static struct hdmi_format_para fmt_para_3840x2160p24_16x9 = {
 		.sync_duration_num = 24,
 		.sync_duration_den = 1,
 		.video_clk         = 297000000,
+		.htotal            = 5500,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -506,7 +536,10 @@ static struct hdmi_format_para fmt_para_4096x2160p24_256x135 = {
 		.sync_duration_num = 24,
 		.sync_duration_den = 1,
 		.video_clk         = 297000000,
+		.htotal            = 5500,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -550,7 +583,10 @@ static struct hdmi_format_para fmt_para_4096x2160p25_256x135 = {
 		.sync_duration_num = 25,
 		.sync_duration_den = 1,
 		.video_clk         = 297000000,
+		.htotal            = 5280,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -595,7 +631,10 @@ static struct hdmi_format_para fmt_para_4096x2160p30_256x135 = {
 		.sync_duration_num = 30,
 		.sync_duration_den = 1,
 		.video_clk         = 297000000,
+		.htotal            = 4400,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -639,7 +678,10 @@ static struct hdmi_format_para fmt_para_4096x2160p50_256x135 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 5280,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -684,7 +726,10 @@ static struct hdmi_format_para fmt_para_4096x2160p60_256x135 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 4400,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -729,7 +774,10 @@ static struct hdmi_format_para fmt_para_1920x1080i60_16x9 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -773,7 +821,10 @@ static struct hdmi_format_para fmt_para_1920x1080i50_16x9 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 148500000,
+		.htotal            = 2640,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -818,7 +869,10 @@ static struct hdmi_format_para fmt_para_1280x720p60_16x9 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 74250000,
+		.htotal            = 1650,
+		.vtotal            = 750,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -862,7 +916,10 @@ static struct hdmi_format_para fmt_para_1280x720p50_16x9 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 74250000,
+		.htotal            = 1980,
+		.vtotal            = 750,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -907,7 +964,10 @@ static struct hdmi_format_para fmt_para_720x480p60_16x9 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 27000000,
+		.htotal            = 858,
+		.vtotal            = 525,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -952,7 +1012,10 @@ static struct hdmi_format_para fmt_para_720x480i60_16x9 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 27000000,
+		.htotal            = 1716,
+		.vtotal            = 525,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCI,
 	},
 };
 
@@ -996,7 +1059,10 @@ static struct hdmi_format_para fmt_para_720x576p50_16x9 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 27000000,
+		.htotal            = 864,
+		.vtotal            = 625,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -1040,7 +1106,10 @@ static struct hdmi_format_para fmt_para_720x576i50_16x9 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 27000000,
+		.htotal            = 1728,
+		.vtotal            = 625,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCI,
 	},
 };
 
@@ -1086,7 +1155,10 @@ static struct hdmi_format_para fmt_para_3840x2160p50_16x9_y420 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 5280,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -1130,7 +1202,10 @@ static struct hdmi_format_para fmt_para_4096x2160p50_256x135_y420 = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 5280,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -1175,7 +1250,10 @@ static struct hdmi_format_para fmt_para_3840x2160p60_16x9_y420 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 4400,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -1221,7 +1299,10 @@ static struct hdmi_format_para fmt_para_4096x2160p60_256x135_y420 = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 594000000,
+		.htotal            = 4400,
+		.vtotal            = 2250,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -1240,7 +1321,10 @@ static struct hdmi_format_para fmt_para_non_hdmi_fmt = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 
@@ -1265,7 +1349,10 @@ static struct hdmi_format_para fmt_para_null_hdmi_fmt = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCP,
 	},
 };
 

@@ -34,6 +34,7 @@
 #include <linux/major.h>
 #include <linux/uaccess.h>
 #include <linux/extcon.h>
+#include <linux/cdev.h>
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -68,8 +69,12 @@ static int uboot_display;
 
 static char vout_axis[64] __nosavedata;
 
-static char hdmimode[VMODE_NAME_LEN_MAX];
-static char cvbsmode[VMODE_NAME_LEN_MAX];
+static char hdmimode[VMODE_NAME_LEN_MAX] = {
+	'i', 'n', 'v', 'a', 'l', 'i', 'd', '\0'
+};
+static char cvbsmode[VMODE_NAME_LEN_MAX] = {
+	'i', 'n', 'v', 'a', 'l', 'i', 'd', '\0'
+};
 static enum vmode_e last_vmode = VMODE_MAX;
 static int tvout_monitor_flag = 1;
 static unsigned int tvout_monitor_timeout_cnt = 20;
@@ -81,6 +86,14 @@ static const unsigned int vout_cable[] = {
 	EXTCON_TYPE_DISP,
 	EXTCON_NONE,
 };
+
+struct vout_cdev_s {
+	dev_t         devno;
+	struct cdev   cdev;
+	struct device *dev;
+};
+
+static struct vout_cdev_s *vout_cdev;
 
 char *get_vout_mode_internal(void)
 {
@@ -318,6 +331,8 @@ static ssize_t vout_vinfo_show(struct class *class,
 		"    sync_duration_den:     %d\n"
 		"    screen_real_width:     %d\n"
 		"    screen_real_height:    %d\n"
+		"    htotal:                %d\n"
+		"    vtotal:                %d\n"
 		"    video_clk:             %d\n"
 		"    viu_color_fmt:         %d\n"
 		"    viu_mux:               %d\n\n",
@@ -326,6 +341,7 @@ static ssize_t vout_vinfo_show(struct class *class,
 		info->aspect_ratio_num, info->aspect_ratio_den,
 		info->sync_duration_num, info->sync_duration_den,
 		info->screen_real_width, info->screen_real_height,
+		info->htotal, info->vtotal,
 		info->video_clk, info->viu_color_fmt, info->viu_mux);
 	len += sprintf(buf+len, "master_display_info:\n"
 		"    present_flag          %d\n"
@@ -347,32 +363,16 @@ static ssize_t vout_vinfo_show(struct class *class,
 		info->master_display_info.white_point[1],
 		info->master_display_info.luminance[0],
 		info->master_display_info.luminance[1]);
+	len += sprintf(buf+len, "hdr_info:\n"
+		"    hdr_support           %d\n"
+		"    lumi_max              %d\n"
+		"    lumi_avg              %d\n"
+		"    lumi_min              %d\n",
+		info->hdr_info.hdr_support,
+		info->hdr_info.lumi_max,
+		info->hdr_info.lumi_avg,
+		info->hdr_info.lumi_min);
 	return len;
-}
-
-static ssize_t vout_mode_flag_show(struct class *class,
-		struct class_attribute *attr, char *buf)
-{
-	int ret = 0;
-
-	ret = sprintf(buf, "%d\n", tvout_monitor_flag);
-
-	return ret;
-}
-
-static ssize_t vout_mode_flag_store(struct class *class,
-		struct class_attribute *attr, const char *buf, size_t count)
-{
-	int ret = 0;
-
-	ret = kstrtoint(buf, 10, &tvout_monitor_flag);
-	if (ret) {
-		VOUTPR("%s: invalid data\n", __func__);
-		return -EINVAL;
-	}
-	VOUTPR("%s: tvout_monitor_flag = %d\n", __func__, tvout_monitor_flag);
-
-	return count;
 }
 
 static struct class_attribute vout_class_attrs[] = {
@@ -381,10 +381,9 @@ static struct class_attribute vout_class_attrs[] = {
 	__ATTR(fr_policy, 0644,
 		vout_fr_policy_show, vout_fr_policy_store),
 	__ATTR(vinfo,     0444, vout_vinfo_show, NULL),
-	__ATTR(mode_flag, 0644, vout_mode_flag_show, vout_mode_flag_store),
 };
 
-static int vout_create_attr(void)
+static int vout_attr_create(void)
 {
 	int i;
 	int ret = 0;
@@ -407,7 +406,7 @@ static int vout_create_attr(void)
 	return ret;
 }
 
-static int vout_remove_attr(void)
+static int vout_attr_remove(void)
 {
 	int i;
 
@@ -422,6 +421,149 @@ static int vout_remove_attr(void)
 
 	return 0;
 }
+
+/* ************************************************************* */
+/* vout ioctl                                                    */
+/* ************************************************************* */
+static int vout_io_open(struct inode *inode, struct file *file)
+{
+	struct vout_cdev_s *vcdev;
+
+	VOUTPR("%s\n", __func__);
+	vcdev = container_of(inode->i_cdev, struct vout_cdev_s, cdev);
+	file->private_data = vcdev;
+	return 0;
+}
+
+static int vout_io_release(struct inode *inode, struct file *file)
+{
+	VOUTPR("%s\n", __func__);
+	file->private_data = NULL;
+	return 0;
+}
+
+static long vout_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int ret = 0;
+	void __user *argp;
+	int mcd_nr;
+	struct vinfo_s *info = NULL;
+	struct vinfo_base_s baseinfo;
+
+	mcd_nr = _IOC_NR(cmd);
+	VOUTPR("%s: cmd_dir = 0x%x, cmd_nr = 0x%x\n",
+		__func__, _IOC_DIR(cmd), mcd_nr);
+
+	argp = (void __user *)arg;
+	switch (mcd_nr) {
+	case VOUT_IOC_NR_GET_VINFO:
+		info = get_current_vinfo();
+		if (info == NULL)
+			ret = -EFAULT;
+		else if (info->mode == VMODE_INIT_NULL)
+			ret = -EFAULT;
+		else {
+			baseinfo.mode = info->mode;
+			baseinfo.width = info->width;
+			baseinfo.height = info->height;
+			baseinfo.field_height = info->field_height;
+			baseinfo.aspect_ratio_num = info->aspect_ratio_num;
+			baseinfo.aspect_ratio_den = info->aspect_ratio_den;
+			baseinfo.sync_duration_num = info->sync_duration_num;
+			baseinfo.sync_duration_den = info->sync_duration_den;
+			baseinfo.screen_real_width = info->screen_real_width;
+			baseinfo.screen_real_height = info->screen_real_height;
+			baseinfo.video_clk = info->video_clk;
+			baseinfo.viu_color_fmt = info->viu_color_fmt;
+			baseinfo.hdr_info = info->hdr_info;
+			if (copy_to_user(argp, &baseinfo,
+				sizeof(struct vinfo_base_s)))
+				ret = -EFAULT;
+		}
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+#ifdef CONFIG_COMPAT
+static long vout_compat_ioctl(struct file *file, unsigned int cmd,
+		unsigned long arg)
+{
+	unsigned long ret;
+
+	arg = (unsigned long)compat_ptr(arg);
+	ret = vout_ioctl(file, cmd, arg);
+	return ret;
+}
+#endif
+
+static const struct file_operations vout_fops = {
+	.owner          = THIS_MODULE,
+	.open           = vout_io_open,
+	.release        = vout_io_release,
+	.unlocked_ioctl = vout_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl   = vout_compat_ioctl,
+#endif
+};
+
+static int vout_fops_create(void)
+{
+	int ret = 0;
+
+	vout_cdev = kmalloc(sizeof(struct vout_cdev_s), GFP_KERNEL);
+	if (!vout_cdev) {
+		VOUTERR("failed to allocate vout_cdev\n");
+		return -1;
+	}
+
+	ret = alloc_chrdev_region(&vout_cdev->devno, 0, 1, VOUT_CDEV_NAME);
+	if (ret < 0) {
+		VOUTERR("failed to alloc devno\n");
+		goto vout_fops_err1;
+	}
+
+	cdev_init(&vout_cdev->cdev, &vout_fops);
+	vout_cdev->cdev.owner = THIS_MODULE;
+	ret = cdev_add(&vout_cdev->cdev, vout_cdev->devno, 1);
+	if (ret) {
+		VOUTERR("failed to add cdev\n");
+		goto vout_fops_err2;
+	}
+
+	vout_cdev->dev = device_create(vout_class, NULL, vout_cdev->devno,
+			NULL, VOUT_CDEV_NAME);
+	if (IS_ERR(vout_cdev->dev)) {
+		ret = PTR_ERR(vout_cdev->dev);
+		VOUTERR("failed to create device: %d\n", ret);
+		goto vout_fops_err3;
+	}
+
+	VOUTPR("%s OK\n", __func__);
+	return 0;
+
+vout_fops_err3:
+	cdev_del(&vout_cdev->cdev);
+vout_fops_err2:
+	unregister_chrdev_region(vout_cdev->devno, 1);
+vout_fops_err1:
+	kfree(vout_cdev);
+	vout_cdev = NULL;
+	return -1;
+}
+
+static void vout_fops_remove(void)
+{
+	cdev_del(&vout_cdev->cdev);
+	unregister_chrdev_region(vout_cdev->devno, 1);
+	kfree(vout_cdev);
+	vout_cdev = NULL;
+}
+/* ************************************************************* */
 
 #ifdef CONFIG_PM
 static int aml_vout_suspend(struct platform_device *pdev, pm_message_t state)
@@ -647,7 +789,8 @@ static int aml_vout_probe(struct platform_device *pdev)
 	set_vout_init_mode();
 
 	vout_class = NULL;
-	ret = vout_create_attr();
+	ret = vout_attr_create();
+	ret = vout_fops_create();
 
 	if (ret == 0)
 		VOUTPR("create vout attribute OK\n");
@@ -666,8 +809,10 @@ static int aml_vout_remove(struct platform_device *pdev)
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	unregister_early_suspend(&early_suspend);
 #endif
-	vout_remove_attr();
+
 	aml_vout_extcon_free();
+	vout_attr_remove();
+	vout_fops_remove();
 
 	return 0;
 }

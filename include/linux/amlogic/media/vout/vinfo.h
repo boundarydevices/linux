@@ -59,7 +59,6 @@ struct hdr_info {
 	u32 lumi_max; /* RX EDID Lumi Max value */
 	u32 lumi_avg; /* RX EDID Lumi Avg value */
 	u32 lumi_min; /* RX EDID Lumi Min value */
-	u8 sink_flag; /*0 = hdmi, 1 = panel*/
 };
 
 enum eotf_type {
@@ -70,6 +69,7 @@ enum eotf_type {
 	EOTF_T_MAX,
 };
 
+/* Dolby Version support information */
 struct dv_info {
 	uint32_t ieeeoui;
 	uint8_t ver; /* 0 or 1 */
@@ -106,6 +106,28 @@ struct dv_info {
 	} vers;
 };
 
+struct vout_device_s {
+	const struct dv_info *dv_info;
+	void (*fresh_tx_hdr_pkt)(struct master_display_info_s *data);
+	void (*fresh_tx_vsif_pkt)(enum eotf_type type, uint8_t tunnel_mode);
+};
+
+struct vinfo_base_s {
+	enum vmode_e mode;
+	u32 width;
+	u32 height;
+	u32 field_height;
+	u32 aspect_ratio_num;
+	u32 aspect_ratio_den;
+	u32 sync_duration_num;
+	u32 sync_duration_den;
+	u32 screen_real_width;
+	u32 screen_real_height;
+	u32 video_clk;
+	enum color_fmt_e viu_color_fmt;
+	struct hdr_info hdr_info;
+};
+
 struct vinfo_s {
 	char *name;
 	enum vmode_e mode;
@@ -126,10 +148,7 @@ struct vinfo_s {
 	enum viu_mux_e viu_mux;
 	struct master_display_info_s master_display_info;
 	struct hdr_info hdr_info;
-	const struct dv_info *dv_info;
-	void (*fresh_tx_hdr_pkt)(struct master_display_info_s *data);
-	void (*fresh_tx_vsif_pkt)(enum eotf_type type, uint8_t tunnel_mode);
-	void *vout_device;
+	struct vout_device_s *vout_device;
 };
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FB

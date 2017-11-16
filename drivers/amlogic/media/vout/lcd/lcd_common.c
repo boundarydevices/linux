@@ -645,7 +645,6 @@ void lcd_hdr_vinfo_update(void)
 	hdr_vinfo->luminance[0] = pconf->hdr_info.luma_max;
 	hdr_vinfo->luminance[1] = pconf->hdr_info.luma_min;
 
-	lcd_drv->lcd_info->hdr_info.sink_flag = 1;
 	lcd_drv->lcd_info->hdr_info.lumi_max = pconf->hdr_info.luma_max;
 }
 

@@ -792,21 +792,28 @@ EXPORT_SYMBOL(dolby_vision_dump_setting);
 
 static int sink_support_dolby_vision(const struct vinfo_s *vinfo)
 {
-	if (!vinfo || !vinfo->dv_info)
+	struct vout_device_s *vdev = NULL;
+
+	if (!vinfo || !vinfo->vout_device)
 		return 0;
-	if (vinfo->dv_info->ieeeoui != 0x00d046)
+
+	vdev = vinfo->vout_device;
+
+	if (!vdev->dv_info)
+		return 0;
+	if (vdev->dv_info->ieeeoui != 0x00d046)
 		return 0;
 	/* 2160p60 if TV support */
 	if ((vinfo->width >= 3840)
-	&& (vinfo->height >= 2160)
-	&& (vinfo->dv_info->sup_2160p60hz == 1))
+		&& (vinfo->height >= 2160)
+		&& (vdev->dv_info->sup_2160p60hz == 1))
 		return 1;
 	/* 1080p~2160p30 if TV support */
 	else if (((vinfo->width == 1920)
-	&& (vinfo->height == 1080))
-	|| ((vinfo->width >= 3840)
-	&& (vinfo->height >= 2160)
-	&& (vinfo->dv_info->sup_2160p60hz == 0)))
+			&& (vinfo->height == 1080))
+		|| ((vinfo->width >= 3840)
+			&& (vinfo->height >= 2160)
+			&& (vdev->dv_info->sup_2160p60hz == 0)))
 		return 1;
 	return 0;
 }
@@ -1390,6 +1397,10 @@ static bool send_hdmi_pkt(
 	struct hdr_10_infoframe_s *p_hdr;
 	int i;
 	bool flag = false;
+	struct vout_device_s *vdev = NULL;
+
+	if (vinfo->vout_device)
+		vdev = vinfo->vout_device;
 
 	if (dst_format == FORMAT_HDR10) {
 		p_hdr = &dovi_setting.hdr_info;
@@ -1496,10 +1507,12 @@ static bool send_hdmi_pkt(
 		hdr10_data.max_frame_average =
 			(p_hdr->max_frame_average_light_level_MSB << 8)
 			| p_hdr->max_frame_average_light_level_LSB;
-		if (vinfo->fresh_tx_hdr_pkt)
-			vinfo->fresh_tx_hdr_pkt(&hdr10_data);
-		if (vinfo->fresh_tx_vsif_pkt)
-			vinfo->fresh_tx_vsif_pkt(0, 0);
+		if (vdev) {
+			if (vdev->fresh_tx_hdr_pkt)
+				vdev->fresh_tx_hdr_pkt(&hdr10_data);
+			if (vdev->fresh_tx_vsif_pkt)
+				vdev->fresh_tx_vsif_pkt(0, 0);
+		}
 
 		if (flag) {
 			pr_dolby_dbg("Info frame for hdr10 changed:\n");
@@ -1540,13 +1553,15 @@ static bool send_hdmi_pkt(
 		hdr10_data.luminance[1] = 0;
 		hdr10_data.max_content = 0;
 		hdr10_data.max_frame_average = 0;
-		if (vinfo->fresh_tx_hdr_pkt)
-			vinfo->fresh_tx_hdr_pkt(&hdr10_data);
-		if (vinfo->fresh_tx_vsif_pkt)
-			vinfo->fresh_tx_vsif_pkt(
-				1, dolby_vision_mode ==
-				DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL
-				? 1 : 0);
+		if (vdev) {
+			if (vdev->fresh_tx_hdr_pkt)
+				vdev->fresh_tx_hdr_pkt(&hdr10_data);
+			if (vdev->fresh_tx_vsif_pkt)
+				vdev->fresh_tx_vsif_pkt(
+					1, dolby_vision_mode ==
+					DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL
+					? 1 : 0);
+		}
 	} else {
 		hdr10_data.features =
 			  (1 << 29)	/* video available */
@@ -1566,10 +1581,12 @@ static bool send_hdmi_pkt(
 		hdr10_data.luminance[1] = 0;
 		hdr10_data.max_content = 0;
 		hdr10_data.max_frame_average = 0;
-		if (vinfo->fresh_tx_hdr_pkt)
-			vinfo->fresh_tx_hdr_pkt(&hdr10_data);
-		if (vinfo->fresh_tx_vsif_pkt)
-			vinfo->fresh_tx_vsif_pkt(0, 0);
+		if (vdev) {
+			if (vdev->fresh_tx_hdr_pkt)
+				vdev->fresh_tx_hdr_pkt(&hdr10_data);
+			if (vdev->fresh_tx_vsif_pkt)
+				vdev->fresh_tx_vsif_pkt(0, 0);
+		}
 	}
 	return flag;
 }
@@ -1615,9 +1632,17 @@ static int dolby_vision_parse_metadata(struct vframe_s *vf)
 		&vf->prop.master_display_colour;
 	unsigned int current_mode = dolby_vision_mode;
 	uint32_t target_lumin_max = 0;
+	struct vout_device_s *vdev = NULL;
+	unsigned int ieeeoui = 0;
 
 	if ((!dolby_vision_enable) || (!p_funcs))
 		return -1;
+
+	if (vinfo->vout_device) {
+		vdev = vinfo->vout_device;
+		if (vdev->dv_info)
+			ieeeoui = vdev->dv_info->ieeeoui;
+	}
 
 	if (vf) {
 		pr_dolby_dbg("frame %d pts %lld:\n", frame_count, vf->pts_us64);
@@ -1739,27 +1764,28 @@ static int dolby_vision_parse_metadata(struct vframe_s *vf)
 		dolby_vision_graphic_max = 100;
 	}
 	if (dolby_vision_flags & FLAG_USE_SINK_MIN_MAX) {
-		if (vinfo->dv_info->ieeeoui == 0x00d046) {
-			if (vinfo->dv_info->ver == 0) {
+		if (ieeeoui == 0x00d046) {
+			if (vdev->dv_info->ver == 0) {
 				/* need lookup PQ table ... */
 				/*dolby_vision_graphic_min =*/
 				/*dolby_vision_target_min =*/
-				/*	vinfo->dv_info.ver0.target_min_pq;*/
+				/*	vdev->dv_info.ver0.target_min_pq;*/
 				/*dolby_vision_graphic_max =*/
 				/*target_lumin_max =*/
-				/*	vinfo->dv_info.ver0.target_max_pq;*/
-			} else if (vinfo->dv_info->ver == 1) {
-				if (vinfo->dv_info->vers.ver1.target_max_lum) {
+				/*	vdev->dv_info.ver0.target_max_pq;*/
+			} else if (vdev->dv_info->ver == 1) {
+				if (vdev->dv_info->
+					vers.ver1.target_max_lum) {
 					/* Target max luminance = 100+50*CV */
 					dolby_vision_graphic_max =
 					target_lumin_max =
-						(vinfo->dv_info->
+						(vdev->dv_info->
 						vers.ver1.target_max_lum
 						* 50 + 100);
 					/* Target min luminance = (CV/127)^2 */
 					dolby_vision_graphic_min =
 					dolby_vision_target_min =
-						(vinfo->dv_info->
+						(vdev->dv_info->
 						vers.ver1.target_min_lum ^ 2)
 						* 10000 / (127 * 127);
 				}

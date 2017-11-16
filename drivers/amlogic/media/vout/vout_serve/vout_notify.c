@@ -77,9 +77,10 @@ static struct vinfo_s vinfo_invalid = {
 	.aspect_ratio_den  = 9,
 	.sync_duration_num = 60,
 	.sync_duration_den = 1,
-	.video_clk = 148500000,
-	.viu_color_fmt = COLOR_FMT_RGB444,
-	.vout_device = NULL,
+	.video_clk         = 148500000,
+	.viu_color_fmt     = COLOR_FMT_RGB444,
+	.viu_mux           = VIU_MUX_MAX,
+	.vout_device       = NULL,
 };
 
 static struct vinfo_s *get_invalid_vinfo(void)

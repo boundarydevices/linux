@@ -378,7 +378,10 @@ static void lcd_tablet_vinfo_update(void)
 		vinfo->sync_duration_num = pconf->lcd_timing.sync_duration_num;
 		vinfo->sync_duration_den = pconf->lcd_timing.sync_duration_den;
 		vinfo->video_clk = pconf->lcd_timing.lcd_clk;
+		vinfo->htotal = pconf->lcd_basic.h_period;
+		vinfo->vtotal = pconf->lcd_basic.v_period;
 		vinfo->viu_color_fmt = COLOR_FMT_RGB444;
+		vinfo->viu_mux = VIU_MUX_ENCL;
 
 		lcd_hdr_vinfo_update();
 	}
@@ -388,7 +391,7 @@ static void lcd_tablet_vinfo_update_default(void)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct vinfo_s *vinfo;
-	unsigned int h_active, v_active;
+	unsigned int h_active, v_active, h_total, v_total;
 
 	if (lcd_drv->lcd_info == NULL) {
 		LCDERR("no lcd_info exist\n");
@@ -399,6 +402,8 @@ static void lcd_tablet_vinfo_update_default(void)
 			- lcd_vcbus_read(ENCL_VIDEO_HAVON_BEGIN) + 1;
 	v_active = lcd_vcbus_read(ENCL_VIDEO_VAVON_ELINE)
 			- lcd_vcbus_read(ENCL_VIDEO_VAVON_BLINE) + 1;
+	h_total = lcd_vcbus_read(ENCL_VIDEO_MAX_PXCNT) + 1;
+	v_total = lcd_vcbus_read(ENCL_VIDEO_MAX_LNCNT) + 1;
 
 	vinfo = lcd_drv->lcd_info;
 	if (vinfo) {
@@ -414,7 +419,10 @@ static void lcd_tablet_vinfo_update_default(void)
 		vinfo->sync_duration_num = 60;
 		vinfo->sync_duration_den = 1;
 		vinfo->video_clk = 0;
+		vinfo->htotal = h_total;
+		vinfo->vtotal = v_total;
 		vinfo->viu_color_fmt = COLOR_FMT_RGB444;
+		vinfo->viu_mux = VIU_MUX_ENCL;
 	}
 }
 

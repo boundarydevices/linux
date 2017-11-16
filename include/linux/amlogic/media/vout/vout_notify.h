@@ -77,7 +77,7 @@ extern int get_vframe_rate_policy(void);
 
 /* vdac ctrl,adc/dac ref signal,cvbs out signal
  * module index: atv demod:0x01; dtv demod:0x02; tvafe:0x4; dac:0x8
-*/
+ */
 extern void vdac_enable(bool on, unsigned int module_sel);
 extern int vout_suspend(void);
 extern int vout_resume(void);
@@ -88,6 +88,17 @@ extern int vout_shutdown(void);
 #define VOUT_EVENT_OSD_BLANK           0x00030000
 #define VOUT_EVENT_OSD_DISP_AXIS       0x00040000
 #define VOUT_EVENT_OSD_PREBLEND_ENABLE 0x00050000
+
+/* ********** vout_ioctl ********** */
+#define VOUT_IOC_TYPE            'C'
+#define VOUT_IOC_NR_GET_VINFO    0x0
+#define VOUT_IOC_NR_SET_VINFO    0x1
+
+#define VOUT_IOC_CMD_GET_VINFO   \
+		_IOR(VOUT_IOC_TYPE, VOUT_IOC_NR_GET_VINFO, struct vinfo_base_s)
+#define VOUT_IOC_CMD_SET_VINFO   \
+		_IOW(VOUT_IOC_TYPE, VOUT_IOC_NR_SET_VINFO, struct vinfo_base_s)
+/* ******************************** */
 
 extern void update_vout_mode(char *name);
 

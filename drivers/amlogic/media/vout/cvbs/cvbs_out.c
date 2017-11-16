@@ -69,8 +69,11 @@ static struct vinfo_s cvbs_info[] = {
 		.sync_duration_num = 60,
 		.sync_duration_den = 1,
 		.video_clk         = 27000000,
+		.htotal            = 1716,
+		.vtotal            = 525,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
 		.viu_mux           = VIU_MUX_ENCI,
+		.vout_device       = NULL,
 	},
 	{ /* MODE_576I */
 		.name              = "576cvbs",
@@ -83,8 +86,11 @@ static struct vinfo_s cvbs_info[] = {
 		.sync_duration_num = 50,
 		.sync_duration_den = 1,
 		.video_clk         = 27000000,
+		.htotal            = 1728,
+		.vtotal            = 625,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
 		.viu_mux           = VIU_MUX_ENCI,
+		.vout_device       = NULL,
 	},
 };
 

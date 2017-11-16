@@ -88,6 +88,8 @@ static atomic_t kref_audio_mute;
 static atomic_t kref_video_mute;
 static char fmt_attr[16];
 
+static struct hdmitx_dev hdmitx_device;
+
 #ifndef CONFIG_AMLOGIC_VOUT
 /* Fake vinfo */
 struct vinfo_s vinfo_1080p60hz = {
@@ -100,13 +102,23 @@ struct vinfo_s vinfo_1080p60hz = {
 	.aspect_ratio_den  = 9,
 	.sync_duration_num = 60,
 	.sync_duration_den = 1,
-	.video_clk		 = 148500000,
+	.video_clk         = 148500000,
+	.htotal            = 2200,
+	.vtotal            = 1125,
+	.viu_color_fmt     = COLOR_FMT_YUV444,
+	.viu_mux           = VIU_MUX_ENCP,
 };
 struct vinfo_s *get_current_vinfo(void)
 {
 	return &vinfo_1080p60hz;
 }
 #endif
+
+struct vout_device_s hdmitx_vdev = {
+	.dv_info = &(hdmitx_device.RXCap.dv_info),
+	.fresh_tx_hdr_pkt = hdmitx_set_drm_pkt,
+	.fresh_tx_vsif_pkt = hdmitx_set_vsif_pkt,
+};
 
 struct hdmi_config_platform_data *hdmi_pdata;
 
@@ -115,7 +127,6 @@ static const unsigned int hdmi_cable[] = {
 	EXTCON_NONE,
 };
 
-static struct hdmitx_dev hdmitx_device;
 struct extcon_dev *hdmitx_extcon_hdmi;
 struct extcon_dev *hdmitx_excton_audio;
 struct extcon_dev *hdmitx_excton_power;
@@ -435,9 +446,6 @@ static int set_disp_mode_auto(void)
 	if (info == NULL)
 		return -1;
 
-	info->fresh_tx_hdr_pkt = hdmitx_set_drm_pkt;
-	info->fresh_tx_vsif_pkt = hdmitx_set_vsif_pkt;
-	info->dv_info = &hdev->RXCap.dv_info;
 	if (!((strncmp(info->name, "480cvbs", 7) == 0) ||
 		(strncmp(info->name, "576cvbs", 7) == 0) ||
 		(strncmp(info->name, "null", 4) == 0))) {
@@ -2425,6 +2433,7 @@ static enum vmode_e hdmitx_validate_vmode(char *mode)
 
 	if (info) {
 		hdmi_info = info;
+		hdmi_info->vout_device = &hdmitx_vdev;
 		return VMODE_HDMI;
 	}
 	return VMODE_MAX;

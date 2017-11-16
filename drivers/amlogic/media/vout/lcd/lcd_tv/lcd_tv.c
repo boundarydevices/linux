@@ -224,6 +224,8 @@ static void lcd_vmode_vinfo_update(enum vmode_e mode)
 	lcd_drv->lcd_info->sync_duration_num = info->frame_rate;
 	lcd_drv->lcd_info->sync_duration_den = 1;
 	lcd_drv->lcd_info->video_clk = pconf->lcd_timing.lcd_clk;
+	lcd_drv->lcd_info->htotal = pconf->lcd_basic.h_period;
+	lcd_drv->lcd_info->vtotal = pconf->lcd_basic.v_period;
 
 	lcd_hdr_vinfo_update();
 }
@@ -581,7 +583,7 @@ static void lcd_vinfo_update_default(void)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct vinfo_s *vinfo;
-	unsigned int h_active, v_active;
+	unsigned int h_active, v_active, h_total, v_total;
 	char *mode;
 
 	if (lcd_drv->lcd_info == NULL) {
@@ -594,6 +596,8 @@ static void lcd_vinfo_update_default(void)
 			- lcd_vcbus_read(ENCL_VIDEO_HAVON_BEGIN) + 1;
 	v_active = lcd_vcbus_read(ENCL_VIDEO_VAVON_ELINE)
 			- lcd_vcbus_read(ENCL_VIDEO_VAVON_BLINE) + 1;
+	h_total = lcd_vcbus_read(ENCL_VIDEO_MAX_PXCNT) + 1;
+	v_total = lcd_vcbus_read(ENCL_VIDEO_MAX_LNCNT) + 1;
 
 	vinfo = lcd_drv->lcd_info;
 	if (vinfo) {
@@ -609,7 +613,10 @@ static void lcd_vinfo_update_default(void)
 		vinfo->sync_duration_num = 60;
 		vinfo->sync_duration_den = 1;
 		vinfo->video_clk = 0;
+		vinfo->htotal = h_total;
+		vinfo->vtotal = v_total;
 		vinfo->viu_color_fmt = COLOR_FMT_RGB444;
+		vinfo->viu_mux = VIU_MUX_ENCL;
 	}
 }
 

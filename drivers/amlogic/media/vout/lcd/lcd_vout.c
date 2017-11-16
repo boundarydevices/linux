@@ -194,6 +194,7 @@ static struct vinfo_s lcd_vinfo = {
 	.name = "panel",
 	.mode = VMODE_LCD,
 	.viu_color_fmt = COLOR_FMT_RGB444,
+	.vout_device = NULL,
 };
 
 struct aml_lcd_drv_s *aml_lcd_get_driver(void)

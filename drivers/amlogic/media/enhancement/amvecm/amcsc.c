@@ -3402,7 +3402,7 @@ static int check_primaries(
 			if ((*di)[3][i] != bt709_white_point[i])
 				need_calculate_mtx = 1;
 		}
-		if (v->hdr_info.sink_flag)
+		if (v->mode == VMODE_LCD)
 			cal_out_curve(v->hdr_info.lumi_max);
 	} else {
 		for (i = 0; i < 3; i++) {
@@ -4769,6 +4769,10 @@ static int vpp_matrix_update(
 	struct master_display_info_s send_info;
 	int need_adjust_contrast_saturation = 0;
 	int hdmi_scs_type_changed = 0;
+	struct vout_device_s *vdev = NULL;
+
+	if (vinfo->vout_device)
+		vdev = vinfo->vout_device;
 
 	/* Tx hdr information */
 	memcpy(&receiver_hdr_info, &vinfo->hdr_info,
@@ -4822,8 +4826,10 @@ static int vpp_matrix_update(
 					| (16 << 8)	/* bt2020-10 */
 					| (10 << 0);	/* bt2020c */
 			amvecm_cp_hdr_info(&send_info, p);
-			if (vinfo->fresh_tx_hdr_pkt)
-				vinfo->fresh_tx_hdr_pkt(&send_info);
+			if (vdev) {
+				if (vdev->fresh_tx_hdr_pkt)
+					vdev->fresh_tx_hdr_pkt(&send_info);
+			}
 			if (hdmi_csc_type != VPP_MATRIX_BT2020YUV_BT2020RGB) {
 				hdmi_csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
 				hdmi_scs_type_changed = 1;
@@ -4843,8 +4849,10 @@ static int vpp_matrix_update(
 					| (signal_transfer_characteristic << 8)
 					| (10 << 0);	/* bt2020c */
 			amvecm_cp_hdr_info(&send_info, p);
-			if (vinfo->fresh_tx_hdr_pkt)
-				vinfo->fresh_tx_hdr_pkt(&send_info);
+			if (vdev) {
+				if (vdev->fresh_tx_hdr_pkt)
+					vdev->fresh_tx_hdr_pkt(&send_info);
+			}
 			if (hdmi_csc_type != VPP_MATRIX_BT2020YUV_BT2020RGB) {
 				hdmi_csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
 				hdmi_scs_type_changed = 1;
@@ -4861,8 +4869,10 @@ static int vpp_matrix_update(
 					| (1 << 16)	/* bt709 */
 					| (1 << 8)	/* bt709 */
 					| (1 << 0);	/* bt709 */
-			if (vinfo->fresh_tx_hdr_pkt)
-				vinfo->fresh_tx_hdr_pkt(&send_info);
+			if (vdev) {
+				if (vdev->fresh_tx_hdr_pkt)
+					vdev->fresh_tx_hdr_pkt(&send_info);
+			}
 			if (hdmi_csc_type != VPP_MATRIX_YUV709_RGB) {
 				hdmi_csc_type = VPP_MATRIX_YUV709_RGB;
 				hdmi_scs_type_changed = 1;
