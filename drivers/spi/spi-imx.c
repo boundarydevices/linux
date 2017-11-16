@@ -111,6 +111,8 @@ struct spi_imx_data {
 	u32 wml;
 	struct completion dma_rx_completion;
 	struct completion dma_tx_completion;
+	struct dma_slave_config rx_config;
+	struct dma_slave_config tx_config;
 
 	const struct spi_imx_devtype_data *devtype_data;
 	int idle_state_provided;
@@ -914,7 +916,6 @@ static int spi_imx_dma_configure(struct spi_master *master,
 {
 	int ret;
 	enum dma_slave_buswidth buswidth;
-	struct dma_slave_config rx = {}, tx = {};
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
 
 	if (bytes_per_word == spi_imx->bytes_per_word)
@@ -935,21 +936,15 @@ static int spi_imx_dma_configure(struct spi_master *master,
 		return -EINVAL;
 	}
 
-	tx.direction = DMA_MEM_TO_DEV;
-	tx.dst_addr = spi_imx->base_phys + MXC_CSPITXDATA;
-	tx.dst_addr_width = buswidth;
-	tx.dst_maxburst = spi_imx->wml / 2;
-	ret = dmaengine_slave_config(master->dma_tx, &tx);
+	spi_imx->tx_config.dst_addr_width = buswidth;
+	ret = dmaengine_slave_config(master->dma_tx, &spi_imx->tx_config);
 	if (ret) {
 		dev_err(spi_imx->dev, "TX dma configuration failed with %d\n", ret);
 		return ret;
 	}
 
-	rx.direction = DMA_DEV_TO_MEM;
-	rx.src_addr = spi_imx->base_phys + MXC_CSPIRXDATA;
-	rx.src_addr_width = buswidth;
-	rx.src_maxburst = spi_imx->wml;
-	ret = dmaengine_slave_config(master->dma_rx, &rx);
+	spi_imx->rx_config.src_addr_width = buswidth;
+	ret = dmaengine_slave_config(master->dma_rx, &spi_imx->rx_config);
 	if (ret) {
 		dev_err(spi_imx->dev, "RX dma configuration failed with %d\n", ret);
 		return ret;
@@ -1040,6 +1035,10 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 		goto err;
 	}
 
+	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
+	spi_imx->tx_config.dst_addr = spi_imx->base_phys + MXC_CSPITXDATA;
+	spi_imx->tx_config.dst_maxburst = spi_imx->wml / 2;
+
 	/* Prepare for RX : */
 	master->dma_rx = dma_request_slave_channel_reason(dev, "rx");
 	if (IS_ERR(master->dma_rx)) {
@@ -1048,6 +1047,10 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 		master->dma_rx = NULL;
 		goto err;
 	}
+
+	spi_imx->rx_config.direction = DMA_DEV_TO_MEM;
+	spi_imx->rx_config.src_addr = spi_imx->base_phys + MXC_CSPIRXDATA;
+	spi_imx->rx_config.src_maxburst = spi_imx->wml;
 
 	spi_imx_dma_configure(master, 1);
 
