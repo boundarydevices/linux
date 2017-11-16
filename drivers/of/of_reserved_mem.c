@@ -37,7 +37,6 @@ static int __init early_init_dt_alloc_reserved_memory_arch(unsigned long node,
 	phys_addr_t highmem_start = __pa(high_memory - 1) + 1;
 	int err = 0;
 
-	end = !end ? MEMBLOCK_ALLOC_ANYWHERE : end;
 	align = !align ? SMP_CACHE_BYTES : align;
 	base = memblock_phys_alloc_range(size, align, start, end);
 	if (!base)
