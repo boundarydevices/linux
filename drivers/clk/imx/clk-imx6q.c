@@ -631,6 +631,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	base = of_iomap(np, 0);
 	ccm_base = base;
 	WARN_ON(!base);
+	imx6q_mmdc_ch1_mask_handshake(base);
 
 	/*                                              name                reg       shift width parent_names     num_parents */
 	clk[IMX6QDL_CLK_STEP]             = imx_clk_mux("step",	            base + 0xc,  8,  1, step_sels,	   ARRAY_SIZE(step_sels));
@@ -673,7 +674,6 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	} else {
 		disable_anatop_clocks(anatop_base);
 
-		imx6q_mmdc_ch1_mask_handshake(base);
 		/*
 		 * The LDB_DI0/1_SEL muxes are registered read-only due to a hardware
 		 * bug. Set the muxes to the requested values before registering the
