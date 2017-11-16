@@ -248,6 +248,11 @@ static int __init rmem_cma_setup(struct reserved_mem *rmem)
 	struct cma *cma;
 	int err;
 
+	if (size_cmdline != -1) {
+		pr_info("Reserved memory: using cma cmdline parameter\n");
+		return -EINVAL;
+	}
+
 	if (!of_get_flat_dt_prop(node, "reusable", NULL) ||
 	    of_get_flat_dt_prop(node, "no-map", NULL))
 		return -EINVAL;
