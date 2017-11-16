@@ -39,6 +39,7 @@
 #include <linux/delay.h>
 #include <linux/mm.h>
 #include <linux/amlogic/media/codec_mm/configs.h>
+#include <linux/completion.h>
 
 #include "codec_mm_priv.h"
 #include "codec_mm_scatter_priv.h"
@@ -181,6 +182,7 @@ struct codec_mm_scatter_mgt {
 	int cached_pages;
 	spinlock_t list_lock;
 	struct mutex monitor_lock;
+	struct completion complete;
 	struct list_head free_list;	/*slot */
 	struct list_head scatter_list;	/*scatter list */
 	struct codec_mm_scatter *scmap[MAX_SC_LIST];/*used for valid check. */
@@ -2164,7 +2166,7 @@ int codec_mm_scatter_mgt_delay_free_swith(
 	codec_mm_list_unlock(smgt);
 	if (on && wait_size_M > 0 && !is_tvp) {
 		u64 start_time = get_jiffies_64();
-		int try_max = 1000;
+		int try_max = 10;
 
 		smgt->force_cache_on = 1;
 		smgt->force_cache_page_cnt = wait_size_M >> PAGE_SHIFT;
@@ -2182,7 +2184,9 @@ int codec_mm_scatter_mgt_delay_free_swith(
 					start_time + HZ)) {
 				break;
 			}
-			msleep(20);
+			wait_for_completion_timeout(
+				&smgt->complete,
+				HZ/10);
 		}
 		pr_info("end: cached pages: %d, speed %d ms\n",
 			smgt->cached_pages,
@@ -2215,6 +2219,8 @@ static void codec_mm_scatter_cache_manage(
 			 (smgt->no_cache_size_M * (SZ_1M >> PAGE_SHIFT)))) {
 			/*have enough pages for most movies.*/
 			  /*don't cache more.*/
+			if (smgt->force_cache_on)
+				complete(&smgt->complete);
 		} else if ((smgt->cached_pages < smgt->keep_size_PAGE) ||
 			(smgt->force_cache_on &&/*on star cache*/
 			(smgt->cached_pages < smgt->force_cache_page_cnt))
@@ -2252,6 +2258,13 @@ static void codec_mm_scatter_cache_manage(
 				}
 			} else {
 				alloced = 0;
+			}
+			/*wake up wait.*/
+			if (alloced &&
+				smgt->force_cache_on &&
+				(smgt->cached_pages >=
+				 smgt->force_cache_page_cnt)) {
+				complete(&smgt->complete);
 			}
 		} else if ((smgt->cached_pages >
 			(smgt->keep_size_PAGE + 1000)) &&
@@ -2507,6 +2520,7 @@ static int codec_mm_scatter_mgt_alloc_in(struct codec_mm_scatter_mgt **psmgt)
 		smgt->no_cache_size_M = 100;
 	} else
 		smgt->no_cache_size_M = 0;
+	init_completion(&smgt->complete);
 	INIT_LIST_HEAD(&smgt->free_list);
 	INIT_LIST_HEAD(&smgt->scatter_list);
 	mutex_init(&smgt->monitor_lock);

@@ -271,13 +271,15 @@ static int codec_mm_alloc_in(
 	int have_space;
 	int alloc_trace_mask = 0;
 
-	int can_from_res = ((mgt->res_pool != NULL) &&	/*have res */
+	int can_from_res = (((mgt->res_pool != NULL) ||
+		(mgt->cma_res_pool.total_size > 0)) &&	/*have res */
 		!(mem->flags & CODEC_MM_FLAGS_CMA)) ||	/*must not CMA */
 		((mem->flags & CODEC_MM_FLAGS_RESERVED) ||/*need RESERVED */
 		CODEC_MM_FOR_DMA_ONLY(mem->flags) ||	/*NO CPU */
 		((mem->flags & CODEC_MM_FLAGS_CPU) &&
 			(mgt->res_mem_flags & RES_MEM_FLAGS_HAVE_MAPED)));
-	 /*CPU*/ int can_from_cma = ((mgt->total_cma_size > 0) &&/*have cma */
+	 /*CPU*/
+	int can_from_cma = ((mgt->total_cma_size > 0) &&/*have cma */
 		!(mem->flags & CODEC_MM_FLAGS_RESERVED)) ||
 		(mem->flags & CODEC_MM_FLAGS_CMA);	/*can from CMA */
 	/*not always reserved. */
@@ -349,7 +351,7 @@ static int codec_mm_alloc_in(
 			}
 		}
 		/*reserved alloc..*/
-		if (can_from_res &&
+		if ((can_from_res && mgt->res_pool) &&
 			(align_2n <= RESERVE_MM_ALIGNED_2N)) {
 			int aligned_buffer_size = ALIGN(mem->buffer_size,
 				(1 << RESERVE_MM_ALIGNED_2N));
