@@ -257,6 +257,12 @@ static int __init rmem_cma_setup(struct reserved_mem *rmem)
 		return -EINVAL;
 	}
 
+	if ((size_cmdline != -1) &&
+	    of_get_flat_dt_prop(node, "linux,cma-default", NULL)) {
+		pr_info("Reserved memory: using cma cmdline parameter\n");
+		return -EINVAL;
+	}
+
 	err = cma_init_reserved_mem(rmem->base, rmem->size, 0, &cma);
 	if (err) {
 		pr_err("Reserved memory: unable to setup CMA region\n");
