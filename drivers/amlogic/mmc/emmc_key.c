@@ -170,11 +170,11 @@ int emmc_key_init(struct mmc_card *card)
 	emmckey_info->key_init = 0;
 
 	size = EMMCKEY_AREA_PHY_SIZE;
-	addr = get_reserve_partition_off_from_tbl() + EMMCKEY_RESERVE_OFFSET;
-	if (addr < 0) {
+	if (get_reserve_partition_off_from_tbl() < 0) {
 		err = -EINVAL;
 		goto exit_err;
 	}
+	addr = get_reserve_partition_off_from_tbl() + EMMCKEY_RESERVE_OFFSET;
 	lba_start = addr >> bit;
 	lba_end = (addr + size) >> bit;
 	emmckey_info->key_init = 1;
