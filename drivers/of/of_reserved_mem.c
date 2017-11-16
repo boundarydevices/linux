@@ -44,7 +44,6 @@ int __init __weak early_init_dt_alloc_reserved_memory_arch(unsigned long node,
 	 * We use __memblock_alloc_base() because memblock_alloc_base()
 	 * panic()s on allocation failure.
 	 */
-	end = !end ? MEMBLOCK_ALLOC_ANYWHERE : end;
 	base = __memblock_alloc_base(size, align, end);
 	if (!base)
 		return -ENOMEM;
