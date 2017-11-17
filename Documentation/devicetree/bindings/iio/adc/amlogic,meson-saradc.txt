@@ -2,6 +2,7 @@
 
 Required properties:
 - compatible:	depending on the SoC this should be one of:
+			- "amlogic,meson-txlx-saradc" for TXLX
 			- "amlogic,meson-axg-saradc" for AXG
 			- "amlogic,meson-gxl-saradc" for GXL
 			- "amlogic,meson-gxm-saradc" for GXM

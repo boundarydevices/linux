@@ -1023,6 +1023,17 @@ static const struct iio_info meson_sar_adc_iio_info = {
 	.driver_module = THIS_MODULE,
 };
 
+struct meson_sar_adc_data meson_sar_adc_txlx_data = {
+	.obt_temp_chan6 = false,
+	.has_bl30_integration = true,
+	.vref_sel = VDDA_AS_VREF,
+	.resolution = SAR_ADC_12BIT,
+	.name = "meson-txlx-saradc",
+	.regs_diff = {
+		.reg3_ring_counter_disable = BIT_HIGH,
+	},
+};
+
 struct meson_sar_adc_data meson_sar_adc_axg_data = {
 	.obt_temp_chan6 = false,
 	.has_bl30_integration = true,
@@ -1069,6 +1080,9 @@ struct meson_sar_adc_data meson_sar_adc_m8b_data = {
 
 static const struct of_device_id meson_sar_adc_of_match[] = {
 	{
+		.compatible = "amlogic,meson-txlx-saradc",
+		.data = &meson_sar_adc_txlx_data,
+	}, {
 		.compatible = "amlogic,meson-axg-saradc",
 		.data = &meson_sar_adc_axg_data,
 	}, {
