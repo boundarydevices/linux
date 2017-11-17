@@ -26,6 +26,7 @@
 #include <linux/interrupt.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
+#include <linux/of_device.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
@@ -34,12 +35,11 @@
 #include <linux/cdev.h>
 #include <linux/delay.h>
 #include <linux/uaccess.h>
-#ifdef CONFIG_INSTABOOT
-#include <linux/syscore_ops.h>
-#endif
+#include <linux/clk.h>
 
 /* Amlogic Headers */
 #include <linux/amlogic/cpu_version.h>
+#include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vdac_dev.h>
@@ -94,10 +94,8 @@ static struct vinfo_s cvbs_info[] = {
 	},
 };
 
-#define PIN_MUX_REG_0 0x202c
-#define P_PIN_MUX_REG_0 CBUS_REG_ADDR(PIN_MUX_REG_0)
-static struct disp_module_info_s disp_module_info __nosavedata;
-static struct disp_module_info_s *info __nosavedata;
+static struct disp_module_info_s disp_module_info;
+static struct disp_module_info_s *info;
 
 static void vdac_power_level_store(char *para);
 SET_CVBS_CLASS_ATTR(vdac_power_level, vdac_power_level_store);
@@ -191,15 +189,8 @@ static void cvbs_cntl_output(unsigned int open)
 		/* must enable adc bandgap, the adc ref signal for demod */
 		vdac_enable(0, 0x8);
 	} else if (open == 1) { /* open */
-#if 0
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL))
-			cntl0 = 0x620001;
-		else
-#endif
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXL))
-			cntl0 = 0xb0001;
-		else
-			cntl0 = 0x1;
+
+		cntl0 = info->cvbs_data->cntl0_val;
 		cntl1 = (vdac_cfg_valid == 0) ? 0 : vdac_cfg_value;
 		cvbs_log_info("vdac open.%d = 0x%x, 0x%x\n",
 			      vdac_cfg_valid, cntl0, cntl1);
@@ -220,62 +211,24 @@ static void cvbs_performance_config(unsigned int index)
 #ifdef CONFIG_CVBS_PERFORMANCE_COMPATIBILITY_SUPPORT
 static void cvbs_performance_enhancement(enum cvbs_mode_e mode)
 {
-	unsigned int index = cvbs_performance_index;
-	unsigned int max = 0;
-	unsigned int type = 0;
 	const struct reg_s *s = NULL;
+	int i = 0;
 
 	if (mode != MODE_576CVBS)
 		return;
-	if (index == 0xff)
-		return;
-#if 0
-	if (check_cpu_type(MESON_CPU_MAJOR_ID_GXBB)) {
-		max = sizeof(cvbsregs_576cvbs_performance_gxbb)
-			/ sizeof(struct reg_s *);
-		index = (index >= max) ? 0 : index;
-		s = cvbsregs_576cvbs_performance_gxbb[index];
-		type = 4;
-	} else if (check_cpu_type(MESON_CPU_MAJOR_ID_GXTVBB)) {
-		max = sizeof(cvbsregs_576cvbs_performance_gxtvbb)
-			/ sizeof(struct reg_s *);
-		index = (index >= max) ? 0 : index;
-		s = cvbsregs_576cvbs_performance_gxtvbb[index];
-		type = 5;
-	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
-		max = sizeof(cvbsregs_576cvbs_performance_txl)
-			/ sizeof(struct reg_s *);
-		index = (index >= max) ? 0 : index;
-		s = cvbsregs_576cvbs_performance_txl[index];
-		type = 8;
-	} else
-#endif
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXL)) {
-		if (is_meson_gxl_package_905L()) {
-			max = sizeof(cvbsregs_576cvbs_performance_905l)
-				/ sizeof(struct reg_s *);
-			index = (index >= max) ? 0 : index;
-			s = cvbsregs_576cvbs_performance_905l[index];
-			type = 7;
-		} else {
-			max = sizeof(cvbsregs_576cvbs_performance_905x)
-				/ sizeof(struct reg_s *);
-			index = (index >= max) ? 0 : index;
-			s = cvbsregs_576cvbs_performance_905x[index];
-			type = 6;
-		}
-	}
 
+	s = info->cvbs_conf.performance_reg_table;
 	if (s == NULL) {
-		cvbs_log_err("can't find performance table!\n");
+		cvbs_log_err("error: can't find performance table!\n");
 		return;
 	}
 
-	cvbs_log_info("cvbs performance type = %d, table = %d\n", type, index);
-	while (s && MREG_END_MARKER != s->reg) {
+	while (i < info->cvbs_conf.performance_reg_cnt) {
 		cvbs_out_reg_write(s->reg, s->val);
 		s++;
+		i++;
 	}
+	cvbs_log_info("%s\n", __func__);
 }
 #endif/* end of CVBS_PERFORMANCE_COMPATIBILITY_SUPPORT */
 
@@ -300,18 +253,6 @@ static int cvbs_out_set_venc(enum cvbs_mode_e mode)
 	return ret;
 }
 
-static void cvbs_out_enable_cvbs_gate(void)
-{
-	/*do it by vpu ctrl*/
-#if 0
-	cvbs_out_hiu_set_mask(HHI_GCLK_OTHER,
-		(1<<DAC_CLK) | (1<<GCLK_VENCI_INT) |
-		(1<<VCLK2_VENCI1) | (1<<VCLK2_VENCI));
-#endif
-	cvbs_out_hiu_set_mask(HHI_VID_CLK_CNTL2,
-		(1<<ENCI_GATE_VCLK) | (1<<VDAC_GATE_VCLK));
-}
-
 static void cvbs_out_disable_clk(void)
 {
 	disable_vmode_clk();
@@ -319,18 +260,97 @@ static void cvbs_out_disable_clk(void)
 
 static void cvbs_out_disable_venc(void)
 {
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB)
-		cvbs_cntl_output(0);
-
+	cvbs_cntl_output(0);
 	cvbs_out_reg_write(ENCI_VIDEO_EN, 0);
+
+	return;
 }
 
-static char *cvbs_out_bist_str[] = {
-	"Fix Value",   /* 0 */
-	"Color Bar",   /* 1 */
-	"Thin Line",   /* 2 */
-	"Dot Grid",    /* 3 */
-};
+static void cvbs_out_vpu_power_ctrl(int status)
+{
+	if (info->vinfo == NULL)
+		return;
+	if (status) {
+#ifdef CONFIG_AMLOGIC_VPU
+		request_vpu_clk_vmod(info->vinfo->video_clk, VPU_VENCI);
+		switch_vpu_mem_pd_vmod(VPU_VENCI, VPU_MEM_POWER_ON);
+#endif
+	} else {
+#ifdef CONFIG_AMLOGIC_VPU
+		switch_vpu_mem_pd_vmod(VPU_VENCI, VPU_MEM_POWER_DOWN);
+		release_vpu_clk_vmod(VPU_VENCI);
+#endif
+	}
+}
+
+static void cvbs_out_clk_gate_ctrl(int status)
+{
+	if (info->vinfo == NULL)
+		return;
+
+	if (status) {
+		if (info->clk_gate_state) {
+			cvbs_log_info("clk_gate is already on\n");
+			return;
+		}
+
+		if (IS_ERR(info->venci_top_gate))
+			cvbs_log_err("error: %s: venci_top_gate\n", __func__);
+		else
+			clk_prepare_enable(info->venci_top_gate);
+
+		if (IS_ERR(info->venci_0_gate))
+			cvbs_log_err("error: %s: venci_0_gate\n", __func__);
+		else
+			clk_prepare_enable(info->venci_0_gate);
+
+		if (IS_ERR(info->venci_1_gate))
+			cvbs_log_err("error: %s: venci_1_gate\n", __func__);
+		else
+			clk_prepare_enable(info->venci_1_gate);
+
+		if (IS_ERR(info->vdac_clk_gate))
+			cvbs_log_err("error: %s: vdac_clk_gate\n", __func__);
+		else
+			clk_prepare_enable(info->vdac_clk_gate);
+
+#ifdef CONFIG_AMLOGIC_VPU
+		switch_vpu_clk_gate_vmod(VPU_VENCI, VPU_CLK_GATE_ON);
+#endif
+
+		info->clk_gate_state = 1;
+	} else {
+		if (info->clk_gate_state == 0) {
+			cvbs_log_info("clk_gate is already off\n");
+			return;
+		}
+
+#ifdef CONFIG_AMLOGIC_VPU
+		switch_vpu_clk_gate_vmod(VPU_VENCI, VPU_CLK_GATE_OFF);
+#endif
+		if (IS_ERR(info->vdac_clk_gate))
+			cvbs_log_err("error: %s: vdac_clk_gate\n", __func__);
+		else
+			clk_disable_unprepare(info->vdac_clk_gate);
+
+		if (IS_ERR(info->venci_0_gate))
+			cvbs_log_err("error: %s: venci_0_gate\n", __func__);
+		else
+			clk_disable_unprepare(info->venci_0_gate);
+
+		if (IS_ERR(info->venci_1_gate))
+			cvbs_log_err("error: %s: venci_1_gate\n", __func__);
+		else
+			clk_disable_unprepare(info->venci_1_gate);
+
+		if (IS_ERR(info->venci_top_gate))
+			cvbs_log_err("error: %s: venci_top_gate\n", __func__);
+		else
+			clk_disable_unprepare(info->venci_top_gate);
+
+		info->clk_gate_state = 0;
+	}
+}
 
 int cvbs_out_setmode(void)
 {
@@ -343,6 +363,10 @@ int cvbs_out_setmode(void)
 		(local_cvbs_mode == 0) ? "480cvbs" :
 		((local_cvbs_mode == 1) ? "576cvbs" :
 		"invalid"), local_cvbs_mode);
+
+	cvbs_out_vpu_power_ctrl(1);
+	cvbs_out_clk_gate_ctrl(1);
+
 	cvbs_cntl_output(0);
 	cvbs_out_reg_write(VENC_VDAC_SETTING, 0xff);
 	/* Before setting clk for CVBS, disable ENCP/I to avoid hungup */
@@ -357,7 +381,6 @@ int cvbs_out_setmode(void)
 #ifdef CONFIG_CVBS_PERFORMANCE_COMPATIBILITY_SUPPORT
 	cvbs_performance_enhancement(local_cvbs_mode);
 #endif
-	cvbs_out_enable_cvbs_gate();
 	msleep(1000);
 	cvbs_cntl_output(1);
 
@@ -495,31 +518,6 @@ enum cvbs_mode_e get_local_cvbs_mode(void)
 }
 EXPORT_SYMBOL(get_local_cvbs_mode);
 
-#ifdef CONFIG_AMLOGIC_VPU
-static void cvbs_out_vpu_power_ctrl(int status)
-{
-	if (info->vinfo == NULL)
-		return;
-	if (status) {
-		request_vpu_clk_vmod(info->vinfo->video_clk, VPU_VENCI);
-		switch_vpu_mem_pd_vmod(VPU_VENCI, VPU_MEM_POWER_ON);
-	} else {
-		switch_vpu_mem_pd_vmod(VPU_VENCI, VPU_MEM_POWER_DOWN);
-		release_vpu_clk_vmod(VPU_VENCI);
-	}
-}
-
-static void cvbs_out_vpu_gate_ctrl(int status)
-{
-	if (info->vinfo == NULL)
-		return;
-	if (status)
-		switch_vpu_clk_gate_vmod(VPU_VENCI, VPU_CLK_GATE_ON);
-	else
-		switch_vpu_clk_gate_vmod(VPU_VENCI, VPU_CLK_GATE_OFF);
-}
-#endif
-
 static int cvbs_set_current_vmode(enum vmode_e mode)
 {
 	enum vmode_e tvmode;
@@ -537,12 +535,11 @@ static int cvbs_set_current_vmode(enum vmode_e mode)
 		      tvmode, info->vinfo->sync_duration_den,
 		      info->vinfo->sync_duration_num);
 
-#ifdef CONFIG_AMLOGIC_VPU
-	cvbs_out_vpu_power_ctrl(1);
-	cvbs_out_vpu_gate_ctrl(1);
-#endif
 	cvbs_out_reg_write(VPP_POSTBLEND_H_SIZE, info->vinfo->width);
 	if (mode & VMODE_INIT_BIT_MASK) {
+		cvbs_out_vpu_power_ctrl(1);
+		cvbs_out_clk_gate_ctrl(1);
+		cvbs_cntl_output(1);
 		cvbs_log_info("already display in uboot\n");
 		return 0;
 	}
@@ -568,12 +565,11 @@ static int cvbs_vmode_is_supported(enum vmode_e mode)
 }
 static int cvbs_module_disable(enum vmode_e cur_vmod)
 {
-#ifdef CONFIG_AMLOGIC_VPU
-	cvbs_out_vpu_power_ctrl(0);
-	cvbs_out_vpu_gate_ctrl(0);
-#endif
-	/* video_dac_disable(); */
 	cvbs_cntl_output(0);
+
+	cvbs_out_vpu_power_ctrl(0);
+	cvbs_out_clk_gate_ctrl(0);
+
 	return 0;
 }
 
@@ -614,13 +610,25 @@ static struct vout_server_s cvbs_server = {
 	},
 };
 
-static void _init_cvbsout(void)
+static void cvbs_init_vout(void)
 {
 	if (info->vinfo == NULL)
 		info->vinfo = &cvbs_info[MODE_480CVBS];
+
+	if (vout_register_server(&cvbs_server))
+		cvbs_log_err("register cvbs module server fail\n");
+	else
+		cvbs_log_info("register cvbs module server ok\n");
 }
 
 /* **************************************************** */
+static char *cvbs_out_bist_str[] = {
+	"Fix Value",   /* 0 */
+	"Color Bar",   /* 1 */
+	"Thin Line",   /* 2 */
+	"Dot Grid",    /* 3 */
+};
+
 static void bist_test_store(char *para)
 {
 	unsigned long num;
@@ -746,6 +754,26 @@ static void cvbs_performance_regs_dump(void)
 	pr_info("------------------------\n");
 }
 
+static void cvbs_performance_config_dump(void)
+{
+	const struct reg_s *s = NULL;
+	int i = 0;
+
+	s = info->cvbs_conf.performance_reg_table;
+	if (s == NULL) {
+		pr_info("can't find performance table!\n");
+		return;
+	}
+
+	pr_info("------------------------\n");
+	while (i < info->cvbs_conf.performance_reg_cnt) {
+		pr_info("0x%04x = 0x%x\n", s->reg, s->val);
+		s++;
+		i++;
+	}
+	pr_info("------------------------\n");
+}
+
 enum {
 	CMD_REG_READ,
 	CMD_REG_READ_BITS,
@@ -767,6 +795,9 @@ enum {
 
 	/* get the current perfomance config */
 	CMD_VP_GET,
+
+	/* dump the perfomance config in dts */
+	CMD_VP_CONFIG_DUMP,
 
 	CMD_HELP,
 
@@ -834,6 +865,8 @@ static void cvbs_debug_store(char *buf)
 		cmd = CMD_VP_SET;
 	else if (!strncmp(argv[0], "vpget", strlen("vpget")))
 		cmd = CMD_VP_GET;
+	else if (!strncmp(argv[0], "vpconf", strlen("vpconf")))
+		cmd = CMD_VP_CONFIG_DUMP;
 	else if (!strncmp(argv[0], "help", strlen("help")))
 		cmd = CMD_HELP;
 	else {
@@ -989,6 +1022,10 @@ static void cvbs_debug_store(char *buf)
 		cvbs_performance_regs_dump();
 		break;
 
+	case CMD_VP_CONFIG_DUMP:
+		print_info("performance config in dts:\n");
+		cvbs_performance_config_dump();
+
 	case CMD_HELP:
 		print_info("command format:\n"
 		"\tr c/h/v address_hex\n"
@@ -1014,8 +1051,6 @@ static  struct  class_attribute   *cvbs_attr[] = {
 	&class_CVBS_attr_wss,
 #endif
 };
-
-
 
 static int create_cvbs_attr(struct disp_module_info_s *info)
 {
@@ -1068,48 +1103,159 @@ fail_create_class:
 }
 /* **************************************************** */
 
-#ifdef CONFIG_INSTABOOT
-struct class  *info_base_class;
-static int cvbsconf_suspend(void)
+static void cvbsout_get_config(struct device *dev)
 {
-	info_base_class = info->base_class;
-	return 0;
+	int ret = 0;
+	unsigned int val, cnt, i, j;
+	struct reg_s *s = NULL;
+
+	/* performance */
+	info->cvbs_conf.performance_reg_cnt = 0;
+	info->cvbs_conf.performance_reg_table = NULL;
+	cnt = 0;
+	while (cnt < CVBS_PERFORMANCE_CNT_MAX) {
+		j = 2 * cnt;
+		ret = of_property_read_u32_index(dev->of_node, "performance",
+			j, &val);
+		if (ret) {
+			cvbs_log_err("error: failed to get performance\n");
+			cnt = 0;
+			break;
+		}
+		if (val == MREG_END_MARKER) /* ending */
+			break;
+		cnt++;
+	}
+
+	if (cnt > 0) {
+		info->cvbs_conf.performance_reg_table =
+			kzalloc(sizeof(struct reg_s) * cnt, GFP_KERNEL);
+		if (info->cvbs_conf.performance_reg_table == NULL) {
+			cvbs_log_err(
+				"error: failed to alloc performance table\n");
+			cnt = 0;
+		}
+		info->cvbs_conf.performance_reg_cnt = cnt;
+
+		i = 0;
+		s = info->cvbs_conf.performance_reg_table;
+		while (i < info->cvbs_conf.performance_reg_cnt) {
+			j = 2 * i;
+			ret = of_property_read_u32_index(dev->of_node,
+				"performance", j, &val);
+			s->reg = val;
+			j = 2 * i + 1;
+			ret = of_property_read_u32_index(dev->of_node,
+				"performance", j, &val);
+			s->val = val;
+			/* pr_info("%p: 0x%04x = 0x%x\n", s, s->reg, s->val); */
+
+			s++;
+			i++;
+		}
+	}
+
+	/* vdac config */
+	ret = of_property_read_u32(dev->of_node, "vdac_config", &val);
+	if (ret)
+		cvbs_log_err("error: failed to get vdac_config\n");
+	else
+		cvbs_config_vdac((val & 0xff00) >> 8, val & 0xff);
+
 }
 
-static void cvbsconf_resume(void)
+static void cvbsout_clktree_probe(struct device *dev)
 {
-	info->base_class = info_base_class;
+	info->clk_gate_state = 0;
+	info->venci_top_gate = devm_clk_get(dev, "venci_top_gate");
+	if (IS_ERR(info->venci_top_gate))
+		cvbs_log_err("error: %s: clk venci_top_gate\n", __func__);
+
+	info->venci_0_gate = devm_clk_get(dev, "venci_0_gate");
+	if (IS_ERR(info->venci_0_gate))
+		cvbs_log_err("error: %s: clk venci_0_gate\n", __func__);
+
+	info->venci_1_gate = devm_clk_get(dev, "venci_1_gate");
+	if (IS_ERR(info->venci_1_gate))
+		cvbs_log_err("error: %s: clk venci_1_gate\n", __func__);
+
+	info->vdac_clk_gate = devm_clk_get(dev, "vdac_clk_gate");
+	if (IS_ERR(info->vdac_clk_gate))
+		cvbs_log_err("error: %s: clk vdac_clk_gate\n", __func__);
 }
 
-static struct syscore_ops cvbsconf_ops = {
-	.suspend = cvbsconf_suspend,
-	.resume = cvbsconf_resume,
-	.shutdown = NULL,
+static void cvbsout_clktree_remove(struct device *dev)
+{
+	if (!IS_ERR(info->venci_top_gate))
+		devm_clk_put(dev, info->venci_top_gate);
+	if (!IS_ERR(info->venci_0_gate))
+		devm_clk_put(dev, info->venci_0_gate);
+	if (!IS_ERR(info->venci_1_gate))
+		devm_clk_put(dev, info->venci_1_gate);
+	if (!IS_ERR(info->vdac_clk_gate))
+		devm_clk_put(dev, info->vdac_clk_gate);
+}
+
+#ifdef CONFIG_OF
+struct meson_cvbsout_data meson_gxl_cvbsout_data = {
+	.cntl0_val = 0xb0001,
+	.cpu_id = CPU_TYPE_GXL,
+	.name = "meson-gxl-cvbsout",
+};
+
+struct meson_cvbsout_data meson_gxm_cvbsout_data = {
+	.cntl0_val = 0xb0001,
+	.cpu_id = CPU_TYPE_GXM,
+	.name = "meson-gxm-cvbsout",
+};
+
+struct meson_cvbsout_data meson_txlx_cvbsout_data = {
+	.cntl0_val = 0x620001,
+	.cpu_id = CPU_TYPE_TXLX,
+	.name = "meson-txlx-cvbsout",
+};
+
+static const struct of_device_id meson_cvbsout_dt_match[] = {
+	{
+		.compatible = "amlogic, cvbsout-gxl",
+		.data		= &meson_gxl_cvbsout_data,
+	}, {
+		.compatible = "amlogic, cvbsout-gxm",
+		.data		= &meson_gxm_cvbsout_data,
+	}, {
+		.compatible = "amlogic, cvbsout-txlx",
+		.data		= &meson_txlx_cvbsout_data,
+	},
+	{},
 };
 #endif
 
 static int cvbsout_probe(struct platform_device *pdev)
 {
 	int  ret;
-#ifdef CONFIG_INSTABOOT
-	INIT_LIST_HEAD(&cvbsconf_ops.node);
-	register_syscore_ops(&cvbsconf_ops);
-#endif
+	const struct of_device_id *match;
+
 	local_cvbs_mode = MODE_MAX;
-	cvbs_out_ioremap();
 	info = &disp_module_info;
-	cvbs_log_info("%s\n", __func__);
+	match = of_match_device(meson_cvbsout_dt_match, &pdev->dev);
+	if (match == NULL) {
+		cvbs_log_err("%s,no matched table\n", __func__);
+		return -1;
+	}
+	info->cvbs_data = (struct meson_cvbsout_data *)match->data;
+	cvbs_log_info("%s£¬cpu_id:%d,name:%s\n", __func__,
+		info->cvbs_data->cpu_id, info->cvbs_data->name);
+
+	cvbsout_get_config(&pdev->dev);
+	cvbsout_clktree_probe(&pdev->dev);
+	cvbs_init_vout();
+
 	ret = alloc_chrdev_region(&info->devno, 0, 1, CVBS_NAME);
 	if (ret < 0) {
 		cvbs_log_err("alloc_chrdev_region error\n");
 		return  ret;
 	}
-	_init_cvbsout();
 	cvbs_log_err("chrdev devno %d for disp\n", info->devno);
-	if (vout_register_server(&cvbs_server))
-		cvbs_log_err("register cvbs module server fail\n");
-	else
-		cvbs_log_info("register cvbs module server ok\n");
 	ret = create_cvbs_attr(info);
 	if (ret < 0) {
 		cvbs_log_err("create_cvbs_attr error\n");
@@ -1122,6 +1268,8 @@ static int cvbsout_probe(struct platform_device *pdev)
 static int cvbsout_remove(struct platform_device *pdev)
 {
 	int i;
+
+	cvbsout_clktree_remove(&pdev->dev);
 
 	if (info->base_class) {
 		for (i = 0; i < ARRAY_SIZE(cvbs_attr); i++)
@@ -1142,20 +1290,9 @@ static void cvbsout_shutdown(struct platform_device *pdev)
 	cvbs_out_disable_venc();
 	cvbs_out_disable_clk();
 
-#ifdef CONFIG_AMLOGIC_VPU
 	cvbs_out_vpu_power_ctrl(0);
-	cvbs_out_vpu_gate_ctrl(0);
-#endif
+	cvbs_out_clk_gate_ctrl(0);
 }
-
-#ifdef CONFIG_OF
-static const struct of_device_id cvbsout_dt_match[] = {
-	{
-		.compatible = "amlogic, cvbsout",
-	},
-	{},
-};
-#endif
 
 static struct platform_driver cvbsout_driver = {
 	.probe = cvbsout_probe,
@@ -1165,7 +1302,7 @@ static struct platform_driver cvbsout_driver = {
 		.name = "cvbsout",
 		.owner = THIS_MODULE,
 #ifdef CONFIG_OF
-		.of_match_table = cvbsout_dt_match,
+		.of_match_table = meson_cvbsout_dt_match,
 #endif
 	},
 };

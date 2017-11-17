@@ -23,6 +23,7 @@
 /* Amlogic Headers */
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vinfo.h>
+#include <linux/amlogic/iomap.h>
 
 /* Local Headers */
 #include "enc_clk_config.h"

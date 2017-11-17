@@ -672,10 +672,33 @@
 		fr_auto_policy = <0>;
 	};
 
+	vdac {
+		compatible = "amlogic, vdac";
+		dev_name = "vdac";
+		status = "okay";
+	};
+
 	cvbsout {
-		compatible = "amlogic, cvbsout";
+		compatible = "amlogic, cvbsout-gxl";
 		dev_name = "cvbsout";
 		status = "okay";
+		clocks = <&clkc CLKID_VCLK2_ENCI
+			&clkc CLKID_VCLK2_VENCI0
+			&clkc CLKID_VCLK2_VENCI1
+			&clkc CLKID_DAC_CLK>;
+		clock-names = "venci_top_gate",
+			"venci_0_gate",
+			"venci_1_gate",
+			"vdac_clk_gate";
+
+		/* performance: reg_address, reg_value */
+		/* s905x */
+		performance = <0x1bf0  0x9
+			0x1b56  0x343
+			0x1b12  0x8080
+			0x1b05  0xfd
+			0x1c59  0xf752
+			0xffff  0x0>; /* ending flag */
 	};
 
 	amhdmitx: amhdmitx{

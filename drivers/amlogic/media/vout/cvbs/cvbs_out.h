@@ -64,12 +64,44 @@ struct  class_attribute  class_CVBS_attr_##name =  \
 __ATTR(name, 0644, \
 		aml_CVBS_attr_##name##_show, aml_CVBS_attr_##name##_store)
 
+struct reg_s {
+	unsigned int reg;
+	unsigned int val;
+};
+
+enum cvbs_cpu_type {
+	CPU_TYPE_GXL  = 0,
+	CPU_TYPE_GXM  = 1,
+	CPU_TYPE_TXLX = 2,
+};
+
+struct meson_cvbsout_data {
+	unsigned int cntl0_val;
+	enum cvbs_cpu_type cpu_id;
+	const char *name;
+};
+
+#define CVBS_PERFORMANCE_CNT_MAX    20
+struct cvbs_config_s {
+	unsigned int performance_reg_cnt;
+	struct reg_s *performance_reg_table;
+};
+
 struct disp_module_info_s {
 	struct vinfo_s *vinfo;
 	struct cdev   *cdev;
 	dev_t         devno;
 	struct class  *base_class;
 	struct device *dev;
+	struct meson_cvbsout_data *cvbs_data;
+	struct cvbs_config_s cvbs_conf;
+
+	/* clktree */
+	unsigned int clk_gate_state;
+	struct clk *venci_top_gate;
+	struct clk *venci_0_gate;
+	struct clk *venci_1_gate;
+	struct clk *vdac_clk_gate;
 };
 
 static  DEFINE_MUTEX(cvbs_mutex);
@@ -78,11 +110,6 @@ struct vout_CCparm_s {
 	unsigned int type;
 	unsigned char data1;
 	unsigned char data2;
-};
-
-struct reg_s {
-	unsigned int reg;
-	unsigned int val;
 };
 
 struct cvbsregs_set_t {

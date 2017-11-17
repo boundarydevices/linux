@@ -28,15 +28,15 @@
 #include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/errno.h>
+#include <linux/delay.h>
 #include <linux/uaccess.h>
+#include <linux/clk.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vout/vdac_dev.h>
+#include <linux/amlogic/iomap.h>
 #include <linux/io.h>
 #include <linux/mutex.h>
-#ifdef CONFIG_AMLOGIC_VPU
-#include <linux/amlogic/media/vpu/vpu.h>
-#endif
 
 #define AMVDAC_NAME               "amvdac"
 #define AMVDAC_DRIVER_NAME        "amvdac"
@@ -54,8 +54,8 @@ struct amvdac_dev_s {
 static struct amvdac_dev_s amvdac_dev;
 static struct mutex vdac_mutex;
 
-#define HHI_VDAC_CNTL0 0x10bd
-#define HHI_VDAC_CNTL1 0x10be
+#define HHI_VDAC_CNTL0 0xbd
+#define HHI_VDAC_CNTL1 0xbe
 
 #define VDAC_MODULE_ATV_DEMOD 0x1
 #define VDAC_MODULE_DTV_DEMOD 0x2
@@ -63,18 +63,12 @@ static struct mutex vdac_mutex;
 #define VDAC_MODULE_CVBS_OUT  0x8
 #define VDAC_MODULE_AUDIO_OUT  0x10
 
-void __iomem *vdac_hiu_reg_base;/* = *ioremap(0xc883c000, 0x2000); */
-
 static bool vdac_init_succ_flag;
 
 /* priority for module,
  * module index: atv demod:0x01; dtv demod:0x02; tvafe:0x4; cvbsout:0x8
  */
 static unsigned int pri_flag;
-
-#ifdef CONFIG_AMLOGIC_VPU
-static unsigned int vpu_gate;
-#endif
 
 static unsigned int vdac_cntl0_bit9;
 module_param(vdac_cntl0_bit9, uint, 0644);
@@ -94,25 +88,12 @@ MODULE_PARM_DESC(vdac_cntl0_bit10, "vdac_cntl0_bit10");
 
 static inline uint32_t vdac_hiu_reg_read(uint32_t reg)
 {
-	uint32_t ret;
-
-	if (vdac_init_succ_flag)
-		ret = readl(vdac_hiu_reg_base+((reg - 0x1000)<<2));
-	else {
-		pr_err("%s: vdac rd error !!\n", __func__);
-		ret = 0;
-	}
-	return ret;
+	return aml_read_hiubus(reg);
 }
 
-static inline uint32_t vdac_hiu_reg_write(uint32_t reg, uint32_t val)
+static inline void vdac_hiu_reg_write(uint32_t reg, uint32_t val)
 {
-	if (vdac_init_succ_flag)
-		writel(val, (vdac_hiu_reg_base+((reg - 0x1000)<<2)));
-	else
-		pr_err("%s: vdac wr error !!\n", __func__);
-
-	return 0;
+	return aml_write_hiubus(reg, val);
 }
 
 static inline void vdac_hiu_reg_setb(uint32_t reg,
@@ -120,7 +101,7 @@ static inline void vdac_hiu_reg_setb(uint32_t reg,
 	    const uint32_t start,
 	    const uint32_t len)
 {
-	vdac_hiu_reg_write(reg, ((vdac_hiu_reg_read(reg) &
+	aml_write_hiubus(reg, ((aml_read_hiubus(reg) &
 			~(((1L << (len)) - 1) << (start))) |
 			(((value) & ((1L << (len)) - 1)) << (start))));
 }
@@ -169,14 +150,12 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 			vdac_cntl0_bit9 &= ~VDAC_MODULE_CVBS_OUT;
 		break;
 	case VDAC_MODULE_AUDIO_OUT: /* audio out ctrl*/
-#if 0
-		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXL) {
+		if (is_meson_txlx_cpu()) {
 			if (on)
 				vdac_cntl0_bit9 |= VDAC_MODULE_AUDIO_OUT;
 			else
 				vdac_cntl0_bit9 &= ~VDAC_MODULE_AUDIO_OUT;
 		}
-#endif
 		break;
 	default:
 		pr_err("module_sel: 0x%x wrong module index !! ", module_sel);
@@ -188,17 +167,11 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 		enable = 0;
 	else
 		enable = 1;
-#if 0
-	if (is_meson_txl_cpu() || (is_meson_gxtvbb_cpu() &&
-		(get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) != 0xa)))
+
+	if (is_meson_txlx_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 9, 1);
 	else
-#endif
-	vdac_hiu_reg_setb(HHI_VDAC_CNTL0, ~enable, 9, 1);
-#if 0
-	pr_info("\nvdac_cntl0_bit9 reg:0x%x\n",
-			vdac_hiu_reg_getb(HHI_VDAC_CNTL0, 9, 1));
-#endif
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, ~enable, 9, 1);
 }
 EXPORT_SYMBOL(ana_ref_cntl0_bit9);
 
@@ -246,10 +219,6 @@ void vdac_out_cntl0_bit10(bool on, unsigned int module_sel)
 		enable = 1;
 
 	vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 10, 1);
-#if 0
-	pr_info("\vdac_cntl0_bit0 reg:0x%x\n",
-			vdac_hiu_reg_getb(HHI_VDAC_CNTL0, 10, 1));
-#endif
 }
 EXPORT_SYMBOL(vdac_out_cntl0_bit10);
 
@@ -297,10 +266,6 @@ void vdac_out_cntl0_bit0(bool on, unsigned int module_sel)
 		enable = 1;
 
 	vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 0, 1);
-#if 0
-	pr_info("\vdac_cntl0_bit0 reg:0x%x\n",
-			vdac_hiu_reg_getb(HHI_VDAC_CNTL0, 0, 1));
-#endif
 }
 EXPORT_SYMBOL(vdac_out_cntl0_bit0);
 
@@ -346,17 +311,11 @@ void vdac_out_cntl1_bit3(bool on, unsigned int module_sel)
 		enable = 0;
 	else
 		enable = 1;
-#if 0
-	if (is_meson_txl_cpu() || (is_meson_gxtvbb_cpu() &&
-		(get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) != 0xa)))
+
+	if (is_meson_txlx_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, enable, 3, 1);
 	else
-#endif
-	vdac_hiu_reg_setb(HHI_VDAC_CNTL1, ~enable, 3, 1);
-#if 0
-	pr_info("\nvdac_cntl1_bit3 reg:0x%x\n",
-		vdac_hiu_reg_getb(HHI_VDAC_CNTL1, 3, 1));
-#endif
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, ~enable, 3, 1);
 }
 EXPORT_SYMBOL(vdac_out_cntl1_bit3);
 
@@ -366,57 +325,6 @@ void vdac_set_ctrl0_ctrl1(unsigned int ctrl0, unsigned int ctrl1)
 	vdac_hiu_reg_write(HHI_VDAC_CNTL1, ctrl1);
 }
 EXPORT_SYMBOL(vdac_set_ctrl0_ctrl1);
-
-#ifdef CONFIG_AMLOGIC_VPU
-void vpu_clk_gate_set(bool on, unsigned int module_sel)
-{
-	bool enable = 0;
-
-	switch (module_sel & 0x1f) {
-	case VDAC_MODULE_ATV_DEMOD: /* dtv demod */
-		if (on)
-			vpu_gate |= VDAC_MODULE_ATV_DEMOD;
-		else
-			vpu_gate &= ~VDAC_MODULE_ATV_DEMOD;
-		break;
-	case VDAC_MODULE_DTV_DEMOD: /* atv demod */
-		if (on)
-			vpu_gate |= VDAC_MODULE_DTV_DEMOD;
-		else
-			vpu_gate &= ~VDAC_MODULE_DTV_DEMOD;
-		break;
-	case VDAC_MODULE_TVAFE: /* cvbs in demod */
-		if (on)
-			vpu_gate |= VDAC_MODULE_TVAFE;
-		else
-			vpu_gate &= ~VDAC_MODULE_TVAFE;
-		break;
-	case VDAC_MODULE_CVBS_OUT: /* cvbs in demod */
-		if (on)
-			vpu_gate |= VDAC_MODULE_CVBS_OUT;
-		else
-			vpu_gate &= ~VDAC_MODULE_CVBS_OUT;
-		break;
-	case VDAC_MODULE_AUDIO_OUT: /* audio out ctrl*/
-		if (on)
-			vpu_gate |= VDAC_MODULE_AUDIO_OUT;
-		else
-			vpu_gate &= ~VDAC_MODULE_AUDIO_OUT;
-		break;
-	default:
-		pr_err("module_sel: 0x%x wrong module index !! ", module_sel);
-		break;
-	}
-	if ((vpu_gate & 0x1f) == 0)
-		enable = 0;
-	else
-		enable = 1;
-	if (enable)
-		switch_vpu_clk_gate_vmod(VPU_VENC_DAC, VPU_CLK_GATE_ON);
-	else
-		switch_vpu_clk_gate_vmod(VPU_VENC_DAC, VPU_CLK_GATE_OFF);
-}
-#endif
 
 /* dac ctl,
  * module index: atv demod:0x01; dtv demod:0x02; tvafe:0x4; dac:0x8
@@ -430,6 +338,12 @@ void vdac_enable(bool on, unsigned int module_sel)
 	case VDAC_MODULE_ATV_DEMOD: /* atv demod */
 		if (on) {
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_ATV_DEMOD);
+			/*after txlx need reset bandgap after bit9 enabled*/
+			if (is_meson_txlx_cpu()) {
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
+				udelay(5);
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
+			}
 			pri_flag &= ~VDAC_MODULE_TVAFE;
 			pri_flag |= VDAC_MODULE_ATV_DEMOD;
 			if (pri_flag & VDAC_MODULE_CVBS_OUT)
@@ -444,7 +358,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			pri_flag &= ~VDAC_MODULE_ATV_DEMOD;
 			if (pri_flag & VDAC_MODULE_CVBS_OUT)
 				break;
-			vdac_out_cntl0_bit0(0, 0x4);
+			vdac_out_cntl0_bit0(0, VDAC_MODULE_ATV_DEMOD);
 			/* Disable AFE output buffer */
 			vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			/* enable dac output */
@@ -452,14 +366,32 @@ void vdac_enable(bool on, unsigned int module_sel)
 		}
 		break;
 	case VDAC_MODULE_DTV_DEMOD: /* dtv demod */
-		if (on)
+		if (on) {
+			if (is_meson_gxlx_cpu())
+				vdac_out_cntl1_bit3(1, VDAC_MODULE_DTV_DEMOD);
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_DTV_DEMOD);
-		else
+			if (is_meson_txlx_cpu()) {
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
+				udelay(5);
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
+			}
+			pri_flag |= VDAC_MODULE_DTV_DEMOD;
+		} else {
 			ana_ref_cntl0_bit9(0, VDAC_MODULE_DTV_DEMOD);
+			if (is_meson_gxlx_cpu())
+				vdac_out_cntl1_bit3(0, VDAC_MODULE_DTV_DEMOD);
+			pri_flag &= ~VDAC_MODULE_DTV_DEMOD;
+		}
 		break;
 	case VDAC_MODULE_TVAFE: /* av in demod */
 		if (on) {
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_TVAFE);
+			/*after txlx need reset bandgap after bit9 enabled*/
+			if (is_meson_txlx_cpu()) {
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
+				udelay(5);
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
+			}
 			pri_flag &= ~VDAC_MODULE_ATV_DEMOD;
 			pri_flag |= VDAC_MODULE_TVAFE;
 			if (pri_flag & VDAC_MODULE_CVBS_OUT)
@@ -482,6 +414,11 @@ void vdac_enable(bool on, unsigned int module_sel)
 			vdac_out_cntl1_bit3(1, VDAC_MODULE_CVBS_OUT);
 			vdac_out_cntl0_bit0(1, VDAC_MODULE_CVBS_OUT);
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_CVBS_OUT);
+			if (is_meson_txlx_cpu()) {
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
+				udelay(5);
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
+			}
 			vdac_out_cntl0_bit10(0, VDAC_MODULE_CVBS_OUT);
 			pri_flag |= VDAC_MODULE_CVBS_OUT;
 		} else {
@@ -497,30 +434,36 @@ void vdac_enable(bool on, unsigned int module_sel)
 			} else if (pri_flag & VDAC_MODULE_TVAFE) {
 				vdac_out_cntl1_bit3(0, VDAC_MODULE_TVAFE);
 				vdac_out_cntl0_bit10(1, VDAC_MODULE_TVAFE);
+			} else if (pri_flag & VDAC_MODULE_DTV_DEMOD) {
+				if (is_meson_gxlx_cpu())
+					vdac_out_cntl1_bit3(1,
+							VDAC_MODULE_DTV_DEMOD);
+				ana_ref_cntl0_bit9(1, VDAC_MODULE_DTV_DEMOD);
 			}
 		}
 		break;
 	case VDAC_MODULE_AUDIO_OUT: /* audio demod */
-#if 0
-		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXL) {
+		if (is_meson_txlx_cpu()) {
 			if (on)
 				ana_ref_cntl0_bit9(1, VDAC_MODULE_AUDIO_OUT);
 			else
 				ana_ref_cntl0_bit9(0, VDAC_MODULE_AUDIO_OUT);
 		}
-#endif
 		break;
 	default:
 		pr_err("%s:module_sel: 0x%x wrong module index !! "
 					, __func__, module_sel);
 		break;
 	}
+
 	mutex_unlock(&vdac_mutex);
-#ifdef CONFIG_AMLOGIC_VPU
-	vpu_clk_gate_set(on, module_sel);
-#endif
 }
 EXPORT_SYMBOL(vdac_enable);
+
+int vdac_enable_check_dtv(void)
+{
+	return (pri_flag & VDAC_MODULE_DTV_DEMOD) ? 1:0;
+}
 
 static int amvdac_open(struct inode *inode, struct file *file)
 {
@@ -602,6 +545,7 @@ static int __exit aml_vdac_remove(struct platform_device *pdev)
 	cdev_del(&devp->cdev);
 	class_destroy(devp->clsp);
 	unregister_chrdev_region(devp->devno, 1);
+
 	pr_info("%s: amvdac_exit.\n", __func__);
 
 	return 0;
@@ -624,18 +568,18 @@ static int amvdac_drv_resume(struct platform_device *pdev)
 #endif
 
 
-/* static const struct of_device_id aml_vdac_dt_match[] = { */
-/* { */
-/* .compatible = "amlogic, vdac", */
-/* }, */
-/* {}, */
-/* }; */
+static const struct of_device_id aml_vdac_dt_match[] = {
+	{
+		.compatible = "amlogic, vdac",
+	},
+	{},
+};
 
 static struct platform_driver aml_vdac_driver = {
 	.driver = {
 		.name = "aml_vdac",
 		.owner = THIS_MODULE,
-		/* .of_match_table = aml_vdac_dt_match, */
+		.of_match_table = aml_vdac_dt_match,
 	},
 	.probe = aml_vdac_probe,
 	.remove = __exit_p(aml_vdac_remove),
@@ -652,8 +596,6 @@ static int __init aml_vdac_init(void)
 	vdac_init_succ_flag = 0;
 
 	mutex_init(&vdac_mutex);
-	/* remap the hiu bus */
-	vdac_hiu_reg_base = ioremap(0xc883c000, 0x2000);
 
 	if (platform_driver_register(&aml_vdac_driver)) {
 		pr_err("%s: failed to register vdac driver module\n", __func__);

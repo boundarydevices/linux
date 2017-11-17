@@ -90,6 +90,7 @@ static const struct reg_s *cvbsregs_576cvbs_performance_gxtvbb[] = {
 };
 #endif
 
+#if 0
 static const struct reg_s cvbsregs_576cvbs_china_sarft_905x[] = {
 	{VENC_VDAC_DAC0_GAINCTRL,	0x9		},
 	{ENCI_YC_DELAY,				0x343	},
@@ -156,8 +157,7 @@ static const struct reg_s *cvbsregs_576cvbs_performance_905l[] = {
 	cvbsregs_576cvbs_china_mobile_905l
 };
 
-#if 0
-static const struct reg_s cvbsregs_576cvbs_china_sarft_txl[] = {
+static const struct reg_s cvbsregs_576cvbs_china_sarft_txlx[] = {
 	{ENCI_YC_DELAY,				0x333	},
 	{ENCI_VIDEO_SAT,			0xf4	},
 	{VENC_VDAC_DAC0_FILT_CTRL1,	0xfc48	},
@@ -165,7 +165,15 @@ static const struct reg_s cvbsregs_576cvbs_china_sarft_txl[] = {
 	{MREG_END_MARKER,			0		}
 };
 
-static const struct reg_s cvbsregs_576cvbs_china_telecom_txl[] = {
+static const struct reg_s cvbsregs_576cvbs_china_telecom_txlx[] = {
+	{ENCI_YC_DELAY,				0x343	},
+	{ENCI_VIDEO_SAT,			0xf4	},
+	{VENC_VDAC_DAC0_FILT_CTRL1,	0xfc48	},
+	{ENCI_SYNC_ADJ,				0x8c00	},
+	{MREG_END_MARKER,			0		}
+};
+
+static const struct reg_s cvbsregs_576cvbs_china_mobile_txlx[] = {
 	{ENCI_YC_DELAY,				0x333	},
 	{ENCI_VIDEO_SAT,			0xf4	},
 	{VENC_VDAC_DAC0_FILT_CTRL1,	0xfc48	},
@@ -173,20 +181,13 @@ static const struct reg_s cvbsregs_576cvbs_china_telecom_txl[] = {
 	{MREG_END_MARKER,			0		}
 };
 
-static const struct reg_s cvbsregs_576cvbs_china_mobile_txl[] = {
-	{ENCI_YC_DELAY,				0x333	},
-	{ENCI_VIDEO_SAT,			0xf4	},
-	{VENC_VDAC_DAC0_FILT_CTRL1,	0xfc48	},
-	{ENCI_SYNC_ADJ,				0x8c00	},
-	{MREG_END_MARKER,			0		}
-};
-
-static const struct reg_s *cvbsregs_576cvbs_performance_txl[] = {
-	cvbsregs_576cvbs_china_sarft_txl,
-	cvbsregs_576cvbs_china_telecom_txl,
-	cvbsregs_576cvbs_china_mobile_txl
+static const struct reg_s *cvbsregs_576cvbs_performance_txlx[] = {
+	cvbsregs_576cvbs_china_sarft_txlx,
+	cvbsregs_576cvbs_china_telecom_txlx,
+	cvbsregs_576cvbs_china_mobile_txlx
 };
 #endif
+
 #endif
 
 static const struct reg_s cvbsregs_480cvbs_enc[] = {
