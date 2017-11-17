@@ -25,8 +25,6 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/dma-mapping.h>
-/*#include <asm/mach-types.h>
-#include <asm/mach/arch.h>*/
 #include <linux/delay.h>
 #include <linux/amlogic/gpio-amlogic.h>
 #include <linux/amlogic/usbtype.h>
@@ -398,9 +396,6 @@ int clk_enable_usb_gxl(struct platform_device *pdev,
 	usb_reset = devm_clk_get(&pdev->dev, "usb_general");
 	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-	usb_reset = devm_clk_get(&pdev->dev, "usb1");
-	clk_prepare_enable(usb_reset);
-	p_clk_reset[pdev->id].usb_reset_usb = usb_reset;
 	usb_reset = devm_clk_get(&pdev->dev, "usb1_to_ddr");
 	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
@@ -431,8 +426,6 @@ void clk_disable_usb_gxl(struct platform_device *pdev,
 	struct clk *usb_reset;
 
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-	clk_disable_unprepare(usb_reset);
-	usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
 	clk_disable_unprepare(usb_reset);
 	usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
 	clk_disable_unprepare(usb_reset);
@@ -478,14 +471,10 @@ int clk_resume_usb_gxl(struct platform_device *pdev,
 	if (0 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
 		clk_prepare_enable(usb_reset);
-		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
-		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
 		clk_prepare_enable(usb_reset);
 	} else if (1 == pdev->id) {
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_general;
-		clk_prepare_enable(usb_reset);
-		usb_reset = p_clk_reset[pdev->id].usb_reset_usb;
 		clk_prepare_enable(usb_reset);
 		usb_reset = p_clk_reset[pdev->id].usb_reset_usb_to_ddr;
 		clk_prepare_enable(usb_reset);
