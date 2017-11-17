@@ -197,6 +197,19 @@ struct aml_nand_flash_dev aml_nand_flash_ids[] = {
 		0,
 		(NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE)},
 
+	{"SamSung NAND k9f2g08u0d 2Gb",
+		{NAND_MFR_SAMSUNG, 0xda, 0x10, 0x95, 0x46},
+		2048,
+		256,
+		0x20000,
+		64,
+		1,
+		20,
+		15,
+		0,
+		0,
+		(NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE)},
+
 	{"A revision NAND 1GiB sF1G-A",
 		{NAND_MFR_AMD, 0xf1, 0x80, 0x1d, 0x01, 0xf1},
 		2048,
@@ -275,6 +288,19 @@ struct aml_nand_flash_dev aml_nand_flash_ids[] = {
 		0,
 		(NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE)},
 
+	{"A revision NAND 4Gib W29N04GV ",
+		{NAND_ID_WINBOND, 0xdc, 0x90, 0x95, 0x54, 0x00},
+		2048,
+		512,
+		0x20000,
+		64,
+		1,
+		20,
+		15,
+		0,
+		0,
+		(NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE)},
+
 	{"A revision NAND 1Gib W29N01GV ",
 		{NAND_ID_WINBOND, 0xf1, 0x80, 0x95, 0x00, 0x00},
 		2048,
@@ -325,6 +351,20 @@ struct aml_nand_flash_dev aml_nand_flash_ids[] = {
 		0,
 		0,
 		(NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE)},
+
+	{"A revision NAND 4Gib GD9FU1G8F2AMGI",
+		{NAND_ID_ESMT, 0xf1, 0x80, 0x1d, 0x42, 0xc8},
+		2048,
+		128,
+		0x20000,
+		128,
+		1,
+		20,
+		15,
+		0,
+		0,
+		(NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE)},
+
 	{"ESMT SLC 128MiB 3.3V 8-bit F59L1G81Lxxx",
 		{NAND_ID_ESMT, 0xd1, 0x80, 0x95, 0x42, 0x7f},
 		2048,
@@ -1049,14 +1089,19 @@ int aml_nand_get_fbb_issue(void)
 
 void aml_nand_check_fbb_issue(u8 *dev_id)
 {
-	u8 samsung_nand_id[MAX_ID_LEN] = {
-	NAND_MFR_SAMSUNG, 0xdc, 0x10, 0x95, 0x56};
+	int i, k;
+	u8 samsung_nand_id[][MAX_ID_LEN] = {
+		{NAND_MFR_SAMSUNG, 0xdc, 0x10, 0x95, 0x56},
+		{NAND_MFR_SAMSUNG, 0xda, 0x10, 0x95, 0x46},
+	};
 
-	if (!strncmp((char *)samsung_nand_id, (char *)dev_id,
-		     strlen((const char *)samsung_nand_id)))
-		nand_fbb_issue_flag = 1;
+	k = ARRAY_SIZE(samsung_nand_id);
+	for (i = 0; i < k; i++) {
+		if (!strncmp((char *)samsung_nand_id[i], (char *)dev_id,
+				 strlen((const char *)samsung_nand_id[i])))
+			nand_fbb_issue_flag = 1;
+	}
 }
-
 /* ******************** */
 #ifdef CONFIG_PARAMETER_PAGE
 struct parameter_page para_page;
