@@ -1411,4 +1411,7 @@
 #define OSD1_AFBCD_PIXEL_VSCOPE 0x31aa
 #define VIU_MISC_CTRL1 0x1a07
 
+/* add for gxm and 962e dv core2 */
+#define DOLBY_CORE2A_SWAP_CTRL1		0x3434
+#define DOLBY_CORE2A_SWAP_CTRL2		0x3435
 #endif

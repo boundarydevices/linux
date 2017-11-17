@@ -19,6 +19,8 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/module.h>
+/* Amlogic Headers */
+#include <linux/amlogic/cpu_version.h>
 
 /* Local Headers */
 #include "osd_io.h"
@@ -241,12 +243,14 @@ static struct reg_item misc_recovery_table[] = {
 	{VIU_OSD2_BLK2_CFG_W4, 0x0, 0xffffffff, 0},
 	{VIU_OSD2_BLK3_CFG_W4, 0x0, 0xffffffff, 0},
 	{VPU_RDARB_MODE_L1C2, 0x0, 0x00010000, 1},
-	{VIU_MISC_CTRL1, 0x0, 0x0000ff00, 1}
+	{VIU_MISC_CTRL1, 0x0, 0x0000ff00, 1},
+	{DOLBY_CORE2A_SWAP_CTRL1, 0x0, 0x0fffffff, 1},
+	{DOLBY_CORE2A_SWAP_CTRL2, 0x0, 0xffffffff, 1}
 };
 
 void recovery_regs_init(void)
 {
-	int i = 0;
+	int i = 0, j;
 
 	if (recovery_enable)
 		return;
@@ -257,6 +261,17 @@ void recovery_regs_init(void)
 	gRecovery[i].table =
 		(struct reg_item *)&osd1_recovery_table[0];
 
+	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX)
+		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)
+		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TXHD)) {
+		for (j = 0; j < gRecovery[i].size; j++) {
+			if (gRecovery[i].table[j].addr ==
+				VIU_OSD1_FIFO_CTRL_STAT) {
+				gRecovery[i].table[j].mask = 0xffc7ffff;
+				break;
+			}
+		}
+	}
 	i++;
 	gRecovery[i].base_addr = OSD1_AFBCD_ENABLE;
 	gRecovery[i].size = sizeof(osd_afbcd_recovery_table)
@@ -365,12 +380,21 @@ int update_recovery_item(u32 addr, u32 value)
 	default:
 		break;
 	}
+	if (((addr == DOLBY_CORE2A_SWAP_CTRL1)
+		|| (addr == DOLBY_CORE2A_SWAP_CTRL2))
+		&& !is_meson_txlx_cpu()
+		&& !is_meson_gxm_cpu())
+		return ret;
 	if ((addr == VIU_OSD2_BLK0_CFG_W4) ||
 		(addr == VIU_OSD2_BLK1_CFG_W4) ||
 		(addr == VIU_OSD2_BLK2_CFG_W4) ||
 		(addr == VIU_OSD2_BLK3_CFG_W4) ||
 		(addr == VPU_RDARB_MODE_L1C2) ||
-		(addr == VIU_MISC_CTRL1)) {
+		(addr == VIU_MISC_CTRL1) ||
+		(addr ==
+		DOLBY_CORE2A_SWAP_CTRL1) ||
+		(addr ==
+		DOLBY_CORE2A_SWAP_CTRL2)) {
 		table = gRecovery[4].table;
 		for (i = 0; i <  gRecovery[4].size; i++) {
 			if (addr == table[i].addr) {
@@ -456,12 +480,22 @@ s32 get_recovery_item(u32 addr, u32 *value, u32 *mask)
 		break;
 	}
 
+	if (((addr == DOLBY_CORE2A_SWAP_CTRL1)
+		|| (addr == DOLBY_CORE2A_SWAP_CTRL2))
+		&& !is_meson_txlx_cpu()
+		&& !is_meson_gxm_cpu())
+		return ret;
+
 	if ((addr == VIU_OSD2_BLK0_CFG_W4) ||
 		(addr == VIU_OSD2_BLK1_CFG_W4) ||
 		(addr == VIU_OSD2_BLK2_CFG_W4) ||
 		(addr == VIU_OSD2_BLK3_CFG_W4) ||
 		(addr == VPU_RDARB_MODE_L1C2) ||
-		(addr == VIU_MISC_CTRL1)) {
+		(addr == VIU_MISC_CTRL1) ||
+		(addr ==
+		DOLBY_CORE2A_SWAP_CTRL1) ||
+		(addr ==
+		DOLBY_CORE2A_SWAP_CTRL2)) {
 		table = gRecovery[4].table;
 		for (i = 0; i <  gRecovery[4].size; i++) {
 			if (addr == table[i].addr) {

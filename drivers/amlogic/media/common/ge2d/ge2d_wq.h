@@ -30,7 +30,7 @@ extern ssize_t free_queue_status_show(struct class *cla,
 
 extern int ge2d_setup(int irq, struct reset_control *rstc);
 extern int ge2d_wq_init(struct platform_device *pdev,
-	int irq, struct reset_control *rstc, struct clk *clk);
+	int irq, struct clk *clk);
 extern int ge2d_wq_deinit(void);
 
 #endif

@@ -321,6 +321,8 @@ struct hdr_osd_reg_s {
 	uint32_t VIU_OSD1_EOTF_3X3_OFST_1; /* 0x1aa1*/
 	uint32_t viu_osd1_oetf_ctl; /* 0x1adc */
 	struct hdr_osd_lut_s lut_val;
+	/* -1: invalid, 0: not shadow, >1: delay count */
+	int32_t shadow_mode;
 };
 
 extern struct hdr_osd_reg_s hdr_osd_reg;

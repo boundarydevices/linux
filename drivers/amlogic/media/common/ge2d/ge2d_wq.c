@@ -52,7 +52,6 @@
 
 static struct ge2d_manager_s ge2d_manager;
 static int ge2d_irq = -ENXIO;
-static struct reset_control *ge2d_rstc;
 static struct clk *ge2d_clk;
 
 
@@ -1370,10 +1369,24 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 		ge2d_config->src1_hsc_phase0_always_en;
 	dp_gen_cfg->src1_hsc_phase0_always_en =
 		ge2d_config->src1_vsc_phase0_always_en;
-	/* 1bit, 0: using minus, 1: using repeat data */
-	dp_gen_cfg->src1_hsc_rpt_ctrl = ge2d_config->src1_hsc_rpt_ctrl;
-	/* 1bit, 0: using minus  1: using repeat data */
-	dp_gen_cfg->src1_vsc_rpt_ctrl = ge2d_config->src1_vsc_rpt_ctrl;
+	if ((context->config.v_scale_coef_type == FILTER_TYPE_GAU0) ||
+		(context->config.v_scale_coef_type == FILTER_TYPE_GAU0_BOT) ||
+		(context->config.v_scale_coef_type == FILTER_TYPE_GAU1) ||
+		(context->config.h_scale_coef_type == FILTER_TYPE_GAU0) ||
+		(context->config.h_scale_coef_type == FILTER_TYPE_GAU0_BOT) ||
+		(context->config.h_scale_coef_type == FILTER_TYPE_GAU1)) {
+		/* 1bit, 0: using minus, 1: using repeat data */
+		dp_gen_cfg->src1_hsc_rpt_ctrl = ge2d_config->src1_hsc_rpt_ctrl;
+		/* 1bit, 0: using minus  1: using repeat data */
+		dp_gen_cfg->src1_vsc_rpt_ctrl = ge2d_config->src1_vsc_rpt_ctrl;
+	} else {
+		/* 1bit, 0: using minus, 1: using repeat data */
+		dp_gen_cfg->src1_hsc_rpt_ctrl = 1;
+		/* 1bit, 0: using minus  1: using repeat data */
+		dp_gen_cfg->src1_vsc_rpt_ctrl = 1;
+	}
+	dp_gen_cfg->src1_gb_alpha = 0xff;
+	dp_gen_cfg->src1_gb_alpha_en = 0;
 
 	dp_gen_cfg->src2_key_en = ge2d_config->src2_key.key_enable;
 	dp_gen_cfg->src2_key_mode = ge2d_config->src2_key.key_mode;
@@ -1721,10 +1734,24 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 		ge2d_config->src1_hsc_phase0_always_en;
 	dp_gen_cfg->src1_hsc_phase0_always_en =
 		ge2d_config->src1_vsc_phase0_always_en;
-	/* 1bit, 0: using minus, 1: using repeat data */
-	dp_gen_cfg->src1_hsc_rpt_ctrl = ge2d_config->src1_hsc_rpt_ctrl;
-	/* 1bit, 0: using minus  1: using repeat data */
-	dp_gen_cfg->src1_vsc_rpt_ctrl = ge2d_config->src1_vsc_rpt_ctrl;
+	if ((context->config.v_scale_coef_type == FILTER_TYPE_GAU0) ||
+		(context->config.v_scale_coef_type == FILTER_TYPE_GAU0_BOT) ||
+		(context->config.v_scale_coef_type == FILTER_TYPE_GAU1) ||
+		(context->config.h_scale_coef_type == FILTER_TYPE_GAU0) ||
+		(context->config.h_scale_coef_type == FILTER_TYPE_GAU0_BOT) ||
+		(context->config.h_scale_coef_type == FILTER_TYPE_GAU1)) {
+		/* 1bit, 0: using minus, 1: using repeat data */
+		dp_gen_cfg->src1_hsc_rpt_ctrl = ge2d_config->src1_hsc_rpt_ctrl;
+		/* 1bit, 0: using minus  1: using repeat data */
+		dp_gen_cfg->src1_vsc_rpt_ctrl = ge2d_config->src1_vsc_rpt_ctrl;
+	} else {
+		/* 1bit, 0: using minus, 1: using repeat data */
+		dp_gen_cfg->src1_hsc_rpt_ctrl = 1;
+		/* 1bit, 0: using minus  1: using repeat data */
+		dp_gen_cfg->src1_vsc_rpt_ctrl = 1;
+	}
+	dp_gen_cfg->src1_gb_alpha = ge2d_config->src1_gb_alpha & 0xff;
+	dp_gen_cfg->src1_gb_alpha_en = ge2d_config->src1_gb_alpha_en & 1;
 
 	dp_gen_cfg->src2_key_en = ge2d_config->src2_key.key_enable;
 	dp_gen_cfg->src2_key_mode = ge2d_config->src2_key.key_mode;
@@ -1755,8 +1782,11 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 	ge2d_cmd_cfg->hsc_phase_step = ge2d_config->hsc_start_phase_step;
 	ge2d_cmd_cfg->hsc_rpt_p0_num = ge2d_config->hf_rpt_num;
 
-	ge2d_cmd_cfg->src1_cmult_asel = 0;
-	ge2d_cmd_cfg->src2_cmult_asel = 0;
+	ge2d_cmd_cfg->src1_cmult_asel =
+		(ge2d_config->src1_cmult_asel < 3) ?
+		ge2d_config->src1_cmult_asel : 0;
+	ge2d_cmd_cfg->src2_cmult_asel =
+		(ge2d_config->src2_cmult_asel != 0) ? 1 : 0;
 	context->config.update_flag = UPDATE_ALL;
 	/* context->config.src1_data.ddr_burst_size_y = 3; */
 	/* context->config.src1_data.ddr_burst_size_cb = 3; */
@@ -1853,17 +1883,16 @@ int  destroy_ge2d_work_queue(struct ge2d_context_s *ge2d_work_queue)
 EXPORT_SYMBOL(destroy_ge2d_work_queue);
 
 int ge2d_wq_init(struct platform_device *pdev,
-	int irq, struct reset_control *rstc, struct clk *clk)
+	int irq, struct clk *clk)
 {
 	struct ge2d_gen_s ge2d_gen_cfg;
 
 	ge2d_manager.pdev = pdev;
 	ge2d_irq = irq;
-	ge2d_rstc = rstc;
 	ge2d_clk = clk;
 
-	ge2d_log_info("ge2d: pdev=%p, irq=%d, rstc=0x%p, clk=%p\n",
-		pdev, irq, rstc, clk);
+	ge2d_log_info("ge2d: pdev=%p, irq=%d, clk=%p\n",
+		pdev, irq, clk);
 
 	ge2d_manager.irq_num = request_irq(ge2d_irq,
 					ge2d_wq_handle,
@@ -1917,7 +1946,6 @@ int ge2d_wq_deinit(void)
 		ge2d_manager.irq_num = -1;
 	}
 	ge2d_irq = -1;
-	ge2d_rstc = NULL;
 	clk_disable_unprepare(ge2d_clk);
 	ge2d_manager.pdev = NULL;
 	return  0;

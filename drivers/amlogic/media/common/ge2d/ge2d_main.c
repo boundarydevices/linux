@@ -53,7 +53,7 @@
 
 struct ge2d_device_s {
 	char name[20];
-	unsigned int open_count;
+	atomic_t open_count;
 	int major;
 	unsigned int dbg_enable;
 	struct class *cla;
@@ -203,7 +203,7 @@ static int ge2d_open(struct inode *inode, struct file *file)
 		return -1;
 	}
 	file->private_data = context;
-	ge2d_device.open_count++;
+	atomic_inc(&ge2d_device.open_count);
 
 	return 0;
 }
@@ -423,8 +423,14 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 				&uf_ex_ion->src2_key,
 				sizeof(struct src_key_ctrl_s));
 
+			r |= get_user(ge2d_config_ex_ion.src1_cmult_asel,
+				&uf_ex_ion->src1_cmult_asel);
+			r |= get_user(ge2d_config_ex_ion.src2_cmult_asel,
+				&uf_ex_ion->src2_cmult_asel);
 			r |= get_user(ge2d_config_ex_ion.alu_const_color,
 				&uf_ex_ion->alu_const_color);
+			r |= get_user(ge2d_config_ex_ion.src1_gb_alpha_en,
+				&uf_ex_ion->src1_gb_alpha_en);
 			r |= get_user(ge2d_config_ex_ion.src1_gb_alpha,
 				&uf_ex_ion->src1_gb_alpha);
 			r |= get_user(ge2d_config_ex_ion.op_mode,
@@ -748,7 +754,7 @@ static int ge2d_release(struct inode *inode, struct file *file)
 
 	context = (struct ge2d_context_s *)file->private_data;
 	if (context && (destroy_ge2d_work_queue(context) == 0)) {
-		ge2d_device.open_count--;
+		atomic_dec(&ge2d_device.open_count);
 		return 0;
 	}
 	ge2d_log_dbg("release one ge2d device\n");
@@ -759,10 +765,11 @@ static int ge2d_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	int irq = 0;
-	struct reset_control *rstc = NULL;
 	struct clk *clk_gate;
+	struct clk *clk_vapb0;
 	struct clk *clk;
 	struct resource res;
+
 	init_ge2d_device();
 	/* get interrupt resource */
 	irq = platform_get_irq_byname(pdev, "ge2d");
@@ -792,15 +799,14 @@ static int ge2d_probe(struct platform_device *pdev)
 	ge2d_log_info("clock clk_ge2d source %p\n", clk);
 	clk_prepare_enable(clk);
 
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB) {
-		struct clk *clk_vapb0;
+	clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
+	if (PTR_ERR(clk_vapb0) != -ENOENT) {
 		int vapb_rate, vpu_rate;
 
-		clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
-		ge2d_log_info("clock source clk_vapb_0 %p\n", clk_vapb0);
-		clk_prepare_enable(clk_vapb0);
-
 		if (!IS_ERR(clk_vapb0)) {
+			ge2d_log_info("clock source clk_vapb_0 %p\n",
+				clk_vapb0);
+			clk_prepare_enable(clk_vapb0);
 			vpu_rate = get_vpu_clk();
 			ge2d_log_info("vpu clock is %d HZ\n",
 					vpu_rate);
@@ -836,7 +842,7 @@ static int ge2d_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = ge2d_wq_init(pdev, irq, rstc, clk_gate);
+	ret = ge2d_wq_init(pdev, irq, clk_gate);
 #ifdef CONFIG_AMLOGIC_ION
 	if (!ge2d_ion_client)
 		ge2d_ion_client = meson_ion_client_create(-1, "meson-ge2d");

@@ -71,6 +71,7 @@ static void *table_vaddr;
 static u32 rdma_enable;
 static u32 item_count;
 static u32 rdma_debug;
+static u32 rdma_hdr_delay = 1;
 static bool osd_rdma_init_flag;
 #define OSD_RDMA_UPDATE_RETRY_COUNT 100
 static unsigned int debug_rdma_status;
@@ -217,9 +218,9 @@ static int update_table_item(u32 addr, u32 val, u8 irq_mode)
 	int reject1 = 0, reject2 = 0, ret = 0;
 	u32 paddr;
 
-	if (item_count > 500) {
+	if ((item_count > 500) || rdma_reset_tigger_flag) {
 		/* rdma table is full */
-		pr_info("update_table_item overflow!\n");
+		/* pr_info("update_table_item overflow!\n"); */
 		return -1;
 	}
 	/* pr_debug("%02dth, ctrl: 0x%x, status: 0x%x, auto:0x%x, flag:0x%x\n",
@@ -504,75 +505,236 @@ void set_reset_rdma_trigger_line(void)
 	aml_write_vcbus(VPP_INT_LINE_NUM, trigger_line);
 }
 
+struct hdr_osd_reg_s hdr_osd_shadow_reg = {
+	0x00000001, /* VIU_OSD1_MATRIX_CTRL 0x1a90 */
+	0x00ba0273, /* VIU_OSD1_MATRIX_COEF00_01 0x1a91 */
+	0x003f1f9a, /* VIU_OSD1_MATRIX_COEF02_10 0x1a92 */
+	0x1ea801c0, /* VIU_OSD1_MATRIX_COEF11_12 0x1a93 */
+	0x01c01e6a, /* VIU_OSD1_MATRIX_COEF20_21 0x1a94 */
+	0x00000000, /* VIU_OSD1_MATRIX_COLMOD_COEF42 0x1a95 */
+	0x00400200, /* VIU_OSD1_MATRIX_OFFSET0_1 0x1a96 */
+	0x00000200, /* VIU_OSD1_MATRIX_PRE_OFFSET2 0x1a97 */
+	0x00000000, /* VIU_OSD1_MATRIX_PRE_OFFSET0_1 0x1a98 */
+	0x00000000, /* VIU_OSD1_MATRIX_PRE_OFFSET2 0x1a99 */
+	0x1fd80000, /* VIU_OSD1_MATRIX_COEF22_30 0x1a9d */
+	0x00000000, /* VIU_OSD1_MATRIX_COEF31_32 0x1a9e */
+	0x00000000, /* VIU_OSD1_MATRIX_COEF40_41 0x1a9f */
+	0x00000000, /* VIU_OSD1_EOTF_CTL 0x1ad4 */
+	0x08000000, /* VIU_OSD1_EOTF_COEF00_01 0x1ad5 */
+	0x00000000, /* VIU_OSD1_EOTF_COEF02_10 0x1ad6 */
+	0x08000000, /* VIU_OSD1_EOTF_COEF11_12 0x1ad7 */
+	0x00000000, /* VIU_OSD1_EOTF_COEF20_21 0x1ad8 */
+	0x08000001, /* VIU_OSD1_EOTF_COEF22_RS 0x1ad9 */
+	0x0,		/* VIU_OSD1_EOTF_3X3_OFST_0 0x1aa0 */
+	0x0,		/* VIU_OSD1_EOTF_3X3_OFST_1 0x1aa1 */
+	0x01c00000, /* VIU_OSD1_OETF_CTL 0x1adc */
+	{
+		/* eotf table */
+		{ /* r map */
+			0x0000, 0x0200, 0x0400, 0x0600, 0x0800, 0x0a00,
+			0x0c00, 0x0e00, 0x1000, 0x1200, 0x1400, 0x1600,
+			0x1800, 0x1a00, 0x1c00, 0x1e00, 0x2000, 0x2200,
+			0x2400, 0x2600, 0x2800, 0x2a00, 0x2c00, 0x2e00,
+			0x3000, 0x3200, 0x3400, 0x3600, 0x3800, 0x3a00,
+			0x3c00, 0x3e00, 0x4000
+		},
+		{ /* g map */
+			0x0000, 0x0200, 0x0400, 0x0600, 0x0800, 0x0a00,
+			0x0c00, 0x0e00, 0x1000, 0x1200, 0x1400, 0x1600,
+			0x1800, 0x1a00, 0x1c00, 0x1e00, 0x2000, 0x2200,
+			0x2400, 0x2600, 0x2800, 0x2a00, 0x2c00, 0x2e00,
+			0x3000, 0x3200, 0x3400, 0x3600, 0x3800, 0x3a00,
+			0x3c00, 0x3e00, 0x4000
+		},
+		{ /* b map */
+			0x0000, 0x0200, 0x0400, 0x0600, 0x0800, 0x0a00,
+			0x0c00, 0x0e00, 0x1000, 0x1200, 0x1400, 0x1600,
+			0x1800, 0x1a00, 0x1c00, 0x1e00, 0x2000, 0x2200,
+			0x2400, 0x2600, 0x2800, 0x2a00, 0x2c00, 0x2e00,
+			0x3000, 0x3200, 0x3400, 0x3600, 0x3800, 0x3a00,
+			0x3c00, 0x3e00, 0x4000
+		},
+		/* oetf table */
+		{ /* or map */
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+		},
+		{ /* og map */
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+		},
+		{ /* ob map */
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+		}
+	},
+	-1
+};
+
+struct hdr_osd_reg_s hdr_osd_display_reg = {
+	0x00000001, /* VIU_OSD1_MATRIX_CTRL 0x1a90 */
+	0x00ba0273, /* VIU_OSD1_MATRIX_COEF00_01 0x1a91 */
+	0x003f1f9a, /* VIU_OSD1_MATRIX_COEF02_10 0x1a92 */
+	0x1ea801c0, /* VIU_OSD1_MATRIX_COEF11_12 0x1a93 */
+	0x01c01e6a, /* VIU_OSD1_MATRIX_COEF20_21 0x1a94 */
+	0x00000000, /* VIU_OSD1_MATRIX_COLMOD_COEF42 0x1a95 */
+	0x00400200, /* VIU_OSD1_MATRIX_OFFSET0_1 0x1a96 */
+	0x00000200, /* VIU_OSD1_MATRIX_PRE_OFFSET2 0x1a97 */
+	0x00000000, /* VIU_OSD1_MATRIX_PRE_OFFSET0_1 0x1a98 */
+	0x00000000, /* VIU_OSD1_MATRIX_PRE_OFFSET2 0x1a99 */
+	0x1fd80000, /* VIU_OSD1_MATRIX_COEF22_30 0x1a9d */
+	0x00000000, /* VIU_OSD1_MATRIX_COEF31_32 0x1a9e */
+	0x00000000, /* VIU_OSD1_MATRIX_COEF40_41 0x1a9f */
+	0x00000000, /* VIU_OSD1_EOTF_CTL 0x1ad4 */
+	0x08000000, /* VIU_OSD1_EOTF_COEF00_01 0x1ad5 */
+	0x00000000, /* VIU_OSD1_EOTF_COEF02_10 0x1ad6 */
+	0x08000000, /* VIU_OSD1_EOTF_COEF11_12 0x1ad7 */
+	0x00000000, /* VIU_OSD1_EOTF_COEF20_21 0x1ad8 */
+	0x08000001, /* VIU_OSD1_EOTF_COEF22_RS 0x1ad9 */
+	0x0,		/* VIU_OSD1_EOTF_3X3_OFST_0 0x1aa0 */
+	0x0,		/* VIU_OSD1_EOTF_3X3_OFST_1 0x1aa1 */
+	0x01c00000, /* VIU_OSD1_OETF_CTL 0x1adc */
+	{
+		/* eotf table */
+		{ /* r map */
+			0x0000, 0x0200, 0x0400, 0x0600, 0x0800, 0x0a00,
+			0x0c00, 0x0e00, 0x1000, 0x1200, 0x1400, 0x1600,
+			0x1800, 0x1a00, 0x1c00, 0x1e00, 0x2000, 0x2200,
+			0x2400, 0x2600, 0x2800, 0x2a00, 0x2c00, 0x2e00,
+			0x3000, 0x3200, 0x3400, 0x3600, 0x3800, 0x3a00,
+			0x3c00, 0x3e00, 0x4000
+		},
+		{ /* g map */
+			0x0000, 0x0200, 0x0400, 0x0600, 0x0800, 0x0a00,
+			0x0c00, 0x0e00, 0x1000, 0x1200, 0x1400, 0x1600,
+			0x1800, 0x1a00, 0x1c00, 0x1e00, 0x2000, 0x2200,
+			0x2400, 0x2600, 0x2800, 0x2a00, 0x2c00, 0x2e00,
+			0x3000, 0x3200, 0x3400, 0x3600, 0x3800, 0x3a00,
+			0x3c00, 0x3e00, 0x4000
+		},
+		{ /* b map */
+			0x0000, 0x0200, 0x0400, 0x0600, 0x0800, 0x0a00,
+			0x0c00, 0x0e00, 0x1000, 0x1200, 0x1400, 0x1600,
+			0x1800, 0x1a00, 0x1c00, 0x1e00, 0x2000, 0x2200,
+			0x2400, 0x2600, 0x2800, 0x2a00, 0x2c00, 0x2e00,
+			0x3000, 0x3200, 0x3400, 0x3600, 0x3800, 0x3a00,
+			0x3c00, 0x3e00, 0x4000
+		},
+		/* oetf table */
+		{ /* or map */
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+		},
+		{ /* og map */
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+		},
+		{ /* ob map */
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+			0x0000, 0x0000, 0x0000, 0x0000, 0x0000
+		}
+	},
+	-1
+};
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 static void hdr_restore_osd_csc(void)
 {
 	u32 i = 0;
 	u32 addr_port;
 	u32 data_port;
-	struct hdr_osd_lut_s *lut = &hdr_osd_reg.lut_val;
+	struct hdr_osd_lut_s *lut = &hdr_osd_shadow_reg.lut_val;
 
 	if ((osd_reset_rdma_handle == -1)
 		|| disable_osd_rdma_reset)
 		return;
 	/* check osd matrix enable status */
-	if (hdr_osd_reg.viu_osd1_matrix_ctrl & 0x00000001) {
+	if (hdr_osd_shadow_reg.viu_osd1_matrix_ctrl & 0x00000001) {
 		/* osd matrix, VPP_MATRIX_0 */
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_PRE_OFFSET0_1,
-			hdr_osd_reg.viu_osd1_matrix_pre_offset0_1);
+			hdr_osd_shadow_reg.viu_osd1_matrix_pre_offset0_1);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_PRE_OFFSET2,
-			hdr_osd_reg.viu_osd1_matrix_pre_offset2);
+			hdr_osd_shadow_reg.viu_osd1_matrix_pre_offset2);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COEF00_01,
-			hdr_osd_reg.viu_osd1_matrix_coef00_01);
+			hdr_osd_shadow_reg.viu_osd1_matrix_coef00_01);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COEF02_10,
-			hdr_osd_reg.viu_osd1_matrix_coef02_10);
+			hdr_osd_shadow_reg.viu_osd1_matrix_coef02_10);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COEF11_12,
-			hdr_osd_reg.viu_osd1_matrix_coef11_12);
+			hdr_osd_shadow_reg.viu_osd1_matrix_coef11_12);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COEF20_21,
-			hdr_osd_reg.viu_osd1_matrix_coef20_21);
+			hdr_osd_shadow_reg.viu_osd1_matrix_coef20_21);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COEF22_30,
-			hdr_osd_reg.viu_osd1_matrix_coef22_30);
+			hdr_osd_shadow_reg.viu_osd1_matrix_coef22_30);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COEF31_32,
-			hdr_osd_reg.viu_osd1_matrix_coef31_32);
+			hdr_osd_shadow_reg.viu_osd1_matrix_coef31_32);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COEF40_41,
-			hdr_osd_reg.viu_osd1_matrix_coef40_41);
+			hdr_osd_shadow_reg.viu_osd1_matrix_coef40_41);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_COLMOD_COEF42,
-			hdr_osd_reg.viu_osd1_matrix_colmod_coef42);
+			hdr_osd_shadow_reg.viu_osd1_matrix_colmod_coef42);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_OFFSET0_1,
-			hdr_osd_reg.viu_osd1_matrix_offset0_1);
+			hdr_osd_shadow_reg.viu_osd1_matrix_offset0_1);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_OFFSET2,
-			hdr_osd_reg.viu_osd1_matrix_offset2);
+			hdr_osd_shadow_reg.viu_osd1_matrix_offset2);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_MATRIX_CTRL,
-			hdr_osd_reg.viu_osd1_matrix_ctrl);
+			hdr_osd_shadow_reg.viu_osd1_matrix_ctrl);
 	}
 	/* restore eotf lut */
-	if ((hdr_osd_reg.viu_osd1_eotf_ctl & 0x80000000) != 0) {
+	if ((hdr_osd_shadow_reg.viu_osd1_eotf_ctl & 0x80000000) != 0) {
 		addr_port = VIU_OSD1_EOTF_LUT_ADDR_PORT;
 		data_port = VIU_OSD1_EOTF_LUT_DATA_PORT;
 		rdma_write_reg(
@@ -609,30 +771,30 @@ static void hdr_restore_osd_csc(void)
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_EOTF_COEF00_01,
-			hdr_osd_reg.viu_osd1_eotf_coef00_01);
+			hdr_osd_shadow_reg.viu_osd1_eotf_coef00_01);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_EOTF_COEF02_10,
-			hdr_osd_reg.viu_osd1_eotf_coef02_10);
+			hdr_osd_shadow_reg.viu_osd1_eotf_coef02_10);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_EOTF_COEF11_12,
-			hdr_osd_reg.viu_osd1_eotf_coef11_12);
+			hdr_osd_shadow_reg.viu_osd1_eotf_coef11_12);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_EOTF_COEF20_21,
-			hdr_osd_reg.viu_osd1_eotf_coef20_21);
+			hdr_osd_shadow_reg.viu_osd1_eotf_coef20_21);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_EOTF_COEF22_RS,
-			hdr_osd_reg.viu_osd1_eotf_coef22_rs);
+			hdr_osd_shadow_reg.viu_osd1_eotf_coef22_rs);
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_EOTF_CTL,
-			hdr_osd_reg.viu_osd1_eotf_ctl);
+			hdr_osd_shadow_reg.viu_osd1_eotf_ctl);
 	}
 	/* restore oetf lut */
-	if ((hdr_osd_reg.viu_osd1_oetf_ctl & 0xe0000000) != 0) {
+	if ((hdr_osd_shadow_reg.viu_osd1_oetf_ctl & 0xe0000000) != 0) {
 		addr_port = VIU_OSD1_OETF_LUT_ADDR_PORT;
 		data_port = VIU_OSD1_OETF_LUT_DATA_PORT;
 		for (i = 0; i < 20; i++) {
@@ -683,7 +845,7 @@ static void hdr_restore_osd_csc(void)
 		rdma_write_reg(
 			osd_reset_rdma_handle,
 			VIU_OSD1_OETF_CTL,
-			hdr_osd_reg.viu_osd1_oetf_ctl);
+			hdr_osd_shadow_reg.viu_osd1_oetf_ctl);
 	}
 }
 #endif
@@ -697,10 +859,43 @@ static void osd_reset_rdma_func(u32 reset_bit)
 		rdma_write_reg(osd_reset_rdma_handle,
 			VIU_SW_RESET, 0);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+		if ((rdma_hdr_delay == 0) ||
+			(hdr_osd_reg.shadow_mode == 0))
+			memcpy(&hdr_osd_shadow_reg, &hdr_osd_reg,
+				sizeof(struct hdr_osd_reg_s));
 		hdr_restore_osd_csc();
 #endif
 		set_reset_rdma_trigger_line();
 		rdma_config(osd_reset_rdma_handle, 1 << 6);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+		if (hdr_osd_reg.shadow_mode == -1) {
+			if (rdma_hdr_delay == 1) {
+				memcpy(&hdr_osd_shadow_reg,
+					&hdr_osd_reg,
+					sizeof(struct hdr_osd_reg_s));
+			} else if (rdma_hdr_delay == 2) {
+				memcpy(&hdr_osd_shadow_reg,
+					&hdr_osd_display_reg,
+					sizeof(struct hdr_osd_reg_s));
+				memcpy(&hdr_osd_display_reg,
+					&hdr_osd_reg,
+					sizeof(struct hdr_osd_reg_s));
+			}
+		} else {
+			if (hdr_osd_reg.shadow_mode == 1) {
+				memcpy(&hdr_osd_shadow_reg,
+					&hdr_osd_reg,
+					sizeof(struct hdr_osd_reg_s));
+			} else if (hdr_osd_reg.shadow_mode == 2) {
+				memcpy(&hdr_osd_shadow_reg,
+					&hdr_osd_display_reg,
+					sizeof(struct hdr_osd_reg_s));
+				memcpy(&hdr_osd_display_reg,
+					&hdr_osd_reg,
+					sizeof(struct hdr_osd_reg_s));
+			}
+		}
+#endif
 	} else
 		rdma_clear(osd_reset_rdma_handle);
 }
@@ -816,9 +1011,9 @@ void osd_rdma_interrupt_done_clear(void)
 			osd_reg_read(RDMA_STATUS);
 		pr_info("osd rdma restart! 0x%x\n",
 			rdma_status);
-		rdma_reset_tigger_flag = 0;
 		osd_rdma_enable(0);
 		osd_rdma_enable(2);
+		rdma_reset_tigger_flag = 0;
 	}
 }
 int read_rdma_table(void)
@@ -1134,3 +1329,5 @@ module_param(dump_reg_trigger, uint, 0664);
 MODULE_PARM_DESC(rdma_recovery_count, "\n rdma_recovery_count\n");
 module_param(rdma_recovery_count, uint, 0664);
 
+MODULE_PARM_DESC(rdma_hdr_delay, "\n rdma_hdr_delay\n");
+module_param(rdma_hdr_delay, uint, 0664);

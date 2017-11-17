@@ -30,7 +30,7 @@
 #define GE2D_DST1_INDEX 0
 #define GE2D_SRC1_INDEX 1
 #define GE2D_SRC2_INDEX 2
-
+static int gaul_filter_used;
 static const  unsigned int filt_coef_gau1[] = { /* gau1+phase */
 	0x20402000,
 	0x203f2001,
@@ -358,6 +358,15 @@ void ge2d_set_src1_scale_coef(unsigned int v_filt_type,
 
 	/* write vert filter coefs */
 	ge2d_reg_write(GE2D_SCALE_COEF_IDX, 0x0000);
+	if ((v_filt_type == FILTER_TYPE_GAU0) ||
+		(v_filt_type == FILTER_TYPE_GAU0_BOT) ||
+		(v_filt_type == FILTER_TYPE_GAU1) ||
+		(h_filt_type == FILTER_TYPE_GAU0) ||
+		(h_filt_type == FILTER_TYPE_GAU0_BOT) ||
+		(h_filt_type == FILTER_TYPE_GAU1))
+		gaul_filter_used = 1;
+	else
+		gaul_filter_used = 0;
 	for (i = 0; i < 33; i++) {
 		if (v_filt_type == FILTER_TYPE_BICUBIC)
 			ge2d_reg_write(GE2D_SCALE_COEF, filt_coef0[i]);
@@ -740,6 +749,8 @@ void ge2d_set_dp_gen(struct ge2d_dp_gen_s *cfg)
 
 
 	ge2d_reg_set_bits(GE2D_GEN_CTRL1, cfg->src1_gb_alpha, 0, 8);
+	ge2d_reg_set_bits(GE2D_GEN_CTRL2,
+		cfg->src1_gb_alpha_en, 29, 1);
 
 	ge2d_reg_write(GE2D_ALU_CONST_COLOR, cfg->alu_const_color);
 
@@ -774,6 +785,7 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 	unsigned int x_chr_phase = 0, y_chr_phase = 0;
 	unsigned int x_yc_ratio, y_yc_ratio;
 	int sc_prehsc_en, sc_prevsc_en;
+	int rate_w = 10, rate_h = 10;
 	/* expand src region with one line. */
 	unsigned int src1_y_end = cfg->src1_y_end + 1;
 
@@ -883,6 +895,61 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 		cfg->hsc_adv_phase = multo & 0xffffff;
 	}
 
+	if (!gaul_filter_used) {
+		rate_w = (widtho * 10) / widthi;
+		rate_h = (heighto * 10) / heighti;
+		if (rate_w == 10) {
+			/* not scaler case */
+			cfg->sc_vsc_en = 1;
+			cfg->vsc_rpt_l0_num = 1;
+			cfg->vsc_ini_phase = 0;
+			ge2d_reg_set_bits(GE2D_SC_MISC_CTRL,
+				((0 << 1) | (0 << 0)), 8, 2);
+		} else if (rate_w < 10) {
+			/* scaler down case */
+			cfg->sc_vsc_en = 1;
+			cfg->vsc_rpt_l0_num = 1;
+			if (rate_w != 0)
+				cfg->vsc_ini_phase =
+					0x5000000/rate_w - 0x800000;
+			else
+				cfg->vsc_ini_phase = 0x5000000;
+		} else {
+			/* scaler up case */
+			cfg->sc_vsc_en = 1;
+			cfg->vsc_rpt_l0_num = 2;
+			cfg->vsc_ini_phase =
+				0x800000 + 0x5000000/rate_w;
+		}
+
+		if (rate_h == 10) {
+			/* not scaler case */
+			cfg->sc_hsc_en = 1;
+			cfg->hsc_rpt_p0_num = 1;
+			cfg->hsc_ini_phase = 0;
+			ge2d_reg_set_bits(GE2D_SC_MISC_CTRL,
+				((0 << 1) | (0 << 0)), 8, 2);
+		} else if (rate_h < 10) {
+			/* scaler down case */
+			cfg->sc_hsc_en = 1;
+			cfg->hsc_rpt_p0_num = 1;
+			if (rate_h != 0)
+				cfg->hsc_ini_phase =
+					0x5000000/rate_h - 0x800000;
+			else
+				cfg->hsc_ini_phase = 0x5000000;
+		} else {
+			/* scaler up case */
+			cfg->sc_hsc_en = 1;
+			cfg->hsc_rpt_p0_num = 2;
+			cfg->hsc_ini_phase =
+				0x800000 + 0x5000000/rate_h;
+		}
+		/* expand src1/src2 color with 1 */
+		ge2d_reg_set_bits(GE2D_GEN_CTRL2, 1, 27, 1);
+		ge2d_reg_set_bits(GE2D_GEN_CTRL2, 1, 25, 1);
+	}
+	ge2d_log_dbg("rate_w=%d,rate_h=%d\n", rate_w, rate_h);
 	ge2d_reg_set_bits(GE2D_SC_MISC_CTRL,
 			   ((cfg->hsc_div_en << 17) |
 			    (cfg->hsc_div_length << 4) |

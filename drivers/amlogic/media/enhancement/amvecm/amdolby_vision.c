@@ -476,7 +476,7 @@ void enable_dolby_vision(int enable)
 			VSYNC_WR_MPEG_REG(VPP_GAINOFF_CTRL0, 0);
 			VSYNC_WR_MPEG_REG_BITS(VIU_OSD1_MATRIX_CTRL, 0, 0, 1);
 			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 28, 1);
-			enable_osd_path(0);
+			enable_osd_path(0, 0);
 			pr_dolby_dbg("Dolby Vision turn on\n");
 		}
 		dolby_vision_on = true;
@@ -504,7 +504,7 @@ void enable_dolby_vision(int enable)
 			VSYNC_WR_MPEG_REG(VPP_GAINOFF_CTRL0,
 				vpp_gainoff_backup);
 			VSYNC_WR_MPEG_REG_BITS(VIU_OSD1_MATRIX_CTRL, 1, 0, 1);
-			enable_osd_path(1);
+			enable_osd_path(1, -1);
 			pr_dolby_dbg("Dolby Vision turn off\n");
 		}
 		dolby_vision_on = false;

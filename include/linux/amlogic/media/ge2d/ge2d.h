@@ -500,6 +500,7 @@ struct ge2d_dp_gen_s {
 	int               matrix_offset[3];
 	int               matrix_coef[9];
 
+	unsigned char     src1_gb_alpha_en;
 	unsigned char     src1_gb_alpha;
 	unsigned int      alu_const_color;
 
@@ -843,7 +844,10 @@ struct config_para_ex_ion_s {
 	struct src_key_ctrl_s  src_key;
 	struct src_key_ctrl_s  src2_key;
 
+	unsigned char src1_cmult_asel;
+	unsigned char src2_cmult_asel;
 	int alu_const_color;
+	unsigned char src1_gb_alpha_en;
 	unsigned int src1_gb_alpha;
 	unsigned int op_mode;
 	unsigned char bitmask_en;
@@ -883,7 +887,10 @@ struct compat_config_para_ex_ion_s {
 	struct src_key_ctrl_s  src_key;
 	struct src_key_ctrl_s  src2_key;
 
+	unsigned char src1_cmult_asel;
+	unsigned char src2_cmult_asel;
 	int alu_const_color;
+	unsigned char src1_gb_alpha_en;
 	unsigned int src1_gb_alpha;
 	unsigned int op_mode;
 	unsigned char bitmask_en;
