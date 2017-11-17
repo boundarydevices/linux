@@ -491,9 +491,8 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 
 	ts->vio = devm_regulator_get(dev, "vio");
 	if (IS_ERR(ts->vio)) {
-		error = PTR_ERR(ts->vio);
-		dev_err(dev, "error acquiring vio regulator: %d", error);
-		return error;
+		ts->vio = NULL;
+		dev_info(dev, "no vio regulator found");
 	}
 
 	mutex_init(&ts->mutex);
