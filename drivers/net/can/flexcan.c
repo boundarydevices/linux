@@ -277,10 +277,10 @@ struct flexcan_priv {
 	struct flexcan_platform_data *pdata;
 	const struct flexcan_devtype_data *devtype_data;
 	struct regulator *reg_xceiver;
-	int stby_gpio;
-	enum of_gpio_flags stby_gpio_flags;
 	int id;
 	struct flexcan_stop_mode stm;
+	int stby_gpio;
+	enum of_gpio_flags stby_gpio_flags;
 };
 
 static struct flexcan_devtype_data fsl_p1010_devtype_data = {
