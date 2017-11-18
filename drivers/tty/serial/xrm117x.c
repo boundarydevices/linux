@@ -1637,8 +1637,6 @@ static int xrm117x_probe_common(struct device *dev,
 #endif
 	reset_gpio = devm_gpiod_get_index(dev, "reset", 0, GPIOD_OUT_HIGH);
 	if (!IS_ERR(reset_gpio)) {
-		/* release reset */
-		gpiod_set_value(reset_gpio, 1);        /* assert */
 		udelay(1);
 		gpiod_set_value(reset_gpio, 0);        /* release */
 		msleep(2);
