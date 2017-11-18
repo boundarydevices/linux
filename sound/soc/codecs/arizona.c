@@ -1664,6 +1664,7 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 		rates = arizona_48k_bclk_rates;
 		limit = ARRAY_SIZE(arizona_48k_bclk_rates);
 	}
+
 	wl = params_width(params);
 
 	if (tdm_slots) {
