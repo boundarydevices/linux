@@ -467,7 +467,7 @@ static void disable_anatop_clocks(void __iomem *anatop_base)
 
 	/* Make sure PLL2 PFDs 0-2 are gated */
 	reg = readl_relaxed(anatop_base + CCM_ANALOG_PFD_528);
-	reg |= PFD1_CLKGATE;			/* Disable PFD1 */
+	reg |= PFD1_CLKGATE;				/* Disable PFD1 */
 
 	/* Cannot gate PFD2 if pll2_pfd2_396m is the parent of MMDC clock */
 	if (parent == clk[IMX6QDL_CLK_PLL2_PFD0_352M]) {
