@@ -215,6 +215,7 @@
 				      "di0_sel", "di1_sel",
 				      "ldb_di0", "ldb_di1",
 				      "540m", "video_pll";
+
 			resets = <&src 4>;
 			bypass_reset = <0>;
 
