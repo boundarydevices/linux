@@ -223,6 +223,7 @@ static int imx_pmx_set(struct pinctrl_dev *pctldev, unsigned selector,
 			dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
 				pin_reg->mux_reg, pin->mux_mode);
 		}
+
 		/*
 		 * If the select input value begins with 0xff, it's a quirky
 		 * select input and the value should be interpreted as below.
