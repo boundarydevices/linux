@@ -33,6 +33,7 @@ struct regmap_irq_chip_data {
 
 	int irq;
 	int wake_count;
+	int last_irq;
 
 	void *status_reg_buf;
 	unsigned int *status_buf;
@@ -44,7 +45,6 @@ struct regmap_irq_chip_data {
 
 	unsigned int irq_reg_stride;
 	unsigned int type_reg_stride;
-	int last_irq;
 };
 
 static inline const
