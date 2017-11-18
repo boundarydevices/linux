@@ -201,6 +201,9 @@ static ssize_t show_debug(struct device *device,
 	return snprintf(buf, PAGE_SIZE, "%lu\n", par->debug);
 }
 
+static struct device_attribute debug_device_attr = \
+	__ATTR(debug, 0660, show_debug, store_debug);
+
 static ssize_t show_scanline(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
@@ -216,9 +219,6 @@ static ssize_t show_scanline(struct device *dev, struct device_attribute *attr,
 		return ret;
 	return sprintf(buf, "%d\n", ret);
 }
-
-static struct device_attribute debug_device_attr = \
-	__ATTR(debug, 0660, show_debug, store_debug);
 
 static DEVICE_ATTR(scanline, S_IRUGO, show_scanline, NULL);
 
