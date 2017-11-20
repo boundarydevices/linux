@@ -14143,3 +14143,7 @@ F: Documentation/devicetree/bindings/sound/es7243.txt
 AMLOGIC LED DRVIER
 M: Peipeng Zhao <peipeng.zhao@amlogic.com>
 F: Documentation/leds/leds-is31fl32xx.txt
+
+AMLOGIC ADD P241 V2 DTS
+M: Siming Chen <siming.chen@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p241_v2-1g.dts
