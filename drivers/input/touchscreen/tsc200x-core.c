@@ -119,6 +119,34 @@ struct tsc200x {
 	int			irq;
 };
 
+static int calibration[7];
+module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
+static void tsc200x_translate(u16 *px, u16 *py)
+{
+	int x, y, x1, y1;
+
+	if (calibration[6]) {
+		x1 = *px;
+		y1 = *py;
+
+		x = calibration[0] * x1 +
+			calibration[1] * y1 +
+			calibration[2];
+		x /= calibration[6];
+		if (x < 0)
+			x = 0;
+		y = calibration[3] * x1 +
+			calibration[4] * y1 +
+			calibration[5];
+		y /= calibration[6];
+		if (y < 0)
+			y = 0;
+		*px = x;
+		*py = y;
+	}
+}
+
 static void tsc200x_update_pen_state(struct tsc200x *ts,
 				     int x, int y, int pressure)
 {
@@ -175,6 +203,9 @@ static irqreturn_t tsc200x_irq_thread(int irq, void *_ts)
 	    ts->in_z1 == tsdata.z1 && ts->in_z2 == tsdata.z2) {
 		goto out;
 	}
+
+	/* Do coordinates translation if calibration provided */
+	tsc200x_translate(&tsdata.x, &tsdata.y);
 
 	/*
 	 * At this point we are happy we have a valid and useful reading.
