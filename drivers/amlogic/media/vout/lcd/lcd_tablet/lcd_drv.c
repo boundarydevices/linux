@@ -29,8 +29,8 @@
 #include <linux/reboot.h>
 #include <linux/of.h>
 #include <linux/reset.h>
-#ifdef CONFIG_AML_VPU
-#include <linux/amlogic/vpu.h>
+#ifdef CONFIG_AMLOGIC_VPU
+#include <linux/amlogic/media/vpu/vpu.h>
 #endif
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
@@ -788,7 +788,7 @@ static void lcd_vbyone_config_set(struct lcd_config_s *pconf)
 
 void lcd_tablet_clk_update(struct lcd_config_s *pconf)
 {
-#ifdef CONFIG_AML_VPU
+#ifdef CONFIG_AMLOGIC_VPU
 	request_vpu_clk_vmod(pconf->lcd_timing.lcd_clk, VPU_VENCL);
 #endif
 
@@ -864,7 +864,7 @@ void lcd_tablet_driver_init_pre(void)
 
 	lcd_tablet_config_update(pconf);
 	lcd_tablet_config_post_update(pconf);
-#ifdef CONFIG_AML_VPU
+#ifdef CONFIG_AMLOGIC_VPU
 	request_vpu_clk_vmod(pconf->lcd_timing.lcd_clk, VPU_VENCL);
 	switch_vpu_mem_pd_vmod(VPU_VENCL, VPU_MEM_POWER_ON);
 #endif
@@ -956,7 +956,7 @@ void lcd_tablet_driver_disable(void)
 
 	lcd_clk_disable();
 	lcd_clk_gate_switch(0);
-#ifdef CONFIG_AML_VPU
+#ifdef CONFIG_AMLOGIC_VPU
 	switch_vpu_mem_pd_vmod(VPU_VENCL, VPU_MEM_POWER_DOWN);
 	release_vpu_clk_vmod(VPU_VENCL);
 #endif

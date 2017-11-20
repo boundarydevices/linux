@@ -28,7 +28,7 @@ extern void lcd_tv_driver_tiny_enable(void);
 extern void lcd_tv_driver_tiny_disable(void);
 
 extern void lcd_vbyone_wait_stable(void);
-extern void lcd_vbyone_interrupt_up(void);
+extern int lcd_vbyone_interrupt_up(void);
 extern void lcd_vbyone_interrupt_down(void);
 
 #endif

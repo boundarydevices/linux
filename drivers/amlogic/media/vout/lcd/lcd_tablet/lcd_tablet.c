@@ -29,8 +29,9 @@
 #include <linux/reboot.h>
 #include <linux/of.h>
 #include <linux/reset.h>
-#ifdef CONFIG_AML_VPU
-#include <linux/amlogic/vpu.h>
+#include <linux/clk.h>
+#ifdef CONFIG_AMLOGIC_VPU
+#include <linux/amlogic/media/vpu/vpu.h>
 #endif
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -80,7 +81,8 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 		} else {
 			ret = -EINVAL;
 		}
-	}
+	} else
+		lcd_clk_gate_switch(1);
 
 	lcd_vcbus_write(VPP_POSTBLEND_H_SIZE, lcd_drv->lcd_info->width);
 
@@ -151,7 +153,7 @@ static int lcd_framerate_automation_set_mode(void)
 	/* update clk & timing config */
 	lcd_tablet_config_update(lcd_drv->lcd_config);
 	/* update interface timing if needed, current no need */
-#ifdef CONFIG_AML_VPU
+#ifdef CONFIG_AMLOGIC_VPU
 	request_vpu_clk_vmod(
 		lcd_drv->lcd_config->lcd_timing.lcd_clk, VPU_VENCL);
 #endif
@@ -1173,7 +1175,7 @@ static void lcd_config_init(struct lcd_config_s *pconf)
 	pconf->lcd_timing.lcd_clk_dft = pconf->lcd_timing.lcd_clk;
 	pconf->lcd_timing.h_period_dft = pconf->lcd_basic.h_period;
 	pconf->lcd_timing.v_period_dft = pconf->lcd_basic.v_period;
-	lcd_tcon_config(pconf);
+	lcd_timing_init_config(pconf);
 
 	lcd_tablet_vinfo_update();
 
@@ -1235,7 +1237,7 @@ static void lcd_set_vinfo(unsigned int sync_duration)
 
 	/* update interface timing */
 	lcd_tablet_config_update(lcd_drv->lcd_config);
-#ifdef CONFIG_AML_VPU
+#ifdef CONFIG_AMLOGIC_VPU
 	request_vpu_clk_vmod(
 		lcd_drv->lcd_config->lcd_timing.lcd_clk, VPU_VENCL);
 #endif

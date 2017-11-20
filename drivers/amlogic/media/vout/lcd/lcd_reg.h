@@ -21,21 +21,8 @@
 
 /* register offset address define */
 /* base & offset */
-#if 0
-#define LCD_REG_BASE_PERIPHS                      (0xc8834400L)
-#define LCD_REG_BASE_CBUS                         (0xc1100000L)
-#define LCD_REG_BASE_HIU                          (0xc883c000L)
-#define LCD_REG_BASE_VCBUS                        (0xd0100000L)
-#endif
-#define LCD_HIU_REG(reg)                          (reg & 0xff)
-#define LCD_PERIPHS_REG(reg)                      (reg & 0xff)
 
-#define LCD_REG_OFFSET_PERIPHS(reg)               ((LCD_PERIPHS_REG(reg) << 2))
-#define LCD_REG_OFFSET_CBUS(reg)                  ((reg << 2))
-#define LCD_REG_OFFSET_HIU(reg)                   ((LCD_HIU_REG(reg) << 2))
-#define LCD_REG_OFFSET_VCBUS(reg)                 ((reg << 2))
-#define LCD_REG_OFFSET_DSI_HOST(reg)              ((reg << 2))
-#define LCD_REG_OFFSET_DSI_PHY(reg)               ((reg << 2))
+#define LCD_REG_OFFSET(reg)         ((reg << 2))
 
 
 /* PERIPHS: 0xc8834400 */
@@ -71,16 +58,16 @@
 
 
 /* HIU:  HHI_CBUS_BASE = 0x10 */
-#define HHI_GCLK_MPEG0                             0x1050
-#define HHI_GCLK_MPEG1                             0x1051
-#define HHI_GCLK_MPEG2                             0x1052
-#define HHI_GCLK_OTHER                             0x1054
+#define HHI_GCLK_MPEG0                             0x50
+#define HHI_GCLK_MPEG1                             0x51
+#define HHI_GCLK_MPEG2                             0x52
+#define HHI_GCLK_OTHER                             0x54
 
-#define HHI_VIID_PLL_CNTL4                         0x1046
-#define HHI_VIID_PLL_CNTL                          0x1047
-#define HHI_VIID_PLL_CNTL2                         0x1048
-#define HHI_VIID_PLL_CNTL3                         0x1049
-#define HHI_VIID_CLK_DIV                           0x104a
+#define HHI_VIID_PLL_CNTL4                         0x46
+#define HHI_VIID_PLL_CNTL                          0x47
+#define HHI_VIID_PLL_CNTL2                         0x48
+#define HHI_VIID_PLL_CNTL3                         0x49
+#define HHI_VIID_CLK_DIV                           0x4a
     #define DAC0_CLK_SEL           28
     #define DAC1_CLK_SEL           24
     #define DAC2_CLK_SEL           20
@@ -88,7 +75,7 @@
     #define VCLK2_XD_EN            16
     #define ENCL_CLK_SEL           12
     #define VCLK2_XD                0
-#define HHI_VIID_CLK_CNTL                          0x104b
+#define HHI_VIID_CLK_CNTL                          0x4b
     #define VCLK2_EN               19
     #define VCLK2_CLK_IN_SEL       16
     #define VCLK2_SOFT_RST         15
@@ -97,7 +84,7 @@
     #define VCLK2_DIV4_EN           2
     #define VCLK2_DIV2_EN           1
     #define VCLK2_DIV1_EN           0
-#define HHI_VIID_DIVIDER_CNTL                      0x104c
+#define HHI_VIID_DIVIDER_CNTL                      0x4c
     #define DIV_CLK_IN_EN          16
     #define DIV_CLK_SEL            15
     #define DIV_POST_TCNT          12
@@ -109,7 +96,7 @@
     #define DIV_PRE_SOFT_RST        3
     #define DIV_POST_RST            1
     #define DIV_PRE_RST             0
-#define HHI_VID_CLK_DIV                            0x1059
+#define HHI_VID_CLK_DIV                            0x59
     #define ENCI_CLK_SEL           28
     #define ENCP_CLK_SEL           24
     #define ENCT_CLK_SEL           20
@@ -118,64 +105,64 @@
     #define ENCL_CLK_SEL           12
     #define VCLK_XD1                8
     #define VCLK_XD0                0
-#define HHI_VID_CLK_CNTL                           0x105f
-#define HHI_VID_CLK_CNTL2                          0x1065
+#define HHI_VID_CLK_CNTL                           0x5f
+#define HHI_VID_CLK_CNTL2                          0x65
     #define HDMI_TX_PIXEL_GATE_VCLK  5
     #define VDAC_GATE_VCLK           4
     #define ENCL_GATE_VCLK           3
     #define ENCP_GATE_VCLK           2
     #define ENCT_GATE_VCLK           1
     #define ENCI_GATE_VCLK           0
-#define HHI_VID_DIVIDER_CNTL                       0x1066
-#define HHI_VID_PLL_CLK_DIV                        0x1068
-#define HHI_EDP_APB_CLK_CNTL                       0x107b
-#define HHI_EDP_APB_CLK_CNTL_M8M2                  0x1082
-#define HHI_EDP_TX_PHY_CNTL0                       0x109c
-#define HHI_EDP_TX_PHY_CNTL1                       0x109d
+#define HHI_VID_DIVIDER_CNTL                       0x66
+#define HHI_VID_PLL_CLK_DIV                        0x68
+#define HHI_EDP_APB_CLK_CNTL                       0x7b
+#define HHI_EDP_APB_CLK_CNTL_M8M2                  0x82
+#define HHI_EDP_TX_PHY_CNTL0                       0x9c
+#define HHI_EDP_TX_PHY_CNTL1                       0x9d
 /* m8b */
-#define HHI_VID_PLL_CNTL                           0x10c8
-#define HHI_VID_PLL_CNTL2                          0x10c9
-#define HHI_VID_PLL_CNTL3                          0x10ca
-#define HHI_VID_PLL_CNTL4                          0x10cb
-#define HHI_VID_PLL_CNTL5                          0x10cc
-#define HHI_VID_PLL_CNTL6                          0x10cd
+#define HHI_VID_PLL_CNTL                           0xc8
+#define HHI_VID_PLL_CNTL2                          0xc9
+#define HHI_VID_PLL_CNTL3                          0xca
+#define HHI_VID_PLL_CNTL4                          0xcb
+#define HHI_VID_PLL_CNTL5                          0xcc
+#define HHI_VID_PLL_CNTL6                          0xcd
 /* g9tv */
-#define HHI_HDMI_PLL_CNTL                          0x10c8
-#define HHI_HDMI_PLL_CNTL2                         0x10c9
-#define HHI_HDMI_PLL_CNTL3                         0x10ca
-#define HHI_HDMI_PLL_CNTL4                         0x10cb
-#define HHI_HDMI_PLL_CNTL5                         0x10cc
-#define HHI_HDMI_PLL_CNTL6                         0x10cd
+#define HHI_HDMI_PLL_CNTL                          0xc8
+#define HHI_HDMI_PLL_CNTL2                         0xc9
+#define HHI_HDMI_PLL_CNTL3                         0xca
+#define HHI_HDMI_PLL_CNTL4                         0xcb
+#define HHI_HDMI_PLL_CNTL5                         0xcc
+#define HHI_HDMI_PLL_CNTL6                         0xcd
 
-#define HHI_DSI_LVDS_EDP_CNTL0                     0x10d1
-#define HHI_DSI_LVDS_EDP_CNTL1                     0x10d2
-#define HHI_DIF_CSI_PHY_CNTL0                      0x10d8
-#define HHI_DIF_CSI_PHY_CNTL1                      0x10d9
-#define HHI_DIF_CSI_PHY_CNTL2                      0x10da
-#define HHI_DIF_CSI_PHY_CNTL3                      0x10db
-#define HHI_DIF_CSI_PHY_CNTL4                      0x10dc
-#define HHI_DIF_CSI_PHY_CNTL5                      0x10dd
-#define HHI_LVDS_TX_PHY_CNTL0                      0x10de
-#define HHI_LVDS_TX_PHY_CNTL1                      0x10df
-#define HHI_VID2_PLL_CNTL                          0x10e0
-#define HHI_VID2_PLL_CNTL2                         0x10e1
-#define HHI_VID2_PLL_CNTL3                         0x10e2
-#define HHI_VID2_PLL_CNTL4                         0x10e3
-#define HHI_VID2_PLL_CNTL5                         0x10e4
-#define HHI_VID2_PLL_CNTL6                         0x10e5
-#define HHI_VID_LOCK_CLK_CNTL                      0x10f2
+#define HHI_DSI_LVDS_EDP_CNTL0                     0xd1
+#define HHI_DSI_LVDS_EDP_CNTL1                     0xd2
+#define HHI_DIF_CSI_PHY_CNTL0                      0xd8
+#define HHI_DIF_CSI_PHY_CNTL1                      0xd9
+#define HHI_DIF_CSI_PHY_CNTL2                      0xda
+#define HHI_DIF_CSI_PHY_CNTL3                      0xdb
+#define HHI_DIF_CSI_PHY_CNTL4                      0xdc
+#define HHI_DIF_CSI_PHY_CNTL5                      0xdd
+#define HHI_LVDS_TX_PHY_CNTL0                      0xde
+#define HHI_LVDS_TX_PHY_CNTL1                      0xdf
+#define HHI_VID2_PLL_CNTL                          0xe0
+#define HHI_VID2_PLL_CNTL2                         0xe1
+#define HHI_VID2_PLL_CNTL3                         0xe2
+#define HHI_VID2_PLL_CNTL4                         0xe3
+#define HHI_VID2_PLL_CNTL5                         0xe4
+#define HHI_VID2_PLL_CNTL6                         0xe5
+#define HHI_VID_LOCK_CLK_CNTL                      0xf2
 
 /* AXG use PLL   0xff63c000 */
-#define HHI_GP0_PLL_CNTL                           0x010
-#define HHI_GP0_PLL_CNTL2                          0x011
-#define HHI_GP0_PLL_CNTL3                          0x012
-#define HHI_GP0_PLL_CNTL4                          0x013
-#define HHI_GP0_PLL_CNTL5                          0x014
-#define HHI_GP0_PLL_CNTL1                          0x016
+#define HHI_GP0_PLL_CNTL                           0x10
+#define HHI_GP0_PLL_CNTL2                          0x11
+#define HHI_GP0_PLL_CNTL3                          0x12
+#define HHI_GP0_PLL_CNTL4                          0x13
+#define HHI_GP0_PLL_CNTL5                          0x14
+#define HHI_GP0_PLL_CNTL1                          0x16
 
-#define	HHI_MIPI_CNTL0                             0x000
-#define	HHI_MIPI_CNTL1                             0x001
-#define	HHI_MIPI_CNTL2                             0x002
+#define	HHI_MIPI_CNTL0                             0x00
+#define	HHI_MIPI_CNTL1                             0x01
+#define	HHI_MIPI_CNTL2                             0x02
 
 /*  Global control:  RESET_CBUS_BASE = 0x11 */
 #define VERSION_CTRL                               0x1100
@@ -1434,7 +1421,7 @@
  * register access api
  */
 
-extern int lcd_ioremap(void);
+extern int lcd_ioremap(struct platform_device *pdev);
 extern unsigned int lcd_vcbus_read(unsigned int _reg);
 extern void lcd_vcbus_write(unsigned int _reg, unsigned int _value);
 extern void lcd_vcbus_setb(unsigned int reg, unsigned int value,
@@ -1479,6 +1466,8 @@ extern unsigned int dsi_phy_getb(unsigned int reg,
         unsigned int _start, unsigned int _len);
 extern void dsi_phy_set_mask(unsigned int reg, unsigned int _mask);
 extern void dsi_phy_clr_mask(unsigned int reg, unsigned int _mask);
+extern int lcd_reg_gxb[];
+extern int lcd_reg_axg[];
 
 #endif
 

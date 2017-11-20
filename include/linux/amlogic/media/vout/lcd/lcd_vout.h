@@ -22,6 +22,8 @@
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
+#include <linux/amlogic/iomap.h>
+
 
 /* **********************************
  * debug print define
@@ -96,12 +98,16 @@ enum lcd_chip_e {
 	LCD_CHIP_GXTVBB = 0,
 	LCD_CHIP_GXL,   /* 1 */
 	LCD_CHIP_GXM,   /* 2 */
-	LCD_CHIP_TXL,   /* 3 */
-	LCD_CHIP_TXLX,  /* 4 */
-	LCD_CHIP_AXG,   /* 5 */
+	LCD_CHIP_TXLX,  /* 3 */
+	LCD_CHIP_AXG,   /* 4 */
 	LCD_CHIP_MAX,
 };
 
+struct lcd_data_s {
+	enum lcd_chip_e chip_type;
+	const char *chip_name;
+	int *reg_map_table;
+};
 
 enum lcd_type_e {
 	LCD_TTL = 0,
@@ -380,6 +386,7 @@ struct lcd_config_s {
 	struct lcd_power_ctrl_s *lcd_power;
 	struct pinctrl *pin;
 	unsigned char pinmux_flag;
+	unsigned char change_flag;
 	struct lcd_clk_gate_ctrl_s rstc;
 };
 
@@ -390,7 +397,7 @@ struct lcd_duration_s {
 
 struct aml_lcd_drv_s {
 	char *version;
-	enum lcd_chip_e chip_type;
+	struct lcd_data_s *data;
 	unsigned char lcd_mode;
 	unsigned char lcd_status;
 	unsigned char lcd_key_valid;
@@ -399,10 +406,12 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_resume_flag; /* 0=directly, 1=workqueue */
 	unsigned char lcd_mute;
 
-	struct clk *vencl_top;
-	struct clk *vencl_int;
-	struct clk *dsi_host;
-	struct clk *dsi_phy;
+	unsigned char clk_gate_state;
+	struct clk *encl_top_gate;
+	struct clk *encl_int_gate;
+
+	struct clk *dsi_host_gate;
+	struct clk *dsi_phy_gate;
 	struct clk *dsi_meas;
 	struct clk *mipi_enable_gate;
 	struct clk *mipi_bandgap_gate;
@@ -431,6 +440,8 @@ struct aml_lcd_drv_s {
 	struct delayed_work lcd_probe_delayed_work;
 	struct delayed_work lcd_vx1_delayed_work;
 	struct work_struct  lcd_resume_work;
+	struct resource *res_vsync_irq;
+	struct resource *res_vx1_irq;
 };
 
 extern struct aml_lcd_drv_s *aml_lcd_get_driver(void);

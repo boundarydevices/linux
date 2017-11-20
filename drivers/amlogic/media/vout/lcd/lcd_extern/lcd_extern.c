@@ -1191,9 +1191,14 @@ static void lcd_extern_init_table_dynamic_size_print(
 {
 	int i, j, k, max_len;
 	unsigned char cmd_size;
-	char str[EXT_LEN_MAX];
+	char *str;
 	unsigned char *init_table;
 
+	str = kmalloc(EXT_LEN_MAX*sizeof(char), GFP_KERNEL);
+	if (str == NULL) {
+		EXTERR("lcd_extern_dynamic_size str malloc error\n");
+		return;
+	}
 	if (flag) {
 		pr_info("power on:\n");
 		init_table = econf->table_init_on;
@@ -1205,6 +1210,7 @@ static void lcd_extern_init_table_dynamic_size_print(
 	}
 	if (init_table == NULL) {
 		EXTERR("init_table %d is NULL\n", flag);
+		kfree(str);
 		return;
 	}
 
@@ -1225,6 +1231,7 @@ static void lcd_extern_init_table_dynamic_size_print(
 		pr_info("%s\n", str);
 		i += (cmd_size + 2);
 	}
+	kfree(str);
 }
 
 static void lcd_extern_init_table_fixed_size_print(
@@ -1232,9 +1239,14 @@ static void lcd_extern_init_table_fixed_size_print(
 {
 	int i, j, k, max_len;
 	unsigned char cmd_size;
-	char str[EXT_LEN_MAX];
+	char *str;
 	unsigned char *init_table;
 
+	str = kmalloc(EXT_LEN_MAX*sizeof(char), GFP_KERNEL);
+	if (str == NULL) {
+		EXTERR("lcd_extern_fixed_size str malloc error\n");
+		return;
+	}
 	cmd_size = econf->cmd_size;
 	if (flag) {
 		pr_info("power on:\n");
@@ -1247,6 +1259,7 @@ static void lcd_extern_init_table_fixed_size_print(
 	}
 	if (init_table == NULL) {
 		EXTERR("init_table %d is NULL\n", flag);
+		kfree(str);
 		return;
 	}
 
@@ -1263,6 +1276,7 @@ static void lcd_extern_init_table_fixed_size_print(
 		pr_info("%s\n", str);
 		i += cmd_size;
 	}
+	kfree(str);
 }
 
 static void lcd_extern_config_dump(struct aml_lcd_extern_driver_s *ext_drv)

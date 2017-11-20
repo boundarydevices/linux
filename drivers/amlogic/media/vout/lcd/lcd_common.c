@@ -27,9 +27,6 @@
 #include <linux/of.h>
 #include <linux/reset.h>
 #include <linux/clk.h>
-#ifdef CONFIG_AML_VPU
-#include <linux/amlogic/vpu.h>
-#endif
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 #include <linux/amlogic/media/vout/lcd/lcd_unifykey.h>
@@ -648,7 +645,7 @@ void lcd_hdr_vinfo_update(void)
 	lcd_drv->lcd_info->hdr_info.lumi_max = pconf->hdr_info.luma_max;
 }
 
-void lcd_tcon_config(struct lcd_config_s *pconf)
+void lcd_timing_init_config(struct lcd_config_s *pconf)
 {
 	unsigned short h_period, v_period, h_active, v_active;
 	unsigned short hsync_bp, hsync_width, vsync_bp, vsync_width;
@@ -820,6 +817,30 @@ int lcd_vmode_change(struct lcd_config_s *pconf)
 			}
 		}
 		break;
+	case 4: /* hdmi mode */
+		if ((duration_num / duration_den) == 59) {
+			/* pixel clk adjust */
+			pclk = (h_period * v_period) /
+				duration_den * duration_num;
+			if (pconf->lcd_timing.lcd_clk != pclk)
+				pconf->lcd_timing.clk_change =
+					LCD_CLK_PLL_CHANGE;
+		} else {
+			/* htotal adjust */
+			h_period = ((pclk / v_period) * duration_den * 100) /
+					duration_num;
+			h_period = (h_period + 99) / 100; /* round off */
+			if (pconf->lcd_basic.h_period != h_period) {
+				/* check clk frac update */
+				pclk = (h_period * v_period) / duration_den *
+					duration_num;
+				if (pconf->lcd_timing.lcd_clk != pclk) {
+					pconf->lcd_timing.clk_change =
+						LCD_CLK_FRAC_UPDATE;
+				}
+			}
+		}
+		break;
 	case 3: /* free adjust, use min/max range to calculate */
 	default:
 		v_period = ((pclk / h_period) * duration_den * 100) /
@@ -930,120 +951,5 @@ void lcd_venc_change(struct lcd_config_s *pconf)
 
 	if (pconf->lcd_basic.v_period != vtotal)
 		aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, NULL);
-}
-
-void lcd_clk_gate_switch(int status)
-{
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-
-	if (lcd_debug_print_flag)
-		LCDPR("%s\n", __func__);
-
-	switch (lcd_drv->chip_type) {
-	case LCD_CHIP_AXG:
-		if (status) {
-			if (IS_ERR(lcd_drv->mipi_enable_gate))
-				LCDERR("%s: mipi_enable_gate\n", __func__);
-			else
-				clk_prepare_enable(lcd_drv->mipi_enable_gate);
-
-			if (IS_ERR(lcd_drv->mipi_bandgap_gate))
-				LCDERR("%s: mipi_bandgap_gate\n", __func__);
-			else
-				clk_prepare_enable(lcd_drv->mipi_bandgap_gate);
-		} else {
-			if (IS_ERR(lcd_drv->mipi_enable_gate))
-				LCDERR("%s: mipi_enable_gate\n", __func__);
-			else
-				clk_disable_unprepare(
-					lcd_drv->mipi_enable_gate);
-
-			if (IS_ERR(lcd_drv->mipi_bandgap_gate))
-				LCDERR("%s: mipi_bandgap_gate\n", __func__);
-			else
-				clk_disable_unprepare(
-					lcd_drv->mipi_bandgap_gate);
-		}
-		break;
-	default:
-		if (status) {
-			if (IS_ERR(lcd_drv->vencl_top))
-				LCDERR("%s: vencl_top\n", __func__);
-			else
-				clk_prepare_enable(lcd_drv->vencl_top);
-
-			if (IS_ERR(lcd_drv->vencl_int))
-				LCDERR("%s: vencl_int\n", __func__);
-			else
-				clk_prepare_enable(lcd_drv->vencl_int);
-		} else {
-			if (IS_ERR(lcd_drv->vencl_int))
-				LCDERR("%s: vencl_int\n", __func__);
-			else
-				clk_disable_unprepare(lcd_drv->vencl_int);
-
-			if (IS_ERR(lcd_drv->vencl_top))
-				LCDERR("%s: vencl_top\n", __func__);
-			else
-				clk_disable_unprepare(lcd_drv->vencl_top);
-		}
-		break;
-	}
-}
-
-void lcd_clktree_probe(void)
-{
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-
-	switch (lcd_drv->chip_type) {
-	case LCD_CHIP_AXG:
-		lcd_drv->dsi_host = devm_clk_get(lcd_drv->dev, "dsi_host");
-		if (IS_ERR(lcd_drv->dsi_host))
-			LCDERR("%s: clk dsi_host\n", __func__);
-		else
-			clk_prepare_enable(lcd_drv->dsi_host);
-
-		lcd_drv->dsi_phy = devm_clk_get(lcd_drv->dev, "dsi_phy");
-		if (IS_ERR(lcd_drv->dsi_phy))
-			LCDERR("%s: clk dsi_phy\n", __func__);
-		else
-			clk_prepare_enable(lcd_drv->dsi_phy);
-
-		lcd_drv->dsi_meas = devm_clk_get(lcd_drv->dev, "dsi_meas");
-		if (IS_ERR(lcd_drv->dsi_meas))
-			LCDERR("%s: clk dsi_meas\n", __func__);
-		else
-			clk_prepare_enable(lcd_drv->dsi_meas);
-
-		lcd_drv->mipi_enable_gate = devm_clk_get(
-			lcd_drv->dev, "mipi_enable_gate");
-		if (IS_ERR(lcd_drv->mipi_enable_gate))
-			LCDERR("%s: clk mipi_enable_gate\n", __func__);
-		else
-			clk_prepare_enable(lcd_drv->mipi_enable_gate);
-
-		lcd_drv->mipi_bandgap_gate = devm_clk_get(
-			lcd_drv->dev, "mipi_bandgap_gate");
-		if (IS_ERR(lcd_drv->mipi_bandgap_gate))
-			LCDERR("%s: clk mipi_bandgap_gate\n", __func__);
-		else
-			clk_prepare_enable(lcd_drv->mipi_bandgap_gate);
-		break;
-	default:
-		lcd_drv->vencl_top = devm_clk_get(lcd_drv->dev, "vencl_top");
-		if (IS_ERR(lcd_drv->vencl_top))
-			LCDERR("%s: clk vencl_top\n", __func__);
-		else
-			clk_prepare_enable(lcd_drv->vencl_top);
-
-		lcd_drv->vencl_int = devm_clk_get(lcd_drv->dev, "vencl_int");
-		if (IS_ERR(lcd_drv->vencl_int))
-			LCDERR("%s: clk vencl_int\n", __func__);
-		else
-			clk_prepare_enable(lcd_drv->vencl_int);
-		break;
-	}
-
-	LCDPR("%s\n", __func__);
 }
 

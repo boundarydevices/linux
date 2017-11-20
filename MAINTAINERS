@@ -14203,3 +14203,7 @@ M:	Nian Jing <nian.jing@amlogic.com>
 F:	drivers/amlogic/media/vin/tvin/tvafe/
 F:	include/linux/amlogic/media/frame_provider/tvin/tvin.h
 
+AMLOGIC TXLX[R311] ADD LCD DRIVER SUPPORT
+M:	Weiming Liu <weiming.liu@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/mesontxlx_r311-panel.dtsi
+F:	drivers/amlogic/media/vout/backlight/aml_ldim/*

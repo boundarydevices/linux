@@ -218,7 +218,7 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *init_table,
 						init_table[i+3]);
 				}
 				if (init_table[i+4] > 0)
-					mdelay(init_table[i+3]);
+					mdelay(init_table[i+4]);
 			} else if (type == LCD_EXTERN_INIT_CMD) {
 				ret = lcd_extern_i2c_write(
 					aml_default_i2c_client,

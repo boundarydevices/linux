@@ -31,6 +31,8 @@
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #include <linux/clk.h>
+#include <linux/of_device.h>
+#include <linux/amlogic/iomap.h>
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #endif
@@ -188,6 +190,7 @@ static struct lcd_config_s lcd_config_dft = {
 	},
 	.lcd_power = &lcd_power_config,
 	.pinmux_flag = 0,
+	.change_flag = 0,
 };
 
 static struct vinfo_s lcd_vinfo = {
@@ -202,38 +205,6 @@ struct aml_lcd_drv_s *aml_lcd_get_driver(void)
 	return lcd_driver;
 }
 /* ********************************************************* */
-
-static void lcd_chip_detect(void)
-{
-	unsigned int cpu_type;
-
-	cpu_type = get_cpu_type();
-	switch (cpu_type) {
-	case MESON_CPU_MAJOR_ID_GXTVBB:
-		lcd_driver->chip_type = LCD_CHIP_GXTVBB;
-		break;
-	case MESON_CPU_MAJOR_ID_GXL:
-		lcd_driver->chip_type = LCD_CHIP_GXL;
-		break;
-	case MESON_CPU_MAJOR_ID_GXM:
-		lcd_driver->chip_type = LCD_CHIP_GXM;
-		break;
-	case MESON_CPU_MAJOR_ID_TXL:
-		lcd_driver->chip_type = LCD_CHIP_TXL;
-		break;
-	case MESON_CPU_MAJOR_ID_TXLX:
-		lcd_driver->chip_type = LCD_CHIP_TXLX;
-		break;
-	case MESON_CPU_MAJOR_ID_AXG:
-		lcd_driver->chip_type = LCD_CHIP_AXG;
-		break;
-	default:
-		lcd_driver->chip_type = LCD_CHIP_MAX;
-	}
-
-	if (lcd_debug_print_flag)
-		LCDPR("check chip: %d\n", lcd_driver->chip_type);
-}
 
 static void lcd_power_tiny_ctrl(int status)
 {
@@ -383,6 +354,7 @@ static void lcd_module_enable(void)
 	lcd_driver->driver_init_pre();
 	lcd_driver->power_ctrl(1);
 	lcd_driver->lcd_status = 1;
+	lcd_driver->lcd_config->change_flag = 0;
 
 	mutex_unlock(&lcd_vout_mutex);
 }
@@ -409,6 +381,7 @@ static void lcd_module_reset(void)
 	lcd_driver->driver_init_pre();
 	lcd_driver->power_ctrl(1);
 	lcd_driver->lcd_status = 1;
+	lcd_driver->lcd_config->change_flag = 0;
 
 	mutex_unlock(&lcd_vout_mutex);
 }
@@ -422,6 +395,7 @@ static void lcd_module_tiny_reset(void)
 	mdelay(500);
 	lcd_power_tiny_ctrl(1);
 	lcd_driver->lcd_status = 1;
+	lcd_driver->lcd_config->change_flag = 0;
 
 	mutex_unlock(&lcd_vout_mutex);
 }
@@ -783,7 +757,7 @@ static void lcd_config_default(void)
 	LCDPR("status: %d\n", lcd_driver->lcd_status);
 }
 
-static int lcd_config_probe(void)
+static int lcd_config_probe(struct platform_device *pdev)
 {
 	const char *str;
 	unsigned int val;
@@ -823,8 +797,6 @@ static int lcd_config_probe(void)
 	LCDPR("detect mode: %s, fr_auto_policy: %d, key_valid: %d\n",
 		str, lcd_driver->fr_auto_policy, lcd_driver->lcd_key_valid);
 
-	lcd_clktree_probe();
-
 	lcd_driver->lcd_info = &lcd_vinfo;
 	lcd_driver->lcd_config = &lcd_config_dft;
 	lcd_driver->lcd_test_flag = 0;
@@ -833,6 +805,10 @@ static int lcd_config_probe(void)
 	lcd_driver->module_reset = lcd_module_reset;
 	lcd_driver->power_tiny_ctrl = lcd_power_tiny_ctrl;
 	lcd_driver->module_tiny_reset = lcd_module_tiny_reset;
+	lcd_driver->res_vsync_irq = platform_get_resource(pdev,
+		IORESOURCE_IRQ, 0);
+	lcd_driver->res_vx1_irq = platform_get_resource(pdev,
+		IORESOURCE_IRQ, 1);
 	lcd_config_default();
 	lcd_init_vout();
 
@@ -862,8 +838,66 @@ static int lcd_config_probe(void)
 	return 0;
 }
 
+#ifdef CONFIG_OF
+
+static struct lcd_data_s lcd_data_gxtvbb = {
+	.chip_type = LCD_CHIP_GXTVBB,
+	.chip_name = "gxtvbb",
+	.reg_map_table = &lcd_reg_gxb[0],
+};
+
+static struct lcd_data_s lcd_data_gxl = {
+	.chip_type = LCD_CHIP_GXL,
+	.chip_name = "gxl",
+	.reg_map_table = &lcd_reg_gxb[0],
+};
+
+static struct lcd_data_s lcd_data_gxm = {
+	.chip_type = LCD_CHIP_GXM,
+	.chip_name = "gxm",
+	.reg_map_table = &lcd_reg_gxb[0],
+};
+
+static struct lcd_data_s lcd_data_txlx = {
+	.chip_type = LCD_CHIP_TXLX,
+	.chip_name = "txlx",
+	.reg_map_table = &lcd_reg_gxb[0],
+};
+
+static struct lcd_data_s lcd_data_axg = {
+	.chip_type = LCD_CHIP_AXG,
+	.chip_name = "axg",
+	.reg_map_table = &lcd_reg_axg[0],
+};
+
+static const struct of_device_id lcd_dt_match_table[] = {
+	{
+		.compatible = "amlogic, lcd-gxtvbb",
+		.data = &lcd_data_gxtvbb,
+	},
+	{
+		.compatible = "amlogic, lcd-gxl",
+		.data = &lcd_data_gxl,
+	},
+	{
+		.compatible = "amlogic, lcd-gxm",
+		.data = &lcd_data_gxm,
+	},
+	{
+		.compatible = "amlogic, lcd-txlx",
+		.data = &lcd_data_txlx,
+	},
+	{
+		.compatible = "amlogic, lcd-axg",
+		.data = &lcd_data_axg,
+	},
+	{},
+};
+#endif
+
 static int lcd_probe(struct platform_device *pdev)
 {
+	const struct of_device_id *match;
 	int ret = 0;
 
 #ifdef LCD_DEBUG_INFO
@@ -878,6 +912,17 @@ static int lcd_probe(struct platform_device *pdev)
 	}
 	lcd_driver->dev = &pdev->dev;
 
+	match = of_match_device(lcd_dt_match_table, &pdev->dev);
+	if (match == NULL) {
+		LCDERR("%s: no match table\n", __func__);
+		return -1;
+	}
+	lcd_driver->data = (struct lcd_data_s *)match->data;
+	LCDPR("driver version: %s(%d-%s)\n",
+		lcd_driver->version,
+		lcd_driver->data->chip_type,
+		lcd_driver->data->chip_name);
+
 	mutex_init(&lcd_vout_mutex);
 	mutex_init(&lcd_power_mutex);
 	lcd_vout_serve_bypass = 0;
@@ -891,10 +936,9 @@ static int lcd_probe(struct platform_device *pdev)
 
 	INIT_WORK(&(lcd_driver->lcd_resume_work), lcd_resume_work);
 
-	lcd_chip_detect();
-	lcd_ioremap();
+	lcd_ioremap(pdev);
 	lcd_clk_config_probe();
-	ret = lcd_config_probe();
+	ret = lcd_config_probe(pdev);
 
 	LCDPR("%s %s\n", __func__, (ret ? "failed" : "ok"));
 	return 0;
@@ -915,10 +959,7 @@ static int lcd_remove(struct platform_device *pdev)
 
 		lcd_fops_remove();
 		lcd_class_remove();
-		if (!IS_ERR(lcd_driver->vencl_top))
-			devm_clk_put(lcd_driver->dev, lcd_driver->vencl_top);
-		if (!IS_ERR(lcd_driver->vencl_int))
-			devm_clk_put(lcd_driver->dev, lcd_driver->vencl_int);
+		lcd_clk_config_remove();
 
 		lcd_mode_remove(lcd_driver->dev);
 		kfree(lcd_driver);
@@ -976,15 +1017,6 @@ static void lcd_shutdown(struct platform_device *pdev)
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_OFF, NULL);
 }
 
-#ifdef CONFIG_OF
-static const struct of_device_id lcd_dt_match[] = {
-	{
-		.compatible = "amlogic, lcd",
-	},
-	{},
-};
-#endif
-
 static struct platform_driver lcd_platform_driver = {
 	.probe = lcd_probe,
 	.remove = lcd_remove,
@@ -995,7 +1027,7 @@ static struct platform_driver lcd_platform_driver = {
 		.name = "mesonlcd",
 		.owner = THIS_MODULE,
 #ifdef CONFIG_OF
-		.of_match_table = lcd_dt_match,
+		.of_match_table = of_match_ptr(lcd_dt_match_table),
 #endif
 	},
 };

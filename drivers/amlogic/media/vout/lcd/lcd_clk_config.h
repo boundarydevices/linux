@@ -171,7 +171,7 @@ enum div_sel_e {
 
 /* ******** frequency limit (unit: kHz) ******** */
 /* pll */
-#define PLL_FRAC_OD_FB_GXL			1
+#define PLL_FRAC_OD_FB_GXL          1
 #define SS_LEVEL_MAX_GXL            5
 #define PLL_M_MIN_GXL               2
 #define PLL_M_MAX_GXL               511
@@ -207,7 +207,7 @@ enum div_sel_e {
 
 /* ******** frequency limit (unit: kHz) ******** */
 /* pll */
-#define PLL_FRAC_OD_FB_GXM			1
+#define PLL_FRAC_OD_FB_GXM          1
 #define SS_LEVEL_MAX_GXM            5
 #define PLL_M_MIN_GXM               2
 #define PLL_M_MAX_GXM               511
@@ -243,7 +243,7 @@ enum div_sel_e {
 
 /* ******** frequency limit (unit: kHz) ******** */
 /* pll */
-#define PLL_FRAC_OD_FB_TXL			1
+#define PLL_FRAC_OD_FB_TXL          1
 #define SS_LEVEL_MAX_TXL            5
 #define PLL_M_MIN_TXL               2
 #define PLL_M_MAX_TXL               511
@@ -279,7 +279,7 @@ enum div_sel_e {
 
 /* ******** frequency limit (unit: kHz) ******** */
 /* pll */
-#define PLL_FRAC_OD_FB_TXLX			0
+#define PLL_FRAC_OD_FB_TXLX          0
 #define SS_LEVEL_MAX_TXLX            6
 #define PLL_M_MIN_TXLX               2
 #define PLL_M_MAX_TXLX               511
@@ -312,7 +312,7 @@ enum div_sel_e {
 
 /* ******** frequency limit (unit: kHz) ******** */
 /* pll */
-#define PLL_FRAC_OD_FB_AXG			0
+#define PLL_FRAC_OD_FB_AXG          0
 #define SS_LEVEL_MAX_AXG            5
 #define PLL_M_MIN_AXG               2
 #define PLL_M_MAX_AXG               511
@@ -341,6 +341,9 @@ extern void lcd_clk_update(struct lcd_config_s *pconf);
 extern void lcd_clk_set(struct lcd_config_s *pconf);
 extern void lcd_clk_disable(void);
 extern void lcd_clk_generate_parameter(struct lcd_config_s *pconf);
+extern void lcd_clk_gate_switch(int status);
+
 extern void lcd_clk_config_probe(void);
+extern void lcd_clk_config_remove(void);
 
 #endif

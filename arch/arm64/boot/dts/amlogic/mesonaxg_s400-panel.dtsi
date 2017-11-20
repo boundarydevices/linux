@@ -17,7 +17,7 @@
 
 / {
 	lcd{
-		compatible = "amlogic, lcd";
+		compatible = "amlogic, lcd-axg";
 		dev_name = "lcd";
 		mode = "tablet";
 		status = "okay";
@@ -27,11 +27,13 @@
 			&clkc CLKID_DSI_MEAS_COMP
 			&clkc CLKID_MIPI_ENABLE_GATE
 			&clkc CLKID_MIPI_BANDGAP_GATE>;
-		clock-names = "dsi_host",
-			"dsi_phy",
+		clock-names = "dsi_host_gate",
+			"dsi_phy_gate",
 			"dsi_meas",
 			"mipi_enable_gate",
 			"mipi_bandgap_gate";
+		reg = <0x0 0xffd00000 0x0 0x6400
+			   0x0 0xff640000 0x0 0x100>;
 		pinctrl_version = <1>; /* for uboot */
 
 		/* power type:
@@ -46,56 +48,50 @@
 
 		lcd_0{
 			model_name = "B080XAN01";
-				/*interface(ttl,lvds,mipi)*/
 			interface = "mipi";
-				/* basic_setting:
-				 * h_active,v_active,h_period,v_period,
-				 * lcd_bits,screen_widht,screen_height
-				 */
-			basic_setting = <768 1024 948 1140 8 119 159>;
-				/* lcd_timing:
-				 * hs_width,hs_bp,hs_pol,vs_width,vs_bp,vs_pol
-				 */
-			lcd_timing = <64 56 0 50 30 0>;
-				/* clk_attr:
-				 * fr_adj_type(0=clock,1=htotal,2=vtotal),
-				 * clk_ss_level,clk_auto_generate,
-				 * pixel_clk(unit in Hz)
-				 */
-			clk_attr = <0 0 1 64843200>;
-				/* mipi_attr:
-				 * lane_num, bit_rate_max(MHz),
-				 * factor(*100, default 0 for auto),
-				 * operation_mode_init(0=video, 1=command),
-				 * operation_mode_display(0=video, 1=command),
-				 * video_mode_type
-				 *     (0=sync_pulse,1=sync_event,2=burst),
-				 * clk_lp_continuous(0=stop,1=continue),
-				 * phy_stop_wait(0=auto,1=standard,2=slow)
-				 */
-			mipi_attr = <4 550 0 1 0 2 1 0>;
-				/* dsi_init: data_type, num, data... */
+			basic_setting = <768 1024 /*h_active, v_active*/
+				948 1140 /*h_period, v_period*/
+				8 /*lcd_bits*/
+				119 159>; /*screen_widht, screen_height*/
+			lcd_timing = <64 56 0 /*hs_width, hs_bp, hs_pol*/
+				50 30 0>; /*vs_width, vs_bp, vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clk, 1=htotal, 2=vtotal)*/
+				0 /*clk_ss_level */
+				1 /*clk_auto_generate*/
+				64843200>; /*pixel_clk(unit in Hz)*/
+			mipi_attr = <4 /*lane_num*/
+				550 /*bit_rate_max(MHz)*/
+				0 /*factor(*100, default 0 for auto)*/
+				1 /*operation_mode_init(0=video, 1=command)*/
+				0 /*operation_mode_display(0=video, 1=command)*/
+				2 /*
+				   *video_mode_type
+				   *(0=sync_pulse,1=sync_event,2=burst)
+				   */
+				1 /*clk_lp_continuous(0=stop,1=continue)*/
+				0>; /*phy_stop_wait(0=auto,1=standard,2=slow)*/
+
+			/* dsi_init: data_type, num, data... */
 			dsi_init_on = <0x05 1 0x11
-					0xff 20     /* delay(ms) */
+					0xff 20     /*delay(ms)*/
 					0x05 1 0x29
-					0xff 20     /* delay(ms) */
-					0xff 0xff>; /* ending flag */
+					0xff 20     /*delay(ms)*/
+					0xff 0xff>; /*ending*/
 			dsi_init_off = <0x05 1 0x28
-					0xff 10     /* delay(ms) */
+					0xff 10     /*delay(ms)*/
 					0x05 1 0x10
-					0xff 10     /* delay(ms) */
-					0xff 0xff>; /* ending flag */
-				/* extern_init: 0xff for invalid */
-			extern_init = <0xff>;
-				/* power step: type,index,value,delay(ms) */
-			power_on_step = <
-					0 0 0 10
-					0 0 1 20
-					2 0 0 0
-					0xff 0 0 0>;
+					0xff 10     /*delay(ms)*/
+					0xff 0xff>; /*ending*/
+			extern_init = <0xff>; /*0xff for invalid*/
+
+			/* power step: type, index, value, delay(ms) */
+			power_on_step = <0 0 0 10
+				0 0 1 20
+				2 0 0 0
+				0xff 0 0 0>; /*ending*/
 			power_off_step = <2 0 0 50
-					0 0 0 100
-					0xff 0 0 0>;
+				0 0 0 100
+				0xff 0 0 0>; /*ending*/
 			backlight_index = <0>;
 		};
 
@@ -155,12 +151,12 @@
 			index = <0>;
 			extern_name = "ext_default";
 			status = "disabled";
-			type = <0>; /* 0=i2c, 1=spi, 2=mipi */
-			i2c_address = <0x37>; /* 7bit i2c address */
-			/* 7bit i2c address, 0xff for none */
-			i2c_second_address = <0xff>;
+			type = <0>; /*0=i2c, 1=spi, 2=mipi*/
+			i2c_address = <0x37>; /*7bit i2c address*/
+			i2c_second_address = <0xff>; /*0xff for none*/
 			i2c_bus = "i2c_bus_c";
 			cmd_size = <4>;
+
 			/* init on/off: (type, value..., delay),
 			 * must match cmd_size for every group
 			 * type: 0x00=cmd(bit[3:0]=1 for second_addr),
@@ -170,56 +166,56 @@
 			 * delay: unit ms
 			 */
 			init_on = <0x00 0x00 0x00 0x00
-						0x00 0x08 0x01 0x00
-						0x00 0x10 0x3F 0x00
-						0x00 0x11 0x00 0x00
-						0x00 0x12 0x00 0x00
-						0x00 0x13 0xE4 0x00
-						0x00 0x14 0x02 0x00
-						0x00 0x15 0x02 0x00
-						0x00 0x16 0x24 0x00
-						0x00 0x17 0x00 0x00
-						0x00 0x18 0x21 0x00
-						0x00 0x20 0x3F 0x00
-						0x00 0x21 0xFF 0x00
-						0x00 0x22 0x00 0x00
-						0x00 0x23 0x00 0x00
-						0x00 0x24 0x00 0x00
-						0x00 0x25 0x00 0x00
-						0x00 0x26 0xE4 0x00
-						0x00 0x27 0x00 0x00
-						0x00 0x28 0x28 0x00
-						0x00 0x29 0x01 0x00
-						0x00 0x2A 0x00 0x00
-						0x00 0x2B 0x01 0x00
-						0x00 0x2C 0x0E 0x00
-						0x00 0x2D 0x00 0x00
-						0x00 0x2E 0x18 0x00
-						0x00 0x2F 0x02 0x00
-						0x00 0x30 0x02 0x00
-						0x00 0x31 0x00 0x00
-						0x00 0x32 0x63 0x00
-						0x00 0x40 0x00 0x00
-						0x00 0x41 0x00 0x00
-						0x00 0x42 0x00 0x00
-						0x00 0x12 0x00 0x00
-						0x00 0x13 0xE4 0x00
-						0x00 0x14 0x02 0x00
-						0x00 0x15 0x00 0x00
-						0x00 0x16 0x0D 0x00
-						0x00 0x17 0x00 0x00
-						0x00 0x18 0x21 0x00
-						0x00 0x41 0x06 0x00
-						0x00 0x00 0x01 0x00
-						0x00 0x08 0x00 0x00
-						0x00 0x10 0x00 0x00
-						0x00 0x11 0x0F 0x00
-						0xff 0x00 0x00 0x00>;
+				0x00 0x08 0x01 0x00
+				0x00 0x10 0x3F 0x00
+				0x00 0x11 0x00 0x00
+				0x00 0x12 0x00 0x00
+				0x00 0x13 0xE4 0x00
+				0x00 0x14 0x02 0x00
+				0x00 0x15 0x02 0x00
+				0x00 0x16 0x24 0x00
+				0x00 0x17 0x00 0x00
+				0x00 0x18 0x21 0x00
+				0x00 0x20 0x3F 0x00
+				0x00 0x21 0xFF 0x00
+				0x00 0x22 0x00 0x00
+				0x00 0x23 0x00 0x00
+				0x00 0x24 0x00 0x00
+				0x00 0x25 0x00 0x00
+				0x00 0x26 0xE4 0x00
+				0x00 0x27 0x00 0x00
+				0x00 0x28 0x28 0x00
+				0x00 0x29 0x01 0x00
+				0x00 0x2A 0x00 0x00
+				0x00 0x2B 0x01 0x00
+				0x00 0x2C 0x0E 0x00
+				0x00 0x2D 0x00 0x00
+				0x00 0x2E 0x18 0x00
+				0x00 0x2F 0x02 0x00
+				0x00 0x30 0x02 0x00
+				0x00 0x31 0x00 0x00
+				0x00 0x32 0x63 0x00
+				0x00 0x40 0x00 0x00
+				0x00 0x41 0x00 0x00
+				0x00 0x42 0x00 0x00
+				0x00 0x12 0x00 0x00
+				0x00 0x13 0xE4 0x00
+				0x00 0x14 0x02 0x00
+				0x00 0x15 0x00 0x00
+				0x00 0x16 0x0D 0x00
+				0x00 0x17 0x00 0x00
+				0x00 0x18 0x21 0x00
+				0x00 0x41 0x06 0x00
+				0x00 0x00 0x01 0x00
+				0x00 0x08 0x00 0x00
+				0x00 0x10 0x00 0x00
+				0x00 0x11 0x0F 0x00
+				0xff 0x00 0x00 0x00>; /*ending*/
 			init_off = <0x00 0x00 0x01 0x00
-						0x00 0x08 0x00 0x00
-						0x00 0x10 0x00 0x00
-						0x00 0x11 0x0F 0x00
-						0xff 0x00 0x00 0x00>;
+				0x00 0x08 0x00 0x00
+				0x00 0x10 0x00 0x00
+				0x00 0x11 0x0F 0x00
+				0xff 0x00 0x00 0x00>; /*ending*/
 		};
 
 		extern_1{
@@ -238,13 +234,15 @@
 	};
 
 	backlight{
-		compatible = "amlogic, backlight";
+		compatible = "amlogic, backlight-axg";
 		dev_name = "backlight";
 		status = "okay";
 		key_valid = <0>;
 		pinctrl-names = "pwm_on";
 		pinctrl-0 = <&bl_pwm_on_pins>;
 		pinctrl_version = <1>; /* for uboot */
+
+		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_VS*/
 		/* power index:(point gpios_index, 0xff=invalid)
 		 * power value:(0=output low, 1=output high, 2=input)
 		 * power delay:(unit in ms)
@@ -258,47 +256,30 @@
 			index = <0>;
 			bl_name = "backlight_pwm";
 			bl_level_default_uboot_kernel = <100 100>;
-				/* level_attr: max, min, mid, mid_mapping */
-			bl_level_attr = <255 10 128 102>;
-
-			/* 1=pwm, 2=pwm_combo, 3=ldim, 4=extern */
-			bl_ctrl_method = <1>;
-				/* power_attr:
-				 * en_gpio_index, on_value, off_value,
-				 * on_delay(ms), off_delay(ms)
-				 */
-			bl_power_attr = <1 1 0 50 50>;
-				/* pwm_port: PWM_A,PWM_B,PWM_C,PWM_D,PWM_VS */
+			bl_level_attr = <255 10 /*max, min*/
+				128 128>; /*mid, mid_mapping*/
+			bl_ctrl_method = <1>; /* 1=pwm, 2=pwm_combo, 4=extern */
+			bl_power_attr = <1 /*en_gpio_index*/
+				1 0 /*on_value, off_value*/
+				200 200>; /*on_delay(ms), off_delay(ms)*/
 			bl_pwm_port = "PWM_B";
-				/* pwm_attr:
-				 * pwm_method: 0=negative, 1=positive
-				 * pwm_freq: pwm_vs: 1~4(vfreq multiple),
-				 *           other pwm: real freq(Hz)
-				 * duty_max(%), duty_min(%)
-				 */
-			bl_pwm_attr = <0 180 100 25>;
-				/* pwm_power:
-				 * pwm_gpio_index, pwm_gpio_off,
-				 * pwm_on_delay(ms), pwm_off_delay(ms)
-				 */
-			bl_pwm_power = <0 0 10 10>;
+			bl_pwm_attr = <0 /*pwm_method*/
+				180 /*pwm_freq(pwm:Hz, pwm_vs:multiple of vs)*/
+				100 25>; /*duty_max(%), duty_min(%)*/
+			bl_pwm_power = <0 0 /*pwm_gpio_index, pwm_gpio_off*/
+				10 10>; /*pwm_on_delay(ms), pwm_off_delay(ms)*/
 			bl_pwm_en_sequence_reverse = <0>; /* 1 for reverse */
 		};
 		backlight_1{
 			index = <1>;
 			bl_name = "bl_extern";
 			bl_level_default_uboot_kernel = <100 100>;
-				/* level_attr: max, min, mid, mid_mapping */
-			bl_level_attr = <255 10 128 102>;
-
-			/* 1=pwm, 2=pwm_combo, 3=ldim, 4=extern */
-			bl_ctrl_method = <4>;
-				/* power_attr:
-				 * en_gpio_index, on_value, off_value,
-				 * on_delay(ms), off_delay(ms)
-				 */
-			bl_power_attr = <1 1 0 200 200>;
-			bl_pwm_en_sequence_reverse = <0>; /* 1 for reverse */
+			bl_level_attr = <255 10 /*max, min*/
+				128 128>; /*mid, mid_mapping*/
+			bl_ctrl_method = <4>; /*1=pwm, 2=pwm_combo, 4=extern*/
+			bl_power_attr = <1 /*en_gpio_index*/
+				1 0 /*on_value, off_value*/
+				200 200>; /*on_delay(ms), off_delay(ms)*/
 			bl_extern_index = <1>;
 		};
 	};
@@ -319,9 +300,8 @@
 			index = <0>;
 			extern_name = "i2c_lp8556";
 
-			/*bl_extern_driver type: 0=i2c, 1=spi, 2=mipi*/
-			type = <0>;
-			i2c_address = <0x2c>; /** 7bit i2c address */
+			type = <0>; /*0=i2c, 1=spi, 2=mipi*/
+			i2c_address = <0x2c>; /*7bit i2c address*/
 			i2c_bus = "i2c_bus_c";
 			dim_max_min = <255 10>;
 		};
@@ -330,8 +310,7 @@
 			index = <1>;
 			extern_name = "mipi_lt070me05";
 
-			/*bl_extern_driver type: 0=i2c, 1=spi, 2=mipi*/
-			type = <2>;
+			type = <2>; /*0=i2c, 1=spi, 2=mipi*/
 			dim_max_min = <255 10>;
 		};
 	};

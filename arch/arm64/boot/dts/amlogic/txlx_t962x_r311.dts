@@ -21,6 +21,7 @@
 
 #include "mesontxlx.dtsi"
 #include "partition_mbox_normal.dtsi"
+#include "mesontxlx_r311-panel.dtsi"
 
 / {
 	model = "Amlogic";
@@ -1376,6 +1377,57 @@
 		};
 	};
 
+	/*backlight*/
+	bl_pwm_on_pins:bl_pwm_on_pin {
+		mux {
+			pins = "pwm_b";
+			function = "pwm_b";
+		};
+	};
+	bl_pwm_vs_on_pins:bl_pwm_vs_on_pin {
+		mux {
+			pins = "pwm_vs_z6";
+			function = "pwm_vs";
+		};
+	};
+	bl_pwm_combo_0_on_pins:bl_pwm_combo_0_on_pin {
+		mux {
+			pins = "pwm_b";
+			function = "pwm_b";
+		};
+	};
+	bl_pwm_combo_1_on_pins:bl_pwm_combo_1_on_pin {
+		mux {
+			pins = "pwm_c_z";
+			function = "pwm_c";
+		};
+	};
+	bl_pwm_combo_0_vs_on_pins:bl_pwm_combo_0_vs_on_pin {
+		mux {
+			pins = "pwm_vs_z6";
+			function = "pwm_vs";
+		};
+	};
+	bl_pwm_combo_1_vs_on_pins:bl_pwm_combo_1_vs_on_pin {
+		mux {
+			pins = "pwm_vs_z7";
+			function = "pwm_vs";
+		};
+	};
+
+	/*ldim*/
+	ldim_pwm_pins:ldim_pwm_pin {
+		mux {
+			pins = "pwm_b";
+			function = "pwm_b";
+		};
+	};
+	ldim_pwm_vs_pins:ldim_pwm_vs_pin {
+		mux {
+			pins = "pwm_vs_z6";
+			function = "pwm_vs";
+		};
+	};
 };
 
 &uart_A {

@@ -27,6 +27,7 @@
 #include <linux/workqueue.h>
 #include <linux/delay.h>
 #include <linux/notifier.h>
+#include <linux/of_device.h>
 #include <linux/pwm.h>
 #include <linux/amlogic/pwm_meson.h>
 #include <linux/amlogic/cpu_version.h>
@@ -49,7 +50,6 @@
 /* #define AML_BACKLIGHT_DEBUG */
 static unsigned int bl_debug_print_flag;
 
-static enum bl_chip_type_e bl_chip_type = BL_CHIP_MAX;
 static struct aml_bl_drv_s *bl_drv;
 
 static unsigned int bl_key_valid;
@@ -88,6 +88,7 @@ static struct bl_config_s bl_config = {
 	.power_on_delay = 100,
 	.power_off_delay = 30,
 	.method = BL_CTRL_MAX,
+	.ldim_flag = 0,
 
 	.bl_pwm = NULL,
 	.bl_pwm_combo0 = NULL,
@@ -142,7 +143,6 @@ static char *bl_method_type_to_str(int type)
 	return str;
 }
 
-static unsigned int *pwm_reg;
 static unsigned int pwm_reg_gxtvbb[6] = {
 	PWM_PWM_A,
 	PWM_PWM_B,
@@ -160,47 +160,6 @@ static unsigned int pwm_reg_txlx[6] = {
 	PWM_PWM_E_TXLX,
 	PWM_PWM_F_TXLX,
 };
-
-enum bl_chip_type_e aml_bl_check_chip(void)
-{
-	unsigned int cpu_type;
-	enum bl_chip_type_e bl_chip = BL_CHIP_MAX;
-
-	cpu_type = get_cpu_type();
-	switch (cpu_type) {
-	case MESON_CPU_MAJOR_ID_GXTVBB:
-		bl_chip = BL_CHIP_GXTVBB;
-		pwm_reg = pwm_reg_gxtvbb;
-		break;
-	case MESON_CPU_MAJOR_ID_GXM:
-		bl_chip = BL_CHIP_GXM;
-		pwm_reg = pwm_reg_gxtvbb;
-		break;
-	case MESON_CPU_MAJOR_ID_GXL:
-		bl_chip = BL_CHIP_GXL;
-		pwm_reg = pwm_reg_gxtvbb;
-		break;
-	case MESON_CPU_MAJOR_ID_TXL:
-		bl_chip = BL_CHIP_TXL;
-		pwm_reg = pwm_reg_gxtvbb;
-		break;
-	case MESON_CPU_MAJOR_ID_TXLX:
-		bl_chip = BL_CHIP_TXLX;
-		pwm_reg = pwm_reg_txlx;
-		break;
-	case MESON_CPU_MAJOR_ID_AXG:
-		bl_chip = BL_CHIP_AXG;
-		pwm_reg = pwm_reg_txlx;
-		break;
-	default:
-		bl_chip = BL_CHIP_MAX;
-		pwm_reg = pwm_reg_gxtvbb;
-	}
-
-	if (bl_debug_print_flag)
-		BLPR("BL driver check chip : %s\n", bl_chip_table[bl_chip]);
-	return bl_chip;
-}
 
 static int aml_bl_check_driver(void)
 {
@@ -1382,6 +1341,9 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 		bconf->power_on_delay = bl_para[3];
 		bconf->power_off_delay = bl_para[4];
 	}
+	ret = of_property_read_u32(child, "bl_ldim_mode", &bl_para[0]);
+	if (ret == 0)
+		bconf->ldim_flag = 1;
 
 	switch (bconf->method) {
 	case BL_CTRL_PWM:
@@ -1587,6 +1549,7 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 	case BL_CTRL_LOCAL_DIMING:
+		bconf->ldim_flag = 1;
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_BL_EXTERN
@@ -2015,17 +1978,17 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 	}
 	aml_bl_config_print(bconf);
 
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
+	if (bconf->ldim_flag)
+		aml_ldim_probe(pdev);
+#endif
+
 	switch (bconf->method) {
 	case BL_CTRL_PWM:
 	case BL_CTRL_PWM_COMBO:
 		ret = pwm_channel_conf(bconf, pdev);
 		bl_pwm_pinmux_set(bconf);
 		break;
-#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
-		aml_ldim_probe(pdev);
-		break;
-#endif
 #ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
 		aml_bl_extern_device_load(bconf->bl_extern_index);
@@ -2414,7 +2377,8 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 					"enabled:            %d\n",
 					pstate.period, pstate.duty_cycle,
 					pstate.polarity, pstate.enabled);
-				value = bl_cbus_read(pwm_reg[bl_pwm->pwm_port]);
+				value = bl_cbus_read(bl_drv->data->pwm_reg[
+					bl_pwm->pwm_port]);
 				len += sprintf(buf+len,
 					"pwm_reg:            0x%08x\n",
 					value);
@@ -2472,7 +2436,8 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 					"enabled:            %d\n",
 					pstate.period, pstate.duty_cycle,
 					pstate.polarity, pstate.enabled);
-				value = bl_cbus_read(pwm_reg[bl_pwm->pwm_port]);
+				value = bl_cbus_read(bl_drv->data->pwm_reg[
+					bl_pwm->pwm_port]);
 				len += sprintf(buf+len,
 					"pwm_0_reg:          0x%08x\n",
 					value);
@@ -2524,7 +2489,8 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 					"enabled:            %d\n",
 					pstate.period, pstate.duty_cycle,
 					pstate.polarity, pstate.enabled);
-				value = bl_cbus_read(pwm_reg[bl_pwm->pwm_port]);
+				value = bl_cbus_read(bl_drv->data->pwm_reg[
+					bl_pwm->pwm_port]);
 				len += sprintf(buf+len,
 					"pwm_1_reg:          0x%08x\n",
 					value);
@@ -2893,8 +2859,65 @@ static int aml_bl_resume(struct platform_device *pdev)
 }
 #endif
 
+#ifdef CONFIG_OF
+static struct bl_data_s bl_data_gxtvbb = {
+	.chip_type = BL_CHIP_GXTVBB,
+	.chip_name = "gxtvbb",
+	.pwm_reg = pwm_reg_gxtvbb,
+};
+
+static struct bl_data_s bl_data_gxl = {
+	.chip_type = BL_CHIP_GXL,
+	.chip_name = "gxl",
+	.pwm_reg = pwm_reg_gxtvbb,
+};
+
+static struct bl_data_s bl_data_gxm = {
+	.chip_type = BL_CHIP_GXM,
+	.chip_name = "gxm",
+	.pwm_reg = pwm_reg_gxtvbb,
+};
+
+static struct bl_data_s bl_data_txlx = {
+	.chip_type = BL_CHIP_TXLX,
+	.chip_name = "txlx",
+	.pwm_reg = pwm_reg_txlx,
+};
+
+static struct bl_data_s bl_data_axg = {
+	.chip_type = BL_CHIP_AXG,
+	.chip_name = "axg",
+	.pwm_reg = pwm_reg_txlx,
+};
+
+static const struct of_device_id bl_dt_match_table[] = {
+	{
+		.compatible = "amlogic, backlight-gxtvbb",
+		.data = &bl_data_gxtvbb,
+	},
+	{
+		.compatible = "amlogic, backlight-gxl",
+		.data = &bl_data_gxl,
+	},
+	{
+		.compatible = "amlogic, backlight-gxm",
+		.data = &bl_data_gxm,
+	},
+	{
+		.compatible = "amlogic, backlight-txlx",
+		.data = &bl_data_txlx,
+	},
+	{
+		.compatible = "amlogic, backlight-axg",
+		.data = &bl_data_axg,
+	},
+	{},
+};
+#endif
+
 static int aml_bl_probe(struct platform_device *pdev)
 {
+	const struct of_device_id *match;
 	struct backlight_properties props;
 	struct backlight_device *bldev;
 	struct bl_config_s *bconf;
@@ -2913,12 +2936,20 @@ static int aml_bl_probe(struct platform_device *pdev)
 	bl_pwm_bypass = 0;
 	bl_pwm_duty_free = 0;
 
-	bl_chip_type = aml_bl_check_chip();
 	bl_drv = kzalloc(sizeof(struct aml_bl_drv_s), GFP_KERNEL);
 	if (!bl_drv) {
 		BLERR("driver malloc error\n");
 		return -ENOMEM;
 	}
+	match = of_match_device(bl_dt_match_table, &pdev->dev);
+	if (match == NULL) {
+		BLERR("%s: no match table\n", __func__);
+		return -1;
+	}
+	bl_drv->data = (struct bl_data_s *)match->data;
+	BLPR("chip type/name: (%d-%s)\n",
+		bl_drv->data->chip_type,
+		bl_drv->data->chip_name);
 
 	bconf = &bl_config;
 	bl_drv->dev = &pdev->dev;
@@ -3005,6 +3036,10 @@ static int __exit aml_bl_remove(struct platform_device *pdev)
 	aml_lcd_notifier_unregister(&aml_bl_on_nb);
 	aml_lcd_notifier_unregister(&aml_bl_off_nb);
 #endif
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
+	if (bl_drv->bconf->ldim_flag)
+		aml_ldim_remove();
+#endif
 	/* platform_set_drvdata(pdev, NULL); */
 	switch (bl_drv->bconf->method) {
 	case BL_CTRL_PWM:
@@ -3014,11 +3049,6 @@ static int __exit aml_bl_remove(struct platform_device *pdev)
 		kfree(bl_drv->bconf->bl_pwm_combo0);
 		kfree(bl_drv->bconf->bl_pwm_combo1);
 		break;
-#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
-		aml_ldim_remove();
-		break;
-#endif
 	default:
 		break;
 	}
@@ -3027,21 +3057,12 @@ static int __exit aml_bl_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_OF
-static const struct of_device_id aml_bl_dt_match[] = {
-	{
-		.compatible = "amlogic, backlight",
-	},
-	{},
-};
-#endif
-
 static struct platform_driver aml_bl_driver = {
 	.driver = {
 		.name  = AML_BL_NAME,
 		.owner = THIS_MODULE,
 #ifdef CONFIG_OF
-		.of_match_table = aml_bl_dt_match,
+		.of_match_table = of_match_ptr(bl_dt_match_table),
 #endif
 	},
 	.probe   = aml_bl_probe,

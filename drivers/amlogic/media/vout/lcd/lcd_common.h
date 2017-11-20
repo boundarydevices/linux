@@ -24,7 +24,7 @@
 
 /* 20170505: add a113 support to linux4.9 */
 /* 20170905: fix coverity errors */
-#define LCD_DRV_VERSION    "20170905"
+#define LCD_DRV_VERSION    "20171201"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 
@@ -51,12 +51,9 @@ extern int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 		unsigned char *buf, int key_len, int len);
 
 extern void lcd_hdr_vinfo_update(void);
-extern void lcd_tcon_config(struct lcd_config_s *pconf);
+extern void lcd_timing_init_config(struct lcd_config_s *pconf);
 extern int lcd_vmode_change(struct lcd_config_s *pconf);
 extern void lcd_venc_change(struct lcd_config_s *pconf);
-extern void lcd_clk_gate_switch(int status);
-extern void lcd_clktree_probe(void);
-
 /* lcd debug */
 extern int lcd_class_creat(void);
 extern int lcd_class_remove(void);

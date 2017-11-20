@@ -45,10 +45,15 @@ enum bl_chip_type_e {
 	BL_CHIP_GXTVBB,
 	BL_CHIP_GXL,
 	BL_CHIP_GXM,
-	BL_CHIP_TXL,
 	BL_CHIP_TXLX,
 	BL_CHIP_AXG,
 	BL_CHIP_MAX,
+};
+
+struct bl_data_s {
+	enum bl_chip_type_e chip_type;
+	const char *chip_name;
+	unsigned int *pwm_reg;
 };
 
 /* for lcd backlight power */
@@ -131,6 +136,7 @@ struct bl_config_s {
 	unsigned int level_max;
 	unsigned int level_mid;
 	unsigned int level_mid_mapping;
+	unsigned int ldim_flag;
 
 	enum bl_ctrl_method_e method;
 	unsigned int en_gpio;
@@ -166,7 +172,7 @@ struct aml_bl_drv_s {
 	unsigned int index;
 	unsigned int level;
 	unsigned int state;
-	enum bl_chip_type_e chip_type;
+	struct bl_data_s *data;
 	struct device             *dev;
 	struct bl_config_s        *bconf;
 	struct backlight_device   *bldev;
@@ -174,10 +180,11 @@ struct aml_bl_drv_s {
 	struct delayed_work       bl_delayed_work;
 };
 
-extern enum bl_chip_type_e aml_bl_check_chip(void);
 extern struct aml_bl_drv_s *aml_bl_get_driver(void);
 extern void bl_pwm_config_init(struct bl_pwm_config_s *bl_pwm);
 extern enum bl_pwm_port_e bl_pwm_str_to_pwm(const char *str);
+extern void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status);
+
 
 #define BL_GPIO_OUTPUT_LOW		0
 #define BL_GPIO_OUTPUT_HIGH		1

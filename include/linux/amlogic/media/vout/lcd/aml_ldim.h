@@ -21,7 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/pinctrl/consumer.h>
-#include <linux/amlogic/media/vout/aml_bl.h>
+#include <linux/amlogic/media/vout/lcd/aml_bl.h>
 #include <linux/spi/spi.h>
 
 enum ldim_dev_type_e {
@@ -62,11 +62,15 @@ struct aml_ldim_driver_s {
 	int static_pic_flag;
 	struct ldim_dev_config_s *ldev_conf;
 	unsigned short *ldim_matrix_buf;
+	unsigned int *hist_matrix;
+	unsigned int *max_rgb;
+	unsigned short *ldim_test_matrix;
+	unsigned short *local_ldim_matrix;
 	int (*init)(void);
 	int (*power_on)(void);
 	int (*power_off)(void);
 	int (*set_level)(unsigned int level);
-	int (*pinmux_ctrl)(char *pin_str, int status);
+	int (*pinmux_ctrl)(char *pin_str);
 	int (*pwm_vs_update)(void);
 	int (*device_power_on)(void);
 	int (*device_power_off)(void);
@@ -78,6 +82,8 @@ struct aml_ldim_driver_s {
 	struct device *dev;
 	struct spi_device *spi;
 	struct spi_board_info *spi_dev;
+	struct resource *res_ldim_irq;
+	struct resource *res_rdma_irq;
 };
 
 extern struct aml_ldim_driver_s *aml_ldim_get_driver(void);
