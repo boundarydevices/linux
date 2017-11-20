@@ -467,6 +467,7 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 	unsigned int fudge_p = TSC200X_DEF_P_FUZZ;
 	unsigned int x_plate_ohm = TSC200X_DEF_RESISTOR;
 	unsigned int esd_timeout;
+	unsigned int reg;
 	int error;
 
 	if (!np && !pdata) {
@@ -599,6 +600,13 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 		dev_err(dev,
 			"Failed to create sysfs attributes, err: %d\n", error);
 		goto disable_regulator;
+	}
+
+	/* Check if device present */
+	error = regmap_read(ts->regmap, TSC200X_REG_TEMP_HIGH, &reg);
+	if (error) {
+		dev_err(dev, "Device not present: %d\n", error);
+		goto err_remove_sysfs;
 	}
 
 	error = input_register_device(ts->idev);
