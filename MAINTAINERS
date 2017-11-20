@@ -14083,6 +14083,10 @@ M: Evoke Zhang <evoke.zhang@amlogic.com>
 F: drivers/amlogic/media/vin/tvin/bt656/*
 F: drivers/amlogic/media/vin/tvin/hdmirx_ext/*
 
+AMLOGIC HDMIRX
+M:	Yicheng Shen <yicheng.shen@amlogic.com>
+F:	drivers/amlogic/media/vin/vdin/hdmirx/*
+
 AMLOGIC add smarthome defconfig for audio product
 M: Peipeng Zhao <peipeng.zhao@amlogic.com>
 F: arch/arm64/configs/meson64_smarthome_defconfig

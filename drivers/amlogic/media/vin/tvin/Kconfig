@@ -19,4 +19,5 @@ source "drivers/amlogic/media/vin/tvin/vdin/Kconfig"
 source "drivers/amlogic/media/vin/tvin/viu/Kconfig"
 source "drivers/amlogic/media/vin/tvin/bt656/Kconfig"
 source "drivers/amlogic/media/vin/tvin/hdmirx_ext/Kconfig"
+source "drivers/amlogic/media/vin/tvin/hdmirx/Kconfig"
 endif
