@@ -13557,6 +13557,8 @@ F: Documentation/devicetree/bindings/amlogic/pwm-meson.txt
 F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
 F: arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
 F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q201_2g.dts
 
 AMLOGIC multimedia
 M:	Nanxin Qin <nanxin.qin@amlogic.com>

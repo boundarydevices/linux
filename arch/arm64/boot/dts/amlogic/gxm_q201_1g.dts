@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+ * arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -21,7 +21,7 @@
 #include "partition_mbox_normal.dtsi"
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "gxm_q200_2g";
+	amlogic-dt-id = "gxm_q201_1g";
 	compatible = "amlogic, Gxm";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
@@ -42,7 +42,7 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x0 0x0100000 0x0 0x7ff00000>;
+		linux,usable-memory = <0x0 0x0100000 0x0 0x3ff00000>;
 	};
 
 	reserved-memory {
@@ -50,14 +50,6 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
-		ramoops@0x07400000 {
-			compatible = "ramoops";
-			reg = <0x0 0x07400000 0x0 0x00100000>;
-			record-size = <0x8000>;
-			console-size = <0x8000>;
-			ftrace-size = <0x0>;
-			pmsg-size = <0x8000>;
-		};
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -119,7 +111,7 @@
 		};
 		/*  POST PROCESS MANAGER */
 		ppmgr_reserved:linux,ppmgr {
-			compatible = "shared-dma-pool";
+			compatible = "amlogic, ppmgr_memory";
 			size = <0x0 0x0>;
 		};
 
@@ -175,7 +167,7 @@
 
 	sd_emmc_c: emmc@d0074000 {
 		status = "okay";
-		compatible = "amlogic, meson-mmc-gxm";
+		compatible = "amlogic, meson-aml-mmc";
 		reg = <0x0 0xd0074000 0x0 0x2000>;
 		interrupts = <0 218 1>;
 		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
@@ -222,7 +214,7 @@
 
 	sd_emmc_b:sd@d0072000 {
 		status = "okay";
-		compatible = "amlogic, meson-mmc-gxm";
+		compatible = "amlogic, meson-aml-mmc";
 		reg = <0x0 0xd0072000 0x0 0x2000>;
 		interrupts = <0 217 1>;
 		pinctrl-names = "sd_all_pins",
@@ -286,7 +278,7 @@
 
 	sd_emmc_a:sdio@d0070000 {
 		status = "okay";
-		compatible = "amlogic, meson-mmc-gxm";
+		compatible = "amlogic, meson-aml-mmc";
 		reg = <0x0 0xd0070000 0x0 0x2000>;
 		interrupts = <0 216 4>;
 		pinctrl-names = "sdio_clk_cmd_pins", "sdio_all_pins";
@@ -366,21 +358,19 @@
 			rb_detect = <1>;
 		};
 		nand_partitions:nand_partition{
-			logo{
-				offset=<0x0 0x0>;
-				size=<0x0 0x200000>;
-			};
-			recovery{
-				offset=<0x0 0x0>;
-				size=<0x0 0x1000000>;
-			};
 			boot{
-				offset=<0x0 0x0>;
-				size=<0x0 0xC00000>;
+				offset=<0x0 0x300000>;
+				size=<0x0 0x800000>;
 			};
-			system{
-				offset=<0x0 0x0>;
-				size=<0x0 0xDC40000>;
+			/*
+			 *recovery{
+			 *	offset=<0x0 0xB00000>;
+			 *	size=<0x0 0xA00000>;
+			 *};
+			 */
+			upgrade{
+				offset=<0x0 0xB00000>;
+				size=<0x0 0x5800000>;
 			};
 			data{
 				offset=<0xffffffff 0xffffffff>;
@@ -685,32 +675,10 @@
 		fr_auto_policy = <0>;
 	};
 
-	vdac {
-		compatible = "amlogic, vdac";
-		dev_name = "vdac";
-		status = "okay";
-	};
-
 	cvbsout {
-		compatible = "amlogic, cvbsout-gxm";
+		compatible = "amlogic, cvbsout";
 		dev_name = "cvbsout";
 		status = "okay";
-		clocks = <&clkc CLKID_VCLK2_ENCI
-			&clkc CLKID_VCLK2_VENCI0
-			&clkc CLKID_VCLK2_VENCI1
-			&clkc CLKID_DAC_CLK>;
-		clock-names = "venci_top_gate",
-			"venci_0_gate",
-			"venci_1_gate",
-			"vdac_clk_gate";
-
-		/* performance: reg_address, reg_value */
-		performance = <0x1bf0  0x9
-			0x1b56  0x343
-			0x1b12  0x8080
-			0x1b05  0xfd
-			0x1c59  0xf752
-			0xffff  0x0>; /* ending flag */
 	};
 
 	amhdmitx: amhdmitx{
@@ -832,7 +800,7 @@
 			&clkc CLKID_PDM_GATE
 		>;
 		reset-names =	"pdm";
-		pinctrl-names = "audio_dmic";
+		pinctrl-names = "aml_dmic_pins";
 		pinctrl-0 = <&aml_dmic_pins>;
 		clocks = <&clkc CLKID_PDM_COMP>,
 			<&clkc CLKID_AMCLK_COMP>;
@@ -861,7 +829,7 @@
 	pcm_dai: PCM {
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml-pcm-dai";
-		pinctrl-names = "audio_pcm";
+		pinctrl-names = "aml_audio_pcm";
 		pinctrl-0 = <&audio_pcm_pins>;
 		clocks =
 			<&clkc CLKID_MPLL0>,
@@ -883,7 +851,7 @@
 	spdif_codec: spdif_codec{
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml-spdif-codec";
-		pinctrl-names = "audio_spdif";
+		pinctrl-names = "aml_audio_spdif";
 		pinctrl-0 = <&audio_spdif_pins>;
 	};
 	pcm_codec: pcm_codec{
@@ -917,7 +885,7 @@
 		mute_inv;
 		hp_disable;
 		hp_paraments = <800 300 0 5 1>;
-		pinctrl-names = "audio_i2s";
+		pinctrl-names = "aml_audio_i2s";
 		pinctrl-0 = <&audio_i2s_pins>;
 		cpu_list = <&cpudai0 &cpudai1 &cpudai2>;
 		codec_list = <&codec0 &codec1 &codec2>;
@@ -1204,6 +1172,6 @@
 &audio_data{
 	status = "okay";
 };
-&i2c1 {
+&i2c_b {
 	status = "okay";
 };
