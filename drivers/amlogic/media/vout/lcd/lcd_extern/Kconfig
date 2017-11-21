@@ -75,3 +75,12 @@ config AMLOGIC_LCD_EXTERN_MIPI_N070ICN
 		through the mipi interface to write data to the LCD,
 		make its initialization
 
+config AMLOGIC_LCD_EXTERN_MIPI_TV070WSM
+	bool "lcd external mipi TV070WSM init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external mipi_TV070WSM init driver support
+		Once the power on, according to the timing requirements,
+		through the mipi interface to write data to the LCD,
+		make its initialization

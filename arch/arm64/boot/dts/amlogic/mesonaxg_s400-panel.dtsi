@@ -98,6 +98,51 @@
 					0xff 0 0 0>;
 			backlight_index = <0>;
 		};
+
+		lcd_1{
+			model_name = "TV070WSM";
+				/*interface(ttl,lvds,mipi)*/
+			interface = "mipi";
+				/* basic_setting:
+				 * h_active,v_active,h_period,v_period,
+				 * lcd_bits,screen_widht,screen_height
+				 */
+			basic_setting = <600 1024 680 1040 8 95 163>;
+				/* lcd_timing:
+				 * hs_width,hs_bp,hs_pol,vs_width,vs_bp,vs_pol
+				 */
+			lcd_timing = <24 36 0 2 8 0>;
+				/* clk_attr:
+				 * fr_adj_type(0=clock,1=htotal,2=vtotal),
+				 * clk_ss_level,clk_auto_generate,
+				 * pixel_clk(unit in Hz)
+				 */
+			clk_attr = <0 0 1 42400000>;
+				/* mipi_attr:
+				 * lane_num, bit_rate_max(MHz),
+				 * factor(*100, default 0 for auto),
+				 * operation_mode_init(0=video, 1=command),
+				 * operation_mode_display(0=video, 1=command),
+				 * video_mode_type
+				 *     (0=sync_pulse,1=sync_event,2=burst),
+				 * clk_lp_continuous(0=stop,1=continue),
+				 * phy_stop_wait(0=auto,1=standard,2=slow)
+				 */
+			mipi_attr = <4 350 0 1 0 2 1 0>;
+				/* dsi_init: data_type, num, data... */
+			dsi_init_on = <0xff 0xff>; /* ending flag */
+			dsi_init_off = <0xff 0xff>; /* ending flag */
+				/* extern_init: 0xff for invalid */
+			extern_init = <2>;
+				/* power step: type,index,value,delay(ms) */
+			power_on_step = <0 0 0 20
+					2 0 0 0
+					0xff 0 0 0>;
+			power_off_step = <2 0 0 100
+					0 0 0 100
+					0xff 0 0 0>;
+			backlight_index = <0>;
+		};
 	};
 
 	lcd_extern{
@@ -183,6 +228,13 @@
 			status = "disabled";
 			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
 		};
+
+		extern_2{
+			index = <2>;
+			extern_name = "mipi_TV070WSM";
+			status = "okay";
+			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
+		};
 	};
 
 	backlight{
@@ -215,7 +267,7 @@
 				 * en_gpio_index, on_value, off_value,
 				 * on_delay(ms), off_delay(ms)
 				 */
-			bl_power_attr = <1 1 0 200 200>;
+			bl_power_attr = <1 1 0 50 50>;
 				/* pwm_port: PWM_A,PWM_B,PWM_C,PWM_D,PWM_VS */
 			bl_pwm_port = "PWM_B";
 				/* pwm_attr:

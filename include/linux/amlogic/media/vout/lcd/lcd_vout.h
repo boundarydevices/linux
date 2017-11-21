@@ -272,7 +272,8 @@ struct vbyone_config_s {
 #define BURST_MODE               0x2
 
 /* command config */
-#define DSI_CMD_INDEX            1  /* byte[1] */
+#define DSI_CMD_SIZE_INDEX       1  /* byte[1] */
+#define DSI_GPIO_INDEX           2  /* byte[2] */
 
 #define DSI_INIT_ON_MAX          100
 #define DSI_INIT_OFF_MAX         30

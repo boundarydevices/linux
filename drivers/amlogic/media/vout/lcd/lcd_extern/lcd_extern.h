@@ -69,6 +69,10 @@ extern int aml_lcd_extern_mipi_N070ICN_probe(
 extern int aml_lcd_extern_mipi_KD080D13_probe(
 	struct aml_lcd_extern_driver_s *ext_drv);
 #endif
+#ifdef CONFIG_AMLOGIC_LCD_EXTERN_MIPI_TV070WSM
+extern int aml_lcd_extern_mipi_TV070WSM_probe(
+	struct aml_lcd_extern_driver_s *ext_drv);
+#endif
 
 #endif
 

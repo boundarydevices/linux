@@ -27,6 +27,7 @@
 #endif
 #include "../lcd_reg.h"
 #include "../lcd_clk_config.h"
+#include "../lcd_common.h"
 #include "mipi_dsi_util.h"
 
 /* *************************************************************
@@ -127,10 +128,11 @@ static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
 				on_off ? "on" : "off", dsi_table[i]);
 			break;
 		} else {
-			n = (DSI_CMD_INDEX + 1) + dsi_table[i+DSI_CMD_INDEX];
+			n = (DSI_CMD_SIZE_INDEX + 1) +
+				dsi_table[i+DSI_CMD_SIZE_INDEX];
 			len = 0;
 			for (j = 0; j < n; j++) {
-				if (j == DSI_CMD_INDEX) {
+				if (j == DSI_CMD_SIZE_INDEX) {
 					len += sprintf(str+len, "%d,",
 						dsi_table[i+j]);
 				} else {
@@ -297,17 +299,34 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 			i += 2;
 			if (val == 0xff)
 				break;
+		} else if (val == 0xf0) { /* cpu_gpio */
+			/*  register gpio */
+			ret = of_property_read_u32_index(m_node,
+				propname, (i + DSI_GPIO_INDEX), &val);
+			lcd_cpu_gpio_register(val);
+
+			/*  cmd size */
+			ret = of_property_read_u32_index(m_node,
+				propname, (i + DSI_CMD_SIZE_INDEX), &val);
+			if (val > n_max)
+				break;
+			if (val < 3) {
+				LCDERR("get %s wrong cmd_size %d for gpio\n",
+					propname, val);
+				break;
+			}
+			i = i + (DSI_CMD_SIZE_INDEX + 1) + (val & 0xff);
+			i += 4;
 		} else if ((val & 0xf) == 0x0) {
 			LCDERR("get %s wrong data_type: 0x%02x\n",
 				propname, val);
 			break;
 		} else {
 			ret = of_property_read_u32_index(m_node,
-				propname, (i + DSI_CMD_INDEX), &val);
+				propname, (i + DSI_CMD_SIZE_INDEX), &val);
 			if (val > n_max)
 				break;
-			else
-				i = i + (DSI_CMD_INDEX + 1) + (val & 0xff);
+			i = i + (DSI_CMD_SIZE_INDEX + 1) + (val & 0xff);
 		}
 	}
 	i = (i > n_max) ? n_max : i;
@@ -1057,7 +1076,7 @@ static void dsi_write_long_packet(struct dsi_cmd_request_s *req)
 	unsigned int i, j, data_index, n, temp;
 
 	/* payload[2] start (payload[0]: data_type, payload[1]: data_cnt) */
-	data_index = DSI_CMD_INDEX + 1;
+	data_index = DSI_CMD_SIZE_INDEX + 1;
 	d_command = ((unsigned int)req->payload[data_index]) & 0xff;
 
 	/* Write Payload Register First */
@@ -1141,9 +1160,12 @@ int dsi_write_cmd(unsigned char *payload)
 	unsigned int req_ack = MIPI_DSI_DCS_ACK_TYPE;
 
 	/* mipi command(payload) */
-	/* format:  data_type, num, data.... */
+	/* format:  data_type, cmd_size, data.... */
 	/* special: data_type=0xff,
-	 *	    num<0xff means delay ms, num=0xff means ending.
+	 *		cmd_size<0xff means delay ms,
+	 *		cmd_size=0xff means ending.
+	 *	    data_type=0xf0,
+	 *		data0=gpio_index, data1=gpio_value, data2=delay.
 	 */
 	while (i < DSI_CMD_SIZE_MAX) {
 		if (payload[i] == 0xff) {
@@ -1152,16 +1174,29 @@ int dsi_write_cmd(unsigned char *payload)
 				break;
 			else
 				mdelay(payload[i+1]);
+		} else if (payload[i] == 0xf0) {
+			j = (DSI_CMD_SIZE_INDEX + 1) +
+				payload[i+DSI_CMD_SIZE_INDEX];
+			if (payload[i+DSI_CMD_SIZE_INDEX] < 3) {
+				LCDERR("wrong cmd_size %d for gpio\n",
+					payload[i+DSI_CMD_SIZE_INDEX]);
+				break;
+			}
+			lcd_cpu_gpio_set(payload[i+DSI_GPIO_INDEX],
+				payload[i+DSI_GPIO_INDEX+1]);
+			if (payload[i+DSI_GPIO_INDEX+2])
+			mdelay(payload[i+DSI_GPIO_INDEX+2]);
 		} else if ((payload[i] & 0xf) == 0x0) {
 				LCDERR("data_type: 0x%02x\n", payload[i]);
 				break;
 		} else {
-			/* payload[i+DSI_CMD_INDEX] is data count */
-			j = (DSI_CMD_INDEX + 1) + payload[i+DSI_CMD_INDEX];
+			/* payload[i+DSI_CMD_SIZE_INDEX] is data count */
+			j = (DSI_CMD_SIZE_INDEX + 1) +
+				payload[i+DSI_CMD_SIZE_INDEX];
 			dsi_cmd_req.data_type = payload[i];
 			dsi_cmd_req.vc_id = (vc_id & 0x3);
 			dsi_cmd_req.payload = &payload[i];
-			dsi_cmd_req.pld_count = payload[i+DSI_CMD_INDEX];
+			dsi_cmd_req.pld_count = payload[i+DSI_CMD_SIZE_INDEX];
 			dsi_cmd_req.req_ack = req_ack;
 			switch (dsi_cmd_req.data_type) {/* analysis data_type */
 			case DT_GEN_SHORT_WR_0:
@@ -1270,7 +1305,7 @@ int dsi_read_single(unsigned char *payload, unsigned char *rd_data,
 	dsi_cmd_req.data_type = payload[0];
 	dsi_cmd_req.vc_id = (vc_id & 0x3);
 	dsi_cmd_req.payload = &payload[0];
-	dsi_cmd_req.pld_count = payload[DSI_CMD_INDEX];
+	dsi_cmd_req.pld_count = payload[DSI_CMD_SIZE_INDEX];
 	dsi_cmd_req.req_ack = req_ack;
 	switch (dsi_cmd_req.data_type) {/* analysis data_type */
 	case DT_GEN_RD_0:

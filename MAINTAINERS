@@ -14147,3 +14147,7 @@ F: Documentation/leds/leds-is31fl32xx.txt
 AMLOGIC ADD P241 V2 DTS
 M: Siming Chen <siming.chen@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p241_v2-1g.dts
+
+AMLOGIC lcd driver
+M: Evoke Zhang <evoke.zhang@amlogic.com>
+F: drivers/amlogic/media/vout/lcd/lcd_extern/mipi_TV070WSM.c
