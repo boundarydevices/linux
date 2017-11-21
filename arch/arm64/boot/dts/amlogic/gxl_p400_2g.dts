@@ -852,7 +852,7 @@
 	};
 };
 
-&i2c_ao {
+&i2c_AO {
 	status = "okay";
 	pca9557:pca9557@0x1f{
 		compatible = "nxp,pca9557";

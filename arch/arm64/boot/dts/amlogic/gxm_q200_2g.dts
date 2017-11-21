@@ -1172,6 +1172,6 @@
 &audio_data{
 	status = "okay";
 };
-&i2c_b {
+&i2c1 {
 	status = "okay";
 };

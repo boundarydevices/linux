@@ -881,7 +881,7 @@
 };
 /* Audio Related start */
 /* for spk board */
-&i2c_b {
+&i2c1 {
 	status = "okay";
 	//pinctrl-names="default";
 	//pinctrl-0=<&b_i2c_master>;
@@ -910,7 +910,7 @@
 };
 
 /* for mic board */
-&i2c_ao {
+&i2c_AO {
 	status = "okay";
 	pinctrl-names="default";
 	pinctrl-0=<&ao_i2c_master_pin2>;
