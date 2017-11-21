@@ -3,6 +3,12 @@ Amlogic Meson PWM Controller
 
 Required properties:
 - compatible: Shall contain "amlogic,meson8b-pwm" or "amlogic,meson-gxbb-pwm".
+			-for txlx
+				ee
+					amlogic,txlx-ee-pwm
+				ao
+					amlogic,txlx-ao-pwm
+
 			-for axg
 				ee
 					amlogic,axg-ee-pwm
