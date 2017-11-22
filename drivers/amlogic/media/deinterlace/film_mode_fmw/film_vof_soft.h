@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/deinterlace/film_vof_soft.h
+ * drivers/amlogic/media/deinterlace/film_mode_fmw/film_vof_soft.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -17,7 +17,7 @@
 
 #ifndef _FLMVOFSFT_H_
 #define _FLMVOFSFT_H_
-
+#include <linux/kernel.h>
 /* Film Detection and VOF detection Software implementation */
 /* Designer: Xin.Hu@amlogic.com */
 /* Date: 12/06/13 */
@@ -131,6 +131,9 @@ struct sFlmSftPar {
 
 	UINT32 sF32Dif02M0;	/* mpeg-4096, cvbs-8192 */
 	UINT32 sF32Dif02M1;	/* mpeg-4096, cvbs-8192 */
+	unsigned int field_count;
+	unsigned short width;
+	unsigned short height;
 };
 
 struct FlmModReg_t {
@@ -145,11 +148,7 @@ struct FlmDectRes {
 	UINT8 rFlmSltPre;
 	UINT8 rFlmPstMod;
 	UINT8 dif01flag;
-	UShort rPstCYWnd0[3];
-	UShort rPstCYWnd1[3];
-	UShort rPstCYWnd2[3];
-	UShort rPstCYWnd3[3];
-	UShort rPstCYWnd4[3];
+	UShort rPstCYWnds[5][3];
 	UShort rF22Flag;
 };
 
@@ -160,17 +159,15 @@ UINT8 Get1RCmb(UINT32 *iHSCMB, UINT32 iRow);
 
 int FlmModsDet(struct sFlmDatSt *pRDat, int nDif01, int nDif02);
 
-
 /*  */
 int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
-		unsigned short *rPstCYWnd1, unsigned short *rPstCYWnd2,
-		unsigned short *rPstCYWnd3, unsigned short *rPstCYWnd4,
-		UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
-		UINT8 *dif01flag, UINT32 *rROFldDif01, UINT32 *rROFrmDif02,
-		UINT32 *rROCmbInf, UINT32 glb_frame_mot_num,
-		UINT32 glb_field_mot_num, int *tTCNm,
-		struct sFlmSftPar *pPar, int nROW, int nCOL,
-		unsigned int *frame_diff_avg, bool reverse);
+	unsigned short *rPstCYWnd1, unsigned short *rPstCYWnd2,
+	unsigned short *rPstCYWnd3, unsigned short *rPstCYWnd4,
+	UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
+	UINT8 *dif01flag, UINT32 *rROFldDif01, UINT32 *rROFrmDif02,
+	UINT32 *rROCmbInf, UINT32 glb_frame_mot_num,
+	UINT32 glb_field_mot_num, unsigned int *cmb_row_num,
+	unsigned int *frame_diff_avg, struct sFlmSftPar *pPar, bool reverse);
 
 /* length of pFlm01/nDif01: [0:5]; */
 /* iDx: index of minimum dif02 ([0:5] */
@@ -203,13 +200,9 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 /* MIX: [1~5] */
 int Flm32DetSub1(struct sFlmDatSt *pRDat, UINT8 *nFlg12, UINT8 *pFlm02t,
 		 UINT8 *nFlg01, UINT8 *nFlg02, UINT8 MIX);
-
 int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 	      UShort *rPstCYWnd0, UShort *rPstCYWnd1, UShort *rPstCYWnd2,
 	      UShort *rPstCYWnd3, int nMod, UINT32 *rROCmbInf,
 	      struct sFlmDatSt *pRDat, struct sFlmSftPar *pPar,
 	      int nROW, int nCOL, bool reverse);
-
-extern UINT32 field_count;
-
 #endif

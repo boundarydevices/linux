@@ -17,6 +17,7 @@
 
 #ifndef __MACH_DEINTERLACE_REG_ADDR_H_
 #define __MACH_DEINTERLACE_REG_ADDR_H_
+#include <linux/amlogic/iomap.h>
 
 #define Wr(adr, val) aml_write_vcbus(adr, val)
 #define Rd(adr) aml_read_vcbus(adr)
@@ -31,6 +32,13 @@ unsigned int RDMA_WR_BITS(unsigned int adr, unsigned int val,
 		unsigned int start, unsigned int len);
 unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 		unsigned int len);
+void DI_Wr(unsigned int addr, unsigned int val);
+void DI_Wr_reg_bits(unsigned int adr, unsigned int val,
+		unsigned int start, unsigned int len);
+void DI_VSYNC_WR_MPEG_REG(unsigned int addr, unsigned int val);
+void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
+	unsigned int val, unsigned int start, unsigned int len);
+
 #define VPU_WRARB_REQEN_SLV_L1C1	((0x2795)) /* << 2) + 0xd0100000) */
 #define VPU_ARB_DBG_STAT_L1C1		((0x27b4)) /* << 2) + 0xd0100000) */
 #define SRSHARP0_SHARP_SR2_CTRL     ((0x3257)) /* << 2) + 0xd0100000) */
@@ -152,17 +160,9 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
  * Bit 7:0 Write luma canvas address
  */
 /* timerc */
-#define ISA_TIMER_MUX					0x2650
-		/* 0xc1109940 */
-#define ISA_TIMERC						0x2653
-		/* 0xc110994c */
-#define ISA_TIMERE						0x2655
-		/* 0xc1109954 */
 /* vd1 */
-#define VD1_IF0_LUMA_FIFO_SIZE			0x1a63
-		/* 0xd010698c */
-#define VD2_IF0_LUMA_FIFO_SIZE			0x1a83
-		/* 0xd0106a0c */
+#define VD1_IF0_GEN_REG					0x1a50
+
 #define VD1_IF0_CANVAS0					0x1a51
 		/* 0xd0106944 */
 #define VD1_IF0_CANVAS1					0x1a52
@@ -175,11 +175,50 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 		/* 0xd0106954 */
 #define VD1_IF0_CHROMA_Y0				0x1a56
 		/* 0xd0106958 */
+#define VD1_IF0_LUMA_X1					0x1a57
+
+#define VD1_IF0_LUMA_Y1					0x1a58
+
+#define VD1_IF0_CHROMA_X1				0x1a59
+
+#define VD1_IF0_CHROMA_Y1				0x1a5a
+
 #define VD1_IF0_RPT_LOOP				0x1a5b
-		/* 0xd010696c */
-#define VD1_IF0_LUMA0_RPT_PAT			0x1a5c
-		/* 0xd0106970 */
-#define VD1_IF0_CHROMA0_RPT_PAT			0x1a5d
+
+#define VD1_IF0_LUMA0_RPT_PAT				0x1a5c
+
+#define VD1_IF0_CHROMA0_RPT_PAT				0x1a5d
+
+#define VD1_IF0_LUMA1_RPT_PAT				0x1a5e
+
+#define VD1_IF0_CHROMA1_RPT_PAT				0x1a5f
+
+#define VD1_IF0_LUMA_PSEL				0x1a60
+
+#define VD1_IF0_CHROMA_PSEL				0x1a61
+
+#define VD1_IF0_DUMMY_PIXEL				0x1a62
+
+#define VD1_IF0_LUMA_FIFO_SIZE				0x1a63
+
+#define VD1_IF0_RANGE_MAP_Y				0x1a6a
+
+#define VD1_IF0_RANGE_MAP_CB				0x1a6b
+
+#define VD1_IF0_RANGE_MAP_CR				0x1a6c
+
+#define VD1_IF0_GEN_REG2				0x1a6d
+
+#define VD1_IF0_PROT_CNTL				0x1a6e
+
+#define VIU_VD1_FMT_CTRL				0x1a68
+
+#define VIU_VD1_FMT_W					0x1a69
+
+#define VD1_IF0_LUMA_FIFO_SIZE				0x1a63
+		/* 0xd010698c */
+#define VD2_IF0_LUMA_FIFO_SIZE				0x1a83
+		/* 0xd0106a0c */
 		/* 0xd0106974 */
 #define VIU_OSD1_CTRL_STAT				0x1a10
 		/* 0xd0106840 */
@@ -322,7 +361,10 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 		/* 0xd0106818 */
 #define VIUB_MISC_CTRL0					0x2006
 		/* 0xd0108018 */
-/* txl new add begin */
+#define VIUB_GCLK_CTRL0					0x2007
+#define VIUB_GCLK_CTRL1					0x2008
+#define VIUB_GCLK_CTRL2					0x2009
+#define VIUB_GCLK_CTRL3					0x200a
 #define DI_IF2_GEN_REG					0x2010
 #define DI_IF2_CANVAS0					0x2011
 #define DI_IF2_LUMA_X0					0x2012
@@ -1384,6 +1426,19 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 /* Bit  7: 0,	reg_CUE_CON_difP1_thrd2	U8,  P1 field Intra-Field top/below line
  * chroma difference threshold (tighter),
  */
+/* change from txlx */
+#define DI_EI_DRT_CTRL                  ((0x1778))
+
+#define DI_EI_DRT_PIXTH                 ((0x1779))
+
+#define DI_EI_DRT_CORRPIXTH             ((0x177a))
+
+#define DI_EI_DRT_RECTG_WAVE            ((0x177b))
+
+#define DI_EI_DRT_PIX_DIFFTH            ((0x177c))
+
+#define DI_EI_DRT_UNBITREND_TH          ((0x177d))
+
 #define NR2_CUE_PRG_DIF                  ((0x177e)) /* << 2) + 0xd0100000) */
 /* Bit 20,	    reg_CUE_PRG_Enable	    Enable bit for progressive video CUE
  * detection.If interlace input video,
@@ -1408,6 +1463,17 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 /* // NR2 REG DEFINE END //// */
 /* // DET 3D REG DEFINE BEGIN //// */
 /* //  8'h80~8'h8f */
+#define DI_EI_DRT_CTRL_GXLX                  ((0x2028))
+
+#define DI_EI_DRT_PIXTH_GXLX                 ((0x2029))
+
+#define DI_EI_DRT_CORRPIXTH_GXLX             ((0x202a))
+
+#define DI_EI_DRT_RECTG_WAVE_GXLX            ((0x202b))
+
+#define DI_EI_DRT_PIX_DIFFTH_GXLX            ((0x202c))
+
+#define DI_EI_DRT_UNBITREND_TH_GXLX          ((0x202d))
 #define DET3D_RO_SPLT_HB                 ((0x1780)) /* << 2) + 0xd0100000) */
 /* Bit 24,	    RO_Det3D_Split_HB_valid
  * U1   horizontal LR split border detected valid signal for top half picture
@@ -2667,6 +2733,7 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 #define MCDI_PD_22_CHK_WND0_Y				(0x2f5a)
 #define MCDI_PD_22_CHK_WND1_X				(0x2f5b)
 #define MCDI_PD_22_CHK_WND1_Y				(0x2f5c)
+#define MCDI_PD_22_CHK_FLG_CNT				(0x2f5e)
 /* mc di */
 /* //=================================================================//// */
 /* // memc di core 0 */
@@ -4013,6 +4080,10 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 #define MCDI_MCVECRD_CANVAS_SIZE                   ((0x2f66))
 #define MCDI_MCINFOWR_CANVAS_SIZE                  ((0x2f67))
 #define MCDI_MCINFORD_CANVAS_SIZE                  ((0x2f68))
+#define MCDI_LMVLCKSTEXT_0                         ((0x2f69))
+#define MCDI_LMVLCKSTEXT_1                         ((0x2f6a))
+#define MCDI_LMVLCKEDEXT_0                         ((0x2f6b))
+#define MCDI_LMVLCKEDEXT_1                         ((0x2f6c))
 #define MCDI_MCVECWR_X                             ((0x2f92))
 #define MCDI_MCVECWR_Y                             ((0x2f93))
 #define MCDI_MCVECWR_CTRL                          ((0x2f94))
@@ -4491,6 +4562,7 @@ unsigned int RDMA_RD_BITS(unsigned int adr, unsigned int start,
 #define DIPD_RO_COMB_18					0x2fe8
 #define DIPD_RO_COMB_19					0x2fe9
 #define DIPD_RO_COMB_20					0x2fea
+#define DIPD_COMB_CTRL6					0x2feb
 /* nr3 */
 #define NR3_MODE					0x2ff0
 		/* d010bfc0 */

@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/deinterlace/flm_mod_xx.c
+ * drivers/amlogic/media/deinterlace/film_mode_fmw/flm_mod_xx.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

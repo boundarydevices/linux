@@ -20,6 +20,7 @@
 
 #include "linux/amlogic/media/amvecm/ve.h"
 #include "linux/amlogic/media/amvecm/cm.h"
+#include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/utils/amstream.h>
 #include <linux/amlogic/cpu_version.h>
 
@@ -94,6 +95,34 @@
 #define MTX_BYPASS_RGB_OGO			(1 << 0)
 #define MTX_RGB2YUVL_RGB_OGO		(1 << 1)
 
+enum pq_table_name_e {
+	TABLE_NAME_SHARPNESS0 = 0x1,/*in vpp*/
+	TABLE_NAME_SHARPNESS1 = 0x2,/*in vpp*/
+	TABLE_NAME_DNLP = 0x4,		/*in vpp*/
+	TABLE_NAME_CM = 0x8,		/*in vpp*/
+	TABLE_NAME_BLK_BLUE_EXT = 0x10,/*in vpp*/
+	TABLE_NAME_BRIGHTNESS = 0x20,/*in vpp*/
+	TABLE_NAME_CONTRAST = 0x40,	/*in vpp*/
+	TABLE_NAME_SATURATION_HUE = 0x80,/*in vpp*/
+	TABLE_NAME_CVD2 = 0x100,		/*in tvafe*/
+	TABLE_NAME_DI = 0x200,		/*in di*/
+	TABLE_NAME_NR = 0x400,		/*in di*/
+	TABLE_NAME_MCDI = 0x800,	/*in di*/
+	TABLE_NAME_DEBLOCK = 0x1000,	/*in di*/
+	TABLE_NAME_DEMOSQUITO = 0x2000,/*in di*/
+	TABLE_NAME_WB = 0X4000,		/*in vpp*/
+	TABLE_NAME_GAMMA = 0X8000,	/*in vpp*/
+	TABLE_NAME_XVYCC = 0x10000,	/*in vpp*/
+	TABLE_NAME_HDR = 0x20000,	/*in vpp*/
+	TABLE_NAME_DOLBY_VISION = 0x40000,/*in vpp*/
+	TABLE_NAME_RESERVED1 = 0x80000,
+	TABLE_NAME_RESERVED2 = 0x100000,
+	TABLE_NAME_RESERVED3 = 0x200000,
+	TABLE_NAME_RESERVED4 = 0x400000,
+	TABLE_NAME_RESERVED5 = 0x800000,
+	TABLE_NAME_MAX,
+};
+
 #define _VE_CM  'C'
 
 #define AMVECM_IOC_VE_DNLP      _IOW(_VE_CM, 0x21, struct ve_dnlp_s)
@@ -125,6 +154,17 @@
 /*VPP.3D-SYNC IOCTL command list*/
 #define AMVECM_IOC_3D_SYNC_EN  _IO(_VE_CM, 0x49)
 #define AMVECM_IOC_3D_SYNC_DIS _IO(_VE_CM, 0x50)
+
+#define _DI_	'D'
+
+struct am_pq_parm_s {
+	unsigned int table_name;
+	unsigned int table_len;
+	void *table_ptr;
+	void *reserved;
+};
+
+#define AMDI_IOC_SET_PQ_PARM  _IOW(_DI_, 0x51, struct am_pq_parm_s)
 
 /* #if (MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8) */
 /* #define WRITE_VPP_REG(x,val)*/

@@ -20,86 +20,61 @@
 #include <linux/cdev.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/video_sink/video.h>
+
+#include <linux/clk.h>
 #include <linux/atomic.h>
-#include "film_vof_soft.h"
-/* di hardware version m8m2*/
-#define NEW_DI_V1 0x00000002 /* from m6tvc */
-#define NEW_DI_V2 0x00000004 /* from m6tvd */
-#define NEW_DI_V3 0x00000008 /* from gx */
-#define NEW_DI_V4 0x00000010 /* dnr added */
+#include "deinterlace_hw.h"
+#include "pulldown_drv.h"
+#include "nr_drv.h"
 
 /*trigger_pre_di_process param*/
-#define TRIGGER_PRE_BY_PUT		'p'
+#define TRIGGER_PRE_BY_PUT			'p'
 #define TRIGGER_PRE_BY_DE_IRQ		'i'
 #define TRIGGER_PRE_BY_UNREG		'u'
 /*di_timer_handle*/
-#define TRIGGER_PRE_BY_TIMER		't'
-#define TRIGGER_PRE_BY_FORCE_UNREG	'f'
-#define TRIGGER_PRE_BY_VFRAME_READY	'r'
+#define TRIGGER_PRE_BY_TIMER			't'
+#define TRIGGER_PRE_BY_FORCE_UNREG		'f'
+#define TRIGGER_PRE_BY_VFRAME_READY		'r'
 #define TRIGGER_PRE_BY_PROVERDER_UNREG	'n'
 #define TRIGGER_PRE_BY_DEBUG_DISABLE	'd'
-#define TRIGGER_PRE_BY_TIMERC		'T'
+#define TRIGGER_PRE_BY_TIMERC			'T'
 #define TRIGGER_PRE_BY_PROVERDER_REG	'R'
 
+#define DI_RUN_FLAG_RUN			0
+#define DI_RUN_FLAG_PAUSE		1
+#define DI_RUN_FLAG_STEP		2
+#define DI_RUN_FLAG_STEP_DONE	3
+
+#define USED_LOCAL_BUF_MAX		3
 #define BYPASS_GET_MAX_BUF_NUM	4
+
+/* buffer management related */
+#define MAX_IN_BUF_NUM				20
+#define MAX_LOCAL_BUF_NUM			12
+#define MAX_POST_BUF_NUM			16
+
+#define VFRAME_TYPE_IN				1
+#define VFRAME_TYPE_LOCAL			2
+#define VFRAME_TYPE_POST			3
+#define VFRAME_TYPE_NUM				3
+
 /*vframe define*/
 #define vframe_t struct vframe_s
 
 /* canvas defination */
 #define DI_USE_FIXED_CANVAS_IDX
-
-#undef USE_LIST
-/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
-#define NEW_KEEP_LAST_FRAME
-/* #endif */
 #define	DET3D
-#undef SUPPORT_MPEG_TO_VDIN /* for all ic after m6c@20140731 */
+#undef SUPPORT_MPEG_TO_VDIN
 
-/************************************
- *	 di hardware level interface
- *************************************/
-#define MAX_WIN_NUM			5
-/* if post size < 80, filter of ei can't work */
-#define MIN_POST_WIDTH  80
-#define MIN_BLEND_WIDTH  27
-struct pulldown_detect_info_s {
-	unsigned int field_diff;
-/* total pixels difference between current field and previous field */
-	unsigned int field_diff_num;
-/* the number of pixels with big difference between
- * current field and previous field
- */
-	unsigned int frame_diff;
-/*total pixels difference between current field and previouse-previouse field*/
-	unsigned int frame_diff_num;
-/* the number of pixels with big difference between current
- * field and previouse-previous field
- */
-	unsigned int frame_diff_skew;
-/* the difference between current frame_diff and previous frame_diff */
-	unsigned int frame_diff_num_skew;
-/* the difference between current frame_diff_num and previous frame_diff_num*/
-/* parameters for detection */
-	unsigned int field_diff_by_pre;
-	unsigned int field_diff_by_next;
-	unsigned int field_diff_num_by_pre;
-	unsigned int field_diff_num_by_next;
-	unsigned int frame_diff_by_pre;
-	unsigned int frame_diff_num_by_pre;
-	unsigned int frame_diff_skew_ratio;
-	unsigned int frame_diff_num_skew_ratio;
-	/* matching pattern */
-	unsigned int field_diff_pattern;
-	unsigned int field_diff_num_pattern;
-	unsigned int frame_diff_pattern;
-	unsigned int frame_diff_num_pattern;
-};
-#define pulldown_detect_info_t struct pulldown_detect_info_s
+#ifndef CONFIG_AMLOGIC_MEDIA_RDMA
+#ifndef VSYNC_WR_MPEG_REG
+#define VSYNC_WR_MPEG_REG(adr, val) aml_write_vcbus(adr, val)
+#define VSYNC_WR_MPEG_REG_BITS(adr, val, start, len)  \
+		aml_vcbus_update_bits(adr, ((1<<len)-1)<<start, val<<start)
+#define VSYNC_RD_MPEG_REG(adr) aml_read_vcbus(adr)
+#endif
+#endif
 
-struct pd_win_prop_s {
-	unsigned int pixels_num;
-};
-#define pd_win_prop_t struct pd_win_prop_s
 enum process_fun_index_e {
 	PROCESS_FUN_NULL = 0,
 	PROCESS_FUN_DI,
@@ -108,14 +83,6 @@ enum process_fun_index_e {
 	PROCESS_FUN_BOB
 };
 #define process_fun_index_t enum process_fun_index_e
-enum pulldown_mode_e {
-	PULL_DOWN_BLEND_0 = 0,/* buf1=dup[0] */
-	PULL_DOWN_BLEND_2 = 1,/* buf1=dup[2] */
-	PULL_DOWN_MTN	  = 2,/* mtn only */
-	PULL_DOWN_BUF1	  = 3,/* do wave with dup[0] */
-	PULL_DOWN_EI	  = 4,/* ei only */
-	PULL_DOWN_NORMAL  = 5,/* normal di */
-};
 
 enum canvas_idx_e {
 	NR_CANVAS,
@@ -124,9 +91,6 @@ enum canvas_idx_e {
 };
 #define pulldown_mode_t enum pulldown_mode_e
 struct di_buf_s {
-#ifdef USE_LIST
-	struct list_head list;
-#endif
 	struct vframe_s *vframe;
 	int index; /* index in vframe_in_dup[] or vframe_in[],
 		    * only for type of VFRAME_TYPE_IN
@@ -149,11 +113,8 @@ struct di_buf_s {
 	int nr_canvas_idx;
 	unsigned long mtn_adr;
 	int mtn_canvas_idx;
-#ifdef NEW_DI_V1
 	unsigned long cnt_adr;
 	int cnt_canvas_idx;
-#endif
-#ifdef NEW_DI_V3
 	unsigned long mcinfo_adr;
 	int mcinfo_canvas_idx;
 	unsigned long mcvec_adr;
@@ -163,20 +124,9 @@ struct di_buf_s {
 	unsigned int motionparadoxflg;
 	unsigned int regs[26];/* reg 0x2fb0~0x2fc9 */
 	} curr_field_mcinfo;
-#endif
 	/* blend window */
-	unsigned short reg0_s;
-	unsigned short reg0_e;
-	unsigned short reg0_bmode;
-	unsigned short reg1_s;
-	unsigned short reg1_e;
-	unsigned short reg1_bmode;
-	unsigned short reg2_s;
-	unsigned short reg2_e;
-	unsigned short reg2_bmode;
-	unsigned short reg3_s;
-	unsigned short reg3_e;
-	unsigned short reg3_bmode;
+	struct pulldown_detected_s
+	pd_config;
 	/* tff bff check result bit[1:0]*/
 	unsigned int privated;
 	unsigned int canvas_config_flag;
@@ -185,10 +135,6 @@ struct di_buf_s {
 	 */
 	unsigned int canvas_height;
 	unsigned int canvas_width[3];/* nr/mtn/mv */
-	/*bit [31~16] width; bit [15~0] height*/
-	pulldown_detect_info_t field_pd_info;
-	pulldown_detect_info_t win_pd_info[MAX_WIN_NUM];
-	pulldown_mode_t pulldown_mode;
 	process_fun_index_t process_fun_index;
 	int early_process_fun_index;
 	int left_right;/*1,left eye; 0,right eye in field alternative*/
@@ -202,169 +148,16 @@ struct di_buf_s {
 	 * 0: after put
 	 */
 	atomic_t di_cnt;
+	struct page	*pages;
 };
-#ifdef DET3D
-extern bool det3d_en;
-#endif
-
-extern uint mtn_ctrl1;
-
-extern pd_win_prop_t pd_win_prop[MAX_WIN_NUM];
-
-extern int	pd_enable;
-
-extern void di_hw_init(void);
-
-extern void di_hw_uninit(void);
-
-extern void enable_di_pre_mif(int enable);
-
-extern int di_vscale_skip_count;
-
-extern unsigned int di_force_bit_mode;
-
-/*
- * di hardware internal
- */
 #define RDMA_DET3D_IRQ				0x20
 /* vdin0 rdma irq */
 #define RDMA_DEINT_IRQ				0x2
-#define RDMA_TABLE_SIZE                    ((PAGE_SIZE)<<1)
+#define RDMA_TABLE_SIZE             ((PAGE_SIZE)<<1)
 
-#if defined(CONFIG_AM_DEINTERLACE_SD_ONLY)
-#define MAX_CANVAS_WIDTH				720
-#define MAX_CANVAS_HEIGHT				576
-#else
 #define MAX_CANVAS_WIDTH				1920
 #define MAX_CANVAS_HEIGHT				1088
-#endif
 
-struct DI_MIF_s {
-	unsigned short	luma_x_start0;
-	unsigned short	luma_x_end0;
-	unsigned short	luma_y_start0;
-	unsigned short	luma_y_end0;
-	unsigned short	chroma_x_start0;
-	unsigned short	chroma_x_end0;
-	unsigned short	chroma_y_start0;
-	unsigned short	chroma_y_end0;
-	unsigned		set_separate_en:2;
-	unsigned		src_field_mode:1;
-	unsigned		src_prog:1;
-	unsigned		video_mode:1;
-	unsigned		output_field_num:1;
-	unsigned		bit_mode:2;
-	/*
-	 * unsigned		burst_size_y:2; set 3 as default
-	 * unsigned		burst_size_cb:2;set 1 as default
-	 * unsigned		burst_size_cr:2;set 1 as default
-	 */
-	unsigned		canvas0_addr0:8;
-	unsigned		canvas0_addr1:8;
-	unsigned		canvas0_addr2:8;
-};
-struct DI_SIM_MIF_s {
-	unsigned short	start_x;
-	unsigned short	end_x;
-	unsigned short	start_y;
-	unsigned short	end_y;
-	unsigned short	canvas_num;
-	unsigned short	bit_mode;
-};
-struct DI_MC_MIF_s {
-	unsigned short start_x;
-	unsigned short start_y;
-	unsigned short size_x;
-	unsigned short size_y;
-	unsigned short canvas_num;
-	unsigned short blend_mode;
-	unsigned short vecrd_offset;
-};
-void disable_deinterlace(void);
-
-void disable_pre_deinterlace(void);
-
-void disable_post_deinterlace(void);
-
-int get_di_pre_recycle_buf(void);
-
-
-void disable_post_deinterlace_2(void);
-
-void enable_film_mode_check(unsigned int width, unsigned int height,
-		enum vframe_source_type_e);
-
-void enable_di_pre_aml(
-	struct DI_MIF_s		*di_inp_mif,
-	struct DI_MIF_s		*di_mem_mif,
-	struct DI_MIF_s		*di_chan2_mif,
-	struct DI_SIM_MIF_s	*di_nrwr_mif,
-	struct DI_SIM_MIF_s	*di_mtnwr_mif,
-#ifdef NEW_DI_V1
-	struct DI_SIM_MIF_s    *di_contp2rd_mif,
-	struct DI_SIM_MIF_s    *di_contprd_mif,
-	struct DI_SIM_MIF_s    *di_contwr_mif,
-#endif
-	int nr_en, int mtn_en, int pd32_check_en, int pd22_check_en,
-	int hist_check_en, int pre_field_num, int pre_vdin_link,
-	int hold_line, int urgent);
-void enable_afbc_input(struct vframe_s *vf);
-#ifdef NEW_DI_V3
-void enable_mc_di_pre(struct DI_MC_MIF_s *di_mcinford_mif,
-	struct DI_MC_MIF_s *di_mcinfowr_mif,
-	struct DI_MC_MIF_s *di_mcvecwr_mif, int urgent);
-void enable_mc_di_post(struct DI_MC_MIF_s *di_mcvecrd_mif,
-	int urgent, bool reverse);
-#endif
-
-void read_new_pulldown_info(struct FlmModReg_t *pFMRegp);
-
-void initial_di_pre_aml(int hsize_pre, int vsize_pre, int hold_line);
-
-void initial_di_post_2(int hsize_post, int vsize_post, int hold_line);
-
-void enable_di_post_2(
-	struct DI_MIF_s		*di_buf0_mif,
-	struct DI_MIF_s		*di_buf1_mif,
-	struct DI_MIF_s		*di_buf2_mif,
-	struct DI_SIM_MIF_s	*di_diwr_mif,
-	#ifndef NEW_DI_V2
-	struct DI_SIM_MIF_s	*di_mtncrd_mif,
-	#endif
-	struct DI_SIM_MIF_s	*di_mtnprd_mif,
-	int ei_en, int blend_en, int blend_mtn_en, int blend_mode,
-	int di_vpp_en, int di_ddr_en,
-	int post_field_num, int hold_line, int urgent
-	#ifndef NEW_DI_V1
-	, unsigned long *reg_mtn_info
-	#endif
-);
-
-void di_post_switch_buffer(
-	struct DI_MIF_s		*di_buf0_mif,
-	struct DI_MIF_s		*di_buf1_mif,
-	struct DI_MIF_s		*di_buf2_mif,
-	struct DI_SIM_MIF_s	*di_diwr_mif,
-	#ifndef NEW_DI_V2
-	struct DI_SIM_MIF_s	*di_mtncrd_mif,
-	#endif
-	struct DI_SIM_MIF_s	*di_mtnprd_mif,
-	struct DI_MC_MIF_s		*di_mcvecrd_mif,
-	int ei_en, int blend_en, int blend_mtn_en, int blend_mode,
-	int di_vpp_en, int di_ddr_en,
-	int post_field_num, int hold_line, int urgent
-	#ifndef NEW_DI_V1
-	, unsigned long *reg_mtn_info
-	#endif
-);
-
-bool read_pulldown_info(pulldown_detect_info_t *field_pd_info,
-		pulldown_detect_info_t *win_pd_info);
-
-/* for video reverse */
-void di_post_read_reverse(bool reverse);
-void di_post_read_reverse_irq(bool reverse);
-extern void recycle_keep_buffer(void);
 
 /* #define DI_BUFFER_DEBUG */
 
@@ -376,42 +169,8 @@ extern void recycle_keep_buffer(void);
 #define DI_LOG_QUEUE		0x40
 #define DI_LOG_VFRAME		0x80
 
-extern unsigned int di_log_flag;
-extern unsigned int di_debug_flag;
-extern bool mcpre_en;
-extern bool dnr_reg_update;
-extern bool dnr_dm_en;
-extern int mpeg2vdin_flag;
-extern int di_vscale_skip_count_real;
-extern unsigned int pulldown_enable;
-
-extern bool post_wr_en;
-extern unsigned int post_wr_surpport;
-
-extern int cmb_adpset_cnt;
-
-extern unsigned int field_diff_rate;
-int di_print(const char *fmt, ...);
 
 
-int get_current_vscale_skip_count(struct vframe_s *vf);
-
-void di_set_power_control(unsigned char type, unsigned char enable);
-void diwr_set_power_control(unsigned char enable);
-
-unsigned char di_get_power_control(unsigned char type);
-void config_di_bit_mode(vframe_t *vframe, unsigned int bypass_flag);
-void combing_pd22_window_config(unsigned int width, unsigned int height);
-int tff_bff_check(int height, int width);
-void tbff_init(void);
-
-
-void DI_Wr(unsigned int addr, unsigned int val);
-void DI_Wr_reg_bits(unsigned int adr, unsigned int val,
-		unsigned int start, unsigned int len);
-void DI_VSYNC_WR_MPEG_REG(unsigned int addr, unsigned int val);
-void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr, unsigned int val,
-	unsigned int start, unsigned int len);
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 extern void enable_rdma(int enable_flag);
 extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
@@ -430,30 +189,37 @@ extern bool is_vsync_rdma_enable(void);
 
 #define DI_COUNT   1
 #define DI_MAP_FLAG	0x1
+#define DI_SUSPEND_FLAG 0x2
+#define DI_LOAD_REG_FLAG 0x4
 struct di_dev_s {
 	dev_t			   devt;
 	struct cdev		   cdev; /* The cdev structure */
 	struct device	   *dev;
 	struct platform_device	*pdev;
 	struct task_struct *task;
+	struct clk	*vpu_clkb;
+	unsigned long clkb_max_rate;
+	unsigned long clkb_min_rate;
+	struct list_head   pq_table_list;
+	struct mutex       pq_lock;
 	unsigned char	   di_event;
 	unsigned int	   di_irq;
 	unsigned int	   flags;
-	unsigned int	   timerc_irq;
+	unsigned long	   jiffy;
 	unsigned long	   mem_start;
 	unsigned int	   mem_size;
 	unsigned int	   buffer_size;
+	unsigned int	   post_buffer_size;
 	unsigned int	   buf_num_avail;
-	unsigned int	   hw_version;
 	int		rdma_handle;
-	/* is surpport nr10bit */
-	unsigned int	   nr10bit_surpport;
-	/* is DI surpport post wr to mem for OMX */
-	unsigned int       post_wr_surpport;
+	/* is support nr10bit */
+	unsigned int	   nr10bit_support;
+	/* is DI support post wr to mem for OMX */
+	unsigned int       post_wr_support;
+	struct	mutex      cma_mutex;
 	unsigned int	   flag_cma;
-	unsigned int	   cma_alloc[10];
-	unsigned int	   buffer_addr[10];
-	struct page	*pages[10];
+	struct page			*total_pages;
+	atomic_t			mem_flag;
 };
 
 struct di_pre_stru_s {
@@ -471,7 +237,6 @@ struct di_pre_stru_s {
 	struct DI_SIM_MIF_s	di_mtnwr_mif;
 	struct di_buf_s *di_wr_buf;
 	struct di_buf_s *di_post_wr_buf;
-#ifdef NEW_DI_V1
 	struct DI_SIM_MIF_s	di_contp2rd_mif;
 	struct DI_SIM_MIF_s	di_contprd_mif;
 	struct DI_SIM_MIF_s	di_contwr_mif;
@@ -482,7 +247,6 @@ struct di_pre_stru_s {
  * 2 (f2,nr1_cnt,nr0)->nr2_cnt
  * 3 (f3,nr2_cnt,nr1_cnt)->nr3_cnt
  */
-#endif
 	struct DI_MC_MIF_s		di_mcinford_mif;
 	struct DI_MC_MIF_s		di_mcvecwr_mif;
 	struct DI_MC_MIF_s		di_mcinfowr_mif;
@@ -498,8 +262,10 @@ struct di_pre_stru_s {
 	/* flag is set when VFRAME_EVENT_PROVIDER_UNREG*/
 	int	unreg_req_flag;
 	int	unreg_req_flag_irq;
+	int	unreg_req_flag_cnt;
 	int	reg_req_flag;
 	int	reg_req_flag_irq;
+	int	reg_req_flag_cnt;
 	int	force_unreg_req_flag;
 	int	disable_req_flag;
 	/* current source info */
@@ -512,23 +278,23 @@ struct di_pre_stru_s {
 	int	cur_prog_flag; /* 1 for progressive source */
 /* valid only when prog_proc_type is 0, for
  * progressive source: top field 1, bot field 0
- */
+*/
 	int	source_change_flag;
+/* input size change flag, 1: need reconfig pre/nr/dnr size */
+/* 0: not need config pre/nr/dnr size*/
+	bool input_size_change_flag;
 /* true: bypass di all logic, false: not bypass */
 	bool bypass_flag;
-
 	unsigned char prog_proc_type;
 /* set by prog_proc_config when source is vdin,0:use 2 i
  * serial buffer,1:use 1 p buffer,3:use 2 i paralleling buffer
- */
+*/
 	unsigned char buf_alloc_mode;
 /* alloc di buf as p or i;0: alloc buf as i;
  * 1: alloc buf as p;
- */
+*/
 	unsigned char enable_mtnwr;
 	unsigned char enable_pulldown_check;
-
-	int	same_field_source_flag;
 	int	left_right;/*1,left eye; 0,right eye in field alternative*/
 /*input2pre*/
 	int	bypass_start_count;
@@ -540,16 +306,20 @@ struct di_pre_stru_s {
 	unsigned int det_tp;
 	unsigned int det_la;
 	unsigned int det_null;
+	unsigned int width_bk;
 #ifdef DET3D
 	int	vframe_interleave_flag;
 #endif
+/**/
 	int	pre_de_irq_timeout_count;
 	int	pre_throw_flag;
+	int	bad_frame_throw_count;
 /*for static pic*/
 	int	static_frame_count;
 	bool force_interlace;
 	bool bypass_pre;
 	bool invert_flag;
+	bool vdin_source;
 	int nr_size;
 	int count_size;
 	int mcinfo_size;
@@ -558,6 +328,10 @@ struct di_pre_stru_s {
 	int cma_alloc_req;
 	int cma_alloc_done;
 	int cma_release_req;
+	/* for performance debug */
+	unsigned long irq_time;
+	/* combing adaptive */
+	struct combing_status_s *mtn_status;
 };
 
 struct di_post_stru_s {
@@ -568,8 +342,8 @@ struct di_post_stru_s {
 	struct DI_SIM_MIF_s	di_mtnprd_mif;
 	struct DI_MC_MIF_s	di_mcvecrd_mif;
 	struct di_buf_s *cur_post_buf;
+	struct di_buf_s *keep_buf;
 	int		update_post_reg_flag;
-	int		post_process_fun_index;
 	int		run_early_proc_fun_flag;
 	int		cur_disp_index;
 	int		canvas_id;
@@ -581,17 +355,27 @@ struct di_post_stru_s {
 	int de_post_process_done;
 	int post_de_busy;
 	int di_post_num;
+	unsigned int di_post_process_cnt;
+	unsigned int check_recycle_buf_cnt;
+	/* performance debug */
+	unsigned int  post_wr_cnt;
+	unsigned long irq_time;
 };
 
 #define MAX_QUEUE_POOL_SIZE   256
 struct queue_s {
-	int		num;
-	int		in_idx;
-	int		out_idx;
-	int		type; /* 0, first in first out;
+	unsigned int num;
+	unsigned int in_idx;
+	unsigned int out_idx;
+	unsigned int type; /* 0, first in first out;
 			       * 1, general;2, fix position for di buf
 			       */
-	unsigned int	pool[MAX_QUEUE_POOL_SIZE];
+	unsigned int pool[MAX_QUEUE_POOL_SIZE];
+};
+
+struct di_buf_pool_s {
+	struct di_buf_s *di_buf_ptr;
+	unsigned int size;
 };
 
 #define di_dev_t struct di_dev_s

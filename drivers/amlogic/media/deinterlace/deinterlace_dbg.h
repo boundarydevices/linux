@@ -14,8 +14,8 @@
  * more details.
  *
  */
-
-#include <linux/amlogic/media/vfm/vframe.h>
+#ifndef _DI_DBG_H
+#define _DI_DBG_H
 #include "deinterlace.h"
 
 void parse_cmd_params(char *buf_orig, char **parm);
@@ -26,4 +26,8 @@ void dump_pool(struct queue_s *q);
 void dump_vframe(vframe_t *vf);
 void dump_di_reg(void);
 void print_di_buf(struct di_buf_s *di_buf, int format);
-
+void dump_pre_mif_state(void);
+void dump_post_mif_reg(void);
+void debug_device_files_add(struct device *dev);
+void debug_device_files_del(struct device *dev);
+#endif

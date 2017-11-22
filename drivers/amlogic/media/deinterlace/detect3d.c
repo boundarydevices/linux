@@ -19,13 +19,10 @@
 #include <linux/module.h>
 /* Amlogic Headers */
 
-#include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include <linux/amlogic/iomap.h>
-
 #include "register.h"
 #include "detect3d.h"
-#include "deinterlace.h"
 
 /*******************Local defines**********************/
 #define DET3D_REG_NUM				9
@@ -98,7 +95,7 @@ static struct det3d_info_s det3d_info = {
  * Enable and Disable det3d
  * flag == true, enable det3d; flag == false, disable det3d;
  */
-void det3d_enable(bool flag)
+void det3d_config(bool flag)
 {
 	int i;
 
@@ -225,7 +222,7 @@ det3d_info.tscore_3d_tb_accum + (tb_score <= 0) -
 		det3d_info.score_3d_chs = det3d_info.score_3d_chs + tmp1;
 		det3d_info.score_3d_int = det3d_info.score_3d_int + tmp2;
 		if (det3d_debug)
-			pr_dbg("%s input(%d,%d),output (%d,%d).\n",
+			pr_info("%s input(%d,%d),output (%d,%d).\n",
 __func__, chessbd_score, int_score,
 det3d_info.score_3d_chs, det3d_info.score_3d_int);
 		/* cliping to s7 */
@@ -422,9 +419,9 @@ chessbd_ver_thrd);
 	}
 
 	if (det3d_debug) {
-		pr_dbg("det3d:frame = %d, 3D_fmt = %d, score_3d_lr = %d,",
+		pr_info("det3d:frame = %d, 3D_fmt = %d, score_3d_lr = %d,",
 det3d_info.nfrm, det3d_info.tfw_det3d_fmt, det3d_info.score_3d_lr);
-		pr_dbg("score_3d_tb = %d, score_3d_int = %d, score_3d_chs = %d",
+		pr_info("score_3d_tb = %d, score_3d_int = %d, score_3d_chs = %d",
 det3d_info.score_3d_tb, det3d_info.score_3d_int, det3d_info.score_3d_chs);
 	}
 	return det3d_info.tfw_det3d_fmt;

@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/deinterlace/vof_soft_top.c
+ * drivers/amlogic/media/deinterlace/film_mode_fmw/vof_soft_top.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -80,7 +80,7 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 		UShort *rPstCYWnd0, UShort *rPstCYWnd1,
 		UShort *rPstCYWnd2, UShort *rPstCYWnd3, int nMod,
 		UINT32 *rROCmbInf, struct sFlmDatSt *pRDat,
-		struct sFlmSftPar *pPar, int nROW, int nCOL)
+		struct sFlmSftPar *pPar, int nROW, int nCOL, bool reverse)
 {
 	/* HSCMB[hist10][9(32bit)] */
 	static UINT32 HSCMB[HISCMBNUM][ROWCMBLEN];
@@ -92,7 +92,9 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 	static UINT8 NumSmFd;  /* counter for same field */
 
 	int mDly = pPar->mPstDlyPre;
-
+	int flm22_flag = pPar->flm22_flag;
+	int cmb22_nocmb_num = pPar->cmb22_nocmb_num;
+	int cmb32_blw_wnd_rel = cmb32_blw_wnd;
 	/* UINT8 *PREWV = pRDat.pFlg32; or pRDat.pFlg22 */
 	/* static int TCNm[HISCMBNUM]; history: the number of combing-rows */
 	int *TCNm = pRDat->TCNm;
@@ -125,7 +127,9 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 	pFlgXx = (((pFlgXx >> 1) << 2) |
 			(pRDat->pFlgXx[HISDETNUM - 2] << 1) |
 			(pRDat->pFlgXx[HISDETNUM - 1]));
-
+	/* for 1080i */
+	if (nROW > 288)
+		cmb32_blw_wnd_rel = 70;
 	/* Initialization */
 	if (BGN == 0) {
 		for (nT0 = 0; nT0 < HISCMBNUM; nT0++) {
@@ -225,11 +229,21 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 		nWCmb = 0;
 		nBCmb = 0;
 		for (nT0 = 0; nT0 < nT1; nT0++) {
-			if (VOFWnd[2 * nT0] > (cmb32_blw_wnd * nROW >> 8)) {
-				CWND[HISDETNUM - 1][2 * nT0] =
-					VOFWnd[2 * nT0] - cmb32_wnd_ext;
-				CWND[HISDETNUM - 1][2 * nT0 + 1] =
-					VOFWnd[2 * nT0 + 1] + cmb32_wnd_ext;
+			if (VOFWnd[2*nT0] > (cmb32_blw_wnd_rel * nROW >> 8)) {
+				CWND[HISDETNUM-1][2*nT0] =
+					VOFWnd[2*nT0] - cmb32_wnd_ext;
+				CWND[HISDETNUM-1][2*nT0+1] =
+					VOFWnd[2*nT0+1] + cmb32_wnd_ext;
+				if (reverse) {
+					if (CWND[HISDETNUM-1][2*nT0+1] >=
+						nROW - 1)
+						CWND[HISDETNUM-1][2*nT0+1]
+							= nROW - 1;
+					CWND[HISDETNUM-1][2*nT0] = nROW - 1
+					- CWND[HISDETNUM-1][2*nT0+1];
+					CWND[HISDETNUM-1][2*nT0+1] = nROW
+					- 1 - (VOFWnd[2*nT0] - cmb32_wnd_ext);
+				}
 
 				nBCmb = VOFWnd[2*nT0+1]-VOFWnd[2*nT0]+1;
 
@@ -350,13 +364,17 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 		} /* here for vertical moving VOF */
 	} else if ((pMod22[HISDETNUM-1] == 2) &&
 		(pFlg22[HISDETNUM-1] & 0x1)) {
-		nT2 = ((nROW * cmb22_gcmb_rnum + 8) >> 4);
+		if (flm22_flag)
+			nT2 = 288 - cmb22_nocmb_num;
+		else
+			nT2 = ((nROW * cmb22_gcmb_rnum + 8) >> 4);
 		if (nCSum > nT2)
 			WGlb[HISDETNUM-1] = 1; /*global combing*/
-
+		else
+			WGlb[HISDETNUM-1] = 0; /*global combing*/
 		if (prt_flg)
 			sprintf(debug_str + strlen(debug_str),
-				"WGlb22=%d\n", WGlb[HISDETNUM-1]);
+					"WGlb22=%d\n", WGlb[HISDETNUM-1]);
 
 		for (nT0 = 0; nT0 < ROWCMBLEN; nT0++)
 			nRCmbAd[nT0] = HSCMB[HISCMBNUM-1][nT0];
@@ -377,7 +395,12 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 		for (nT0 = 0; nT0 < nT1; nT0++) {
 			CWND[HISDETNUM-1][2*nT0]   = VOFWnd[2*nT0];
 			CWND[HISDETNUM-1][2*nT0+1] = VOFWnd[2*nT0+1];
-
+			if (reverse) {
+				CWND[HISDETNUM-1][2*nT0] =
+					nROW - 1 - VOFWnd[2*nT0+1];
+				CWND[HISDETNUM-1][2*nT0+1] =
+					nROW - 1 - VOFWnd[2*nT0];
+			}
 			if (prt_flg)
 				sprintf(debug_str + strlen(debug_str),
 					"Wnd22[%d]=[%3d~%3d]\n",
@@ -428,7 +451,12 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 		for (nT0 = 0; nT0 < nT1; nT0++) {
 			CWND[HISDETNUM-1][2*nT0]   = VOFWnd[2*nT0];
 			CWND[HISDETNUM-1][2*nT0+1] = VOFWnd[2*nT0+1];
-
+			if (reverse) {
+				CWND[HISDETNUM-1][2*nT0] =
+					nROW - 1 - VOFWnd[2*nT0+1];
+				CWND[HISDETNUM-1][2*nT0+1] =
+					nROW - 1 - VOFWnd[2*nT0];
+			}
 			if (prt_flg)
 				sprintf(debug_str + strlen(debug_str),
 				"WndXx[%d]=[%3d~%3d]\n",
@@ -553,7 +581,7 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 		pr_info("%s", debug_str);
 	}
 
-	return nWCmb;
+	return nCSum;
 }
 
 /* int *PREWV:5*2 */
@@ -561,10 +589,10 @@ int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 int VOFDetSub1(int *VOFWnd, int *nCNum, int nMod, UINT32 *nRCmb, int nROW,
 	       struct sFlmSftPar *pPar)
 {
-	int rCmbRwMinCt0 = pPar->rCmbRwMinCt0;	/* 8; //for film 3-2 */
-	int rCmbRwMinCt1 = pPar->rCmbRwMinCt1;	/* =7; //for film 2-2 */
+	int rCmbRwMinCt0 = 0; /* 8; //for film 3-2 */
+	int rCmbRwMinCt1 = 0; /* =7; //for film 2-2 */
 	/* int rCmbRwMaxStp=1; //fill in the hole */
-	int rCmbRwMinCt = rCmbRwMinCt1;
+	int rCmbRwMinCt = 0;
 	int nCSUM = 0;	/* Combing sum (nCSUM>rCmbRwMinCt0) */
 	int nMIN = 0;
 	int nT0 = 0;
@@ -577,8 +605,16 @@ int VOFDetSub1(int *VOFWnd, int *nCNum, int nMod, UINT32 *nRCmb, int nROW,
 	int pIDx[VOFWNDNUM + 1][2];	/* Maximum-5windows */
 	int nIDx = 0;
 
+	rCmbRwMinCt = rCmbRwMinCt1;
 	if (nMod == 3)
 		rCmbRwMinCt = rCmbRwMinCt0;
+	if (IS_ERR(pPar)) {
+		pr_err("%s:%d pPar = 0x%p.\n",
+			__func__, __LINE__, pPar);
+		return -1;
+	}
+	rCmbRwMinCt0 = pPar->rCmbRwMinCt0;	/* 8; //for film 3-2 */
+	rCmbRwMinCt1 = pPar->rCmbRwMinCt1;	/* =7; //for film 2-2 */
 
 	for (nT0 = 0; (nT0 < nROW) && (nIDx <= VOFWNDNUM); nT0++) {
 		fEND = 0;
@@ -650,6 +686,7 @@ UINT8 Get1RCmb(UINT32 *iHSCMB, UINT32 iRow)
 	UINT8 nBt = 0;
 
 	nR1 = ((iRow >> 5) & 0xf);/* iRow/32; 0--8 */
+	iHSCMB[nR1] = nR1 > 8 ? 0 : iHSCMB[nR1];
 	nBt = (iRow & 0x1f);/* iRow%32 */
 	return (iHSCMB[nR1] >> nBt) & 0x1;
 }

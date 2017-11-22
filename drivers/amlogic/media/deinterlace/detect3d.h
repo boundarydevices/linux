@@ -313,7 +313,7 @@ enum det3d_fmt_e {
 /* *************************************** */
 /* ******** GLOBAL FUNCTION CLAIM ******** */
 /* *************************************** */
-extern void det3d_enable(bool flag);
+extern void det3d_config(bool flag);
 extern enum tvin_trans_fmt det3d_fmt_detect(void);
 #define WRITE_DET3D_REG(x, val)				aml_write_vcbus(x, val)
 #define WRITE_DET3D_REG_BITS(x, val, start, length) \
