@@ -31,9 +31,8 @@ extern unsigned long sdio_debug;
 extern unsigned int sd_emmc_debug;
 extern const u8 tuning_blk_pattern_4bit[64];
 extern const u8 tuning_blk_pattern_8bit[128];
-#define DEBUG_SD_OF		1
-/* #define DEBUG_SD_OF			0 */
 
+#define DEBUG_SD_OF		0
 #define MODULE_NAME		"amlsd"
 
 #if 0
@@ -50,21 +49,6 @@ extern const u8 tuning_blk_pattern_8bit[128];
 #define LDO4DAC_REG_2_8_V       0x4c
 #define LDO4DAC_REG_3_3_V       0x60
 #endif
-
-#define AMLSD_DBG_COMMON	(1<<0)
-#define AMLSD_DBG_REQ		(1<<1)
-#define AMLSD_DBG_RESP		(1<<2)
-#define AMLSD_DBG_REG		(1<<3)
-#define AMLSD_DBG_RD_TIME	(1<<4)
-#define AMLSD_DBG_WR_TIME	(1<<5)
-#define AMLSD_DBG_BUSY_TIME	(1<<6)
-#define AMLSD_DBG_RD_DATA	(1<<7)
-#define AMLSD_DBG_WR_DATA	(1<<8)
-#define AMLSD_DBG_IOS		(1<<9)
-#define AMLSD_DBG_IRQ		(1<<10)
-#define AMLSD_DBG_CLKC		(1<<11)
-#define AMLSD_DBG_TUNING	(1<<12)
-#define AMLSD_DBG_V3		(1<<13)
 
 #define     DETECT_CARD_IN          1
 #define     DETECT_CARD_OUT         2
@@ -85,35 +69,6 @@ extern const u8 tuning_blk_pattern_8bit[128];
 	pr_info("[%s] gpio op failed(%d) at line %d\n",\
 			__func__, ret, __LINE__); \
 }
-
-#define sdhc_dbg(dbg_level, fmt, args...) do {\
-	if (dbg_level & sdhc_debug)	\
-	pr_info("[%s]" fmt, __func__, ##args);	\
-} while (0)
-
-#define sdhc_err(fmt, args...) \
-	pr_info("[%s] " fmt, __func__, ##args)
-
-
-#define sdio_dbg(dbg_level, fmt, args...) do {\
-	if (dbg_level & sdio_debug)	\
-	pr_info("[%s]" fmt, __func__, ##args);	\
-} while (0)
-
-#define sdio_err(fmt, args...) \
-	pr_info("[%s] " fmt, __func__, ##args)
-
-#define sd_emmc_dbg(dbg_level, fmt, args...) do {\
-	if (dbg_level & sd_emmc_debug)	\
-	pr_info("[%s]" fmt, __func__, ##args);	\
-} while (0)
-#define sd_emmc_err(fmt, args...) \
-	pr_warn("[%s] " fmt, __func__, ##args)
-
-#define emmc_dbg(dbg_level, fmt, args...) do {\
-	if (dbg_level & sd_emmc_debug)	\
-		pr_warn("[%s]" fmt, __func__, ##args);	\
-} while (0)
 
 #define SD_PARSE_U32_PROP_HEX(node, prop_name, prop, value) do { \
 	if (!of_property_read_u32(node, prop_name, &prop)) {\

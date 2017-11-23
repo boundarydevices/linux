@@ -363,7 +363,7 @@ int of_amlsd_init(struct amlsd_platform *pdata)
 			  1, MODULE_NAME);
 			CHECK_RET(ret);
 		} else {
-			sdio_err("request gpio_ro pin fail!\n");
+			pr_err("request gpio_ro pin fail!\n");
 		}
 	}
 #endif
@@ -391,7 +391,7 @@ void aml_devm_pinctrl_put(struct amlsd_host *host)
 		host->pinctrl = NULL;
 
 		host->pinctrl_name[0] = '\0';
-		/* sdio_err("Put Pinctrl\n"); */
+		/* pr_err("Put Pinctrl\n"); */
 	}
 }
 
@@ -409,19 +409,19 @@ static struct pinctrl * __must_check aml_devm_pinctrl_get_select(
 			return p;
 
 		host->pinctrl = p;
-		/* sdio_err("switch %s\n", name); */
+		/* pr_err("switch %s\n", name); */
 	}
 
 	s = pinctrl_lookup_state(p, name);
 	if (IS_ERR(s)) {
-		sdio_err("lookup %s fail\n", name);
+		pr_err("lookup %s fail\n", name);
 		devm_pinctrl_put(p);
 		return ERR_CAST(s);
 	}
 
 	ret = pinctrl_select_state(p, s);
 	if (ret < 0) {
-		sdio_err("select %s fail\n", name);
+		pr_err("select %s fail\n", name);
 		devm_pinctrl_put(p);
 		return ERR_PTR(ret);
 	}
@@ -479,7 +479,7 @@ void of_amlsd_xfer_pre(struct mmc_host *mmc)
 					sizeof(host->pinctrl_name))
 				>= sizeof(host->pinctrl_name)) {
 
-			sdio_err("Pinctrl name is too long!\n");
+			pr_err("Pinctrl name is too long!\n");
 			return;
 		}
 
@@ -499,7 +499,7 @@ void of_amlsd_xfer_pre(struct mmc_host *mmc)
 			mdelay(1);
 		}
 		if (i == 100)
-			sdhc_err("CMD%d: get pinctrl %s fail.\n",
+			pr_err("CMD%d: get pinctrl %s fail.\n",
 					host->opcode, pinctrl);
 	}
 }
@@ -514,7 +514,7 @@ int of_amlsd_ro(struct amlsd_platform *pdata)
 
 	if (pdata->gpio_ro)
 		ret = gpio_get_value(pdata->gpio_ro);
-	/* sdio_err("read-only?--%s\n", ret?"YES":"NO"); */
+	/* pr_err("read-only?--%s\n", ret?"YES":"NO"); */
 	return ret;
 }
 
@@ -525,7 +525,7 @@ void aml_snprint (char **pp, int *left_size,  const char *fmt, ...)
 	int size;
 
 	if (*left_size <= 1) {
-		sdhc_err("buf is full\n");
+		pr_err("buf is full\n");
 		return;
 	}
 
@@ -597,7 +597,7 @@ static int aml_is_card_insert(struct amlsd_platform *pdata)
 		else if (in_count > 100)
 			ret = 0;
 	}
-	sdio_err("card %s\n", ret?"OUT":"IN");
+	pr_err("card %s\n", ret?"OUT":"IN");
 	if (!pdata->gpio_cd_level)
 		ret = !ret; /* reverse, so ---- 0: no inserted  1: inserted */
 
@@ -1050,7 +1050,7 @@ int storage_flag;
 
 bool is_emmc_exist(struct amlsd_host *host) // is eMMC/tSD exist
 {
-	print_tmp("host->storage_flag=%d, POR_BOOT_VALUE=%d\n",
+	pr_info("host->storage_flag=%d, POR_BOOT_VALUE=%d\n",
 			host->storage_flag, POR_BOOT_VALUE);
 	if ((host->storage_flag == EMMC_BOOT_FLAG)
 			|| (host->storage_flag == SPI_EMMC_FLAG)

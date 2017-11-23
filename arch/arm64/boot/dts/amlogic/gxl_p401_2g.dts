@@ -97,7 +97,7 @@
 
 	sd_emmc_c: emmc@d0074000 {
 		status = "disabled";
-		compatible = "amlogic, meson-aml-mmc";
+		compatible = "amlogic, meson-mmc-gxl";
 		reg = <0x0 0xd0074000 0x0 0x2000>;
 		interrupts = <0 218 1>;
 		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
@@ -144,7 +144,7 @@
 
 	sd_emmc_b:sd@d0072000 {
 		status = "okay";
-		compatible = "amlogic, meson-aml-mmc";
+		compatible = "amlogic, meson-mmc-gxl";
 		reg = <0x0 0xd0072000 0x0 0x2000>;
 		interrupts = <0 217 1>;
 		pinctrl-names = "sd_all_pins",
@@ -208,7 +208,7 @@
 
 	sd_emmc_a:sdio@d0070000 {
 		status = "okay";
-		compatible = "amlogic, meson-aml-mmc";
+		compatible = "amlogic, meson-mmc-gxl";
 		reg = <0x0 0xd0070000 0x0 0x2000>;
 		interrupts = <0 216 4>;
 		pinctrl-names = "sdio_clk_cmd_pins", "sdio_all_pins";

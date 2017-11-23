@@ -69,27 +69,27 @@ static void  __attribute__((unused))sdhc_debug_status(struct amlsd_host *host)
 	switch (sdhc_debug_flag) {
 	case 1:
 		host->status = HOST_TX_FIFO_EMPTY;
-		sdhc_err("Force host->status:%d here\n", host->status);
+		pr_err("Force host->status:%d here\n", host->status);
 		break;
 	case 2:
 		host->status = HOST_RX_FIFO_FULL;
-		sdhc_err("Force host->status:%d here\n", host->status);
+		pr_err("Force host->status:%d here\n", host->status);
 		break;
 	case 3:
 		host->status = HOST_RSP_CRC_ERR;
-		sdhc_err("Force host->status:%d here\n", host->status);
+		pr_err("Force host->status:%d here\n", host->status);
 		break;
 	case 4:
 		host->status = HOST_DAT_CRC_ERR;
-		sdhc_err("Force host->status:%d here\n", host->status);
+		pr_err("Force host->status:%d here\n", host->status);
 		break;
 	case 5:
 		host->status = HOST_DAT_TIMEOUT_ERR;
-		sdhc_err("Force host->status:%d here\n", host->status);
+		pr_err("Force host->status:%d here\n", host->status);
 		break;
 	case 6:
 		host->status = HOST_RSP_TIMEOUT_ERR;
-		sdhc_err("Force host->status:%d here\n", host->status);
+		pr_err("Force host->status:%d here\n", host->status);
 		break;
 	default:
 		break;
@@ -131,15 +131,14 @@ int aml_buf_verify(int *buf, int blocks, int lba)
 	int i, j;
 	int lba_bak = lba;
 
-	sdhc_err("Enter\n");
+	pr_err("Enter\n");
 	for (i = 0; i < blocks; i++) {
 		for (j = 0; j < 128; j++) {
 			if (buf[j] != (lba*512 + j)) {
-				sdhc_err(
-						"buf error, lba_bak=%#x,lba=%#x,offset=%#x,blocks=%d\n",
+				pr_err("buf error, lba_bak=%#x,lba=%#x,offset=%#x,blocks=%d\n",
 						lba_bak, lba, j, blocks);
 
-				sdhc_err("buf[j]=%#x, target=%#x\n",
+				pr_err("buf[j]=%#x, target=%#x\n",
 						buf[j], (lba*512 + j));
 
 				block_size = (lba - lba_bak)*512;
@@ -230,16 +229,14 @@ static int aml_sdhc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 				if (!memcmp(blk_pattern, blk_test, blksz))
 					nmatch++;
 				else {
-					sdhc_dbg(AMLSD_DBG_TUNING,
-						"Tuning pattern mismatch: rx_phase=%d nmatch=%d\n",
-						rx_phase, nmatch);
+					pr_debug("Tuning pattern mismatch: rx_phase=%d nmatch=%d\n",
+							rx_phase, nmatch);
 				}
 			} else {
-				sdhc_dbg(AMLSD_DBG_TUNING, "Tuning transfer error:");
-				sdhc_dbg(AMLSD_DBG_TUNING,
-					"rx_phase=%d nmatch=%d cmd.error=%d data.error=%d\n",
-					rx_phase, nmatch,
-					cmd.error, data.error);
+				pr_debug("Tuning transfer error:");
+				pr_debug("rx_phase=%d nmatch=%d cmd.error=%d data.error=%d\n",
+						rx_phase, nmatch,
+						cmd.error, data.error);
 			}
 		}
 
@@ -276,19 +273,18 @@ static int aml_sdhc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 			}
 		}
 	}
-	sdhc_dbg(AMLSD_DBG_TUNING, "RX Tuning Result\n");
+	pr_debug("RX Tuning Result\n");
 	for (n = 0; n <= clkc->clk_div; n++) {
 		if (n < ARRAY_SIZE(rx_tuning_result))
-			sdhc_dbg(AMLSD_DBG_TUNING,
-					"RX[%d]=%d\n", n, rx_tuning_result[n]);
+			pr_debug("RX[%d]=%d\n", n, rx_tuning_result[n]);
 	}
 
-	sdhc_dbg(AMLSD_DBG_TUNING, "curr_win_start=%d\n", curr_win_start);
-	sdhc_dbg(AMLSD_DBG_TUNING, "curr_win_size=%d\n", curr_win_size);
-	sdhc_dbg(AMLSD_DBG_TUNING, "best_win_start=%d\n", best_win_start);
-	sdhc_dbg(AMLSD_DBG_TUNING, "best_win_size=%d\n", best_win_size);
-	sdhc_dbg(AMLSD_DBG_TUNING, "wrap_win_start=%d\n", wrap_win_start);
-	sdhc_dbg(AMLSD_DBG_TUNING, "wrap_win_size=%d\n", wrap_win_size);
+	pr_debug("curr_win_start=%d\n", curr_win_start);
+	pr_debug("curr_win_size=%d\n", curr_win_size);
+	pr_debug("best_win_start=%d\n", best_win_start);
+	pr_debug("best_win_size=%d\n", best_win_size);
+	pr_debug("wrap_win_start=%d\n", wrap_win_start);
+	pr_debug("wrap_win_size=%d\n", wrap_win_size);
 	if (curr_win_start >= 0) {
 		if (best_win_start < 0) {
 			best_win_start = curr_win_start;
@@ -309,7 +305,7 @@ static int aml_sdhc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 	}
 
 	if (best_win_start < 0) {
-		sdhc_err("Tuning failed to find a valid window, using default rx phase\n");
+		pr_err("Tuning failed to find a valid window, using default rx phase\n");
 		ret = -EIO;
 		writel(vclk2_bak, host->base + SDHC_CLK2);
 		pdata->clk2 = vclk2_bak;
@@ -328,16 +324,15 @@ static int aml_sdhc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 		pdata->clk2 = vclk2;
 		pdata->tune_phase = vclk2;
 
-		sdhc_dbg(AMLSD_DBG_TUNING,
-				"Tuning result: rx_phase=%d\n", rx_phase);
+		pr_debug("Tuning result: rx_phase=%d\n", rx_phase);
 	}
-	sdhc_dbg(AMLSD_DBG_TUNING, "Final Result\n");
-	sdhc_dbg(AMLSD_DBG_TUNING, "curr_win_start=%d\n", curr_win_start);
-	sdhc_dbg(AMLSD_DBG_TUNING, "curr_win_size=%d\n", curr_win_size);
-	sdhc_dbg(AMLSD_DBG_TUNING, "best_win_start=%d\n", best_win_start);
-	sdhc_dbg(AMLSD_DBG_TUNING, "best_win_size=%d\n", best_win_size);
-	sdhc_dbg(AMLSD_DBG_TUNING, "wrap_win_start=%d\n", wrap_win_start);
-	sdhc_dbg(AMLSD_DBG_TUNING, "wrap_win_size=%d\n", wrap_win_size);
+	pr_debug("Final Result\n");
+	pr_debug("curr_win_start=%d\n", curr_win_start);
+	pr_debug("curr_win_size=%d\n", curr_win_size);
+	pr_debug("best_win_start=%d\n", best_win_start);
+	pr_debug("best_win_size=%d\n", best_win_size);
+	pr_debug("wrap_win_start=%d\n", wrap_win_start);
+	pr_debug("wrap_win_size=%d\n", wrap_win_size);
 	kfree(blk_test);
 
 	/* do not dynamical tuning for eMMC */
@@ -364,7 +359,7 @@ static int aml_sdhc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		tuning_data.blk_pattern = tuning_blk_pattern_4bit;
 		tuning_data.blksz = sizeof(tuning_blk_pattern_4bit);
 	} else {
-		sdhc_err("Undefined command(%d) for tuning\n", opcode);
+		pr_err("Undefined command(%d) for tuning\n", opcode);
 		return -EINVAL;
 	}
 
@@ -510,7 +505,7 @@ int aml_sdhc_wait_ready(struct amlsd_host *host, u32 timeout)
 		udelay(1);
 	}
 
-	sdhc_err("SDHC_STAT=%#x, sdhc controller is busy.\n", vstat);
+	pr_err("SDHC_STAT=%#x, sdhc controller is busy.\n", vstat);
 	/* aml_sdhc_print_reg(host); */
 	aml_sdhc_host_reset(host);
 	/* WARN_ON(1); */
@@ -535,16 +530,14 @@ int aml_sdhc_read_response(struct mmc_host *mmc, struct mmc_command *cmd)
 			pdma->pio_rdresp = i;
 			writel(vpdma, host->base+SDHC_PDMA);
 			presp[j] = readl(host->base+SDHC_ARGU);
-			sdhc_dbg(AMLSD_DBG_RESP,
-					"Cmd %d ,Resp[%d] 0x%x\n",
+			pr_debug("Cmd %d ,Resp[%d] 0x%x\n",
 					cmd->opcode, j, presp[j]);
 		}
 	} else { /*48 bit*/
 		pdma->pio_rdresp = i;
 		writel(vpdma, host->base+SDHC_PDMA);
 		presp[0] = readl(host->base+SDHC_ARGU);
-		sdhc_dbg(AMLSD_DBG_RESP,
-				"Cmd %d ,Resp 0x%x\n", cmd->opcode, presp[0]);
+		pr_debug("Cmd %d ,Resp 0x%x\n", cmd->opcode, presp[0]);
 	}
 	return 0;
 }
@@ -620,7 +613,7 @@ void aml_sdhc_prepare_dma(struct amlsd_host *host, struct mmc_request *mrq)
 	if (data->flags & MMC_DATA_WRITE) {
 		aml_sg_copy_buffer(data->sg, data->sg_len,
 				host->bn_buf, data->blksz*data->blocks, 1);
-		sdhc_dbg(AMLSD_DBG_WR_DATA, "W Cmd %d, %x-%x-%x-%x\n",
+		pr_debug("W Cmd %d, %x-%x-%x-%x\n",
 				mrq->cmd->opcode,
 				host->bn_buf[0], host->bn_buf[1],
 				host->bn_buf[2], host->bn_buf[3]);
@@ -679,8 +672,7 @@ void aml_sdhc_start_cmd(struct amlsd_platform *pdata, struct mmc_request *mrq)
 	ictl.resp_timeout = 1; /* try */
 	ictl.resp_err_crc = 1; /* try */
 
-	sdhc_dbg(AMLSD_DBG_REQ,
-			"%s %d %s: cmd:%d, flags:0x%x, args:0x%x\n",
+	pr_debug("%s %d %s: cmd:%d, flags:0x%x, args:0x%x\n",
 			__func__, __LINE__,
 			pdata->pinname, mrq->cmd->opcode,
 			mrq->cmd->flags, mrq->cmd->arg);
@@ -700,13 +692,13 @@ void aml_sdhc_start_cmd(struct amlsd_platform *pdata, struct mmc_request *mrq)
 		vstat = readl(host->base + SDHC_STAT);
 		if (stat->txfifo_cnt || stat->rxfifo_cnt) {
 #ifdef CONFIG_MMC_AML_DEBUG
-			sdhc_err("cmd%d: txfifo_cnt:%d, rxfifo_cnt:%d\n",
+			pr_err("cmd%d: txfifo_cnt:%d, rxfifo_cnt:%d\n",
 					mrq->cmd->opcode, stat->txfifo_cnt,
 					stat->rxfifo_cnt);
 #endif
 			if (aml_sdhc_wait_ready(host, STAT_POLL_TIMEOUT)) {
 				/*Wait command busy*/
-				sdhc_err("aml_sdhc_wait_ready error before start cmd fifo\n");
+				pr_err("aml_sdhc_wait_ready error before start cmd fifo\n");
 			}
 			vsrst = readl(host->base + SDHC_SRST);
 			srst->rxfifo = 1;
@@ -718,7 +710,7 @@ void aml_sdhc_start_cmd(struct amlsd_platform *pdata, struct mmc_request *mrq)
 		}
 		vstat = readl(host->base + SDHC_STAT);
 		if (stat->txfifo_cnt || stat->rxfifo_cnt) {
-			sdhc_err("FAIL to clear FIFO, cmd%d: txfifo_cnt:%d, rxfifo_cnt:%d\n",
+			pr_err("FAIL to clear FIFO, cmd%d: txfifo_cnt:%d, rxfifo_cnt:%d\n",
 				mrq->cmd->opcode,
 				stat->txfifo_cnt, stat->rxfifo_cnt);
 		}
@@ -779,7 +771,7 @@ void aml_sdhc_start_cmd(struct amlsd_platform *pdata, struct mmc_request *mrq)
 	writel(host->bn_dma_buf, host->base+SDHC_ADDR);
 	if (aml_sdhc_wait_ready(host, STAT_POLL_TIMEOUT)) {
 		/*Wait command busy*/
-		sdhc_err("aml_sdhc_wait_ready error before start cmd\n");
+		pr_err("aml_sdhc_wait_ready error before start cmd\n");
 	}
 	if (mrq->data)
 		aml_sdhc_set_pdma(pdata, mrq);/*Start dma transfer*/
@@ -796,19 +788,19 @@ void aml_sdhc_start_cmd(struct amlsd_platform *pdata, struct mmc_request *mrq)
 		vesta = readl(host->base + SDHC_ESTA);
 		if (vesta == 0) {
 #ifdef CONFIG_MMC_AML_DEBUG
-			sdhc_err("ok: %s: cmd%d, SDHC_ESTA=%#x, i=%d\n",
+			pr_err("ok: %s: cmd%d, SDHC_ESTA=%#x, i=%d\n",
 					mmc_hostname(host->mmc),
 					mrq->cmd->opcode, vesta, i);
 #endif
 			break;
 		}
 		if (i > 50) {
-			sdhc_err("udelay\n");
+			pr_err("udelay\n");
 			udelay(1);
 		}
 	}
 	if (i >= loop_limit) {
-		sdhc_err("Warning: %s: cmd%d, SDHC_ESTA=%#x\n",
+		pr_err("Warning: %s: cmd%d, SDHC_ESTA=%#x\n",
 				mmc_hostname(host->mmc),
 				mrq->cmd->opcode, vesta);
 	}
@@ -818,7 +810,7 @@ void aml_sdhc_start_cmd(struct amlsd_platform *pdata, struct mmc_request *mrq)
 			vstat = readl(host->base + SDHC_STAT);
 			if (stat->txfifo_cnt != 0) {
 #ifdef CONFIG_MMC_AML_DEBUG
-				sdhc_err("OK: %s: cmd%d, txfifo_cnt=%d, i=%d\n",
+				pr_err("OK: %s: cmd%d, txfifo_cnt=%d, i=%d\n",
 						mmc_hostname(host->mmc),
 						mrq->cmd->opcode,
 						stat->txfifo_cnt, i);
@@ -828,7 +820,7 @@ void aml_sdhc_start_cmd(struct amlsd_platform *pdata, struct mmc_request *mrq)
 			udelay(1);
 		}
 		if (i >= loop_limit) {
-			sdhc_err("Warning: %s: cmd%d, txfifo_cnt=%d\n",
+			pr_err("Warning: %s: cmd%d, txfifo_cnt=%d\n",
 					mmc_hostname(host->mmc),
 					mrq->cmd->opcode, stat->txfifo_cnt);
 		}
@@ -856,10 +848,10 @@ void aml_sdhc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 	aml_dbg_verify_pull_up(pdata);
 
 	if (0) {
-		sdhc_err("%s: cmd%d, start sdhc reg:\n",
+		pr_err("%s: cmd%d, start sdhc reg:\n",
 				mmc_hostname(host->mmc), mrq->cmd->opcode);
 		aml_sdhc_print_reg_(host->reg_buf);
-		sdhc_err("done reg:\n");
+		pr_err("done reg:\n");
 		aml_sdhc_print_reg(host);
 	}
 #endif
@@ -872,7 +864,7 @@ void aml_sdhc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 	writel(SDHC_ISTA_W1C_ALL, host->base+SDHC_ISTA);
 	if (aml_sdhc_wait_ready(host, STAT_POLL_TIMEOUT)) {
 		/*Wait command busy*/
-		sdhc_err("aml_sdhc_wait_ready request done\n");
+		pr_err("aml_sdhc_wait_ready request done\n");
 	}
 	aml_sdhc_clk_switch_off(host);
 	mmc_request_done(host->mmc, mrq);
@@ -995,19 +987,18 @@ static void aml_sdhc_print_err(struct amlsd_host *host)
 		}
 	}
 	aml_snprint(&p, &left_size, "iSTA=%#x, STAT=%#x", vista, vstat);
-	sdhc_err("%s\n", host->msg_buf);
+	pr_err("%s\n", host->msg_buf);
 
 	tmp_reg = aml_read_cbus(HHI_GCLK_MPEG0);
 	if (!(tmp_reg & 0x00004000)) {
-		sdhc_err(
-				"Error: SDHC is gated clock,HHI_GCLK_MPEG0=%#x, bit14 is 0\n",
+		pr_err("Error: SDHC is gated clock,HHI_GCLK_MPEG0=%#x, bit14 is 0\n",
 				tmp_reg);
 	}
 
 #ifdef CONFIG_MMC_AML_DEBUG
 	aml_dbg_print_pinmux();
 	if (xfer_step == XFER_TIMER_TIMEOUT) { /* by aml_sdhc_timeout() */
-		sdhc_err("old sdhc reg:\n");
+		pr_err("old sdhc reg:\n");
 		aml_sdhc_print_reg_(host->reg_buf);
 	}
 	aml_sdhc_print_reg(host);
@@ -1033,7 +1024,7 @@ static void aml_sdhc_timeout(struct work_struct *work)
 	spin_lock_irqsave(&host->mrq_lock, flags);
 	if (host->xfer_step == XFER_FINISHED) {
 		spin_unlock_irqrestore(&host->mrq_lock, flags);
-		sdhc_err("timeout after xfer finished\n");
+		pr_err("timeout after xfer finished\n");
 		wake_up_interruptible(&mmc_req_wait_q);
 		wait_req_flag = 0;
 		return;
@@ -1049,8 +1040,7 @@ static void aml_sdhc_timeout(struct work_struct *work)
 			goto timeout_handle;
 
 		spin_unlock_irqrestore(&host->mrq_lock, flags);
-		sdhc_err(
-				"%s:cmd%d, xfer_step=%d,time_start_cnt=%ldmS,timeout_cnt=%d\n",
+		pr_err("%s:cmd%d, xfer_step=%d,time_start_cnt=%ldmS,timeout_cnt=%d\n",
 				mmc_hostname(host->mmc),
 				host->mrq->cmd->opcode, host->xfer_step,
 				time_start_cnt, timeout_cnt);
@@ -1080,14 +1070,14 @@ timeout_handle:
 
 	if (sdhc_error_flag && (mrq->cmd->retries == 0)) {
 		sdhc_error_flag |= (1<<30);
-		sdhc_err("Command retried failed\n");
+		pr_err("Command retried failed\n");
 	}
 
 	aml_sdhc_status(host);
 
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
 	aml_sdhc_read_response(host->mmc, mrq->cmd);
-	sdhc_err("time_start_cnt:%ld\n", time_start_cnt);
+	pr_err("time_start_cnt:%ld\n", time_start_cnt);
 
 	aml_sdhc_print_err(host);
 
@@ -1143,7 +1133,7 @@ void aml_sdhc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			wait_req_flag == 0, WAIT_UNTIL_REQ_DONE);
 	if (status == 0) {
 		mmc_request_done(mmc, mrq);
-		sdhc_err("SDHC CMD conflict!\n");
+		pr_err("SDHC CMD conflict!\n");
 		return;
 	} else if (status < 0)
 		return;
@@ -1178,7 +1168,7 @@ void aml_sdhc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 				wait_req_flag == 0, WAIT_UNTIL_REQ_DONE);
 		if (status == 0) {
 			mmc_request_done(mmc, mrq);
-			sdhc_err(" SDHC CMD conflict in tuning\n");
+			pr_err(" SDHC CMD conflict in tuning\n");
 			return;
 		} else if (status < 0)
 			return;
@@ -1187,14 +1177,14 @@ void aml_sdhc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	aml_sdhc_disable_imask(host, SDHC_ICTL_ALL);
 
-	sdhc_dbg(AMLSD_DBG_REQ, "%s: starting CMD%u arg %08x flags %08x\n",
+	pr_debug("%s: starting CMD%u arg %08x flags %08x\n",
 		mmc_hostname(mmc), mrq->cmd->opcode,
 		mrq->cmd->arg, mrq->cmd->flags);
 
 #ifdef CONFIG_AML_MMC_DEBUG_FORCE_SINGLE_BLOCK_RW
 	if ((mrq->cmd->opcode == 18) ||
 			(mrq->cmd->opcode == 25)) { /* for debug */
-		sdhc_err("cmd%d\n", mrq->cmd->opcode);
+		pr_err("cmd%d\n", mrq->cmd->opcode);
 	}
 #endif
 
@@ -1218,8 +1208,7 @@ void aml_sdhc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		/*Copy data to dma buffer for write request*/
 		aml_sdhc_prepare_dma(host, mrq);
 
-		sdhc_dbg(AMLSD_DBG_REQ,
-			"%s: blksz %d blocks %d flags %08x tsac %d ms nsac %d\n",
+		pr_debug("%s: blksz %d blocks %d flags %08x tsac %d ms nsac %d\n",
 			mmc_hostname(mmc), mrq->data->blksz,
 			mrq->data->blocks, mrq->data->flags,
 			mrq->data->timeout_ns / 1000000,
@@ -1250,7 +1239,7 @@ void aml_sdhc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
 	if (host->xfer_step != XFER_FINISHED && host->xfer_step != XFER_INIT)
-		sdhc_err("host->xfer_step %d\n", host->xfer_step);
+		pr_err("host->xfer_step %d\n", host->xfer_step);
 
 	/*host->mrq, used in irq & tasklet*/
 	host->mrq = mrq;
@@ -1275,7 +1264,7 @@ static int aml_sdhc_status(struct amlsd_host *host)
 	struct mmc_request *mrq = host->mrq;
 
 	if (!mrq) {
-		sdhc_err("NULL mrq\n");
+		pr_err("NULL mrq\n");
 		return ret;
 	}
 
@@ -1345,11 +1334,10 @@ static irqreturn_t aml_sdhc_irq(int irq, void *dev_id)
 	mmc = host->mmc;
 	pdata = mmc_priv(mmc);
 
-	sdhc_dbg(AMLSD_DBG_IRQ,
-			"%s %d %s  occurred, vstat:0x%x\n",
+	pr_debug("%s %d %s  occurred, vstat:0x%x\n",
 			__func__, __LINE__, pdata->pinname, vista);
 	if (!mrq) {
-		sdhc_err("NULL mrq in aml_sdhc_irq step %d\n", host->xfer_step);
+		pr_err("NULL mrq in aml_sdhc_irq step %d\n", host->xfer_step);
 		if (host->xfer_step == XFER_FINISHED ||
 				host->xfer_step == XFER_TIMER_TIMEOUT){
 			spin_unlock_irqrestore(&host->mrq_lock, flags);
@@ -1364,7 +1352,7 @@ static irqreturn_t aml_sdhc_irq(int irq, void *dev_id)
 	}
 
 	if ((host->xfer_step != XFER_AFTER_START) && (!host->cmd_is_stop)) {
-		sdhc_err("host->xfer_step=%d\n", host->xfer_step);
+		pr_err("host->xfer_step=%d\n", host->xfer_step);
 		exception_flag = true;
 	}
 
@@ -1376,7 +1364,7 @@ static irqreturn_t aml_sdhc_irq(int irq, void *dev_id)
 	if (victl & vista) {
 		aml_sdhc_status(host);
 		if (exception_flag)
-			sdhc_err("victl=%#x, vista=%#x,status=%#x\n",
+			pr_err("victl=%#x, vista=%#x,status=%#x\n",
 					victl, vista, host->status);
 		switch (host->status) {
 		case HOST_RX_FIFO_FULL:
@@ -1402,8 +1390,7 @@ static irqreturn_t aml_sdhc_irq(int irq, void *dev_id)
 			writel(vista, host->base+SDHC_ISTA);
 			break;
 		default:
-			sdhc_err(
-				"Unknown irq status, victl=%#x, vista=%#x,status=%#x\n",
+			pr_err("Unknown irq status, victl=%#x, vista=%#x,status=%#x\n",
 				victl, vista, host->status);
 			break;
 		}
@@ -1413,8 +1400,7 @@ static irqreturn_t aml_sdhc_irq(int irq, void *dev_id)
 
 	}
 	host->xfer_step = XFER_IRQ_UNKNOWN_IRQ;
-	sdhc_err(
-			"%s Unknown Irq Ictl 0x%x, Ista 0x%x, cmd %d,xfer %d bytes\n",
+	pr_err("%s Unknown Irq Ictl 0x%x, Ista 0x%x, cmd %d,xfer %d bytes\n",
 			pdata->pinname, victl, vista, mrq->cmd->opcode,
 			mrq->data?mrq->data->blksz*mrq->data->blocks:0);
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
@@ -1435,7 +1421,7 @@ static void aml_sdhc_not_timeout_err_handler (struct amlsd_host *host)
 {
 	if (aml_sdhc_wait_ready(host, (STAT_POLL_TIMEOUT<<2))) {
 		/*Wait command busy*/
-		sdhc_err("aml_sdhc_wait_ready error not timeout error handler\n");
+		pr_err("aml_sdhc_wait_ready error not timeout error handler\n");
 	}
 	aml_sdhc_com_err_handler(host);
 }
@@ -1490,8 +1476,7 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 	status = host->status;
 
 	if ((xfer_step == XFER_FINISHED) || (xfer_step == XFER_TIMER_TIMEOUT)) {
-		sdhc_err(
-				"Warning: xfer_step=%d,host->status=%d\n",
+		pr_err("Warning: xfer_step=%d,host->status=%d\n",
 				xfer_step, status);
 		spin_unlock_irqrestore(&host->mrq_lock, flags);
 		return IRQ_HANDLED;
@@ -1501,7 +1486,7 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 			&& (host->xfer_step != XFER_IRQ_TASKLET_BUSY));
 
 	if (!mrq) {
-		sdhc_err("!mrq xfer_step %d\n", xfer_step);
+		pr_err("!mrq xfer_step %d\n", xfer_step);
 		if (xfer_step == XFER_FINISHED ||
 				xfer_step == XFER_TIMER_TIMEOUT){
 			spin_unlock_irqrestore(&host->mrq_lock, flags);
@@ -1514,14 +1499,14 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 		int delay = 1;
 
 		if (mrq->cmd->error)
-			sdhc_err("cmd12 error %d\n", mrq->cmd->error);
+			pr_err("cmd12 error %d\n", mrq->cmd->error);
 		host->cmd_is_stop = 0;
 		mrq->cmd->error = sdhc_err_bak;
 		spin_unlock_irqrestore(&host->mrq_lock, flags);
 		if (delayed_work_pending(&host->timeout))
 			cancel_delayed_work_sync(&host->timeout);
 		msleep(delay);
-		sdhc_err("delay %dms\n", delay);
+		pr_err("delay %dms\n", delay);
 		aml_sdhc_request_done(host->mmc, host->mrq);
 		return IRQ_HANDLED;
 	}
@@ -1550,13 +1535,13 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 					if (((esta >> 11) & 0x7) == 0)
 						break;
 					else if (i == 10)
-						sdhc_err("SDHC_ESTA=0x%x\n",
+						pr_err("SDHC_ESTA=0x%x\n",
 								esta);
 				}
 
 				if (i == STAT_POLL_TIMEOUT) { /* error */
-					sdhc_err("Warning:DMA state is wrong!");
-					sdhc_err(" SDHC_ESTA=0x%x\n", esta);
+					pr_err("Warning:DMA state is wrong!");
+					pr_err(" SDHC_ESTA=0x%x\n", esta);
 				}
 
 				pdma->rxfifo_manual_flush |= 0x02;
@@ -1573,12 +1558,12 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 					if (dmc_sts)
 						break;
 					else if (i == 10)
-						sdhc_err("SDHC_ESTA=0x%x\n",
+						pr_err("SDHC_ESTA=0x%x\n",
 								esta);
 				}
 
 				if (i == STAT_POLL_TIMEOUT) /* error */
-					sdhc_err(
+					pr_err(
 							"DMA wrong!SDHC_ESTA=0x%x dmc_sts:%d\n",
 							esta, dmc_sts);
 #endif
@@ -1586,10 +1571,10 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 			aml_sg_copy_buffer(mrq->data->sg,
 					mrq->data->sg_len,
 					host->bn_buf, xfer_bytes, 0);
-			sdhc_dbg(AMLSD_DBG_RD_DATA, "R Cmd%d, arg %x, size=%d\n",
+			pr_debug("R Cmd%d, arg %x, size=%d\n",
 					mrq->cmd->opcode,
 					mrq->cmd->arg, xfer_bytes);
-			sdhc_dbg(AMLSD_DBG_RD_DATA, "R Cmd %d, %x-%x-%x-%x-%x-%x-%x-%x\n",
+			pr_debug("R Cmd %d, %x-%x-%x-%x-%x-%x-%x-%x\n",
 					host->mrq->cmd->opcode,
 					host->bn_buf[0], host->bn_buf[1],
 					host->bn_buf[2], host->bn_buf[3],
@@ -1600,7 +1585,7 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 
 		vstat = readl(host->base + SDHC_STAT);
 		if (stat->rxfifo_cnt) {
-			sdhc_err("cmd%d, rxfifo_cnt=%d\n",
+			pr_err("cmd%d, rxfifo_cnt=%d\n",
 					mrq->cmd->opcode, stat->rxfifo_cnt);
 		}
 
@@ -1612,7 +1597,7 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 		/* do not check device ready status here */
 		if (aml_sdhc_wait_ready(host,
 				(STAT_POLL_TIMEOUT<<2))) { /*Wait command busy*/
-			sdhc_err("aml_sdhc_wait_ready error after data thread\n");
+			pr_err("aml_sdhc_wait_ready error after data thread\n");
 		}
 		aml_sdhc_read_response(host->mmc, mrq->cmd);
 		aml_sdhc_request_done(host->mmc, mrq);
@@ -1628,12 +1613,12 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 			spin_unlock_irqrestore(&host->mrq_lock, flags);
 			if (aml_sdhc_wait_ready(host, STAT_POLL_TIMEOUT)) {
 				/*Wait command busy*/
-				sdhc_err("aml_sdhc_wait_ready error cmd thread\n");
+				pr_err("aml_sdhc_wait_ready error cmd thread\n");
 			}
 			aml_sdhc_read_response(host->mmc, host->mrq->cmd);
 			aml_sdhc_request_done(host->mmc, mrq);
 		} else {
-			sdhc_err(
+			pr_err(
 				"xfer_step is HOST_TASKLET_CMD, while host->mrq->data is not NULL\n");
 		}
 		break;
@@ -1645,7 +1630,7 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 			cancel_delayed_work_sync(&host->timeout);
 		if (aml_sdhc_wait_ready(host,
 				(STAT_POLL_TIMEOUT<<2))) { /*Wait command busy*/
-			sdhc_err("aml_sdhc_wait_ready error fifo or timeout thread\n");
+			pr_err("aml_sdhc_wait_ready error fifo or timeout thread\n");
 		}
 		aml_sdhc_read_response(host->mmc, host->mrq->cmd);
 		aml_sdhc_print_err(host);
@@ -1675,7 +1660,7 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 
 		if (sdhc_error_flag && (mrq->cmd->retries == 0)) {
 			sdhc_error_flag |= (1<<30);
-			sdhc_err(
+			pr_err(
 				"Command retried failed line:%d, status:%d\n",
 				__LINE__, status);
 		}
@@ -1700,7 +1685,7 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 					!= MMC_SEND_TUNING_BLOCK)
 				&& (host->mrq->cmd->opcode
 					!= MMC_SEND_TUNING_BLOCK_HS200)) {
-			sdhc_err("host->mmc->ios.clock:%d\n",
+			pr_err("host->mmc->ios.clock:%d\n",
 					host->mmc->ios.clock);
 			while (host->mmc->ios.clock <= clock[cnt]) {
 				cnt++;
@@ -1731,13 +1716,13 @@ irqreturn_t aml_sdhc_data_thread(int irq, void *data)
 		}
 		if (sdhc_error_flag && (mrq->cmd->retries == 0)) {
 			sdhc_error_flag |= (1<<30);
-			/* sdhc_err("Command retried failed\n"); */
+			/* pr_err("Command retried failed\n"); */
 		}
 
 		aml_sdhc_not_timeout_err_handler(host);
 		break;
 	default:
-		sdhc_err("BUG xfer_step=%d, host->status=%d\n",
+		pr_err("BUG xfer_step=%d, host->status=%d\n",
 			xfer_step, status);
 		aml_sdhc_print_err(host);
 		break;
@@ -1752,7 +1737,7 @@ static void aml_sdhc_clk_switch_off(struct amlsd_host *host)
 	struct sdhc_clkc *clkc = (struct sdhc_clkc *)&vclkc;
 
 	if (host->is_gated) {
-		/*sdhc_err("direct return\n");*/
+		/*pr_err("direct return\n");*/
 		return;
 	}
 
@@ -1765,7 +1750,7 @@ static void aml_sdhc_clk_switch_off(struct amlsd_host *host)
 	writel(vclkc, host->base+SDHC_CLKC);
 
 	host->is_gated = true;
-	/*sdhc_err("clock off\n");*/
+	/*pr_err("clock off\n");*/
 }
 
 static void aml_sdhc_emmc_clock_switch_on(struct amlsd_platform *pdata)
@@ -1820,7 +1805,7 @@ static void aml_sdhc_clk_switch(struct amlsd_platform *pdata,
 
 	if (!host->is_gated && (clkc->clk_div == clk_div)
 			&& (clkc->clk_src_sel == clk_src_sel)) {
-		/*sdhc_err("direct return\n");*/
+		/*pr_err("direct return\n");*/
 		return; /* if the same, return directly */
 	}
 
@@ -1867,7 +1852,7 @@ static void aml_sdhc_set_clk_rate(struct mmc_host *mmc, unsigned int clk_ios)
 		clk_src_div = 0;
 		break;
 	default:
-		sdhc_err("Clock source error: %d\n", clk_src_sel);
+		pr_err("Clock source error: %d\n", clk_src_sel);
 		return; /* clk_src_div = -1; */
 	}
 
@@ -1923,13 +1908,13 @@ static void aml_sdhc_set_clk_rate(struct mmc_host *mmc, unsigned int clk_ios)
 	/* udelay(100); */
 
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
-	sdhc_dbg(AMLSD_DBG_IOS, "Clk IOS %d, Clk Src %d, Host Max Clk %d,",
+	pr_debug("Clk IOS %d, Clk Src %d, Host Max Clk %d,",
 			clk_ios, clk_rate, pdata->f_max);
-	sdhc_dbg(AMLSD_DBG_IOS, " vclkc=%#x, clk2=%#x, actual_clock=%d,",
+	pr_debug(" vclkc=%#x, clk2=%#x, actual_clock=%d,",
 			readl(host->base+SDHC_CLKC),
 			readl(host->base+SDHC_CLK2),
 			pdata->mmc->actual_clock);
-	sdhc_dbg(AMLSD_DBG_IOS, " rx_clk_phase=%d, sd_clk_phase=%d\n",
+	pr_debug(" rx_clk_phase=%d, sd_clk_phase=%d\n",
 			clk2->rx_clk_phase, clk2->sd_clk_phase);
 }
 
@@ -1952,14 +1937,14 @@ static void aml_sdhc_set_bus_width(struct amlsd_platform *pdata, u32 busw_ios)
 		width = 2;
 		break;
 	default:
-		sdhc_err("Error Data Bus\n");
+		pr_err("Error Data Bus\n");
 		break;
 	}
 
 	ctrl->dat_type = width;
 	pdata->width = width;
 	writel(vctrl, host->base+SDHC_CTRL);
-	sdhc_dbg(AMLSD_DBG_COMMON, "Bus Width Ios %d\n", busw_ios);
+	pr_debug("Bus Width Ios %d\n", busw_ios);
 }
 
 /*call by mmc, power on, power off ...*/
@@ -2041,7 +2026,7 @@ static int aml_sdhc_card_busy(struct mmc_host *mmc)
 	struct sdhc_stat *stat = (struct sdhc_stat *)&vstat;
 
 	vstat = readl(host->base + SDHC_STAT);
-	sdhc_dbg(AMLSD_DBG_COMMON, "dat[0:3]=%#x\n", stat->dat3_0);
+	pr_debug("dat[0:3]=%#x\n", stat->dat3_0);
 
 	/* return (stat->dat3_0 == 0); */
 	if (stat->dat3_0 == 0)
@@ -2168,14 +2153,14 @@ static struct amlsd_host *aml_sdhc_init_host(struct amlsd_host *host)
 	if (request_threaded_irq(host->irq, aml_sdhc_irq,
 				aml_sdhc_data_thread,
 				IRQF_SHARED, "sdhc", (void *)host)) {
-		sdhc_err("Request SDHC Irq Error!\n");
+		pr_err("Request SDHC Irq Error!\n");
 		return NULL;
 	}
 
 	host->bn_buf = dma_alloc_coherent(NULL, SDHC_BOUNCE_REQ_SIZE,
 			&host->bn_dma_buf, GFP_KERNEL);
 	if (host->bn_buf == NULL) {
-		sdhc_err("Dma alloc Fail!\n");
+		pr_err("Dma alloc Fail!\n");
 		return NULL;
 	}
 	INIT_DELAYED_WORK(&host->timeout, aml_sdhc_timeout);
@@ -2199,11 +2184,11 @@ static struct amlsd_host *aml_sdhc_init_host(struct amlsd_host *host)
 
 #ifdef CONFIG_MMC_AML_DEBUG
 	host->req_cnt = 0;
-	sdhc_err("CONFIG_MMC_AML_DEBUG is on!\n");
+	pr_err("CONFIG_MMC_AML_DEBUG is on!\n");
 #endif
 
 #ifdef CONFIG_AML_MMC_DEBUG_FORCE_SINGLE_BLOCK_RW
-	sdhc_err("CONFIG_AML_MMC_DEBUG_FORCE_SINGLE_BLOCK_RW is on!\n");
+	pr_err("CONFIG_AML_MMC_DEBUG_FORCE_SINGLE_BLOCK_RW is on!\n");
 #endif
 
 	host->debug.name =
@@ -2347,7 +2332,7 @@ static int aml_sdhc_probe(struct platform_device *pdev)
 
 		ret = mmc_add_host(mmc);
 		if (ret) { /* error */
-			sdhc_err("Failed to add mmc host.\n");
+			pr_err("Failed to add mmc host.\n");
 			goto probe_free_host;
 		} else { /* ok */
 			if (aml_card_type_sdio(pdata)) { /* if sdio_wifi */
@@ -2375,13 +2360,13 @@ static int aml_sdhc_probe(struct platform_device *pdev)
 					| IRQF_ONESHOT,
 					"sdhc_mmc_cd", pdata);
 			if (ret) {
-				sd_emmc_err("Failed to request SD IN detect\n");
+				pr_err("Failed to request SD IN detect\n");
 				goto probe_free_host;
 			}
 		}
 	}
 
-	print_tmp("%s() success!\n", __func__);
+	pr_info("%s() success!\n", __func__);
 	return 0;
 
 probe_free_host:
@@ -2396,7 +2381,7 @@ fail_init_host:
 	dma_free_coherent(NULL, SDHC_BOUNCE_REQ_SIZE, host->bn_buf,
 			(dma_addr_t)host->bn_dma_buf);
 	kfree(host);
-	print_tmp("aml_sdhc_probe() fail!\n");
+	pr_info("aml_sdhc_probe() fail!\n");
 	return ret;
 }
 
@@ -2467,7 +2452,7 @@ static int __init rx_clk_phase_setup(char *str)
 	int ret;
 
 	ret = kstrtol(str, 0, (long *)&rx_clk_phase_set);
-	print_dbg("rx_clk_phase=%d\n", rx_clk_phase_set);
+	pr_debug("rx_clk_phase=%d\n", rx_clk_phase_set);
 	return ret;
 }
 __setup("rx_clk_phase=", rx_clk_phase_setup);
@@ -2477,7 +2462,7 @@ static int __init sd_clk_phase_setup(char *str)
 	int ret;
 
 	ret = kstrtol(str, 0, (long *)&sd_clk_phase_set);
-	print_dbg("sd_clk_phase_set=%d\n", sd_clk_phase_set);
+	pr_debug("sd_clk_phase_set=%d\n", sd_clk_phase_set);
 	return ret;
 }
 __setup("sd_clk_phase=", sd_clk_phase_setup);
@@ -2487,7 +2472,7 @@ static int __init rx_endian_setup(char *str)
 	int ret;
 
 	ret = kstrtol(str, 0, (long *)&rx_endian);
-	print_dbg("rx_endian=%#x\n", rx_endian);
+	pr_debug("rx_endian=%#x\n", rx_endian);
 	return ret;
 }
 __setup("rx_endian=", rx_endian_setup);
@@ -2497,7 +2482,7 @@ static int __init tx_endian_setup(char *str)
 	int ret;
 
 	ret = kstrtol(str, 0, (long *)&tx_endian);
-	print_dbg("tx_endian=%#x\n", tx_endian);
+	pr_debug("tx_endian=%#x\n", tx_endian);
 	return ret;
 }
 __setup("tx_endian=", tx_endian_setup);
@@ -2507,7 +2492,7 @@ static int __init val1_setup(char *str)
 	int ret;
 
 	ret = kstrtol(str, 0, (long *)&val1);
-	print_dbg("val1=%d\n", val1);
+	pr_debug("val1=%d\n", val1);
 	return ret;
 }
 __setup("val1=", val1_setup);

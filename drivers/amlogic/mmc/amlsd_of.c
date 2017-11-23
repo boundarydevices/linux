@@ -77,7 +77,7 @@ static int amlsd_get_host_caps(struct device_node *of_node,
 		caps |= MMC_CAP_4_BIT_DATA;
 
 	pdata->caps = caps;
-	pr_info("%s:pdata->caps = %x\n", pdata->pinname, pdata->caps);
+	pr_debug("%s:pdata->caps = %x\n", pdata->pinname, pdata->caps);
 	return 0;
 }
 
@@ -114,7 +114,7 @@ static int amlsd_get_host_caps2(struct device_node *of_node,
 		}
 	};
 	pdata->caps2 = caps;
-	pr_info("%s:pdata->caps2 = %x\n", pdata->pinname, pdata->caps2);
+	pr_debug("%s:pdata->caps2 = %x\n", pdata->pinname, pdata->caps2);
 	return 0;
 }
 
@@ -126,6 +126,7 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 	struct device_node *child;
 	u32 i, prop;
 	const char *str = "none";
+	struct amlsd_host *host = mmc_priv(mmc);
 
 #ifdef CONFIG_AMLOGIC_M8B_MMC
 	of_node = pdev->dev.of_node;
@@ -184,12 +185,12 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 				prop, pdata->base);
 		SD_PARSE_U32_PROP_DEC(child, "tx_delay",
 						prop, pdata->tx_delay);
-		if (get_cpu_type() > MESON_CPU_MAJOR_ID_M8B) {
+		if (host->data->chip_type > MMC_CHIP_M8B) {
 			if (aml_card_type_mmc(pdata)) {
 				/*tx_phase set default value first*/
-				if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB)
+				if (host->data->chip_type == MMC_CHIP_GXTVBB)
 					pdata->tx_phase = 1;
-				if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)
+				if (host->data->chip_type == MMC_CHIP_TXL)
 					pdata->tx_delay = 3;
 				SD_PARSE_U32_PROP_DEC(child, "tx_phase",
 						prop, pdata->tx_phase);

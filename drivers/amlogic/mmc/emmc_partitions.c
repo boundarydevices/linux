@@ -582,17 +582,17 @@ static int mmc_read_partition_tbl(struct mmc_card *card,
 		if (strncmp(pt_fmt->magic, MMC_PARTITIONS_MAGIC,
 					sizeof(pt_fmt->magic)) != 0) {
 
-			print_tmp("magic error: %s\n",
+			pr_info("magic error: %s\n",
 					(pt_fmt->magic)?pt_fmt->magic:"NULL");
 
 		} else if ((pt_fmt->part_num < 0)
 				|| (pt_fmt->part_num > MAX_MMC_PART_NUM)) {
 
-			print_tmp("partition number error: %d\n",
+			pr_info("partition number error: %d\n",
 					pt_fmt->part_num);
 
 		} else {
-			print_tmp(
+			pr_info(
 				"checksum error: pt_fmt->checksum=%d,calc_result=%d\n",
 				pt_fmt->checksum,
 				mmc_partition_tbl_checksum_calc(

@@ -468,7 +468,7 @@
 	};
 	sd_emmc_c: emmc@ffe07000 {
 		status = "disabled";
-		compatible = "amlogic, meson-aml-mmc";
+		compatible = "amlogic, meson-mmc-axg";
 		reg = <0x0 0xffe07000 0x0 0x2000>;
 		interrupts = <0 218 1>;
 		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
@@ -477,8 +477,9 @@
 		clocks = <&clkc CLKID_SD_EMMC_C>,
 			   <&clkc CLKID_SD_EMMC_C_P0_COMP>,
 			   <&clkc CLKID_FCLK_DIV2>,
-			   <&clkc CLKID_FCLK_DIV5>;
-		clock-names = "core", "clkin0", "clkin1", "clkin2";
+			   <&clkc CLKID_FCLK_DIV5>,
+			   <&xtal>;
+		clock-names = "core", "clkin0", "clkin1", "clkin2", "xtal";
 
 		bus-width = <8>;
 		cap-sd-highspeed;
@@ -517,7 +518,7 @@
 
 	sd_emmc_b:sdio@ffe05000 {
 		status = "okay";
-		compatible = "amlogic, meson-aml-mmc";
+		compatible = "amlogic, meson-mmc-axg";
 		reg = <0x0 0xffe05000 0x0 0x2000>;
 		interrupts = <0 217 4>;
 		pinctrl-names = "sdio_clk_cmd_pins", "sdio_all_pins";

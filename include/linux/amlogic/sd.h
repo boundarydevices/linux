@@ -24,13 +24,15 @@
 #include <linux/clk-provider.h>
 #include <linux/mmc/host.h>
 /* #include <linux/earlysuspend.h> */
+#undef pr_fmt
+#define pr_fmt(fmt) "meson-mmc: " fmt
 
 #define	 AML_ERROR_RETRY_COUNTER		 10
 #define	 AML_TIMEOUT_RETRY_COUNTER	   2
 #define AML_CALIBRATION
-#define AML_SDHC_MAGIC			 "amlsdhc"
-#define AML_SDIO_MAGIC			 "amlsdio"
-#define AML_SD_EMMC_MAGIC			 "amlsd_emmc"
+#define AML_SDHC_MAGIC		"amlsdhc"
+#define AML_SDIO_MAGIC		"amlsdio"
+#define AML_SD_EMMC_MAGIC	"amlsd_emmc"
 #define SD_EMMC_MANUAL_CMD23
 #define MAX_TUNING_RETRY 4
 #define TUNING_NUM_PER_POINT 10
@@ -157,6 +159,23 @@ struct cali_ctrl {
 	u8 max_index;
 };
 
+enum mmc_chip_e {
+	MMC_CHIP_M8B = 0x1B,
+	MMC_CHIP_GXBB = 0x1F,
+	MMC_CHIP_GXTVBB = 0x20,
+	MMC_CHIP_GXL = 0x21,
+	MMC_CHIP_GXM = 0x22,
+	MMC_CHIP_TXL = 0x23,
+	MMC_CHIP_TXLX = 0x24,
+	MMC_CHIP_AXG = 0x25,
+	MMC_CHIP_GXLX = 0x26,
+	MMC_CHIP_TXHD = 0x27,
+};
+
+struct meson_mmc_data {
+	enum mmc_chip_e chip_type;
+};
+
 struct amlsd_host;
 struct amlsd_platform {
 	struct amlsd_host *host;
@@ -228,7 +247,6 @@ struct amlsd_platform {
 	int base_line;
 	unsigned int count;
 	unsigned int delay_cell;
-	unsigned int ds_core;
 	/* int order; */
 	unsigned int rx_err;
 	/* 0:unknown, 1:mmc card(include eMMC), 2:sd card(include tSD),
@@ -305,6 +323,7 @@ struct amlsd_host {
 	struct amlsd_platform *pdata;
 	struct mmc_host		*mmc;
 	struct mmc_request	*request;
+	struct meson_mmc_data *data;
 
 	struct mmc_command	*cmd;
 	u32 ocr_mask;
@@ -1636,16 +1655,6 @@ extern struct mmc_host *sdio_host;
 #define POR_EMMC_BOOT()	(POR_BOOT_VALUE == 3)
 
 #define POR_CARD_BOOT() (POR_BOOT_VALUE == 0)
-
-#define print_tmp(fmt, args...) \
-{ \
-	pr_info("[%s] " fmt, __func__, ##args); \
-}
-
-#define print_dbg(fmt, args...) \
-{ \
-	pr_info("[%s] " fmt, __func__, ##args); \
-}
 
 /* for external codec status, if using external codec,
  *	jtag should not be set.
