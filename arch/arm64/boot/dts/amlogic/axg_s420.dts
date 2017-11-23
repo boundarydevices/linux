@@ -857,7 +857,7 @@
 		 */
 		datain_src = <4>;
 		datain_chnum = <8>;
-		datain_chmask = <0x3f>;
+		datain_chmask = <0x7f>;
 
 		/* tdmin_lb src
 		 * 0: tdmoutA
@@ -869,7 +869,7 @@
 		 */
 		datalb_src = <1>;
 		datalb_chnum = <2>;
-		datalb_chmask = <0x3>;
+		datalb_chmask = <0x1>;
 
 		status = "okay";
 	};
