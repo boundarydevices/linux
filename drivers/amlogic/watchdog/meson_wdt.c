@@ -268,11 +268,13 @@ static int aml_wtd_reboot_notify(struct notifier_block *nb,
 {
 	struct aml_wdt_dev *wdev;
 
+	wdev = container_of(nb, struct aml_wdt_dev, reboot_notifier);
 	if (event == SYS_DOWN || event == SYS_HALT) {
-		wdev = container_of(nb, struct aml_wdt_dev, reboot_notifier);
 		disable_watchdog(wdev);
+		pr_info("disable watchdog\n");
 	}
-	pr_info("disable watchdog\n");
+	if (wdev->reset_watchdog_method == 1)
+		cancel_delayed_work(&wdev->boot_queue);
 	return NOTIFY_OK;
 }
 
