@@ -433,16 +433,11 @@ static int of_parse_gpr(struct platform_device *pdev,
 	int ret;
 	struct of_phandle_args args;
 
-	if (of_device_is_compatible(pdev->dev.of_node,
-				    "fsl,imx7d-evk-wm8960"))
-		return 0;
-
+	/* Check if board is using gpr, discard if not the case */
 	ret = of_parse_phandle_with_fixed_args(pdev->dev.of_node,
 					       "gpr", 3, 0, &args);
-	if (ret) {
-		dev_warn(&pdev->dev, "failed to get gpr property\n");
-		return ret;
-	}
+	if (ret)
+		return 0;
 
 	data->gpr = syscon_node_to_regmap(args.np);
 	if (IS_ERR(data->gpr)) {
