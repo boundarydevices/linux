@@ -4744,6 +4744,7 @@ static void vscale_skip_disable_post(struct di_buf_s *di_buf, vframe_t *disp_vf)
 	disp_vf->height = di_buf_i->vframe->height;
 	disp_vf->duration = di_buf_i->vframe->duration;
 	disp_vf->pts = di_buf_i->vframe->pts;
+	disp_vf->omx_index = di_buf_i->vframe->omx_index;
 	disp_vf->flag = di_buf_i->vframe->flag;
 	disp_vf->canvas0Addr = di_post_idx[di_post_stru.canvas_id][0];
 	disp_vf->canvas1Addr = di_post_idx[di_post_stru.canvas_id][0];

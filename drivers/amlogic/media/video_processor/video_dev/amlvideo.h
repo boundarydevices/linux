@@ -79,6 +79,7 @@ struct vivi_dev {
 	int inst;
 	struct vframe_provider_s video_vf_prov;
 	struct vframe_receiver_s video_vf_recv;
+	u32 frame_num;
 };
 
 struct vivi_fh {

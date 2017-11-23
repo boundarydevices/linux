@@ -116,11 +116,23 @@ struct platform_resource_s {
 static int debugflags;
 static int output_fps;
 static u32 omx_pts;
+static u32 omx_pts_set_index;
+static bool omx_run;
+static u32 omx_version = 2;
 static int omx_pts_interval_upper = 11000;
 static int omx_pts_interval_lower = -5500;
+static int omx_pts_set_from_hwc_count;
 static int drop_frame_count;
+#define OMX_MAX_COUNT_RESET_SYSTEMTIME 2
 static int receive_frame_count;
 static int display_frame_count;
+static int omx_need_drop_frame_num;
+static bool omx_drop_done;
+
+/*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
+static u32 omx_info = 0x1;
+
+static DEFINE_MUTEX(omx_mutex);
 
 #define DURATION_GCD 750
 
@@ -3645,6 +3657,8 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 		} else
 			return false;
 	}
+	if (omx_secret_mode && (!omx_run || !omx_drop_done))
+		return false;
 
 	if (next_vf->duration == 0)
 
@@ -3700,6 +3714,17 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 			return false;
 		} else if (omx_secret_mode == true)
 			return true;
+	} else if (omx_run
+			&& omx_secret_mode
+			&& (omx_pts + omx_pts_interval_upper < next_vf->pts)
+			&& (abs(omx_pts_set_index - next_vf->omx_index) <= 16)
+			&& (omx_pts_set_index >= next_vf->omx_index)) {
+		pr_info("omx, omx_pts=%d omx_pts_set_index=%d pts=%d omx_index=%d\n",
+					omx_pts,
+					omx_pts_set_index,
+					next_vf->pts,
+					next_vf->omx_index);
+		return true;
 	}
 #if 1
 	if (vsync_pts_inc_upint && (!freerun_mode)) {
@@ -4334,6 +4359,26 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	/* pr_info("%s: %s\n", __func__, dev_id_s); */
 #endif
 
+	if (omx_need_drop_frame_num > 0 && !omx_drop_done && omx_secret_mode) {
+		struct vframe_s *vf = NULL;
+
+		while (1) {
+			vf = vf_peek(RECEIVER_NAME);
+			if (vf) {
+				if (omx_need_drop_frame_num >= vf->omx_index) {
+					//pr_info("vsync drop omx_index %d\n",
+						//vf->omx_index);
+					vf = vf_get(RECEIVER_NAME);
+					vf_put(vf, RECEIVER_NAME);
+				} else {
+					omx_drop_done = true;
+					break;
+				}
+			} else
+				break;
+		}
+	}
+
 	vf = video_vf_peek();
 	if ((vf) && ((vf->type & VIDTYPE_NO_VIDEO_ENABLE) == 0)) {
 		if ((old_vmode != new_vmode) || (debug_flag == 8)) {
@@ -4447,7 +4492,9 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		int diff = system_time - omx_pts;
 
 		if ((diff - omx_pts_interval_upper) > 0
-			|| (diff - omx_pts_interval_lower) < 0) {
+			|| (diff - omx_pts_interval_lower) < 0
+			|| (omx_pts_set_from_hwc_count <
+			OMX_MAX_COUNT_RESET_SYSTEMTIME)) {
 			timestamp_pcrscr_enable(1);
 			/*pr_info("system_time=%d, omx_pts=%d, diff=%d\n",*/
 			/*system_time, omx_pts, diff);*/
@@ -5943,6 +5990,11 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		drop_frame_count = 0;
 		receive_frame_count = 0;
 		display_frame_count = 0;
+		omx_run = false;
+		omx_pts_set_from_hwc_count = 0;
+		omx_need_drop_frame_num = 0;
+		omx_drop_done = false;
+		omx_pts_set_index = 0;
 #ifdef CONFIG_AM_VIDEO2
 		provider_name = (char *)data;
 		if (strncmp(provider_name, "decoder", 7) == 0
@@ -6142,8 +6194,53 @@ static void _set_video_window(int *p)
 	}
 }
 
-/*
- ********************************************************
+static void set_omx_pts(u32 *p)
+{
+	u32 tmp_pts = p[0];
+	/*u32 vision = p[1];*/
+	u32 set_from_hwc = p[2];
+	u32 frame_num = p[3];
+	u32 not_reset = p[4];
+
+	mutex_lock(&omx_mutex);
+	if (omx_pts_set_index < frame_num)
+		omx_pts_set_index = frame_num;
+
+	if (not_reset == 0)
+		omx_pts = tmp_pts;
+	if (set_from_hwc == 1) {
+		if (!omx_run) {
+			omx_need_drop_frame_num =
+				frame_num > 0 ? frame_num-1 : 0;
+			if (omx_need_drop_frame_num == 0)
+				omx_drop_done = true;
+			pr_info("omx_need_drop_frame_num %d\n",
+			omx_need_drop_frame_num);
+		}
+		omx_run = true;
+		if (omx_pts_set_from_hwc_count < OMX_MAX_COUNT_RESET_SYSTEMTIME)
+			omx_pts_set_from_hwc_count++;
+
+	} else if (set_from_hwc == 0 && !omx_run) {
+		struct vframe_s *vf = NULL;
+
+		while (1) {
+			vf = vf_peek(RECEIVER_NAME);
+			if (vf) {
+				if (frame_num >= vf->omx_index) {
+					vf = vf_get(RECEIVER_NAME);
+					vf_put(vf, RECEIVER_NAME);
+				} else
+					break;
+			} else
+				break;
+		}
+	}
+	mutex_unlock(&omx_mutex);
+}
+
+
+/*********************************************************
  * /dev/amvideo APIs
  ********************************************************
  */
@@ -6182,15 +6279,22 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 
 	switch (cmd) {
 	case AMSTREAM_IOC_SET_OMX_VPTS:{
-			u32 pts;
-
-			get_user(pts, (u32 __user *)argp);
-			omx_pts = pts;
+			u32 pts[6];
+			if (copy_from_user(pts, argp, sizeof(pts)) == 0)
+				set_omx_pts(pts);
 		}
 		break;
 
 	case AMSTREAM_IOC_GET_OMX_VPTS:
 		put_user(omx_pts, (u32 __user *)argp);
+		break;
+
+	case AMSTREAM_IOC_GET_OMX_VERSION:
+		put_user(omx_version, (u32 __user *)argp);
+		break;
+
+	case AMSTREAM_IOC_GET_OMX_INFO:
+		put_user(omx_info, (u32 __user *)argp);
 		break;
 
 	case AMSTREAM_IOC_TRICKMODE:
@@ -6524,6 +6628,8 @@ static long amvideo_compat_ioctl(struct file *file, unsigned int cmd, ulong arg)
 	switch (cmd) {
 	case AMSTREAM_IOC_SET_OMX_VPTS:
 	case AMSTREAM_IOC_GET_OMX_VPTS:
+	case AMSTREAM_IOC_GET_OMX_VERSION:
+	case AMSTREAM_IOC_GET_OMX_INFO:
 	case AMSTREAM_IOC_TRICK_STAT:
 	case AMSTREAM_IOC_GET_TRICK_VPTS:
 	case AMSTREAM_IOC_GET_SYNC_ADISCON:
@@ -8895,6 +9001,12 @@ static struct mconfig video_configs[] = {
 	MC_PI32("cur_dev_idx", &cur_dev_idx),
 	MC_PU32("new_frame_count", &new_frame_count),
 	MC_PU32("omx_pts", &omx_pts),
+	MC_PU32("omx_pts_set_index", &omx_pts_set_index),
+	MC_PBOOL("omx_run", &omx_run),
+	MC_PU32("omx_version", &omx_version),
+	MC_PU32("omx_info", &omx_info),
+	MC_PI32("omx_need_drop_frame_num", &omx_need_drop_frame_num),
+	MC_PBOOL("omx_drop_done", &omx_drop_done),
 	MC_PI32("omx_pts_interval_upper", &omx_pts_interval_upper),
 	MC_PI32("omx_pts_interval_lower", &omx_pts_interval_lower),
 	MC_PBOOL("bypass_pps", &bypass_pps),
@@ -9270,6 +9382,24 @@ module_param(first_frame_toggled, uint, 0664);
 
 MODULE_PARM_DESC(omx_pts, "\n omx_pts\n");
 module_param(omx_pts, uint, 0664);
+
+MODULE_PARM_DESC(omx_run, "\n omx_run\n");
+module_param(omx_run, bool, 0664);
+
+MODULE_PARM_DESC(omx_pts_set_index, "\n omx_pts_set_index\n");
+module_param(omx_pts_set_index, uint, 0664);
+
+MODULE_PARM_DESC(omx_version, "\n omx_version\n");
+module_param(omx_version, uint, 0664);
+
+MODULE_PARM_DESC(omx_info, "\n omx_info\n");
+module_param(omx_info, uint, 0664);
+
+MODULE_PARM_DESC(omx_need_drop_frame_num, "\n omx_need_drop_frame_num\n");
+module_param(omx_need_drop_frame_num, int, 0664);
+
+MODULE_PARM_DESC(omx_drop_done, "\n omx_drop_done\n");
+module_param(omx_drop_done, bool, 0664);
 
 MODULE_PARM_DESC(omx_pts_interval_upper, "\n omx_pts_interval\n");
 module_param(omx_pts_interval_upper, int, 0664);

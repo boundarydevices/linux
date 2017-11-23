@@ -161,6 +161,8 @@
 #define AMSTREAM_IOC_SET_SUBTITLE_INFO _IOW((_A_M), 0xae, int)
 #define AMSTREAM_IOC_SET_OMX_VPTS _IOW((_A_M), 0xaf, int)
 #define AMSTREAM_IOC_GET_OMX_VPTS _IOW((_A_M), 0xb0, int)
+#define AMSTREAM_IOC_GET_OMX_VERSION _IOW((_A_M), 0xb1, int)
+#define AMSTREAM_IOC_GET_OMX_INFO    _IOR((_A_M), 0xb2, unsigned int)
 
 #define AMSTREAM_IOC_GET_TRICK_VPTS _IOR((_A_M), 0xf0, int)
 #define AMSTREAM_IOC_DISABLE_SLOW_SYNC _IOW((_A_M), 0xf1, int)

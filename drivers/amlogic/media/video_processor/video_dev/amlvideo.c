@@ -243,6 +243,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 
 		dev->vf = NULL;
 		dev->first_frame = 0;
+		dev->frame_num = 0;
 		mutex_unlock(&dev->vfpMutex);
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
 		amlvideo_vf_states(&states, dev);
@@ -521,6 +522,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		mutex_unlock(&dev->vfpMutex);
 		return -EAGAIN;
 	}
+	dev->vf->omx_index = dev->frame_num;
 
 	vfq_push(&dev->q_ready, dev->vf);
 	p->index = 0;
@@ -546,6 +548,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		p->timecode.type = dev->vf->width;
 		p->timecode.flags = dev->vf->height;
 	}
+	p->sequence = dev->frame_num++;
 
 	vf_notify_receiver(
 			dev->vf_provider_name,
