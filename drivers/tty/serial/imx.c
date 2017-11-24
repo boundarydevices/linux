@@ -2434,6 +2434,12 @@ static int serial_imx_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	if (sport->port.rs485.flags & SER_RS485_ENABLED &&
+	    (!sport->have_rtscts || !sport->have_rtsgpio))
+		dev_err(&pdev->dev, "no RTS control, disabling rs485\n");
+
+	imx_rs485_config(&sport->port, &sport->port.rs485);
+
 	/* Disable interrupts before requesting them */
 	reg = readl_relaxed(sport->port.membase + UCR1);
 	reg &= ~(UCR1_ADEN | UCR1_TRDYEN | UCR1_IDEN | UCR1_RRDYEN |
