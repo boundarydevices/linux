@@ -629,6 +629,8 @@ static int adv7511_get_modes(struct adv7511 *adv7511,
 {
 	struct edid *edid;
 	unsigned int count;
+	u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
+	int ret;
 
 	edid = adv7511_get_edid(adv7511, connector);
 
@@ -636,6 +638,14 @@ static int adv7511_get_modes(struct adv7511 *adv7511,
 	count = drm_add_edid_modes(connector, edid);
 
 	kfree(edid);
+
+	connector->display_info.bus_flags = DRM_BUS_FLAG_DE_LOW |
+					    DRM_BUS_FLAG_PIXDATA_NEGEDGE;
+
+	ret = drm_display_info_set_bus_formats(&connector->display_info,
+					       &bus_format, 1);
+	if (ret)
+		return ret;
 
 	return count;
 }
