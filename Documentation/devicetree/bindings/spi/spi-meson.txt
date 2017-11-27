@@ -20,3 +20,58 @@ Required properties:
 		#address-cells = <1>;
 		#size-cells = <0>;
 	};
+
+* SPICC (SPI Communication Controller)
+
+The Meson SPICC is generic SPI controller for general purpose Full-Duplex
+communications with dedicated 16 words RX/TX PIO FIFOs.
+
+Required properties:
+ - compatible: should be:
+	"amlogic,meson-gx-spicc" on Amlogic GX and compatible SoCs.
+	"amlogic,meson-txlx-spicc" on Amlogic TXLX and compatible SoCs
+ - reg: physical base address and length of the controller registers
+ - interrupts: The interrupt specifier
+ - clock-names: Must contain "core"
+ - clocks: phandle of the input clock for the baud rate generator
+ - #address-cells: should be 1
+ - #size-cells: should be 0
+
+Optional properties:
+ - resets: phandle of the internal reset line
+
+See ../spi/spi-bus.txt for more details on SPI bus master and slave devices
+required and optional properties.
+
+Example :
+	spi@c1108d80 {
+		compatible = "amlogic,meson-gx-spicc";
+		reg = <0xc1108d80 0x80>;
+		interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+		clock-names = "core";
+		clocks = <&clk81>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	spicc_a: spi@13000 {
+		compatible = "amlogic,meson-txlx-spicc";
+		reg = <0x0 0x13000 0x0 0x3c>;
+		interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc CLKID_SPICC0>;
+		clock-names = "core";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	spicc_b: spi@15000 {
+		compatible = "amlogic,meson-txlx-spicc";
+		reg = <0x0 0x15000 0x0 0x3c>;
+		interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc CLKID_SPICC1>;
+		clock-names = "core";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
