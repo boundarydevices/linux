@@ -3419,6 +3419,9 @@ static int amhdmitx_remove(struct platform_device *pdev)
 static int amhdmitx_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
+	hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
+		DDC_RESET_HDCP, 0);
+	pr_info("amhdmitx: suspend and reset hdcp\n");
 	return 0;
 }
 
