@@ -259,7 +259,7 @@
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
-
+#ifdef CONFIG_WL_TI
 	wlan {
 		compatible = "ti,wilink6";
 		interrupt-parent = <&gpio6>;
@@ -285,7 +285,14 @@
 		flow_cntrl = <1>;
 		baud_rate = <3000000>;
 	};
-
+#else
+	bt_rfkill: bt_rfkill {
+		compatible = "net,rfkill-gpio";
+		name = "bt_rfkill";
+		gpios = <&gpio6 16 0>;
+		type = <2>;     /* bluetooth */
+	};
+#endif
 	i2cmux@2 {
 		compatible = "i2c-mux-gpio";
 		pinctrl-names = "default";
