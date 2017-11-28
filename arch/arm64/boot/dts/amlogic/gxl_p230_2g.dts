@@ -481,6 +481,19 @@
 			"mailbox_2";
 	};
 
+	gpio_keypad{
+		compatible = "amlogic, gpio_keypad";
+		status = "okay";
+		scan_period = <20>;
+		key_num = <1>;
+		key_name = "power";
+		key_code = <116>;
+		key_pin = <&gpio_ao  GPIOAO_2  GPIO_ACTIVE_HIGH>;/*"GPIOAO_2";*/
+		irq_keyup = <6>;
+		irq_keydown = <7>;
+	};
+
+
 	aml_sensor0: aml-sensor@0 {
 		compatible = "amlogic, aml-thermal";
 		device_name = "thermal";
