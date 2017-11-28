@@ -439,21 +439,16 @@ static inline void amlnf_clr_reg32_mask(uint32_t *_reg,
  *#define NFC_CMD_I_ADR(addr)	NFC_CMD_ADI(addr), NFC_CMD_ADI(addr)
  */
 
-#define NAND_ECC_NONE		(0x0)
-#define NAND_ECC_BCH8		(0x1)
-#define NAND_ECC_BCH8_1K	(0x2)
-#define NAND_ECC_BCH16_1K	(0x3)
-#define NAND_ECC_BCH24_1K	(0x4)
-#define NAND_ECC_BCH24_1K_M8	(0x3)
-#define NAND_ECC_BCH30_1K	(0x5)
-#define NAND_ECC_BCH30_1K_M8	(0x4)
-#define NAND_ECC_BCH40_1K	(0x6)
-#define NAND_ECC_BCH40_1K_M8	(0x5)
-#define NAND_ECC_BCH50_1K_M8	(0x6)
+#define NAND_ECC_NONE			(0x0)
+#define NAND_ECC_BCH8			(0x1)
+#define NAND_ECC_BCH8_1K		(0x2)
+#define NAND_ECC_BCH24_1K		(0x3)
+#define NAND_ECC_BCH30_1K		(0x4)
+#define NAND_ECC_BCH40_1K		(0x5)
+#define NAND_ECC_BCH50_1K		(0x6)
 /*NAND_ECC_BCH50_1K only for mtd for general*/
-#define NAND_ECC_BCH50_1K	(0x6)
-#define NAND_ECC_BCH60_1K	(0x7)
-#define NAND_ECC_BCH_SHORT	(0x8)
+#define NAND_ECC_BCH60_1K		(0x7)
+#define NAND_ECC_BCH_SHORT		(0x8)
 
 #define	PER_INFO_BYTE	8
 

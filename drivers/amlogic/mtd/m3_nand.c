@@ -436,17 +436,6 @@ static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 		aml_chip->ecc_max = 8;
 		chip->ecc.steps = mtd->writesize / chip->ecc.size;
 		break;
-	/*don't support for new chip(greater than m8)*/
-	case NAND_ECC_BCH16_1K_MODE:
-		chip->ecc.strength = 16;
-		chip->ecc.size = NAND_ECC_UNIT_1KSIZE;
-		chip->ecc.bytes = NAND_BCH16_1K_ECC_SIZE;
-		aml_chip->bch_mode = NAND_ECC_BCH16_1K;
-		aml_chip->user_byte_mode = 2;
-		aml_chip->ecc_cnt_limit = 14;
-		aml_chip->ecc_max = 16;
-		chip->ecc.steps = mtd->writesize / chip->ecc.size;
-		break;
 
 	case NAND_ECC_BCH24_1K_MODE:
 		chip->ecc.strength = 24;
