@@ -1452,6 +1452,7 @@ static void aml_sd_emmc_set_power(struct amlsd_host *host, u32 power_mode)
 	case MMC_POWER_OFF:
 		writel(0, host->base + SD_EMMC_DELAY);
 		writel(0, host->base + SD_EMMC_ADJUST);
+		break;
 	default:
 		if (pdata->pwr_pre)
 			pdata->pwr_pre(pdata);
