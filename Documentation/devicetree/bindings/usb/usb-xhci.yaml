@@ -25,6 +25,11 @@ properties:
     description: Set if the controller has broken port disable mechanism
     type: boolean
 
+  usb3-resume-missing-cas:
+    description: set if the CAS(Cold Attach Status) may lose in case device
+      plugged in while system sleep.
+    type: boolean
+
   imod-interval-ns:
     description: Interrupt moderation interval
     default: 5000
