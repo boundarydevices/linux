@@ -562,6 +562,13 @@ static void hdmi_hwi_init(struct hdmitx_dev *hdev)
 	hdmitx_ddc_hw_op(DDC_MUX_DDC);
 
 /* Configure E-DDC interface */
+	data32  = 0;
+	data32 |= (1    << 24); /* [26:24] infilter_ddc_intern_clk_divide */
+	data32 |= (0    << 16); /* [23:16] infilter_ddc_sample_clk_divide */
+	data32 |= (0    << 8);  /* [10: 8] infilter_cec_intern_clk_divide */
+	data32 |= (1    << 0);  /* [ 7: 0] infilter_cec_sample_clk_divide */
+	hdmitx_wr_reg(HDMITX_TOP_INFILTER, data32);
+
 	data32 = 0;
 	data32 |= (0 << 6);  /* [  6] read_req_mask */
 	data32 |= (0 << 2);  /* [  2] done_mask */
@@ -642,7 +649,7 @@ static irqreturn_t intr_handler(int irq, void *dev)
 		hdev->hdmitx_event |= HDMI_TX_HPD_PLUGIN;
 		hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGOUT;
 		queue_delayed_work(hdev->hdmi_wq,
-			&hdev->work_hpd_plugin, HZ / 3);
+			&hdev->work_hpd_plugin, HZ / 2);
 	}
 	/* HPD falling */
 	if (data32 & (1 << 2)) {
@@ -1824,14 +1831,6 @@ static void set_tmds_clk_div40(unsigned int div40)
 
 static void hdmitx_set_scdc(struct hdmitx_dev *hdev)
 {
-	unsigned char rx_ver = 0;
-
-	scdc_rd_sink(SINK_VER, &rx_ver);
-	if (rx_ver != 1)
-		scdc_rd_sink(SINK_VER, &rx_ver);	/* Recheck */
-	hdmi_print(IMP, SYS "hdmirx version is %s\n",
-		(rx_ver == 1) ? "2.0" : "1.4 or below");
-
 	switch (hdev->cur_video_param->VIC) {
 	case HDMI_3840x2160p50_16x9:
 	case HDMI_3840x2160p60_16x9:
@@ -1874,7 +1873,8 @@ static void hdmitx_set_scdc(struct hdmitx_dev *hdev)
 		break;
 	}
 	set_tmds_clk_div40(hdev->para->tmds_clk_div40);
-	scdc_config(hdev);
+	if (hdev->RXCap.scdc_present)
+		scdc_config(hdev);
 }
 
 static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
@@ -3737,6 +3737,14 @@ static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 		break;
 	case MISC_HDCP_CLKDIS:
 		hdmitx_set_reg_bits(HDMITX_DWC_MC_CLKDIS, !!argv, 6, 1);
+		break;
+	case MISC_I2C_REACTIVE:
+		hdmitx_set_reg_bits(HDMITX_DWC_A_HDCPCFG1, 0, 0, 1);
+		hdmitx_set_reg_bits(HDMITX_DWC_HDCP22REG_CTRL, 0, 2, 1);
+		hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_HCNT_1, 0xff);
+		hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_HCNT_0, 0xf6);
+		edid_read_head_8bytes();
+		hdmi_hwi_init(hdev);
 		break;
 	default:
 		hdmi_print(ERR, "misc: hdmitx: unknown cmd: 0x%x\n", cmd);

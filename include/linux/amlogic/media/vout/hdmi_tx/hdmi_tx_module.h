@@ -423,6 +423,7 @@ struct hdmitx_dev {
 #define MISC_ESM_RESET		(CMD_MISC_OFFSET + 0x0d)
 #define MISC_HDCP_CLKDIS	(CMD_MISC_OFFSET + 0x0e)
 #define MISC_TMDS_RXSENSE	(CMD_MISC_OFFSET + 0x0f)
+#define MISC_I2C_REACTIVE       (CMD_MISC_OFFSET + 0x10)
 
 /***********************************************************************
  *                          Get State //GetState

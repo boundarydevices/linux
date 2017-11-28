@@ -89,5 +89,6 @@ void scdc_wr_sink(uint8_t adr, uint8_t val);
 uint32_t hdcp_rd_hdcp14_ver(void);
 uint32_t hdcp_rd_hdcp22_ver(void);
 void scdc_config(void *hdev);
+void edid_read_head_8bytes(void);
 
 #endif  /* __HDMI_TX_SCDC_H__ */

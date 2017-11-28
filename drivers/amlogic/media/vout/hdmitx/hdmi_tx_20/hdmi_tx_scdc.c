@@ -20,26 +20,13 @@
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ddc.h>
 
 static struct timer_list scdc_tmds_cfg_timer;
-static int cnt;
 
 static void tmds_config(unsigned long arg)
 {
 	struct hdmitx_dev *hdev = (struct hdmitx_dev *)arg;
-	uint8_t st = 0;
 
 	/* TMDS 1/40 & Scramble */
 	scdc_wr_sink(TMDS_CFG, hdev->para->tmds_clk_div40 ? 0x3 : 0);
-	scdc_wr_sink(TMDS_CFG, hdev->para->tmds_clk_div40 ? 0x3 : 0);
-	scdc_rd_sink(SCRAMBLER_ST, &st);
-	cnt++;
-	if ((hdev->para->tmds_clk_div40) && (st & 0x1)) {
-		pr_info("hdmitx20: rx scrambler status\n");
-		return;
-	}
-	if ((hdev->para->tmds_clk_div40) && (cnt < 3))
-		mod_timer(&scdc_tmds_cfg_timer, jiffies + HZ / 2);
-	else
-		cnt = 0;
 }
 
 void scdc_config(void *hdev)
