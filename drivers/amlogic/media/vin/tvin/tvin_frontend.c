@@ -54,7 +54,6 @@ int tvin_reg_frontend(struct tvin_frontend_s *fe)
 {
 	ulong flags;
 	struct tvin_frontend_s *f, *t;
-
 	if (!strlen(fe->name) || !fe->dec_ops ||
 		!fe->dec_ops->support || !fe->sm_ops)
 		return -1;
@@ -138,7 +137,6 @@ static ssize_t frontend_name_show(struct class *cls,
 {
 	size_t len = 0;
 	struct tvin_frontend_s *f = NULL;
-
 	list_for_each_entry(f, &head, list) {
 		len += sprintf(buf+len, "%s\n", f->name);
 	}
@@ -149,7 +147,6 @@ static CLASS_ATTR(frontend_names, 0444, frontend_name_show, NULL);
 static int __init tvin_common_init(void)
 {
 	int ret = 0;
-
 	tvcom_clsp = class_create(THIS_MODULE, CLASS_NAME);
 	if (!tvcom_clsp) {
 		pr_err("[tvin_com..]%s: create tvin common class error.\n",

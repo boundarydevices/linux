@@ -19,13 +19,10 @@
 #define __VDIN_VF_H
 
 /* Standard Linux Headers */
-#include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/spinlock.h>
-#include <linux/list.h>
 
 /* Amlogic Linux Headers */
-#include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/vfm/vframe_provider.h>
 #define VF_LOG_EN
 
@@ -36,6 +33,16 @@
 #define VF_LOG_FE
 /* only log backend opertations */
 #define VF_LOG_BE
+
+#define VDIN_DV_MAX_NUM		        9
+
+#define VF_FLAG_NORMAL_FRAME		 0x00000001
+#define VF_FLAG_FREEZED_FRAME		 0x00000002
+#define VFRAME_DISP_MAX_NUM 10
+#define VDIN_VF_POOL_FREEZE              0x00000001
+#define ISR_LOG_EN
+
+#define VF_LOG_PRINT_MAX_LEN 100
 
 enum vf_operation_e {
 	VF_OPERATION_INIT = 0,
@@ -84,18 +91,14 @@ struct vf_log_s {
 
 #endif
 
-#define ISR_LOG_EN
 #ifdef ISR_LOG_EN
-#define ISR_LOG_LEN		 2000
+#define ISR_LOG_LEN 2000
 struct isr_log_s {
 	struct timeval isr_time[ISR_LOG_LEN];
 	unsigned int log_cur;
 	unsigned char isr_log_en;
 };
 #endif
-
-#define VF_FLAG_NORMAL_FRAME		 0x00000001
-#define VF_FLAG_FREEZED_FRAME		 0x00000002
 
 
 struct vf_entry {
@@ -105,28 +108,28 @@ struct vf_entry {
 	unsigned int flag;
 };
 
-#define VDIN_VF_POOL_FREEZE              0x00000001
 struct vf_pool {
 	unsigned int pool_flag;
 	unsigned int max_size, size;
 	struct vf_entry *master;
 	struct vf_entry *slave;
 	struct list_head wr_list; /* vf_entry */
-	spinlock_t       wr_lock;
-	unsigned int	 wr_list_size;
+	spinlock_t wr_lock;
+	unsigned int wr_list_size;
 	struct list_head *wr_next;
 	struct list_head rd_list; /* vf_entry */
-	spinlock_t       rd_lock;
-	unsigned int	 rd_list_size;
+	spinlock_t rd_lock;
+	unsigned int rd_list_size;
 	struct list_head wt_list; /* vframe_s */
-	spinlock_t       wt_lock;
-	unsigned int	 fz_list_size;
+	spinlock_t wt_lock;
+	unsigned int fz_list_size;
 	struct list_head fz_list;
-	spinlock_t       fz_lock;
-	unsigned int	 tmp_list_size;
+	spinlock_t fz_lock;
+	unsigned int tmp_list_size;
 	struct list_head tmp_list;
 	spinlock_t tmp_lock;
-	spinlock_t lock;
+	spinlock_t log_lock;
+	spinlock_t dv_lock;/*dolby vision lock*/
 #ifdef VF_LOG_EN
 	struct vf_log_s log;
 #endif
@@ -134,7 +137,17 @@ struct vf_pool {
 	struct isr_log_s isr_log;
 #endif
 	atomic_t buffer_cnt;
+	unsigned int dv_buf_mem[VDIN_DV_MAX_NUM];
+	void *dv_buf_vmem[VDIN_DV_MAX_NUM];
+	unsigned int dv_buf_size[VDIN_DV_MAX_NUM];
+	char *dv_buf[VDIN_DV_MAX_NUM];
+	char *dv_buf_ori[VDIN_DV_MAX_NUM];
+	unsigned int disp_index[VFRAME_DISP_MAX_NUM];
+	unsigned int skip_vf_num;/*skip pre vframe num*/
+	enum vframe_disp_mode_e	disp_mode[VFRAME_DISP_MAX_NUM];
 };
+extern unsigned int dolby_size_byte;
+extern unsigned int dv_dbg_mask;
 
 extern void vf_log_init(struct vf_pool *p);
 extern void vf_log_print(struct vf_pool *p);
@@ -162,6 +175,7 @@ extern struct vf_entry *receiver_vf_peek(struct vf_pool *p);
 extern struct vf_entry *receiver_vf_get(struct vf_pool *p);
 extern void receiver_vf_put(struct vframe_s *vf, struct vf_pool *p);
 
+
 extern struct vframe_s *vdin_vf_peek(void *op_arg);
 extern struct vframe_s *vdin_vf_get(void *op_arg);
 extern void vdin_vf_put(struct vframe_s *vf, void *op_arg);
@@ -171,5 +185,8 @@ extern void vdin_vf_freeze(struct vf_pool *p, unsigned int hold_num);
 extern void vdin_vf_unfreeze(struct vf_pool *p);
 
 extern void vdin_dump_vf_state(struct vf_pool *p);
+
+extern void vdin_vf_disp_mode_update(struct vf_entry *vfe, struct vf_pool *p);
+extern void vdin_vf_disp_mode_skip(struct vf_pool *p);
 #endif /* __VDIN_VF_H */
 

@@ -49,6 +49,7 @@ struct provider_aux_req_s {
 	char *aux_buf;
 	int aux_size;
 	int dv_enhance_exist;
+	int low_latency;
 };
 struct provider_disp_mode_req_s {
 	/*input*/

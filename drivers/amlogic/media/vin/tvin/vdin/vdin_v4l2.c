@@ -61,10 +61,16 @@ struct vdin_v4l2_ops_s *get_vdin_v4l2_ops()
 {
 	if ((ops.start_tvin_service != NULL) && (ops.stop_tvin_service != NULL))
 		return &ops;
-	return NULL;
+	else {
+		/* pr_err("[vdin..]%s: vdin v4l2 operation
+		 * haven't registered.",__func__);
+		 */
+		return NULL;
+	}
 }
 EXPORT_SYMBOL(get_vdin_v4l2_ops);
 
+/*Converts commands into strings */
 const char *cam_cmd_to_str(enum cam_command_e cmd)
 {
 	switch (cmd) {

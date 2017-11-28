@@ -35,6 +35,7 @@ enum tvin_sm_status_e {
 	TVIN_SM_STATUS_STABLE,
 };
 struct tvin_sm_s {
+	enum tvin_sig_status_e sig_status;
 	enum tvin_sm_status_e state;
 	unsigned int state_cnt; /* STATE_NOSIG, STATE_UNSTABLE */
 	unsigned int exit_nosig_cnt; /* STATE_NOSIG */

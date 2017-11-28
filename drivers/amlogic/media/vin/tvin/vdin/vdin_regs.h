@@ -18,11 +18,12 @@
 #ifndef __VDIN_REGS_H
 #define __VDIN_REGS_H
 
-
 /* mmc */
 #define VPU_VDIN_ASYNC_HOLD_CTRL 0x2743
 #define VPU_VDISP_ASYNC_HOLD_CTRL 0x2744
 #define VPU_VPUARB2_ASYNC_HOLD_CTRL 0x2745
+#define VPU_ARB_URG_CTRL 0x2747
+#define VPU_WRARB_MODE_L2C1 0x27a2
 #define VPU_ARB_DBG_STAT_L1C2	0x27b6
 #define VDIN_DET_IDLE_BIT 8
 #define VDIN_DET_IDLE_WIDTH 4
@@ -60,6 +61,8 @@
 
 /* vpp */
 #define VPP_VDO_MEAS_CTRL 0x1da8
+#define VPP_POSTBLEND_VD1_H_START_END 0x1d1c
+#define VPP_POSTBLEND_VD1_V_START_END 0x1d1d
 
 /* VDIN0        8'h00 - 8'h7f */
 /* VDIN1        8'h80 - 8'hef */
@@ -180,7 +183,7 @@
  * is not sync with external signal
  */
 /* Bit 24, decimation de enable */
-/* Bit 23:20, decimation phase
+/* Bit 23:20, decimation phase,
  * which counter value use to decimate,
  */
 /* Bit 19:16, decimation number, 0: not decimation,
@@ -333,7 +336,6 @@
 #define VDIN_MATRIX_PROBE_POS             ((0x122a))/* + 0xd0100000) */
 #define VDIN_CHROMA_ADDR_PORT             ((0x122b))/* + 0xd0100000) */
 #define VDIN_CHROMA_DATA_PORT             ((0x122c))/* + 0xd0100000) */
-/*  */
 #define VDIN_CM_BRI_CON_CTRL              ((0x122d))/* + 0xd0100000) */
 /* Bit 17  clk_cyc_cnt_clr, if true, clear this register */
 /* Bit 16 if true, use vpu clock to count one line,
@@ -544,7 +546,7 @@
 /* Bit 31:29 Reserved */
 /* Bit 28:16 blkbar_row_th1.       //threshold of the top blackbar */
 /* Bit 15:13 Reserved */
-/* bit 12:0  blkbar_row_th2        //threshold of the bottom blackbar */
+/* bit 12:0  blkbar_row_th2        //threshold of the bottom blackbar*/
 #define VDIN_BLKBAR_ROW_TH1_TH2  ((0x1264))/* + 0xd0100000) */
 /* Readonly */
 /* Bit 31:29 Reserved */
@@ -608,8 +610,8 @@
 /* Bit 28:16 input window H start */
 /* Bit 12:0  input window H end */
 #define VDIN_WIN_H_START_END     ((0x126d))/* + 0xd0100000) */
-/* Bit 28:16 input window H start */
-/* Bit 12:0  input window V start */
+/* Bit 28:16 input window V start */
+/* Bit 12:0  input window V end */
 #define VDIN_WIN_V_START_END     ((0x126e))/* + 0xd0100000) */
 /* Bit 23:16 vdi8 asfifo_ctrl */
 /* Bit 15:8 vdi7 asfifo_ctrl */
@@ -629,6 +631,20 @@
 /* Bit 5:0, vdi9_asfifo_cnt */
 #define VDIN_COM_STATUS3         ((0x1273))/* + 0xd0100000) */
 
+/* dolby vdin regs */
+#define VDIN_DOLBY_DSC_CTRL0                       0x1275
+/*((0x1275  << 2) + 0xff900000)*/
+#define VDIN_DOLBY_DSC_CTRL1                       0x1276
+#define VDIN_DOLBY_DSC_CTRL2                       0x1277
+#define VDIN_DOLBY_DSC_CTRL3                       0x1278
+#define VDIN_DOLBY_AXI_CTRL0                       0x1279
+#define VDIN_DOLBY_AXI_CTRL1                       0x127a
+#define VDIN_DOLBY_AXI_CTRL2                       0x127b
+#define VDIN_DOLBY_AXI_CTRL3                       0x127c
+#define VDIN_DOLBY_DSC_STATUS0                     0x127d
+#define VDIN_DOLBY_DSC_STATUS1                     0x127e
+#define VDIN_DOLBY_DSC_STATUS2                     0x127f
+#define VDIN_DOLBY_DSC_STATUS3                     0x121d
 
 
 
@@ -637,13 +653,13 @@
 
 /* #define VDIN_COM_CTRL0                             0x1202 */
 /* used by other modules,indicates that MPEG input.
- * 0: mpeg source to NR directly,
- * 1: mpeg source pass through here
+ *0: mpeg source to NR directly,
+ *1: mpeg source pass through here
  */
 #define MPEG_TO_VDIN_SEL_BIT            31
 #define MPEG_TO_VDIN_SEL_WID            1
 /* indicates MPEG field ID,written by software.
- * 0: EVEN FIELD 1: ODD FIELD
+ *0: EVEN FIELD 1: ODD FIELD
  */
 #define MPEG_FLD_BIT                    30
 #define MPEG_FLD_WID                    1
@@ -667,21 +683,16 @@
 /* 00: component0_in 01: component1_in 10: component2_in */
 #define COMP0_OUT_SWT_BIT               6
 #define COMP0_OUT_SWT_WID               2
-
-
 #define INPUT_WIN_SEL_EN_BIT            5
 #define INPUT_WIN_SEL_EN_WID            1
-
-
 /* 0: no data input 1: common data input */
 #define COMMON_DATA_IN_EN_BIT           4
 #define COMMON_DATA_IN_EN_WID           1
 /* 1: MPEG, 2: 656, 3: TVFE, 4: CVD2, 5: HDMI_Rx,6: DVIN otherwise: NULL
- *7: loopback from VIU1, 8: MIPI csi2 in meson6
- */
+*7: loopback from VIU1, 8: MIPI csi2 in meson6
+*/
 #define VDIN_SEL_BIT                    0
 #define VDIN_SEL_WID                    4
-
 /* #define VDIN_ACTIVE_MAX_PIX_CNT_STATUS             0x1203 */
 /* ~field_hold & prehsc input active max pixel
  * every line output of window
@@ -820,8 +831,9 @@
 #define WIDTHM1O_WID                    13
 
 /* #define VDIN_SC_MISC_CTRL                       0x120b */
-/* signed value for short line output
- */
+/* signed value for short line output */
+#define PRE_HSCL_MODE_BIT               17
+#define PRE_HSCL_MODE_WID               4
 #define INIT_PIX_IN_PTR_BIT             8
 #define INIT_PIX_IN_PTR_WID             7
 #define INIT_PIX_IN_PTR_MSK             0x0000007f
@@ -832,7 +844,7 @@
 #define HSCL_EN_WID                     1    /* hscaler: fine scale down */
 #define SHORT_LN_OUT_EN_BIT             5
 #define SHORT_LN_OUT_EN_WID             1
-/* when decimation timing located in between 2 input pixels,
+/*when decimation timing located in between 2 input pixels,
  * decimate the nearest one
  */
 #define HSCL_NEAREST_EN_BIT             4
@@ -852,8 +864,7 @@
 #define HSCL_PHASE_STEP_FRA_WID         24
 
 /* #define VDIN_HSC_INI_CTRL                          0x120d */
-/* repeatedly decimation of pixel #0 of each line?
- */
+/* repeatedly decimation of pixel #0 of each line? */
 #define HSCL_RPT_P0_NUM_BIT             29
 #define HSCL_RPT_P0_NUM_WID             2
 /* if rev>rpt_p0+1, then start decimation upon ini_phase? */
@@ -866,7 +877,6 @@
 
 /* #define VDIN_COM_STATUS2                           0x120e */
 /* Read only */
-
 #define VDI7_FIFO_OVFL_BIT              23  /* vdi7 fifo overflow */
 #define VDI7_FIFO_OVFL_WID              1
 #define VDI7_ASFIFO_CNT_BIT             16  /* vdi7_asfifo_cnt */
@@ -880,8 +890,6 @@
 #define VDI5_FIFO_OVFL_WID              1
 #define VDI5_ASFIFO_CNT_BIT             0  /* vdi5_asfifo_cnt */
 #define VDI5_ASFIFO_CNT_WID             6
-
-
 
 /* #define VDIN_ASFIFO_CTRL2                          0x120f */
 #define ASFIFO_DECIMATION_SYNC_WITH_DE_BIT        25
@@ -913,7 +921,6 @@
 #define ASFIFO5_SOFT_RST_BIT                      0
 /* write 1 & then 0 to reset */
 #define ASFIFO5_SOFT_RST_WID                      1
-
 
 /* #define VDIN_MATRIX_CTRL                        0x1210 */
 #define VDIN_MATRIX0_BYPASS_BIT             9/* 1:bypass 0:pass */
@@ -1017,17 +1024,38 @@
 #define VDIN_INTF_WIDTHM1_BIT           0
 #define VDIN_INTF_WIDTHM1_WID           13
 
+/* #define VDIN_LFIFO_URG_CTRL                       0x121e */
+/*Bit 15          default== 0, urgent_ctrl_en
+ *Bit 14          default== 0, urgent_wr, if true for write buffer
+ *Bit 13          default== 0, out_inv_en
+ *Bit 12          default == 0, urgent_ini_value
+ *Bit 11:6        default == 0, up_th  up threshold
+ *Bit 5:0         default == 0, dn_th  dn threshold
+ */
+#define VDIN_LFIFO_URG_CTRL_EN_BIT      15
+#define VDIN_LFIFO_URG_CTRL_EN_WID      1
+#define VDIN_LFIFO_URG_WR_EN_BIT        14
+#define VDIN_LFIFO_URG_WR_EN_WID        1
+#define VDIN_LFIFO_OUT_INV_EN_BIT       13
+#define VDIN_LFIFO_OUT_INV_EN_WID       1
+#define VDIN_LFIFO_URG_INI_BIT          12
+#define VDIN_LFIFO_URG_INI_WID          1
+#define VDIN_LFIFO_URG_UP_TH_BIT        6
+#define VDIN_LFIFO_URG_UP_TH_WID        6
+#define VDIN_LFIFO_URG_DN_TH_BIT        0
+#define VDIN_LFIFO_URG_DN_TH_WID        6
+
 
 /* #define VDIN_WR_CTRL2                           0x121f */
-/*1: enable WR 10 bit mode, 0: disable WR 10 bit mode */
+/*1: enable WR 10 bit mode, 0: disable WR 10 bit mode*/
 #define VDIN_WR_10BIT_MODE_BIT		19
 #define VDIN_WR_10BIT_MODE_WID		1
 /* data_ext_en 1:send out data if req was interrupt by soft reset */
 /* 0:normal mode */
 #define VDIN_WR_DATA_EXT_EN_BIT		18
 #define VDIN_WR_DATA_EXT_EN_WID		1
-/* 0: 1 word in 1burst, 1: 2 words in 1burst;
- * 10: 4 words in 1burst; 11: reserved
+/*0: 1 word in 1burst, 1: 2 words in 1burst;
+ *10: 4 words in 1burst; 11: reserved
  */
 #define VDIN_WR_BURST_MODE_BIT		12
 #define VDIN_WR_BURST_MODE_WID		4
@@ -1093,8 +1121,6 @@
 #define WR_CANVAS_BIT                   0
 #define WR_CANVAS_WID                   8
 
-
-
 /* #define VDIN_WR_H_START_END                        0x1221 */
 
 #define HORIZONTAL_REVERSE_BIT          29/* if true horizontal reverse */
@@ -1132,7 +1158,11 @@
 /* #define VDIN_SCIN_HEIGHTM1                          0x1225 */
 /* Bit 12:0, scaler input height minus 1 */
 #define SCALER_INPUT_HEIGHT_BIT            0
-#define SCALER_INPUT_HEIGHT_WID           12
+#define SCALER_INPUT_HEIGHT_WID           13
+
+/* Bit 28:16, vshrk input height minus 1 */
+#define VSHRK_INPUT_HEIGHT_BIT           16
+#define VSHRK_INPUT_HEIGHT_WID           13
 
 /* #define `define VDIN_DUMMY_DATA                0x1226 */
 #define DUMMY_COMPONENT0_BIT                16
@@ -1549,7 +1579,6 @@
 #define MEAS_VS_TOTAL_CNT_LO_BIT        0  /* vsync_total_counter[31:0] */
 #define MEAS_VS_TOTAL_CNT_LO_WID        32
 
-
 /* 1st/2nd/3rd/4th hs range according to VDIN_MEAS_HS_INDEX */
 /* #define VDIN_MEAS_HS_RANGE                         0x125d */
 #define MEAS_HS_RANGE_CNT_START_BIT     16
@@ -1557,13 +1586,10 @@
 #define MEAS_HS_RANGE_CNT_END_BIT       0
 #define MEAS_HS_RANGE_CNT_END_WID       13
 
-
 /* hs count as per 1st/2nd/3rd/4th hs range according to VDIN_MEAS_HS_INDEX */
 /* #define VDIN_MEAS_HS_COUNT                         0x125e // read only */
 #define MEAS_HS_CNT_BIT                 0
 #define MEAS_HS_CNT_WID                 24
-
-
 
 /* #define VDIN_BLKBAR_CTRL1                          0x125f */
 #define BLKBAR_WHITE_EN_BIT             8
@@ -1571,9 +1597,7 @@
 #define BLKBAR_WHITE_LVL_BIT            0
 #define BLKBAR_WHITE_LVL_WID            8
 
-
 /* #define VDIN_BLKBAR_CTRL0                       0x1260 */
-
 
  /* threshold to judge a black point */
 #define BLKBAR_BLK_LVL_BIT              24
@@ -1586,7 +1610,7 @@
 #define BLKBAR_COMP_SEL_BIT             5
 #define BLKBAR_COMP_SEL_WID             3
 /* sw statistic of black pixels of each block,
- * 1: search once, 0: search continuously till the exact edge
+ *1: search once, 0: search continuously till the exact edge
  */
 #define BLKBAR_SW_STAT_EN_BIT           4
 #define BLKBAR_SW_STAT_EN_WID           1
@@ -1678,14 +1702,11 @@
 #define INPUT_WIN_H_END_BIT              0
 #define INPUT_WIN_H_END_WID              13
 
-
-
 /* #define VDIN_WIN_V_START_END                       0x126e */
 #define INPUT_WIN_V_START_BIT            16
 #define INPUT_WIN_V_START_WID            13
 #define INPUT_WIN_V_END_BIT              0
 #define INPUT_WIN_V_END_WID              13
-
 
 /* Bit 15:8 vdi7 asfifo_ctrl */
 /* Bit 7:0 vdi6 asfifo_ctrl */
@@ -1698,6 +1719,13 @@
 #define VDI7_ASFIFO_CTRL_WID            8
 #define VDI6_ASFIFO_CTRL_BIT            0
 #define VDI6_ASFIFO_CTRL_WID            8
+
+#define VDIN_VSHRK_EN_BIT	27
+#define VDIN_VSHRK_EN_WID	1
+#define VDIN_VSHRK_LPF_MODE_BIT	24
+#define VDIN_VSHRK_LPF_MODE_WID	1
+#define VDIN_VSHRK_MODE_BIT	25
+#define VDIN_VSHRK_MODE_WID	2
 
 /* Bit 3:2 vshrk_clk2_ctrl */
 /* Bit 1:0 vshrk_clk1_ctrl */
@@ -1713,7 +1741,34 @@
 /* Bit 5:0, vdi9_asfifo_cnt */
 /* #define VDIN_COM_STATUS3    ((0x1273  << 2) + 0xd0100000) */
 
+#define VDIN_FORCEGOLINE_EN_BIT		28
+#define VDIN_WRREQUEST_EN_BT		8
+#define VDIN_WRCTRLREG_PAUSE_BIT		10
 
+/*#define VDIN_INTF_WIDTHM1*/
+#define VDIN_FIX_NONSTDVSYNC_BIT	24
+#define VDIN_FIX_NONSTDVSYNC_WID	2
+
+/*#define VPU_ARB_URG_CTRL*/
+#define VDIN_LFF_URG_CTRL_BIT	8
+#define VDIN_LFF_URG_CTRL_WID	1
+#define VPP_OFF_URG_CTRL_BIT	6
+#define VPP_OFF_URG_CTRL_WID	1
+
+/*#define VDIN_COM_CTRL0*/
+#define VDIN_COMMONINPUT_EN_BIT		4
+#define VDIN_COMMONINPUT_EN_WID		1
+
+/*#define VDIN_WR_CTRL*/
+#define VDIN0_VCP_WR_EN_BIT	25
+#define VDIN0_VCP_WR_EN_WID	1
+#define VDIN0_DISABLE_CLOCKGATE_BIT	29
+#define VDIN0_DISABLE_CLOCKGATE_WID	1
+/*#define VDIN1_WR_CTRL*/
+#define VDIN1_VCP_WR_EN_BIT	8
+#define VDIN1_VCP_WR_EN_WID	1
+#define VDIN1_DISABLE_CLOCKGATE_BIT	29
+#define VDIN1_DISABLE_CLOCKGATE_WID	1
 
 
 #endif /* __VDIN_REGS_H */

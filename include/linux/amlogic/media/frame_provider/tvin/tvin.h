@@ -330,7 +330,9 @@ enum tvin_sig_fmt_e {
 	TVIN_SIG_FMT_HDMI_RESERVE11 = 0x44b,
 	TVIN_SIG_FMT_HDMI_720X480P_60HZ_FRAME_PACKING = 0x44c,
 	TVIN_SIG_FMT_HDMI_720X576P_50HZ_FRAME_PACKING = 0x44d,
-	TVIN_SIG_FMT_HDMI_MAX = 0x44e,
+	TVIN_SIG_FMT_HDMI_640X480P_72HZ = 0x44e,
+	TVIN_SIG_FMT_HDMI_640X480P_75HZ = 0x44f,
+	TVIN_SIG_FMT_HDMI_MAX = 0x450,
 	TVIN_SIG_FMT_HDMI_THRESHOLD = 0x600,
 	/* Video Formats */
 	TVIN_SIG_FMT_CVBS_NTSC_M = 0x601,
@@ -340,7 +342,8 @@ enum tvin_sig_fmt_e {
 	TVIN_SIG_FMT_CVBS_PAL_60 = 0x605,
 	TVIN_SIG_FMT_CVBS_PAL_CN = 0x606,
 	TVIN_SIG_FMT_CVBS_SECAM = 0x607,
-	TVIN_SIG_FMT_CVBS_MAX = 0x608,
+	TVIN_SIG_FMT_CVBS_NTSC_50 = 0x608,
+	TVIN_SIG_FMT_CVBS_MAX = 0x609,
 	TVIN_SIG_FMT_CVBS_THRESHOLD = 0x800,
 	/* 656 Formats */
 	TVIN_SIG_FMT_BT656IN_576I_50HZ = 0x801,
@@ -460,7 +463,7 @@ struct tvin_info_s {
 	enum tvin_sig_status_e status;
 	enum tvin_color_fmt_e cfmt;
 	unsigned int fps;
-	unsigned int reserved;
+	unsigned int is_dvi;
 };
 
 struct tvin_buf_info_s {
@@ -871,6 +874,14 @@ struct tvafe_pin_mux_s {
  *adc pll ctl, atv demod & tvafe use the same adc module
  * module index: atv demod:0x01; tvafe:0x2
  */
-extern void adc_set_pll_cntl(bool on, unsigned int module_sel);
+/* extern void adc_set_pll_cntl(bool on, unsigned int module_sel);*/
+
+struct dfe_adcpll_para {
+	unsigned int adcpllctl;
+	unsigned int demodctl;
+	unsigned int atsc;
+};
+extern int adc_set_pll_cntl(bool on, unsigned int module_sel, void *pDtvPara);
+extern void tvafe_set_ddemod_default(void);/* add for dtv demod*/
 
 #endif

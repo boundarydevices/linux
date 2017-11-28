@@ -27,14 +27,20 @@
 #ifdef TVBUS_REG_ADDR
 #define R_APB_REG(reg) aml_read_reg32(TVBUS_REG_ADDR(reg))
 #define W_APB_REG(reg, val) aml_write_reg32(TVBUS_REG_ADDR(reg), val)
+#define R_VBI_APB_REG(reg) aml_read_reg32(TVBUS_REG_ADDR(reg))
+#define W_VBI_APB_REG(reg, val) aml_write_reg32(TVBUS_REG_ADDR(reg), val)
 #define R_APB_BIT(reg, start, len) \
 	aml_get_reg32_bits(TVBUS_REG_ADDR(reg), start, len)
 #define W_APB_BIT(reg, val, start, len) \
+	aml_set_reg32_bits(TVBUS_REG_ADDR(reg), val, start, len)
+#define W_VBI_APB_BIT(reg, val, start, len) \
 	aml_set_reg32_bits(TVBUS_REG_ADDR(reg), val, start, len)
 #else
 #if 1
 extern int tvafe_reg_read(unsigned int reg, unsigned int *val);
 extern int tvafe_reg_write(unsigned int reg, unsigned int val);
+extern int tvafe_vbi_reg_read(unsigned int reg, unsigned int *val);
+extern int tvafe_vbi_reg_write(unsigned int reg, unsigned int val);
 extern int tvafe_hiu_reg_read(unsigned int reg, unsigned int *val);
 extern int tvafe_hiu_reg_write(unsigned int reg, unsigned int val);
 #else
@@ -55,7 +61,6 @@ static int tvafe_reg_write(unsigned int reg, unsigned int val)
 static inline uint32_t R_APB_REG(uint32_t reg)
 {
 	unsigned int val;
-
 	tvafe_reg_read(reg, &val);
 	return val;
 }
@@ -64,6 +69,30 @@ static inline void W_APB_REG(uint32_t reg,
 				 const uint32_t val)
 {
 	tvafe_reg_write(reg, val);
+}
+
+static inline uint32_t R_VBI_APB_REG(uint32_t reg)
+{
+	unsigned int val = 0;
+
+	tvafe_vbi_reg_read(reg, &val);
+	return val;
+}
+
+static inline void W_VBI_APB_REG(uint32_t reg,
+				 const uint32_t val)
+{
+	tvafe_vbi_reg_write(reg, val);
+}
+
+static inline void W_VBI_APB_BIT(uint32_t reg,
+				    const uint32_t value,
+				    const uint32_t start,
+				    const uint32_t len)
+{
+	W_VBI_APB_REG(reg, ((R_VBI_APB_REG(reg) &
+			     ~(((1L << (len)) - 1) << (start))) |
+			    (((value) & ((1L << (len)) - 1)) << (start))));
 }
 
 static inline void W_APB_BIT(uint32_t reg,
@@ -112,7 +141,6 @@ static inline uint32_t R_VCBUS_BIT(uint32_t reg,
 static inline uint32_t R_HIU_REG(uint32_t reg)
 {
 	unsigned int val;
-
 	tvafe_hiu_reg_read(reg, &val);
 	return val;
 }
@@ -145,13 +173,13 @@ static inline uint32_t R_HIU_BIT(uint32_t reg,
 }
 
 /*
- *#define R_APB_REG(reg) READ_APB_REG(reg)
- *#define W_APB_REG(reg, val) WRITE_APB_REG(reg, val)
- *#define R_APB_BIT(reg, start, len) \
- *	READ_APB_REG_BITS(reg, start, len)
- *#define W_APB_BIT(reg, val, start, len) \
- *	WRITE_APB_REG_BITS(reg, val, start, len)
- */
+#define R_APB_REG(reg) READ_APB_REG(reg)
+#define W_APB_REG(reg, val) WRITE_APB_REG(reg, val)
+#define R_APB_BIT(reg, start, len) \
+	READ_APB_REG_BITS(reg, start, len)
+#define W_APB_BIT(reg, val, start, len) \
+	WRITE_APB_REG_BITS(reg, val, start, len)
+*/
 #endif
 
 
@@ -404,11 +432,18 @@ struct tvin_sig_property_s {
 	unsigned int		he;	/* for horizontal end cut window */
 	unsigned int		vs;	/* for vertical start cut window */
 	unsigned int		ve;	/* for vertical end cut window */
+	unsigned int		pre_vs;	/* for vertical start cut window */
+	unsigned int		pre_ve;	/* for vertical end cut window */
+	unsigned int		pre_hs;	/* for horizontal start cut window */
+	unsigned int		pre_he;	/* for horizontal end cut window */
 	unsigned int		decimation_ratio;	/* for decimation */
 	unsigned int		colordepth; /* for color bit depth */
 	unsigned int		vdin_hdr_Flag;
 	enum tvin_color_fmt_range_e color_fmt_range;
 	struct tvin_hdr_info_s hdr_info;
+	bool dolby_vision;/*is signal dolby version*/
+	uint8_t fps;
+	unsigned int skip_vf_num;/*skip pre vframe num*/
 };
 
 #define TVAFE_VF_POOL_SIZE			6 /* 8 */
