@@ -14151,3 +14151,7 @@ F: arch/arm64/boot/dts/amlogic/gxl_p241_v2-1g.dts
 AMLOGIC lcd driver
 M: Evoke Zhang <evoke.zhang@amlogic.com>
 F: drivers/amlogic/media/vout/lcd/lcd_extern/mipi_TV070WSM.c
+
+AMLOGIC remote
+M: Zan Peng <zan.peng@amlogic.com>
+F: {include/uapi/linux => drivers/amlogic/input/remote}/rc_common.h

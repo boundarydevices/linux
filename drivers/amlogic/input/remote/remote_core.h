@@ -88,10 +88,11 @@ struct remote_dev {
 	int debug_buffer_size;
 	int debug_current;
 
-	u32 (*getkeycode)(struct remote_dev *dev, u32 scancode);
-	bool (*set_custom_code)(struct remote_dev *dev, u32 code);
-	bool (*is_valid_custom)(struct remote_dev *dev);
-	bool (*is_next_repeat)(struct remote_dev *dev);
+	u32 (*getkeycode)(struct remote_dev *, u32);
+	int (*ir_report_rel)(struct remote_dev *, u32, int);
+	bool (*set_custom_code)(struct remote_dev *, u32);
+	bool (*is_valid_custom)(struct remote_dev *);
+	bool (*is_next_repeat)(struct remote_dev *);
 };
 
 struct remote_raw_handle {
@@ -205,5 +206,3 @@ bool remote_debug_get_enable(void);
 int debug_log_printk(struct remote_dev *dev, const char *fmt);
 
 #endif
-
-

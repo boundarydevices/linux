@@ -18,7 +18,7 @@
 #ifndef _REMOTE_MESON_H
 #define _REMOTE_MESON_H
 #include <linux/cdev.h>
-#include <uapi/linux/rc_common.h>
+#include "rc_common.h"
 #include "remote_core.h"
 
 #define DRIVER_NAME "meson-remote"
@@ -26,10 +26,17 @@
 #define IR_DATA_IS_VALID(data) (data & 0x8)
 #define IR_CONTROLLER_BUSY(x) ((x >> 7) & 0x1)
 
+#define CURSOR_MOVE_ACCELERATE {0, 2, 2, 4, 4, 6, 8, 10, 12, 14, 16, 18}
+
 enum IR_CONTR_NUMBER {
 	MULTI_IR_ID = 0,
 	LEGACY_IR_ID,
 	IR_ID_MAX
+};
+
+enum IR_WORK_MODE {
+	NORMAL_MODE = 0,
+	MOUSE_MODE = 1
 };
 
 struct remote_range {
@@ -47,7 +54,15 @@ struct remote_reg_map {
 	unsigned int val;
 };
 
+/*
+ *struct ir_map_tab_list
+ *
+ *@ir_dev_mode: 0: normal mode; 1: mouse mode
+ *@list:
+ *@tab:
+ */
 struct ir_map_tab_list {
+	bool ir_dev_mode;
 	struct list_head list;
 	struct ir_map_tab tab;
 };
@@ -185,6 +200,3 @@ struct ir_map_tab_list *seek_map_tab(struct remote_chip *chip, int custom_code);
 void ir_tab_free(struct ir_map_tab_list *ir_map_list);
 
 #endif
-
-
-

@@ -106,6 +106,18 @@ static ssize_t keymap_show(struct device *dev,
 	len += sprintf(buf+len, "release_delay=%d\n",
 						map_tab->tab.release_delay);
 	len += sprintf(buf+len, "map_size=%d\n",  map_tab->tab.map_size);
+	len += sprintf(buf+len, "fn_key_scancode = 0x%x\n",
+				map_tab->tab.cursor_code.fn_key_scancode);
+	len += sprintf(buf+len, "cursor_left_scancode = 0x%x\n",
+				map_tab->tab.cursor_code.cursor_left_scancode);
+	len += sprintf(buf+len, "cursor_right_scancode = 0x%x\n",
+				map_tab->tab.cursor_code.cursor_right_scancode);
+	len += sprintf(buf+len, "cursor_up_scancode = 0x%x\n",
+				map_tab->tab.cursor_code.cursor_up_scancode);
+	len += sprintf(buf+len, "cursor_down_scancode = 0x%x\n",
+				map_tab->tab.cursor_code.cursor_down_scancode);
+	len += sprintf(buf+len, "cursor_ok_scancode = 0x%x\n",
+				map_tab->tab.cursor_code.cursor_ok_scancode);
 	len += sprintf(buf+len, "keycode scancode\n");
 	for (i = 0; i <  map_tab->tab.map_size; i++) {
 		len += sprintf(buf+len, "%4d %4d\n",
@@ -283,6 +295,3 @@ void ir_sys_device_attribute_sys(struct remote_chip *chip)
 	device_destroy(&remote_class, chip->chr_devno);
 }
 EXPORT_SYMBOL_GPL(ir_sys_device_attribute_sys);
-
-
-

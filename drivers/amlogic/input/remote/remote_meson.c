@@ -136,6 +136,60 @@ static int ir_lookup_by_scancode(struct ir_map_tab *ir_map,
 	return -1;
 }
 
+static int ir_report_rel(struct remote_dev *dev, u32 scancode, int status)
+{
+	struct remote_chip *chip = (struct remote_chip *)dev->platform_data;
+	struct ir_map_tab_list *ct = chip->cur_tab;
+	static u32 repeat_count;
+	s32 cursor_value = 0;
+	u32 valid_scancode;
+	u16 mouse_code;
+	s32 move_accelerate[] = CURSOR_MOVE_ACCELERATE;
+
+	/*nothing need to do in normal mode*/
+	if (!ct || (ct->ir_dev_mode != MOUSE_MODE))
+		return -EINVAL;
+
+	if (status == REMOTE_REPEAT) {
+		valid_scancode = dev->last_scancode;
+		repeat_count++;
+		if (repeat_count > ARRAY_SIZE(move_accelerate) - 1)
+			repeat_count = ARRAY_SIZE(move_accelerate) - 1;
+	} else {
+		valid_scancode = scancode;
+		dev->last_scancode = scancode;
+		repeat_count = 0;
+	}
+	if (valid_scancode == ct->tab.cursor_code.cursor_left_scancode) {
+		cursor_value = -(1 + move_accelerate[repeat_count]);
+		mouse_code = REL_X;
+	} else if (valid_scancode ==
+			ct->tab.cursor_code.cursor_right_scancode) {
+		cursor_value = 1 + move_accelerate[repeat_count];
+		mouse_code = REL_X;
+	} else if (valid_scancode ==
+			ct->tab.cursor_code.cursor_up_scancode) {
+		cursor_value = -(1 + move_accelerate[repeat_count]);
+		mouse_code = REL_Y;
+	} else if (valid_scancode ==
+			ct->tab.cursor_code.cursor_down_scancode) {
+		cursor_value = 1 + move_accelerate[repeat_count];
+		mouse_code = REL_Y;
+	} else {
+		return -EINVAL;
+	}
+	input_event(chip->r_dev->input_device, EV_REL,
+			mouse_code, cursor_value);
+	input_sync(chip->r_dev->input_device);
+
+	remote_dbg(chip->dev, "mouse cursor be %s moved %d.\n",
+				mouse_code == REL_X ? "horizontal" :
+					"vertical",
+					cursor_value);
+
+	return 0;
+}
+
 static u32 getkeycode(struct remote_dev *dev, u32 scancode)
 {
 	struct remote_chip *chip = (struct remote_chip *)dev->platform_data;
@@ -146,13 +200,36 @@ static u32 getkeycode(struct remote_dev *dev, u32 scancode)
 		dev_err(chip->dev, "cur_custom is nulll\n");
 		return KEY_RESERVED;
 	}
+	/*return BTN_LEFT in mouse mode*/
+	if (ct->ir_dev_mode == MOUSE_MODE &&
+			scancode == ct->tab.cursor_code.cursor_ok_scancode) {
+		remote_dbg(chip->dev, "mouse left button scancode: 0x%x",
+					BTN_LEFT);
+		return BTN_LEFT;
+	}
+
 	index = ir_lookup_by_scancode(&ct->tab, scancode);
 	if (index < 0) {
 		dev_err(chip->dev, "scancode %d undefined\n", scancode);
 		return KEY_RESERVED;
 	}
+
+	/*save remote-control work mode*/
+	if (dev->keypressed == false &&
+			scancode == ct->tab.cursor_code.fn_key_scancode) {
+		if (ct->ir_dev_mode == NORMAL_MODE)
+			ct->ir_dev_mode = MOUSE_MODE;
+		else
+			ct->ir_dev_mode = NORMAL_MODE;
+		dev_info(chip->dev, "remote control[ID: 0x%x] switch to %s\n",
+					ct->tab.custom_code,
+					ct->ir_dev_mode ?
+					"mouse mode":"normal mode");
+	}
+
 	return ct->tab.codemap[index].map.keycode;
 }
+
 static bool is_valid_custom(struct remote_dev *dev)
 {
 	struct remote_chip *chip = (struct remote_chip *)dev->platform_data;
@@ -371,6 +448,8 @@ static int get_custom_tables(struct device_node *node,
 			goto err;
 		}
 
+		memset(&ptable->tab.cursor_code, 0xff,
+					sizeof(struct cursor_codemap));
 		ir_scancode_sort(&ptable->tab);
 		/*insert list*/
 		spin_lock_irqsave(&chip->slock, flags);
@@ -540,6 +619,7 @@ static int remote_probe(struct platform_device *pdev)
 	chip->r_dev->dev = &pdev->dev;
 	chip->r_dev->platform_data = (void *)chip;
 	chip->r_dev->getkeycode    = getkeycode;
+	chip->r_dev->ir_report_rel = ir_report_rel;
 	chip->r_dev->set_custom_code = set_custom_code;
 	chip->r_dev->is_valid_custom = is_valid_custom;
 	chip->r_dev->is_next_repeat  = is_next_repeat;
@@ -689,4 +769,3 @@ module_exit(remote_exit);
 MODULE_AUTHOR("AMLOGIC");
 MODULE_DESCRIPTION("AMLOGIC REMOTE PROTOCOL");
 MODULE_LICENSE("GPL");
-

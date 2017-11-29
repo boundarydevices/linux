@@ -14,7 +14,7 @@
 #define CUSTOM_NAME_LEN 64
 
 /*to ensure kernel and user spase use the same header file*/
-#define SHARE_DATA_VERSION "v1.0.0"
+#define SHARE_DATA_VERSION "v1.1.0"
 
 union _codemap {
 	struct ir_key_map {
@@ -23,10 +23,31 @@ union _codemap {
 		} map;
 	__u32 code;
 };
+
+/*
+ *struct cursor_codemap - codemap for mouse mode
+ *
+ *@fn_key_scancode: scancode of fn key which used to swith mode
+ *@cursor_left_scancode: scancode of left key
+ *@cursor_right_scancode: scancode of right key
+ *@cursor_up_scancode: scancode of up key
+ *@cursor_down_scancode: scancode of down key
+ *@cursor_ok_scancode: scancode of ok key
+ */
+struct cursor_codemap {
+	__u16 fn_key_scancode;
+	__u16 cursor_left_scancode;
+	__u16 cursor_right_scancode;
+	__u16 cursor_up_scancode;
+	__u16 cursor_down_scancode;
+	__u16 cursor_ok_scancode;
+};
+
 /**
  *struct ir_map_table - the IR key map table for different remote-control
  *
  *@custom_name: table name
+ *@cursor_code: mouse mode need
  *@map_size: number of IR key
  *@custom_code: custom code, identify different key mapping table
  *@release_delay: release delay time
@@ -34,6 +55,7 @@ union _codemap {
  */
 struct ir_map_tab {
 	char custom_name[CUSTOM_NAME_LEN];
+	struct cursor_codemap cursor_code;
 	__u16 map_size;
 	__u32 custom_code;
 	__u32 release_delay;
