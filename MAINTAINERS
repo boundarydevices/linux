@@ -14155,3 +14155,7 @@ F: drivers/amlogic/media/vout/lcd/lcd_extern/mipi_TV070WSM.c
 AMLOGIC remote
 M: Zan Peng <zan.peng@amlogic.com>
 F: {include/uapi/linux => drivers/amlogic/input/remote}/rc_common.h
+
+AMLOGIC ADD P241 buildroot V2 DTS
+M: Wenbiao <wenbiao.zhang@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/gxl_p241_v2_1g_buildroot.dts
