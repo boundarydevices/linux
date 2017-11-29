@@ -734,7 +734,6 @@
 		clocks = <&clks IMX6SX_CLK_CKO2>;
 		VDDA-supply = <&reg_1p8v>;
 		VDDIO-supply = <&reg_1p8v>;
-		VDDD-supply = <&reg_1p8v>;
 		assigned-clocks = <&clks IMX6SX_CLK_CKO2_SEL>,
 				  <&clks IMX6SX_CLK_CKO2>;
 		assigned-clock-parents = <&clks IMX6SX_CLK_OSC>;
