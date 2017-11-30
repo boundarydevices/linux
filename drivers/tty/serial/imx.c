@@ -1330,7 +1330,7 @@ static void imx_disable_dma(struct imx_port *sport)
 
 	/* clear UCR2 */
 	temp = readl(sport->port.membase + UCR2);
-	temp &= ~(UCR2_CTSC | UCR2_CTS | UCR2_ATEN);
+	temp &= ~(UCR2_CTSC | UCR2_CTS);
 	writel(temp, sport->port.membase + UCR2);
 
 	/* clear UCR4 */
@@ -1709,7 +1709,7 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 	old_ucr2 = readl(sport->port.membase + UCR2);
 	writel(old_ucr2 & ~(UCR2_TXEN | UCR2_RXEN),
 			sport->port.membase + UCR2);
-	old_ucr2 &= (UCR2_TXEN | UCR2_RXEN | UCR2_ATEN);
+	old_ucr2 &= (UCR2_TXEN | UCR2_RXEN);
 
 	/* custom-baudrate handling */
 	div = sport->port.uartclk / (baud * 16);
