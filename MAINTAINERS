@@ -14685,6 +14685,10 @@ F:	arch/arm64/boot/dts/amlogic/axg_s400_v03.dts
 F:	arch/arm64/boot/dts/amlogic/axg_s400emmc.dts
 F:	arch/arm64/boot/dts/amlogic/axg_s400emmc_v03.dts
 
+AMLOGIC DOLBY FIRMWARE DRIVER
+M:  Yan Wang <yan.wang@amlogic.com>
+F:  drivers/amlogic/dolby_fw/
+
 AMLOGIC MESON DTS
 M:	Huan Biao <huan.biao@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/g12a_s905d2_u200_buildroot_vccktest.dts

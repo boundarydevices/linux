@@ -1,0 +1,1 @@
+obj-$(CONFIG_DOLBY_FW) += dolby_fw.o

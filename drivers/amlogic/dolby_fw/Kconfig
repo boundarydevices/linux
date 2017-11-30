@@ -1,0 +1,5 @@
+config DOLBY_FW
+	tristate "Dolby FW kernel driver"
+	default n
+	help
+	This is Dolby FW Driver.

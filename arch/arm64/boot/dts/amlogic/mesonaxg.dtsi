@@ -267,6 +267,11 @@
 		sys_reset = <0x84000009>;
 		sys_poweroff = <0x84000008>;
 	};
+	dolby_fw: dolby_fw {
+		compatible = "amlogic, dolby_fw";
+		mem_size = <0x100000>;
+		status = "okay";
+	};
 
 	wdt_ee: watchdog@0xffd0f0d0 {
 		compatible = "amlogic, meson-wdt";
