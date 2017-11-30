@@ -860,11 +860,15 @@ out:
 static unsigned int imx_get_hwmctrl(struct imx_port *sport)
 {
 	unsigned int tmp = TIOCM_DSR;
-	unsigned usr1 = readl(sport->port.membase + USR1);
-	unsigned usr2 = readl(sport->port.membase + USR2);
+	unsigned int usr1 = readl(sport->port.membase + USR1);
+	unsigned int usr2 = readl(sport->port.membase + USR2);
+	unsigned int ucr2 = readl(sport->port.membase + UCR2);
 
 	if (usr1 & USR1_RTSS)
 		tmp |= TIOCM_CTS;
+
+	if (ucr2 & UCR2_CTS)
+		tmp |= TIOCM_RTS;
 
 	/* in DCE mode DCDIN is always 0 */
 	if (!(usr2 & USR2_DCDIN))
@@ -873,6 +877,9 @@ static unsigned int imx_get_hwmctrl(struct imx_port *sport)
 	if (sport->dte_mode)
 		if (!(readl(sport->port.membase + USR2) & USR2_RIIN))
 			tmp |= TIOCM_RI;
+
+	if (readl(sport->port.membase + uts_reg(sport)) & UTS_LOOP)
+		tmp |= TIOCM_LOOP;
 
 	return tmp;
 }
@@ -1335,6 +1342,7 @@ static void imx_disable_dma(struct imx_port *sport)
 	temp = readl(sport->port.membase + UCR4);
 	temp &= ~UCR4_IDDMAEN;
 	writel(temp, sport->port.membase + UCR4);
+
 	imx_setup_ufcr(sport, TXTL_DEFAULT, RXTL_DEFAULT);
 
 	sport->dma_is_enabled = 0;
@@ -1409,6 +1417,7 @@ static int imx_startup(struct uart_port *port)
 		INIT_WORK(&sport->tsk_dma_tx, dma_tx_work);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
+
 	/* Reset fifo's and state machines */
 	i = 100;
 
@@ -1643,7 +1652,6 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 		else
 			imx_port_rts_active(sport, &ucr2);
 	}
-
 
 	if (termios->c_cflag & CSTOPB)
 		ucr2 |= UCR2_STPB;
