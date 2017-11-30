@@ -919,7 +919,7 @@ static void imx_uart_clear_rx_errors(struct imx_port *sport);
  */
 static unsigned int imx_uart_get_hwmctrl(struct imx_port *sport)
 {
-	unsigned int tmp = TIOCM_DSR | TIOCM_CAR;
+	unsigned int tmp = TIOCM_DSR;
 	unsigned int usr1 = imx_uart_readl(sport, USR1);
 	unsigned int usr2 = imx_uart_readl(sport, USR2);
 	unsigned int ucr2 = imx_uart_readl(sport, UCR2);
