@@ -1047,6 +1047,24 @@ static void imx_break_ctl(struct uart_port *port, int break_state)
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
 
+/*
+ * This is our per-port timeout handler, for checking the
+ * modem status signals.
+ */
+static void imx_timeout(unsigned long data)
+{
+	struct imx_port *sport = (struct imx_port *)data;
+	unsigned long flags;
+
+	if (sport->port.state) {
+		spin_lock_irqsave(&sport->port.lock, flags);
+		imx_mctrl_check(sport);
+		spin_unlock_irqrestore(&sport->port.lock, flags);
+
+		mod_timer(&sport->timer, jiffies + MCTRL_TIMEOUT);
+	}
+}
+
 #define RX_BUF_SIZE	(PAGE_SIZE)
 static void imx_rx_dma_done(struct imx_port *sport)
 {
@@ -1080,24 +1098,6 @@ static void clear_rx_errors(struct imx_port *sport)
 		writel(USR2_ORE, sport->port.membase + USR2);
 	}
 
-}
-
-/*
- * This is our per-port timeout handler, for checking the
- * modem status signals.
- */
-static void imx_timeout(unsigned long data)
-{
-	struct imx_port *sport = (struct imx_port *)data;
-	unsigned long flags;
-
-	if (sport->port.state) {
-		spin_lock_irqsave(&sport->port.lock, flags);
-		imx_mctrl_check(sport);
-		spin_unlock_irqrestore(&sport->port.lock, flags);
-
-		mod_timer(&sport->timer, jiffies + MCTRL_TIMEOUT);
-	}
 }
 
 /*
