@@ -1455,10 +1455,11 @@ static int imx_startup(struct uart_port *port)
 	temp |= UCR1_UARTEN;
 	writel(temp, sport->port.membase + UCR1);
 
-	temp = readl(sport->port.membase + UCR4);
-	temp |= UCR4_OREN;
-	writel(temp, sport->port.membase + UCR4);
-
+	if (!sport->dma_is_inited) {
+		temp = readl(sport->port.membase + UCR4);
+		temp |= UCR4_OREN;
+		writel(temp, sport->port.membase + UCR4);
+	}
 	temp = readl(sport->port.membase + UCR2);
 	temp |= (UCR2_RXEN | UCR2_TXEN);
 	if (!sport->have_rtscts)
