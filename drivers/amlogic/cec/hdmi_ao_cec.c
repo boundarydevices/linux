@@ -45,7 +45,7 @@
 
 #include <linux/uaccess.h>
 #include <linux/delay.h>
-
+#include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include <linux/amlogic/pm.h>
 #include <linux/of.h>
 #include <linux/pinctrl/consumer.h>

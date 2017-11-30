@@ -530,9 +530,9 @@ void tvin_smr(struct vdin_dev_s *devp)
 		}
 		/* dynamic adjust cutwindow for atv test */
 		if ((port >= TVIN_PORT_CVBS0) &&
-			(port <= TVIN_PORT_CVBS7))
+			(port <= TVIN_PORT_CVBS3))
 			vdin_auto_de_handler(devp);
-		if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS7) &&
+		if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3) &&
 			devp->auto_ratio_en && sm_ops->get_sig_property)
 			sm_ops->get_sig_property(devp->frontend, prop);
 		/* hdmirx_color_fmt_handler(devp); */

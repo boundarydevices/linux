@@ -296,6 +296,7 @@ static inline uint32_t rd_bits(uint32_t offset,
 #define CVD2_DGAIN_LIMITL (CVD2_DGAIN_MIDDLE - CVD2_DGAIN_WINDOW)
 #define CVD2_DGAIN_MAX		    0x0600
 #define CVD2_DGAIN_MIN		    0x0100
+#define PGA_DELTA_VAL			0x10
 #endif
 
 #define TVAFE_SET_CVBS_CDTO_EN
@@ -303,6 +304,7 @@ static inline uint32_t rd_bits(uint32_t offset,
 #define TVAFE_SET_CVBS_CDTO_START   300
 #define TVAFE_SET_CVBS_CDTO_STEP    0
 #define HS_CNT_STANDARD             0x31380	/*0x17a00*/
+#define CDTO_FILTER_FACTOR			1
 #endif
 
 enum tvin_sync_pol_e {

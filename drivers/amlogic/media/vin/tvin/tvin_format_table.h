@@ -24,10 +24,6 @@
 extern const char *tvin_sig_fmt_str(enum tvin_sig_fmt_e fmt);
 extern const struct tvin_format_s *tvin_get_fmt_info(enum tvin_sig_fmt_e fmt);
 
-extern const struct tvin_format_s tvin_vga_fmt_tbl[TVIN_SIG_FMT_VGA_MAX -
-	TVIN_SIG_FMT_VGA_512X384P_60HZ_D147 + 1];
-extern const struct tvin_format_s tvin_comp_fmt_tbl[TVIN_SIG_FMT_COMP_MAX -
-	TVIN_SIG_FMT_COMP_480P_60HZ_D000 + 1];
 extern const struct tvin_format_s tvin_hdmi_fmt_tbl[TVIN_SIG_FMT_HDMI_MAX -
 	TVIN_SIG_FMT_HDMI_640X480P_60HZ + 1];
 extern const struct tvin_format_s tvin_cvbs_fmt_tbl[TVIN_SIG_FMT_CVBS_MAX -
@@ -35,10 +31,6 @@ extern const struct tvin_format_s tvin_cvbs_fmt_tbl[TVIN_SIG_FMT_CVBS_MAX -
 extern const struct tvin_format_s tvin_bt601_fmt_tbl[TVIN_SIG_FMT_BT601_MAX -
 	TVIN_SIG_FMT_BT656IN_576I_50HZ + 1];
 
-extern const unsigned char adc_vga_table[TVIN_SIG_FMT_VGA_MAX -
-	TVIN_SIG_FMT_VGA_512X384P_60HZ_D147][ADC_REG_NUM];
-extern const unsigned char adc_component_table[TVIN_SIG_FMT_COMP_MAX -
-	TVIN_SIG_FMT_COMP_480P_60HZ_D000][ADC_REG_NUM];
 extern const unsigned char adc_cvbs_table[ADC_REG_NUM];
 extern const unsigned char cvd_part1_table[TVIN_SIG_FMT_CVBS_NTSC_50 -
 	TVIN_SIG_FMT_CVBS_NTSC_M + 1][CVD_PART1_REG_NUM];

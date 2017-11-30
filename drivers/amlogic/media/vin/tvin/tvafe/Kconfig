@@ -1,0 +1,37 @@
+#
+# AMLOGIC TVAFE Device Driver Configuration
+#
+
+config AMLOGIC_MEDIA_TVIN_AFE
+	tristate "Amlogic AFE device driver"
+	default n
+	help
+		AFE device driver,
+		process input source of av/atv/vga/ypbpr/atvdemod,
+		translate analog signal to digtal to vdin process
+
+if AMLOGIC_MEDIA_TVIN_AFE
+config ADC_DOUBLE_SAMPLING_FOR_CVBS
+	bool "Enable double sampling function for AV port"
+	default n
+	help
+		Adc double sampling for AV port
+		Only for input source of AV,
+		Only support on G9TV and after G9TV
+		right now,not add support on M6TV
+
+config AMLOGIC_MEDIA_TVIN_VBI
+	tristate "Amlogic TVIN VBI device"
+	default n
+	help
+		VBI devices driver
+		Only for ATV input,
+		By now,wo only test CC is ok on M6TV & G9TV
+		CC is usually used in USA
+config AMLOGIC_MEDIA_TVIN_AVDETECT
+	tristate "Amlogic AVIN DETECT device"
+	default n
+	help
+		avin detect devices driver
+		Only for av input
+endif

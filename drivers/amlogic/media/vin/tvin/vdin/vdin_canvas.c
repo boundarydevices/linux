@@ -391,7 +391,7 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		(((devp->parm.port >= TVIN_PORT_HDMI0) &&
 			(devp->parm.port <= TVIN_PORT_HDMI7)) ||
 			((devp->parm.port >= TVIN_PORT_CVBS0) &&
-			(devp->parm.port <= TVIN_PORT_CVBS7))))
+			(devp->parm.port <= TVIN_PORT_CVBS3))))
 		max_buffer_num += devp->vfp->skip_vf_num;
 	if (max_buffer_num > max_buf_num)
 		max_buffer_num = max_buf_num;

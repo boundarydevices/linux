@@ -2749,10 +2749,6 @@ bool vdin_check_vs(struct vdin_dev_s *devp)
 	bool ret = false;
 	unsigned int dh = 0, dv = 0;
 
-	if ((devp->parm.port < TVIN_PORT_COMP0) ||
-		(devp->parm.port > TVIN_PORT_COMP7))
-		return ret;
-
 	/* check vs after n*vs avoid unstable signal after TVIN_IOC_START_DEC*/
 	if (devp->vs_cnt_valid++ >= VDIN_WAIT_VALID_VS)
 		devp->vs_cnt_valid = VDIN_WAIT_VALID_VS;
@@ -3756,7 +3752,7 @@ u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
 		/*tvafe FIELD POLARITY 0 TOP,vdin must invert for correct*/
 		if (invert_top_bot ||
 			(devp->parm.port >= TVIN_PORT_CVBS0 &&
-			devp->parm.port <= TVIN_PORT_CVBS7))
+			devp->parm.port <= TVIN_PORT_CVBS3))
 			type |=	field_status ?
 			VIDTYPE_INTERLACE_TOP :	VIDTYPE_INTERLACE_BOTTOM;
 		else
@@ -3800,21 +3796,7 @@ inline void vdin_set_source_type(struct vdin_dev_s *devp,
 		break;
 	case TVIN_PORT_CVBS1:
 	case TVIN_PORT_CVBS2:
-	case TVIN_PORT_CVBS4:
-	case TVIN_PORT_CVBS5:
-	case TVIN_PORT_CVBS6:
-	case TVIN_PORT_CVBS7:
 		vf->source_type = VFRAME_SOURCE_TYPE_CVBS;
-		break;
-	case TVIN_PORT_COMP0:
-	case TVIN_PORT_COMP1:
-	case TVIN_PORT_COMP2:
-	case TVIN_PORT_COMP3:
-	case TVIN_PORT_COMP4:
-	case TVIN_PORT_COMP5:
-	case TVIN_PORT_COMP6:
-	case TVIN_PORT_COMP7:
-		vf->source_type = VFRAME_SOURCE_TYPE_COMP;
 		break;
 	case TVIN_PORT_HDMI0:
 	case TVIN_PORT_HDMI1:
@@ -3872,7 +3854,6 @@ void vdin_set_pixel_aspect_ratio(struct vdin_dev_s *devp,
 {
 	switch (devp->parm.info.fmt) {
 	/* 480P */
-	case TVIN_SIG_FMT_COMP_480P_60HZ_D000:
 	case TVIN_SIG_FMT_HDMI_640X480P_60HZ:
 	case TVIN_SIG_FMT_HDMI_640X480P_72HZ:
 	case TVIN_SIG_FMT_HDMI_640X480P_75HZ:
@@ -3888,7 +3869,6 @@ void vdin_set_pixel_aspect_ratio(struct vdin_dev_s *devp,
 	case TVIN_SIG_FMT_CVBS_NTSC_443:
 	case TVIN_SIG_FMT_CVBS_PAL_M:
 	case TVIN_SIG_FMT_CVBS_PAL_60:
-	case TVIN_SIG_FMT_COMP_480I_59HZ_D940:
 	case TVIN_SIG_FMT_HDMI_1440X480I_60HZ:
 	case TVIN_SIG_FMT_HDMI_2880X480I_60HZ:
 	case TVIN_SIG_FMT_HDMI_1440X480I_120HZ:
@@ -3898,7 +3878,6 @@ void vdin_set_pixel_aspect_ratio(struct vdin_dev_s *devp,
 		vf->pixel_ratio = PIXEL_ASPECT_RATIO_8_9;
 		break;
 		/* 576P */
-	case TVIN_SIG_FMT_COMP_576P_50HZ_D000:
 	case TVIN_SIG_FMT_HDMI_720X576P_50HZ:
 	case TVIN_SIG_FMT_HDMI_1440X576P_50HZ:
 	case TVIN_SIG_FMT_HDMI_2880X576P_50HZ:
@@ -3909,7 +3888,6 @@ void vdin_set_pixel_aspect_ratio(struct vdin_dev_s *devp,
 	case TVIN_SIG_FMT_CVBS_PAL_I:
 	case TVIN_SIG_FMT_CVBS_PAL_CN:
 	case TVIN_SIG_FMT_CVBS_SECAM:
-	case TVIN_SIG_FMT_COMP_576I_50HZ_D000:
 	case TVIN_SIG_FMT_HDMI_1440X576I_50HZ:
 	case TVIN_SIG_FMT_HDMI_2880X576I_50HZ:
 	case TVIN_SIG_FMT_HDMI_1440X576I_100HZ:

@@ -85,38 +85,6 @@ const char *tvin_port_str(enum tvin_port_e port)
 		return "TVIN_PORT_BT656_HDMI";
 	case TVIN_PORT_BT601_HDMI:
 		return "TVIN_PORT_BT601_HDMI";
-	case TVIN_PORT_VGA0:
-		return "TVIN_PORT_VGA0";
-	case TVIN_PORT_VGA1:
-		return "TVIN_PORT_VGA1";
-	case TVIN_PORT_VGA2:
-		return "TVIN_PORT_VGA2";
-	case TVIN_PORT_VGA3:
-		return "TVIN_PORT_VGA3";
-	case TVIN_PORT_VGA4:
-		return "TVIN_PORT_VGA4";
-	case TVIN_PORT_VGA5:
-		return "TVIN_PORT_VGA5";
-	case TVIN_PORT_VGA6:
-		return "TVIN_PORT_VGA6";
-	case TVIN_PORT_VGA7:
-		return "TVIN_PORT_VGA7";
-	case TVIN_PORT_COMP0:
-		return "TVIN_PORT_COMP0";
-	case TVIN_PORT_COMP1:
-		return "TVIN_PORT_COMP1";
-	case TVIN_PORT_COMP2:
-		return "TVIN_PORT_COMP2";
-	case TVIN_PORT_COMP3:
-		return "TVIN_PORT_COMP3";
-	case TVIN_PORT_COMP4:
-		return "TVIN_PORT_COMP4";
-	case TVIN_PORT_COMP5:
-		return "TVIN_PORT_COMP5";
-	case TVIN_PORT_COMP6:
-		return "TVIN_PORT_COMP6";
-	case TVIN_PORT_COMP7:
-		return "TVIN_PORT_COMP7";
 	case TVIN_PORT_CVBS0:
 		return "TVIN_PORT_CVBS0";
 	case TVIN_PORT_CVBS1:
@@ -125,30 +93,6 @@ const char *tvin_port_str(enum tvin_port_e port)
 		return "TVIN_PORT_CVBS2";
 	case TVIN_PORT_CVBS3:
 		return "TVIN_PORT_CVBS3";
-	case TVIN_PORT_CVBS4:
-		return "TVIN_PORT_CVBS4";
-	case TVIN_PORT_CVBS5:
-		return "TVIN_PORT_CVBS5";
-	case TVIN_PORT_CVBS6:
-		return "TVIN_PORT_CVBS6";
-	case TVIN_PORT_CVBS7:
-		return "TVIN_PORT_CVBS7";
-	case TVIN_PORT_SVIDEO0:
-		return "TVIN_PORT_SVIDEO0";
-	case TVIN_PORT_SVIDEO1:
-		return "TVIN_PORT_SVIDEO1";
-	case TVIN_PORT_SVIDEO2:
-		return "TVIN_PORT_SVIDEO2";
-	case TVIN_PORT_SVIDEO3:
-		return "TVIN_PORT_SVIDEO3";
-	case TVIN_PORT_SVIDEO4:
-		return "TVIN_PORT_SVIDEO4";
-	case TVIN_PORT_SVIDEO5:
-		return "TVIN_PORT_SVIDEO5";
-	case TVIN_PORT_SVIDEO6:
-		return "TVIN_PORT_SVIDEO6";
-	case TVIN_PORT_SVIDEO7:
-		return "TVIN_PORT_SVIDEO7";
 	case TVIN_PORT_HDMI0:
 		return "TVIN_PORT_HDMI0";
 	case TVIN_PORT_HDMI1:

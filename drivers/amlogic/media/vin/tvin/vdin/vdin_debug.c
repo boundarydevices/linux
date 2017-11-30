@@ -852,20 +852,11 @@ static ssize_t vdin_attr_store(struct device *dev,
 		case 2:/* HDMI2 */
 			port = TVIN_PORT_HDMI2;
 			break;
-		case 3:/* Component0 */
-			port = TVIN_PORT_COMP0;
-			break;
-		case 4:/* Component1 */
-			port = TVIN_PORT_COMP1;
-			break;
 		case 5:/* CVBS0 */
 			port = TVIN_PORT_CVBS0;
 			break;
 		case 6:/* CVBS1 */
 			port = TVIN_PORT_CVBS1;
-			break;
-		case 7:/* Vga0 */
-			port = TVIN_PORT_VGA0;
 			break;
 		case 8:/* CVBS2 */
 			port = TVIN_PORT_CVBS2;

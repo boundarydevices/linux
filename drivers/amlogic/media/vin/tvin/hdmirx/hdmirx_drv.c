@@ -42,7 +42,7 @@
 /* Amlogic headers */
 /*#include <linux/amlogic/amports/vframe_provider.h>*/
 /*#include <linux/amlogic/amports/vframe_receiver.h>*/
-#include <linux/amlogic/media/tvin/tvin.h>
+#include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 /*#include <linux/amlogic/amports/vframe.h>*/
 #include <linux/of_gpio.h>
 

@@ -1334,7 +1334,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	}
 	if ((devp->auto_cutwindow_en == 1) &&
 		(devp->parm.port >= TVIN_PORT_CVBS0) &&
-		(devp->parm.port <= TVIN_PORT_CVBS7))
+		(devp->parm.port <= TVIN_PORT_CVBS3))
 		curr_wr_vf->width = devp->h_active;
 
 	decops = devp->frontend->dec_ops;
@@ -1344,7 +1344,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		goto irq_handled;
 	}
 	if ((devp->parm.port >= TVIN_PORT_CVBS0) &&
-		(devp->parm.port <= TVIN_PORT_CVBS7))
+		(devp->parm.port <= TVIN_PORT_CVBS3))
 		curr_wr_vf->phase = sm_ops->get_secam_phase(devp->frontend) ?
 				VFRAME_PHASE_DB : VFRAME_PHASE_DR;
 
@@ -1435,7 +1435,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		curr_wr_vf->height = 480;
 	curr_wr_vfe->flag |= VF_FLAG_NORMAL_FRAME;
 	if (devp->auto_ratio_en && (devp->parm.port >= TVIN_PORT_CVBS0) &&
-		(devp->parm.port <= TVIN_PORT_CVBS7))
+		(devp->parm.port <= TVIN_PORT_CVBS3))
 		vdin_set_display_ratio(devp, curr_wr_vf);
 	if (devp->flags&VDIN_FLAG_RDMA_ENABLE && (devp->game_mode == false)) {
 		devp->last_wr_vfe = curr_wr_vfe;

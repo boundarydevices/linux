@@ -14208,3 +14208,9 @@ F:	include/linux/amlogic/media/sound/*
 F:	sound/soc/amlogic/auge/*
 F:	sound/soc/amlogic/meson/*
 F:	sound/soc/codecs/amlogic/*
+
+AMLOGIC TVAFE DRIVER
+M:	Nian Jing <nian.jing@amlogic.com>
+F:	drivers/amlogic/media/vin/tvin/tvafe/
+F:	include/linux/amlogic/media/frame_provider/tvin/tvin.h
+

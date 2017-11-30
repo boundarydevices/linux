@@ -23,7 +23,7 @@
 
 
 #include <linux/amlogic/cpu_version.h>
-#include <linux/amlogic/media/tvin/tvin.h>
+#include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/cdev.h>
 #include <linux/irqreturn.h>

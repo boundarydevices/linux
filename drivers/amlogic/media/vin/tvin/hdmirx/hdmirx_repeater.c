@@ -34,7 +34,7 @@
 #include <linux/uaccess.h>
 #include <linux/delay.h>
 #include <linux/of_gpio.h>
-#include <linux/amlogic/media/tvin/tvin.h>
+#include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 
 /* Local include */
 #include "hdmirx_drv.h"
