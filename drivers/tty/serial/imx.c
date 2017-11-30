@@ -728,8 +728,7 @@ static void imx_start_tx(struct uart_port *port)
 			return;
 		}
 
-		if (!uart_circ_empty(&port->state->xmit) &&
-		    !uart_tx_stopped(port) && !sport->dma_is_txing)
+		if (!sport->dma_is_txing)
 			schedule_work(&sport->tsk_dma_tx);
 	} else {
 		temp = readl(sport->port.membase + UCR1);
