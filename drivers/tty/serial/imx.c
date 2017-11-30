@@ -982,6 +982,9 @@ static unsigned int imx_tx_empty(struct uart_port *port)
 	return ret;
 }
 
+/*
+ * We have a modem side uart, so the meanings of RTS and CTS are inverted.
+ */
 static unsigned int imx_get_mctrl(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
