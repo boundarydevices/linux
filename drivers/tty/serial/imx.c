@@ -854,8 +854,6 @@ out:
 	return IRQ_HANDLED;
 }
 
-static void clear_rx_errors(struct imx_port *sport);
-
 /*
  * We have a modem side uart, so the meanings of RTS and CTS are inverted.
  */
@@ -1069,6 +1067,31 @@ static void imx_rx_dma_done(struct imx_port *sport)
 		wake_up(&sport->dma_wait);
 }
 
+static void clear_rx_errors(struct imx_port *sport)
+{
+	unsigned int status_usr1, status_usr2;
+
+	status_usr1 = readl(sport->port.membase + USR1);
+	status_usr2 = readl(sport->port.membase + USR2);
+
+	if (status_usr2 & USR2_BRCD) {
+		sport->port.icount.brk++;
+		writel(USR2_BRCD, sport->port.membase + USR2);
+	} else if (status_usr1 & USR1_FRAMERR) {
+		sport->port.icount.frame++;
+		writel(USR1_FRAMERR, sport->port.membase + USR1);
+	} else if (status_usr1 & USR1_PARITYERR) {
+		sport->port.icount.parity++;
+		writel(USR1_PARITYERR, sport->port.membase + USR1);
+	}
+
+	if (status_usr2 & USR2_ORE) {
+		sport->port.icount.overrun++;
+		writel(USR2_ORE, sport->port.membase + USR2);
+	}
+
+}
+
 /*
  * There are two kinds of RX DMA interrupts(such as in the MX6Q):
  *   [1] the RX DMA buffer is full.
@@ -1171,31 +1194,6 @@ static int start_rx_dma(struct imx_port *sport)
 
 	sport->dma_is_rxing = 1;
 	return 0;
-}
-
-static void clear_rx_errors(struct imx_port *sport)
-{
-	unsigned int status_usr1, status_usr2;
-
-	status_usr1 = readl(sport->port.membase + USR1);
-	status_usr2 = readl(sport->port.membase + USR2);
-
-	if (status_usr2 & USR2_BRCD) {
-		sport->port.icount.brk++;
-		writel(USR2_BRCD, sport->port.membase + USR2);
-	} else if (status_usr1 & USR1_FRAMERR) {
-		sport->port.icount.frame++;
-		writel(USR1_FRAMERR, sport->port.membase + USR1);
-	} else if (status_usr1 & USR1_PARITYERR) {
-		sport->port.icount.parity++;
-		writel(USR1_PARITYERR, sport->port.membase + USR1);
-	}
-
-	if (status_usr2 & USR2_ORE) {
-		sport->port.icount.overrun++;
-		writel(USR2_ORE, sport->port.membase + USR2);
-	}
-
 }
 
 #define TXTL_DEFAULT 2 /* reset default */
