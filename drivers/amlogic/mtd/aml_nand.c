@@ -2046,9 +2046,7 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 	slc_program_info = &new_nand_info->slc_program_info;
 
 	chip->IO_ADDR_R = chip->IO_ADDR_W =
-		devm_ioremap_nocache(aml_chip->device,
-			NAND_BASE_APB + P_NAND_BUF,
-			sizeof(int));
+		controller->reg_base + P_NAND_BUF;
 
 	chip->options |= NAND_SKIP_BBTSCAN;
 	chip->options |= NAND_NO_SUBPAGE_WRITE;
