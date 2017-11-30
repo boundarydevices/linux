@@ -922,7 +922,7 @@ static irqreturn_t imx_int(int irq, void *dev_id)
 	sts = readl(sport->port.membase + USR1);
 	sts2 = readl(sport->port.membase + USR2);
 
-	if ((sts & USR1_RRDY || sts & USR1_AGTIM) &&
+	if ((sts & (USR1_RRDY | USR1_AGTIM)) &&
 		!sport->dma_is_enabled) {
 		if (sts & USR1_AGTIM)
 			writel(USR1_AGTIM, sport->port.membase + USR1);
