@@ -1129,20 +1129,14 @@ static void dma_rx_callback(void *data)
 	}
 
 	status = dmaengine_tx_status(chan, sport->rx_buf.cookie, &state);
+	count = RX_BUF_SIZE - state.residue;
+	dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
+
 	if (status == DMA_ERROR) {
 		dev_err(sport->port.dev, "DMA transaction error.\n");
 		clear_rx_errors(sport);
 		return;
 	}
-
-	if (readl(sport->port.membase + USR2) & USR2_IDLE) {
-		/* In condition [3] the SDMA counted up too early */
-		count--;
-		writel(USR2_IDLE, sport->port.membase + USR2);
-	}
-
-	count = RX_BUF_SIZE - state.residue;
-	dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
 
 	i = sport->rx_buf.pending_idx;
 	if (count) {
