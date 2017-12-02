@@ -17,6 +17,7 @@
 #include <linux/highmem.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
@@ -3202,12 +3203,19 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	/* SDR104 supports also implies SDR50 support */
 	if (caps[1] & SDHCI_SUPPORT_SDR104) {
+		struct device_node *np;
+
 		mmc->caps |= MMC_CAP_UHS_SDR104 | MMC_CAP_UHS_SDR50;
-		/* SD3.0: SDR104 is supported so (for eMMC) the caps2
-		 * field can be promoted to support HS200.
-		 */
-		if (!(host->quirks2 & SDHCI_QUIRK2_BROKEN_HS200))
-			mmc->caps2 |= MMC_CAP2_HS200;
+		np = mmc->parent->of_node;
+		if (of_property_read_bool(np, "no-sd-uhs-sdr104")) {
+			mmc->caps &= ~MMC_CAP_UHS_SDR104;
+		} else {
+			/* SD3.0: SDR104 is supported so (for eMMC) the caps2
+			 * field can be promoted to support HS200.
+			 */
+			if (!(host->quirks2 & SDHCI_QUIRK2_BROKEN_HS200))
+				mmc->caps2 |= MMC_CAP2_HS200;
+		}
 	} else if (caps[1] & SDHCI_SUPPORT_SDR50)
 		mmc->caps |= MMC_CAP_UHS_SDR50;
 
