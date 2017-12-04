@@ -904,14 +904,28 @@
 
 	hdmitx_aocec: ao_cec {
 		mux {
-			groups = "ao_cec_ao7",
-				"ao_cec_ao8";
+			groups = "ao_cec_ao7";
 			function = "ao_cec";
 		};
 	};
+
+	hdmitx_aocec1: ao_cec1 {
+		mux {
+			groups = "ao_cec_ao8";
+			function = "ao_cec";
+		};
+	};
+
 	hdmitx_aocecb: ao_cecb {
 		mux {
 			groups = "ao_cec_b_ao7";
+			function = "ao_cec_b";
+		};
+	};
+
+	hdmitx_aocecb1: ao_cecb1 {
+		mux {
+			groups = "ao_cec_b_ao8";
 			function = "ao_cec_b";
 		};
 	};

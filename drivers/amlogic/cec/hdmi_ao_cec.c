@@ -279,6 +279,7 @@ static unsigned int hdmirx_cec_read(unsigned int reg)
 		return hdmirx_rd_dwc(reg);
 }
 
+/*only for ee cec*/
 static void hdmirx_cec_write(unsigned int reg, unsigned int value)
 {
 	/*
@@ -528,10 +529,48 @@ static void ao_cecb_init(void)
 	cec_set_reg_bits(AO_CECB_GEN_CNTL, 0, 0, 1);
 
 	/* Enable all AO_CECB interrupt sources */
-	writel(CECB_IRQ_EN_MASK, cec_dev->cec_reg + AO_CECB_INTR_MASKN);
-	CEC_INFO("enable:int mask:0x%x\n",
-		 readl(cec_dev->cec_reg + AO_CECB_INTR_MASKN));
+	cec_irq_enable(true);
 	hdmirx_cec_write(DWC_CEC_WKUPCTRL, 0);
+}
+
+void eecec_irq_enable(bool enable)
+{
+	if (cec_dev->cpu_type < MESON_CPU_MAJOR_ID_TXLX) {
+		if (enable)
+			hdmirx_cec_write(DWC_AUD_CEC_IEN_SET,
+				EE_CEC_IRQ_EN_MASK);
+		else {
+			hdmirx_cec_write(DWC_AUD_CEC_ICLR,
+			(~(hdmirx_cec_read(DWC_AUD_CEC_IEN)) |
+			EE_CEC_IRQ_EN_MASK));
+			hdmirx_cec_write(DWC_AUD_CEC_IEN_SET,
+			hdmirx_cec_read(DWC_AUD_CEC_IEN) &
+			~EE_CEC_IRQ_EN_MASK);
+			hdmirx_cec_write(DWC_AUD_CEC_IEN_CLR,
+			(~(hdmirx_cec_read(DWC_AUD_CEC_IEN)) |
+			EE_CEC_IRQ_EN_MASK));
+		}
+		CEC_INFO("ee enable:int mask:0x%x\n",
+		hdmirx_cec_read(DWC_AUD_CEC_IEN));
+	} else {
+		if (enable)
+			writel(CECB_IRQ_EN_MASK,
+			cec_dev->cec_reg + AO_CECB_INTR_MASKN);
+		else
+			writel(readl(cec_dev->cec_reg + AO_CECB_INTR_MASKN)
+				& ~CECB_IRQ_EN_MASK,
+				cec_dev->cec_reg + AO_CECB_INTR_MASKN);
+		CEC_INFO("ao move enable:int mask:0x%x\n",
+			 readl(cec_dev->cec_reg + AO_CECB_INTR_MASKN));
+	}
+}
+
+void cec_irq_enable(bool enable)
+{
+	if (ee_cec)
+		eecec_irq_enable(enable);
+	else
+		aocec_irq_enable(enable);
 }
 
 int cecrx_hw_init(void)
@@ -562,7 +601,7 @@ int cecrx_hw_init(void)
 		hdmirx_set_bits_top(TOP_EDID_GEN_CNTL, EDID_AUTO_CEC_EN, 11, 1);
 
 		/* enable all cec irq */
-		hdmirx_cec_write(DWC_AUD_CEC_IEN_SET, EE_CEC_IRQ_EN_MASK);
+		cec_irq_enable(true);
 		/* clear all wake up source */
 		hdmirx_cec_write(DWC_CEC_WKUPCTRL, 0);
 		/* cec enable */
@@ -638,10 +677,13 @@ static int dump_cecrx_reg(char *b)
 
 /*--------------------- END of EE CEC --------------------*/
 
-static void cec_enable_irq(void)
+void aocec_irq_enable(bool enable)
 {
-	cec_set_reg_bits(AO_CEC_INTR_MASKN, 0x6, 0, 3);
-	CEC_INFO("enable:int mask:0x%x\n",
+	if (enable)
+		cec_set_reg_bits(AO_CEC_INTR_MASKN, 0x6, 0, 3);
+	else
+		cec_set_reg_bits(AO_CEC_INTR_MASKN, 0x0, 0, 3);
+	CEC_INFO("ao enable:int mask:0x%x\n",
 		 readl(cec_dev->cec_reg + AO_CEC_INTR_MASKN));
 }
 
@@ -696,7 +738,7 @@ static void cec_hw_reset(void)
 	cec_set_reg_bits(AO_CEC_GEN_CNTL, 0, 0, 1);
 
 	/* Enable all AO_CEC interrupt sources */
-	cec_set_reg_bits(AO_CEC_INTR_MASKN, 0x6, 0, 3);
+	cec_irq_enable(true);
 
 	cec_logicaddr_set(cec_dev->cec_info.log_addr);
 
@@ -1112,7 +1154,7 @@ void ao_cec_init(void)
 	cec_set_reg_bits(AO_CEC_GEN_CNTL, 0, 0, 1);
 
 	/* Enable all AO_CEC interrupt sources */
-	cec_enable_irq();
+	cec_irq_enable(true);
 }
 
 void cec_arbit_bit_time_set(unsigned int bit_set,
@@ -2361,6 +2403,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 	cec_dev->dev_type = DEV_TYPE_PLAYBACK;
 	cec_dev->dbg_dev  = &pdev->dev;
 	cec_dev->tx_dev   = get_hdmitx_device();
+	cec_dev->cpu_type = get_cpu_type();
 	phy_addr_test = 0;
 
 	/* cdev registe */
@@ -2439,17 +2482,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 	else
 		ee_cec = 0;
 	CEC_INFO("using EE cec:%d\n", ee_cec);
-
-	/* irq set */
-	irq_idx = of_irq_get(node, 0);
-	cec_dev->irq_cec = irq_idx;
-	if (of_get_property(node, "interrupt-names", NULL)) {
-		r = of_property_read_string(node, "interrupt-names", &irq_name);
-		if (!r)
-			r = request_irq(irq_idx,
-				ee_cec ?  &cecrx_isr :  &cec_isr_handler,
-				IRQF_SHARED, irq_name, (void *)cec_dev);
-	}
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res) {
 		base = ioremap(res->start, res->end - res->start);
@@ -2521,6 +2553,22 @@ static int aml_cec_probe(struct platform_device *pdev)
 		CEC_INFO("not find cec_version\n");
 		cec_dev->cec_info.cec_version = CEC_VERSION_20;
 	}
+
+	/* irq set */
+	cec_irq_enable(false);
+	irq_idx = of_irq_get(node, 0);
+	cec_dev->irq_cec = irq_idx;
+	if (of_get_property(node, "interrupt-names", NULL)) {
+		r = of_property_read_string(node, "interrupt-names", &irq_name);
+		if (!r && !ee_cec) {
+			r = request_irq(irq_idx, &cec_isr_handler, IRQF_SHARED,
+					irq_name, (void *)cec_dev);
+		}
+		if (!r && ee_cec) {
+			r = request_irq(irq_idx, &cecrx_isr, IRQF_SHARED,
+					irq_name, (void *)cec_dev);
+		}
+	}
 #endif
 
 	if (!ee_cec) {
@@ -2533,7 +2581,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 		}
 	}
 
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	aocec_suspend_handler.level   = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 20;
 	aocec_suspend_handler.suspend = aocec_early_suspend;
@@ -2543,7 +2590,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 #endif
 	hrtimer_init(&start_bit_check, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	start_bit_check.function = cec_line_check;
-	/*cec_dev->cpu_type = get_cpu_type();*/
 	/* for init */
 	cec_pre_init();
 	queue_delayed_work(cec_dev->cec_thread, &cec_dev->cec_work, 0);
