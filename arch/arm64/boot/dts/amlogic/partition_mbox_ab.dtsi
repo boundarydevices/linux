@@ -129,50 +129,26 @@
 			compatible = "android,fstab";
 			system {
 				compatible = "android,system";
-				dev = "/dev/block/system_a";
+				dev = "/dev/block/system";
 				type = "ext4";
 				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait";
-				};
-
-			system_b {
-				compatible = "android,system";
-				dev = "/dev/block/system_b";
-				type = "ext4";
-				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait";
+				fsmgr_flags = "wait,slotselect";
 				};
 
 			vendor {
 				compatible = "android,vendor";
-				dev = "/dev/block/vendor_a";
+				dev = "/dev/block/vendor";
 				type = "ext4";
 				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait";
-				};
-
-			vendor_b {
-				compatible = "android,vendor";
-				dev = "/dev/block/vendor_b";
-				type = "ext4";
-				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait";
+				fsmgr_flags = "wait,slotselect";
 				};
 
 			odm {
 				compatible = "android,odm";
-				dev = "/dev/block/odm_a";
+				dev = "/dev/block/odm";
 				type = "ext4";
 				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait";
-				};
-
-			odm_b {
-				compatible = "android,odm";
-				dev = "/dev/block/odm_b";
-				type = "ext4";
-				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait";
+				fsmgr_flags = "wait,slotselect";
 				};
 			};
 		};
