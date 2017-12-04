@@ -1485,12 +1485,14 @@ static int mx6s_vidioc_querycap(struct file *file, void  *priv,
 			       struct v4l2_capability *cap)
 {
 	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
 
 	WARN_ON(priv != file->private_data);
 
 	/* cap->name is set by the friendly caller:-> */
 	strlcpy(cap->driver, MX6S_CAM_DRV_NAME, sizeof(cap->driver));
-	strlcpy(cap->card, MX6S_CAM_DRIVER_DESCRIPTION, sizeof(cap->card));
+	strlcpy(cap->card, sd ? sd->name : MX6S_CAM_DRIVER_DESCRIPTION,
+		sizeof(cap->card));
 	snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s",
 		 dev_name(csi_dev->dev));
 
