@@ -788,10 +788,21 @@
 		mux-ext-port = <3>;
 	};
 
+	/* finger_sensor */
 	v4l2_cap_0 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
 		csi_id = <0>;
+		mipi_camera = <0>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	/* ov5640_mipi */
+	v4l2_cap_1 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <1>;
 		mipi_camera = <1>;
 		mclk_source = <0>;
 		status = "okay";
@@ -992,7 +1003,7 @@
 		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
 		rst-gpios = GP_OV5640_MIPI_RESET;
 		ipu_id = <0>;
-		csi_id = <0>;
+		csi_id = <1>;
 		mclk = <24000000>;
 		mclk_source = <0>;
 	};
