@@ -300,6 +300,7 @@
 			rb_detect = <1>;
 		};
 		nand_partitions:nand_partition{
+
 			/*
 			 * if bl_mode is 1, tpl size was generate by
 			 * fip_copies * fip_size which
@@ -323,7 +324,7 @@
 			};
 			boot{
 				offset=<0x0 0x0>;
-				size=<0x0 0xC00000>;
+				size=<0x0 0x1000000>;
 			};
 			system{
 				offset=<0x0 0x0>;
