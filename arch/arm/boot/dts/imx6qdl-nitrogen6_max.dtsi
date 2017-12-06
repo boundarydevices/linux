@@ -635,11 +635,8 @@
 				MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x000b0		/* ov5642 Power Down */
 				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x000b0		/* ov5642 Reset */
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* USB Hub Reset */
-				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x100b0		/* wl12xx_wl_irq */
 				MX6QDL_PAD_NANDF_CS1__SD3_VSELECT	0x100b0		/* sd3 voltage select */
-				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* wl12xx_wl_en */
 				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x000b0		/* wl12xx_bt_en */
-				MX6QDL_PAD_SD1_CLK__OSC32K_32K_OUT	0x000b0		/* TiWi slow clock */
 				MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0		/* rv4162 rtc interrupt */
 			>;
 		};
@@ -680,6 +677,42 @@
 		pinctrl_pcie: pciegrp {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_BCLK__GPIO6_IO31		0x000b0		/* pcie reset */
+			>;
+		};
+
+		pinctrl_usdhc2: usdhc2grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD2_CLK__SD2_CLK		0x10071
+				MX6QDL_PAD_SD2_CMD__SD2_CMD		0x17071
+				MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x17071
+				MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17071
+				MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17071
+				MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17071
+				MX6QDL_PAD_SD1_CLK__OSC32K_32K_OUT	0x000b0		/* slow clock */
+				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x100b0		/* wl12xx_wl_irq */
+				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* wl12xx_wl_en */
+			>;
+		};
+
+		pinctrl_usdhc2_100mhz: usdhc2grp-100mhz {
+			fsl,pins = <
+				MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170B9
+				MX6QDL_PAD_SD2_CLK__SD2_CLK		0x100B9
+				MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170B9
+				MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170B9
+				MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170B9
+				MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170B9
+			>;
+		};
+
+		pinctrl_usdhc2_200mhz: usdhc2grp-200mhz {
+			fsl,pins = <
+				MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170F9
+				MX6QDL_PAD_SD2_CLK__SD2_CLK 		0x100F9
+				MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170F9
+				MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170F9
+				MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170F9
+				MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170F9
 			>;
 		};
 	};
@@ -951,8 +984,10 @@
 };
 
 &usdhc2 {	/* uSDHC2, TiWi wl1271 */
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc2_2>;
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc2>;
+	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	bus-width = <4>;
 	non-removable;
 	vmmc-supply = <&wlan_en_reg>;
