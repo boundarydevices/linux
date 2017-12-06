@@ -3333,6 +3333,14 @@ static void binder_transaction(struct binder_proc *proc,
 	} else if (!(t->flags & TF_ONE_WAY)) {
 		BUG_ON(t->buffer->async_transaction != 0);
 		binder_inner_proc_lock(proc);
+#ifdef CONFIG_AMLOGIC_MODIFY
+#define B_PACK_CHARS(c1, c2, c3, c4) \
+		    ((((c1)<<24)) | (((c2)<<16)) | (((c3)<<8)) | (c4))
+		if (!tr->target.handle &&
+				t->code == B_PACK_CHARS('_', 'P', 'N', 'G'))
+			binder_enqueue_thread_work_ilocked(thread, tcomplete);
+		else
+#endif
 		binder_enqueue_thread_work_ilocked_nowake(thread, tcomplete);
 		t->need_reply = 1;
 		t->from_parent = thread->transaction_stack;
