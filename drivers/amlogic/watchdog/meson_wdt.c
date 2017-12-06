@@ -35,7 +35,7 @@
 #include <linux/of_address.h>
 
 #undef pr_fmt
-#define pr_fmt(fmt)    "aml-wdt: %s: " fmt, __func__
+#define pr_fmt(fmt)    "meson-watchdog: %s: " fmt, __func__
 
 #define	CTRL	0x0
 #define	CTRL1	0x4
@@ -109,6 +109,7 @@ static int aml_wdt_start(struct watchdog_device *wdog)
 	if (wdev->boot_queue)
 		cancel_delayed_work(&wdev->boot_queue);
 #endif
+	dev_info(wdev->dev, "start watchdog\n");
 	return 0;
 }
 
@@ -119,6 +120,8 @@ static int aml_wdt_stop(struct watchdog_device *wdog)
 	mutex_lock(&wdev->lock);
 	disable_watchdog(wdev);
 	mutex_unlock(&wdev->lock);
+	dev_info(wdev->dev, "stop watchdog\n");
+
 	return 0;
 }
 
@@ -144,6 +147,7 @@ static int aml_wdt_set_timeout(struct watchdog_device *wdog,
 	wdev->timeout = timeout;
 	mutex_unlock(&wdev->lock);
 
+	dev_info(wdev->dev, "set timeout\n");
 	return 0;
 }
 
@@ -253,11 +257,13 @@ static int aml_wtd_pm_notify(struct notifier_block *nb, unsigned long event,
 
 	if (event == PM_SUSPEND_PREPARE) {
 		disable_watchdog(wdev);
-		pr_info("disable watchdog\n");
+		dev_info(wdev->dev,
+			"pm_notify: disable watchdog, event = %lu\n", event);
 	}
 	if (event == PM_POST_SUSPEND) {
 		enable_watchdog(wdev);
-		pr_info("enable watchdog\n");
+		dev_info(wdev->dev,
+			"pm_notify: enable watchdog, event = %lu\n", event);
 	}
 	return NOTIFY_OK;
 }
@@ -271,7 +277,9 @@ static int aml_wtd_reboot_notify(struct notifier_block *nb,
 	wdev = container_of(nb, struct aml_wdt_dev, reboot_notifier);
 	if (event == SYS_DOWN || event == SYS_HALT) {
 		disable_watchdog(wdev);
-		pr_info("disable watchdog\n");
+		dev_info(wdev->dev,
+			"reboot_notify: disable watchdog (event = %lu)\n",
+			event);
 	}
 	if (wdev->reset_watchdog_method == 1)
 		cancel_delayed_work(&wdev->boot_queue);
@@ -384,7 +392,7 @@ static struct platform_driver aml_wdt_driver = {
 	.resume		= aml_wdt_resume,
 	.driver		= {
 		.owner	= THIS_MODULE,
-		.name	= "aml_wdt",
+		.name	= "meson_wdt",
 		.of_match_table = aml_wdt_of_match,
 	},
 };
