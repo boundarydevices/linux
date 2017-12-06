@@ -615,8 +615,7 @@ static int mcp251x_do_set_bittiming(struct net_device *net)
 	return 0;
 }
 
-static int mcp251x_setup(struct net_device *net, struct mcp251x_priv *priv,
-			 struct spi_device *spi)
+static int mcp251x_setup(struct net_device *net, struct spi_device *spi)
 {
 	mcp251x_do_set_bittiming(net);
 
@@ -796,7 +795,7 @@ static void mcp251x_restart_work_handler(struct work_struct *ws)
 	mutex_lock(&priv->mcp_lock);
 	if (priv->after_suspend) {
 		mcp251x_hw_reset(spi);
-		mcp251x_setup(net, priv, spi);
+		mcp251x_setup(net, spi);
 		if (priv->after_suspend & AFTER_SUSPEND_RESTART) {
 			mcp251x_set_normal_mode(spi);
 		} else if (priv->after_suspend & AFTER_SUSPEND_UP) {
@@ -992,7 +991,7 @@ static int mcp251x_open(struct net_device *net)
 		mcp251x_open_clean(net);
 		goto open_unlock;
 	}
-	ret = mcp251x_setup(net, priv, spi);
+	ret = mcp251x_setup(net, spi);
 	if (ret) {
 		mcp251x_open_clean(net);
 		goto open_unlock;
