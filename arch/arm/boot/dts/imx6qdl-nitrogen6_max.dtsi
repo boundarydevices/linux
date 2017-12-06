@@ -88,8 +88,8 @@
 		wlan_en_reg: fixed-regulator {
 			compatible = "regulator-fixed";
 			regulator-name = "wlan-en";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
 
 			gpio = <&gpio6 15 0>;
 			startup-delay-us = <70000>;
