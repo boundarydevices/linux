@@ -14,23 +14,36 @@
 
 / {
 	aliases {
-                mxcfb0 = &hdmi_display;
-                mxcfb1 = &lvds_display;
-                mxcfb2 = &lcd_display;
-                mxcfb3 = &lvds_display_2;
-		hdmi_display = &hdmi_display;
-		lvds_display = &lvds_display;
-		lcd_display = &lcd_display;
+		backlight_lcd = &backlight_lcd;
+		backlight_lvds = &backlight_lvds;
+		backlight_lvds2 = &backlight_lvds2;
+		fb_hdmi = &fb_hdmi;
+		fb_lcd = &fb_lcd;
+		fb_lvds = &fb_lvds;
+		fb_lvds2 = &fb_lvds2;
+		lcd = &lcd;
+		ldb = &ldb;
+		mxcfb0 = &fb_hdmi;
+		mxcfb1 = &fb_lvds;
+		mxcfb2 = &fb_lcd;
+		mxcfb3 = &fb_lvds2;
+		pwm_lcd = &pwm1;
+		pwm_lvds = &pwm4;
+		pwm_lvds2 = &pwm2;
+		t_lvds = &t_lvds;
+		t_lvds2 = &t_lvds2;
+		/* obsolete below */
+		hdmi_display = &fb_hdmi;
+		lvds_display = &fb_lvds;
+		lvds_display_2 = &fb_lvds2;
+		lcd_display = &fb_lcd;
 		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
+		lg1280x800 = &t_lvds;
 		lvds1080p = &lvds1080p;
 		okaya1024x600 = &okaya1024x600;
-
-		lvds_display_2 = &lvds_display_2;
 		hannstar_2 = &hannstar_2 ;
-		lg1280x800_2 = &lg1280x800_2;
+		lg1280x800_2 = &t_lvds2;
 		okaya1024x600_2 = &okaya1024x600_2;
-		ldb = &ldb;
 	};
 
 	memory {
@@ -158,7 +171,7 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	lvds_display: fb@0 {
+	fb_lvds: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -168,7 +181,7 @@
 		status = "disabled";
 	};
 
-	lcd_display: fb@1 {
+	fb_lcd: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB666";
@@ -178,7 +191,7 @@
 		status = "disabled";
 	};
 
-	lvds_display_2: fb@2 {
+	fb_lvds2: fb@2 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -188,7 +201,7 @@
 		status = "disabled";
 	};
 
-	hdmi_display: fb@3 {
+	fb_hdmi: fb@3 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "hdmi";
 		interface_pix_fmt = "RGB24";
@@ -199,7 +212,7 @@
 		status = "disabled";
 	};
 
-	lcd0: lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
@@ -216,14 +229,14 @@
 		default-brightness-level = <7>;
 	};
 
-	backlight_lvds0 {
+	backlight_lvds: backlight_lvds0 {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <7>;
 	};
 
-	backlight_lvds1: backlight_lvds1 {
+	backlight_lvds2: backlight_lvds1 {
 		compatible = "pwm-backlight";
 		pwms = <&pwm2 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
@@ -809,7 +822,7 @@
 		primary;
 
 		display-timings {
-			lg1280x800: lp101wx1 {
+			t_lvds: lp101wx1 {
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
@@ -863,7 +876,7 @@
 		status = "okay";
 
 		display-timings {
-			lg1280x800_2: lp101wx1_2 {
+			t_lvds2: lp101wx1_2 {
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
