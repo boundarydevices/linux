@@ -1394,9 +1394,9 @@
 		clock-names = "clkin0","clkin1","clkin2","clkin3";
 		status = "disabled";
 	};
-    pwm_cd: pwm@c1108650 {
+    pwm_cd: pwm@c1108640 {
 		compatible = "amlogic,gx-ee-pwm";
-		reg = <0x0 0xc1108650 0x0 0x1c>;
+		reg = <0x0 0xc1108640 0x0 0x1c>;
 		#pwm-cells = <3>;
 		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
 		clock-names = "clkin0","clkin1","clkin2","clkin3";
