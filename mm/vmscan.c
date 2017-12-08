@@ -1591,7 +1591,11 @@ int isolate_lru_page(struct page *page)
 static int too_many_isolated(struct pglist_data *pgdat, int file,
 		struct scan_control *sc)
 {
+#ifdef CONFIG_AMLOGIC_MODIFY
+	signed long inactive, isolated;
+#else
 	unsigned long inactive, isolated;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	if (current_is_kswapd())
 		return 0;
@@ -1607,6 +1611,9 @@ static int too_many_isolated(struct pglist_data *pgdat, int file,
 		isolated = node_page_state(pgdat, NR_ISOLATED_ANON);
 	}
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	isolated -= node_page_state(pgdat, NR_CMA_ISOLATED);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	/*
 	 * GFP_NOIO/GFP_NOFS callers are allowed to isolate more pages, so they
 	 * won't get blocked by normal direct-reclaimers, forming a circular
@@ -1615,6 +1622,12 @@ static int too_many_isolated(struct pglist_data *pgdat, int file,
 	if ((sc->gfp_mask & (__GFP_IO | __GFP_FS)) == (__GFP_IO | __GFP_FS))
 		inactive >>= 3;
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	WARN_ONCE(isolated > inactive,
+		  "isolated:%ld, cma:%ld, inactive:%ld, mask:%x, file:%d\n",
+		  isolated, node_page_state(pgdat, NR_CMA_ISOLATED),
+		  inactive, sc->gfp_mask, file);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	return isolated > inactive;
 }
 

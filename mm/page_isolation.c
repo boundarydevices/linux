@@ -164,7 +164,11 @@ int start_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 {
 	unsigned long pfn;
 	unsigned long undo_pfn;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	struct page *page = NULL;		/* avoid compile error */
+#else
 	struct page *page;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	BUG_ON(!IS_ALIGNED(start_pfn, pageblock_nr_pages));
 	BUG_ON(!IS_ALIGNED(end_pfn, pageblock_nr_pages));
@@ -179,6 +183,11 @@ int start_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 			goto undo;
 		}
 	}
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (migratetype == MIGRATE_CMA && page)
+		__mod_zone_page_state(page_zone(page),
+				      NR_CMA_ISOLATED, end_pfn - start_pfn);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	return 0;
 undo:
 	for (pfn = start_pfn;
@@ -196,7 +205,11 @@ int undo_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 			    unsigned migratetype)
 {
 	unsigned long pfn;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	struct page *page = NULL;		/* avoid compile error */
+#else
 	struct page *page;
+#endif
 
 	BUG_ON(!IS_ALIGNED(start_pfn, pageblock_nr_pages));
 	BUG_ON(!IS_ALIGNED(end_pfn, pageblock_nr_pages));
@@ -209,6 +222,11 @@ int undo_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 			continue;
 		unset_migratetype_isolate(page, migratetype);
 	}
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (migratetype == MIGRATE_CMA && page)
+		__mod_zone_page_state(page_zone(page),
+				      NR_CMA_ISOLATED, start_pfn - end_pfn);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	return 0;
 }
 /*
