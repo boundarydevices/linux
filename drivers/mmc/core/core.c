@@ -1887,8 +1887,10 @@ int mmc_set_uhs_voltage(struct mmc_host *host, u32 ocr)
 	 * Failure to switch is indicated by the card holding
 	 * dat[0:3] low
 	 */
-	if (host->ops->card_busy && host->ops->card_busy(host))
+	if (host->ops->card_busy && host->ops->card_busy(host)) {
 		err = -EAGAIN;
+		pr_debug("%s: power switch failed, err=%d\n", __func__, err);
+	}
 
 power_cycle:
 	if (err) {
