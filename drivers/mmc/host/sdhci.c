@@ -1804,6 +1804,7 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 		if (host->quirks2 & SDHCI_QUIRK2_NO_1_8_V)
 			return -EIO;
 
+		msleep(2);	/* Helps switching fail in a recoverable way */
 		if (!IS_ERR(mmc->supply.vqmmc) &&
 				!(host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)) {
 			ret = regulator_set_voltage(mmc->supply.vqmmc,
