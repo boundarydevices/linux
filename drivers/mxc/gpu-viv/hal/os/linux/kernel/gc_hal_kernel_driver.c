@@ -940,7 +940,7 @@ static int gpu_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     memcpy(moduleParam.registerBases, registerBases, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
     memcpy(moduleParam.registerSizes, registerSizes, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
     memcpy(moduleParam.chipIDs, chipIDs, gcmSIZEOF(gctUINT) * gcvCORE_COUNT);
-    moduleParam.compression = (compression == -1) ? gcvCOMPRESSION_OPTION_DEFAULT : (gceCOMPRESSION_OPTION)compression;
+    moduleParam.compression = compression;
     platform->device = pdev;
     galcore_device = &pdev->dev;
 
