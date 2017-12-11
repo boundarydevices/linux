@@ -212,6 +212,51 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 	}
 }
 
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+/*
+ * dump a block of user memory from around the given address
+ */
+static void show_user_data(unsigned long addr, int nbytes, const char *name)
+{
+	int	i, j;
+	int	nlines;
+	u32	*p;
+
+	if (!access_ok(VERIFY_READ, (void *)addr, nbytes))
+		return;
+
+	pr_info("\n%s: %#lx:\n", name, addr);
+
+	/*
+	 * round address down to a 32 bit boundary
+	 * and always dump a multiple of 32 bytes
+	 */
+	p = (u32 *)(addr & ~(sizeof(u32) - 1));
+	nbytes += (addr & (sizeof(u32) - 1));
+	nlines = (nbytes + 31) / 32;
+
+	for (i = 0; i < nlines; i++) {
+		/*
+		 * just display low 16 bits of address to keep
+		 * each line of the dump < 80 characters
+		 */
+		pr_info("%04lx ", (unsigned long)p & 0xffff);
+		for (j = 0; j < 8; j++) {
+			u32	data;
+			int bad;
+
+			bad = __get_user(data, p);
+			if (bad)
+				pr_info(" ********");
+			else
+				pr_info(" %08x", data);
+			++p;
+		}
+		pr_info("\n");
+	}
+}
+#endif /* CONFIG_AMLOGIC_USER_FAULT */
+
 static void show_extra_register_data(struct pt_regs *regs, int nbytes)
 {
 	mm_segment_t fs;
@@ -229,6 +274,138 @@ static void show_extra_register_data(struct pt_regs *regs, int nbytes)
 	}
 	set_fs(fs);
 }
+
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+static void show_user_extra_register_data(struct pt_regs *regs, int nbytes)
+{
+	mm_segment_t fs;
+	unsigned int i, top_reg;
+	u64 sp, lr;
+
+	if (compat_user_mode(regs)) {
+		lr = regs->compat_lr;
+		sp = regs->compat_sp;
+		top_reg = 13;
+	} else {
+		lr = regs->regs[30];
+		sp = regs->sp;
+		top_reg = 29;
+	}
+
+	fs = get_fs();
+	set_fs(KERNEL_DS);
+	show_user_data(regs->pc - nbytes, nbytes * 2, "PC");
+	show_user_data(lr - nbytes, nbytes * 2, "LR");
+	show_user_data(sp - nbytes, nbytes * 2, "SP");
+	for (i = 0; i < top_reg; i++) {
+		char name[4];
+
+		snprintf(name, sizeof(name), "r%u", i);
+		show_user_data(regs->regs[i] - nbytes, nbytes * 2, name);
+	}
+	set_fs(fs);
+}
+
+static void show_vma(struct mm_struct *mm, unsigned long addr)
+{
+	struct vm_area_struct *vma;
+	struct file *file;
+	vm_flags_t flags;
+	unsigned long ino = 0;
+	unsigned long long pgoff = 0;
+	unsigned long start, end;
+	dev_t dev = 0;
+	const char *name = NULL;
+
+	vma = find_vma(mm, addr);
+	if (!vma) {
+		pr_info("can't find vma for %lx\n", addr);
+		return;
+	}
+
+	file = vma->vm_file;
+	flags = vma->vm_flags;
+	if (file) {
+		struct inode *inode = file_inode(vma->vm_file);
+
+		dev = inode->i_sb->s_dev;
+		ino = inode->i_ino;
+		pgoff = ((loff_t)vma->vm_pgoff) << PAGE_SHIFT;
+	}
+
+	/* We don't show the stack guard page in /proc/maps */
+	start = vma->vm_start;
+	end = vma->vm_end;
+
+	pr_info("vma for %lx:\n", addr);
+	pr_info("%08lx-%08lx %c%c%c%c %08llx %02x:%02x %lu ",
+		start,
+		end,
+		flags & VM_READ ? 'r' : '-',
+		flags & VM_WRITE ? 'w' : '-',
+		flags & VM_EXEC ? 'x' : '-',
+		flags & VM_MAYSHARE ? 's' : 'p',
+		pgoff,
+		MAJOR(dev), MINOR(dev), ino);
+
+	/*
+	 * Print the dentry name for named mappings, and a
+	 * special [heap] marker for the heap:
+	 */
+	if (file) {
+		char file_name[256] = {};
+		char *p = d_path(&file->f_path, file_name, 256);
+
+		if (!IS_ERR(p)) {
+			mangle_path(file_name, p, "\n");
+			pr_info("%s", p);
+		} else
+			pr_info(" get file path failed\n");
+		goto done;
+	}
+
+	name = arch_vma_name(vma);
+	if (!name) {
+		pid_t tid;
+
+		if (!mm) {
+			name = "[vdso]";
+			goto done;
+		}
+
+		if (vma->vm_start <= mm->brk &&
+		    vma->vm_end >= mm->start_brk) {
+			name = "[heap]";
+			goto done;
+		}
+
+		tid = vma_is_stack_for_current(vma);
+
+		if (tid != 0) {
+			/*
+			 * Thread stack in /proc/PID/task/TID/maps or
+			 * the main process stack.
+			 */
+			if ((vma->vm_start <= mm->start_stack &&
+			    vma->vm_end >= mm->start_stack)) {
+				name = "[stack]";
+			} else {
+				/* Thread stack in /proc/PID/maps */
+				pr_info("[stack:%d]", tid);
+			}
+			goto done;
+		}
+
+		if (vma_get_anon_name(vma))
+			pr_info("[anon]");
+	}
+
+done:
+	if (name)
+		pr_info("%s", name);
+	pr_info("\n");
+}
+#endif /* CONFIG_AMLOGIC_USER_FAULT */
 
 void __show_regs(struct pt_regs *regs)
 {
@@ -248,6 +425,12 @@ void __show_regs(struct pt_regs *regs)
 	show_regs_print_info(KERN_DEFAULT);
 	print_symbol("PC is at %s\n", instruction_pointer(regs));
 	print_symbol("LR is at %s\n", lr);
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+	if (user_mode(regs)) {
+		show_vma(current->mm, instruction_pointer(regs));
+		show_vma(current->mm, lr);
+	}
+#endif /* CONFIG_AMLOGIC_USER_FAULT */
 	printk("pc : [<%016llx>] lr : [<%016llx>] pstate: %08llx\n",
 	       regs->pc, lr, regs->pstate);
 	printk("sp : %016llx\n", sp);
@@ -267,6 +450,10 @@ void __show_regs(struct pt_regs *regs)
 	}
 	if (!user_mode(regs))
 		show_extra_register_data(regs, 128);
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+	else
+		show_user_extra_register_data(regs, 128);
+#endif /* CONFIG_AMLOGIC_USER_FAULT */
 	printk("\n");
 }
 

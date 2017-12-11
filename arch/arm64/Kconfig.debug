@@ -15,6 +15,14 @@ config ARM64_PTDUMP
 
 	  If in doubt, say N.
 
+config AMLOGIC_USER_FAULT
+	bool "Amlogic user fault helper"
+	help
+		show more information when catch user fault. Including:
+		memory around all registers
+		maps with pc/lr
+		pfn for all virtual address of regirsters
+
 config PID_IN_CONTEXTIDR
 	bool "Write the current PID to the CONTEXTIDR register"
 	help
