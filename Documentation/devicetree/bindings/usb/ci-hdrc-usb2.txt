@@ -80,6 +80,7 @@ Optional properties:
   controller. It's expected that a mux state of 0 indicates device mode and a
   mux state of 1 indicates host mode.
 - mux-control-names: Shall be "usb_switch" if mux-controls is specified.
+- ci-disable-lpm: Some chipidea hardware need to disable low power mode
 
 i.mx specific properties
 - fsl,usbmisc: phandler of non-core register device, with one
