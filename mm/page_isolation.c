@@ -185,8 +185,8 @@ int start_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 	}
 #ifdef CONFIG_AMLOGIC_MODIFY
 	if (migratetype == MIGRATE_CMA && page)
-		__mod_zone_page_state(page_zone(page),
-				      NR_CMA_ISOLATED, end_pfn - start_pfn);
+		mod_zone_page_state(page_zone(page), NR_CMA_ISOLATED,
+				    end_pfn - start_pfn);
 #endif /* CONFIG_AMLOGIC_MODIFY */
 	return 0;
 undo:
@@ -224,8 +224,8 @@ int undo_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 	}
 #ifdef CONFIG_AMLOGIC_MODIFY
 	if (migratetype == MIGRATE_CMA && page)
-		__mod_zone_page_state(page_zone(page),
-				      NR_CMA_ISOLATED, start_pfn - end_pfn);
+		mod_zone_page_state(page_zone(page), NR_CMA_ISOLATED,
+				    start_pfn - end_pfn);
 #endif /* CONFIG_AMLOGIC_MODIFY */
 	return 0;
 }
