@@ -66,9 +66,9 @@
 		logo_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x800000>;
+			size = <0x0 0x400000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
+			alloc-ranges = <0x0 0x3fc00000 0x0 0x400000>;
 		};
 		//don't put other dts in front of logo_reserved
 
@@ -792,14 +792,14 @@
 		interrupts = <0 3 1
 			0 89 1>;
 		interrupt-names = "viu-vsync", "rdma";
-		mem_size = <0x00800000 0x01800000 0x00100000>;
-		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x01851000*/
+		mem_size = <0x00400000 0x00b00000 0x00100000>;
+		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x0b51000*/
 		display_mode_default = "720p60hz";
 		scale_mode = <1>;
 		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		display_size_default = <1280 720 1280 2160 32>;
-		/*1280*720*4*3 = 0x17BB000*/
-		logo_addr = "0x3f800000";
+		/*1280*720*4*3 = 0xA8C000*/
+		logo_addr = "0x3fc00000";
 	};
 	ge2d {
 		compatible = "amlogic, ge2d";
