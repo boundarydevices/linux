@@ -2567,7 +2567,7 @@ int codec_mm_scatter_mgt_init(void)
 	g_scatter.enable_slot_from_sys = smgt->enable_slot_from_sys;
 	g_scatter.support_from_slot_sys = smgt->support_from_slot_sys;
 	g_scatter.no_cache_size_M = smgt->no_cache_size_M;
-	g_scatter.no_alloc_from_sys = smgt->no_cache_size_M;
+	g_scatter.no_alloc_from_sys = 0;
 	INIT_REG_NODE_CONFIGS("media.codec_mm",
 		&codec_mm_sc, "scatter",
 		codec_mm_sc_configs,
