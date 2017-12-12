@@ -27,3 +27,5 @@ make ARCH=arm64 axg_s420.dtb || echo "Compile dtb Fail !!"
 make ARCH=arm64 axg_s400_v03.dtb || echo "Compile dtb Fail !!"
 
 make ARCH=arm64 axg_s420_v03.dtb || echo "Compile dtb Fail !!"
+
+make ARCH=arm64 g12a_pxp.dtb || echo "Compile dtb Fail!!"

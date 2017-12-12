@@ -1092,7 +1092,8 @@ static int meson_uart_probe(struct platform_device *pdev)
 		pr_err("%s: clock source not found\n", dev_name(&pdev->dev));
 		/* return PTR_ERR(clk); */
 	}
-	port->uartclk = clk_get_rate(clk);
+	if (!IS_ERR(clk))
+		port->uartclk = clk_get_rate(clk);
 #endif
 
 	port->fifosize = 64;
