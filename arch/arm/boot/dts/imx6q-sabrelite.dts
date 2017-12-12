@@ -26,15 +26,15 @@
 	ipu_id = <1>;
 };
 
-&lvds_display {
+&fb_lvds {
 	status = "okay";
 };
 
-&hdmi_display {
+&fb_hdmi {
 	status = "okay";
 };
 
-&lcd_display {
+&fb_lcd {
 	status = "okay";
 };
 
