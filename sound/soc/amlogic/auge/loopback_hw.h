@@ -65,7 +65,7 @@ extern void lb_enable(bool is_enable);
 
 extern void lb_mode(int mode);
 
-extern void tdmin_lb_enable(int in_enable);
+extern void tdmin_lb_enable(int tdm_index, int in_enable);
 
 extern void tdmin_lb_fifo_enable(int is_enable);
 #endif

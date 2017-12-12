@@ -118,15 +118,19 @@ struct loopback_cfg {
 	enum datain_src datain_src;
 	unsigned int datain_chnum;
 	unsigned int datain_chmask;
-	unsigned int toddr_index;
+	int toddr_index;
 
 	enum tdmin_lb_src datalb_src;
 	unsigned int datalb_chnum;
 	unsigned int datalb_chmask;
-	unsigned int frddr_index;
+	int frddr_index;
 };
 
+extern void loopback_set_status(int is_running);
+
 extern int loopback_is_enable(void);
+
+extern int loopback_check_enable(int src);
 
 extern int snd_card_add_kcontrols(struct snd_soc_card *card);
 

@@ -32,6 +32,7 @@ struct snd_elem_info {
 };
 
 static unsigned int loopback_enable;
+static unsigned int loopback_is_running;
 
 static const char *const loopback_enable_texts[] = {
 	"Disable",
@@ -1085,7 +1086,7 @@ static void loopback_modules_disable(
 {
 	/* tdminLB */
 	tdmin_lb_fifo_enable(0);
-	tdmin_lb_enable(0);
+	tdmin_lb_enable(tdm_index, 0);
 
 	/* pdmin */
 	pdm_enable(0);
@@ -1100,12 +1101,14 @@ static void loopback_modules_disable(
 	/* frddr */
 	if (frddr_index >= 3)
 		toddr_enable(0, frddr_index - 3);
-	else
+	else if (frddr_index >= 0)
 		frddr_enable(0, frddr_index);
 
 	/* tdmout */
-	tdm_fifo_enable(tdm_index, 0);
-	tdm_enable(tdm_index, 0);
+	if (frddr_index >= 0) {
+		tdm_fifo_enable(tdm_index, 0);
+		tdm_enable(tdm_index, 0);
+	}
 }
 
 static void loopback_modules_enable(
@@ -1118,13 +1121,15 @@ static void loopback_modules_enable(
 	 */
 
 	/* tdmout */
-	tdm_fifo_enable(tdm_index, 1);
-	tdm_enable(tdm_index, 1);
+	if (frddr_index >= 0) {
+		tdm_fifo_enable(tdm_index, 1);
+		tdm_enable(tdm_index, 1);
+	}
 
 	/* frddr */
 	if (frddr_index >= 3)
 		toddr_enable(1, frddr_index - 3);
-	else
+	else if (frddr_index >= 0)
 		frddr_enable(1, frddr_index);
 
 	/* toddr */
@@ -1139,7 +1144,7 @@ static void loopback_modules_enable(
 
 	/*tdminLB*/
 	tdmin_lb_fifo_enable(1);
-	tdmin_lb_enable(1);
+	tdmin_lb_enable(tdm_index, 1);
 }
 
 int loopback_trigger(
@@ -1147,13 +1152,13 @@ int loopback_trigger(
 	int cmd,
 	struct loopback_cfg *lb_cfg)
 {
-	pr_info("%s\n", __func__);
-
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		if (loopback_enable && loopback_is_running) {
+			pr_info("loopback enable\n");
+
 			/*
 			 * toddr/frdd is selected in dai_prepare already.
 			 * check toddr index of datain
@@ -1173,22 +1178,18 @@ int loopback_trigger(
 				lb_cfg->toddr_index,
 				lb_cfg->frddr_index);
 
-			if (loopback_enable
-				&& (lb_cfg->toddr_index >= 0)
-				&& (lb_cfg->frddr_index >= 0)) {
-				pr_info("loopback modules in sequence!\n");
-				/*if pdm overrun, re-set up the sequence*/
-				if (lb_cfg->frddr_index >= 0)
-					loopback_modules_disable(
-						lb_cfg->datalb_src,
-						lb_cfg->frddr_index,
-						lb_cfg->toddr_index);
+			pr_info("loopback modules in sequence!\n");
+			/*if pdm overrun, re-set up the sequence*/
+			if (lb_cfg->frddr_index >= 0)
+				loopback_modules_disable(
+					lb_cfg->datalb_src,
+					lb_cfg->frddr_index,
+					lb_cfg->toddr_index);
 
-				loopback_modules_enable(
-						lb_cfg->datalb_src,
-						lb_cfg->frddr_index,
-						lb_cfg->toddr_index);
-			}
+			loopback_modules_enable(
+					lb_cfg->datalb_src,
+					lb_cfg->frddr_index,
+					lb_cfg->toddr_index);
 		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -1198,7 +1199,7 @@ int loopback_trigger(
 			if (loopback_enable) {
 				pr_info("loopback disable\n");
 				lb_enable(0);
-				tdmin_lb_enable(0);
+				tdmin_lb_enable(lb_cfg->datalb_src, 0);
 			}
 		}
 		break;
@@ -1209,7 +1210,19 @@ int loopback_trigger(
 	return 0;
 }
 
+void loopback_set_status(int is_running)
+{
+	loopback_is_running = is_running;
+}
+
 int loopback_is_enable(void)
 {
 	return (loopback_enable == 1);
+}
+
+int loopback_check_enable(int src)
+{
+	return (src <= PDMIN)
+		&& (loopback_datain == src)
+		&& (loopback_enable == 1);
 }
