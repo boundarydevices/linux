@@ -94,7 +94,10 @@ enum color_index_e {
 #define FBIOPUT_OSD_ROTATE_ANGLE         0x4517
 #define FBIOPUT_OSD_SYNC_ADD             0x4518
 #define FBIOPUT_OSD_SYNC_RENDER_ADD      0x4519
-#define FBIOPUT_OSD_CURSOR               0x451a
+
+#define FB_IOC_MAGIC   'O'
+#define FBIOPUT_OSD_CURSOR	\
+	_IOWR(FB_IOC_MAGIC, 0x0,  struct fb_cursor_user)
 /* OSD color definition */
 #define KEYCOLOR_FLAG_TARGET  1
 #define KEYCOLOR_FLAG_ONHOLD  2
