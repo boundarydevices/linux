@@ -259,7 +259,8 @@ static int mtd_nand_probe(struct platform_device *pdev)
 	/*prase dtb and get device(part) information*/
 	prase_get_dtb_nand_parameter(aml_nand_dev, pdev);
 
-	nand_init(pdev);
+	err = nand_init(pdev);
+	pr_info("%s %d , err = %d\n", __func__, __LINE__, err);
 
 exit_error:
 	return err;

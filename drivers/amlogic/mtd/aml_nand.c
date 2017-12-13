@@ -434,6 +434,12 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 				start_blk = 0;
 	do {
 		offset = adjust_offset + start_blk * mtd->erasesize;
+		if (offset > mtd->size) {
+			pr_info("%s %d error : over the nand size!!!\n",
+			__func__, __LINE__);
+			WARN_ON(1);
+			return -ENOMEM;
+		}
 		error = mtd->_block_isbad(mtd, offset);
 		if (error == FACTORY_BAD_BLOCK_ERROR) {
 			pr_info("%s:%d factory bad addr=%llx\n",
