@@ -112,7 +112,7 @@ struct meson_domain_data {
 	const char *name;
 	struct meson_bank *banks;
 	unsigned int num_banks;
-	unsigned int pin_base;
+
 	unsigned int num_pins;
 };
 
@@ -195,10 +195,9 @@ enum PINMUX_TYPE {
 #define CMD_TEST_N_DIR 0x82000046
 #define TEST_N_OUTPUT  1
 
-#define PIN(x, b)	(b + x)
 #define MESON_MUX_V2_MASK(x) (0xf << x)
 #define MESON_MUX_V2_VAL(y, x) ((y & 0xf) << x)
-#define MESON_PIN(x, b) PINCTRL_PIN(PIN(x, b), #x)
+#define MESON_PIN(x) PINCTRL_PIN(x, #x)
 
 #define GROUP(grp, r, b)						\
 	{								\
@@ -209,10 +208,10 @@ enum PINMUX_TYPE {
 		.bit = b,						\
 	}
 
-#define GPIO_GROUP(gpio, b)						\
+#define GPIO_GROUP(gpio)						\
 	{								\
 		.name = #gpio,						\
-		.pins = (const unsigned int[]){ PIN(gpio, b) },		\
+		.pins = (const unsigned int[]){ gpio },		\
 		.num_pins = 1,						\
 		.is_gpio = true,					\
 	}

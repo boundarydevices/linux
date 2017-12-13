@@ -96,33 +96,6 @@ static int meson_get_bank(struct meson_domain *domain, unsigned int pin,
 }
 
 /**
- * meson_get_domain_and_bank() - find domain and bank containing a given pin
- *
- * @pc:		Meson pin controller device
- * @pin:	the pin number
- * @domain:	the found domain
- * @bank:	the found bank
- *
- * Return:	0 on success, a negative value on error
- */
-static int meson_get_domain_and_bank(struct meson_pinctrl *pc, unsigned int pin,
-				     struct meson_domain **domain,
-				     struct meson_bank **bank)
-{
-	struct meson_domain *d;
-
-	d = pc->domain;
-
-	if (pin >= d->data->pin_base &&
-	    pin < d->data->pin_base + d->data->num_pins) {
-		*domain = d;
-		return meson_get_bank(d, pin, bank);
-	}
-
-	return -EINVAL;
-}
-
-/**
  * meson_calc_reg_and_bit() - calculate register and bit for a pin
  *
  * @bank:	the bank containing the pin
@@ -421,14 +394,14 @@ static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 			     unsigned long *configs, unsigned int num_configs)
 {
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
-	struct meson_domain *domain;
+	struct meson_domain *domain = pc->domain;
 	struct meson_bank *bank;
 	enum pin_config_param param;
 	unsigned int reg, bit;
 	int i, ret;
 	u16 arg;
 
-	ret = meson_get_domain_and_bank(pc, pin, &domain, &bank);
+	ret = meson_get_bank(domain, pin, &bank);
 	if (ret)
 		return ret;
 
@@ -499,12 +472,12 @@ static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 
 static int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin)
 {
-	struct meson_domain *domain;
+	struct meson_domain *domain = pc->domain;
 	struct meson_bank *bank;
 	unsigned int reg, bit, val;
 	int ret, conf;
 
-	ret = meson_get_domain_and_bank(pc, pin, &domain, &bank);
+	ret = meson_get_bank(domain, pin, &bank);
 	if (ret)
 		return ret;
 
@@ -587,32 +560,18 @@ static inline struct meson_domain *to_meson_domain(struct gpio_chip *chip)
 {
 	return container_of(chip, struct meson_domain, chip);
 }
-
-static int meson_gpio_request(struct gpio_chip *chip, unsigned int gpio)
-{
-	return pinctrl_request_gpio(chip->base + gpio);
-}
-
-static void meson_gpio_free(struct gpio_chip *chip, unsigned int gpio)
-{
-	struct meson_domain *domain = to_meson_domain(chip);
-
-	pinctrl_free_gpio(domain->data->pin_base + gpio);
-}
-
 static int meson_gpio_direction_input(struct gpio_chip *chip, unsigned int gpio)
 {
 	struct meson_domain *domain = to_meson_domain(chip);
-	unsigned int reg, bit, pin;
+	unsigned int reg, bit;
 	struct meson_bank *bank;
 	int ret;
 
-	pin = domain->data->pin_base + gpio;
-	ret = meson_get_bank(domain, pin, &bank);
+	ret = meson_get_bank(domain, gpio, &bank);
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, pin, REG_DIR, &reg, &bit);
+	meson_calc_reg_and_bit(bank, gpio, REG_DIR, &reg, &bit);
 
 	return regmap_update_bits(domain->reg_gpio, reg, BIT(bit), BIT(bit));
 }
@@ -621,21 +580,20 @@ static int meson_gpio_direction_output(struct gpio_chip *chip,
 	unsigned int gpio, int value)
 {
 	struct meson_domain *domain = to_meson_domain(chip);
-	unsigned int reg, bit, pin;
+	unsigned int reg, bit;
 	struct meson_bank *bank;
 	int ret;
 
-	pin = domain->data->pin_base + gpio;
-	ret = meson_get_bank(domain, pin, &bank);
+	ret = meson_get_bank(domain, gpio, &bank);
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, pin, REG_DIR, &reg, &bit);
+	meson_calc_reg_and_bit(bank, gpio, REG_DIR, &reg, &bit);
 	ret = regmap_update_bits(domain->reg_gpio, reg, BIT(bit), 0);
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, pin, REG_OUT, &reg, &bit);
+	meson_calc_reg_and_bit(bank, gpio, REG_OUT, &reg, &bit);
 	return regmap_update_bits(domain->reg_gpio, reg, BIT(bit),
 				  value ? BIT(bit) : 0);
 }
@@ -644,16 +602,15 @@ static void meson_gpio_set(struct gpio_chip *chip, unsigned int gpio,
 	int value)
 {
 	struct meson_domain *domain = to_meson_domain(chip);
-	unsigned int reg, bit, pin;
+	unsigned int reg, bit;
 	struct meson_bank *bank;
 	int ret;
 
-	pin = domain->data->pin_base + gpio;
-	ret = meson_get_bank(domain, pin, &bank);
+	ret = meson_get_bank(domain, gpio, &bank);
 	if (ret)
 		return;
 
-	meson_calc_reg_and_bit(bank, pin, REG_OUT, &reg, &bit);
+	meson_calc_reg_and_bit(bank, gpio, REG_OUT, &reg, &bit);
 	regmap_update_bits(domain->reg_gpio, reg, BIT(bit),
 			   value ? BIT(bit) : 0);
 }
@@ -662,7 +619,7 @@ static int meson_gpio_pull_set(struct gpio_chip *chip, unsigned int gpio,
 	int value)
 {
 	struct meson_domain *domain = to_meson_domain(chip);
-	unsigned int reg, bit, pin;
+	unsigned int reg, bit;
 	struct meson_bank *bank;
 	int ret;
 
@@ -670,12 +627,11 @@ static int meson_gpio_pull_set(struct gpio_chip *chip, unsigned int gpio,
 		&& (value != GPIOD_PULL_UP))
 		return -EINVAL;
 
-	pin = domain->data->pin_base + gpio;
-	ret = meson_get_bank(domain, pin, &bank);
+	ret = meson_get_bank(domain, gpio, &bank);
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
+	meson_calc_reg_and_bit(bank, gpio, REG_PULLEN,
 				&reg, &bit);
 	ret = regmap_update_bits(domain->reg_pullen, reg,
 				BIT(bit),
@@ -683,7 +639,7 @@ static int meson_gpio_pull_set(struct gpio_chip *chip, unsigned int gpio,
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, pin, REG_PULL, &reg, &bit);
+	meson_calc_reg_and_bit(bank, gpio, REG_PULL, &reg, &bit);
 	ret = regmap_update_bits(domain->reg_pull, reg,
 				BIT(bit),
 				(value == GPIOD_PULL_DOWN) ? 0 : BIT(bit));
@@ -696,30 +652,26 @@ static int meson_gpio_pull_set(struct gpio_chip *chip, unsigned int gpio,
 static int meson_gpio_get(struct gpio_chip *chip, unsigned int gpio)
 {
 	struct meson_domain *domain = to_meson_domain(chip);
-	unsigned int reg, bit, val, pin;
+	unsigned int reg, bit, val;
 	struct meson_bank *bank;
 	int ret;
 
-	pin = domain->data->pin_base + gpio;
-	ret = meson_get_bank(domain, pin, &bank);
+	ret = meson_get_bank(domain, gpio, &bank);
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, pin, REG_IN, &reg, &bit);
+	meson_calc_reg_and_bit(bank, gpio, REG_IN, &reg, &bit);
 	regmap_read(domain->reg_gpio, reg, &val);
 
 	return !!(val & BIT(bit));
 }
 
-static int meson_gpio_to_irq(struct gpio_chip *chip, unsigned int offset)
+static int meson_gpio_to_irq(struct gpio_chip *chip, unsigned int gpio)
 {
 	struct meson_domain *domain = to_meson_domain(chip);
 	struct meson_bank *bank;
 	struct irq_fwspec fwspec;
 	int hwirq;
-	int gpio;
-
-	gpio = chip->base + offset;
 
 	if (meson_get_bank(domain, gpio, &bank))
 		return -EINVAL;
@@ -840,15 +792,15 @@ static int meson_gpiolib_register(struct meson_pinctrl *pc)
 	domain->chip.label = domain->data->name;
 	/* domain->chip.dev = pc->dev; */
 	domain->chip.parent = pc->dev;
-	domain->chip.request = meson_gpio_request;
-	domain->chip.free = meson_gpio_free;
+	domain->chip.request = gpiochip_generic_request;
+	domain->chip.free = gpiochip_generic_free;
 	domain->chip.direction_input = meson_gpio_direction_input;
 	domain->chip.direction_output = meson_gpio_direction_output;
 	domain->chip.get = meson_gpio_get;
 	domain->chip.set = meson_gpio_set;
 	domain->chip.to_irq = meson_gpio_to_irq;
 	domain->chip.set_pull = meson_gpio_pull_set;
-	domain->chip.base = domain->data->pin_base;
+	domain->chip.base = -1;
 	domain->chip.ngpio = domain->data->num_pins;
 	domain->chip.can_sleep = false;
 	domain->chip.of_node = domain->of_node;
@@ -862,8 +814,7 @@ static int meson_gpiolib_register(struct meson_pinctrl *pc)
 	}
 
 	ret = gpiochip_add_pin_range(&domain->chip, dev_name(pc->dev),
-				     0, domain->data->pin_base,
-				     domain->chip.ngpio);
+				     0, 0, domain->chip.ngpio);
 	if (ret) {
 	dev_err(pc->dev, "can't add pin range\n");
 	goto fail;
