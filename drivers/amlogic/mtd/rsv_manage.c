@@ -411,7 +411,7 @@ int aml_nand_read_rsv_info(struct mtd_info *mtd,
 {
 	struct aml_nand_chip *aml_chip = mtd_to_nand_chip(mtd);
 	struct oobinfo_t *oobinfo;
-	int error = 0;
+	int error = 0, ret = 0;
 	loff_t addr = 0;
 	size_t amount_loaded = 0;
 	size_t len;
@@ -419,6 +419,7 @@ int aml_nand_read_rsv_info(struct mtd_info *mtd,
 	unsigned char *data_buf;
 	unsigned char oob_buf[sizeof(struct oobinfo_t)];
 
+READ_RSV_AGAIN:
 	addr = nandrsv_info->valid_node->phy_blk_addr;
 	addr *= mtd->erasesize;
 	addr += nandrsv_info->valid_node->phy_page_addr * mtd->writesize;
@@ -446,7 +447,10 @@ int aml_nand_read_rsv_info(struct mtd_info *mtd,
 		if ((error != 0) && (error != -EUCLEAN)) {
 			pr_info("blk good but read failed: %llx, %d\n",
 				(uint64_t)addr, error);
-			return 1;
+			ret = aml_nand_scan_rsv_info(mtd, nandrsv_info);
+			if (ret == -1)
+				return 1;
+			goto READ_RSV_AGAIN;
 		}
 
 		if (memcmp(oobinfo->name, nandrsv_info->name, 4))
@@ -482,7 +486,6 @@ int aml_nand_read_rsv_info(struct mtd_info *mtd,
 #endif
 	/* if(data_buf) */
 	/* kfree(data_buf); */
-
 	return 0;
 }
 
@@ -512,7 +515,6 @@ int aml_nand_read_key(struct mtd_info *mtd, size_t offset, u_char *buf)
 			aml_chip->aml_nandkey_info->name);
 		return 1;
 	}
-
 	if (aml_nand_read_rsv_info(mtd,
 		aml_chip->aml_nandkey_info, offset, (u_char *)buf))
 		return 1;
@@ -612,7 +614,7 @@ int aml_nand_save_rsv_info(struct mtd_info *mtd,
 	struct aml_nandrsv_info_t *nandrsv_info, u_char *buf)
 {
 	struct free_node_t *free_node = NULL, *tmp_node = NULL;
-	int error = 0, pages_per_blk, i = 1;
+	int error = 0, pages_per_blk, valid_page_addr, i = 1;
 	loff_t addr = 0;
 	struct erase_info erase_info;
 
@@ -628,17 +630,14 @@ int aml_nand_save_rsv_info(struct mtd_info *mtd,
 		nandrsv_info->name, nandrsv_info->valid, i);
 RE_SEARCH:
 	if (nandrsv_info->valid) {
-		/*pr_info("%s:%d,phy_page_addr=%d,pages=%d\n",
-		 *		__func__, __LINE__,
-		 *		nandrsv_info->valid_node->phy_page_addr, i);
-		 **/
 		nandrsv_info->valid_node->phy_page_addr += i;
-if ((nandrsv_info->valid_node->phy_page_addr+i) > pages_per_blk) {
-	if ((nandrsv_info->valid_node->phy_page_addr - i) == pages_per_blk) {
+		valid_page_addr = nandrsv_info->valid_node->phy_page_addr;
+		if ((valid_page_addr + i) > pages_per_blk) {
+			if ((valid_page_addr - i) == pages_per_blk) {
 				addr = nandrsv_info->valid_node->phy_blk_addr;
 				addr *= mtd->erasesize;
 				memset(&erase_info,
-						0, sizeof(struct erase_info));
+					0, sizeof(struct erase_info));
 				erase_info.mtd = mtd;
 				erase_info.addr = addr;
 				erase_info.len = mtd->erasesize;
@@ -671,7 +670,7 @@ if ((nandrsv_info->valid_node->phy_page_addr+i) > pages_per_blk) {
 			nandrsv_info->valid_node->timestamp += 1;
 			nandrsv_info->free_node = tmp_node->next;
 			release_free_node(mtd, tmp_node);
-}
+		}
 	} else {
 		tmp_node = nandrsv_info->free_node;
 		nandrsv_info->valid_node->phy_blk_addr = tmp_node->phy_blk_addr;
@@ -921,6 +920,46 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 	return 0;
 }
 
+int aml_nand_free_rsv_info(struct mtd_info *mtd,
+	struct aml_nandrsv_info_t *nandrsv_info)
+{
+	struct free_node_t *tmp_node, *next_node = NULL;
+	int error = 0;
+	loff_t addr = 0;
+	struct erase_info erase_info;
+
+	pr_info("free %s:\n", nandrsv_info->name);
+
+	if (nandrsv_info->valid) {
+		addr = nandrsv_info->valid_node->phy_blk_addr;
+		addr *= mtd->erasesize;
+		memset(&erase_info,
+			0, sizeof(struct erase_info));
+		erase_info.mtd = mtd;
+		erase_info.addr = addr;
+		erase_info.len = mtd->erasesize;
+		_aml_rsv_disprotect();
+		error = mtd->_erase(mtd, &erase_info);
+		_aml_rsv_protect();
+		pr_info("erasing valid info block: %llx\n", addr);
+		nandrsv_info->valid_node->phy_blk_addr = -1;
+		nandrsv_info->valid_node->ec = -1;
+		nandrsv_info->valid_node->phy_page_addr = 0;
+		nandrsv_info->valid_node->timestamp = 0;
+		nandrsv_info->valid_node->status = 0;
+		nandrsv_info->valid = 0;
+	}
+	tmp_node = nandrsv_info->free_node;
+	while (tmp_node != NULL) {
+		next_node = tmp_node->next;
+		release_free_node(mtd, tmp_node);
+		tmp_node = next_node;
+	}
+	nandrsv_info->free_node = NULL;
+
+	return error;
+}
+
 int aml_nand_scan_rsv_info(struct mtd_info *mtd,
 	struct aml_nandrsv_info_t *nandrsv_info)
 {
@@ -937,15 +976,10 @@ int aml_nand_scan_rsv_info(struct mtd_info *mtd,
 	int error = 0, ret = 0;
 
 	data_buf = aml_chip->rsv_data_buf;
-	/*
-	 *good_addr = kzalloc(256, GFP_KERNEL);
-	 *if (good_addr == NULL)
-	 *	return -ENOMEM;
-	 *memset(good_addr, 0 , 256);
-	 **/
-
 	oobinfo = (struct oobinfo_t *)oob_buf;
 
+RE_RSV_INFO_EXT:
+	memset(good_addr, 0, 256);
 	max_scan_blk = nandrsv_info->end_block;
 	start_blk = nandrsv_info->start_block;
 	pr_info("%s: info size=0x%x max_scan_blk=%d, start_blk=%d\n",
@@ -968,20 +1002,7 @@ RE_RSV_INFO:
 		0x0, mtd->writesize);
 	memset((unsigned char *)aml_oob_ops.oobbuf,
 		0x0, aml_oob_ops.ooblen);
-	/*
-	 *fixit, need or not;
-	 *when list bad block, it will be check in save rsv info.
-	 *when not,it is not list.
-	 **/
-	/*
-	 *error = mtd->_block_isbad(mtd, offset);
-	 *if (error == FACTORY_BAD_BLOCK_ERROR) {
-	 *	pr_info("%s:%d factory bad addr =%llx\n",
-	 *		__func__,__LINE__,
-	 *		(uint64_t)(offset >> phys_erase_shift));
-	 *	goto SCAN_LOOP;
-	 *}
-	 **/
+
 	error = mtd->_read_oob(mtd, offset, &aml_oob_ops);
 	if ((error != 0) && (error != -EUCLEAN)) {
 		pr_info("blk check good but read failed: %llx, %d\n",
@@ -995,17 +1016,11 @@ RE_RSV_INFO:
 		goto RE_RSV_INFO;
 	}
 
-	/* pr_info("%s %d\n", __func__, __LINE__); */
 	nandrsv_info->init = 1;
 	nandrsv_info->valid_node->status = 0;
 	if (!memcmp(oobinfo->name, nandrsv_info->name, 4)) {
-		/* pr_info("%s %d\n", __func__, __LINE__); */
 		nandrsv_info->valid = 1;
 		if (nandrsv_info->valid_node->phy_blk_addr >= 0) {
-			/*
-			 *free_node =
-			 *kzalloc(sizeof(struct free_node_t), GFP_KERNEL);
-			 **/
 			free_node = get_free_node(mtd);
 			if (free_node == NULL)
 				return -ENOMEM;
@@ -1044,10 +1059,6 @@ RE_RSV_INFO:
 				oobinfo->timestamp;
 		}
 	} else {
-		/*
-		 *free_node =
-		 *	kzalloc(sizeof(struct free_node_t), GFP_KERNEL);
-		 **/
 		free_node = get_free_node(mtd);
 		if (free_node == NULL)
 			return -ENOMEM;
@@ -1063,7 +1074,7 @@ RE_RSV_INFO:
 			tmp_node->next = free_node;
 		}
 	}
-/* SCAN_LOOP: */
+
 	} while ((++start_blk) < max_scan_blk);
 
 	pr_info("%s : phy_blk_addr=%d, ec=%d, phy_page_addr=%d, timestamp=%d\n",
@@ -1083,7 +1094,6 @@ RE_RSV_INFO:
 	}
 
 	/*second stage*/
-
 	phys_erase_shift = fls(mtd->erasesize) - 1;
 	pages_per_blk = (1 << (phys_erase_shift - chip->page_shift));
 	page_num = nandrsv_info->size / mtd->writesize;
@@ -1114,13 +1124,12 @@ RE_RSV_INFO:
 		if ((error != 0) && (error != -EUCLEAN)) {
 			pr_info("blk good but read failed:%llx,%d\n",
 				(uint64_t)offset, error);
+			nandrsv_info->valid_node->status |= ECC_ABNORMAL_FLAG;
 			ret = -1;
 			continue;
 		}
 
 		if (!memcmp(oobinfo->name, nandrsv_info->name, 4)) {
-			/* pr_info("%d page find info:%llx\n", */
-			/* i, (uint64_t)offset); */
 			good_addr[i] = 1;
 			nandrsv_info->valid_node->phy_page_addr = i;
 		} else
@@ -1133,6 +1142,7 @@ RE_RSV_INFO:
 		i = nandrsv_info->valid_node->phy_page_addr;
 		if (((i + 1) % page_num) != 0) {
 			ret = -1;
+			nandrsv_info->valid_node->status |= POWER_ABNORMAL_FLAG;
 			pr_info("find %s incomplete\n", nandrsv_info->name);
 		}
 		if (ret == -1) {
@@ -1153,10 +1163,17 @@ RE_RSV_INFO:
 				}
 			}
 		}
+		if (ret == -1) {
+			nandrsv_info->valid_node->status = 0;
+			aml_nand_free_rsv_info(mtd, nandrsv_info);
+			goto RE_RSV_INFO_EXT;
+		}
 		i = (nandrsv_info->size + mtd->writesize - 1) / mtd->writesize;
 		nandrsv_info->valid_node->phy_page_addr -= (i - 1);
 	}
 
+	if (nandrsv_info->valid != 1)
+		ret = -1;
 	offset = nandrsv_info->valid_node->phy_blk_addr;
 	offset *= mtd->erasesize;
 	offset += nandrsv_info->valid_node->phy_page_addr * mtd->writesize;
@@ -1226,6 +1243,7 @@ int aml_nand_bbt_check(struct mtd_info *mtd)
 		return ret;
 	}
 
+	ret = 0;
 	buf = aml_chip->block_status;
 	if (aml_chip->aml_nandbbt_info->valid == 1) {
 		/*read bbt*/
@@ -1233,7 +1251,6 @@ int aml_nand_bbt_check(struct mtd_info *mtd)
 			__func__, __LINE__);
 		aml_nand_read_rsv_info(mtd,
 			aml_chip->aml_nandbbt_info, 0, (u_char *)buf);
-		ret = 0;
 		goto exit_error1;
 	} else {
 		pr_info("%s %d bbt is invalid, scanning.\n",

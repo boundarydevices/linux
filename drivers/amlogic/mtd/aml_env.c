@@ -286,14 +286,6 @@ ssize_t uboot_env_write(struct file *file,
 		return -ENOMEM;
 
 	mutex_lock(&env_mutex);
-	/*not need nand_get_device here, mtd->_read_xx will done with it*/
-	/*nand_get_device(mtd, FL_WRITING);*/
-	ret = amlnf_env_read((u8 *)env_ptr, CONFIG_ENV_SIZE);
-	if (ret) {
-		pr_info("nand_env_read: nand env read failed\n");
-		ret = -EFAULT;
-		goto exit;
-	}
 
 	if ((*ppos + count) > CONFIG_ENV_SIZE)
 		write_size = CONFIG_ENV_SIZE - *ppos;
@@ -312,7 +304,6 @@ ssize_t uboot_env_write(struct file *file,
 	*ppos += write_size;
 exit:
 	mutex_unlock(&env_mutex);
-	/*nand_release_device(mtd);*/
 	vfree(env_ptr);
 	return write_size;
 }
