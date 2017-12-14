@@ -21,7 +21,7 @@
 /* Local Headers */
 #include "osd_log.h"
 
-int osd_io_remap(void);
+int osd_io_remap(int iomap);
 uint32_t osd_cbus_read(uint32_t reg);
 void osd_cbus_write(uint32_t reg,
 				   const uint32_t val);
@@ -37,7 +37,6 @@ void osd_reg_set_bits(uint32_t reg,
 				    const uint32_t start,
 				    const uint32_t len);
 
-#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 u32 VSYNCOSD_RD_MPEG_REG(u32 reg);
 int VSYNCOSD_WR_MPEG_REG(u32 reg, u32 val);
 int VSYNCOSD_WR_MPEG_REG_BITS(u32 reg, u32 val, u32 start, u32 len);
@@ -45,7 +44,7 @@ int VSYNCOSD_SET_MPEG_REG_MASK(u32 reg, u32 mask);
 int VSYNCOSD_CLR_MPEG_REG_MASK(u32 reg, u32 mask);
 
 int VSYNCOSD_IRQ_WR_MPEG_REG(u32 reg, u32 val);
-#else
+#if 0
 #define VSYNCOSD_RD_MPEG_REG(reg) osd_reg_read(reg)
 #define VSYNCOSD_WR_MPEG_REG(reg, val) osd_reg_write(reg, val)
 #define VSYNCOSD_WR_MPEG_REG_BITS(reg, val, start, len) \

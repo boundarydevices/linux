@@ -35,7 +35,6 @@
 #include <linux/of_device.h>
 
 /* Local Headers */
-#include <linux/amlogic/cpu_version.h>
 #include "osd.h"
 #include "osd_io.h"
 #include "osd_reg.h"
@@ -859,11 +858,14 @@ static void osd_reset_rdma_func(u32 reset_bit)
 		rdma_write_reg(osd_reset_rdma_handle,
 			VIU_SW_RESET, 0);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
-		if ((rdma_hdr_delay == 0) ||
-			(hdr_osd_reg.shadow_mode == 0))
-			memcpy(&hdr_osd_shadow_reg, &hdr_osd_reg,
-				sizeof(struct hdr_osd_reg_s));
-		hdr_restore_osd_csc();
+		if (osd_hw.osd_meson_dev.osd_ver <= OSD_NORMAL) {
+			if ((rdma_hdr_delay == 0) ||
+				(hdr_osd_reg.shadow_mode == 0))
+				memcpy(&hdr_osd_shadow_reg, &hdr_osd_reg,
+					sizeof(struct hdr_osd_reg_s));
+			hdr_restore_osd_csc();
+		}
+		/* Todo: what about g12a */
 #endif
 		set_reset_rdma_trigger_line();
 		rdma_config(osd_reset_rdma_handle, 1 << 6);
@@ -919,6 +921,7 @@ static void osd_rdma_irq(void *arg)
 	osd_update_3d_mode();
 	osd_update_vsync_hit();
 	osd_hw_reset();
+	osd_mali_afbc_restart();
 	rdma_irq_count++;
 	{
 		/*This is a memory barrier*/
@@ -1090,11 +1093,11 @@ int osd_rdma_reset_and_flush(u32 reset_bit)
 	}
 
 	/* same bit, but gxm only reset hardware, not top reg*/
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
+	if (osd_hw.osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_GXM)
 		reset_bit &= ~HW_RESET_AFBCD_REGS;
 
 	i = 0;
-	base = VIU_OSD1_CTRL_STAT;
+	base = hw_osd_reg_array[OSD1].osd_ctrl_stat;
 	while ((reset_bit & HW_RESET_OSD1_REGS)
 		&& (i < OSD_REG_BACKUP_COUNT)) {
 		addr = osd_reg_backup[i];
@@ -1114,6 +1117,17 @@ int osd_rdma_reset_and_flush(u32 reset_bit)
 			addr, value);
 		i++;
 	}
+	i = 0;
+	base = VPU_MAFBC_COMMAND;
+	while ((reset_bit & HW_RESET_MALI_AFBCD_REGS)
+		&& (i < MALI_AFBC_REG_BACKUP_COUNT)) {
+		addr = mali_afbc_reg_backup[i];
+		value = mali_afbc_backup[addr - base];
+		wrtie_reg_internal(
+			addr, value);
+		i++;
+	}
+
 	if (item_count < 500)
 		osd_reg_write(END_ADDR, (table_paddr + item_count * 8 - 1));
 	else {
@@ -1172,6 +1186,7 @@ static irqreturn_t osd_rdma_isr(int irq, void *dev_id)
 		osd_update_3d_mode();
 		osd_update_vsync_hit();
 		osd_hw_reset();
+		osd_mali_afbc_restart();
 		rdma_irq_count++;
 		{
 			/*This is a memory barrier*/
@@ -1258,8 +1273,8 @@ static int osd_rdma_init(void)
 	osd_reg_write(OSD_RDMA_FLAG_REG, 0x0);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
-	if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL)
-		&& (get_cpu_type() <= MESON_CPU_MAJOR_ID_TXL)) {
+	if ((osd_hw.osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_GXL)
+		&& (osd_hw.osd_meson_dev.cpu_id <= __MESON_CPU_MAJOR_ID_TXL)) {
 		osd_reset_rdma_op.arg = osd_rdma_dev;
 		osd_reset_rdma_handle =
 			rdma_register(&osd_reset_rdma_op,

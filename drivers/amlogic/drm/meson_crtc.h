@@ -29,4 +29,5 @@ int meson_crtc_create(struct meson_drm *priv);
 
 void meson_crtc_irq(struct meson_drm *priv);
 
+int meson_crtc_dts_info_set(const void *dt_match_data);
 #endif /* __MESON_CRTC_H */

@@ -37,6 +37,7 @@
 #include <linux/amlogic/cpu_version.h>
 #include "osd_drm.h"
 #include "osd_hw.h"
+#include "osd_io.h"
 #include "osd.h"
 #include "osd_log.h"
 
@@ -391,11 +392,13 @@ static ssize_t osd_afbcd_read_file(struct file *file,
 				char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
+	struct seq_file *s = file->private_data;
+	int osd_id = *(int *)s;
 	char buf[128];
 	ssize_t len;
 	unsigned int enable_afbcd = 0;
 
-	enable_afbcd = osd_get_afbc();
+	enable_afbcd = osd_get_afbc(osd_id);
 	len = snprintf(buf, 128, "%d\n", enable_afbcd);
 	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
 }
@@ -404,6 +407,8 @@ static ssize_t osd_afbcd_write_file(struct file *file,
 				const char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
+	struct seq_file *s = file->private_data;
+	int osd_id = *(int *)s;
 	char buf[128];
 	unsigned int enable_afbcd = 0;
 	int ret = 0;
@@ -414,7 +419,7 @@ static ssize_t osd_afbcd_write_file(struct file *file,
 	buf[count] = 0;
 	ret = kstrtoint(buf, 0, &enable_afbcd);
 	osd_log_info("afbc: %d\n", enable_afbcd);
-	osd_set_afbc(enable_afbcd);
+	osd_set_afbc(osd_id, enable_afbcd);
 	return count;
 }
 
@@ -460,6 +465,107 @@ static ssize_t osd_dump_write_file(struct file *file,
 	return 0;
 }
 
+static void parse_param(char *buf_orig, char **parm)
+{
+	char *ps, *token;
+	unsigned int n = 0;
+	char delim1[3] = " ";
+	char delim2[2] = "\n";
+
+	ps = buf_orig;
+	strcat(delim1, delim2);
+	while (1) {
+		token = strsep(&ps, delim1);
+		if (token == NULL)
+			break;
+		if (*token == '\0')
+			continue;
+		parm[n++] = token;
+	}
+}
+
+static ssize_t osd_reg_write_file(struct file *file,
+				const char __user *userbuf,
+				size_t count, loff_t *ppos)
+{
+	char buf[128];
+	char *buf_orig, *parm[8] = {NULL};
+	long val = 0;
+	unsigned int reg_addr, reg_val;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+	buf[count] = 0;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	parse_param(buf_orig, (char **)&parm);
+	if (!strcmp(parm[0], "rv")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		reg_val = osd_reg_read(reg_addr);
+		pr_info("reg[0x%04x]=0x%08x\n", reg_addr, reg_val);
+	} else if (!strcmp(parm[0], "wv")) {
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			return -EINVAL;
+		reg_addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0)
+			return -EINVAL;
+		reg_val = val;
+		osd_reg_write(reg_addr, reg_val);
+	}
+	return count;
+}
+
+static ssize_t osd_hwc_enable_read_file(struct file *file,
+				char __user *userbuf,
+				size_t count, loff_t *ppos)
+{
+	char buf[128];
+	ssize_t len;
+	unsigned int hwc_enable = 0;
+
+	osd_get_hwc_enable(&hwc_enable);
+	len = snprintf(buf, 128, "%d\n", hwc_enable);
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+static ssize_t osd_hwc_enable_write_file(struct file *file,
+				const char __user *userbuf,
+				size_t count, loff_t *ppos)
+{
+	char buf[128];
+	unsigned int hwc_enable = 0;
+	int ret = 0;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+	buf[count] = 0;
+	ret = kstrtoint(buf, 0, &hwc_enable);
+	osd_log_info("hwc enable: %d\n", hwc_enable);
+	osd_set_hwc_enable(hwc_enable);
+	return count;
+}
+
+static ssize_t osd_do_hwc_write_file(struct file *file,
+				const char __user *userbuf,
+				size_t count, loff_t *ppos)
+{
+	char buf[128];
+	unsigned int do_hwc = 0;
+	int ret = 0;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+	buf[count] = 0;
+	ret = kstrtoint(buf, 0, &do_hwc);
+	osd_log_info("do_hwc: %d\n", do_hwc);
+	if (do_hwc)
+		osd_do_hwc();
+	return count;
+}
 
 static const struct file_operations loglevel_file_ops = {
 	.open		= simple_open,
@@ -537,6 +643,21 @@ static const struct file_operations osd_dump_file_ops = {
 	.write		= osd_dump_write_file,
 };
 
+static const struct file_operations osd_reg_file_ops = {
+	.open		= simple_open,
+	.write		= osd_reg_write_file,
+};
+
+static const struct file_operations osd_hwc_enable_file_ops = {
+	.open		= simple_open,
+	.read		= osd_hwc_enable_read_file,
+	.write		= osd_hwc_enable_write_file,
+};
+
+static const struct file_operations osd_do_hwc_file_ops = {
+	.open		= simple_open,
+	.write		= osd_do_hwc_write_file,
+};
 
 struct osd_drm_debugfs_files_s {
 	const char *name;
@@ -558,6 +679,10 @@ static struct osd_drm_debugfs_files_s osd_drm_debugfs_files[] = {
 	{"osd_afbcd", S_IFREG | 0640, &osd_afbcd_file_ops},
 	{"osd_clear", S_IFREG | 0220, &osd_clear_file_ops},
 	{"osd_dump", S_IFREG | 0640, &osd_dump_file_ops},
+	{"osd_reg", S_IFREG | 0220, &osd_reg_file_ops},
+	{"osd_hwc_enable", S_IFREG | 0640, &osd_hwc_enable_file_ops},
+	{"osd_do_hwc", S_IFREG | 0220, &osd_do_hwc_file_ops},
+
 };
 
 void osd_drm_debugfs_add(
@@ -602,25 +727,26 @@ EXPORT_SYMBOL(osd_drm_debugfs_exit);
 void osd_drm_vsync_isr_handler(void)
 {
 
-#ifndef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
-	osd_update_scan_mode();
-	/* go through update list */
-	walk_through_update_list();
-	osd_update_3d_mode();
-	osd_update_vsync_hit();
-	osd_hw_reset();
-#else
-	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
-		osd_rdma_interrupt_done_clear();
-	else {
+	if (osd_hw.hw_rdma_en) {
 		osd_update_scan_mode();
 		/* go through update list */
 		walk_through_update_list();
 		osd_update_3d_mode();
 		osd_update_vsync_hit();
 		osd_hw_reset();
+		osd_mali_afbc_restart();
+	} else {
+		if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
+			osd_rdma_interrupt_done_clear();
+		else {
+			osd_update_scan_mode();
+			/* go through update list */
+			walk_through_update_list();
+			osd_update_3d_mode();
+			osd_update_vsync_hit();
+			osd_hw_reset();
+		}
 	}
-#endif
 }
 EXPORT_SYMBOL(osd_drm_vsync_isr_handler);
 
@@ -636,12 +762,12 @@ void osd_drm_plane_enable_hw(u32 index, u32 enable)
 }
 EXPORT_SYMBOL(osd_drm_plane_enable_hw);
 
-int osd_drm_init(void)
+int osd_drm_init(struct osd_device_data_s *osd_meson_dev)
 {
 	int ret;
 
 	/* osd hw init */
-	ret = osd_io_remap();
+	ret = osd_io_remap(osd_meson_dev->osd_ver == OSD_SIMPLE);
 	if (!ret) {
 		osd_log_err("osd_io_remap failed\n");
 		return -1;
@@ -649,18 +775,20 @@ int osd_drm_init(void)
 	/* init osd logo */
 	ret = logo_work_init();
 	if (ret == 0)
-		osd_init_hw(1, 0);
+		osd_init_hw(1, 0, osd_meson_dev);
 	else
-		osd_init_hw(0, 0);
-	/* freescale switch from osd2 to osd1*/
-	osd_log_info("freescale switch from osd2 to osd1\n");
-	osd_set_free_scale_mode_hw(OSD2, 1);
-	osd_set_free_scale_enable_hw(OSD2, 0);
-	osd_set_free_scale_mode_hw(OSD1, 1);
-	osd_set_free_scale_axis_hw(OSD1, 0, 0, 1919, 1279);
-	osd_set_window_axis_hw(OSD1, 0, 0, 1919, 1279);
-	osd_set_free_scale_enable_hw(OSD1, 0x10001);
-	osd_enable_hw(OSD1, 1);
+		osd_init_hw(0, 0, osd_meson_dev);
+	if (osd_meson_dev->osd_ver <= OSD_NORMAL) {
+		/* freescale switch from osd2 to osd1*/
+		osd_log_info("freescale switch from osd2 to osd1\n");
+		osd_set_free_scale_mode_hw(OSD2, 1);
+		osd_set_free_scale_enable_hw(OSD2, 0);
+		osd_set_free_scale_mode_hw(OSD1, 1);
+		osd_set_free_scale_axis_hw(OSD1, 0, 0, 1919, 1279);
+		osd_set_window_axis_hw(OSD1, 0, 0, 1919, 1279);
+		osd_set_free_scale_enable_hw(OSD1, 0x10001);
+		osd_enable_hw(OSD1, 1);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(osd_drm_init);

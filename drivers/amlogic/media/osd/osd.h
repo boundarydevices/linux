@@ -94,16 +94,21 @@ enum color_index_e {
 #define FBIOPUT_OSD_ROTATE_ANGLE         0x4517
 #define FBIOPUT_OSD_SYNC_ADD             0x4518
 #define FBIOPUT_OSD_SYNC_RENDER_ADD      0x4519
+#define FBIOPUT_OSD_HWC_ENABLE           0x451a
+#define FBIOPUT_OSD_DO_HWC               0x451b
 
 #define FB_IOC_MAGIC   'O'
 #define FBIOPUT_OSD_CURSOR	\
 	_IOWR(FB_IOC_MAGIC, 0x0,  struct fb_cursor_user)
+
+
 /* OSD color definition */
 #define KEYCOLOR_FLAG_TARGET  1
 #define KEYCOLOR_FLAG_ONHOLD  2
 #define KEYCOLOR_FLAG_CURRENT 4
 
-#define HW_OSD_COUNT 2
+#define HW_OSD_COUNT 3
+#define OSD_BLEND_LAYERS 4
 /* OSD block definition */
 #define HW_OSD_BLOCK_COUNT 4
 #define HW_OSD_BLOCK_REG_COUNT (HW_OSD_BLOCK_COUNT*2)
@@ -131,11 +136,17 @@ enum color_index_e {
 #define INT_VIU2_VSYNC 45
 #define INT_RDMA 121
 
-#define OSD_MAX_BUF_NUM 3  /* fence relative */
+#define OSD_MAX_BUF_NUM 1  /* fence relative */
+#define MALI_AFBC_16X16_PIXEL  0
+#define MALI_AFBC_32X8_PIXEL   1
+
+#define MALI_AFBC_SPLIT_OFF  0
+#define MALI_AFBC_SPLIT_ON   1
 
 enum osd_index_e {
 	OSD1 = 0,
-	OSD2
+	OSD2,
+	OSD3
 };
 
 enum osd_enable_e {
@@ -203,6 +214,7 @@ struct para_osd_info_s {
 enum osd_dev_e {
 	DEV_OSD0 = 0,
 	DEV_OSD1,
+	DEV_OSD2,
 	DEV_ALL,
 	DEV_MAX
 };
@@ -232,11 +244,84 @@ enum hw_reg_index_e {
 	HW_REG_INDEX_MAX
 };
 
+enum cpuid_type_e {
+	__MESON_CPU_MAJOR_ID_M8B = 0x1B,
+	__MESON_CPU_MAJOR_ID_GXBB = 0x1F,
+	__MESON_CPU_MAJOR_ID_GXTVBB,
+	__MESON_CPU_MAJOR_ID_GXL,
+	__MESON_CPU_MAJOR_ID_GXM,
+	__MESON_CPU_MAJOR_ID_TXL,
+	__MESON_CPU_MAJOR_ID_TXLX,
+	__MESON_CPU_MAJOR_ID_AXG,
+	__MESON_CPU_MAJOR_ID_GXLX,
+	__MESON_CPU_MAJOR_ID_TXHD,
+	__MESON_CPU_MAJOR_ID_G12A,
+	__MESON_CPU_MAJOR_ID_UNKNOWN,
+};
+
+enum osd_afbc_e {
+	NO_AFBC = 0,
+	MESON_AFBC,
+	MALI_AFBC
+};
+
+enum osd_ver_e {
+	OSD_SIMPLE = 0,
+	OSD_NORMAL,
+	OSD_HIGH_ONE,
+	OSD_HIGH_OTHER
+};
+
+enum osd_blend_din_index_e {
+	BLEND_DIN1 = 0,
+	BLEND_DIN2,
+	BLEND_DIN3,
+	BLEND_DIN4
+};
+
+enum osd_zorder_e {
+	LAYER_1 = 1,
+	LAYER_2,
+	LAYER_3,
+	LAYER_UNSUPPORT
+};
+
+/*
+ * OSD_BLEND_ABC: (OSD1 & (OSD2+SC & OSD3+SC)) +SC
+ * OSD_BLEND_AB_C: (OSD1 & OSD2 + SC) + SC, OSD3+SC
+ * OSD_BLEND_A_BC: OSD1+SC, (OSD2 +SC & OSD3 +SC)
+ */
+enum osd_blend_mode_e {
+	OSD_BLEND_NONE,
+	OSD_BLEND_ABC,
+	OSD_BLEND_AB_C,
+	OSD_BLEND_A_BC,
+};
+
+enum afbc_pix_format_e {
+	R8 = 0,
+	YUV422_8B,
+	RGB565,
+	RGBA5551,
+	RGBA4444,
+	RGBA8888,
+	RGB888 = 7,
+	YUV422_10B,
+	RGBA1010102,
+};
+
 struct pandata_s {
 	s32 x_start;
 	s32 x_end;
 	s32 y_start;
 	s32 y_end;
+};
+
+struct dispdata_s {
+	s32 x;
+	s32 y;
+	s32 w;
+	s32 h;
 };
 
 struct fb_geometry_s {
@@ -290,6 +375,12 @@ struct osd_fence_map_s {
 	u32 dst_h;
 	int byte_stride;
 	int pxiel_stride;
+	u32 background_w;
+	u32 background_h;
+	u32 zorder;
+	u32 premult_en;
+	u32 afbc_en;
+	u32 afbc_inter_format;
 	u32 reserve;
 	struct fence *in_fence;
 };
@@ -301,9 +392,88 @@ struct afbcd_data_s {
 	u32 frame_width;
 	u32 frame_height;
 	u32 conv_lbuf_len;
+	u32 out_addr_id;
+	u32 format;
+	u32 inter_format;
+	u32 afbc_start;
 };
 
-typedef void (*update_func_t)(void);
+struct osd_device_data_s {
+	enum cpuid_type_e cpu_id;
+	enum osd_ver_e osd_ver; /* axg: simple, others: normal; g12: high */
+	enum osd_afbc_e afbc_type;/* 0:no afbc; 1: meson-afbc 2:mali-afbc */
+	u8 osd_count;
+	u8 has_deband;
+	u8 has_lut;
+	u8 has_rdma;
+	u8 has_dolby_vision;
+	u8 osd_fifo_len;
+	u32 vpp_fifo_len;
+	u32 dummy_data;
+};
+
+struct hw_osd_reg_s {
+	u32 osd_ctrl_stat; /* VIU_OSD1_CTRL_STAT */
+	u32 osd_ctrl_stat2;/* VIU_OSD1_CTRL_STAT2 */
+	u32 osd_color_addr;/* VIU_OSD1_COLOR_ADDR */
+	u32 osd_color;/* VIU_OSD1_COLOR */
+	u32 osd_tcolor_ag0; /* VIU_OSD1_TCOLOR_AG0 */
+	u32 osd_tcolor_ag1; /* VIU_OSD1_TCOLOR_AG1 */
+	u32 osd_tcolor_ag2; /* VIU_OSD1_TCOLOR_AG2 */
+	u32 osd_tcolor_ag3; /* VIU_OSD1_TCOLOR_AG3 */
+	u32 osd_blk0_cfg_w0;/* VIU_OSD1_BLK0_CFG_W0 */
+	u32 osd_blk0_cfg_w1;/* VIU_OSD1_BLK0_CFG_W1 */
+	u32 osd_blk0_cfg_w2;/* VIU_OSD1_BLK0_CFG_W2 */
+	u32 osd_blk0_cfg_w3;/* VIU_OSD1_BLK0_CFG_W3 */
+	u32 osd_blk0_cfg_w4;/* VIU_OSD1_BLK0_CFG_W4 */
+	u32 osd_blk1_cfg_w4;/* VIU_OSD1_BLK1_CFG_W4 */
+	u32 osd_blk2_cfg_w4;/* VIU_OSD1_BLK2_CFG_W4 */
+	u32 osd_fifo_ctrl_stat;/* VIU_OSD1_FIFO_CTRL_STAT */
+	u32 osd_test_rddata;/* VIU_OSD1_TEST_RDDATA */
+	u32 osd_prot_ctrl;/* VIU_OSD1_PROT_CTRL */
+	u32 osd_mali_unpack_ctrl;/* VIU_OSD1_MALI_UNPACK_CTRL */
+	u32 osd_dimm_ctrl;/* VIU_OSD1_DIMM_CTRL */
+	//u32 osd_blend_din_scope_h; /* VIU_OSD_BLEND_DIN0_SCOPE_H */
+	//u32 osd_blend_din_scope_v; /* VIU_OSD_BLEND_DIN0_SCOPE_V */
+
+	u32 osd_scale_coef_idx;/* VPP_OSD_SCALE_COEF_IDX */
+	u32 osd_scale_coef;/* VPP_OSD_SCALE_COEF */
+	u32 osd_vsc_phase_step;/* VPP_OSD_VSC_PHASE_STEP */
+	u32 osd_vsc_init_phase;/* VPP_OSD_VSC_INI_PHASE */
+	u32 osd_vsc_ctrl0;/* VPP_OSD_VSC_CTRL0 */
+	u32 osd_hsc_phase_step;/* VPP_OSD_HSC_PHASE_STEP */
+	u32 osd_hsc_init_phase;/* VPP_OSD_HSC_INI_PHASE */
+	u32 osd_hsc_ctrl0;/* VPP_OSD_HSC_CTRL0 */
+	u32 osd_sc_dummy_data;/* VPP_OSD_SC_DUMMY_DATA */
+	u32 osd_sc_ctrl0;/* VPP_OSD_SC_CTRL0 */
+	u32 osd_sci_wh_m1;/* VPP_OSD_SCI_WH_M1 */
+	u32 osd_sco_h_start_end;/* VPP_OSD_SCO_H_START_END */
+	u32 osd_sco_v_start_end;/* VPP_OSD_SCO_V_START_END */
+	u32 afbc_header_buf_addr_low_s;/* VPU_MAFBC_HEADER_BUF_ADDR_LOW_S0 */
+	u32 afbc_header_buf_addr_high_s;/* VPU_MAFBC_HEADER_BUF_ADDR_HIGH_S0 */
+	u32 afbc_format_specifier_s;/* VPU_MAFBC_FORMAT_SPECIFIER_S0 */
+	u32 afbc_buffer_width_s;/* VPU_MAFBC_BUFFER_WIDTH_S0 */
+	u32 afbc_buffer_hight_s;/* VPU_MAFBC_BUFFER_HEIGHT_S0 */
+	u32 afbc_boundings_box_x_start_s;/* VPU_MAFBC_BOUNDING_BOX_X_START_S0 */
+	u32 afbc_boundings_box_x_end_s;/* VPU_MAFBC_BOUNDING_BOX_X_END_S0 */
+	u32 afbc_boundings_box_y_start_s;/* VPU_MAFBC_BOUNDING_BOX_Y_START_S0 */
+	u32 afbc_boundings_box_y_end_s;/* VPU_MAFBC_BOUNDING_BOX_Y_END_S0 */
+	u32 afbc_output_buf_addr_low_s;/* VPU_MAFBC_OUTPUT_BUF_ADDR_LOW_S0 */
+	u32 afbc_output_buf_addr_high_s;/* VPU_MAFBC_OUTPUT_BUF_ADDR_HIGH_S0 */
+	u32 afbc_output_buf_stride_s;/* VPU_MAFBC_OUTPUT_BUF_STRIDE_S0 */
+	u32 afbc_prefetch_cfg_s;/* VPU_MAFBC_PREFETCH_CFG_S0 */
+};
+
+struct hw_osd_blending_s {
+	u8 osd_to_bdin_table[OSD_BLEND_LAYERS];
+	u8 reorder[HW_OSD_COUNT];
+	u32 input_src_w[HW_OSD_COUNT];
+	u32 din_reoder_sel;
+	u32 layer_cnt;
+};
+
+extern struct hw_osd_reg_s hw_osd_reg_array[HW_OSD_COUNT];
+typedef void (*update_func_t)(u32);
 struct hw_list_s {
 	struct list_head list;
 	update_func_t update_func;
@@ -320,6 +490,8 @@ struct hw_para_s {
 	struct pandata_s free_dst_data_backup[HW_OSD_COUNT];
 	/* struct pandata_s rotation_pandata[HW_OSD_COUNT]; */
 	struct pandata_s cursor_dispdata[HW_OSD_COUNT];
+	struct dispdata_s src_data[HW_OSD_COUNT];
+	struct dispdata_s dst_data[HW_OSD_COUNT];
 	u32 buffer_alloc[HW_OSD_COUNT];
 
 	u32 gbl_alpha[HW_OSD_COUNT];
@@ -339,7 +511,12 @@ struct hw_para_s {
 	const struct color_bit_define_s *color_info[HW_OSD_COUNT];
 	const struct color_bit_define_s *color_backup[HW_OSD_COUNT];
 	u32 scan_mode[HW_OSD_COUNT];
-	u32 order;
+	u32 order[HW_OSD_COUNT];
+	u32 premult_en[HW_OSD_COUNT];
+	u32 osd_blend_mode;
+	u32 background_w;
+	u32 background_h;
+
 	struct osd_3d_mode_s mode_3d[HW_OSD_COUNT];
 	u32 updated[HW_OSD_COUNT];
 	/* u32 block_windows[HW_OSD_COUNT][HW_OSD_BLOCK_REG_COUNT]; */
@@ -348,7 +525,9 @@ struct hw_para_s {
 	u32 free_scale_mode_backup[HW_OSD_COUNT];
 	u32 osd_reverse[HW_OSD_COUNT];
 	/* struct osd_rotate_s rotate[HW_OSD_COUNT]; */
-	struct hw_list_s reg[HW_OSD_COUNT][HW_REG_INDEX_MAX];
+	int use_h_filter_mode[HW_OSD_COUNT];
+	int use_v_filter_mode[HW_OSD_COUNT];
+	struct hw_list_s reg[HW_REG_INDEX_MAX];
 	u32 field_out_en;
 	u32 scale_workaround;
 	u32 fb_for_4k2k;
@@ -358,8 +537,8 @@ struct hw_para_s {
 	u32 bot_type;
 	u32 hw_reset_flag;
 	struct afbcd_data_s osd_afbcd[HW_OSD_COUNT];
+	struct osd_device_data_s osd_meson_dev;
 	u32 urgent[HW_OSD_COUNT];
-	u32 osd_fifo[HW_OSD_COUNT];
 	u32 osd_deband_enable;
 	u32 osd_fps;
 	u32 osd_fps_start;
@@ -372,7 +551,13 @@ struct hw_para_s {
 	u32 vinfo_width;
 	u32 vinfo_height;
 	u32 fb_drvier_probe;
+	u32 afbc_restart_in_vsync;
+	u32 afbc_force_reset;
+	u32 afbc_status_err_reset;
+	u32 afbc_use_latch;
+	u32 hwc_enable;
+	u32 osd_use_latch;
+	u32 hw_cursor_en;
+	u32 hw_rdma_en;
 };
-
-
 #endif /* _OSD_H_ */

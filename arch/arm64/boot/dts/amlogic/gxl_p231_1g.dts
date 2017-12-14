@@ -663,7 +663,7 @@
 	};
 
 	meson-fb {
-		compatible = "amlogic, meson-fb";
+		compatible = "amlogic, meson-gxl";
 		memory-region = <&logo_reserved>;
 		dev_name = "meson-fb";
 		status = "okay";

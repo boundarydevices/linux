@@ -23,13 +23,12 @@
 #include "osd_sync.h"
 #include "osd_drm.h"
 
-#define REG_OFFSET (0x20)
+//#define REG_OFFSET (0x20)
 #define OSD_RELATIVE_BITS 0x33330
-#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 #include "osd_rdma.h"
-#endif
 
 extern int int_viu_vsync;
+extern struct hw_para_s osd_hw;
 
 #ifdef CONFIG_HIBERNATION
 extern void osd_freeze_hw(void);
@@ -118,15 +117,14 @@ extern int osd_sync_request_render(u32 index, u32 yres,
 	struct fb_sync_request_render_s *request,
 	u32 phys_addr);
 extern s32  osd_wait_vsync_event(void);
-#if defined(CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR)
 extern void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart,
 			  u32 osd_w, u32 osd_h);
-#endif
 extern void osd_init_scan_mode(void);
 extern void osd_suspend_hw(void);
 extern void osd_resume_hw(void);
 extern void osd_shutdown_hw(void);
-extern void osd_init_hw(u32 logo_loaded, u32 osd_probe);
+extern void osd_init_hw(u32 logo_loaded, u32 osd_probe,
+	struct osd_device_data_s *osd_meson);
 extern void osd_init_scan_mode(void);
 extern void osd_set_logo_index(int index);
 extern int osd_get_logo_index(void);
@@ -142,8 +140,8 @@ extern void enable_rdma(int enable_flag);
 extern void osd_ext_clone_pan(u32 index);
 #endif
 extern void osd_set_pxp_mode(u32 mode);
-extern void osd_set_afbc(u32 enable);
-extern u32 osd_get_afbc(void);
+extern void osd_set_afbc(u32 index, u32 enable);
+extern u32 osd_get_afbc(u32 index);
 extern u32 osd_get_reset_status(void);
 extern void osd_switch_free_scale(
 	u32 pre_index, u32 pre_enable, u32 pre_scale,
@@ -155,11 +153,27 @@ void osd_set_deband(u32 osd_deband_enable);
 void osd_get_fps(u32 *osd_fps);
 void osd_set_fps(u32 osd_fps_start);
 extern void osd_get_info(u32 index, u32 *addr, u32 *width, u32 *height);
+void osd_update_scan_mode(void);
+void osd_update_3d_mode(void);
+void osd_update_vsync_hit(void);
+void osd_hw_reset(void);
+void osd_mali_afbc_restart(void);
 int logo_work_init(void);
 void set_logo_loaded(void);
 int set_osd_logo_freescaler(void);
 void osd_get_display_debug(u32 *osd_display_debug_enable);
 void osd_set_display_debug(u32 osd_display_debug_enable);
+void osd_get_background_size(u32 *background_w, u32 *background_h);
+void osd_set_background_size(u32 background_w, u32 background_h);
+u32 osd_get_premult(u32 index);
+void osd_set_premult(u32 index, u32 premult);
+void osd_get_afbc_debug(u32 *val1, u32 *val2, u32 *val3, u32 *val4);
+void osd_set_afbc_debug(u32 val1, u32 val2, u32 val3, u32 val4);
+void osd_get_afbc_format(u32 index, u32 *format, u32 *inter_format);
+void osd_set_afbc_format(u32 index, u32 format, u32 inter_format);
+void osd_get_hwc_enable(u32 *hwc_enable);
+void osd_set_hwc_enable(u32 hwc_enable);
+void osd_do_hwc(void);
 void osd_backup_screen_info(
 	u32 index,
 	char __iomem *screen_base,
@@ -171,5 +185,6 @@ void osd_restore_screen_info(
 void osd_set_clear(u32 index, u32 osd_clear);
 void osd_page_flip(struct osd_plane_map_s *plane_map);
 void walk_through_update_list(void);
-
+int osd_setting_blend(void);
+void osd_set_hwc_enable(u32 hwc_enable);
 #endif

@@ -75,6 +75,165 @@
  * - Powering up video processing HW blocks
  * - Powering Up HDMI controller and PHY
  */
+#if 1
+static struct osd_device_data_s osd_gxbb = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_GXBB,
+	.osd_ver = OSD_NORMAL,
+	.afbc_type = NO_AFBC,
+	.osd_count = 2,
+	.has_deband = 0,
+	.has_lut = 0,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 32,
+	.vpp_fifo_len = 0x77f,
+	.dummy_data = 0x00808000,
+};
+
+static struct osd_device_data_s osd_gxtvbb = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_GXTVBB,
+	.osd_ver = OSD_NORMAL,
+	.afbc_type = MESON_AFBC,
+	.osd_count = 2,
+	.has_deband = 0,
+	.has_lut = 0,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 32,
+	.vpp_fifo_len = 0xfff,
+	.dummy_data = 0x0,
+};
+
+static struct osd_device_data_s osd_gxl = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_GXL,
+	.osd_ver = OSD_NORMAL,
+	.afbc_type = NO_AFBC,
+	.osd_count = 2,
+	.has_deband = 0,
+	.has_lut = 0,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 32,
+	.vpp_fifo_len = 0x77f,
+	.dummy_data = 0x00808000,
+};
+
+static struct osd_device_data_s osd_gxm = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_GXM,
+	.osd_ver = OSD_NORMAL,
+	.afbc_type = MESON_AFBC,
+	.osd_count = 2,
+	.has_deband = 0,
+	.has_lut = 0,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 32,
+	.vpp_fifo_len = 0xfff,
+	.dummy_data = 0x00202000,/* dummy data is different */
+};
+
+static struct osd_device_data_s osd_txl = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_TXL,
+	.osd_ver = OSD_NORMAL,
+	.afbc_type = NO_AFBC,
+	.osd_count = 2,
+	.has_deband = 0,
+	.has_lut = 0,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 64,
+	.vpp_fifo_len = 0x77f,
+	.dummy_data = 0x00808000,
+};
+
+static struct osd_device_data_s osd_txlx = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_TXLX,
+	.osd_ver = OSD_NORMAL,
+	.afbc_type = NO_AFBC,
+	.osd_count = 2,
+	.has_deband = 1,
+	.has_lut = 1,
+	.has_rdma = 1,
+	.has_dolby_vision = 1,
+	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
+	.vpp_fifo_len = 0x77f,
+	.dummy_data = 0x00808000,
+};
+
+static struct osd_device_data_s osd_axg = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_AXG,
+	.osd_ver = OSD_SIMPLE,
+	.afbc_type = NO_AFBC,
+	.osd_count = 1,
+	.has_deband = 1,
+	.has_lut = 1,
+	.has_rdma = 0,
+	.has_dolby_vision = 0,
+	 /* use iomap its self, no rdma, no canvas, no freescale */
+	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
+	.vpp_fifo_len = 0x400,
+	.dummy_data = 0x00808000,
+};
+
+static struct osd_device_data_s osd_g12a = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_G12A,
+	.osd_ver = OSD_HIGH_ONE,
+	.afbc_type = MALI_AFBC,
+	.osd_count = 3,
+	.has_deband = 1,
+	.has_lut = 1,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
+	.vpp_fifo_len = 0xfff,/* 2048 */
+	.dummy_data = 0x00808000,
+};
+
+static const struct of_device_id meson_drm_dt_match[] = {
+	{
+		.compatible = "amlogic,meson-gxbb",
+		.data = &osd_gxbb,
+
+	},
+	{
+		.compatible = "amlogic,meson-gxl",
+		.data = &osd_gxl,
+	},
+	{
+		.compatible = "amlogic,meson-gxm",
+		.data = &osd_gxm,
+
+	},
+	{
+		.compatible = "amlogic,meson-txl",
+		.data = &osd_txl,
+	},
+	{
+		.compatible = "amlogic,meson-txlx",
+		.data = &osd_txlx,
+
+	},
+	{
+		.compatible = "amlogic,meson-axg",
+		.data = &osd_axg,
+
+	},
+	{
+		.compatible = "amlogic,meson-g12a",
+		.data = &osd_g12a,
+	},
+	{},
+};
+
+#else
+static const struct of_device_id meson_drm_dt_match[] = {
+	{ .compatible = "amlogic,meson-gxbb-vpu" },
+	{ .compatible = "amlogic,meson-gxl-vpu" },
+	{ .compatible = "amlogic,meson-gxm-vpu" },
+	{}
+};
+#endif
+
 static void meson_fb_output_poll_changed(struct drm_device *dev)
 {
 #ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
@@ -328,6 +487,21 @@ static int meson_drv_probe(struct platform_device *pdev)
 	if (meson_drv_use_osd())
 		return meson_drv_probe_prune(pdev);
 
+	if (pdev->dev.of_node) {
+		const struct of_device_id *match;
+		struct device_node	*of_node = pdev->dev.of_node;
+
+		match = of_match_node(meson_drm_dt_match, of_node);
+		if (match) {
+			ret = meson_crtc_dts_info_set((match->data));
+			if (ret < 0)
+				return -ENODEV;
+		} else {
+				pr_err("%s NOT match\n", __func__);
+				return -ENODEV;
+			}
+	}
+
 #ifndef CONFIG_DRM_MESON_BYPASS_MODE
 	/* Checks if an output connector is available */
 	if (!meson_vpu_has_available_connectors(dev)) {
@@ -478,13 +652,8 @@ static int meson_drv_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id dt_match[] = {
-	{ .compatible = "amlogic,meson-gxbb-vpu" },
-	{ .compatible = "amlogic,meson-gxl-vpu" },
-	{ .compatible = "amlogic,meson-gxm-vpu" },
-	{}
-};
-MODULE_DEVICE_TABLE(of, dt_match);
+
+MODULE_DEVICE_TABLE(of, meson_drm_dt_match);
 
 static struct platform_driver meson_drm_platform_driver = {
 	.probe      = meson_drv_probe,
@@ -492,7 +661,7 @@ static struct platform_driver meson_drm_platform_driver = {
 	.driver     = {
 		.owner  = THIS_MODULE,
 		.name   = DRIVER_NAME,
-		.of_match_table = dt_match,
+		.of_match_table = meson_drm_dt_match,
 	},
 };
 

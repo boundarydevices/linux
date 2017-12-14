@@ -26,7 +26,6 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/canvas/canvas.h>
 #include <linux/amlogic/media/canvas/canvas_mgr.h>
-#include <linux/amlogic/cpu_version.h>
 
 #include "osd_canvas.h"
 #include "osd_fb.h"
@@ -165,7 +164,7 @@ int osd_init_progress_bar(void)
 	struct ge2d_context_s *context = ge2d_context;
 	u32 step = 1;
 
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+	if (osd_hw.osd_meson_dev.has_ver == OSD_SIMPLE)
 		return 0;
 
 	memset(&progress_bar, 0, sizeof(struct osd_progress_bar_s));

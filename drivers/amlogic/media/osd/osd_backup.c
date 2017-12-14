@@ -19,12 +19,11 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/module.h>
-/* Amlogic Headers */
-#include <linux/amlogic/cpu_version.h>
 
 /* Local Headers */
 #include "osd_io.h"
 #include "osd_backup.h"
+#include "osd_hw.h"
 
 const u16 osd_reg_backup[OSD_REG_BACKUP_COUNT] = {
 	0x1a10, 0x1a13,
@@ -37,14 +36,27 @@ const u16 osd_afbc_reg_backup[OSD_AFBC_REG_BACKUP_COUNT] = {
 	0x31a6, 0x31a5, 0x31a4, 0x31a3, 0x31a2, 0x31a1, 0x31a0
 };
 
+const u16 mali_afbc_reg_backup[MALI_AFBC_REG_BACKUP_COUNT] = {
+	0x3a05, 0x3a07,
+	0x3a10, 0x3a11, 0x3a12, 0x3a13, 0x3a14, 0x3a15, 0x3a16,
+	0x3a17, 0x3a18, 0x3a19, 0x3a1a, 0x3a1b, 0x3a1c,
+	0x3a30, 0x3a31, 0x3a32, 0x3a33, 0x3a34, 0x3a35, 0x3a36,
+	0x3a37, 0x3a38, 0x3a39, 0x3a3a, 0x3a3b, 0x3a3c,
+	0x3a50, 0x3a51, 0x3a52, 0x3a53, 0x3a54, 0x3a55, 0x3a56,
+	0x3a57, 0x3a58, 0x3a59, 0x3a5a, 0x3a5b, 0x3a5c
+};
 static u32 osd_backup_count = OSD_VALUE_COUNT;
 static u32 afbc_backup_count = OSD_AFBC_VALUE_COUNT;
+static u32 mali_afbc_backup_count = MALI_AFBC_REG_BACKUP_COUNT;
 u32 osd_backup[OSD_VALUE_COUNT];
 u32 osd_afbc_backup[OSD_AFBC_VALUE_COUNT];
+u32 mali_afbc_backup[MALI_AFBC_VALUE_COUNT];
 module_param_array(osd_backup, uint, &osd_backup_count, 0444);
 MODULE_PARM_DESC(osd_backup, "\n osd register backup\n");
 module_param_array(osd_afbc_backup, uint, &afbc_backup_count, 0444);
 MODULE_PARM_DESC(osd_afbc_backup, "\n osd afbc register backup\n");
+module_param_array(mali_afbc_backup, uint, &mali_afbc_backup_count, 0444);
+MODULE_PARM_DESC(mali_afbc_backup, "\n mali afbc register backup\n");
 
 /* 0: not backup */
 static u32 backup_enable;
@@ -59,12 +71,21 @@ void update_backup_reg(u32 addr, u32 value)
 		(addr <= OSD1_AFBCD_PIXEL_VSCOPE) &&
 		(backup_enable & HW_RESET_AFBCD_REGS)) {
 		osd_afbc_backup[addr - base] = value;
+		return;
 	}
 	base = VIU_OSD1_CTRL_STAT;
 	if ((addr >= VIU_OSD1_CTRL_STAT) &&
 		(addr <= VIU_OSD1_CTRL_STAT2) &&
 		(backup_enable & HW_RESET_OSD1_REGS)) {
 		osd_backup[addr - base] = value;
+		return;
+	}
+	base = VPU_MAFBC_COMMAND;
+	if ((addr >= VPU_MAFBC_COMMAND)
+		&& (addr <= VPU_MAFBC_PREFETCH_CFG_S2) &&
+		(backup_enable & HW_RESET_MALI_AFBCD_REGS)) {
+		mali_afbc_backup[addr - base] = value;
+		return;
 	}
 }
 
@@ -92,6 +113,16 @@ s32 get_backup_reg(u32 addr, u32 *value)
 		for (i = 0; i < OSD_REG_BACKUP_COUNT; i++)
 			if (addr == osd_reg_backup[i]) {
 				*value = osd_backup[addr - base];
+				return 0;
+			}
+	}
+	base = VPU_MAFBC_COMMAND;
+	if ((addr >= VPU_MAFBC_COMMAND) &&
+		(addr <= VPU_MAFBC_PREFETCH_CFG_S2) &&
+		(backup_enable & HW_RESET_MALI_AFBCD_REGS)) {
+		for (i = 0; i < MALI_AFBC_REG_BACKUP_COUNT; i++)
+			if (addr == mali_afbc_reg_backup[i]) {
+				*value = mali_afbc_backup[addr - base];
 				return 0;
 			}
 	}
@@ -123,6 +154,15 @@ void backup_regs_init(u32 backup_mask)
 			osd_reg_read(addr);
 		i++;
 	}
+	i = 0;
+	base = VPU_MAFBC_COMMAND;
+	while ((backup_mask & HW_RESET_MALI_AFBCD_REGS)
+		&& (i < MALI_AFBC_REG_BACKUP_COUNT)) {
+		addr = mali_afbc_reg_backup[i];
+		mali_afbc_backup[addr - base] =
+			osd_reg_read(addr);
+		i++;
+	}
 	backup_enable = backup_mask;
 }
 
@@ -131,7 +171,6 @@ u32 is_backup(void)
 	return backup_enable;
 }
 
-#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 /* recovery section */
 #define INVAILD_REG_ITEM {0xffff, 0x0, 0x0, 0x0}
 #define REG_RECOVERY_TABLE 5
@@ -251,6 +290,7 @@ static struct reg_item misc_recovery_table[] = {
 void recovery_regs_init(void)
 {
 	int i = 0, j;
+	int cpu_id = osd_hw.osd_meson_dev.cpu_id;
 
 	if (recovery_enable)
 		return;
@@ -261,9 +301,9 @@ void recovery_regs_init(void)
 	gRecovery[i].table =
 		(struct reg_item *)&osd1_recovery_table[0];
 
-	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX)
-		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)
-		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TXHD)) {
+	if ((cpu_id == __MESON_CPU_MAJOR_ID_TXLX)
+		|| (cpu_id == __MESON_CPU_MAJOR_ID_TXL)
+		|| (cpu_id == __MESON_CPU_MAJOR_ID_TXHD)) {
 		for (j = 0; j < gRecovery[i].size; j++) {
 			if (gRecovery[i].table[j].addr ==
 				VIU_OSD1_FIFO_CTRL_STAT) {
@@ -308,6 +348,7 @@ int update_recovery_item(u32 addr, u32 value)
 	int i;
 	struct reg_item *table = NULL;
 	int ret = -1;
+	int cpu_id = osd_hw.osd_meson_dev.cpu_id;
 
 	if (!recovery_enable)
 		return ret;
@@ -382,8 +423,8 @@ int update_recovery_item(u32 addr, u32 value)
 	}
 	if (((addr == DOLBY_CORE2A_SWAP_CTRL1)
 		|| (addr == DOLBY_CORE2A_SWAP_CTRL2))
-		&& !is_meson_txlx_cpu()
-		&& !is_meson_gxm_cpu())
+		&& (cpu_id != __MESON_CPU_MAJOR_ID_TXLX)
+		&& (cpu_id != __MESON_CPU_MAJOR_ID_GXM))
 		return ret;
 	if ((addr == VIU_OSD2_BLK0_CFG_W4) ||
 		(addr == VIU_OSD2_BLK1_CFG_W4) ||
@@ -415,6 +456,7 @@ s32 get_recovery_item(u32 addr, u32 *value, u32 *mask)
 	int i;
 	struct reg_item *table = NULL;
 	int ret = -1;
+	int cpu_id = osd_hw.osd_meson_dev.cpu_id;
 
 	if (!recovery_enable)
 		return ret;
@@ -482,8 +524,8 @@ s32 get_recovery_item(u32 addr, u32 *value, u32 *mask)
 
 	if (((addr == DOLBY_CORE2A_SWAP_CTRL1)
 		|| (addr == DOLBY_CORE2A_SWAP_CTRL2))
-		&& !is_meson_txlx_cpu()
-		&& !is_meson_gxm_cpu())
+		&& (cpu_id != __MESON_CPU_MAJOR_ID_TXLX)
+		&& (cpu_id != __MESON_CPU_MAJOR_ID_GXM))
 		return ret;
 
 	if ((addr == VIU_OSD2_BLK0_CFG_W4) ||
@@ -532,7 +574,7 @@ s32 get_recovery_item(u32 addr, u32 *value, u32 *mask)
 	 */
 	return ret;
 }
-#else
+#if 0
 void recovery_regs_init(void)
 {
 }

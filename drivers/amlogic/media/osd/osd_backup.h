@@ -22,20 +22,25 @@
 
 #define OSD_REG_BACKUP_COUNT 12
 #define OSD_AFBC_REG_BACKUP_COUNT 9
-
+#define MALI_AFBC_REG_BACKUP_COUNT 41
 #define OSD_VALUE_COUNT (VIU_OSD1_CTRL_STAT2 - VIU_OSD1_CTRL_STAT + 1)
 #define OSD_AFBC_VALUE_COUNT (OSD1_AFBCD_PIXEL_VSCOPE - OSD1_AFBCD_ENABLE + 1)
+#define MALI_AFBC_VALUE_COUNT \
+	(VPU_MAFBC_PREFETCH_CFG_S2 - VPU_MAFBC_COMMAND + 1)
 
 extern const u16 osd_reg_backup[OSD_REG_BACKUP_COUNT];
 extern const u16 osd_afbc_reg_backup[OSD_AFBC_REG_BACKUP_COUNT];
+extern const u16 mali_afbc_reg_backup[MALI_AFBC_REG_BACKUP_COUNT];
 extern u32 osd_backup[OSD_VALUE_COUNT];
 extern u32 osd_afbc_backup[OSD_AFBC_VALUE_COUNT];
+extern u32 mali_afbc_backup[MALI_AFBC_VALUE_COUNT];
 
 enum hw_reset_flag_e {
 	HW_RESET_NONE = 0,
 	HW_RESET_AFBCD_REGS = 0x80000000,
 	HW_RESET_OSD1_REGS = 0x00000001,
 	HW_RESET_AFBCD_HARDWARE = 0x80000000,
+	HW_RESET_MALI_AFBCD_REGS = 0x200000,
 };
 
 struct reg_item {

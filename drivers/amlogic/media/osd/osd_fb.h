@@ -27,12 +27,7 @@
 /* Local Headers */
 #include "osd.h"
 
-#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
-#define OSD_COUNT 2 /* enable two OSD layers */
-#else
-#define OSD_COUNT 1 /* only enable one OSD layer */
-#endif
-
+#define OSD_COUNT (HW_OSD_COUNT)
 #define INVALID_BPP_ITEM {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 struct osd_fb_dev_s {

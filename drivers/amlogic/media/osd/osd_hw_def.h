@@ -21,35 +21,21 @@
 #include <linux/list.h>
 #include "osd_hw.h"
 
-static void osd1_update_color_mode(void);
-static void osd1_update_enable(void);
-static void osd1_update_color_key(void);
-static void osd1_update_color_key_enable(void);
-static void osd1_update_gbl_alpha(void);
-static void osd1_update_order(void);
-static void osd1_update_disp_geometry(void);
-static void osd1_update_coef(void);
-static void osd1_update_disp_freescale_enable(void);
-static void osd1_update_disp_osd_reverse(void);
-static void osd1_update_disp_osd_rotate(void);
-static void osd1_update_disp_scale_enable(void);
-static void osd1_update_disp_3d_mode(void);
-static void osd1_update_fifo(void);
+static void osd_update_color_mode(u32 index);
+static void osd_update_enable(u32 index);
+static void osd_update_color_key(u32 index);
+static void osd_update_color_key_enable(u32 index);
+static void osd_update_gbl_alpha(u32 index);
+static void osd_update_order(u32 index);
+static void osd_update_disp_geometry(u32 index);
+static void osd_update_coef(u32 index);
+static void osd_update_disp_freescale_enable(u32 index);
+static void osd_update_disp_osd_reverse(u32 index);
+static void osd_update_disp_osd_rotate(u32 index);
+static void osd_update_disp_scale_enable(u32 index);
+static void osd_update_disp_3d_mode(u32 index);
+static void osd_update_fifo(u32 index);
 
-static void osd2_update_color_mode(void);
-static void osd2_update_enable(void);
-static void osd2_update_color_key(void);
-static void osd2_update_color_key_enable(void);
-static void osd2_update_gbl_alpha(void);
-static void osd2_update_order(void);
-static void osd2_update_disp_geometry(void);
-static void osd2_update_coef(void);
-static void osd2_update_disp_freescale_enable(void);
-static void osd2_update_disp_osd_reverse(void);
-static void osd2_update_disp_osd_rotate(void);
-static void osd2_update_disp_scale_enable(void);
-static void osd2_update_disp_3d_mode(void);
-static void osd2_update_fifo(void);
 
 LIST_HEAD(update_list);
 static DEFINE_SPINLOCK(osd_lock);
@@ -57,38 +43,22 @@ static unsigned long lock_flags;
 #ifdef FIQ_VSYNC
 static unsigned long fiq_flag;
 #endif
-static update_func_t hw_func_array[HW_OSD_COUNT][HW_REG_INDEX_MAX] = {
-	{
-		osd1_update_color_mode,
-		osd1_update_enable,
-		osd1_update_color_key,
-		osd1_update_color_key_enable,
-		osd1_update_gbl_alpha,
-		osd1_update_order,
-		osd1_update_coef,
-		osd1_update_disp_geometry,
-		osd1_update_disp_scale_enable,
-		osd1_update_disp_freescale_enable,
-		osd1_update_disp_osd_reverse,
-		osd1_update_disp_osd_rotate,
-		osd1_update_fifo,
-	},
-	{
-		osd2_update_color_mode,
-		osd2_update_enable,
-		osd2_update_color_key,
-		osd2_update_color_key_enable,
-		osd2_update_gbl_alpha,
-		osd2_update_order,
-		osd2_update_coef,
-		osd2_update_disp_geometry,
-		osd2_update_disp_scale_enable,
-		osd2_update_disp_freescale_enable,
-		osd2_update_disp_osd_reverse,
-		osd2_update_disp_osd_rotate,
-		osd2_update_fifo,
-	},
+static update_func_t hw_func_array[HW_REG_INDEX_MAX] = {
+		osd_update_color_mode,
+		osd_update_enable,
+		osd_update_color_key,
+		osd_update_color_key_enable,
+		osd_update_gbl_alpha,
+		osd_update_order,
+		osd_update_coef,
+		osd_update_disp_geometry,
+		osd_update_disp_scale_enable,
+		osd_update_disp_freescale_enable,
+		osd_update_disp_osd_reverse,
+		osd_update_disp_osd_rotate,
+		osd_update_fifo,
 };
+
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 #ifdef FIQ_VSYNC
@@ -97,10 +67,11 @@ static update_func_t hw_func_array[HW_OSD_COUNT][HW_REG_INDEX_MAX] = {
 		spin_lock_irqsave(&osd_lock, lock_flags); \
 		raw_local_save_flags(fiq_flag); \
 		local_fiq_disable(); \
-		if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) \
+		if (!osd_hw.osd_meson_dev.has_rdma || \
+			!osd_hw.hw_rdma_en) \
 			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
 		else \
-			osd_hw.reg[osd_idx][cmd_idx].update_func(); \
+			osd_hw.reg[cmd_idx].update_func(osd_idx); \
 		raw_local_irq_restore(fiq_flag); \
 		spin_unlock_irqrestore(&osd_lock, lock_flags); \
 	} while (0)
@@ -108,10 +79,11 @@ static update_func_t hw_func_array[HW_OSD_COUNT][HW_REG_INDEX_MAX] = {
 #define add_to_update_list(osd_idx, cmd_idx) \
 	do { \
 		spin_lock_irqsave(&osd_lock, lock_flags); \
-		if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) \
+		if (!osd_hw.osd_meson_dev.has_rdma || \
+			!osd_hw.hw_rdma_en) \
 			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
 		else \
-			osd_hw.reg[osd_idx][cmd_idx].update_func(); \
+			osd_hw.reg[cmd_idx].update_func(osd_idx); \
 		spin_unlock_irqrestore(&osd_lock, lock_flags); \
 	} while (0)
 #endif
@@ -139,12 +111,12 @@ static update_func_t hw_func_array[HW_OSD_COUNT][HW_REG_INDEX_MAX] = {
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 #define remove_from_update_list(osd_idx, cmd_idx) \
 	do { \
-		if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG) \
+		if (!osd_hw.osd_meson_dev.has_rdma || \
+			!osd_hw.hw_rdma_en) \
 			(osd_hw.updated[osd_idx] &= ~(1<<cmd_idx)); \
 	} while (0)
 #else
 #define remove_from_update_list(osd_idx, cmd_idx) \
 	(osd_hw.updated[osd_idx] &= ~(1<<cmd_idx))
 #endif
-
 #endif

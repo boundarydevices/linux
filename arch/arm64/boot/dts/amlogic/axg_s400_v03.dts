@@ -787,7 +787,7 @@
 	};
 
 	meson-fb {
-		compatible = "amlogic, meson-fb";
+		compatible = "amlogic, meson-axg";
 		memory-region = <&fb_reserved>;
 		dev_name = "meson-fb";
 		status = "okay";

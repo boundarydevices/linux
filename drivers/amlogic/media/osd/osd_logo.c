@@ -23,7 +23,6 @@
 #include <linux/delay.h>
 
 /* Amlogic Headers */
-#include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 
@@ -171,11 +170,8 @@ int set_osd_logo_freescaler(void)
 		pr_info("logo changed, return!\n");
 		return -1;
 	}
-#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_ENABLE
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
-		if (index >= 1)
-			return -1;
-#endif
+	if ((osd_hw.osd_meson_dev.osd_ver == OSD_SIMPLE) && (index >= 1))
+		return -1;
 
 	osd_set_free_scale_mode_hw(index, 1);
 	osd_set_free_scale_enable_hw(index, 0);

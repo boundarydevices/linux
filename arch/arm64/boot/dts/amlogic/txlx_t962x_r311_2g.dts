@@ -232,7 +232,7 @@
 	};
 
 	meson-fb {
-		compatible = "amlogic, meson-fb";
+		compatible = "amlogic, meson-txlx";
 		memory-region = <&fb_reserved>;
 		dev_name = "meson-fb";
 		status = "okay";

@@ -21,7 +21,6 @@
 #include <linux/amlogic/iomap.h>
 #include <linux/io.h>
 
-#include <linux/amlogic/cpu_version.h>
 /* Local Headers */
 #include "osd_log.h"
 #include "osd_backup.h"
@@ -40,13 +39,11 @@ static struct reg_map_s osd_reg_map = {
 	.size = 0x10000,
 };
 
-int osd_io_remap(void)
+int osd_io_remap(int iomap)
 {
 	int ret = 0;
-	u32 cpu_type;
 
-	cpu_type = get_cpu_type();
-	if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+	if (iomap) {
 		if (osd_reg_map.flag)
 			return 1;
 		osd_reg_map.vir_addr =
@@ -67,11 +64,9 @@ int osd_io_remap(void)
 uint32_t osd_cbus_read(uint32_t reg)
 {
 	uint32_t ret = 0;
-	u32 cpu_type;
 	unsigned int addr = 0;
 
-	cpu_type = get_cpu_type();
-	if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+	if (osd_reg_map.flag) {
 		addr = OSDBUS_REG_ADDR(reg);
 		ret = readl(osd_reg_map.vir_addr + addr);
 
@@ -85,11 +80,9 @@ uint32_t osd_cbus_read(uint32_t reg)
 void osd_cbus_write(uint32_t reg,
 				   const uint32_t val)
 {
-	u32 cpu_type;
 	unsigned int addr = 0;
 
-	cpu_type = get_cpu_type();
-	if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+	if (osd_reg_map.flag) {
 		addr = OSDBUS_REG_ADDR(reg);
 		writel(val, osd_reg_map.vir_addr + addr);
 	} else
@@ -101,13 +94,11 @@ void osd_cbus_write(uint32_t reg,
 uint32_t osd_reg_read(uint32_t reg)
 {
 	uint32_t ret = 0;
-	u32 cpu_type;
 	unsigned int addr = 0;
 
 	/* if (get_backup_reg(reg, &ret) != 0) */
 	/* not read from bakcup */
-	cpu_type = get_cpu_type();
-	if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+	if (osd_reg_map.flag) {
 		addr = OSDBUS_REG_ADDR(reg);
 		ret = readl(osd_reg_map.vir_addr + addr);
 
@@ -121,11 +112,9 @@ uint32_t osd_reg_read(uint32_t reg)
 void osd_reg_write(uint32_t reg,
 				 const uint32_t val)
 {
-	u32 cpu_type;
 	unsigned int addr = 0;
 
-	cpu_type = get_cpu_type();
-	if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+	if (osd_reg_map.flag) {
 		addr = OSDBUS_REG_ADDR(reg);
 		writel(val, osd_reg_map.vir_addr + addr);
 	} else

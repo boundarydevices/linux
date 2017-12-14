@@ -25,6 +25,7 @@
 #include "meson_crtc.h"
 #include "osd_drm.h"
 
+static struct osd_device_data_s osd_meson_dev;
 
 #define to_am_meson_crtc(x) container_of(x, struct am_meson_crtc, base)
 
@@ -231,7 +232,7 @@ int meson_crtc_create(struct meson_drm *priv)
 	}
 
 	drm_crtc_helper_add(crtc, &am_crtc_helper_funcs);
-	osd_drm_init();
+	osd_drm_init(&osd_meson_dev);
 
 	priv->crtc = crtc;
 	return 0;
@@ -245,3 +246,17 @@ void meson_crtc_irq(struct meson_drm *priv)
 	am_meson_crtc_handle_vsync(amcrtc);
 }
 
+int meson_crtc_dts_info_set(const void *dt_match_data)
+{
+	struct osd_device_data_s *osd_meson;
+
+	osd_meson = (struct osd_device_data_s *)dt_match_data;
+	if (osd_meson)
+		memcpy(&osd_meson_dev, osd_meson,
+			sizeof(struct osd_device_data_s));
+	else {
+		pr_err("%s data NOT match\n", __func__);
+		return -1;
+	}
+	return 0;
+}

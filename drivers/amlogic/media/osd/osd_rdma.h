@@ -59,17 +59,12 @@ struct rdma_table_item {
 	(osd_reg_read(OSD_RDMA_FLAG_REG) & \
 	~OSD_RDMA_FLAG_REJECT)))
 
-extern void osd_update_scan_mode(void);
-extern void osd_update_3d_mode(void);
-extern void osd_update_vsync_hit(void);
-extern void osd_hw_reset(void);
+
 extern int read_rdma_table(void);
 extern int osd_rdma_enable(u32 enable);
 extern int osd_rdma_reset_and_flush(u32 reset_bit);
 extern int rdma_reset_tigger_flag;
 extern int rdma_mgr_irq_request;
-#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 extern void osd_rdma_interrupt_done_clear(void);
-#endif
 extern int osd_rdma_uninit(void);
 #endif
