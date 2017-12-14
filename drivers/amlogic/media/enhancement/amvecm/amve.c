@@ -793,6 +793,11 @@ unsigned int contrast_adj_sel;/*0:vdj1, 1:vd1 mtx rgb contrast*/
 module_param(contrast_adj_sel, uint, 0664);
 MODULE_PARM_DESC(contrast_adj_sel, "\n contrast_adj_sel\n");
 
+/*gxlx adaptive sr level*/
+static unsigned int sr_adapt_level;
+module_param(sr_adapt_level, uint, 0664);
+MODULE_PARM_DESC(sr_adapt_level, "\n sr_adapt_level\n");
+
 /* *********************************************************************** */
 /* *** VPP_FIQ-oriented functions **************************************** */
 /* *********************************************************************** */
@@ -3573,26 +3578,42 @@ static void ve_dnlp_calculate_reg(void)
 
 static void ve_dnlp_load_reg(void)
 {
-/* #ifdef NEW_DNLP_IN_SHARPNESS */
-	/* if(dnlp_sel == NEW_DNLP_IN_SHARPNESS){ */
-	if (is_meson_gxtvbb_cpu() &&
-		(dnlp_sel == NEW_DNLP_IN_SHARPNESS)) {
-		WRITE_VPP_REG(SRSHARP0_DNLP_00, ve_dnlp_reg[0]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_01, ve_dnlp_reg[1]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_02, ve_dnlp_reg[2]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_03, ve_dnlp_reg[3]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_04, ve_dnlp_reg[4]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_05, ve_dnlp_reg[5]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_06, ve_dnlp_reg[6]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_07, ve_dnlp_reg[7]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_08, ve_dnlp_reg[8]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_09, ve_dnlp_reg[9]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_10, ve_dnlp_reg[10]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_11, ve_dnlp_reg[11]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_12, ve_dnlp_reg[12]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_13, ve_dnlp_reg[13]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_14, ve_dnlp_reg[14]);
-		WRITE_VPP_REG(SRSHARP0_DNLP_15, ve_dnlp_reg[15]);
+	if  (dnlp_sel == NEW_DNLP_IN_SHARPNESS) {
+		if (is_meson_gxlx_cpu()) {
+			WRITE_VPP_REG(SRSHARP1_DNLP_00, ve_dnlp_reg[0]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_01, ve_dnlp_reg[1]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_02, ve_dnlp_reg[2]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_03, ve_dnlp_reg[3]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_04, ve_dnlp_reg[4]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_05, ve_dnlp_reg[5]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_06, ve_dnlp_reg[6]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_07, ve_dnlp_reg[7]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_08, ve_dnlp_reg[8]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_09, ve_dnlp_reg[9]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_10, ve_dnlp_reg[10]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_11, ve_dnlp_reg[11]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_12, ve_dnlp_reg[12]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_13, ve_dnlp_reg[13]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_14, ve_dnlp_reg[14]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_15, ve_dnlp_reg[15]);
+		} else {
+			WRITE_VPP_REG(SRSHARP0_DNLP_00, ve_dnlp_reg[0]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_01, ve_dnlp_reg[1]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_02, ve_dnlp_reg[2]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_03, ve_dnlp_reg[3]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_04, ve_dnlp_reg[4]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_05, ve_dnlp_reg[5]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_06, ve_dnlp_reg[6]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_07, ve_dnlp_reg[7]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_08, ve_dnlp_reg[8]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_09, ve_dnlp_reg[9]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_10, ve_dnlp_reg[10]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_11, ve_dnlp_reg[11]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_12, ve_dnlp_reg[12]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_13, ve_dnlp_reg[13]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_14, ve_dnlp_reg[14]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_15, ve_dnlp_reg[15]);
+		}
 	} else {
 		/* #endif */
 		WRITE_VPP_REG(VPP_DNLP_CTRL_00, ve_dnlp_reg[0]);
@@ -3616,22 +3637,60 @@ static void ve_dnlp_load_reg(void)
 
 static void ve_dnlp_load_def_reg(void)
 {
-	WRITE_VPP_REG(VPP_DNLP_CTRL_00, ve_dnlp_reg_def[0]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_01, ve_dnlp_reg_def[1]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_02, ve_dnlp_reg_def[2]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_03, ve_dnlp_reg_def[3]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_04, ve_dnlp_reg_def[4]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_05, ve_dnlp_reg_def[5]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_06, ve_dnlp_reg_def[6]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_07, ve_dnlp_reg_def[7]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_08, ve_dnlp_reg_def[8]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_09, ve_dnlp_reg_def[9]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_10, ve_dnlp_reg_def[10]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_11, ve_dnlp_reg_def[11]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_12, ve_dnlp_reg_def[12]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_13, ve_dnlp_reg_def[13]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_14, ve_dnlp_reg_def[14]);
-	WRITE_VPP_REG(VPP_DNLP_CTRL_15, ve_dnlp_reg_def[15]);
+	if  (dnlp_sel == NEW_DNLP_IN_SHARPNESS) {
+		if (is_meson_gxlx_cpu()) {
+			WRITE_VPP_REG(SRSHARP1_DNLP_00, ve_dnlp_reg[0]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_01, ve_dnlp_reg[1]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_02, ve_dnlp_reg[2]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_03, ve_dnlp_reg[3]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_04, ve_dnlp_reg[4]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_05, ve_dnlp_reg[5]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_06, ve_dnlp_reg[6]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_07, ve_dnlp_reg[7]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_08, ve_dnlp_reg[8]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_09, ve_dnlp_reg[9]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_10, ve_dnlp_reg[10]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_11, ve_dnlp_reg[11]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_12, ve_dnlp_reg[12]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_13, ve_dnlp_reg[13]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_14, ve_dnlp_reg[14]);
+			WRITE_VPP_REG(SRSHARP1_DNLP_15, ve_dnlp_reg[15]);
+		} else {
+			WRITE_VPP_REG(SRSHARP0_DNLP_00, ve_dnlp_reg[0]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_01, ve_dnlp_reg[1]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_02, ve_dnlp_reg[2]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_03, ve_dnlp_reg[3]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_04, ve_dnlp_reg[4]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_05, ve_dnlp_reg[5]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_06, ve_dnlp_reg[6]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_07, ve_dnlp_reg[7]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_08, ve_dnlp_reg[8]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_09, ve_dnlp_reg[9]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_10, ve_dnlp_reg[10]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_11, ve_dnlp_reg[11]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_12, ve_dnlp_reg[12]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_13, ve_dnlp_reg[13]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_14, ve_dnlp_reg[14]);
+			WRITE_VPP_REG(SRSHARP0_DNLP_15, ve_dnlp_reg[15]);
+		}
+	} else {
+		WRITE_VPP_REG(VPP_DNLP_CTRL_00, ve_dnlp_reg_def[0]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_01, ve_dnlp_reg_def[1]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_02, ve_dnlp_reg_def[2]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_03, ve_dnlp_reg_def[3]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_04, ve_dnlp_reg_def[4]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_05, ve_dnlp_reg_def[5]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_06, ve_dnlp_reg_def[6]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_07, ve_dnlp_reg_def[7]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_08, ve_dnlp_reg_def[8]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_09, ve_dnlp_reg_def[9]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_10, ve_dnlp_reg_def[10]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_11, ve_dnlp_reg_def[11]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_12, ve_dnlp_reg_def[12]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_13, ve_dnlp_reg_def[13]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_14, ve_dnlp_reg_def[14]);
+		WRITE_VPP_REG(VPP_DNLP_CTRL_15, ve_dnlp_reg_def[15]);
+	}
 }
 
 void ve_on_vs(struct vframe_s *vf)
@@ -5493,3 +5552,79 @@ void amvecm_3d_sync_process(void)
 }
 /* 3d process end */
 
+/*gxlx sr adaptive param*/
+#define SR_SD_SCALE_LEVEL 0x1
+#define SR_HD_SCALE_LEVEL 0x2
+#define SR_4k_LEVEL 0x4
+#define SR_CVBS_LEVEL 0x8
+#define SR_NOSCALE_LEVEL 0x10
+static void amve_sr_reg_setting(unsigned int adaptive_level)
+{
+	if (adaptive_level & SR_SD_SCALE_LEVEL)
+		am_set_regmap(&sr1reg_sd_scale);
+	else if (adaptive_level & SR_HD_SCALE_LEVEL)
+		am_set_regmap(&sr1reg_hd_scale);
+	else if (adaptive_level & SR_4k_LEVEL) {
+		amvecm_sharpness_enable(1);/*peaking*/
+		amvecm_sharpness_enable(3);/*lcti*/
+		amvecm_sharpness_enable(5);/*drtlpf theta*/
+		amvecm_sharpness_enable(7);/*debanding*/
+		amvecm_sharpness_enable(9);/*dejaggy*/
+		amvecm_sharpness_enable(11);/*dering*/
+		amvecm_sharpness_enable(13);/*drlpf*/
+	} else if (adaptive_level & SR_CVBS_LEVEL)
+		am_set_regmap(&sr1reg_cvbs);
+	else if (adaptive_level & SR_NOSCALE_LEVEL)
+		am_set_regmap(&sr1reg_hv_noscale);
+}
+void amve_sharpness_adaptive_setting(struct vframe_s *vf,
+	 unsigned int sps_h_en, unsigned int sps_v_en)
+{
+	static unsigned int adaptive_level = 1;
+	unsigned int cur_level;
+	unsigned int width, height;
+	struct vinfo_s *vinfo = get_current_vinfo();
+
+	if (vf == NULL)
+		return;
+	if (vinfo->mode == VMODE_CVBS)
+		cur_level = SR_CVBS_LEVEL;
+	else {
+		width = (vf->type & VIDTYPE_COMPRESS) ?
+			vf->compWidth : vf->width;
+		height = (vf->type & VIDTYPE_COMPRESS) ?
+			vf->compHeight : vf->height;
+
+		if ((sps_h_en == 1) && (sps_v_en == 1)) {
+			/*super scaler h and v scale up x2 */
+			if ((height >= 2160) && (width >= 3840))
+				cur_level = SR_4k_LEVEL;
+			else if ((height >= 720) && (width >= 1280))
+				cur_level = SR_HD_SCALE_LEVEL;
+			else
+				cur_level = SR_SD_SCALE_LEVEL;
+		} else {
+			/*1. super scaler no up scale */
+			/*2. super scaler h up scale x2*/
+			if ((height >= 2160) && (width >= 3840))
+				cur_level = SR_4k_LEVEL;
+			else
+				cur_level = SR_NOSCALE_LEVEL;
+		}
+	}
+
+	if (adaptive_level == cur_level)
+		return;
+
+	amve_sr_reg_setting(cur_level);
+	adaptive_level = cur_level;
+	sr_adapt_level = adaptive_level;
+	pr_amve_dbg("\n[amcm..]sr_adapt_level = %d :1->sd;2->hd;4->4k\n",
+			sr_adapt_level);
+
+}
+/*gxlx sr init*/
+void amve_sharpness_init(void)
+{
+	am_set_regmap(&sr1reg_sd_scale);
+}

@@ -195,5 +195,13 @@ extern int video_rgb_ogo_xvy_mtx;
 extern unsigned int vlock_mode;
 extern unsigned int vlock_en;
 
+/*gxlx sr adaptive setting*/
+extern void amve_sharpness_adaptive_setting(struct vframe_s *vf,
+	unsigned int sps_h_en, unsigned int sps_v_en);
+extern void amve_sharpness_init(void);
+extern struct am_regs_s sr1reg_sd_scale;
+extern struct am_regs_s sr1reg_hd_scale;
+extern struct am_regs_s sr1reg_cvbs;
+extern struct am_regs_s sr1reg_hv_noscale;
 #endif
 

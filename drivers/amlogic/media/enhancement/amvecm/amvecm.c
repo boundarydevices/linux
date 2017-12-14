@@ -53,6 +53,8 @@
 #include "amve.h"
 #include "amcm.h"
 #include "amcsc.h"
+#include "keystone_correction.h"
+#include "bitdepth.h"
 
 #define pr_amvecm_dbg(fmt, args...)\
 	do {\
@@ -196,15 +198,6 @@ __setup("pq=", amvecm_load_pq_val);
 static void amvecm_size_patch(void)
 {
 	unsigned int hs, he, vs, ve;
-
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) {
-		hs = READ_VPP_REG_BITS(VPP_HSC_REGION12_STARTP, 16, 13);
-		he = READ_VPP_REG_BITS(VPP_HSC_REGION4_ENDP, 0, 13);
-
-		vs = READ_VPP_REG_BITS(VPP_VSC_REGION12_STARTP, 16, 13);
-		ve = READ_VPP_REG_BITS(VPP_VSC_REGION4_ENDP, 0, 13);
-		ve_frame_size_patch(he-hs+1, ve-vs+1);
-	}
 	hs = READ_VPP_REG_BITS(VPP_POSTBLEND_VD1_H_START_END, 16, 13);
 	he = READ_VPP_REG_BITS(VPP_POSTBLEND_VD1_H_START_END, 0, 13);
 
@@ -903,7 +896,9 @@ void amvecm_video_latch(void)
 int amvecm_on_vs(
 	struct vframe_s *vf,
 	struct vframe_s *toggle_vf,
-	int flags)
+	int flags,
+	unsigned int sps_h_en,
+	unsigned int sps_v_en)
 {
 	int result = 0;
 
@@ -924,6 +919,10 @@ int amvecm_on_vs(
 
 	/* add some flag to trigger */
 	if (vf) {
+		/*gxlx sharpness adaptive setting*/
+		if (is_meson_gxlx_cpu())
+			amve_sharpness_adaptive_setting(vf,
+				sps_h_en, sps_v_en);
 		amvecm_bricon_process(
 			vd1_brightness,
 			vd1_contrast + vd1_contrast_offset, vf);
@@ -937,7 +936,8 @@ int amvecm_on_vs(
 	}
 	/* todo:vlock processs only for tv chip */
 	if (is_meson_gxtvbb_cpu() ||
-		is_meson_txl_cpu() || is_meson_txlx_cpu()) {
+		is_meson_txl_cpu() || is_meson_txlx_cpu()
+		|| is_meson_txhd_cpu()) {
 		if (vf != NULL)
 			amve_vlock_process(vf);
 		else
@@ -1757,6 +1757,78 @@ static ssize_t amvecm_cm_reg_store(struct class *cls,
 		addr = node * 8 + 0x100 + i;
 		WRITE_VPP_REG(addr_port, addr);
 		WRITE_VPP_REG(data_port, data[i]);
+	}
+
+	kfree(buf_orig);
+	return count;
+}
+
+static ssize_t amvecm_write_reg_show(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	pr_info("Usage: echo w addr value > /sys/class/amvecm/pq_reg_rw\n");
+	pr_info("Usage: echo bw addr value start length > /...\n");
+	pr_info("Usage: echo r addr > /sys/class/amvecm/pq_reg_rw\n");
+	pr_info("addr and value must be hex\n");
+	return 0;
+}
+
+static ssize_t amvecm_write_reg_store(struct class *cls,
+		 struct class_attribute *attr,
+		 const char *buffer, size_t count)
+{
+
+	unsigned int addr, value, bitstart, bitlength;
+	long val = 0;
+	char *buf_orig, *parm[5] = {NULL};
+
+	if (!buffer)
+		return count;
+	buf_orig = kstrdup(buffer, GFP_KERNEL);
+	parse_param_amvecm(buf_orig, (char **)&parm);
+
+	if (!strncmp(parm[0], "r", 1)) {
+		if (kstrtoul(parm[1], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		addr = val;
+		value = READ_VPP_REG(addr);
+		pr_info("0x%x=0x%x\n", addr, value);
+	} else if (!strncmp(parm[0], "w", 1)) {
+		if (kstrtoul(parm[1], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		value = val;
+		WRITE_VPP_REG(addr, value);
+	} else if (!strncmp(parm[0], "bw", 2)) {
+		if (kstrtoul(parm[1], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		addr = val;
+		if (kstrtoul(parm[2], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		value = val;
+		if (kstrtoul(parm[3], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		bitstart = val;
+		if (kstrtoul(parm[4], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		bitlength = val;
+		WRITE_VPP_REG_BITS(addr, value, bitstart, bitlength);
 	}
 
 	kfree(buf_orig);
@@ -2986,22 +3058,27 @@ static void dump_vpp_size_info(void)
 
 static void amvecm_wb_enable(int enable)
 {
-	if (enable)
+	if (enable) {
 		wb_en = 1;
-	else
+		if (video_rgb_ogo_xvy_mtx)
+			WRITE_VPP_REG_BITS(VPP_MATRIX_CTRL, 1, 6, 1);
+		else
+			WRITE_VPP_REG_BITS(VPP_GAINOFF_CTRL0, 1, 31, 1);
+	} else {
 		wb_en = 0;
-
-	if (video_rgb_ogo_xvy_mtx)
-		WRITE_VPP_REG_BITS(VPP_MATRIX_CTRL, enable, 6, 1);
-	else
-		WRITE_VPP_REG_BITS(VPP_GAINOFF_CTRL0, enable, 31, 1);
+		if (video_rgb_ogo_xvy_mtx)
+			WRITE_VPP_REG_BITS(VPP_MATRIX_CTRL, 0, 6, 1);
+		else
+			WRITE_VPP_REG_BITS(VPP_GAINOFF_CTRL0, 0, 31, 1);
+	}
 }
 
-static void amvecm_sharpness_debug(int enable)
+
+void amvecm_sharpness_enable(int sel)
 {
 	/*0:peaking enable   1:peaking disable*/
 	/*2:lti/cti enable   3:lti/cti disable*/
-	switch (enable) {
+	switch (sel) {
 	case 0:
 		WRITE_VPP_REG_BITS(SRSHARP0_PK_NR_ENABLE, 1, 1, 1);
 		WRITE_VPP_REG_BITS(SRSHARP1_PK_NR_ENABLE, 1, 1, 1);
@@ -3064,6 +3141,34 @@ static void amvecm_sharpness_debug(int enable)
 		WRITE_VPP_REG_BITS(SRSHARP1_DB_FLT_CTRL, 0, 22, 1);
 		WRITE_VPP_REG_BITS(SRSHARP1_DB_FLT_CTRL, 0, 23, 1);
 		break;
+	/*sr3 dejaggy en*/
+	case 8:
+		WRITE_VPP_REG_BITS(SRSHARP0_DEJ_CTRL, 1, 0, 1);
+		WRITE_VPP_REG_BITS(SRSHARP1_DEJ_CTRL, 1, 0, 1);
+		break;
+	case 9:
+		WRITE_VPP_REG_BITS(SRSHARP0_DEJ_CTRL, 0, 0, 1);
+		WRITE_VPP_REG_BITS(SRSHARP1_DEJ_CTRL, 0, 0, 1);
+		break;
+	/*sr3 dering en*/
+	case 10:
+		WRITE_VPP_REG_BITS(SRSHARP0_SR3_DERING_CTRL, 1, 28, 3);
+		WRITE_VPP_REG_BITS(SRSHARP1_SR3_DERING_CTRL, 1, 28, 3);
+		break;
+	case 11:
+		WRITE_VPP_REG_BITS(SRSHARP0_SR3_DERING_CTRL, 0, 28, 3);
+		WRITE_VPP_REG_BITS(SRSHARP1_SR3_DERING_CTRL, 0, 28, 3);
+		break;
+	/*sr3 derection lpf en*/
+	case 12:
+		WRITE_VPP_REG_BITS(SRSHARP0_SR3_DRTLPF_EN, 7, 0, 3);
+		WRITE_VPP_REG_BITS(SRSHARP1_SR3_DRTLPF_EN, 7, 0, 3);
+		break;
+	case 13:
+		WRITE_VPP_REG_BITS(SRSHARP0_SR3_DRTLPF_EN, 0, 0, 3);
+		WRITE_VPP_REG_BITS(SRSHARP1_SR3_DRTLPF_EN, 0, 0, 3);
+		break;
+
 	default:
 		break;
 	}
@@ -3098,7 +3203,7 @@ static void amvecm_pq_enable(int enable)
 			WRITE_VPP_REG_BITS(SRSHARP1_SR3_DERING_CTRL, 1, 28, 3);
 		}
 		/*sr4 drtlpf theta/ debanding en*/
-		if (is_meson_txlx_cpu()) {
+		if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
 			WRITE_VPP_REG_BITS(SRSHARP0_SR3_DRTLPF_EN, 7, 4, 3);
 
 			WRITE_VPP_REG_BITS(SRSHARP0_DB_FLT_CTRL, 1, 4, 1);
@@ -3330,7 +3435,10 @@ static const char *amvecm_debug_usage_str = {
 	"echo dnlp disable > /sys/class/amvecm/debug\n"
 	"echo vpp_pq enable > /sys/class/amvecm/debug\n"
 	"echo vpp_pq disable > /sys/class/amvecm/debug\n"
-
+	"echo keystone_process > /sys/class/amvecm/debug; keystone init config\n"
+	"echo keystone_status > /sys/class/amvecm/debug; keystone parameter status\n"
+	"echo keystone_regs > /sys/class/amvecm/debug; keystone regs value\n"
+	"echo keystone_config param1(D) param2(D) > /sys/class/amvecm/debug; keystone param config\n"
 	"echo vpp_mtx xvycc_10 rgb2yuv > /sys/class/amvecm/debug; 10bit xvycc mtx\n"
 	"echo vpp_mtx xvycc_10 yuv2rgb > /sys/class/amvecm/debug; 10bit xvycc mtx\n"
 	"echo vpp_mtx post_10 rgb2yuv > /sys/class/amvecm/debug; 10bit post mtx\n"
@@ -3343,6 +3451,7 @@ static const char *amvecm_debug_usage_str = {
 	"echo vpp_mtx post_12 yuv2rgb > /sys/class/amvecm/debug; 12bit post mtx\n"
 	"echo vpp_mtx vd1_12 rgb2yuv > /sys/class/amvecm/debug; 12bit vd1 mtx\n"
 	"echo vpp_mtx vd1_12 yuv2rgb > /sys/class/amvecm/debug; 12bit vd1 mtx\n"
+	"echo bitdepth 10/12/other-num > /sys/class/amvecm/debug; config data path\n"
 	"echo dolby_config 0/1/2.. > /sys/class/amvecm/debug; dolby dma table config\n"
 	"echo dolby_crc 0/1 > /sys/class/amvecm/debug; dolby_crc insert or clr\n"
 	"echo datapath_config param1(D) param2(D) > /sys/class/amvecm/debug; config data path\n"
@@ -3389,53 +3498,65 @@ static ssize_t amvecm_debug_store(struct class *cla,
 		}
 	} else if (!strncmp(parm[0], "sr", 2)) {
 		if (!strncmp(parm[1], "peaking_en", 10)) {
-			amvecm_sharpness_debug(0);
+			amvecm_sharpness_enable(0);
 			pr_info("enable peaking\n");
 		} else if (!strncmp(parm[1], "peaking_dis", 11)) {
-			amvecm_sharpness_debug(1);
+			amvecm_sharpness_enable(1);
 			pr_info("disable peaking\n");
 		} else if (!strncmp(parm[1], "lcti_en", 7)) {
-			amvecm_sharpness_debug(2);
+			amvecm_sharpness_enable(2);
 			pr_info("enable lti cti\n");
 		} else if (!strncmp(parm[1], "lcti_dis", 8)) {
-			amvecm_sharpness_debug(3);
+			amvecm_sharpness_enable(3);
 			pr_info("disable lti cti\n");
 		} else if (!strncmp(parm[1], "theta_en", 8)) {
-			amvecm_sharpness_debug(4);
+			amvecm_sharpness_enable(4);
 			pr_info("SR4 enable drtlpf theta\n");
 		} else if (!strncmp(parm[1], "theta_dis", 9)) {
-			amvecm_sharpness_debug(5);
+			amvecm_sharpness_enable(5);
 			pr_info("SR4 disable drtlpf theta\n");
 		} else if (!strncmp(parm[1], "deband_en", 9)) {
-			amvecm_sharpness_debug(6);
+			amvecm_sharpness_enable(6);
 			pr_info("SR4 enable debanding\n");
 		} else if (!strncmp(parm[1], "deband_dis", 10)) {
-			amvecm_sharpness_debug(7);
+			amvecm_sharpness_enable(7);
 			pr_info("SR4 disable debanding\n");
 		} else if (!strncmp(parm[1], "dejaggy_en", 10)) {
-			amvecm_sr0_dejaggy_enable(true);
-			amvecm_sr1_dejaggy_enable(true);
+			amvecm_sharpness_enable(8);
 			pr_info("SR3 enable dejaggy\n");
 		} else if (!strncmp(parm[1], "dejaggy_dis", 11)) {
-			amvecm_sr0_dejaggy_enable(false);
-			amvecm_sr1_dejaggy_enable(false);
+			amvecm_sharpness_enable(9);
 			pr_info("SR3 disable dejaggy\n");
 		} else if (!strncmp(parm[1], "dering_en", 9)) {
-			amvecm_sr0_dering_enable(true);
-			amvecm_sr1_dering_enable(true);
+			amvecm_sharpness_enable(10);
 			pr_info("SR3 enable dering\n");
 		} else if (!strncmp(parm[1], "dering_dis", 10)) {
-			amvecm_sr0_dering_enable(false);
-			amvecm_sr1_dering_enable(false);
+			amvecm_sharpness_enable(11);
 			pr_info("SR3 disable dering\n");
-		} else if (!strncmp(parm[1], "derec_en", 8)) {
-			amvecm_sr0_derection_enable(true);
-			amvecm_sr1_derection_enable(true);
-			pr_info("SR3 enable derection\n");
-		} else if (!strncmp(parm[1], "derec_dis", 9)) {
-			amvecm_sr0_derection_enable(false);
-			amvecm_sr1_derection_enable(false);
-			pr_info("SR3 disable derection\n");
+		} else if (!strncmp(parm[1], "drlpf_en", 8)) {
+			amvecm_sharpness_enable(12);
+			pr_info("SR3 enable drlpf\n");
+		} else if (!strncmp(parm[1], "drlpf_dis", 9)) {
+			amvecm_sharpness_enable(13);
+			pr_info("SR3 disable drlpf\n");
+		} else if (!strncmp(parm[1], "enable", 6)) {
+			amvecm_sharpness_enable(0);
+			amvecm_sharpness_enable(2);
+			amvecm_sharpness_enable(4);
+			amvecm_sharpness_enable(6);
+			amvecm_sharpness_enable(8);
+			amvecm_sharpness_enable(10);
+			amvecm_sharpness_enable(12);
+			pr_info("SR enable\n");
+		} else if (!strncmp(parm[1], "disable", 7)) {
+			amvecm_sharpness_enable(1);
+			amvecm_sharpness_enable(3);
+			amvecm_sharpness_enable(5);
+			amvecm_sharpness_enable(7);
+			amvecm_sharpness_enable(9);
+			amvecm_sharpness_enable(11);
+			amvecm_sharpness_enable(13);
+			pr_info("SR disable\n");
 		}
 	} else if (!strncmp(parm[0], "cm", 2)) {
 		if (!strncmp(parm[1], "enable", 6)) {
@@ -3531,6 +3652,68 @@ static ssize_t amvecm_debug_store(struct class *cla,
 			amvecm_dither_enable(2);
 			pr_info("disable ve round dither\n");
 		}
+	} else if (!strcmp(parm[0], "keystone_process")) {
+		keystone_correction_process();
+		pr_info("keystone_correction_process done!\n");
+	} else if (!strcmp(parm[0], "keystone_status")) {
+		keystone_correction_status();
+	} else if (!strcmp(parm[0], "keystone_regs")) {
+		keystone_correction_regs();
+	} else if (!strcmp(parm[0], "keystone_config")) {
+		enum vks_param_e vks_param;
+		unsigned int vks_param_val;
+
+		if (!parm[2]) {
+			pr_info("misss param\n");
+			return -EINVAL;
+		}
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		vks_param = val;
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			return -EINVAL;
+		vks_param_val = val;
+		keystone_correction_config(vks_param, vks_param_val);
+	} else if (!strcmp(parm[0], "bitdepth")) {
+		unsigned int bitdepth;
+
+		if (!parm[1]) {
+			pr_info("misss param1\n");
+			return -EINVAL;
+		}
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		bitdepth = val;
+		vpp_bitdepth_config(bitdepth);
+	} else if (!strcmp(parm[0], "datapath_config")) {
+		unsigned int node, param1, param2;
+
+		if (!parm[1]) {
+			pr_info("misss param1\n");
+			return -EINVAL;
+		}
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		node = val;
+
+		if (!parm[2]) {
+			pr_info("misss param2\n");
+			return -EINVAL;
+		}
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			return -EINVAL;
+		param1 = val;
+
+		if (!parm[3]) {
+			pr_info("misss param3,default is 0\n");
+			param2 = 0;
+		}
+		if (kstrtoul(parm[3], 10, &val) < 0)
+			return -EINVAL;
+		param2 = val;
+		vpp_datapath_config(node, param1, param2);
+	} else if (!strcmp(parm[0], "datapath_status")) {
+		vpp_datapath_status();
 	} else if (!strcmp(parm[0], "clip_config")) {
 		if (parm[1]) {
 			if (kstrtoul(parm[1], 16, &val) < 0) {
@@ -3736,6 +3919,8 @@ void init_pq_setting(void)
 		WRITE_VPP_REG(SRSHARP1_SHARP_SR2_CBIC_HCOEF0, 0x4000);
 		WRITE_VPP_REG(SRSHARP1_SHARP_SR2_CBIC_VCOEF0, 0x4000);
 	}
+	if (is_meson_gxlx_cpu())
+		amve_sharpness_init();
 }
 /* #endif*/
 
@@ -3748,8 +3933,12 @@ static void amvecm_gamma_init(bool en)
 		WRITE_VPP_REG_BITS(L_GAMMA_CNTL_PORT,
 				0, GAMMA_EN, 1);
 
-		for (i = 0; i < 256; i++)
+		for (i = 0; i < 256; i++) {
 			data[i] = i << 2;
+			video_gamma_table_r.data[i] = data[i];
+			video_gamma_table_g.data[i] = data[i];
+			video_gamma_table_b.data[i] = data[i];
+		}
 		amve_write_gamma_table(
 					data,
 					H_SEL_R);
@@ -3903,6 +4092,8 @@ static struct class_attribute amvecm_class_attrs[] = {
 		amvecm_reg_show, amvecm_reg_store),
 	__ATTR(pq_user_set, 0644,
 		amvecm_pq_user_show, amvecm_pq_user_store),
+	__ATTR(pq_reg_rw, 0644,
+		amvecm_write_reg_show, amvecm_write_reg_store),
 	__ATTR_NULL
 };
 
@@ -4043,17 +4234,18 @@ static int aml_vecm_probe(struct platform_device *pdev)
 #endif
 	/* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
 	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu()
-		|| is_meson_txlx_cpu())
+		|| is_meson_txlx_cpu() || is_meson_txhd_cpu())
 		init_pq_setting();
 	/* #endif */
 	vpp_get_hist_en();
 
 	if (is_meson_txlx_cpu()) {
-		/*vpp_set_12bit_datapath2();*/
+		vpp_set_12bit_datapath2();
 		/*post matrix 12bit yuv2rgb*/
 		/* mtx_sel_dbg |= 1 << VPP_MATRIX_2; */
 		/* amvecm_vpp_mtx_debug(mtx_sel_dbg, 1);*/
-	}
+	} else if (is_meson_txhd_cpu())
+		vpp_set_10bit_datapath1();
 	memset(&vpp_hist_param.vpp_histgram[0],
 		0, sizeof(unsigned short) * 64);
 	/* box sdr_mode:auto, tv sdr_mode:off */
@@ -4069,12 +4261,13 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	/*config vlock mode*/
 	/*todo:txlx & g9tv support auto pll,*/
 	/*but support not good,need vlsi support optimize*/
-	if (is_meson_txlx_cpu())
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
 		vlock_mode = VLOCK_MODE_MANUAL_PLL;
 	else
 		vlock_mode = VLOCK_MODE_MANUAL_PLL;
 	if (is_meson_gxtvbb_cpu() ||
-		is_meson_txl_cpu() || is_meson_txlx_cpu())
+		is_meson_txl_cpu() || is_meson_txlx_cpu()
+		|| is_meson_txhd_cpu())
 		vlock_en = 1;
 	else
 		vlock_en = 0;
@@ -4141,6 +4334,27 @@ static int amvecm_drv_resume(struct platform_device *pdev)
 }
 #endif
 
+static void amvecm_shutdown(struct platform_device *pdev)
+{
+	struct amvecm_dev_s *devp = &amvecm_dev;
+
+	ve_disable_dnlp();
+	amcm_disable();
+	WRITE_VPP_REG(VPP_VADJ_CTRL, 0x0);
+	amvecm_wb_enable(0);
+	/*dnlp cm vadj1 wb gate*/
+	WRITE_VPP_REG(VPP_GCLK_CTRL0, 0x11000400);
+	WRITE_VPP_REG(VPP_GCLK_CTRL1, 0x14);
+	pr_info("amvecm: shutdown module\n");
+
+	device_destroy(devp->clsp, devp->devno);
+	cdev_del(&devp->cdev);
+	class_destroy(devp->clsp);
+	unregister_chrdev_region(devp->devno, 1);
+#ifdef CONFIG_AML_LCD
+	aml_lcd_notifier_unregister(&aml_lcd_gamma_nb);
+#endif
+}
 
 static const struct of_device_id aml_vecm_dt_match[] = {
 	{
@@ -4156,6 +4370,7 @@ static struct platform_driver aml_vecm_driver = {
 		.of_match_table = aml_vecm_dt_match,
 	},
 	.probe = aml_vecm_probe,
+	.shutdown = amvecm_shutdown,
 	.remove = __exit_p(aml_vecm_remove),
 #ifdef CONFIG_PM
 	.suspend    = amvecm_drv_suspend,
@@ -4170,7 +4385,7 @@ static int __init aml_vecm_init(void)
 
 	pr_info("%s:module init\n", __func__);
 	/* remap the hiu bus */
-	if (is_meson_txlx_cpu())
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
 		hiu_reg_base = 0xff63c000;
 	else
 		hiu_reg_base = 0xc883c000;

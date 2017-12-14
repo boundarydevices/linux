@@ -13848,23 +13848,11 @@ M: Jianxin Pan <jianxin.pan@amlogic.com>
 F: drivers/amlogic/clocksource
 
 AMLOGIC AMVECM, PQ, HDR
-M: Mingliang Dong <mingliang.dong@amlogic.com>
-F: drivers/amlogic/media/enhancement/amvecm/amcm.c
-F: drivers/amlogic/media/enhancement/amvecm/amcm.h
-F: drivers/amlogic/media/enhancement/amvecm/amcm_regmap.h
-F: drivers/amlogic/media/enhancement/amvecm/amcsc.c
-F: drivers/amlogic/media/enhancement/amvecm/amcsc.h
-F: drivers/amlogic/media/enhancement/amvecm/amdolby_vision.c
-F: drivers/amlogic/media/enhancement/amvecm/amve.c
-F: drivers/amlogic/media/enhancement/amvecm/amve.h
-F: drivers/amlogic/media/enhancement/amvecm/amve_gamma_table.h
-F: drivers/amlogic/media/enhancement/amvecm/amvecm.c
-F: drivers/amlogic/media/enhancement/amvecm/amvecm_vlock_regmap.h
-F: drivers/amlogic/media/enhancement/amvecm/Kconfig
-F: drivers/amlogic/media/enhancement/amvecm/Makefile
-F: drivers/amlogic/media/enhancement/amvecm/dolby_vision/*
-F: drivers/amlogic/media/enhancement/amvecm/arch/*
-F: include/linux/amlogic/media/amvecm/*
+M:	Mingliang Dong <mingliang.dong@amlogic.com>
+F:	drivers/amlogic/media/enhancement/amvecm/*
+F:	drivers/amlogic/media/enhancement/amvecm/dolby_vision/*
+F:	drivers/amlogic/media/enhancement/amvecm/arch/*
+F:	include/linux/amlogic/media/amvecm/*
 
 AMLOGIC GXL ADD SKT DTS
 M: Yun Cai <yun.cai@amlogic.com>

@@ -228,7 +228,9 @@ extern bool gamma_en;
 extern int amvecm_on_vs(
 	struct vframe_s *display_vf,
 	struct vframe_s *toggle_vf,
-	int flags);
+	int flags,
+	unsigned int sps_h_en,
+	unsigned int sps_v_en);
 extern void refresh_on_vs(struct vframe_s *vf);
 extern void pc_mode_process(void);
 extern void pq_user_latch_process(void);
@@ -242,6 +244,7 @@ struct hdr_metadata_info_s {
 
 extern void vpp_vd_adj1_saturation_hue(signed int sat_val,
 	signed int hue_val, struct vframe_s *vf);
+extern void amvecm_sharpness_enable(int sel);
 
 extern int metadata_read_u32(uint32_t *value);
 extern int metadata_wait(struct vframe_s *vf);
