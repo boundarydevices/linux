@@ -13917,11 +13917,6 @@ F: sound/soc/codecs/amlogic/Makefile
 F: sound/soc/codecs/amlogic/tas5707.c
 F: sound/soc/codecs/amlogic/tas5707.h
 
-AMLOGIC PINCTRL SUPPORT FOR AXG
-M: Xingyu Chen <xingyu.chen@amlogic.com>
-F: drivers/amlogic/pinctrl/pinctrl-mesonaxg.c
-F: include/dt-bindings/gpio/mesonaxg-gpio.h
-
 AMLOGIC AXG ADD DTS FOR A113D SOCKET AND DEVELOPMENT BOARDS
 M:	Yun Cai <yun.cai@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/axg_a113d_skt.dts
@@ -14224,6 +14219,11 @@ M: 	peipeng.zhao <peipeng.zhao@amlogic.com>
 F:      sound/soc/amlogic/meson/dmic.h
 
 AMLOGIC GPIO IRQ
-M: Xingyu Chen <xingyu.chen@amlogic.com>
-F: drivers/amlogic/irqchip/*
-F: Documentation/devicetree/bindings/interrupt-controller/amlogic,meson-gpio-intc.txt
+M:	Xingyu Chen <xingyu.chen@amlogic.com>
+F:	drivers/amlogic/irqchip/*
+F:	Documentation/devicetree/bindings/interrupt-controller/amlogic,meson-gpio-intc.txt
+
+AMLOGIC PINCTRL DRIVER
+M:	Xingyu Chen <xingyu.chen@amlogic.com>
+F:	drivers/amlogic/pinctrl/*
+F:	include/dt-bindings/gpio/*

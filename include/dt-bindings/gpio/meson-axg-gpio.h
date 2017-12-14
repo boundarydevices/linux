@@ -1,22 +1,12 @@
 /*
- * include/dt-bindings/gpio/mesonaxg-gpio.h
+ * Copyright (c) 2017 Amlogic, Inc. All rights reserved.
+ * Author: Xingyu Chen <xingyu.chen@amlogic.com>
  *
- * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
+ * SPDX-License-Identifier: GPL-2.0+
  */
 
-#ifndef _DT_BINDINGS_MESONAXG_GPIO_H
-#define _DT_BINDINGS_MESONAXG_GPIO_H
+#ifndef _DT_BINDINGS_MESON_AXG_GPIO_H
+#define _DT_BINDINGS_MESON_AXG_GPIO_H
 
 /* First GPIO chip */
 #define GPIOAO_0	0
@@ -33,7 +23,7 @@
 #define GPIOAO_11	11
 #define GPIOAO_12	12
 #define GPIOAO_13	13
-#define GPIO_TEST_N 14
+#define GPIO_TEST_N	14
 
 /* Second GPIO chip */
 #define GPIOZ_0		0
@@ -62,7 +52,7 @@
 #define BOOT_12		23
 #define BOOT_13		24
 #define BOOT_14		25
-#define GPIOA_0	    26
+#define GPIOA_0		26
 #define GPIOA_1		27
 #define GPIOA_2		28
 #define GPIOA_3		29
@@ -123,4 +113,4 @@
 #define GPIOY_14	84
 #define GPIOY_15	85
 
-#endif /* _DT_BINDINGS_MESONAXG_GPIO_H */
+#endif /* _DT_BINDINGS_MESON_AXG_GPIO_H */

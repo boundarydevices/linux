@@ -36,10 +36,6 @@
  * In some cases the register ranges for pull enable and pull
  * direction are the same and thus there are only 3 register ranges.
  *
- * Every pinmux group can be enabled by a specific bit in the first
- * register range; when all groups for a given pin are disabled the
- * pin acts as a GPIO.
- *
  * For the pull and GPIO configuration every bank uses a contiguous
  * set of bits in the register sets described above; the same register
  * can be shared by more banks with different offsets.
@@ -66,7 +62,6 @@
 #include <linux/of_platform.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include "../../pinctrl/core.h"
 #include "../../pinctrl/pinctrl-utils.h"
 #include "pinctrl-meson.h"
 
@@ -156,106 +151,14 @@ static const struct pinctrl_ops meson_pctrl_ops = {
 	.pin_dbg_show		= meson_pin_dbg_show,
 };
 
-/**
- * meson_pmx_disable_other_groups() - disable other groups using a given pin
- *
- * @pc:		meson pin controller device
- * @pin:	number of the pin
- * @sel_group:	index of the selected group, or -1 if none
- *
- * The function disables all pinmux groups using a pin except the
- * selected one. If @sel_group is -1 all groups are disabled, leaving
- * the pin in GPIO mode.
- */
-static void meson_pmx_disable_other_groups(struct meson_pinctrl *pc,
-					   unsigned int pin, int sel_group)
-{
-	struct meson_pmx_group *group;
-	int i, j;
-
-	for (i = 0; i < pc->data->num_groups; i++) {
-		group = &pc->data->groups[i];
-		if (group->is_gpio || i == sel_group)
-			continue;
-
-		for (j = 0; j < group->num_pins; j++) {
-			if (group->pins[j] == pin) {
-				/* We have found a group using the pin */
-				regmap_update_bits(pc->reg_mux,
-						   group->reg * 4,
-						   BIT(group->bit), 0);
-			}
-		}
-	}
-}
-
-static int meson_pmx_v1_set_mux(struct pinctrl_dev *pcdev,
-	unsigned int func_num, unsigned int group_num)
-{
-	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
-	struct meson_pmx_func *func = &pc->data->funcs[func_num];
-	struct meson_pmx_group *group = &pc->data->groups[group_num];
-	int i, ret = 0;
-
-	dev_dbg(pc->dev, "enable function %s, group %s\n", func->name,
-		group->name);
-
-	/*
-	 * Disable groups using the same pin.
-	 * The selected group is not disabled to avoid glitches.
-	 */
-	for (i = 0; i < group->num_pins; i++)
-		meson_pmx_disable_other_groups(pc, group->pins[i], group_num);
-
-	/* Function 0 (GPIO) doesn't need any additional setting */
-	if (func_num && (group->bit != 0xff))
-		ret = regmap_update_bits(pc->reg_mux, group->reg * 4,
-					 BIT(group->bit), BIT(group->bit));
-
-	return ret;
-}
-
-static int meson_pmx_request_gpio(struct pinctrl_dev *pcdev,
-				  struct pinctrl_gpio_range *range,
-				  unsigned int offset)
-{
-	struct pin_desc *desc;
-	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
-
-	desc = pin_desc_get(pcdev, offset);
-	if (desc->mux_owner) {
-		pr_info("%s is using the pin %s as pinmux\n",
-				desc->mux_owner, desc->name);
-		return -EINVAL;
-	}
-
-	meson_pmx_disable_other_groups(pc, offset, -1);
-
-	return 0;
-}
-
-static int meson_pmx_request(struct pinctrl_dev *pcdev, unsigned int offset)
-{
-	struct pin_desc *desc;
-
-	desc = pin_desc_get(pcdev, offset);
-	if (desc->gpio_owner) {
-		pr_info("%s is using the pin %s as gpio\n",
-				desc->gpio_owner, desc->name);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int meson_pmx_get_funcs_count(struct pinctrl_dev *pcdev)
+int meson_pmx_get_funcs_count(struct pinctrl_dev *pcdev)
 {
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
 
 	return pc->data->num_funcs;
 }
 
-static const char *meson_pmx_get_func_name(struct pinctrl_dev *pcdev,
+const char *meson_pmx_get_func_name(struct pinctrl_dev *pcdev,
 					   unsigned int selector)
 {
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
@@ -263,7 +166,7 @@ static const char *meson_pmx_get_func_name(struct pinctrl_dev *pcdev,
 	return pc->data->funcs[selector].name;
 }
 
-static int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
+int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
 	unsigned int selector, const char * const **groups,
 	unsigned int * const num_groups)
 {
@@ -274,115 +177,6 @@ static int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
 
 	return 0;
 }
-
-static const struct pinmux_ops meson_pmx_v1_ops = {
-	.set_mux = meson_pmx_v1_set_mux,
-	.get_functions_count = meson_pmx_get_funcs_count,
-	.get_function_name = meson_pmx_get_func_name,
-	.get_function_groups = meson_pmx_get_groups,
-	.gpio_request_enable = meson_pmx_request_gpio,
-	.request = meson_pmx_request,
-};
-
-static struct meson_desc_function *
-meson_pinctrl_desc_find_function_by_name(struct meson_pinctrl *pc,
-					 const char *pin_name,
-					 const char *func_name)
-{
-	int i;
-	const struct meson_desc_pin *pin;
-	struct meson_desc_function *func;
-
-	for (i = 0; i < pc->data->num_pins; i++) {
-		pin = pc->data->meson_pins + i;
-		if (!strcmp(pin->pin.name, pin_name)) {
-			func = pin->functions;
-			while (func->name) {
-				if (!strcmp(func->name, func_name))
-					return func;
-
-				func++;
-			}
-		}
-	}
-
-	return NULL;
-}
-
-static int meson_pmx_v2_set_mux(struct pinctrl_dev *pcdev,
-	unsigned int func_num, unsigned int group_num)
-{
-	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
-	struct meson_pmx_func *func = &pc->data->funcs[func_num];
-	struct meson_pmx_group *group = &pc->data->groups[group_num];
-	struct meson_desc_function *desc;
-	int ret = 0;
-
-	dev_dbg(pc->dev, "enable function %s, group %s\n", func->name,
-		group->name);
-
-	desc = meson_pinctrl_desc_find_function_by_name(pc,
-							group->name,
-							func->name);
-	if (!desc)
-		return -EINVAL;
-
-	dev_dbg(pc->dev,
-		"group->reg = 0x%x; group->bit = %d; desc->muxval = %d\n",
-		group->reg, group->bit, desc->muxval);
-
-	/* Function 0 (GPIO) doesn't need any additional setting */
-	if (func_num && (group->bit != 0xff)) {
-		ret = regmap_update_bits(pc->reg_mux, group->reg * 4,
-				MESON_MUX_V2_MASK(group->bit),
-				MESON_MUX_V2_VAL(desc->muxval, group->bit));
-	}
-
-	return ret;
-}
-static int meson_pmx_v2_request_gpio(struct pinctrl_dev *pcdev,
-				  struct pinctrl_gpio_range *range,
-				  unsigned int offset)
-{
-
-	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
-	const struct meson_desc_pin *pin;
-	struct pin_desc *desc;
-	int i;
-
-	desc = pin_desc_get(pcdev, offset);
-	if (desc->mux_owner) {
-		pr_info("%s is using the pin %s as pinmux\n",
-				desc->mux_owner, desc->name);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < pc->data->num_pins; i++) {
-		pin = pc->data->meson_pins + i;
-		if (pin->pin.number == offset) {
-			dev_dbg(pc->dev,
-				"pin->name = %s; pin->number = %d; "
-				"pin->reg = 0x%x; pin->bit = %d\n",
-				pin->pin.name, pin->pin.number,
-				pin->reg, pin->bit);
-			regmap_update_bits(pc->reg_mux, pin->reg * 4,
-				MESON_MUX_V2_MASK(pin->bit),
-				MESON_MUX_V2_VAL(0, pin->bit));
-			break;
-		}
-	}
-
-	return 0;
-}
-
-static const struct pinmux_ops meson_pmx_v2_ops = {
-	.set_mux = meson_pmx_v2_set_mux,
-	.get_functions_count = meson_pmx_get_funcs_count,
-	.get_function_name = meson_pmx_get_func_name,
-	.get_function_groups = meson_pmx_get_groups,
-	.gpio_request_enable = meson_pmx_v2_request_gpio,
-	.request = meson_pmx_request,
-};
 
 static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 			     unsigned long *configs, unsigned int num_configs)
@@ -665,12 +459,12 @@ static int meson_gpio_to_irq(struct gpio_chip *chip, unsigned int gpio)
 		return -EINVAL;
 
 	if (bank->irq < 0) {
-		pr_warn("pinctrl-meson: no support irq for pin[%d]\n", gpio);
+		dev_warn(pc->dev, "no support irq for pin[%d]\n", gpio);
 		return -EINVAL;
 	}
 
 	if (!pc->of_irq) {
-		pr_err("pinctrl-meson: invalid device node of gpio INTC\n");
+		dev_err(pc->dev, "invalid device node of gpio INTC\n");
 		return -EINVAL;
 	}
 
@@ -808,142 +602,11 @@ static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 	return 0;
 }
 
-static int meson_pinctrl_add_function(struct meson_pinctrl *pc,
-						const char *name)
-{
-	struct meson_pmx_func *func = pc->data->funcs;
-
-	while (func->name) {
-		/* function already there */
-		if (strcmp(func->name, name) == 0) {
-			func->num_groups++;
-			return -EEXIST;
-		}
-		func++;
-	}
-
-	func->name = name;
-	func->num_groups = 1;
-
-	pc->data->num_funcs++;
-
-	return 0;
-}
-
-static struct meson_pmx_func *
-meson_pinctrl_find_function_by_name(struct meson_pinctrl *pc,
-				    const char *name)
-{
-	struct meson_pmx_func *func = pc->data->funcs;
-	int i;
-
-	for (i = 0; i < pc->data->num_funcs; i++) {
-		if (!func[i].name)
-			break;
-
-		if (!strcmp(func[i].name, name))
-			return func + i;
-	}
-
-	return NULL;
-}
-
-static int meson_pinctrl_build_state(struct meson_pinctrl *pc)
-{
-	const struct meson_desc_pin *pin;
-	struct meson_pmx_group *group;
-	struct meson_desc_function *func;
-	struct meson_pmx_func *funcs_tmp;
-	struct meson_pmx_func *func_item;
-	const char **func_grp;
-	int i;
-
-	/* Allocate pin groups */
-	pc->data->num_groups = pc->data->num_pins;
-	pc->data->groups = devm_kzalloc(pc->dev,
-		pc->data->num_groups * sizeof(*pc->data->groups),
-		GFP_KERNEL);
-	if (!pc->data->groups)
-		return -ENOMEM;
-
-	for (i = 0; i < pc->data->num_pins; i++) {
-		pin = pc->data->meson_pins + i;
-		group = pc->data->groups + i;
-		group->name = pin->pin.name;
-		group->pins = &(pin->pin.number);
-		/*per pin group only include one pin*/
-		group->num_pins = 1;
-		group->reg = pin->reg;
-		group->bit = pin->bit;
-	}
-
-	/*
-	 * We suppose that we won't have any more functions than pins,
-	 * we'll reallocate that later anyway
-	 */
-	pc->data->funcs = devm_kzalloc(pc->dev,
-			pc->data->num_pins * sizeof(*pc->data->funcs),
-			GFP_KERNEL);
-	if (!pc->data->funcs)
-		return -ENOMEM;
-
-	/* Count functions and their associated groups */
-	for (i = 0; i < pc->data->num_pins; i++) {
-		pin = pc->data->meson_pins + i;
-		func = pin->functions;
-		while (func->name) {
-			meson_pinctrl_add_function(pc, func->name);
-			func++;
-		}
-	}
-
-	funcs_tmp = krealloc(pc->data->funcs,
-		pc->data->num_funcs * sizeof(*pc->data->funcs),
-		GFP_KERNEL);
-	if (!funcs_tmp)
-		return -ENOMEM;
-
-	pc->data->funcs = funcs_tmp;
-
-	for (i = 0; i < pc->data->num_pins; i++) {
-		pin = pc->data->meson_pins + i;
-		func = pin->functions;
-
-		while (func->name) {
-			func_item = meson_pinctrl_find_function_by_name(pc,
-						func->name);
-			if (!func_item)
-				return -EINVAL;
-
-			if (!func_item->groups) {
-				func_item->groups =
-					devm_kzalloc(pc->dev,
-					func_item->num_groups *
-						sizeof(*func_item->groups),
-					GFP_KERNEL);
-				if (!func_item->groups)
-					return -ENOMEM;
-			}
-
-			func_grp = (const char **)func_item->groups;
-			while (*func_grp)
-				func_grp++;
-
-			*func_grp = pin->pin.name;
-			func++;
-		}
-	}
-
-	return 0;
-}
-
 int meson_pinctrl_probe(struct platform_device *pdev)
 {
-	struct pinctrl_pin_desc *pins;
 	struct device *dev = &pdev->dev;
 	struct meson_pinctrl *pc;
 	int ret;
-	int i;
 
 	pc = devm_kzalloc(dev, sizeof(struct meson_pinctrl), GFP_KERNEL);
 	if (!pc)
@@ -956,33 +619,16 @@ int meson_pinctrl_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	if (pc->data->pinmux_type == PINMUX_V2) {
-		ret = meson_pinctrl_build_state(pc);
-		if (ret)
-			dev_err(pc->dev, "can't register pinctrl device\n");
-
-		pins = devm_kzalloc(pc->dev, pc->data->num_pins * sizeof(*pins),
-				GFP_KERNEL);
-		if (!pins)
-			return -ENOMEM;
-		for (i = 0; i < pc->data->num_pins; i++)
-			pins[i] = pc->data->meson_pins[i].pin;
-
-		pc->desc.pins   = (const struct pinctrl_pin_desc *)pins;
-		pc->desc.pmxops	= &meson_pmx_v2_ops;
-	} else {
-		pc->desc.pmxops	= &meson_pmx_v1_ops;
-		pc->desc.pins	= pc->data->pins;
-	}
-
-	if (pc->data->init)
-		pc->data->init(pc);
-
 	pc->desc.name		= "pinctrl-meson";
 	pc->desc.owner		= THIS_MODULE;
 	pc->desc.pctlops	= &meson_pctrl_ops;
+	pc->desc.pmxops		= pc->data->pmx_ops;
+	pc->desc.pins		= pc->data->pins;
 	pc->desc.confops	= &meson_pinconf_ops;
 	pc->desc.npins		= pc->data->num_pins;
+
+	if (pc->data->init)
+		pc->data->init(pc);
 
 	pc->pcdev = devm_pinctrl_register(pc->dev, &pc->desc, pc);
 	if (IS_ERR(pc->pcdev)) {

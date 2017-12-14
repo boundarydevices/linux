@@ -18,6 +18,7 @@
 #include "pinctrl-meson.h"
 #include <linux/arm-smccc.h>
 #include <dt-bindings/gpio/meson-txlx-gpio.h>
+#include "pinctrl-meson8-pmx.h"
 
 static const struct pinctrl_pin_desc meson_txlx_periphs_pins[] = {
 	MESON_PIN(GPIOZ_0),
@@ -1424,7 +1425,6 @@ int meson_txlx_aobus_init(struct meson_pinctrl *pc)
 
 struct meson_pinctrl_data meson_txlx_periphs_pinctrl_data = {
 	.name		= "periphs-banks",
-	.pinmux_type	= PINMUX_V1,
 	.init		= NULL,
 	.pins		= meson_txlx_periphs_pins,
 	.groups		= meson_txlx_periphs_groups,
@@ -1434,11 +1434,11 @@ struct meson_pinctrl_data meson_txlx_periphs_pinctrl_data = {
 	.num_groups	= ARRAY_SIZE(meson_txlx_periphs_groups),
 	.num_funcs	= ARRAY_SIZE(meson_txlx_periphs_functions),
 	.num_banks	= ARRAY_SIZE(meson_txlx_periphs_banks),
+	.pmx_ops	= &meson8_pmx_ops,
 };
 
 struct meson_pinctrl_data meson_txlx_aobus_pinctrl_data = {
 	.name		= "aobus-banks",
-	.pinmux_type	= PINMUX_V1,
 	.init		= meson_txlx_aobus_init,
 	.pins		= meson_txlx_aobus_pins,
 	.groups		= meson_txlx_aobus_groups,
@@ -1448,6 +1448,7 @@ struct meson_pinctrl_data meson_txlx_aobus_pinctrl_data = {
 	.num_groups	= ARRAY_SIZE(meson_txlx_aobus_groups),
 	.num_funcs	= ARRAY_SIZE(meson_txlx_aobus_functions),
 	.num_banks	= ARRAY_SIZE(meson_txlx_aobus_banks),
+	.pmx_ops	= &meson8_pmx_ops,
 };
 
 static const struct of_device_id meson_txlx_pinctrl_dt_match[] = {

@@ -885,92 +885,106 @@
 &pinctrl_periphs {
 	tdmout_a: tdmout_a {
 		mux {
-			pins = "GPIOX_12", "GPIOX_13";
+			groups = "tdma_sclk",
+				"tdma_fs";
 			function = "tdma_out";
 		};
 	};
 
 	tdmout_a_data: tdmout_a_data {
 		mux {
-			pins = "GPIOX_15";
-			function = "tdma_out1";
+			groups = "tdma_dout1_x15";
+			function = "tdma_out";
 		};
 	};
 
 	tdmin_a: tdmin_a {
 		mux {
-			pins = "GPIOX_14";
+			groups = "tdma_din0";
 			function = "tdma_in";
 		};
 	};
+
 	tdmb_mclk: tdmb_mclk {
 		mux {
-			pins = "GPIOA_1";
-			function = "mclk";
+			groups = "mclk_b";
+			function = "mclk_b";
 		};
 	};
 
 	tdmout_b: tdmout_b {
 		mux {
-			pins = "GPIOA_8", "GPIOA_9";
+			groups = "tdmb_sclk",
+				"tdmb_fs";
 			function = "tdmb_out";
 		};
 	};
+
 	// tdmin and tdmout are the same pins. can't use at same time
 	/*
 	 *tdmin_b:tdmin_b {
 	 *	mux {
-	 *		pins = "GPIOA_10", "GPIOA_11", "GPIOA_12", "GPIOA_13";
+	 *		groups = "tdmb_din0",
+	 *			"tdmb_din1",
+	 *			"tdmb_din2_a12",
+	 *			"tdmb_din3_a13";
 	 *		function = "tdmb_in";
 	 *	};
 	 *};
 	 */
+
 	tdmin_b: tdmin_b {
 		mux {
-			pins = "GPIOA_10","GPIOA_11";
+			groups = "tdmb_din0",
+				"tdmb_din1";
 			function = "tdmb_in";
 		};
 	};
 
 	tdmc_mclk: tdmc_mclk {
 		mux {
-			pins = "GPIOA_0";
-			function = "mclk";
+			groups = "mclk_a";
+			function = "mclk_a";
 		};
 	};
 
 	tdmout_c:tdmout_c {
 		mux {
-			pins = "GPIOA_2", "GPIOA_3", "GPIOA_4";
+			groups = "tdmc_sclk",
+				"tdmc_fs",
+				"tdmc_dout0";
 			function = "tdmc_out";
 		};
 	};
 
 	tdmin_c:tdmin_c {
 		mux {
-			pins = "GPIOA_5";
+			groups = "tdmc_din1";
 			function = "tdmc_in";
 		};
 	};
 
 	spdifout: spidfout {
 		mux {
-			pins = "GPIOA_20";
+			groups = "spdif_out_a20";
 			function = "spdif_out";
 		};
 	};
 
 	spdifin: spidfin {
 		mux {
-			pins = "GPIOA_19";
+			groups = "spdif_in_a19";
 			function = "spdif_in";
 		};
 	};
 
 	pdmin: pdmin {
 		mux {
-			pins = "GPIOA_14", "GPIOA_15", "GPIOA_16",
-				"GPIOA_17", "GPIOA_18";
+			groups = "pdm_dclk_a14",
+				"pdm_din0",
+				"pdm_din1",
+				"pdm_din2",
+				"pdm_din3";
 			function = "pdm";
 		};
 	};

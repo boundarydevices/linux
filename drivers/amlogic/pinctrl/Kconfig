@@ -14,20 +14,30 @@ if AMLOGIC_PINCTRL
 config AMLOGIC_PINCTRL_MESON8B
 	bool "Meson 8b SoC pinctrl driver"
 	depends on ARM
+	select AMLOGIC_PINCTRL_MESON8_PMX
 	default n
 
 config AMLOGIC_PINCTRL_MESON_GXL
 	bool "Meson gxl SoC pinctrl driver"
 	depends on ARM64
+	select AMLOGIC_PINCTRL_MESON8_PMX
 	default n
 
 config AMLOGIC_PINCTRL_MESON_AXG
 	bool "Meson axg SoC pinctrl driver"
 	depends on ARM64
+	select AMLOGIC_PINCTRL_MESON_AXG_PMX
 	default n
 
 config AMLOGIC_PINCTRL_MESON_TXLX
 	bool "Meson txlx SoC pinctrl driver"
 	depends on ARM64
+	select AMLOGIC_PINCTRL_MESON8_PMX
 	default n
+
+config AMLOGIC_PINCTRL_MESON8_PMX
+	bool
+
+config AMLOGIC_PINCTRL_MESON_AXG_PMX
+	bool
 endif

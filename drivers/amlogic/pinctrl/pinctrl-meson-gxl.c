@@ -18,6 +18,7 @@
 #include "pinctrl-meson.h"
 #include <linux/arm-smccc.h>
 #include <dt-bindings/gpio/gxl.h>
+#include "pinctrl-meson8-pmx.h"
 
 #define HHI_XTAL_DIVN_CNTL_GPIO (0xc883c000 + (0x2f << 2))
 
@@ -1186,7 +1187,6 @@ static int meson_gxl_aobus_init(struct meson_pinctrl *pc)
 
 static struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data = {
 	.name		= "periphs-banks",
-	.pinmux_type	= PINMUX_V1,
 	.init		= meson_gxl_periphs_init,
 	.pins		= meson_gxl_periphs_pins,
 	.groups		= meson_gxl_periphs_groups,
@@ -1196,11 +1196,11 @@ static struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data = {
 	.num_groups	= ARRAY_SIZE(meson_gxl_periphs_groups),
 	.num_funcs	= ARRAY_SIZE(meson_gxl_periphs_functions),
 	.num_banks	= ARRAY_SIZE(meson_gxl_periphs_banks),
+	.pmx_ops	= &meson8_pmx_ops,
 };
 
 static struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data = {
 	.name		= "aobus-banks",
-	.pinmux_type	= PINMUX_V1,
 	.init		= meson_gxl_aobus_init,
 	.pins		= meson_gxl_aobus_pins,
 	.groups		= meson_gxl_aobus_groups,
@@ -1210,6 +1210,7 @@ static struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data = {
 	.num_groups	= ARRAY_SIZE(meson_gxl_aobus_groups),
 	.num_funcs	= ARRAY_SIZE(meson_gxl_aobus_functions),
 	.num_banks	= ARRAY_SIZE(meson_gxl_aobus_banks),
+	.pmx_ops	= &meson8_pmx_ops,
 };
 
 static const struct of_device_id meson_gxl_pinctrl_dt_match[] = {

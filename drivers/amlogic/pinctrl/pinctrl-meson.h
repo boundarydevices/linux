@@ -21,6 +21,7 @@
 #include <linux/regmap.h>
 #include <linux/types.h>
 #include <linux/module.h>
+#include "../../pinctrl/core.h"
 
 /**
  * struct meson_pmx_group - a pinmux group
@@ -38,8 +39,7 @@ struct meson_pmx_group {
 	const unsigned int *pins;
 	unsigned int num_pins;
 	bool is_gpio;
-	unsigned int reg;
-	unsigned int bit;
+	const void *data;
 };
 
 /**
@@ -105,7 +105,6 @@ struct meson_bank {
 
 struct meson_pinctrl;
 struct meson_pinctrl_data {
-	unsigned char pinmux_type;
 	const char *name;
 	int (*init)(struct meson_pinctrl *);
 	const struct pinctrl_pin_desc *pins;
@@ -117,6 +116,8 @@ struct meson_pinctrl_data {
 	unsigned int num_groups;
 	unsigned int num_funcs;
 	unsigned int num_banks;
+	const struct pinmux_ops *pmx_ops;
+	void *pmx_data;
 };
 
 struct meson_pinctrl {
@@ -133,54 +134,10 @@ struct meson_pinctrl {
 	struct device_node *of_irq;
 };
 
-struct meson_desc_function {
-	const char *name;
-	unsigned char muxval;
-};
-
-struct meson_desc_pin {
-	struct pinctrl_pin_desc pin;
-	unsigned int reg;
-	unsigned int bit;
-	struct meson_desc_function *functions;
-};
-
-/* enum PINMUX_TYPE - pinmux type
- *
- *@PINMUX_V1: use more bits that maybe from different registers to choose
- * function for per gpio
- *@PINMUX_V2: use continuous 4bit to choose function for per gpio
- *
- */
-enum PINMUX_TYPE {
-	PINMUX_V1 = 0,
-	PINMUX_V2,
-	PINMUX_MAX,
-};
-
 #define CMD_TEST_N_DIR 0x82000046
 #define TEST_N_OUTPUT  1
 
-#define MESON_MUX_V2_MASK(x) (0xf << x)
-#define MESON_MUX_V2_VAL(y, x) ((y & 0xf) << x)
 #define MESON_PIN(x) PINCTRL_PIN(x, #x)
-
-#define GROUP(grp, r, b)						\
-	{								\
-		.name = #grp,						\
-		.pins = grp ## _pins,					\
-		.num_pins = ARRAY_SIZE(grp ## _pins),			\
-		.reg = r,						\
-		.bit = b,						\
-	}
-
-#define GPIO_GROUP(gpio)						\
-	{								\
-		.name = #gpio,						\
-		.pins = (const unsigned int[]){ gpio },		\
-		.num_pins = 1,						\
-		.is_gpio = true,					\
-	}
 
 #define FUNCTION(fn)							\
 	{								\
@@ -204,19 +161,13 @@ enum PINMUX_TYPE {
 		},							\
 	}
 
-#define MESON_FUNCTION(_val, _name)				\
-	{							\
-		.name = _name,					\
-		.muxval = _val,					\
-	}
-
-#define MESON_PINCTRL_PIN(_pin, r, b, ...)		\
-	{							\
-		.pin = _pin,					\
-		.reg = r,				\
-		.bit = b,				\
-		.functions = (struct meson_desc_function[]){	\
-			__VA_ARGS__, { } },			\
-	}
-
 extern int meson_pinctrl_probe(struct platform_device *pdev);
+
+/* Common pmx functions */
+extern int meson_pmx_get_funcs_count(struct pinctrl_dev *pcdev);
+extern const char *meson_pmx_get_func_name(struct pinctrl_dev *pcdev,
+					unsigned int selector);
+extern int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
+					unsigned int selector,
+					const char * const **groups,
+					unsigned int * const num_groups);
