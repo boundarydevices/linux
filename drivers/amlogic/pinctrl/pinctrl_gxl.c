@@ -1151,40 +1151,7 @@ static struct meson_bank meson_gxl_aobus_banks[] = {
 		0, 30, 0, 14, 0, 14, 0, 31, 1, 31),
 };
 
-struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data = {
-	.name		= "periphs-banks",
-	.pins		= meson_gxl_periphs_pins,
-	.groups		= meson_gxl_periphs_groups,
-	.funcs		= meson_gxl_periphs_functions,
-	.banks		= meson_gxl_periphs_banks,
-	.num_pins	= ARRAY_SIZE(meson_gxl_periphs_pins),
-	.num_groups	= ARRAY_SIZE(meson_gxl_periphs_groups),
-	.num_funcs	= ARRAY_SIZE(meson_gxl_periphs_functions),
-	.num_banks	= ARRAY_SIZE(meson_gxl_periphs_banks),
-};
-
-struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data = {
-	.name		= "aobus-banks",
-	.pins		= meson_gxl_aobus_pins,
-	.groups		= meson_gxl_aobus_groups,
-	.funcs		= meson_gxl_aobus_functions,
-	.banks		= meson_gxl_aobus_banks,
-	.num_pins	= ARRAY_SIZE(meson_gxl_aobus_pins),
-	.num_groups	= ARRAY_SIZE(meson_gxl_aobus_groups),
-	.num_funcs	= ARRAY_SIZE(meson_gxl_aobus_functions),
-	.num_banks	= ARRAY_SIZE(meson_gxl_aobus_banks),
-};
-
-int meson_gxl_aobus_init(struct meson_pinctrl *pc)
-{
-	struct arm_smccc_res res;
-	/*set TEST_N to output*/
-	arm_smccc_smc(CMD_TEST_N_DIR, TEST_N_OUTPUT, 0, 0, 0, 0, 0, 0, &res);
-
-	return 0;
-}
-
-int meson_gxl_periphs_init(struct meson_pinctrl *pc)
+static int meson_gxl_periphs_init(struct meson_pinctrl *pc)
 {
 	void __iomem *reg;
 
@@ -1207,3 +1174,76 @@ int meson_gxl_periphs_init(struct meson_pinctrl *pc)
 
 	return 0;
 }
+
+static int meson_gxl_aobus_init(struct meson_pinctrl *pc)
+{
+	struct arm_smccc_res res;
+	/*set TEST_N to output*/
+	arm_smccc_smc(CMD_TEST_N_DIR, TEST_N_OUTPUT, 0, 0, 0, 0, 0, 0, &res);
+
+	return 0;
+}
+
+static struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data = {
+	.name		= "periphs-banks",
+	.pinmux_type	= PINMUX_V1,
+	.init		= meson_gxl_periphs_init,
+	.pins		= meson_gxl_periphs_pins,
+	.groups		= meson_gxl_periphs_groups,
+	.funcs		= meson_gxl_periphs_functions,
+	.banks		= meson_gxl_periphs_banks,
+	.num_pins	= ARRAY_SIZE(meson_gxl_periphs_pins),
+	.num_groups	= ARRAY_SIZE(meson_gxl_periphs_groups),
+	.num_funcs	= ARRAY_SIZE(meson_gxl_periphs_functions),
+	.num_banks	= ARRAY_SIZE(meson_gxl_periphs_banks),
+};
+
+static struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data = {
+	.name		= "aobus-banks",
+	.pinmux_type	= PINMUX_V1,
+	.init		= meson_gxl_aobus_init,
+	.pins		= meson_gxl_aobus_pins,
+	.groups		= meson_gxl_aobus_groups,
+	.funcs		= meson_gxl_aobus_functions,
+	.banks		= meson_gxl_aobus_banks,
+	.num_pins	= ARRAY_SIZE(meson_gxl_aobus_pins),
+	.num_groups	= ARRAY_SIZE(meson_gxl_aobus_groups),
+	.num_funcs	= ARRAY_SIZE(meson_gxl_aobus_functions),
+	.num_banks	= ARRAY_SIZE(meson_gxl_aobus_banks),
+};
+
+static const struct of_device_id meson_gxl_pinctrl_dt_match[] = {
+	{
+		.compatible = "amlogic,meson-gxl-periphs-pinctrl",
+		.data = &meson_gxl_periphs_pinctrl_data,
+	},
+	{
+		.compatible = "amlogic,meson-gxl-aobus-pinctrl",
+		.data = &meson_gxl_aobus_pinctrl_data,
+	},
+
+};
+
+static struct platform_driver meson_gxl_pinctrl_driver = {
+	.probe		= meson_pinctrl_probe,
+	.driver = {
+		.name	= "meson-gxl-pinctrl",
+		.of_match_table = meson_gxl_pinctrl_dt_match,
+	},
+};
+
+static int __init gxl_pmx_init(void)
+{
+	return platform_driver_register(&meson_gxl_pinctrl_driver);
+}
+
+static void __exit gxl_pmx_exit(void)
+{
+	platform_driver_unregister(&meson_gxl_pinctrl_driver);
+}
+
+arch_initcall(gxl_pmx_init);
+module_exit(gxl_pmx_exit);
+MODULE_DESCRIPTION("gxl pin control driver");
+MODULE_LICENSE("GPL v2");
+

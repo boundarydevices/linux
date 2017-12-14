@@ -1,15 +1,33 @@
-# Amlogic PINCTRL
+menuconfig AMLOGIC_PINCTRL
+	bool "PINCTRL/GPIO support"
+	select OF
+	select PINCTRL
+	select PINMUX
+	select PINCONF
+	select GENERIC_PINCONF
+	select GPIOLIB
+	select OF_GPIO
+	select REGMAP_MMIO
 
+if AMLOGIC_PINCTRL
 
-config AMLOGIC_PINCTRL
-    bool "PINCTRL/GPIO support"
-    select OF
-    select PINCTRL
-    select PINMUX
-    select PINCONF
-    select GENERIC_PINCONF
-    select GPIOLIB
-    select OF_GPIO
-    select GPIOLIB_IRQCHIP
-    help
-      This is the Amlogic PINCTRL/GPIO  driver
+config AMLOGIC_PINCTRL_MESON8B
+	bool "Meson 8b SoC pinctrl driver"
+	depends on ARM
+	default n
+
+config AMLOGIC_PINCTRL_MESON_GXL
+	bool "Meson gxl SoC pinctrl driver"
+	depends on ARM64
+	default n
+
+config AMLOGIC_PINCTRL_MESON_AXG
+	bool "Meson axg SoC pinctrl driver"
+	depends on ARM64
+	default n
+
+config AMLOGIC_PINCTRL_MESON_TXLX
+	bool "Meson txlx SoC pinctrl driver"
+	depends on ARM64
+	default n
+endif

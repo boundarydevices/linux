@@ -17,8 +17,10 @@
 
 #include <linux/gpio.h>
 #include <linux/pinctrl/pinctrl.h>
+#include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/types.h>
+#include <linux/module.h>
 
 /**
  * struct meson_pmx_group - a pinmux group
@@ -101,8 +103,11 @@ struct meson_bank {
 	struct meson_reg_desc regs[NUM_REG];
 };
 
+struct meson_pinctrl;
 struct meson_pinctrl_data {
+	unsigned char pinmux_type;
 	const char *name;
+	int (*init)(struct meson_pinctrl *);
 	const struct pinctrl_pin_desc *pins;
 	struct meson_pmx_group *groups;
 	struct meson_pmx_func *funcs;
@@ -126,12 +131,6 @@ struct meson_pinctrl {
 	struct gpio_chip chip;
 	struct device_node *of_node;
 	struct device_node *of_irq;
-};
-
-struct meson_pinctrl_private {
-	unsigned char pinmux_type;
-	struct meson_pinctrl_data *pinctrl_data;
-	int (*init)(struct meson_pinctrl *pc);
 };
 
 struct meson_desc_function {
@@ -220,18 +219,4 @@ enum PINMUX_TYPE {
 			__VA_ARGS__, { } },			\
 	}
 
-extern struct meson_pinctrl_data meson8_cbus_pinctrl_data;
-extern struct meson_pinctrl_data meson8_aobus_pinctrl_data;
-extern struct meson_pinctrl_data meson8b_cbus_pinctrl_data;
-extern struct meson_pinctrl_data meson8b_aobus_pinctrl_data;
-extern struct meson_pinctrl_data meson_gxl_periphs_pinctrl_data;
-extern struct meson_pinctrl_data meson_gxl_aobus_pinctrl_data;
-extern struct meson_pinctrl_data meson_axg_periphs_pinctrl_data;
-extern struct meson_pinctrl_data meson_axg_aobus_pinctrl_data;
-extern struct meson_pinctrl_data meson_txlx_periphs_pinctrl_data;
-extern struct meson_pinctrl_data meson_txlx_aobus_pinctrl_data;
-
-extern int meson_gxl_aobus_init(struct meson_pinctrl *pc);
-extern int meson_gxl_periphs_init(struct meson_pinctrl *pc);
-extern int meson_axg_aobus_init(struct meson_pinctrl *pc);
-extern int meson_txlx_aobus_init(struct meson_pinctrl *pc);
+extern int meson_pinctrl_probe(struct platform_device *pdev);

@@ -684,92 +684,6 @@ static int meson_gpio_to_irq(struct gpio_chip *chip, unsigned int gpio)
 	return irq_create_fwspec_mapping(&fwspec);
 }
 
-struct meson_pinctrl_private meson_gxl_periphs = {
-	.pinmux_type = PINMUX_V1,
-	.pinctrl_data = &meson_gxl_periphs_pinctrl_data,
-	.init = meson_gxl_periphs_init,
-};
-
-struct meson_pinctrl_private meson_gxl_aobus = {
-	.pinmux_type = PINMUX_V1,
-	.pinctrl_data = &meson_gxl_aobus_pinctrl_data,
-	.init = meson_gxl_aobus_init,
-};
-
-struct meson_pinctrl_private meson_m8b_cbus = {
-	.pinmux_type = PINMUX_V1,
-	.pinctrl_data = &meson8b_cbus_pinctrl_data,
-	.init = NULL,
-};
-
-struct meson_pinctrl_private meson_m8b_aobus = {
-	.pinmux_type = PINMUX_V1,
-	.pinctrl_data = &meson8b_aobus_pinctrl_data,
-	.init = NULL,
-};
-
-struct meson_pinctrl_private meson_axg_periphs = {
-	.pinmux_type = PINMUX_V2,
-	.pinctrl_data = &meson_axg_periphs_pinctrl_data,
-	.init = NULL,
-};
-
-struct meson_pinctrl_private meson_axg_aobus = {
-	.pinmux_type = PINMUX_V2,
-	.pinctrl_data = &meson_axg_aobus_pinctrl_data,
-	.init = meson_axg_aobus_init,
-};
-
-struct meson_pinctrl_private meson_txlx_periphs = {
-	.pinmux_type = PINMUX_V1,
-	.pinctrl_data = &meson_txlx_periphs_pinctrl_data,
-	.init = NULL,
-};
-
-struct meson_pinctrl_private meson_txlx_aobus = {
-	.pinmux_type = PINMUX_V1,
-	.pinctrl_data = &meson_txlx_aobus_pinctrl_data,
-	.init = meson_txlx_aobus_init,
-};
-
-static const struct of_device_id meson_pinctrl_dt_match[] = {
-	{
-		.compatible = "amlogic,meson-gxl-periphs-pinctrl",
-		.data = &meson_gxl_periphs,
-	},
-	{
-		.compatible = "amlogic,meson-gxl-aobus-pinctrl",
-		.data = &meson_gxl_aobus,
-	},
-	{
-		.compatible = "amlogic,meson8b-cbus-pinctrl",
-		.data = &meson_m8b_cbus,
-	},
-	{
-		.compatible = "amlogic,meson8b-aobus-pinctrl",
-		.data = &meson_m8b_aobus,
-	},
-	{
-		.compatible = "amlogic,meson-axg-periphs-pinctrl",
-		.data = &meson_axg_periphs,
-	},
-	{
-		.compatible = "amlogic,meson-axg-aobus-pinctrl",
-		.data = &meson_axg_aobus,
-	},
-	{
-		.compatible = "amlogic,meson-txlx-periphs-pinctrl",
-		.data = &meson_txlx_periphs,
-	},
-	{
-		.compatible = "amlogic,meson-txlx-aobus-pinctrl",
-		.data = &meson_txlx_aobus,
-	},
-	{ },
-};
-
-MODULE_DEVICE_TABLE(of, meson_pinctrl_dt_match);
-
 static int meson_gpiolib_register(struct meson_pinctrl *pc)
 {
 	int ret;
@@ -1023,10 +937,8 @@ static int meson_pinctrl_build_state(struct meson_pinctrl *pc)
 	return 0;
 }
 
-static int meson_pinctrl_probe(struct platform_device *pdev)
+int meson_pinctrl_probe(struct platform_device *pdev)
 {
-	struct meson_pinctrl_private *priv;
-	const struct of_device_id *match;
 	struct pinctrl_pin_desc *pins;
 	struct device *dev = &pdev->dev;
 	struct meson_pinctrl *pc;
@@ -1038,15 +950,13 @@ static int meson_pinctrl_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	pc->dev = dev;
-	match = of_match_node(meson_pinctrl_dt_match, pdev->dev.of_node);
-	priv = (struct meson_pinctrl_private *)match->data;
-	pc->data = (struct meson_pinctrl_data *) priv->pinctrl_data;
+	pc->data = (struct meson_pinctrl_data *) of_device_get_match_data(dev);
 
-	ret = meson_pinctrl_parse_dt(pc, pdev->dev.of_node);
+	ret = meson_pinctrl_parse_dt(pc, dev->of_node);
 	if (ret)
 		return ret;
 
-	if (priv->pinmux_type == PINMUX_V2) {
+	if (pc->data->pinmux_type == PINMUX_V2) {
 		ret = meson_pinctrl_build_state(pc);
 		if (ret)
 			dev_err(pc->dev, "can't register pinctrl device\n");
@@ -1065,49 +975,20 @@ static int meson_pinctrl_probe(struct platform_device *pdev)
 		pc->desc.pins	= pc->data->pins;
 	}
 
+	if (pc->data->init)
+		pc->data->init(pc);
+
 	pc->desc.name		= "pinctrl-meson";
 	pc->desc.owner		= THIS_MODULE;
 	pc->desc.pctlops	= &meson_pctrl_ops;
 	pc->desc.confops	= &meson_pinconf_ops;
 	pc->desc.npins		= pc->data->num_pins;
 
-	pc->pcdev = pinctrl_register(&pc->desc, pc->dev, pc);
+	pc->pcdev = devm_pinctrl_register(pc->dev, &pc->desc, pc);
 	if (IS_ERR(pc->pcdev)) {
 		dev_err(pc->dev, "can't register pinctrl device");
 		return PTR_ERR(pc->pcdev);
 	}
 
-	ret = meson_gpiolib_register(pc);
-	if (ret) {
-		pinctrl_unregister(pc->pcdev);
-		return ret;
-	}
-
-	if (priv->init)
-		priv->init(pc);
-
-	return 0;
+	return meson_gpiolib_register(pc);
 }
-
-static struct platform_driver meson_pinctrl_driver = {
-	.probe		= meson_pinctrl_probe,
-	.driver = {
-		.name	= "meson-pinctrl",
-		.of_match_table = meson_pinctrl_dt_match,
-	},
-};
-
-static int __init gxl_pmx_init(void)
-{
-	return platform_driver_register(&meson_pinctrl_driver);
-}
-
-static void __exit gxl_pmx_exit(void)
-{
-	platform_driver_unregister(&meson_pinctrl_driver);
-}
-
-arch_initcall(gxl_pmx_init);
-module_exit(gxl_pmx_exit);
-MODULE_DESCRIPTION("gxl pin control driver");
-MODULE_LICENSE("GPL v2");

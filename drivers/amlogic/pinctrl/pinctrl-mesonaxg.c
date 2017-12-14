@@ -485,23 +485,7 @@ static struct meson_bank mesonaxg_aobus_banks[] = {
 	0, 30, 0, 14, 0, 14, 0, 31, 1, 31),
 };
 
-struct meson_pinctrl_data  meson_axg_periphs_pinctrl_data = {
-	.name		= "periphs-banks",
-	.meson_pins	= mesonaxg_periphs_pins,
-	.banks		= mesonaxg_periphs_banks,
-	.num_pins	= ARRAY_SIZE(mesonaxg_periphs_pins),
-	.num_banks	= ARRAY_SIZE(mesonaxg_periphs_banks),
-};
-
-struct meson_pinctrl_data  meson_axg_aobus_pinctrl_data = {
-	.name		= "aobus-banks",
-	.meson_pins	= mesonaxg_aobus_pins,
-	.banks		= mesonaxg_aobus_banks,
-	.num_pins	= ARRAY_SIZE(mesonaxg_aobus_pins),
-	.num_banks	= ARRAY_SIZE(mesonaxg_aobus_banks),
-};
-
-int meson_axg_aobus_init(struct meson_pinctrl *pc)
+static int meson_axg_aobus_init(struct meson_pinctrl *pc)
 {
 	struct arm_smccc_res res;
 	/*set TEST_N to output*/
@@ -509,3 +493,57 @@ int meson_axg_aobus_init(struct meson_pinctrl *pc)
 
 	return 0;
 }
+
+static struct meson_pinctrl_data  meson_axg_periphs_pinctrl_data = {
+	.name		= "periphs-banks",
+	.pinmux_type	= PINMUX_V2,
+	.init		= NULL,
+	.meson_pins	= mesonaxg_periphs_pins,
+	.banks		= mesonaxg_periphs_banks,
+	.num_pins	= ARRAY_SIZE(mesonaxg_periphs_pins),
+	.num_banks	= ARRAY_SIZE(mesonaxg_periphs_banks),
+};
+
+static struct meson_pinctrl_data  meson_axg_aobus_pinctrl_data = {
+	.name		= "aobus-banks",
+	.pinmux_type	= PINMUX_V2,
+	.init		= meson_axg_aobus_init,
+	.meson_pins	= mesonaxg_aobus_pins,
+	.banks		= mesonaxg_aobus_banks,
+	.num_pins	= ARRAY_SIZE(mesonaxg_aobus_pins),
+	.num_banks	= ARRAY_SIZE(mesonaxg_aobus_banks),
+};
+
+static const struct of_device_id meson_axg_pinctrl_dt_match[] = {
+	{
+		.compatible = "amlogic,meson-axg-periphs-pinctrl",
+		.data = &meson_axg_periphs_pinctrl_data,
+	},
+	{
+		.compatible = "amlogic,meson-axg-aobus-pinctrl",
+		.data = &meson_axg_aobus_pinctrl_data,
+	},
+};
+
+static struct platform_driver meson_axg_pinctrl_driver = {
+	.probe = meson_pinctrl_probe,
+	.driver = {
+		.name = "meson-axg-pinctrl",
+		.of_match_table = meson_axg_pinctrl_dt_match,
+	},
+};
+static int __init axg_pmx_init(void)
+{
+	return platform_driver_register(&meson_axg_pinctrl_driver);
+}
+
+static void __exit axg_pmx_exit(void)
+{
+	platform_driver_unregister(&meson_axg_pinctrl_driver);
+}
+
+arch_initcall(axg_pmx_init);
+module_exit(axg_pmx_exit);
+MODULE_DESCRIPTION("axg pin control driver");
+MODULE_LICENSE("GPL v2");
+

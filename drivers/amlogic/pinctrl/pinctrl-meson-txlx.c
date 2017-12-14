@@ -1413,8 +1413,19 @@ static struct meson_bank meson_txlx_aobus_banks[] = {
 	0,  30, 0,  14, 0,  14, 0,  31, 1,  31),
 };
 
+int meson_txlx_aobus_init(struct meson_pinctrl *pc)
+{
+	struct arm_smccc_res res;
+	/*set TEST_N to output*/
+	arm_smccc_smc(CMD_TEST_N_DIR, TEST_N_OUTPUT, 0, 0, 0, 0, 0, 0, &res);
+
+	return 0;
+}
+
 struct meson_pinctrl_data meson_txlx_periphs_pinctrl_data = {
 	.name		= "periphs-banks",
+	.pinmux_type	= PINMUX_V1,
+	.init		= NULL,
 	.pins		= meson_txlx_periphs_pins,
 	.groups		= meson_txlx_periphs_groups,
 	.funcs		= meson_txlx_periphs_functions,
@@ -1427,6 +1438,8 @@ struct meson_pinctrl_data meson_txlx_periphs_pinctrl_data = {
 
 struct meson_pinctrl_data meson_txlx_aobus_pinctrl_data = {
 	.name		= "aobus-banks",
+	.pinmux_type	= PINMUX_V1,
+	.init		= meson_txlx_aobus_init,
 	.pins		= meson_txlx_aobus_pins,
 	.groups		= meson_txlx_aobus_groups,
 	.funcs		= meson_txlx_aobus_functions,
@@ -1437,11 +1450,37 @@ struct meson_pinctrl_data meson_txlx_aobus_pinctrl_data = {
 	.num_banks	= ARRAY_SIZE(meson_txlx_aobus_banks),
 };
 
-int meson_txlx_aobus_init(struct meson_pinctrl *pc)
-{
-	struct arm_smccc_res res;
-	/*set TEST_N to output*/
-	arm_smccc_smc(CMD_TEST_N_DIR, TEST_N_OUTPUT, 0, 0, 0, 0, 0, 0, &res);
+static const struct of_device_id meson_txlx_pinctrl_dt_match[] = {
+	{
+		.compatible = "amlogic,meson-txlx-periphs-pinctrl",
+		.data = &meson_txlx_periphs_pinctrl_data,
+	},
+	{
+		.compatible = "amlogic,meson-txlx-aobus-pinctrl",
+		.data = &meson_txlx_aobus_pinctrl_data,
+	},
 
-	return 0;
+};
+
+static struct platform_driver meson_txlx_pinctrl_driver = {
+	.probe		= meson_pinctrl_probe,
+	.driver = {
+		.name	= "meson-txlx-pinctrl",
+		.of_match_table = meson_txlx_pinctrl_dt_match,
+	},
+};
+
+static int __init txlx_pmx_init(void)
+{
+	return platform_driver_register(&meson_txlx_pinctrl_driver);
 }
+
+static void __exit txlx_pmx_exit(void)
+{
+	platform_driver_unregister(&meson_txlx_pinctrl_driver);
+}
+
+arch_initcall(txlx_pmx_init);
+module_exit(txlx_pmx_exit);
+MODULE_DESCRIPTION("txlx pin control driver");
+MODULE_LICENSE("GPL v2");
