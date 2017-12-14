@@ -3800,11 +3800,8 @@ static unsigned char pre_de_buf_config(void)
 		}
 	}
 
-	if (!pre_de_proc()) {
-		pr_err("%s%d bypass pre process.\n",
-			__func__, __LINE__);
+	if (!pre_de_proc())
 		return 0;
-	}
 
 	if (di_pre_stru.di_inp_buf_next) {
 		di_pre_stru.di_inp_buf = di_pre_stru.di_inp_buf_next;
