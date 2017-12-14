@@ -485,30 +485,20 @@ static struct meson_bank mesonaxg_aobus_banks[] = {
 	0, 30, 0, 14, 0, 14, 0, 31, 1, 31),
 };
 
-static struct meson_domain_data mesonaxg_periphs_domain_data = {
-	.name		= "periphs-banks",
-	.banks		= mesonaxg_periphs_banks,
-	.num_banks	= ARRAY_SIZE(mesonaxg_periphs_banks),
-	.num_pins	= 86,
-};
-
-static struct meson_domain_data mesonaxg_aobus_domain_data = {
-	.name		= "aobus-banks",
-	.banks		= mesonaxg_aobus_banks,
-	.num_banks	= ARRAY_SIZE(mesonaxg_aobus_banks),
-	.num_pins	= 15,
-};
-
 struct meson_pinctrl_data  meson_axg_periphs_pinctrl_data = {
-	.meson_pins  = mesonaxg_periphs_pins,
-	.domain_data = &mesonaxg_periphs_domain_data,
-	.num_pins = ARRAY_SIZE(mesonaxg_periphs_pins),
+	.name		= "periphs-banks",
+	.meson_pins	= mesonaxg_periphs_pins,
+	.banks		= mesonaxg_periphs_banks,
+	.num_pins	= ARRAY_SIZE(mesonaxg_periphs_pins),
+	.num_banks	= ARRAY_SIZE(mesonaxg_periphs_banks),
 };
 
 struct meson_pinctrl_data  meson_axg_aobus_pinctrl_data = {
-	.meson_pins  = mesonaxg_aobus_pins,
-	.domain_data = &mesonaxg_aobus_domain_data,
-	.num_pins = ARRAY_SIZE(mesonaxg_aobus_pins),
+	.name		= "aobus-banks",
+	.meson_pins	= mesonaxg_aobus_pins,
+	.banks		= mesonaxg_aobus_banks,
+	.num_pins	= ARRAY_SIZE(mesonaxg_aobus_pins),
+	.num_banks	= ARRAY_SIZE(mesonaxg_aobus_banks),
 };
 
 int meson_axg_aobus_init(struct meson_pinctrl *pc)

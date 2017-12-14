@@ -941,36 +941,26 @@ static struct meson_bank meson8b_aobus_banks[] = {
 	0,  0,  0, 16,  0,  0,  0, 16,  1,  0),
 };
 
-static struct meson_domain_data meson8b_periphs_domain_data = {
-	.name		= "cbus-banks",
-	.banks		= meson8b_cbus_banks,
-	.num_banks	= ARRAY_SIZE(meson8b_cbus_banks),
-	.num_pins	= 115,
-};
-
-static struct meson_domain_data meson8b_aobus_domain_data = {
-	.name		= "aobus-banks",
-	.banks		= meson8b_aobus_banks,
-	.num_banks	= ARRAY_SIZE(meson8b_aobus_banks),
-	.num_pins	= 14,
-};
-
 struct meson_pinctrl_data meson8b_cbus_pinctrl_data = {
+	.name		= "cbus-banks",
 	.pins		= meson8b_cbus_pins,
 	.groups		= meson8b_cbus_groups,
 	.funcs		= meson8b_cbus_functions,
-	.domain_data	= &meson8b_periphs_domain_data,
+	.banks		= meson8b_cbus_banks,
 	.num_pins	= ARRAY_SIZE(meson8b_cbus_pins),
 	.num_groups	= ARRAY_SIZE(meson8b_cbus_groups),
 	.num_funcs	= ARRAY_SIZE(meson8b_cbus_functions),
+	.num_banks	= ARRAY_SIZE(meson8b_cbus_banks),
 };
 
 struct meson_pinctrl_data meson8b_aobus_pinctrl_data = {
+	.name		= "aobus-banks",
 	.pins		= meson8b_aobus_pins,
 	.groups		= meson8b_aobus_groups,
 	.funcs		= meson8b_aobus_functions,
-	.domain_data	= &meson8b_aobus_domain_data,
+	.banks		= meson8b_aobus_banks,
 	.num_pins	= ARRAY_SIZE(meson8b_aobus_pins),
 	.num_groups	= ARRAY_SIZE(meson8b_aobus_groups),
 	.num_funcs	= ARRAY_SIZE(meson8b_aobus_functions),
+	.num_banks	= ARRAY_SIZE(meson8b_aobus_banks),
 };
