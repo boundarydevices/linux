@@ -271,6 +271,6 @@
 #define CLKID_SARADC_GATE (CLKID_MISC_BASE + 25)
 #define CLKID_SARADC_COMP (CLKID_MISC_BASE + 26)
 
-#define NR_CLKS				(OTHER_BASE + 106)
+#define NR_CLKS				(CLKID_SARADC_COMP + 1)
 
 #endif /* __GX_CLKC_H */
