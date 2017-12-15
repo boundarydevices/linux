@@ -593,7 +593,6 @@ static struct codec_mm_slot *codec_mm_slot_alloc(
 			if (codec_mm_get_free_size() < try_alloc_size)
 				try_alloc_size = codec_mm_get_free_size();
 			mm = codec_mm_alloc(SCATTER_MEM, try_alloc_size, 0,
-					CODEC_MM_FLAGS_CMA_FIRST |
 					CODEC_MM_FLAGS_FOR_VDECODER |
 					CODEC_MM_FLAGS_FOR_SCATTER |
 					(smgt->tvp_mode ?
