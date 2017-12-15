@@ -176,6 +176,15 @@
 		storage_get_enctype = <0x8200006B>;
 		storage_version = <0x8200006C>;
 	};
+
+	rng {
+		compatible = "amlogic,meson-rng";
+		status = "okay";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		reg = <0x0 0xff634500 0x0 0x4>;
+	};
+
 	mailbox: mhu@c883c400 {
 		compatible = "amlogic, meson_mhu";
 		reg = <0x0 0xff63c400 0x0 0x4c>,   /* MHU registers */
@@ -1090,3 +1099,4 @@
 	};
 
 }; /* end of pinctrl_periphs */
+

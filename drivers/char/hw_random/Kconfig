@@ -399,7 +399,6 @@ config HW_RANDOM_PIC32
 config HW_RANDOM_MESON
 	tristate "Amlogic Meson Random Number Generator support"
 	depends on HW_RANDOM
-	depends on ARCH_MESON || COMPILE_TEST
 	default y
 	---help---
 	  This driver provides kernel-side support for the Random Number
