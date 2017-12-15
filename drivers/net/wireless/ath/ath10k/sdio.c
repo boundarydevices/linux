@@ -251,7 +251,7 @@ static int ath10k_sdio_write32(struct ath10k *ar, u32 addr, u32 val)
 
 	*buf = cpu_to_le32(val);
 
-	ret = ath10k_sdio_write(ar, addr, &val, sizeof(val), true);
+	ret = ath10k_sdio_write(ar, addr, buf, sizeof(*buf), true);
 	if (ret) {
 		ath10k_warn(ar, "failed to write 0x%x to address 0x%x: %d\n",
 			    val, addr, ret);
@@ -303,7 +303,7 @@ static int ath10k_sdio_read32(struct ath10k *ar, u32 addr, u32 *val)
 	if (!buf)
 		return -ENOMEM;
 
-	ret = ath10k_sdio_read(ar, addr, buf, sizeof(*val), true);
+	ret = ath10k_sdio_read(ar, addr, buf, sizeof(*buf), true);
 	if (ret) {
 		ath10k_warn(ar, "failed to read from address 0x%x: %d\n",
 			    addr, ret);
