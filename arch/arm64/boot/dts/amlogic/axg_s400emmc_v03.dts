@@ -695,7 +695,7 @@
 	};
 
 	partitions: partitions{
-		parts = <11>;
+		parts = <12>;
 		part-0 = <&logo>;
 		part-1 = <&recovery>;
 		part-2 = <&rsv>;
@@ -706,7 +706,8 @@
 		part-7 = <&boot>;
 		part-8 = <&system>;
 		part-9 = <&cache>;
-		part-10 = <&data>;
+		part-10 = <&udisk>;
+		part-11 = <&data>;
 
 		logo:logo{
 			pname = "logo";
@@ -758,6 +759,12 @@
 		cache:cache
 		{
 			pname = "cache";
+			size = <0x0 0x20000000>;
+			mask = <2>;
+		};
+		udisk:udisk
+		{
+			pname = "udisk";
 			size = <0x0 0x20000000>;
 			mask = <2>;
 		};
