@@ -29,6 +29,9 @@
 #define MESON_CPU_MAJOR_ID_GXLX		0x26
 #define MESON_CPU_MAJOR_ID_TXHD		0x27
 
+#define MESON_CPU_MAJOR_ID_G12A		0x28
+#define MESON_CPU_MAJOR_ID_G12B		0x29
+
 #define MESON_CPU_VERSION_LVL_MAJOR	0
 #define MESON_CPU_VERSION_LVL_MINOR	1
 #define MESON_CPU_VERSION_LVL_PACK	2
@@ -150,6 +153,11 @@ static inline bool is_meson_gxlx_cpu(void)
 static inline bool is_meson_txhd_cpu(void)
 {
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_TXHD;
+}
+
+static inline bool is_meson_g12a_cpu(void)
+{
+	return get_cpu_type() == MESON_CPU_MAJOR_ID_G12A;
 }
 
 static inline bool cpu_after_eq(unsigned int id)
