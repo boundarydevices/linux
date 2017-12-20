@@ -1440,7 +1440,27 @@
 
 		imx_ion {
 			compatible = "fsl,mxc-ion";
-			fsl,heap-id = <0>;
+
+			heap_cma@0 {
+				compatible = "fsl,cma";
+				heap-name = "cma";
+				heap-type = <4>;
+				heap-id = <0>;
+			};
+
+			heap_sys_contig@0 {
+				compatible = "fsl,sys-contig";
+				heap-name = "sys-contig";
+				heap-type = <1>;
+				heap-id = <1>;
+			};
+
+			heap_sys@0 {
+				compatible = "fsl,system";
+				heap-name = "system";
+				heap-type = <0>;
+				heap-id = <2>;
+			};
 		};
 	};
 };
