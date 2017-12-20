@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011 Google, Inc.
  * Copyright (C) 2012-2016 Freescale Semiconductor, Inc.
+ * Copyright 2017 NXP.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -27,52 +28,24 @@
 #include <linux/dma-buf.h>
 
 #include "../ion_priv.h"
+#include "../ion.h"
+#include "../ion_of.h"
 #include "../../uapi/mxc_ion.h"
 
-static struct ion_device *idev;
-static int num_heaps = 1;
-static struct ion_heap **heaps;
-static int cacheable;
+struct fsl_ion_dev {
+	struct ion_heap **heaps;
+	struct ion_device *idev;
+	struct ion_platform_data *data;
+};
 
-struct ion_platform_data *
-mxc_ion_parse_of(struct platform_device *pdev)
-{
-	struct ion_platform_data *pdata = 0;
-	const struct device_node *node = pdev->dev.of_node;
-	int ret = 0;
-	unsigned int val = 0;
-	struct ion_platform_heap *heap = NULL;
-
-	pdata = kzalloc(sizeof(struct ion_platform_data), GFP_KERNEL);
-	if (!pdata)
-		return ERR_PTR(-ENOMEM);
-
-	heap = kzalloc(sizeof(struct ion_platform_heap), GFP_KERNEL);
-	if (!heap) {
-		kfree(pdata);
-		return ERR_PTR(-ENOMEM);
-	}
-
-	heap->type = ION_HEAP_TYPE_DMA;
-	heap->priv = &pdev->dev;
-	heap->name = "mxc_ion";
-
-	pdata->heaps = heap;
-	pdata->nr = num_heaps;
-
-	ret = of_property_read_u32(node, "fsl,heap-cacheable", &val);
-	if (!ret)
-		cacheable = 1;
-
-	val = 0;
-	ret = of_property_read_u32(node, "fsl,heap-id", &val);
-	if (!ret)
-		heap->id = val;
-	else
-		heap->id = 0;
-
-	return pdata;
-}
+static struct ion_of_heap fsl_heaps[] = {
+	PLATFORM_HEAP("fsl,cma", 0, ION_HEAP_TYPE_DMA, "cma"),
+	PLATFORM_HEAP("fsl,sys-contig", 1,
+			ION_HEAP_TYPE_SYSTEM_CONTIG, "sys-contig"),
+	PLATFORM_HEAP("fsl,system", 2,
+			ION_HEAP_TYPE_SYSTEM, "system"),
+    {}
+};
 
 static long
 mxc_custom_ioctl(struct ion_client *client, unsigned int cmd, unsigned long arg)
@@ -209,68 +182,53 @@ err1:
 int
 mxc_ion_probe(struct platform_device *pdev)
 {
-	struct ion_platform_data *pdata = NULL;
-	int pdata_is_created = 0;
-	int err;
 	int i;
+	struct fsl_ion_dev *fdev = NULL;
 
-	if (pdev->dev.of_node) {
-		pdata = mxc_ion_parse_of(pdev);
-		pdata_is_created = 1;
-	} else {
-		pdata = pdev->dev.platform_data;
-	}
+	fdev = devm_kzalloc(&pdev->dev, sizeof(*fdev), GFP_KERNEL);
+	if (!fdev)
+		return -ENODEV;
 
-	if (IS_ERR_OR_NULL(pdata))
-		return PTR_ERR(pdata);
+	platform_set_drvdata(pdev, fdev);
+	fdev->idev = ion_device_create(mxc_custom_ioctl);
+	if (IS_ERR(fdev->idev))
+		return PTR_ERR(fdev->idev);
 
-	num_heaps = pdata->nr;
+	fdev->data = ion_parse_dt(pdev, fsl_heaps);
+	if (IS_ERR(fdev->data))
+		return PTR_ERR(fdev->data);
 
-	heaps = kzalloc(sizeof(struct ion_heap *) * pdata->nr, GFP_KERNEL);
-
-	idev = ion_device_create(mxc_custom_ioctl);
-	if (IS_ERR_OR_NULL(idev)) {
-		err = PTR_ERR(idev);
-		goto err;
+	fdev->heaps = devm_kzalloc(&pdev->dev,
+			sizeof(struct ion_heap *) * fdev->data->nr, GFP_KERNEL);
+	if (!fdev->heaps) {
+		ion_destroy_platform_data(fdev->data);
+		return -ENOMEM;
 	}
 
 	/* create the heaps as specified in the board file */
-	for (i = 0; i < num_heaps; i++) {
-		struct ion_platform_heap *heap_data = &pdata->heaps[i];
-
-		heaps[i] = ion_heap_create(heap_data);
-		if (IS_ERR_OR_NULL(heaps[i])) {
-			err = PTR_ERR(heaps[i]);
-			heaps[i] = NULL;
-			goto err;
+	for (i = 0; i < fdev->data->nr; i++) {
+		fdev->heaps[i] = ion_heap_create(&fdev->data->heaps[i]);
+		if (!fdev->heaps[i]) {
+			ion_destroy_platform_data(fdev->data);
+			return -ENOMEM;
 		}
-		ion_device_add_heap(idev, heaps[i]);
+		ion_device_add_heap(fdev->idev, fdev->heaps[i]);
 	}
-	platform_set_drvdata(pdev, idev);
+
 	return 0;
-err:
-	for (i = 0; i < num_heaps; i++) {
-		if (heaps[i])
-			ion_heap_destroy(heaps[i]);
-	}
-	kfree(heaps);
-	if (pdata_is_created) {
-		kfree(pdata->heaps);
-		kfree(pdata);
-	}
-	return err;
 }
 
 int
 mxc_ion_remove(struct platform_device *pdev)
 {
-	struct ion_device *idev = platform_get_drvdata(pdev);
+	struct fsl_ion_dev *fdev = platform_get_drvdata(pdev);
 	int i;
 
-	ion_device_destroy(idev);
-	for (i = 0; i < num_heaps; i++)
-		ion_heap_destroy(heaps[i]);
-	kfree(heaps);
+	for (i = 0; i < fdev->data->nr; i++)
+		ion_heap_destroy(fdev->heaps[i]);
+	ion_destroy_platform_data(fdev->data);
+	ion_device_destroy(fdev->idev);
+
 	return 0;
 }
 
