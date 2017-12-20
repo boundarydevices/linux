@@ -912,11 +912,12 @@
 	pinctrl-names="default";
 	pinctrl-0=<&ao_i2c_master_pin2>;
 
-	pca9557: pca9557@0x1f {
-		 compatible = "nxp,pca9557";
-		 reg = <0x1f>;
-		 status = "okay";
+	aml_pca9557: aml_pca9557@0x1f {
+		compatible = "aml, ledring";
+		reg = <0x1f>;
+		status = "okay";
 	};
+
 	tlv320adc3101_30: tlv320adc3101_30@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;

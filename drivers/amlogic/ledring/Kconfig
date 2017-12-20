@@ -1,0 +1,8 @@
+#
+# LEDRING drivers configuration
+#
+config AMLOGIC_LEDRING
+	bool "System ledring Support"
+	default n
+	help
+	  This option enables support for system ledring drivers.

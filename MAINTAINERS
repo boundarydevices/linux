@@ -14164,3 +14164,7 @@ AMLOGIC MKIMAGE SCRIPT
 M:	Bo Yang <bo.yang@amlogic.com>
 F:	scripts/amlogic/mkimage_32.sh
 F:	scripts/amlogic/mkimage_64.sh
+
+AMLOGIC ledring driver
+M: Renjun Xu <renjun.xu@amlogic.com>
+F: drivers/amlogic/ledring/ledring.c

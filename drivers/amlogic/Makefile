@@ -108,3 +108,5 @@ obj-$(CONFIG_AMLOGIC_M8B_SM) += secure_monitor/
 obj-$(CONFIG_AMLOGIC_TEE) += tee/
 
 obj-$(CONFIG_AMLOGIC_MEMORY_EXTEND) += memory_ext/
+
+obj-$(CONFIG_AMLOGIC_LEDRING) += ledring/
