@@ -256,7 +256,7 @@ static int pre_process_time;
 static int pre_process_time_force;
 /**/
 static int di_receiver_event_fun(int type, void *data, void *arg);
-static void di_uninit_buf(void);
+static void di_uninit_buf(unsigned int disable_mirror);
 static unsigned char is_bypass(vframe_t *vf_in);
 static void log_buffer_state(unsigned char *tag);
 /* static void put_get_disp_buf(void); */
@@ -1279,7 +1279,7 @@ static void dis2_di(void)
 		queue_in(di_pre_stru.di_inp_buf, QUEUE_IN_FREE);
 		di_pre_stru.di_inp_buf = NULL;
 	}
-	di_uninit_buf();
+	di_uninit_buf(0);
 	if (get_blackout_policy()) {
 		DI_Wr(DI_CLKG_CTRL, 0x2);
 		if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
@@ -2056,14 +2056,10 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 	return 0;
 }
 
-static void di_uninit_buf(void)
+static void keep_mirror_buffer(void)
 {
-	struct di_buf_s *p = NULL, *keep_buf;
+	struct di_buf_s *p = NULL;
 	int i = 0, ii = 0, itmp;
-
-	/* vframe_t* cur_vf = get_cur_dispbuf(); */
-	if (!queue_empty(QUEUE_DISPLAY))
-		di_post_stru.keep_buf = NULL;
 
 	queue_for_each_entry(p, ptmp, QUEUE_DISPLAY, list) {
 	if (p->di_buf[0]->type != VFRAME_TYPE_IN &&
@@ -2094,6 +2090,19 @@ static void di_uninit_buf(void)
 		break;
 	}
 	}
+
+}
+static void di_uninit_buf(unsigned int disable_mirror)
+{
+	struct di_buf_s *keep_buf = NULL;
+	int i = 0;
+
+	if (!queue_empty(QUEUE_DISPLAY) || disable_mirror)
+		di_post_stru.keep_buf = NULL;
+
+	if (disable_mirror != 1)
+		keep_mirror_buffer();
+
 	if (!IS_ERR_OR_NULL(di_post_stru.keep_buf)) {
 		keep_buf = di_post_stru.keep_buf;
 		pr_info("%s keep cur di_buf %d (",
@@ -5508,14 +5517,15 @@ static void di_unreg_process(void)
 static void di_unreg_process_irq(void)
 {
 	ulong irq_flag2 = 0;
-
+	unsigned int mirror_disable = 0;
 #if (defined ENABLE_SPIN_LOCK_ALWAYS)
 	ulong flags = 0;
 	spin_lock_irqsave(&plist_lock, flags);
 #endif
+	mirror_disable = get_blackout_policy();
 	di_lock_irqfiq_save(irq_flag2);
 	di_print("%s: di_uninit_buf\n", __func__);
-	di_uninit_buf();
+	di_uninit_buf(mirror_disable);
 	init_flag = 0;
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 /* stop rdma */
@@ -5532,7 +5542,7 @@ static void di_unreg_process_irq(void)
 	} else
 		DI_Wr(DI_CLKG_CTRL, 0xf60000);
 /* nr/blend0/ei0/mtn0 clock gate */
-	if (get_blackout_policy()) {
+	if (mirror_disable) {
 		di_hw_disable(mcpre_en);
 		if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
 			enable_di_post_mif(GATE_OFF);
@@ -5806,6 +5816,8 @@ static void di_reg_process_irq(void)
 					(vframe->source_type),
 					is_progressive(vframe),
 					vframe->sig_fmt);
+		if (de_devp->flags & DI_LOAD_REG_FLAG)
+			up(&di_sema);
 		init_flag = 1;
 		di_pre_stru.reg_req_flag_irq = 1;
 	}
@@ -5999,6 +6011,19 @@ static int di_task_handle(void *data)
 			}
 			mutex_unlock(&de_devp->cma_mutex);
 			#endif
+			if (de_devp->flags & DI_LOAD_REG_FLAG) {
+				struct di_pq_parm_s *pos = NULL, *tmp = NULL;
+
+				mutex_lock(&de_devp->pq_lock);
+				list_for_each_entry_safe(pos, tmp,
+					&de_devp->pq_table_list, list) {
+					di_load_regs(pos);
+					list_del(&pos->list);
+					di_pq_parm_destroy(pos);
+				}
+				de_devp->flags &= ~DI_LOAD_REG_FLAG;
+				mutex_unlock(&de_devp->pq_lock);
+			}
 		}
 	}
 
@@ -7187,7 +7212,7 @@ static int di_remove(struct platform_device *pdev)
 	vf_unreg_provider(&di_vf_prov);
 	vf_unreg_receiver(&di_vf_recv);
 
-	di_uninit_buf();
+	di_uninit_buf(1);
 /* Remove the cdev */
 	device_remove_file(di_devp->dev, &dev_attr_config);
 	device_remove_file(di_devp->dev, &dev_attr_debug);

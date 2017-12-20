@@ -1933,13 +1933,11 @@ void enable_di_post_mif(enum gate_mode_e mode)
 
 void di_hw_disable(bool mc_enable)
 {
-	DI_Wr(DI_PRE_CTRL, 0x3 << 30);
 	enable_di_pre_mif(false, mc_enable);
-	DI_Wr(DI_POST_CTRL, 0x3 << 30);
 	DI_Wr(DI_POST_SIZE, (32-1) | ((128-1) << 16));
-	DI_Wr(DI_IF1_GEN_REG, 0x3 << 30);
+	DI_Wr_reg_bits(DI_IF1_GEN_REG, 0, 0, 1);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL))
-		DI_Wr(DI_IF2_GEN_REG, 0x3 << 30);
+		DI_Wr_reg_bits(DI_IF2_GEN_REG, 0, 0, 1);
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB) {
 		/* disable ma,enable if0 to vpp,enable afbc to vpp */
 		if (Rd_reg_bits(VIU_MISC_CTRL0, 16, 4) != 0)

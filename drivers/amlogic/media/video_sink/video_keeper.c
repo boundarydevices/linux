@@ -812,10 +812,6 @@ static unsigned int vf_keep_current_locked(
 		pr_info("keep exit is osd\n");
 		return 0;
 	}
-	if (READ_VCBUS_REG(DI_IF1_GEN_REG) & 0x1) {
-		pr_info("keep exit is di\n");
-		return 0;
-	}
 	if (get_video_debug_flags() & DEBUG_FLAG_TOGGLE_SKIP_KEEP_CURRENT) {
 		pr_info("keep exit is skip current\n");
 		return 0;
@@ -826,6 +822,10 @@ static unsigned int vf_keep_current_locked(
 #endif
 	if (get_blackout_policy()) {
 		pr_info("keep exit is skip current\n");
+		return 0;
+	}
+	if (VSYNC_RD_MPEG_REG(DI_IF1_GEN_REG) & 0x1) {
+		pr_info("keep exit is di\n");
 		return 0;
 	}
 
