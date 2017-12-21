@@ -42,27 +42,27 @@ static struct work_struct ledring_work;
 static int ledring_speed;
 static struct kobject *ledring_kobj;
 static struct i2c_client *g_client;
+static int m_temp = -1;
 static int m_index;
-static int tmp1_rgb_style, tmp2_rgb_style, tmp3_rgb_style;
-static int tmp4_rgb_style, tmp5_rgb_style, tmp6_rgb_style;
 static int timeout_flag;
 static int timeout;
 
 static struct _style {
-	int num;
-	int speed;
-	int timeout;
-	int style[6][6];
+	int num; /*the number of led*/
+	int rgbflag; /*color flag. 0: signal color 1: rgb color */
+	int speed; /*speed. N(ms)*/
+	int timeout; /*timeout N(s)*/
+	int style[6][6]; /*style data*/
 } styleData = {
-	6, DEFAULT_SPEED, 0,
+	6, 0, DEFAULT_SPEED, 0,
 	{
-	       /*rgb1 rgb2 rgb3 rgb4 rgb5 rgb6*/
-		{0x80, 0x0, 0x0, 0x0, 0x0, 0x0},
-		{0x40, 0x0, 0x0, 0x0, 0x0, 0x0},
-		{0x20, 0x0, 0x0, 0x0, 0x0, 0x0},
-		{0x10, 0x0, 0x0, 0x0, 0x0, 0x0},
-		{0x08, 0x0, 0x0, 0x0, 0x0, 0x0},
-		{0x04, 0x0, 0x0, 0x0, 0x0, 0x0},
+	       /*led1  led2  led3  led4  led5  led6*/
+		{0x01, 0x00, 0x00, 0x00, 0x00, 0x00}, /*state1*/
+		{0x00, 0x01, 0x00, 0x00, 0x00, 0x00}, /*state2*/
+		{0x00, 0x00, 0x01, 0x00, 0x00, 0x00}, /*state3*/
+		{0x00, 0x00, 0x00, 0x01, 0x00, 0x00}, /*state4*/
+		{0x00, 0x00, 0x00, 0x00, 0x01, 0x00}, /*state5*/
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, /*state6*/
 	},
 };
 
@@ -186,26 +186,31 @@ static int leds_init(void)
 
 static int leds_light(void)
 {
-	int ret;
+	int ret = 0;
+	int i = 0;
+	int temp = 0;
 
-	if ((tmp1_rgb_style != styleData.style[m_index][0]) ||
-		(tmp2_rgb_style != styleData.style[m_index][1]) ||
-		(tmp3_rgb_style != styleData.style[m_index][2]) ||
-		(tmp4_rgb_style != styleData.style[m_index][3]) ||
-		(tmp5_rgb_style != styleData.style[m_index][4]) ||
-		(tmp6_rgb_style != styleData.style[m_index][5])) {
-		ret = i2c_smbus_write_byte_data(g_client,
-			addr_led_reg1, styleData.style[m_index][0]);
-		if (ret < 0)
-			pr_err("led lit fail!\n");
-		tmp1_rgb_style = styleData.style[m_index][0];
-		tmp2_rgb_style = styleData.style[m_index][1];
-		tmp3_rgb_style = styleData.style[m_index][2];
-		tmp4_rgb_style = styleData.style[m_index][3];
-		tmp5_rgb_style = styleData.style[m_index][4];
-		tmp6_rgb_style = styleData.style[m_index][5];
+	if (styleData.rgbflag == 1) {
+		for (i = 0; i < styleData.num; i++) {
+			ret = i2c_smbus_write_byte_data(g_client,
+				addr_led_reg1, styleData.style[m_index][i]);
+			if (ret < 0)
+				pr_err("led lit fail!\n");
+		}
+	} else if (styleData.rgbflag == 0) {
+		for (i = 0; i < styleData.num; i++) {
+			temp |= styleData.style[m_index][i]
+				<< (styleData.num-i+1);
+		}
+
+		if (m_temp != temp) {
+			ret = i2c_smbus_write_byte_data(g_client,
+				addr_led_reg1, temp);
+			if (ret < 0)
+				pr_err("led lit fail!\n");
+			m_temp = temp;
+		}
 	}
-
 	if (++m_index > 5)
 		m_index = 0;
 
