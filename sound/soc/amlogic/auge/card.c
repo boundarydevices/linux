@@ -680,7 +680,7 @@ static int aml_card_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id aml_of_match[] = {
-	{ .compatible = "amlogic, sound-card", },
+	{ .compatible = "amlogic, axg-sound-card", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, aml_of_match);

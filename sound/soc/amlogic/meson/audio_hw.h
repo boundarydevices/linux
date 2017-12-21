@@ -65,6 +65,27 @@ struct _aiu_958_raw_setting_t {
 	struct _aiu_958_channel_status_t *chan_stat;
 };
 
+struct aml_chipset_info {
+	/* is tv chipset */
+	bool is_tv_chipset;
+	/* audin clk support */
+	bool audin_clk_support;
+	/* audin(i2s in) for external codec */
+	bool audin_ext_support;
+	/* audin (i2s in) check l/r invert */
+	bool audin_lr_invert;
+	/* aud_buf gate is removed*/
+	bool audbuf_gate_rm;
+	/* split mode supoort completely */
+	bool split_complete;
+	/* spdif pao mode */
+	bool spdif_pao;
+	/* spdif in 88k/176k*/
+	bool spdifin_more_rate;
+	/* cpudai fmt polarity */
+	unsigned int fmt_polarity;
+};
+
 enum {
 	I2SIN_MASTER_MODE = 0,
 	I2SIN_SLAVE_MODE = 1 << 0,
@@ -78,6 +99,7 @@ enum {
 	AML_AUDIO_I2SOUT = 1 << 3,
 	AML_AUDIO_PCMIN = 1 << 4,
 	AML_AUDIO_PCMOUT = 1 << 5,
+	AML_AUDIO_I2SIN2 = 1 << 6,
 };
 
 #define AUDIO_CLK_256FS             0
@@ -115,16 +137,18 @@ extern unsigned int IEC958_MODE;
 extern unsigned int I2S_MODE;
 extern unsigned int audio_in_source;
 
-void set_i2s_source(unsigned int source);
 void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel);
 void audio_set_958outbuf(u32 addr, u32 size, int flag);
 void audio_in_i2s_set_buf(u32 addr, u32 size,
 	u32 i2s_mode, u32 i2s_sync, u32 din_sel, u32 ch);
 void audio_in_spdif_set_buf(u32 addr, u32 size, u32 src);
+void audio_in_i2s2_set_buf(u32 addr, u32 size, u32 src, u32 ch);
 void audio_in_i2s_enable(int flag);
 void audio_in_spdif_enable(int flag);
+void audio_in_i2s2_enable(int flag);
 unsigned int audio_in_i2s_rd_ptr(void);
 unsigned int audio_in_i2s_wr_ptr(void);
+unsigned int audio_in_i2s2_wr_ptr(void);
 unsigned int audio_in_spdif_wr_ptr(void);
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 void audio_set_i2s_mode(u32 mode, unsigned int channel);
@@ -139,7 +163,7 @@ void audio_i2s_unmute(void);
 void audio_i2s_mute(void);
 void aml_audio_i2s_unmute(void);
 void aml_audio_i2s_mute(void);
-void audio_util_set_dac_i2s_format(unsigned int format);
+void audio_util_set_i2s_format(unsigned int format);
 void audio_util_set_dac_958_format(unsigned int format);
 void audio_set_958_mode(
 	unsigned int mode,
@@ -159,6 +183,16 @@ unsigned int audio_spdifout_pg_enable(unsigned char enable);
 unsigned int audio_aiu_pg_enable(unsigned char enable);
 void audio_mute_left_right(unsigned int flag);
 void audio_i2s_958_same_source(unsigned int same);
+void set_hdmi_tx_clk_source(int source);
+
+extern void audio_in_clk_sel(void);
+
+extern void aml_chipset_update_info(struct aml_chipset_info *chipset_info);
+extern bool is_meson_tv_chipset(void);
+extern bool is_audin_ext_support(void);
+extern bool is_audin_lr_invert_check(void);
+extern bool is_audbuf_gate_rm(void);
+extern void chipset_set_spdif_pao(void);
 
 extern unsigned int IEC958_mode_codec;
 extern unsigned int clk81;

@@ -14,6 +14,8 @@
  * more details.
  *
  */
+#undef pr_fmt
+#define pr_fmt(fmt) "snd_i2s: " fmt
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -44,6 +46,7 @@
 #include "audio_hw.h"
 #include <linux/amlogic/media/sound/aiu_regs.h>
 #include <linux/amlogic/media/sound/audin_regs.h>
+#include <linux/amlogic/media/sound/audio_iomap.h>
 
 /*
  * timer for i2s data update, hw timer, hrtimer, timer
@@ -71,6 +74,9 @@ EXPORT_SYMBOL(aml_i2s_playback_channel);
 
 unsigned int aml_i2s_playback_format = 16;
 EXPORT_SYMBOL(aml_i2s_playback_format);
+
+unsigned int aml_i2s_playback_running_flag;
+EXPORT_SYMBOL(aml_i2s_playback_running_flag);
 
 static int trigger_underrun;
 void aml_audio_hw_trigger(void)
@@ -127,10 +133,10 @@ static const struct snd_pcm_hardware aml_i2s_capture = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE |
 	    SNDRV_PCM_FMTBIT_S32_LE,
 	.period_bytes_min = 64,
-	.period_bytes_max = 32 * 1024,
+	.period_bytes_max = 32 * 1024 * 2,
 	.periods_min = 2,
 	.periods_max = 1024,
-	.buffer_bytes_max = 64 * 1024,
+	.buffer_bytes_max = 64 * 1024 * 4,
 
 	.rate_min = 8000,
 	.rate_max = 48000,
@@ -237,7 +243,7 @@ static int aml_i2s_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 		buf->bytes = size;
 		/* malloc tmp buffer */
 		size = aml_i2s_capture.period_bytes_max;
-		tmp_buf->buffer_start = kzalloc(size, GFP_KERNEL);
+		tmp_buf->buffer_start = kzalloc(size + 64, GFP_KERNEL);
 		if (tmp_buf->buffer_start == NULL) {
 			dev_err(pcm->card->dev, "alloc capture tmp buffer error\n");
 			kfree(tmp_buf);
@@ -251,6 +257,7 @@ static int aml_i2s_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 
 }
 #endif
+
 /*--------------------------------------------------------------------------
  * ISR
  *--------------------------------------------------------------------------
@@ -301,8 +308,10 @@ static int aml_i2s_prepare(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_runtime_data *prtd = runtime->private_data;
 	struct audio_stream *s = &prtd->s;
+#ifndef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
 	struct aml_audio_buffer *tmp_buf = buf->private_data;
+#endif
 
 	if (s && s->device_type == AML_AUDIO_I2SOUT && trigger_underrun) {
 		dev_info(substream->pcm->card->dev, "clear i2s out trigger underrun\n");
@@ -317,7 +326,15 @@ static int aml_i2s_prepare(struct snd_pcm_substream *substream)
 		else if (runtime->format == SNDRV_PCM_FORMAT_S24_LE)
 			aml_i2s_playback_format = 24;
 	}
+#ifndef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+#ifndef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	tmp_buf->cached_len = 0;
+#endif
+	tmp_buf->find_start = 0;
+	tmp_buf->invert_flag = 0;
+	tmp_buf->cached_sample = 0;
+#endif
+
 	return 0;
 }
 
@@ -329,12 +346,14 @@ static irqreturn_t audio_isr_handler(int irq, void *data)
 	struct snd_pcm_substream *substream = prtd->substream;
 
 	aml_i2s_timer_callback((unsigned long)substream);
+
 	return IRQ_HANDLED;
 }
 
 static int snd_free_hw_timer_irq(void *data)
 {
 	free_irq(INT_TIMER_D, data);
+
 	return 0;
 }
 
@@ -343,11 +362,11 @@ static int snd_request_hw_timer(void *data)
 	int ret = 0;
 
 	if (hw_timer_init == 0) {
-		aml_write_cbus(ISA_TIMERD, TIMER_COUNT);
-		aml_cbus_update_bits(ISA_TIMER_MUX, 3 << 6,
+		aml_isa_write(ISA_TIMERD, TIMER_COUNT);
+		aml_isa_update_bits(ISA_TIMER_MUX, 3 << 6,
 					TIMERD_RESOLUTION << 6);
-		aml_cbus_update_bits(ISA_TIMER_MUX, 1 << 15, TIMERD_MODE << 15);
-		aml_cbus_update_bits(ISA_TIMER_MUX, 1 << 19, 1 << 19);
+		aml_isa_update_bits(ISA_TIMER_MUX, 1 << 15, TIMERD_MODE << 15);
+		aml_isa_update_bits(ISA_TIMER_MUX, 1 << 19, 1 << 19);
 		hw_timer_init = 1;
 	}
 	ret = request_irq(INT_TIMER_D, audio_isr_handler,
@@ -493,7 +512,6 @@ static snd_pcm_uframes_t aml_i2s_pointer(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_runtime_data *prtd = runtime->private_data;
 	struct audio_stream *s = &prtd->s;
-
 	unsigned int addr, ptr;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
@@ -503,11 +521,11 @@ static snd_pcm_uframes_t aml_i2s_pointer(struct snd_pcm_substream *substream)
 			ptr = read_iec958_rd_ptr();
 		addr = ptr - s->I2S_addr;
 		return bytes_to_frames(runtime, addr);
-	}
-
-	{
+	} else {
 		if (s->device_type == AML_AUDIO_I2SIN)
 			ptr = audio_in_i2s_wr_ptr();
+		else if (s->device_type == AML_AUDIO_I2SIN2)
+			ptr = audio_in_i2s2_wr_ptr();
 		else
 			ptr = audio_in_spdif_wr_ptr();
 		addr = ptr - s->I2S_addr;
@@ -562,6 +580,8 @@ static void aml_i2s_timer_callback(unsigned long data)
 	} else {
 		if (s->device_type == AML_AUDIO_I2SIN)
 			last_ptr = audio_in_i2s_wr_ptr();
+		else if (s->device_type == AML_AUDIO_I2SIN2)
+			last_ptr = audio_in_i2s2_wr_ptr();
 		else
 			last_ptr = audio_in_spdif_wr_ptr();
 
@@ -677,7 +697,12 @@ static int aml_i2s_open(struct snd_pcm_substream *substream)
 static int aml_i2s_close(struct snd_pcm_substream *substream)
 {
 	struct aml_runtime_data *prtd = substream->runtime->private_data;
+	struct audio_stream *s = &prtd->s;
 
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (s->device_type == AML_AUDIO_I2SOUT)
+			aml_i2s_playback_running_flag = 0;
+	}
 #ifdef USE_HW_TIMER
 	snd_free_hw_timer_irq(prtd);
 #endif
@@ -709,6 +734,7 @@ static int aml_i2s_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 	int cached_len = tmp_buf->cached_len;
 	char *cache_buffer_bytes = tmp_buf->cache_buffer_bytes;
 #endif
+
 	n = frames_to_bytes(runtime, count);
 	if (n > tmp_buf->buffer_size) {
 		dev_err(dev, "FATAL_ERR:UserData/%d > buffer_size/%d\n",
@@ -756,8 +782,15 @@ static int aml_i2s_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 	/*end of mask*/
 #endif
 
-	if (s->device_type == AML_AUDIO_I2SOUT)
+	if (s->device_type == AML_AUDIO_I2SOUT) {
 		aml_i2s_alsa_write_addr = offset;
+#ifdef CONFIG_AMLOGIC_AMAUDIO2
+		if (amaudio2_read_enable == 1 && get_pcm_cache_space() > n
+				&& amaudio2_enable == 0)
+			cache_pcm_write(buf, n);
+#endif
+		aml_i2s_playback_running_flag = 1;
+	}
 
 	if (access_ok(VERIFY_READ, buf, frames_to_bytes(runtime, count))) {
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
@@ -932,6 +965,30 @@ static int aml_i2s_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 	return res;
 }
 
+static int find_start_position(void *ubuf, int bytes, int *find_start)
+{
+	uint32_t *ptr = (uint32_t *)ubuf;
+	int i = 0, revert = 0, pos = 0;
+	uint32_t sample2 = *ptr++;
+	uint32_t sample1 = 0;
+
+	for (i = 0; i < (bytes - 4); i += 4) {
+		sample1 = sample2;
+		sample2 = *ptr++;
+		if (((sample1 >> 28) & 0xf) == 0xf &&
+				((sample2 >> 28) & 0xf) == 0x3) {
+			if (pos % 2 == 1)
+				revert = 1;
+			*find_start = 1;
+			pr_info("first start position = %d, revert = %d\n",
+					pos, revert);
+			break;
+		}
+		pos++;
+	}
+	return revert;
+}
+
 static int aml_i2s_copy_capture(struct snd_pcm_runtime *runtime, int channel,
 				snd_pcm_uframes_t pos,
 				void __user *buf, snd_pcm_uframes_t count,
@@ -953,6 +1010,28 @@ static int aml_i2s_copy_capture(struct snd_pcm_runtime *runtime, int channel,
 			if (pos % 8)
 				dev_err(dev, "audio data unligned\n");
 
+			if (is_audin_lr_invert_check()
+					&& audio_in_source == 0
+					&& tmp_buf->find_start == 0) {
+				char *hwbuf = runtime->dma_area + offset * 2;
+				int32_t *tfrom = (int32_t *)hwbuf;
+				int32_t *to = (int32_t *)ubuf;
+				int32_t *left = tfrom;
+				int32_t *right = tfrom + 8;
+
+				for (j = 0; j < n * 2; j += 64) {
+					for (i = 0; i < 8; i++) {
+						*to++ = (int32_t)(*left++);
+						*to++ = (int32_t)(*right++);
+					}
+					left += 8;
+					right += 8;
+				}
+				tmp_buf->invert_flag =
+						find_start_position(ubuf, n,
+						&(tmp_buf->find_start));
+			}
+
 			if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
 				char *hwbuf = runtime->dma_area + offset * 2;
 				int32_t *tfrom = (int32_t *)hwbuf;
@@ -962,6 +1041,10 @@ static int aml_i2s_copy_capture(struct snd_pcm_runtime *runtime, int channel,
 
 				if ((n * 2) % 64)
 					dev_err(dev, "audio data unaligned 64 bytes\n");
+
+				if (tmp_buf->invert_flag == 1)
+					*to++ = (int16_t)
+						(tmp_buf->cached_sample);
 
 				for (j = 0; j < n * 2; j += 64) {
 					for (i = 0; i < 8; i++) {
@@ -973,6 +1056,10 @@ static int aml_i2s_copy_capture(struct snd_pcm_runtime *runtime, int channel,
 					left += 8;
 					right += 8;
 				}
+
+				if (tmp_buf->invert_flag == 1)
+					tmp_buf->cached_sample = *(to - 1);
+
 				/* clean hw buffer */
 				memset(hwbuf, 0, n * 2);
 			} else {
@@ -984,6 +1071,10 @@ static int aml_i2s_copy_capture(struct snd_pcm_runtime *runtime, int channel,
 
 				if (n % 64)
 					dev_err(dev, "audio data unaligned 64 bytes\n");
+
+				if (tmp_buf->invert_flag == 1)
+					*to++ = (int32_t)
+						(tmp_buf->cached_sample);
 
 				if (runtime->format == SNDRV_PCM_FORMAT_S24_LE)
 					r_shift = 0;
@@ -998,6 +1089,10 @@ static int aml_i2s_copy_capture(struct snd_pcm_runtime *runtime, int channel,
 					left += 8;
 					right += 8;
 				}
+
+				if (tmp_buf->invert_flag == 1)
+					tmp_buf->cached_sample = *(to - 1);
+
 				memset(hwbuf, 0, n);
 			}
 		} else if (runtime->channels == 8) {
@@ -1062,6 +1157,7 @@ int aml_i2s_silence(struct snd_pcm_substream *substream, int channel,
 	n = frames_to_bytes(runtime, count);
 	ppos = runtime->dma_area + frames_to_bytes(runtime, pos);
 	memset(ppos, 0, n);
+
 	return 0;
 }
 
@@ -1171,6 +1267,7 @@ static int aml_output_swap_get_enum(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	ucontrol->value.enumerated.item[0] = read_i2s_mute_swap_reg();
+
 	return 0;
 }
 
@@ -1178,6 +1275,7 @@ static int aml_output_swap_set_enum(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	audio_i2s_swap_left_right(ucontrol->value.enumerated.item[0]);
+
 	return 0;
 }
 
@@ -1186,11 +1284,14 @@ static int aml_audio_set_i2s_mute(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
 	aml_audio_i2s_mute_flag = ucontrol->value.integer.value[0];
+
 	pr_info("aml_audio_i2s_mute_flag: flag=%d\n", aml_audio_i2s_mute_flag);
+
 	if (aml_audio_i2s_mute_flag)
 		aml_audio_i2s_mute();
 	else
 		aml_audio_i2s_unmute();
+
 	return 0;
 }
 
@@ -1198,6 +1299,7 @@ static int aml_audio_get_i2s_mute(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
 	ucontrol->value.integer.value[0] = aml_audio_i2s_mute_flag;
+
 	return 0;
 }
 
@@ -1233,13 +1335,13 @@ static int aml_soc_platform_probe(struct platform_device *pdev)
 static int aml_soc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
+
 	return 0;
 }
 
 #ifdef CONFIG_OF
 static const struct of_device_id amlogic_audio_dt_match[] = {
-	{.compatible = "amlogic, aml-i2s",
-	 },
+	{.compatible = "amlogic, aml-i2s",},
 	{},
 };
 #else
@@ -1249,10 +1351,12 @@ static const struct of_device_id amlogic_audio_dt_match[] = {
 #ifdef CONFIG_HIBERNATION
 static unsigned long isa_timerd_saved;
 static unsigned long isa_timerd_mux_saved;
+
 static int aml_i2s_freeze(struct device *dev)
 {
-	isa_timerd_saved = aml_read_cbus(ISA_TIMERD);
-	isa_timerd_mux_saved = aml_read_cbus(ISA_TIMER_MUX);
+	isa_timerd_saved = aml_isa_read(ISA_TIMERD);
+	isa_timerd_mux_saved = aml_isa_read(ISA_TIMER_MUX);
+
 	return 0;
 }
 
@@ -1263,8 +1367,9 @@ static int aml_i2s_thaw(struct device *dev)
 
 static int aml_i2s_restore(struct device *dev)
 {
-	aml_write_cbus(ISA_TIMERD, isa_timerd_saved);
-	aml_write_cbus(ISA_TIMER_MUX, isa_timerd_mux_saved);
+	aml_isa_write(ISA_TIMERD, isa_timerd_saved);
+	aml_isa_write(ISA_TIMER_MUX, isa_timerd_mux_saved);
+
 	return 0;
 }
 
@@ -1277,11 +1382,11 @@ const struct dev_pm_ops aml_i2s_pm = {
 
 static struct platform_driver aml_i2s_driver = {
 	.driver = {
-		.name = "aml-i2s",
-		.owner = THIS_MODULE,
+		.name           = "aml-i2s",
+		.owner          = THIS_MODULE,
 		.of_match_table = amlogic_audio_dt_match,
 #ifdef CONFIG_HIBERNATION
-		.pm     = &aml_i2s_pm,
+		.pm             = &aml_i2s_pm,
 #endif
 		},
 

@@ -1,0 +1,16 @@
+# AML AUDIO control drivers
+
+menu "Audio Interface"
+config	AMLOGIC_AMAUDIO
+	bool "Amlogic Audio Interface"
+    default n
+    depends on SOUND
+    depends on SND_SOC
+    depends on SND
+    depends on AMLOGIC_AUDIO_DSP
+    #depends on SND_AMLOGIC_SOC
+    #depends on SWITCH
+	help
+		"Amlogic Audio Interface"
+
+endmenu

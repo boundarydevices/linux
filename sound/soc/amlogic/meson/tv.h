@@ -27,6 +27,15 @@
 #define AML_I2C_BUS_C 3
 #define AML_I2C_BUS_D 4
 
+struct aml_card_info {
+	/* tv chipset*/
+	struct aml_chipset_info chipset_info;
+	/*init, such as EQ, DRC, controls, parse channel mask */
+	int (*chipset_init)(struct snd_soc_card *card);
+	int (*set_audin_source)(int audin_src);
+	int (*set_resample_param)(int index);
+};
+
 struct aml_audio_private_data {
 	int clock_en;
 	bool suspended;
@@ -50,20 +59,15 @@ struct aml_audio_private_data {
 	int amp_mute_inv;
 	struct clk *clk;
 	int sleep_time;
-	struct work_struct pinmux_work;
+	struct work_struct init_work;
 	int aml_EQ_enable;
 	int aml_DRC_enable;
-};
 
-struct aml_audio_codec_info {
-	const char *name;
-	const char *status;
-	struct device_node *p_node;
-	unsigned int i2c_bus_type;
-	unsigned int i2c_addr;
-	unsigned int id_reg;
-	unsigned int id_val;
-	unsigned int capless;
+	/* snd card */
+	struct snd_card card;
+
+	/* tv info */
+	struct aml_card_info *cardinfo;
 };
 
 struct codec_info {
@@ -71,9 +75,9 @@ struct codec_info {
 	char name_bus[I2C_NAME_SIZE];
 };
 
-struct codec_probe_priv {
-	int num_eq;
-	struct tas57xx_eq_cfg *eq_configs;
-};
-
+#ifdef CONFIG_AMLOGIC_AMAUDIO2
+extern int External_Mute(int mute_flag);
+#else
+int External_Mute(int mute_flag) { return 0; }
+#endif
 #endif

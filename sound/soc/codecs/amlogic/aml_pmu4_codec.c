@@ -55,7 +55,7 @@ struct pmu4_audio_init_reg {
 #define AML1220_PMU_CTR_04 0x05
 
 static struct pmu4_audio_init_reg init_list[] = {
-	{PMU4_BLOCK_ENABLE, 0xBCF6},
+	{PMU4_BLOCK_ENABLE, 0xBCFF},
 	{PMU4_AUDIO_CONFIG, 0x3400},
 	{PMU4_PGA_IN_CONFIG, 0x2929},
 	{PMU4_ADC_VOL_CTR, 0x5050},
@@ -233,14 +233,14 @@ static const struct snd_soc_dapm_widget pmu4_audio_dapm_widgets[] = {
 			 PMU4_DACR_EN, 0),
 
 	/*DRV output */
-	SND_SOC_DAPM_OUT_DRV("LOLP_OUT_EN", PMU4_BLOCK_ENABLE,
-			     PMU4_LOLP_EN, 0, NULL, 0),
-	SND_SOC_DAPM_OUT_DRV("LOLN_OUT_EN", PMU4_BLOCK_ENABLE,
-			     PMU4_LOLN_EN, 0, NULL, 0),
-	SND_SOC_DAPM_OUT_DRV("LORP_OUT_EN", PMU4_BLOCK_ENABLE,
-			     PMU4_LORP_EN, 0, NULL, 0),
-	SND_SOC_DAPM_OUT_DRV("LORN_OUT_EN", PMU4_BLOCK_ENABLE,
-			     PMU4_LORN_EN, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("LOLP_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("LOLN_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("LORP_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("LORN_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
 
 	/*MUX output source select */
 	SND_SOC_DAPM_MUX("Lineout left P switch", SND_SOC_NOPM,
@@ -351,7 +351,7 @@ static int aml_pmu4_audio_set_bias_level(struct snd_soc_codec *codec,
 
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->component.dapm.bias_level == SND_SOC_BIAS_OFF) {
-#if 0 /*xang_kernel44_tmp*/
+#if 0 /*tmp_mask_for_kernel_4_4*/
 			codec->cache_only = false;
 			codec->cache_sync = 1;
 #endif

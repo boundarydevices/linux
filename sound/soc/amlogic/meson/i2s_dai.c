@@ -14,6 +14,8 @@
  * more details.
  *
  */
+#undef pr_fmt
+#define pr_fmt(fmt) "snd_i2s_dai: " fmt
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -38,6 +40,7 @@
 #include <sound/control.h>
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
+#include <linux/amlogic/media/sound/audin_regs.h>
 #include "i2s_dai.h"
 #include "pcm.h"
 #include "i2s.h"
@@ -45,7 +48,7 @@
 #include <linux/amlogic/media/sound/aout_notify.h>
 #include "spdif_dai.h"
 
-struct aml_dai_info dai_info[3] = { {0} };
+#define AOUT_EVENT_IEC_60958_PCM 0x1
 
 /* extern int set_i2s_iec958_samesource(int enable);
  *
@@ -102,7 +105,10 @@ static int aml_dai_i2s_startup(struct snd_pcm_substream *substream,
 			== SNDRV_PCM_STREAM_PLAYBACK) {
 		s->device_type = AML_AUDIO_I2SOUT;
 	} else {
-		s->device_type = AML_AUDIO_I2SIN;
+		if (is_audin_ext_support())
+			s->device_type = AML_AUDIO_I2SIN2;
+		else
+			s->device_type = AML_AUDIO_I2SIN;
 	}
 	return 0;
  out:
@@ -116,23 +122,30 @@ static void aml_dai_i2s_shutdown(struct snd_pcm_substream *substream,
 		aml_spdif_play(1);
 }
 
-#define AOUT_EVENT_IEC_60958_PCM 0x1
 static int aml_i2s_set_amclk(struct aml_i2s *i2s, unsigned long rate)
 {
 	int ret = 0;
 
 	ret = clk_set_rate(i2s->clk_mpll, rate * 10);
-	if (ret)
+	if (ret) {
+		pr_info("Cannot set i2s mpll\n");
 		return ret;
+	}
 	ret = clk_set_parent(i2s->clk_mclk, i2s->clk_mpll);
-	if (ret)
+	if (ret) {
+		pr_info("Cannot set i2s mclk parent\n");
 		return ret;
+	}
 
 	ret = clk_set_rate(i2s->clk_mclk, rate);
-	if (ret)
+	if (ret) {
+		pr_info("Cannot set i2s mclk %lu\n", rate);
 		return ret;
+	}
 
 	audio_set_i2s_clk_div();
+	set_hdmi_tx_clk_source(2);
+	audio_util_set_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
 
 	return 0;
 }
@@ -146,29 +159,47 @@ static int aml_dai_i2s_prepare(struct snd_pcm_substream *substream,
 	struct aml_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		s->i2s_mode = dai_info[dai->id].i2s_mode;
-		if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
-			audio_in_i2s_set_buf(runtime->dma_addr,
-					runtime->dma_bytes * 2,
-					0, i2s->i2s_pos_sync,
-					i2s->audin_fifo_src,
-					runtime->channels);
-			memset((void *)runtime->dma_area, 0,
-					runtime->dma_bytes * 2);
+		dev_info(substream->pcm->card->dev, "I2S capture prepare!\n");
+		if (is_audin_ext_support()) {
+			if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
+				audio_in_i2s2_set_buf(runtime->dma_addr,
+						runtime->dma_bytes * 2, HDMI_IN,
+						runtime->channels);
+				memset((void *)runtime->dma_area, 0,
+						runtime->dma_bytes * 2);
+			} else {
+				audio_in_i2s2_set_buf(runtime->dma_addr,
+						runtime->dma_bytes, HDMI_IN,
+						runtime->channels);
+				memset((void *)runtime->dma_area, 0,
+						runtime->dma_bytes);
+			}
+			s->device_type = AML_AUDIO_I2SIN2;
 		} else {
-			audio_in_i2s_set_buf(runtime->dma_addr,
-					runtime->dma_bytes,
-					0, i2s->i2s_pos_sync,
-					i2s->audin_fifo_src,
-					runtime->channels);
-			memset((void *)runtime->dma_area, 0,
-					runtime->dma_bytes);
+			if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
+				audio_in_i2s_set_buf(runtime->dma_addr,
+						runtime->dma_bytes * 2,
+						i2s->clk_data_pos,
+						i2s->i2s_pos_sync,
+						i2s->audin_fifo_src,
+						runtime->channels);
+				memset((void *)runtime->dma_area, 0,
+						runtime->dma_bytes * 2);
+			} else {
+				audio_in_i2s_set_buf(runtime->dma_addr,
+						runtime->dma_bytes,
+						i2s->clk_data_pos,
+						i2s->i2s_pos_sync,
+						i2s->audin_fifo_src,
+						runtime->channels);
+				memset((void *)runtime->dma_area, 0,
+						runtime->dma_bytes);
+			}
+			s->device_type = AML_AUDIO_I2SIN;
 		}
-		s->device_type = AML_AUDIO_I2SIN;
 	} else {
 		s->device_type = AML_AUDIO_I2SOUT;
 		audio_out_i2s_enable(0);
-		audio_util_set_dac_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
 		aml_hw_i2s_init(runtime);
 		/* i2s/958 share the same audio hw buffer when PCM mode */
 		if (IEC958_mode_codec == 0) {
@@ -193,7 +224,6 @@ static int aml_dai_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		/* TODO */
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			dev_info(substream->pcm->card->dev, "I2S playback enable\n");
 			audio_out_i2s_enable(1);
@@ -202,7 +232,11 @@ static int aml_dai_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 				audio_hw_958_enable(1);
 			}
 		} else {
-			audio_in_i2s_enable(1);
+			dev_info(substream->pcm->card->dev, "I2S capture enable!\n");
+			if (is_audin_ext_support())
+				audio_in_i2s2_enable(1);
+			else
+				audio_in_i2s_enable(1);
 		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -216,7 +250,12 @@ static int aml_dai_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 				audio_hw_958_enable(0);
 			}
 		} else {
-			audio_in_i2s_enable(0);
+			dev_info(substream->pcm->card->dev, "I2S capture disable!\n");
+			if (is_audin_ext_support()) {
+				/*TODO: i2s2 deocder must always enable*/
+				/*audio_in_i2s2_enable(0);*/
+			} else
+				audio_in_i2s_enable(0);
 		}
 		break;
 	default:
@@ -235,9 +274,12 @@ static int aml_dai_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	srate = params_rate(params);
 	if (i2s->old_samplerate != srate) {
-		i2s->old_samplerate = srate;
-		mclk_rate = srate * DEFAULT_MCLK_RATIO_SR;
-		aml_i2s_set_amclk(i2s, mclk_rate);
+		if (audio_in_source == 0 || substream->stream
+				== SNDRV_PCM_STREAM_PLAYBACK) {
+			i2s->old_samplerate = srate;
+			mclk_rate = srate * DEFAULT_MCLK_RATIO_SR;
+			aml_i2s_set_amclk(i2s, mclk_rate);
+		}
 	}
 
 	return 0;
@@ -247,8 +289,10 @@ static int aml_dai_set_i2s_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 	struct aml_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 
+	/*pr_info("%s: cpu_dai = %s, fmt = %u\n", __func__, dai->name, fmt);*/
+
 	if (fmt & SND_SOC_DAIFMT_CBS_CFS)	/* slave mode */
-		dai_info[dai->id].i2s_mode = I2S_SLAVE_MODE;
+		i2s->clk_data_pos = I2S_SLAVE_MODE;
 
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_NB_NF:
@@ -294,32 +338,34 @@ static int aml_dai_i2s_resume(struct snd_soc_dai *dai)
 		SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
 static struct snd_soc_dai_ops aml_dai_i2s_ops = {
-	.startup = aml_dai_i2s_startup,
-	.shutdown = aml_dai_i2s_shutdown,
-	.prepare = aml_dai_i2s_prepare,
-	.trigger = aml_dai_i2s_trigger,
-	.hw_params = aml_dai_i2s_hw_params,
-	.set_fmt = aml_dai_set_i2s_fmt,
+	.startup    = aml_dai_i2s_startup,
+	.shutdown   = aml_dai_i2s_shutdown,
+	.prepare    = aml_dai_i2s_prepare,
+	.trigger    = aml_dai_i2s_trigger,
+	.hw_params  = aml_dai_i2s_hw_params,
+	.set_fmt    = aml_dai_set_i2s_fmt,
 	.set_sysclk = aml_dai_set_i2s_sysclk,
 };
 
 struct snd_soc_dai_driver aml_i2s_dai[] = {
 	{
-	 .id = 0,
-	 .suspend = aml_dai_i2s_suspend,
-	 .resume = aml_dai_i2s_resume,
-	 .playback = {
-		      .channels_min = 1,
-		      .channels_max = 8,
-		      .rates = AML_DAI_I2S_RATES,
-		      .formats = AML_DAI_I2S_FORMATS,},
-	 .capture = {
-		     .channels_min = 1,
-		     .channels_max = 8,
-		     .rates = AML_DAI_I2S_RATES,
-		     .formats = AML_DAI_I2S_FORMATS,},
-	 .ops = &aml_dai_i2s_ops,
-	 },
+		.id = 0,
+		.suspend  = aml_dai_i2s_suspend,
+		.resume   = aml_dai_i2s_resume,
+		.playback = {
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates        = AML_DAI_I2S_RATES,
+			.formats      = AML_DAI_I2S_FORMATS,
+		},
+		.capture  = {
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates        = AML_DAI_I2S_RATES,
+			.formats      = AML_DAI_I2S_FORMATS,
+		},
+		.ops = &aml_dai_i2s_ops,
+	},
 };
 EXPORT_SYMBOL_GPL(aml_i2s_dai);
 
@@ -327,10 +373,15 @@ static const struct snd_soc_component_driver aml_component = {
 	.name = "aml-i2s-dai",
 };
 
+/*
+ * vdac_clk should be managed in audio module for kernel4.9,
+ * not in vpu for kernel3.14
+ * aud_buf has been remove from txlx/txhd
+ */
 static const char *const gate_names[] = {
 	"top_glue", "aud_buf", "i2s_out", "amclk_measure",
 	"aififo2", "aud_mixer", "mixer_reg", "adc",
-	"top_level", "aoclk", "aud_in"
+	"top_level", "aoclk", "aud_in", "vdac_clk"
 };
 
 static int aml_i2s_dai_probe(struct platform_device *pdev)
@@ -344,7 +395,12 @@ static int aml_i2s_dai_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(gate_names); i++) {
 		clk_gate = devm_clk_get(&pdev->dev, gate_names[i]);
 		if (IS_ERR(clk_gate)) {
-			dev_err(&pdev->dev, "Can't get aml audio gate\n");
+			if (i == 1) {
+				pr_info("ignore aud_buf gate for txlx/txhd\n");
+				continue;
+			} else
+				dev_err(&pdev->dev, "Can't get aml audio gate:%s\n",
+						gate_names[i]);
 			return PTR_ERR(clk_gate);
 		}
 		pr_info("clock source gate %s : %p\n", gate_names[i], clk_gate);
@@ -362,9 +418,9 @@ static int aml_i2s_dai_probe(struct platform_device *pdev)
 	i2s->disable_clk_suspend =
 		of_property_read_bool(pnode, "disable_clk_suspend");
 
-	i2s->clk_mpll = devm_clk_get(&pdev->dev, "mpll2");
+	i2s->clk_mpll = devm_clk_get(&pdev->dev, "mpll");
 	if (IS_ERR(i2s->clk_mpll)) {
-		dev_err(&pdev->dev, "Can't retrieve mpll2 clock\n");
+		dev_err(&pdev->dev, "Can't retrieve mpll clock\n");
 		ret = PTR_ERR(i2s->clk_mpll);
 		goto err;
 	}
@@ -383,6 +439,7 @@ static int aml_i2s_dai_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Can't set aml_i2s :%d\n", ret);
 		goto err;
 	}
+	i2s->old_samplerate = DEFAULT_SAMPLERATE;
 
 	ret = clk_prepare_enable(i2s->clk_mclk);
 	if (ret) {
@@ -391,21 +448,12 @@ static int aml_i2s_dai_probe(struct platform_device *pdev)
 	}
 
 	if (of_property_read_bool(pdev->dev.of_node, "DMIC")) {
-		i2s->audin_fifo_src = 3;
+		i2s->audin_fifo_src = DMIC;
 		dev_info(&pdev->dev, "DMIC is in platform!\n");
 	} else {
-		i2s->audin_fifo_src = 1;
+		i2s->audin_fifo_src = I2S_IN;
 		dev_info(&pdev->dev, "I2S Mic is in platform!\n");
 	}
-
-	ret =
-	    of_property_read_u32((&pdev->dev)->of_node, "i2s_pos_sync",
-				 &i2s->i2s_pos_sync);
-
-	if (ret < 0)
-		i2s->i2s_pos_sync = 0;
-
-	dev_info(&pdev->dev, "i2s_pos_sync is %d\n", i2s->i2s_pos_sync);
 
 	ret = snd_soc_register_component(&pdev->dev, &aml_component,
 					  aml_i2s_dai, ARRAY_SIZE(aml_i2s_dai));
@@ -450,10 +498,10 @@ static const struct of_device_id amlogic_dai_dt_match[] = {
 
 static struct platform_driver aml_i2s_dai_driver = {
 	.driver = {
-		   .name = "aml-i2s-dai",
-		   .owner = THIS_MODULE,
-		   .of_match_table = amlogic_dai_dt_match,
-		   },
+		.name = "aml-i2s-dai",
+		.owner = THIS_MODULE,
+		.of_match_table = amlogic_dai_dt_match,
+	},
 
 	.probe = aml_i2s_dai_probe,
 	.remove = aml_i2s_dai_remove,

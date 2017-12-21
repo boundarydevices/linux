@@ -14187,3 +14187,17 @@ F:	arch/arm64/boot/dts/amlogic/mesontxlx.dtsi
 F:	arch/arm64/boot/dts/amlogic/txlx_t962e_r321.dts
 F:	arch/arm64/boot/dts/amlogic/txlx_t962e_r311.dts
 
+AMLOGIC TXLX Audio
+M:	Xing Wang <xing.wang@amlogic.com>
+F:	arch/arm/configs/meson32_defconfig
+F:	arch/arm64/boot/dts/amlogic/*
+F:	arch/arm64/configs/meson64_defconfig
+F:	arch/arm64/configs/meson64_smarthome_defconfig
+F:	drivers/amlogic/Kconfig
+F:	drivers/amlogic/Makefile
+F:	drivers/amlogic/amaudio/*
+F:	drivers/amlogic/amaudio2/*
+F:	include/linux/amlogic/media/sound/*
+F:	sound/soc/amlogic/auge/*
+F:	sound/soc/amlogic/meson/*
+F:	sound/soc/codecs/amlogic/*

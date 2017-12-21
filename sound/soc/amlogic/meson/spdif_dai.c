@@ -14,7 +14,8 @@
  * more details.
  *
  */
-#define pr_fmt(fmt) "aml_spdif_dai: " fmt
+#undef pr_fmt
+#define pr_fmt(fmt) "snd_spdif_dai: " fmt
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -47,7 +48,7 @@
 #include <linux/amlogic/media/sound/aout_notify.h>
 #include <linux/amlogic/media/sound/aiu_regs.h>
 #include <linux/amlogic/media/sound/audin_regs.h>
-#include <linux/amlogic/cpu_version.h>
+#include <linux/amlogic/media/sound/audio_iomap.h>
 
 /*
  * 0 --  other formats except(DD,DD+,DTS)
@@ -58,6 +59,7 @@
  */
 unsigned int IEC958_mode_codec;
 EXPORT_SYMBOL(IEC958_mode_codec);
+
 struct aml_spdif {
 	struct clk *clk_mpl1;
 	struct clk *clk_i958;
@@ -72,6 +74,7 @@ struct aml_spdif {
 	uint src;
 };
 struct aml_spdif *spdif_p;
+
 unsigned int clk81;
 EXPORT_SYMBOL(clk81);
 
@@ -88,11 +91,6 @@ static void set_IEC958_clock_div(uint div)
 		audio_set_spdif_clk_div(div);
 		spdif_p->clk_div = div;
 	}
-}
-
-static inline bool is_meson_tv_chipset(void)
-{
-	return is_meson_gxtvbb_cpu() || is_meson_txl_cpu();
 }
 
 void aml_spdif_play(int samesrc)
@@ -407,10 +405,10 @@ void aml_hw_iec958_init(struct snd_pcm_substream *substream, int samesrc)
 	} else if (IEC958_mode_codec == 5) {
 		aout_notifier_call_chain(AOUT_EVENT_RAWDATA_DTS_HD, substream);
 	} else if (IEC958_mode_codec == 7 || IEC958_mode_codec == 8) {
-		aml_write_cbus(AIU_958_CHSTAT_L0, 0x1902);
-		aml_write_cbus(AIU_958_CHSTAT_L1, 0x900);
-		aml_write_cbus(AIU_958_CHSTAT_R0, 0x1902);
-		aml_write_cbus(AIU_958_CHSTAT_R1, 0x900);
+		aml_aiu_write(AIU_958_CHSTAT_L0, 0x1902);
+		aml_aiu_write(AIU_958_CHSTAT_L1, 0x900);
+		aml_aiu_write(AIU_958_CHSTAT_R0, 0x1902);
+		aml_aiu_write(AIU_958_CHSTAT_R1, 0x900);
 		if (IEC958_mode_codec == 8)
 			aout_notifier_call_chain(AOUT_EVENT_RAWDATA_DTS_HD_MA,
 			substream);
@@ -720,7 +718,7 @@ static int aml_dai_spdif_probe(struct platform_device *pdev)
 	 * set default mode from spdif-in
 	 */
 	spdif_priv->src = SPDIF_IN;
-	aml_spdif_play(1);
+	aml_spdif_play(0);
 	ret = snd_soc_register_component(&pdev->dev, &aml_component,
 					  aml_spdif_dai,
 					  ARRAY_SIZE(aml_spdif_dai));
@@ -742,6 +740,7 @@ static int aml_dai_spdif_remove(struct platform_device *pdev)
 
 	snd_soc_unregister_component(&pdev->dev);
 	clk_disable_unprepare(spdif_priv->clk_spdif);
+
 	return 0;
 }
 
@@ -764,14 +763,14 @@ static const struct of_device_id amlogic_spdif_dai_dt_match[] = {
 #endif
 
 static struct platform_driver aml_spdif_dai_driver = {
-	.probe = aml_dai_spdif_probe,
-	.remove = aml_dai_spdif_remove,
+	.probe    = aml_dai_spdif_probe,
+	.remove   = aml_dai_spdif_remove,
 	.shutdown = aml_spdif_dai_shutdown,
-	.driver = {
-		   .name = "aml-spdif-dai",
-		   .owner = THIS_MODULE,
-		   .of_match_table = amlogic_spdif_dai_dt_match,
-		   },
+	.driver   = {
+		.name           = "aml-spdif-dai",
+		.owner          = THIS_MODULE,
+		.of_match_table = amlogic_spdif_dai_dt_match,
+	},
 };
 
 static int __init aml_dai_spdif_init(void)

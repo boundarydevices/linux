@@ -50,8 +50,13 @@ struct audio_stream {
 struct aml_audio_buffer {
 	void *buffer_start;
 	unsigned int buffer_size;
+#ifndef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	char cache_buffer_bytes[256];
 	int cached_len;
+#endif
+	int find_start;
+	int invert_flag;
+	int cached_sample;
 };
 
 struct aml_i2s_dma_params {
@@ -79,12 +84,21 @@ struct aml_runtime_data {
 	struct snd_pcm_substream *substream;
 	struct audio_stream s;
 	struct timer_list timer;	/* timeer for playback and capture */
-	struct hrtimer hrtimer;
-	ktime_t wakeups_per_second;
 	spinlock_t timer_lock;
 	void *buf; /* tmp buffer for playback or capture */
 	int active;
 	unsigned int xrun_num;
+
+	/* hrtimer */
+	struct hrtimer hrtimer;
+	ktime_t wakeups_per_second;
 };
+
+#ifdef CONFIG_AMLOGIC_AMAUDIO2
+extern int amaudio2_enable;
+extern int amaudio2_read_enable;
+extern int cache_pcm_write(char __user *buf, int size);
+extern int get_pcm_cache_space(void);
+#endif
 
 #endif

@@ -18,7 +18,6 @@
 #ifndef __AML_I2S_DAI_H__
 #define __AML_I2S_DAI_H__
 
-extern struct snd_soc_dai_driver aml_dai[];
 struct aml_i2s {
 	struct clk *clk_mpll;
 	struct clk *clk_mclk;
@@ -26,6 +25,6 @@ struct aml_i2s {
 	bool disable_clk_suspend;
 	int audin_fifo_src;
 	int i2s_pos_sync;
+	int clk_data_pos;
 };
-
 #endif

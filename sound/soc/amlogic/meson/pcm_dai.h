@@ -24,8 +24,4 @@ struct aml_pcm {
 	struct clk *clk_pcm_sync;
 	int pcm_mode;
 };
-
-void aml_hw_iec958_init(struct snd_pcm_substream *substream);
-extern struct snd_soc_dai_driver aml_dai[];
-
 #endif

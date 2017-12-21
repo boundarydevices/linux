@@ -14,6 +14,8 @@
  * more details.
  *
  */
+#undef pr_fmt
+#define pr_fmt(fmt) "snd_dmic: " fmt
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -23,7 +25,7 @@
 #include <linux/reset.h>
 #include <linux/pinctrl/consumer.h>
 
-#define DRV_NAME "aml_snd_dmic"
+#define DRV_NAME "snd_dmic"
 
 #define PDM_CTRL		0x40
 /* process_header_copy_only_on */
@@ -119,13 +121,14 @@ static int aml_dmic_platform_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dmic_priv->dmic_pins =
-		devm_pinctrl_get_select(&pdev->dev, "aml_dmic_pins");
+		devm_pinctrl_get_select(&pdev->dev, "dmic_pins");
 	if (IS_ERR(dmic_priv->dmic_pins)) {
 		dev_err(&pdev->dev, "pinctrls error!\n");
 		return -EINVAL;
 	}
 
 	dev_set_drvdata(&pdev->dev, dmic_priv);
+
 	dmic_priv->clk_mclk = devm_clk_get(&pdev->dev, "mclk");
 	if (IS_ERR(dmic_priv->clk_mclk)) {
 		dev_err(&pdev->dev, "Can't retrieve clk_mclk clock\n");
@@ -147,7 +150,7 @@ static int aml_dmic_platform_probe(struct platform_device *pdev)
 	}
 
 	ret = clk_set_rate(dmic_priv->clk_pdm,
-		clk_get_rate(dmic_priv->clk_mclk)/4);
+		clk_get_rate(dmic_priv->clk_mclk) / 4);
 	if (ret) {
 		pr_err("Can't set dmic pdm clock rate, err: %d\n", ret);
 		goto err;
@@ -183,8 +186,24 @@ err:
 
 static int aml_dmic_platform_remove(struct platform_device *pdev)
 {
+	struct aml_dmic_priv *dmic_priv = dev_get_drvdata(&pdev->dev);
+
+	if (dmic_priv && dmic_priv->clk_pdm)
+		clk_disable_unprepare(dmic_priv->clk_pdm);
+
 	snd_soc_unregister_codec(&pdev->dev);
+
 	return 0;
+}
+
+static void aml_dmic_platform_shutdown(struct platform_device *pdev)
+{
+	struct aml_dmic_priv *dmic_priv = dev_get_drvdata(&pdev->dev);
+
+	if (dmic_priv && dmic_priv->clk_pdm)
+		clk_disable_unprepare(dmic_priv->clk_pdm);
+
+	snd_soc_unregister_codec(&pdev->dev);
 }
 
 static const struct of_device_id amlogic_dmic_of_match[] = {
@@ -194,12 +213,13 @@ static const struct of_device_id amlogic_dmic_of_match[] = {
 
 static struct platform_driver aml_dmic_driver = {
 	.driver = {
-		   .name = DRV_NAME,
-		   .owner = THIS_MODULE,
-		   .of_match_table = amlogic_dmic_of_match,
-		   },
+		.name = DRV_NAME,
+		.owner = THIS_MODULE,
+		.of_match_table = amlogic_dmic_of_match,
+	},
 	.probe = aml_dmic_platform_probe,
 	.remove = aml_dmic_platform_remove,
+	.shutdown = aml_dmic_platform_shutdown,
 };
 
 module_platform_driver(aml_dmic_driver);

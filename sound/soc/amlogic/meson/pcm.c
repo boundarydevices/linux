@@ -14,7 +14,8 @@
  * more details.
  *
  */
-#define pr_fmt(fmt) "aml_pcm: " fmt
+#undef pr_fmt
+#define pr_fmt(fmt) "snd_pcm: " fmt
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -111,6 +112,7 @@ static unsigned int aml_pcm_offset_tx(struct aml_pcm_runtime_data *prtd)
 
 	pr_debug("%s value: 0x%08x offset: 0x%08x\n", __func__,
 		  value, diff);
+
 	return (unsigned int)diff;
 }
 
@@ -128,6 +130,7 @@ static unsigned int aml_pcm_offset_rx(struct aml_pcm_runtime_data *prtd)
 
 	pr_debug("%s value: 0x%08x offset: 0x%08x\n", __func__,
 		  value, diff);
+
 	return (unsigned int)diff;
 }
 
@@ -171,7 +174,6 @@ static void aml_pcm_timer_update(struct aml_pcm_runtime_data *prtd)
 	prtd->data_size += size;
 	if (prtd->data_size >= frames_to_bytes(runtime, runtime->period_size))
 		prtd->period_elapsed++;
-
 }
 
 static void aml_pcm_timer_rearm(struct aml_pcm_runtime_data *prtd)
@@ -187,6 +189,7 @@ static int aml_pcm_timer_start(struct aml_pcm_runtime_data *prtd)
 	aml_pcm_timer_rearm(prtd);
 	prtd->running = 1;
 	spin_unlock(&prtd->lock);
+
 	return 0;
 }
 
@@ -197,6 +200,7 @@ static int aml_pcm_timer_stop(struct aml_pcm_runtime_data *prtd)
 	prtd->running = 0;
 	del_timer(&prtd->timer);
 	spin_unlock(&prtd->lock);
+
 	return 0;
 }
 
@@ -239,12 +243,13 @@ static int aml_pcm_timer_create(struct snd_pcm_substream *substream)
 	prtd->timer.data = (unsigned long)substream;
 	prtd->timer.function = aml_pcm_timer_callback;
 	prtd->running = 0;
+
 	return 0;
 }
 
-static int
-aml_pcm_hw_params(struct snd_pcm_substream *substream,
-		     struct snd_pcm_hw_params *params)
+static int aml_pcm_hw_params(
+	struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
@@ -412,10 +417,10 @@ static int aml_pcm_close(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int
-aml_pcm_copy_playback(struct snd_pcm_runtime *runtime, int channel,
-			 snd_pcm_uframes_t pos,
-			 void __user *buf, snd_pcm_uframes_t count)
+static int aml_pcm_copy_playback(
+	struct snd_pcm_runtime *runtime,
+	int channel, snd_pcm_uframes_t pos,
+	void __user *buf, snd_pcm_uframes_t count)
 {
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
 	unsigned char *hwbuf =
@@ -442,10 +447,10 @@ aml_pcm_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 	return ret;
 }
 
-static int
-aml_pcm_copy_capture(struct snd_pcm_runtime *runtime, int channel,
-			snd_pcm_uframes_t pos,
-			void __user *buf, snd_pcm_uframes_t count)
+static int aml_pcm_copy_capture(
+	struct snd_pcm_runtime *runtime,
+	int channel, snd_pcm_uframes_t pos,
+	void __user *buf, snd_pcm_uframes_t count)
 {
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
 	signed short *hwbuf =
@@ -565,10 +570,10 @@ static int aml_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 
 static int aml_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
-	int ret = 0;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_pcm *pcm = rtd->pcm;
 	struct snd_soc_dai *dai;
+	int ret = 0;
 
 	dai = rtd->cpu_dai;
 	pr_info("enter %s dai->name: %s dai->id: %d\n", __func__,
@@ -634,14 +639,13 @@ static int aml_soc_platform_pcm_probe(struct platform_device *pdev)
 static int aml_soc_platform_pcm_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
+
 	return 0;
 }
 
 #ifdef CONFIG_OF
 static const struct of_device_id amlogic_audio_dt_match[] = {
-	{
-		.compatible = "amlogic, aml-pcm",
-	},
+	{.compatible = "amlogic, aml-pcm",},
 	{},
 };
 #else
@@ -650,12 +654,12 @@ static const struct of_device_id amlogic_audio_dt_match[] = {
 
 static struct platform_driver aml_platform_pcm_driver = {
 	.driver = {
-		   .name = "aml-pcm",
-		   .owner = THIS_MODULE,
-		   .of_match_table = amlogic_audio_dt_match,
-		   },
+		.name           = "aml-pcm",
+		.owner          = THIS_MODULE,
+		.of_match_table = amlogic_audio_dt_match,
+	},
 
-	.probe = aml_soc_platform_pcm_probe,
+	.probe  = aml_soc_platform_pcm_probe,
 	.remove = aml_soc_platform_pcm_remove,
 };
 

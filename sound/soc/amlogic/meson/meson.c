@@ -14,7 +14,8 @@
  * more details.
  *
  */
-#define pr_fmt(fmt) "aml_snd_card: " fmt
+#undef pr_fmt
+#define pr_fmt(fmt) "snd_card_meson: " fmt
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -57,7 +58,7 @@
 static int i2sbuf[32 + 16];
 static void aml_i2s_play(void)
 {
-	audio_util_set_dac_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
+	audio_util_set_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	audio_set_i2s_mode(AIU_I2S_MODE_PCM16, 2);
 #else
@@ -552,7 +553,7 @@ static void aml_pinmux_init(struct snd_soc_card *card)
 #endif
 
 	p_aml_audio->pin_ctl = devm_pinctrl_get_select(
-		card->dev, "aml_audio_i2s");
+		card->dev, "audio_i2s");
 	if (IS_ERR(p_aml_audio->pin_ctl)) {
 		pr_info("%s,aml_pinmux_init error!\n", __func__);
 		return;
@@ -782,6 +783,10 @@ static int aml_audio_probe(struct platform_device *pdev)
 static void aml_audio_shutdown(struct platform_device *pdev)
 {
 	struct pinctrl_state *state;
+	struct snd_soc_card *card;
+
+	card = platform_get_drvdata(pdev);
+	aml_suspend_pre(card);
 
 	if (IS_ERR_OR_NULL(p_audio->pin_ctl)) {
 		pr_info("no audio pin_ctrl to shutdown\n");

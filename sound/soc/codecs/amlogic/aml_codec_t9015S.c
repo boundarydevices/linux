@@ -36,6 +36,7 @@
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/sound/aiu_regs.h>
 #include <linux/amlogic/media/sound/audin_regs.h>
+#include <linux/amlogic/media/sound/audio_iomap.h>
 
 #include "aml_codec_t9015S.h"
 
@@ -45,7 +46,7 @@ struct aml_T9015S_audio_priv {
 };
 
 static const struct reg_default t9015s_init_list[] = {
-	{AUDIO_CONFIG_BLOCK_ENABLE, 0x3400BCFF},
+	{AUDIO_CONFIG_BLOCK_ENABLE, 0x1403BCFF},
 	{ADC_VOL_CTR_PGA_IN_CONFIG, 0x50502929},
 	{DAC_VOL_CTR_DAC_SOFT_MUTE, 0xFBFB0000},
 	{LINE_OUT_CONFIG, 0x00004444},
@@ -384,7 +385,7 @@ static int aml_T9015S_audio_set_bias_level(struct snd_soc_codec *codec,
 		break;
 
 	case SND_SOC_BIAS_OFF:
-
+		snd_soc_write(codec, AUDIO_CONFIG_BLOCK_ENABLE, 0);
 		break;
 
 	default:
@@ -405,7 +406,7 @@ static int aml_T9015S_prepare(struct snd_pcm_substream *substream,
 
 static int aml_T9015S_audio_reset(struct snd_soc_codec *codec)
 {
-	aml_cbus_update_bits(RESET1_REGISTER, (1 << ACODEC_RESET),
+	aml_hiu_reset_update_bits(RESET1_REGISTER, (1 << ACODEC_RESET),
 					(1 << ACODEC_RESET));
 	udelay(1000);
 	return 0;
@@ -454,14 +455,15 @@ static int aml_T9015S_audio_probe(struct snd_soc_codec *codec)
 	aml_T9015S_audio_start_up(codec);
 	aml_T9015S_audio_reg_init(codec);
 
-	aml_write_cbus(AIU_ACODEC_CTRL, (1 << 4)
+	aml_aiu_write(AIU_ACODEC_CTRL, (1 << 4)
 			   |(1 << 6)
 			   |(1 << 11)
 			   |(1 << 15)
 			   |(2 << 2)
 	);
 
-	aml_write_cbus(AUDIN_SOURCE_SEL, 3);
+	aml_audin_update_bits(AUDIN_SOURCE_SEL, 3, 3);
+
 	codec->dapm.bias_level = SND_SOC_BIAS_STANDBY;
 	T9015S_audio->codec = codec;
 
@@ -470,6 +472,7 @@ static int aml_T9015S_audio_probe(struct snd_soc_codec *codec)
 
 static int aml_T9015S_audio_remove(struct snd_soc_codec *codec)
 {
+	pr_info("aml_T9015S_audio_remove!\n");
 	aml_T9015S_audio_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
 }
@@ -478,7 +481,6 @@ static int aml_T9015S_audio_suspend(struct snd_soc_codec *codec)
 {
 	pr_info("aml_T9015S_audio_suspend!\n");
 	aml_T9015S_audio_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	snd_soc_write(codec, AUDIO_CONFIG_BLOCK_ENABLE, 0);
 	return 0;
 }
 
@@ -592,6 +594,16 @@ static int aml_T9015S_audio_codec_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void aml_T9015S_audio_codec_shutdown(struct platform_device *pdev)
+{
+	struct aml_T9015S_audio_priv *aml_acodec;
+	struct snd_soc_codec *codec;
+
+	aml_acodec = platform_get_drvdata(pdev);
+	codec = aml_acodec->codec;
+	aml_T9015S_audio_remove(codec);
+}
+
 static const struct of_device_id aml_T9015S_codec_dt_match[] = {
 	{.compatible = "amlogic, aml_codec_T9015S",},
 	{},
@@ -605,6 +617,7 @@ static struct platform_driver aml_T9015S_codec_platform_driver = {
 		   },
 	.probe = aml_T9015S_audio_codec_probe,
 	.remove = aml_T9015S_audio_codec_remove,
+	.shutdown = aml_T9015S_audio_codec_shutdown,
 };
 
 static int __init aml_T9015S_audio_modinit(void)

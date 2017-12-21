@@ -317,7 +317,7 @@
 
 	/* Sound iomap */
 	aml_snd_iomap {
-		compatible = "amlogic, snd_iomap";
+		compatible = "amlogic, axg-snd-iomap";
 		status = "okay";
 		#address-cells=<2>;
 		#size-cells=<2>;
@@ -340,9 +340,9 @@
 		status = "okay";
 	};
 
-	meson_sound {
-		compatible = "amlogic, sound-card";
-		aml-audio-card,name = "AML-AXGSOUND";
+	auge_sound {
+		compatible = "amlogic, axg-sound-card";
+		aml-audio-card,name = "AML-AUGESOUND";
 
 		aml-audio-card,dai-link@0 {
 			format = "dsp_a";

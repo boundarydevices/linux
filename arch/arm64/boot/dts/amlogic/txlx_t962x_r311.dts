@@ -969,7 +969,7 @@
 
 	/* Sound iomap */
 	aml_snd_iomap {
-		compatible = "amlogic, snd_iomap";
+		compatible = "amlogic, meson-snd-iomap";
 		status = "okay";
 		#address-cells=<2>;
 		#size-cells=<2>;

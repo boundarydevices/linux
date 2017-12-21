@@ -13,18 +13,20 @@ config AMLOGIC_SND_SPLIT_MODE
 	depends on AMLOGIC_SND_SOC_MESON
 	default n
 	help
-	  Say Y to enable AIU split mode. If not, it is normal mode.
-	  Say Y to enable AIU split mode. If not, it is normal mode.
-	  Say Y to enable AIU split mode. If not, it is normal mode.
-	  Say Y to enable AIU split mode. If not, it is normal mode.
+	  Say Y to enable AIU split mode. If not, it is normal  block mode.
+	  Say Y to enable AIU split mode. If not, it is normal  block mode.
+	  Say Y to enable AIU split mode. If not, it is normal  block mode.
+	  Say Y to enable AIU split mode. If not, it is normal  block mode.
 
 config AMLOGIC_SND_SPLIT_MODE_MMAP
-	bool "AIU split mode, mmap"
-	depends on AMLOGIC_SND_SPLIT_MODE
+	bool "AIU split/interleave and mmap mode"
 	depends on AMLOGIC_SND_SOC_MESON
 	default n
 	help
-		Say Y or N to enable/disable AIU split mmap
+	  Say Y to enable AIU split mode. If not, it is normal  block mode.
+	  Say Y to enable mmap mode. If not, it is copy mode.
+	  Say Y to enable AIU split mode. If not, it is normal  block mode.
+	  Say Y to enable mmap mode. If not, it is copy mode.
 
 endif # AMLOGIC_SND_SOC_MESON
 

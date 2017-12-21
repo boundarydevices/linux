@@ -14,6 +14,8 @@
 
 #include "tas5707.h"
 
+#define DEV_NAME	"tas5707"
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 static void tas5707_early_suspend(struct early_suspend *h);
@@ -290,7 +292,7 @@ static const struct snd_soc_dai_ops tas5707_dai_ops = {
 };
 
 static struct snd_soc_dai_driver tas5707_dai = {
-	.name = "tas5707",
+	.name = DEV_NAME,
 	.playback = {
 		.stream_name = "HIFI Playback",
 		.channels_min = 2,
@@ -524,9 +526,11 @@ static int tas5707_init(struct snd_soc_codec *codec)
 	regmap_raw_write(tas5707->regmap, DDX_PWM_MUX, burst_data[2], 4);
 
 	/*drc */
-	//tas5707_set_drc(codec);
+	if (tas5707->EQ_enum_value)
+		tas5707_set_drc(codec);
 	/*eq */
-	//tas5707_set_eq(codec);
+	if (tas5707->DRC_enum_value)
+		tas5707_set_eq(codec);
 
 	snd_soc_write(codec, DDX_VOLUME_CONFIG, 0xD1);
 	snd_soc_write(codec, DDX_SYS_CTL_2, 0x84);
@@ -671,6 +675,19 @@ static int tas5707_parse_dt(
 	}
 	tas5707->pdata->reset_pin = reset_pin;
 
+	/* check eq/drc whether enable */
+	ret =
+	    of_property_read_u32(np, "eq_enable",
+				 &tas5707->EQ_enum_value);
+
+	ret =
+	    of_property_read_u32(np, "drc_enable",
+				 &tas5707->DRC_enum_value);
+
+	pr_info("tas5707 eq_enable:%d, drc_enable:%d\n",
+		tas5707->EQ_enum_value,
+		tas5707->DRC_enum_value);
+
 	return ret;
 }
 
@@ -680,6 +697,7 @@ static int tas5707_i2c_probe(struct i2c_client *i2c,
 	struct tas5707_priv *tas5707;
 	struct tas57xx_platform_data *pdata;
 	int ret;
+	const char *codec_name;
 
 	tas5707 = devm_kzalloc(&i2c->dev, sizeof(struct tas5707_priv),
 			       GFP_KERNEL);
@@ -694,8 +712,6 @@ static int tas5707_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
-	i2c_set_clientdata(i2c, tas5707);
-
 	pdata = devm_kzalloc(&i2c->dev,
 				sizeof(struct tas57xx_platform_data),
 				GFP_KERNEL);
@@ -706,6 +722,18 @@ static int tas5707_i2c_probe(struct i2c_client *i2c,
 	tas5707->pdata = pdata;
 
 	tas5707_parse_dt(tas5707, i2c->dev.of_node);
+
+	if (of_property_read_string(i2c->dev.of_node,
+			"codec_name",
+				&codec_name)) {
+		pr_info("no codec name\n");
+		ret = -1;
+	}
+	pr_info("aux name = %s\n", codec_name);
+	if (codec_name)
+		dev_set_name(&i2c->dev, "%s", codec_name);
+
+	i2c_set_clientdata(i2c, tas5707);
 
 	ret = snd_soc_register_codec(&i2c->dev, &soc_codec_dev_tas5707,
 				     &tas5707_dai, 1);
@@ -735,7 +763,7 @@ MODULE_DEVICE_TABLE(of, tas5707_of_id);
 
 static struct i2c_driver tas5707_i2c_driver = {
 	.driver = {
-		.name = "tas5707",
+		.name = DEV_NAME,
 		.of_match_table = tas5707_of_id,
 		.owner = THIS_MODULE,
 	},

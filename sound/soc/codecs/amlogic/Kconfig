@@ -57,6 +57,17 @@ config AMLOGIC_SND_CODEC_PMU3
                 AML PMU3 codec,
                 AML PMU3 codec,
                 this codec is internal
+
+config AMLOGIC_SND_CODEC_TXLX_ACODEC
+	bool "Amlogic Audio txlx acodec"
+	depends on AMLOGIC_SND_SOC_CODECS
+	default n
+	help
+		Amlogic Audio codec,
+		AML txlx acodec,
+		AML txlx acodec,
+		this codec is internal
+
 #Third part codecs
 # Amlogic add codecs
 config AMLOGIC_SND_SOC_TAS5707

@@ -336,6 +336,12 @@
 #define   AED_DEBUG4                        0x1487
 #define   AED_DEBUG5                        0x1488
 #define   AED_DEBUG6                        0x1489
+#define   AED_DRC_AA_H                      0x148a
+#define   AED_DRC_AD_H                      0x148b
+#define   AED_DRC_AA_1M_H                   0x148c
+#define   AED_DRC_AD_1M_H                   0x148d
+#define   AED_NG_CNT                        0x148e
+#define   AED_NG_STEP                       0x148f
 #define   AED_TOP_CTL                       0x1490
 
 #endif /* _AML_AIU_REGS_H */

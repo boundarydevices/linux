@@ -14,7 +14,8 @@
  * more details.
  *
  */
-#define pr_fmt(fmt) "aml_pcm_dai: " fmt
+#undef pr_fmt
+#define pr_fmt(fmt) "snd_pcm_dai: " fmt
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -55,18 +56,18 @@ static int aml_pcm_set_clk(struct aml_pcm *pcm, unsigned long rate)
 
 	ret = clk_set_rate(pcm->clk_mpll, rate * 10);
 	if (ret) {
-		pr_debug("%s, line:%d, error:%d\n", __func__, __LINE__, ret);
+		pr_info("Cannot set pcm mpll\n");
 		return ret;
 	}
 	ret = clk_set_parent(pcm->clk_pcm_mclk, pcm->clk_mpll);
 	if (ret) {
-		pr_debug("%s line:%d, error:%d\n", __func__, __LINE__, ret);
+		pr_info("Cannot set pcm mclk parent\n");
 		return ret;
 	}
 
 	ret = clk_set_rate(pcm->clk_pcm_mclk, rate);
 	if (ret) {
-		pr_debug("%s, line:%d, error:%d\n", __func__, __LINE__, ret);
+		pr_info("Cannot set pcm mclk rate:%lu\n", rate);
 		return ret;
 	}
 
@@ -274,7 +275,7 @@ static int aml_pcm_dai_probe(struct platform_device *pdev)
 
 	pr_debug("enter %s\n", __func__);
 
-	pin_ctl = devm_pinctrl_get_select(&pdev->dev, "aml_audio_pcm");
+	pin_ctl = devm_pinctrl_get_select(&pdev->dev, "audio_pcm");
 	if (IS_ERR(pin_ctl)) {
 		pin_ctl = NULL;
 		pr_err("aml audio pcm dai pinmux set error!\n");
@@ -357,6 +358,16 @@ static int aml_pcm_dai_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void aml_pcm_dai_plat_shutdown(struct platform_device *pdev)
+{
+	struct aml_pcm *pcm_priv = dev_get_drvdata(&pdev->dev);
+
+	clk_disable_unprepare(pcm_priv->clk_pcm_mclk);
+	clk_disable_unprepare(pcm_priv->clk_pcm_sync);
+
+	snd_soc_unregister_component(&pdev->dev);
+}
+
 #ifdef CONFIG_OF
 static const struct of_device_id amlogic_pcm_dai_match[] = {
 	{.compatible = "amlogic, aml-pcm-dai",
@@ -376,6 +387,7 @@ static struct platform_driver aml_pcm_dai_driver = {
 
 	.probe = aml_pcm_dai_probe,
 	.remove = aml_pcm_dai_remove,
+	.shutdown = aml_pcm_dai_plat_shutdown,
 };
 
 static int __init aml_pcm_dai_modinit(void)

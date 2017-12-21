@@ -80,6 +80,10 @@ source "drivers/amlogic/unifykey/Kconfig"
 
 source "drivers/amlogic/thermal/Kconfig"
 
+source "drivers/amlogic/amaudio/Kconfig"
+
+source "drivers/amlogic/amaudio2/Kconfig"
+
 source "drivers/amlogic/audiodsp/Kconfig"
 
 source "drivers/amlogic/audioinfo/Kconfig"

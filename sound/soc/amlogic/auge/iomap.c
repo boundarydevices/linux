@@ -22,6 +22,8 @@
 
 #include "iomap.h"
 
+#define DEV_NAME	"auge_snd_iomap"
+
 static void __iomem *aml_snd_reg_map[IO_MAX];
 
 
@@ -142,26 +144,26 @@ static int snd_iomap_probe(struct platform_device *pdev)
 
 		i++;
 	}
-	pr_info("aml snd iomap probe done\n");
+	pr_info("amlogic %s probe done\n", DEV_NAME);
 
 	return ret;
 }
 
 static const struct of_device_id snd_iomap_dt_match[] = {
-	{ .compatible = "amlogic, snd_iomap" },
+	{ .compatible = "amlogic, axg-snd-iomap" },
 	{},
 };
 
 static  struct platform_driver snd_iomap_platform_driver = {
 	.probe		= snd_iomap_probe,
 	.driver		= {
-		.owner		= THIS_MODULE,
-		.name		= "snd_iomap",
+		.owner		    = THIS_MODULE,
+		.name		    = DEV_NAME,
 		.of_match_table	= snd_iomap_dt_match,
 	},
 };
 
-int __init meson_snd_iomap_init(void)
+int __init auge_snd_iomap_init(void)
 {
 	int ret;
 
@@ -169,4 +171,4 @@ int __init meson_snd_iomap_init(void)
 
 	return ret;
 }
-core_initcall(meson_snd_iomap_init);
+core_initcall(auge_snd_iomap_init);
