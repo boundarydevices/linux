@@ -14207,3 +14207,7 @@ AMLOGIC TXLX[R311] ADD LCD DRIVER SUPPORT
 M:	Weiming Liu <weiming.liu@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesontxlx_r311-panel.dtsi
 F:	drivers/amlogic/media/vout/backlight/aml_ldim/*
+
+AMLOGIC ADD LCD_EXTERN ST7701 DRIVER
+M:	Weiming Liu <weiming.liu@amlogic.com>
+F:	drivers/amlogic/media/vout/lcd/lcd_extern/mipi_ST7701.c
