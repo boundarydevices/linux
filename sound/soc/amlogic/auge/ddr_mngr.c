@@ -55,6 +55,7 @@ struct toddr {
 	unsigned int lsb_bit;
 	unsigned int reg_base;
 	enum toddr_src src;
+	int is_lb; /* check whether for loopback */
 	int irq;
 	bool in_use: 1;
 	struct aml_audio_controller *actrl;
@@ -134,6 +135,12 @@ static int unregister_toddr_l(struct device *dev, void *data)
 		return -EINVAL;
 
 	to = &toddrs[i];
+
+	/* check for loopback */
+	if (to->is_lb) {
+		loopback_set_status(0);
+		to->is_lb = 0;
+	}
 
 	/* disable audio ddr arb */
 	mask_bit = i;
@@ -259,8 +266,11 @@ void aml_toddr_select_src(struct toddr *to, enum toddr_src src)
 	to->src = src;
 
 	/* check whether loopback enable */
-	if (loopback_is_enable())
+	if (loopback_check_enable(src)) {
+		loopback_set_status(1);
+		to->is_lb = 1; /* in loopback */
 		src = LOOPBACK;
+	}
 
 	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl,	reg, 0x7, src & 0x7);

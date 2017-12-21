@@ -123,19 +123,22 @@ void lb_mode(int mode)
 		);
 }
 
-void tdmin_lb_clk_enalbe(int is_enable)
+static void tdmin_lb_clk_enalbe(int tdm_src, int is_enable)
 {
-	audiobus_update_bits(
-		EE_AUDIO_CLK_TDMIN_LB_CTRL,
-		0x3 << 30 | 1 << 29 | 0xf << 24 | 0xf << 20,
-		0x3 << 30 | 1 << 29 | 2 << 24 | 2 << 20
-		);
+	if (tdm_src <= 2)
+		audiobus_update_bits(
+			EE_AUDIO_CLK_TDMIN_LB_CTRL,
+			0x3 << 30 | 1 << 29 | 0xf << 24 | 0xf << 20,
+			0x3 << 30 | 1 << 29 | tdm_src << 24 | tdm_src << 20
+			);
+	else
+		pr_warn_once("pad from tdmin_a, tdmin_b, tdmin_c needs clks\n");
 }
 
-void tdmin_lb_enable(int is_enable)
+void tdmin_lb_enable(int tdm_index, int is_enable)
 {
 	if (is_enable)
-		tdmin_lb_clk_enalbe(is_enable);
+		tdmin_lb_clk_enalbe(tdm_index, is_enable);
 
 	audiobus_update_bits(
 		EE_AUDIO_TDMIN_LB_CTRL,
