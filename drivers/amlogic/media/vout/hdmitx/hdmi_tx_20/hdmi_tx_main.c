@@ -122,7 +122,6 @@ struct extcon_dev *hdmitx_excton_power;
 struct extcon_dev *hdmitx_excton_hdr;
 struct extcon_dev *hdmitx_excton_rxsense;
 struct extcon_dev *hdmitx_excton_hdcp;
-struct extcon_dev *hdmitx_excton_setmode;
 
 static int hdmi_init;
 
@@ -495,7 +494,6 @@ static int set_disp_mode_auto(void)
 		if (!strstr(mode, "420"))
 			strncat(mode, "420", 3);
 	}
-	extcon_set_state_sync(hdmitx_excton_setmode, EXTCON_DISP_HDMI, 1);
 	para = hdmi_get_fmt_name(mode, fmt_attr);
 	hdev->para = para;
 	/* msleep(500); */
@@ -534,8 +532,6 @@ static int set_disp_mode_auto(void)
 		hdev->cur_VIC = vic;
 		hdev->output_blank_flag = 1;
 		hdev->ready = 1;
-		extcon_set_state_sync(hdmitx_excton_setmode,
-			EXTCON_DISP_HDMI, 0);
 		return 1;
 	}
 	hdmitx_pre_display_init();
@@ -571,7 +567,6 @@ static int set_disp_mode_auto(void)
 	hdmitx_set_audio(hdev, &(hdev->cur_audio_param), hdmi_ch);
 	hdev->output_blank_flag = 1;
 	hdev->ready = 1;
-	extcon_set_state_sync(hdmitx_excton_setmode, EXTCON_DISP_HDMI, 0);
 	return ret;
 }
 
@@ -3112,24 +3107,6 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 		return;
 	}
 	hdmitx_excton_hdcp = edev;
-
-	/*hdmitx extcon setmode*/
-	edev = extcon_dev_allocate(hdmi_cable);
-	if (IS_ERR(edev)) {
-		hdmi_print(IMP, SYS "failed to allocate extcon setmode\n");
-		return;
-	}
-
-	edev->dev.parent = dev;
-	edev->name = "hdmitx_excton_setmode";
-	dev_set_name(&edev->dev, "setmode");
-	ret = extcon_dev_register(edev);
-	if (ret < 0) {
-		hdmi_print(IMP, SYS "failed to register extcon setmode\n");
-		return;
-	}
-	hdmitx_excton_setmode = edev;
-
 }
 
 static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)

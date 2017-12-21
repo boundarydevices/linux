@@ -368,8 +368,6 @@ int set_current_vmode(enum vmode_e mode)
 {
 	int ret = -1;
 	struct vout_server_s  *p_server;
-	struct vinfo_s *vinfo;
-	char *str;
 
 	mutex_lock(&vout_mutex);
 	list_for_each_entry(p_server, &vout_module.vout_server_list, list) {
@@ -381,15 +379,6 @@ int set_current_vmode(enum vmode_e mode)
 		if (p_server->op.vmode_is_supported(mode) == true) {
 			vout_module.curr_vout_server = p_server;
 			ret = p_server->op.set_vmode(mode);
-			vinfo = p_server->op.get_vinfo();
-			if (vinfo) {
-				str = vinfo->name;
-				if (vout_module.curr_vout_server)
-					update_vout_mode(str);
-			} else {
-				VOUTERR("%s: p_server->op.get_vinfo is NULL\n",
-					__func__);
-			}
 			/* break;  do not exit , should disable other modules */
 		} else
 			p_server->op.disable(mode);

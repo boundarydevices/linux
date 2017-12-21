@@ -33,6 +33,7 @@
 #include <linux/of.h>
 #include <linux/major.h>
 #include <linux/uaccess.h>
+#include <linux/extcon.h>
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -75,14 +76,11 @@ static unsigned int tvout_monitor_timeout_cnt = 20;
 
 static struct delayed_work tvout_mode_work;
 
-void update_vout_mode(char *name)
-{
-	if (name)
-		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", name);
-	else
-		VOUTERR("%s: vout mode is null\n", __func__);
-}
-EXPORT_SYMBOL(update_vout_mode);
+static struct extcon_dev *vout_excton_setmode;
+static const unsigned int vout_cable[] = {
+	EXTCON_TYPE_DISP,
+	EXTCON_NONE,
+};
 
 char *get_vout_mode_internal(void)
 {
@@ -116,13 +114,19 @@ static int set_vout_mode(char *name)
 	memset(local_name, 0, sizeof(local_name));
 	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", name);
 
+	extcon_set_state_sync(vout_excton_setmode, EXTCON_TYPE_DISP, 1);
+
 	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE_PRE, &mode);
 	ret = set_current_vmode(mode);
 	if (ret)
 		VOUTERR("new mode %s set error\n", name);
-	else
-		VOUTPR("new mode %s set ok\n", name);
+	else {
+		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", name);
+		VOUTPR("new mode %s set ok\n", vout_mode);
+	}
 	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE, &mode);
+
+	extcon_set_state_sync(vout_excton_setmode, EXTCON_TYPE_DISP, 0);
 
 	return ret;
 }
@@ -148,7 +152,12 @@ static int set_vout_init_mode(void)
 	memset(local_name, 0, sizeof(local_name));
 	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", vout_mode_uboot);
 	ret = set_current_vmode(vmode);
-	VOUTPR("init mode %s\n", vout_mode_uboot);
+	if (ret)
+		VOUTERR("init mode %s set error\n", vout_mode_uboot);
+	else {
+		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", vout_mode_uboot);
+		VOUTPR("init mode %s set ok\n", vout_mode);
+	}
 
 	return ret;
 }
@@ -230,8 +239,7 @@ static ssize_t vout_mode_store(struct class *class,
 	mutex_lock(&vout_mutex);
 	tvout_monitor_flag = 0;
 	snprintf(mode, VMODE_NAME_LEN_MAX, "%s", buf);
-	if (set_vout_mode(mode) == 0)
-		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s\n", mode);
+	set_vout_mode(mode);
 	mutex_unlock(&vout_mutex);
 	return count;
 }
@@ -380,7 +388,6 @@ static int vout_create_attr(void)
 {
 	int i;
 	int ret = 0;
-	struct vinfo_s *init_mode;
 
 	/* create vout class */
 	vout_class = class_create(THIS_MODULE, VOUT_CLASS_NAME);
@@ -396,11 +403,6 @@ static int vout_create_attr(void)
 				vout_class_attrs[i].attr.name);
 		}
 	}
-
-	/* init /sys/class/display/mode */
-	init_mode = get_current_vinfo();
-	if (init_mode)
-		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", init_mode->name);
 
 	return ret;
 }
@@ -555,10 +557,7 @@ static int refresh_tvout_mode(void)
 
 	if (cur_vmode != last_vmode) {
 		VOUTPR("%s: mode chang\n", __func__);
-		if (set_vout_mode(cur_mode_str) == 0) {
-			snprintf(vout_mode, VMODE_NAME_LEN_MAX,
-				"%s", cur_mode_str);
-		}
+		set_vout_mode(cur_mode_str);
 		last_vmode = cur_vmode;
 	}
 
@@ -600,6 +599,35 @@ static void aml_tvout_mode_monitor(void)
 	schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
 }
 
+static void aml_vout_extcon_register(struct platform_device *pdev)
+{
+	struct extcon_dev *edev;
+	int ret;
+
+	/*set display mode*/
+	edev = extcon_dev_allocate(vout_cable);
+	if (IS_ERR(edev)) {
+		VOUTERR("failed to allocate extcon setmode\n");
+		return;
+	}
+
+	edev->dev.parent = &pdev->dev;
+	edev->name = "vout_excton_setmode";
+	dev_set_name(&edev->dev, "setmode");
+	ret = extcon_dev_register(edev);
+	if (ret) {
+		VOUTERR("failed to register extcon setmode\n");
+		return;
+	}
+	vout_excton_setmode = edev;
+}
+
+static void aml_vout_extcon_free(void)
+{
+	extcon_dev_free(vout_excton_setmode);
+	vout_excton_setmode = NULL;
+}
+
 /*****************************************************************
  **
  **	vout driver interface
@@ -626,6 +654,7 @@ static int aml_vout_probe(struct platform_device *pdev)
 	else
 		VOUTERR("create vout attribute FAILED\n");
 
+	aml_vout_extcon_register(pdev);
 	aml_tvout_mode_monitor();
 
 	VOUTPR("%s OK\n", __func__);
@@ -638,6 +667,7 @@ static int aml_vout_remove(struct platform_device *pdev)
 	unregister_early_suspend(&early_suspend);
 #endif
 	vout_remove_attr();
+	aml_vout_extcon_free();
 
 	return 0;
 }
