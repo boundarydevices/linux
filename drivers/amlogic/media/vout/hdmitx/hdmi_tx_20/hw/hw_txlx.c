@@ -16,8 +16,28 @@
  */
 
 #include <linux/printk.h>
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 #include "common.h"
-#include "mach_reg.h"
+#include "reg_ops.h"
+#include "txlx_reg.h"
+
+unsigned int hdmitx_get_format_txlx(void)
+{
+	return hd_read_reg(P_ISA_DEBUG_REG0);
+}
+
+/*
+ * hdmitx apb reset
+ * P_RESET0_REGISTER bit19 : hdmitx capb
+ * P_RESET2_REGISTER bit15 : hdmi system reset
+ * P_RESET2_REGISTER bit2 : hdmi tx
+ */
+void hdmitx_sys_reset_txlx(void)
+{
+	hd_set_reg_bits(P_RESET0_REGISTER, 1, 19, 1);
+	hd_set_reg_bits(P_RESET2_REGISTER, 1, 15, 1);
+	hd_set_reg_bits(P_RESET2_REGISTER, 1,  2, 1);
+}
 
 /*
  * NAME		PAD		PINMUX		GPIO
@@ -30,30 +50,45 @@ int hdmitx_hpd_hw_op_txlx(enum hpd_op cmd)
 {
 	int ret = 0;
 
+	struct hdmitx_dev *hdev = get_hdmitx_device();
+
+	if (hdev->pdev == NULL) {
+		pr_info("exit for null device of hdmitx!\n");
+		return -ENODEV;
+	}
+
+	if (hdev->pdev->pins == NULL) {
+		pr_info("exit for null pins of hdmitx device!\n");
+		return -ENODEV;
+	}
+
+	if (hdev->pdev->pins->p == NULL) {
+		pr_info("exit for null pinctrl of hdmitx device pins!\n");
+		return -ENODEV;
+	}
+
 	switch (cmd) {
 	case HPD_INIT_DISABLE_PULLUP:
-		hd_set_reg_bits(P_PAD_PULL_UP_REG1, 0, 21, 1);
 		break;
 	case HPD_INIT_SET_FILTER:
 		hdmitx_wr_reg(HDMITX_TOP_HPD_FILTER,
 			((0xa << 12) | (0xa0 << 0)));
 		break;
 	case HPD_IS_HPD_MUXED:
-		ret = !!(hd_read_reg(P_PERIPHS_PIN_MUX_0) & (1 << 23));
+		ret = 1;
 		break;
 	case HPD_MUX_HPD:
-		hd_set_reg_bits(P_PREG_PAD_GPIO1_EN_N, 1, 21, 1);
-		hd_set_reg_bits(P_PERIPHS_PIN_MUX_0, 1, 23, 1);
+		pinctrl_select_state(hdev->pdev->pins->p,
+			hdev->pinctrl_default);
 		break;
 	case HPD_UNMUX_HPD:
-		hd_set_reg_bits(P_PERIPHS_PIN_MUX_0, 0, 23, 1);
-		hd_set_reg_bits(P_PREG_PAD_GPIO1_EN_N, 1, 21, 1);
+		pinctrl_select_state(hdev->pdev->pins->p, hdev->pinctrl_i2c);
 		break;
 	case HPD_READ_HPD_GPIO:
-		ret = !!(hd_read_reg(P_PREG_PAD_GPIO1_I) & (1 << 21));
+		ret = hdmitx_rd_reg(HDMITX_DWC_PHY_STAT0) & (1 << 1);
 		break;
 	default:
-		pr_info("error hpd cmd %d\n", cmd);
+		pr_err("error hpd cmd %d\n", cmd);
 		break;
 	}
 	return ret;
@@ -61,28 +96,41 @@ int hdmitx_hpd_hw_op_txlx(enum hpd_op cmd)
 
 int read_hpd_gpio_txlx(void)
 {
-	return !!(hd_read_reg(P_PREG_PAD_GPIO1_I) & (1 << 21));
+	return hdmitx_rd_reg(HDMITX_DWC_PHY_STAT0) & (1 << 1);
 }
 
 int hdmitx_ddc_hw_op_txlx(enum ddc_op cmd)
 {
 	int ret = 0;
+	struct hdmitx_dev *hdev = get_hdmitx_device();
+
+	if (hdev->pdev == NULL) {
+		pr_info("exit for null device of hdmitx!\n");
+		return -ENODEV;
+	}
+
+	if (hdev->pdev->pins == NULL) {
+		pr_info("exit for null pins of hdmitx device!\n");
+		return -ENODEV;
+	}
+
+	if (hdev->pdev->pins->p == NULL) {
+		pr_info("exit for null pinctrl of hdmitx device pins!\n");
+		return -ENODEV;
+	}
 
 	switch (cmd) {
 	case DDC_INIT_DISABLE_PULL_UP_DN:
-		hd_set_reg_bits(P_PAD_PULL_UP_EN_REG1, 0, 22, 2);
-		hd_set_reg_bits(P_PAD_PULL_UP_REG1, 0, 22, 2);
 		break;
 	case DDC_MUX_DDC:
-		hd_set_reg_bits(P_PREG_PAD_GPIO1_EN_N, 3, 22, 2);
-		hd_set_reg_bits(P_PERIPHS_PIN_MUX_0, 3, 21, 2);
+		pinctrl_select_state(hdev->pdev->pins->p,
+			hdev->pinctrl_default);
 		break;
 	case DDC_UNMUX_DDC:
-		hd_set_reg_bits(P_PREG_PAD_GPIO1_EN_N, 3, 22, 2);
-		hd_set_reg_bits(P_PERIPHS_PIN_MUX_0, 0, 21, 2);
+		pinctrl_select_state(hdev->pdev->pins->p, hdev->pinctrl_i2c);
 		break;
 	default:
-		pr_info("error ddc cmd %d\n", cmd);
+		pr_err("error ddc cmd %d\n", cmd);
 	}
 	return ret;
 }

@@ -30,19 +30,10 @@
 #include <linux/mutex.h>
 #include <linux/cdev.h>
 #include <linux/io.h>
-#include "mach_reg.h"
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
+#include "common.h"
 #include "hdmi_tx_reg.h"
-
-static int dbg_en;
-
-/*
- * RePacket HDMI related registers rd/wr
- */
-struct reg_map {
-	unsigned int phy_addr;
-	unsigned int size;
-	void __iomem *p;
-};
+#include "reg_ops.h"
 
 /* For gxb/gxl/gxm */
 static struct reg_map reg_maps_def[] = {
@@ -87,7 +78,7 @@ static struct reg_map reg_maps_def[] = {
 /* For txlx */
 static struct reg_map reg_maps_txlx[] = {
 	[CBUS_REG_IDX] = { /* CBUS */
-		.phy_addr = 0xffd00000,
+		.phy_addr = 0xffd0f000,
 		.size = 0xa00000,
 	},
 	[PERIPHS_REG_IDX] = { /* PERIPHS */
@@ -131,23 +122,22 @@ void init_reg_map(unsigned int type)
 	int i;
 
 	switch (type) {
-	case 1:
+	case MESON_CPU_ID_TXLX:
 		map = reg_maps_txlx;
 		break;
 	default:
 		map = reg_maps_def;
-		break;
-	}
-
-	for (i = 0; i < REG_IDX_END; i++) {
-		map[i].p = ioremap(map[i].phy_addr, map[i].size);
-		if (!map[i].p) {
-			pr_info("hdmitx20: failed Mapped PHY: 0x%x\n",
-				map[i].phy_addr);
-		} else {
-			pr_info("hdmitx20: Mapped PHY: 0x%x\n",
-				map[i].phy_addr);
+		for (i = 0; i < REG_IDX_END; i++) {
+			map[i].p = ioremap(map[i].phy_addr, map[i].size);
+			if (!map[i].p) {
+				pr_info("hdmitx20: failed Mapped PHY: 0x%x\n",
+					map[i].phy_addr);
+			} else {
+				pr_info("hdmitx20: Mapped PHY: 0x%x\n",
+					map[i].phy_addr);
+			}
 		}
+		break;
 	}
 }
 
@@ -170,11 +160,46 @@ unsigned int hd_read_reg(unsigned int addr)
 {
 	unsigned int val = 0;
 	unsigned int paddr = TO_PHY_ADDR(addr);
+	unsigned int index = (addr) >> BASE_REG_OFFSET;
 
-	val = readl(TO_PMAP_ADDR(addr));
+	struct hdmitx_dev *hdev = get_hdmitx_device();
 
-	if (dbg_en)
-		pr_info("Rd[0x%x] 0x%x\n", paddr, val);
+	switch (hdev->chip_type) {
+	case MESON_CPU_ID_TXLX:
+		switch (index) {
+		case CBUS_REG_IDX:
+		case RESET_CBUS_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			val = aml_read_cbus(addr);
+			break;
+		case VCBUS_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			val = aml_read_vcbus(addr);
+			break;
+		case AOBUS_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			val = aml_read_aobus(addr);
+			break;
+		case HHI_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			val = aml_read_hiubus(addr);
+			break;
+		default:
+			break;
+		}
+		break;
+	case MESON_CPU_ID_GXL:
+	case MESON_CPU_ID_GXM:
+	default:
+		val = readl(TO_PMAP_ADDR(addr));
+		break;
+	}
+
+	pr_debug(REG "Rd[0x%x] 0x%x\n", paddr, val);
 
 	return val;
 }
@@ -182,11 +207,46 @@ unsigned int hd_read_reg(unsigned int addr)
 void hd_write_reg(unsigned int addr, unsigned int val)
 {
 	unsigned int paddr = TO_PHY_ADDR(addr);
+	unsigned int index = (addr) >> BASE_REG_OFFSET;
 
-	writel(val, TO_PMAP_ADDR(addr));
+	struct hdmitx_dev *hdev = get_hdmitx_device();
 
-	if (dbg_en)
-		pr_info("Wr[0x%x] 0x%x\n", paddr, val);
+	switch (hdev->chip_type) {
+	case MESON_CPU_ID_TXLX:
+		switch (index) {
+		case CBUS_REG_IDX:
+		case RESET_CBUS_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			aml_write_cbus(addr, val);
+			break;
+		case VCBUS_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			aml_write_vcbus(addr, val);
+			break;
+		case AOBUS_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			aml_write_aobus(addr, val);
+			break;
+		case HHI_REG_IDX:
+			addr &= ~(index << BASE_REG_OFFSET);
+			addr >>= 2;
+			aml_write_hiubus(addr, val);
+			break;
+		default:
+			break;
+		}
+		break;
+	case MESON_CPU_ID_GXL:
+	case MESON_CPU_ID_GXM:
+	default:
+		writel(val, TO_PMAP_ADDR(addr));
+		break;
+	}
+
+	pr_debug(REG "Wr[0x%x] 0x%x\n", paddr, val);
 }
 
 void hd_set_reg_bits(unsigned int addr, unsigned int value,
@@ -218,8 +278,7 @@ unsigned int hdmitx_rd_reg(unsigned int addr)
 	);
 	data = (unsigned int)(x0&0xffffffff);
 
-	if (dbg_en)
-		pr_info("%s rd[0x%x] 0x%x\n", offset ? "DWC" : "TOP",
+	pr_debug(REG "%s rd[0x%x] 0x%x\n", offset ? "DWC" : "TOP",
 			addr, data);
 	return data;
 }
@@ -227,6 +286,7 @@ unsigned int hdmitx_rd_reg(unsigned int addr)
 void hdmitx_wr_reg(unsigned int addr, unsigned int data)
 {
 	unsigned long offset = (addr & DWC_OFFSET_MASK) >> 24;
+
 	register long x0 asm("x0") = 0x82000019;
 	register long x1 asm("x1") = (unsigned long)addr;
 	register long x2 asm("x2") = data;
@@ -239,8 +299,7 @@ void hdmitx_wr_reg(unsigned int addr, unsigned int data)
 		: : "r"(x0), "r"(x1), "r"(x2)
 	);
 
-	if (dbg_en)
-		pr_info("%s wr[0x%x] 0x%x\n", offset ? "DWC" : "TOP",
+	pr_debug("%s wr[0x%x] 0x%x\n", offset ? "DWC" : "TOP",
 			addr, data);
 }
 
@@ -265,7 +324,7 @@ void hdmitx_poll_reg(unsigned int addr, unsigned int val, unsigned long timeout)
 		mdelay(2);
 	}
 	if (time_after(jiffies, time + timeout))
-		pr_info("hdmitx poll:0x%x  val:0x%x T1=%lu t=%lu T2=%lu timeout\n",
+		pr_info(REG "hdmitx poll:0x%x  val:0x%x T1=%lu t=%lu T2=%lu timeout\n",
 			addr, val, time, timeout, jiffies);
 }
 
@@ -273,15 +332,12 @@ void hdmitx_rd_check_reg(unsigned int addr, unsigned int exp_data,
 	unsigned int mask)
 {
 	unsigned long rd_data;
+
 	rd_data = hdmitx_rd_reg(addr);
 	if ((rd_data | mask) != (exp_data | mask)) {
-		pr_info("HDMITX-DWC addr=0x%04x rd_data=0x%02x\n",
+		pr_info(REG "HDMITX-DWC addr=0x%04x rd_data=0x%02x\n",
 			(unsigned int)addr, (unsigned int)rd_data);
-		pr_info("Error: HDMITX-DWC exp_data=0x%02x mask=0x%02x\n",
+		pr_info(REG "Error: HDMITX-DWC exp_data=0x%02x mask=0x%02x\n",
 			(unsigned int)exp_data, (unsigned int)mask);
 	}
 }
-
-MODULE_PARM_DESC(dbg_en, "\n debug_level\n");
-module_param(dbg_en, int, 0664);
-

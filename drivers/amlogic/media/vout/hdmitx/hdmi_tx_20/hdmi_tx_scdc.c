@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ddc.h>
+#include "hw/common.h"
 
 static struct timer_list scdc_tmds_cfg_timer;
 

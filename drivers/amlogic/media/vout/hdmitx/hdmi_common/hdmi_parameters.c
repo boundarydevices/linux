@@ -1409,7 +1409,7 @@ struct hdmi_format_para *hdmi_match_dtd_paras(struct dtd *t)
 	if (!t)
 		return NULL;
 	for (i = 0; all_fmt_paras[i]; i++) {
-		if ((abs(all_fmt_paras[i]->timing.frac_freq / 10
+		if ((abs(all_fmt_paras[i]->timing.pixel_freq / 10
 		    - t->pixel_clock) <= (t->pixel_clock + 1000) / 1000) &&
 		    (t->h_active == all_fmt_paras[i]->timing.h_active) &&
 		    (t->h_blank == all_fmt_paras[i]->timing.h_blank) &&
@@ -1584,20 +1584,22 @@ struct vinfo_s *hdmi_get_valid_vinfo(char *mode)
 	struct vinfo_s *info = NULL;
 	char mode_[32];
 
-	/* the string of mode contains char NF */
-	memset(mode_, 0, sizeof(mode_));
-	strncpy(mode_, mode, strlen(mode));
-	for (i = 0; i < sizeof(mode_); i++)
-		if (mode_[i] == 10)
-			mode_[i] = 0;
+	if (strlen(mode)) {
+		/* the string of mode contains char NF */
+		memset(mode_, 0, sizeof(mode_));
+		strncpy(mode_, mode, sizeof(mode_));
+		for (i = 0; i < sizeof(mode_); i++)
+			if (mode_[i] == 10)
+				mode_[i] = 0;
 
-	for (i = 0; all_fmt_paras[i]; i++) {
-		if (all_fmt_paras[i]->hdmitx_vinfo.mode == VMODE_MAX)
-			continue;
-		if (strncmp(all_fmt_paras[i]->hdmitx_vinfo.name, mode_,
-			strlen(mode_)) == 0) {
-			info = &all_fmt_paras[i]->hdmitx_vinfo;
-			break;
+		for (i = 0; all_fmt_paras[i]; i++) {
+			if (all_fmt_paras[i]->hdmitx_vinfo.mode == VMODE_MAX)
+				continue;
+			if (strncmp(all_fmt_paras[i]->hdmitx_vinfo.name, mode_,
+				strlen(mode_)) == 0) {
+				info = &all_fmt_paras[i]->hdmitx_vinfo;
+				break;
+			}
 		}
 	}
 	return info;

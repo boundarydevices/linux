@@ -53,6 +53,14 @@ struct hw_enc_clk_val_group {
 };
 
 void hdmitx_set_clk(struct hdmitx_dev *hdev);
+void hdmitx_set_cts_sys_clk(struct hdmitx_dev *hdev);
+void hdmitx_set_top_pclk(struct hdmitx_dev *hdev);
+void hdmitx_set_hdcp_pclk(struct hdmitx_dev *hdev);
+void hdmitx_set_cts_hdcp22_clk(struct hdmitx_dev *hdev);
+void hdmitx_set_sys_clk(struct hdmitx_dev *hdev, unsigned char flag);
+void hdmitx_set_vclk2_encp(struct hdmitx_dev *hdev);
+void hdmitx_set_vclk2_enci(struct hdmitx_dev *hdev);
+
 
 #endif
 

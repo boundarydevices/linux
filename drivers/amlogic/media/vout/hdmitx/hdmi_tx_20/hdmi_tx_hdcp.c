@@ -42,7 +42,7 @@
 /* #include <mach/am_regs.h> */
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_info_global.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
-/* #include <mach/hdmi_tx_reg.h> */
+#include "hw/common.h"
 #include "hdmi_tx_hdcp.h"
 /*
  * hdmi_tx_hdcp.c
@@ -51,6 +51,24 @@
 
 
 static int hdmi_authenticated;
+
+unsigned int hdcp_get_downstream_ver(void)
+{
+	unsigned int ret = 14;
+
+	struct hdmitx_dev *hdev = get_hdmitx_device();
+
+	/* if TX don't have HDCP22 key, skip RX hdcp22 ver */
+	if (hdev->HWOp.CntlDDC(hdev,
+		DDC_HDCP_22_LSTORE, 0) == 0)
+		if (hdcp_rd_hdcp22_ver())
+			ret = 22;
+		else
+			ret = 14;
+	else
+		ret = 14;
+	return ret;
+}
 
 /* Notic: the HDCP key setting has been moved to uboot
  * On MBX project, it is too late for HDCP get from
@@ -107,9 +125,9 @@ static int __init hdmitx_hdcp_init(void)
 {
 	struct hdmitx_dev *hdev = get_hdmitx_device();
 
-	pr_info("hdmitx_hdcp_init\n");
+	pr_info(HDCP "hdmitx_hdcp_init\n");
 	if (hdev->hdtx_dev == NULL) {
-		hdmi_print(IMP, SYS "exit for null device of hdmitx!\n");
+		pr_info(HDCP "exit for null device of hdmitx!\n");
 		return -ENODEV;
 	}
 

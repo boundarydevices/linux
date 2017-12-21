@@ -32,8 +32,8 @@
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_info_global.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_compliance.h>
+#include "hw/common.h"
 
-static unsigned char hdmi_output_rgb;
 static void hdmitx_set_spd_info(struct hdmitx_dev *hdmitx_device);
 static void hdmi_set_vend_spec_infofram(struct hdmitx_dev *hdmitx_device,
 	enum hdmi_vic VideoCode);
@@ -551,25 +551,6 @@ static void hdmi_tx_construct_avi_packet(
  *	hdmitx protocol level interface
  *************************************/
 
-void hdmitx_init_parameters(struct hdmitx_info *info)
-{
-	memset(info, 0, sizeof(struct hdmitx_info));
-
-	info->video_out_changing_flag = 1;
-
-	info->audio_flag = 1;
-	info->audio_info.type = CT_REFER_TO_STREAM;
-	info->audio_info.format = AF_I2S;
-	info->audio_info.fs = FS_44K1;
-	info->audio_info.ss = SS_16BITS;
-	info->audio_info.channels = CC_2CH;
-	info->audio_out_changing_flag = 1;
-
-	info->auto_hdcp_ri_flag = 1;
-	info->hw_sha_calculator_flag = 1;
-
-}
-
 /*
  * HDMI Identifier = 0x000c03
  * If not, treated as a DVI Device
@@ -580,11 +561,6 @@ static int is_dvi_device(struct rx_cap *pRXCap)
 		return 1;
 	else
 		return 0;
-}
-
-void hdmitx_output_rgb(void)
-{
-	hdmi_output_rgb = 1;
 }
 
 int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
@@ -602,51 +578,46 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
 		AVI_DB[i] = 0;
 
 	vic = hdev->HWOp.GetState(hdev, STAT_VIDEO_VIC, 0);
-	hdmi_print(IMP, SYS "already init VIC = %d  Now VIC = %d\n",
+	pr_info(VID "already init VIC = %d  Now VIC = %d\n",
 		vic, VideoCode);
-	if ((vic != HDMI_Unknown) && (vic == VideoCode)) {
+	if ((vic != HDMI_Unknown) && (vic == VideoCode))
 		hdev->cur_VIC = vic;
-		/* return 1; */
-	}
 
 	param = hdmi_get_video_param(VideoCode);
 	hdev->cur_video_param = param;
 	if (param) {
 		param->color = param->color_prefer;
-		if (hdmi_output_rgb) {
+		/* HDMI CT 7-24 Pixel Encoding
+		 * YCbCr to YCbCr Sink
+		 */
+		switch (hdev->RXCap.native_Mode & 0x30) {
+		case 0x20:/*bit5==1, then support YCBCR444 + RGB*/
+		case 0x30:
+			param->color = COLORSPACE_YUV444;
+			break;
+		case 0x10:/*bit4==1, then support YCBCR422 + RGB*/
+			param->color = COLORSPACE_YUV422;
+			break;
+		default:
 			param->color = COLORSPACE_RGB444;
-		} else {
-			/* HDMI CT 7-24 Pixel Encoding
-			 * YCbCr to YCbCr Sink
-			 */
-			switch (hdev->RXCap.native_Mode & 0x30) {
-			case 0x20:/*bit5==1, then support YCBCR444 + RGB*/
-			case 0x30:
-				param->color = COLORSPACE_YUV444;
-				break;
-			case 0x10:/*bit4==1, then support YCBCR422 + RGB*/
-				param->color = COLORSPACE_YUV422;
-				break;
-			default:
-				param->color = COLORSPACE_RGB444;
-			}
-			/* For Y420 modes */
-			switch (VideoCode) {
-			case HDMI_3840x2160p50_16x9_Y420:
-			case HDMI_3840x2160p60_16x9_Y420:
-			case HDMI_4096x2160p50_256x135_Y420:
-			case HDMI_4096x2160p60_256x135_Y420:
-				param->color = COLORSPACE_YUV420;
-				break;
-			default:
-				break;
-			}
-			if (param->color == COLORSPACE_RGB444) {
-				hdev->para->cs = hdev->cur_video_param->color;
-				pr_info("hdmitx: rx edid only support RGB format\n");
-			}
-
 		}
+		/* For Y420 modes */
+		switch (VideoCode) {
+		case HDMI_3840x2160p50_16x9_Y420:
+		case HDMI_3840x2160p60_16x9_Y420:
+		case HDMI_4096x2160p50_256x135_Y420:
+		case HDMI_4096x2160p60_256x135_Y420:
+			param->color = COLORSPACE_YUV420;
+			break;
+		default:
+			break;
+		}
+
+		if (param->color == COLORSPACE_RGB444) {
+			hdev->para->cs = hdev->cur_video_param->color;
+			pr_info(VID "rx edid only support RGB format\n");
+		}
+
 		if (hdev->HWOp.SetDispMode(hdev) >= 0) {
 			/* HDMI CT 7-33 DVI Sink, no HDMI VSDB nor any
 			 * other VSDB, No GB or DI expected
@@ -654,11 +625,11 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
 			 * 0: DVI Mode	   1: HDMI Mode
 			 */
 			if (is_dvi_device(&hdev->RXCap)) {
-				hdmi_print(1, "Sink is DVI device\n");
+				pr_info(VID "Sink is DVI device\n");
 				hdev->HWOp.CntlConfig(hdev,
 					CONF_HDMI_DVI_MODE, DVI_MODE);
 			} else {
-				hdmi_print(1, "Sink is HDMI device\n");
+				pr_info(VID "Sink is HDMI device\n");
 				hdev->HWOp.CntlConfig(hdev,
 					CONF_HDMI_DVI_MODE, HDMI_MODE);
 			}
@@ -678,9 +649,7 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
 		}
 	}
 	hdmitx_set_spd_info(hdev);
-#if 0
-	hdmitx_special_handler_video(hdev);
-#endif
+
 	return ret;
 }
 
@@ -756,7 +725,7 @@ static void hdmitx_set_spd_info(struct hdmitx_dev *hdev)
 	if (hdev->config_data.vend_data)
 		vend_data = hdev->config_data.vend_data;
 	else {
-		hdmi_print(INF, SYS "packet: can\'t get vendor data\n");
+		pr_info(VID "packet: can\'t get vendor data\n");
 		return;
 	}
 	if (vend_data->vendor_name) {

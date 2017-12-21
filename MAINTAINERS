@@ -13500,6 +13500,7 @@ F: drivers/amlogic/power/*
 HDMITX OUTPUT DRIVER
 M:	Zongdong Jiao <zongdong.jiao@amlogic.com>
 M:	Yi Zhou <yi.zhou@amlogic.com>
+M:	Kaifu Hu <kaifu.hu@amlogic.com>
 S:	Maintained
 F:	drivers/amlogic/media/vout/hdmitx/*
 F:	drivers/amlogic/media/vout/hdmitx/hdcp/*

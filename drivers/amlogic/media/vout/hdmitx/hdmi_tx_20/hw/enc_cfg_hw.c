@@ -37,6 +37,7 @@
 #include <linux/amlogic/media/vout/hdmi_tx/enc_clk_config.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_info_global.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
+#include "common.h"
 #include "mach_reg.h"
 
 #define MREG_END_MARKER 0xFFFF
@@ -744,37 +745,6 @@ static struct vic_tvregs_set tvregsTab[] = {
 	{HDMI_3840x2160p50_16x9_Y420, tvregs_4k2k_25hz},
 };
 
-static inline void setreg(const struct reg_s *r)
-{
-	hd_write_reg(r->reg, r->val);
-	/* printk("[0x%x] = 0x%x\n", r->reg, r->val); */
-}
-
-static const struct reg_s *tvregs_setting_mode(enum hdmi_vic vic)
-{
-	int i = 0;
-
-	for (i = 0; i < ARRAY_SIZE(tvregsTab); i++) {
-		if (vic == tvregsTab[i].vic)
-			return tvregsTab[i].reg_setting;
-	}
-	return NULL;
-}
-
-void set_vmode_enc_hw(enum hdmi_vic vic)
-{
-	const struct reg_s *s = tvregs_setting_mode(vic);
-	/* Turn off VDAC, no need any more for HDMITX */
-	hd_set_reg_bits(P_VENC_VDAC_SETTING, 0x1f, 0, 5);
-
-	if (s) {
-		pr_info("hdmitx: set enc for VIC: %d\n", vic);
-		while (s->reg != MREG_END_MARKER)
-			setreg(s++);
-	} else
-		pr_info("hdmitx: not find VIC: %d\n", vic);
-}
-
 /*
  * For 3D FramePacket Setting
  */
@@ -989,25 +959,44 @@ static struct vic_tvregs_set tvregsTab_3dfp[] = {
 	{HDMI_1280x720p50_16x9, tvregs_3dfp_720p50},
 };
 
-static const struct reg_s *tvregs_3dfp_setting_mode(enum hdmi_vic vic)
+static inline void setreg(const struct reg_s *r)
+{
+	hd_write_reg(r->reg, r->val);
+}
+
+static const struct reg_s *tvregs_setting_mode(struct hdmitx_dev *hdev)
 {
 	int i = 0;
+	enum hdmi_vic vic = hdev->cur_video_param->VIC;
 
-	for (i = 0; i < ARRAY_SIZE(tvregsTab_3dfp); i++) {
-		if (vic == tvregsTab_3dfp[i].vic)
-			return tvregsTab_3dfp[i].reg_setting;
+	if (hdev->flag_3dfp) {
+		for (i = 0; i < ARRAY_SIZE(tvregsTab_3dfp); i++) {
+			if (vic == tvregsTab_3dfp[i].vic)
+				return tvregsTab_3dfp[i].reg_setting;
+		}
+	} else {
+		for (i = 0; i < ARRAY_SIZE(tvregsTab); i++) {
+			if (vic == tvregsTab[i].vic)
+				return tvregsTab[i].reg_setting;
+		}
 	}
+
 	return NULL;
 }
 
-void set_vmode_3dfp_enc_hw(enum hdmi_vic vic)
+void set_vmode_enc_hw(struct hdmitx_dev *hdev)
 {
-	const struct reg_s *s = tvregs_3dfp_setting_mode(vic);
+	const struct reg_s *s = tvregs_setting_mode(hdev);
+	/* Turn off VDAC, no need any more for HDMITX */
+	hd_set_reg_bits(P_VENC_VDAC_SETTING, 0x1f, 0, 5);
 
 	if (s) {
-		pr_info("hdmitx: set 3dfp enc for VIC: %d\n", vic);
+		pr_info("set enc for VIC: %d\n",
+			hdev->cur_video_param->VIC);
 		while (s->reg != MREG_END_MARKER)
 			setreg(s++);
 	} else
-		pr_info("hdmitx: not find VIC: %d\n", vic);
+		pr_info("set enc not find VIC: %d\n",
+			hdev->cur_video_param->VIC);
 }
+

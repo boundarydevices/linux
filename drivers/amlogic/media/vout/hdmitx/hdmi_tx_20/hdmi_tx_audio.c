@@ -32,6 +32,8 @@
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_info_global.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_compliance.h>
+#include "hw/common.h"
+
 
 #undef PCM_USE_INFOFRAME
 
@@ -53,17 +55,13 @@ static const unsigned char channel_status_sample_word_length[] = {
 	0xb  /*24 bits*/
 };
 
-void hdmi_tx_set_N_CTS(unsigned int N_value, unsigned int CTS)
-{
-}
-
 static void hdmi_tx_construct_aud_packet(
 	struct hdmitx_audpara *audio_param, unsigned char *AUD_DB,
 	unsigned char *CHAN_STAT_BUF, int hdmi_ch)
 {
 #ifndef PCM_USE_INFOFRAME
 	if (audio_param->type == CT_PCM) {
-		hdmi_print(INF, AUD "Audio Type: PCM\n");
+		pr_info(AUD "Audio Type: PCM\n");
 		if (AUD_DB) {
 			/*Note: HDMI Spec V1.4 Page 154*/
 			if ((audio_param->channel_num == CC_2CH) ||
@@ -97,7 +95,7 @@ static void hdmi_tx_construct_aud_packet(
 				audio_param->sample_rate])<<4);
 		}
 	} else if (audio_param->type == CT_AC_3) {
-		hdmi_print(INF, AUD "Audio Type: AC3\n");
+		pr_info(AUD "Audio Type: AC3\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_AC_3<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -105,7 +103,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_MPEG1) {
-		hdmi_print(INF, AUD "Audio Type: MPEG1\n");
+		pr_info(AUD "Audio Type: MPEG1\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_MPEG1<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -113,7 +111,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_MP3) {
-		hdmi_print(INF, AUD "Audio Type: MP3\n");
+		pr_info(AUD "Audio Type: MP3\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_MP3<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -121,7 +119,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_MPEG2) {
-		hdmi_print(INF, AUD "Audio Type: MPEG2\n");
+		pr_info(AUD "Audio Type: MPEG2\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_MPEG2<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -129,7 +127,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_AAC) {
-		hdmi_print(INF, AUD "Audio Type: AAC\n");
+		pr_info(AUD "Audio Type: AAC\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_AAC<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -137,7 +135,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_DTS) {
-		hdmi_print(INF, AUD "Audio Type: DTS\n");
+		pr_info(AUD "Audio Type: DTS\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_DTS<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -145,7 +143,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_ATRAC) {
-		hdmi_print(INF, AUD "Audio Type: ATRAC\n");
+		pr_info(AUD "Audio Type: ATRAC\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_ATRAC<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -153,7 +151,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_ONE_BIT_AUDIO) {
-		hdmi_print(INF, AUD "Audio Type: One Bit Audio\n");
+		pr_info(AUD "Audio Type: One Bit Audio\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_ONE_BIT_AUDIO<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -161,7 +159,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_DOLBY_D) {
-		hdmi_print(INF, AUD "Audio Type: Dobly Digital +\n");
+		pr_info(AUD "Audio Type: Dobly Digital +\n");
 		if (AUD_DB) {
 			AUD_DB[0] =
 				(FS_REFER_TO_STREAM<<4)|(CC_REFER_TO_STREAM);
@@ -175,7 +173,7 @@ static void hdmi_tx_construct_aud_packet(
 			CHAN_STAT_BUF[4] = CHAN_STAT_BUF[24+4] = 0x1;
 		}
 	} else if (audio_param->type == CT_DTS_HD) {
-		hdmi_print(INF, AUD "Audio Type: DTS-HD\n");
+		pr_info(AUD "Audio Type: DTS-HD\n");
 		if (AUD_DB) {
 			AUD_DB[0] =
 				(FS_REFER_TO_STREAM<<4)|(CC_REFER_TO_STREAM);
@@ -184,7 +182,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_MAT) {
-		hdmi_print(INF, AUD "Audio Type: MAT(MLP)\n");
+		pr_info(AUD "Audio Type: MAT(MLP)\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_MAT<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -192,7 +190,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_DST) {
-		hdmi_print(INF, AUD "Audio Type: DST\n");
+		pr_info(AUD "Audio Type: DST\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_DST<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -200,7 +198,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_WMA) {
-		hdmi_print(INF, AUD "Audio Type: WMA Pro\n");
+		pr_info(AUD "Audio Type: WMA Pro\n");
 		if (AUD_DB) {
 			AUD_DB[0] = (CT_WMA<<4)|(CC_REFER_TO_STREAM);
 			AUD_DB[1] = (FS_REFER_TO_STREAM<<2)|SS_REFER_TO_STREAM;
@@ -218,11 +216,12 @@ static void hdmi_tx_construct_aud_packet(
 }
 
 int hdmitx_set_audio(struct hdmitx_dev *hdmitx_device,
-	struct hdmitx_audpara *audio_param, int hdmi_ch)
+	struct hdmitx_audpara *audio_param)
 {
 	int i, ret = -1;
 	unsigned char AUD_DB[32];
 	unsigned char CHAN_STAT_BUF[24*2];
+	unsigned int hdmi_ch = hdmitx_device->hdmi_ch;
 
 	for (i = 0; i < 32; i++)
 		AUD_DB[i] = 0;

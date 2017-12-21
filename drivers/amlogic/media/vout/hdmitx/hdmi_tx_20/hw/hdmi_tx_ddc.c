@@ -37,7 +37,7 @@
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ddc.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_info_global.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
-
+#include "common.h"
 #include "hdmi_tx_reg.h"
 
 static DEFINE_MUTEX(ddc_mutex);
@@ -54,7 +54,7 @@ static uint32_t ddc_write_1byte(uint8_t slave, uint8_t offset_addr,
 	mdelay(2);
 	if (hdmitx_rd_reg(HDMITX_DWC_IH_I2CM_STAT0) & (1 << 0)) {
 		st = 0;
-		pr_info("hdmitx: ddc w1b error 0x%02x 0x%02x 0x%02x\n",
+		pr_info("ddc w1b error 0x%02x 0x%02x 0x%02x\n",
 			slave, offset_addr, data);
 	} else
 		st = 1;
@@ -157,7 +157,7 @@ static uint32_t ddc_read_1byte(uint8_t slave, uint8_t offset_addr,
 	mdelay(2);
 	if (hdmitx_rd_reg(HDMITX_DWC_IH_I2CM_STAT0) & (1 << 0)) {
 		st = 0;
-		pr_info("hdmitx: ddc rd8b error 0x%02x 0x%02x\n",
+		pr_info("ddc rd8b error 0x%02x 0x%02x\n",
 			slave, offset_addr);
 	} else
 		st = 1;

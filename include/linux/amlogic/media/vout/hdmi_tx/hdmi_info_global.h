@@ -20,8 +20,6 @@
 
 #include "hdmi_common.h"
 
-/* old definitions move to hdmi_common.h */
-
 enum hdmi_rx_video_state {
 	STATE_VIDEO__POWERDOWN = 0,
 	STATE_VIDEO__MUTED = 1,
@@ -269,16 +267,6 @@ struct vsdb_phyaddr {
 	unsigned char c:4;
 	unsigned char d:4;
 	unsigned char valid;
-};
-
-struct hdmitx_clk {
-	enum hdmi_vic vic;
-	uint64_t clk_sys;
-	uint64_t clk_phy;
-	uint64_t clk_vid;
-	uint64_t clk_encp;
-	uint64_t clk_enci;
-	uint64_t clk_pixel;
 };
 
 #define Y420CMDB_MAX	32

@@ -15,7 +15,7 @@
  *
  */
 
-#include <linux/amlogic/media/vout/hdmi_tx/hdmi_info_global.h>
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 
-void set_vmode_enc_hw(enum hdmi_vic vic);
-void set_vmode_3dfp_enc_hw(enum hdmi_vic vic); /* For 3D Frame Packing */
+
+void set_vmode_enc_hw(struct hdmitx_dev *hdev);

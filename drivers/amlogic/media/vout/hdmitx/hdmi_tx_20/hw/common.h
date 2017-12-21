@@ -20,8 +20,27 @@
 
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ddc.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_common.h>
-#include "mach_reg.h"
 #include "hdmi_tx_reg.h"
+
+/***********************************************************************
+ *                   hdmi debug printk
+ * pr_info(EDID "edid bad\");
+ * pr_debug(AUD "set audio format: AC-3\n");
+ * pr_err(REG "write reg\n")
+ **********************************************************************/
+#undef pr_fmt
+#define pr_fmt(fmt) "hdmitx: " fmt
+
+#define VID         "video: "
+#define AUD         "audio: "
+#define CEC         "cec: "
+#define EDID        "edid: "
+#define HDCP        "hdcp: "
+#define SYS         "system: "
+#define HPD         "hpd: "
+#define HW          "hw: "
+#define REG         "reg: "
+
 /*
  * HDMITX HPD HW related operations
  */
@@ -54,5 +73,7 @@ void set_hpll_od3_gxl(unsigned int div);
 int hdmitx_hpd_hw_op_txlx(enum hpd_op cmd);
 int read_hpd_gpio_txlx(void);
 int hdmitx_ddc_hw_op_txlx(enum ddc_op cmd);
+extern unsigned int hdmitx_get_format_txlx(void);
+extern void hdmitx_sys_reset_txlx(void);
 
 #endif
