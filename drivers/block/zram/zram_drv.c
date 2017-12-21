@@ -755,9 +755,18 @@ compress_again:
 
 		atomic64_inc(&zram->stats.writestall);
 
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		handle = zs_malloc(meta->mem_pool, clen,
+				GFP_NOIO |
+				__GFP_HIGHMEM |
+				__GFP_NOWARN |
+				__GFP_REPEAT |
+				__GFP_MOVABLE);
+	#else
 		handle = zs_malloc(meta->mem_pool, clen,
 				GFP_NOIO | __GFP_HIGHMEM |
 				__GFP_MOVABLE);
+	#endif
 		if (handle)
 			goto compress_again;
 

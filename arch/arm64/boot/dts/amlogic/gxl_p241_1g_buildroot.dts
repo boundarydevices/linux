@@ -121,7 +121,7 @@
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0xb400000>;
+			size = <0x0 0x7800000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};

@@ -416,9 +416,6 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	if (bitmap_count > bitmap_maxno)
 		return NULL;
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-	atomic_inc(&cma_alloc_ref);
-#endif
 	for (;;) {
 		mutex_lock(&cma->lock);
 		bitmap_no = bitmap_find_next_zero_area_off(cma->bitmap,
@@ -465,13 +462,10 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	trace_cma_alloc(pfn, page, count, align);
 
 #ifdef CONFIG_AMLOGIC_MODIFY
-	atomic_dec(&cma_alloc_ref);
 	if (page) {
 		atomic_long_add(count, &driver_alloc_cma);
 		update_cma_page_trace(page, count);
 	}
-	WARN_ONCE(!page, "can't alloc from %lx with size:%ld, ret:%d\n",
-		  cma->base_pfn, count, ret);
 #endif /* CONFIG_AMLOGIC_MODIFY */
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
@@ -522,7 +516,7 @@ bool cma_suitable(gfp_t gfp_mask)
 		return false;
 
 	/* try to reduce page lock wait for read */
-	if (atomic_read(&cma_alloc_ref) && (gfp_mask & __GFP_COLD))
+	if (atomic_read(&cma_alloc_ref))
 		return false;
 
 	return true;

@@ -2314,14 +2314,19 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
  * Do the hard work of removing an element from the buddy allocator.
  * Call me with the zone->lock already held.
  */
+#ifdef CONFIG_AMLOGIC_MODIFY
+static struct page *__rmqueue(struct zone *zone, unsigned int order,
+				int migratetype, gfp_t gfp_flags)
+#else
 static struct page *__rmqueue(struct zone *zone, unsigned int order,
 				int migratetype)
+#endif /* CONFIG_AMLOGIC_MODIFY */
 {
 	struct page *page;
 
 #ifdef CONFIG_AMLOGIC_MODIFY
 	/* use CMA first */
-	if (migratetype == MIGRATE_MOVABLE) {
+	if (migratetype == MIGRATE_MOVABLE && cma_suitable(gfp_flags)) {
 		page = __rmqueue_cma_fallback(zone, order);
 		if (page) {
 			trace_mm_page_alloc_zone_locked(page, order,
@@ -2372,15 +2377,25 @@ static struct page *rmqueue_no_cma(struct zone *zone, unsigned int order,
  * a single hold of the lock, for efficiency.  Add them to the supplied list.
  * Returns the number of new pages which were placed at *list.
  */
+#ifdef CONFIG_AMLOGIC_MODIFY
+static int rmqueue_bulk(struct zone *zone, unsigned int order,
+			unsigned long count, struct list_head *list,
+			int migratetype, bool cold, gfp_t flags)
+#else
 static int rmqueue_bulk(struct zone *zone, unsigned int order,
 			unsigned long count, struct list_head *list,
 			int migratetype, bool cold)
+#endif /* CONFIG_AMLOGIC_MODIFY */
 {
 	int i, alloced = 0;
 
 	spin_lock(&zone->lock);
 	for (i = 0; i < count; ++i) {
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		struct page *page = __rmqueue(zone, order, migratetype, flags);
+	#else
 		struct page *page = __rmqueue(zone, order, migratetype);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		if (unlikely(page == NULL))
 			break;
 
@@ -2803,9 +2818,16 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 			pcp = &this_cpu_ptr(zone->pageset)->pcp;
 			list = &pcp->lists[migratetype];
 			if (list_empty(list)) {
+			#ifdef CONFIG_AMLOGIC_MODIFY
+				pcp->count += rmqueue_bulk(zone, 0,
+						pcp->batch, list,
+						migratetype, cold,
+						gfp_flags);
+			#else
 				pcp->count += rmqueue_bulk(zone, 0,
 						pcp->batch, list,
 						migratetype, cold);
+			#endif /* CONFIG_AMLOGIC_MODIFY */
 				if (unlikely(list_empty(list)))
 					goto failed;
 			}
@@ -2875,7 +2897,12 @@ use_pcp:
 					trace_mm_page_alloc_zone_locked(page, order, migratetype);
 			}
 			if (!page)
+			#ifdef CONFIG_AMLOGIC_MODIFY
+				page = __rmqueue(zone, order,
+						 migratetype, gfp_flags);
+			#else
 				page = __rmqueue(zone, order, migratetype);
+			#endif /* CONFIG_AMLOGIC_MODIFY */
 		} while (page && check_new_pages(page, order));
 		spin_unlock(&zone->lock);
 		if (!page)
@@ -3986,7 +4013,7 @@ got_pg:
 static inline void should_wakeup_kswap(gfp_t gfp_mask, int order,
 				       struct alloc_context *ac)
 {
-	unsigned long free_pages;
+	unsigned long free_pages, free_cma = 0;
 	struct zoneref *z = ac->preferred_zoneref;
 	struct zone *zone;
 
@@ -3996,6 +4023,11 @@ static inline void should_wakeup_kswap(gfp_t gfp_mask, int order,
 	for_next_zone_zonelist_nodemask(zone, z, ac->zonelist, ac->high_zoneidx,
 								ac->nodemask) {
 		free_pages = zone_page_state(zone, NR_FREE_PAGES);
+	#ifdef CONFIG_CMA
+		if (cma_suitable(gfp_mask))
+			free_cma = zone_page_state(zone, NR_FREE_CMA_PAGES);
+	#endif
+		free_pages -= free_cma;
 		/*
 		 * wake up kswapd before get pages from buddy, this help to
 		 * fast reclaim process and can avoid memory become too low
@@ -4584,7 +4616,7 @@ void show_free_areas(unsigned int filter)
 		" slab_reclaimable:%lu slab_unreclaimable:%lu\n"
 		" mapped:%lu shmem:%lu pagetables:%lu bounce:%lu\n"
 	#ifdef CONFIG_AMLOGIC_MODIFY
-		" driver_cma:%lu"
+		" [cma] driver:%lu anon:%lu file:%lu isolate:%lu total:%lu\n"
 	#endif /* CONFIG_AMLOGIC_MODIFY */
 		" free:%lu free_pcp:%lu free_cma:%lu\n",
 		global_node_page_state(NR_ACTIVE_ANON),
@@ -4605,6 +4637,12 @@ void show_free_areas(unsigned int filter)
 		global_page_state(NR_BOUNCE),
 	#ifdef CONFIG_AMLOGIC_MODIFY
 		get_driver_alloc_cma(),
+		global_page_state(NR_INACTIVE_ANON_CMA) +
+		global_page_state(NR_ACTIVE_ANON_CMA),
+		global_page_state(NR_INACTIVE_FILE_CMA) +
+		global_page_state(NR_ACTIVE_FILE_CMA),
+		global_page_state(NR_CMA_ISOLATED),
+		totalcma_pages,
 	#endif /* CONFIG_AMLOGIC_MODIFY */
 		global_page_state(NR_FREE_PAGES),
 		free_pcp,
