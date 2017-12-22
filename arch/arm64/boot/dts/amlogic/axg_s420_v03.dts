@@ -740,8 +740,8 @@
 	pinctrl-names="default";
 	pinctrl-0=<&ao_i2c_master_pin2>;
 
-	pca9557:pca9557@0x1f {
-		compatible = "nxp,pca9557";
+	aml_pca9557:aml_pca9557@0x1f {
+		compatible = "aml, ledring";
 		reg = <0x1f>;
 		status = "okay";
 	};

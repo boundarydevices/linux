@@ -526,7 +526,7 @@
 		aml-audio-card,dai-link@2 {
 			format = "i2s";
 			mclk-fs = <256>;
-			continuous-clock;
+			//continuous-clock;
 			//bitclock-inversion;
 			//frame-inversion;
 			//bitclock-master = <&aml_tdmc>;
@@ -547,7 +547,7 @@
 		};
 
 		aml-audio-card,dai-link@3 {
-			mclk-fs = <64>;
+			mclk-fs = <256>;
 			cpu {
 				sound-dai = <&aml_pdm>;
 			};
@@ -580,6 +580,7 @@
 		dev_name = "aml_wifi";
 		status = "okay";
 		interrupt_pin = <&gpio       GPIOX_6       GPIO_ACTIVE_HIGH>;
+		interrupts = <	0 67 4>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
 		power_on_pin2 = <&gpio       GPIOX_16       GPIO_ACTIVE_HIGH>;
 		power_on_pin = <&gpio       GPIOX_7       GPIO_ACTIVE_HIGH>;
@@ -787,8 +788,8 @@
 		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		display_size_default = <768 1024 768 2048 32>;
 		/*768*1024*4*2 = 0x600000*/
-		logo_addr = "0x3e000000";
 		mem_alloc = <1>;
+		logo_addr = "0x3e000000";
 		pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 	};
 
@@ -916,6 +917,7 @@
 		reg = <0x1f>;
 		status = "okay";
 	};
+
 	tlv320adc3101_30: tlv320adc3101_30@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;
