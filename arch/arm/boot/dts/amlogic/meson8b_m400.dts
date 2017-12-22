@@ -183,7 +183,7 @@
 	};
 
 	unifykey{
-		compatible = "amlogic, unifykey";
+		compatible = "amlogic, unifykey-m8b";
 		status = "ok";
 
 		unifykey-num = <6>;

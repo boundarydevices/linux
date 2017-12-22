@@ -25,13 +25,13 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
-/*#include <asm/compiler.h>*/
 #include <linux/spinlock.h>
 #include <linux/mutex.h>
 #include <linux/amlogic/unifykey/security_key.h>
 #include <linux/amlogic/unifykey/v7/key_service_routine.h>
+
 #undef pr_fmt
-#define pr_fmt(fmt) "storage: " fmt
+#define pr_fmt(fmt) "unifykey: " fmt
 
 
 static void *storage_block_base;
@@ -56,52 +56,6 @@ static unsigned int block_base_func_id;
 static unsigned int block_size_func_id;
 
 static DEFINE_MUTEX(storage_lock);
-
-#if 0
-static DEFINE_SPINLOCK(storage_lock);
-static unsigned long lockflags;
-
-static uint64_t storage_smc_ops(uint64_t func)
-{
-	register unsigned long x0 asm("x0") = func;
-	asm volatile(
-		__asmeq("%0", "x0")
-		"smc	#0\n"
-		: "+r" (x0));
-
-	return x0;
-}
-static uint64_t storage_smc_ops2(uint64_t func, uint64_t arg1)
-{
-	register unsigned long x0 asm("x0") = func;
-	register unsigned long x1 asm("x1") = arg1;
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		"smc    #0\n"
-		: "+r" (x0)
-		: "r"(x1));
-
-	return x0;
-}
-
-uint64_t storage_smc_ops3(uint64_t func, uint64_t arg1, uint32_t arg2)
-{
-	register unsigned long x0 asm("x0") = func;
-	register unsigned long x1 asm("x1") = arg1;
-	register unsigned long x2 asm("x2") = arg2;
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		__asmeq("%2", "x2")
-		"smc    #0\n"
-		: "+r" (x0)
-		: "r"(x1), "r"(x2));
-
-
-	return x0;
-}
-#endif
 
 
 static inline int32_t smc_to_linux_errno(uint64_t errno)
@@ -351,44 +305,15 @@ int32_t secure_storage_status(uint8_t *keyname, uint32_t *retval)
 int32_t secure_storage_list(uint8_t *listbuf,
 		uint32_t buflen, uint32_t *readlen)
 {
-#if 0
-	uint32_t *output = (uint32_t *)storage_out_base;
-#endif
 	uint64_t ret = 0;
 
-#if 0
-	spin_lock_irqsave(&storage_lock, lockflags);
-	ret = storage_smc_ops(storage_list_func);
-	if (ret == RET_OK) {
-		if (*output > buflen)
-			*readlen = buflen;
-		else
-			*readlen = *output;
-		memcpy(listbuf, (uint8_t *)(output+1), *readlen);
-	}
-	spin_unlock_irqrestore(&storage_lock, lockflags);
-#endif
 	return smc_to_linux_errno(ret);
 }
 
 int32_t secure_storage_remove(uint8_t *keyname)
 {
-#if 0
-	uint32_t *input = (uint32_t *)storage_in_base;
-	uint32_t namelen;
-	uint8_t *name;
-#endif
 	uint64_t ret = 0;
 
-#if 0
-	spin_lock_irqsave(&storage_lock, lockflags);
-	namelen = strlen((const char *)keyname);
-	*input++ = namelen;
-	name = (uint8_t *)input;
-	memcpy(name, keyname, namelen);
-	ret = storage_smc_ops(storage_remove_func);
-	spin_unlock_irqrestore(&storage_lock, lockflags);
-#endif
 	return smc_to_linux_errno(ret);
 }
 
@@ -406,21 +331,13 @@ int32_t secure_storage_set_enctype(uint32_t type)
 int32_t secure_storage_get_enctype(void)
 {
 	uint64_t ret = 0;
-#if 0
-	spin_lock_irqsave(&storage_lock, lockflags);
-	ret = storage_smc_ops(storage_get_enctype_func);
-	spin_unlock_irqrestore(&storage_lock, lockflags);
-#endif
+
 	return smc_to_linux_errno(ret);
 }
 int32_t secure_storage_version(void)
 {
 	uint64_t ret = 0;
-#if 0
-	spin_lock_irqsave(&storage_lock, lockflags);
-	ret = storage_smc_ops(storage_version_func);
-	spin_unlock_irqrestore(&storage_lock, lockflags);
-#endif
+
 	return smc_to_linux_errno(ret);
 }
 

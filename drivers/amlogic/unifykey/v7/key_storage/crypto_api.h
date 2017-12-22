@@ -18,8 +18,6 @@
 #ifndef _CRYPTO_API_H_
 #define _CRYPTO_API_H_
 
-#define AES_BLOCK_SIZE 16
-
 int do_aes_internal(unsigned char bEncryptFlag, unsigned char *pIN,
 		int nINLen, unsigned char *pOUT, int *pOUTLen);
 int sha256(uint8_t *in, uint32_t len, unsigned char output[32]);

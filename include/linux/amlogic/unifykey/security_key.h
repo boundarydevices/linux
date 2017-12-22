@@ -20,11 +20,11 @@
 
 /* internal return value*/
 #define RET_OK		0
-#define RET_EFAIL	1		/*not found*/
+#define RET_EFAIL	1	/*not found*/
 #define RET_EINVAL	2	/*name length*/
 #define RET_EMEM	3	/*no enough memory*/
+#define RET_EUND	0xff
 
-#define RET_EUND	-1
 #define SMC_UNK		0xffffffff
 
 /* keyattr: 0: normal, 1: secure*/

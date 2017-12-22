@@ -25,6 +25,10 @@
 #include "storage_def.h"
 #include "crypto_api.h"
 
+#undef pr_fmt
+#define pr_fmt(fmt) "unifykey: " fmt
+
+
 static int emmc_key_transfer(u8 *buf, u32 *value, u32 len, u32 direct);
 static uint32_t emmckey_checksum(uint8_t *buf, uint32_t length);
 /* static var is initialized to be 0 by default */
@@ -85,7 +89,6 @@ int32_t storage_writeToFlash(void)
 	pkey_data = (uint8_t *)pstorage_key_head +
 		sizeof(struct key_storage_head);
 
-	//list_for_each_entry(node, &nodelist, list)
 	list_for_each_entry_reverse(node, &nodelist, list)
 		if (node->status & OBJ_STATUS_VALID) {
 			obj = &(node->object);
@@ -196,8 +199,9 @@ static void storage_del(struct storage_node *node)
 static void storage_reset(void)
 {
 	struct storage_node *node;
+	struct storage_node *tmp;
 
-	list_for_each_entry(node, &nodelist, list)
+	list_for_each_entry_safe(node, tmp, &nodelist, list)
 		__storage_del(node);
 }
 

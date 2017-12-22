@@ -38,10 +38,8 @@
 #include <linux/amlogic/unifykey/security_key.h>
 #include <linux/amlogic/unifykey/key_manage.h>
 #include <linux/of.h>
-#include <linux/amlogic/cpu_version.h>
 #include "unifykey.h"
 #include "amlkey_if.h"
-/* #include <amlogic/storage_if.h> */
 
 /* key buffer status */
 /* bit0, dirty flag*/
@@ -51,6 +49,9 @@
 #define SECUESTORAGE_WHOLE_SIZE		(0x40000)
 
 #define OTHER_METHOD_CALL
+
+#undef pr_fmt
+#define pr_fmt(fmt) "unifykey: " fmt
 
 struct storagekey_info_t {
 	uint8_t *buffer;
@@ -111,7 +112,7 @@ EXPORT_SYMBOL(storage_ops_write);
  *1.init
  * return ok 0, fail 1
  */
-int32_t amlkey_init(uint8_t *seed, uint32_t len, int encrypt_type)
+int32_t amlkey_init_gen(uint8_t *seed, uint32_t len, int encrypt_type)
 {
 	int32_t ret = 0;
 	uint32_t actual_size;
@@ -131,13 +132,76 @@ int32_t amlkey_init(uint8_t *seed, uint32_t len, int encrypt_type)
 		goto _out;
 	}
 
-	if (is_meson_m8b_cpu()) {
-		if ((void *)kallsyms_lookup_name("nand_key_read")
-			== (void *)store_key_read)
-			secure_storage_type(0);
-		else
-			secure_storage_type(1);
+	/* get buffer from bl31 */
+	storagekey_info.buffer =
+		secure_storage_getbuffer(&storagekey_info.size);
+	if (storagekey_info.buffer == NULL) {
+		pr_err("%s() %d: can't get buffer from bl31!\n",
+				__func__, __LINE__);
+		ret = -1;
+		goto _out;
 	}
+
+	/* full fill key infos from storage. */
+	if (store_key_read) {
+		ret = store_key_read(storagekey_info.buffer,
+					storagekey_info.size, &actual_size);
+		if (ret != 0) {
+			pr_err("fail to read key data\n");
+			memset(storagekey_info.buffer, 0,
+				SECUESTORAGE_HEAD_SIZE);
+			ret = -1;
+			goto _out;
+		}
+		if (actual_size >= (1U << 20)) {
+			pr_err("really need more than 1M mem? please check\n");
+			memset(storagekey_info.buffer, 0,
+				SECUESTORAGE_HEAD_SIZE);
+			ret = -1;
+			goto _out;
+		}
+	} else {
+		pr_err("store_key_read is NULL\n");
+		pr_err("check whether emmc_key/nand_key driver is enabled\n");
+		ret = -1;
+		goto _out;
+	}
+
+	storagekey_info.size = actual_size;
+	pr_info("%s() storagekey_info.buffer=%p, storagekey_info.size = %0x!\n",
+		__func__,
+		storagekey_info.buffer,
+		storagekey_info.size);
+
+_out:
+	return ret;
+}
+
+int32_t amlkey_init_m8b(uint8_t *seed, uint32_t len, int encrypt_type)
+{
+	int32_t ret = 0;
+	uint32_t actual_size;
+
+#ifndef OTHER_METHOD_CALL
+	ret = store_operation_init();
+	if (ret < 0) {
+		ret = -1;
+		pr_err(" %s store_operation_init fail!\n", __func__);
+		goto _out;
+	}
+#endif
+	/* do nothing for now*/
+	pr_info("%s() enter!\n", __func__);
+	if (storagekey_info.buffer != NULL) {
+		pr_err("%s() %d: already init!\n", __func__, __LINE__);
+		goto _out;
+	}
+
+	if ((void *)kallsyms_lookup_name("nand_key_read")
+		== (void *)store_key_read)
+		secure_storage_type(0);
+	else
+		secure_storage_type(1);
 
 	/* get buffer from bl31 */
 	storagekey_info.buffer =
@@ -149,16 +213,34 @@ int32_t amlkey_init(uint8_t *seed, uint32_t len, int encrypt_type)
 		goto _out;
 	}
 
-	if (is_meson_m8b_cpu()) {
-		if (encrypt_type == -1)
-			encrypt_type = 0;
-		secure_storage_set_enctype(encrypt_type);
-	}
+	if (encrypt_type == -1)
+		encrypt_type = 0;
+	secure_storage_set_enctype(encrypt_type);
 
 	/* full fill key infos from storage. */
-	if (store_key_read)
+	if (store_key_read) {
 		ret = store_key_read(storagekey_info.buffer,
 					storagekey_info.size, &actual_size);
+		if (ret != 0) {
+			pr_err("fail to read key data\n");
+			memset(storagekey_info.buffer, 0,
+				SECUESTORAGE_HEAD_SIZE);
+			ret = -1;
+			goto _out;
+		}
+		if (actual_size >= (1U << 20)) {
+			pr_err("really need more than 1M mem? please check\n");
+			memset(storagekey_info.buffer, 0,
+				SECUESTORAGE_HEAD_SIZE);
+			ret = -1;
+			goto _out;
+		}
+	} else {
+		pr_err("store_key_read is NULL\n");
+		pr_err("check whether emmc_key/nand_key driver is enabled\n");
+		ret = -1;
+		goto _out;
+	}
 
 	storagekey_info.size = actual_size;
 	pr_info("%s() storagekey_info.buffer=%p, storagekey_info.size = %0x!\n",
@@ -166,21 +248,13 @@ int32_t amlkey_init(uint8_t *seed, uint32_t len, int encrypt_type)
 		storagekey_info.buffer,
 		storagekey_info.size);
 
-	if (ret) {
-		/* memset head info for bl31 */
-		memset(storagekey_info.buffer, 0, SECUESTORAGE_HEAD_SIZE);
-		ret = 0;
-		goto _out;
-	}
-
-	if (is_meson_m8b_cpu()) {
-		storagekey_info.size = actual_size;
-		secure_storage_notifier_ex(actual_size);
-	}
+	storagekey_info.size = actual_size;
+	secure_storage_notifier_ex(actual_size);
 
 _out:
 	return ret;
 }
+
 
 /**
  *2. query if the key already programmed

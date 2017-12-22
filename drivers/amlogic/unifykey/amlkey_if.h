@@ -18,12 +18,12 @@
 #ifndef __AMLKEY_IF_H__
 #define __AMLKEY_IF_H__
 
-#define AMLKEY_NAME_LEN_MAX     (80)
-
 /*
  * init
  */
-int32_t amlkey_init(uint8_t *seed, uint32_t len, int encrypt_type);
+int32_t amlkey_init_gen(uint8_t *seed, uint32_t len, int encrypt_type);
+int32_t amlkey_init_m8b(uint8_t *seed, uint32_t len, int encrypt_type);
+
 /*
  * query if the key already programmed
  * exsit 1, non 0

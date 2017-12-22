@@ -39,7 +39,7 @@ static u8 const fixed_key[32] = {0x2F, 0x7D, 0x49, 0xD9,
 
 
 
-// AES-256-CBC
+/* AES-256-CBC */
 int do_aes_internal(unsigned char enc_flag, unsigned char *in,
 		int in_len, unsigned char *out, int *out_len)
 {

@@ -24,11 +24,12 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
-/*#include <asm/compiler.h>*/
 #include <linux/spinlock.h>
 #include <linux/amlogic/unifykey/security_key.h>
+
 #undef pr_fmt
-#define pr_fmt(fmt) "storage: " fmt
+#define pr_fmt(fmt) "unifykey: " fmt
+
 
 #define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
@@ -36,10 +37,10 @@ static void __iomem *storage_in_base;
 static void __iomem *storage_out_base;
 static void __iomem *storage_block_base;
 
-static long phy_storage_in_base;
-static long phy_storage_out_base;
-static long phy_storage_block_base;
-static long storage_block_size;
+static unsigned long phy_storage_in_base;
+static unsigned long phy_storage_out_base;
+static unsigned long phy_storage_block_base;
+static unsigned long storage_block_size;
 
 static unsigned long storage_read_func;
 static unsigned long storage_write_func;
@@ -124,7 +125,7 @@ int32_t secure_storage_write(uint8_t *keyname, uint8_t *keybuf,
 		keydata = name + namelen;
 		memcpy(keydata, keybuf, keylen);
 		ret = storage_smc_ops(storage_write_func);
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 	return smc_to_linux_errno(ret);
@@ -152,7 +153,7 @@ int32_t secure_storage_read(uint8_t *keyname, uint8_t *keybuf,
 			buf = (uint8_t *)(output + 1);
 			memcpy(keybuf, buf, *readlen);
 		}
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 	return smc_to_linux_errno(ret);
@@ -175,7 +176,7 @@ int32_t secure_storage_verify(uint8_t *keyname, uint8_t *hashbuf)
 		ret = storage_smc_ops(storage_verify_func);
 		if (ret == RET_OK)
 			memcpy(hashbuf, (uint8_t *)output, 32);
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 
@@ -199,7 +200,7 @@ int32_t secure_storage_query(uint8_t *keyname, uint32_t *retval)
 		ret = storage_smc_ops(storage_query_func);
 		if (ret == RET_OK)
 			*retval = *output;
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 
@@ -223,7 +224,7 @@ int32_t secure_storage_tell(uint8_t *keyname, uint32_t *retval)
 		ret = storage_smc_ops(storage_tell_func);
 		if (ret == RET_OK)
 			*retval = *output;
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 	return smc_to_linux_errno(ret);
@@ -246,7 +247,7 @@ int32_t secure_storage_status(uint8_t *keyname, uint32_t *retval)
 		ret = storage_smc_ops(storage_status_func);
 		if (ret == RET_OK)
 			*retval = *output;
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 	return smc_to_linux_errno(ret);
@@ -268,7 +269,7 @@ int32_t secure_storage_list(uint8_t *listbuf,
 				*readlen = *output;
 			memcpy(listbuf, (uint8_t *)(output+1), *readlen);
 		}
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 	return smc_to_linux_errno(ret);
@@ -288,7 +289,7 @@ int32_t secure_storage_remove(uint8_t *keyname)
 		name = (uint8_t *)input;
 		memcpy(name, keyname, namelen);
 		ret = storage_smc_ops(storage_remove_func);
-	}	else
+	} else
 		ret = RET_EUND;
 	spin_unlock_irqrestore(&storage_lock, lockflags);
 	return smc_to_linux_errno(ret);

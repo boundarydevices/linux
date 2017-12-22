@@ -199,10 +199,6 @@ int64_t storage_api_version(void);
 
 /* aes apis*/
 void set_encryptkeyfrom(int32_t from);
-//int do_aes_internal(unsigned char bEncryptFlag, unsigned char *pIN,
-//							int nINLen,
-//							unsigned char *pOUT,
-//							int *pOUTLen);
 int32_t efuse_has_burn_enckey(void);
 
 /* TLV */

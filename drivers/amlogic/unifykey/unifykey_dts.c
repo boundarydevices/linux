@@ -24,8 +24,10 @@
 #include <linux/err.h>
 #include <linux/scatterlist.h>
 #include <linux/of.h>
-#include <linux/amlogic/cpu_version.h>
 #include "unifykey.h"
+
+#undef pr_fmt
+#define pr_fmt(fmt) "unifykey: " fmt
 
 /* storages where key stored */
 #define KEY_DEV_EFUSE		"efuse"
@@ -46,9 +48,6 @@
 #define KEY_ATTR_TRUE		"true"
 #define KEY_ATTR_FALSE		"false"
 
-static struct key_info_t unify_key_info = {.key_num = 0, .key_flag = 0,
-					   .encrypt_type = 0};
-static struct key_item_t *unifykey_item;
 
 int unifykey_item_verify_check(struct key_item_t *key_item)
 {
@@ -63,86 +62,104 @@ int unifykey_item_verify_check(struct key_item_t *key_item)
 	return 0;
 }
 
-struct key_item_t *unifykey_find_item_by_name(char *name)
+struct key_item_t *unifykey_find_item_by_name(struct list_head *list,
+		char *name)
 {
-	struct key_item_t *pre_item;
+	struct key_item_t *item;
 
-	pre_item = unifykey_item;
-	while (pre_item) {
-		if (!strncmp(pre_item->name, name,
-				((strlen(pre_item->name) > strlen(name))
-				? strlen(pre_item->name) : strlen(name))))
-			return pre_item;
-		pre_item = pre_item->next;
-	}
+	list_for_each_entry(item, list, node)
+		if (!strncmp(item->name, name,
+				((strlen(item->name) > strlen(name))
+				? strlen(item->name) : strlen(name))))
+			return item;
+
 	return NULL;
 }
 
-struct key_item_t *unifykey_find_item_by_id(int id)
+struct key_item_t *unifykey_find_item_by_id(struct list_head *list, int id)
 {
-	struct key_item_t *pre_item;
+	struct key_item_t *item;
 
-	pre_item = unifykey_item;
-	while (pre_item) {
-		if (pre_item->id == id)
-			return pre_item;
-		pre_item = pre_item->next;
-	}
+	list_for_each_entry(item, list, node)
+		if (item->id == id)
+			return item;
+
 	return NULL;
 }
 
-int unifykey_count_key(void)
+int unifykey_count_key(struct list_head *list)
 {
 	int count = 0;
-	struct key_item_t *pre_item;
+	struct list_head *node;
 
-	pre_item = unifykey_item;
-	while (pre_item) {
+	list_for_each(node, list)
 		count++;
-		pre_item = pre_item->next;
-	}
 
 	return count;
 }
 
-char unifykey_get_efuse_version(void)
+char unifykey_get_efuse_version(struct key_info_t *uk_info)
 {
 	char ver = 0;
 
-	if (unify_key_info.efuse_version != -1)
-		ver = (char)unify_key_info.efuse_version;
+	if (uk_info->efuse_version != -1)
+		ver = (char)(uk_info->efuse_version);
+
 	return ver;
 }
 
-static int unifykey_add_to_list(struct key_item_t *item)
+static int unifykey_add_to_list(struct list_head *list, struct key_item_t *item)
 {
-	struct key_item_t *pre_item;
+	list_add(&(item->node), list);
 
-	if (unifykey_item == NULL) {
-		unifykey_item = item;
-	} else {
-		pre_item = unifykey_item;
-		while (pre_item->next != NULL)
-			pre_item = pre_item->next;
-		pre_item->next = item;
-	}
 	return 0;
 }
 
-static int unifykey_free_list(void)
+static int unifykey_free_list(struct list_head *list)
 {
-	struct key_item_t *pre_item;
+	struct key_item_t *item;
+	struct key_item_t *tmp;
 
-	pre_item = unifykey_item;
-	while (pre_item) {
-		unifykey_item = unifykey_item->next;
-		kfree(pre_item);
-		pre_item = unifykey_item;
+
+	list_for_each_entry_safe(item, tmp, list, node) {
+		list_del(&(item->node));
+		kfree(item);
 	}
+
 	return 0;
 }
 
-static int unifykey_item_parse_dt(struct device_node *node, int id)
+
+int parse_extra_df_node_m8b(struct device_node *node, unsigned int *df)
+{
+	int ret =  -1;
+	const char *propname;
+
+	*df = KEY_M_MAX_DF;
+	ret = of_property_read_string(node, "key-dataformat",
+				&propname);
+	if (ret < 0) {
+		ret = -EINVAL;
+		return ret;
+	}
+
+	if (propname) {
+		if (strcmp(propname, "hexdata") == 0)
+			*df = KEY_M_HEXDATA;
+		else if (strcmp(propname, "hexascii") == 0)
+			*df = KEY_M_HEXASCII;
+		else if (strcmp(propname, "allascii") == 0)
+			*df = KEY_M_ALLASCII;
+		else
+			*df = KEY_M_MAX_DF;
+	}
+
+	return 0;
+}
+
+
+static int unifykey_item_parse_dt(struct aml_unifykey_dev *ukdev,
+	struct device_node *node, int id)
 {
 	int count;
 	int ret =  -1;
@@ -199,24 +216,10 @@ static int unifykey_item_parse_dt(struct device_node *node, int id)
 		temp_item->permit |= KEY_M_PERMIT_DEL;
 	temp_item->id = id;
 
-	if (is_meson_m8b_cpu()) {
-		temp_item->df = KEY_M_MAX_DF;
-		ret = of_property_read_string(node, "key-dataformat",
-					&propname);
-		if (ret < 0) {
-			ret = -EINVAL;
+	if (ukdev->ops->parse_extra_df_node != NULL) {
+		ret = ukdev->ops->parse_extra_df_node(node, &(temp_item->df));
+		if (ret != 0)
 			goto exit;
-		}
-		if (propname) {
-			if (strcmp(propname, "hexdata") == 0)
-				temp_item->df = KEY_M_HEXDATA;
-			else if (strcmp(propname, "hexascii") == 0)
-				temp_item->df = KEY_M_HEXASCII;
-			else if (strcmp(propname, "allascii") == 0)
-				temp_item->df = KEY_M_ALLASCII;
-			else
-				temp_item->df = KEY_M_MAX_DF;
-		}
 	}
 
 	temp_item->attr = 0;
@@ -231,7 +234,7 @@ static int unifykey_item_parse_dt(struct device_node *node, int id)
 _next_attr:
 	/*todo, add new attribute here*/
 
-	unifykey_add_to_list(temp_item);
+	unifykey_add_to_list(&(ukdev->uk_header), temp_item);
 
 	return 0;
 exit:
@@ -247,11 +250,12 @@ static int unifykey_item_create(struct platform_device *pdev, int num)
 	int index;
 	struct device_node *child;
 	struct device_node *np = pdev->dev.of_node;
+	struct aml_unifykey_dev *ukdev = platform_get_drvdata(pdev);
 
 	of_node_get(np);
 	index = 0;
 	for_each_child_of_node(np, child) {
-		ret = unifykey_item_parse_dt(child, index);
+		ret = unifykey_item_parse_dt(ukdev, child, index);
 		if (!ret)
 			index++;
 	}
@@ -260,9 +264,9 @@ static int unifykey_item_create(struct platform_device *pdev, int num)
 	return 0;
 }
 
-int unifykey_get_encrypt_type(void)
+int unifykey_get_encrypt_type(struct key_info_t *uk_info)
 {
-	return unify_key_info.encrypt_type;
+	return uk_info->encrypt_type;
 }
 
 
@@ -270,14 +274,13 @@ int unifykey_dt_create(struct platform_device *pdev)
 {
 	int ret =  -1;
 	int key_num;
+	struct aml_unifykey_dev *ukdev = platform_get_drvdata(pdev);
 
-	if (is_meson_m8b_cpu()) {
-		/* do not care whether unifykey-encrypt really exists*/
-		unify_key_info.encrypt_type = -1;
-		ret = of_property_read_u32(pdev->dev.of_node,
-			"unifykey-encrypt",
-			&unify_key_info.encrypt_type);
-	}
+	/* do not care whether unifykey-encrypt really exists*/
+	ukdev->uk_info.encrypt_type = -1;
+	ret = of_property_read_u32(pdev->dev.of_node,
+		"unifykey-encrypt",
+		&(ukdev->uk_info.encrypt_type));
 
 	ret = of_property_read_u32(pdev->dev.of_node,
 		"unifykey-num", &key_num);
@@ -289,17 +292,18 @@ int unifykey_dt_create(struct platform_device *pdev)
 	}
 
 	ret = of_property_read_u32(pdev->dev.of_node, "efuse-version",
-		&unify_key_info.efuse_version);
+		&(ukdev->uk_info.efuse_version));
 	if (ret != 0) {
 		pr_info("no efuse-version set, use default value: -1\n");
-		unify_key_info.efuse_version = -1;
+		ukdev->uk_info.efuse_version = -1;
+		ret = 0;
 	}
 
 	pr_info("key unify config unifykey-num is %d\n", key_num);
-	unify_key_info.key_num = key_num;
-	if (!unify_key_info.key_flag) {
+	ukdev->uk_info.key_num = key_num;
+	if (!(ukdev->uk_info.key_flag)) {
 		unifykey_item_create(pdev, key_num);
-		unify_key_info.key_flag = 1;
+		ukdev->uk_info.key_flag = 1;
 	}
 
 	return ret;
@@ -307,10 +311,12 @@ int unifykey_dt_create(struct platform_device *pdev)
 
 int unifykey_dt_release(struct platform_device *pdev)
 {
+	struct aml_unifykey_dev *ukdev = platform_get_drvdata(pdev);
+
 	if (pdev->dev.of_node)
 		of_node_put(pdev->dev.of_node);
-	unifykey_free_list();
-	unify_key_info.key_flag = 0;
+	unifykey_free_list(&(ukdev->uk_header));
+	ukdev->uk_info.key_flag = 0;
 	return 0;
 }
 

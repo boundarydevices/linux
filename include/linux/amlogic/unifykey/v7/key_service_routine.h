@@ -20,25 +20,6 @@
 
 #include <linux/types.h>
 
-/* L2X0  0x0000~0x0010 */
-#define L2_CTRL		0x82000001
-#define L2_AUX		0x82000002
-#define L2_PREFETCH		0x82000003
-#define L2_TAGLATENCY		0x82000004
-#define L2_DATALATENCY		0x82000005
-#define L2_FILTERSTART		0x82000006
-#define L2_FILTEREND			0x82000007
-#define L2_DEBUG					0x82000008
-#define L2_POWER					0x82000009
-
-/* SRAM & ROMCODE */
-/*
- * #define SRAM_READ		0x82000010
- * #define CORE_RD_REV1		0x82000011
- * #define SRAM_ACS_READ		0x82000012
- * #define SRAM_ACS_INDIRECT_REA	0x82000013
- */
-
 /*HDCP*/
 /* Old definition */
 #define HDCP_ENABLE		0x82000010
@@ -113,9 +94,6 @@
 #define SECURITY_KEY_GET_ENCTYPE	0x8200006B
 #define SECURITY_KEY_VERSION		0x8200006C
 #define SECURITY_KEY_STORAGE_TYPE	0x8200006D
-
-
-#define AES_GCM_SCP			0x82000070
 
 uint64_t storage_service_routine(uint32_t fid,
 			     uint64_t x1, void *in, void **out);

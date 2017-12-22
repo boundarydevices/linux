@@ -19,6 +19,10 @@
 #include "storage_util.h"
 #include "storage_def.h"
 
+#undef pr_fmt
+#define pr_fmt(fmt) "unifykey: " fmt
+
+
 /* parameters from share key input memory*/
 uint64_t storage_api_write(void *in)
 {
