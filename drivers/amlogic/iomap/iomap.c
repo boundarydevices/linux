@@ -158,10 +158,7 @@ int aml_read_vcbus(unsigned int reg)
 {
 	int ret, val;
 
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX)
-		ret = aml_reg_read(IO_VAPB_BUS_BASE, (reg<<2), &val);
-	else
-		ret = aml_reg_read(IO_APB_BUS_BASE, (0x100000+(reg<<2)), &val);
+	ret = aml_reg_read(IO_VAPB_BUS_BASE, reg<<2, &val);
 
 	if (ret) {
 		pr_err("read vcbus reg %x error %d\n", reg, ret);
@@ -176,10 +173,7 @@ void aml_write_vcbus(unsigned int reg, unsigned int val)
 {
 	int ret;
 
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX)
-		ret = aml_reg_write(IO_VAPB_BUS_BASE, (reg<<2), val);
-	else
-		ret = aml_reg_write(IO_APB_BUS_BASE, (0x100000+(reg<<2)), val);
+	ret = aml_reg_write(IO_VAPB_BUS_BASE, reg<<2, val);
 
 	if (ret)
 		pr_err("write vcbus reg %x error %d\n", reg, ret);
@@ -191,12 +185,8 @@ void aml_vcbus_update_bits(unsigned int reg,
 {
 	int ret;
 
-	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXLX)
-		ret = aml_regmap_update_bits(IO_VAPB_BUS_BASE,
-						(reg<<2), mask, val);
-	else
-		ret = aml_regmap_update_bits(IO_APB_BUS_BASE,
-						(0x100000+(reg<<2)), mask, val);
+	ret = aml_regmap_update_bits(IO_VAPB_BUS_BASE,
+			reg<<2, mask, val);
 	if (ret)
 		pr_err("write vcbus reg %x error %d\n", reg, ret);
 
@@ -211,7 +201,7 @@ int aml_read_dosbus(unsigned int reg)
 {
 	int ret, val;
 
-	ret = aml_reg_read(IO_APB_BUS_BASE, (0x50000+(reg<<2)), &val);
+	ret = aml_reg_read(IO_APB_BUS_BASE, reg<<2, &val);
 	if (ret) {
 		pr_err("read vcbus reg %x error %d\n", reg, ret);
 		return -1;
@@ -224,7 +214,7 @@ void aml_write_dosbus(unsigned int reg, unsigned int val)
 {
 	int ret;
 
-	ret = aml_reg_write(IO_APB_BUS_BASE, (0x50000+(reg<<2)), val);
+	ret = aml_reg_write(IO_APB_BUS_BASE, reg<<2, val);
 	if (ret)
 		pr_err("write vcbus reg %x error %d\n", reg, ret);
 }
@@ -235,8 +225,7 @@ void aml_dosbus_update_bits(unsigned int reg,
 {
 	int ret;
 
-	ret = aml_regmap_update_bits(IO_APB_BUS_BASE,
-						(0x50000+(reg<<2)), mask, val);
+	ret = aml_regmap_update_bits(IO_APB_BUS_BASE, reg<<2, mask, val);
 	if (ret)
 		pr_err("write vcbus reg %x error %d\n", reg, ret);
 }
