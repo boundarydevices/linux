@@ -27,6 +27,7 @@
 #include <linux/mmc/host.h>
 #include <linux/io.h>
 #include <linux/of_irq.h>
+#include <linux/of_device.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
 #include <linux/mmc/sdio.h>
@@ -1167,6 +1168,14 @@ static int aml_sdio_probe(struct platform_device *pdev)
 	host->pdev = pdev;
 	host->dev = &pdev->dev;
 	platform_set_drvdata(pdev, host);
+
+	host->data = (struct meson_mmc_data *)
+		of_device_get_match_data(&pdev->dev);
+	if (!host->data) {
+		ret = -EINVAL;
+		goto probe_free_host;
+	}
+
 	/* init sdio reg here */
 	aml_sdio_init_param(host);
 

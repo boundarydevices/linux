@@ -28,6 +28,7 @@
 #include <linux/mmc/card.h>
 #include <linux/io.h>
 #include <linux/of_irq.h>
+#include <linux/of_device.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sdio.h>
 #include <linux/highmem.h>
@@ -2247,6 +2248,14 @@ static int aml_sdhc_probe(struct platform_device *pdev)
 	host->pdev = pdev;
 	host->dev = &pdev->dev;
 	platform_set_drvdata(pdev, host);
+
+	host->data = (struct meson_mmc_data *)
+		of_device_get_match_data(&pdev->dev);
+	if (!host->data) {
+		ret = -EINVAL;
+		goto probe_free_host;
+	}
+
 	aml_sdhc_reg_init(host);
 	init_waitqueue_head(&mmc_req_wait_q);
 
