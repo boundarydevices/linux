@@ -1023,6 +1023,8 @@ static void hdmitx_set_drm_pkt(struct master_display_info_s *data)
 	DRM_DB[24] = GET_LOW8BIT(data->max_frame_average);
 	DRM_DB[25] = GET_HIGH8BIT(data->max_frame_average);
 
+	/*eliminate the work of work_hdr*/
+	cancel_work(&hdev->work_hdr);
 	/* bt2020 + gamma transfer */
 	if (hdev->hdr_transfer_feature == T_BT709 &&
 		hdev->hdr_color_feature == C_BT2020) {
