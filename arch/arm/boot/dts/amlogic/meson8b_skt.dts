@@ -495,10 +495,10 @@
 	pinctrl-0 = <&uart_b0_pins>;
 	pinctrl-names = "default";
 };
-&i2c_a {
+&i2c0 {
 	status = "ok";
 };
-&i2c_ao {
+&i2c_AO {
 	status = "ok";
 };
 

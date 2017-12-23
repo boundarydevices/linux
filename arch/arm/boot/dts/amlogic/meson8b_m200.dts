@@ -605,11 +605,15 @@
 	pinctrl-0 = <&uart_b0_pins>;
 	pinctrl-names = "default";
 };
-&i2c_a {
+&i2c0 {
 	status = "ok";
+	pinctrl-names="default";
+	pinctrl-0=<&a_i2c_master>;
 };
-&i2c_ao {
+&i2c_AO {
 	status = "ok";
+	pinctrl-names="default";
+	pinctrl-0=<&ao_i2c_master>;
 };
 &pinctrl_cbus {
 	sdhc_emmc_clk_cmd_pins:sdhc_emmc_clk_cmd_pins {

@@ -511,7 +511,7 @@
 
 			/*i2c-A*/
 			i2c0: i2c@8500 {
-				compatible = "amlogic,meson-txlx-i2c";
+				compatible = "amlogic,meson-gx-i2c";
 				status = "disabled";
 				reg = <0x0 0x8500 0x0 0x20>;
 				interrupts = <GIC_SPI 21 IRQ_TYPE_EDGE_RISING>,
@@ -524,7 +524,7 @@
 
 			/*i2c-B*/
 			i2c1: i2c@87c0 {
-				compatible = "amlogic,meson-txlx-i2c";
+				compatible = "amlogic,meson-gx-i2c";
 				status = "disabled";
 				reg = <0x0 0x87c0 0x0 0x20>;
 				interrupts = <GIC_SPI 214 IRQ_TYPE_EDGE_RISING>,
@@ -537,7 +537,7 @@
 
 			/*i2c-C*/
 			i2c2: i2c@87e0 {
-				compatible = "amlogic,meson-txlx-i2c";
+				compatible = "amlogic,meson-gx-i2c";
 				status = "disabled";
 				reg = <0x0 0x87e0 0x0 0x20>;
 				interrupts = <GIC_SPI 215 IRQ_TYPE_EDGE_RISING>,
@@ -550,7 +550,7 @@
 
 			/*i2c-D*/
 			i2c3: i2c@8d20 {
-				compatible = "amlogic,meson-axg-i2c";
+				compatible = "amlogic,meson-gx-i2c";
 				status = "disabled";
 				reg = <0x0 0x8d20 0x0 0x20>;
 				interrupts = <GIC_SPI 39 IRQ_TYPE_EDGE_RISING>,
@@ -573,10 +573,10 @@
 				reg=<0x0 0x0220 0x0 0x4>;
 			};
 
-			i2c_AO: i2c@0100 {
-				compatible = "amlogic,meson-txlx-i2c";
+			i2c_AO: i2c@0500 {
+				compatible = "amlogic,meson-gx-i2c";
 				status = "disabled";
-				reg = <0x0 0x0100 0x0 0x20>;
+				reg = <0x0 0x0500 0x0 0x20>;
 				interrupts = <GIC_SPI 195 IRQ_TYPE_EDGE_RISING>;
 				#address-cells = <1>;
 				#size-cells = <0>;

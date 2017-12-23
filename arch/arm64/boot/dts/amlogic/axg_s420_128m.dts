@@ -707,8 +707,9 @@
 /* for spk board */
 &i2c1 {
 	status = "okay";
-	//pinctrl-names="default";
-	//pinctrl-0=<&b_i2c_master>;
+	pinctrl-names="default";
+	pinctrl-0=<&b_i2c_master>;
+
 	tlv320adc3101_32: tlv320adc3101_32@30 {
 		compatible = "ti,tlv320adc3101";
 		#sound-dai-cells = <0>;

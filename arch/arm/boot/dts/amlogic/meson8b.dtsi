@@ -14,7 +14,7 @@
  * more details.
  *
  */
-
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/meson8b-clkc.h>
 #include <dt-bindings/gpio/meson8b-gpio.h>
 #include <dt-bindings/reset/amlogic,meson8b-reset.h>
@@ -67,80 +67,15 @@
 		};
 	};
 
-	i2c_ao: i2c@c8100500{ /*I2C-AO*/
-		compatible = "amlogic, meson-i2c";
-		dev_name = "i2c-AO";
-		status = "disabled";
-		reg = <0xc8100500 0x1d>;
-		device_id = <0>;
-		pinctrl-names="default";
-		pinctrl-0=<&ao_i2c_master>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		use_pio = <0>;
-		master_i2c_speed = <100000>;
-		clocks = <&clkc CLKID_CLK81>;
-		clock-names = "clk_i2c";
-	};
-	i2c_a: i2c@c1108500{ /*I2C-A*/
-		compatible = "amlogic, meson-i2c";
-		dev_name = "i2c-A";
-		status = "disabled";
-		reg = <0xc1108500 0x20>;
-		device_id = <1>;
-		pinctrl-names="default";
-		pinctrl-0=<&a_i2c_master>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		use_pio = <0>;
-		master_i2c_speed = <300000>;
-		clocks = <&clkc CLKID_CLK81>;
-		clock-names = "clk_i2c";
-	};
-	i2c_b: i2c@c11087c0{ /*I2C-B*/
-		compatible = "amlogic, meson-i2c";
-		dev_name = "i2c-B";
-		status = "disabled";
-		reg = <0xc11087c0 0x20>;
-		device_id = <2>;
-		pinctrl-names="default";
-		pinctrl-0=<&b_i2c_master>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		use_pio = <0>;
-		master_i2c_speed = <300000>;
-		clocks = <&clkc CLKID_CLK81>;
-		clock-names = "clk_i2c";
-	};
-	i2c_c: i2c@c11087e0{ /*I2C-C*/
-		compatible = "amlogic, meson-i2c";
-		dev_name = "i2c-C";
-		status = "disabled";
-		reg = <0xc11087e0 0x20>;
-		device_id = <3>;
-		pinctrl-names="default";
-		pinctrl-0=<&c_i2c_master>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		use_pio = <0>;
-		master_i2c_speed = <300000>;
-		clocks = <&clkc CLKID_CLK81>;
-		clock-names = "clk_i2c";
-	};
-	i2c_d: i2c@c1108d20{ /*I2C-D*/
-		compatible = "amlogic, meson-i2c";
-		dev_name = "i2c-D";
-		status = "disabled";
-		reg = <0xc1108d20 0x20>;
-		device_id = <4>;
-		pinctrl-names="default";
-		pinctrl-0=<&d_i2c_master>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		use_pio = <0>;
-		master_i2c_speed = <300000>;
-		clocks = <&clkc CLKID_CLK81>;
-		clock-names = "clk_i2c";
+	i2c_AO: i2c@0100 {
+			compatible = "amlogic,meson8b-i2c";
+			status = "disabled";
+			reg = <0xc8100500 0x20>;
+			interrupts = <GIC_SPI 124 IRQ_TYPE_EDGE_RISING>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&clkc CLKID_CLK81>;
+			clock-names = "clk_i2c";
 	};
 
 	soc {
@@ -355,6 +290,58 @@
 			reg = <0xc11086c0 0x10>;
 			#pwm-cells = <3>;
 			status = "disabled";
+		};
+
+		/*i2c-A*/
+		i2c0: i2c@8500 {
+			compatible = "amlogic,meson8b-i2c";
+			status = "disabled";
+			reg = <0xc1108500 0x20>;
+			interrupts = <GIC_SPI 21 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 47 IRQ_TYPE_EDGE_RISING>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&clkc CLKID_CLK81>;
+			clock-names = "clk_i2c";
+		};
+
+		/*i2c-B*/
+		i2c1: i2c@87c0 {
+			compatible = "amlogic,meson8b-i2c";
+			status = "disabled";
+			reg = <0xc11087c0 0x20>;
+			interrupts = <GIC_SPI 214 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 48 IRQ_TYPE_EDGE_RISING>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&clkc CLKID_CLK81>;
+			clock-names = "clk_i2c";
+		};
+
+		/*i2c-C*/
+		i2c2: i2c@87e0 {
+			compatible = "amlogic,meson8b-i2c";
+			status = "disabled";
+			reg = <0xc11087e0 0x20>;
+			interrupts = <GIC_SPI 215 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 49 IRQ_TYPE_EDGE_RISING>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&clkc CLKID_CLK81>;
+			clock-names = "clk_i2c";
+		};
+
+		/*i2c-D*/
+		i2c3: i2c@8d20 {
+			compatible = "amlogic,meson8b-i2c";
+			status = "disabled";
+			reg = <0xc1108d20 0x20>;
+			interrupts = <GIC_SPI 39 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 50 IRQ_TYPE_EDGE_RISING>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&clkc CLKID_CLK81>;
+			clock-names = "clk_i2c";
 		};
 
 		pinctrl_cbus: pinctrl@c1109880 {
