@@ -107,6 +107,7 @@ struct meson_clk_mpll {
 	u8 en_dds;
 	u16 top_misc_reg; /*after txlx*/
 	u16 top_misc_bit;
+	u16 mpll_cntl0_reg;
 	spinlock_t *lock;
 };
 
@@ -211,6 +212,10 @@ extern const struct clk_ops meson_clk_mpll_ops;
 extern const struct clk_ops meson_clk_mux_ops;
 extern const struct clk_ops meson_axg_pll_ro_ops;
 extern const struct clk_ops meson_axg_pll_ops;
+extern const struct clk_ops meson_g12a_pll_ro_ops;
+extern const struct clk_ops meson_g12a_pll_ops;
+extern const struct clk_ops meson_g12a_mpll_ro_ops;
+extern const struct clk_ops meson_g12a_mpll_ops;
 
 extern void meson_clk_register_composite(struct clk **soc_clks,
 			struct meson_composite *composite,
@@ -234,5 +239,7 @@ void axg_amlogic_init_misc(void);
 void meson_txlx_sdemmc_init(void);
 void meson_txlx_media_init(void);
 void meson_init_gpu(void);
+
+void meson_g12a_sdemmc_init(void);
 
 #endif /* __CLKC_H */

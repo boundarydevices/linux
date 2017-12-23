@@ -14277,3 +14277,6 @@ F: arch/arm64/boot/dts/amlogic/mesong12a.dtsi
 F: arch/arm64/boot/dts/amlogic/g12a_pxp.dts
 F: include/dt-bindings/clock/amlogic,g12a-audio-clk.h
 F: include/dt-bindings/clock/amlogic,g12a-clkc.h
+F: drivers/amlogic/clk/g12a/*
+F: drivers/amlogic/clk/clkc.h
+

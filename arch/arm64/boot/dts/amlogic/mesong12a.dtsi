@@ -247,7 +247,7 @@
 			ranges = <0x0 0x0 0x0 0xff63c000 0x0 0x2000>;
 
 			clkc: clock-controller@0 {
-				compatible = "amlogic,axg-clkc";
+				compatible = "amlogic,g12a-clkc";
 				#clock-cells = <1>;
 				reg = <0x0 0x0 0x0 0x320>;
 			};
