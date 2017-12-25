@@ -2253,6 +2253,7 @@ static int aml_sdhc_probe(struct platform_device *pdev)
 		of_device_get_match_data(&pdev->dev);
 	if (!host->data) {
 		ret = -EINVAL;
+		pr_info("host->data null\n");
 		goto probe_free_host;
 	}
 
@@ -2420,9 +2421,14 @@ int aml_sdhc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static struct meson_mmc_data mmc_data_m8b = {
+	.chip_type = MMC_CHIP_M8B,
+};
+
 static const struct of_device_id aml_sdhc_dt_match[] = {
 	{
 		.compatible = "amlogic, aml_sdhc",
+		.data = &mmc_data_m8b,
 	},
 	{},
 };

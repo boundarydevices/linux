@@ -1335,9 +1335,14 @@ fail_init_host:
 		return 0;
 	}
 
+	static struct meson_mmc_data mmc_data_m8b = {
+		.chip_type = MMC_CHIP_M8B,
+	};
+
 	static const struct of_device_id aml_sdio_dt_match[] = {
 		{
 			.compatible = "amlogic, aml_sdio",
+			.data = &mmc_data_m8b,
 		},
 		{},
 	};

@@ -126,14 +126,16 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 	struct device_node *child;
 	u32 i, prop;
 	const char *str = "none";
-	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_host *host = NULL;
 
 #ifdef CONFIG_AMLOGIC_M8B_MMC
 	of_node = pdev->dev.of_node;
+	host = platform_get_drvdata(pdev);
 #else
 	if (!mmc->parent)
 		return 0;
 	of_node = mmc->parent->of_node;
+	host = mmc_priv(mmc);
 #endif
 	if (of_node) {
 		child = of_node->child;
