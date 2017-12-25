@@ -14183,7 +14183,8 @@ AMLOGIC TXLX PLATFORM SUPPORT
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesontxlx.dtsi
 F:	arch/arm64/boot/dts/amlogic/txlx_t962e_r321.dts
-F:	arch/arm64/boot/dts/amlogic/txlx_t962e_r311.dts
+F:	arch/arm64/boot/dts/amlogic/txlx_t962x_r311_1g.dts
+F:	arch/arm64/boot/dts/amlogic/txlx_t962x_r311_2g.dts
 
 AMLOGIC TXLX Audio
 M:	Xing Wang <xing.wang@amlogic.com>

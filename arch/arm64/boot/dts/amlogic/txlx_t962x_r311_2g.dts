@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/txlx_t962x_r311.dts
+ * arch/arm64/boot/dts/amlogic/txlx_t962x_r311_2g.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -844,7 +844,7 @@
 	amhdmitx: amhdmitx {
 		compatible = "amlogic, amhdmitx";
 		dev_name = "amhdmitx";
-		status = "okay";
+		status = "disabled";
 		pinctrl-names="default", "hdmitx_i2c";
 		pinctrl-0=<&hdmitx_hpd &hdmitx_ddc>;
 		pinctrl-1=<&hdmitx_hpd_gpio &i2c2_h_pins>;
