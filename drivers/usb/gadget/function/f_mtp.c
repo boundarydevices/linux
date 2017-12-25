@@ -1042,6 +1042,51 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_AMLOGIC_USB
+#ifdef CONFIG_COMPAT
+
+struct mtp_event_compat {
+	compat_size_t	length;
+	compat_uptr_t	data;
+};
+
+#define COMPAT_MTP_SEND_EVENT	_IOW('M', 3, struct mtp_event_compat)
+
+static long mtp_compat_ioctl(struct file *fp,
+	unsigned int cmd,
+	unsigned long arg)
+{
+	if (cmd == COMPAT_MTP_SEND_EVENT) {
+		struct mtp_event	event;
+		struct mtp_event_compat	event_compat;
+		struct mtp_dev *dev = fp->private_data;
+		int ret = -EINVAL;
+
+		if (mtp_lock(&dev->ioctl_excl))
+			return -EBUSY;
+
+		memset(&event, 0, sizeof(event));
+		memset(&event_compat, 0, sizeof(event_compat));
+
+		if (copy_from_user(&event_compat,
+			(void __user *)arg, sizeof(event_compat)))
+			ret = -EFAULT;
+		else {
+			event.length = event_compat.length;
+			event.data = compat_ptr(event_compat.data);
+
+			ret = mtp_send_event(dev, &event);
+		}
+		mtp_unlock(&dev->ioctl_excl);
+		DBG(dev->cdev, "ioctl returning %d\n", ret);
+		return ret;
+	} else
+		return mtp_ioctl(fp, cmd,
+			(unsigned long) compat_ptr(arg));
+}
+#endif
+#endif
+
 static int mtp_open(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_open\n");
@@ -1070,6 +1115,11 @@ static const struct file_operations mtp_fops = {
 	.read = mtp_read,
 	.write = mtp_write,
 	.unlocked_ioctl = mtp_ioctl,
+#ifdef CONFIG_AMLOGIC_USB
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = mtp_compat_ioctl,
+#endif
+#endif
 	.open = mtp_open,
 	.release = mtp_release,
 };
