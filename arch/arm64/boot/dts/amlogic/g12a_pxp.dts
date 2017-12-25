@@ -54,6 +54,14 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
+
+		ion_cma_reserved:linux,ion-dev {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x8000000>;
+			alignment = <0x0 0x400000>;
+		};
+
 	};
 
 	vout {

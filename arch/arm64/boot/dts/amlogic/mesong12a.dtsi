@@ -26,6 +26,7 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
 #include <dt-bindings/phy/phy-amlogic-pcie.h>
+#include "mesong12a-dvalin.dtsi"
 
 / {
 	cpus:cpus {
@@ -412,6 +413,11 @@
 				reg = <0x0 0x0 0x0 0x320>;
 			};
 		};/* end of hiubus*/
+
+		ion_dev {
+			compatible = "amlogic, ion_dev";
+			memory-region = <&ion_cma_reserved>;
+		};/* end of ion_dev*/
 
 	}; /* end of soc*/
 
