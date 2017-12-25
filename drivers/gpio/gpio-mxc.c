@@ -67,6 +67,7 @@ struct mxc_gpio_port {
 	u32 both_edges;
 	struct mxc_gpio_reg_saved gpio_saved_reg;
 	bool power_off;
+	int saved_reg[6];
 	bool gpio_ranges;
 };
 
@@ -633,6 +634,7 @@ static int __maybe_unused mxc_gpio_runtime_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mxc_gpio_port *port = platform_get_drvdata(pdev);
 
+	mxc_gpio_save_regs(port);
 	clk_disable_unprepare(port->clk);
 
 	return 0;
@@ -642,8 +644,15 @@ static int __maybe_unused mxc_gpio_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mxc_gpio_port *port = platform_get_drvdata(pdev);
+	int ret;
 
-	return clk_prepare_enable(port->clk);
+	ret = clk_prepare_enable(port->clk);
+	if (ret)
+		return ret;
+
+	mxc_gpio_restore_regs(port);
+
+	return 0;
 }
 
 static int __maybe_unused mxc_gpio_suspend(struct device *dev)
