@@ -589,8 +589,8 @@ u32 aml_sd_emmc_tuning_transfer(struct mmc_host *mmc,
 				break;
 			}
 		} else {
-			pr_err("Tuning transfer error: nmatch=%d\n",
-					nmatch);
+			pr_err("Tuning transfer error: nmatch=%d tuning_err:0x%x\n",
+					nmatch, tuning_err);
 			break;
 		}
 	}

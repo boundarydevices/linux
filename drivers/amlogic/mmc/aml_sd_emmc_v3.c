@@ -241,22 +241,20 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
 		clkc->div = clk_div / 2;
 		if (aml_card_type_mmc(pdata))
 			clkc->core_phase  = 2;
-		writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
-		pdata->clkc = vclkc;
 		pr_info("%s: try set sd/emmc to DDR mode\n",
 			mmc_hostname(host->mmc));
-	} else if (timing == MMC_TIMING_MMC_HS) {
+	} else if (timing == MMC_TIMING_MMC_HS)
 		clkc->core_phase = 3;
-		writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
-		pdata->clkc = vclkc;
-	} else if ((timing == MMC_TIMING_MMC_HS200)
-			|| ((timing == MMC_TIMING_MMC_HS)
-				&& aml_card_type_non_sdio(pdata))) {
+	else if ((timing == MMC_TIMING_MMC_HS200)
+			|| ((timing == MMC_TIMING_SD_HS)
+				&& aml_card_type_non_sdio(pdata))
+			|| (timing == MMC_TIMING_UHS_SDR104)) {
 		clkc->core_phase = 2;
-		writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
-		pdata->clkc = vclkc;
 	} else
 		ctrl->ddr = 0;
+
+	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
+	pdata->clkc = vclkc;
 
 	writel(vctrl, host->base + SD_EMMC_CFG);
 	pr_debug("sd emmc is %s\n",
@@ -775,8 +773,8 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 	delay2 += (cmd_count<<24);
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
 	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
-	pr_debug("ds_count:%d,delay1:0x%x,delay2:0x%x,count: %u\n",
-			ds_count, readl(host->base + SD_EMMC_DELAY1_V3),
+	pr_debug("cmd_count:%d,delay1:0x%x,delay2:0x%x,count: %u\n",
+			cmd_count, readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3), count);
 	return 0;
 }
@@ -1201,10 +1199,11 @@ RETRY:
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
 
 	host->is_tunning = 0;
-	pr_info("%s: gadjust=0x%x, gdelay1=0x%x\n",
+	pr_info("%s: gadjust=0x%x, gdelay1=0x%x, gclock=0x%x\n",
 			mmc_hostname(host->mmc),
 			readl(host->base + SD_EMMC_ADJUST_V3),
-			readl(host->base + SD_EMMC_DELAY1_V3));
+			readl(host->base + SD_EMMC_DELAY1_V3),
+			readl(host->base + SD_EMMC_CLOCK_V3));
 	return 0;
 }
 
