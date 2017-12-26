@@ -964,7 +964,7 @@
 		clocks = <&clkc CLKID_USB_GENERAL
 					&clkc CLKID_USB1_TO_DDR>;
 		clock-names = "usb_general",
-						"usb1_to_ddr";
+						"usb1";
 	};
 
 	/* Sound iomap */

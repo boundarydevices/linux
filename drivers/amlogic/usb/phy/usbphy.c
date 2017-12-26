@@ -396,7 +396,7 @@ int clk_enable_usb_gxl(struct platform_device *pdev,
 	usb_reset = devm_clk_get(&pdev->dev, "usb_general");
 	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_general = usb_reset;
-	usb_reset = devm_clk_get(&pdev->dev, "usb1_to_ddr");
+	usb_reset = devm_clk_get(&pdev->dev, "usb1");
 	clk_prepare_enable(usb_reset);
 	p_clk_reset[pdev->id].usb_reset_usb_to_ddr = usb_reset;
 	set_device_mode(pdev, usb_peri_reg, controller_type);
