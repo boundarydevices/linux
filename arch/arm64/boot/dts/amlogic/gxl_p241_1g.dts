@@ -18,7 +18,7 @@
 /dts-v1/;
 
 #include "mesongxl.dtsi"
-#include "partition_mbox_normal.dtsi"
+#include "partition_mbox_p241.dtsi"
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxl_p241_1g";
