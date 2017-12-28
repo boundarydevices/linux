@@ -456,8 +456,10 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 
 		pr_debug("%s(): memory range at %p is busy, retrying\n",
 			 __func__, pfn_to_page(pfn));
+	#ifndef CONFIG_AMLOGIC_MODIFY
 		/* try again with a bit different memory target */
 		start = bitmap_no + mask + 1;
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 	}
 
 	trace_cma_alloc(pfn, page, count, align);
