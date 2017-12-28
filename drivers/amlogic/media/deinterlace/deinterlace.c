@@ -2736,6 +2736,8 @@ static void pre_de_process(void)
 			vdin_ops->tvin_vdin_func(0, &vdin_arg);
 	}
 #endif
+	/* enable pre mif before reset avoid timeout */
+	enable_di_pre_mif(true, mcpre_en);
 	/* frame + soft reset for the pre modules. */
 	RDMA_WR(DI_PRE_CTRL, Rd(DI_PRE_CTRL) | 3 << 30);
 	RDMA_WR(DI_PRE_CTRL,
@@ -2745,7 +2747,7 @@ static void pre_de_process(void)
 		RDMA_WR_BITS(DI_PRE_CTRL, 1, 13, 1);
 	#endif
 
-	/* enable pre mif*/
+	/* enable mc pre mif*/
 	enable_di_pre_mif(true, mcpre_en);
 	di_pre_stru.irq_time = sched_clock()/NSEC_PER_MSEC;
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
