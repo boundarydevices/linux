@@ -647,7 +647,7 @@
 	sysled {
 		compatible = "amlogic, sysled";
 		dev_name = "sysled";
-		status = "okay";
+		status = "disabled";
 		led_gpio = <&gpio GPIODV_24 GPIO_ACTIVE_HIGH>;
 		led_active_low = <1>;
 	};
@@ -790,7 +790,7 @@
 			<&clkc CLKID_AOCLK_GATE>,
 			<&clkc CLKID_I2S_SPDIF>;
 		clock-names =
-			"mpll2",
+			"mpll",
 			"mclk",
 			"top_glue",
 			"aud_buf",

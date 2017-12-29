@@ -825,7 +825,7 @@
 			<&clkc CLKID_AOCLK_GATE>,
 			<&clkc CLKID_I2S_SPDIF>;
 		clock-names =
-			"mpll2",
+			"mpll",
 			"mclk",
 			"top_glue",
 			"aud_buf",

@@ -766,7 +766,7 @@
 			<&clkc CLKID_AOCLK_GATE>,
 			<&clkc CLKID_I2S_SPDIF>;
 		clock-names =
-			"mpll2",
+			"mpll",
 			"mclk",
 			"top_glue",
 			"aud_buf",
@@ -785,7 +785,7 @@
 		#sound-dai-cells = <0>;
 		compatible = "aml, aml_snd_dmic";
 		reg = <0x0 0xd0042000 0x0 0x2000>;
-		status = "okay";
+		status = "disabled";
 		resets = <
 			&clkc CLKID_PDM_GATE
 		>;

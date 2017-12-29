@@ -395,8 +395,8 @@ static int aml_i2s_dai_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(gate_names); i++) {
 		clk_gate = devm_clk_get(&pdev->dev, gate_names[i]);
 		if (IS_ERR(clk_gate)) {
-			if (i == 1) {
-				pr_info("ignore aud_buf gate for txlx/txhd\n");
+			if (i == 1 || i == 11) {
+				pr_info("ignore aud_buf/vdac_clk gate\n");
 				continue;
 			} else
 				dev_err(&pdev->dev, "Can't get aml audio gate:%s\n",

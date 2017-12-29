@@ -670,7 +670,8 @@ static void aml_txlx_acodec_shutdown(struct platform_device *pdev)
 
 	aml_acodec = platform_get_drvdata(pdev);
 	codec = aml_acodec->codec;
-	txlx_acodec_remove(codec);
+	if (codec)
+		txlx_acodec_remove(codec);
 }
 
 static const struct of_device_id aml_txlx_acodec_dt_match[] = {

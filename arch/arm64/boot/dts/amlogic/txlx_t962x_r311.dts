@@ -1109,7 +1109,7 @@
 	};
 
 	aml_snd_tv {
-		compatible = "aml, aml_snd_tv";
+		compatible = "amlogic, txlx-snd-tv";
 		status = "okay";
 		aml-sound-card,format = "i2s";
 		aml_sound_card,name = "AML-TVAUDIO";

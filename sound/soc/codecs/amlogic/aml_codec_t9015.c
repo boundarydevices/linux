@@ -522,7 +522,8 @@ static void aml_T9015_audio_codec_shutdown(struct platform_device *pdev)
 
 	aml_acodec = platform_get_drvdata(pdev);
 	codec = aml_acodec->codec;
-	aml_T9015_audio_remove(codec);
+	if (codec)
+		aml_T9015_audio_remove(codec);
 }
 
 static const struct of_device_id aml_T9015_codec_dt_match[] = {

@@ -121,7 +121,7 @@ static int aml_dmic_platform_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dmic_priv->dmic_pins =
-		devm_pinctrl_get_select(&pdev->dev, "dmic_pins");
+		devm_pinctrl_get_select(&pdev->dev, "audio_dmic");
 	if (IS_ERR(dmic_priv->dmic_pins)) {
 		dev_err(&pdev->dev, "pinctrls error!\n");
 		return -EINVAL;
