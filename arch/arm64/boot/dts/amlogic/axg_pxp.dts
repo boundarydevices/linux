@@ -208,7 +208,7 @@
 			&clkc CLKID_VPU_P1_MUX
 			&clkc CLKID_VPU_MUX>;
 		clock-names = "vapb_clk",
-			"vpu_intr",
+			"vpu_intr_gate",
 			"vpu_clk0",
 			"vpu_clk1",
 			"vpu_clk";

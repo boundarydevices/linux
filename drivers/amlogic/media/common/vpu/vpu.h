@@ -32,7 +32,20 @@ enum vpu_chip_e {
 	VPU_CHIP_GXM,
 	VPU_CHIP_TXLX,
 	VPU_CHIP_AXG,
+	VPU_CHIP_G12A,
 	VPU_CHIP_MAX,
+};
+
+struct fclk_div_s {
+	unsigned int fclk_id;
+	unsigned int fclk_mux;
+	unsigned int fclk_div;
+};
+
+struct vpu_clk_s {
+	unsigned int freq;
+	unsigned int mux;
+	unsigned int div;
 };
 
 struct vpu_ctrl_s {
@@ -47,6 +60,7 @@ struct vpu_data_s {
 	const char *chip_name;
 	unsigned char clk_level_dft;
 	unsigned char clk_level_max;
+	struct fclk_div_s *fclk_div_table;
 
 	unsigned char gp_pll_valid;
 	unsigned char mem_pd_reg1_valid;

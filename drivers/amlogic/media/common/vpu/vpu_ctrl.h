@@ -60,6 +60,11 @@
 #define CLK_LEVEL_DFT_AXG      3
 #define CLK_LEVEL_MAX_AXG      4
 
+/* G12A */
+/* freq max=666M, default=666M */
+#define CLK_LEVEL_DFT_G12A     7
+#define CLK_LEVEL_MAX_G12A     8
+
 /* vpu clk setting */
 enum vpu_mux_e {
 	FCLK_DIV4 = 0,
@@ -70,17 +75,29 @@ enum vpu_mux_e {
 	VID_PLL_CLK,
 	VID2_PLL_CLK,
 	GPLL_CLK,
+	FCLK_DIV_MAX,
 };
 
-static unsigned int fclk_div_table[] = {
-	4, /* mux 0 */
-	3, /* mux 1 */
-	5, /* mux 2 */
-	7, /* mux 3 */
-	2, /* invalid */
+static struct fclk_div_s fclk_div_table_gxb[] = {
+	/* id,         mux,  div */
+	{FCLK_DIV4,    0,    4},
+	{FCLK_DIV3,    1,    3},
+	{FCLK_DIV5,    2,    5},
+	{FCLK_DIV7,    3,    7},
+	{FCLK_DIV_MAX, 8,    1},
 };
 
-static unsigned int vpu_clk_table[10][3] = {
+static struct fclk_div_s fclk_div_table_g12a[] = {
+	/* id,         mux,  div */
+	{FCLK_DIV3,    0,    3},
+	{FCLK_DIV4,    1,    4},
+	{FCLK_DIV5,    2,    5},
+	{FCLK_DIV7,    3,    7},
+	{FCLK_DIV_MAX, 8,    1},
+};
+
+#define VPU_CLK_TOLERANCE    1000000 /* Hz */
+static struct vpu_clk_s vpu_clk_table[] = {
 	/* frequency   clk_mux       div */
 	{100000000,    FCLK_DIV5,    3}, /* 0 */
 	{166666667,    FCLK_DIV3,    3}, /* 1 */

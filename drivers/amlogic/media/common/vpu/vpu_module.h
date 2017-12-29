@@ -76,9 +76,6 @@ static char *vpu_mod_table[] = {
 	"none",
 	"none",
 	"none",
-	"none",
-	"none",
-	"none",
 };
 
 #endif
