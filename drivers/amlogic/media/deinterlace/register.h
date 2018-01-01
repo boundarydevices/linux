@@ -2048,6 +2048,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 /* Bit 7:1   vertical formatter phase step (3.4) */
 /* Bit 0     vertical formatter enable */
 #define VIU_VD1_FMT_W				    0x1a69
+/*g12a addr change to 0x3219*/
 /* ((0x1a69  << 2) + 0xd0100000) */
 /* Bit 27:16  horizontal formatter width */
 /* Bit 11:0   vertical formatter width */

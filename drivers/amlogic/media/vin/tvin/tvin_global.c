@@ -111,8 +111,8 @@ const char *tvin_port_str(enum tvin_port_e port)
 		return "TVIN_PORT_HDMI7";
 	case TVIN_PORT_DVIN0:
 		return "TVIN_PORT_DVIN0";
-	case TVIN_PORT_VIU:
-		return "TVIN_PORT_VIU";
+	case TVIN_PORT_VIU1:
+		return "TVIN_PORT_VIU1";
 	case TVIN_PORT_MIPI:
 		return "TVIN_PORT_MIPI";
 	case TVIN_PORT_ISP:

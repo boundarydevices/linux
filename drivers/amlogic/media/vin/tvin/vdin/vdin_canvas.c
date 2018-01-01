@@ -89,7 +89,7 @@ void vdin_canvas_init(struct vdin_dev_s *devp)
 	if (devp->canvas_max_num > VDIN_CANVAS_MAX_CNT)
 		devp->canvas_max_num = VDIN_CANVAS_MAX_CNT;
 
-	devp->mem_start = roundup(devp->mem_start, 32);
+	devp->mem_start = roundup(devp->mem_start, devp->canvas_align);
 	pr_info("vdin.%d canvas initial table:\n", devp->index);
 	for (i = 0; i < devp->canvas_max_num; i++) {
 		canvas_id = vdin_canvas_ids[devp->index][i];
@@ -131,9 +131,7 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_RGB) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_GBR) ||
-
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG) ||
-		(devp->force_yuv444_malloc == 1)) {
+		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG)) {
 		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
 			devp->canvas_w = max_buf_width *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
@@ -164,8 +162,16 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 	}
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
+	if (devp->force_yuv444_malloc == 1) {
+		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
+			devp->canvas_w = devp->h_active *
+				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
+		else
+			devp->canvas_w = devp->h_active *
+				VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
+	}
 	/*canvas_w must ensure divided exact by 256bit(32byte)*/
-	devp->canvas_w = roundup(devp->canvas_w, 32);
+	devp->canvas_w = roundup(devp->canvas_w, devp->canvas_align);
 	devp->canvas_h = devp->v_active;
 
 	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
@@ -181,7 +187,7 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 
 	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x100)) {
 		/*use_reserved_mem or alloc_from_contiguous*/
-		devp->mem_start = roundup(devp->mem_start, 32);
+		devp->mem_start = roundup(devp->mem_start, devp->canvas_align);
 #ifdef VDIN_DEBUG
 		pr_info("vdin%d cnavas start configuration table:\n",
 			devp->index);
@@ -215,7 +221,8 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 #endif
 		for (i = 0; i < devp->canvas_max_num; i++) {
 			devp->vfmem_start[i] =
-				roundup(devp->vfmem_start[i], 32);
+				roundup(devp->vfmem_start[i],
+					devp->canvas_align);
 			canvas_id = vdin_canvas_ids[devp->index][i*canvas_step];
 			canvas_addr = devp->vfmem_start[i];
 			canvas_config(canvas_id, canvas_addr,
@@ -265,9 +272,7 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_RGB) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_GBR) ||
-
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG) ||
-		(devp->force_yuv444_malloc == 1)) {
+		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG)) {
 		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
@@ -299,8 +304,16 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 	}
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
+	if (devp->force_yuv444_malloc == 1) {
+		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
+			devp->canvas_w = devp->h_active *
+				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
+		else
+			devp->canvas_w = devp->h_active *
+				VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
+	}
 	/*canvas_w must ensure divided exact by 256bit(32byte)*/
-	devp->canvas_w = roundup(devp->canvas_w, 32);
+	devp->canvas_w = roundup(devp->canvas_w, devp->canvas_align);
 	devp->canvas_h = devp->v_active;
 
 	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
@@ -315,7 +328,7 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 	devp->canvas_max_num = min(devp->canvas_max_num, max_buffer_num);
 	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x100)) {
 		/*use_reserved_mem or alloc_from_contiguous*/
-		devp->mem_start = roundup(devp->mem_start, 32);
+		devp->mem_start = roundup(devp->mem_start, devp->canvas_align);
 #ifdef VDIN_DEBUG
 		pr_info("vdin%d cnavas auto configuration table:\n",
 			devp->index);
@@ -349,7 +362,8 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 #endif
 		for (i = 0; i < devp->canvas_max_num; i++) {
 			devp->vfmem_start[i] =
-				roundup(devp->vfmem_start[i], 32);
+				roundup(devp->vfmem_start[i],
+					devp->canvas_align);
 			canvas_id = vdin_canvas_ids[devp->index][i*canvas_step];
 			canvas_addr = devp->vfmem_start[i];
 			canvas_config(canvas_id, canvas_addr,
@@ -419,12 +433,14 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		(devp->force_yuv444_malloc == 1)) {
 		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) {
 			h_size = roundup(h_size *
-				VDIN_YUV444_10BIT_PER_PIXEL_BYTE, 32);
+				VDIN_YUV444_10BIT_PER_PIXEL_BYTE,
+				devp->canvas_align);
 			devp->canvas_alin_w = h_size /
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		} else {
 			h_size = roundup(h_size *
-				VDIN_YUV444_8BIT_PER_PIXEL_BYTE, 32);
+				VDIN_YUV444_8BIT_PER_PIXEL_BYTE,
+				devp->canvas_align);
 			devp->canvas_alin_w = h_size /
 				VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
 		}
@@ -432,7 +448,7 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_NV21) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_NV12) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_NV21)) {
-		h_size = roundup(h_size, 32);
+		h_size = roundup(h_size, devp->canvas_align);
 		devp->canvas_alin_w = h_size;
 		/*todo change with canvas alloc!!*/
 		/* nv21/nv12 only have 8bit mode */
@@ -446,17 +462,19 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		(devp->format_convert == VDIN_FORMAT_CONVERT_GBR_YUV422) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_BRG_YUV422)) &&
 		(devp->color_depth_mode == 1)) {
-			h_size = roundup((h_size * 5)/2, 32);
+			h_size = roundup((h_size * 5)/2, devp->canvas_align);
 			devp->canvas_alin_w = (h_size * 2) / 5;
 		} else if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
 			(devp->color_depth_mode == 0)) {
 			h_size = roundup(h_size *
-				VDIN_YUV422_10BIT_PER_PIXEL_BYTE, 32);
+				VDIN_YUV422_10BIT_PER_PIXEL_BYTE,
+				devp->canvas_align);
 			devp->canvas_alin_w = h_size /
 				VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
 		} else {
 			h_size = roundup(h_size *
-				VDIN_YUV422_8BIT_PER_PIXEL_BYTE, 32);
+				VDIN_YUV422_8BIT_PER_PIXEL_BYTE,
+				devp->canvas_align);
 			devp->canvas_alin_w = h_size /
 				VDIN_YUV422_8BIT_PER_PIXEL_BYTE;
 		}
@@ -487,11 +505,12 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 					devp->index, i);
 				devp->cma_mem_alloc = 0;
 				return 1;
+			} else {
+				devp->cma_mem_alloc = 1;
+				pr_info("vdin%d buf[%d] mem_start = 0x%lx, mem_size = 0x%x\n",
+					devp->index, i,
+					devp->vfmem_start[i], devp->vfmem_size);
 			}
-			devp->cma_mem_alloc = 1;
-			pr_info("vdin%d buf[%d] mem_start = 0x%lx, mem_size = 0x%x\n",
-				devp->index, i,
-				devp->vfmem_start[i], devp->vfmem_size);
 		}
 		pr_info("vdin%d codec cma alloc ok!\n", devp->index);
 		devp->mem_size = mem_size;
@@ -504,11 +523,12 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 				devp->index);
 			devp->cma_mem_alloc = 0;
 			return 1;
+		} else {
+			devp->cma_mem_alloc = 1;
+			pr_info("vdin%d mem_start = 0x%lx, mem_size = 0x%x\n",
+				devp->index, devp->mem_start, devp->mem_size);
+			pr_info("vdin%d codec cma alloc ok!\n", devp->index);
 		}
-		devp->cma_mem_alloc = 1;
-		pr_info("vdin%d mem_start = 0x%lx, mem_size = 0x%x\n",
-			devp->index, devp->mem_start, devp->mem_size);
-		pr_info("vdin%d codec cma alloc ok!\n", devp->index);
 	} else if (devp->cma_config_flag == 0x100) {
 		for (i = 0; i < max_buffer_num; i++) {
 			devp->vfvenc_pages[i] = dma_alloc_from_contiguous(

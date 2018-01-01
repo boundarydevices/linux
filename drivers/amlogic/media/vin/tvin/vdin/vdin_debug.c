@@ -110,10 +110,10 @@ static ssize_t sig_det_store(struct device *dev,
 	if (!buf)
 		return len;
 	/* port = simple_strtol(buf, NULL, 10); */
-	if (kstrtol(buf, 10, &val) == 0)
-		port = val;
-	else
+	if (kstrtol(buf, 10, &val) < 0)
 		return -EINVAL;
+	else
+		port = val;
 
 	frontend = tvin_get_frontend(port, 0);
 	if (frontend && frontend->dec_ops &&
@@ -308,14 +308,15 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 {
 	struct file *filp = NULL;
 	loff_t pos = 0;
-	loff_t i = 0;
+	loff_t i = 0, j = 0;
+	unsigned int mem_size = 0;
 	void *buf = NULL;
 	void *vfbuf[VDIN_CANVAS_MAX_CNT];
 	mm_segment_t old_fs = get_fs();
-
 	set_fs(KERNEL_DS);
 	filp = filp_open(path, O_RDWR|O_CREAT, 0666);
 
+	mem_size = devp->canvas_active_w * devp->canvas_h;
 	for (i = 0; i < VDIN_CANVAS_MAX_CNT; i++)
 		vfbuf[i] = NULL;
 	if (IS_ERR(filp)) {
@@ -328,7 +329,7 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 		return;
 	}
 	for (i = 0; i < devp->canvas_max_num; i++) {
-		pos = devp->canvas_max_size * i;
+		pos = mem_size * i;
 		if (devp->cma_config_flag == 0x1)
 			buf = codec_mm_phys_to_virt(devp->mem_start +
 				devp->canvas_max_size*i);
@@ -340,11 +341,18 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 		else
 			buf = phys_to_virt(devp->mem_start +
 				devp->canvas_max_size*i);
-		if (devp->cma_config_flag & 0x100)
-			vfs_write(filp, vfbuf[i], devp->canvas_max_size, &pos);
-		else
-			vfs_write(filp, buf, devp->canvas_max_size, &pos);
-
+		/*only write active data*/
+		for (j = 0; j < devp->canvas_h; j++) {
+			if (devp->cma_config_flag & 0x100) {
+				vfs_write(filp, vfbuf[i],
+					devp->canvas_active_w, &pos);
+				vfbuf[i] += devp->canvas_w;
+			} else {
+				vfs_write(filp, buf,
+					devp->canvas_active_w, &pos);
+				buf += devp->canvas_w;
+			}
+		}
 		pr_info("write buffer %lld of %2u  to %s.\n",
 				i, devp->canvas_max_num, path);
 	}
@@ -431,8 +439,10 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	struct vf_pool *vfp = devp->vfp;
 	pr_info("h_active = %d, v_active = %d\n",
 		devp->h_active, devp->v_active);
-	pr_info("canvas_w = %d, canvas_h = %d, canvas_alin_w = %d\n",
-		devp->canvas_w, devp->canvas_h, devp->canvas_alin_w);
+	pr_info("canvas_w = %d, canvas_h = %d\n",
+		devp->canvas_w, devp->canvas_h);
+	pr_info("canvas_alin_w = %d, canvas_active_w = %d\n",
+		devp->canvas_alin_w, devp->canvas_active_w);
 	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x1))
 		pr_info("mem_start = %ld, mem_size = %d\n",
 			devp->mem_start, devp->mem_size);
@@ -564,11 +574,10 @@ static void vdin_write_mem(
 	struct vf_pool *p = devp->vfp;
 	/* vtype = simple_strtol(type, NULL, 10); */
 
-	if (kstrtol(type, 10, &val) == 0)
-		vtype = val;
-	else
+	if (kstrtol(type, 10, &val) < 0)
 		return;
 
+	vtype = val;
 	if (!devp->curr_wr_vfe) {
 		devp->curr_wr_vfe = provider_vf_get(devp->vfp);
 		if (!devp->curr_wr_vfe) {
@@ -961,11 +970,11 @@ start_chk:
 			param.port = TVIN_PORT_CAMERA;
 			pr_info(" port is TVIN_PORT_CAMERA\n");
 		} else if (!strcmp(parm[1], "viuin")) {
-			param.port = TVIN_PORT_VIU;
-			pr_info(" port is TVIN_PORT_VIU\n");
+			param.port = TVIN_PORT_VIU1;
+			pr_info(" port is TVIN_PORT_VIU1\n");
 		} else if (!strcmp(parm[1], "video")) {
-			param.port = TVIN_PORT_VIDEO;
-			pr_info(" port is TVIN_PORT_VIDEO\n");
+			param.port = TVIN_PORT_VIU1_VIDEO;
+			pr_info(" port is TVIN_PORT_VIU1_VIDEO\n");
 		} else if (!strcmp(parm[1], "isp")) {
 			param.port = TVIN_PORT_ISP;
 			pr_info(" port is TVIN_PORT_ISP\n");

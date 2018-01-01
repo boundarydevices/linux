@@ -950,13 +950,13 @@ struct amlvideo2_node *node)
 	else
 		cur_angle = cur_angle % 360;
 
-	if (node->porttype == TVIN_PORT_VIU) {
+	if (node->porttype == TVIN_PORT_VIU1) {
 		if (src_width < src_height)
 			cur_angle = (cur_angle + 90) % 360;
 	}
 
 	if ((node->crop_info.capture_crop_enable == 0) &&
-		(node->porttype != TVIN_PORT_VIDEO)) {
+		(node->porttype != TVIN_PORT_VIU1_VIDEO)) {
 		output_axis_adjust(
 			src_width, src_height,
 			&dst_width, &dst_height,
@@ -1318,7 +1318,7 @@ struct amlvideo2_node *node)
 	if (src_width < src_height)
 		cur_angle = (cur_angle + 90) % 360;
 	if ((node->crop_info.capture_crop_enable == 0) &&
-		(node->porttype != TVIN_PORT_VIDEO)) {
+		(node->porttype != TVIN_PORT_VIU1_VIDEO)) {
 		output_axis_adjust(
 			src_width, src_height,
 			&dst_width, &dst_height,
@@ -1689,13 +1689,13 @@ struct amlvideo2_node *node)
 	else
 		cur_angle = cur_angle % 360;
 
-	if (node->porttype == TVIN_PORT_VIU) {
+	if (node->porttype == TVIN_PORT_VIU1) {
 		if (src_width < src_height)
 			cur_angle = (cur_angle + 90) % 360;
 	}
 
 	if ((node->crop_info.capture_crop_enable == 0) &&
-		(node->porttype != TVIN_PORT_VIDEO)) {
+		(node->porttype != TVIN_PORT_VIU1_VIDEO)) {
 		output_axis_adjust(
 			src_width, src_height,
 			&dst_width, &dst_height,
@@ -2091,13 +2091,13 @@ struct amlvideo2_node *node)
 	else
 		cur_angle = cur_angle % 360;
 
-	if (node->porttype == TVIN_PORT_VIU) {
+	if (node->porttype == TVIN_PORT_VIU1) {
 		if (src_width < src_height)
 			cur_angle = (cur_angle + 90) % 360;
 	}
 
 	if ((node->crop_info.capture_crop_enable == 0) &&
-		(node->porttype != TVIN_PORT_VIDEO)) {
+		(node->porttype != TVIN_PORT_VIU1_VIDEO)) {
 		output_axis_adjust(
 			src_width, src_height,
 			&dst_width, &dst_height,
@@ -2491,13 +2491,13 @@ struct amlvideo2_node *node)
 	else
 		cur_angle = cur_angle % 360;
 
-	if (node->porttype == TVIN_PORT_VIU) {
+	if (node->porttype == TVIN_PORT_VIU1) {
 		if (src_width < src_height)
 			cur_angle = (cur_angle + 90) % 360;
 	}
 
 	if ((node->crop_info.capture_crop_enable == 0) &&
-		(node->porttype != TVIN_PORT_VIDEO)) {
+		(node->porttype != TVIN_PORT_VIU1_VIDEO)) {
 		output_axis_adjust(
 			src_width, src_height,
 			&dst_width, &dst_height,
@@ -3099,13 +3099,13 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 	else
 		cur_angle = cur_angle % 360;
 
-	if (node->porttype == TVIN_PORT_VIU) {
+	if (node->porttype == TVIN_PORT_VIU1) {
 		if (src_width < src_height)
 			cur_angle = (cur_angle + 90) % 360;
 	}
 
 	if ((node->crop_info.capture_crop_enable == 0) &&
-		(node->porttype != TVIN_PORT_VIDEO)) {
+		(node->porttype != TVIN_PORT_VIU1_VIDEO)) {
 		output_axis_adjust(
 			src_width, src_height,
 			&dst_width, &dst_height,
@@ -3462,7 +3462,7 @@ static int amlvideo2_fillbuff(struct amlvideo2_fh *fh,
 			& VIDTYPE_INTERLACE_TOP)) {
 			if (vf->canvas0Addr == vf->canvas1Addr) {
 				if ((node->p_type == AML_PROVIDE_VDIN0) &&
-					(node->porttype == TVIN_PORT_VIU)) {
+					(node->porttype == TVIN_PORT_VIU1)) {
 					src_canvas =
 				amlvideo2_ge2d_interlace_vdindata_process(
 					vf, node->context, &ge2d_config,
@@ -4773,7 +4773,7 @@ static int amlvideo2_start_tvin_service(struct amlvideo2_node *node)
 	para.dest_vactive = dst_h;
 	if (para.scan_mode == TVIN_SCAN_MODE_INTERLACED)
 		para.dest_vactive = para.dest_vactive / 2;
-	if (para.port == TVIN_PORT_VIDEO) {
+	if (para.port == TVIN_PORT_VIU1_VIDEO) {
 		para.dest_hactive = 0;
 		para.dest_vactive = 0;
 	}
@@ -5018,7 +5018,7 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	para.dest_vactive = dst_h;
 	if (para.scan_mode == TVIN_SCAN_MODE_INTERLACED)
 		para.dest_vactive = para.dest_vactive / 2;
-	if (para.port == TVIN_PORT_VIDEO) {
+	if (para.port == TVIN_PORT_VIU1_VIDEO) {
 		if (node->ge2d_multi_process_flag) {
 			para.dest_hactive = 384;
 			para.dest_vactive = 216;

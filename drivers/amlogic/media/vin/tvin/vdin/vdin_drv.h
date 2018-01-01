@@ -211,6 +211,10 @@ struct vdin_dev_s {
 	unsigned int canvas_alin_w;
 	unsigned int canvas_max_size;
 	unsigned int canvas_max_num;
+	/*before G12A:32byte(256bit)align;
+	 *after G12A:64byte(512bit)align
+	 */
+	unsigned int canvas_align;
 
 	unsigned int irq;
 	unsigned int rdma_irq;

@@ -5152,8 +5152,7 @@ SET_FILTER:
 			16) | (cur_frame_par->video_input_h & 0x1fff));
 
 		/* vpp super scaler */
-		if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) &&
-			(get_cpu_type() != MESON_CPU_MAJOR_ID_G12A))
+		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB)
 			vpp_set_super_scaler_regs(cur_frame_par->supscl_path,
 				cur_frame_par->supsc0_enable,
 				cur_frame_par->spsc0_w_in,

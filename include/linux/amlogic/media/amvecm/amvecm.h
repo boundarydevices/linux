@@ -204,8 +204,8 @@ static inline void WRITE_VPP_REG_BITS(uint32_t reg,
 		const uint32_t len)
 {
 	WRITE_VPP_REG(reg, ((READ_VPP_REG(reg) &
-			     ~(((1L << (len)) - 1) << (start))) |
-			    (((value) & ((1L << (len)) - 1)) << (start))));
+		~(((1L << (len)) - 1) << (start))) |
+		(((value) & ((1L << (len)) - 1)) << (start))));
 }
 
 static inline uint32_t READ_VPP_REG_BITS(uint32_t reg,

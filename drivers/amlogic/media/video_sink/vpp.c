@@ -404,7 +404,7 @@ static int force_filter_mode = 1;
 MODULE_PARM_DESC(force_filter_mode, "force_filter_mode");
 module_param(force_filter_mode, int, 0664);
 #endif
-bool super_scaler;
+bool super_scaler = 1;
 static unsigned int sr_support;
 static u32 sr_reg_offt;
 static unsigned int super_debug;
@@ -1643,6 +1643,7 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 				((~(reg_srscl0_hori_ratio&0x1))&0x1), 0, 1);
 	}
 	/* core1 config */
+	if (sr_support & SUPER_CORE1_SUPPORT) {
 	if (is_meson_gxtvbb_cpu())
 		tmp_data = sharpness1_sr2_ctrl_32d7;
 	else
@@ -1668,14 +1669,16 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 			sharpness1_sr2_ctrl_32d7 = tmp_data;
 		}
 	}
+	}
 
 	/* size config */
 	tmp_data = ((reg_srscl0_hsize & 0x1fff) << 16) |
 			   (reg_srscl0_vsize & 0x1fff);
 	tmp_data2 = VSYNC_RD_MPEG_REG(
-		SRSHARP0_SHARP_SR2_CTRL + sr_reg_offt);
+		SRSHARP0_SHARP_HVSIZE + sr_reg_offt);
 	if (tmp_data != tmp_data2)
-		VSYNC_WR_MPEG_REG(SRSHARP0_SHARP_HVSIZE, tmp_data);
+		VSYNC_WR_MPEG_REG(SRSHARP0_SHARP_HVSIZE + sr_reg_offt,
+		tmp_data);
 
 	tmp_data = ((reg_srscl1_hsize & 0x1fff) << 16) |
 			   (reg_srscl1_vsize & 0x1fff);
@@ -1741,9 +1744,12 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 			VSYNC_WR_MPEG_REG_BITS(VPP_VE_ENABLE_CTRL,
 				0, data_path_chose, 1);
 	} else {
-		if (is_meson_g12a_cpu())
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
-		else
+		if (is_meson_g12a_cpu()) {
+			if (scaler_path_sel == CORE0_AFTER_PPS)
+				VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
+			else
+				VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
+		} else
 			VSYNC_WR_MPEG_REG_BITS(VPP_VE_ENABLE_CTRL,
 				1, data_path_chose, 1);
 	}

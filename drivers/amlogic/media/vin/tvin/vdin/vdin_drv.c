@@ -505,10 +505,8 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	devp->curr_field_type = vdin_get_curr_field_type(devp);
 	/* configure regs and enable hw */
-#ifdef CONFIG_AML_VPU
 	switch_vpu_mem_pd_vmod(devp->addr_offset?VPU_VIU_VDIN1:VPU_VIU_VDIN0,
 			VPU_MEM_POWER_ON);
-#endif
 
 	vdin_hw_enable(devp->addr_offset);
 	vdin_set_all_regs(devp);
@@ -539,7 +537,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	else
 		vf_notify_receiver(devp->name,
 			VFRAME_EVENT_PROVIDER_START, NULL);
-	if ((devp->parm.port != TVIN_PORT_VIU) ||
+	if ((devp->parm.port != TVIN_PORT_VIU1) ||
 		(viu_hw_irq != 0)) {
 		/*enable irq */
 		enable_irq(devp->irq);
@@ -551,7 +549,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	if (vdin_dbg_en)
 		pr_info("****[%s]ok!****\n", __func__);
 #ifdef CONFIG_AM_TIMESYNC
-	if (devp->parm.port != TVIN_PORT_VIU) {
+	if (devp->parm.port != TVIN_PORT_VIU1) {
 		/*disable audio&video sync used for libplayer*/
 		tsync_set_enable(0);
 		/* enable system_time */
@@ -617,10 +615,8 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	vdin_dolby_addr_release(devp, devp->vfp->size);
 
 
-#ifdef CONFIG_AML_VPU
 	switch_vpu_mem_pd_vmod(devp->addr_offset?VPU_VIU_VDIN1:VPU_VIU_VDIN0,
 			VPU_MEM_POWER_DOWN);
-#endif
 	memset(&devp->prop, 0, sizeof(struct tvin_sig_property_s));
 #ifdef CONFIG_AML_RDMA
 	rdma_clear(devp->rdma_handle);
@@ -673,7 +669,7 @@ int start_tvin_service(int no, struct vdin_parm_s  *para)
 		ret = -EBUSY;
 		return ret;
 	}
-	if ((para->port != TVIN_PORT_VIU) ||
+	if ((para->port != TVIN_PORT_VIU1) ||
 		(viu_hw_irq != 0)) {
 		ret = request_irq(devp->irq, vdin_v4l2_isr, IRQF_SHARED,
 				devp->irq_name, (void *)devp);
@@ -707,7 +703,7 @@ int start_tvin_service(int no, struct vdin_parm_s  *para)
 			para->h_active >>= 1;
 		devp->fmt_info_p->h_active  = para->h_active;
 		devp->fmt_info_p->v_active  = para->v_active;
-		if ((devp->parm.port == TVIN_PORT_VIDEO) &&
+		if ((devp->parm.port == TVIN_PORT_VIU1_VIDEO) &&
 			(!(devp->flags & VDIN_FLAG_V4L2_DEBUG))) {
 			devp->fmt_info_p->v_active =
 				((rd(0, VPP_POSTBLEND_VD1_V_START_END) &
@@ -792,7 +788,7 @@ int stop_tvin_service(int no)
 /* #endif */
 	devp->flags &= (~VDIN_FLAG_DEC_OPENED);
 	devp->flags &= (~VDIN_FLAG_DEC_STARTED);
-	if ((devp->parm.port != TVIN_PORT_VIU) ||
+	if ((devp->parm.port != TVIN_PORT_VIU1) ||
 		(viu_hw_irq != 0)) {
 		free_irq(devp->irq, (void *)devp);
 		devp->flags &= (~VDIN_FLAG_ISR_REQ);
@@ -840,13 +836,13 @@ static int vdin_ioctl_fe(int no, struct fe_arg_s *parm)
 }
 
 /*
- * if parm.port is TVIN_PORT_VIU,call vdin_v4l2_isr
+ * if parm.port is TVIN_PORT_VIU1,call vdin_v4l2_isr
  *	vdin_v4l2_isr is used to the sample
  *	v4l2 application such as camera,viu
  */
 static void vdin_rdma_isr(struct vdin_dev_s *devp)
 {
-	if (devp->parm.port == TVIN_PORT_VIU)
+	if (devp->parm.port == TVIN_PORT_VIU1)
 		vdin_v4l2_isr(devp->irq, devp);
 }
 
@@ -964,7 +960,6 @@ void vdin_resume_dec(struct vdin_dev_s *devp)
 {
 	vdin_hw_enable(devp->addr_offset);
 }
-
 /*register provider & notify receiver */
 void vdin_vf_reg(struct vdin_dev_s *devp)
 {
@@ -1543,7 +1538,7 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 		goto irq_handled;
 	}
 
-	if ((devp->parm.port == TVIN_PORT_VIU) ||
+	if ((devp->parm.port == TVIN_PORT_VIU1) ||
 		(devp->parm.port == TVIN_PORT_CAMERA)) {
 		if (!vdin_write_done_check(offset, devp)) {
 			if (vdin_dbg_en)
@@ -2371,8 +2366,15 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	/* @todo vdin_addr_offset */
 	if (is_meson_gxbb_cpu() && vdevp->index)
 		vdin_addr_offset[vdevp->index] = 0x70;
+	else if (is_meson_g12a_cpu() && vdevp->index)
+		vdin_addr_offset[vdevp->index] = 0x100;
 	vdevp->addr_offset = vdin_addr_offset[vdevp->index];
 	vdevp->flags = 0;
+	/*canvas align number*/
+	if (is_meson_g12a_cpu())
+		vdevp->canvas_align = 64;
+	else
+		vdevp->canvas_align = 32;
 	/*mif reset patch for vdin wr ram bug on gxtvbb*/
 	if (is_meson_gxtvbb_cpu())
 		enable_reset = 1;

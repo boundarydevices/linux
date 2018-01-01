@@ -54,6 +54,15 @@
 #define ENCL_INFO_READ 0x271f
 #define VPU_VIU2VDIN_HDN_CTRL 0x2780
 
+/*g12a new add*/
+#define VPU_VIU_ASYNC_MASK 0x2781
+#define VDIN_MISC_CTRL 0x2782
+#define VPU_VIU_VDIN_IF_MUX_CTRL 0x2783
+#define VPU_VIU2VDIN1_HDN_CTRL 0x2784
+#define VPU_VENCX_CLK_CTRL 0x2785
+#define VPP_WRBAK_CTRL 0x1df9
+
+
 static unsigned int vsync_enter_line_curr;
 module_param(vsync_enter_line_curr, uint, 0664);
 MODULE_PARM_DESC(vsync_enter_line_curr,
@@ -130,7 +139,7 @@ static inline uint32_t rd_bits_viu(uint32_t reg,
 
 static int viuin_support(struct tvin_frontend_s *fe, enum tvin_port_e port)
 {
-	if (port == TVIN_PORT_VIU || port == TVIN_PORT_VIDEO)
+	if (port == TVIN_PORT_VIU1 || port == TVIN_PORT_VIU1_VIDEO)
 		return 0;
 	else
 		return -1;
@@ -154,7 +163,7 @@ void viuin_check_venc_line(struct viuin_s *devp_local)
 static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 {
 	struct viuin_s *devp = container_of(fe, struct viuin_s, frontend);
-	unsigned int viu_mux = 0;
+	unsigned int viu_mux = 0, viu_sel = 0;
 
 	if (!memcpy(&devp->parm, fe->private_data,
 			sizeof(struct vdin_parm_s))) {
@@ -183,7 +192,7 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 		break;
 	}
 	viuin_check_venc_line(devp);
-	if (port == TVIN_PORT_VIDEO) {
+	if (port == TVIN_PORT_VIU1_VIDEO) {
 		/* enable hsync for vdin loop */
 		wr_bits_viu(VIU_MISC_CTRL1, 1, 28, 1);
 		viu_mux = 0x4;
@@ -193,8 +202,68 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 			/* 1/2 down scaling */
 			wr_viu(VPU_VIU2VDIN_HDN_CTRL, 0x40f00);
 	}
-	wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, viu_mux, 4, 4);
-	wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, viu_mux, 8, 4);
+	if (is_meson_g12a_cpu()) {
+		if (((port >= TVIN_PORT_VIU1_WB0_VD1) &&
+			(port <= TVIN_PORT_VIU1_WB0_POST_BLEND)) ||
+			((port >= TVIN_PORT_VIU2_WB0_VD1) &&
+			(port <= TVIN_PORT_VIU2_WB0_POST_BLEND)))
+			viu_mux = 8;
+		else if (((port >= TVIN_PORT_VIU1_WB1_VD1) &&
+			(port <= TVIN_PORT_VIU1_WB1_POST_BLEND)) ||
+			((port >= TVIN_PORT_VIU2_WB1_VD1) &&
+			(port <= TVIN_PORT_VIU2_WB1_POST_BLEND)))
+			viu_mux = 16;
+		if (port >> 8 == 0xa0)
+			viu_sel = 1;
+		else if (port >> 8 == 0xc0)
+			viu_sel = 2;
+		if (viu_sel == 1) {
+			wr_bits_viu(VPU_VIU_VDIN_IF_MUX_CTRL, viu_mux, 0, 5);
+			wr_bits_viu(VPU_VIU_VDIN_IF_MUX_CTRL, viu_mux, 8, 5);
+		} else if (viu_sel == 2) {
+			wr_bits_viu(VPU_VIU_VDIN_IF_MUX_CTRL, viu_mux, 16, 5);
+			wr_bits_viu(VPU_VIU_VDIN_IF_MUX_CTRL, viu_mux, 24, 5);
+		} else {
+			wr_viu(VPU_VIU_VDIN_IF_MUX_CTRL, 0);
+		}
+		if ((port == TVIN_PORT_VIU1_WB0_VD1) ||
+			(port == TVIN_PORT_VIU2_WB0_VD1))
+			wr_bits_viu(VPP_WRBAK_CTRL, 1, 0, 3);
+		else if ((port == TVIN_PORT_VIU1_WB0_VD2) ||
+			(port == TVIN_PORT_VIU2_WB0_VD2))
+			wr_bits_viu(VPP_WRBAK_CTRL, 2, 0, 3);
+		else if ((port == TVIN_PORT_VIU1_WB0_OSD1) ||
+			(port == TVIN_PORT_VIU2_WB0_OSD1))
+			wr_bits_viu(VPP_WRBAK_CTRL, 3, 0, 3);
+		else if ((port == TVIN_PORT_VIU1_WB0_OSD2) ||
+			(port == TVIN_PORT_VIU2_WB0_OSD2))
+			wr_bits_viu(VPP_WRBAK_CTRL, 4, 0, 3);
+		else if ((port == TVIN_PORT_VIU1_WB0_POST_BLEND) ||
+			(port == TVIN_PORT_VIU2_WB0_POST_BLEND))
+			wr_bits_viu(VPP_WRBAK_CTRL, 5, 0, 3);
+		else
+			wr_bits_viu(VPP_WRBAK_CTRL, 0, 4, 3);
+		if ((port == TVIN_PORT_VIU1_WB1_VD1) ||
+			(port == TVIN_PORT_VIU2_WB1_VD1))
+			wr_bits_viu(VPP_WRBAK_CTRL, 1, 4, 3);
+		else if ((port == TVIN_PORT_VIU1_WB1_VD2) ||
+			(port == TVIN_PORT_VIU2_WB1_VD2))
+			wr_bits_viu(VPP_WRBAK_CTRL, 2, 4, 3);
+		else if ((port == TVIN_PORT_VIU1_WB1_OSD1) ||
+			(port == TVIN_PORT_VIU2_WB1_OSD1))
+			wr_bits_viu(VPP_WRBAK_CTRL, 3, 4, 3);
+		else if ((port == TVIN_PORT_VIU1_WB1_OSD2) ||
+			(port == TVIN_PORT_VIU2_WB1_OSD2))
+			wr_bits_viu(VPP_WRBAK_CTRL, 4, 4, 3);
+		else if ((port == TVIN_PORT_VIU1_WB1_POST_BLEND) ||
+			(port == TVIN_PORT_VIU2_WB1_POST_BLEND))
+			wr_bits_viu(VPP_WRBAK_CTRL, 5, 4, 3);
+		else
+			wr_bits_viu(VPP_WRBAK_CTRL, 0, 4, 3);
+	} else {
+		wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, viu_mux, 4, 4);
+		wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, viu_mux, 8, 4);
+	}
 	devp->flag = 0;
 	open_cnt++;
 	return 0;
@@ -203,14 +272,21 @@ static void viuin_close(struct tvin_frontend_s *fe)
 {
 	struct viuin_s *devp = container_of(fe, struct viuin_s, frontend);
 
-	viuin_check_venc_line(devp);
+	if (0)/*temp mark for pxp verify*/
+		viuin_check_venc_line(devp);
 	memset(&devp->parm, 0, sizeof(struct vdin_parm_s));
 	/*close the venc to vdin path*/
 	if (open_cnt)
 		open_cnt--;
 	if (open_cnt == 0) {
-		wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, 0, 8, 4);
-		wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, 0, 4, 4);
+		if (is_meson_g12a_cpu()) {
+			wr_viu(VPU_VIU_VDIN_IF_MUX_CTRL, 0);
+			wr_viu(VPP_WRBAK_CTRL, 0);
+
+		} else {
+			wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, 0, 8, 4);
+			wr_bits_viu(VPU_VIU_VENC_MUX_CTRL, 0, 4, 4);
+		}
 	}
 	if (rd_viu(VPU_VIU2VDIN_HDN_CTRL) != 0)
 		wr_viu(VPU_VIU2VDIN_HDN_CTRL, 0x0);
@@ -278,7 +354,7 @@ static void viuin_sig_property(struct tvin_frontend_s *fe,
 	static const struct vinfo_s *vinfo;
 	struct viuin_s *devp = container_of(fe, struct viuin_s, frontend);
 
-	if (devp->parm.port == TVIN_PORT_VIDEO)
+	if (devp->parm.port == TVIN_PORT_VIU1_VIDEO)
 		prop->color_format = TVIN_YUV444;
 	else {
 		vinfo = get_current_vinfo();
