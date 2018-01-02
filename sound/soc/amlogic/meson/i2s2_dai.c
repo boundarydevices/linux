@@ -172,14 +172,16 @@ static int aml_dai_i2s2_prepare(struct snd_pcm_substream *substream,
 				audio_in_i2s_set_buf(runtime->dma_addr,
 						runtime->dma_bytes * 2,
 						0, 1, 1,
-						runtime->channels);
+						runtime->channels,
+						runtime->format);
 				memset((void *)runtime->dma_area, 0,
 						runtime->dma_bytes * 2);
 			} else {
 				audio_in_i2s_set_buf(runtime->dma_addr,
 						runtime->dma_bytes,
 						0, 1, 1,
-						runtime->channels);
+						runtime->channels,
+						runtime->format);
 				memset((void *)runtime->dma_area, 0,
 						runtime->dma_bytes);
 			}

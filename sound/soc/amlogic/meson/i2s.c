@@ -166,18 +166,33 @@ static int aml_i2s_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
-	size_t size = aml_i2s_hardware.buffer_bytes_max;
+	size_t size;
 
 	buf->dev.type = SNDRV_DMA_TYPE_DEV;
 	buf->dev.dev = pcm->card->dev;
 	buf->private_data = NULL;
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		/* malloc DMA buffer */
+		size = aml_i2s_hardware.buffer_bytes_max;
 
-	buf->area = dmam_alloc_coherent(pcm->card->dev, size,
-			&buf->addr, GFP_KERNEL);
-	dev_info(pcm->card->dev, "aml-pcm %d: playback preallocate_dma_buffer: area=%p, addr=%p, size=%ld\n",
-		stream, (void *) buf->area, (void *) buf->addr, size);
-	if (!buf->area)
-		return -ENOMEM;
+		buf->area = dmam_alloc_coherent(pcm->card->dev, size,
+				&buf->addr, GFP_KERNEL);
+		dev_info(pcm->card->dev, "aml-i2s %d: playback preallocate_dma_buffer: area=%p, addr=%p, size=%ld\n",
+			stream, (void *) buf->area, (void *) buf->addr, size);
+		if (!buf->area)
+			return -ENOMEM;
+
+	} else {
+		/* malloc DMA buffer */
+		size = aml_i2s_capture.buffer_bytes_max;
+		buf->area = dmam_alloc_coherent(pcm->card->dev, size,
+				&buf->addr, GFP_KERNEL);
+		dev_info(pcm->card->dev, "aml-i2s %d: capture preallocate_dma_buffer: area=%p, addr=%p, size=%ld\n",
+			stream, (void *) buf->area, (void *) buf->addr, size);
+		if (!buf->area)
+			return -ENOMEM;
+	}
+
 
 	buf->bytes = size;
 	return 0;
@@ -521,7 +536,9 @@ static snd_pcm_uframes_t aml_i2s_pointer(struct snd_pcm_substream *substream)
 			ptr = read_iec958_rd_ptr();
 		addr = ptr - s->I2S_addr;
 		return bytes_to_frames(runtime, addr);
-	} else {
+	}
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		if (s->device_type == AML_AUDIO_I2SIN)
 			ptr = audio_in_i2s_wr_ptr();
 		else if (s->device_type == AML_AUDIO_I2SIN2)
@@ -529,10 +546,14 @@ static snd_pcm_uframes_t aml_i2s_pointer(struct snd_pcm_substream *substream)
 		else
 			ptr = audio_in_spdif_wr_ptr();
 		addr = ptr - s->I2S_addr;
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+		return bytes_to_frames(runtime, addr);
+#else
 		if (runtime->format == SNDRV_PCM_FORMAT_S16_LE)
 			return bytes_to_frames(runtime, addr) >> 1;
 		else
 			return bytes_to_frames(runtime, addr);
+#endif
 	}
 
 	return 0;
@@ -586,12 +607,17 @@ static void aml_i2s_timer_callback(unsigned long data)
 			last_ptr = audio_in_spdif_wr_ptr();
 
 		if (last_ptr < s->last_ptr) {
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+			size = runtime->dma_bytes +
+					(last_ptr - (s->last_ptr));
+#else
 			if (runtime->format == SNDRV_PCM_FORMAT_S16_LE)
 				size = runtime->dma_bytes +
 					(last_ptr - (s->last_ptr)) / 2;
 			else
 				size = runtime->dma_bytes +
 					(last_ptr - (s->last_ptr));
+#endif
 			prtd->xrun_num = 0;
 		} else if (last_ptr == s->last_ptr) {
 			if (prtd->xrun_num++ > XRUN_NUM) {
@@ -599,10 +625,14 @@ static void aml_i2s_timer_callback(unsigned long data)
 				s->size = runtime->period_size;
 			}
 		} else {
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+			size = (last_ptr - (s->last_ptr));
+#else
 			if (runtime->format == SNDRV_PCM_FORMAT_S16_LE)
 				size = (last_ptr - (s->last_ptr)) / 2;
 			else
 				size = last_ptr - (s->last_ptr);
+#endif
 			prtd->xrun_num = 0;
 		}
 

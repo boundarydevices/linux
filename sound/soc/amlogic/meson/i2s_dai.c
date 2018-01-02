@@ -47,6 +47,7 @@
 #include "audio_hw.h"
 #include <linux/amlogic/media/sound/aout_notify.h>
 #include "spdif_dai.h"
+#include "dmic.h"
 
 #define AOUT_EVENT_IEC_60958_PCM 0x1
 
@@ -76,7 +77,7 @@ static void aml_hw_i2s_init(struct snd_pcm_runtime *runtime)
 	audio_set_i2s_mode(i2s_mode);
 #endif
 	audio_set_aiubuf(runtime->dma_addr, runtime->dma_bytes,
-			 runtime->channels);
+			 runtime->channels, runtime->format);
 }
 
 static int aml_dai_i2s_startup(struct snd_pcm_substream *substream,
@@ -177,21 +178,35 @@ static int aml_dai_i2s_prepare(struct snd_pcm_substream *substream,
 			s->device_type = AML_AUDIO_I2SIN2;
 		} else {
 			if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+				audio_in_i2s_set_buf(runtime->dma_addr,
+					runtime->dma_bytes,
+					0, i2s->i2s_pos_sync,
+					i2s->audin_fifo_src,
+					runtime->channels,
+					runtime->format);
+				memset((void *)runtime->dma_area, 0,
+					runtime->dma_bytes);
+#else
+
 				audio_in_i2s_set_buf(runtime->dma_addr,
 						runtime->dma_bytes * 2,
 						i2s->clk_data_pos,
 						i2s->i2s_pos_sync,
 						i2s->audin_fifo_src,
-						runtime->channels);
+						runtime->channels,
+						runtime->format);
 				memset((void *)runtime->dma_area, 0,
 						runtime->dma_bytes * 2);
+#endif
 			} else {
 				audio_in_i2s_set_buf(runtime->dma_addr,
 						runtime->dma_bytes,
 						i2s->clk_data_pos,
 						i2s->i2s_pos_sync,
 						i2s->audin_fifo_src,
-						runtime->channels);
+						runtime->channels,
+						runtime->format);
 				memset((void *)runtime->dma_area, 0,
 						runtime->dma_bytes);
 			}
@@ -270,9 +285,25 @@ static int aml_dai_i2s_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
 	struct aml_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-	int srate, mclk_rate;
+	int srate, mclk_rate, ret;
 
 	srate = params_rate(params);
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		if (i2s->audin_fifo_src == 3) {
+			mclk_rate = srate * DEFAULT_MCLK_RATIO_SR;
+			ret = clk_set_rate(dmic_pub->clk_mclk, mclk_rate * 10);
+			if (ret)
+				return ret;
+			ret = clk_set_parent(dmic_pub->clk_pdm,
+				dmic_pub->clk_mclk);
+			if (ret)
+				return ret;
+			ret = clk_set_rate(dmic_pub->clk_pdm, mclk_rate/4);
+			if (ret)
+				return ret;
+			return  0;
+		}
+	}
 	if (i2s->old_samplerate != srate) {
 		if (audio_in_source == 0 || substream->stream
 				== SNDRV_PCM_STREAM_PLAYBACK) {

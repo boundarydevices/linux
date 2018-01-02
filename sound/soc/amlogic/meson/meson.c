@@ -65,7 +65,8 @@ static void aml_i2s_play(void)
 	audio_set_i2s_mode(AIU_I2S_MODE_PCM16);
 #endif
 	memset(i2sbuf, 0, sizeof(i2sbuf));
-	audio_set_aiubuf((virt_to_phys(i2sbuf) + 63) & (~63), 128, 2);
+	audio_set_aiubuf((virt_to_phys(i2sbuf) + 63) & (~63), 128, 2,
+		SNDRV_PCM_FORMAT_S16_LE);
 	audio_out_i2s_enable(1);
 
 }

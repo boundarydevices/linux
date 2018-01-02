@@ -24,6 +24,7 @@
 #include <sound/soc.h>
 #include <linux/reset.h>
 #include <linux/pinctrl/consumer.h>
+#include "dmic.h"
 
 #define DRV_NAME "snd_dmic"
 
@@ -49,12 +50,7 @@
 #define PDM_VOL_GAIN_R	0x45
 #define PDM_STATUS		0x50
 
-struct aml_dmic_priv {
-	void __iomem *pdm_base;
-	struct pinctrl *dmic_pins;
-	struct clk *clk_pdm;
-	struct clk *clk_mclk;
-};
+struct aml_dmic_priv *dmic_pub;
 
 static int aml_dmic_codec_probe(struct snd_soc_codec *codec)
 {
@@ -171,13 +167,14 @@ static int aml_dmic_platform_probe(struct platform_device *pdev)
 		return PTR_ERR(dmic_priv->pdm_base);
 	}
 
-	writel(0x100000, dmic_priv->pdm_base + (PDM_VOL_GAIN_L<<2));
-	writel(0x100000, dmic_priv->pdm_base + (PDM_VOL_GAIN_R<<2));
+	writel(0x10000, dmic_priv->pdm_base + (PDM_VOL_GAIN_L<<2));
+	writel(0x10000, dmic_priv->pdm_base + (PDM_VOL_GAIN_R<<2));
 
 	val = readl(dmic_priv->pdm_base + (PDM_CTRL<<2));
 	writel(1, dmic_priv->pdm_base + (PDM_CTRL<<2));
 	val = readl(dmic_priv->pdm_base + (PDM_CTRL<<2));
 
+	dmic_pub = dmic_priv;
 	return snd_soc_register_codec(&pdev->dev,
 			&aml_dmic, &aml_dmic_dai, 1);
 err:

@@ -152,7 +152,8 @@ void chipset_set_spdif_pao(void)
 		0x1 << 1);
 }
 
-void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel)
+void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel,
+	snd_pcm_format_t format)
 {
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	aml_aiu_write(AIU_MEM_I2S_START_PTR, addr & 0xffffff00);
@@ -288,15 +289,27 @@ void audio_in_clk_sel(void)
  * din_sel 0:spdif 1:i2s 2:pcm 3: dmic
  */
 static void i2sin_fifo0_set_buf(u32 addr, u32 size, u32 i2s_mode,
-		u32 i2s_sync, u32 din_sel, u32 ch)
+		u32 i2s_sync, u32 din_sel, u32 ch, snd_pcm_format_t format)
 {
 	unsigned char mode = 0;
 	unsigned int sync_mode = 0, din_pos = 0;
-
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+	unsigned int fifo_bytes = 0;
+	unsigned int i2s_size = 0;
+#endif
 	if (i2s_sync)
 		sync_mode = i2s_sync;
 	if (i2s_mode & I2SIN_SLAVE_MODE)
 		mode = 1;
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+	if (format == SNDRV_PCM_FORMAT_S16_LE) {
+		fifo_bytes = 1;
+		i2s_size = 0;
+	} else {
+		fifo_bytes = 2;
+		i2s_size = 3;
+	}
+#endif
 	if (din_sel != 1)
 		din_pos = 1;
 	aml_audin_write(AUDIN_FIFO0_START, addr & 0xffffffc0);
@@ -308,14 +321,42 @@ static void i2sin_fifo0_set_buf(u32 addr, u32 size, u32 i2s_mode,
 			   | (1 << AUDIN_FIFO_LOAD) /* load start address */
 			   | (din_sel << AUDIN_FIFO_DIN_SEL) /*DIN from i2sin*/
 			   | (4 << AUDIN_FIFO_ENDIAN) /*AUDIN_FIFO_ENDIAN*/
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+			   | (1 << AUDIN_FIFO_CHAN) /* ch mode ctl */
+#else
 			   | ((ch == 2?2:1) << AUDIN_FIFO_CHAN) /*ch mode ctl*/
+#endif
 			   | (1 << AUDIN_FIFO_UG) /* Urgent request. */
 	);
-
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+	if (format == SNDRV_PCM_FORMAT_S16_LE)
+		aml_write_cbus(AUDIN_FIFO0_CTRL,
+				aml_read_cbus(AUDIN_FIFO0_CTRL) |
+				(7 << AUDIN_FIFO_ENDIAN));
+	else
+		aml_write_cbus(AUDIN_FIFO0_CTRL,
+				aml_read_cbus(AUDIN_FIFO0_CTRL) |
+				(6 << AUDIN_FIFO_ENDIAN));
+#endif
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+	aml_write_cbus(AUDIN_FIFO0_CTRL1, 0 << 4	/* fifo0_dest_sel */
+			   | fifo_bytes << 2 /* fifo0_din_byte_num */
+			   | 0 << 0);	/* fifo0_din_pos */
+#else
 	aml_audin_write(AUDIN_FIFO0_CTRL1, 0 << 4	/* fifo0_dest_sel */
 			   | 2 << 2	/* 0: 8bit; 1:16bit; 2:32bit */
 			   | din_pos << 0);	/* fifo0_din_pos */
-
+#endif
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+	if (format == SNDRV_PCM_FORMAT_S16_LE)
+		aml_write_cbus(AUDIN_FIFO0_CTRL1,
+				aml_read_cbus(AUDIN_FIFO0_CTRL1) |
+				(0 << 0));
+	else
+		aml_write_cbus(AUDIN_FIFO0_CTRL1,
+				aml_read_cbus(AUDIN_FIFO0_CTRL1) |
+				(1 << 0));
+#endif
 	if (audio_in_source == 1 && (!is_audin_ext_support())) {
 		aml_audin_write(AUDIN_I2SIN_CTRL, (1 << I2SIN_CHAN_EN)
 				   | (0 << I2SIN_SIZE)
@@ -335,6 +376,17 @@ static void i2sin_fifo0_set_buf(u32 addr, u32 size, u32 i2s_mode,
 				   | (1 << I2SIN_CLK_SEL)
 				   | (1 << I2SIN_DIR));
 	} else {
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE_MMAP
+		aml_write_cbus(AUDIN_I2SIN_CTRL,
+				   ((0xf>>(4 - ch/2)) << I2SIN_CHAN_EN)
+				   | (i2s_size << I2SIN_SIZE)
+				   | (1 << I2SIN_LRCLK_INVT)
+				   | (1 << I2SIN_LRCLK_SKEW)
+				   | (sync_mode << I2SIN_POS_SYNC)
+				   | (!mode << I2SIN_LRCLK_SEL)
+				   | (!mode << I2SIN_CLK_SEL)
+				   | (!mode << I2SIN_DIR));
+#else
 		aml_audin_write(AUDIN_I2SIN_CTRL,
 				   ((0xf>>(4 - ch/2)) << I2SIN_CHAN_EN)
 				   | (3 << I2SIN_SIZE)
@@ -344,6 +396,7 @@ static void i2sin_fifo0_set_buf(u32 addr, u32 size, u32 i2s_mode,
 				   | (!mode << I2SIN_LRCLK_SEL)
 				   | (!mode << I2SIN_CLK_SEL)
 				   | (!mode << I2SIN_DIR));
+#endif
 	}
 
 }
@@ -473,11 +526,14 @@ static void spdifin_fifo1_set_buf(u32 addr, u32 size, u32 src)
 		aml_audin_write(AUDIN_FIFO1_CTRL1, 0x88);
 }
 
-void audio_in_i2s_set_buf(u32 addr, u32 size,
-	u32 i2s_mode, u32 i2s_sync, u32 din_sel, u32 ch)
+void audio_in_i2s_set_buf(u32 addr, u32 size, u32 i2s_mode,
+	u32 i2s_sync, u32 din_sel, u32 ch, snd_pcm_format_t format)
+
 {
 	pr_debug("i2sin_fifo0_set_buf din_sel:%d ch:%d\n", din_sel, ch);
-	i2sin_fifo0_set_buf(addr, size, i2s_mode, i2s_sync, din_sel, ch);
+	i2sin_fifo0_set_buf(addr, size, i2s_mode, i2s_sync,
+		din_sel, ch, format);
+
 }
 
 void audio_in_i2s2_set_buf(u32 addr, u32 size, u32 src, u32 ch)
@@ -580,6 +636,7 @@ int if_audio_in_spdif_enable(void)
 unsigned int audio_in_i2s_rd_ptr(void)
 {
 	unsigned int val;
+
 	val = aml_audin_read(AUDIN_FIFO0_RDPTR);
 	pr_info("audio in i2s rd ptr: %x\n", val);
 	return val;

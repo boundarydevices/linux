@@ -14213,3 +14213,7 @@ F:	drivers/amlogic/media/vout/backlight/aml_ldim/*
 AMLOGIC ADD LCD_EXTERN ST7701 DRIVER
 M:	Weiming Liu <weiming.liu@amlogic.com>
 F:	drivers/amlogic/media/vout/lcd/lcd_extern/mipi_ST7701.c
+
+AMLOGIC MESONGXL ADD SOUND DMIC MMAP FUNCTION
+M: 	peipeng.zhao <peipeng.zhao@amlogic.com>
+F:      sound/soc/amlogic/meson/dmic.h
