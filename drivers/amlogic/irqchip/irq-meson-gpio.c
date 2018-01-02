@@ -71,6 +71,10 @@ static const struct meson_gpio_irq_params txlx_params = {
 	.nr_hwirq = 119,
 };
 
+static const struct meson_gpio_irq_params g12a_params = {
+	.nr_hwirq = 100,
+};
+
 static const struct of_device_id meson_irq_gpio_matches[] = {
 	{ .compatible = "amlogic,meson8-gpio-intc", .data = &meson8_params },
 	{ .compatible = "amlogic,meson8b-gpio-intc", .data = &meson8b_params },
@@ -78,6 +82,7 @@ static const struct of_device_id meson_irq_gpio_matches[] = {
 	{ .compatible = "amlogic,meson-gxl-gpio-intc", .data = &gxl_params },
 	{ .compatible = "amlogic,meson-axg-gpio-intc", .data = &axg_params },
 	{ .compatible = "amlogic,meson-txlx-gpio-intc", .data = &txlx_params },
+	{ .compatible = "amlogic,meson-g12a-gpio-intc", .data = &g12a_params },
 	{ }
 };
 
