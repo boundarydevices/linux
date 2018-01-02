@@ -583,6 +583,24 @@ static int cvbs_module_disable(enum vmode_e cur_vmod)
 	return 0;
 }
 
+static int cvbs_vout_state;
+static int cvbs_vout_set_state(int index)
+{
+	cvbs_vout_state |= (1 << index);
+	return 0;
+}
+
+static int cvbs_vout_clr_state(int index)
+{
+	cvbs_vout_state &= ~(1 << index);
+	return 0;
+}
+
+static int cvbs_vout_get_state(void)
+{
+	return cvbs_vout_state;
+}
+
 #ifdef CONFIG_PM
 static int cvbs_suspend(void)
 {
@@ -602,14 +620,17 @@ static int cvbs_resume(void)
 }
 #endif
 
-static struct vout_server_s cvbs_server = {
-	.name = "vout_cvbs_server",
+static struct vout_server_s cvbs_vout_server = {
+	.name = "cvbs_vout_server",
 	.op = {
 		.get_vinfo = cvbs_get_current_info,
 		.set_vmode = cvbs_set_current_vmode,
 		.validate_vmode = cvbs_validate_vmode,
 		.vmode_is_supported = cvbs_vmode_is_supported,
 		.disable = cvbs_module_disable,
+		.set_state = cvbs_vout_set_state,
+		.clr_state = cvbs_vout_clr_state,
+		.get_state = cvbs_vout_get_state,
 		.set_vframe_rate_hint = NULL,
 		.set_vframe_rate_end_hint = NULL,
 		.set_vframe_rate_policy = NULL,
@@ -621,15 +642,45 @@ static struct vout_server_s cvbs_server = {
 	},
 };
 
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+static struct vout_server_s cvbs_vout2_server = {
+	.name = "cvbs_vout2_server",
+	.op = {
+		.get_vinfo = cvbs_get_current_info,
+		.set_vmode = cvbs_set_current_vmode,
+		.validate_vmode = cvbs_validate_vmode,
+		.vmode_is_supported = cvbs_vmode_is_supported,
+		.disable = cvbs_module_disable,
+		.set_state = cvbs_vout_set_state,
+		.clr_state = cvbs_vout_clr_state,
+		.get_state = cvbs_vout_get_state,
+		.set_vframe_rate_hint = NULL,
+		.set_vframe_rate_end_hint = NULL,
+		.set_vframe_rate_policy = NULL,
+		.get_vframe_rate_policy = NULL,
+#ifdef CONFIG_PM
+		.vout_suspend = cvbs_suspend,
+		.vout_resume = cvbs_resume,
+#endif
+	},
+};
+#endif
+
 static void cvbs_init_vout(void)
 {
 	if (info->vinfo == NULL)
 		info->vinfo = &cvbs_info[MODE_480CVBS];
 
-	if (vout_register_server(&cvbs_server))
+	if (vout_register_server(&cvbs_vout_server))
 		cvbs_log_err("register cvbs module server fail\n");
 	else
 		cvbs_log_info("register cvbs module server ok\n");
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	if (vout2_register_server(&cvbs_vout2_server))
+		cvbs_log_err("register cvbs module vout2 server fail\n");
+	else
+		cvbs_log_info("register cvbs module vout2 server ok\n");
+#endif
 }
 
 /* **************************************************** */
@@ -1292,7 +1343,10 @@ static int cvbsout_remove(struct platform_device *pdev)
 		cdev_del(info->cdev);
 		kfree(info);
 	}
-	vout_unregister_server(&cvbs_server);
+	vout_unregister_server(&cvbs_vout_server);
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	vout2_unregister_server(&cvbs_vout2_server);
+#endif
 	cvbs_log_info("%s\n", __func__);
 	return 0;
 }

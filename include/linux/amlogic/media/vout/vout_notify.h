@@ -39,6 +39,9 @@ struct vout_op_s {
 	enum vmode_e (*validate_vmode)(char *);
 	int (*vmode_is_supported)(enum vmode_e);
 	int (*disable)(enum vmode_e);
+	int (*set_state)(int);
+	int (*clr_state)(int);
+	int (*get_state)(void);
 	int (*set_vframe_rate_hint)(int);
 	int (*set_vframe_rate_end_hint)(void);
 	int (*set_vframe_rate_policy)(int);
@@ -61,27 +64,40 @@ struct vout_module_s {
 
 extern int vout_register_client(struct notifier_block *p);
 extern int vout_unregister_client(struct notifier_block *p);
+extern int vout_notifier_call_chain(unsigned int long, void *p);
 extern int vout_register_server(struct vout_server_s *p);
 extern int vout_unregister_server(struct vout_server_s *p);
-extern int vout_notifier_call_chain(unsigned int long, void *p);
 
 extern struct vinfo_s *get_current_vinfo(void);
 extern enum vmode_e get_current_vmode(void);
-extern int set_current_vmode(enum vmode_e);
-extern enum vmode_e validate_vmode(char *p);
-extern int get_vsource_fps(int duration);
 extern int set_vframe_rate_hint(int duration);
 extern int set_vframe_rate_end_hint(void);
 extern int set_vframe_rate_policy(int pol);
 extern int get_vframe_rate_policy(void);
 
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+extern int vout2_register_client(struct notifier_block *p);
+extern int vout2_unregister_client(struct notifier_block *p);
+extern int vout2_notifier_call_chain(unsigned int long, void *p);
+extern int vout2_register_server(struct vout_server_s *p);
+extern int vout2_unregister_server(struct vout_server_s *p);
+
+extern struct vinfo_s *get_current_vinfo2(void);
+extern enum vmode_e get_current_vmode2(void);
+extern int set_vframe2_rate_hint(int duration);
+extern int set_vframe2_rate_end_hint(void);
+extern int set_vframe2_rate_policy(int pol);
+extern int get_vframe2_rate_policy(void);
+
+#endif
+
+extern int vout_get_vsource_fps(int duration);
+
 /* vdac ctrl,adc/dac ref signal,cvbs out signal
  * module index: atv demod:0x01; dtv demod:0x02; tvafe:0x4; dac:0x8
  */
 extern void vdac_enable(bool on, unsigned int module_sel);
-extern int vout_suspend(void);
-extern int vout_resume(void);
-extern int vout_shutdown(void);
+
 
 #define VOUT_EVENT_MODE_CHANGE_PRE     0x00010000
 #define VOUT_EVENT_MODE_CHANGE         0x00020000
@@ -100,11 +116,7 @@ extern int vout_shutdown(void);
 		_IOW(VOUT_IOC_TYPE, VOUT_IOC_NR_SET_VINFO, struct vinfo_base_s)
 /* ******************************** */
 
-extern void update_vout_mode(char *name);
-
 extern char *get_vout_mode_internal(void);
 extern char *get_vout_mode_uboot(void);
-
-extern enum vmode_e get_logo_vmode(void);
 
 #endif /* _VOUT_NOTIFY_H_ */

@@ -35,9 +35,9 @@ enum vmode_e {
 };
 
 enum viu_mux_e {
-	VIU_MUX_ENCI = 0,
+	VIU_MUX_ENCL = 0,
+	VIU_MUX_ENCI,
 	VIU_MUX_ENCP,
-	VIU_MUX_ENCL,
 	VIU_MUX_MAX,
 };
 

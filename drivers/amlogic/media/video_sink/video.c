@@ -8908,7 +8908,7 @@ static int __init video_early_init(void)
 	/*(3<<9) | (1<<8) | (0)); // fclk_div7/1 = 364M*/
 	/*moved to vpu.c, default config by dts */
 
-	if (/*get_logo_vmode()*/0 >= VMODE_MAX) {/*DEBUG_TMP*/
+#if 0	/* if (0 >= VMODE_MAX) //DEBUG_TMP */
 #if 1				/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 			WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0xfff,
@@ -8921,11 +8921,12 @@ static int __init video_early_init(void)
 				     VPP_OFIFO_SIZE_WID);
 #endif
 #endif			/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
-	} else {
+#else
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 			WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0xfff,
 				VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
-	}
+#endif
+
 #if 1			/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 	WRITE_VCBUS_REG(VPP_PREBLEND_VD1_H_START_END, 4096);
 	WRITE_VCBUS_REG(VPP_BLEND_VD2_H_START_END, 4096);
@@ -8940,23 +8941,20 @@ static int __init video_early_init(void)
 	if (is_meson_gxbb_cpu())
 		SET_VCBUS_REG_MASK(VPP_MISC, VPP_OUT_SATURATE);
 
-	if (/*get_logo_vmode()*/0 >= VMODE_MAX) {/*DEBUG_TMP*/
+#if 0	/* if (0 >= VMODE_MAX) //DEBUG_TMP */
 		CLEAR_VCBUS_REG_MASK(VPP_VSC_PHASE_CTRL,
 				     VPP_PHASECTL_TYPE_INTERLACE);
-#ifndef CONFIG_FB_AML_TCON
 		SET_VCBUS_REG_MASK(VPP_MISC, VPP_OUT_SATURATE);
-#endif
 		WRITE_VCBUS_REG(VPP_HOLD_LINES + cur_dev->vpp_off, 0x08080808);
-	}
+#endif
+
 #ifdef CONFIG_SUPPORT_VIDEO_ON_VPP2
-	if (/*get_logo_vmode()*/0 >= VMODE_MAX) {/*DEBUG_TMP*/
+#if 0	/* if (0 >= VMODE_MAX) //DEBUG_TMP */
 		CLEAR_VCBUS_REG_MASK(VPP2_VSC_PHASE_CTRL,
 				     VPP_PHASECTL_TYPE_INTERLACE);
-#ifndef CONFIG_FB_AML_TCON
 		SET_VCBUS_REG_MASK(VPP2_MISC, VPP_OUT_SATURATE);
-#endif
 		WRITE_VCBUS_REG(VPP2_HOLD_LINES, 0x08080808);
-	}
+#endif
 #if 1				/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 	WRITE_VCBUS_REG_BITS(VPP2_OFIFO_SIZE, 0x800,
 			     VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);

@@ -14285,3 +14285,19 @@ M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: drivers/amlogic/clk/g12a/g12a_clk_gpu.c
 F: drivers/amlogic/clk/g12a/g12a_clk_media.c
 
+AMLOGIC VOUT_SERVE
+M:      Evoke Zhang <evoke.zhang@amlogic.com>
+F:      drivers/amlogic/media/vout/vout_serve/vout2_notify.c
+F:      drivers/amlogic/media/vout/vout_serve/vout2_serve.c
+F:      drivers/amlogic/media/vout/vout_serve/vout_func.c
+F:      drivers/amlogic/media/vout/vout_serve/vout_func.h
+
+AMLOGIC GPIO IRQ
+M: Xingyu Chen <xingyu.chen@amlogic.com>
+F: drivers/amlogic/irqchip/*
+F: Documentation/devicetree/bindings/interrupt-controller/amlogic,meson-gpio-intc.txt
+
+AMLOGIC PINCTRL DRIVER
+M: Xingyu Chen <xingyu.chen@amlogic.com>
+F: drivers/amlogic/pinctrl/*
+F: include/dt-bindings/gpio/*

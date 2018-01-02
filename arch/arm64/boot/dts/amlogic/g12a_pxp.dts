@@ -56,6 +56,18 @@
 		};
 	};
 
+	vout {
+		compatible = "amlogic, vout";
+		dev_name = "vout";
+		status = "okay";
+	};
+
+	vout2 {
+		compatible = "amlogic, vout2";
+		dev_name = "vout";
+		status = "okay";
+	};
+
 }; /* end of / */
 
 &aobus{

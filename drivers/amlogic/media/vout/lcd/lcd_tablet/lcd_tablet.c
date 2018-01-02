@@ -49,6 +49,24 @@
  * vout server api
  * **************************************************
  */
+static struct vinfo_s *lcd_get_current_info(void)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	return lcd_drv->lcd_info;
+}
+
+static int lcd_vmode_is_supported(enum vmode_e mode)
+{
+	mode &= VMODE_MODE_BIT_MASK;
+	if (lcd_debug_print_flag)
+		LCDPR("%s vmode = %d\n", __func__, mode);
+
+	if (mode == VMODE_LCD)
+		return true;
+	return false;
+}
+
 static enum vmode_e lcd_validate_vmode(char *mode)
 {
 	if (mode == NULL)
@@ -58,13 +76,6 @@ static enum vmode_e lcd_validate_vmode(char *mode)
 		return VMODE_LCD;
 
 	return VMODE_MAX;
-}
-
-static struct vinfo_s *lcd_get_current_info(void)
-{
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-
-	return lcd_drv->lcd_info;
 }
 
 static int lcd_set_current_vmode(enum vmode_e mode)
@@ -90,22 +101,29 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 	return ret;
 }
 
-static int lcd_vmode_is_supported(enum vmode_e mode)
-{
-	mode &= VMODE_MODE_BIT_MASK;
-	if (lcd_debug_print_flag)
-		LCDPR("%s vmode = %d\n", __func__, mode);
-
-	if (mode == VMODE_LCD)
-		return true;
-	return false;
-}
-
 static int lcd_vout_disable(enum vmode_e cur_vmod)
 {
 	aml_lcd_notifier_call_chain(LCD_EVENT_IF_POWER_OFF, NULL);
 	LCDPR("%s finished\n", __func__);
 	return 0;
+}
+
+static int lcd_vout_state;
+static int lcd_vout_set_state(int index)
+{
+	lcd_vout_state |= (1 << index);
+	return 0;
+}
+
+static int lcd_vout_clr_state(int index)
+{
+	lcd_vout_state &= ~(1 << index);
+	return 0;
+}
+
+static int lcd_vout_get_state(void)
+{
+	return lcd_vout_state;
 }
 
 #ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
@@ -343,6 +361,9 @@ static struct vout_server_s lcd_vout_server = {
 		.validate_vmode = lcd_validate_vmode,
 		.vmode_is_supported = lcd_vmode_is_supported,
 		.disable = lcd_vout_disable,
+		.set_state = lcd_vout_set_state,
+		.clr_state = lcd_vout_clr_state,
+		.get_state = lcd_vout_get_state,
 		.set_vframe_rate_hint = lcd_set_vframe_rate_hint,
 		.set_vframe_rate_end_hint = lcd_set_vframe_rate_end_hint,
 		.set_vframe_rate_policy = lcd_set_vframe_rate_policy,
@@ -353,6 +374,30 @@ static struct vout_server_s lcd_vout_server = {
 #endif
 	},
 };
+
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+static struct vout_server_s lcd_vout2_server = {
+	.name = "lcd_vout2_server",
+	.op = {
+		.get_vinfo = lcd_get_current_info,
+		.set_vmode = lcd_set_current_vmode,
+		.validate_vmode = lcd_validate_vmode,
+		.vmode_is_supported = lcd_vmode_is_supported,
+		.disable = lcd_vout_disable,
+		.set_state = lcd_vout_set_state,
+		.clr_state = lcd_vout_clr_state,
+		.get_state = lcd_vout_get_state,
+		.set_vframe_rate_hint = lcd_set_vframe_rate_hint,
+		.set_vframe_rate_end_hint = lcd_set_vframe_rate_end_hint,
+		.set_vframe_rate_policy = lcd_set_vframe_rate_policy,
+		.get_vframe_rate_policy = lcd_get_vframe_rate_policy,
+#ifdef CONFIG_PM
+		.vout_suspend = lcd_suspend,
+		.vout_resume = lcd_resume,
+#endif
+	},
+};
+#endif
 
 static void lcd_tablet_vinfo_update(void)
 {
@@ -430,10 +475,15 @@ static void lcd_tablet_vinfo_update_default(void)
 	}
 }
 
-void lcd_tablet_vout_server_init(void)
+static void lcd_tablet_vout_server_init(void)
 {
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
 	lcd_tablet_vinfo_update_default();
-	vout_register_server(&lcd_vout_server);
+	lcd_drv->vout_server = &lcd_vout_server;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	lcd_drv->vout2_server = &lcd_vout2_server;
+#endif
 }
 
 /* **************************************************

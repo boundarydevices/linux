@@ -1390,6 +1390,25 @@ void prepare_hdr10_param(
 	}
 }
 
+static inline void fresh_tx_hdr_pkt(struct vout_device_s *vdev)
+{
+	if (vdev) {
+		if (vdev->fresh_tx_hdr_pkt)
+			vdev->fresh_tx_hdr_pkt(&hdr10_data);
+	}
+}
+
+static inline void fresh_tx_vsif_pkt(struct vout_device_s *vdev,
+		int dv_en, int dv_mode)
+{
+	int tmp = (dv_mode == DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL ? 1 : 0);
+
+	if (vdev) {
+		if (vdev->fresh_tx_vsif_pkt)
+			vdev->fresh_tx_vsif_pkt(dv_en, tmp);
+	}
+}
+
 static bool send_hdmi_pkt(
 	enum signal_format_e dst_format,
 	const struct vinfo_s *vinfo)
@@ -1507,12 +1526,8 @@ static bool send_hdmi_pkt(
 		hdr10_data.max_frame_average =
 			(p_hdr->max_frame_average_light_level_MSB << 8)
 			| p_hdr->max_frame_average_light_level_LSB;
-		if (vdev) {
-			if (vdev->fresh_tx_hdr_pkt)
-				vdev->fresh_tx_hdr_pkt(&hdr10_data);
-			if (vdev->fresh_tx_vsif_pkt)
-				vdev->fresh_tx_vsif_pkt(0, 0);
-		}
+		fresh_tx_hdr_pkt(vdev);
+		fresh_tx_vsif_pkt(vdev, 0, 0);
 
 		if (flag) {
 			pr_dolby_dbg("Info frame for hdr10 changed:\n");
@@ -1553,15 +1568,8 @@ static bool send_hdmi_pkt(
 		hdr10_data.luminance[1] = 0;
 		hdr10_data.max_content = 0;
 		hdr10_data.max_frame_average = 0;
-		if (vdev) {
-			if (vdev->fresh_tx_hdr_pkt)
-				vdev->fresh_tx_hdr_pkt(&hdr10_data);
-			if (vdev->fresh_tx_vsif_pkt)
-				vdev->fresh_tx_vsif_pkt(
-					1, dolby_vision_mode ==
-					DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL
-					? 1 : 0);
-		}
+		fresh_tx_hdr_pkt(vdev);
+		fresh_tx_vsif_pkt(vdev, 1, dolby_vision_mode);
 	} else {
 		hdr10_data.features =
 			  (1 << 29)	/* video available */
@@ -1581,12 +1589,8 @@ static bool send_hdmi_pkt(
 		hdr10_data.luminance[1] = 0;
 		hdr10_data.max_content = 0;
 		hdr10_data.max_frame_average = 0;
-		if (vdev) {
-			if (vdev->fresh_tx_hdr_pkt)
-				vdev->fresh_tx_hdr_pkt(&hdr10_data);
-			if (vdev->fresh_tx_vsif_pkt)
-				vdev->fresh_tx_vsif_pkt(0, 0);
-		}
+		fresh_tx_hdr_pkt(vdev);
+		fresh_tx_vsif_pkt(vdev, 0, 0);
 	}
 	return flag;
 }

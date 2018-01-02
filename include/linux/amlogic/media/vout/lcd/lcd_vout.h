@@ -425,6 +425,10 @@ struct aml_lcd_drv_s {
 	struct lcd_config_s *lcd_config;
 	struct vinfo_s *lcd_info;
 	struct class *lcd_debug_class;
+	struct vout_server_s *vout_server;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	struct vout_server_s *vout2_server;
+#endif
 	int fr_auto_policy;
 	struct lcd_duration_s std_duration;
 

@@ -263,8 +263,6 @@ int get_video0_frame_info(struct vframe_s *vf);
 
 #define AMVIDEO_UPDATE_OSD_MODE	0x00000001
 
-extern enum vmode_e get_logo_vmode(void);
-
 int query_video_status(int type, int *value);
 int get_video0_frame_info(struct vframe_s *vf);
 int amvideo_notifier_call_chain(unsigned long val, void *v);

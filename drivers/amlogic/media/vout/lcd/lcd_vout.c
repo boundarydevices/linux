@@ -700,21 +700,17 @@ static void lcd_fops_remove(void)
 
 static void lcd_init_vout(void)
 {
-	switch (lcd_driver->lcd_mode) {
-#ifdef CONFIG_AMLOGIC_LCD_TV
-	case LCD_MODE_TV:
-		lcd_tv_vout_server_init();
-		break;
+	if (lcd_driver->vout_server_init)
+		lcd_driver->vout_server_init();
+	else
+		LCDERR("vout_server_init is null\n");
+
+	if (lcd_driver->vout_server)
+		vout_register_server(lcd_driver->vout_server);
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	if (lcd_driver->vout2_server)
+		vout2_register_server(lcd_driver->vout2_server);
 #endif
-#ifdef CONFIG_AMLOGIC_LCD_TABLET
-	case LCD_MODE_TABLET:
-		lcd_tablet_vout_server_init();
-		break;
-#endif
-	default:
-		LCDERR("invalid lcd mode: %d\n", lcd_driver->lcd_mode);
-		break;
-	}
 }
 
 static int lcd_mode_probe(struct device *dev)

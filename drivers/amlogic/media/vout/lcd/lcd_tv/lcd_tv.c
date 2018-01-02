@@ -227,6 +227,7 @@ static void lcd_vmode_vinfo_update(enum vmode_e mode)
 	lcd_drv->lcd_info->video_clk = pconf->lcd_timing.lcd_clk;
 	lcd_drv->lcd_info->htotal = pconf->lcd_basic.h_period;
 	lcd_drv->lcd_info->vtotal = pconf->lcd_basic.v_period;
+	lcd_drv->lcd_info->viu_mux = VIU_MUX_ENCL;
 
 	lcd_hdr_vinfo_update();
 }
@@ -326,6 +327,24 @@ static int lcd_vmode_is_supported(enum vmode_e mode)
 static int lcd_vout_disable(enum vmode_e cur_vmod)
 {
 	return 0;
+}
+
+static int lcd_vout_state;
+static int lcd_vout_set_state(int index)
+{
+	lcd_vout_state |= (1 << index);
+	return 0;
+}
+
+static int lcd_vout_clr_state(int index)
+{
+	lcd_vout_state &= ~(1 << index);
+	return 0;
+}
+
+static int lcd_vout_get_state(void)
+{
+	return lcd_vout_state;
 }
 
 #ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
@@ -572,6 +591,9 @@ static struct vout_server_s lcd_vout_server = {
 		.validate_vmode = lcd_validate_vmode,
 		.vmode_is_supported = lcd_vmode_is_supported,
 		.disable = lcd_vout_disable,
+		.set_state = lcd_vout_set_state,
+		.clr_state = lcd_vout_clr_state,
+		.get_state = lcd_vout_get_state,
 		.set_vframe_rate_hint = lcd_set_vframe_rate_hint,
 		.set_vframe_rate_end_hint = lcd_set_vframe_rate_end_hint,
 		.set_vframe_rate_policy = lcd_set_vframe_rate_policy,
@@ -624,10 +646,15 @@ static void lcd_vinfo_update_default(void)
 	}
 }
 
-void lcd_tv_vout_server_init(void)
+static void lcd_tv_vout_server_init(void)
 {
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
 	lcd_vinfo_update_default();
-	vout_register_server(&lcd_vout_server);
+	lcd_drv->vout_server = &lcd_vout_server;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	lcd_drv->vout2_server = NULL;
+#endif
 }
 
 /* ************************************************** *

@@ -38,12 +38,9 @@
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
-#ifdef CONFIG_AMLOGIC_HDMITX
-#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
-#endif
 
 /* Local Headers */
-#include "vout_serve.h"
+#include "vout_func.h"
 
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 #include <linux/amlogic/pm.h>
@@ -60,7 +57,7 @@ static int early_resume_flag;
 
 #define VMODE_NAME_LEN_MAX    64
 static struct class *vout_class;
-static DEFINE_MUTEX(vout_mutex);
+static DEFINE_MUTEX(vout_serve_mutex);
 static char vout_mode_uboot[VMODE_NAME_LEN_MAX] __nosavedata;
 static char vout_mode[VMODE_NAME_LEN_MAX] __nosavedata;
 static char local_name[VMODE_NAME_LEN_MAX] = {0};
@@ -87,13 +84,95 @@ static const unsigned int vout_cable[] = {
 	EXTCON_NONE,
 };
 
-struct vout_cdev_s {
-	dev_t         devno;
-	struct cdev   cdev;
-	struct device *dev;
+static struct vout_cdev_s *vout_cdev;
+
+/* **********************************************************
+ * null display support
+ * **********************************************************
+ */
+static struct vinfo_s nulldisp_vinfo = {
+	.name              = "null",
+	.mode              = VMODE_NULL,
+	.width             = 1920,
+	.height            = 1080,
+	.field_height      = 1080,
+	.aspect_ratio_num  = 16,
+	.aspect_ratio_den  = 9,
+	.sync_duration_num = 60,
+	.sync_duration_den = 1,
+	.video_clk         = 148500000,
+	.htotal            = 2200,
+	.vtotal            = 1125,
+	.viu_color_fmt     = COLOR_FMT_RGB444,
+	.viu_mux           = VIU_MUX_MAX,
+	.vout_device       = NULL,
 };
 
-static struct vout_cdev_s *vout_cdev;
+static struct vinfo_s *nulldisp_get_current_info(void)
+{
+	return &nulldisp_vinfo;
+}
+
+static int nulldisp_set_current_vmode(enum vmode_e mode)
+{
+	return 0;
+}
+
+static enum vmode_e nulldisp_validate_vmode(char *name)
+{
+	if (strncmp(nulldisp_vinfo.name, name,
+		strlen(nulldisp_vinfo.name)) == 0) {
+		return nulldisp_vinfo.mode;
+	}
+
+	return VMODE_MAX;
+}
+
+static int nulldisp_vmode_is_supported(enum vmode_e mode)
+{
+	if (nulldisp_vinfo.mode == mode)
+		return true;
+	return false;
+}
+
+static int nulldisp_disable(enum vmode_e cur_vmod)
+{
+	return 0;
+}
+
+static int nulldisp_vout_state;
+static int nulldisp_vout_set_state(int bit)
+{
+	nulldisp_vout_state |= (1 << bit);
+	return 0;
+}
+
+static int nulldisp_vout_clr_state(int bit)
+{
+	nulldisp_vout_state &= ~(1 << bit);
+	return 0;
+}
+
+static int nulldisp_vout_get_state(void)
+{
+	return nulldisp_vout_state;
+}
+
+static struct vout_server_s nulldisp_vout_server = {
+	.name = "nulldisp_vout_server",
+	.op = {
+		.get_vinfo          = nulldisp_get_current_info,
+		.set_vmode          = nulldisp_set_current_vmode,
+		.validate_vmode     = nulldisp_validate_vmode,
+		.vmode_is_supported = nulldisp_vmode_is_supported,
+		.disable            = nulldisp_disable,
+		.set_state          = nulldisp_vout_set_state,
+		.clr_state          = nulldisp_vout_clr_state,
+		.get_state          = nulldisp_vout_get_state,
+	},
+};
+
+/* ********************************************************** */
 
 char *get_vout_mode_internal(void)
 {
@@ -249,11 +328,11 @@ static ssize_t vout_mode_store(struct class *class,
 {
 	char mode[64];
 
-	mutex_lock(&vout_mutex);
+	mutex_lock(&vout_serve_mutex);
 	tvout_monitor_flag = 0;
 	snprintf(mode, VMODE_NAME_LEN_MAX, "%s", buf);
 	set_vout_mode(mode);
-	mutex_unlock(&vout_mutex);
+	mutex_unlock(&vout_serve_mutex);
 	return count;
 }
 
@@ -269,10 +348,10 @@ static ssize_t vout_axis_show(struct class *class,
 static ssize_t vout_axis_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
-	mutex_lock(&vout_mutex);
+	mutex_lock(&vout_serve_mutex);
 	snprintf(vout_axis, 64, "%s", buf);
 	set_vout_axis(vout_axis);
-	mutex_unlock(&vout_mutex);
+	mutex_unlock(&vout_serve_mutex);
 	return count;
 }
 
@@ -294,17 +373,17 @@ static ssize_t vout_fr_policy_store(struct class *class,
 	int policy;
 	int ret = 0;
 
-	mutex_lock(&vout_mutex);
+	mutex_lock(&vout_serve_mutex);
 	ret = kstrtoint(buf, 10, &policy);
 	if (ret) {
 		pr_info("%s: invalid data\n", __func__);
-		mutex_unlock(&vout_mutex);
+		mutex_unlock(&vout_serve_mutex);
 		return -EINVAL;
 	}
 	ret = set_vframe_rate_policy(policy);
 	if (ret)
 		pr_info("%s: %d failed\n", __func__, policy);
-	mutex_unlock(&vout_mutex);
+	mutex_unlock(&vout_serve_mutex);
 
 	return count;
 }
@@ -398,10 +477,12 @@ static int vout_attr_create(void)
 	/* create vout class attr files */
 	for (i = 0; i < ARRAY_SIZE(vout_class_attrs); i++) {
 		if (class_create_file(vout_class, &vout_class_attrs[i])) {
-			VOUTERR("create attribute %s fail\n",
+			VOUTERR("create vout attribute %s fail\n",
 				vout_class_attrs[i].attr.name);
 		}
 	}
+
+	VOUTPR("create vout attribute OK\n");
 
 	return ret;
 }
@@ -523,7 +604,7 @@ static int vout_fops_create(void)
 
 	ret = alloc_chrdev_region(&vout_cdev->devno, 0, 1, VOUT_CDEV_NAME);
 	if (ret < 0) {
-		VOUTERR("failed to alloc devno\n");
+		VOUTERR("failed to alloc vout devno\n");
 		goto vout_fops_err1;
 	}
 
@@ -531,7 +612,7 @@ static int vout_fops_create(void)
 	vout_cdev->cdev.owner = THIS_MODULE;
 	ret = cdev_add(&vout_cdev->cdev, vout_cdev->devno, 1);
 	if (ret) {
-		VOUTERR("failed to add cdev\n");
+		VOUTERR("failed to add vout cdev\n");
 		goto vout_fops_err2;
 	}
 
@@ -539,7 +620,7 @@ static int vout_fops_create(void)
 			NULL, VOUT_CDEV_NAME);
 	if (IS_ERR(vout_cdev->dev)) {
 		ret = PTR_ERR(vout_cdev->dev);
-		VOUTERR("failed to create device: %d\n", ret);
+		VOUTERR("failed to create vout device: %d\n", ret);
 		goto vout_fops_err3;
 	}
 
@@ -677,9 +758,7 @@ static int refresh_tvout_mode(void)
 	if (tvout_monitor_flag == 0)
 		return 0;
 
-#ifdef CONFIG_AMLOGIC_HDMITX
-	hpd_state = get_hpd_state();
-#endif
+	hpd_state = vout_get_hpd_state();
 	if (hpd_state) {
 		cur_vmode = validate_vmode(hdmimode);
 		cur_mode_str = hdmimode;
@@ -714,9 +793,9 @@ static void aml_tvout_mode_work(struct work_struct *work)
 		return;
 	}
 
-	mutex_lock(&vout_mutex);
+	mutex_lock(&vout_serve_mutex);
 	refresh_tvout_mode();
-	mutex_unlock(&vout_mutex);
+	mutex_unlock(&vout_serve_mutex);
 
 	if (tvout_monitor_flag)
 		schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
@@ -734,9 +813,9 @@ static void aml_tvout_mode_monitor(void)
 	tvout_monitor_flag = 1;
 	INIT_DELAYED_WORK(&tvout_mode_work, aml_tvout_mode_work);
 
-	mutex_lock(&vout_mutex);
+	mutex_lock(&vout_serve_mutex);
 	refresh_tvout_mode();
-	mutex_unlock(&vout_mutex);
+	mutex_unlock(&vout_serve_mutex);
 
 	schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
 }
@@ -749,7 +828,7 @@ static void aml_vout_extcon_register(struct platform_device *pdev)
 	/*set display mode*/
 	edev = extcon_dev_allocate(vout_cable);
 	if (IS_ERR(edev)) {
-		VOUTERR("failed to allocate extcon setmode\n");
+		VOUTERR("failed to allocate vout extcon setmode\n");
 		return;
 	}
 
@@ -758,7 +837,7 @@ static void aml_vout_extcon_register(struct platform_device *pdev)
 	dev_set_name(&edev->dev, "setmode");
 	ret = extcon_dev_register(edev);
 	if (ret) {
-		VOUTERR("failed to register extcon setmode\n");
+		VOUTERR("failed to register vout extcon setmode\n");
 		return;
 	}
 	vout_excton_setmode = edev;
@@ -786,16 +865,12 @@ static int aml_vout_probe(struct platform_device *pdev)
 	register_early_suspend(&early_suspend);
 #endif
 
-	set_vout_init_mode();
-
 	vout_class = NULL;
 	ret = vout_attr_create();
 	ret = vout_fops_create();
 
-	if (ret == 0)
-		VOUTPR("create vout attribute OK\n");
-	else
-		VOUTERR("create vout attribute FAILED\n");
+	vout_register_server(&nulldisp_vout_server);
+	set_vout_init_mode();
 
 	aml_vout_extcon_register(pdev);
 	aml_tvout_mode_monitor();
@@ -813,6 +888,7 @@ static int aml_vout_remove(struct platform_device *pdev)
 	aml_vout_extcon_free();
 	vout_attr_remove();
 	vout_fops_remove();
+	vout_unregister_server(&nulldisp_vout_server);
 
 	return 0;
 }

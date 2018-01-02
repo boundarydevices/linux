@@ -2447,20 +2447,61 @@ static int hdmitx_module_disable(enum vmode_e cur_vmod)
 	return 0;
 }
 
-static struct vout_server_s hdmitx_server = {
-	.name = "vout_hdmitx_server",
+static int hdmitx_vout_state;
+static int hdmitx_vout_set_state(int index)
+{
+	hdmitx_vout_state |= (1 << index);
+	return 0;
+}
+
+static int hdmitx_vout_clr_state(int index)
+{
+	hdmitx_vout_state &= ~(1 << index);
+	return 0;
+}
+
+static int hdmitx_vout_get_state(void)
+{
+	return hdmitx_vout_state;
+}
+
+static struct vout_server_s hdmitx_vout_server = {
+	.name = "hdmitx_vout_server",
 	.op = {
 		.get_vinfo = hdmitx_get_current_vinfo,
 		.set_vmode = hdmitx_set_current_vmode,
 		.validate_vmode = hdmitx_validate_vmode,
 		.vmode_is_supported = hdmitx_vmode_is_supported,
 		.disable = hdmitx_module_disable,
+		.set_state = hdmitx_vout_set_state,
+		.clr_state = hdmitx_vout_clr_state,
+		.get_state = hdmitx_vout_get_state,
 #ifdef CONFIG_PM
 		.vout_suspend = NULL,
 		.vout_resume = NULL,
 #endif
 	},
 };
+
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+static struct vout_server_s hdmitx_vout2_server = {
+	.name = "hdmitx_vout2_server",
+	.op = {
+		.get_vinfo = hdmitx_get_current_vinfo,
+		.set_vmode = hdmitx_set_current_vmode,
+		.validate_vmode = hdmitx_validate_vmode,
+		.vmode_is_supported = hdmitx_vmode_is_supported,
+		.disable = hdmitx_module_disable,
+		.set_state = hdmitx_vout_set_state,
+		.clr_state = hdmitx_vout_clr_state,
+		.get_state = hdmitx_vout_get_state,
+#ifdef CONFIG_PM
+		.vout_suspend = NULL,
+		.vout_resume = NULL,
+#endif
+	},
+};
+#endif
 
 
 #include <linux/soundcard.h>
@@ -3357,7 +3398,10 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	hdmitx_device.nb.notifier_call = hdmitx_reboot_notifier;
 	register_reboot_notifier(&hdmitx_device.nb);
 
-	vout_register_server(&hdmitx_server);
+	vout_register_server(&hdmitx_vout_server);
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	vout2_register_server(&hdmitx_vout2_server);
+#endif
 #ifdef CONFIG_AMLOGIC_SND_SOC
 	aout_register_client(&hdmitx_notifier_nb_a);
 #else
@@ -3390,7 +3434,10 @@ static int amhdmitx_remove(struct platform_device *pdev)
 		hdmitx_device.HWOp.UnInit(&hdmitx_device);
 	hdmitx_device.hpd_event = 0xff;
 	kthread_stop(hdmitx_device.task);
-	vout_unregister_server(&hdmitx_server);
+	vout_unregister_server(&hdmitx_vout_server);
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	vout2_unregister_server(&hdmitx_vout2_server);
+#endif
 #ifdef CONFIG_AMLOGIC_SND_SOC
 	aout_unregister_client(&hdmitx_notifier_nb_a);
 #endif
