@@ -912,6 +912,8 @@ static void __init g12a_clkc_init(struct device_node *np)
 	}
 
 	meson_g12a_sdemmc_init();
+	meson_g12a_gpu_init();
+	meson_g12a_media_init();
 	/*g12a_amlogic_init_misc();*/
 
 	pr_debug("%s: register all clk ok!", __func__);

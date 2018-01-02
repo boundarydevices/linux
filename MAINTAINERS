@@ -14280,3 +14280,8 @@ F: include/dt-bindings/clock/amlogic,g12a-clkc.h
 F: drivers/amlogic/clk/g12a/*
 F: drivers/amlogic/clk/clkc.h
 
+AMLOGIC G12A clk tree for media/gpu
+M: Qiufang Dai <qiufang.dai@amlogic.com>
+F: drivers/amlogic/clk/g12a/g12a_clk_gpu.c
+F: drivers/amlogic/clk/g12a/g12a_clk_media.c
+

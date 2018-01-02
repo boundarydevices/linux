@@ -241,5 +241,7 @@ void meson_txlx_media_init(void);
 void meson_init_gpu(void);
 
 void meson_g12a_sdemmc_init(void);
+void meson_g12a_media_init(void);
+void meson_g12a_gpu_init(void);
 
 #endif /* __CLKC_H */
