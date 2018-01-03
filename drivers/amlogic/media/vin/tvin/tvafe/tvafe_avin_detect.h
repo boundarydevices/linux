@@ -108,9 +108,14 @@ struct tvafe_avin_det_s {
 
 void tvafe_cha1_SYNCTIP_close_config(void);
 void tvafe_cha2_SYNCTIP_close_config(void);
-void tvafe_cha1_2_SYNCTIP_close_config(void);
 void tvafe_cha1_detect_restart_config(void);
 void tvafe_cha2_detect_restart_config(void);
+
+/*opened port,1:av1, 2:av2, 0:none av*/
+extern unsigned int avport_opened;
+/*0:in, 1:out*/
+extern unsigned int av1_plugin_state;
+extern unsigned int av2_plugin_state;
 
 #endif /* TVAFE_AVIN_DETECT_H_ */
 

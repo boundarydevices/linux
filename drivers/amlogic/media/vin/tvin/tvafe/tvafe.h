@@ -40,6 +40,10 @@
 #define TVAFE_FLAG_DEV_SNOW_FLAG 0x00000040
 #define TVAFE_POWERDOWN_IN_IDLE 0x00000080
 
+/*used to flag port opend for avdetect config*/
+#define TVAFE_PORT_AV1 0x1
+#define TVAFE_PORT_AV2 0x2
+
 /************************************************************ */
 /* *** enum definitions ********************************************* */
 /************************************************************ */

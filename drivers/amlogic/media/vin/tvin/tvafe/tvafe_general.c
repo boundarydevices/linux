@@ -163,7 +163,8 @@ static const unsigned int cvbs_top_reg_default[][2] = {
 	/*0xc4f64 0x00004B60*/,},
 	/* TVFE_TOP_CTRL */
 #endif
-	{TVFE_CLAMP_INTF, 0x00008666,},
+	/*enable in tvafe_dec_open or avdetect avplug in*/
+	{TVFE_CLAMP_INTF, 0x00000666,},
 	{TVFE_RST_CTRL, 0x00000000,},
 	{TVFE_EXT_VIDEO_AFE_CTRL_MUX1, 0x00000000,},
 	/* TVFE_EXT_VIDEO_AFE_CTRL_MUX1 */

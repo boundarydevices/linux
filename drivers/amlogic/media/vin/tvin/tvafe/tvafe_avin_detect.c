@@ -37,6 +37,8 @@
 #include <linux/uaccess.h>
 #include <linux/delay.h>
 #include "tvafe_avin_detect.h"
+#include "tvafe.h"
+#include "tvafe_regs.h"
 #include "tvafe_debug.h"
 #include "../tvin_global.h"
 
@@ -65,7 +67,7 @@ static unsigned int sync_level = 1;
 module_param(sync_level, int, 0664);
 MODULE_PARM_DESC(sync_level, "sync_level");
 
-static unsigned int avplay_sync_level = 4;
+static unsigned int avplay_sync_level = 6;
 module_param(avplay_sync_level, int, 0664);
 MODULE_PARM_DESC(avplay_sync_level, "avplay_sync_level");
 
@@ -337,22 +339,6 @@ void tvafe_cha2_SYNCTIP_close_config(void)
 		AFE_CH2_SYNC_HYS_ADJ_BIT, AFE_CH2_SYNC_HYS_ADJ_WIDTH);
 }
 
-void tvafe_cha1_2_SYNCTIP_close_config(void)
-{
-	W_HIU_BIT(HHI_CVBS_DETECT_CNTL, 1, AFE_CH1_EN_SYNC_TIP_BIT,
-		AFE_CH1_EN_SYNC_TIP_WIDTH);
-	W_HIU_BIT(HHI_CVBS_DETECT_CNTL, avplay_sync_level,
-		AFE_CH1_SYNC_LEVEL_ADJ_BIT, AFE_CH1_SYNC_LEVEL_ADJ_WIDTH);
-	W_HIU_BIT(HHI_CVBS_DETECT_CNTL, 1,
-		AFE_CH1_SYNC_HYS_ADJ_BIT, AFE_CH1_SYNC_HYS_ADJ_WIDTH);
-	W_HIU_BIT(HHI_CVBS_DETECT_CNTL, 1, AFE_CH2_EN_SYNC_TIP_BIT,
-		AFE_CH2_EN_SYNC_TIP_WIDTH);
-	W_HIU_BIT(HHI_CVBS_DETECT_CNTL, avplay_sync_level,
-		AFE_CH2_SYNC_LEVEL_ADJ_BIT, AFE_CH2_SYNC_LEVEL_ADJ_WIDTH);
-	W_HIU_BIT(HHI_CVBS_DETECT_CNTL, 0,
-		AFE_CH2_SYNC_HYS_ADJ_BIT, AFE_CH2_SYNC_HYS_ADJ_WIDTH);
-}
-
 /*After the CVBS is unplug,the EN_SYNC_TIP need be set to "1"*/
 /*to sense the plug in operation*/
 void tvafe_cha1_detect_restart_config(void)
@@ -586,6 +572,8 @@ static ssize_t tvafe_avin_detect_store(struct device *dev,
 		tvafe_avin_detect_enable(avdev);
 	} else if (!strcmp(parm[0], "disable")) {
 		tvafe_avin_detect_disable(avdev);
+		av1_plugin_state = 0;
+		av2_plugin_state = 0;
 	} else if (!strcmp(parm[0], "status")) {
 		tvafe_avin_detect_state(avdev);
 	} else
@@ -615,7 +603,15 @@ static void tvafe_avin_detect_timer_handler(unsigned long arg)
 					avdev->report_data_s[1].status =
 							TVAFE_AVIN_STATUS_IN;
 					state_changed = 1;
+					av2_plugin_state = 0;
 					tvafe_pr_info("avin[1].status IN.\n");
+				/*port opened and plug in,enable clamp*/
+				/*sync tip close*/
+				if (avport_opened == TVAFE_PORT_AV2) {
+					W_APB_BIT(TVFE_CLAMP_INTF, 1,
+					CLAMP_EN_BIT, CLAMP_EN_WID);
+					tvafe_cha2_SYNCTIP_close_config();
+				}
 				}
 				s_irq_counter1_time = 0;
 			}
@@ -630,9 +626,15 @@ static void tvafe_avin_detect_timer_handler(unsigned long arg)
 					avdev->report_data_s[1].status =
 						TVAFE_AVIN_STATUS_OUT;
 					state_changed = 1;
+					av2_plugin_state = 1;
 					tvafe_pr_info("avin[1].status OUT.\n");
-
+				/*port opened but plug out,need disable clamp*/
+					if (avport_opened == TVAFE_PORT_AV2) {
+					W_APB_BIT(TVFE_CLAMP_INTF, 0,
+						CLAMP_EN_BIT, CLAMP_EN_WID);
+						/*restart in tvafe port close*/
 					tvafe_cha2_detect_restart_config();
+					}
 				}
 				s_irq_counter1_time = 0;
 			}
@@ -652,7 +654,15 @@ static void tvafe_avin_detect_timer_handler(unsigned long arg)
 				avdev->report_data_s[0].status =
 					TVAFE_AVIN_STATUS_IN;
 				state_changed = 1;
+				av1_plugin_state = 0;
 				tvafe_pr_info("avin[0].status IN.\n");
+				/*port opened and plug in then enable clamp*/
+				/*sync tip close*/
+				if (avport_opened == TVAFE_PORT_AV1) {
+					W_APB_BIT(TVFE_CLAMP_INTF, 1,
+						CLAMP_EN_BIT, CLAMP_EN_WID);
+					tvafe_cha1_SYNCTIP_close_config();
+				}
 			}
 			s_irq_counter0_time = 0;
 		}
@@ -667,12 +677,18 @@ static void tvafe_avin_detect_timer_handler(unsigned long arg)
 				avdev->report_data_s[0].status =
 						TVAFE_AVIN_STATUS_OUT;
 				state_changed = 1;
+				av1_plugin_state = 1;
 				tvafe_pr_info("avin[0].status OUT.\n");
 
 			/*After the CVBS is unplug,*/
 			/*the EN_SYNC_TIP need be set to "1"*/
 			/*to sense the plug in operation*/
-				tvafe_cha1_detect_restart_config();
+			/*port opened but plug out,need disable clamp*/
+				if (avport_opened == TVAFE_PORT_AV1) {
+					W_APB_BIT(TVFE_CLAMP_INTF, 0,
+						CLAMP_EN_BIT, CLAMP_EN_WID);
+					tvafe_cha1_detect_restart_config();
+				}
 			}
 			s_irq_counter0_time = 0;
 		}

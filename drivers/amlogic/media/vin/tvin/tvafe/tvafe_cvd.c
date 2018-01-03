@@ -593,7 +593,7 @@ static void tvafe_cvd2_non_std_config(struct tvafe_cvd2_s *cvd2)
 			/* W_APB_BIT(CVD2_VSYNC_SIGNAL_THRESHOLD, 1, */
 			/* VS_SIGNAL_AUTO_TH_BIT, VS_SIGNAL_AUTO_TH_WID); */
 			W_APB_REG(CVD2_HSYNC_RISING_EDGE_START, 0x25);
-			W_APB_REG(TVFE_CLAMP_INTF, 0x8661);
+			W_APB_BIT(TVFE_CLAMP_INTF, 0x661, 0, 12);
 			if (noise_strenth > 48 && NOISE_JUDGE)
 				W_APB_BIT(CVD2_H_LOOP_MAXSTATE, 4,
 					HSTATE_MAX_BIT, HSTATE_MAX_WID);
@@ -607,7 +607,7 @@ static void tvafe_cvd2_non_std_config(struct tvafe_cvd2_s *cvd2)
 		}
 #else
 		W_APB_REG(CVD2_HSYNC_RISING_EDGE_START, 0x25);
-		W_APB_REG(TVFE_CLAMP_INTF, 0x8000);
+		W_APB_BIT(TVFE_CLAMP_INTF, 0x0, 0, 12);
 		W_APB_BIT(CVD2_H_LOOP_MAXSTATE, 4,
 			HSTATE_MAX_BIT, HSTATE_MAX_WID);
 		if ((cvd2->vd_port == TVIN_PORT_CVBS3) ||
@@ -640,7 +640,8 @@ static void tvafe_cvd2_non_std_config(struct tvafe_cvd2_s *cvd2)
 			tvafe_pr_info("%s: out of non-std signal.\n",
 				__func__);
 		W_APB_REG(CVD2_HSYNC_RISING_EDGE_START, 0x6d);
-		W_APB_REG(TVFE_CLAMP_INTF, 0x8666);
+		/*bit 15 dis/enabled by avin detect*/
+		W_APB_BIT(TVFE_CLAMP_INTF, 0x666, 0, 12);
 		W_APB_BIT(CVD2_H_LOOP_MAXSTATE, 5,
 			HSTATE_MAX_BIT, HSTATE_MAX_WID);
 		if ((cvd2->vd_port == TVIN_PORT_CVBS3) ||
