@@ -13497,6 +13497,10 @@ AMLOGIC driver for pmu
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/power/*
 
+AMLOGIC boot config for M8B
+M: Tao Zeng <tao.zeng@amlogic.com>
+F: arch/arm/mach-meson/Makefile.boot
+
 HDMITX OUTPUT DRIVER
 M:	Zongdong Jiao <zongdong.jiao@amlogic.com>
 M:	Yi Zhou <yi.zhou@amlogic.com>

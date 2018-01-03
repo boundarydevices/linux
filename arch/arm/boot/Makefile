@@ -16,6 +16,11 @@ OBJCOPYFLAGS	:=-O binary -R .comment -S
 ifneq ($(MACHINE),)
 include $(MACHINE)/Makefile.boot
 endif
+
+ifeq ($(CONFIG_MACH_MESON8B),y)
+include $(srctree)/arch/arm/mach-meson/Makefile.boot
+endif
+
 include $(srctree)/arch/arm/boot/dts/Makefile
 
 # Note: the following conditions must always be true:
