@@ -24,5 +24,5 @@ struct bt_dev_data {
 	int power_low_level;
 	int power_on_pin_OD;
 };
-
+extern void set_usb_bt_power(int is_power);
 #endif

@@ -86,8 +86,7 @@ static void bt_device_on(struct bt_dev_data *pdata)
 			&& (pdata->power_low_level)) {
 			gpio_direction_input(pdata->gpio_en);
 		} else {
-			gpio_direction_output(pdata->gpio_en,
-				pdata->power_low_level);
+			set_usb_bt_power(0);
 		}
 	}
 	msleep(200);
@@ -107,8 +106,7 @@ static void bt_device_on(struct bt_dev_data *pdata)
 			&& (!pdata->power_low_level)) {
 			gpio_direction_input(pdata->gpio_en);
 		} else {
-			gpio_direction_output(pdata->gpio_en,
-				!pdata->power_low_level);
+			set_usb_bt_power(1);
 		}
 	}
 	msleep(200);
@@ -132,8 +130,7 @@ static void bt_device_off(struct bt_dev_data *pdata)
 			&& (pdata->power_low_level)) {
 			gpio_direction_input(pdata->gpio_en);
 		} else {
-			gpio_direction_output(pdata->gpio_en,
-				pdata->power_low_level);
+			set_usb_bt_power(0);
 		}
 	}
 	msleep(20);

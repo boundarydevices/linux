@@ -57,7 +57,7 @@ struct pwm_double_data {
 
 struct pwm_double_datas {
 	int num_pwm;
-	struct pwm_double_data pwms[0];
+	struct pwm_double_data pwms[2];
 };
 
 struct pwm_single_data {
@@ -207,15 +207,19 @@ static void usb_power_control(int is_power, int shift)
 {
 	mutex_lock(&wifi_bt_mutex);
 	if (is_power) {
-		if (!usb_power)
+		if (!usb_power) {
 			set_wifi_power(is_power);
+			WIFI_INFO("Set %s power on !\n", (shift ? "WiFi":"BT"));
+			sdio_reinit();
+		}
 		usb_power |= (1 << shift);
 		WIFI_INFO("Set %s power on !\n", (shift ? "WiFi":"BT"));
 	} else {
 		usb_power &= ~(1 << shift);
-		if (!usb_power)
+		if (!usb_power) {
 			set_wifi_power(is_power);
-		WIFI_INFO("Set %s power down !\n", (shift ? "WiFi":"BT"));
+			WIFI_INFO("Set %s power down\n", (shift ? "WiFi":"BT"));
+		}
 	}
 	mutex_unlock(&wifi_bt_mutex);
 }
@@ -287,9 +291,9 @@ void pci_remove_reinit(unsigned int vid, unsigned int pid, unsigned int delBus)
 		WIFI_INFO("target pci device not found 0x%x:0x%x\n", vid, pid);
 	}
 
-	extern_wifi_set_enable(0);
+	set_usb_wifi_power(0);
 	msleep(200);
-	extern_wifi_set_enable(1);
+	set_usb_wifi_power(1);
 	msleep(200);
 
 	pci_lock_rescan_remove();
@@ -315,22 +319,23 @@ static long wifi_power_ioctl(struct file *filp,
 		set_usb_wifi_power(0);
 		mdelay(200);
 		set_usb_wifi_power(1);
+		WIFI_INFO(KERN_INFO "ioctl Set usb_sdio wifi power up!\n");
 		break;
 	case USB_POWER_DOWN:
 		set_usb_wifi_power(0);
-		WIFI_INFO("Set usb_sdio wifi power down!\n");
+		WIFI_INFO(KERN_INFO "ioctl Set usb_sdio wifi power down!\n");
 		break;
 	case WIFI_POWER_UP:
-		extern_wifi_set_enable(0);
+		set_usb_wifi_power(0);
 		mdelay(200);
-		extern_wifi_set_enable(1);
+		set_usb_wifi_power(1);
 		mdelay(200);
-		sdio_reinit();
 		pci_reinit();
 		WIFI_INFO("Set sdio wifi power up!\n");
 		break;
 	case WIFI_POWER_DOWN:
-		extern_wifi_set_enable(0);
+		set_usb_wifi_power(0);
+		WIFI_INFO("ioctl Set sdio wifi power down!\n");
 		break;
 	case SDIO_GET_DEV_TYPE:
 		memcpy(dev_type, get_wifi_inf(), strlen(get_wifi_inf()));
