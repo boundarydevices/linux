@@ -56,6 +56,8 @@ static struct mutex vdac_mutex;
 
 #define HHI_VDAC_CNTL0 0xbd
 #define HHI_VDAC_CNTL1 0xbe
+#define HHI_VDAC_CNTL0_G12A 0xbb
+#define HHI_VDAC_CNTL1_G12A 0xbc
 
 #define VDAC_MODULE_ATV_DEMOD 0x1
 #define VDAC_MODULE_DTV_DEMOD 0x2
@@ -170,6 +172,8 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 
 	if (is_meson_txlx_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 9, 1);
+	else if (is_meson_g12a_cpu())
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL0_G12A, ~enable, 9, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, ~enable, 9, 1);
 }
@@ -181,6 +185,10 @@ EXPORT_SYMBOL(ana_ref_cntl0_bit9);
 void vdac_out_cntl0_bit10(bool on, unsigned int module_sel)
 {
 	bool enable = 0;
+
+	/*bit10 is for bandgap startup setting in g12a*/
+	if (is_meson_g12a_cpu())
+		return;
 
 	switch (module_sel & 0xf) {
 	case VDAC_MODULE_ATV_DEMOD: /* dtv demod */
@@ -265,7 +273,10 @@ void vdac_out_cntl0_bit0(bool on, unsigned int module_sel)
 	else
 		enable = 1;
 
-	vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 0, 1);
+	if (is_meson_g12a_cpu())
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL0_G12A, enable, 0, 1);
+	else
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 0, 1);
 }
 EXPORT_SYMBOL(vdac_out_cntl0_bit0);
 
@@ -321,8 +332,13 @@ EXPORT_SYMBOL(vdac_out_cntl1_bit3);
 
 void vdac_set_ctrl0_ctrl1(unsigned int ctrl0, unsigned int ctrl1)
 {
-	vdac_hiu_reg_write(HHI_VDAC_CNTL0, ctrl0);
-	vdac_hiu_reg_write(HHI_VDAC_CNTL1, ctrl1);
+	if (is_meson_g12a_cpu()) {
+		vdac_hiu_reg_write(HHI_VDAC_CNTL0_G12A, ctrl0);
+		vdac_hiu_reg_write(HHI_VDAC_CNTL1_G12A, ctrl1);
+	} else {
+		vdac_hiu_reg_write(HHI_VDAC_CNTL0, ctrl0);
+		vdac_hiu_reg_write(HHI_VDAC_CNTL1, ctrl1);
+	}
 }
 EXPORT_SYMBOL(vdac_set_ctrl0_ctrl1);
 
@@ -339,6 +355,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 		if (on) {
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_ATV_DEMOD);
 			/*after txlx need reset bandgap after bit9 enabled*/
+			/*bit10 reset bandgap in g12a*/
 			if (is_meson_txlx_cpu()) {
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
 				udelay(5);
@@ -351,7 +368,8 @@ void vdac_enable(bool on, unsigned int module_sel)
 			/*Cdac pwd*/
 			vdac_out_cntl1_bit3(1, VDAC_MODULE_ATV_DEMOD);
 			/* enable AFE output buffer */
-			vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
+			if (!is_meson_g12a_cpu())
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			vdac_out_cntl0_bit0(1, VDAC_MODULE_ATV_DEMOD);
 		} else {
 			ana_ref_cntl0_bit9(0, VDAC_MODULE_ATV_DEMOD);
@@ -360,7 +378,8 @@ void vdac_enable(bool on, unsigned int module_sel)
 				break;
 			vdac_out_cntl0_bit0(0, VDAC_MODULE_ATV_DEMOD);
 			/* Disable AFE output buffer */
-			vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
+			if (!is_meson_g12a_cpu())
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			/* enable dac output */
 			vdac_out_cntl1_bit3(0, 0x4);
 		}
@@ -429,7 +448,9 @@ void vdac_enable(bool on, unsigned int module_sel)
 			pri_flag &= ~VDAC_MODULE_CVBS_OUT;
 			if (pri_flag & VDAC_MODULE_ATV_DEMOD) {
 				vdac_out_cntl1_bit3(1, VDAC_MODULE_ATV_DEMOD);
-				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
+				if (!is_meson_g12a_cpu())
+					vdac_hiu_reg_setb(HHI_VDAC_CNTL0,
+						0, 10, 1);
 				vdac_out_cntl0_bit0(1, VDAC_MODULE_ATV_DEMOD);
 			} else if (pri_flag & VDAC_MODULE_TVAFE) {
 				vdac_out_cntl1_bit3(0, VDAC_MODULE_TVAFE);

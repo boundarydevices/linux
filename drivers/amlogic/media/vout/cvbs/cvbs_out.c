@@ -98,7 +98,13 @@ static struct vinfo_s cvbs_info[] = {
 
 static struct disp_module_info_s disp_module_info;
 static struct disp_module_info_s *info;
+static enum cvbs_mode_e local_cvbs_mode;
+static unsigned int vdac_cfg_valid;
+static unsigned int vdac_cfg_value;
+static DEFINE_MUTEX(setmode_mutex);
+static DEFINE_MUTEX(CC_mutex);
 
+static int cvbs_vdac_power_level;
 static void vdac_power_level_store(char *para);
 SET_CVBS_CLASS_ATTR(vdac_power_level, vdac_power_level_store);
 
@@ -112,19 +118,12 @@ struct class_attribute class_CVBS_attr_wss = __ATTR(wss, 0644,
 			aml_CVBS_attr_wss_show, aml_CVBS_attr_wss_store);
 #endif /*CONFIG_AMLOGIC_WSS*/
 
-static int cvbs_vdac_power_level;
-
-static DEFINE_MUTEX(setmode_mutex);
-static DEFINE_MUTEX(CC_mutex);
-
-static enum cvbs_mode_e local_cvbs_mode;
 static void cvbs_config_vdac(unsigned int flag, unsigned int cfg);
-
+static void cvbs_cntl_output(unsigned int open);
+static void cvbs_performance_config(unsigned int index);
 #ifdef CONFIG_CVBS_PERFORMANCE_COMPATIBILITY_SUPPORT
 static void cvbs_performance_enhancement(enum cvbs_mode_e mode);
 #endif
-static void cvbs_cntl_output(unsigned int open);
-static void cvbs_performance_config(unsigned int index);
 
 #if 0
 static int get_vdac_power_level(void)
@@ -148,7 +147,12 @@ static int check_cpu_type(unsigned int cpu_type)
  * }
  */
 
-static unsigned int vdac_cfg_valid = 0, vdac_cfg_value;
+int cvbs_cpu_type(void)
+{
+	return info->cvbs_data->cpu_id;
+}
+EXPORT_SYMBOL(cvbs_cpu_type);
+
 static unsigned int cvbs_get_trimming_version(unsigned int flag)
 {
 	unsigned int version = 0xff;
@@ -798,6 +802,10 @@ static void cvbs_performance_regs_dump(void)
 			HHI_VDAC_CNTL0,
 			HHI_VDAC_CNTL1
 		};
+	unsigned int performance_regs_vdac_g12a[] = {
+			HHI_VDAC_CNTL0_G12A,
+			HHI_VDAC_CNTL1_G12A
+		};
 	int i, size;
 
 	size = sizeof(performance_regs_enci)/sizeof(unsigned int);
@@ -806,12 +814,19 @@ static void cvbs_performance_regs_dump(void)
 		pr_info("vcbus [0x%x] = 0x%x\n", performance_regs_enci[i],
 			cvbs_out_reg_read(performance_regs_enci[i]));
 	}
-
-	size = sizeof(performance_regs_vdac)/sizeof(unsigned int);
+	if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A)
+		size = sizeof(performance_regs_vdac_g12a)/sizeof(unsigned int);
+	else
+		size = sizeof(performance_regs_vdac)/sizeof(unsigned int);
 	pr_info("------------------------\n");
 	for (i = 0; i < size; i++) {
-		pr_info("hiu [0x%x] = 0x%x\n", performance_regs_vdac[i],
-			cvbs_out_hiu_read(performance_regs_vdac[i]));
+		if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A)
+			pr_info("hiu [0x%x] = 0x%x\n",
+			performance_regs_vdac_g12a[i],
+			cvbs_out_hiu_read(performance_regs_vdac_g12a[i]));
+		else
+			pr_info("hiu [0x%x] = 0x%x\n", performance_regs_vdac[i],
+				cvbs_out_hiu_read(performance_regs_vdac[i]));
 	}
 	pr_info("------------------------\n");
 }
@@ -1261,20 +1276,26 @@ static void cvbsout_clktree_remove(struct device *dev)
 #ifdef CONFIG_OF
 struct meson_cvbsout_data meson_gxl_cvbsout_data = {
 	.cntl0_val = 0xb0001,
-	.cpu_id = CPU_TYPE_GXL,
+	.cpu_id = CVBS_CPU_TYPE_GXL,
 	.name = "meson-gxl-cvbsout",
 };
 
 struct meson_cvbsout_data meson_gxm_cvbsout_data = {
 	.cntl0_val = 0xb0001,
-	.cpu_id = CPU_TYPE_GXM,
+	.cpu_id = CVBS_CPU_TYPE_GXM,
 	.name = "meson-gxm-cvbsout",
 };
 
 struct meson_cvbsout_data meson_txlx_cvbsout_data = {
 	.cntl0_val = 0x620001,
-	.cpu_id = CPU_TYPE_TXLX,
+	.cpu_id = CVBS_CPU_TYPE_TXLX,
 	.name = "meson-txlx-cvbsout",
+};
+
+struct meson_cvbsout_data meson_g12a_cvbsout_data = {
+	.cntl0_val = 0x906001,
+	.cpu_id = CVBS_CPU_TYPE_G12A,
+	.name = "meson-g12a-cvbsout",
 };
 
 static const struct of_device_id meson_cvbsout_dt_match[] = {
@@ -1287,6 +1308,9 @@ static const struct of_device_id meson_cvbsout_dt_match[] = {
 	}, {
 		.compatible = "amlogic, cvbsout-txlx",
 		.data		= &meson_txlx_cvbsout_data,
+	}, {
+		.compatible = "amlogic, cvbsout-g12a",
+		.data		= &meson_g12a_cvbsout_data,
 	},
 	{},
 };

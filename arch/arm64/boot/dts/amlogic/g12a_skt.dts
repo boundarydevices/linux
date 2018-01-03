@@ -136,6 +136,27 @@
 		};
 	};
 
+	vdac {
+		compatible = "amlogic, vdac";
+		dev_name = "vdac";
+		status = "okay";
+	};
+
+	cvbsout {
+		compatible = "amlogic, cvbsout-g12a";
+		dev_name = "cvbsout";
+		status = "okay";
+
+		/* performance: reg_address, reg_value */
+		/* s905x */
+		performance = <0x1bf0  0x9
+			0x1b56  0x343
+			0x1b12  0x8080
+			0x1b05  0xfd
+			0x1c59  0xf752
+			0xffff  0x0>; /* ending flag */
+	};
+
 	bt-dev{
 		compatible = "amlogic, bt-dev";
 		dev_name = "bt-dev";

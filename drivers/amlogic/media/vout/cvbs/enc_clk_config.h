@@ -20,5 +20,6 @@
 
 void set_vmode_clk(void);
 extern void disable_vmode_clk(void);
+extern int cvbs_cpu_type(void);
 
 #endif

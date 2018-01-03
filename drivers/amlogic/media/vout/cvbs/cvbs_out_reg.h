@@ -114,6 +114,8 @@
 #define HHI_HDMI_PLL_CNTL4                         0xcb
 #define HHI_HDMI_PLL_CNTL5                         0xcc
 #define HHI_HDMI_PLL_CNTL6                         0xcd
+/*G12A*/
+#define HHI_HDMI_PLL_CNTL7                         0xce
 
 #define HHI_DSI_LVDS_EDP_CNTL0                     0xd1
 #define HHI_DSI_LVDS_EDP_CNTL1                     0xd2
@@ -135,6 +137,8 @@
 
 #define HHI_VDAC_CNTL0                             0xbd
 #define HHI_VDAC_CNTL1                             0xbe
+#define HHI_VDAC_CNTL0_G12A                        0xbb
+#define HHI_VDAC_CNTL1_G12A                        0xbc
 
 /*********************************
  * HIU:  GXBB

@@ -26,16 +26,16 @@
 #include <linux/amlogic/iomap.h>
 
 /* Local Headers */
+#include "cvbs_out.h"
 #include "enc_clk_config.h"
 #include "cvbs_out_reg.h"
-#include "cvbs_log.h"
 
 static DEFINE_MUTEX(setclk_mutex);
 
 static int hpll_wait_lock(unsigned int reg, unsigned int lock_bit)
 {
 	unsigned int pll_lock;
-	int wait_loop = 200;
+	int wait_loop = 2000;
 	int ret = 0;
 
 	do {
@@ -61,22 +61,21 @@ static void disable_hpll_clk_out(void)
 	cvbs_out_hiu_setb(HHI_VID_PLL_CLK_DIV, 0, 19, 1);
 
 	/* close hpll */
-	cvbs_out_hiu_setb(HHI_HDMI_PLL_CNTL, 0, 30, 1);
+	if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A)
+		cvbs_out_hiu_setb(HHI_HDMI_PLL_CNTL, 0, 28, 1);
+	else
+		cvbs_out_hiu_setb(HHI_HDMI_PLL_CNTL, 0, 30, 1);
 }
 
 void set_vmode_clk(void)
 {
 	int ret;
 
-	cvbs_log_info("set_vmode_clk start\n");
+	pr_info("set_vmode_clk start\n");
 	mutex_lock(&setclk_mutex);
-	if (is_meson_gxbb_cpu() ||
-		is_meson_gxtvbb_cpu()) {
+	if (cvbs_cpu_type() == CVBS_CPU_TYPE_GXTVBB) {
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x5800023d);
-		if (is_meson_gxbb_cpu())
-			cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL2, 0x00404e00);
-		else
-			cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL2, 0x00404380);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL2, 0x00404380);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL3, 0x0d5c5091);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL4, 0x801da72c);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL5, 0x71486980);
@@ -87,7 +86,22 @@ void set_vmode_clk(void)
 			pr_info("[error]: hdmi_pll lock failed\n");
 		cvbs_out_hiu_setb(HHI_VIID_CLK_CNTL, 0, VCLK2_EN, 1);
 		udelay(5);
-	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXL)) {
+	} else if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A) {
+		pr_info("config g12a hpll\n");
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x3b00047b);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL2, 0x00018000);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL3, 0x00000000);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL4, 0x0a691c00);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL5, 0x33771290);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL6, 0x39270000);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL7, 0x50540000);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x1b00047b);
+		ret = hpll_wait_lock(HHI_HDMI_PLL_CNTL, 31);
+		if (ret)
+			pr_info("[error]:hdmi_pll lock failed\n");
+		msleep(100);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x1b01047b);
+	} else {
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x4000027b);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL2, 0x800cb300);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL3, 0xa6212844);
@@ -99,10 +113,9 @@ void set_vmode_clk(void)
 		ret = hpll_wait_lock(HHI_HDMI_PLL_CNTL, 31);
 		if (ret)
 			pr_info("[error]: hdmi_pll lock failed\n");
-	} else {
-		cvbs_log_err("Set clk.cpu_type unsupport.\n");
-		goto LAB_OUT;
 	}
+
+	/* divider: 1 */
 	/* clk div */
 	cvbs_out_hiu_setb(HHI_VID_PLL_CLK_DIV, 0, 19, 1);
 	cvbs_out_hiu_setb(HHI_VID_PLL_CLK_DIV, 0, 15, 1);
@@ -114,9 +127,11 @@ void set_vmode_clk(void)
 	cvbs_out_hiu_setb(HHI_VIID_CLK_DIV, (55 - 1), VCLK2_XD, 8);
 	udelay(5);
 	/* Bit[18:16] - v2_cntl_clk_in_sel */
-	cvbs_out_hiu_setb(HHI_VIID_CLK_CNTL, 4, VCLK2_CLK_IN_SEL, 3);
+	/*before g12a set 4 and 0 all ok,after g12a must set 0*/
+	cvbs_out_hiu_setb(HHI_VIID_CLK_CNTL, 0, VCLK2_CLK_IN_SEL, 3);
 	cvbs_out_hiu_setb(HHI_VIID_CLK_CNTL, 1, VCLK2_EN, 1);
 	udelay(2);
+	/* vclk: 27M */
 	/* [15:12] encl_clk_sel, select vclk2_div1 */
 	cvbs_out_hiu_setb(HHI_VID_CLK_DIV, 8, 28, 4);
 	cvbs_out_hiu_setb(HHI_VIID_CLK_DIV, 8, 28, 4);
@@ -131,9 +146,8 @@ void set_vmode_clk(void)
 	cvbs_out_hiu_setb(HHI_VID_CLK_CNTL2, 1, 0, 1);
 	cvbs_out_hiu_setb(HHI_VID_CLK_CNTL2, 1, 4, 1);
 
-LAB_OUT:
 	mutex_unlock(&setclk_mutex);
-	cvbs_log_info("set_vmode_clk DONE\n");
+	pr_info("set_vmode_clk DONE\n");
 }
 
 void disable_vmode_clk(void)
