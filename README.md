@@ -40,6 +40,8 @@ The latest 3.14.x kernel is in branch [boundary-imx\_3.14.52\_1.1.0\_ga][latest-
 
 The latest 4.1.15 kernel is in branch [boundary-imx\_4.1.15\_2.0.0\_ga][latest-4.1.15]
 
+The latest 4.9.x kernel is in branch [boundary-imx\_4.9.x\_1.0.0\_ga][latest-4.9.x]
+
 These branches are based on Freescale releases of the same name (minus the 'boundary').
 
 
@@ -62,4 +64,4 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [latest-3.10.x]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.10.53_1.1.1_ga "Boundary 3.10.53-1.1.1 GA kernel tree"
 [latest-3.14.x]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.14.52_1.1.0_ga "Boundary 3.14.52-1.1.0 GA kernel tree"
 [latest-4.1.15]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.1.15_2.0.0_ga "Boundary 4.1.15-2.0.0 GA kernel tree"
-
+[latest-4.9.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.9.x_1.0.0_ga "Boundary 4.9.x-1.0.0 GA kernel tree"
