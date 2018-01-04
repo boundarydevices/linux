@@ -13666,12 +13666,14 @@ AMLOGIC VRTC DRIVER
 M:	Yun Cai <yun.cai@amlogic.com>
 F:	drivers/amlogic/vrtc/
 
-AMLOGIC DEINTERLACE, NR, CUE, Field Detection, VOF DRIVERS
+AMLOGIC DEINTERLACE, NR, CUE, Field Detection, NR DS, PPS, VOF DRIVERS
 M: Kele Bai <kele.bai@amlogic.com>
 F: drivers/amlogic/deinterlace/*
 F: drivers/amlogic/media/deinterlace/film_mode_fmw/*
 F: include/linux/amlogic/media/amvecm/amvecm.h
 F: arch/arm64/boot/dts/amlogic/txlx_t962e_r321.dts
+F: arch/arm64/boot/dts/amlogic/txlx_t962x_r311.dts
+F: arch/arm64/boot/dts/amlogic/g12a_pxp.dts
 
 AMLOGIC TVIN
 M: Dezhi Kong <dezhi.kong@amlogic.com>

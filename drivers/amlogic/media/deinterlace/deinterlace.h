@@ -18,6 +18,7 @@
 #ifndef _DI_H
 #define _DI_H
 #include <linux/cdev.h>
+#include <linux/types.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/video_sink/video.h>
 
@@ -50,7 +51,7 @@
 
 /* buffer management related */
 #define MAX_IN_BUF_NUM				20
-#define MAX_LOCAL_BUF_NUM			12
+#define MAX_LOCAL_BUF_NUM			10
 #define MAX_POST_BUF_NUM			16
 
 #define VFRAME_TYPE_IN				1
@@ -65,7 +66,7 @@
 #define DI_USE_FIXED_CANVAS_IDX
 #define	DET3D
 #undef SUPPORT_MPEG_TO_VDIN
-
+#define CLK_TREE_SUPPORT
 #ifndef CONFIG_AMLOGIC_MEDIA_RDMA
 #ifndef VSYNC_WR_MPEG_REG
 #define VSYNC_WR_MPEG_REG(adr, val) aml_write_vcbus(adr, val)
@@ -203,7 +204,8 @@ struct di_dev_s {
 	struct list_head   pq_table_list;
 	atomic_t	       pq_flag;
 	unsigned char	   di_event;
-	unsigned int	   di_irq;
+	unsigned int	   pre_irq;
+	unsigned int	   post_irq;
 	unsigned int	   flags;
 	unsigned long	   jiffy;
 	unsigned long	   mem_start;
@@ -216,6 +218,8 @@ struct di_dev_s {
 	unsigned int	   nr10bit_support;
 	/* is DI support post wr to mem for OMX */
 	unsigned int       post_wr_support;
+	unsigned int nrds_enable;
+	unsigned int pps_enable;
 	struct	mutex      cma_mutex;
 	unsigned int	   flag_cma;
 	struct page			*total_pages;
@@ -293,13 +297,15 @@ struct di_pre_stru_s {
 /* alloc di buf as p or i;0: alloc buf as i;
  * 1: alloc buf as p;
 */
-	unsigned char enable_mtnwr;
-	unsigned char enable_pulldown_check;
+	unsigned char madi_enable;
+	unsigned char mcdi_enable;
+	unsigned int  pps_dstw;
+	unsigned int  pps_dsth;
 	int	left_right;/*1,left eye; 0,right eye in field alternative*/
 /*input2pre*/
 	int	bypass_start_count;
 /* need discard some vframe when input2pre => bypass */
-	int	vdin2nr;
+	unsigned char vdin2nr;
 	enum tvin_trans_fmt	source_trans_fmt;
 	enum tvin_trans_fmt	det3d_trans_fmt;
 	unsigned int det_lr;

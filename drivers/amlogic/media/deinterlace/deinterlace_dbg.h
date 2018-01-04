@@ -25,9 +25,11 @@ void dump_di_buf(struct di_buf_s *di_buf);
 void dump_pool(struct queue_s *q);
 void dump_vframe(vframe_t *vf);
 void dump_di_reg(void);
+void dump_di_reg_g12(void);
 void print_di_buf(struct di_buf_s *di_buf, int format);
 void dump_pre_mif_state(void);
 void dump_post_mif_reg(void);
+void dump_buf_addr(struct di_buf_s *di_buf, unsigned int num);
 void debug_device_files_add(struct device *dev);
 void debug_device_files_del(struct device *dev);
 #endif

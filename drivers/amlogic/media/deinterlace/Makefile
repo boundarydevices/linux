@@ -12,6 +12,7 @@ di-objs += deinterlace_dbg.o
 di-objs += nr_drv.o
 di-objs += pulldown_drv.o
 di-objs += detect3d.o
-di-objs += detect3d.o
+di-objs += nr_downscale.o
+di-objs += di_pps.o
 ccflags-y += -Idrivers/amlogic/media/common/rdma/
 

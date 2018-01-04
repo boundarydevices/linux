@@ -387,6 +387,7 @@
 			"fclk_div4",
 			"vpu_clkb_tmp_composite",
 			"vpu_clkb_composite";
+		clock-range = <250 500>;
 		/* buffer-size = <3621952>;(yuv422 8bit) */
 		buffer-size = <4179008>;/*yuv422 fullpack*/
 		/* reserve-iomap = "true"; */
