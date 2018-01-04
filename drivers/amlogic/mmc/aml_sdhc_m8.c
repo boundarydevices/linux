@@ -2361,8 +2361,9 @@ static int aml_sdhc_probe(struct platform_device *pdev)
 		/*Register card detect irq : plug in & unplug*/
 		if (pdata->gpio_cd
 				&& aml_card_type_non_sdio(pdata)) {
-			pdata->irq_init(pdata);
 			mutex_init(&pdata->in_out_lock);
+#ifdef CARD_DETECT_IRQ
+			pdata->irq_init(pdata);
 			ret = request_threaded_irq(pdata->irq_cd,
 					aml_sd_irq_cd, aml_irq_cd_thread,
 					IRQF_TRIGGER_RISING
@@ -2373,6 +2374,11 @@ static int aml_sdhc_probe(struct platform_device *pdev)
 				pr_err("Failed to request SD IN detect\n");
 				goto probe_free_host;
 			}
+#else
+			INIT_DELAYED_WORK(&pdata->cd_detect,
+					meson_mmc_cd_detect);
+			schedule_delayed_work(&pdata->cd_detect, 50);
+#endif
 		}
 	}
 

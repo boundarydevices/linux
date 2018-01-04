@@ -2924,9 +2924,10 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		sdio_host = mmc;
 
 	/*Register card detect irq : plug in & unplug*/
-	if (aml_card_type_non_sdio(pdata)) {
-		pdata->irq_init(pdata);
+	if (pdata->gpio_cd && aml_card_type_non_sdio(pdata)) {
 		mutex_init(&pdata->in_out_lock);
+#ifdef CARD_DETECT_IRQ
+		pdata->irq_init(pdata);
 		ret = devm_request_threaded_irq(&pdev->dev, pdata->irq_cd,
 				aml_sd_irq_cd, aml_irq_cd_thread,
 				IRQF_TRIGGER_RISING
@@ -2937,6 +2938,10 @@ static int meson_mmc_probe(struct platform_device *pdev)
 			pr_err("Failed to request SD IN detect\n");
 			goto free_cali;
 		}
+#else
+		INIT_DELAYED_WORK(&host->cd_work, meson_mmc_cd_detect);
+		schedule_delayed_work(&host->cd_work, 50);
+#endif
 	}
 	pr_info("%s() : success!\n", __func__);
 	return 0;

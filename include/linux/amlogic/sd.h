@@ -193,6 +193,7 @@ struct amlsd_platform {
 #ifdef CONFIG_AMLOGIC_M8B_MMC
 	unsigned int width;
 	unsigned int tune_phase;	/* store tuning result */
+	struct delayed_work cd_detect;
 #endif
 	unsigned int caps;
 	unsigned int caps2;
@@ -214,6 +215,7 @@ struct amlsd_platform {
 	unsigned int irq_cd;
 	unsigned int gpio_cd;
 	unsigned int gpio_cd_level;
+	unsigned int gpio_cd_sta;
 	unsigned int gpio_power;
 	unsigned int power_level;
 	unsigned int auto_clk_close;
@@ -364,6 +366,7 @@ struct amlsd_host {
 	int	sdio_irqen;
 	unsigned int error_bak;
 	struct delayed_work	timeout;
+	struct delayed_work	cd_work;
 	struct class debug;
 
 	unsigned int send;

@@ -215,7 +215,9 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 		amlsd_get_host_caps(child, pdata);
 		amlsd_get_host_caps2(child, pdata);
 		pdata->port_init = of_amlsd_init;
+#ifdef CARD_DETECT_IRQ
 		pdata->irq_init = of_amlsd_irq_init;
+#endif
 		pdata->ro = of_amlsd_ro;
 	}
 	return 0;

@@ -34,6 +34,7 @@ extern const u8 tuning_blk_pattern_8bit[128];
 
 #define DEBUG_SD_OF		0
 #define MODULE_NAME		"amlsd"
+/* #define CARD_DETECT_IRQ    1 */
 
 #if 0
 #define A0_GP_CFG0			(0xc8100240)
@@ -151,7 +152,6 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 		struct amlsd_platform *pdata,
 		struct mmc_host *mmc, u32 index);
 
-void of_amlsd_irq_init(struct amlsd_platform *pdata);
 int of_amlsd_init(struct amlsd_platform *pdata);
 #if 0
 int amlsd_get_reg_base(struct platform_device *pdev,
@@ -169,8 +169,13 @@ void of_amlsd_pwr_off(struct amlsd_platform *pdata);
 void of_amlsd_xfer_pre(struct mmc_host *mmc);
 void of_amlsd_xfer_post(struct mmc_host *mmc);
 
+#ifdef CARD_DETECT_IRQ
+void of_amlsd_irq_init(struct amlsd_platform *pdata);
 irqreturn_t aml_sd_irq_cd(int irq, void *dev_id);
 irqreturn_t aml_irq_cd_thread(int irq, void *data);
+#else
+void meson_mmc_cd_detect(struct work_struct *work);
+#endif
 #if 0
 void aml_sduart_pre(struct amlsd_platform *pdata);
 
