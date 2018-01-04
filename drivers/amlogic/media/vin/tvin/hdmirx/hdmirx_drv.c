@@ -526,7 +526,7 @@ void hdmirx_extcon_register(struct platform_device *pdev, struct device *dev)
 	/*hdmirx extcon start rx22*/
 	edev = extcon_dev_allocate(rx22_ext);
 	if (IS_ERR(edev)) {
-		rx_pr("failed to allocate hdmitx_extcon_hpd\n");
+		rx_pr("failed to allocate rx_excton_rx22\n");
 		return;
 	}
 	edev->dev.parent = dev;
@@ -542,18 +542,19 @@ void hdmirx_extcon_register(struct platform_device *pdev, struct device *dev)
 	/*hdmirx extcon rp auth*/
 	edev = extcon_dev_allocate(rx22_ext);
 	if (IS_ERR(edev)) {
-		rx_pr("failed to allocate hdmitx_extcon_hpd\n");
+		rx_pr("failed to allocate rx_excton_auth\n");
 		return;
 	}
 	edev->dev.parent = dev;
 	edev->name = "rx_excton_auth";
-	dev_set_name(&edev->dev, "auth");
+	dev_set_name(&edev->dev, "rp_auth");
 	ret = extcon_dev_register(edev);
 	if (ret < 0) {
 		rx_pr("failed to register rx_excton_auth\n");
 		return;
 	}
 	rx.hdcp.rx_excton_auth = edev;
+	rx_pr("hdmirx_extcon_register done\n");
 }
 static struct tvin_decoder_ops_s hdmirx_dec_ops = {
 	.support    = hdmirx_dec_support,
@@ -639,7 +640,7 @@ void hdmirx_get_fps_info(struct tvin_sig_property_s *prop)
 	uint32_t rate = rx.pre.frame_rate;
 
 	rate = rate/100 + (((rate%100)/10 >= 5) ? 1 : 0);
-	/*prop->fps = rate;*/
+	prop->fps = rate;
 }
 
 /*
@@ -651,8 +652,8 @@ void hdmirx_set_timing_info(struct tvin_sig_property_s *prop)
 	enum tvin_sig_fmt_e sig_fmt;
 
 	sig_fmt = hdmirx_hw_get_fmt();
-	/*in some PC case, 4096X2160 show in 3840X2160 monitor will*/
-	/*result in blurred, so adjust hactive to 3840 to show dot by dot*/
+	/* in some PC case, 4096X2160 show in 3840X2160 monitor will */
+	/* result in blurred, so adjust hactive to 3840 to show dot by dot */
 	if (en_4k_2_2k) {
 		if ((sig_fmt == TVIN_SIG_FMT_HDMI_4096_2160_00HZ) ||
 			(sig_fmt == TVIN_SIG_FMT_HDMI_3840_2160_00HZ)) {
@@ -673,7 +674,7 @@ void hdmirx_set_timing_info(struct tvin_sig_property_s *prop)
 	/* 422 : hdmiout clk = pixel clk * colordepth / 8 */
 	/* 444 : hdmiout clk = pixel clk */
 	if ((rx.pre.colordepth > E_COLORDEPTH_8) &&
-		/*(prop->fps > 49) &&*/
+		(prop->fps > 49) &&
 		((sig_fmt == TVIN_SIG_FMT_HDMI_4096_2160_00HZ) ||
 		(sig_fmt == TVIN_SIG_FMT_HDMI_3840_2160_00HZ)))
 		prop->ve = 1;
@@ -739,15 +740,7 @@ void hdmirx_get_color_fmt(struct tvin_sig_property_s *prop)
  */
 void hdmirx_get_colordepth(struct tvin_sig_property_s *prop)
 {
-	int ret = rx.pre.colordepth;
-	#if 0
-	if (pc_mode_en == 1) {
-		if ((rx.pre.sw_vic == HDMI_2160p_60hz_420) ||
-			(rx.pre.sw_vic == HDMI_4096p_60hz_420))
-			ret = E_COLORDEPTH_8;
-	}
-	#endif
-	prop->colordepth = ret;
+	prop->colordepth = rx.pre.colordepth;
 }
 
 /*
@@ -775,7 +768,7 @@ void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 	rx_get_vsi_info();
 
 	prop->trans_fmt = TVIN_TFMT_2D;
-	/*prop->dolby_vision = FALSE;*/
+	prop->dolby_vision = FALSE;
 	if (hdmirx_hw_get_3d_structure() == 1) {
 		if (rx.vsi_info._3d_structure == 0x1) {
 			/* field alternative */
@@ -1673,15 +1666,13 @@ static int hdmirx_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct hdmirx_dev_s *hdevp;
-	struct extcon_dev *edev;
 	struct resource *res;
 	struct clk *xtal_clk;
 	struct clk *fclk_div5_clk;
+	struct clk *fclk_div7_clk;
 	struct clk *tmds_clk_fs;
 	int clk_rate;
 	const struct of_device_id *of_id;
-
-	edev = extcon_dev_allocate(rx22_ext);
 
 	log_init(DEF_LOG_BUF_SIZE);
 	pEdid_buffer = (unsigned char *) pdev->dev.platform_data;
@@ -1806,16 +1797,7 @@ static int hdmirx_probe(struct platform_device *pdev)
 			repeat_function = 0;
 		}
 	}
-	edev->dev.parent = hdevp->dev;
-	edev->name = "hdmirx_extcon_hpd";
-	dev_set_name(&edev->dev, "hdmirx_hpd");
-	ret = extcon_dev_register(edev);
-	if (ret < 0) {
-		rx_pr("failed to register hdmirx extcon hpd\n");
-		/*return;*/
-		goto fail_register_extcn;
-	}
-	/*hdmitx_extcon_hdmi = edev;*/
+	hdmirx_extcon_register(pdev, hdevp->dev);
 	if (request_irq(hdevp->irq,
 			&irq_handler,
 			IRQF_SHARED,
@@ -1850,6 +1832,14 @@ static int hdmirx_probe(struct platform_device *pdev)
 		pr_info("%s: fclk_div5_clk is %d MHZ\n", __func__,
 				clk_rate/1000000);
 	}
+	fclk_div7_clk = clk_get(&pdev->dev, "fclk_div7");
+	if (IS_ERR(fclk_div7_clk))
+		rx_pr("get fclk_div7_clk err\n");
+	else {
+		clk_rate = clk_get_rate(fclk_div7_clk);
+		pr_info("%s: fclk_div7_clk is %d MHZ\n", __func__,
+				clk_rate/1000000);
+	}
 	hdevp->modet_clk = clk_get(&pdev->dev, "hdmirx_modet_clk");
 	if (IS_ERR(hdevp->modet_clk))
 		rx_pr("get modet_clk err\n");
@@ -1873,7 +1863,31 @@ static int hdmirx_probe(struct platform_device *pdev)
 		pr_info("%s: cfg_clk is %d MHZ\n", __func__,
 				clk_rate/1000000);
 	}
-
+	hdcp22_on = rx_is_hdcp22_support();
+	if (hdcp22_on) {
+		hdevp->esm_clk = clk_get(&pdev->dev, "hdcp_rx22_esm");
+		if (IS_ERR(hdevp->esm_clk))
+			rx_pr("get esm_clk err\n");
+		else {
+			clk_set_parent(hdevp->esm_clk, fclk_div7_clk);
+			clk_set_rate(hdevp->esm_clk, 285714285);
+			clk_prepare_enable(hdevp->esm_clk);
+			clk_rate = clk_get_rate(hdevp->esm_clk);
+			pr_info("%s: esm_clk is %d MHZ\n", __func__,
+					clk_rate/1000000);
+		}
+		hdevp->skp_clk = clk_get(&pdev->dev, "hdcp_rx22_skp");
+		if (IS_ERR(hdevp->skp_clk))
+			rx_pr("get skp_clk err\n");
+		else {
+			clk_set_parent(hdevp->skp_clk, xtal_clk);
+			clk_set_rate(hdevp->skp_clk, 24000000);
+			clk_prepare_enable(hdevp->skp_clk);
+			clk_rate = clk_get_rate(hdevp->skp_clk);
+			pr_info("%s: skp_clk is %d MHZ\n", __func__,
+					clk_rate/1000000);
+		}
+	}
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
 		tmds_clk_fs = clk_get(&pdev->dev, "hdmirx_aud_pll2fs");
 		if (IS_ERR(tmds_clk_fs))
@@ -1948,7 +1962,6 @@ static int hdmirx_probe(struct platform_device *pdev)
 
 	hdmirx_hw_probe();
 	hdmirx_switch_pinmux(pdev->dev);
-
 	mutex_init(&hdevp->rx_lock);
 	register_pm_notifier(&aml_hdcp22_pm_notifier);
 
@@ -1961,10 +1974,18 @@ static int hdmirx_probe(struct platform_device *pdev)
 	rx_pr("hdmirx: driver probe ok\n");
 
 	return 0;
+fail_kmalloc_pd_fifo:
+	return ret;
+fail_get_resource_irq:
+	return ret;
 fail_create_cec_file:
 	device_remove_file(hdevp->dev, &dev_attr_cec);
 fail_create_esm_base_file:
 	device_remove_file(hdevp->dev, &dev_attr_esm_base);
+fail_create_info_file:
+	device_remove_file(hdevp->dev, &dev_attr_info);
+fail_create_param_file:
+	device_remove_file(hdevp->dev, &dev_attr_param);
 fail_create_reg_file:
 	device_remove_file(hdevp->dev, &dev_attr_reg);
 fail_create_log_file:
@@ -1975,10 +1996,6 @@ fail_create_edid_file:
 	device_remove_file(hdevp->dev, &dev_attr_edid);
 fail_create_debug_file:
 	device_remove_file(hdevp->dev, &dev_attr_debug);
-fail_create_param_file:
-	device_remove_file(hdevp->dev, &dev_attr_param);
-fail_create_info_file:
-		device_remove_file(hdevp->dev, &dev_attr_info);
 
 /* fail_get_resource_irq: */
 	/* hdmirx_delete_device(hdevp->index); */
@@ -1989,13 +2006,6 @@ fail_add_cdev:
 	kfree(hdevp);
 fail_kmalloc_hdev:
 	return ret;
-fail_kmalloc_pd_fifo:
-	return ret;
-fail_get_resource_irq:
-	return ret;
-fail_register_extcn:
-	return ret;
-
 }
 
 static int hdmirx_remove(struct platform_device *pdev)

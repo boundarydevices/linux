@@ -923,8 +923,7 @@ static int hdmi_rx_ctrl_irq_handler(void)
 	if (intr_aud_fifo != 0)
 		hdmirx_wr_dwc(DWC_AUD_FIFO_ICLR, intr_aud_fifo);
 
-	if ((rx.chip_id == CHIP_ID_GXTVBB) ||
-		(rx.chip_id == CHIP_ID_TXL)) {
+	if (rx.chip_id == CHIP_ID_TXL) {
 		intr_aud_cec =
 				hdmirx_rd_dwc(DWC_AUD_CEC_ISTS) &
 				hdmirx_rd_dwc(DWC_AUD_CEC_IEN);
@@ -946,11 +945,11 @@ static int hdmi_rx_ctrl_irq_handler(void)
 			rx_pr("intr=%#x\n", intr_hdcp22);
 		switch (intr_hdcp22) {
 		case _BIT(0):
-			hdcp22_capable_sts = HDCP22_AUTH_STATE_CAPBLE;
+			hdcp22_capable_sts = HDCP22_AUTH_STATE_CAPABLE;
 			rx.hdcp.hdcp_version = HDCP_VER_22;
 			break;
 		case _BIT(1):
-			hdcp22_capable_sts = HDCP22_AUTH_STATE_NOT_CAPBLE;
+			hdcp22_capable_sts = HDCP22_AUTH_STATE_NOT_CAPABLE;
 			break;
 		case _BIT(2):
 			hdcp22_auth_sts = HDCP22_AUTH_STATE_LOST;
@@ -1589,7 +1588,7 @@ void hdmirx_hdcp22_reauth(void)
 void monitor_hdcp22_sts(void)
 {
 	/*if the auth lost after the success of authentication*/
-	if ((hdcp22_capable_sts == HDCP22_AUTH_STATE_CAPBLE) &&
+	if ((hdcp22_capable_sts == HDCP22_AUTH_STATE_CAPABLE) &&
 		((hdcp22_auth_sts == HDCP22_AUTH_STATE_LOST) ||
 		(hdcp22_auth_sts == HDCP22_AUTH_STATE_FAILED))) {
 		hdmirx_hdcp22_reauth();

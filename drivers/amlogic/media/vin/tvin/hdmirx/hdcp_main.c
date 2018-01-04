@@ -31,6 +31,8 @@
 #include <linux/moduleparam.h>
 #include <linux/netlink.h>
 #include <linux/proc_fs.h>
+#include <linux/debugfs.h>
+#include <linux/version.h>
 #include "hdcp_main.h"
 
 #define MAX_ESM_DEVICES 6
@@ -55,6 +57,8 @@ struct esm_device {
 	uint32_t data_size;
 	uint8_t *data;
 
+	struct debugfs_blob_wrapper blob;
+
 	struct resource *hpi_resource;
 	uint8_t __iomem *hpi;
 };
@@ -62,7 +66,7 @@ struct esm_device {
 static struct esm_device esm_devices[MAX_ESM_DEVICES];
 static const char *MY_TAG = "ESM HLD: ";
 
-/* ESM_IOC_MEMINFO implementation */
+/* get_meminfo - ESM_IOC_MEMINFO implementation */
 static long get_meminfo(struct esm_device *esm, void __user *arg)
 {
 	struct esm_ioc_meminfo info = {
@@ -79,7 +83,7 @@ static long get_meminfo(struct esm_device *esm, void __user *arg)
 	return 0;
 }
 
-/* ESM_IOC_LOAD_CODE implementation */
+/* load_code - ESM_IOC_LOAD_CODE implementation */
 static long load_code(struct esm_device *esm,
 	struct esm_ioc_code __user *arg)
 {
@@ -104,7 +108,7 @@ static long load_code(struct esm_device *esm,
 	return 0;
 }
 
-/* ESM_IOC_WRITE_DATA implementation */
+/* write_data - ESM_IOC_WRITE_DATA implementation */
 static long write_data(struct esm_device *esm,
 	struct esm_ioc_data __user *arg)
 {
@@ -124,7 +128,7 @@ static long write_data(struct esm_device *esm,
 	return 0;
 }
 
-/* ESM_IOC_READ_DATA implementation */
+/* read_data - ESM_IOC_READ_DATA implementation */
 static long read_data(struct esm_device *esm,
 	struct esm_ioc_data __user *arg)
 {
@@ -144,7 +148,7 @@ static long read_data(struct esm_device *esm,
 	return 0;
 }
 
-/* ESM_IOC_MEMSET_DATA implementation */
+/* set_data - ESM_IOC_MEMSET_DATA implementation */
 static long set_data(struct esm_device *esm, void __user *arg)
 {
 	union {
@@ -164,7 +168,7 @@ static long set_data(struct esm_device *esm, void __user *arg)
 	return 0;
 }
 
-/* ESM_IOC_READ_HPI implementation */
+/* hpi_read - ESM_IOC_READ_HPI implementation */
 static long hpi_read(struct esm_device *esm, void __user *arg)
 {
 	struct esm_ioc_hpi_reg reg;
@@ -183,7 +187,7 @@ static long hpi_read(struct esm_device *esm, void __user *arg)
 	return 0;
 }
 
-/* ESM_IOC_WRITE_HPI implementation */
+/* hpi_write - ESM_IOC_WRITE_HPI implementation */
 static long hpi_write(struct esm_device *esm, void __user *arg)
 {
 	struct esm_ioc_hpi_reg reg;
@@ -198,6 +202,7 @@ static long hpi_write(struct esm_device *esm, void __user *arg)
 	return 0;
 }
 
+/* alloc_esm_slot - alloc_esm_slot*/
 static struct esm_device *alloc_esm_slot(
 	const struct esm_ioc_meminfo *info)
 {
@@ -225,6 +230,7 @@ static struct esm_device *alloc_esm_slot(
 	return NULL;
 }
 
+/* free_dma_areas - free_dma_areas*/
 static void free_dma_areas(struct esm_device *esm)
 {
 	if (!esm->code_is_phys_mem && esm->code) {
@@ -239,6 +245,9 @@ static void free_dma_areas(struct esm_device *esm)
 		esm->data = NULL;
 	}
 }
+
+static struct dentry *esm_rx_debugfs;
+struct dentry *esm_rx_blob;
 
 static int alloc_dma_areas(struct esm_device *esm,
 	const struct esm_ioc_meminfo *info)
@@ -272,6 +281,15 @@ static int alloc_dma_areas(struct esm_device *esm,
 		}
 	}
 
+	esm_rx_debugfs = debugfs_create_dir("esm_rx", NULL);
+	if (!esm_rx_debugfs)
+		return -ENOENT;
+
+	esm->blob.data = (void *)esm->data;
+	esm->blob.size = esm->data_size;
+	esm_rx_blob = debugfs_create_blob("blob",
+		0644, esm_rx_debugfs, &esm->blob);
+
 	if (randomize_mem) {
 		prandom_bytes(esm->code, esm->code_size);
 		prandom_bytes(esm->data, esm->data_size);
@@ -279,6 +297,7 @@ static int alloc_dma_areas(struct esm_device *esm,
 	esm_data_base_addr = esm->data_base;
 	if (!is_esmmem_created) {
 		if ((esm->data_base) && (esm->code_base)) {
+			/* rm esmmem*/
 			/*hdmirx_dev_init();*/
 			is_esmmem_created = 1;
 			pr_info("create /dev/esmmem\n");
@@ -288,7 +307,7 @@ static int alloc_dma_areas(struct esm_device *esm,
 	return 0;
 }
 
-/* ESM_IOC_INIT implementation */
+/* init - ESM_IOC_INIT implementation */
 static long init(struct file *f, void __user *arg)
 {
 	struct resource *hpi_mem;
@@ -340,6 +359,7 @@ err_free:
 	return rc;
 }
 
+/* free_esm_slot - free_esm_slot*/
 static void free_esm_slot(struct esm_device *slot)
 {
 	if (!slot->allocated)
@@ -355,6 +375,7 @@ static void free_esm_slot(struct esm_device *slot)
 	slot->allocated = 0;
 }
 
+/* hld_ioctl - hld_ioctl*/
 static long hld_ioctl(struct file *f,
 	unsigned int cmd, unsigned long arg)
 {

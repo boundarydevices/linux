@@ -96,6 +96,14 @@ enum eq_sts_e {
 	E_EQ_FAIL
 };
 
+enum eq_cable_type_e {
+	E_CABLE_NOT_FOUND,
+	E_LONG_CABLE,
+	E_SHORT_CABLE,
+	E_LONG_CABLE2,
+	E_ERR_CABLE = 255,
+};
+
 struct st_eq_data {
 	/* Best long cable setting */
 	uint16_t bestLongSetting;

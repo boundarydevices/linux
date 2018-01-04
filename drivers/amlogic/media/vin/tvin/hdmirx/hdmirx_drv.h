@@ -168,6 +168,8 @@ struct hdmirx_dev_s {
 	struct clk *acr_ref_clk;
 	struct clk *audmeas_clk;
 	struct clk *aud_out_clk;
+	struct clk *esm_clk;
+	struct clk *skp_clk;
 	const struct meson_hdmirx_data *data;
 };
 
@@ -323,8 +325,8 @@ enum hdmirx_port_e {
 };
 
 enum hdcp22_auth_state_e {
-	HDCP22_AUTH_STATE_NOT_CAPBLE,
-	HDCP22_AUTH_STATE_CAPBLE,
+	HDCP22_AUTH_STATE_CAPABLE,
+	HDCP22_AUTH_STATE_NOT_CAPABLE,
 	HDCP22_AUTH_STATE_LOST,
 	HDCP22_AUTH_STATE_SUCCESS,
 	HDCP22_AUTH_STATE_FAILED,
@@ -782,7 +784,7 @@ void rx_hdcp22_wr_reg_bits(uint16_t addr, uint32_t mask, uint32_t value);
 void hdcp22_wr_top(uint32_t addr, uint32_t data);
 uint32_t hdcp22_rd_top(uint32_t addr);
 uint32_t rx_hdcp22_rd(uint32_t addr);
-void hdcp22_clk_en(uint8_t en);
+void hdcp22_clk_en(bool en);
 void rx_sec_reg_write(unsigned int *addr, unsigned int value);
 unsigned int rx_sec_reg_read(unsigned int *addr);
 unsigned int sec_top_read(unsigned int *addr);
@@ -895,7 +897,6 @@ extern int rx_debug_rd_reg(const char *buf, char *tmpbuf);
  * tvafe:0x4; dac:0x8, audio pll:0x10
  */
 extern int pd_fifo_start_cnt;
-extern int hdmirx_dev_init(void);
 extern void dump_eq_data(void);
 extern void repeater_dwork_handle(struct work_struct *work);
 /* for other modules */
@@ -904,4 +905,5 @@ extern void vdac_enable(bool on, unsigned int module_sel);
 extern void hdmirx_dv_packet_stop(void);
 extern void rx_aud_pll_ctl(bool en);
 extern void rx_send_hpd_pulse(void);
+extern int rx_is_hdcp22_support(void);
 #endif

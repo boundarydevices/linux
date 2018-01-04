@@ -36,9 +36,9 @@
 
 /*this parameter moved from wrapper.c */
 /*
- *bool hdr_enable = true;
- *MODULE_PARM_DESC(hdr_enable, "\n hdr_enable\n");
- *module_param(hdr_enable, bool, 0664);
+ * bool hdr_enable = true;
+ * MODULE_PARM_DESC(hdr_enable, "\n hdr_enable\n");
+ * module_param(hdr_enable, bool, 0664);
  */
 static struct rxpkt_st rxpktsts;
 
@@ -68,8 +68,8 @@ static struct pkt_typeregmap_st pktmaping[] = {
 };
 
 /*
- *uint32_t timerbuff[50];
- *uint32_t timerbuff_idx = 0;
+ * uint32_t timerbuff[50];
+ * uint32_t timerbuff_idx = 0;
  */
 
 struct st_pkt_test_buff *pkt_testbuff;
@@ -1257,16 +1257,16 @@ static int rx_pkt_get_drminfo(struct hdmi_rx_ctrl *ctx)
 	if (rx.state != FSM_SIG_READY)
 		return 0;
 	/*
-	 *if (hdr_enable == false)
-	 *	return 0;
+	 * if (hdr_enable == false)
+	 *		return 0;
 	 */
 	if (ctx == 0)
 		return -EINVAL;
 
-	/* waiting, before send the hdr data to post modules
-	 *if (rx.hdr_info.hdr_state != HDR_STATE_NULL)
-	 *	return -EBUSY;
-	 */
+	/* waiting, before send the hdr data to post modules */
+		if (rx.hdr_info.hdr_state != HDR_STATE_NULL)
+			return -EBUSY;
+
 	/*rx_pkt_get_drm_ex(&drmpkt);*/
 	drmpkt = (struct drm_infoframe_st *)&(rx.drm_info);
 
@@ -1355,7 +1355,7 @@ void rx_pkt_content_chk_en(uint32_t enable)
 }
 
 /*
- *read pkt data from pkt fifo or external register set
+ * read pkt data from pkt fifo or external register set
  */
 void rx_pkt_set_fifo_pri(uint32_t pri)
 {
@@ -1724,8 +1724,8 @@ int rx_pkt_fifodecode(struct rx_s *prx,
 	case PKT_TYPE_INFOFRAME_NVBI:
 		pktsts->pkt_cnt_nvbi++;
 		pktsts->pkt_op_flag |= PKT_OP_NVBI;
-		/*memset(&prx->ntscvbi_info, 0,*/
-		/*	sizeof(struct pd_infoframe_s));*/
+		/* memset(&prx->ntscvbi_info, 0, */
+			/* sizeof(struct pd_infoframe_s)); */
 		memcpy(&prx->ntscvbi_info, pktdata,
 					sizeof(struct pd_infoframe_s));
 		pktsts->pkt_op_flag &= ~PKT_OP_NVBI;
@@ -1826,9 +1826,9 @@ int rx_pkt_handler(enum pkt_decode_type pkt_int_src)
 		if (hdmirx_rd_dwc(DWC_PDEC_STS) & PD_TH_START) {
 readpkt:
 			/*how many packet number need read from fifo*/
-			/*If software tries to read more packets from the*/
-			/*FIFO than what is stored already, an underflow */
-			/*occurs.*/
+			/* If software tries to read more packets from the */
+			/* FIFO than what is stored already, an underflow */
+			/* occurs. */
 			pkt_num = hdmirx_rd_dwc(DWC_PDEC_FIFO_STS1) >> 3;
 			rxpktsts.fifo_pkt_num = pkt_num;
 
@@ -1908,8 +1908,8 @@ readpkt:
 
 	/*t2 = sched_clock();*/
 	/*
-	 *timerbuff[timerbuff_idx] = pkt_num;
-	 *if (timerbuff_idx++ >= 50)
+	 * timerbuff[timerbuff_idx] = pkt_num;
+	 * if (timerbuff_idx++ >= 50)
 	 *	timerbuff_idx = 0;
 	 */
 	return 0;
