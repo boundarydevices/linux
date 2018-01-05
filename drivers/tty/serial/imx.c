@@ -2590,8 +2590,10 @@ static void serial_imx_enable_wakeup(struct imx_port *sport, bool on)
 		writel(USR1_AWAKE | USR1_RTSD, sport->port.membase + USR1);
 
 	val = readl(sport->port.membase + UCR3);
-	if (on)
+	if (on) {
+		writel(USR1_AWAKE, sport->port.membase + USR1);
 		val |= UCR3_AWAKEN;
+	}
 	else
 		val &= ~UCR3_AWAKEN;
 	writel(val, sport->port.membase + UCR3);
@@ -2610,14 +2612,6 @@ static int imx_serial_port_suspend_noirq(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_port *sport = platform_get_drvdata(pdev);
-	int ret;
-
-	ret = clk_enable(sport->clk_ipg);
-	if (ret)
-		return ret;
-
-	/* enable wakeup from i.MX UART */
-	serial_imx_enable_wakeup(sport, true);
 
 	serial_imx_save_context(sport);
 
@@ -2642,11 +2636,6 @@ static int imx_serial_port_resume_noirq(struct device *dev)
 
 	serial_imx_restore_context(sport);
 
-	/* disable wakeup from i.MX UART */
-	serial_imx_enable_wakeup(sport, false);
-
-	clk_disable(sport->clk_ipg);
-
 	return 0;
 }
 
@@ -2654,12 +2643,19 @@ static int imx_serial_port_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_port *sport = platform_get_drvdata(pdev);
+	int ret;
 
 	uart_suspend_port(&imx_reg, &sport->port);
 	disable_irq(sport->port.irq);
 
-	/* Needed to enable clock in suspend_noirq */
-	return clk_prepare(sport->clk_ipg);
+	ret = clk_prepare_enable(sport->clk_ipg);
+	if (ret)
+		return ret;
+
+	/* enable wakeup from i.MX UART */
+	serial_imx_enable_wakeup(sport, true);
+
+	return 0;
 }
 
 static int imx_serial_port_resume(struct device *dev)
@@ -2667,10 +2663,13 @@ static int imx_serial_port_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_port *sport = platform_get_drvdata(pdev);
 
+	/* disable wakeup from i.MX UART */
+	serial_imx_enable_wakeup(sport, false);
+
 	uart_resume_port(&imx_reg, &sport->port);
 	enable_irq(sport->port.irq);
 
-	clk_unprepare(sport->clk_ipg);
+	clk_disable_unprepare(sport->clk_ipg);
 
 	return 0;
 }
@@ -2682,8 +2681,7 @@ static int imx_serial_port_freeze(struct device *dev)
 
 	uart_suspend_port(&imx_reg, &sport->port);
 
-	/* Needed to enable clock in suspend_noirq */
-	return clk_prepare(sport->clk_ipg);
+	return clk_prepare_enable(sport->clk_ipg);
 }
 
 static int imx_serial_port_thaw(struct device *dev)
@@ -2693,7 +2691,7 @@ static int imx_serial_port_thaw(struct device *dev)
 
 	uart_resume_port(&imx_reg, &sport->port);
 
-	clk_unprepare(sport->clk_ipg);
+	clk_disable_unprepare(sport->clk_ipg);
 
 	return 0;
 }
