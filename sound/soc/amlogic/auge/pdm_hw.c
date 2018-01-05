@@ -422,3 +422,35 @@ void aml_pdm_filter_ctrl(int osr, int mode)
 		);
 
 }
+
+int pdm_get_mute_value(void)
+{
+	return aml_pdm_read(PDM_MUTE_VALUE);
+}
+
+void pdm_set_mute_value(int val)
+{
+	aml_pdm_write(PDM_MUTE_VALUE, val);
+}
+
+int pdm_get_mute_channel(void)
+{
+	int val = aml_pdm_read(PDM_CTRL);
+
+	if (!((val & 20000) >> 17))
+		pr_warn_once("pdm mute is not enable\n");
+
+	return (val & (0xff << 20));
+}
+
+void pdm_set_mute_channel(int mute_chmask)
+{
+	int mute_en = 0;
+
+	if (mute_chmask)
+		mute_en = 1;
+
+	aml_pdm_update_bits(PDM_CTRL,
+		(0xff << 20 | 0x1 << 17),
+		(mute_chmask << 20 | mute_en << 17));
+}

@@ -447,9 +447,7 @@ static int aml_T9015S_audio_probe(struct snd_soc_codec *codec)
 	if (T9015S_audio == NULL)
 		return -ENOMEM;
 	snd_soc_codec_set_drvdata(codec, T9015S_audio);
-#if 0 /*tmp_mask_for_kernel_4_4*/
-	snd_soc_codec_set_cache_io(codec, 32, 32, SND_SOC_REGMAP);
-#endif
+
 	/*reset audio codec register*/
 	aml_T9015S_audio_reset(codec);
 	aml_T9015S_audio_start_up(codec);

@@ -33,6 +33,11 @@ extern void pdm_enable(int is_enable);
 
 extern void pdm_fifo_reset(void);
 
+extern int pdm_get_mute_value(void);
+extern void pdm_set_mute_value(int val);
+extern int pdm_get_mute_channel(void);
+extern void pdm_set_mute_channel(int mute_chmask);
+
 extern int pdm_hcic_shift_gain;
 extern int pdm_dclk;
 

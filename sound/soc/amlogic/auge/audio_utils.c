@@ -23,6 +23,9 @@
 #include "pdm_hw.h"
 #include "tdm_hw.h"
 #include "ddr_mngr.h"
+#include "resample.h"
+
+#include <linux/amlogic/media/sound/auge_utils.h>
 
 #include <linux/of_platform.h>
 
@@ -281,16 +284,17 @@ static int snd_enum_get(struct snd_kcontrol *kcontrol,
 	int val;
 	struct snd_elem_info *einfo = (void *)kcontrol->private_value;
 
+	pr_info("%s:reg:0x%x, mask:0x%x",
+		__func__,
+		einfo->reg,
+		einfo->mask);
+
 	val = audiobus_read(einfo->reg);
 	val >>= einfo->shift;
 	val &= einfo->mask;
 	ucontrol->value.integer.value[0] = val;
 
-	pr_info("%s:reg:0x%x, mask:0x%x val:0x%x\n",
-		__func__,
-		einfo->reg,
-		einfo->mask,
-		val);
+	pr_info("\t val:0x%x\n", val);
 
 	return 0;
 }
@@ -457,16 +461,19 @@ static int spdifout_channel_status;
 static int spdif_channel_status_info(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_info *uinfo)
 {
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	int i;
+	/* struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	 * int i;
+	 */
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->value.integer.min = 0;
 	uinfo->value.integer.max = 0xffffffff;
 	uinfo->count = 1;
 
-	for (i = 0; i < e->items; i++)
-		pr_info("Item:%d, %s\n", i, e->texts[i]);
+	/*
+	 * for (i = 0; i < e->items; i++)
+	 *     pr_info("Item:%d, %s\n", i, e->texts[i]);
+	 */
 
 	return 0;
 }
@@ -584,6 +591,34 @@ static int spdifout_channel_status_set(
 	.private_value = (unsigned long)&xenum\
 }
 
+static const char *const audio_locker_texts[] = {
+	"Disable",
+	"Enable",
+};
+
+static const struct soc_enum audio_locker_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(audio_locker_texts),
+			audio_locker_texts);
+
+static int audio_locker_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = audio_locker_get();
+
+	return 0;
+}
+
+static int audio_locker_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int enable = ucontrol->value.enumerated.item[0];
+
+	audio_locker_set(enable);
+
+	return 0;
+}
 
 #define SND_MIX(xname, type, xenum, xshift, xmask)   \
 	SND_ENUM(xname, type, CTRL0, xenum, xshift, xmask)
@@ -880,12 +915,27 @@ static const struct snd_kcontrol_new snd_auge_controls[] = {
 	/* SPDIFIN Channel Status */
 	SPDIFOUT_CHSTATUS("SPDIFOUT Channel Status",
 				spdif_channel_status_enum),
+
+	/* audio locker */
+	SOC_ENUM_EXT("audio locker enable",
+		     audio_locker_enum,
+		     audio_locker_get_enum,
+		     audio_locker_set_enum),
 };
 
 
 int snd_card_add_kcontrols(struct snd_soc_card *card)
 {
+	int ret;
+
 	pr_info("%s card:%p\n", __func__, card);
+
+	ret = card_add_resample_kcontrols(card);
+	if (ret < 0) {
+		pr_err("Failed to add resample controls\n");
+		return ret;
+	}
+
 	return snd_soc_add_card_controls(card,
 		snd_auge_controls, ARRAY_SIZE(snd_auge_controls));
 
@@ -1370,4 +1420,21 @@ int loopback_check_enable(int src)
 	return (src <= PDMIN)
 		&& (loopback_datain == src)
 		&& (loopback_enable == 1);
+}
+
+void auge_acodec_reset(void)
+{
+	audioreset_update_bits(EE_RESET1, 1 << 29, 1 << 29);
+}
+
+void auge_toacodec_ctrl(int tdmout_id)
+{
+	// TODO: check skew for g12a
+	audiobus_write(EE_AUDIO_TOACODEC_CTRL0,
+		1 << 31
+		| tdmout_id << 12 /* data 0*/
+		| tdmout_id << 8 /* lrclk */
+		| tdmout_id << 4 /* bclk */
+		| tdmout_id << 0 /* mclk */
+		);
 }

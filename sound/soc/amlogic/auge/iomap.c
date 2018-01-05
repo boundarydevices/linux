@@ -122,6 +122,87 @@ void audiobus_update_bits(unsigned int reg,
 }
 EXPORT_SYMBOL(audiobus_update_bits);
 
+int audiolocker_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_AUDIO_LOCKER, reg, &val);
+
+	if (ret) {
+		pr_err("read reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(audiolocker_read);
+
+void audiolocker_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_AUDIO_LOCKER, reg, val);
+}
+EXPORT_SYMBOL(audiolocker_write);
+
+void audiolocker_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_AUDIO_LOCKER, reg, mask, val);
+}
+EXPORT_SYMBOL(audiolocker_update_bits);
+
+int eqdrc_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_EQDRC_BUS, reg, &val);
+
+	if (ret) {
+		pr_err("read audio reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(eqdrc_read);
+
+void eqdrc_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_EQDRC_BUS, reg, val);
+}
+EXPORT_SYMBOL(eqdrc_write);
+
+void eqdrc_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_EQDRC_BUS, reg, mask, val);
+}
+EXPORT_SYMBOL(eqdrc_update_bits);
+
+int audioreset_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_RESET, reg, &val);
+
+	if (ret) {
+		pr_err("read reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(audioreset_read);
+
+void audioreset_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_RESET, reg, val);
+}
+EXPORT_SYMBOL(audioreset_write);
+
+void audioreset_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_RESET, reg, mask, val);
+}
+EXPORT_SYMBOL(audioreset_update_bits);
+
 static int snd_iomap_probe(struct platform_device *pdev)
 {
 	struct resource res;
@@ -150,7 +231,7 @@ static int snd_iomap_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id snd_iomap_dt_match[] = {
-	{ .compatible = "amlogic, axg-snd-iomap" },
+	{ .compatible = "amlogic, snd-iomap" },
 	{},
 };
 

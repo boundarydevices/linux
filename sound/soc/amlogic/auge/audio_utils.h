@@ -154,4 +154,7 @@ extern int loopback_trigger(
 	int cmd,
 	struct loopback_cfg *lb_cfg);
 
+extern void audio_locker_set(int enable);
+
+extern int audio_locker_get(void);
 #endif

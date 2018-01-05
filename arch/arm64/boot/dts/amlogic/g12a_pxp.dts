@@ -299,7 +299,385 @@
 		mem_alloc = <1>;
 		logo_addr = "0x3f800000";
 	};
+
+	/* Audio Related start */
+	/* Sound iomap */
+	aml_snd_iomap {
+		compatible = "amlogic, snd-iomap";
+		status = "okay";
+		#address-cells=<2>;
+		#size-cells=<2>;
+		ranges;
+		pdm_bus {
+			reg = <0x0 0xFF640000 0x0 0x2000>;
+		};
+		audiobus_base {
+			reg = <0x0 0xFF642000 0x0 0x2000>;
+		};
+		audiolocker_base {
+			reg = <0x0 0xFF64A000 0x0 0x2000>;
+		};
+		eqdrc_base {
+			reg = <0x0 0xFF642800 0x0 0x1800>;
+		};
+		reset_base {
+			reg = <0x0 0xFFD01000 0x0 0x1000>;
+		};
+	};
+	pdm_codec:dummy{
+		#sound-dai-cells = <0>;
+		compatible = "amlogic, pdm_dummy_codec";
+		status = "okay";
+	};
+	dummy_codec:dummy{
+		#sound-dai-cells = <0>;
+		compatible = "amlogic, aml_dummy_codec";
+		status = "okay";
+	};
+	amlogic_codec:t9015{
+		#sound-dai-cells = <0>;
+		compatible = "amlogic, aml_codec_T9015";
+		reg = <0x0 0xFF632000 0x0 0x2000>;
+		is_auge_used = <1>; /* meson or auge chipset used */
+		tdmout_index = <0>;
+		status = "disabled";
+	};
+	auge_sound {
+		compatible = "amlogic, g12a-sound-card";
+		aml-audio-card,name = "AML-AUGESOUND";
+
+		aml-audio-card,dai-link@0 {
+			format = "dsp_a";
+			mclk-fs = <512>;
+			//continuous-clock;
+			//bitclock-inversion;
+			//frame-inversion;
+			//bitclock-master = <&tdmacodec>;
+			//frame-master = <&tdmacodec>;
+			tdmacpu: cpu {
+				sound-dai = <&aml_tdma>;
+				dai-tdm-slot-tx-mask =
+							<1 1 1 1 1 1 1 1>;
+				dai-tdm-slot-rx-mask =
+							<1 1 1 1 1 1 1 1>;
+				dai-tdm-slot-num = <8>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <24576000>;
+			};
+			tdmacodec: codec {
+				sound-dai = <&dummy_codec &dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@1 {
+			format = "i2s";
+			mclk-fs = <256>;
+			//continuous-clock;
+			//bitclock-inversion;
+			//frame-inversion;
+			bitclock-master = <&aml_tdmb>;
+			frame-master = <&aml_tdmb>;
+			cpu {
+				sound-dai = <&aml_tdmb>;
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec &dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@2 {
+			format = "i2s";
+			mclk-fs = <256>;
+			continuous-clock;
+			//bitclock-inversion;
+			//frame-inversion;
+			bitclock-master = <&aml_tdmc>;
+			frame-master = <&aml_tdmc>;
+			cpu {
+				sound-dai = <&aml_tdmc>;
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec &dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@3 {
+			mclk-fs = <64>;
+			cpu {
+				sound-dai = <&aml_pdm>;
+			};
+			codec {
+				sound-dai = <&pdm_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@4 {
+			mclk-fs = <128>;
+			cpu {
+				sound-dai = <&aml_spdif>;
+				system-clock-frequency = <6144000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+		aml-audio-card,dai-link@5 {
+			mclk-fs = <128>;
+			cpu {
+				sound-dai = <&aml_spdif_b>;
+				system-clock-frequency = <6144000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+	};
+	audiolocker: locker {
+		compatible = "amlogic, audiolocker";
+		clocks = <&clkaudio CLKID_AUDIO_LOCKER_OUT
+				&clkaudio CLKID_AUDIO_LOCKER_IN
+				&clkaudio CLKID_AUDIO_MCLK_D
+				&clkaudio CLKID_AUDIO_MCLK_E
+				&clkc CLKID_MPLL1
+				&clkc CLKID_MPLL2>;
+		clock-names = "lock_out", "lock_in", "out_src",
+					"in_src", "out_calc", "in_ref";
+		interrupts = <GIC_SPI 1 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "irq";
+		frequency = <49000000>; /* pll */
+		dividor = <49>; /* locker's parent */
+		status = "disabled";
+	};
+	/* Audio Related end */
 }; /* end of / */
+
+&audiobus {
+	aml_tdma: tdma {
+		compatible = "amlogic, g12a-snd-tdma";
+		#sound-dai-cells = <0>;
+		dai-tdm-lane-slot-mask-in = <1 0>;
+		dai-tdm-lane-slot-mask-out = <0 1>;
+		dai-tdm-clk-sel = <0>;
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
+				&clkc CLKID_MPLL0>;
+		clock-names = "mclk", "clk_srcpll";
+		pinctrl-names = "tdm_pins";
+		pinctrl-0 = <&tdmout_a &tdmin_a>;
+	};
+
+	aml_tdmb: tdmb {
+		compatible = "amlogic, g12a-snd-tdmb";
+		#sound-dai-cells = <0>;
+		dai-tdm-lane-slot-mask-in = <1 1 1 1>;
+		dai-tdm-clk-sel = <1>;
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
+				&clkc CLKID_MPLL1>;
+		clock-names = "mclk", "clk_srcpll";
+		pinctrl-names = "tdm_pins";
+		pinctrl-0 = <&tdmb_mclk /*&tdmout_b &tdmin_b*/>;
+	};
+
+	aml_tdmc: tdmc {
+		compatible = "amlogic, g12a-snd-tdmc";
+		#sound-dai-cells = <0>;
+		dai-tdm-lane-slot-mask-in = <0 1 0 0>;
+		#dai-tdm-lane-slot-mask-out = <1 0 1 1>;
+		#dai-tdm-lane-oe-slot-mask-in = <0 0 0 0>;
+		dai-tdm-lane-oe-slot-mask-out = <1 0 0 0>;
+		dai-tdm-clk-sel = <2>;
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
+				&clkc CLKID_MPLL2>;
+		clock-names = "mclk", "clk_srcpll";
+		pinctrl-names = "tdm_pins";
+		pinctrl-0 = <&tdmc_mclk &tdmout_c &tdmin_c>;
+	};
+
+	aml_spdif: spdif {
+		compatible = "amlogic, g12a-snd-spdif-a";
+		#sound-dai-cells = <0>;
+		clocks = <&clkc CLKID_MPLL0
+				&clkc CLKID_FCLK_DIV4
+				&clkaudio CLKID_AUDIO_SPDIFIN
+				&clkaudio CLKID_AUDIO_SPDIFOUT
+				&clkaudio CLKID_AUDIO_SPDIFIN_CTRL
+				&clkaudio CLKID_AUDIO_SPDIFOUT_CTRL>;
+		clock-names = "sysclk", "fixed_clk", "gate_spdifin",
+				"gate_spdifout", "clk_spdifin", "clk_spdifout";
+		interrupts =
+				<GIC_SPI 87 IRQ_TYPE_EDGE_RISING>;
+
+		interrupt-names = "irq_spdifin";
+		pinctrl-names = "spdif_pins";
+		pinctrl-0 = <&spdifout &spdifin>;
+		status = "okay";
+	};
+	aml_spdif_b: spdif_b {
+		compatible = "amlogic, g12a-snd-spdif-b";
+		#sound-dai-cells = <0>;
+		clocks = <&clkc CLKID_MPLL0 /*CLKID_HIFI_PLL*/
+				&clkaudio CLKID_AUDIO_SPDIFOUTB
+				&clkaudio CLKID_AUDIO_SPDIFOUTB_CTRL>;
+		clock-names = "sysclk",
+				"gate_spdifout", "clk_spdifout";
+		pinctrl-names = "spdif_pins";
+		pinctrl-0 = <&spdifout_b>;
+		status = "okay";
+	};
+	aml_pdm: pdm {
+		compatible = "amlogic, g12a-snd-pdm";
+		#sound-dai-cells = <0>;
+		clocks = <&clkaudio CLKID_AUDIO_PDM
+			&clkc CLKID_FCLK_DIV3
+			&clkc CLKID_MPLL3
+			&clkaudio CLKID_AUDIO_PDMIN0
+			&clkaudio CLKID_AUDIO_PDMIN1>;
+		clock-names = "gate",
+			"sysclk_srcpll",
+			"dclk_srcpll",
+			"pdm_dclk",
+			"pdm_sysclk";
+		pinctrl-names = "pdm_pins";
+		pinctrl-0 = <&pdmin>;
+		filter_mode = <1>; /* mode 0~4, defalut:1 */
+		status = "okay";
+	};
+	aml_pwrdet: pwrdet {
+		compatible = "amlogic, g12a-power-detect";
+
+		interrupts = <GIC_SPI 155 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "pwrdet_irq";
+
+		/* pwrdet source sel
+		 * 7: loopback;
+		 * 6: tdmin_lb;
+		 * 5: reserved;
+		 * 4: pdmin;
+		 * 3: spdifin;
+		 * 2: tdmin_c;
+		 * 1: tdmin_b;
+		 * 0: tdmin_a;
+		 */
+		pwrdet_src = <4>;
+
+		hi_th = <0x70000>;
+		lo_th = <0x16000>;
+
+		status = "disabled";
+	};
+}; /* end of audiobus */
+
+&pinctrl_periphs {
+	tdmout_a: tdmout_a {
+		mux { /* GPIOX_11, GPIOX_10, GPIOX_8 */
+			groups = "tdma_sclk",
+				"tdma_fs",
+				"tdma_dout1";
+			function = "tdma_out";
+		};
+	};
+
+	tdmin_a: tdmin_a {
+		mux { /* GPIOX_9 */
+			groups = "tdma_din0";
+			function = "tdma_in";
+		};
+	};
+
+	tdmb_mclk: tdmb_mclk {
+		mux {
+			groups = "mclk0_a";
+			function = "mclk0";
+		};
+	};
+
+	tdmc_mclk: tdmc_mclk {
+		mux { /* GPIOZ_8 */
+			groups = "mclk1_z";
+			function = "mclk1";
+		};
+	};
+
+	tdmout_c:tdmout_c {
+		mux { /* gpioz_7, gpioz_6, GPIOZ_2, GPIOZ_4, GPIOZ_5*/
+			groups = "tdmc_sclk_z",
+				"tdmc_fs_z",
+				"tdmc_dout0_z"
+				/*,"tdmc_dout2_z",
+				 *"tdmc_dout3_z"
+				 */;
+			function = "tdmc_out";
+		};
+	};
+
+	tdmin_c:tdmin_c {
+		mux { /* GPIOZ_3 */
+			groups = "tdmc_din1_z";
+			function = "tdmc_in";
+		};
+	};
+
+	spdifin: spdifin {
+		mux {/* gpioa_10 */
+			groups = "spdif_in_a10";
+			function = "spdif_in";
+		};
+	};
+
+	spdifout: spdifout {
+		mux {/* gpioa_11 */
+			groups = "spdif_out_a11";
+			function = "spdif_out";
+		};
+	};
+
+	spdifout_b: spdifout_b {
+		mux { /* gpioa_13 */
+			groups = "spdif_out_a13";
+			function = "spdif_out";
+		};
+	};
+
+	pdmin: pdmin {
+		mux { /* gpioa_5, gpioa_6, gpioa_7, gpioa_8, gpioa_9*/
+			groups = "pdm_din0_a",
+			"pdm_din1_a",
+			"pdm_din2_a",
+			"pdm_din3_a",
+			"pdm_dclk_a";
+			function = "pdm";
+		};
+	};
+
+}; /* end of pinctrl_periphs */
+
+&pinctrl_aobus {
+	tdmout_b: tdmout_b {
+		mux { /* GPIOAO_7, GPIOAO_8, GPIOAO_4 */
+			groups = "tdmb_fs_ao",
+				"tdmb_fs_ao",
+				"tdmb_dout0_ao";
+			function = "tdmb_out_ao";
+		};
+	};
+
+	tdmin_b:tdmin_b {
+		mux {
+			groups = "tdmb_din2_ao";
+			function = "tdmb_in_ao";
+		};
+	};
+};  /* end of pinctrl_aobus */
+/* Audio Related End */
 
 &aobus{
 	uart_AO: serial@3000 {

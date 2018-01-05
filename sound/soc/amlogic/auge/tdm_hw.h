@@ -35,6 +35,14 @@ struct pcm_setting {
 	unsigned int pcm_width;
 	unsigned int lane_mask_out;
 	unsigned int lane_mask_in;
+	/* lane oe (out pad) mask */
+	unsigned int lane_oe_mask_out;
+	unsigned int lane_oe_mask_in;
+	/* lane in selected from out, for intrenal loopback */
+	unsigned int lane_lb_mask_in;
+
+	/* eco or sclk_ws_inv */
+	bool sclk_ws_inv;
 };
 
 extern void aml_tdm_enable(
@@ -63,9 +71,14 @@ extern void aml_tdm_set_format(
 	unsigned int capture_active,
 	unsigned int playback_active);
 
-extern void aml_tdm_set_slot(
+extern void aml_tdm_set_slot_out(
 	struct aml_audio_controller *actrl,
-	int slots, int slot_width, int index);
+	int index, int slots, int slot_width,
+	int force_oe, int oe_val);
+
+extern void aml_tdm_set_slot_in(
+	struct aml_audio_controller *actrl,
+	int index, int in_src, int slot_width);
 
 extern void aml_tdm_set_channel_mask(
 	struct aml_audio_controller *actrl,
@@ -86,4 +99,10 @@ extern void aml_tdm_set_lrclkdiv(
 extern void tdm_enable(int tdm_index, int is_enable);
 
 extern void tdm_fifo_enable(int tdm_index, int is_enable);
+
+extern void aml_tdmout_select_aed(bool enable, int tdmout_id);
+
+extern void aml_tdmout_get_aed_info(int tdmout_id,
+	int *bitwidth, int *frddrtype);
+
 #endif

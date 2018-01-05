@@ -1,6 +1,8 @@
 obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						audio_io.o \
-						clocks.o \
+						audio_clks.o \
+						axg,clocks.o \
+						g12a,clocks.o \
 						card.o \
 						card_utils.o \
 						tdm.o \
@@ -13,4 +15,12 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						iomap.o \
 						ddr_mngr.o \
 						loopback_hw.o \
-						audio_utils.o
+						audio_utils.o \
+						locker.o \
+						locker_hw.o \
+						resample.o \
+						resample_hw.o \
+						effects.o \
+						effects_hw.o \
+						pwrdet.o \
+						pwrdet_hw.o

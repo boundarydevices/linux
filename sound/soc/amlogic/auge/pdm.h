@@ -38,6 +38,18 @@
 						SNDRV_PCM_FMTBIT_S24_LE |\
 						SNDRV_PCM_FMTBIT_S32_LE)
 
+enum {
+	PDM_RUN_MUTE_VAL = 0,
+	PDM_RUN_MUTE_CHMASK,
+
+	PDM_RUN_MAX,
+};
+
+struct pdm_chipinfo {
+	/* pdm supports mute function */
+	bool mute_fn;
+};
+
 struct aml_pdm {
 	struct device *dev;
 	struct aml_audio_controller *actrl;
@@ -56,6 +68,9 @@ struct aml_pdm {
 	 * the group delay (latency) is from high to low.
 	 */
 	int filter_mode;
+
+	struct pdm_chipinfo *chipinfo;
+	struct snd_kcontrol *controls[PDM_RUN_MAX];
 };
 
 #endif /*__AML_PDM_H__*/

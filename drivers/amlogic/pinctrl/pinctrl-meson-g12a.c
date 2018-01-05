@@ -1184,9 +1184,9 @@ static const char * const tdmc_in_groups[] = {
 };
 
 static const char * const tdmc_out_groups[] = {
-	"tdmc_sclk_a", "tdmc_fs_a", "tdmc_fs_a", "tdmc_dout1_a",
+	"tdmc_sclk_a", "tdmc_fs_a", "tdmc_dout0_a", "tdmc_dout1_a",
 	"tdmc_dout2_a", "tdmc_dout3_a", "tdmc_slv_sclk_a", "tdmc_slv_fs_a",
-	"tdmc_sclk_z", "tdmc_fs_z", "tdmc_fs_z", "tdmc_dout1_z",
+	"tdmc_sclk_z", "tdmc_fs_z", "tdmc_dout0_z", "tdmc_dout1_z",
 	"tdmc_dout2_z", "tdmc_dout3_z", "tdmc_slv_sclk_z", "tdmc_slv_fs_z",
 };
 

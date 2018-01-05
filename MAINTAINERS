@@ -14312,3 +14312,14 @@ F:      drivers/amlogic/media/common/vpu/vpu_power_init.c
 AMLOGIC dts for g12a skt
 M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/g12a_skt.dts
+
+AMLOGIC G12A Audio DRIVER
+M:	Xing Wang <xing.wang@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/axg_*.dts
+F:	arch/arm64/boot/dts/amlogic/g12a_pxp.dts
+F:	arch/arm64/boot/dts/amlogic/mesong12a.dtsi
+F:	drivers/amlogic/pinctrl/pinctrl-meson-g12a.c
+F:	include/dt-bindings/clock/amlogic,g12a-audio-clk.h
+F:	include/linux/amlogic/media/sound/auge_utils.h
+F:	sound/soc/amlogic/auge/*
+F:	sound/soc/codecs/amlogic/aml_codec_t9015.c

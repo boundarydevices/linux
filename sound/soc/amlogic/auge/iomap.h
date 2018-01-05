@@ -21,22 +21,35 @@
 enum{
 	IO_PDM_BUS = 0,
 	IO_AUDIO_BUS,
+	IO_AUDIO_LOCKER,
+	IO_EQDRC_BUS,
+	IO_RESET,
 
 	IO_MAX,
 };
 
 extern int aml_pdm_read(unsigned int reg);
-
 extern void aml_pdm_write(unsigned int reg, unsigned int val);
-
 extern void aml_pdm_update_bits(unsigned int reg,
 	unsigned int mask, unsigned int val);
 
 extern int audiobus_read(unsigned int reg);
-
 extern void audiobus_write(unsigned int reg, unsigned int val);
-
 extern void audiobus_update_bits(unsigned int reg,
 	unsigned int mask, unsigned int val);
 
+extern int audiolocker_read(unsigned int reg);
+extern void audiolocker_write(unsigned int reg, unsigned int val);
+extern void audiolocker_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val);
+
+extern int eqdrc_read(unsigned int reg);
+extern void eqdrc_write(unsigned int reg, unsigned int val);
+extern void eqdrc_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val);
+
+extern int audioreset_read(unsigned int reg);
+extern void audioreset_write(unsigned int reg, unsigned int val);
+extern void audioreset_update_bits(unsigned int reg,
+	unsigned int mask, unsigned int val);
 #endif

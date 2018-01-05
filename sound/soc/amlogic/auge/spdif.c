@@ -22,6 +22,7 @@
 #include <linux/errno.h>
 #include <linux/ioctl.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/clk.h>
 #include <sound/core.h>
@@ -38,6 +39,24 @@
 
 #define DRV_NAME "aml_spdif"
 
+#define SPDIF_A	0
+#define SPDIF_B	1
+
+struct spdif_chipinfo {
+	unsigned int id;
+
+	/* add ch_cnt to ch_num */
+	bool chnum_en;
+	/* Reg_clr_interrupt[7:0] for each bit of irq_status[7:0]; */
+	bool clr_irq_bits;
+	/* find PaPb */
+	bool irq_papb;
+	/* reg_hold_start_en; 1: add delay to match TDM out when share buff; */
+	bool hold_start;
+	/* eq/drc */
+	bool eq_drc_en;
+};
+
 struct aml_spdif {
 	struct pinctrl *pin_ctl;
 	struct aml_audio_controller *actrl;
@@ -53,6 +72,9 @@ struct aml_spdif {
 	int irq_spdifin;
 	struct toddr *tddr;
 	struct frddr *fddr;
+
+	unsigned int id;
+	struct spdif_chipinfo *chipinfo;
 };
 
 static const struct snd_pcm_hardware aml_spdif_hardware = {
@@ -297,7 +319,9 @@ static int aml_dai_spdif_startup(
 
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
 
-	aml_spdif_fifo_reset(p_spdif->actrl, substream->stream);
+	aml_spdif_fifo_reset(p_spdif->actrl,
+		substream->stream,
+		p_spdif->id);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		/* enable clock gate */
@@ -426,12 +450,14 @@ static int aml_dai_spdif_prepare(
 
 		// to ddr spdifin
 		aml_toddr_select_src(to, SPDIFIN);
-		aml_toddr_set_format(to, toddr_type, msb, lsb);
+		aml_toddr_set_format(to, toddr_type, msb, lsb,
+			runtime->channels,
+			bit_depth);
 		aml_toddr_set_fifos(to, 0x40);
 	}
 
 	aml_spdif_fifo_ctrl(p_spdif->actrl, bit_depth,
-			substream->stream, fifo_id);
+			substream->stream, p_spdif->id, fifo_id);
 
 	return 0;
 }
@@ -453,7 +479,7 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 			aml_toddr_enable(p_spdif->tddr, 1);
 		}
 		aml_spdif_enable(p_spdif->actrl,
-			substream->stream, true);
+			substream->stream, p_spdif->id, true);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
@@ -466,7 +492,7 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 			aml_toddr_enable(p_spdif->tddr, 0);
 		}
 		aml_spdif_enable(p_spdif->actrl,
-			substream->stream, false);
+			substream->stream, p_spdif->id, false);
 		break;
 	default:
 		return -EINVAL;
@@ -505,6 +531,8 @@ static int aml_dai_set_spdif_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	return 0;
 }
 
+/*#define G12A_PTM*/
+
 static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 {
 	unsigned int mpll_freq = 0;
@@ -515,6 +543,10 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 		unsigned int mul = 4;
 
 		mpll_freq = p_spdif->sysclk_freq * mul;
+
+#ifdef G12A_PTM
+		mpll_freq = p_spdif->sysclk_freq * 57;
+#endif
 		clk_set_rate(p_spdif->sysclk, mpll_freq);
 		clk_set_rate(p_spdif->clk_spdifout,
 			p_spdif->sysclk_freq);
@@ -549,81 +581,108 @@ static struct snd_soc_dai_ops aml_dai_spdif_ops = {
 #define AML_DAI_SPDIF_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE |\
 		SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
-static struct snd_soc_dai_driver aml_spdif_dai = {
-	.name = "SPDIF",
-	.id = 0,
-	.probe = aml_dai_spdif_probe,
-	.remove = aml_dai_spdif_remove,
-	.playback = {
-	      .channels_min = 1,
-	      .channels_max = 2,
-	      .rates = AML_DAI_SPDIF_RATES,
-	      .formats = AML_DAI_SPDIF_FORMATS,
+static struct snd_soc_dai_driver aml_spdif_dai[] = {
+	{
+		.name = "SPDIF",
+		.id = 0,
+		.probe = aml_dai_spdif_probe,
+		.remove = aml_dai_spdif_remove,
+		.playback = {
+		      .channels_min = 1,
+		      .channels_max = 2,
+		      .rates = AML_DAI_SPDIF_RATES,
+		      .formats = AML_DAI_SPDIF_FORMATS,
+		},
+		.capture = {
+		     .channels_min = 1,
+			 /* spdif 2ch + tdmin_lb 8ch(fake for loopback) */
+		     .channels_max = 10,
+		     .rates = AML_DAI_SPDIF_RATES,
+		     .formats = AML_DAI_SPDIF_FORMATS,
+		},
+		.ops = &aml_dai_spdif_ops,
 	},
-	.capture = {
-	     .channels_min = 1,
-		 /* spdif 2ch + tdmin_lb 8ch(fake for loopback) */
-	     .channels_max = 10,
-	     .rates = AML_DAI_SPDIF_RATES,
-	     .formats = AML_DAI_SPDIF_FORMATS,
-	},
-	.ops = &aml_dai_spdif_ops,
+	{
+		.name = "SPDIF-B",
+		.id = 1,
+		.probe = aml_dai_spdif_probe,
+		.remove = aml_dai_spdif_remove,
+		.playback = {
+			  .channels_min = 1,
+			  .channels_max = 2,
+			  .rates = AML_DAI_SPDIF_RATES,
+			  .formats = AML_DAI_SPDIF_FORMATS,
+		},
+		.ops = &aml_dai_spdif_ops,
+	}
 };
 
 static const struct snd_soc_component_driver aml_spdif_component = {
 	.name		= DRV_NAME,
 };
 
-static int aml_spdif_clks_parse_of(struct aml_spdif *p_spdif)
+static int aml_spdif_parse_of(struct platform_device *pdev)
 {
-	struct device *dev = p_spdif->dev;
+	struct device *dev = &pdev->dev;
+	struct aml_spdif *p_spdif = dev_get_drvdata(dev);
+
 	int ret = 0;
 
-	/* clock gate */
-	p_spdif->gate_spdifin = devm_clk_get(dev, "gate_spdifin");
-	if (IS_ERR(p_spdif->gate_spdifin)) {
-		dev_err(dev, "Can't get spdifin gate\n");
-		return PTR_ERR(p_spdif->gate_spdifin);
+	/* clock for spdif in */
+	if (p_spdif->id == 0) {
+		/* clock gate */
+		p_spdif->gate_spdifin = devm_clk_get(dev, "gate_spdifin");
+		if (IS_ERR(p_spdif->gate_spdifin)) {
+			dev_err(dev, "Can't get spdifin gate\n");
+			return PTR_ERR(p_spdif->gate_spdifin);
+		}
+		/* pll */
+		p_spdif->fixed_clk = devm_clk_get(dev, "fixed_clk");
+		if (IS_ERR(p_spdif->fixed_clk)) {
+			dev_err(dev, "Can't retrieve fixed_clk\n");
+			return PTR_ERR(p_spdif->fixed_clk);
+		}
+		/* spdif in clk */
+		p_spdif->clk_spdifin = devm_clk_get(dev, "clk_spdifin");
+		if (IS_ERR(p_spdif->clk_spdifin)) {
+			dev_err(dev, "Can't retrieve spdifin clock\n");
+			return PTR_ERR(p_spdif->clk_spdifin);
+		}
+		ret = clk_set_parent(p_spdif->clk_spdifin, p_spdif->fixed_clk);
+		if (ret) {
+			dev_err(dev,
+				"Can't set clk_spdifin parent clock\n");
+			ret = PTR_ERR(p_spdif->clk_spdifin);
+			return ret;
+		}
+
+		/* irqs */
+		p_spdif->irq_spdifin =
+			platform_get_irq_byname(pdev, "irq_spdifin");
+		if (p_spdif->irq_spdifin < 0)
+			dev_err(dev, "platform_get_irq_byname failed\n");
+
 	}
 
+	/* clock for spdif in */
+	/* clock gate */
 	p_spdif->gate_spdifout = devm_clk_get(dev, "gate_spdifout");
 	if (IS_ERR(p_spdif->gate_spdifout)) {
 		dev_err(dev, "Can't get spdifout gate\n");
 		return PTR_ERR(p_spdif->gate_spdifout);
 	}
-
+	/* pll */
 	p_spdif->sysclk = devm_clk_get(dev, "sysclk");
 	if (IS_ERR(p_spdif->sysclk)) {
 		dev_err(dev, "Can't retrieve sysclk clock\n");
 		return PTR_ERR(p_spdif->sysclk);
 	}
-
-	p_spdif->fixed_clk = devm_clk_get(dev, "fixed_clk");
-	if (IS_ERR(p_spdif->fixed_clk)) {
-		dev_err(dev, "Can't retrieve fixed_clk\n");
-		return PTR_ERR(p_spdif->fixed_clk);
-	}
-
-	p_spdif->clk_spdifin = devm_clk_get(dev, "clk_spdifin");
-	if (IS_ERR(p_spdif->clk_spdifin)) {
-		dev_err(dev, "Can't retrieve spdifin clock\n");
-		return PTR_ERR(p_spdif->clk_spdifin);
-	}
-
+	/* spdif out clock */
 	p_spdif->clk_spdifout = devm_clk_get(dev, "clk_spdifout");
 	if (IS_ERR(p_spdif->clk_spdifout)) {
 		dev_err(dev, "Can't retrieve spdifout clock\n");
 		return PTR_ERR(p_spdif->clk_spdifout);
 	}
-
-	ret = clk_set_parent(p_spdif->clk_spdifin, p_spdif->fixed_clk);
-	if (ret) {
-		dev_err(dev,
-			"Can't set clk_spdifin parent clock\n");
-		ret = PTR_ERR(p_spdif->clk_spdifin);
-		return ret;
-	}
-
 	ret = clk_set_parent(p_spdif->clk_spdifout, p_spdif->sysclk);
 	if (ret) {
 		dev_err(dev,
@@ -632,8 +691,54 @@ static int aml_spdif_clks_parse_of(struct aml_spdif *p_spdif)
 		return ret;
 	}
 
+	/* spdif pinmux */
+	p_spdif->pin_ctl = devm_pinctrl_get_select(dev, "spdif_pins");
+	if (IS_ERR(p_spdif->pin_ctl)) {
+		dev_info(dev, "aml_spdif_get_pins error!\n");
+		return PTR_ERR(p_spdif->pin_ctl);
+	}
+
 	return 0;
 }
+
+struct spdif_chipinfo axg_spdif_chipinfo = {
+	.id = SPDIF_A,
+};
+
+struct spdif_chipinfo g12a_spdif_a_chipinfo = {
+	.id           = SPDIF_A,
+	.chnum_en     = true,
+	.clr_irq_bits = true,
+	.irq_papb     = true,
+	.hold_start   = true,
+	.eq_drc_en    = true,
+};
+
+struct spdif_chipinfo g12a_spdif_b_chipinfo = {
+	.id           = SPDIF_B,
+	.chnum_en     = true,
+	.clr_irq_bits = true,
+	.irq_papb     = true,
+	.hold_start   = true,
+	.eq_drc_en    = true,
+};
+
+static const struct of_device_id aml_spdif_device_id[] = {
+	{
+		.compatible = "amlogic, axg-snd-spdif",
+		.data = &axg_spdif_chipinfo,
+	},
+	{
+		.compatible = "amlogic, g12a-snd-spdif-a",
+		.data = &g12a_spdif_a_chipinfo,
+	},
+	{
+		.compatible = "amlogic, g12a-snd-spdif-b",
+		.data = &g12a_spdif_b_chipinfo,
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, aml_spdif_device_id);
 
 static int aml_spdif_platform_probe(struct platform_device *pdev)
 {
@@ -643,7 +748,9 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct aml_audio_controller *actrl = NULL;
 	struct aml_spdif *aml_spdif = NULL;
+	struct spdif_chipinfo *p_spdif_chipinfo;
 	int ret = 0;
+
 
 	aml_spdif = devm_kzalloc(dev, sizeof(struct aml_spdif), GFP_KERNEL);
 	if (!aml_spdif)
@@ -651,6 +758,17 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 
 	aml_spdif->dev = dev;
 	dev_set_drvdata(dev, aml_spdif);
+
+	/* match data */
+	p_spdif_chipinfo = (struct spdif_chipinfo *)
+		of_device_get_match_data(dev);
+	if (p_spdif_chipinfo) {
+		aml_spdif->id = p_spdif_chipinfo->id;
+		aml_spdif->chipinfo = p_spdif_chipinfo;
+	} else
+		dev_warn_once(dev,
+			"check whether to update spdif chipinfo\n");
+	pr_info("%s, spdif ID = %u\n", __func__, aml_spdif->id);
 
 	/* get audio controller */
 	node_prt = of_get_parent(node);
@@ -663,24 +781,12 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 				platform_get_drvdata(pdev_parent);
 	aml_spdif->actrl = actrl;
 
-	ret = aml_spdif_clks_parse_of(aml_spdif);
+	ret = aml_spdif_parse_of(pdev);
 	if (ret)
 		return -EINVAL;
 
-	/* irqs */
-	aml_spdif->irq_spdifin = platform_get_irq_byname(pdev, "irq_spdifin");
-	if (aml_spdif->irq_spdifin < 0)
-		dev_err(dev, "platform_get_irq_byname failed\n");
-
-	/* spdif pinmux */
-	aml_spdif->pin_ctl = devm_pinctrl_get_select(dev, "spdif_pins");
-	if (IS_ERR(aml_spdif->pin_ctl)) {
-		dev_info(dev, "aml_spdif_get_pins error!\n");
-		return PTR_ERR(aml_spdif->pin_ctl);
-	}
-
 	ret = devm_snd_soc_register_component(dev, &aml_spdif_component,
-					 &aml_spdif_dai, 1);
+		&aml_spdif_dai[aml_spdif->id], 1);
 	if (ret) {
 		dev_err(dev, "devm_snd_soc_register_component failed\n");
 		return ret;
@@ -690,12 +796,6 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 
 	return devm_snd_soc_register_platform(dev, &aml_spdif_platform);
 }
-
-static const struct of_device_id aml_spdif_device_id[] = {
-	{ .compatible = "amlogic, snd-spdif" },
-	{},
-};
-MODULE_DEVICE_TABLE(of, aml_spdif_device_id);
 
 struct platform_driver aml_spdif_driver = {
 	.driver = {

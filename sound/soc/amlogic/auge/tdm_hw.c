@@ -26,6 +26,9 @@
 #define MST_CLK_INVERT_PH2_TDMOUT_BCLK    (1 << 4)
 #define MST_CLK_INVERT_PH2_TDMOUT_FCLK    (1 << 5)
 
+/*#define G12A_PTM*/
+/*#define G12A_PTM_LB_INTERNAL*/
+
 /* without audio handler, it should be improved */
 void aml_tdm_enable(
 	struct aml_audio_controller *actrl,
@@ -226,9 +229,18 @@ void aml_tdm_set_format(
 		0xff<<20,
 		valb<<24|valf<<20);
 
+	if (p_config->sclk_ws_inv)
+		aml_audiobus_update_bits(actrl,
+			reg_out,
+			1 << 28,
+			0 << 28);
+
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
-		bclkout_skew = 1;
+		if (p_config->sclk_ws_inv)
+			bclkout_skew = 2;
+		else
+			bclkout_skew = 1;
 		bclkin_skew = 3;
 
 		clkctl |= MST_CLK_INVERT_PH0_PAD_FCLK;
@@ -308,6 +320,9 @@ void aml_tdm_set_format(
 	pr_info("sclk_ph0 (pad) clk ctl set:%x\n", clkctl);
 	/* clk ctrl: delay line and invert clk */
 	/*clkctl |= 0x88880000;*/
+#ifdef G12A_PTM
+	clkctl |= 0x77777700;
+#endif
 	if (master_mode) {
 		off_set = EE_AUDIO_MST_B_SCLK_CTRL1 - EE_AUDIO_MST_A_SCLK_CTRL1;
 		reg_out = EE_AUDIO_MST_A_SCLK_CTRL1 + off_set * id;
@@ -325,8 +340,13 @@ void aml_tdm_set_format(
 		aml_audiobus_update_bits(actrl, reg_out,
 			0x3<<30, 0x3<<30);
 
-		aml_audiobus_update_bits(actrl, reg_out,
-			0x1<<29, binv<<29);
+		if (p_config->sclk_ws_inv)
+			aml_audiobus_update_bits(actrl, reg_out,
+				0x1 << 28,
+				0x1 << 28);
+		else
+			aml_audiobus_update_bits(actrl, reg_out,
+				0x1<<29, binv<<29);
 
 		off_set = EE_AUDIO_TDMOUT_B_CTRL1 - EE_AUDIO_TDMOUT_A_CTRL1;
 		reg_out = EE_AUDIO_TDMOUT_A_CTRL1 + off_set * id;
@@ -363,9 +383,10 @@ void aml_tdm_set_format(
 	}
 }
 
-void aml_tdm_set_slot(
+void aml_tdm_set_slot_out(
 	struct aml_audio_controller *actrl,
-	int slots, int slot_width, int index)
+	int index, int slots, int slot_width,
+	int force_oe, int oe_val)
 {
 	unsigned int reg, offset;
 
@@ -374,10 +395,38 @@ void aml_tdm_set_slot(
 	aml_audiobus_update_bits(actrl, reg,
 				0x3ff, ((slots - 1) << 5) | (slot_width - 1));
 
+	if (force_oe) {
+		aml_audiobus_update_bits(actrl, reg, 0xf << 24, force_oe << 24);
+
+		/* force oe val, in or out */
+		if (oe_val) {
+			reg = EE_AUDIO_TDMOUT_A_CTRL1 + offset * index;
+			aml_audiobus_update_bits(actrl, reg,
+				0xf << 0, oe_val << 0);
+		}
+	}
+}
+
+void aml_tdm_set_slot_in(
+	struct aml_audio_controller *actrl,
+	int index, int in_src, int slot_width)
+{
+	unsigned int reg, offset;
+
 	offset = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
 	reg = EE_AUDIO_TDMIN_A_CTRL + offset * index;
+
+#ifdef G12A_PTM_LB_INTERNAL
+	if (index == 0) /*TODO: ptm, tdma dsp_a lb*/
+		aml_audiobus_update_bits(actrl, reg,
+			0xf<<20|0x1f, 6<<20|(slot_width-1));
+	if (index == 1) /*TODO: ptm, tdmb i2s lb*/
+		aml_audiobus_update_bits(actrl, reg,
+			0xf<<20|0x1f, 7<<20|(slot_width-1));
+	else
+#endif
 	aml_audiobus_update_bits(actrl, reg,
-		0xf<<20|0x1f, index<<20|(slot_width-1));
+		0xf << 20 | 0x1f, in_src << 20 | (slot_width-1));
 }
 
 void aml_tdm_set_channel_mask(
@@ -450,4 +499,31 @@ void aml_tdm_set_lrclkdiv(
 	aml_audiobus_update_bits(actrl, reg,
 		(3 << 30)|(0x3ff << 20),
 		(3 << 30)|(ratio << 20));
+}
+
+void aml_tdmout_select_aed(bool enable, int tdmout_id)
+{
+	unsigned int reg, offset;
+
+	/* select eq_drc output */
+	offset = EE_AUDIO_TDMOUT_B_CTRL1
+			- EE_AUDIO_TDMOUT_A_CTRL1;
+	reg = EE_AUDIO_TDMOUT_A_CTRL1 + offset * tdmout_id;
+	audiobus_update_bits(reg, 0x1 << 31, enable << 31);
+}
+
+void aml_tdmout_get_aed_info(int tdmout_id,
+	int *bitwidth, int *frddrtype)
+{
+	unsigned int reg, offset, val;
+
+	offset = EE_AUDIO_TDMOUT_B_CTRL1
+			- EE_AUDIO_TDMOUT_A_CTRL1;
+	reg = EE_AUDIO_TDMOUT_A_CTRL1 + offset * tdmout_id;
+
+	val = audiobus_read(reg);
+	if (bitwidth)
+		*bitwidth = (val >> 8) & 0x1f;
+	if (frddrtype)
+		*frddrtype = (val >> 4) & 0x7;
 }

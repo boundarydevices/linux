@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/string.h>
 #include <linux/timer.h>
@@ -32,11 +33,21 @@
 #include "../../../../drivers/gpio/gpiolib.h"
 #include "card.h"
 
+#include "effects.h"
+
 struct aml_jack {
 	struct snd_soc_jack jack;
 	struct snd_soc_jack_pin pin;
 	struct snd_soc_jack_gpio gpio;
+};
 
+struct aml_chipset_info {
+	/* INT address separated from start address for ddr */
+	bool ddr_addr_separated;
+	/* two spdif out ? */
+	bool spdif_b;
+	/* eq/drc function */
+	bool eqdrc_fn;
 };
 
 struct aml_card_data {
@@ -67,6 +78,8 @@ struct aml_card_data {
 	int micphone_gpio_det;
 	int mic_detect_flag;
 	bool mic_det_enable;
+
+	struct aml_chipset_info *chipinfo;
 };
 
 #define aml_priv_to_dev(priv) ((priv)->snd_card.dev)
@@ -817,6 +830,24 @@ card_parse_end:
 	return ret;
 }
 
+
+static struct aml_chipset_info g12a_chipset_info = {
+	.spdif_b        = true,
+	.eqdrc_fn       = true,
+};
+
+static const struct of_device_id auge_of_match[] = {
+	{
+		.compatible = "amlogic, axg-sound-card",
+	},
+	{
+		.compatible = "amlogic, g12a-sound-card",
+		.data       = &g12a_chipset_info,
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, auge_of_match);
+
 static int aml_card_probe(struct platform_device *pdev)
 {
 	struct aml_card_data *priv;
@@ -895,6 +926,13 @@ static int aml_card_probe(struct platform_device *pdev)
 					sizeof(priv->dai_props->codec_dai));
 	}
 
+
+	priv->chipinfo = (struct aml_chipset_info *)
+		of_device_get_match_data(&pdev->dev);
+
+	if (!priv->chipinfo)
+		pr_warn_once("check whether to update sound card init data\n");
+
 	snd_soc_card_set_drvdata(&priv->snd_card, priv);
 
 	ret = devm_snd_soc_register_card(&pdev->dev, &priv->snd_card);
@@ -910,6 +948,13 @@ static int aml_card_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	if (priv->chipinfo && priv->chipinfo->eqdrc_fn) {
+		pr_info("eq/drc function enable\n");
+		ret = card_add_eqdrc_kcontrols(&priv->snd_card);
+		if (ret < 0)
+			pr_warn_once("Failed to add audio effects controls\n");
+	} else
+		pr_info("not support eq/drc function\n");
 
 	if (priv->hp_det_enable == 1 || priv->mic_det_enable == 1) {
 		audio_jack_detect(priv);
@@ -935,17 +980,11 @@ static int aml_card_remove(struct platform_device *pdev)
 	return aml_card_clean_reference(card);
 }
 
-static const struct of_device_id aml_of_match[] = {
-	{ .compatible = "amlogic, axg-sound-card", },
-	{},
-};
-MODULE_DEVICE_TABLE(of, aml_of_match);
-
 static struct platform_driver aml_card = {
 	.driver = {
 		.name = "asoc-aml-card",
 		.pm = &snd_soc_pm_ops,
-		.of_match_table = aml_of_match,
+		.of_match_table = auge_of_match,
 	},
 	.probe = aml_card_probe,
 	.remove = aml_card_remove,

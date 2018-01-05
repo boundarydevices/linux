@@ -14,16 +14,24 @@
  * more details.
  *
  */
+#undef pr_fmt
+#define pr_fmt(fmt) "audio_ddr_mngr: " fmt
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/slab.h>
+#include <linux/of_device.h>
+
 #include "regs.h"
 #include "ddr_mngr.h"
 #include "audio_utils.h"
 
-#define DRV_NAME "aml_audio_ddr_manager"
+#include "resample_hw.h"
+#include "effects_hw.h"
+#include "pwrdet_hw.h"
+
+#define DRV_NAME "audio-ddr-manager"
 
 static DEFINE_MUTEX(ddr_mutex);
 #if 0
@@ -46,6 +54,18 @@ struct ddr_desc {
 	struct clk *ddr_arb;
 };
 #endif
+
+struct ddr_chipinfo {
+	/* INT and Start address separated */
+	bool addr_separated;
+	/* force finished */
+	bool force_finished;
+	/* same source */
+	bool same_src_fn;
+	/* insert channel number */
+	bool insert_chnum;
+};
+
 struct toddr {
 	//struct ddr_desc dscrpt;
 	struct device *dev;
@@ -54,11 +74,40 @@ struct toddr {
 	unsigned int msb_bit;
 	unsigned int lsb_bit;
 	unsigned int reg_base;
+	unsigned int channels;
+	unsigned int bitdepth;
 	enum toddr_src src;
+	unsigned int fifo_id;
+
 	int is_lb; /* check whether for loopback */
 	int irq;
 	bool in_use: 1;
 	struct aml_audio_controller *actrl;
+	struct ddr_chipinfo *chipinfo;
+};
+
+enum status {
+	DISABLED,
+	READY,    /* controls has set enable, but ddr is not in running */
+	RUNNING,
+};
+
+struct toddr_attach {
+	bool enable;
+	int status;
+	/* which module should be attached,
+	 * check which toddr in use should be attached
+	 */
+	enum toddr_src attach_module;
+};
+
+struct frddr_attach {
+	bool enable;
+	int status;
+	/* which module for attach ,
+	 * check which frddr in use should be added
+	 */
+	enum frddr_dest attach_module;
 };
 
 struct frddr {
@@ -70,11 +119,24 @@ struct frddr {
 	unsigned int fifo_id;
 	int irq;
 	bool in_use;
+	struct ddr_chipinfo *chipinfo;
 };
 
 #define DDRMAX 3
 static struct frddr frddrs[DDRMAX];
 static struct toddr toddrs[DDRMAX];
+
+/* resample */
+static struct toddr_attach attach_resample;
+static void aml_check_resample(bool enable);
+
+/* power detect */
+static struct toddr_attach attach_pwrdet;
+static void aml_check_pwrdet(bool enable);
+
+/* Audio EQ DRC */
+static struct frddr_attach attach_aed;
+static void aml_check_aed(bool enable);
 
 /* to DDRS */
 static struct toddr *register_toddr_l(struct device *dev,
@@ -178,6 +240,22 @@ int fetch_toddr_index_by_src(int toddr_src)
 	return -1;
 }
 
+struct toddr *fetch_toddr_by_src(int toddr_src)
+{
+	int i;
+
+	for (i = 0; i < DDRMAX; i++) {
+		if (toddrs[i].in_use
+			&& (toddrs[i].src == toddr_src)) {
+			return &toddrs[i];
+		}
+	}
+
+	pr_err("invalid toddr src\n");
+
+	return NULL;
+}
+
 struct toddr *aml_audio_register_toddr(struct device *dev,
 	struct aml_audio_controller *actrl,
 	irq_handler_t handler, void *data)
@@ -219,6 +297,13 @@ int aml_toddr_set_buf(struct toddr *to, unsigned int start,
 	reg = calc_toddr_address(EE_AUDIO_TODDR_A_FINISH_ADDR, reg_base);
 	aml_audiobus_write(actrl, reg, end);
 
+	/* int address */
+	if (to->chipinfo
+		&& to->chipinfo->addr_separated) {
+		reg = calc_toddr_address(EE_AUDIO_TODDR_A_INIT_ADDR, reg_base);
+		aml_audiobus_write(actrl, reg, start);
+	}
+
 	return 0;
 }
 
@@ -254,6 +339,12 @@ void aml_toddr_enable(struct toddr *to, bool enable)
 
 	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl,	reg, 1<<31, enable<<31);
+
+	/* check resample */
+	aml_check_resample(enable);
+
+	/* check power detect */
+	aml_check_pwrdet(enable);
 }
 
 void aml_toddr_select_src(struct toddr *to, enum toddr_src src)
@@ -287,15 +378,148 @@ void aml_toddr_set_fifos(struct toddr *to, unsigned int thresh)
 }
 
 void aml_toddr_set_format(struct toddr *to,
-	unsigned int type, unsigned int msb, unsigned int lsb)
+	unsigned int type, unsigned int msb, unsigned int lsb,
+	int ch_num, int bit_depth)
 {
 	struct aml_audio_controller *actrl = to->actrl;
 	unsigned int reg_base = to->reg_base;
 	unsigned int reg;
 
+	to->channels = ch_num;
+	to->bitdepth = bit_depth;
+
 	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl, reg, 0x1fff<<3,
 				type<<13|msb<<8|lsb<<3);
+}
+
+static void aml_set_resample(struct toddr *to,
+	bool enable)
+{
+	struct aml_audio_controller *actrl = to->actrl;
+	unsigned int reg_base = to->reg_base;
+	unsigned int reg;
+
+	if (enable) {
+		/* channels and bit depth for resample */
+		resample_format_set(to->channels, to->bitdepth);
+
+		/* toddr index for resample */
+		resample_src_select(to->fifo_id);
+	}
+
+	/* resample enable or not */
+	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL0, reg_base);
+	aml_audiobus_update_bits(actrl, reg, 0x1 << 30, enable << 30);
+}
+
+void aml_resample_enable(bool enable, int resample_module)
+{
+	/* when try to enable resample, if toddr is not in used,
+	 * set resample status as ready
+	 */
+	attach_resample.enable = enable;
+	attach_resample.attach_module = resample_module;
+	if (enable) {
+		if ((attach_resample.status == DISABLED)
+			|| (attach_resample.status == READY)) {
+			struct toddr *to = fetch_toddr_by_src(resample_module);
+
+			if (!to) {
+				attach_resample.status = READY;
+				pr_info("not in capture, resample is ready");
+			} else {
+				attach_resample.status = RUNNING;
+				aml_set_resample(to, enable);
+			}
+		}
+	} else {
+		if (attach_resample.status == RUNNING) {
+			struct toddr *to = fetch_toddr_by_src(resample_module);
+
+			aml_set_resample(to, enable);
+		}
+		attach_resample.status = DISABLED;
+	}
+}
+
+static void aml_check_resample(bool enable)
+{
+	/* resample in enable */
+	if (attach_resample.enable) {
+		if (enable) {
+			/* check whether ready ? */
+			if (attach_resample.status == READY)
+				aml_resample_enable(true,
+					attach_resample.attach_module);
+		} else {
+			if (attach_resample.status == RUNNING)
+				attach_resample.status = READY;
+		}
+	}
+}
+
+static void aml_set_pwrdet(struct toddr *to,
+	bool enable)
+{
+	if (enable) {
+		struct aml_audio_controller *actrl = to->actrl;
+		unsigned int reg_base = to->reg_base;
+		unsigned int reg, val;
+		unsigned int toddr_type, msb, lsb;
+
+		reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL0, reg_base);
+		val = aml_audiobus_read(actrl, reg);
+		toddr_type = (val >> 13) & 0x7;
+		msb = (val >> 8) & 0x1f;
+		lsb = (val >> 3) & 0x1f;
+
+		aml_pwrdet_format_set(toddr_type, msb, lsb);
+	}
+	pwrdet_src_select(enable, to->src);
+}
+
+void aml_pwrdet_enable(bool enable, int pwrdet_module)
+{
+	attach_pwrdet.enable = enable;
+	attach_pwrdet.attach_module = pwrdet_module;
+	if (enable) {
+		if ((attach_pwrdet.status == DISABLED)
+			|| (attach_pwrdet.status == READY)) {
+			struct toddr *to = fetch_toddr_by_src(pwrdet_module);
+
+			if (!to) {
+				attach_pwrdet.status = READY;
+				pr_info("not in capture, power detect is ready");
+			} else {
+				attach_pwrdet.status = RUNNING;
+				aml_set_pwrdet(to, enable);
+			}
+		}
+	} else {
+		if (attach_pwrdet.status == RUNNING) {
+			struct toddr *to = fetch_toddr_by_src(pwrdet_module);
+
+			aml_set_pwrdet(to, enable);
+		}
+		attach_pwrdet.status = DISABLED;
+	}
+}
+
+static void aml_check_pwrdet(bool enable)
+{
+	/* power detect in enable */
+	if (attach_pwrdet.enable) {
+		if (enable) {
+			/* check whether ready ? */
+			if (attach_pwrdet.status == READY)
+				aml_pwrdet_enable(true,
+					attach_pwrdet.attach_module);
+		} else {
+			if (attach_pwrdet.status == RUNNING)
+				attach_pwrdet.status = READY;
+		}
+	}
 }
 
 /* from DDRS */
@@ -392,6 +616,22 @@ int fetch_frddr_index_by_src(int frddr_src)
 	return -1;
 }
 
+struct frddr *fetch_frddr_by_src(int frddr_src)
+{
+	int i;
+
+	for (i = 0; i < DDRMAX; i++) {
+		if (frddrs[i].in_use
+			&& (frddrs[i].dest == frddr_src)) {
+			return &frddrs[i];
+		}
+	}
+
+	pr_err("invalid frddr src\n");
+
+	return NULL;
+}
+
 struct frddr *aml_audio_register_frddr(struct device *dev,
 	struct aml_audio_controller *actrl,
 	irq_handler_t handler, void *data)
@@ -432,6 +672,13 @@ int aml_frddr_set_buf(struct frddr *fr, unsigned int start,
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_FINISH_ADDR, reg_base);
 	aml_audiobus_write(actrl, reg, end);
 
+	/* int address */
+	if (fr->chipinfo
+		&& fr->chipinfo->addr_separated) {
+		reg = calc_frddr_address(EE_AUDIO_FRDDR_A_INIT_ADDR, reg_base);
+		aml_audiobus_write(actrl, reg, start);
+	}
+
 	return 0;
 }
 
@@ -467,6 +714,9 @@ void aml_frddr_enable(struct frddr *fr, bool enable)
 
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl,	reg, 1<<31, enable<<31);
+
+	/* check for Audio EQ/DRC */
+	aml_check_aed(enable);
 }
 
 void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest dst)
@@ -479,6 +729,12 @@ void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest dst)
 
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl,	reg, 0x7, dst & 0x7);
+
+	/* same source en */
+	if (fr->chipinfo
+		&& fr->chipinfo->same_src_fn) {
+		aml_audiobus_update_bits(actrl, reg, 1 << 3, 1 << 3);
+	}
 }
 
 void aml_frddr_set_fifos(struct frddr *fr,
@@ -499,9 +755,89 @@ unsigned int aml_frddr_get_fifo_id(struct frddr *fr)
 	return fr->fifo_id;
 }
 
+static void aml_set_aed(struct frddr *fr, bool enable)
+{
+	if (enable) {
+		/* frddr type and bit depth for AED */
+		aml_aed_format_set(fr->dest);
+	}
+	aed_src_select(enable, fr->dest, fr->fifo_id);
+}
+
+
+void aml_aed_enable(bool enable, int aed_module)
+{
+	/* when try to enable AED, if frddr is not in used,
+	 * set AED status as ready
+	 */
+	attach_aed.enable = enable;
+	attach_aed.attach_module = aed_module;
+	if (enable) {
+		if ((attach_aed.status == DISABLED)
+			|| (attach_aed.status == READY)) {
+			struct frddr *fr = fetch_frddr_by_src(aed_module);
+
+			if (!fr) {
+				attach_aed.status = READY;
+				pr_info("not in playback, AED is ready");
+			} else {
+				attach_aed.status = RUNNING;
+				aml_set_aed(fr, enable);
+			}
+		}
+	} else {
+		if (attach_aed.status == RUNNING) {
+			struct frddr *fr = fetch_frddr_by_src(aed_module);
+
+			aml_set_aed(fr, enable);
+		}
+		attach_aed.status = DISABLED;
+	}
+}
+
+static void aml_check_aed(bool enable)
+{
+	/* AED in enable */
+	if (attach_aed.enable) {
+		if (enable) {
+			/* check whether ready ? */
+			if (attach_aed.status == READY)
+				aml_aed_enable(true, attach_aed.attach_module);
+		} else {
+			if (attach_aed.status == RUNNING)
+				attach_aed.status = READY;
+		}
+	}
+}
+
+static struct ddr_chipinfo g12a_ddr_chipinfo = {
+	.addr_separated        = true,
+	.same_src_fn           = true,
+};
+
+
+static const struct of_device_id aml_ddr_mngr_device_id[] = {
+	{
+		.compatible = "amlogic, axg-audio-ddr-manager",
+	},
+	{
+		.compatible = "amlogic, g12a-audio-ddr-manager",
+		.data       = &g12a_ddr_chipinfo,
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, aml_ddr_mngr_device_id);
+
 static int aml_ddr_mngr_platform_probe(struct platform_device *pdev)
 {
+	struct ddr_chipinfo *p_ddr_chipinfo;
 	int i;
+
+	p_ddr_chipinfo = (struct ddr_chipinfo *)
+		of_device_get_match_data(&pdev->dev);
+	if (!p_ddr_chipinfo)
+		dev_warn_once(&pdev->dev,
+			"check whether to update ddr_mngr chipinfo\n");
 
 	/* irqs */
 	toddrs[DDR_A].irq = platform_get_irq_byname(pdev, "toddr_a");
@@ -525,21 +861,26 @@ static int aml_ddr_mngr_platform_probe(struct platform_device *pdev)
 	toddrs[DDR_A].reg_base = EE_AUDIO_TODDR_A_CTRL0;
 	toddrs[DDR_B].reg_base = EE_AUDIO_TODDR_B_CTRL0;
 	toddrs[DDR_C].reg_base = EE_AUDIO_TODDR_C_CTRL0;
+	toddrs[DDR_A].fifo_id  = DDR_A;
+	toddrs[DDR_B].fifo_id  = DDR_B;
+	toddrs[DDR_C].fifo_id  = DDR_C;
+
 	frddrs[DDR_A].reg_base = EE_AUDIO_FRDDR_A_CTRL0;
 	frddrs[DDR_B].reg_base = EE_AUDIO_FRDDR_B_CTRL0;
 	frddrs[DDR_C].reg_base = EE_AUDIO_FRDDR_C_CTRL0;
-	frddrs[DDR_A].fifo_id = DDR_A;
-	frddrs[DDR_B].fifo_id = DDR_B;
-	frddrs[DDR_C].fifo_id = DDR_C;
+	frddrs[DDR_A].fifo_id  = DDR_A;
+	frddrs[DDR_B].fifo_id  = DDR_B;
+	frddrs[DDR_C].fifo_id  = DDR_C;
+
+	toddrs[DDR_A].chipinfo = p_ddr_chipinfo;
+	toddrs[DDR_B].chipinfo = p_ddr_chipinfo;
+	toddrs[DDR_C].chipinfo = p_ddr_chipinfo;
+	frddrs[DDR_A].chipinfo = p_ddr_chipinfo;
+	frddrs[DDR_B].chipinfo = p_ddr_chipinfo;
+	frddrs[DDR_C].chipinfo = p_ddr_chipinfo;
 
 	return 0;
 }
-
-static const struct of_device_id aml_ddr_mngr_device_id[] = {
-	{ .compatible = "amlogic, audio-ddr-manager", },
-	{},
-};
-MODULE_DEVICE_TABLE(of, aml_ddr_mngr_device_id);
 
 struct platform_driver aml_audio_ddr_manager = {
 	.driver = {

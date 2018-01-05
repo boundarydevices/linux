@@ -52,10 +52,12 @@ enum frddr_dest {
 	TDMOUT_B,
 	TDMOUT_C,
 	SPDIFOUT,
+	SPDIFOUT_B,
 };
 
 /* to ddrs */
 int fetch_toddr_index_by_src(int toddr_src);
+struct toddr *fetch_toddr_by_src(int toddr_src);
 struct toddr *aml_audio_register_toddr(struct device *dev,
 		struct aml_audio_controller *actrl,
 		irq_handler_t handler, void *data);
@@ -68,10 +70,17 @@ void aml_toddr_select_src(struct toddr *to, enum toddr_src);
 void aml_toddr_enable(struct toddr *to, bool enable);
 void aml_toddr_set_fifos(struct toddr *to, unsigned int thresh);
 void aml_toddr_set_format(struct toddr *to,
-		unsigned int type, unsigned int msb, unsigned int lsb);
+		unsigned int type, unsigned int msb, unsigned int lsb,
+		int ch_num, int bit_depth);
+
+/* resample */
+void aml_resample_enable(bool enable, int resample_module);
+/* power detect */
+void aml_pwrdet_enable(bool enable, int pwrdet_module);
 
 /* from ddrs */
 int fetch_frddr_index_by_src(int frddr_src);
+struct frddr *fetch_frddr_by_src(int frddr_src);
 
 struct frddr *aml_audio_register_frddr(struct device *dev,
 		struct aml_audio_controller *actrl,
@@ -86,6 +95,7 @@ void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest);
 void aml_frddr_set_fifos(struct frddr *fr,
 		unsigned int depth, unsigned int thresh);
 unsigned int aml_frddr_get_fifo_id(struct frddr *fr);
-
+/* audio eq drc */
+void aml_aed_enable(bool enable, int aed_module);
 #endif
 

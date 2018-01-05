@@ -485,6 +485,33 @@
 			memory-region = <&ion_cma_reserved>;
 		};/* end of ion_dev*/
 
+		audiobus: audiobus@0xff642000 {
+			compatible = "amlogic, audio-controller", "simple-bus";
+			reg = <0x0 0xff642000 0x0 0x2000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0x0 0x0 0xff642000 0x0 0x2000>;
+			clkaudio: audio_clocks {
+				compatible = "amlogic, g12a-audio-clocks";
+				#clock-cells = <1>;
+				reg = <0x0 0x0 0x0 0xb0>;
+			};
+			ddr_manager {
+				compatible = "amlogic, g12a-audio-ddr-manager";
+				interrupts = <
+					GIC_SPI 148 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 149 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 150 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 152 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 153 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 154 IRQ_TYPE_EDGE_RISING
+				>;
+				interrupt-names =
+					"toddr_a", "toddr_b", "toddr_c",
+					"frddr_a", "frddr_b", "frddr_c";
+			};
+		};/* end of audiobus*/
+
 	}; /* end of soc*/
 
 };/* end of / */

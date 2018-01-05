@@ -444,18 +444,22 @@
 		status = "okay";
 	};
 
+	/* Audio Related start */
 	/* Sound iomap */
 	aml_snd_iomap {
-		compatible = "amlogic, axg-snd-iomap";
+		compatible = "amlogic, snd-iomap";
 		status = "okay";
 		#address-cells=<2>;
 		#size-cells=<2>;
 		ranges;
 		pdm_bus {
-			reg = <0x0 0xFF632000 0x0 0x20>;
+			reg = <0x0 0xFF632000 0x0 0x2000>;
 		};
 		audiobus_base {
 			reg = <0x0 0xFF642000 0x0 0x2000>;
+		};
+		audiolocker_base {
+			reg = <0x0 0xFF64A000 0x0 0x2000>;
 		};
 	};
 	pdm_codec:dummy{
@@ -580,6 +584,23 @@
 			};
 		};
 	};
+	audiolocker: locker {
+		compatible = "amlogic, audiolocker";
+		clocks = <&clkaudio CLKID_AUDIO_LOCKER_OUT
+				&clkaudio CLKID_AUDIO_LOCKER_IN
+				&clkaudio CLKID_AUDIO_MCLK_D
+				&clkaudio CLKID_AUDIO_MCLK_E
+				&clkc CLKID_MPLL1
+				&clkc CLKID_MPLL2>;
+		clock-names = "lock_out", "lock_in", "out_src",
+					"in_src", "out_calc", "in_ref";
+		interrupts = <GIC_SPI 1 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "irq";
+		frequency = <49000000>; /* pll */
+		dividor = <49>; /* locker's parent */
+		status = "okay";
+	};
+	/* Audio Related end */
 
 	bt-dev{
 		compatible = "amlogic, bt-dev";
@@ -1077,7 +1098,7 @@
 
 &audiobus {
 	aml_tdma: tdma {
-		compatible = "amlogic, snd-tdma";
+		compatible = "amlogic, axg-snd-tdma";
 		#sound-dai-cells = <0>;
 		dai-tdm-lane-slot-mask-in = <1 0>;
 		dai-tdm-lane-slot-mask-out = <0 1>;
@@ -1090,7 +1111,7 @@
 	};
 
 	aml_tdmb: tdmb {
-		compatible = "amlogic, snd-tdmb";
+		compatible = "amlogic, axg-snd-tdmb";
 		#sound-dai-cells = <0>;
 		dai-tdm-lane-slot-mask-in = <1 1 1 1>;
 		dai-tdm-clk-sel = <1>;
@@ -1102,10 +1123,12 @@
 	};
 
 	aml_tdmc: tdmc {
-		compatible = "amlogic, snd-tdmc";
+		compatible = "amlogic, axg-snd-tdmc";
 		#sound-dai-cells = <0>;
 		dai-tdm-lane-slot-mask-in = <0 1 0 0>;
 		dai-tdm-lane-slot-mask-out = <1 0 1 1>;
+		#dai-tdm-lane-oe-slot-mask-in = <0 0 0 0>;
+		#dai-tdm-lane-oe-slot-mask-out = <1 0 0 0>;
 		dai-tdm-clk-sel = <2>;
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
 				&clkc CLKID_MPLL2>;
@@ -1115,7 +1138,7 @@
 	};
 
 	aml_spdif: spdif {
-		compatible = "amlogic, snd-spdif";
+		compatible = "amlogic, axg-snd-spdif";
 		#sound-dai-cells = <0>;
 		clocks = <&clkc CLKID_MPLL0
 				&clkc CLKID_FCLK_DIV4
@@ -1134,7 +1157,7 @@
 		status = "okay";
 	};
 	aml_pdm: pdm {
-		compatible = "amlogic, snd-pdm";
+		compatible = "amlogic, axg-snd-pdm";
 		#sound-dai-cells = <0>;
 		clocks = <&clkaudio CLKID_AUDIO_PDM
 			&clkc CLKID_FCLK_DIV3
@@ -1177,7 +1200,7 @@
 		 */
 		datain_src = <4>;
 		datain_chnum = <8>;
-		datain_chmask = <0x7f>;
+		datain_chmask = <0xf0>;
 
 		/* tdmin_lb src
 		 * 0: tdmoutA
@@ -1187,12 +1210,53 @@
 		 * 4: PAD_tdminB
 		 * 5: PAD_tdminC
 		 */
-		/*if tdmin_lb >= 3, use external loopback*/
-		datalb_src = <2>;
-		datalb_chnum = <2>;
-		/*config which data pin as loopback*/
-		/*datalb-lane-mask-in = <0 0 0 1>;*/
-		datalb_chmask = <0x1>;
+
+		datalb_src = <4>;
+		datalb_chnum = <4>;
+		datalb_chmask = <0xf>;
+
+		status = "okay";
+	};
+
+	audioresample: resample {
+		compatible = "amlogic, axg-resample";
+		clocks = <&clkc CLKID_MPLL3
+				&clkaudio CLKID_AUDIO_MCLK_F
+				&clkaudio CLKID_AUDIO_RESAMPLE_CTRL>;
+		clock-names = "resample_pll", "resample_src", "resample_clk";
+		/*same with toddr_src
+		 *	TDMIN_A,
+		 *	TDMIN_B,
+		 *	TDMIN_C,
+		 *	SPDIFIN,
+		 *	PDMIN,
+		 *	NONE,
+		 *	TDMIN_LB,
+		 *	LOOPBACK,
+		 */
+		resample_module = <4>;
+		status = "okay";
+	};
+	aml_pwrdet: pwrdet {
+		compatible = "amlogic, axg-power-detect";
+
+		interrupts = <GIC_SPI 91 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "pwrdet_irq";
+
+		/* pwrdet source sel
+		 * 7: loopback;
+		 * 6: tdmin_lb;
+		 * 5: reserved;
+		 * 4: pdmin;
+		 * 3: spdifin;
+		 * 2: tdmin_c;
+		 * 1: tdmin_b;
+		 * 0: tdmin_a;
+		 */
+		pwrdet_src = <4>;
+
+		hi_th = <0x70000>;
+		lo_th = <0x16000>;
 
 		status = "okay";
 	};
