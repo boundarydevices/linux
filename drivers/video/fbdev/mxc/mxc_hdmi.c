@@ -2044,7 +2044,8 @@ static void hotplug_worker(struct work_struct *work)
 
 			hdmi_set_cable_state(1);
 #ifdef CONFIG_EXTCON
-			extcon_set_state_sync(hdmi_edev, EXTCON_DISP_HDMI, 1);
+			if (!hdmi->hdmi_data.video_mode.mDVI)
+				extcon_set_state_sync(hdmi_edev, EXTCON_DISP_HDMI, 1);
 #endif
 			sprintf(event_string, "EVENT=plugin");
 			kobject_uevent_env(&hdmi->pdev->dev.kobj, KOBJ_CHANGE, envp);
@@ -2054,7 +2055,8 @@ static void hotplug_worker(struct work_struct *work)
 		} else if (!(phy_int_pol & HDMI_PHY_HPD)) {
 			/* Plugout event */
 #ifdef CONFIG_EXTCON
-			extcon_set_state_sync(hdmi_edev, EXTCON_DISP_HDMI, 0);
+			if (!hdmi->hdmi_data.video_mode.mDVI)
+				extcon_set_state_sync(hdmi_edev, EXTCON_DISP_HDMI, 0);
 #endif
 			dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
 			hdmi_set_cable_state(0);
