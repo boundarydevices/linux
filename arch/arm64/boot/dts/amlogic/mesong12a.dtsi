@@ -290,6 +290,54 @@
 				reg = <0x0 0x18004 0x0 0x4
 		       0x0 0x1800c 0x0 0x4>;
 			};
+
+			pwm_ab: pwm@1b000 {
+				compatible = "amlogic,txlx-ee-pwm";
+				reg = <0x0 0x1b000 0x0 0x20>;
+				#pwm-cells = <3>;
+				clocks = <&xtal>,
+						<&xtal>,
+						<&xtal>,
+						<&xtal>;
+				clock-names = "clkin0",
+						"clkin1",
+						"clkin2",
+						"clkin3";
+				/* default xtal 24m  clkin0-clkin2 and
+				 * clkin1-clkin3 should be set the same
+				 */
+				status = "disabled";
+			};
+
+			pwm_cd: pwm@1a000 {
+				compatible = "amlogic,txlx-ee-pwm";
+				reg = <0x0 0x1a000  0x0 0x20>;
+				#pwm-cells = <3>;
+				clocks = <&xtal>,
+						<&xtal>,
+						<&xtal>,
+						<&xtal>;
+				clock-names = "clkin0",
+						"clkin1",
+						"clkin2",
+						"clkin3";
+				status = "disabled";
+			};
+
+			pwm_ef: pwm@19000 {
+				compatible = "amlogic,txlx-ee-pwm";
+				reg = <0x0 0x19000  0x0 0x20>;
+				#pwm-cells = <3>;
+				clocks = <&xtal>,
+						<&xtal>,
+						<&xtal>,
+						<&xtal>;
+				clock-names = "clkin0",
+						"clkin1",
+						"clkin2",
+						"clkin3";
+				status = "disabled";
+			};
 		}; /* end of cbus */
 
 		aobus: aobus@ff800000 {
@@ -301,6 +349,36 @@
 
 			cpu_version {
 				reg=<0x0 0x220 0x0 0x4>;
+			};
+
+			pwm_AO_ab: pwm@7000 {
+				compatible = "amlogic,txlx-ao-pwm";
+				reg = <0x0 0x7000  0x0 0x20>;
+				#pwm-cells = <3>;
+				clocks = <&xtal>,
+					 <&xtal>,
+					 <&xtal>,
+					 <&xtal>;
+				clock-names = "clkin0",
+					      "clkin1",
+					      "clkin2",
+					      "clkin3";
+				status = "disabled";
+			};
+
+			pwm_AO_cd: pwm@2000 {
+				compatible = "amlogic,txlx-ao-pwm";
+				reg = <0x0 0x2000  0x0 0x20>;
+				#pwm-cells = <3>;
+				clocks = <&xtal>,
+					 <&xtal>,
+					 <&xtal>,
+					 <&xtal>;
+				clock-names = "clkin0",
+					      "clkin1",
+					      "clkin2",
+					      "clkin3";
+				status = "disabled";
 			};
 		};/* end of aobus */
 
