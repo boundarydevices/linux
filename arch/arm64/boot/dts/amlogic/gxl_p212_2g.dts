@@ -820,7 +820,7 @@
 		#sound-dai-cells = <0>;
 		compatible = "aml, aml_snd_dmic";
 		reg = <0x0 0xd0042000 0x0 0x2000>;
-		status = "okay";
+		status = "disabled";
 		resets = <
 			&clkc CLKID_PDM_GATE
 		>;
