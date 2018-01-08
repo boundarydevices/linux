@@ -20,10 +20,46 @@
 / {
 	model = "Boundary Devices i.MX6 Quad Nitrogen6x Board - CWC config";
 	compatible = "fsl,imx6q-nitrogen6x", "fsl,imx6q";
+
+	/delete-node/ v4l2_cap_1;
+	/delete-node/ v4l2_cap_2;
+	/delete-node/ v4l2_cap_3;
+};
+
+&flexcan1 {
+	status = "disabled" ;
 };
 
 &hdmi_core {
 	status = "disabled";
+};
+
+&i2c2 {
+	/delete-node/ ov5640_mipi@3e;
+};
+
+&i2c3 {
+	inter-byte-delay = <170>;
+	stop-delay = <30>;
+
+	/delete-node/ ov5640@3c;
+	/delete-node/ tsc2004@48;
+
+	ar1020_i2c@4d {
+		compatible = "ar1020_i2c";
+		reg = <0x4d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_tsc2004>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
+		status = "okay";
+	};
+
+	hookswitch@20 {
+		compatible = "cwc_hookswitch";
+		reg = <0x20>;
+		status = "okay";
+	};
 };
 
 &mxcfb1 {
@@ -42,37 +78,6 @@
 	status = "disabled";
 };
 
-&ov5640 {
-	status = "disabled";
-};
-
-&ov5640_mipi {
-	status = "disabled";
-};
-
-&ov5642 {
-	ipu_id = <0>;
-	csi_id = <0>;
-	status = "okay";
-};
-
-&pinctrl_ov5640 { /* parallel camera */
-	fsl,pins = <
-		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
-		MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13	0xb0b1
-		MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14	0xb0b1
-		MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15	0xb0b1
-		MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16	0xb0b1
-		MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17	0xb0b1
-		MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18	0xb0b1
-		MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19	0xb0b1
-		MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN	0xb0b1
-		MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK	0xb0b1
-		MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC	0xb0b1
-		MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC	0xb0b1
-	>;
-};
-
 &sata {
 	status = "okay";
 };
@@ -82,47 +87,4 @@
 	csi_id = <0>;
 	mipi_camera = <0>;
 	status = "okay" ;
-};
-
-/* ov5640_mipi */
-&v4l2_cap_1 {
-	status = "disabled" ;
-};
-
-/* ov5640, ov5642 */
-&v4l2_cap_2 {
-	status = "disabled" ;
-};
-
-&ov5640_mipi {
-	status = "disabled" ;
-};
-
-&tsc2004 {
-	status = "disabled" ;
-};
-
-&flexcan1 {
-	status = "disabled" ;
-};
-
-&i2c3 {
-	inter-byte-delay = <170>;
-	stop-delay = <30>;
-
-	ar1020_i2c@4d {
-		compatible = "ar1020_i2c";
-		reg = <0x4d>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_tsc2004>;
-		interrupt-parent = <&gpio4>;
-		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
-		status = "okay";
-	};
-
-	hookswitch@20 {
-		compatible = "cwc_hookswitch";
-		reg = <0x20>;
-		status = "okay";
-	};
 };
