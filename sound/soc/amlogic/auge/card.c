@@ -23,15 +23,20 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/string.h>
+#include <linux/timer.h>
+#include <linux/workqueue.h>
+#include <linux/extcon.h>
 #include <sound/jack.h>
 #include <sound/soc.h>
 #include <sound/soc-dai.h>
+#include "../../../../drivers/gpio/gpiolib.h"
 #include "card.h"
 
 struct aml_jack {
 	struct snd_soc_jack jack;
 	struct snd_soc_jack_pin pin;
 	struct snd_soc_jack_gpio gpio;
+
 };
 
 struct aml_card_data {
@@ -48,6 +53,20 @@ struct aml_card_data {
 	int spk_mute_gpio;
 	bool spk_mute_active_low;
 	struct loopback_cfg lb_cfg;
+	struct timer_list timer;
+	struct work_struct work;
+	bool hp_last_state;
+	bool hp_cur_state;
+	bool hp_det_status;
+	int hp_gpio_det;
+	int hp_detect_flag;
+	bool hp_det_enable;
+	bool micphone_last_state;
+	bool micphone_cur_state;
+	bool micphone_det_status;
+	int micphone_gpio_det;
+	int mic_detect_flag;
+	bool mic_det_enable;
 };
 
 #define aml_priv_to_dev(priv) ((priv)->snd_card.dev)
@@ -64,11 +83,163 @@ struct aml_card_data {
 	aml_card_init_jack(card, sjack, 1, prefix)
 #define aml_card_init_mic(card, sjack, prefix)\
 	aml_card_init_jack(card, sjack, 0, prefix)
+
+static const unsigned int headphone_cable[] = {
+	EXTCON_JACK_HEADPHONE,
+	EXTCON_NONE,
+};
+
+static const unsigned int microphone_cable[] = {
+	EXTCON_JACK_MICROPHONE,
+	EXTCON_NONE,
+};
+
+struct extcon_dev *audio_extcon_headphone;
+struct extcon_dev *audio_extcon_microphone;
+
+static void jack_audio_start_timer(struct aml_card_data *card_data,
+				  unsigned long delay)
+{
+	card_data->timer.expires = jiffies + delay;
+	add_timer(&card_data->timer);
+}
+
+static void jack_audio_stop_timer(struct aml_card_data *card_data)
+{
+	del_timer_sync(&card_data->timer);
+	cancel_work_sync(&card_data->work);
+}
+static void jack_timer_func(unsigned long data)
+{
+	struct aml_card_data *card_data = (struct aml_card_data *)data;
+	unsigned long delay = msecs_to_jiffies(150);
+
+	schedule_work(&card_data->work);
+	mod_timer(&card_data->timer, jiffies + delay);
+}
+
+static int jack_audio_hp_detect(struct aml_card_data *card_data)
+{
+	int loop_num = 0;
+	int change_cnt = 0;
+
+	card_data->hp_cur_state =
+		gpio_get_value_cansleep(card_data->hp_jack.gpio.gpio);
+	if (card_data->hp_last_state != card_data->hp_cur_state) {
+		while (loop_num < 5) {
+			card_data->hp_cur_state =
+				gpio_get_value_cansleep(
+					card_data->hp_jack.gpio.gpio);
+
+			if (card_data->hp_last_state != card_data->hp_cur_state)
+				change_cnt++;
+			else
+				change_cnt = 0;
+
+			msleep_interruptible(50);
+			loop_num = loop_num + 1;
+		}
+		if (change_cnt >= 5) {
+			card_data->hp_last_state = card_data->hp_cur_state;
+			card_data->hp_det_status = card_data->hp_last_state;
+		}
+		return card_data->hp_det_status;
+	}
+	return -1;
+}
+
+static int jack_audio_micphone_detect(struct aml_card_data *card_data)
+{
+	int loop_num = 0;
+	int change_cnt = 0;
+
+	card_data->micphone_cur_state =
+		gpio_get_value_cansleep(card_data->mic_jack.gpio.gpio);
+	if (card_data->micphone_last_state != card_data->micphone_cur_state) {
+		while (loop_num < 5) {
+			card_data->micphone_cur_state =
+				gpio_get_value_cansleep(
+					card_data->mic_jack.gpio.gpio);
+			if (card_data->micphone_last_state !=
+				card_data->micphone_cur_state)
+				change_cnt++;
+			else
+				change_cnt = 0;
+
+			msleep_interruptible(50);
+			loop_num = loop_num + 1;
+		}
+		if (change_cnt >= 5) {
+			card_data->micphone_last_state =
+				card_data->micphone_cur_state;
+			card_data->micphone_det_status =
+				card_data->micphone_last_state;
+		}
+		return card_data->micphone_det_status;
+	}
+	return -1;
+}
+static void jack_work_func(struct work_struct *work)
+{
+	struct aml_card_data *card_data = NULL;
+	int status = SND_JACK_HEADPHONE;
+	int flag = 0;
+
+	card_data = container_of(work, struct aml_card_data, work);
+
+	if (card_data->hp_det_enable == 1) {
+		flag = jack_audio_hp_detect(card_data);
+		if (flag == -1)
+			return;
+		if (card_data->hp_detect_flag != flag) {
+
+			card_data->hp_detect_flag = flag;
+
+			if (flag) {
+				extcon_set_state_sync(audio_extcon_headphone,
+					EXTCON_JACK_HEADPHONE, 1);
+				snd_soc_jack_report(&card_data->hp_jack.jack,
+					status, SND_JACK_HEADPHONE);
+			} else {
+				extcon_set_state_sync(audio_extcon_headphone,
+					EXTCON_JACK_HEADPHONE, 0);
+				snd_soc_jack_report(&card_data->hp_jack.jack, 0,
+						SND_JACK_HEADPHONE);
+			}
+
+		}
+	}
+	if (card_data->mic_det_enable == 1) {
+		flag = jack_audio_micphone_detect(card_data);
+		if (flag == -1)
+			return;
+		if (card_data->mic_detect_flag != flag) {
+
+			card_data->mic_detect_flag = flag;
+
+			if (flag) {
+				extcon_set_state_sync(audio_extcon_headphone,
+					EXTCON_JACK_MICROPHONE, 1);
+				snd_soc_jack_report(&card_data->hp_jack.jack,
+					status, SND_JACK_HEADPHONE);
+			} else {
+				extcon_set_state_sync(audio_extcon_headphone,
+					EXTCON_JACK_MICROPHONE, 0);
+				snd_soc_jack_report(&card_data->hp_jack.jack, 0,
+						SND_JACK_HEADPHONE);
+			}
+
+		}
+	}
+}
+
 static int aml_card_init_jack(struct snd_soc_card *card,
 				      struct aml_jack *sjack,
 				      int is_hp, char *prefix)
 {
+	struct aml_card_data *priv = aml_card_to_priv(card);
 	struct device *dev = card->dev;
+	struct gpio_desc *desc;
 	enum of_gpio_flags flags;
 	char prop[128];
 	char *pin_name;
@@ -83,16 +254,30 @@ static int aml_card_init_jack(struct snd_soc_card *card,
 		pin_name	= "Headphones";
 		gpio_name	= "Headphone detection";
 		mask		= SND_JACK_HEADPHONE;
+
+		desc = of_get_named_gpiod_flags(dev->of_node, prop, 0, &flags);
+		if (IS_ERR(desc)) {
+			priv->hp_det_enable = 0;
+			return -1;
+		}
+		priv->hp_det_enable = 1;
+		det = desc_to_gpio(desc);
+		gpio_request(det, "hp-det-gpio");
 	} else {
 		snprintf(prop, sizeof(prop), "%smic-det-gpio", prefix);
 		pin_name	= "Mic Jack";
 		gpio_name	= "Mic detection";
 		mask		= SND_JACK_MICROPHONE;
-	}
 
-	det = of_get_named_gpio_flags(dev->of_node, prop, 0, &flags);
-	if (det == -EPROBE_DEFER)
-		return -EPROBE_DEFER;
+		desc = of_get_named_gpiod_flags(dev->of_node, prop, 0, &flags);
+		if (IS_ERR(desc)) {
+			priv->mic_det_enable = 0;
+			return -1;
+		}
+		priv->mic_det_enable = 1;
+		det = desc_to_gpio(desc);
+		gpio_request(det, "mic-det-gpio");
+	}
 
 	if (gpio_is_valid(det)) {
 		sjack->pin.pin		= pin_name;
@@ -104,15 +289,80 @@ static int aml_card_init_jack(struct snd_soc_card *card,
 		sjack->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
 		sjack->gpio.debounce_time = 150;
 
+		gpio_direction_input(det);
+		gpiod_set_pull(desc, GPIOD_PULL_DIS);
 		snd_soc_card_jack_new(card, pin_name, mask,
 				      &sjack->jack,
 				      &sjack->pin, 1);
 
 		snd_soc_jack_add_gpios(&sjack->jack, 1,
 				       &sjack->gpio);
-	}
+	} else
+		pr_info("detect gpio is invalid\n");
 
+	if (is_hp) {
+		if (det >= 0)
+			priv->hp_gpio_det = det;
+	} else {
+		if (det >= 0)
+			priv->micphone_gpio_det = det;
+	}
 	return 0;
+}
+
+static void audio_jack_detect(struct aml_card_data *card_data)
+{
+	init_timer(&card_data->timer);
+	card_data->timer.function = jack_timer_func;
+	card_data->timer.data = (unsigned long)card_data;
+
+	INIT_WORK(&card_data->work, jack_work_func);
+
+	jack_audio_start_timer(card_data,
+			msecs_to_jiffies(5000));
+}
+
+static void audio_extcon_register(struct aml_card_data *priv,
+	struct device *dev)
+{
+	struct extcon_dev *edev;
+	int ret;
+
+	if (priv->hp_det_enable == 1) {
+		/*audio extcon headphone*/
+		edev = extcon_dev_allocate(headphone_cable);
+		if (IS_ERR(edev)) {
+			pr_info("failed to allocate audio extcon headphone\n");
+			return;
+		}
+		edev->dev.parent = dev;
+		edev->name = "audio_extcon_headphone";
+		dev_set_name(&edev->dev, "headphone");
+		ret = extcon_dev_register(edev);
+		if (ret < 0) {
+			pr_info("failed to register audio extcon headphone\n");
+			return;
+		}
+		audio_extcon_headphone = edev;
+	}
+	if (priv->mic_det_enable == 1) {
+		/*audio extcon microphone*/
+		edev = extcon_dev_allocate(microphone_cable);
+		if (IS_ERR(edev)) {
+			pr_info("failed to allocate audio extcon microphone\n");
+			return;
+		}
+
+		edev->dev.parent = dev;
+		edev->name = "audio_extcon_microphone";
+		dev_set_name(&edev->dev, "microphone");
+		ret = extcon_dev_register(edev);
+		if (ret < 0) {
+			pr_info("failed to register audio extcon microphone\n");
+			return;
+		}
+		audio_extcon_microphone = edev;
+	}
 }
 
 static void aml_card_remove_jack(struct aml_jack *sjack)
@@ -229,11 +479,12 @@ static struct snd_soc_ops aml_card_ops = {
 
 static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct aml_card_data *priv =	snd_soc_card_get_drvdata(rtd->card);
+	struct aml_card_data *priv = snd_soc_card_get_drvdata(rtd->card);
 	struct snd_soc_dai *codec = rtd->codec_dai;
 	struct snd_soc_dai *cpu = rtd->cpu_dai;
 	struct aml_dai_props *dai_props =
 		aml_priv_to_props(priv, rtd->num);
+	static int hp_mic_detect_cnt;
 	bool idle_clk = false;
 	int ret, i;
 
@@ -249,14 +500,11 @@ static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 	if (ret < 0)
 		return ret;
 
-	ret = aml_card_init_hp(rtd->card, &priv->hp_jack, PREFIX);
-	if (ret < 0)
-		return ret;
-
-	ret = aml_card_init_mic(rtd->card, &priv->hp_jack, PREFIX);
-	if (ret < 0)
-		return ret;
-
+	if (hp_mic_detect_cnt == 0) {
+		aml_card_init_hp(rtd->card, &priv->hp_jack, PREFIX);
+		aml_card_init_mic(rtd->card, &priv->mic_jack, PREFIX);
+		hp_mic_detect_cnt = 1;
+	}
 	/* enable dai-link mclk when CONTINUOUS clk setted */
 	idle_clk = !!(rtd->dai_link->dai_fmt & SND_SOC_DAIFMT_CONT);
 	if (idle_clk && dai_props->cpu_dai.clk) {
@@ -659,6 +907,11 @@ static int aml_card_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+
+	if (priv->hp_det_enable == 1 || priv->mic_det_enable == 1) {
+		audio_jack_detect(priv);
+		audio_extcon_register(priv, dev);
+	}
 	ret = aml_card_parse_gpios(np, priv);
 	if (ret >= 0)
 		return ret;
@@ -675,7 +928,7 @@ static int aml_card_remove(struct platform_device *pdev)
 
 	aml_card_remove_jack(&priv->hp_jack);
 	aml_card_remove_jack(&priv->mic_jack);
-
+	jack_audio_stop_timer(priv);
 	return aml_card_clean_reference(card);
 }
 

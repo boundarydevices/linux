@@ -350,6 +350,8 @@
 
 		aml-audio-card,loopback = <&aml_loopback>;
 
+		aml-audio-card,hp-det-gpio = <&gpio GPIOZ_7 GPIO_ACTIVE_LOW>;
+
 		aml-audio-card,dai-link@0 {
 			format = "dsp_a";
 			mclk-fs = <256>;//512
