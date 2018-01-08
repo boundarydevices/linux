@@ -8,6 +8,11 @@ Required properties:
 					amlogic,txlx-ee-pwm
 				ao
 					amlogic,txlx-ao-pwm
+			-for g12a
+				ee
+					amlogic,g12a-ee-pwm
+				ao
+					amlogic,g12a-ao-pwm
 
 			-for axg
 				ee
@@ -50,3 +55,4 @@ Example:
 		status = "disabled";
 		clocks = <&xtal>, <&xtal>,<&xtal>,<&xtal>;
 		clock-names = "clkin0", "clkin1","clkin2","clkin3";
+	}
