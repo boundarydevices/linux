@@ -13550,10 +13550,11 @@ AMLOGIC driver for cec
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/cec/*
 
-AMLOGIC I2C
-M: Jian Hu <jian.hu@amlogic.com>
-F: driver/amlogic/i2c/*
-F: Documentation/devicetree/bindings/amlogic/i2c-meson.txt
+AMLOGIC I2C DRIVER
+M:	Jian Hu <jian.hu@amlogic.com>
+F:	driver/amlogic/i2c/*
+F:	include/dt-bindings/i2c/i2c-meson.h
+F:	Documentation/devicetree/bindings/amlogic/i2c-meson.txt
 
 AMLOGIC internal phy driver for ethernet
 M: Zhuo Wang <zhuo.wang@amlogic.com>
@@ -13564,18 +13565,13 @@ M: Jianxin Pan <jianxin.pan@amlogic.com>
 F: drivers/amlogic/cpu_hotplug/*
 
 AMLOGIC PWM DRIVER
-M: Jian Hu <jian.hu@amlogic.com>
-F: drivers/amlogic/pwm/Kconfig
-F: drivers/amlogic/pwm/Makefile
-F: drivers/amlogic/pwm/pwm_meson.c
-F: drivers/amlogic/pwm/pwm_meson_sysfs.c
-F: include/linux/amlogic/pwm_meson.h
-F: Documentation/devicetree/bindings/amlogic/pwm-meson.txt
-F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts
-F: arch/arm64/boot/dts/amlogic/gxm_q201_2g.dts
+M:	Jian Hu <jian.hu@amlogic.com>
+F:	drivers/amlogic/pwm/*
+F:	include/linux/amlogic/pwm_meson.h
+F:	Documentation/devicetree/bindings/amlogic/pwm-meson.txt
+F:	arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F:	arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
+F:	arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
 
 AMLOGIC multimedia
 M:	Nanxin Qin <nanxin.qin@amlogic.com>
