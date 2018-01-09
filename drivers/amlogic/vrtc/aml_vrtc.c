@@ -27,7 +27,7 @@
 #include <linux/amlogic/scpi_protocol.h>
 
 static void __iomem *alarm_reg_vaddr;
-static void __iomem *tel_reg_vaddr, *teh_reg_vaddr;
+static void __iomem *timere_low_vaddr, *timere_high_vaddr;
 static unsigned int vrtc_init_date;
 
 #define TIME_LEN 10
@@ -64,19 +64,26 @@ static int parse_init_date(const char *date)
 	return 0;
 }
 
+static u32 timere_read(void)
+{
+	u32 time = 0;
+	unsigned long te = 0, temp = 0;
+
+	/*timeE high+low, first read low, second read high*/
+	te = readl(timere_low_vaddr);
+	temp =  readl(timere_high_vaddr);
+	te += (temp << 32);
+	time = (u32)(te / 1000000);
+	pr_debug("----------time_e: %us\n", time);
+	return time;
+}
+
 static u32 read_te(void)
 {
-	u32 time;
-	unsigned long te = 0;
+	u32 time = 0;
 
-	time = 0;
-
-	if (tel_reg_vaddr && teh_reg_vaddr) {
-		te = readl(teh_reg_vaddr);
-		te <<= 32;
-		te += readl(tel_reg_vaddr);
-		time = (u32)(te / 1000000);
-		pr_debug("time_e: %us\n", time);
+	if (timere_low_vaddr && timere_high_vaddr) {
+		time = timere_read();
 		time += vrtc_init_date;
 	}
 	return time;
@@ -94,20 +101,13 @@ static int aml_vrtc_read_time(struct device *dev, struct rtc_time *tm)
 static int aml_rtc_write_time(struct device *dev, struct rtc_time *tm)
 {
 	unsigned long time_t;
-	unsigned long te = 0;
-	unsigned int time;
+	unsigned int time = 0;
 
 	rtc_tm_to_time(tm, &time_t);
 	pr_debug("aml_rtc : write the rtc time, time is %ld\n", time_t);
 
-	time = 0;
-	if (tel_reg_vaddr && teh_reg_vaddr) {
-		te = readl(teh_reg_vaddr);
-		te <<= 32;
-		te += readl(tel_reg_vaddr);
-		time = (u32)(te / 1000000);
-		pr_debug("time_e: %us\n", time);
-	}
+	if (timere_low_vaddr && timere_high_vaddr)
+		time = timere_read();
 	vrtc_init_date = (unsigned int)time_t - time;
 
 	return 0;
@@ -177,8 +177,8 @@ static int aml_vrtc_probe(struct platform_device *pdev)
 			"timer_e_addr", &paddr);
 	if (!ret) {
 		pr_debug("timer_e_paddr: 0x%x\n", paddr);
-		tel_reg_vaddr = ioremap(paddr, 0x4);
-		teh_reg_vaddr = ioremap(paddr + 4, 0x4);
+		timere_low_vaddr = ioremap(paddr, 0x4);
+		timere_high_vaddr = ioremap(paddr + 4, 0x4);
 	}
 
 	ret = of_property_read_u32(pdev->dev.of_node,
