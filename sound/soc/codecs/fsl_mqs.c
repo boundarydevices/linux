@@ -161,7 +161,7 @@ static struct snd_soc_dai_driver fsl_mqs_dai = {
 static int fsl_mqs_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	struct device_node *gpr_np;
+	struct device_node *gpr_np = 0;
 	struct fsl_mqs *mqs_priv;
 	int ret = 0;
 
