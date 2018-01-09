@@ -2776,7 +2776,16 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	}
 	if (host->data->chip_type >= MMC_CHIP_TXLX)
 		host->ctrl_ver = 3;
-	host->pinmux_base = ioremap(0xc8834400, 0x200);
+	host->pinmux_base = ioremap(host->data->pinmux_base, 0x200);
+	if (IS_ERR(host->pinmux_base)) {
+		ret = PTR_ERR(host->pinmux_base);
+		goto free_host;
+	}
+	host->clksrc_base = ioremap(host->data->clksrc_base, 0x300);
+	if (IS_ERR(host->clksrc_base)) {
+		ret = PTR_ERR(host->clksrc_base);
+		goto free_host;
+	}
 	res_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	host->base = devm_ioremap_resource(&pdev->dev, res_mem);
 	if (IS_ERR(host->base)) {
@@ -2860,10 +2869,6 @@ static int meson_mmc_probe(struct platform_device *pdev)
 
 	if (pdata->caps & MMC_PM_KEEP_POWER)
 		mmc->pm_caps |= MMC_PM_KEEP_POWER;
-	if (pdata->base != 0) {
-		iounmap(host->pinmux_base);
-		host->pinmux_base = ioremap(pdata->base, 0x200);
-	}
 	host->init_flag = 1;
 	host->version = AML_MMC_VERSION;
 	host->pinctrl = NULL;
@@ -2900,12 +2905,16 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		/* Poll down BOOT_15 in case hardward not pull down */
 		u32 boot_poll_en, boot_poll_down;
 
-		boot_poll_down = readl(host->pinmux_base + BOOT_POLL_UP_DOWN);
-		boot_poll_down &= (~(1 << 15));
-		boot_poll_en = readl(host->pinmux_base + BOOT_POLL_UP_DOWN_EN);
-		boot_poll_en |= (1 << 15);
-		writel(boot_poll_down, host->pinmux_base + BOOT_POLL_UP_DOWN);
-		writel(boot_poll_en, host->pinmux_base + BOOT_POLL_UP_DOWN_EN);
+		boot_poll_down = readl(host->pinmux_base
+				+ (host->data->ds_pin_poll << 2));
+		boot_poll_down &= (~(1 << host->data->ds_pin_poll_bit));
+		boot_poll_en = readl(host->pinmux_base
+				+ (host->data->ds_pin_poll_en << 2));
+		boot_poll_en |= (1 << host->data->ds_pin_poll_bit);
+		writel(boot_poll_down, host->pinmux_base
+				+ (host->data->ds_pin_poll << 2));
+		writel(boot_poll_en, host->pinmux_base
+				+ (host->data->ds_pin_poll_en << 2));
 	}
 
 	if (pdata->port_init)
@@ -2969,6 +2978,7 @@ static int meson_mmc_remove(struct platform_device *pdev)
 
 	devm_free_irq(&pdev->dev, host->irq, host);
 	iounmap(host->pinmux_base);
+	iounmap(host->clksrc_base);
 
 	if (host->cfg_div_clk)
 		clk_disable_unprepare(host->cfg_div_clk);
@@ -2983,30 +2993,75 @@ static int meson_mmc_remove(struct platform_device *pdev)
 
 static struct meson_mmc_data mmc_data_gxbb = {
 	.chip_type = MMC_CHIP_GXBB,
+	.pinmux_base = 0xc8834400,
+	.clksrc_base = 0xc883c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 15,
 };
 static struct meson_mmc_data mmc_data_gxtvbb = {
 	.chip_type = MMC_CHIP_GXTVBB,
+	.pinmux_base = 0xc8834400,
+	.clksrc_base = 0xc883c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 15,
 };
 static struct meson_mmc_data mmc_data_gxl = {
 	.chip_type = MMC_CHIP_GXL,
+	.pinmux_base = 0xc8834400,
+	.clksrc_base = 0xc883c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 15,
 };
 static struct meson_mmc_data mmc_data_gxm = {
 	.chip_type = MMC_CHIP_GXM,
+	.pinmux_base = 0xc8834400,
+	.clksrc_base = 0xc883c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 15,
 };
 static struct meson_mmc_data mmc_data_txl = {
 	.chip_type = MMC_CHIP_TXL,
+	.pinmux_base = 0xc8834400,
+	.clksrc_base = 0xc883c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 11,
 };
 static struct meson_mmc_data mmc_data_txlx = {
 	.chip_type = MMC_CHIP_TXLX,
+	.pinmux_base = 0xff634400,
+	.clksrc_base = 0xff63c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 11,
 };
 static struct meson_mmc_data mmc_data_axg = {
 	.chip_type = MMC_CHIP_AXG,
+	.pinmux_base = 0xff634400,
+	.clksrc_base = 0xff63c000,
+	.ds_pin_poll = 0x3e,
+	.ds_pin_poll_en = 0x4c,
+	.ds_pin_poll_bit = 13,
 };
 static struct meson_mmc_data mmc_data_gxlx = {
 	.chip_type = MMC_CHIP_GXLX,
+	.pinmux_base = 0xc8834400,
+	.clksrc_base = 0xc883c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 15,
 };
 static struct meson_mmc_data mmc_data_txhd = {
 	.chip_type = MMC_CHIP_TXHD,
+	.pinmux_base = 0xff634400,
+	.clksrc_base = 0xff63c000,
+	.ds_pin_poll = 0x3c,
+	.ds_pin_poll_en = 0x4a,
+	.ds_pin_poll_bit = 11,
 };
 
 static const struct of_device_id meson_mmc_of_match[] = {

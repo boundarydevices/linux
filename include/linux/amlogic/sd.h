@@ -174,6 +174,11 @@ enum mmc_chip_e {
 
 struct meson_mmc_data {
 	enum mmc_chip_e chip_type;
+	unsigned int pinmux_base;
+	unsigned int clksrc_base;
+	unsigned int ds_pin_poll;
+	unsigned int ds_pin_poll_en;
+	unsigned int ds_pin_poll_bit;
 };
 
 struct amlsd_host;
@@ -228,7 +233,6 @@ struct amlsd_platform {
 	unsigned int hw_reset;
 	unsigned int jtag_pin;
 	int is_sduart;
-	unsigned int base;
 	unsigned int card_in_delay;
 	bool is_in;
 	bool is_tuned;		/* if card has been tuning */
@@ -344,6 +348,7 @@ struct amlsd_host {
 	struct sd_emmc_regs *sd_emmc_regs;
 	void __iomem		*base;
 	void __iomem		*pinmux_base;
+	void __iomem		*clksrc_base;
 	int			dma;
 	char *bn_buf;
 	dma_addr_t		bn_dma_buf;
@@ -1580,7 +1585,7 @@ struct sd_emmc_desc_info {
 	u32 data_addr;
 	u32 resp_addr;
 };
-#define P_HHI_NAND_CLK_CNTL			(0xff63c000 + (0x97 << 2))
+#define HHI_NAND_CLK_CNTL					0x97
 #define SD_EMMC_MAX_DESC_MUN					512
 #define SD_EMMC_REQ_DESC_MUN					4
 #define SD_EMMC_CLOCK_SRC_OSC				 0 /* 24MHz */
@@ -1613,8 +1618,6 @@ struct sd_emmc_desc_info {
 }
 /* #define DBG_LINE_INFO() */
 /* #define dev_err(a,s) pr_info(KERN_INFO s); */
-#define BOOT_POLL_UP_DOWN (0x3C << 2)
-#define BOOT_POLL_UP_DOWN_EN (0x4A << 2)
 
 #define AML_MMC_DISABLED_TIMEOUT	100
 #define AML_MMC_SLEEP_TIMEOUT		1000

@@ -93,7 +93,6 @@ static int meson_mmc_clk_set_rate_v3(struct amlsd_host *host,
 	struct amlsd_platform *pdata = host->pdata;
 	int ret = 0;
 	struct clk *src0_clk = NULL;
-	void __iomem *source_base = NULL;
 #ifdef SD_EMMC_CLK_CTRL
 	u32 clk_rate, clk_div, clk_src_sel;
 	struct amlsd_platform *pdata = host->pdata;
@@ -194,16 +193,13 @@ static int meson_mmc_clk_set_rate_v3(struct amlsd_host *host,
 		writel(vcfg, host->base + SD_EMMC_CFG);
 	}
 #endif
-	source_base =
-				ioremap_nocache(P_HHI_NAND_CLK_CNTL,
-					sizeof(u32));
 	pr_debug("actual_clock :%u, HHI_nand: 0x%x\n",
-		mmc->actual_clock, readl(source_base));
+			mmc->actual_clock,
+			readl(host->clksrc_base + (HHI_NAND_CLK_CNTL << 2)));
 
 	 pr_debug("[%s] after clock: 0x%x\n",
 		 __func__, readl(host->base + SD_EMMC_CLOCK_V3));
 
-	iounmap(source_base);
 	return ret;
 }
 

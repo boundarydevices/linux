@@ -1157,7 +1157,6 @@ static int aml_sdio_probe(struct platform_device *pdev)
 
 	host->irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
 	pr_info("host->irq = %d\n", host->irq);
-	host->pinmux_base = ioremap(0xc1108000, 0x200);
 	host->base = devm_ioremap_nocache(&pdev->dev, res_mem->start, size);
 
 	aml_sdio_init_host(host);
@@ -1175,6 +1174,9 @@ static int aml_sdio_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto probe_free_host;
 	}
+
+	if (host->data->pinmux_base)
+		host->pinmux_base = ioremap(host->data->pinmux_base, 0x200);
 
 	/* init sdio reg here */
 	aml_sdio_init_param(host);
@@ -1343,6 +1345,7 @@ fail_init_host:
 
 	static struct meson_mmc_data mmc_data_m8b = {
 		.chip_type = MMC_CHIP_M8B,
+		.pinmux_base = 0xc1108000,
 	};
 
 	static const struct of_device_id aml_sdio_dt_match[] = {
