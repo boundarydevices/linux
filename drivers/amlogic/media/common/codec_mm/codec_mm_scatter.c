@@ -654,8 +654,10 @@ static struct codec_mm_slot *codec_mm_slot_alloc(
 				   *may auto enabled when free more.
 				 */
 				smgt->support_from_slot_sys = 0;
-				ERR_LOG("alloc sys failed size =%d!!!\n",
-					try_alloc_size);
+				/*
+				 * ERR_LOG("alloc sys failed size =%d!!!\n",
+				 *	try_alloc_size);
+				 */
 				goto error;
 			}
 		}
