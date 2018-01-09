@@ -14240,3 +14240,8 @@ AMLOGIC PINCTRL DRIVER
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
 F:	drivers/amlogic/pinctrl/*
 F:	include/dt-bindings/gpio/*
+
+AMLOGIC LEDRING DRIVER
+M:	Renjun Xu <renjun.xu@amlogic.com>
+F:	drivers/amlogic/ledring/aml-is31fl32xx.c
+F:	drivers/amlogic/ledring/aml-pca9557.c
