@@ -1228,7 +1228,7 @@ static void brcmf_usb_probe_phase2(struct device *dev, int ret,
 	}
 
 	/* Attach to the common driver interface */
-	ret = brcmf_attach(devinfo->dev);
+	ret = brcmf_attach(devinfo->dev, true);
 	if (ret)
 		goto error;
 
@@ -1310,7 +1310,7 @@ static int brcmf_usb_probe_cb(struct brcmf_usbdev_info *devinfo)
 				goto fail;
 		}
 
-		ret = brcmf_attach(devinfo->dev);
+		ret = brcmf_attach(devinfo->dev, true);
 		if (ret)
 			goto fail;
 
