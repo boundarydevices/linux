@@ -131,12 +131,16 @@ static CLASS_ATTR(os_version, 0644, tee_os_version_show,
 static CLASS_ATTR(api_version, 0644, tee_api_version_show,
 		NULL);
 
-int tee_load_video_fw(uint32_t index)
+/*
+ * index: firmware index
+ * vdec:  vdec type(0: compatible, 1: legency vdec, 2: HEVC vdec)
+ */
+int tee_load_video_fw(uint32_t index, uint32_t vdec)
 {
 	struct arm_smccc_res res;
 
 	arm_smccc_smc(TEE_SMC_LOAD_VIDEO_FW,
-			index, 0, 0, 0, 0, 0, 0, &res);
+			index, vdec, 0, 0, 0, 0, 0, &res);
 
 	return res.a0;
 }
