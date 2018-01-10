@@ -691,6 +691,7 @@ static int aml_dai_set_tdm_slot(struct snd_soc_dai *cpu_dai,
 	aml_tdm_set_slot(p_tdm->actrl, slots, slot_width, p_tdm->id);
 	/* constrains hw channels_max by DTS configs */
 	drv->playback.channels_max = slots * lanes_cnt;
+	drv->capture.channels_max = slots * lanes_cnt;
 
 	return 0;
 }
