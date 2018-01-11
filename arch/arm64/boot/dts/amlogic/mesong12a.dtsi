@@ -137,6 +137,11 @@
 		interrupts = <GIC_PPI 9 0xf04>;
 	};
 
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
+
 	meson_suspend:pm {
 		compatible = "amlogic, pm";
 		status = "disabled";
