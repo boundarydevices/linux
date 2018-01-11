@@ -14245,3 +14245,8 @@ AMLOGIC LEDRING DRIVER
 M:	Renjun Xu <renjun.xu@amlogic.com>
 F:	drivers/amlogic/ledring/aml-is31fl32xx.c
 F:	drivers/amlogic/ledring/aml-pca9557.c
+
+AMLOGIC LEDRING DRIVER IOCTL
+M:	Renjun Xu <renjun.xu@amlogic.com>
+F:	drivers/amlogic/ledring/aml-is31fl32xx.c
+F:	drivers/amlogic/ledring/aml-pca9557.c

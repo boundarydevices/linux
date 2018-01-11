@@ -437,6 +437,7 @@ static const struct file_operations led_fops = {
 	.owner = THIS_MODULE,
 	.read = leds_read,
 	.compat_ioctl = leds_ioctl,
+	.unlocked_ioctl = leds_ioctl,
 };
 
 static int ledring_parse_child_dt(const struct device *dev, int *mode)
@@ -493,7 +494,8 @@ static int ledring_parse_child_dt(const struct device *dev, int *mode)
 static int ledring_probe(struct i2c_client *client,
 		const struct i2c_device_id *i2c_id)
 {
-	int ret,i;
+	int ret, i;
+	int try_times = 0;
 	struct device *dev = &client->dev;
 
 	g_client = client;
@@ -516,14 +518,23 @@ static int ledring_probe(struct i2c_client *client,
 		if (ret)
 			goto err1;
 		key_led_des->run_time = DEFAULT_SPEED;
-		ret = leds_init(key_led_des->mode);
-		if (ret < 0) {
-			goto err1;
+		for (i = 0; i < 3; i++) {
+			ret = leds_init(key_led_des->mode);
+			if (ret != 0) {
+				if (++try_times >= 3)
+					goto err1;
+			} else
+				break;
 		}
 	} else {
-		ret = leds_init(key_led_des->mode);
-		if (ret < 0)
-			goto err3;
+		for (i = 0; i < 3; i++) {
+			ret = leds_init(key_led_des->mode);
+			if (ret != 0) {
+				if (++try_times >= 3)
+					goto err3;
+			} else
+				break;
+		}
 		key_led_des->pca_input_dev = input_allocate_device();
 		if (key_led_des->pca_input_dev == NULL) {
 			pr_err("input_allocate_device err!\n");

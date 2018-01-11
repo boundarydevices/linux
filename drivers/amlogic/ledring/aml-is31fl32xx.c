@@ -685,6 +685,7 @@ static void setup_timer_task(void)
 static const struct file_operations is31fl32xx_fops = {
 	.owner = THIS_MODULE,
 	.compat_ioctl = is31fl32xx_ioctl,
+	.unlocked_ioctl = is31fl32xx_ioctl,
 };
 
 static int is31fl32xx_probe(struct i2c_client *client,
@@ -694,7 +695,8 @@ static int is31fl32xx_probe(struct i2c_client *client,
 	const struct of_device_id *of_dev_id;
 	struct device *dev = &client->dev;
 	struct is31fl32xx_priv *priv;
-	int count;
+	int count, i;
+	int try_times = 0;
 	int ret = 0;
 
 	pr_info("%s\n",__func__);
@@ -725,11 +727,14 @@ static int is31fl32xx_probe(struct i2c_client *client,
 	priv->client = client;
 	priv->cdef = cdef;
 	i2c_set_clientdata(client, priv);
-
-	ret = is31fl32xx_init_regs(priv);
-	if (ret)
-		goto err1;
-
+	for (i = 0; i < 3; i++) {
+		ret = is31fl32xx_init_regs(priv);
+		if (ret) {
+			if (++try_times >= 3)
+				goto err1;
+		} else
+			break;
+	}
 	ret = is31fl32xx_parse_dt(dev, priv);
 	if (ret)
 		goto err1;
