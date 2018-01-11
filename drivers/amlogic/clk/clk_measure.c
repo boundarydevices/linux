@@ -830,7 +830,7 @@ static void __exit aml_clkmsr_exit(void)
 	platform_driver_unregister(&aml_clkmsr_driver);
 }
 
-module_init(aml_clkmsr_init);
+arch_initcall(aml_clkmsr_init);
 module_exit(aml_clkmsr_exit);
 
 MODULE_DESCRIPTION("Amlogic clkmsr module");

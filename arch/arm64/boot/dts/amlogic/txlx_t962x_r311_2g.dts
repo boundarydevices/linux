@@ -1440,6 +1440,10 @@
 	status = "okay";
 };
 
+&pwm_ab {
+	status = "okay";
+};
+
 &pwm_cd {
 	status = "okay";
 };

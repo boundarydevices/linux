@@ -534,6 +534,7 @@
 		pinctrl_version = <2>; /* for uboot */
 		interrupts = <0 3 1>;
 		interrupt-names = "ldim_vsync";
+		bl_pwm_config = <&bl_pwm_conf>;
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
 		/* power index:(point gpios_index, 0xff=invalid) */

@@ -457,7 +457,7 @@ static void bl_set_pwm(struct bl_pwm_config_s *bl_pwm)
 	case BL_PWM_F:
 		pwm_period = 1000000000 / bl_pwm->pwm_freq;
 		pwm_duty = (pwm_period * bl_pwm->pwm_duty) / 100;
-		if ((!IS_ERR(bl_pwm->pwm_data.pwm)) &&
+		if ((!IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) &&
 			((bl_pwm->pwm_data.port_index % 2) ==
 			bl_pwm->pwm_data.meson_index) &&
 			(bl_pwm->pwm_data.port_index ==
@@ -525,7 +525,7 @@ void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status)
 		case BL_PWM_D:
 		case BL_PWM_E:
 		case BL_PWM_F:
-			if (!IS_ERR(bl_pwm->pwm_data.pwm)) {
+			if (!IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
 				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 				pwm_constant_enable(bl_pwm->pwm_data.meson,
 					bl_pwm->pwm_data.meson_index);
@@ -1919,7 +1919,7 @@ static int pwm_channel_conf(struct bl_config_s *bconf,
 		bl_pwm->pwm_data.meson_index = index1;
 		bl_pwm->pwm_data.pwm = devm_of_pwm_get(
 			bl_drv->dev, child, NULL);
-		if (IS_ERR(bl_pwm->pwm_data.pwm)) {
+		if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
 			ret = PTR_ERR(bl_pwm->pwm_data.pwm);
 			BLERR("unable to request bl_pwm\n");
 			return ret;
@@ -2367,6 +2367,11 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 			case BL_PWM_D:
 			case BL_PWM_E:
 			case BL_PWM_F:
+				if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
+					len += sprintf(buf+len,
+						"pwm invalid\n");
+					break;
+				}
 				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 				len += sprintf(buf+len,
 					"\n"
@@ -2426,6 +2431,11 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 			case BL_PWM_D:
 			case BL_PWM_E:
 			case BL_PWM_F:
+				if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
+					len += sprintf(buf+len,
+						"pwm invalid\n");
+					break;
+				}
 				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 				len += sprintf(buf+len,
 					"\n"
@@ -2479,6 +2489,11 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 			case BL_PWM_D:
 			case BL_PWM_E:
 			case BL_PWM_F:
+				if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
+					len += sprintf(buf+len,
+						"pwm invalid\n");
+					break;
+				}
 				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 				len += sprintf(buf+len,
 					"\n"
@@ -2801,7 +2816,7 @@ static int aml_bl_creat_class(void)
 	int i;
 
 	bl_debug_class = class_create(THIS_MODULE, "aml_bl");
-	if (IS_ERR(bl_debug_class)) {
+	if (IS_ERR_OR_NULL(bl_debug_class)) {
 		BLERR("create aml_bl debug class fail\n");
 		return -1;
 	}
