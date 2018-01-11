@@ -884,6 +884,24 @@
 		};
 	};
 
+	sd_to_ao_uart_clr_pins:sd_to_ao_uart_clr_pins {
+		mux {
+			groups = "GPIOAO_0",
+					"GPIOAO_1";
+			function = "gpio_aobus";
+		};
+	};
+
+	sd_to_ao_uart_pins:sd_to_ao_uart_pins {
+		mux {
+			groups = "uart_tx_ao_a",
+					"uart_rx_ao_a";
+			function = "uart_ao_a";
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
 	hdmitx_aocec: ao_cec {
 		mux {
 			groups = "ao_cec_ao7",
@@ -995,7 +1013,7 @@
 		};
 	};
 
-	sdio_clk_cmd_pins:sdio_clk_cmd_pins {
+	sd_clk_cmd_pins:sd_clk_cmd_pins {
 		mux {
 			groups = "sdcard_cmd_c",
 				   "sdcard_clk_c";
@@ -1005,7 +1023,7 @@
 		};
 	};
 
-	sdio_all_pins:sdio_all_pins {
+	sd_all_pins:sd_all_pins {
 		mux {
 			groups = "sdcard_d0_c",
 				   "sdcard_d1_c",
@@ -1016,6 +1034,27 @@
 			function = "sdcard";
 			input-enable;
 			bias-pull-up;
+		};
+	};
+
+	sd_1bit_pins:sd_1bit_pins {
+		mux {
+			groups = "sdcard_d0_c",
+					"sdcard_cmd_c",
+					"sdcard_clk_c";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	ao_to_sd_uart_pins:ao_to_sd_uart_pins {
+		mux {
+			groups = "uart_tx_ao_a_c4",
+					"uart_rx_ao_a_c5";
+			function = "uart_ao_a_ee";
+			bias-pull-up;
+			input-enable;
 		};
 	};
 

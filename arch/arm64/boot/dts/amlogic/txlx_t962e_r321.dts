@@ -662,9 +662,9 @@
 		compatible = "amlogic, meson-mmc-txlx";
 		reg = <0x0 0xffe05000 0x0 0x2000>;
 		interrupts = <0 217 4>;
-		pinctrl-names = "sdio_clk_cmd_pins", "sdio_all_pins";
-		pinctrl-0 = <&sdio_clk_cmd_pins>;
-		pinctrl-1 = <&sdio_all_pins>;
+		pinctrl-names = "sd_clk_cmd_pins", "sd_all_pins";
+		pinctrl-0 = <&sd_clk_cmd_pins>;
+		pinctrl-1 = <&sd_all_pins>;
 		clocks = <&clkc CLKID_SD_EMMC_B>,
 			   <&clkc CLKID_SD_EMMC_B_P0_COMP>,
 			   <&clkc CLKID_FCLK_DIV2>,
@@ -698,6 +698,7 @@
 			card_type = <3>;
 			/* 3:sdio device(ie:sdio-wifi),
 			 * 4:SD combo (IO+mem) card
+			 * 5:NON sdio device(means sd/mmc card)
 			 */
 		};
 	};
