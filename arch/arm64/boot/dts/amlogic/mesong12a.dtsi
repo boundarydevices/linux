@@ -823,6 +823,20 @@
 			function = "i2c_ao_slave";
 		};
 	};
+
+	aocec_a: ao_ceca {
+		mux {
+			groups = "cec_ao_a";
+			function = "cec_ao";
+		};
+	};
+
+	aocec_b: ao_cecb {
+		mux {
+			groups = "cec_ao_b";
+			function = "cec_ao";
+		};
+	};
 };
 
 &pinctrl_periphs {
@@ -1090,6 +1104,28 @@
 		mux {
 			groups = "pwm_e";
 			function = "pwm_e";
+		};
+	};
+
+	c_i2c_master_pin1:c_i2c_pin1 {
+		mux {
+			groups = "i2c3_sck_a",
+				"i2c3_sda_a";
+			function = "i2c3";
+		};
+	};
+
+	eecec_a: ee_ceca {
+		mux {
+			groups = "cec_ao_a_ee";
+			function = "cec_ao_ee";
+		};
+	};
+
+	eecec_b: ee_cecb {
+		mux {
+			groups = "cec_ao_b_ee";
+			function = "cec_ao_ee";
 		};
 	};
 };

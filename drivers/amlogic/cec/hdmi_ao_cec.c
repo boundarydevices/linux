@@ -510,7 +510,7 @@ static void ao_cecb_init(void)
 	writel(reg, cec_dev->cec_reg + AO_CECB_CLK_CNTL_REG0);
 
 	reg = readl(cec_dev->cec_reg + AO_RTI_PWR_CNTL_REG0);
-	reg |=  (0x01 << 6);	/* xtal gate */
+	reg |=  (0x01 << 14);	/* xtal gate */
 	writel(reg, cec_dev->cec_reg + AO_RTI_PWR_CNTL_REG0);
 
 	data32  = 0;
@@ -1840,7 +1840,6 @@ static ssize_t physical_addr_store(struct class *cla,
 
 	if (kstrtouint(buf, 16, &addr) != 1)
 		return -EINVAL;
-
 	if (addr > 0xffff || addr < 0) {
 		CEC_ERR("invalid input:%s\n", buf);
 		phy_addr_test = 0;
@@ -2385,6 +2384,11 @@ static const struct cec_platform_data_s cec_txlx_data = {
 	.ee_to_ao = 1,
 };
 
+static const struct cec_platform_data_s cec_g12a_data = {
+	.line_bit = 7,
+	.ee_to_ao = 1,
+};
+
 static const struct of_device_id aml_cec_dt_match[] = {
 	{
 		.compatible = "amlogic, amlogic-aocec",
@@ -2393,6 +2397,10 @@ static const struct of_device_id aml_cec_dt_match[] = {
 	{
 		.compatible = "amlogic, aocec-txlx",
 		.data = &cec_txlx_data,
+	},
+	{
+		.compatible = "amlogic, aocec-g12a",
+		.data = &cec_g12a_data,
 	},
 };
 #endif
@@ -2406,7 +2414,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 	struct device_node *node = pdev->dev.of_node;
 	int irq_idx = 0, r;
 	const char *irq_name = NULL;
-	/*struct pinctrl *p;*/
+	struct pinctrl *p;
 	struct vendor_info_data *vend;
 	struct resource *res;
 	resource_size_t *base;
@@ -2502,6 +2510,19 @@ static int aml_cec_probe(struct platform_device *pdev)
 	else
 		ee_cec = 0;
 	CEC_INFO("using EE cec:%d\n", ee_cec);
+	/* pinmux set */
+	if (of_get_property(node, "pinctrl-names", NULL)) {
+		r = of_property_read_string(node,
+					    "pinctrl-names",
+					    &cec_dev->pin_name);
+		if ((!r) && strcmp(cec_dev->pin_name, "default")) {
+			CEC_INFO("%s pin name:%s\n", __func__,
+			 cec_dev->pin_name);
+			p = devm_pinctrl_get_select(&pdev->dev,
+						    cec_dev->pin_name);
+		}
+	}
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res) {
 		base = ioremap(res->start, res->end - res->start);
@@ -2613,6 +2634,8 @@ static int aml_cec_probe(struct platform_device *pdev)
 	/* for init */
 	cec_pre_init();
 	queue_delayed_work(cec_dev->cec_thread, &cec_dev->cec_work, 0);
+
+	CEC_ERR("%s success end\n", __func__);
 
 	return 0;
 tag_cec_msg_alloc_err:

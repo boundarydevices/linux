@@ -484,6 +484,28 @@
 		pinctrl-0 = <&c_uart_pins>;
 	};
 
+	aocec: aocec {
+		compatible = "amlogic, aocec-g12a";
+		device_name = "aocec";
+		status = "okay";
+		vendor_name = "Amlogic"; /* Max Chars: 8     */
+		/* Refer to the following URL at:
+		 * http://standards.ieee.org/develop/regauth/oui/oui.txt
+		 */
+		vendor_id = <0x000000>;
+		product_desc = "G12A"; /* Max Chars: 16    */
+		cec_osd_string = "AML_MBOX"; /* Max Chars: 14    */
+		port_num = <1>;
+		ee_cec;
+		arc_port_mask = <0x2>;
+		interrupts = <0 203 1>;
+		interrupt-names = "hdmi_aocecb";
+		pinctrl-names = "default";
+		pinctrl-0=<&eecec_b>;
+		reg = <0x0 0xFF80023c 0x0 0x4
+		       0x0 0xFF800000 0x0 0x400>;
+	};
+
 	dwc3: dwc3@ff500000 {
 		compatible = "synopsys, dwc3";
 		status = "okay";

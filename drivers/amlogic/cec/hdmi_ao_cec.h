@@ -58,6 +58,14 @@
 #define AO_DEBUG_REG1			((0x29 << 2))
 #define AO_DEBUG_REG2			((0x2a << 2))
 #define AO_DEBUG_REG3			((0x2b << 2))
+#define AO_CEC_STICKY_DATA0			((0xca << 2))
+#define AO_CEC_STICKY_DATA1			((0xcb << 2))
+#define AO_CEC_STICKY_DATA2			((0xcc << 2))
+#define AO_CEC_STICKY_DATA3			((0xcd << 2))
+#define AO_CEC_STICKY_DATA4			((0xce << 2))
+#define AO_CEC_STICKY_DATA5			((0xcf << 2))
+#define AO_CEC_STICKY_DATA6			((0xd0 << 2))
+#define AO_CEC_STICKY_DATA7			((0xd1 << 2))
 
 /*
  * AOCEC_B
