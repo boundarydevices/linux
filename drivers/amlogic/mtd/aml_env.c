@@ -185,6 +185,41 @@ int uboot_env_open(struct inode *node, struct file *file)
 	return 0;
 }
 
+static loff_t uboot_env_llseek(struct file *file, loff_t off, int whence)
+{
+	loff_t newpos;
+
+	mutex_lock(&env_mutex);
+	switch (whence) {
+	case 0: /* SEEK_SET (start postion)*/
+		newpos = off;
+		break;
+
+	case 1: /* SEEK_CUR */
+		newpos = file->f_pos + off;
+		break;
+
+	case 2: /* SEEK_END */
+		newpos = (loff_t)(CONFIG_ENV_SIZE) - 1;
+		newpos = newpos - off;
+		break;
+
+	default: /* can't happen */
+		mutex_unlock(&env_mutex);
+		return -EINVAL;
+	}
+
+	if ((newpos < 0) || (newpos >= (loff_t)CONFIG_ENV_SIZE)) {
+		mutex_unlock(&env_mutex);
+		return -EINVAL;
+	}
+
+	file->f_pos = newpos;
+	mutex_unlock(&env_mutex);
+
+	return newpos;
+}
+
 ssize_t uboot_env_read(struct file *file,
 		char __user *buf,
 		size_t count,
@@ -291,6 +326,7 @@ static const struct file_operations uboot_env_ops = {
 	.open = uboot_env_open,
 	.read = uboot_env_read,
 	.write = uboot_env_write,
+	.llseek	= uboot_env_llseek,
 	.unlocked_ioctl = uboot_env_ioctl,
 };
 #endif /* AML_NAND_UBOOT */
