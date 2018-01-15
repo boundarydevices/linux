@@ -91,6 +91,7 @@ struct aml_aes_dev {
 
 	struct ablkcipher_request	*req;
 	size_t	total;
+	size_t	fast_total;
 
 	struct scatterlist	*in_sg;
 	size_t			in_offset;
@@ -219,6 +220,8 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 		uint32_t *nents, size_t total)
 {
 	size_t count = 0;
+	size_t count_total = 0;
+	size_t count_sg = 0;
 	uint32_t i = 0;
 	int err = 0;
 	struct scatterlist *in_sg = dd->in_sg;
@@ -250,15 +253,19 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 
 	in_sg = dd->in_sg;
 	out_sg = dd->out_sg;
+	count_total = count;
 	for (i = 0; i < *nents; i++) {
+		count_sg = count_total > sg_dma_len(in_sg) ?
+			sg_dma_len(in_sg) : count_total;
 		addr_in = sg_dma_address(in_sg);
 		addr_out = sg_dma_address(out_sg);
 		dsc[i].src_addr = (uintptr_t)addr_in;
 		dsc[i].tgt_addr = (uintptr_t)addr_out;
 		dsc[i].dsc_cfg.d32 = 0;
-		dsc[i].dsc_cfg.b.length = sg_dma_len(in_sg);
+		dsc[i].dsc_cfg.b.length = count_sg;
 		in_sg = sg_next(in_sg);
 		out_sg = sg_next(out_sg);
+		count_total -= count_sg;
 	}
 	return count;
 }
@@ -358,15 +365,20 @@ static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
 		dd->fast_nents = 0;
 	}
 
+	//fast = 0;
 	if (fast)  {
 		count = aml_aes_sg_dma(dd, dsc, &dd->fast_nents, dd->total);
 		dd->flags |= AES_FLAGS_FAST;
 		nents = dd->fast_nents;
+		dd->fast_total = count;
 	} else {
 		/* slow dma */
 		/* use cache buffers */
 		count = aml_aes_sg_copy(&dd->in_sg, &dd->in_offset,
-				dd->buf_in, dd->buflen, dd->total, 0);
+				dd->buf_in, dd->buflen,
+				((dd->total + dd->ctx->block_size - 1)
+				 / dd->ctx->block_size)
+				* dd->ctx->block_size, 0);
 		addr_in = dd->dma_addr_in;
 		addr_out = dd->dma_addr_out;
 		dd->dma_size = count;
@@ -375,7 +387,8 @@ static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
 		dsc->src_addr = (uint32_t)addr_in;
 		dsc->tgt_addr = (uint32_t)addr_out;
 		dsc->dsc_cfg.d32 = 0;
-		dsc->dsc_cfg.b.length = count;
+		dsc->dsc_cfg.b.length = ((count + dd->ctx->block_size - 1)
+				/ dd->ctx->block_size) * dd->ctx->block_size;
 		nents = 1;
 		dd->flags &= ~AES_FLAGS_FAST;
 	}
@@ -465,7 +478,8 @@ static int aml_aes_handle_queue(struct aml_aes_dev *dd,
 
 	err = aml_aes_write_ctrl(dd);
 	if (!err) {
-		if (dd->total % AML_AES_DMA_THRESHOLD == 0)
+		if (dd->total % AML_AES_DMA_THRESHOLD == 0 ||
+			(dd->flags & AES_FLAGS_CTR))
 			err = aml_aes_crypt_dma_start(dd);
 		else {
 			pr_err("size %zd is not multiple of %d",
@@ -496,6 +510,10 @@ static int aml_aes_crypt_dma_stop(struct aml_aes_dev *dd)
 					dd->fast_nents, DMA_FROM_DEVICE);
 			dma_unmap_sg(dd->dev, dd->in_sg,
 					dd->fast_nents, DMA_TO_DEVICE);
+			if (dd->flags & AES_FLAGS_CBC)
+				scatterwalk_map_and_copy(dd->req->info,
+						dd->out_sg, dd->fast_total - 16,
+						16, 0);
 		} else {
 			dma_sync_single_for_cpu(dd->dev, dd->dma_addr_out,
 					dd->dma_size, DMA_FROM_DEVICE);
@@ -507,6 +525,10 @@ static int aml_aes_crypt_dma_stop(struct aml_aes_dev *dd)
 			if (count != dd->dma_size) {
 				err = -EINVAL;
 				pr_err("not all data converted: %zu\n", count);
+			}
+			if (dd->flags & AES_FLAGS_CBC) {
+				memcpy(dd->req->info, dd->buf_out +
+						dd->dma_size - 16, 16);
 			}
 		}
 		dd->flags &= ~AES_FLAGS_DMA;
@@ -596,7 +618,8 @@ static int aml_aes_crypt(struct ablkcipher_request *req, unsigned long mode)
 	struct aml_aes_reqctx *rctx = ablkcipher_request_ctx(req);
 	struct aml_aes_dev *dd;
 
-	if (!IS_ALIGNED(req->nbytes, AES_BLOCK_SIZE)) {
+	if (!IS_ALIGNED(req->nbytes, AES_BLOCK_SIZE) &&
+			!(mode & AES_FLAGS_CTR)) {
 		pr_err("request size is not exact amount of AES blocks\n");
 		return -EINVAL;
 	}

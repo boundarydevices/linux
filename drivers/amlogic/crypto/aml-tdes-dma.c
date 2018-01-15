@@ -127,6 +127,7 @@ static int set_tdes_key_iv(struct aml_tdes_dev *dd,
 	uint32_t key_iv[12];
 	uint32_t *piv = key_iv + 8;
 	uint32_t len = keylen;
+	uint32_t processed = 0;
 	dma_addr_t dma_addr_key;
 	uint32_t i = 0;
 
@@ -149,15 +150,16 @@ static int set_tdes_key_iv(struct aml_tdes_dev *dd,
 	}
 
 	while (len > 0) {
+		processed = len > 16 ? 16 : len;
 		dsc[i].src_addr = (uint32_t)dma_addr_key + i * 16;
 		dsc[i].tgt_addr = i * 16;
 		dsc[i].dsc_cfg.d32 = 0;
-		dsc[i].dsc_cfg.b.length = len > 16 ? 16 : len;
+		dsc[i].dsc_cfg.b.length = processed;
 		dsc[i].dsc_cfg.b.mode = MODE_KEY;
 		dsc[i].dsc_cfg.b.eoc = 0;
 		dsc[i].dsc_cfg.b.owner = 1;
 		i++;
-		len -= 16;
+		len -= processed;
 	}
 	dsc[i - 1].dsc_cfg.b.eoc = 1;
 

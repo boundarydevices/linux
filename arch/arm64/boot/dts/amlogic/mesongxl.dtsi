@@ -1029,7 +1029,7 @@
 	aml_dma {
 		compatible = "amlogic,aml_gxl_dma";
 		reg = <0x0 0xc883e000 0x0 0x28>;
-		interrupts = <0 180 1>;
+		interrupts = <0 188 1>;
 
 		aml_aes {
 			compatible = "amlogic,aes_dma";
