@@ -552,14 +552,20 @@ static ssize_t show_attr(struct device *dev,
 	return pos;
 }
 
-static ssize_t store_attr(struct device *dev,
+ssize_t store_attr(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	memcpy(hdmitx_device.fmt_attr, buf, sizeof(hdmitx_device.fmt_attr));
 	return count;
 }
-
 /*aud_mode attr*/
+
+void setup_attr(const char *buf)
+{
+	store_attr(NULL, NULL, buf, 0);
+}
+EXPORT_SYMBOL(setup_attr);
+
 static ssize_t show_aud_mode(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -3099,8 +3105,8 @@ static int hdmi_task_handle(void *data)
 	INIT_WORK(&hdmitx_device->work_hdr, hdr_work_func);
 
 /* When init hdmi, clear the hdmitx module edid ram and edid buffer. */
+	hdmitx_edid_clear(hdmitx_device);
 	hdmitx_edid_ram_buffer_clear(hdmitx_device);
-
 	hdmitx_device->hdmi_wq = alloc_workqueue(DEVICE_NAME,
 		WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
 	INIT_DELAYED_WORK(&hdmitx_device->work_hpd_plugin,
@@ -3119,7 +3125,9 @@ static int hdmi_task_handle(void *data)
 
 	hdmitx_device->tx_aud_cfg = 1; /* default audio configure is on */
 
-	hdmitx_device->HWOp.SetupIRQ(hdmitx_device);
+	/*Direct Rander Management use another irq*/
+	if (hdmitx_device->drm_feature == 0)
+		hdmitx_device->HWOp.SetupIRQ(hdmitx_device);
 
 	/* Trigger HDMITX IRQ*/
 	hdmitx_device->HWOp.CntlMisc(hdmitx_device, MISC_HPD_MUX_OP, PIN_UNMUX);
@@ -3520,7 +3528,15 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 			if (ret)
 				pr_info(SYS "not find pwr_ctl\n");
 		}
-		}
+		/* Get drm feature information */
+		ret = of_property_read_u32(pdev->dev.of_node, "drm_feature",
+			&(hdmitx_device.drm_feature));
+		if (ret)
+			pr_info(SYS "not find drm_feature\n");
+		else
+			pr_info(SYS "hdmitx_device.drm_feature : %d\n",
+				hdmitx_device.drm_feature);
+	}
 
 #else
 		hdmi_pdata = pdev->dev.platform_data;
@@ -3776,6 +3792,9 @@ static int amhdmitx_resume(struct platform_device *pdev)
 static const struct of_device_id meson_amhdmitx_dt_match[] = {
 	{
 	.compatible	 = "amlogic, amhdmitx",
+	},
+	{
+	.compatible	 = "amlogic, drm_amhdmitx",
 	},
 	{},
 };

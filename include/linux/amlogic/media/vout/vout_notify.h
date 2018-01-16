@@ -120,5 +120,10 @@ extern char *get_vout_mode_internal(void);
 extern char *get_vout_mode_uboot(void);
 
 extern int set_vout_mode(char *name);
+extern void set_vout_init(enum vmode_e mode);
+extern void update_vout_viu(void);
+extern int set_vout_vmode(enum vmode_e mode);
+extern enum vmode_e validate_vmode(char *name);
+extern int set_current_vmode(enum vmode_e mode);
 
 #endif /* _VOUT_NOTIFY_H_ */

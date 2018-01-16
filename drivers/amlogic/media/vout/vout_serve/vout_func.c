@@ -118,11 +118,64 @@ static inline int vout_func_check_state(int index, unsigned int state,
 	return 0;
 }
 
-static void vout_func_update_viu(int index, struct vout_server_s *p_server)
+void vout_func_set_state(int index, enum vmode_e mode)
+{
+	struct vout_server_s *p_server;
+	struct vout_module_s *p_module = NULL;
+	int state;
+
+	mutex_lock(&vout_mutex);
+
+	if (index == 1)
+		p_module = &vout_module;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	else if (index == 2)
+		p_module = &vout2_module;
+#endif
+
+	list_for_each_entry(p_server, &p_module->vout_server_list, list) {
+		if (p_server->op.vmode_is_supported == NULL) {
+			p_server->op.disable(mode);
+			continue;
+		}
+
+		if (p_server->op.vmode_is_supported(mode) == true) {
+			p_module->curr_vout_server = p_server;
+			if (p_server->op.set_state)
+				p_server->op.set_state(index);
+		} else {
+			if (p_server->op.get_state) {
+				state = p_server->op.get_state();
+				if (state & (1 << index))
+					p_server->op.disable(mode);
+			}
+			if (p_server->op.clr_state)
+				p_server->op.clr_state(index);
+		}
+	}
+
+	mutex_unlock(&vout_mutex);
+}
+EXPORT_SYMBOL(vout_func_set_state);
+
+void vout_func_update_viu(int index)
 {
 	struct vinfo_s *vinfo = NULL;
+	struct vout_server_s *p_server;
+	struct vout_module_s *p_module = NULL;
 	unsigned int mux_bit = 0xff, mux_sel = VIU_MUX_MAX;
 	unsigned int clk_bit = 0xff, clk_sel = 0;
+
+	mutex_lock(&vout_mutex);
+
+	if (index == 1)
+		p_module = &vout_module;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	else if (index == 2)
+		p_module = &vout2_module;
+#endif
+
+	p_server = p_module->curr_vout_server;
 
 	if (p_server->op.get_vinfo)
 		vinfo = p_server->op.get_vinfo();
@@ -168,17 +221,14 @@ static void vout_func_update_viu(int index, struct vout_server_s *p_server)
 	VOUTPR("%s: %d, mux_sel=%d, clk_sel=%d\n",
 		__func__, index, mux_sel, clk_sel);
 #endif
+	mutex_unlock(&vout_mutex);
 }
+EXPORT_SYMBOL(vout_func_update_viu);
 
-/*
- * interface export to client who want to set current vmode.
- */
-int vout_func_set_current_vmode(int index, enum vmode_e mode)
+int vout_func_set_vmode(int index, enum vmode_e mode)
 {
 	int ret = -1;
-	struct vout_server_s *p_server;
 	struct vout_module_s *p_module = NULL;
-	int state;
 
 	mutex_lock(&vout_mutex);
 
@@ -188,33 +238,23 @@ int vout_func_set_current_vmode(int index, enum vmode_e mode)
 	else if (index == 2)
 		p_module = &vout2_module;
 #endif
-
-	list_for_each_entry(p_server, &p_module->vout_server_list, list) {
-		if (p_server->op.vmode_is_supported == NULL) {
-			p_server->op.disable(mode);
-			continue;
-		}
-
-		if (p_server->op.vmode_is_supported(mode) == true) {
-			p_module->curr_vout_server = p_server;
-			if (p_server->op.set_state)
-				p_server->op.set_state(index);
-		} else {
-			if (p_server->op.get_state) {
-				state = p_server->op.get_state();
-				if (state & (1 << index))
-					p_server->op.disable(mode);
-			}
-			if (p_server->op.clr_state)
-				p_server->op.clr_state(index);
-		}
-	}
-	vout_func_update_viu(index, p_module->curr_vout_server);
 	ret = p_module->curr_vout_server->op.set_vmode(mode);
 
 	mutex_unlock(&vout_mutex);
 
 	return ret;
+}
+EXPORT_SYMBOL(vout_func_set_vmode);
+
+/*
+ * interface export to client who want to set current vmode.
+ */
+int vout_func_set_current_vmode(int index, enum vmode_e mode)
+{
+	vout_func_set_state(index, mode);
+	vout_func_update_viu(index);
+
+	return vout_func_set_vmode(index, mode);
 }
 EXPORT_SYMBOL(vout_func_set_current_vmode);
 

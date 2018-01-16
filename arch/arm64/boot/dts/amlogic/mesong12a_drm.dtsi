@@ -37,6 +37,12 @@
 		};
 	};
 
+	amhdmitx: amhdmitx {
+		compatible = "amlogic, drm_amhdmitx";
+		dev_name = "amhdmitx";
+		drm_feature = <1>;
+	};
+
 	drm_vpu:drm@0xff900000 {
 		status = "okay";
 		compatible = "amlogic,meson-g12a";

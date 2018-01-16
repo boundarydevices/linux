@@ -638,6 +638,8 @@ static int meson_drv_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_DRM_MESON_BYPASS_MODE
 	osd_drm_debugfs_exit();
+	am_hdmi_connector_cleanup(drm);
+
 #endif
 	drm_dev_unregister(drm);
 #ifdef CONFIG_DRM_MESON_EMULATE_FBDEV

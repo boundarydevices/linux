@@ -256,6 +256,7 @@ unsigned int hd_read_reg(unsigned int addr)
 
 	return val;
 }
+EXPORT_SYMBOL(hd_read_reg);
 
 void hd_write_reg(unsigned int addr, unsigned int val)
 {
@@ -301,6 +302,7 @@ void hd_write_reg(unsigned int addr, unsigned int val)
 		break;
 	}
 }
+EXPORT_SYMBOL(hd_write_reg);
 
 void hd_set_reg_bits(unsigned int addr, unsigned int value,
 	unsigned int offset, unsigned int len)
@@ -312,6 +314,7 @@ void hd_set_reg_bits(unsigned int addr, unsigned int value,
 	data32 |= (value & ((1 << len) - 1)) << offset;
 	hd_write_reg(addr, data32);
 }
+EXPORT_SYMBOL(hd_set_reg_bits);
 
 #define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
@@ -380,6 +383,7 @@ unsigned int hdmitx_rd_reg(unsigned int addr)
 		data = hdmitx_rd_reg_normal(addr);
 	return data;
 }
+EXPORT_SYMBOL(hdmitx_rd_reg);
 
 void hdmitx_wr_reg_normal(unsigned int addr, unsigned int data)
 {
@@ -440,6 +444,7 @@ void hdmitx_wr_reg(unsigned int addr, unsigned int data)
 	else
 		hdmitx_wr_reg_normal(addr, data);
 }
+EXPORT_SYMBOL(hdmitx_wr_reg);
 
 void hdmitx_set_reg_bits(unsigned int addr, unsigned int value,
 	unsigned int offset, unsigned int len)
@@ -451,6 +456,7 @@ void hdmitx_set_reg_bits(unsigned int addr, unsigned int value,
 	data32 |= (value & ((1 << len) - 1)) << offset;
 	hdmitx_wr_reg(addr, data32);
 }
+EXPORT_SYMBOL(hdmitx_set_reg_bits);
 
 void hdmitx_poll_reg(unsigned int addr, unsigned int val, unsigned long timeout)
 {
@@ -465,6 +471,7 @@ void hdmitx_poll_reg(unsigned int addr, unsigned int val, unsigned long timeout)
 		pr_info(REG "hdmitx poll:0x%x  val:0x%x T1=%lu t=%lu T2=%lu timeout\n",
 			addr, val, time, timeout, jiffies);
 }
+EXPORT_SYMBOL(hdmitx_poll_reg);
 
 void hdmitx_rd_check_reg(unsigned int addr, unsigned int exp_data,
 	unsigned int mask)
@@ -479,3 +486,4 @@ void hdmitx_rd_check_reg(unsigned int addr, unsigned int exp_data,
 			(unsigned int)exp_data, (unsigned int)mask);
 	}
 }
+EXPORT_SYMBOL(hdmitx_rd_check_reg);

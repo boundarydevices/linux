@@ -64,7 +64,7 @@ enum hdmi_barinfo {
 /* Vert.and Horiz. Bar Info valid */
 };
 
-enum hdmi_colorimetry {
+enum hdmi_colourimetry {
 	CC_NO_DATA = 0, CC_ITU601, CC_ITU709, CC_XVYCC601, CC_XVYCC709,
 };
 
@@ -84,7 +84,7 @@ struct hdmi_videoinfo {
 	enum hdmi_barinfo bar_info;
 	enum hdmi_pixel_repeat repeat_time;
 	enum hdmi_aspect_ratio aspect_ratio;
-	enum hdmi_colorimetry cc;
+	enum hdmi_colourimetry cc;
 	enum hdmi_scan ss;
 	enum hdmi_slacing sc;
 };
@@ -207,7 +207,7 @@ struct hdmitx_vidpara {
 	enum hdmi_barinfo bar_info;
 	enum hdmi_pixel_repeat repeat_time;
 	enum hdmi_aspect_ratio aspect_ratio;
-	enum hdmi_colorimetry cc;
+	enum hdmi_colourimetry cc;
 	enum hdmi_scan ss;
 	enum hdmi_slacing sc;
 };

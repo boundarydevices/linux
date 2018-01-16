@@ -37,6 +37,12 @@
 		};
 	};
 
+	amhdmitx: amhdmitx {
+		compatible = "amlogic, drm_amhdmitx";
+		dev_name = "amhdmitx";
+		drm_feature = <1>;
+	};
+
 	drm_vpu@d0100000 {
 		status = "okay";
 		compatible = "amlogic,meson-gxbb-vpu";

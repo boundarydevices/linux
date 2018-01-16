@@ -54,6 +54,9 @@ extern struct vout_module_s *vout_func_get_vout_module(void);
 extern struct vout_module_s *vout_func_get_vout2_module(void);
 #endif
 
+extern void vout_func_set_state(int index, enum vmode_e mode);
+extern void vout_func_update_viu(int index);
+extern int vout_func_set_vmode(int index, enum vmode_e mode);
 extern int vout_func_set_current_vmode(int index, enum vmode_e mode);
 extern enum vmode_e vout_func_validate_vmode(int index, char *name);
 extern int vout_func_set_vframe_rate_hint(int index, int duration);

@@ -62,6 +62,9 @@ char *am_meson_crtc_get_voutmode(struct drm_display_mode *mode)
 {
 	int i;
 
+	if (!strcmp(mode->name, "panel")) {
+		return "panel";
+	}
 	for (i = 0; i < ARRAY_SIZE(am_vout_modes); i++) {
 		if ((am_vout_modes[i].width == mode->hdisplay)
 			&& (am_vout_modes[i].height == mode->vdisplay)
@@ -112,7 +115,6 @@ int am_meson_crtc_set_mode(struct drm_mode_set *set)
 	int ret;
 
 	DRM_DEBUG_DRIVER("am_crtc_set_mode\n");
-
 	amcrtc = to_am_meson_crtc(set->crtc);
 	ret = drm_atomic_helper_set_config(set);
 
@@ -140,6 +142,7 @@ static bool am_meson_crtc_mode_fixup(struct drm_crtc *crtc,
 void am_meson_crtc_enable(struct drm_crtc *crtc)
 {
 	char *name;
+	enum vmode_e mode;
 	struct drm_display_mode *adjusted_mode = &crtc->state->adjusted_mode;
 
 	if (!adjusted_mode) {
@@ -147,10 +150,18 @@ void am_meson_crtc_enable(struct drm_crtc *crtc)
 			adjusted_mode->name);
 		return;
 	}
-	//DRM_INFO("meson_crtc_enable  %s\n", adjusted_mode->name);
+	DRM_INFO("%s: %s\n", __func__, adjusted_mode->name);
 	name = am_meson_crtc_get_voutmode(adjusted_mode);
+	mode = validate_vmode(name);
+	if (mode == VMODE_MAX) {
+		DRM_ERROR("no matched vout mode\n");
+		return;
+	}
 
-	set_vout_mode(name);
+	set_vout_init(mode);
+	update_vout_viu();
+
+	return;
 }
 
 void am_meson_crtc_disable(struct drm_crtc *crtc)

@@ -100,7 +100,7 @@ static int rptx_ksv_no;
 static int rptx_ksvlist_retry;
 static char rptx_ksv_buf[635];
 
-static int hdmitx_hpd_hw_op(enum hpd_op cmd)
+int hdmitx_hpd_hw_op(enum hpd_op cmd)
 {
 	struct hdmitx_dev *hdev = get_hdmitx_device();
 
@@ -121,6 +121,7 @@ static int hdmitx_hpd_hw_op(enum hpd_op cmd)
 	}
 	return 0;
 }
+EXPORT_SYMBOL(hdmitx_hpd_hw_op);
 
 int read_hpd_gpio(void)
 {
@@ -164,6 +165,7 @@ int hdmitx_ddc_hw_op(enum ddc_op cmd)
 	}
 	return 0;
 }
+EXPORT_SYMBOL(hdmitx_ddc_hw_op);
 
 int hdmitx_hdcp_opr(unsigned int val)
 {
@@ -632,6 +634,7 @@ static irqreturn_t intr_handler(int irq, void *dev)
 {
 	unsigned int data32 = 0;
 	struct hdmitx_dev *hdev = (struct hdmitx_dev *)dev;
+
 	/* get interrupt status */
 	data32 = hdmitx_rd_reg(HDMITX_TOP_INTR_STAT);
 	pr_info(HW "irq %x\n", data32);

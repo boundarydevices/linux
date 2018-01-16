@@ -360,6 +360,7 @@ struct hdmitx_dev {
 	unsigned int flag_3dfp:1;
 	unsigned int flag_3dtb:1;
 	unsigned int flag_3dss:1;
+	unsigned int drm_feature;/*Direct Rander Management*/
 };
 
 #define CMD_DDC_OFFSET          (0x10 << 24)
@@ -621,6 +622,28 @@ extern unsigned int get_hdcp22_base(void);
 extern void hdmitx_audio_mute_op(unsigned int flag);
 extern void hdmitx_video_mute_op(unsigned int flag);
 
+/*
+ * HDMITX HPD HW related operations
+ */
+enum hpd_op {
+	HPD_INIT_DISABLE_PULLUP,
+	HPD_INIT_SET_FILTER,
+	HPD_IS_HPD_MUXED,
+	HPD_MUX_HPD,
+	HPD_UNMUX_HPD,
+	HPD_READ_HPD_GPIO,
+};
+extern int hdmitx_hpd_hw_op(enum hpd_op cmd);
+/*
+ * HDMITX DDC HW related operations
+ */
+enum ddc_op {
+	DDC_INIT_DISABLE_PULL_UP_DN,
+	DDC_MUX_DDC,
+	DDC_UNMUX_DDC,
+};
+extern int hdmitx_ddc_hw_op(enum ddc_op cmd);
+
 #define HDMITX_HWCMD_MUX_HPD_IF_PIN_HIGH       0x3
 #define HDMITX_HWCMD_TURNOFF_HDMIHW           0x4
 #define HDMITX_HWCMD_MUX_HPD                0x5
@@ -660,5 +683,17 @@ struct Hdcp_Sub {
 	unsigned int hdcp_sub_addr_start;
 	unsigned int hdcp_sub_len;
 };
-
+extern void setup_attr(const char *buf);
+extern unsigned int hd_read_reg(unsigned int addr);
+extern void hd_write_reg(unsigned int addr, unsigned int val);
+extern void hd_set_reg_bits(unsigned int addr, unsigned int value,
+		unsigned int offset, unsigned int len);
+extern void hdmitx_wr_reg(unsigned int addr, unsigned int data);
+extern void hdmitx_poll_reg(unsigned int addr, unsigned int val,
+	unsigned long timeout);
+extern void hdmitx_set_reg_bits(unsigned int addr, unsigned int value,
+	unsigned int offset, unsigned int len);
+extern unsigned int hdmitx_rd_reg(unsigned int addr);
+extern void hdmitx_rd_check_reg(unsigned int addr, unsigned int exp_data,
+	unsigned int mask);
 #endif
