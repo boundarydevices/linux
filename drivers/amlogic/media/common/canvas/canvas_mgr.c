@@ -226,8 +226,7 @@ static void canvas_pool_init(void)
 	memset(pool, 0, sizeof(struct canvas_pool));
 	spin_lock_init(&pool->lock);
 	pool->canvas_max = CANVAS_MAX_NUM;
-	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR) <
-		MESON_CPU_MAJOR_ID_M6TV)
+	if (get_cpu_type() < MESON_CPU_MAJOR_ID_M6TV)
 		pool->canvas_max = 192;
 	pool->next_alloced_index = pool->canvas_max / 2;
 	/* /start at end part index. */

@@ -94,6 +94,39 @@
 			vendor_id = <0x000000>;
 		};
 	};
+
+	canvas{
+		compatible = "amlogic, meson, canvas";
+		dev_name = "amlogic-canvas";
+		status = "okay";
+		reg = <0x0 0xff638000 0x0 0x2000>;
+	};
+
+	codec_io {
+		compatible = "amlogic, codec_io";
+		status = "okay";
+		#address-cells=<2>;
+		#size-cells=<2>;
+		ranges;
+		io_cbus_base{
+			reg = <0x0 0xffd00000 0x0 0x100000>;
+		};
+		io_dos_base{
+			reg = <0x0 0xff620000 0x0 0x10000>;
+		};
+		io_hiubus_base{
+			reg = <0x0 0xff63c000 0x0 0x2000>;
+		};
+		io_aobus_base{
+			reg = <0x0 0xff800000 0x0 0x10000>;
+		};
+		io_vcbus_base{
+			reg = <0x0 0xff900000 0x0 0x40000>;
+		};
+		io_dmc_base{
+			reg = <0x0 0xff638000 0x0 0x2000>;
+		};
+	};
 }; /* end of / */
 
 &aobus{

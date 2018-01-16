@@ -71,8 +71,7 @@ static uint32_t ge2d_reg_read(unsigned int reg)
 	unsigned int addr = 0;
 	unsigned int val = 0;
 
-	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
-		< MESON_CPU_MAJOR_ID_GXBB)
+	if (get_cpu_type() < MESON_CPU_MAJOR_ID_GXBB)
 		return (uint32_t)aml_read_cbus(reg);
 
 	addr = GE2DBUS_REG_ADDR(reg);
@@ -88,8 +87,7 @@ static void ge2d_reg_write(unsigned int reg, unsigned int val)
 {
 	unsigned int addr = 0;
 
-	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
-		< MESON_CPU_MAJOR_ID_GXBB) {
+	if (get_cpu_type() < MESON_CPU_MAJOR_ID_GXBB) {
 		aml_write_cbus(reg, val);
 		return;
 	}
