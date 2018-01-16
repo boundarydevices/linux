@@ -1,0 +1,71 @@
+/*
+ * arch/arm64/boot/dts/amlogic/mesongxl_p212-panel.dtsi
+ *
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/ {
+	lcd{
+		compatible = "amlogic, lcd-gxl";
+		dev_name = "lcd";
+		mode = "tablet";
+		status = "okay";
+		key_valid = <0>;
+		/* clocks = <&clkc CLKID_VCLK2_ENCL
+		 *	&clkc CLKID_VCLK2_VENCL>;
+		 * clock-names = "vencl_top_gate",
+		 * "vencl_int_gate";
+		 */
+		reg = <0x0 0xc8834400 0x0 0x100>;
+		pinctrl_version = <1>; /* for uboot */
+
+		/* power type:
+		 *    (0=cpu_gpio, 1=pmu_gpio, 2=signal,3=extern, 0xff=ending)
+		 * power index:
+		 *    (point gpios_index, or extern_index,0xff=invalid)
+		 * power value:(0=output low, 1=output high, 2=input)
+		 * power delay:(unit in ms)
+		 */
+		/*lcd_cpu-gpios = <&gpio GPIOX_3 1>;*/
+		/*lcd_cpu_gpio_names = "GPIOX_3";*/
+
+		lcd_0{
+			model_name = "LCD720P";
+			interface = "ttl";
+			basic_setting = <1280 720 /*h_active, v_active*/
+				1650 750 /*h_period, v_period*/
+				8      /*lcd_bits */
+				16 9>; /*screen_widht, screen_height*/
+			lcd_timing = <40 220 1 /*hs_width, hs_bp, hs_pol*/
+				5 20 1>; /*vs_width, vs_bp, vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clk, 1=htotal, 2=vtotal)*/
+				0 /*clk_ss_level*/
+				1 /*clk_auto_generate*/
+				74250000>; /*pixel_clk(unit in Hz)*/
+			ttl_attr = <0 /*clk_pol*/
+				1 /*de_valid*/
+				1 /*hvsync_valid*/
+				0 /*rb_swap*/
+				0>; /*bit_swap*/
+
+			/* power step: type, index, value, delay(ms) */
+			power_on_step = <2 0 0 0
+				0xff 0 0 0>; /*ending*/
+			power_off_step = <2 0 0 50
+				0xff 0 0 0>; /*ending*/
+			backlight_index = <0xff>;
+		};
+	};
+};/* end of panel */
+

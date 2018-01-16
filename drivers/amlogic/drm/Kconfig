@@ -17,6 +17,19 @@ config DRM_MESON_BYPASS_MODE
 		We add bypass mode to implment drm based on amlogic existing driver,
 		it should be easier and more robust.
 
+config DRM_MESON_PANEL
+	bool "support drm panel function for meson drm display."
+	default y
+	depends on DRM_MESON
+	depends on AMLOGIC_LCD
+	select DRM_PANEL
+	select DRM_MIPI_DSI
+	help
+		add drm panel support.
+		use internal amlogic media vout lcd driver.
+		We should confirm AMLOGIC_LCD is configured if
+		DRM_MESON_PANEL is selected.
+
 config DRM_MESON_USE_ION
 	bool "gem use ion to alloc/free graphic buffer."
 	default y

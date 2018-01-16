@@ -19,6 +19,7 @@
 
 #include "mesongxl.dtsi"
 #include "meson_drm.dtsi"
+#include "mesongxl_p212-panel.dtsi"
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxl_p212_1g";

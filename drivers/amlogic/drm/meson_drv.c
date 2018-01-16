@@ -51,6 +51,7 @@
 #include "meson_canvas.h"
 #include "meson_registers.h"
 #endif
+#include "am_meson_lcd.h"
 #ifdef CONFIG_DRM_MESON_USE_ION
 #include "am_meson_gem.h"
 #include "am_meson_fb.h"
@@ -586,6 +587,7 @@ static int meson_drv_probe(struct platform_device *pdev)
 	meson_vpp_init(priv);
 	meson_viu_init(priv);
 #endif
+	am_drm_lcd_register(drm);
 
 	ret = meson_plane_create(priv);
 	if (ret)
@@ -628,6 +630,8 @@ free_drm:
 static int meson_drv_remove(struct platform_device *pdev)
 {
 	struct drm_device *drm = dev_get_drvdata(&pdev->dev);
+
+	am_drm_lcd_unregister(drm);
 
 	if (meson_drv_use_osd())
 		return meson_drv_remove_prune(pdev);

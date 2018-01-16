@@ -74,6 +74,7 @@
 /* lcd bist pattern test occurred */
 #define LCD_EVENT_TEST_PATTERN      (1 << 14)
 
+
 extern int aml_lcd_notifier_register(struct notifier_block *nb);
 extern int aml_lcd_notifier_unregister(struct notifier_block *nb);
 extern int aml_lcd_notifier_call_chain(unsigned long event, void *v);

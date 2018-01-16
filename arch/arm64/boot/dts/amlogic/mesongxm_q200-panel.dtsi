@@ -17,7 +17,7 @@
 
 / {
 	lcd{
-		compatible = "amlogic, lcd";
+		compatible = "amlogic, lcd-gxm";
 		dev_name = "lcd";
 		mode = "tablet";
 		status = "okay";
@@ -27,6 +27,7 @@
 		 * clock-names = "vencl_top_gate",
 		 * "vencl_int_gate";
 		 */
+		reg = <0x0 0xc8834400 0x0 0x100>;
 		pinctrl_version = <1>; /* for uboot */
 		pinctrl-names = "ttl_6bit_hvsync_de_on","ttl_6bit_hvsync_on",
 			"ttl_6bit_de_on","ttl_8bit_hvsync_de_on",

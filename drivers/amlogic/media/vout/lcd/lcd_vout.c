@@ -419,7 +419,7 @@ static int lcd_power_if_on_notifier(struct notifier_block *nb,
 	} else {
 		LCDERR("%s: can't power on when controller is off\n",
 				__func__);
-			return NOTIFY_DONE;
+		return NOTIFY_DONE;
 	}
 
 	return NOTIFY_OK;

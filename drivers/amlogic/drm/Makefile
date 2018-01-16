@@ -16,4 +16,8 @@ ifeq ($(CONFIG_DRM_MESON_EMULATE_FBDEV),y)
         meson-y += am_meson_fbdev.o
 endif
 
+ifeq ($(CONFIG_DRM_MESON_PANEL),y)
+        meson-y += am_meson_lcd.o
+endif
+
 obj-$(CONFIG_DRM_MESON) += meson.o
