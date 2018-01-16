@@ -62,6 +62,7 @@ struct snvs_secvio_drv_private {
 	/* Registered handlers for each violation */
 	struct secvio_int_src intsrc[MAX_SECVIO_SOURCES];
 
+	struct gpio_desc *gpio_tamper;
 };
 
 #endif /* SECVIO_H */
