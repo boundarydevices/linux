@@ -2963,7 +2963,7 @@ static void pre_de_done_buf_config(void)
 			}
 			di_pre_stru.di_chan2_buf_dup_p = di_pre_stru.di_wr_buf;
 
-			if (di_pre_stru.di_wr_buf->post_proc_flag == 2) {
+			if (di_pre_stru.source_change_flag) {
 				/* add dummy buf, will not be displayed */
 				if (!queue_empty(QUEUE_LOCAL_FREE)) {
 					struct di_buf_s *di_buf_tmp;
