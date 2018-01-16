@@ -1894,7 +1894,7 @@ static int sdma_config_write(struct dma_chan *chan,
 		       enum dma_transfer_direction direction)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
-	/* clear watermark_level before setting */
+
 	sdmac->watermark_level = 0;
 	sdmac->is_ram_script = false;
 
