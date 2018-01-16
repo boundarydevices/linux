@@ -195,7 +195,6 @@
 		non-removable;
 		disable-wp;
 		emmc {
-			status = "disabled";
 			pinname = "emmc";
 			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
 			caps = "MMC_CAP_8_BIT_DATA",
@@ -254,7 +253,6 @@
 		max-frequency = <100000000>;
 		disable-wp;
 		sd {
-			status = "disabled";
 			pinname = "sd";
 			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
 			caps = "MMC_CAP_4_BIT_DATA",
@@ -303,7 +301,6 @@
 		non-removable;
 		disable-wp;
 		sdio {
-			status = "disabled";
 			pinname = "sdio";
 			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
 			caps = "MMC_CAP_4_BIT_DATA",

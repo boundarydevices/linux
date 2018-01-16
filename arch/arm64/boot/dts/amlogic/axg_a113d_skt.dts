@@ -539,7 +539,6 @@
 		non-removable;
 		disable-wp;
 		emmc {
-			status = "disabled";
 			pinname = "emmc";
 			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
 			caps = "MMC_CAP_8_BIT_DATA",
