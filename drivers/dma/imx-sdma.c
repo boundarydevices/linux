@@ -74,6 +74,9 @@
 #define SDMA_CHNENBL0_IMX35	0x200
 #define SDMA_CHNENBL0_IMX31	0x080
 #define SDMA_CHNPRI_0		0x100
+#define SDMA_DONE0_CONFIG	0x1000
+#define SDMA_DONE0_CONFIG_DONE_SEL	0x7
+#define SDMA_DONE0_CONFIG_DONE_DIS	0x6
 
 /*
  * Buffer descriptor status values.
@@ -242,6 +245,10 @@ struct sdma_script_start_addrs {
 	s32 mcu_2_zqspi_addr;
 	/* End of v4 array */
 };
+
+#define SDMA_WATERMARK_LEVEL_FIFOS_OFF	12
+#define SDMA_WATERMARK_LEVEL_SW_DONE	BIT(23)
+#define SDMA_WATERMARK_LEVEL_SW_DONE_SEL_OFF 24
 
 /*
  * Mode/Count of data node descriptors - IPCv2
@@ -447,6 +454,9 @@ struct sdma_channel {
 	bool				is_ram_script;
 	bool				src_dualfifo;
 	bool				dst_dualfifo;
+	unsigned int			fifo_num;
+	bool				sw_done;
+	u32				sw_done_sel;
 };
 
 #define IMX_DMA_SG_LOOP		BIT(0)
@@ -799,6 +809,21 @@ static void sdma_event_enable(struct sdma_channel *sdmac, unsigned int event)
 	val = readl_relaxed(sdma->regs + chnenbl);
 	__set_bit(channel, &val);
 	writel_relaxed(val, sdma->regs + chnenbl);
+
+	/* Set SDMA_DONEx_CONFIG is sw_done enabled */
+	if (sdmac->sw_done) {
+		u32 offset = SDMA_DONE0_CONFIG + sdmac->sw_done_sel / 4;
+		u32 done_sel = SDMA_DONE0_CONFIG_DONE_SEL +
+				((sdmac->sw_done_sel % 4) << 3);
+		u32 sw_done_dis = SDMA_DONE0_CONFIG_DONE_DIS +
+				((sdmac->sw_done_sel % 4) << 3);
+
+		val = readl_relaxed(sdma->regs + offset);
+		__set_bit(done_sel, &val);
+		__clear_bit(sw_done_dis, &val);
+		writel_relaxed(val, sdma->regs + offset);
+	}
+
 }
 
 static void sdma_event_disable(struct sdma_channel *sdmac, unsigned int event)
@@ -1055,6 +1080,10 @@ static void sdma_get_pc(struct sdma_channel *sdmac,
 		emi_2_per = sdma->script_addrs->hdmi_dma_addr;
 		sdmac->is_ram_script = true;
 		break;
+	case IMX_DMATYPE_MULTI_SAI:
+		per_2_emi = sdma->script_addrs->sai_2_mcu_addr;
+		emi_2_per = sdma->script_addrs->mcu_2_sai_addr;
+		sdmac->is_ram_script = true;
 	default:
 		break;
 	}
@@ -1269,6 +1298,26 @@ static void sdma_set_watermarklevel_for_p2p(struct sdma_channel *sdmac)
 		sdmac->watermark_level |= SDMA_WATERMARK_LEVEL_DD;
 }
 
+static void sdma_set_watermarklevel_for_sais(struct sdma_channel *sdmac)
+{
+	sdmac->watermark_level &= ~(0xFF << SDMA_WATERMARK_LEVEL_FIFOS_OFF |
+				    SDMA_WATERMARK_LEVEL_SW_DONE |
+				    0xf << SDMA_WATERMARK_LEVEL_SW_DONE_SEL_OFF);
+
+	if (sdmac->sw_done)
+		sdmac->watermark_level |= SDMA_WATERMARK_LEVEL_SW_DONE |
+			sdmac->sw_done_sel <<
+			SDMA_WATERMARK_LEVEL_SW_DONE_SEL_OFF;
+
+	/* For fifo_num
+	 * bit 12-15 is the fifo number;
+	 * bit 16-19 is the fifo offset,
+	 * so here only need to shift left fifo_num 12 bit for watermake_level
+	 */
+	sdmac->watermark_level |= sdmac->fifo_num<<
+				SDMA_WATERMARK_LEVEL_FIFOS_OFF;
+}
+
 static int sdma_config_channel(struct dma_chan *chan)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
@@ -1301,8 +1350,12 @@ static int sdma_config_channel(struct dma_chan *chan)
 			if (sdmac->peripheral_type == IMX_DMATYPE_ASRC_SP ||
 			    sdmac->peripheral_type == IMX_DMATYPE_ASRC)
 				sdma_set_watermarklevel_for_p2p(sdmac);
-		} else
+		} else {
+			if (sdmac->peripheral_type == IMX_DMATYPE_MULTI_SAI)
+				sdma_set_watermarklevel_for_sais(sdmac);
+
 			__set_bit(sdmac->event_id0, sdmac->event_mask);
+		}
 
 		/* Address */
 		sdmac->shp_addr = sdmac->per_address;
@@ -1442,6 +1495,11 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 	sdmac->event_id1 = data->dma_request2;
 	sdmac->src_dualfifo = data->src_dualfifo;
 	sdmac->dst_dualfifo = data->dst_dualfifo;
+	/* Get software done selector if sw_done enabled */
+	if (data->done_sel & BIT(31)) {
+		sdmac->sw_done = true;
+		sdmac->sw_done_sel = (data->done_sel >> 8) & 0xff;
+	}
 
 	ret = clk_enable(sdmac->sdma->clk_ipg);
 	if (ret)
@@ -1751,11 +1809,14 @@ static int sdma_config_write(struct dma_chan *chan,
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 
+	sdmac->watermark_level = 0;
+
 	if (direction == DMA_DEV_TO_MEM) {
 		sdmac->per_address = dmaengine_cfg->src_addr;
 		sdmac->watermark_level = dmaengine_cfg->src_maxburst *
 			dmaengine_cfg->src_addr_width;
 		sdmac->word_size = dmaengine_cfg->src_addr_width;
+		sdmac->fifo_num =  dmaengine_cfg->src_fifo_num;
 	} else if (direction == DMA_DEV_TO_DEV) {
 		sdmac->per_address2 = dmaengine_cfg->src_addr;
 		sdmac->per_address = dmaengine_cfg->dst_addr;
@@ -1773,6 +1834,7 @@ static int sdma_config_write(struct dma_chan *chan,
 		sdmac->watermark_level = dmaengine_cfg->dst_maxburst *
 			dmaengine_cfg->dst_addr_width;
 		sdmac->word_size = dmaengine_cfg->dst_addr_width;
+		sdmac->fifo_num =  dmaengine_cfg->dst_fifo_num;
 	}
 	sdmac->direction = direction;
 	return sdma_config_channel(chan);
@@ -2143,7 +2205,10 @@ static struct dma_chan *sdma_xlate(struct of_phandle_args *dma_spec,
 
 	data.dma_request = dma_spec->args[0];
 	data.peripheral_type = dma_spec->args[1];
-	data.priority = dma_spec->args[2];
+	/* Get sw_done setting if sw_done enabled */
+	if (dma_spec->args[2] & BIT(31))
+		data.done_sel = dma_spec->args[2];
+	data.priority = dma_spec->args[2] & 0xff;
 	/*
 	 * init dma_request2 to zero, which is not used by the dts.
 	 * For P2P, dma_request2 is init from dma_request_channel(),
