@@ -8,6 +8,8 @@
 #include "intern.h"
 #include "secvio.h"
 #include "regs.h"
+#include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
@@ -51,6 +53,34 @@ static const u8 *snvs_ssm_state_name[] = {
 	"(undef:14)",
 	"secure",
 };
+
+static void test_tamper_gpio(struct snvs_secvio_drv_private *svpriv)
+{
+	struct device *dev = &svpriv->pdev->dev;
+	u32 td_en = rd_reg32(&svpriv->svregs->hp.secvio_ctl);
+	int gpval = gpiod_get_value(svpriv->gpio_tamper);
+
+	if (gpval < 0)
+		gpval = 0;
+	if (!(td_en & HP_SECVIO_INTEN_SRC5) && gpval) {
+		dev_dbg(dev, "%s: enabling VIO5", __func__);
+		td_en |= HP_SECVIO_INTEN_SRC5;
+	} else if ((td_en & HP_SECVIO_INTEN_SRC5) && !gpval) {
+		dev_dbg(dev, "%s: disabling VIO5", __func__);
+		td_en &= ~(HP_SECVIO_INTEN_SRC5);
+	}
+
+	wr_reg32(&svpriv->svregs->hp.secvio_ctl, td_en);
+	wr_reg32(&svpriv->svregs->hp.secvio_intcfg, td_en);
+}
+
+static irqreturn_t snvs_secvio_gpio_interrupt(int irq, void *id)
+{
+	/* Debounce GPIO signal */
+	msleep(100);
+	test_tamper_gpio((struct snvs_secvio_drv_private *)id);
+	return IRQ_HANDLED;
+}
 
 /* Top-level security violation interrupt */
 static irqreturn_t snvs_secvio_interrupt(int irq, void *snvsdev)
@@ -311,6 +341,22 @@ static int snvs_secvio_probe(struct platform_device *pdev)
 		 snvs_ssm_state_name[hpstate]);
 
 	clk_disable(svpriv->clk);
+
+	svpriv->gpio_tamper = devm_gpiod_get_optional(svdev,
+						      "external-pin-tamper",
+						      GPIOD_IN);
+	if (!IS_ERR(svpriv->gpio_tamper)) {
+		dev_dbg(svdev, "Adding tamper external pin control\n");
+		error = devm_request_threaded_irq(svdev,
+					gpiod_to_irq(svpriv->gpio_tamper),
+					NULL, snvs_secvio_gpio_interrupt,
+					IRQF_ONESHOT | IRQF_TRIGGER_RISING |
+					IRQF_TRIGGER_FALLING,
+					"external-pin-tamper", svpriv);
+		if (error)
+			dev_err(svdev, "IRQ request failed %d\n", error);
+		test_tamper_gpio(svpriv);
+	}
 
 	return 0;
 }
