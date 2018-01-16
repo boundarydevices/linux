@@ -131,8 +131,8 @@
 #define GP_3P7_BYPASS_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
 
-#define GPIRQ_TAMPER		<&gpio4 18 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x1b0b0
+#define GP_TAMPER		<&gpio4 18 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x130b0
 			/* TODO Wireless control pins */
 #define GP_BT_CLK_REQ		<&gpio6 8 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x1b0b0
@@ -1161,6 +1161,10 @@
 			compatible = "samsung,max77823-fuelgauge";
 		};
 	};
+};
+
+&caam_snvs {
+	external-pin-tamper-gpios = GP_TAMPER;
 };
 
 &ldb {
