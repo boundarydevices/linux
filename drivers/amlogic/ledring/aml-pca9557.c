@@ -22,7 +22,9 @@
 #include <linux/kobject.h>
 #include <linux/device.h>
 #include <linux/slab.h>
+#include <linux/pm.h>
 #include <linux/uaccess.h>
+#include <linux/pm_runtime.h>
 #include <linux/input.h>
 #include <linux/of_platform.h>
 
@@ -589,11 +591,42 @@ static int ledring_remove(struct i2c_client *client)
 	return 0;
 }
 
+static int ledring_resume(struct device *dev)
+{
+	pr_info("enter ledring_resume.\n");
+
+	schedule_work(&key_led_des->list_work);
+	mod_timer(&key_led_des->mtimer,
+		jiffies+key_led_des->run_time*HZ/1000);
+
+	return 0;
+}
+
+static int ledring_suspend(struct device *dev)
+{
+	int ret;
+
+	pr_info("enter ledring_suspend.\n");
+	del_timer(&key_led_des->mtimer);
+	ret = i2c_smbus_write_byte_data(g_client,
+			addr_led_reg1, 0);
+	if (ret < 0)
+		pr_err("led set reg1 fail!\n");
+
+	return 0;
+}
+
+static const struct dev_pm_ops ledring_pm = {
+	.suspend = ledring_suspend,
+	.resume = ledring_resume,
+};
+
 static struct i2c_driver ledring_drv = {
 	.driver = {
 		.name = "aml_ledring",
 		.owner = THIS_MODULE,
 		.of_match_table = ledring_dt_ids,
+		.pm = &ledring_pm,
 	},
 	.probe = ledring_probe,
 	.remove = ledring_remove,

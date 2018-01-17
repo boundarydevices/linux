@@ -22,6 +22,8 @@
 #include <linux/of_device.h>
 #include <linux/kobject.h>
 #include <linux/slab.h>
+#include <linux/pm.h>
+#include <linux/pm_runtime.h>
 #include <linux/device.h>
 #include <linux/uaccess.h>
 
@@ -752,6 +754,7 @@ static int is31fl32xx_probe(struct i2c_client *client,
 	ret = sysfs_create_group(led_priv_data->running_kobj, &attr_group);
 	if (ret)
 		goto err2;
+
 	return 0;
 err1:
 	return -ENOMEM;
@@ -791,10 +794,47 @@ static const struct i2c_device_id is31fl32xx_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, is31fl32xx_id);
 
+static int is31fl32xx_resume(struct device *dev)
+{
+	pr_info("enter is31fl32xx_resume.\n");
+	schedule_work(&led_priv_data->ledring_work);
+	mod_timer(&led_priv_data->mtimer,
+		jiffies+led_priv_data->ledring_speed*HZ/1000);
+
+	return 0;
+}
+
+static int is31fl32xx_suspend(struct device *dev)
+{
+	int i, ret;
+
+	pr_info("enter is31fl32xx_suspend.\n");
+	del_timer(&led_priv_data->mtimer);
+	for (i = 0; i < styleData.num*3; i++) {
+		ret = is31fl32xx_write(led_priv_data->g_client, i+1, 0);
+		if (ret) {
+			pr_err("try close led: %d fail\n", i+1);
+				return ret;
+		}
+		ret = is31fl32xx_write(led_priv_data->g_client, 37, 0);
+	if (ret)
+		pr_err("try close led: %d fail\n", i+1);
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops is31fl32xx_pm = {
+	.suspend = is31fl32xx_suspend,
+	.resume = is31fl32xx_resume,
+};
+
 static struct i2c_driver is31fl32xx_driver = {
 	.driver = {
 		.name	= "is31fl32xx",
+		.owner = THIS_MODULE,
 		.of_match_table = of_is31fl32xx_match,
+		.pm = &is31fl32xx_pm,
 	},
 	.probe		= is31fl32xx_probe,
 	.remove		= is31fl32xx_remove,
