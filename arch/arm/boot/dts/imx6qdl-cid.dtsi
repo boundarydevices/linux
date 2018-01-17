@@ -128,8 +128,6 @@
 			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
 			/* TP105 */
 			MX6QDL_PAD_EIM_A24__GPIO5_IO04		0x1b0b0
-			/* TP106 */
-			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x1b0b0
 			/* TP110 */
 			MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0
 			/* Let max77818 control this directly by turning on/off CHGIN */
@@ -307,6 +305,7 @@
 		fsl,pins = <
 #define GP_LED_VIBRATOR		<&gpio5 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x030b0
+#ifdef CONFIG_REV_OLD
 			/* Blue Led */
 #define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1b0b0
@@ -316,6 +315,21 @@
 			/* Red Led */
 #define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x1b0b0
+#else
+			/* Blue Led */
+#define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x130b0
+			/* Green Led */
+#define GP_STAT_LED2		<&gpio4 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x130b0
+#define GP_STAT_LED2_CTRL	<&gpio3 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x100b0
+			/* Red Led */
+#define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x130b0
+#define GP_STAT_LED3_CTRL	<&gpio2 30 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x100b0
+#endif
 		>;
 	};
 
@@ -356,6 +370,13 @@
 		fsl,pins = <
 #define GP_NFC_PWR_EN	<&gpio4 21 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x030b0
+		>;
+	};
+
+	pinctrl_reg_usbh1: reg-usbh1grp {
+		fsl,pins = <
+#define GP_USBH1_PWR_EN	<&gpio4 17 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DI0_PIN15__GPIO4_IO17	0x030b0
 		>;
 	};
 
@@ -735,11 +756,23 @@
 			regulator-max-microvolt = <5000000>;
 		};
 
-		reg_wlan_en: regulator@8 {
+		reg_usbh1: regulator@8 {
+			compatible = "regulator-fixed";
+			enable-active-high;
+			gpio = GP_USBH1_PWR_EN;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_usbh1>;
+			reg = <8>;
+			regulator-name = "nfc";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
+
+		reg_wlan_en: regulator@9 {
 			compatible = "regulator-fixed";
 			enable-active-high;
 			gpio = GP_REG_WLAN_EN;
-			reg = <8>;
+			reg = <9>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_wlan_en>;
 			regulator-name = "wlan-en";
@@ -1295,6 +1328,7 @@
 	reset-gpios = GP_USBH1_HUB_RESET;
 	status = "okay";
 	id = <1>;
+	vbus-supply = <&reg_usbh1>;
 };
 
 &usbotg {
