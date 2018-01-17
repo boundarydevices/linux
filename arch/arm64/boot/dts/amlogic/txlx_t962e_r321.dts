@@ -657,7 +657,7 @@
 		};
 	};
 
-	sd_emmc_b: sdio@ffe05000 {
+	sd_emmc_b: sd@ffe05000 {
 		status = "okay";
 		compatible = "amlogic, meson-mmc-txlx";
 		reg = <0x0 0xffe05000 0x0 0x2000>;
@@ -678,9 +678,9 @@
 		max-frequency = <100000000>;
 		non-removable;
 		disable-wp;
-		sdio {
+		sd {
 			status = "disabled";
-			pinname = "sdio";
+			pinname = "sd";
 			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
 			caps = "MMC_CAP_4_BIT_DATA",
 				 "MMC_CAP_MMC_HIGHSPEED",
