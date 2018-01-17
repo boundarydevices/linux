@@ -408,10 +408,10 @@
 		>;
 	};
 
-	pinctrl_uart1: uart1grp {
+	pinctrl_snvs_sec_vio: snvs-sec-viogrp {
 		fsl,pins = <
-			MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x1b0b1
-			MX6QDL_PAD_SD3_DAT6__UART1_RX_DATA	0x1b0b1
+#define GP_TAMPER		<&gpio6 17 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD3_DAT7__GPIO6_IO17		0x1b0b0
 		>;
 	};
 
@@ -862,6 +862,13 @@
 	status = "okay";
 };
 
+&caam_snvs {
+	external-pin-tamper-gpios = GP_TAMPER;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_snvs_sec_vio>;
+	status = "okay";
+};
+
 &ecspi1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
@@ -1285,12 +1292,6 @@
 
 &ssi1 {
 	fsl,mode = "i2s-slave";
-	status = "okay";
-};
-
-&uart1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
 };
 
