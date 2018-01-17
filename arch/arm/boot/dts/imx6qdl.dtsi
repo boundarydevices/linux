@@ -849,6 +849,7 @@
 			caam_snvs: caam-snvs@020cc000 {
 				compatible = "fsl,imx6q-caam-snvs";
 				reg = <0x020cc000 0x4000>;
+				status = "disabled";
 			};
 
 			snvs: snvs@020cc000 {
