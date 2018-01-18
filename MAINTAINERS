@@ -14250,3 +14250,9 @@ AMLOGIC LEDRING DRIVER IOCTL
 M:	Renjun Xu <renjun.xu@amlogic.com>
 F:	drivers/amlogic/ledring/aml-is31fl32xx.c
 F:	drivers/amlogic/ledring/aml-pca9557.c
+
+AMLOGIC TOUCHSCREEN DRIVER
+M:	Sunny Luo <sunny.luo@amlogic.com>
+F:	Documentation/devicetree/bindings/input/touchscreen/amlogic-ts.txt
+F:	drivers/amlogic/input/touchscreen/*
+F:	drivers/amlogic/input/touchscreen/focaltech_touch/*

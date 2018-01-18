@@ -7,3 +7,5 @@
 obj-$(CONFIG_AMLOGIC_INPUT_KEYBOARD) += keyboard/
 
 obj-$(CONFIG_AMLOGIC_REMOTE) += remote/
+
+obj-$(CONFIG_AMLOGIC_TOUCHSCREEN) += touchscreen/

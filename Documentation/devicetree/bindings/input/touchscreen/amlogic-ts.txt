@@ -1,0 +1,28 @@
+* Focaltech FT3x27 series touchscreen controller
+
+Required properties:
+ - compatible: Should be "focaltech,fts"
+ - reg: I2C address of the chip. Should be 0x38
+ - irq-gpio: GPIO pin used for IRQ
+ - reset-gpio: GPIO pin used for reset
+ - x_max: horizontal resolution
+ - y_max: vertical resolution
+ - max-touch-number: the max touch fingers support
+
+Example:
+	i2c1: i2c@1e000 {
+		/* ... */
+
+		focaltech_ts@0x38 {
+			compatible = "focaltech,fts";
+			status = "okay";
+			reg = <0x38>;
+			reset-gpio = <&gpio GPIOZ_2 0x00>;
+			irq-gpio = <&gpio GPIOZ_3 0x00>;
+			x_max = <600>;
+			y_max = <1024>;
+			max-touch-number = <10>;
+		};
+
+		/* ... */
+	};

@@ -1,0 +1,22 @@
+#
+# touchscreen drivers
+#
+
+menuconfig AMLOGIC_TOUCHSCREEN
+	bool "amlogic touchscreen"
+	default n
+	help
+	  Say Y here, and a list of supported touchscreen driver will be displayed.
+	  This option doesn't affect the kernel.
+
+if AMLOGIC_TOUCHSCREEN
+
+config AMLOGIC_TOUCHSCREEN_FTS
+	tristate "facaltech FT_xx touch driver support"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you want to use facaltech FT_xx.
+
+
+endif
