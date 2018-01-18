@@ -1,0 +1,11 @@
+#
+# Goodix Touchscreen driver configuration
+#
+
+config AMLOGIC_TOUCHSCREEN_GT1X
+	bool "Goodix GT1X Touchscreen"
+		depends on I2C
+		default n
+		help
+		  Say Y here if you have Goodix GT1X touch panel.
+		  If unsure, say N.

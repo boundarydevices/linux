@@ -14253,6 +14253,7 @@ F:	drivers/amlogic/ledring/aml-pca9557.c
 
 AMLOGIC TOUCHSCREEN DRIVER
 M:	Sunny Luo <sunny.luo@amlogic.com>
-F:	Documentation/devicetree/bindings/input/touchscreen/amlogic-ts.txt
+F:	Documentation/devicetree/bindings/amlogic/input/amlogic-ts.txt
 F:	drivers/amlogic/input/touchscreen/*
 F:	drivers/amlogic/input/touchscreen/focaltech_touch/*
+F:	drivers/amlogic/input/touchscreen/goodix_gt1x/*
