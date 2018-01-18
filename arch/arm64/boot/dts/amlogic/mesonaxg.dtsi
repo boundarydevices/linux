@@ -928,7 +928,7 @@
 	c_i2c_master_pin1:c_i2c_pin1 {
 		mux {
 			groups = "i2c2_sck_a",
-				"i2c2_sck_a";
+				"i2c2_sda_a";
 			function = "i2c2";
 		};
 	};

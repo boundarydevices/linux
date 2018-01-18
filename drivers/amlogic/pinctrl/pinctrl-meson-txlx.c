@@ -1343,7 +1343,7 @@ static const char * const i2c_ao_groups[] = {
 
 static const char * const i2c_slave_ao_groups[] = {
 	"i2c_slave_sck_ao4", "i2c_slave_sda_ao5",
-	"i2c_slave_sck_ao10", "i2c_slave_sd_ao11",
+	"i2c_slave_sck_ao10", "i2c_slave_sda_ao11",
 };
 
 static const char * const ao_cec_groups[] = {
