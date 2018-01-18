@@ -270,6 +270,16 @@
 		clocks = <&xtal>;
 	};
 
+	saradc:saradc {
+		compatible = "amlogic,meson-g12a-saradc";
+		status = "okay";
+		#io-channel-cells = <1>;
+		clocks = <&xtal>, <&clkc CLKID_SARADC_GATE>;
+		clock-names = "xtal", "saradc_clk";
+		interrupts = <GIC_SPI 200 IRQ_TYPE_EDGE_RISING>;
+		reg = <0x0 0xff809000 0x0 0x48>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
