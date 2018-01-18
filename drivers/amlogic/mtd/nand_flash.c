@@ -377,7 +377,7 @@ struct aml_nand_flash_dev aml_nand_flash_ids[] = {
 		0,
 		0,
 		(NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE)},
-	{"ESMT SLC 128MiB 3.3V 8-bit F59L1G81MA (2Y)",
+	{"ESMT SLC 128MiB 3.3V 8-bit F59L1G81Mxxx",
 		{NAND_ID_ESMT, 0xd1, 0x80, 0x95, 0x40, 0x7f},
 		2048,
 		128,
