@@ -94,3 +94,13 @@ config AMLOGIC_LCD_EXTERN_MIPI_ST7701
 		Once the power on, according to the timing requirements,
 		through the mipi interface to write data to the LCD,
 		make its initialization
+
+config AMLOGIC_LCD_EXTERN_MIPI_P070ACB
+	bool "lcd external mipi P070ACB init driver"
+	default n
+	depends on AMLOGIC_LCD_EXTERN
+	help
+		Amlogic LCD external mipi_P070ACB init driver support
+		Once the power on, according to the timing requirements,
+		through the mipi interface to write data to the LCD,
+		make its initialization

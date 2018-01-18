@@ -1128,6 +1128,10 @@ static int lcd_extern_add_mipi(struct aml_lcd_extern_driver_s *ext_drv)
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN_MIPI_ST7701
 		ret = aml_lcd_extern_mipi_st7701_probe(ext_drv);
 #endif
+	} else if (strcmp(ext_drv->config.name, "mipi_P070ACB") == 0) {
+#ifdef CONFIG_AMLOGIC_LCD_EXTERN_MIPI_P070ACB
+		ret = aml_lcd_extern_mipi_p070acb_probe(ext_drv);
+#endif
 	} else {
 		EXTERR("invalid driver name: %s\n", ext_drv->config.name);
 		ret = -1;
