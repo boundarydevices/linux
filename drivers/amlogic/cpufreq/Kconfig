@@ -21,3 +21,22 @@ config AMLOGIC_M8B_CPUFREQ
 		it if your chip belongs this group
 
 endchoice #AMLOGIC_CPUFREQ
+
+config AMLOGIC_INPUT_BOOST
+    bool "Meson BOOST cpufreq when key input"
+    depends on CPU_FREQ_GOV_INTERACTIVE
+    help
+        This adds boost cpuferq support when key input detected.
+        This adds boost cpuferq support when key input detected.
+        When key input, cpufreq is boosted.
+        And boost_duration is decideded by AMLOGIC_INPUT_BOOST_DURATION
+
+config AMLOGIC_INPUT_BOOST_DURATION
+    int "Input boost duration"
+    range 0 5000
+    default 1000
+    depends on AMLOGIC_INPUT_BOOST
+    help
+        This set boost cpuferq duration.
+        unit is ms.
+

@@ -1152,6 +1152,33 @@ static void interactive_tunables_free(struct interactive_tunables *tunables)
 	kfree(tunables);
 }
 
+#ifdef CONFIG_AMLOGIC_INPUT_BOOST
+void set_boostpulse(void)
+{
+	struct interactive_tunables *tunables;
+	struct interactive_cpu *icpu;
+
+	icpu = &per_cpu(interactive_cpu, smp_processor_id());
+
+	if (!down_read_trylock(&icpu->enable_sem))
+		return;
+
+	if (!icpu->ipolicy) {
+		up_read(&icpu->enable_sem);
+		return;
+	}
+
+	tunables = icpu->ipolicy->tunables;
+	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
+		CONFIG_AMLOGIC_INPUT_BOOST_DURATION * 1000;
+	trace_cpufreq_interactive_boost("pulse");
+	if (!tunables->boosted)
+		cpufreq_interactive_boost(tunables);
+	up_read(&icpu->enable_sem);
+}
+EXPORT_SYMBOL(set_boostpulse);
+#endif
+
 int cpufreq_interactive_init(struct cpufreq_policy *policy)
 {
 	struct interactive_policy *ipolicy;

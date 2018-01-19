@@ -28,6 +28,9 @@
 #include <linux/mutex.h>
 #include <linux/rcupdate.h>
 #include "input-compat.h"
+#ifdef CONFIG_AMLOGIC_INPUT_BOOST
+#include <linux/cpufreq.h>
+#endif
 
 MODULE_AUTHOR("Vojtech Pavlik <vojtech@suse.cz>");
 MODULE_DESCRIPTION("Input core");
@@ -291,6 +294,10 @@ static int input_get_disposition(struct input_dev *dev,
 				disposition = INPUT_PASS_TO_HANDLERS;
 				break;
 			}
+
+#ifdef CONFIG_AMLOGIC_INPUT_BOOST
+			set_boostpulse();
+#endif
 
 			if (!!test_bit(code, dev->key) != !!value) {
 
