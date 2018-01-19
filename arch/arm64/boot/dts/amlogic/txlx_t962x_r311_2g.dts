@@ -1158,7 +1158,7 @@
 		pinctrl-names = "audio_i2s";
 		pinctrl-0 = <&aml_audio_i2s>;
 		/*avout mute gpio*/
-		mute_gpio-gpios = <&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
+		mute_gpio-gpios = <&gpio GPIODV_5 GPIO_ACTIVE_HIGH>;
 		/*analog amp mute*/
 		/*amp_mute_gpio-gpios = <&gpio GPIOZ_18 GPIO_ACTIVE_LOW>;*/
 		aux_dev = <&tas5707>;
@@ -1360,17 +1360,17 @@
 
 }; /* end of / */
 
-&i2c0 {
+&i2c2 {
 	status = "okay";
 	pinctrl-names="default";
-	pinctrl-0=<&i2c0_z_pins>;
+	pinctrl-0=<&i2c2_h_pins>;
 
 	tas5707: tas5707@36 {
 		compatible = "ti,tas5707";
 		#sound-dai-cells = <0>;
 		codec_name = "tas5707";
 		reg = <0x1B>;
-		reset_pin = <&gpio GPIOZ_13 GPIO_ACTIVE_LOW>;
+		reset_pin = <&gpio GPIODV_4 GPIO_ACTIVE_LOW>;
 		eq_enable = <0>;
 		drc_enable = <0>;
 		status = "okay";
@@ -1381,18 +1381,10 @@
 	/*i2s*/
 	aml_audio_i2s: aml_audio_i2s {
 		mux {
-			groups = "i2s_mclk_z",
-				"i2s_sclk_z",
-				"i2s_lrclk_z",
-				"i2s_dout01_z"
-				//, "i2s_dout23_z15"
-				//, "i2s_dout45_z"
-				//, "i2s_dout67_z19"
-				//, "i2s_din01_h6"
-				//, "i2s_din23_h5"
-				//, "i2s_din23_h5"
-				//, "i2s_din67_h0"
-				;
+			groups = "i2s_mclk_h",
+				"i2s_sclk_h",
+				"i2s_lrclk_h",
+				"i2s_dout01_h6";
 			function = "i2s";
 		};
 	};
