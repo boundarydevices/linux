@@ -705,6 +705,10 @@
 		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
 		interrupts = <0 57 1>;
 		interrupt-names = "hdmitx_hpd";
+		/* 0:M8B 1:GXBB 2:GXTVBB 3:GXL 4:GXM
+		 * 5:TXL 6:TXLX 7:AXG 8:GXLX 9:TXHD
+		 */
+		ic_type = <4>;
 		vend_data: vend_data{ /* Should modified by Customer */
 			vendor_name = "Amlogic"; /* Max Chars: 8 */
 			/* standards.ieee.org/develop/regauth/oui/oui.txt */
