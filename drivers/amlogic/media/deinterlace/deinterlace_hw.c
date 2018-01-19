@@ -54,6 +54,11 @@ module_param(debug_blend_mode_ctrl, ushort, 0664);
 static unsigned int pq_load_dbg;
 module_param_named(pq_load_dbg, pq_load_dbg, uint, 0644);
 
+static bool pd22_flg_calc_en = true;
+#ifdef DEBUG_SUPPORT
+module_param_named(pd22_flg_calc_en, pd22_flg_calc_en, bool, 0644);
+#endif
+
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 extern u32 VSYNC_RD_MPEG_REG(u32 adr);
 #endif
@@ -174,12 +179,55 @@ void init_field_mode(unsigned short height)
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXLX))
 		DI_Wr(DIPD_COMB_CTRL6, 0x00107064);
 }
+
+static void mc_pd22_check_irq(void)
+{
+	int cls_2_stl_thd = 1, cls_2_stl = 0;
+	int is_zmv = 0, no_gmv = 0;
+	int i, last_gmv, last_22_flg;
+	int cur_gmv, cur_22_flg;
+	unsigned int reg_val = 0;
+
+	if (!pd22_flg_calc_en)
+		return;
+
+	is_zmv  = RDMA_RD_BITS(MCDI_RO_GMV_LOCK_FLG, 1, 1);
+	last_gmv = RDMA_RD_BITS(MCDI_FIELD_MV, 0, 6);
+	last_gmv = last_gmv > 32 ? (32 - last_gmv) : last_gmv;
+	cur_gmv = RDMA_RD_BITS(MCDI_RO_GMV_LOCK_FLG, 2, 6);
+	cur_gmv = cur_gmv > 32 ? (32 - cur_gmv) : cur_gmv;
+
+	cls_2_stl = abs(cur_gmv) <= cls_2_stl_thd;
+	no_gmv  = (abs(cur_gmv) == 32 && (abs(last_gmv) <= cls_2_stl_thd));
+	for (i = 0; i < 3; i++) {
+		last_22_flg = RDMA_RD_BITS(MCDI_PD_22_CHK_FLG_CNT, (24+i), 1);
+		cur_22_flg = RDMA_RD_BITS(MCDI_RO_PD_22_FLG, (24+i), 1);
+		if ((is_zmv == 1 || cls_2_stl == 1 || no_gmv == 1) &&
+			last_22_flg == 1 && cur_22_flg == 0) {
+			RDMA_WR_BITS(MCDI_PD_22_CHK_FLG_CNT,
+				last_22_flg, (24+i), 1);
+			reg_val = RDMA_RD_BITS(MCDI_PD22_CHK_THD_RT, 0, 5) - 1;
+			RDMA_WR_BITS(MCDI_PD_22_CHK_FLG_CNT,
+				reg_val, i*8, 8);
+		} else {
+			RDMA_WR_BITS(MCDI_PD_22_CHK_FLG_CNT,
+				cur_22_flg, (24+i), 1);
+			reg_val = RDMA_RD_BITS(MCDI_RO_PD_22_FLG, i*8, 8);
+			RDMA_WR_BITS(MCDI_PD_22_CHK_FLG_CNT, reg_val, i*8, 8);
+		}
+	}
+}
+
 void mc_pre_mv_irq(void)
 {
 	unsigned int val1;
 
-	val1 = RDMA_RD(MCDI_RO_PD_22_FLG);
-	RDMA_WR(MCDI_PD_22_CHK_FLG_CNT, val1);
+	if (pd22_flg_calc_en && is_meson_gxlx_cpu()) {
+		mc_pd22_check_irq();
+	} else {
+		val1 = RDMA_RD(MCDI_RO_PD_22_FLG);
+		RDMA_WR(MCDI_PD_22_CHK_FLG_CNT, val1);
+	}
 
 	val1 = RDMA_RD_BITS(MCDI_RO_HIGH_VERT_FRQ_FLG, 0, 1);
 	RDMA_WR_BITS(MCDI_FIELD_HVF_PRDX_CNT, val1, 0, 1);

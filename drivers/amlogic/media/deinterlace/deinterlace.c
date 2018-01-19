@@ -4035,7 +4035,8 @@ static irqreturn_t de_irq(int irq, void *dev_instance)
 			di_pre_stru.irq_time);
 		if (mcpre_en) {
 			get_mcinfo_from_reg_in_irq();
-			if (is_meson_gxlx_cpu() ||
+			if ((is_meson_gxlx_cpu() &&
+				di_pre_stru.field_count_for_cont >= 4) ||
 				is_meson_txhd_cpu())
 				mc_pre_mv_irq();
 			calc_lmv_base_mcinfo((di_pre_stru.cur_height>>1),
@@ -5650,6 +5651,10 @@ static void di_pre_size_change(unsigned short width,
 		RDMA_WR(MCDI_HV_BLKSIZEIN, (overturn ? 3 : 0) << 30
 			| blkhsize << 16 | height);
 		RDMA_WR(MCDI_BLKTOTAL, blkhsize * height);
+		if (is_meson_gxlx_cpu()) {
+			RDMA_WR(MCDI_PD_22_CHK_FLG_CNT, 0);
+			RDMA_WR(MCDI_FIELD_MV, 0);
+		}
 	}
 }
 static bool need_bypass(struct vframe_s *vf)
