@@ -27,23 +27,17 @@
 			&clkc CLKID_VCLK2_VENCL>;
 		clock-names = "encl_top_gate",
 			"encl_int_gate";
-		reg = <0x0 0xff634000 0x0 0x100>;
+		reg = <0x0 0xff634400 0x0 0x100>;
 		interrupts = <0 3 1
 			0 78 1>;
-		interrupt-names = "vbyone","vbyone_vsync";
+		interrupt-names = "vsync","vbyone";
 		pinctrl-names = "vbyone";
 		pinctrl-0 = <&lcd_vbyone_pins>;
 		pinctrl_version = <2>; /* for uboot */
 
-		/* power type:(0=cpu_gpio, 1=pmu_gpio,
-		 * 2=signal, 3=extern, 0xff=ending)
-		 */
-		/* power index:(point gpios_index,
-		 * or extern_index, 0xff=invalid)
-		 */
-		/* power value:(0=output low,
-		 * 1=output high, 2=input)
-		 */
+		/* power type:(0=cpu_gpio, 2=signal, 3=extern, 0xff=ending) */
+		/* power index:(gpios_index, or extern_index, 0xff=invalid) */
+		/* power value:(0=output low, 1=output high, 2=input) */
 		/* power delay:(unit in ms) */
 		lcd_cpu-gpios = <&gpio GPIOZ_13 GPIO_ACTIVE_HIGH
 			&gpio GPIOZ_8 GPIO_ACTIVE_HIGH
@@ -70,10 +64,9 @@
 				44 148 0  /*hs_width, hs_bp, hs_pol*/
 				5  30 0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				2 /*
-				   *fr_adj_type
+				2 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				3 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -115,10 +108,9 @@
 				44 148 0   /*hs_width, hs_bp, hs_pol*/
 				5  30  0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				4 /*
-				   *fr_adj_type
+				4 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				0 /*clk_ss_level */
 				1 /*clk_auto_generate*/
@@ -160,10 +152,9 @@
 				56 64 0   /*hs_width, hs_bp, hs_pol*/
 				3  28 0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				2 /*
-				   *fr_adj_type
+				2 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				3 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -205,10 +196,9 @@
 				33 477 0  /*hs_width, hs_bp, hs_pol*/
 				6  65 0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				2 /*
-				   *fr_adj_type
+				2 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				1 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -248,10 +238,9 @@
 				33 477 0   /*hs_width, hs_bp, hs_pol*/
 				6  65  0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				2 /*
-				   *fr_adj_type
+				2 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				1 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -293,10 +282,9 @@
 				33 477 0 /*hs_width, hs_bp, hs_pol*/
 				6 65 0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				4 /*
-				   *fr_adj_type
+				4 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				0 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -338,10 +326,9 @@
 				33 477 1   /*hs_width, hs_bp, hs_pol*/
 				6  65  0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				2 /*
-				   *fr_adj_type
+				2 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				1 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -385,10 +372,9 @@
 				33 477 1 /*hs_width, hs_bp, hs_pol*/
 				6 65 0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				2 /*
-				   *fr_adj_type
+				2 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				1 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -432,10 +418,9 @@
 				33 477 0 /*hs_width, hs_bp, hs_pol*/
 				6 65 0>; /*vs_width, vs_bp, vs_pol*/
 			clk_attr = <
-				2 /*
-				   *fr_adj_type
+				2 /*fr_adj_type
 				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
-				   *4=hdmi_mode)
+				   * 4=hdmi_mode)
 				   */
 				1 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
@@ -638,8 +623,7 @@
 				1 0  /*on_value, off_value*/
 				200 200>; /*on_delay(ms), off_delay(ms)*/
 			bl_ldim_region_row_col = <1 8>;
-			bl_ldim_mode = <1>; /*
-					     *1=single_side
+			bl_ldim_mode = <1>; /*1=single_side
 					     *   (top, bottom, left or right),
 					     *2=uniform(top/bottom, left/right)
 					     */
@@ -657,8 +641,7 @@
 				1 0 /*on_value, off_value*/
 				200 200>; /* on_delay(ms), off_delay(ms)*/
 			bl_ldim_region_row_col = <1 1>;
-			bl_ldim_mode = <1>; /*
-					     *1=single_side
+			bl_ldim_mode = <1>; /*1=single_side
 					     *   (top, bottom, left or right),
 					     *2=uniform(top/bottom, left/right)
 					     */

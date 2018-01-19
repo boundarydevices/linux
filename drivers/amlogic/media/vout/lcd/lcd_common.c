@@ -106,16 +106,8 @@ char *lcd_mode_mode_to_str(int mode)
  * lcd gpio
  * **********************************
  */
-#if 0
-#define lcd_gpio_request(dev, str)        gpiod_get(dev, str)
-#define lcd_gpio_free(gdesc)              gpiod_put(gdesc)
-#define lcd_gpio_input(gdesc)             gpiod_direction_input(gdesc)
-#define lcd_gpio_output(gdesc, val)       gpiod_direction_output(gdesc, val)
-#define lcd_gpio_get_value(gdesc)         gpiod_get_value(gdesc)
-#define lcd_gpio_set_value(gdesc, val)    gpiod_set_value(gdesc, val)
-#endif
 
-void lcd_cpu_gpio_register(unsigned int index)
+void lcd_cpu_gpio_probe(unsigned int index)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct lcd_cpu_gpio_s *cpu_gpio;
@@ -127,7 +119,7 @@ void lcd_cpu_gpio_register(unsigned int index)
 		return;
 	}
 	cpu_gpio = &lcd_drv->lcd_config->lcd_power->cpu_gpio[index];
-	if (cpu_gpio->flag) {
+	if (cpu_gpio->probe_flag) {
 		if (lcd_debug_print_flag) {
 			LCDPR("gpio %s[%d] is already registered\n",
 				cpu_gpio->name, index);
@@ -144,20 +136,61 @@ void lcd_cpu_gpio_register(unsigned int index)
 	}
 	strcpy(cpu_gpio->name, str);
 
+	/* init gpio flag */
+	cpu_gpio->probe_flag = 1;
+	cpu_gpio->register_flag = 0;
+}
+
+static int lcd_cpu_gpio_register(unsigned int index, int init_value)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	struct lcd_cpu_gpio_s *cpu_gpio;
+	int value;
+
+	if (index >= LCD_CPU_GPIO_NUM_MAX) {
+		LCDERR("%s: gpio index %d, exit\n", __func__, index);
+		return -1;
+	}
+	cpu_gpio = &lcd_drv->lcd_config->lcd_power->cpu_gpio[index];
+	if (cpu_gpio->probe_flag == 0) {
+		LCDERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
+		return -1;
+	}
+	if (cpu_gpio->register_flag) {
+		LCDPR("%s: gpio %s[%d] is already registered\n",
+			__func__, cpu_gpio->name, index);
+		return 0;
+	}
+
+	switch (init_value) {
+	case LCD_GPIO_OUTPUT_LOW:
+		value = GPIOD_OUT_LOW;
+		break;
+	case LCD_GPIO_OUTPUT_HIGH:
+		value = GPIOD_OUT_HIGH;
+		break;
+	case LCD_GPIO_INPUT:
+	default:
+		value = GPIOD_IN;
+		break;
+	}
+
 	/* request gpio */
 	cpu_gpio->gpio = devm_gpiod_get_index(lcd_drv->dev,
-		"lcd_cpu", index, GPIOD_OUT_HIGH);
+		"lcd_cpu", index, value);
 	if (IS_ERR(cpu_gpio->gpio)) {
 		LCDERR("register gpio %s[%d]: %p, err: %d\n",
 			cpu_gpio->name, index, cpu_gpio->gpio,
 			IS_ERR(cpu_gpio->gpio));
-	} else {
-		cpu_gpio->flag = 1;
-		if (lcd_debug_print_flag) {
-			LCDPR("register gpio %s[%d]: %p\n",
-				cpu_gpio->name, index, cpu_gpio->gpio);
-		}
+		return -1;
 	}
+	cpu_gpio->register_flag = 1;
+	if (lcd_debug_print_flag) {
+		LCDPR("register gpio %s[%d]: %p, init value: %d\n",
+			cpu_gpio->name, index, cpu_gpio->gpio, init_value);
+	}
+
+	return 0;
 }
 
 void lcd_cpu_gpio_set(unsigned int index, int value)
@@ -170,11 +203,16 @@ void lcd_cpu_gpio_set(unsigned int index, int value)
 		return;
 	}
 	cpu_gpio = &lcd_drv->lcd_config->lcd_power->cpu_gpio[index];
-	if (cpu_gpio->flag == 0) {
-		LCDERR("gpio [%d] is not registered\n", index);
+	if (cpu_gpio->probe_flag == 0) {
+		LCDERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
 		return;
 	}
-	if (IS_ERR(cpu_gpio->gpio)) {
+	if (cpu_gpio->register_flag == 0) {
+		lcd_cpu_gpio_register(index, value);
+		return;
+	}
+
+	if (IS_ERR_OR_NULL(cpu_gpio->gpio)) {
 		LCDERR("gpio %s[%d]: %p, err: %ld\n",
 			cpu_gpio->name, index, cpu_gpio->gpio,
 			PTR_ERR(cpu_gpio->gpio));
@@ -203,11 +241,16 @@ unsigned int lcd_cpu_gpio_get(unsigned int index)
 	struct lcd_cpu_gpio_s *cpu_gpio;
 
 	cpu_gpio = &lcd_drv->lcd_config->lcd_power->cpu_gpio[index];
-	if (cpu_gpio->flag == 0) {
-		LCDERR("gpio[%d] is not registered\n", index);
+	if (cpu_gpio->probe_flag == 0) {
+		LCDERR("%s: gpio [%d] is not probed\n", __func__, index);
 		return -1;
 	}
-	if (IS_ERR(cpu_gpio->gpio)) {
+	if (cpu_gpio->register_flag == 0) {
+		LCDERR("%s: gpio %s[%d] is not registered\n",
+			__func__, cpu_gpio->name, index);
+		return -1;
+	}
+	if (IS_ERR_OR_NULL(cpu_gpio->gpio)) {
 		LCDERR("gpio[%d]: %p, err: %ld\n",
 			index, cpu_gpio->gpio, PTR_ERR(cpu_gpio->gpio));
 		return -1;
@@ -428,12 +471,12 @@ int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 				"power_on_step", j, &val);
 			lcd_power->power_on_step[i].delay = val;
 
-			/* gpio request */
+			/* gpio probe */
 			switch (lcd_power->power_on_step[i].type) {
 			case LCD_POWER_TYPE_CPU:
 				index = lcd_power->power_on_step[i].index;
 				if (index < LCD_CPU_GPIO_NUM_MAX)
-					lcd_cpu_gpio_register(index);
+					lcd_cpu_gpio_probe(index);
 				break;
 			default:
 				break;
@@ -479,12 +522,12 @@ int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 				"power_off_step", j, &val);
 			lcd_power->power_off_step[i].delay = val;
 
-			/* gpio request */
+			/* gpio probe */
 			switch (lcd_power->power_off_step[i].type) {
 			case LCD_POWER_TYPE_CPU:
 				index = lcd_power->power_off_step[i].index;
 				if (index < LCD_CPU_GPIO_NUM_MAX)
-					lcd_cpu_gpio_register(index);
+					lcd_cpu_gpio_probe(index);
 				break;
 			default:
 				break;
@@ -549,12 +592,12 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 				(*p | ((*(p + 1)) << 8));
 		p += LCD_UKEY_PWR_DELAY;
 
-		/* gpio request */
+		/* gpio probe */
 		switch (pconf->lcd_power->power_on_step[i].type) {
 		case LCD_POWER_TYPE_CPU:
 			index = pconf->lcd_power->power_on_step[i].index;
 			if (index < LCD_CPU_GPIO_NUM_MAX)
-				lcd_cpu_gpio_register(index);
+				lcd_cpu_gpio_probe(index);
 			break;
 		default:
 			break;
@@ -596,12 +639,12 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 				(*p | ((*(p + 1)) << 8));
 		p += LCD_UKEY_PWR_DELAY;
 
-		/* gpio request */
+		/* gpio probe */
 		switch (pconf->lcd_power->power_off_step[i].type) {
 		case LCD_POWER_TYPE_CPU:
 			index = pconf->lcd_power->power_off_step[i].index;
 			if (index < LCD_CPU_GPIO_NUM_MAX)
-				lcd_cpu_gpio_register(index);
+				lcd_cpu_gpio_probe(index);
 			break;
 		default:
 			break;

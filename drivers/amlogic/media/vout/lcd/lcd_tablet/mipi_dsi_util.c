@@ -300,10 +300,10 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 			if (val == 0xff)
 				break;
 		} else if (val == 0xf0) { /* cpu_gpio */
-			/*  register gpio */
+			/*  probe gpio */
 			ret = of_property_read_u32_index(m_node,
 				propname, (i + DSI_GPIO_INDEX), &val);
-			lcd_cpu_gpio_register(val);
+			lcd_cpu_gpio_probe(val);
 
 			/*  cmd size */
 			ret = of_property_read_u32_index(m_node,

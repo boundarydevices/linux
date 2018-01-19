@@ -38,7 +38,13 @@
 #include "ldim_dev_drv.h"
 #include "../aml_bl_reg.h"
 
-struct bl_gpio_s ldim_gpio[BL_GPIO_NUM_MAX];
+struct bl_gpio_s ldim_gpio[BL_GPIO_NUM_MAX] = {
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+};
 
 static struct spi_board_info ldim_spi_dev = {
 	.modalias = "ldim_dev",
@@ -120,7 +126,7 @@ static void ldim_gpio_release(int index)
 }
 #endif
 
-static void ldim_gpio_register(int index)
+static void ldim_gpio_probe(int index)
 {
 	struct bl_gpio_s *ld_gpio;
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
@@ -132,7 +138,7 @@ static void ldim_gpio_register(int index)
 		return;
 	}
 	ld_gpio = &ldim_gpio[index];
-	if (ld_gpio->flag) {
+	if (ld_gpio->probe_flag) {
 		if (ldim_debug_print) {
 			LDIMPR("gpio %s[%d] is already registered\n",
 				ld_gpio->name, index);
@@ -149,20 +155,63 @@ static void ldim_gpio_register(int index)
 	}
 	strcpy(ld_gpio->name, str);
 
+	/* init gpio flag */
+	ld_gpio->probe_flag = 1;
+	ld_gpio->register_flag = 0;
+}
+
+static int ldim_gpio_register(int index, int init_value)
+{
+	struct bl_gpio_s *ld_gpio;
+	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
+	int value;
+
+	if (index >= BL_GPIO_NUM_MAX) {
+		LDIMERR("%s: gpio index %d, exit\n", __func__, index);
+		return -1;
+	}
+	ld_gpio = &ldim_gpio[index];
+	if (ld_gpio->probe_flag == 0) {
+		LDIMERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
+		return -1;
+	}
+	if (ld_gpio->register_flag) {
+		if (ldim_debug_print) {
+			LDIMPR("%s: gpio %s[%d] is already registered\n",
+				__func__, ld_gpio->name, index);
+		}
+		return 0;
+	}
+
+	switch (init_value) {
+	case BL_GPIO_OUTPUT_LOW:
+		value = GPIOD_OUT_LOW;
+		break;
+	case BL_GPIO_OUTPUT_HIGH:
+		value = GPIOD_OUT_HIGH;
+		break;
+	case BL_GPIO_INPUT:
+	default:
+		value = GPIOD_IN;
+		break;
+	}
+
 	/* request gpio */
 	ld_gpio->gpio = devm_gpiod_get_index(ldim_drv->dev,
-		"ldim_dev", index, GPIOD_OUT_HIGH);
+		"ldim_dev", index, value);
 	if (IS_ERR(ld_gpio->gpio)) {
 		LDIMERR("register gpio %s[%d]: %p, err: %d\n",
 			ld_gpio->name, index, ld_gpio->gpio,
 			IS_ERR(ld_gpio->gpio));
-	} else {
-		ld_gpio->flag = 1;
-		if (ldim_debug_print) {
-			LDIMPR("register gpio %s[%d]: %p\n",
-				ld_gpio->name, index, ld_gpio->gpio);
-		}
+		return -1;
 	}
+	ld_gpio->register_flag = 1;
+	if (ldim_debug_print) {
+		LDIMPR("register gpio %s[%d]: %p, init value: %d\n",
+			ld_gpio->name, index, ld_gpio->gpio, init_value);
+	}
+
+	return 0;
 }
 
 void ldim_gpio_set(int index, int value)
@@ -174,11 +223,15 @@ void ldim_gpio_set(int index, int value)
 		return;
 	}
 	ld_gpio = &ldim_gpio[index];
-	if (ld_gpio->flag == 0) {
-		LDIMERR("gpio [%d] is not registered\n", index);
+	if (ld_gpio->probe_flag == 0) {
+		BLERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
 		return;
 	}
-	if (IS_ERR(ld_gpio->gpio)) {
+	if (ld_gpio->register_flag == 0) {
+		ldim_gpio_register(index, value);
+		return;
+	}
+	if (IS_ERR_OR_NULL(ld_gpio->gpio)) {
 		LDIMERR("gpio %s[%d]: %p, err: %ld\n",
 			ld_gpio->name, index, ld_gpio->gpio,
 			PTR_ERR(ld_gpio->gpio));
@@ -211,11 +264,16 @@ unsigned int ldim_gpio_get(int index)
 	}
 
 	ld_gpio = &ldim_gpio[index];
-	if (ld_gpio->flag == 0) {
-		LDIMERR("gpio[%d] is not registered\n", index);
+	if (ld_gpio->probe_flag == 0) {
+		LDIMERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
 		return -1;
 	}
-	if (IS_ERR(ld_gpio->gpio)) {
+	if (ld_gpio->register_flag == 0) {
+		LDIMERR("%s: gpio %s[%d] is not registered\n",
+			__func__, ld_gpio->name, index);
+		return -1;
+	}
+	if (IS_ERR_OR_NULL(ld_gpio->gpio)) {
 		LDIMERR("gpio %s[%d]: %p, err: %ld\n",
 			ld_gpio->name, index,
 			ld_gpio->gpio, PTR_ERR(ld_gpio->gpio));
@@ -526,7 +584,7 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 			ldim_dev_config.en_gpio = BL_GPIO_MAX;
 		} else {
 			ldim_dev_config.en_gpio = temp[0];
-			ldim_gpio_register(ldim_dev_config.en_gpio);
+			ldim_gpio_probe(ldim_dev_config.en_gpio);
 		}
 		ldim_dev_config.en_gpio_on = temp[1];
 		ldim_dev_config.en_gpio_off = temp[2];
@@ -603,7 +661,7 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 			} else {
 				ldim_dev_config.lamp_err_gpio = val;
 				ldim_dev_config.fault_check = 1;
-				ldim_gpio_register(
+				ldim_gpio_probe(
 					ldim_dev_config.lamp_err_gpio);
 				ldim_gpio_set(ldim_dev_config.lamp_err_gpio,
 					BL_GPIO_INPUT);

@@ -40,16 +40,17 @@ static unsigned char lcd_ext_config_load;
 struct lcd_ext_gpio_s {
 	char name[15];
 	struct gpio_desc *gpio;
-	int flag;
+	int probe_flag;
+	int register_flag;
 };
 
 static struct lcd_ext_gpio_s lcd_extern_gpio[LCD_EXTERN_GPIO_NUM_MAX] = {
-	{.flag = 0,},
-	{.flag = 0,},
-	{.flag = 0,},
-	{.flag = 0,},
-	{.flag = 0,},
-	{.flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
+	{.probe_flag = 0, .register_flag = 0,},
 };
 
 struct aml_lcd_extern_driver_s *aml_lcd_extern_get_driver(int index)
@@ -92,7 +93,7 @@ static struct aml_lcd_extern_driver_s
 #endif
 
 #ifdef CONFIG_OF
-void lcd_extern_gpio_register(unsigned char index)
+void lcd_extern_gpio_probe(unsigned char index)
 {
 	struct lcd_ext_gpio_s *ext_gpio;
 	const char *str;
@@ -103,7 +104,7 @@ void lcd_extern_gpio_register(unsigned char index)
 		return;
 	}
 	ext_gpio = &lcd_extern_gpio[index];
-	if (ext_gpio->flag) {
+	if (ext_gpio->probe_flag) {
 		if (lcd_debug_print_flag) {
 			EXTPR("gpio %s[%d] is already registered\n",
 				ext_gpio->name, index);
@@ -120,20 +121,61 @@ void lcd_extern_gpio_register(unsigned char index)
 	}
 	strcpy(ext_gpio->name, str);
 
+	/* init gpio flag */
+	ext_gpio->probe_flag = 1;
+	ext_gpio->register_flag = 0;
+}
+
+static int lcd_extern_gpio_register(unsigned char index, int init_value)
+{
+	struct lcd_ext_gpio_s *ext_gpio;
+	int value;
+
+	if (index >= LCD_EXTERN_GPIO_NUM_MAX) {
+		EXTERR("gpio index %d, exit\n", index);
+		return -1;
+	}
+	ext_gpio = &lcd_extern_gpio[index];
+	if (ext_gpio->probe_flag == 0) {
+		EXTERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
+		return -1;
+	}
+	if (ext_gpio->register_flag) {
+		EXTPR("%s: gpio %s[%d] is already registered\n",
+			__func__, ext_gpio->name, index);
+		return 0;
+	}
+
+	switch (init_value) {
+	case LCD_GPIO_OUTPUT_LOW:
+		value = GPIOD_OUT_LOW;
+		break;
+	case LCD_GPIO_OUTPUT_HIGH:
+		value = GPIOD_OUT_HIGH;
+		break;
+	case LCD_GPIO_INPUT:
+	default:
+		value = GPIOD_IN;
+		break;
+	}
+
 	/* request gpio */
 	ext_gpio->gpio = devm_gpiod_get_index(
-		lcd_extern_dev, "extern", index, GPIOD_OUT_HIGH);
+		lcd_extern_dev, "extern", index, value);
 	if (IS_ERR(ext_gpio->gpio)) {
 		EXTERR("register gpio %s[%d]: %p, err: %d\n",
 			ext_gpio->name, index, ext_gpio->gpio,
 			IS_ERR(ext_gpio->gpio));
 		ext_gpio->gpio = NULL;
-	} else {
-		if (lcd_debug_print_flag) {
-			EXTPR("register gpio %s[%d]: %p\n",
-				ext_gpio->name, index, ext_gpio->gpio);
-		}
+		return -1;
 	}
+	ext_gpio->register_flag = 1;
+	if (lcd_debug_print_flag) {
+		EXTPR("register gpio %s[%d]: %p, init value: %d\n",
+			ext_gpio->name, index, ext_gpio->gpio, init_value);
+	}
+
+	return 0;
 }
 #endif
 
@@ -146,11 +188,16 @@ void lcd_extern_gpio_set(unsigned char index, int value)
 		return;
 	}
 	ext_gpio = &lcd_extern_gpio[index];
-	if (ext_gpio->flag == 0) {
-		EXTERR("gpio [%d] is not registered\n", index);
+	if (ext_gpio->probe_flag == 0) {
+		EXTERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
 		return;
 	}
-	if (IS_ERR(ext_gpio->gpio)) {
+	if (ext_gpio->register_flag == 0) {
+		lcd_extern_gpio_register(index, value);
+		return;
+	}
+
+	if (IS_ERR_OR_NULL(ext_gpio->gpio)) {
 		EXTERR("gpio %s[%d]: %p, err: %ld\n",
 			ext_gpio->name, index, ext_gpio->gpio,
 			PTR_ERR(ext_gpio->gpio));
@@ -182,11 +229,16 @@ unsigned int lcd_extern_gpio_get(unsigned char index)
 		return -1;
 	}
 	ext_gpio = &lcd_extern_gpio[index];
-	if (ext_gpio->flag == 0) {
-		EXTERR("gpio [%d] is not registered\n", index);
+	if (ext_gpio->probe_flag == 0) {
+		EXTERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
 		return -1;
 	}
-	if (IS_ERR(ext_gpio->gpio)) {
+	if (ext_gpio->register_flag == 0) {
+		EXTERR("%s: gpio %s[%d] is not registered\n",
+			__func__, ext_gpio->name, index);
+		return -1;
+	}
+	if (IS_ERR_OR_NULL(ext_gpio->gpio)) {
 		EXTERR("gpio %s[%d]: %p, err: %ld\n",
 			ext_gpio->name, index, ext_gpio->gpio,
 			PTR_ERR(ext_gpio->gpio));
@@ -292,10 +344,10 @@ static int lcd_extern_init_table_dynamic_size_load_dts(
 			init_table[i+2+j] = (unsigned char)val;
 		}
 		if (type == LCD_EXTERN_INIT_GPIO) {
-			/* gpio request */
+			/* gpio probe */
 			index = init_table[i+2];
 			if (index < LCD_EXTERN_GPIO_NUM_MAX)
-				lcd_extern_gpio_register(index);
+				lcd_extern_gpio_probe(index);
 		}
 		step++;
 		i += (cmd_size + 2);
@@ -340,10 +392,10 @@ static int lcd_extern_init_table_fixed_size_load_dts(
 		if (init_table[i] == LCD_EXTERN_INIT_END) {
 			break;
 		} else if (init_table[i] == LCD_EXTERN_INIT_GPIO) {
-			/* gpio request */
+			/* gpio probe */
 			index = init_table[i+1];
 			if (index < LCD_EXTERN_GPIO_NUM_MAX)
-				lcd_extern_gpio_register(index);
+				lcd_extern_gpio_probe(index);
 		}
 		step++;
 		i += cmd_size;
@@ -489,7 +541,7 @@ static int lcd_extern_get_config_dts(struct device_node *of_node,
 			return -1;
 		}
 		extconf->spi_gpio_cs = val;
-		lcd_extern_gpio_register(val);
+		lcd_extern_gpio_probe(val);
 		if (lcd_debug_print_flag)
 			EXTPR("spi_gpio_cs: %d\n", extconf->spi_gpio_cs);
 		ret = of_property_read_u32(of_node, "gpio_spi_clk", &val);
@@ -500,7 +552,7 @@ static int lcd_extern_get_config_dts(struct device_node *of_node,
 			return -1;
 		}
 		extconf->spi_gpio_clk = val;
-		lcd_extern_gpio_register(val);
+		lcd_extern_gpio_probe(val);
 		if (lcd_debug_print_flag)
 			EXTPR("spi_gpio_clk: %d\n", extconf->spi_gpio_clk);
 		ret = of_property_read_u32(of_node, "gpio_spi_data", &val);
@@ -511,7 +563,7 @@ static int lcd_extern_get_config_dts(struct device_node *of_node,
 			return -1;
 		}
 		extconf->spi_gpio_data = val;
-		lcd_extern_gpio_register(val);
+		lcd_extern_gpio_probe(val);
 		if (lcd_debug_print_flag)
 			EXTPR("spi_gpio_data: %d\n", extconf->spi_gpio_data);
 		ret = of_property_read_u32(of_node, "spi_clk_freq", &val);
@@ -686,10 +738,10 @@ static int lcd_extern_init_table_dynamic_size_load_unifykey(
 		if (init_table[i] == LCD_EXTERN_INIT_END) {
 			break;
 		} else if (init_table[i] == LCD_EXTERN_INIT_GPIO) {
-			/* gpio request */
+			/* gpio probe */
 			index = init_table[i+1];
 			if (index < LCD_EXTERN_GPIO_NUM_MAX)
-				lcd_extern_gpio_register(index);
+				lcd_extern_gpio_probe(index);
 		}
 		step++;
 		i += (cmd_size + 2);
@@ -736,10 +788,10 @@ static int lcd_extern_init_table_fixed_size_load_unifykey(
 		if (init_table[i] == LCD_EXTERN_INIT_END) {
 			break;
 		} else if (init_table[i] == LCD_EXTERN_INIT_GPIO) {
-			/* gpio request */
+			/* gpio probe */
 			index = init_table[i+1];
 			if (index < LCD_EXTERN_GPIO_NUM_MAX)
-				lcd_extern_gpio_register(index);
+				lcd_extern_gpio_probe(index);
 		}
 		step++;
 		i += cmd_size;
@@ -851,13 +903,13 @@ static int lcd_extern_get_config_unifykey(struct lcd_extern_config_s *extconf)
 		break;
 	case LCD_EXTERN_SPI:
 		extconf->spi_gpio_cs = *p;
-		lcd_extern_gpio_register(*p);
+		lcd_extern_gpio_probe(*p);
 		p += LCD_UKEY_EXT_TYPE_VAL_0;
 		extconf->spi_gpio_clk = *p;
-		lcd_extern_gpio_register(*p);
+		lcd_extern_gpio_probe(*p);
 		p += LCD_UKEY_EXT_TYPE_VAL_1;
 		extconf->spi_gpio_data = *p;
-		lcd_extern_gpio_register(*p);
+		lcd_extern_gpio_probe(*p);
 		p += LCD_UKEY_EXT_TYPE_VAL_2;
 		extconf->spi_clk_freq = (*p | ((*(p + 1)) << 8) |
 					((*(p + 2)) << 16) |

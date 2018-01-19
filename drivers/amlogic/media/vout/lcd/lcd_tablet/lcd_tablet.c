@@ -308,7 +308,7 @@ static int lcd_resume(void)
 	if (lcd_resume_flag)
 		return 0;
 
-	if (lcd_drv->lcd_resume_flag) {
+	if (lcd_drv->lcd_resume_type) {
 		if (lcd_drv->workqueue) {
 			queue_work(lcd_drv->workqueue,
 				&(lcd_drv->lcd_resume_work));

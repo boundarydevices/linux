@@ -99,7 +99,8 @@ enum bl_off_policy_e {
 struct bl_gpio_s {
 	char name[15];
 	struct gpio_desc *gpio;
-	int flag;
+	int probe_flag;
+	int register_flag;
 };
 
 struct pwm_data_s {

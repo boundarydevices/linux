@@ -133,16 +133,16 @@ static struct dsi_config_s lcd_mipi_config = {
 
 static struct lcd_power_ctrl_s lcd_power_config = {
 	.cpu_gpio = {
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
 	},
 	.power_on_step = {
 		{
@@ -800,7 +800,7 @@ static int lcd_config_probe(struct platform_device *pdev)
 	lcd_driver->lcd_info = &lcd_vinfo;
 	lcd_driver->lcd_config = &lcd_config_dft;
 	lcd_driver->lcd_test_flag = 0;
-	lcd_driver->lcd_resume_flag = 1; /* default workqueue */
+	lcd_driver->lcd_resume_type = 1; /* default workqueue */
 	lcd_driver->power_ctrl = lcd_power_ctrl;
 	lcd_driver->module_reset = lcd_module_reset;
 	lcd_driver->power_tiny_ctrl = lcd_power_tiny_ctrl;
@@ -972,7 +972,7 @@ static int lcd_remove(struct platform_device *pdev)
 
 static int lcd_resume(struct platform_device *pdev)
 {
-	if (lcd_driver->lcd_resume_flag) {
+	if (lcd_driver->lcd_resume_type) {
 		lcd_resume_flag = 1;
 		if (lcd_driver->workqueue) {
 			queue_work(lcd_driver->workqueue,

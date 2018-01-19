@@ -31,7 +31,7 @@
 #ifdef CONFIG_USE_OF
 extern struct device_node *aml_lcd_extern_get_dts_child(int index);
 #endif
-extern void lcd_extern_gpio_register(unsigned char index);
+extern void lcd_extern_gpio_probe(unsigned char index);
 extern void lcd_extern_gpio_set(unsigned char index, int value);
 extern unsigned int lcd_extern_gpio_get(unsigned char index);
 

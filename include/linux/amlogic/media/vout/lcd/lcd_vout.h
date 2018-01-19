@@ -345,7 +345,8 @@ enum lcd_pmu_gpio_e {
 struct lcd_cpu_gpio_s {
 	char name[15];
 	struct gpio_desc *gpio;
-	int flag;
+	int probe_flag;
+	int register_flag;
 };
 
 #define LCD_PMU_GPIO_NUM_MAX         3
@@ -403,7 +404,7 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_key_valid;
 	unsigned char lcd_config_load;
 	unsigned char lcd_test_flag;
-	unsigned char lcd_resume_flag; /* 0=directly, 1=workqueue */
+	unsigned char lcd_resume_type; /* 0=directly, 1=workqueue */
 	unsigned char lcd_mute;
 
 	unsigned char clk_gate_state;

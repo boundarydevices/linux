@@ -1463,8 +1463,8 @@ int lcd_vbyone_interrupt_up(void)
 		viu_vsync_irq = lcd_drv->res_vsync_irq->start;
 		LCDPR("viu_vsync_irq: %d\n", viu_vsync_irq);
 
-		if (request_irq(viu_vsync_irq, lcd_vbyone_vsync_isr, 0,
-			"vbyone_vsync", (void *)"vbyone_vsync"))
+		if (request_irq(viu_vsync_irq, lcd_vbyone_vsync_isr,
+			IRQF_SHARED, "vbyone_vsync", (void *)"vbyone_vsync"))
 			LCDERR("can't request viu_vsync_irq\n");
 		else {
 			if (lcd_debug_print_flag)

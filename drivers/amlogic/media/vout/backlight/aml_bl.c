@@ -97,11 +97,11 @@ static struct bl_config_s bl_config = {
 	.pwm_off_delay = 0,
 
 	.bl_gpio = {
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
-		{.flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
+		{.probe_flag = 0, .register_flag = 0,},
 	},
 };
 
@@ -204,7 +204,7 @@ struct aml_bl_drv_s *aml_bl_get_driver(void)
 	return bl_drv;
 }
 
-static void bl_gpio_register(int index)
+static void bl_gpio_probe(int index)
 {
 	struct bl_gpio_s *bl_gpio;
 	const char *str;
@@ -215,7 +215,7 @@ static void bl_gpio_register(int index)
 		return;
 	}
 	bl_gpio = &bl_drv->bconf->bl_gpio[index];
-	if (bl_gpio->flag) {
+	if (bl_gpio->probe_flag) {
 		if (bl_debug_print_flag) {
 			BLPR("gpio %s[%d] is already registered\n",
 				bl_gpio->name, index);
@@ -232,20 +232,60 @@ static void bl_gpio_register(int index)
 	}
 	strcpy(bl_gpio->name, str);
 
+	/* init gpio flag */
+	bl_gpio->probe_flag = 1;
+	bl_gpio->register_flag = 0;
+}
+
+static int bl_gpio_register(int index, int init_value)
+{
+	struct bl_gpio_s *bl_gpio;
+	int value;
+
+	if (index >= BL_GPIO_NUM_MAX) {
+		BLERR("%s: gpio index %d, exit\n", __func__, index);
+		return -1;
+	}
+	bl_gpio = &bl_drv->bconf->bl_gpio[index];
+	if (bl_gpio->probe_flag == 0) {
+		BLERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
+		return -1;
+	}
+	if (bl_gpio->register_flag) {
+		BLPR("%s: gpio %s[%d] is already registered\n",
+			__func__, bl_gpio->name, index);
+		return 0;
+	}
+
+	switch (init_value) {
+	case BL_GPIO_OUTPUT_LOW:
+		value = GPIOD_OUT_LOW;
+		break;
+	case BL_GPIO_OUTPUT_HIGH:
+		value = GPIOD_OUT_HIGH;
+		break;
+	case BL_GPIO_INPUT:
+	default:
+		value = GPIOD_IN;
+		break;
+	}
+
 	/* request gpio */
-	bl_gpio->gpio = devm_gpiod_get_index(
-		bl_drv->dev, "bl", index, GPIOD_OUT_HIGH);
+	bl_gpio->gpio = devm_gpiod_get_index(bl_drv->dev, "bl", index, value);
 	if (IS_ERR(bl_gpio->gpio)) {
 		BLERR("register gpio %s[%d]: %p, err: %d\n",
 			bl_gpio->name, index, bl_gpio->gpio,
 			IS_ERR(bl_gpio->gpio));
-	} else {
-		bl_gpio->flag = 1;
-		if (bl_debug_print_flag) {
-			BLPR("register gpio %s[%d]: %p\n",
-				bl_gpio->name, index, bl_gpio->gpio);
-		}
+		return -1;
 	}
+
+	bl_gpio->register_flag = 1;
+	if (bl_debug_print_flag) {
+		BLPR("register gpio %s[%d]: %p, init value: %d\n",
+			bl_gpio->name, index, bl_gpio->gpio, init_value);
+	}
+
+	return 0;
 }
 
 static void bl_gpio_set(int index, int value)
@@ -257,11 +297,16 @@ static void bl_gpio_set(int index, int value)
 		return;
 	}
 	bl_gpio = &bl_drv->bconf->bl_gpio[index];
-	if (bl_gpio->flag == 0) {
-		BLERR("gpio [%d] is not registered\n", index);
+	if (bl_gpio->probe_flag == 0) {
+		BLERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
 		return;
 	}
-	if (IS_ERR(bl_gpio->gpio)) {
+	if (bl_gpio->register_flag == 0) {
+		bl_gpio_register(index, value);
+		return;
+	}
+
+	if (IS_ERR_OR_NULL(bl_gpio->gpio)) {
 		BLERR("gpio %s[%d]: %p, err: %ld\n",
 			bl_gpio->name, index, bl_gpio->gpio,
 			PTR_ERR(bl_gpio->gpio));
@@ -1334,7 +1379,7 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 			bconf->en_gpio = BL_GPIO_MAX;
 		} else {
 			bconf->en_gpio = bl_para[0];
-			bl_gpio_register(bconf->en_gpio);
+			bl_gpio_probe(bconf->en_gpio);
 		}
 		bconf->en_gpio_on = bl_para[1];
 		bconf->en_gpio_off = bl_para[2];
@@ -1670,7 +1715,7 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 		bconf->en_gpio = BL_GPIO_MAX;
 	} else {
 		bconf->en_gpio = temp;
-		bl_gpio_register(bconf->en_gpio);
+		bl_gpio_probe(bconf->en_gpio);
 	}
 	p += LCD_UKEY_BL_EN_GPIO;
 	bconf->en_gpio_on = *p;

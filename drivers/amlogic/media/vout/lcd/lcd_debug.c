@@ -128,7 +128,7 @@ static const char *lcd_debug_usage_str = {
 "    echo info > debug ; show lcd information\n"
 "    echo reg > debug ; show lcd registers\n"
 "    echo dump > debug ; show lcd information & registers\n"
-"	 echo dith <dither_en> <rounding_en> <dither_md>  > debug ; set vpu_vencl_dith_ctrl\n"
+"    echo dith <dither_en> <rounding_en> <dither_md>  > debug ; set vpu_vencl_dith_ctrl\n"
 "    echo key > debug ; show lcd_key_valid config, and lcd unifykey raw data\n"
 "\n"
 "    echo reset > debug; reset lcd driver\n"
@@ -171,11 +171,21 @@ static int lcd_cpu_gpio_register_print(struct lcd_config_s *pconf,
 	i = 0;
 	while (i < LCD_CPU_GPIO_NUM_MAX) {
 		cpu_gpio = &pconf->lcd_power->cpu_gpio[i];
-		if (cpu_gpio->flag) {
+		if (cpu_gpio->probe_flag == 0) {
+			i++;
+			continue;
+		}
+
+		if (cpu_gpio->register_flag) {
 			n = lcd_debug_info_len(len + offset);
 			len += snprintf((buf+len), n,
 				"%d: name=%s, gpio=%p\n",
 				i, cpu_gpio->name, cpu_gpio->gpio);
+		} else {
+			n = lcd_debug_info_len(len + offset);
+			len += snprintf((buf+len), n,
+				"%d: name=%s, no registered\n",
+				i, cpu_gpio->name);
 		}
 		i++;
 	}
@@ -1466,9 +1476,9 @@ static ssize_t lcd_debug_resume_show(struct class *class,
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
-	return sprintf(buf, "lcd resume flag: %d(%s)\n",
-		lcd_drv->lcd_resume_flag,
-		lcd_drv->lcd_resume_flag ? "workqueue" : "directly");
+	return sprintf(buf, "lcd resume type: %d(%s)\n",
+		lcd_drv->lcd_resume_type,
+		lcd_drv->lcd_resume_type ? "workqueue" : "directly");
 }
 
 static ssize_t lcd_debug_resume_store(struct class *class,
@@ -1483,8 +1493,8 @@ static ssize_t lcd_debug_resume_store(struct class *class,
 		LCDERR("invalid data\n");
 		return -EINVAL;
 	}
-	lcd_drv->lcd_resume_flag = (unsigned char)temp;
-	LCDPR("set lcd resume flag: %d\n", lcd_drv->lcd_resume_flag);
+	lcd_drv->lcd_resume_type = (unsigned char)temp;
+	LCDPR("set lcd resume flag: %d\n", lcd_drv->lcd_resume_type);
 
 	return count;
 }
@@ -2139,11 +2149,11 @@ static ssize_t lcd_debug_print_store(struct class *class,
 static struct class_attribute lcd_debug_class_attrs[] = {
 	__ATTR(help,        0444, lcd_debug_common_help, NULL),
 	__ATTR(debug,       0644, lcd_debug_show, lcd_debug_store),
-	__ATTR(change,		0644, lcd_debug_change_show,
+	__ATTR(change,      0644, lcd_debug_change_show,
 		lcd_debug_change_store),
 	__ATTR(enable,      0644,
 		lcd_debug_enable_show, lcd_debug_enable_store),
-	__ATTR(resume,      0644,
+	__ATTR(resume_type, 0644,
 		lcd_debug_resume_show, lcd_debug_resume_store),
 	__ATTR(power,       0644, lcd_debug_power_show, lcd_debug_power_store),
 	__ATTR(frame_rate,  0644,
@@ -2157,7 +2167,7 @@ static struct class_attribute lcd_debug_class_attrs[] = {
 	__ATTR(reg,         0200, NULL, lcd_debug_reg_store),
 	__ATTR(dither,      0644,
 		lcd_debug_dither_show, lcd_debug_dither_store),
-	__ATTR(dump,		0644,
+	__ATTR(dump,        0644,
 		lcd_debug_dump_show, lcd_debug_dump_store),
 	__ATTR(print,       0644, lcd_debug_print_show, lcd_debug_print_store),
 };
