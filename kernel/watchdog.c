@@ -26,6 +26,8 @@
 #include <linux/kvm_para.h>
 #include <linux/kthread.h>
 
+#include <linux/amlogic/debug_lockup.h>
+
 static DEFINE_MUTEX(watchdog_proc_mutex);
 
 #if defined(CONFIG_HAVE_NMI_WATCHDOG) || defined(CONFIG_HARDLOCKUP_DETECTOR)
@@ -239,6 +241,22 @@ static int is_softlockup(unsigned long touch_ts)
 static void watchdog_interrupt_count(void)
 {
 	__this_cpu_inc(hrtimer_interrupts);
+}
+
+unsigned long watchdog_get_interrupt_count_cpu(int cpu)
+{
+	return per_cpu(hrtimer_interrupts, cpu);
+}
+/*
+ * These two functions are mostly architecture specific
+ * defining them as weak here.
+ */
+int __weak watchdog_nmi_enable(unsigned int cpu)
+{
+	return 0;
+}
+void __weak watchdog_nmi_disable(unsigned int cpu)
+{
 }
 
 static int watchdog_enable_all_cpus(void);

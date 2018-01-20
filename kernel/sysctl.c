@@ -969,7 +969,7 @@ static struct ctl_table kern_table[] = {
 		.extra1		= &zero,
 		.extra2		= &one,
 	},
-#ifdef CONFIG_HARDLOCKUP_DETECTOR
+#if defined(CONFIG_HARDLOCKUP_DETECTOR)
 	{
 		.procname	= "hardlockup_panic",
 		.data		= &hardlockup_panic,

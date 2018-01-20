@@ -764,9 +764,19 @@ void handle_percpu_devid_irq(struct irq_desc *desc)
 		chip->irq_ack(&desc->irq_data);
 
 	if (likely(action)) {
+
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+		unsigned long tin;
+		unsigned int cpu = smp_processor_id();
+
+		isr_in_hook(cpu, &tin, irq, action->handler);
+#endif
 		trace_irq_handler_entry(irq, action);
 		res = action->handler(irq, raw_cpu_ptr(action->percpu_dev_id));
 		trace_irq_handler_exit(irq, action, res);
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+		isr_out_hook(cpu, tin, irq);
+#endif
 	} else {
 		unsigned int cpu = smp_processor_id();
 		bool enabled = cpumask_test_cpu(cpu, desc->percpu_enabled);

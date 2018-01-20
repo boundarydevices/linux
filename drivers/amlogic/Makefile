@@ -118,3 +118,5 @@ obj-$(CONFIG_AMLOGIC_LEDRING) += ledring/
 obj-$(CONFIG_AMLOGIC_GPIO_IRQ) += irqchip/
 
 obj-$(CONFIG_AMLOGIC_ATV_DEMOD) += atv_demod/
+
+obj-$(CONFIG_AMLOGIC_DEBUG) += debug/

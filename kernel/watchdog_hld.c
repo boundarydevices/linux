@@ -129,6 +129,9 @@ static void watchdog_overflow_callback(struct perf_event *event,
 				!test_and_set_bit(0, &hardlockup_allcpu_dumped))
 			trigger_allbutself_cpu_backtrace();
 
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+		pr_lockup_info(next_cpu);
+#endif
 		if (hardlockup_panic)
 			nmi_panic(regs, "Hard LOCKUP");
 
@@ -198,6 +201,9 @@ void watchdog_check_hardlockup_other_cpu(void)
 		if (per_cpu(hard_watchdog_warn, next_cpu) == true)
 			return;
 
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+		pr_lockup_info(next_cpu);
+#endif
 		if (hardlockup_panic)
 			panic("Watchdog detected hard LOCKUP on cpu %u",
 				next_cpu);

@@ -14446,3 +14446,6 @@ M:      Jihong Sui <jihong.sui@amlogic.com>
 F:      include/uapi/linux/dvb/aml_demod.h
 F:      drivers/amlogic/media/aml_demod/*
 
+AMLOGIC DEBUG
+M: Jianxin Pan <jianxin.pan@amlogic.com>
+F:  drivers/amlogic/debug/

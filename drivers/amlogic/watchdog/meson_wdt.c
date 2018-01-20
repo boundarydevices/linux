@@ -56,7 +56,6 @@ struct aml_wdt_dev {
 	struct notifier_block reboot_notifier;
 };
 
-
 static void aml_update_bits(void __iomem  *reg, unsigned int mask,
 							unsigned int val)
 {
@@ -295,6 +294,24 @@ static struct notifier_block aml_wdt_reboot_notifier = {
 	.notifier_call = aml_wtd_reboot_notify,
 };
 
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+/* HARDLOCKUP safe window: watchdog_thresh * 2 * /5 *3 *2 = 24 second*/
+#define HARDLOCKUP_WIN	 30
+struct aml_wdt_dev *g_awdt;
+void aml_wdt_disable_dbg(void)
+{
+	static int flg;
+	int cnt;
+
+	if (!g_awdt || flg)
+		return;
+	cnt = readl(g_awdt->reg_base + TCNT) & 0xffff;
+	if (cnt < HARDLOCKUP_WIN * g_awdt->one_second)
+		cnt = HARDLOCKUP_WIN * g_awdt->one_second;
+	set_watchdog_cnt(g_awdt, cnt);
+}
+#endif
+
 static int aml_wdt_probe(struct platform_device *pdev)
 {
 	struct watchdog_device *aml_wdt;
@@ -340,7 +357,9 @@ static int aml_wdt_probe(struct platform_device *pdev)
 	register_pm_notifier(&wdev->pm_notifier);
 	register_reboot_notifier(&wdev->reboot_notifier);
 	dev_info(wdev->dev, "AML Watchdog Timer probed done\n");
-
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+	g_awdt = wdev;
+#endif
 	return 0;
 }
 

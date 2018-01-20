@@ -1,45 +1,48 @@
 /*
- * Copyright (C) 2012 ARM Ltd.
+ * drivers/amlogic/debug/irqflags_debug.h
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __ASM_IRQFLAGS_H
-#define __ASM_IRQFLAGS_H
+
+#ifndef __ASM_IRQFLAGS_DEBUG_H
+#define __ASM_IRQFLAGS_DEBUG_H
 
 #ifdef __KERNEL__
 
-#include <asm/ptrace.h>
-
-#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
-#include <../drivers/amlogic/debug/irqflags_debug.h>
-#else
 /*
  * CPU interrupt mask handling.
  */
+#include <linux/amlogic/debug_lockup.h>
+
 static inline unsigned long arch_local_irq_save(void)
 {
 	unsigned long flags;
+
 	asm volatile(
 		"mrs	%0, daif		// arch_local_irq_save\n"
 		"msr	daifset, #2"
 		: "=r" (flags)
 		:
 		: "memory");
+	 irq_trace_start(flags);
 	return flags;
 }
 
 static inline void arch_local_irq_enable(void)
 {
+	irq_trace_stop(0);
+
 	asm volatile(
 		"msr	daifclr, #2		// arch_local_irq_enable"
 		:
@@ -49,11 +52,14 @@ static inline void arch_local_irq_enable(void)
 
 static inline void arch_local_irq_disable(void)
 {
+#if 0
 	asm volatile(
 		"msr	daifset, #2		// arch_local_irq_disable"
 		:
 		:
 		: "memory");
+#endif
+	arch_local_irq_save();
 }
 
 #define local_fiq_enable()	asm("msr	daifclr, #1" : : : "memory")
@@ -68,6 +74,7 @@ static inline void arch_local_irq_disable(void)
 static inline unsigned long arch_local_save_flags(void)
 {
 	unsigned long flags;
+
 	asm volatile(
 		"mrs	%0, daif		// arch_local_save_flags"
 		: "=r" (flags)
@@ -81,6 +88,7 @@ static inline unsigned long arch_local_save_flags(void)
  */
 static inline void arch_local_irq_restore(unsigned long flags)
 {
+	irq_trace_stop(flags);
 	asm volatile(
 		"msr	daif, %0		// arch_local_irq_restore"
 	:
@@ -113,6 +121,5 @@ static inline int arch_irqs_disabled_flags(unsigned long flags)
 		: : "r" (flags) : "memory");				\
 	} while (0)
 
-#endif
 #endif
 #endif

@@ -1,0 +1,15 @@
+menuconfig AMLOGIC_DEBUG
+	bool "AMLOGIC kernel debug"
+	default n
+	help
+		Amlogic kernel debug
+
+config AMLOGIC_DEBUG_LOCKUP
+	bool "Amlogic Kernel Lockup debug"
+	depends on AMLOGIC_DEBUG
+	depends on HARDLOCKUP_DETECTOR
+	default n
+	help
+		Debug lockup in isr and deaklock whit irq disabled.
+		When enable this config, Watchdog should be disabled.
+
