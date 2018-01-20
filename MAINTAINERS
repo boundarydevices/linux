@@ -14257,6 +14257,7 @@ F:	Documentation/devicetree/bindings/amlogic/input/amlogic-ts.txt
 F:	drivers/amlogic/input/touchscreen/*
 F:	drivers/amlogic/input/touchscreen/focaltech_touch/*
 F:	drivers/amlogic/input/touchscreen/goodix_gt1x/*
+F:	drivers/amlogic/input/touchscreen/goodix_gt9xx/*
 
 AMLOGIC ADD LCD_EXTERN P070ACB DRIVER
 M:	Weiming Liu <weiming.liu@amlogic.com>

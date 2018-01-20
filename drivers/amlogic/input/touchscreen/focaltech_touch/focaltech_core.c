@@ -62,11 +62,7 @@ struct i2c_client *fts_i2c_client;
 struct fts_ts_data *fts_wq_data;
 struct input_dev *fts_input_dev;
 
-#if FTS_DEBUG_EN
 int g_show_log = 1;
-#else
-int g_show_log = 0;
-#endif
 
 #if (FTS_DEBUG_EN && (FTS_DEBUG_LEVEL == 2))
 char g_sz_debug[1024] = {0};
@@ -98,12 +94,7 @@ int fts_wait_tp_to_valid(struct i2c_client *client)
     do
     {
         ret = fts_i2c_read_reg(client, FTS_REG_CHIP_ID, &reg_value);
-        if ((ret < 0) || (reg_value != chip_types.chip_idh))
-        {
-            FTS_INFO("TP Not Ready, ReadData = 0x%x", reg_value);
-        }
-        else if (reg_value == chip_types.chip_idh)
-        {
+        if (ret >= 0) {
             FTS_INFO("TP Ready, Device ID = 0x%x", reg_value);
             return 0;
         }
@@ -113,7 +104,7 @@ int fts_wait_tp_to_valid(struct i2c_client *client)
     while ((cnt * INTERVAL_READ_REG) < TIMEOUT_READ_REG);
 
     /* error: not get correct reg data */
-    return -1;
+    return ret;
 }
 
 /*****************************************************************************
@@ -1134,28 +1125,14 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
         return -ENOMEM;
     }
 
-    input_dev = input_allocate_device();
-    if (!input_dev)
-    {
-        FTS_ERROR("[INPUT]Failed to allocate input device");
-        FTS_FUNC_EXIT();
-        return -ENOMEM;
-    }
-
-
-
-    data->input_dev = input_dev;
     data->client = client;
     data->pdata = pdata;
 
     fts_wq_data = data;
     fts_i2c_client = client;
-    fts_input_dev = input_dev;
 
     spin_lock_init(&fts_wq_data->irq_lock);
     mutex_init(&fts_wq_data->report_mutex);
-
-    fts_input_dev_init(client, data, input_dev, pdata);
 
     fts_ctpm_get_upgrade_array();
 
@@ -1172,9 +1149,23 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
     }
 
     fts_reset_proc(200);
-    fts_wait_tp_to_valid(client);
+    if (fts_wait_tp_to_valid(client)) {
+        FTS_ERROR("TP invalid\n");
+        goto free_gpio;
+    }
 
-	client->irq = gpio_to_irq(data->pdata->irq_gpio);
+    input_dev = input_allocate_device();
+    if (!input_dev)
+    {
+        FTS_ERROR("[INPUT]Failed to allocate input device");
+        FTS_FUNC_EXIT();
+        return -ENOMEM;
+    }
+    data->input_dev = input_dev;
+    fts_input_dev = input_dev;
+    fts_input_dev_init(client, data, input_dev, pdata);
+
+    client->irq = gpio_to_irq(data->pdata->irq_gpio);
     err = request_threaded_irq(client->irq, NULL, fts_ts_interrupt,
                                pdata->irq_gpio_flags | IRQF_ONESHOT | IRQF_TRIGGER_FALLING,
                                client->dev.driver->name, data);
@@ -1244,7 +1235,6 @@ free_gpio:
     if (gpio_is_valid(pdata->irq_gpio))
         gpio_free(pdata->irq_gpio);
     return err;
-
 }
 
 /*****************************************************************************

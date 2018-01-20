@@ -25,4 +25,11 @@ config AMLOGIC_TOUCHSCREEN_GT1X
 	help
 	  Say Y here if you want to use goodix gt1x.
 
+config AMLOGIC_TOUCHSCREEN_GT9XX
+	tristate "goodix gt9xx touch driver support"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you want to use the Goodix gt9xx.
+
 endif
