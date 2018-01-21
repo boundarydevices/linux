@@ -261,6 +261,14 @@
 		};
 	};
 
+	wdt: watchdog@0xffd0f0d0 {
+		compatible = "amlogic,meson-g12a-wdt";
+		status = "okay";
+		reg = <0x0 0xffd0f0d0 0x0 0x10>;
+		clock-names = "xtal";
+		clocks = <&xtal>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;

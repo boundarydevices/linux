@@ -18,4 +18,14 @@ config AMLOGIC_WDT_MESON
 	default n
 	help
 	  say y to enable Amlogic meson watchdog driver.
+
+config AMLOGIC_WDT_MESON_V3
+	tristate "Amlogic Meson SoCs Watchdog V3"
+	default n
+	help
+	  Say Y here to include support for the watchdog timer
+	  in Amlogic Meson SoCs.
+	  To compile this driver as a module, choose M here.
+
+
 endif

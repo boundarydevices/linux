@@ -13794,8 +13794,8 @@ M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: drivers/amlogic/pm/*
 
 AMLOGIC WATCHDOG DRIVER SUPPORT
-M: Bo Yang <bo.yang@amlogic.com>
-F: drivers/amlogic/watchdog/*
+M:	Bo Yang <bo.yang@amlogic.com>
+F:	drivers/amlogic/watchdog/*
 
 AMLOGIC LED DRIVER SUPPORT
 M: Bo Yang <bo.yang@amlogic.com>
