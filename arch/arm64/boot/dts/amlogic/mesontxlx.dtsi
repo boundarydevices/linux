@@ -911,8 +911,7 @@
 	};
 	hdmitx_aocecb: ao_cecb {
 		mux {
-			groups = "ao_cec_b_ao7",
-				"ao_cec_b_ao8";
+			groups = "ao_cec_b_ao7";
 			function = "ao_cec_b";
 		};
 	};
