@@ -521,11 +521,13 @@ static int lcd_get_vframe_rate_policy(void)
 #ifdef CONFIG_PM
 static int lcd_suspend(void)
 {
-	mutex_lock(&lcd_power_mutex);
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	mutex_lock(&lcd_drv->power_mutex);
 	aml_lcd_notifier_call_chain(LCD_EVENT_POWER_OFF, NULL);
 	lcd_resume_flag = 0;
 	LCDPR("%s finished\n", __func__);
-	mutex_unlock(&lcd_power_mutex);
+	mutex_unlock(&lcd_drv->power_mutex);
 	return 0;
 }
 
@@ -541,20 +543,20 @@ static int lcd_resume(void)
 			queue_work(lcd_drv->workqueue,
 				&(lcd_drv->lcd_resume_work));
 		} else {
+			mutex_lock(&lcd_drv->power_mutex);
 			LCDPR("Warning: no lcd workqueue\n");
-			mutex_lock(&lcd_power_mutex);
 			lcd_resume_flag = 1;
 			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
 			LCDPR("%s finished\n", __func__);
-			mutex_unlock(&lcd_power_mutex);
+			mutex_unlock(&lcd_drv->power_mutex);
 		}
 	} else {
+		mutex_lock(&lcd_drv->power_mutex);
 		LCDPR("directly lcd late resume\n");
-		mutex_lock(&lcd_power_mutex);
 		lcd_resume_flag = 1;
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
 		LCDPR("%s finished\n", __func__);
-		mutex_unlock(&lcd_power_mutex);
+		mutex_unlock(&lcd_drv->power_mutex);
 	}
 
 	return 0;
@@ -1413,11 +1415,10 @@ int lcd_tv_probe(struct device *dev)
 	lcd_drv->version = LCD_DRV_VERSION;
 	lcd_drv->vout_server_init = lcd_tv_vout_server_init;
 	lcd_drv->driver_init_pre = lcd_tv_driver_init_pre;
+	lcd_drv->driver_disable_post = lcd_tv_driver_disable_post;
 	lcd_drv->driver_init = lcd_tv_driver_init;
 	lcd_drv->driver_disable = lcd_tv_driver_disable;
 	lcd_drv->driver_change = lcd_tv_driver_change;
-	lcd_drv->driver_tiny_enable = lcd_tv_driver_tiny_enable;
-	lcd_drv->driver_tiny_disable = lcd_tv_driver_tiny_disable;
 
 	lcd_get_config(lcd_drv->lcd_config, dev);
 

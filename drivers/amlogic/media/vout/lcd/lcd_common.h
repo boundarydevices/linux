@@ -24,11 +24,11 @@
 
 /* 20170505: add a113 support to linux4.9 */
 /* 20170905: fix coverity errors */
-#define LCD_DRV_VERSION    "20171201"
+/* 20180122: support txlx, optimize lcd noitfier event */
+#define LCD_DRV_VERSION    "20180122"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 
-extern struct mutex lcd_power_mutex;
 extern struct mutex lcd_vout_mutex;
 extern unsigned char lcd_resume_flag;
 extern int lcd_vout_serve_bypass;

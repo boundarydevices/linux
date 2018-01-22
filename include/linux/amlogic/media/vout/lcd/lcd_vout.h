@@ -396,6 +396,10 @@ struct lcd_duration_s {
 	unsigned int duration_den;
 };
 
+#define LCD_STATUS_IF_ON      (1 << 0)
+#define LCD_STATUS_ENCL_ON    (1 << 1)
+#define LCD_STATUS_ON         (LCD_STATUS_IF_ON | LCD_STATUS_ENCL_ON)
+
 struct aml_lcd_drv_s {
 	char *version;
 	struct lcd_data_s *data;
@@ -426,15 +430,14 @@ struct aml_lcd_drv_s {
 
 	void (*vout_server_init)(void);
 	void (*driver_init_pre)(void);
+	void (*driver_disable_post)(void);
 	int (*driver_init)(void);
 	void (*driver_disable)(void);
 	int (*driver_change)(void);
 	void (*module_reset)(void);
-	void (*power_tiny_ctrl)(int status);
-	void (*driver_tiny_enable)(void);
-	void (*driver_tiny_disable)(void);
 	void (*module_tiny_reset)(void);
-	void (*lcd_test_pattern_restore)(void);
+	void (*lcd_screen_black)(void);
+	void (*lcd_screen_restore)(void);
 	void (*power_ctrl)(int status);
 
 	struct workqueue_struct *workqueue;
@@ -443,6 +446,8 @@ struct aml_lcd_drv_s {
 	struct work_struct  lcd_resume_work;
 	struct resource *res_vsync_irq;
 	struct resource *res_vx1_irq;
+
+	struct mutex power_mutex;
 };
 
 extern struct aml_lcd_drv_s *aml_lcd_get_driver(void);

@@ -837,10 +837,7 @@ static void lcd_vx1_timeout_reset(unsigned long data)
 		return;
 
 	LCDPR("%s\n", __func__);
-	if (vx1_timeout_reset_flag == 1)
-		lcd_drv->module_reset();
-	else
-		lcd_drv->module_tiny_reset();
+	lcd_drv->module_reset();
 	if (lcd_drv->lcd_config->lcd_control.vbyone_config->intr_en)
 		lcd_vx1_hold_reset();
 	vx1_timeout_reset_flag = 0;
@@ -855,7 +852,7 @@ static irqreturn_t lcd_vbyone_vsync_isr(int irq, void *dev_id)
 	struct vbyone_config_s *vx1_conf;
 
 	vx1_conf = lcd_drv->lcd_config->lcd_control.vbyone_config;
-	if (lcd_drv->lcd_status == 0)
+	if ((lcd_drv->lcd_status & LCD_STATUS_IF_ON) == 0)
 		return IRQ_HANDLED;
 	if (lcd_vcbus_read(VBO_STATUS_L) & 0x40) /* hpd detect */
 		return IRQ_HANDLED;
@@ -1240,7 +1237,26 @@ void lcd_tv_driver_init_pre(void)
 	lcd_clk_set(pconf);
 	lcd_venc_set(pconf);
 	lcd_tcon_set(pconf);
-	lcd_drv->lcd_test_pattern_restore();
+
+	lcd_vcbus_write(VENC_INTCTRL, 0x200);
+
+	if (lcd_debug_print_flag)
+		LCDPR("%s finished\n", __func__);
+}
+
+void lcd_tv_driver_disable_post(void)
+{
+	lcd_vcbus_write(ENCL_VIDEO_EN, 0); /* disable encl */
+
+	lcd_clk_disable();
+	lcd_clk_gate_switch(0);
+#ifdef CONFIG_AMLOGIC_VPU
+	switch_vpu_mem_pd_vmod(VPU_VENCL, VPU_MEM_POWER_DOWN);
+	release_vpu_clk_vmod(VPU_VENCL);
+#endif
+
+	if (lcd_debug_print_flag)
+		LCDPR("%s finished\n", __func__);
 }
 
 int lcd_tv_driver_init(void)
@@ -1266,14 +1282,12 @@ int lcd_tv_driver_init(void)
 		lcd_vbyone_phy_set(pconf, 1);
 		lcd_vx1_intr_request = 1;
 		queue_delayed_work(lcd_drv->workqueue,
-				&lcd_drv->lcd_vx1_delayed_work,
-				msecs_to_jiffies(LCD_VX1_WAIT_STABLE_DELAY));
+			&lcd_drv->lcd_vx1_delayed_work,
+			msecs_to_jiffies(LCD_VX1_WAIT_STABLE_DELAY));
 		break;
 	default:
 		break;
 	}
-
-	lcd_vcbus_write(VENC_INTCTRL, 0x200);
 
 	if (lcd_debug_print_flag)
 		LCDPR("%s finished\n", __func__);
@@ -1310,15 +1324,6 @@ void lcd_tv_driver_disable(void)
 		break;
 	}
 
-	lcd_vcbus_write(ENCL_VIDEO_EN, 0); /* disable encl */
-
-	lcd_clk_disable();
-	lcd_clk_gate_switch(0);
-#ifdef CONFIG_AMLOGIC_VPU
-	switch_vpu_mem_pd_vmod(VPU_VENCL, VPU_MEM_POWER_DOWN);
-	release_vpu_clk_vmod(VPU_VENCL);
-#endif
-
 	if (lcd_debug_print_flag)
 		LCDPR("%s finished\n", __func__);
 }
@@ -1341,18 +1346,11 @@ int lcd_tv_driver_change(void)
 	request_vpu_clk_vmod(pconf->lcd_timing.lcd_clk, VPU_VENCL);
 #endif
 
-	if (lcd_drv->lcd_status == 0) {
-		/* only change parameters when panel is off */
-		switch (pconf->lcd_timing.clk_change) {
-		case LCD_CLK_PLL_CHANGE:
-			lcd_clk_generate_parameter(pconf);
-			break;
-		default:
-			break;
+	if (lcd_drv->lcd_status & LCD_STATUS_ENCL_ON) {
+		if (pconf->lcd_basic.lcd_type == LCD_VBYONE) {
+			if (lcd_drv->lcd_status & LCD_STATUS_IF_ON)
+				lcd_vbyone_interrupt_enable(0);
 		}
-	} else {
-		if (pconf->lcd_basic.lcd_type == LCD_VBYONE)
-			lcd_vbyone_interrupt_enable(0);
 
 		switch (pconf->lcd_timing.clk_change) {
 		case LCD_CLK_PLL_CHANGE:
@@ -1367,8 +1365,19 @@ int lcd_tv_driver_change(void)
 		}
 		lcd_venc_change(pconf);
 
-		if (pconf->lcd_basic.lcd_type == LCD_VBYONE)
-			lcd_vbyone_wait_stable();
+		if (pconf->lcd_basic.lcd_type == LCD_VBYONE) {
+			if (lcd_drv->lcd_status & LCD_STATUS_IF_ON)
+				lcd_vbyone_wait_stable();
+		}
+	} else {
+		/* only change parameters when panel is off */
+		switch (pconf->lcd_timing.clk_change) {
+		case LCD_CLK_PLL_CHANGE:
+			lcd_clk_generate_parameter(pconf);
+			break;
+		default:
+			break;
+		}
 	}
 
 	if (lcd_debug_print_flag)
@@ -1376,69 +1385,10 @@ int lcd_tv_driver_change(void)
 	return 0;
 }
 
-void lcd_tv_driver_tiny_enable(void)
-{
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-	struct lcd_config_s *pconf;
-	int ret;
-
-	pconf = lcd_drv->lcd_config;
-	ret = lcd_type_supported(pconf);
-	if (ret)
-		return;
-
-	switch (pconf->lcd_basic.lcd_type) {
-	case LCD_LVDS:
-		lcd_lvds_control_set(pconf);
-		lcd_lvds_phy_set(pconf, 1);
-		break;
-	case LCD_VBYONE:
-		lcd_vbyone_pinmux_set(1);
-		lcd_vbyone_control_set(pconf);
-		lcd_vbyone_wait_hpd(pconf);
-		lcd_vbyone_phy_set(pconf, 1);
-		lcd_vbyone_power_on_wait_stable(pconf);
-		break;
-	default:
-		break;
-	}
-
-	LCDPR("enable driver\n");
-}
-
-void lcd_tv_driver_tiny_disable(void)
-{
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-	struct lcd_config_s *pconf;
-	int ret;
-
-	LCDPR("disable driver\n");
-	pconf = lcd_drv->lcd_config;
-	ret = lcd_type_supported(pconf);
-	if (ret)
-		return;
-
-	switch (pconf->lcd_basic.lcd_type) {
-	case LCD_LVDS:
-		lcd_lvds_phy_set(pconf, 0);
-		lcd_lvds_disable();
-		break;
-	case LCD_VBYONE:
-		lcd_vbyone_interrupt_enable(0);
-		lcd_vbyone_phy_set(pconf, 0);
-		lcd_vbyone_pinmux_set(0);
-		lcd_vbyone_disable();
-		break;
-	default:
-		break;
-	}
-}
-
 #define VBYONE_IRQF   IRQF_SHARED /* IRQF_DISABLED */ /* IRQF_SHARED */
 
 int lcd_vbyone_interrupt_up(void)
 {
-	int ret = 0;
 	unsigned int viu_vsync_irq = 0, venc_vx1_irq = 0;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
@@ -1450,42 +1400,39 @@ int lcd_vbyone_interrupt_up(void)
 	lcd_vx1_intr_request = 0;
 	lcd_encl_clk_err_cnt = 0;
 
-	tasklet_init(&lcd_vx1_reset_tasklet, lcd_vx1_timeout_reset,
-		123);
+	tasklet_init(&lcd_vx1_reset_tasklet, lcd_vx1_timeout_reset, 123);
 
 	INIT_DELAYED_WORK(&lcd_drv->lcd_vx1_delayed_work,
 		lcd_vx1_wait_stable_delayed);
 
 	if (!lcd_drv->res_vsync_irq) {
-		ret = -ENODEV;
-		goto err;
-	} else {
-		viu_vsync_irq = lcd_drv->res_vsync_irq->start;
-		LCDPR("viu_vsync_irq: %d\n", viu_vsync_irq);
+		LCDERR("res_vsync_irq is null\n");
+		return -1;
+	}
+	viu_vsync_irq = lcd_drv->res_vsync_irq->start;
+	LCDPR("viu_vsync_irq: %d\n", viu_vsync_irq);
 
-		if (request_irq(viu_vsync_irq, lcd_vbyone_vsync_isr,
-			IRQF_SHARED, "vbyone_vsync", (void *)"vbyone_vsync"))
-			LCDERR("can't request viu_vsync_irq\n");
-		else {
-			if (lcd_debug_print_flag)
-				LCDPR("request viu_vsync_irq successful\n");
-		}
+	if (request_irq(viu_vsync_irq, lcd_vbyone_vsync_isr,
+		IRQF_SHARED, "vbyone_vsync", (void *)"vbyone_vsync"))
+		LCDERR("can't request viu_vsync_irq\n");
+	else {
+		if (lcd_debug_print_flag)
+			LCDPR("request viu_vsync_irq successful\n");
 	}
 
 	if (!lcd_drv->res_vx1_irq) {
-		ret = -ENODEV;
-		goto err;
-	} else {
-		venc_vx1_irq = lcd_drv->res_vx1_irq->start;
-		LCDPR("venc_vx1_irq: %d\n", venc_vx1_irq);
+		LCDERR("res_vx1_irq is null\n");
+		return -1;
+	}
+	venc_vx1_irq = lcd_drv->res_vx1_irq->start;
+	LCDPR("venc_vx1_irq: %d\n", venc_vx1_irq);
 
-		if (request_irq(venc_vx1_irq, lcd_vbyone_interrupt_handler, 0,
-			"vbyone", (void *)"vbyone"))
-			LCDERR("can't request venc_vx1_irq\n");
-		else {
-			if (lcd_debug_print_flag)
-				LCDPR("request venc_vx1_irq successful\n");
-		}
+	if (request_irq(venc_vx1_irq, lcd_vbyone_interrupt_handler, 0,
+		"vbyone", (void *)"vbyone"))
+		LCDERR("can't request venc_vx1_irq\n");
+	else {
+		if (lcd_debug_print_flag)
+			LCDPR("request venc_vx1_irq successful\n");
 	}
 
 	lcd_vx1_intr_request = 1;
@@ -1500,10 +1447,6 @@ int lcd_vbyone_interrupt_up(void)
 	LCDPR("add vbyone hpll timer handler\n");
 
 	return 0;
-
-err:
-	return -ENODEV;
-
 }
 
 void lcd_vbyone_interrupt_down(void)

@@ -873,7 +873,26 @@ void lcd_tablet_driver_init_pre(void)
 	lcd_clk_set(pconf);
 	lcd_venc_set(pconf);
 	lcd_tcon_set(pconf);
-	lcd_drv->lcd_test_pattern_restore();
+
+	lcd_vcbus_write(VENC_INTCTRL, 0x200);
+
+	if (lcd_debug_print_flag)
+		LCDPR("%s finished\n", __func__);
+}
+
+void lcd_tablet_driver_disable_post(void)
+{
+	lcd_vcbus_write(ENCL_VIDEO_EN, 0); /* disable encl */
+
+	lcd_clk_disable();
+	lcd_clk_gate_switch(0);
+#ifdef CONFIG_AMLOGIC_VPU
+	switch_vpu_mem_pd_vmod(VPU_VENCL, VPU_MEM_POWER_DOWN);
+	release_vpu_clk_vmod(VPU_VENCL);
+#endif
+
+	if (lcd_debug_print_flag)
+		LCDPR("%s finished\n", __func__);
 }
 
 int lcd_tablet_driver_init(void)
@@ -910,8 +929,6 @@ int lcd_tablet_driver_init(void)
 	default:
 		break;
 	}
-
-	lcd_vcbus_write(VENC_INTCTRL, 0x200);
 
 	if (lcd_debug_print_flag)
 		LCDPR("%s finished\n", __func__);
@@ -952,88 +969,7 @@ void lcd_tablet_driver_disable(void)
 		break;
 	}
 
-	lcd_vcbus_write(ENCL_VIDEO_EN, 0); /* disable encl */
-
-	lcd_clk_disable();
-	lcd_clk_gate_switch(0);
-#ifdef CONFIG_AMLOGIC_VPU
-	switch_vpu_mem_pd_vmod(VPU_VENCL, VPU_MEM_POWER_DOWN);
-	release_vpu_clk_vmod(VPU_VENCL);
-#endif
-
 	if (lcd_debug_print_flag)
 		LCDPR("%s finished\n", __func__);
-}
-
-void lcd_tablet_driver_tiny_enable(void)
-{
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-	struct lcd_config_s *pconf;
-	int ret;
-
-	pconf = lcd_drv->lcd_config;
-	ret = lcd_type_supported(pconf);
-	if (ret)
-		return;
-
-	/* init driver */
-	switch (pconf->lcd_basic.lcd_type) {
-	case LCD_TTL:
-		lcd_ttl_control_set(pconf);
-		lcd_ttl_pinmux_set(1);
-		break;
-	case LCD_LVDS:
-		lcd_lvds_control_set(pconf);
-		lcd_lvds_phy_set(pconf, 1);
-		break;
-	case LCD_VBYONE:
-		lcd_vbyone_pinmux_set(1);
-		lcd_vbyone_control_set(pconf);
-		lcd_vx1_wait_hpd();
-		lcd_vbyone_phy_set(pconf, 1);
-		lcd_tablet_vbyone_wait_stable();
-	case LCD_MIPI:
-		lcd_mipi_phy_set(pconf, 1);
-		lcd_mipi_control_set(pconf, 1);
-		break;
-	default:
-		break;
-	}
-
-	LCDPR("enable driver\n");
-}
-
-void lcd_tablet_driver_tiny_disable(void)
-{
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-	struct lcd_config_s *pconf;
-	int ret;
-
-	LCDPR("disable driver\n");
-	pconf = lcd_drv->lcd_config;
-	ret = lcd_type_supported(pconf);
-	if (ret)
-		return;
-
-	switch (pconf->lcd_basic.lcd_type) {
-	case LCD_TTL:
-		lcd_ttl_pinmux_set(0);
-		break;
-	case LCD_LVDS:
-		lcd_lvds_phy_set(pconf, 0);
-		lcd_lvds_disable();
-		break;
-	case LCD_VBYONE:
-		lcd_vbyone_phy_set(pconf, 0);
-		lcd_vbyone_pinmux_set(0);
-		lcd_vbyone_disable();
-	case LCD_MIPI:
-		mipi_dsi_link_off(pconf);
-		lcd_mipi_phy_set(pconf, 0);
-		lcd_mipi_control_set(pconf, 0);
-		break;
-	default:
-		break;
-	}
 }
 

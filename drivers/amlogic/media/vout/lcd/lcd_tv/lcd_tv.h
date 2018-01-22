@@ -21,11 +21,10 @@
 
 extern void lcd_tv_config_update(struct lcd_config_s *pconf);
 extern void lcd_tv_driver_init_pre(void);
+extern void lcd_tv_driver_disable_post(void);
 extern int lcd_tv_driver_init(void);
 extern void lcd_tv_driver_disable(void);
 extern int lcd_tv_driver_change(void);
-extern void lcd_tv_driver_tiny_enable(void);
-extern void lcd_tv_driver_tiny_disable(void);
 
 extern void lcd_vbyone_wait_stable(void);
 extern int lcd_vbyone_interrupt_up(void);
