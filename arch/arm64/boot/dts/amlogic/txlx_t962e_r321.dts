@@ -873,6 +873,10 @@
 		pinctrl-names="default", "hdmitx_i2c";
 		pinctrl-0=<&hdmitx_hpd &hdmitx_ddc>;
 		pinctrl-1=<&hdmitx_hpd_gpio &i2c2_h_pins>;
+		clocks = <&clkc CLKID_HDCP22_SKP_COMP>,
+			     <&clkc CLKID_HDCP22_ESM_COMP>;
+		clock-names = "hdcp22_tx_skp",
+				      "hdcp22_tx_esm";
 		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
 		interrupts = <0 57 1>;
 		interrupt-names = "hdmitx_hpd";
