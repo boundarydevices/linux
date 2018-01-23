@@ -11,7 +11,10 @@
 
 #define FSL_SAI_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
 			 SNDRV_PCM_FMTBIT_S24_LE |\
-			 SNDRV_PCM_FMTBIT_S32_LE)
+			 SNDRV_PCM_FMTBIT_S32_LE |\
+			 SNDRV_PCM_FMTBIT_DSD_U8 |\
+			 SNDRV_PCM_FMTBIT_DSD_U16_LE |\
+			 SNDRV_PCM_FMTBIT_DSD_U32_LE)
 
 /* SAI Register Map Register */
 #define FSL_SAI_VERID	0x00 /* SAI Version ID Register */
@@ -264,8 +267,13 @@ struct fsl_sai {
 	bool slave_mode[2];
 	bool is_lsb_first;
 	bool is_dsp_mode;
+	bool is_multi_lane;
 	bool synchronous[2];
+	bool is_dsd;
 	unsigned int dataline[2];
+	unsigned int dataline_dsd[2];
+	unsigned int dataline_off[2];
+	unsigned int dataline_off_dsd[2];
 	unsigned int masterflag[2];
 
 	unsigned int mclk_id[2];
@@ -281,6 +289,8 @@ struct fsl_sai {
 	struct fsl_sai_verid verid;
 	struct fsl_sai_param param;
 	struct pm_qos_request pm_qos_req;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_dsd;
 };
 
 #define TX 1
