@@ -20,28 +20,8 @@
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ddc.h>
 #include "hw/common.h"
 
-static struct timer_list scdc_tmds_cfg_timer;
-
-static void tmds_config(unsigned long arg)
+void scdc_config(struct hdmitx_dev *hdev)
 {
-	struct hdmitx_dev *hdev = (struct hdmitx_dev *)arg;
-
 	/* TMDS 1/40 & Scramble */
 	scdc_wr_sink(TMDS_CFG, hdev->para->tmds_clk_div40 ? 0x3 : 0);
-}
-
-void scdc_config(void *hdev)
-{
-	static int init_flag;
-
-	if (!init_flag) {
-		init_flag = 1;
-		init_timer(&scdc_tmds_cfg_timer);
-		scdc_tmds_cfg_timer.data = (ulong)hdev;
-		scdc_tmds_cfg_timer.function = tmds_config;
-		scdc_tmds_cfg_timer.expires = jiffies;
-		add_timer(&scdc_tmds_cfg_timer);
-		return;
-	}
-	mod_timer(&scdc_tmds_cfg_timer, jiffies);
 }
