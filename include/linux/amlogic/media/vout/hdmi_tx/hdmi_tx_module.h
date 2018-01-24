@@ -597,7 +597,6 @@ static inline int hdmitx_event_notifier_unregist(struct notifier_block *nb)
 
 extern void hdmi_set_audio_para(int para);
 extern int get_cur_vout_index(void);
-extern struct vinfo_s *hdmi_get_current_vinfo(void);
 extern void phy_pll_off(void);
 extern int get_hpd_state(void);
 extern void hdmitx_hdcp_do_work(struct hdmitx_dev *hdev);

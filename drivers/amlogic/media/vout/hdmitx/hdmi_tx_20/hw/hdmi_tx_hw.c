@@ -652,7 +652,7 @@ static irqreturn_t intr_handler(int irq, void *dev)
 		hdev->hdmitx_event |= HDMI_TX_HPD_PLUGOUT;
 		hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGIN;
 		queue_delayed_work(hdev->hdmi_wq,
-			&hdev->work_hpd_plugout, HZ / 50);
+			&hdev->work_hpd_plugout, HZ / 20);
 	}
 next:
 	/* internal interrupt */

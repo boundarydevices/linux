@@ -68,7 +68,6 @@
 
 static struct class *hdmitx_class;
 static int set_disp_mode_auto(void);
-struct vinfo_s *hdmi_get_current_vinfo(void);
 static void hdmitx_get_edid(struct hdmitx_dev *hdev);
 static void hdmitx_set_drm_pkt(struct master_display_info_s *data);
 static void hdmitx_set_vsif_pkt(enum eotf_type type, uint8_t tunnel_mode);
@@ -111,7 +110,7 @@ static inline void hdmitx_notify_hpd(int hpd)
 #include <linux/amlogic/pm.h>
 static void hdmitx_early_suspend(struct early_suspend *h)
 {
-	const struct vinfo_s *info = hdmi_get_current_vinfo();
+	const struct vinfo_s *info = hdmitx_get_current_vinfo();
 	struct hdmitx_dev *phdmi = (struct hdmitx_dev *)h->param;
 
 	if (info && (strncmp(info->name, "panel", 5) == 0
@@ -146,7 +145,7 @@ static int hdmitx_is_hdmi_vmode(char *mode_name)
 
 static void hdmitx_late_resume(struct early_suspend *h)
 {
-	const struct vinfo_s *info = hdmi_get_current_vinfo();
+	const struct vinfo_s *info = hdmitx_get_current_vinfo();
 	struct hdmitx_dev *phdmi = (struct hdmitx_dev *)h->param;
 
 	if (info && (strncmp(info->name, "panel", 5) == 0 ||
@@ -221,14 +220,6 @@ int get_cur_vout_index(void)
 {
 	int vout_index = 1;
 	return vout_index;
-}
-
-struct vinfo_s *hdmi_get_current_vinfo(void)
-{
-	struct vinfo_s *info;
-
-	info = get_current_vinfo();
-	return info;
 }
 
 static  int  set_disp_mode(const char *mode)
@@ -2417,6 +2408,7 @@ static int hdmitx_module_disable(enum vmode_e cur_vmod)
 	hdev->HWOp.CntlConfig(hdev, CONF_CLR_VSDB_PACKET, 0);
 	hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
 	hdev->para = hdmi_get_fmt_name("invalid", hdev->fmt_attr);
+	hdmitx_validate_vmode("null");
 
 	return 0;
 }
@@ -2664,7 +2656,7 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 			(unsigned long int)bksv_buf);
 		rx_set_receive_hdcp(bksv_buf, 1, 1, 0, 0);
 	}
-	set_disp_mode_auto();
+
 	hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
 	hdev->hpd_state = 1;
 	hdmitx_notify_hpd(hdev->hpd_state);

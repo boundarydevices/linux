@@ -38,7 +38,7 @@
 /* For gxb/gxl/gxm */
 static struct reg_map reg_maps_def[] = {
 	[CBUS_REG_IDX] = { /* CBUS */
-		.phy_addr = 0xc1100000,
+		.phy_addr = 0xc1109800,
 		.size = 0xa00000,
 	},
 	[PERIPHS_REG_IDX] = { /* PERIPHS */
