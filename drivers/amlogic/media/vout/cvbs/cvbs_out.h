@@ -18,6 +18,9 @@
 #ifndef _CVBS_OUT_H_
 #define _CVBS_OUT_H_
 
+/* Standard Linux Headers */
+#include <linux/workqueue.h>
+
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include "cvbs_mode.h"
@@ -95,6 +98,8 @@ struct disp_module_info_s {
 	struct device *dev;
 	struct meson_cvbsout_data *cvbs_data;
 	struct cvbs_config_s cvbs_conf;
+	struct delayed_work dv_dwork;
+	bool dwork_flag;
 
 	/* clktree */
 	unsigned int clk_gate_state;

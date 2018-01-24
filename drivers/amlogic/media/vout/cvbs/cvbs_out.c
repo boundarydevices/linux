@@ -34,6 +34,8 @@
 /*#include <linux/major.h>*/
 #include <linux/cdev.h>
 #include <linux/delay.h>
+#include <linux/jiffies.h>
+#include <linux/workqueue.h>
 #include <linux/uaccess.h>
 #include <linux/clk.h>
 
@@ -260,6 +262,7 @@ static void cvbs_out_disable_clk(void)
 
 static void cvbs_out_disable_venc(void)
 {
+	info->dwork_flag = 0;
 	cvbs_cntl_output(0);
 	cvbs_out_reg_write(ENCI_VIDEO_EN, 0);
 
@@ -352,6 +355,13 @@ static void cvbs_out_clk_gate_ctrl(int status)
 	}
 }
 
+static void cvbs_dv_dwork(struct work_struct *work)
+{
+	if (!info->dwork_flag)
+		return;
+	cvbs_cntl_output(1);
+}
+
 int cvbs_out_setmode(void)
 {
 	int ret;
@@ -381,9 +391,8 @@ int cvbs_out_setmode(void)
 #ifdef CONFIG_CVBS_PERFORMANCE_COMPATIBILITY_SUPPORT
 	cvbs_performance_enhancement(local_cvbs_mode);
 #endif
-	msleep(1000);
-	cvbs_cntl_output(1);
-
+	info->dwork_flag = 1;
+	schedule_delayed_work(&info->dv_dwork, msecs_to_jiffies(1000));
 	mutex_unlock(&setmode_mutex);
 	return 0;
 }
@@ -565,6 +574,7 @@ static int cvbs_vmode_is_supported(enum vmode_e mode)
 }
 static int cvbs_module_disable(enum vmode_e cur_vmod)
 {
+	info->dwork_flag = 0;
 	cvbs_cntl_output(0);
 
 	cvbs_out_vpu_power_ctrl(0);
@@ -578,6 +588,7 @@ static int cvbs_suspend(void)
 {
 	/* TODO */
 	/* video_dac_disable(); */
+	info->dwork_flag = 0;
 	cvbs_cntl_output(0);
 	return 0;
 }
@@ -1261,6 +1272,7 @@ static int cvbsout_probe(struct platform_device *pdev)
 		cvbs_log_err("create_cvbs_attr error\n");
 		return -1;
 	}
+	INIT_DELAYED_WORK(&info->dv_dwork, cvbs_dv_dwork);
 	cvbs_log_info("%s OK\n", __func__);
 	return 0;
 }
