@@ -418,6 +418,15 @@
 				sound-dai = <&aml_pdm>;
 			};
 			codec {
+				/*
+				 *enable external loopback
+				 *and tlv320adc3101 as loopback
+				 */
+				/*sound-dai = <&pdm_codec &tlv320adc3101_32>;*/
+				/*
+				 * enable internal loopback
+				 * or disable loopback
+				 */
 				sound-dai = <&pdm_codec>;
 			};
 		};
@@ -844,6 +853,12 @@
 	aml_loopback: loopback {
 		compatible = "amlogic, snd-loopback";
 		/*
+		 * external loopback clk config
+		 * enable clk while pdm record data
+		 */
+		/*clocks = <&clkc CLKID_MPLL1>;*/
+		/*clock-names = "datalb_mpll";*/
+		/*
 		 * 0: out rate = in data rate;
 		 * 1: out rate = loopback data rate;
 		 */
@@ -868,8 +883,11 @@
 		 * 4: PAD_tdminB
 		 * 5: PAD_tdminC
 		 */
+		/*if tdmin_lb >= 3, use external loopback*/
 		datalb_src = <2>;
 		datalb_chnum = <2>;
+		/*config which data pin as loopback*/
+		/*datalb-lane-mask-in = <0 1>;*/
 		datalb_chmask = <0x1>;
 
 		status = "okay";

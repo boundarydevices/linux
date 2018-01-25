@@ -24,6 +24,8 @@
 #include "tdm_hw.h"
 #include "ddr_mngr.h"
 
+#include <linux/of_platform.h>
+
 struct snd_elem_info {
 	struct soc_enum *ee;
 	int reg;
@@ -892,7 +894,26 @@ int snd_card_add_kcontrols(struct snd_soc_card *card)
 int loopback_parse_of(struct device_node *node,
 	struct loopback_cfg *lb_cfg)
 {
-	int ret;
+	struct platform_device *pdev;
+	const __be32 *of_slot_mask;
+	unsigned int lane_mask = 0;
+	int i, ret, set_num = 0;
+	u32 val;
+
+	pdev = of_find_device_by_node(node);
+	if (!pdev) {
+		dev_err(&pdev->dev, "failed to find platform device\n");
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	/*mpll used for tdmin*/
+	lb_cfg->tdmin_mpll = devm_clk_get(&pdev->dev, "datalb_mpll");
+	if (IS_ERR(lb_cfg->tdmin_mpll)) {
+		dev_err(&pdev->dev,
+			"Can't retrieve tdmin_mpll clock\n");
+		lb_cfg->tdmin_mpll = NULL;
+	}
 
 	ret = of_property_read_u32(node, "lb_mode",
 		&lb_cfg->lb_mode);
@@ -945,7 +966,25 @@ int loopback_parse_of(struct device_node *node,
 		ret = -EINVAL;
 		goto fail;
 	}
+	of_slot_mask = of_get_property(node, "datalb-lane-mask-in", &val);
+	if (!of_slot_mask) {
+		pr_err("if use extern loopback, pls set datalb-lane-mask-in\n");
+	} else {
+		val /= sizeof(u32);
+		for (i = 0; i < val; i++)
+			if (be32_to_cpup(&of_slot_mask[i]))
+				lane_mask |= (1 << i);
+		for (i = 0; i < 4; i++) {
+			if ((1 << i) & lane_mask) {
+				/*each lane only L/R masked*/
+				lb_cfg->datalb_chswap |=
+					(i * 2) << (set_num++ * 4);
+				lb_cfg->datalb_chswap |=
+					(i * 2 + 1) << (set_num++ * 4);
+			}
+		}
 
+	}
 	loopback_datain = lb_cfg->datain_src;
 	loopback_tdminlb = lb_cfg->datalb_src;
 
@@ -955,13 +994,75 @@ int loopback_parse_of(struct device_node *node,
 		lb_cfg->datain_src,
 		lb_cfg->datain_chnum,
 		lb_cfg->datain_chmask);
-	pr_info("\tdatalb_src:%d, datalb_chnum:%d, datalb_chumask:%x\n",
+	pr_info("\tdatalb_src:%d, datalb_chnum:%d\n",
 		lb_cfg->datalb_src,
-		lb_cfg->datalb_chnum,
+		lb_cfg->datalb_chnum);
+	pr_info("\tdatalb_chswap:0x%x,datalb_chumask:%x\n",
+		lb_cfg->datalb_chswap,
 		lb_cfg->datalb_chmask);
 
 fail:
 	return ret;
+}
+
+int loopback_hw_params(struct snd_pcm_substream *substream,
+				      struct snd_pcm_hw_params *params,
+				      struct loopback_cfg *lb_cfg,
+				      unsigned int mclk)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	unsigned int bclk_sel, fsclk_sel;
+	int bit_depth;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		return 0;
+	bit_depth = snd_pcm_format_width(runtime->format);
+
+	if (lb_cfg->datalb_src >= 3) {
+		/*tdm in*/
+		/*for i2s mode*/
+		unsigned int sclk_div = 4 - 1;
+		unsigned int ratio = params_channels(params) * bit_depth - 1;
+		unsigned int fsclk_hi = ratio / 2;
+		unsigned int clk_id = lb_cfg->datalb_src - 3;
+		unsigned int mul = 2;
+		unsigned int mpll_freq, offset, reg;
+
+		pr_info("%s, channels:%d, format:%d, ratio:%d\n",
+				__func__,
+				params_channels(params),
+				bit_depth,
+				ratio);
+
+		bclk_sel = clk_id;
+		fsclk_sel = clk_id;
+
+		/*mclk*/
+		mpll_freq = mclk * mul;
+		clk_set_rate(lb_cfg->tdmin_mpll, mpll_freq);
+		pr_info("mpll freq:%d, %lu\n", mpll_freq,
+			clk_get_rate(lb_cfg->tdmin_mpll));
+		offset = EE_AUDIO_MCLK_B_CTRL - EE_AUDIO_MCLK_A_CTRL;
+		reg = EE_AUDIO_MCLK_A_CTRL + offset * clk_id;
+		audiobus_write(reg,
+				1 << 31 | /*clk enable*/
+				clk_id << 24 | /*clk src*/
+				(mul - 1)); /*clk_div mclk*/
+
+		/*sclk, lrclk*/
+		offset = EE_AUDIO_MST_B_SCLK_CTRL0 - EE_AUDIO_MST_A_SCLK_CTRL0;
+		reg = EE_AUDIO_MST_A_SCLK_CTRL0 + offset * clk_id;
+		audiobus_update_bits(reg,
+				0x3 << 30 | 0x3ff << 20 | 0x3ff<<10 | 0x3ff,
+				0x3 << 30 | sclk_div << 20 | fsclk_hi << 10
+				| ratio);
+
+		audiobus_update_bits(
+			EE_AUDIO_CLK_TDMIN_LB_CTRL,
+			0x3 << 30 | 1 << 29 | 0xf << 24 | 0xf << 20,
+			0x3 << 30 | 1 << 29 | bclk_sel << 24 | fsclk_sel << 20);
+	}
+	return 0;
 }
 
 int loopback_prepare(
@@ -1052,7 +1153,7 @@ int loopback_prepare(
 	datain_config(&datain);
 	datalb_config(&datalb);
 
-	datalb_ctrl(lb_cfg->datalb_src);
+	datalb_ctrl(lb_cfg);
 	lb_mode(lb_cfg->lb_mode);
 
 	return 0;
@@ -1081,6 +1182,7 @@ void frddr_enable(int is_enable, int frddr_index)
 }
 
 static void loopback_modules_disable(
+	struct loopback_cfg *lb_cfg,
 	int tdm_index,
 	int frddr_index, int toddr_index)
 {
@@ -1088,9 +1190,24 @@ static void loopback_modules_disable(
 	tdmin_lb_fifo_enable(0);
 	tdmin_lb_enable(tdm_index, 0);
 
-	/* pdmin */
-	pdm_enable(0);
-
+	/* datain src */
+	switch (lb_cfg->datain_src) {
+	case 0:
+	case 1:
+	case 2:
+		/*tdm in*/
+		break;
+	case 3:
+		/*spdif in*/
+		break;
+	case 4:
+		/*pdm in*/
+		pdm_enable(0);
+		break;
+	default:
+		pr_err("unsupport datain source!!\n");
+		return;
+	}
 	/* loopback */
 	lb_enable(0);
 
@@ -1112,6 +1229,7 @@ static void loopback_modules_disable(
 }
 
 static void loopback_modules_enable(
+	struct loopback_cfg *lb_cfg,
 	int tdm_index,
 	int frddr_index, int toddr_index)
 {
@@ -1132,6 +1250,9 @@ static void loopback_modules_enable(
 	else if (frddr_index >= 0)
 		frddr_enable(1, frddr_index);
 
+	tdm_fifo_enable(tdm_index, 1);
+	tdm_enable(tdm_index, 1);
+	 frddr_enable(1, frddr_index);
 	/* toddr */
 	if (toddr_index >= 0)
 		toddr_enable(1, toddr_index);
@@ -1139,9 +1260,24 @@ static void loopback_modules_enable(
 	/* loopback */
 	lb_enable(1);
 
-	/* pdmin */
-	pdm_enable(1);
-
+	/* datain src */
+	switch (lb_cfg->datain_src) {
+	case 0:
+	case 1:
+	case 2:
+		/*tdm in*/
+		break;
+	case 3:
+		/*spdif in*/
+		break;
+	case 4:
+		/*pdm in*/
+		pdm_enable(1);
+		break;
+	default:
+		pr_err("unsupport datain source!!\n");
+		return;
+	}
 	/*tdminLB*/
 	tdmin_lb_fifo_enable(1);
 	tdmin_lb_enable(tdm_index, 1);
@@ -1182,11 +1318,13 @@ int loopback_trigger(
 			/*if pdm overrun, re-set up the sequence*/
 			if (lb_cfg->frddr_index >= 0)
 				loopback_modules_disable(
+					lb_cfg,
 					lb_cfg->datalb_src,
 					lb_cfg->frddr_index,
 					lb_cfg->toddr_index);
 
 			loopback_modules_enable(
+					lb_cfg,
 					lb_cfg->datalb_src,
 					lb_cfg->frddr_index,
 					lb_cfg->toddr_index);

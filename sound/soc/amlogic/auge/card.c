@@ -412,7 +412,7 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai_link *dai_link = aml_priv_to_link(priv, rtd->num);
 	struct aml_dai_props *dai_props =
 		aml_priv_to_props(priv, rtd->num);
-	unsigned int mclk, mclk_fs = 0;
+	unsigned int mclk = 0, mclk_fs = 0;
 	int i = 0, ret = 0;
 
 	if (priv->mclk_fs)
@@ -442,6 +442,9 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 		if (ret && ret != -ENOTSUPP)
 			goto err;
 	}
+
+	if (loopback_is_enable() && mclk)
+		loopback_hw_params(substream, params, &priv->lb_cfg, mclk);
 	return 0;
 err:
 	return ret;

@@ -28,12 +28,16 @@
 
 void pdm_enable(int is_enable)
 {
-	if (is_enable)
+	if (is_enable) {
+		aml_pdm_update_bits(
+			PDM_CTRL,
+			0xffff,
+			0xffff);
 		aml_pdm_update_bits(
 			PDM_CTRL,
 			0x1 << 31,
 			is_enable << 31);
-	else {
+	} else {
 		aml_pdm_update_bits(
 			PDM_CTRL,
 			0x1 << 31 | 0x1 << 16,

@@ -50,9 +50,9 @@ void datalb_config(struct data_lb *datalb)
 		);
 }
 
-void datalb_ctrl(int lb_src)
+void datalb_ctrl(struct loopback_cfg *lb_cfg)
 {
-	int id = lb_src;
+	int id = lb_cfg->datalb_src;
 	int offset = 0;
 	int reg, reg_base;
 
@@ -64,7 +64,7 @@ void datalb_ctrl(int lb_src)
 		1 << 30 |
 		1 << 29 |
 		1 << 28 |
-		lb_src << 20 |
+		lb_cfg->datalb_src << 20 |
 		3 << 16|
 		31 << 0
 		);
@@ -74,8 +74,47 @@ void datalb_ctrl(int lb_src)
 		reg_base = EE_AUDIO_TDMOUT_A_SWAP;
 		offset = EE_AUDIO_TDMOUT_B_SWAP - EE_AUDIO_TDMOUT_A_SWAP;
 	} else if (id < 6) {
-		/* pad from tdmin_a, tdmin_b, tdmin_c */
-		id -= 3; /*id offset from tdmin_a */
+		/*lb_cfg->datalb_src for pad tdm in,
+		 *pad from tdmin_a, tdmin_b, tdmin_c
+		 */
+		/* id offset from tdmin_a */
+		id -= 3;
+
+		reg_base = EE_AUDIO_TDMIN_A_CTRL;
+		offset = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
+		reg = reg_base + offset * id;
+		audiobus_update_bits(reg, 3<<28, 0);
+		audiobus_update_bits(reg, 1<<29, 1<<29);
+		audiobus_update_bits(reg, 1<<28, 1<<28);
+
+		/* just assume lb from tdm in is i2s mode */
+		audiobus_update_bits(
+			reg,
+			0xf << 28 | 0xf << 20 | 0x7 << 16 | 0x1f << 0,
+			1 << 31 |
+			/* 0:tdm mode; 1: i2s mode */
+			1 << 30 |
+			1 << 29 |
+			1 << 28 |
+			id << 20 |
+			3 << 16|
+			31 << 0
+			);
+
+		pr_info("reg:0x%x, EE_AUDIO_TDMIN_A_CTRL:0x%x\n",
+			reg,
+			audiobus_read(EE_AUDIO_TDMIN_A_CTRL));
+		/* swap */
+		reg += 1;
+		audiobus_write(
+			reg,
+			lb_cfg->datalb_chswap);
+
+		/* mask 0 */
+		reg += 1;
+		audiobus_write(
+			reg,
+			lb_cfg->datalb_chmask);
 		reg_base = EE_AUDIO_TDMIN_A_SWAP;
 		offset = EE_AUDIO_TDMIN_B_SWAP - EE_AUDIO_TDMIN_A_SWAP;
 	} else {
@@ -95,19 +134,19 @@ void datalb_ctrl(int lb_src)
 		EE_AUDIO_TDMIN_LB_MASK0,
 		audiobus_read(reg));
 
-	/* mask 0 */
+	/* mask 1 */
 	reg += 1;
 	audiobus_write(
 		EE_AUDIO_TDMIN_LB_MASK1,
 		audiobus_read(reg));
 
-	/* mask 0 */
+	/* mask 2 */
 	reg += 1;
 	audiobus_write(
 		EE_AUDIO_TDMIN_LB_MASK2,
 		audiobus_read(reg));
 
-	/* mask 0 */
+	/* mask 3 */
 	reg += 1;
 	audiobus_write(
 		EE_AUDIO_TDMIN_LB_MASK3,
@@ -116,6 +155,8 @@ void datalb_ctrl(int lb_src)
 
 void lb_mode(int mode)
 {
+// TODO:
+	return;
 	audiobus_update_bits(
 		EE_AUDIO_LB_CTRL0,
 		0x1 << 30,

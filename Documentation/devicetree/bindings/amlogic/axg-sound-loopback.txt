@@ -1,0 +1,115 @@
+Enable external loopback for S420 & S400 board
+
+diff --git a/arch/arm64/boot/dts/amlogic/axg_s400_v03.dts b/arch/arm64/boot/dts/amlogic/axg_s400_v03.dts
+index 8038672..064de0f 100644
+--- a/arch/arm64/boot/dts/amlogic/axg_s400_v03.dts
++++ b/arch/arm64/boot/dts/amlogic/axg_s400_v03.dts
+@@ -562,12 +562,12 @@
+ 				 *enable external loopback
+ 				 *and tlv320adc3101 as loopback
+ 				 */
+-				/*sound-dai = <&pdm_codec &tlv320adc3101_32>;*/
++				sound-dai = <&pdm_codec &tlv320adc3101_32>;
+ 				/*
+				 * enable internal loopback
+ 				 * or disable loopback
+ 				 */
+-				sound-dai = <&pdm_codec>;
++				/*sound-dai = <&pdm_codec>;*/
+ 			};
+ 		};
+
+@@ -1163,8 +1163,8 @@
+ 		 * external loopback clock config
+ 		 * enable clk while pdm record data
+ 		 */
+-		/*clocks = <&clkc CLKID_MPLL1>;*/
+-		/*clock-names = "datalb_mpll";*/
++		clocks = <&clkc CLKID_MPLL1>;
++		clock-names = "datalb_mpll";
+
+ 		/*
+ 		 * 0: out rate = in data rate;
+@@ -1182,7 +1182,7 @@
+ 		 */
+ 		datain_src = <4>;
+ 		datain_chnum = <8>;
+-		datain_chmask = <0x7f>;
++		datain_chmask = <0x3f>;
+
+ 		/* tdmin_lb src
+ 		 * 0: tdmoutA
+@@ -1194,11 +1194,11 @@
+ 		 */
+
+ 		/*if tdmin_lb >= 3, use external loopback*/
+-		datalb_src = <2>;
++		datalb_src = <4>;
+ 		datalb_chnum = <2>;
+ 		/*config which data pin as loopback*/
+-		/*datalb-lane-mask-in = <0 0 0 1>;*/
+-		datalb_chmask = <0x1>;
++		datalb-lane-mask-in = <0 0 0 1>;
++		datalb_chmask = <0x3>;
+
+ 		status = "okay";
+ 	};
+diff --git a/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts b/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
+index aaf05de..bb5b173 100644
+--- a/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
++++ b/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
+@@ -427,12 +427,12 @@
+ 				 *enable external loopback
+ 				 *and tlv320adc3101 as loopback
+ 				 */
+-				/*sound-dai = <&pdm_codec &tlv320adc3101_32>;*/
++				sound-dai = <&pdm_codec &tlv320adc3101_32>;
+ 				/*
+				 * enable internal loopback
+ 				 * or disable loopback
+ 				 */
+-				sound-dai = <&pdm_codec>;
++				/*sound-dai = <&pdm_codec>;*/
+ 			};
+ 		};
+
+@@ -983,12 +983,13 @@
+
+ 	aml_loopback: loopback {
+ 		compatible = "amlogic, snd-loopback";
++
+ 		/*
+ 		 * external loopback clk config
+ 		 * enable clk while pdm record data
+ 		 */
+-		/*clocks = <&clkc CLKID_MPLL1>;*/
+-		/*clock-names = "datalb_mpll";*/
++		clocks = <&clkc CLKID_MPLL1>;
++		clock-names = "datalb_mpll";
+
+ 		/*
+ 		 * 0: out rate = in data rate;
+@@ -1005,7 +1006,7 @@
+ 		 */
+ 		datain_src = <4>;
+ 		datain_chnum = <8>;
+-		datain_chmask = <0x7f>;
++		datain_chmask = <0x3f>;
+
+ 		/* tdmin_lb src
+ 		 * 0: tdmoutA
+@@ -1017,11 +1018,11 @@
+ 		 */
+
+ 		/*if tdmin_lb >= 3, use external loopback*/
+-		datalb_src = <2>;
++		datalb_src = <4>;
+ 		datalb_chnum = <2>;
+ 		/*config which data pin as loopback*/
+-		/*datalb-lane-mask-in = <0 1>;*/
+-		datalb_chmask = <0x1>;
++		datalb-lane-mask-in = <0 1>;
++		datalb_chmask = <0x3>;
+
+ 		status = "okay";
+ 	};

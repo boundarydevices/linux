@@ -57,7 +57,7 @@ extern void datain_config(struct data_in *datain);
 
 extern void datalb_config(struct data_lb *datalb);
 
-extern void datalb_ctrl(int lb_src);
+extern void datalb_ctrl(struct loopback_cfg *lb_cfg);
 
 extern int lb_is_enable(void);
 

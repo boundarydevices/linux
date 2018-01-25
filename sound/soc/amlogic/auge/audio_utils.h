@@ -18,6 +18,7 @@
 #ifndef __AML_AUDIO_UTILS_H__
 #define __AML_AUDIO_UTILS_H__
 
+#include <linux/clk.h>
 #include <linux/types.h>
 #include <sound/soc.h>
 #include <sound/tlv.h>
@@ -109,6 +110,7 @@ struct audio_data {
 
 /**/
 struct loopback_cfg {
+	struct clk *tdmin_mpll;
 	/* lb_mode
 	 * 0: out rate = in data rate;
 	 * 1: out rate = loopback data rate;
@@ -122,6 +124,7 @@ struct loopback_cfg {
 
 	enum tdmin_lb_src datalb_src;
 	unsigned int datalb_chnum;
+	unsigned int datalb_chswap;
 	unsigned int datalb_chmask;
 	int frddr_index;
 };
@@ -135,7 +138,12 @@ extern int loopback_check_enable(int src);
 extern int snd_card_add_kcontrols(struct snd_soc_card *card);
 
 extern int loopback_parse_of(struct device_node *node,
-					   struct loopback_cfg *lb_cfg);
+				struct loopback_cfg *lb_cfg);
+
+extern int loopback_hw_params(struct snd_pcm_substream *substream,
+				struct snd_pcm_hw_params *params,
+				struct loopback_cfg *lb_cfg,
+				unsigned int mclk);
 
 extern int loopback_prepare(
 	struct snd_pcm_substream *substream,
