@@ -161,6 +161,8 @@ struct drm_hdmi_info {
 
 	/* Colorimerty info from EDID */
 	u32 colorimetry;
+	/* Panel HDR capabilities */
+	struct hdr_static_metadata hdr_panel_metadata;
 };
 
 /**
@@ -1087,7 +1089,6 @@ struct drm_connector {
 	struct llist_node free_node;
 
 	/* HDR metdata */
-	struct hdr_static_metadata *hdr_panel_metadata;
 	struct hdr_static_metadata *hdr_source_metadata;
 };
 
