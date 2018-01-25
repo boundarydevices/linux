@@ -89,8 +89,6 @@ static const struct snd_soc_dapm_widget ak5558_dapm_widgets[] = {
 	SND_SOC_DAPM_AIF_OUT("SDTO", "Capture", 0, SND_SOC_NOPM, 0, 0),
 };
 
-static int ak5558_init_reg(struct snd_soc_codec *codec);
-
 static const struct snd_soc_dapm_route ak5558_intercon[] = {
 	{"ADC Ch1", NULL, "AIN1"},
 	{"SDTO", NULL, "ADC Ch1"},
