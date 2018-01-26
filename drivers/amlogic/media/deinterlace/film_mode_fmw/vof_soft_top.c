@@ -76,6 +76,21 @@ static unsigned int flmxx_no_cmb[7] = {8, 32, 8, 8, 8, 32, 32};
 static unsigned int flmxx_nn_cmb = 7;
 module_param_array(flmxx_no_cmb, uint, &flmxx_nn_cmb, 0664);
 
+/* Get 1-Row combing information, 1bit */
+/* iHSCMB[9]; 9x32=288 */
+static UINT8 Get1RCmb(UINT32 *iHSCMB, UINT32 iRow, int nRow)
+{
+	UINT8 nR1 = 0;
+	UINT8 nBt = 0;
+
+	if (nRow > 288)
+		iRow >>= 1;
+	nR1 = ((iRow >> 5) & 0xf);/* iRow/32; 0--8 */
+	iHSCMB[nR1] = nR1 > 8 ? 0 : iHSCMB[nR1];
+	nBt = (iRow & 0x1f);/* iRow%32 */
+	return (iHSCMB[nR1] >> nBt) & 0x1;
+}
+
 int VOFSftTop(UINT8 *rFlmPstGCm, UINT8 *rFlmSltPre, UINT8 *rFlmPstMod,
 		UShort *rPstCYWnd0, UShort *rPstCYWnd1,
 		UShort *rPstCYWnd2, UShort *rPstCYWnd3, int nMod,
@@ -621,23 +636,23 @@ int VOFDetSub1(int *VOFWnd, int *nCNum, int nMod, UINT32 *nRCmb, int nROW,
 		nT1 = nROW - 1 - nT0;
 
 		/* if(nRCmb[nT0]==1) */
-		if (Get1RCmb(nRCmb, nT1)) {
+		if (Get1RCmb(nRCmb, nT1, nROW)) {
 			nCSUM += 1;	/* Total */
 			if (nT0 == 0)
 				nBgn = nT0;
 			else if (nT0 == nROW - 1) {
-				if (Get1RCmb(nRCmb, 1)) {
+				if (Get1RCmb(nRCmb, 1, nROW)) {
 					/* at least (2-Row combing) */
 					nEnd = nT0;
 					fEND = 1;
 				}
-			} else if (!Get1RCmb(nRCmb, nT1 + 1)) {
+			} else if (!Get1RCmb(nRCmb, nT1 + 1, nROW)) {
 				/* (nRCmb[nT0-1]==0) */
 				nBgn = nT0;
 			}
 		} else {
 			/* nRCmb[nT0]==0 */
-			if (nT0 != 0 && Get1RCmb(nRCmb, nT1 + 1)) {
+			if (nT0 != 0 && Get1RCmb(nRCmb, nT1 + 1, nROW)) {
 				nEnd = nT0;	/* nT0-1 */
 				fEND = 1;
 			}
@@ -675,19 +690,5 @@ int VOFDetSub1(int *VOFWnd, int *nCNum, int nMod, UINT32 *nRCmb, int nROW,
 		VOFWnd[2 * nT0 + 1] = pIDx[nT0][1];/* nEnd */
 	}
 	return nIDx;
-}
-
-
-/* Get 1-Row combing information, 1bit */
-/* iHSCMB[9]; 9x32=288 */
-UINT8 Get1RCmb(UINT32 *iHSCMB, UINT32 iRow)
-{
-	UINT8 nR1 = 0;
-	UINT8 nBt = 0;
-
-	nR1 = ((iRow >> 5) & 0xf);/* iRow/32; 0--8 */
-	iHSCMB[nR1] = nR1 > 8 ? 0 : iHSCMB[nR1];
-	nBt = (iRow & 0x1f);/* iRow%32 */
-	return (iHSCMB[nR1] >> nBt) & 0x1;
 }
 
