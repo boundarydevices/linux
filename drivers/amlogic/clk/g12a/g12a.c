@@ -619,7 +619,6 @@ static struct clk_gate g12a_clk81 = {
 	},
 };
 
-
 /* Everything Else (EE) domain gates */
 static MESON_GATE(g12a_ddr, HHI_GCLK_MPEG0, 0);
 static MESON_GATE(g12a_dos, HHI_GCLK_MPEG0, 1);
@@ -646,7 +645,7 @@ static MESON_GATE(g12a_acodec, HHI_GCLK_MPEG0, 28);
 
 static MESON_GATE(g12a_audio, HHI_GCLK_MPEG1, 0);
 static MESON_GATE(g12a_eth_core, HHI_GCLK_MPEG1, 3);
-static MESON_GATE(g12a_u_stp_top, HHI_GCLK_MPEG1, 4);
+static MESON_GATE(g12a_demux, HHI_GCLK_MPEG1, 4);
 static MESON_GATE(g12a_aififo, HHI_GCLK_MPEG1, 11);
 static MESON_GATE(g12a_adc, HHI_GCLK_MPEG1, 13);
 static MESON_GATE(g12a_uart1, HHI_GCLK_MPEG1, 16);
@@ -668,6 +667,26 @@ static MESON_GATE(g12a_mmc_pclk, HHI_GCLK_MPEG2, 11);
 static MESON_GATE(g12a_uart2, HHI_GCLK_MPEG2, 15);
 static MESON_GATE(g12a_vpu_intr, HHI_GCLK_MPEG2, 25);
 static MESON_GATE(g12a_gic, HHI_GCLK_MPEG2, 30);
+
+static MESON_GATE(g12a_vclk2_venci0, HHI_GCLK_OTHER, 1);
+static MESON_GATE(g12a_vclk2_venci1, HHI_GCLK_OTHER, 2);
+static MESON_GATE(g12a_vclk2_vencp0, HHI_GCLK_OTHER, 3);
+static MESON_GATE(g12a_vclk2_vencp1, HHI_GCLK_OTHER, 4);
+static MESON_GATE(g12a_vclk2_venct0, HHI_GCLK_OTHER, 5);
+static MESON_GATE(g12a_vclk2_venct1, HHI_GCLK_OTHER, 6);
+static MESON_GATE(g12a_vclk2_other, HHI_GCLK_OTHER, 7);
+static MESON_GATE(g12a_vclk2_enci, HHI_GCLK_OTHER, 8);
+static MESON_GATE(g12a_vclk2_encp, HHI_GCLK_OTHER, 9);
+static MESON_GATE(g12a_dac_clk, HHI_GCLK_OTHER, 10);
+static MESON_GATE(g12a_aoclk_gate, HHI_GCLK_OTHER, 14);
+static MESON_GATE(g12a_iec958_gate, HHI_GCLK_OTHER, 16);
+static MESON_GATE(g12a_enc480p, HHI_GCLK_OTHER, 20);
+static MESON_GATE(g12a_rng1, HHI_GCLK_OTHER, 21);
+static MESON_GATE(g12a_vclk2_enct, HHI_GCLK_OTHER, 22);
+static MESON_GATE(g12a_vclk2_encl, HHI_GCLK_OTHER, 23);
+static MESON_GATE(g12a_vclk2_venclmmc, HHI_GCLK_OTHER, 24);
+static MESON_GATE(g12a_vclk2_vencl, HHI_GCLK_OTHER, 25);
+static MESON_GATE(g12a_vclk2_other1, HHI_GCLK_OTHER, 26);
 
 /* Always On (AO) domain gates */
 #if 0
@@ -724,14 +743,14 @@ static struct clk_hw *g12a_clk_hws[] = {
 	[CLKID_ACODEC]          = &g12a_acodec.hw,
 	[CLKID_AUDIO]           = &g12a_audio.hw,
 	[CLKID_ETH_CORE]        = &g12a_eth_core.hw,
-	[CLKID_U_STP_TOP]       = &g12a_u_stp_top.hw,
+	[CLKID_DEMUX]           = &g12a_demux.hw,
 	[CLKID_AIFIFO]          = &g12a_aififo.hw,
 	[CLKID_ADC]             = &g12a_adc.hw,
 	[CLKID_UART1]           = &g12a_uart1.hw,
 	[CLKID_G2D]             = &g12a_g2d.hw,
 	[CLKID_RESET]           = &g12a_reset.hw,
 	[CLKID_PCIE_COMB]       = &g12a_pcie_comb.hw,
-	[CLKID_PARSER]          = &g12a_parser.hw,
+	[CLKID_DOS_PARSER]      = &g12a_parser.hw,
 	[CLKID_USB_GENERAL]     = &g12a_usb_general.hw,
 	[CLKID_PCIE_PHY]        = &g12a_pcie_phy.hw,
 	[CLKID_AHB_ARB0]        = &g12a_ahb_arb0.hw,
@@ -745,6 +764,25 @@ static struct clk_hw *g12a_clk_hws[] = {
 	[CLKID_UART2]           = &g12a_uart2.hw,
 	[CLKID_VPU_INTR]        = &g12a_vpu_intr.hw,
 	[CLKID_GIC]             = &g12a_gic.hw,
+	[CLKID_VCLK2_VENCI0]    = &g12a_vclk2_venci0.hw,
+	[CLKID_VCLK2_VENCI1]    = &g12a_vclk2_venci1.hw,
+	[CLKID_VCLK2_VENCP0]    = &g12a_vclk2_vencp0.hw,
+	[CLKID_VCLK2_VENCP1]    = &g12a_vclk2_vencp1.hw,
+	[CLKID_VCLK2_VENCT0]    = &g12a_vclk2_venct0.hw,
+	[CLKID_VCLK2_VENCT1]    = &g12a_vclk2_venct1.hw,
+	[CLKID_VCLK2_OTHER]     = &g12a_vclk2_other.hw,
+	[CLKID_VCLK2_ENCI]      = &g12a_vclk2_enci.hw,
+	[CLKID_VCLK2_ENCP]      = &g12a_vclk2_encp.hw,
+	[CLKID_DAC_CLK]         = &g12a_dac_clk.hw,
+	[CLKID_AOCLK_GATE]      = &g12a_aoclk_gate.hw,
+	[CLKID_IEC958_GATE]     = &g12a_iec958_gate.hw,
+	[CLKID_ENC480P]         = &g12a_enc480p.hw,
+	[CLKID_RNG1]            = &g12a_rng1.hw,
+	[CLKID_VCLK2_ENCT]      = &g12a_vclk2_enct.hw,
+	[CLKID_VCLK2_ENCL]      = &g12a_vclk2_encl.hw,
+	[CLKID_VCLK2_VENCLMMC]  = &g12a_vclk2_venclmmc.hw,
+	[CLKID_VCLK2_VENCL]     = &g12a_vclk2_vencl.hw,
+	[CLKID_VCLK2_OTHER1]    = &g12a_vclk2_other1.hw,
 
 #if 0
 	[CLKID_AO_MEDIA_CPU]    = &g12a_ao_media_cpu.hw,
@@ -807,7 +845,7 @@ static struct clk_gate *g12a_clk_gates[] = {
 	&g12a_acodec,
 	&g12a_audio,
 	&g12a_eth_core,
-	&g12a_u_stp_top,
+	&g12a_demux,
 	&g12a_aififo,
 	&g12a_adc,
 	&g12a_uart1,
@@ -828,6 +866,25 @@ static struct clk_gate *g12a_clk_gates[] = {
 	&g12a_uart2,
 	&g12a_vpu_intr,
 	&g12a_gic,
+	&g12a_vclk2_venci0,
+	&g12a_vclk2_venci1,
+	&g12a_vclk2_vencp0,
+	&g12a_vclk2_vencp1,
+	&g12a_vclk2_venct0,
+	&g12a_vclk2_venct1,
+	&g12a_vclk2_other,
+	&g12a_vclk2_enci,
+	&g12a_vclk2_encp,
+	&g12a_dac_clk,
+	&g12a_aoclk_gate,
+	&g12a_iec958_gate,
+	&g12a_enc480p,
+	&g12a_rng1,
+	&g12a_vclk2_enct,
+	&g12a_vclk2_encl,
+	&g12a_vclk2_venclmmc,
+	&g12a_vclk2_vencl,
+	&g12a_vclk2_other1,
 #if 0
 	&g12a_ao_media_cpu,
 	&g12a_ao_ahb_sram,
@@ -914,7 +971,7 @@ static void __init g12a_clkc_init(struct device_node *np)
 	meson_g12a_sdemmc_init();
 	meson_g12a_gpu_init();
 	meson_g12a_media_init();
-	/*g12a_amlogic_init_misc();*/
+	meson_g12a_misc_init();
 
 	pr_debug("%s: register all clk ok!", __func__);
 	/*

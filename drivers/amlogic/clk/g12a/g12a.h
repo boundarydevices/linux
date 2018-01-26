@@ -42,18 +42,20 @@
 #define HHI_GCLK_MPEG0			0x140 /* 0x50 offset in data sheet */
 #define HHI_GCLK_MPEG1			0x144 /* 0x51 offset in data sheet */
 #define HHI_GCLK_MPEG2			0x148 /* 0x52 offset in data sheet */
+#define HHI_GCLK_OTHER			0x150 /* 0x54 offset in data sheet */
+
 #if 0
 #define HHI_GCLK_AO			0x154 /* 0x55 offset in data sheet */
 
 #define HHI_VID_CLK_DIV		0x164 /* 0x59 offset in data sheet */
 #define HHI_SPICC_HCLK_CNTL 0x168 /* 0x5a offset in data sheet */
 #endif
-#define HHI_MPEG_CLK_CNTL		0x174 /* 0x5d offset in data sheet */
-#define HHI_AUD_CLK_CNTL		0x178 /* 0x5e offset in data sheet */
-#define HHI_VID_CLK_CNTL		0x17c /* 0x5f offset in data sheet */
-//#define HHI_AUD_CLK_CNTL2		0x190 /* 0x64 offset in data sheet */
-#define HHI_VID_CLK_CNTL2		0x194 /* 0x65 offset in data sheet */
-#define HHI_SYS_CPU_CLK_CNTL0	0x19c /* 0x67 offset in data sheet */
+#define HHI_MPEG_CLK_CNTL       0x174 /* 0x5d offset in data sheet */
+#define HHI_AUD_CLK_CNTL        0x178 /* 0x5e offset in data sheet */
+#define HHI_VID_CLK_CNTL        0x17c /* 0x5f offset in data sheet */
+#define HHI_TS_CLK_CNTL         0x190 /* 0x64 offset in data sheet */
+#define HHI_VID_CLK_CNTL2       0x194 /* 0x65 offset in data sheet */
+#define HHI_SYS_CPU_CLK_CNTL0   0x19c /* 0x67 offset in data sheet */
 
 #define HHI_MALI_CLK_CNTL		0x1b0 /* 0x6c offset in data sheet */
 #define HHI_VPU_CLK_CNTL		0x1bC /* 0x6f offset in data sheet */
