@@ -153,7 +153,6 @@
 
 	secmon {
 		compatible = "amlogic, secmon";
-		status = "disabled";
 		memory-region = <&secmon_reserved>;
 		in_base_func = <0x82000020>;
 		out_base_func = <0x82000021>;
