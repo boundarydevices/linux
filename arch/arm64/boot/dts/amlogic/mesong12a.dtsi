@@ -500,5 +500,28 @@
 };
 
 &pinctrl_periphs {
+	/* sdemmc portB */
+	sd_clk_cmd_pins:sd_clk_cmd_pins {
+		mux {
+			groups = "sdcard_cmd_c",
+				   "sdcard_clk_c";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+		};
+	};
 
+	sd_all_pins:sd_all_pins {
+		mux {
+			groups = "sdcard_d0_c",
+				   "sdcard_d1_c",
+				   "sdcard_d2_c",
+				   "sdcard_d3_c",
+				   "sdcard_cmd_c",
+				   "sdcard_clk_c";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+		};
+	};
 };

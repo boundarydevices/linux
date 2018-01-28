@@ -19,6 +19,12 @@
 #define AMLSD_H
 #include <linux/of_gpio.h>
 
+/* ptm or pxp simulation */
+#define CONFIG_MESON_CPU_EMULATOR
+/* hardcode clock, for debug or bringup */
+/* #define SD_EMMC_CLK_CTRL	(1) */
+/* #define SD_EMMC_PIN_CTRL	(1) */
+
 #define AML_MMC_MAJOR_VERSION   3
 #define AML_MMC_MINOR_VERSION   02
 #define AML_MMC_VERSION \

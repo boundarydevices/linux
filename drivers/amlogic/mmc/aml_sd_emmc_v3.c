@@ -52,10 +52,11 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	struct amlsd_platform *pdata = host->pdata;
 
 	writel(0, host->base + SD_EMMC_CLOCK_V3);
+#ifndef SD_EMMC_CLK_CTRL
 	ret = aml_emmc_clktree_init(host);
 	if (ret)
 		return ret;
-
+#endif
 	/* init SD_EMMC_CLOCK to sane defaults w/min clock rate */
 	vclkc = 0;
 	pclkc->div = 60;	 /* 400KHz */
@@ -92,11 +93,12 @@ static int meson_mmc_clk_set_rate_v3(struct amlsd_host *host,
 	struct mmc_host *mmc = host->mmc;
 	struct amlsd_platform *pdata = host->pdata;
 	int ret = 0;
-	struct clk *src0_clk = NULL;
+
 #ifdef SD_EMMC_CLK_CTRL
 	u32 clk_rate, clk_div, clk_src_sel;
 	struct amlsd_platform *pdata = host->pdata;
 #else
+	struct clk *src0_clk = NULL;
 	u32 vcfg = 0;
 	struct sd_emmc_config *conf = (struct sd_emmc_config *)&vcfg;
 #endif

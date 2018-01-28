@@ -2932,6 +2932,8 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	if (aml_card_type_sdio(pdata)) /* if sdio_wifi */
 		sdio_host = mmc;
 
+#ifndef CONFIG_MESON_CPU_EMULATOR
+	/* disable sdcard detect irq for ptm */
 	/*Register card detect irq : plug in & unplug*/
 	if (pdata->gpio_cd && aml_card_type_non_sdio(pdata)) {
 		mutex_init(&pdata->in_out_lock);
@@ -2952,6 +2954,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		schedule_delayed_work(&host->cd_work, 50);
 #endif
 	}
+#endif /* CONFIG_MESON_CPU_EMULATOR */
 	pr_info("%s() : success!\n", __func__);
 	return 0;
 
@@ -3064,6 +3067,15 @@ static struct meson_mmc_data mmc_data_txhd = {
 	.ds_pin_poll_bit = 11,
 };
 
+static struct meson_mmc_data mmc_data_g12a = {
+	.chip_type = MMC_CHIP_G12A,
+	.pinmux_base = 0xff634400,
+	.clksrc_base = 0xff63c000,
+	.ds_pin_poll = 0x3a,
+	.ds_pin_poll_en = 0x48,
+	.ds_pin_poll_bit = 13,
+};
+
 static const struct of_device_id meson_mmc_of_match[] = {
 	{
 		.compatible = "amlogic, meson-mmc-gxbb",
@@ -3100,6 +3112,10 @@ static const struct of_device_id meson_mmc_of_match[] = {
 	{
 		.compatible = "amlogic, meson-mmc-txhd",
 		.data = &mmc_data_txhd,
+	},
+	{
+		.compatible = "amlogic, meson-mmc-g12a",
+		.data = &mmc_data_g12a,
 	},
 	{}
 };
