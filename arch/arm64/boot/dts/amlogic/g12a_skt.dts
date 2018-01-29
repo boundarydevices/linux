@@ -1,0 +1,263 @@
+/*
+ * arch/arm64/boot/dts/amlogic/g12a_skt.dts
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/dts-v1/;
+
+#include "mesong12a.dtsi"
+
+/ {
+	model = "Amlogic";
+	compatible = "amlogic, g12a";
+	interrupt-parent = <&gic>;
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		serial0 = &uart_AO;
+	};
+
+	memory@00000000 {
+		device_type = "memory";
+		linux,usable-memory = <0x0 0x100000 0x0 0x7ff00000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		/* global autoconfigured region for contiguous allocations */
+		secmon_reserved:linux,secmon {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x400000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x400000>;
+		};
+
+		secos_reserved:linux,secos {
+			status = "disable";
+			compatible = "amlogic, aml_secos_memory";
+			reg = <0x0 0x05300000 0x0 0x2000000>;
+			no-map;
+		};
+		logo_reserved:linux,meson-fb {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x800000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x7f800000 0x0 0x800000>;
+		};
+		ion_cma_reserved:linux,ion-dev {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x8000000>;
+			alignment = <0x0 0x400000>;
+		};
+	};
+
+	vout {
+		compatible = "amlogic, vout";
+		dev_name = "vout";
+		status = "okay";
+	};
+
+	vout2 {
+		compatible = "amlogic, vout2";
+		dev_name = "vout";
+		status = "okay";
+	};
+
+	amhdmitx: amhdmitx{
+		compatible = "amlogic, amhdmitx";
+		dev_name = "amhdmitx";
+		status = "okay";
+		vend-data = <&vend_data>;
+		//pinctrl-names="hdmitx_hpd", "hdmitx_ddc";
+		//pinctrl-0=<&hdmitx_hpd>;
+		//pinctrl-1=<&hdmitx_ddc>;
+		clocks = <&clkc CLKID_VAPB_MUX>,
+			 <&clkc CLKID_VPU_MUX>;
+		clock-names = "hdmi_vapb_clk",
+			      "hdmi_vpu_clk";
+		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
+		interrupts = <0 57 1>;
+		interrupt-names = "hdmitx_hpd";
+		/* 0:M8B 1:GXBB 2:GXTVBB 3:GXL 4:GXM
+		 * 5:TXL 6:TXLX 7:AXG 8:GXLX 9:TXHD
+		 * 10:G12A
+		 */
+		ic_type = <10>;
+		vend_data: vend_data{ /* Should modified by Customer */
+			vendor_name = "Amlogic"; /* Max Chars: 8 */
+			/* standards.ieee.org/develop/regauth/oui/oui.txt */
+			vendor_id = <0x000000>;
+		};
+	};
+
+	sd_emmc_b:sd@ffe05000 {
+		status = "okay";
+		compatible = "amlogic, meson-mmc-g12a";
+		reg = <0x0 0xffe05000 0x0 0x2000>;
+		interrupts = <0 190 1>;
+
+		pinctrl-names = "sd_clk_cmd_pins", "sd_all_pins";
+		pinctrl-0 = <&sd_clk_cmd_pins>;
+		pinctrl-1 = <&sd_all_pins>;
+
+		clocks = <&clkc CLKID_SD_EMMC_B>,
+			<&clkc CLKID_SD_EMMC_B_P0_COMP>,
+			<&clkc CLKID_FCLK_DIV2>,
+			<&clkc CLKID_FCLK_DIV5>;
+		clock-names = "core", "clkin0", "clkin1", "clkin2";
+
+		bus-width = <4>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		max-frequency = <100000000>;
+		non-removable;
+		disable-wp;
+		sd {
+			pinname = "sd";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			caps = "MMC_CAP_4_BIT_DATA",
+				 "MMC_CAP_MMC_HIGHSPEED",
+				 "MMC_CAP_SD_HIGHSPEED",
+				 "MMC_CAP_NONREMOVABLE",
+				 "MMC_CAP_UHS_SDR12",
+				 "MMC_CAP_UHS_SDR25",
+				 "MMC_CAP_UHS_SDR50",
+				 "MMC_PM_KEEP_POWER",
+				 "MMC_CAP_NONREMOVABLE"; /**ptm debug */
+			f_min = <400000>;
+			f_max = <200000000>;
+			max_req_size = <0x20000>; /**128KB*/
+			card_type = <5>;
+			/* 3:sdio device(ie:sdio-wifi),
+			 * 4:SD combo (IO+mem) card
+			 */
+		};
+	};
+
+	canvas{
+		compatible = "amlogic, meson, canvas";
+		dev_name = "amlogic-canvas";
+		status = "okay";
+		reg = <0x0 0xff638000 0x0 0x2000>;
+	};
+
+	codec_io {
+		compatible = "amlogic, codec_io";
+		status = "okay";
+		#address-cells=<2>;
+		#size-cells=<2>;
+		ranges;
+		io_cbus_base{
+			reg = <0x0 0xffd00000 0x0 0x100000>;
+		};
+		io_dos_base{
+			reg = <0x0 0xff620000 0x0 0x10000>;
+		};
+		io_hiubus_base{
+			reg = <0x0 0xff63c000 0x0 0x2000>;
+		};
+		io_aobus_base{
+			reg = <0x0 0xff800000 0x0 0x10000>;
+		};
+		io_vcbus_base{
+			reg = <0x0 0xff900000 0x0 0x40000>;
+		};
+		io_dmc_base{
+			reg = <0x0 0xff638000 0x0 0x2000>;
+		};
+	};
+
+	rdma{
+		compatible = "amlogic, meson, rdma";
+		dev_name = "amlogic-rdma";
+		status = "okay";
+		interrupts = <0 89 1>;
+		interrupt-names = "rdma";
+	};
+
+	ge2d {
+		compatible = "amlogic, ge2d-g12a";
+		dev_name = "ge2d";
+		status = "okay";
+		interrupts = <0 146 1>;
+		interrupt-names = "ge2d";
+		clocks = <&clkc CLKID_VAPB_MUX>,
+			<&clkc CLKID_G2D>,
+			<&clkc CLKID_GE2D_GATE>;
+		clock-names = "clk_vapb_0",
+			"clk_ge2d",
+			"clk_ge2d_gate";
+		reg = <0x0 0xff940000 0x0 0x10000>;
+	};
+
+	amlvecm {
+		compatible = "amlogic, vecm";
+		dev_name = "aml_vecm";
+		status = "okay";
+		gamma_en = <0>;/*1:enabel ;0:disable*/
+		wb_en = <0>;/*1:enabel ;0:disable*/
+		cm_en = <0>;/*1:enabel ;0:disable*/
+	};
+
+	meson-amvideom {
+		compatible = "amlogic, amvideom";
+		dev_name = "amvideom";
+		status = "okay";
+		interrupts = <0 3 1>;
+		interrupt-names = "vsync";
+	};
+
+	meson-fb {
+		compatible = "amlogic, meson-g12a";
+		memory-region = <&logo_reserved>;
+		dev_name = "meson-fb";
+		status = "okay";
+		interrupts = <0 3 1
+			0 89 1>;
+		interrupt-names = "viu-vsync", "rdma";
+		mem_size = <0x00800000 0x1980000 0x100000 0x100000>;
+		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x01851000*/
+		display_mode_default = "1080p60hz";
+		scale_mode = <1>;
+		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
+		display_size_default = <1920 1080 1920 2160 32>;
+		/*1920*1080*4*3 = 0x17BB000*/
+		pxp_mode = <1>; /** 0:normal mode 1:pxp mode */
+		mem_alloc = <1>;
+		logo_addr = "0x3f800000";
+	};
+}; /* end of / */
+
+&aobus{
+	uart_AO: serial@3000 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0x3000 0x0 0x18>;
+		interrupts = <0 193 1>;
+		status = "okay";
+		clocks = <&xtal>;
+		clock-names = "clk_uart";
+		xtal_tick_en = <1>;
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_uart_pins>;
+		support-sysrq = <0>;    /* 0 not support , 1 support */
+	};
+};

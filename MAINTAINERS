@@ -14306,3 +14306,7 @@ F: arch/arm64/boot/dts/amlogic/mesong12a-dvalin.dtsi
 AMLOGIC VPU DRIVER
 M:      Evoke Zhang <evoke.zhang@amlogic.com>
 F:      drivers/amlogic/media/common/vpu/vpu_power_init.c
+
+AMLOGIC dts for g12a skt
+M: Qiufang Dai <qiufang.dai@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/g12a_skt.dts
