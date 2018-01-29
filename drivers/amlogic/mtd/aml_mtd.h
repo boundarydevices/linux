@@ -195,6 +195,12 @@ union nand_core_clk {
 #define BOOT_COPY_NUM (BOOT_TOTAL_PAGES / BOOT_PAGES_PER_COPY)
 /*it also means normal device start addrress */
 #define RESERVED_BLOCK_NUM 48
+/* reserved region info */
+#define NAND_GAP_BLOCK_NUM 4
+#define NAND_BBT_BLOCK_NUM 4
+#define NAND_ENV_BLOCK_NUM 8
+#define NAND_KEY_BLOCK_NUM 8
+#define NAND_DTB_BLOCK_NUM 4
 
 #define AML_CHIP_NONE_RB	4
 #define AML_INTERLEAVING_MODE	8

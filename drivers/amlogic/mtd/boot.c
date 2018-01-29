@@ -156,7 +156,7 @@ void __attribute__((unused)) nand_info_page_prepare(
 	(bbt_size + mtd->writesize - 1) / mtd->writesize;
 	p_ext_info->bbt_occupy_pages = bbt_pages;
 	p_ext_info->bbt_start_block =
-		(BOOT_TOTAL_PAGES >> pages_per_blk_shift) + 4;
+		(BOOT_TOTAL_PAGES >> pages_per_blk_shift) + NAND_GAP_BLOCK_NUM;
 	/* fill descrete infos */
 	if (aml_chip->bl_mode) {
 		p_fip_info->version = 1;
