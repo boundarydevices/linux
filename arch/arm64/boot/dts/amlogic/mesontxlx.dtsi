@@ -172,6 +172,12 @@
 		reserve_mem_size = <0x00300000>;
 	};
 
+	vcodec_dec {
+		compatible = "amlogic, vcodec-dec";
+		dev_name = "aml-vcodec-dec";
+		status = "okay";
+	};
+
 	securitykey {
 		compatible = "aml, securitykey";
 		status = "okay";

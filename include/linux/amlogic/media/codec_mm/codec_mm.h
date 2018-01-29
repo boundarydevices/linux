@@ -96,6 +96,7 @@ struct codec_mm_s {
 #define AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA 4
 #define AMPORTS_MEM_FLAGS_FROM_GET_FROM_TVP 5
 #define AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA_RES 6
+#define AMPORTS_MEM_FLAGS_FROM_GET_FROM_COHERENT 7
 	int from_flags;
 	/*may can be shared on many user..*/
 	   /*decoder/di/ppmgr,*/
@@ -148,4 +149,10 @@ void *codec_mm_dma_alloc_coherent(const char *owner, int size,
 			dma_addr_t *dma_handle, gfp_t flag, int memflags);
 void codec_mm_dma_free_coherent(const char *owner, int size,
 			void *cpu_addr, dma_addr_t dma_handle, int memflags);
+
+struct device *v4l_get_dev_from_codec_mm(void);
+struct codec_mm_s *v4l_reqbufs_from_codec_mm(const char *owner,
+	unsigned int addr, unsigned int size, unsigned int index);
+void v4l_freebufs_back_to_codec_mm(const char *owner, struct codec_mm_s *mem);
+
 #endif

@@ -75,6 +75,7 @@
 #define VFRAME_FLAG_ERROR_RECOVERY		8
 #define VFRAME_FLAG_SYNCFRAME			0x10
 #define VFRAME_FLAG_GAME_MODE		0x20
+#define VFRAME_FLAG_EMPTY_FRAME_V4L		0x80
 
 enum pixel_aspect_ratio_e {
 	PIXEL_ASPECT_RATIO_1_1,
@@ -256,6 +257,7 @@ struct vframe_s {
 	u32 next_vf_pts;
 	u32 disp_pts;
 	u64 disp_pts_us64;
+	u64 timestamp;
 	u32 flag;
 
 	u32 canvas0Addr;
@@ -346,6 +348,8 @@ struct vframe_s {
 	/*for MMU H265/VP9 compress header*/
 	void *mem_head_handle;
 	struct vframe_pic_mode_s pic_mode;
+
+	unsigned long v4l_mem_handle;
 } /*vframe_t */;
 
 #if 0

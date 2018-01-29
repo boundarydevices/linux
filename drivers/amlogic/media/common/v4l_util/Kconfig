@@ -4,6 +4,8 @@
 
 config AMLOGIC_VIDEOBUF_RESOURCE
 	bool "Amlogic V4L UTIL Support"
+	select VIDEOBUF2_DMA_CONTIG
+	select V4L2_MEM2MEM_DEV
 	default n
 	help
 		Select to enable V4L UTIL support
