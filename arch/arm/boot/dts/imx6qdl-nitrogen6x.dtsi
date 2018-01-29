@@ -510,6 +510,10 @@
 
 		pinctrl_ov5640: pinctrl_ov5640 {
 			/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+			fsl,pins = <
+				/* Having no pins in here can cause Linux to not boot */
+				MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x0b0b0		/* Power */
+			>;
 		};
 
 		pinctrl_ov5640_gpios: pinctrl_ov5640_gpios {
