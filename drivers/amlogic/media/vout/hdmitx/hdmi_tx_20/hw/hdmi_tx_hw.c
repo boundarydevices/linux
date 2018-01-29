@@ -46,6 +46,7 @@
 #include "common.h"
 #include "hdcpVerify.h"
 #include "hw_clk.h"
+#include <linux/arm-smccc.h>
 
 static void mode420_half_horizontal_para(void);
 static void hdmi_phy_suspend(void);
@@ -169,98 +170,45 @@ EXPORT_SYMBOL(hdmitx_ddc_hw_op);
 
 int hdmitx_hdcp_opr(unsigned int val)
 {
+	struct arm_smccc_res res;
+
 	if (val == 1) { /* HDCP14_ENABLE */
-		register long x0 asm("x0") = 0x82000010;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: : "r"(x0)
-		);
+		arm_smccc_smc(0x82000010, 0, 0, 0, 0, 0, 0, 0, &res);
 	}
 	if (val == 2) { /* HDCP14_RESULT */
-		register long x0 asm("x0") = 0x82000011;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: "+r"(x0)
-		);
-		return (unsigned int)(x0&0xffffffff);
+		arm_smccc_smc(0x82000011, 0, 0, 0, 0, 0, 0, 0, &res);
+		return (unsigned int)((res.a0)&0xffffffff);
 	}
 	if (val == 0) { /* HDCP14_INIT */
-		register long x0 asm("x0") = 0x82000012;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: : "r"(x0)
-		);
+		arm_smccc_smc(0x82000012, 0, 0, 0, 0, 0, 0, 0, &res);
 	}
 	if (val == 3) { /* HDCP14_EN_ENCRYPT */
-		register long x0 asm("x0") = 0x82000013;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: : "r"(x0)
-		);
+		arm_smccc_smc(0x82000013, 0, 0, 0, 0, 0, 0, 0, &res);
 	}
 	if (val == 4) { /* HDCP14_OFF */
-		register long x0 asm("x0") = 0x82000014;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: : "r"(x0)
-		);
+		arm_smccc_smc(0x82000014, 0, 0, 0, 0, 0, 0, 0, &res);
 	}
 	if (val == 5) {	/* HDCP_MUX_22 */
-		register long x0 asm("x0") = 0x82000015;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: : "r"(x0)
-		);
+		arm_smccc_smc(0x82000015, 0, 0, 0, 0, 0, 0, 0, &res);
 	}
 	if (val == 6) {	/* HDCP_MUX_14 */
-		register long x0 asm("x0") = 0x82000016;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: : "r"(x0)
-		);
+		arm_smccc_smc(0x82000016, 0, 0, 0, 0, 0, 0, 0, &res);
 	}
 	if (val == 7) { /* HDCP22_RESULT */
-		register long x0 asm("x0") = 0x82000017;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: "+r"(x0)
-		);
-		return (unsigned int)(x0&0xffffffff);
+		arm_smccc_smc(0x82000017, 0, 0, 0, 0, 0, 0, 0, &res);
+		return (unsigned int)((res.a0)&0xffffffff);
 	}
 	if (val == 0xa) { /* HDCP14_KEY_LSTORE */
-		register long x0 asm("x0") = 0x8200001a;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: "+r"(x0)
-		);
-		return (unsigned int)(x0&0xffffffff);
+		arm_smccc_smc(0x8200001a, 0, 0, 0, 0, 0, 0, 0, &res);
+		return (unsigned int)((res.a0)&0xffffffff);
 	}
 	if (val == 0xb) { /* HDCP22_KEY_LSTORE */
-		register long x0 asm("x0") = 0x8200001b;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: "+r"(x0)
-		);
-		return (unsigned int)(x0&0xffffffff);
+		arm_smccc_smc(0x8200001b, 0, 0, 0, 0, 0, 0, 0, &res);
+		return (unsigned int)((res.a0)&0xffffffff);
 	}
 	if (val == 0xc) { /* HDCP22_KEY_SET_DUK */
-		register long x0 asm("x0") = 0x8200001c;
-		asm volatile(
-			__asmeq("%0", "x0")
-			"smc #0\n"
-			: "+r"(x0)
-		);
-		return (unsigned int)(x0&0xffffffff);
+		arm_smccc_smc(0x8200001c, 0, 0, 0, 0, 0, 0, 0, &res);
+		return (unsigned int)((res.a0)&0xffffffff);
 	}
 	return -1;
 }

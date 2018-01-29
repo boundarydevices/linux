@@ -28,6 +28,7 @@
 #include <linux/of.h>
 #include <linux/slab.h>
 #include "audio_data.h"
+#include <linux/arm-smccc.h>
 
 #ifdef CONFIG_MESON_TRUSTZONE
 #include <mach/meson-secure.h>
@@ -66,11 +67,7 @@ int meson_efuse_fn_smc_query_audioinfo(struct efuse_hal_api_arg *arg)
 	int ret;
 	unsigned int cmd, offset, size;
 	unsigned long *retcnt;
-
-	register unsigned x0 asm("x0");
-	register unsigned x1 asm("x1");
-	register unsigned x2 asm("x2");
-	register unsigned x3 asm("x3");
+	struct arm_smccc_res res;
 
 	if (!arg)
 		return -1;
@@ -86,24 +83,11 @@ int meson_efuse_fn_smc_query_audioinfo(struct efuse_hal_api_arg *arg)
 	memcpy((void *)sharemem_input, (const void *)arg->buffer, size);
 
 	asm __volatile__("" : : : "memory");
-	x0 = cmd;
-	x1 = offset;
-	x2 = size;
-	x3 = 0;
 
-	do {
-		asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x0")
-		__asmeq("%2", "x1")
-		__asmeq("%3", "x2")
-		__asmeq("%4", "x3")
-		"smc #0\n"
-		: "=r"(x0)
-		: "r"(x0), "r"(x1), "r"(x2), "r"(x3));
-	} while (0);
-	ret = x0;
-	*retcnt = x0;
+	arm_smccc_smc(cmd, offset, size, 0, 0, 0, 0, 0, &res);
+	ret = res.a0;
+	*retcnt = res.a0;
+
 	MYPRT("[%s %d]ret/%d\n", __func__, __LINE__, ret);
 
 	if (ret == 0) {

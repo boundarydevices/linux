@@ -25,24 +25,19 @@
 #include <linux/sched.h>
 #include <linux/platform_device.h>
 #include <linux/amlogic/iomap.h>
-#ifndef CONFIG_ARM64
-#include <asm/opcodes-sec.h>
-#endif
 #include "efuse.h"
 #ifdef CONFIG_ARM64
 #include <linux/amlogic/efuse.h>
 #endif
 #include <linux/amlogic/secmon.h>
+#include <linux/arm-smccc.h>
 
 static long meson_efuse_fn_smc(struct efuse_hal_api_arg *arg)
 {
 	long ret;
 	unsigned int cmd, offset, size;
 	unsigned long *retcnt = (unsigned long *)(arg->retcnt);
-
-	register unsigned int x0 asm("x0");
-	register unsigned int x1 asm("x1");
-	register unsigned int x2 asm("x2");
+	struct arm_smccc_res res;
 
 	if (!sharemem_input_base || !sharemem_output_base)
 		return -1;
@@ -60,19 +55,9 @@ static long meson_efuse_fn_smc(struct efuse_hal_api_arg *arg)
 
 	asm __volatile__("" : : : "memory");
 
-	x0 = cmd;
-	x1 = offset;
-	x2 = size;
-	asm volatile(
-			__asmeq("%0", "x0")
-			__asmeq("%1", "x0")
-			__asmeq("%2", "x1")
-			__asmeq("%3", "x2")
-			"smc	#0\n"
-		: "=r"(x0)
-		: "r"(x0), "r"(x1), "r"(x2));
-	ret = x0;
-	*retcnt = x0;
+	arm_smccc_smc(cmd, offset, size, 0, 0, 0, 0, 0, &res);
+	ret = res.a0;
+	*retcnt = res.a0;
 
 	if ((arg->cmd == EFUSE_HAL_API_READ) && (ret != 0))
 		memcpy((void *)arg->buffer,
@@ -102,24 +87,14 @@ ssize_t meson_trustzone_efuse_get_max(struct efuse_hal_api_arg *arg)
 {
 	ssize_t ret;
 	unsigned int cmd;
-
-	register uint64_t x0 asm("x0");
+	struct arm_smccc_res res;
 
 	if (arg->cmd == EFUSE_HAL_API_USER_MAX) {
 		cmd = efuse_get_max_cmd;
 
 		asm __volatile__("" : : : "memory");
-		x0 = cmd;
-
-		do {
-			asm volatile(
-			    __asmeq("%0", "x0")
-			    __asmeq("%1", "x0")
-			    "smc    #0\n"
-			    : "=r"(x0)
-			    : "r"(x0));
-		} while (0);
-		ret = x0;
+		arm_smccc_smc(cmd, 0, 0, 0, 0, 0, 0, 0, &res);
+		ret = res.a0;
 
 		if (!ret)
 			return -1;

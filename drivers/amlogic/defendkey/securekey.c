@@ -20,9 +20,9 @@
 /* #include <asm/compiler.h> */
 #include <linux/amlogic/iomap.h>
 #include "securekey.h"
+#include <linux/arm-smccc.h>
 
 #ifdef CONFIG_ARM64
-#define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
 int aml_is_secure_set(void)
 {
@@ -36,12 +36,11 @@ int aml_is_secure_set(void)
 
 long get_sharemem_info(unsigned long function_id)
 {
-	asm volatile(
-		__asmeq("%0", "x0")
-		"smc    #0\n"
-		: "+r" (function_id));
+	struct arm_smccc_res res;
 
-	return function_id;
+	arm_smccc_smc((unsigned long)function_id, 0, 0, 0, 0, 0, 0, 0, &res);
+
+	return res.a0;
 }
 
 unsigned long aml_sec_boot_check(unsigned long nType,
@@ -49,38 +48,20 @@ unsigned long aml_sec_boot_check(unsigned long nType,
 	unsigned long nLength,
 	unsigned long nOption)
 {
-	uint64_t ret = 1;
-
-	register uint64_t x0 asm("x0");
-	register uint64_t x1 asm("x1");
-	register uint64_t x2 asm("x2");
-	register uint64_t x3 asm("x3");
-	register uint64_t x4 asm("x4");
+	struct arm_smccc_res res;
 
 	asm __volatile__("" : : : "memory");
 
-	x0 = AML_DATA_PROCESS;
-	x1 = nType;
-	x2 = pBuffer;
-	x3 = nLength;
-	x4 = nOption;
-
 	do {
-		asm volatile(
-			__asmeq("%0", "x0")
-			__asmeq("%1", "x0")
-			__asmeq("%2", "x1")
-			__asmeq("%3", "x2")
-			__asmeq("%4", "x3")
-			__asmeq("%5", "x4")
-		    "smc #0\n"
-		    : "=r"(x0)
-		    : "r"(x0), "r"(x1), "r"(x2), "r"(x3), "r"(x4));
+		arm_smccc_smc((unsigned long)AML_DATA_PROCESS,
+					(unsigned long)nType,
+					(unsigned long)pBuffer,
+					(unsigned long)nLength,
+					(unsigned long)nOption,
+					0, 0, 0, &res);
 	} while (0);
 
-	ret = x0;
-
-	return ret;
+	return res.a0;
 
 }
 #endif

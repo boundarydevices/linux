@@ -26,12 +26,10 @@
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
 #include <linux/amlogic/unifykey/security_key.h>
+#include <linux/arm-smccc.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "unifykey: " fmt
-
-
-#define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
 static void __iomem *storage_in_base;
 static void __iomem *storage_out_base;
@@ -61,29 +59,21 @@ static int storage_init_status;
 
 static uint64_t storage_smc_ops(uint64_t func)
 {
-	register unsigned long x0 asm("x0") = func;
-	asm volatile(
-		__asmeq("%0", "x0")
-		"smc	#0\n"
-		: "+r" (x0));
+	struct arm_smccc_res res;
 
-	return x0;
+	arm_smccc_smc((unsigned long)func, 0, 0, 0, 0, 0, 0, 0, &res);
+	return res.a0;
 }
+
 static uint64_t storage_smc_ops2(uint64_t func, uint64_t arg1)
 {
-	register unsigned long x0 asm("x0") = func;
-	register unsigned long x1 asm("x1") = arg1;
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		"smc    #0\n"
-		: "+r" (x0)
-		: "r"(x1));
+	struct arm_smccc_res res;
 
-	return x0;
+	arm_smccc_smc((unsigned long)func,
+				(unsigned long)arg1,
+				0, 0, 0, 0, 0, 0, &res);
+	return res.a0;
 }
-
-
 
 static inline int32_t smc_to_linux_errno(uint64_t errno)
 {

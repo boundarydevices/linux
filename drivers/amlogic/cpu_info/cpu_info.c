@@ -29,13 +29,11 @@
 #include <linux/sched.h>
 #include <linux/platform_device.h>
 #include <linux/amlogic/iomap.h>
-#ifndef CONFIG_ARM64
-#include <asm/opcodes-sec.h>
-#endif
 #include <linux/amlogic/secmon.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/amlogic/cpu_version.h>
+#include <linux/arm-smccc.h>
 
 static unsigned char cpuinfo_chip_id[16] = { 0 };
 
@@ -44,20 +42,14 @@ static noinline int fn_smc(u64 function_id,
 			   u64 arg1,
 			   u64 arg2)
 {
-	register long x0 asm("x0") = function_id;
-	register long x1 asm("x1") = arg0;
-	register long x2 asm("x2") = arg1;
-	register long x3 asm("x3") = arg2;
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		__asmeq("%2", "x2")
-		__asmeq("%3", "x3")
-		"smc	#0\n"
-		: "+r" (x0)
-		: "r" (x1), "r" (x2), "r" (x3));
+	struct arm_smccc_res res;
 
-	return x0;
+	arm_smccc_smc((unsigned long)function_id,
+						(unsigned long)arg0,
+						(unsigned long)arg1,
+						(unsigned long)arg2,
+						0, 0, 0, 0, &res);
+	return res.a0;
 }
 
 static int cpuinfo_probe(struct platform_device *pdev)

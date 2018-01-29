@@ -26,9 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/dma-contiguous.h>
 #include <asm/compiler.h>
-#ifndef CONFIG_ARM64
-#include <asm/opcodes-sec.h>
-#endif
+#include <linux/arm-smccc.h>
 #undef pr_fmt
 #define pr_fmt(fmt) "secmon: " fmt
 
@@ -43,36 +41,17 @@ static long phy_out_base;
 #endif
  #define OUT_SIZE 0x1000
 static DEFINE_MUTEX(sharemem_mutex);
-#ifdef CONFIG_ARM64
+#define DEV_REGISTED 1
+#define DEV_UNREGISTED 0
+static int secmon_dev_registed = DEV_UNREGISTED;
 static long get_sharemem_info(unsigned int function_id)
 {
-	long ret;
+	struct arm_smccc_res res;
 
-	asm volatile(
-		"mov	x0, %[function_id]	\n"
-		"smc	#0			\n"
-		"mov	%[ret], x0		\n"
-		: [ret] "=r" (ret)
-		: [function_id] "r" (function_id)
-		: "memory", "cc", "x0"
-	);
+	arm_smccc_smc(function_id, 0, 0, 0, 0, 0, 0, 0, &res);
 
-	return ret;
+	return res.a0;
 }
-#else
-static long get_sharemem_info(unsigned int function_id)
-{
-	register long r0 asm("r0") = function_id;
-	asm volatile(
-		__asmeq("%0", "r0")
-		__asmeq("%1", "r0")
-		__SMC(0)
-			: "=r" (r0)
-			: "r"(r0));
-
-	return r0;
-}
-#endif
 
 #define RESERVE_MEM_SIZE	0x300000
 static int secmon_probe(struct platform_device *pdev)
@@ -118,6 +97,7 @@ static int secmon_probe(struct platform_device *pdev)
 		pr_info("secmon share mem out buffer remap fail!\n");
 		return -ENOMEM;
 	}
+	secmon_dev_registed = DEV_REGISTED;
 	pr_info("share in base: 0x%lx, share out base: 0x%lx\n",
 		(long)sharemem_in_base, (long)sharemem_out_base);
 	pr_info("phy_in_base: 0x%lx, phy_out_base: 0x%lx\n",
@@ -142,9 +122,14 @@ static  struct platform_driver secmon_platform_driver = {
 
 int __init meson_secmon_init(void)
 {
-	return  platform_driver_register(&secmon_platform_driver);
+	int ret;
+
+	ret = platform_driver_register(&secmon_platform_driver);
+	WARN((secmon_dev_registed != DEV_REGISTED),
+			"ERROR: secmon device must be enable!!!\n");
+	return ret;
 }
-module_init(meson_secmon_init);
+subsys_initcall(meson_secmon_init);
 
 void sharemem_mutex_lock(void)
 {

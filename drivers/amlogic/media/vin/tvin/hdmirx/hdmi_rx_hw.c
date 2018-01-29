@@ -35,6 +35,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
+#include <linux/arm-smccc.h>
 
 /* Local include */
 #include "hdmi_rx_drv.h"
@@ -50,7 +51,6 @@
 #define GCP_GLOBAVMUTE_EN 1 /* ag506 must clear this bit */
 #define EDID_CLK_DIV 9 /* sys clk/(9+1) = 20M */
 #define HDCP_KEY_WR_TRIES		(5)
-#define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
 /*------------------------variable define------------------------------*/
 static DEFINE_SPINLOCK(reg_rw_lock);
@@ -485,17 +485,10 @@ unsigned int rx_hdcp22_rd_top(uint32_t addr)
  */
 void sec_top_write(unsigned int *addr, unsigned int value)
 {
-	register long x0 asm("x0") = 0x8200001e;
-	register long x1 asm("x1") = (unsigned long)addr;
-	register long x2 asm("x2") = value;
+	struct arm_smccc_res res;
 
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		__asmeq("%2", "x2")
-		"smc #0\n"
-		: : "r"(x0), "r"(x1), "r"(x2)
-	);
+	arm_smccc_smc(0x8200001e, (unsigned long)(uintptr_t)addr,
+					value, 0, 0, 0, 0, 0, &res);
 }
 
 /*
@@ -503,16 +496,12 @@ void sec_top_write(unsigned int *addr, unsigned int value)
  */
 unsigned int sec_top_read(unsigned int *addr)
 {
-	register long x0 asm("x0") = 0x8200001d;
-	register long x1 asm("x1") = (unsigned long)addr;
+	struct arm_smccc_res res;
 
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		"smc #0\n"
-		: "+r"(x0) : "r"(x1)
-	);
-	return (unsigned int)(x0&0xffffffff);
+	arm_smccc_smc(0x8200001d, (unsigned long)(uintptr_t)addr,
+					0, 0, 0, 0, 0, 0, &res);
+
+	return (unsigned int)((res.a0)&0xffffffff);
 }
 
 /*
@@ -520,17 +509,10 @@ unsigned int sec_top_read(unsigned int *addr)
  */
 void rx_sec_reg_write(unsigned int *addr, unsigned int value)
 {
-	register long x0 asm("x0") = 0x8200002f;
-	register long x1 asm("x1") = (unsigned long)addr;
-	register long x2 asm("x2") = value;
+	struct arm_smccc_res res;
 
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		__asmeq("%2", "x2")
-		"smc #0\n"
-		: : "r"(x0), "r"(x1), "r"(x2)
-	);
+	arm_smccc_smc(0x8200002f, (unsigned long)(uintptr_t)addr,
+				value, 0, 0, 0, 0, 0, &res);
 }
 
 /*
@@ -538,16 +520,12 @@ void rx_sec_reg_write(unsigned int *addr, unsigned int value)
  */
 unsigned int rx_sec_reg_read(unsigned int *addr)
 {
-	register long x0 asm("x0") = 0x8200001f;
-	register long x1 asm("x1") = (unsigned long)addr;
+	struct arm_smccc_res res;
 
-	asm volatile(
-		__asmeq("%0", "x0")
-		__asmeq("%1", "x1")
-		"smc #0\n"
-		: "+r"(x0) : "r"(x1)
-	);
-	return (unsigned int)(x0&0xffffffff);
+	arm_smccc_smc(0x8200001f, (unsigned long)(uintptr_t)addr,
+					0, 0, 0, 0, 0, 0, &res);
+
+	return (unsigned int)((res.a0)&0xffffffff);
 }
 
 /*
@@ -555,14 +533,11 @@ unsigned int rx_sec_reg_read(unsigned int *addr)
  */
 unsigned int rx_sec_set_duk(void)
 {
-	register long x0 asm("x0") = 0x8200002e;
+	struct arm_smccc_res res;
 
-	asm volatile(
-		__asmeq("%0", "x0")
-		"smc #0\n"
-		: "+r"(x0)
-	);
-	return (unsigned int)(x0&0xffffffff);
+	arm_smccc_smc(0x8200002e, 0, 0, 0, 0, 0, 0, 0, &res);
+
+	return (unsigned int)((res.a0)&0xffffffff);
 }
 
 /*
