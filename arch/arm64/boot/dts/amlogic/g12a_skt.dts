@@ -67,6 +67,30 @@
 			size = <0x0 0x8000000>;
 			alignment = <0x0 0x400000>;
 		};
+		//di_reserved:linux,di {
+			//compatible = "amlogic, di-mem";
+			/* buffer_size = 3621952(yuv422 8bit) */
+			/* 4179008(yuv422 10bit full pack mode) */
+			/** 10x3621952=34.6M(0x23) support 8bit **/
+			/** 10x4736064=45.2M(0x2e) support 12bit **/
+			/** 10x4179008=40M(0x28) support 10bit **/
+			//size = <0x0 0x2800000>;
+			//no-map;
+		//};
+		/*di CMA pool */
+		di_cma_reserved:linux,di_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/* buffer_size = 3621952(yuv422 8bit)
+			 *  | 4736064(yuv422 10bit)
+			 *  | 4074560(yuv422 10bit full pack mode)
+			 * 10x3621952=34.6M(0x23) support 8bit
+			 * 10x4736064=45.2M(0x2e) support 12bit
+			 * 10x4074560=40M(0x28) support 10bit
+			 */
+			size = <0x0 0x02900000>;
+			alignment = <0x0 0x400000>;
+		};
 	};
 
 	vout {
@@ -208,6 +232,34 @@
 		reg = <0x0 0xff940000 0x0 0x10000>;
 	};
 
+	deinterlace {
+		compatible = "amlogic, deinterlace";
+		status = "okay";
+		/* 0:use reserved; 1:use cma; 2:use cma as reserved */
+		flag_cma = <1>;
+		//memory-region = <&di_reserved>;
+		memory-region = <&di_cma_reserved>;
+		interrupts = <0 46 1
+				0 40 1>;
+		interrupt-names = "pre_irq", "post_irq";
+		clocks = <&clkc CLKID_VPU_MUX>,
+			<&clkc CLKID_FCLK_DIV4>,
+			<&clkc CLKID_VPU_CLKB_TMP_COMP>,
+			<&clkc CLKID_VPU_CLKB_COMP>;
+		clock-names = "vpu_mux",
+			"fclk_div4",
+			"vpu_clkb_tmp_composite",
+			"vpu_clkb_composite";
+		clock-range = <333 666>;
+		/* buffer-size = <3621952>;(yuv422 8bit) */
+		buffer-size = <4074560>;/*yuv422 fullpack*/
+		/* reserve-iomap = "true"; */
+		/* if enable nr10bit, set nr10bit-support to 1 */
+		post-wr-support = <1>;
+		nr10bit-support = <1>;
+		nrds-enable = <1>;
+		pps-enable = <1>;
+	};
 	amlvecm {
 		compatible = "amlogic, vecm";
 		dev_name = "aml_vecm";
