@@ -251,7 +251,8 @@ struct hw_osd_reg_s hw_osd_reg_array[HW_OSD_COUNT] = {
 };
 #endif
 
-
+static int osd_setting_blending_scope(u32 index);
+static int vpp_blend_setting_default(u32 index);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 /* sync fence relative varible. */
@@ -265,8 +266,6 @@ struct kthread_work buffer_toggle_work;
 struct list_head post_fence_list;
 struct mutex post_fence_list_lock;
 static void osd_pan_display_fence(struct osd_fence_map_s *fence_map);
-static int osd_setting_blending_scope(u32 index);
-static int vpp_blend_setting_default(u32 index);
 
 static void *osd_timeline_create(void)
 {
@@ -2777,7 +2776,7 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 	const struct vinfo_s *vinfo;
 
 	if (!osd_hw.hwc_enable) {
-		if (index >= OSD1)
+		if (index >= OSD2)
 			return;
 	} else {
 		if (index >= OSD3)
@@ -3514,6 +3513,9 @@ static void osd_update_disp_freescale_enable(u32 index)
 	struct hw_osd_reg_s *osd_reg = &hw_osd_reg_array[index];
 	u32 data32 = 0x0;
 
+	if (osd_hw.osd_meson_dev.osd_ver != OSD_HIGH_ONE)
+		osd_reg = &hw_osd_reg_array[0];
+
 	if (osd_hw.scale_workaround)
 		vf_bank_len = 2;
 	else
@@ -3643,8 +3645,17 @@ static void osd_update_coef(u32 index)
 	int use_v_filter_mode, use_h_filter_mode;
 	int OSD_SCALE_COEF_IDX, OSD_SCALE_COEF;
 
-	OSD_SCALE_COEF_IDX = hw_osd_reg_array[index].osd_scale_coef_idx;
-	OSD_SCALE_COEF = hw_osd_reg_array[index].osd_scale_coef;
+	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+		OSD_SCALE_COEF_IDX =
+			hw_osd_reg_array[index].osd_scale_coef_idx;
+		OSD_SCALE_COEF =
+			hw_osd_reg_array[index].osd_scale_coef;
+	} else {
+		OSD_SCALE_COEF_IDX =
+			hw_osd_reg_array[0].osd_scale_coef_idx;
+		OSD_SCALE_COEF =
+			hw_osd_reg_array[0].osd_scale_coef;
+	}
 	use_v_filter_mode = osd_hw.use_v_filter_mode[index];
 	use_h_filter_mode = osd_hw.use_h_filter_mode[index];
 	if (osd_hw.scale_workaround) {
