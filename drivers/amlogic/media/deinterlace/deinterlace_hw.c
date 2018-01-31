@@ -387,6 +387,27 @@ void calc_lmv_base_mcinfo(unsigned int vf_height, unsigned long mcinfo_adr)
 	Wr(MCDI_LMVLCKEDEXT_1, lmv_lckedext[2]);
 }
 
+/*
+ * config pre hold ratio & mif request block len
+ * pass_ratio = (pass_cnt + 1)/(pass_cnt + 1 + hold_cnt + 1)
+ */
+static void pre_hold_block_mode_config(void)
+{
+	if (is_meson_txlx_cpu()) {
+		/* setup pre process ratio to 66.6%*/
+		DI_Wr(DI_PRE_HOLD, (1 << 31) | (1 << 16) | 3);
+		/* block len, after block insert null req to balance reqs */
+		DI_Wr_reg_bits(DI_INP_GEN_REG3, 0, 4, 3);
+		DI_Wr_reg_bits(DI_MEM_GEN_REG3, 0, 4, 3);
+		DI_Wr_reg_bits(DI_CHAN2_GEN_REG3, 0, 4, 3);
+		DI_Wr_reg_bits(DI_IF1_GEN_REG3, 0, 4, 3);
+		DI_Wr_reg_bits(DI_IF2_GEN_REG3, 0, 4, 3);
+		DI_Wr_reg_bits(VD1_IF0_GEN_REG3, 0, 4, 3);
+	} else {
+		DI_Wr(DI_PRE_HOLD, (1 << 31) | (31 << 16) | 31);
+	}
+}
+
 void di_hw_init(bool pd_enable, bool mc_enable)
 {
 	unsigned short fifo_size_vpp = 0xc0;
@@ -428,8 +449,7 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 		di_pre_gate_control(true, true);
 		di_post_gate_control(true);
 	}
-	DI_Wr(DI_PRE_HOLD, (1 << 31) | (31 << 16) | 31);
-
+	pre_hold_block_mode_config();
 	ma_di_init();
 	ei_hw_init();
 	nr_hw_init();
