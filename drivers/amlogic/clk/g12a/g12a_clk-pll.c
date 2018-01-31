@@ -51,8 +51,13 @@
 /* G12A */
 
 //#define G12A_PCIE_PLL_CNTL 0x400106c8
+#define G12A_PCIE_PLL_CNTL0_0  0x200c04c8
+#define G12A_PCIE_PLL_CNTL0_1  0x300c04c8
+#define G12A_PCIE_PLL_CNTL0_2  0x340c04c8
+#define G12A_PCIE_PLL_CNTL0_3  0x140c04c8
 #define G12A_PCIE_PLL_CNTL1  0x00000000
-#define G12A_PCIE_PLL_CNTL2  0x00001000
+#define G12A_PCIE_PLL_CNTL2  0x00001100
+#define G12A_PCIE_PLL_CNTL2_ 0x00001000
 #define G12A_PCIE_PLL_CNTL3  0x10058e00
 #define G12A_PCIE_PLL_CNTL4  0x000100c0
 #define G12A_PCIE_PLL_CNTL4_ 0x008100c0
@@ -61,8 +66,8 @@
 
 #define G12A_PLL_CNTL1 0x00000000
 #define G12A_PLL_CNTL2 0x00000000
-#define G12A_PLL_CNTL3 0x0a691c20
-#define G12A_PLL_CNTL4 0x33071290
+#define G12A_PLL_CNTL3 0x0a691c00
+#define G12A_PLL_CNTL4 0x33771290
 #define G12A_PLL_CNTL5 0x39270000
 #define G12A_PLL_CNTL6 0x50540000
 
@@ -213,10 +218,9 @@ static int meson_g12a_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		|| !strcmp(clk_hw_get_name(hw), "sys_pll")) {
 		void *cntlbase = pll->base + p->reg_off;
 
-		writel((readl(cntlbase) | MESON_PLL_RESET)
-			& (~MESON_PLL_ENABLE), cntlbase);
-
 		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+			writel(G12A_PCIE_PLL_CNTL0_0, cntlbase + (u64)(0*4));
+			writel(G12A_PCIE_PLL_CNTL0_1, cntlbase + (u64)(0*4));
 			writel(G12A_PCIE_PLL_CNTL1, cntlbase + (u64)(1*4));
 			writel(G12A_PCIE_PLL_CNTL2, cntlbase + (u64)(2*4));
 			writel(G12A_PCIE_PLL_CNTL3, cntlbase + (u64)(3*4));
@@ -227,9 +231,14 @@ static int meson_g12a_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 			writel(G12A_PCIE_PLL_CNTL4_, cntlbase + (u64)(4*4));
 			udelay(10);
 			/*set pcie_apll_afc_start bit*/
-			writel(readl(cntlbase) | (1 << 26), cntlbase);
+			writel(G12A_PCIE_PLL_CNTL0_2, cntlbase + (u64)(0*4));
+			writel(G12A_PCIE_PLL_CNTL0_3, cntlbase + (u64)(0*4));
 			udelay(10);
+			writel(G12A_PCIE_PLL_CNTL2_, cntlbase + (u64)(2*4));
+			goto OUT;
 		} else {
+			writel((readl(cntlbase) | MESON_PLL_RESET)
+				& (~MESON_PLL_ENABLE), cntlbase);
 			writel(G12A_PLL_CNTL1, cntlbase + (u64)1*4);
 			writel(G12A_PLL_CNTL2, cntlbase + (u64)2*4);
 			writel(G12A_PLL_CNTL3, cntlbase + (u64)3*4);
@@ -363,25 +372,26 @@ static void meson_g12a_pll_disable(struct clk_hw *hw)
 	struct parm *p = &pll->n;
 	unsigned long flags = 0;
 
-	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
-			|| !strcmp(clk_hw_get_name(hw), "hifi_pll")
-			|| !strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-		if (pll->lock)
-			spin_lock_irqsave(pll->lock, flags);
+	if (pll->lock)
+		spin_lock_irqsave(pll->lock, flags);
 
-		writel(readl(pll->base + p->reg_off) & (~MESON_PLL_ENABLE),
-			pll->base + p->reg_off);
+	writel(readl(pll->base + p->reg_off) & (~MESON_PLL_ENABLE),
+		pll->base + p->reg_off);
 
-		if (pll->lock)
-			spin_unlock_irqrestore(pll->lock, flags);
-	}
-
+	if (pll->lock)
+		spin_unlock_irqrestore(pll->lock, flags);
 }
 
 const struct clk_ops meson_g12a_pll_ops = {
 	.recalc_rate	= meson_g12a_pll_recalc_rate,
 	.round_rate	= meson_g12a_pll_round_rate,
 	.set_rate	= meson_g12a_pll_set_rate,
+	.enable		= meson_g12a_pll_enable,
+	.disable	= meson_g12a_pll_disable,
+};
+
+const struct clk_ops meson_g12a_pcie_pll_ops = {
+	.recalc_rate	= meson_g12a_pll_recalc_rate,
 	.enable		= meson_g12a_pll_enable,
 	.disable	= meson_g12a_pll_disable,
 };
