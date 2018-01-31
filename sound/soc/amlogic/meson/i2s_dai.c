@@ -285,34 +285,35 @@ static int aml_dai_i2s_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
 	struct aml_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-	int srate, mclk_rate, ret;
+	int srate, ret, mclk_rate;
 
 	srate = params_rate(params);
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		if (i2s->audin_fifo_src == 3) {
-			mclk_rate = srate * DEFAULT_MCLK_RATIO_SR;
-			ret = clk_set_rate(dmic_pub->clk_mclk, mclk_rate * 10);
-			if (ret)
-				return ret;
-			ret = clk_set_parent(dmic_pub->clk_pdm,
+	if ((substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+			&& (i2s->audin_fifo_src == 3)) {
+		mclk_rate = srate * DEFAULT_MCLK_RATIO_SR;
+		ret = clk_set_rate(dmic_pub->clk_mclk, mclk_rate*40);
+		if (ret)
+			return ret;
+		ret = clk_set_parent(dmic_pub->clk_pdm,
 				dmic_pub->clk_mclk);
-			if (ret)
-				return ret;
-			ret = clk_set_rate(dmic_pub->clk_pdm, mclk_rate/4);
-			if (ret)
-				return ret;
-			return  0;
-		}
-	}
-	if (i2s->old_samplerate != srate) {
-		if (audio_in_source == 0 || substream->stream
-				== SNDRV_PCM_STREAM_PLAYBACK) {
-			i2s->old_samplerate = srate;
-			mclk_rate = srate * DEFAULT_MCLK_RATIO_SR;
-			aml_i2s_set_amclk(i2s, mclk_rate);
-		}
-	}
+		if (ret)
+			return ret;
 
+		ret = clk_set_rate(dmic_pub->clk_pdm,
+				clk_get_rate(dmic_pub->clk_mclk)/160);
+		if (ret)
+			return ret;
+	}
+	if (i2s->audin_fifo_src == 3) {/*pdm in as audioin*/
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK
+				|| i2s->old_samplerate == 0)
+			i2s->old_samplerate = srate;
+	} else { /*i2s in as audioin*/
+		if (i2s->old_samplerate != srate)
+			i2s->old_samplerate = srate;
+	}
+	mclk_rate = i2s->old_samplerate * DEFAULT_MCLK_RATIO_SR;
+	aml_i2s_set_amclk(i2s, mclk_rate);
 	return 0;
 }
 

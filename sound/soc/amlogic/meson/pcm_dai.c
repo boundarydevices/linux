@@ -54,7 +54,7 @@ static int aml_pcm_set_clk(struct aml_pcm *pcm, unsigned long rate)
 {
 	int ret = 0;
 
-	ret = clk_set_rate(pcm->clk_mpll, rate * 10);
+	ret = clk_set_rate(pcm->clk_mpll, rate * 60);
 	if (ret) {
 		pr_info("Cannot set pcm mpll\n");
 		return ret;

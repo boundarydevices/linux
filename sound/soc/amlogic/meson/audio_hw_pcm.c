@@ -165,7 +165,7 @@ RESET_FIFO:
 		aml_audin_write(AUDIN_FIFO1_CTRL,
 			(1 << 15) |    /* urgent request */
 			(1 << 11) |    /* channel */
-			(4 << 8) |     /* endian */
+			(6 << 8) |     /* endian */
 			(2 << 3) |     /* PCMIN input selection */
 			(1 << 2) |     /* load address */
 			(0 << 1) |     /* reset fifo */
@@ -587,7 +587,7 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 			(1 << 5) |      /* circular buffer */
 			(0 << 4) |      /* use register set 0 always */
 			(1 << 3) |      /* urgent request */
-			(4 << 0)        /* endian */
+			(6 << 0)        /* endian */
 		);
 
 		aml_audin_write(AUDOUT_CTRL,
@@ -605,7 +605,7 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 			(1 << 5) |      /* circular buffer */
 			(0 << 4) |      /* use register set 0 always */
 			(1 << 3) |       /* urgent request */
-			(4 << 0)         /* endian */
+			(6 << 0)         /* endian */
 		);
 
 		/* pcmout control3 */
