@@ -229,6 +229,9 @@ static u32 hdmiin_frame_check_cnt;
 		switch_vpu_mem_pd_vmod(VPU_VIU_VD1, VPU_MEM_POWER_ON); \
 		switch_vpu_mem_pd_vmod(VPU_AFBC_DEC, VPU_MEM_POWER_ON); \
 		switch_vpu_mem_pd_vmod(VPU_DI_POST, VPU_MEM_POWER_ON); \
+		if (!legacy_vpp) \
+			switch_vpu_mem_pd_vmod( \
+				VPU_VD1_SCALE, VPU_MEM_POWER_ON); \
 	} while (0)
 #define VD2_MEM_POWER_ON() \
 	do { \
@@ -8786,6 +8789,10 @@ static void do_vpu_delay_work(struct work_struct *work)
 				switch_vpu_mem_pd_vmod(
 					VPU_DI_POST,
 					VPU_MEM_POWER_DOWN);
+				if (!legacy_vpp)
+					switch_vpu_mem_pd_vmod(
+						VPU_VD1_SCALE,
+						VPU_MEM_POWER_DOWN);
 			}
 
 			if ((vpu_delay_work_flag &
