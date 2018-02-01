@@ -67,7 +67,7 @@ void init_reg_map(unsigned int type);
 	do {							\
 		unsigned int st = 0, cnt = 10;			\
 		while (cnt--) {                                 \
-			udelay(5);				\
+			udelay(50);				\
 			st = !!(hd_read_reg(reg) & (1 << 31));	\
 			if (st)					\
 				break;				\

@@ -1677,7 +1677,6 @@ static void set_phy_by_mode(unsigned int mode)
 		default:
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb8282);
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x28b0ff3b);
-			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0800);
 			break;
 		}
 		break;
