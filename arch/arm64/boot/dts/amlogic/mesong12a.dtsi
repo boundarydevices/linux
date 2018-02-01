@@ -508,6 +508,12 @@
 				reg=<0x0 0x220 0x0 0x4>;
 			};
 
+			aoclkc: clock-controller@0 {
+				compatible = "amlogic,g12a-aoclkc";
+				#clock-cells = <1>;
+				reg = <0x0 0x0 0x0 0x320>;
+			};
+
 			pwm_AO_ab: pwm@7000 {
 				compatible = "amlogic,txlx-ao-pwm";
 				reg = <0x0 0x7000  0x0 0x20>;
