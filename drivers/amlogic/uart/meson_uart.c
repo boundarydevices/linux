@@ -92,6 +92,8 @@
 #define AML_UART_BAUD_USE		BIT(23)
 #define AML_UART_BAUD_XTAL		BIT(24)
 #define AML_UART_BAUD_XTAL_TICK	BIT(26)
+#define AML_UART_BAUD_XTAL_DIV2	BIT(27)
+
 
 #define AML_UART_PORT_MAX		16
 #define AML_UART_DEV_NAME		"ttyS"
@@ -552,9 +554,15 @@ static void meson_uart_change_speed(struct uart_port *port, unsigned long baud)
 			dev_info(&pdev->dev, "ttyS%d use xtal(24M) %d change %ld to %ld\n",
 				port->line, port->uartclk,
 				mup->baud, baud);
-			val = (port->uartclk + baud / 2) / baud  - 1;
-			val |= (AML_UART_BAUD_USE|AML_UART_BAUD_XTAL
-				|AML_UART_BAUD_XTAL_TICK);
+			if (xtal_tick_en == 1) {
+				val = (port->uartclk + baud / 2) / baud  - 1;
+				val |= (AML_UART_BAUD_USE|AML_UART_BAUD_XTAL
+					|AML_UART_BAUD_XTAL_TICK);
+			} else if (xtal_tick_en == 2) {
+				val = (port->uartclk/2 + baud / 2) / baud  - 1;
+				val |= (AML_UART_BAUD_USE|AML_UART_BAUD_XTAL
+					|AML_UART_BAUD_XTAL_DIV2);
+			}
 		} else {
 			dev_info(&pdev->dev, "ttyS%d use xtal(8M) %d change %ld to %ld\n",
 				port->line, port->uartclk,
@@ -1103,10 +1111,12 @@ static int meson_uart_probe(struct platform_device *pdev)
 
 	if (!xtal_tick_en) {
 		prop = of_get_property(pdev->dev.of_node, "xtal_tick_en", NULL);
-		if (prop)
+		if (prop) {
 			xtal_tick_en = of_read_ulong(prop, 1);
+			if (xtal_tick_en == 1)
+				xtal_tick_en = 0;
+		}
 	}
-	xtal_tick_en = 0;
 
 	port->iotype = UPIO_MEM;
 	port->mapbase = res_mem->start;

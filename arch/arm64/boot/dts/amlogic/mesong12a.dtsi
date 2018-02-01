@@ -524,6 +524,14 @@
 			function = "uart_ao_a";
 		};
 	};
+
+	ao_b_uart_pins:ao_b_uart {
+		mux {
+			groups = "uart_ao_tx_b_2",
+				"uart_ao_rx_b_3";
+			function = "uart_ao_b";
+		};
+	};
 };
 
 &pinctrl_periphs {
@@ -549,6 +557,30 @@
 			function = "sdcard";
 			input-enable;
 			bias-pull-up;
+		};
+	};
+
+	a_uart_pins:a_uart {
+		mux {
+			groups = "uart_tx_a",
+				"uart_rx_a";
+			function = "uart_a";
+		};
+	};
+
+	b_uart_pins:b_uart {
+		mux {
+			groups = "uart_tx_b",
+				"uart_rx_b";
+			function = "uart_b";
+		};
+	};
+
+	c_uart_pins:c_uart {
+		mux {
+			groups = "uart_tx_c",
+				"uart_rx_c";
+			function = "uart_c";
 		};
 	};
 };

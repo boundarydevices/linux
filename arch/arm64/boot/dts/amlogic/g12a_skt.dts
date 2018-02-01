@@ -28,6 +28,10 @@
 
 	aliases {
 		serial0 = &uart_AO;
+		serial1 = &uart_A;
+		serial2 = &uart_B;
+		serial3 = &uart_C;
+		serial4 = &uart_AO_B;
 	};
 
 	memory@00000000 {
@@ -174,6 +178,48 @@
 			 * 4:SD combo (IO+mem) card
 			 */
 		};
+	};
+
+	uart_A: serial@ffd24000 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xffd24000 0x0 0x18>;
+		interrupts = <0 26 1>;
+		status = "disable";
+		clocks = <&xtal
+			&clkc CLKID_UART0>;
+		clock-names = "clk_uart",
+			"clk_gate";
+		fifosize = < 128 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&a_uart_pins>;
+	};
+
+	uart_B: serial@ffd23000 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xffd23000 0x0 0x18>;
+		interrupts = <0 75 1>;
+		status = "disable";
+		clocks = <&xtal
+			&clkc CLKID_UART1>;
+		clock-names = "clk_uart",
+			"clk_gate";
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&b_uart_pins>;
+	};
+
+	uart_C: serial@ffd22000 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0xffd22000 0x0 0x18>;
+		interrupts = <0 93 1>;
+		status = "disable";
+		clocks = <&xtal
+			&clkc CLKID_UART1>;
+		clock-names = "clk_uart",
+			"clk_gate";
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&c_uart_pins>;
 	};
 
 	canvas{
@@ -682,10 +728,22 @@
 		status = "okay";
 		clocks = <&xtal>;
 		clock-names = "clk_uart";
-		xtal_tick_en = <1>;
+		xtal_tick_en = <2>;
 		fifosize = < 64 >;
 		pinctrl-names = "default";
 		pinctrl-0 = <&ao_uart_pins>;
 		support-sysrq = <0>;    /* 0 not support , 1 support */
+	};
+
+	uart_AO_B: serial@4000 {
+		compatible = "amlogic, meson-uart";
+		reg = <0x0 0x4000 0x0 0x18>;
+		interrupts = <0 197 1>;
+		status = "disable";
+		clocks = <&xtal>;
+		clock-names = "clk_uart";
+		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_b_uart_pins>;
 	};
 };
