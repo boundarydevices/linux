@@ -349,8 +349,10 @@ int vout_func_vout_suspend(int index)
 
 	if (index == 1)
 		p_server = vout_module.curr_vout_server;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
 	else if (index == 2)
 		p_server = vout2_module.curr_vout_server;
+#endif
 
 	if (!IS_ERR_OR_NULL(p_server)) {
 		if (p_server->op.vout_suspend)
