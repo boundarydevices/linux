@@ -4316,9 +4316,6 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 
 	get_vscale_skip_count(zoom_start_x_lines);
 
-	if (!di_post_stru.toggle_flag)
-		return 0;
-
 	if (IS_ERR_OR_NULL(di_buf))
 		return 0;
 	else if (IS_ERR_OR_NULL(di_buf->di_buf_dup_p[0]))
@@ -5645,7 +5642,7 @@ static void di_pre_size_change(unsigned short width,
 	RDMA_WR(DI_PRE_SIZE, (width - 1) |
 		((height - 1) << 16));
 	if (mcpre_en) {
-		blkhsize = (width + 3) / 5;
+		blkhsize = (width + 4) / 5;
 		RDMA_WR(MCDI_HV_SIZEIN, height
 			| (width << 16));
 		RDMA_WR(MCDI_HV_BLKSIZEIN, (overturn ? 3 : 0) << 30
