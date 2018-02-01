@@ -5560,11 +5560,11 @@ SET_FILTER:
 				set_value =
 					((1 << 20) |
 					(1 << 16) | /* post bld premult*/
-					(1 << 8)); /* post src */
+					(2 << 8)); /* post src */
 			else if (vpp_misc_set & VPP_VD2_PREBLEND)
 				set_value =
 					((1 << 4) | /* pre bld premult*/
-					(1 << 0)); /* pre bld src 1 */
+					(2 << 0)); /* pre bld src 1 */
 			VSYNC_WR_MPEG_REG(
 				VD2_BLEND_SRC_CTRL + cur_dev->vpp_off,
 				set_value);
@@ -5575,9 +5575,7 @@ SET_FILTER:
 			if ((vpp_misc_set & VPP_VD2_PREBLEND)
 				&& (vpp_misc_set & VPP_VD1_PREBLEND))
 				set_value |= VPP_PREBLEND_EN;
-			if ((vpp_misc_set & VPP_VD2_POSTBLEND)
-				|| (vpp_misc_set & VPP_VD1_POSTBLEND))
-				set_value |= VPP_POSTBLEND_EN;
+			set_value |= VPP_POSTBLEND_EN;
 			VSYNC_WR_MPEG_REG(
 				VPP_MISC + cur_dev->vpp_off,
 				set_value);
