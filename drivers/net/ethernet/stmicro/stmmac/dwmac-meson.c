@@ -19,17 +19,45 @@
 #include <linux/platform_device.h>
 #include <linux/stmmac.h>
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
+#include <linux/bitops.h>
+#include <linux/of_device.h>
 #include <linux/gpio/consumer.h>
 #include "dwmac1000.h"
 #include "dwmac_dma.h"
 #endif
 #include "stmmac_platform.h"
 
-#define ETHMAC_SPEED_100	BIT(1)
+#define ETHMAC_SPEED_10	BIT(1)
+
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+/* Ethernet register for G12A PHY */
+#define ETH_PLL_CTL0 0x44
+#define ETH_PLL_CTL1 0x48
+#define ETH_PLL_CTL2 0x4C
+#define ETH_PLL_CTL3 0x50
+#define ETH_PLL_CTL4 0x54
+#define ETH_PLL_CTL5 0x58
+#define ETH_PLL_CTL6 0x5C
+#define ETH_PLL_CTL7 0x60
+
+#define ETH_PHY_CNTL0 0x80
+#define ETH_PHY_CNTL1 0x84
+#define ETH_PHY_CNTL2 0x88
+
+#define	ETH_USE_EPHY BIT(5)
+#define	ETH_EPHY_FROM_MAC BIT(6)
+
+struct meson_dwmac_data {
+	bool g12a_phy;
+};
+#endif
 
 struct meson_dwmac {
 	struct device	*dev;
 	void __iomem	*reg;
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	const struct meson_dwmac_data *data;
+#endif
 };
 
 static void meson6_dwmac_fix_mac_speed(void *priv, unsigned int speed)
@@ -81,24 +109,39 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 	struct resource *res;
 	u32 mc_val, cali_val, internal_phy;
 	void __iomem *addr = NULL;
-	void __iomem *PREG_ETH_REG0;
-	void __iomem *PREG_ETH_REG1;
-	void __iomem *PREG_ETH_REG2;
-	void __iomem *PREG_ETH_REG3;
-	void __iomem *PREG_ETH_REG4;
+	void __iomem *PREG_ETH_REG0 = NULL;
+	void __iomem *PREG_ETH_REG1 = NULL;
+	void __iomem *PREG_ETH_REG2 = NULL;
+	void __iomem *PREG_ETH_REG3 = NULL;
+	void __iomem *PREG_ETH_REG4 = NULL;
 
 	/*map reg0 and reg 1 addr.*/
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		dev_err(&pdev->dev, "Unable to get resource(%d)\n", __LINE__);
+		return NULL;
+	}
+
 	addr = devm_ioremap_resource(dev, res);
+	if (IS_ERR(addr)) {
+		dev_err(&pdev->dev, "Unable to map base (%d)\n", __LINE__);
+		return NULL;
+	}
+
 	PREG_ETH_REG0 = addr;
 	PREG_ETH_REG1 = addr + 4;
 	pr_debug("REG0:REG1 = %p :%p\n", PREG_ETH_REG0, PREG_ETH_REG1);
 
 	if (!of_property_read_u32(np, "internal_phy", &internal_phy)) {
-		res = NULL;
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
 		if (res) {
 		addr = devm_ioremap_resource(dev, res);
+
+		if (IS_ERR(addr)) {
+			dev_err(&pdev->dev, "Unable to map %d\n", __LINE__);
+			return NULL;
+		}
+
 		PREG_ETH_REG2 = addr;
 		PREG_ETH_REG3 = addr + 4;
 		PREG_ETH_REG4 = addr + 8;
@@ -165,6 +208,128 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 	pr_debug("Ethernet: pinmux setup ok\n");
 	return PREG_ETH_REG0;
 }
+
+static int dwmac_meson_cfg_pll(void __iomem *base_addr)
+{
+	void __iomem *ETH_PHY_config_addr = base_addr;
+
+	writel(0x19C0040A, ETH_PHY_config_addr + ETH_PLL_CTL0);
+	writel(0x927E0000, ETH_PHY_config_addr + ETH_PLL_CTL1);
+	writel(0x705B49e5, ETH_PHY_config_addr + ETH_PLL_CTL2);
+	writel(0x00000000, ETH_PHY_config_addr + ETH_PLL_CTL3);
+	usleep_range(100, 200);
+	writel(0x19C0040A, ETH_PHY_config_addr + ETH_PLL_CTL0);
+	return 0;
+}
+
+static int dwmac_meson_cfg_analog(void __iomem *base_addr)
+{
+	void __iomem *ETH_PHY_config_addr = base_addr;
+
+	/*Analog*/
+	writel(0x20200000, ETH_PHY_config_addr + ETH_PLL_CTL5);
+	writel(0x0000c002, ETH_PHY_config_addr + ETH_PLL_CTL6);
+	writel(0x00000023, ETH_PHY_config_addr + ETH_PLL_CTL7);
+
+	return 0;
+}
+
+static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
+{
+	void __iomem *ETH_PHY_config_addr = base_addr;
+
+	/*config phyid should between  a 0~0xffffffff*/
+	/*please don't use 44000181, this has been used by internal phy*/
+	writel(0x33000180, ETH_PHY_config_addr + ETH_PHY_CNTL0);
+
+	/*use_phy_smi | use_phy_ip | co_clkin from eth_phy_top*/
+	writel(0x260, ETH_PHY_config_addr + ETH_PHY_CNTL2);
+
+	writel(0x74043, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(0x34043, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(0x74043, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	return 0;
+}
+/*for newer then g12a use this dts architecture for dts*/
+static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct device *dev = &pdev->dev;
+	struct pinctrl *pin_ctl;
+	struct resource *res = NULL;
+	u32 mc_val;
+	void __iomem *addr = NULL;
+	void __iomem *REG_ETH_reg0_addr = NULL;
+	void __iomem *ETH_PHY_config_addr = NULL;
+	u32 internal_phy = 0;
+
+	pr_debug("g12a_network_interface_setup\n");
+	/*map PRG_ETH_REG */
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eth_cfg");
+	if (!res) {
+		dev_err(&pdev->dev, "Unable to get resource(%d)\n", __LINE__);
+		return NULL;
+	}
+
+	addr = devm_ioremap_resource(dev, res);
+	if (IS_ERR(addr)) {
+		dev_err(&pdev->dev, "Unable to map base (%d)\n", __LINE__);
+		return NULL;
+	}
+
+	REG_ETH_reg0_addr = addr;
+	pr_info(" REG0:Addr = %p\n", REG_ETH_reg0_addr);
+
+	/*map ETH_PLL address*/
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eth_pll");
+	if (!res) {
+		dev_err(&pdev->dev, "Unable to get resource(%d)\n", __LINE__);
+		return NULL;
+	}
+
+	addr = devm_ioremap_resource(dev, res);
+	if (IS_ERR(addr)) {
+		dev_err(&pdev->dev, "Unable to map clk base (%d)\n", __LINE__);
+		return NULL;
+	}
+
+	ETH_PHY_config_addr = addr;
+
+	/*PRG_ETH_REG0*/
+	if (of_property_read_u32(np, "mc_val", &mc_val))
+		pr_info("Miss mc_val for REG0\n");
+	else
+		writel(mc_val, REG_ETH_reg0_addr);
+
+	/*read phy option*/
+	if (of_property_read_u32(np, "internal_phy", &internal_phy) != 0) {
+		pr_info("Dts miss internal_phy item\n");
+		return REG_ETH_reg0_addr;
+	}
+
+	/* Config G12A internal PHY */
+	if (internal_phy) {
+		/*PLL*/
+		dwmac_meson_cfg_pll(ETH_PHY_config_addr);
+		dwmac_meson_cfg_analog(ETH_PHY_config_addr);
+		dwmac_meson_cfg_ctrl(ETH_PHY_config_addr);
+		pin_ctl = devm_pinctrl_get_select
+			(&pdev->dev, "internal_eth_pins");
+		return REG_ETH_reg0_addr;
+	}
+
+	/*config extern phy*/
+	if (internal_phy == 0) {
+		/*TODO*/
+		pin_ctl = devm_pinctrl_get_select
+			(&pdev->dev, "external_eth_pins");
+		return REG_ETH_reg0_addr;
+	}
+
+	pr_info("should not happen\n");
+	return REG_ETH_reg0_addr;
+}
+
 #endif
 static int meson6_dwmac_probe(struct platform_device *pdev)
 {
@@ -188,7 +353,13 @@ static int meson6_dwmac_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
-	dwmac->reg = network_interface_setup(pdev);
+	dwmac->data = (const struct meson_dwmac_data *)
+			of_device_get_match_data(&pdev->dev);
+
+	if (dwmac->data->g12a_phy)
+		dwmac->reg = g12a_network_interface_setup(pdev);
+	else
+		dwmac->reg = network_interface_setup(pdev);
 	/* Custom initialisation (if needed) */
 	if (plat_dat->init) {
 		ret = plat_dat->init(pdev, plat_dat->bsp_priv);
@@ -219,9 +390,31 @@ err_remove_config_dt:
 	return ret;
 }
 
-static const struct of_device_id meson6_dwmac_match[] = {
-	{ .compatible = "amlogic,meson6-dwmac" },
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
+static const struct meson_dwmac_data gxbb_dwmac_data = {
+	.g12a_phy	= false,
+};
+
+static const struct meson_dwmac_data g12a_dwmac_data = {
+	.g12a_phy	= true,
+};
+#endif
+static const struct of_device_id meson6_dwmac_match[] = {
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	{
+		.compatible	= "amlogic, meson6-dwmac",
+		.data		= &gxbb_dwmac_data,
+	},
+	{
+		.compatible	= "amlogic, gxbb-eth-dwmac",
+		.data		= &gxbb_dwmac_data,
+	},
+	{
+		.compatible	= "amlogic, g12a-eth-dwmac",
+		.data		= &g12a_dwmac_data,
+	},
+#else
+	{ .compatible = "amlogic,meson6-dwmac" },
 	{ .compatible = "amlogic, gxbb-eth-dwmac" },
 #endif
 	{ }

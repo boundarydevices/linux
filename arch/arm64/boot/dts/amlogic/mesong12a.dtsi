@@ -1128,6 +1128,34 @@
 			function = "cec_ao_ee";
 		};
 	};
+
+	internal_eth_pins: internal_eth_pins {
+		mux {
+			groups = "eth_link_led",
+				"eth_act_led";
+			function = "eth";
+		};
+	};
+
+	external_eth_pins: external_eth_pins {
+		mux {
+			groups = "eth_mdio",
+			"eth_mdc",
+			"eth_rgmii_rx_clk",
+			"eth_rx_dv",
+			"eth_rxd0",
+			"eth_rxd1",
+			"eth_rxd2_rgmii",
+			"eth_rxd3_rgmii",
+			"eth_rgmii_tx_clk",
+			"eth_txen",
+			"eth_txd0",
+			"eth_txd1",
+			"eth_txd2_rgmii",
+			"eth_txd3_rgmii";
+			function = "eth";
+		};
+	};
 };
 
 &pinctrl_aobus {
