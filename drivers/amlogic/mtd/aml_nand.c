@@ -2087,19 +2087,18 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 	aml_chip->bch_info = NAND_ECC_BCH60_1K;
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
 		aml_chip->bch_info = NAND_ECC_BCH8_1K;
-	if (nand_scan(mtd, controller->chip_num) == 0) {
-		chip->options = 0;
-		chip->options |=  NAND_SKIP_BBTSCAN;
-		chip->options |= NAND_NO_SUBPAGE_WRITE;
-		if (aml_nand_scan(mtd, controller->chip_num)) {
-			err = -ENXIO;
-			goto exit_error;
-		}
-	} else {
-		pr_info("pre nand scan failed\n");
+
+	mtd_set_ooblayout(mtd, &aml_ooblayout_ops);
+	mtd_ooblayout_free(mtd, 0, &oobregion);
+	mtd->oobavail = oobregion.length;
+	chip->options = 0;
+	chip->options |=  NAND_SKIP_BBTSCAN;
+	chip->options |= NAND_NO_SUBPAGE_WRITE;
+	if (aml_nand_scan(mtd, controller->chip_num)) {
 		err = -ENXIO;
 		goto exit_error;
 	}
+
 	valid_chip_num = 0;
 	for (i = 0; i < controller->chip_num; i++) {
 		if (aml_chip->valid_chip[i])
@@ -2114,9 +2113,6 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		err = -ENXIO;
 		goto exit_error;
 	}
-	mtd_set_ooblayout(mtd, &aml_ooblayout_ops);
-	mtd_ooblayout_free(mtd, 0, &oobregion);
-	mtd->oobavail = oobregion.length;
 
 	aml_chip->virtual_page_size = mtd->writesize;
 	aml_chip->virtual_block_size = mtd->erasesize;
@@ -2154,17 +2150,6 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		goto exit_error;
 	}
 #endif
-	/*
-	 *if (chip->buffers)
-	 *	kfree(chip->buffers);
-	 *if (mtd->oobsize >= NAND_MAX_OOBSIZE)
-	 *	chip->buffers =
-	 *	kzalloc((mtd->writesize + 3 * mtd->oobsize), GFP_KERNEL);
-	 *else
-	 *	chip->buffers =
-	 *	kzalloc((mtd->writesize + 3 * NAND_MAX_OOBSIZE), GFP_KERNEL);
-	 */
-
 	if (chip->buffers == NULL) {
 		pr_info("no memory for flash data buf\n");
 		err = -ENOMEM;

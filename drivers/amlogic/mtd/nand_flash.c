@@ -1404,7 +1404,6 @@ static struct aml_nand_flash_dev *aml_nand_get_flash_type(struct mtd_info *mtd,
 	return type;
 }
 
-
 static int aml_nand_scan_ident(struct mtd_info *mtd, int maxchips)
 {
 	int i, busw, nand_maf_id, valid_chip_num = 1;
@@ -1413,6 +1412,11 @@ static int aml_nand_scan_ident(struct mtd_info *mtd, int maxchips)
 	struct aml_nand_flash_dev *aml_type;
 	u8 dev_id[MAX_ID_LEN], onfi_features[4];
 	unsigned int temp_chip_shift;
+
+	chip->cmdfunc = aml_nand_command;
+	chip->waitfunc = aml_nand_wait;
+	chip->erase = aml_nand_erase_cmd;
+	chip->write_page = aml_nand_write_page;
 
 	/* Get buswidth to select the correct functions */
 	busw = chip->options & NAND_BUSWIDTH_16;
@@ -1537,11 +1541,6 @@ static int aml_nand_scan_ident(struct mtd_info *mtd, int maxchips)
 	/* overide bootloader's size consdering info page */
 	if (!strcmp(mtd->name, NAND_BOOT_NAME))
 		mtd->size =  BOOT_TOTAL_PAGES * mtd->writesize;
-
-	chip->cmdfunc = aml_nand_command;
-	chip->waitfunc = aml_nand_wait;
-	chip->erase = aml_nand_erase_cmd;
-	chip->write_page = aml_nand_write_page;
 
 	return 0;
 }

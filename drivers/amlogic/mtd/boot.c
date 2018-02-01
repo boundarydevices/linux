@@ -294,7 +294,7 @@ int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
 					memset(oob_buf, 0xff, user_byte_num);
 				} else {
 					mtd->ecc_stats.failed++;
-					pr_info("page0 read ecc fail at blk0 chip0\n");
+					pr_info("page0 read ecc fail\n");
 				}
 			} else
 				mtd->ecc_stats.corrected += stat;
