@@ -142,21 +142,22 @@
 		reg = <0x0 0xffe05000 0x0 0x2000>;
 		interrupts = <0 190 1>;
 
-		pinctrl-names = "sd_clk_cmd_pins", "sd_all_pins";
-		pinctrl-0 = <&sd_clk_cmd_pins>;
-		pinctrl-1 = <&sd_all_pins>;
+		pinctrl-names = "sd_all_pins",
+			"sd_clk_cmd_pins";
+		pinctrl-0 = <&sd_all_pins>;
+		pinctrl-1 = <&sd_clk_cmd_pins>;
 
 		clocks = <&clkc CLKID_SD_EMMC_B>,
 			<&clkc CLKID_SD_EMMC_B_P0_COMP>,
 			<&clkc CLKID_FCLK_DIV2>,
-			<&clkc CLKID_FCLK_DIV5>;
-		clock-names = "core", "clkin0", "clkin1", "clkin2";
+			<&clkc CLKID_FCLK_DIV5>,
+			<&xtal>;
+		clock-names = "core", "clkin0", "clkin1", "clkin2", "xtal";
 
 		bus-width = <4>;
 		cap-sd-highspeed;
 		cap-mmc-highspeed;
 		max-frequency = <100000000>;
-		non-removable;
 		disable-wp;
 		sd {
 			pinname = "sd";
@@ -164,15 +165,15 @@
 			caps = "MMC_CAP_4_BIT_DATA",
 				 "MMC_CAP_MMC_HIGHSPEED",
 				 "MMC_CAP_SD_HIGHSPEED",
-				 "MMC_CAP_NONREMOVABLE",
 				 "MMC_CAP_UHS_SDR12",
 				 "MMC_CAP_UHS_SDR25",
-				 "MMC_CAP_UHS_SDR50",
-				 "MMC_PM_KEEP_POWER",
-				 "MMC_CAP_NONREMOVABLE"; /**ptm debug */
+				 "MMC_CAP_UHS_SDR50";
 			f_min = <400000>;
 			f_max = <200000000>;
 			max_req_size = <0x20000>; /**128KB*/
+			gpio_dat3 = <&gpio GPIOC_4 GPIO_ACTIVE_HIGH>;
+			jtag_pin = <&gpio GPIOC_0 GPIO_ACTIVE_HIGH>;
+			gpio_cd = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
 			card_type = <5>;
 			/* 3:sdio device(ie:sdio-wifi),
 			 * 4:SD combo (IO+mem) card

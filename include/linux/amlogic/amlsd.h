@@ -20,7 +20,8 @@
 #include <linux/of_gpio.h>
 
 /* ptm or pxp simulation */
-#define CONFIG_MESON_CPU_EMULATOR
+/* #define CONFIG_MESON_CPU_EMULATOR */
+/* #define SD_EMMC_DEBUG_BOARD */
 /* hardcode clock, for debug or bringup */
 /* #define SD_EMMC_CLK_CTRL	(1) */
 /* #define SD_EMMC_PIN_CTRL	(1) */

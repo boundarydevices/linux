@@ -569,6 +569,26 @@
 			bias-pull-up;
 		};
 	};
+	sd_1bit_pins:sd_1bit_pins {
+		mux {
+			groups = "sdcard_d0_c",
+					"sdcard_cmd_c",
+					"sdcard_clk_c";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	ao_to_sd_uart_pins:ao_to_sd_uart_pins {
+		mux {
+			groups = "uart_tx_ao_a_c4",
+					"uart_rx_ao_a_c5";
+			function = "uart_ao_a_ee";
+			bias-pull-up;
+			input-enable;
+		};
+	};
 
 	all_nand_pins: all_nand_pins {
 		mux {

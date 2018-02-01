@@ -669,7 +669,7 @@ static int aml_is_sdjtag(struct amlsd_host *host)
 
 static int aml_is_sduart(struct amlsd_host *host)
 {
-#ifdef CONFIG_MESON_CPU_EMULATOR
+#ifndef SD_EMMC_DEBUG_BOARD
 	return 0;
 #else
 	int in = 0, i;
@@ -705,6 +705,9 @@ static int aml_is_sduart(struct amlsd_host *host)
 /* int n=0; */
 static int aml_uart_switch(struct amlsd_host *host, bool on)
 {
+#ifndef SD_EMMC_DEBUG_BOARD
+	return on;
+#else
 	struct pinctrl *pc;
 	char *name[2] = {
 		"sd_to_ao_uart_pins",
@@ -716,6 +719,7 @@ static int aml_uart_switch(struct amlsd_host *host, bool on)
 	mutex_lock(&host->pinmux_lock);
 	pc = aml_devm_pinctrl_get_select(host, name[on]);
 	mutex_unlock(&host->pinmux_lock);
+#endif
 	return on;
 }
 
@@ -786,6 +790,9 @@ static void aml_jtag_switch_sd(struct amlsd_host *host)
 
 static void aml_jtag_switch_ao(struct amlsd_host *host)
 {
+#ifndef SD_EMMC_DEBUG_BOARD
+
+#else
 	struct pinctrl *pc;
 	int i;
 
@@ -798,6 +805,7 @@ static void aml_jtag_switch_ao(struct amlsd_host *host)
 			break;
 		mdelay(1);
 	}
+#endif
 }
 #endif
 
