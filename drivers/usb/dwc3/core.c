@@ -1141,7 +1141,10 @@ static int dwc3_probe(struct platform_device *pdev)
 				    &dwc->hsphy_interface);
 	device_property_read_u32(dev, "snps,quirk-frame-length-adjustment",
 				 &dwc->fladj);
-
+#ifdef CONFIG_AMLOGIC_USB
+	dwc->super_speed_support = device_property_read_bool(dev,
+				"snps,super_speed_support");
+#endif
 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
 	dwc->tx_de_emphasis = tx_de_emphasis;
 

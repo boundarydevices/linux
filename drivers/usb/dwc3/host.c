@@ -113,6 +113,11 @@ int dwc3_host_init(struct dwc3 *dwc)
 		}
 	}
 
+#ifdef CONFIG_AMLOGIC_USB
+	if (dwc->super_speed_support)
+		props[prop_idx++].name = "usb3-support";
+#endif
+
 	phy_create_lookup(dwc->usb2_generic_phy, "usb2-phy",
 			  dev_name(&xhci->dev));
 	phy_create_lookup(dwc->usb3_generic_phy, "usb3-phy",

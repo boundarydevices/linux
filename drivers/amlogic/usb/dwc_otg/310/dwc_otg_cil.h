@@ -1057,6 +1057,8 @@ struct dwc_otg_core_if {
 	uint8_t stop_adpprb;
 
 	int controller_type;
+
+	uint32_t phy_interface;
 };
 
 #ifdef DEBUG

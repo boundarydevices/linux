@@ -982,6 +982,7 @@ struct dwc3 {
 	unsigned		tx_de_emphasis_quirk:1;
 	unsigned		tx_de_emphasis:2;
 #ifdef CONFIG_AMLOGIC_USB
+	unsigned		super_speed_support:1;
 	struct clk		*general_clk;
 #endif
 };

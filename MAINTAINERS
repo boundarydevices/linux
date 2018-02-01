@@ -13531,6 +13531,10 @@ F: drivers/usb/phy/phy-aml-new-usb.h
 F: drivers/usb/phy/phy-aml-new-usb.c
 F: drivers/usb/phy/phy-aml-new-usb2.c
 F: drivers/usb/phy/phy-aml-new-usb3.c
+F: drivers/usb/phy/phy-aml-new-usb-v2.h
+F: drivers/usb/phy/phy-aml-new-usb-v2.c
+F: drivers/usb/phy/phy-aml-new-usb2-v2.c
+F: drivers/usb/phy/phy-aml-new-usb3-v2.c
 F: drivers/usb/phy/phy-aml-usb.h
 F: drivers/usb/phy/phy-aml-usb.c
 F: drivers/usb/phy/phy-aml-usb2.c
@@ -13541,6 +13545,7 @@ F: include/linux/amlogic/usb-gxbbtv.h
 F: include/linux/amlogic/usb-gxl.h
 F: include/linux/amlogic/usb-gxbb.h
 F: include/linux/amlogic/usbtype.h
+F: include/linux/amlogic/usb-v2.h
 
 AMLOGIC scpi cpufreq
 M:  jianxin.pan <jianxin.pan@amlogic.com>

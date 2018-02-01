@@ -1472,6 +1472,12 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 		break;
 	}
 
+	/* AMLOGIC USB PHY interface */
+	if (core_if->phy_interface == 1)
+		usbcfg.b.usbtrdtim = 9;
+	else
+		usbcfg.b.usbtrdtim = 5;
+
 	DWC_WRITE_REG32(&global_regs->gusbcfg, usbcfg.d32);
 
 #ifdef CONFIG_USB_DWC_OTG_LPM

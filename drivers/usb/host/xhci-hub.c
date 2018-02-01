@@ -255,6 +255,7 @@ static void xhci_usb3_hub_descriptor(struct usb_hcd *hcd, struct xhci_hcd *xhci,
 	unsigned int i;
 
 	ports = xhci->num_usb3_ports;
+
 	xhci_common_hub_descriptor(xhci, desc, ports);
 	desc->bDescriptorType = USB_DT_SS_HUB;
 	desc->bDescLength = USB_DT_SS_HUB_SIZE;
@@ -279,12 +280,22 @@ static void xhci_usb3_hub_descriptor(struct usb_hcd *hcd, struct xhci_hcd *xhci,
 static void xhci_hub_descriptor(struct usb_hcd *hcd, struct xhci_hcd *xhci,
 		struct usb_hub_descriptor *desc)
 {
-
+#ifdef CONFIG_AMLOGIC_USB
+	if (xhci->quirks & XHCI_AML_SUPER_SPEED_SUPPORT) {
+		if (hcd->speed >= HCD_USB3)
+			xhci_usb3_hub_descriptor(hcd, xhci, desc);
+		else
+			xhci_usb2_hub_descriptor(hcd, xhci, desc);
+	} else {
+		if (hcd->speed < HCD_USB3)
+			xhci_usb2_hub_descriptor(hcd, xhci, desc);
+	}
+#else
 	if (hcd->speed >= HCD_USB3)
 		xhci_usb3_hub_descriptor(hcd, xhci, desc);
 	else
 		xhci_usb2_hub_descriptor(hcd, xhci, desc);
-
+#endif
 }
 
 static unsigned int xhci_port_speed(unsigned int port_status)

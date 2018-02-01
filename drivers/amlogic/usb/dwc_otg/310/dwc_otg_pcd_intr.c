@@ -1127,6 +1127,12 @@ int32_t dwc_otg_pcd_handle_enum_done_intr(dwc_otg_pcd_t *pcd)
 		/* Full or low speed */
 		gusbcfg.b.usbtrdtim = 9;
 	}
+
+	/* AMLOGIC USB PHY interface */
+	if (GET_CORE_IF(pcd)->phy_interface == 1)
+		gusbcfg.b.usbtrdtim = 9;
+	else
+		gusbcfg.b.usbtrdtim = 5;
 	DWC_WRITE_REG32(&global_regs->gusbcfg, gusbcfg.d32);
 
 	/* Clear interrupt */
