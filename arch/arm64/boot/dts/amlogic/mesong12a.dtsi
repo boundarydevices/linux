@@ -621,7 +621,9 @@
 	a_uart_pins:a_uart {
 		mux {
 			groups = "uart_tx_a",
-				"uart_rx_a";
+				"uart_rx_a",
+				"uart_cts_a",
+				"uart_rts_a";
 			function = "uart_a";
 		};
 	};
@@ -639,6 +641,13 @@
 			groups = "uart_tx_c",
 				"uart_rx_c";
 			function = "uart_c";
+		};
+	};
+
+	wifi_32k_pins:wifi_32k_pins {
+		mux {
+			groups = "pwm_e";
+			function = "pwm_e";
 		};
 	};
 };

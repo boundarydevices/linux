@@ -136,6 +136,39 @@
 		};
 	};
 
+	bt-dev{
+		compatible = "amlogic, bt-dev";
+		dev_name = "bt-dev";
+		status = "okay";
+		gpio_reset = <&gpio       GPIOX_17       GPIO_ACTIVE_HIGH>;
+	};
+
+	wifi{
+		compatible = "amlogic, aml_wifi";
+		dev_name = "aml_wifi";
+		status = "okay";
+		interrupt_pin = <&gpio       GPIOX_7       GPIO_ACTIVE_HIGH>;
+		irq_trigger_type = "GPIO_IRQ_LOW";
+		power_on_pin = <&gpio       GPIOX_6       GPIO_ACTIVE_HIGH>;
+		dhd_static_buf;	//if use bcm wifi, config dhd_static_buf
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_32k_pins>;
+		pwm_config = <&wifi_pwm_conf>;
+	};
+
+	wifi_pwm_conf:wifi_pwm_conf{
+		pwm_channel1_conf {
+			pwms = <&pwm_ef MESON_PWM_0 30040 0>;
+			duty-cycle = <15020>;
+			times = <10>;
+		};
+		pwm_channel2_conf {
+			pwms = <&pwm_ef MESON_PWM_2 30030 0>;
+			duty-cycle = <15015>;
+			times = <12>;
+		};
+	};
+
 	sd_emmc_b:sd@ffe05000 {
 		status = "okay";
 		compatible = "amlogic, meson-mmc-g12a";
@@ -274,7 +307,7 @@
 		compatible = "amlogic, meson-uart";
 		reg = <0x0 0xffd24000 0x0 0x18>;
 		interrupts = <0 26 1>;
-		status = "disable";
+		status = "okay";
 		clocks = <&xtal
 			&clkc CLKID_UART0>;
 		clock-names = "clk_uart",
@@ -899,4 +932,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&ao_b_uart_pins>;
 	};
+};
+
+&pwm_ef {
+	status = "okay";
 };
