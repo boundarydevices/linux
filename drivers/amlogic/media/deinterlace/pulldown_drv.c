@@ -49,7 +49,7 @@ static void pulldown_mode_init(struct pulldown_detected_s *pd_config)
 }
 
 static void pulldown_wnd_config(struct pulldown_detected_s *pd_config,
-	unsigned short **wins)
+	unsigned short wins[][3])
 {
 	unsigned int i = 0;
 
@@ -273,7 +273,7 @@ unsigned int pulldown_detection(struct pulldown_detected_s *res,
 
 		if (flm32 && (pldn_cmb0 == 1)) {
 			pulldown_wnd_config(res,
-				(unsigned short **)dectres.rPstCYWnds);
+				dectres.rPstCYWnds);
 		} else if (dectres.rF22Flag > 1 &&
 			dectres.rFlmPstMod == 1 &&
 			pldn_cmb0 == 1) {
@@ -283,7 +283,7 @@ unsigned int pulldown_detection(struct pulldown_detected_s *res,
 			} else if (dectres.rFlmPstGCm == 0 &&
 				pldn_cmb0 > 1 && pldn_cmb0 <= 5) {
 				pulldown_wnd_config(res,
-					(unsigned short **)dectres.rPstCYWnds);
+					dectres.rPstCYWnds);
 				/* 1-->only film-mode
 				 * 2-->windows-->mtn
 				 * 3-->windows-->detected
@@ -308,7 +308,7 @@ unsigned int pulldown_detection(struct pulldown_detected_s *res,
 			if ((dectres.rFlmPstGCm == 1) && (pldn_cmb1 > 0)
 			    && (pldn_cmb1 <= 5)) {
 				pulldown_wnd_config(res,
-					(unsigned short **)dectres.rPstCYWnds);
+					dectres.rPstCYWnds);
 				/*
 				 * 1-->normal set in pulldown
 				 * wnd config func

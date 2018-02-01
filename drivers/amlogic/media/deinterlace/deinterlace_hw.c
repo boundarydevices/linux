@@ -2065,9 +2065,9 @@ void read_pulldown_info(unsigned int *glb_frm_mot_num,
 	 * addr will increase by 1 automatically
 	 */
 	DI_Wr(DI_INFO_ADDR, 1);
-	*glb_frm_mot_num = Rd(DI_INFO_DATA);
+	*glb_frm_mot_num = (Rd(DI_INFO_DATA)&0xffffff);
 	DI_Wr(DI_INFO_ADDR, 4);
-	*glb_fid_mot_num = Rd(DI_INFO_DATA);
+	*glb_fid_mot_num = (Rd(DI_INFO_DATA)&0xffffff);
 }
 
 void read_new_pulldown_info(struct FlmModReg_t *pFMReg)
