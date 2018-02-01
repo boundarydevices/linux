@@ -63,6 +63,7 @@ struct aml_card_data {
 	struct snd_soc_dai_link *dai_link;
 	int spk_mute_gpio;
 	bool spk_mute_active_low;
+	struct gpio_desc *avout_mute_desc;
 	struct loopback_cfg lb_cfg;
 	struct timer_list timer;
 	struct work_struct work;
@@ -751,6 +752,14 @@ static int aml_card_parse_gpios(struct device_node *node,
 		ret = snd_soc_add_card_controls(soc_card, card_controls,
 					ARRAY_SIZE(card_controls));
 	}
+
+	priv->avout_mute_desc = gpiod_get(dev,
+				"avout_mute",
+				GPIOD_OUT_HIGH);
+
+	gpiod_direction_output(priv->avout_mute_desc,
+		GPIOF_OUT_INIT_HIGH);
+	pr_info("set av out GPIOF_OUT_INIT_HIGH!\n");
 
 	return 0;
 }

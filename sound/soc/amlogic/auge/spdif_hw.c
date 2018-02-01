@@ -269,3 +269,13 @@ void aml_spdifout_get_aed_info(int spdifout_id,
 	if (frddrtype)
 		*frddrtype = (val >> 4) & 0x7;
 }
+
+void spdifoutb_to_hdmitx_ctrl(void)
+{
+	audiobus_write(EE_AUDIO_TOHDMITX_CTRL0,
+		1 << 31
+		| 0 << 2 /* spdif_clk_inv */
+		| 1 << 1 /* spdif_out_b */
+		| 1 << 0 /* spdif_clk_b */
+	);
+}

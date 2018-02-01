@@ -1432,8 +1432,9 @@ void auge_toacodec_ctrl(int tdmout_id)
 	// TODO: check skew for g12a
 	audiobus_write(EE_AUDIO_TOACODEC_CTRL0,
 		1 << 31
-		| tdmout_id << 12 /* data 0*/
+		| ((tdmout_id << 2)) << 12 /* data 0*/
 		| tdmout_id << 8 /* lrclk */
+		| 1 << 7         /* Bclk_cap_inv*/
 		| tdmout_id << 4 /* bclk */
 		| tdmout_id << 0 /* mclk */
 		);

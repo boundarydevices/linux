@@ -33,5 +33,6 @@ config AMLOGIC_SND_SOC_AUGE
 # All the supported SoCs
 source "sound/soc/amlogic/meson/Kconfig"
 source "sound/soc/amlogic/auge/Kconfig"
+source "sound/soc/amlogic/common/Kconfig"
 
 endif # AMLOGIC_SND_SOC

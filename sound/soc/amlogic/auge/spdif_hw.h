@@ -53,4 +53,5 @@ extern void aml_spdifout_select_aed(bool enable, int spdifout_id);
 extern void aml_spdifout_get_aed_info(int spdifout_id,
 	int *bitwidth, int *frddrtype);
 
+extern void spdifoutb_to_hdmitx_ctrl(void);
 #endif

@@ -322,7 +322,9 @@
 #define    PDM_MUTE_VALUE                                      0x00d
 
 /* clk pad */
-#define    EE_AUDIO_MST_PAD_CTRL                               0x007
+#define    EE_AUDIO_MST_PAD_CTRL0                              0x007
+#define    EE_AUDIO_MST_PAD_CTRL1                              0x008
+#define    EE_AUDIO_SW_RESET                                   0x009
 /* spdifout_b clk*/
 #define    EE_AUDIO_CLK_SPDIFOUT_B_CTRL                        0x02d
 

@@ -843,6 +843,14 @@
 			function = "pwm_e";
 		};
 	};
+
+	c_i2c_master_pin1:c_i2c_pin1 {
+		mux {
+			groups = "i2c3_sck_a",
+				"i2c3_sda_a";
+			function = "i2c3";
+		};
+	};
 };
 
 &pinctrl_aobus {

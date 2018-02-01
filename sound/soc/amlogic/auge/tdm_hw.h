@@ -105,4 +105,8 @@ extern void aml_tdmout_select_aed(bool enable, int tdmout_id);
 extern void aml_tdmout_get_aed_info(int tdmout_id,
 	int *bitwidth, int *frddrtype);
 
+extern void aml_tdm_clk_pad_select(
+	struct aml_audio_controller *actrl,
+	int mpad, int mclk_sel,
+	int tdm_index, int clk_sel);
 #endif

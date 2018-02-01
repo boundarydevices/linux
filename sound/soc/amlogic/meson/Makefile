@@ -17,7 +17,6 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += snd-soc-i2s-dai.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += snd-soc-i2s2-dai.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += snd-soc-pcm-dai.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += snd-soc-hw.o
-obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += notify.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += snd-soc-hw-pcm2bt.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += snd-soc-spdif-dai.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_MESON) += snd-soc-dmic.o

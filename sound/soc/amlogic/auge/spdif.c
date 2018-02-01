@@ -37,6 +37,8 @@
 #include "spdif_hw.h"
 #include "audio_utils.h"
 
+#include <linux/amlogic/media/sound/aout_notify.h>
+
 #define DRV_NAME "aml_spdif"
 
 #define SPDIF_A	0
@@ -396,10 +398,33 @@ static int aml_dai_spdif_prepare(
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		struct frddr *fr = p_spdif->fddr;
+		enum frddr_dest dst;
+
+		switch (p_spdif->id) {
+		case 0:
+			dst = SPDIFOUT;
+			break;
+		case 1:
+			dst = SPDIFOUT_B;
+			break;
+		default:
+			dev_err(p_spdif->dev, "invalid id: %d\n", p_spdif->id);
+			return -EINVAL;
+		}
 
 		fifo_id = aml_frddr_get_fifo_id(fr);
-		aml_frddr_select_dst(fr, SPDIFOUT);
+		aml_frddr_select_dst(fr, dst);
 		aml_frddr_set_fifos(fr, 0x40, 0x20);
+
+		// TODO: TOHDMITX_CTRL0
+		if (p_spdif->id == 1) {
+			/* HDMI audio stream type ID */
+			#define AOUT_EVENT_IEC_60958_PCM	0x1
+
+			spdifoutb_to_hdmitx_ctrl();
+			aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM,
+				substream);
+		}
 	} else {
 		struct toddr *to = p_spdif->tddr;
 		unsigned int msb, lsb, toddr_type;
@@ -584,7 +609,7 @@ static struct snd_soc_dai_ops aml_dai_spdif_ops = {
 static struct snd_soc_dai_driver aml_spdif_dai[] = {
 	{
 		.name = "SPDIF",
-		.id = 0,
+		.id = 1,
 		.probe = aml_dai_spdif_probe,
 		.remove = aml_dai_spdif_remove,
 		.playback = {
@@ -604,7 +629,7 @@ static struct snd_soc_dai_driver aml_spdif_dai[] = {
 	},
 	{
 		.name = "SPDIF-B",
-		.id = 1,
+		.id = 2,
 		.probe = aml_dai_spdif_probe,
 		.remove = aml_dai_spdif_remove,
 		.playback = {
@@ -662,6 +687,12 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 		if (p_spdif->irq_spdifin < 0)
 			dev_err(dev, "platform_get_irq_byname failed\n");
 
+		/* spdif pinmux */
+		p_spdif->pin_ctl = devm_pinctrl_get_select(dev, "spdif_pins");
+		if (IS_ERR(p_spdif->pin_ctl)) {
+			dev_info(dev, "aml_spdif_get_pins error!\n");
+			return PTR_ERR(p_spdif->pin_ctl);
+		}
 	}
 
 	/* clock for spdif in */
@@ -689,13 +720,6 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 			"Can't set clk_spdifout parent clock\n");
 		ret = PTR_ERR(p_spdif->clk_spdifout);
 		return ret;
-	}
-
-	/* spdif pinmux */
-	p_spdif->pin_ctl = devm_pinctrl_get_select(dev, "spdif_pins");
-	if (IS_ERR(p_spdif->pin_ctl)) {
-		dev_info(dev, "aml_spdif_get_pins error!\n");
-		return PTR_ERR(p_spdif->pin_ctl);
 	}
 
 	return 0;
@@ -768,6 +792,7 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 	} else
 		dev_warn_once(dev,
 			"check whether to update spdif chipinfo\n");
+
 	pr_info("%s, spdif ID = %u\n", __func__, aml_spdif->id);
 
 	/* get audio controller */

@@ -76,6 +76,9 @@ struct tdm_chipinfo {
 
 	/* output en (oe) for pinmux */
 	bool oe_fn;
+
+	/* clk pad */
+	bool clk_pad_ctl;
 };
 
 struct aml_tdm {
@@ -570,6 +573,27 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 			stream, p_tdm->id, swap_val);
 	}
 
+
+	return 0;
+}
+
+static int aml_tdm_set_clk_pad(struct aml_tdm *p_tdm)
+{
+	unsigned int mpad, mclk_sel;
+
+	// TODO: update pad
+	if (p_tdm->id >= 1) {
+		mpad = p_tdm->id - 1;
+		mclk_sel = p_tdm->id;
+	} else {
+		mpad = 0;
+		mclk_sel = 0;
+	}
+
+	/* clk pad */
+	aml_tdm_clk_pad_select(p_tdm->actrl, mpad, mclk_sel,
+		p_tdm->id, p_tdm->clk_sel);
+
 	return 0;
 }
 
@@ -604,6 +628,12 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 	ret = aml_tdm_set_lanes(p_tdm, channels, substream->stream);
 	if (ret)
 		return ret;
+
+	if (p_tdm->chipinfo && p_tdm->chipinfo->clk_pad_ctl) {
+		ret = aml_tdm_set_clk_pad(p_tdm);
+		if (ret)
+			return ret;
+	}
 
 	return 0;
 }
@@ -952,20 +982,22 @@ struct tdm_chipinfo g12a_tdma_chipinfo = {
 	.id = TDM_A,
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
+	.clk_pad_ctl = true,
 };
 
 struct tdm_chipinfo g12a_tdmb_chipinfo = {
 	.id = TDM_B,
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
+	.clk_pad_ctl = true,
 };
 
 struct tdm_chipinfo g12a_tdmc_chipinfo = {
 	.id = TDM_C,
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
+	.clk_pad_ctl = true,
 };
-
 
 static const struct of_device_id aml_tdm_device_id[] = {
 	{

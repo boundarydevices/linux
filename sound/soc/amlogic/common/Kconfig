@@ -1,0 +1,7 @@
+menuconfig AMLOGIC_SND_SOC_COMMON
+        bool "Amlogic Common for ASoC"
+        default n
+        help
+                Say Y or M if you want to add support for common interface attached to
+                the Amlogic Asoc interface. You will also need
+                to select the audio interfaces to support below.

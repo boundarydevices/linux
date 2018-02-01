@@ -527,3 +527,48 @@ void aml_tdmout_get_aed_info(int tdmout_id,
 	if (frddrtype)
 		*frddrtype = (val >> 4) & 0x7;
 }
+
+void aml_tdm_clk_pad_select(
+	struct aml_audio_controller *actrl,
+	int mpad, int mclk_sel,
+	int tdm_index, int clk_sel)
+{
+	unsigned int reg, mask_offset, val_offset;
+
+	// TODO: fix mclk
+	if (mpad == 0) {
+		mask_offset = 0x7 << 0;
+		val_offset = mclk_sel << 0;
+	} else if (mpad == 1) {
+		mask_offset = 0x7 << 4;
+		val_offset = mclk_sel << 4;
+	} else {
+		pr_err("unknown tdm mpad:%d\n", mpad);
+		return;
+	}
+	reg = EE_AUDIO_MST_PAD_CTRL0;
+	aml_audiobus_update_bits(actrl, reg,
+		mask_offset, val_offset);
+
+	reg = EE_AUDIO_MST_PAD_CTRL1;
+	switch (tdm_index) {
+	case 0:
+		mask_offset = 0x7 << 16 | 0x7 << 0;
+		val_offset = clk_sel << 16 | clk_sel << 0;
+		break;
+	case 1:
+		mask_offset = 0x7 << 20 | 0x7 << 4;
+		val_offset = clk_sel << 20 | clk_sel << 4;
+		break;
+	case 2:
+		mask_offset = 0x7 << 24 | 0x7 << 8;
+		val_offset = clk_sel << 24 | clk_sel << 8;
+		break;
+	default:
+		pr_err("unknown tdm index:%d\n", tdm_index);
+		return;
+	}
+	aml_audiobus_update_bits(actrl, reg,
+		mask_offset, val_offset);
+
+}
