@@ -285,3 +285,7 @@
 		support-sysrq = <0>;	/* 0 not support , 1 support */
 	};
 };
+
+&audio_data{
+	status = "okay";
+};

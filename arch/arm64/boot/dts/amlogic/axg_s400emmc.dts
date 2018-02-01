@@ -1225,3 +1225,7 @@
 		pinctrl-0 = <&ao_b_uart_pins>;
 	};
 };
+
+&audio_data{
+	status = "okay";
+};

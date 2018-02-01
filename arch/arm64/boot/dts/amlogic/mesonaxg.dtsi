@@ -779,6 +779,12 @@
 			size = <16>;
 		};
 	};
+
+	audio_data: audio_data {
+		compatible = "amlogic, audio_data";
+		query_licence_cmd = <0x82000050>;
+		status = "disabled";
+	};
 };/* end of / */
 
 &pinctrl_aobus {
