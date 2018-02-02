@@ -241,7 +241,8 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
 			clkc->core_phase  = 2;
 		pr_info("%s: try set sd/emmc to DDR mode\n",
 			mmc_hostname(host->mmc));
-	} else if (timing == MMC_TIMING_MMC_HS)
+	} else if ((timing == MMC_TIMING_MMC_HS)
+		&& (host->data->chip_type < MMC_CHIP_G12A))
 		clkc->core_phase = 3;
 	else if ((timing == MMC_TIMING_MMC_HS200)
 			|| ((timing == MMC_TIMING_SD_HS)
