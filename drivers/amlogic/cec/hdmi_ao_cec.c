@@ -1919,7 +1919,6 @@ static ssize_t fun_cfg_show(struct class *cla,
 static ssize_t cec_version_show(struct class *cla,
 	struct class_attribute *attr, char *buf)
 {
-	CEC_INFO("driver date:%s\n", CEC_DRIVER_VERSION);
 	return sprintf(buf, "%d\n", cec_dev->cec_info.cec_version);
 }
 
@@ -2107,8 +2106,11 @@ static long hdmitx_cec_ioctl(struct file *f,
 		check_physical_addr_valid(20);
 		if (cec_dev->dev_type ==  DEV_TYPE_PLAYBACK && !phy_addr_test) {
 			/* physical address for mbox */
-			if (cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.valid == 0)
+			if (cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.valid
+			 == 0) {
+				mutex_unlock(&cec_dev->cec_ioctl_mutex);
 				return -EINVAL;
+			}
 			a = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.a;
 			b = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.b;
 			c = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.c;
@@ -2134,32 +2136,41 @@ static long hdmitx_cec_ioctl(struct file *f,
 		} else
 			tmp = cec_dev->phy_addr;
 
-		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		break;
 
 	case CEC_IOC_GET_VERSION:
 		tmp = cec_dev->cec_info.cec_version;
-		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		break;
 
 	case CEC_IOC_GET_VENDOR_ID:
 		tmp = cec_dev->v_data.vendor_id;
-		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		break;
 
 	case CEC_IOC_GET_PORT_NUM:
 		tmp = cec_dev->port_num;
-		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		break;
 
 	case CEC_IOC_GET_PORT_INFO:
 		port = kcalloc(cec_dev->port_num, sizeof(*port), GFP_KERNEL);
 		if (!port) {
 			CEC_ERR("no memory\n");
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
 		}
 		check_physical_addr_valid(20);
@@ -2180,6 +2191,7 @@ static long hdmitx_cec_ioctl(struct file *f,
 			port->physical_address = tmp & 0xffff;
 			if (copy_to_user(argp, port, sizeof(*port))) {
 				kfree(port);
+				mutex_unlock(&cec_dev->cec_ioctl_mutex);
 				return -EINVAL;
 			}
 		} else {
@@ -2187,6 +2199,7 @@ static long hdmitx_cec_ioctl(struct file *f,
 			init_cec_port_info(port, cec_dev);
 			if (copy_to_user(argp, port, sizeof(*port) * b)) {
 				kfree(port);
+				mutex_unlock(&cec_dev->cec_ioctl_mutex);
 				return -EINVAL;
 			}
 		}
@@ -2240,8 +2253,10 @@ static long hdmitx_cec_ioctl(struct file *f,
 		if (cec_dev->dev_type == DEV_TYPE_PLAYBACK)
 			tmp = tx_hpd;
 		else {
-			if (copy_from_user(&a, argp, _IOC_SIZE(cmd)))
+			if (copy_from_user(&a, argp, _IOC_SIZE(cmd))) {
+				mutex_unlock(&cec_dev->cec_ioctl_mutex);
 				return -EINVAL;
+			}
 			if (!a && cec_dev->dev_type == DEV_TYPE_TUNER)
 				tmp = tx_hpd;
 			else {	/* mixed for rx */
@@ -2252,8 +2267,10 @@ static long hdmitx_cec_ioctl(struct file *f,
 					tmp = 0;
 			}
 		}
-		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		break;
 
 	case CEC_IOC_ADD_LOGICAL_ADDR:
@@ -2278,8 +2295,10 @@ static long hdmitx_cec_ioctl(struct file *f,
 		break;
 
 	case CEC_IOC_SET_DEV_TYPE:
-		if (arg > DEV_TYPE_VIDEO_PROCESSOR)
+		if (arg > DEV_TYPE_VIDEO_PROCESSOR) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		cec_dev->dev_type = arg;
 		break;
 
@@ -2400,6 +2419,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto tag_cec_devm_err;
 	}
+	CEC_ERR("cec driver date:%s\n", CEC_DRIVER_VERSION);
 	cec_dev->dev_type = DEV_TYPE_PLAYBACK;
 	cec_dev->dbg_dev  = &pdev->dev;
 	cec_dev->tx_dev   = get_hdmitx_device();
