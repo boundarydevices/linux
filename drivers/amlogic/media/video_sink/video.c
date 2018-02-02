@@ -5570,7 +5570,12 @@ SET_FILTER:
 			set_value = vpp_misc_set;
 			set_value &=
 				((1 << 29) | VPP_CM_ENABLE |
-				(0x1ff << VPP_VD2_ALPHA_BIT) | 7);
+				(0x1ff << VPP_VD2_ALPHA_BIT) |
+				VPP_VD2_PREBLEND |
+				VPP_VD1_PREBLEND |
+				VPP_VD2_POSTBLEND |
+				VPP_VD1_POSTBLEND |
+				7);
 			if ((vpp_misc_set & VPP_VD2_PREBLEND)
 				&& (vpp_misc_set & VPP_VD1_PREBLEND))
 				set_value |= VPP_PREBLEND_EN;
@@ -8852,9 +8857,12 @@ static int __init video_early_init(void)
 #endif
 #endif			/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 #else
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
-			WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0xfff,
-				VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
+	if (!legacy_vpp)
+		WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0x1000,
+			VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
+	else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
+		WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0xfff,
+			VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
 #endif
 
 #if 1			/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */

@@ -67,11 +67,10 @@ static update_func_t hw_func_array[HW_REG_INDEX_MAX] = {
 		spin_lock_irqsave(&osd_lock, lock_flags); \
 		raw_local_save_flags(fiq_flag); \
 		local_fiq_disable(); \
-		if (!osd_hw.osd_meson_dev.has_rdma || \
-			!osd_hw.hw_rdma_en) \
-			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
-		else \
+		if (osd_hw.hw_rdma_en || osd_hw.osd_use_latch) \
 			osd_hw.reg[cmd_idx].update_func(osd_idx); \
+		else \
+			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
 		raw_local_irq_restore(fiq_flag); \
 		spin_unlock_irqrestore(&osd_lock, lock_flags); \
 	} while (0)
@@ -79,11 +78,10 @@ static update_func_t hw_func_array[HW_REG_INDEX_MAX] = {
 #define add_to_update_list(osd_idx, cmd_idx) \
 	do { \
 		spin_lock_irqsave(&osd_lock, lock_flags); \
-		if (!osd_hw.osd_meson_dev.has_rdma || \
-			!osd_hw.hw_rdma_en) \
-			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
-		else \
+		if (osd_hw.hw_rdma_en || osd_hw.osd_use_latch) \
 			osd_hw.reg[cmd_idx].update_func(osd_idx); \
+		else \
+			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
 		spin_unlock_irqrestore(&osd_lock, lock_flags); \
 	} while (0)
 #endif
@@ -111,8 +109,8 @@ static update_func_t hw_func_array[HW_REG_INDEX_MAX] = {
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_VSYNC_RDMA
 #define remove_from_update_list(osd_idx, cmd_idx) \
 	do { \
-		if (!osd_hw.osd_meson_dev.has_rdma || \
-			!osd_hw.hw_rdma_en) \
+		if (!osd_hw.hw_rdma_en && \
+			!osd_hw.osd_use_latch) \
 			(osd_hw.updated[osd_idx] &= ~(1<<cmd_idx)); \
 	} while (0)
 #else
