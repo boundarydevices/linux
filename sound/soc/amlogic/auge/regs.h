@@ -377,7 +377,7 @@
 /* TOACODEC Registers */
 #define    EE_AUDIO_TOACODEC_CTRL0                             0x1d0
 /* TOHDMITX Registers */
-#define    EE_AUDIO_TOHDMITX_CTRL0                             0x1d0
+#define    EE_AUDIO_TOHDMITX_CTRL0                             0x1d1
 
 /* acodec reset */
 #define    EE_RESET1                                           0x002

@@ -35,6 +35,9 @@
 #include "regs.h"
 #include "ddr_mngr.h"
 
+/*#define G12A_PTM*/
+#define CLK_INTEGER_MODE
+
 static struct snd_pcm_hardware aml_pdm_hardware = {
 	.info			=
 					SNDRV_PCM_INFO_MMAP |
@@ -706,8 +709,6 @@ static int aml_pdm_dai_trigger(
 	return 0;
 }
 
-/*#define G12A_PTM*/
-
 static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 				int clk_id, unsigned int freq, int dir)
 {
@@ -720,18 +721,26 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 #ifdef G12A_PTM
 	clk_set_rate(p_pdm->dclk_srcpll, 24576000);
 #else
+#ifdef CLK_INTEGER_MODE
+	clk_set_rate(p_pdm->clk_pdm_sysclk,
+		sysclk_srcpll_freq / 4);
+#else
 	clk_set_rate(p_pdm->clk_pdm_sysclk,
 		sysclk_srcpll_freq / 5);
+#endif
 	if (dclk_srcpll_freq == 0)
 		clk_set_rate(p_pdm->dclk_srcpll, 24576000);
 #endif
-
 	if (pdm_dclk == 1)
 		clk_set_rate(p_pdm->clk_pdm_dclk, 1024000);
 	else if (pdm_dclk == 2)
 		clk_set_rate(p_pdm->clk_pdm_dclk, 768000);
 	else
 		clk_set_rate(p_pdm->clk_pdm_dclk, 3072000);
+
+	pr_info("pdm pdm_sysclk:%lu clk_pdm_dclk:%lu\n",
+		clk_get_rate(p_pdm->clk_pdm_sysclk),
+		clk_get_rate(p_pdm->clk_pdm_dclk));
 
 	return 0;
 }

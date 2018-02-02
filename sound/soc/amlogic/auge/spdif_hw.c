@@ -274,6 +274,7 @@ void spdifoutb_to_hdmitx_ctrl(void)
 {
 	audiobus_write(EE_AUDIO_TOHDMITX_CTRL0,
 		1 << 31
+		| 1 << 3 /* spdif_clk_cap_inv */
 		| 0 << 2 /* spdif_clk_inv */
 		| 1 << 1 /* spdif_out_b */
 		| 1 << 0 /* spdif_clk_b */

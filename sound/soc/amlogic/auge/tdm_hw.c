@@ -264,7 +264,10 @@ void aml_tdm_set_format(
 		 * that is, together with the last bit of the previous
 		 * data word.
 		 */
-		bclkout_skew = 1;
+		if (p_config->sclk_ws_inv)
+			bclkout_skew = 2;
+		else
+			bclkout_skew = 1;
 		bclkin_skew = 3;
 
 		if (capture_active)
