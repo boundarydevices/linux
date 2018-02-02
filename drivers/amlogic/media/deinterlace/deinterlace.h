@@ -201,7 +201,7 @@ struct di_dev_s {
 	unsigned long clkb_max_rate;
 	unsigned long clkb_min_rate;
 	struct list_head   pq_table_list;
-	struct mutex       pq_lock;
+	atomic_t	       pq_flag;
 	unsigned char	   di_event;
 	unsigned int	   di_irq;
 	unsigned int	   flags;

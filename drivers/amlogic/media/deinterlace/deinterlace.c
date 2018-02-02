@@ -5620,6 +5620,25 @@ static struct rdma_op_s di_rdma_op = {
 	NULL
 };
 #endif
+
+static void di_load_pq_table(void)
+{
+	struct di_pq_parm_s *pos = NULL, *tmp = NULL;
+
+	if (atomic_read(&de_devp->pq_flag) == 0 &&
+		(de_devp->flags & DI_LOAD_REG_FLAG)) {
+		atomic_set(&de_devp->pq_flag, 1);
+		list_for_each_entry_safe(pos, tmp,
+			&de_devp->pq_table_list, list) {
+			di_load_regs(pos);
+			list_del(&pos->list);
+			di_pq_parm_destroy(pos);
+		}
+		de_devp->flags &= ~DI_LOAD_REG_FLAG;
+		atomic_set(&de_devp->pq_flag, 0);
+	}
+}
+
 static void di_pre_size_change(unsigned short width,
 	unsigned short height, unsigned short vf_type)
 {
@@ -5653,6 +5672,7 @@ static void di_pre_size_change(unsigned short width,
 			RDMA_WR(MCDI_FIELD_MV, 0);
 		}
 	}
+	di_load_pq_table();
 }
 static bool need_bypass(struct vframe_s *vf)
 {
@@ -5796,21 +5816,6 @@ static void di_reg_process_irq(void)
 		first_field_type = (vframe->type & VIDTYPE_TYPEMASK);
 		di_pre_size_change(vframe->width, nr_height,
 				first_field_type);
-
-		if (de_devp->flags & DI_LOAD_REG_FLAG) {
-			struct di_pq_parm_s *pos = NULL, *tmp = NULL;
-
-			mutex_lock(&de_devp->pq_lock);
-			list_for_each_entry_safe(pos, tmp,
-					&de_devp->pq_table_list, list) {
-				di_load_regs(pos);
-				list_del(&pos->list);
-				di_pq_parm_destroy(pos);
-			}
-			de_devp->flags &= ~DI_LOAD_REG_FLAG;
-			mutex_unlock(&de_devp->pq_lock);
-		}
-
 
 		di_pre_stru.mtn_status =
 			adpative_combing_config(vframe->width,
@@ -6013,19 +6018,6 @@ static int di_task_handle(void *data)
 			}
 			mutex_unlock(&de_devp->cma_mutex);
 			#endif
-			if (de_devp->flags & DI_LOAD_REG_FLAG) {
-				struct di_pq_parm_s *pos = NULL, *tmp = NULL;
-
-				mutex_lock(&de_devp->pq_lock);
-				list_for_each_entry_safe(pos, tmp,
-					&de_devp->pq_table_list, list) {
-					di_load_regs(pos);
-					list_del(&pos->list);
-					di_pq_parm_destroy(pos);
-				}
-				de_devp->flags &= ~DI_LOAD_REG_FLAG;
-				mutex_unlock(&de_devp->pq_lock);
-			}
 		}
 	}
 
@@ -6735,8 +6727,9 @@ static long di_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		tab_flag = TABLE_NAME_DI | TABLE_NAME_NR | TABLE_NAME_MCDI |
 			TABLE_NAME_DEBLOCK | TABLE_NAME_DEMOSQUITO;
 		if (tmp_pq_s.table_name & tab_flag) {
-			pr_info("[DI] load 0x%x pq table len %u.\n",
-				tmp_pq_s.table_name, tmp_pq_s.table_len);
+			pr_info("[DI] load 0x%x pq table len %u %s.\n",
+				tmp_pq_s.table_name, tmp_pq_s.table_len,
+				init_flag?"directly":"later");
 		} else {
 			pr_err("[DI] load 0x%x wrong pq table.\n",
 				tmp_pq_s.table_name);
@@ -6756,26 +6749,32 @@ static long di_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (init_flag) {
 			di_load_regs(di_pq_ptr);
 			di_pq_parm_destroy(di_pq_ptr);
-		} else {
+			break;
+		}
+		if (atomic_read(&de_devp->pq_flag) == 0) {
+			atomic_set(&de_devp->pq_flag, 1);
 			if (di_devp->flags & DI_LOAD_REG_FLAG) {
 				struct di_pq_parm_s *pos = NULL, *tmp = NULL;
-
-				mutex_lock(&de_devp->pq_lock);
 				list_for_each_entry_safe(pos, tmp,
 					&di_devp->pq_table_list, list) {
-					if (di_pq_ptr->pq_parm.table_name &
+					if (di_pq_ptr->pq_parm.table_name ==
 						pos->pq_parm.table_name) {
+						pr_info("[DI] remove 0x%x table.\n",
+						pos->pq_parm.table_name);
 						list_del(&pos->list);
 						di_pq_parm_destroy(pos);
 					}
 				}
-				mutex_unlock(&de_devp->pq_lock);
 			}
-			mutex_lock(&de_devp->pq_lock);
 			list_add_tail(&di_pq_ptr->list,
 				&di_devp->pq_table_list);
 			di_devp->flags |= DI_LOAD_REG_FLAG;
-			mutex_unlock(&di_devp->pq_lock);
+			atomic_set(&de_devp->pq_flag, 0);
+		} else {
+			pr_err("[DI] please retry table name 0x%x.\n",
+			di_pq_ptr->pq_parm.table_name);
+			di_pq_parm_destroy(di_pq_ptr);
+			ret = -EFAULT;
 		}
 		break;
 	default:
@@ -7088,7 +7087,7 @@ static int di_probe(struct platform_device *pdev)
 	}
 	mutex_init(&di_devp->cma_mutex);
 	INIT_LIST_HEAD(&di_devp->pq_table_list);
-	mutex_init(&di_devp->pq_lock);
+	atomic_set(&di_devp->pq_flag, 0);
 	di_devp->di_irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
 	pr_info("di_irq:%d\n",
 		di_devp->di_irq);
@@ -7200,7 +7199,6 @@ static int di_remove(struct platform_device *pdev)
 		clk_disable_unprepare(di_devp->vpu_clkb);
 	di_hw_uninit();
 	di_devp->di_event = 0xff;
-	mutex_destroy(&di_devp->pq_lock);
 	kthread_stop(di_devp->task);
 	hrtimer_cancel(&di_pre_hrtimer);
 	tasklet_disable(&di_pre_tasklet);

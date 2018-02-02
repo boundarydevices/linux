@@ -2474,7 +2474,8 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 		regs_p++;
 		DI_Wr(addr, value);
 		if (pq_load_dbg == 2)
-			pr_info("[%u][0x%x] = [0x%x]\n", i, addr, value);
+			pr_info("[%u][0x%x] = [0x%x] %s\n", i, addr,
+				value, Rd(addr) != value?"fail":"success");
 	}
 }
 
