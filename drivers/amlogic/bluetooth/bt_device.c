@@ -57,6 +57,17 @@ static void bt_device_init(struct bt_dev_data *pdata)
 	if (pdata->gpio_en > 0)
 		gpio_request(pdata->gpio_en, BT_RFKILL);
 
+	if (pdata->gpio_hostwake > 0) {
+		gpio_request(pdata->gpio_hostwake, BT_RFKILL);
+
+	if ((pdata->power_on_pin_OD) && (!pdata->power_low_level)) {
+		gpio_direction_input(pdata->gpio_hostwake);
+		} else {
+			gpio_direction_output(pdata->gpio_hostwake,
+				!pdata->power_low_level);
+		}
+	}
+
 }
 
 static void bt_device_deinit(struct bt_dev_data *pdata)
@@ -66,6 +77,9 @@ static void bt_device_deinit(struct bt_dev_data *pdata)
 
 	if (pdata->gpio_en > 0)
 		gpio_free(pdata->gpio_en);
+
+	if (pdata->gpio_hostwake > 0)
+		gpio_free(pdata->gpio_hostwake);
 
 }
 
@@ -133,6 +147,7 @@ static void bt_device_off(struct bt_dev_data *pdata)
 			set_usb_bt_power(0);
 		}
 	}
+
 	msleep(20);
 }
 
@@ -143,10 +158,10 @@ static int bt_set_block(void *data, bool blocked)
 	pr_info("BT_RADIO going: %s\n", blocked ? "off" : "on");
 
 	if (!blocked) {
-		pr_info("BCM_BT: going ON\n");
+		pr_info("AML_BT: going ON\n");
 		bt_device_on(pdata);
 	} else {
-		pr_info("BCM_BT: going OFF\n");
+		pr_info("AML_BT: going OFF\n");
 	bt_device_off(pdata);
 	}
 	return 0;
@@ -205,7 +220,7 @@ static int bt_probe(struct platform_device *pdev)
 			pdata->gpio_reset = desc_to_gpio(desc);
 		}
 
-	ret = of_property_read_string(pdev->dev.of_node,
+		ret = of_property_read_string(pdev->dev.of_node,
 		"gpio_en", &str);
 		if (ret) {
 			pr_warn("not get gpio_en\n");
@@ -214,6 +229,16 @@ static int bt_probe(struct platform_device *pdev)
 			desc = of_get_named_gpiod_flags(pdev->dev.of_node,
 				"gpio_en", 0, NULL);
 			pdata->gpio_en = desc_to_gpio(desc);
+		}
+		ret = of_property_read_string(pdev->dev.of_node,
+		"gpio_hostwake", &str);
+		if (ret) {
+			pr_warn("not get gpio_hostwake\n");
+			pdata->gpio_hostwake = 0;
+		} else {
+			desc = of_get_named_gpiod_flags(pdev->dev.of_node,
+				"gpio_hostwake", 0, NULL);
+			pdata->gpio_hostwake = desc_to_gpio(desc);
 		}
 
 		prop = of_get_property(pdev->dev.of_node,
