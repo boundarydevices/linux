@@ -212,6 +212,7 @@ static int dwc3_core_soft_reset(struct dwc3 *dwc)
 
 	usb_phy_init(dwc->usb2_phy);
 	usb_phy_init(dwc->usb3_phy);
+
 	ret = phy_init(dwc->usb2_generic_phy);
 	if (ret < 0)
 		return ret;
@@ -221,7 +222,8 @@ static int dwc3_core_soft_reset(struct dwc3 *dwc)
 		phy_exit(dwc->usb2_generic_phy);
 		return ret;
 	}
-	mdelay(100);
+
+	udelay(1000);
 
 	/* Clear USB3 PHY reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(0));
@@ -249,7 +251,7 @@ static int dwc3_core_soft_reset(struct dwc3 *dwc)
 	reg &= ~DWC3_GUSB2PHYCFG_PHYSOFTRST;
 	dwc3_writel(dwc->regs, DWC3_GUSB2PHYCFG(3), reg);
 
-	mdelay(100);
+	udelay(1000);
 
 	/* After PHYs are stable we can take Core out of reset state */
 	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
@@ -925,6 +927,13 @@ static int dwc3_core_get_phy(struct dwc3 *dwc)
 		}
 	}
 
+#ifdef CONFIG_AMLOGIC_USB
+	if (dwc->usb3_phy->flags == AML_USB3_PHY_ENABLE)
+		dwc->super_speed_support = 1;
+	else
+		dwc->super_speed_support = 0;
+#endif
+
 	dwc->usb2_generic_phy = devm_phy_get(dev, "usb2-phy");
 	if (IS_ERR(dwc->usb2_generic_phy)) {
 		ret = PTR_ERR(dwc->usb2_generic_phy);
@@ -1141,10 +1150,7 @@ static int dwc3_probe(struct platform_device *pdev)
 				    &dwc->hsphy_interface);
 	device_property_read_u32(dev, "snps,quirk-frame-length-adjustment",
 				 &dwc->fladj);
-#ifdef CONFIG_AMLOGIC_USB
-	dwc->super_speed_support = device_property_read_bool(dev,
-				"snps,super_speed_support");
-#endif
+
 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
 	dwc->tx_de_emphasis = tx_de_emphasis;
 

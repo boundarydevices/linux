@@ -31,6 +31,7 @@
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
+#include <linux/amlogic/usbtype.h>
 #include "phy-aml-new-usb-v2.h"
 
 #define HOST_MODE	0
@@ -131,17 +132,13 @@ static int amlogic_new_usb3_init(struct usb_phy *x)
 		return 0;
 	}
 
-	/* set the phy from pcie to usb3 */
-	if (phy->portnum > 0)
-		writel((readl(phy->phy3_cfg) | (3<<5)), phy->phy3_cfg);
-
 	for (i = 0; i < 6; i++) {
 		usb_new_aml_regs_v2.usb_r_v2[i] = (void __iomem *)
 			((unsigned long)phy->regs + 4*i);
 	}
 
 	r1.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[1]);
-	r1.b.u3h_fladj_30mhz_reg = 0x20;
+	r1.b.u3h_fladj_30mhz_reg = 0x26;
 	writel(r1.d32, usb_new_aml_regs_v2.usb_r_v2[1]);
 
 	r5.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[5]);
@@ -164,7 +161,7 @@ static int amlogic_new_usb3_init(struct usb_phy *x)
 		udelay(2);
 		r1.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[1]);
 		r1.b.u3h_host_port_power_control_present = 1;
-		r1.b.u3h_fladj_30mhz_reg = 32;
+		r1.b.u3h_fladj_30mhz_reg = 0x26;
 		writel(r1.d32, usb_new_aml_regs_v2.usb_r_v2[1]);
 		udelay(2);
 	}
@@ -256,6 +253,26 @@ static irqreturn_t amlogic_botg_detect_irq(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
+static bool device_is_available(const struct device_node *device)
+{
+	const char *status;
+	int statlen;
+
+	if (!device)
+		return false;
+
+	status = of_get_property(device, "status", &statlen);
+	if (status == NULL)
+		return true;
+
+	if (statlen > 0) {
+		if (!strcmp(status, "okay") || !strcmp(status, "ok"))
+			return true;
+	}
+
+	return false;
+}
+
 static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 {
 	struct amlogic_usb_v2			*phy;
@@ -273,6 +290,8 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 	int retval;
 	int gpio_vbus_power_pin = -1;
 	int otg = 0;
+	int ret;
+	struct device_node *tsi_pci;
 
 	gpio_name = of_get_property(dev->of_node, "gpio-vbus-power", NULL);
 	if (gpio_name) {
@@ -289,6 +308,15 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 
 	if (!portnum)
 		dev_err(&pdev->dev, "This phy has no usb port\n");
+
+	tsi_pci = of_find_node_by_type(NULL, "pci");
+	if (tsi_pci) {
+		if (device_is_available(tsi_pci)) {
+			dev_info(&pdev->dev,
+				"pci-e driver probe, disable USB 3.0 function!!!\n");
+			portnum = 0;
+		}
+	}
 
 	prop = of_get_property(dev->of_node, "otg", NULL);
 	if (prop)
@@ -347,8 +375,30 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 	phy->phy.set_suspend	= amlogic_new_usb3_suspend;
 	phy->phy.shutdown	= amlogic_new_usb3phy_shutdown;
 	phy->phy.type		= USB_PHY_TYPE_USB3;
+	phy->phy.flags		= AML_USB3_PHY_DISABLE;
 	phy->vbus_power_pin = gpio_vbus_power_pin;
 	phy->usb_gpio_desc = usb_gd;
+
+	/* set the phy from pcie to usb3 */
+	if (phy->portnum > 0) {
+		writel((readl(phy->phy3_cfg) | (3<<5)), phy->phy3_cfg);
+		udelay(100);
+
+		phy->clk = devm_clk_get(dev, "pcie_refpll");
+		if (IS_ERR(phy->clk)) {
+			dev_err(dev, "Failed to get usb3 bus clock\n");
+			ret = PTR_ERR(phy->clk);
+			return ret;
+		}
+
+		ret = clk_prepare_enable(phy->clk);
+		if (ret) {
+			dev_err(dev, "Failed to enable usb3 bus clock\n");
+			ret = PTR_ERR(phy->clk);
+			return ret;
+		}
+		phy->phy.flags = AML_USB3_PHY_ENABLE;
+	}
 
 	INIT_DELAYED_WORK(&phy->work, amlogic_gxl_work);
 

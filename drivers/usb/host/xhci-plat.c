@@ -238,7 +238,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		xhci->quirks |= XHCI_BROKEN_PORT_PED;
 
 #ifdef CONFIG_AMLOGIC_USB
-	if (device_property_read_bool(&pdev->dev, "usb3-support"))
+	if (device_property_read_bool(&pdev->dev, "super_speed_support"))
 		xhci->quirks |= XHCI_AML_SUPER_SPEED_SUPPORT;
 #endif
 

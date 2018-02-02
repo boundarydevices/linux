@@ -40,6 +40,11 @@
 #define USB_CORE_RESET_TIME	10
 #define USB_ID_CHANGE_TIME	100
 
+enum usb3_phy_func_e {
+	AML_USB3_PHY_DISABLE = 0,
+	AML_USB3_PHY_ENABLE,
+};
+
 enum usb_port_type_e {
 	USB_PORT_TYPE_OTG = 0,
 	USB_PORT_TYPE_HOST,

@@ -23,6 +23,7 @@
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
+#include <linux/clk.h>
 
 #define PHY_REGISTER_SIZE	0x20
 /* Register definitions */
@@ -171,6 +172,7 @@ struct amlogic_usb_v2 {
 
 	int portnum;
 	int suspend_flag;
+	struct clk		*clk;
 };
 
 #endif

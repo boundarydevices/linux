@@ -105,6 +105,11 @@ int dwc3_host_init(struct dwc3 *dwc)
 	if (dwc->revision <= DWC3_REVISION_300A)
 		props[prop_idx++].name = "quirk-broken-port-ped";
 
+#ifdef CONFIG_AMLOGIC_USB
+	if (dwc->super_speed_support)
+		props[prop_idx++].name = "super_speed_support";
+#endif
+
 	if (prop_idx) {
 		ret = platform_device_add_properties(xhci, props);
 		if (ret) {
@@ -112,11 +117,6 @@ int dwc3_host_init(struct dwc3 *dwc)
 			goto err1;
 		}
 	}
-
-#ifdef CONFIG_AMLOGIC_USB
-	if (dwc->super_speed_support)
-		props[prop_idx++].name = "usb3-support";
-#endif
 
 	phy_create_lookup(dwc->usb2_generic_phy, "usb2-phy",
 			  dev_name(&xhci->dev));

@@ -441,7 +441,6 @@
 		clock-src = "usb3.0";
 		clocks = <&clkc CLKID_USB_GENERAL>;
 		clock-names = "dwc_general";
-		/*snps,super_speed_support;*/
 	};
 
 	usb2_phy_v2: usb2phy@ffe09000 {
@@ -463,6 +462,8 @@
 		phy-reg-size = <0x4>;
 		interrupts = <0 16 4>;
 		otg = <0>;
+		clocks = <&clkc CLKID_PCIE_PLL>;
+		clock-names = "pcie_refpll";
 	};
 
 	dwc2_a {
