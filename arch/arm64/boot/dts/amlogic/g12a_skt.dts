@@ -805,7 +805,60 @@
 		status = "disabled";
 	};
 	/* Audio Related end */
+
+	cpufreq-meson {
+		compatible = "amlogic, cpufreq-meson";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwmcpu_pins>;
+		status = "okay";
+	};
+
+	vddcpu0: pwmao_d-regulator {
+		compatible = "pwm-regulator";
+		pwms = <&pwm_AO_cd MESON_PWM_1 1210 0>;
+		regulator-name = "vddcpu0";
+		regulator-min-microvolt = <731000>;
+		regulator-max-microvolt = <1011000>;
+		regulator-always-on;
+		max-duty-cycle = <1210>;
+		/* Voltage Duty-Cycle */
+		voltage-table = <1011000 0>,
+			<1001000 6>,
+			<991000 9>,
+			<981000 12>,
+			<971000 16>,
+			<961000 19>,
+			<951000 23>,
+			<941000 26>,
+			<931000 29>,
+			<921000 33>,
+			<911000 36>,
+			<901000 39>,
+			<891000 43>,
+			<881000 46>,
+			<871000 50>,
+			<861000 53>,
+			<851000 56>,
+			<841000 60>,
+			<831000 63>,
+			<821000 67>,
+			<811000 70>,
+			<801000 73>,
+			<791000 77>,
+			<781000 80>,
+			<771000 84>,
+			<761000 87>,
+			<751000 90>,
+			<741000 94>,
+			<731000 100>;
+
+		status = "okay";
+	 };
 }; /* end of / */
+
+&pwm_AO_cd {
+		status = "okay";
+	};
 
 &i2c3 {
 	status = "okay";
