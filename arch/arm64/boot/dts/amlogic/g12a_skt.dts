@@ -95,6 +95,21 @@
 			size = <0x0 0x02900000>;
 			alignment = <0x0 0x400000>;
 		};
+		codec_mm_cma:linux,codec_mm_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/* ion_codec_mm max can alloc size 80M*/
+			size = <0x0 0x13400000>;
+			alignment = <0x0 0x400000>;
+			linux,contiguous-region;
+		};
+		/* codec shared reserved */
+		codec_mm_reserved:linux,codec_mm_reserved {
+			compatible = "amlogic, codec-mm-reserved";
+			size = <0x0 0x0>;
+			alignment = <0x0 0x100000>;
+			//no-map;
+		};
 	};
 
 	vout {
@@ -494,6 +509,49 @@
 		io_dmc_base{
 			reg = <0x0 0xff638000 0x0 0x2000>;
 		};
+	};
+
+	codec_mm {
+		compatible = "amlogic, codec, mm";
+		memory-region = <&codec_mm_cma &codec_mm_reserved>;
+		dev_name = "codec_mm";
+		status = "okay";
+	};
+
+	mesonstream {
+		compatible = "amlogic, codec, streambuf";
+		dev_name = "mesonstream";
+		status = "okay";
+	//	clocks = <&clkc CLKID_DOS_PARSER
+	//		&clkc CLKID_DEMUX
+	//		&clkc CLKID_DOS
+	//		&clkc CLKID_VDEC_MUX
+	//		&clkc CLKID_HCODEC_MUX
+	//		&clkc CLKID_HEVC_MUX>;
+	//	clock-names = "parser_top",
+	//		"demux",
+	//		"vdec",
+	//		"clk_vdec_mux",
+	//		"clk_hcodec_mux",
+	//		"clk_hevc_mux";
+	};
+
+	vdec {
+		compatible = "amlogic, vdec";
+		dev_name = "vdec.0";
+		status = "okay";
+		interrupts = <0 3 1
+			0 23 1
+			0 32 1
+			0 43 1
+			0 44 1
+			0 45 1>;
+		interrupt-names = "vsync",
+			"demux",
+			"parser",
+			"mailbox_0",
+			"mailbox_1",
+			"mailbox_2";
 	};
 
 	rdma{
