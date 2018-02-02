@@ -14330,3 +14330,8 @@ F:	include/linux/amlogic/media/sound/auge_utils.h
 F:	sound/soc/amlogic/auge/*
 F:	sound/soc/amlogic/common/*
 F:	sound/soc/codecs/amlogic/aml_codec_t9015.c
+
+AMLOGIC Audio codec AD82584F driver
+M: Peipeng Zhao <peipeng.zhao@amlogic.com>
+F: sound/soc/codecs/amlogic/ad82584f.c
+F: sound/soc/codecs/amlogic/ad82584f.h

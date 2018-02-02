@@ -15,6 +15,7 @@ snd-soc-tlv320adc3101-objs := tlv320adc3101.o
 snd-soc-pcm186x-objs := pcm186x.o pcm186x-i2c.o pcm186x-spi.o
 snd-soc-ssm3515-objs := ssm3515.o
 snd-soc-ssm3525-objs := ssm3525.o
+snd-soc-ad82584f-objs := ad82584f.o
 
 # Amlogic
 obj-$(CONFIG_AMLOGIC_SND_CODEC_DUMMY_CODEC) += snd-soc-dummy_codec.o
@@ -32,3 +33,4 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_SSM3515) += snd-soc-ssm3515.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_SSM3525) += snd-soc-ssm3525.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_TAS575X) += tas575x.o
 obj-$(CONFIG_AMLOGIC_SND_SOC_ES7243) += es7243.o
+obj-$(CONFIG_AMLOGIC_SND_SOC_AD82584F) += ad82584f.o
