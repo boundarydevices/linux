@@ -13942,6 +13942,7 @@ F:      arch/arm64/boot/dts/amlogic/axg_s420.dts
 AMLOGIC PCIE DRIVER SUPPORT
 M: Yue Wang <yue.wang@amlogic.com>
 F: drivers/amlogic/pci/pcie-amlogic.c
+F: drivers/amlogic/pci/pcie-amlogic-v2.c
 F: drivers/amlogic/pci/pcie-amlogic.h
 F: drivers/amlogic/pci/Kconfig
 F: drivers/amlogic/pci/Makefile
