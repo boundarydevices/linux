@@ -190,6 +190,40 @@
 		};
 	};
 
+	pcie_A: pcieA@fc000000 {
+		compatible = "amlogic, amlogic-pcie-v2", "snps,dw-pcie";
+		reg = <0x0 0xfc000000 0x0 0x400000
+			0x0 0xff648000 0x0 0x2000
+			0x0 0xfc400000 0x0 0x200000
+			0x0 0xff646000 0x0 0x2000
+			0x0 0xffd01080 0x0 0x10>;
+		reg-names = "elbi", "cfg", "config", "phy", "reset";
+		reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
+		interrupts = <0 221 0>, <0 223 0>;
+		#interrupt-cells = <1>;
+		bus-range = <0x0 0xff>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		ranges = <0x82000000 0 0 0x0 0xfc600000 0 0x1a00000>;
+		/* non-prefetchable memory */
+		num-lanes = <1>;
+		pcie-num = <1>;
+
+		clocks = <&clkc CLKID_PCIE_PLL
+			&clkc CLKID_PCIE_COMB
+			&clkc CLKID_PCIE_PHY>;
+		clock-names = "pcie_refpll",
+				"pcie",
+				"pcie_phy";
+		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
+		gpio-type = <2>;
+		pcie-apb-rst-bit = <15>;
+		pcie-phy-rst-bit = <14>;
+		pcie-ctrl-a-rst-bit = <12>;
+		status = "okay";
+	};
+
 	sd_emmc_b:sd@ffe05000 {
 		status = "okay";
 		compatible = "amlogic, meson-mmc-g12a";
@@ -392,7 +426,7 @@
 	usb3_phy_v2: usb3phy@ffe09080 {
 		compatible = "amlogic, amlogic-new-usb3-v2";
 		status = "okay";
-		portnum = <1>;
+		portnum = <0>;
 		reg = <0x0 0xffe09080 0x0 0x20>;
 		phy-reg = <0xff646000>;
 		phy-reg-size = <0x4>;
