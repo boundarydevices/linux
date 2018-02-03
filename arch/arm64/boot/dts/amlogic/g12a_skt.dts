@@ -1007,7 +1007,8 @@
 &i2c3 {
 	status = "okay";
 	pinctrl-names="default";
-	pinctrl-0=<&c_i2c_master_pin1>;
+	pinctrl-0=<&i2c3_master_pins2>;
+	clock-frequency = <100000>; /* default 100k */
 
 	/* for ref board */
 	ad82584f_62: ad82584f_62@62 {
