@@ -106,8 +106,8 @@ static void amlogic_new_usb3phy_shutdown(struct usb_phy *x)
 void aml_new_usb_v2_init(void)
 {
 	union usb_r5_v2 r5 = {.d32 = 0};
-	unsigned long reg_addr = ((unsigned long)
-		usb_new_aml_regs_v2.usb_r_v2[0] - 0x80);
+	unsigned long reg_addr = (unsigned long)
+		g_phy_v2->usb2_phy_cfg;
 
 	r5.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[5]);
 	if (r5.b.iddig_curr == 0) {
@@ -223,7 +223,7 @@ static void amlogic_gxl_work(struct work_struct *work)
 	struct amlogic_usb_v2 *phy =
 		container_of(work, struct amlogic_usb_v2, work.work);
 	union usb_r5_v2 r5 = {.d32 = 0};
-	unsigned long reg_addr = ((unsigned long)phy->regs - 0x80);
+	unsigned long reg_addr = ((unsigned long)phy->usb2_phy_cfg);
 
 	r5.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[5]);
 	if (r5.b.iddig_curr == 0) {
@@ -282,6 +282,9 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 	void __iomem *phy3_base;
 	unsigned int phy3_mem;
 	unsigned int phy3_mem_size = 0;
+	void __iomem *usb2_phy_base;
+	unsigned int usb2_phy_mem;
+	unsigned int usb2_phy_mem_size = 0;
 	const char *gpio_name = NULL;
 	struct gpio_desc *usb_gd = NULL;
 	const void *prop;
@@ -342,6 +345,22 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 	if (!phy3_base)
 		return -ENOMEM;
 
+	retval = of_property_read_u32
+				(dev->of_node, "usb2-phy-reg", &usb2_phy_mem);
+	if (retval < 0)
+		return -EINVAL;
+
+	retval = of_property_read_u32
+		(dev->of_node, "usb2-phy-reg-size", &usb2_phy_mem_size);
+	if (retval < 0)
+		return -EINVAL;
+
+	usb2_phy_base = devm_ioremap_nocache
+				(&(pdev->dev), (resource_size_t)usb2_phy_mem,
+				(unsigned long)usb2_phy_mem_size);
+	if (!usb2_phy_base)
+		return -ENOMEM;
+
 	phy = devm_kzalloc(&pdev->dev, sizeof(*phy), GFP_KERNEL);
 	if (!phy)
 		return -ENOMEM;
@@ -367,6 +386,7 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 	phy->dev		= dev;
 	phy->regs		= phy_base;
 	phy->phy3_cfg	= phy3_base;
+	phy->usb2_phy_cfg	= usb2_phy_base;
 	phy->portnum      = portnum;
 	phy->suspend_flag = 0;
 	phy->phy.dev		= phy->dev;

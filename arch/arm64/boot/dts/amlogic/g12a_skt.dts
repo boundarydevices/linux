@@ -511,10 +511,14 @@
 		reg = <0x0 0xffe09080 0x0 0x20>;
 		phy-reg = <0xff646000>;
 		phy-reg-size = <0x4>;
+		usb2-phy-reg = <0xffe09000>;
+		usb2-phy-reg-size = <0x80>;
 		interrupts = <0 16 4>;
-		otg = <0>;
+		otg = <1>;
 		clocks = <&clkc CLKID_PCIE_PLL>;
 		clock-names = "pcie_refpll";
+		gpio-vbus-power = "GPIOH_6";
+		gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
 	};
 
 	dwc2_a {
@@ -535,7 +539,7 @@
 		usb-fifo = <728>;
 		cpu-type = "v2";
 		/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
-		controller-type = <1>;
+		controller-type = <3>;
 		phy-reg = <0xffe09000>;
 		phy-reg-size = <0xa0>;
 		/** phy-interface: 0x0: amlogic phy, 0x1: synopsys phy **/
