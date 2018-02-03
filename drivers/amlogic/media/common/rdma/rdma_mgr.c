@@ -39,6 +39,7 @@
 
 #include <linux/amlogic/media/utils/vdec_reg.h>
 #include <linux/amlogic/media/rdma/rdma_mgr.h>
+#include <linux/amlogic/media/vpu/vpu.h>
 #include "rdma.h"
 
 #define DRIVER_NAME "amlogic-rdma"
@@ -772,6 +773,8 @@ static int rdma_probe(struct platform_device *pdev)
 
 	pr_info("%s\n", __func__);
 
+	switch_vpu_mem_pd_vmod(VPU_RDMA, VPU_MEM_POWER_ON);
+
 	WRITE_VCBUS_REG(VPU_VDISP_ASYNC_HOLD_CTRL, 0x18101810);
 	WRITE_VCBUS_REG(VPU_VPUARB2_ASYNC_HOLD_CTRL, 0x18101810);
 
@@ -826,7 +829,7 @@ static int rdma_probe(struct platform_device *pdev)
 static int rdma_remove(struct platform_device *pdev)
 {
 	pr_error("RDMA driver removed.\n");
-
+	switch_vpu_mem_pd_vmod(VPU_RDMA, VPU_MEM_POWER_DOWN);
 	return 0;
 }
 
