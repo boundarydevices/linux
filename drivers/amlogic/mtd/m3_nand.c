@@ -19,6 +19,8 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/nand_ecc.h>
 #include <linux/mtd/partitions.h>
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 
 #include "aml_mtd.h"
 
@@ -260,6 +262,41 @@ static void m3_nand_select_chip(struct aml_nand_chip *aml_chip, int chipnr)
 	controller_select_chip(controller, chipnr);
 }
 
+#define GATE_CLK	0
+#define GATE_CLKIN	1
+static int aml_nfc_clk_init(struct hw_controller *controller)
+{
+	char *clk_name[2] = {"core", "clkin"};
+	int i, ret = 0;
+
+	for (i = 0; i < 2; i++) {
+		controller->clk[i] =
+			devm_clk_get(controller->device, clk_name[i]);
+		if (IS_ERR(controller->clk[i])) {
+			dev_err(controller->device,
+				"failed to get %s\n", clk_name[i]);
+			return PTR_ERR(controller->clk[i]);
+		}
+	}
+
+	ret = clk_prepare_enable(controller->clk[GATE_CLK]);
+	if (ret) {
+		dev_err(controller->device, "failed to set nand gate\n");
+		return ret;
+	}
+
+	ret = clk_prepare_enable(controller->clk[GATE_CLKIN]);
+	if (ret) {
+		dev_err(controller->device, "failed to enable nand clk\n");
+		goto clk_enbale_error;
+	}
+	return 0;
+
+clk_enbale_error:
+	clk_disable_unprepare(controller->clk[GATE_CLK]);
+	return ret;
+}
+
 void get_sys_clk_rate_mtd(struct hw_controller *controller, int *rate)
 {
 	int clk_freq = *rate;
@@ -308,6 +345,8 @@ void get_sys_clk_rate_mtd(struct hw_controller *controller, int *rate)
 static void m3_nand_hw_init(struct aml_nand_chip *aml_chip)
 {
 	int sys_clk_rate, bus_cycle, bus_timing;
+
+	aml_nfc_clk_init(controller);
 
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
 		sys_clk_rate = 24;
@@ -1075,6 +1114,10 @@ int nand_init(struct platform_device *pdev)
 	controller->nand_clk_reg = devm_ioremap_nocache(&pdev->dev,
 					aml_nand_mid_device.nand_clk_ctrl,
 					sizeof(int));
+	controller->nand_clk_upper = devm_ioremap_nocache(&pdev->dev,
+					NAND_CLK_CNTL_INNER,
+					sizeof(int));
+
 	if (controller->nand_clk_reg == NULL) {
 		dev_err(&pdev->dev, "ioremap External Nand Clock IO fail\n");
 		return -ENOMEM;

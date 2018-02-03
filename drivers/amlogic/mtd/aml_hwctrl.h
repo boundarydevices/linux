@@ -48,9 +48,11 @@ struct hw_controller {
 	u8 chip_num;
 	u32 ce_enable[MAX_CHIP_NUM];
 	u32 rb_enable[MAX_CHIP_NUM];
+	struct clk *clk[4];
 
 	void __iomem *reg_base;
 	void __iomem *nand_clk_reg;
+	void __iomem *nand_clk_upper;
 	u32 irq;
 #ifndef AML_NAND_UBOOT
 	/*dma_addr_t data_dma_addr;*/
@@ -100,6 +102,8 @@ struct hw_controller {
 #define NAND_CLK_CNTL	(SD_EMMC_BASE_C)
 #define	POC_CONFIG_REG	((uint32_t *)(0xc1107d54))
 #endif /* AML_NAND_UBOOT */
+
+#define NAND_CLK_CNTL_INNER	(0xff63c000+(0x097 << 2))
 
 #define A0_GP_CFG0	(0xc8100240)
 #define A0_GP_CFG2	(0xc8100248)

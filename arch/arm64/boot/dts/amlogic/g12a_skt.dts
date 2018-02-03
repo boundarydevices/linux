@@ -296,11 +296,10 @@
 		status = "okay";
 	};
 
-
 	sd_emmc_c: emmc@ffe07000 {
 		status = "okay";
 		compatible = "amlogic, meson-mmc-g12a";
-		reg = <0x0 0xffe07000 0x0 0x2000>;
+		reg = <0x0 0xffe07000 0x0 0x800>;
 		interrupts = <0 191 1>;
 		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
 		pinctrl-0 = <&emmc_clk_cmd_pins>;
@@ -394,7 +393,7 @@
 	nand: nfc@0 {
 		compatible = "amlogic, aml_mtd_nand";
 		dev_name = "mtdnand";
-		status = "okay";
+		status = "disabled";
 		reg = <0x0 0xFFE07800 0x0 0x200>;
 		interrupts = <0 34 1>;
 
@@ -402,8 +401,11 @@
 		pinctrl-0 = <&all_nand_pins>;
 		pinctrl-1 = <&all_nand_pins>;
 		pinctrl-2 = <&nand_cs_pins>;
-		device_id = <0>;
+		clocks = <&clkc CLKID_SD_EMMC_C>,
+				<&clkc CLKID_SD_EMMC_C_P0_COMP>;
+		clock-names = "core", "clkin";
 
+		device_id = <0>;
 		/*fip/tpl configurations, must be same
 		 * with uboot if bl_mode was set as 1
 		 * bl_mode: 0 compact mode; 1 descrete mode
