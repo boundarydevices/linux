@@ -237,8 +237,10 @@
 		#address-cells = <3>;
 		#size-cells = <2>;
 		device_type = "pci";
-		ranges = <0x82000000 0 0 0x0 0xfc600000 0 0x1a00000>;
-		/* non-prefetchable memory */
+		ranges = <0x81000000 0 0 0 0xfc600000 0x0 0x100000
+			/* downstream I/O */
+			0x82000000 0 0xfa510000 0x0 0xfc700000 0 0x1900000>;
+			/* non-prefetchable memory */
 		num-lanes = <1>;
 		pcie-num = <1>;
 

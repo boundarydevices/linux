@@ -313,7 +313,8 @@ static void amlogic_pcie_assert_reset(struct amlogic_pcie *amlogic_pcie)
 		if (amlogic_pcie->reset_gpio >= 0)
 			devm_gpio_request(dev,
 				amlogic_pcie->reset_gpio, "RESET");
-
+		gpio_direction_output(
+			amlogic_pcie->reset_gpio, 0);
 		if (gpio_is_valid(amlogic_pcie->reset_gpio)) {
 			dev_info(amlogic_pcie->pp.dev,
 				"GPIO normal: amlogic_pcie_assert_reset\n");
