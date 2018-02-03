@@ -5603,6 +5603,12 @@ SET_FILTER:
 			VD1_IF0_GEN_REG + cur_dev->viu_off, 0);
 		VSYNC_WR_MPEG_REG(
 			VD2_IF0_GEN_REG + cur_dev->viu_off, 0);
+		if (!legacy_vpp) {
+			VSYNC_WR_MPEG_REG(
+				VD1_BLEND_SRC_CTRL + cur_dev->vpp_off, 0);
+			VSYNC_WR_MPEG_REG(
+				VD2_BLEND_SRC_CTRL + cur_dev->vpp_off, 0);
+		}
 	}
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
@@ -8933,6 +8939,11 @@ static int __init video_early_init(void)
 	WRITE_VCBUS_REG(VPP_SRSHARP0_CTRL, 0);
 	WRITE_VCBUS_REG(VPP_SRSHARP1_CTRL, 0);
 
+	/* Temp force set dmc */
+	if (!legacy_vpp)
+		WRITE_DMCREG(
+			DMC_AM0_CHAN_CTRL,
+			0x8ff403cf);
 	return 0;
 }
 
