@@ -239,10 +239,10 @@ static struct fb_var_screeninfo fb_def_var[] = {
 		.rotate          = 0,
 	},
 	{
-		.xres			 = 1920,
-		.yres			 = 1080,
-		.xres_virtual	 = 1920,
-		.yres_virtual	 = 1080,
+		.xres			 = 32,
+		.yres			 = 32,
+		.xres_virtual	 = 32,
+		.yres_virtual	 = 32,
 		.xoffset		 = 0,
 		.yoffset		 = 0,
 		.bits_per_pixel = 32,
@@ -268,10 +268,10 @@ static struct fb_var_screeninfo fb_def_var[] = {
 		.rotate          = 0,
 	},
 	{
-		.xres			 = 1920,
-		.yres			 = 1080,
-		.xres_virtual	 = 1920,
-		.yres_virtual	 = 1080,
+		.xres			 = 32,
+		.yres			 = 32,
+		.xres_virtual	 = 32,
+		.yres_virtual	 = 32,
 		.xoffset		 = 0,
 		.yoffset		 = 0,
 		.bits_per_pixel = 32,
@@ -3128,9 +3128,9 @@ static int osd_probe(struct platform_device *pdev)
 				return -ENODEV;
 			}
 		} else {
-				pr_err("%s NOT match\n", __func__);
-				return -ENODEV;
-			}
+			pr_err("%s NOT match\n", __func__);
+			return -ENODEV;
+		}
 	}
 
 	/* get interrupt resource */

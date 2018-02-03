@@ -484,11 +484,23 @@ static void osd_vpu_power_on(void)
 	switch_vpu_mem_pd_vmod(VPU_VIU_OSD1, VPU_MEM_POWER_ON);
 	switch_vpu_mem_pd_vmod(VPU_VIU_OSD2, VPU_MEM_POWER_ON);
 	switch_vpu_mem_pd_vmod(VPU_VIU_OSD_SCALE, VPU_MEM_POWER_ON);
+	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+		switch_vpu_mem_pd_vmod(
+			VPU_VD2_OSD2_SCALE,
+			VPU_MEM_POWER_ON);
+		switch_vpu_mem_pd_vmod(VPU_VIU_OSD3,
+			VPU_MEM_POWER_ON);
+		switch_vpu_mem_pd_vmod(VPU_OSD_BLD34,
+			VPU_MEM_POWER_ON);
+	}
 	if (osd_hw.osd_meson_dev.afbc_type == MESON_AFBC) {
-		switch_vpu_mem_pd_vmod(VPU_AFBC_DEC,
+		switch_vpu_mem_pd_vmod(
+			VPU_AFBC_DEC,
 			VPU_MEM_POWER_ON);
 	} else if (osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) {
-
+		switch_vpu_mem_pd_vmod(
+			VPU_MAIL_AFBCD,
+			VPU_MEM_POWER_ON);
 	}
 #endif
 }
@@ -2794,7 +2806,7 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 		}
 		/* Todo: */
 		if (fence_map->ext_addr && fence_map->width
-				&& fence_map->height) {
+			&& fence_map->height) {
 			spin_lock_irqsave(&osd_lock, lock_flags);
 			use_ext = true;
 			if (!fence_map->afbc_en) {
@@ -5670,6 +5682,10 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	int err_num = 0;
 
 	osd_hw.fb_drvier_probe = osd_probe;
+
+	memcpy(&osd_hw.osd_meson_dev, osd_meson,
+		sizeof(struct osd_device_data_s));
+
 	osd_vpu_power_on();
 	if (osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_GXTVBB)
 		backup_regs_init(HW_RESET_AFBCD_REGS);
@@ -5687,8 +5703,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	for (idx = 0; idx < HW_REG_INDEX_MAX; idx++)
 		osd_hw.reg[idx].update_func =
 		hw_func_array[idx];
-	memcpy(&osd_hw.osd_meson_dev, osd_meson,
-		sizeof(struct osd_device_data_s));
+
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 	osd_hdr_on = false;
 #endif
@@ -5756,8 +5771,9 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		/* just disable osd to avoid booting hang up */
 		data32 = 0x1 << 0;
 		data32 |= OSD_GLOBAL_ALPHA_DEF << 12;
-	for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count; idx++)
-		osd_reg_write(hw_osd_reg_array[idx].osd_ctrl_stat, data32);
+		for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count; idx++)
+			osd_reg_write(
+				hw_osd_reg_array[idx].osd_ctrl_stat, data32);
 	}
 	if (osd_hw.osd_meson_dev.osd_ver <= OSD_NORMAL) {
 		osd_vpp_misc =
