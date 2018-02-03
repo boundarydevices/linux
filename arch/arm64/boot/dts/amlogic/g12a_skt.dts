@@ -995,7 +995,14 @@
 
 &pwm_AO_cd {
 		status = "okay";
-	};
+};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c0_master_pins2>;
+	clock-frequency = <100000>; /* default 100k */
+};
 
 &i2c3 {
 	status = "okay";
@@ -1272,3 +1279,4 @@
 &pwm_ef {
 	status = "okay";
 };
+
