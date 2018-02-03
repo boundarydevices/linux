@@ -331,6 +331,42 @@
 		reg = <0x0 0xff809000 0x0 0x48>;
 	};
 
+	p_tsensor: p_tsensor@ff634594 {
+		compatible = "amlogic, r1p1-tsensor";
+		device_name = "meson-pthermal";
+		status = "okay";
+		reg = <0x0 0xff634800 0x0 0x50>,
+			<0x0 0xff800268 0x0 0x4>;
+		cal_type = <0x1>;
+		cal_a = <324>;
+		cal_b = <424>;
+		cal_c = <3159>;
+		cal_d = <9411>;
+		rtemp = <130000>;
+		interrupts = <0 35 0>;
+		clocks = <&clkc CLKID_TS_COMP>; /* CLKID_TS_COMP>;*/
+		clock-names = "ts_comp";
+		#thermal-sensor-cells = <1>;
+	};
+
+	d_tsensor: d_tsensor@ff800228 {
+		compatible = "amlogic, r1p1-tsensor";
+		device_name = "meson-dthermal";
+		status = "okay";
+		reg = <0x0 0xff634c00 0x0 0x50>,
+			<0x0 0xff800230 0x0 0x4>;
+		cal_type = <0x1>;
+		cal_a = <324>;
+		cal_b = <424>;
+		cal_c = <3159>;
+		cal_d = <9411>;
+		rtemp = <130000>;
+		interrupts = <0 36 0>;
+		clocks = <&clkc CLKID_TS_COMP>; /* CLKID_TS_COMP>;*/
+		clock-names = "ts_comp";
+		#thermal-sensor-cells = <1>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
