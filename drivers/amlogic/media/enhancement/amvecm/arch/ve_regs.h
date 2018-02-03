@@ -526,4 +526,23 @@
 #define SRSHARP0_DNLP_15					0x3255
 #define SRSHARP0_DEMO_CRTL					0x3256
 
+#define SRSHARP1_DNLP_EN					0x32c5
+#define SRSHARP1_DNLP_00					0x32c6
+#define SRSHARP1_DNLP_01					0x32c7
+#define SRSHARP1_DNLP_02					0x32c8
+#define SRSHARP1_DNLP_03					0x32c9
+#define SRSHARP1_DNLP_04					0x32ca
+#define SRSHARP1_DNLP_05					0x32cb
+#define SRSHARP1_DNLP_06					0x32cc
+#define SRSHARP1_DNLP_07					0x32cd
+#define SRSHARP1_DNLP_08					0x32ce
+#define SRSHARP1_DNLP_09					0x32cf
+#define SRSHARP1_DNLP_10					0x32d0
+#define SRSHARP1_DNLP_11					0x32d1
+#define SRSHARP1_DNLP_12					0x32d2
+#define SRSHARP1_DNLP_13					0x32d3
+#define SRSHARP1_DNLP_14					0x32d4
+#define SRSHARP1_DNLP_15					0x32d5
+#define SRSHARP1_DEMO_CRTL					0x32d6
+
 #endif /* _VE_REG_H */

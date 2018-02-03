@@ -4887,7 +4887,8 @@ SET_FILTER:
 		amvecm_on_vs(
 			(cur_dispbuf != &vf_local)
 			? cur_dispbuf : NULL,
-			vf, CSC_FLAG_CHECK_OUTPUT,
+			toggle_frame,
+			toggle_frame ? CSC_FLAG_TOGGLE_FRAME : 0,
 			cur_frame_par ?
 			cur_frame_par->supsc1_hori_ratio :
 			0,
