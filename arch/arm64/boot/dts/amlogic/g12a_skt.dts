@@ -243,7 +243,7 @@
 		power_on_pin = <&gpio       GPIOX_6       GPIO_ACTIVE_HIGH>;
 		dhd_static_buf;	//if use bcm wifi, config dhd_static_buf
 		pinctrl-names = "default";
-		pinctrl-0 = <&wifi_32k_pins>;
+		pinctrl-0 = <&pwm_e_pins>;
 		pwm_config = <&wifi_pwm_conf>;
 	};
 
@@ -1006,7 +1006,7 @@
 	cpufreq-meson {
 		compatible = "amlogic, cpufreq-meson";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pwmcpu_pins>;
+		pinctrl-0 = <&pwm_ao_d_pins3>;
 		status = "okay";
 	};
 

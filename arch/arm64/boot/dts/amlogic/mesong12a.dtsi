@@ -793,13 +793,6 @@
 		};
 	};
 
-	pwmcpu_pins:pwmcpus {
-		mux {
-			groups = "pwm_ao_d_e";
-			function = "pwm_ao_d";
-		};
-	};
-
 	ao_i2c_master_pins1:ao_i2c_pins1 {
 		mux {
 			groups = "i2c_ao_sck",
@@ -821,6 +814,69 @@
 			groups = "i2c_ao_slave_sck",
 				"i2c_ao_slave_sda";
 			function = "i2c_ao_slave";
+		};
+	};
+
+	pwm_ao_a_pins: pwm_ao_a {
+		mux {
+			groups = "pwm_ao_a";
+			function = "pwm_ao_a";
+		};
+	};
+
+	pwm_ao_a_hiz_pins: pwm_ao_a_hiz {
+		mux {
+			groups = "pwm_ao_a_hiz";
+			function = "pwm_ao_a";
+		};
+	};
+
+	pwm_ao_b_pins: pwm_ao_b {
+		mux {
+			groups = "pwm_ao_b";
+			function = "pwm_ao_b";
+		};
+	};
+
+	pwm_ao_c_pins1: pwm_ao_c_pins1 {
+		mux {
+			groups = "pwm_ao_c_4";
+			function = "pwm_ao_c";
+		};
+	};
+
+	pwm_ao_c_pins2: pwm_ao_c_pins2 {
+		mux {
+			groups = "pwm_ao_c_6";
+			function = "pwm_ao_c";
+		};
+	};
+
+	pwm_ao_c_hiz_pins: pwm_ao_c_hiz {
+		mux {
+			groups = "pwm_ao_c_hiz_4";
+			function = "pwm_ao_c";
+		};
+	};
+
+	pwm_ao_d_pins1: pwm_ao_d_pins1 {
+		mux {
+			groups = "pwm_ao_d_5";
+			function = "pwm_ao_d";
+		};
+	};
+
+	pwm_ao_d_pins2: pwm_ao_d_pins2 {
+		mux {
+			groups = "pwm_ao_d_10";
+			function = "pwm_ao_d";
+		};
+	};
+
+	pwm_ao_d_pins3: pwm_ao_d_pins3 {
+		mux {
+			groups = "pwm_ao_d_e";
+			function = "pwm_ao_d";
 		};
 	};
 
@@ -1040,6 +1096,83 @@
 		};
 	};
 
+	pwm_a_pins: pwm_a {
+		mux {
+			groups = "pwm_a";
+			function = "pwm_a";
+		};
+	};
+
+	pwm_b_pins1: pwm_b_pins1 {
+		mux {
+			groups = "pwm_b_x7";
+			function = "pwm_b";
+		};
+	};
+
+	pwm_b_pins2: pwm_b_pins2 {
+		mux {
+			groups = "pwm_b_x19";
+			function = "pwm_b";
+		};
+	};
+
+	pwm_c_pins1: pwm_c_pins1 {
+		mux {
+			groups = "pwm_c_c4";
+			function = "pwm_c";
+		};
+	};
+
+	pwm_c_pins2: pwm_c_pins2 {
+		mux {
+			groups = "pwm_c_x5";
+			function = "pwm_c";
+		};
+	};
+
+	pwm_c_pins3: pwm_c_pins3 {
+		mux {
+			groups = "pwm_c_x8";
+			function = "pwm_c";
+		};
+	};
+
+	pwm_d_pins1: pwm_d_pins1 {
+		mux {
+			groups = "pwm_d_x3";
+			function = "pwm_d";
+		};
+	};
+
+	pwm_d_pins2: pwm_d_pins2 {
+		mux {
+			groups = "pwm_d_x6";
+			function = "pwm_d";
+		};
+	};
+
+	pwm_e_pins: pwm_e {
+		mux {
+			groups = "pwm_e";
+			function = "pwm_e";
+		};
+	};
+
+	pwm_f_pins1: pwm_f_pins1 {
+		mux {
+			groups = "pwm_f_x";
+			function = "pwm_f";
+		};
+	};
+
+	pwm_f_pins2: pwm_f_pins2 {
+		mux {
+			groups = "pwm_f_h";
+			function = "pwm_f";
+		};
+	};
+
 	a_uart_pins:a_uart {
 		mux {
 			groups = "uart_tx_a",
@@ -1097,21 +1230,6 @@
 			"i2c0_sck_c";
 			function = "i2c3";
 			bias-disable;
-		};
-	};
-
-	wifi_32k_pins:wifi_32k_pins {
-		mux {
-			groups = "pwm_e";
-			function = "pwm_e";
-		};
-	};
-
-	c_i2c_master_pin1:c_i2c_pin1 {
-		mux {
-			groups = "i2c3_sck_a",
-				"i2c3_sda_a";
-			function = "i2c3";
 		};
 	};
 
