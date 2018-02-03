@@ -14350,3 +14350,8 @@ AMLOGIC Irblaster driver
 M: yu.tu <yu.tu@amlogic.com>
 F: drivers/amlogic/irblaster/meson-irblaster.c
 F: drivers/amlogic/irblaster/meson-irblaster.h
+
+AMLOGIC THERMAL DRIVER
+M:	Huan Biao <huan.biao@amlogic.com>
+F:	drivers/amlgoic/thermal/meson_tsensor.c
+F:	drivers/amlogic/thermal/meson_cooldev.c
