@@ -104,7 +104,7 @@
 #define HHI_SYS_PLL_CNTL5		0x308 /* 0xc2 offset in data sheet */
 #define HHI_SYS_PLL_CNTL6		0x30c /* 0xc3 offset in data sheet */
 
-
+#define HHI_SPICC_CLK_CNTL      0x3dc /* 0xf7 offset in data sheet */
 /* AO registers*/
 #define AO_RTI_PWR_CNTL_REG0 0x10 /* 0x4 offset in data sheet */
 #define AO_SAR_CLK		0x90 /* 0x24 offset in data sheet */

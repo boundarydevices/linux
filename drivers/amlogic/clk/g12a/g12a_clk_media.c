@@ -301,7 +301,7 @@ static struct clk_hw *hcodec_clk_hws[] = {
 	[CLKID_HCODEC_MUX - CLKID_HCODEC_P0_MUX]	  = &hcodec_mux.hw,
 };
 
-/* cts_hevc_clk */
+/* cts_hevcb_clk */
 static struct clk_mux hevc_p0_mux = {
 	.reg = (void *)HHI_VDEC2_CLK_CNTL,
 	.mask = 0x7,
@@ -408,6 +408,115 @@ static struct clk_hw *hevc_clk_hws[] = {
 	[CLKID_HEVC_P1_DIV - CLKID_HEVC_P0_MUX]	= &hevc_p1_div.hw,
 	[CLKID_HEVC_P1_GATE - CLKID_HEVC_P0_MUX] = &hevc_p1_gate.hw,
 	[CLKID_HEVC_MUX - CLKID_HEVC_P0_MUX]	  = &hevc_mux.hw,
+};
+
+/* cts_hevcf_clk */
+static struct clk_mux hevcf_p0_mux = {
+	.reg = (void *)HHI_VDEC2_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "hevcf_p0_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = g12a_dec_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider hevcf_p0_div = {
+	.reg = (void *)HHI_VDEC2_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "hevcf_p0_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "hevcf_p0_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate hevcf_p0_gate = {
+	.reg = (void *)HHI_VDEC2_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "hevcf_p0_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "hevcf_p0_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux hevcf_p1_mux = {
+	.reg = (void *)HHI_VDEC4_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "hevcf_p1_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = g12a_dec_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider hevcf_p1_div = {
+	.reg = (void *)HHI_VDEC4_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "hevcf_p1_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "hevcf_p1_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate hevcf_p1_gate = {
+	.reg = (void *)HHI_VDEC4_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "hevcf_p1_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "hevcf_p1_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux hevcf_mux = {
+	.reg = (void *)HHI_VDEC4_CLK_CNTL,
+	.mask = 0x1,
+	.shift = 15,
+	.lock = &clk_lock,
+	.flags = CLK_PARENT_ALTERNATE,
+	.hw.init = &(struct clk_init_data){
+		.name = "hevcf_mux",
+		.ops = &meson_clk_mux_ops,
+		.parent_names = (const char *[]){ "hevcf_p0_composite",
+			"hevcf_p1_composite"},
+		.num_parents = 2,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_hw *hevcf_clk_hws[] = {
+	[CLKID_HEVCF_P0_MUX - CLKID_HEVCF_P0_MUX]   = &hevcf_p0_mux.hw,
+	[CLKID_HEVCF_P0_DIV - CLKID_HEVCF_P0_MUX]   = &hevcf_p0_div.hw,
+	[CLKID_HEVCF_P0_GATE - CLKID_HEVCF_P0_MUX]  = &hevcf_p0_gate.hw,
+	[CLKID_HEVCF_P1_MUX - CLKID_HEVCF_P0_MUX]   = &hevcf_p1_mux.hw,
+	[CLKID_HEVCF_P1_DIV - CLKID_HEVCF_P0_MUX]   = &hevcf_p1_div.hw,
+	[CLKID_HEVCF_P1_GATE - CLKID_HEVCF_P0_MUX]  = &hevcf_p1_gate.hw,
+	[CLKID_HEVCF_MUX - CLKID_HEVCF_P0_MUX]      = &hevcf_mux.hw,
 };
 
 static const char * const vpu_parent_names[] = { "fclk_div3",
@@ -760,6 +869,15 @@ void meson_g12a_media_init(void)
 	hevc_p1_gate.reg = clk_base + (u64)(hevc_p1_gate.reg);
 	hevc_mux.reg = clk_base + (u64)(hevc_mux.reg);
 
+	/* cts_hevcf_clk */
+	hevcf_p0_mux.reg = clk_base + (u64)(hevcf_p0_mux.reg);
+	hevcf_p0_div.reg = clk_base + (u64)(hevcf_p0_div.reg);
+	hevcf_p0_gate.reg = clk_base + (u64)(hevcf_p0_gate.reg);
+	hevcf_p1_mux.reg = clk_base + (u64)(hevcf_p1_mux.reg);
+	hevcf_p1_div.reg = clk_base + (u64)(hevcf_p1_div.reg);
+	hevcf_p1_gate.reg = clk_base + (u64)(hevcf_p1_gate.reg);
+	hevcf_mux.reg = clk_base + (u64)(hevcf_mux.reg);
+
 	/* cts_vpu_clk */
 	vpu_p0_mux.reg = clk_base + (u64)(vpu_p0_mux.reg);
 	vpu_p0_div.reg = clk_base + (u64)(vpu_p0_div.reg);
@@ -899,6 +1017,39 @@ void meson_g12a_media_init(void)
 		hevc_clk_hws[CLKID_HEVC_MUX - CLKID_HEVC_P0_MUX]);
 	if (IS_ERR(clks[CLKID_HEVC_MUX]))
 		panic("%s: %d clk_register hevc_mux error\n",
+			__func__, __LINE__);
+
+	/* cts_hevcf_clk */
+	clks[CLKID_HEVCF_P0_COMP] = clk_register_composite(NULL,
+		"hevcf_p0_composite",
+		g12a_dec_parent_names, 8,
+		hevcf_clk_hws[CLKID_HEVCF_P0_MUX - CLKID_HEVCF_P0_MUX],
+		&clk_mux_ops,
+		hevcf_clk_hws[CLKID_HEVCF_P0_DIV - CLKID_HEVCF_P0_MUX],
+		&clk_divider_ops,
+		hevcf_clk_hws[CLKID_HEVCF_P0_GATE - CLKID_HEVCF_P0_MUX],
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_HEVCF_P0_COMP]))
+		panic("%s: %d clk_register_composite hevcf_p0_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_HEVCF_P1_COMP] = clk_register_composite(NULL,
+		"hevcf_p1_composite",
+		g12a_dec_parent_names, 8,
+		hevcf_clk_hws[CLKID_HEVCF_P1_MUX - CLKID_HEVCF_P0_MUX],
+		&clk_mux_ops,
+		hevcf_clk_hws[CLKID_HEVCF_P1_DIV - CLKID_HEVCF_P0_MUX],
+		&clk_divider_ops,
+		hevcf_clk_hws[CLKID_HEVCF_P1_GATE - CLKID_HEVCF_P0_MUX],
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_HEVCF_P1_COMP]))
+		panic("%s: %d clk_register_composite hevcf_p1_composite error\n",
+		__func__, __LINE__);
+
+	clks[CLKID_HEVCF_MUX] = clk_register(NULL,
+		hevcf_clk_hws[CLKID_HEVCF_MUX - CLKID_HEVCF_P0_MUX]);
+	if (IS_ERR(clks[CLKID_HEVCF_MUX]))
+		panic("%s: %d clk_register hevcf_mux error\n",
 			__func__, __LINE__);
 
 	/* cts_vpu_clk */
