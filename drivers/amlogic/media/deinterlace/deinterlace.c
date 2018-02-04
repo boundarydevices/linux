@@ -5616,13 +5616,14 @@ static void di_unreg_process_irq(void)
 	di_uninit_buf(mirror_disable);
 	init_flag = 0;
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
-/* stop rdma */
-	rdma_clear(de_devp->rdma_handle);
+	if (di_pre_rdma_enable)
+		rdma_clear(de_devp->rdma_handle);
 #endif
 	adpative_combing_exit();
 	enable_di_pre_mif(false, mcpre_en);
 	di_hw_uninit();
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()
+		|| is_meson_g12a_cpu())
 		di_pre_gate_control(false, mcpre_en);
 	else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) {
 		DI_Wr(DI_CLKG_CTRL, 0x80f60000);
@@ -5632,7 +5633,8 @@ static void di_unreg_process_irq(void)
 /* nr/blend0/ei0/mtn0 clock gate */
 	if (mirror_disable) {
 		di_hw_disable(mcpre_en);
-		if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
+		if (is_meson_txlx_cpu() || is_meson_txhd_cpu()
+			|| is_meson_g12a_cpu()) {
 			enable_di_post_mif(GATE_OFF);
 			di_post_gate_control(false);
 			di_top_gate_control(false, false);
@@ -5770,7 +5772,7 @@ static void di_pre_size_change(unsigned short width,
 		nr_ds_init(width, height);
 	if (de_devp->pps_enable && pps_position) {
 		pps_w = di_pre_stru.cur_width;
-		pps_h = di_pre_stru.cur_height>>(vf_type?1:0);
+		pps_h = di_pre_stru.cur_height>>1;
 		di_pps_config(1, pps_w, pps_h, pps_dstw, (pps_dsth>>1));
 	}
 }

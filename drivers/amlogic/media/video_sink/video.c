@@ -2476,7 +2476,6 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 	if (cur_dispbuf != &vf_local)
 		video_keeper_new_frame_notify();
 }
-
 static inline void vd1_path_select(bool afbc)
 {
 	u32 misc_off = cur_dev->vpp_off;
@@ -2503,14 +2502,18 @@ static inline void vd1_path_select(bool afbc)
 			/* afbc0 gclk ctrl */
 			(0 << 0),
 			0, 22);
-		if ((DI_POST_REG_RD(DI_POST_CTRL) & 0x100) != 0)
+		if ((DI_POST_REG_RD(DI_POST_CTRL) & 0x100) != 0) {
 			VSYNC_WR_MPEG_REG_BITS(
 				VD1_AFBCD0_MISC_CTRL,
-				/* afbc0 to di */
-				(1 << 9) |
 				/* vd1 mif to di */
-				(1 << 8),
+				1,
 				8, 2);
+			VSYNC_WR_MPEG_REG_BITS(
+				VD1_AFBCD0_MISC_CTRL,
+				/* go field select di post */
+				1,
+				20, 2);
+		}
 	} else {
 		if ((DI_POST_REG_RD(DI_POST_CTRL) & 0x100) == 0)
 			VSYNC_WR_MPEG_REG_BITS(

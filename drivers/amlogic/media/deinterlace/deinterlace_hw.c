@@ -2098,7 +2098,6 @@ void initial_di_post_2(int hsize_post, int vsize_post,
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
 				0, 8, 9);
 		} else {
-			DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0x00200005);
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
 				1, 20, 1);
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
@@ -2178,6 +2177,10 @@ void di_post_switch_buffer(
 			(di_buf0_mif->canvas0_addr2 << 16) |
 			(di_buf0_mif->canvas0_addr1 << 8) |
 			(di_buf0_mif->canvas0_addr0 << 0));
+			if (!di_ddr_en) {
+				DI_VSYNC_WR_MPEG_REG_BITS(VD1_IF0_GEN_REG,
+					0, 0, 1);
+			}
 		if (mc_enable) {
 			DI_VSYNC_WR_MPEG_REG_BITS(MCVECRD_CTRL1,
 				di_mcvecrd_mif->canvas_num, 16, 8);
@@ -2268,7 +2271,7 @@ void di_post_switch_buffer(
 		((blend_mode == 1?1:0) << 1)  |
 		(ei_en << 2) |			/* ei  enable */
 		(blend_mtn_en << 3) |	/* mtn line buffer enable */
-		(blend_mtn_en  << 4) |/* mtnp read mif enable */
+		(blend_mtn_en << 4) |/* mtnp read mif enable */
 		(blend_en << 5) |
 		(1 << 6) |		/* di mux output enable */
 		(di_ddr_en << 7) |/* di write to SDRAM enable.*/
@@ -2340,10 +2343,15 @@ void enable_di_post_2(
 	buf1_en =  (!ei_only && (di_ddr_en || di_vpp_en));
 
 	if (ei_en || di_vpp_en || di_ddr_en) {
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 			set_di_if0_mif_g12(di_buf0_mif, di_vpp_en,
 				hold_line, vskip_cnt, di_ddr_en);
-		else
+			/* if di post vpp link disable vd1 for new if0 */
+			if (!di_ddr_en) {
+				DI_VSYNC_WR_MPEG_REG_BITS(VD1_IF0_GEN_REG,
+					0, 0, 1);
+			}
+		} else
 			set_di_if0_mif(di_buf0_mif, di_vpp_en,
 				hold_line, vskip_cnt, di_ddr_en);
 	}
@@ -2433,8 +2441,8 @@ void disable_post_deinterlace_2(void)
 	 * Rd(DI_IF1_GEN_REG) & 0xfffffffe);
 	 */
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
-		DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL, 0, 8, 9);
-		DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL, 0, 20, 1);
+		DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL, 0, 8, 2);
+		DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL, 0, 20, 2);
 	}
 }
 
@@ -2455,7 +2463,20 @@ void enable_di_post_mif(enum gate_mode_e mode)
 	default:
 		gate = 0;
 	}
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
+		/* enable if0 external gate freerun hw issue */
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL1, ((gate == 0)?2:gate), 2, 2);
+		/* enable if1 external gate freerun hw issue */
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL1, ((gate == 0)?2:gate), 4, 2);
+		/* enable if1 external gate freerun hw issue */
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL1, ((gate == 0)?2:gate), 6, 2);
+		/* enable di wr external gate */
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL1, gate, 8, 2);
+		/* enable mtn rd external gate */
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL1, gate, 10, 2);
+		/* enable mv rd external gate */
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL1, gate, 12, 2);
+	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
 		/* enable if1 external gate freerun hw issue */
 		DI_Wr_reg_bits(VIUB_GCLK_CTRL1, ((gate == 0)?2:gate), 2, 2);
 		/* enable if2 external gate freerun hw issue */
