@@ -113,8 +113,9 @@ static int hdmitx_hpd_hw_op(enum hpd_op cmd)
 	case MESON_CPU_ID_GXM:
 		return hdmitx_hpd_hw_op_gxl(cmd);
 	case MESON_CPU_ID_TXLX:
-	case MESON_CPU_ID_G12A:
 		return hdmitx_hpd_hw_op_txlx(cmd);
+	case MESON_CPU_ID_G12A:
+		return hdmitx_hpd_hw_op_g12a(cmd);
 	default:
 		break;
 	}
@@ -1677,6 +1678,7 @@ static void set_phy_by_mode(unsigned int mode)
 		default:
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb8282);
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x28b0ff3b);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0);
 			break;
 		}
 		break;

@@ -147,7 +147,6 @@ void set_hpll_od1_g12a(unsigned int div)
 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 2, 16, 2);
 		break;
 	default:
-		pr_info("Err %s[%d]\n", __func__, __LINE__);
 		break;
 	}
 }
@@ -165,7 +164,6 @@ void set_hpll_od2_g12a(unsigned int div)
 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 2, 18, 2);
 		break;
 	default:
-		pr_info("Err %s[%d]\n", __func__, __LINE__);
 		break;
 	}
 }
@@ -187,3 +185,36 @@ void set_hpll_od3_g12a(unsigned int div)
 		break;
 	}
 }
+
+int hdmitx_hpd_hw_op_g12a(enum hpd_op cmd)
+{
+	int ret = 0;
+
+	switch (cmd) {
+	case HPD_INIT_DISABLE_PULLUP:
+		hd_set_reg_bits(P_PAD_PULL_UP_REG1, 0, 25, 1);
+		break;
+	case HPD_INIT_SET_FILTER:
+		hdmitx_wr_reg(HDMITX_TOP_HPD_FILTER,
+			((0xa << 12) | (0xa0 << 0)));
+		break;
+	case HPD_IS_HPD_MUXED:
+		ret = !!(hd_read_reg(P_PERIPHS_PIN_MUX_6) & (1 << 31));
+		break;
+	case HPD_MUX_HPD:
+		hd_set_reg_bits(P_PERIPHS_PIN_MUX_B, 1, 8, 4);
+		hd_set_reg_bits(P_PREG_PAD_GPIO4_O, 1, 8, 1);
+		break;
+	case HPD_UNMUX_HPD:
+		hd_set_reg_bits(P_PERIPHS_PIN_MUX_B, 0, 8, 4);
+		hd_set_reg_bits(P_PREG_PAD_GPIO4_O, 0, 8, 1);
+		break;
+	case HPD_READ_HPD_GPIO:
+		ret = hdmitx_rd_reg(HDMITX_DWC_PHY_STAT0) & (1 << 1);
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+

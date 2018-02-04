@@ -164,7 +164,7 @@ void init_reg_map(unsigned int type)
 	switch (type) {
 	case MESON_CPU_ID_G12A:
 		map = reg_maps_g12a;
-		for (i = HDMITX_REG_IDX; i <= HDMITX_SEC_REG_IDX; i++) {
+		for (i = 0; i <= REG_IDX_END; i++) {
 			map[i].p = ioremap(map[i].phy_addr, map[i].size);
 			if (!map[i].p) {
 				pr_info("hdmitx20: failed Mapped PHY: 0x%x\n",
@@ -220,7 +220,6 @@ unsigned int hd_read_reg(unsigned int addr)
 
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
-	case MESON_CPU_ID_G12A:
 		switch (index) {
 		case CBUS_REG_IDX:
 		case RESET_CBUS_REG_IDX:
@@ -249,6 +248,7 @@ unsigned int hd_read_reg(unsigned int addr)
 		break;
 	case MESON_CPU_ID_GXL:
 	case MESON_CPU_ID_GXM:
+	case MESON_CPU_ID_G12A:
 	default:
 		val = readl(TO_PMAP_ADDR(addr));
 		break;
@@ -267,7 +267,6 @@ void hd_write_reg(unsigned int addr, unsigned int val)
 
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
-	case MESON_CPU_ID_G12A:
 		switch (index) {
 		case CBUS_REG_IDX:
 		case RESET_CBUS_REG_IDX:
@@ -296,6 +295,7 @@ void hd_write_reg(unsigned int addr, unsigned int val)
 		break;
 	case MESON_CPU_ID_GXL:
 	case MESON_CPU_ID_GXM:
+	case MESON_CPU_ID_G12A:
 	default:
 		writel(val, TO_PMAP_ADDR(addr));
 		break;
