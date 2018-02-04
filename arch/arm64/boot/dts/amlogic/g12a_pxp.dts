@@ -144,7 +144,7 @@
 		vend-data = <&vend_data>;
 		pinctrl-names="default", "hdmitx_i2c";
 		pinctrl-0=<&hdmitx_hpd &hdmitx_ddc>;
-		pinctrl-1=<&hdmitx_hpd_gpio &c_i2c_master>;
+		pinctrl-1=<&hdmitx_hpd_gpio &i2c3_master_pins1>;
 		clocks = <&clkc CLKID_VAPB_MUX>,
 			 <&clkc CLKID_VPU_MUX>;
 		clock-names = "hdmi_vapb_clk",

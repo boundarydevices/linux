@@ -1224,15 +1224,6 @@
 		};
 	};
 
-	c_i2c_master: c_i2c {
-		mux {
-			groups = "i2c0_sda_c",
-			"i2c0_sck_c";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
 	eecec_a: ee_ceca {
 		mux {
 			groups = "cec_ao_a_ee";
