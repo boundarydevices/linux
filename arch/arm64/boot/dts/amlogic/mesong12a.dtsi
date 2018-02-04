@@ -66,6 +66,7 @@
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU1:cpu@1 {
@@ -83,6 +84,7 @@
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU2:cpu@2 {
@@ -100,6 +102,7 @@
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU3:cpu@3 {
@@ -117,6 +120,7 @@
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		idle-states {
@@ -139,53 +143,47 @@
 			opp00 {
 				opp-hz = /bits/ 64 <100000000>;
 				opp-microvolt = <761000>;
-				clock-latency-ns = <2000000>;
 			};
 			opp01 {
 				opp-hz = /bits/ 64 <250000000>;
 				opp-microvolt = <781000>;
-				clock-latency-ns = <2000000>;
 			};
 			opp02 {
 				opp-hz = /bits/ 64 <500000000>;
 				opp-microvolt = <801000>;
-				clock-latency-ns = <2000000>;
 			};
 			opp03 {
 				opp-hz = /bits/ 64 <667000000>;
 				opp-microvolt = <851000>;
-				clock-latency-ns = <2000000>;
 			};
 			opp04 {
 				opp-hz = /bits/ 64 <1000000000>;
 				opp-microvolt = <881000>;
-				clock-latency-ns = <2000000>;
 			};
 			opp05 {
 				opp-hz = /bits/ 64 <1200000000>;
 				opp-microvolt = <891000>;
-				clock-latency-ns = <2000000>;
 			};
 			opp06 {
 				opp-hz = /bits/ 64 <1398000000>;
-				opp-microvolt = <981000>;
-				clock-latency-ns = <2000000>;
+				opp-microvolt = <921000>;
 			};
 			opp07 {
-				opp-hz = /bits/ 64 <1608000000>;
-				opp-microvolt = <991000>;
-				clock-latency-ns = <2000000>;
+				opp-hz = /bits/ 64 <1512000000>;
+				opp-microvolt = <951000>;
 			};
 			opp08 {
+				opp-hz = /bits/ 64 <1608000000>;
+				opp-microvolt = <991000>;
+			};
+			opp09 {
 				opp-hz = /bits/ 64 <1800000000>;
 				opp-microvolt = <1001000>;
-				clock-latency-ns = <2000000>;
 			};
 
-			opp09 {
+			opp10 {
 				opp-hz = /bits/ 64 <2016000000>;
 				opp-microvolt = <1011000>;
-				clock-latency-ns = <2000000>;
 			};
 		};
 
