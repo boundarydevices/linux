@@ -1070,7 +1070,7 @@ int nand_init(struct platform_device *pdev)
 {
 	struct aml_nand_platform *plat = NULL;
 	struct resource *res_mem, *res_irq;
-	int i, ret, size;
+	int i, ret = 0, size;
 
 	controller = kzalloc(sizeof(struct hw_controller), GFP_KERNEL);
 	if (controller == NULL)
@@ -1187,6 +1187,10 @@ int nand_init(struct platform_device *pdev)
 			continue;
 		}
 	}
+
+	if (ret)
+		kfree(controller);
+
 	nand_curr_device = 1; /* fixit */
 	return ret;
 }
