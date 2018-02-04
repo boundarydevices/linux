@@ -419,7 +419,7 @@ static const char * const pwm_g12a_ee_parent_names[] = {
 };
 
 static const char * const pwm_g12a_ao_parent_names[] = {
-	"clk81", "xtal", "fclk_div4", "fclk_div5"
+	"xtal", "clk81", "fclk_div4", "fclk_div5"
 };
 
 static const char * const pwm_txlx_ee_parent_names[] = {
