@@ -183,7 +183,7 @@ int hdmitx_hdcp_opr(unsigned int val);
 #define HDMITX_TOP_AXI_ASYNC_STAT0              (TOP_OFFSET_MASK + 0x027)
 #define HDMITX_TOP_I2C_BUSY_CNT_MAX             (TOP_OFFSET_MASK + 0x028)
 #define HDMITX_TOP_I2C_BUSY_CNT_STAT            (TOP_OFFSET_MASK + 0x029)
-#define HDMITX_TOP_HDCP22_BSOD                  (TOP_OFFSET_MASK + 0x02A)
+#define HDMITX_TOP_HDCP22_BSOD                  (TOP_SEC_OFFSET_MASK + 0x02A)
 #define HDMITX_TOP_DDC_CNTL                     (TOP_OFFSET_MASK + 0x02B)
 #define HDMITX_TOP_REVOCMEM_ADDR_S              (TOP_OFFSET_MASK + 0x2000 >> 2)
 #define HDMITX_TOP_REVOCMEM_ADDR_E              (TOP_OFFSET_MASK + 0x365E >> 2)

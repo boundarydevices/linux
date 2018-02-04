@@ -3308,10 +3308,13 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 		break;
 	case DDC_HDCP_MUX_INIT:
 		if (argv == 2) {
+			/*hdmitx_set_reg_bits
+			 *	(HDMITX_TOP_HDCP22_BSOD, 1, 25, 1);
+			 */
 			hdmitx_ddc_hw_op(DDC_MUX_DDC);
 			hdmitx_set_reg_bits(HDMITX_DWC_MC_CLKDIS, 1, 6, 1);
 			udelay(5);
-			hdmitx_wr_reg(HDMITX_DWC_HDCP22REG_CTRL, 0x6);
+			hdmitx_wr_reg(HDMITX_DWC_HDCP22REG_CTRL, 0x86);
 			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 5, 1);
 			udelay(10);
 			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 0, 5, 1);
@@ -3377,7 +3380,6 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 	case DDC_HDCP14_GET_BCAPS_RP:
 		return !!(hdmitx_rd_reg(HDMITX_DWC_A_HDCPOBS3) & (1 << 6));
 	default:
-		pr_info(HW "ddc: unknown cmd: 0x%x\n", cmd);
 		break;
 	}
 	return 1;
@@ -3478,7 +3480,7 @@ static int hdmitx_cntl_config(struct hdmitx_dev *hdev, unsigned int cmd,
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF3, argv, 2, 2);
 		break;
 	default:
-		pr_err(HW "config: unknown cmd: 0x%x\n", cmd);
+		break;
 	}
 
 	return ret;
@@ -3581,7 +3583,7 @@ static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 		hdmi_hwi_init(hdev);
 		break;
 	default:
-		pr_err(HW "misc: unknown cmd: 0x%x\n", cmd);
+		break;
 	}
 	return 1;
 }
