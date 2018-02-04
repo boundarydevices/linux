@@ -966,6 +966,151 @@ static int pts_lookup_offset_inline_locked(u8 type, u32 offset, u32 *val,
 	return -1;
 }
 
+static int pts_pick_by_offset_inline_locked(u8 type, u32 offset, u32 *val,
+		u32 pts_margin, u64 *uS64)
+{
+	struct pts_table_s *pTable;
+	int lookup_threshold;
+
+	int look_cnt = 0;
+
+	if (type >= PTS_TYPE_MAX)
+		return -EINVAL;
+
+	pTable = &pts_table[type];
+
+	if (pts_margin == 0)
+		lookup_threshold = pTable->lookup_threshold;
+	else
+		lookup_threshold = pts_margin;
+
+	if (!pTable->first_lookup_ok)
+		lookup_threshold <<= 1;
+
+
+
+	if (likely(pTable->status == PTS_RUNNING)) {
+		struct pts_rec_s *p = NULL;
+		struct pts_rec_s *p2 = NULL;
+
+		if ((pTable->lookup_cache_valid) &&
+			(offset == pTable->lookup_cache_offset)) {
+			*val = pTable->lookup_cache_pts;
+			return 0;
+		}
+
+		if ((type == PTS_TYPE_VIDEO)
+			&& !list_empty(&pTable->valid_list)) {
+			struct pts_rec_s *rec = NULL;
+			struct pts_rec_s *next = NULL;
+			int look_cnt1 = 0;
+
+			list_for_each_entry_safe(rec,
+				next, &pTable->valid_list, list) {
+				if (OFFSET_DIFF(offset, rec->offset) >
+					PTS_VALID_OFFSET_TO_CHECK) {
+					if (pTable->pts_search == &rec->list)
+						pTable->pts_search =
+						rec->list.next;
+
+					if (tsync_get_debug_vpts()) {
+						pr_info("remove node  offset: 0x%x cnt:%d\n",
+							rec->offset, look_cnt1);
+					}
+
+					list_move_tail(&rec->list,
+						&pTable->free_list);
+					look_cnt1++;
+				} else {
+					break;
+				}
+			}
+		}
+
+		if (list_empty(&pTable->valid_list))
+			return -1;
+
+		if (pTable->pts_search == &pTable->valid_list) {
+			p = list_entry(pTable->valid_list.next,
+						   struct pts_rec_s, list);
+		} else {
+			p = list_entry(pTable->pts_search, struct pts_rec_s,
+						   list);
+		}
+
+		if (OFFSET_LATER(offset, p->offset)) {
+			p2 = p;	/* lookup candidate */
+
+			list_for_each_entry_continue(p, &pTable->valid_list,
+					list) {
+#if 0
+				if (type == PTS_TYPE_VIDEO)
+					pr_info("   >> rec: 0x%x\n", p->offset);
+#endif
+				look_cnt++;
+
+				if (OFFSET_LATER(p->offset, offset))
+					break;
+
+				p2 = p;
+			}
+		} else if (OFFSET_LATER(p->offset, offset)) {
+			list_for_each_entry_continue_reverse(p,
+					&pTable->
+					valid_list, list) {
+#if 0
+				if (type == PTS_TYPE_VIDEO)
+					pr_info("   >> rec: 0x%x\n", p->offset);
+#endif
+#ifdef DEBUG
+				look_cnt++;
+#endif
+				if (OFFSET_EQLATER(offset, p->offset)) {
+					p2 = p;
+					break;
+				}
+			}
+		} else
+			p2 = p;
+
+		if ((p2) &&
+			(OFFSET_DIFF(offset, p2->offset) < lookup_threshold)) {
+
+			if (tsync_get_debug_pts_checkout()) {
+				if (tsync_get_debug_vpts()
+					&& (type == PTS_TYPE_VIDEO)) {
+					pr_info
+					("vpts look up offset<0x%x> -->",
+					 offset);
+					pr_info
+					("<0x%x:0x%x>, look_cnt = %d\n",
+					 p2->offset, p2->val, look_cnt);
+				}
+
+				if (tsync_get_debug_apts()
+					&& (type == PTS_TYPE_AUDIO)) {
+					pr_info
+					("apts look up offset<0x%x> -->",
+					 offset);
+					pr_info
+					("<0x%x:0x%x>, look_cnt = %d\n",
+					 p2->offset, p2->val, look_cnt);
+
+				}
+			}
+			*val = p2->val;
+			*uS64 = p2->pts_uS64;
+
+			return 0;
+
+		}
+	}
+
+
+	return -1;
+}
+
+
 static int pts_lookup_offset_inline(u8 type, u32 offset, u32 *val,
 		u32 pts_margin, u64 *uS64)
 {
@@ -996,6 +1141,22 @@ static int pts_lookup_offset_inline(u8 type, u32 offset, u32 *val,
 	return res;
 }
 
+static int pts_pick_by_offset_inline(u8 type, u32 offset, u32 *val,
+		u32 pts_margin, u64 *uS64)
+{
+	unsigned long flags;
+	int res;
+
+	spin_lock_irqsave(&lock, flags);
+	res = pts_pick_by_offset_inline_locked(
+				type, offset, val, pts_margin, uS64);
+
+	spin_unlock_irqrestore(&lock, flags);
+
+	return res;
+}
+
+
 int pts_lookup_offset(u8 type, u32 offset, u32 *val, u32 pts_margin)
 {
 	u64 pts_us;
@@ -1010,6 +1171,14 @@ int pts_lookup_offset_us64(u8 type, u32 offset, u32 *val, u32 pts_margin,
 	return pts_lookup_offset_inline(type, offset, val, pts_margin, uS64);
 }
 EXPORT_SYMBOL(pts_lookup_offset_us64);
+
+int pts_pickout_offset_us64(u8 type, u32 offset, u32 *val, u32 pts_margin,
+						   u64 *uS64)
+{
+	return pts_pick_by_offset_inline(type, offset, val, pts_margin, uS64);
+}
+EXPORT_SYMBOL(pts_pickout_offset_us64);
+
 
 int pts_set_resolution(u8 type, u32 level)
 {

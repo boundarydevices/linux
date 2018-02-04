@@ -120,10 +120,20 @@
 #define AMSTREAM_IOC_UD_LENGTH _IOR((_A_M), 0x54, int)
 #define AMSTREAM_IOC_UD_POC _IOR((_A_M), 0x55, int)
 #define AMSTREAM_IOC_UD_FLUSH_USERDATA _IOR((_A_M), 0x56, int)
+
+#define AMSTREAM_IOC_UD_BUF_READ _IOR((_A_M), 0x57, struct userdata_param_t)
+
 #define AMSTREAM_IOC_GET_SCREEN_MODE _IOR((_A_M), 0x58, int)
 #define AMSTREAM_IOC_SET_SCREEN_MODE _IOW((_A_M), 0x59, int)
 #define AMSTREAM_IOC_GET_VIDEO_DISCONTINUE_REPORT _IOR((_A_M), 0x5a, int)
 #define AMSTREAM_IOC_SET_VIDEO_DISCONTINUE_REPORT _IOW((_A_M), 0x5b, int)
+
+/*
+ * #define AMSTREAM_IOC_UD_BUF_STATUS _IOR((_A_M),
+ * 0x5c, struct userdata_buf_state_t)
+ */
+
+
 #define AMSTREAM_IOC_VF_STATUS  _IOR((_A_M), 0x60, int)
 #define AMSTREAM_IOC_CLEAR_VBUF _IO((_A_M), 0x80)
 
@@ -138,6 +148,8 @@
 #define AMSTREAM_IOC_SET_VSYNC_UPINT   _IOW((_A_M), 0x89, int)
 #define AMSTREAM_IOC_GET_VSYNC_SLOW_FACTOR   _IOW((_A_M), 0x8a, int)
 #define AMSTREAM_IOC_SET_VSYNC_SLOW_FACTOR   _IOW((_A_M), 0x8b, int)
+#define AMSTREAM_IOC_GET_FIRST_FRAME_LATENCY _IOR((_A_M), 0x8c, int)
+#define AMSTREAM_IOC_CLEAR_FIRST_FRAME_LATENCY _IOR((_A_M), 0x8d, int)
 #define AMSTREAM_IOC_SET_DEMUX  _IOW((_A_M), 0x90, int)
 #define AMSTREAM_IOC_SET_DRMMODE _IOW((_A_M), 0x91, int)
 #define AMSTREAM_IOC_TSTAMP_uS64 _IOW((_A_M), 0x95, int)
@@ -380,12 +392,87 @@ struct codec_profile_t {
 struct userdata_poc_info_t {
 
 	unsigned int poc_info;
-
 	unsigned int poc_number;
+	/*
+	 * bit 0:
+	 *	1, group start
+	 *	0, not group start
+	 * bit 1-2:
+	 *	0, extension_and_user_data( 0 )
+	 *	1, extension_and_user_data( 1 )
+	 *	2, extension_and_user_data( 2 )
+	 */
+	unsigned int flags;
+	unsigned int vpts;
+	unsigned int vpts_valid;
+	unsigned int duration;
 };
 
-/*
-******************************************************************
+struct userdata_meta_info_t {
+	uint32_t poc_number;
+	/************ flags bit defination ***********/
+	/*
+	 * bit 0:		//used for mpeg2
+	 *	1, group start
+	 *	0, not group start
+	 * bit 1-2:	//used for mpeg2
+	 *	0, extension_and_user_data( 0 )
+	 *	1, extension_and_user_data( 1 )
+	 *	2, extension_and_user_data( 2 )
+	 * bit 3-6:	//video format
+	 *	0,	VFORMAT_MPEG12
+	 *	1,	VFORMAT_MPEG4
+	 *	2,	VFORMAT_H264
+	 *	3,	VFORMAT_MJPEG
+	 *	4,	VFORMAT_REAL
+	 *	5,	VFORMAT_JPEG
+	 *	6,	VFORMAT_VC1
+	 *	7,	VFORMAT_AVS
+	 *	8,	VFORMAT_SW
+	 *	9,	VFORMAT_H264MVC
+	 *	10, VFORMAT_H264_4K2K
+	 *	11, VFORMAT_HEVC
+	 *	12, VFORMAT_H264_ENC
+	 *	13, VFORMAT_JPEG_ENC
+	 *	14, VFORMAT_VP9
+	 * bit 7-9:	//frame type
+	 *	0, Unknown Frame Type
+	 *	1, I Frame
+	 *	2, B Frame
+	 *	3, P Frame
+	 *	4, D_Type_MPEG2
+	 * bit 10:  //top_field_first_flag valid
+	 *	0: top_field_first_flag is not valid
+	 *	1: top_field_first_flag is valid
+	 * bit 11: //top_field_first bit val
+	 */
+	uint32_t flags;
+	uint32_t vpts;			/*video frame pts*/
+	/*
+	 * 0: pts is invalid, please use duration to calcuate
+	 * 1: pts is valid
+	 */
+	uint32_t vpts_valid;
+	/*duration for frame*/
+	uint32_t duration;
+	/* how many records left in queue waiting to be read*/
+	uint32_t records_in_que;
+	unsigned long long priv_data;
+	uint32_t padding_data[4];
+};
+
+struct userdata_param_t {
+	uint32_t version;
+	uint32_t instance_id; /*input, 0~9*/
+	uint32_t buf_len; /*input*/
+	uint32_t data_size; /*output*/
+	unsigned long long pbuf_addr; /*input*/
+	struct userdata_meta_info_t meta_info; /*output*/
+};
+
+
+
+/*******************************************************************
 * 0x100~~0x1FF : set cmd
 * 0x200~~0x2FF : set ex cmd
 * 0x300~~0x3FF : set ptr cmd
