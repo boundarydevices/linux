@@ -1068,7 +1068,26 @@
 	status = "okay";
 	pinctrl-names="default";
 	pinctrl-0=<&i2c0_master_pins2>;
-	clock-frequency = <100000>; /* default 100k */
+	clock-frequency = <400000>;
+
+	gt9xx@5d {
+		compatible = "goodix,gt9xx";
+		status = "disabled";
+		reg = <0x5d>;
+		reset-gpio = <&gpio GPIOZ_9 0x00>;
+		irq-gpio = <&gpio GPIOZ_3 0x00>;
+	};
+
+	ftxx@38 {
+		compatible = "focaltech,fts";
+		status = "disabled";
+		reg = <0x38>;
+		reset-gpio = <&gpio GPIOZ_9 0x00>;
+		irq-gpio = <&gpio GPIOZ_3 0x00>;
+		x_max = <600>;
+		y_max = <1024>;
+		max-touch-number = <10>;
+	};
 };
 
 &i2c3 {
