@@ -149,7 +149,65 @@ static void meson_i2c_write_tokens(struct meson_i2c *i2c)
 	writel(i2c->tokens[1], i2c->regs + REG_TOK_LIST1);
 }
 
-static void meson_i2c_set_clk_div(struct meson_i2c *i2c)
+/*
+ * According to I2C-BUS Spec 2.1, in FAST-MODE, LOW period should be at
+ * least 1.3uS, and HIGH period should be at lease 0.6. HIGH to LOW
+ * ratio as 1 to 2 is more safe.
+ *
+ * So in FAST-MODE, we should control the SCL low time.
+ *
+ * Count = clk/freq  = H + L
+ * Duty  = H/(H + L) = 1/2	-- duty 50%
+ * H = n + delay
+ * L = 2m
+ *
+ * =>
+ *
+ * n = Count/2 - delay
+ * m = Count/4
+ */
+static void meson_i2c_set_clk_div_fast(struct meson_i2c *i2c)
+{
+	unsigned long clk_rate = clk_get_rate(i2c->clk);
+	unsigned int div_h, div_l;
+	unsigned int div_temp;
+
+
+	div_temp = DIV_ROUND_UP(clk_rate, i2c->frequency);
+	div_h = DIV_ROUND_UP(div_temp, 2) - i2c->data->delay_ajust;
+	div_l = DIV_ROUND_UP(div_temp, 4);
+
+	/* clock divider has 12 bits */
+	if (div_h >= (1 << 12)) {
+		dev_err(i2c->dev, "requested bus frequency too low\n");
+		div_h = (1 << 12) - 1;
+	}
+
+	if (div_l >= (1 << 12)) {
+		dev_err(i2c->dev, "requested bus frequency too low\n");
+		div_l = (1 << 12) - 1;
+	}
+
+
+	/*control reg:12-21 bits*/
+	meson_i2c_set_mask(i2c, REG_CTRL, REG_CTRL_CLKDIV_MASK,
+			   (div_h & GENMASK(9, 0)) << REG_CTRL_CLKDIV_SHIFT);
+	meson_i2c_set_mask(i2c, REG_CTRL, REG_CTRL_CLKDIVEXT_MASK,
+			   (div_h >> 10) << REG_CTRL_CLKDIVEXT_SHIFT);
+
+
+	/* set SCL low delay */
+	meson_i2c_set_mask(i2c, REG_SLAVE_ADDR, GENMASK(27, 16),
+		(div_l << 16 ) & GENMASK(27, 16));
+
+	/* enable to control SCL low time */
+	meson_i2c_set_mask(i2c, REG_SLAVE_ADDR, BIT(28), BIT(28));
+
+	dev_dbg(i2c->dev, "%s: clk %lu, freq %u, div_h %u, div_l %u\n",
+		__func__, clk_rate, i2c->frequency, div_h, div_l);
+}
+
+static void meson_i2c_set_clk_div_std(struct meson_i2c *i2c)
 {
 	unsigned long clk_rate = clk_get_rate(i2c->clk);
 	unsigned int div;
@@ -174,6 +232,15 @@ static void meson_i2c_set_clk_div(struct meson_i2c *i2c)
 
 	dev_dbg(i2c->dev, "%s: clk %lu, freq %u, div %u\n", __func__,
 		clk_rate, i2c->frequency, div);
+}
+
+static void meson_i2c_set_clk_div(struct meson_i2c *i2c)
+{
+	if (i2c->frequency > 100000) {
+		meson_i2c_set_clk_div_fast(i2c);
+	} else {
+		meson_i2c_set_clk_div_std(i2c);
+	}
 }
 
 static void meson_i2c_get_data(struct meson_i2c *i2c, char *buf, int len)
@@ -327,7 +394,9 @@ static void meson_i2c_do_start(struct meson_i2c *i2c, struct i2c_msg *msg)
 	token = (msg->flags & I2C_M_RD) ? TOKEN_SLAVE_ADDR_READ :
 		TOKEN_SLAVE_ADDR_WRITE;
 
-	writel(msg->addr << 1, i2c->regs + REG_SLAVE_ADDR);
+	meson_i2c_set_mask(i2c, REG_SLAVE_ADDR, GENMASK(7, 0),
+		(unsigned int)((msg->addr << 1) & GENMASK(7, 0)));
+
 	meson_i2c_add_token(i2c, TOKEN_START);
 	meson_i2c_add_token(i2c, token);
 }
