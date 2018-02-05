@@ -136,57 +136,6 @@
 		};
 	};
 
-		cpu_opp_table0: cpu_opp_table0 {
-			compatible = "operating-points-v2";
-			opp-shared;
-
-			opp00 {
-				opp-hz = /bits/ 64 <100000000>;
-				opp-microvolt = <761000>;
-			};
-			opp01 {
-				opp-hz = /bits/ 64 <250000000>;
-				opp-microvolt = <781000>;
-			};
-			opp02 {
-				opp-hz = /bits/ 64 <500000000>;
-				opp-microvolt = <801000>;
-			};
-			opp03 {
-				opp-hz = /bits/ 64 <667000000>;
-				opp-microvolt = <851000>;
-			};
-			opp04 {
-				opp-hz = /bits/ 64 <1000000000>;
-				opp-microvolt = <881000>;
-			};
-			opp05 {
-				opp-hz = /bits/ 64 <1200000000>;
-				opp-microvolt = <891000>;
-			};
-			opp06 {
-				opp-hz = /bits/ 64 <1398000000>;
-				opp-microvolt = <921000>;
-			};
-			opp07 {
-				opp-hz = /bits/ 64 <1512000000>;
-				opp-microvolt = <951000>;
-			};
-			opp08 {
-				opp-hz = /bits/ 64 <1608000000>;
-				opp-microvolt = <991000>;
-			};
-			opp09 {
-				opp-hz = /bits/ 64 <1800000000>;
-				opp-microvolt = <1001000>;
-			};
-
-			opp10 {
-				opp-hz = /bits/ 64 <2016000000>;
-				opp-microvolt = <1011000>;
-			};
-		};
-
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <GIC_PPI 13 0xff08>,
