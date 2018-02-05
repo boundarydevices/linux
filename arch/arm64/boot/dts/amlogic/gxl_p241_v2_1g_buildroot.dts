@@ -63,12 +63,11 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
-		fb_reserved:linux,meson-fb {
+		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x1000000>;
+			size = <0x0 0x8000000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x3f000000 0x0 0x1000000>;
 		};
 		//don't put other dts in front of fb_reserved
 
@@ -88,12 +87,6 @@
 			size = <0x0 0x02400000>;
 			alignment = <0x0 0x400000>;
 		};
-
-		ion_reserved:linux,ion-dev {
-			compatible = "amlogic, idev-mem";
-			size = <0x0 0x1000>;
-		};
-
 		/*  vdin0 CMA pool */
 		//vdin0_cma_reserved:linux,vdin0_cma {
 		//	compatible = "shared-dma-pool";
@@ -113,9 +106,8 @@
 		};
 		/*  POST PROCESS MANAGER */
 		ppmgr_reserved:linux,ppmgr {
-			compatible = "amlogic, ppmgr_memory";
+			compatible = "shared-dma-pool";
 			size = <0x0 0x0>;
-			multi-use;
 		};
 
 		codec_mm_cma:linux,codec_mm_cma {

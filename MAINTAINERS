@@ -14277,6 +14277,10 @@ F:	drivers/amlogic/input/touchscreen/focaltech_touch/*
 F:	drivers/amlogic/input/touchscreen/goodix_gt1x/*
 F:	drivers/amlogic/input/touchscreen/goodix_gt9xx/*
 
+AMLOGIC ADD Q200 buildroot DTS
+M:      Wenbiao <wenbiao.zhang@amlogic.com>
+F:      arch/arm64/boot/dts/amlogic/gxm_q200_2g_buildroot.dts
+
 AMLOGIC ADD LCD_EXTERN P070ACB DRIVER
 M:	Weiming Liu <weiming.liu@amlogic.com>
 F:	drivers/amlogic/media/vout/lcd/lcd_extern/mipi_P070ACB.c
