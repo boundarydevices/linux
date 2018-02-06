@@ -14345,3 +14345,8 @@ AMLOGIC CPUFREQS DRIVER
 M:	hong guo <hong.guo@amlogic.com>
 F:	drivers/cpufreq/meson-cpufreq.c
 F:	drivers/amlogic/clk/clk-cpu-fclk-composite.c
+
+AMLOGIC Irblaster driver
+M: yu.tu <yu.tu@amlogic.com>
+F: drivers/amlogic/irblaster/meson-irblaster.c
+F: drivers/amlogic/irblaster/meson-irblaster.h

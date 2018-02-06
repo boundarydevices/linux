@@ -130,6 +130,16 @@
 		};
 	};
 
+	meson-irblaster {
+		compatible = "amlogic, meson_irblaster";
+		dev_name = "meson-irblaster";
+		reg = <0x0 0xff80014c 0x0 0x10>,
+			<0x0 0xff800040 0x0 0x4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&irblaster_pins>;
+		status = "okay";
+	};
+
 	vout {
 		compatible = "amlogic, vout";
 		dev_name = "vout";
