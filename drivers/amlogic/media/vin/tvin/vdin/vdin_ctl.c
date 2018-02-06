@@ -139,7 +139,8 @@ static unsigned int vpu_reg_27af = 0x3;
 #define MEAS_MUX_DTV                    6
 #define MEAS_MUX_ISP                    8
 #define MEAS_MUX_656_B                  9
-#define MEAS_MUX_VIU                    6
+#define MEAS_MUX_VIU1                   6
+#define MEAS_MUX_VIU2                   9
 
 #define HDMI_DE_REPEAT_DONE_FLAG	0xF0
 #define DECIMATION_REAL_RANGE		0x0F
@@ -574,7 +575,8 @@ static void vdin_set_meas_mux(unsigned int offset, enum tvin_port_e port_,
 		if ((is_meson_gxbb_cpu() || is_meson_gxtvbb_cpu()) &&
 			(bt_path == BT_PATH_GPIO_B))
 			meas_mux = MEAS_MUX_656_B;
-		else if ((is_meson_gxl_cpu() || is_meson_gxm_cpu()) &&
+		else if ((is_meson_gxl_cpu() || is_meson_gxm_cpu() ||
+			is_meson_g12a_cpu()) &&
 			(bt_path == BT_PATH_GPIO))
 			meas_mux = MEAS_MUX_656;
 		else
@@ -598,8 +600,11 @@ static void vdin_set_meas_mux(unsigned int offset, enum tvin_port_e port_,
 	case 0x80: /* dvin */
 		meas_mux = MEAS_MUX_DVIN;
 		break;
+	case 0xa0:/* viu */
+		meas_mux = MEAS_MUX_VIU1;
+		break;
 	case 0xc0:/* viu */
-		meas_mux = MEAS_MUX_VIU;
+		meas_mux = MEAS_MUX_VIU2;
 		break;
 	case 0x100:/* dtv mipi */
 		meas_mux = MEAS_MUX_DTV;
@@ -651,7 +656,7 @@ static void vdin_set_meas_mux(unsigned int offset, enum tvin_port_e port_,
 
 /*attention:new add for bt656
  *0x02: /bt656/
-	a.BT_PATH_GPIO:	gxl & gxm
+	a.BT_PATH_GPIO:	gxl & gxm & g12a
 	b.BT_PATH_GPIO_B:gxtvbb & gxbb
 	c.txl and txlx don't support bt656
 */
@@ -681,7 +686,8 @@ void vdin_set_top(unsigned int offset,
 			vdin_mux = VDIN_MUX_656_B;
 			wr_bits(offset, VDIN_ASFIFO_CTRL3, 0xe4,
 				VDI9_ASFIFO_CTRL_BIT, VDI9_ASFIFO_CTRL_WID);
-		} else if ((is_meson_gxm_cpu() || is_meson_gxl_cpu()) &&
+		} else if ((is_meson_gxm_cpu() || is_meson_gxl_cpu() ||
+			is_meson_g12a_cpu()) &&
 			(bt_path == BT_PATH_GPIO)) {
 			vdin_mux = VDIN_MUX_656;
 			wr_bits(offset, VDIN_ASFIFO_CTRL0, 0xe4,
@@ -727,7 +733,7 @@ void vdin_set_top(unsigned int offset,
 		break;
 	case 0xa0:/*viu1*/
 		vdin_mux = VDIN_MUX_VIU_1;
-		if (port == TVIN_PORT_VIU1_VIDEO)
+		if (port != TVIN_PORT_VIU1)
 			wr_bits(offset, VDIN_ASFIFO_CTRL3, 0xe4,
 				VDI6_ASFIFO_CTRL_BIT, VDI6_ASFIFO_CTRL_WID);
 		else
@@ -736,7 +742,7 @@ void vdin_set_top(unsigned int offset,
 		break;
 	case 0xc0: /* viu2 */
 		vdin_mux = VDIN_MUX_VIU_2;
-		if (port == TVIN_PORT_VIU1_VIDEO)
+		if (port != TVIN_PORT_VIU2)
 			wr_bits(offset, VDIN_ASFIFO_CTRL3, 0xe4,
 				VDI8_ASFIFO_CTRL_BIT, VDI8_ASFIFO_CTRL_WID);
 		else
@@ -1442,6 +1448,10 @@ static void vdin_set_color_matrix0_g12a(unsigned int offset,
 		wr_bits(offset, VDIN_HDR2_MATRIXI_EN_CTRL, 1, 0, 1);
 		wr_bits(offset, VDIN_HDR2_CTRL, 1, 16, 1);
 		wr_bits(offset, VDIN_HDR2_CTRL, 0, 13, 1);
+		wr_bits(offset, VDIN_MATRIX_CTRL, 0,
+			VDIN_MATRIX0_BYPASS_BIT, VDIN_MATRIX0_BYPASS_WID);
+		wr_bits(offset, VDIN_MATRIX_CTRL, 1,
+			VDIN_MATRIX_EN_BIT, VDIN_MATRIX_EN_WID);
 	}
 }
 
@@ -1995,11 +2005,19 @@ void vdin_set_canvas_id(struct vdin_dev_s *devp, unsigned int rdma_enable,
 			unsigned int canvas_id)
 {
 #ifdef CONFIG_AML_RDMA
-	if (rdma_enable)
+	if (rdma_enable) {
+		if (is_meson_g12a_cpu()) {
+			rdma_write_reg_bits(devp->rdma_handle,
+				VDIN_COM_CTRL0+devp->addr_offset, 1,
+				VDIN_FORCEGOLINE_EN_BIT, 1);
+			rdma_write_reg_bits(devp->rdma_handle,
+				VDIN_COM_CTRL0+devp->addr_offset, 0,
+				VDIN_FORCEGOLINE_EN_BIT, 1);
+		}
 		rdma_write_reg_bits(devp->rdma_handle,
 			VDIN_WR_CTRL+devp->addr_offset,
 			canvas_id, WR_CANVAS_BIT, WR_CANVAS_WID);
-	else
+	} else
 #endif
 		wr_bits(devp->addr_offset, VDIN_WR_CTRL, canvas_id,
 			WR_CANVAS_BIT, WR_CANVAS_WID);

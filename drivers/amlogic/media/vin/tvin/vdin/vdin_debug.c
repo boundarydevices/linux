@@ -145,6 +145,10 @@ static ssize_t vdin_attr_show(struct device *dev,
 	len += sprintf(buf+len,
 		"echo v4l2start bt656/viuin/video/isp h_actve v_active");
 	len += sprintf(buf+len,
+		"viuin/viu_wb0_vd1/viu_wb0_vd1/viu_wb0_post_blend/viu_wb0_osd1/viu_wb0_osd2");
+	len += sprintf(buf+len,
+		"viuin2/viu2_wb0_vd1/viu2_wb0_vd1/viu2_wb0_post_blend/viu2_wb0_osd1/viu2_wb0_osd2");
+	len += sprintf(buf+len,
 		"frame_rate cfmt dfmt scan_fmt > /sys/class/vdin/vdinx/attr.\n");
 	len += sprintf(buf+len,
 		"cfmt/dfmt:\t0 : RGB44\t1 YUV422\t2 YUV444\t7 NV12\t8 NV21\n");
@@ -971,10 +975,76 @@ start_chk:
 			pr_info(" port is TVIN_PORT_CAMERA\n");
 		} else if (!strcmp(parm[1], "viuin")) {
 			param.port = TVIN_PORT_VIU1;
-			pr_info(" port is TVIN_PORT_VIU1\n");
+			pr_info(" port is TVIN_PORT_VIU\n");
 		} else if (!strcmp(parm[1], "video")) {
 			param.port = TVIN_PORT_VIU1_VIDEO;
-			pr_info(" port is TVIN_PORT_VIU1_VIDEO\n");
+			pr_info(" port is TVIN_PORT_VIU_VIDEO\n");
+		} else if (!strcmp(parm[1], "viu_wb0_vd1")) {
+			param.port = TVIN_PORT_VIU1_WB0_VD1;
+			pr_info(" port is TVIN_PORT_VIU_WB0_VD1\n");
+		} else if (!strcmp(parm[1], "viu_wb0_vd2")) {
+			param.port = TVIN_PORT_VIU1_WB0_VD2;
+			pr_info(" port is TVIN_PORT_VIU_WB0_VD2\n");
+		} else if (!strcmp(parm[1], "viu_wb0_osd1")) {
+			param.port = TVIN_PORT_VIU1_WB0_OSD1;
+			pr_info(" port is TVIN_PORT_VIU_WB0_OSD1\n");
+		} else if (!strcmp(parm[1], "viu_wb0_osd2")) {
+			param.port = TVIN_PORT_VIU1_WB0_OSD2;
+			pr_info(" port is TVIN_PORT_VIU_WB0_OSD2\n");
+		} else if (!strcmp(parm[1], "viu_wb0_post_blend")) {
+			param.port = TVIN_PORT_VIU1_WB0_POST_BLEND;
+			pr_info(" port is TVIN_PORT_VIU_WB0_POST_BLEND\n");
+		} else if (!strcmp(parm[1], "viu_wb1_vd1")) {
+			param.port = TVIN_PORT_VIU1_WB1_VD1;
+			pr_info(" port is TVIN_PORT_VIU_WB1_VD1\n");
+		} else if (!strcmp(parm[1], "viu_wb1_vd2")) {
+			param.port = TVIN_PORT_VIU1_WB1_VD2;
+			pr_info(" port is TVIN_PORT_VIU_WB1_VD2\n");
+		} else if (!strcmp(parm[1], "viu_wb1_osd1")) {
+			param.port = TVIN_PORT_VIU1_WB1_OSD1;
+			pr_info(" port is TVIN_PORT_VIU_WB1_OSD1\n");
+		} else if (!strcmp(parm[1], "viu_wb0_osd2")) {
+			param.port = TVIN_PORT_VIU1_WB1_OSD2;
+			pr_info(" port is TVIN_PORT_VIU_WB1_OSD2\n");
+		} else if (!strcmp(parm[1], "viu_wb1_post_blend")) {
+			param.port = TVIN_PORT_VIU1_WB1_POST_BLEND;
+			pr_info(" port is TVIN_PORT_VIU_WB1_POST_BLEND\n");
+		} else if (!strcmp(parm[1], "viuin2")) {
+			param.port = TVIN_PORT_VIU2;
+			pr_info(" port is TVIN_PORT_VIU\n");
+		} else if (!strcmp(parm[1], "video2")) {
+			param.port = TVIN_PORT_VIU2_VIDEO;
+			pr_info(" port is TVIN_PORT_VIU_VIDEO\n");
+		} else if (!strcmp(parm[1], "viu2_wb0_vd1")) {
+			param.port = TVIN_PORT_VIU2_WB0_VD1;
+			pr_info(" port is TVIN_PORT_VIU_WB0_VD1\n");
+		} else if (!strcmp(parm[1], "viu2_wb0_vd2")) {
+			param.port = TVIN_PORT_VIU2_WB0_VD2;
+			pr_info(" port is TVIN_PORT_VIU_WB0_VD2\n");
+		} else if (!strcmp(parm[1], "viu2_wb0_osd1")) {
+			param.port = TVIN_PORT_VIU2_WB0_OSD1;
+			pr_info(" port is TVIN_PORT_VIU_WB0_OSD1\n");
+		} else if (!strcmp(parm[1], "viu2_wb0_osd2")) {
+			param.port = TVIN_PORT_VIU2_WB0_OSD2;
+			pr_info(" port is TVIN_PORT_VIU_WB0_OSD2\n");
+		} else if (!strcmp(parm[1], "viu2_wb0_post_blend")) {
+			param.port = TVIN_PORT_VIU2_WB0_POST_BLEND;
+			pr_info(" port is TVIN_PORT_VIU_WB0_POST_BLEND\n");
+		} else if (!strcmp(parm[1], "viu2_wb1_vd1")) {
+			param.port = TVIN_PORT_VIU2_WB1_VD1;
+			pr_info(" port is TVIN_PORT_VIU_WB1_VD1\n");
+		} else if (!strcmp(parm[1], "viu2_wb1_vd2")) {
+			param.port = TVIN_PORT_VIU2_WB1_VD2;
+			pr_info(" port is TVIN_PORT_VIU_WB1_VD2\n");
+		} else if (!strcmp(parm[1], "viu2_wb1_osd1")) {
+			param.port = TVIN_PORT_VIU2_WB1_OSD1;
+			pr_info(" port is TVIN_PORT_VIU_WB1_OSD1\n");
+		} else if (!strcmp(parm[1], "viu2_wb0_osd2")) {
+			param.port = TVIN_PORT_VIU2_WB1_OSD2;
+			pr_info(" port is TVIN_PORT_VIU_WB1_OSD2\n");
+		} else if (!strcmp(parm[1], "viu2_wb1_post_blend")) {
+			param.port = TVIN_PORT_VIU2_WB1_POST_BLEND;
+			pr_info(" port is TVIN_PORT_VIU_WB1_POST_BLEND\n");
 		} else if (!strcmp(parm[1], "isp")) {
 			param.port = TVIN_PORT_ISP;
 			pr_info(" port is TVIN_PORT_ISP\n");

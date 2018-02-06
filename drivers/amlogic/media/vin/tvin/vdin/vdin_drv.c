@@ -423,6 +423,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	/*gxbb/gxl/gxm use clkb as vdin clk,
 	 *for clkb is low speed,wich is enough for 1080p process,
 	 *gxtvbb/txl use vpu clk for process 4k
+	 *g12a use vpu clk for process 4K input buf can't output 4k
 	 */
 	if (is_meson_gxl_cpu() || is_meson_gxm_cpu() || is_meson_gxbb_cpu() ||
 		is_meson_txhd_cpu())

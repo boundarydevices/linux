@@ -1584,8 +1584,6 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 	int tmp_data2 = 0;
 	unsigned int data_path_chose;
 
-	if (super_scaler == 0)
-		return 0;
 	/* top config */
 	tmp_data = VSYNC_RD_MPEG_REG(VPP_SRSHARP0_CTRL);
 	if (sr0_sr1_refresh) {

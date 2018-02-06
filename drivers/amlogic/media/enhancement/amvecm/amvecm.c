@@ -4387,7 +4387,8 @@ static int __init aml_vecm_init(void)
 
 	pr_info("%s:module init\n", __func__);
 	/* remap the hiu bus */
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu() ||
+		is_meson_g12a_cpu())
 		hiu_reg_base = 0xff63c000;
 	else
 		hiu_reg_base = 0xc883c000;
