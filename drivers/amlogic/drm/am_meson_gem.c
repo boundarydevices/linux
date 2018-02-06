@@ -339,12 +339,38 @@ struct sg_table *am_meson_gem_prime_get_sg_table(
 	struct drm_gem_object *obj)
 {
 	struct am_meson_gem_object *meson_gem_obj;
+	struct sg_table *dst_table = NULL;
+	struct scatterlist *dst_sg = NULL;
+	struct sg_table *src_table = NULL;
+	struct scatterlist *src_sg = NULL;
+	int ret, i;
 
 	meson_gem_obj = to_am_meson_gem_obj(obj);
 	DRM_DEBUG("am_meson_gem_prime_get_sg_table %p.\n", meson_gem_obj);
 
-	if (meson_gem_obj->base.import_attach == false)
-		return meson_gem_obj->handle->buffer->sg_table;
+	if (meson_gem_obj->base.import_attach == false) {
+		src_table = meson_gem_obj->handle->buffer->sg_table;
+		dst_table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
+		if (!dst_table) {
+			ret = -ENOMEM;
+			return ERR_PTR(ret);
+		}
+
+		ret = sg_alloc_table(dst_table, src_table->nents, GFP_KERNEL);
+		if (ret) {
+			kfree(dst_table);
+			return ERR_PTR(ret);
+		}
+
+		dst_sg = dst_table->sgl;
+		src_sg = src_table->sgl;
+		for (i = 0; i < src_table->nents; i++) {
+			sg_set_page(dst_sg, sg_page(src_sg), src_sg->length, 0);
+			dst_sg = sg_next(dst_sg);
+			src_sg = sg_next(src_sg);
+		}
+		return dst_table;
+	}
 	else {
 		DRM_ERROR("Not support import buffer from other driver.\n");
 		return NULL;
