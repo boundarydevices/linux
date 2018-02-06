@@ -136,7 +136,7 @@ static void aml_check_pwrdet(bool enable);
 
 /* Audio EQ DRC */
 static struct frddr_attach attach_aed;
-static void aml_check_aed(bool enable);
+static void aml_check_aed(bool enable, int dst);
 
 /* to DDRS */
 static struct toddr *register_toddr_l(struct device *dev,
@@ -716,7 +716,7 @@ void aml_frddr_enable(struct frddr *fr, bool enable)
 	aml_audiobus_update_bits(actrl,	reg, 1<<31, enable<<31);
 
 	/* check for Audio EQ/DRC */
-	aml_check_aed(enable);
+	aml_check_aed(enable, fr->dest);
 }
 
 void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest dst)
@@ -734,6 +734,42 @@ void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest dst)
 	if (fr->chipinfo
 		&& fr->chipinfo->same_src_fn) {
 		aml_audiobus_update_bits(actrl, reg, 1 << 3, 1 << 3);
+	}
+}
+
+/* select dst for same source
+ * sel: share buffer req_sel 1~2
+ * sel 0 is aleardy used for reg_frddr_src_sel1
+ * sel 1 is for reg_frddr_src_sel2
+ * sel 2 is for reg_frddr_src_sel3
+ */
+void aml_frddr_select_dst_ss(struct frddr *fr, enum frddr_dest dst, int sel)
+{
+	struct aml_audio_controller *actrl = fr->actrl;
+	unsigned int reg_base = fr->reg_base;
+	unsigned int reg;
+
+	if (dst == fr->dest) {
+		pr_warn_once("same source sel is same with frddr->dest\r");
+		return;
+	}
+
+	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
+	/* same source en */
+	if (fr->chipinfo
+		&& fr->chipinfo->same_src_fn) {
+
+		if (sel == 1)
+			aml_audiobus_update_bits(actrl, reg,
+				0xf << 4,
+				dst << 4 | 1 << 7);
+		else if (sel == 2)
+			aml_audiobus_update_bits(actrl, reg,
+				0xf << 8,
+				dst << 8 | 1 << 11);
+		else
+			pr_warn_once("sel :%d is not supported for same source\n",
+				sel);
 	}
 }
 
@@ -795,8 +831,12 @@ void aml_aed_enable(bool enable, int aed_module)
 	}
 }
 
-static void aml_check_aed(bool enable)
+static void aml_check_aed(bool enable, int dst)
 {
+	/* check effect module is sync with crruent frddr dst */
+	if (attach_aed.attach_module != dst)
+		return;
+
 	/* AED in enable */
 	if (attach_aed.enable) {
 		if (enable) {

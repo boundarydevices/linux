@@ -280,3 +280,90 @@ void spdifoutb_to_hdmitx_ctrl(void)
 		| 1 << 0 /* spdif_clk_b */
 	);
 }
+
+void spdifout_clk_ctrl(int spdif_id, bool is_enable)
+{
+	unsigned int offset, reg;
+
+	offset = EE_AUDIO_CLK_SPDIFOUT_B_CTRL - EE_AUDIO_CLK_SPDIFOUT_CTRL;
+	reg = EE_AUDIO_CLK_SPDIFOUT_CTRL + offset * spdif_id;
+
+	/* select : mpll 0, 24m, so spdif clk:6m */
+	audiobus_write(reg, is_enable << 31 | 0x0 << 24 | 0x3 << 0);
+}
+
+void spdifout_fifo_ctrl(int spdif_id, int fifo_id, int bitwidth)
+{
+	unsigned int frddr_type;
+	unsigned int offset, reg;
+
+	switch (bitwidth) {
+	case 8:
+		frddr_type = 0;
+		break;
+	case 16:
+		frddr_type = 1;
+		break;
+	case 24:
+		frddr_type = 4;
+		break;
+	case 32:
+		frddr_type = 3;
+		break;
+	default:
+		pr_err("runtime format invalid bitwidth: %d\n",
+			bitwidth);
+		return;
+	}
+
+	pr_info("%s, bit depth:%d, frddr type:%d\n",
+		__func__, bitwidth, frddr_type);
+
+	/* mask lane 0 L/R channels */
+	offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
+	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * spdif_id;
+	audiobus_update_bits(reg,
+		0x1<<29|0x1<<28|0x1<<20|0x1<<19|0xff<<4,
+		1<<29|1<<28|0<<20|0<<19|0x3<<4);
+
+	offset = EE_AUDIO_SPDIFOUT_B_CTRL1 - EE_AUDIO_SPDIFOUT_CTRL1;
+	reg = EE_AUDIO_SPDIFOUT_CTRL1 + offset * spdif_id;
+	audiobus_update_bits(reg,
+		0x3 << 24 | 0x1f << 8 | 0x7 << 4,
+		fifo_id << 24 | (bitwidth - 1) << 8 | frddr_type<<4);
+
+	offset = EE_AUDIO_SPDIFOUT_B_SWAP - EE_AUDIO_SPDIFOUT_SWAP;
+	reg = EE_AUDIO_SPDIFOUT_SWAP + offset * spdif_id;
+	audiobus_write(reg, 1<<4);
+
+	/* reset afifo */
+	offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
+	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * spdif_id;
+	audiobus_update_bits(reg, 3<<28, 0);
+	audiobus_update_bits(reg, 1<<29, 1<<29);
+	audiobus_update_bits(reg, 1<<28, 1<<28);
+
+}
+
+void spdifout_enable(int spdif_id, bool is_enable)
+{
+	unsigned int offset, reg;
+
+	offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
+	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * spdif_id;
+	audiobus_update_bits(reg, 1<<31, is_enable<<31);
+}
+
+void spdifout_samesource_set(int spdif_index, int fifo_id,
+	int bitwidth, bool is_enable)
+{
+	int spdif_id;
+
+	if (spdif_index == 1)
+		spdif_id = 1;
+	else
+		spdif_id = 0;
+
+	spdifout_clk_ctrl(spdif_id, true);
+	spdifout_fifo_ctrl(spdif_id, fifo_id, bitwidth);
+}

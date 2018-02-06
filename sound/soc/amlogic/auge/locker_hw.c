@@ -55,16 +55,16 @@ void audiolocker_update_clks(struct clk *clk_calc, struct clk *clk_ref)
 
 	in_count = audiolocker_read(RO_REF2IMCLK_CNT_L);
 	out_count = audiolocker_read(RO_REF2OMCLK_CNT_L);
-	/*pr_info("\tin count:%d, out count:%d\n", in_count, out_count);*/
+	pr_info("\tin count:%d, out count:%d\n", in_count, out_count);
 
 	if (in_count < out_count) {
 		add_cnt++;
 		mpll1_rate = clk_get_rate(clk_calc);
 		mpll2_rate = clk_get_rate(clk_ref);
-/*		if ( !(add_cnt % 1000))
- *		pr_info("\t    add cnt:%d, mpll1_rate:%d mpll2 rate:%d\n",
- *		add_cnt,mpll1_rate, mpll2_rate);
- */
+
+		pr_info("\t    add cnt:%d, mpll1_rate:%d mpll2 rate:%d\n",
+			add_cnt, mpll1_rate, mpll2_rate);
+
 		clk_set_rate(clk_ref, mpll2_rate + 600);
 		/*udelay(1);*/
 		audiolocker_reset();
@@ -72,10 +72,10 @@ void audiolocker_update_clks(struct clk *clk_calc, struct clk *clk_ref)
 		reduce_cnt++;
 		mpll1_rate = clk_get_rate(clk_calc);
 		mpll2_rate = clk_get_rate(clk_ref);
-/*		if (!(reduce_cnt % 1000))
- *		pr_info("\t reduce cnt:%d, mpll1_rate:%d, mpll2 rate:%d\n",
- *		reduce_cnt,mpll1_rate, mpll2_rate);
- */
+
+		pr_info("\t reduce cnt:%d, mpll1_rate:%d, mpll2 rate:%d\n",
+			reduce_cnt, mpll1_rate, mpll2_rate);
+
 		clk_set_rate(clk_ref, mpll2_rate - 600);
 		/*udelay(1);*/
 		audiolocker_reset();

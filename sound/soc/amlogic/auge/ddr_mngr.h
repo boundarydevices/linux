@@ -92,6 +92,8 @@ int aml_frddr_set_intrpt(struct frddr *fr, unsigned int intrpt);
 unsigned int aml_frddr_get_position(struct frddr *fr);
 void aml_frddr_enable(struct frddr *fr, bool enable);
 void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest);
+extern void aml_frddr_select_dst_ss(struct frddr *fr,
+	enum frddr_dest dst, int sel);
 void aml_frddr_set_fifos(struct frddr *fr,
 		unsigned int depth, unsigned int thresh);
 unsigned int aml_frddr_get_fifo_id(struct frddr *fr);

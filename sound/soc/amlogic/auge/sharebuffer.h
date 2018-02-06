@@ -1,5 +1,5 @@
 /*
- * sound/soc/amlogic/auge/effects.h
+ * sound/soc/amlogic/auge/sharebuffer.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -14,9 +14,11 @@
  * more details.
  *
  */
-#ifndef __AML_AUDIO_EFFECTS_H__
-#define __AML_AUDIO_EFFECTS_H__
+#ifndef __AML_AUDIO_SHAREBUFFER_H__
+#define __AML_AUDIO_SHAREBUFFER_H__
 
-extern int card_add_effects_init(struct snd_soc_card *card);
+extern int sharebuffer_prepare(struct snd_pcm_substream *substream,
+	void *pfrddr, int samesource_sel);
+extern int sharebuffer_trigger(int cmd, int samesource_sel);
 
 #endif

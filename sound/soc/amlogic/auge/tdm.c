@@ -37,6 +37,10 @@
 #include "ddr_mngr.h"
 #include "tdm_hw.h"
 
+/*#define G12A_PTM*/
+
+#include "sharebuffer.h"
+
 #define DRV_NAME "aml_tdm"
 
 #define TDM_A	0
@@ -79,6 +83,9 @@ struct tdm_chipinfo {
 
 	/* clk pad */
 	bool clk_pad_ctl;
+
+	/* same source */
+	bool same_src_fn;
 };
 
 struct aml_tdm {
@@ -97,6 +104,8 @@ struct aml_tdm {
 	struct frddr *fddr;
 
 	struct tdm_chipinfo *chipinfo;
+	/* share buffer with module */
+	int samesource_sel;
 };
 
 static const struct snd_pcm_hardware aml_tdm_hardware = {
@@ -116,7 +125,7 @@ static const struct snd_pcm_hardware aml_tdm_hardware = {
 	.buffer_bytes_max = 512 * 1024,
 
 	.rate_min = 8000,
-	.rate_max = 48000,
+	.rate_max = 192000,
 	.channels_min = 1,
 	.channels_max = 32,
 };
@@ -383,6 +392,14 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 		enum frddr_dest dst;
 		unsigned int fifo_id;
 
+		/* share buffer prepare */
+		if (p_tdm->chipinfo &&
+			p_tdm->chipinfo->same_src_fn) {
+			if (p_tdm->samesource_sel >= 0)
+				sharebuffer_prepare(substream,
+					fr, p_tdm->samesource_sel);
+		}
+
 		fifo_id = aml_frddr_get_fifo_id(fr);
 		aml_tdm_fifo_ctrl(p_tdm->actrl,
 			bit_depth,
@@ -460,6 +477,13 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 {
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 
+	/* share buffer trigger */
+	if (p_tdm->chipinfo &&
+		p_tdm->chipinfo->same_src_fn) {
+		if (p_tdm->samesource_sel >= 0)
+			sharebuffer_trigger(cmd, p_tdm->samesource_sel);
+	}
+
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
@@ -476,7 +500,6 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 			dev_info(substream->pcm->card->dev, "tdm capture enable\n");
 			aml_toddr_enable(p_tdm->tddr, 1);
 		}
-
 		aml_tdm_enable(p_tdm->actrl,
 			substream->stream, p_tdm->id, true);
 
@@ -486,6 +509,7 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		aml_tdm_enable(p_tdm->actrl,
 			substream->stream, p_tdm->id, false);
+
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			dev_info(substream->pcm->card->dev, "tdm playback stop\n");
 			aml_frddr_enable(p_tdm->fddr, 0);
@@ -696,8 +720,6 @@ static unsigned int aml_mpll_mclk_ratio(unsigned int freq)
 
 	return ratio;
 }
-
-/*#define G12A_PTM*/
 
 static int aml_dai_set_tdm_sysclk(struct snd_soc_dai *cpu_dai,
 				int clk_id, unsigned int freq, int dir)
@@ -983,6 +1005,7 @@ struct tdm_chipinfo g12a_tdma_chipinfo = {
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
+	.same_src_fn = true,
 };
 
 struct tdm_chipinfo g12a_tdmb_chipinfo = {
@@ -990,6 +1013,7 @@ struct tdm_chipinfo g12a_tdmb_chipinfo = {
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
+	.same_src_fn = true,
 };
 
 struct tdm_chipinfo g12a_tdmc_chipinfo = {
@@ -997,6 +1021,7 @@ struct tdm_chipinfo g12a_tdmc_chipinfo = {
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
+	.same_src_fn = true,
 };
 
 static const struct of_device_id aml_tdm_device_id[] = {
@@ -1070,6 +1095,19 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Can't retrieve dai-tdm-clk-sel\n");
 		return -ENXIO;
+	}
+
+	/* default no same source */
+	if (p_tdm->chipinfo &&
+		p_tdm->chipinfo->same_src_fn) {
+		ret = of_property_read_u32(node, "samesource_sel",
+				&p_tdm->samesource_sel);
+		if (ret < 0)
+			p_tdm->samesource_sel = -1;
+
+		pr_info("TDM id %d samesource_sel:%d\n",
+			p_tdm->id,
+			p_tdm->samesource_sel);
 	}
 
 	/* get tdm lanes info. if not, set to default 1 */

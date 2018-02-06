@@ -71,11 +71,16 @@ static int resample_clk_set(struct audioresample *p_resample)
 			pr_err("Can't enable resample_src clock: %d\n", ret);
 			return -EINVAL;
 		}
-		if (p_resample->out_rate)
+		if (p_resample->out_rate) {
 			clk_set_rate(p_resample->sclk,
 				p_resample->out_rate * 256);
-		else
+			clk_set_rate(p_resample->clk,
+				p_resample->out_rate * 256);
+		} else {
+			/* defaule resample clk */
 			clk_set_rate(p_resample->sclk, 48000 * 256);
+			clk_set_rate(p_resample->clk, 48000 * 256);
+		}
 
 		ret = clk_prepare_enable(p_resample->pll);
 		if (ret) {

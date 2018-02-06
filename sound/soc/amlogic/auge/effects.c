@@ -131,7 +131,7 @@ static int mixer_set_AED_req_ctrl(struct snd_kcontrol *kcontrol,
 	pr_info("AED req_sel0 module:%s\n", aed_req_module_texts[value]);
 
 	/* REQ_SEL0 */
-	aed_req_sel(0, value);
+	aed_req_sel(false, 0, value);
 
 	return 0;
 }
@@ -140,8 +140,12 @@ static int mixer_set_EQ(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
 	unsigned int value = ucontrol->value.integer.value[0];
+	int eqdrc_module;
 
 	aed_set_eq(value, aml_EQ_param_length, &aml_EQ_param[0]);
+
+	eqdrc_module = aed_get_req_sel(0);
+	aml_aed_enable(value, eqdrc_module);
 
 	return 0;
 }
@@ -150,9 +154,13 @@ static int mixer_set_DRC_params(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
 	unsigned int value = ucontrol->value.integer.value[0];
+	int eqdrc_module;
 
 	aed_set_drc(value, aml_DRC_param_length, &aml_drc_table[0],
 		aml_DRC_param_length, &aml_drc_tko_table[0]);
+
+	eqdrc_module = aed_get_req_sel(0);
+	aml_aed_enable(value, eqdrc_module);
 
 	return 0;
 }
@@ -185,59 +193,99 @@ static const struct snd_kcontrol_new snd_eqdrc_controls[] = {
 			 mixer_eqdrc_read, mixer_eqdrc_write,
 			 chvol_tlv),
 
-	SOC_SINGLE_EXT_TLV("EQ master volume mute",
+	SOC_SINGLE_EXT("EQ master volume mute",
 			 AED_MUTE, 31, 0x1, 0,
-			 mixer_eqdrc_read, mixer_eqdrc_write,
-			 NULL),
+			 mixer_eqdrc_read, mixer_eqdrc_write),
 
-	SOC_SINGLE_EXT_TLV("EQ/DRC Channel Mask",
+	SOC_SINGLE_EXT("EQ/DRC Channel Mask",
 			 AED_TOP_CTL, 18, 0xff, 0,
-			 mixer_eqdrc_read, mixer_eqdrc_write,
-			 NULL),
+			 mixer_eqdrc_read, mixer_eqdrc_write),
 
-	SOC_SINGLE_EXT_TLV("EQ/DRC Lane Mask",
+	SOC_SINGLE_EXT("EQ/DRC Lane Mask",
 			 AED_TOP_CTL, 14, 0xf, 0,
-			 mixer_eqdrc_read, mixer_eqdrc_write,
-			 NULL),
+			 mixer_eqdrc_read, mixer_eqdrc_write),
 
-	SOC_SINGLE_EXT_TLV("EQ/DRC Req Module",
+	SOC_SINGLE_EXT("EQ/DRC Req Module",
 			 AED_TOP_REQ_CTL, 0, 0x7, 0,
-			 mixer_eqdrc_read, mixer_set_AED_req_ctrl,
-			 NULL),
+			 mixer_eqdrc_read, mixer_set_AED_req_ctrl),
 
-	SOC_SINGLE_EXT_TLV("EQ enable",
+	SOC_SINGLE_EXT("EQ enable",
 			 AED_EQ_EN, 0, 0x1, 0,
-			 mixer_eqdrc_read, mixer_set_EQ,
-			 NULL),
+			 mixer_eqdrc_read, mixer_set_EQ),
 
-	SOC_SINGLE_EXT_TLV("DRC enable",
+	SOC_SINGLE_EXT("DRC enable",
 			 AED_DRC_EN, 0, 0x1, 0,
-			 mixer_eqdrc_read, mixer_set_DRC_params,
-			 NULL),
+			 mixer_eqdrc_read, mixer_set_DRC_params),
 
-	SOC_SINGLE_EXT_TLV("NG enable",
+	SOC_SINGLE_EXT("NG enable",
 			 AED_NG_CTL, 0, 0x1, 0,
-			 mixer_eqdrc_read, mixer_eqdrc_write,
-			 NULL),
+			 mixer_eqdrc_read, mixer_eqdrc_write),
 
-	SOC_SINGLE_EXT_TLV("NG noise thd",
+	SOC_SINGLE_EXT("NG noise thd",
 			 AED_NG_THD0, 8, 0x7FFF, 0,
-			 mixer_eqdrc_read, mixer_eqdrc_write,
-			 NULL),
+			 mixer_eqdrc_read, mixer_eqdrc_write),
 
-	SOC_SINGLE_EXT_TLV("NG signal thd",
+	SOC_SINGLE_EXT("NG signal thd",
 			 AED_NG_THD1, 8, 0x7FFF, 0,
-			 mixer_eqdrc_read, mixer_eqdrc_write,
-			 NULL),
+			 mixer_eqdrc_read, mixer_eqdrc_write),
 
-	SOC_SINGLE_EXT_TLV("NG counter thd",
+	SOC_SINGLE_EXT("NG counter thd",
 			 AED_NG_CNT_THD, 0, 0xFFFF, 0,
-			 mixer_eqdrc_read, mixer_eqdrc_write,
-			 NULL),
+			 mixer_eqdrc_read, mixer_eqdrc_write),
 };
 
-int card_add_eqdrc_kcontrols(struct snd_soc_card *card)
+int card_add_effects_init(struct snd_soc_card *card)
 {
+	struct device_node *audio_effect_np;
+	int eq_enable = -1, drc_enable = -1, eqdrc_module = -1;
+	int lane_mask = -1, channel_mask = -1;
+
+	audio_effect_np = of_parse_phandle(card->dev->of_node,
+		"aml-audio-card,effect", 0);
+	if (audio_effect_np == NULL) {
+		pr_err("error: failed to find node %s for eq/drc info!\n",
+				"audio_effect");
+		return -EINVAL;
+	}
+
+	of_property_read_u32(audio_effect_np,
+		"eq_enable",
+		&eq_enable);
+	of_property_read_u32(audio_effect_np,
+		"drc_enable",
+		&drc_enable);
+	of_property_read_u32(audio_effect_np,
+		"eqdrc_module",
+		&eqdrc_module);
+	of_property_read_u32(audio_effect_np,
+		"lane_mask",
+		&lane_mask);
+	of_property_read_u32(audio_effect_np,
+		"channel_mask",
+		&channel_mask);
+
+	init_EQ_DRC_module();
+
+	if (eq_enable >= 0)
+		aed_set_eq(1, aml_EQ_param_length, &aml_EQ_param[0]);
+
+	if (drc_enable >= 0)
+		aed_set_drc(1, aml_DRC_param_length, &aml_drc_table[0],
+			aml_DRC_param_length, &aml_drc_tko_table[0]);
+
+	/* sel 0 in default */
+	if (eqdrc_module >= 0)
+		aed_req_sel(false, 0, eqdrc_module);
+
+	if (lane_mask >= 0)
+		aed_set_lane(lane_mask);
+	if (channel_mask >= 0)
+		aed_set_channel(channel_mask);
+
+	/* init eq/drc in defalut */
+	set_internal_EQ_volume(0xc0, 0x30, 0x30);
+
+	/* eq/drc mixer controls */
 	return snd_soc_add_card_controls(card,
 		snd_eqdrc_controls, ARRAY_SIZE(snd_eqdrc_controls));
 }

@@ -416,11 +416,8 @@ static int aml_dai_spdif_prepare(
 		aml_frddr_select_dst(fr, dst);
 		aml_frddr_set_fifos(fr, 0x40, 0x20);
 
-		// TODO: TOHDMITX_CTRL0
+		/* TOHDMITX_CTRL0 */
 		if (p_spdif->id == 1) {
-			/* HDMI audio stream type ID */
-			#define AOUT_EVENT_IEC_60958_PCM	0x1
-
 			spdifoutb_to_hdmitx_ctrl();
 			aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM,
 				substream);

@@ -29,11 +29,14 @@ extern int set_internal_EQ_volume(
 	unsigned int channel_1_volume,
 	unsigned int channel_2_volume);
 
-extern void aed_req_sel(int sel, int req_module);
+extern void aed_req_sel(bool enable, int sel, int req_module);
+extern int aed_get_req_sel(int sel);
 extern void aed_set_eq(int enable, int params_len, unsigned int *params);
 extern void aed_set_drc(int enable,
 	int drc_len, unsigned int *drc_params,
 	int drc_tko_len, unsigned int *drc_tko_params);
 extern int aml_aed_format_set(int frddr_dst);
 extern void aed_src_select(bool enable, int frddr_dst, int fifo_id);
+extern void aed_set_lane(int lane_mask);
+extern void aed_set_channel(int channel_mask);
 #endif

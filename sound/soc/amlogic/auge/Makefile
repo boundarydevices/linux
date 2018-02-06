@@ -23,4 +23,5 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						effects.o \
 						effects_hw.o \
 						pwrdet.o \
-						pwrdet_hw.o
+						pwrdet_hw.o \
+						sharebuffer.o

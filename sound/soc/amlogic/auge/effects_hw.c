@@ -35,12 +35,10 @@ int DRC0_enable(int enable, int thd0, int k0)
 
 int init_EQ_DRC_module(void)
 {
-	eqdrc_write(AED_TOP_CTL, (1 << 31)); /* fifo init */
 	eqdrc_write(AED_ED_CTL, 1); /* soft reset*/
 	msleep(20);
 	eqdrc_write(AED_ED_CTL, 0); /* soft reset*/
-	eqdrc_write(AED_TOP_CTL, (0 << 1) /*i2s in sel*/
-						| (1 << 0)); /*module enable*/
+
 	eqdrc_write(AED_NG_CTL, (3 << 30)); /* disable noise gate*/
 
 	return 0;
@@ -62,22 +60,22 @@ int set_internal_EQ_volume(
 	return 0;
 }
 
-void aed_req_sel(int sel, int req_module)
+void aed_req_sel(bool enable, int sel, int req_module)
 {
 	int mask_offset, val_offset;
 
 	switch (sel) {
 	case 0: /* REQ_SEL0 */
 		mask_offset = 0x1 << 3 | 0x7 << 0;
-		val_offset = 0x1 << 3 | req_module << 0;
+		val_offset = enable << 3 | req_module << 0;
 		break;
 	case 1: /* REQ_SEL1 */
 		mask_offset = 0x1 << 7 | 0x7 << 4;
-		val_offset = 0x1 << 7 | req_module << 4;
+		val_offset = enable << 7 | req_module << 4;
 		break;
-	case 2: /* REQ_SEL0 */
+	case 2: /* REQ_SEL2 */
 		mask_offset = 0x1 << 11 | 0x7 << 8;
-		val_offset = 0x1 << 11 | req_module << 8;
+		val_offset = enable << 11 | req_module << 8;
 		break;
 	default:
 		pr_err("unknown AED req_sel:%d\n", sel);
@@ -85,6 +83,30 @@ void aed_req_sel(int sel, int req_module)
 	}
 
 	eqdrc_update_bits(AED_TOP_REQ_CTL, mask_offset, val_offset);
+}
+
+/* get eq/drc module */
+int aed_get_req_sel(int sel)
+{
+	int val = eqdrc_read(AED_TOP_REQ_CTL);
+	int mask_off;
+
+	switch (sel) {
+	case 0: /* REQ_SEL0 */
+		mask_off = 0;
+		break;
+	case 1: /* REQ_SEL1 */
+		mask_off = 4;
+		break;
+	case 2: /* REQ_SEL2 */
+		mask_off = 8;
+		break;
+	default:
+		pr_err("unknown AED req_sel:%d\n", sel);
+		return -EINVAL;
+	}
+
+	return (val >> mask_off) & 0x7;
 }
 
 void aed_set_eq(int enable, int params_len, unsigned int *params)
@@ -156,17 +178,31 @@ int aml_aed_format_set(int frddr_dst)
 
 void aed_src_select(bool enable, int frddr_dst, int fifo_id)
 {
-	if (enable) {
-		if (frddr_dst >= 3) {
-			/* SPDIFOUT A/B */
-			aml_spdifout_select_aed(enable, frddr_dst - 3);
-		} else if (frddr_dst < 3 && frddr_dst >= 0) {
-			/* TDMOUT A/B/C */
-			aml_tdmout_select_aed(enable, frddr_dst);
-		} else
-			pr_err("unknown function for AED\n");
-	}
+	/* Effect Module */
+	if (frddr_dst >= 3) {
+		/* SPDIFOUT A/B */
+		aml_spdifout_select_aed(enable, frddr_dst - 3);
+	} else if (frddr_dst < 3 && frddr_dst >= 0) {
+		/* TDMOUT A/B/C */
+		aml_tdmout_select_aed(enable, frddr_dst);
+	} else
+		pr_err("unknown function for AED\n");
+
+	/* AED module, req */
+	aed_req_sel(enable, 0, frddr_dst);
+
+	/* AED module, sel & enable */
 	eqdrc_update_bits(AED_TOP_CTL,
 		0x3 << 4 | 0x1 << 0,
 		fifo_id << 4 | enable << 0);
+}
+
+void aed_set_lane(int lane_mask)
+{
+	eqdrc_update_bits(AED_TOP_CTL, 0xf << 14, lane_mask << 14);
+}
+
+void aed_set_channel(int channel_mask)
+{
+	eqdrc_update_bits(AED_TOP_CTL, 0xff << 18, channel_mask << 18);
 }

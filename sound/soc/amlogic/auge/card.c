@@ -959,7 +959,7 @@ static int aml_card_probe(struct platform_device *pdev)
 
 	if (priv->chipinfo && priv->chipinfo->eqdrc_fn) {
 		pr_info("eq/drc function enable\n");
-		ret = card_add_eqdrc_kcontrols(&priv->snd_card);
+		ret = card_add_effects_init(&priv->snd_card);
 		if (ret < 0)
 			pr_warn_once("Failed to add audio effects controls\n");
 	} else

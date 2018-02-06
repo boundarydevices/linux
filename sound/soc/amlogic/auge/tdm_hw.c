@@ -237,9 +237,12 @@ void aml_tdm_set_format(
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
-		if (p_config->sclk_ws_inv)
-			bclkout_skew = 2;
-		else
+		if (p_config->sclk_ws_inv) {
+			if (master_mode)
+				bclkout_skew = 2;
+			else
+				bclkout_skew = 3;
+		} else
 			bclkout_skew = 1;
 		bclkin_skew = 3;
 
@@ -264,9 +267,12 @@ void aml_tdm_set_format(
 		 * that is, together with the last bit of the previous
 		 * data word.
 		 */
-		if (p_config->sclk_ws_inv)
-			bclkout_skew = 2;
-		else
+		if (p_config->sclk_ws_inv) {
+			if (master_mode)
+				bclkout_skew = 2;
+			else
+				bclkout_skew = 3;
+		} else
 			bclkout_skew = 1;
 		bclkin_skew = 3;
 
@@ -279,7 +285,13 @@ void aml_tdm_set_format(
 		 * Frame high, one bit for frame sync,
 		 * frame sync asserts with the first bit of the frame.
 		 */
-		bclkout_skew = 2;
+		if (p_config->sclk_ws_inv) {
+			if (master_mode)
+				bclkout_skew = 3;
+			else
+				bclkout_skew = 4;
+		} else
+			bclkout_skew = 2;
 		bclkin_skew = 2;
 
 		if (capture_active)
@@ -343,7 +355,7 @@ void aml_tdm_set_format(
 		aml_audiobus_update_bits(actrl, reg_out,
 			0x3<<30, 0x3<<30);
 
-		if (p_config->sclk_ws_inv)
+		if (p_config->sclk_ws_inv && master_mode)
 			aml_audiobus_update_bits(actrl, reg_out,
 				0x1 << 28,
 				0x1 << 28);

@@ -49,8 +49,6 @@
 #include "spdif_dai.h"
 #include "dmic.h"
 
-#define AOUT_EVENT_IEC_60958_PCM 0x1
-
 /* extern int set_i2s_iec958_samesource(int enable);
  *
  * the I2S hw  and IEC958 PCM output initiation,958 initiation here,
