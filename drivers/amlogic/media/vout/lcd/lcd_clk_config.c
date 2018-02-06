@@ -781,16 +781,17 @@ static void lcd_set_pll_g12a(struct lcd_clk_config_s *cConf)
 		(cConf->pll_m << LCD_PLL_M_G12A) |
 		(cConf->pll_od1_sel << LCD_PLL_OD_G12A));
 	pll_ctrl1 = 0x00;
-	pll_ctrl1 |= ((1 << 19) | (cConf->pll_frac << 0));
+	/*pll_ctrl1 |= ((1 << 19) | (cConf->pll_frac << 0));*/
 
 	lcd_hiu_write(HHI_GP0_PLL_CNTL0_G12A, pll_ctrl);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL1_G12A, pll_ctrl1);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL2_G12A, 0x00);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL3_G12A, 0x08691c00);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL4_G12A, 0x33771291);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL5_G12A, 0x39270000);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL4_G12A, 0x33771290);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL5_G12A, 0x39272000);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL6_G12A, 0x50540000);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 1, LCD_PLL_RST_G12A, 1);
+	udelay(100);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 0, LCD_PLL_RST_G12A, 1);
 
 	ret = lcd_pll_wait_lock(HHI_GP0_PLL_CNTL0_G12A, LCD_PLL_LOCK_G12A);

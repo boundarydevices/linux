@@ -43,7 +43,7 @@
 		 * power value:(0=output low, 1=output high, 2=input)
 		 * power delay:(unit in ms)
 		 */
-		lcd_cpu-gpios = <&gpio GPIOZ_8 1>;
+		lcd_cpu-gpios = <&gpio GPIOZ_8 GPIO_ACTIVE_HIGH>;
 		lcd_cpu_gpio_names = "GPIOZ_8";
 
 		lcd_0{
@@ -86,9 +86,13 @@
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
+				0 0 0 10
+				0 0 1 20
 				2 0 0 0
 				0xff 0 0 0>; /*ending*/
-			power_off_step = <2 0 0 50
+			power_off_step = <
+				2 0 0 50
+				0 0 0 100
 				0xff 0 0 0>; /*ending*/
 			backlight_index = <0>;
 		};
@@ -97,7 +101,7 @@
 			model_name = "TV070WSM";
 			interface = "mipi";
 			basic_setting = <600 1024 /*h_active, v_active*/
-				680 1040 /*h_period, v_period*/
+				700 1053 /*h_period, v_period*/
 				8 /*lcd_bits*/
 				95 163>; /*screen_widht, screen_height*/
 			lcd_timing = <24 36 0 /*hs_width,hs_bp,hs_pol*/
@@ -105,9 +109,9 @@
 			clk_attr = <0 /*fr_adj_type(0=clock,1=htotal,2=vtotal)*/
 				0 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
-				42400000>; /*pixel_clk(unit in Hz)*/
+				44250000>; /*pixel_clk(unit in Hz)*/
 			mipi_attr = <4 /*lane_num*/
-				350 /*bit_rate_max(MHz)*/
+				360 /*bit_rate_max(MHz)*/
 				0 /*factor(*100, default 0 for auto)*/
 				1 /*operation_mode_init(0=video, 1=command)*/
 				0 /*operation_mode_display(0=video, 1=command)*/
@@ -124,10 +128,12 @@
 			extern_init = <1>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <
+					0 0 0 20
 					2 0 0 0
 					0xff 0 0 0>;
 			power_off_step = <
 					2 0 0 100
+					0 0 0 100
 					0xff 0 0 0>;
 			backlight_index = <0>;
 		};
@@ -163,9 +169,14 @@
 			extern_init = <2>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <
+					0 0 1 20
+					0 0 0 10
+					0 0 1 20
 					2 0 0 0
 					0xff 0 0 0>;
-			power_off_step = <2 0 0 50
+			power_off_step = <
+					2 0 0 50
+					0 0 0 100
 					0xff 0 0 0>;
 			backlight_index = <0>;
 		};
@@ -269,7 +280,7 @@
 		status = "okay";
 		key_valid = <0>;
 		pinctrl-names = "pwm_on";
-		pinctrl-0 = <&bl_pwm_on_pins>;
+		pinctrl-0 = <&bl_pwm_on_pins>; /*pwm_f_pins2*/
 		pinctrl_version = <2>; /* for uboot */
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
 		/* power index:(point gpios_index, 0xff=invalid)
@@ -308,7 +319,7 @@
 			bl_power_attr = <1 /*en_gpio_index*/
 				1 0 /*on_value, off_value*/
 				200 200>; /*on_delay(ms), off_delay(ms)*/
-			bl_extern_index = <1>;
+			bl_extern_index = <0>;
 		};
 	};
 	bl_pwm_conf:bl_pwm_conf{
