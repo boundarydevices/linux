@@ -175,6 +175,8 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 				prop, pdata->gpio_cd_level);
 		SD_PARSE_STRING_PROP(child, "pinname",
 				str, pdata->pinname);
+		SD_PARSE_STRING_PROP(child, "dmode",
+				str, pdata->dmode);
 		SD_PARSE_U32_PROP_DEC(child, "auto_clk_close",
 				prop, pdata->auto_clk_close);
 		SD_PARSE_U32_PROP_DEC(child, "vol_switch_18",

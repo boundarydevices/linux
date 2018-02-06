@@ -376,7 +376,7 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 			xfer_bytes = mrq->data->blksz*mrq->data->blocks;
 			/* copy buffer from dma to data->sg in read cmd*/
 #ifdef SD_EMMC_REQ_DMA_SGMAP
-			WARN_ON(aml_sd_emmc_post_dma(host, mrq));
+			WARN_ON(host->post_cmd_op(host, mrq));
 #else
 			if (host->mrq->data->flags & MMC_DATA_READ) {
 				aml_sg_copy_buffer(mrq->data->sg,

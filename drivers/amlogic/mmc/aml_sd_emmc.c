@@ -1484,6 +1484,7 @@ static void meson_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 }
 
 #ifdef SD_EMMC_REQ_DMA_SGMAP
+
 static char *aml_sd_emmc_kmap_atomic(
 		struct scatterlist *sg, unsigned long *flags)
 {
@@ -1503,6 +1504,79 @@ static void aml_sd_emmc_kunmap_atomic(
  * a linear buffer and an SG list  for amlogic,
  * We don't disable irq in this function
  */
+#ifdef CFG_SDEMMC_PIO
+static u32 aml_sd_emmc_pre_pio(struct amlsd_host *host,
+	struct mmc_request *mrq, struct sd_emmc_desc_info *desc)
+{
+	struct mmc_data *data = NULL;
+	u8 direction = 0, data_rw = 0, block_mode, data_num = 0;
+	u32 data_size, data_len, ret = 0;
+	u32 desc_cnt = 0;
+	u32 bl_len;
+	struct sd_emmc_desc_info *desc_cur = NULL;
+	struct cmd_cfg *des_cmd_cur = NULL;
+
+	data = mrq->cmd->data;
+	if (data == NULL) {
+		WARN_ON(1);
+		goto err_exit;
+	}
+	direction = (data->flags & MMC_DATA_READ)
+		? DMA_FROM_DEVICE : DMA_TO_DEVICE;
+	data_rw = (data->flags & MMC_DATA_READ) ? 0 : 1;
+
+	host->sg_cnt = dma_map_sg(mmc_dev(host->mmc),
+		data->sg, data->sg_len, direction);
+
+	/*
+	 * This only happens when someone fed
+	 * us an invalid request.
+	 */
+	if (host->sg_cnt == 0) {
+		WARN_ON(1);
+		goto err_exit;
+	}
+
+	data_size = (mrq->cmd->data->blksz * mrq->cmd->data->blocks);
+	block_mode = ((mrq->cmd->data->blocks > 1)
+		|| (mrq->cmd->data->blksz >= 512)) ? 1 : 0;
+	bl_len = block_mode ? log2i(mrq->cmd->data->blksz) : 0;
+	if (data_size > SD_EMMC_PIO_SIZE) {
+		pr_err("ERROR: data %d\n", data_size);
+		WARN_ON(data_size > SD_EMMC_PIO_SIZE);
+	}
+
+	/* write out*/
+	if (data_rw)
+		sg_copy_to_buffer(data->sg,
+			host->sg_cnt, host->pio_buf, data_size);
+
+	desc_cur = desc;
+	des_cmd_cur = (struct cmd_cfg *)&(desc_cur->cmd_info);
+	if (desc_cnt != 0) { /* for first desc, */
+		des_cmd_cur->no_resp = 1;
+		des_cmd_cur->no_cmd = 1;
+	}
+	des_cmd_cur->data_io = 1;
+	des_cmd_cur->owner = 1;
+	des_cmd_cur->timeout = 0xc;
+	des_cmd_cur->data_wr = data_rw;
+	des_cmd_cur->block_mode = block_mode;
+	des_cmd_cur->data_num = data_num;
+
+	data_len = block_mode ?
+		(data_size >> bl_len) : data_size;
+	des_cmd_cur->length = data_len;
+	/* sram for pio addr */
+	desc_cur->data_addr = host->pio_dma_buf | 1;
+	/* only 1 desc will be filled as we just got a 1k pio buffer. */
+	ret = 1;
+
+err_exit:
+	return ret;
+}
+#endif /* CFG_SDEMMC_PIO */
+
 static unsigned int aml_sd_emmc_pre_dma(struct amlsd_host *host,
 	struct mmc_request *mrq, struct sd_emmc_desc_info *desc)
 {
@@ -1637,12 +1711,40 @@ static unsigned int aml_sd_emmc_pre_dma(struct amlsd_host *host,
 err_exit:
 	return host->sg_cnt;
 }
-
 /**
  * aml_sg_copy_buffer - Copy data between
  *a linear buffer and an SG list  for amlogic,
  * We don't disable irq in this function
  **/
+#ifdef CFG_SDEMMC_PIO
+int aml_sd_emmc_post_pio(struct amlsd_host *host,
+		struct mmc_request *mrq)
+{
+	struct mmc_data *data = NULL;
+	int ret = 0;
+	u32 data_size;
+
+	data = mrq->cmd->data;
+	if (data == NULL) {
+		WARN_ON(1);
+		ret = -1;
+		goto err_exit;
+	}
+	if (data->flags & MMC_DATA_READ) {
+		data_size = (data->blksz * data->blocks);
+		sg_copy_from_buffer(data->sg,
+			host->sg_cnt, host->pio_buf, data_size);
+	}
+
+	/* unmap */
+	dma_unmap_sg(mmc_dev(host->mmc), data->sg, data->sg_len,
+		(data->flags & MMC_DATA_READ) ?
+			DMA_FROM_DEVICE : DMA_TO_DEVICE);
+err_exit:
+	return ret;
+}
+#endif /* CFG_SDEMMC_PIO */
+
 int aml_sd_emmc_post_dma(struct amlsd_host *host,
 		struct mmc_request *mrq)
 {
@@ -1683,7 +1785,7 @@ int aml_sd_emmc_post_dma(struct amlsd_host *host,
 err_exit:
 	return ret;
 }
-#endif
+#endif /* SD_EMMC_REQ_DMA_SGMAP */
 
 static void aml_sd_emmc_check_sdio_irq(struct amlsd_host *host)
 {
@@ -1724,15 +1826,10 @@ int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 static void __attribute__((unused))aml_sd_emmc_mrq_print_info(
 	struct mmc_request *mrq, unsigned int desc_cnt)
 {
-	pr_info("*mmc_request desc_cnt:%d cmd:%d, arg:0x%x, flags:0x%x",
-	desc_cnt, mrq->cmd->opcode, mrq->cmd->arg, mrq->cmd->flags);
-
-	if (mrq->cmd->data)
-		pr_info(", blksz:%d, blocks:0x%x",
-			mrq->data->blksz, mrq->data->blocks);
-
-	pr_info("\n");
-
+	pr_info("desc_cnt:%d cmd:%d, arg:0x%x, flags:0x%x, blksz:%d, blocks:0x%x\n",
+		desc_cnt, mrq->cmd->opcode, mrq->cmd->arg, mrq->cmd->flags,
+		mrq->cmd->data ? mrq->data->blksz : 0,
+		mrq->cmd->data ? mrq->data->blocks : 0);
 }
 
 static void __attribute__((unused))
@@ -1787,6 +1884,9 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 	u8 blk_len;
 	unsigned int xfer_bytes = 0;
 #endif
+#ifdef CFG_SDEMMC_PIO
+	u32 desc_size = (u32)sizeof(struct sd_emmc_desc_info);
+#endif
 
 	/* Stop execution */
 	vstart = readl(host->base + SD_EMMC_START);
@@ -1794,7 +1894,13 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 	writel(vstart, host->base + SD_EMMC_START);
 
 	/* Setup descriptors */
-	desc_cur = (struct sd_emmc_desc_info *)host->desc_buf;
+#ifdef CFG_SDEMMC_PIO
+	if (!strcmp(pdata->dmode, "pio"))
+		desc_cur = (struct sd_emmc_desc_info *)host->desc_bn;
+	else
+#endif /* CFG_SDEMMC_PIO */
+		desc_cur = (struct sd_emmc_desc_info *)host->desc_buf;
+
 	desc_cnt++;
 
 	memset(desc_cur, 0, sizeof(struct sd_emmc_desc_info));
@@ -1885,7 +1991,7 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 	if (mrq->cmd->data) {
 #ifdef SD_EMMC_REQ_DMA_SGMAP
 		des_cmd_cur->timeout = 0xc;
-		sg_len = aml_sd_emmc_pre_dma(host, mrq, desc_cur);
+		sg_len = host->pre_cmd_op(host, mrq, desc_cur);
 		WARN_ON(sg_len == 0);
 		desc_cnt += (sg_len - 1);
 		desc_cur += (sg_len - 1); /* last desc here */
@@ -1992,7 +2098,19 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 	writel(SD_EMMC_IRQ_ALL, host->base + SD_EMMC_STATUS);
 
 	vstart = readl(host->base + SD_EMMC_START);
-	desc_start->init = 0;
+#ifdef CFG_SDEMMC_PIO
+	if (!strcmp(pdata->dmode, "pio")) {
+		/* run in sram */
+		desc_start->init = 1;
+		if ((desc_cnt * desc_size) < SD_EMMC_DESC_SIZE)
+			memcpy(host->desc_buf, host->desc_bn,
+				desc_cnt * desc_size);
+		else
+			WARN_ON(1);
+	} else
+#endif /* CFG_SDEMMC_PIO */
+		desc_start->init = 0;
+
 	desc_start->busy = 1;
 	desc_start->addr = host->desc_dma_addr >> 2;
 
@@ -2425,7 +2543,7 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 			xfer_bytes = mrq->data->blksz*mrq->data->blocks;
 			/* copy buffer from dma to data->sg in read cmd*/
 #ifdef SD_EMMC_REQ_DMA_SGMAP
-			WARN_ON(aml_sd_emmc_post_dma(host, mrq));
+			WARN_ON(host->post_cmd_op(host, mrq));
 #else
 			if (host->mrq->data->flags & MMC_DATA_READ) {
 				WARN_ON(xfer_bytes > SD_EMMC_BOUNCE_REQ_SIZE);
@@ -2786,7 +2904,9 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(host->clksrc_base);
 		goto free_host;
 	}
-	res_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	host->mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	res_mem = host->mem;
+
 	host->base = devm_ioremap_resource(&pdev->dev, res_mem);
 	if (IS_ERR(host->base)) {
 		ret = PTR_ERR(host->base);
@@ -2815,27 +2935,6 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto free_host;
 	}
-	/* data desc buffer */
-	host->desc_buf =
-		dma_alloc_coherent(host->dev,
-				SD_EMMC_MAX_DESC_MUN
-				* (sizeof(struct sd_emmc_desc_info)),
-				&host->desc_dma_addr, GFP_KERNEL);
-	if (host->desc_buf == NULL) {
-		dev_err(host->dev, "Unable to map allocate DMA desc buffer.\n");
-		ret = -ENOMEM;
-		goto free_cali;
-	}
-
-	/* data bounce buffer */
-	host->bn_buf =
-		dma_alloc_coherent(host->dev, SD_EMMC_BOUNCE_REQ_SIZE,
-				   &host->bn_dma_buf, GFP_KERNEL);
-	if (host->bn_buf == NULL) {
-		dev_err(host->dev, "Unable to map allocate DMA bounce buffer.\n");
-		ret = -ENOMEM;
-		goto free_cali;
-	}
 
 	host->pdata = pdata;
 	spin_lock_init(&host->mrq_lock);
@@ -2860,6 +2959,50 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	if (amlsd_get_platform_data(pdev, pdata, mmc, 0))
 		mmc_free_host(mmc);
 
+	/* data desc buffer */
+#ifdef CFG_SDEMMC_PIO
+	pr_err(">>>>>>>>>>hostbase %p, dmode %s\n", host->base, pdata->dmode);
+	if (!strcmp(pdata->dmode, "pio")) {
+		host->desc_buf = host->base + SD_EMMC_DESC_OFF;
+		host->desc_dma_addr = host->mem->start + SD_EMMC_DESC_OFF;
+		host->pio_buf = host->base + SD_EMMC_PIO_OFF;
+		host->pio_dma_buf = host->mem->start + SD_EMMC_PIO_OFF;
+		host->pre_cmd_op = aml_sd_emmc_pre_pio;
+		host->post_cmd_op = aml_sd_emmc_post_pio;
+		host->desc_bn = kzalloc(SD_EMMC_MAX_DESC_MUN_PIO
+			* sizeof(struct sd_emmc_desc_info), GFP_KERNEL);
+		if (host->desc_bn == NULL) {
+			ret = -ENOMEM;
+			goto free_cali;
+		}
+	} else {
+#endif
+		host->pre_cmd_op = aml_sd_emmc_pre_dma;
+		host->post_cmd_op = aml_sd_emmc_post_dma;
+		host->desc_buf =
+			dma_alloc_coherent(host->dev,
+				SD_EMMC_MAX_DESC_MUN
+				* (sizeof(struct sd_emmc_desc_info)),
+				&host->desc_dma_addr, GFP_KERNEL);
+
+		if (host->desc_buf == NULL) {
+			dev_err(host->dev, "Unable to map allocate DMA desc buffer.\n");
+			ret = -ENOMEM;
+			goto free_cali;
+		}
+#ifdef CFG_SDEMMC_PIO
+	}
+#endif
+	/* data bounce buffer */
+	host->bn_buf =
+		dma_alloc_coherent(host->dev, SD_EMMC_BOUNCE_REQ_SIZE,
+				   &host->bn_dma_buf, GFP_KERNEL);
+	if (host->bn_buf == NULL) {
+		dev_err(host->dev, "Unable to map allocate DMA bounce buffer.\n");
+		ret = -ENOMEM;
+		goto free_cali;
+	}
+
 	if (aml_card_type_mmc(pdata)
 			&& (host->ctrl_ver < 3))
 		/**set emmc tx_phase regs here base on dts**/
@@ -2876,8 +3019,17 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	host->is_tunning = 0;
 	mmc->ios.clock = 400000;
 	mmc->ios.bus_width = MMC_BUS_WIDTH_1;
-	mmc->max_blk_count = 4095;
-	mmc->max_blk_size = 4095;
+#ifdef CFG_SDEMMC_PIO
+	if (!strcmp(pdata->dmode, "pio")) {
+		mmc->max_blk_count = 1;
+		mmc->max_blk_size = 1024;
+	} else {
+#endif
+		mmc->max_blk_count = 4096;
+		mmc->max_blk_size = 4096;
+#ifdef CFG_SDEMMC_PIO
+	}
+#endif
 	mmc->max_req_size = pdata->max_req_size;
 	mmc->max_seg_size = mmc->max_req_size;
 	mmc->max_segs = 1024;
@@ -2959,6 +3111,9 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	return 0;
 
 free_cali:
+#ifdef CFG_SDEMMC_PIO
+	kfree(host->desc_bn);
+#endif
 	kfree(host->blk_test);
 free_host:
 	mmc_free_host(mmc);
@@ -2978,6 +3133,9 @@ static int meson_mmc_remove(struct platform_device *pdev)
 	if (host->bn_buf)
 		dma_free_coherent(host->dev, SD_EMMC_BOUNCE_REQ_SIZE,
 				host->bn_buf, host->bn_dma_buf);
+#ifdef CFG_SDEMMC_PIO
+	kfree(host->desc_bn);
+#endif
 
 	devm_free_irq(&pdev->dev, host->irq, host);
 	iounmap(host->pinmux_base);

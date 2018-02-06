@@ -953,7 +953,32 @@
 			input-enable;
 		};
 	};
+	/* sdemmc portA */
+	sdio_clk_cmd_pins:sdio_clk_cmd_pins {
+		mux {
+			groups = "sdio_clk",
+				"sdio_cmd";
+			function = "sdio";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <2 1>;
+		};
+	};
 
+	sdio_all_pins:sdio_all_pins {
+		mux {
+			groups = "sdio_d0",
+				"sdio_d1",
+				"sdio_d2",
+				"sdio_d3",
+				"sdio_clk",
+				"sdio_cmd";
+			function = "sdio";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <1 1 1 1 2 1>;
+		};
+	};
 	all_nand_pins: all_nand_pins {
 		mux {
 			groups =  "emmc_nand_d0",

@@ -38,6 +38,9 @@
 #define TUNING_NUM_PER_POINT 10
 #define CALI_PATTERN_OFFSET ((SZ_1M * (36 + 3)) / 512)
 /* #define AML_RESP_WR_EXT */
+/* pio to transfer data */
+#define CFG_SDEMMC_PIO		(1)
+
 #ifdef AML_CALIBRATION
 #define MAX_CALI_RETRY	3
 #define MAX_DELAY_CNT	16
@@ -68,6 +71,20 @@
 #define SD_EMMC_EYETEST_OUT0 0x30
 #define SD_EMMC_EYETEST_OUT1 0x34
 #define SD_EMMC_INTF3	0x38
+
+#define SD_EMMC_DESC_OFF	0x200
+/* using SD_EMMC_CMD_RSP */
+#define SD_EMMC_RESP_SIZE	0x0
+#define SD_EMMC_DESC_SIZE	(0x200 - SD_EMMC_RESP_SIZE)
+#define SD_EMMC_RESP_OFF	(SD_EMMC_DESC_OFF + SD_EMMC_DESC_SIZE)
+
+#define SD_EMMC_PING_OFF	0x400
+#define SD_EMMC_PING_SIZE	0x200
+#define SD_EMMC_PONG_OFF	0x600
+#define SD_EMMC_PONE_SIZE	0x200
+/* join ping/pong as one */
+#define SD_EMMC_PIO_OFF		(SD_EMMC_PING_OFF)
+#define SD_EMMC_PIO_SIZE	(SD_EMMC_PING_SIZE + SD_EMMC_PONE_SIZE)
 
 #define   CLK_DIV_SHIFT 0
 #define   CLK_DIV_WIDTH 6
@@ -183,6 +200,8 @@ struct meson_mmc_data {
 };
 
 struct amlsd_host;
+struct sd_emmc_desc_info;
+
 struct amlsd_platform {
 	struct amlsd_host *host;
 	struct mmc_host *mmc;
@@ -229,6 +248,7 @@ struct amlsd_platform {
 	unsigned int vol_switch_18;
 	unsigned int vol_switch_delay;
 	char pinname[32];
+	char dmode[8];
 	unsigned int gpio_ro;
 	unsigned int gpio_dat3;
 	unsigned int hw_reset;
@@ -387,6 +407,13 @@ struct amlsd_host {
 
 	u8 *blk_test;
 	char *desc_buf;
+#ifdef CFG_SDEMMC_PIO
+	/* bounce buffer to accomplish 32bit apb access */
+	u8 *desc_bn;
+	/* pio buffer */
+	u8 *pio_buf;
+	dma_addr_t pio_dma_buf;
+#endif
 	dma_addr_t		desc_dma_addr;
 	unsigned int dma_sts;
 	unsigned int sg_cnt;
@@ -447,6 +474,12 @@ struct amlsd_host {
 	struct aml_emmc_adjust emmc_adj;
 	struct aml_emmc_rxclk emmc_rxclk;
 	u32 error_flag;
+	/* pre cmd op */
+	unsigned int (*pre_cmd_op)(struct amlsd_host *host,
+		struct mmc_request *mrq, struct sd_emmc_desc_info *desc);
+	/* post cmd op */
+	int (*post_cmd_op)(struct amlsd_host *host,
+		struct mmc_request *mrq);
 };
 
 /*-sdio-*/
@@ -1588,6 +1621,7 @@ struct sd_emmc_desc_info {
 };
 #define HHI_NAND_CLK_CNTL					0x97
 #define SD_EMMC_MAX_DESC_MUN		512
+#define SD_EMMC_MAX_DESC_MUN_PIO		36
 #define SD_EMMC_REQ_DESC_MUN		4
 #define SD_EMMC_CLOCK_SRC_OSC		0 /* 24MHz */
 #define SD_EMMC_CLOCK_SRC_FCLK_DIV2	1 /* 1GHz */
