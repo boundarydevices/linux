@@ -19,6 +19,9 @@
 #define __PAGE_TRACE_H__
 
 #include <asm/memory.h>
+#include <asm/stacktrace.h>
+#include <asm/sections.h>
+#include <linux/page-flags.h>
 
 /*
  * bit map lay out for _ret_ip table
@@ -49,6 +52,8 @@
  /* max order usually should not be 15 */
 #define IP_INVALID		(0xf)
 
+struct page;
+
 /* this struct should not larger than 32 bit */
 struct page_trace {
 	unsigned int ret_ip	  :24;
@@ -58,11 +63,16 @@ struct page_trace {
 };
 
 #ifdef CONFIG_AMLOGIC_PAGE_TRACE
+extern unsigned int cma_alloc_trace;
 extern unsigned long unpack_ip(struct page_trace *trace);
+extern unsigned int pack_ip(unsigned long ip, int order, gfp_t flag);
 extern void set_page_trace(struct page *page, int order, gfp_t gfp_flags);
 extern void reset_page_trace(struct page *page, int order);
 extern void page_trace_mem_init(void);
 extern struct page_trace *find_page_base(struct page *page);
+extern unsigned long find_back_trace(void);
+extern unsigned long get_page_trace(struct page *page);
+extern void show_data(unsigned long addr, int nbytes, const char *name);
 #else
 static inline unsigned long unpack_ip(struct page_trace *trace)
 {
@@ -81,7 +91,22 @@ static inline struct page_trace *find_page_base(struct page *page)
 {
 	return NULL;
 }
+static unsigned long find_back_trace(void)
+{
+	return 0;
+}
 #endif
+
+#ifdef CONFIG_AMLOGIC_SLUB_DEBUG
+#include <linux/slub_def.h>
+extern int aml_slub_check_object(struct kmem_cache *s, void *p, void *q);
+extern void aml_get_slub_trace(struct kmem_cache *s, struct page *page,
+				gfp_t flags, int order);
+extern void aml_put_slub_trace(struct page *page, struct kmem_cache *s);
+extern int aml_check_kmemcache(struct kmem_cache_cpu *c, struct kmem_cache *s,
+			void *object);
+extern void aml_slub_set_trace(struct kmem_cache *s, void *object);
+#endif /* CONFIG_AMLOGIC_SLUB_DEBUG */
 
 #ifdef CONFIG_KALLSYMS
 extern const unsigned long kallsyms_addresses[] __weak;

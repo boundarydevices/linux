@@ -93,7 +93,7 @@ static int secmon_probe(struct platform_device *pdev)
 		pr_err("can't get reserve_mem_size, use default value\n");
 		mem_size = RESERVE_MEM_SIZE;
 	} else
-		pr_debug("reserve_mem_size:0x%x\n", mem_size);
+		pr_info("reserve_mem_size:0x%x\n", mem_size);
 
 	ret = of_reserved_mem_device_init(&pdev->dev);
 	if (ret) {
@@ -106,7 +106,7 @@ static int secmon_probe(struct platform_device *pdev)
 		pr_err("alloc page failed, ret:%p\n", page);
 		return -ENOMEM;
 	}
-	pr_debug("get page:%p, %lx\n", page, page_to_pfn(page));
+	pr_info("get page:%p, %lx\n", page, page_to_pfn(page));
 
 	sharemem_in_base = ioremap_cache(phy_in_base, IN_SIZE);
 	if (!sharemem_in_base) {

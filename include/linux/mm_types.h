@@ -44,8 +44,18 @@ struct mem_cgroup;
  */
 struct page {
 	/* First double word block */
+#if defined(CONFIG_AMLOGIC_PAGE_TRACE) && defined(CONFIG_64BIT)
+	union {
+		unsigned long flags;
+		struct {
+			unsigned int s_flags;
+			unsigned int trace;
+		};
+	};
+#else
 	unsigned long flags;		/* Atomic flags, some possibly
 					 * updated asynchronously */
+#endif /* CONFIG_AMLOGIC_PAGE_TRACE */
 	union {
 		struct address_space *mapping;	/* If low bit clear, points to
 						 * inode address_space, or NULL.

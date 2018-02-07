@@ -155,6 +155,10 @@ static int __init __reserved_mem_alloc_size(unsigned long node,
 			end = start + dt_mem_next_cell(dt_root_size_cells,
 						       &prop);
 
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			pr_info("%s, start:%llx, end:%llx, len:%llx\n",
+				__func__, start, end, end - start);
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 			ret = early_init_dt_alloc_reserved_memory_arch(size,
 					align, start, end, nomap, &base);
 			if (ret == 0) {
@@ -175,7 +179,12 @@ static int __init __reserved_mem_alloc_size(unsigned long node,
 	}
 
 	if (base == 0) {
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		pr_info("failed to allocate memory for node %s, size:%ld MB\n",
+			uname, (unsigned long)size / SZ_1M);
+	#else
 		pr_info("failed to allocate memory for node '%s'\n", uname);
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 		return -ENOMEM;
 	}
 

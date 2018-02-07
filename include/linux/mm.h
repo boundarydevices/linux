@@ -702,7 +702,11 @@ int alloc_set_pte(struct fault_env *fe, struct mem_cgroup *memcg,
 /* Page flags: | [SECTION] | [NODE] | ZONE | [LAST_CPUPID] | ... | FLAGS | */
 #define SECTIONS_PGOFF		((sizeof(unsigned long)*8) - SECTIONS_WIDTH)
 #define NODES_PGOFF		(SECTIONS_PGOFF - NODES_WIDTH)
+#if defined(CONFIG_AMLOGIC_PAGE_TRACE) && defined(CONFIG_64BIT)
+#define ZONES_PGOFF		((sizeof(unsigned int) * 8) - ZONES_WIDTH)
+#else
 #define ZONES_PGOFF		(NODES_PGOFF - ZONES_WIDTH)
+#endif /* CONFIG_AMLOGIC_PAGE_TRACE */
 #define LAST_CPUPID_PGOFF	(ZONES_PGOFF - LAST_CPUPID_WIDTH)
 
 /*
