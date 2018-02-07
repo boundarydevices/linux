@@ -72,6 +72,12 @@ struct aml_bl_extern_driver_s {
 	struct device *dev;
 };
 
+struct aml_bl_extern_i2c_dev_s {
+	char name[20];
+	struct i2c_client *client;
+};
+
+extern struct aml_bl_extern_i2c_dev_s *aml_bl_extern_i2c_get_dev(void);
 extern struct aml_bl_extern_driver_s *aml_bl_extern_get_driver(void);
 extern int aml_bl_extern_device_load(int index);
 

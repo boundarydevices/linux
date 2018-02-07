@@ -1351,6 +1351,13 @@
 		reset_pin = <&gpio GPIOA_5 0>;
 	};
 
+	bl_extern_i2c {
+		compatible = "amlogic, bl_extern_i2c";
+		status = "disabled";
+		reg = <0x2c>; /*reg_address for lp8556*/
+		dev_name = "lp8556";
+	};
+
 };
 
 &audiobus {
@@ -1625,12 +1632,6 @@
 		};
 	};
 
-	bl_pwm_on_pins: bl_pwm_on_pin {
-		mux {
-			groups = "pwm_f_h";
-			function = "pwm_f";
-		};
-	};
 
 }; /* end of pinctrl_periphs */
 &pinctrl_aobus {

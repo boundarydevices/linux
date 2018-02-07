@@ -118,6 +118,7 @@ static unsigned char bl_extern_get_i2c_bus_str(const char *str)
 static void bl_extern_config_print(void)
 {
 	struct aml_bl_extern_driver_s *bl_extern = aml_bl_extern_get_driver();
+	struct aml_bl_extern_i2c_dev_s *i2c_dev = aml_bl_extern_i2c_get_dev();
 
 	BLEX("%s:\n", __func__);
 	switch (bl_extern->config.type) {
@@ -136,6 +137,16 @@ static void bl_extern_config_print(void)
 			bl_extern->config.i2c_bus,
 			bl_extern->config.dim_min,
 			bl_extern->config.dim_max);
+		if (i2c_dev) {
+			pr_info("i2c_dev_name:      %s\n"
+				"i2c_client_name:   %s\n"
+				"i2c_client_addr:   0x%02x\n",
+				i2c_dev->name,
+				i2c_dev->client->name,
+				i2c_dev->client->addr);
+		} else {
+			pr_info("invalid i2c device\n");
+		}
 		break;
 	case BL_EXTERN_SPI:
 		break;

@@ -770,7 +770,7 @@ static void lcd_pll_reset_g12a(void)
 
 static void lcd_set_pll_g12a(struct lcd_clk_config_s *cConf)
 {
-	unsigned int pll_ctrl, pll_ctrl1;
+	unsigned int pll_ctrl, pll_ctrl1, pll_ctrl3, pll_ctrl4, pll_ctrl6;
 	int ret;
 
 	if (lcd_debug_print_flag == 2)
@@ -780,16 +780,25 @@ static void lcd_set_pll_g12a(struct lcd_clk_config_s *cConf)
 		(cConf->pll_n << LCD_PLL_N_G12A) |
 		(cConf->pll_m << LCD_PLL_M_G12A) |
 		(cConf->pll_od1_sel << LCD_PLL_OD_G12A));
-	pll_ctrl1 = 0x00;
-	/*pll_ctrl1 |= ((1 << 19) | (cConf->pll_frac << 0));*/
+	pll_ctrl1 = (cConf->pll_frac << 0);
+	if (cConf->pll_frac) {
+		pll_ctrl |= (1 << 27);
+		pll_ctrl3 = 0x6a295c00;
+		pll_ctrl4 = 0x65771290;
+		pll_ctrl6 = 0x54540000;
+	} else {
+		pll_ctrl3 = 0x08691c00;
+		pll_ctrl4 = 0x33771290;
+		pll_ctrl6 = 0x50540000;
+	}
 
 	lcd_hiu_write(HHI_GP0_PLL_CNTL0_G12A, pll_ctrl);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL1_G12A, pll_ctrl1);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL2_G12A, 0x00);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL3_G12A, 0x08691c00);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL4_G12A, 0x33771290);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL3_G12A, pll_ctrl3);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL4_G12A, pll_ctrl4);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL5_G12A, 0x39272000);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL6_G12A, 0x50540000);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL6_G12A, pll_ctrl6);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 1, LCD_PLL_RST_G12A, 1);
 	udelay(100);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 0, LCD_PLL_RST_G12A, 1);

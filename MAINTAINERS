@@ -14360,3 +14360,7 @@ F:	drivers/amlogic/thermal/meson_cooldev.c
 AMLOGIC G12A Audio DRIVER
 M:	Xing Wang <xing.wang@amlogic.com>
 F:	sound/soc/amlogic/auge/*
+
+AMLOGIC G12A BL_EXTERN LP8556 DRIVER
+M:      Weiming Liu <weiming.liu@amlogic.com>
+F:      drivers/amlogic/media/vout/backlight/bl_extern/bl_extern_i2c.c

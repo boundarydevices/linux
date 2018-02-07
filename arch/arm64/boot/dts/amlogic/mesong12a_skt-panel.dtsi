@@ -43,8 +43,9 @@
 		 * power value:(0=output low, 1=output high, 2=input)
 		 * power delay:(unit in ms)
 		 */
-		lcd_cpu-gpios = <&gpio GPIOZ_8 GPIO_ACTIVE_HIGH>;
-		lcd_cpu_gpio_names = "GPIOZ_8";
+		lcd_cpu-gpios = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH
+				&gpio GPIOZ_8 GPIO_ACTIVE_HIGH>;
+		lcd_cpu_gpio_names = "GPIOZ_9","GPIOZ_8";
 
 		lcd_0{
 			model_name = "B080XAN01";
@@ -86,13 +87,15 @@
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
+				0 1 0 100
 				0 0 0 10
 				0 0 1 20
 				2 0 0 0
 				0xff 0 0 0>; /*ending*/
 			power_off_step = <
 				2 0 0 50
-				0 0 0 100
+				0 0 0 10
+				0 1 1 100
 				0xff 0 0 0>; /*ending*/
 			backlight_index = <0>;
 		};
@@ -280,7 +283,7 @@
 		status = "okay";
 		key_valid = <0>;
 		pinctrl-names = "pwm_on";
-		pinctrl-0 = <&bl_pwm_on_pins>; /*pwm_f_pins2*/
+		pinctrl-0 = <&pwm_f_pins2>;
 		pinctrl_version = <2>; /* for uboot */
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
 		/* power index:(point gpios_index, 0xff=invalid)
