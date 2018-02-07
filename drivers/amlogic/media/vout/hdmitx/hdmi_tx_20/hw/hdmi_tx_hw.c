@@ -3243,10 +3243,10 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 	int i = 0;
 	unsigned char *tmp_char = NULL;
 
-	if (!(cmd & CMD_DDC_OFFSET))
+	if ((cmd & CMD_DDC_OFFSET) != CMD_DDC_OFFSET) {
 		pr_err(HW "ddc: invalid cmd 0x%x\n", cmd);
-	else if (cmd != 0x10000007) /* excepte DDC_HDCP_GET_AUTH */
-		pr_info(HW "ddc: cmd 0x%x\n", cmd);
+		return -1;
+	}
 
 	switch (cmd) {
 	case DDC_RESET_EDID:
@@ -3385,10 +3385,10 @@ static int hdmitx_cntl_config(struct hdmitx_dev *hdev, unsigned int cmd,
 {
 	int ret = 0;
 
-	if (!(cmd & CMD_CONF_OFFSET))
+	if ((cmd & CMD_CONF_OFFSET) != CMD_CONF_OFFSET) {
 		pr_err(HW "config: invalid cmd 0x%x\n", cmd);
-	else
-		pr_info(HW "config: cmd 0x%x\n", cmd);
+		return -1;
+	}
 
 	switch (cmd) {
 	case CONF_HDMI_DVI_MODE:
@@ -3495,10 +3495,10 @@ static int hdmitx_tmds_rxsense(void)
 static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 	unsigned int argv)
 {
-	if (!(cmd & CMD_MISC_OFFSET))
+	if ((cmd & CMD_MISC_OFFSET) != CMD_MISC_OFFSET) {
 		pr_err(HW "misc: w: invalid cmd 0x%x\n", cmd);
-	else
-		pr_info(HW "misc: cmd 0x%x\n", cmd);
+		return -1;
+	}
 
 	switch (cmd) {
 	case MISC_HPD_MUX_OP:
@@ -3607,10 +3607,10 @@ static enum hdmi_vic get_vic_from_pkt(void)
 static int hdmitx_get_state(struct hdmitx_dev *hdev, unsigned int cmd,
 	unsigned int argv)
 {
-	if (!(cmd & CMD_STAT_OFFSET))
+	if ((cmd & CMD_STAT_OFFSET) != CMD_STAT_OFFSET) {
 		pr_err(HW "state: invalid cmd 0x%x\n", cmd);
-	else
-		pr_info(HW "state: cmd 0x%x\n", cmd);
+		return -1;
+	}
 
 	switch (cmd) {
 	case STAT_VIDEO_VIC:
