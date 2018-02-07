@@ -1129,7 +1129,7 @@ void osd_hw_reset(void)
 			int i;
 			u32 addr;
 			u32 value;
-			u32 base = VPU_MAFBC_COMMAND;
+			u32 base = VPU_MAFBC_IRQ_MASK;
 
 			for (i = 0; i < MALI_AFBC_REG_BACKUP_COUNT; i++) {
 				addr = mali_afbc_reg_backup[i];
@@ -1137,8 +1137,8 @@ void osd_hw_reset(void)
 				VSYNCOSD_IRQ_WR_MPEG_REG(
 					addr, value);
 			}
+			VSYNCOSD_IRQ_WR_MPEG_REG(VPU_MAFBC_COMMAND, 1);
 		}
-
 	} else
 		osd_rdma_reset_and_flush(reset_bit);
 	spin_unlock_irqrestore(&osd_lock, lock_flags);
@@ -1182,9 +1182,9 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
 		/* go through update list */
 		walk_through_update_list();
 		osd_update_3d_mode();
+		osd_mali_afbc_start();
 		osd_update_vsync_hit();
 		osd_hw_reset();
-		osd_mali_afbc_restart();
 	} else
 		osd_rdma_interrupt_done_clear();
 
@@ -2361,7 +2361,7 @@ void osd_set_premult(u32 index, u32 premult)
 
 void osd_get_afbc_debug(u32 *val1, u32 *val2, u32 *val3, u32 *val4)
 {
-	*val1 = osd_hw.afbc_restart_in_vsync;
+	*val1 = osd_hw.afbc_start_in_vsync;
 	*val2 = osd_hw.afbc_force_reset;
 	*val3 = osd_hw.afbc_status_err_reset;
 	*val4 = osd_hw.afbc_use_latch;
@@ -2369,7 +2369,7 @@ void osd_get_afbc_debug(u32 *val1, u32 *val2, u32 *val3, u32 *val4)
 
 void osd_set_afbc_debug(u32 val1, u32 val2, u32 val3, u32 val4)
 {
-	osd_hw.afbc_restart_in_vsync = val1;
+	osd_hw.afbc_start_in_vsync = val1;
 	osd_hw.afbc_force_reset = val2;
 	osd_hw.afbc_status_err_reset = val3;
 	osd_hw.afbc_use_latch = val4;
@@ -2420,31 +2420,31 @@ const struct color_bit_define_s extern_color_format_array[] = {
 	{
 		COLOR_INDEX_32_ABGR, 2, 5,
 		0, 8, 0, 8, 8, 0, 16, 8, 0, 24, 8, 0,
-		0, 4
+		0, 32
 	},
 	/*32 bit color RGBX */
 	{
 		COLOR_INDEX_32_XBGR, 2, 5,
 		0, 8, 0, 8, 8, 0, 16, 8, 0, 24, 0, 0,
-		0, 4
+		0, 32
 	},
 	/*24 bit color RGB */
 	{
 		COLOR_INDEX_24_RGB, 5, 7,
 		16, 8, 0, 8, 8, 0, 0, 8, 0, 0, 0, 0,
-		0, 3
+		0, 24
 	},
 	/*16 bit color BGR */
 	{
 		COLOR_INDEX_16_565, 4, 4,
 		11, 5, 0, 5, 6, 0, 0, 5, 0, 0, 0, 0,
-		0, 2
+		0, 16
 	},
 	/*32 bit color BGRA */
 	{
 		COLOR_INDEX_32_ARGB, 1, 5,
 		16, 8, 0, 8, 8, 0, 0, 8, 0, 24, 8, 0,
-		0, 4
+		0, 32
 	},
 };
 
@@ -2472,7 +2472,7 @@ static bool osd_ge2d_compose_pan_display(struct osd_fence_map_s *fence_map)
 	canvas_config(osd_hw.fb_gem[index].canvas_idx,
 		fence_map->ext_addr,
 		CANVAS_ALIGNED(fence_map->width *
-		osd_hw.color_info[index]->bpp),
+		(osd_hw.color_info[index]->bpp >> 3)),
 		fence_map->height,
 		CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
 
@@ -2856,6 +2856,8 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 					osd_hw.reg[OSD_ENABLE]
 					.update_func(index);
 			}
+			if (osd_hw.hw_rdma_en)
+				osd_mali_afbc_start();
 			spin_unlock_irqrestore(&osd_lock, lock_flags);
 			osd_wait_vsync_hw();
 		} else if (xoffset != osd_hw.pandata[index].x_start
@@ -2964,6 +2966,8 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 					osd_hw.reg[OSD_ENABLE]
 					.update_func(index);
 			}
+			if (osd_hw.hw_rdma_en)
+				osd_mali_afbc_start();
 			spin_unlock_irqrestore(&osd_lock, lock_flags);
 			osd_wait_vsync_hw();
 		} else if ((osd_enable != osd_hw.enable[index])
@@ -2973,6 +2977,8 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 			if (!osd_hw.osd_display_debug)
 				osd_hw.reg[OSD_ENABLE]
 				.update_func(index);
+			if (osd_hw.hw_rdma_en)
+				osd_mali_afbc_start();
 			spin_unlock_irqrestore(&osd_lock, lock_flags);
 			osd_wait_vsync_hw();
 		}
@@ -3830,11 +3836,11 @@ static void osd_update_color_mode(u32 index)
 				/*  0  Block split mode off.
 				 *  1  Block split mode on.
 				 */
-				u32 yuv_transform = 0;
+				u32 yuv_transform = 1;
 				/* 0  Internal YUV transform off.
 				 * 1  Internal YUV transform on.
 				 */
-				u32 afbc_color_reorder = 0x4321;
+				u32 afbc_color_reorder = 0x1234;
 				/* 0x4321 = ABGR
 				 * 0x1234 = RGBA
 				 */
@@ -3969,10 +3975,12 @@ static void osd_update_enable(u32 index)
 				VSYNCOSD_WR_MPEG_REG_BITS(
 					VIU_MISC_CTRL1, 0x90, 8, 8);
 			}
-		} else if (
-			osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) {
+		} else if (osd_hw.osd_meson_dev.afbc_type
+			== MALI_AFBC) {
 			if (osd_hw.enable[index] == ENABLE) {
 				/* enable mali afbc */
+				VSYNCOSD_WR_MPEG_REG(
+					VPU_MAFBC_IRQ_MASK, 0xf);
 				VSYNCOSD_WR_MPEG_REG_BITS(
 					VPU_MAFBC_SURFACE_CFG,
 					1, index, 1);
@@ -3985,7 +3993,29 @@ static void osd_update_enable(u32 index)
 					0, index, 1);
 				osd_hw.osd_afbcd[index].afbc_start = 0;
 			}
+			VSYNCOSD_WR_MPEG_REG_BITS(
+				osd_reg->osd_ctrl_stat2, 1, 1, 1);
 		}
+	}
+	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+		u8 postbld_src_sel = 0;
+
+		if (osd_hw.enable[index] == ENABLE)
+			postbld_src_sel = (index == 0) ? 3 : 4;
+		if (index == 0)
+			VSYNCOSD_WR_MPEG_REG(OSD1_BLEND_SRC_CTRL,
+				(0 & 0xf) << 0 |
+				(0 & 0x1) << 4 |
+				(postbld_src_sel & 0xf) << 8 |
+				(0 & 0x1) << 16|
+				(1 & 0x1) << 20);
+		else if (index == 1)
+			VSYNCOSD_WR_MPEG_REG(OSD2_BLEND_SRC_CTRL,
+				(0 & 0xf) << 0 |
+				(0 & 0x1) << 4 |
+				(postbld_src_sel & 0xf) << 8 |
+				(0 & 0x1) << 16 |
+				(1 & 0x1) << 20);
 	}
 	remove_from_update_list(index, OSD_ENABLE);
 }
@@ -4240,7 +4270,7 @@ static int blend_din_to_osd(
 		blending->osd_to_bdin_table[blend_din_index];
 	if ((osd_index > OSD3)
 		|| (osd_index < OSD1)) {
-		osd_log_err("blend_din:%d no match osd find!\n",
+		osd_log_dbg("blend_din:%d no match osd find!\n",
 			blend_din_index);
 		return -1;
 	} else
@@ -5082,7 +5112,7 @@ static void osd_setting_default_hwc(void)
 	u32 din3_osd_sel = 1;
 	u32 din_reoder_sel = 0x1;
 	u32 postbld_src3_sel = 3, postbld_src4_sel = 0;
-	u32 postbld_osd1_premult = 1, postbld_osd2_premult = 0;
+	u32 postbld_osd1_premult = 0, postbld_osd2_premult = 0;
 
 	osd_log_dbg("osd_setting_default_hwc\n");
 	/* depend on din0_premult_en */
@@ -5135,13 +5165,8 @@ static void osd_setting_default_hwc(void)
 	VSYNCOSD_WR_MPEG_REG(VIU_OSD_BLEND_BLEND1_SIZE,
 		blend_vsize  << 16 |
 		blend_hsize);
-
-	/* close vd1, vd2 for debug */
-	VSYNCOSD_WR_MPEG_REG(VD1_BLEND_SRC_CTRL, 0);
-	VSYNCOSD_WR_MPEG_REG(VD2_BLEND_SRC_CTRL, 0);
-
 	VSYNCOSD_WR_MPEG_REG_BITS(DOLBY_PATH_CTRL,
-		0xf, 0, 4);
+		0x3, 2, 2);
 }
 
 int osd_setting_blend(void)
@@ -5171,33 +5196,29 @@ int osd_setting_blend(void)
 }
 
 
-void osd_mali_afbc_restart(void)
+void osd_mali_afbc_start(void)
 {
-	int i, osd_count, afbc_enable;
+	int i, osd_count, afbc_enable = 0;
 
-	afbc_enable = 0;
 	osd_count = osd_hw.osd_meson_dev.osd_count;
-	if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC)
-		&& osd_hw.afbc_restart_in_vsync) {
-		VSYNCOSD_WR_MPEG_REG(VPU_MAFBC_IRQ_MASK, 0xf);
+	if (osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) {
 		for (i = 0; i < osd_count; i++) {
 			if (osd_hw.osd_afbcd[i].afbc_start) {
 				/* enable mali afbc */
-				VSYNCOSD_WR_MPEG_REG_BITS(
-					VPU_MAFBC_SURFACE_CFG,
-					1, i, 1);
-				afbc_enable = 1;
+				afbc_enable |= (1 << i);
+				/* afbc_enable |= 0x10000; */
 			}
 		}
-		if (afbc_enable) {
-			if (osd_hw.afbc_use_latch)
-				VSYNCOSD_WR_MPEG_REG(VPU_MAFBC_COMMAND, 0x2);
-			else {
-				osd_log_dbg("start afbc decode\n");
-				/* start decode */
-				VSYNCOSD_WR_MPEG_REG(VPU_MAFBC_COMMAND, 1);
-			}
-		}
+		/*
+		if (osd_hw.afbc_start_in_vsync)
+			VSYNCOSD_WR_MPEG_REG(
+				VPU_MAFBC_SURFACE_CFG,
+				afbc_enable);
+		*/
+		if (afbc_enable)
+			VSYNCOSD_WR_MPEG_REG(
+				VPU_MAFBC_COMMAND,
+				(osd_hw.afbc_use_latch ? 2 : 1));
 	}
 }
 
@@ -5715,7 +5736,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			osd_hw.hw_rdma_en = 1;
 	} else if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 		osd_hw.hw_cursor_en = 0;
-		osd_hw.hw_rdma_en = 0;
+		osd_hw.hw_rdma_en = 1;
 	}
 	/* here we will init default value ,these value only set once . */
 	if (!logo_loaded) {
@@ -5802,10 +5823,12 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			osd_hw.premult_en[idx] = 0;
 			osd_hw.osd_afbcd[idx].format = COLOR_INDEX_32_ABGR;
 			osd_hw.osd_afbcd[idx].inter_format =
-				MALI_AFBC_16X16_PIXEL << 1 |
+				MALI_AFBC_32X8_PIXEL << 1 |
 				MALI_AFBC_SPLIT_ON;
 			osd_hw.osd_afbcd[idx].afbc_start = 0;
-			osd_hw.afbc_restart_in_vsync = 1;
+			osd_hw.afbc_start_in_vsync = 0;
+			osd_hw.afbc_force_reset = 1;
+#if 0
 			/* enable for latch */
 			osd_hw.osd_use_latch = 1;
 			data32 = 0;
@@ -5814,6 +5837,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			data32 |= 0x80000000;
 			osd_reg_write(
 				hw_osd_reg_array[idx].osd_ctrl_stat, data32);
+#endif
 		}
 		osd_setting_default_hwc();
 	}
@@ -6606,6 +6630,8 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 					osd_hw.reg[OSD_ENABLE]
 						.update_func(index);
 			}
+			if (osd_hw.hw_rdma_en)
+				osd_mali_afbc_start();
 			osd_wait_vsync_hw();
 		} else if (plane_map->phy_addr && plane_map->src_w
 				&& plane_map->src_h && index == OSD2) {
@@ -6625,7 +6651,8 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 					osd_hw.reg[OSD_ENABLE]
 						.update_func(index);
 			}
-
+			if (osd_hw.hw_rdma_en)
+				osd_mali_afbc_start();
 		}
 	} else {
 		if (plane_map->phy_addr && plane_map->src_w
@@ -6664,6 +6691,8 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 					osd_hw.reg[OSD_ENABLE]
 						.update_func(index);
 			}
+			if (osd_hw.hw_rdma_en)
+				osd_mali_afbc_start();
 			osd_wait_vsync_hw();
 		}
 	}

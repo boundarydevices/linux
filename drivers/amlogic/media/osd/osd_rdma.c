@@ -921,7 +921,6 @@ static void osd_rdma_irq(void *arg)
 	osd_update_3d_mode();
 	osd_update_vsync_hit();
 	osd_hw_reset();
-	osd_mali_afbc_restart();
 	rdma_irq_count++;
 	{
 		/*This is a memory barrier*/
@@ -1118,7 +1117,7 @@ int osd_rdma_reset_and_flush(u32 reset_bit)
 		i++;
 	}
 	i = 0;
-	base = VPU_MAFBC_COMMAND;
+	base = VPU_MAFBC_IRQ_MASK;
 	while ((reset_bit & HW_RESET_MALI_AFBCD_REGS)
 		&& (i < MALI_AFBC_REG_BACKUP_COUNT)) {
 		addr = mali_afbc_reg_backup[i];
@@ -1127,6 +1126,11 @@ int osd_rdma_reset_and_flush(u32 reset_bit)
 			addr, value);
 		i++;
 	}
+
+	if ((reset_bit & HW_RESET_MALI_AFBCD_REGS)
+		&& (osd_hw.osd_meson_dev.cpu_id
+		== __MESON_CPU_MAJOR_ID_G12A))
+		wrtie_reg_internal(VPU_MAFBC_COMMAND, 1);
 
 	if (item_count < 500)
 		osd_reg_write(END_ADDR, (table_paddr + item_count * 8 - 1));

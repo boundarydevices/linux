@@ -732,9 +732,9 @@ void osd_drm_vsync_isr_handler(void)
 		/* go through update list */
 		walk_through_update_list();
 		osd_update_3d_mode();
+		osd_mali_afbc_start();
 		osd_update_vsync_hit();
 		osd_hw_reset();
-		osd_mali_afbc_restart();
 	} else {
 		if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG)
 			osd_rdma_interrupt_done_clear();
