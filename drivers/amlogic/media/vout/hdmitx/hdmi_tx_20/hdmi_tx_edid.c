@@ -1386,24 +1386,23 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 			offset++;
 			if ((BlockBuf[offset] == 0x03) &&
 				(BlockBuf[offset+1] == 0x0c) &&
-				(BlockBuf[offset+2] == 0x00))
+				(BlockBuf[offset+2] == 0x00)) {
 				pRXCap->IEEEOUI = 0x000c03;
-			else
-				goto case_hf;
-			pRXCap->ColorDeepSupport =
-				(unsigned long)BlockBuf[offset+5];
-			pRXCap->Max_TMDS_Clock1 =
-				(unsigned long)BlockBuf[offset+6];
-			if (count > 7) {
-				tmp = BlockBuf[offset+7];
-				idx = offset + 8;
-				if (tmp & (1<<6))
-					idx += 2;
-				if (tmp & (1<<7))
-					idx += 2;
-				if (tmp & (1<<5)) {
-					idx += 1;
-					/* valid 4k */
+				pRXCap->ColorDeepSupport =
+					(count > 5) ? BlockBuf[offset+5] : 0;
+				pRXCap->Max_TMDS_Clock1 =
+					(count > 6) ? BlockBuf[offset+6] : 0;
+
+				if (count > 7) {
+					tmp = BlockBuf[offset+7];
+					idx = offset + 8;
+					if (tmp & (1<<6))
+						idx += 2;
+					if (tmp & (1<<7))
+						idx += 2;
+					if (tmp & (1<<5)) {
+						idx += 1;
+						/* valid 4k */
 					if (BlockBuf[idx] & 0xe0) {
 						hdmitx_edid_4k2k_parse(
 							pRXCap,
@@ -1417,24 +1416,23 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 							&BlockBuf[offset+7],
 							count - 7);
 					}
+					}
 				}
-			}
-			goto case_next;
-case_hf:
-			if ((BlockBuf[offset] == 0xd8) &&
+			} else if ((BlockBuf[offset] == 0xd8) &&
 				(BlockBuf[offset+1] == 0x5d) &&
-				(BlockBuf[offset+2] == 0xc4))
+				(BlockBuf[offset+2] == 0xc4)) {
 				pRXCap->HF_IEEEOUI = 0xd85dc4;
-			pRXCap->Max_TMDS_Clock2 = BlockBuf[offset+4];
-			pRXCap->scdc_present =
-				!!(BlockBuf[offset+5] & (1 << 7));
-			pRXCap->scdc_rr_capable =
-				!!(BlockBuf[offset+5] & (1 << 6));
-			pRXCap->lte_340mcsc_scramble =
-				!!(BlockBuf[offset+5] & (1 << 3));
-			set_vsdb_dc_420_cap(&hdmitx_device->RXCap,
-				&BlockBuf[offset]);
-case_next:
+				pRXCap->Max_TMDS_Clock2 = BlockBuf[offset+4];
+				pRXCap->scdc_present =
+					!!(BlockBuf[offset+5] & (1 << 7));
+				pRXCap->scdc_rr_capable =
+					!!(BlockBuf[offset+5] & (1 << 6));
+				pRXCap->lte_340mcsc_scramble =
+					!!(BlockBuf[offset+5] & (1 << 3));
+				set_vsdb_dc_420_cap(&hdmitx_device->RXCap,
+					&BlockBuf[offset]);
+			}
+
 			offset += count; /* ignore the remaind. */
 			break;
 

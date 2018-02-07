@@ -79,7 +79,7 @@ struct rx_cap {
 	unsigned char RxSpeakerAllocation;
 	/*vendor*/
 	unsigned int IEEEOUI;
-	unsigned int Max_TMDS_Clock1; /* HDMI1.4b TMDS_CLK */
+	unsigned char Max_TMDS_Clock1; /* HDMI1.4b TMDS_CLK */
 	unsigned int HF_IEEEOUI;	/* For HDMI Forum */
 	unsigned int Max_TMDS_Clock2; /* HDMI2.0 TMDS_CLK */
 	/* CEA861-F, Table 56, Colorimetry Data Block */
@@ -112,7 +112,7 @@ struct rx_cap {
 	unsigned char physcial_height;
 	unsigned char edid_version;
 	unsigned char edid_revision;
-	unsigned int ColorDeepSupport;
+	unsigned char ColorDeepSupport;
 	unsigned int Video_Latency;
 	unsigned int Audio_Latency;
 	unsigned int Interlaced_Video_Latency;
