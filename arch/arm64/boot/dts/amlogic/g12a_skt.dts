@@ -97,6 +97,12 @@
 			size = <0x0 0x02800000>;
 			alignment = <0x0 0x400000>;
 		};
+		/*  POST PROCESS MANAGER */
+		ppmgr_reserved:linux,ppmgr {
+			compatible = "shared-dma-pool";
+			size = <0x0 0x0>;
+		};
+
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -724,6 +730,13 @@
 			"clk_ge2d",
 			"clk_ge2d_gate";
 		reg = <0x0 0xff940000 0x0 0x10000>;
+	};
+
+	ppmgr {
+		compatible = "amlogic, ppmgr";
+		memory-region = <&ppmgr_reserved>;
+		dev_name = "ppmgr";
+		status = "okay";
 	};
 
 	deinterlace {
