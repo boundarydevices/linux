@@ -643,6 +643,14 @@
 				dev-id = <MESON_I2C_MASTERAO>;
 			};
 
+			i2c_AO_slave:i2c_slave@6000 {
+				compatible = "amlogic, meson-i2c-slave";
+				status = "disabled";
+				reg = <0x0 0x6000 0x0 0x20>;
+				interrupts = <0 194 1>;
+				pinctrl-names="default";
+				pinctrl-0=<&ao_i2c_slave_pins>;
+			};
 		};/* end of aobus */
 
 		periphs: periphs@ff634400 {
