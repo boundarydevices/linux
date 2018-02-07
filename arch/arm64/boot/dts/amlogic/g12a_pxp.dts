@@ -303,18 +303,20 @@
 		compatible = "amlogic, codec, streambuf";
 		dev_name = "mesonstream";
 		status = "okay";
-	//	clocks = <&clkc CLKID_DOS_PARSER
-	//		&clkc CLKID_DEMUX
-	//		&clkc CLKID_DOS
-	//		&clkc CLKID_VDEC_MUX
-	//		&clkc CLKID_HCODEC_MUX
-	//		&clkc CLKID_HEVC_MUX>;
-	//	clock-names = "parser_top",
-	//		"demux",
-	//		"vdec",
-	//		"clk_vdec_mux",
-	//		"clk_hcodec_mux",
-	//		"clk_hevc_mux";
+		clocks = <&clkc CLKID_DOS_PARSER
+			&clkc CLKID_DEMUX
+			&clkc CLKID_DOS
+			&clkc CLKID_VDEC_MUX
+			&clkc CLKID_HCODEC_MUX
+			&clkc CLKID_HEVC_MUX
+			&clkc CLKID_HEVCF_MUX>;
+		clock-names = "parser_top",
+			"demux",
+			"vdec",
+			"clk_vdec_mux",
+			"clk_hcodec_mux",
+			"clk_hevc_mux",
+			"clk_hevcb_mux";
 	};
 
 	vdec {
