@@ -246,7 +246,7 @@ static u32 temp_to_code(struct meson_tsensor_data *data, int temp, bool trend)
 			reg_code = ((sensor_code >> 0x4) & R1P1_TS_TEMP_MASK)
 				+ TEMP_CAL;
 		else
-			reg_code = ((sensor_code >> 0x4) & R1P1_TS_TEMP_MASK)
+			reg_code = ((sensor_code >> 0x4) & R1P1_TS_TEMP_MASK);
 		break;
 	default:
 		pr_info("Cal_type not supported\n");
