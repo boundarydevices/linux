@@ -496,6 +496,7 @@
 		mxcfb2 = &fb_hdmi;
 		pwm_lcd = &pwm1;
 		pwm_lvds = &pwm4;
+		rtc1 = &snvs_rtc;
 		t_lvds = &t_lvds;
 	};
 
