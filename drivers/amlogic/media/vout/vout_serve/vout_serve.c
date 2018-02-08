@@ -186,7 +186,7 @@ char *get_vout_mode_uboot(void)
 }
 EXPORT_SYMBOL(get_vout_mode_uboot);
 
-static int set_vout_mode(char *name)
+int set_vout_mode(char *name)
 {
 	enum vmode_e mode;
 	int ret = 0;

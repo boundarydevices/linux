@@ -17,7 +17,8 @@
 
 #ifndef __AM_MESON_GEM_H
 #define __AM_MESON_GEM_H
-#include  <drm/drm_gem.h>
+#include <drm/drm_gem.h>
+#include <linux/amlogic/meson_drm.h>
 #include <ion/ion_priv.h>
 #include "meson_drv.h"
 
@@ -49,6 +50,11 @@ int am_meson_gem_dumb_destroy(
 	struct drm_file *file,
 	struct drm_device *dev,
 	uint32_t handle);
+
+int am_meson_gem_create_ioctl(
+	struct drm_device *dev,
+	void *data,
+	struct drm_file *file_priv);
 
 int am_meson_gem_dumb_map_offset(
 	struct drm_file *file_priv,

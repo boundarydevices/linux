@@ -693,6 +693,8 @@ void osd_drm_debugfs_add(
 	struct dentry *ent;
 	int i;
 
+	osd_drm_debugfs_init();
+
 	plane_osd_id[osd_id] = osd_id;
 	*plane_debugfs_dir = debugfs_create_dir(name, osd_debugfs_root);
 	if (!plane_debugfs_dir)
@@ -712,6 +714,8 @@ EXPORT_SYMBOL(osd_drm_debugfs_add);
 
 void osd_drm_debugfs_init(void)
 {
+	if (osd_debugfs_root)
+		return;
 	osd_debugfs_root = debugfs_create_dir("graphics", NULL);
 	if (!osd_debugfs_root)
 		pr_err("can't create debugfs dir\n");

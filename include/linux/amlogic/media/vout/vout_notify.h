@@ -119,4 +119,6 @@ extern void vdac_enable(bool on, unsigned int module_sel);
 extern char *get_vout_mode_internal(void);
 extern char *get_vout_mode_uboot(void);
 
+extern int set_vout_mode(char *name);
+
 #endif /* _VOUT_NOTIFY_H_ */

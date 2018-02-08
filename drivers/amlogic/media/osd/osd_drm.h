@@ -33,6 +33,11 @@ struct osd_plane_map_s {
 	u32 dst_w;
 	u32 dst_h;
 	int byte_stride;
+	u32 background_w;
+	u32 background_h;
+	u32 premult_en;
+	u32 afbc_en;
+	u32 afbc_inter_format;
 	u32 reserve;
 };
 

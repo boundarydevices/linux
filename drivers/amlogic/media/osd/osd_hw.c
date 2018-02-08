@@ -6257,6 +6257,35 @@ static bool osd_direct_render(struct osd_plane_map_s *plane_map)
 		plane_map->byte_stride,
 		plane_map->src_h,
 		CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+	if (osd_hw.hwc_enable) {
+	#if 1
+		plane_map->zorder = 1;
+		plane_map->premult_en = 0;
+		plane_map->background_w = 1920;
+		plane_map->background_h = 1080;
+		plane_map->afbc_inter_format = 0x3;
+		plane_map->afbc_en = 0;
+	#endif
+		/* just get para, need update via do_hwc */
+		osd_hw.order[index] = plane_map->zorder;
+		osd_hw.premult_en[index] = plane_map->premult_en;
+		osd_hw.background_w = plane_map->background_w;
+		osd_hw.background_h = plane_map->background_h;
+		osd_hw.osd_afbcd[index].enable = plane_map->afbc_en;
+		osd_hw.osd_afbcd[index].inter_format =
+			plane_map->afbc_inter_format;
+
+		osd_hw.src_data[index].x = plane_map->src_x;
+		osd_hw.src_data[index].y = plane_map->src_y;
+		osd_hw.src_data[index].w = plane_map->src_w;
+		osd_hw.src_data[index].h = plane_map->src_h;
+
+		osd_hw.dst_data[index].x = plane_map->dst_x;
+		osd_hw.dst_data[index].y = plane_map->dst_y;
+		osd_hw.dst_data[index].w = plane_map->dst_w;
+		osd_hw.dst_data[index].h = plane_map->dst_h;
+		return 0;
+	}
 
 	width_dst = osd_hw.free_dst_data_backup[index].x_end -
 		osd_hw.free_dst_data_backup[index].x_start + 1;
@@ -6668,9 +6697,11 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 	} else {
 		if (plane_map->phy_addr && plane_map->src_w
 				&& plane_map->src_h) {
+#if 1
 			osd_hw.fb_gem[index].canvas_idx =
 				osd_extra_idx[index][ext_canvas_id];
 			ext_canvas_id ^= 1;
+#endif
 			color = convert_panel_format(plane_map->format);
 			if (color) {
 				osd_hw.color_info[index] = color;

@@ -90,20 +90,6 @@ static struct osd_device_data_s osd_gxbb = {
 	.dummy_data = 0x00808000,
 };
 
-static struct osd_device_data_s osd_gxtvbb = {
-	.cpu_id = __MESON_CPU_MAJOR_ID_GXTVBB,
-	.osd_ver = OSD_NORMAL,
-	.afbc_type = MESON_AFBC,
-	.osd_count = 2,
-	.has_deband = 0,
-	.has_lut = 0,
-	.has_rdma = 1,
-	.has_dolby_vision = 0,
-	.osd_fifo_len = 32,
-	.vpp_fifo_len = 0xfff,
-	.dummy_data = 0x0,
-};
-
 static struct osd_device_data_s osd_gxl = {
 	.cpu_id = __MESON_CPU_MAJOR_ID_GXL,
 	.osd_ver = OSD_NORMAL,
@@ -286,6 +272,13 @@ static irqreturn_t meson_irq(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_DRM_MESON_USE_ION
+static const struct drm_ioctl_desc meson_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(MESON_GEM_CREATE, am_meson_gem_create_ioctl,
+		DRM_UNLOCKED | DRM_AUTH | DRM_RENDER_ALLOW),
+};
+#endif
+
 static const struct file_operations fops = {
 	.owner		= THIS_MODULE,
 	.open		= drm_open,
@@ -340,6 +333,8 @@ static struct drm_driver meson_driver = {
 	.dumb_map_offset		= am_meson_gem_dumb_map_offset,
 	.gem_free_object_unlocked	= am_meson_gem_object_free,
 	.gem_vm_ops			= &drm_gem_cma_vm_ops,
+	.ioctls			= meson_ioctls,
+	.num_ioctls		= ARRAY_SIZE(meson_ioctls),
 #else
 	/* PRIME Ops */
 	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
@@ -613,10 +608,6 @@ static int meson_drv_probe(struct platform_device *pdev)
 	ret = drm_dev_register(drm, 0);
 	if (ret)
 		goto free_drm;
-
-#ifdef CONFIG_DRM_MESON_BYPASS_MODE
-	osd_drm_debugfs_init();
-#endif
 
 	return 0;
 

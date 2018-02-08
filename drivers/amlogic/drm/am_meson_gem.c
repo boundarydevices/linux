@@ -43,18 +43,23 @@ static int am_meson_gem_alloc_ion_buff(
 	if (!meson_gem_obj)
 		return -EINVAL;
 
-	//TODO,check flags to set different ion heap type.
-	handle = ion_alloc(client, meson_gem_obj->base.size,
+	//check flags to set different ion heap type.
+	//if flags is set to 0, need to use ion dma buffer.
+	if (((flags & (BO_USE_SCANOUT | BO_USE_CURSOR)) != 0)
+		|| (flags == 0)) {
+		handle = ion_alloc(client, meson_gem_obj->base.size,
 				0, (1 << ION_HEAP_TYPE_DMA), 0);
-	if (IS_ERR(handle)) {
+	}
+	else {
 		handle = ion_alloc(client, meson_gem_obj->base.size,
 					0, (1 << ION_HEAP_TYPE_SYSTEM), 0);
-		if (IS_ERR(handle)) {
-			DRM_ERROR("am_meson_gem_alloc_ion_buff FAILED.\n");
-			return -ENOMEM;
-		}
-
 		bscatter = true;
+	}
+
+	if (IS_ERR(handle)) {
+		DRM_ERROR("%s: FAILED, flags:0x%x.\n",
+			__func__, flags);
+		return -ENOMEM;
 	}
 
 	meson_gem_obj->handle = handle;
@@ -312,6 +317,42 @@ unlock:
 	mutex_unlock(&dev->struct_mutex);
 	return ret;
 }
+
+int am_meson_gem_create_ioctl(
+	struct drm_device *dev,
+	void *data,
+	struct drm_file *file_priv)
+{
+	struct am_meson_gem_object *meson_gem_obj;
+	struct meson_drm *drmdrv = dev->dev_private;
+	struct ion_client *client = (struct ion_client *)drmdrv->gem_client;
+	struct drm_meson_gem_create *args = data;
+	int ret = 0;
+
+	meson_gem_obj = am_meson_gem_object_create(
+					dev, args->flags, args->size, client);
+	if (IS_ERR(meson_gem_obj))
+		return PTR_ERR(meson_gem_obj);
+
+	/*
+	 * allocate a id of idr table where the obj is registered
+	 * and handle has the id what user can see.
+	 */
+	ret = drm_gem_handle_create(file_priv,
+			&meson_gem_obj->base, &args->handle);
+	/* drop reference from allocate - handle holds it now. */
+	drm_gem_object_unreference_unlocked(&meson_gem_obj->base);
+	if (ret) {
+		DRM_ERROR("%s: create dumb handle failed %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	DRM_DEBUG("%s: create dumb %p  with gem handle (0x%x)\n",
+		__func__, meson_gem_obj, args->handle);
+	return 0;
+}
+
 
 int am_meson_gem_create(struct meson_drm  *drmdrv)
 {

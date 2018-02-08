@@ -139,8 +139,6 @@ static bool am_meson_crtc_mode_fixup(struct drm_crtc *crtc,
 
 void am_meson_crtc_enable(struct drm_crtc *crtc)
 {
-	enum vmode_e mode;
-	int ret = 0;
 	char *name;
 	struct drm_display_mode *adjusted_mode = &crtc->state->adjusted_mode;
 
@@ -152,19 +150,7 @@ void am_meson_crtc_enable(struct drm_crtc *crtc)
 	//DRM_INFO("meson_crtc_enable  %s\n", adjusted_mode->name);
 	name = am_meson_crtc_get_voutmode(adjusted_mode);
 
-	mode = validate_vmode(name);
-	if (mode == VMODE_MAX) {
-		DRM_ERROR("no matched vout mode\n");
-		return;
-	}
-
-	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE_PRE, &mode);
-	ret = set_current_vmode(mode);
-	if (ret)
-		DRM_ERROR("new mode %s set error\n", name);
-	else
-		DRM_INFO("new mode %s set ok\n", name);
-	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE, &mode);
+	set_vout_mode(name);
 }
 
 void am_meson_crtc_disable(struct drm_crtc *crtc)

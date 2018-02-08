@@ -9,7 +9,7 @@
 
 / {
 
-	dvalin@0xffe40000 {
+	gpu:dvalin@0xffe40000 {
 		compatible = "arm,malit60x", "arm,malit6xx", "arm,mali-midgard";
 		#cooling-cells = <2>;		/* min followed by max */
 		reg = <0 0xFFE40000 0 0x04000>, /*mali APB bus base address*/
