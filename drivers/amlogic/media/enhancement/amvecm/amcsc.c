@@ -34,6 +34,8 @@
 #include "../../osd/osd_rdma.h"
 
 #include "amcsc.h"
+#include "set_hdr2_v0.h"
+
 
 #define pr_csc(fmt, args...)\
 	do {\
@@ -197,6 +199,11 @@ MODULE_PARM_DESC(sdr_saturation_offset, "\n add saturation\n");
 static uint force_csc_type = 0xff;
 module_param(force_csc_type, uint, 0664);
 MODULE_PARM_DESC(force_csc_type, "\n force colour space convert type\n");
+
+static uint fresh_vs;
+module_param(fresh_vs, uint, 0664);
+MODULE_PARM_DESC(fresh_vs, "\n fresh_vs\n");
+
 
 static uint cur_hdr_support;
 module_param(cur_hdr_support, uint, 0664);
@@ -2997,7 +3004,7 @@ int signal_type_changed(struct vframe_s *vf, struct vinfo_s *vinfo)
 	}
 	if (cur_knee_factor != knee_factor) {
 		pr_csc("Knee factor changed.\n");
-		change_flag |= SIG_KNEE_FACTOR;
+		//change_flag |= SIG_KNEE_FACTOR;
 	}
 	if (cur_hdr_process_mode != hdr_process_mode) {
 		pr_csc("HDR mode changed.\n");
@@ -4804,6 +4811,12 @@ static int vpp_matrix_update(
 	if (vf && vinfo)
 		signal_change_flag = signal_type_changed(vf, vinfo);
 
+	if ((!signal_change_flag) && (force_csc_type == 0xff) && (!fresh_vs))
+		return 0;
+
+	if (fresh_vs > 0)
+		fresh_vs = 0;
+
 	if (force_csc_type != 0xff)
 		csc_type = force_csc_type;
 	else
@@ -4910,23 +4923,43 @@ static int vpp_matrix_update(
 				if (get_hdr_type() & HLG_FLAG)
 					need_adjust_contrast_saturation =
 						hlg_process(csc_type, vinfo, p);
-				else
-					need_adjust_contrast_saturation =
-						hdr_process(csc_type, vinfo, p);
+				else {
+					if (get_cpu_type() ==
+						MESON_CPU_MAJOR_ID_G12A) {
+						hdr2sdr_func(VD1_HDR);
+						hdrbypass_func(OSD1_HDR);
+					} else
+						need_adjust_contrast_saturation
+							= hdr_process(csc_type,
+								vinfo, p);
+				}
 			}
 		} else {
 			if ((csc_type < VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-				sdr_process_mode)
+				sdr_process_mode) {
 				/* for gxl and gxm SDR to HDR process */
-				sdr_hdr_process(csc_type, vinfo, p);
-			else {
+				if (get_cpu_type() ==
+					MESON_CPU_MAJOR_ID_G12A) {
+					sdr2hdr_func(VD1_HDR);
+					sdr2hdr_func(OSD1_HDR);
+				} else
+					sdr_hdr_process(csc_type,
+						vinfo, p);
+			} else {
 				/* for gxtvbb and gxl HDR bypass process */
 				if ((get_hdr_type() & HLG_FLAG) &&
 					(vinfo->viu_color_fmt !=
 						COLOR_FMT_RGB444))
 					bypass_hlg_process(csc_type, vinfo, p);
-				else
-					bypass_hdr_process(csc_type, vinfo, p);
+				else {
+					if (get_cpu_type() ==
+						MESON_CPU_MAJOR_ID_G12A) {
+						hdrbypass_func(VD1_HDR);
+						hdrbypass_func(OSD1_HDR);
+					} else
+						bypass_hdr_process(csc_type,
+							vinfo, p);
+				}
 			}
 		}
 		if (cur_hdr_process_mode != hdr_process_mode) {

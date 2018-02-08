@@ -4276,7 +4276,7 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	aml_vecm_dt_parse(pdev);
 	if (is_meson_gxm_cpu())
 		dolby_vision_init_receiver();
-	probe_ok = 0;/*temp mark for g12a bringup*/
+	probe_ok = 1;
 	pr_info("%s: ok\n", __func__);
 	return 0;
 

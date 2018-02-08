@@ -1,0 +1,90 @@
+#include <linux/types.h>
+
+#ifndef MAX
+#define MAX(x1, x2) (double)(x1 > x2 ? x1 : x2)
+#endif
+
+#ifndef POW
+#define POW(x1, x2) (int64_t)(pow((double)x1, (double)x2))
+#endif
+
+#ifndef LOG2
+#define LOG2(x) (int)(x == 0 ? 0 : log2((long long)x))
+#endif
+
+#define FLTZERO 0xfc000/*float zero*/
+
+#define peak_out  10000/* luma out*/
+#define peak_in   1000/* luma in*/
+/* 0:hdr10 peak_in input to hdr10 peak_out,*/
+/*1:hdr peak_in->gamma,2:gamma->hdr peak out*/
+#define fmt_io       2
+
+#define precision  14/* freeze*/
+/*input data bitwidth : 12 (VD1 OSD1 VD2)*/
+/*10 (VDIN & DI)*/
+#define IE_BW      12
+#define OE_BW      12/*same IE_BW*/
+#define O_BW       32/*freeze*/
+#define maxbit     33/*freeze*/
+#define OGAIN_BW   12/*freeze*/
+
+int64_t FloatRev(int64_t iA);
+int64_t FloatCon(int64_t iA, int MOD);
+
+enum hdr_module_sel {
+	VD1_HDR = 0x1,
+	VD2_HDR = 0x2,
+	OSD1_HDR = 0x4,
+	VDIN0_HDR = 0x8,
+	VDIN1_HDR = 0x10,
+	DI_HDR = 0x20,
+	HDR_MAX
+};
+
+enum hdr_matrix_sel {
+	HDR_IN_MTX = 0x1,
+	HDR_GAMUT_MTX = 0x2,
+	HDR_OUT_MTX = 0x4,
+	HDR_MTX_MAX
+};
+
+enum hdr_lut_sel {
+	HDR_EOTF_LUT = 0x1,
+	HDR_OOTF_LUT = 0x2,
+	HDR_OETF_LUT = 0x4,
+	HDR_CGAIN_LUT = 0x8,
+	HDR_LUT_MAX
+};
+
+enum hdr_process_sel {
+	HDR_SDR = 0x1,
+	SDR_HDR = 0x2,
+	HDR_BYPASS = 0x4,
+	HDR_p_MAX
+};
+
+
+#define MTX_ON  1
+#define MTX_OFF 0
+
+#define MTX_ONLY  1
+#define HDR_ONLY  0
+
+#define LUT_ON  1
+#define LUT_OFF 0
+
+#define HDR2_EOTF_LUT_SIZE 143
+#define HDR2_OOTF_LUT_SIZE 149
+#define HDR2_OETF_LUT_SIZE 149
+#define HDR2_CGAIN_LUT_SIZE 65
+
+
+typedef int64_t(*MenuFun)(int64_t);
+void eotf_float_gen(int64_t *o_out, MenuFun eotf);
+void oetf_float_gen(int64_t *bin_e, MenuFun oetf);
+void nolinear_lut_gen(int64_t *bin_c, MenuFun cgain);
+extern void hdrbypass_func(enum hdr_module_sel module_sel);
+extern void hdr2sdr_func(enum hdr_module_sel module_sel);
+extern void sdr2hdr_func(enum hdr_module_sel module_sel);
+
