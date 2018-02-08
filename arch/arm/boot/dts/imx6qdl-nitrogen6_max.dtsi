@@ -516,6 +516,7 @@
 		pwm_lcd = &pwm1;
 		pwm_lvds = &pwm4;
 		pwm_lvds2 = &pwm2;
+		rtc1 = &snvs_rtc;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 	};
