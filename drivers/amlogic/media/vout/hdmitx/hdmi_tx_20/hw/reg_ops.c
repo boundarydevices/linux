@@ -164,7 +164,7 @@ void init_reg_map(unsigned int type)
 	switch (type) {
 	case MESON_CPU_ID_G12A:
 		map = reg_maps_g12a;
-		for (i = 0; i <= REG_IDX_END; i++) {
+		for (i = 0; i < REG_IDX_END; i++) {
 			map[i].p = ioremap(map[i].phy_addr, map[i].size);
 			if (!map[i].p) {
 				pr_info("hdmitx20: failed Mapped PHY: 0x%x\n",
