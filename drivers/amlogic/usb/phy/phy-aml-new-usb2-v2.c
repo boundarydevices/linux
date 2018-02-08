@@ -29,14 +29,14 @@
 #include <linux/amlogic/usb-v2.h>
 #include "phy-aml-new-usb-v2.h"
 
-void set_usb_pll(void __iomem	*reg)
+void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 {
 	/* TO DO set usb  PLL */
-	writel(0x39400414, reg + 0x40);
-	writel(0x927E0000, reg + 0x44);
-	writel(0xAD5B29E9, reg + 0x48);
+	writel((0x30000000 | (phy->pll_setting[0])), reg + 0x40);
+	writel(phy->pll_setting[1], reg + 0x44);
+	writel(phy->pll_setting[2], reg + 0x48);
 	udelay(100);
-	writel(0x19400414, reg + 0x40);
+	writel((0x10000000 | (phy->pll_setting[0])), reg + 0x40);
 }
 
 static int amlogic_new_usb2_init(struct usb_phy *x)
@@ -103,10 +103,11 @@ static int amlogic_new_usb2_init(struct usb_phy *x)
 			cnt++;
 			udelay(5);
 		}
-
-		/* step 7: pll setting */
-		set_usb_pll(phy->phy_cfg[i]);
 	}
+
+	/* step 7: pll setting */
+	for (i = 0; i < phy->portnum; i++)
+		set_usb_pll(phy, phy->phy_cfg[i]);
 
 	return 0;
 }
@@ -147,6 +148,8 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	int portnum = 0;
 	const void *prop;
 	int i = 0;
+	u32 retval;
+	u32 pll_setting[3];
 
 	prop = of_get_property(dev->of_node, "portnum", NULL);
 	if (prop)
@@ -185,6 +188,21 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	if (!phy)
 		return -ENOMEM;
 
+	retval = of_property_read_u32(dev->of_node,
+		"pll-setting-1", &(pll_setting[0]));
+	if (retval < 0)
+		return -EINVAL;
+
+	retval = of_property_read_u32(dev->of_node,
+		"pll-setting-2", &(pll_setting[1]));
+	if (retval < 0)
+		return -EINVAL;
+
+	retval = of_property_read_u32(dev->of_node,
+		"pll-setting-3", &(pll_setting[2]));
+	if (retval < 0)
+		return -EINVAL;
+
 	dev_info(&pdev->dev, "USB2 phy probe:phy_mem:0x%lx, iomap phy_base:0x%lx\n",
 			(unsigned long)phy_mem->start, (unsigned long)phy_base);
 
@@ -199,6 +217,9 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	phy->phy.set_suspend	= amlogic_new_usb2_suspend;
 	phy->phy.shutdown	= amlogic_new_usb2phy_shutdown;
 	phy->phy.type		= USB_PHY_TYPE_USB2;
+	phy->pll_setting[0] = pll_setting[0];
+	phy->pll_setting[1] = pll_setting[1];
+	phy->pll_setting[2] = pll_setting[2];
 	for (i = 0; i < portnum; i++)
 		phy->phy_cfg[i] = phy_cfg_base[i];
 
