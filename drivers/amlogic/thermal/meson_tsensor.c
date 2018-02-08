@@ -98,7 +98,7 @@
 #define MCELSIUS	1000
 #define MAX_TS_NUM	3
 #define	TS_DEF_RTEMP	125
-
+#define	TEMP_CAL	1
 
 enum soc_type {
 	SOC_ARCH_TS_R1P0 = 1,
@@ -212,7 +212,7 @@ static void meson_report_trigger(struct meson_tsensor_data *p)
  * tsensor treats temperature as a mapped temperature code.
  * The temperature is converted differently depending on the calibration type.
  */
-static u32 temp_to_code(struct meson_tsensor_data *data, int temp)
+static u32 temp_to_code(struct meson_tsensor_data *data, int temp, bool trend)
 {
 	struct meson_tsensor_platform_data *pdata = data->pdata;
 	long long int sensor_code;
@@ -242,7 +242,11 @@ static u32 temp_to_code(struct meson_tsensor_data *data, int temp)
 		}
 		sensor_code = (sensor_code * 100 /
 				(cal_b - cal_a * sensor_code / (1 << 16)));
-		reg_code = (sensor_code >> 0x4) & R1P1_TS_TEMP_MASK;
+		if (trend)
+			reg_code = ((sensor_code >> 0x4) & R1P1_TS_TEMP_MASK)
+				+ TEMP_CAL;
+		else
+			reg_code = ((sensor_code >> 0x4) & R1P1_TS_TEMP_MASK)
 		break;
 	default:
 		pr_info("Cal_type not supported\n");
@@ -378,7 +382,7 @@ static int r1p1_tsensor_initialize(struct platform_device *pdev)
 
 	/*r1p1 init the ts reboot soc function*/
 	reboot_temp = pdata->reboot_temp;
-	reboot_reg = temp_to_code(data, reboot_temp / MCELSIUS);
+	reboot_reg = temp_to_code(data, reboot_temp / MCELSIUS, true);
 	con = (readl(data->base_c + R1P1_TS_CFG_REG2) | (reboot_reg << 4));
 	con |= (R1P1_TS_HITEMP_EN | R1P1_TS_REBOOT_ALL_EN);
 	con |= (R1P1_TS_REBOOT_TIME);
@@ -416,7 +420,7 @@ static int r1p1_tsensor_initialize(struct platform_device *pdev)
 		temp_hist = temp - (temp_hist / MCELSIUS);
 
 		/* Set 12-bit temperature code for rising threshold levels */
-		threshold_code = temp_to_code(data, temp);
+		threshold_code = temp_to_code(data, temp, true);
 		rising_threshold = readl(data->base_c +
 				R1P1_TS_CFG_REG4 + reg_off);
 		rising_threshold &= ~(R1P1_TS_TEMP_MASK << (12 * bit_off));
@@ -425,7 +429,7 @@ static int r1p1_tsensor_initialize(struct platform_device *pdev)
 			data->base_c + R1P1_TS_CFG_REG4 + reg_off);
 
 		/* Set 12-bit temperature code for falling threshold levels */
-		threshold_code = temp_to_code(data, temp_hist);
+		threshold_code = temp_to_code(data, temp_hist, false);
 		falling_threshold = readl(data->base_c +
 				R1P1_TS_CFG_REG6 + reg_off);
 		falling_threshold &= ~(R1P1_TS_TEMP_MASK << (12 * bit_off));
@@ -493,7 +497,7 @@ static void r1p1_tsensor_update_irqs(struct meson_tsensor_data *data)
 		/* Find the level for which trip happened */
 	for (i = 0; i < of_thermal_get_ntrips(tz); i++) {
 		tz->ops->get_trip_temp(tz, i, &temp);
-		if (tz->last_temperature < (temp - 1000))
+		if (tz->last_temperature < temp)
 			break;
 	}
 

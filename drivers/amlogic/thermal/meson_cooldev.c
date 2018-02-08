@@ -310,6 +310,7 @@ static int meson_cooldev_probe(struct platform_device *pdev)
 	int cpu, i, c_id;
 	struct cool_dev *cool;
 	struct meson_cooldev *mcooldev;
+	struct cpufreq_policy *policy;
 
 	pr_info("meson_cdev probe\n");
 	mcooldev = devm_kzalloc(&pdev->dev, sizeof(struct meson_cooldev),
@@ -318,6 +319,13 @@ static int meson_cooldev_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	platform_set_drvdata(pdev, mcooldev);
 	mutex_init(&mcooldev->lock);
+
+	policy = cpufreq_cpu_get(0);
+	if (!policy || !policy->freq_table) {
+		dev_info(&pdev->dev,
+			"Frequency policy not init. Deferring probe...\n");
+		return -EPROBE_DEFER;
+	}
 
 	for_each_possible_cpu(cpu) {
 		if (mc_capable())
