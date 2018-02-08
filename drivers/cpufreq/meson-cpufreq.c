@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  */
 
-#define DEBUG  0
+//#define DEBUG  0
 
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
