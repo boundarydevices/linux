@@ -93,21 +93,21 @@
 			threshold = <210 236>;
 		};
 
-		dvfs750_cfg:dvfs750_cfg {
-			clk_freq = <744000000>;
-			clk_parent = "gp0_pll";
-			clkp_freq = <744000000>;
-			clk_reg = <0x200>;
+		dvfs800_cfg:dvfs800_cfg {
+			clk_freq = <800000000>;
+			clk_parent = "fclk_div2p5";
+			clkp_freq = <800000000>;
+			clk_reg = <0x600>;
 			voltage = <1150>;
 			keep_count = <5>;
 			threshold = <230 255>;
 		};
 
-		dvfs800_cfg:dvfs800_cfg {
-			clk_freq = <800000000>;
+		dvfs850_cfg:dvfs850_cfg {
+			clk_freq = <846000000>;
 			clk_parent = "gp0_pll";
-			clkp_freq = <800000000>;
-			clk_reg = <0x600>;
+			clkp_freq = <846000000>;
+			clk_reg = <0x200>;
 			voltage = <1150>;
 			keep_count = <5>;
 			threshold = <230 255>;
