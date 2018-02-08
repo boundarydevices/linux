@@ -456,9 +456,9 @@ static void handle_non_critical_trips(struct thermal_zone_device *tz,
 #ifdef CONFIG_AMLOGIC_TEMP_SENSOR
 static bool can_notify(struct thermal_zone_device *tz,
 		       int trip, enum thermal_trip_type trip_type,
-		       long trip_temp)
+		       int trip_temp)
 {
-	unsigned int hyst = 0;
+	int hyst = 0;
 
 	if (trip_type != THERMAL_TRIP_HOT)
 		return false;
@@ -471,7 +471,7 @@ static bool can_notify(struct thermal_zone_device *tz,
 	if (tz->temperature >= (trip_temp + tz->hot_step * hyst)) {
 		tz->hot_step++;
 		dev_info(&tz->device,
-			 "temp:%d increase, hyst:%d, trip_temp:%ld, hot:%x\n",
+			 "temp:%d increase, hyst:%d, trip_temp:%d, hot:%x\n",
 			 tz->temperature, hyst, trip_temp, tz->hot_step);
 		return true;
 	}
@@ -480,7 +480,7 @@ static bool can_notify(struct thermal_zone_device *tz,
 	    tz->hot_step) {
 		tz->hot_step--;
 		dev_info(&tz->device,
-			 "temp:%d decrease, hyst:%d, trip_temp:%ld, hot:%x\n",
+			 "temp:%d decrease, hyst:%d, trip_temp:%d, hot:%x\n",
 			 tz->temperature, hyst, trip_temp, tz->hot_step);
 		return true;
 	}
