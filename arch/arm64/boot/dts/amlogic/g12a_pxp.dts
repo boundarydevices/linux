@@ -89,7 +89,7 @@
 			 * 10x4736064=45.2M(0x2e) support 12bit
 			 * 10x4074560=40M(0x28) support 10bit
 			 */
-			size = <0x0 0x02900000>;
+			size = <0x0 0x02800000>;
 			alignment = <0x0 0x400000>;
 		};
 		codec_mm_cma:linux,codec_mm_cma {
@@ -370,15 +370,11 @@
 		interrupts = <0 46 1
 				0 40 1>;
 		interrupt-names = "pre_irq", "post_irq";
-		clocks = <&clkc CLKID_VPU_MUX>,
-			<&clkc CLKID_FCLK_DIV4>,
-			<&clkc CLKID_VPU_CLKB_TMP_COMP>,
+		clocks = <&clkc CLKID_VPU_CLKB_TMP_COMP>,
 			<&clkc CLKID_VPU_CLKB_COMP>;
-		clock-names = "vpu_mux",
-			"fclk_div4",
-			"vpu_clkb_tmp_composite",
+		clock-names = "vpu_clkb_tmp_composite",
 			"vpu_clkb_composite";
-		clock-range = <333 666>;
+		clock-range = <334 667>;
 		/* buffer-size = <3621952>;(yuv422 8bit) */
 		buffer-size = <4074560>;/*yuv422 fullpack*/
 		/* reserve-iomap = "true"; */

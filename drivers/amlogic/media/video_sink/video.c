@@ -2185,7 +2185,8 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 		VSYNC_WR_MPEG_REG(AFBC_BODY_BADDR, vf->compBodyAddr>>4);
 	}
 	if ((vf->canvas0Addr != 0) &&
-	(DI_POST_REG_RD(DI_IF1_GEN_REG) & 0x1) == 0) {
+	(DI_POST_REG_RD(DI_POST_CTRL) & 0x1000) == 0) {
+
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		if (vf->canvas0Addr != (u32)-1) {
 			canvas_copy(vf->canvas0Addr & 0xff,

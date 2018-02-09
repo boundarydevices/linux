@@ -64,7 +64,7 @@
 
 /* canvas defination */
 #define DI_USE_FIXED_CANVAS_IDX
-#define	DET3D
+//#define	DET3D
 #undef SUPPORT_MPEG_TO_VDIN
 #define CLK_TREE_SUPPORT
 #ifndef CONFIG_AMLOGIC_MEDIA_RDMA
@@ -361,6 +361,7 @@ struct di_post_stru_s {
 	int de_post_process_done;
 	int post_de_busy;
 	int di_post_num;
+	unsigned int post_peek_underflow;
 	unsigned int di_post_process_cnt;
 	unsigned int check_recycle_buf_cnt;
 	/* performance debug */

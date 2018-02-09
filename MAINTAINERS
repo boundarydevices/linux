@@ -13679,6 +13679,7 @@ F: include/linux/amlogic/media/amvecm/amvecm.h
 F: arch/arm64/boot/dts/amlogic/txlx_t962e_r321.dts
 F: arch/arm64/boot/dts/amlogic/txlx_t962x_r311.dts
 F: arch/arm64/boot/dts/amlogic/g12a_pxp.dts
+F: arch/arm64/boot/dts/amlogic/g12a_skt.dts
 
 AMLOGIC TVIN
 M: Dezhi Kong <dezhi.kong@amlogic.com>

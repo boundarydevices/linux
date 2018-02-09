@@ -355,9 +355,13 @@ static void dump_mif_state(struct DI_MIF_s *mif)
 	pr_info("luma <%u, %u> <%u %u>.\n",
 		mif->luma_x_start0, mif->luma_x_end0,
 		mif->luma_y_start0, mif->luma_y_end0);
-	pr_info("if0 chroma <%u, %u> <%u %u>.\n",
+	pr_info("chroma <%u, %u> <%u %u>.\n",
 		mif->chroma_x_start0, mif->chroma_x_end0,
 		mif->chroma_y_start0, mif->chroma_y_end0);
+	pr_info("canvas id <%u %u %u>.\n",
+		mif->canvas0_addr0,
+		mif->canvas0_addr1,
+		mif->canvas0_addr2);
 }
 
 static void dump_simple_mif_state(struct DI_SIM_MIF_s *simp_mif)
@@ -365,6 +369,8 @@ static void dump_simple_mif_state(struct DI_SIM_MIF_s *simp_mif)
 	pr_info("<%u %u> <%u %u>.\n",
 		simp_mif->start_x, simp_mif->end_x,
 		simp_mif->start_y, simp_mif->end_y);
+	pr_info("canvas num <%u>.\n",
+		simp_mif->canvas_num);
 }
 
 static void dump_mc_mif_state(struct DI_MC_MIF_s *mc_mif)
@@ -449,33 +455,50 @@ void dump_di_post_stru(struct di_post_stru_s *di_post_stru_p)
 		di_post_stru_p->post_de_busy);
 	pr_info("de_post_process_done	= %d\n",
 		di_post_stru_p->de_post_process_done);
-	pr_info("cur_post_buf			= 0x%p\n,",
+	pr_info("cur_post_buf			= 0x%p\n",
 		di_post_stru_p->cur_post_buf);
+	pr_info("post_peek_underflow	= %u\n",
+		di_post_stru_p->post_peek_underflow);
 }
 
 void dump_mif_size_state(struct di_pre_stru_s *pre_stru_p,
 	struct di_post_stru_s *post_stru_p)
 {
 	pr_info("======pre mif status======\n");
-	pr_info("DI_PRE_SIZE=0x%x", Rd(DI_PRE_SIZE));
+	pr_info("DI_PRE_CTRL=0x%x\n", Rd(DI_PRE_CTRL));
+	pr_info("DI_PRE_SIZE=0x%x\n", Rd(DI_PRE_SIZE));
 	pr_info("DNR_HVSIZE=0x%x\n", Rd(DNR_HVSIZE));
-	pr_info("CONTWR_CAN_SIZE=0x%x", Rd(0x37ec));
+	pr_info("CONTWR_CAN_SIZE=0x%x\n", Rd(0x37ec));
 	pr_info("MTNWR_CAN_SIZE=0x%x\n", Rd(0x37f0));
-	pr_info("DNR_STAT_X_START_END=0x%x", Rd(0x2d08));
+	pr_info("DNR_STAT_X_START_END=0x%x\n", Rd(0x2d08));
 	pr_info("DNR_STAT_Y_START_END=0x%x\n", Rd(0x2d09));
-	pr_info("MCDI_HV_SIZEIN=0x%x", Rd(0x2f00));
+	pr_info("MCDI_HV_SIZEIN=0x%x\n", Rd(0x2f00));
 	pr_info("MCDI_HV_BLKSIZEIN=0x%x\n", Rd(0x2f01));
-	pr_info("MCVECWR_CAN_SIZE=0x%x", Rd(0x37f4));
+	pr_info("MCVECWR_CAN_SIZE=0x%x\n", Rd(0x37f4));
 	pr_info("MCINFWR_CAN_SIZE=0x%x\n", Rd(0x37f8));
-	pr_info("NRDSWR_CAN_SIZE=0x%x", Rd(0x37fc));
+	pr_info("NRDSWR_CAN_SIZE=0x%x\n", Rd(0x37fc));
 	pr_info("NR_DS_BUF_SIZE=0x%x\n", Rd(0x3740));
 	pr_info("=====inp mif:\n");
+#if 0
+	Wr(DI_DBG_CTRL, 0x1b);
+	Wr(DI_DBG_CTRL1, 0x640064);
+	Wr_reg_bits(DI_PRE_GL_CTRL, 0, 31, 1);
+	Wr_reg_bits(DI_PRE_CTRL, 0, 11, 1);
+	Wr_reg_bits(DI_PRE_CTRL, 1, 31, 1);
+	Wr_reg_bits(DI_PRE_GL_CTRL, 1, 31, 1);
+	pr_info("DI_DBG_SRDY_INF=0x%x\n", Rd(DI_DBG_SRDY_INF));
+	pr_info("DI_DBG_RRDY_INF=0x%x\n", Rd(DI_DBG_RRDY_INF));
+#endif
+	pr_info("DI_INP_GEN_REG=0x%x\n", Rd(DI_INP_GEN_REG));
 	dump_mif_state(&pre_stru_p->di_inp_mif);
 	pr_info("=====mem mif:\n");
+	pr_info("DI_MEM_GEN_REG=0x%x\n", Rd(DI_MEM_GEN_REG));
 	dump_mif_state(&pre_stru_p->di_mem_mif);
 	pr_info("=====chan2 mif:\n");
+	pr_info("DI_CHAN2_GEN_REG=0x%x\n", Rd(DI_CHAN2_GEN_REG));
 	dump_mif_state(&pre_stru_p->di_chan2_mif);
 	pr_info("=====nrwr mif:\n");
+	pr_info("DI_NRWR_CTRL=0x%x\n", Rd(DI_NRWR_CTRL));
 	dump_simple_mif_state(&pre_stru_p->di_nrwr_mif);
 	pr_info("=====mtnwr mif:\n");
 	dump_simple_mif_state(&pre_stru_p->di_mtnwr_mif);
@@ -492,13 +515,16 @@ void dump_mif_size_state(struct di_pre_stru_s *pre_stru_p,
 	pr_info("=====mcvecwr mif:\n");
 	dump_mc_mif_state(&pre_stru_p->di_mcvecwr_mif);
 	pr_info("======post mif status======\n");
-	pr_info("DI_POST_SIZE=0x%x", Rd(DI_POST_SIZE));
+	pr_info("DI_POST_SIZE=0x%x\n", Rd(DI_POST_SIZE));
 	pr_info("DECOMB_FRM_SIZE=0x%x\n", Rd(0x2d8f));
 	pr_info("=====if0 mif:\n");
+	pr_info("DI_IF0_GEN_REG=0x%x\n", Rd(0x2030));
 	dump_mif_state(&post_stru_p->di_buf0_mif);
 	pr_info("=====if1 mif:\n");
+	pr_info("DI_IF1_GEN_REG=0x%x\n", Rd(0x17e8));
 	dump_mif_state(&post_stru_p->di_buf1_mif);
 	pr_info("=====if2 mif:\n");
+	pr_info("DI_IF2_GEN_REG=0x%x\n", Rd(0x2010));
 	dump_mif_state(&post_stru_p->di_buf2_mif);
 	pr_info("=====diwr mif:\n");
 	dump_simple_mif_state(&post_stru_p->di_diwr_mif);
@@ -507,9 +533,9 @@ void dump_mif_size_state(struct di_pre_stru_s *pre_stru_p,
 	pr_info("=====mcvecrd mif:\n");
 	dump_mc_mif_state(&post_stru_p->di_mcvecrd_mif);
 	pr_info("======pps size status======\n");
-	pr_info("DI_SC_LINE_IN_LENGTH=0x%x", Rd(0x3751));
+	pr_info("DI_SC_LINE_IN_LENGTH=0x%x\n", Rd(0x3751));
 	pr_info("DI_SC_PIC_IN_HEIGHT=0x%x\n", Rd(0x3752));
-	pr_info("DI_HDR_IN_HSIZE=0x%x", Rd(0x376e));
+	pr_info("DI_HDR_IN_HSIZE=0x%x\n", Rd(0x376e));
 	pr_info("DI_HDR_IN_VSIZE=0x%x\n", Rd(0x376f));
 }
 void dump_di_buf(struct di_buf_s *di_buf)
@@ -626,27 +652,16 @@ void dump_pre_mif_state(void)
 	Wr_reg_bits(DI_CHAN2_GEN_REG3, 3, 10, 2);
 	pr_info("DI_INP_GEN_REG2=0x%x.\n", Rd(DI_INP_GEN_REG2));
 	pr_info("DI_INP_GEN_REG3=0x%x.\n", Rd(DI_INP_GEN_REG3));
-	pr_info("DI_INP_LUMA_FIFO_SIZE=0x%x.\n", Rd(DI_INP_LUMA_FIFO_SIZE));
-	pr_info("DI_INP_RANGE_MAP_Y=0x%x.\n", Rd(DI_INP_RANGE_MAP_Y));
-	pr_info("DI_INP_RANGE_MAP_CB=0x%x.\n", Rd(DI_INP_RANGE_MAP_CB));
-	pr_info("DI_INP_RANGE_MAP_CR=0x%x.\n", Rd(DI_INP_RANGE_MAP_CR));
-	pr_info("DI_INP_URGENT_CTRL=0x%x.\n", Rd(DI_INP_URGENT_CTRL));
 	for (i = 0; i < 10; i++)
 		pr_info("0x%x=0x%x.\n", 0x17ce + i, Rd(0x17ce + i));
 	pr_info("DI_MEM_GEN_REG2=0x%x.\n", Rd(DI_MEM_GEN_REG2));
 	pr_info("DI_MEM_GEN_REG3=0x%x.\n", Rd(DI_MEM_GEN_REG3));
 	pr_info("DI_MEM_LUMA_FIFO_SIZE=0x%x.\n", Rd(DI_MEM_LUMA_FIFO_SIZE));
-	pr_info("DI_MEM_RANGE_MAP_CB=0x%x.\n", Rd(DI_MEM_RANGE_MAP_CB));
-	pr_info("DI_MEM_RANGE_MAP_CR=0x%x.\n", Rd(DI_MEM_RANGE_MAP_CR));
-	pr_info("DI_MEM_URGENT_CTRL=0x%x.\n", Rd(DI_MEM_URGENT_CTRL));
 	for (i = 0; i < 10; i++)
 		pr_info("0x%x=0x%x.\n", 0x17db + i, Rd(0x17db + i));
 	pr_info("DI_CHAN2_GEN_REG2=0x%x.\n", Rd(DI_CHAN2_GEN_REG2));
 	pr_info("DI_CHAN2_GEN_REG3=0x%x.\n", Rd(DI_CHAN2_GEN_REG3));
 	pr_info("DI_CHAN2_LUMA_FIFO_SIZE=0x%x.\n", Rd(DI_CHAN2_LUMA_FIFO_SIZE));
-	pr_info("DI_CHAN2_RANGE_MAP_CB=0x%x.\n", Rd(DI_CHAN2_RANGE_MAP_CB));
-	pr_info("DI_CHAN2_RANGE_MAP_CR=0x%x.\n", Rd(DI_CHAN2_RANGE_MAP_CR));
-	pr_info("DI_CHAN2_URGENT_CTRL=0x%x.\n", Rd(DI_CHAN2_URGENT_CTRL));
 	for (i = 0; i < 10; i++)
 		pr_info("0x%x=0x%x.\n", 0x17f5 + i, Rd(0x17f5 + i));
 }

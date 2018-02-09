@@ -92,7 +92,7 @@ struct di_pq_parm_s {
 void read_pulldown_info(unsigned int *glb_frm_mot_num,
 	unsigned int *glb_fid_mot_num);
 void read_new_pulldown_info(struct FlmModReg_t *pFMRegp);
-
+void pulldown_info_clear_g12a(void);
 void combing_pd22_window_config(unsigned int width, unsigned int height);
 void di_hw_init(bool pulldown_en, bool mc_enable);
 void di_hw_uninit(void);
@@ -151,7 +151,6 @@ void di_post_switch_buffer(
 	int invert_mv, bool pd_en, bool mc_enable,
 	int vskip_cnt
 );
-void di_post_read_reverse(bool reverse, bool mc_enable);
 void di_post_read_reverse_irq(bool reverse,
 	unsigned char mc_pre_flag, bool mc_enable);
 void di_top_gate_control(bool top_en, bool mc_en);
@@ -160,7 +159,6 @@ void di_post_gate_control(bool gate);
 void diwr_set_power_control(unsigned char enable);
 void di_hw_disable(bool mc_enable);
 void enable_di_pre_mif(bool enable, bool mc_enable);
-void reset_pre_simple_mif(void);
 void enable_di_post_mif(enum gate_mode_e mode);
 void di_hw_uninit(void);
 void combing_pd22_window_config(unsigned int width, unsigned int height);
@@ -170,4 +168,9 @@ void init_field_mode(unsigned short height);
 void film_mode_win_config(unsigned int width, unsigned int height);
 void pulldown_vof_win_config(struct pulldown_detected_s *wins);
 void di_load_regs(struct di_pq_parm_s *di_pq_ptr);
+void pre_frame_reset_g12a(unsigned char madi_en, unsigned char mcdi_en);
+void pre_frame_reset(void);
+void di_interrupt_ctrl(unsigned char vf_type,
+	unsigned char det3d_en, unsigned char nrds_en,
+	unsigned char post_wr, unsigned char mc_en);
 #endif

@@ -53,6 +53,11 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define VIUB_GCLK_CTRL1					0x2008
 #define VIUB_GCLK_CTRL2					0x2009
 #define VIUB_GCLK_CTRL3					0x200a
+/* g12a add debug reg */
+#define DI_DBG_CTRL						0x200b
+#define DI_DBG_CTRL1					0x200c
+#define DI_DBG_SRDY_INF					0x200d
+#define DI_DBG_RRDY_INF				0x200e
 /* txl add if2 */
 #define DI_IF2_GEN_REG					0x2010
 #define DI_IF2_CANVAS0					0x2011

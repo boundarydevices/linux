@@ -134,7 +134,6 @@ void nr_ds_mif_config(void)
 		NR_DS_WIDTH, NR_DS_HEIGHT, 0, 0);
 	RDMA_WR_BITS(NRDSWR_CTRL,
 		nrds_dev.canvas_idx, 0, 8);
-	RDMA_WR_BITS(DI_PRE_CTRL, 1, 11, 1);
 	nr_ds_hw_ctrl(true);
 }
 

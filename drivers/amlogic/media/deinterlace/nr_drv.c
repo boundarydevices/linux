@@ -316,7 +316,7 @@ static void nr4_config(struct NR4_PARM_s *nr4_parm_p,
 	DI_Wr_reg_bits(NR4_TOP_CTRL, 1, 16, 1);
 	DI_Wr_reg_bits(NR4_TOP_CTRL, 1, 18, 1);
 	DI_Wr_reg_bits(NR4_TOP_CTRL, 1, 3, 1);
-	DI_Wr_reg_bits(NR4_TOP_CTRL, (val&0x1), 5, 1);
+	DI_Wr_reg_bits(NR4_TOP_CTRL, 1, 5, 1);
 	nr4_parm_p->width = width - val - val - 1;
 	nr4_parm_p->height = height - val - val - 1;
 }
@@ -350,9 +350,11 @@ static void linebuffer_config(unsigned short width)
 
 static void nr2_config(unsigned short width, unsigned short height)
 {
-	if (is_meson_txlx_cpu() || is_meson_g12a_cpu())
+	if (is_meson_txlx_cpu() || is_meson_g12a_cpu()) {
 		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 2, 1);
-	else {
+		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 15, 1);
+		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 17, 1);
+	} else {
 		/*set max height to disable nfram cnt in cue*/
 		if (is_meson_gxlx_cpu())
 			DI_Wr(NR2_FRM_SIZE, (0xfff<<16)|width);
