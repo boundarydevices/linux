@@ -350,7 +350,7 @@
 		clock-names = "pcie_refpll";
 	};
 
-	dwc2_a: dwc2@ff400000 {
+	dwc2_a: dwc2_a@ff400000 {
 		compatible = "amlogic, dwc2";
 		status = "disable";
 		device_name = "dwc2_a";
