@@ -159,45 +159,6 @@
 		dev_name = "vout";
 		status = "okay";
 	};
-/*external_phy please use this
-	ethmac: ethernet@ff3f0000 {
-		compatible = "amlogic, g12a-eth-dwmac", "snps,dwmac";
-		reg = <0x0 0xff3f0000 0x0 0x10000
-			0x0 0xff634540 0x0 0x8
-			0x0 0xff64c000 0x0 0xa0>;
-		reg-names = "eth_base", "eth_cfg", "eth_pll";
-		interrupts = <0 8 1>;
-		interrupt-names = "macirq";
-		status = "okay";
-		clocks = <&clkc CLKID_ETH_CORE>;
-		clock-names = "ethclk81";
-
-		pinctrl-names = "external_eth_pins";
-		pinctrl-0 = <&external_eth_pins>;
-		mc_val = <0x1621>;
-
-		internal_phy=<0>;
-	};
-
-*/
-	ethmac: ethernet@ff3f0000 {
-		compatible = "amlogic, g12a-eth-dwmac","snps,dwmac";
-		reg = <0x0 0xff3f0000 0x0 0x10000
-			0x0 0xff634540 0x0 0x8
-			0x0 0xff64c000 0x0 0xa0>;
-		reg-names = "eth_base", "eth_cfg", "eth_pll";
-		interrupts = <0 8 1>;
-		interrupt-names = "macirq";
-		status = "okay";
-		clocks = <&clkc CLKID_ETH_CORE>;
-		clock-names = "ethclk81";
-
-		pinctrl-names = "internal_eth_pins";
-		pinctrl-0 = <&internal_eth_pins>;
-		mc_val = <0x4be04>;
-
-		internal_phy=<1>;
-	};
 
 	amhdmitx: amhdmitx{
 		compatible = "amlogic, amhdmitx";
@@ -1625,4 +1586,11 @@
 	/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
 	controller-type = <3>;
 };
+&ethmac {
+	status = "okay";
+	pinctrl-names = "internal_eth_pins";
+	pinctrl-0 = <&internal_eth_pins>;
+	mc_val = <0x4be04>;
 
+	internal_phy=<1>;
+};

@@ -209,31 +209,6 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 	return PREG_ETH_REG0;
 }
 
-static int dwmac_meson_cfg_pll(void __iomem *base_addr)
-{
-	void __iomem *ETH_PHY_config_addr = base_addr;
-
-	writel(0x19C0040A, ETH_PHY_config_addr + ETH_PLL_CTL0);
-	writel(0x927E0000, ETH_PHY_config_addr + ETH_PLL_CTL1);
-	writel(0x705B49e5, ETH_PHY_config_addr + ETH_PLL_CTL2);
-	writel(0x00000000, ETH_PHY_config_addr + ETH_PLL_CTL3);
-	usleep_range(100, 200);
-	writel(0x19C0040A, ETH_PHY_config_addr + ETH_PLL_CTL0);
-	return 0;
-}
-
-static int dwmac_meson_cfg_analog(void __iomem *base_addr)
-{
-	void __iomem *ETH_PHY_config_addr = base_addr;
-
-	/*Analog*/
-	writel(0x20200000, ETH_PHY_config_addr + ETH_PLL_CTL5);
-	writel(0x0000c002, ETH_PHY_config_addr + ETH_PLL_CTL6);
-	writel(0x00000023, ETH_PHY_config_addr + ETH_PLL_CTL7);
-
-	return 0;
-}
-
 static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
 {
 	void __iomem *ETH_PHY_config_addr = base_addr;
@@ -250,6 +225,46 @@ static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
 	writel(0x74043, ETH_PHY_config_addr + ETH_PHY_CNTL1);
 	return 0;
 }
+
+static int dwmac_meson_cfg_pll(void __iomem *base_addr,
+			       struct platform_device *pdev)
+{
+	void __iomem *ETH_PHY_config_addr = base_addr;
+	u32 pll_val[3] = {0};
+
+	of_property_read_u32_array(pdev->dev.of_node, "pll_val",
+				   pll_val, sizeof(pll_val) / sizeof(u32));
+	pr_info("wzh pll %x %x %x", pll_val[0], pll_val[1], pll_val[2]);
+
+	writel(pll_val[0] | 0x30000000, ETH_PHY_config_addr + ETH_PLL_CTL0);
+	writel(pll_val[1], ETH_PHY_config_addr + ETH_PLL_CTL1);
+	writel(pll_val[2], ETH_PHY_config_addr + ETH_PLL_CTL2);
+	writel(0x00000000, ETH_PHY_config_addr + ETH_PLL_CTL3);
+	usleep_range(100, 200);
+	writel(pll_val[0] | 0x10000000, ETH_PHY_config_addr + ETH_PLL_CTL0);
+	return 0;
+}
+
+static int dwmac_meson_cfg_analog(void __iomem *base_addr,
+				  struct platform_device *pdev)
+{
+	void __iomem *ETH_PHY_config_addr = base_addr;
+	u32 analog_val[3] = {0};
+
+	of_property_read_u32_array
+				   (pdev->dev.of_node, "analog_val",
+				   analog_val,
+				   sizeof(analog_val) / sizeof(u32));
+	pr_info("wzh analog %x %x %x", analog_val[0],
+		analog_val[1], analog_val[2]);
+	/*Analog*/
+	writel(analog_val[0], ETH_PHY_config_addr + ETH_PLL_CTL5);
+	writel(analog_val[1], ETH_PHY_config_addr + ETH_PLL_CTL6);
+	writel(analog_val[2], ETH_PHY_config_addr + ETH_PLL_CTL7);
+
+	return 0;
+}
+
 /*for newer then g12a use this dts architecture for dts*/
 static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 {
@@ -310,8 +325,8 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	/* Config G12A internal PHY */
 	if (internal_phy) {
 		/*PLL*/
-		dwmac_meson_cfg_pll(ETH_PHY_config_addr);
-		dwmac_meson_cfg_analog(ETH_PHY_config_addr);
+		dwmac_meson_cfg_pll(ETH_PHY_config_addr, pdev);
+		dwmac_meson_cfg_analog(ETH_PHY_config_addr, pdev);
 		dwmac_meson_cfg_ctrl(ETH_PHY_config_addr);
 		pin_ctl = devm_pinctrl_get_select
 			(&pdev->dev, "internal_eth_pins");

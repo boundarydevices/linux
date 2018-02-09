@@ -275,6 +275,21 @@
 		/* 4: 333.3M    5: 400.0M    6: 500.0M    7: 666.7M */
 	};
 
+	ethmac: ethernet@ff3f0000 {
+		compatible = "amlogic, g12a-eth-dwmac","snps,dwmac";
+		reg = <0x0 0xff3f0000 0x0 0x10000
+			0x0 0xff634540 0x0 0x8
+			0x0 0xff64c000 0x0 0xa0>;
+		reg-names = "eth_base", "eth_cfg", "eth_pll";
+		interrupts = <0 8 1>;
+		interrupt-names = "macirq";
+		status = "disabled";
+		clocks = <&clkc CLKID_ETH_CORE>;
+		clock-names = "ethclk81";
+		pll_val = <0x9c0040a 0x927e0000 0xac5f49e5>;
+		analog_val = <0x20200000 0x0000c000 0x00000023>;
+	};
+
 	pinctrl_aobus: pinctrl@ff800014{
 		compatible = "amlogic,meson-g12a-aobus-pinctrl";
 		#address-cells = <2>;
