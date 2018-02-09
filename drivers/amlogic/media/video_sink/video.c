@@ -138,6 +138,8 @@ static DEFINE_MUTEX(omx_mutex);
 
 #define DURATION_GCD 750
 
+static bool bypass_cm;
+
 static bool bypass_pps;
 /*For 3D usage ----0:  mbx   1: tv */
 bool platform_type = 1;
@@ -2576,7 +2578,7 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 		if (type & VIDTYPE_COMPRESS) {
 			r = (3 << 24) |
 			    (17 << 16) |
-			    (1 << 14) | /*burst1 1*/
+			    ((legacy_vpp ? 1 : 2) << 14) | /* burst1 */
 			    (vf->bitdepth & BITDEPTH_MASK);
 
 			if (frame_par->hscale_skip_count)
@@ -3112,7 +3114,7 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 		if (type & VIDTYPE_COMPRESS) {
 			r = (3 << 24) |
 			    (17 << 16) |
-			    (1 << 14) | /*burst1 1*/
+			    ((legacy_vpp ? 1 : 2) << 14) | /* burst1 */
 			    (vf->bitdepth & BITDEPTH_MASK);
 
 			if (frame_par->hscale_skip_count)
@@ -5392,6 +5394,10 @@ SET_FILTER:
 	else
 		vpp_misc_set &= ~VPP_CM_ENABLE;
 #endif
+
+	if (bypass_cm)
+		vpp_misc_set &= ~VPP_CM_ENABLE;
+
 	if (update_osd_vpp_misc && legacy_vpp) {
 		vpp_misc_set &= ~osd_vpp_misc_mask;
 		vpp_misc_set |=
@@ -5582,6 +5588,8 @@ SET_FILTER:
 			if ((vpp_misc_set & VPP_VD2_PREBLEND)
 				&& (vpp_misc_set & VPP_VD1_PREBLEND))
 				set_value |= VPP_PREBLEND_EN;
+			if (bypass_cm)
+				set_value &= ~VPP_CM_ENABLE;
 			set_value |= VPP_POSTBLEND_EN;
 			VSYNC_WR_MPEG_REG(
 				VPP_MISC + cur_dev->vpp_off,
@@ -9419,6 +9427,9 @@ module_param(framepacking_height, uint, 0664);
 
 MODULE_PARM_DESC(framepacking_blank, "\n framepacking_blank\n");
 module_param(framepacking_blank, uint, 0664);
+
+MODULE_PARM_DESC(bypass_cm, "\n bypass_cm\n");
+module_param(bypass_cm, bool, 0664);
 
 #ifdef TV_REVERSE
 module_param(reverse, bool, 0644);
