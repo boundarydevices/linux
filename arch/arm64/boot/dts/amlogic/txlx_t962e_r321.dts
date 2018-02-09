@@ -483,9 +483,9 @@
 		cma_size = <190>;
 		interrupts = <0 83 1>;
 		rdma-irq = <2>;
-		//clocks = <&clock CLK_FPLL_DIV5>,
-		//	<&clock CLK_VDIN_MEAS_CLK>;
-		//clock-names = "fclk_div5", "cts_vdin_meas_clk";
+		clocks = <&clkc CLKID_FCLK_DIV5>,
+			<&clkc CLKID_VDIN_MEAS_COMP>;
+		clock-names = "fclk_div5", "cts_vdin_meas_clk";
 		vdin_id = <0>;
 		/* vdin write mem color depth support:
 		 * bit0:support 8bit
@@ -506,9 +506,9 @@
 		flag_cma = <0>;/*1:share with codec_mm;0:cma alone*/
 		interrupts = <0 85 1>;
 		rdma-irq = <4>;
-		//clocks = <&clock CLK_FPLL_DIV5>,
-		//	<&clock CLK_VDIN_MEAS_CLK>;
-		//clock-names = "fclk_div5", "cts_vdin_meas_clk";
+		clocks = <&clkc CLKID_FCLK_DIV5>,
+			<&clkc CLKID_VDIN_MEAS_COMP>;
+		clock-names = "fclk_div5", "cts_vdin_meas_clk";
 		vdin_id = <1>;
 		/* vdin write mem color depth support:
 		 * bit0:support 8bit

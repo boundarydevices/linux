@@ -150,7 +150,6 @@ extern void vdin_set_matrixs(struct vdin_dev_s *devp, unsigned char no,
 extern bool vdin_check_cycle(struct vdin_dev_s *devp);
 extern bool vdin_write_done_check(unsigned int offset,
 		struct vdin_dev_s *devp);
-extern bool vdin_check_vs(struct vdin_dev_s *devp);
 extern void vdin_calculate_duration(struct vdin_dev_s *devp);
 extern void vdin_wr_reverse(unsigned int offset, bool hreverse,
 		bool vreverse);
