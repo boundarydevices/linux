@@ -209,6 +209,10 @@ static uint cur_hdr_support;
 module_param(cur_hdr_support, uint, 0664);
 MODULE_PARM_DESC(cur_hdr_support, "\n cur_hdr_support\n");
 
+static uint cur_output_mode;
+module_param(cur_output_mode, uint, 0664);
+MODULE_PARM_DESC(cur_output_mode, "\n cur_output_mode\n");
+
 static uint range_control;
 module_param(range_control, uint, 0664);
 MODULE_PARM_DESC(range_control, "\n range_control 0:limit 1:full\n");
@@ -2851,6 +2855,7 @@ static struct vframe_master_display_colour_s cur_master_display_colour = {
 #define SIG_HDR_MODE	0x10
 #define SIG_HDR_SUPPORT	0x20
 #define SIG_WB_CHG	0x40
+#define SIG_OP_CHG	0x200
 
 int signal_type_changed(struct vframe_s *vf, struct vinfo_s *vinfo)
 {
@@ -3019,7 +3024,11 @@ int signal_type_changed(struct vframe_s *vf, struct vinfo_s *vinfo)
 		change_flag |= SIG_HDR_SUPPORT;
 		cur_hdr_support = vinfo->hdr_info.hdr_support & 0x4;
 	}
-
+	if (cur_output_mode != vinfo->viu_color_fmt) {
+		pr_csc("output mode changed.\n");
+		change_flag |= SIG_OP_CHG;
+		cur_output_mode = vinfo->viu_color_fmt;
+	}
 	if ((cur_eye_protect_mode != wb_val[0]) ||
 		(cur_eye_protect_mode == 1)) {
 		pr_csc(" eye protect mode changed.\n");
@@ -4907,7 +4916,7 @@ static int vpp_matrix_update(
 	if ((cur_csc_type != csc_type)
 		|| (signal_change_flag
 		& (SIG_PRI_INFO | SIG_KNEE_FACTOR | SIG_HDR_MODE |
-		SIG_HDR_SUPPORT))) {
+		SIG_HDR_SUPPORT | SIG_OP_CHG))) {
 		/* decided by edid or panel info or user setting */
 		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
 			hdr_process_mode) {
@@ -4962,6 +4971,14 @@ static int vpp_matrix_update(
 				}
 			}
 		}
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
+			if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
+				mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);
+			else
+				mtx_setting(POST2_MTX,
+					MATRIX_YUV709_RGB, MTX_ON);
+		}
+
 		if (cur_hdr_process_mode != hdr_process_mode) {
 			cur_hdr_process_mode = hdr_process_mode;
 			pr_csc("hdr_process_mode changed to %d",
@@ -5025,11 +5042,13 @@ static struct vframe_s *last_vf;
 static int last_vf_signal_type;
 static int null_vf_cnt;
 static int prev_hdr_support;
+static int prev_output_mode;
 
 static unsigned int fg_vf_sw_dbg;
 unsigned int null_vf_max = 1;
 module_param(null_vf_max, uint, 0664);
 MODULE_PARM_DESC(null_vf_max, "\n null_vf_max\n");
+
 int amvecm_matrix_process(
 	struct vframe_s *vf, struct vframe_s *vf_rpt, int flags)
 {
@@ -5094,6 +5113,11 @@ int amvecm_matrix_process(
 		if (prev_hdr_support != vinfo->hdr_info.hdr_support) {
 			null_vf_cnt = 0;
 			prev_hdr_support = vinfo->hdr_info.hdr_support;
+		}
+		/* handle change between output mode*/
+		if (prev_output_mode != vinfo->viu_color_fmt) {
+			null_vf_cnt = 0;
+			prev_output_mode =	vinfo->viu_color_fmt;
 		}
 		/* handle eye protect mode */
 		if (cur_eye_protect_mode != wb_val[0])

@@ -7,11 +7,10 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
+#include <linux/amlogic/media/amvecm/amvecm.h>
 #include "set_hdr2_v0.h"
 #include "arch/vpp_hdr_regs.h"
-#include <linux/amlogic/media/amvecm/amvecm.h>
-
-
+#include "arch/vpp_regs.h"
 
 //#define HDR2_MODULE
 //#define HDR2_PRINT
@@ -1362,4 +1361,107 @@ void sdr2hdr_func(enum hdr_module_sel module_sel)
 		mtx_out, mtx_cgain, mtx_ogain, MTX_ON, SDR_HDR);
 
 	set_c_gain(module_sel, cgain_lut, LUT_ON);
+}
+/*G12A matrix setting*/
+void mtx_setting(enum vpp_matrix_e mtx_sel,
+	enum mtx_csc_e mtx_csc,
+	int mtx_on)
+{
+	unsigned int matrix_coef00_01 = 0;
+	unsigned int matrix_coef02_10 = 0;
+	unsigned int matrix_coef11_12 = 0;
+	unsigned int matrix_coef20_21 = 0;
+	unsigned int matrix_coef22 = 0;
+	unsigned int matrix_coef13_14 = 0;
+	unsigned int matrix_coef23_24 = 0;
+	unsigned int matrix_coef15_25 = 0;
+	unsigned int matrix_clip = 0;
+	unsigned int matrix_offset0_1 = 0;
+	unsigned int matrix_offset2 = 0;
+	unsigned int matrix_pre_offset0_1 = 0;
+	unsigned int matrix_pre_offset2 = 0;
+	unsigned int matrix_en_ctrl = 0;
+
+	if (mtx_sel & VD1_MTX) {
+		matrix_coef00_01 = VPP_VD1_MATRIX_COEF00_01;
+		matrix_coef02_10 = VPP_VD1_MATRIX_COEF02_10;
+		matrix_coef11_12 = VPP_VD1_MATRIX_COEF11_12;
+		matrix_coef20_21 = VPP_VD1_MATRIX_COEF20_21;
+		matrix_coef22 = VPP_VD1_MATRIX_COEF22;
+		matrix_coef13_14 = VPP_VD1_MATRIX_COEF13_14;
+		matrix_coef23_24 = VPP_VD1_MATRIX_COEF23_24;
+		matrix_coef15_25 = VPP_VD1_MATRIX_COEF15_25;
+		matrix_clip = VPP_VD1_MATRIX_CLIP;
+		matrix_offset0_1 = VPP_VD1_MATRIX_OFFSET0_1;
+		matrix_offset2 = VPP_VD1_MATRIX_OFFSET2;
+		matrix_pre_offset0_1 = VPP_VD1_MATRIX_PRE_OFFSET0_1;
+		matrix_pre_offset2 = VPP_VD1_MATRIX_PRE_OFFSET2;
+		matrix_en_ctrl = VPP_VD1_MATRIX_EN_CTRL;
+
+		WRITE_VPP_REG_BITS(VPP_VD1_MATRIX_EN_CTRL, mtx_on, 0, 1);
+	} else if (mtx_sel & POST2_MTX) {
+		matrix_coef00_01 = VPP_POST2_MATRIX_COEF00_01;
+		matrix_coef02_10 = VPP_POST2_MATRIX_COEF02_10;
+		matrix_coef11_12 = VPP_POST2_MATRIX_COEF11_12;
+		matrix_coef20_21 = VPP_POST2_MATRIX_COEF20_21;
+		matrix_coef22 = VPP_POST2_MATRIX_COEF22;
+		matrix_coef13_14 = VPP_POST2_MATRIX_COEF13_14;
+		matrix_coef23_24 = VPP_POST2_MATRIX_COEF23_24;
+		matrix_coef15_25 = VPP_POST2_MATRIX_COEF15_25;
+		matrix_clip = VPP_POST2_MATRIX_CLIP;
+		matrix_offset0_1 = VPP_POST2_MATRIX_OFFSET0_1;
+		matrix_offset2 = VPP_POST2_MATRIX_OFFSET2;
+		matrix_pre_offset0_1 = VPP_POST2_MATRIX_PRE_OFFSET0_1;
+		matrix_pre_offset2 = VPP_POST2_MATRIX_PRE_OFFSET2;
+		matrix_en_ctrl = VPP_POST2_MATRIX_EN_CTRL;
+
+		WRITE_VPP_REG_BITS(VPP_POST2_MATRIX_EN_CTRL, mtx_on, 0, 1);
+	} else if (mtx_sel & POST_MTX) {
+		matrix_coef00_01 = VPP_POST_MATRIX_COEF00_01;
+		matrix_coef02_10 = VPP_POST_MATRIX_COEF02_10;
+		matrix_coef11_12 = VPP_POST_MATRIX_COEF11_12;
+		matrix_coef20_21 = VPP_POST_MATRIX_COEF20_21;
+		matrix_coef22 = VPP_POST_MATRIX_COEF22;
+		matrix_coef13_14 = VPP_POST_MATRIX_COEF13_14;
+		matrix_coef23_24 = VPP_POST_MATRIX_COEF23_24;
+		matrix_coef15_25 = VPP_POST_MATRIX_COEF15_25;
+		matrix_clip = VPP_POST_MATRIX_CLIP;
+		matrix_offset0_1 = VPP_POST_MATRIX_OFFSET0_1;
+		matrix_offset2 = VPP_POST_MATRIX_OFFSET2;
+		matrix_pre_offset0_1 = VPP_POST_MATRIX_PRE_OFFSET0_1;
+		matrix_pre_offset2 = VPP_POST_MATRIX_PRE_OFFSET2;
+		matrix_en_ctrl = VPP_POST_MATRIX_EN_CTRL;
+
+		WRITE_VPP_REG_BITS(VPP_POST_MATRIX_EN_CTRL, mtx_on, 0, 1);
+	}
+
+	if (!mtx_on)
+		return;
+
+	switch (mtx_csc) {
+	case MATRIX_RGB_YUV709:
+		WRITE_VPP_REG(matrix_coef00_01, 0x00bb0275);
+		WRITE_VPP_REG(matrix_coef02_10, 0x003f1f99);
+		WRITE_VPP_REG(matrix_coef11_12, 0x1ea601c2);
+		WRITE_VPP_REG(matrix_coef20_21, 0x01c21e67);
+		WRITE_VPP_REG(matrix_coef22, 0x00001fd7);
+		WRITE_VPP_REG(matrix_offset0_1, 0x00400200);
+		WRITE_VPP_REG(matrix_offset2, 0x00000200);
+		WRITE_VPP_REG(matrix_pre_offset0_1, 0x0);
+		WRITE_VPP_REG(matrix_pre_offset2, 0x0);
+		break;
+	case MATRIX_YUV709_RGB:
+		WRITE_VPP_REG(matrix_coef00_01, 0x04A80000);
+		WRITE_VPP_REG(matrix_coef02_10, 0x072C04A8);
+		WRITE_VPP_REG(matrix_coef11_12, 0x1F261DDD);
+		WRITE_VPP_REG(matrix_coef20_21, 0x04A80876);
+		WRITE_VPP_REG(matrix_coef22, 0x0);
+		WRITE_VPP_REG(matrix_offset0_1, 0x0);
+		WRITE_VPP_REG(matrix_offset2, 0x0);
+		WRITE_VPP_REG(matrix_pre_offset0_1, 0x7c00600);
+		WRITE_VPP_REG(matrix_pre_offset2, 0x00000600);
+		break;
+	default:
+		break;
+	}
 }

@@ -87,4 +87,39 @@ void nolinear_lut_gen(int64_t *bin_c, MenuFun cgain);
 extern void hdrbypass_func(enum hdr_module_sel module_sel);
 extern void hdr2sdr_func(enum hdr_module_sel module_sel);
 extern void sdr2hdr_func(enum hdr_module_sel module_sel);
+/*G12A vpp matrix*/
+enum vpp_matrix_e {
+	VD1_MTX = 0x1,
+	POST2_MTX = 0x2,
+	POST_MTX = 0x4
+};
 
+enum mtx_csc_e {
+	MATRIX_NULL = 0,
+	MATRIX_RGB_YUV601 = 0x1,
+	MATRIX_RGB_YUV601F = 0x2,
+	MATRIX_RGB_YUV709 = 0x3,
+	MATRIX_RGB_YUV709F = 0x4,
+	MATRIX_YUV601_RGB = 0x10,
+	MATRIX_YUV601_YUV601F = 0x11,
+	MATRIX_YUV601_YUV709 = 0x12,
+	MATRIX_YUV601_YUV709F = 0x13,
+	MATRIX_YUV601F_RGB = 0x14,
+	MATRIX_YUV601F_YUV601 = 0x15,
+	MATRIX_YUV601F_YUV709 = 0x16,
+	MATRIX_YUV601F_YUV709F = 0x17,
+	MATRIX_YUV709_RGB = 0x20,
+	MATRIX_YUV709_YUV601 = 0x21,
+	MATRIX_YUV709_YUV601F = 0x22,
+	MATRIX_YUV709_YUV709F = 0x23,
+	MATRIX_YUV709F_RGB = 0x24,
+	MATRIX_YUV709F_YUV601 = 0x25,
+	MATRIX_YUV709F_YUV709 = 0x26,
+	MATRIX_BT2020YUV_BT2020RGB = 0x40,
+	MATRIX_BT2020RGB_709RGB,
+	MATRIX_BT2020RGB_CUSRGB,
+};
+
+extern void mtx_setting(enum vpp_matrix_e mtx_sel,
+	enum mtx_csc_e mtx_csc,
+	int mtx_on);
