@@ -1530,6 +1530,11 @@
 		};
 	};
 };  /* end of pinctrl_aobus */
+
+&audio_data {
+	status = "okay";
+};
+
 /* Audio Related End */
 
 &aobus{

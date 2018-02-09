@@ -328,6 +328,12 @@
 		};
 	};
 
+	audio_data: audio_data {
+		compatible = "amlogic, audio_data";
+		query_licence_cmd = <0x82000050>;
+		status = "disabled";
+	};
+
 	dwc3: dwc3@ff500000 {
 		compatible = "synopsys, dwc3";
 		status = "disable";
