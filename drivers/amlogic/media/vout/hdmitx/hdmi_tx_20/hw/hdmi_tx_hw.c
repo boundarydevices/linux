@@ -1665,9 +1665,9 @@ static void set_phy_by_mode(unsigned int mode)
 	case MESON_CPU_ID_G12A:
 		switch (mode) {
 		case 1: /* 5.94Gbps, 3.7125Gbsp */
-			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb8282);
-			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x28b0ff3b);
-			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0800);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb65c4);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x2ab0ff3b);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x080b);
 			break;
 		case 2: /* 2.97Gbps */
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb8282);
