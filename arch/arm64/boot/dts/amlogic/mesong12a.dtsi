@@ -213,7 +213,7 @@
 	mailbox: mhu@c883c400 {
 		compatible = "amlogic, meson_mhu";
 		reg = <0x0 0xff63c400 0x0 0x4c>,   /* MHU registers */
-		      <0x0 0xfffd3000 0x0 0x800>;   /* Payload area */
+		      <0x0 0xfffe7000 0x0 0x800>;   /* Payload area */
 		interrupts = <0 209 1>,   /* low priority interrupt */
 			     <0 210 1>;   /* high priority interrupt */
 		#mbox-cells = <1>;
@@ -254,6 +254,12 @@
 		compatible = "amlogic, cpuinfo";
 		status = "okay";
 		cpuinfo_cmd = <0x82000044>;
+	};
+
+	aml_reboot{
+		compatible = "aml, reboot";
+		sys_reset = <0x84000009>;
+		sys_poweroff = <0x84000008>;
 	};
 
 	vpu {
