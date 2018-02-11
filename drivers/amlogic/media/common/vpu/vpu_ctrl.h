@@ -390,6 +390,37 @@ static struct vpu_ctrl_s vpu_clk_gate_axg[] = {
 	{VPU_MAX,           VPU_REG_END,           0,   0},
 };
 
+static struct vpu_ctrl_s vpu_clk_gate_g12a[] = {
+	/* vpu module,      reg,                  bit,  len */
+	{VPU_VPU_TOP,       VPU_CLK_GATE,          1,   1}, /* vpu_system_clk */
+	{VPU_VPU_CLKB,      VPU_CLK_GATE,         18,   1},
+	{VPU_RDMA,          VPU_CLK_GATE,         15,   1}, /* rdma_clk */
+	{VPU_VLOCK,         VPU_CLK_GATE,         14,   1},
+	{VPU_MISC,          VPU_CLK_GATE,          6,   1}, /* hs,vs interrupt*/
+	{VPU_VENCP,         VPU_CLK_GATE,          3,   1},
+	{VPU_VENCP,         VPU_CLK_GATE,          0,   1},
+	{VPU_VENCL,         VPU_CLK_GATE,          4,   2},
+	{VPU_VENCI,         VPU_CLK_GATE,         10,   2},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL,  24,   6},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL,   4,  18},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL,   1,   1},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL2,  0,   4},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL,  24,   6},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL,   4,  18},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL,   1,   1},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL2,  0,   4},
+	{VPU_DI,            DI_CLKG_CTRL,         26,   5},
+	{VPU_DI,            DI_CLKG_CTRL,         24,   1},
+	{VPU_DI,            DI_CLKG_CTRL,         17,   5},
+	{VPU_DI,            DI_CLKG_CTRL,          0,   2},
+	{VPU_VPP,           VPP_GCLK_CTRL0,        2,  30},
+	{VPU_VPP,           VPP_GCLK_CTRL1,        0,  12},
+	{VPU_VPP,           VPP_SC_GCLK_CTRL,     18,   8},
+	{VPU_VPP,           VPP_SC_GCLK_CTRL,      2,  10},
+	{VPU_VPP,           VPP_XVYCC_GCLK_CTRL,   0,  18},
+	{VPU_MAX,           VPU_REG_END,           0,   0},
+};
+
 /* ************************************************ */
 
 #endif

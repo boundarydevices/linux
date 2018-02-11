@@ -1316,9 +1316,9 @@ static struct vpu_data_s vpu_data_g12a = {
 	.mem_pd_table_cnt =
 		sizeof(vpu_mem_pd_g12a) / sizeof(struct vpu_ctrl_s),
 	.clk_gate_table_cnt =
-		sizeof(vpu_clk_gate_gxl) / sizeof(struct vpu_ctrl_s),
+		sizeof(vpu_clk_gate_g12a) / sizeof(struct vpu_ctrl_s),
 	.mem_pd_table = vpu_mem_pd_g12a,
-	.clk_gate_table = vpu_clk_gate_gxl,
+	.clk_gate_table = vpu_clk_gate_g12a,
 
 	.power_on  = vpu_power_on_txlx,
 	.power_off = vpu_power_off_txlx,
