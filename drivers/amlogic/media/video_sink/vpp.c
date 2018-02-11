@@ -404,7 +404,8 @@ static int force_filter_mode = 1;
 MODULE_PARM_DESC(force_filter_mode, "force_filter_mode");
 module_param(force_filter_mode, int, 0664);
 #endif
-bool super_scaler = 1;
+/*temp disable sr for power test*/
+bool super_scaler;
 static unsigned int sr_support;
 static u32 sr_reg_offt;
 static unsigned int super_debug;

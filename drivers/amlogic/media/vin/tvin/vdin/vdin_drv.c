@@ -202,6 +202,8 @@ int vdin_open_fe(enum tvin_port_e port, int index,  struct vdin_dev_s *devp)
 	 /* clear color para*/
 	memset(&devp->prop, 0, sizeof(devp->prop));
 
+	/*enable clk*/
+	vdin_clk_onoff(devp, true);
 	vdin_set_default_regmap(devp->addr_offset);
 	/*only for vdin0*/
 	if (devp->urgent_en && (devp->index == 0))
@@ -594,6 +596,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 		((devp->parm.port != TVIN_PORT_CVBS3) ||
 		((devp->flags & VDIN_FLAG_SNOW_FLAG) == 0)))
 		devp->frontend->dec_ops->stop(devp->frontend, devp->parm.port);
+
 	vdin_set_default_regmap(devp->addr_offset);
 	/*only for vdin0*/
 	if (devp->urgent_en && (devp->index == 0))
@@ -678,6 +681,7 @@ int start_tvin_service(int no, struct vdin_parm_s  *para)
 		/*disable vsync irq until vdin configured completely*/
 		disable_irq_nosync(devp->irq);
 	}
+	vdin_clk_onoff(devp, true);
 	/*config the vdin use default value*/
 	vdin_set_default_regmap(devp->addr_offset);
 	/*only for vdin0*/
@@ -2460,6 +2464,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	}
 	/*disable vdin hardware*/
 	vdin_enable_module(vdevp->addr_offset, false);
+	vdin_clk_onoff(vdevp, false);
 	/*enable auto cutwindow for atv*/
 	if (vdevp->index == 0) {
 		vdevp->auto_cutwindow_en = 1;

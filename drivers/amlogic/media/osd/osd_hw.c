@@ -1092,7 +1092,7 @@ void osd_hw_reset(void)
 		VSYNCOSD_IRQ_WR_MPEG_REG(
 			VIU_SW_RESET, 0);
 		if (reset_bit == HW_RESET_MALI_AFBCD_REGS)
-		osd_log_dbg("reset_bit=%x\n", reset_bit);
+			osd_log_dbg("reset_bit=%x\n", reset_bit);
 		if (reset_bit & HW_RESET_OSD1_REGS) {
 			/* restore osd regs */
 			int i;
@@ -3912,8 +3912,10 @@ static void osd_update_enable(u32 index)
 	u32 temp_val = 0;
 	struct hw_osd_reg_s *osd_reg = &hw_osd_reg_array[index];
 
+	/*
 	if (!osd_hw.buffer_alloc[index])
 		return;
+	*/
 	if ((osd_hw.osd_meson_dev.afbc_type == MESON_AFBC) &&
 		(osd_hw.enable[index] == ENABLE)) {
 		/* only for osd1 */
@@ -4652,19 +4654,6 @@ static int vpp_blend_setting(struct hw_osd_blending_s *blending)
 	VSYNCOSD_WR_MPEG_REG(VPP_OSD2_BLD_V_SCOPE,
 		osd2_v_start << 16 | osd2_v_end);
 
-	osd_log_dbg("vinfo_height=%d,vinfo_width=%d\n",
-		osd_hw.vinfo_height, osd_hw.vinfo_width);
-	VSYNCOSD_WR_MPEG_REG(VPP_POSTBLEND_H_SIZE,
-		osd_hw.vinfo_height << 16 |
-		osd_hw.vinfo_width);
-	VSYNCOSD_WR_MPEG_REG(VPP_OUT_H_V_SIZE,
-		osd_hw.vinfo_height << 16 |
-		osd_hw.vinfo_width);
-
-	VSYNCOSD_WR_MPEG_REG(VPP_POST_BLEND_BLEND_DUMMY_DATA,
-		0x00000000);//yuv 0x000080880
-	VSYNCOSD_WR_MPEG_REG(VPP_POST_BLEND_DUMMY_ALPHA,
-		0x00000000);//dummy alpha yuv 0x10000000
 	return 0;
 }
 
@@ -4718,19 +4707,6 @@ static int vpp_blend_setting_default(u32 index)
 	VSYNCOSD_WR_MPEG_REG(VPP_OSD1_BLD_V_SCOPE,
 		osd1_v_start << 16 | osd1_v_end);
 
-	osd_log_dbg("vinfo_height=%d,vinfo_width=%d\n",
-		osd_hw.vinfo_height, osd_hw.vinfo_width);
-	VSYNCOSD_WR_MPEG_REG(VPP_POSTBLEND_H_SIZE,
-		osd_hw.vinfo_height << 16 |
-		osd_hw.vinfo_width);
-	VSYNCOSD_WR_MPEG_REG(VPP_OUT_H_V_SIZE,
-		osd_hw.vinfo_height << 16 |
-		osd_hw.vinfo_width);
-
-	VSYNCOSD_WR_MPEG_REG(VPP_POST_BLEND_BLEND_DUMMY_DATA,
-		0x00000000);//yuv 0x000080880
-	VSYNCOSD_WR_MPEG_REG(VPP_POST_BLEND_DUMMY_ALPHA,
-		0x00000000);//dummy alpha yuv 0x10000000
 	return 0;
 }
 
@@ -5633,8 +5609,14 @@ static void osd_update_fifo(u32 index)
 
 	data32 = osd_hw.urgent[index] & 1;
 	data32 |= 4 << 5; /* hold_fifo_lines */
-	/* burst_len_sel: 3=64 */
-	data32 |= 3  << 10;
+
+	/* burst_len_sel: 3=64, g12a = 5 */
+	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+		data32 |= 1 << 10;
+		data32 |= 1 << 31;
+	} else
+		data32 |= 3 << 10;
+
 	/* fifo_depth_val: 32*8=256 */
 	data32 |= (osd_hw.osd_meson_dev.osd_fifo_len
 		& 0xfffffff) << 12;
@@ -5756,8 +5738,12 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		 */
 		data32 = 1;
 		data32 |= 4 << 5;  /* hold_fifo_lines */
-		/* burst_len_sel: 3=64 */
-		data32 |= 3  << 10;
+		/* burst_len_sel: 3=64, g12a = 5 */
+		if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+			data32 |= 1 << 10;
+			data32 |= 1 << 31;
+		} else
+			data32 |= 3 << 10;
 		/*
 		 * bit 23:22, fifo_ctrl
 		 * 00 : for 1 word in 1 burst
@@ -5828,6 +5814,15 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			osd_hw.osd_afbcd[idx].afbc_start = 0;
 			osd_hw.afbc_start_in_vsync = 0;
 			osd_hw.afbc_force_reset = 1;
+			/* TODO: temp set at here, need move it to uboot */
+			osd_reg_set_bits(
+				hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
+				1, 31, 1);
+			/* TODO: temp set at here, need check for logo */
+			if (idx > 0)
+				osd_reg_set_bits(
+					hw_osd_reg_array[idx].osd_ctrl_stat,
+					0, 0, 1);
 #if 0
 			/* enable for latch */
 			osd_hw.osd_use_latch = 1;
@@ -5839,8 +5834,24 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 				hw_osd_reg_array[idx].osd_ctrl_stat, data32);
 #endif
 		}
+		/* TODO: temp power down */
+		switch_vpu_mem_pd_vmod(
+			VPU_VIU_OSD2,
+			VPU_MEM_POWER_DOWN);
+		switch_vpu_mem_pd_vmod(
+			VPU_VD2_OSD2_SCALE,
+			VPU_MEM_POWER_DOWN);
+		switch_vpu_mem_pd_vmod(
+			VPU_VIU_OSD3,
+			VPU_MEM_POWER_DOWN);
+		switch_vpu_mem_pd_vmod(
+			VPU_OSD_BLD34,
+			VPU_MEM_POWER_DOWN);
 		osd_setting_default_hwc();
 	}
+	/* disable deband as default */
+	if (osd_hw.osd_meson_dev.has_deband)
+		osd_reg_write(OSD_DB_FLT_CTRL, 0);
 	for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count; idx++) {
 		osd_hw.updated[idx] = 0;
 		osd_hw.urgent[idx] = 1;

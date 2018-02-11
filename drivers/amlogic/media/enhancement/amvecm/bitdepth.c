@@ -309,6 +309,17 @@ void vpp_set_vd2_mux5(bool flag)
 	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 14, 2);
 }
 
+/*0:vd1 gclk enable 0x55: disbale */
+void vpp_set_vd1_gate(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD1_AFBCD0_MISC_CTRL, flag, 0, 8);
+}
+/*0:vd2 gclk enable 0x55: disbale */
+void vpp_set_vd2_gate(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 0, 8);
+}
+
 /*blend src mux==>0:close;1:vd1;2:vd2:3:osd1;4:osd2*/
 void vpp_set_vd1_preblend_mux(unsigned int flag)
 {
@@ -383,11 +394,13 @@ void vpp_set_12bit_datapath_g12a(void)
 		vpp_set_vd1_preblend_mux(0);
 		vpp_set_vd1_postblend_mux(0);
 		vpp_set_vd1_postblend_en(1);
+		vpp_set_vd1_gate(0x55);
 		vpp_set_vd2_preblend_mux(0);
 		vpp_set_vd2_postblend_mux(0);
 		vpp_set_vd2_postblend_en(0);
 		vpp_set_vd2_ext_mod(0);
 		vpp_set_vd2_bypass_dolby(1);
+		vpp_set_vd2_gate(0x55);
 	}
 }
 

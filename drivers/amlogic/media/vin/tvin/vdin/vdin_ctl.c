@@ -4169,3 +4169,16 @@ void vdin_source_bitdepth_reinit(struct vdin_dev_s *devp)
 		vdin_set_source_bitdepth(devp, vf);
 	}
 }
+
+void vdin_clk_onoff(struct vdin_dev_s *devp, bool onoff)
+{
+	unsigned int offset = devp->addr_offset;
+
+	if (onoff) {
+		wr(offset, VDIN_COM_GCLK_CTRL, 0);
+		wr(offset, VDIN_COM_GCLK_CTRL2, 0);
+	} else {
+		wr(offset, VDIN_COM_GCLK_CTRL, 0x55555555);
+		wr(offset, VDIN_COM_GCLK_CTRL2, 0x55555555);
+	}
+}

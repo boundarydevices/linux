@@ -8808,10 +8808,14 @@ static void do_vpu_delay_work(struct work_struct *work)
 				switch_vpu_mem_pd_vmod(
 					VPU_DI_POST,
 					VPU_MEM_POWER_DOWN);
-				if (!legacy_vpp)
+				if (!legacy_vpp) {
 					switch_vpu_mem_pd_vmod(
 						VPU_VD1_SCALE,
 						VPU_MEM_POWER_DOWN);
+					WRITE_VCBUS_REG_BITS(
+						VD1_AFBCD0_MISC_CTRL,
+						0x55, 0, 8);
+				}
 			}
 
 			if ((vpu_delay_work_flag &
@@ -8826,10 +8830,14 @@ static void do_vpu_delay_work(struct work_struct *work)
 				switch_vpu_mem_pd_vmod(
 					VPU_AFBC_DEC1,
 					VPU_MEM_POWER_DOWN);
-				if (!legacy_vpp)
+				if (!legacy_vpp) {
 					switch_vpu_mem_pd_vmod(
 						VPU_VD2_SCALE,
 						VPU_MEM_POWER_DOWN);
+					WRITE_VCBUS_REG_BITS(
+						VD2_AFBCD1_MISC_CTRL,
+						0x55, 0, 8);
+				}
 			}
 
 			if ((vpu_delay_work_flag &
@@ -8874,10 +8882,12 @@ static int __init video_early_init(void)
 #endif
 #endif			/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 #else
-	if (!legacy_vpp)
+	if (!legacy_vpp) {
 		WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0x1000,
 			VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
-	else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
+		WRITE_VCBUS_REG_BITS(
+			VPP_MATRIX_CTRL, 0, 10, 5);
+	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 		WRITE_VCBUS_REG_BITS(VPP_OFIFO_SIZE, 0xfff,
 			VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
 #endif
