@@ -827,7 +827,15 @@ static int meson_bL_cpufreq_init(struct cpufreq_policy *policy)
 	else
 		policy->cur = clk_get_rate(clk[cur_cluster]) / 1000;
 
-	freq_hz =  policy->cur*1000;
+	/*
+	 * if uboot default cpufreq larger than freq_table's max,
+	 * it will set freq_table's max.
+	 */
+	if (policy->cur > policy->suspend_freq)
+		freq_hz = policy->suspend_freq*1000;
+	else
+		freq_hz =  policy->cur*1000;
+
 	opp = dev_pm_opp_find_freq_ceil(cpu_dev, &freq_hz);
 	volt_new = dev_pm_opp_get_voltage(opp);
 	volt_old = regulator_get_voltage(cpu_reg);
