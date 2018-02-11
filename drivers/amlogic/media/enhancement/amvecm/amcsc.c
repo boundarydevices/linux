@@ -200,11 +200,6 @@ static uint force_csc_type = 0xff;
 module_param(force_csc_type, uint, 0664);
 MODULE_PARM_DESC(force_csc_type, "\n force colour space convert type\n");
 
-static uint fresh_vs;
-module_param(fresh_vs, uint, 0664);
-MODULE_PARM_DESC(fresh_vs, "\n fresh_vs\n");
-
-
 static uint cur_hdr_support;
 module_param(cur_hdr_support, uint, 0664);
 MODULE_PARM_DESC(cur_hdr_support, "\n cur_hdr_support\n");
@@ -3009,7 +3004,8 @@ int signal_type_changed(struct vframe_s *vf, struct vinfo_s *vinfo)
 	}
 	if (cur_knee_factor != knee_factor) {
 		pr_csc("Knee factor changed.\n");
-		//change_flag |= SIG_KNEE_FACTOR;
+		change_flag |= SIG_KNEE_FACTOR;
+		cur_knee_factor = knee_factor;
 	}
 	if (cur_hdr_process_mode != hdr_process_mode) {
 		pr_csc("HDR mode changed.\n");
@@ -4820,12 +4816,6 @@ static int vpp_matrix_update(
 	if (vf && vinfo)
 		signal_change_flag = signal_type_changed(vf, vinfo);
 
-	if ((!signal_change_flag) && (force_csc_type == 0xff) && (!fresh_vs))
-		return 0;
-
-	if (fresh_vs > 0)
-		fresh_vs = 0;
-
 	if (force_csc_type != 0xff)
 		csc_type = force_csc_type;
 	else
@@ -5129,7 +5119,8 @@ int amvecm_matrix_process(
 		/* when sdr mode change */
 		if ((vinfo->hdr_info.hdr_support & 0x4) &&
 			((get_cpu_type() == MESON_CPU_MAJOR_ID_GXL) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)))
+			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM) ||
+			(get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)))
 			if (((sdr_process_mode != 1) && (sdr_mode > 0))
 				|| ((sdr_process_mode > 0) && (sdr_mode == 0)))
 				null_vf_cnt = toggle_frame;
