@@ -189,6 +189,8 @@
 			MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x1b0b0
 #define GPIRQ_LIGHT_SENSOR	<&gpio7 6 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_SD3_DAT2__GPIO7_IO06		0x1b0b0
+#define GP_REG_USBOTG	<&gpio3 22 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x030b0
 		>;
 	};
 
@@ -276,13 +278,6 @@
 	pinctrl_pwm2: pwm2grp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_1__PWM2_OUT		0x030b1
-		>;
-	};
-
-	pinctrl_reg_usbotg_vbus: reg-usbotg-vbusgrp {
-		fsl,pins = <
-#define GP_REG_USBOTG	<&gpio3 22 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x030b0
 		>;
 	};
 
@@ -601,19 +596,6 @@
 			regulator-name = "3P3V";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_usbotg_vbus: regulator@3 {
-			compatible = "regulator-fixed";
-			reg = <3>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
-			regulator-name = "usb_otg_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = GP_REG_USBOTG;
-			enable-active-high;
 			regulator-always-on;
 		};
 
