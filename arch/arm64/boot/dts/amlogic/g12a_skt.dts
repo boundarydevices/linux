@@ -1178,6 +1178,13 @@
 			compatible = "amlogic, meson-cooldev";
 			device_name = "mcooldev";
 			cooling_devices {
+				cpufreq_cool_cluster0 {
+					min_state = <1000000>;
+					dyn_coeff = <140>;
+					cluster_id = <0>;
+					node_name = "cpufreq_cool0";
+					device_type = "cpufreq";
+				};
 				cpucore_cool_cluster0 {
 					min_state = <1>;
 					dyn_coeff = <0>;
@@ -1185,6 +1192,9 @@
 					node_name = "cpucore_cool0";
 					device_type = "cpucore";
 				};
+			};
+			cpufreq_cool0:cpufreq_cool0 {
+				#cooling-cells = <2>; /* min followed by max */
 			};
 			cpucore_cool0:cpucore_cool0 {
 				#cooling-cells = <2>; /* min followed by max */
@@ -1196,50 +1206,63 @@
 		soc_thermal: soc_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <1050>;
+			sustainable-power = <2150>;
 			thermal-sensors = <&p_tsensor 0>;
 			trips {
-				switch_on: trip-point@0 {
+				pswitch_on: trip-point@0 {
 					temperature = <60000>;
-					hysteresis = <2000>;
+					hysteresis = <5000>;
 					type = "passive";
 				};
-				control: trip-point@1 {
+				pcontrol: trip-point@1 {
 					temperature = <75000>;
-					hysteresis = <2000>;
+					hysteresis = <5000>;
 					type = "passive";
 				};
-				hot: trip-point@2 {
+				phot: trip-point@2 {
 					temperature = <85000>;
-					hysteresis = <3000>;
+					hysteresis = <5000>;
 					type = "hot";
 				};
-				critical: trip-point@3 {
+				pcritical: trip-point@3 {
 					temperature = <150000>;
 					hysteresis = <1000>;
 					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				cpufreq_cooling_map {
+					trip = <&pcontrol>;
+					cooling-device = <&cpufreq_cool0 0 4>;
+					contribution = <1024>;
+				};
+				cpucore_cooling_map {
+					trip = <&pcontrol>;
+					cooling-device = <&cpucore_cool0 0 3>;
+					contribution = <1024>;
 				};
 			};
 		};
 		ddr_thermal: ddr_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <1050>;
+			sustainable-power = <2150>;
 			thermal-sensors = <&d_tsensor 1>;
 			trips {
 				dswitch_on: trip-point@0 {
 					temperature = <60000>;
-					hysteresis = <2000>;
+					hysteresis = <5000>;
 					type = "passive";
 				};
 				dcontrol: trip-point@1 {
 					temperature = <75000>;
-					hysteresis = <2000>;
+					hysteresis = <5000>;
 					type = "passive";
 				};
 				dhot: trip-point@2 {
 					temperature = <85000>;
-					hysteresis = <3000>;
+					hysteresis = <5000>;
 					type = "hot";
 				};
 				dcritical: trip-point@3 {
