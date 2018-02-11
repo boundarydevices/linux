@@ -1023,10 +1023,17 @@ int loopback_hw_params(struct snd_pcm_substream *substream,
 		/*for i2s mode*/
 		unsigned int sclk_div = 4 - 1;
 		unsigned int ratio = params_channels(params) * bit_depth - 1;
-		unsigned int fsclk_hi = ratio / 2;
+		unsigned int fsclk_hi;
 		unsigned int clk_id = lb_cfg->datalb_src - 3;
 		unsigned int mul = 2;
 		unsigned int mpll_freq, offset, reg;
+
+		/*lrclk sclk depend on default 8ch setting,*/
+		/* so if num of channels is 4, to change ratio*/
+		if (params_channels(params) == 4)
+			ratio = ratio*2;
+
+		fsclk_hi = ratio/2;
 
 		pr_info("%s, channels:%d, format:%d, ratio:%d\n",
 				__func__,
