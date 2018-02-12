@@ -30,6 +30,7 @@
 #include "lcd_reg.h"
 #include "lcd_common.h"
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
+#include <linux/amlogic/media/vout/lcd/lcd_mipi.h>
 #include "lcd_tablet/mipi_dsi_util.h"
 #endif
 
@@ -2297,6 +2298,22 @@ static const char *lcd_edp_debug_usage_str = {
 "\n"
 };
 
+static const char *lcd_mipi_cmd_debug_usage_str = {
+"Usage:\n"
+"   echo <data_type> <N> <data0> <data1> <data2> ...... <dataN-1> > mpcmd ; send mipi cmd\n"
+"   support data_type:\n"
+"	DT_SHUT_DOWN            = 0x22\n"
+"	DT_TURN_ON              = 0x32\n"
+"	DT_GEN_SHORT_WR_0       = 0x03\n"
+"	DT_GEN_SHORT_WR_1       = 0x13\n"
+"	DT_GEN_SHORT_WR_2       = 0x23\n"
+"	DT_DCS_SHORT_WR_0       = 0x05\n"
+"	DT_DCS_SHORT_WR_1       = 0x15\n"
+"	DT_GEN_LONG_WR          = 0x29\n"
+"	DT_DCS_LONG_WR          = 0x39\n"
+"\n"
+};
+
 static ssize_t lcd_ttl_debug_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -2695,6 +2712,57 @@ static ssize_t lcd_phy_debug_store(struct class *class,
 	return count;
 }
 
+static ssize_t lcd_mipi_cmd_debug_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%s\n", lcd_mipi_cmd_debug_usage_str);
+}
+
+static ssize_t lcd_mipi_cmd_debug_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	int i;
+	int ret = 0;
+	unsigned int para[24];
+	unsigned char *cmd_table = NULL;
+
+	ret = sscanf(buf,
+		"%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x",
+		&para[0], &para[1], &para[2], &para[3], &para[4], &para[5],
+		&para[6], &para[7], &para[8], &para[9], &para[10], &para[11],
+		&para[12], &para[13], &para[14], &para[15], &para[16],
+		&para[17], &para[18], &para[19], &para[20], &para[21],
+		&para[22], &para[23]);
+
+	if (ret < 2) {
+		pr_info("invalid mipi cmd\n");
+		return count;
+	}
+	if (ret < (2+para[1])) {
+		pr_info("invalid data num\n");
+		return count;
+	}
+
+	cmd_table = kmalloc_array((2+para[1]+2),
+		sizeof(unsigned char), GFP_KERNEL);
+	if (cmd_table == NULL) {
+		pr_err("error for mipi cmd\n");
+		return -ENOMEM;
+	}
+	for (i = 0; i < (2+para[1]); i++)
+		cmd_table[i] = (unsigned char)para[i];
+	cmd_table[2+para[1]] = 0xff;
+	cmd_table[2+para[1]+1] = 0xff;
+
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+	dsi_write_cmd(cmd_table);
+#endif
+
+	kfree(cmd_table);
+
+	return count;
+}
+
 static struct class_attribute lcd_interface_debug_class_attrs[] = {
 	__ATTR(ttl,    0644,
 		lcd_ttl_debug_show, lcd_ttl_debug_store),
@@ -2711,6 +2779,11 @@ static struct class_attribute lcd_interface_debug_class_attrs[] = {
 static struct class_attribute lcd_phy_debug_class_attrs[] = {
 	__ATTR(phy,    0644,
 		lcd_phy_debug_show, lcd_phy_debug_store),
+};
+
+static struct class_attribute lcd_mipi_cmd_debug_class_attrs[] = {
+	__ATTR(mpcmd,    0644,
+		lcd_mipi_cmd_debug_show, lcd_mipi_cmd_debug_store),
 };
 
 int lcd_class_creat(void)
@@ -2756,6 +2829,17 @@ int lcd_class_creat(void)
 				&lcd_phy_debug_class_attrs[i])) {
 				LCDERR("create phy debug attribute %s fail\n",
 					lcd_phy_debug_class_attrs[i].attr.name);
+			}
+		}
+		break;
+	case LCD_MIPI:
+		for (i = 0; i < ARRAY_SIZE
+			(lcd_mipi_cmd_debug_class_attrs); i++) {
+			if (class_create_file(lcd_drv->lcd_debug_class,
+				&lcd_mipi_cmd_debug_class_attrs[i])) {
+				LCDERR("create mipi_cmd debug attr %s fail\n",
+					lcd_mipi_cmd_debug_class_attrs[
+					i].attr.name);
 			}
 		}
 		break;
