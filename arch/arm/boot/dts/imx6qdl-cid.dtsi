@@ -658,6 +658,7 @@
 
 	mipi_dsi_reset: mipi-dsi-reset {
 		compatible = "gpio-reset";
+		initially-in-reset;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_mipi_dsi_reset>;
 		reset-gpios = GP_MIPI_DSI_RESET;
