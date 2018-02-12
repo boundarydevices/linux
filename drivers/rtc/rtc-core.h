@@ -62,9 +62,11 @@ int rtc_add_groups(struct rtc_device *rtc, const struct attribute_group **grps)
 #endif
 
 #ifdef CONFIG_RTC_NVMEM
-void rtc_nvmem_register(struct rtc_device *rtc);
+void rtc_nvmem_register(struct rtc_device *rtc,
+			struct nvmem_config *nvmem_config);
 void rtc_nvmem_unregister(struct rtc_device *rtc);
 #else
-static inline void rtc_nvmem_register(struct rtc_device *rtc) {}
+static inline void rtc_nvmem_register(struct rtc_device *rtc,
+				      struct nvmem_config *nvmem_config) {}
 static inline void rtc_nvmem_unregister(struct rtc_device *rtc) {}
 #endif
