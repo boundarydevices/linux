@@ -1052,12 +1052,14 @@ static int hdmi_rx_ctrl_irq_handler(void)
 		if (get(intr_aud_fifo, OVERFL) != 0) {
 			if (log_level & 0x100)
 				rx_pr("[irq] OVERFL\n");
+			rx.irq_flag |= IRQ_AUD_FLAG;
 			//if (rx.aud_info.real_sr != 0)
 				//error |= hdmirx_audio_fifo_rst();
 		}
 		if (get(intr_aud_fifo, UNDERFL) != 0) {
 			if (log_level & 0x100)
 				rx_pr("[irq] UNDERFL\n");
+			rx.irq_flag |= IRQ_AUD_FLAG;
 			//if (rx.aud_info.real_sr != 0)
 				//error |= hdmirx_audio_fifo_rst();
 		}
