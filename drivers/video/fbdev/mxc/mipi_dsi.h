@@ -74,7 +74,6 @@ struct mipi_dsi_info {
 	struct regmap			*regmap;
 	const struct mipi_dsi_bus_mux	*bus_mux;
 	int				dsi_power_on;
-	int				lcd_inited;
 	int				encoder;
 	int				traffic_mode;
 	u32				dphy_pll_config;
@@ -88,6 +87,8 @@ struct mipi_dsi_info {
 	struct mxc_dispdrv_handle	*disp_mipi;
 	struct  fb_videomode		*mode;
 	struct regulator		*disp_power_on;
+	struct gpio_desc		*reset_gpio;
+	int				reset_delay_us;
 	struct  mipi_lcd_config		*lcd_config;
 	/* board related power control */
 	struct backlight_device		*bl;
