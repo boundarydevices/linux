@@ -367,6 +367,8 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 		}
 		mipi_dsi_read_register(mipi_dsi, MIPI_DSI_PHY_STATUS, &val);
 	}
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CTRL,
+			DSI_PHY_IF_CTRL_TX_REQ_CLK_HS);
 	return 0;
 }
 
