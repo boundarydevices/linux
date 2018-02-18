@@ -458,7 +458,7 @@ static void mipi_dsi_controller_init(struct mipi_dsi_info *mipi_dsi)
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_ERROR_MSK1, 0);
 }
 
-static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
+static int mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 				bool init)
 {
 	if (init) {
@@ -476,6 +476,7 @@ static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 		mipi_dsi_dphy_init(mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
 					mipi_dsi->dphy_pll_config);
 	}
+	return 0;
 }
 
 static void mipi_dsi_disable_controller(struct mipi_dsi_info *mipi_dsi)
@@ -571,7 +572,9 @@ static int mipi_dsi_power_on(struct mxc_dispdrv_handle *disp)
 	 * the blank state in Sleep In –mode) and then return to Default condition for H/W reset
 	 */
 	msleep(150);
-	mipi_dsi_enable_controller(mipi_dsi, true);
+	ret = mipi_dsi_enable_controller(mipi_dsi, true);
+	if (ret < 0)
+		goto err1;
 	mipi_dsi_set_mode(mipi_dsi, true);
 	ret = mipi_dsi->lcd_callback->mipi_lcd_setup(mipi_dsi);
 	if (ret < 0) {
@@ -597,6 +600,7 @@ static int mipi_dsi_power_on(struct mxc_dispdrv_handle *disp)
 	mipi_dsi->dsi_power_on = 1;
 	return 0;
 err1:
+	mipi_dsi_disable_controller(mipi_dsi);
 	reset_control_assert(mipi_dsi->rc);
 	clk_disable_unprepare(mipi_dsi->dphy_clk);
 	clk_disable_unprepare(mipi_dsi->cfg_clk);
