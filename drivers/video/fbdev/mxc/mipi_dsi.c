@@ -319,8 +319,7 @@ static int mipi_dsi_dcs_cmd(struct mipi_dsi_info *mipi_dsi,
 	return err;
 }
 
-static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
-						u32 cmd, u32 data)
+static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 {
 	u32 val;
 	u32 timeout = 0;
@@ -331,10 +330,11 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL1,
-		(0x10000 | cmd));
+		(0x10000 | DSI_PHY_CLK_INIT_COMMAND));
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 2);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
-	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL1, (0 | data));
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL1,
+			mipi_dsi->dphy_pll_config);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 2);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
 	val = DSI_PHY_RSTZ_EN_CLK | DSI_PHY_RSTZ_DISABLE_RST |
@@ -495,8 +495,7 @@ static int mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 
 			mipi_dsi_controller_init(mipi_dsi);
 		}
-		ret = mipi_dsi_dphy_init(mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
-				mipi_dsi->dphy_pll_config);
+		ret = mipi_dsi_dphy_init(mipi_dsi);
 		if (!ret)
 			break;
 		if (retry++ < 5)
