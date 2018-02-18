@@ -327,6 +327,9 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP, DSI_PWRUP_POWERUP);
 
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 1);	/* testclr asserted */
+
 	val = ((mipi_dsi->lcd_config->data_lane_num - 1)
 		& DSI_PHY_IF_CFG_N_LANES_MASK)
 		<< DSI_PHY_IF_CFG_N_LANES_SHIFT;
