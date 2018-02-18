@@ -134,6 +134,8 @@ struct wm8960_priv {
 	int sysclk;
 	int clk_id;
 	int freq_in;
+	unsigned long powering_down_time;
+	unsigned powering_down;
 	bool is_stream_in_use[2];
 	struct wm8960_data pdata;
 	ktime_t dsch_start;
@@ -902,6 +904,25 @@ static int wm8960_mute(struct snd_soc_dai *dai, int mute, int direction)
 	return 0;
 }
 
+static void wait_for_powering_down_time(struct wm8960_priv *wm8960)
+{
+	long delay;
+
+	if (!wm8960->powering_down)
+		return;
+
+	if (!time_after(jiffies, wm8960->powering_down_time)) {
+		delay = wm8960->powering_down_time - jiffies;
+		if (delay < 1)
+			delay = 1;
+		delay = jiffies_to_msecs(delay);
+		if (delay > 600)
+			delay = 600;
+		msleep(delay);
+	}
+	wm8960->powering_down = 0;
+}
+
 static int wm8960_set_bias_level_out3(struct snd_soc_component *component,
 				      enum snd_soc_bias_level level)
 {
@@ -932,6 +953,7 @@ static int wm8960_set_bias_level_out3(struct snd_soc_component *component,
 				return ret;
 
 			/* Set VMID to 2x50k */
+			wait_for_powering_down_time(wm8960);
 			snd_soc_component_update_bits(component, WM8960_POWER1, 0x180, 0x80);
 			break;
 
@@ -968,6 +990,7 @@ static int wm8960_set_bias_level_out3(struct snd_soc_component *component,
 				      WM8960_BUFDCOPEN | WM8960_BUFIOEN);
 
 			/* Enable & ramp VMID at 2x50k */
+			wait_for_powering_down_time(wm8960);
 			snd_soc_component_update_bits(component, WM8960_POWER1, 0x80, 0x80);
 			msleep(100);
 
@@ -980,18 +1003,23 @@ static int wm8960_set_bias_level_out3(struct snd_soc_component *component,
 		}
 
 		/* Set VMID to 2x250k */
+		wait_for_powering_down_time(wm8960);
 		snd_soc_component_update_bits(component, WM8960_POWER1, 0x180, 0x100);
 		break;
 
 	case SND_SOC_BIAS_OFF:
-		/* Enable anti-pop features */
-		snd_soc_component_write(component, WM8960_APOP1,
+		if (!wm8960->powering_down) {
+			/* Enable anti-pop features */
+			snd_soc_component_write(component, WM8960_APOP1,
 			     WM8960_POBCTRL | WM8960_SOFT_ST |
 			     WM8960_BUFDCOPEN | WM8960_BUFIOEN);
 
-		/* Disable VMID and VREF, mark discharge */
-		snd_soc_component_write(component, WM8960_POWER1, 0);
-		wm8960->dsch_start = ktime_get();
+			/* Disable VMID and VREF, mark discharge */
+			snd_soc_component_write(component, WM8960_POWER1, 0);
+			wm8960->dsch_start = ktime_get();
+			wm8960->powering_down_time = jiffies + msecs_to_jiffies(600);
+			wm8960->powering_down = 1;
+		}
 		break;
 	}
 
