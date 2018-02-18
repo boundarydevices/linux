@@ -366,15 +366,115 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 	}
 }
 
+static void mipi_dsi_controller_init(struct mipi_dsi_info *mipi_dsi)
+{
+	struct  fb_videomode *mode = mipi_dsi->mode;
+	struct  mipi_lcd_config *lcd_config = mipi_dsi->lcd_config;
+	u32	val = 0;
+	uint64_t val64;
+	u32	lane_byte_clk_period;
+
+	if (!(mode->sync & FB_SYNC_VERT_HIGH_ACT))
+		val = DSI_DPI_CFG_VSYNC_ACT_LOW;
+	if (!(mode->sync & FB_SYNC_HOR_HIGH_ACT))
+		val |= DSI_DPI_CFG_HSYNC_ACT_LOW;
+	if ((mode->sync & FB_SYNC_OE_LOW_ACT))
+		val |= DSI_DPI_CFG_DATAEN_ACT_LOW;
+	if (MIPI_RGB666_LOOSELY == lcd_config->dpi_fmt)
+		val |= DSI_DPI_CFG_EN18LOOSELY;
+	val |= (lcd_config->dpi_fmt & DSI_DPI_CFG_COLORCODE_MASK)
+			<< DSI_DPI_CFG_COLORCODE_SHIFT;
+	val |= (lcd_config->virtual_ch & DSI_DPI_CFG_VID_MASK)
+			<< DSI_DPI_CFG_VID_SHIFT;
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_DPI_CFG, val);
+
+	val = DSI_PCKHDL_CFG_EN_BTA | DSI_PCKHDL_CFG_EN_ECC_RX |
+			DSI_PCKHDL_CFG_EN_CRC_RX;
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PCKHDL_CFG, val);
+
+	val = (mode->xres & DSI_VID_PKT_CFG_VID_PKT_SZ_MASK)
+			<< DSI_VID_PKT_CFG_VID_PKT_SZ_SHIFT;
+	val |= (NUMBER_OF_CHUNKS & DSI_VID_PKT_CFG_NUM_CHUNKS_MASK)
+			<< DSI_VID_PKT_CFG_NUM_CHUNKS_SHIFT;
+	val |= (NULL_PKT_SIZE & DSI_VID_PKT_CFG_NULL_PKT_SZ_MASK)
+			<< DSI_VID_PKT_CFG_NULL_PKT_SZ_SHIFT;
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_VID_PKT_CFG, val);
+
+	/* enable LP mode when TX DCS cmd and enable DSI command mode */
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CMD_MODE_CFG,
+			MIPI_DSI_CMD_MODE_CFG_EN_LOWPOWER);
+
+	 /* mipi lane byte clk period in 1/256 ps unit */
+	val64 = (8000000ULL * 256) + lcd_config->max_phy_clk - 1;
+	do_div(val64, lcd_config->max_phy_clk);
+	lane_byte_clk_period = (u32)val64;
+
+	val64 = (uint64_t)mode->hsync_len * mode->pixclock
+			* 256 + lane_byte_clk_period - 1;
+	do_div(val64, lane_byte_clk_period);
+	if (val64 >= (1 << 9)) {
+		dev_err(&mipi_dsi->pdev->dev, "hsync(%d) too large\n", (u32)val64);
+		val64 = (1 << 9) - 1;
+	}
+	val = (u32)val64 << DSI_TME_LINE_CFG_HSA_TIME_SHIFT;
+
+	val64 = (uint64_t)mode->left_margin * mode->pixclock
+			* 256 + lane_byte_clk_period - 1;
+	do_div(val64, lane_byte_clk_period);
+	if (val64 >= (1 << 9)) {
+		dev_err(&mipi_dsi->pdev->dev, "left_margin(%d) too large\n", (u32)val64);
+		val64 = (1 << 9) - 1;
+	}
+	val |= (u32)val64 << DSI_TME_LINE_CFG_HBP_TIME_SHIFT;
+
+	val64 = (uint64_t)(mode->left_margin + mode->right_margin +
+			mode->hsync_len + mode->xres) * mode->pixclock
+			* 256 + lane_byte_clk_period - 1;
+	do_div(val64, lane_byte_clk_period);
+	if (val64 >= (1 << 14)) {
+		dev_err(&mipi_dsi->pdev->dev, "total(%d) too large\n", (u32)val64);
+		val64 = (1 << 14) - 1;
+	}
+	val |= (u32)val64 << DSI_TME_LINE_CFG_HLINE_TIME_SHIFT;
+
+	pr_debug("%s:LINE_CFG=%x\n", __func__, val);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_TMR_LINE_CFG, val);
+
+	val = ((mode->vsync_len & DSI_VTIMING_CFG_VSA_LINES_MASK)
+				<< DSI_VTIMING_CFG_VSA_LINES_SHIFT);
+	val |= ((mode->upper_margin & DSI_VTIMING_CFG_VBP_LINES_MASK)
+			<< DSI_VTIMING_CFG_VBP_LINES_SHIFT);
+	val |= ((mode->lower_margin & DSI_VTIMING_CFG_VFP_LINES_MASK)
+			<< DSI_VTIMING_CFG_VFP_LINES_SHIFT);
+	val |= ((mode->yres & DSI_VTIMING_CFG_V_ACT_LINES_MASK)
+			<< DSI_VTIMING_CFG_V_ACT_LINES_SHIFT);
+	pr_debug("%s:VTIMING_CFG=%x\n", __func__, val);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_VTIMING_CFG, val);
+
+	val = ((PHY_BTA_MAXTIME & DSI_PHY_TMR_CFG_BTA_TIME_MASK)
+			<< DSI_PHY_TMR_CFG_BTA_TIME_SHIFT);
+	val |= ((PHY_LP2HS_MAXTIME & DSI_PHY_TMR_CFG_LP2HS_TIME_MASK)
+			<< DSI_PHY_TMR_CFG_LP2HS_TIME_SHIFT);
+	val |= ((PHY_HS2LP_MAXTIME & DSI_PHY_TMR_CFG_HS2LP_TIME_MASK)
+			<< DSI_PHY_TMR_CFG_HS2LP_TIME_SHIFT);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TMR_CFG, val);
+
+	val = (((lcd_config->data_lane_num - 1) &
+		DSI_PHY_IF_CFG_N_LANES_MASK)
+		<< DSI_PHY_IF_CFG_N_LANES_SHIFT);
+	val |= ((PHY_STOP_WAIT_TIME & DSI_PHY_IF_CFG_WAIT_TIME_MASK)
+			<< DSI_PHY_IF_CFG_WAIT_TIME_SHIFT);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CFG, val);
+
+	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_ERROR_ST0, &val);
+	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_ERROR_ST1, &val);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_ERROR_MSK0, 0);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_ERROR_MSK1, 0);
+}
+
 static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 				bool init)
 {
-	uint64_t	val64;
-	u32		val = 0;
-	u32		lane_byte_clk_period;
-	struct  fb_videomode *mode = mipi_dsi->mode;
-	struct  mipi_lcd_config *lcd_config = mipi_dsi->lcd_config;
-
 	if (init) {
 		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP,
 			DSI_PWRUP_RESET);
@@ -383,105 +483,7 @@ static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CLKMGR_CFG,
 			DSI_CLKMGR_CFG_CLK_DIV);
 
-		if (!(mode->sync & FB_SYNC_VERT_HIGH_ACT))
-			val = DSI_DPI_CFG_VSYNC_ACT_LOW;
-		if (!(mode->sync & FB_SYNC_HOR_HIGH_ACT))
-			val |= DSI_DPI_CFG_HSYNC_ACT_LOW;
-		if ((mode->sync & FB_SYNC_OE_LOW_ACT))
-			val |= DSI_DPI_CFG_DATAEN_ACT_LOW;
-		if (MIPI_RGB666_LOOSELY == lcd_config->dpi_fmt)
-			val |= DSI_DPI_CFG_EN18LOOSELY;
-		val |= (lcd_config->dpi_fmt & DSI_DPI_CFG_COLORCODE_MASK)
-				<< DSI_DPI_CFG_COLORCODE_SHIFT;
-		val |= (lcd_config->virtual_ch & DSI_DPI_CFG_VID_MASK)
-				<< DSI_DPI_CFG_VID_SHIFT;
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_DPI_CFG, val);
-
-		val = DSI_PCKHDL_CFG_EN_BTA |
-				DSI_PCKHDL_CFG_EN_ECC_RX |
-				DSI_PCKHDL_CFG_EN_CRC_RX;
-
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PCKHDL_CFG, val);
-
-		val = (mode->xres & DSI_VID_PKT_CFG_VID_PKT_SZ_MASK)
-				<< DSI_VID_PKT_CFG_VID_PKT_SZ_SHIFT;
-		val |= (NUMBER_OF_CHUNKS & DSI_VID_PKT_CFG_NUM_CHUNKS_MASK)
-				<< DSI_VID_PKT_CFG_NUM_CHUNKS_SHIFT;
-		val |= (NULL_PKT_SIZE & DSI_VID_PKT_CFG_NULL_PKT_SZ_MASK)
-				<< DSI_VID_PKT_CFG_NULL_PKT_SZ_SHIFT;
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_VID_PKT_CFG, val);
-
-		/* enable LP mode when TX DCS cmd and enable DSI command mode */
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CMD_MODE_CFG,
-				MIPI_DSI_CMD_MODE_CFG_EN_LOWPOWER);
-
-		 /* mipi lane byte clk period in 1/256 ps unit */
-		val64 = (8000000ULL * 256) + lcd_config->max_phy_clk - 1;
-		do_div(val64, lcd_config->max_phy_clk);
-		lane_byte_clk_period = (u32)val64;
-
-		val64 = (uint64_t)mode->hsync_len * mode->pixclock
-				* 256 + lane_byte_clk_period - 1;
-		do_div(val64, lane_byte_clk_period);
-		if (val64 >= (1 << 9)) {
-			dev_err(&mipi_dsi->pdev->dev, "hsync(%d) too large\n", (u32)val64);
-			val64 = (1 << 9) - 1;
-		}
-		val = (u32)val64 << DSI_TME_LINE_CFG_HSA_TIME_SHIFT;
-
-		val64 = (uint64_t)mode->left_margin * mode->pixclock
-				* 256 + lane_byte_clk_period - 1;
-		do_div(val64, lane_byte_clk_period);
-		if (val64 >= (1 << 9)) {
-			dev_err(&mipi_dsi->pdev->dev, "left_margin(%d) too large\n", (u32)val64);
-			val64 = (1 << 9) - 1;
-		}
-		val |= (u32)val64 << DSI_TME_LINE_CFG_HBP_TIME_SHIFT;
-
-		val64 = (uint64_t)(mode->left_margin + mode->right_margin +
-				mode->hsync_len + mode->xres) * mode->pixclock
-				* 256 + lane_byte_clk_period - 1;
-		do_div(val64, lane_byte_clk_period);
-		if (val64 >= (1 << 14)) {
-			dev_err(&mipi_dsi->pdev->dev, "total(%d) too large\n", (u32)val64);
-			val64 = (1 << 14) - 1;
-		}
-		val |= (u32)val64 << DSI_TME_LINE_CFG_HLINE_TIME_SHIFT;
-
-		pr_debug("%s:LINE_CFG=%x\n", __func__, val);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_TMR_LINE_CFG, val);
-
-		val = ((mode->vsync_len & DSI_VTIMING_CFG_VSA_LINES_MASK)
-					<< DSI_VTIMING_CFG_VSA_LINES_SHIFT);
-		val |= ((mode->upper_margin & DSI_VTIMING_CFG_VBP_LINES_MASK)
-				<< DSI_VTIMING_CFG_VBP_LINES_SHIFT);
-		val |= ((mode->lower_margin & DSI_VTIMING_CFG_VFP_LINES_MASK)
-				<< DSI_VTIMING_CFG_VFP_LINES_SHIFT);
-		val |= ((mode->yres & DSI_VTIMING_CFG_V_ACT_LINES_MASK)
-				<< DSI_VTIMING_CFG_V_ACT_LINES_SHIFT);
-		pr_debug("%s:VTIMING_CFG=%x\n", __func__, val);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_VTIMING_CFG, val);
-
-		val = ((PHY_BTA_MAXTIME & DSI_PHY_TMR_CFG_BTA_TIME_MASK)
-				<< DSI_PHY_TMR_CFG_BTA_TIME_SHIFT);
-		val |= ((PHY_LP2HS_MAXTIME & DSI_PHY_TMR_CFG_LP2HS_TIME_MASK)
-				<< DSI_PHY_TMR_CFG_LP2HS_TIME_SHIFT);
-		val |= ((PHY_HS2LP_MAXTIME & DSI_PHY_TMR_CFG_HS2LP_TIME_MASK)
-				<< DSI_PHY_TMR_CFG_HS2LP_TIME_SHIFT);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TMR_CFG, val);
-
-		val = (((lcd_config->data_lane_num - 1) &
-			DSI_PHY_IF_CFG_N_LANES_MASK)
-			<< DSI_PHY_IF_CFG_N_LANES_SHIFT);
-		val |= ((PHY_STOP_WAIT_TIME & DSI_PHY_IF_CFG_WAIT_TIME_MASK)
-				<< DSI_PHY_IF_CFG_WAIT_TIME_SHIFT);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CFG, val);
-
-		mipi_dsi_read_register(mipi_dsi, MIPI_DSI_ERROR_ST0, &val);
-		mipi_dsi_read_register(mipi_dsi, MIPI_DSI_ERROR_ST1, &val);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_ERROR_MSK0, 0);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_ERROR_MSK1, 0);
-
+		mipi_dsi_controller_init(mipi_dsi);
 		mipi_dsi_dphy_init(mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
 					mipi_dsi->dphy_pll_config);
 	} else {
