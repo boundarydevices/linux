@@ -366,6 +366,14 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 	}
 }
 
+static void mipi_dsi_disable_controller(struct mipi_dsi_info *mipi_dsi)
+{
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CTRL,
+			DSI_PHY_IF_CTRL_RESET);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP, DSI_PWRUP_RESET);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_RSTZ, DSI_PHY_RSTZ_RST);
+}
+
 static void mipi_dsi_controller_init(struct mipi_dsi_info *mipi_dsi)
 {
 	struct  fb_videomode *mode = mipi_dsi->mode;
@@ -491,14 +499,6 @@ static int mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 					mipi_dsi->dphy_pll_config);
 	}
 	return 0;
-}
-
-static void mipi_dsi_disable_controller(struct mipi_dsi_info *mipi_dsi)
-{
-	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CTRL,
-			DSI_PHY_IF_CTRL_RESET);
-	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP, DSI_PWRUP_RESET);
-	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_RSTZ, DSI_PHY_RSTZ_RST);
 }
 
 static irqreturn_t mipi_dsi_irq_handler(int irq, void *data)
