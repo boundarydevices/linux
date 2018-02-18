@@ -328,14 +328,29 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 			DSI_PHY_IF_CTRL_RESET);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP, DSI_PWRUP_POWERUP);
 
+	val = ((mipi_dsi->lcd_config->data_lane_num - 1)
+		& DSI_PHY_IF_CFG_N_LANES_MASK)
+		<< DSI_PHY_IF_CFG_N_LANES_SHIFT;
+	val |= (PHY_STOP_WAIT_TIME & DSI_PHY_IF_CFG_WAIT_TIME_MASK)
+			<< DSI_PHY_IF_CFG_WAIT_TIME_SHIFT;
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CFG, val);
+
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CLKMGR_CFG,
+		DSI_CLKMGR_CFG_CLK_DIV);
+
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
+
+	/* Address write on falling edge of testclk */
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL1,
 		(0x10000 | DSI_PHY_CLK_INIT_COMMAND));
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 2);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
+
+	/* Data write on rising edge of testclk */
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL1,
 			mipi_dsi->dphy_pll_config);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 2);
+
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
 	val = DSI_PHY_RSTZ_EN_CLK | DSI_PHY_RSTZ_DISABLE_RST |
 			DSI_PHY_RSTZ_DISABLE_SHUTDOWN;
@@ -468,13 +483,6 @@ static void mipi_dsi_controller_init(struct mipi_dsi_info *mipi_dsi)
 			<< DSI_PHY_TMR_CFG_HS2LP_TIME_SHIFT);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TMR_CFG, val);
 
-	val = (((lcd_config->data_lane_num - 1) &
-		DSI_PHY_IF_CFG_N_LANES_MASK)
-		<< DSI_PHY_IF_CFG_N_LANES_SHIFT);
-	val |= ((PHY_STOP_WAIT_TIME & DSI_PHY_IF_CFG_WAIT_TIME_MASK)
-			<< DSI_PHY_IF_CFG_WAIT_TIME_SHIFT);
-	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CFG, val);
-
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_ERROR_ST0, &val);
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_ERROR_ST1, &val);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_ERROR_MSK0, 0);
@@ -490,8 +498,6 @@ static int mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 	do {
 		if (init) {
 			mipi_dsi_disable_controller(mipi_dsi);
-			mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CLKMGR_CFG,
-				DSI_CLKMGR_CFG_CLK_DIV);
 
 			mipi_dsi_controller_init(mipi_dsi);
 		}
