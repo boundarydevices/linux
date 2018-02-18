@@ -324,8 +324,6 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 	u32 val;
 	u32 timeout = 0;
 
-	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CTRL,
-			DSI_PHY_IF_CTRL_RESET);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP, DSI_PWRUP_POWERUP);
 
 	val = ((mipi_dsi->lcd_config->data_lane_num - 1)
@@ -498,9 +496,13 @@ static int mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 	do {
 		if (init) {
 			mipi_dsi_disable_controller(mipi_dsi);
-
-			mipi_dsi_controller_init(mipi_dsi);
+		} else {
+			mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_IF_CTRL,
+					DSI_PHY_IF_CTRL_RESET);
 		}
+
+		if (init)
+			mipi_dsi_controller_init(mipi_dsi);
 		ret = mipi_dsi_dphy_init(mipi_dsi);
 		if (!ret)
 			break;
