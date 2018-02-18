@@ -340,12 +340,14 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CLKMGR_CFG,
 		DSI_CLKMGR_CFG_CLK_DIV);
 
+	/* Address write on falling edge of testclk, next 2 are NOT falling edge */
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL1, 0);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
+	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 2);
 
 	/* Address write on falling edge of testclk */
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL1,
 		(0x10000 | DSI_PHY_CLK_INIT_COMMAND));
-	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 2);
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_TST_CTRL0, 0);
 
 	/* Data write on rising edge of testclk */
