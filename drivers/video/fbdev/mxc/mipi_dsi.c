@@ -484,10 +484,7 @@ static int mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 				bool init)
 {
 	if (init) {
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP,
-			DSI_PWRUP_RESET);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_RSTZ,
-			DSI_PHY_RSTZ_RST);
+		mipi_dsi_disable_controller(mipi_dsi);
 		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CLKMGR_CFG,
 			DSI_CLKMGR_CFG_CLK_DIV);
 
