@@ -46,7 +46,7 @@
 #define	MIPI_MUX_CTRL(v)		(((v) & 0x3) << 4)
 #define	MIPI_LCD_SLEEP_MODE_DELAY	(120)
 #define	MIPI_DSI_REG_RW_TIMEOUT		(200)
-#define	MIPI_DSI_PHY_TIMEOUT		(100)
+#define	MIPI_DSI_PHY_TIMEOUT		(200)
 
 static struct mipi_dsi_match_lcd mipi_dsi_lcd_db[] = {
 #ifdef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
@@ -323,6 +323,7 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 {
 	u32 val;
 	u32 timeout = 0;
+	u32 m;
 
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PWR_UP, DSI_PWRUP_POWERUP);
 
@@ -355,25 +356,14 @@ static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi)
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_PHY_RSTZ, val);
 
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_PHY_STATUS, &val);
-	while ((val & DSI_PHY_STATUS_LOCK) != DSI_PHY_STATUS_LOCK) {
+	m = DSI_PHY_STATUS_LOCK | DSI_PHY_STATUS_STOPSTATE_CLK_LANE;
+	while ((val & m) != m) {
 		udelay(100);
 		timeout++;
 		if (timeout == MIPI_DSI_PHY_TIMEOUT) {
 			dev_err(&mipi_dsi->pdev->dev,
-				"Error: phy lock timeout!\n");
-			break;
-		}
-		mipi_dsi_read_register(mipi_dsi, MIPI_DSI_PHY_STATUS, &val);
-	}
-	timeout = 0;
-	while ((val & DSI_PHY_STATUS_STOPSTATE_CLK_LANE) !=
-			DSI_PHY_STATUS_STOPSTATE_CLK_LANE) {
-		udelay(100);
-		timeout++;
-		if (timeout == MIPI_DSI_PHY_TIMEOUT) {
-			dev_err(&mipi_dsi->pdev->dev,
-				"Error: phy lock lane timeout!\n");
-			break;
+				"Error: phy lock timeout(0x%x)!\n", val);
+			return -ETIMEDOUT;
 		}
 		mipi_dsi_read_register(mipi_dsi, MIPI_DSI_PHY_STATUS, &val);
 	}
