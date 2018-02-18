@@ -319,7 +319,7 @@ static int mipi_dsi_dcs_cmd(struct mipi_dsi_info *mipi_dsi,
 	return err;
 }
 
-static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
+static int mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 						u32 cmd, u32 data)
 {
 	u32 val;
@@ -364,6 +364,7 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 		}
 		mipi_dsi_read_register(mipi_dsi, MIPI_DSI_PHY_STATUS, &val);
 	}
+	return 0;
 }
 
 static void mipi_dsi_disable_controller(struct mipi_dsi_info *mipi_dsi)
@@ -483,18 +484,26 @@ static void mipi_dsi_controller_init(struct mipi_dsi_info *mipi_dsi)
 static int mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 				bool init)
 {
-	if (init) {
-		mipi_dsi_disable_controller(mipi_dsi);
-		mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CLKMGR_CFG,
-			DSI_CLKMGR_CFG_CLK_DIV);
+	int ret;
+	int retry = 0;
 
-		mipi_dsi_controller_init(mipi_dsi);
-		mipi_dsi_dphy_init(mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
-					mipi_dsi->dphy_pll_config);
-	} else {
-		mipi_dsi_dphy_init(mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
-					mipi_dsi->dphy_pll_config);
-	}
+	do {
+		if (init) {
+			mipi_dsi_disable_controller(mipi_dsi);
+			mipi_dsi_write_register(mipi_dsi, MIPI_DSI_CLKMGR_CFG,
+				DSI_CLKMGR_CFG_CLK_DIV);
+
+			mipi_dsi_controller_init(mipi_dsi);
+		}
+		ret = mipi_dsi_dphy_init(mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
+				mipi_dsi->dphy_pll_config);
+		if (!ret)
+			break;
+		if (retry++ < 5)
+			continue;
+		dev_err(&mipi_dsi->pdev->dev, "%s: failed\n", __func__);
+		return ret;
+	} while (1);
 	return 0;
 }
 
