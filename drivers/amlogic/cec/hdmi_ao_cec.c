@@ -775,10 +775,20 @@ static inline bool is_feature_abort_msg(const unsigned char *msg, int len)
 	return false;
 }
 
+static inline bool is_report_phy_addr_msg(const unsigned char *msg, int len)
+{
+	if (!msg || len < 4)
+		return false;
+	if (msg[1] == CEC_OC_REPORT_PHYSICAL_ADDRESS)
+		return true;
+	return false;
+}
+
 static bool need_nack_repeat_msg(const unsigned char *msg, int len, int t)
 {
 	if (len == last_cec_msg->len &&
-	    (is_poll_message(msg[0]) || is_feature_abort_msg(msg, len)) &&
+	    (is_poll_message(msg[0]) || is_feature_abort_msg(msg, len) ||
+	      is_report_phy_addr_msg(msg, len)) &&
 	    last_cec_msg->last_result == CEC_FAIL_NACK &&
 	    jiffies - last_cec_msg->last_jiffies < t) {
 		return true;
@@ -1039,7 +1049,7 @@ int cec_ll_tx(const unsigned char *msg, unsigned char len)
 	mutex_lock(&cec_dev->cec_mutex);
 	/* make sure we got valid physical address */
 	if (len >= 2 && msg[1] == CEC_OC_REPORT_PHYSICAL_ADDRESS)
-		check_physical_addr_valid(20);
+		check_physical_addr_valid(3);
 
 try_again:
 	reinit_completion(&cec_dev->tx_ok);
