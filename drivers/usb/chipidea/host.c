@@ -41,7 +41,7 @@ static int (*orig_hub_control)(struct usb_hcd *hcd,
 				char *buf, u16 wLength);
 
 struct ehci_ci_priv {
-	struct regulator *reg_vbus;
+	int control_vbus;
 };
 
 /* This function is used to override WKCN, WKDN, and WKOC */
@@ -67,22 +67,15 @@ static int ehci_ci_portpower(struct usb_hcd *hcd, int portnum, bool enable)
 	int ret = 0;
 	int port = HCS_N_PORTS(ehci->hcs_params);
 
-	if (priv->reg_vbus) {
+	if (priv->control_vbus) {
 		if (port > 1) {
 			dev_warn(dev,
 				"Not support multi-port regulator control\n");
 			return 0;
 		}
-		if (enable)
-			ret = regulator_enable(priv->reg_vbus);
-		else
-			ret = regulator_disable(priv->reg_vbus);
-		if (ret) {
-			dev_err(dev,
-				"Failed to %s vbus regulator, ret=%d\n",
-				enable ? "enable" : "disable", ret);
+		ret = hw_vbus_enable(ci, enable);
+		if (ret)
 			return ret;
-		}
 	}
 
 	if (enable && (ci->platdata->phy_mode == USBPHY_INTERFACE_MODE_HSIC)) {
@@ -315,19 +308,15 @@ static int host_start(struct ci_hdrc *ci)
 	ehci->imx28_write_fix = ci->imx28_write_fix;
 
 	priv = (struct ehci_ci_priv *)ehci->priv;
-	priv->reg_vbus = NULL;
+	priv->control_vbus = 0;
 
 	if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci)) {
 		if (ci->platdata->flags & CI_HDRC_TURN_VBUS_EARLY_ON) {
-			ret = regulator_enable(ci->platdata->reg_vbus);
-			if (ret) {
-				dev_err(ci->dev,
-				"Failed to enable vbus regulator, ret=%d\n",
-									ret);
+			ret = hw_vbus_enable(ci, 1);
+			if (ret)
 				goto put_hcd;
-			}
 		} else {
-			priv->reg_vbus = ci->platdata->reg_vbus;
+			priv->control_vbus = ci->platdata->reg_vbus ? 1 : 0;
 		}
 	}
 
@@ -363,7 +352,7 @@ static int host_start(struct ci_hdrc *ci)
 disable_reg:
 	if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci) &&
 			(ci->platdata->flags & CI_HDRC_TURN_VBUS_EARLY_ON))
-		regulator_disable(ci->platdata->reg_vbus);
+		hw_vbus_enable(ci, 0);
 put_hcd:
 	usb_put_hcd(hcd);
 
@@ -381,7 +370,7 @@ static void host_stop(struct ci_hdrc *ci)
 		usb_put_hcd(hcd);
 		if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci) &&
 			(ci->platdata->flags & CI_HDRC_TURN_VBUS_EARLY_ON))
-				regulator_disable(ci->platdata->reg_vbus);
+				hw_vbus_enable(ci, 0);
 		if (hcd->self.is_b_host)
 			hcd->self.is_b_host = 0;
 	}
