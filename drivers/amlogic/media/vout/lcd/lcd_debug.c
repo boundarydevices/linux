@@ -2763,6 +2763,16 @@ static ssize_t lcd_mipi_cmd_debug_store(struct class *class,
 	return count;
 }
 
+static ssize_t lcd_mipi_state_debug_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	return sprintf(buf, "state: %d, check_en: %d\n",
+		lcd_drv->lcd_config->lcd_control.mipi_config->check_state,
+		lcd_drv->lcd_config->lcd_control.mipi_config->check_en);
+}
+
 static struct class_attribute lcd_interface_debug_class_attrs[] = {
 	__ATTR(ttl,    0644,
 		lcd_ttl_debug_show, lcd_ttl_debug_store),
@@ -2781,9 +2791,10 @@ static struct class_attribute lcd_phy_debug_class_attrs[] = {
 		lcd_phy_debug_show, lcd_phy_debug_store),
 };
 
-static struct class_attribute lcd_mipi_cmd_debug_class_attrs[] = {
+static struct class_attribute lcd_mipi_debug_class_attrs[] = {
 	__ATTR(mpcmd,    0644,
 		lcd_mipi_cmd_debug_show, lcd_mipi_cmd_debug_store),
+	__ATTR(mpstate,  0644, lcd_mipi_state_debug_show, NULL),
 };
 
 int lcd_class_creat(void)
@@ -2834,12 +2845,11 @@ int lcd_class_creat(void)
 		break;
 	case LCD_MIPI:
 		for (i = 0; i < ARRAY_SIZE
-			(lcd_mipi_cmd_debug_class_attrs); i++) {
+			(lcd_mipi_debug_class_attrs); i++) {
 			if (class_create_file(lcd_drv->lcd_debug_class,
-				&lcd_mipi_cmd_debug_class_attrs[i])) {
-				LCDERR("create mipi_cmd debug attr %s fail\n",
-					lcd_mipi_cmd_debug_class_attrs[
-					i].attr.name);
+				&lcd_mipi_debug_class_attrs[i])) {
+				LCDERR("create mipi debug attr %s fail\n",
+				lcd_mipi_debug_class_attrs[i].attr.name);
 			}
 		}
 		break;

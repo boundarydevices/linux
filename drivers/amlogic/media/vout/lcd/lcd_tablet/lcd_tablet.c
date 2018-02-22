@@ -559,6 +559,12 @@ static void lcd_config_print(struct lcd_config_s *pconf)
 		LCDPR("color_fmt = %d\n",
 			pconf->lcd_control.vbyone_config->color_fmt);
 	} else if (pconf->lcd_basic.lcd_type == LCD_MIPI) {
+		if (pconf->lcd_control.mipi_config->check_en) {
+			LCDPR("check_reg = 0x%02x\n",
+				pconf->lcd_control.mipi_config->check_reg);
+			LCDPR("check_cnt = %d\n",
+				pconf->lcd_control.mipi_config->check_cnt);
+		}
 		LCDPR("mipi_lane_num = %d\n",
 			pconf->lcd_control.mipi_config->lane_num);
 		LCDPR("bit_rate_max = %d\n",
@@ -813,6 +819,20 @@ static int lcd_config_load_from_dts(struct lcd_config_s *pconf,
 		}
 		break;
 	case LCD_MIPI:
+		ret = of_property_read_u32_array(child, "check_state",
+			&para[0], 2);
+		if (ret) {
+			if (lcd_debug_print_flag)
+				LCDPR("failed to get check_state\n");
+			pconf->lcd_control.mipi_config->check_en = 0;
+		} else {
+			pconf->lcd_control.mipi_config->check_en = 1;
+			pconf->lcd_control.mipi_config->check_reg =
+				(unsigned char)(para[0]);
+			pconf->lcd_control.mipi_config->check_cnt =
+				(unsigned char)(para[1]);
+		}
+
 		ret = of_property_read_u32_array(child, "mipi_attr",
 			&para[0], 8);
 		if (ret) {

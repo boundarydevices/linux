@@ -128,6 +128,10 @@ static struct dsi_config_s lcd_mipi_config = {
 		/* ext_index if needed, must match ext_config index;
 		 *    0xff for invalid
 		 */
+	.check_en = 0,
+	.check_reg = 0,
+	.check_cnt = 0,
+	.check_state = 0,
 };
 
 static struct lcd_power_ctrl_s lcd_power_config = {

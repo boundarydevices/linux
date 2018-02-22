@@ -113,6 +113,8 @@
 				0 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
 				44250000>; /*pixel_clk(unit in Hz)*/
+			check_state = <0x04 /* check_reg */
+				3>; /* check_cnt */
 			mipi_attr = <4 /*lane_num*/
 				360 /*bit_rate_max(MHz)*/
 				0 /*factor(*100, default 0 for auto)*/
@@ -154,6 +156,8 @@
 				0 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
 				48715200>; /*pixel_clk(unit in Hz)*/
+			check_state = <0x04 /* check_reg */
+				3>; /* check_cnt */
 			mipi_attr = <4 /*lane_num*/
 				300 /*bit_rate_max(MHz)*/
 				0 /*factor(*100, default 0 for auto)*/
