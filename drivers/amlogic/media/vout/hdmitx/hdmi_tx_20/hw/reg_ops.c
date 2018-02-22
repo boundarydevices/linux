@@ -343,14 +343,28 @@ unsigned int hdmitx_rd_reg_g12a(unsigned int addr)
 	unsigned long hdmitx_addr = 0;
 	unsigned int val;
 
-	if (large_offset == 0x10) {
+	switch  (large_offset) {
+	case 0x10:
+		/*DWC*/
 		hdmitx_addr = HDMITX_SEC_REG_ADDR(small_offset);
 		val = readb(TO_PMAP_ADDR(hdmitx_addr));
-	} else if ((large_offset == 0x11) || (large_offset == 0x01))
+		break;
+	case 0x11:
+	case 0x01:
+		/*SECURITY DWC/TOP*/
 		val = hdmitx_rd_reg_normal(addr);
-	else {
-		hdmitx_addr = HDMITX_REG_ADDR(small_offset);
-		val = readl(TO_PMAP_ADDR(hdmitx_addr));
+		break;
+	case 00:
+	default:
+		/*TOP*/
+		if ((small_offset >= 0x2000) && (small_offset <= 0x365E)) {
+			hdmitx_addr = HDMITX_REG_ADDR(small_offset);
+			val = readb(TO_PMAP_ADDR(hdmitx_addr));
+		} else {
+			hdmitx_addr = HDMITX_REG_ADDR((small_offset << 2));
+			val = readl(TO_PMAP_ADDR(hdmitx_addr));
+		}
+		break;
 	}
 	return val;
 }
@@ -393,14 +407,27 @@ void hdmitx_wr_reg_g12a(unsigned int addr, unsigned int data)
 	unsigned int small_offset = addr & ((1 << 24)  - 1);
 	unsigned long hdmitx_addr = 0;
 
-	if (large_offset == 0x10) {
+	switch (large_offset) {
+	case 0x10:
+		/*DWC*/
 		hdmitx_addr = HDMITX_SEC_REG_ADDR(small_offset);
 		writeb(data & 0xff, TO_PMAP_ADDR(hdmitx_addr));
-	} else if ((large_offset == 0x11) || (large_offset == 0x01))
+		break;
+	case 0x11:
+	case 0x01:
+		/*SECURITY DWC/TOP*/
 		hdmitx_wr_reg_normal(addr, data);
-	else {
-		hdmitx_addr = HDMITX_REG_ADDR(small_offset);
-		writel(data, TO_PMAP_ADDR(hdmitx_addr));
+		break;
+	case 00:
+	default:
+		/*TOP*/
+		if ((small_offset >= 0x2000) && (small_offset <= 0x365E)) {
+			hdmitx_addr = HDMITX_REG_ADDR(small_offset);
+			writeb(data & 0xff, TO_PMAP_ADDR(hdmitx_addr));
+		} else {
+			hdmitx_addr = HDMITX_REG_ADDR((small_offset << 2));
+			writel(data, TO_PMAP_ADDR(hdmitx_addr));
+		}
 	}
 }
 

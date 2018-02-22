@@ -65,11 +65,11 @@ void set_g12a_hpll_clk_out(unsigned int frac_rate, unsigned int clk)
 {
 	switch (clk) {
 	case 5940000:
-		hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x3b0004f7);
+		hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x3b3a04f7);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL1, 0x00010000);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);
-		hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x0a691c00);
-		hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x33771290);
+		hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x2a29dc00);
+		hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x65771290);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x39270000);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x50540000);
 		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL0));
@@ -116,7 +116,7 @@ void set_g12a_hpll_clk_out(unsigned int frac_rate, unsigned int clk)
 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL0);
 		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL0));
 		break;
-	case 4320000:
+	case 4324320:
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x3b0004b4);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL1, 0x00000000);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);

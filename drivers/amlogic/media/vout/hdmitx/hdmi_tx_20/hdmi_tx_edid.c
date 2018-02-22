@@ -2215,32 +2215,6 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 	return valid;
 }
 
-/*
- * For some TVs, their EDID declare support 2160p60hz(>3.4Gbps) on SVDs,
- * but no HF_IEEEOUT, so consider they don't support that format.
- */
-static enum hdmi_vic hdmitx_edid_recheck_format(struct hdmitx_dev *hdev,
-	enum hdmi_vic vic)
-{
-	struct rx_cap *pRXCap = &(hdev->RXCap);
-
-	switch (vic) {
-	case HDMI_3840x2160p50_16x9:
-	case HDMI_3840x2160p60_16x9:
-	case HDMI_4096x2160p50_256x135:
-	case HDMI_4096x2160p60_256x135:
-	case HDMI_3840x2160p50_64x27:
-	case HDMI_3840x2160p60_64x27:
-		break;
-	default:
-		return vic;
-	}
-
-	if (!pRXCap->HF_IEEEOUI || ((pRXCap->Max_TMDS_Clock2 * 5) < 340))
-		vic = HDMI_Unknown;
-	return vic;
-}
-
 /* force_flag: 0 means check with RX's edid */
 /* 1 means no check wich RX's edid */
 enum hdmi_vic hdmitx_edid_get_VIC(struct hdmitx_dev *hdev,
@@ -2260,7 +2234,6 @@ enum hdmi_vic hdmitx_edid_get_VIC(struct hdmitx_dev *hdev,
 				vic = HDMI_Unknown;
 		}
 	}
-	vic = hdmitx_edid_recheck_format(hdev, vic);
 	return vic;
 }
 

@@ -803,6 +803,40 @@
 		};
 	};
 
+	hdmitx_hpd: hdmitx_hpd {
+		mux {
+			groups = "hdmitx_hpd_in";
+			function = "hdmitx";
+			bias-disable;
+		};
+	};
+
+	hdmitx_hpd_gpio: hdmitx_hpd_gpio {
+		mux {
+			groups = "GPIOH_1";
+			function = "gpio_periphs";
+			bias-disable;
+		};
+	};
+
+	hdmitx_ddc: hdmitx_ddc {
+		mux {
+			groups = "hdmitx_sda",
+				"hdmitx_sck";
+			function = "hdmitx";
+			bias-disable;
+		};
+	};
+
+	c_i2c_master: c_i2c {
+		mux {
+			groups = "i2c0_sda_c",
+			"i2c0_sck_c";
+			function = "i2c3";
+			bias-disable;
+		};
+	};
+
 	wifi_32k_pins:wifi_32k_pins {
 		mux {
 			groups = "pwm_e";
