@@ -499,11 +499,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	/* devp->stamp_valid = false; */
 	devp->stamp = 0;
 	devp->cycle = 0;
-	devp->cycle_tag = 0;
 	devp->hcnt64 = 0;
-	devp->hcnt64_tag = 0;
-	devp->vs_cnt_valid = 0;
-	devp->vs_cnt_ignore = 0;
 
 	memset(&devp->parm.histgram[0], 0, sizeof(unsigned short) * 64);
 
@@ -1253,16 +1249,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	devp->hcnt64 = vdin_get_meas_hcnt64(offset);
 
-	/* ignore invalid vs base on the continuous fields
-	 * different cnt to void screen flicker
-	 */
-	if (vdin_check_vs(devp) &&
-		(!(isr_flag & VDIN_BYPASS_VSYNC_CHECK))
-		&& (!(devp->flags & VDIN_FLAG_SNOW_FLAG))) {
-		devp->vdin_irq_flag = 5;
-		vdin_drop_cnt++;
-		goto irq_handled;
-	}
 	sm_ops = devp->frontend->sm_ops;
 
 	last_field_type = devp->curr_field_type;
@@ -2435,7 +2421,6 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		} else {
 			clk_set_parent(vdevp->msr_clk, clk);
 			vdevp->msr_clk_val = clk_get_rate(vdevp->msr_clk);
-			clk_put(vdevp->msr_clk);
 			pr_info("%s: vdin msr clock is %d MHZ\n", __func__,
 					vdevp->msr_clk_val/1000000);
 		}
@@ -2462,7 +2447,6 @@ static int vdin_drv_probe(struct platform_device *pdev)
 			if (!IS_ERR(vdevp->msr_clk)) {
 				vdevp->msr_clk_val =
 						clk_get_rate(vdevp->msr_clk);
-				clk_put(vdevp->msr_clk);
 				pr_info("%s: vdin[%d] clock is %d MHZ\n",
 						__func__, vdevp->index,
 						vdevp->msr_clk_val/1000000);

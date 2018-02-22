@@ -145,16 +145,6 @@ static unsigned int vpu_reg_27af = 0x3;
 #define VDIN_PIXELCLK_4K_30HZ		248832000
 #define VDIN_PIXELCLK_4K_60HZ		497664000
 
-
-/* check hcnt/vcnt after N*vs. */
-#define VDIN_WAIT_VALID_VS      2
-/* ignore n*vs which have wrong data. */
-#define VDIN_IGNORE_VS_CNT      20
-/* the diff value between normal/bad data */
-#define VDIN_MEAS_HSCNT_DIFF    0x50
-/* the diff value between normal/bad data */
-#define VDIN_MEAS_VSCNT_DIFF    0x50
-
 #if 0/*ndef VDIN_DEBUG*/
 #undef pr_info
 #define pr_info(fmt, ...)
@@ -2743,40 +2733,6 @@ bool vdin_write_done_check(unsigned int offset, struct vdin_dev_s *devp)
 }
 
 #endif
-/* check invalid vs to avoid screen flicker */
-bool vdin_check_vs(struct vdin_dev_s *devp)
-{
-	bool ret = false;
-	unsigned int dh = 0, dv = 0;
-
-	/* check vs after n*vs avoid unstable signal after TVIN_IOC_START_DEC*/
-	if (devp->vs_cnt_valid++ >= VDIN_WAIT_VALID_VS)
-		devp->vs_cnt_valid = VDIN_WAIT_VALID_VS;
-
-	/* check hcnt64/cycle to find format changed */
-	if (devp->hcnt64 < devp->hcnt64_tag)
-		dh = devp->hcnt64_tag - devp->hcnt64;
-	else
-		dh = devp->hcnt64 - devp->hcnt64_tag;
-	if (devp->cycle < devp->cycle_tag)
-		dv = devp->cycle_tag - devp->cycle;
-	else
-		dv = devp->cycle - devp->cycle_tag;
-	if ((dh > VDIN_MEAS_HSCNT_DIFF) || (dv > VDIN_MEAS_VSCNT_DIFF)) {
-		devp->hcnt64_tag = devp->hcnt64;
-		devp->cycle_tag  = devp->cycle;
-		if (devp->vs_cnt_valid >= VDIN_WAIT_VALID_VS)
-			devp->vs_cnt_ignore = VDIN_IGNORE_VS_CNT;
-	}
-
-	/* Do not send data of format changed to video buffer */
-	if (devp->vs_cnt_ignore) {
-		devp->vs_cnt_ignore--;
-		ret = true;
-	}
-
-	return ret;
-}
 /*
 cycle = delta_stamp = ((1/fps)/(1/msr_clk))*(vsync_span+1)
 msr_clk/fps unit is HZ

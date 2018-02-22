@@ -1849,14 +1849,9 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 	frame_count = 0;
 	disp_frame_count = 0;
 	cur_post_ready_di_buf = NULL;
-	for (i = 0; i < MAX_IN_BUF_NUM; i++) {
-		if (vframe_in[i]) {
-			vf_put(vframe_in[i], VFM_NAME);
-			vf_notify_provider(
-				VFM_NAME, VFRAME_EVENT_RECEIVER_PUT, NULL);
-			vframe_in[i] = NULL;
-		}
-	}
+	/* decoder'buffer had been releae no need put */
+	for (i = 0; i < MAX_IN_BUF_NUM; i++)
+		vframe_in[i] = NULL;
 	memset(&di_pre_stru, 0, sizeof(di_pre_stru));
 	if (nr10bit_support) {
 		if (full_422_pack)
