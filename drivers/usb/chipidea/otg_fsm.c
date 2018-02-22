@@ -464,27 +464,19 @@ static void ci_otg_drv_vbus(struct otg_fsm *fsm, int on)
 		/* Enable power */
 		hw_write(ci, OP_PORTSC, PORTSC_W1C_BITS | PORTSC_PP,
 							PORTSC_PP);
-		if (ci->platdata->reg_vbus) {
-			ret = regulator_enable(ci->platdata->reg_vbus);
-			if (ret) {
-				dev_err(ci->dev,
-				"Failed to enable vbus regulator, ret=%d\n",
-				ret);
-				return;
-			}
-		}
-
 		if (ci->platdata->flags & CI_HDRC_PHY_VBUS_CONTROL)
 			usb_phy_vbus_on(ci->usb_phy);
 
+		ret = hw_vbus_enable(ci, 1);
+		if (ret)
+			return;
 		/* Disable data pulse irq */
 		hw_write_otgsc(ci, OTGSC_DPIE, 0);
 
 		fsm->a_srp_det = 0;
 		fsm->power_up = 0;
 	} else {
-		if (ci->platdata->reg_vbus)
-			regulator_disable(ci->platdata->reg_vbus);
+		hw_vbus_enable(ci, 0);
 
 		if (ci->platdata->flags & CI_HDRC_PHY_VBUS_CONTROL)
 			usb_phy_vbus_off(ci->usb_phy);
