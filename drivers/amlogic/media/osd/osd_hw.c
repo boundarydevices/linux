@@ -84,7 +84,9 @@ static bool vsync_hit;
 static bool osd_update_window_axis;
 static int osd_afbc_dec_enable;
 //static u32 extern_canvas[2] = {EXTERN1_CANVAS, EXTERN2_CANVAS};
+#if 0
 static int ext_canvas_id;
+#endif
 static int osd_extra_idx[3][2];
 
 static void osd_clone_pan(u32 index, u32 yoffset, int debug_flag);
@@ -2808,10 +2810,12 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 			spin_lock_irqsave(&osd_lock, lock_flags);
 			use_ext = true;
 			if (!fence_map->afbc_en) {
+#if 0
 				osd_hw.fb_gem[index].canvas_idx =
 					osd_extra_idx[index][ext_canvas_id];
 				ext_canvas_id ^= 1;
 				osd_hw.osd_afbcd[index].enable = DISABLE;
+#endif
 			} else
 				osd_hw.osd_afbcd[index].enable = ENABLE;
 
@@ -3237,9 +3241,11 @@ static void osd_pan_display_fence(struct osd_fence_map_s *fence_map)
 			spin_lock_irqsave(&osd_lock, lock_flags);
 			use_ext = true;
 			if (!fence_map->afbc_en) {
+#if 0
 				osd_hw.fb_gem[index].canvas_idx =
 					osd_extra_idx[index][ext_canvas_id];
 				ext_canvas_id ^= 1;
+#endif
 				osd_hw.osd_afbcd[index].enable = DISABLE;
 			} else
 				osd_hw.osd_afbcd[index].enable = ENABLE;
@@ -6573,12 +6579,15 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 		osd_hw.vinfo_width = vinfo->width;
 		osd_hw.vinfo_height = vinfo->height;
 	}
+
 	if (osd_hw.osd_meson_dev.osd_ver <= OSD_NORMAL) {
 		if (plane_map->phy_addr && plane_map->src_w
 				&& plane_map->src_h && index == OSD1) {
+#if 0
 			osd_hw.fb_gem[index].canvas_idx =
 				osd_extra_idx[index][ext_canvas_id];
 			ext_canvas_id ^= 1;
+#endif
 			color = convert_panel_format(plane_map->format);
 			if (color) {
 				osd_hw.color_info[index] = color;
@@ -6633,9 +6642,11 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 	} else {
 		if (plane_map->phy_addr && plane_map->src_w
 				&& plane_map->src_h) {
+#if 0
 			osd_hw.fb_gem[index].canvas_idx =
 				osd_extra_idx[index][ext_canvas_id];
 			ext_canvas_id ^= 1;
+#endif
 			color = convert_panel_format(plane_map->format);
 			if (color) {
 				osd_hw.color_info[index] = color;
