@@ -517,6 +517,51 @@ int hw_device_reset(struct ci_hdrc *ci)
 	return 0;
 }
 
+int hw_vbus_enable(struct ci_hdrc *ci, int enable)
+{
+	struct regulator *reg_vbus = ci->platdata->reg_vbus;
+	int ret;
+	int retry = 0;
+
+	if (PTR_ERR(reg_vbus) == -EPROBE_DEFER) {
+		if (!enable)
+			return 0;
+
+		while (1) {
+			reg_vbus = devm_regulator_get_optional(ci->platdata->dev, "vbus");
+			if (IS_ERR(reg_vbus)) {
+				if (PTR_ERR(reg_vbus) == -EPROBE_DEFER) {
+					if (retry == 20) {
+						dev_warn(ci->platdata->dev, "regulator EPROBE_DEFER\n");
+						return -EPROBE_DEFER;
+					}
+					msleep(500);
+					retry++;
+					continue;
+				}
+				dev_err(ci->platdata->dev, "Getting regulator error: %ld\n",
+							PTR_ERR(reg_vbus));
+				ci->platdata->reg_vbus = NULL;
+				return PTR_ERR(reg_vbus);
+			}
+			break;
+		}
+		ci->platdata->reg_vbus = reg_vbus;
+	}
+	if (reg_vbus) {
+		if (enable)
+			ret = regulator_enable(reg_vbus);
+		else
+			ret = regulator_disable(reg_vbus);
+		if (ret) {
+			dev_err(ci->dev, "Failed to %s vbus regulator, ret=%d\n",
+				enable ? "enable" : "disable", ret);
+			return ret;
+		}
+	}
+	return 0;
+}
+
 static irqreturn_t ci_irq_handler(int irq, void *data)
 {
 	struct ci_hdrc *ci = data;
@@ -688,7 +733,6 @@ static int ci_get_platdata(struct device *dev,
 		/* Get the vbus regulator */
 		platdata->reg_vbus = devm_regulator_get_optional(dev, "vbus");
 		if (PTR_ERR(platdata->reg_vbus) == -EPROBE_DEFER) {
-			return -EPROBE_DEFER;
 		} else if (PTR_ERR(platdata->reg_vbus) == -ENODEV) {
 			/* no vbus regulator is needed */
 			platdata->reg_vbus = NULL;
@@ -860,6 +904,7 @@ struct platform_device *ci_hdrc_add_device(struct device *dev,
 	int id, ret;
 	u32 start;
 
+	platdata->dev = dev;
 	ret = ci_get_platdata(dev, platdata);
 	if (ret)
 		return ERR_PTR(ret);

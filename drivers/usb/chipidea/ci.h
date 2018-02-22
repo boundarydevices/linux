@@ -500,6 +500,7 @@ u8 hw_port_test_get(struct ci_hdrc *ci);
 
 void hw_phymode_configure(struct ci_hdrc *ci);
 
+int hw_vbus_enable(struct ci_hdrc *ci, int enable);
 void ci_platform_configure(struct ci_hdrc *ci);
 
 void dbg_create_files(struct ci_hdrc *ci);

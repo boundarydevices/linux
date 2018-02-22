@@ -91,6 +91,7 @@ struct ci_hdrc_platform_data {
 	struct pinctrl_state *pins_default;
 	struct pinctrl_state *pins_host;
 	struct pinctrl_state *pins_device;
+	struct device *dev;
 
 	/* platform-specific hooks */
 	int (*hub_control)(struct ci_hdrc *ci, u16 typeReq, u16 wValue,
