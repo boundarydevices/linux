@@ -11,9 +11,12 @@
  */
 
 #include <linux/delay.h>
+#include <linux/gpio.h>
+#include <linux/basic_mmio_gpio.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
+#include <linux/irqdomain.h>
 #include <linux/genalloc.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
@@ -776,6 +779,10 @@ static void imx6_qspi_restore(struct qspi_regs *pregs, int reg_num)
 		writel_relaxed(pregs[i].value, qspi_base + pregs[i].offset);
 }
 
+extern struct irq_domain *gpc_domain;
+#define GPIO_IMR 0x14
+#define GPIO_ISR 0x18
+
 static int imx6q_pm_enter(suspend_state_t state)
 {
 	unsigned int console_saved_reg[10] = {0};
@@ -890,19 +897,42 @@ static int imx6q_pm_enter(suspend_state_t state)
 	}
 
 #ifdef CONFIG_SUSPEND
-	for (i = 0; i < 4; i++) {
-		imr[i] = readl_relaxed(gpc_mem_base +
+	if (gpc_domain) {
+		for (i = 0; i < 4; i++) {
+			imr[i] = readl_relaxed(gpc_mem_base +
 					IMX6_GPC_IMR1_OFFSET + i * 4);
-		isr[i] = readl_relaxed(gpc_mem_base +
+			isr[i] = readl_relaxed(gpc_mem_base +
 				IMX6_GPC_ISR1_OFFSET + i * 4);
-		irq_num = (i + 1)*32;
-		if ((~imr[i]) & isr[i]) {
-			gpc_isr = (~imr[i]) & isr[i];
+			irq_num = i * 32;
+			gpc_isr = ~imr[i] & isr[i];
 			while (gpc_isr) {
-			if (gpc_isr & 0x1)
-				log_wakeup_reason(irq_num);
-				irq_num++;
-				gpc_isr /= 2;
+				int irq;
+				irq_hw_number_t hwirq;
+				int j = __ffs(gpc_isr);
+
+				gpc_isr &= ~(1 << j);
+				hwirq = irq_num + j;
+				if ((hwirq >= (98 - 32)) && (hwirq <= (111 - 32))) {
+					/* GPIO interrupts */
+					unsigned gpio_num = ((hwirq - 66) / 2) * 32;
+					struct gpio_desc *gd = gpio_to_desc(gpio_num);
+					struct gpio_chip *gc = gpiod_to_chip(gd);
+					struct bgpio_chip *bgc = to_bgpio_chip(gc);
+					void __iomem *gpio_base = bgc->reg_set;
+					u32 irq_stat;
+
+					irq = gpiod_to_irq(gd);
+					irq_stat = readl(gpio_base + GPIO_ISR) & readl(gpio_base + GPIO_IMR);
+					while (irq_stat) {
+						j = __ffs(irq_stat);
+						irq_stat &= ~(1 << j);
+						log_wakeup_reason(irq + j);
+					}
+
+				} else {
+					irq = irq_linear_revmap(gpc_domain, hwirq);
+					log_wakeup_reason(irq);
+				}
 			}
 		}
 	}

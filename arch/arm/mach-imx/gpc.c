@@ -475,6 +475,8 @@ static int imx_pcie_regulator_notify(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+struct irq_domain *gpc_domain;
+
 static int __init imx_gpc_init(struct device_node *node,
 			       struct device_node *parent)
 {
@@ -506,6 +508,7 @@ static int __init imx_gpc_init(struct device_node *node,
 		iounmap(gpc_base);
 		return -ENOMEM;
 	}
+	gpc_domain = domain;
 
 	/* Initially mask all interrupts */
 	for (i = 0; i < IMR_NUM; i++)
