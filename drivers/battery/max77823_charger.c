@@ -447,19 +447,12 @@ static void max77823_set_buck(struct max77823_charger_data *charger,
 	pr_info("%s: CHG_CNFG_00(0x%02x)\n", __func__, ret);
 }
 
-static void max77823_chg_cable_work(struct work_struct *work)
+static void max77823_set_charging_current_max(struct max77823_charger_data *charger, unsigned max_current)
 {
-	struct max77823_charger_data *charger =
-	container_of(work, struct max77823_charger_data,chg_cable_work.work);
-	int quotient, remainder;
-	int ret;
+	int quotient, remainder, ret;
 
-	pr_debug("[%s]VALUE(%d)DATA(0x%x)\n",
-		__func__, charger->charging_current_max,
-		max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_09));
-
-	quotient = charger->charging_current_max / 100;
-	remainder = charger->charging_current_max % 100;
+	quotient = max_current / 100;
+	remainder = max_current % 100;
 
 	ret = quotient * 3;
 	if (remainder >= 67)
@@ -469,16 +462,23 @@ static void max77823_chg_cable_work(struct work_struct *work)
 
 	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_09, ret);
 
-	pr_info("[%s]VALUE(%d)DATA(0x%x)\n",
-		__func__, charger->charging_current_max,
-		ret);
+	pr_debug("[%s]VALUE(%d)DATA(0x%x)\n", __func__, max_current,
+		max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_09));
+}
+
+static void max77823_chg_cable_work(struct work_struct *work)
+{
+	struct max77823_charger_data *charger =
+	container_of(work, struct max77823_charger_data,chg_cable_work.work);
+
+	max77823_set_charging_current_max(charger, charger->charging_current_max);
 }
 
 static void max77823_set_input_current(struct max77823_charger_data *charger,
 				       int input_current)
 {
 	u8 reg_data = 0;
-	int quotient, remainder;
+	int quotient;
 
 	/* disable only buck because power onoff test issue */
 	if (input_current <= 0) {
@@ -505,21 +505,7 @@ static void max77823_set_input_current(struct max77823_charger_data *charger,
 	} else {
 		/* HV TA, etc */
 		cancel_delayed_work_sync(&charger->chg_cable_work);
-
-		quotient = input_current / 100;
-		remainder = input_current % 100;
-
-		if (remainder >= 67)
-			reg_data |= (quotient * 3) + 2;
-		else if (remainder >= 33)
-			reg_data |= (quotient * 3) + 1;
-		else if (remainder < 33)
-			reg_data |= quotient * 3;
-
-		max77823_write_reg(charger->i2c,
-				   MAX77823_CHG_CNFG_09, reg_data);
-
-		pr_info("[3][HV TA, etc][0x%x]\n", reg_data);
+		max77823_set_charging_current_max(charger, input_current);
 	}
 }
 
@@ -1786,22 +1772,22 @@ static int max77823_charger_resume(struct device *dev)
 
 static void max77823_charger_shutdown(struct device *dev)
 {
-/*  No need to turn off charging when device is going to poweroff */
-#if 0
-	struct max77823_charger_data *charger =
-				dev_get_drvdata(dev);
+	struct max77823_charger_data *charger = dev_get_drvdata(dev);
+	struct sec_charging_current *ci = get_charging_info(charger, POWER_SUPPLY_TYPE_MAINS);
 
-	pr_info("%s: MAX77823 Charger driver shutdown\n", __func__);
+	pr_debug("%s: MAX77823 Charger driver shutdown\n", __func__);
 	if (!charger->i2c) {
 		pr_err("%s: no max77823 i2c client\n", __func__);
 		return;
 	}
-	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_00, 0x04);
-	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_09, 0x0f);
-	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_10, 0x19);
+	max77823_set_charging_current_max(charger, ci->input_current_limit);
+	/* Protection allow 0xb9 write */
+	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_06, 0x0c);
+	max77823_set_charge_current(charger, ci->fast_charging_current);
+	/* enable charging from chgin(otg)/wcin, Vchrgin_reg = 4.3V */
 	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_12, 0x67);
-#endif
-	pr_info("func:%s \n", __func__);
+	/* enable charging mode */
+	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_00, 0x5);
 }
 
 #ifdef CONFIG_OF
