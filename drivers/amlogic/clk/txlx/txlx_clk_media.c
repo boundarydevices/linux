@@ -651,4 +651,6 @@ void meson_txlx_media_init(void)
 
 	clks[CLKID_IEC958_MUX] = clk_register(NULL, &cts_iec958_spdif.hw);
 	WARN_ON(IS_ERR(clks[CLKID_IEC958_MUX]));
+	/* todo: set default div4 parent for tmp clkb */
+	clk_set_parent(clks[CLKID_VPU_CLKB_TMP_COMP], clks[CLKID_FCLK_DIV4]);
 }

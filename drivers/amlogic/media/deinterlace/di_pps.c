@@ -415,8 +415,6 @@ void di_pps_config(unsigned char path, int src_w, int src_h,
 		vsc_en = 1;
 	if (src_w != dst_w)
 		hsc_en = 1;
-	pr_info("[pps] %s input %d %d output %d %d.\n",
-		path?"pre":"post", src_w, src_h, dst_w, dst_h);
 	/* config hdr size */
 	Wr_reg_bits(DI_HDR_IN_HSIZE, dst_w, 0, 13);
 	Wr_reg_bits(DI_HDR_IN_VSIZE, dst_h, 0, 13);
@@ -533,6 +531,9 @@ void di_pps_config(unsigned char path, int src_w, int src_h,
 		(0 << 4)          |      // vert nonlinear 4region enable
 		(vert_bank_length << 0)  // vert scaler bank length
 	);
+
+	pr_info("[pps] %s input %d %d output %d %d.\n",
+		path?"pre":"post", src_w, src_h, dst_w, dst_h);
 }
 /*
  * 0x374e ~ 0x376d, 20 regs

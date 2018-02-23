@@ -1512,9 +1512,10 @@ static unsigned char is_input2pre(void)
 #ifdef DI_USE_FIXED_CANVAS_IDX
 static int di_post_idx[2][6];
 static int di_pre_idx[2][10];
-static int di_wr_idx;
 #ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 static unsigned int di_inp_idx[3];
+#else
+static int di_wr_idx;
 #endif
 static int di_get_canvas(void)
 {
@@ -1570,6 +1571,8 @@ static int di_get_canvas(void)
 #endif
 	if (de_devp->post_wr_support == 0)
 		return 0;
+
+#ifndef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 	if (canvas_pool_alloc_canvas_table("di_wr",
 			&di_wr_idx, 1, CANVAS_MAP_TYPE_1)) {
 		pr_err("%s allocat di write back canvas error.\n",
@@ -1577,6 +1580,7 @@ static int di_get_canvas(void)
 			return 1;
 	}
 	pr_info("DI: support post write back %u.\n", di_wr_idx);
+#endif
 	return 0;
 }
 
@@ -1739,8 +1743,10 @@ static unsigned int di_cma_alloc(struct di_dev_s *devp)
 						buf_p->index, buf_p->pages);
 			}
 		} else {
-			pr_err("DI buf[%d] page:0x%p cma alloced skip\n",
+			if (cma_print) {
+				pr_err("DI buf[%d] page:0x%p cma alloced skip\n",
 					buf_p->index, buf_p->pages);
+			}
 		}
 		buf_p->nr_adr = page_to_phys(buf_p->pages);
 		if (cma_print)
@@ -1945,8 +1951,6 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 			di_buf_size = nr_size + mtn_size + count_size;
 		}
 		di_buf_size = roundup(di_buf_size, PAGE_SIZE);
-		pr_info("[DI] %s buffer size %u.\n", __func__,
-			di_buf_size);
 		de_devp->buf_num_avail = de_devp->mem_size / di_buf_size;
 
 		if (post_wr_en && post_wr_support) {
@@ -5765,8 +5769,11 @@ static void di_pre_size_change(unsigned short width,
 		pps_h = di_pre_stru.cur_height>>1;
 		di_pps_config(1, pps_w, pps_h, pps_dstw, (pps_dsth>>1));
 	}
-	di_interrupt_ctrl(vf_type, det3d_en?1:0,
-		de_devp->nrds_enable, post_wr_en, mcpre_en?1:0);
+	di_interrupt_ctrl(di_pre_stru.madi_enable,
+		det3d_en?1:0,
+		de_devp->nrds_enable,
+		post_wr_en,
+		di_pre_stru.mcdi_enable);
 }
 
 static bool need_bypass(struct vframe_s *vf)
@@ -5844,28 +5851,18 @@ static void di_reg_process_irq(void)
 		switch_vpu_clk_gate_vmod(VPU_VPU_CLKB, VPU_CLK_GATE_ON);
 		if (post_wr_en && post_wr_support)
 			diwr_set_power_control(1);
+		/* up for vpu clkb rate change */
+		up(&di_sema);
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
 			if (!use_2_interlace_buff) {
-				if (is_meson_txlx_cpu()) {
-					#ifdef CLK_TREE_SUPPORT
-					/* nr only clkb upto 500M*/
-					clk_set_rate(de_devp->vpu_clkb,
-						de_devp->clkb_min_rate);
-					#endif
-				}
 				di_top_gate_control(true, true);
 				di_post_gate_control(true);
 				/* freerun for reg configuration */
 				enable_di_post_mif(GATE_AUTO);
 			} else {
-				if (is_meson_txlx_cpu()) {
-					#ifdef CLK_TREE_SUPPORT
-					clk_set_rate(de_devp->vpu_clkb,
-						de_devp->clkb_max_rate);
-					#endif
-				}
 				di_top_gate_control(true, false);
 			}
+			de_devp->flags |= DI_VPU_CLKB_SET;
 			enable_di_pre_mif(true, mcpre_en);
 			di_pre_gate_control(true, mcpre_en);
 		} else {
@@ -6100,6 +6097,11 @@ static int di_task_handle(void *data)
 				di_pre_stru.disable_req_flag) &&
 				(di_pre_stru.pre_de_busy == 0)) {
 				di_unreg_process();
+				/* set min rate for power saving */
+				if (de_devp->vpu_clkb) {
+					clk_set_rate(de_devp->vpu_clkb,
+						de_devp->clkb_min_rate);
+				}
 			}
 			if (di_pre_stru.reg_req_flag_irq ||
 				di_pre_stru.reg_req_flag) {
@@ -6125,6 +6127,28 @@ static int di_task_handle(void *data)
 			}
 			mutex_unlock(&de_devp->cma_mutex);
 			#endif
+		}
+		if (de_devp->flags & DI_VPU_CLKB_SET) {
+			if (is_meson_txlx_cpu()) {
+				if (!use_2_interlace_buff) {
+					#ifdef CLK_TREE_SUPPORT
+					clk_set_rate(de_devp->vpu_clkb,
+						de_devp->clkb_min_rate);
+					#endif
+				} else {
+					#ifdef CLK_TREE_SUPPORT
+					clk_set_rate(de_devp->vpu_clkb,
+						de_devp->clkb_max_rate);
+					#endif
+				}
+			}
+			if (is_meson_g12a_cpu()) {
+				#ifdef CLK_TREE_SUPPORT
+				clk_set_rate(de_devp->vpu_clkb,
+						de_devp->clkb_max_rate);
+				#endif
+			}
+			de_devp->flags &= (~DI_VPU_CLKB_SET);
 		}
 	}
 
@@ -6559,7 +6583,7 @@ static bool show_nrwr;
 static vframe_t *di_vf_get(void *arg)
 {
 	vframe_t *vframe_ret = NULL;
-	struct di_buf_s *di_buf = NULL;
+	struct di_buf_s *di_buf = NULL, *nr_buf = NULL;
 	ulong irq_flag2 = 0;
 
 	if (di_pre_stru.bypass_flag)
@@ -6596,11 +6620,10 @@ get_vframe:
 
 		if (di_buf) {
 			vframe_ret = di_buf->vframe;
-
+			nr_buf = di_buf->di_buf_dup_p[1];
 			if ((post_wr_en && post_wr_support) &&
 			(di_buf->process_fun_index != PROCESS_FUN_NULL)) {
-				#if 0
-				CONFIG_MULTI_DEC
+				#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 				vframe_ret->canvas0_config[0].phy_addr =
 					di_buf->nr_adr;
 				vframe_ret->canvas0_config[0].width =
@@ -6611,13 +6634,20 @@ get_vframe:
 				vframe_ret->plane_num = 1;
 				vframe_ret->canvas0Addr = -1;
 				vframe_ret->canvas1Addr = -1;
+				if (show_nrwr) {
+					vframe_ret->canvas0_config[0].phy_addr =
+						nr_buf->nr_adr;
+					vframe_ret->canvas0_config[0].width =
+						nr_buf->canvas_width[NR_CANVAS];
+					vframe_ret->canvas0_config[0].height =
+						nr_buf->canvas_height;
+				}
 				#else
 				config_canvas_idx(di_buf, di_wr_idx, -1);
 				vframe_ret->canvas0Addr = di_buf->nr_canvas_idx;
 				vframe_ret->canvas1Addr = di_buf->nr_canvas_idx;
 				if (show_nrwr) {
-					config_canvas_idx(
-						di_buf->di_buf_dup_p[1],
+					config_canvas_idx(nr_buf,
 						di_wr_idx, -1);
 					vframe_ret->canvas0Addr = di_wr_idx;
 					vframe_ret->canvas1Addr = di_wr_idx;
@@ -7131,8 +7161,7 @@ static void di_get_vpu_clkb(struct device *dev, struct di_dev_s *pdev)
 	pdev->vpu_clkb = clk_get(dev, "vpu_clkb_composite");
 	if (IS_ERR(pdev->vpu_clkb))
 		pr_err("%s: get vpu clkb gate error.\n", __func__);
-	clk_set_rate(pdev->vpu_clkb, pdev->clkb_max_rate);
-	clk_set_rate(pdev->vpu_clkb, pdev->clkb_max_rate);
+	clk_set_rate(pdev->vpu_clkb, pdev->clkb_min_rate);
 	#endif
 }
 

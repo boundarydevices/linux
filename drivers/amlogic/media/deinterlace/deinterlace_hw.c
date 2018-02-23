@@ -610,25 +610,21 @@ static void set_di_nrwr_mif(struct DI_SIM_MIF_s *nrwr_mif,
 		RDMA_WR_BITS(DI_NRWR_CTRL, 0x3, 22, 2);
 }
 
-void di_interrupt_ctrl(unsigned char vf_type,
+void di_interrupt_ctrl(unsigned char ma_en,
 	unsigned char det3d_en, unsigned char nrds_en,
 	unsigned char post_wr, unsigned char mc_en)
 {
 
-	if (vf_type & VIDTYPE_TYPEMASK) {
-		RDMA_WR_BITS(DI_INTR_CTRL, 0, 17, 1);
-		RDMA_WR_BITS(DI_INTR_CTRL, 1, 20, 1);
-		RDMA_WR_BITS(DI_INTR_CTRL, mc_en?0:7, 21, 3);
-	} else {
-		RDMA_WR_BITS(DI_INTR_CTRL, 1, 17, 1);
-		RDMA_WR_BITS(DI_INTR_CTRL, 1, 20, 1);
-		/* mask mc int */
-		RDMA_WR_BITS(DI_INTR_CTRL, 7, 21, 3);
-	}
+	RDMA_WR_BITS(DI_INTR_CTRL, ma_en?0:1, 17, 1);
+	RDMA_WR_BITS(DI_INTR_CTRL, ma_en?0:1, 20, 1);
+	RDMA_WR_BITS(DI_INTR_CTRL, mc_en?0:3, 22, 2);
 	/* enable nr wr int */
 	RDMA_WR_BITS(DI_INTR_CTRL, 0, 16, 1);
-	RDMA_WR_BITS(DI_INTR_CTRL, 1, 19, 1);
 	RDMA_WR_BITS(DI_INTR_CTRL, post_wr?0:1, 18, 1);
+	/* mask me interrupt hit abnormal */
+	RDMA_WR_BITS(DI_INTR_CTRL, 1, 21, 1);
+	/* mask hist interrupt */
+	RDMA_WR_BITS(DI_INTR_CTRL, 1, 19, 1);
 	RDMA_WR_BITS(DI_INTR_CTRL, det3d_en?0:1, 24, 1);
 	RDMA_WR_BITS(DI_INTR_CTRL, nrds_en?0:1, 25, 1);
 	/* clean all pending interrupt bits */
@@ -678,7 +674,6 @@ void enable_di_pre_aml(
 		chan2_disable = true;
 	if ((mem_hsize != nrwr_hsize) || (mem_vsize != nrwr_vsize))
 		mem_bypass = true;
-
 	/*
 	 * enable&disable contwr txt
 	 */
@@ -713,6 +708,7 @@ void enable_di_pre_aml(
 				(0 << 12) | /* pre viu link */
 			(pre_vdin_link << 13) |
 			(pre_vdin_link << 14) |/* pre go line link */
+				(1 << 21) |/* invert NR field num */
 				(1 << 22) |/* MTN after NR. */
 			(0 << 25) |/* contrd en */
 		((mem_bypass ? 1 : 0) << 28) |

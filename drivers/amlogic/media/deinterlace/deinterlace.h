@@ -192,6 +192,7 @@ extern bool is_vsync_rdma_enable(void);
 #define DI_MAP_FLAG	0x1
 #define DI_SUSPEND_FLAG 0x2
 #define DI_LOAD_REG_FLAG 0x4
+#define DI_VPU_CLKB_SET 0x8
 struct di_dev_s {
 	dev_t			   devt;
 	struct cdev		   cdev; /* The cdev structure */

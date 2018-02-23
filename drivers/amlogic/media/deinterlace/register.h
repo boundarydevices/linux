@@ -1294,7 +1294,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
  */
 /* // NR2 REG DEFINE END //// */
 /* // DET 3D REG DEFINE BEGIN //// */
-/* //  8'h80~8'h8f */
+/* for gxlx */
 #define DI_EI_DRT_CTRL_GXLX                  ((0x2028))
 
 #define DI_EI_DRT_PIXTH_GXLX                 ((0x2029))
