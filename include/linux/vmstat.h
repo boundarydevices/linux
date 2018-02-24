@@ -345,13 +345,13 @@ static inline void __mod_zone_freepage_state(struct zone *zone, int nr_pages,
 					     int migratetype)
 {
 	__mod_zone_page_state(zone, NR_FREE_PAGES, nr_pages);
-#ifndef CONFIG_AMLOGIC_MODIFY
+#ifndef CONFIG_AMLOGIC_MEMORY_EXTEND
 	if (is_migrate_cma(migratetype))
 		__mod_zone_page_state(zone, NR_FREE_CMA_PAGES, nr_pages);
-#endif /* !CONFIG_AMLOGIC_MODIFY */
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 }
 
-#ifdef CONFIG_AMLOGIC_MODIFY
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 /* statistics free pages according migrate type */
 static inline void __mod_zone_migrate_state(struct zone *zone, int nr_pages,
 					    int migratetype)
@@ -362,7 +362,7 @@ static inline void __mod_zone_migrate_state(struct zone *zone, int nr_pages,
 	}
 	zone_page_state_add(nr_pages, zone, NR_FREE_UNMOVABLE + migratetype);
 }
-#endif	/* CONFIG_AMLOGIC_MODIFY */
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 
 extern const char * const vmstat_text[];
 

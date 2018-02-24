@@ -722,11 +722,11 @@ struct block_device *bdget(dev_t dev)
 		inode->i_rdev = dev;
 		inode->i_bdev = bdev;
 		inode->i_data.a_ops = &def_blk_aops;
-	#ifdef CONFIG_AMLOGIC_MODIFY
+	#ifdef CONFIG_AMLOGIC_CMA
 		mapping_set_gfp_mask(&inode->i_data, GFP_USER | __GFP_BDEV);
 	#else
 		mapping_set_gfp_mask(&inode->i_data, GFP_USER);
-	#endif /* CONFIG_AMLOGIC_MODIFY */
+	#endif /* CONFIG_AMLOGIC_CMA */
 		spin_lock(&bdev_lock);
 		list_add(&bdev->bd_list, &all_bdevs);
 		spin_unlock(&bdev_lock);

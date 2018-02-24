@@ -56,7 +56,7 @@ struct page;
 
 /* this struct should not larger than 32 bit */
 struct page_trace {
-	unsigned int ret_ip	  :24;
+	unsigned int ret_ip       :24;
 	unsigned int migrate_type : 3;
 	unsigned int module_flag  : 1;
 	unsigned int order        : 4;

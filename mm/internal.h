@@ -15,9 +15,6 @@
 #include <linux/mm.h>
 #include <linux/pagemap.h>
 #include <linux/tracepoint-defs.h>
-#ifdef CONFIG_AMLOGIC_MODIFY
-#include <linux/migrate.h>
-#endif
 
 /*
  * The set of flags that only affect watermark checking and reclaim
@@ -161,6 +158,9 @@ extern int user_min_free_kbytes;
 
 #if defined CONFIG_COMPACTION || defined CONFIG_CMA
 
+#ifdef CONFIG_AMLOGIC_CMA
+#include <linux/amlogic/aml_cma.h>
+#else
 /*
  * in mm/compaction.c
  */
@@ -180,9 +180,6 @@ struct compact_control {
 	unsigned long migrate_pfn;	/* isolate_migratepages search base */
 	unsigned long last_migrated_pfn;/* Not yet flushed page being freed */
 	enum migrate_mode mode;		/* Async or sync migration mode */
-#ifdef CONFIG_AMLOGIC_MODIFY
-	enum migrate_reason reason;	/* reason for compact */
-#endif /* CONFIG_AMLOGIC_MODIFY */
 	bool ignore_skip_hint;		/* Scan blocks even if marked skip */
 	bool ignore_block_suitable;	/* Scan blocks considered unsuitable */
 	bool direct_compaction;		/* False from kcompactd or /proc/... */
@@ -201,6 +198,7 @@ isolate_freepages_range(struct compact_control *cc,
 unsigned long
 isolate_migratepages_range(struct compact_control *cc,
 			   unsigned long low_pfn, unsigned long end_pfn);
+#endif /* CONFIG_AMLOGIC_CMA */
 int find_suitable_fallback(struct free_area *area, unsigned int order,
 			int migratetype, bool only_stealable, bool *can_steal);
 

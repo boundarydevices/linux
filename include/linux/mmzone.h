@@ -138,23 +138,26 @@ enum zone_stat_item {
 	NUMA_LOCAL,		/* allocation from local node */
 	NUMA_OTHER,		/* allocation from other node */
 #endif
-#ifdef CONFIG_AMLOGIC_MODIFY /* get free pages according migrate type */
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 	NR_FREE_UNMOVABLE,
 	NR_FREE_MOVABLE,
 	NR_FREE_RECLAIMABLE,
 	NR_FREE_HIGHATOMIC,
-#endif /* CONFIG_AMLOGIC_MODIFY */
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 	NR_FREE_CMA_PAGES,
-#ifdef CONFIG_AMLOGIC_MODIFY
-	/* This is in order with MIGRATE_TYPES */
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+#ifdef CONFIG_MEMORY_ISOLATION
 	NR_FREE_ISOLATE,
+#endif
+#ifdef CONFIG_AMLOGIC_CMA
 	NR_INACTIVE_ANON_CMA,	/* must match order of LRU_[IN]ACTIVE */
 	NR_ACTIVE_ANON_CMA,
 	NR_INACTIVE_FILE_CMA,
 	NR_ACTIVE_FILE_CMA,
 	NR_UNEVICTABLE_FILE_CMA,
 	NR_CMA_ISOLATED,	/* cma isolate */
-#endif /* CONFIG_AMLOGIC_MODIFY */
+#endif /* CONFIG_AMLOGIC_CMA */
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 	NR_VM_ZONE_STAT_ITEMS };
 
 enum node_stat_item {
@@ -241,12 +244,26 @@ struct zone_reclaim_stat {
 struct lruvec {
 	struct list_head		lists[NR_LRU_LISTS];
 	struct zone_reclaim_stat	reclaim_stat;
+#ifdef CONFIG_AMLOGIC_CMA
+	struct list_head *cma_list[NR_LRU_LISTS];
+#endif /* CONFIG_AMLOGIC_CMA */
 	/* Evictions & activations on the inactive file list */
 	atomic_long_t			inactive_age;
 #ifdef CONFIG_MEMCG
 	struct pglist_data *pgdat;
 #endif
 };
+
+#ifdef CONFIG_AMLOGIC_CMA
+static inline bool lru_normal_empty(enum lru_list lru, struct lruvec *lruv)
+{
+	if (lruv->lists[lru].next == lruv->cma_list[lru])
+		return true;
+	else
+		return false;
+}
+#endif /* CONFIG_AMLOGIC_CMA */
+
 
 /* Mask used at gathering information at once (see memcontrol.c) */
 #define LRU_ALL_FILE (BIT(LRU_INACTIVE_FILE) | BIT(LRU_ACTIVE_FILE))

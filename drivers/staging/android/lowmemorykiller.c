@@ -43,6 +43,10 @@
 #include <linux/profile.h>
 #include <linux/notifier.h>
 
+#ifdef CONFIG_AMLOGIC_CMA
+#include <linux/amlogic/aml_cma.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #include "trace/lowmemorykiller.h"
 
@@ -81,6 +85,47 @@ static unsigned long lowmem_count(struct shrinker *s,
 		global_node_page_state(NR_INACTIVE_FILE);
 }
 
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+static unsigned long forgeround_jiffes;
+static void show_task_adj(void)
+{
+#define SHOW_PRIFIX	"score_adj:%5d, rss:%5lu"
+	struct task_struct *tsk;
+	int tasksize;
+
+	/* avoid print too many */
+	if (time_after(forgeround_jiffes, jiffies))
+		return;
+
+	forgeround_jiffes = jiffies + HZ * 5;
+	show_mem(0);
+	lowmem_print(1, "Foreground task killed, show all Candidates\n");
+	for_each_process(tsk) {
+		struct task_struct *p;
+		short oom_score_adj;
+
+		if (tsk->flags & PF_KTHREAD)
+			continue;
+		p = find_lock_task_mm(tsk);
+		if (!p)
+			continue;
+		oom_score_adj = p->signal->oom_score_adj;
+		tasksize = get_mm_rss(p->mm);
+		task_unlock(p);
+	#ifdef CONFIG_ZRAM
+		lowmem_print(1, SHOW_PRIFIX ", rswap:%5lu, task:%5d, %s\n",
+			     oom_score_adj, get_mm_rss(p->mm),
+			     get_mm_counter(p->mm, MM_SWAPENTS),
+			     p->pid, p->comm);
+	#else
+		lowmem_print(1, SHOW_PRIFIX ", task:%5d, %s\n",
+			     oom_score_adj, get_mm_rss(p->mm),
+			     p->pid, p->comm);
+	#endif /* CONFIG_ZRAM */
+	}
+}
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
+
 static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
@@ -98,6 +143,20 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 				global_node_page_state(NR_SHMEM) -
 				global_node_page_state(NR_UNEVICTABLE) -
 				total_swapcache_pages();
+#ifdef CONFIG_AMLOGIC_CMA
+	int free_cma   = 0;
+	int file_cma   = 0;
+	int cma_forbid = 0;
+
+	if (cma_forbidden_mask(sc->gfp_mask)) {
+		free_cma    = global_page_state(NR_FREE_CMA_PAGES);
+		file_cma    = global_page_state(NR_INACTIVE_FILE_CMA) +
+			      global_page_state(NR_ACTIVE_FILE_CMA);
+		other_free -= free_cma;
+		other_file -= file_cma;
+		cma_forbid  = 1;
+	}
+#endif /* CONFIG_AMLOGIC_CMA */
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
@@ -185,8 +244,24 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			     cache_size, cache_limit,
 			     min_score_adj,
 			     free);
+	#ifdef CONFIG_AMLOGIC_CMA
+		if (cma_forbid) {
+			/* kill quickly if can't use cma */
+			lowmem_deathpending_timeout = jiffies + HZ / 2;
+			pr_info("   Free cma:%ldkB, file cma:%ldkB\n",
+				free_cma * (long)(PAGE_SIZE / 1024),
+				file_cma * (long)(PAGE_SIZE / 1024));
+		} else {
+			lowmem_deathpending_timeout = jiffies + HZ;
+		}
+	#else
 		lowmem_deathpending_timeout = jiffies + HZ;
+	#endif /* CONFIG_AMLOGIC_CMA */
 		rem += selected_tasksize;
+	#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+		if (!selected_oom_score_adj) /* forgeround task killed */
+			show_task_adj();
+	#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 	}
 
 	lowmem_print(4, "lowmem_scan %lu, %x, return %lu\n",

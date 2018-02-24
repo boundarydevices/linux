@@ -160,6 +160,11 @@ int __do_page_cache_readahead(struct address_space *mapping, struct file *filp,
 	loff_t isize = i_size_read(inode);
 	gfp_t gfp_mask = readahead_gfp_mask(mapping);
 
+#ifdef CONFIG_AMLOGIC_CMA
+	if (filp->f_mode & (FMODE_WRITE | FMODE_WRITE_IOCTL))
+		gfp_mask |= __GFP_WRITE;
+#endif /* CONFIG_AMLOGIC_CMA */
+
 	if (isize == 0)
 		goto out;
 

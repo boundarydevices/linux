@@ -26,6 +26,10 @@
 
 #define MMC_QUEUE_BOUNCESZ	65536
 
+#ifdef CONFIG_AMLOGIC_CMA
+#include <linux/sched.h>
+#endif /* CONFIG_AMLOGIC_CMA */
+
 /*
  * Prepare a MMC request. This just filters out odd stuff.
  */
@@ -61,6 +65,10 @@ static int mmc_queue_thread(void *d)
 	sched_setscheduler(current, SCHED_FIFO, &scheduler_params);
 
 	current->flags |= PF_MEMALLOC;
+
+#ifdef CONFIG_AMLOGIC_CMA
+	set_user_nice(current, -15);
+#endif /* CONFIG_AMLOGIC_CMA */
 
 	down(&mq->thread_sem);
 	do {

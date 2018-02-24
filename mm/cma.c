@@ -36,37 +36,15 @@
 #include <linux/highmem.h>
 #include <linux/io.h>
 #include <trace/events/cma.h>
-#ifdef CONFIG_AMLOGIC_MODIFY
-#include <linux/amlogic/page_trace.h>
-#endif
+#ifdef CONFIG_AMLOGIC_CMA
+#include <linux/amlogic/aml_cma.h>
+#endif /* CONFIG_AMLOGIC_CMA */
 
 #include "cma.h"
 
 struct cma cma_areas[MAX_CMA_AREAS];
 unsigned cma_area_count;
 static DEFINE_MUTEX(cma_mutex);
-#ifdef CONFIG_AMLOGIC_MODIFY
-/* how many cma pages used by driver */
-static atomic_long_t driver_alloc_cma;
-static atomic_t cma_alloc_ref = ATOMIC_INIT(0);
-unsigned long get_driver_alloc_cma(void)
-{
-	return atomic_long_read(&driver_alloc_cma);
-}
-
-static void update_cma_page_trace(struct page *page, unsigned long cnt)
-{
-	long i;
-
-	if (page == NULL)
-		return;
-
-	for (i = 0; i < cnt; i++) {
-		set_page_trace(page, 0, __GFP_BDEV);
-		page++;
-	}
-}
-#endif /* CONFIG_AMLOGIC_MODIFY */
 
 phys_addr_t cma_get_base(const struct cma *cma)
 {
@@ -177,9 +155,6 @@ static int __init cma_init_reserved_areas(void)
 		if (ret)
 			return ret;
 	}
-#ifdef CONFIG_AMLOGIC_MODIFY
-	atomic_long_set(&driver_alloc_cma, 0);
-#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	return 0;
 }
@@ -398,6 +373,9 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	unsigned long bitmap_maxno, bitmap_no, bitmap_count;
 	struct page *page = NULL;
 	int ret;
+#ifdef CONFIG_AMLOGIC_CMA
+	int dummy;
+#endif /* CONFIG_AMLOGIC_CMA */
 
 	if (!cma || !cma->count)
 		return NULL;
@@ -416,6 +394,10 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	if (bitmap_count > bitmap_maxno)
 		return NULL;
 
+#ifdef CONFIG_AMLOGIC_CMA
+	aml_cma_alloc_pre_hook(&dummy, count);
+#endif /* CONFIG_AMLOGIC_CMA */
+
 	for (;;) {
 		mutex_lock(&cma->lock);
 		bitmap_no = bitmap_find_next_zero_area_off(cma->bitmap,
@@ -423,11 +405,6 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 				offset);
 		if (bitmap_no >= bitmap_maxno) {
 			mutex_unlock(&cma->lock);
-		#ifdef CONFIG_AMLOGIC_MODIFY
-			/* for debug */
-			pr_err("can't find zero bit map for %lx, cnt:%ld\n",
-				cma->base_pfn, count);
-		#endif
 			break;
 		}
 		bitmap_set(cma->bitmap, bitmap_no, bitmap_count);
@@ -440,7 +417,11 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 
 		pfn = cma->base_pfn + (bitmap_no << cma->order_per_bit);
 		mutex_lock(&cma_mutex);
+	#ifdef CONFIG_AMLOGIC_CMA
+		ret = aml_cma_alloc_range(pfn, pfn + count);
+	#else
 		ret = alloc_contig_range(pfn, pfn + count, MIGRATE_CMA);
+	#endif /* CONFIG_AMLOGIC_CMA */
 		mutex_unlock(&cma_mutex);
 		if (ret == 0) {
 			page = pfn_to_page(pfn);
@@ -453,20 +434,17 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 
 		pr_debug("%s(): memory range at %p is busy, retrying\n",
 			 __func__, pfn_to_page(pfn));
-	#ifndef CONFIG_AMLOGIC_MODIFY
+	#ifndef CONFIG_AMLOGIC_CMA
 		/* try again with a bit different memory target */
 		start = bitmap_no + mask + 1;
-	#endif /* CONFIG_AMLOGIC_MODIFY */
+	#endif /* CONFIG_AMLOGIC_CMA */
 	}
 
 	trace_cma_alloc(pfn, page, count, align);
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-	if (page) {
-		atomic_long_add(count, &driver_alloc_cma);
-		update_cma_page_trace(page, count);
-	}
-#endif /* CONFIG_AMLOGIC_MODIFY */
+#ifdef CONFIG_AMLOGIC_CMA
+	aml_cma_alloc_post_hook(&dummy, count, page);
+#endif /* CONFIG_AMLOGIC_CMA */
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
 }
@@ -497,29 +475,15 @@ bool cma_release(struct cma *cma, const struct page *pages, unsigned int count)
 
 	VM_BUG_ON(pfn + count > cma->base_pfn + cma->count);
 
+#ifdef CONFIG_AMLOGIC_CMA
+	aml_cma_release_hook(count, (struct page *)pages);
+	aml_cma_free(pfn, count);
+#else
 	free_contig_range(pfn, count);
+#endif /* CONFIG_AMLOGIC_CMA */
 	cma_clear_bitmap(cma, pfn, count);
 	trace_cma_release(pfn, pages, count);
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-	atomic_long_sub(count, &driver_alloc_cma);
-#endif /* CONFIG_AMLOGIC_MODIFY */
 	return true;
 }
-
-#ifdef CONFIG_AMLOGIC_MODIFY
-bool cma_suitable(gfp_t gfp_mask)
-{
-	if (gfp_mask & (__GFP_RECLAIMABLE | __GFP_BDEV | __GFP_WRITE))
-		return false;
-	if (!(gfp_mask & __GFP_MOVABLE))
-		return false;
-
-	/* try to reduce page lock wait for read */
-	if (atomic_read(&cma_alloc_ref))
-		return false;
-
-	return true;
-}
-#endif /* CONFIG_AMLOGIC_MODIFY */
 

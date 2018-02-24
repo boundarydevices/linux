@@ -41,9 +41,9 @@ struct vm_area_struct;
 #define ___GFP_OTHER_NODE	0x800000u
 #define ___GFP_WRITE		0x1000000u
 #define ___GFP_KSWAPD_RECLAIM	0x2000000u
-#ifdef CONFIG_AMLOGIC_MODIFY
+#ifdef CONFIG_AMLOGIC_CMA
 #define ___GFP_BDEV		0x4000000u
-#endif /* CONFIG_AMLOGIC_MODIFY */
+#endif /* CONFIG_AMLOGIC_CMA */
 /* If the above are modified, __GFP_BITS_SHIFT may need updating */
 
 /*
@@ -188,16 +188,16 @@ struct vm_area_struct;
 #define __GFP_NOTRACK	((__force gfp_t)___GFP_NOTRACK)
 #define __GFP_NOTRACK_FALSE_POSITIVE (__GFP_NOTRACK)
 #define __GFP_OTHER_NODE ((__force gfp_t)___GFP_OTHER_NODE)
-#ifdef CONFIG_AMLOGIC_MODIFY
+#ifdef CONFIG_AMLOGIC_CMA
 #define __GFP_BDEV	((__force gfp_t)___GFP_BDEV)
-#endif /* CONFIG_AMLOGIC_MODIFY */
+#endif /* CONFIG_AMLOGIC_CMA */
 
 /* Room for N __GFP_FOO bits */
-#ifdef CONFIG_AMLOGIC_MODIFY
+#ifdef CONFIG_AMLOGIC_CMA
 #define __GFP_BITS_SHIFT 27
 #else
 #define __GFP_BITS_SHIFT 26
-#endif /* CONFIG_AMLOGIC_MODIFY */
+#endif /* CONFIG_AMLOGIC_CMA */
 #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
 
 /*

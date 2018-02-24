@@ -47,6 +47,7 @@
  *
  */
 static bool merge_function = 1;
+static int page_trace_filter = 64; /* not print size < page_trace_filter */
 unsigned int cma_alloc_trace;
 static struct proc_dir_entry *dentry;
 #ifndef CONFIG_64BIT
@@ -80,6 +81,7 @@ static struct fun_symbol common_func[] __initdata = {
 	{"__kmalloc",			1},
 	{"cma_alloc",			1},
 	{"dma_alloc_from_contiguous",	1},
+	{"aml_cma_alloc_post_hook",	1},
 	{"__dma_alloc",			1},
 	{"__kmalloc_track_caller",	1},
 	{"kmem_cache_alloc_trace",	1},
@@ -396,11 +398,11 @@ static void __init find_static_common_symbol(void)
 
 static int is_common_caller(struct alloc_caller *caller, unsigned long pc)
 {
-	int ret = 0, cnt = 0;
+	int ret = 0;
 	int low = 0, high = COMMON_CALLER_SIZE - 1, mid;
 	unsigned long add_l, add_h;
 
-	while (low < high) {
+	while (1) {
 		mid = (high + low) / 2;
 		add_l = caller[mid].func_start_addr;
 		add_h = caller[mid].func_start_addr + caller[mid].size;
@@ -408,16 +410,20 @@ static int is_common_caller(struct alloc_caller *caller, unsigned long pc)
 			ret = 1;
 			break;
 		}
-		if (pc < add_l) {		/* caller is desending order */
-			if (mid == (low + 1))
-				break;
-			low = mid - 1;
-		} else {
-			if (mid == (high - 1))
-				break;
-			high = mid + 1;
-		}
-		cnt++;
+
+		if (low >= high)	/* still not match */
+			break;
+
+		if (pc < add_l)		/* caller is desending order */
+			low = mid + 1;
+		else
+			high = mid - 1;
+
+		/* fix range */
+		if (high < 0)
+			high = 0;
+		if (low > (COMMON_CALLER_SIZE - 1))
+			low = COMMON_CALLER_SIZE - 1;
 	}
 	return ret;
 }
@@ -550,10 +556,14 @@ unsigned int pack_ip(unsigned long ip, int order, gfp_t flag)
 
 	trace.ret_ip = (ip - text) >> 2;
 	WARN_ON(trace.ret_ip > IP_RANGE_MASK);
+#ifdef CONFIG_AMLOGIC_CMA
 	if (flag == __GFP_BDEV)
 		trace.migrate_type = MIGRATE_CMA;
 	else
 		trace.migrate_type = gfpflags_to_migratetype(flag);
+#else
+	trace.migrate_type = gfpflags_to_migratetype(flag);
+#endif /* CONFIG_AMLOGIC_CMA */
 	trace.order = order;
 #if DEBUG_PAGE_TRACE
 	pr_debug("%s, base:%p, page:%lx, _ip:%x, o:%d, f:%x, ip:%lx\n",
@@ -684,10 +694,39 @@ static int __init page_trace_pre_work(unsigned long size)
 }
 #endif
 
-#define SHOW_CNT	1024
+/*--------------------------sysfs node -------------------------------*/
+#define LARGE	512
+#define SMALL	128
+
+/* caller for unmovalbe are max */
+#define MT_UNMOVABLE_IDX	0                            /* 0,UNMOVABLE   */
+#define MT_MOVABLE_IDX		(MT_UNMOVABLE_IDX   + LARGE) /* 1,MOVABLE     */
+#define MT_RECLAIMABLE_IDX	(MT_MOVABLE_IDX     + SMALL) /* 2,RECLAIMABLE */
+#define MT_HIGHATOMIC_IDX	(MT_RECLAIMABLE_IDX + SMALL) /* 3,HIGHATOMIC  */
+#define MT_CMA_IDX		(MT_HIGHATOMIC_IDX  + SMALL) /* 4,CMA         */
+#define MT_ISOLATE_IDX		(MT_CMA_IDX         + SMALL) /* 5,ISOLATE     */
+
+#define SHOW_CNT		(MT_ISOLATE_IDX)
+
+static int mt_offset[] = {
+	MT_UNMOVABLE_IDX,
+	MT_MOVABLE_IDX,
+	MT_RECLAIMABLE_IDX,
+	MT_HIGHATOMIC_IDX,
+	MT_CMA_IDX,
+	MT_ISOLATE_IDX,
+	MT_ISOLATE_IDX + SMALL
+};
+
 struct page_summary {
 	unsigned long ip;
 	unsigned int cnt;
+};
+
+struct pagetrace_summary {
+	struct page_summary *sum;
+	unsigned long ticks;
+	int mt_cnt[MIGRATE_TYPES];
 };
 
 static unsigned long find_ip_base(unsigned long ip)
@@ -704,7 +743,8 @@ static unsigned long find_ip_base(unsigned long ip)
 }
 
 static int find_page_ip(struct page_trace *trace,
-			struct page_summary *sum, int *o)
+			struct page_summary *sum, int *o,
+			int range, int *mt_cnt)
 {
 	int i = 0;
 	int order;
@@ -713,9 +753,7 @@ static int find_page_ip(struct page_trace *trace,
 	*o = 0;
 	ip = unpack_ip(trace);
 	order = trace->order;
-	if (merge_function)
-		ip = find_ip_base(ip);
-	for (i = 0; i < SHOW_CNT; i++) {
+	for (i = 0; i < range; i++) {
 		if (sum[i].ip == ip) {
 			/* find */
 			sum[i].cnt += (1 << order);
@@ -726,10 +764,11 @@ static int find_page_ip(struct page_trace *trace,
 			sum[i].cnt += (1 << order);
 			sum[i].ip = ip;
 			*o = order;
-			return 1;
+			mt_cnt[trace->migrate_type]++;
+			return 0;
 		}
 	}
-	return 0;
+	return -ERANGE;
 }
 
 #define K(x)		((x) << (PAGE_SHIFT - 10))
@@ -743,40 +782,81 @@ static int trace_cmp(const void *x1, const void *x2)
 }
 
 static void show_page_trace(struct seq_file *m,
-			    struct page_summary *sum, int cnt, int type)
+			    struct page_summary *sum, int *mt_cnt)
 {
-	int i;
-	unsigned long total = 0;
+	int i, j;
+	struct page_summary *p;
+	unsigned long total;
 
-	if (!cnt)
-		return;
-	sort(sum, cnt, sizeof(*sum), trace_cmp, NULL);
-	for (i = 0; i < cnt; i++) {
-		seq_printf(m, "%8d, %16lx, %pf\n",
-			   K(sum[i].cnt), sum[i].ip, (void *)sum[i].ip);
-		total += sum[i].cnt;
-	}
+	seq_printf(m, "%s %s            %s\n",
+		   "count(KB)", "kaddr", "function");
 	seq_puts(m, "------------------------------\n");
-	seq_printf(m, "total pages:%ld, %ld kB, type:%s\n",
-		   total, K(total), migratetype_names[type]);
+	for (j = 0; j < MIGRATE_TYPES; j++) {
+
+		if (!mt_cnt[j])	/* this migrate type is empty */
+			continue;
+
+		p = sum + mt_offset[j];
+		sort(p, mt_cnt[j], sizeof(*p), trace_cmp, NULL);
+
+		total = 0;
+		for (i = 0; i < mt_cnt[j]; i++) {
+			if (!p[i].cnt)	/* may be empty after merge */
+				continue;
+
+			if (K(p[i].cnt) >= page_trace_filter) {
+				seq_printf(m, "%8d, %16lx, %pf\n",
+					   K(p[i].cnt), p[i].ip,
+					   (void *)p[i].ip);
+			}
+			total += p[i].cnt;
+		}
+		seq_puts(m, "------------------------------\n");
+		seq_printf(m, "total pages:%ld, %ld kB, type:%s\n",
+			   total, K(total), migratetype_names[j]);
+		seq_puts(m, "------------------------------\n");
+	}
 }
 
-static inline int type_match(struct page_trace *trace, int type)
+static void merge_same_function(struct page_summary *sum, int *mt_cnt)
 {
-	return (trace->migrate_type) == type;
+	int i, j, k, range;
+	struct page_summary *p;
+
+	for (i = 0; i < MIGRATE_TYPES; i++) {
+		range = mt_cnt[i];
+		p = sum + mt_offset[i];
+
+		/* first, replace all ip to entry of each function */
+		for (j = 0; j < range; j++)
+			p[j].ip = find_ip_base(p[j].ip);
+
+		/* second, loop and merge same ip */
+		for (j = 0; j < range; j++) {
+			for (k = j + 1; k < range; k++) {
+				if (p[k].ip != (-1ul) &&
+				    p[k].ip == p[j].ip) {
+					p[j].cnt += p[k].cnt;
+					p[k].ip  = (-1ul);
+					p[k].cnt = 0;
+				}
+			}
+		}
+	}
 }
 
 static int update_page_trace(struct seq_file *m, struct zone *zone,
-			     struct page_summary *sum, int type)
+			     struct page_summary *sum, int *mt_cnt)
 {
 	unsigned long pfn;
 	unsigned long start_pfn = zone->zone_start_pfn;
 	unsigned long end_pfn = zone_end_pfn(zone);
-	int    max_trace = 0, ret;
+	int    ret = 0, mt;
 	int    order;
-	unsigned long ip;
 	struct page_trace *trace;
+	struct page_summary *p;
 
+	/* loop whole zone */
 	for (pfn = start_pfn; pfn < end_pfn; pfn++) {
 		struct page *page;
 
@@ -799,30 +879,29 @@ static int update_page_trace(struct seq_file *m, struct zone *zone,
 		if (!(*(unsigned int *)trace)) /* empty */
 			continue;
 
-		if (type_match(trace, type)) {
-			ret = find_page_ip(trace, sum, &order);
-			if (max_trace == SHOW_CNT && ret) {
-				ip = unpack_ip(trace);
-				pr_err("MAX sum cnt, pfn:%ld, lr:%lx, %pf\n",
-				       pfn, ip, (void *)ip);
-			} else
-				max_trace += ret;
-			if (order)
-				pfn += ((1 << order) - 1);
+		mt = trace->migrate_type;
+		p  = sum + mt_offset[mt];
+		ret = find_page_ip(trace, p, &order,
+				   mt_offset[mt + 1] - mt_offset[mt], mt_cnt);
+		if (ret) {
+			pr_err("mt type:%d, out of range:%d\n",
+			       mt, mt_offset[mt + 1] - mt_offset[mt]);
+			break;
 		}
+		if (order)
+			pfn += ((1 << order) - 1);
 	}
-	return max_trace;
+	if (merge_function)
+		merge_same_function(sum, mt_cnt);
+	return ret;
 }
-/*
- * This prints out statistics in relation to grouping pages by mobility.
- * It is expensive to collect so do not constantly read the file.
- */
+
 static int pagetrace_show(struct seq_file *m, void *arg)
 {
 	pg_data_t *p = (pg_data_t *)arg;
 	struct zone *zone;
-	int mtype, ret, print_flag;
-	struct page_summary *sum;
+	int ret, size = sizeof(struct page_summary) * SHOW_CNT;
+	struct pagetrace_summary *sum;
 
 #ifndef CONFIG_64BIT
 	if (!trace_buffer) {
@@ -835,29 +914,41 @@ static int pagetrace_show(struct seq_file *m, void *arg)
 	if (!node_state(p->node_id, N_MEMORY))
 		return 0;
 
-	sum = vmalloc(sizeof(struct page_summary) * SHOW_CNT);
-	if (!sum)
-		return -ENOMEM;
+	if (!m->private) {
+		sum = kzalloc(sizeof(*sum), GFP_KERNEL);
+		if (!sum)
+			return -ENOMEM;
 
-	for_each_populated_zone(zone) {
-		print_flag = 0;
-		seq_printf(m, "Node %d, zone %8s\n", p->node_id, zone->name);
-		for (mtype = 0; mtype < MIGRATE_TYPES; mtype++) {
-			memset(sum, 0, sizeof(struct page_summary) * SHOW_CNT);
-			ret = update_page_trace(m, zone, sum, mtype);
-			if (ret > 0) {
-				seq_printf(m, "%s %s            %s\n",
-					   "count(KB)", "kaddr", "function");
-				seq_puts(m, "------------------------------\n");
-				show_page_trace(m, sum, ret, mtype);
-				seq_puts(m, "\n");
-				print_flag = 1;
+		m->private = sum;
+		sum->sum = vzalloc(size);
+		if (!sum->sum) {
+			kfree(sum);
+			m->private = NULL;
+			return -ENOMEM;
+		}
+
+		/* update only once */
+		sum->ticks = sched_clock();
+		for_each_populated_zone(zone) {
+			memset(sum->sum, 0, size);
+			ret = update_page_trace(m, zone, sum->sum, sum->mt_cnt);
+			if (ret) {
+				seq_printf(m, "Error %d in Node %d, zone %8s\n",
+					   ret, p->node_id, zone->name);
+				continue;
 			}
 		}
-		if (print_flag)
-			seq_puts(m, "------------------------------\n");
+		sum->ticks = sched_clock() - sum->ticks;
 	}
-	vfree(sum);
+
+	sum = (struct pagetrace_summary *)m->private;
+	for_each_populated_zone(zone) {
+		seq_printf(m, "Node %d, zone %8s\n", p->node_id, zone->name);
+		show_page_trace(m, sum->sum, sum->mt_cnt);
+	}
+	seq_printf(m, "SHOW_CNT:%d, buffer size:%d, tick:%ld ns\n",
+		   SHOW_CNT, size, sum->ticks);
+
 	return 0;
 }
 
@@ -879,7 +970,9 @@ static void *frag_next(struct seq_file *m, void *arg, loff_t *pos)
 	pg_data_t *pgdat = (pg_data_t *)arg;
 
 	(*pos)++;
-	return next_online_pgdat(pgdat);
+	pgdat = next_online_pgdat(pgdat);
+
+	return pgdat;
 }
 
 static void frag_stop(struct seq_file *m, void *arg)
@@ -895,6 +988,21 @@ static const struct seq_operations pagetrace_op = {
 static int pagetrace_open(struct inode *inode, struct file *file)
 {
 	return seq_open(file, &pagetrace_op);
+}
+
+static int pagetrace_release(struct inode *inode, struct file *file)
+{
+	struct pagetrace_summary *sum;
+	struct seq_file *m = file->private_data;
+
+	if (m->private) {
+		sum = (struct pagetrace_summary *)m->private;
+		if (sum->sum)
+			vfree(sum->sum);
+		kfree(sum);
+	}
+
+	return seq_release(inode, file);
 }
 
 static ssize_t pagetrace_write(struct file *file, const char __user *buffer,
@@ -929,6 +1037,14 @@ static ssize_t pagetrace_write(struct file *file, const char __user *buffer,
 		cma_alloc_trace = arg ? 1 : 0;
 		pr_info("set cma_trace to %d\n", cma_alloc_trace);
 	}
+	if (!strncmp(buf, "filter=", 7)) {	/* option for 'filter=' */
+		if (sscanf(buf, "filter=%ld", &arg) < 0) {
+			kfree(buf);
+			return -EINVAL;
+		}
+		page_trace_filter = arg;
+		pr_info("set filter to %d KB\n", page_trace_filter);
+	}
 
 	kfree(buf);
 
@@ -940,7 +1056,7 @@ static const struct file_operations pagetrace_file_ops = {
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.write		= pagetrace_write,
-	.release	= seq_release,
+	.release	= pagetrace_release,
 };
 
 static int __init page_trace_module_init(void)

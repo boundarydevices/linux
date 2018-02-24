@@ -13506,6 +13506,10 @@ AMLOGIC driver for memory extend
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/memory_ext/*
 
+AMLOGIC driver for memory extend
+M: Tao Zeng <tao.zeng@amlogic.com>
+F: include/linux/amlogic/aml_cma.h
+
 AMLOGIC driver for pmu
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/power/*
