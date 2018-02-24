@@ -207,5 +207,10 @@
 
 #define VD2_IF0_GEN_REG3 0x1aa8
 
+#define VD1_AFBCD0_MISC_CTRL 0x1a0a
+#define VD2_AFBCD1_MISC_CTRL 0x1a0b
+#define G12_VD1_IF0_GEN_REG3 0x3216
+#define G12_VD2_IF0_GEN_REG3 0x3236
+
 #endif
 

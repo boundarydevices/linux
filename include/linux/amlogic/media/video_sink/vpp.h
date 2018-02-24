@@ -123,17 +123,17 @@ struct vpp_frame_par_s {
 
 	bool supsc0_enable;
 	bool supsc1_enable;
+	bool supsc0_hori_ratio;
+	bool supsc1_hori_ratio;
+	bool supsc0_vert_ratio;
+	bool supsc1_vert_ratio;
 	u32 supscl_path;
-	u32 supsc0_hori_ratio;
-	u32 supsc1_hori_ratio;
-	u32 supsc0_vert_ratio;
-	u32 supsc1_vert_ratio;
 	u32 spsc0_w_in;
 	u32 spsc0_h_in;
 	u32 spsc1_w_in;
 	u32 spsc1_h_in;
-	u32 vpp_postblend_out_width;
-	u32 vpp_postblend_out_height;
+	u32 video_input_w;
+	u32 video_input_h;
 
 	bool nocomp;
 
@@ -154,21 +154,31 @@ struct vpp_frame_par_s {
 extern bool reverse;
 #endif
 extern bool platform_type;
-extern unsigned int super_scaler;
 
 enum select_scaler_path_e {
-	sup0_pp_sp1_scpath,
-	sup0_pp_post_blender,
+	CORE0_PPS_CORE1 = 0,
+	CORE0_CORE1_PPS,
+	/*gxlx only have core1,support below two mode*/
+	CORE1_BEFORE_PPS,
+	CORE1_AFTER_PPS,
+	/*txhd only have core0,support below two mode*/
+	CORE0_BEFORE_PPS,
+	CORE0_AFTER_PPS,
+	SCALER_PATH_MAX,
 };
 /*
- * note from vlsi!!!
- * if core0 v enable,core0 input width max=1024;
- * if core0 v disable,core0 input width max=2048;
- * if core1 v enable,core1 input width max=2048;
- * if core1 v disable,core1 input width max=4096;
- */
+* note from vlsi!!!
+* if core0 v enable,core0 input width max=1024;
+* if core0 v disable,core0 input width max=2048;
+* if core1 v enable,core1 input width max=2048;
+* if core1 v disable,core1 input width max=4096;
+* gxlx only have core1,txhd/g12a only have core0
+*/
 #define SUPER_CORE0_WIDTH_MAX  2048
 #define SUPER_CORE1_WIDTH_MAX  4096
+#define SUPER_CORE0_SUPPORT  (1 << 0)
+#define SUPER_CORE1_SUPPORT  (1 << 1)
+
 
 #ifdef TV_3D_FUNCTION_OPEN
 

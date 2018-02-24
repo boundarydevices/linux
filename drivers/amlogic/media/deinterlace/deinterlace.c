@@ -374,6 +374,8 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr, unsigned int val,
 
 unsigned int DI_POST_REG_RD(unsigned int addr)
 {
+	if (IS_ERR_OR_NULL(de_devp))
+		return 0;
 	if (de_devp->flags & DI_SUSPEND_FLAG) {
 		pr_err("[DI] REG 0x%x access prohibited.\n", addr);
 		return 0;
@@ -384,6 +386,8 @@ EXPORT_SYMBOL(DI_POST_REG_RD);
 
 int DI_POST_WR_REG_BITS(u32 adr, u32 val, u32 start, u32 len)
 {
+	if (IS_ERR_OR_NULL(de_devp))
+		return 0;
 	if (de_devp->flags & DI_SUSPEND_FLAG) {
 		pr_err("[DI] REG 0x%x access prohibited.\n", adr);
 		return -1;
@@ -7042,6 +7046,7 @@ static int di_probe(struct platform_device *pdev)
 	}
 	de_devp = di_devp;
 	memset(di_devp, 0, sizeof(struct di_dev_s));
+	di_devp->flags |= DI_SUSPEND_FLAG;
 	cdev_init(&(di_devp->cdev), &di_fops);
 	di_devp->cdev.owner = THIS_MODULE;
 	cdev_add(&(di_devp->cdev), di_devno, DI_COUNT);
@@ -7100,6 +7105,7 @@ static int di_probe(struct platform_device *pdev)
 		di_get_vpu_clkb(&pdev->dev, di_devp);
 		clk_prepare_enable(di_devp->vpu_clkb);
 	}
+	di_devp->flags &= (~DI_SUSPEND_FLAG);
 	ret = of_property_read_u32(pdev->dev.of_node,
 		"buffer-size", &(di_devp->buffer_size));
 	if (ret)

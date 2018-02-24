@@ -52,6 +52,7 @@ extern void vpp_set_12bit_datapath1(void);
 extern void vpp_set_12bit_datapath2(void);
 extern void vpp_set_pre_s2u(enum data_conv_mode_e conv_mode);
 extern void vpp_set_10bit_datapath1(void);
+extern void vpp_set_12bit_datapath_g12a(void);
 
 #endif
 

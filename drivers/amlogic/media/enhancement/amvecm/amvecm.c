@@ -4246,6 +4246,8 @@ static int aml_vecm_probe(struct platform_device *pdev)
 		/* amvecm_vpp_mtx_debug(mtx_sel_dbg, 1);*/
 	} else if (is_meson_txhd_cpu())
 		vpp_set_10bit_datapath1();
+	else if (is_meson_g12a_cpu())
+		vpp_set_12bit_datapath_g12a();
 	memset(&vpp_hist_param.vpp_histgram[0],
 		0, sizeof(unsigned short) * 64);
 	/* box sdr_mode:auto, tv sdr_mode:off */
@@ -4274,7 +4276,7 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	aml_vecm_dt_parse(pdev);
 	if (is_meson_gxm_cpu())
 		dolby_vision_init_receiver();
-	probe_ok = 1;
+	probe_ok = 0;/*temp mark for g12a bringup*/
 	pr_info("%s: ok\n", __func__);
 	return 0;
 

@@ -211,6 +211,19 @@
 #define VD1_IF0_GEN_REG3 0x1aa7
 #define VD2_IF0_GEN_REG3 0x1aa8
 
+/*g12a new add reg*/
+#define VD1_AFBCD0_MISC_CTRL 0x1a0a
+#define VD2_AFBCD1_MISC_CTRL 0x1a0b
+#define DOLBY_PATH_CTRL 0x1a0c
+#define WR_BACK_MISC_CTRL 0x1a0d
+
+#define VD1_BLEND_SRC_CTRL 0x1dfb
+#define VD2_BLEND_SRC_CTRL 0x1dfc
+#define OSD1_BLEND_SRC_CTRL 0x1dfd
+#define OSD2_BLEND_SRC_CTRL 0x1dfe
+
+#define G12_VD1_IF0_GEN_REG3 0x3216
+#define G12_VD2_IF0_GEN_REG3 0x3236
 
 #define VPP2_DUMMY_DATA 0x1900
 #define VPP2_LINE_IN_LENGTH 0x1901

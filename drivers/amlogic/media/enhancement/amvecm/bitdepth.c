@@ -222,11 +222,17 @@ void vpp_extend_mode_osd2(bool mode)
 /**/
 void vpp_vd1_if_bits_mode(enum vd_if_bits_mode_e bits_mode)
 {
-	WRITE_VPP_REG_BITS(VD1_IF0_GEN_REG3, (bits_mode & 0x3), 8, 2);
+	u32 reg = (is_meson_g12a_cpu() ?
+		G12_VD1_IF0_GEN_REG3 :
+		VD1_IF0_GEN_REG3);
+	WRITE_VPP_REG_BITS(reg, (bits_mode & 0x3), 8, 2);
 }
 void vpp_vd2_if_bits_mode(enum vd_if_bits_mode_e bits_mode)
 {
-	WRITE_VPP_REG_BITS(VD2_IF0_GEN_REG3, (bits_mode & 0x3), 8, 2);
+	u32 reg = (is_meson_g12a_cpu() ?
+		G12_VD2_IF0_GEN_REG3 :
+		VD2_IF0_GEN_REG3);
+	WRITE_VPP_REG_BITS(reg, (bits_mode & 0x3), 8, 2);
 }
 void vpp_enable_dither(bool enable)
 {
@@ -237,6 +243,155 @@ void vpp_dither_bits_comp_mode(bool mode)
 {
 	WRITE_VPP_REG_BITS(VPP_DOLBY_CTRL, mode, 14, 1);
 }
+
+/*g12a new add begin*/
+/*0:axird to vd1;1:axird to afbc1*/
+void vpp_set_vd1_mux0(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD1_AFBCD0_MISC_CTRL, flag, 12, 2);
+}
+/*0:axird to vd2;1:axird to afbc2*/
+void vpp_set_vd2_mux0(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 12, 2);
+}
+
+/*vd1 mif config:0:vd1_mif to vpp;1:use afbc_mif*/
+void vpp_set_vd1_mux1(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD1_AFBCD0_MISC_CTRL, flag, 10, 1);
+}
+void vpp_set_vd2_mux1(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 10, 1);
+}
+
+/*0:vd1/afbc to vpp;1:vd1/afbc to di*/
+void vpp_set_vd1_mux2(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD1_AFBCD0_MISC_CTRL, flag, 8, 1);
+}
+/*0:afbc1 to di;1:afbc2 to di*/
+void vpp_set_vd2_mux2(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 8, 1);
+}
+
+/*0:afbc to vpp;1:afbc to di*/
+void vpp_set_vd1_mux3(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD1_AFBCD0_MISC_CTRL, flag, 9, 1);
+}
+void vpp_set_vd2_mux3(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 9, 1);
+}
+
+/*0:afbc/vd1 to vd1;1:osd3 to vd1*/
+void vpp_set_vd1_mux4(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD1_AFBCD0_MISC_CTRL, flag, 11, 1);
+}
+/*0:afbc1/vd2 to vd2;1:osd4 to vd2*/
+void vpp_set_vd2_mux4(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 11, 1);
+}
+
+/*0:vd1 to dolby;2:vd1 to primel*/
+void vpp_set_vd1_mux5(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD1_AFBCD0_MISC_CTRL, flag, 14, 2);
+}
+/*0:afbc2 to vd2;2:osd4 to vd2*/
+void vpp_set_vd2_mux5(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD2_AFBCD1_MISC_CTRL, flag, 14, 2);
+}
+
+/*blend src mux==>0:close;1:vd1;2:vd2:3:osd1;4:osd2*/
+void vpp_set_vd1_preblend_mux(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD1_BLEND_SRC_CTRL, flag, 0, 4);
+}
+/*blend src mux==>0:close;1:vd1;2:vd2:3:osd1;4:osd2*/
+void vpp_set_vd1_postblend_mux(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD1_BLEND_SRC_CTRL, flag, 8, 4);
+}
+/*if vpp_misc 0x1d26[7]=1 0x1dfb[16] must set 1*/
+void vpp_set_vd1_postblend_en(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD1_BLEND_SRC_CTRL, flag, 16, 1);
+}
+
+/*blend src mux==>0:close;1:vd1;2:vd2:3:osd1;4:osd2*/
+void vpp_set_vd2_preblend_mux(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD2_BLEND_SRC_CTRL, flag, 0, 4);
+}
+/*blend src mux==>0:close;1:vd1;2:vd2:3:osd1;4:osd2*/
+void vpp_set_vd2_postblend_mux(unsigned int flag)
+{
+	WRITE_VPP_REG_BITS(VD2_BLEND_SRC_CTRL, flag, 8, 4);
+}
+void vpp_set_vd2_postblend_en(bool flag)
+{
+	WRITE_VPP_REG_BITS(VD2_BLEND_SRC_CTRL, flag, 16, 1);
+	if (flag)
+		WRITE_VPP_REG_BITS(VD2_BLEND_SRC_CTRL, 1, 20, 1);
+}
+
+/*data ext mod==>0:data << 2;1:data << 0*/
+void vpp_set_vd1_ext_mod(bool flag)
+{
+	WRITE_VPP_REG_BITS(DOLBY_PATH_CTRL, flag, 4, 1);
+}
+/*vd1 dolby bypass==>0:no bypass;1:bypass*/
+void vpp_set_vd1_bypass_dolby(bool flag)
+{
+	WRITE_VPP_REG_BITS(DOLBY_PATH_CTRL, flag, 0, 1);
+}
+
+/*data ext mod==>0:data << 2;1:data << 0*/
+void vpp_set_vd2_ext_mod(bool flag)
+{
+	WRITE_VPP_REG_BITS(DOLBY_PATH_CTRL, flag, 5, 1);
+}
+/*vd2 dolby bypass==>0:no bypass;1:bypass*/
+void vpp_set_vd2_bypass_dolby(bool flag)
+{
+	WRITE_VPP_REG_BITS(DOLBY_PATH_CTRL, flag, 1, 1);
+}
+
+void vpp_set_12bit_datapath_g12a(void)
+{
+	/*after this step vd1 output data is U10*/
+	vpp_vd1_if_bits_mode(BIT_MODE_10BIT_422);
+
+	/*after this step vd1 output data is U12,*/
+	vpp_set_vd1_ext_mod(0);
+	vpp_set_vd1_bypass_dolby(1);
+
+	if (is_meson_g12a_cpu()) {
+		/*vd1 mux config*/
+		vpp_set_vd1_mux0(0);
+		vpp_set_vd1_mux1(0);
+		vpp_set_vd1_mux4(0);
+		vpp_set_vd1_mux2(0);
+		vpp_set_vd1_mux5(0);
+		vpp_set_vd1_preblend_mux(1);
+		vpp_set_vd1_postblend_mux(1);
+		vpp_set_vd1_postblend_en(1);
+		vpp_set_vd2_preblend_mux(0);
+		vpp_set_vd2_postblend_mux(2);
+		vpp_set_vd2_postblend_en(0);
+		vpp_set_vd2_ext_mod(0);
+		vpp_set_vd2_bypass_dolby(1);
+	}
+}
+
+/*g12a new add end*/
 
 void vpp_set_12bit_datapath1(void)
 {
@@ -401,6 +556,8 @@ void vpp_bitdepth_config(unsigned int bitdepth)
 		vpp_set_12bit_datapath1();
 	else if (bitdepth == 122)
 		vpp_set_12bit_datapath2();
+	else if (bitdepth == 123)
+		vpp_set_12bit_datapath_g12a();
 	else
 		vpp_set_datapath();
 }
@@ -482,8 +639,18 @@ void vpp_datapath_status(void)
 	unsigned int chroma_coring_en, black_ext_en, bluestretch_en;
 	unsigned int vadj1_en, vadj2_en;
 
-	vd1_out_format = READ_VPP_REG_BITS(VD1_IF0_GEN_REG3, 8, 2);
-	vd2_out_format = READ_VPP_REG_BITS(VD2_IF0_GEN_REG3, 8, 2);
+	if (is_meson_g12a_cpu()) {
+		vd1_out_format =
+			READ_VPP_REG_BITS(G12_VD1_IF0_GEN_REG3, 8, 2);
+		vd2_out_format =
+			READ_VPP_REG_BITS(G12_VD2_IF0_GEN_REG3, 8, 2);
+	} else {
+		vd1_out_format =
+			READ_VPP_REG_BITS(VD1_IF0_GEN_REG3, 8, 2);
+		vd2_out_format =
+			READ_VPP_REG_BITS(VD2_IF0_GEN_REG3, 8, 2);
+	}
+
 	core1_ext_mode = READ_VPP_REG_BITS(VIU_MISC_CTRL1, 20, 1);
 	core1_bypass = READ_VPP_REG_BITS(VIU_MISC_CTRL1, 16, 1);
 	pre_blend_switch = READ_VPP_REG_BITS(VPP_DOLBY_CTRL, 0, 1);
