@@ -610,6 +610,9 @@
 		io_dmc_base{
 			reg = <0x0 0xff638000 0x0 0x2000>;
 		};
+		io_efuse_base{
+			reg = <0x0 0xff630000 0x0 0x2000>;
+		};
 	};
 
 	codec_mm {

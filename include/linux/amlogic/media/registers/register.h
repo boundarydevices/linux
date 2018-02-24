@@ -39,5 +39,6 @@
 #include "regs/demux_regs.h"
 #include "regs/ao_regs.h"
 #include "regs/dmc_regs.h"
+#include "regs/efuse_regs.h"
 
 #endif

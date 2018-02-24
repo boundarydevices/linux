@@ -304,8 +304,8 @@
 #define HEVC_DBLK_CFG9 0x3509
 #define HEVC_DBLK_CFGA 0x350a
 #define HEVC_DBLK_CFGE 0x350e
-#define HEVC_DBLK_STS0 0x350b
-#define HEVC_DBLK_STS1 0x350c
+#define HEVC_DBLK_STS0 0x350b	/* changes the val to 0x350f on g12a */
+#define HEVC_DBLK_STS1 0x350c	/* changes the val to 0x3510 on g12a */
 #define HEVC_SAO_VERSION 0x3600
 #define HEVC_SAO_CTRL0 0x3601
 #define HEVC_SAO_CTRL1 0x3602

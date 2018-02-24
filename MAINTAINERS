@@ -14375,3 +14375,7 @@ AMLOGIC G12A Dolby Vision DRIVER
 M:	Zhilei Wu <zhilei.wu@amlogic.com>
 F:	drivers/amlogic/media/enhancement/amdolby_vision*
 F:	include/linux/amlogic/media/amdolbyvision/*
+
+AMLOGIC G12A Media codec io bus
+M:	Nanxin Qin <nanxin.qin@amlogic.com>
+F:	include/linux/amlogic/media/registers/regs/efuse_regs.h

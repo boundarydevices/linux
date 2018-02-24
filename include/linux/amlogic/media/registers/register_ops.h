@@ -43,6 +43,7 @@ enum
 	IO_VPP_BUS,
 	IO_DMC_BUS,
 	IO_RESET_BUS,
+	IO_EFUSE_BUS,
 	BUS_MAX
 };
 
@@ -67,6 +68,7 @@ int register_reg_ops_mgr(int cputype[], struct chip_register_ops *sops_list,
 	int ops_size);
 int register_reg_ex_ops_mgr(int cputype[],
 	struct chip_register_ops *ex_ops_list, int ops_size);
+
 #define DEF_BUS_OPS(BUS_TYPE, name)\
 static inline void codec_##name##bus_write(unsigned int reg, u32 val)\
 {\
@@ -113,5 +115,6 @@ DEF_BUS_OPS(IO_PARSER_BUS, pars);
 DEF_BUS_OPS(IO_AIU_BUS, aiu);
 DEF_BUS_OPS(IO_DEMUX_BUS, demux);
 DEF_BUS_OPS(IO_RESET_BUS, reset);
+DEF_BUS_OPS(IO_EFUSE_BUS, efuse);
 
 #endif

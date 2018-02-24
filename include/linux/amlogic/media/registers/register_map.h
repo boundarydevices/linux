@@ -37,4 +37,6 @@ int codecio_read_demuxbus(unsigned int reg);
 void codecio_write_demuxbus(unsigned int reg, unsigned int val);
 int codecio_read_resetbus(unsigned int reg);
 void codecio_write_resetbus(unsigned int reg, unsigned int val);
+int codecio_read_efusebus(unsigned int reg);
+void codecio_write_efusebus(unsigned int reg, unsigned int val);
 #endif

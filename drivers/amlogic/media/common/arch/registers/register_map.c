@@ -45,6 +45,7 @@ enum {
 	CODECIO_AOBUS_BASE,
 	CODECIO_VCBUS_BASE,
 	CODECIO_DMCBUS_BASE,
+	CODECIO_EFUSE_BASE,
 	CODECIO_BUS_MAX,
 };
 
@@ -307,6 +308,28 @@ void codecio_write_resetbus(unsigned int reg, unsigned int val)
 	int ret;
 
 	ret = codecio_reg_write(CODECIO_CBUS_BASE, reg << 2, val);
+	if (ret)
+		pr_err("write reset reg %x error %d\n", reg, ret);
+}
+
+int codecio_read_efusebus(unsigned int reg)
+{
+	int ret, val;
+
+	ret = codecio_reg_read(CODECIO_EFUSE_BASE, reg << 2, &val);
+	if (ret) {
+		pr_err("read reset reg %x error %d\n", reg, ret);
+		return -1;
+	}
+
+	return val;
+}
+
+void codecio_write_efusebus(unsigned int reg, unsigned int val)
+{
+	int ret;
+
+	ret = codecio_reg_write(CODECIO_EFUSE_BASE, reg << 2, val);
 	if (ret)
 		pr_err("write reset reg %x error %d\n", reg, ret);
 }
