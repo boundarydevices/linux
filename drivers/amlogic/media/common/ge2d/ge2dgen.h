@@ -63,7 +63,7 @@ void ge2dgen_src_key(struct ge2d_context_s *wq,
 		     int en, int key, int keymask, int keymode);
 
 void ge2dgent_src_gbalpha(struct ge2d_context_s *wq,
-			  unsigned char alpha);
+			  unsigned char alpha1, unsigned char alpha2);
 
 void ge2dgen_src_color(struct ge2d_context_s *wq,
 		       unsigned int color);

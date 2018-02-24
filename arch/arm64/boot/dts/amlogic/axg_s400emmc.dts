@@ -806,7 +806,7 @@
 	};
 
 	ge2d {
-		compatible = "amlogic, ge2d";
+		compatible = "amlogic, ge2d-axg";
 		dev_name = "ge2d";
 		status = "okay";
 		interrupts = <0 150 1>;

@@ -740,7 +740,7 @@
 		logo_addr = "0x7dc00000";
 	};
 	ge2d {
-		compatible = "amlogic, ge2d";
+		compatible = "amlogic, ge2d-gxl";
 		dev_name = "ge2d";
 		status = "okay";
 		interrupts = <0 150 1>;

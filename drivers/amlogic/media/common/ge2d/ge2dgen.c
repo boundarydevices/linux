@@ -323,14 +323,22 @@ void ge2dgen_src_key(struct ge2d_context_s *wq,
 EXPORT_SYMBOL(ge2dgen_src_key);
 
 void ge2dgent_src_gbalpha(struct ge2d_context_s *wq,
-			  unsigned char alpha)
+			  unsigned char alpha1, unsigned char alpha2)
 {
 	struct ge2d_dp_gen_s *dp_gen_cfg = ge2d_wq_get_dp_gen(wq);
-
-	if (dp_gen_cfg->src1_gb_alpha != alpha) {
-		dp_gen_cfg->src1_gb_alpha = alpha;
+#ifdef CONFIG_GE2D_SRC2
+	if ((dp_gen_cfg->src1_gb_alpha != alpha1)
+		|| (dp_gen_cfg->src2_gb_alpha != alpha2)) {
+		dp_gen_cfg->src1_gb_alpha = alpha1;
+		dp_gen_cfg->src2_gb_alpha = alpha2;
 		wq->config.update_flag |= UPDATE_DP_GEN;
 	}
+#else
+	if (dp_gen_cfg->src1_gb_alpha != alpha1) {
+		dp_gen_cfg->src1_gb_alpha = alpha1;
+		wq->config.update_flag |= UPDATE_DP_GEN;
+	}
+#endif
 }
 
 void ge2dgen_src_color(struct ge2d_context_s *wq,

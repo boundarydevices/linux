@@ -31,6 +31,7 @@
 #define MAX_BITBLT_WORK_CONFIG 4
 #define MAX_GE2D_CMD  32   /* 64 */
 
+#define CONFIG_GE2D_SRC2
 #define GE2D_STATE_IDLE                 0
 #define GE2D_STATE_RUNNING              1
 #define GE2D_STATE_CLEANUP              2
@@ -502,6 +503,11 @@ struct ge2d_dp_gen_s {
 
 	unsigned char     src1_gb_alpha_en;
 	unsigned char     src1_gb_alpha;
+#ifdef CONFIG_GE2D_SRC2
+	unsigned char     src2_gb_alpha_en;
+	unsigned char     src2_gb_alpha;
+	unsigned char     src2_cmult_ad;
+#endif
 	unsigned int      alu_const_color;
 
 	unsigned char     src1_key_en;
@@ -569,7 +575,9 @@ struct ge2d_cmd_s {
 
 	unsigned char    src1_cmult_asel;
 	unsigned char    src2_cmult_asel;
-
+#ifdef CONFIG_GE2D_SRC2
+	unsigned char    src2_cmult_ad;
+#endif
 	unsigned char    color_blend_mode;
 	unsigned char    color_src_blend_factor;
 	unsigned char    color_dst_blend_factor;
@@ -750,6 +758,9 @@ struct config_para_ex_s {
 
 	int alu_const_color;
 	unsigned int src1_gb_alpha;
+#ifdef CONFIG_GE2D_SRC2
+	unsigned int src2_gb_alpha;
+#endif
 	unsigned int op_mode;
 	unsigned char bitmask_en;
 	unsigned char bytemask_only;
@@ -790,6 +801,9 @@ struct compat_config_para_ex_s {
 
 	int alu_const_color;
 	unsigned int src1_gb_alpha;
+#ifdef CONFIG_GE2D_SRC2
+	unsigned int src2_gb_alpha;
+#endif
 	unsigned int op_mode;
 	unsigned char bitmask_en;
 	unsigned char bytemask_only;
@@ -846,9 +860,16 @@ struct config_para_ex_ion_s {
 
 	unsigned char src1_cmult_asel;
 	unsigned char src2_cmult_asel;
+#ifdef CONFIG_GE2D_SRC2
+	unsigned char src2_cmult_ad;
+#endif
 	int alu_const_color;
 	unsigned char src1_gb_alpha_en;
 	unsigned int src1_gb_alpha;
+#ifdef CONFIG_GE2D_SRC2
+	unsigned char src2_gb_alpha_en;
+	unsigned int src2_gb_alpha;
+#endif
 	unsigned int op_mode;
 	unsigned char bitmask_en;
 	unsigned char bytemask_only;
@@ -889,9 +910,16 @@ struct compat_config_para_ex_ion_s {
 
 	unsigned char src1_cmult_asel;
 	unsigned char src2_cmult_asel;
+#ifdef CONFIG_GE2D_SRC2
+	unsigned char src2_cmult_ad;
+#endif
 	int alu_const_color;
 	unsigned char src1_gb_alpha_en;
 	unsigned int src1_gb_alpha;
+#ifdef CONFIG_GE2D_SRC2
+	unsigned char src2_gb_alpha_en;
+	unsigned int src2_gb_alpha;
+#endif
 	unsigned int op_mode;
 	unsigned char bitmask_en;
 	unsigned char bytemask_only;
@@ -920,6 +948,16 @@ struct compat_config_para_ex_ion_s {
 	struct compat_config_planes_ion_s dst_planes[4];
 };
 #endif
+struct ge2d_device_data_s {
+	int ge2d_rate;
+	int src2_alp;
+	int canvas_status;
+	int deep_color;
+	int hang_flag;
+	int fifo;
+};
+extern struct ge2d_device_data_s ge2d_meson_dev;
+
 #define GE2D_IOC_MAGIC  'G'
 
 #define GE2D_CONFIG		_IOW(GE2D_IOC_MAGIC, 0x00, struct config_para_s)
@@ -989,7 +1027,6 @@ extern struct ge2d_dp_gen_s *ge2d_wq_get_dp_gen(struct ge2d_context_s *wq);
 extern struct ge2d_cmd_s *ge2d_wq_get_cmd(struct ge2d_context_s *wq);
 extern int ge2d_wq_add_work(struct ge2d_context_s *wq);
 void ge2d_canv_config(u32 index, u32 addr, u32 stride);
-
 #include "ge2d_func.h"
 
 #endif

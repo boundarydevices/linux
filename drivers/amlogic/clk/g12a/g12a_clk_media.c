@@ -480,7 +480,7 @@ void meson_g12a_media_init(void)
 	/* cts_vapb_clk */
 	clks[CLKID_VAPB_P0_COMP] = clk_register_composite(NULL,
 		"vapb_p0_composite",
-		vpu_parent_names, 8,
+		vapb_parent_names, 8,
 		vapb_clk_hws[CLKID_VAPB_P0_MUX - CLKID_VAPB_P0_MUX],
 		&clk_mux_ops,
 		vapb_clk_hws[CLKID_VAPB_P0_DIV - CLKID_VAPB_P0_MUX],
@@ -493,7 +493,7 @@ void meson_g12a_media_init(void)
 
 	clks[CLKID_VAPB_P1_COMP] = clk_register_composite(NULL,
 		"vapb_p1_composite",
-		vpu_parent_names, 8,
+		vapb_parent_names, 8,
 		vapb_clk_hws[CLKID_VAPB_P1_MUX - CLKID_VAPB_P0_MUX],
 		&clk_mux_ops,
 		vapb_clk_hws[CLKID_VAPB_P1_DIV - CLKID_VAPB_P0_MUX],

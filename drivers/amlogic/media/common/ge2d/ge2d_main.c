@@ -49,7 +49,7 @@
 #include "ge2d_wq.h"
 
 #define GE2D_CLASS_NAME "ge2d"
-#define MAX_GE2D_CLK 400000000
+#define MAX_GE2D_CLK 500000000
 
 struct ge2d_device_s {
 	char name[20];
@@ -69,6 +69,8 @@ unsigned int ge2d_dump_reg_cnt;
 #ifdef CONFIG_AMLOGIC_ION
 struct ion_client *ge2d_ion_client;
 #endif
+
+struct ge2d_device_data_s ge2d_meson_dev;
 
 static int init_ge2d_device(void);
 static int remove_ge2d_device(void);
@@ -223,6 +225,7 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	int r = 0;
 	int i, j;
 #endif
+	int cap_mask = 0;
 	void __user *argp = (void __user *)args;
 
 	context = (struct ge2d_context_s *)filp->private_data;
@@ -240,6 +243,10 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	}
 #endif
 	switch (cmd) {
+	case GE2D_GET_CAP:
+		cap_mask = ge2d_meson_dev.src2_alp & 0x1;
+		put_user(cap_mask, (int __user *)argp);
+		break;
 	case GE2D_CONFIG:
 	case GE2D_SRCCOLORKEY:
 		ret = copy_from_user(&ge2d_config,
@@ -433,6 +440,12 @@ static long ge2d_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 				&uf_ex_ion->src1_gb_alpha_en);
 			r |= get_user(ge2d_config_ex_ion.src1_gb_alpha,
 				&uf_ex_ion->src1_gb_alpha);
+#ifdef CONFIG_GE2D_SRC2
+			r |= get_user(ge2d_config_ex_ion.src2_gb_alpha_en,
+				&uf_ex_ion->src2_gb_alpha_en);
+			r |= get_user(ge2d_config_ex_ion.src2_gb_alpha,
+				&uf_ex_ion->src2_gb_alpha);
+#endif
 			r |= get_user(ge2d_config_ex_ion.op_mode,
 				&uf_ex_ion->op_mode);
 			r |= get_user(ge2d_config_ex_ion.bitmask_en,
@@ -761,6 +774,88 @@ static int ge2d_release(struct inode *inode, struct file *file)
 	return -1;
 }
 
+static struct ge2d_device_data_s ge2d_gxl = {
+	.ge2d_rate = 400000000,
+	.src2_alp = 0,
+	.canvas_status = 0,
+	.deep_color = 0,
+	.hang_flag = 0,
+	.fifo = 0,
+};
+
+static struct ge2d_device_data_s ge2d_gxm = {
+	.ge2d_rate = 400000000,
+	.src2_alp = 0,
+	.canvas_status = 0,
+	.deep_color = 0,
+	.hang_flag = 0,
+	.fifo = 0,
+};
+
+static struct ge2d_device_data_s ge2d_txl = {
+	.ge2d_rate = 400000000,
+	.src2_alp = 0,
+	.canvas_status = 0,
+	.deep_color = 1,
+	.hang_flag = 0,
+	.fifo = 0,
+};
+
+static struct ge2d_device_data_s ge2d_txlx = {
+	.ge2d_rate = 400000000,
+	.src2_alp = 0,
+	.canvas_status = 0,
+	.deep_color = 1,
+	.hang_flag = 1,
+	.fifo = 1,
+};
+
+static struct ge2d_device_data_s ge2d_axg = {
+	.ge2d_rate = 400000000,
+	.src2_alp = 0,
+	.canvas_status = 1,
+	.deep_color = 1,
+	.hang_flag = 1,
+	.fifo = 1,
+};
+
+static struct ge2d_device_data_s ge2d_g12a = {
+	.ge2d_rate = 500000000,
+	.src2_alp = 1,
+	.canvas_status = 0,
+	.deep_color = 1,
+	.hang_flag = 1,
+	.fifo = 1,
+};
+
+static const struct of_device_id ge2d_dt_match[] = {
+	{
+		.compatible = "amlogic, ge2d-gxl",
+		.data = &ge2d_gxl,
+	},
+	{
+		.compatible = "amlogic, ge2d-gxm",
+		.data = &ge2d_gxm,
+	},
+	{
+		.compatible = "amlogic, ge2d-txl",
+		.data = &ge2d_txl,
+	},
+	{
+		.compatible = "amlogic, ge2d-txlx",
+		.data = &ge2d_txlx,
+	},
+	{
+		.compatible = "amlogic, ge2d-axg",
+		.data = &ge2d_axg,
+	},
+	{
+		.compatible = "amlogic, ge2d-g12a",
+		.data = &ge2d_g12a,
+	},
+	{},
+};
+
 static int ge2d_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -771,6 +866,27 @@ static int ge2d_probe(struct platform_device *pdev)
 	struct resource res;
 
 	init_ge2d_device();
+
+	if (pdev->dev.of_node) {
+		const struct of_device_id *match;
+		struct ge2d_device_data_s *ge2d_meson;
+		struct device_node *of_node = pdev->dev.of_node;
+
+		match = of_match_node(ge2d_dt_match, of_node);
+		if (match) {
+			ge2d_meson = (struct ge2d_device_data_s *)match->data;
+			if (ge2d_meson)
+				memcpy(&ge2d_meson_dev, ge2d_meson,
+					sizeof(struct ge2d_device_data_s));
+			else {
+				pr_err("%s data NOT match\n", __func__);
+				return -ENODEV;
+			}
+		} else {
+				pr_err("%s NOT match\n", __func__);
+				return -ENODEV;
+		}
+	}
 	/* get interrupt resource */
 	irq = platform_get_irq_byname(pdev, "ge2d");
 	if (irq == -ENXIO) {
@@ -806,7 +922,12 @@ static int ge2d_probe(struct platform_device *pdev)
 		if (!IS_ERR(clk_vapb0)) {
 			ge2d_log_info("clock source clk_vapb_0 %p\n",
 				clk_vapb0);
+			vapb_rate =  ge2d_meson_dev.ge2d_rate;
+			clk_set_rate(clk_vapb0, vapb_rate);
 			clk_prepare_enable(clk_vapb0);
+			vapb_rate = clk_get_rate(clk_vapb0);
+			ge2d_log_info("ge2d init clock is %d HZ\n",
+				vapb_rate);
 			vpu_rate = get_vpu_clk();
 			ge2d_log_info("vpu clock is %d HZ\n",
 					vpu_rate);
@@ -843,6 +964,9 @@ static int ge2d_probe(struct platform_device *pdev)
 	}
 
 	ret = ge2d_wq_init(pdev, irq, clk_gate);
+
+	clk_disable_unprepare(clk_gate);
+
 #ifdef CONFIG_AMLOGIC_ION
 	if (!ge2d_ion_client)
 		ge2d_ion_client = meson_ion_client_create(-1, "meson-ge2d");
@@ -858,11 +982,6 @@ static int ge2d_remove(struct platform_device *pdev)
 	remove_ge2d_device();
 	return 0;
 }
-
-static const struct of_device_id ge2d_dt_match[] = {
-	{.compatible = "amlogic, ge2d",},
-	{},
-};
 
 static struct platform_driver ge2d_driver = {
 	.probe      = ge2d_probe,

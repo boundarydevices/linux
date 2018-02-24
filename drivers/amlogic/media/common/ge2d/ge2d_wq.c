@@ -54,7 +54,6 @@ static struct ge2d_manager_s ge2d_manager;
 static int ge2d_irq = -ENXIO;
 static struct clk *ge2d_clk;
 
-
 static const int bpp_type_lut[] = {
 	/* 16bit */
 	COLOR_INDEX_16_655,	/* 0 */
@@ -526,17 +525,14 @@ static void build_ge2d_config(struct config_para_s *cfg,
 			      struct src_dst_para_s *dst,
 			      int index)
 {
-	int cpu_type;
-
 	index &= 0xff;
-	cpu_type = get_cpu_type();
 	if (src) {
 		src->xres = cfg->src_planes[0].w;
 		src->yres = cfg->src_planes[0].h;
 		src->ge2d_color_index = cfg->src_format;
 		src->bpp = bpp(cfg->src_format);
 		if (cfg->src_planes[0].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+			if (ge2d_meson_dev.canvas_status == 1) {
 				src->canvas_index = 0;
 				src->phy_addr = cfg->src_planes[0].addr;
 				src->stride = cfg->src_planes[0].w *
@@ -556,7 +552,7 @@ static void build_ge2d_config(struct config_para_s *cfg,
 		}
 		/* multi-src_planes */
 		if (cfg->src_planes[1].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+			if (ge2d_meson_dev.canvas_status == 1)
 				ge2d_log_info("ge2d not support src_planes[1]\n");
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 			else {
@@ -571,7 +567,7 @@ static void build_ge2d_config(struct config_para_s *cfg,
 #endif
 		}
 		if (cfg->src_planes[2].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+			if (ge2d_meson_dev.canvas_status == 1)
 				ge2d_log_info("ge2d not support src_planes[2]\n");
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 			else {
@@ -586,7 +582,7 @@ static void build_ge2d_config(struct config_para_s *cfg,
 #endif
 		}
 		if (cfg->src_planes[3].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+			if (ge2d_meson_dev.canvas_status == 1)
 				ge2d_log_info("ge2d not support src_planes[3]\n");
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 			else {
@@ -607,7 +603,7 @@ static void build_ge2d_config(struct config_para_s *cfg,
 		dst->ge2d_color_index = cfg->dst_format;
 		dst->bpp = bpp(cfg->dst_format);
 		if (cfg->dst_planes[0].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+			if (ge2d_meson_dev.canvas_status == 1) {
 				dst->canvas_index = 0;
 				dst->phy_addr = cfg->src_planes[0].addr;
 				dst->stride = cfg->src_planes[0].w *
@@ -627,7 +623,7 @@ static void build_ge2d_config(struct config_para_s *cfg,
 		}
 		/* multi-src_planes */
 		if (cfg->dst_planes[1].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+			if (ge2d_meson_dev.canvas_status == 1)
 				ge2d_log_info("ge2d not support dst_planes[1]\n");
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 			else {
@@ -642,7 +638,7 @@ static void build_ge2d_config(struct config_para_s *cfg,
 #endif
 		}
 		if (cfg->dst_planes[2].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+			if (ge2d_meson_dev.canvas_status == 1)
 				ge2d_log_info("ge2d not support dst_planes[2]\n");
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 			else {
@@ -657,7 +653,7 @@ static void build_ge2d_config(struct config_para_s *cfg,
 #endif
 		}
 		if (cfg->dst_planes[3].addr) {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG)
+			if (ge2d_meson_dev.canvas_status == 1)
 				ge2d_log_info("ge2d not support dst_planes[3]\n");
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 			else {
@@ -684,11 +680,9 @@ static int setup_display_property(struct src_dst_para_s *src_dst, int index)
 	unsigned	int	data32;
 	unsigned	int	bpp;
 	unsigned int	block_mode[] = {2, 4, 8, 16, 16, 32, 0, 24};
-	int cpu_type;
 
-	cpu_type = get_cpu_type();
 	src_dst->canvas_index = index;
-	if (cpu_type != MESON_CPU_MAJOR_ID_AXG) {
+	if (ge2d_meson_dev.canvas_status == 0) {
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 		canvas_read(index, &canvas);
 		cs_width = canvas.width;
@@ -704,7 +698,7 @@ static int setup_display_property(struct src_dst_para_s *src_dst, int index)
 	data32 = VSYNCOSD_RD_MPEG_REG(
 		VIU_OSD1_BLK0_CFG_W0 + REG_OFFSET * index);
 	src_dst->canvas_index = (data32 >> 16) & 0xff;
-	if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+	if (ge2d_meson_dev.canvas_status == 1) {
 		src_dst->canvas_index = 0;
 		osd_get_info(index, &cs_addr,
 			&cs_width, &cs_height);
@@ -1068,11 +1062,9 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 	struct ge2d_dp_gen_s *dp_gen_cfg;
 	struct ge2d_cmd_s *ge2d_cmd_cfg;
 	int top, left, width, height;
-	int cpu_type;
 	unsigned int src_addr = 0, src2_addr = 0, dst_addr = 0;
 	unsigned int src_stride = 0, src2_stride = 0, dst_stride = 0;
 
-	cpu_type = get_cpu_type();
 	/* setup src and dst */
 	switch (ge2d_config->src_para.mem_type) {
 	case CANVAS_OSD0:
@@ -1115,7 +1107,7 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 			ge2d_log_dbg("ge2d error: src alloc, out of range\n");
 			return -1;
 		}
-		if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_meson_dev.canvas_status == 1) {
 			if (build_ge2d_addr_config(
 				&ge2d_config->src_planes[0],
 				ge2d_config->src_para.format,
@@ -1190,7 +1182,7 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 			src2_addr = src_addr;
 			src2_stride = src_stride;
 		} else {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+			if (ge2d_meson_dev.canvas_status == 1) {
 				if (build_ge2d_addr_config(
 					&ge2d_config->src2_planes[0],
 					ge2d_config->src2_para.format,
@@ -1276,7 +1268,7 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 			dst_addr = src2_addr;
 			dst_stride = src2_stride;
 		} else {
-			if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+			if (ge2d_meson_dev.canvas_status == 1) {
 				if (build_ge2d_addr_config(
 					&ge2d_config->dst_planes[0],
 					ge2d_config->dst_para.format,
@@ -1325,8 +1317,12 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 			ge2d_config->src_key.key_color,
 			ge2d_config->src_key.key_mask,
 			ge2d_config->src_key.key_mode);
-
-	ge2dgent_src_gbalpha(context, ge2d_config->src1_gb_alpha);
+#ifdef CONFIG_GE2D_SRC2
+	ge2dgent_src_gbalpha(context, ge2d_config->src1_gb_alpha,
+		ge2d_config->src2_gb_alpha);
+#else
+	ge2dgent_src_gbalpha(context, ge2d_config->src1_gb_alpha, 0);
+#endif
 	ge2dgen_src_color(context, ge2d_config->src_para.color);
 
 	ge2dgen_src2(context, ge2d_config->src2_para.canvas_index,
@@ -1387,7 +1383,10 @@ int ge2d_context_config_ex(struct ge2d_context_s *context,
 	}
 	dp_gen_cfg->src1_gb_alpha = 0xff;
 	dp_gen_cfg->src1_gb_alpha_en = 0;
-
+#ifdef CONFIG_GE2D_SRC2
+	dp_gen_cfg->src2_gb_alpha = 0xff;
+	dp_gen_cfg->src2_gb_alpha_en = 0;
+#endif
 	dp_gen_cfg->src2_key_en = ge2d_config->src2_key.key_enable;
 	dp_gen_cfg->src2_key_mode = ge2d_config->src2_key.key_mode;
 	dp_gen_cfg->src2_key =   ge2d_config->src2_key.key_color;
@@ -1441,11 +1440,9 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 	struct ge2d_dp_gen_s *dp_gen_cfg;
 	struct ge2d_cmd_s *ge2d_cmd_cfg;
 	int top, left, width, height;
-	int cpu_type;
 	unsigned int src_addr = 0, src2_addr = 0, dst_addr = 0;
 	unsigned int src_stride = 0, src2_stride = 0, dst_stride = 0;
 
-	cpu_type = get_cpu_type();
 	/* setup src and dst */
 	switch (ge2d_config->src_para.mem_type) {
 	case CANVAS_OSD0:
@@ -1489,7 +1486,7 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 			ge2d_log_dbg("ge2d error: src alloc, out of range\n");
 			return -1;
 		}
-		if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_meson_dev.canvas_status == 1) {
 			if (build_ge2d_addr_config_ion(
 				&ge2d_config->src_planes[0],
 				ge2d_config->src_para.format,
@@ -1565,7 +1562,7 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 		 *	index = ge2d_config->src_para.canvas_index;
 		 * else
 		 */
-		if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_meson_dev.canvas_status == 1) {
 			if (build_ge2d_addr_config_ion(
 				&ge2d_config->src2_planes[0],
 				ge2d_config->src2_para.format,
@@ -1643,7 +1640,7 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 		 *	index = ge2d_config->src2_para.canvas_index;
 		 * else
 		 */
-		if (cpu_type == MESON_CPU_MAJOR_ID_AXG) {
+		if (ge2d_meson_dev.canvas_status == 1) {
 			if (build_ge2d_addr_config_ion(
 				&ge2d_config->dst_planes[0],
 				ge2d_config->dst_para.format,
@@ -1690,8 +1687,12 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 			ge2d_config->src_key.key_color,
 			ge2d_config->src_key.key_mask,
 			ge2d_config->src_key.key_mode);
-
-	ge2dgent_src_gbalpha(context, ge2d_config->src1_gb_alpha);
+#ifdef CONFIG_GE2D_SRC2
+	ge2dgent_src_gbalpha(context, ge2d_config->src1_gb_alpha,
+		ge2d_config->src2_gb_alpha);
+#else
+	ge2dgent_src_gbalpha(context, ge2d_config->src1_gb_alpha, 0);
+#endif
 	ge2dgen_src_color(context, ge2d_config->src_para.color);
 
 	ge2dgen_src2(context, ge2d_config->src2_para.canvas_index,
@@ -1752,7 +1753,11 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 	}
 	dp_gen_cfg->src1_gb_alpha = ge2d_config->src1_gb_alpha & 0xff;
 	dp_gen_cfg->src1_gb_alpha_en = ge2d_config->src1_gb_alpha_en & 1;
-
+#ifdef CONFIG_GE2D_SRC2
+	dp_gen_cfg->src2_gb_alpha = ge2d_config->src2_gb_alpha & 0xff;
+	dp_gen_cfg->src2_gb_alpha_en = ge2d_config->src2_gb_alpha_en & 1;
+	ge2d_cmd_cfg->src2_cmult_ad = ge2d_config->src2_cmult_ad;
+#endif
 	dp_gen_cfg->src2_key_en = ge2d_config->src2_key.key_enable;
 	dp_gen_cfg->src2_key_mode = ge2d_config->src2_key.key_mode;
 	dp_gen_cfg->src2_key =   ge2d_config->src2_key.key_color;
@@ -1781,12 +1786,8 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 	ge2d_cmd_cfg->hsc_ini_phase = ge2d_config->hf_init_phase;
 	ge2d_cmd_cfg->hsc_phase_step = ge2d_config->hsc_start_phase_step;
 	ge2d_cmd_cfg->hsc_rpt_p0_num = ge2d_config->hf_rpt_num;
-
-	ge2d_cmd_cfg->src1_cmult_asel =
-		(ge2d_config->src1_cmult_asel < 3) ?
-		ge2d_config->src1_cmult_asel : 0;
-	ge2d_cmd_cfg->src2_cmult_asel =
-		(ge2d_config->src2_cmult_asel != 0) ? 1 : 0;
+	ge2d_cmd_cfg->src1_cmult_asel = ge2d_config->src1_cmult_asel;
+	ge2d_cmd_cfg->src2_cmult_asel = ge2d_config->src2_cmult_asel;
 	context->config.update_flag = UPDATE_ALL;
 	/* context->config.src1_data.ddr_burst_size_y = 3; */
 	/* context->config.src1_data.ddr_burst_size_cb = 3; */
@@ -1912,7 +1913,6 @@ int ge2d_wq_init(struct platform_device *pdev,
 	INIT_LIST_HEAD(&ge2d_manager.process_queue);
 	ge2d_manager.last_wq = NULL;
 	ge2d_manager.ge2d_thread = NULL;
-
 	ge2d_clk_config(true);
 	ge2d_soft_rst();
 	ge2d_gen_cfg.interrupt_ctrl = 0x02;
@@ -1928,7 +1928,6 @@ int ge2d_wq_init(struct platform_device *pdev,
 	ge2d_gen_cfg.burst_ctrl = 0;
 	ge2d_set_gen(&ge2d_gen_cfg);
 	ge2d_clk_config(false);
-
 	if (ge2d_start_monitor()) {
 		ge2d_log_err("ge2d create thread error\n");
 		return -1;

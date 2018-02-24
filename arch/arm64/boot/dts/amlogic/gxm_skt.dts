@@ -657,7 +657,7 @@
 		logo_addr = "0x3f800000";
 	};
 	ge2d {
-		compatible = "amlogic, ge2d";
+		compatible = "amlogic, ge2d-gxm";
 		dev_name = "ge2d";
 		status = "okay";
 		interrupts = <0 150 1>;

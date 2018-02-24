@@ -18,6 +18,7 @@
 #ifndef _GE2D_CMD_H_
 #define _GE2D_CMD_H_
 
+#define GE2D_GET_CAP                        0x470b
 #define GE2D_BLEND_NOALPHA_NOBLOCK          0x470a
 #define GE2D_BLEND_NOALPHA                  0x4709
 #define	GE2D_STRETCHBLIT_NOALPHA_NOBLOCK    0x4708
