@@ -31,7 +31,8 @@
 			&dvfs400_cfg
 			&dvfs500_cfg
 			&dvfs666_cfg
-			&dvfs800_cfg>;
+			&dvfs850_cfg
+			&dvfs850_cfg>;
 
 		dvfs125_cfg:clk125_cfg {
 			clk_freq = <125000000>;
