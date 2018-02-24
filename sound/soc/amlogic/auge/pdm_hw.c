@@ -147,22 +147,22 @@ static void aml_pdm_filters_config(int osr,
 	case 32:
 		hcic_dn_rate = 0x4;
 		hcic_gain	 = 0x80;
-		hcic_shift	 = 0xa;
+		hcic_shift	 = 0xe;
 		break;
 	case 40:
 		hcic_dn_rate = 0x5;
-		hcic_gain	 = 0x54;
-		hcic_shift	 = 0xb;
+		hcic_gain	 = 0x6b;
+		hcic_shift	 = 0x10;
 		break;
 	case 48:
 		hcic_dn_rate = 0x6;
-		hcic_gain	 = 0x43;
-		hcic_shift	 = 0xc;
+		hcic_gain	 = 0x78;
+		hcic_shift	 = 0x12;
 		break;
 	case 56:
 		hcic_dn_rate = 0x7;
-		hcic_gain	 = 0x7d;
-		hcic_shift	 = 0xe;
+		hcic_gain	 = 0x51;
+		hcic_shift	 = 0x13;
 		break;
 	case 64:
 		hcic_dn_rate = 0x0008;
@@ -358,7 +358,8 @@ void aml_pdm_filter_ctrl(int osr, int mode)
 	case 48:
 	case 56:
 	default:
-		pr_info("default mode 1, osr 64, 48k\n");
+		pr_info("osr :%d , lpf2 uses default parameters with osr64\n",
+			osr);
 		lpf2_coeff = lpf2_osr64;
 		break;
 	}

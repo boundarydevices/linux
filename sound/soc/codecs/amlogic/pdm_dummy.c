@@ -20,7 +20,8 @@
 #include <linux/of.h>
 #include <sound/soc.h>
 
-#define DUMMY_RATES			(SNDRV_PCM_RATE_48000 |\
+#define DUMMY_RATES			(SNDRV_PCM_RATE_64000 |\
+						SNDRV_PCM_RATE_48000 |\
 						SNDRV_PCM_RATE_32000 |\
 						SNDRV_PCM_RATE_16000 |\
 						SNDRV_PCM_RATE_8000)

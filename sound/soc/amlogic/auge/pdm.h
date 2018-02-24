@@ -29,7 +29,8 @@
 #define PDM_CHANNELS_MIN		1
 #define PDM_CHANNELS_MAX		(8 + 8) /* 8ch pdm in, 8 ch tdmin_lb */
 
-#define PDM_RATES			(SNDRV_PCM_RATE_48000 |\
+#define PDM_RATES			(SNDRV_PCM_RATE_64000 |\
+						SNDRV_PCM_RATE_48000 |\
 						SNDRV_PCM_RATE_32000 |\
 						SNDRV_PCM_RATE_16000 |\
 						SNDRV_PCM_RATE_8000)
