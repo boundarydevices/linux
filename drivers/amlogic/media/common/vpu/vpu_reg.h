@@ -28,7 +28,7 @@
  * *********************************
  */
 
-#define AO_RTI_GEN_PWR_SLEEP0        ((0x00 << 10) | (0x3a << 2))
+#define AO_RTI_GEN_PWR_SLEEP0        (0x3a << 2)
 
 /* HHI bus */
 #define HHI_GP1_PLL_CNTL             0x16
@@ -71,6 +71,31 @@
 #define RESET6_LEVEL                 0x1126
 #define RESET7_LEVEL                 0x1127
 
+#define RESET0_REGISTER_TXLX         0x0401
+#define RESET1_REGISTER_TXLX         0x0402
+#define RESET2_REGISTER_TXLX         0x0403
+#define RESET3_REGISTER_TXLX         0x0404
+#define RESET4_REGISTER_TXLX         0x0405
+#define RESET5_REGISTER_TXLX         0x0406
+#define RESET6_REGISTER_TXLX         0x0407
+#define RESET7_REGISTER_TXLX         0x0408
+#define RESET0_MASK_TXLX             0x0410
+#define RESET1_MASK_TXLX             0x0411
+#define RESET2_MASK_TXLX             0x0412
+#define RESET3_MASK_TXLX             0x0413
+#define RESET4_MASK_TXLX             0x0414
+#define RESET5_MASK_TXLX             0x0415
+#define RESET6_MASK_TXLX             0x0416
+#define RESET7_MASK_TXLX             0x0418
+#define RESET0_LEVEL_TXLX            0x0420
+#define RESET1_LEVEL_TXLX            0x0421
+#define RESET2_LEVEL_TXLX            0x0422
+#define RESET3_LEVEL_TXLX            0x0423
+#define RESET4_LEVEL_TXLX            0x0424
+#define RESET5_LEVEL_TXLX            0x0425
+#define RESET6_LEVEL_TXLX            0x0426
+#define RESET7_LEVEL_TXLX            0x0427
+
 /* vpu clk gate */
 /* hiu_bus */
 #define HHI_GCLK_OTHER               0x54
@@ -95,6 +120,17 @@
 #define VPP_OSDSR_GCLK_CTRL          0x1d78
 #define VPP_XVYCC_GCLK_CTRL          0x1d79
 
+#define DOLBY_TV_CLKGATE_CTRL        0x33f1
+#define DOLBY_CORE1_CLKGATE_CTRL     0x33f2
+#define DOLBY_CORE2A_CLKGATE_CTRL    0x3432
+#define DOLBY_CORE3_CLKGATE_CTRL     0x36f0
+
+#define VPU_RDARB_MODE_L1C1          0x2790
+#define VPU_RDARB_MODE_L1C2          0x2799
+#define VPU_RDARB_MODE_L2C1          0x279d
+#define VPU_WRARB_MODE_L2C1          0x27a2
+
+
 extern unsigned int vpu_hiu_read(unsigned int _reg);
 extern void vpu_hiu_write(unsigned int _reg, unsigned int _value);
 extern void vpu_hiu_setb(unsigned int _reg, unsigned int _value,
@@ -112,5 +148,17 @@ extern unsigned int vpu_vcbus_getb(unsigned int _reg,
 		unsigned int _start, unsigned int _len);
 extern void vpu_vcbus_set_mask(unsigned int _reg, unsigned int _mask);
 extern void vpu_vcbus_clr_mask(unsigned int _reg, unsigned int _mask);
+
+extern unsigned int vpu_ao_read(unsigned int _reg);
+extern void vpu_ao_write(unsigned int _reg, unsigned int _value);
+extern void vpu_ao_setb(unsigned int _reg, unsigned int _value,
+		unsigned int _start, unsigned int _len);
+
+extern unsigned int vpu_cbus_read(unsigned int _reg);
+extern void vpu_cbus_write(unsigned int _reg, unsigned int _value);
+extern void vpu_cbus_setb(unsigned int _reg, unsigned int _value,
+		unsigned int _start, unsigned int _len);
+extern void vpu_cbus_set_mask(unsigned int _reg, unsigned int _mask);
+extern void vpu_cbus_clr_mask(unsigned int _reg, unsigned int _mask);
 
 #endif

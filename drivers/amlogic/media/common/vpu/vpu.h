@@ -70,6 +70,9 @@ struct vpu_data_s {
 	unsigned int clk_gate_table_cnt;
 	struct vpu_ctrl_s *mem_pd_table;
 	struct vpu_ctrl_s *clk_gate_table;
+
+	void (*power_on)(void);
+	void (*power_off)(void);
 };
 
 struct vpu_conf_s {
@@ -95,5 +98,13 @@ extern int vpu_debug_print_flag;
 
 extern int vpu_chip_valid_check(void);
 extern void vpu_ctrl_probe(void);
+
+extern void vpu_mem_pd_init_off(void);
+extern void vpu_clk_gate_init_off(void);
+extern void vpu_module_init_config(void);
+extern void vpu_power_on_gx(void);
+extern void vpu_power_off_gx(void);
+extern void vpu_power_on_txlx(void);
+extern void vpu_power_off_txlx(void);
 
 #endif

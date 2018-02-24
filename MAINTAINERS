@@ -14301,3 +14301,7 @@ F: include/dt-bindings/gpio/*
 AMLOGIC GPU CONFIG
 M: Jiyu Yang <Jiyu.Yang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/mesong12a-dvalin.dtsi
+
+AMLOGIC VPU DRIVER
+M:      Evoke Zhang <evoke.zhang@amlogic.com>
+F:      drivers/amlogic/media/common/vpu/vpu_power_init.c

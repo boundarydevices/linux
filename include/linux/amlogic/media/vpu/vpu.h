@@ -35,6 +35,7 @@ enum vpu_mod_e {
 	VPU_VIU_SRSCL,        /* reg0[21:20] //GXBB, GXTVBB, TXLX */
 	VPU_VIU_OSDSR,        /* reg0[23:22] //GXBB */
 	VPU_AFBC_DEC1,        /* reg0[23:22] //GXTVBB, TXLX */
+	VPU_VIU_DI_SCALE,     /* reg0[25:24] //G12A */
 	VPU_DI_PRE,           /* reg0[27:26] //common */
 	VPU_DI_POST,          /* reg0[29:28] //common */
 	VPU_SHARP,            /* reg0[31:30] //common */
@@ -54,19 +55,31 @@ enum vpu_mod_e {
 	VPU_VPU_ARB,          /* reg1[15:14] //GXBB, GXTVBB, GXL, TXLX */
 	VPU_AFBC_DEC,         /* reg1[17:16] //GXBB, GXTVBB, TXL, TXLX */
 	VPU_OSD_AFBCD,        /* reg1[19:18] //TXLX */
+	VPU_VD2_SCALE,        /* reg1[19:18] //G12A */
 	VPU_VENCP,            /* reg1[21:20] //common */
 	VPU_VENCL,            /* reg1[23:22] //common */
 	VPU_VENCI,            /* reg1[25:24] //common */
 	VPU_LDIM_STTS,        /* reg1[29:28] //GXTVBB, GXL, TXL, TXLX */
+	VPU_TV_DEC_CVD2,      /* reg1[29:28] */
 	VPU_XVYCC_LUT,        /* reg1[31:30] //GXTVBB, GXL, TXL, TXLX */
+	VPU_VD2_OSD2_SCALE,   /* reg1[31:30] //G12A */
 
-	VPU_VIU1_WM,          /* reg2[1:0]  //GXL, TXL, TXLX */
+	VPU_VIU_WM,           /* reg2[1:0]   //GXL, TXL, TXLX */
+	VPU_TCON,             /* reg2[3:2]   //TXHD */
+	VPU_VIU_OSD3,         /* reg2[5:4]   //G12A */
+	VPU_VIU_OSD4,         /* reg2[7:6]   //G12A */
+	VPU_MAIL_AFBCD,       /* reg2[9:8]   //G12A */
+	VPU_VD1_SCALE,        /* reg2[11:10] //G12A */
+	VPU_OSD_BLD34,        /* reg2[13:12] //G12A */
+	VPU_PRIME_DOLBY_RAM,  /* reg2[15:14] //G12A */
+	VPU_VD2_OFIFO,        /* reg2[17:16] //G12A */
+	VPU_RDMA,             /* reg2[31:30] //G12A */
+
 	VPU_MOD_MAX,
 
 	/* for clk_gate */
 	VPU_VPU_TOP,
 	VPU_VPU_CLKB,
-	VPU_RDMA,
 	VPU_MISC,      /* hs,vs,interrupt */
 	VPU_VENC_DAC,
 	VPU_VLOCK,

@@ -758,7 +758,7 @@ static ssize_t vpu_mem_debug(struct class *class, struct class_attribute *attr,
 {
 	unsigned int tmp[2];
 	unsigned int _reg0, _reg1, _reg2;
-	int ret = 0;
+	int ret = 0, i;
 
 	_reg0 = HHI_VPU_MEM_PD_REG0;
 	_reg1 = HHI_VPU_MEM_PD_REG1;
@@ -783,6 +783,11 @@ static ssize_t vpu_mem_debug(struct class *class, struct class_attribute *attr,
 		} else {
 			VPUERR("invalid parameters\n");
 		}
+		break;
+	case 'i':
+		VPUPR("vpu modules:\n");
+		for (i = VPU_VIU_OSD1; i < VPU_MOD_MAX; i++)
+			pr_info("    [%02d] %s\n", i, vpu_mod_table[i]);
 		break;
 	default:
 		VPUERR("wrong mem_pd command\n");
@@ -1132,6 +1137,37 @@ static void vpu_clktree_init(struct device *dev)
 	VPUPR("clktree_init\n");
 }
 
+static int vpu_power_init_check(void)
+{
+	unsigned int val;
+	int ret = 0;
+
+	val = vpu_hiu_getb(HHI_VPU_CLK_CNTL, 31, 1);
+	if (val) {
+		if (vpu_hiu_getb(HHI_VPU_CLK_CNTL, 24, 1) == 0)
+			ret = 1;
+	} else {
+		if (vpu_hiu_getb(HHI_VPU_CLK_CNTL, 8, 1) == 0)
+			ret = 1;
+	}
+
+	return ret;
+}
+
+static void vpu_power_init(void)
+{
+	int ret = 0;
+
+	ret = vpu_chip_valid_check();
+	if (ret)
+		return;
+
+	vpu_conf.data->power_on();
+	vpu_mem_pd_init_off();
+	vpu_clk_gate_init_off();
+	vpu_module_init_config();
+}
+
 static struct vpu_data_s vpu_data_gxb = {
 	.chip_type = VPU_CHIP_GXBB,
 	.chip_name = "gxbb",
@@ -1149,6 +1185,9 @@ static struct vpu_data_s vpu_data_gxb = {
 		sizeof(vpu_clk_gate_gxb) / sizeof(struct vpu_ctrl_s),
 	.mem_pd_table = vpu_mem_pd_gxb,
 	.clk_gate_table = vpu_clk_gate_gxb,
+
+	.power_on  = vpu_power_on_gx,
+	.power_off = vpu_power_off_gx,
 };
 
 static struct vpu_data_s vpu_data_gxtvbb = {
@@ -1168,6 +1207,9 @@ static struct vpu_data_s vpu_data_gxtvbb = {
 		sizeof(vpu_clk_gate_gxl) / sizeof(struct vpu_ctrl_s),
 	.mem_pd_table = vpu_mem_pd_gxtvbb,
 	.clk_gate_table = vpu_clk_gate_gxl,
+
+	.power_on  = vpu_power_on_gx,
+	.power_off = vpu_power_off_gx,
 };
 
 static struct vpu_data_s vpu_data_gxl = {
@@ -1187,6 +1229,9 @@ static struct vpu_data_s vpu_data_gxl = {
 		sizeof(vpu_clk_gate_gxl) / sizeof(struct vpu_ctrl_s),
 	.mem_pd_table = vpu_mem_pd_gxl,
 	.clk_gate_table = vpu_clk_gate_gxl,
+
+	.power_on  = vpu_power_on_gx,
+	.power_off = vpu_power_off_gx,
 };
 
 static struct vpu_data_s vpu_data_gxm = {
@@ -1206,6 +1251,9 @@ static struct vpu_data_s vpu_data_gxm = {
 		sizeof(vpu_clk_gate_gxl) / sizeof(struct vpu_ctrl_s),
 	.mem_pd_table = vpu_mem_pd_gxl,
 	.clk_gate_table = vpu_clk_gate_gxl,
+
+	.power_on  = vpu_power_on_gx,
+	.power_off = vpu_power_off_gx,
 };
 
 static struct vpu_data_s vpu_data_txlx = {
@@ -1225,6 +1273,9 @@ static struct vpu_data_s vpu_data_txlx = {
 		sizeof(vpu_clk_gate_txlx) / sizeof(struct vpu_ctrl_s),
 	.mem_pd_table = vpu_mem_pd_txlx,
 	.clk_gate_table = vpu_clk_gate_txlx,
+
+	.power_on  = vpu_power_on_txlx,
+	.power_off = vpu_power_off_txlx,
 };
 
 static struct vpu_data_s vpu_data_axg = {
@@ -1244,6 +1295,9 @@ static struct vpu_data_s vpu_data_axg = {
 		sizeof(vpu_clk_gate_axg) / sizeof(struct vpu_ctrl_s),
 	.mem_pd_table = vpu_mem_pd_axg,
 	.clk_gate_table = vpu_clk_gate_axg,
+
+	.power_on  = vpu_power_on_txlx,
+	.power_off = vpu_power_off_txlx,
 };
 
 static struct vpu_data_s vpu_data_g12a = {
@@ -1258,11 +1312,14 @@ static struct vpu_data_s vpu_data_g12a = {
 	.mem_pd_reg2_valid = 1,
 
 	.mem_pd_table_cnt =
-		sizeof(vpu_mem_pd_gxl) / sizeof(struct vpu_ctrl_s),
+		sizeof(vpu_mem_pd_g12a) / sizeof(struct vpu_ctrl_s),
 	.clk_gate_table_cnt =
 		sizeof(vpu_clk_gate_gxl) / sizeof(struct vpu_ctrl_s),
-	.mem_pd_table = vpu_mem_pd_gxl,
+	.mem_pd_table = vpu_mem_pd_g12a,
 	.clk_gate_table = vpu_clk_gate_gxl,
+
+	.power_on  = vpu_power_on_txlx,
+	.power_off = vpu_power_off_txlx,
 };
 
 static const struct of_device_id vpu_of_table[] = {
@@ -1334,8 +1391,11 @@ static int vpu_probe(struct platform_device *pdev)
 
 	get_vpu_config(pdev);
 
+	ret = vpu_power_init_check();
 	vpu_clktree_init(&pdev->dev);
 	set_vpu_clk(vpu_conf.clk_level);
+	if (ret)
+		vpu_power_init();
 
 	creat_vpu_debug_class();
 

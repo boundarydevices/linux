@@ -98,3 +98,49 @@ void vpu_vcbus_clr_mask(unsigned int _reg, unsigned int _mask)
 	vpu_vcbus_write(_reg, (vpu_vcbus_read(_reg) & (~(_mask))));
 }
 
+unsigned int vpu_ao_read(unsigned int _reg)
+{
+	return aml_read_aobus(_reg);
+};
+
+void vpu_ao_write(unsigned int _reg, unsigned int _value)
+{
+	aml_write_aobus(_reg, _value);
+};
+
+void vpu_ao_setb(unsigned int _reg, unsigned int _value,
+		unsigned int _start, unsigned int _len)
+{
+	vpu_ao_write(_reg, ((vpu_ao_read(_reg) &
+			~(((1L << (_len))-1) << (_start))) |
+			(((_value)&((1L<<(_len))-1)) << (_start))));
+}
+
+unsigned int vpu_cbus_read(unsigned int _reg)
+{
+	return aml_read_cbus(_reg);
+};
+
+void vpu_cbus_write(unsigned int _reg, unsigned int _value)
+{
+	aml_write_cbus(_reg, _value);
+};
+
+void vpu_cbus_setb(unsigned int _reg, unsigned int _value,
+		unsigned int _start, unsigned int _len)
+{
+	vpu_cbus_write(_reg, ((vpu_cbus_read(_reg) &
+			~(((1L << (_len))-1) << (_start))) |
+			(((_value)&((1L<<(_len))-1)) << (_start))));
+}
+
+void vpu_cbus_set_mask(unsigned int _reg, unsigned int _mask)
+{
+	vpu_cbus_write(_reg, (vpu_cbus_read(_reg) | (_mask)));
+}
+
+void vpu_cbus_clr_mask(unsigned int _reg, unsigned int _mask)
+{
+	vpu_cbus_write(_reg, (vpu_cbus_read(_reg) & (~(_mask))));
+}
+
