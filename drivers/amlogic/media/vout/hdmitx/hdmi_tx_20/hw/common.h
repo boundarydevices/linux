@@ -70,6 +70,11 @@ void set_hpll_od1_gxl(unsigned int div);
 void set_hpll_od2_gxl(unsigned int div);
 void set_hpll_od3_gxl(unsigned int div);
 
+void set_g12a_hpll_clk_out(unsigned int frac_rate, unsigned int clk);
+void set_hpll_od1_g12a(unsigned int div);
+void set_hpll_od2_g12a(unsigned int div);
+void set_hpll_od3_g12a(unsigned int div);
+
 int hdmitx_hpd_hw_op_txlx(enum hpd_op cmd);
 int read_hpd_gpio_txlx(void);
 int hdmitx_ddc_hw_op_txlx(enum ddc_op cmd);

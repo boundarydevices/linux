@@ -32,7 +32,7 @@
 /* chip type */
 #define MESON_CPU_ID_M8B		0
 #define MESON_CPU_ID_GXBB		1
-#define MESON_CPU_ID_GXTVBB	    2
+#define MESON_CPU_ID_GXTVBB	        2
 #define MESON_CPU_ID_GXL		3
 #define MESON_CPU_ID_GXM		4
 #define MESON_CPU_ID_TXL		5
@@ -40,6 +40,7 @@
 #define MESON_CPU_ID_AXG		7
 #define MESON_CPU_ID_GXLX		8
 #define MESON_CPU_ID_TXHD		9
+#define MESON_CPU_ID_G12A		10
 
 /*****************************
  *    hdmitx attr management
@@ -211,6 +212,8 @@ enum hdmi_hdr_color {
 
 struct hdmitx_clk_tree_s {
 	/* hdmitx clk tree */
+	struct clk *hdmi_clk_vapb;
+	struct clk *hdmi_clk_vpu;
 	struct clk *hdcp22_tx_skp;
 	struct clk *hdcp22_tx_esm;
 };

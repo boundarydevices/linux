@@ -113,6 +113,7 @@ static int hdmitx_hpd_hw_op(enum hpd_op cmd)
 	case MESON_CPU_ID_GXM:
 		return hdmitx_hpd_hw_op_gxl(cmd);
 	case MESON_CPU_ID_TXLX:
+	case MESON_CPU_ID_G12A:
 		return hdmitx_hpd_hw_op_txlx(cmd);
 	default:
 		break;
@@ -133,6 +134,7 @@ int read_hpd_gpio(void)
 	case MESON_CPU_ID_GXM:
 		return read_hpd_gpio_gxl();
 	case MESON_CPU_ID_TXLX:
+	case MESON_CPU_ID_G12A:
 		return read_hpd_gpio_txlx();
 	default:
 		break;
@@ -154,6 +156,7 @@ int hdmitx_ddc_hw_op(enum ddc_op cmd)
 	case MESON_CPU_ID_GXM:
 		return hdmitx_ddc_hw_op_gxl(cmd);
 	case MESON_CPU_ID_TXLX:
+	case MESON_CPU_ID_G12A:
 		return hdmitx_ddc_hw_op_txlx(cmd);
 	default:
 		break;
@@ -394,6 +397,7 @@ static unsigned int hdmitx_get_format(void)
 
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
+	case MESON_CPU_ID_G12A:
 		ret = hdmitx_get_format_txlx();
 		break;
 	case MESON_CPU_ID_GXBB:
@@ -438,6 +442,7 @@ void hdmitx_sys_reset(void)
 
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
+	case MESON_CPU_ID_G12A:
 		hdmitx_sys_reset_txlx();
 		break;
 	case MESON_CPU_ID_GXBB:
@@ -461,7 +466,6 @@ static void set_vmode_clk(struct hdmitx_dev *hdev)
 static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 {
 	hdmitx_set_sys_clk(hdev, 0xff);
-
 	hdmitx_set_cts_hdcp22_clk(hdev);
 	hdmitx_set_hdcp_pclk(hdev);
 
@@ -527,9 +531,11 @@ static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 		hdev->para->cs = COLORSPACE_RESERVED;
 		/* reset HDMITX APB & TX & PHY */
 		hdmitx_sys_reset();
-		/* Enable APB3 fail on error */
-		hd_set_reg_bits(P_HDMITX_CTRL_PORT, 1, 15, 1);
-		hd_set_reg_bits((P_HDMITX_CTRL_PORT + 0x10), 1, 15, 1);
+		if ((hdev->chip_type) < MESON_CPU_ID_G12A) {
+			/* Enable APB3 fail on error */
+			hd_set_reg_bits(P_HDMITX_CTRL_PORT, 1, 15, 1);
+			hd_set_reg_bits((P_HDMITX_CTRL_PORT + 0x10), 1, 15, 1);
+		}
 		/* Bring out of reset */
 		hdmitx_wr_reg(HDMITX_TOP_SW_RESET,	0);
 		udelay(200);
@@ -1655,6 +1661,26 @@ static void set_phy_by_mode(unsigned int mode)
 	struct hdmitx_dev *hdev = get_hdmitx_device();
 
 	switch (hdev->chip_type) {
+	case MESON_CPU_ID_G12A:
+		switch (mode) {
+		case 1: /* 5.94Gbps, 3.7125Gbsp */
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb8282);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x28b0ff3b);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0800);
+			break;
+		case 2: /* 2.97Gbps */
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb8282);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x28b0ff3b);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0800);
+			break;
+		case 3: /* 1.485Gbps, and below */
+		default:
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb8282);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x28b0ff3b);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0800);
+			break;
+		}
+		break;
 	case MESON_CPU_ID_M8B:
 	case MESON_CPU_ID_GXBB:
 	case MESON_CPU_ID_GXTVBB:
@@ -1845,7 +1871,6 @@ static void hdmitx_set_scdc(struct hdmitx_dev *hdev)
 void hdmitx_set_enc_hw(struct hdmitx_dev *hdev)
 {
 	struct hdmi_format_para *para = NULL;
-
 	set_vmode_enc_hw(hdev);
 
 	para = hdmi_get_fmt_paras(hdev->cur_video_param->VIC);
@@ -3630,6 +3655,8 @@ static int hdmitx_get_state(struct hdmitx_dev *hdev, unsigned int cmd,
 static void hdmi_phy_suspend(void)
 {
 	hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x0);
+	hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x0);
+	hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0);
 }
 
 static void hdmi_phy_wakeup(struct hdmitx_dev *hdev)

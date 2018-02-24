@@ -68,6 +68,32 @@
 		status = "okay";
 	};
 
+	amhdmitx: amhdmitx{
+		compatible = "amlogic, amhdmitx";
+		dev_name = "amhdmitx";
+		status = "okay";
+		vend-data = <&vend_data>;
+		//pinctrl-names="hdmitx_hpd", "hdmitx_ddc";
+		//pinctrl-0=<&hdmitx_hpd>;
+		//pinctrl-1=<&hdmitx_ddc>;
+		clocks = <&clkc CLKID_VAPB_MUX>,
+			 <&clkc CLKID_VPU_MUX>;
+		clock-names = "hdmi_vapb_clk",
+			      "hdmi_vpu_clk";
+		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
+		interrupts = <0 57 1>;
+		interrupt-names = "hdmitx_hpd";
+		/* 0:M8B 1:GXBB 2:GXTVBB 3:GXL 4:GXM
+		 * 5:TXL 6:TXLX 7:AXG 8:GXLX 9:TXHD
+		 * 10:G12A
+		 */
+		ic_type = <10>;
+		vend_data: vend_data{ /* Should modified by Customer */
+			vendor_name = "Amlogic"; /* Max Chars: 8 */
+			/* standards.ieee.org/develop/regauth/oui/oui.txt */
+			vendor_id = <0x000000>;
+		};
+	};
 }; /* end of / */
 
 &aobus{

@@ -42,6 +42,8 @@ int hdmitx_hdcp_opr(unsigned int val);
 #define TOP_SEC_OFFSET_MASK  ((TOP_OFFSET_MASK) | (SEC_OFFSET))
 #define DWC_OFFSET_MASK      (0x10UL << 24)
 #define DWC_SEC_OFFSET_MASK  ((DWC_OFFSET_MASK) | (SEC_OFFSET))
+#define HDMITX_DWC_BASE_OFFSET  0xFF600000
+#define HDMITX_TOP_BASE_OFFSET  0xFF608000
 
 /* Bit 7 RW Reserved. Default 1.
  * Bit 6 RW Reserved. Default 1.
@@ -171,6 +173,20 @@ int hdmitx_hdcp_opr(unsigned int val);
 #define HDMITX_TOP_INFILTER                     (TOP_OFFSET_MASK + 0x01D)
 #define HDMITX_TOP_NSEC_SCRATCH                 (TOP_OFFSET_MASK + 0x01E)
 #define HDMITX_TOP_SEC_SCRATCH                  (TOP_SEC_OFFSET_MASK + 0x01F)
+#define HDMITX_TOP_EMP_CNTL0                    (TOP_OFFSET_MASK + 0x020)
+#define HDMITX_TOP_EMP_CNTL1                    (TOP_OFFSET_MASK + 0x021)
+#define HDMITX_TOP_EMP_MEMADDR_START            (TOP_OFFSET_MASK + 0x022)
+#define HDMITX_TOP_EMP_STAT0                    (TOP_OFFSET_MASK + 0x023)
+#define HDMITX_TOP_EMP_STAT1                    (TOP_OFFSET_MASK + 0x024)
+#define HDMITX_TOP_AXI_ASYNC_CNTL0              (TOP_OFFSET_MASK + 0x025)
+#define HDMITX_TOP_AXI_ASYNC_CNTL1              (TOP_OFFSET_MASK + 0x026)
+#define HDMITX_TOP_AXI_ASYNC_STAT0              (TOP_OFFSET_MASK + 0x027)
+#define HDMITX_TOP_I2C_BUSY_CNT_MAX             (TOP_OFFSET_MASK + 0x028)
+#define HDMITX_TOP_I2C_BUSY_CNT_STAT            (TOP_OFFSET_MASK + 0x029)
+#define HDMITX_TOP_HDCP22_BSOD                  (TOP_OFFSET_MASK + 0x02A)
+#define HDMITX_TOP_DDC_CNTL                     (TOP_OFFSET_MASK + 0x02B)
+#define HDMITX_TOP_REVOCMEM_ADDR_S              (TOP_OFFSET_MASK + 0x2000 >> 2)
+#define HDMITX_TOP_REVOCMEM_ADDR_E              (TOP_OFFSET_MASK + 0x365E >> 2)
 
 #define HDMITX_TOP_DONT_TOUCH0                  (TOP_OFFSET_MASK + 0x0FE)
 #define HDMITX_TOP_DONT_TOUCH1                  (TOP_OFFSET_MASK + 0x0FF)

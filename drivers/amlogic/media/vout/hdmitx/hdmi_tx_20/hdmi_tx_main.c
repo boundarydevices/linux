@@ -131,6 +131,11 @@ static void hdmitx_early_suspend(struct early_suspend *h)
 	extcon_set_state_sync(hdmitx_extcon_power, EXTCON_DISP_HDMI, 0);
 	phdmi->HWOp.CntlConfig(&hdmitx_device, CONF_CLR_AVI_PACKET, 0);
 	phdmi->HWOp.CntlConfig(&hdmitx_device, CONF_CLR_VSDB_PACKET, 0);
+	/*close vpu clk*/
+	if (phdmi->hdmitx_clk_tree.hdmi_clk_vapb != NULL)
+		clk_disable_unprepare(phdmi->hdmitx_clk_tree.hdmi_clk_vapb);
+	if (phdmi->hdmitx_clk_tree.hdmi_clk_vpu != NULL)
+		clk_disable_unprepare(phdmi->hdmitx_clk_tree.hdmi_clk_vpu);
 }
 
 static int hdmitx_is_hdmi_vmode(char *mode_name)
@@ -147,6 +152,12 @@ static void hdmitx_late_resume(struct early_suspend *h)
 {
 	const struct vinfo_s *info = hdmitx_get_current_vinfo();
 	struct hdmitx_dev *phdmi = (struct hdmitx_dev *)h->param;
+
+	/*open vpu clk*/
+	if (phdmi->hdmitx_clk_tree.hdmi_clk_vapb != NULL)
+		clk_prepare_enable(phdmi->hdmitx_clk_tree.hdmi_clk_vapb);
+	if (phdmi->hdmitx_clk_tree.hdmi_clk_vpu != NULL)
+		clk_prepare_enable(phdmi->hdmitx_clk_tree.hdmi_clk_vpu);
 
 	if (info && (strncmp(info->name, "panel", 5) == 0 ||
 		strncmp(info->name, "null", 4) == 0)) {
@@ -276,7 +287,6 @@ static  int  set_disp_mode(const char *mode)
 				(hdmitx_device.hpdmode == 2)?1:0);
 		}
 	}
-
 	return ret;
 }
 
@@ -3297,7 +3307,24 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
  */
 static void amhdmitx_clktree_probe(struct device *hdmitx_dev)
 {
+	struct clk *hdmi_clk_vapb, *hdmi_clk_vpu;
 	struct clk *hdcp22_tx_skp, *hdcp22_tx_esm;
+
+	hdmi_clk_vapb = devm_clk_get(hdmitx_dev, "hdmi_vapb_clk");
+	if (IS_ERR(hdmi_clk_vapb))
+		pr_err(SYS "vapb_clk failed to probe\n");
+	else {
+		hdmitx_device.hdmitx_clk_tree.hdmi_clk_vapb = hdmi_clk_vapb;
+		clk_prepare_enable(hdmitx_device.hdmitx_clk_tree.hdmi_clk_vapb);
+	}
+
+	hdmi_clk_vpu = devm_clk_get(hdmitx_dev, "hdmi_vpu_clk");
+	if (IS_ERR(hdmi_clk_vpu))
+		pr_err(SYS "vpu_clk failed to probe\n");
+	else {
+		hdmitx_device.hdmitx_clk_tree.hdmi_clk_vpu = hdmi_clk_vpu;
+		clk_prepare_enable(hdmitx_device.hdmitx_clk_tree.hdmi_clk_vpu);
+	}
 
 	hdcp22_tx_skp = devm_clk_get(hdmitx_dev, "hdcp22_tx_skp");
 	if (IS_ERR(hdcp22_tx_skp))

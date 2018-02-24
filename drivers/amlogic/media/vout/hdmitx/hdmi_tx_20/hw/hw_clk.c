@@ -126,6 +126,7 @@ void hdmitx_set_cts_hdcp22_clk(struct hdmitx_dev *hdev)
 	break;
 	case MESON_CPU_ID_GXL:
 	case MESON_CPU_ID_GXM:
+	case MESON_CPU_ID_G12A:
 	default:
 		hd_write_reg(P_HHI_HDCP22_CLK_CNTL, 0x01000100);
 	break;
@@ -403,6 +404,9 @@ static void set_hpll_clk_out(unsigned int clk)
 	case MESON_CPU_ID_TXLX:
 		set_gxl_hpll_clk_out(frac_rate, clk);
 		break;
+	case MESON_CPU_ID_G12A:
+		set_g12a_hpll_clk_out(frac_rate, clk);
+		break;
 	default:
 		break;
 	}
@@ -455,6 +459,11 @@ static void set_hpll_od1(unsigned int div)
 		break;
 	case MESON_CPU_ID_GXL:
 	case MESON_CPU_ID_GXM:
+		set_hpll_od1_gxl(div);
+		break;
+	case MESON_CPU_ID_G12A:
+		set_hpll_od1_g12a(div);
+		break;
 	default:
 		set_hpll_od1_gxl(div);
 		break;
@@ -487,6 +496,11 @@ static void set_hpll_od2(unsigned int div)
 		break;
 	case MESON_CPU_ID_GXL:
 	case MESON_CPU_ID_GXM:
+		set_hpll_od2_gxl(div);
+		break;
+	case MESON_CPU_ID_G12A:
+		set_hpll_od2_g12a(div);
+		break;
 	default:
 		set_hpll_od2_gxl(div);
 		break;
@@ -519,6 +533,11 @@ static void set_hpll_od3(unsigned int div)
 		break;
 	case MESON_CPU_ID_GXL:
 	case MESON_CPU_ID_GXM:
+		set_hpll_od3_gxl(div);
+		break;
+	case MESON_CPU_ID_G12A:
+		set_hpll_od3_g12a(div);
+		break;
 	default:
 		set_hpll_od3_gxl(div);
 		break;

@@ -70,9 +70,9 @@ struct reg_map {
 #define RESET_CBUS_REG_ADDR(reg) \
 	((RESET_CBUS_REG_IDX << BASE_REG_OFFSET) + (reg << 2))
 #define HDMITX_SEC_REG_ADDR(reg) \
-	((HDMITX_SEC_REG_IDX << BASE_REG_OFFSET) + (reg << 2))
+	((HDMITX_SEC_REG_IDX << BASE_REG_OFFSET) + reg)/*DWC*/
 #define HDMITX_REG_ADDR(reg) \
-	((HDMITX_REG_IDX << BASE_REG_OFFSET) + (reg << 2))
+	((HDMITX_REG_IDX << BASE_REG_OFFSET) + (reg << 2))/*TOP*/
 #define ELP_ESM_REG_ADDR(reg) \
 	((ELP_ESM_REG_IDX << BASE_REG_OFFSET) + (reg << 2))
 

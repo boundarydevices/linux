@@ -988,8 +988,8 @@ void set_vmode_enc_hw(struct hdmitx_dev *hdev)
 {
 	const struct reg_s *s = tvregs_setting_mode(hdev);
 	/* Turn off VDAC, no need any more for HDMITX */
-	hd_set_reg_bits(P_VENC_VDAC_SETTING, 0x1f, 0, 5);
 
+	/*hd_set_reg_bits(P_VENC_VDAC_SETTING, 0x1f, 0, 5);*/
 	if (s) {
 		pr_info("set enc for VIC: %d\n",
 			hdev->cur_video_param->VIC);

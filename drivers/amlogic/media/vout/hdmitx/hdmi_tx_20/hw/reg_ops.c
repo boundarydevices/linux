@@ -115,6 +115,46 @@ static struct reg_map reg_maps_txlx[] = {
 	},
 };
 
+/* For g12a */
+static struct reg_map reg_maps_g12a[] = {
+	[CBUS_REG_IDX] = { /* CBUS */
+		.phy_addr = 0xffd0f000,
+		.size = 0xa00000,
+	},
+	[PERIPHS_REG_IDX] = { /* PERIPHS */
+		.phy_addr = 0xff634400,
+		.size = 0x2000,
+	},
+	[VCBUS_REG_IDX] = { /* VPU */
+		.phy_addr = 0xff900000,
+		.size = 0x40000,
+	},
+	[AOBUS_REG_IDX] = { /* RTI */
+		.phy_addr = 0xff800000,
+		.size = 0x100000,
+	},
+	[HHI_REG_IDX] = { /* HIU */
+		.phy_addr = 0xff63c000,
+		.size = 0x2000,
+	},
+	[RESET_CBUS_REG_IDX] = { /* RESET */
+		.phy_addr = 0xffd01000,
+		.size = 0x100,
+	},
+	[HDMITX_SEC_REG_IDX] = { /* HDMITX DWC LEVEL*/
+		.phy_addr = 0xff600000,
+		.size = 0x8000,
+	},
+	[HDMITX_REG_IDX] = { /* HDMITX TOP LEVEL*/
+		.phy_addr = 0xff608000,
+		.size = 0x4000,
+	},
+	[ELP_ESM_REG_IDX] = {
+		.phy_addr = 0xffe01000,
+		.size = 0x100,
+	},
+};
+
 static struct reg_map *map;
 
 void init_reg_map(unsigned int type)
@@ -122,6 +162,19 @@ void init_reg_map(unsigned int type)
 	int i;
 
 	switch (type) {
+	case MESON_CPU_ID_G12A:
+		map = reg_maps_g12a;
+		for (i = HDMITX_REG_IDX; i <= HDMITX_SEC_REG_IDX; i++) {
+			map[i].p = ioremap(map[i].phy_addr, map[i].size);
+			if (!map[i].p) {
+				pr_info("hdmitx20: failed Mapped PHY: 0x%x\n",
+					map[i].phy_addr);
+			} else {
+				pr_info("hdmitx20: Mapped PHY: 0x%x\n",
+					map[i].phy_addr);
+			}
+		}
+		break;
 	case MESON_CPU_ID_TXLX:
 		map = reg_maps_txlx;
 		break;
@@ -163,9 +216,11 @@ unsigned int hd_read_reg(unsigned int addr)
 	unsigned int index = (addr) >> BASE_REG_OFFSET;
 
 	struct hdmitx_dev *hdev = get_hdmitx_device();
+	pr_debug(REG "Rd[0x%x] 0x%x\n", paddr, val);
 
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
+	case MESON_CPU_ID_G12A:
 		switch (index) {
 		case CBUS_REG_IDX:
 		case RESET_CBUS_REG_IDX:
@@ -199,8 +254,6 @@ unsigned int hd_read_reg(unsigned int addr)
 		break;
 	}
 
-	pr_debug(REG "Rd[0x%x] 0x%x\n", paddr, val);
-
 	return val;
 }
 
@@ -210,9 +263,11 @@ void hd_write_reg(unsigned int addr, unsigned int val)
 	unsigned int index = (addr) >> BASE_REG_OFFSET;
 
 	struct hdmitx_dev *hdev = get_hdmitx_device();
+	pr_debug(REG "Wr[0x%x] 0x%x\n", paddr, val);
 
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
+	case MESON_CPU_ID_G12A:
 		switch (index) {
 		case CBUS_REG_IDX:
 		case RESET_CBUS_REG_IDX:
@@ -245,8 +300,6 @@ void hd_write_reg(unsigned int addr, unsigned int val)
 		writel(val, TO_PMAP_ADDR(addr));
 		break;
 	}
-
-	pr_debug(REG "Wr[0x%x] 0x%x\n", paddr, val);
 }
 
 void hd_set_reg_bits(unsigned int addr, unsigned int value,
@@ -262,7 +315,7 @@ void hd_set_reg_bits(unsigned int addr, unsigned int value,
 
 #define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
-unsigned int hdmitx_rd_reg(unsigned int addr)
+unsigned int hdmitx_rd_reg_normal(unsigned int addr)
 {
 	unsigned long offset = (addr & DWC_OFFSET_MASK) >> 24;
 	unsigned int data;
@@ -283,7 +336,38 @@ unsigned int hdmitx_rd_reg(unsigned int addr)
 	return data;
 }
 
-void hdmitx_wr_reg(unsigned int addr, unsigned int data)
+unsigned int hdmitx_rd_reg_g12a(unsigned int addr)
+{
+	unsigned int large_offset = addr >> 24;
+	unsigned int small_offset = addr & ((1 << 24)  - 1);
+	unsigned long hdmitx_addr = 0;
+	unsigned int val;
+
+	if (large_offset == 0x10) {
+		hdmitx_addr = HDMITX_SEC_REG_ADDR(small_offset);
+		val = readb(TO_PMAP_ADDR(hdmitx_addr));
+	} else if ((large_offset == 0x11) || (large_offset == 0x01))
+		val = hdmitx_rd_reg_normal(addr);
+	else {
+		hdmitx_addr = HDMITX_REG_ADDR(small_offset);
+		val = readl(TO_PMAP_ADDR(hdmitx_addr));
+	}
+	return val;
+}
+
+unsigned int hdmitx_rd_reg(unsigned int addr)
+{
+	unsigned int data;
+	struct hdmitx_dev *hdev = get_hdmitx_device();
+
+	if (hdev->chip_type >= MESON_CPU_ID_G12A)
+		data = hdmitx_rd_reg_g12a(addr);
+	else
+		data = hdmitx_rd_reg_normal(addr);
+	return data;
+}
+
+void hdmitx_wr_reg_normal(unsigned int addr, unsigned int data)
 {
 	unsigned long offset = (addr & DWC_OFFSET_MASK) >> 24;
 
@@ -301,6 +385,33 @@ void hdmitx_wr_reg(unsigned int addr, unsigned int data)
 
 	pr_debug("%s wr[0x%x] 0x%x\n", offset ? "DWC" : "TOP",
 			addr, data);
+}
+
+void hdmitx_wr_reg_g12a(unsigned int addr, unsigned int data)
+{
+	unsigned int large_offset = addr >> 24;
+	unsigned int small_offset = addr & ((1 << 24)  - 1);
+	unsigned long hdmitx_addr = 0;
+
+	if (large_offset == 0x10) {
+		hdmitx_addr = HDMITX_SEC_REG_ADDR(small_offset);
+		writeb(data & 0xff, TO_PMAP_ADDR(hdmitx_addr));
+	} else if ((large_offset == 0x11) || (large_offset == 0x01))
+		hdmitx_wr_reg_normal(addr, data);
+	else {
+		hdmitx_addr = HDMITX_REG_ADDR(small_offset);
+		writel(data, TO_PMAP_ADDR(hdmitx_addr));
+	}
+}
+
+void hdmitx_wr_reg(unsigned int addr, unsigned int data)
+{
+	struct hdmitx_dev *hdev = get_hdmitx_device();
+
+	if (hdev->chip_type >= MESON_CPU_ID_G12A)
+		hdmitx_wr_reg_g12a(addr, data);
+	else
+		hdmitx_wr_reg_normal(addr, data);
 }
 
 void hdmitx_set_reg_bits(unsigned int addr, unsigned int value,
