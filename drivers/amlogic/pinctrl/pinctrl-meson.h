@@ -16,7 +16,9 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/pinctrl/pinconf-generic.h>
 #include <linux/pinctrl/pinctrl.h>
+#include <linux/pinctrl/pinconf.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/types.h>
@@ -117,7 +119,9 @@ struct meson_pinctrl_data {
 	unsigned int num_funcs;
 	unsigned int num_banks;
 	const struct pinmux_ops *pmx_ops;
+	const struct pinconf_ops *pcf_ops;
 	void *pmx_data;
+	void *pcf_drv_data;
 };
 
 struct meson_pinctrl {
@@ -129,6 +133,7 @@ struct meson_pinctrl {
 	struct regmap *reg_pullen;
 	struct regmap *reg_pull;
 	struct regmap *reg_gpio;
+	struct regmap *reg_drive;
 	struct gpio_chip chip;
 	struct device_node *of_node;
 	struct device_node *of_irq;
@@ -171,3 +176,9 @@ extern int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
 					unsigned int selector,
 					const char * const **groups,
 					unsigned int * const num_groups);
+
+/* Common pinconf functions */
+extern int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin);
+
+extern int meson_pinconf_set_pull(struct meson_pinctrl *pc, unsigned int pin,
+						enum pin_config_param param);

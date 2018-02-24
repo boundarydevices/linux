@@ -178,86 +178,97 @@ int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
 	return 0;
 }
 
-static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
-			     unsigned long *configs, unsigned int num_configs)
+int meson_pinconf_set_pull(struct meson_pinctrl *pc, unsigned int pin,
+					enum pin_config_param param)
 {
-	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
 	struct meson_bank *bank;
-	enum pin_config_param param;
 	unsigned int reg, bit;
-	int i, ret;
-	u16 arg;
+	int ret;
 
 	ret = meson_get_bank(pc, pin, &bank);
 	if (ret)
 		return ret;
 
+	switch (param) {
+	case PIN_CONFIG_BIAS_DISABLE:
+		dev_dbg(pc->dev, "pin %u: disable bias\n", pin);
+
+		meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
+					&reg, &bit);
+		ret = regmap_update_bits(pc->reg_pullen, reg,
+					 BIT(bit), 0);
+		if (ret)
+			return ret;
+		break;
+	case PIN_CONFIG_BIAS_PULL_UP:
+		dev_dbg(pc->dev, "pin %u: enable pull-up\n", pin);
+
+		meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
+					   &reg, &bit);
+		ret = regmap_update_bits(pc->reg_pullen, reg,
+					 BIT(bit), BIT(bit));
+		if (ret)
+			return ret;
+
+		meson_calc_reg_and_bit(bank, pin, REG_PULL, &reg, &bit);
+		ret = regmap_update_bits(pc->reg_pull, reg,
+					 BIT(bit), BIT(bit));
+		if (ret)
+			return ret;
+		break;
+	case PIN_CONFIG_BIAS_PULL_DOWN:
+		dev_dbg(pc->dev, "pin %u: enable pull-down\n", pin);
+
+		meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
+					   &reg, &bit);
+		ret = regmap_update_bits(pc->reg_pullen, reg,
+					 BIT(bit), BIT(bit));
+		if (ret)
+			return ret;
+
+		meson_calc_reg_and_bit(bank, pin, REG_PULL, &reg, &bit);
+		ret = regmap_update_bits(pc->reg_pull, reg,
+					 BIT(bit), 0);
+		if (ret)
+			return ret;
+		break;
+	case PIN_CONFIG_INPUT_ENABLE:
+		dev_dbg(pc->dev, "pin %u: enable input\n", pin);
+
+		meson_calc_reg_and_bit(bank, pin, REG_DIR,
+					   &reg, &bit);
+		ret = regmap_update_bits(pc->reg_gpio, reg,
+					 BIT(bit), BIT(bit));
+		if (ret)
+			return ret;
+		break;
+	default:
+		return -ENOTSUPP;
+	}
+
+	return 0;
+}
+static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
+			     unsigned long *configs, unsigned int num_configs)
+{
+	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
+	enum pin_config_param param;
+	int i, ret;
+	u16 arg;
+
 	for (i = 0; i < num_configs; i++) {
 		param = pinconf_to_config_param(configs[i]);
 		arg = pinconf_to_config_argument(configs[i]);
 
-		switch (param) {
-		case PIN_CONFIG_BIAS_DISABLE:
-			dev_dbg(pc->dev, "pin %u: disable bias\n", pin);
-
-			meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
-						&reg, &bit);
-			ret = regmap_update_bits(pc->reg_pullen, reg,
-						 BIT(bit), 0);
-			if (ret)
-				return ret;
-			break;
-		case PIN_CONFIG_BIAS_PULL_UP:
-			dev_dbg(pc->dev, "pin %u: enable pull-up\n", pin);
-
-			meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
-					       &reg, &bit);
-			ret = regmap_update_bits(pc->reg_pullen, reg,
-						 BIT(bit), BIT(bit));
-			if (ret)
-				return ret;
-
-			meson_calc_reg_and_bit(bank, pin, REG_PULL, &reg, &bit);
-			ret = regmap_update_bits(pc->reg_pull, reg,
-						 BIT(bit), BIT(bit));
-			if (ret)
-				return ret;
-			break;
-		case PIN_CONFIG_BIAS_PULL_DOWN:
-			dev_dbg(pc->dev, "pin %u: enable pull-down\n", pin);
-
-			meson_calc_reg_and_bit(bank, pin, REG_PULLEN,
-					       &reg, &bit);
-			ret = regmap_update_bits(pc->reg_pullen, reg,
-						 BIT(bit), BIT(bit));
-			if (ret)
-				return ret;
-
-			meson_calc_reg_and_bit(bank, pin, REG_PULL, &reg, &bit);
-			ret = regmap_update_bits(pc->reg_pull, reg,
-						 BIT(bit), 0);
-			if (ret)
-				return ret;
-			break;
-		case PIN_CONFIG_INPUT_ENABLE:
-			dev_dbg(pc->dev, "pin %u: enable input\n", pin);
-
-			meson_calc_reg_and_bit(bank, pin, REG_DIR,
-					       &reg, &bit);
-			ret = regmap_update_bits(pc->reg_gpio, reg,
-						 BIT(bit), BIT(bit));
-			if (ret)
-				return ret;
-			break;
-		default:
-			return -ENOTSUPP;
-		}
+		ret = meson_pinconf_set_pull(pc, pin, param);
+		if (ret)
+			return ret;
 	}
 
 	return 0;
 }
 
-static int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin)
+int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin)
 {
 	struct meson_bank *bank;
 	unsigned int reg, bit, val;
@@ -582,21 +593,42 @@ static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 		return PTR_ERR(pc->reg_mux);
 	}
 
-	pc->reg_pull = meson_map_resource(pc, gpio_np, "pull");
-	if (IS_ERR(pc->reg_pull)) {
-		dev_err(pc->dev, "pull registers not found\n");
-		return PTR_ERR(pc->reg_pull);
-	}
-
-	pc->reg_pullen = meson_map_resource(pc, gpio_np, "pull-enable");
-	/* Use pull region if pull-enable one is not present */
-	if (IS_ERR(pc->reg_pullen))
-		pc->reg_pullen = pc->reg_pull;
-
 	pc->reg_gpio = meson_map_resource(pc, gpio_np, "gpio");
 	if (IS_ERR(pc->reg_gpio)) {
 		dev_err(pc->dev, "gpio registers not found\n");
 		return PTR_ERR(pc->reg_gpio);
+	}
+
+	pc->reg_pull = meson_map_resource(pc, gpio_np, "pull");
+	/* Use gpio region if pull one is not present */
+	if (IS_ERR(pc->reg_pull)) {
+		if (PTR_ERR(pc->reg_pull) == -ENOENT) {
+			pc->reg_pull = pc->reg_gpio;
+		} else {
+			dev_err(pc->dev, "pull registers not found\n");
+			return PTR_ERR(pc->reg_pull);
+		}
+	}
+
+	pc->reg_pullen = meson_map_resource(pc, gpio_np, "pull-enable");
+	/* Use pull region if pull-enable one is not present */
+	if (IS_ERR(pc->reg_pullen)) {
+		if (PTR_ERR(pc->reg_pullen) == -ENOENT)
+			pc->reg_pullen = pc->reg_pull;
+		else {
+			dev_err(pc->dev, "pull-enable registers not found\n");
+			return PTR_ERR(pc->reg_pullen);
+		}
+	}
+
+	pc->reg_drive = meson_map_resource(pc, gpio_np, "drive-strength");
+	if (IS_ERR(pc->reg_drive)) {
+		if (PTR_ERR(pc->reg_drive) == -ENOENT)
+			pc->reg_drive = NULL;
+		else {
+			dev_err(pc->dev, "drive-strength registers not found\n");
+			return PTR_ERR(pc->reg_drive);
+		}
 	}
 
 	return 0;
@@ -624,8 +656,12 @@ int meson_pinctrl_probe(struct platform_device *pdev)
 	pc->desc.pctlops	= &meson_pctrl_ops;
 	pc->desc.pmxops		= pc->data->pmx_ops;
 	pc->desc.pins		= pc->data->pins;
-	pc->desc.confops	= &meson_pinconf_ops;
 	pc->desc.npins		= pc->data->num_pins;
+
+	if (pc->data->pcf_ops)
+		pc->desc.confops = pc->data->pcf_ops;
+	else
+		pc->desc.confops = &meson_pinconf_ops;
 
 	if (pc->data->init)
 		pc->data->init(pc);

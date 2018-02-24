@@ -19,6 +19,7 @@
 #include <dt-bindings/clock/amlogic,g12a-clkc.h>
 #include <dt-bindings/clock/amlogic,g12a-audio-clk.h>
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
+#include <dt-bindings/gpio/meson-g12a-gpio.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/gpio/gpio.h>
@@ -198,6 +199,44 @@
 		cpuinfo_cmd = <0x82000044>;
 	};
 
+	pinctrl_aobus: pinctrl@ff800014{
+		compatible = "amlogic,meson-g12a-aobus-pinctrl";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		gpio_ao: ao-bank@ff800014{
+			reg = <0x0 0xff800014 0x0 0x8>,
+				  <0x0 0xff800024 0x0 0x14>,
+				  <0x0 0xff80001c 0x0 0x8>;
+			reg-names = "mux","gpio", "drive-strength";
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+	};
+
+	pinctrl_periphs: pinctrl@ff634480{
+		compatible = "amlogic,meson-g12a-periphs-pinctrl";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		gpio: banks@ff6346c0{
+			reg = <0x0 0xff6346c0 0x0 0x40>,
+				  <0x0 0xff6344e8 0x0 0x18>,
+				  <0x0 0xff634520 0x0 0x18>,
+				  <0x0 0xff634440 0x0 0x4c>,
+				  <0x0 0xff634740 0x0 0x1c>;
+			reg-names = "mux",
+				"pull",
+				"pull-enable",
+				"gpio",
+				"drive-strength";
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
+	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
@@ -268,3 +307,16 @@
 
 };/* end of / */
 
+&pinctrl_aobus {
+	ao_uart_pins:ao_uart {
+		mux {
+			groups = "uart_ao_tx_a",
+				"uart_ao_rx_a";
+			function = "uart_ao_a";
+		};
+	};
+};
+
+&pinctrl_periphs {
+
+};

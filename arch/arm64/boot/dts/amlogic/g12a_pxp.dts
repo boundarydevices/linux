@@ -68,6 +68,8 @@
 		clock-names = "clk_uart";
 		xtal_tick_en = <1>;
 		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_uart_pins>;
 		support-sysrq = <0>;    /* 0 not support , 1 support */
 	};
 };
