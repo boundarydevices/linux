@@ -24,14 +24,14 @@
 		key_valid = <0>;
 		clocks = <&clkc CLKID_MIPI_DSI_HOST
 			&clkc CLKID_MIPI_DSI_PHY
-/*			&clkc CLKID_DSI_MEAS_COMP*/
-/*			&clkc CLKID_VCLK2_ENCL*/
-/*			&clkc CLKID_VCLK2_VENCL*/>;
+			&clkc CLKID_DSI_MEAS_COMP
+			&clkc CLKID_VCLK2_ENCL
+			&clkc CLKID_VCLK2_VENCL>;
 		clock-names = "dsi_host_gate",
-			"dsi_phy_gate"
-/*			"dsi_meas",*/
-/*			"encl_top_gate",*/
-/*			"encl_int_gate"*/;
+			"dsi_phy_gate",
+			"dsi_meas",
+			"encl_top_gate",
+			"encl_int_gate";
 		reg = <0x0 0xffd00000 0x0 0x7400
 			   0x0 0xff644000 0x0 0x2000>;
 		pinctrl_version = <2>; /* for uboot */

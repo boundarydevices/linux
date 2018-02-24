@@ -26,9 +26,8 @@
 #include "../clkc.h"
 #include "g12a.h"
 
-#if 0
 /* cts_dsi_meas_clk */ /*MIPI_HOST*/
-static const char * const meas_parent_names[] = { "xtal", "fclk_div4",
+const char *g12a_meas_parent_names[] = { "xtal", "fclk_div4",
 	"fclk_div3", "fclk_div5", "null", "null", "fclk_dvi2", "fclk_div7"};
 
 /* cts_dsi_meas_clk */
@@ -40,9 +39,9 @@ static struct clk_mux dsi_meas_mux = {
 	.hw.init = &(struct clk_init_data){
 		.name = "dsi_meas_mux",
 		.ops = &clk_mux_ops,
-		.parent_names = meas_parent_names,
+		.parent_names = g12a_meas_parent_names,
 		.num_parents = 8,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+		.flags = CLK_GET_RATE_NOCACHE,
 	},
 };
 
@@ -56,7 +55,7 @@ static struct clk_divider dsi_meas_div = {
 		.ops = &clk_divider_ops,
 		.parent_names = (const char *[]){ "dsi_meas_mux" },
 		.num_parents = 1,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+		.flags = CLK_GET_RATE_NOCACHE,
 	},
 };
 
@@ -69,16 +68,15 @@ static struct clk_gate dsi_meas_gate = {
 		.ops = &clk_gate_ops,
 		.parent_names = (const char *[]){ "dsi_meas_div" },
 		.num_parents = 1,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
+		.flags = CLK_GET_RATE_NOCACHE,
 	},
 };
 
 static struct clk_hw *dsi_meas_clk_hws[] = {
-[CLKID_DSI_MEAS_MUX - CLKID_DSI_MEAS_MUX] = &dsi_meas_mux.hw,
-[CLKID_DSI_MEAS_DIV - CLKID_DSI_MEAS_MUX] = &dsi_meas_div.hw,
-[CLKID_DSI_MEAS_GATE - CLKID_DSI_MEAS_MUX] = &dsi_meas_gate.hw,
+	[CLKID_DSI_MEAS_MUX - CLKID_DSI_MEAS_MUX] = &dsi_meas_mux.hw,
+	[CLKID_DSI_MEAS_DIV - CLKID_DSI_MEAS_MUX] = &dsi_meas_div.hw,
+	[CLKID_DSI_MEAS_GATE - CLKID_DSI_MEAS_MUX] = &dsi_meas_gate.hw,
 };
-#endif
 
 const char *g12a_dec_parent_names[] = { "fclk_div2p5", "fclk_div3",
 	"fclk_div4", "fclk_div5", "fclk_div7", "hifi_pll", "gp0_pll", "xtal"};
@@ -836,12 +834,11 @@ static struct clk_gate vpu_clkb_gate = {
 
 void meson_g12a_media_init(void)
 {
-#if 0
 	/* cts_dsi_meas_clk */
 	dsi_meas_mux.reg = clk_base + (u64)(dsi_meas_mux.reg);
 	dsi_meas_div.reg = clk_base + (u64)(dsi_meas_div.reg);
 	dsi_meas_gate.reg = clk_base + (u64)(dsi_meas_gate.reg);
-#endif
+
 	/* cts_vdec_clk */
 	vdec_p0_mux.reg = clk_base + (u64)(vdec_p0_mux.reg);
 	vdec_p0_div.reg = clk_base + (u64)(vdec_p0_div.reg);
@@ -905,10 +902,9 @@ void meson_g12a_media_init(void)
 	vpu_clkb_div.reg = clk_base + (u64)(vpu_clkb_div.reg);
 	vpu_clkb_gate.reg = clk_base + (u64)(vpu_clkb_gate.reg);
 
-#if 0
 	clks[CLKID_DSI_MEAS_COMP] = clk_register_composite(NULL,
 		"dsi_meas_composite",
-		meas_parent_names, 6,
+		g12a_meas_parent_names, 8,
 		dsi_meas_clk_hws[CLKID_DSI_MEAS_MUX - CLKID_DSI_MEAS_MUX],
 		&clk_mux_ops,
 		dsi_meas_clk_hws[CLKID_DSI_MEAS_DIV - CLKID_DSI_MEAS_MUX],
@@ -916,9 +912,8 @@ void meson_g12a_media_init(void)
 		dsi_meas_clk_hws[CLKID_DSI_MEAS_GATE - CLKID_DSI_MEAS_MUX],
 		&clk_gate_ops, 0);
 	if (IS_ERR(clks[CLKID_DSI_MEAS_COMP]))
-		pr_err("%s: %d clk_register_composite dsi_meas_composite error\n",
+		panic("%s: %d clk_register_composite dsi_meas_composite error\n",
 			__func__, __LINE__);
-#endif
 
 	/* cts_vdec_clk */
 	clks[CLKID_VDEC_P0_COMP] = clk_register_composite(NULL,
