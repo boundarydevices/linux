@@ -3887,6 +3887,9 @@ static void amvecm_gamma_init(bool en)
 		amve_write_gamma_table(
 					data,
 					H_SEL_B);
+
+		WRITE_VPP_REG_BITS(L_GAMMA_CNTL_PORT,
+				1, GAMMA_EN, 1);
 	}
 }
 static void amvecm_wb_init(bool en)
