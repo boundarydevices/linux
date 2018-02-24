@@ -80,6 +80,8 @@ static char *vpu_mod_table[] = {
 	/* for clk_gate */
 	"vpu_top",
 	"vpu_clkb",
+	"clk_vib",
+	"clk_b_reg_latch",
 	"vpu_misc",
 	"venc_dac",
 	"vlock",

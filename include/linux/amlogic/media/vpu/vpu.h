@@ -80,6 +80,8 @@ enum vpu_mod_e {
 	/* for clk_gate */
 	VPU_VPU_TOP,
 	VPU_VPU_CLKB,
+	VPU_CLK_VIB,
+	VPU_CLK_B_REG_LATCH,
 	VPU_MISC,      /* hs,vs,interrupt */
 	VPU_VENC_DAC,
 	VPU_VLOCK,

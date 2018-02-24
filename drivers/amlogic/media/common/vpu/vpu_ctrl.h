@@ -394,6 +394,8 @@ static struct vpu_ctrl_s vpu_clk_gate_g12a[] = {
 	/* vpu module,      reg,                  bit,  len */
 	{VPU_VPU_TOP,       VPU_CLK_GATE,          1,   1}, /* vpu_system_clk */
 	{VPU_VPU_CLKB,      VPU_CLK_GATE,         18,   1},
+	{VPU_CLK_B_REG_LATCH, VPU_CLK_GATE,       17,   1},
+	{VPU_CLK_VIB,       VPU_CLK_GATE,         16,   1},
 	{VPU_RDMA,          VPU_CLK_GATE,         15,   1}, /* rdma_clk */
 	{VPU_VLOCK,         VPU_CLK_GATE,         14,   1},
 	{VPU_MISC,          VPU_CLK_GATE,          6,   1}, /* hs,vs interrupt*/
