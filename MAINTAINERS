@@ -14097,7 +14097,7 @@ M: Evoke Zhang <evoke.zhang@amlogic.com>
 F: drivers/amlogic/media/vin/tvin/bt656/*
 F: drivers/amlogic/media/vin/tvin/hdmirx_ext/*
 
-AMLOGIC HDMIRX DRIVER
+AMLOGIC HDMIRX DRIVER CODE
 M:	Yicheng Shen <yicheng.shen@amlogic.com>
 F:	drivers/amlogic/media/vin/vdin/hdmirx/*
 

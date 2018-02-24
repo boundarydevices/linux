@@ -20,7 +20,6 @@
 
 /* EDID */
 #define MAX_RECEIVE_EDID	33
-#define MAX_HDR_LUMI		3
 #define MAX_KSV_SIZE		5
 #define MAX_REPEAT_COUNT	127
 #define MAX_REPEAT_DEPTH	7
@@ -53,15 +52,27 @@ extern int hdcp_repeat_depth;
 extern bool new_hdcp;
 extern bool repeat_plug;
 extern int up_phy_addr;/*d c b a 4bit*/
+extern bool downstream_rp_en;
 
+void rx_set_repeater_support(bool enable);
+extern int rx_set_receiver_edid(unsigned char *data, int len);
 extern void rx_modify_edid(unsigned char *buffer,
 				int len, unsigned char *addition);
-extern unsigned int rx_exchange_bits(unsigned int value);
 extern void rx_start_repeater_auth(void);
 extern void rx_edid_update_audio_info(unsigned char *p_edid,
 						unsigned int len);
 extern void rx_set_repeat_signal(bool repeat);
 extern bool rx_set_repeat_aksv(unsigned char *data, int len, int depth,
 		bool dev_exceed, bool cascade_exceed);
+
+extern void repeater_dwork_handle(struct work_struct *work);
+bool rx_set_receive_hdcp(unsigned char *data,
+	int len, int depth, bool cas_exceed, bool devs_exceed);
+void rx_repeat_hpd_state(bool plug);
+void rx_repeat_hdcp_ver(int version);
+void rx_check_repeat(void);
+extern bool hdmirx_is_key_write(void);
+
+
 
 #endif

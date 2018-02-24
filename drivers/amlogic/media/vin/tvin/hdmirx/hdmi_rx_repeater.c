@@ -37,9 +37,11 @@
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 
 /* Local include */
-#include "hdmirx_drv.h"
-#include "hdmi_rx_reg.h"
-
+#include "hdmi_rx_drv.h"
+#include "hdmi_rx_hw.h"
+#include "hdmi_rx_repeater.h"
+#include "hdmi_rx_wrapper.h"
+#include "hdmi_rx_edid.h"
 /*edid original data from device*/
 static unsigned char receive_edid[MAX_RECEIVE_EDID];
 int receive_edid_len = MAX_RECEIVE_EDID;
@@ -57,28 +59,45 @@ bool new_hdcp;
 bool repeat_plug;
 int up_phy_addr;/*d c b a 4bit*/
 
-void repeater_dwork_handle(struct work_struct *work)
+bool downstream_rp_en;
+
+enum repeater_state_e rpt_state;
+
+bool hdmirx_repeat_support(void)
 {
-	if (hdmirx_repeat_support()) {
-		if (rx.hdcp.hdcp_version && hdmirx_is_key_write()
-			&& rx.open_fg) {
-			extcon_set_state_sync(rx.hdcp.rx_excton_auth,
-				EXTCON_DISP_HDMI, 1);
-			extcon_set_state_sync(rx.hdcp.rx_excton_auth,
-				EXTCON_DISP_HDMI, rx.hdcp.hdcp_version);
-		}
-	}
+	return downstream_rp_en;
 }
 
 void rx_start_repeater_auth(void)
 {
-	rx.hdcp.state = REPEATER_STATE_START;
+	rpt_state = REPEATER_STATE_START;
 	rx.hdcp.delay = 0;
 	hdcp_len = 0;
 	hdcp_repeat_depth = 0;
 	rx.hdcp.dev_exceed = 0;
 	rx.hdcp.cascade_exceed = 0;
 	memset(&receive_hdcp, 0, sizeof(receive_hdcp));
+}
+
+void repeater_dwork_handle(struct work_struct *work)
+{
+	if (hdmirx_repeat_support()) {
+		if (rx.hdcp.hdcp_version && hdmirx_is_key_write()
+			&& rx.open_fg) {
+			extcon_set_state_sync(rx.hdcp.rx_excton_auth,
+				EXTCON_DISP_HDMI, 0);
+			extcon_set_state_sync(rx.hdcp.rx_excton_auth,
+				EXTCON_DISP_HDMI, rx.hdcp.hdcp_version);
+		}
+	}
+}
+
+bool hdmirx_is_key_write(void)
+{
+	if (hdmirx_rd_dwc(DWC_HDCP_BKSV0) != 0)
+		return 1;
+	else
+		return 0;
 }
 
 void rx_check_repeat(void)
@@ -102,12 +121,12 @@ void rx_check_repeat(void)
 	if (new_edid) {
 		/*check downstream plug when new plug occur*/
 		/*check receive change*/
-		hdmi_rx_ctrl_edid_update();
+		hdmi_rx_top_edid_update();
 		new_edid = false;
 		rx_send_hpd_pulse();
 	}
 	if (repeat_plug) {
-		switch (rx.hdcp.state) {
+		switch (rpt_state) {
 		case REPEATER_STATE_START:
 			rx_pr("[RX] receive aksv\n");
 			hdmirx_wr_bits_dwc(DWC_HDCP_RPT_CTRL,
@@ -116,12 +135,12 @@ void rx_check_repeat(void)
 						KSVLIST_LOSTAUTH, 0);
 			hdmirx_wr_bits_dwc(DWC_HDCP_RPT_CTRL,
 						KSVLIST_READY, 0);
-			rx.hdcp.state = REPEATER_STATE_WAIT_KSV;
+			rpt_state = REPEATER_STATE_WAIT_KSV;
 		break;
 
 		case REPEATER_STATE_WAIT_KSV:
 		if (!rx.cur_5v_sts) {
-			rx.hdcp.state = REPEATER_STATE_IDLE;
+			rpt_state = REPEATER_STATE_IDLE;
 			break;
 		}
 		if (hdmirx_rd_bits_dwc(DWC_HDCP_RPT_CTRL, WAITING_KSV)) {
@@ -133,13 +152,13 @@ void rx_check_repeat(void)
 			} else if (rx.hdcp.delay >= KSV_LIST_WAIT_DELAY) {
 				hdmirx_wr_bits_dwc(DWC_HDCP_RPT_CTRL,
 						KSVLIST_TIMEOUT, 1);
-				rx.hdcp.state = REPEATER_STATE_IDLE;
+				rpt_state = REPEATER_STATE_IDLE;
 				rx_pr("[RX] receive ksv wait timeout\n");
 			}
 			if (rx_set_repeat_aksv(receive_hdcp, hdcp_len,
 				hdcp_repeat_depth, rx.hdcp.dev_exceed,
 				rx.hdcp.cascade_exceed)) {
-				rx.hdcp.state = REPEATER_STATE_IDLE;
+				rpt_state = REPEATER_STATE_IDLE;
 			}
 		}
 		/*if support hdcp2.2 jump to wait_ack else to idle*/
@@ -389,20 +408,7 @@ void rx_edid_update_audio_info(unsigned char *p_edid,
 	rx_modify_edid(p_edid, len, receive_edid);
 }
 
-unsigned int rx_exchange_bits(unsigned int value)
-{
-	unsigned int temp;
 
-	rx_pr("bfe:%#x\n", value);
-	temp = value & 0xF;
-	value = (((value >> 4) & 0xF) | (value & 0xFFF0));
-	value = ((value & 0xFF0F) | (temp << 4));
-	temp = value & 0xF00;
-	value = (((value >> 4) & 0xF00) | (value & 0xF0FF));
-	value = ((value & 0x0FFF) | (temp << 4));
-	rx_pr("aft:%#x\n", value);
-	return value;
-}
 
 int rx_set_receiver_edid(unsigned char *data, int len)
 {
@@ -417,7 +423,7 @@ EXPORT_SYMBOL(rx_set_receiver_edid);
 
 void rx_set_repeater_support(bool enable)
 {
-	downstream_rp_support = enable;
+	downstream_rp_en = enable;
 }
 EXPORT_SYMBOL(rx_set_repeater_support);
 

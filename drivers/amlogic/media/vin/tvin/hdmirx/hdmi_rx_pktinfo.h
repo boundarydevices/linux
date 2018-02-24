@@ -14,7 +14,6 @@
  * more details.
  *
  */
-
 #ifndef __HDMIRX_PKT_INFO_H__
 #define __HDMIRX_PKT_INFO_H__
 
@@ -28,8 +27,13 @@
 
 #define K_FLAG_TAB_END			0xa0a05f5f
 
-#define K_DOLBY_VS_V0_PKT_LENGTH 0x18
 
+enum dolbyvision_lenGth_e {
+	E_DV_LENGTH_4 = 0x04,
+	E_DV_LENGTH_5 = 0x05,
+	E_DV_LENGTH_24 = 0x18,
+	E_DV_LENGTH_27 = 0x1B
+};
 
 enum pkt_decode_type {
 	PKT_BUFF_SET_FIFO = 0x01,
@@ -767,18 +771,6 @@ struct drm_infoframe_st {
 	} __packed des_u;
 } __packed;
 
-
-struct pd_infoframe_s {
-	uint32_t HB;
-	uint32_t PB0;
-	uint32_t PB1;
-	uint32_t PB2;
-	uint32_t PB3;
-	uint32_t PB4;
-	uint32_t PB5;
-	uint32_t PB6;
-};
-
 union pktinfo {
 	/*normal packet 0x0-0xf*/
 	struct acr_ptk_st audclkgen_ptk;
@@ -799,7 +791,7 @@ union pktinfo {
 
 union infoframe_u {
 	/*info frame 0x81 - 0x87*/
-	struct pd_infoframe_s word_md_infoframe;
+	/* struct pd_infoframe_s word_md_infoframe; */
 	struct fifo_rawdata_st raw_infoframe;
 	struct vsi_infoframe_st vsi_infoframe;
 	struct avi_infoframe_st avi_infoframe;
@@ -810,6 +802,12 @@ union infoframe_u {
 	struct drm_infoframe_st drm_infoframe;
 };
 
+enum vsi_vid_format_e {
+	VSI_FORMAT_NO_DATA,
+	VSI_FORMAT_EXT_RESOLUTION,
+	VSI_FORMAT_3D_FORMAT,
+	VSI_FORMAT_FUTURE,
+};
 
 struct rxpkt_st {
 	uint32_t pkt_cnt_avi;
@@ -847,6 +845,49 @@ struct rxpkt_st {
 
 	uint32_t pkt_attach_vsi;
 	uint32_t pkt_attach_drm;
+};
+
+struct pd_infoframe_s {
+	uint32_t HB;
+	uint32_t PB0;
+	uint32_t PB1;
+	uint32_t PB2;
+	uint32_t PB3;
+	uint32_t PB4;
+	uint32_t PB5;
+	uint32_t PB6;
+};
+
+struct packet_info_s {
+	/* packet type 0x81 vendor-specific */
+	struct pd_infoframe_s vs_info;
+	/* packet type 0x82 AVI */
+	struct pd_infoframe_s avi_info;
+	/* packet type 0x83 source product description */
+	struct pd_infoframe_s spd_info;
+	/* packet type 0x84 Audio */
+	struct pd_infoframe_s aud_pktinfo;
+	/* packet type 0x85 Mpeg source */
+	struct pd_infoframe_s mpegs_info;
+	/* packet type 0x86 NTSCVBI */
+	struct pd_infoframe_s ntscvbi_info;
+	/* packet type 0x87 DRM */
+	struct pd_infoframe_s drm_info;
+
+	/* packet type 0x01 info */
+	struct pd_infoframe_s acr_info;
+	/* packet type 0x03 info */
+	struct pd_infoframe_s gcp_info;
+	/* packet type 0x04 info */
+	struct pd_infoframe_s acp_info;
+	/* packet type 0x05 info */
+	struct pd_infoframe_s isrc1_info;
+	/* packet type 0x06 info */
+	struct pd_infoframe_s isrc2_info;
+	/* packet type 0x0a info */
+	struct pd_infoframe_s gameta_info;
+	/* packet type 0x0d audio metadata data */
+	struct pd_infoframe_s amp_info;
 };
 
 struct st_pkt_test_buff {
@@ -894,7 +935,7 @@ struct st_pkt_test_buff {
 
 
 
-
+extern struct packet_info_s rx_pkt;
 /*extern bool hdr_enable;*/
 extern void rx_pkt_status(void);
 extern void rx_pkt_debug(void);
@@ -929,6 +970,9 @@ extern uint32_t rx_pkt_chk_attach_drm(void);
 extern void rx_pkt_clr_attach_drm(void);
 extern uint32_t rx_pkt_chk_busy_vsi(void);
 extern uint32_t rx_pkt_chk_busy_drm(void);
+extern void rx_get_pd_fifo_param(enum pkt_type_e pkt_type,
+		struct pd_infoframe_s *pkt_info,
+		unsigned int size);
 
 #endif
 

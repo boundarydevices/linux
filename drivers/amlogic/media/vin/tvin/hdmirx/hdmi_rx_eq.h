@@ -28,7 +28,7 @@
 /* suitable for a long cable */
 /* Maximum allowable setting, HW as the maximum = 15, should */
 #define maxsetting	14
-/* only be need for ultra long cables at high rates,*/
+/* only be need for ultra long cables at high rates, */
 /* condition never detected on LAB */
 /* Default setting for short cables, */
 /* if system cannot find any one better than this. */
@@ -96,6 +96,19 @@ enum eq_sts_e {
 	E_EQ_FAIL
 };
 
+enum e_eq_freq {
+	E_EQ_3G,
+	E_EQ_HD,
+	E_EQ_SD,
+	E_EQ_6G = 4,
+	E_EQ_FREQ
+};
+
+struct eq_cfg_coef_s {
+	uint16_t fat_bit_sts;
+	uint8_t min_max_diff;
+};
+
 enum eq_cable_type_e {
 	E_CABLE_NOT_FOUND,
 	E_LONG_CABLE,
@@ -130,9 +143,16 @@ struct st_eq_data {
 extern struct st_eq_data eq_ch0;
 extern struct st_eq_data eq_ch1;
 extern struct st_eq_data eq_ch2;
+extern int delay_ms_cnt;
+extern int eq_max_setting;
+extern bool phy_pddq_en;
+extern int eq_dbg_ch0;
+extern int eq_dbg_ch1;
+extern int eq_dbg_ch2;
+extern int long_cable_best_setting;
 
 /*--------------------------function declare------------------*/
-void rx_eq_algorithm(void);
+int rx_eq_algorithm(void);
 int hdmirx_phy_start_eq(void);
 uint8_t SettingFinder(void);
 bool eq_maxvsmin(int ch0Setting, int ch1Setting, int ch2Setting);
@@ -145,6 +165,8 @@ void eq_cfg(void);
 void eq_run(void);
 void rx_set_eq_run_state(enum eq_sts_e state);
 enum eq_sts_e rx_get_eq_run_state(void);
+extern void dump_eq_data(void);
+extern void eq_dwork_handler(struct work_struct *work);
 
 /*function declare end*/
 

@@ -37,8 +37,10 @@
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 
 /* Local include */
-#include "hdmirx_drv.h"
-#include "hdmi_rx_reg.h"
+#include "hdmi_rx_drv.h"
+#include "hdmi_rx_hw.h"
+#include "hdmi_rx_edid.h"
+#include "hdmi_rx_wrapper.h"
 
 /*------------------------marco define------------------------------*/
 #define SCRAMBLE_SEL 1
@@ -52,11 +54,11 @@
 
 /*------------------------variable define------------------------------*/
 static DEFINE_SPINLOCK(reg_rw_lock);
-/*should enable fast switching, since some devices in non-current port*/
-/* will suspend because of RxSense = 0, such as xiaomi-mtk box*/
+/* should enable fast switching, since some devices in non-current port */
+/* will suspend because of RxSense = 0, such as xiaomi-mtk box */
 static bool phy_fast_switching = true;
 static bool phy_fsm_enhancement = true;
-static unsigned int last_clk_rate;
+unsigned int last_clk_rate;
 
 /* SNPS suggest to use the previous setting 0x3f when handle eq issues to
  * make clk_stable bit more stable(=1),but 0x3f may misjudge 46.25~92.5
@@ -69,61 +71,30 @@ static uint32_t phy_cfg_clk = 24000;
 static uint32_t modet_clk = 24000;
 
 /* top_irq_en bit[16:13] hdcp_sts */
-static int top_intr_maskn_value = 1;
+int top_intr_maskn_value = 1;
 bool hdcp_enable = 1;
-
-static int acr_mode;
-MODULE_PARM_DESC(acr_mode, "\n acr_mode\n");
-module_param(acr_mode, int, 0664);
-
-static int auto_aclk_mute = 2;
-MODULE_PARM_DESC(auto_aclk_mute, "\n auto_aclk_mute\n");
-module_param(auto_aclk_mute, int, 0664);
-
-static int aud_avmute_en = 1;
-MODULE_PARM_DESC(aud_avmute_en, "\n aud_avmute_en\n");
-module_param(aud_avmute_en, int, 0664);
-
+int acr_mode;
+int auto_aclk_mute = 2;
+int aud_avmute_en = 1;
 int aud_mute_sel;
-MODULE_PARM_DESC(aud_mute_sel, "\n aud_mute_sel\n");
-module_param(aud_mute_sel, int, 0664);
-
-static int force_clk_rate;
-MODULE_PARM_DESC(force_clk_rate, "\n force_clk_rate\n");
-module_param(force_clk_rate, int, 0664);
-
+int force_clk_rate;
 int md_ists_en = VIDEO_MODE;
-MODULE_PARM_DESC(md_ists_en, "\n rx_md_ists_en\n");
-module_param(md_ists_en, int, 0664);
-
 int pdec_ists_en;/* = AVI_CKS_CHG | DVIDET | DRM_CKS_CHG | DRM_RCV_EN;*/
-MODULE_PARM_DESC(pdec_ists_en, "\n pdec_ists_en\n");
-module_param(pdec_ists_en, int, 0664);
-
-/* bit5 pll_lck_chg_en */
-/* bit6 clk_change_en */
-int hdmi_ists_en = AKSV_RCV;
-MODULE_PARM_DESC(hdmi_ists_en, "\n hdmi_ists_en\n");
-module_param(hdmi_ists_en, int, 0664);
-
 uint32_t packet_fifo_cfg;
-module_param(packet_fifo_cfg, int, 0664);
-MODULE_PARM_DESC(packet_fifo_cfg, "packet_fifo_cfg");
-
-int pd_fifo_start_cnt = K_PKT_FIFO_START;
-module_param(pd_fifo_start_cnt, int, 0664);
-MODULE_PARM_DESC(pd_fifo_start_cnt, "pd_fifo_start_cnt");
-
+int pd_fifo_start_cnt = 0x80;
 /* Controls equalizer reference voltage. */
-static int eq_ref_voltage = 0x1ea;
-module_param(eq_ref_voltage, int, 0664);
-MODULE_PARM_DESC(eq_ref_voltage, "eq_ref_voltage");
-
+int eq_ref_voltage = 0x1ea;
 int hdcp22_on;
 MODULE_PARM_DESC(hdcp22_on, "\n hdcp22_on\n");
 module_param(hdcp22_on, int, 0664);
 
 /*------------------------variable define end------------------------------*/
+
+static int check_regmap_flag(unsigned int addr)
+{
+	return 1;
+
+}
 
 /*
  * hdmirx_rd_dwc - Read data from HDMI RX CTRL
@@ -131,7 +102,7 @@ module_param(hdcp22_on, int, 0664);
  *
  * return data read value
  */
-uint32_t hdmirx_rd_dwc(uint16_t addr)
+unsigned int hdmirx_rd_dwc(unsigned int addr)
 {
 	ulong flags;
 	int data;
@@ -151,9 +122,9 @@ uint32_t hdmirx_rd_dwc(uint16_t addr)
  *
  * return masked bits of register value
  */
-uint32_t hdmirx_rd_bits_dwc(uint16_t addr, uint32_t mask)
+unsigned int hdmirx_rd_bits_dwc(unsigned int addr, unsigned int mask)
 {
-	return get(hdmirx_rd_dwc(addr), mask);
+	return rx_get_bits(hdmirx_rd_dwc(addr), mask);
 }
 
 /*
@@ -161,10 +132,10 @@ uint32_t hdmirx_rd_bits_dwc(uint16_t addr, uint32_t mask)
  * @addr: register address
  * @data: new register value
  */
-void hdmirx_wr_dwc(uint16_t addr, uint32_t data)
+void hdmirx_wr_dwc(unsigned int addr, unsigned int data)
 {
 	ulong flags;
-	unsigned long dev_offset = 0x10;
+	unsigned int dev_offset = 0x10;
 
 	spin_lock_irqsave(&reg_rw_lock, flags);
 	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_addr_port | dev_offset, addr);
@@ -178,9 +149,10 @@ void hdmirx_wr_dwc(uint16_t addr, uint32_t data)
  * @mask: bits mask
  * @value: new register value
  */
-void hdmirx_wr_bits_dwc(uint16_t addr, uint32_t mask, uint32_t value)
+void hdmirx_wr_bits_dwc(unsigned int addr,
+	unsigned int mask, unsigned int value)
 {
-	hdmirx_wr_dwc(addr, set(hdmirx_rd_dwc(addr), mask, value));
+	hdmirx_wr_dwc(addr, rx_set_bits(hdmirx_rd_dwc(addr), mask, value));
 }
 
 /*
@@ -189,7 +161,7 @@ void hdmirx_wr_bits_dwc(uint16_t addr, uint32_t mask, uint32_t value)
  *
  * return data read value
  */
-uint16_t hdmirx_rd_phy(uint8_t reg_address)
+unsigned int hdmirx_rd_phy(unsigned int reg_address)
 {
 	int cnt = 0;
 
@@ -212,7 +184,7 @@ uint16_t hdmirx_rd_phy(uint8_t reg_address)
 		}
 	} while (1);
 
-	return (uint16_t)(hdmirx_rd_dwc(DWC_I2CM_PHYG3_DATAI));
+	return (unsigned int)(hdmirx_rd_dwc(DWC_I2CM_PHYG3_DATAI));
 }
 
 /*
@@ -222,9 +194,9 @@ uint16_t hdmirx_rd_phy(uint8_t reg_address)
  *
  * return masked bits of register value
  */
-uint16_t hdmirx_rd_bits_phy(uint16_t addr, uint32_t mask)
+unsigned int hdmirx_rd_bits_phy(unsigned int addr, unsigned int mask)
 {
-	return get(hdmirx_rd_phy(addr), mask);
+	return rx_get_bits(hdmirx_rd_phy(addr), mask);
 }
 
 /*
@@ -234,7 +206,7 @@ uint16_t hdmirx_rd_bits_phy(uint16_t addr, uint32_t mask)
  *
  * return 0 on write succeed, return -1 otherwise.
  */
-int hdmirx_wr_phy(uint8_t reg_address, uint16_t data)
+unsigned int hdmirx_wr_phy(unsigned int reg_address, unsigned int data)
 {
 	int error = 0;
 	int cnt = 0;
@@ -255,10 +227,8 @@ int hdmirx_wr_phy(uint8_t reg_address, uint16_t data)
 		cnt++;
 		if (cnt > 50000) {
 			error = -1;
-			if (log_level & ERR_LOG) {
-				rx_pr("[error]:(%x,%x,%x)timeout\n",
-					__func__, 0x39, reg_address, data);
-			}
+			rx_pr("[err-%s]:(%x,%x)timeout\n",
+					__func__, reg_address, data);
 			break;
 		}
 	} while (1);
@@ -275,7 +245,8 @@ int hdmirx_wr_phy(uint8_t reg_address, uint16_t data)
  */
 int hdmirx_wr_bits_phy(uint16_t addr, uint32_t mask, uint32_t value)
 {
-	return hdmirx_wr_phy(addr, set(hdmirx_rd_phy(addr), mask, value));
+	return hdmirx_wr_phy(addr, rx_set_bits(hdmirx_rd_phy(addr),
+		mask, value));
 }
 
 /*
@@ -284,12 +255,11 @@ int hdmirx_wr_bits_phy(uint16_t addr, uint32_t mask, uint32_t value)
  *
  * return data read value
  */
-unsigned long hdmirx_rd_top(unsigned long addr)
+unsigned int hdmirx_rd_top(unsigned int addr)
 {
 	ulong flags;
 	int data;
-	unsigned long dev_offset = 0;
-
+	unsigned int dev_offset = 0;
 	spin_lock_irqsave(&reg_rw_lock, flags);
 	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_addr_port | dev_offset, addr);
 	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_addr_port | dev_offset, addr);
@@ -307,7 +277,7 @@ unsigned long hdmirx_rd_top(unsigned long addr)
  */
 uint32_t hdmirx_rd_bits_top(uint16_t addr, uint32_t mask)
 {
-	return get(hdmirx_rd_top(addr), mask);
+	return rx_get_bits(hdmirx_rd_top(addr), mask);
 }
 
 /*
@@ -315,7 +285,7 @@ uint32_t hdmirx_rd_bits_top(uint16_t addr, uint32_t mask)
  * @addr: register address
  * @data: new register value
  */
-void hdmirx_wr_top(unsigned long addr, unsigned long data)
+void hdmirx_wr_top(unsigned int addr, unsigned int data)
 {
 	ulong flags;
 	unsigned long dev_offset = 0;
@@ -332,17 +302,82 @@ void hdmirx_wr_top(unsigned long addr, unsigned long data)
  * @mask: bits mask
  * @value: new register value
  */
-void hdmirx_wr_bits_top(uint16_t addr, uint32_t mask, uint32_t value)
+void hdmirx_wr_bits_top(unsigned int addr,
+	unsigned int mask, unsigned int value)
 {
-	hdmirx_wr_top(addr, set(hdmirx_rd_top(addr), mask, value));
+	hdmirx_wr_top(addr, rx_set_bits(hdmirx_rd_top(addr), mask, value));
 }
+
+	/*
+	 * rd_reg_hhi
+	 * @offset: offset address of hhi physical addr
+	 *
+	 * returns unsigned int bytes read from the addr
+	 */
+	unsigned int rd_reg_hhi(unsigned int offset)
+	{
+		unsigned int addr = offset +
+			reg_maps[MAP_ADDR_MODULE_HIU].phy_addr;
+
+		return rd_reg(MAP_ADDR_MODULE_HIU, addr);
+	}
+
+	/*
+	 * wr_reg_hhi
+	 * @offset: offset address of hhi physical addr
+	 * @val: value being written
+	 */
+	void wr_reg_hhi(unsigned int offset, unsigned int val)
+	{
+		unsigned int addr = offset +
+			reg_maps[MAP_ADDR_MODULE_HIU].phy_addr;
+		wr_reg(MAP_ADDR_MODULE_HIU, addr, val);
+	}
+
+	/*
+	 * rd_reg - regisger read
+	 * @module: module index of the reg_map table
+	 * @reg_addr: offset address of specified phy addr
+	 *
+	 * returns unsigned int bytes read from the addr
+	 */
+	unsigned int rd_reg(enum map_addr_module_e module,
+		unsigned int reg_addr)
+	{
+		unsigned int val = 0;
+
+		if ((module < MAP_ADDR_MODULE_NUM)
+			&& check_regmap_flag(reg_addr))
+			val = readl(reg_maps[module].p +
+			(reg_addr - reg_maps[module].phy_addr));
+		else
+			rx_pr("rd reg %x error\n", reg_addr);
+		return val;
+	}
+
+	/*
+	 * wr_reg - regisger write
+	 * @module: module index of the reg_map table
+	 * @reg_addr: offset address of specified phy addr
+	 * @val: value being written
+	 */
+	void wr_reg(enum map_addr_module_e module,
+			unsigned int reg_addr, unsigned int val)
+	{
+		if ((module < MAP_ADDR_MODULE_NUM)
+			&& check_regmap_flag(reg_addr))
+			writel(val, reg_maps[module].p +
+			(reg_addr - reg_maps[module].phy_addr));
+		else
+			rx_pr("wr reg %x err\n", reg_addr);
+	}
 
 /*
  * rx_hdcp22_wr_only
  */
-void rx_hdcp22_wr_only(uint32_t addr, uint32_t data)
+void rx_hdcp22_wr_only(unsigned int addr, unsigned int data)
 {
-	ulong flags;
+	unsigned long flags;
 
 	spin_lock_irqsave(&reg_rw_lock, flags);
 	wr_reg(MAP_ADDR_MODULE_HDMIRX_CAPB3,
@@ -351,13 +386,10 @@ void rx_hdcp22_wr_only(uint32_t addr, uint32_t data)
 	spin_unlock_irqrestore(&reg_rw_lock, flags);
 }
 
-/*
- * rx_hdcp22_rd
- */
-uint32_t rx_hdcp22_rd(uint32_t addr)
+unsigned int rx_hdcp22_rd(unsigned int addr)
 {
-	uint32_t data;
-	ulong flags;
+	unsigned int data;
+	unsigned long flags;
 
 	spin_lock_irqsave(&reg_rw_lock, flags);
 	data = rd_reg(MAP_ADDR_MODULE_HDMIRX_CAPB3,
@@ -366,23 +398,17 @@ uint32_t rx_hdcp22_rd(uint32_t addr)
 	return data;
 }
 
-/*
- * rx_hdcp22_rd_check
- */
-void rx_hdcp22_rd_check(uint32_t addr, uint32_t exp_data, uint32_t mask)
+void rx_hdcp22_rd_check(unsigned int addr,
+	unsigned int exp_data, unsigned int mask)
 {
-	uint32_t rd_data;
+	unsigned int rd_data;
 
 	rd_data = rx_hdcp22_rd(addr);
 	if ((rd_data | mask) != (exp_data | mask))
 		rx_pr("addr=0x%02x rd_data=0x%08x\n", addr, rd_data);
 }
 
-/*
- * rx_hdcp22_wr
- * no use
- */
-void rx_hdcp22_wr(uint32_t addr, uint32_t data)
+void rx_hdcp22_wr(unsigned int addr, unsigned int data)
 {
 	rx_hdcp22_wr_only(addr, data);
 	rx_hdcp22_rd_check(addr, data, 0);
@@ -393,7 +419,7 @@ void rx_hdcp22_wr(uint32_t addr, uint32_t data)
  * @addr: register address
  * @value: new register value
  */
-void rx_hdcp22_wr_reg(uint32_t addr, uint32_t data)
+void rx_hdcp22_wr_reg(unsigned int addr, unsigned int data)
 {
 	rx_sec_reg_write((unsigned int *)(unsigned long)
 	(reg_maps[MAP_ADDR_MODULE_HDMIRX_CAPB3].phy_addr + addr),
@@ -404,7 +430,7 @@ void rx_hdcp22_wr_reg(uint32_t addr, uint32_t data)
  * rx_hdcp22_rd_reg - hdcp2.2 reg read
  * @addr: register address
  */
-uint32_t rx_hdcp22_rd_reg(uint32_t addr)
+unsigned int rx_hdcp22_rd_reg(unsigned int addr)
 {
 	return (uint32_t)rx_sec_reg_read((unsigned int *)(unsigned long)
 	(reg_maps[MAP_ADDR_MODULE_HDMIRX_CAPB3].phy_addr + addr));
@@ -415,9 +441,9 @@ uint32_t rx_hdcp22_rd_reg(uint32_t addr)
  * @addr: register address
  * @mask: bits mask
  */
-uint32_t rx_hdcp22_rd_reg_bits(uint16_t addr, uint32_t mask)
+unsigned int rx_hdcp22_rd_reg_bits(unsigned int addr, unsigned int mask)
 {
-	return get(rx_hdcp22_rd_reg(addr), mask);
+	return rx_get_bits(rx_hdcp22_rd_reg(addr), mask);
 }
 
 /*
@@ -426,9 +452,11 @@ uint32_t rx_hdcp22_rd_reg_bits(uint16_t addr, uint32_t mask)
  * @mask: bits mask
  * @value: new register value
  */
-void rx_hdcp22_wr_reg_bits(uint16_t addr, uint32_t mask, uint32_t value)
+void rx_hdcp22_wr_reg_bits(unsigned int addr,
+	unsigned int mask, unsigned int value)
 {
-	rx_hdcp22_wr_reg(addr, set(rx_hdcp22_rd_reg(addr), mask, value));
+	rx_hdcp22_wr_reg(addr, rx_set_bits(rx_hdcp22_rd_reg(addr),
+			mask, value));
 }
 
 /*
@@ -436,7 +464,7 @@ void rx_hdcp22_wr_reg_bits(uint16_t addr, uint32_t mask, uint32_t value)
  * @addr: register address
  * @data: new register value
  */
-void hdcp22_wr_top(uint32_t addr, uint32_t data)
+void rx_hdcp22_wr_top(unsigned int addr, unsigned int data)
 {
 	sec_top_write((unsigned int *)(unsigned long)addr, data);
 }
@@ -445,9 +473,9 @@ void hdcp22_wr_top(uint32_t addr, uint32_t data)
  * hdcp22_rd_top - hdcp2.2 top reg read
  * @addr: register address
  */
-uint32_t hdcp22_rd_top(uint32_t addr)
+unsigned int rx_hdcp22_rd_top(uint32_t addr)
 {
-	return (uint32_t)sec_top_read((unsigned int *)(unsigned long)addr);
+	return (unsigned int)sec_top_read((unsigned int *)(unsigned long)addr);
 }
 
 /*
@@ -539,7 +567,7 @@ unsigned int rx_sec_set_duk(void)
  * hdmirx_phy_pddq - phy pddq config
  * @enable: enable phy pddq up
  */
-void hdmirx_phy_pddq(int enable)
+void hdmirx_phy_pddq(unsigned int enable)
 {
 	hdmirx_wr_bits_dwc(DWC_SNPS_PHYG3_CTRL,
 		MSK(1, 1), enable);
@@ -548,9 +576,9 @@ void hdmirx_phy_pddq(int enable)
 /*
  * hdmirx_wr_ctl_port
  */
-void hdmirx_wr_ctl_port(unsigned int offset, unsigned long data)
+void hdmirx_wr_ctl_port(unsigned int offset, unsigned int data)
 {
-	ulong flags;
+	unsigned long flags;
 
 	spin_lock_irqsave(&reg_rw_lock, flags);
 	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_ctrl_port+offset, data);
@@ -563,7 +591,7 @@ void hdmirx_wr_ctl_port(unsigned int offset, unsigned long data)
  */
 void rx_irq_en(bool enable)
 {
-	int data32 = 0;
+	unsigned int data32 = 0;
 
 	if (enable) {
 		if (is_meson_txlx_cpu()) {
@@ -653,7 +681,6 @@ void rx_irq_en(bool enable)
 		}
 		hdmirx_wr_dwc(DWC_PDEC_IEN_SET, data32);
 		hdmirx_wr_dwc(DWC_AUD_FIFO_IEN_SET, OVERFL|UNDERFL);
-		/*hdmirx_wr_dwc(DWC_MD_IEN_SET, rx_md_ists_en);*/
 	} else {
 		/* clear enable */
 		hdmirx_wr_dwc(DWC_PDEC_IEN_CLR, ~0);
@@ -728,9 +755,28 @@ void rx_get_audinfo(struct aud_info_s *audio_info)
 }
 
 /*
+ * rx_get_audio_status - interface for audio module
+ */
+void rx_get_audio_status(struct rx_audio_stat_s *aud_sts)
+{
+	if (rx.state == FSM_SIG_READY) {
+		aud_sts->aud_rcv_flag =
+			(rx.aud_info.aud_packet_received == 0) ? false : true;
+		aud_sts->aud_stb_flag = true;
+		aud_sts->aud_sr = rx.aud_info.real_sr;
+		aud_sts->aud_channel_cnt = rx.aud_info.channel_count;
+		aud_sts->aud_type = rx.aud_info.coding_type;
+	} else {
+		memset(aud_sts, 0,
+			sizeof(struct rx_audio_stat_s));
+	}
+}
+EXPORT_SYMBOL(rx_get_audio_status);
+
+/*
  * rx_get_hdmi5v_sts - get current pwr5v status on all ports
  */
-uint8_t rx_get_hdmi5v_sts(void)
+unsigned int rx_get_hdmi5v_sts(void)
 {
 	return (hdmirx_rd_top(TOP_HPD_PWR5V) >> 20) & 0xf;
 }
@@ -738,7 +784,7 @@ uint8_t rx_get_hdmi5v_sts(void)
 /*
  * rx_get_hpd_sts - get current hpd status on all ports
  */
-uint8_t rx_get_hpd_sts(void)
+unsigned int rx_get_hpd_sts(void)
 {
 	return hdmirx_rd_top(TOP_HPD_PWR5V) & 0xf;
 }
@@ -746,7 +792,7 @@ uint8_t rx_get_hpd_sts(void)
 /*
  * rx_get_scdc_clkrate_sts - get tmds clk ratio
  */
-uint8_t rx_get_scdc_clkrate_sts(void)
+unsigned int rx_get_scdc_clkrate_sts(void)
 {
 	if (is_meson_txhd_cpu())
 		return 0;
@@ -758,7 +804,7 @@ uint8_t rx_get_scdc_clkrate_sts(void)
  * rx_get_pll_lock_sts - tmds pll lock indication
  * return true if tmds pll locked, false otherwise.
  */
-uint8_t rx_get_pll_lock_sts(void)
+unsigned int rx_get_pll_lock_sts(void)
 {
 	return hdmirx_rd_dwc(DWC_HDMI_PLL_LCK_STS) & 1;
 }
@@ -794,7 +840,7 @@ bool is_clk_stable(void)
 /*
  * hdmirx_audio_fifo_rst - reset afifo
  */
-int hdmirx_audio_fifo_rst(void)
+unsigned int hdmirx_audio_fifo_rst(void)
 {
 	int error = 0;
 	static bool rst_flag;
@@ -905,7 +951,7 @@ void pd_fifo_irq_ctl(bool en)
 /*
  * hdmirx_packet_fifo_rst - reset packet fifo
  */
-int hdmirx_packet_fifo_rst(void)
+unsigned int hdmirx_packet_fifo_rst(void)
 {
 	int error = 0;
 
@@ -1062,26 +1108,22 @@ static int DWC_init(void)
 }
 
 /*
- * hdmirx_is_key_write - hdcp1.4 key exist
- */
-bool hdmirx_is_key_write(void)
-{
-	if (hdmirx_rd_dwc(DWC_HDCP_BKSV0) != 0)
-		return 1;
-	else
-		return 0;
-}
-
-/*
  * hdmi_rx_ctrl_hdcp_config - config hdcp1.4 keys
  */
-void hdmi_rx_ctrl_hdcp_config(const struct hdmi_rx_ctrl_hdcp *hdcp)
+void rx_hdcp14_config(const struct hdmi_rx_hdcp *hdcp)
 {
 	int error = 0;
 	unsigned int i = 0;
 	unsigned int k = 0;
 
 	hdmirx_wr_bits_dwc(DWC_HDCP_SETTINGS, HDCP_FAST_MODE, 0);
+	/* Enable hdcp bcaps bit(bit7). In hdcp1.4 spec: Use of
+	 * this bit is reserved, hdcp Receivers not capable of
+	 * supporting HDMI must clear this bit to 0. For YAMAHA
+	 * RX-V377 amplifier, enable this bit is needed, in case
+	 * the amplifier won't do hdcp1.4 interaction occasionally.
+	 */
+	hdmirx_wr_bits_dwc(DWC_HDCP_SETTINGS, HDCP_BCAPS, 1);
 	hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, ENCRIPTION_ENABLE, 0);
 	/* hdmirx_wr_bits_dwc(ctx, DWC_HDCP_CTRL, KEY_DECRYPT_ENABLE, 1); */
 	hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, KEY_DECRYPT_ENABLE, 0);
@@ -1113,9 +1155,9 @@ void hdmi_rx_ctrl_hdcp_config(const struct hdmi_rx_ctrl_hdcp *hdcp)
 	hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, ENCRIPTION_ENABLE, 1);
 }
 
-void rx_set_hpd(uint8_t val)
+void rx_set_hpd(bool en)
 {
-	if (val) {
+	if (en) {
 		hdmirx_wr_top(TOP_HPD_PWR5V,
 			hdmirx_rd_top(TOP_HPD_PWR5V)&(~(1<<rx.port)));
 	} else {
@@ -1124,7 +1166,7 @@ void rx_set_hpd(uint8_t val)
 	}
 	if (log_level & LOG_EN)
 		rx_pr("%s, port:%d, val:%d\n", __func__,
-						rx.port, val);
+						rx.port, en);
 }
 
 /*
@@ -1157,12 +1199,14 @@ void control_reset(void)
 	hdmirx_wr_dwc(DWC_DMI_DISABLE_IF, data32);
 	mdelay(1);
 	hdmirx_wr_dwc(DWC_DMI_SW_RST,	0x0000001F);
-
 }
 
 void rx_esm_tmdsclk_en(bool en)
 {
 	hdmirx_wr_bits_top(TOP_CLK_CNTL, HDCP22_TMDSCLK_EN, en);
+
+	if (log_level & HDCP_LOG)
+		rx_pr("%s:%d\n", __func__, en);
 }
 
 /*
@@ -1196,7 +1240,7 @@ int rx_is_hdcp22_support(void)
 	int ret = 0;
 
 	if (rx_sec_set_duk() == 1) {
-		hdcp22_wr_top(TOP_SKP_CNTL_STAT, 7);
+		rx_hdcp22_wr_top(TOP_SKP_CNTL_STAT, 7);
 		ret = 1;
 	} else
 		ret = 0;
@@ -1231,14 +1275,12 @@ void hdcp22_suspend(void)
 	/* it will stop cec wake up func if EE domain still working */
 	/* rx_set_hpd(0); */
 	hpd_to_esm = 0;
-	do_esm_rst_flag = 1;
 	hdmirx_wr_dwc(DWC_HDCP22_CONTROL,
 				0x0);
-	if (hdcp22_kill_esm == 0) {
-		rx_pr("kill = 1\n");
+	if (hdcp22_kill_esm == 0)
+		/* rx_pr("kill = 1\n"); */
 		hdmirx_hdcp22_esm_rst();
-		msleep(20);
-	}
+		/* msleep(20); */
 	rx_pr("hdcp22 off\n");
 }
 
@@ -1253,8 +1295,8 @@ void hdcp22_resume(void)
 	hdcp22_clk_en(1);
 	hdmirx_wr_dwc(DWC_HDCP22_CONTROL,
 				0x1000);
-	hdcp22_wr_top(TOP_SKP_CNTL_STAT, 0x1);
-	hdmirx_hw_config();
+	/* rx_hdcp22_wr_top(TOP_SKP_CNTL_STAT, 0x1); */
+	/* hdmirx_hw_config(); */
 	/* switch_set_state(&rx.hpd_sdev, 0x1); */
 	extcon_set_state_sync(rx.rx_excton_rx22, EXTCON_DISP_HDMI, 1);
 	hpd_to_esm = 1;
@@ -1280,10 +1322,9 @@ void clk_init(void)
 
 	/* Enable APB3 fail on error */
 	/* APB3 to HDMIRX-TOP err_en */
-	/* default 0x3ff, | bit15 = 1 */
-
-	/* hdmirx_wr_ctl_port(0, 0x83ff); */
-	/* hdmirx_wr_ctl_port(0x10, 0x83ff); */
+	/* default 0x3ff, | bit15 = 1 | bit12 = 1 */
+	hdmirx_wr_ctl_port(0, 0x93ff);
+	hdmirx_wr_ctl_port(0x10, 0x93ff);
 
 	/* turn on clocks: md, cfg... */
 	/* G9 clk tree */
@@ -1342,15 +1383,6 @@ void clk_init(void)
 	data32 |= 0 << 1;   /* [1]      bus_clk_inv */
 	data32 |= 0 << 0;   /* [0]      hdmi_clk_inv */
 	hdmirx_wr_top(TOP_CLK_CNTL, data32);    /* DEFAULT: {32'h0} */
-}
-
-/*
- * clk_off - clock off
- */
-void clk_off(void)
-{
-	/* wr_reg(HHI_HDMIRX_CLK_CNTL, 0); */
-	/* wr_reg(HHI_HDMIRX_AUD_CLK_CNTL, 0); */
 }
 
 /*
@@ -1606,6 +1638,7 @@ void hdmirx_phy_init(void)
 
 	/* clear clkrate cfg */
 	hdmirx_wr_bits_phy(PHY_CDR_CTRL_CNT, CLK_RATE_BIT, 0);
+	last_clk_rate = 0;
 
 	#if 0
 	/* enable all ports's termination*/
@@ -1623,16 +1656,6 @@ void hdmirx_phy_init(void)
 	data32 |= 0 << 0;
 	hdmirx_wr_dwc(DWC_SNPS_PHYG3_CTRL, data32);
 	rx_pr("%s Done!\n", __func__);
-}
-
-/*
- * hdmirx_edid_reset - reset edid interface
- */
-void hdmirx_edid_reset(void)
-{
-	hdmirx_wr_bits_top(TOP_SW_RESET, _BIT(1), 0);
-	hdmirx_wr_bits_top(TOP_SW_RESET, _BIT(1), 1);
-	hdmirx_wr_bits_top(TOP_SW_RESET, _BIT(1), 0);
 }
 
 /*
@@ -1668,7 +1691,8 @@ bool rx_clkrate_monitor(void)
 			rx_pr("clk_rate:%d, last_clk_rate: %d\n",
 			clk_rate, last_clk_rate);
 		last_clk_rate = clk_rate;
-		rx.state = FSM_WAIT_CLK_STABLE;
+		if (rx.state >= FSM_WAIT_CLK_STABLE)
+			rx.state = FSM_WAIT_CLK_STABLE;
 	}
 	return changed;
 }
@@ -1679,7 +1703,7 @@ bool rx_clkrate_monitor(void)
 void rx_hdcp_init(void)
 {
 	if (hdcp_enable)
-		hdmi_rx_ctrl_hdcp_config(&rx.hdcp);
+		rx_hdcp14_config(&rx.hdcp);
 	else
 		hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, ENCRIPTION_ENABLE, 0);
 }
@@ -1712,24 +1736,16 @@ void rx_sw_reset(int level)
 void hdmirx_hw_config(void)
 {
 	rx_pr("%s port:%d\n", __func__, rx.port);
-	hdmirx_wr_top(TOP_INTR_MASKN, 0);
 	control_reset();
-	hdmirx_edid_reset();
-	/*hdmirx_irq_enable(FALSE);*/
-	/*hdmirx_irq_hdcp22_enable(FALSE);*/
-	hdmi_rx_ctrl_edid_update();
-	/* hdmirx_wr_dwc(DWC_HDCP22_CONTROL, 2); */
+	hdmi_rx_top_edid_update();
 	rx_hdcp_init();
 	hdmirx_audio_init();
 	packet_init();
 	if (!is_meson_txhd_cpu())
 		hdmirx_20_init();
-	hdmirx_wr_top(TOP_INTR_MASKN, top_intr_maskn_value);
-
-	hdmirx_phy_init();
-	hdmirx_wr_top(TOP_PORT_SEL, 0x10 | ((1<<rx.port)));
 	DWC_init();
-	hdmirx_irq_hdcp_enable(TRUE);
+	hdmirx_irq_hdcp_enable(true);
+	hdmirx_phy_init();
 	rx_pr("%s  %d Done!\n", __func__, rx.port);
 }
 
@@ -1743,11 +1759,11 @@ void hdmirx_hw_probe(void)
 	hdmirx_wr_top(TOP_SW_RESET, 0);
 	clk_init();
 	hdmirx_wr_top(TOP_HPD_PWR5V, 0x1f);
-	hdmi_rx_ctrl_edid_update();
+	hdmi_rx_top_edid_update();
 	TOP_init();
 	control_reset();
 	DWC_init();
-	hdmirx_phy_init();
+
 	/*hdmirx_irq_enable(FALSE);*/
 	/*hdmirx_irq_hdcp22_enable(FALSE);*/
 	hdcp22_clk_en(1);
@@ -1755,20 +1771,31 @@ void hdmirx_hw_probe(void)
 	packet_init();
 	if (!is_meson_txhd_cpu())
 		hdmirx_20_init();
+	hdmirx_phy_init();
 	hdmirx_wr_top(TOP_PORT_SEL, 0x10);
 	hdmirx_wr_top(TOP_INTR_STAT_CLR, ~0);
 	hdmirx_wr_top(TOP_INTR_MASKN, top_intr_maskn_value);
-	rx_pr("%s Done!\n", __func__);
+	/* rx_pr("%s Done!\n", __func__); */
 }
 
 /*
- * hdmirx_audio_pll_sw_update
+ * rx_audio_pll_sw_update
  * Sent an update pulse to audio pll module.
  * Indicate the ACR info is changed.
  */
-void hdmirx_audio_pll_sw_update(void)
+void rx_audio_pll_sw_update(void)
 {
 	hdmirx_wr_bits_top(TOP_ACR_CNTL_STAT, _BIT(11), 1);
+}
+/*
+ * func: rx_acr_info_update
+ * refresh aud_pll by manual N/CTS changing
+ */
+void rx_acr_info_sw_update(void)
+{
+	hdmirx_wr_dwc(DWC_AUD_CLK_CTRL, 0x10);
+	udelay(100);
+	hdmirx_wr_dwc(DWC_AUD_CLK_CTRL, 0x0);
 }
 
 /*
@@ -1811,12 +1838,12 @@ bool is_aud_pll_error(void)
 
 	if (rx.aud_info.real_sr == 0)
 		return false;
-	if	((abs(clk - aud_128fs) < 500000) ||
-		(abs(clk - aud_512fs) < 500000)) {
+	if	((abs(clk - aud_128fs) < AUD_PLL_THRESHOLD) ||
+		(abs(clk - aud_512fs) < AUD_PLL_THRESHOLD)) {
 		ret = false;
 	}
 	if ((ret) && (log_level & AUDIO_LOG))
-		rx_pr("%d,%d,%d,\n", clk, aud_128fs, aud_512fs);
+		rx_pr("clk:%d,128fs:%d,512fs:%d,\n", clk, aud_128fs, aud_512fs);
 	return ret;
 }
 
@@ -1826,7 +1853,6 @@ bool is_aud_pll_error(void)
 void rx_aud_pll_ctl(bool en)
 {
 	int tmp = 0;
-
 	if (en) {
 		tmp = hdmirx_rd_phy(PHY_MAINFSM_STATUS1);
 		wr_reg_hhi(HHI_AUD_PLL_CNTL, 0x20000000);
@@ -1839,15 +1865,19 @@ void rx_aud_pll_ctl(bool en)
 		wr_reg_hhi(HHI_AUD_PLL_CNTL3, 0x00000000);
 		wr_reg_hhi(HHI_AUD_PLL_CNTL, 0x40000000);
 		wr_reg_hhi(HHI_ADC_PLL_CNTL4, 0x805);
-		hdmirx_audio_pll_sw_update();
+		rx_audio_pll_sw_update();
 		/*External_Mute(0);*/
 	} else{
 		/* disable pll, into reset mode */
-		/*External_Mute(1);*/
+		External_Mute(1);
 		wr_reg_hhi(HHI_AUD_PLL_CNTL, 0x20000000);
 	}
 }
 
+unsigned char rx_get_hdcp14_sts(void)
+{
+	return (unsigned char)((hdmirx_rd_dwc(DWC_HDCP_STS) >> 8) & 3);
+}
 /*
  * rx_get_video_info - get current avi info
  */
@@ -1917,6 +1947,7 @@ void rx_get_video_info(void)
 	/* YCC quantization range */
 	/** @note HW does not support AVI CN1-0, */
 	/* IT content type */
+
 	rx.cur.bar_end_top =
 		hdmirx_rd_bits_dwc(DWC_PDEC_AVI_TBB, LIN_END_TOP_BAR);
 	rx.cur.bar_start_bottom =
@@ -1926,6 +1957,7 @@ void rx_get_video_info(void)
 	rx.cur.bar_start_right =
 		hdmirx_rd_bits_dwc(DWC_PDEC_AVI_LRB, PIX_ST_RIG_BAR);
 	#endif
+
 	/* refresh rate */
 	tmp = hdmirx_rd_bits_dwc(DWC_MD_VTC, VTOT_CLK);
 	/* tmp = (tmp == 0)? 0: (ctx->md_clk * 100000) / tmp; */
@@ -2030,7 +2062,6 @@ unsigned int hdmirx_get_clock(int index)
 unsigned int hdmirx_get_tmds_clock(void)
 {
 	uint32_t clk = clk_util_clk_msr(25);
-
 	if (clk == 0) {
 		clk = hdmirx_rd_dwc(DWC_HDMI_CKM_RESULT) & 0xffff;
 		clk = clk * 158000 / 4095 * 1000;
@@ -2241,29 +2272,14 @@ int rx_debug_wr_reg(const char *buf, char *tmpbuf, int i)
 			rx_pr("write %x to hiu [%x]\n",
 				value, adr);
 		} else if (buf[2] == 'h') {
-			hdcp22_wr_top(adr, value);
-			/* hdcp22_wr(adr, value); */
+			rx_hdcp22_wr_top(adr, value);
 			rx_pr("write %x to hdcp [%x]\n",
 				value, adr);
 		} else if (buf[2] == 'c') {
 			rx_hdcp22_wr_reg(adr, value);
-			/* hdcp22_wr(adr, value); */
 			rx_pr("write %x to chdcp [%x]\n",
 				value, adr);
 		}
-	} else if (buf[1] == 'c') {
-		aml_write_cbus(adr, value);
-		rx_pr("write %x to CBUS [%x]\n", value, adr);
-	} else if (buf[1] == 'p') {
-		/* WRITE_APB_REG(adr, value); */
-	} else if (buf[1] == 'l') {
-		/* aml_write_cbus(MDB_CTRL, 2); */
-		/* aml_write_cbus(MDB_ADDR_REG, adr); */
-		/* aml_write_cbus(MDB_DATA_REG, value); */
-	} else if (buf[1] == 'r') {
-		/* aml_write_cbus(MDB_CTRL, 1); */
-		/* aml_write_cbus(MDB_ADDR_REG, adr); */
-		/* aml_write_cbus(MDB_DATA_REG, value); */
 	}
 	return 0;
 }
@@ -2287,33 +2303,37 @@ int rx_debug_rd_reg(const char *buf, char *tmpbuf)
 			rx_pr("PHY [%x]=%x\n", adr, value);
 		} else if (tmpbuf[2] == 'u') {
 			value = rd_reg_hhi(adr);
-			rx_pr("hiu [%x]=%x\n", adr, value);
+			rx_pr("HIU [%x]=%x\n", adr, value);
 		} else if (tmpbuf[2] == 'h') {
-			value = hdcp22_rd_top(adr);
-			/* value = hdcp22_rd(adr); */
-			rx_pr("hdcp [%x]=%x\n", adr, value);
+			value = rx_hdcp22_rd_top(adr);
+			rx_pr("HDCP [%x]=%x\n", adr, value);
 		} else if (tmpbuf[2] == 'c') {
 			value = rx_hdcp22_rd_reg(adr);
-			/* value = hdcp22_rd(adr); */
 			rx_pr("chdcp [%x]=%x\n", adr, value);
 		}
-	} else if (buf[1] == 'c') {
-		/* value = READ_MPEG_REG(adr); */
-		rx_pr("CBUS reg[%x]=%x\n", adr, value);
-	} else if (buf[1] == 'p') {
-		/* value = READ_APB_REG(adr); */
-		rx_pr("APB reg[%x]=%x\n", adr, value);
-	} else if (buf[1] == 'l') {
-		/* aml_write_cbus(MDB_CTRL, 2); */
-		/* aml_write_cbus(MDB_ADDR_REG, adr); */
-		/* value = READ_MPEG_REG(MDB_DATA_REG); */
-		rx_pr("LMEM[%x]=%x\n", adr, value);
-	} else if (buf[1] == 'r') {
-		/* aml_write_cbus(MDB_CTRL, 1); */
-		/* aml_write_cbus(MDB_ADDR_REG, adr); */
-		/* value = READ_MPEG_REG(MDB_DATA_REG); */
-		rx_pr("amrisc reg[%x]=%x\n", adr, value);
 	}
 	return 0;
+}
+
+int rx_get_aud_pll_err_sts(void)
+{
+	int ret = E_AUDPLL_OK;
+	int32_t req_clk = hdmirx_get_mpll_div_clk();
+	uint32_t phy_pll_rate = (hdmirx_rd_phy(PHY_MAINFSM_STATUS1)>>9)&0x3;
+	uint32_t aud_pll_cntl = (rd_reg_hhi(HHI_AUD_PLL_CNTL6)>>28)&0x3;
+
+	if (req_clk > PHY_REQUEST_CLK_MAX ||
+			req_clk < PHY_REQUEST_CLK_MIN) {
+		ret = E_REQUESTCLK_ERR;
+		if (log_level & AUDIO_LOG)
+			rx_pr("request clk err:%d\n", req_clk);
+	} else if (phy_pll_rate != aud_pll_cntl) {
+		ret = E_PLLRATE_CHG;
+		if (log_level & AUDIO_LOG)
+			rx_pr("pll rate chg,phy=%d,pll=%d\n",
+				phy_pll_rate, aud_pll_cntl);
+	}
+
+	return ret;
 }
 

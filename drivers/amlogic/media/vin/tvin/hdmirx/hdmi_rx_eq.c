@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/vin/tvin/hdmirx/hdmi_rx_eq.c
+ * drivers/amlogic/tvin/hdmirx/hdmi_rx_eq.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -37,55 +37,28 @@
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 /* Local include */
 #include "hdmi_rx_eq.h"
-#include "hdmirx_drv.h"
-#include "hdmi_rx_reg.h"
+#include "hdmi_rx_drv.h"
+#include "hdmi_rx_hw.h"
+#include "hdmi_rx_wrapper.h"
 
-/*------------------------variable define------------------------------*/
-
-int eq_setting_back;
 static int fat_bit_status;
 static int min_max_diff = 4;
-static int long_cable_best_setting = 6;
 struct st_eq_data eq_ch0;
 struct st_eq_data eq_ch1;
 struct st_eq_data eq_ch2;
 enum eq_sts_e eq_sts = E_EQ_START;
-
-static int tmds_valid_cnt_max = 2;
-MODULE_PARM_DESC(tmds_valid_cnt_max, "\n tmds_valid_cnt_max\n");
-module_param(tmds_valid_cnt_max, int, 0664);
-
-static int delay_ms_cnt = 10; /* 5 */
-MODULE_PARM_DESC(delay_ms_cnt, "\n delay_ms_cnt\n");
-module_param(delay_ms_cnt, int, 0664);
-
-static int eq_sts_stable_max = 2;
-MODULE_PARM_DESC(eq_sts_stable_max, "\n eq_sts_stable_max\n");
-module_param(eq_sts_stable_max, int, 0664);
-
-static int eq_max_setting = 7;
-MODULE_PARM_DESC(eq_max_setting, "\n eq_max_setting\n");
-module_param(eq_max_setting, int, 0664);
-
+/* variable define*/
+int long_cable_best_setting = 6;
+int delay_ms_cnt = 10; /* 5 */
+int eq_max_setting = 7;
 int eq_dbg_ch0;
-MODULE_PARM_DESC(eq_dbg_ch0, "\n eq_dbg_ch0\n");
-module_param(eq_dbg_ch0, int, 0664);
-
 int eq_dbg_ch1;
-MODULE_PARM_DESC(eq_dbg_ch1, "\n eq_dbg_ch1\n");
-module_param(eq_dbg_ch1, int, 0664);
-
 int eq_dbg_ch2;
-MODULE_PARM_DESC(eq_dbg_ch2, "\n eq_dbg_ch2\n");
-module_param(eq_dbg_ch2, int, 0664);
-
 /*
  * select the mode to config eq setting
  * 0: no pddq mode	1: use pddq down and up mode
  */
-static bool phy_pddq_en;
-MODULE_PARM_DESC(phy_pddq_en, "\n phy_pddq_en\n");
-module_param(phy_pddq_en, bool, 0664);
+bool phy_pddq_en;
 /*------------------------variable define end----------------------*/
 
 bool eq_maxvsmin(int ch0Setting, int ch1Setting, int ch2Setting)
@@ -197,34 +170,24 @@ enum eq_sts_e rx_get_eq_run_state(void)
 	return eq_sts;
 }
 
-void eq_algorithm(struct work_struct *work)
+void eq_dwork_handler(struct work_struct *work)
 {
-	unsigned int i;
-
 	cancel_delayed_work(&eq_dwork);
-	for (i = 0; i < 3; i++) {
-		if (SettingFinder() == 1) {
-			rx_pr("EQ-%d-%d-%d-",
-					eq_ch0.bestsetting,
-					eq_ch1.bestsetting,
-					eq_ch2.bestsetting);
-			if (eq_maxvsmin(eq_ch0.bestsetting,
-					eq_ch1.bestsetting,
-					eq_ch2.bestsetting) == 1) {
-				if (log_level & EQ_LOG)
-					rx_pr("pass\n");
-				break;
-			}
+	if (SettingFinder() == 1) {
+		rx_pr("EQ-%d-%d-%d-",
+				eq_ch0.bestsetting,
+				eq_ch1.bestsetting,
+				eq_ch2.bestsetting);
+		if (eq_maxvsmin(eq_ch0.bestsetting,
+			eq_ch1.bestsetting,
+			eq_ch2.bestsetting) == 1) {
 			if (log_level & EQ_LOG)
-				rx_pr("fail\n");
+				rx_pr("pass\n");
+		} else {
+			eq_ch0.bestsetting = ErrorcableSetting;
+			eq_ch1.bestsetting = ErrorcableSetting;
+			eq_ch2.bestsetting = ErrorcableSetting;
 		}
-	}
-	if (i >= MINMAX_nTrys) {
-		eq_ch0.bestsetting = ErrorcableSetting;
-		eq_ch1.bestsetting = ErrorcableSetting;
-		eq_ch2.bestsetting = ErrorcableSetting;
-		if (log_level & EQ_LOG)
-			rx_pr("EQ fail-retry\n");
 	}
 	eq_cfg();
 	eq_sts = E_EQ_FINISH;
@@ -240,32 +203,17 @@ void eq_run(void)
 }
 void eq_cfg(void)
 {
-	/* ConfEqualSetting */
-	if (rx.chip_id == CHIP_ID_GXTVBB) {
-		hdmirx_wr_phy(PHY_EQCTRL4_CH0, 1<<eq_ch0.bestsetting);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH0, 0x0024);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH0, 0x0026);
+	hdmirx_wr_phy(PHY_EQCTRL4_CH0, 1<<eq_ch0.bestsetting);
+	hdmirx_wr_phy(PHY_EQCTRL2_CH0, 0x4024 | (avgAcq << 11));
+	hdmirx_wr_phy(PHY_EQCTRL2_CH0, 0x4026 | (avgAcq << 11));
 
-		hdmirx_wr_phy(PHY_EQCTRL4_CH1, 1<<eq_ch1.bestsetting);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH1, 0x0024);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH1, 0x0026);
+	hdmirx_wr_phy(PHY_EQCTRL4_CH1, 1<<eq_ch1.bestsetting);
+	hdmirx_wr_phy(PHY_EQCTRL2_CH1, 0x4024 | (avgAcq << 11));
+	hdmirx_wr_phy(PHY_EQCTRL2_CH1, 0x4026 | (avgAcq << 11));
 
-		hdmirx_wr_phy(PHY_EQCTRL4_CH2, 1<<eq_ch2.bestsetting);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH2, 0x0024);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH2, 0x0026);
-	} else {
-		hdmirx_wr_phy(PHY_EQCTRL4_CH0, 1<<eq_ch0.bestsetting);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH0, 0x4024 | (avgAcq << 11));
-		hdmirx_wr_phy(PHY_EQCTRL2_CH0, 0x4026 | (avgAcq << 11));
-
-		hdmirx_wr_phy(PHY_EQCTRL4_CH1, 1<<eq_ch1.bestsetting);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH1, 0x4024 | (avgAcq << 11));
-		hdmirx_wr_phy(PHY_EQCTRL2_CH1, 0x4026 | (avgAcq << 11));
-
-		hdmirx_wr_phy(PHY_EQCTRL4_CH2, 1<<eq_ch2.bestsetting);
-		hdmirx_wr_phy(PHY_EQCTRL2_CH2, 0x4024 | (avgAcq << 11));
-		hdmirx_wr_phy(PHY_EQCTRL2_CH2, 0x4026 | (avgAcq << 11));
-	}
+	hdmirx_wr_phy(PHY_EQCTRL4_CH2, 1<<eq_ch2.bestsetting);
+	hdmirx_wr_phy(PHY_EQCTRL2_CH2, 0x4024 | (avgAcq << 11));
+	hdmirx_wr_phy(PHY_EQCTRL2_CH2, 0x4026 | (avgAcq << 11));
 
 	/* As for the issue of "Toggling PDDQ after SW EQ sometime effect
 	 * HDCP Authentication", SNPS suggestion is to: Skip the PDDQ toggle
@@ -313,7 +261,7 @@ uint8_t testType(uint16_t setting, struct st_eq_data *ch_data)
 	}
 	/* Exit type Long cable
 	 * (early-late count curve well behaved
-	 *and 50% threshold achived)
+	 * and 50% threshold achived)
 	 */
 	if (ch_data->validLongSetting  == 1 &&
 		ch_data->acc > AccLimit) {
@@ -322,10 +270,10 @@ uint8_t testType(uint16_t setting, struct st_eq_data *ch_data)
 			ch_data->bestsetting = long_cable_best_setting;
 		if (log_level & EQ_LOG)
 			rx_pr("longcable1");
-		return 1;
+		return E_LONG_CABLE;
 	}
 	/* Exit type short cable
-	 *(early-late count curve  behaved as a short cable)
+	 * (early-late count curve  behaved as a short cable)
 	 */
 	if (setting == eq_max_setting &&
 		ch_data->acc < AccLimit &&
@@ -333,11 +281,11 @@ uint8_t testType(uint16_t setting, struct st_eq_data *ch_data)
 		ch_data->bestsetting = ch_data->bestShortSetting;
 		if (log_level & EQ_LOG)
 			rx_pr("shortcable");
-		return 2;
+		return E_SHORT_CABLE;
 	}
 	/* Exit type long cable
-	 *(early-late count curve well behaved
-	 *nevertheless 50% threshold not achieved
+	 * (early-late count curve well behaved
+	 * nevertheless 50% threshold not achieved
 	 */
 	if ((setting == eq_max_setting) &&
 		(ch_data->tmdsvalid == 1) &&
@@ -346,19 +294,19 @@ uint8_t testType(uint16_t setting, struct st_eq_data *ch_data)
 		ch_data->bestsetting = long_cable_best_setting;
 		if (log_level & EQ_LOG)
 			rx_pr("longcable2");
-		return 3;
+		return E_LONG_CABLE2;
 	}
 	/* error cable */
 	if (setting == eq_max_setting) {
 		if (log_level & EQ_LOG)
 			rx_pr("errcable");
 		ch_data->bestsetting = ErrorcableSetting;
-		return 255;
+		return E_ERR_CABLE;
 	}
 	/* Cable not detected,
-	 *continue to next setting
+	 * continue to next setting
 	 */
-	return 0;
+	return E_CABLE_NOT_FOUND;
 }
 
 
@@ -392,109 +340,28 @@ uint8_t aquireEarlyCnt(uint16_t setting)
 		return 0;
 	}
 
-	if (rx.chip_id != CHIP_ID_GXTVBB) {
-		/* End the acquisitions if no TMDS valid */
-		/* hdmi_rx_phy_ConfEqualSetting(lockVector); */
-		/* phy_conf_eq_setting(setting, setting, setting); */
-		/* sleep_time_CDR should be enough */
-		/*	to have TMDS valid asserted. */
-		/* TMDS VALID can be obtained either */
-		/*	by per channel basis or global pin */
-		/* TMDS VALID BY channel basis (Option #1) */
-		/* Get early counters */
-		eq_ch0.acq = rx_phy_rd_earlycnt_ch0() >> avgAcq;
-		eq_ch0.acq_n[setting] = eq_ch0.acq;
-		if (log_level & ERR_LOG)
-			rx_pr("eq_ch0_acq #%d = %d\n", setting, eq_ch0.acq);
-		eq_ch1.acq = rx_phy_rd_earlycnt_ch1() >> avgAcq;
-		eq_ch1.acq_n[setting] = eq_ch1.acq;
-		if (log_level & ERR_LOG)
-			rx_pr("eq_ch1_acq #%d = %d\n", setting, eq_ch1.acq);
-		eq_ch2.acq = rx_phy_rd_earlycnt_ch2() >> avgAcq;
-		eq_ch2.acq_n[setting] = eq_ch2.acq;
-		if (log_level & ERR_LOG)
-			rx_pr("eq_ch2_acq #%d = %d\n", setting, eq_ch2.acq);
-	} else {
-		uint16_t cnt;
-		uint16_t upperBound_acqCH0;
-		uint16_t upperBound_acqCH1;
-		uint16_t upperBound_acqCH2;
-		uint16_t lowerBound_acqCH0;
-		uint16_t lowerBound_acqCH1;
-		uint16_t lowerBound_acqCH2;
-		uint8_t outBound_acqCH0;
-		uint8_t outBound_acqCH1;
-		uint8_t outBound_acqCH2;
-		/* Maximum allowable deviation to */
-		/*	consider a acquisition stable = 20*2 */
-		uint16_t boundspread = 20;
-		/* Minimum number of acquisitions to evaluate the stability */
-		uint8_t minACQtoStableDetection = 3;
-		uint16_t acq_ch0 = 0;
-		uint16_t acq_ch1 = 0;
-		uint16_t acq_ch2 = 0;
+	/* End the acquisitions if no TMDS valid */
+	/* hdmi_rx_phy_ConfEqualSetting(lockVector); */
+	/* phy_conf_eq_setting(setting, setting, setting); */
+	/* sleep_time_CDR should be enough */
+	/*	to have TMDS valid asserted. */
+	/* TMDS VALID can be obtained either */
+	/*	by per channel basis or global pin */
+	/* TMDS VALID BY channel basis (Option #1) */
+	/* Get early counters */
+	eq_ch0.acq = rx_phy_rd_earlycnt_ch0() >> avgAcq;
+	eq_ch0.acq_n[setting] = eq_ch0.acq;
+	if (log_level & ERR_LOG)
+		rx_pr("eq_ch0_acq #%d = %d\n", setting, eq_ch0.acq);
+	eq_ch1.acq = rx_phy_rd_earlycnt_ch1() >> avgAcq;
+	eq_ch1.acq_n[setting] = eq_ch1.acq;
+	if (log_level & ERR_LOG)
+		rx_pr("eq_ch1_acq #%d = %d\n", setting, eq_ch1.acq);
+	eq_ch2.acq = rx_phy_rd_earlycnt_ch2() >> avgAcq;
+	eq_ch2.acq_n[setting] = eq_ch2.acq;
+	if (log_level & ERR_LOG)
+		rx_pr("eq_ch2_acq #%d = %d\n", setting, eq_ch2.acq);
 
-		/* get TMDSVALID and early counters */
-		eq_ch0.acq = 0;
-		eq_ch1.acq = 0;
-		eq_ch2.acq = 0;
-		outBound_acqCH0 = 0;
-		outBound_acqCH1 = 0;
-		outBound_acqCH2 = 0;
-
-		/* Get fisrt set of early counters */
-		acq_ch0 = rx_phy_rd_earlycnt_ch0();
-		acq_ch1 = rx_phy_rd_earlycnt_ch1();
-		acq_ch2 = rx_phy_rd_earlycnt_ch2();
-
-		eq_ch0.acq += acq_ch0;
-		eq_ch1.acq += acq_ch1;
-		eq_ch2.acq += acq_ch2;
-
-		upperBound_acqCH0 = acq_ch0 + boundspread;
-		lowerBound_acqCH0 = acq_ch0 - boundspread;
-		upperBound_acqCH1 = acq_ch1 + boundspread;
-		lowerBound_acqCH1 = acq_ch1 - boundspread;
-		upperBound_acqCH2 = acq_ch2 + boundspread;
-		lowerBound_acqCH2 = acq_ch2 - boundspread;
-
-		for (cnt = 1; cnt < setting; cnt++) {
-			hdmi_rx_phy_ConfEqualAutoCalib();
-			mdelay(delay_ms_cnt);
-			if (acq_ch0 > upperBound_acqCH0 ||
-				acq_ch0 < lowerBound_acqCH0)
-				outBound_acqCH0++;
-			if (acq_ch1 > upperBound_acqCH1 ||
-				acq_ch1 < lowerBound_acqCH1)
-				outBound_acqCH1++;
-			if (acq_ch2 > upperBound_acqCH2 ||
-				acq_ch2 < lowerBound_acqCH2)
-				outBound_acqCH2++;
-
-			/* Stable detection, minimum 3 readouts */
-			if (cnt == minACQtoStableDetection) {
-				if (outBound_acqCH0 == 0 &&
-					outBound_acqCH1 == 0 &&
-					outBound_acqCH2 == 0) {
-					rx_pr("STABLE ACQ\n");
-					setting = 3;
-					break;
-				}
-
-			}
-			acq_ch0 = rx_phy_rd_earlycnt_ch0();
-			acq_ch1 = rx_phy_rd_earlycnt_ch1();
-			acq_ch2 = rx_phy_rd_earlycnt_ch2();
-			eq_ch0.acq += acq_ch0;
-			eq_ch1.acq += acq_ch1;
-			eq_ch2.acq += acq_ch2;
-		}
-		if (setting != 0) {
-			eq_ch0.acq = eq_ch0.acq/setting;
-			eq_ch1.acq = eq_ch1.acq/setting;
-			eq_ch2.acq = eq_ch2.acq/setting;
-		}
-	}
 	return 1;
 }
 
@@ -594,28 +461,36 @@ struct eq_cfg_coef_s eq_cfg_coef_tbl[] = {
  * 74M 2
  * 27M 3
  */
-void rx_eq_algorithm(void)
+int rx_eq_algorithm(void)
 {
 	static uint8_t pre_eq_freq = 0xff;
 	uint8_t pll_rate = hdmirx_rd_phy(PHY_MAINFSM_STATUS1) >> 9 & 3;
 
+	if (is_6g_mode())
+		pll_rate = E_EQ_6G;
+
+	rx_pr("pll rate pre:%d, cur:%d\n", pre_eq_freq, pll_rate);
+	rx_pr("eq_sts = %d\n", eq_sts);
+
 	if ((eq_dbg_ch0) || (eq_dbg_ch1) || (eq_dbg_ch2))  {
 		rx_eq_cfg(eq_dbg_ch0, eq_dbg_ch1, eq_dbg_ch2);
-		return;
+		return 0;
 	}
 	if (pre_eq_freq == pll_rate) {
 		if ((eq_sts == E_EQ_FINISH) ||
 			(eq_sts == E_EQ_SAME)) {
 			eq_sts = E_EQ_SAME;
-			return;
+			rx_pr("same pll rate\n");
+			return 0;
 		}
+	} else if ((pll_rate&0x2) == E_EQ_SD) {
+		eq_sts = E_EQ_FINISH;
+		pre_eq_freq = pll_rate;
+		rx_pr("low pll rate\n");
+		return 0;
 	}
 
 	pre_eq_freq = pll_rate;
-
-	if (is_6g_mode())
-		pll_rate = 4;
-
 	fat_bit_status = eq_cfg_coef_tbl[pll_rate].fat_bit_sts;
 	min_max_diff = eq_cfg_coef_tbl[pll_rate].min_max_diff;
 
@@ -625,8 +500,10 @@ void rx_eq_algorithm(void)
 	hdmirx_wr_phy(PHY_EQCTRL6_CH1, fat_bit_status);
 	hdmirx_wr_phy(PHY_EQCTRL6_CH2, fat_bit_status);
 	eq_run();
-	rx_pr("pll rate = %d\n", pll_rate);
+
 	eq_sts = E_EQ_START;
+
+	return 1;
 }
 
 void dump_eq_data(void)

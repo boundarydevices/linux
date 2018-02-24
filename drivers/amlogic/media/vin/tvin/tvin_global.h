@@ -444,6 +444,7 @@ struct tvin_sig_property_s {
 	enum tvin_color_fmt_range_e color_fmt_range;
 	struct tvin_hdr_info_s hdr_info;
 	bool dolby_vision;/*is signal dolby version*/
+	bool low_latency;/*is low latency dolby mode*/
 	uint8_t fps;
 	unsigned int skip_vf_num;/*skip pre vframe num*/
 };

@@ -59,9 +59,9 @@ enum {
  * must be called before any other ioctl on the file descriptor.
  *
  *   - hpi_base = base address of ESM HPI registers.
- *   -code_base=base address of firmware memory (0 to allocate internally)
+ *   - code_base = base address of firmware mem (0 to allocate internally)
  *   - data_base = base address of data memory (0 to allocate internally)
- *   -code_len, data_len=length of firmware and data memory, respectively.
+ *   - code_len, data_len = length of firmware and data mem, respectively.
  */
 #define ESM_IOC_INIT    _IOW('E', ESM_NR_INIT, struct esm_ioc_meminfo)
 
@@ -79,7 +79,7 @@ struct esm_ioc_meminfo {
 	__u32 code_base;
 	__u32 code_size;
 	__u32 data_base;
-	 __u32 data_size;
+	__u32 data_size;
 };
 
 /*
@@ -141,5 +141,4 @@ struct esm_ioc_hpi_reg {
 	__u32 offset;
 	__u32 value;
 };
-
 #endif

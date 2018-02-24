@@ -26,22 +26,24 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/delay.h>
-#include "hdmi_rx_reg.h"
-#include "hdmirx_drv.h"
 #include <linux/moduleparam.h>
 #include <linux/netlink.h>
 #include <linux/proc_fs.h>
 #include <linux/debugfs.h>
 #include <linux/version.h>
-#include "hdcp_main.h"
+#include "hdcp_rx_main.h"
+#include "hdmi_rx_drv.h"
+#include "hdmi_rx_hw.h"
 
 #define MAX_ESM_DEVICES 6
 #define ESM_RX_HPI_BASE    0xd0076000
-
 static bool randomize_mem;
 static int is_esmmem_created;
-module_param(randomize_mem, bool, 0664);
-MODULE_PARM_DESC(noverify, "Wipe mem allocations on startup (for debug)");
+
+/*
+ * module_param(randomize_mem, bool, 0664);
+ * MODULE_PARM_DESC(noverify, "Wipe mem allocations on startup (for debug)");
+ */
 
 struct esm_device {
 	int allocated, initialized;
@@ -95,11 +97,8 @@ static long load_code(struct esm_device *esm,
 	if (head.len > esm->code_size)
 		return -ENOSPC;
 
-	if (do_esm_rst_flag == 1)
-		esm->code_loaded = 0;
-
-	if (esm->code_loaded)
-		return -EBUSY;
+	/* if (esm->code_loaded) */
+	/*	return -EBUSY; */
 
 	if (copy_from_user(esm->code, &arg->data, head.len) != 0)
 		return -EFAULT;
@@ -294,16 +293,12 @@ static int alloc_dma_areas(struct esm_device *esm,
 		prandom_bytes(esm->code, esm->code_size);
 		prandom_bytes(esm->data, esm->data_size);
 	}
-	esm_data_base_addr = esm->data_base;
 	if (!is_esmmem_created) {
 		if ((esm->data_base) && (esm->code_base)) {
-			/* rm esmmem*/
-			/*hdmirx_dev_init();*/
 			is_esmmem_created = 1;
 			pr_info("create /dev/esmmem\n");
 		}
 	}
-	pr_info("get_data_phys_addr=%x\n", esm_data_base_addr);
 	return 0;
 }
 
