@@ -23,12 +23,17 @@
 #define VOUTPR(fmt, args...)     pr_info("vout: "fmt"", ## args)
 #define VOUTERR(fmt, args...)    pr_err("vout: error: "fmt"", ## args)
 
-/* [ 3: 2] cntl_viu2_sel_venc:
- *         0=No connection, 1=ENCI, 2=ENCP, 3=ENCT.
- * [ 1: 0] cntl_viu1_sel_venc:
- *         0=No connection, 1=ENCI, 2=ENCP, 3=ENCT.
+/* [3: 2] cntl_viu2_sel_venc:
+ *         0=ENCL, 1=ENCI, 2=ENCP, 3=ENCT.
+ * [1: 0] cntl_viu1_sel_venc:
+ *         0=ENCL, 1=ENCI, 2=ENCP, 3=ENCT.
  */
 #define VPU_VIU_VENC_MUX_CTRL                      0x271a
+/* [2] Enci_afifo_clk: 0: cts_vpu_clk_tm 1: cts_vpu_clkc_tm
+ * [1] Encl_afifo_clk: 0: cts_vpu_clk_tm 1: cts_vpu_clkc_tm
+ * [0] Encp_afifo_clk: 0: cts_vpu_clk_tm 1: cts_vpu_clkc_tm
+ */
+#define VPU_VENCX_CLK_CTRL                         0x2785
 #define VPP_POSTBLEND_H_SIZE                       0x1d21
 #define VPP2_POSTBLEND_H_SIZE                      0x1921
 

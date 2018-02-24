@@ -548,7 +548,6 @@ static int cvbs_set_current_vmode(enum vmode_e mode)
 		      tvmode, info->vinfo->sync_duration_den,
 		      info->vinfo->sync_duration_num);
 
-	cvbs_out_reg_write(VPP_POSTBLEND_H_SIZE, info->vinfo->width);
 	if (mode & VMODE_INIT_BIT_MASK) {
 		cvbs_out_vpu_power_ctrl(1);
 		cvbs_out_clk_gate_ctrl(1);

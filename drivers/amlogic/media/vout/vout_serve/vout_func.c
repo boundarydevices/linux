@@ -121,10 +121,9 @@ static inline int vout_func_check_state(int index, unsigned int state,
 static void vout_func_update_viu(int index, struct vout_server_s *p_server)
 {
 	struct vinfo_s *vinfo = NULL;
-	unsigned int post_reg = VPP_POSTBLEND_H_SIZE;
-	unsigned int bit = 0, mux = 3;
+	unsigned int mux_bit = 0, mux_sel = 3;
+	unsigned int clk_bit = 0, clk_sel = 0;
 
-	return;
 	if (p_server->op.get_vinfo)
 		vinfo = p_server->op.get_vinfo();
 	else
@@ -132,21 +131,39 @@ static void vout_func_update_viu(int index, struct vout_server_s *p_server)
 
 	switch (index) {
 	case 1:
-		post_reg = VPP_POSTBLEND_H_SIZE;
-		bit = 0;
+		mux_bit = 0;
+		clk_sel = 0;
 		break;
 	case 2:
-		post_reg = VPP2_POSTBLEND_H_SIZE;
-		bit = 2;
+		mux_bit = 2;
+		clk_sel = 1;
 		break;
 	default:
 		break;
 	}
 
-	mux = vinfo->viu_mux;
+	mux_sel = vinfo->viu_mux;
+	switch (mux_sel) {
+	case VIU_MUX_ENCL:
+		clk_bit = 1;
+		break;
+	case VIU_MUX_ENCI:
+		clk_bit = 2;
+		break;
+	case VIU_MUX_ENCP:
+		clk_bit = 0;
+		break;
+	default:
+		break;
+	}
 
-	vout_func_vcbus_write(post_reg, vinfo->width);
-	vout_func_vcbus_setb(VPU_VIU_VENC_MUX_CTRL, mux, bit, 2);
+	vout_func_vcbus_setb(VPU_VIU_VENC_MUX_CTRL, mux_sel, mux_bit, 2);
+	vout_func_vcbus_setb(VPU_VENCX_CLK_CTRL, clk_sel, clk_bit, 1);
+
+#if 0
+	VOUTPR("%s: %d, mux_sel=%d, clk_sel=%d\n",
+		__func__, index, mux_sel, clk_sel);
+#endif
 }
 
 /*
@@ -176,10 +193,10 @@ int vout_func_set_current_vmode(int index, enum vmode_e mode)
 
 		if (p_server->op.vmode_is_supported(mode) == true) {
 			p_module->curr_vout_server = p_server;
+			vout_func_update_viu(index, p_server);
 			ret = p_server->op.set_vmode(mode);
 			if (p_server->op.set_state)
 				p_server->op.set_state(index);
-			vout_func_update_viu(index, p_server);
 		} else {
 			if (p_server->op.get_state) {
 				state = p_server->op.get_state();

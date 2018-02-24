@@ -300,8 +300,6 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 	} else
 		lcd_clk_gate_switch(1);
 
-	lcd_vcbus_write(VPP_POSTBLEND_H_SIZE, lcd_drv->lcd_info->width);
-
 	mutex_unlock(&lcd_vout_mutex);
 	return ret;
 }

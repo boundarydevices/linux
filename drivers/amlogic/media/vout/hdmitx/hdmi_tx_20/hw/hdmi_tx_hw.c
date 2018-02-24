@@ -1871,17 +1871,7 @@ static void hdmitx_set_scdc(struct hdmitx_dev *hdev)
 
 void hdmitx_set_enc_hw(struct hdmitx_dev *hdev)
 {
-	struct hdmi_format_para *para = NULL;
 	set_vmode_enc_hw(hdev);
-
-	para = hdmi_get_fmt_paras(hdev->cur_video_param->VIC);
-
-	if (para == NULL) {
-		pr_info("error at %s[%d] vic = %d\n", __func__, __LINE__,
-		hdev->cur_video_param->VIC);
-	} else {
-		hd_write_reg(P_VPP_POSTBLEND_H_SIZE, para->hdmitx_vinfo.width);
-	}
 
 	if (hdev->flag_3dfp) {
 		hd_write_reg(P_VPU_HDMI_SETTING, 0x8e);
