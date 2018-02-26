@@ -223,6 +223,6 @@ struct imx_hdp {
 
 };
 
-u32 imx_hdp_audio(AUDIO_TYPE type, u32 sample_rate, u32 channels, u32 width);
+void imx_hdp_register_audio_driver(struct device *dev);
 
 #endif
