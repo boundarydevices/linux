@@ -17,7 +17,8 @@
 
 #ifndef _OSD_H_
 #define _OSD_H_
-
+#include <linux/kthread.h>
+#include "osd_sync.h"
 enum color_index_e {
 	COLOR_INDEX_02_PAL4    = 2,  /* 0 */
 	COLOR_INDEX_04_PAL16   = 4, /* 0 */
@@ -96,6 +97,8 @@ enum color_index_e {
 #define FBIOPUT_OSD_SYNC_RENDER_ADD      0x4519
 #define FBIOPUT_OSD_HWC_ENABLE           0x451a
 #define FBIOPUT_OSD_DO_HWC               0x451b
+#define FBIOPUT_OSD_BLANK                0x451c
+#define FBIOGET_OSD_CAPBILITY            0x451e
 
 #define FB_IOC_MAGIC   'O'
 #define FBIOPUT_OSD_CURSOR	\
@@ -142,12 +145,21 @@ enum color_index_e {
 
 #define MALI_AFBC_SPLIT_OFF  0
 #define MALI_AFBC_SPLIT_ON   1
+#define OSD_HW_CURSOR           (1 << 0)
+#define OSD_VIDEO_CONFLICT      (1 << 1)
+#define OSD_FREESCALE           (1 << 2)
+#define OSD_UBOOT_LOGO          (1 << 3)
+#define OSD_LAYER_ENABLE        (1 << 31)
+
+#define BYPASS_DIN        (1 << 7)
+#define OSD_BACKUP_COUNT 8
 
 enum osd_index_e {
 	OSD1 = 0,
 	OSD2,
 	OSD3,
 	OSD4,
+	OSD_MAX = OSD4,
 };
 
 enum osd_enable_e {
@@ -278,7 +290,19 @@ enum osd_blend_din_index_e {
 	BLEND_DIN1 = 0,
 	BLEND_DIN2,
 	BLEND_DIN3,
-	BLEND_DIN4
+	BLEND_DIN4,
+	BLEND0_DIN,
+	BLEND1_DIN,
+	BLEND2_DIN,
+	BLEND_NO_DIN,
+};
+
+enum vpp_blend_input_e {
+	POSTBLD_CLOSE = 0,
+	POSTBLD_VD1,
+	POSTBLD_VD2,
+	POSTBLD_OSD1,
+	POSTBLD_OSD2,
 };
 
 enum osd_zorder_e {
@@ -295,8 +319,10 @@ enum osd_zorder_e {
  */
 enum osd_blend_mode_e {
 	OSD_BLEND_NONE,
+	OSD_BLEND_A,
+	OSD_BLEND_AC,
+	OSD_BLEND_A_C,
 	OSD_BLEND_ABC,
-	OSD_BLEND_AB_C,
 	OSD_BLEND_A_BC,
 };
 
@@ -357,7 +383,6 @@ struct osd_rotate_s {
 
 struct osd_fence_map_s {
 	struct list_head list;
-
 	u32 fb_index;
 	u32 buf_num;
 	u32 xoffset;
@@ -377,14 +402,46 @@ struct osd_fence_map_s {
 	u32 dst_h;
 	int byte_stride;
 	int pxiel_stride;
+	u32 zorder;
+	u32 blend_mode;
+	u32 plane_alpha;
+	u32 afbc_inter_format;
 	u32 background_w;
 	u32 background_h;
-	u32 zorder;
-	u32 premult_en;
-	u32 afbc_en;
-	u32 afbc_inter_format;
-	u32 reserve;
 	struct fence *in_fence;
+};
+
+struct layer_fence_map_s {
+	u32 fb_index;
+	u32 enable;
+	s32 in_fd;
+	s32 out_fd;
+	u32 ext_addr;
+	u32 format;
+	u32 compose_type;
+	u32 src_x;
+	u32 src_y;
+	u32 src_w;
+	u32 src_h;
+	u32 dst_x;
+	u32 dst_y;
+	u32 dst_w;
+	u32 dst_h;
+	int byte_stride;
+	int pxiel_stride;
+	u32 afbc_inter_format;
+	u32 zorder;
+	u32 blend_mode;
+	u32 plane_alpha;
+	struct fence *in_fence;
+};
+
+struct osd_layers_fence_map_s {
+	struct list_head list;
+	int out_fd;
+	u32 background_w;
+	u32 background_h;
+	struct layer_fence_map_s layer_map[HW_OSD_COUNT];
 };
 
 struct afbcd_data_s {
@@ -468,12 +525,57 @@ struct hw_osd_reg_s {
 	u32 afbc_prefetch_cfg_s;/* VPU_MAFBC_PREFETCH_CFG_S0 */
 };
 
+struct layer_blend_reg_s {
+	u32 hold_line;
+	u32 blend2_premult_en;
+	u32 din0_byp_blend;
+	u32 din2_osd_sel;
+	u32 din3_osd_sel;
+	u32 blend_din_en;
+	u32 din_premult_en;
+	u32 din_reoder_sel;
+	u32 osd_blend_din_scope_h[OSD_BLEND_LAYERS];
+	u32 osd_blend_din_scope_v[OSD_BLEND_LAYERS];
+	u32 osd_blend_blend0_size;
+	u32 osd_blend_blend1_size;
+	/* post blend */
+	u32 postbld_src3_sel;
+	u32 postbld_osd1_premult;
+	u32 postbld_src4_sel;
+	u32 postbld_osd2_premult;
+	u32 vpp_osd1_blend_h_scope;
+	u32 vpp_osd1_blend_v_scope;
+	u32 vpp_osd2_blend_h_scope;
+	u32 vpp_osd2_blend_v_scope;
+};
+
+struct layer_blend_s {
+	u8 input1;
+	u8 input2;
+	struct dispdata_s input1_data;
+	struct dispdata_s input2_data;
+	struct dispdata_s output_data;
+	u32 background_w;
+	u32 background_h;
+};
 struct hw_osd_blending_s {
+	u8 osd_blend_mode;
 	u8 osd_to_bdin_table[OSD_BLEND_LAYERS];
 	u8 reorder[HW_OSD_COUNT];
-	u32 input_src_w[HW_OSD_COUNT];
 	u32 din_reoder_sel;
 	u32 layer_cnt;
+	bool change_order;
+	bool b_continuous;
+	bool b_exchange_din;
+	bool b_exchange_blend_in;
+	bool osd1_freescale_used;
+	bool osd1_freescale_disable;
+	u32 background_w;
+	u32 background_h;
+	u32 vinfo_width;
+	u32 vinfo_height;
+	struct layer_blend_reg_s blend_reg;
+	struct layer_blend_s layer_blend;
 };
 
 extern struct hw_osd_reg_s hw_osd_reg_array[HW_OSD_COUNT];
@@ -481,6 +583,45 @@ typedef void (*update_func_t)(u32);
 struct hw_list_s {
 	struct list_head list;
 	update_func_t update_func;
+};
+
+typedef int (*sync_render_fence)(u32 index, u32 yres,
+	struct sync_req_render_s *request,
+	u32 phys_addr);
+typedef void (*osd_toggle_buffer_op)(
+	struct kthread_work *work);
+struct osd_fence_fun_s {
+	sync_render_fence sync_fence_handler;
+	osd_toggle_buffer_op toggle_buffer_handler;
+};
+
+struct layer_info_s {
+	int enable;
+	u32 ext_addr;
+	unsigned int    src_x;
+	unsigned int    src_y;
+	unsigned int	src_w;
+	unsigned int	src_h;
+	unsigned int    dst_x;
+	unsigned int    dst_y;
+	unsigned int    dst_w;
+	unsigned int    dst_h;
+	unsigned int  zorder;
+	unsigned int  blend_mode;
+};
+
+struct osd_debug_backup_s {
+	struct layer_info_s layer[HW_OSD_COUNT];
+	struct layer_blend_reg_s blend_reg;
+};
+
+
+struct hw_debug_s {
+	bool wait_fence_release;
+	u32 osd_single_step_mode;
+	u32 osd_single_step;
+	int backup_count;
+	struct osd_debug_backup_s osd_backup[OSD_BACKUP_COUNT];
 };
 
 struct hw_para_s {
@@ -497,7 +638,6 @@ struct hw_para_s {
 	struct dispdata_s src_data[HW_OSD_COUNT];
 	struct dispdata_s dst_data[HW_OSD_COUNT];
 	u32 buffer_alloc[HW_OSD_COUNT];
-
 	u32 gbl_alpha[HW_OSD_COUNT];
 	u32 color_key[HW_OSD_COUNT];
 	u32 color_key_enable[HW_OSD_COUNT];
@@ -520,7 +660,6 @@ struct hw_para_s {
 	u32 scan_mode[HW_OSD_COUNT];
 	u32 order[HW_OSD_COUNT];
 	u32 premult_en[HW_OSD_COUNT];
-	u32 osd_blend_mode;
 	u32 background_w;
 	u32 background_h;
 
@@ -558,7 +697,6 @@ struct hw_para_s {
 	u32 vinfo_width;
 	u32 vinfo_height;
 	u32 fb_drvier_probe;
-	u32 afbc_start_in_vsync;
 	u32 afbc_force_reset;
 	u32 afbc_status_err_reset;
 	u32 afbc_use_latch;
@@ -566,5 +704,13 @@ struct hw_para_s {
 	u32 osd_use_latch[HW_OSD_COUNT];
 	u32 hw_cursor_en;
 	u32 hw_rdma_en;
+	u32 blend_bypass;
+	u32 hdr_used;
+	u32 basic_urgent;
+	u32 two_ports;
+	struct hw_debug_s osd_debug;
+	int out_fence_fd;
+	int in_fd[HW_OSD_COUNT];
+	struct osd_fence_fun_s osd_fence[2];
 };
 #endif /* _OSD_H_ */

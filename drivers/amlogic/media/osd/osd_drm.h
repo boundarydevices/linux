@@ -38,6 +38,8 @@ struct osd_plane_map_s {
 	u32 premult_en;
 	u32 afbc_en;
 	u32 afbc_inter_format;
+	u32 blend_mode;
+	int  plane_alpha;
 	u32 reserve;
 };
 

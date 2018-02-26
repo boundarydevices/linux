@@ -68,6 +68,31 @@ static void osd_debug_dump_value(void)
 	osd_log_info("bot_type: %d\n", hwpara->bot_type);
 	osd_log_info("field_out_en: %d\n", hwpara->field_out_en);
 
+	if (hwpara->osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+		struct hw_osd_blending_s *blend_para = NULL;
+
+		osd_get_blending_para(&blend_para);
+		if (blend_para != NULL) {
+			osd_log_info("OSD LAYER: %d\n", blend_para->layer_cnt);
+			osd_log_info("OSD background size: %d, %d\n",
+				blend_para->background_w,
+				blend_para->background_h);
+			osd_log_info("|index\t|order\t|src axis\t|dst axis\n");
+			for (index = 0; index < HW_OSD_COUNT; index++) {
+				osd_log_info("%2d\t%2d\t(%4d,%4d,%4d,%4d)\t(%4d,%4d,%4d,%4d)\n",
+					index,
+					hwpara->order[index],
+					hwpara->src_data[index].x,
+					hwpara->src_data[index].y,
+					hwpara->src_data[index].w,
+					hwpara->src_data[index].h,
+					hwpara->dst_data[index].x,
+					hwpara->dst_data[index].y,
+					hwpara->dst_data[index].w,
+					hwpara->dst_data[index].h);
+			}
+		}
+	}
 	for (index = 0; index < HW_OSD_COUNT; index++) {
 		osd_log_info("\n--- OSD%d ---\n", index);
 		osd_log_info("order: %d\n", hwpara->order[index]);
@@ -182,7 +207,8 @@ static void osd_debug_dump_register_all(void)
 		osd_log_info("reg[0x%x]: 0x%08x\n", reg, osd_reg_read(reg));
 		reg = VPP_OUT_H_V_SIZE;
 		osd_log_info("reg[0x%x]: 0x%08x\n", reg, osd_reg_read(reg));
-
+		if (!osd_hw.powered[count - 1])
+			count--;
 	}
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_NORMAL) {
 		reg = VPP_OSD_SC_CTRL0;
@@ -194,13 +220,12 @@ static void osd_debug_dump_register_all(void)
 		reg = VPP_OSD_SCO_V_START_END;
 		osd_log_info("reg[0x%x]: 0x%08x\n\n", reg, osd_reg_read(reg));
 	}
+	#if 0
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_SIMPLE) {
 		reg = OSD_DB_FLT_CTRL;
 		osd_log_info("reg[0x%x]: 0x%08x\n\n", reg, osd_reg_read(reg));
 	}
-
-	if (!osd_hw.powered[count - 1])
-		count--;
+	#endif
 	for (index = 0; index < count; index++) {
 		osd_reg = &hw_osd_reg_array[index];
 		reg = osd_reg->osd_fifo_ctrl_stat;
@@ -632,6 +657,9 @@ int osd_set_debug_hw(const char *buf)
 		break;
 	case 't':
 		osd_debug_auto_test();
+		break;
+	case 's':
+		output_save_info();
 		break;
 	default:
 		osd_log_err("arg error\n");

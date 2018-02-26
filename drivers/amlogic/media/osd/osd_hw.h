@@ -110,13 +110,15 @@ extern void osd_setpal_hw(u32 index, unsigned int regno,
 				unsigned int red, unsigned int green,
 				unsigned int blue, unsigned int transp);
 extern void osd_enable_hw(u32 index, u32 enable);
+extern void osd_set_enable_hw(u32 index, u32 enable);
 extern void osd_pan_display_hw(u32 index, unsigned int xoffset,
 			       unsigned int yoffset);
-extern int osd_sync_request(u32 index, u32 yres, u32 xoffset, u32 yoffset,
-			    s32 in_fence_fd);
+extern int osd_sync_request(u32 index, u32 yres,
+	struct fb_sync_request_s *request);
 extern int osd_sync_request_render(u32 index, u32 yres,
-	struct fb_sync_request_render_s *request,
+	struct sync_req_render_s *request,
 	u32 phys_addr);
+extern int osd_sync_do_hwc(u32 width, u32 height);
 extern s32  osd_wait_vsync_event(void);
 extern void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart,
 			  u32 osd_w, u32 osd_h);
@@ -132,6 +134,7 @@ extern void osd_set_logo_index(int index);
 extern int osd_get_logo_index(void);
 extern int osd_get_init_hw_flag(void);
 extern void osd_get_hw_para(struct hw_para_s **para);
+extern void osd_get_blending_para(struct hw_osd_blending_s **para);
 extern int osd_set_debug_hw(const char *buf);
 extern char *osd_get_debug_hw(void);
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
@@ -176,6 +179,7 @@ void osd_set_afbc_format(u32 index, u32 format, u32 inter_format);
 void osd_get_hwc_enable(u32 *hwc_enable);
 void osd_set_hwc_enable(u32 hwc_enable);
 void osd_do_hwc(void);
+int osd_get_capbility(u32 index);
 void osd_backup_screen_info(
 	u32 index,
 	char __iomem *screen_base,
@@ -189,4 +193,9 @@ void osd_page_flip(struct osd_plane_map_s *plane_map);
 void walk_through_update_list(void);
 int osd_setting_blend(void);
 void osd_set_hwc_enable(u32 hwc_enable);
+void osd_set_urgent_info(u32 ports, u32 basic_urgent);
+void osd_get_urgent_info(u32 *ports, u32 *basic_urgent);
+void osd_set_single_step_mode(u32 osd_single_step_mode);
+void osd_set_single_step(u32 osd_single_step);
+void output_save_info(void);
 #endif

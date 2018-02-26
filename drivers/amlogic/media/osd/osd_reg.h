@@ -1413,4 +1413,6 @@
 
 #define VPP_POST_BLEND_BLEND_DUMMY_DATA            0x3968
 #define VPP_POST_BLEND_DUMMY_ALPHA                 0x3969
+#define VPP_RDARB_MODE                             0x3978
+#define VPU_RDARB_MODE_L2C1                        0x279d
 #endif

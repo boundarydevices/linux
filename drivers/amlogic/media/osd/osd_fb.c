@@ -713,6 +713,8 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	u32 srckey_enable;
 	u32 gbl_alpha;
 	u32 osd_order;
+	u32 blank;
+	u32 capbility;
 	s32 osd_axis[4] = {0};
 	s32 osd_dst_axis[4] = {0};
 	u32 block_windows[8] = {0};
@@ -720,10 +722,12 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	u32 hwc_enable;
 	unsigned long ret;
 	u32 flush_rate;
+	int out_fen_fd;
+	int xoffset, yoffset;
 	struct fb_sync_request_s sync_request;
-	struct fb_sync_request_render_s sync_request_render;
 	struct fb_dmabuf_export dmaexp;
 	struct fb_cursor cursor;
+	struct do_hwc_cmd_s do_hwc_cmd;
 
 	switch (cmd) {
 	case  FBIOPUT_OSD_SRCKEY_ENABLE:
@@ -739,12 +743,9 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		ret = copy_from_user(&osd_axis, argp, 4 * sizeof(s32));
 		break;
 	case FBIOPUT_OSD_SYNC_ADD:
+	case FBIOPUT_OSD_SYNC_RENDER_ADD:
 		ret = copy_from_user(&sync_request, argp,
 				sizeof(struct fb_sync_request_s));
-		break;
-	case FBIOPUT_OSD_SYNC_RENDER_ADD:
-		ret = copy_from_user(&sync_request_render, argp,
-				sizeof(struct fb_sync_request_render_s));
 		break;
 	case FBIO_WAITFORVSYNC:
 	case FBIOGET_OSD_SCALE_AXIS:
@@ -764,6 +765,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	case FBIOPUT_OSD_REVERSE:
 	case FBIOPUT_OSD_ROTATE_ON:
 	case FBIOPUT_OSD_ROTATE_ANGLE:
+	case FBIOGET_OSD_CAPBILITY:
 		break;
 	case FBIOGET_OSD_DMABUF:
 		ret = copy_from_user(&dmaexp, argp,
@@ -788,6 +790,11 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		ret = copy_from_user(&hwc_enable, argp, sizeof(u32));
 		break;
 	case FBIOPUT_OSD_DO_HWC:
+		ret = copy_from_user(&do_hwc_cmd, argp,
+				sizeof(struct do_hwc_cmd_s));
+		break;
+	case FBIOPUT_OSD_BLANK:
+		ret = copy_from_user(&blank, argp, sizeof(u32));
 		break;
 	default:
 		osd_log_err("command 0x%x not supported (%s)\n",
@@ -928,64 +935,78 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 			osd_dst_axis[1], osd_dst_axis[2], osd_dst_axis[3]);
 		break;
 	case FBIOPUT_OSD_SYNC_ADD:
-		sync_request.out_fen_fd =
+		out_fen_fd =
 			osd_sync_request(info->node, info->var.yres,
-					sync_request.xoffset,
-					sync_request.yoffset,
-					sync_request.in_fen_fd);
-		ret = copy_to_user(argp, &sync_request,
+					&sync_request);
+		if ((sync_request.sync_req.magic & 0xfffffffe) ==
+			(FB_SYNC_REQUEST_MAGIC & 0xfffffffe)) {
+			sync_request.sync_req.out_fen_fd = out_fen_fd;
+			xoffset = sync_request.sync_req.xoffset;
+			yoffset = sync_request.sync_req.yoffset;
+			ret = copy_to_user(argp, &sync_request,
 				sizeof(struct fb_sync_request_s));
-		if (sync_request.out_fen_fd  < 0) {
+		} else {
+			sync_request.sync_req_old.out_fen_fd = out_fen_fd;
+			xoffset = sync_request.sync_req_old.xoffset;
+			yoffset = sync_request.sync_req_old.yoffset;
+			ret = copy_to_user(argp, &sync_request,
+				sizeof(struct fb_sync_request_s));
+		}
+		if (out_fen_fd  < 0) {
 			/* fence create fail. */
 			ret = -1;
 		} else {
-			info->var.xoffset = sync_request.xoffset;
-			info->var.yoffset = sync_request.yoffset;
+			info->var.xoffset = xoffset;
+			info->var.yoffset = yoffset;
 		}
 		break;
 	case FBIOPUT_OSD_SYNC_RENDER_ADD:
-		{
-			ion_phys_addr_t addr;
-			size_t len;
-			u32 phys_addr;
+	{
+		ion_phys_addr_t addr;
+		size_t len;
+		u32 phys_addr;
 
-			if (sync_request_render.shared_fd >= 0) {
-				ret = meson_ion_share_fd_to_phys(fb_ion_client,
-					sync_request_render.shared_fd,
-					&addr, &len);
-				if (ret == 0) {
-					if (sync_request_render.type ==
-						GE2D_COMPOSE_MODE) {
-						phys_addr = addr +
-						sync_request_render.yoffset
+		if ((sync_request.sync_req_render.magic & 0xfffffffe) ==
+			(FB_SYNC_REQUEST_RENDER_MAGIC_V1 & 0xfffffffe)) {
+			struct sync_req_render_s *sync_request_render;
+
+			sync_request_render =
+				&sync_request.sync_req_render;
+			ret = meson_ion_share_fd_to_phys(fb_ion_client,
+				sync_request_render->shared_fd,
+				&addr, &len);
+			if (ret == 0) {
+				if (sync_request_render->type ==
+					GE2D_COMPOSE_MODE) {
+					phys_addr = addr +
+					sync_request_render->yoffset
 						* info->fix.line_length;
-					} else
-						phys_addr = addr;
 				} else
-					phys_addr = 0;
+					phys_addr = addr;
 			} else
 				phys_addr = 0;
 
-			sync_request_render.out_fen_fd =
+			sync_request_render->out_fen_fd =
 				osd_sync_request_render(info->node,
 				info->var.yres,
-				&sync_request_render, phys_addr);
+				sync_request_render, phys_addr);
 			osd_restore_screen_info(info->node,
 				&info->screen_base, &info->screen_size);
 			ret = copy_to_user(argp,
-				&sync_request_render,
-				sizeof(struct fb_sync_request_render_s));
-			if (sync_request_render.out_fen_fd  < 0) {
+				&sync_request,
+				sizeof(struct fb_sync_request_s));
+			if (sync_request_render->out_fen_fd  < 0) {
 				/* fence create fail. */
 				ret = -1;
 			} else {
 				info->var.xoffset =
-					sync_request_render.xoffset;
+					sync_request_render->xoffset;
 				info->var.yoffset =
-					sync_request_render.yoffset;
+					sync_request_render->yoffset;
 			}
 		}
 		break;
+	}
 	case FBIOGET_OSD_DMABUF:
 #ifdef CONFIG_ION
 		if (osd_get_afbc(info->node)) {
@@ -1019,10 +1040,25 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		break;
 	case FBIOPUT_OSD_HWC_ENABLE:
 		osd_set_hwc_enable(hwc_enable);
+		ret = 0;
 		break;
 	case FBIOPUT_OSD_DO_HWC:
-		osd_setting_blend();
+		do_hwc_cmd.out_fen_fd =
+			osd_sync_do_hwc(do_hwc_cmd.background_w,
+				do_hwc_cmd.background_h);
+		ret = copy_to_user(argp,
+			&do_hwc_cmd,
+			sizeof(struct do_hwc_cmd_s));
+		if (do_hwc_cmd.out_fen_fd >= 0)
+			ret = 0;
 		break;
+	case FBIOPUT_OSD_BLANK:
+		osd_set_enable_hw(info->node, (blank != 0) ? 0 : 1);
+		ret = 0;
+		break;
+	case FBIOGET_OSD_CAPBILITY:
+		capbility = osd_get_capbility(info->node);
+		ret = copy_to_user(argp, &capbility, sizeof(u32));
 	default:
 		break;
 	}
@@ -1380,7 +1416,7 @@ static int malloc_osd_memory(struct fb_info *info)
 
 static int osd_open(struct fb_info *info, int arg)
 {
-	u32 fb_index;
+	u32 fb_index, logo_index;
 	struct osd_fb_dev_s *fbdev;
 	struct fb_fix_screeninfo *fix = NULL;
 	int ret = 0;
@@ -1427,6 +1463,14 @@ static int osd_open(struct fb_info *info, int arg)
 		fix->smem_len = fb_rmem_size[fb_index];
 		if (!fb_ion_client)
 			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
+	}
+	logo_index = osd_get_logo_index();
+	/* clear osd buffer if not logo layer */
+	if (((logo_index < 0) || (logo_index != fb_index)) ||
+		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_AXG) ||
+		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12A)) {
+		osd_log_info("set logo loaded\n");
+		set_logo_loaded();
 	}
 	return 0;
 }
@@ -2741,6 +2785,61 @@ static ssize_t store_do_hwc(struct device *device,
 	return count;
 }
 
+static ssize_t show_osd_urgent(
+	struct device *device, struct device_attribute *attr,
+	char *buf)
+{
+	u32 urgent[2];
+
+	osd_get_urgent_info(&urgent[0], &urgent[1]);
+
+	return snprintf(buf, PAGE_SIZE, "%d %d\n", urgent[0], urgent[1]);
+}
+
+static ssize_t store_osd_urgent(
+	struct device *device, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	int parsed[2];
+
+	if (likely(parse_para(buf, 2, parsed) == 2))
+		osd_set_urgent_info(parsed[0], parsed[1]);
+	else
+		osd_log_err("set osd_set_urgent_info size error\n");
+
+	return count;
+}
+
+static ssize_t store_osd_single_step_mode(struct device *device,
+			   struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	if (ret < 0)
+		return -EINVAL;
+	osd_set_single_step_mode(res);
+
+	return count;
+}
+
+static ssize_t store_osd_single_step(struct device *device,
+			   struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	if (ret < 0)
+		return -EINVAL;
+	osd_set_single_step(res);
+
+	return count;
+}
+
 static inline  int str2lower(char *str)
 {
 	while (*str != '\0') {
@@ -2939,6 +3038,13 @@ static struct device_attribute osd_attrs[] = {
 			show_osd_hwc_enalbe, store_osd_hwc_enalbe),
 	__ATTR(osd_do_hwc, 0220,
 			NULL, store_do_hwc),
+	__ATTR(osd_urgent, 0644,
+			show_osd_urgent, store_osd_urgent),
+	__ATTR(osd_single_step_mode, 0220,
+			NULL, store_osd_single_step_mode),
+	__ATTR(osd_single_step, 0220,
+			NULL, store_osd_single_step),
+
 };
 
 static struct device_attribute osd_attrs_viu2[] = {
