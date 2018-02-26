@@ -113,12 +113,14 @@
 		gpio = <&gpio2 14 GPIO_ACTIVE_LOW>;
 	};
 
-	backlight: backlight {
-		compatible = "pwm-backlight";
-		pwms = <&pwm1 0 5000000 0>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <6>;
-		status = "okay";
+	reg_pcie: regulator-pcie {
+		compatible = "regulator-fixed";
+		regulator-name = "MPCIE_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&extended_io 6 GPIO_ACTIVE_HIGH>;
+		regulator-always-on;
+		enable-active-high;
 	};
 
 	panel {
@@ -133,7 +135,7 @@
 		};
 	};
 
-	backlight {
+	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
@@ -429,7 +431,9 @@
 };
 
 &pcie {
+	pinctrl-names = "default";
 	reset-gpio = <&extended_io 1 GPIO_ACTIVE_LOW>;
+	disable-gpio = <&extended_io 0 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
