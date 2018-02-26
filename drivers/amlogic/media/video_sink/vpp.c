@@ -405,7 +405,7 @@ MODULE_PARM_DESC(force_filter_mode, "force_filter_mode");
 module_param(force_filter_mode, int, 0664);
 #endif
 /*temp disable sr for power test*/
-bool super_scaler;
+bool super_scaler = true;
 static unsigned int sr_support;
 static u32 sr_reg_offt;
 static unsigned int super_debug;
@@ -1600,10 +1600,6 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 		if ((tmp_data&0x1) != 1)
 			VSYNC_WR_MPEG_REG_BITS(VPP_SRSHARP0_CTRL, 1, 0, 1);
 	}
-	if (super_scaler == 0) {
-		VSYNC_WR_MPEG_REG(VPP_SRSHARP0_CTRL, 0);
-		VSYNC_WR_MPEG_REG(VPP_SRSHARP1_CTRL, 0);
-	}
 	tmp_data = VSYNC_RD_MPEG_REG(VPP_SRSHARP1_CTRL);
 	if (sr0_sr1_refresh) {
 		if (((tmp_data >> 1)&0x1) != 1)
@@ -1751,6 +1747,10 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 		} else
 			VSYNC_WR_MPEG_REG_BITS(VPP_VE_ENABLE_CTRL,
 				1, data_path_chose, 1);
+	}
+	if (super_scaler == 0) {
+		VSYNC_WR_MPEG_REG(VPP_SRSHARP0_CTRL, 0);
+		VSYNC_WR_MPEG_REG(VPP_SRSHARP1_CTRL, 0);
 	}
 
 	return 0;
@@ -2503,9 +2503,10 @@ void vpp_super_scaler_support(void)
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
 	scaler_path_sel = SCALER_PATH_MAX;
-	if (is_meson_g12a_cpu())
+	if (is_meson_g12a_cpu()) {
 		sr_reg_offt = 0xc00;
-	else
+		super_scaler = false;
+	} else
 		sr_reg_offt = 0;
 }
 /*for gxlx only have core1 which will affact pip line*/
