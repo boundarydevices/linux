@@ -149,6 +149,7 @@ unsigned int get_vpu_clk(void)
 	unsigned int clk_freq;
 	unsigned int clk_source, div;
 	unsigned int mux_id;
+	struct clk_hw *hw;
 
 	if (IS_ERR_OR_NULL(vpu_conf.vpu_clk)) {
 		VPUERR("%s: vpu_clk\n", __func__);
@@ -174,7 +175,8 @@ unsigned int get_vpu_clk(void)
 		return clk_freq;
 	}
 
-	clk_freq = clk_get_rate(vpu_conf.vpu_clk);
+	hw = __clk_get_hw(vpu_conf.vpu_clk);
+	clk_freq = clk_hw_get_rate(hw);
 	return clk_freq;
 }
 
