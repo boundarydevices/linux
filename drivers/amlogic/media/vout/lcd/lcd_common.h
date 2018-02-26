@@ -25,7 +25,8 @@
 /* 20170505: add a113 support to linux4.9 */
 /* 20170905: fix coverity errors */
 /* 20180122: support txlx, optimize lcd noitfier event */
-#define LCD_DRV_VERSION    "20180122"
+/* 20180226: g12a support */
+#define LCD_DRV_VERSION    "20180226"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 

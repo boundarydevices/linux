@@ -200,6 +200,7 @@ static struct vinfo_s lcd_vinfo = {
 	.name = "panel",
 	.mode = VMODE_LCD,
 	.viu_color_fmt = COLOR_FMT_RGB444,
+	.viu_mux = VIU_MUX_ENCL,
 	.vout_device = NULL,
 };
 
@@ -751,18 +752,20 @@ static int lcd_mode_probe(struct device *dev)
 	return 0;
 }
 
-static int lcd_mode_remove(struct device *dev)
+static int lcd_config_remove(struct device *dev)
 {
 	lcd_notifier_unregister();
 
 	switch (lcd_driver->lcd_mode) {
 #ifdef CONFIG_AMLOGIC_LCD_TV
 	case LCD_MODE_TV:
+		lcd_tv_vout_server_remove();
 		lcd_tv_remove(dev);
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
 	case LCD_MODE_TABLET:
+		lcd_tablet_vout_server_remove();
 		lcd_tablet_remove(dev);
 		break;
 #endif
@@ -770,6 +773,9 @@ static int lcd_mode_remove(struct device *dev)
 		LCDPR("invalid lcd mode\n");
 		break;
 	}
+
+	lcd_clk_config_remove();
+
 	return 0;
 }
 
@@ -856,6 +862,16 @@ static int lcd_config_probe(struct platform_device *pdev)
 	LCDPR("detect mode: %s, fr_auto_policy: %d, key_valid: %d\n",
 		str, lcd_driver->fr_auto_policy, lcd_driver->lcd_key_valid);
 
+	ret = of_property_read_u32(lcd_driver->dev->of_node, "clk_path", &val);
+	if (ret) {
+		if (lcd_debug_print_flag)
+			LCDPR("failed to get clk_path\n");
+		lcd_driver->lcd_clk_path = 0;
+	} else {
+		lcd_driver->lcd_clk_path = (unsigned char)val;
+		LCDPR("detect lcd_clk_path: %d\n", lcd_driver->lcd_clk_path);
+	}
+
 	lcd_driver->lcd_info = &lcd_vinfo;
 	lcd_driver->lcd_config = &lcd_config_dft;
 	lcd_driver->lcd_test_flag = 0;
@@ -866,6 +882,7 @@ static int lcd_config_probe(struct platform_device *pdev)
 		IORESOURCE_IRQ, 0);
 	lcd_driver->res_vx1_irq = platform_get_resource(pdev,
 		IORESOURCE_IRQ, 1);
+	lcd_clk_config_probe();
 	lcd_config_default();
 	lcd_init_vout();
 
@@ -1004,7 +1021,6 @@ static int lcd_probe(struct platform_device *pdev)
 	INIT_WORK(&(lcd_driver->lcd_resume_work), lcd_resume_work);
 
 	lcd_ioremap(pdev);
-	lcd_clk_config_probe();
 	ret = lcd_config_probe(pdev);
 
 	LCDPR("%s %s\n", __func__, (ret ? "failed" : "ok"));
@@ -1013,33 +1029,15 @@ static int lcd_probe(struct platform_device *pdev)
 
 static int lcd_remove(struct platform_device *pdev)
 {
-	int ret;
-
-	ret = cancel_delayed_work(&lcd_driver->lcd_probe_delayed_work);
+	cancel_delayed_work(&lcd_driver->lcd_probe_delayed_work);
 	if (lcd_driver->workqueue)
 		destroy_workqueue(lcd_driver->workqueue);
 
 	if (lcd_driver) {
-		switch (lcd_driver->lcd_mode) {
-#ifdef CONFIG_AMLOGIC_LCD_TV
-		case LCD_MODE_TV:
-			lcd_tv_vout_server_remove();
-			break;
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_TABLET
-		case LCD_MODE_TABLET:
-			lcd_tablet_vout_server_remove();
-			break;
-#endif
-		default:
-			break;
-		}
-
 		lcd_fops_remove();
 		lcd_class_remove();
-		lcd_clk_config_remove();
+		lcd_config_remove(lcd_driver->dev);
 
-		lcd_mode_remove(lcd_driver->dev);
 		kfree(lcd_driver);
 		lcd_driver = NULL;
 	}

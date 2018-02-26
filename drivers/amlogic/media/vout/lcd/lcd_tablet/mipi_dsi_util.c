@@ -411,13 +411,30 @@ static void mipi_dcs_set(int trans_type, int req_ack, int tear_en)
  * Check the status of the dphy: phylock and stopstateclklane,
  *  to decide if the DPHY is ready
  */
+#define DPHY_TIMEOUT    200000
 static void check_phy_status(void)
 {
-	while (dsi_host_getb(MIPI_DSI_DWC_PHY_STATUS_OS, BIT_PHY_LOCK, 1) == 0)
+	int i = 0;
+
+	while (dsi_host_getb(MIPI_DSI_DWC_PHY_STATUS_OS,
+		BIT_PHY_LOCK, 1) == 0) {
+		if (i++ >= DPHY_TIMEOUT) {
+			LCDERR("%s: phy_lock timeout\n", __func__);
+			break;
+		}
 		udelay(6);
+	}
+
+	i = 0;
+	udelay(10);
 	while (dsi_host_getb(MIPI_DSI_DWC_PHY_STATUS_OS,
 		BIT_PHY_STOPSTATECLKLANE, 1) == 0) {
-		LCDPR(" Waiting STOP STATE LANE\n");
+		if (i == 0)
+			LCDPR(" Waiting STOP STATE LANE\n");
+		if (i++ >= DPHY_TIMEOUT) {
+			LCDERR("%s: lane_state timeout\n", __func__);
+			break;
+		}
 		udelay(6);
 	}
 }

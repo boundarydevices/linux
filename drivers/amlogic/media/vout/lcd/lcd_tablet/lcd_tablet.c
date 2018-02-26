@@ -427,8 +427,6 @@ static void lcd_tablet_vinfo_update(void)
 		vinfo->video_clk = pconf->lcd_timing.lcd_clk;
 		vinfo->htotal = pconf->lcd_basic.h_period;
 		vinfo->vtotal = pconf->lcd_basic.v_period;
-		vinfo->viu_color_fmt = COLOR_FMT_RGB444;
-		vinfo->viu_mux = VIU_MUX_ENCL;
 
 		lcd_hdr_vinfo_update();
 	}
@@ -468,8 +466,6 @@ static void lcd_tablet_vinfo_update_default(void)
 		vinfo->video_clk = 0;
 		vinfo->htotal = h_total;
 		vinfo->vtotal = v_total;
-		vinfo->viu_color_fmt = COLOR_FMT_RGB444;
-		vinfo->viu_mux = VIU_MUX_ENCL;
 	}
 }
 

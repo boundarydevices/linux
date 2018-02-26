@@ -639,8 +639,6 @@ static void lcd_vinfo_update_default(void)
 		vinfo->video_clk = 0;
 		vinfo->htotal = h_total;
 		vinfo->vtotal = v_total;
-		vinfo->viu_color_fmt = COLOR_FMT_RGB444;
-		vinfo->viu_mux = VIU_MUX_ENCL;
 	}
 }
 

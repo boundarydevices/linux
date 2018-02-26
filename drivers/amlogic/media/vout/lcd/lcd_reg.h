@@ -133,6 +133,8 @@
 #define HHI_HDMI_PLL_CNTL4                         0xcb
 #define HHI_HDMI_PLL_CNTL5                         0xcc
 #define HHI_HDMI_PLL_CNTL6                         0xcd
+/*G12A*/
+#define HHI_HDMI_PLL_CNTL7                         0xce
 
 #define HHI_DSI_LVDS_EDP_CNTL0                     0xd1
 #define HHI_DSI_LVDS_EDP_CNTL1                     0xd2

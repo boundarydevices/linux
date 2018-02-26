@@ -49,14 +49,12 @@ extern unsigned char lcd_debug_print_flag;
 /* ******** div_ctrl ******** */
 #define DIV_CTRL_EDP_DIV1           24 /* [26:24] */
 #define DIV_CTRL_EDP_DIV0           20 /* [23:20] */
-#define DIV_CTRL_DIV_POST           12 /* [14:12] */
-#define DIV_CTRL_DIV_PRE            8 /* [10:8] */
 #define DIV_CTRL_DIV_SEL            8 /* [15:8] */
 #define DIV_CTRL_XD                 0 /* [7:0] */
 
 /* ******** clk_ctrl ******** */
-#define CLK_CTRL_LEVEL              12 /* [14:12] */
-#define CLK_CTRL_FRAC               0  /* [11:0] */
+#define CLK_CTRL_LEVEL              28 /* [30:28] */
+#define CLK_CTRL_FRAC               0  /* [18:0] */
 
 /* **********************************
  * VENC to TCON sync delay
@@ -394,6 +392,7 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_mode;
 	unsigned char lcd_status;
 	unsigned char lcd_key_valid;
+	unsigned char lcd_clk_path; /* 0=hpll, 1=gp0_pll */
 	unsigned char lcd_config_load;
 	unsigned char lcd_test_flag;
 	unsigned char lcd_resume_type; /* 0=directly, 1=workqueue */

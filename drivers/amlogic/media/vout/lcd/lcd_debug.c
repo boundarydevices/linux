@@ -462,13 +462,12 @@ static unsigned int lcd_reg_dump_clk_axg[] = {
 	HHI_GP0_PLL_CNTL4_AXG,
 	HHI_GP0_PLL_CNTL5_AXG,
 	HHI_GP0_PLL_CNTL1_AXG,
-	HHI_VID_PLL_CLK_DIV,
 	HHI_VIID_CLK_DIV,
 	HHI_VIID_CLK_CNTL,
 	HHI_VID_CLK_CNTL2,
 };
 
-static unsigned int lcd_reg_dump_clk_g12a[] = {
+static unsigned int lcd_reg_dump_clk_gp0_g12a[] = {
 	HHI_GP0_PLL_CNTL0_G12A,
 	HHI_GP0_PLL_CNTL1_G12A,
 	HHI_GP0_PLL_CNTL2_G12A,
@@ -476,10 +475,25 @@ static unsigned int lcd_reg_dump_clk_g12a[] = {
 	HHI_GP0_PLL_CNTL4_G12A,
 	HHI_GP0_PLL_CNTL5_G12A,
 	HHI_GP0_PLL_CNTL6_G12A,
+	HHI_VIID_CLK_DIV,
+	HHI_VIID_CLK_CNTL,
+	HHI_VID_CLK_CNTL2,
+	HHI_MIPIDSI_PHY_CLK_CNTL,
+};
+
+static unsigned int lcd_reg_dump_clk_hpll_g12a[] = {
+	HHI_HDMI_PLL_CNTL,
+	HHI_HDMI_PLL_CNTL2,
+	HHI_HDMI_PLL_CNTL3,
+	HHI_HDMI_PLL_CNTL4,
+	HHI_HDMI_PLL_CNTL5,
+	HHI_HDMI_PLL_CNTL6,
+	HHI_HDMI_PLL_CNTL7,
 	HHI_VID_PLL_CLK_DIV,
 	HHI_VIID_CLK_DIV,
 	HHI_VIID_CLK_CNTL,
 	HHI_VID_CLK_CNTL2,
+	HHI_MIPIDSI_PHY_CLK_CNTL,
 };
 
 static unsigned int lcd_reg_dump_encl[] = {
@@ -822,19 +836,33 @@ static int lcd_reg_print(char *buf, int offset)
 		}
 		break;
 	case LCD_CHIP_G12A:
-		for (i = 0; i < ARRAY_SIZE(lcd_reg_dump_clk_g12a); i++) {
-			n = lcd_debug_info_len(len + offset);
-			len += snprintf((buf+len), n,
-				"hiu     [0x%04x] = 0x%08x\n",
-				lcd_reg_dump_clk_g12a[i],
-				lcd_hiu_read(lcd_reg_dump_clk_g12a[i]));
+		if (lcd_drv->lcd_clk_path) {
+			for (i = 0; i < ARRAY_SIZE(lcd_reg_dump_clk_gp0_g12a);
+				i++) {
+				n = lcd_debug_info_len(len + offset);
+				len += snprintf((buf+len), n,
+					"hiu     [0x%04x] = 0x%08x\n",
+					lcd_reg_dump_clk_gp0_g12a[i],
+					lcd_hiu_read(
+						lcd_reg_dump_clk_gp0_g12a[i]));
+			}
+		} else {
+			for (i = 0; i < ARRAY_SIZE(lcd_reg_dump_clk_hpll_g12a);
+				i++) {
+				n = lcd_debug_info_len(len + offset);
+				len += snprintf((buf+len), n,
+					"hiu   [0x%04x] = 0x%08x\n",
+					lcd_reg_dump_clk_hpll_g12a[i],
+					lcd_hiu_read(
+						lcd_reg_dump_clk_hpll_g12a[i]));
+			}
 		}
 		break;
 	default:
 		for (i = 0; i < ARRAY_SIZE(lcd_reg_dump_clk); i++) {
 			n = lcd_debug_info_len(len + offset);
 			len += snprintf((buf+len), n,
-			"hiu   [0x%04x] = 0x%08x\n",
+				"hiu   [0x%04x] = 0x%08x\n",
 				lcd_reg_dump_clk[i],
 				lcd_hiu_read(lcd_reg_dump_clk[i]));
 		}
@@ -1717,6 +1745,45 @@ static ssize_t lcd_debug_clk_show(struct class *class,
 	return sprintf(buf, "\n");
 }
 
+static ssize_t lcd_debug_clk_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	unsigned int temp = 0;
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	switch (buf[0]) {
+	case 'p':
+		ret = sscanf(buf, "path %d", &temp);
+		if (ret == 1) {
+			ret = lcd_clk_path_change(temp);
+			if (ret) {
+				pr_info("change clk_path error\n");
+			} else {
+				lcd_clk_generate_parameter(lcd_drv->lcd_config);
+				pr_info("change clk_path: %d\n", temp);
+			}
+		} else {
+			pr_info("invalid data\n");
+			return -EINVAL;
+		}
+		break;
+	default:
+		pr_info("wrong command\n");
+		break;
+	}
+
+	return count;
+}
+
+static ssize_t lcd_debug_test_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	return sprintf(buf, "test pattern: %d\n", lcd_drv->lcd_test_flag);
+}
+
 static ssize_t lcd_debug_test_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
@@ -2202,8 +2269,8 @@ static struct class_attribute lcd_debug_class_attrs[] = {
 	__ATTR(fr_policy,   0644,
 		lcd_debug_fr_policy_show, lcd_debug_fr_policy_store),
 	__ATTR(ss,          0644, lcd_debug_ss_show, lcd_debug_ss_store),
-	__ATTR(clk,         0444, lcd_debug_clk_show, NULL),
-	__ATTR(test,        0200, NULL, lcd_debug_test_store),
+	__ATTR(clk,         0644, lcd_debug_clk_show, lcd_debug_clk_store),
+	__ATTR(test,        0644, lcd_debug_test_show, lcd_debug_test_store),
 	__ATTR(mute,        0644, lcd_debug_mute_show, lcd_debug_mute_store),
 	__ATTR(reg,         0200, NULL, lcd_debug_reg_store),
 	__ATTR(dither,      0644,
