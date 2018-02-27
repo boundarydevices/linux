@@ -75,12 +75,12 @@
 #define UCR1_IDEN	(1<<12) /* Idle condition interrupt */
 #define UCR1_ICD_REG(x) (((x) & 3) << 10) /* idle condition detect */
 #define UCR1_RRDYEN	(1<<9)	/* Recv ready interrupt enable */
-#define UCR1_RDMAEN	(1<<8)	/* Recv ready DMA enable */
+#define UCR1_RXDMAEN	(1<<8)	/* Recv ready DMA enable */
 #define UCR1_IREN	(1<<7)	/* Infrared interface enable */
 #define UCR1_TXMPTYEN	(1<<6)	/* Transimitter empty interrupt enable */
 #define UCR1_RTSDEN	(1<<5)	/* RTS delta interrupt enable */
 #define UCR1_SNDBRK	(1<<4)	/* Send break */
-#define UCR1_TDMAEN	(1<<3)	/* Transmitter ready DMA enable */
+#define UCR1_TXDMAEN	(1<<3)	/* Transmitter ready DMA enable */
 #define IMX1_UCR1_UARTCLKEN (1<<2) /* UART clock enabled, i.mx1 only */
 #define UCR1_ATDMAEN    (1<<2)  /* Aging DMA Timer Enable */
 #define UCR1_DOZE	(1<<1)	/* Doze */
@@ -400,7 +400,7 @@ static void imx_stop_tx(struct uart_port *port)
 
 	ucr1 = readl(port->membase + UCR1);
 	ucr4 = readl(port->membase + UCR4);
-	ucr1 &= ~(UCR1_TXMPTYEN | UCR1_TDMAEN);
+	ucr1 &= ~(UCR1_TXMPTYEN | UCR1_TXDMAEN);
 
 	/* in rs485 mode disable transmitter if shifter is empty */
 	if (port->rs485.flags & SER_RS485_ENABLED) {
@@ -512,7 +512,7 @@ static inline int imx_transmit_buffer(struct imx_port *sport)
 		 **/
 		temp = readl(sport->port.membase + UCR1);
 		temp &= ~UCR1_TXMPTYEN;
-		temp |= UCR1_TDMAEN;
+		temp |= UCR1_TXDMAEN;
 		writel(temp, sport->port.membase + UCR1);
 		temp = readl(sport->port.membase + UCR4);
 		temp &= ~UCR4_TCEN;
@@ -560,7 +560,7 @@ static void dma_tx_callback(void *data)
 	}
 
 	temp = readl(sport->port.membase + UCR1);
-	temp &= ~UCR1_TDMAEN;
+	temp &= ~UCR1_TXDMAEN;
 	writel(temp, sport->port.membase + UCR1);
 
 	sport->dma_is_txing = 0;
@@ -616,7 +616,7 @@ static void imx_dma_tx(struct imx_port *sport)
 		/* We have X-char to send, so enable TX IRQ and
 		 * disable TX DMA to let TX interrupt to send X-char */
 		temp = readl(sport->port.membase + UCR1);
-		temp &= ~UCR1_TDMAEN;
+		temp &= ~UCR1_TXDMAEN;
 		temp |= UCR1_TXMPTYEN;
 		writel(temp, sport->port.membase + UCR1);
 		goto out1;
@@ -671,7 +671,7 @@ static void imx_dma_tx(struct imx_port *sport)
 
 		spin_lock_irqsave(&sport->port.lock, flags);
 		temp = readl(sport->port.membase + UCR1);
-		temp |= UCR1_TDMAEN;
+		temp |= UCR1_TXDMAEN;
 		writel(temp, sport->port.membase + UCR1);
 		spin_unlock_irqrestore(&sport->port.lock, flags);
 		return;
@@ -721,7 +721,7 @@ static void imx_start_tx(struct uart_port *port)
 			/* We have X-char to send, so enable TX IRQ and
 			 * disable TX DMA to let TX interrupt to send X-char */
 			temp = readl(sport->port.membase + UCR1);
-			temp &= ~UCR1_TDMAEN;
+			temp &= ~UCR1_TXDMAEN;
 			temp |= UCR1_TXMPTYEN;
 			writel(temp, sport->port.membase + UCR1);
 			return;
@@ -1340,7 +1340,7 @@ static void imx_enable_dma(struct imx_port *sport)
 
 	/* set UCR1 */
 	temp = readl(sport->port.membase + UCR1);
-	temp |= UCR1_RDMAEN | UCR1_TDMAEN | UCR1_ATDMAEN |
+	temp |= UCR1_RXDMAEN | UCR1_TXDMAEN | UCR1_ATDMAEN |
 		/* wait for 32 idle frames for IDDMA interrupt */
 		UCR1_ICD_REG(3);
 	writel(temp, sport->port.membase + UCR1);
@@ -1361,7 +1361,7 @@ static void imx_disable_dma(struct imx_port *sport)
 
 	/* clear UCR1 */
 	temp = readl(sport->port.membase + UCR1);
-	temp &= ~(UCR1_RDMAEN | UCR1_TDMAEN | UCR1_ATDMAEN);
+	temp &= ~(UCR1_RXDMAEN | UCR1_TXDMAEN | UCR1_ATDMAEN);
 	writel(temp, sport->port.membase + UCR1);
 
 	/* clear UCR2 */
@@ -1604,7 +1604,7 @@ static void imx_flush_buffer(struct uart_port *port)
 		dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents,
 			     DMA_TO_DEVICE);
 		temp = readl(sport->port.membase + UCR1);
-		temp &= ~UCR1_TDMAEN;
+		temp &= ~UCR1_TXDMAEN;
 		writel(temp, sport->port.membase + UCR1);
 		sport->dma_is_txing = 0;
 		smp_mb__after_atomic();
