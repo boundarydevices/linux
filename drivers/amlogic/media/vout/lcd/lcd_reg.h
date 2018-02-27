@@ -23,6 +23,7 @@
 /* base & offset */
 
 #define LCD_REG_OFFSET(reg)         ((reg << 2))
+#define LCD_REG_OFFSET_MIPI_HOST(reg)         (((reg & 0xff) << 2))
 
 
 /* PERIPHS: 0xc8834400 */
