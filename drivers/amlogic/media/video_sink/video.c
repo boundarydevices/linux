@@ -141,7 +141,7 @@ static DEFINE_MUTEX(omx_mutex);
 
 static bool bypass_cm;
 
-static bool bypass_pps;
+static bool bypass_pps = true;
 /*For 3D usage ----0:  mbx   1: tv */
 bool platform_type = 1;
 
