@@ -931,8 +931,9 @@ static int ge2d_probe(struct platform_device *pdev)
 			vpu_rate = get_vpu_clk();
 			ge2d_log_info("vpu clock is %d HZ\n",
 					vpu_rate);
-			if (vpu_rate >= MAX_GE2D_CLK)
-				clk_set_rate(clk_vapb0, MAX_GE2D_CLK);
+			if (vpu_rate >= ge2d_meson_dev.ge2d_rate)
+				clk_set_rate(clk_vapb0,
+					ge2d_meson_dev.ge2d_rate);
 			else if (vpu_rate == 333330000)
 				clk_set_rate(clk_vapb0, 333333333);
 			else if (vpu_rate == 166660000)
