@@ -98,3 +98,17 @@ int sharebuffer_trigger(int cmd, int samesource_sel)
 
 	return 0;
 }
+
+void sharebuffer_get_mclk_fs_ratio(int samesource_sel,
+	int *pll_mclk_ratio, int *mclk_fs_ratio)
+{
+	if (samesource_sel < 0) {
+		pr_err("Not support same source\n");
+	} else if (samesource_sel < 3) {
+		// TODO: same with tdm
+	} else if (samesource_sel < 5) {
+		/* spdif a/b */
+		*pll_mclk_ratio = 4;
+		*mclk_fs_ratio = 128;
+	}
+}

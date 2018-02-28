@@ -21,4 +21,6 @@ extern int sharebuffer_prepare(struct snd_pcm_substream *substream,
 	void *pfrddr, int samesource_sel);
 extern int sharebuffer_trigger(int cmd, int samesource_sel);
 
+extern void sharebuffer_get_mclk_fs_ratio(int samesource_sel,
+	int *pll_mclk_ratio, int *mclk_fs_ratio);
 #endif

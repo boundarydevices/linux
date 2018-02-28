@@ -715,6 +715,9 @@ void aml_frddr_enable(struct frddr *fr, bool enable)
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
 	aml_audiobus_update_bits(actrl,	reg, 1<<31, enable<<31);
 
+	if (!enable)
+		aml_audiobus_write(actrl, reg, 0x0);
+
 	/* check for Audio EQ/DRC */
 	aml_check_aed(enable, fr->dest);
 }

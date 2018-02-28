@@ -53,6 +53,11 @@ struct aml_chipset_info {
 struct aml_card_data {
 	struct snd_soc_card snd_card;
 	struct aml_dai_props {
+		/* sync with android audio hal,
+		 * dai link is used for which output,
+		 */
+		const char *suffix_name;
+
 		struct aml_dai cpu_dai;
 		struct aml_dai codec_dai;
 		unsigned int mclk_fs;
@@ -626,10 +631,20 @@ static int aml_card_dai_link_of(struct device_node *node,
 	if (ret < 0)
 		goto dai_link_of_err;
 
-	ret = aml_card_set_dailink_name(dev, dai_link,
-						"%s-%s",
-						dai_link->cpu_dai_name,
-						dai_link->codecs->dai_name);
+	/* sync with android audio hal, what's the link used for. */
+	of_property_read_string(node, "suffix-name", &dai_props->suffix_name);
+
+	if (dai_props->suffix_name)
+		ret = aml_card_set_dailink_name(dev, dai_link,
+					"%s-%s-%s",
+					dai_link->cpu_dai_name,
+					dai_link->codecs->dai_name,
+					dai_props->suffix_name);
+	else
+		ret = aml_card_set_dailink_name(dev, dai_link,
+					"%s-%s",
+					dai_link->cpu_dai_name,
+					dai_link->codecs->dai_name);
 	if (ret < 0)
 		goto dai_link_of_err;
 

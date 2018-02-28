@@ -96,6 +96,7 @@ struct aml_tdm {
 	struct clk *clk;
 	struct clk *clk_gate;
 	struct clk *mclk;
+	struct clk *samesrc_sysclk;
 	bool contns_clk;
 	unsigned int id;
 	/* bclk src selection */
@@ -659,6 +660,20 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 	}
 
+	/* share buffer trigger */
+	if (p_tdm->chipinfo
+		&& (p_tdm->chipinfo->same_src_fn)
+		&& (p_tdm->samesource_sel >= 0)) {
+		int mux = 0, ratio = 0;
+
+			sharebuffer_get_mclk_fs_ratio(p_tdm->samesource_sel,
+				&mux, &ratio);
+			pr_info("samesource sysclk:%d\n", rate * ratio * mux);
+			if (p_tdm->samesrc_sysclk)
+				clk_set_rate(p_tdm->samesrc_sysclk,
+					rate * ratio * mux);
+	}
+
 	return 0;
 }
 
@@ -1100,11 +1115,20 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	/* default no same source */
 	if (p_tdm->chipinfo &&
 		p_tdm->chipinfo->same_src_fn) {
+
 		ret = of_property_read_u32(node, "samesource_sel",
 				&p_tdm->samesource_sel);
 		if (ret < 0)
 			p_tdm->samesource_sel = -1;
-
+		else {
+			p_tdm->samesrc_sysclk = devm_clk_get(&pdev->dev,
+				"samesource_sysclk");
+			if (IS_ERR(p_tdm->samesrc_sysclk)) {
+				dev_err(&pdev->dev,
+					"Can't retrieve samesrc_sysclk clock\n");
+				return PTR_ERR(p_tdm->samesrc_sysclk);
+			}
+		}
 		pr_info("TDM id %d samesource_sel:%d\n",
 			p_tdm->id,
 			p_tdm->samesource_sel);

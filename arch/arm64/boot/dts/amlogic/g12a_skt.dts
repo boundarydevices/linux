@@ -1042,6 +1042,10 @@
 			//frame-inversion;
 			//bitclock-master = <&tdmacodec>;
 			//frame-master = <&tdmacodec>;
+			/* suffix-name, sync with android audio hal
+			 * what's the dai link used for
+			 */
+			suffix-name = "alsaPORT-pcm";
 			tdmacpu: cpu {
 				sound-dai = <&aml_tdma>;
 				dai-tdm-slot-tx-mask =
@@ -1067,6 +1071,10 @@
 			frame-master = <&aml_tdmb>;
 			//bitclock-master = <&tdmbcodec>;
 			//frame-master = <&tdmbcodec>;
+			/* suffix-name, sync with android audio hal
+			 * what's the dai link used for
+			 */
+			suffix-name = "alsaPORT-i2s";
 			cpu {
 				sound-dai = <&aml_tdmb>;
 
@@ -1086,7 +1094,7 @@
 			};
 			tdmbcodec: codec {
 				sound-dai = <&dummy_codec &dummy_codec
-				&amlogic_codec /*&ad82584f_62*/>;
+				&amlogic_codec &ad82584f_62>;
 			};
 		};
 
@@ -1098,6 +1106,10 @@
 			//frame-inversion;
 			bitclock-master = <&aml_tdmc>;
 			frame-master = <&aml_tdmc>;
+			/* suffix-name, sync with android audio hal
+			 * what's the dai link used for
+			 */
+			//suffix-name = "alsaPORT-tdm";
 			cpu {
 				sound-dai = <&aml_tdmc>;
 				dai-tdm-slot-tx-mask = <1 1>;
@@ -1113,6 +1125,10 @@
 
 		aml-audio-card,dai-link@3 {
 			mclk-fs = <64>;
+			/* suffix-name, sync with android audio hal
+			 * what's the dai link used for
+			 */
+			suffix-name = "alsaPORT-pdm";
 			cpu {
 				sound-dai = <&aml_pdm>;
 			};
@@ -1123,6 +1139,10 @@
 
 		aml-audio-card,dai-link@4 {
 			mclk-fs = <128>;
+			/* suffix-name, sync with android audio hal
+			 * what's the dai link used for
+			 */
+			suffix-name = "alsaPORT-spdif";
 			cpu {
 				sound-dai = <&aml_spdif>;
 				system-clock-frequency = <6144000>;
@@ -1133,6 +1153,10 @@
 		};
 		aml-audio-card,dai-link@5 {
 			mclk-fs = <128>;
+			/* suffix-name, sync with android audio hal
+			 * what's the dai link used for
+			 */
+			suffix-name = "alsaPORT-hdmi";
 			cpu {
 				sound-dai = <&aml_spdif_b>;
 				system-clock-frequency = <6144000>;
@@ -1446,8 +1470,9 @@
 		dai-tdm-lane-slot-mask-out = <1 0 0 0>;
 		dai-tdm-clk-sel = <1>;
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
-				&clkc CLKID_MPLL1>;
-		clock-names = "mclk", "clk_srcpll";
+				&clkc CLKID_MPLL1
+				&clkc CLKID_MPLL0>;
+		clock-names = "mclk", "clk_srcpll", "samesource_sysclk";
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmb_mclk &tdmout_b &tdmin_b>;
 		/*
