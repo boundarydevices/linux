@@ -88,19 +88,19 @@ void set_vmode_clk(void)
 		udelay(5);
 	} else if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A) {
 		pr_info("config g12a hpll\n");
-		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x3b00047b);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x1b01047b);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL2, 0x00018000);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL3, 0x00000000);
-		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL4, 0x0a691c00);
-		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL5, 0x33771290);
-		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL6, 0x39270000);
-		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL7, 0x50540000);
-		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x1b00047b);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL4, 0x6a29dc00);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL5, 0x65771290);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL6, 0x39272000);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL7, 0x54540000);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x3b01047b);
+		udelay(100);
+		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x1b01047b);
 		ret = hpll_wait_lock(HHI_HDMI_PLL_CNTL, 31);
 		if (ret)
 			pr_info("[error]:hdmi_pll lock failed\n");
-		msleep(100);
-		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x1b01047b);
 	} else {
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL, 0x4000027b);
 		cvbs_out_hiu_write(HHI_HDMI_PLL_CNTL2, 0x800cb300);
