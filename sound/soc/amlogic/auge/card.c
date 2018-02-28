@@ -237,15 +237,15 @@ static void jack_work_func(struct work_struct *work)
 			card_data->mic_detect_flag = flag;
 
 			if (flag) {
-				extcon_set_state_sync(audio_extcon_headphone,
+				extcon_set_state_sync(audio_extcon_microphone,
 					EXTCON_JACK_MICROPHONE, 1);
-				snd_soc_jack_report(&card_data->hp_jack.jack,
-					status, SND_JACK_HEADPHONE);
+				snd_soc_jack_report(&card_data->mic_jack.jack,
+					status, SND_JACK_MICROPHONE);
 			} else {
-				extcon_set_state_sync(audio_extcon_headphone,
+				extcon_set_state_sync(audio_extcon_microphone,
 					EXTCON_JACK_MICROPHONE, 0);
-				snd_soc_jack_report(&card_data->hp_jack.jack, 0,
-						SND_JACK_HEADPHONE);
+				snd_soc_jack_report(&card_data->mic_jack.jack,
+					0, SND_JACK_MICROPHONE);
 			}
 
 		}
