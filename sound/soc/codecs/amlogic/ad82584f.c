@@ -48,6 +48,7 @@ static int ad82584f_reg_init(struct snd_soc_codec *codec);
 static int ad82584f_set_eq_drc(struct snd_soc_codec *codec);
 //static int reset_ad82584f(struct snd_soc_codec *codec);
 /* Power-up register defaults */
+static const
 struct reg_default ad82584f_reg_defaults[AD82584F_REGISTER_COUNT] = {
 	{0x00, 0x00},//##State_Control_1
 	{0x01, 0x04},//##State_Control_2
@@ -186,7 +187,7 @@ struct reg_default ad82584f_reg_defaults[AD82584F_REGISTER_COUNT] = {
 
 };
 
-static int m_reg_tab[AD82584F_REGISTER_COUNT][2] = {
+static const int m_reg_tab[AD82584F_REGISTER_COUNT][2] = {
 	{0x00, 0x00},//##State_Control_1
 	{0x01, 0x04},//##State_Control_2
 	{0x02, 0x00},//##State_Control_3
@@ -324,7 +325,7 @@ static int m_reg_tab[AD82584F_REGISTER_COUNT][2] = {
 
 };
 
-static int m_ram1_tab[][4] = {
+static const int m_ram1_tab[][4] = {
 	{0x00, 0x00, 0x00, 0x00},//##Channel_1_EQ1_A1
 	{0x01, 0x00, 0x00, 0x00},//##Channel_1_EQ1_A2
 	{0x02, 0x00, 0x00, 0x00},//##Channel_1_EQ1_B1
@@ -763,9 +764,9 @@ static int reset_ad82584f_GPIO(struct snd_soc_codec *codec)
 		return -1;
 
 	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_LOW);
-	mdelay(10);
+	mdelay(1);
 	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_HIGH);
-	mdelay(15);
+	mdelay(1);
 
 	return 0;
 }
