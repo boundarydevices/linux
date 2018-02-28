@@ -3537,7 +3537,7 @@ void osd_pan_display_hw(u32 index, unsigned int xoffset, unsigned int yoffset)
 		add_to_update_list(index, DISP_GEOMETRY);
 		if (osd_hw.osd_fps_start)
 			osd_hw.osd_fps++;
-		osd_wait_vsync_hw();
+		/* osd_wait_vsync_hw(); */
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_EXT
 	osd_ext_clone_pan(index);
