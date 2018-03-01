@@ -55,5 +55,8 @@
 /* add from GXM */
 #define HHI_WAVE420L_CLK_CNTL 0x109a
 
+/* add from g12a */
+#define HHI_WAVE420L_CLK_CNTL2 0x109b
+
 #endif
 
