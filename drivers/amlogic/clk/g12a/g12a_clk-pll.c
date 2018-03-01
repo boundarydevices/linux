@@ -319,7 +319,7 @@ static int meson_g12a_pll_enable(struct clk_hw *hw)
 	int ret = 0;
 	unsigned long flags = 0;
 	unsigned long first_set = 1;
-	struct clk *parent;
+	struct clk_hw *parent;
 	unsigned long rate;
 
 	p = &pll->n;
@@ -348,20 +348,20 @@ static int meson_g12a_pll_enable(struct clk_hw *hw)
 		}
 	}
 
-	parent = clk_get_parent(hw->clk);
+	parent = clk_hw_get_parent(hw);
 
 	/*First init, just set minimal rate.*/
 	if (first_set)
 		rate = pll->rate_table[0].rate;
 	else {
-		rate = meson_g12a_pll_recalc_rate(hw, clk_get_rate(parent));
+		rate = meson_g12a_pll_recalc_rate(hw, clk_hw_get_rate(parent));
 		rate = meson_g12a_pll_round_rate(hw, rate, NULL);
 	}
 
 	if (pll->lock)
 		spin_unlock_irqrestore(pll->lock, flags);
 
-	ret = meson_g12a_pll_set_rate(hw, rate, clk_get_rate(parent));
+	ret = meson_g12a_pll_set_rate(hw, rate, clk_hw_get_rate(parent));
 
 	return ret;
 }

@@ -30,7 +30,7 @@
 /* #define pr_debug pr_info */
 #define SDM_MAX 16384
 #define MAX_RATE	500000000
-#define MIN_RATE	7830000
+#define MIN_RATE	3920000
 
 #define G12A_MPLL_CNTL0 0x00000543
 #define G12A_MPLL_CNTL2 0x40000033
@@ -83,7 +83,7 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	if ((rate > MAX_RATE) || (rate < MIN_RATE)) {
 		pr_err("Err: can not set rate to %lu!\n", rate);
-		pr_err("Range[5000000 - 500000000]\n");
+		pr_err("Range[3920000 - 500000000]\n");
 		return -1;
 	}
 
