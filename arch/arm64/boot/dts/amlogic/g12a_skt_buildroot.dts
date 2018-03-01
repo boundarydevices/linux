@@ -38,6 +38,11 @@
 		serial4 = &uart_AO_B;
 		tsensor0 = &p_tsensor;
 		tsensor1 = &d_tsensor;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c_AO;
 	};
 
 	memory@00000000 {

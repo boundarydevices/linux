@@ -22,7 +22,6 @@
 #include <dt-bindings/gpio/meson-g12a-gpio.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
-#include <dt-bindings/i2c/i2c-meson.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
@@ -546,7 +545,6 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
-				dev-id = <MESON_I2C_MASTER0>;
 			};
 
 			i2c1: i2c@1e000 {
@@ -559,7 +557,6 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
-				dev-id = <MESON_I2C_MASTER1>;
 			};
 
 			i2c2: i2c@1d000 {
@@ -572,7 +569,6 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
-				dev-id = <MESON_I2C_MASTER2>;
 			};
 
 			i2c3: i2c@1c000 {
@@ -585,7 +581,6 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
-				dev-id = <MESON_I2C_MASTER3>;
 			};
 
 		}; /* end of cbus */
@@ -646,7 +641,6 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
-				dev-id = <MESON_I2C_MASTERAO>;
 			};
 
 			i2c_AO_slave:i2c_slave@6000 {

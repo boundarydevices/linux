@@ -13562,7 +13562,6 @@ F: drivers/amlogic/cec/*
 AMLOGIC I2C DRIVER
 M:	Jian Hu <jian.hu@amlogic.com>
 F:	driver/amlogic/i2c/*
-F:	include/dt-bindings/i2c/i2c-meson.h
 F:	Documentation/devicetree/bindings/amlogic/i2c-meson.txt
 
 AMLOGIC internal phy driver for ethernet
