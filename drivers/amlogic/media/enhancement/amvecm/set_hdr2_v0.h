@@ -79,6 +79,25 @@ enum hdr_process_sel {
 #define HDR2_OETF_LUT_SIZE 149
 #define HDR2_CGAIN_LUT_SIZE 65
 
+struct hdr_proc_mtx_param_s {
+	int mtx_only;
+	int mtx_in[15];
+	int mtx_gamut[9];
+	int mtx_cgain[15];
+	int mtx_ogain[15];
+	int mtx_out[15];
+	unsigned int mtx_on;
+	enum hdr_process_sel p_sel;
+};
+
+struct hdr_proc_lut_param_s {
+	int64_t eotf_lut[143];
+	int64_t oetf_lut[149];
+	int64_t ogain_lut[149];
+	int64_t cgain_lut[65];
+	unsigned int lut_on;
+	unsigned int bitdepth;
+};
 
 typedef int64_t(*MenuFun)(int64_t);
 void eotf_float_gen(int64_t *o_out, MenuFun eotf);

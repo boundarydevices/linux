@@ -580,10 +580,6 @@ void nolinear_lut_gen(int64_t *bin_c, MenuFun cgain)
 }
 
 #endif /*HDR2_MODULE*/
-int64_t eotf_lut[143];
-int64_t oetf_lut[149];
-int64_t ogain_lut[149];
-int64_t cgain_lut[65];
 
 static uint force_din_swap = 0xff;
 module_param(force_din_swap, uint, 0664);
@@ -684,12 +680,7 @@ static int bypass_coeff[15] = {
 void set_hdr_matrix(
 	enum hdr_module_sel module_sel,
 	enum hdr_matrix_sel mtx_sel,
-	int mtx_only,
-	int *m,
-	int *cgain_m,
-	int *ogain_m,
-	unsigned int mtx_on,
-	enum hdr_process_sel p_sel)
+	struct hdr_proc_mtx_param_s *hdr_mtx_param)
 {
 	unsigned int MATRIXI_COEF00_01 = 0;
 	unsigned int MATRIXI_COEF02_10 = 0;
@@ -868,18 +859,18 @@ void set_hdr_matrix(
 		hdr_ctrl = OSD1_HDR2_CTRL;
 	}
 
-	WRITE_VPP_REG_BITS(hdr_ctrl, mtx_on, 13, 1);
+	WRITE_VPP_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_on, 13, 1);
 
 	if (mtx_sel & HDR_IN_MTX) {
-		if (m) {
+		if (hdr_mtx_param->mtx_in) {
 			for (i = 0; i < 15; i++)
-				mtx[i] = m[i];
+				mtx[i] = hdr_mtx_param->mtx_in[i];
 		}
-		WRITE_VPP_REG(MATRIXI_EN_CTRL, mtx_on);
+		WRITE_VPP_REG(MATRIXI_EN_CTRL, hdr_mtx_param->mtx_on);
 		/*yuv in*/
-		WRITE_VPP_REG_BITS(hdr_ctrl, mtx_on, 4, 1);
+		WRITE_VPP_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_on, 4, 1);
 
-		WRITE_VPP_REG_BITS(hdr_ctrl, mtx_only, 16, 1);
+		WRITE_VPP_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_only, 16, 1);
 		WRITE_VPP_REG_BITS(hdr_ctrl, 0, 17, 1);
 		/*mtx in en*/
 		WRITE_VPP_REG_BITS(hdr_ctrl, 1, 14, 1);
@@ -904,32 +895,35 @@ void set_hdr_matrix(
 			yuv2rgbpre[2]);
 
 	} else if (mtx_sel & HDR_GAMUT_MTX) {
-		if (m) {
+		if (hdr_mtx_param->mtx_gamut) {
 			for (i = 0; i < 9; i++)
-				gmut_coef[i/3][i%3] = m[i];
+				gmut_coef[i/3][i%3] =
+					hdr_mtx_param->mtx_gamut[i];
 		}
 		gmut_shift = 11;
 
-		if (cgain_m) {
+		if (hdr_mtx_param->mtx_cgain) {
 			for (i = 0; i < 3; i++)
-				c_gain_lim_coef[i] = cgain_m[i] << 2;
+				c_gain_lim_coef[i] =
+					hdr_mtx_param->mtx_cgain[i] << 2;
 		}
 
 		adpscl_mode = 1;/*according to test code*/
 		for (i = 0; i < 3; i++) {
 			adpscl_enable[i] = 0;
-			if (p_sel & HDR_SDR)
+			if (hdr_mtx_param->p_sel & HDR_SDR)
 				adpscl_alpha[i] = out_luma *
 					(1 << adp_scal_shift) / in_luma;
-			else if (p_sel & SDR_HDR)
+			else if (hdr_mtx_param->p_sel & SDR_HDR)
 				adpscl_alpha[i] = in_luma *
 					(1 << adp_scal_shift) / out_luma;
-			else if (p_sel & HDR_BYPASS)
+			else if (hdr_mtx_param->p_sel & HDR_BYPASS)
 				adpscl_alpha[i] = out_luma *
 					(1 << adp_scal_shift) / in_luma;
 			adpscl_shift[i] = adp_scal_shift;
-			if (ogain_m)
-				adpscl_ys_coef[i] = ogain_m[i] << 1;
+			if (hdr_mtx_param->mtx_ogain)
+				adpscl_ys_coef[i] =
+					hdr_mtx_param->mtx_ogain[i] << 1;
 			adpscl_beta_s[i] = 0;
 			adpscl_beta[i] = FLTZERO;
 		}
@@ -976,18 +970,18 @@ void set_hdr_matrix(
 	    WRITE_VPP_REG(ADPS_COEF1, adpscl_ys_coef[2]);
 
 	} else if (mtx_sel & HDR_OUT_MTX) {
-		if (m) {
+		if (hdr_mtx_param->mtx_out) {
 			for (i = 0; i < 15; i++)
-				mtx[i] = m[i];
+				mtx[i] = hdr_mtx_param->mtx_out[i];
 		}
 
 		WRITE_VPP_REG(CGAIN_OFFT,
 			(rgb2yuvpos[2] << 16) | rgb2yuvpos[1]);
-		WRITE_VPP_REG(MATRIXO_EN_CTRL, mtx_on);
+		WRITE_VPP_REG(MATRIXO_EN_CTRL, hdr_mtx_param->mtx_on);
 		/*yuv in*/
-		WRITE_VPP_REG_BITS(hdr_ctrl, mtx_on, 4, 1);
+		WRITE_VPP_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_on, 4, 1);
 
-		WRITE_VPP_REG_BITS(hdr_ctrl, mtx_only, 16, 1);
+		WRITE_VPP_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_only, 16, 1);
 		WRITE_VPP_REG_BITS(hdr_ctrl, 0, 17, 1);
 		/*mtx out en*/
 		WRITE_VPP_REG_BITS(hdr_ctrl, 1, 15, 1);
@@ -1016,8 +1010,7 @@ void set_hdr_matrix(
 
 void set_eotf_lut(
 	enum hdr_module_sel module_sel,
-	int64_t *lut_param,
-	unsigned int lut_on)
+	struct hdr_proc_lut_param_s *hdr_lut_param)
 {
 	unsigned int lut[HDR2_EOTF_LUT_SIZE];
 	unsigned int eotf_lut_addr_port = 0;
@@ -1035,12 +1028,10 @@ void set_eotf_lut(
 		hdr_ctrl = OSD1_HDR2_CTRL;
 	}
 
-	if (lut_param) {
-		for (i = 0; i < HDR2_EOTF_LUT_SIZE; i++)
-			lut[i] = lut_param[i];
-	}
+	for (i = 0; i < HDR2_EOTF_LUT_SIZE; i++)
+		lut[i] = hdr_lut_param->eotf_lut[i];
 
-	WRITE_VPP_REG_BITS(hdr_ctrl, lut_on, 3, 1);
+	WRITE_VPP_REG_BITS(hdr_ctrl, hdr_lut_param->lut_on, 3, 1);
 	WRITE_VPP_REG(eotf_lut_addr_port, 0x0);
 	for (i = 0; i < HDR2_EOTF_LUT_SIZE; i++)
 		WRITE_VPP_REG(eotf_lut_data_port, lut[i]);
@@ -1048,8 +1039,7 @@ void set_eotf_lut(
 
 void set_ootf_lut(
 	enum hdr_module_sel module_sel,
-	int64_t *lut_param,
-	unsigned int lut_on)
+	struct hdr_proc_lut_param_s *hdr_lut_param)
 {
 	unsigned int lut[HDR2_OOTF_LUT_SIZE];
 	unsigned int ootf_lut_addr_port = 0;
@@ -1067,26 +1057,22 @@ void set_ootf_lut(
 		hdr_ctrl = OSD1_HDR2_CTRL;
 	}
 
-	if (lut_param) {
-		for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
-			lut[i] = lut_param[i];
-	}
+	for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
+		lut[i] = hdr_lut_param->ogain_lut[i];
 
-	WRITE_VPP_REG_BITS(hdr_ctrl, lut_on, 1, 1);
+	WRITE_VPP_REG_BITS(hdr_ctrl, hdr_lut_param->lut_on, 1, 1);
 	WRITE_VPP_REG(ootf_lut_addr_port, 0x0);
 
 	for (i = 0; i < HDR2_OOTF_LUT_SIZE / 2; i++)
 		WRITE_VPP_REG(ootf_lut_data_port,
-			(ogain_lut[i * 2 + 1] << 16) + lut_param[i * 2]);
-	WRITE_VPP_REG(ootf_lut_data_port, lut_param[148]);
-
+			(lut[i * 2 + 1] << 16) +
+			lut[i * 2]);
+	WRITE_VPP_REG(ootf_lut_data_port, lut[148]);
 }
 
 void set_oetf_lut(
 	enum hdr_module_sel module_sel,
-	int64_t *lut_param,
-	unsigned int bitdepth,
-	unsigned int lut_on)
+	struct hdr_proc_lut_param_s *hdr_lut_param)
 {
 	unsigned int lut[HDR2_OETF_LUT_SIZE];
 	unsigned int oetf_lut_addr_port = 0;
@@ -1104,30 +1090,27 @@ void set_oetf_lut(
 		hdr_ctrl = OSD1_HDR2_CTRL;
 	}
 
-	if (lut_param) {
-		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++)
-			lut[i] = lut_param[i];
-	}
+	for (i = 0; i < HDR2_OETF_LUT_SIZE; i++)
+		lut[i] = hdr_lut_param->oetf_lut[i];
 
-	WRITE_VPP_REG_BITS(hdr_ctrl, lut_on, 2, 1);
+	WRITE_VPP_REG_BITS(hdr_ctrl, hdr_lut_param->lut_on, 2, 1);
 	WRITE_VPP_REG(oetf_lut_addr_port, 0x0);
 	for (i = 0; i < HDR2_OETF_LUT_SIZE / 2; i++) {
-		if (bitdepth == 10)
+		if (hdr_lut_param->bitdepth == 10)
 			WRITE_VPP_REG(oetf_lut_data_port,
-				((lut_param[i * 2 + 1] >> 2) << 16) +
-				(lut_param[i * 2] >> 2));
+				((lut[i * 2 + 1] >> 2) << 16) +
+				(lut[i * 2] >> 2));
 		else
 			WRITE_VPP_REG(oetf_lut_data_port,
-				(lut_param[i * 2 + 1] << 16) +
-				lut_param[i * 2]);
+				(lut[i * 2 + 1] << 16) +
+				lut[i * 2]);
 		}
-		WRITE_VPP_REG(oetf_lut_data_port, lut_param[148]);
+		WRITE_VPP_REG(oetf_lut_data_port, lut[148]);
 }
 
 void set_c_gain(
 	enum hdr_module_sel module_sel,
-	int64_t *lut_param,
-	unsigned int lut_on)
+	struct hdr_proc_lut_param_s *hdr_lut_param)
 {
 	unsigned int lut[HDR2_CGAIN_LUT_SIZE];
 	unsigned int cgain_lut_addr_port = 0;
@@ -1145,41 +1128,33 @@ void set_c_gain(
 		hdr_ctrl = OSD1_HDR2_CTRL;
 	}
 
-	if (lut_param) {
-		for (i = 0; i < HDR2_CGAIN_LUT_SIZE; i++)
-			lut[i] = lut_param[i];
-	}
+
+	for (i = 0; i < HDR2_CGAIN_LUT_SIZE; i++)
+		lut[i] = hdr_lut_param->cgain_lut[i];
 
 	/*cgain mode: 0->y domin*/
 	/*cgain mode: 1->rgb domin, use r/g/b max*/
-	WRITE_VPP_REG_BITS(hdr_ctrl, lut_on, 12, 1);
-	WRITE_VPP_REG_BITS(hdr_ctrl, lut_on, 0, 1);
+	WRITE_VPP_REG_BITS(hdr_ctrl, hdr_lut_param->lut_on, 12, 1);
+	WRITE_VPP_REG_BITS(hdr_ctrl, hdr_lut_param->lut_on, 0, 1);
 
 	WRITE_VPP_REG(cgain_lut_addr_port, 0x0);
 	for (i = 0; i < HDR2_CGAIN_LUT_SIZE / 2; i++)
 		WRITE_VPP_REG(cgain_lut_data_port,
-			(lut_param[i * 2 + 1] << 16) + lut_param[i * 2]);
-	WRITE_VPP_REG(cgain_lut_data_port, lut_param[64]);
+			(lut[i * 2 + 1] << 16) + lut[i * 2]);
+	WRITE_VPP_REG(cgain_lut_data_port, lut[64]);
 }
+
+struct hdr_proc_lut_param_s hdr_lut_param;
 
 void hdrbypass_func(enum hdr_module_sel module_sel)
 {
 	int bit_depth;
 	unsigned int i = 0;
-	int mtx_in[15];
-	int mtx_ogain[15];
-	int mtx_cgain[15];
-	int mtx_out[15];
-	int mtx_gamut[9];
-#ifdef HDR2_MODULE
-	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf, sld_eotf, sld_oetf,
-		hlg_eotf, hlg_oetf, ootf_gain, nolinear_cgain, hlg_gain};
+	struct hdr_proc_mtx_param_s hdr_mtx_param;
 
-	eotf_float_gen(eotf_lut, fun[2]);
-	oetf_float_gen(oetf_lut, fun[1]);
-	oetf_float_gen(ogain_lut, fun[8]);
-	nolinear_lut_gen(cgain_lut, fun[9]);
-#else
+	memset(&hdr_mtx_param, 0, sizeof(struct hdr_proc_mtx_param_s));
+	memset(&hdr_lut_param, 0, sizeof(struct hdr_proc_lut_param_s));
+
 	if (module_sel & (VD1_HDR | VD2_HDR | OSD1_HDR))
 		bit_depth = 12;
 	else if (module_sel & (VDIN0_HDR | VDIN1_HDR | DI_HDR))
@@ -1187,61 +1162,68 @@ void hdrbypass_func(enum hdr_module_sel module_sel)
 	else
 		return;
 
+#ifdef HDR2_MODULE
+	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf, sld_eotf, sld_oetf,
+		hlg_eotf, hlg_oetf, ootf_gain, nolinear_cgain, hlg_gain};
+
+	/*lut parameters*/
+	eotf_float_gen(hdr_lut_param.eotf_lut, fun[2]);
+	oetf_float_gen(hdr_lut_param.oetf_lut, fun[1]);
+	oetf_float_gen(hdr_lut_param.ogain_lut, fun[8]);
+	nolinear_lut_gen(hdr_lut_param.cgain_lut, fun[9]);
+	hdr_lut_param.lut_on = LUT_OFF;
+	hdr_lut_param.bitdepth = bit_depth;
+#else
+	/*lut parameters*/
 	for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
-		oetf_lut[i]  = oetf_lut1[i];
-		ogain_lut[i] = ogain_lut1[i];
+		hdr_lut_param.oetf_lut[i]  = oetf_lut1[i];
+		hdr_lut_param.ogain_lut[i] = ogain_lut1[i];
 		if (i < HDR2_EOTF_LUT_SIZE)
-			eotf_lut[i] = eotf_lut1[i];
+			hdr_lut_param.eotf_lut[i] = eotf_lut1[i];
 		if (i < HDR2_CGAIN_LUT_SIZE)
-			cgain_lut[i] = cgain_lut1[i] - 1;
+			hdr_lut_param.cgain_lut[i] = cgain_lut1[i] - 1;
 	}
+	hdr_lut_param.lut_on = LUT_OFF;
+	hdr_lut_param.bitdepth = bit_depth;
 #endif
 
+	/*mtx parameters*/
+	hdr_mtx_param.mtx_only = MTX_ONLY;
 	for (i = 0; i < 15; i++) {
-		mtx_in[i] = bypass_coeff[i];
-		mtx_cgain[i] = bypass_coeff[i];
-		mtx_ogain[i] = bypass_coeff[i];
-		mtx_out[i] = bypass_coeff[i];
+		hdr_mtx_param.mtx_in[i] = bypass_coeff[i];
+		hdr_mtx_param.mtx_cgain[i] = bypass_coeff[i];
+		hdr_mtx_param.mtx_ogain[i] = bypass_coeff[i];
+		hdr_mtx_param.mtx_out[i] = bypass_coeff[i];
 		if (i < 9)
-			mtx_gamut[i] = bypass_coeff[i];
+			hdr_mtx_param.mtx_gamut[i] = bypass_coeff[i];
 	}
+	hdr_mtx_param.mtx_on = MTX_OFF;
+	hdr_mtx_param.p_sel = HDR_BYPASS;
 
-	set_hdr_matrix(module_sel, HDR_IN_MTX, MTX_ONLY,
-		mtx_in, mtx_cgain, mtx_ogain, MTX_OFF, HDR_BYPASS);
+	set_hdr_matrix(module_sel, HDR_IN_MTX, &hdr_mtx_param);
 
-	set_eotf_lut(module_sel, eotf_lut, LUT_OFF);
+	set_eotf_lut(module_sel, &hdr_lut_param);
 
-	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, MTX_ONLY,
-		mtx_gamut, mtx_cgain, mtx_ogain, MTX_OFF, HDR_BYPASS);
+	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, &hdr_mtx_param);
 
-	set_ootf_lut(module_sel, ogain_lut, LUT_OFF);
+	set_ootf_lut(module_sel, &hdr_lut_param);
 
-	set_oetf_lut(module_sel, oetf_lut, bit_depth, LUT_OFF);
+	set_oetf_lut(module_sel, &hdr_lut_param);
 
-	set_hdr_matrix(module_sel, HDR_OUT_MTX, MTX_ONLY,
-		mtx_out, mtx_cgain, mtx_ogain, MTX_OFF, HDR_BYPASS);
+	set_hdr_matrix(module_sel, HDR_OUT_MTX, &hdr_mtx_param);
 
-	set_c_gain(module_sel, cgain_lut, LUT_OFF);
+	set_c_gain(module_sel, &hdr_lut_param);
 }
 
 void hdr2sdr_func(enum hdr_module_sel module_sel)
 {
 	unsigned int bit_depth;
 	unsigned int i = 0;
-	int mtx_in[15];
-	int mtx_ogain[15];
-	int mtx_cgain[15];
-	int mtx_out[15];
-	int mtx_gamut[9];
-#ifdef HDR2_MODULE
-	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf, sld_eotf, sld_oetf,
-		hlg_eotf, hlg_oetf, ootf_gain, nolinear_cgain, hlg_gain};
+	struct hdr_proc_mtx_param_s hdr_mtx_param;
 
-	eotf_float_gen(eotf_lut, fun[2]);
-	oetf_float_gen(oetf_lut, fun[1]);
-	oetf_float_gen(ogain_lut, fun[8]);
-	nolinear_lut_gen(cgain_lut, fun[9]);
-#else
+	memset(&hdr_mtx_param, 0, sizeof(struct hdr_proc_mtx_param_s));
+	memset(&hdr_lut_param, 0, sizeof(struct hdr_proc_lut_param_s));
+
 	if (module_sel & (VD1_HDR | VD2_HDR | OSD1_HDR))
 		bit_depth = 12;
 	else if (module_sel & (VDIN0_HDR | VDIN1_HDR | DI_HDR))
@@ -1249,61 +1231,68 @@ void hdr2sdr_func(enum hdr_module_sel module_sel)
 	else
 		return;
 
+#ifdef HDR2_MODULE
+	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf, sld_eotf, sld_oetf,
+		hlg_eotf, hlg_oetf, ootf_gain, nolinear_cgain, hlg_gain};
+
+	/*lut parameters*/
+	eotf_float_gen(hdr_lut_param.eotf_lut, fun[2]);
+	oetf_float_gen(hdr_lut_param.oetf_lut, fun[1]);
+	oetf_float_gen(hdr_lut_param.ogain_lut, fun[8]);
+	nolinear_lut_gen(hdr_lut_param.cgain_lut, fun[9]);
+	hdr_lut_param.lut_on = LUT_ON;
+	hdr_lut_param.bitdepth = bit_depth;
+#else
+	/*lut parameters*/
 	for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
-		oetf_lut[i]  = oetf_lut1[i];
-		ogain_lut[i] = ogain_lut1[i];
+		hdr_lut_param.oetf_lut[i]  = oetf_lut1[i];
+		hdr_lut_param.ogain_lut[i] = ogain_lut1[i];
 		if (i < HDR2_EOTF_LUT_SIZE)
-			eotf_lut[i] = eotf_lut1[i];
+			hdr_lut_param.eotf_lut[i] = eotf_lut1[i];
 		if (i < HDR2_CGAIN_LUT_SIZE)
-			cgain_lut[i] = cgain_lut1[i] - 1;
+			hdr_lut_param.cgain_lut[i] = cgain_lut1[i] - 1;
 	}
+	hdr_lut_param.lut_on = LUT_ON;
+	hdr_lut_param.bitdepth = bit_depth;
 #endif
 
+	/*mtx parameters*/
+	hdr_mtx_param.mtx_only = MTX_ONLY;
 	for (i = 0; i < 15; i++) {
-		mtx_in[i] = ycbcr2rgb_ncl2020[i];
-		mtx_cgain[i] = rgb2ycbcr_709[i];
-		mtx_ogain[i] = rgb2ycbcr_ncl2020[i];
-		mtx_out[i] = rgb2ycbcr_709[i];
+		hdr_mtx_param.mtx_in[i] = ycbcr2rgb_ncl2020[i];
+		hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_709[i];
+		hdr_mtx_param.mtx_ogain[i] = rgb2ycbcr_ncl2020[i];
+		hdr_mtx_param.mtx_out[i] = rgb2ycbcr_709[i];
 		if (i < 9)
-			mtx_gamut[i] = ncl_2020_709[i];
+			hdr_mtx_param.mtx_gamut[i] = ncl_2020_709[i];
 	}
+	hdr_mtx_param.mtx_on = MTX_ON;
+	hdr_mtx_param.p_sel = HDR_SDR;
 
-	set_hdr_matrix(module_sel, HDR_IN_MTX, HDR_ONLY,
-		mtx_in, mtx_cgain, mtx_ogain, MTX_ON, HDR_SDR);
+	set_hdr_matrix(module_sel, HDR_IN_MTX, &hdr_mtx_param);
 
-	set_eotf_lut(module_sel, eotf_lut, LUT_ON);
+	set_eotf_lut(module_sel, &hdr_lut_param);
 
-	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, HDR_ONLY,
-		mtx_gamut, mtx_cgain, mtx_ogain, MTX_ON, HDR_SDR);
+	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, &hdr_mtx_param);
 
-	set_ootf_lut(module_sel, ogain_lut, LUT_ON);
+	set_ootf_lut(module_sel, &hdr_lut_param);
 
-	set_oetf_lut(module_sel, oetf_lut, bit_depth, LUT_ON);
+	set_oetf_lut(module_sel, &hdr_lut_param);
 
-	set_hdr_matrix(module_sel, HDR_OUT_MTX, HDR_ONLY,
-		mtx_out, mtx_cgain, mtx_ogain, MTX_ON, HDR_SDR);
+	set_hdr_matrix(module_sel, HDR_OUT_MTX, &hdr_mtx_param);
 
-	set_c_gain(module_sel, cgain_lut, LUT_ON);
+	set_c_gain(module_sel, &hdr_lut_param);
 }
 
 void sdr2hdr_func(enum hdr_module_sel module_sel)
 {
 	unsigned int bit_depth;
 	unsigned int i = 0;
-	int mtx_in[15];
-	int mtx_ogain[15];
-	int mtx_cgain[15];
-	int mtx_out[15];
-	int mtx_gamut[9];
-#ifdef HDR2_MODULE
-	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf, sld_eotf, sld_oetf,
-		hlg_eotf, hlg_oetf, ootf_gain, nolinear_cgain, hlg_gain};
+	struct hdr_proc_mtx_param_s hdr_mtx_param;
 
-	eotf_float_gen(eotf_lut, fun[2]);
-	oetf_float_gen(oetf_lut, fun[1]);
-	oetf_float_gen(ogain_lut, fun[8]);
-	nolinear_lut_gen(cgain_lut, fun[9]);
-#else
+	memset(&hdr_mtx_param, 0, sizeof(struct hdr_proc_mtx_param_s));
+	memset(&hdr_lut_param, 0, sizeof(struct hdr_proc_lut_param_s));
+
 	if (module_sel & (VD1_HDR | VD2_HDR | OSD1_HDR))
 		bit_depth = 12;
 	else if (module_sel & (VDIN0_HDR | VDIN1_HDR | DI_HDR))
@@ -1311,41 +1300,51 @@ void sdr2hdr_func(enum hdr_module_sel module_sel)
 	else
 		return;
 
+#ifdef HDR2_MODULE
+	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf, sld_eotf, sld_oetf,
+		hlg_eotf, hlg_oetf, ootf_gain, nolinear_cgain, hlg_gain};
+
+	eotf_float_gen(hdr_lut_param.eotf_lut, fun[2]);
+	oetf_float_gen(hdr_lut_param.oetf_lut, fun[1]);
+	oetf_float_gen(hdr_lut_param.ogain_lut, fun[8]);
+	nolinear_lut_gen(hdr_lut_param.cgain_lut, fun[9]);
+#else
 	for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
-		oetf_lut[i]  = oetf_lut0[i];
-		ogain_lut[i] = ogain_lut0[i];
+		hdr_lut_param.oetf_lut[i]  = oetf_lut0[i];
+		hdr_lut_param.ogain_lut[i] = ogain_lut0[i];
 		if (i < HDR2_EOTF_LUT_SIZE)
-			eotf_lut[i] = eotf_lut0[i];
+			hdr_lut_param.eotf_lut[i] = eotf_lut0[i];
 		if (i < HDR2_CGAIN_LUT_SIZE)
-			cgain_lut[i] = cgain_lut0[i] - 1;
+			hdr_lut_param.cgain_lut[i] = cgain_lut0[i] - 1;
 	}
+	hdr_lut_param.lut_on = LUT_ON;
+	hdr_lut_param.bitdepth = bit_depth;
 #endif
 
 	for (i = 0; i < 15; i++) {
-		mtx_in[i] = ycbcr2rgb_709[i];
-		mtx_cgain[i] = rgb2ycbcr_ncl2020[i];
-		mtx_ogain[i] = rgb2ycbcr_709[i];
-		mtx_out[i] = rgb2ycbcr_ncl2020[i];
+		hdr_mtx_param.mtx_in[i] = ycbcr2rgb_709[i];
+		hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_ncl2020[i];
+		hdr_mtx_param.mtx_ogain[i] = rgb2ycbcr_709[i];
+		hdr_mtx_param.mtx_out[i] = rgb2ycbcr_ncl2020[i];
 		if (i < 9)
-			mtx_gamut[i] = ncl_709_2020[i];
+			hdr_mtx_param.mtx_gamut[i] = ncl_709_2020[i];
 	}
+	hdr_mtx_param.mtx_on = MTX_ON;
+	hdr_mtx_param.p_sel = SDR_HDR;
 
-	set_hdr_matrix(module_sel, HDR_IN_MTX, HDR_ONLY,
-		mtx_in, mtx_cgain, mtx_ogain, MTX_ON, SDR_HDR);
+	set_hdr_matrix(module_sel, HDR_IN_MTX, &hdr_mtx_param);
 
-	set_eotf_lut(module_sel, eotf_lut, LUT_ON);
+	set_eotf_lut(module_sel, &hdr_lut_param);
 
-	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, HDR_ONLY,
-		mtx_gamut, mtx_cgain, mtx_ogain, MTX_ON, SDR_HDR);
+	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, &hdr_mtx_param);
 
-	set_ootf_lut(module_sel, ogain_lut, LUT_ON);
+	set_ootf_lut(module_sel, &hdr_lut_param);
 
-	set_oetf_lut(module_sel, oetf_lut, bit_depth, LUT_ON);
+	set_oetf_lut(module_sel, &hdr_lut_param);
 
-	set_hdr_matrix(module_sel, HDR_OUT_MTX, HDR_ONLY,
-		mtx_out, mtx_cgain, mtx_ogain, MTX_ON, SDR_HDR);
+	set_hdr_matrix(module_sel, HDR_OUT_MTX, &hdr_mtx_param);
 
-	set_c_gain(module_sel, cgain_lut, LUT_ON);
+	set_c_gain(module_sel, &hdr_lut_param);
 }
 /*G12A matrix setting*/
 void mtx_setting(enum vpp_matrix_e mtx_sel,
