@@ -567,7 +567,6 @@ static void osd_vpu_power_on_viu2(void)
 			VPU_MEM_POWER_ON);
 		val = osd_reg_read(VPU_CLK_GATE);
 		val =  val | 0x30000;
-		osd_log_info("VPU_CLK_GATE val=%x\n", val);
 		osd_reg_write(VPU_CLK_GATE, val);
 	}
 #endif
@@ -1802,7 +1801,6 @@ static void osd_set_free_scale_enable_mode1(u32 index, u32 enable)
 	unsigned int v_enable = 0;
 	int ret = 0;
 
-	osd_log_info("osd_set_free_scale_enable_mode1\n");
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_SIMPLE)
 		return;
 	h_enable = (enable & 0xffff0000 ? 1 : 0);
@@ -2069,7 +2067,6 @@ void osd_enable_hw(u32 index, u32 enable)
 
 		spin_unlock_irqrestore(&osd_lock, lock_flags);
 		osd_afbc_dec_enable = 0;
-		osd_log_info("set color format\n");
 		add_to_update_list(index, OSD_COLOR_MODE);
 		add_to_update_list(index, OSD_GBL_ALPHA);
 		add_to_update_list(index, DISP_GEOMETRY);
@@ -3745,7 +3742,6 @@ static void osd_update_coef(u32 index)
 	int use_v_filter_mode, use_h_filter_mode;
 	int OSD_SCALE_COEF_IDX, OSD_SCALE_COEF;
 
-	osd_log_info("osd_update_coef\n");
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 		OSD_SCALE_COEF_IDX =
 			hw_osd_reg_array[index].osd_scale_coef_idx;
@@ -3844,7 +3840,6 @@ static void osd_update_color_mode(u32 index)
 	u32  data32 = 0;
 	struct hw_osd_reg_s *osd_reg = &hw_osd_reg_array[index];
 
-	osd_log_info("osd_update_color_mode\n");
 	if (osd_hw.color_info[index] != NULL) {
 		enum color_index_e idx =
 			osd_hw.color_info[index]->color_index;
@@ -4005,7 +4000,7 @@ static void osd_update_enable(u32 index)
 {
 	u32 temp_val = 0;
 	struct hw_osd_reg_s *osd_reg = &hw_osd_reg_array[index];
-	osd_log_info("osd_update_enable,index=%d\n", index);
+
 	/*
 	if (!osd_hw.buffer_alloc[index])
 		return;
@@ -5300,7 +5295,6 @@ static void osd_basic_update_disp_geometry(u32 index)
 	u32 data32;
 	u32 buffer_w, buffer_h;
 
-	osd_log_info("osd_basic_update_disp_geometry\n");
 	data32 = (osd_hw.dispdata[index].x_start & 0xfff)
 		| (osd_hw.dispdata[index].x_end & 0xfff) << 16;
 	VSYNCOSD_WR_MPEG_REG(
