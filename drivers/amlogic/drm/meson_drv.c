@@ -88,6 +88,7 @@ static struct osd_device_data_s osd_gxbb = {
 	.osd_fifo_len = 32,
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_gxl = {
@@ -102,6 +103,7 @@ static struct osd_device_data_s osd_gxl = {
 	.osd_fifo_len = 32,
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_gxm = {
@@ -116,6 +118,7 @@ static struct osd_device_data_s osd_gxm = {
 	.osd_fifo_len = 32,
 	.vpp_fifo_len = 0xfff,
 	.dummy_data = 0x00202000,/* dummy data is different */
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_txl = {
@@ -130,6 +133,7 @@ static struct osd_device_data_s osd_txl = {
 	.osd_fifo_len = 64,
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_txlx = {
@@ -144,6 +148,7 @@ static struct osd_device_data_s osd_txlx = {
 	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_axg = {
@@ -159,6 +164,7 @@ static struct osd_device_data_s osd_axg = {
 	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
 	.vpp_fifo_len = 0x400,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_g12a = {
@@ -173,6 +179,7 @@ static struct osd_device_data_s osd_g12a = {
 	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
 	.vpp_fifo_len = 0xfff,/* 2048 */
 	.dummy_data = 0x00808000,
+	.has_viu2 = 1,
 };
 
 static const struct of_device_id meson_drm_dt_match[] = {

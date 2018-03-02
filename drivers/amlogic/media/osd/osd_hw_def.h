@@ -67,7 +67,7 @@ static update_func_t hw_func_array[HW_REG_INDEX_MAX] = {
 		spin_lock_irqsave(&osd_lock, lock_flags); \
 		raw_local_save_flags(fiq_flag); \
 		local_fiq_disable(); \
-		if (osd_hw.hw_rdma_en || osd_hw.osd_use_latch) \
+		if (osd_hw.hw_rdma_en || osd_hw.osd_use_latch[osd_idx]) \
 			osd_hw.reg[cmd_idx].update_func(osd_idx); \
 		else \
 			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
@@ -78,7 +78,7 @@ static update_func_t hw_func_array[HW_REG_INDEX_MAX] = {
 #define add_to_update_list(osd_idx, cmd_idx) \
 	do { \
 		spin_lock_irqsave(&osd_lock, lock_flags); \
-		if (osd_hw.hw_rdma_en || osd_hw.osd_use_latch) \
+		if (osd_hw.hw_rdma_en || osd_hw.osd_use_latch[osd_idx]) \
 			osd_hw.reg[cmd_idx].update_func(osd_idx); \
 		else \
 			osd_hw.updated[osd_idx] |= (1<<cmd_idx); \
@@ -110,7 +110,7 @@ static update_func_t hw_func_array[HW_REG_INDEX_MAX] = {
 #define remove_from_update_list(osd_idx, cmd_idx) \
 	do { \
 		if (!osd_hw.hw_rdma_en && \
-			!osd_hw.osd_use_latch) \
+			!osd_hw.osd_use_latch[osd_idx]) \
 			(osd_hw.updated[osd_idx] &= ~(1<<cmd_idx)); \
 	} while (0)
 #else

@@ -1398,7 +1398,6 @@ static int vpu_probe(struct platform_device *pdev)
 	set_vpu_clk(vpu_conf.clk_level);
 	if (ret)
 		vpu_power_init();
-
 	creat_vpu_debug_class();
 
 	VPUPR("%s OK\n", __func__);

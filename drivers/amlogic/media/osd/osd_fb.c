@@ -45,6 +45,7 @@
 #include <linux/fs.h>
 #include <linux/cma.h>
 #include <linux/dma-contiguous.h>
+#include <linux/clk.h>
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -61,6 +62,8 @@
 static __u32 var_screeninfo[5];
 static struct osd_device_data_s osd_meson_dev;
 
+#define MAX_VPU_CLKC_CLK 500000000
+#define CUR_VPU_CLKC_CLK 200000000
 struct osd_info_s osd_info = {
 	.index = 0,
 	.osd_reverse = 0,
@@ -295,6 +298,35 @@ static struct fb_var_screeninfo fb_def_var[] = {
 		.sync			 = 0,
 		.vmode			 = FB_VMODE_NONINTERLACED,
 		.rotate          = 0,
+	},
+	{
+		.xres			 = 32,
+		.yres			 = 32,
+		.xres_virtual	 = 32,
+		.yres_virtual	 = 32,
+		.xoffset		 = 0,
+		.yoffset		 = 0,
+		.bits_per_pixel = 32,
+		.grayscale		 = 0,
+		.red			 = {0, 0, 0},
+		.green			 = {0, 0, 0},
+		.blue			 = {0, 0, 0},
+		.transp          = {0, 0, 0},
+		.nonstd          = 0,
+		.activate		 = FB_ACTIVATE_NOW,
+		.height          = -1,
+		.width           = -1,
+		.accel_flags     = 0,
+		.pixclock		 = 0,
+		.left_margin	 = 0,
+		.right_margin	 = 0,
+		.upper_margin	 = 0,
+		.lower_margin	 = 0,
+		.hsync_len		 = 0,
+		.vsync_len		 = 0,
+		.sync			 = 0,
+		.vmode			 = FB_VMODE_NONINTERLACED,
+		.rotate          = 0,
 	}
 };
 
@@ -325,6 +357,7 @@ static int osd_shutdown_flag;
 
 unsigned int osd_log_level;
 int int_viu_vsync = -ENXIO;
+int int_viu2_vsync = -ENXIO;
 int int_rdma = INT_RDMA;
 struct osd_fb_dev_s *gp_fbdev_list[OSD_COUNT] = {};
 static u32 fb_memsize[HW_OSD_COUNT + 1];
@@ -795,7 +828,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	case FBIOPUT_OSD_REVERSE:
 		if (arg >= REVERSE_MAX)
 			arg = REVERSE_FALSE;
-		osd_set_reverse_hw(info->node, arg);
+		osd_set_reverse_hw(info->node, arg, 1);
 		break;
 	case FBIOPUT_OSD_ROTATE_ON:
 		break;
@@ -1074,6 +1107,7 @@ static int malloc_osd_memory(struct fb_info *info)
 	struct platform_device *pdev = NULL;
 	phys_addr_t base = 0;
 	unsigned long size = 0;
+	unsigned long fb_memsize_total  = 0;
 #ifdef CONFIG_CMA
 	struct cma *cma = NULL;
 #endif
@@ -1106,10 +1140,11 @@ static int malloc_osd_memory(struct fb_info *info)
 	var = &info->var;
 	if (!fb_ion_client)
 		fb_ion_client = meson_ion_client_create(-1, "meson-fb");
+	for (j = 0; j <= osd_meson_dev.osd_count; j++)
+		fb_memsize_total += fb_memsize[j];
 	/* read cma/fb-reserved memory first */
 	if ((b_reserved_mem == true) &&
-		((fb_memsize[0] + fb_memsize[1] +
-		fb_memsize[2] + fb_memsize[3] <= size) &&
+		((fb_memsize_total <= size) &&
 		(fb_memsize[fb_index + 1] > 0))) {
 		fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
 		if (fb_index == DEV_OSD0)
@@ -1120,6 +1155,10 @@ static int malloc_osd_memory(struct fb_info *info)
 		} else if (fb_index == DEV_OSD2) {
 			fb_rmem_paddr[fb_index] = base + fb_memsize[0]
 				+ fb_memsize[1] + fb_memsize[2];
+		} else if (fb_index == DEV_OSD3) {
+			fb_rmem_paddr[fb_index] = base + fb_memsize[0]
+				+ fb_memsize[1] + fb_memsize[2]
+				+ fb_memsize[3];
 		}
 		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
 			__func__, __LINE__, fb_index,
@@ -1354,6 +1393,18 @@ static int osd_open(struct fb_info *info, int arg)
 		return 0;
 
 	fb_index = fbdev->fb_index;
+	if ((osd_meson_dev.has_viu2)
+		&& (fb_index == OSD4)) {
+		int vpu_clkc_rate;
+
+		/* select mux0, if select mux1, mux0 must be set */
+		clk_prepare_enable(osd_meson_dev.vpu_clkc);
+		clk_set_rate(osd_meson_dev.vpu_clkc, CUR_VPU_CLKC_CLK);
+		vpu_clkc_rate = clk_get_rate(osd_meson_dev.vpu_clkc);
+		osd_log_info("vpu clkc clock is %d MHZ\n",
+			vpu_clkc_rate/1000000);
+		osd_init_viu2();
+	}
 	if (osd_meson_dev.osd_count <= fb_index)
 		return -1;
 	if (b_alloc_mem) {
@@ -1550,6 +1601,8 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 	}
 	osd_log_info("current vmode=%s, cmd: 0x%lx\n",
 		vinfo->name, cmd);
+	if (!strcmp(vinfo->name, "invalid"))
+		return -1;
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
 		set_osd_logo_freescaler();
@@ -1569,6 +1622,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 			else if (osd_meson_dev.osd_ver == OSD_HIGH_ONE)
 				osd_set_antiflicker_hw(i, vinfo,
 				       gp_fbdev_list[i]->fb_info->var.yres);
+			osd_reg_write(VPP_POSTBLEND_H_SIZE, vinfo->width);
 			console_unlock();
 		}
 		break;
@@ -1627,9 +1681,97 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 	return 0;
 }
 
+int osd_notify_callback_viu2(struct notifier_block *block, unsigned long cmd,
+			void *para)
+{
+	struct vinfo_s *vinfo = NULL;
+	struct osd_fb_dev_s *fb_dev;
+	int  i, blank;
+	struct disp_rect_s *disp_rect;
+
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	vinfo = get_current_vinfo2();
+#endif
+
+	if (!vinfo) {
+		osd_log_err("current vinfo NULL\n");
+		return -1;
+	}
+	osd_log_info("current vmode=%s, cmd: 0x%lx\n",
+		vinfo->name, cmd);
+	if (!strcmp(vinfo->name, "invalid"))
+		return -1;
+	i = osd_meson_dev.osd_count - 1;
+	switch (cmd) {
+	case  VOUT_EVENT_MODE_CHANGE:
+		fb_dev = gp_fbdev_list[i];
+		set_default_display_axis(&fb_dev->fb_info->var,
+			&fb_dev->osd_ctl, vinfo);
+		console_lock();
+		osddev_update_disp_axis(fb_dev, 1);
+		osd_set_antiflicker_hw(i, vinfo,
+		gp_fbdev_list[i]->fb_info->var.yres);
+		osd_reg_write(VPP2_POSTBLEND_H_SIZE, vinfo->width);
+		console_unlock();
+		break;
+	case VOUT_EVENT_OSD_BLANK:
+		blank = *(int *)para;
+		fb_dev = gp_fbdev_list[i];
+		console_lock();
+		osd_blank(blank, fb_dev->fb_info);
+		console_unlock();
+		break;
+	case VOUT_EVENT_OSD_DISP_AXIS:
+		disp_rect = (struct disp_rect_s *)para;
+		if (!disp_rect)
+			break;
+		fb_dev = gp_fbdev_list[i];
+		/*
+		 * if osd layer preblend,
+		 * it's position is controlled by vpp.
+		 * if (fb_dev->preblend_enable)
+		 *	break;
+		 */
+		fb_dev->osd_ctl.disp_start_x = disp_rect->x;
+		fb_dev->osd_ctl.disp_start_y = disp_rect->y;
+		osd_log_dbg("set disp axis: x:%d y:%d w:%d h:%d\n",
+			disp_rect->x, disp_rect->y,
+			disp_rect->w, disp_rect->h);
+		if (disp_rect->x + disp_rect->w > vinfo->width)
+			fb_dev->osd_ctl.disp_end_x = vinfo->width - 1;
+		else
+			fb_dev->osd_ctl.disp_end_x =
+				fb_dev->osd_ctl.disp_start_x +
+				disp_rect->w - 1;
+		if (disp_rect->y + disp_rect->h > vinfo->height)
+			fb_dev->osd_ctl.disp_end_y = vinfo->height - 1;
+		else
+			fb_dev->osd_ctl.disp_end_y =
+				fb_dev->osd_ctl.disp_start_y +
+				disp_rect->h - 1;
+		disp_rect++;
+		osd_log_dbg("new disp axis: x0:%d y0:%d x1:%d y1:%d\n",
+			fb_dev->osd_ctl.disp_start_x,
+			fb_dev->osd_ctl.disp_start_y,
+			fb_dev->osd_ctl.disp_end_x,
+			fb_dev->osd_ctl.disp_end_y);
+		console_lock();
+		osddev_update_disp_axis(fb_dev, 0);
+		console_unlock();
+		break;
+	}
+	return 0;
+}
+
 static struct notifier_block osd_notifier_nb = {
 	.notifier_call	= osd_notify_callback,
 };
+
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+static struct notifier_block osd_notifier_nb2 = {
+	.notifier_call	= osd_notify_callback_viu2,
+};
+#endif
 
 static ssize_t store_enable_3d(struct device *device,
 			       struct device_attribute *attr,
@@ -2189,7 +2331,7 @@ static ssize_t store_osd_reverse(struct device *device,
 	osd_reverse = res;
 	if (osd_reverse >= REVERSE_MAX)
 		osd_reverse = REVERSE_FALSE;
-	osd_set_reverse_hw(fb_info->node, osd_reverse);
+	osd_set_reverse_hw(fb_info->node, osd_reverse, 1);
 	return count;
 }
 
@@ -2797,7 +2939,51 @@ static struct device_attribute osd_attrs[] = {
 			show_osd_hwc_enalbe, store_osd_hwc_enalbe),
 	__ATTR(osd_do_hwc, 0220,
 			NULL, store_do_hwc),
+};
 
+static struct device_attribute osd_attrs_viu2[] = {
+	__ATTR(color_key, 0644,
+			show_color_key, store_color_key),
+	__ATTR(enable_key, 0664,
+			show_enable_key, store_enable_key),
+	__ATTR(enable_key_onhold, 0664,
+			show_enable_key_onhold, store_enable_key_onhold),
+	__ATTR(block_windows, 0644,
+			show_block_windows, store_block_windows),
+	__ATTR(block_mode, 0664,
+			show_block_mode, store_block_mode),
+	__ATTR(debug, 0644,
+			show_debug, store_debug),
+	__ATTR(log_level, 0644,
+			show_log_level, store_log_level),
+	__ATTR(flush_rate, 0444,
+			show_flush_rate, NULL),
+	__ATTR(osd_reverse, 0644,
+			show_osd_reverse, store_osd_reverse),
+	__ATTR(osd_antiflicker, 0644,
+			show_antiflicker, store_antiflicker),
+	__ATTR(ver_clone, 0644,
+			show_ver_clone, store_ver_clone),
+	__ATTR(ver_update_pan, 0220,
+			NULL, store_ver_update_pan),
+	__ATTR(osd_afbcd, 0664,
+			show_afbcd, store_afbcd),
+	__ATTR(osd_clear, 0220,
+			NULL, osd_clear),
+	__ATTR(reset_status, 0444,
+			show_reset_status, NULL),
+	__ATTR(osd_fps, 0644,
+			show_osd_fps, store_osd_fps),
+	__ATTR(osd_reg, 0220,
+			NULL, store_osd_reg),
+	__ATTR(osd_display_debug, 0644,
+			show_osd_display_debug, store_osd_display_debug),
+	__ATTR(osd_background_size, 0644,
+			show_osd_background_size, store_osd_background_size),
+	__ATTR(osd_afbc_debug, 0644,
+			show_osd_afbc_debug, store_osd_afbc_debug),
+	__ATTR(osd_afbc_format, 0644,
+			show_osd_afbc_format, store_osd_afbc_format),
 };
 
 #ifdef CONFIG_PM
@@ -2953,6 +3139,7 @@ static struct osd_device_data_s osd_gxbb = {
 	.osd_fifo_len = 32,
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_gxtvbb = {
@@ -2967,6 +3154,7 @@ static struct osd_device_data_s osd_gxtvbb = {
 	.osd_fifo_len = 32,
 	.vpp_fifo_len = 0xfff,
 	.dummy_data = 0x0,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_gxl = {
@@ -2981,6 +3169,7 @@ static struct osd_device_data_s osd_gxl = {
 	.osd_fifo_len = 32,
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_gxm = {
@@ -2995,6 +3184,7 @@ static struct osd_device_data_s osd_gxm = {
 	.osd_fifo_len = 32,
 	.vpp_fifo_len = 0xfff,
 	.dummy_data = 0x00202000,/* dummy data is different */
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_txl = {
@@ -3009,6 +3199,7 @@ static struct osd_device_data_s osd_txl = {
 	.osd_fifo_len = 64,
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_txlx = {
@@ -3023,6 +3214,7 @@ static struct osd_device_data_s osd_txlx = {
 	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
 	.vpp_fifo_len = 0x77f,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_axg = {
@@ -3038,13 +3230,14 @@ static struct osd_device_data_s osd_axg = {
 	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
 	.vpp_fifo_len = 0x400,
 	.dummy_data = 0x00808000,
+	.has_viu2 = 0,
 };
 
 static struct osd_device_data_s osd_g12a = {
 	.cpu_id = __MESON_CPU_MAJOR_ID_G12A,
 	.osd_ver = OSD_HIGH_ONE,
 	.afbc_type = MALI_AFBC,
-	.osd_count = 3,
+	.osd_count = 4,
 	.has_deband = 1,
 	.has_lut = 1,
 	.has_rdma = 1,
@@ -3052,6 +3245,7 @@ static struct osd_device_data_s osd_g12a = {
 	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
 	.vpp_fifo_len = 0xfff,/* 2048 */
 	.dummy_data = 0x00808000,
+	.has_viu2 = 1,
 };
 
 static const struct of_device_id meson_fb_dt_match[] = {
@@ -3140,6 +3334,15 @@ static int osd_probe(struct platform_device *pdev)
 		goto failed1;
 	} else
 		osd_log_info("viu vsync irq: %d\n", int_viu_vsync);
+	if (osd_hw.osd_meson_dev.has_viu2) {
+	int_viu2_vsync = platform_get_irq_byname(pdev, "viu2-vsync");
+		if (int_viu2_vsync  == -ENXIO) {
+			osd_log_err("cannot get viu2 irq resource\n");
+			goto failed1;
+		} else
+			osd_log_info("viu2 vsync irq: %d\n", int_viu2_vsync);
+	}
+
 	if (osd_meson_dev.has_rdma) {
 		int_rdma = platform_get_irq_byname(pdev, "rdma");
 		if (int_viu_vsync  == -ENXIO) {
@@ -3147,12 +3350,21 @@ static int osd_probe(struct platform_device *pdev)
 			goto failed1;
 		}
 	}
+	if (osd_meson_dev.has_viu2) {
+		osd_meson_dev.vpu_clkc = devm_clk_get(&pdev->dev, "vpu_clkc");
+		if (IS_ERR(osd_meson_dev.vpu_clkc)) {
+			osd_log_err("cannot get vpu_clkc\n");
+			osd_meson_dev.vpu_clkc = NULL;
+			ret = -ENOENT;
+			goto failed1;
+		}
+	}
+
 	ret = osd_io_remap(osd_meson_dev.osd_ver == OSD_SIMPLE);
 	if (!ret) {
 		osd_log_err("osd_io_remap failed\n");
 		goto failed1;
 	}
-
 	/* init osd logo */
 	ret = logo_work_init();
 	if (ret == 0)
@@ -3230,6 +3442,8 @@ static int osd_probe(struct platform_device *pdev)
 	vinfo = get_current_vinfo();
 	for (index = 0; index < osd_meson_dev.osd_count; index++) {
 		/* register frame buffer memory */
+		if (!fb_memsize[index + 1])
+			continue;
 		fbi = framebuffer_alloc(sizeof(struct osd_fb_dev_s),
 				&pdev->dev);
 		if (!fbi) {
@@ -3310,8 +3524,15 @@ static int osd_probe(struct platform_device *pdev)
 		/* register frame buffer */
 		register_framebuffer(fbi);
 		/* create device attribute files */
-		for (i = 0; i < ARRAY_SIZE(osd_attrs); i++)
-			ret = device_create_file(fbi->dev, &osd_attrs[i]);
+		if (index <= DEV_OSD2) {
+			for (i = 0; i < ARRAY_SIZE(osd_attrs); i++)
+				ret = device_create_file(
+				fbi->dev, &osd_attrs[i]);
+		} else if ((osd_meson_dev.osd_ver == OSD_HIGH_ONE) &&
+			(index == DEV_OSD3)) {
+			for (i = 0; i < ARRAY_SIZE(osd_attrs_viu2); i++)
+			ret = device_create_file(fbi->dev, &osd_attrs_viu2[i]);
+		}
 	}
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	early_suspend.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
@@ -3322,12 +3543,19 @@ static int osd_probe(struct platform_device *pdev)
 
 	/* init osd reverse */
 	if (osd_info.index == DEV_ALL) {
-		for (i = 0; i < osd_meson_dev.osd_count; i++)
-			osd_set_reverse_hw(i, osd_info.osd_reverse);
-	} else
-		osd_set_reverse_hw(osd_info.index, osd_info.osd_reverse);
+		for (i = 0; i < osd_meson_dev.osd_count - 1; i++)
+			osd_set_reverse_hw(i, osd_info.osd_reverse, 1);
+		osd_set_reverse_hw(i, osd_info.osd_reverse, 0);
+	} else if (osd_info.index <= DEV_OSD2)
+		osd_set_reverse_hw(osd_info.index, osd_info.osd_reverse, 1);
+	else if (osd_info.index == DEV_OSD3)
+		osd_set_reverse_hw(osd_info.index, osd_info.osd_reverse, 0);
 	/* register vout client */
 	vout_register_client(&osd_notifier_nb);
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	if (osd_meson_dev.has_viu2)
+		vout2_register_client(&osd_notifier_nb2);
+#endif
 	INIT_DELAYED_WORK(&osd_dwork, mem_free_work);
 	schedule_delayed_work(&osd_dwork, msecs_to_jiffies(60 * 1000));
 
@@ -3352,6 +3580,10 @@ static int osd_remove(struct platform_device *pdev)
 	unregister_early_suspend(&early_suspend);
 #endif
 	vout_unregister_client(&osd_notifier_nb);
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	if (osd_meson_dev.has_viu2)
+		vout2_unregister_client(&osd_notifier_nb2);
+#endif
 	for (i = 0; i < osd_meson_dev.osd_count; i++) {
 		int j;
 
@@ -3359,8 +3591,16 @@ static int osd_remove(struct platform_device *pdev)
 			struct osd_fb_dev_s *fbdev = gp_fbdev_list[i];
 
 			fbi = fbdev->fb_info;
-			for (j = 0; j < ARRAY_SIZE(osd_attrs); j++)
-				device_remove_file(fbi->dev, &osd_attrs[j]);
+			if (i <= DEV_OSD2) {
+				for (j = 0; j < ARRAY_SIZE(osd_attrs); j++)
+					device_remove_file(
+					fbi->dev, &osd_attrs[j]);
+			} else if ((osd_meson_dev.osd_ver == OSD_HIGH_ONE) &&
+				(i == DEV_OSD3)) {
+				for (j = 0; j < ARRAY_SIZE(osd_attrs_viu2); j++)
+					device_remove_file(
+					fbi->dev, &osd_attrs_viu2[j]);
+			}
 			iounmap(fbdev->fb_mem_vaddr);
 			if (osd_get_afbc(i)) {
 				for (j = 1; j < OSD_MAX_BUF_NUM; j++)

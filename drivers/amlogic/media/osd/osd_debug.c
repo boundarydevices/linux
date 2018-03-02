@@ -199,6 +199,8 @@ static void osd_debug_dump_register_all(void)
 		osd_log_info("reg[0x%x]: 0x%08x\n\n", reg, osd_reg_read(reg));
 	}
 
+	if (!osd_hw.powered[count - 1])
+		count--;
 	for (index = 0; index < count; index++) {
 		osd_reg = &hw_osd_reg_array[index];
 		reg = osd_reg->osd_fifo_ctrl_stat;

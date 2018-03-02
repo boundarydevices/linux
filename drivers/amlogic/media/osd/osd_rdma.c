@@ -307,12 +307,29 @@ retry:
 	return ret;
 }
 
+static inline u32 is_rdma_reg(u32 addr)
+{
+	u32 rdma_en = 1;
+
+	if ((addr >= 0x1e10) && (addr <= 0x1e50))
+		rdma_en = 0;
+	else
+		rdma_en = 1;
+	return rdma_en;
+}
+
 static inline u32 read_reg_internal(u32 addr)
 {
 	int  i;
 	u32 val = 0;
+	u32 rdma_en = 0;
 
-	if (rdma_enable) {
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (rdma_en) {
 		for (i = (int)(item_count - 1);
 			i >= 0; i--) {
 			if (addr == rdma_table[i].addr) {
@@ -329,8 +346,14 @@ static inline u32 read_reg_internal(u32 addr)
 static inline int wrtie_reg_internal(u32 addr, u32 val)
 {
 	struct rdma_table_item request_item;
+	u32 rdma_en = 0;
 
-	if (!rdma_enable) {
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (!rdma_en) {
 		osd_reg_write(addr, val);
 		return 0;
 	}
@@ -363,8 +386,14 @@ u32 VSYNCOSD_RD_MPEG_REG(u32 addr)
 	bool find = false;
 	u32 val = 0;
 	unsigned long flags;
+	u32 rdma_en = 0;
 
-	if (rdma_enable) {
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (rdma_en) {
 		spin_lock_irqsave(&rdma_lock, flags);
 		/* 1st, read from rdma table */
 		for (i = (int)(item_count - 1);
@@ -391,8 +420,14 @@ EXPORT_SYMBOL(VSYNCOSD_RD_MPEG_REG);
 int VSYNCOSD_WR_MPEG_REG(u32 addr, u32 val)
 {
 	int ret = 0;
+	u32 rdma_en = 0;
 
-	if (rdma_enable)
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (rdma_en)
 		ret = update_table_item(addr, val, 0);
 	else
 		osd_reg_write(addr, val);
@@ -405,8 +440,14 @@ int VSYNCOSD_WR_MPEG_REG_BITS(u32 addr, u32 val, u32 start, u32 len)
 	unsigned long read_val;
 	unsigned long write_val;
 	int ret = 0;
+	u32 rdma_en = 0;
 
-	if (rdma_enable) {
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (rdma_en) {
 		read_val = VSYNCOSD_RD_MPEG_REG(addr);
 		write_val = (read_val & ~(((1L << (len)) - 1) << (start)))
 			    | ((unsigned int)(val) << (start));
@@ -422,8 +463,14 @@ int VSYNCOSD_SET_MPEG_REG_MASK(u32 addr, u32 _mask)
 	unsigned long read_val;
 	unsigned long write_val;
 	int ret = 0;
+	u32 rdma_en = 0;
 
-	if (rdma_enable) {
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (rdma_en) {
 		read_val = VSYNCOSD_RD_MPEG_REG(addr);
 		write_val = read_val | _mask;
 		ret = update_table_item(addr, write_val, 0);
@@ -438,8 +485,14 @@ int VSYNCOSD_CLR_MPEG_REG_MASK(u32 addr, u32 _mask)
 	unsigned long read_val;
 	unsigned long write_val;
 	int ret = 0;
+	u32 rdma_en = 0;
 
-	if (rdma_enable) {
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (rdma_en) {
 		read_val = VSYNCOSD_RD_MPEG_REG(addr);
 		write_val = read_val & (~_mask);
 		ret = update_table_item(addr, write_val, 0);
@@ -452,8 +505,14 @@ EXPORT_SYMBOL(VSYNCOSD_CLR_MPEG_REG_MASK);
 int VSYNCOSD_IRQ_WR_MPEG_REG(u32 addr, u32 val)
 {
 	int ret = 0;
+	u32 rdma_en = 0;
 
-	if (rdma_enable)
+	if (!is_rdma_reg(addr))
+		rdma_en = 0;
+	else
+		rdma_en = rdma_enable;
+
+	if (rdma_en)
 		ret = update_table_item(addr, val, 1);
 	else
 		osd_reg_write(addr, val);

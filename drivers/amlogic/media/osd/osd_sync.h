@@ -31,6 +31,7 @@ struct fb_sync_request_s {
 	int out_fen_fd;
 };
 
+#if 0
 struct fb_sync_request_render_s {
 	unsigned int    xoffset;
 	unsigned int    yoffset;
@@ -50,4 +51,31 @@ struct fb_sync_request_render_s {
 	int				pxiel_stride;
 	unsigned int    reserve;
 };
+#endif
+struct fb_sync_request_render_s {
+unsigned int    xoffset;
+unsigned int    yoffset;
+int             in_fen_fd;
+int             out_fen_fd;
+int             width;
+int             height;
+int             format;
+int             shared_fd;
+unsigned int    op;
+unsigned int    type; /*direct render or ge2d*/
+unsigned int    dst_x;
+unsigned int    dst_y;
+unsigned int    dst_w;
+unsigned int    dst_h;
+int	 byte_stride;
+int	 pxiel_stride;
+unsigned int  background_w;
+unsigned int  background_h;
+unsigned int  zorder;
+unsigned int  premult_en;
+unsigned int  afbc_en;
+unsigned int  afbc_inter_format;
+int  reserve;
+};
+
 #endif

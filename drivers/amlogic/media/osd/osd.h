@@ -107,7 +107,7 @@ enum color_index_e {
 #define KEYCOLOR_FLAG_ONHOLD  2
 #define KEYCOLOR_FLAG_CURRENT 4
 
-#define HW_OSD_COUNT 3
+#define HW_OSD_COUNT 4
 #define OSD_BLEND_LAYERS 4
 /* OSD block definition */
 #define HW_OSD_BLOCK_COUNT 4
@@ -146,7 +146,8 @@ enum color_index_e {
 enum osd_index_e {
 	OSD1 = 0,
 	OSD2,
-	OSD3
+	OSD3,
+	OSD4,
 };
 
 enum osd_enable_e {
@@ -215,6 +216,7 @@ enum osd_dev_e {
 	DEV_OSD0 = 0,
 	DEV_OSD1,
 	DEV_OSD2,
+	DEV_OSD3,
 	DEV_ALL,
 	DEV_MAX
 };
@@ -410,6 +412,8 @@ struct osd_device_data_s {
 	u8 osd_fifo_len;
 	u32 vpp_fifo_len;
 	u32 dummy_data;
+	u32 has_viu2;
+	struct clk *vpu_clkc;
 };
 
 struct hw_osd_reg_s {
@@ -498,6 +502,7 @@ struct hw_para_s {
 	u32 color_key[HW_OSD_COUNT];
 	u32 color_key_enable[HW_OSD_COUNT];
 	u32 enable[HW_OSD_COUNT];
+	u32 powered[HW_OSD_COUNT];
 	u32 reg_status_save;
 #ifdef FIQ_VSYNC
 	bridge_item_t fiq_handle_item;
@@ -556,7 +561,7 @@ struct hw_para_s {
 	u32 afbc_status_err_reset;
 	u32 afbc_use_latch;
 	u32 hwc_enable;
-	u32 osd_use_latch;
+	u32 osd_use_latch[HW_OSD_COUNT];
 	u32 hw_cursor_en;
 	u32 hw_rdma_en;
 };

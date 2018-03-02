@@ -58,6 +58,7 @@
 #define HHI_SYS_CPU_CLK_CNTL0   0x19c /* 0x67 offset in data sheet */
 
 #define HHI_MALI_CLK_CNTL		0x1b0 /* 0x6c offset in data sheet */
+#define HHI_VPU_CLKC_CNTL		0x1b4 /* 0x6d offset in data sheet */
 #define HHI_VPU_CLK_CNTL		0x1bC /* 0x6f offset in data sheet */
 
 #define HHI_HDMI_CLK_CNTL		0x1CC /* 0x73 offset in data sheet */

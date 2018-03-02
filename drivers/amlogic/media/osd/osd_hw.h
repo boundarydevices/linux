@@ -28,6 +28,7 @@
 #include "osd_rdma.h"
 
 extern int int_viu_vsync;
+extern int int_viu2_vsync;
 extern struct hw_para_s osd_hw;
 
 #ifdef CONFIG_HIBERNATION
@@ -95,7 +96,7 @@ extern void osd_enable_3d_mode_hw(u32 index, u32 enable);
 extern void osd_set_2x_scale_hw(u32 index, u16 h_scale_enable,
 				u16 v_scale_enable);
 extern void osd_get_flush_rate_hw(u32 *break_rate);
-extern void osd_set_reverse_hw(u32 index, u32 reverse);
+extern void osd_set_reverse_hw(u32 index, u32 reverse, u32 update);
 extern void osd_get_reverse_hw(u32 index, u32 *reverse);
 extern void osd_set_antiflicker_hw(u32 index, struct vinfo_s *vinfo, u32 yres);
 extern void osd_get_antiflicker_hw(u32 index, u32 *on_off);
@@ -125,6 +126,7 @@ extern void osd_resume_hw(void);
 extern void osd_shutdown_hw(void);
 extern void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	struct osd_device_data_s *osd_meson);
+extern void osd_init_viu2(void);
 extern void osd_init_scan_mode(void);
 extern void osd_set_logo_index(int index);
 extern int osd_get_logo_index(void);

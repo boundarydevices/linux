@@ -830,6 +830,118 @@ static struct clk_gate vpu_clkb_gate = {
 	},
 };
 
+static const char * const vpu_clkc_parent_names[] = { "fclk_div4",
+	"fclk_div3", "fclk_div5", "fclk_div7", "null", "null",
+	"null",  "null"};
+
+/* cts_clkc */
+static struct clk_mux vpu_clkc_p0_mux = {
+	.reg = (void *)HHI_VPU_CLKC_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "vpu_clkc_p0_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = vpu_clkc_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider vpu_clkc_p0_div = {
+	.reg = (void *)HHI_VPU_CLKC_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "vpu_clkc_p0_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "vpu_clkc_p0_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate vpu_clkc_p0_gate = {
+	.reg = (void *)HHI_VPU_CLKC_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "vpu_clkc_p0_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "vpu_clkc_p0_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux vpu_clkc_p1_mux = {
+	.reg = (void *)HHI_VPU_CLKC_CNTL,
+	.mask = 0x7,
+	.shift = 25,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "vpu_clkc_p1_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = vpu_clkc_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider vpu_clkc_p1_div = {
+	.reg = (void *)HHI_VPU_CLKC_CNTL,
+	.shift = 16,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "vpu_clkc_p1_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "vpu_clkc_p1_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate vpu_clkc_p1_gate = {
+	.reg = (void *)HHI_VPU_CLKC_CNTL,
+	.bit_idx = 24,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "vpu_clkc_p1_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "vpu_clkc_p1_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux vpu_clkc_mux = {
+	.reg = (void *)HHI_VPU_CLKC_CNTL,
+	.mask = 0x1,
+	.shift = 31,
+	.lock = &clk_lock,
+	.flags = CLK_PARENT_ALTERNATE,
+	.hw.init = &(struct clk_init_data){
+		.name = "vpu_clkc_mux",
+		.ops = &meson_clk_mux_ops,
+		.parent_names = (const char *[]){ "vpu_clkc_p0_composite",
+			"vpu_clkc_p1_composite"},
+		.num_parents = 2,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_hw *vpu_clkc_hws[] = {
+	[CLKID_VPU_CLKC_P0_MUX - CLKID_VPU_CLKC_P0_MUX] = &vpu_clkc_p0_mux.hw,
+	[CLKID_VPU_CLKC_P0_DIV - CLKID_VPU_CLKC_P0_MUX] = &vpu_clkc_p0_div.hw,
+	[CLKID_VPU_CLKC_P0_GATE - CLKID_VPU_CLKC_P0_MUX] = &vpu_clkc_p0_gate.hw,
+	[CLKID_VPU_CLKC_P1_MUX - CLKID_VPU_CLKC_P0_MUX] = &vpu_clkc_p1_mux.hw,
+	[CLKID_VPU_CLKC_P1_DIV - CLKID_VPU_CLKC_P0_MUX] = &vpu_clkc_p1_div.hw,
+	[CLKID_VPU_CLKC_P1_GATE - CLKID_VPU_CLKC_P0_MUX] = &vpu_clkc_p1_gate.hw,
+	[CLKID_VPU_CLKC_MUX - CLKID_VPU_CLKC_P0_MUX]      = &vpu_clkc_mux.hw,
+};
 
 
 void meson_g12a_media_init(void)
@@ -901,6 +1013,15 @@ void meson_g12a_media_init(void)
 
 	vpu_clkb_div.reg = clk_base + (u64)(vpu_clkb_div.reg);
 	vpu_clkb_gate.reg = clk_base + (u64)(vpu_clkb_gate.reg);
+
+	/* cts_vpu_clkc */
+	vpu_clkc_p0_mux.reg = clk_base + (u64)(vpu_clkc_p0_mux.reg);
+	vpu_clkc_p0_div.reg = clk_base + (u64)(vpu_clkc_p0_div.reg);
+	vpu_clkc_p0_gate.reg = clk_base + (u64)(vpu_clkc_p0_gate.reg);
+	vpu_clkc_p1_mux.reg = clk_base + (u64)(vpu_clkc_p1_mux.reg);
+	vpu_clkc_p1_div.reg = clk_base + (u64)(vpu_clkc_p1_div.reg);
+	vpu_clkc_p1_gate.reg = clk_base + (u64)(vpu_clkc_p1_gate.reg);
+	vpu_clkc_mux.reg = clk_base + (u64)(vpu_clkc_mux.reg);
 
 	clks[CLKID_DSI_MEAS_COMP] = clk_register_composite(NULL,
 		"dsi_meas_composite",
@@ -1145,6 +1266,38 @@ void meson_g12a_media_init(void)
 			panic("%s: %d clk_register_composite vpu_clkb_composite error\n",
 				__func__, __LINE__);
 
+	/* cts_vpu_clkc */
+	clks[CLKID_VPU_CLKC_P0_COMP] = clk_register_composite(NULL,
+		"vpu_clkc_p0_composite",
+		vpu_clkc_parent_names, 8,
+		vpu_clkc_hws[CLKID_VPU_CLKC_P0_MUX - CLKID_VPU_CLKC_P0_MUX],
+		&clk_mux_ops,
+		vpu_clkc_hws[CLKID_VPU_CLKC_P0_DIV - CLKID_VPU_CLKC_P0_MUX],
+		&clk_divider_ops,
+		vpu_clkc_hws[CLKID_VPU_CLKC_P0_GATE - CLKID_VPU_CLKC_P0_MUX],
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_VPU_CLKC_P0_COMP]))
+		panic("%s: %d clk_register_composite vpu_clkc_p0_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_VPU_CLKC_P1_COMP] = clk_register_composite(NULL,
+		"vpu_clkc_p1_composite",
+		vpu_clkc_parent_names, 8,
+		vpu_clkc_hws[CLKID_VPU_CLKC_P1_MUX - CLKID_VPU_CLKC_P0_MUX],
+		&clk_mux_ops,
+		vpu_clkc_hws[CLKID_VPU_CLKC_P1_DIV - CLKID_VPU_CLKC_P0_MUX],
+		&clk_divider_ops,
+		vpu_clkc_hws[CLKID_VPU_CLKC_P1_GATE - CLKID_VPU_CLKC_P0_MUX],
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_VPU_CLKC_P1_COMP]))
+		panic("%s: %d clk_register_composite vpu_clkc_p1_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_VPU_CLKC_MUX] = clk_register(NULL,
+		vpu_clkc_hws[CLKID_VPU_CLKC_MUX - CLKID_VPU_CLKC_P0_MUX]);
+	if (IS_ERR(clks[CLKID_VPU_CLKC_MUX]))
+		panic("%s: %d clk_register vpu_clkc_mux error\n",
+			__func__, __LINE__);
 	pr_info("%s: register meson media clk\n", __func__);
 }
 

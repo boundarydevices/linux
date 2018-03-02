@@ -350,7 +350,7 @@ static ssize_t osd_reverse_write_file(struct file *file,
 	ret = kstrtoint(buf, 0, &osd_reverse);
 	if (osd_reverse >= REVERSE_MAX)
 		osd_reverse = REVERSE_FALSE;
-	osd_set_reverse_hw(osd_id, osd_reverse);
+	osd_set_reverse_hw(osd_id, osd_reverse, 1);
 	return count;
 }
 
