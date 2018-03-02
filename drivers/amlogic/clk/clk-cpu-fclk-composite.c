@@ -170,11 +170,10 @@ static unsigned long meson_fclk_cpu_recalc_rate(struct clk_hw *hw,
 {
 	struct meson_cpu_mux_divider *mux_divider =
 		to_clk_mux_divider(hw);
-	struct clk_hw *parent_hw;
 	struct parm_fclk *p_premux, *p_postmux, *p_div;
-	unsigned long rate, new_parent_rate;
+	unsigned long rate;
 	u32  val, final_dyn_mask, div;
-	u8 final_dyn_shift, index;
+	u8 final_dyn_shift;
 
 	final_dyn_mask = mux_divider->cpu_fclk_p.mask;
 	final_dyn_shift = mux_divider->cpu_fclk_p.shift;
@@ -190,11 +189,6 @@ static unsigned long meson_fclk_cpu_recalc_rate(struct clk_hw *hw,
 		p_div = &mux_divider->cpu_fclk_p01;
 	}
 
-	index = meson_fclk_cpu_get_parent(hw);
-	parent_hw = clk_hw_get_parent_by_index(hw, index);
-	new_parent_rate = clk_hw_get_rate(parent_hw);
-	if (new_parent_rate != parent_rate)
-		clk_set_parent(hw->clk, parent_hw->clk);
 	div = PARM_GET(p_div->width, p_div->shift, val);
 	rate = parent_rate / (div + 1);
 
@@ -267,7 +261,6 @@ int meson_fclk_mux_divider_determine_rate(struct clk_hw *hw,
 			     struct clk_rate_request *req)
 {
 	struct clk_hw *best_parent = NULL;
-	int ret;
 	unsigned long best = 0;
 	struct clk_rate_request parent_req = *req;
 	struct meson_cpu_mux_divider *mux_divider =
@@ -283,15 +276,8 @@ int meson_fclk_mux_divider_determine_rate(struct clk_hw *hw,
 	best_parent = clk_hw_get_parent_by_index(hw, premux);
 	best = clk_hw_get_rate(best_parent);
 
-	if (best != parent_req.rate) {
-		ret = clk_set_rate(best_parent->clk, parent_req.rate);
-		if (ret)
-			pr_err("Fail! Can not set to %lu, cur rate: %lu\n",
-					parent_req.rate, best);
-		pr_debug("success set parent %s rate to %lu\n",
-			clk_hw_get_name(best_parent),
-				clk_hw_get_rate(best_parent));
-	}
+	if (best != parent_req.rate)
+		meson_fclk_cpu_set_parent(hw, premux);
 
 	if (!best_parent)
 		return -EINVAL;
