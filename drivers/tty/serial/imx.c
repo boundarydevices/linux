@@ -775,6 +775,9 @@ static void imx_start_tx(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 	u32 ucr1, ucr2, ucr4;
 
+	if (!sport->port.x_char && uart_circ_empty(&port->state->xmit))
+		return;
+
 	if (sport->half_duplex) {
 		/* half duplex in IrDA mode; have to disable receive mode */
 		ucr4 = imx_uart_readl(sport, UCR4);
