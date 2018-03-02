@@ -134,7 +134,7 @@ static const struct pll_rate_table g12a_pll_rate_table[] = {
 	PLL_RATE(1704000000, 142, 1, 1), /*DCO=3408M*/
 	PLL_RATE(1800000000, 150, 1, 1), /*DCO=3600M*/
 	PLL_RATE(1896000000, 158, 1, 1), /*DCO=3792M*/
-	PLL_RATE(1992000000, 166, 1, 1), /*DCO=3984M*/
+	PLL_RATE(2016000000, 168, 1, 1), /*DCO=4032M*/
 	PLL_RATE(2100000000, 175, 1, 1), /*DCO=4200M*/
 	PLL_RATE(2196000000, 183, 1, 1), /*DCO=4392M*/
 	PLL_RATE(2292000000, 191, 1, 1), /*DCO=4584M*/
@@ -177,6 +177,19 @@ static const struct pll_rate_table g12a_pll_rate_table[] = {
 	PLL_RATE(6000000000, 250, 1, 0), /*DCO=6000M*/
 
 	{ /* sentinel */ },
+};
+
+/*fix pll rate table*/
+static const struct fclk_rate_table fclk_pll_rate_table[] = {
+	FCLK_PLL_RATE(50000000, 1, 1, 19),
+	FCLK_PLL_RATE(100000000, 1, 1, 9),
+	FCLK_PLL_RATE(167000000, 2, 1, 3),
+	FCLK_PLL_RATE(200000000, 1, 1, 4),
+	FCLK_PLL_RATE(250000000, 1, 1, 3),
+	FCLK_PLL_RATE(333000000, 2, 1, 1),
+	FCLK_PLL_RATE(500000000, 1, 1, 1),
+	FCLK_PLL_RATE(667000000, 2, 0, 0),
+	FCLK_PLL_RATE(1000000000, 1, 0, 0),
 };
 
 /*PCIE clk_out = 24M*m/2/2/OD*/

@@ -41,14 +41,16 @@
 #define MESON_CPU_CLK_CNTL1		0x00
 #define MESON_CPU_CLK_CNTL		0x40
 
-#define MESON_CPU_CLK_MUX1		BIT(7)
-#define MESON_CPU_CLK_MUX2		BIT(0)
+#define MESON_POST_MUX0		BIT(2)
+#define MESON_DYN_MUX			BIT(10)
+#define MESON_FINAL_MUX			BIT(11)
+#define MESON_POST_MUX1		BIT(18)
 
 #define MESON_N_WIDTH			9
 #define MESON_N_SHIFT			20
 #define MESON_SEL_WIDTH			2
 #define MESON_SEL_SHIFT			2
-
+#define MID_RATE		(1000*1000*1000)
 #include "clkc.h"
 
 #define to_meson_clk_cpu_nb(_nb) container_of(_nb, struct meson_clk_cpu, clk_nb)
@@ -84,6 +86,40 @@ static u8 meson_clk_cpu_get_parent(struct clk_hw *hw)
 static int meson_clk_cpu_set_parent(struct clk_hw *hw, u8 index)
 {
 	/* To Do*/
+	struct clk_mux *mux = to_clk_mux(hw);
+	u32 val;
+	unsigned long flags = 0;
+
+	if (mux->table) {
+		index = mux->table[index];
+	} else {
+		if (mux->flags & CLK_MUX_INDEX_BIT)
+			index = (1 << ffs(index));
+
+		if (mux->flags & CLK_MUX_INDEX_ONE)
+			index++;
+	}
+
+	if (mux->lock)
+		spin_lock_irqsave(mux->lock, flags);
+	else
+		__acquire(mux->lock);
+
+	if (mux->flags & CLK_MUX_HIWORD_MASK) {
+		val = mux->mask << (mux->shift + 16);
+	} else {
+		val = clk_readl(mux->reg);
+		val &= ~(mux->mask << mux->shift);
+	}
+
+	val |= index << mux->shift;
+	clk_writel(val, mux->reg);
+
+	if (mux->lock)
+		spin_unlock_irqrestore(mux->lock, flags);
+	else
+		__release(mux->lock);
+
 	return 0;
 }
 
@@ -111,19 +147,15 @@ static int meson_clk_cpu_pre_rate_change(struct meson_clk_cpu *clk_cpu,
 {
 	u32 cpu_clk_cntl;
 
-	/* switch MUX1 to xtal */
-	cpu_clk_cntl = readl(clk_cpu->base + clk_cpu->reg_off
+	if (ndata->new_rate > MID_RATE) {
+		/* switch final mux to fix pll */
+		cpu_clk_cntl = readl(clk_cpu->base + clk_cpu->reg_off
 				+ MESON_CPU_CLK_CNTL);
-	cpu_clk_cntl &= ~MESON_CPU_CLK_MUX1;
-	writel(cpu_clk_cntl, clk_cpu->base + clk_cpu->reg_off
+		cpu_clk_cntl &= ~MESON_FINAL_MUX;
+		writel(cpu_clk_cntl, clk_cpu->base + clk_cpu->reg_off
 				+ MESON_CPU_CLK_CNTL);
-	udelay(100);
-
-	/* switch MUX2 to sys-pll */
-	cpu_clk_cntl |= MESON_CPU_CLK_MUX2;
-	writel(cpu_clk_cntl, clk_cpu->base + clk_cpu->reg_off
-				+ MESON_CPU_CLK_CNTL);
-
+		udelay(100);
+	}
 	return 0;
 }
 
@@ -133,13 +165,15 @@ static int meson_clk_cpu_post_rate_change(struct meson_clk_cpu *clk_cpu,
 {
 	u32 cpu_clk_cntl;
 
-	/* switch MUX1 to divisors' output */
-	cpu_clk_cntl = readl(clk_cpu->base + clk_cpu->reg_off
+	if (ndata->new_rate > MID_RATE) {
+		/* switch final mux to sys pll */
+		cpu_clk_cntl = readl(clk_cpu->base + clk_cpu->reg_off
 				+ MESON_CPU_CLK_CNTL);
-	cpu_clk_cntl |= MESON_CPU_CLK_MUX1;
-	writel(cpu_clk_cntl, clk_cpu->base + clk_cpu->reg_off
+		cpu_clk_cntl |= MESON_FINAL_MUX;
+		writel(cpu_clk_cntl, clk_cpu->base + clk_cpu->reg_off
 				+ MESON_CPU_CLK_CNTL);
-	udelay(100);
+		udelay(100);
+	}
 
 	return 0;
 }
@@ -165,7 +199,7 @@ int meson_clk_cpu_notifier_cb(struct notifier_block *nb,
 }
 
 const struct clk_ops meson_clk_cpu_ops = {
-	.recalc_rate	= meson_clk_cpu_recalc_rate,
+	.recalc_rate = meson_clk_cpu_recalc_rate,
 	.get_parent = meson_clk_cpu_get_parent,
 	.set_parent = meson_clk_cpu_set_parent,
 };

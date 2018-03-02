@@ -41,6 +41,12 @@ struct parm {
 	u8	width;
 };
 
+struct parm_fclk {
+	u8	shift;
+	u8	width;
+	u32	mask;
+};
+
 struct pll_rate_table {
 	unsigned long	rate;
 	u16		m;
@@ -48,6 +54,13 @@ struct pll_rate_table {
 	u16		od;
 	u16		od2;
 	u16		frac;
+};
+
+struct fclk_rate_table {
+	unsigned long rate;
+	u16 premux;
+	u16 postmux;
+	u16 mux_div;
 };
 
 #define PLL_RATE(_r, _m, _n, _od)					\
@@ -67,6 +80,14 @@ struct pll_rate_table {
 		.od2		= (_od2),				\
 		.frac		= (_frac),				\
 	}								\
+
+#define FCLK_PLL_RATE(_r, _premux, _postmux, _mux_div)			\
+	{								\
+		.rate		= (_r),					\
+		.premux		= (_premux),				\
+		.postmux	= (_postmux),				\
+		.mux_div	= (_mux_div),				\
+	}
 
 struct meson_clk_pll {
 	struct clk_hw hw;
@@ -197,6 +218,24 @@ struct meson_composite {
 	unsigned long flags;
 };
 
+/*cpu mux and divider*/
+struct meson_cpu_mux_divider {
+	struct clk_hw hw;
+	void __iomem	*reg;
+	u32	*table;
+	struct parm_fclk cpu_fclk_p00;
+	struct parm_fclk cpu_fclk_p0;
+	struct parm_fclk cpu_fclk_p10;
+	struct parm_fclk cpu_fclk_p1;
+	struct parm_fclk cpu_fclk_p;
+	struct parm_fclk cpu_fclk_p01;
+	struct parm_fclk cpu_fclk_p11;
+	const struct fclk_rate_table *rate_table;
+	unsigned int rate_count;
+	spinlock_t *lock;
+	unsigned long flags;
+};
+
 /*single clock,mux/div/gate*/
 struct meson_hw {
 	unsigned int hw_id;
@@ -207,6 +246,7 @@ struct meson_hw {
 extern const struct clk_ops meson_clk_pll_ro_ops;
 extern const struct clk_ops meson_clk_pll_ops;
 extern const struct clk_ops meson_clk_cpu_ops;
+extern const struct clk_ops meson_fclk_cpu_ops;
 extern const struct clk_ops meson_clk_mpll_ro_ops;
 extern const struct clk_ops meson_clk_mpll_ops;
 extern const struct clk_ops meson_clk_mux_ops;

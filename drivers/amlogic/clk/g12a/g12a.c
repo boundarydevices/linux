@@ -439,6 +439,7 @@ static struct clk_gate g12a_mipi_bandgap_gate = {
  * post-dividers and should be modelled with their respective PLLs via the
  * forthcoming coordinated clock rates feature
  */
+ #if 0
 static u32 mux_table_cpu_px0[]	= { 0, 1, 2 };
 static u32 mux_table_cpu_px[]	= { 0, 1 };
 
@@ -547,6 +548,57 @@ static struct clk_mux g12a_cpu_fixedpll_p = {
 			"cpu_fixedpll_p1"},
 		.num_parents = 2,
 		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+#endif
+static u32 mux_table_cpu_p[]	= { 0, 1, 2 };
+static u32 mux_table_cpu_px[]   = { 0, 1 };
+static struct meson_cpu_mux_divider g12a_cpu_fclk_p = {
+	.reg = (void *)HHI_SYS_CPU_CLK_CNTL0,
+	.cpu_fclk_p00 = {
+		.mask = 0x3,
+		.shift = 0,
+		.width = 2,
+	},
+	.cpu_fclk_p0 = {
+		.mask = 0x1,
+		.shift = 2,
+		.width = 1,
+	},
+	.cpu_fclk_p10 = {
+		.mask = 0x3,
+		.shift = 16,
+		.width = 2,
+	},
+	.cpu_fclk_p1 = {
+		.mask = 0x1,
+		.shift = 18,
+		.width = 1,
+	},
+	.cpu_fclk_p = {
+		.mask = 0x1,
+		.shift = 10,
+		.width = 1,
+	},
+	.cpu_fclk_p01 = {
+		.shift = 4,
+		.width = 6,
+	},
+	.cpu_fclk_p11 = {
+		.shift = 20,
+		.width = 6,
+	},
+	.table = mux_table_cpu_p,
+	.rate_table = fclk_pll_rate_table,
+	.rate_count = ARRAY_SIZE(fclk_pll_rate_table),
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cpu_fixedpll_p",
+		.ops = &meson_fclk_cpu_ops,
+		.parent_names = (const char *[]){ "xtal", "fclk_div2",
+			"fclk_div3"},
+		.num_parents = 3,
+		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
 	},
 };
 
@@ -791,13 +843,15 @@ static struct clk_hw *g12a_clk_hws[] = {
 	[CLKID_AO_IFACE]        = &g12a_ao_iface.hw,
 	[CLKID_AO_I2C]          = &g12a_ao_i2c.hw,
 #endif
+#if 0
 	[CLKID_CPU_FCLK_P00]    = &g12a_cpu_fixedpll_p00.hw,
 	[CLKID_CPU_FCLK_P01]    = &g12a_cpu_fixedpll_p01.hw,
 	[CLKID_CPU_FCLK_P0]     = &g12a_cpu_fixedpll_p0.hw,
 	[CLKID_CPU_FCLK_P10]    = &g12a_cpu_fixedpll_p10.hw,
 	[CLKID_CPU_FCLK_P11]    = &g12a_cpu_fixedpll_p11.hw,
 	[CLKID_CPU_FCLK_P1]     = &g12a_cpu_fixedpll_p1.hw,
-	[CLKID_CPU_FCLK_P]      = &g12a_cpu_fixedpll_p.hw,
+#endif
+	[CLKID_CPU_FCLK_P]      = &g12a_cpu_fclk_p.hw,
 	[CLKID_CPU_CLK]         = &g12a_cpu_clk.mux.hw,
 
 	[CLKID_PCIE_PLL]        = &g12a_pcie_pll.hw,
@@ -919,14 +973,17 @@ static void __init g12a_clkc_init(struct device_node *np)
 		g12a_clk_mplls[i]->base = clk_base;
 
 	/* Populate the base address for CPU clk */
+	g12a_cpu_clk.base = clk_base;
 	g12a_cpu_clk.mux.reg = clk_base + (u64)g12a_cpu_clk.mux.reg;
+#if 0
 	g12a_cpu_fixedpll_p00.reg = clk_base + (u64)g12a_cpu_fixedpll_p00.reg;
 	g12a_cpu_fixedpll_p01.reg = clk_base + (u64)g12a_cpu_fixedpll_p01.reg;
 	g12a_cpu_fixedpll_p10.reg = clk_base + (u64)g12a_cpu_fixedpll_p10.reg;
 	g12a_cpu_fixedpll_p11.reg = clk_base + (u64)g12a_cpu_fixedpll_p11.reg;
 	g12a_cpu_fixedpll_p0.reg = clk_base + (u64)g12a_cpu_fixedpll_p0.reg;
 	g12a_cpu_fixedpll_p1.reg = clk_base + (u64)g12a_cpu_fixedpll_p1.reg;
-	g12a_cpu_fixedpll_p.reg = clk_base + (u64)g12a_cpu_fixedpll_p.reg;
+#endif
+	g12a_cpu_fclk_p.reg = clk_base + (u64)g12a_cpu_fclk_p.reg;
 
 	/* Populate the base address for the MPEG clks */
 	g12a_mpeg_clk_sel.reg = clk_base + (u64)g12a_mpeg_clk_sel.reg;

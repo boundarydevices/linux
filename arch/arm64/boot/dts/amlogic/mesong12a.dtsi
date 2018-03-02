@@ -183,7 +183,7 @@
 			};
 
 			opp09 {
-				opp-hz = /bits/ 64 <1992000000>;
+				opp-hz = /bits/ 64 <2016000000>;
 				opp-microvolt = <1011000>;
 				clock-latency-ns = <2000000>;
 			};

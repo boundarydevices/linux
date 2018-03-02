@@ -14336,3 +14336,8 @@ AMLOGIC Audio codec AD82584F driver
 M: Peipeng Zhao <peipeng.zhao@amlogic.com>
 F: sound/soc/codecs/amlogic/ad82584f.c
 F: sound/soc/codecs/amlogic/ad82584f.h
+
+AMLOGIC CPUFREQS DRIVER
+M:	hong guo <hong.guo@amlogic.com>
+F:	drivers/cpufreq/meson-cpufreq.c
+F:	drivers/amlogic/clk/clk-cpu-fclk-composite.c

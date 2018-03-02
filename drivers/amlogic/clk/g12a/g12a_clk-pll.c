@@ -294,7 +294,7 @@ static int meson_g12a_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	/* PLL reset */
 	writel(readl(pll->base + p->reg_off) | MESON_PLL_ENABLE,
 		pll->base + p->reg_off);
-	udelay(10);
+	udelay(50);
 	writel(readl(pll->base + p->reg_off) & (~MESON_PLL_RESET),
 		pll->base + p->reg_off);
 	ret = meson_g12a_pll_wait_lock(pll, p);
@@ -375,6 +375,8 @@ static void meson_g12a_pll_disable(struct clk_hw *hw)
 	if (pll->lock)
 		spin_lock_irqsave(pll->lock, flags);
 
+	writel(readl(pll->base + p->reg_off) | (MESON_PLL_RESET),
+		pll->base + p->reg_off);
 	writel(readl(pll->base + p->reg_off) & (~MESON_PLL_ENABLE),
 		pll->base + p->reg_off);
 
