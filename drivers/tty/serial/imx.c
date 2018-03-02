@@ -504,15 +504,6 @@ static void imx_stop_rx(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 	u32 ucr1, ucr2, ucr4;
 
-	if (sport->dma_is_rxing) {
-		if (sport->port.suspended) {
-			dmaengine_terminate_all(sport->dma_chan_rx);
-			sport->dma_is_rxing = 0;
-		} else {
-			return;
-		}
-	}
-
 	/* disable the Receiver Ready and overrun Interrrupt */
 	ucr1 = imx_uart_readl(sport, UCR1);
 	imx_uart_writel(sport, ucr1 & ~UCR1_RRDYEN, UCR1);
