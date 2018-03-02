@@ -646,15 +646,16 @@ static void lcd_vinfo_update_default(void)
 	}
 }
 
-static void lcd_tv_vout_server_init(void)
+void lcd_tv_vout_server_init(void)
 {
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-
 	lcd_vinfo_update_default();
-	lcd_drv->vout_server = &lcd_vout_server;
-#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
-	lcd_drv->vout2_server = NULL;
-#endif
+
+	vout_register_server(&lcd_vout_server);
+}
+
+void lcd_tv_vout_server_remove(void)
+{
+	vout_register_server(&lcd_vout_server);
 }
 
 /* ************************************************** *
@@ -1440,7 +1441,6 @@ int lcd_tv_probe(struct device *dev)
 
 	memset(lcd_output_name, 0, sizeof(lcd_output_name));
 	lcd_drv->version = LCD_DRV_VERSION;
-	lcd_drv->vout_server_init = lcd_tv_vout_server_init;
 	lcd_drv->driver_init_pre = lcd_tv_driver_init_pre;
 	lcd_drv->driver_disable_post = lcd_tv_driver_disable_post;
 	lcd_drv->driver_init = lcd_tv_driver_init;

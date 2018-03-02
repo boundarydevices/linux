@@ -153,12 +153,24 @@
 #define HHI_VID_LOCK_CLK_CNTL                      0xf2
 
 /* AXG use PLL   0xff63c000 */
-#define HHI_GP0_PLL_CNTL                           0x10
-#define HHI_GP0_PLL_CNTL2                          0x11
-#define HHI_GP0_PLL_CNTL3                          0x12
-#define HHI_GP0_PLL_CNTL4                          0x13
-#define HHI_GP0_PLL_CNTL5                          0x14
-#define HHI_GP0_PLL_CNTL1                          0x16
+#define HHI_GP0_PLL_CNTL_AXG                       0x10
+#define HHI_GP0_PLL_CNTL2_AXG                      0x11
+#define HHI_GP0_PLL_CNTL3_AXG                      0x12
+#define HHI_GP0_PLL_CNTL4_AXG                      0x13
+#define HHI_GP0_PLL_CNTL5_AXG                      0x14
+#define HHI_GP0_PLL_CNTL1_AXG                      0x16
+
+/* G12A use PLL   0xff63c000 */
+#define HHI_GP0_PLL_CNTL0_G12A                     0x10
+#define HHI_GP0_PLL_CNTL1_G12A                     0x11
+#define HHI_GP0_PLL_CNTL2_G12A                     0x12
+#define HHI_GP0_PLL_CNTL3_G12A                     0x13
+#define HHI_GP0_PLL_CNTL4_G12A                     0x14
+#define HHI_GP0_PLL_CNTL5_G12A                     0x15
+#define HHI_GP0_PLL_CNTL6_G12A                     0x16
+
+#define HHI_MIPIDSI_PHY_CLK_CNTL                   0x95
+
 
 #define	HHI_MIPI_CNTL0                             0x00
 #define	HHI_MIPI_CNTL1                             0x01
@@ -1280,6 +1292,67 @@
 //  1: 0 RW mem_pd.     Default 3.
 #define MIPI_DSI_TOP_MEM_PD                        0x18fd
 
+#define MIPI_DSI_DWC_VERSION_OS_G12A                    0x1c00
+#define MIPI_DSI_DWC_PWR_UP_OS_G12A                     0x1c01
+#define MIPI_DSI_DWC_CLKMGR_CFG_OS_G12A                 0x1c02
+#define MIPI_DSI_DWC_DPI_VCID_OS_G12A                   0x1c03
+#define MIPI_DSI_DWC_DPI_COLOR_CODING_OS_G12A           0x1c04
+#define MIPI_DSI_DWC_DPI_CFG_POL_OS_G12A                0x1c05
+#define MIPI_DSI_DWC_DPI_LP_CMD_TIM_OS_G12A             0x1c06
+#define MIPI_DSI_DWC_PCKHDL_CFG_OS_G12A                 0x1c0b
+#define MIPI_DSI_DWC_GEN_VCID_OS_G12A                   0x180c
+#define MIPI_DSI_DWC_MODE_CFG_OS_G12A                   0x1c0d
+#define MIPI_DSI_DWC_VID_MODE_CFG_OS_G12A               0x1c0e
+#define MIPI_DSI_DWC_VID_PKT_SIZE_OS_G12A               0x1c0f
+#define MIPI_DSI_DWC_VID_NUM_CHUNKS_OS_G12A             0x1c10
+#define MIPI_DSI_DWC_VID_NULL_SIZE_OS_G12A              0x1c11
+#define MIPI_DSI_DWC_VID_HSA_TIME_OS_G12A               0x1c12
+#define MIPI_DSI_DWC_VID_HBP_TIME_OS_G12A               0x1c13
+#define MIPI_DSI_DWC_VID_HLINE_TIME_OS_G12A             0x1c14
+#define MIPI_DSI_DWC_VID_VSA_LINES_OS_G12A              0x1c15
+#define MIPI_DSI_DWC_VID_VBP_LINES_OS_G12A              0x1c16
+#define MIPI_DSI_DWC_VID_VFP_LINES_OS_G12A              0x1c17
+#define MIPI_DSI_DWC_VID_VACTIVE_LINES_OS_G12A          0x1c18
+#define MIPI_DSI_DWC_EDPI_CMD_SIZE_OS_G12A              0x1c19
+#define MIPI_DSI_DWC_CMD_MODE_CFG_OS_G12A               0x1c1a
+#define MIPI_DSI_DWC_GEN_HDR_OS_G12A                    0x1c1b
+#define MIPI_DSI_DWC_GEN_PLD_DATA_OS_G12A               0x1c1c
+#define MIPI_DSI_DWC_CMD_PKT_STATUS_OS_G12A             0x1c1d
+#define MIPI_DSI_DWC_TO_CNT_CFG_OS_G12A                 0x1c1e
+#define MIPI_DSI_DWC_HS_RD_TO_CNT_OS_G12A               0x1c1f
+#define MIPI_DSI_DWC_LP_RD_TO_CNT_OS_G12A               0x1c20
+#define MIPI_DSI_DWC_HS_WR_TO_CNT_OS_G12A               0x1c21
+#define MIPI_DSI_DWC_LP_WR_TO_CNT_OS_G12A               0x1c22
+#define MIPI_DSI_DWC_BTA_TO_CNT_OS_G12A                 0x1c23
+#define MIPI_DSI_DWC_SDF_3D_OS_G12A                     0x1c24
+#define MIPI_DSI_DWC_LPCLK_CTRL_OS_G12A                 0x1c25
+#define MIPI_DSI_DWC_PHY_TMR_LPCLK_CFG_OS_G12A          0x1c26
+#define MIPI_DSI_DWC_PHY_TMR_CFG_OS_G12A                0x1c27
+#define MIPI_DSI_DWC_PHY_RSTZ_OS_G12A                   0x1c28
+#define MIPI_DSI_DWC_PHY_IF_CFG_OS_G12A                 0x1c29
+#define MIPI_DSI_DWC_PHY_ULPS_CTRL_OS_G12A              0x1c2a
+#define MIPI_DSI_DWC_PHY_TX_TRIGGERS_OS_G12A            0x1c2b
+#define MIPI_DSI_DWC_PHY_STATUS_OS_G12A                 0x1c2c
+#define MIPI_DSI_DWC_PHY_TST_CTRL0_OS_G12A              0x1c2d
+#define MIPI_DSI_DWC_PHY_TST_CTRL1_OS_G12A              0x1c2e
+#define MIPI_DSI_DWC_INT_ST0_OS_G12A                    0x1c2f
+#define MIPI_DSI_DWC_INT_ST1_OS_G12A                    0x1c30
+#define MIPI_DSI_DWC_INT_MSK0_OS_G12A                   0x1c31
+#define MIPI_DSI_DWC_INT_MSK1_OS_G12A                   0x1c32
+#define MIPI_DSI_TOP_SW_RESET_G12A                      0x1cf0
+#define MIPI_DSI_TOP_CLK_CNTL_G12A                      0x1cf1
+#define MIPI_DSI_TOP_CNTL_G12A                          0x1cf2
+#define MIPI_DSI_TOP_SUSPEND_CNTL_G12A                  0x1cf3
+#define MIPI_DSI_TOP_SUSPEND_LINE_G12A                  0x1cf4
+#define MIPI_DSI_TOP_SUSPEND_PIX_G12A                   0x1cf5
+#define MIPI_DSI_TOP_MEAS_CNTL_G12A                     0x1cf6
+#define MIPI_DSI_TOP_STAT_G12A                          0x1cf7
+#define MIPI_DSI_TOP_MEAS_STAT_TE0_G12A                 0x1cf8
+#define MIPI_DSI_TOP_MEAS_STAT_TE1_G12A                 0x1cf9
+#define MIPI_DSI_TOP_MEAS_STAT_VS0_G12A                 0x1cfa
+#define MIPI_DSI_TOP_MEAS_STAT_VS1_G12A                 0x1cfb
+#define MIPI_DSI_TOP_INTR_CNTL_STAT_G12A                0x1cfc
+#define MIPI_DSI_TOP_MEM_PD_G12A                        0x1cfd
 /* ***********************************************
  * DSI PHY register offset address define
  */

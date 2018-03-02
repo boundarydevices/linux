@@ -455,12 +455,26 @@ static unsigned int lcd_reg_dump_clk[] = {
 };
 
 static unsigned int lcd_reg_dump_clk_axg[] = {
-	HHI_GP0_PLL_CNTL,
-	HHI_GP0_PLL_CNTL2,
-	HHI_GP0_PLL_CNTL3,
-	HHI_GP0_PLL_CNTL4,
-	HHI_GP0_PLL_CNTL5,
-	HHI_GP0_PLL_CNTL1,
+	HHI_GP0_PLL_CNTL_AXG,
+	HHI_GP0_PLL_CNTL2_AXG,
+	HHI_GP0_PLL_CNTL3_AXG,
+	HHI_GP0_PLL_CNTL4_AXG,
+	HHI_GP0_PLL_CNTL5_AXG,
+	HHI_GP0_PLL_CNTL1_AXG,
+	HHI_VID_PLL_CLK_DIV,
+	HHI_VIID_CLK_DIV,
+	HHI_VIID_CLK_CNTL,
+	HHI_VID_CLK_CNTL2,
+};
+
+static unsigned int lcd_reg_dump_clk_g12a[] = {
+	HHI_GP0_PLL_CNTL0_G12A,
+	HHI_GP0_PLL_CNTL1_G12A,
+	HHI_GP0_PLL_CNTL2_G12A,
+	HHI_GP0_PLL_CNTL3_G12A,
+	HHI_GP0_PLL_CNTL4_G12A,
+	HHI_GP0_PLL_CNTL5_G12A,
+	HHI_GP0_PLL_CNTL6_G12A,
 	HHI_VID_PLL_CLK_DIV,
 	HHI_VIID_CLK_DIV,
 	HHI_VIID_CLK_CNTL,
@@ -804,6 +818,15 @@ static int lcd_reg_print(char *buf, int offset)
 				"hiu     [0x%04x] = 0x%08x\n",
 				lcd_reg_dump_clk_axg[i],
 				lcd_hiu_read(lcd_reg_dump_clk_axg[i]));
+		}
+		break;
+	case LCD_CHIP_G12A:
+		for (i = 0; i < ARRAY_SIZE(lcd_reg_dump_clk_g12a); i++) {
+			n = lcd_debug_info_len(len + offset);
+			len += snprintf((buf+len), n,
+				"hiu     [0x%04x] = 0x%08x\n",
+				lcd_reg_dump_clk_g12a[i],
+				lcd_hiu_read(lcd_reg_dump_clk_g12a[i]));
 		}
 		break;
 	default:

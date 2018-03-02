@@ -29,6 +29,24 @@
 
 #define VPP_OUT_SATURATE            (1 << 0)
 
+/* ******** mipi_dsi_phy ******** */
+/* bit[15:11] */
+#define MIPI_PHY_LANE_BIT        11
+#define MIPI_PHY_LANE_WIDTH       5
+
+/* MIPI-DSI */
+#define DSI_LANE_0              (1 << 4)
+#define DSI_LANE_1              (1 << 3)
+#define DSI_LANE_CLK            (1 << 2)
+#define DSI_LANE_2              (1 << 1)
+#define DSI_LANE_3              (1 << 0)
+#define DSI_LANE_COUNT_1        (DSI_LANE_CLK | DSI_LANE_0)
+#define DSI_LANE_COUNT_2        (DSI_LANE_CLK | DSI_LANE_0 | DSI_LANE_1)
+#define DSI_LANE_COUNT_3        (DSI_LANE_CLK | DSI_LANE_0 |\
+					DSI_LANE_1 | DSI_LANE_2)
+#define DSI_LANE_COUNT_4        (DSI_LANE_CLK | DSI_LANE_0 |\
+					DSI_LANE_1 | DSI_LANE_2 | DSI_LANE_3)
+
 extern struct mutex lcd_vout_mutex;
 extern unsigned char lcd_resume_flag;
 extern int lcd_vout_serve_bypass;
@@ -60,12 +78,16 @@ extern int lcd_class_remove(void);
 
 /* lcd driver */
 #ifdef CONFIG_AMLOGIC_LCD_TV
+extern void lcd_tv_vout_server_init(void);
+extern void lcd_tv_vout_server_remove(void);
 extern void lcd_vbyone_interrupt_enable(int flag);
 extern void lcd_tv_clk_update(struct lcd_config_s *pconf);
 extern int lcd_tv_probe(struct device *dev);
 extern int lcd_tv_remove(struct device *dev);
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
+extern void lcd_tablet_vout_server_init(void);
+extern void lcd_tablet_vout_server_remove(void);
 extern void lcd_tablet_clk_update(struct lcd_config_s *pconf);
 extern int lcd_tablet_probe(struct device *dev);
 extern int lcd_tablet_remove(struct device *dev);

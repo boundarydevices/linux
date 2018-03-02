@@ -329,6 +329,34 @@ enum div_sel_e {
 #define CRT_VID_CLK_IN_MAX_AXG      (1632 * 1000)
 #define ENCL_CLK_IN_MAX_AXG         (200 * 1000)
 
+/* G12A */
+/* ******** register bit ******** */
+/* PLL_CNTL */
+#define LCD_PLL_LOCK_G12A            31
+#define LCD_PLL_EN_G12A              28
+#define LCD_PLL_RST_G12A             29
+#define LCD_PLL_OD_G12A              16
+#define LCD_PLL_N_G12A               10
+#define LCD_PLL_M_G12A               0
+
+/* ******** frequency limit (unit: kHz) ******** */
+/* pll */
+#define PLL_FRAC_OD_FB_G12A          0
+#define SS_LEVEL_MAX_G12A            5
+#define PLL_M_MIN_G12A               2
+#define PLL_M_MAX_G12A               511
+#define PLL_N_MIN_G12A               1
+#define PLL_N_MAX_G12A               1
+#define PLL_FRAC_RANGE_G12A         (1 << 17)
+#define PLL_OD_SEL_MAX_G12A          5
+#define PLL_FREF_MIN_G12A            (5 * 1000)
+#define PLL_FREF_MAX_G12A            (25 * 1000)
+#define PLL_VCO_MIN_G12A             (3000 * 1000)
+#define PLL_VCO_MAX_G12A             (6000 * 1000)
+
+/* video */
+#define CRT_VID_CLK_IN_MAX_G12A      (6000 * 1000)
+#define ENCL_CLK_IN_MAX_G12A         (200 * 1000)
 
 extern int meson_clk_measure(unsigned int clk_mux);
 extern struct lcd_clk_config_s *get_lcd_clk_config(void);

@@ -36,8 +36,8 @@ static spinlock_t lcd_clk_lock;
 
 static const unsigned int od_fb_table[2] = {1, 2};
 
-static const unsigned int od_table[4] = {
-	1, 2, 4, 8
+static const unsigned int od_table[6] = {
+	1, 2, 4, 8, 16, 32
 };
 
 static const unsigned int div_pre_table[6] = {
@@ -145,6 +145,7 @@ static void lcd_clk_config_init_print(void)
 
 	switch (lcd_drv->data->chip_type) {
 	case LCD_CHIP_AXG:
+	case LCD_CHIP_G12A:
 		LCDPR("lcd clk config init:\n"
 			"pll_m_max:         %d\n"
 			"pll_m_min:         %d\n"
@@ -206,6 +207,7 @@ void lcd_clk_config_print(void)
 
 	switch (lcd_drv->data->chip_type) {
 	case LCD_CHIP_AXG:
+	case LCD_CHIP_G12A:
 		LCDPR("lcd clk config:\n"
 			"pll_m:        %d\n"
 			"pll_n:        %d\n"
@@ -349,6 +351,25 @@ static void lcd_clk_config_chip_init(void)
 			od_table[cConf->pll_od_sel_max - 1];
 		cConf->div_post_out_fmax = CRT_VID_CLK_IN_MAX_AXG;
 		cConf->xd_out_fmax = ENCL_CLK_IN_MAX_AXG;
+		break;
+	case LCD_CHIP_G12A:
+		cConf->od_fb = PLL_FRAC_OD_FB_G12A;
+		cConf->ss_level_max = SS_LEVEL_MAX_G12A;
+		cConf->pll_m_max = PLL_M_MAX_G12A;
+		cConf->pll_m_min = PLL_M_MIN_G12A;
+		cConf->pll_n_max = PLL_N_MAX_G12A;
+		cConf->pll_n_min = PLL_N_MIN_G12A;
+		cConf->pll_frac_range = PLL_FRAC_RANGE_G12A;
+		cConf->pll_od_sel_max = PLL_OD_SEL_MAX_G12A;
+		cConf->pll_ref_fmax = PLL_FREF_MAX_G12A;
+		cConf->pll_ref_fmin = PLL_FREF_MIN_G12A;
+		cConf->pll_vco_fmax = PLL_VCO_MAX_G12A;
+		cConf->pll_vco_fmin = PLL_VCO_MIN_G12A;
+		cConf->pll_out_fmax = CRT_VID_CLK_IN_MAX_G12A;
+		cConf->pll_out_fmin = cConf->pll_vco_fmin /
+			od_table[cConf->pll_od_sel_max - 1];
+		cConf->div_post_out_fmax = CRT_VID_CLK_IN_MAX_G12A;
+		cConf->xd_out_fmax = ENCL_CLK_IN_MAX_G12A;
 		break;
 	default:
 		LCDPR("%s invalid chip type\n", __func__);
@@ -694,6 +715,98 @@ static void lcd_set_pll_txlx(struct lcd_clk_config_s *cConf)
 		lcd_set_pll_ss_txlx(cConf);
 }
 
+static void lcd_pll_reset_axg(void)
+{
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL_AXG, 1, LCD_PLL_RST_AXG, 1);
+	udelay(10);
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL_AXG, 0, LCD_PLL_RST_AXG, 1);
+}
+
+static void lcd_set_pll_axg(struct lcd_clk_config_s *cConf)
+{
+	unsigned int pll_ctrl, pll_ctrl1, pll_ctrl2;
+	int ret;
+
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s\n", __func__);
+
+	pll_ctrl = ((1 << LCD_PLL_EN_AXG) |
+		(cConf->pll_n << LCD_PLL_N_AXG) |
+		(cConf->pll_m << LCD_PLL_M_AXG) |
+		(cConf->pll_od1_sel << LCD_PLL_OD_AXG));
+	pll_ctrl1 = 0xc084a000;
+	pll_ctrl1 |= ((1 << 12) | (cConf->pll_frac << 0));
+	pll_ctrl2 = 0xb75020be | (cConf->od_fb << 19);
+
+	lcd_hiu_write(HHI_GP0_PLL_CNTL_AXG, pll_ctrl);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL1_AXG, pll_ctrl1);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL2_AXG, pll_ctrl2);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL3_AXG, 0x0a59a288);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL4_AXG, 0xc000004d);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL5_AXG, 0x00078000);
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL_AXG, 1, LCD_PLL_RST_AXG, 1);
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL_AXG, 0, LCD_PLL_RST_AXG, 1);
+
+	ret = lcd_pll_wait_lock(HHI_GP0_PLL_CNTL_AXG, LCD_PLL_LOCK_AXG);
+	if (ret)
+		LCDERR("gp0_pll lock failed\n");
+
+}
+
+static void lcd_update_pll_frac_axg(struct lcd_clk_config_s *cConf)
+{
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s\n", __func__);
+
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL1_AXG, cConf->pll_frac, 0, 12);
+}
+
+static void lcd_pll_reset_g12a(void)
+{
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 1, LCD_PLL_RST_G12A, 1);
+	udelay(10);
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 0, LCD_PLL_RST_G12A, 1);
+}
+
+static void lcd_set_pll_g12a(struct lcd_clk_config_s *cConf)
+{
+	unsigned int pll_ctrl, pll_ctrl1;
+	int ret;
+
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s\n", __func__);
+
+	pll_ctrl = ((1 << LCD_PLL_EN_G12A) |
+		(cConf->pll_n << LCD_PLL_N_G12A) |
+		(cConf->pll_m << LCD_PLL_M_G12A) |
+		(cConf->pll_od1_sel << LCD_PLL_OD_G12A));
+	pll_ctrl1 = 0x00;
+	pll_ctrl1 |= ((1 << 19) | (cConf->pll_frac << 0));
+
+	lcd_hiu_write(HHI_GP0_PLL_CNTL0_G12A, pll_ctrl);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL1_G12A, pll_ctrl1);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL2_G12A, 0x00);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL3_G12A, 0x08691c00);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL4_G12A, 0x33771291);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL5_G12A, 0x39270000);
+	lcd_hiu_write(HHI_GP0_PLL_CNTL6_G12A, 0x50540000);
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 1, LCD_PLL_RST_G12A, 1);
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 0, LCD_PLL_RST_G12A, 1);
+
+	ret = lcd_pll_wait_lock(HHI_GP0_PLL_CNTL0_G12A, LCD_PLL_LOCK_G12A);
+	if (ret)
+		LCDERR("gp0_pll lock failed\n");
+
+}
+
+static void lcd_update_pll_frac_g12a(struct lcd_clk_config_s *cConf)
+{
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s\n", __func__);
+
+	lcd_hiu_setb(HHI_GP0_PLL_CNTL1_G12A, cConf->pll_frac, 0, 19);
+}
+
 static unsigned int lcd_clk_div_g9_gxtvbb[][3] = {
 	/* divider,        shift_val,  shift_sel */
 	{CLK_DIV_SEL_1,    0xffff,     0,},
@@ -759,6 +872,7 @@ static void lcd_set_clk_div_g9_gxtvbb(struct lcd_clk_config_s *cConf)
 
 static void lcd_set_vclk_crt(int lcd_type, struct lcd_clk_config_s *cConf)
 {
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	if (lcd_debug_print_flag == 2)
 		LCDPR("%s\n", __func__);
 
@@ -767,7 +881,14 @@ static void lcd_set_vclk_crt(int lcd_type, struct lcd_clk_config_s *cConf)
 	udelay(5);
 
 	/* select vid_pll_clk */
-	lcd_hiu_setb(HHI_VIID_CLK_CNTL, 0, VCLK2_CLK_IN_SEL, 3);
+	switch (lcd_drv->data->chip_type) {
+	case LCD_CHIP_G12A:
+		lcd_hiu_setb(HHI_VIID_CLK_CNTL, 1, VCLK2_CLK_IN_SEL, 3);
+		break;
+	default:
+		lcd_hiu_setb(HHI_VIID_CLK_CNTL, 0, VCLK2_CLK_IN_SEL, 3);
+		break;
+	}
 	lcd_hiu_setb(HHI_VIID_CLK_CNTL, 1, VCLK2_EN, 1);
 	udelay(2);
 
@@ -785,6 +906,18 @@ static void lcd_set_vclk_crt(int lcd_type, struct lcd_clk_config_s *cConf)
 
 	/* enable CTS_ENCL clk gate */
 	lcd_hiu_setb(HHI_VID_CLK_CNTL2, 1, ENCL_GATE_VCLK, 1);
+}
+
+static void dsi_phy_clk_set(void)
+{
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s\n", __func__);
+
+	lcd_hiu_setb(HHI_MIPIDSI_PHY_CLK_CNTL, 0, 14, 1);
+	lcd_hiu_setb(HHI_MIPIDSI_PHY_CLK_CNTL, 0, 13, 1);
+	lcd_hiu_setb(HHI_MIPIDSI_PHY_CLK_CNTL, 1, 12, 1);
+	lcd_hiu_setb(HHI_MIPIDSI_PHY_CLK_CNTL, 1, 8, 1);
+	lcd_hiu_setb(HHI_MIPIDSI_PHY_CLK_CNTL, 0, 0, 7);
 }
 
 static unsigned int clk_div_calc_g9_gxtvbb(unsigned int clk,
@@ -1614,44 +1747,6 @@ generate_clk_done_axg:
 	}
 }
 
-static void lcd_pll_reset_axg(void)
-{
-	lcd_hiu_setb(HHI_GP0_PLL_CNTL, 1, LCD_PLL_RST_AXG, 1);
-	udelay(10);
-	lcd_hiu_setb(HHI_GP0_PLL_CNTL, 0, LCD_PLL_RST_AXG, 1);
-}
-
-static void lcd_set_pll_axg(struct lcd_clk_config_s *cConf)
-{
-	unsigned int pll_ctrl, pll_ctrl1, pll_ctrl2;
-	int ret;
-
-	if (lcd_debug_print_flag == 2)
-		LCDPR("%s\n", __func__);
-
-	pll_ctrl = ((1 << LCD_PLL_EN_AXG) |
-		(cConf->pll_n << LCD_PLL_N_AXG) |
-		(cConf->pll_m << LCD_PLL_M_AXG) |
-		(cConf->pll_od1_sel << LCD_PLL_OD_AXG));
-	pll_ctrl1 = 0xc084a000;
-	pll_ctrl1 |= ((1 << 12) | (cConf->pll_frac << 0));
-	pll_ctrl2 = 0xb75020be | (cConf->od_fb << 19);
-
-	lcd_hiu_write(HHI_GP0_PLL_CNTL, pll_ctrl);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL1, pll_ctrl1);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL2, pll_ctrl2);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL3, 0x0a59a288);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL4, 0xc000004d);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL5, 0x00078000);
-	lcd_hiu_setb(HHI_GP0_PLL_CNTL, 1, LCD_PLL_RST_AXG, 1);
-	lcd_hiu_setb(HHI_GP0_PLL_CNTL, 0, LCD_PLL_RST_AXG, 1);
-
-	ret = lcd_pll_wait_lock(HHI_GP0_PLL_CNTL, LCD_PLL_LOCK_AXG);
-	if (ret)
-		LCDERR("gp0_pll lock failed\n");
-
-}
-
 static void lcd_pll_frac_generate_axg(struct lcd_config_s *pconf)
 {
 	unsigned int pll_fout;
@@ -1716,15 +1811,160 @@ static void lcd_pll_frac_generate_axg(struct lcd_config_s *pconf)
 	if (lcd_debug_print_flag)
 		LCDPR("lcd_pll_frac_generate: frac=0x%x\n", frac);
 }
-
-static void lcd_update_pll_frac_axg(struct lcd_clk_config_s *cConf)
+#if 0
+static int check_pll_g12a(struct lcd_clk_config_s *cConf,
+		unsigned int pll_fout)
 {
-	if (lcd_debug_print_flag == 2)
-		LCDPR("%s\n", __func__);
+	unsigned int m, n, od_sel, od;
+	unsigned int pll_fvco;
+	unsigned int pll_frac;
+	int done = 0;
 
-	lcd_hiu_setb(HHI_GP0_PLL_CNTL1, cConf->pll_frac, 0, 12);
+	if ((pll_fout > cConf->pll_out_fmax) ||
+		(pll_fout < cConf->pll_out_fmin)) {
+		return done;
+	}
+	for (od_sel = cConf->pll_od_sel_max; od_sel > 0; od_sel--) {
+		od = od_table[od_sel - 1];
+		pll_fvco = pll_fout * od;
+		if ((pll_fvco < cConf->pll_vco_fmin) ||
+			(pll_fvco > cConf->pll_vco_fmax)) {
+			continue;
+		}
+		cConf->pll_od1_sel = od_sel - 1;
+		cConf->pll_fout = pll_fout;
+		if (lcd_debug_print_flag == 2) {
+			LCDPR("od_sel=%d, pll_fvco=%d\n",
+				(od_sel - 1), pll_fvco);
+		}
+
+		cConf->pll_fvco = pll_fvco;
+		n = 1;
+		m = pll_fvco / cConf->fin;
+		pll_frac = (pll_fvco % cConf->fin) *
+				cConf->pll_frac_range / cConf->fin;
+		cConf->pll_m = m;
+		cConf->pll_n = n;
+		cConf->pll_frac = pll_frac;
+		if (lcd_debug_print_flag == 2) {
+			LCDPR("pll_m=%d, pll_n=%d\n", m, n);
+			LCDPR("pll_frac=0x%03x\n",
+				pll_frac);
+		}
+		done = 1;
+		break;
+	}
+	return done;
 }
 
+static void lcd_clk_generate_g12a(struct lcd_config_s *pconf)
+{
+	unsigned int pll_fout;
+	unsigned int xd;
+	unsigned int dsi_bit_rate_max = 0, dsi_bit_rate_min = 0;
+	unsigned int tmp;
+	struct lcd_clk_config_s *cConf;
+
+	cConf = get_lcd_clk_config();
+	cConf->fout = pconf->lcd_timing.lcd_clk / 1000; /* kHz */
+	cConf->err_fmin = MAX_ERROR;
+
+	if (cConf->fout > cConf->xd_out_fmax) {
+		LCDERR("%s: wrong lcd_clk value %dkHz\n",
+			__func__, cConf->fout);
+	}
+
+	switch (pconf->lcd_basic.lcd_type) {
+	case LCD_MIPI:
+		cConf->xd_max = CRT_VID_DIV_MAX;
+		tmp = pconf->lcd_control.mipi_config->bit_rate_max;
+		dsi_bit_rate_max = tmp * 1000; /* change to kHz */
+		dsi_bit_rate_min = dsi_bit_rate_max - cConf->fout;
+
+		for (xd = 1; xd <= cConf->xd_max; xd++) {
+			pll_fout = cConf->fout * xd;
+			if ((pll_fout > dsi_bit_rate_max) ||
+				(pll_fout < dsi_bit_rate_min)) {
+				continue;
+			}
+			if (lcd_debug_print_flag == 2)
+				LCDPR("fout=%d, xd=%d\n", cConf->fout, xd);
+
+			pconf->lcd_control.mipi_config->bit_rate =
+				pll_fout * 1000;
+			pconf->lcd_control.mipi_config->clk_factor = xd;
+			cConf->xd = xd;
+			check_pll_g12a(cConf, pll_fout);
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+static void lcd_pll_frac_generate_g12a(struct lcd_config_s *pconf)
+{
+	unsigned int pll_fout;
+	unsigned int od, pll_fvco;
+	unsigned int m, n, frac, offset, temp;
+	struct lcd_clk_config_s *cConf;
+
+	cConf = get_lcd_clk_config();
+	cConf->fout = pconf->lcd_timing.lcd_clk / 1000; /* kHz */
+	od = od_table[cConf->pll_od1_sel];
+	m = cConf->pll_m;
+	n = cConf->pll_n;
+
+	if (lcd_debug_print_flag == 2) {
+		LCDPR("m=%d, n=%d, od=%d, xd=%d\n",
+			m, n, cConf->pll_od1_sel, cConf->xd);
+	}
+	if (cConf->fout > cConf->xd_out_fmax) {
+		LCDERR("%s: wrong lcd_clk value %dkHz\n",
+			__func__, cConf->fout);
+		return;
+	}
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s pclk=%d\n", __func__, cConf->fout);
+
+	pll_fout = cConf->fout * cConf->xd;
+	if ((pll_fout > cConf->pll_out_fmax) ||
+		(pll_fout < cConf->pll_out_fmin)) {
+		LCDERR("%s: wrong pll_fout value %dkHz\n", __func__, pll_fout);
+		return;
+	}
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s pll_fout=%d\n", __func__, pll_fout);
+
+	pll_fvco = pll_fout * od;
+	if ((pll_fvco < cConf->pll_vco_fmin) ||
+		(pll_fvco > cConf->pll_vco_fmax)) {
+		LCDERR("%s: wrong pll_fvco value %dkHz\n", __func__, pll_fvco);
+		return;
+	}
+	if (lcd_debug_print_flag == 2)
+		LCDPR("%s pll_fvco=%d\n", __func__, pll_fvco);
+
+	cConf->pll_fvco = pll_fvco;
+	temp = cConf->fin * m / n;
+	if (pll_fvco >= temp) {
+		temp = pll_fvco - temp;
+		offset = 0;
+	} else {
+		temp = temp - pll_fvco;
+		offset = 1;
+	}
+	if (temp >= (2 * cConf->fin)) {
+		LCDERR("%s: pll changing %dkHz is too much\n",
+			__func__, temp);
+		return;
+	}
+	frac = temp * cConf->pll_frac_range * n / cConf->fin;
+	cConf->pll_frac = frac | (offset << 11);
+	if (lcd_debug_print_flag)
+		LCDPR("lcd_pll_frac_generate: frac=0x%x\n", frac);
+}
+#endif
 void lcd_clk_generate_parameter(struct lcd_config_s *pconf)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
@@ -1739,8 +1979,12 @@ void lcd_clk_generate_parameter(struct lcd_config_s *pconf)
 		lcd_clk_generate_txl(pconf);
 		break;
 	case LCD_CHIP_AXG:
+	case LCD_CHIP_G12A:
 		lcd_clk_generate_axg(pconf);
 		break;
+//	case LCD_CHIP_G12A:
+//		lcd_clk_generate_g12a(pconf);
+//		break;
 	default:
 		break;
 	}
@@ -1826,6 +2070,9 @@ void lcd_pll_reset(void)
 	case LCD_CHIP_AXG:
 		lcd_pll_reset_axg();
 		break;
+	case LCD_CHIP_G12A:
+		lcd_pll_reset_g12a();
+		break;
 	default:
 		break;
 	}
@@ -1856,6 +2103,10 @@ void lcd_clk_update(struct lcd_config_s *pconf)
 	case LCD_CHIP_AXG:
 		lcd_pll_frac_generate_axg(pconf);
 		lcd_update_pll_frac_axg(&clk_conf);
+		break;
+	case LCD_CHIP_G12A:
+		lcd_pll_frac_generate_axg(pconf);
+		lcd_update_pll_frac_g12a(&clk_conf);
 		break;
 	default:
 		break;
@@ -1892,6 +2143,10 @@ void lcd_clk_set(struct lcd_config_s *pconf)
 	case LCD_CHIP_AXG:
 		lcd_set_pll_axg(&clk_conf);
 		break;
+	case LCD_CHIP_G12A:
+		lcd_set_pll_g12a(&clk_conf);
+		dsi_phy_clk_set();
+		break;
 	default:
 		break;
 	}
@@ -1914,6 +2169,7 @@ void lcd_clk_disable(void)
 	case LCD_CHIP_GXM:
 	case LCD_CHIP_TXLX:
 	case LCD_CHIP_AXG:
+	case LCD_CHIP_G12A:
 		lcd_hiu_setb(HHI_VID_CLK_CNTL2, 0, ENCL_GATE_VCLK, 1);
 		break;
 	default:
@@ -1923,9 +2179,6 @@ void lcd_clk_disable(void)
 	/* close vclk2_div gate: 0x104b[4:0] */
 	lcd_hiu_setb(HHI_VIID_CLK_CNTL, 0, 0, 5);
 	lcd_hiu_setb(HHI_VIID_CLK_CNTL, 0, VCLK2_EN, 1);
-
-	/* close vid2_pll gate: 0x104c[16] */
-	lcd_hiu_setb(HHI_VIID_DIVIDER_CNTL, 0, DIV_CLK_IN_EN, 1);
 
 	/* disable pll */
 	switch (lcd_drv->data->chip_type) {
@@ -1942,7 +2195,11 @@ void lcd_clk_disable(void)
 		break;
 	case LCD_CHIP_AXG:
 		/* disable hdmi_pll: 0x10c8[30] */
-		lcd_hiu_setb(HHI_GP0_PLL_CNTL, 0, LCD_PLL_EN_AXG, 1);
+		lcd_hiu_setb(HHI_GP0_PLL_CNTL_AXG, 0, LCD_PLL_EN_AXG, 1);
+		break;
+	case LCD_CHIP_G12A:
+		/* disable hdmi_pll: 0x10c8[28] */
+		lcd_hiu_setb(HHI_GP0_PLL_CNTL0_G12A, 0, LCD_PLL_EN_G12A, 1);
 		break;
 	default:
 		break;
@@ -1984,6 +2241,28 @@ void lcd_clk_gate_switch(int status)
 				LCDERR("%s: mipi_bandgap_gate\n", __func__);
 			else
 				clk_prepare_enable(lcd_drv->mipi_bandgap_gate);
+			break;
+		case LCD_CHIP_G12A:
+			if (IS_ERR(lcd_drv->dsi_host_gate))
+				LCDERR("%s: dsi_host_gate\n", __func__);
+			else
+				clk_prepare_enable(lcd_drv->dsi_host_gate);
+			if (IS_ERR(lcd_drv->dsi_phy_gate))
+				LCDERR("%s: dsi_phy_gate\n", __func__);
+			else
+				clk_prepare_enable(lcd_drv->dsi_phy_gate);
+			if (IS_ERR(lcd_drv->dsi_meas))
+				LCDERR("%s: dsi_meas\n", __func__);
+			else
+				clk_prepare_enable(lcd_drv->dsi_meas);
+			if (IS_ERR(lcd_drv->encl_top_gate))
+				LCDERR("%s: encl_top_gate\n", __func__);
+			else
+				clk_prepare_enable(lcd_drv->encl_top_gate);
+			if (IS_ERR(lcd_drv->encl_int_gate))
+				LCDERR("%s: encl_int_gata\n", __func__);
+			else
+				clk_prepare_enable(lcd_drv->encl_int_gate);
 			break;
 		default:
 			if (IS_ERR(lcd_drv->encl_top_gate))
@@ -2030,6 +2309,33 @@ void lcd_clk_gate_switch(int status)
 			else
 				clk_disable_unprepare(
 					lcd_drv->mipi_bandgap_gate);
+			break;
+		case LCD_CHIP_G12A:
+			if (IS_ERR(lcd_drv->dsi_host_gate))
+				LCDERR("%s: dsi_host_gate\n", __func__);
+			else
+				clk_disable_unprepare(
+					lcd_drv->dsi_host_gate);
+			if (IS_ERR(lcd_drv->dsi_phy_gate))
+				LCDERR("%s: dsi_phy_gate\n", __func__);
+			else
+				clk_disable_unprepare(
+					lcd_drv->dsi_phy_gate);
+			if (IS_ERR(lcd_drv->dsi_meas))
+				LCDERR("%s: dsi_meas\n", __func__);
+			else
+				clk_disable_unprepare(
+					lcd_drv->dsi_meas);
+			if (IS_ERR(lcd_drv->encl_int_gate))
+				LCDERR("%s: encl_int_gate\n", __func__);
+			else
+				clk_disable_unprepare(
+					lcd_drv->encl_int_gate);
+			if (IS_ERR(lcd_drv->encl_top_gate))
+				LCDERR("%s: encl_top_gate\n", __func__);
+			else
+				clk_disable_unprepare(
+					lcd_drv->encl_top_gate);
 			break;
 		default:
 			if (IS_ERR(lcd_drv->encl_int_gate))
@@ -2081,6 +2387,32 @@ static void lcd_clktree_probe(void)
 		if (IS_ERR(lcd_drv->mipi_bandgap_gate))
 			LCDERR("%s: clk mipi_bandgap_gate\n", __func__);
 		break;
+	case LCD_CHIP_G12A:
+		lcd_drv->dsi_host_gate = devm_clk_get(lcd_drv->dev,
+			"dsi_host_gate");
+		if (IS_ERR(lcd_drv->dsi_host_gate))
+			LCDERR("%s: clk dsi_host_gate\n", __func__);
+
+		lcd_drv->dsi_phy_gate = devm_clk_get(lcd_drv->dev,
+			"dsi_phy_gate");
+		if (IS_ERR(lcd_drv->dsi_phy_gate))
+			LCDERR("%s: clk dsi_phy_gate\n", __func__);
+
+		lcd_drv->dsi_meas = devm_clk_get(lcd_drv->dev,
+			"dsi_meas");
+		if (IS_ERR(lcd_drv->dsi_meas))
+			LCDERR("%s: clk dsi_meas\n", __func__);
+
+		lcd_drv->encl_top_gate = devm_clk_get(
+			lcd_drv->dev, "encl_top_gate");
+		if (IS_ERR(lcd_drv->encl_top_gate))
+			LCDERR("%s: clk encl_top_gate\n", __func__);
+
+		lcd_drv->encl_int_gate = devm_clk_get(
+			lcd_drv->dev, "encl_int_gate");
+		if (IS_ERR(lcd_drv->encl_int_gate))
+			LCDERR("%s: clk encl_int_gate\n", __func__);
+		break;
 	default:
 		lcd_drv->encl_top_gate = devm_clk_get(lcd_drv->dev,
 			"encl_top_gate");
@@ -2116,6 +2448,18 @@ static void lcd_clktree_remove(void)
 			devm_clk_put(lcd_drv->dev, lcd_drv->dsi_phy_gate);
 		if (!IS_ERR(lcd_drv->dsi_host_gate))
 			devm_clk_put(lcd_drv->dev, lcd_drv->dsi_host_gate);
+		break;
+	case LCD_CHIP_G12A:
+		if (!IS_ERR(lcd_drv->dsi_host_gate))
+			devm_clk_put(lcd_drv->dev, lcd_drv->dsi_host_gate);
+		if (!IS_ERR(lcd_drv->dsi_phy_gate))
+			devm_clk_put(lcd_drv->dev, lcd_drv->dsi_phy_gate);
+		if (!IS_ERR(lcd_drv->dsi_meas))
+			devm_clk_put(lcd_drv->dev, lcd_drv->dsi_meas);
+		if (!IS_ERR(lcd_drv->encl_top_gate))
+			devm_clk_put(lcd_drv->dev, lcd_drv->encl_top_gate);
+		if (!IS_ERR(lcd_drv->encl_int_gate))
+			devm_clk_put(lcd_drv->dev, lcd_drv->encl_int_gate);
 		break;
 	default:
 		if (!IS_ERR(lcd_drv->encl_top_gate))

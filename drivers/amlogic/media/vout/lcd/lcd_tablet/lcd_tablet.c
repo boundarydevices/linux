@@ -475,14 +475,21 @@ static void lcd_tablet_vinfo_update_default(void)
 	}
 }
 
-static void lcd_tablet_vout_server_init(void)
+void lcd_tablet_vout_server_init(void)
 {
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-
 	lcd_tablet_vinfo_update_default();
-	lcd_drv->vout_server = &lcd_vout_server;
+
+	vout_register_server(&lcd_vout_server);
 #ifdef CONFIG_AMLOGIC_VOUT2_SERVE
-	lcd_drv->vout2_server = &lcd_vout2_server;
+	vout2_register_server(&lcd_vout2_server);
+#endif
+}
+
+void lcd_tablet_vout_server_remove(void)
+{
+	vout_unregister_server(&lcd_vout_server);
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	vout2_unregister_server(&lcd_vout2_server);
 #endif
 }
 
@@ -1342,7 +1349,6 @@ int lcd_tablet_probe(struct device *dev)
 	int ret;
 
 	lcd_drv->version = LCD_DRV_VERSION;
-	lcd_drv->vout_server_init = lcd_tablet_vout_server_init;
 	lcd_drv->driver_init_pre = lcd_tablet_driver_init_pre;
 	lcd_drv->driver_disable_post = lcd_tablet_driver_disable_post;
 	lcd_drv->driver_init = lcd_tablet_driver_init;

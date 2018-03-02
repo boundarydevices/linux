@@ -134,12 +134,21 @@ static inline void __iomem *check_lcd_dsi_host_reg(unsigned int _reg)
 	void __iomem *p;
 	int reg_bus;
 	unsigned int reg_offset;
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	reg_bus = LCD_MAP_DSI_HOST;
 	if (check_lcd_ioremap(reg_bus))
 		return NULL;
 
-	reg_offset = LCD_REG_OFFSET(_reg);
+	switch (lcd_drv->data->chip_type) {
+	case LCD_CHIP_G12A:
+		reg_offset = _reg + 0x400;
+		reg_offset = LCD_REG_OFFSET(reg_offset);
+		break;
+	default:/*axg*/
+		reg_offset = LCD_REG_OFFSET(_reg);
+		break;
+	}
 	if (reg_offset >= lcd_reg_map[reg_bus].size) {
 		LCDERR("invalid dsi_host reg offset: 0x%04x\n", _reg);
 		return NULL;

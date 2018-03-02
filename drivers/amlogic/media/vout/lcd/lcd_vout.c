@@ -700,17 +700,21 @@ static void lcd_fops_remove(void)
 
 static void lcd_init_vout(void)
 {
-	if (lcd_driver->vout_server_init)
-		lcd_driver->vout_server_init();
-	else
-		LCDERR("vout_server_init is null\n");
-
-	if (lcd_driver->vout_server)
-		vout_register_server(lcd_driver->vout_server);
-#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
-	if (lcd_driver->vout2_server)
-		vout2_register_server(lcd_driver->vout2_server);
+	switch (lcd_driver->lcd_mode) {
+#ifdef CONFIG_AMLOGIC_LCD_TV
+	case LCD_MODE_TV:
+		lcd_tv_vout_server_init();
+		break;
 #endif
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+	case LCD_MODE_TABLET:
+		lcd_tablet_vout_server_init();
+		break;
+#endif
+	default:
+		LCDERR("invalid lcd mode: %d\n", lcd_driver->lcd_mode);
+		break;
+	}
 }
 
 static int lcd_mode_probe(struct device *dev)
@@ -919,6 +923,12 @@ static struct lcd_data_s lcd_data_axg = {
 	.reg_map_table = &lcd_reg_axg[0],
 };
 
+static struct lcd_data_s lcd_data_g12a = {
+	.chip_type = LCD_CHIP_G12A,
+	.chip_name = "g12a",
+	.reg_map_table = &lcd_reg_axg[0],
+};
+
 static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-gxtvbb",
@@ -939,6 +949,10 @@ static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-axg",
 		.data = &lcd_data_axg,
+	},
+	{
+		.compatible = "amlogic, lcd-g12a",
+		.data = &lcd_data_g12a,
 	},
 	{},
 };
@@ -1002,6 +1016,21 @@ static int lcd_remove(struct platform_device *pdev)
 		destroy_workqueue(lcd_driver->workqueue);
 
 	if (lcd_driver) {
+		switch (lcd_driver->lcd_mode) {
+#ifdef CONFIG_AMLOGIC_LCD_TV
+		case LCD_MODE_TV:
+			lcd_tv_vout_server_remove();
+			break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+		case LCD_MODE_TABLET:
+			lcd_tablet_vout_server_remove();
+			break;
+#endif
+		default:
+			break;
+		}
+
 		lcd_fops_remove();
 		lcd_class_remove();
 		lcd_clk_config_remove();

@@ -64,24 +64,6 @@ extern unsigned char lcd_debug_print_flag;
  */
 #define TTL_DELAY                   13
 
-/* ******** AXG ******** */
-/* bit[15:11] */
-#define BIT_PHY_LANE_AXG        11
-#define PHY_LANE_WIDTH_AXG       5
-
-/* MIPI-DSI */
-#define DSI_LANE_0              (1 << 4)
-#define DSI_LANE_1              (1 << 3)
-#define DSI_LANE_CLK            (1 << 2)
-#define DSI_LANE_2              (1 << 1)
-#define DSI_LANE_3              (1 << 0)
-#define DSI_LANE_COUNT_1        (DSI_LANE_CLK | DSI_LANE_0)
-#define DSI_LANE_COUNT_2        (DSI_LANE_CLK | DSI_LANE_0 | DSI_LANE_1)
-#define DSI_LANE_COUNT_3        (DSI_LANE_CLK | DSI_LANE_0 |\
-					DSI_LANE_1 | DSI_LANE_2)
-#define DSI_LANE_COUNT_4        (DSI_LANE_CLK | DSI_LANE_0 |\
-					DSI_LANE_1 | DSI_LANE_2 | DSI_LANE_3)
-
 
 /* **********************************
  * global control define
@@ -100,6 +82,7 @@ enum lcd_chip_e {
 	LCD_CHIP_GXM,   /* 2 */
 	LCD_CHIP_TXLX,  /* 3 */
 	LCD_CHIP_AXG,   /* 4 */
+	LCD_CHIP_G12A,  /* 5 */
 	LCD_CHIP_MAX,
 };
 
@@ -425,14 +408,10 @@ struct aml_lcd_drv_s {
 	struct lcd_config_s *lcd_config;
 	struct vinfo_s *lcd_info;
 	struct class *lcd_debug_class;
-	struct vout_server_s *vout_server;
-#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
-	struct vout_server_s *vout2_server;
-#endif
+
 	int fr_auto_policy;
 	struct lcd_duration_s std_duration;
 
-	void (*vout_server_init)(void);
 	void (*driver_init_pre)(void);
 	void (*driver_disable_post)(void);
 	int (*driver_init)(void);

@@ -14308,6 +14308,10 @@ M: Xingyu Chen <xingyu.chen@amlogic.com>
 F: drivers/amlogic/pinctrl/*
 F: include/dt-bindings/gpio/*
 
+AMLOGIC G12A LCD_SUPPORT
+M:      Weiming Liu <weiming.liu@amlogic.com>
+F:      arch/arm64/boot/dts/amlogic/mesong12a_skt-panel.dtsi
+
 AMLOGIC GPU CONFIG
 M: Jiyu Yang <Jiyu.Yang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/mesong12a-dvalin.dtsi

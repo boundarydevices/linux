@@ -19,6 +19,8 @@
 
 #include "mesong12a.dtsi"
 #include "partition_mbox_normal.dtsi"
+#include "mesong12a_skt-panel.dtsi"
+
 / {
 	model = "Amlogic";
 	compatible = "amlogic, g12a";
@@ -1321,6 +1323,13 @@
 			"pdm_din3_a",
 			"pdm_dclk_a";
 			function = "pdm";
+		};
+	};
+
+	bl_pwm_on_pins: bl_pwm_on_pin {
+		mux {
+			groups = "pwm_f_h";
+			function = "pwm_f";
 		};
 	};
 
