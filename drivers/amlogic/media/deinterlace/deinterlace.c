@@ -4109,6 +4109,8 @@ static irqreturn_t post_irq(int irq, void *dev_instance)
 				di_post_stru.post_wr_cnt,
 				di_post_stru.irq_time);
 		DI_Wr(DI_INTR_CTRL, (data32&0xffff0004)|(intr_mode<<30));
+		/* disable wr back avoid pps sreay in g12a */
+		DI_Wr_reg_bits(DI_POST_CTRL, 0, 7, 1);
 	}
 
 	if (init_flag)
