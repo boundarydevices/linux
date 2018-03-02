@@ -223,6 +223,13 @@ struct imx_port {
 
 	struct mctrl_gpios *gpios;
 
+	/* shadow registers */
+	unsigned int ucr1;
+	unsigned int ucr2;
+	unsigned int ucr3;
+	unsigned int ucr4;
+	unsigned int ufcr;
+
 	unsigned		txen_mask;
 	unsigned		txen_levels;
 	unsigned		txing;
@@ -311,12 +318,56 @@ MODULE_DEVICE_TABLE(of, imx_uart_dt_ids);
 
 static void imx_uart_writel(struct imx_port *sport, u32 val, u32 offset)
 {
+	switch (offset) {
+	case UCR1:
+		sport->ucr1 = val;
+		break;
+	case UCR2:
+		sport->ucr2 = val;
+		break;
+	case UCR3:
+		sport->ucr3 = val;
+		break;
+	case UCR4:
+		sport->ucr4 = val;
+		break;
+	case UFCR:
+		sport->ufcr = val;
+		break;
+	default:
+		break;
+	}
 	writel(val, sport->port.membase + offset);
 }
 
 static u32 imx_uart_readl(struct imx_port *sport, u32 offset)
 {
-	return readl(sport->port.membase + offset);
+	switch (offset) {
+	case UCR1:
+		return sport->ucr1;
+		break;
+	case UCR2:
+		/*
+		 * UCR2_SRST is the only bit in the cached registers that might
+		 * differ from the value that was last written. As it only
+		 * clears after being set, reread conditionally.
+		 */
+		if (sport->ucr2 & UCR2_SRST)
+			sport->ucr2 = readl(sport->port.membase + offset);
+		return sport->ucr2;
+		break;
+	case UCR3:
+		return sport->ucr3;
+		break;
+	case UCR4:
+		return sport->ucr4;
+		break;
+	case UFCR:
+		return sport->ufcr;
+		break;
+	default:
+		return readl(sport->port.membase + offset);
+	}
 }
 
 static inline unsigned uts_reg(struct imx_port *sport)
@@ -2465,6 +2516,13 @@ static int serial_imx_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to enable per clk: %d\n", ret);
 		return ret;
 	}
+
+	/* initialize shadow register values */
+	sport->ucr1 = readl(sport->port.membase + UCR1);
+	sport->ucr2 = readl(sport->port.membase + UCR2);
+	sport->ucr3 = readl(sport->port.membase + UCR3);
+	sport->ucr4 = readl(sport->port.membase + UCR4);
+	sport->ufcr = readl(sport->port.membase + UFCR);
 
 	if (sport->port.rs485.flags & SER_RS485_ENABLED &&
 	    (!sport->have_rtscts && !sport->have_rtsgpio))
