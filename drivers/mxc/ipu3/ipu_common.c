@@ -457,6 +457,7 @@ static int ipu_probe(struct platform_device *pdev)
 	const struct ipu_devtype *devtype = &iputype->devtype;
 	int ret = 0, id;
 	u32 bypass_reset, reg;
+	u32 disable_di_causes_reset;
 
 	dev_dbg(&pdev->dev, "<%s>\n", __func__);
 
@@ -466,6 +467,10 @@ static int ipu_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "can not get bypass_reset\n");
 		return ret;
 	}
+	ret = of_property_read_u32(pdev->dev.of_node,
+			"disable_di_causes_reset", &disable_di_causes_reset);
+	if (ret < 0)
+		disable_di_causes_reset = 0;
 
 	id = of_alias_get_id(pdev->dev.of_node, "ipu");
 	if (id < 0) {
@@ -478,6 +483,7 @@ static int ipu_probe(struct platform_device *pdev)
 	ipu->bypass_reset = (bool)bypass_reset;
 	ipu->dev = &pdev->dev;
 	ipu->id = id;
+	ipu->disable_di_causes_reset = disable_di_causes_reset;
 	ipu->devtype = devtype->type;
 	ipu->ch0123_axi = iputype->ch0123_axi;
 	ipu->ch23_axi = iputype->ch23_axi;
@@ -1316,10 +1322,12 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_
 	if (ipu->dmfc_use_count == 0)
 		ipu_conf &= ~IPU_CONF_DMFC_EN;
 	if (ipu->di_use_count[0] == 0) {
-		ipu_conf &= ~IPU_CONF_DI0_EN;
+		if (!(ipu->disable_di_causes_reset & 1))
+			ipu_conf &= ~IPU_CONF_DI0_EN;
 	}
 	if (ipu->di_use_count[1] == 0) {
-		ipu_conf &= ~IPU_CONF_DI1_EN;
+		if (!(ipu->disable_di_causes_reset & 2))
+			ipu_conf &= ~IPU_CONF_DI1_EN;
 	}
 	if (ipu->smfc_use_count == 0)
 		ipu_conf &= ~IPU_CONF_SMFC_EN;
