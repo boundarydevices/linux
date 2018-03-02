@@ -37,6 +37,7 @@
 #define VID_PLL_DIV_14     12
 #define VID_PLL_DIV_15     13
 #define VID_PLL_DIV_2p5    14
+#define VID_PLL_DIV_3p25   15
 
 #define GROUP_MAX	8
 struct hw_enc_clk_val_group {

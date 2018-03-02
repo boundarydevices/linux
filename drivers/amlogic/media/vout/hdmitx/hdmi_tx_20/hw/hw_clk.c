@@ -624,6 +624,10 @@ static void set_hpll_od3_clk_div(int div_sel)
 		shift_val = 0x5294;
 		shift_sel = 2;
 		break;
+	case VID_PLL_DIV_3p25:
+		shift_val = 0x66cc;
+		shift_sel = 2;
+		break;
 	default:
 		pr_info("Error: clocks_set_vid_clk_div:  Invalid parameter\n");
 		break;
@@ -813,7 +817,7 @@ static struct hw_enc_clk_val_group setting_enc_clk_val_36[] = {
 	  HDMI_3840x2160p60_16x9_Y420,
 	  HDMI_3840x2160p50_16x9_Y420,
 	  HDMI_VIC_END},
-		4455000, 1, 1, 1, VID_PLL_DIV_7p5, 1, 2, 1, -1},
+		4455000, 1, 1, 2, VID_PLL_DIV_3p25, 1, 2, 1, -1},
 	{{HDMI_3840x2160p24_16x9,
 	  HDMI_3840x2160p25_16x9,
 	  HDMI_3840x2160p30_16x9,
