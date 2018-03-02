@@ -56,6 +56,9 @@ struct master_display_info_s {
 
 struct hdr_info {
 	u32 hdr_support; /* RX EDID hdr support types */
+	/*bit7:BT2020RGB    bit6:BT2020YCC bit5:BT2020cYCC bit4:adobeRGB*/
+	/*bit3:adobeYCC601 bit2:sYCC601     bit1:xvYCC709    bit0:xvYCC601*/
+	u8 colorimetry_support; /* RX EDID colorimetry support types */
 	u32 lumi_max; /* RX EDID Lumi Max value */
 	u32 lumi_avg; /* RX EDID Lumi Avg value */
 	u32 lumi_min; /* RX EDID Lumi Min value */

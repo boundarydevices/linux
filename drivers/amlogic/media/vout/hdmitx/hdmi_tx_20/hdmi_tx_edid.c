@@ -2031,6 +2031,8 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 				(pRXCap->hdr_sup_eotf_hdr << 1) |
 				(pRXCap->hdr_sup_eotf_smpte_st_2084 << 2) |
 				(pRXCap->hdr_sup_eotf_hlg << 3);
+			info->hdr_info.colorimetry_support =
+				pRXCap->colorimetry_data;
 			info->hdr_info.lumi_max = pRXCap->hdr_lum_max;
 			info->hdr_info.lumi_avg = pRXCap->hdr_lum_avg;
 			info->hdr_info.lumi_min = pRXCap->hdr_lum_min;

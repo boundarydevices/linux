@@ -397,7 +397,10 @@ static int set_disp_mode_auto(void)
 		(strncmp(info->name, "null", 4) == 0))) {
 		info->hdr_info.hdr_support = (hdev->RXCap.hdr_sup_eotf_sdr << 0)
 				| (hdev->RXCap.hdr_sup_eotf_hdr << 1)
-				| (hdev->RXCap.hdr_sup_eotf_smpte_st_2084 << 2);
+				| (hdev->RXCap.hdr_sup_eotf_smpte_st_2084 << 2)
+				| (hdev->RXCap.hdr_sup_eotf_hlg << 3);
+		info->hdr_info.colorimetry_support =
+			hdev->RXCap.colorimetry_data;
 		info->hdr_info.lumi_max = hdev->RXCap.hdr_lum_max;
 		info->hdr_info.lumi_avg = hdev->RXCap.hdr_lum_avg;
 		info->hdr_info.lumi_min = hdev->RXCap.hdr_lum_min;
@@ -1891,6 +1894,8 @@ static ssize_t show_hdr_cap(struct device *dev,
 		pRXCap->hdr_lum_avg);
 	pos += snprintf(buf + pos, PAGE_SIZE, "    Min: %d\n",
 		pRXCap->hdr_lum_min);
+	pos += snprintf(buf + pos, PAGE_SIZE, "    colorimetry_data: %x\n",
+		pRXCap->colorimetry_data);
 
 	return pos;
 }
@@ -2990,6 +2995,7 @@ static void clear_hdr_info(struct hdmitx_dev *hdev)
 
 	if (info) {
 		info->hdr_info.hdr_support = 0;
+		info->hdr_info.colorimetry_support = 0;
 		info->hdr_info.lumi_max = 0;
 		info->hdr_info.lumi_avg = 0;
 		info->hdr_info.lumi_min = 0;
