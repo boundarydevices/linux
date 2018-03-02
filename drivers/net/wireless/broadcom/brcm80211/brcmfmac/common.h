@@ -37,6 +37,7 @@ extern struct brcmf_mp_global_t brcmf_mp_global;
  * @feature_disable: Feature_disable bitmask.
  * @fcmode: FWS flow control.
  * @roamoff: Firmware roaming off?
+ * @eap_restrict: Not allow data tx/rx until 802.1X auth succeeds
  * @ignore_probe_fail: Ignore probe failure.
  * @trivial_ccode_map: Assume firmware uses ISO3166 country codes with rev 0
  * @country_codes: If available, pointer to struct for translating country codes
@@ -48,6 +49,7 @@ struct brcmf_mp_device {
 	int		fcmode;
 	bool		roamoff;
 	bool		iapp;
+	bool		eap_restrict;
 	bool		ignore_probe_fail;
 	bool		trivial_ccode_map;
 	struct brcmfmac_pd_cc *country_codes;
