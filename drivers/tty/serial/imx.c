@@ -701,6 +701,10 @@ static void imx_dma_tx(struct imx_port *sport)
 		goto out1;
 	}
 
+	ucr4 = imx_uart_readl(sport, UCR4);
+	ucr4 &= ~UCR4_TCEN;
+	imx_uart_writel(sport, ucr4, UCR4);
+
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
 	if (sport->tx_bytes > 0) {
@@ -792,6 +796,16 @@ static void imx_start_tx(struct uart_port *port)
 
 		if (!(port->rs485.flags & SER_RS485_RX_DURING_TX))
 			imx_stop_rx(port);
+
+		/*
+		 * Enable transmitter and shifter empty irq only if DMA is off.
+		 * In the DMA case this is done in the tx-callback.
+		 */
+		if (!sport->dma_is_enabled) {
+			u32 ucr4 = imx_uart_readl(sport, UCR4);
+			ucr4 |= UCR4_TCEN;
+			imx_uart_writel(sport, ucr4, UCR4);
+		}
 	}
 
 	if (sport->dma_is_enabled) {
