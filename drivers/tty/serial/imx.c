@@ -466,6 +466,7 @@ static void imx_start_rx(struct uart_port *port)
 		ucr1 |= UCR1_RXDMAEN | UCR1_ATDMAEN;
 	} else {
 		ucr1 |= UCR1_RRDYEN;
+		ucr2 |= UCR2_ATEN;
 	}
 
 	/* Write UCR2 first as it includes RXEN */
@@ -533,6 +534,7 @@ static void imx_stop_rx(struct uart_port *port)
 		ucr1 &= ~(UCR1_RXDMAEN | UCR1_ATDMAEN);
 	} else {
 		ucr1 &= ~UCR1_RRDYEN;
+		ucr2 &= ~UCR2_ATEN;
 	}
 	imx_uart_writel(sport, ucr1, UCR1);
 
@@ -1602,6 +1604,10 @@ static int imx_startup(struct uart_port *port)
 		ucr1 = imx_uart_readl(sport, UCR1);
 		ucr1 |= UCR1_RRDYEN;
 		imx_uart_writel(sport, ucr1, UCR1);
+
+		ucr2 = imx_uart_readl(sport, UCR2);
+		ucr2 |= UCR2_ATEN;
+		imx_uart_writel(sport, ucr2, UCR2);
 	}
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
@@ -1643,7 +1649,7 @@ static void imx_shutdown(struct uart_port *port)
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	ucr2 = imx_uart_readl(sport, UCR2);
-	ucr2 &= ~(UCR2_TXEN | UCR2_CTS | UCR2_CTSC);
+	ucr2 &= ~(UCR2_TXEN | UCR2_ATEN | UCR2_CTS | UCR2_CTSC);
 	imx_uart_writel(sport, ucr2, UCR2);
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 
@@ -1833,14 +1839,15 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 	imx_uart_writel(sport,
 			old_ucr1 & ~(UCR1_TXMPTYEN | UCR1_RRDYEN | UCR1_RTSDEN),
 			UCR1);
+	old_ucr2 = imx_uart_readl(sport, UCR2);
+	imx_uart_writel(sport, old_ucr2 & ~UCR2_ATEN, UCR2);
 
 	while (!(imx_uart_readl(sport, USR2) & USR2_TXDC))
 		barrier();
 
 	/* then, disable everything */
-	old_ucr2 = imx_uart_readl(sport, UCR2);
-	imx_uart_writel(sport, old_ucr2 & ~(UCR2_TXEN | UCR2_RXEN), UCR2);
-	old_ucr2 &= (UCR2_TXEN | UCR2_RXEN);
+	imx_uart_writel(sport, old_ucr2 & ~(UCR2_TXEN | UCR2_RXEN | UCR2_ATEN), UCR2);
+	old_ucr2 &= (UCR2_TXEN | UCR2_RXEN | UCR2_ATEN);
 
 	/* custom-baudrate handling */
 	div = sport->port.uartclk / (baud * 16);
@@ -1975,12 +1982,14 @@ static int imx_poll_init(struct uart_port *port)
 	ucr1 &= ~(UCR1_TXMPTYEN | UCR1_RTSDEN | UCR1_RRDYEN);
 
 	ucr2 |= UCR2_RXEN;
+	ucr2 &= ~UCR2_ATEN;
 
 	imx_uart_writel(sport, ucr1, UCR1);
 	imx_uart_writel(sport, ucr2, UCR2);
 
 	/* now enable irqs */
 	imx_uart_writel(sport, ucr1 | UCR1_RRDYEN, UCR1);
+	imx_uart_writel(sport, ucr2 | UCR2_ATEN, UCR2);
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 
