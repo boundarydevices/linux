@@ -17,6 +17,7 @@
 
 #include <linux/kernel.h>
 #include <linux/err.h>
+#include <linux/amlogic/media/registers/regs/di_regs.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include "di_pps.h"
 #include "register.h"
@@ -414,8 +415,11 @@ void di_pps_config(unsigned char path, int src_w, int src_h,
 		vsc_en = 1;
 	if (src_w != dst_w)
 		hsc_en = 1;
-	pr_info("[pps] input %d %d output %d %d.\n",
-		src_w, src_h, dst_w, dst_h);
+	pr_info("[pps] %s input %d %d output %d %d.\n",
+		path?"pre":"post", src_w, src_h, dst_w, dst_h);
+	/* config hdr size */
+	Wr_reg_bits(DI_HDR_IN_HSIZE, dst_w, 0, 13);
+	Wr_reg_bits(DI_HDR_IN_VSIZE, dst_h, 0, 13);
 	p_src_w = (prehsc_en ? ((src_w+1) >> 1) : src_w);
 	p_src_h = prevsc_en ? ((src_h+1) >> 1) : src_h;
 
@@ -521,7 +525,7 @@ void di_pps_config(unsigned char path, int src_w, int src_h,
 		(prevsc_en << 19) |      // prevsc_en
 		(vsc_en << 18)    |      // vsc_en
 		(hsc_en << 17)    |      // hsc_en
-		(1 << 16)         |      // sc_top_en
+		((vsc_en | hsc_en) << 16)         |      // sc_top_en
 		(1 << 15)         |      // vd1 sc out enable
 		(0 << 12)         |      // horz nonlinear 4region enable
 		(4 << 8)          |      // horz scaler bank length

@@ -294,10 +294,6 @@ struct combing_status_s *adpative_combing_config(unsigned int width,
 
 void adpative_combing_exit(void)
 {
-	if (is_meson_gxtvbb_cpu() && dejaggy_enable) {
-		dejaggy_flag = -1;
-		DI_Wr_reg_bits(SRSHARP0_SHARP_DEJ1_MISC, 0, 3, 1);
-	}
 }
 static int cmb_adpset_cnt;
 unsigned int adp_set_level(unsigned int diff, unsigned int field_diff_num)

@@ -18,6 +18,9 @@
 #ifndef __MACH_DEINTERLACE_REG_ADDR_H_
 #define __MACH_DEINTERLACE_REG_ADDR_H_
 #include <linux/amlogic/iomap.h>
+#include <linux/amlogic/media/registers/regs/di_regs.h>
+#include <linux/amlogic/media/registers/regs/viu_regs.h>
+#include <linux/amlogic/media/registers/regs/vdin_regs.h>
 
 #define Wr(adr, val) aml_write_vcbus(adr, val)
 #define Rd(adr) aml_read_vcbus(adr)
@@ -41,326 +44,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define HHI_VPU_CLKB_CNTL	0x83
 #define VPU_WRARB_REQEN_SLV_L1C1	((0x2795)) /* << 2) + 0xd0100000) */
 #define VPU_ARB_DBG_STAT_L1C1		((0x27b4)) /* << 2) + 0xd0100000) */
-#define SRSHARP0_SHARP_SR2_CTRL     ((0x3257)) /* << 2) + 0xd0100000) */
-/* Bit 24,  sr2_dejaggy_en  */
 
-#define SRSHARP0_SHARP_DEJ2_MISC    ((0x3263)) /* << 2) + 0xd0100000) */
-/*  Bit 3 sr2_dejaggy2_alpha_force,
- * force enable of the alpha for dejaggy2
- * Bit 2: 0	sr2_dejaggy2_alpha_value,
- * forced value of alpha for dejaggy2
- */
-
-#define SRSHARP0_DEJ_CTRL             0x3264  /*<< 2) + 0xd0100000)*/
-/* Bit 31:4    reserved
- * Bit 3:2,    reg_sr3_dejaggy_sameside_prtct
- * u2:  enable of sr3 dejaggy same side curve protect from filter,
- * [0] for proc, [1] for ctrl path,  default=3
- * Bit 1,      reg_sr3_dejaggy_sameside_mode
- * u1: mode of the sameside flag decision: default =1
- * Bit 0,      reg_sr3_dejaggy_enable
- * u1: enable of sr3 dejaggy: default =0
- */
-
-#define SRSHARP0_SHARP_DEJ2_PRC     ((0x3261)) /* << 2) + 0xd0100000) */
-/* Bit 31:24,  reg_dejaggy2_hcon_thrd             : .
- * unsigned, default =5,hcon threshold, only pixels with hcon equal or
- * larger than this value can be detected as jaggy2
- * Bit 23:16,  reg_dejaggy2_svdif_thrd            : . unsigned,
- * default =30,abs(sum(vdif[4])) threshold to decide jaggy2, only
- * pixels ws abs(sum(vdif[4]))>= thrd can be jaggy2
- * Bit 15: 8,  reg_dejaggy2_svdif_rate            : .
- * unsigned, default =32,sum(abs(vdif[4])) <= (rate*abs(sum(vdif[4]))/16)
- * rate to decide jaggy2,(normalized 2)
- * Bit  7: 6,  reserved
- * Bit  5: 0,  reg_dejaggy2_vdif_thrd             : .
- * signed, default =-3,vdif threshold for same trend decidion, these value
- * is the margin for not same trend; if >0, means need to be same trend, <0,
- * can be a little bit glitch
- */
-#define SRSHARP0_SHARP_DEJ1_PRC    ((0x3262)) /* << 2) + 0xd0100000) */
-/* Bit 31:24,  reg_dejaggy1_hcon_thrd             : . unsigned,
- * default =1,hcon threshold, only pixels with hcon equal or larger
- * than this value can be detected as jaggy1
- * Bit 23:16,  reg_dejaggy1_svdif_thrd            : . unsigned,
- * default =50,abs(sum(vdif[4])) threshold to decide jaggy1, only
- * pixels ws abs(sum(vdif[4]))<= thrd can be jaggy1
- * Bit 15: 8, reg_dejaggy1_svdif_rate            : . unsigned,
- * default =64,sum(abs(vdif[4])) <= (rate*abs(sum(vdif[4]))/16) rate
- * to decide jaggy2,(normalized 2)
- * Bit  7: 6,  reserved
- * Bit  5: 0,  reg_dejaggy1_dif12_rate            : . unsigned,
- * default =16,sum(abs(vdif2[3]))< (sum(abs(vdif[4]))*rate/32) rate
- * to decide jaggy2, (normalized 0.5)
- */
-#define SRSHARP0_SHARP_DEJ1_MISC   ((0x3264)) /* << 2) + 0xd0100000) */
-/* Bit 31:12,  reserved
- * Bit 11: 8,  reg_dejaggy1_svdif_ofst            : .
- * unsigned, default =2,sum(abs(vdif[4])) >= (rate*abs(sum(vdif[4]))/32 + ofst)
- * offset to decide jaggy2,(normalized 2)
- * Bit  7,     reg_dejaggy1_proc_chrm             : .
- * unsigned, default =1, enable to filter 2 pixels step on chroma
- * Bit  6,     reg_dejaggy1_proc_luma			  : .
- * unsigned, default =1, enable to filter 2 pixels step on luma
- * Bit  5: 4,  reg_dejaggy1_extend_mode           : .
- * unsigned, default =3, extend mode for dejaggy1 horizontally,
- * 0, no extnd, 1: exend 1 pixel, 2: extend 2 pixels, 3, extend 3 pixels
- * Bit  3,     reserved
- * Bit  2,     reg_dejaggy1_alpha_force           : .
- * unsigned, default =0, force enable of the alpha for dejaggy1
- * Bit  1: 0,  reg_dejaggy1_alpha_value           : .
- * unsigned, default =0, force value of the alpha for dejaggy1
- */
-
-
-
-/* vdin */
-#define VDIN_WR_CTRL					0x1220
-#define WR_CANVAS_BIT					0
-#define WR_CANVAS_WID					8
-/* 0xd0104880 */
-/* Bit 31:30 hconv_mode, Applicable only to bit[13:12]=0 or 2.
- *		0: Output every even pixels' CbCr;
- *		1: Output every odd pixels' CbCr;
- *		2: Output an average value per even&odd pair of pixels;
- *		3: Output all CbCr.
- * (This does NOT apply to bit[13:12]=0 -- 4:2:2 mode.)
- * Bit 29 no_clk_gate: disable vid_wr_mif clock gating function.
- * Bit 28 clear write response counter in the vdin write memory interface
- * Bit 27 eol_sel, 1: use eol as the line end indication, 0: use width as line
- * end indication in the vdin write memory interface
- * Bit 26 vcp_nr_en. Only used in VDIN0. NOT used in VDIN1.
- * Bit 25 vcp_wr_en. Only used in VDIN0. NOT used in VDIN1.
- * Bit 24 vcp_in_en. Only used in VDIN0. NOT used in VDIN1.
- * Bit 23 vdin frame reset enble, if true, it will provide frame reset during
- * go_field(vsync) to the modules after that
- * Bit 22 vdin line fifo soft reset enable, meaning, if true line fifo will
- * reset during go_field (vsync)
- * Bit 21 vdin direct write done status clear bi
- * Bit 20 vdin NR write done status clear bit
- * Bit 18 swap_cbcr. Applicable only to bit[13:12]=2.
- *		0: Output CbCr (NV12);
- *		1: Output CrCb (NV21).
- * Bit 17:16 vconv_mode, Applicable only to bit[13:12]=2. 0: Output every even
- * lines' CbCr;
- *		1: Output every odd lines' CbCr;
- *		2: Reserved;
- *		3: Output all CbCr.
- * Bit 13:12 vdin write format,
- *		0: 4:2:2 to luma canvas, 1: 4:4:4 to luma canvas,
- *		2: Y to luma canvas, CbCr to chroma canvas.
- * For NV12/21, also define Bit
- * 31:30, 17:16, and bit 18.
- * Bit 11 vdin write canvas double buffer enable, means the canvas address will
- * be latched by vsync before using
- * Bit 10 1: disable ctrl_reg write pulse which will reset internal counter.
- * when bit 11 is 1, this bit should be 1.
- * Bit 9 vdin write request urgent
- * Bit 8 vdin write request enable
- * Bit 7:0 Write luma canvas address
- */
-/* timerc */
-/* vd1 */
-#define VD1_IF0_GEN_REG					0x1a50
-
-#define VD1_IF0_CANVAS0					0x1a51
-		/* 0xd0106944 */
-#define VD1_IF0_CANVAS1					0x1a52
-		/* 0xd0106948 */
-#define VD1_IF0_LUMA_X0					0x1a53
-		/* 0xd010694c */
-#define VD1_IF0_LUMA_Y0					0x1a54
-		/* 0xd0106950 */
-#define VD1_IF0_CHROMA_X0				0x1a55
-		/* 0xd0106954 */
-#define VD1_IF0_CHROMA_Y0				0x1a56
-		/* 0xd0106958 */
-#define VD1_IF0_LUMA_X1					0x1a57
-
-#define VD1_IF0_LUMA_Y1					0x1a58
-
-#define VD1_IF0_CHROMA_X1				0x1a59
-
-#define VD1_IF0_CHROMA_Y1				0x1a5a
-
-#define VD1_IF0_RPT_LOOP				0x1a5b
-
-#define VD1_IF0_LUMA0_RPT_PAT				0x1a5c
-
-#define VD1_IF0_CHROMA0_RPT_PAT				0x1a5d
-
-#define VD1_IF0_LUMA1_RPT_PAT				0x1a5e
-
-#define VD1_IF0_CHROMA1_RPT_PAT				0x1a5f
-
-#define VD1_IF0_LUMA_PSEL				0x1a60
-
-#define VD1_IF0_CHROMA_PSEL				0x1a61
-
-#define VD1_IF0_DUMMY_PIXEL				0x1a62
-
-#define VD1_IF0_LUMA_FIFO_SIZE				0x1a63
-
-#define VD1_IF0_RANGE_MAP_Y				0x1a6a
-
-#define VD1_IF0_RANGE_MAP_CB				0x1a6b
-
-#define VD1_IF0_RANGE_MAP_CR				0x1a6c
-
-#define VD1_IF0_GEN_REG2				0x1a6d
-
-#define VD1_IF0_PROT_CNTL				0x1a6e
-
-#define VIU_VD1_FMT_CTRL				0x1a68
-
-#define VIU_VD1_FMT_W					0x1a69
-
-#define VD1_IF0_LUMA_FIFO_SIZE				0x1a63
-		/* 0xd010698c */
-#define VD2_IF0_LUMA_FIFO_SIZE				0x1a83
-		/* 0xd0106a0c */
-		/* 0xd0106974 */
-#define VIU_OSD1_CTRL_STAT				0x1a10
-		/* 0xd0106840 */
-/* afbc */
-#define AFBC_ENABLE                        ((0x1ae0)) /* << 2) + 0xd0100000) */
-/* Bit   31:1,     reserved
- * Bit   8,        dec_enable        unsigned  , default = 0
- * Bit   7:1,      reserved
- * Bit   0,        frm_start         unsigned  , default = 0
- */
-#define AFBC_MODE                          ((0x1ae1)) /* << 2) + 0xd0100000) */
-/* Bit   31,       soft_reset        the use as go_field
- * Bit   30:28,    reserved
- * Bit   27:26,    rev_mode          uns, default = 0 , reverse mode
- * Bit   25:24,    mif_urgent        uns, default = 3 ,
- * info mif and data mif urgent
- * Bit   22:16,    hold_line_num
- * Bit   15:14,    burst_len         uns, default = 1,
- *		0: burst1 1:burst2 2:burst4
- * Bit   13:8,     compbits_yuv      uns, default = 0 ,
- *		bit 1:0,: y  component bitwidth : 00-8bit 01-9bit 10-10bit
- *		bit 3:2,: u  component bitwidth : 00-8bit 01-9bit 10-10bit
- *		bit 5:4,: v  component bitwidth : 00-8bit 01-9bit 10-10bit
- * Bit   7:6,      vert_skip_y       uns, default = 0 ,
- * luma vert skip mode : 00-y0y1, 01-y0, 10-y1, 11-(y0+y1)/2
- * Bit   5:4,      horz_skip_y       uns, default = 0 ,
- * luma horz skip mode : 00-y0y1, 01-y0, 10-y1, 11-(y0+y1)/2
- * Bit   3:2,      vert_skip_uv      uns, default = 0 ,
- * chroma vert skip mode : 00-y0y1, 01-y0, 10-y1, 11-(y0+y1)/2
- * Bit   1:0,      horz_skip_uv      uns, default = 0 ,
- * chroma horz skip mode : 00-y0y1, 01-y0, 10-y1, 11-(y0+y1)/2
- */
-#define AFBC_SIZE_IN                       ((0x1ae2)) /* << 2) + 0xd0100000) */
-/* Bit   31:29,    reserved
- * Bit   28:16     hsize_in          uns, default = 1920 ,
- * pic horz size in  unit: pixel
- * Bit   15:13,    reserved
- * Bit   12:0,     vsize_in          uns, default = 1080 ,
- * pic vert size in  unit: pixel
- */
-#define AFBC_DEC_DEF_COLOR                 ((0x1ae3)) /* << 2) + 0xd0100000) */
-/* Bit   31:29,    reserved
- * Bit   29:20,   def_color_y        uns, default = 0,
- * afbc dec y default setting value
- * Bit   19:10,   def_color_u        uns, default = 0,
- * afbc dec u default setting value
- * Bit    9: 0,   def_color_v        uns, default = 0,
- * afbc dec v default setting value
- */
-#define AFBC_CONV_CTRL                     ((0x1ae4)) /* << 2) + 0xd0100000) */
-/* Bit   31:12,   reserved
- * Bit   11: 0,   conv_lbuf_len       uns, default = 256,
- * unit=16 pixel need to set = 2^n
- */
-#define AFBC_LBUF_DEPTH                    ((0x1ae5)) /* << 2) + 0xd0100000) */
-/* Bit   31:28,   reserved
- * Bit   27:16,   dec_lbuf_depth      uns, default = 128; // unit= 8 pixel
- * Bit   15:12,   reserved
- * Bit   11:0,    mif_lbuf_depth      uns, default = 128;
- */
-#define AFBC_HEAD_BADDR                    ((0x1ae6)) /* << 2) + 0xd0100000) */
-/* Bit   31:0,   mif_info_baddr      uns, default = 32'h0; */
-#define AFBC_BODY_BADDR                    ((0x1ae7)) /* << 2) + 0xd0100000) */
-/* Bit   31:0,   mif_data_baddr      uns, default = 32'h0001_0000; */
-#define AFBC_SIZE_OUT                    ((0x1ae8)) /* << 2) + 0xd0100000) */
-/* Bit   31:29,   reserved
- * Bit   28:16,   hsize_out    uns, default = 1920    ;    unit: 1 pixel
- * Bit   15:13,   reserved
- * Bit    12:0,   vsize_out    uns, default = 1080 ;       unit: 1 pixel
- */
-#define AFBC_OUT_YSCOPE                    ((0x1ae9)) /* << 2) + 0xd0100000) */
-/* Bit   31:29,   reserved
- * Bit   28:16,   out_vert_bgn        uns, default = 0    ; // unit: 1 pixel
- * Bit   15:13,   reserved
- * Bit    12:0,   out_vert_end        uns, default = 1079 ; // unit: 1 pixel
- */
-#define AFBC_STAT                          ((0x1aea)) /* << 2) + 0xd0100000) */
-/* Bit   31:1,   reserved
- * Bit      0,   frm_end_stat         uns, frame end status
- */
-#define AFBC_VD_CFMT_CTRL                  ((0x1aeb)) /* << 2) + 0xd0100000) */
-/* Bit 31    it true, disable clock, otherwise enable clock
- * Bit 30    soft rst bit
- * Bit 28    if true, horizontal formatter use repeating to generete pixel,
- * otherwise use bilinear interpolation
- * Bit 27:24 horizontal formatter initial phase
- * Bit 23    horizontal formatter repeat pixel 0 enable
- * Bit 22:21 horizontal Y/C ratio, 00: 1:1, 01: 2:1, 10: 4:1
- * Bit 20    horizontal formatter enable
- * Bit 19    if true, always use phase0 while vertical formater,
- * meaning always
- * repeat data, no interpolation
- * Bit 18    if true, disable vertical formatter chroma repeat last line
- * Bit 17    veritcal formatter dont need repeat line on phase0,
- *		1: enable, 0: disable
- * Bit 16    veritcal formatter repeat line 0 enable
- * Bit 15:12 vertical formatter skip line num at the beginning
- * Bit 11:8  vertical formatter initial phase
- * Bit 7:1   vertical formatter phase step (3.4)
- * Bit 0     vertical formatter enable
- */
-#define AFBC_VD_CFMT_W                     ((0x1aec)) /* << 2) + 0xd0100000) */
-/* Bit 27:16  horizontal formatter width */
-/* Bit 11:0   vertical formatter width */
-#define AFBC_MIF_HOR_SCOPE                 ((0x1aed)) /* << 2) + 0xd0100000) */
-/* Bit   31:26,   reserved
- * Bit   25:16,   mif_blk_bgn_h        uns, default = 0  ;
- *		// unit: 32 pixel/block hor
- * Bit   15:10,   reserved
- * Bit    9: 0,   mif_blk_end_h        uns, default = 59 ;
- *		// unit: 32 pixel/block hor
- */
-#define AFBC_MIF_VER_SCOPE                 ((0x1aee)) /* << 2) + 0xd0100000) */
-/* Bit   31:28,   reserved
- * Bit   27:16,   mif_blk_bgn_v        uns, default = 0  ;
- *		// unit: 32 pixel/block ver
- * Bit   15:12,   reserved
- * Bit   11: 0,   mif_blk_end_v        uns, default = 269;
- *		// unit: 32 pixel/block ver
- */
-#define AFBC_PIXEL_HOR_SCOPE               ((0x1aef)) /* << 2) + 0xd0100000) */
-/* Bit   31:29,   reserved
- * Bit   28:16,   dec_pixel_bgn_h        uns, default = 0  ;
- *		// unit: pixel
- * Bit   15:13,   reserved
- * Bit   12: 0,   dec_pixel_end_h        uns, default = 1919 ; // unit: pixel
- */
-#define AFBC_PIXEL_VER_SCOPE               ((0x1af0)) /* << 2) + 0xd0100000) */
-/* Bit   31:29,   reserved
- * Bit   28:16,   dec_pixel_bgn_v        uns, default = 0  ; // unit: pixel
- * Bit   15:13,   reserved
- * Bit   12: 0,   dec_pixel_end_v        uns, default = 1079 ; // unit: pixel
- */
-#define AFBC_VD_CFMT_H                     ((0x1af1)) /* << 2) + 0xd0100000) */
-/* Bit 12:0   vertical formatter height */
-
-
-/* viu mux */
-#define VIU_MISC_CTRL0					0x1a06
-		/* 0xd0106818 */
-#define VIU_MISC_CTRL1					0x1a07
-#define VD1_AFBCD0_MISC_CTRL			0x1a0a
 #define VIUB_SW_RESET					0x2001
 #define VIUB_SW_RESET0					0x2002
 #define VIUB_MISC_CTRL0					0x2006
@@ -369,6 +53,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define VIUB_GCLK_CTRL1					0x2008
 #define VIUB_GCLK_CTRL2					0x2009
 #define VIUB_GCLK_CTRL3					0x200a
+/* txl add if2 */
 #define DI_IF2_GEN_REG					0x2010
 #define DI_IF2_CANVAS0					0x2011
 #define DI_IF2_LUMA_X0					0x2012
@@ -519,69 +204,6 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define DI_HSC_INI_PAT_CTRL				0x376b
 #define DI_SC_GCLK_CTRL					0x376c
 #define DI_SC_HOLD_LINE					0x376d
-/* DI HDR */
-#define DI_HDR_IN_HSIZE					0x376e
-#define DI_HDR_IN_VSIZE					0x376f
-#define DI_HDR2_CTRL					0x3800
-#define DI_HDR2_CLK_GATE				0x3881
-#define DI_HDR2_MATRIXI_COEF00_01		0x3882
-#define DI_HDR2_MATRIXI_COEF02_10		0x3883
-#define DI_HDR2_MATRIXI_COEF11_12		0x3884
-#define DI_HDR2_MATRIXI_COEF20_21		0x3885
-#define DI_HDR2_MATRIXI_COEF22			0x3886
-#define DI_HDR2_MATRIXI_COEF30_31		0x3887
-#define DI_HDR2_MATRIXI_COEF32_40		0x3888
-#define DI_HDR2_MATRIXI_COEF41_42		0x3889
-#define DI_HDR2_MATRIXI_OFFSET0_1		0x388A
-#define DI_HDR2_MATRIXI_OFFSET2			0x388B
-#define DI_HDR2_MATRIXI_PRE_OFFSET0_1	0x388C
-#define DI_HDR2_MATRIXI_PRE_OFFSET2		0x388D
-#define DI_HDR2_MATRIXO_COEF00_01		0x388E
-#define DI_HDR2_MATRIXO_COEF02_10		0x388F
-#define DI_HDR2_MATRIXO_COEF11_12		0x3890
-#define DI_HDR2_MATRIXO_COEF20_21		0x3891
-#define DI_HDR2_MATRIXO_COEF22			0x3892
-#define DI_HDR2_MATRIXO_COEF30_31		0x3893
-#define DI_HDR2_MATRIXO_COEF32_40		0x3894
-#define DI_HDR2_MATRIXO_COEF41_42		0x3895
-#define DI_HDR2_MATRIXO_OFFSET0_1		0x3896
-#define DI_HDR2_MATRIXO_OFFSET2			0x3897
-#define DI_HDR2_MATRIXO_PRE_OFFSET0_1	0x3898
-#define DI_HDR2_MATRIXO_PRE_OFFSET2		0x3899
-#define DI_HDR2_MATRIXI_CLIP			0x389A
-#define DI_HDR2_MATRIXO_CLIP			0x389B
-#define DI_HDR2_CGAIN_OFFT				0x389C
-#define DI_EOTF_LUT_ADDR_PORT			0x389E
-#define DI_EOTF_LUT_DATA_PORT			0x389F
-#define DI_OETF_LUT_ADDR_PORT			0x38A0
-#define DI_OETF_LUT_DATA_PORT			0x38A1
-#define DI_CGAIN_LUT_ADDR_PORT			0x38A2
-#define DI_CGAIN_LUT_DATA_PORT			0x38A3
-#define DI_HDR2_CGAIN_COEF0				0x38A4
-#define DI_HDR2_CGAIN_COEF1				0x38A5
-#define DI_OGAIN_LUT_ADDR_PORT			0x38A6
-#define DI_OGAIN_LUT_DATA_PORT			0x38A7
-#define DI_HDR2_ADPS_CTRL				0x38A8
-#define DI_HDR2_ADPS_ALPHA0				0x38A9
-#define DI_HDR2_ADPS_ALPHA1				0x38AA
-#define DI_HDR2_ADPS_BETA0				0x38AB
-#define DI_HDR2_ADPS_BETA1				0x38AC
-#define DI_HDR2_ADPS_BETA2				0x38AD
-#define DI_HDR2_ADPS_COEF0				0x38AE
-#define DI_HDR2_ADPS_COEF1				0x38AF
-#define DI_HDR2_GMUT_CTRL				0x38B0
-#define DI_HDR2_GMUT_COEF0				0x38B1
-#define DI_HDR2_GMUT_COEF1				0x38B2
-#define DI_HDR2_GMUT_COEF2				0x38B3
-#define DI_HDR2_GMUT_COEF3				0x38B4
-#define DI_HDR2_GMUT_COEF4				0x38B5
-#define DI_HDR2_PIPE_CTRL1				0x38B6
-#define DI_HDR2_PIPE_CTRL2				0x38B7
-#define DI_HDR2_PIPE_CTRL3				0x38B8
-#define DI_HDR2_PROC_WIN1				0x38B9
-#define DI_HDR2_PROC_WIN2				0x38BA
-#define DI_HDR2_MATRIXI_EN_CTRL			0x38BB
-#define DI_HDR2_MATRIXO_EN_CTRL			0x38BC
 /* NR DOWNSAMPLE */
 #define NRDSWR_X						0x37f9
 #define NRDSWR_Y						0x37fa
@@ -591,7 +213,6 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define NR_DS_CTRL						0x3741
 #define NR_DS_OFFSET					0x3742
 #define NR_DS_BLD_COEF					0x3743
-
 /* di */
 #define DI_IF1_URGENT_CTRL                  (0x20a3)  /*  << 2 + 0xd0100000*/
 /* bit15, auto enable; bit14, canvas write mode ;7:4, high threshold ;3:0 ,
@@ -638,7 +259,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 /* bit  2,      check322p_en */
 /* bit  1,      mtn_en */
 /* bit  0,      nr_en */
-#define DI_POST_CTRL                      ((0x1701)) /* << 2) + 0xd0100000) */
+/* #define DI_POST_CTRL                      ((0x1701)) */
 /* bit 31,      cbus_post_frame_rst */
 /* bit 30,      cbus_post_soft_rst */
 /* bit 29,      post_field_num */
@@ -657,7 +278,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 /* bit  2,      di_ei_en */
 /* bit  1,      di_buf1_en */
 /* bit  0,      di_buf0_en */
-#define DI_POST_SIZE                      ((0x1702)) /* << 2) + 0xd0100000) */
+/* #define DI_POST_SIZE                      ((0x1702)) */
 /* bit 28:16,    vsize1post */
 /* bit 12:0,     hsize1post */
 #define DI_PRE_SIZE                       ((0x1703)) /* << 2) + 0xd0100000) */
@@ -1984,7 +1605,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define DI_MEM_GEN_REG2                  ((0x1792)) /* << 2) + 0xd0100000) */
 #define DI_MEM_FMT_CTRL                  ((0x17e6)) /* << 2) + 0xd0100000) */
 #define DI_MEM_FMT_W                     ((0x17e7)) /* << 2) + 0xd0100000) */
-#define DI_IF1_GEN_REG                   ((0x17e8)) /* << 2) + 0xd0100000) */
+/* #define DI_IF1_GEN_REG                   ((0x17e8)) + 0xd0100000) */
 #define DI_IF1_CANVAS0                   ((0x17e9)) /* << 2) + 0xd0100000) */
 #define DI_IF1_LUMA_X0                   ((0x17ea)) /* << 2) + 0xd0100000) */
 #define DI_IF1_LUMA_Y0                   ((0x17eb)) /* << 2) + 0xd0100000) */
@@ -2048,21 +1669,13 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 /* Bit 7:1   vertical formatter phase step (3.4) */
 /* Bit 0     vertical formatter enable */
 #define VIU_VD1_FMT_W				    0x1a69
-/*g12a addr change to 0x3219*/
 /* ((0x1a69  << 2) + 0xd0100000) */
 /* Bit 27:16  horizontal formatter width */
 /* Bit 11:0   vertical formatter width */
 
 
 #define VD1_IF0_GEN_REG2		0x1a6d
-#define VD2_IF0_GEN_REG2		0x1a8d
 
-#define VD1_IF0_GEN_REG3                0x1aa7
-		/* 0xd0106a9c */
-/*bit9:8	bit mode: 0 = 8bits, 1=10bits 422,  2 = 10bits 444 */
-#define DI_IF1_GEN_REG3                 0x20a7
-		/* 0xd010829c */
-/*bit9:8	bit mode: 0 = 8bits, 1=10bits 422,  2 = 10bits 444 */
 #define DI_INP_GEN_REG3                 0x20a8
 		/* 0xd01082a0 */
 /*bit9:8	bit mode: 0 = 8bits, 1=10bits 422,  2 = 10bits 444 */

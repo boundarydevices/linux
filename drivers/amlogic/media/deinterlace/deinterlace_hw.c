@@ -617,6 +617,8 @@ static void set_di_nrwr_mif(struct DI_SIM_MIF_s *nrwr_mif,
 	RDMA_WR_BITS(DI_NRWR_X,	nrwr_mif->start_x, 16, 14);
 	RDMA_WR_BITS(DI_NRWR_Y, nrwr_mif->start_y, 16, 13);
 	RDMA_WR_BITS(DI_NRWR_Y, nrwr_mif->end_y, 0, 13);
+	/* wr ext en from gxtvbb */
+	RDMA_WR_BITS(DI_NRWR_Y, 1, 15, 1);
 	RDMA_WR_BITS(DI_NRWR_Y, 3, 30, 2);
 	RDMA_WR(DI_NRWR_CTRL, nrwr_mif->canvas_num|
 			(urgent<<16)|
@@ -651,16 +653,28 @@ void enable_di_pre_aml(
 	set_di_nrwr_mif(di_nrwr_mif, pre_urgent);
 	set_di_mem_mif(di_mem_mif, pre_urgent, pre_hold_line);
 	set_di_chan2_mif(di_chan2_mif, pre_urgent, pre_hold_line);
-	nrwr_hsize = di_nrwr_mif->end_x - di_nrwr_mif->start_x;
-	nrwr_vsize = di_nrwr_mif->end_y - di_nrwr_mif->start_y;
-	chan2_hsize = di_chan2_mif->luma_x_start0 - di_chan2_mif->luma_x_end0;
-	chan2_vsize = di_chan2_mif->luma_y_start0 - di_chan2_mif->luma_y_end0;
-	mem_hsize = di_mem_mif->luma_x_start0 - di_mem_mif->luma_x_end0;
-	mem_vsize = di_mem_mif->luma_y_start0 - di_mem_mif->luma_y_end0;
-	if ((chan2_hsize < nrwr_hsize) || (chan2_vsize < nrwr_vsize))
+
+	nrwr_hsize = di_nrwr_mif->end_x -
+		di_nrwr_mif->start_x + 1;
+	nrwr_vsize = di_nrwr_mif->end_y -
+		di_nrwr_mif->start_y + 1;
+	chan2_hsize = di_chan2_mif->luma_x_end0 -
+		di_chan2_mif->luma_x_start0 + 1;
+	chan2_vsize = di_chan2_mif->luma_y_end0 -
+		di_chan2_mif->luma_y_start0 + 1;
+	mem_hsize = di_mem_mif->luma_x_end0 -
+		di_mem_mif->luma_x_start0 + 1;
+	mem_vsize = di_mem_mif->luma_y_end0 -
+		di_mem_mif->luma_y_start0 + 1;
+
+	if ((chan2_hsize != nrwr_hsize) || (chan2_vsize != nrwr_vsize)) {
 		chan2_disable = true;
-	if ((mem_hsize < nrwr_hsize) || (mem_vsize < nrwr_vsize))
+		pr_info("[DI] pre size not match bypass chan2.\n");
+	}
+	if ((mem_hsize != nrwr_hsize) || (mem_vsize != nrwr_vsize)) {
 		mem_bypass = true;
+		pr_info("[DI] pre size not match bypass mem.\n");
+	}
 
 	if (madi_en) {
 		/*
@@ -746,6 +760,22 @@ void enable_di_pre_aml(
 			(pre_field_num << 29)/* pre field number.*/
 				   );
 	}
+}
+/*
+ * after g12a, framereset will not reset simple
+ * wr mif of pre such as mtn&cont&mv&mcinfo wr
+ */
+void reset_pre_simple_mif(void)
+{
+	RDMA_WR_BITS(CONTWR_CAN_SIZE, 1, 14, 1);
+	RDMA_WR_BITS(MTNWR_CAN_SIZE, 1, 14, 1);
+	RDMA_WR_BITS(MCVECWR_CAN_SIZE, 1, 14, 1);
+	RDMA_WR_BITS(MCINFWR_CAN_SIZE, 1, 14, 1);
+
+	RDMA_WR_BITS(CONTWR_CAN_SIZE, 0, 14, 1);
+	RDMA_WR_BITS(MTNWR_CAN_SIZE, 0, 14, 1);
+	RDMA_WR_BITS(MCVECWR_CAN_SIZE, 0, 14, 1);
+	RDMA_WR_BITS(MCINFWR_CAN_SIZE, 0, 14, 1);
 }
 
 void enable_afbc_input(struct vframe_s *vf)
@@ -2061,23 +2091,20 @@ void initial_di_post_2(int hsize_post, int vsize_post,
 	DI_VSYNC_WR_MPEG_REG(DI_BLEND_REG2_X, (hsize_post-1));
 	DI_VSYNC_WR_MPEG_REG(DI_BLEND_REG3_X, (hsize_post-1));
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
-		#if 0
-		if (post_write_en)
-			DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0x80000005);
-		else
-			DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0x00200005);
-		#endif
 		if (post_write_en) {
-			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
-				0, 8, 9);
+			DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0x80000005);
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
 				0, 20, 1);
-		} else {
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
-				1, 8, 9);
+				0, 8, 9);
+		} else {
+			DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0x00200005);
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
 				1, 20, 1);
+			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
+				1, 8, 9);
 		}
+
 	} else {
 		/* enable ma,disable if0 to vpp */
 		if ((VSYNC_RD_MPEG_REG(VIU_MISC_CTRL0) & 0x50000) != 0x50000) {
@@ -2094,8 +2121,8 @@ void initial_di_post_2(int hsize_post, int vsize_post,
 					  (0 << 4)	|
 					  (0 << 5)	|
 					  (0 << 6)	|
-					  (0 << 7)	|
-					  (1 << 8)	|
+					  ((post_write_en?1:0) << 7)	|
+					  ((post_write_en?0:1) << 8)	|
 					  (0 << 9)	|
 					  (0 << 10) |
 					  (0 << 11) |
@@ -2127,8 +2154,6 @@ module_param(pldn_ctrl_rflsh, uint, 0644);
 MODULE_PARM_DESC(pldn_ctrl_rflsh, "/n post blend reflesh./n");
 static unsigned int post_ctrl;
 module_param_named(post_ctrl, post_ctrl, uint, 0644);
-static bool vd1_en;
-module_param_named(vd1_en, vd1_en, bool, 0644);
 void di_post_switch_buffer(
 	struct DI_MIF_s		   *di_buf0_mif,
 	struct DI_MIF_s		   *di_buf1_mif,
@@ -2235,7 +2260,6 @@ void di_post_switch_buffer(
 
 	if (!is_meson_txlx_cpu())
 		invert_mv = 0;
-	DI_VSYNC_WR_MPEG_REG_BITS(VD1_IF0_GEN_REG, vd1_en?1:0, 0, 1);
 	if (post_ctrl != 0)
 		DI_VSYNC_WR_MPEG_REG(DI_POST_CTRL, post_ctrl | (0x3 << 30));
 	else {
@@ -2259,14 +2283,12 @@ void di_post_switch_buffer(
 		(0x3 << 30)	/* post soft rst  post frame rst. */
 		);
 	}
-	if (di_ddr_en && mc_enable)
-		DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MCVECRD_CTRL, 1, 9, 1);
-	#if 0
+
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) && di_ddr_en) {
 		DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0xc0200005);
 		DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0x80200005);
-	}
-	#endif
+	} else if (di_ddr_en && mc_enable)
+		DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MCVECRD_CTRL, 1, 9, 1);
 }
 
 static void set_post_mtnrd_mif(struct DI_SIM_MIF_s *mtnprd_mif,
@@ -2340,7 +2362,10 @@ void enable_di_post_2(
 		DI_VSYNC_WR_MPEG_REG(DI_DIWR_X,
 (di_diwr_mif->start_x << 16) | (di_diwr_mif->end_x));
 		DI_VSYNC_WR_MPEG_REG(DI_DIWR_Y, (3 << 30) |
-(di_diwr_mif->start_y << 16) | (di_diwr_mif->end_y));
+					(di_diwr_mif->start_y << 16) |
+						/* wr ext en from gxtvbb */
+							(1 << 15) |
+							(di_diwr_mif->end_y));
 		DI_VSYNC_WR_MPEG_REG(DI_DIWR_CTRL,
 			di_diwr_mif->canvas_num|
 			(urgent << 16) |
@@ -2350,12 +2375,7 @@ void enable_di_post_2(
 			di_buf1_mif->bit_mode,
 			di_buf2_mif->bit_mode,
 			di_diwr_mif->bit_mode);
-		pr_info("%s diwr mif<%u, %u; %u, %u>.\n",
-			__func__,
-			di_diwr_mif->start_x, di_diwr_mif->end_x,
-			di_diwr_mif->start_y, di_diwr_mif->end_y);
 	}
-
 	DI_VSYNC_WR_MPEG_REG_BITS(DI_BLEND_CTRL, 7, 22, 3);
 	DI_VSYNC_WR_MPEG_REG_BITS(DI_BLEND_CTRL,
 		blend_en&0x1, 31, 1);
@@ -2389,12 +2409,10 @@ void enable_di_post_2(
 (0x3 << 30)
 /* post soft rst  post frame rst. */
 		);
-	#if 0
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) && di_ddr_en) {
 		DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0xc0200005);
 		DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL, 0x80200005);
 	}
-	#endif
 }
 
 void disable_post_deinterlace_2(void)

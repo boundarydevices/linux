@@ -160,6 +160,7 @@ void di_post_gate_control(bool gate);
 void diwr_set_power_control(unsigned char enable);
 void di_hw_disable(bool mc_enable);
 void enable_di_pre_mif(bool enable, bool mc_enable);
+void reset_pre_simple_mif(void);
 void enable_di_post_mif(enum gate_mode_e mode);
 void di_hw_uninit(void);
 void combing_pd22_window_config(unsigned int width, unsigned int height);

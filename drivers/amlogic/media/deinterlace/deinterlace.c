@@ -76,6 +76,10 @@
 #define CLASS_NAME		"deinterlace"
 #define VFM_NAME		"deinterlace"
 
+static struct di_pre_stru_s di_pre_stru;
+
+static struct di_post_stru_s di_post_stru;
+
 static DEFINE_SPINLOCK(di_lock2);
 
 #define di_lock_irqfiq_save(irq_flag) \
@@ -138,6 +142,7 @@ static int timeout_miss_policy;
  */
 
 static int force_width;
+static int force_height;
 /* add avoid vframe put/get error */
 static int di_blocking;
 /*
@@ -376,8 +381,10 @@ void DI_VSYNC_WR_MPEG_REG(unsigned int addr, unsigned int val)
 {
 	if (is_need_stop_reg(addr))
 		return;
-
-	VSYNC_WR_MPEG_REG(addr, val);
+	if (post_wr_en && post_wr_support)
+		DI_Wr(addr, val);
+	else
+		VSYNC_WR_MPEG_REG(addr, val);
 }
 
 void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr, unsigned int val,
@@ -385,8 +392,10 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr, unsigned int val,
 {
 	if (is_need_stop_reg(addr))
 		return;
-
-	VSYNC_WR_MPEG_REG_BITS(addr, val, start, len);
+	if (post_wr_en && post_wr_support)
+		DI_Wr_reg_bits(addr, val, start, len);
+	else
+		VSYNC_WR_MPEG_REG_BITS(addr, val, start, len);
 }
 
 unsigned int DI_POST_REG_RD(unsigned int addr)
@@ -459,7 +468,6 @@ store_dbg(struct device *dev,
 		dump_vframe(vf);
 	} else if (strncmp(buf, "pool", 4) == 0) {
 		unsigned long idx = 0;
-
 		if (kstrtoul(buf + 4, 10, &idx))
 			return count;
 		dump_pool(get_queue_by_idx(idx));
@@ -494,8 +502,8 @@ store_dbg(struct device *dev,
 			dump_di_reg_g12();
 		else
 			dump_di_reg();
-	} else if (strncmp(buf, "robust_test", 11) == 0) {
-		recovery_flag = 1;
+	} else if (strncmp(buf, "dump_mif", 8) == 0) {
+		dump_mif_size_state(&di_pre_stru, &di_post_stru);
 	} else if (strncmp(buf, "recycle_buf", 11) == 0) {
 		recycle_keep_buffer();
 	} else if (strncmp(buf, "recycle_post", 12) == 0) {
@@ -1164,9 +1172,6 @@ static bool is_in_queue(struct di_buf_s *di_buf, int queue_idx)
 	return ret;
 }
 
-static struct di_pre_stru_s di_pre_stru;
-
-static struct di_post_stru_s di_post_stru;
 
 
 static ssize_t
@@ -1176,6 +1181,7 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
 	unsigned int n = 0, canvas_w = 0, canvas_h = 0;
 	unsigned long nr_size = 0, dump_adr = 0;
 	struct di_buf_s *di_buf = NULL;
+	struct vframe_s *post_vf = NULL;
 	char *buf_orig, *ps, *token;
 	char *parm[3] = { NULL };
 	char delim1[2] = " ";
@@ -1200,9 +1206,16 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
 	}
 	if (strcmp(parm[0], "capture") == 0)
 		di_buf = di_pre_stru.di_mem_buf_dup_p;
-	else if (strcmp(parm[0], "capture_post") == 0)
-		di_buf = di_post_stru.cur_post_buf;
-	else if (strcmp(parm[0], "capture_nrds") == 0)
+	else if (strcmp(parm[0], "capture_post") == 0) {
+		if (di_vf_peek(NULL)) {
+			post_vf = di_vf_get(NULL);
+			if (!IS_ERR_OR_NULL(post_vf)) {
+				di_buf = post_vf->private_data;
+				di_vf_put(post_vf, NULL);
+			}
+			post_vf = NULL;
+		}
+	} else if (strcmp(parm[0], "capture_nrds") == 0)
 		get_nr_ds_buf(&dump_adr, &nr_size);
 	else {
 		pr_err("wrong dump cmd\n");
@@ -1305,12 +1318,8 @@ static void dis2_di(void)
 		}
 	}
 
-	if (post_wr_en && post_wr_support) {
+	if (post_wr_en && post_wr_support)
 		diwr_set_power_control(0);
-		#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-		enable_rdma(1);
-		#endif
-	}
 
 	di_unlock_irqfiq_restore(irq_flag2);
 	spin_unlock_irqrestore(&plist_lock, flags);
@@ -1938,6 +1947,8 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 			di_buf_size = nr_size + mtn_size + count_size;
 		}
 		di_buf_size = roundup(di_buf_size, PAGE_SIZE);
+		pr_info("[DI] %s buffer size %u.\n", __func__,
+			di_buf_size);
 		de_devp->buf_num_avail = de_devp->mem_size / di_buf_size;
 
 		if (post_wr_en && post_wr_support) {
@@ -2396,7 +2407,7 @@ config_di_mcinford_mif(struct DI_MC_MIF_s *di_mcinford_mif,
 		       struct di_buf_s *di_buf)
 {
 	if (di_buf) {
-		di_mcinford_mif->size_x = di_buf->vframe->height / 4 - 1;
+		di_mcinford_mif->size_x = (di_buf->vframe->height + 2) / 4 - 1;
 		di_mcinford_mif->size_y = 1;
 		di_mcinford_mif->canvas_num = di_buf->mcinfo_canvas_idx;
 	}
@@ -2406,13 +2417,17 @@ config_di_pre_mc_mif(struct DI_MC_MIF_s *di_mcinfo_mif,
 		     struct DI_MC_MIF_s *di_mcvec_mif,
 		     struct di_buf_s *di_buf)
 {
+	unsigned int pre_size_w = 0, pre_size_h = 0;
+
 	if (di_buf) {
-		di_mcinfo_mif->size_x = di_buf->vframe->height / 4 - 1;
+		pre_size_w = di_buf->vframe->width;
+		pre_size_h = (di_buf->vframe->height + 1) / 2;
+		di_mcinfo_mif->size_x = (pre_size_h + 1) / 2 - 1;
 		di_mcinfo_mif->size_y = 1;
 		di_mcinfo_mif->canvas_num = di_buf->mcinfo_canvas_idx;
 
-		di_mcvec_mif->size_x = (di_buf->vframe->width + 4) / 5 - 1;
-		di_mcvec_mif->size_y = di_buf->vframe->height / 2 - 1;
+		di_mcvec_mif->size_x = (pre_size_w + 4) / 5 - 1;
+		di_mcvec_mif->size_y = pre_size_h - 1;
 		di_mcvec_mif->canvas_num = di_buf->mcvec_canvas_idx;
 	}
 }
@@ -2700,6 +2715,7 @@ static void pre_de_process(void)
 			nr_ds_hw_ctrl(false);
 		}
 	}
+
 	/* set interrupt mask for pre module.
 	 * we need to only leave one mask open
 	 * to prevent multiple entry for de_irq
@@ -2761,27 +2777,21 @@ static void pre_de_process(void)
 			vdin_ops->tvin_vdin_func(0, &vdin_arg);
 	}
 #endif
-#if 0
+	enable_di_pre_mif(true, mcpre_en);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		RDMA_WR(DI_PRE_GL_CTRL, 0xc3200005);
 		RDMA_WR(DI_PRE_GL_CTRL, 0x83200005);
+		reset_pre_simple_mif();
 	} else {
 		/* frame + soft reset for the pre modules. */
 		RDMA_WR(DI_PRE_CTRL, Rd(DI_PRE_CTRL) | 3 << 30);
+		/* enable mc pre mif*/
+		enable_di_pre_mif(true, mcpre_en);
 	}
-#endif
-	enable_di_pre_mif(true, mcpre_en);
-
-	/* frame + soft reset for the pre modules. */
-	RDMA_WR_BITS(DI_PRE_CTRL, 3, 30, 2);
-
 	#ifdef SUPPORT_MPEG_TO_VDIN
 	if (mpeg2vdin_flag)
 		RDMA_WR_BITS(DI_PRE_CTRL, 1, 13, 1);
 	#endif
-
-	/* enable mc pre mif*/
-	enable_di_pre_mif(true, mcpre_en);
 	di_pre_stru.irq_time = sched_clock()/NSEC_PER_MSEC;
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (di_pre_rdma_enable & 0x2)
@@ -3177,6 +3187,8 @@ static int pps_dsth;
 module_param_named(pps_dsth, pps_dsth, int, 0644);
 static bool pps_en;
 module_param_named(pps_en, pps_en, bool, 0644);
+static unsigned int pps_position = 1;
+module_param_named(pps_position, pps_position, uint, 0644);
 static unsigned int pre_enable_mask = 3;
 module_param_named(pre_enable_mask, pre_enable_mask, uint, 0644);
 
@@ -3270,10 +3282,12 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 							is_meson_gxl_cpu() ||
 							is_meson_gxm_cpu());
 		width_roundup = bit10_pack_patch ? 16 : width_roundup;
+#if 0 //test for even width&height
 		if (di_force_bit_mode == 10)
 			force_width = roundup(vframe->width, width_roundup);
 		else
 			force_width = 0;
+#endif
 		di_pre_stru.source_trans_fmt = vframe->trans_fmt;
 		di_pre_stru.left_right = di_pre_stru.left_right ? 0 : 1;
 		di_pre_stru.invert_flag =
@@ -3296,6 +3310,9 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 		di_pre_stru.width_bk = vframe->width;
 		if (force_width)
 			vframe->width = force_width;
+		if (force_height)
+			vframe->height = force_height;
+
 		/* backup frame motion info */
 		vframe->combing_cur_lev = cur_lev;
 
@@ -3668,7 +3685,7 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 	/* set vframe bit info */
 	di_buf->vframe->bitdepth &= ~(BITDEPTH_YMASK);
 	di_buf->vframe->bitdepth &= ~(FULL_PACK_422_MODE);
-	if (de_devp->pps_enable || pps_en) {
+	if (de_devp->pps_enable && pps_position) {
 		if (pps_dstw != di_buf->vframe->width) {
 			di_buf->vframe->width = pps_dstw;
 			di_pre_stru.width_bk = pps_dstw;
@@ -4507,10 +4524,19 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 		di_post_stru.di_buf2_mif.luma_x_end0 = di_end_x;
 
 		if (post_wr_en && post_wr_support) {
-			di_post_stru.di_diwr_mif.start_x = di_start_x;
-			di_post_stru.di_diwr_mif.end_x   = di_end_x;
-			di_post_stru.di_diwr_mif.start_y = di_start_y;
-			di_post_stru.di_diwr_mif.end_y   = di_end_y;
+			if (de_devp->pps_enable && pps_position == 0) {
+				di_pps_config(0, di_width, di_height,
+					pps_dstw, pps_dsth);
+				di_post_stru.di_diwr_mif.start_x = 0;
+				di_post_stru.di_diwr_mif.end_x   = pps_dstw - 1;
+				di_post_stru.di_diwr_mif.start_y = 0;
+				di_post_stru.di_diwr_mif.end_y   = pps_dsth - 1;
+			} else {
+				di_post_stru.di_diwr_mif.start_x = di_start_x;
+				di_post_stru.di_diwr_mif.end_x   = di_end_x;
+				di_post_stru.di_diwr_mif.start_y = di_start_y;
+				di_post_stru.di_diwr_mif.end_y   = di_end_y;
+			}
 		}
 
 		di_post_stru.di_mtnprd_mif.start_x = di_start_x;
@@ -4871,6 +4897,10 @@ static void post_de_done_buf_config(void)
 	di_lock_irqfiq_save(irq_flag2);
 	queue_out(di_post_stru.cur_post_buf);
 	di_buf = di_post_stru.cur_post_buf;
+	if (de_devp->pps_enable && pps_position == 0) {
+		di_buf->vframe->width = pps_dstw;
+		di_buf->vframe->height = pps_dsth;
+	}
 	queue_in(di_post_stru.cur_post_buf, QUEUE_POST_READY);
 	di_unlock_irqfiq_restore(irq_flag2);
 	vf_notify_receiver(VFM_NAME, VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
@@ -5615,12 +5645,8 @@ static void di_unreg_process_irq(void)
 				VPU_CLK_GATE_OFF);
 			pr_info("%s disable di mirror image.\n", __func__);
 	}
-	if (post_wr_en && post_wr_support) {
+	if (post_wr_en && post_wr_support)
 		diwr_set_power_control(0);
-		#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-		enable_rdma(1);
-		#endif
-	}
 	di_unlock_irqfiq_restore(irq_flag2);
 
 #if (defined ENABLE_SPIN_LOCK_ALWAYS)
@@ -5738,13 +5764,11 @@ static void di_pre_size_change(unsigned short width,
 
 	di_load_pq_table();
 
-#if 0
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 		RDMA_WR(DI_PRE_GL_CTRL, 0x80000005);
-#endif
 	if (de_devp->nrds_enable)
 		nr_ds_init(width, height);
-	if (de_devp->pps_enable || pps_en) {
+	if (de_devp->pps_enable && pps_position) {
 		pps_w = di_pre_stru.cur_width;
 		pps_h = di_pre_stru.cur_height>>(vf_type?1:0);
 		di_pps_config(1, pps_w, pps_h, pps_dstw, (pps_dsth>>1));
@@ -5824,12 +5848,8 @@ static void di_reg_process_irq(void)
 		de_devp->nrds_enable = nrds_en;
 		de_devp->pps_enable = pps_en;
 		switch_vpu_clk_gate_vmod(VPU_VPU_CLKB, VPU_CLK_GATE_ON);
-		if (post_wr_en && post_wr_support) {
+		if (post_wr_en && post_wr_support)
 			diwr_set_power_control(1);
-			#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-			enable_rdma(0);
-			#endif
-		}
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
 			if (!use_2_interlace_buff) {
 				#ifdef CLK_TREE_SUPPORT
@@ -6379,7 +6399,9 @@ light_unreg:
 		if (receiver_name) {
 			if (!strcmp(receiver_name, "amvideo")) {
 				di_post_stru.run_early_proc_fun_flag = 0;
-		/* pr_info("set run_early_proc_fun_flag to 1\n"); */
+				if (post_wr_en && post_wr_support)
+					di_post_stru.run_early_proc_fun_flag
+						= 1;
 			} else {
 				di_post_stru.run_early_proc_fun_flag = 1;
 				pr_info("set run_early_proc_fun_flag to 1\n");
@@ -6451,7 +6473,7 @@ static void fast_process(void)
 			while (process_post_vframe()) {
 				if (di_post_stru.di_post_process_cnt++ >
 					MAX_POST_BUF_NUM) {
-					di_pr_info("%s: process_post_vframe time out!!\n",
+					pr_info("%s: process_post_vframe time out!!\n",
 						__func__);
 					break;
 				}
@@ -7154,10 +7176,6 @@ static int di_probe(struct platform_device *pdev)
 	ret = of_property_read_u32(pdev->dev.of_node,
 		"pps-enable", &(di_devp->pps_enable));
 
-	pr_info("DI cma_flag %u, nrds %u, pps %u.\n",
-			di_devp->flag_cma,
-			di_devp->nrds_enable,
-			di_devp->pps_enable);
 	if (di_devp->flag_cma >= 1) {
 #ifdef CONFIG_CMA
 		di_devp->pdev = pdev;
@@ -7498,6 +7516,7 @@ module_param_named(bypass_trick_mode, bypass_trick_mode, int, 0664);
 module_param_named(invert_top_bot, invert_top_bot, int, 0664);
 module_param_named(skip_top_bot, skip_top_bot, int, 0664);
 module_param_named(force_width, force_width, int, 0664);
+module_param_named(force_height, force_height, int, 0664);
 module_param_named(prog_proc_config, prog_proc_config, int, 0664);
 module_param_named(start_frame_drop_count, start_frame_drop_count, int, 0664);
 #ifdef SUPPORT_START_FRAME_HOLD
@@ -7572,6 +7591,7 @@ module_param_named(queue_print_flag, queue_print_flag, int, 0664);
 module_param_named(full_422_pack, full_422_pack, bool, 0644);
 #ifdef DEBUG_SUPPORT
 module_param_named(pulldown_enable, pulldown_enable, bool, 0644);
+module_param_named(cma_print, cma_print, bool, 0644);
 #ifdef RUN_DI_PROCESS_IN_IRQ
 module_param_named(input2pre, input2pre, uint, 0664);
 module_param_named(input2pre_buf_miss_count, input2pre_buf_miss_count,

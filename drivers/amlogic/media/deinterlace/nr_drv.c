@@ -1047,6 +1047,10 @@ static ssize_t nr_dbg_show(struct device *dev,
 
 	len += sprintf(buff+len,
 		"echo disable/enable to disable/enable nr(nr2/nr4/dnr).\n");
+	len += sprintf(buff+len,
+		"NR4_TOP_CTRL=0x%x DNR_CTRL=0x%x DI_NR_CTRL0=0x%x\n",
+		Rd(NR4_TOP_CTRL), Rd(DNR_CTRL), Rd(DI_NR_CTRL0));
+
 	return len;
 }
 

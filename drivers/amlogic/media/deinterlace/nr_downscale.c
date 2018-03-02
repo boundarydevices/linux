@@ -44,13 +44,15 @@ static void nr_ds_hw_init(unsigned int width, unsigned int height)
 
 	RDMA_WR_BITS(VIUB_MISC_CTRL0, 3, 5, 2);   //Switch MIF to NR_DS
 	RDMA_WR_BITS(NR_DS_BUF_SIZE_REG, width_out, 0, 8);  // config dsbuf_ocol
-	RDMA_WR_BITS(NR_DS_BUF_SIZE_REG, height_out, 0, 8); // config dsbuf_orow
+	RDMA_WR_BITS(NR_DS_BUF_SIZE_REG, height_out, 8, 8); // config dsbuf_orow
 
 	RDMA_WR_BITS(NRDSWR_X, (width_out-1), 0, 13);
 	RDMA_WR_BITS(NRDSWR_Y, (height_out-1), 0, 13);
 
 	RDMA_WR_BITS(NRDSWR_CAN_SIZE, (height_out-1), 0, 13);
 	RDMA_WR_BITS(NRDSWR_CAN_SIZE, (width_out-1), 16, 13);
+	/* little endian */
+	RDMA_WR_BITS(NRDSWR_CAN_SIZE, 1, 13, 1);
 
 	RDMA_WR_BITS(NR_DS_CTRL, v_step, 16, 6);
 	RDMA_WR_BITS(NR_DS_CTRL, h_step, 24, 6);

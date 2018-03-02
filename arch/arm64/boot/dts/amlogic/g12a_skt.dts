@@ -92,7 +92,7 @@
 			 * 10x4736064=45.2M(0x2e) support 12bit
 			 * 10x4074560=40M(0x28) support 10bit
 			 */
-			size = <0x0 0x02900000>;
+			size = <0x0 0x02800000>;
 			alignment = <0x0 0x400000>;
 		};
 		codec_mm_cma:linux,codec_mm_cma {
