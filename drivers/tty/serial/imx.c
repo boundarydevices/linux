@@ -1400,6 +1400,8 @@ static void imx_enable_dma(struct imx_port *sport)
 
 	init_waitqueue_head(&sport->dma_wait);
 
+	imx_setup_ufcr(sport, TXTL_DMA, RXTL_DMA);
+
 	/* set UCR1 */
 	ucr1 = imx_uart_readl(sport, UCR1);
 	ucr1 |= UCR1_RXDMAEN | UCR1_TXDMAEN | UCR1_ATDMAEN |
@@ -1411,8 +1413,6 @@ static void imx_enable_dma(struct imx_port *sport)
 	ucr4 = imx_uart_readl(sport, UCR4);
 	ucr4 |= UCR4_IDDMAEN;
 	imx_uart_writel(sport, ucr4, UCR4);
-
-	imx_setup_ufcr(sport, TXTL_DMA, RXTL_DMA);
 
 	sport->dma_is_enabled = 1;
 }
