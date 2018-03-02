@@ -123,6 +123,7 @@ struct ipu_soc {
 	int vdi_use_count;
 	int di_use_count[2];
 	int csi_use_count[2];
+	u32 disable_di_causes_reset;
 
 	struct mutex mutex_lock;
 	spinlock_t int_reg_spin_lock;

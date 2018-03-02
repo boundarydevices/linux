@@ -138,6 +138,7 @@
 			clock-names = "bus", "di0", "di1", "di0_sel", "di1_sel";
 			resets = <&src 2>;
 			bypass_reset = <0>;
+			disable_di_causes_reset = <1>;	/* mask, skip disable of DI0 */
 
 			ipu_di0: port@2 {
 				reg = <2>;
