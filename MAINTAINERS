@@ -14367,3 +14367,8 @@ F:	sound/soc/amlogic/auge/*
 AMLOGIC G12A BL_EXTERN LP8556 DRIVER
 M:      Weiming Liu <weiming.liu@amlogic.com>
 F:      drivers/amlogic/media/vout/backlight/bl_extern/bl_extern_i2c.c
+
+AMLOGIC G12A Dolby Vision DRIVER
+M:	Zhilei Wu <zhilei.wu@amlogic.com>
+F:	drivers/amlogic/media/enhancement/amdolby_vision*
+F:	include/linux/amlogic/media/amdolbyvision/*

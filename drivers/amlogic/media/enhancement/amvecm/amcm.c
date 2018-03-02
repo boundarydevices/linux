@@ -28,6 +28,7 @@
 #include "arch/cm_regs.h"
 #include "amcm.h"
 #include "amcm_regmap.h"
+#include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 
 #define pr_amcm_dbg(fmt, args...)\
 	do {\
@@ -249,15 +250,13 @@ void amcm_enable(void)
 {
 	int temp;
 
-	if (!is_dolby_vision_enable()) {
-		if (!(READ_VPP_REG(VPP_MISC) & (0x1 << 28)))
-			WRITE_VPP_REG_BITS(VPP_MISC, 1, 28, 1);
+	if (!(READ_VPP_REG(VPP_MISC) & (0x1 << 28)))
+		WRITE_VPP_REG_BITS(VPP_MISC, 1, 28, 1);
+	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
+	temp = READ_VPP_REG(VPP_CHROMA_DATA_PORT);
+	if (!(temp & 0x2)) {
 		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
-		temp = READ_VPP_REG(VPP_CHROMA_DATA_PORT);
-		if (!(temp & 0x2)) {
-			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
-			WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, temp | 0x2);
-		}
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, temp | 0x2);
 	}
 }
 

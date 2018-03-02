@@ -980,7 +980,11 @@
 		wb_en = <0>;/*1:enabel ;0:disable*/
 		cm_en = <0>;/*1:enabel ;0:disable*/
 	};
-
+	amdolby_vision {
+		compatible = "amlogic, aml_amdolby_vision_driver";
+		dev_name = "aml_amdolby_vision_driver";
+		status = "okay";
+	};
 	meson-amvideom {
 		compatible = "amlogic, amvideom";
 		dev_name = "amvideom";

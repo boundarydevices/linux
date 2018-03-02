@@ -66,50 +66,87 @@ enum eotf_type {
 	EOTF_T_DOLBYVISION,
 	EOTF_T_HDR10,
 	EOTF_T_SDR,
+	EOTF_T_LL_MODE,
 	EOTF_T_MAX,
 };
 
-/* Dolby Version support information */
-struct dv_info {
-	uint32_t ieeeoui;
-	uint8_t ver; /* 0 or 1 */
-	uint8_t sup_yuv422_12bit:1; /* if as 0, then support RGB tunnel mode */
-	uint8_t sup_2160p60hz:1; /* if as 0, then support 2160p30hz */
-	uint8_t sup_global_dimming:1;
-	uint8_t colorimetry:1;
+enum mode_type {
+	YUV422_BIT12 = 0,
+	RGB_8BIT,
+	RGB_10_12BIT,
+	YUV444_10_12BIT,
+};
+
+#define DV_IEEE_OUI	0x00D046
+
+/* Dolby Version VSIF  parameter*/
+struct dv_vsif_para {
+	uint8_t ver; /* 0 or 1 or 2*/
+	uint8_t length;/*ver1: 15 or 12*/
 	union {
 		struct {
-			uint16_t chrom_red_primary_x;
-			uint16_t chrom_red_primary_y;
-			uint16_t chrom_green_primary_x;
-			uint16_t chrom_green_primary_y;
-			uint16_t chrom_blue_primary_x;
-			uint16_t chrom_blue_primary_y;
-			uint16_t chrom_white_primary_x;
-			uint16_t chrom_white_primary_y;
-			uint16_t target_min_pq;
-			uint16_t target_max_pq;
-			uint8_t dm_major_ver;
-			uint8_t dm_minor_ver;
-		} ver0;
-		struct {
-			uint8_t dm_version;
-			uint8_t target_max_lum;
-			uint8_t target_min_lum;
-			uint8_t chrom_red_primary_x;
-			uint8_t chrom_red_primary_y;
-			uint8_t chrom_green_primary_x;
-			uint8_t chrom_green_primary_y;
-			uint8_t chrom_blue_primary_x;
-			uint8_t chrom_blue_primary_y;
-		} ver1;
+			uint8_t low_latency:1;
+			uint8_t dobly_vision_signal:1;
+			uint8_t backlt_ctrl_MD_present:1;
+			uint8_t auxiliary_MD_present:1;
+			uint8_t eff_tmax_PQ_hi;
+			uint8_t eff_tmax_PQ_low;
+			uint8_t auxiliary_runmode;
+			uint8_t auxiliary_runversion;
+			uint8_t auxiliary_debug0;
+		} ver2;
 	} vers;
+};
+
+/* Dolby Version support information from EDID*/
+/* Refer to DV Spec version2.9 page26 to page39*/
+enum block_type {
+	ERROR_NULL = 0,
+	ERROR_LENGTH,
+	ERROR_OUI,
+	CORRECT,
+};
+
+struct dv_info {
+	unsigned char rawdata[27];
+	enum block_type block_flag;
+	uint32_t ieeeoui;
+	uint8_t ver; /* 0 or 1 or 2*/
+	uint8_t length;/*ver1: 15 or 12*/
+
+	uint8_t sup_yuv422_12bit:1;
+	/* if as 0, then support RGB tunnel mode */
+	uint8_t sup_2160p60hz:1;
+	/* if as 0, then support 2160p30hz */
+	uint8_t sup_global_dimming:1;
+	uint16_t Rx;
+	uint16_t Ry;
+	uint16_t Gx;
+	uint16_t Gy;
+	uint16_t Bx;
+	uint16_t By;
+	uint16_t Wx;
+	uint16_t Wy;
+	uint16_t tminPQ;
+	uint16_t tmaxPQ;
+	uint8_t dm_major_ver;
+	uint8_t dm_minor_ver;
+	uint8_t dm_version;
+	uint8_t tmaxLUM;
+	uint8_t colorimetry:1;/* ver1*/
+	uint8_t tminLUM;
+	uint8_t low_latency:1;/* ver1_12 and 2*/
+	uint8_t sup_backlight_control:1;/*only ver2*/
+	uint8_t backlt_min_luma;/*only ver2*/
+	uint8_t Interface;/*only ver2*/
+	uint8_t sup_10b_12b_444;/*only ver2*/
 };
 
 struct vout_device_s {
 	const struct dv_info *dv_info;
 	void (*fresh_tx_hdr_pkt)(struct master_display_info_s *data);
-	void (*fresh_tx_vsif_pkt)(enum eotf_type type, uint8_t tunnel_mode);
+	void (*fresh_tx_vsif_pkt)(enum eotf_type type,
+	enum mode_type tunnel_mode, struct dv_vsif_para *data);
 };
 
 struct vinfo_base_s {

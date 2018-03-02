@@ -397,7 +397,7 @@ static void vfm_init(void)
 	char tvpath_chain[] = "vdin0 deinterlace amvideo";
 #endif
 #endif /**/
-#ifdef CONFIG_AM_VDEC_DV
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	char def_dvbl_id[] = "dvblpath";
 /*	char def_dvbl_chain[] = "dvbldec dvbl amvideo";*/
 	char def_dvbl_chain[] = "dvbldec amvideo";
@@ -427,7 +427,7 @@ static void vfm_init(void)
 #ifdef CONFIG_AMLOGIC_V4L_VIDEO2
 	vfm_map_add(def_amlvideo2_id, def_amlvideo2_chain);
 #endif /**/
-#ifdef CONFIG_AM_VDEC_DV
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	vfm_map_add(def_dvbl_id, def_dvbl_chain);
 	vfm_map_add(def_dvel_id, def_dvel_chain);
 #endif

@@ -35,7 +35,7 @@
 
 #include "amcsc.h"
 #include "set_hdr2_v0.h"
-
+#include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 
 #define pr_csc(fmt, args...)\
 	do {\
@@ -2585,6 +2585,97 @@ static void vpp_set_mtx_en_read(void)
 				OSD1_MTX_EN_MASK);
 }
 
+/* dvll output 12bit */
+static int dvll_RGB_to_YUV709l_coeff[MATRIX_5x3_COEF_SIZE] = {
+	0, 0, 0, /* pre offset */
+	COEFF_NORM(0.181873), COEFF_NORM(0.611831), COEFF_NORM(0.061765),
+	COEFF_NORM(-0.100251), COEFF_NORM(-0.337249), COEFF_NORM(0.437500),
+	COEFF_NORM(0.437500), COEFF_NORM(-0.397384), COEFF_NORM(-0.040116),
+	0, 0, 0, /* 10'/11'/12' */
+	0, 0, 0, /* 20'/21'/22' */
+	64, 512, 512, /* offset */
+	0, 0, 0 /* mode, right_shift, clip_en */
+};
+static int *cur_post_mtx = bypass_coeff;
+static int cur_post_on = CSC_OFF;
+static int32_t *post_mtx_backup;
+static int32_t post_on_backup;
+static bool restore_post_table;
+/* coeff: pointer to target coeff array */
+/* bits: how many bits for target coeff, could be 10 ~ 12, default 10 */
+int enable_rgb_to_yuv_matrix_for_dvll(
+	int32_t on, uint32_t *coeff_orig, uint32_t bits)
+{
+	int32_t i, j;
+	uint32_t coeff01, coeff23, coeff45, coeff67;
+	uint32_t coeff8, scale, shift, offset[3];
+	int32_t *coeff = dvll_RGB_to_YUV709l_coeff;
+
+	if ((bits < 10) || (bits > 12))
+		return -1;
+	if (on && !coeff_orig)
+		return -2;
+	if (on) {
+		/* only store the start one */
+		if (cur_post_mtx !=
+			dvll_RGB_to_YUV709l_coeff) {
+			post_mtx_backup = cur_post_mtx;
+			post_on_backup = cur_post_on;
+		}
+		coeff01 = coeff_orig[0];
+		coeff23 = coeff_orig[1];
+		coeff45 = coeff_orig[2];
+		coeff67 = coeff_orig[3];
+		coeff8 = coeff_orig[4] & 0xffff;
+		scale =  (coeff_orig[4] >> 16) & 0x0f;
+		offset[0] = 0; /* coeff_orig[5]; */
+		offset[1] = 0; /* coeff_orig[6]; */
+		offset[2] = 0; /* coeff_orig[7]; */
+		if (scale >= bits) {
+			shift = scale - bits;
+			coeff[5] = (coeff01 & 0xffff) >> shift;
+			coeff[3] = ((coeff01 >> 16) & 0xffff) >> shift;
+			coeff[4] = (coeff23 & 0xffff) >> shift;
+			coeff[8] = ((coeff23 >> 16) & 0xffff) >> shift;
+			coeff[6] = (coeff45 & 0xffff) >> shift;
+			coeff[7] = ((coeff45 >> 16) & 0xffff) >> shift;
+			coeff[11] = (coeff67 & 0xffff) >> shift;
+			coeff[9] = ((coeff67 >> 16) & 0xffff) >> shift;
+			coeff[10] = (coeff8 & 0xffff) >> shift;
+		} else {
+			shift = bits - scale;
+			coeff[5] = (coeff01 & 0xffff) << shift;
+			coeff[3] = ((coeff01 >> 16) & 0xffff) << shift;
+			coeff[4] = (coeff23 & 0xffff) << shift;
+			coeff[8] = ((coeff23 >> 16) & 0xffff) << shift;
+			coeff[6] = (coeff45 & 0xffff) << shift;
+			coeff[7] = ((coeff45 >> 16) & 0xffff) << shift;
+			coeff[11] = (coeff67 & 0xffff) << shift;
+			coeff[9] = ((coeff67 >> 16) & 0xffff) << shift;
+			coeff[10] = (coeff8 & 0xffff) << shift;
+		}
+		coeff[18] = offset[0] >> (12 - bits);
+		coeff[19] = offset[1] >> (12 - bits);
+		coeff[20] = offset[2] >> (12 - bits);
+		for (i = 3; i < 12; i++) {
+			if (coeff[i] & (1 << bits))
+				for (j = bits + 1; j <= 12; j++)
+					coeff[i] |= 1 << j;
+		}
+		coeff[22] = bits - 10;
+		set_vpp_matrix(VPP_MATRIX_POST,
+			coeff, CSC_ON);
+		vpp_set_mtx_en_write();
+		restore_post_table = true;
+	} else if (restore_post_table) {
+		set_vpp_matrix(VPP_MATRIX_POST,
+			post_mtx_backup, post_on_backup);
+		vpp_set_mtx_en_write();
+		restore_post_table = false;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(enable_rgb_to_yuv_matrix_for_dvll);
 static void vpp_set_matrix(
 		enum vpp_matrix_sel_e vd1_or_vd2_or_post,
 		unsigned int on,

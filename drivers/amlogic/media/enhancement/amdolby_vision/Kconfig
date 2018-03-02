@@ -1,0 +1,15 @@
+#
+# AMLOGIC amdolby_vision devices configuration
+#
+
+comment "Amlogic amdolby_vision Drivers"
+
+menu "Amlogic amdolby_vision Driver"
+
+config AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+        bool "Amlogic amdolby_vision driver"
+        default n
+        help
+                "Amlogic amdolby_vision module init"
+
+endmenu

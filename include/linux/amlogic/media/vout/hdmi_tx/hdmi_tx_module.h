@@ -355,6 +355,7 @@ struct hdmitx_dev {
 	unsigned char hdmi_audio_off_flag;
 	enum hdmi_hdr_transfer hdr_transfer_feature;
 	enum hdmi_hdr_color hdr_color_feature;
+	unsigned int dv_src_feature;
 	unsigned int sdr_hdr_feature;
 	unsigned int flag_3dfp:1;
 	unsigned int flag_3dtb:1;

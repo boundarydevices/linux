@@ -5203,6 +5203,7 @@ static void osd_basic_update_disp_geometry(u32 index)
 {
 	struct hw_osd_reg_s *osd_reg = &hw_osd_reg_array[index];
 	u32 data32;
+	u32 buffer_w, buffer_h;
 
 	data32 = (osd_hw.dispdata[index].x_start & 0xfff)
 		| (osd_hw.dispdata[index].x_end & 0xfff) << 16;
@@ -5346,6 +5347,27 @@ static void osd_basic_update_disp_geometry(u32 index)
 		data32 = (osd_hw.pandata[index].y_start & 0x1fff)
 			| (osd_hw.pandata[index].y_end & 0x1fff) << 16;
 		VSYNCOSD_WR_MPEG_REG(osd_reg->osd_blk0_cfg_w2, data32);
+	}
+
+	data32 = (osd_hw.free_src_data[OSD1].x_start & 0x1fff) |
+			 (osd_hw.free_src_data[OSD1].x_end & 0x1fff) << 16;
+	VSYNCOSD_WR_MPEG_REG(
+		hw_osd_reg_array[OSD1].osd_blk0_cfg_w1, data32);
+	buffer_w = ((data32 >> 16) & 0x1fff) - (data32 & 0x1fff) + 1;
+	data32 = ((osd_hw.free_src_data[OSD1].y_start
+		+ osd_hw.pandata[OSD1].y_start) & 0x1fff)
+		| ((osd_hw.free_src_data[OSD1].y_end
+		+ osd_hw.pandata[OSD1].y_start) & 0x1fff) << 16;
+	VSYNCOSD_WR_MPEG_REG(VIU_OSD1_BLK0_CFG_W2, data32);
+	buffer_h = ((data32 >> 16) & 0x1fff) - (data32 & 0x1fff) + 1;
+	if (osd_hw.osd_meson_dev.has_dolby_vision) {
+		VSYNCOSD_WR_MPEG_REG(
+			DOLBY_CORE2A_SWAP_CTRL1,
+			((buffer_w + 0x40) << 16)
+			| (buffer_h + 0x80 + 0));
+		VSYNCOSD_WR_MPEG_REG(
+			DOLBY_CORE2A_SWAP_CTRL2,
+			(buffer_w << 16) | (buffer_h + 0));
 	}
 	data32 = VSYNCOSD_RD_MPEG_REG(osd_reg->osd_ctrl_stat);
 	data32 &= ~0x1ff008;//0x1ff00e;

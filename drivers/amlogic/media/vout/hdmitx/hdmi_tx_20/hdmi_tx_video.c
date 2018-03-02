@@ -35,7 +35,7 @@
 #include "hw/common.h"
 
 static void hdmitx_set_spd_info(struct hdmitx_dev *hdmitx_device);
-static void hdmi_set_vend_spec_infofram(struct hdmitx_dev *hdmitx_device,
+static void hdmi_set_vend_spec_infofram(struct hdmitx_dev *hdev,
 	enum hdmi_vic VideoCode);
 
 static struct hdmitx_vidpara hdmi_tx_video_params[] = {
@@ -659,30 +659,40 @@ static void hdmi_set_vend_spec_infofram(struct hdmitx_dev *hdev,
 	int i;
 	unsigned char VEN_DB[6];
 	unsigned char VEN_HB[3];
-
 	VEN_HB[0] = 0x81;
 	VEN_HB[1] = 0x01;
 	VEN_HB[2] = 0x5;
+
+	if (VideoCode == 0) {	   /* For non-4kx2k mode setting */
+		hdev->HWOp.SetPacket(HDMI_PACKET_VEND, NULL, VEN_HB);
+		return;
+	}
+
+	if ((hdev->RXCap.dv_info.block_flag == CORRECT) ||
+		(hdev->dv_src_feature == 1)) {	   /* For dolby */
+		return;
+	}
 
 	for (i = 0; i < 0x6; i++)
 		VEN_DB[i] = 0;
 	VEN_DB[0] = 0x03;
 	VEN_DB[1] = 0x0c;
 	VEN_DB[2] = 0x00;
-	VEN_DB[3] = 0x20;    /* 4k x 2k  Spec P156 */
-	if (VideoCode == 0) {	   /* For non-4kx2k mode setting */
-		hdev->HWOp.SetPacket(HDMI_PACKET_VEND, NULL, VEN_HB);
-		return;
-	}
-	if (VideoCode == HDMI_4k2k_30)
+	VEN_DB[3] = 0x00;    /* 4k x 2k  Spec P156 */
+
+	if (VideoCode == HDMI_4k2k_30) {
+		VEN_DB[3] = 0x20;
 		VEN_DB[4] = 0x1;
-	else if (VideoCode == HDMI_4k2k_25)
+	} else if (VideoCode == HDMI_4k2k_25) {
+		VEN_DB[3] = 0x20;
 		VEN_DB[4] = 0x2;
-	else if (VideoCode == HDMI_4k2k_24)
+	} else if (VideoCode == HDMI_4k2k_24) {
+		VEN_DB[3] = 0x20;
 		VEN_DB[4] = 0x3;
-	else if (VideoCode == HDMI_4k2k_smpte_24)
+	} else if (VideoCode == HDMI_4k2k_smpte_24) {
+		VEN_DB[3] = 0x20;
 		VEN_DB[4] = 0x4;
-	else
+	} else
 		;
 	hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB, VEN_HB);
 }
