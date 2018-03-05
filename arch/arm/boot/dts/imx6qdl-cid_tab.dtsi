@@ -540,10 +540,10 @@
 #define GP_MODEM_RESET		<&gpio4 23 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT2__GPIO4_IO23	0x030b0
 /*
- * This signal can only turn the modem on,
- * pull low for 2 seconds, then release,
+ * This signal (PWR_ON_N) can only turn the modem on,
+ * pull low for >= 25ms, then can take up to 2s to fully boot,
  * when signal goes low again, the device is ready.
- * Use AT*PSCPOF to power off.
+ * Use AT+CPOF to power off.
  */
 #define GP_MODEM_PULSE_ON	<&gpio4 29 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x4001b8b0	/* Open drain, bidirectional signal */
@@ -841,7 +841,7 @@
 		name = "wwan_rfkill";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_wwan_rfkill>;
-		pulse-duration = <2000>;
+		pulse-duration = <30>;
 		pulse-on-gpios = GP_MODEM_PULSE_ON;
 		reset-gpios = GP_MODEM_RESET;
 		status = "okay";
