@@ -395,13 +395,19 @@ void calc_lmv_base_mcinfo(unsigned int vf_height, unsigned long mcinfo_adr)
 	Wr(MCDI_LMVLCKEDEXT_1, lmv_lckedext[2]);
 }
 
+static unsigned short line_num_post_frst = 5;
+static unsigned short line_num_pre_frst = 5;
 /*
  * config pre hold ratio & mif request block len
  * pass_ratio = (pass_cnt + 1)/(pass_cnt + 1 + hold_cnt + 1)
  */
 static void pre_hold_block_mode_config(void)
 {
-	if (is_meson_txlx_cpu()) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
+		DI_Wr(DI_PRE_HOLD, 0);
+		/* go field after 2 lines */
+		DI_Wr(DI_PRE_GL_CTRL, (0x80000000|line_num_pre_frst));
+	} else if (is_meson_txlx_cpu()) {
 		/* setup pre process ratio to 66.6%*/
 		DI_Wr(DI_PRE_HOLD, (1 << 31) | (1 << 16) | 3);
 		/* block len, after block insert null req to balance reqs */
@@ -416,8 +422,6 @@ static void pre_hold_block_mode_config(void)
 	}
 }
 
-static unsigned short line_num_post_frst = 5;
-static unsigned short line_num_pre_frst = 5;
 void di_hw_init(bool pd_enable, bool mc_enable)
 {
 	unsigned short fifo_size_vpp = 0xc0;
@@ -469,13 +473,6 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 	}
 
 	pre_hold_block_mode_config();
-
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
-		DI_Wr(DI_PRE_HOLD, 0);
-		/* go field after 2 lines */
-		DI_Wr(DI_PRE_GL_CTRL, (0x80000000|line_num_pre_frst));
-	} else
-		DI_Wr(DI_PRE_HOLD, (1 << 31) | (31 << 16) | 31);
 
 	ma_di_init();
 	ei_hw_init();

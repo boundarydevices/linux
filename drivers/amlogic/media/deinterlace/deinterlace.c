@@ -4334,7 +4334,8 @@ static int do_pre_only_fun(void *arg, vframe_t *disp_vf)
 		di_post_stru.next_canvas_id = di_post_stru.canvas_id ? 0 : 1;
 
 		if (di_buf->process_fun_index == PROCESS_FUN_NULL) {
-			if (Rd(DI_IF1_GEN_REG) & 0x1 || Rd(DI_POST_CTRL) & 0xf)
+			if (Rd(DI_IF1_GEN_REG) & 0x1 ||
+				Rd(DI_POST_CTRL) & 0x10f)
 				disable_post_deinterlace_2();
 		}
 
@@ -6075,9 +6076,11 @@ static void di_pre_trigger_work(struct di_pre_stru_s *pre_stru_p)
 		if (recovery_flag || (force_recovery & 0x2)) {
 			force_recovery_count++;
 			if (init_flag) {
-				pr_err("====== DI force recovery =========\n");
+				pr_err("====== DI force recovery %u-%u =========\n",
+					recovery_log_reason,
+					recovery_log_queue_idx);
+				print_di_buf(recovery_log_di_buf, 2);
 				force_recovery &= (~0x2);
-				dis2_di();
 				recovery_flag = 0;
 			}
 		}
