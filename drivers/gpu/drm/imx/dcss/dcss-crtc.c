@@ -18,6 +18,7 @@
 #include <linux/component.h>
 #include <linux/pm_runtime.h>
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_atomic_helper.h>
 #include <video/imx-dcss.h>
@@ -25,6 +26,7 @@
 #include "dcss-kms.h"
 #include "dcss-plane.h"
 #include "imx-drm.h"
+#include "dcss-crtc.h"
 
 struct dcss_crtc {
 	struct device *dev;
@@ -40,6 +42,13 @@ struct dcss_crtc {
 	struct drm_property *dtrc_table_ofs;
 
 	struct completion disable_completion;
+	struct drm_pending_vblank_event *event;
+	int vblank_cnt;
+
+	enum dcss_hdr10_nonlinearity opipe_nl;
+	enum dcss_hdr10_gamut opipe_g;
+	enum dcss_hdr10_pixel_range opipe_pr;
+	u32 opipe_pix_format;
 };
 
 static void dcss_crtc_destroy(struct drm_crtc *crtc)
@@ -113,15 +122,18 @@ static int dcss_crtc_atomic_check(struct drm_crtc *crtc,
 static void dcss_crtc_atomic_begin(struct drm_crtc *crtc,
 				   struct drm_crtc_state *old_crtc_state)
 {
-	drm_crtc_vblank_on(crtc);
+	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
+						   base);
 
-	spin_lock_irq(&crtc->dev->event_lock);
 	if (crtc->state->event) {
-		WARN_ON(drm_crtc_vblank_get(crtc));
-		drm_crtc_arm_vblank_event(crtc, crtc->state->event);
+		crtc->state->event->pipe = drm_crtc_index(crtc);
+
+		WARN_ON(drm_crtc_vblank_get(crtc) != 0);
+
+		dcss_crtc->event = crtc->state->event;
 		crtc->state->event = NULL;
+		dcss_crtc->vblank_cnt = 0;
 	}
-	spin_unlock_irq(&crtc->dev->event_lock);
 }
 
 static void dcss_crtc_atomic_flush(struct drm_crtc *crtc,
@@ -133,6 +145,66 @@ static void dcss_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	if (dcss_dtg_is_enabled(dcss))
 		dcss_ctxld_enable(dcss);
+}
+
+void dcss_crtc_setup_opipe(struct drm_crtc *crtc, struct drm_connector *conn,
+			   u32 colorimetry, u32 eotf,
+			   enum hdmi_quantization_range qr)
+{
+	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
+						   base);
+	struct drm_display_info *di = &conn->display_info;
+	int vic;
+
+	if ((colorimetry & HDMI_EXTENDED_COLORIMETRY_BT2020) ||
+	    (colorimetry & HDMI_EXTENDED_COLORIMETRY_BT2020_CONST_LUM))
+		dcss_crtc->opipe_g = G_REC2020;
+	else if (colorimetry & HDMI_EXTENDED_COLORIMETRY_ADOBE_RGB)
+		dcss_crtc->opipe_g = G_ADOBE_ARGB;
+	else if (colorimetry & HDMI_EXTENDED_COLORIMETRY_XV_YCC_709)
+		dcss_crtc->opipe_g = G_REC709;
+	else
+		dcss_crtc->opipe_g = G_REC601_PAL;
+
+	if (eotf & (1 << 3))
+		dcss_crtc->opipe_nl = NL_2100HLG;
+	else if (eotf & (1 << 2))
+		dcss_crtc->opipe_nl = NL_REC2084;
+	else
+		dcss_crtc->opipe_nl = NL_REC709;
+
+	if (qr == HDMI_QUANTIZATION_RANGE_FULL)
+		dcss_crtc->opipe_pr = PR_FULL;
+	else
+		dcss_crtc->opipe_pr = PR_LIMITED;
+
+	vic = drm_match_cea_mode(&crtc->state->adjusted_mode);
+
+	/* FIXME: we should get the connector colorspace some other way */
+	if (vic == 97 &&
+	    (di->color_formats & DRM_COLOR_FORMAT_YCRCB420) &&
+	    (di->bpc >= 10))
+		dcss_crtc->opipe_pix_format = DRM_FORMAT_P010;
+	else
+		dcss_crtc->opipe_pix_format = DRM_FORMAT_ARGB8888;
+
+	DRM_INFO("OPIPE_CFG: gamut = %d, nl = %d, pr = %d, pix_format = %d\n",
+		 dcss_crtc->opipe_g, dcss_crtc->opipe_nl,
+		 dcss_crtc->opipe_pr, dcss_crtc->opipe_pix_format);
+}
+
+int dcss_crtc_get_opipe_cfg(struct drm_crtc *crtc,
+			    struct dcss_hdr10_pipe_cfg *opipe_cfg)
+{
+	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
+						   base);
+
+	opipe_cfg->pixel_format = dcss_crtc->opipe_pix_format;
+	opipe_cfg->g = dcss_crtc->opipe_g;
+	opipe_cfg->nl = dcss_crtc->opipe_nl;
+	opipe_cfg->pr = dcss_crtc->opipe_pr;
+
+	return 0;
 }
 
 static void dcss_crtc_enable(struct drm_crtc *crtc)
@@ -148,12 +220,18 @@ static void dcss_crtc_enable(struct drm_crtc *crtc)
 	pm_runtime_get_sync(dcss_crtc->dev->parent);
 
 	dcss_dtg_sync_set(dcss, &vm);
+
+	dcss_ss_subsam_set(dcss, dcss_crtc->opipe_pix_format);
 	dcss_ss_sync_set(dcss, &vm, mode->flags & DRM_MODE_FLAG_PHSYNC,
 			 mode->flags & DRM_MODE_FLAG_PVSYNC);
+
+	dcss_dtg_css_set(dcss, dcss_crtc->opipe_pix_format);
 
 	dcss_ss_enable(dcss, true);
 	dcss_dtg_enable(dcss, true, NULL);
 	dcss_ctxld_enable(dcss);
+
+	drm_crtc_vblank_on(crtc);
 
 	crtc->enabled = true;
 }
@@ -230,9 +308,20 @@ static const struct imx_drm_crtc_helper_funcs dcss_crtc_helper_funcs = {
 static irqreturn_t dcss_crtc_irq_handler(int irq, void *dev_id)
 {
 	struct dcss_crtc *dcss_crtc = dev_id;
+	struct drm_device *drm = dcss_crtc->base.dev;
+	struct drm_crtc *crtc = &dcss_crtc->base;
 	struct dcss_soc *dcss = dev_get_drvdata(dcss_crtc->dev->parent);
+	unsigned long flags;
 
 	drm_crtc_handle_vblank(&dcss_crtc->base);
+
+	spin_lock_irqsave(&drm->event_lock, flags);
+	if (dcss_crtc->event && !dcss_crtc->vblank_cnt--) {
+		drm_crtc_send_vblank_event(crtc, dcss_crtc->event);
+		drm_crtc_vblank_put(crtc);
+		dcss_crtc->event = NULL;
+	}
+	spin_unlock_irqrestore(&drm->event_lock, flags);
 
 	dcss_vblank_irq_clear(dcss);
 
