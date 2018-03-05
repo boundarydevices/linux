@@ -5541,7 +5541,6 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			else
 				efuse_mode = 1;
 		}
-		efuse_mode = 0;/*for g12a tmp*/
 		WRITE_VPP_REG(DOLBY_TV_CLKGATE_CTRL, reg_clk);
 		pr_dolby_dbg
 			("efuse_mode=%d reg_value = 0x%x\n",
