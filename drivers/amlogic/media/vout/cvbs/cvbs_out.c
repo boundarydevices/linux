@@ -96,6 +96,10 @@ static struct vinfo_s cvbs_info[] = {
 	},
 };
 
+/*bit[0]: 0=vid_pll, 1=gp0_pll*/
+/*bit[1]: 0=vid2_clk, 1=vid1_clk*/
+unsigned int cvbs_clk_path;
+
 static struct disp_module_info_s disp_module_info;
 static struct disp_module_info_s *info;
 static enum cvbs_mode_e local_cvbs_mode;
@@ -383,8 +387,7 @@ int cvbs_out_setmode(void)
 
 	cvbs_cntl_output(0);
 	cvbs_out_reg_write(VENC_VDAC_SETTING, 0xff);
-	/* Before setting clk for CVBS, disable ENCP/I to avoid hungup */
-	cvbs_out_reg_write(ENCP_VIDEO_EN, 0);
+	/* Before setting clk for CVBS, disable ENCI to avoid hungup */
 	cvbs_out_reg_write(ENCI_VIDEO_EN, 0);
 	set_vmode_clk();
 	ret = cvbs_out_set_venc(local_cvbs_mode);
@@ -874,6 +877,9 @@ enum {
 
 	/* dump the perfomance config in dts */
 	CMD_VP_CONFIG_DUMP,
+	/*set pll path: 3:vid pll  2:gp0 pll path2*/
+			/*1:gp0 pll path1*/
+	CMD_VP_SET_PLLPATH,
 
 	CMD_HELP,
 
@@ -943,6 +949,8 @@ static void cvbs_debug_store(char *buf)
 		cmd = CMD_VP_GET;
 	else if (!strncmp(argv[0], "vpconf", strlen("vpconf")))
 		cmd = CMD_VP_CONFIG_DUMP;
+	else if (!strncmp(argv[0], "set_clkpath", strlen("set_clkpath")))
+		cmd = CMD_VP_SET_PLLPATH;
 	else if (!strncmp(argv[0], "help", strlen("help")))
 		cmd = CMD_HELP;
 	else {
@@ -1101,7 +1109,33 @@ static void cvbs_debug_store(char *buf)
 	case CMD_VP_CONFIG_DUMP:
 		print_info("performance config in dts:\n");
 		cvbs_performance_config_dump();
+		break;
+	case CMD_VP_SET_PLLPATH:
+		if (cvbs_cpu_type() != CVBS_CPU_TYPE_G12A) {
+			print_info("ERR:Only g12a chip supported\n");
+			break;
+		}
+		if (argc != 2) {
+			print_info("[%s] set_clkpath 0/1/2/3\n",
+				__func__);
+			goto DEBUG_END;
+		}
+		ret = kstrtoul(argv[1], 10, &value);
+		if (value == 1 || value == 2 ||
+			value == 3 || value == 0) {
+			cvbs_clk_path = value;
+			print_info("path 0:vid_pll vid2_clk\n");
+			print_info("path 1:gp0_pll vid2_clk\n");
+			print_info("path 2:vid_pll vid1_clk\n");
+			print_info("path 3:gp0_pll vid1_clk\n");
+			print_info("you select path %d\n", cvbs_clk_path);
+		} else {
+			print_info("invalid value, only 0/1/2/3\n");
+			print_info("bit[0]: 0=vid_pll, 1=gp0_pll\n");
+			print_info("bit[1]: 0=vid2_clk, 1=vid1_clk\n");
+		}
 
+		break;
 	case CMD_HELP:
 		print_info("command format:\n"
 		"\tr c/h/v address_hex\n"
@@ -1110,7 +1144,8 @@ static void cvbs_debug_store(char *buf)
 		"\tw value_hex c/h/v address_hex\n"
 		"\twb value_hex c/h/v address_hex start_dec length_dec\n"
 		"\tbist 0/1/2/3/off\n"
-		"\tclkdump\n");
+		"\tclkdump\n"
+		"\tset_clkpath 0/1/2/3\n");
 		break;
 	default:
 		break;
@@ -1319,6 +1354,8 @@ static int cvbsout_probe(struct platform_device *pdev)
 {
 	int  ret;
 	const struct of_device_id *match;
+
+	cvbs_clk_path = 0;
 
 	local_cvbs_mode = MODE_MAX;
 	info = &disp_module_info;

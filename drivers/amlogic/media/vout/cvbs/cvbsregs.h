@@ -285,6 +285,7 @@ static const struct reg_s cvbsregs_576cvbs_enc[] = {
 	{VENC_VDAC_DAC0_FILT_CTRL0,       0x1        },
 	{VENC_VDAC_DAC0_FILT_CTRL1,       0xfc48     },
 	{ENCI_MACV_N0,                    0x0        },
+	{ENCI_VIDEO_CONT,                 0x0        },
 	{MREG_END_MARKER,                 0          }
 };
 

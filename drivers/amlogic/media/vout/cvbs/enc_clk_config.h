@@ -18,6 +18,7 @@
 #ifndef __ENC_CLK_CONFIG_H__
 #define __ENC_CLK_CONFIG_H__
 
+extern unsigned int cvbs_clk_path;
 void set_vmode_clk(void);
 extern void disable_vmode_clk(void);
 extern int cvbs_cpu_type(void);
