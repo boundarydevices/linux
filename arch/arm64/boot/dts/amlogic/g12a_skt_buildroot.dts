@@ -20,7 +20,6 @@
 #include "mesong12a.dtsi"
 #include "partition_mbox_normal.dtsi"
 #include "mesong12a_skt-panel.dtsi"
-#include "mesong12a-dvalin.dtsi"
 #include "mesong12a_drm.dtsi"
 
 / {
