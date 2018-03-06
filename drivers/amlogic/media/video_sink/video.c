@@ -6132,6 +6132,7 @@ static void set_omx_pts(u32 *p)
 	u32 set_from_hwc = p[2];
 	u32 frame_num = p[3];
 	u32 not_reset = p[4];
+	unsigned int try_cnt = 0x1000;
 
 	mutex_lock(&omx_mutex);
 	if (omx_pts_set_index < frame_num)
@@ -6155,12 +6156,13 @@ static void set_omx_pts(u32 *p)
 	} else if (set_from_hwc == 0 && !omx_run) {
 		struct vframe_s *vf = NULL;
 
-		while (1) {
+		while (try_cnt--) {
 			vf = vf_peek(RECEIVER_NAME);
 			if (vf) {
 				if (frame_num >= vf->omx_index) {
 					vf = vf_get(RECEIVER_NAME);
-					vf_put(vf, RECEIVER_NAME);
+					if (vf)
+						vf_put(vf, RECEIVER_NAME);
 				} else
 					break;
 			} else
