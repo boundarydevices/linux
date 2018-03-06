@@ -20,15 +20,16 @@
 #include <linux/of.h>
 #include <sound/soc.h>
 
-#define DUMMY_RATES			(SNDRV_PCM_RATE_64000 |\
-						SNDRV_PCM_RATE_48000 |\
-						SNDRV_PCM_RATE_32000 |\
-						SNDRV_PCM_RATE_16000 |\
-						SNDRV_PCM_RATE_8000)
+#define DUMMY_RATES		(SNDRV_PCM_RATE_96000 |\
+					SNDRV_PCM_RATE_64000 |\
+					SNDRV_PCM_RATE_48000 |\
+					SNDRV_PCM_RATE_32000 |\
+					SNDRV_PCM_RATE_16000 |\
+					SNDRV_PCM_RATE_8000)
 
 #define DUMMY_FORMATS		(SNDRV_PCM_FMTBIT_S16_LE |\
-						SNDRV_PCM_FMTBIT_S24_LE |\
-						SNDRV_PCM_FMTBIT_S32_LE)
+					SNDRV_PCM_FMTBIT_S24_LE |\
+					SNDRV_PCM_FMTBIT_S32_LE)
 
 static int pdm_dummy_set_fmt(
 	struct snd_soc_dai *codec_dai,

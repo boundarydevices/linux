@@ -51,7 +51,7 @@ static struct snd_pcm_hardware aml_pdm_hardware = {
 					SNDRV_PCM_FMTBIT_S32,
 
 	.rate_min			=	8000,
-	.rate_max			=	64000,
+	.rate_max			=	96000,
 
 	.channels_min		=	PDM_CHANNELS_MIN,
 	.channels_max		=	PDM_CHANNELS_MAX,
@@ -107,7 +107,7 @@ static int aml_pdm_filter_mode_set_enum(
 	return 0;
 }
 
-int pdm_hcic_shift_gain = 1;
+int pdm_hcic_shift_gain;
 
 static const char *const pdm_hcic_shift_gain_texts[] = {
 	"keep with coeff",
@@ -139,7 +139,7 @@ static int pdm_hcic_shift_gain_set_enum(
 int pdm_dclk;
 
 static const char *const pdm_dclk_texts[] = {
-	"PDM Dclk 3.072m, support 8k/16k/32k/48k/64k",
+	"PDM Dclk 3.072m, support 8k/16k/32k/48k/64k/96k",
 	"PDM Dclk 1.024m, support 8k/16k",
 	"PDM Dclk   768k, support 8k/16k",
 };
@@ -652,7 +652,9 @@ static int aml_pdm_dai_prepare(
 				return -EINVAL;
 			}
 		} else {
-			if (runtime->rate == 64000)
+			if (runtime->rate == 96000)
+				osr = 32;
+			else if (runtime->rate == 64000)
 				osr = 48;
 			else if (runtime->rate == 48000)
 				osr = 64;
