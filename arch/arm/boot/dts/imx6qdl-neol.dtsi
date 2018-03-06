@@ -730,6 +730,7 @@
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	bus-width = <4>;
 	non-removable;
+	no-sd-uhs-sdr104;
 	vmmc-supply = <&reg_wlan_en>;
 	vqmmc-1-8-v;
 	cap-power-off-card;
