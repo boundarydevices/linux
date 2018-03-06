@@ -2264,6 +2264,7 @@ config FB_JZ4740
 config FB_MXS
 	tristate "MXS LCD framebuffer support"
 	depends on FB && (ARCH_MXS || ARCH_MXC)
+	depends on FB_MXC_SYNC_PANEL
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
@@ -2311,6 +2312,22 @@ config FB_SIMPLE
 source "drivers/video/fbdev/omap/Kconfig"
 source "drivers/video/fbdev/omap2/Kconfig"
 source "drivers/video/fbdev/mmp/Kconfig"
+
+if ARCH_MXC
+source "drivers/video/fbdev/mxc/Kconfig"
+endif
+
+config FB_SH_MOBILE_MERAM
+	tristate "SuperH Mobile MERAM read ahead support"
+	depends on (SUPERH || ARCH_SHMOBILE)
+	select GENERIC_ALLOCATOR
+	help
+	  Enable MERAM support for the SuperH controller.
+
+	  This will allow for caching of the framebuffer to provide more
+	  reliable access under heavy main memory bus traffic situations.
+	  Up to 4 memory channels can be configured, allowing 4 RGB or
+	  2 YCbCr framebuffers to be configured.
 
 config FB_SSD1307
 	tristate "Solomon SSD1307 framebuffer support"
