@@ -583,16 +583,28 @@ static ssize_t tvafe_avin_detect_store(struct device *dev,
 
 static void tvafe_avin_detect_timer_handler(unsigned long arg)
 {
-	unsigned int state_changed;
+	unsigned int state_changed = 0;
 	struct tvafe_avin_det_s *avdev = (struct tvafe_avin_det_s *)arg;
 
-	if (avdev->dts_param.device_mask == TVAFE_AVIN_CH1_MASK)
+	if (avdev->dts_param.device_mask == TVAFE_AVIN_CH1_MASK) {
 		avdev->irq_counter[0] = aml_read_cbus(CVBS_IRQ0_COUNTER);
-	else if (avdev->dts_param.device_mask == TVAFE_AVIN_CH2_MASK)
+		if (!R_HIU_BIT(HHI_CVBS_DETECT_CNTL,
+			AFE_CH1_EN_DETECT_BIT, AFE_CH1_EN_DETECT_WIDTH)) {
+			goto TIMER;
+		}
+	} else if (avdev->dts_param.device_mask == TVAFE_AVIN_CH2_MASK) {
 		avdev->irq_counter[0] = aml_read_cbus(CVBS_IRQ1_COUNTER);
-	else if (avdev->dts_param.device_mask == TVAFE_AVIN_MASK) {
+		if (!R_HIU_BIT(HHI_CVBS_DETECT_CNTL,
+			AFE_CH2_EN_DETECT_BIT, AFE_CH2_EN_DETECT_WIDTH))
+			goto TIMER;
+	} else if (avdev->dts_param.device_mask == TVAFE_AVIN_MASK) {
 		avdev->irq_counter[0] = aml_read_cbus(CVBS_IRQ0_COUNTER);
 		avdev->irq_counter[1] = aml_read_cbus(CVBS_IRQ1_COUNTER);
+		if (!R_HIU_BIT(HHI_CVBS_DETECT_CNTL,
+			AFE_CH1_EN_DETECT_BIT, AFE_CH1_EN_DETECT_WIDTH) ||
+			!R_HIU_BIT(HHI_CVBS_DETECT_CNTL,
+			AFE_CH2_EN_DETECT_BIT, AFE_CH2_EN_DETECT_WIDTH))
+			goto TIMER;
 		if (avdev->irq_counter[1] != s_irq_counter1) {
 			if (s_counter1_last_state != 1)
 				s_irq_counter1_time = 0;
@@ -698,8 +710,8 @@ static void tvafe_avin_detect_timer_handler(unsigned long arg)
 
 	if (state_changed)
 		wake_up_interruptible(&tvafe_avin_waitq);
-	state_changed = 0;
 
+TIMER:
 	avin_detect_timer.expires = jiffies +
 				(TVAFE_AVIN_INTERVAL * avin_timer_time);
 	add_timer(&avin_detect_timer);
