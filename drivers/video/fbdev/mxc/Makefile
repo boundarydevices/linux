@@ -8,7 +8,6 @@ obj-$(CONFIG_FB_MXC_RK_PANEL_RK055AHD042)	+= mxcfb_rm68200_wxga.o
 obj-$(CONFIG_FB_MXC_RK_PANEL_RK055IQH042)	+= mxcfb_rm68191_qhd.o
 obj-$(CONFIG_FB_MXC_LDB) += ldb.o
 obj-$(CONFIG_FB_MXC_HDMI)			+= mxc_hdmi.o
-obj-$(CONFIG_FB_MX8_HDMI)			+= imx8_hdmi.o API_AFE_t28hpc_hdmitx.o
 obj-$(CONFIG_FB_MXC_EDID)			+= mxc_edid.o
 obj-$(CONFIG_FB_MXC_ADV7535)			+= adv7535.o
 obj-$(CONFIG_FB_MXC_DISP_FRAMEWORK)		+= mxc_dispdrv.o
