@@ -1815,12 +1815,16 @@ static inline void pcd_setup(dwc_otg_pcd_t *pcd)
 		    ("\n\n-----------	 CANNOT handle > 1 setup packet in DMA mode\n\n");
 
 	if ((core_if->snpsid >= OTG_CORE_REV_3_00a)
-	    && (core_if->dma_enable == 1) && (core_if->dma_desc_enable == 0))
+	    && (core_if->dma_enable == 1) && (core_if->dma_desc_enable == 0)) {
+		if (doeptsize0.b.supcnt == 3 && ep0->dwc_ep.stp_rollover == 0) {
+			DWC_ERROR(" !!! Setup packet count\n");
+			return;
+		}
 		ctrl =
 		    (pcd->setup_pkt +
 		     (3 - doeptsize0.b.supcnt - 1 +
 		      ep0->dwc_ep.stp_rollover))->req;
-
+	}
 #ifdef DEBUG_EP0
 	DWC_DEBUGPL(DBG_PCD, "SETUP %02x.%02x v%04x i%04x l%04x\n",
 		    ctrl.bmRequestType, ctrl.bRequest,
