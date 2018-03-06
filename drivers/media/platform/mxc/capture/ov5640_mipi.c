@@ -2909,7 +2909,8 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	int ret = 0;
 
 	/* Make sure power on */
-	ov5640_standby(0);
+	if (gpio_get_value(pwn_gpio))
+		ov5640_standby(0);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
