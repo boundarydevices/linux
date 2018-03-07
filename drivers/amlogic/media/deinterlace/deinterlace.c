@@ -1844,8 +1844,10 @@ static void di_cma_release(struct di_dev_s *devp)
 				pr_err("DI CMA  release buf[%d] fail.\n", i);
 			}
 		} else {
-			pr_err("DI buf[%d] page:0x%p no release.\n",
-				buf_p->index, buf_p->pages);
+			if (!IS_ERR_OR_NULL(buf_p->pages)) {
+				pr_err("DI buf[%d] page:0x%p no release.\n",
+					buf_p->index, buf_p->pages);
+			}
 		}
 	}
 	if (post_wr_en && post_wr_support) {
@@ -1978,7 +1980,7 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 		int ii = USED_LOCAL_BUF_MAX;
 		if (!IS_ERR_OR_NULL(keep_buf)) {
 			for (ii = 0; ii < USED_LOCAL_BUF_MAX; ii++) {
-				if (di_buf == di_buf->di_buf_dup_p[ii]) {
+				if (di_buf == keep_buf->di_buf_dup_p[ii]) {
 					di_print("%s skip %d\n", __func__, i);
 					break;
 				}
