@@ -37,7 +37,7 @@
 		};
 	};
 
-	drm_vpu:drm@d0100000 {
+	drm_vpu:drm@0xff900000 {
 		status = "okay";
 		compatible = "amlogic,meson-g12a";
 		reg = <0x0 0xff900000 0x0 0x40000>,
