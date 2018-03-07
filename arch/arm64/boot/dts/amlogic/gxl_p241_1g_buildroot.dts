@@ -637,14 +637,6 @@
 		compatible = "amlogic, vdac";
 		dev_name = "vdac";
 		status = "okay";
-		clocks = <&clkc CLKID_DAC_CLK>;
-		clock-names = "vdac_clk";
-	};
-
-	vdac {
-		compatible = "amlogic, vdac";
-		dev_name = "vdac";
-		status = "okay";
 	};
 
 	cvbsout {
