@@ -73,7 +73,6 @@ enum vlock_param_e {
 extern struct ve_hist_s video_ve_hist;
 extern unsigned int ve_size;
 extern struct ve_dnlp_s am_ve_dnlp;
-extern struct ve_dnlp_table_s am_ve_new_dnlp;
 extern struct tcon_gamma_table_s video_gamma_table_r;
 extern struct tcon_gamma_table_s video_gamma_table_g;
 extern struct tcon_gamma_table_s video_gamma_table_b;
@@ -82,19 +81,6 @@ extern struct tcon_gamma_table_s video_gamma_table_g_adj;
 extern struct tcon_gamma_table_s video_gamma_table_b_adj;
 extern struct tcon_rgb_ogo_s     video_rgb_ogo;
 
-extern int glb_scurve[65];
-extern int glb_clash_curve[65];
-extern int glb_pst_gamma[65];
-
-extern int gma_scurve0[65];
-extern int gma_scurve1[65];
-extern int gma_scurvet[65];
-extern int clash_curve[65];
-extern int clsh_scvbld[65];
-extern int blk_gma_crv[65];
-extern int blk_gma_bld[65];
-extern int blkwht_ebld[65];
-
 
 extern spinlock_t vpp_lcd_gamma_lock;
 
@@ -102,7 +88,6 @@ void ve_on_vs(struct vframe_s *vf);
 
 void ve_set_bext(struct ve_bext_s *p);
 void ve_set_dnlp(struct ve_dnlp_s *p);
-void ve_set_new_dnlp(struct ve_dnlp_table_s *p);
 void ve_set_dnlp_2(void);
 void ve_set_hsvs(struct ve_hsvs_s *p);
 void ve_set_ccor(struct ve_ccor_s *p);
@@ -194,6 +179,8 @@ extern int video_rgb_ogo_xvy_mtx;
 /* 0:enc;1:pll;2:manual pll */
 extern unsigned int vlock_mode;
 extern unsigned int vlock_en;
+extern unsigned int dnlp_sel;
+extern void ve_dnlp_load_reg(void);
 
 /*gxlx sr adaptive setting*/
 extern void amve_sharpness_adaptive_setting(struct vframe_s *vf,

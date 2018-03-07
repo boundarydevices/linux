@@ -125,11 +125,10 @@ enum pq_table_name_e {
 
 #define _VE_CM  'C'
 
-#define AMVECM_IOC_VE_DNLP      _IOW(_VE_CM, 0x21, struct ve_dnlp_s)
 #define AMVECM_IOC_G_HIST_AVG   _IOW(_VE_CM, 0x22, struct ve_hist_s)
 #define AMVECM_IOC_VE_DNLP_EN   _IO(_VE_CM, 0x23)
 #define AMVECM_IOC_VE_DNLP_DIS  _IO(_VE_CM, 0x24)
-#define AMVECM_IOC_VE_NEW_DNLP  _IOW(_VE_CM, 0x25, struct ve_dnlp_table_s)
+#define AMVECM_IOC_VE_NEW_DNLP  _IOW(_VE_CM, 0x25, struct ve_dnlp_curve_param_s)
 #define AMVECM_IOC_G_HIST_BIN   _IOW(_VE_CM, 0x26, struct vpp_hist_param_s)
 #define AMVECM_IOC_G_HDR_METADATA _IOW(_VE_CM, 0x27, struct hdr_metadata_info_s)
 

@@ -66,106 +66,91 @@ struct ve_hist_s {
 	int height;
 	int ave;
 };
-struct ve_dnlp_table_s {
-	unsigned int en;
-	unsigned int method;
-	unsigned int cliprate;
-	unsigned int lowrange;
-	unsigned int hghrange;
-	unsigned int lowalpha;
-	unsigned int midalpha;
-	unsigned int hghalpha;
-	unsigned int adj_level;
-	unsigned int new_adj_level;
-	unsigned int new_mvreflsh;
-	unsigned int new_gmma_rate;
-	unsigned int new_lowalpha;
-	unsigned int new_hghalpha;
-	unsigned int new_sbgnbnd;
-	unsigned int new_sendbnd;
-	unsigned int new_clashBgn;
-	unsigned int new_clashEnd;
-	unsigned int new_cliprate;
-	unsigned int new_mtdbld_rate;
-	unsigned int new_dnlp_pst_gmarat;
-	unsigned int dnlp_sel;
-	unsigned int dnlp_blk_cctr;/*blk signal add brightness*/
-	unsigned int dnlp_brgt_ctrl;
-	unsigned int dnlp_brgt_range;
-	unsigned int dnlp_brght_add;
-	unsigned int dnlp_brght_max;
-	unsigned int dnlp_almst_wht;
-	unsigned int dnlp_hghbin;/*1*/
-	unsigned int dnlp_hghnum;
-	unsigned int dnlp_lowbin;
-	unsigned int dnlp_lownum;
-	unsigned int dnlp_bkgend;
-	unsigned int dnlp_bkgert;
-	unsigned int dnlp_blkext;
-	unsigned int dnlp_whtext;
-	unsigned int dnlp_bextmx;
-	unsigned int dnlp_wextmx;
-	unsigned int dnlp_smhist_ck;
-	unsigned int dnlp_glb_crate;/*12*/
-	unsigned int dnlp_pstgma_brghtrate;
-	unsigned int dnlp_pstgma_brghtrat1;
-	unsigned int dnlp_wext_autorat;
-	unsigned int dnlp_cliprate_min;
-	unsigned int dnlp_adpcrat_lbnd;
-	unsigned int dnlp_adpcrat_hbnd;
-	unsigned int dnlp_adpmtd_lbnd;
-	unsigned int dnlp_adpmtd_hbnd;
-	unsigned int dnlp_set_bext;
-	unsigned int dnlp_set_wext;
-	unsigned int dnlp_satur_rat;
-	unsigned int dnlp_satur_max;
-	unsigned int blk_prct_rng;
-	unsigned int blk_prct_max;
-	unsigned int dnlp_lowrange;
-	unsigned int dnlp_hghrange;
-	unsigned int dnlp_auto_rng;
-	unsigned int dnlp_bin0_absmax;
-	unsigned int dnlp_bin0_sbtmax;
-	unsigned int dnlp_adpalpha_lrate;
-	unsigned int dnlp_adpalpha_hrate;
-	unsigned int dnlp_lrate00;/*0-64bin curve slope*/
-	unsigned int dnlp_lrate02;
-	unsigned int dnlp_lrate04;
-	unsigned int dnlp_lrate06;
-	unsigned int dnlp_lrate08;
-	unsigned int dnlp_lrate10;
-	unsigned int dnlp_lrate12;
-	unsigned int dnlp_lrate14;
-	unsigned int dnlp_lrate16;
-	unsigned int dnlp_lrate18;
-	unsigned int dnlp_lrate20;
-	unsigned int dnlp_lrate22;
-	unsigned int dnlp_lrate24;
-	unsigned int dnlp_lrate26;
-	unsigned int dnlp_lrate28;
-	unsigned int dnlp_lrate30;
-	unsigned int dnlp_lrate32;
-	unsigned int dnlp_lrate34;
-	unsigned int dnlp_lrate36;
-	unsigned int dnlp_lrate38;
-	unsigned int dnlp_lrate40;
-	unsigned int dnlp_lrate42;
-	unsigned int dnlp_lrate44;
-	unsigned int dnlp_lrate46;
-	unsigned int dnlp_lrate48;
-	unsigned int dnlp_lrate50;
-	unsigned int dnlp_lrate52;
-	unsigned int dnlp_lrate54;
-	unsigned int dnlp_lrate56;
-	unsigned int dnlp_lrate58;
-	unsigned int dnlp_lrate60;
-	unsigned int dnlp_lrate62;
-};
+
 struct vpp_hist_param_s {
 	unsigned int vpp_hist_pow;
 	unsigned int vpp_luma_sum;
 	unsigned int vpp_pixel_sum;
 	unsigned short vpp_histgram[64];
+};
+struct ve_dnlp_curve_param_s {
+	unsigned int ve_dnlp_scurv_low[65];
+	unsigned int ve_dnlp_scurv_mid1[65];
+	unsigned int ve_dnlp_scurv_mid2[65];
+	unsigned int ve_dnlp_scurv_hgh1[65];
+	unsigned int ve_dnlp_scurv_hgh2[65];
+	unsigned int ve_gain_var_lut49[49];
+	unsigned int ve_wext_gain[48];
+	unsigned int param[100];
+};
+enum dnlp_param_e {
+	ve_dnlp_enable = 0,
+	ve_dnlp_respond,
+	ve_dnlp_sel,
+	ve_dnlp_respond_flag,
+	ve_dnlp_smhist_ck,
+	ve_dnlp_mvreflsh,
+	ve_dnlp_pavg_btsft,
+	ve_dnlp_dbg_i2r,
+	ve_dnlp_cuvbld_min,
+	ve_dnlp_cuvbld_max,
+	ve_dnlp_schg_sft,
+	ve_dnlp_bbd_ratio_low,
+	ve_dnlp_bbd_ratio_hig,
+	ve_dnlp_limit_rng,
+	ve_dnlp_range_det,
+	ve_dnlp_blk_cctr,
+	ve_dnlp_brgt_ctrl,
+	ve_dnlp_brgt_range,
+	ve_dnlp_brght_add,
+	ve_dnlp_brght_max,
+	ve_dnlp_dbg_adjavg,
+	ve_dnlp_auto_rng,
+	ve_dnlp_lowrange,
+	ve_dnlp_hghrange,
+	ve_dnlp_satur_rat,
+	ve_dnlp_satur_max,
+	ve_dnlp_set_saturtn,
+	ve_dnlp_sbgnbnd,
+	ve_dnlp_sendbnd,
+	ve_dnlp_clashBgn,
+	ve_dnlp_clashEnd,
+	ve_dnlp_var_th,
+	ve_dnlp_clahe_gain_neg,
+	ve_dnlp_clahe_gain_pos,
+	ve_dnlp_clahe_gain_delta,
+	ve_dnlp_mtdbld_rate,
+	ve_dnlp_adpmtd_lbnd,
+	ve_dnlp_adpmtd_hbnd,
+	ve_dnlp_blkext_ofst,
+	ve_dnlp_whtext_ofst,
+	ve_dnlp_blkext_rate,
+	ve_dnlp_whtext_rate,
+	ve_dnlp_bwext_div4x_min,
+	ve_dnlp_iRgnBgn,
+	ve_dnlp_iRgnEnd,
+	ve_dnlp_dbg_map,
+	ve_dnlp_final_gain,
+	ve_dnlp_cliprate_v3,
+	ve_dnlp_cliprate_min,
+	ve_dnlp_adpcrat_lbnd,
+	ve_dnlp_adpcrat_hbnd,
+	ve_dnlp_scurv_low_th,
+	ve_dnlp_scurv_mid1_th,
+	ve_dnlp_scurv_mid2_th,
+	ve_dnlp_scurv_hgh1_th,
+	ve_dnlp_scurv_hgh2_th,
+	ve_dnlp_mtdrate_adp_en,
+	ve_dnlp_param_max,
+};
+enum dnlp_curve_e {
+	ve_scurv_low = 1000,
+	ve_scurv_mid1,
+	ve_scurv_mid2,
+	ve_scurv_hgh1,
+	ve_scurv_hgh2,
+	ve_curv_var_lut49,
+	ve_curv_wext_gain,
 };
 #else
 struct ve_dnlp_s {
