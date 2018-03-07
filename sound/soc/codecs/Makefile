@@ -297,6 +297,8 @@ snd-soc-wm-hubs-objs := wm_hubs.o
 snd-soc-wsa881x-objs := wsa881x.o
 snd-soc-zl38060-objs := zl38060.o
 snd-soc-zx-aud96p22-objs := zx_aud96p22.o
+snd-soc-rpmsg-wm8960-objs := rpmsg_wm8960.o
+snd-soc-rpmsg-wm8960-i2c-objs := rpmsg_wm8960_i2c.o
 
 # Amp
 snd-soc-max9877-objs := max9877.o
@@ -608,6 +610,8 @@ obj-$(CONFIG_SND_SOC_WM_HUBS)	+= snd-soc-wm-hubs.o
 obj-$(CONFIG_SND_SOC_WSA881X)	+= snd-soc-wsa881x.o
 obj-$(CONFIG_SND_SOC_ZL38060)	+= snd-soc-zl38060.o
 obj-$(CONFIG_SND_SOC_ZX_AUD96P22) += snd-soc-zx-aud96p22.o
+obj-$(CONFIG_SND_SOC_RPMSG_WM8960)	+= snd-soc-rpmsg-wm8960.o
+obj-$(CONFIG_SND_SOC_RPMSG_WM8960_I2C)	+= snd-soc-rpmsg-wm8960-i2c.o
 
 # Amp
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
