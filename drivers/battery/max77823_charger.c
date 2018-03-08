@@ -50,6 +50,7 @@ static const char* const psy_names[] = {
 [PS_BATT] = "battery",
 [PS_PS] = "ps",
 [PS_WIRELESS] = "wireless",
+[PS_USB_CHARGER] = "imx_usb_charger",	/* From ci_hdrc_imx, otg port */
 };
 
 static int psy_get_prop(struct max77823_charger_data *charger, enum ps_id id, enum power_supply_property property, union power_supply_propval *value)
@@ -447,31 +448,111 @@ static void max77823_set_buck(struct max77823_charger_data *charger,
 	pr_info("%s: CHG_CNFG_00(0x%02x)\n", __func__, ret);
 }
 
-static void max77823_set_charging_current_max(struct max77823_charger_data *charger, unsigned max_current)
+static int convert_to_ilim(int current_ma)
 {
-	int quotient, remainder, ret;
+	int ilim = (current_ma / 100);
+	int remainder = current_ma  - (ilim * 100);
 
-	quotient = max_current / 100;
-	remainder = max_current % 100;
-
-	ret = quotient * 3;
+	ilim *= 3;
 	if (remainder >= 67)
-		ret += 2;
+		ilim += 2;
 	else if (remainder >= 33)
-		ret += 1;
+		ilim += 1;
+	if (ilim < 3)
+		ilim = 3;
+	else if (ilim >= 0x78)
+		ilim = 0x78;
+	return ilim;
+}
 
-	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_09, ret);
+static int cvt_ilim_to_ma(int ilim)
+{
+	int ma = ilim / 3;
+	int remainder = ilim - (ma * 3);
 
-	pr_debug("[%s]VALUE(%d)DATA(0x%x)\n", __func__, max_current,
-		max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_09));
+	ma *= 100;
+	ma += remainder * 33;
+	if (remainder == 2)
+		ma++;
+	return ma;
+}
+
+static void max77823_set_chgin_ilim(struct max77823_charger_data *charger, unsigned ilim)
+{
+	charger->chgin_ilim = ilim;
+	charger->current_checked = 0;
+	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_09, ilim);
+}
+
+static void max77823_set_desired_chgin_ilim(struct max77823_charger_data *charger, unsigned ilim)
+{
+	struct power_supply *psy = charger->psy_ref[PS_USB_CHARGER];
+	union power_supply_propval value;
+	unsigned ilim2;
+	int ret;
+
+	charger->desired_chgin_ilim = ilim;
+	if (psy) {
+		ret = psy_get_prop(charger, PS_USB_CHARGER, POWER_SUPPLY_PROP_CURRENT_MAX, &value);
+		if (!ret) {
+			ilim2 = convert_to_ilim(value.intval);
+			pr_info("%s: ilim = 0x%x 0x%x\n", __func__, ilim, ilim2);
+			if (ilim > ilim2)
+				ilim = ilim2;
+		}
+		if (ilim > charger->chgin_ilim) {
+			ilim = charger->chgin_ilim;
+			if (ilim < 0x78)
+				ilim++;	/* Ramp up, keeping VBUS valid */
+		}
+	}
+	max77823_set_chgin_ilim(charger, ilim);
+	if (psy)
+		schedule_delayed_work(&charger->chg_cable_work, msecs_to_jiffies(2));
 }
 
 static void max77823_chg_cable_work(struct work_struct *work)
 {
 	struct max77823_charger_data *charger =
-	container_of(work, struct max77823_charger_data,chg_cable_work.work);
+		container_of(work, struct max77823_charger_data,
+				chg_cable_work.work);
+	struct power_supply *psy = charger->psy_ref[PS_USB_CHARGER];
+	union power_supply_propval value;
+	unsigned ilim = charger->chgin_ilim;
+	unsigned ilim2;
+	int ret;
+	int vbus = 0;
 
-	max77823_set_charging_current_max(charger, charger->charging_current_max);
+	if (psy) {
+		ret = psy_get_prop(charger, PS_USB_CHARGER, POWER_SUPPLY_PROP_HEALTH, &value);
+		if (!ret) {
+			vbus = (value.intval == POWER_SUPPLY_HEALTH_GOOD);
+			if (vbus) {
+				if (ilim < charger->desired_chgin_ilim)
+					ilim++;
+			} else {
+				if (ilim >= 5)
+					ilim -= 2;
+				charger->desired_chgin_ilim = ilim;
+			}
+		}
+		ret = psy_get_prop(charger, PS_USB_CHARGER, POWER_SUPPLY_PROP_CURRENT_MAX, &value);
+		if (!ret) {
+			if (!value.intval && vbus)
+				charger->current_checked = 0;
+			ilim2 = convert_to_ilim(value.intval);
+			if (ilim > ilim2)
+				ilim = ilim2;
+		}
+	}
+	if (ilim != charger->chgin_ilim) {
+		max77823_set_chgin_ilim(charger, ilim);
+		if (psy)
+			schedule_delayed_work(&charger->chg_cable_work, msecs_to_jiffies(2));
+	} else if (psy && !charger->current_checked) {
+		charger->current_checked = 1;
+		schedule_delayed_work(&charger->chg_cable_work, msecs_to_jiffies(100));
+	}
 }
 
 static void max77823_set_input_current(struct max77823_charger_data *charger,
@@ -482,30 +563,23 @@ static void max77823_set_input_current(struct max77823_charger_data *charger,
 
 	/* disable only buck because power onoff test issue */
 	if (input_current <= 0) {
+		charger->desired_chgin_ilim = charger->chgin_ilim = 3;
 		max77823_write_reg(charger->i2c,
-				   MAX77823_CHG_CNFG_09, 0x0F);
+				   MAX77823_CHG_CNFG_09, 3);
 		max77823_set_buck(charger, DISABLE);
 		return;
 	}
 	else
 		max77823_set_buck(charger, ENABLE);
 
-	if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
-		reg_data |= INPUT_CURRENT_1000mA;
-		max77823_write_reg(charger->i2c,
-				   MAX77823_CHG_CNFG_09, reg_data);
-
-		pr_info("[1][TA][0x%x]\n", reg_data);
-		schedule_delayed_work(&charger->chg_cable_work, msecs_to_jiffies(2000));
-	} else if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS) {
+	if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS) {
 		quotient = input_current / 20;
 		reg_data |= quotient;
 		max77823_write_reg(charger->i2c,
 				   MAX77823_CHG_CNFG_10, reg_data);
 	} else {
-		/* HV TA, etc */
 		cancel_delayed_work_sync(&charger->chg_cable_work);
-		max77823_set_charging_current_max(charger, input_current);
+		max77823_set_desired_chgin_ilim(charger, convert_to_ilim(input_current));
 	}
 }
 
@@ -592,12 +666,8 @@ static void max77823_charger_function_control(
 		charger->aicl_on = false;
 		set_charging_current = 0;
 		set_charging_current_max =
-			get_charging_info(charger, POWER_SUPPLY_TYPE_BATTERY)->input_current_limit;
-
-		set_charging_current_max =
 			get_charging_info(charger, POWER_SUPPLY_TYPE_USB)->input_current_limit;
 		charger->charging_current = set_charging_current;
-		charger->charging_current_max = set_charging_current_max;
 
 		ret = max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
 			charger->pdata->boost ? CHG_CNFG_00_BOOST_MASK : 0,
@@ -609,7 +679,7 @@ static void max77823_charger_function_control(
 
 		if ((ret >= 0) && (ret & 0x20))
 			charger->is_charging = true;
-		charger->charging_current_max =
+		set_charging_current_max =
 			get_charging_info(charger, charger->cable_type)->input_current_limit;
 		charger->charging_current =
 			get_charging_info(charger, charger->cable_type)->fast_charging_current;
@@ -620,8 +690,6 @@ static void max77823_charger_function_control(
 		    set_charging_current < usb_charging_current)
 			set_charging_current = usb_charging_current;
 
-		set_charging_current_max =
-			charger->charging_current_max;
 
 		if (charger->siop_level < 100) {
 			if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS) {
@@ -658,10 +726,10 @@ static void max77823_charger_function_control(
 					    get_charging_info(charger, charger->cable_type)->full_check_current_2nd);
 	}
 
-	pr_info("charging = %d, fc = %d, il = %d, t1 = %d, t2 = %d, cable = %d\n",
+	pr_info("charging = %d, fc = %d, il = 0x%x, t1 = %d, t2 = %d, cable = %d\n",
 		charger->is_charging,
 		charger->charging_current,
-		charger->charging_current_max,
+		charger->chgin_ilim,
 		get_charging_info(charger, charger->cable_type)->full_check_current_1st,
 		get_charging_info(charger, charger->cable_type)->full_check_current_2nd,
 		charger->cable_type);
@@ -841,6 +909,7 @@ static int max77823_chg_set_property(struct power_supply *psy,
 	struct max77823_charger_data *charger = psy->drv_data;
 	int set_charging_current_max;
 	const int usb_charging_current = get_charging_info(charger, POWER_SUPPLY_TYPE_USB)->fast_charging_current;
+	int limit_ma = 4000;
 
 	switch (psp) {
 	/* val->intval : type */
@@ -858,7 +927,7 @@ static int max77823_chg_set_property(struct power_supply *psy,
 
 	/* val->intval : input charging current */
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		charger->charging_current_max = val->intval;
+		max77823_set_input_current(charger, val->intval);
 		break;
 	/*  val->intval : charging current */
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
@@ -881,34 +950,21 @@ static int max77823_chg_set_property(struct power_supply *psy,
 					current_now < usb_charging_current)
 				current_now = usb_charging_current;
 
+			set_charging_current_max =
+				cvt_ilim_to_ma(charger->desired_chgin_ilim);
 			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS || \
 				charger->cable_type == POWER_SUPPLY_TYPE_HV_MAINS) {
-				if (charger->siop_level < 100 ) {
-					set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
-				} else {
-					set_charging_current_max =
-						charger->charging_current_max;
-				}
-
-				if (charger->siop_level < 100 &&
-				    current_now > SIOP_CHARGING_LIMIT_CURRENT)
-					current_now = SIOP_CHARGING_LIMIT_CURRENT;
-				max77823_set_input_current(charger,
-						   set_charging_current_max);
+				limit_ma = SIOP_INPUT_LIMIT_CURRENT;
 			} else if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS) {
-				if (charger->siop_level < 100 ) {
-					set_charging_current_max = SIOP_WIRELESS_INPUT_LIMIT_CURRENT;
-				} else {
-					set_charging_current_max =
-						charger->charging_current_max;
-				}
-
-				if (charger->siop_level < 100 &&
-						current_now > SIOP_WIRELESS_CHARGING_LIMIT_CURRENT)
-					current_now = SIOP_WIRELESS_CHARGING_LIMIT_CURRENT;
-				max77823_set_input_current(charger,
-					set_charging_current_max);
+				limit_ma = SIOP_WIRELESS_INPUT_LIMIT_CURRENT;
 			}
+			if (charger->siop_level < 100 )
+				set_charging_current_max = limit_ma;
+
+			if (charger->siop_level < 100 && current_now > limit_ma)
+				current_now = limit_ma;
+			max77823_set_input_current(charger,
+					   set_charging_current_max);
 
 			max77823_set_charge_current(charger, current_now);
 
@@ -1246,7 +1302,7 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 					__func__, chgin_dtls, chg_dtls);
 			pr_info("%s: undervoltage->normal\n", __func__);
 			max77823_set_input_current(charger,
-					charger->charging_current_max);
+					cvt_ilim_to_ma(charger->desired_chgin_ilim));
 		}
 	}
 	/* Have the battery reevaluate charging */
@@ -1574,6 +1630,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	struct max77823_charger_data *charger;
 	int ret = 0;
 	struct regulator *reg_otg;
+	union power_supply_propval value;
 
 	pr_info("%s: Max77823 Charger Driver Loading\n", __func__);
 
@@ -1701,6 +1758,9 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
 		charger->pdata->boost ? CHG_CNFG_00_BOOST_MASK : 0,
 		CHG_CNFG_00_BOOST_MASK);
+#define DEFAULT_VCHGIN_REG	0	/* 0 - 4.5V */
+	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
+		DEFAULT_VCHGIN_REG << 3, 3 << 3);
 
 	/* enable chgin irq after sec_battery_probe */
 	queue_delayed_work(charger->wqueue, &charger->chgin_init_work,
@@ -1715,6 +1775,10 @@ static int max77823_charger_probe(struct platform_device *pdev)
 		charger->irq_bypass = 0;
 	}
 
+	ret = psy_get_prop(charger, PS_USB_CHARGER, POWER_SUPPLY_PROP_CURRENT_MAX, &value);
+	if (!ret) {
+		pr_info("%s: max_current = %d\n", __func__, value.intval);
+	}
 	pr_info("%s: MAX77823 Charger Driver Loaded\n", __func__);
 
 	return 0;
@@ -1780,12 +1844,20 @@ static void max77823_charger_shutdown(struct device *dev)
 		pr_err("%s: no max77823 i2c client\n", __func__);
 		return;
 	}
-	max77823_set_charging_current_max(charger, ci->input_current_limit);
+	if (charger->chgin_ilim < 0x0f)
+		max77823_set_chgin_ilim(charger, convert_to_ilim(ci->input_current_limit));
 	/* Protection allow 0xb9 write */
 	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_06, 0x0c);
 	max77823_set_charge_current(charger, ci->fast_charging_current);
-	/* enable charging from chgin(otg)/wcin, Vchrgin_reg = 4.3V */
-	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_12, 0x67);
+	/*
+	 * enable charging from chgin(otg)/wcin,
+	 * VCHGIN_REG - bits[4:3]
+	 * 0 - Vchgin_reg = 4.5V, Vchgin_uvlo=4.3V
+	 * 1 - Vchgin_reg = 4.9V, Vchgin_uvlo=4.7V
+	 * 2 - Vchgin_reg = 5.0V, Vchgin_uvlo=4.8V
+	 * 3 - Vchgin_reg = 5.1V, Vchgin_uvlo=4.9V
+	 */
+	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_12, 0x67 | (DEFAULT_VCHGIN_REG << 3));
 	/* enable charging mode */
 	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_00, 0x5);
 }
