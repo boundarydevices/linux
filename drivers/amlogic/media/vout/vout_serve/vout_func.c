@@ -121,8 +121,8 @@ static inline int vout_func_check_state(int index, unsigned int state,
 static void vout_func_update_viu(int index, struct vout_server_s *p_server)
 {
 	struct vinfo_s *vinfo = NULL;
-	unsigned int mux_bit = 0, mux_sel = 3;
-	unsigned int clk_bit = 0, clk_sel = 0;
+	unsigned int mux_bit = 0xff, mux_sel = VIU_MUX_MAX;
+	unsigned int clk_bit = 0xff, clk_sel = 0;
 
 	if (p_server->op.get_vinfo)
 		vinfo = p_server->op.get_vinfo();
@@ -157,8 +157,12 @@ static void vout_func_update_viu(int index, struct vout_server_s *p_server)
 		break;
 	}
 
-	vout_func_vcbus_setb(VPU_VIU_VENC_MUX_CTRL, mux_sel, mux_bit, 2);
-	vout_func_vcbus_setb(VPU_VENCX_CLK_CTRL, clk_sel, clk_bit, 1);
+	if (mux_bit < 0xff) {
+		vout_func_vcbus_setb(VPU_VIU_VENC_MUX_CTRL,
+				mux_sel, mux_bit, 2);
+	}
+	if (clk_bit < 0xff)
+		vout_func_vcbus_setb(VPU_VENCX_CLK_CTRL, clk_sel, clk_bit, 1);
 
 #if 0
 	VOUTPR("%s: %d, mux_sel=%d, clk_sel=%d\n",
@@ -193,8 +197,6 @@ int vout_func_set_current_vmode(int index, enum vmode_e mode)
 
 		if (p_server->op.vmode_is_supported(mode) == true) {
 			p_module->curr_vout_server = p_server;
-			vout_func_update_viu(index, p_server);
-			ret = p_server->op.set_vmode(mode);
 			if (p_server->op.set_state)
 				p_server->op.set_state(index);
 		} else {
@@ -207,6 +209,8 @@ int vout_func_set_current_vmode(int index, enum vmode_e mode)
 				p_server->op.clr_state(index);
 		}
 	}
+	vout_func_update_viu(index, p_module->curr_vout_server);
+	ret = p_module->curr_vout_server->op.set_vmode(mode);
 
 	mutex_unlock(&vout_mutex);
 

@@ -284,7 +284,7 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 		LCDPR("vout_serve bypass\n");
 		return 0;
 	}
-	mutex_lock(&lcd_vout_mutex);
+	mutex_lock(&lcd_drv->power_mutex);
 
 	/* do not change mode value here, for bit mask is useful */
 	lcd_vmode_vinfo_update(mode & VMODE_MODE_BIT_MASK);
@@ -292,7 +292,9 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 	if (!(mode & VMODE_INIT_BIT_MASK)) {
 		switch (mode & VMODE_MODE_BIT_MASK) {
 		case VMODE_LCD:
+			mutex_lock(&lcd_vout_mutex);
 			ret = lcd_drv->driver_change();
+			mutex_unlock(&lcd_vout_mutex);
 			break;
 		default:
 			ret = -EINVAL;
@@ -300,7 +302,7 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 	} else
 		lcd_clk_gate_switch(1);
 
-	mutex_unlock(&lcd_vout_mutex);
+	mutex_unlock(&lcd_drv->power_mutex);
 	return ret;
 }
 

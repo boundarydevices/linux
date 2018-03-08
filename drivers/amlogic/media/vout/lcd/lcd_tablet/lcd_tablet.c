@@ -83,26 +83,29 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 	int ret = 0;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
-	mutex_lock(&lcd_vout_mutex);
+	mutex_lock(&lcd_drv->power_mutex);
 
 	if (!(mode & VMODE_INIT_BIT_MASK)) {
-		if (VMODE_LCD == (mode & VMODE_MODE_BIT_MASK)) {
-			lcd_drv->driver_init_pre();
-			ret = lcd_drv->driver_init();
-		} else {
+		if (VMODE_LCD == (mode & VMODE_MODE_BIT_MASK))
+			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+		else
 			ret = -EINVAL;
-		}
 	} else
 		lcd_clk_gate_switch(1);
 
-	mutex_unlock(&lcd_vout_mutex);
+	mutex_unlock(&lcd_drv->power_mutex);
 	return ret;
 }
 
 static int lcd_vout_disable(enum vmode_e cur_vmod)
 {
-	aml_lcd_notifier_call_chain(LCD_EVENT_IF_POWER_OFF, NULL);
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+
+	mutex_lock(&lcd_drv->power_mutex);
+	aml_lcd_notifier_call_chain(LCD_EVENT_POWER_OFF, NULL);
 	LCDPR("%s finished\n", __func__);
+	mutex_unlock(&lcd_drv->power_mutex);
+
 	return 0;
 }
 
