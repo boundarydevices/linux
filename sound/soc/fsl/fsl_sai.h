@@ -291,7 +291,7 @@ struct fsl_sai {
 	struct fsl_sai_param param;
 	struct pm_qos_request pm_qos_req;
 	struct pinctrl *pinctrl;
-	struct pinctrl_state *pins_dsd;
+	struct pinctrl_state *pins_state;
 };
 
 #define TX 1
