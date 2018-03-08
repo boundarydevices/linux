@@ -1335,8 +1335,12 @@
 &usbotg {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
+	charging-downstream-port-mA = <900>;
 	disable-over-current;
+	dedicate-charging-port-mA = <4000>;
+	imx-usb-charger-detection;
 	vbus-supply = <&reg_usbotg_vbus>;
+	vbus-detect-mV = <4600>;
 	status = "okay";
 };
 
