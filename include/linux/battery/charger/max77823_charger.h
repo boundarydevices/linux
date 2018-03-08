@@ -138,6 +138,7 @@ enum ps_id {
 	PS_BATT,
 	PS_PS,
 	PS_WIRELESS,
+	PS_USB_CHARGER,
 	PS_MAX	/* last */
 };
 
@@ -173,8 +174,10 @@ struct max77823_charger_data {
 	unsigned int	battery_state;
 	unsigned int	battery_present;
 	unsigned int	cable_type;
-	unsigned int	charging_current_max;
+	unsigned int	chgin_ilim;
+	unsigned int	desired_chgin_ilim;
 	unsigned int	charging_current;
+	unsigned int	current_checked;
 	unsigned int	input_current_limit;
 	unsigned int	vbus_state;
 	int		aicl_on;
