@@ -14329,7 +14329,7 @@ F:      drivers/amlogic/media/common/vpu/vpu_power_init.c
 
 AMLOGIC dts for g12a skt
 M: Qiufang Dai <qiufang.dai@amlogic.com>
-F: arch/arm64/boot/dts/amlogic/g12a_skt.dts
+F: arch/arm64/boot/dts/amlogic/g12a_*.dts
 
 AMLOGIC G12A Audio DRIVER
 M:	Xing Wang <xing.wang@amlogic.com>

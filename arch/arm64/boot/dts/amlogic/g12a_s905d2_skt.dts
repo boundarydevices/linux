@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/g12a_skt.dts
+ * arch/arm64/boot/dts/amlogic/g12a_s905d2_skt.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -1076,7 +1076,7 @@
 			 "MMC_CAP_CMD23";
 		/* caps2 = "MMC_CAP2_HS200", "MMC_CAP2_HS400";*/
 		f_min = <400000>;
-		f_max = <200000000>;
+		f_max = <40000000>;
 	};
 };
 
@@ -1101,14 +1101,10 @@
 			 "MMC_CAP_MMC_HIGHSPEED",
 			 "MMC_CAP_SD_HIGHSPEED",
 			 "MMC_CAP_NONREMOVABLE",
-			 "MMC_CAP_UHS_SDR12",
-			 "MMC_CAP_UHS_SDR25",
-			 "MMC_CAP_UHS_SDR50",
-			 "MMC_CAP_UHS_SDR104",
 			 "MMC_PM_KEEP_POWER",
 			 "MMC_CAP_SDIO_IRQ";
 		f_min = <400000>;
-		f_max = <200000000>;
+		f_max = <50000000>;
 	};
 };
 
