@@ -3081,7 +3081,7 @@ static void hdcp_ksv_print(void)
 	unsigned int i, pos;
 	unsigned char *tmp_buf = NULL;
 
-	tmp_buf = kmalloc(2000, GFP_KERNEL);
+	tmp_buf = kmalloc(2000, GFP_ATOMIC);
 	if (!tmp_buf)
 		return;
 
@@ -3110,7 +3110,7 @@ static void hdcp_ksv_sha1_calc(struct hdmitx_dev *hdev)
 	int j = 0;
 
 	/* 0x165e: Page 95 */
-	hdcp_mKsvListBuf = kmalloc(0x1660, GFP_KERNEL);
+	hdcp_mKsvListBuf = kmalloc(0x1660, GFP_ATOMIC);
 	if (hdcp_mKsvListBuf) {
 		/* KSV_LEN; */
 		list = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_0) & KSV_MSK;
