@@ -844,7 +844,9 @@ static void ffs_user_copy_worker(struct work_struct *work)
 
 	if (io_data->read)
 		kfree(io_data->to_free);
+#ifndef CONFIG_AMLOGIC_USB
 	kfree(io_data->buf);
+#endif
 	kfree(io_data);
 }
 
