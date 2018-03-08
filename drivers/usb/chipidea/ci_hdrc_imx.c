@@ -144,6 +144,7 @@ static enum power_supply_property imx_usb_charger_power_props[] = {
 	POWER_SUPPLY_PROP_PRESENT,	/* Charger detected */
 	POWER_SUPPLY_PROP_ONLINE,	/* VBUS online */
 	POWER_SUPPLY_PROP_CURRENT_MAX,	/* Maximum current in mA */
+	POWER_SUPPLY_PROP_HEALTH,	/* whether VBUS is valid currently */
 };
 
 /* Common functions shared by usbmisc drivers */
@@ -155,6 +156,7 @@ static struct imx_usbmisc_data *usbmisc_get_init_data(struct device *dev)
 	struct of_phandle_args args;
 	struct imx_usbmisc_data *data;
 	int ret;
+	u32 val;
 
 	/*
 	 * In case the fsl,usbmisc property is not present this device doesn't
@@ -216,7 +218,12 @@ static struct imx_usbmisc_data *usbmisc_get_init_data(struct device *dev)
 			return ERR_PTR(-EINVAL);
 		}
 	}
-
+	ret = of_property_read_u32(np, "dedicate-charging-port-mA", &val);
+	data->dcp_ma = (!ret) ? val : 1500;
+	ret = of_property_read_u32(np, "charging-downstream-port-mA", &val);
+	data->cdp_ma = (!ret) ? val : 900;
+	ret = of_property_read_u32(np, "vbus-detect-mV", &val);
+	data->vbus_detect_ma = (!ret) ? val : 4400;
 	return data;
 }
 
@@ -390,6 +397,8 @@ static int imx_usb_charger_get_property(struct power_supply *psy,
 {
 	struct usb_charger *charger =
 		container_of(psy->desc, struct usb_charger, psy_desc);
+	struct ci_hdrc_imx_data *data =
+		container_of(charger, struct ci_hdrc_imx_data, charger);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_PRESENT:
@@ -400,6 +409,11 @@ static int imx_usb_charger_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		val->intval = charger->max_current;
+		break;
+	case POWER_SUPPLY_PROP_HEALTH:
+		val->intval = imx_usbmisc_check_vbus(data->usbmisc_data) ?
+			POWER_SUPPLY_HEALTH_GOOD :
+			POWER_SUPPLY_HEALTH_UNDERVOLTAGE;
 		break;
 	default:
 		return -EINVAL;
