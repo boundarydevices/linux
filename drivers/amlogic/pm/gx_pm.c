@@ -243,7 +243,6 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 
 	debug_reg = of_iomap(pdev->dev.of_node, 0);
 	exit_reg = of_iomap(pdev->dev.of_node, 1);
-	writel(0x0, debug_reg);
 	device_create_file(&pdev->dev, &dev_attr_suspend_reason);
 	device_create_file(&pdev->dev, &dev_attr_time_out);
 	device_rename(&pdev->dev, "aml_pm");
