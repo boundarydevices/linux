@@ -54,6 +54,11 @@ static void __iomem *codecio_reg_map[CODECIO_BUS_MAX];
 static int codecio_reg_read(u32 bus_type, unsigned int reg, unsigned int *val)
 {
 	if ((bus_type >= CODECIO_CBUS_BASE) && (bus_type < CODECIO_BUS_MAX)) {
+		if (codecio_reg_map[bus_type] == NULL) {
+			pr_err("No support bus type %d to read.\n", bus_type);
+			return -1;
+		}
+
 		*val = readl((codecio_reg_map[bus_type] + reg));
 		return 0;
 	} else
@@ -63,6 +68,11 @@ static int codecio_reg_read(u32 bus_type, unsigned int reg, unsigned int *val)
 static int codecio_reg_write(u32 bus_type, unsigned int reg, unsigned int val)
 {
 	if ((bus_type >= CODECIO_CBUS_BASE) && (bus_type < CODECIO_BUS_MAX)) {
+		if (codecio_reg_map[bus_type] == NULL) {
+			pr_err("No support bus type %d to write.\n", bus_type);
+			return -1;
+		}
+
 		writel(val, (codecio_reg_map[bus_type] + reg));
 		return 0;
 	} else
