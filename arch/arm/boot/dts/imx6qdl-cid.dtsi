@@ -138,6 +138,8 @@
 			MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x130b0
 			/* TP131 */
 			MX6QDL_PAD_EIM_A25__GPIO5_IO02		0x1b0b0
+			/* USB (J2) port control (NFC/FP) */
+			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x400030b0
 		>;
 	};
 
@@ -363,13 +365,6 @@
 		fsl,pins = <
 #define GP_REG_GPS_EN	<&gpio4 5 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0
-		>;
-	};
-
-	pinctrl_reg_nfc: reg-nfcgrp {
-		fsl,pins = <
-#define GP_NFC_PWR_EN	<&gpio4 21 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x030b0
 		>;
 	};
 
@@ -744,35 +739,23 @@
 			regulator-always-on;
 		};
 
-		reg_nfc: regulator@7 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_NFC_PWR_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_nfc>;
-			reg = <7>;
-			regulator-name = "nfc";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-		};
-
-		reg_usbh1: regulator@8 {
+		reg_usbh1: regulator@7 {
 			compatible = "regulator-fixed";
 			enable-active-high;
 			gpio = GP_USBH1_PWR_EN;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_usbh1>;
-			reg = <8>;
-			regulator-name = "nfc";
+			reg = <7>;
+			regulator-name = "usbh1";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 		};
 
-		reg_wlan_en: regulator@9 {
+		reg_wlan_en: regulator@8 {
 			compatible = "regulator-fixed";
 			enable-active-high;
 			gpio = GP_REG_WLAN_EN;
-			reg = <9>;
+			reg = <8>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_wlan_en>;
 			regulator-name = "wlan-en";
