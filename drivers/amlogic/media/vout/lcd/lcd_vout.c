@@ -1048,6 +1048,9 @@ static int lcd_remove(struct platform_device *pdev)
 
 static int lcd_resume(struct platform_device *pdev)
 {
+	if ((lcd_driver->lcd_status & LCD_STATUS_VMODE_ACTIVE) == 0)
+		return 0;
+
 	if (lcd_driver->lcd_resume_type) {
 		lcd_resume_flag = 1;
 		if (lcd_driver->workqueue) {

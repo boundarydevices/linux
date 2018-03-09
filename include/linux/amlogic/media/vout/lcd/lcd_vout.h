@@ -384,6 +384,7 @@ struct lcd_duration_s {
 
 #define LCD_STATUS_IF_ON      (1 << 0)
 #define LCD_STATUS_ENCL_ON    (1 << 1)
+#define LCD_STATUS_VMODE_ACTIVE  (1 << 2)
 #define LCD_STATUS_ON         (LCD_STATUS_IF_ON | LCD_STATUS_ENCL_ON)
 
 struct aml_lcd_drv_s {
