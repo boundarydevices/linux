@@ -178,6 +178,7 @@ struct max77823_charger_data {
 	unsigned int	desired_chgin_ilim;
 	unsigned int	charging_current;
 	unsigned int	current_checked;
+	unsigned int	last_cable_type;
 	unsigned int	input_current_limit;
 	unsigned int	vbus_state;
 	int		aicl_on;
