@@ -330,6 +330,7 @@ bool sec_bat_check_callback(struct sec_battery_info *battery)
 void sec_bat_check_cable_result_callback(struct device *dev,
 		int cable_type)
 {
+#if 0
 	struct regulator *pma8084_lvs2;
 	int rc = 0;
 	current_cable_type = cable_type;
@@ -365,6 +366,7 @@ void sec_bat_check_cable_result_callback(struct device *dev,
 		}
 	}
 	regulator_put(pma8084_lvs2);
+#endif
 }
 
 int sec_bat_check_cable_callback(struct sec_battery_info *battery)
