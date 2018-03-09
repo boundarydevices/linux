@@ -21,6 +21,7 @@
 
 #include <linux/mfd/core.h>
 #include <linux/regulator/machine.h>
+#include <linux/power_supply.h>
 
 #define MAX77823_SAFEOUT2                0x80
 
@@ -224,6 +225,7 @@ struct max77823_charger_data {
 	struct		regulator_desc reg_descs[1];
 	struct		regulator_dev *regulators[1];
 
+	struct power_supply_desc psy_chg_desc;
 	sec_battery_platform_data_t	*pdata;
 };
 
