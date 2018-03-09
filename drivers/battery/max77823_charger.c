@@ -448,6 +448,27 @@ static void max77823_set_buck(struct max77823_charger_data *charger,
 	pr_info("%s: CHG_CNFG_00(0x%02x)\n", __func__, ret);
 }
 
+static void update_cable_type(struct max77823_charger_data *charger)
+{
+	struct power_supply *psy = charger->psy_ref[PS_USB_CHARGER];
+	union power_supply_propval value;
+	int type;
+
+	value.intval = POWER_SUPPLY_TYPE_HV_MAINS;
+	if (psy && psy->desc->type) {
+		type = psy->desc->type;
+		if (type != POWER_SUPPLY_TYPE_MAINS)
+			value.intval = type;
+		else if (charger->last_cable_type)
+			return;
+	}
+
+	if (charger->last_cable_type != value.intval) {
+		charger->last_cable_type = value.intval;
+		psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
+	}
+}
+
 static int convert_to_ilim(int current_ma)
 {
 	int ilim = (current_ma / 100);
@@ -540,6 +561,7 @@ static void max77823_chg_cable_work(struct work_struct *work)
 		if (!ret) {
 			if (!value.intval && vbus)
 				charger->current_checked = 0;
+			update_cable_type(charger);
 			ilim2 = convert_to_ilim(value.intval);
 			if (ilim > ilim2)
 				ilim = ilim2;
@@ -1340,8 +1362,7 @@ static void max77823_chgin_init_work(struct work_struct *work)
 				__func__, charger->irq_chgin, ret);
 		charger->irq_chgin = 0;
 	}
-	value.intval = POWER_SUPPLY_TYPE_HV_MAINS;
-	psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
+	update_cable_type(charger);
 	/* Have the battery reevaluate charging */
 	psy_get_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 }
