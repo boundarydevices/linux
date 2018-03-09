@@ -456,6 +456,7 @@ static void update_cable_type(struct max77823_charger_data *charger)
 
 	value.intval = POWER_SUPPLY_TYPE_HV_MAINS;
 	if (psy && psy->desc->type) {
+		value.intval = POWER_SUPPLY_TYPE_USB;
 		type = psy->desc->type;
 		if (type != POWER_SUPPLY_TYPE_MAINS)
 			value.intval = type;
@@ -465,6 +466,7 @@ static void update_cable_type(struct max77823_charger_data *charger)
 
 	if (charger->last_cable_type != value.intval) {
 		charger->last_cable_type = value.intval;
+		charger->psy_chg_desc.type = value.intval;
 		psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
 	}
 }
@@ -1730,7 +1732,8 @@ static int max77823_charger_probe(struct platform_device *pdev)
 					       "charger-wpc");
 	INIT_DELAYED_WORK(&charger->wpc_work, wpc_detect_work);
 	psy_chg_config.drv_data = charger;
-	charger->psy_chg = power_supply_register(&pdev->dev, &psy_chg_desc, &psy_chg_config);
+	charger->psy_chg_desc = psy_chg_desc;
+	charger->psy_chg = power_supply_register(&pdev->dev, &charger->psy_chg_desc, &psy_chg_config);
 	if (IS_ERR(charger->psy_chg)) {
 		pr_err("%s: Failed to Register psy_chg\n", __func__);
 		ret = PTR_ERR(charger->psy_chg);
