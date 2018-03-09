@@ -1013,7 +1013,7 @@
 
 &usb3_phy_v2 {
 	status = "okay";
-	portnum = <0>;
+	portnum = <1>;
 	otg = <1>;
 	gpio-vbus-power = "GPIOH_6";
 	gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
@@ -1181,7 +1181,7 @@
 
 &pcie_A {
 	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disable";
 };
 
 &meson_cooldev {
