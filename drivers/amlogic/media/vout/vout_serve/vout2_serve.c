@@ -35,6 +35,8 @@
 #include <linux/uaccess.h>
 #include <linux/extcon.h>
 #include <linux/cdev.h>
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -67,6 +69,8 @@ static const unsigned int vout2_cable[] = {
 };
 
 static struct vout_cdev_s *vout2_cdev;
+static struct clk *vpu_clkc;
+static unsigned char vpu_clkc_state;
 
 /* **********************************************************
  * null display support
@@ -720,6 +724,111 @@ static void aml_vout2_extcon_free(void)
  **	vout driver interface
  **
  ******************************************************************/
+static int vout2_clk_on_notifier(struct notifier_block *nb,
+		unsigned long event, void *data)
+{
+	int *vmod;
+
+	if ((event & VOUT_EVENT_MODE_CHANGE_PRE) == 0)
+		return NOTIFY_DONE;
+
+	if (data == NULL) {
+		VOUTERR("%s: data is NULL\n", __func__);
+		return NOTIFY_DONE;
+	}
+	vmod = (int *)data;
+	if (*vmod < VMODE_NULL) {
+		if (IS_ERR_OR_NULL(vpu_clkc))
+			VOUTERR("vout2: vpu_clkc\n");
+		else {
+			if (vpu_clkc_state == 0) {
+				VOUTPR("vout2: enable vpu_clkc\n");
+				clk_prepare_enable(vpu_clkc);
+				vpu_clkc_state = 1;
+			}
+		}
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block vout2_clk_on_nb = {
+	.notifier_call = vout2_clk_on_notifier,
+};
+
+static int vout2_clk_off_notifier(struct notifier_block *nb,
+		unsigned long event, void *data)
+{
+	int *vmod;
+
+	if ((event & VOUT_EVENT_MODE_CHANGE) == 0)
+		return NOTIFY_DONE;
+
+	if (data == NULL) {
+		VOUTERR("%s: data is NULL\n", __func__);
+		return NOTIFY_DONE;
+	}
+	vmod = (int *)data;
+	if (*vmod >= VMODE_NULL) {
+		if (IS_ERR_OR_NULL(vpu_clkc))
+			VOUTERR("vout2: vpu_clkc\n");
+		else {
+			if (vpu_clkc_state) {
+				VOUTPR("vout2: disable vpu_clkc\n");
+				clk_disable_unprepare(vpu_clkc);
+				vpu_clkc_state = 0;
+			}
+		}
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block vout2_clk_off_nb = {
+	.notifier_call = vout2_clk_off_notifier,
+};
+
+static int vout2_notifier_register(void)
+{
+	int ret = 0;
+
+	ret = vout2_register_client(&vout2_clk_on_nb);
+	if (ret)
+		VOUTERR("register vout2_clk_on_nb failed\n");
+	ret = vout2_register_client(&vout2_clk_off_nb);
+	if (ret)
+		VOUTERR("register vout2_clk_off_nb failed\n");
+
+	return 0;
+}
+
+static void vout2_notifier_unregister(void)
+{
+	vout2_unregister_client(&vout2_clk_on_nb);
+	vout2_unregister_client(&vout2_clk_off_nb);
+}
+
+static void vout2_clktree_init(struct device *dev)
+{
+	struct clk *vpu_clkc0;
+
+	vpu_clkc = NULL;
+	vpu_clkc_state = 0;
+
+	/* init & enable vpu_clk */
+	vpu_clkc0 = devm_clk_get(dev, "vpu_clkc0");
+	vpu_clkc = devm_clk_get(dev, "vpu_clkc");
+	if ((IS_ERR_OR_NULL(vpu_clkc0)) ||
+		(IS_ERR_OR_NULL(vpu_clkc))) {
+		VOUTERR("vout2: %s: vpu_clkc\n", __func__);
+	} else {
+		clk_set_rate(vpu_clkc0, 200000000);
+		clk_set_parent(vpu_clkc, vpu_clkc0);
+	}
+
+	VOUTPR("vout2: clktree_init\n");
+}
+
 static int aml_vout2_probe(struct platform_device *pdev)
 {
 	int ret = -1;
@@ -737,8 +846,11 @@ static int aml_vout2_probe(struct platform_device *pdev)
 
 	vout2_register_server(&nulldisp_vout2_server);
 	set_vout2_init_mode();
+	vout2_clktree_init(&pdev->dev);
 
 	aml_vout2_extcon_register(pdev);
+
+	vout2_notifier_register();
 
 	VOUTPR("vout2: %s OK\n", __func__);
 	return ret;
@@ -749,6 +861,7 @@ static int aml_vout2_remove(struct platform_device *pdev)
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	unregister_early_suspend(&early_suspend);
 #endif
+	vout2_notifier_unregister();
 
 	aml_vout2_extcon_free();
 	vout2_attr_remove();
