@@ -277,11 +277,9 @@ int hdmitx_hpd_hw_op_g12a(enum hpd_op cmd)
 		break;
 	case HPD_MUX_HPD:
 		hd_set_reg_bits(P_PERIPHS_PIN_MUX_B, 1, 8, 4);
-		hd_set_reg_bits(P_PREG_PAD_GPIO4_O, 1, 8, 1);
 		break;
 	case HPD_UNMUX_HPD:
 		hd_set_reg_bits(P_PERIPHS_PIN_MUX_B, 0, 8, 4);
-		hd_set_reg_bits(P_PREG_PAD_GPIO4_O, 0, 8, 1);
 		break;
 	case HPD_READ_HPD_GPIO:
 		ret = hdmitx_rd_reg(HDMITX_DWC_PHY_STAT0) & (1 << 1);
