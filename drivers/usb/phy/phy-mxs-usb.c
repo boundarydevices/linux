@@ -406,6 +406,7 @@ static int mxs_phy_suspend(struct usb_phy *x, int suspend)
 	int ret;
 	struct mxs_phy *mxs_phy = to_mxs_phy(x);
 	bool low_speed_connection, vbus_is_on;
+	unsigned pwd;
 
 	low_speed_connection = mxs_phy_is_low_speed_connection(mxs_phy);
 	vbus_is_on = mxs_phy_get_vbus_status(mxs_phy);
@@ -422,10 +423,14 @@ static int mxs_phy_suspend(struct usb_phy *x, int suspend)
 			 * several 32Khz cycles are needed.
 			 */
 			mxs_phy_clock_switch_delay();
-			writel(0xffbfffff, x->io_priv + HW_USBPHY_PWD);
+			pwd = 0xffbfffff;
 		} else {
-			writel(0xffffffff, x->io_priv + HW_USBPHY_PWD);
+			pwd = 0xffffffff;
 		}
+		if ((mxs_phy->port_id == 0) && vbus_is_on)
+			pwd &= 0xffefffff;
+
+		writel(pwd, x->io_priv + HW_USBPHY_PWD);
 		writel(BM_USBPHY_CTRL_CLKGATE,
 		       x->io_priv + HW_USBPHY_CTRL_SET);
 		if (!(mxs_phy->port_id == 1 &&
