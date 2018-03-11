@@ -141,7 +141,7 @@ static DEFINE_MUTEX(omx_mutex);
 
 static bool bypass_cm;
 
-static bool bypass_pps;
+static bool bypass_pps = true;
 /*For 3D usage ----0:  mbx   1: tv */
 bool platform_type = 1;
 
@@ -5178,6 +5178,8 @@ SET_FILTER:
 		/* for bypass pps debug */
 		if ((vpp_filter->vpp_hsc_start_phase_step == 0x1000000) &&
 			(vpp_filter->vpp_vsc_start_phase_step == 0x1000000) &&
+			!vpp_filter->vpp_pre_vsc_en &&
+			!vpp_filter->vpp_pre_hsc_en &&
 			bypass_pps)
 			VSYNC_WR_MPEG_REG_BITS(VPP_SC_MISC + cur_dev->vpp_off,
 				0, VPP_SC_TOP_EN_BIT, VPP_SC_TOP_EN_WID);
