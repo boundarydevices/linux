@@ -1010,7 +1010,9 @@ static int m3_nand_probe(struct aml_nand_platform *plat, unsigned int dev_num)
 
 #endif
 	} else {
+	#ifndef CONFIG_MTD_ENV_IN_NAND
 		aml_ubootenv_init(aml_chip);
+	#endif
 		aml_key_init(aml_chip);
 		amlnf_dtb_init(aml_chip);
 	}

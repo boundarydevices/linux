@@ -802,7 +802,7 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 {
 	struct aml_nand_chip *aml_chip = mtd_to_nand_chip(mtd);
 	struct nand_chip *chip = mtd->priv;
-	unsigned int pages_per_blk_shift, bbt_start_block;
+	unsigned int pages_per_blk_shift, bbt_start_block, vernier;
 	int phys_erase_shift, i;
 
 	phys_erase_shift = fls(mtd->erasesize) - 1;
@@ -812,6 +812,7 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 	bbt_start_block = BOOT_TOTAL_PAGES >> pages_per_blk_shift;
 	bbt_start_block += NAND_GAP_BLOCK_NUM; /*gap occupy 4 blocks*/
 
+	vernier = bbt_start_block;
 	aml_chip->rsv_data_buf = kzalloc(mtd->writesize, GFP_KERNEL);
 	if (aml_chip->rsv_data_buf == NULL)
 		return -ENOMEM;
@@ -836,9 +837,10 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 		return -ENOMEM;
 
 	aml_chip->aml_nandbbt_info->valid_node->phy_blk_addr = -1;
-	aml_chip->aml_nandbbt_info->start_block = bbt_start_block;
+	aml_chip->aml_nandbbt_info->start_block = vernier;
 	aml_chip->aml_nandbbt_info->end_block =
-		aml_chip->aml_nandbbt_info->start_block + NAND_BBT_BLOCK_NUM;
+		vernier + NAND_BBT_BLOCK_NUM;
+	vernier += NAND_BBT_BLOCK_NUM;
 	aml_chip->aml_nandbbt_info->size = mtd->size >> phys_erase_shift;
 	memcpy(aml_chip->aml_nandbbt_info->name, BBT_NAND_MAGIC, 4);
 
@@ -850,7 +852,7 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 		return -ENOMEM;
 	}
 	memset(aml_chip->block_status, 0, (mtd->size >> phys_erase_shift));
-
+#ifndef CONFIG_MTD_ENV_IN_NAND
 	/*env info init*/
 	aml_chip->aml_nandenv_info =
 		kzalloc(sizeof(struct aml_nandrsv_info_t), GFP_KERNEL);
@@ -864,13 +866,13 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 		return -ENOMEM;
 
 	aml_chip->aml_nandenv_info->valid_node->phy_blk_addr = -1;
-	aml_chip->aml_nandenv_info->start_block =
-		aml_chip->aml_nandbbt_info->end_block;
+	aml_chip->aml_nandenv_info->start_block = vernier;
 	aml_chip->aml_nandenv_info->end_block =
-		aml_chip->aml_nandbbt_info->end_block + NAND_ENV_BLOCK_NUM;
+		vernier + NAND_ENV_BLOCK_NUM;
+	vernier += NAND_ENV_BLOCK_NUM;
 	aml_chip->aml_nandenv_info->size = CONFIG_ENV_SIZE;
 	memcpy(aml_chip->aml_nandenv_info->name, ENV_NAND_MAGIC, 4);
-
+#endif
 	aml_chip->aml_nandkey_info =
 		kzalloc(sizeof(struct aml_nandrsv_info_t), GFP_KERNEL);
 	if (aml_chip->aml_nandkey_info == NULL)
@@ -884,10 +886,10 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 		return -ENOMEM;
 
 	aml_chip->aml_nandkey_info->valid_node->phy_blk_addr = -1;
-	aml_chip->aml_nandkey_info->start_block =
-		aml_chip->aml_nandenv_info->end_block;
+	aml_chip->aml_nandkey_info->start_block = vernier;
 	aml_chip->aml_nandkey_info->end_block =
-		aml_chip->aml_nandenv_info->end_block + NAND_KEY_BLOCK_NUM;
+		vernier + NAND_KEY_BLOCK_NUM;
+	vernier += NAND_KEY_BLOCK_NUM;
 	aml_chip->aml_nandkey_info->size = aml_chip->keysize;
 	memcpy(aml_chip->aml_nandkey_info->name, KEY_NAND_MAGIC, 4);
 
@@ -904,18 +906,28 @@ int aml_nand_rsv_info_init(struct mtd_info *mtd)
 		return -ENOMEM;
 
 	aml_chip->aml_nanddtb_info->valid_node->phy_blk_addr = -1;
-	aml_chip->aml_nanddtb_info->start_block =
-		aml_chip->aml_nandkey_info->end_block;
+	aml_chip->aml_nanddtb_info->start_block = vernier;
 	aml_chip->aml_nanddtb_info->end_block =
-		aml_chip->aml_nandkey_info->end_block + NAND_DTB_BLOCK_NUM;
+		vernier + NAND_DTB_BLOCK_NUM;
+	vernier += NAND_DTB_BLOCK_NUM;
 	aml_chip->aml_nanddtb_info->size = aml_chip->dtbsize;
 	memcpy(aml_chip->aml_nanddtb_info->name, DTB_NAND_MAGIC, 4);
 
-	pr_info("bbt_start=%d env_start=%d key_start=%d dtb_start=%d\n",
-		aml_chip->aml_nandbbt_info->start_block,
-		aml_chip->aml_nandenv_info->start_block,
-		aml_chip->aml_nandkey_info->start_block,
-		aml_chip->aml_nanddtb_info->start_block);
+	if ((vernier - (BOOT_TOTAL_PAGES >> pages_per_blk_shift)) >
+	    RESERVED_BLOCK_NUM) {
+		pr_info("ERROR: total blk number is over the limit\n");
+		return -ENOMEM;
+		}
+		pr_info("bbt_start=%d\n",
+				aml_chip->aml_nandbbt_info->start_block);
+#ifndef CONFIG_MTD_ENV_IN_NAND
+		pr_info("env_start=%d\n",
+				aml_chip->aml_nandenv_info->start_block);
+#endif
+		pr_info("key_start=%d\n",
+				aml_chip->aml_nandkey_info->start_block);
+		pr_info("dtb_start=%d\n",
+				aml_chip->aml_nanddtb_info->start_block);
 
 	return 0;
 }

@@ -63,6 +63,16 @@ extern unsigned char pagelist_hynix256[128];
 #define CONFIG_ENV_SIZE  (64*1024U)
 
 /*
+ * open this macro, the env will store in
+ * normal partition: "environment". and the
+ * env region in reserve zone will be hidden
+ *
+ * please remember add a partition named
+ * "environment" in dts file.
+ * #define CONFIG_MTD_ENV_IN_NAND
+ */
+
+/*
  ** Max page list cnt for usrdef mode
  */
 #define NAND_PAGELIST_CNT 16

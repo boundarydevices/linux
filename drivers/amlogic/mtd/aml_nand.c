@@ -2127,7 +2127,9 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		pr_info("invalid nand bbt\n");
 		goto exit_error;
 	}
+#ifndef CONFIG_MTD_ENV_IN_NAND
 	aml_nand_env_check(mtd);
+#endif
 	aml_nand_key_check(mtd);
 	aml_nand_dtb_check(mtd);
 

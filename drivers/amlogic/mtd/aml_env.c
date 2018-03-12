@@ -21,6 +21,7 @@
 #include<linux/cdev.h>
 #include <linux/device.h>
 
+#ifndef CONFIG_MTD_ENV_IN_NAND
 #define ENV_NAME "nand_env"
 static DEFINE_MUTEX(env_mutex);
 static dev_t uboot_env_no;
@@ -28,6 +29,7 @@ struct cdev uboot_env;
 struct device *uboot_dev;
 struct class *uboot_env_class;
 #endif  /* AML_NAND_UBOOT */
+#endif
 
 struct aml_nand_chip *aml_chip_env;
 
@@ -136,7 +138,7 @@ exit_err:
 
 	return ret;
 }
-
+#ifndef CONFIG_MTD_ENV_IN_NAND
 #ifndef AML_NAND_UBOOT
 
 ssize_t env_show(struct class *class, struct class_attribute *attr,
@@ -437,5 +439,5 @@ exit:
 	}
 	return 0;
 }
-
+#endif
 
