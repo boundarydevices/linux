@@ -3483,6 +3483,14 @@ static int hdmitx_cntl_config(struct hdmitx_dev *hdev, unsigned int cmd,
 	case CONF_AVI_YQ01:
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF3, argv, 2, 2);
 		break;
+	case CONF_EMP_NUMBER:
+		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL0, argv, 16, 16);
+	case CONF_EMP_PHY_ADDR:
+		hdmitx_rd_check_reg(HDMITX_TOP_EMP_STAT0, 0, 0x3fffffff);
+		hdmitx_wr_reg(HDMITX_TOP_EMP_MEMADDR_START, argv);/*phys_ptr*/
+		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL1, 1, 17, 1); /*little*/
+		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL1, 120, 0, 16);
+		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL0, 1, 0, 1);/*emp_tx_en*/
 	default:
 		break;
 	}

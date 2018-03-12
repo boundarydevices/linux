@@ -418,6 +418,8 @@ struct hdmitx_dev {
 #define CONF_VIDEO_MUTE_OP      (CMD_CONF_OFFSET + 0x1000 + 0x04)
 #define VIDEO_MUTE          0x1
 #define VIDEO_UNMUTE        0x2
+#define CONF_EMP_NUMBER         (CMD_CONF_OFFSET + 0x3000 + 0x00)
+#define CONF_EMP_PHY_ADDR       (CMD_CONF_OFFSET + 0x3000 + 0x01)
 
 /* Audio part */
 #define CONF_CLR_AVI_PACKET     (CMD_CONF_OFFSET + 0x04)

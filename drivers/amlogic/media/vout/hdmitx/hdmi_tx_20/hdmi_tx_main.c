@@ -72,6 +72,7 @@ static void hdmitx_get_edid(struct hdmitx_dev *hdev);
 static void hdmitx_set_drm_pkt(struct master_display_info_s *data);
 static void hdmitx_set_vsif_pkt(enum eotf_type type, enum mode_type
 	tunnel_mode, struct dv_vsif_para *data);
+static void hdmitx_set_emp_pkt(void);
 static int check_fbc_special(unsigned char *edid_dat);
 static struct vinfo_s *hdmitx_get_current_vinfo(void);
 
@@ -1293,6 +1294,41 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 	}
 }
 
+static void hdmitx_set_emp_pkt(void)
+{
+	unsigned int number;
+	unsigned char *virt_ptr;
+	unsigned char *virt_ptr_align32bit;
+	unsigned long phys_ptr;
+	unsigned int i;
+	struct hdmitx_dev *hdev = &hdmitx_device;
+/*******this data is used to test*********/
+	unsigned char EMP[64] = {0x81, 0x01, 0x18, 0x57,
+		0x03, 0x0c, 0x30, 0x0, 0x0, 0x0};
+	number = 2;
+
+/************************************/
+	if (hdmitx_device.chip_type < MESON_CPU_ID_G12A) {
+		pr_info("this chip doesn't support emp function\n");
+		return;
+	}
+	virt_ptr = kzalloc(sizeof(unsigned char)*(number + 0x1f),
+		GFP_KERNEL);
+	pr_info("emp_pkt virt_ptr: %p\n", virt_ptr);
+	virt_ptr_align32bit = (unsigned char *)
+		((((unsigned long)virt_ptr) + 0x1f) & (~0x1f));
+	pr_info("emp_pkt virt_ptr_align32bit: %p\n", virt_ptr_align32bit);
+
+	for (i = 0; i < number * 32; i++)
+		virt_ptr_align32bit[i]  = EMP[i];
+
+	phys_ptr = virt_to_phys(virt_ptr_align32bit);
+	pr_info("emp_pkt phys_ptr: %lx\n", phys_ptr);
+
+	hdev->HWOp.CntlConfig(hdev, CONF_EMP_NUMBER, number);
+	hdev->HWOp.CntlConfig(hdev, CONF_EMP_PHY_ADDR, phys_ptr);
+}
+
 /*config attr*/
 static ssize_t show_config(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -1412,6 +1448,10 @@ static ssize_t store_config(struct device *dev,
 				DRM_DB, DRM_HB);
 	} else if (strncmp(buf, "vsif", 4) == 0)
 		hdmitx_set_vsif_pkt(buf[4] - '0', buf[5] == '1', NULL);
+	else if (strncmp(buf, "emp", 3) == 0) {
+		if (hdmitx_device.chip_type >= MESON_CPU_ID_G12A)
+			hdmitx_set_emp_pkt();
+	}
 
 	return 16;
 }
