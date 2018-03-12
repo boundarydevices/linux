@@ -168,7 +168,7 @@
 				reg = <0x021e0000 0x4000>;
 				interrupts = <0 102 0x04>;
 				gpr = <&gpr>;
-				clocks = <&clks IMX6QDL_CLK_HSI_TX>, <&clks IMX6QDL_CLK_VIDEO_27M>;
+				clocks = <&clks IMX6QDL_CLK_MIPI_CORE_CFG>, <&clks IMX6QDL_CLK_MIPI_CORE_CFG>;
 				clock-names = "mipi_pllref_clk", "mipi_cfg_clk";
 				status = "disabled";
 			};
