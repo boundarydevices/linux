@@ -1133,24 +1133,33 @@
 		};
 	};
 
-	hdmirx_pins: hdmirx {
-		hdmirx_a_mux {
+	hdmirx_a_mux:hdmirx_a_mux {
+		mux {
 			groups = "hdmirx_hpd_a", "hdmirx_det_a",
 				"hdmirx_sda_a", "hdmirx_sck_a";
 			function = "hdmirx_a";
 		};
-		hdmirx_b_mux {
+	};
+
+	hdmirx_b_mux:hdmirx_b_mux {
+		mux {
 			groups = "hdmirx_hpd_b", "hdmirx_det_b",
 				"hdmirx_sda_b", "hdmirx_sck_b";
 			function = "hdmirx_b";
 		};
-		hdmirx_c_mux {
-			groups = "hdmirx_hpd_c","hdmirx_det_c",
+	};
+
+	hdmirx_c_mux:hdmirx_c_mux {
+		mux {
+			groups = "hdmirx_hpd_c", "hdmirx_det_c",
 				"hdmirx_sda_c", "hdmirx_sck_c";
 			function = "hdmirx_c";
 		};
-		hdmirx_d_mux {
-			groups = "hdmirx_hpd_d","hdmirx_det_d",
+	};
+
+	hdmirx_d_mux:hdmirx_d_mux {
+		mux {
+			groups = "hdmirx_hpd_d", "hdmirx_det_d",
 				"hdmirx_sda_d", "hdmirx_sck_d";
 			function = "hdmirx_d";
 		};

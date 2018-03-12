@@ -425,7 +425,8 @@
 		dev_name = "hdmirx";
 		status = "okay";
 		pinctrl-names = "hdmirx_pins";
-		pinctrl-0 = <&hdmirx_pins>;
+		pinctrl-0 = <&hdmirx_a_mux &hdmirx_b_mux
+			&hdmirx_c_mux &hdmirx_d_mux>;
 		repeat = <0>;
 		interrupts = <0 56 1>;
 		clocks = <&clkc CLKID_HDMIRX_MODET_COMP>,
