@@ -302,6 +302,7 @@ struct ionvideo_dev {
 	struct mutex mutex_input;
 	struct mutex mutex_output;
 	struct v4l2_buffer ionvideo_input[IONVIDEO_POOL_SIZE + 1];
+	bool wait_ge2d_timeout;
 };
 
 unsigned int get_ionvideo_debug(void);

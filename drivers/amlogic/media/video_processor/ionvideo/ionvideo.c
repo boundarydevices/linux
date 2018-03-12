@@ -310,12 +310,14 @@ static int ionvideo_fillbuff(struct ionvideo_dev *dev,
 			vf_put(vf, dev->vf_receiver_name);
 			return ret;
 		}
+		if (dev->wait_ge2d_timeout) {
+			IONVID_INFO("ppmgr2_process timeout\n");
+			dev->wait_ge2d_timeout = false;
+			return -EAGAIN;
+		}
+		dev->wait_ge2d_timeout = false;
 		videoc_omx_compute_pts(dev, vf);
 		buf->timecode.frames = 0;
-		if (vf->flag & VFRAME_FLAG_ERROR_RECOVERY)
-			buf->timecode.frames |= 1;
-		if (vf->flag & VFRAME_FLAG_SYNCFRAME)
-			buf->timecode.frames |= 2;
 		vf_put(vf, dev->vf_receiver_name);
 		buf->timestamp.tv_sec = dev->pts >> 32;
 		buf->timestamp.tv_usec = dev->pts & 0xFFFFFFFF;
@@ -361,6 +363,7 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 	if (dev->active_state == ION_INACTIVE)
 		return;
 
+	dev->wait_ge2d_timeout = false;
 	vf = vf_peek(dev->vf_receiver_name);
 	if (!vf) {
 		dev->vf_wait_cnt++;
@@ -920,15 +923,21 @@ static int ionvideo_v4l2_release(void)
 static int video_receiver_event_fun(int type, void *data, void *private_data)
 {
 	struct ionvideo_dev *dev = (struct ionvideo_dev *)private_data;
-
+	int timeout = 0;
 	if (type == VFRAME_EVENT_PROVIDER_UNREG) {
 		dev->receiver_register = 0;
 		dev->is_omx_video_started = 0;
 		if (dev->active_state == ION_ACTIVE) {
 			/*if player killed thread may have exit.*/
 			dev->active_state = ION_INACTIVE_REQ;
-			wait_for_completion_timeout(&dev->inactive_done,
-				msecs_to_jiffies(100));
+			dev->wait_ge2d_timeout = false;
+			timeout = wait_for_completion_timeout(
+				&dev->inactive_done,
+				msecs_to_jiffies(200));
+			if (!timeout) {
+				IONVID_INFO("unreg:wait timeout\n");
+				dev->wait_ge2d_timeout = true;
+			}
 		}
 
 		/*tsync_avevent(VIDEO_STOP, 0);*/
