@@ -1381,6 +1381,18 @@ err1:
 	return -EIO;
 }
 
+void disable_mipi(void)
+{
+	void *mipi_csi2_info;
+
+	mipi_csi2_info = mipi_csi2_get_info();
+
+	/* disable mipi csi2 */
+	if (mipi_csi2_info)
+		if (mipi_csi2_get_status(mipi_csi2_info))
+			mipi_csi2_disable(mipi_csi2_info);
+}
+
 static int power_down(struct sensor_data *sensor)
 {
 	if (!sensor->on)
@@ -1394,7 +1406,7 @@ static int power_down(struct sensor_data *sensor)
 		regulator_disable(analog_regulator);
 	if (io_regulator)
 		regulator_disable(io_regulator);
-
+	disable_mipi();
 	sensor->on = 0;
 	return 0;
 }
@@ -3318,15 +3330,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
  */
 static int ioctl_dev_exit(struct v4l2_int_device *s)
 {
-	void *mipi_csi2_info;
-
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	/* disable mipi csi2 */
-	if (mipi_csi2_info)
-		if (mipi_csi2_get_status(mipi_csi2_info))
-			mipi_csi2_disable(mipi_csi2_info);
-
+	disable_mipi();
 	return 0;
 }
 
