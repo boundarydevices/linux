@@ -48,7 +48,7 @@
 /* 3d3: Selects counter threshold 8K */
 /* 3d4: Selects counter threshold 16K */
 /* Number of retries in case of algorithm ending with errors */
-#define MINMAX_nTrys	3
+#define NTRYS	1
 /* theoretical threshold for an equalized system */
 #define equalizedCounterValue	512
 /* theoretical threshold for an equalized system */

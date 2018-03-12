@@ -172,22 +172,33 @@ enum eq_sts_e rx_get_eq_run_state(void)
 
 void eq_dwork_handler(struct work_struct *work)
 {
+	unsigned int i;
+
 	cancel_delayed_work(&eq_dwork);
-	if (SettingFinder() == 1) {
-		rx_pr("EQ-%d-%d-%d-",
-				eq_ch0.bestsetting,
-				eq_ch1.bestsetting,
-				eq_ch2.bestsetting);
-		if (eq_maxvsmin(eq_ch0.bestsetting,
-			eq_ch1.bestsetting,
-			eq_ch2.bestsetting) == 1) {
+	for (i = 0; i < NTRYS; i++) {
+		if (SettingFinder() == 1) {
+			rx_pr("EQ-%d-%d-%d-",
+					eq_ch0.bestsetting,
+					eq_ch1.bestsetting,
+					eq_ch2.bestsetting);
+
+			if (eq_maxvsmin(eq_ch0.bestsetting,
+					eq_ch1.bestsetting,
+					eq_ch2.bestsetting) == 1) {
+				if (log_level & EQ_LOG)
+					rx_pr("pass\n");
+				break;
+			}
 			if (log_level & EQ_LOG)
-				rx_pr("pass\n");
-		} else {
-			eq_ch0.bestsetting = ErrorcableSetting;
-			eq_ch1.bestsetting = ErrorcableSetting;
-			eq_ch2.bestsetting = ErrorcableSetting;
+				rx_pr("fail\n");
 		}
+	}
+	if (i >= NTRYS) {
+		eq_ch0.bestsetting = ErrorcableSetting;
+		eq_ch1.bestsetting = ErrorcableSetting;
+		eq_ch2.bestsetting = ErrorcableSetting;
+		if (log_level & EQ_LOG)
+			rx_pr("EQ fail-retry\n");
 	}
 	eq_cfg();
 	eq_sts = E_EQ_FINISH;

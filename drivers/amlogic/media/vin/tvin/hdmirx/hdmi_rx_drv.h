@@ -34,7 +34,7 @@
 //#include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2018-01-25-S"
+#define RX_VER0 "ver.2018-03-12-S"
 /*
  *
  *

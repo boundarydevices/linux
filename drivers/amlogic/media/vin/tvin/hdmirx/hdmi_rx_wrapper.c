@@ -2370,10 +2370,10 @@ unsigned int hdmirx_show_info(unsigned char *buf, int size)
 			"Color Space: %s\n", "1-YUV422");
 	else if (rx.cur.colorspace == E_COLOR_YUV444)
 		pos += snprintf(buf+pos, size-pos,
-			"Color Space: %s\n", "1-YUV444");
+			"Color Space: %s\n", "2-YUV444");
 	else if (rx.cur.colorspace == E_COLOR_YUV420)
 		pos += snprintf(buf+pos, size-pos,
-			"Color Space: %s\n", "1-YUV420");
+			"Color Space: %s\n", "3-YUV420");
 	pos += snprintf(buf+pos, size-pos,
 		"Dvi: %d\n", rx.cur.hw_dvi);
 	pos += snprintf(buf+pos, size-pos,
