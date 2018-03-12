@@ -1057,7 +1057,21 @@ int32_t dwc_otg_pcd_handle_enum_done_intr(dwc_otg_pcd_t *pcd)
 	    GET_CORE_IF(pcd)->core_global_regs;
 	uint8_t utmi16b, utmi8b;
 	int speed;
+	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
+
 	DWC_DEBUGPL(DBG_PCD, "SPEED ENUM\n");
+	if (core_if->controller_type == USB_OTG) {
+		if (core_if->phy_interface == 0) {
+			if (pcd->otg_dev->host_plug) {
+				gintsts.d32 = 0;
+				gintsts.b.enumdone = 1;
+				DWC_WRITE_REG32(&GET_CORE_IF(pcd)->
+					core_global_regs->gintsts, gintsts.d32);
+				DWC_DEBUGPL(DBG_PCD, "false speed emun\n");
+				return 1;
+			}
+		}
+	}
 
 	if (GET_CORE_IF(pcd)->snpsid >= OTG_CORE_REV_2_60a) {
 		utmi16b = 6;

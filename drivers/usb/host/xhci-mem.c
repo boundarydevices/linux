@@ -2252,7 +2252,14 @@ static void xhci_add_in_port(struct xhci_hcd *xhci, unsigned int num_ports,
 		}
 		xhci->port_array[i] = major_revision;
 		if (major_revision == 0x03)
+#ifdef CONFIG_AMLOGIC_USB
+			if (xhci->quirks & XHCI_AML_SUPER_SPEED_SUPPORT)
+				xhci->num_usb3_ports++;
+			else
+				xhci->num_usb3_ports = 0;
+#else
 			xhci->num_usb3_ports++;
+#endif
 		else
 			xhci->num_usb2_ports++;
 	}

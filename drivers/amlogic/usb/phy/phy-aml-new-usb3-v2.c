@@ -70,7 +70,6 @@ static void aml_new_usb_notifier_call(unsigned long is_device_on)
 	blocking_notifier_call_chain
 			(&aml_new_usb_v2_notifier_list, is_device_on, NULL);
 }
-//EXPORT_SYMBOL(aml_new_usb_notifier_call);
 
 static void set_usb_vbus_power
 	(struct gpio_desc *usb_gd, int pin, char is_power_on)
@@ -100,6 +99,9 @@ static void amlogic_new_usb3phy_shutdown(struct usb_phy *x)
 {
 	struct amlogic_usb_v2 *phy = phy_to_amlusb(x);
 
+	if (phy->phy.flags == AML_USB3_PHY_ENABLE)
+		clk_disable_unprepare(phy->clk);
+
 	phy->suspend_flag = 1;
 }
 
@@ -128,6 +130,8 @@ static int amlogic_new_usb3_init(struct usb_phy *x)
 	int i = 0;
 
 	if (phy->suspend_flag) {
+		if (phy->phy.flags == AML_USB3_PHY_ENABLE)
+			clk_prepare_enable(phy->clk);
 		phy->suspend_flag = 0;
 		return 0;
 	}
@@ -148,7 +152,7 @@ static int amlogic_new_usb3_init(struct usb_phy *x)
 	writel(r5.d32, usb_new_aml_regs_v2.usb_r_v2[5]);
 
 	/* config usb3 phy */
-	if (phy->portnum > 0) {
+	if (phy->phy.flags == AML_USB3_PHY_ENABLE) {
 		r3.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[3]);
 		r3.b.p30_ssc_en = 1;
 		r3.b.p30_ref_ssp_en = 1;

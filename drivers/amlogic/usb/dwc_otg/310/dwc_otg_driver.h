@@ -88,6 +88,8 @@ typedef struct dwc_otg_device {
 	struct notifier_block nb;
 
 	struct delayed_work	work;
+
+	u32 host_plug;
 } dwc_otg_device_t;
 
 /*We must clear S3C24XX_EINTPEND external interrupt register

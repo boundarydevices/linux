@@ -47,20 +47,12 @@ static int amlogic_new_usb2_init(struct usb_phy *x)
 	struct u2p_aml_regs_v2 u2p_aml_regs;
 	union u2p_r0_v2 reg0;
 	union u2p_r1_v2 reg1;
-	//u32 val;
+	u32 val;
 
-	if (phy->suspend_flag) {
-		phy->suspend_flag = 0;
-		for (i = 0; i < phy->portnum; i++) {
-			for (j = 0; j < 2; j++) {
-				u2p_aml_regs.u2p_r_v2[j] = (void __iomem *)
-				((unsigned long)phy->regs + i*PHY_REGISTER_SIZE
-					+ 4 * j);
-			}
-		}
-		/*TO DO: set usb phy to low power mode*/
-		return 0;
-	}
+	val = readl((void __iomem *)
+		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
+	writel((val | (0x3 << 16)), (void __iomem *)
+		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
 
 	amlogic_new_usbphy_reset_v2(phy);
 
@@ -73,9 +65,13 @@ static int amlogic_new_usb2_init(struct usb_phy *x)
 
 		reg0.d32 = readl(u2p_aml_regs.u2p_r_v2[0]);
 		reg0.b.POR = 1;
-		reg0.b.host_device = 1;
-		if (i == 1)
-			reg0.b.IDPULLUP0 = 1;
+		if (phy->suspend_flag == 0) {
+			reg0.b.host_device = 1;
+			if (i == 1) {
+				reg0.b.IDPULLUP0 = 1;
+				reg0.b.DRVVBUS0 = 1;
+			}
+		}
 
 		writel(reg0.d32, u2p_aml_regs.u2p_r_v2[0]);
 
@@ -120,19 +116,15 @@ static int amlogic_new_usb2_suspend(struct usb_phy *x, int suspend)
 static void amlogic_new_usb2phy_shutdown(struct usb_phy *x)
 {
 	struct amlogic_usb_v2 *phy = phy_to_amlusb(x);
-	struct u2p_aml_regs_v2 u2p_aml_regs;
-	int i, j;
+	u32 val;
+
+	/* set usb phy to low power mode */
+	val = readl((void __iomem		*)
+		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
+	writel((val & (~(0x3 << 16))), (void __iomem	*)
+		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
 
 	phy->suspend_flag = 1;
-	for (i = phy->portnum - 1; i >= 0; i--) {
-		for (j = 0; j < 2; j++) {
-			u2p_aml_regs.u2p_r_v2[j] = (void __iomem	*)
-				((unsigned long)phy->regs + i*PHY_REGISTER_SIZE
-				+ 4 * j);
-		}
-
-		/*TO DO: set usb phy to low power mode*/
-	}
 }
 
 static int amlogic_new_usb2_probe(struct platform_device *pdev)
@@ -210,7 +202,6 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	phy->regs		= phy_base;
 	phy->reset_regs = reset_base;
 	phy->portnum      = portnum;
-	phy->suspend_flag = 0;
 	phy->phy.dev		= phy->dev;
 	phy->phy.label		= "amlogic-usbphy2";
 	phy->phy.init		= amlogic_new_usb2_init;
@@ -220,6 +211,7 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	phy->pll_setting[0] = pll_setting[0];
 	phy->pll_setting[1] = pll_setting[1];
 	phy->pll_setting[2] = pll_setting[2];
+	phy->suspend_flag = 0;
 	for (i = 0; i < portnum; i++)
 		phy->phy_cfg[i] = phy_cfg_base[i];
 
