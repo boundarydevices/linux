@@ -1203,6 +1203,7 @@
 		status = "okay";
 		clocks = <&clkc CLKID_DOS_PARSER
 			&clkc CLKID_DEMUX
+			&clkc CLKID_AHB_ARB0
 			&clkc CLKID_DOS
 			&clkc CLKID_VDEC_MUX
 			&clkc CLKID_HCODEC_MUX
@@ -1210,6 +1211,7 @@
 			&clkc CLKID_HEVCF_MUX>;
 		clock-names = "parser_top",
 			"demux",
+			"ahbarb0",
 			"vdec",
 			"clk_vdec_mux",
 			"clk_hcodec_mux",

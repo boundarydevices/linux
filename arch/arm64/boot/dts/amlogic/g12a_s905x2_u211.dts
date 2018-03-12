@@ -280,7 +280,15 @@
 		dev_name = "ionvideo";
 		status = "okay";
 	};
-
+	dvb{
+	    compatible = "amlogic, dvb";
+		dev_name = "dvb";
+		status = "ok";
+		/*"parallel","serial","disable"*/
+		ts2 = "parallel";
+		ts2_control = <0>;
+		ts2_invert = <0>;
+	};
 	unifykey{
 		compatible = "amlogic, unifykey";
 		status = "ok";
