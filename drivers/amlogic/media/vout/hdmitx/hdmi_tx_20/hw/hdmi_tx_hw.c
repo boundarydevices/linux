@@ -652,8 +652,6 @@ static irqreturn_t intr_handler(int irq, void *dev)
 	}
 	/* HPD rising */
 	if (data32 & (1 << 1)) {
-		queue_delayed_work(hdev->hdmi_wq,
-			&hdev->work_aud_hpd_plug, HZ / 2);
 		hdev->hdmitx_event |= HDMI_TX_HPD_PLUGIN;
 		hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGOUT;
 		queue_delayed_work(hdev->hdmi_wq,
