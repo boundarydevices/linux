@@ -308,28 +308,22 @@
 #define GP_LED_VIBRATOR		<&gpio5 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x030b0
 #ifdef CONFIG_REV_OLD
-			/* Blue Led */
-#define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_LOW>
+#define GP_LED_BLUE		<&gpio4 26 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1b0b0
-			/* Green Led */
-#define GP_STAT_LED2		<&gpio4 25 GPIO_ACTIVE_LOW>
+#define GP_LED_GREEN		<&gpio4 25 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
-			/* Red Led */
-#define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_LOW>
+#define GP_LED_RED		<&gpio4 27 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x1b0b0
 #else
-			/* Blue Led */
-#define GP_STAT_LED1		<&gpio4 26 GPIO_ACTIVE_HIGH>
+#define GP_LED_BLUE		<&gpio4 26 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x130b0
-			/* Green Led */
-#define GP_STAT_LED2		<&gpio4 25 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x130b0
-#define GP_STAT_LED2_CTRL	<&gpio3 7 GPIO_ACTIVE_HIGH>
+#define GP_LED_GREEN		<&gpio4 25 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
+#define GP_LED_CTRL_GREEN	<&gpio3 7 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x100b0
-			/* Red Led */
-#define GP_STAT_LED3		<&gpio4 27 GPIO_ACTIVE_HIGH>
+#define GP_LED_RED		<&gpio4 27 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x130b0
-#define GP_STAT_LED3_CTRL	<&gpio2 30 GPIO_ACTIVE_HIGH>
+#define GP_LED_CTRL_RED		<&gpio2 30 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x100b0
 #endif
 		>;
@@ -626,17 +620,17 @@
 		pinctrl-0 = <&pinctrl_leds>;
 
 		blue {
-			gpios = GP_STAT_LED1;
+			gpios = GP_LED_BLUE;
 			default-state = "off";
 		};
 
 		green {
-			gpios = GP_STAT_LED2;
+			gpios = GP_LED_GREEN;
 			default-state = "off";
 		};
 
 		red {
-			gpios = GP_STAT_LED3;
+			gpios = GP_LED_RED;
 			default-state = "off";
 		};
 
