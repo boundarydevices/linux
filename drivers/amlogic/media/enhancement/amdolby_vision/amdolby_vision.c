@@ -2383,27 +2383,6 @@ void enable_dolby_vision(int enable)
 				pr_dolby_dbg("Dolby Vision STB cores turn on\n");
 			} else if (get_cpu_type() ==
 			MESON_CPU_MAJOR_ID_G12A) {
-				VSYNC_WR_MPEG_REG(VPP_DOLBY_CTRL,
-					/* cm_datx4_mode */
-					(0x0<<21) |
-					/* reg_front_cti_bit_mode */
-					(0x0<<20) |
-					/* vpp_clip_ext_mode 19:17 */
-					(0x1<<17) |
-					/* vpp_dolby2_en core3 */
-					(((dolby_vision_mask & 4) ?
-					(0 << 0) : (1 << 0)) << 16) |
-					/* mat_xvy_dat_mode */
-					(0x1<<15) |
-					/* vpp_ve_din_mode */
-					(0x1<<14) |
-					(0x1<<13) |
-					/* mat_vd2_dat_mode 13:12 */
-					(0x1<<12) |
-					(0x1<<11) |
-					/* vpp_dpath_sel 10:8 */
-					/* vpp_uns2s_mode 7:0 */
-					0xd7);
 				if (dolby_vision_mask & 4)
 					VSYNC_WR_MPEG_REG_BITS(VPP_DOLBY_CTRL,
 						1, 3, 1);   /* core3 enable */
@@ -2436,14 +2415,41 @@ void enable_dolby_vision(int enable)
 						0, 1); /* core1 */
 					dolby_vision_core1_on = false;
 				}
-				/* bypass all video effect */
-				if ((dolby_vision_flags & FLAG_BYPASS_VPP)
-				|| (dolby_vision_flags & FLAG_CERTIFICAION))
+				if (dolby_vision_flags & FLAG_CERTIFICAION) {
+					/* bypass dither/PPS/SR/CM*/
+					/*   bypass EO/OE*/
+					/*   bypass vadj2/mtx/gainoff */
+					VSYNC_WR_MPEG_REG_BITS(
+						VPP_DOLBY_CTRL, 7, 0, 3);
+					/* bypass all video effect */
 					video_effect_bypass(1);
+					/* 12 bit unsigned to sign*/
+					/*   before vadj1 */
+					/* 12 bit sign to unsign*/
+					/*   before post blend */
+					VSYNC_WR_MPEG_REG(
+						VPP_DAT_CONV_PARA0, 0x08000800);
+					/* 12->10 before vadj2*/
+					/*   10->12 after gainoff */
+					VSYNC_WR_MPEG_REG(
+						VPP_DAT_CONV_PARA1, 0x20002000);
+				} else {
+					/* bypass all video effect */
+					if (dolby_vision_flags
+					& FLAG_BYPASS_VPP)
+						video_effect_bypass(1);
+					/* 12->10 before vadj1*/
+					/*   10->12 before post blend */
+					VSYNC_WR_MPEG_REG(
+						VPP_DAT_CONV_PARA0, 0x20002000);
+					/* 12->10 before vadj2*/
+					/*   10->12 after gainoff */
+					VSYNC_WR_MPEG_REG(
+						VPP_DAT_CONV_PARA1, 0x20002000);
+				}
 				VSYNC_WR_MPEG_REG(VPP_MATRIX_CTRL, 0);
-				VSYNC_WR_MPEG_REG(VPP_DUMMY_DATA1, 0x20000000);
-				/* disable osd effect and shadow mode */
-				osd_path_enable(0);
+				VSYNC_WR_MPEG_REG(VPP_DUMMY_DATA1,
+					0x80200);
 #ifdef V2_4
 				if (((dolby_vision_mode ==
 					DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL)
@@ -2453,9 +2459,19 @@ void enable_dolby_vision(int enable)
 					dovi_setting.dovi_ll_enable) {
 					u32 *reg =
 						(u32 *)&dovi_setting.dm_reg3;
+					/* input u12 -0x800 to s12 */
+					VSYNC_WR_MPEG_REG(
+						VPP_DAT_CONV_PARA1, 0x8000800);
+					/* bypass vadj */
+					VSYNC_WR_MPEG_REG(
+						VPP_VADJ_CTRL, 0);
+					/* bypass gainoff */
+					VSYNC_WR_MPEG_REG(
+						VPP_GAINOFF_CTRL0, 0);
+					/* enable wm tp vks*/
+					/* bypass gainoff to vks */
 					VSYNC_WR_MPEG_REG_BITS(
-						VPP_DOLBY_CTRL,
-						3, 6, 2); /* post matrix */
+						VPP_DOLBY_CTRL, 1, 1, 2);
 					enable_rgb_to_yuv_matrix_for_dvll(
 						1, &reg[18],
 						(dv_ll_output_mode >> 8)
@@ -2636,9 +2652,6 @@ void enable_dolby_vision(int enable)
 					0, 3);
 				VSYNC_WR_MPEG_REG_BITS(VPP_DOLBY_CTRL,
 					0, 3, 1);   /* core3 disable */
-				/* enable osd effect and*/
-				/*	use default shadow mode */
-				osd_path_enable(1);
 #ifdef V2_4
 				if (p_funcs) /* destroy ctx */
 					p_funcs->control_path(
