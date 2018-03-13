@@ -3564,9 +3564,9 @@ static int sec_usb_get_property(struct power_supply *psy,
 	if (psp != POWER_SUPPLY_PROP_ONLINE)
 		return -EINVAL;
 
+	val->intval = 0;
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
 			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
-		val->intval = 0;
 		return 0;
 	}
 	/* Set enable=1 only if the USB charger is connected */
@@ -3578,9 +3578,6 @@ static int sec_usb_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_TYPE_MHL_USB:
 	case POWER_SUPPLY_TYPE_MHL_USB_100:
 		val->intval = 1;
-		break;
-	default:
-		val->intval = 0;
 		break;
 	}
 
@@ -3596,11 +3593,11 @@ static int sec_ac_get_property(struct power_supply *psy,
 	if (psp != POWER_SUPPLY_PROP_ONLINE)
 		return -EINVAL;
 
+	val->intval = 0;
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
 			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE) ||
 			(battery->charger_health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
 			(battery->charger_health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
-		val->intval = 0;
 		return 0;
 	}
 	/* Set enable=1 only if the AC charger is connected */
@@ -3625,9 +3622,6 @@ static int sec_ac_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_TYPE_MDOCK_TA:
 #endif
 		val->intval = 1;
-		break;
-	default:
-		val->intval = 0;
 		break;
 	}
 
