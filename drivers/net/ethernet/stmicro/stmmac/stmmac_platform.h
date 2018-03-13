@@ -30,6 +30,10 @@ int stmmac_get_platform_resources(struct platform_device *pdev,
 				  struct stmmac_resources *stmmac_res);
 
 int stmmac_pltfr_remove(struct platform_device *pdev);
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+int stmmac_pltfr_suspend(struct device *dev);
+int stmmac_pltfr_resume(struct device *dev);
+#endif
 extern const struct dev_pm_ops stmmac_pltfr_pm_ops;
 
 static inline void *get_stmmac_bsp_priv(struct device *dev)

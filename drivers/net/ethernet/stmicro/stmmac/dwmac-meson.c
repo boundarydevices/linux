@@ -30,6 +30,9 @@
 #define ETHMAC_SPEED_10	BIT(1)
 
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
+/*if not g12a use genphy driver*/
+/* if it's internal phy we will shutdown analog*/
+static unsigned int is_internal_phy;
 /* Ethernet register for G12A PHY */
 #define ETH_PLL_CTL0 0x44
 #define ETH_PLL_CTL1 0x48
@@ -277,6 +280,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	void __iomem *REG_ETH_reg0_addr = NULL;
 	void __iomem *ETH_PHY_config_addr = NULL;
 	u32 internal_phy = 0;
+	is_internal_phy = 0;
 
 	pr_debug("g12a_network_interface_setup\n");
 	/*map PRG_ETH_REG */
@@ -322,6 +326,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 		return REG_ETH_reg0_addr;
 	}
 
+	is_internal_phy = internal_phy;
 	/* Config G12A internal PHY */
 	if (internal_phy) {
 		/*PLL*/
@@ -335,7 +340,8 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 
 	/*config extern phy*/
 	if (internal_phy == 0) {
-		/*TODO*/
+		/*switch to extern phy*/
+		writel(0x0, ETH_PHY_config_addr + ETH_PHY_CNTL2);
 		pin_ctl = devm_pinctrl_get_select
 			(&pdev->dev, "external_eth_pins");
 		return REG_ETH_reg0_addr;
@@ -344,6 +350,71 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	pr_info("should not happen\n");
 	return REG_ETH_reg0_addr;
 }
+
+void __iomem *phy_analog_config_addr;
+static int dwmac_meson_disable_analog(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	void __iomem *phy_analog_config_addr = NULL;
+
+	/*map ETH_PLL address*/
+	phy_analog_config_addr = devm_ioremap_nocache
+					(&pdev->dev,
+					(resource_size_t)0xff64c000, 4);
+	pr_info("suspend addr %p\n", phy_analog_config_addr);
+
+	writel(0x00000000, phy_analog_config_addr + 0x0);
+	writel(0x003e0000, phy_analog_config_addr + 0x4);
+	writel(0x12844008, phy_analog_config_addr + 0x8);
+	writel(0x0800a40c, phy_analog_config_addr + 0xc);
+	writel(0x00000000, phy_analog_config_addr + 0x10);
+	writel(0x031d161c, phy_analog_config_addr + 0x14);
+	writel(0x00001683, phy_analog_config_addr + 0x18);
+	writel(0x09c0040a, phy_analog_config_addr + 0x44);
+	return 0;
+}
+
+static int dwmac_meson_recover_analog(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	void __iomem *phy_analog_config_addr = NULL;
+
+	/*map ETH_PLL address*/
+	phy_analog_config_addr = devm_ioremap_nocache
+					(&pdev->dev,
+					(resource_size_t)0xff64c000, 4);
+	pr_info("recover %p\n", phy_analog_config_addr);
+
+	writel(0x19c0040a, phy_analog_config_addr + 0x44);
+	writel(0x0, phy_analog_config_addr + 0x4);
+	return 0;
+}
+
+static int meson6_dwmac_suspend(struct device *dev)
+{
+	int ret;
+
+	/*shudown internal phy analog*/
+	pr_info("suspend inter = %d\n", is_internal_phy);
+	if (is_internal_phy)
+		dwmac_meson_disable_analog(dev);
+	ret = stmmac_pltfr_suspend(dev);
+
+	return ret;
+}
+
+static int meson6_dwmac_resume(struct device *dev)
+{
+	int ret;
+
+	pr_info("resuem inter = %d\n", is_internal_phy);
+	if (is_internal_phy)
+		dwmac_meson_recover_analog(dev);
+	ret = stmmac_pltfr_resume(dev);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(meson6_dwmac_resume);
 
 #endif
 static int meson6_dwmac_probe(struct platform_device *pdev)
@@ -436,6 +507,10 @@ static const struct of_device_id meson6_dwmac_match[] = {
 };
 MODULE_DEVICE_TABLE(of, meson6_dwmac_match);
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+SIMPLE_DEV_PM_OPS(stmmac_pltfr_pm_ops, meson6_dwmac_suspend,
+		  meson6_dwmac_resume);
+#endif
 static struct platform_driver meson6_dwmac_driver = {
 	.probe  = meson6_dwmac_probe,
 	.remove = stmmac_pltfr_remove,

@@ -2044,6 +2044,7 @@
 			"eth_txd2_rgmii",
 			"eth_txd3_rgmii";
 			function = "eth";
+			drive-strength = <3>;
 		};
 	};
 };
