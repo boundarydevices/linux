@@ -519,6 +519,17 @@ struct dovi_setting_s {
 #endif
 };
 
+enum cpuID_e {
+	_CPU_MAJOR_ID_GXM,
+	_CPU_MAJOR_ID_TXLX,
+	_CPU_MAJOR_ID_G12A,
+	_CPU_MAJOR_ID_UNKNOWN,
+};
+
+struct dv_device_data_s {
+	enum cpuID_e cpu_id;
+};
+
 struct amdolby_vision_port_t {
 	const char *name;
 	struct device *dev;
