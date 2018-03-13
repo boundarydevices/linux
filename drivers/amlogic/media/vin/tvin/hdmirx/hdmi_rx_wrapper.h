@@ -43,7 +43,7 @@
 #define COLOR_DEP_EN	0x400
 
 /* aud sample rate stable range */
-#define AUD_SR_RANGE 2000
+/* #define AUD_SR_RANGE 2000 */
 #define PHY_REQUEST_CLK_MIN		170000000
 #define PHY_REQUEST_CLK_MAX		370000000
 #define TIMER_STATE_CHECK		(1*HZ/100)

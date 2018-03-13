@@ -411,12 +411,14 @@ static int hdmi_rx_ctrl_irq_handler(void)
 		if (rx_get_bits(intr_aud_fifo, OVERFL) != 0) {
 			if (log_level & 0x100)
 				rx_pr("[irq] OVERFL\n");
+			rx.irq_flag |= IRQ_AUD_FLAG;
 			//if (rx.aud_info.real_sr != 0)
 				//error |= hdmirx_audio_fifo_rst();
 		}
 		if (rx_get_bits(intr_aud_fifo, UNDERFL) != 0) {
 			if (log_level & 0x100)
 				rx_pr("[irq] UNDERFL\n");
+			rx.irq_flag |= IRQ_AUD_FLAG;
 			//if (rx.aud_info.real_sr != 0)
 				//error |= hdmirx_audio_fifo_rst();
 		}
@@ -483,15 +485,15 @@ reisr:hdmirx_top_intr_stat = hdmirx_rd_top(TOP_INTR_STAT);
 	return IRQ_HANDLED;
 }
 
-static const uint32_t sr_tbl[] = {
-	32000,
-	44100,
-	48000,
-	88200,
-	96000,
-	176400,
-	192000,
-	0
+static const uint32_t sr_tbl[][2] = {
+	{32000, 3000},
+	{44100, 2000},
+	{48000, 2000},
+	{88200, 3000},
+	{96000, 3000},
+	{176400, 3000},
+	{192000, 3000},
+	{0, 0}
 };
 #ifdef USE_NEW_FSM_METHODE
 static bool check_real_sr_change(void)
@@ -501,9 +503,9 @@ static bool check_real_sr_change(void)
 	/* note: if arc is missmatch with LUT, then return 0 */
 	uint32_t ret_sr = 0;
 
-	for (i = 0; sr_tbl[i] != 0; i++) {
-		if (abs(rx.aud_info.arc - sr_tbl[i]) < AUD_SR_RANGE) {
-			ret_sr = sr_tbl[i];
+	for (i = 0; sr_tbl[i][0] != 0; i++) {
+		if (abs(rx.aud_info.arc - sr_tbl[i][0]) < sr_tbl[i][1]) {
+			ret_sr = sr_tbl[i][0];
 			break;
 		}
 	}
@@ -522,9 +524,9 @@ static uint32_t get_real_sample_rate(void)
 	/* note: if arc is missmatch with LUT, then return 0 */
 	uint32_t ret_sr = 0; /* rx.aud_info.arc; */
 
-	for (i = 0; sr_tbl[i] != 0; i++) {
-		if (abs(rx.aud_info.arc - sr_tbl[i]) < AUD_SR_RANGE) {
-			ret_sr = sr_tbl[i];
+	for (i = 0; sr_tbl[i][0] != 0; i++) {
+		if (abs(rx.aud_info.arc - sr_tbl[i][0]) < sr_tbl[i][1]) {
+			ret_sr = sr_tbl[i][0];
 			break;
 		}
 		ret_sr = 0;
@@ -1863,6 +1865,7 @@ void rx_main_state_machine(void)
 			if (++pll_lock_cnt < pll_lock_max)
 				break;
 			rx_dwc_reset();
+			rx.err_code = ERR_NONE;
 			rx.state = FSM_SIG_WAIT_STABLE;
 		} else {
 			pll_lock_cnt = 0;
