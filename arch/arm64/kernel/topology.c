@@ -233,7 +233,11 @@ const struct sched_group_energy * const cpu_cluster_energy(int cpu)
 	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL1];
 
 	if (!sge) {
+#ifdef CONFIG_AMLOGIC_MODIFY
+		pr_debug("Invalid sched_group_energy for Cluster%d\n", cpu);
+#else
 		pr_warn("Invalid sched_group_energy for Cluster%d\n", cpu);
+#endif
 		return NULL;
 	}
 
@@ -246,7 +250,11 @@ const struct sched_group_energy * const cpu_core_energy(int cpu)
 	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL0];
 
 	if (!sge) {
+#ifdef CONFIG_AMLOGIC_MODIFY
+		pr_debug("Invalid sched_group_energy for Cluster%d\n", cpu);
+#else
 		pr_warn("Invalid sched_group_energy for CPU%d\n", cpu);
+#endif
 		return NULL;
 	}
 
