@@ -3566,7 +3566,9 @@ static int sec_usb_get_property(struct power_supply *psy,
 
 	val->intval = 0;
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
-			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+	    (battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE) ||
+	    (battery->charger_health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
+	    (battery->charger_health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
 		return 0;
 	}
 	/* Set enable=1 only if the USB charger is connected */
@@ -3595,9 +3597,9 @@ static int sec_ac_get_property(struct power_supply *psy,
 
 	val->intval = 0;
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
-			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE) ||
-			(battery->charger_health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
-			(battery->charger_health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+	    (battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE) ||
+	    (battery->charger_health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
+	    (battery->charger_health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
 		return 0;
 	}
 	/* Set enable=1 only if the AC charger is connected */
