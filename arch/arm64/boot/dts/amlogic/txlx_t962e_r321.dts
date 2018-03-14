@@ -38,6 +38,11 @@
 		serial4 = &uart_AO_B;
 	};
 
+	ion_dev {
+		compatible = "amlogic, ion_dev";
+		memory-region = <&ion_reserved>;
+	};
+
 	memory@00000000 {
 		device_type = "memory";
 		linux,usable-memory = <0x0 0x100000 0x0 0x7ff00000>;
@@ -71,18 +76,14 @@
 		//	no-map;
 		//};
 
-		//pstore:aml_pstore {
-		//	compatible = "amlogic, pstore";
-		//	reg = <0x0 0x07300000 0x0 0x100000>;
-		//	no-map;
-		//};
 
-		fb_reserved:linux,meson-fb {
+
+		logo_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x1c00000>;
+			size = <0x0 0x800000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x7e400000 0x0 0x1c00000>;
+			alloc-ranges = <0x0 0x7f800000 0x0 0x800000>;
 		};
 
 		//carveout_reserved:linux,carveout-reserve {
@@ -93,7 +94,7 @@
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x5C00000>;
+			size = <0x0 0x7C00000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -240,21 +241,21 @@
 
 	meson-fb {
 		compatible = "amlogic, meson-txlx";
-		memory-region = <&fb_reserved>;
+		memory-region = <&logo_reserved>;
 		dev_name = "meson-fb";
 		status = "okay";
 		interrupts = <0 3 1
 			0 89 1>;
 		interrupt-names = "viu-vsync", "rdma";
-		mem_size = <0x00800000 0x01000000 0x00100000>;
+		mem_size = <0x00800000 0x01800000 0x00100000>;
 		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x01851000*/
 		display_mode_default = "1080p60hz";
 		/* 0:VPU free scale 1:OSD free scale 2:OSD super scale */
 		scale_mode = <1>;
-		/* 1920*1080*4*2 = 0xFD2000 */
-		display_size_default = <1920 1080 1920 2160 32>;
+		/* 1920*1080*4*3 = 0x17BB000 */
+		display_size_default = <1920 1080 1920 3240 32>;
 		pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
-		logo_addr = "0x7e400000";
+		logo_addr = "0x7f800000";
 	};
 
 	ge2d {
@@ -349,11 +350,7 @@
 		interrupt-names = "vsync";
 	};
 
-	ion_dev {
-		compatible = "amlogic, ion_dev";
-		status = "okay";
-		memory-region = <&ion_reserved>;
-	};
+
 
 	amvideocap {
 		compatible = "amlogic, amvideocap";
