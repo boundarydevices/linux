@@ -134,6 +134,11 @@ struct _ext_info {
 #define NAND_FIPMODE_COMPACT    (0)
 #define NAND_FIPMODE_DISCRETE   (1)
 
+/* if you don't need skip the bad blocks when add
+ * partitions, please open this macro.
+ * #define CONFIG_NOT_SKIP_BAD_BLOCK
+ */
+
 struct _fip_info {
 	/* version */
 	uint16_t version;
