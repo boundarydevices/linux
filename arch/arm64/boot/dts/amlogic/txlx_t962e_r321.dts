@@ -1375,6 +1375,13 @@
 	};
 };
 
+&i2c1 {
+	status = "okay";
+	clock-frequency = <300000>;
+	pinctrl-names="default";
+	pinctrl-0=<&i2c1_dv_pins>;
+};
+
 &pinctrl_periphs {
 	/*i2s*/
 	aml_audio_i2s: aml_audio_i2s {

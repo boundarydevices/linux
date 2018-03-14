@@ -567,6 +567,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			i2c1: i2c@1e000 {
@@ -579,6 +580,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			i2c2: i2c@1d000 {
@@ -591,6 +593,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			i2c3: i2c@1c000 {
@@ -603,6 +606,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			pwm_ab: pwm@1b000 {
@@ -738,6 +742,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			aoclkc: clock-controller@0 {
@@ -1107,7 +1112,7 @@
 	i2c1_dv_pins:i2c1_z {
 		mux {
 			groups = "i2c1_sda",
-				"i2c2_sck";
+				"i2c1_sck";
 			function = "i2c1";
 		};
 	};
