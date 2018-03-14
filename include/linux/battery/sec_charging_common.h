@@ -380,6 +380,7 @@ struct sec_battery_platform_data {
 	int charging_current_entries;
 	sec_charging_current_t *charging_current;
 	unsigned int boost;
+	unsigned int restart_threshold_mv;
 #ifdef CONFIG_OF
 	char *chip_vendor;
 	unsigned int temp_adc_type;
