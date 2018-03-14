@@ -466,7 +466,6 @@ static void update_cable_type(struct max77823_charger_data *charger)
 
 	if (charger->last_cable_type != value.intval) {
 		charger->last_cable_type = value.intval;
-		charger->psy_chg_desc.type = value.intval;
 		psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
 	}
 }
