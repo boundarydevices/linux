@@ -764,6 +764,7 @@ static void max77823_charger_function_control(
 static void max77823_charger_initialize(struct max77823_charger_data *charger)
 {
 	int ret;
+	int i;
 	pr_info("%s\n", __func__);
 
 	/* unmasked: CHGIN_I, WCIN_I, BATP_I, BYP_I	*/
@@ -774,11 +775,20 @@ static void max77823_charger_initialize(struct max77823_charger_data *charger)
 
 	/*
 	 * fast charge timer disable
-	 * restart threshold disable
-	 * pre-qual charge enable(default)
+	 * Switching frequency 2 MHz
 	 */
+	i = charger->pdata->restart_threshold_mv;
+	if (i >= 250)
+		i = 3;		/* Disabled */
+	else if (i >= 200)
+		i = 2;		/* 200 mV */
+	else if (i >= 150)
+		i = 1;		/* 150 mV */
+	else
+		i = 0;		/* 100 mV */
+
 	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_01,
-		(0x08 << 0) | (0x03 << 4));
+		(0 << 0) | (0x01 << 3) | (i << 4));
 
 	/*
 	 * charge current 466mA(default)
@@ -1593,6 +1603,8 @@ static int max77823_charger_parse_dt(struct max77823_charger_data *charger, stru
 					&pdata->full_check_type);
 		ret = of_property_read_u32(np, "boost",
 					&pdata->boost);
+		ret = of_property_read_u32(np, "restart-threshold-mv",
+					&pdata->restart_threshold_mv);
 
 		if (!pdata->charging_current) {
 			p = of_get_property(np, "battery,input_current_limit", &len);
