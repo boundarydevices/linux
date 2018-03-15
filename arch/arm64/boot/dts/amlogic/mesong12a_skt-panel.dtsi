@@ -133,12 +133,13 @@
 			extern_init = <1>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <
-					0 0 0 20
+					0 1 0 200
 					2 0 0 0
 					0xff 0 0 0>;
 			power_off_step = <
-					2 0 0 100
-					0 0 0 100
+					2 0 0 0
+					0 0 0 20
+					0 1 1 100
 					0xff 0 0 0>;
 			backlight_index = <0>;
 		};
@@ -159,7 +160,7 @@
 			check_state = <0x04 /* check_reg */
 				3>; /* check_cnt */
 			mipi_attr = <4 /*lane_num*/
-				300 /*bit_rate_max(MHz)*/
+				400 /*bit_rate_max(MHz)*/
 				0 /*factor(*100, default 0 for auto)*/
 				1 /*operation_mode_init(0=video, 1=command)*/
 				0 /*operation_mode_display(0=video, 1=command)*/
@@ -176,14 +177,16 @@
 			extern_init = <2>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <
+					0 1 0 200
 					0 0 1 20
 					0 0 0 10
 					0 0 1 20
 					2 0 0 0
 					0xff 0 0 0>;
 			power_off_step = <
-					2 0 0 50
-					0 0 0 100
+					2 0 0 0
+					0 0 0 20
+					0 1 1 100
 					0xff 0 0 0>;
 			backlight_index = <0>;
 		};

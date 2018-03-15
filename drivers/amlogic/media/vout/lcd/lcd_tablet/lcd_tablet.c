@@ -829,11 +829,15 @@ static int lcd_config_load_from_dts(struct lcd_config_s *pconf,
 				LCDPR("failed to get check_state\n");
 			pconf->lcd_control.mipi_config->check_en = 0;
 		} else {
-			pconf->lcd_control.mipi_config->check_en = 1;
-			pconf->lcd_control.mipi_config->check_reg =
-				(unsigned char)(para[0]);
-			pconf->lcd_control.mipi_config->check_cnt =
-				(unsigned char)(para[1]);
+			if (para[0] == 0xffff) {
+				pconf->lcd_control.mipi_config->check_en = 0;
+			} else {
+				pconf->lcd_control.mipi_config->check_en = 1;
+				pconf->lcd_control.mipi_config->check_reg =
+					(unsigned char)(para[0]);
+				pconf->lcd_control.mipi_config->check_cnt =
+					(unsigned char)(para[1]);
+			}
 		}
 
 		ret = of_property_read_u32_array(child, "mipi_attr",

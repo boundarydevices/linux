@@ -71,7 +71,7 @@ static void lcd_debug_info_print(char *print_buf)
 	}
 }
 
-static int lcd_debug_info_len(int num)
+int lcd_debug_info_len(int num)
 {
 	int ret = 0;
 
@@ -1741,8 +1741,19 @@ static ssize_t lcd_debug_ss_store(struct class *class,
 static ssize_t lcd_debug_clk_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
-	lcd_clk_config_print();
-	return sprintf(buf, "\n");
+	char *print_buf;
+	int n = 0;
+
+	print_buf = kcalloc(PR_BUF_MAX, sizeof(char), GFP_KERNEL);
+	if (print_buf == NULL)
+		return sprintf(buf, "%s: buf malloc error\n", __func__);
+
+	lcd_clk_config_print(print_buf, 0);
+
+	n = sprintf(buf, "%s\n", print_buf);
+	kfree(print_buf);
+
+	return n;
 }
 
 static ssize_t lcd_debug_clk_store(struct class *class,

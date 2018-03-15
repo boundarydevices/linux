@@ -281,7 +281,6 @@ struct dsi_config_s {
 
 	unsigned int venc_data_width;
 	unsigned int dpi_data_format;
-	unsigned int venc_fmt;
 
 	unsigned char *dsi_init_on;
 	unsigned char *dsi_init_off;

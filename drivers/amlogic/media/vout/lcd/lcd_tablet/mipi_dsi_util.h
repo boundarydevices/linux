@@ -508,6 +508,8 @@ struct dsi_phy_s {
 	unsigned int clk_pre;
 	unsigned int init;
 	unsigned int wakeup;
+
+	unsigned int state_change;
 };
 
 struct dsi_vid_s {

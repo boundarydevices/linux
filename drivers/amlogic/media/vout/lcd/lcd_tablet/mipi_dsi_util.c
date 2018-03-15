@@ -154,6 +154,7 @@ static void mipi_dsi_dphy_print_info(struct dsi_config_s *dconf)
 	temp = ((1000000 * 100) / (dconf->bit_rate / 1000)) * 8;
 	pr_info("MIPI DSI DPHY timing (unit: ns)\n"
 		"  UI:                %d.%02d\n"
+		"  LP TESC:           %d\n"
 		"  LP LPX:            %d\n"
 		"  LP TA_SURE:        %d\n"
 		"  LP TA_GO:          %d\n"
@@ -168,8 +169,10 @@ static void mipi_dsi_dphy_print_info(struct dsi_config_s *dconf)
 		"  CLK PREPARE:       %d\n"
 		"  CLK PRE:           %d\n"
 		"  INIT:              %d\n"
-		"  WAKEUP:            %d\n\n",
+		"  WAKEUP:            %d\n"
+		"  state_change:      %d\n\n",
 		(temp / 8 / 100), ((temp / 8) % 100),
+		(temp * dsi_phy_config.lp_tesc / 100),
 		(temp * dsi_phy_config.lp_lpx / 100),
 		(temp * dsi_phy_config.lp_ta_sure / 100),
 		(temp * dsi_phy_config.lp_ta_go / 100),
@@ -184,7 +187,8 @@ static void mipi_dsi_dphy_print_info(struct dsi_config_s *dconf)
 		(temp * dsi_phy_config.clk_prepare / 100),
 		(temp * dsi_phy_config.clk_pre / 100),
 		(temp * dsi_phy_config.init / 100),
-		(temp * dsi_phy_config.wakeup / 100));
+		(temp * dsi_phy_config.wakeup / 100),
+		dsi_phy_config.state_change);
 }
 
 static void mipi_dsi_video_print_info(struct dsi_config_s *dconf)
@@ -580,7 +584,6 @@ static void set_mipi_dsi_host(unsigned int vcid, unsigned int chroma_subsample,
 {
 	unsigned int dpi_data_format, venc_data_width;
 	unsigned int lane_num, vid_mode_type;
-	enum tv_enc_lcd_type_e  output_type;
 	unsigned int temp;
 	struct dsi_config_s *dconf;
 
@@ -589,16 +592,12 @@ static void set_mipi_dsi_host(unsigned int vcid, unsigned int chroma_subsample,
 	dpi_data_format = dconf->dpi_data_format;
 	lane_num        = (unsigned int)(dconf->lane_num);
 	vid_mode_type   = (unsigned int)(dconf->video_mode_type);
-	output_type     = dconf->venc_fmt;
 
 	/* ----------------------------------------------------- */
 	/* Standard Configuration for Video Mode Operation */
 	/* ----------------------------------------------------- */
 	/* 1,    Configure Lane number and phy stop wait time */
-	if ((output_type != TV_ENC_LCD240x160_dsi) &&
-		(output_type != TV_ENC_LCD1920x1200p) &&
-		(output_type != TV_ENC_LCD2560x1600) &&
-		(output_type != TV_ENC_LCD768x1024p)) {
+	if (dsi_phy_config.state_change == 2) {
 		dsi_host_write(MIPI_DSI_DWC_PHY_IF_CFG_OS,
 			(0x28 << BIT_PHY_STOP_WAIT_TIME) |
 			((lane_num-1) << BIT_N_LANES));
@@ -723,24 +722,15 @@ static void set_mipi_dsi_host(unsigned int vcid, unsigned int chroma_subsample,
 	dsi_host_write(MIPI_DSI_DWC_MODE_CFG_OS, operation_mode);
 
 	/* Phy Timer */
-	if ((output_type != TV_ENC_LCD240x160_dsi) &&
-		(output_type != TV_ENC_LCD1920x1200p) &&
-		(output_type != TV_ENC_LCD2560x1600) &&
-		(output_type != TV_ENC_LCD768x1024p)) {
+	if (dsi_phy_config.state_change == 2)
 		dsi_host_write(MIPI_DSI_DWC_PHY_TMR_CFG_OS, 0x03320000);
-	} else {
+	else
 		dsi_host_write(MIPI_DSI_DWC_PHY_TMR_CFG_OS, 0x090f0000);
-	}
 
-	/* Configure DPHY Parameters */
-	if ((output_type != TV_ENC_LCD240x160_dsi) &&
-		(output_type != TV_ENC_LCD1920x1200p) &&
-		(output_type != TV_ENC_LCD2560x1600) &&
-		(output_type != TV_ENC_LCD768x1024p)) {
+	if (dsi_phy_config.state_change == 2)
 		dsi_host_write(MIPI_DSI_DWC_PHY_TMR_LPCLK_CFG_OS, 0x870025);
-	} else {
+	else
 		dsi_host_write(MIPI_DSI_DWC_PHY_TMR_LPCLK_CFG_OS, 0x260017);
-	}
 }
 
 /* *************************************************************
@@ -1378,7 +1368,7 @@ int dsi_read_single(unsigned char *payload, unsigned char *rd_data,
 
 static void mipi_dsi_phy_config(struct dsi_phy_s *dphy, unsigned int dsi_ui)
 {
-	unsigned int temp, t_ui;
+	unsigned int temp, t_ui, t_req;
 
 	t_ui = (1000000 * 100) / (dsi_ui / 1000); /* 0.01ns*100 */
 	temp = t_ui * 8; /* lane_byte cycle time */
@@ -1404,6 +1394,30 @@ static void mipi_dsi_phy_config(struct dsi_phy_s *dphy, unsigned int dsi_ui)
 	dphy->clk_pre = ((DPHY_TIME_CLK_PRE(t_ui) + temp - 1) / temp) & 0xff;
 	dphy->init = (DPHY_TIME_INIT(t_ui) + temp - 1) / temp;
 	dphy->wakeup = (DPHY_TIME_WAKEUP(t_ui) + temp - 1) / temp;
+
+	/* check dphy spec: (unit: ns) */
+	if ((temp * dsi_phy_config.lp_tesc / 100) <= 100)
+		LCDERR("lp_tesc timing error\n");
+	if ((temp * dsi_phy_config.lp_lpx / 100) <= 50)
+		LCDERR("lp_lpx timing error\n");
+	if ((temp * dsi_phy_config.hs_exit / 100) <= 100)
+		LCDERR("hs_exit timing error\n");
+	t_req = ((t_ui > (60 * 100 / 4)) ?
+		(8 * t_ui) : ((60 * 100) + 4 * t_ui));
+	if ((temp * dsi_phy_config.hs_trail / 100) <= ((t_req + 50) / 100))
+		LCDERR("hs_trail timing error\n");
+	t_req = temp * dsi_phy_config.hs_prepare / 100;
+	if ((t_req <= (40 + (t_ui * 4 / 100))) ||
+		(t_req >= (85 + (t_ui * 6 / 100))))
+		LCDERR("hs_prepare timing error\n");
+	t_req = 145 + (t_ui * 10 / 100);
+	if (((temp * dsi_phy_config.hs_zero / 100) +
+		(temp * dsi_phy_config.hs_prepare / 100)) <= t_req)
+		LCDERR("hs_zero timing error\n");
+	if ((temp * dsi_phy_config.init / 100) <= 100000)
+		LCDERR("init timing error\n");
+	if ((temp * dsi_phy_config.wakeup / 100) <= 1000000)
+		LCDERR("wakeup timing error\n");
 
 	if (lcd_debug_print_flag) {
 		LCDPR("%s:\n"
@@ -1819,20 +1833,21 @@ void lcd_mipi_dsi_config_set(struct lcd_config_s *pconf)
 	/* Venc resolution format */
 	switch (dconf->phy_stop_wait) {
 	case 1: /* standard */
-		dconf->venc_fmt = TV_ENC_LCD768x1024p;
+		dsi_phy_config.state_change = 1;
 		break;
 	case 2: /* slow */
-		dconf->venc_fmt = TV_ENC_LCD1280x720;
+		dsi_phy_config.state_change = 2;
 		break;
 	case 0: /* auto */
 	default:
 		if ((pconf->lcd_basic.h_active != 240) &&
 			(pconf->lcd_basic.h_active != 768) &&
 			(pconf->lcd_basic.h_active != 1920) &&
-			(pconf->lcd_basic.h_active != 2560))
-			dconf->venc_fmt = TV_ENC_LCD1280x720;
-		else
-			dconf->venc_fmt = TV_ENC_LCD768x1024p;
+			(pconf->lcd_basic.h_active != 2560)) {
+			dsi_phy_config.state_change = 2;
+		} else {
+			dsi_phy_config.state_change = 1;
+		}
 		break;
 	}
 }

@@ -368,9 +368,11 @@ enum div_sel_e {
 
 /* ******** api ******** */
 extern int meson_clk_measure(unsigned int clk_mux);
+extern int lcd_debug_info_len(int num);
+
 extern struct lcd_clk_config_s *get_lcd_clk_config(void);
 extern int lcd_clk_path_change(int sel);
-extern void lcd_clk_config_print(void);
+extern int lcd_clk_config_print(char *buf, int offset);
 extern int lcd_encl_clk_msr(void);
 extern void lcd_pll_reset(void);
 extern char *lcd_get_spread_spectrum(void);
