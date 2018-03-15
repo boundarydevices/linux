@@ -830,9 +830,17 @@ static void ffs_user_copy_worker(struct work_struct *work)
 	bool kiocb_has_eventfd = io_data->kiocb->ki_flags & IOCB_EVENTFD;
 
 	if (io_data->read && ret > 0) {
+#ifdef CONFIG_AMLOGIC_USB
+		mm_segment_t oldfs = get_fs();
+
+		set_fs(USER_DS);
+#endif
 		use_mm(io_data->mm);
 		ret = ffs_copy_to_iter(io_data->buf, ret, &io_data->data);
 		unuse_mm(io_data->mm);
+#ifdef CONFIG_AMLOGIC_USB
+		set_fs(oldfs);
+#endif
 	}
 
 	io_data->kiocb->ki_complete(io_data->kiocb, ret, ret);
@@ -844,9 +852,7 @@ static void ffs_user_copy_worker(struct work_struct *work)
 
 	if (io_data->read)
 		kfree(io_data->to_free);
-#ifndef CONFIG_AMLOGIC_USB
 	kfree(io_data->buf);
-#endif
 	kfree(io_data);
 }
 
@@ -1031,6 +1037,14 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 			goto error_mutex;
 		}
 #else
+		if (io_data->aio) {
+			spin_unlock_irq(&epfile->ffs->eps_lock);
+			data = kmalloc(data_len, GFP_KERNEL);
+			if (unlikely(!data)) {
+				ret = -ENOMEM;
+				goto error_mutex;
+			}
+		} else {
 		/* Fire the request */
 		/*
 		 * Avoid kernel panic caused by race condition. For example,
@@ -1049,14 +1063,16 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		 * data buffer for requests. And the memory resources has
 		 * been released in kill_sb.
 		 */
-		buffer = assign_ffs_buffer(epfile->ffs);
-		if (unlikely(!buffer)) {
-			ret = -ENOMEM;
+			buffer = assign_ffs_buffer(epfile->ffs);
+			if (unlikely(!buffer)) {
+				ret = -ENOMEM;
+				spin_unlock_irq(&epfile->ffs->eps_lock);
+				goto error_mutex;
+			}
+
+			data = buffer->data_ep;
 			spin_unlock_irq(&epfile->ffs->eps_lock);
-			goto error_mutex;
 		}
-		data = buffer->data_ep;
-		spin_unlock_irq(&epfile->ffs->eps_lock);
 #endif
 
 		if (!io_data->read &&
@@ -1162,8 +1178,13 @@ error_mutex:
 	mutex_unlock(&epfile->mutex);
 error:
 #ifdef CONFIG_AMLOGIC_USB
-	if (buffer)
-		release_ffs_buffer(epfile->ffs, buffer);
+	if (io_data->aio) {
+		kfree(data);
+		data = NULL;
+	} else {
+		if (buffer)
+			release_ffs_buffer(epfile->ffs, buffer);
+	}
 #else
 	kfree(data);
 #endif
