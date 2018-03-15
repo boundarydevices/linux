@@ -15,7 +15,7 @@
 #include "imx6q.dtsi"
 
 / {
-	model = "Freescale i.MX6 Quad CID Board";
+	model = "Freescale i.MX6 Quad CID2 Board";
 	compatible = "fsl,imx6q-cid", "fsl,imx6q";
 };
 
@@ -33,17 +33,9 @@
 		fsl,pins = <
 #define GP_LED_VIBRATOR		<&gpio5 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x030b0
-#ifdef CONFIG_REV_OLD
-#define GP_LED_BLUE		<&gpio4 26 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1b0b0
-#define GP_LED_GREEN		<&gpio4 25 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
-#define GP_LED_RED		<&gpio4 27 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x1b0b0
-#else
 #define GP_LED_BLUE		<&gpio4 26 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x130b0
-#define GP_LED_GREEN		<&gpio4 25 GPIO_ACTIVE_HIGH>
+#define GP_LED_GREEN		<&gpio4 25 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x1b0b0
 #define GP_LED_CTRL_GREEN	<&gpio3 7 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x100b0
@@ -51,7 +43,6 @@
 			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x130b0
 #define GP_LED_CTRL_RED		<&gpio2 30 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x100b0
-#endif
 		>;
 	};
 };
