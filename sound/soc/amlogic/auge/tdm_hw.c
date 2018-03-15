@@ -587,3 +587,15 @@ void aml_tdm_clk_pad_select(
 		mask_offset, val_offset);
 
 }
+
+void i2s_to_hdmitx_ctrl(int tdm_index)
+{
+	audiobus_write(EE_AUDIO_TOHDMITX_CTRL0,
+		1 << 31
+		| tdm_index << 12 /* dat_sel */
+		| tdm_index << 8 /* lrclk_sel */
+		| 1 << 7 /* Bclk_cap_inv */
+		| 0 << 6 /* Bclk_o_inv */
+		| tdm_index << 4 /* Bclk_sel */
+	);
+}

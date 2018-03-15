@@ -23,7 +23,7 @@
 
 #include "spdif_hw.h"
 
-int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
+static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 	struct frddr *fr, int spdif_id)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -37,9 +37,24 @@ int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 
 	/* spdif b, notify hdmitx audio */
 	if (spdif_id == 1) {
-		spdifoutb_to_hdmitx_ctrl();
+		spdifoutb_to_hdmitx_ctrl(spdif_id);
 		aout_notifier_call_chain(0x1, substream);
 	}
+
+	return 0;
+}
+
+static int sharebuffer_spdifout_free(struct snd_pcm_substream *substream,
+	struct frddr *fr, int spdif_id)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	int bit_depth;
+
+	bit_depth = snd_pcm_format_width(runtime->format);
+
+	spdifout_samesource_set(spdif_id,
+		aml_frddr_get_fifo_id(fr),
+		bit_depth, false);
 
 	return 0;
 }
@@ -74,10 +89,33 @@ int sharebuffer_prepare(struct snd_pcm_substream *substream,
 	}
 
 	/* frddr, share buffer, src_sel1 */
-	aml_frddr_select_dst_ss(fr, samesource_sel, 1);
+	aml_frddr_select_dst_ss(fr, samesource_sel, 1, true);
 
 	return 0;
 }
+
+int sharebuffer_free(struct snd_pcm_substream *substream,
+	void *pfrddr, int samesource_sel)
+{
+	struct frddr *fr = (struct frddr *)pfrddr;
+
+	/* each module prepare, clocks and controls */
+	if (samesource_sel < 0) {
+		pr_err("Not support same source\n");
+		return -EINVAL;
+	} else if (samesource_sel < 3) {
+		// TODO: same with tdm
+	} else if (samesource_sel < 5) {
+		/* same source with spdif a/b */
+		sharebuffer_spdifout_free(substream, fr, samesource_sel - 3);
+	}
+
+	/* frddr, share buffer, src_sel1 */
+	aml_frddr_select_dst_ss(fr, samesource_sel, 1, false);
+
+	return 0;
+}
+
 
 int sharebuffer_trigger(int cmd, int samesource_sel)
 {

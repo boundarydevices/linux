@@ -270,14 +270,15 @@ void aml_spdifout_get_aed_info(int spdifout_id,
 		*frddrtype = (val >> 4) & 0x7;
 }
 
-void spdifoutb_to_hdmitx_ctrl(void)
+/*value for spdif_index is only 0, 1 */
+void spdifoutb_to_hdmitx_ctrl(int spdif_index)
 {
 	audiobus_write(EE_AUDIO_TOHDMITX_CTRL0,
 		1 << 31
 		| 1 << 3 /* spdif_clk_cap_inv */
 		| 0 << 2 /* spdif_clk_inv */
-		| 1 << 1 /* spdif_out_b */
-		| 1 << 0 /* spdif_clk_b */
+		| spdif_index << 1 /* spdif_out_b */
+		| spdif_index << 0 /* spdif_clk_b */
 	);
 }
 
@@ -364,6 +365,9 @@ void spdifout_samesource_set(int spdif_index, int fifo_id,
 	else
 		spdif_id = 0;
 
-	spdifout_clk_ctrl(spdif_id, true);
-	spdifout_fifo_ctrl(spdif_id, fifo_id, bitwidth);
+	if (is_enable) {
+		spdifout_clk_ctrl(spdif_id, true);
+		spdifout_fifo_ctrl(spdif_id, fifo_id, bitwidth);
+	} else
+		spdifout_clk_ctrl(spdif_id, false);
 }

@@ -34,6 +34,8 @@
 #include <linux/amlogic/clk_measure.h>
 #include <linux/amlogic/cpu_version.h>
 
+#include <linux/amlogic/media/sound/aout_notify.h>
+
 #include "ddr_mngr.h"
 #include "tdm_hw.h"
 
@@ -107,6 +109,8 @@ struct aml_tdm {
 	struct tdm_chipinfo *chipinfo;
 	/* share buffer with module */
 	int samesource_sel;
+	/* virtual link for i2s to hdmitx */
+	int i2s2hdmitx;
 };
 
 static const struct snd_pcm_hardware aml_tdm_hardware = {
@@ -401,6 +405,13 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 					fr, p_tdm->samesource_sel);
 		}
 
+		/* i2s source to hdmix */
+		if (p_tdm->i2s2hdmitx) {
+			i2s_to_hdmitx_ctrl(p_tdm->id);
+			aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM,
+				substream);
+		}
+
 		fifo_id = aml_frddr_get_fifo_id(fr);
 		aml_tdm_fifo_ctrl(p_tdm->actrl,
 			bit_depth,
@@ -681,11 +692,20 @@ static int aml_dai_tdm_hw_free(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *cpu_dai)
 {
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct frddr *fr = p_tdm->fddr;
 	int i;
 
 	for (i = 0; i < 4; i++)
 		aml_tdm_set_channel_mask(p_tdm->actrl,
 			substream->stream, p_tdm->id, i, 0);
+
+	/* share buffer free */
+	if (p_tdm->chipinfo &&
+		p_tdm->chipinfo->same_src_fn && fr) {
+		if (p_tdm->samesource_sel >= 0)
+			sharebuffer_free(substream,
+				fr, p_tdm->samesource_sel);
+	}
 
 	return 0;
 }
@@ -1133,6 +1153,14 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 			p_tdm->id,
 			p_tdm->samesource_sel);
 	}
+
+	ret = of_property_read_u32(node, "i2s2hdmi",
+			&p_tdm->i2s2hdmitx);
+	if (ret < 0)
+		p_tdm->i2s2hdmitx = 0;
+	pr_info("TDM id %d i2s2hdmi:%d\n",
+		p_tdm->id,
+		p_tdm->i2s2hdmitx);
 
 	/* get tdm lanes info. if not, set to default 1 */
 	ret = of_parse_tdm_lane_slot_in(node,

@@ -418,7 +418,7 @@ static int aml_dai_spdif_prepare(
 
 		/* TOHDMITX_CTRL0 */
 		if (p_spdif->id == 1) {
-			spdifoutb_to_hdmitx_ctrl();
+			spdifoutb_to_hdmitx_ctrl(p_spdif->id);
 			aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM,
 				substream);
 		}

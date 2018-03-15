@@ -746,33 +746,34 @@ void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest dst)
  * sel 1 is for reg_frddr_src_sel2
  * sel 2 is for reg_frddr_src_sel3
  */
-void aml_frddr_select_dst_ss(struct frddr *fr, enum frddr_dest dst, int sel)
+void aml_frddr_select_dst_ss(struct frddr *fr,
+	enum frddr_dest dst, int sel, bool enable)
 {
 	struct aml_audio_controller *actrl = fr->actrl;
 	unsigned int reg_base = fr->reg_base;
 	unsigned int reg;
 
-	if (dst == fr->dest) {
-		pr_warn_once("same source sel is same with frddr->dest\r");
-		return;
-	}
-
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
 	/* same source en */
 	if (fr->chipinfo
 		&& fr->chipinfo->same_src_fn) {
+		int s_v = 0, s_m = 0;
 
-		if (sel == 1)
-			aml_audiobus_update_bits(actrl, reg,
-				0xf << 4,
-				dst << 4 | 1 << 7);
-		else if (sel == 2)
-			aml_audiobus_update_bits(actrl, reg,
-				0xf << 8,
-				dst << 8 | 1 << 11);
-		else
-			pr_warn_once("sel :%d is not supported for same source\n",
-				sel);
+			switch (sel) {
+			case 1:
+				s_m = 0xf << 4;
+				s_v = enable ? (dst << 4 | 1 << 7) : 0 << 4;
+				break;
+			case 2:
+				s_m = 0xf << 8;
+				s_v = enable ? (dst << 8 | 1 << 11) : 0 << 8;
+				break;
+			default:
+				pr_warn_once("sel :%d is not supported for same source\n",
+					sel);
+				break;
+			}
+			aml_audiobus_update_bits(actrl, reg, s_m, s_v);
 	}
 }
 

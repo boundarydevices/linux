@@ -163,10 +163,11 @@ static int snd_int_get(struct snd_kcontrol *kcontrol,
 	val = audiobus_read(reg);
 	ucontrol->value.integer.value[0] = val;
 
-	pr_info("%s:reg:0x%x, val:0x%x\n",
-		__func__,
-		reg,
-		val);
+	/*	pr_info("%s:reg:0x%x, val:0x%x\n",
+	 *		__func__,
+	 *		reg,
+	 *		val);
+	 */
 
 	return 0;
 }
@@ -177,10 +178,11 @@ static int snd_int_set(struct snd_kcontrol *kcontrol,
 	int val  = (int)ucontrol->value.integer.value[0];
 	unsigned int reg = kcontrol->private_value;
 
-	pr_info("%s:reg:0x%x, val:0x%x\n",
-		__func__,
-		reg,
-		val);
+	/*	pr_info("%s:reg:0x%x, val:0x%x\n",
+	 *		__func__,
+	 *		reg,
+	 *		val);
+	 */
 
 	audiobus_write(reg, val);
 
@@ -220,11 +222,12 @@ static int snd_byte_get(struct snd_kcontrol *kcontrol,
 
 	ucontrol->value.integer.value[0] = val;
 
-	pr_info("%s:reg:0x%x, mask:0x%x, mask val:0x%x\n",
-		__func__,
-		einfo->reg,
-		einfo->mask,
-		val);
+	/*	pr_info("%s:reg:0x%x, mask:0x%x, mask val:0x%x\n",
+	 *		__func__,
+	 *		einfo->reg,
+	 *		einfo->mask,
+	 *		val);
+	 */
 
 	return 0;
 }
@@ -240,11 +243,12 @@ static int snd_byte_set(struct snd_kcontrol *kcontrol,
 	if (val > 255)
 		val = 255;
 
-	pr_info("%s:reg:0x%x, mask:0x%x, mask val:0x%x\n",
-		__func__,
-		einfo->reg,
-		einfo->mask,
-		val);
+	/*	pr_info("%s:reg:0x%x, mask:0x%x, mask val:0x%x\n",
+	 *		__func__,
+	 *		einfo->reg,
+	 *		einfo->mask,
+	 *		val);
+	 */
 
 	audiobus_update_bits(
 		einfo->reg,
@@ -284,17 +288,18 @@ static int snd_enum_get(struct snd_kcontrol *kcontrol,
 	int val;
 	struct snd_elem_info *einfo = (void *)kcontrol->private_value;
 
-	pr_info("%s:reg:0x%x, mask:0x%x",
-		__func__,
-		einfo->reg,
-		einfo->mask);
+	/* pr_info("%s:reg:0x%x, mask:0x%x",
+	 *		__func__,
+	 *		einfo->reg,
+	 *		einfo->mask);
+	 */
 
 	val = audiobus_read(einfo->reg);
 	val >>= einfo->shift;
 	val &= einfo->mask;
 	ucontrol->value.integer.value[0] = val;
 
-	pr_info("\t val:0x%x\n", val);
+	/* pr_info("\t val:0x%x\n", val); */
 
 	return 0;
 }
@@ -305,12 +310,12 @@ static int snd_enum_set(struct snd_kcontrol *kcontrol,
 	struct snd_elem_info *einfo = (void *)kcontrol->private_value;
 	int val  = (int)ucontrol->value.integer.value[0];
 
-	pr_info("%s:reg:0x%x, swap mask:0x%x, val:0x%x\n",
-		__func__,
-		einfo->reg,
-		einfo->mask,
-		val);
-
+	/*	pr_info("%s:reg:0x%x, swap mask:0x%x, val:0x%x\n",
+	 *		__func__,
+	 *		einfo->reg,
+	 *		einfo->mask,
+	 *		val);
+	 */
 	audiobus_update_bits(
 		einfo->reg,
 		einfo->mask << einfo->shift,
@@ -481,20 +486,21 @@ static int spdif_channel_status_info(struct snd_kcontrol *kcontrol,
 static int spdifin_channel_status_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	/* struct soc_enum *e = (struct soc_enum *)kcontrol->private_value; */
 	int reg, status;
 
-	pr_info("set which channel status you wanted to get firstly\n");
+	/* pr_info("set which channel status you wanted to get firstly\n"); */
 	reg = SPDIFIN_CHSTS_REG;
 	status = spdif_get_channel_status(reg);
 
 	ucontrol->value.enumerated.item[0] = status;
 
 	/*channel status value in printk information*/
-	pr_info("%s: 0x%x\n",
-		e->texts[spdifin_channel_status],
-		status
-		);
+	/*	pr_info("%s: 0x%x\n",
+	 *		e->texts[spdifin_channel_status],
+	 *		status
+	 *		);
+	 */
 	return 0;
 }
 
@@ -518,8 +524,9 @@ static int spdifin_channel_status_set(
 	valid_bits = (chst >= 6) ? (chst - 6) : chst;
 
 	spdifin_channel_status = chst;
-	pr_info("%s\n",
-		e->texts[spdifin_channel_status]);
+	/*	pr_info("%s\n",
+	 *		e->texts[spdifin_channel_status]);
+	 */
 
 	spdifin_set_channel_status(ch, valid_bits);
 
@@ -529,21 +536,22 @@ static int spdifin_channel_status_set(
 static int spdifout_channel_status_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	/* struct soc_enum *e = (struct soc_enum *)kcontrol->private_value; */
 	int reg, status;
 
-	pr_info("set which channel status you wanted to get firstly\n");
+	/* pr_info("set which channel status you wanted to get firstly\n"); */
 	reg = SPDIFOUT_CHSTS_REG(spdifout_channel_status);
 	status = spdif_get_channel_status(reg);
 
 	ucontrol->value.enumerated.item[0] = status;
 
 	/*channel status value in printk information*/
-	pr_info("%s: reg:0x%x, status:0x%x\n",
-		e->texts[spdifout_channel_status],
-		reg,
-		status
-		);
+	/*	pr_info("%s: reg:0x%x, status:0x%x\n",
+	 *		e->texts[spdifout_channel_status],
+	 *		reg,
+	 *		status
+	 *		);
+	 */
 	return 0;
 }
 
@@ -564,9 +572,9 @@ static int spdifout_channel_status_set(
 	}
 
 	spdifout_channel_status = chst;
-	pr_info("%s\n",
-		e->texts[chst]);
-
+	/*	pr_info("%s\n",
+	 *		e->texts[chst]);
+	 */
 	return 0;
 }
 
