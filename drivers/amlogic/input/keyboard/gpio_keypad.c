@@ -51,6 +51,9 @@
 
 #define MOD_NAME       "gpio_key"
 
+#undef pr_fmt
+#define pr_fmt(fmt) "gpio_key: " fmt
+
 struct gpio_key {
 	int code;	  /* input key code */
 	const char *name;
@@ -154,7 +157,7 @@ static irqreturn_t kp_isr(int irq,  void *data)
 {
 	struct kp *kp_data = (struct kp *)data;
 
-	schedule_work(&(kp_data->work_update));
+	queue_work(system_freezable_wq, &(kp_data->work_update));
 
 	/* if (!deep_suspend_flag)
 	 *	clr_pwr_key();
@@ -167,7 +170,7 @@ void kp_timer_sr(unsigned long data)
 {
 	struct kp *kp_data = (struct kp *)data;
 
-	schedule_work(&(kp_data->work_update));
+	queue_work(system_freezable_wq, &(kp_data->work_update));
 	mod_timer(&kp_data->timer, jiffies+msecs_to_jiffies(25));
 }
 #endif
@@ -441,12 +444,24 @@ static int gpio_key_suspend(struct platform_device *dev,  pm_message_t state)
 
 static int gpio_key_resume(struct platform_device *dev)
 {
+	int i;
+	struct gpio_platform_data *pdata;
+
+	pdata = (struct gpio_platform_data *)platform_get_drvdata(dev);
+
 	if (get_resume_method() == POWER_KEY_WAKEUP) {
-		pr_info("gpio keypad wakeup\n");
-		input_report_key(gp_kp->input,  KEY_POWER,  1);
-		input_sync(gp_kp->input);
-		input_report_key(gp_kp->input,  KEY_POWER,  0);
-		input_sync(gp_kp->input);
+		for (i = 0; i < pdata->key_num; i++) {
+			if (pdata->key[i].code == KEY_POWER) {
+				pr_info("gpio keypad wakeup\n");
+
+				input_report_key(gp_kp->input,  KEY_POWER,  1);
+				input_sync(gp_kp->input);
+				input_report_key(gp_kp->input,  KEY_POWER,  0);
+				input_sync(gp_kp->input);
+
+				break;
+			}
+		}
 	}
 	return 0;
 }

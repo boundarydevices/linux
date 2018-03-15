@@ -609,14 +609,24 @@ static int meson_adc_kp_suspend(struct platform_device *pdev,
 
 static int meson_adc_kp_resume(struct platform_device *pdev)
 {
+	struct adc_key *key;
 	struct meson_adc_kp *kp = platform_get_drvdata(pdev);
 
 	if (get_resume_method() == POWER_KEY_WAKEUP) {
-		dev_info(&pdev->dev, "adc keypad wakeup\n");
-		input_report_key(kp->poll_dev->input,  KEY_POWER,  1);
-		input_sync(kp->poll_dev->input);
-		input_report_key(kp->poll_dev->input,  KEY_POWER,  0);
-		input_sync(kp->poll_dev->input);
+		list_for_each_entry(key, &kp->adckey_head, list) {
+			if (key->code == KEY_POWER) {
+				dev_info(&pdev->dev, "adc keypad wakeup\n");
+
+				input_report_key(kp->poll_dev->input,
+					KEY_POWER,  1);
+				input_sync(kp->poll_dev->input);
+				input_report_key(kp->poll_dev->input,
+					KEY_POWER,  0);
+				input_sync(kp->poll_dev->input);
+
+				break;
+			}
+		}
 	}
 	return 0;
 }
