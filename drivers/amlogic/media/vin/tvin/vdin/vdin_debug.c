@@ -1637,6 +1637,7 @@ static ssize_t vdin_cm2_show(struct device *dev,
 	     struct device_attribute *attr,
 					     char *buf)
 {
+	int len = 0;
 	struct vdin_dev_s *devp;
 	unsigned int addr_port = VDIN_CHROMA_ADDR_PORT;
 	unsigned int data_port = VDIN_CHROMA_DATA_PORT;
@@ -1646,17 +1647,17 @@ static ssize_t vdin_cm2_show(struct device *dev,
 		addr_port = VDIN_CHROMA_ADDR_PORT + devp->addr_offset;
 		data_port = VDIN_CHROMA_DATA_PORT + devp->addr_offset;
 	}
-	pr_info("addr_port[0x%x] data_port[0x%x]\n",
-		addr_port, data_port);
 
-	pr_info("Usage:");
-	pr_info(" echo wm addr data0 data1 data2 data3 data4 >");
-	pr_info("/sys/class/vdin/vdin0/cm2\n");
-	pr_info(" echo rm addr > / sys/class/vdin/vdin0/cm2\n");
-	pr_info(" echo wm addr data0 data1 data2 data3 data4 >");
-	pr_info("/sys/class/vdin/vdin1/cm2\n");
-	pr_info(" echo rm addr > / sys/class/vdin/vdin1/cm2\n");
-return 0;
+	len += sprintf(buf+len, "addr_port[0x%x] data_port[0x%x]\n",
+		addr_port, data_port);
+	len += sprintf(buf+len, "Usage:");
+	len += sprintf(buf+len, "echo wm addr data0 data1 data2 data3 data4 >");
+	len += sprintf(buf+len, "/sys/class/vdin/vdin0/cm2\n");
+	len += sprintf(buf+len, "echo rm addr > / sys/class/vdin/vdin0/cm2\n");
+	len += sprintf(buf+len, "echo wm addr data0 data1 data2 data3 data4 >");
+	len += sprintf(buf+len, "/sys/class/vdin/vdin1/cm2\n");
+	len += sprintf(buf+len, "echo rm addr > / sys/class/vdin/vdin1/cm2\n");
+	return len;
 }
 
 static ssize_t vdin_cm2_store(struct device *dev,
