@@ -1273,6 +1273,7 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
 #define is_from_vdin(vframe) (vframe->type & VIDTYPE_VIU_422)
 static void recycle_vframe_type_pre(struct di_buf_s *di_buf);
 static void recycle_vframe_type_post(struct di_buf_s *di_buf);
+static void add_dummy_vframe_type_pre(struct di_buf_s *src_buf);
 #ifdef DI_BUFFER_DEBUG
 static void
 recycle_vframe_type_post_print(struct di_buf_s *di_buf,
@@ -2987,29 +2988,7 @@ static void pre_de_done_buf_config(void)
 
 			if (di_pre_stru.source_change_flag) {
 				/* add dummy buf, will not be displayed */
-				if (!queue_empty(QUEUE_LOCAL_FREE)) {
-					struct di_buf_s *di_buf_tmp;
-
-					di_buf_tmp =
-					get_di_buf_head(QUEUE_LOCAL_FREE);
-					if (di_buf_tmp) {
-						queue_out(di_buf_tmp);
-						di_buf_tmp->pre_ref_count = 0;
-						di_buf_tmp->post_ref_count = 0;
-						di_buf_tmp->post_proc_flag = 3;
-						di_buf_tmp->new_format_flag = 0;
-						queue_in(
-							di_buf_tmp,
-							QUEUE_PRE_READY);
-#ifdef DI_BUFFER_DEBUG
-					di_print(
-					"%s: dummy %s[%d] => pre_ready_list\n",
-					__func__,
-					vframe_type_name[di_buf_tmp->type],
-					di_buf_tmp->index);
-#endif
-					}
-				}
+				add_dummy_vframe_type_pre(post_wr_buf);
 			}
 			di_pre_stru.di_wr_buf->seq =
 				di_pre_stru.pre_ready_seq++;
@@ -3092,6 +3071,34 @@ static void recycle_vframe_type_pre(struct di_buf_s *di_buf)
 	queue_in(di_buf, QUEUE_RECYCLE);
 
 	di_unlock_irqfiq_restore(irq_flag2);
+}
+/*
+ * add dummy buffer to pre ready queue
+ */
+static void add_dummy_vframe_type_pre(struct di_buf_s *src_buf)
+{
+	struct di_buf_s *di_buf_tmp = NULL;
+
+	if (!queue_empty(QUEUE_LOCAL_FREE)) {
+		di_buf_tmp = get_di_buf_head(QUEUE_LOCAL_FREE);
+		if (di_buf_tmp) {
+			queue_out(di_buf_tmp);
+			di_buf_tmp->pre_ref_count = 0;
+			di_buf_tmp->post_ref_count = 0;
+			di_buf_tmp->post_proc_flag = 3;
+			di_buf_tmp->new_format_flag = 0;
+			if (!IS_ERR_OR_NULL(src_buf))
+				memcpy(di_buf_tmp->vframe, src_buf->vframe,
+					sizeof(vframe_t));
+			queue_in(di_buf_tmp, QUEUE_PRE_READY);
+			#ifdef DI_BUFFER_DEBUG
+			di_print("%s: dummy %s[%d] => pre_ready_list\n",
+				__func__,
+				vframe_type_name[di_buf_tmp->type],
+				di_buf_tmp->index);
+			#endif
+		}
+	}
 }
 /*
  * it depend on local buffer queue type is 2
