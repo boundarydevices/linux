@@ -1,18 +1,18 @@
-Texas Instruments TAS5707 Audio amplifier
+Texas Instruments TAS5756 Audio amplifier
 
-The TAS5707 serial control bus communicates through the I2C protocol only. The
+The TAS5756 serial control bus communicates through the I2C protocol only. The
 serial bus is also used for periodic codec fault checking/reporting during
 audio playback. For more product information please see the links below:
 
 Required properties:
 
-- compatible : "ti,tas5707"
+- compatible : "ti, tas5756"
 - reg : I2C slave address
 
 Example:
 
-tas5707: tas5707@6c {
+tas5756: tas5756@7c {
 	status = "okay";
-	compatible = "ti,tas5707";
-	reg = <0x6c>;
+	compatible = "ti, tas5756";
+	reg = <0x7c>;
 };

@@ -14393,3 +14393,7 @@ F:	arch/arm64/boot/dts/amlogic/g12a*.dts
 AMLOGIC FIX PCM186X DRIVER
 M:    Renjun Xu <renjun.xu@amlogic.com>
 F:    sound/soc/codecs/amlogic/pcm186x.c
+
+AMLOGIC TAS5756 DRIVER FIX
+M:     Renjun Xu <renjun.xu@amlogic.com>
+F:     sound/soc/codecs/amlogic/tas575x.c

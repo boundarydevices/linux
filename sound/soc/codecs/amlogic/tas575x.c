@@ -177,9 +177,9 @@ static DECLARE_TLV_DB_SCALE(dac_tlv, -10350, 50, 0);
 
 static const struct snd_kcontrol_new tas575x_snd_controls[] = {
 	SOC_SINGLE_TLV("Channel B Playback Volume",
-		       TAS575X_CH_B_DIG_VOL, 0, 0xff, 0, dac_tlv),
+		       TAS575X_CH_B_DIG_VOL, 0, 0xff, 1, dac_tlv),
 	SOC_SINGLE_TLV("Channel A Playback Volume",
-			   TAS575X_CH_A_DIG_VOL, 0, 0xff, 0, dac_tlv),
+			   TAS575X_CH_A_DIG_VOL, 0, 0xff, 1, dac_tlv),
 };
 
 static struct snd_soc_codec_driver soc_codec_dev_tas575x = {
