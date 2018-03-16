@@ -302,7 +302,7 @@ static int pcm186x_dsp_coefficients_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static const DECLARE_TLV_DB_SCALE(pcm186x_pga_tlv, -1200, 4000, 50);
+static const DECLARE_TLV_DB_SCALE(pcm186x_pga_tlv, -1200, 50, 0);
 
 static const struct snd_kcontrol_new pcm1863_snd_controls[] = {
 	SOC_DOUBLE_R_S_TLV("Analog Gain", PCM186X_PGA_VAL_CH1_L,
@@ -719,8 +719,8 @@ static int pcm186x_set_fmt(struct snd_soc_dai *dai, unsigned int format)
 	 * We only support the non-inverted clocks. Note that clock polarity
 	 * depends on the actual FORMAT.
 	 */
-	if ((format & SND_SOC_DAIFMT_INV_MASK) != SND_SOC_DAIFMT_NB_NF)
-		return -EINVAL;
+	//if ((format & SND_SOC_DAIFMT_INV_MASK) != SND_SOC_DAIFMT_NB_NF)
+	//	return -EINVAL;
 
 	priv->dai_format = format;
 
@@ -739,10 +739,10 @@ static int pcm186x_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 		"%s() tx_mask=0x%x rx_mask=0x%x slots=%d slot_width=%d\n",
 		__func__, tx_mask, rx_mask, slots, slot_width);
 
-	if (!tx_mask) {
-		dev_err(codec->dev, "tdm tx mask must not be 0\n");
-		return -EINVAL;
-	}
+	//if (!tx_mask) {
+	//	dev_err(codec->dev, "tdm tx mask must not be 0\n");
+	//	return -EINVAL;
+	//}
 	tx_mask = priv->slots_mask;
 	first_slot = __ffs(tx_mask);
 	last_slot = __fls(tx_mask);
@@ -762,7 +762,7 @@ static int pcm186x_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 	}
 
 	priv->tdm_offset = tdm_offset;
-	tdm_offset += 1;
+	//tdm_offset += 1;
 	ret = regmap_write(priv->regmap, PCM186X_TDM_TX_OFFSET, tdm_offset);
 	if (ret < 0)
 		dev_err(codec->dev, "failed to write register: %d\n", ret);
@@ -1164,25 +1164,36 @@ int pcm186x_probe(struct device *dev, enum pcm186x_type type, int irq,
 		goto err_disable_reg;
 	}
 
-	/*default ADC1 Input Channel Select*/
-	ret = regmap_write(regmap, PCM186X_ADC1_INPUT_SEL_L, 0x50);
+	ret = regmap_write(regmap, PCM186X_PGA_VAL_CH2_L, 0x0C);
 	if (ret != 0) {
 		dev_err(dev, "failed to write device: %d\n", ret);
 		goto err_disable_reg;
 	}
-	ret = regmap_write(regmap, PCM186X_ADC1_INPUT_SEL_R, 0x50);
+	ret = regmap_write(regmap, PCM186X_PGA_VAL_CH2_R, 0x0C);
+	if (ret != 0) {
+		dev_err(dev, "failed to write device: %d\n", ret);
+		goto err_disable_reg;
+	}
+
+	/*default ADC1 Input Channel Select*/
+	ret = regmap_write(regmap, PCM186X_ADC1_INPUT_SEL_L, 0x02);
+	if (ret != 0) {
+		dev_err(dev, "failed to write device: %d\n", ret);
+		goto err_disable_reg;
+	}
+	ret = regmap_write(regmap, PCM186X_ADC1_INPUT_SEL_R, 0x02);
 	if (ret != 0) {
 		dev_err(dev, "failed to write device: %d\n", ret);
 		goto err_disable_reg;
 	}
 
 	/*default ADC2 Input Channel Select*/
-	ret = regmap_write(regmap, PCM186X_ADC2_INPUT_SEL_L, 0x40);
+	ret = regmap_write(regmap, PCM186X_ADC2_INPUT_SEL_L, 0x60);
 	if (ret != 0) {
 		dev_err(dev, "failed to write device: %d\n", ret);
 		goto err_disable_reg;
 	}
-	ret = regmap_write(regmap, PCM186X_ADC2_INPUT_SEL_R, 0x40);
+	ret = regmap_write(regmap, PCM186X_ADC2_INPUT_SEL_R, 0x60);
 	if (ret != 0) {
 		dev_err(dev, "failed to write device: %d\n", ret);
 		goto err_disable_reg;

@@ -1,0 +1,83 @@
+Texas Instruments pcm186x DT bindings
+
+This driver supports the I2C.
+
+Required properties on I2C:
+ - compatible: "ti, pcm1864"
+ - reg: the I2C address
+
+
+Examples:
+
+&i2c_c {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&c_i2c_master_pin1>;
+
+    	pcm1864_4a: pcm1864_4a@4a {
+	    compatible = "ti, pcm1864";
+		#sound-dai-cells = <0>;
+		slots_mask = <0x0f>;
+		reg = <0x4a>;
+		status = "okay";
+	};
+};
+
+Note:
+   Because pcm1864 need to use a fixed frequency,
+   So we also need to modify pcm config.
+Reference is as follows:
+
+diff --git a/sound/soc/amlogic/auge/tdm.c b/sound/soc/amlogic/auge/tdm.c
+index d235a8d..a294e1b 100644
+--- a/sound/soc/amlogic/auge/tdm.c
++++ b/sound/soc/amlogic/auge/tdm.c
+@@ -451,11 +451,12 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
+ }
+
+ static int pcm_setting_init(struct pcm_setting *setting, unsigned int rate,
+-			unsigned int channels)
++			unsigned int channels, unsigned int fixbclk)
+ {
+ 	unsigned int ratio = 0;
+ 	setting->lrclk = rate;
+-	setting->bclk_lrclk_ratio = setting->slots * setting->slot_width;
++
++	setting->bclk_lrclk_ratio = setting->slots * setting->slot_width * fixbclk;
+ 	setting->bclk = setting->lrclk * setting->bclk_lrclk_ratio;
+
+ 	/* calculate mclk */
+@@ -534,8 +535,13 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
+ 	unsigned int rate = params_rate(params);
+ 	unsigned int channels = params_channels(params);
+ 	int ret;
+-
+-	ret = pcm_setting_init(setting, rate, channels);
++
++	// FOR PCM1864 TDM BCLK NEED 12.288MHz
++	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
++		ret = pcm_setting_init(setting, rate, channels, 1);
++	} else {
++		ret = pcm_setting_init(setting, rate, channels, 2);
++	}
+ 	if (ret)
+ 		return ret;
+
+diff --git a/sound/soc/amlogic/auge/tdm.c b/sound/soc/amlogic/auge/tdm.c
+index a294e1b..a756035 100644
+--- a/sound/soc/amlogic/auge/tdm.c
++++ b/sound/soc/amlogic/auge/tdm.c
+@@ -455,8 +455,11 @@ static int pcm_setting_init(struct pcm_setting *setting, unsigned int rate,
+ {
+ 	unsigned int ratio = 0;
+ 	setting->lrclk = rate;
+-
+-	setting->bclk_lrclk_ratio = setting->slots * setting->slot_width * fixbclk;
++
++	if (fixbclk == 2)
++		setting->bclk_lrclk_ratio = setting->slots * 32 * fixbclk;
++	else
++		setting->bclk_lrclk_ratio = setting->slots * setting->slot_width * fixbclk;
+ 	setting->bclk = setting->lrclk * setting->bclk_lrclk_ratio;
+
+ 	/* calculate mclk */
