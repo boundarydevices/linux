@@ -3360,7 +3360,10 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 					0;
 				di_pre_stru.di_chan2_buf_dup_p = NULL;
 			}
-			/* force recycle keep buffer when switch source */
+			#if 0
+			/* channel change will occur between atv and dtv,
+			 * that need mirror
+			 */
 			if (!IS_ERR_OR_NULL(di_post_stru.keep_buf)) {
 				if (di_post_stru.keep_buf->vframe
 					->source_type !=
@@ -3370,6 +3373,7 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 						__func__);
 				}
 			}
+			#endif
 			pr_info(
 			"%s:%ums %dth source change: 0x%x/%d/%d/%d=>0x%x/%d/%d/%d\n",
 				__func__,
@@ -7091,15 +7095,18 @@ static void set_di_flag(void)
 		di_vscale_skip_enable = (is_meson_txlx_cpu()
 				|| is_meson_txhd_cpu())?12:4;
 		use_2_interlace_buff = is_meson_gxlx_cpu()?0:1;
-		if (nr10bit_support)
-			di_force_bit_mode = 10;
-		else
-			di_force_bit_mode = 8;
 		if (is_meson_txlx_cpu() ||
 			is_meson_gxlx_cpu() ||
 			is_meson_txhd_cpu() ||
 			is_meson_g12a_cpu()) {
 			full_422_pack = true;
+		}
+
+		if (nr10bit_support)
+			di_force_bit_mode = 10;
+		else {
+			di_force_bit_mode = 8;
+			full_422_pack = false;
 		}
 		post_hold_line = is_meson_g12a_cpu()?10:17;
 	} else {
