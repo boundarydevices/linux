@@ -466,6 +466,13 @@ static void update_cable_type(struct max77823_charger_data *charger)
 
 	if (charger->last_cable_type != value.intval) {
 		charger->last_cable_type = value.intval;
+		/*
+		 * Next line commented out because POWER_SUPPLY_TYPE_USB
+		 * is special to Android. It checks online status of all
+		 * supplies of this type. So online must also be as Android
+		 * expects, if type is corrected to be POWER_SUPPLY_TYPE_USB.
+		 */
+		/* charger->psy_chg_desc.type = value.intval; */
 		psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
 	}
 }
@@ -830,7 +837,17 @@ static int max77823_chg_get_property(struct power_supply *psy,
 				val->intval = POWER_SUPPLY_TYPE_WIRELESS;
 				charger->wc_w_state = 1;
 			} else if (ret & MAX77823_CHGIN_OK) {
+				struct power_supply *psy =
+					charger->psy_ref[PS_USB_CHARGER];
+				int type;
+
 				val->intval = POWER_SUPPLY_TYPE_MAINS;
+				if (psy && psy->desc->type) {
+					type = psy->desc->type;
+					if (type == POWER_SUPPLY_TYPE_MAINS)
+						type = POWER_SUPPLY_TYPE_USB;
+					val->intval = type;
+				}
 			}
 		}
 		break;
@@ -1685,6 +1702,9 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	charger->irq_base = pdata->irq_base;
 	charger->aicl_on = false;
 	charger->siop_level = 100;
+	ret = max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_09);
+	if (ret >= 0)
+		charger->chgin_ilim = ret & 0x7f;
 
 #if defined(CONFIG_OF)
 	ret = max77823_charger_parse_dt(charger, pdev->dev.of_node);
