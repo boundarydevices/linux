@@ -270,6 +270,10 @@ static int sec_bat_set_charge(
 		POWER_SUPPLY_PROP_ONLINE, val);
 	}
 #else
+	if (val.intval == POWER_SUPPLY_TYPE_UNKNOWN) {
+		psy_do_property(battery->pdata->charger_name, get,
+				POWER_SUPPLY_PROP_ONLINE, val);
+	}
 	psy_do_property(battery->pdata->charger_name, set,
 		POWER_SUPPLY_PROP_ONLINE, val);
 #endif
@@ -4488,7 +4492,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->wc_status = 0;
 	battery->ps_status= 0;
 	battery->ps_changed= 0;
-	battery->wire_status = POWER_SUPPLY_TYPE_BATTERY;
+	battery->wire_status = POWER_SUPPLY_TYPE_UNKNOWN;
 
 #if defined(CONFIG_BATTERY_SWELLING)
 	battery->swelling_mode = false;
@@ -4519,7 +4523,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 
 	battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 	battery->is_recharging = false;
-	battery->cable_type = POWER_SUPPLY_TYPE_BATTERY;
+	battery->cable_type = POWER_SUPPLY_TYPE_UNKNOWN;
 	battery->test_mode = 0;
 	battery->factory_mode = false;
 	battery->store_mode = false;
