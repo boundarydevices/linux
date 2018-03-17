@@ -30,7 +30,7 @@
 extern int get_jig_state(void);
 #endif
 
-int current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
+int current_cable_type = POWER_SUPPLY_TYPE_UNKNOWN;
 extern unsigned int system_rev;
 
 #if defined(CONFIG_BATTERY_SAMSUNG_DATA)
@@ -494,13 +494,16 @@ void cable_initial_check(struct sec_battery_info *battery)
 	union power_supply_propval value;
 
 	pr_info("%s : current_cable_type : (%d)\n", __func__, current_cable_type);
-	if (POWER_SUPPLY_TYPE_BATTERY != current_cable_type) {
+	if ((POWER_SUPPLY_TYPE_BATTERY != current_cable_type) &&
+	    (POWER_SUPPLY_TYPE_UNKNOWN != current_cable_type)) {
 		value.intval = current_cable_type;
 		psy_do_property("battery", set,
 				POWER_SUPPLY_PROP_ONLINE, value);
 	} else {
 		psy_do_property(battery->pdata->charger_name, get,
 				POWER_SUPPLY_PROP_ONLINE, value);
+		current_cable_type = value.intval;
+		pr_info("%s : current_cable_type : (%d)\n", __func__, current_cable_type);
 		if (value.intval == POWER_SUPPLY_TYPE_WIRELESS) {
 			value.intval = 1;
 			psy_do_property("wireless", set,
