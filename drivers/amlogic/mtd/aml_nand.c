@@ -326,12 +326,6 @@ int aml_nand_block_bad_scrub_update_bbt(struct mtd_info *mtd)
 	return 0;
 }
 
-static int aml_repair_bbt(struct aml_nand_chip *aml_chip,
-	unsigned int *bad_blk_addr, int cnt)
-{
-	return 0;
-}
-
 static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 {
 	struct mtd_info *mtd = aml_chip->mtd;
@@ -339,21 +333,22 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 #ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_partition *temp_parts = NULL;
 	struct mtd_partition *parts;
-	int nr, i, error = 0, part_save_in_env = 1, phys_erase_shift;
-	u8 part_num = 0;
-	loff_t offset;
-	int bad_block_cnt = 0;
+	int nr, i, ret = 0;
 	loff_t adjust_offset = 0;
-	uint64_t last_size = 0, start_blk = 0;
-	uint64_t mini_part_size;
+	uint64_t mini_part_size, part_size;
 	int reserved_part_blk_num = RESERVED_BLOCK_NUM;
 	uint8_t bl_mode, base_part = 0;
 	uint32_t fip_copies, fip_size, fip_part_size = 0;
-	unsigned int bad_blk_addr[128];
+#ifndef CONFIG_NOT_SKIP_BAD_BLOCK
+	uint64_t start_blk = 0;
+	loff_t offset;
+	int phys_erase_shift, error = 0;
+
+	phys_erase_shift = fls(mtd->erasesize) - 1;
+#endif
 
 	mini_part_size =
 	(mtd->erasesize > MINI_PART_SIZE) ? mtd->erasesize : MINI_PART_SIZE;
-	phys_erase_shift = fls(mtd->erasesize) - 1;
 	parts = plat->platform_nand_data.chip.partitions;
 	nr = plat->platform_nand_data.chip.nr_partitions;
 	if (!strncmp((char *)plat->name,
@@ -370,28 +365,15 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 		nr = 1;
 		nand_boot_flag = 1;
 	} else {
+		if ((!parts) || (!nr)) {
+			pr_info("can't get part table!!!\n");
+			return -ENOMEM;
+		}
 		if (nand_boot_flag)
 			adjust_offset =
 				(1024 * mtd->writesize / aml_chip->plane_num);
-		part_num++;
-		start_blk = 0;
 		bl_mode = aml_chip->bl_mode;
-		if (bl_mode == NAND_FIPMODE_COMPACT) {
-			/* compact bootloader mode */
-			do {
-				offset = adjust_offset +
-					start_blk * mtd->erasesize;
-				error = mtd->_block_isbad(mtd, offset);
-				if (error == FACTORY_BAD_BLOCK_ERROR) {
-					pr_info("%s:%d factory bad addr =%llx\n",
-					__func__, __LINE__,
-					(uint64_t)(offset >> phys_erase_shift));
-					adjust_offset += mtd->erasesize;
-					continue;
-				}
-				start_blk++;
-			} while (start_blk < reserved_part_blk_num);
-		} else {
+		if (bl_mode == NAND_FIPMODE_DISCRETE) {
 			/* descrete bootloader mode */
 			/* calculate fip partition by dts config*/
 			fip_copies = aml_chip->fip_copies;
@@ -409,102 +391,54 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 		adjust_offset += reserved_part_blk_num * mtd->erasesize
 			+fip_part_size;
 		/*normal mtd device divide part from here(adjust_offset)*/
-		if (nr == 0) {
-			part_save_in_env = 0;
-			if (nand_boot_flag)
-				nr = NAND_MINI_PART_NUM + 1;
-			else
-				nr = 2;
-			parts = kzalloc((nr * sizeof(struct mtd_partition)),
-				GFP_KERNEL);
-			if (!parts)
-				return -ENOMEM;
-			mini_part_size =
-	(mtd->erasesize > MINI_PART_SIZE) ? mtd->erasesize : MINI_PART_SIZE;
-		}
 		for (i = base_part; i < nr; i++) {
 			temp_parts = parts + i;
-			bad_block_cnt = 0;
-			memset((u8 *)bad_blk_addr, 0xff, 128 * sizeof(int));
-			if ((temp_parts->size >= mtd->erasesize)
-				|| (i == (nr - 1)))
-				mini_part_size = temp_parts->size;
-			temp_parts->offset = adjust_offset;
-			if (i < (nr - 1)) {
-				start_blk = 0;
-	do {
-		offset = adjust_offset + start_blk * mtd->erasesize;
-		if (offset > mtd->size) {
-			pr_info("%s %d error : over the nand size!!!\n",
-			__func__, __LINE__);
-			WARN_ON(1);
-			return -ENOMEM;
-		}
-		error = mtd->_block_isbad(mtd, offset);
-		if (error == FACTORY_BAD_BLOCK_ERROR) {
-			pr_info("%s:%d factory bad addr=%llx\n",
-			__func__, __LINE__,
-			(uint64_t)(offset >> phys_erase_shift));
-			adjust_offset += mtd->erasesize;
-			continue;
-		} else if (error) {
-			if (bad_block_cnt < 128)
-				bad_blk_addr[bad_block_cnt] =
-				offset >> phys_erase_shift;
-			pr_info("%s:%d find %d bad addr =%d\n",
-				__func__, __LINE__,
-				bad_block_cnt,
-				bad_blk_addr[bad_block_cnt]);
-				bad_block_cnt++;
-		}
-		start_blk++;
-	} while (start_blk < (mini_part_size >> phys_erase_shift));
-	if (mini_part_size > NAND_SYS_PART_SIZE) {
-		if (((bad_block_cnt*32) > (mini_part_size >> phys_erase_shift))
-		|| (bad_block_cnt > 10))
-			aml_repair_bbt(aml_chip, bad_blk_addr, bad_block_cnt);
-	}
-			} else {
-	last_size = mtd->size - adjust_offset;
-	start_blk = 0;
-	bad_block_cnt = 0;
-	memset((unsigned char *)bad_blk_addr, 0xff, 128 * sizeof(int));
-	do {
-		offset =
-		adjust_offset + start_blk * mtd->erasesize;
-		error = mtd->_block_isbad(mtd, offset);
-		if (error
-		 && (error != FACTORY_BAD_BLOCK_ERROR)) {
-			if (bad_block_cnt < 128)
-				bad_blk_addr[bad_block_cnt] =
-					offset >> phys_erase_shift;
-			pr_info("%s:%d find %d bad addr =%d\n",
-				__func__, __LINE__,
-				bad_block_cnt, bad_blk_addr[bad_block_cnt]);
-				bad_block_cnt++;
-		}
-		start_blk++;
-	} while (start_blk < (last_size >> phys_erase_shift));
+			if (mtd->size < adjust_offset) {
+				pr_info("%s %d error: over the nand size!!!\n",
+						__func__, __LINE__);
+				return -ENOMEM;
 			}
-
-			if ((i == (nr - 1)) && (part_save_in_env == 0))
-				temp_parts->size = NAND_SYS_PART_SIZE;
-			else if (mini_part_size != MTDPART_SIZ_FULL)
-				temp_parts->size =
-			mini_part_size + (adjust_offset - temp_parts->offset);
-			adjust_offset += mini_part_size;
-
+			temp_parts->offset = adjust_offset;
+			if (temp_parts->size < mini_part_size)
+				part_size = mini_part_size;
+			else
+				part_size = temp_parts->size;
+			if ((i == nr - 1) && (mtd->size > adjust_offset))
+				part_size = mtd->size - adjust_offset;
+	#ifndef CONFIG_NOT_SKIP_BAD_BLOCK
+			offset = 0;
+			start_blk = 0;
+			do {
+				offset = adjust_offset + start_blk *
+					mtd->erasesize;
+				error = mtd->_block_isbad(mtd, offset);
+				if (error) {
+					pr_info("%s:%d factory bad addr=%llx\n",
+						__func__, __LINE__,
+					(uint64_t)(offset >> phys_erase_shift));
+					adjust_offset += mtd->erasesize;
+					continue;
+				}
+				start_blk++;
+			} while (start_blk < (part_size >> phys_erase_shift));
+	#endif
 			if (temp_parts->name == NULL) {
 				temp_parts->name =
-				kzalloc(MAX_MTD_PART_NAME_LEN, GFP_KERNEL);
+					kzalloc(MAX_MTD_PART_NAME_LEN,
+						GFP_KERNEL);
 				if (!temp_parts->name)
 					return -ENOMEM;
 				sprintf((char *)temp_parts->name,
-					"mtd%d", part_num++);
+					"mtd%d", nr);
 			}
+			adjust_offset += part_size;
+			temp_parts->size = adjust_offset - temp_parts->offset;
 		}
 	}
-	return add_mtd_partitions(mtd, parts, nr);
+	ret = add_mtd_partitions(mtd, parts, nr);
+	if (nr == 1)
+		kfree(parts);
+	return ret;
 #else
 	return add_mtd_device(mtd);
 #endif
