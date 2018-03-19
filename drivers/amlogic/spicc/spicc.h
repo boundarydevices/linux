@@ -58,7 +58,8 @@
 #define CON_DATA_RATE_DIV bits_desc(SPICC_REG_CON, 16, 3)
 #define CON_BITS_PER_WORD bits_desc(SPICC_REG_CON, 19, 6)
 #define CON_BURST_LEN bits_desc(SPICC_REG_CON, 25, 7)
-#define BURST_LEN_MAX 128
+#define BURST_LEN_MAX 120
+#define DMA_RX_FIFO_TH_MAX 15
 
 #define INT_TX_EMPTY_EN bits_desc(SPICC_REG_INT, 0, 1)
 #define INT_TX_HALF_EN bits_desc(SPICC_REG_INT, 1, 1)
@@ -87,11 +88,14 @@
 #define STA_RX_OF bits_desc(SPICC_REG_STA, 6, 1)
 #define STA_XFER_COM bits_desc(SPICC_REG_STA, 7, 1)
 
+#define WAIT_CYCLES bits_desc(SPICC_REG_PERIOD, 0, 14)
+
 #define TX_COUNT bits_desc(SPICC_REG_TEST, 0, 5)
 #define RX_COUNT bits_desc(SPICC_REG_TEST, 5, 5)
+#define LOOPBACK_EN bits_desc(SPICC_REG_TEST, 14, 1)
+#define SWAP_EN bits_desc(SPICC_REG_TEST, 15, 1)
 #define DELAY_CONTROL bits_desc(SPICC_REG_TEST, 16, 6)
-#define RX_FIFO_RESET bits_desc(SPICC_REG_TEST, 22, 1)
-#define TX_FIFO_RESET bits_desc(SPICC_REG_TEST, 23, 1)
+#define FIFO_RESET bits_desc(SPICC_REG_TEST, 22, 2)
 #define CLK_FREE_EN bits_desc(SPICC_REG_TEST, 24, 1)
 
 #define CS_DELAY bits_desc(SPICC_REG_ENHANCE_CNTL, 0, 16)
