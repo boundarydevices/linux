@@ -54,6 +54,8 @@ int read_hpd_gpio_gxl(void);
 int hdmitx_ddc_hw_op_gxl(enum ddc_op cmd);
 void set_gxl_hpll_clk_out(unsigned int frac_rate, unsigned int clk);
 void set_hpll_sspll_gxl(enum hdmi_vic vic);
+void set_hpll_sspll_g12a(enum hdmi_vic vic);
+
 void set_hpll_od1_gxl(unsigned int div);
 void set_hpll_od2_gxl(unsigned int div);
 void set_hpll_od3_gxl(unsigned int div);

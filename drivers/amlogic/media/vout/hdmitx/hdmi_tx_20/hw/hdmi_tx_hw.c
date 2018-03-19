@@ -1679,7 +1679,7 @@ static void set_phy_by_mode(unsigned int mode)
 			break;
 		case 3: /* 1.485Gbps, and below */
 		default:
-			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x33eb6262);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x33eb4242);
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x2ab0ff3b);
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x00000003);
 			break;

@@ -454,6 +454,9 @@ static void set_hpll_sspll(enum hdmi_vic vic)
 	struct hdmitx_dev *hdev = get_hdmitx_device();
 
 	switch (hdev->chip_type) {
+	case MESON_CPU_ID_G12A:
+		set_hpll_sspll_g12a(vic);
+		break;
 	case MESON_CPU_ID_GXBB:
 		break;
 	case MESON_CPU_ID_GXTVBB:
@@ -967,9 +970,7 @@ static void hdmitx_set_clk_(struct hdmitx_dev *hdev)
 next:
 	hdmitx_set_cts_sys_clk(hdev);
 	set_hpll_clk_out(p_enc[j].hpll_clk_out);
-	/* 4K mode doesn't enable SS*/
-	if ((cd == COLORDEPTH_24B) && (hdev->sspll)
-		&& (p_enc[j].hpll_clk_out != 5940000))
+	if ((cd == COLORDEPTH_24B) && (hdev->sspll))
 		set_hpll_sspll(vic);
 	set_hpll_od1(p_enc[j].od1);
 	set_hpll_od2(p_enc[j].od2);

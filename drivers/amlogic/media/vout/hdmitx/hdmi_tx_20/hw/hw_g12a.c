@@ -350,3 +350,31 @@ int hdmitx_hpd_hw_op_g12a(enum hpd_op cmd)
 	return ret;
 }
 
+
+void set_hpll_sspll_g12a(enum hdmi_vic vic)
+{
+	switch (vic) {
+	case HDMI_1920x1080p60_16x9:
+	case HDMI_1920x1080p50_16x9:
+	case HDMI_1280x720p60_16x9:
+	case HDMI_1280x720p50_16x9:
+	case HDMI_1920x1080i60_16x9:
+	case HDMI_1920x1080i50_16x9:
+		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 1, 29, 1);
+		/* bit[22:20] hdmi_dpll_fref_sel
+		 * bit[8] hdmi_dpll_ssc_en
+		 * bit[7:4] hdmi_dpll_ssc_dep_sel
+		 */
+		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 1, 20, 3);
+		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 1, 8, 1);
+		/* 2: 1000ppm  1: 500ppm */
+		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 2, 4, 4);
+		/* bit[15] hdmi_dpll_sdmnc_en */
+		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL3, 0, 15, 1);
+		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 0, 29, 1);
+		break;
+	default:
+		break;
+	}
+}
+
