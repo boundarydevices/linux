@@ -17,7 +17,7 @@
 #include "fsl-imx8mq.dtsi"
 
 / {
-	firmware {
+	firmware: firmware {
 		android {
 			compatible = "android,firmware";
 			fstab {
