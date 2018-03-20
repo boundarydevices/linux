@@ -636,17 +636,12 @@ vpp_process_speed_check(s32 width_in,
 	} else {
 		clk_in_pps = get_vpu_clk();
 	}
-	if (vf->type & VIDTYPE_COMPRESS) {
-		if (vf->width > 720)
-			min_ratio_1000 = (MIN_RATIO_1000 * 1400)/1000;
-		else
-			min_ratio_1000 = (1750 * 1400)/1000;
-	} else {
-		if (vf->width > 720)
-			min_ratio_1000 =  MIN_RATIO_1000;
-		else
-			min_ratio_1000 = 1750;
-	}
+
+	if (vf->width > 720)
+		min_ratio_1000 =  MIN_RATIO_1000;
+	else
+		min_ratio_1000 = 1750;
+
 	if (vinfo->field_height < vinfo->height)
 		vtotal = 525 / 2;//vinfo->vtotal/2;
 	else
