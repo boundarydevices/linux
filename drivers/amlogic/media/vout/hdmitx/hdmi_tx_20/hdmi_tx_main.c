@@ -58,6 +58,7 @@
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_config.h>
 #include "hw/tvenc_conf.h"
 #include "hw/common.h"
+#include "hw/hw_clk.h"
 #include "hdmi_tx_hdcp.h"
 
 #define DEVICE_NAME "amhdmitx"
@@ -1547,7 +1548,7 @@ static ssize_t store_debug(struct device *dev,
 
 /* support format lists */
 const char *disp_mode_t[] = {
-#if 0
+#if 1
 	"480i60hz",
 	"576i50hz",
 #endif
@@ -2702,6 +2703,8 @@ static int hdmitx_module_disable(enum vmode_e cur_vmod)
 	hdev->HWOp.CntlConfig(hdev, CONF_CLR_AVI_PACKET, 0);
 	hdev->HWOp.CntlConfig(hdev, CONF_CLR_VSDB_PACKET, 0);
 	hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
+	if (hdev->para->hdmitx_vinfo.viu_mux == VIU_MUX_ENCI)
+		hdmitx_disable_vclk2_enci(hdev);
 	hdev->para = hdmi_get_fmt_name("invalid", hdev->fmt_attr);
 	hdmitx_validate_vmode("null");
 
@@ -3573,10 +3576,11 @@ static void amhdmitx_clktree_probe(struct device *hdmitx_dev)
 {
 	struct clk *hdmi_clk_vapb, *hdmi_clk_vpu;
 	struct clk *hdcp22_tx_skp, *hdcp22_tx_esm;
+	struct clk *venci_top_gate, *venci_0_gate, *venci_1_gate;
 
 	hdmi_clk_vapb = devm_clk_get(hdmitx_dev, "hdmi_vapb_clk");
 	if (IS_ERR(hdmi_clk_vapb))
-		pr_err(SYS "vapb_clk failed to probe\n");
+		pr_warn(SYS "vapb_clk failed to probe\n");
 	else {
 		hdmitx_device.hdmitx_clk_tree.hdmi_clk_vapb = hdmi_clk_vapb;
 		clk_prepare_enable(hdmitx_device.hdmitx_clk_tree.hdmi_clk_vapb);
@@ -3584,7 +3588,7 @@ static void amhdmitx_clktree_probe(struct device *hdmitx_dev)
 
 	hdmi_clk_vpu = devm_clk_get(hdmitx_dev, "hdmi_vpu_clk");
 	if (IS_ERR(hdmi_clk_vpu))
-		pr_err(SYS "vpu_clk failed to probe\n");
+		pr_warn(SYS "vpu_clk failed to probe\n");
 	else {
 		hdmitx_device.hdmitx_clk_tree.hdmi_clk_vpu = hdmi_clk_vpu;
 		clk_prepare_enable(hdmitx_device.hdmitx_clk_tree.hdmi_clk_vpu);
@@ -3592,15 +3596,33 @@ static void amhdmitx_clktree_probe(struct device *hdmitx_dev)
 
 	hdcp22_tx_skp = devm_clk_get(hdmitx_dev, "hdcp22_tx_skp");
 	if (IS_ERR(hdcp22_tx_skp))
-		pr_err(SYS "hdcp22_tx_skp failed to probe\n");
+		pr_warn(SYS "hdcp22_tx_skp failed to probe\n");
 	else
 		hdmitx_device.hdmitx_clk_tree.hdcp22_tx_skp = hdcp22_tx_skp;
 
 	hdcp22_tx_esm = devm_clk_get(hdmitx_dev, "hdcp22_tx_esm");
 	if (IS_ERR(hdcp22_tx_esm))
-		pr_err(SYS "hdcp22_tx_esm failed to probe\n");
+		pr_warn(SYS "hdcp22_tx_esm failed to probe\n");
 	else
 		hdmitx_device.hdmitx_clk_tree.hdcp22_tx_esm = hdcp22_tx_esm;
+
+	venci_top_gate = devm_clk_get(hdmitx_dev, "venci_top_gate");
+	if (IS_ERR(venci_top_gate))
+		pr_warn(SYS "venci_top_gate failed to probe\n");
+	else
+		hdmitx_device.hdmitx_clk_tree.venci_top_gate = venci_top_gate;
+
+	venci_0_gate = devm_clk_get(hdmitx_dev, "venci_0_gate");
+	if (IS_ERR(venci_0_gate))
+		pr_warn(SYS "venci_0_gate failed to probe\n");
+	else
+		hdmitx_device.hdmitx_clk_tree.venci_0_gate = venci_0_gate;
+
+	venci_1_gate = devm_clk_get(hdmitx_dev, "venci_1_gate");
+	if (IS_ERR(venci_1_gate))
+		pr_warn(SYS "venci_0_gate failed to probe\n");
+	else
+		hdmitx_device.hdmitx_clk_tree.venci_1_gate = venci_1_gate;
 }
 
 static int amhdmitx_probe(struct platform_device *pdev)

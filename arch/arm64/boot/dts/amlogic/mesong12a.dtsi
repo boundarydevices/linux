@@ -1021,10 +1021,16 @@
 		pinctrl-names="default", "hdmitx_i2c";
 		pinctrl-0=<&hdmitx_hpd &hdmitx_ddc>;
 		pinctrl-1=<&hdmitx_hpd_gpio &i2c3_master_pins1>;
-		clocks = <&clkc CLKID_VAPB_MUX>,
-			 <&clkc CLKID_VPU_MUX>;
-		clock-names = "hdmi_vapb_clk",
-			      "hdmi_vpu_clk";
+		clocks = <&clkc CLKID_VCLK2_ENCI
+			&clkc CLKID_VCLK2_VENCI0
+			&clkc CLKID_VCLK2_VENCI1
+			&clkc CLKID_VAPB_MUX
+			&clkc CLKID_VPU_MUX>;
+		clock-names = "venci_top_gate",
+			"venci_0_gate",
+			"venci_1_gate",
+			"hdmi_vapb_clk",
+			"hdmi_vpu_clk";
 		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
 		interrupts = <0 57 1>;
 		interrupt-names = "hdmitx_hpd";

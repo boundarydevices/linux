@@ -1110,6 +1110,7 @@ static void hdmi_tvenc480i_set(struct hdmitx_vidpara *param)
 	unsigned long vso_begin_evn = 0, vso_begin_odd = 0;
 
 	hd_set_reg_bits(P_HHI_GCLK_OTHER, 1, 8, 1);
+
 	switch (param->VIC) {
 	case HDMI_480i60:
 	case HDMI_480i60_16x9:
@@ -1873,6 +1874,9 @@ static void hdmitx_set_scdc(struct hdmitx_dev *hdev)
 
 void hdmitx_set_enc_hw(struct hdmitx_dev *hdev)
 {
+	if (hdev->para->hdmitx_vinfo.viu_mux == VIU_MUX_ENCI)
+		hdmitx_set_vclk2_enci(hdev);
+
 	set_vmode_enc_hw(hdev);
 
 	if (hdev->flag_3dfp) {

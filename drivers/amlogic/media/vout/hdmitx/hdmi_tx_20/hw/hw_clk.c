@@ -23,6 +23,9 @@
 #include "common.h"
 #include "mach_reg.h"
 #include "hw_clk.h"
+#ifdef CONFIG_AMLOGIC_VPU
+#include <linux/amlogic/media/vpu/vpu.h>
+#endif
 
 /*
  * HDMITX Clock configuration
@@ -71,9 +74,40 @@ void hdmitx_set_vclk2_encp(struct hdmitx_dev *hdev)
 		hd_read_reg(P_HHI_GCLK_OTHER)|(1<<17));
 }
 
+void hdmitx_disable_vclk2_enci(struct hdmitx_dev *hdev)
+{
+	if (hdev->hdmitx_clk_tree.venci_top_gate)
+		clk_disable_unprepare(hdev->hdmitx_clk_tree.venci_top_gate);
+
+	if (hdev->hdmitx_clk_tree.venci_0_gate)
+		clk_disable_unprepare(hdev->hdmitx_clk_tree.venci_0_gate);
+
+	if (hdev->hdmitx_clk_tree.venci_1_gate)
+		clk_disable_unprepare(hdev->hdmitx_clk_tree.venci_1_gate);
+
+#ifdef CONFIG_AMLOGIC_VPU
+	switch_vpu_clk_gate_vmod(VPU_VENCI, VPU_CLK_GATE_OFF);
+	switch_vpu_mem_pd_vmod(VPU_VENCI, VPU_MEM_POWER_DOWN);
+#endif
+
+}
+
 void hdmitx_set_vclk2_enci(struct hdmitx_dev *hdev)
 {
-	hd_set_reg_bits(P_HHI_GCLK_OTHER, 1, 8, 1);
+	if (hdev->hdmitx_clk_tree.venci_top_gate)
+		clk_prepare_enable(hdev->hdmitx_clk_tree.venci_top_gate);
+
+	if (hdev->hdmitx_clk_tree.venci_0_gate)
+		clk_prepare_enable(hdev->hdmitx_clk_tree.venci_0_gate);
+
+	if (hdev->hdmitx_clk_tree.venci_1_gate)
+		clk_prepare_enable(hdev->hdmitx_clk_tree.venci_1_gate);
+
+#ifdef CONFIG_AMLOGIC_VPU
+	switch_vpu_clk_gate_vmod(VPU_VENCI, VPU_CLK_GATE_ON);
+	switch_vpu_mem_pd_vmod(VPU_VENCI, VPU_MEM_POWER_ON);
+#endif
+
 }
 
 void hdmitx_set_cts_sys_clk(struct hdmitx_dev *hdev)
