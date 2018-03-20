@@ -158,11 +158,17 @@ static void hdmitx_late_resume(struct early_suspend *h)
 	/*open vpu clk*/
 	if (phdmi->hdmitx_clk_tree.hdmi_clk_vapb != NULL)
 		clk_prepare_enable(phdmi->hdmitx_clk_tree.hdmi_clk_vapb);
+
 	if (phdmi->hdmitx_clk_tree.hdmi_clk_vpu != NULL)
 		clk_prepare_enable(phdmi->hdmitx_clk_tree.hdmi_clk_vpu);
 
-	if (info && (strncmp(info->name, "panel", 5) == 0 ||
-		strncmp(info->name, "null", 4) == 0)) {
+	if ((info == NULL) || (info->name == NULL)) {
+		pr_info(SYS "vinfo is NULL\n");
+		return;
+	}
+
+	if (strncmp(info->name, "panel", 5) == 0 ||
+		strncmp(info->name, "null", 4) == 0) {
 		;
 	} else {
 		if (hdmitx_is_hdmi_vmode(info->name) == 1)
