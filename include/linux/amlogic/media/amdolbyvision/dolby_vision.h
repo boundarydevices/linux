@@ -28,6 +28,11 @@ extern void dolby_vision_update_pq_config(
 	char *pq_config_buf);
 extern int dolby_vision_update_setting(void);
 extern bool is_dolby_vision_stb_mode(void);
+extern bool is_meson_g12a(void);
+extern bool is_meson_gxm(void);
+extern bool is_meson_txlx(void);
+extern bool is_meson_txlx_tvmode(void);
+extern bool is_meson_txlx_stbmode(void);
 extern void tv_dolby_vision_crc_clear(int flag);
 extern char *tv_dolby_vision_get_crc(u32 *len);
 extern void tv_dolby_vision_insert_crc(bool print);

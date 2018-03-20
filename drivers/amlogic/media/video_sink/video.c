@@ -378,6 +378,7 @@ static u32 hdmiin_frame_check_cnt;
 		CLEAR_VCBUS_REG_MASK(VPP_MISC + cur_dev->vpp_off, \
 		VPP_VD2_POSTBLEND | VPP_VD2_PREBLEND | \
 		(0x1ff << VPP_VD2_ALPHA_BIT)); \
+		VIDEO_LAYER2_OFF(); \
 		VD2_MEM_POWER_OFF(); \
 	} while (0)
 #endif
@@ -721,6 +722,7 @@ static const struct vinfo_s *vinfo;
 /* config */
 static struct vframe_s *cur_dispbuf;
 static struct vframe_s *cur_dispbuf2;
+static bool need_disable_vd2;
 void update_cur_dispbuf(void *buf)
 {
 	cur_dispbuf = buf;
@@ -1620,13 +1622,13 @@ static void zoom_display_horz(int hscale)
 			(zoom_start_x_lines - l_aligned);
 			content_r = content_l + content_w - 1;
 			VSYNC_WR_MPEG_REG(AFBC_PIXEL_HOR_SCOPE,
-				  (content_l << 16) | content_r);
+				  (((content_l << 16)) | content_r) / h_skip);
 		} else
 #endif
 		{
 			VSYNC_WR_MPEG_REG(AFBC_PIXEL_HOR_SCOPE,
-				  ((zoom_start_x_lines - l_aligned) << 16) |
-				  (zoom_end_x_lines - l_aligned));
+				  (((zoom_start_x_lines - l_aligned) << 16) |
+				  (zoom_end_x_lines - l_aligned)) / h_skip);
 		}
 		VSYNC_WR_MPEG_REG(AFBC_SIZE_IN,
 			 (VSYNC_RD_MPEG_REG(AFBC_SIZE_IN) & 0xffff) |
@@ -2018,6 +2020,10 @@ static void vframe_canvas_set(struct canvas_config_s *config, u32 planes,
 		canvas_config_config(*canvas_index, cfg);
 }
 
+/* for sdr/hdr/single dv switch with dual dv */
+static u32 last_el_status;
+/* for dual dv switch with different el size */
+static u32 last_el_w;
 bool has_enhanced_layer(struct vframe_s *vf)
 {
 	struct provider_aux_req_s req;
@@ -2363,6 +2369,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 	    (cur_dispbuf->ratio_control != vf->ratio_control) ||
 	    ((cur_dispbuf->type_backup & VIDTYPE_INTERLACE) !=
 	     (vf->type_backup & VIDTYPE_INTERLACE)) ||
+	     (last_el_status != vf_with_el) ||
 	    (cur_dispbuf->type != vf->type)
 	    ))) {
 		last_process_3d_type = process_3d_type;
@@ -2419,6 +2426,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 		/* #endif */
 
 	}
+	last_el_status = vf_with_el;
 
 	if (((vf->type & VIDTYPE_NO_VIDEO_ENABLE) == 0) &&
 	    ((!property_changed_true) || (vf != cur_dispbuf))) {
@@ -2437,6 +2445,8 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 				VD2_MEM_POWER_ON();
 			else if (vf_with_el)
 				EnableVideoLayer2();
+			else if (need_disable_vd2)
+				DisableVideoLayer2();
 		}
 	}
 	if (cur_dispbuf && (cur_dispbuf->type != vf->type)) {
@@ -2449,7 +2459,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 				VD2_MEM_POWER_ON();
 			else if (vf_with_el)
 				EnableVideoLayer2();
-			else
+			else if (need_disable_vd2)
 				DisableVideoLayer2();
 		}
 	}
@@ -2920,6 +2930,16 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				<< VFORMATTER_PHASE_BIT) | VFORMATTER_EN);
 	}
 
+	if ((is_meson_txlx_cpu()
+		|| is_meson_g12a())
+		&& is_dolby_vision_on()
+		&& is_dolby_vision_stb_mode()
+		&& (vf->source_type ==
+		VFRAME_SOURCE_TYPE_OTHERS))
+		VSYNC_WR_MPEG_REG_BITS(
+			VIU_VD1_FMT_CTRL + cur_dev->viu_off,
+			1, 29, 1);
+
 	/* LOOP/SKIP pattern */
 	pat = vpat[frame_par->vscale_skip_count];
 
@@ -3095,6 +3115,10 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	u32 type = vf->type, bit_mode = 0;
 
 	pr_debug("set dcu for vd2 %p, type:0x%x\n", vf, type);
+	last_el_w = (vf->type
+		& VIDTYPE_COMPRESS) ?
+		vf->compWidth :
+		vf->width;
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB) {
 		if (type & VIDTYPE_COMPRESS) {
 			r = (3 << 24) |
@@ -3366,6 +3390,16 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				/*is_dolby_vision_on()*/0);
 		}
 	}
+
+	if ((is_meson_txlx_cpu()
+		|| is_meson_g12a())
+		&& is_dolby_vision_on()
+		&& is_dolby_vision_stb_mode()
+		&& (vf->source_type ==
+		VFRAME_SOURCE_TYPE_OTHERS))
+		VSYNC_WR_MPEG_REG_BITS(
+			VIU_VD2_FMT_CTRL + cur_dev->viu_off,
+			1, 29, 1);
 	/* LOOP/SKIP pattern */
 	pat = vpat[frame_par->vscale_skip_count];
 
@@ -4041,9 +4075,9 @@ static int dolby_vision_need_wait(void)
 		return 1;
 	return 0;
 }
-
 /* patch for 4k2k bandwidth issue, skiw mali and vpu mif */
-static void dmc_adjust_for_mali_vpu(unsigned int width, unsigned int height)
+static void dmc_adjust_for_mali_vpu(unsigned int width,
+	unsigned int height, bool force_adjust)
 {
 	if (toggle_count == last_toggle_count)
 		toggle_same_count++;
@@ -4053,9 +4087,9 @@ static void dmc_adjust_for_mali_vpu(unsigned int width, unsigned int height)
 	}
 	/*avoid 3840x2160 crop*/
 	if ((width >= 2000) && (height >= 1400) &&
-		(dmc_config_state != 1) &&
-		(toggle_same_count < 30)) {
-		if (is_dolby_vision_enable()) {
+		(((dmc_config_state != 1) && (toggle_same_count < 30))
+		|| force_adjust)) {
+		if (0) {/* if (is_dolby_vision_enable()) { */
 			/* vpu dmc */
 			WRITE_DMCREG(
 				DMC_AM0_CHAN_CTRL,
@@ -4081,6 +4115,19 @@ static void dmc_adjust_for_mali_vpu(unsigned int width, unsigned int height)
 				DMC_AXI2_HOLD_CTRL,
 				0x08040804);
 		} else {
+			/* vpu dmc */
+			WRITE_DMCREG(
+				DMC_AM1_CHAN_CTRL,
+				0x43028);
+			WRITE_DMCREG(
+				DMC_AM1_HOLD_CTRL,
+				0x18101818);
+			WRITE_DMCREG(
+				DMC_AM3_CHAN_CTRL,
+				0x85f403f4);
+			WRITE_DMCREG(
+				DMC_AM4_CHAN_CTRL,
+				0x85f403f4);
 			/* mali dmc */
 			WRITE_DMCREG(
 				DMC_AXI1_HOLD_CTRL,
@@ -4099,10 +4146,22 @@ static void dmc_adjust_for_mali_vpu(unsigned int width, unsigned int height)
 			0x8FF003C4);
 		WRITE_DMCREG(
 			DMC_AM1_CHAN_CTRL,
-			0x8FF003C4);
+			0x3028);
+		WRITE_DMCREG(
+			DMC_AM1_HOLD_CTRL,
+			0x18101810);
 		WRITE_DMCREG(
 			DMC_AM2_CHAN_CTRL,
 			0x8FF003C4);
+		WRITE_DMCREG(
+			DMC_AM2_HOLD_CTRL,
+			0x3028);
+		WRITE_DMCREG(
+			DMC_AM3_CHAN_CTRL,
+			0x85f003f4);
+		WRITE_DMCREG(
+			DMC_AM4_CHAN_CTRL,
+			0x85f003f4);
 
 		/* mali dmc */
 		WRITE_DMCREG(
@@ -4122,13 +4181,33 @@ static void dmc_adjust_for_mali_vpu(unsigned int width, unsigned int height)
 	}
 }
 
+static bool is_sc_enable_before_pps(struct vpp_frame_par_s *par)
+{
+	bool ret = false;
+
+	if (par) {
+		if (par->supsc0_enable &&
+			((par->supscl_path == CORE0_PPS_CORE1)
+			|| (par->supscl_path == CORE0_BEFORE_PPS)))
+			ret = true;
+		else if (par->supsc1_enable &&
+			(par->supscl_path == CORE1_BEFORE_PPS))
+			ret = true;
+		else if ((par->supsc0_enable || par->supsc1_enable)
+			&& (par->supscl_path == CORE0_CORE1_PPS))
+			ret = true;
+	}
+	return ret;
+}
+
 void correct_vd1_mif_size_for_DV(struct vpp_frame_par_s *par)
 {
 	u32 aligned_mask = 0xfffffffe;
 	u32 old_len;
-
-	if ((is_dolby_vision_on() == true) &&
-		(par->VPP_line_in_length_ > 0)) {
+	if ((is_dolby_vision_on() == true)
+		&& (par->VPP_line_in_length_ > 0)
+		&& !is_sc_enable_before_pps(par)) {
+		/* work around to skip the size check when sc enable */
 		if (cur_dispbuf2) {
 			/*
 			 *if (cur_dispbuf2->type
@@ -4185,9 +4264,10 @@ void correct_vd2_mif_size_for_DV(
 {
 	int width_bl, width_el, line_in_length;
 	int shift;
-
-	if ((is_dolby_vision_on() == true) &&
-		(par->VPP_line_in_length_ > 0)) {
+	if ((is_dolby_vision_on() == true)
+		&& (par->VPP_line_in_length_ > 0)
+		&& !is_sc_enable_before_pps(par)) {
+		/* work around to skip the size check when sc enable */
 		width_el = (cur_dispbuf2->type
 			& VIDTYPE_COMPRESS) ?
 			cur_dispbuf2->compWidth :
@@ -4248,6 +4328,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	struct vframe_s *toggle_vf = NULL;
 	struct vframe_s *toggle_frame = NULL;
 	int video1_off_req = 0;
+	int video2_off_req = 0;
 	struct vframe_s *cur_dispbuf_back = cur_dispbuf;
 	static  struct vframe_s *pause_vf;
 
@@ -4343,16 +4424,31 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		vsync_enter_line_max = enc_line;
 
 	if (is_meson_txlx_cpu() && dmc_adjust) {
+		bool force_adjust = false;
+
+		if (vf)
+			force_adjust =
+				((vf->type & (VIDTYPE_VIU_444
+				| VIDTYPE_PIC))
+				== (VIDTYPE_VIU_444
+				| VIDTYPE_PIC)) ? true : false;
+		else if (cur_dispbuf)
+			force_adjust =
+				((cur_dispbuf->type & (VIDTYPE_VIU_444
+				| VIDTYPE_PIC))
+				== (VIDTYPE_VIU_444
+				| VIDTYPE_PIC)) ? true : false;
 		if (vf)
 			dmc_adjust_for_mali_vpu(
-				vf->width, vf->height);
+				vf->width, vf->height, force_adjust);
 		else if (cur_dispbuf)
 			dmc_adjust_for_mali_vpu(
 				cur_dispbuf->width,
-				cur_dispbuf->height);
+				cur_dispbuf->height,
+				force_adjust);
 		else
 			dmc_adjust_for_mali_vpu(
-				0, 0);
+				0, 0, force_adjust);
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	vsync_rdma_config_pre();
@@ -4827,16 +4923,20 @@ SET_FILTER:
 				cur_dispbuf, 2, false);
 			dolby_vision_set_toggle_flag(1);
 		}
+/* pause mode was moved to video display property */
+#if 0
 		/* force toggle in pause mode */
 		if (cur_dispbuf
 			&& (cur_dispbuf != &vf_local)
 			&& !toggle_vf
-			&& is_dolby_vision_on()) {
+			&& is_dolby_vision_on()
+			&& !for_dolby_vision_certification()) {
 			toggle_vf = cur_dispbuf;
 			dolby_vision_parse_metadata(
 				cur_dispbuf, 0, false);
 			dolby_vision_set_toggle_flag(1);
 		}
+#endif
 		if (cur_frame_par) {
 			if (cur_frame_par->VPP_hd_start_lines_
 				>=  cur_frame_par->VPP_hd_end_lines_)
@@ -4888,6 +4988,22 @@ SET_FILTER:
 				if (cur_dispbuf2)
 					vd2_set_dcu(cur_frame_par,
 						cur_dispbuf2);
+			} else if (cur_dispbuf2) {
+				u32 new_el_w =
+					(cur_dispbuf2->type
+					& VIDTYPE_COMPRESS) ?
+					cur_dispbuf2->compWidth :
+					cur_dispbuf2->width;
+				if (new_el_w != last_el_w) {
+					pr_info("reset vd2 dcu for el change, %d->%d, %p--%p\n",
+						last_el_w, new_el_w,
+						cur_dispbuf, cur_dispbuf2);
+					vd2_set_dcu(cur_frame_par,
+						cur_dispbuf2);
+				}
+			} else {
+				last_el_w = 0;
+				last_el_status = 0;
 			}
 		}
 		{
@@ -4912,10 +5028,10 @@ SET_FILTER:
 				&& cur_dispbuf &&
 				(cur_dispbuf->type & VIDTYPE_VIU_FIELD)) {
 				VSYNC_WR_MPEG_REG_BITS(VIU_VD1_FMT_CTRL +
-					cur_dev->viu_off, 0, 20, 1);
+					cur_dev->viu_off, 1, 20, 1);
 				/* HFORMATTER_EN */
 				VSYNC_WR_MPEG_REG_BITS(VIU_VD2_FMT_CTRL +
-					cur_dev->viu_off, 0, 20, 1);
+					cur_dev->viu_off, 1, 20, 1);
 				/* HFORMATTER_EN */
 			}
 			if (process_3d_type & MODE_3D_OUT_FA_MASK) {
@@ -5402,7 +5518,7 @@ SET_FILTER:
 		VPP_HSC_START_PHASE_STEP + cur_dev->vpp_off);
 		v_phase_step = READ_VCBUS_REG(
 		VPP_VSC_START_PHASE_STEP + cur_dev->vpp_off);
-		if ((vpp_filter->vpp_hsc_start_phase_step != h_phase_step) ||
+		if ((vpp_filter->vpp_hf_start_phase_step != h_phase_step) ||
 		(vpp_filter->vpp_vsc_start_phase_step != v_phase_step)) {
 			video_property_changed = true;
 			/*pr_info("frame info register rdma write fail!\n");*/
@@ -5491,6 +5607,7 @@ SET_FILTER:
 
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
 				pr_info("VsyncDisableVideoLayer2\n");
+			video2_off_req = 1;
 		}
 		spin_unlock_irqrestore(&video2_onoff_lock, flags);
 	}
@@ -5579,6 +5696,24 @@ SET_FILTER:
 			vpp_misc_set);
 
 	/*vpp_misc_set maybe have same,but need off.*/
+	/* if vd1 off, disable vd2 also */
+	if (video2_off_req || video1_off_req) {
+		if ((debug_flag & DEBUG_FLAG_BLACKOUT)
+			&& video2_off_req)
+			pr_info("VD2 AFBC off now.\n");
+		VSYNC_WR_MPEG_REG(VD2_AFBC_ENABLE, 0);
+		VSYNC_WR_MPEG_REG(
+			VD2_IF0_GEN_REG + cur_dev->viu_off, 0);
+		if (!legacy_vpp) {
+			VSYNC_WR_MPEG_REG(
+				VD2_BLEND_SRC_CTRL + cur_dev->vpp_off, 0);
+		}
+		last_el_w = 0;
+		last_el_status = 0;
+		if (cur_dispbuf2 && (cur_dispbuf2 == &vf_local2))
+			cur_dispbuf2 = NULL;
+		need_disable_vd2 = false;
+	}
 	if (video1_off_req) {
 		/*
 		 * video layer off, swith off afbc,
@@ -5587,19 +5722,26 @@ SET_FILTER:
 		if (debug_flag & DEBUG_FLAG_BLACKOUT)
 			pr_info("AFBC off now.\n");
 		VSYNC_WR_MPEG_REG(AFBC_ENABLE, 0);
-		VSYNC_WR_MPEG_REG(VD2_AFBC_ENABLE, 0);
 		VSYNC_WR_MPEG_REG(
 			VD1_IF0_GEN_REG + cur_dev->viu_off, 0);
-		VSYNC_WR_MPEG_REG(
-			VD2_IF0_GEN_REG + cur_dev->viu_off, 0);
 		if (!legacy_vpp) {
 			VSYNC_WR_MPEG_REG(
 				VD1_BLEND_SRC_CTRL + cur_dev->vpp_off, 0);
-			VSYNC_WR_MPEG_REG(
-				VD2_BLEND_SRC_CTRL + cur_dev->vpp_off, 0);
 		}
-	}
-
+		if (is_dolby_vision_enable()) {
+			if (is_meson_txlx_stbmode() ||
+				is_meson_gxm())
+				VSYNC_WR_MPEG_REG_BITS(
+					VIU_MISC_CTRL1,
+					1, 16, 1); /* bypass core1 */
+			else if (is_meson_g12a())
+				VSYNC_WR_MPEG_REG_BITS(
+								DOLBY_PATH_CTRL,
+								1, 0, 1);
+		}
+		if (cur_dispbuf && (cur_dispbuf == &vf_local))
+			cur_dispbuf = NULL;
+		}
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	cur_rdma_buf = cur_dispbuf;
 	/* vsync_rdma_config(); */
@@ -5796,6 +5938,8 @@ static void video_vf_unreg_provider(void)
 		cur_dispbuf = &vf_local;
 		cur_dispbuf->video_angle = 0;
 	}
+	if (cur_dispbuf2)
+		need_disable_vd2 = true;
 	if (is_dolby_vision_enable()) {
 		if (cur_dispbuf2 == &vf_local2)
 			cur_dispbuf2 = NULL;
@@ -6038,8 +6182,10 @@ int _video_set_disable(u32 val)
 			video_property_changed = true;
 		try_free_keep_video(0);
 	} else {
-		if (cur_dispbuf && (cur_dispbuf != &vf_local))
+		if (cur_dispbuf && (cur_dispbuf != &vf_local)) {
 			EnableVideoLayer();
+			video_property_changed = true;
+		}
 	}
 
 	return 0;

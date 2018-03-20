@@ -1202,7 +1202,8 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 	}
 	/*ver1_12 and ver2 use Dolby VSIF*/
 	if ((hdev->RXCap.dv_info.ver == 2) || ((hdev->RXCap.dv_info.ver == 1)
-		&& (hdev->RXCap.dv_info.length == 0xB))) {
+		&& (hdev->RXCap.dv_info.length == 0xB))
+		|| (type == EOTF_T_LL_MODE)) {
 
 		if (data == NULL)
 			data = &para;
