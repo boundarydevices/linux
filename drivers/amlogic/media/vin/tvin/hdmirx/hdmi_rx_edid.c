@@ -507,8 +507,7 @@ unsigned int rx_edid_cal_phy_addr(
 		/*find phy_addr_offset*/
 		if (pedid[i] == 0x03) {
 			if ((pedid[i+1] == 0x0c) &&
-				(pedid[i+2] == 0x00) &&
-				(pedid[i+4]) == 0x0c) {
+			(pedid[i+2] == 0x00)) {
 				if (brepeat)
 					pedid[i+3] = 0x00;
 				else
@@ -604,7 +603,6 @@ void rx_edid_fill_to_register(
 	}
 }
 
-#if 0
 void rx_edid_update_overlay(
 						u_int phy_addr_offset,
 						u_int *pphy_addr,
@@ -668,7 +666,6 @@ void rx_edid_update_overlay(
 					//i, pphy_addr[i], pchecksum[i]);
 	//}
 }
-#endif
 
 /* @func: seek dd+ atmos bit
  * @param:get audio type info by cec message:
@@ -767,7 +764,7 @@ unsigned char rx_edid_update_atmos(unsigned char *p_edid)
 unsigned int hdmi_rx_top_edid_update(void)
 {
 	int edid_index = rx_get_edid_index();
-	bool brepeat = hdmirx_repeat_support();
+	bool brepeat = true;
 	u_char *pedid_data;
 	u_int sts;
 	u_int phy_addr_offset;
@@ -802,10 +799,10 @@ unsigned int hdmi_rx_top_edid_update(void)
 	/* write edid to edid register */
 	rx_edid_fill_to_register(pedid_data, brepeat,
 							phy_addr, checksum);
-	//if (sts) {
+	if (sts) {
 		/* update physical and checksum */
-		//rx_edid_update_overlay(phy_addr_offset, phy_addr, checksum);
-	//}
+	rx_edid_update_overlay(phy_addr_offset, phy_addr, checksum);
+	}
 	return true;
 }
 
