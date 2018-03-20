@@ -1650,7 +1650,7 @@ static ssize_t device_type_store(struct class *cla,
 {
 	unsigned int type;
 
-	if (kstrtouint(buf, 10, &type) != 1)
+	if (kstrtouint(buf, 10, &type) != 0)
 		return -EINVAL;
 
 	cec_dev->dev_type = type;
@@ -1693,7 +1693,7 @@ static ssize_t vendor_id_store(struct class *cla, struct class_attribute *attr,
 {
 	unsigned int id;
 
-	if (kstrtouint(buf, 16, &id) != 1)
+	if (kstrtouint(buf, 16, &id) != 0)
 		return -EINVAL;
 	cec_dev->cec_info.vendor_id = id;
 	return count;
@@ -1775,7 +1775,7 @@ static ssize_t port_seq_store(struct class *cla,
 {
 	unsigned int seq;
 
-	if (kstrtouint(buf, 16, &seq) != 1)
+	if (kstrtouint(buf, 16, &seq) != 0)
 		return -EINVAL;
 
 	CEC_ERR("port_seq:%x\n", seq);
@@ -1848,7 +1848,7 @@ static ssize_t physical_addr_store(struct class *cla,
 {
 	int addr;
 
-	if (kstrtouint(buf, 16, &addr) != 1)
+	if (kstrtouint(buf, 16, &addr) != 0)
 		return -EINVAL;
 	if (addr > 0xffff || addr < 0) {
 		CEC_ERR("invalid input:%s\n", buf);
@@ -1871,7 +1871,7 @@ static ssize_t dbg_en_store(struct class *cla, struct class_attribute *attr,
 {
 	int en;
 
-	if (kstrtouint(buf, 16, &en) != 1)
+	if (kstrtouint(buf, 16, &en) != 0)
 		return -EINVAL;
 
 	cec_msg_dbg_en = en ? 1 : 0;
