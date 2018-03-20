@@ -38,10 +38,6 @@
  *		data0=gpio_index, data1=gpio_value, data2=delay.
  */
 static unsigned char mipi_init_on_table[] = {
-	0xf0, 3, 0, 1, 30, /* reset high, delay 30ms */
-	0xf0, 3, 0, 0, 10, /* reset low, delay 10ms */
-	0xf0, 3, 0, 1, 30, /* reset high, delay 30ms */
-	0xff, 100,   /* delay */
 	0x15, 2, 0x62, 0x01,
 	0x39, 5, 0xff, 0xaa, 0x55, 0x25, 0x01,
 	0x15, 2, 0xfc, 0x08,

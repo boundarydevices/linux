@@ -660,7 +660,6 @@ static int lcd_config_load_from_dts(struct lcd_config_s *pconf,
 	}
 	ret = of_property_read_u32_array(child, "range_setting", &para[0], 6);
 	if (ret) {
-		LCDPR("failed to get range_setting\n");
 		pconf->lcd_basic.h_period_min = pconf->lcd_basic.h_period;
 		pconf->lcd_basic.h_period_max = pconf->lcd_basic.h_period;
 		pconf->lcd_basic.v_period_min = pconf->lcd_basic.v_period;

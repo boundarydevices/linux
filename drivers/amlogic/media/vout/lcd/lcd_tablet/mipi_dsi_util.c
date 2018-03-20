@@ -123,6 +123,17 @@ static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
 				pr_info("  0x%02x,%d,\n",
 					dsi_table[i], dsi_table[i+1]);
 			}
+		} else if (dsi_table[i] == 0xf0) {
+			n = (DSI_CMD_SIZE_INDEX + 1) +
+				dsi_table[i+DSI_CMD_SIZE_INDEX];
+			pr_info("  ");
+			for (j = 0; j < n; j++) {
+				if (j == 0)
+					pr_info("0x%02x,", dsi_table[i+j]);
+				else
+					pr_info("%d,", dsi_table[i+j]);
+			}
+			pr_info("\n");
 		} else if ((dsi_table[i] & 0xf) == 0x0) {
 			pr_info("dsi_init_%s wrong data_type: 0x%02x\n",
 				on_off ? "on" : "off", dsi_table[i]);
@@ -1704,6 +1715,11 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 	if (dconf->check_en)
 		mipi_dsi_check_state(dconf, dconf->check_reg, dconf->check_cnt);
 
+	if (dconf->dsi_init_on) {
+		dsi_write_cmd(dconf->dsi_init_on);
+		LCDPR("dsi init on\n");
+	}
+
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
 	if (dconf->extern_init < LCD_EXTERN_INDEX_INVALID) {
 		lcd_ext = aml_lcd_extern_get_driver(dconf->extern_init);
@@ -1711,22 +1727,14 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 			LCDPR("no lcd_extern driver\n");
 		} else {
 			if (lcd_ext->config.table_init_on) {
-				dsi_write_cmd(
-					lcd_ext->config.table_init_on);
+				dsi_write_cmd(lcd_ext->config.table_init_on);
 				LCDPR("[extern]%s dsi init on\n",
 					lcd_ext->config.name);
-				goto mipi_dsi_link_disp;
 			}
 		}
 	}
 #endif
 
-	if (dconf->dsi_init_on) {
-		dsi_write_cmd(dconf->dsi_init_on);
-		LCDPR("dsi init on\n");
-	}
-
-mipi_dsi_link_disp:
 	if (op_mode_disp != op_mode_init) {
 		set_mipi_dsi_host(MIPI_DSI_VIRTUAL_CHAN_ID,
 			0, /* Chroma sub sample, only for

@@ -121,10 +121,15 @@
 				1 /*clk_lp_continuous(0=stop,1=continue)*/
 				0>; /*phy_stop_wait(0=auto,1=standard,2=slow)*/
 				/* dsi_init: data_type, num, data... */
-			dsi_init_on = <0xff 0xff>; /* ending flag */
+			dsi_init_on = <
+				0xf0 3 0 1 30 /* reset high, delay 30ms */
+				0xf0 3 0 0 10 /* reset low, delay 10ms */
+				0xf0 3 0 1 30 /* reset high, delay 30ms */
+				0xff 100   /* delay */
+				0xff 0xff>; /* ending flag */
 			dsi_init_off = <0xff 0xff>; /* ending flag */
 				/* extern_init: 0xff for invalid */
-			extern_init = <2>;
+			extern_init = <1>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <0 0 0 20
 					2 0 0 0
@@ -164,7 +169,7 @@
 			dsi_init_on = <0xff 0xff>; /* ending flag */
 			dsi_init_off = <0xff 0xff>; /* ending flag */
 				/* extern_init: 0xff for invalid */
-			extern_init = <3>;
+			extern_init = <2>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <0 0 1 20
 					0 0 0 10
@@ -206,7 +211,7 @@
 			dsi_init_on = <0xff 0xff>; /* ending flag */
 			dsi_init_off = <0xff 0xff>; /* ending flag */
 				/* extern_init: 0xff for invalid */
-			extern_init = <4>;
+			extern_init = <3>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <0 0 1 20
 					0 0 0 10
@@ -299,27 +304,20 @@
 
 		extern_1{
 			index = <1>;
-			extern_name = "mipi_KD080D13";
-			status = "disabled";
+			extern_name = "mipi_TV070WSM";
+			status = "okay";
 			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
 		};
 
 		extern_2{
 			index = <2>;
-			extern_name = "mipi_TV070WSM";
+			extern_name = "mipi_ST7701";
 			status = "okay";
 			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
 		};
 
 		extern_3{
 			index = <3>;
-			extern_name = "mipi_ST7701";
-			status = "okay";
-			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
-		};
-
-		extern_4{
-			index = <4>;
 			extern_name = "mipi_P070ACB";
 			status = "okay";
 			type = <2>; /* 0=i2c, 1=spi, 2=mipi */

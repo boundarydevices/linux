@@ -127,7 +127,12 @@
 				1 /*clk_lp_continuous(0=stop,1=continue)*/
 				0>; /*phy_stop_wait(0=auto,1=standard,2=slow)*/
 				/* dsi_init: data_type, num, data... */
-			dsi_init_on = <0xff 0xff>; /* ending flag */
+			dsi_init_on = <
+				0xf0 3 0 1 30 /* reset high, delay 30ms */
+				0xf0 3 0 0 10 /* reset low, delay 10ms */
+				0xf0 3 0 1 30 /* reset high, delay 30ms */
+				0xff 100   /* delay */
+				0xff 0xff>; /* ending flag */
 			dsi_init_off = <0xff 0xff>; /* ending flag */
 				/* extern_init: 0xff for invalid */
 			extern_init = <1>;
@@ -188,6 +193,104 @@
 					0 0 0 20
 					0 1 1 100
 					0xff 0 0 0>;
+			backlight_index = <0>;
+		};
+
+		lcd_3{
+			model_name = "TL050FHV02CT";
+			interface = "mipi";
+			basic_setting = <1080 1920 /*h_active, v_active*/
+				1125 2200 /*h_period, v_period*/
+				8 /*lcd_bits*/
+				65 119>; /*screen_widht, screen_height*/
+			lcd_timing = <5 30 0 /*hs_width,hs_bp,hs_pol*/
+				88 148 0>; /*vs_width,vs_bp,vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clock,1=htotal,2=vtotal)*/
+				0 /*clk_ss_level*/
+				1 /*clk_auto_generate*/
+				148500000>; /*pixel_clk(unit in Hz)*/
+			mipi_attr = <4 /*lane_num*/
+				900 /*bit_rate_max(MHz)*/
+				0 /*factor(*100, default 0 for auto)*/
+				1 /*operation_mode_init(0=video, 1=command)*/
+				0 /*operation_mode_display(0=video, 1=command)*/
+				2 /*
+				   *video_mode_type
+				   *(0=sync_pulse,1=sync_event,2=burst)
+				   */
+				1 /*clk_lp_continuous(0=stop,1=continue)*/
+				0>; /*phy_stop_wait(0=auto,1=standard,2=slow)*/
+				/* dsi_init: data_type, num, data... */
+			dsi_init_on = <0xff 0xff>; /* ending flag */
+			dsi_init_off = <0xff 0xff>; /* ending flag */
+				/* extern_init: 0xff for invalid */
+			extern_init = <3>;
+				/* power step: type,index,value,delay(ms) */
+			power_on_step = <
+					0 1 0 200
+					0 0 1 20
+					0 0 0 10
+					0 0 1 20
+					2 0 0 0
+					0xff 0 0 0>;
+			power_off_step = <
+					2 0 0 0
+					0 0 0 20
+					0 1 1 100
+					0xff 0 0 0>;
+			backlight_index = <0>;
+		};
+
+		lcd_4{
+			model_name = "TL070WSH27";
+			interface = "mipi";
+			basic_setting = <1024 600 /*h_active, v_active*/
+				1250 630 /*h_period, v_period*/
+				8 /*lcd_bits*/
+				154 86>; /*screen_widht, screen_height*/
+			lcd_timing = <80 100 0 /*hs_width, hs_bp, hs_pol*/
+				5 20 0>; /*vs_width, vs_bp, vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clk, 1=htotal, 2=vtotal)*/
+				0 /*clk_ss_level */
+				1 /*clk_auto_generate*/
+				47250000>; /*pixel_clk(unit in Hz)*/
+			mipi_attr = <4 /*lane_num*/
+				300 /*bit_rate_max(MHz)*/
+				0 /*factor(*100, default 0 for auto)*/
+				1 /*operation_mode_init(0=video, 1=command)*/
+				0 /*operation_mode_display(0=video, 1=command)*/
+				2 /*
+				   *video_mode_type
+				   *(0=sync_pulse,1=sync_event,2=burst)
+				   */
+				1 /*clk_lp_continuous(0=stop,1=continue)*/
+				0>; /*phy_stop_wait(0=auto,1=standard,2=slow)*/
+
+			/* dsi_init: data_type, num, data... */
+			dsi_init_on = <0x05 1 0x11
+					0xff 20     /*delay(ms)*/
+					0x05 1 0x29
+					0xff 20     /*delay(ms)*/
+					0xff 0xff>; /*ending*/
+			dsi_init_off = <0x05 1 0x28
+					0xff 10     /*delay(ms)*/
+					0x05 1 0x10
+					0xff 10     /*delay(ms)*/
+					0xff 0xff>; /*ending*/
+			extern_init = <0xff>; /*0xff for invalid*/
+
+			/* power step: type, index, value, delay(ms) */
+			power_on_step = <
+				0 1 0 100
+				0 0 0 10
+				0 0 1 20
+				2 0 0 0
+				0xff 0 0 0>; /*ending*/
+			power_off_step = <
+				2 0 0 50
+				0 0 0 10
+				0 1 1 100
+				0xff 0 0 0>; /*ending*/
 			backlight_index = <0>;
 		};
 	};
@@ -279,6 +382,13 @@
 		extern_2{
 			index = <2>;
 			extern_name = "mipi_P070ACB";
+			status = "okay";
+			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
+		};
+
+		extern_3{
+			index = <3>;
+			extern_name = "mipi_TL050FHV02CT";
 			status = "okay";
 			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
 		};

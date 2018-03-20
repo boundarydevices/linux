@@ -14398,7 +14398,11 @@ AMLOGIC TAS5756 DRIVER FIX
 M:     Renjun Xu <renjun.xu@amlogic.com>
 F:     sound/soc/codecs/amlogic/tas575x.c
 
-
 AMLOGIC G12A buildroot dts
 M:     wenbiao zhang <wenbiao.zhang@amlogic.com>
 F:     arch/arm64/boot/dts/amlogic/g12a_s905d2_u200_buildroot.dts
+
+AMLOGIC ADD LCD_EXTERN TL050FHV02CT DRIVER
+M:	Weiming Liu <weiming.liu@amlogic.com>
+F:	drivers/amlogic/media/vout/lcd/lcd_extern/mipi_TL050FHV02CT.c
+
