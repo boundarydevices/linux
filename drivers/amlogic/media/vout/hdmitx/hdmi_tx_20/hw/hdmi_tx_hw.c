@@ -478,6 +478,7 @@ static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 	/* Bring HDMITX MEM output of power down */
 	hd_set_reg_bits(P_HHI_MEM_PD_REG0, 0, 8, 8);
 	if (hdmitx_uboot_already_display()) {
+		hdev->ready = 1;
 		/* Get uboot output color space from AVI */
 		switch (hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3) {
 		case 0:
