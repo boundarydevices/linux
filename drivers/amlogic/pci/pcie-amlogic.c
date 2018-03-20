@@ -437,11 +437,6 @@ static int amlogic_pcie_establish_link(struct amlogic_pcie *amlogic_pcie)
 	return -ETIMEDOUT;
 }
 
-static irqreturn_t amlogic_pcie_irq_handler(int irq, void *arg)
-{
-	return IRQ_HANDLED;
-}
-
 static irqreturn_t amlogic_pcie_msi_irq_handler(int irq, void *arg)
 {
 	struct amlogic_pcie *amlogic_pcie = arg;
@@ -596,18 +591,6 @@ static int __init amlogic_add_pcie_port(struct amlogic_pcie *amlogic_pcie,
 	struct pcie_port *pp = &amlogic_pcie->pp;
 	struct device *dev = pp->dev;
 	int ret;
-
-	pp->irq = platform_get_irq(pdev, 1);
-	if (!pp->irq) {
-		dev_err(dev, "failed to get irq\n");
-		return -ENODEV;
-	}
-	ret = devm_request_irq(dev, pp->irq, amlogic_pcie_irq_handler,
-				IRQF_SHARED, "amlogic-pcie", amlogic_pcie);
-	if (ret) {
-		dev_err(dev, "failed to request irq\n");
-		return ret;
-	}
 
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		pp->msi_irq = platform_get_irq(pdev, 0);

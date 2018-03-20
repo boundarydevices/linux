@@ -984,11 +984,13 @@
 			0x0 0xff646000 0x0 0x2000
 			0x0 0xffd01080 0x0 0x10>;
 		reg-names = "elbi", "cfg", "config", "phy", "reset";
-		interrupts = <0 221 0>, <0 223 0>;
+		interrupts = <0 221 0>;
 		#interrupt-cells = <1>;
 		bus-range = <0x0 0xff>;
 		#address-cells = <3>;
 		#size-cells = <2>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 223 IRQ_TYPE_EDGE_RISING>;
 		device_type = "pci";
 		ranges = <0x81000000 0 0 0 0xfc600000 0x0 0x100000
 			/* downstream I/O */
