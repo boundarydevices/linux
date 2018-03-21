@@ -8971,14 +8971,10 @@ static void do_vpu_delay_work(struct work_struct *work)
 				switch_vpu_mem_pd_vmod(
 					VPU_DI_POST,
 					VPU_MEM_POWER_DOWN);
-				if (!legacy_vpp) {
+				if (!legacy_vpp)
 					switch_vpu_mem_pd_vmod(
 						VPU_VD1_SCALE,
 						VPU_MEM_POWER_DOWN);
-					WRITE_VCBUS_REG_BITS(
-						VD1_AFBCD0_MISC_CTRL,
-						0x55, 0, 8);
-				}
 			}
 
 			if ((vpu_delay_work_flag &
@@ -8993,14 +8989,10 @@ static void do_vpu_delay_work(struct work_struct *work)
 				switch_vpu_mem_pd_vmod(
 					VPU_AFBC_DEC1,
 					VPU_MEM_POWER_DOWN);
-				if (!legacy_vpp) {
+				if (!legacy_vpp)
 					switch_vpu_mem_pd_vmod(
 						VPU_VD2_SCALE,
 						VPU_MEM_POWER_DOWN);
-					WRITE_VCBUS_REG_BITS(
-						VD2_AFBCD1_MISC_CTRL,
-						0x55, 0, 8);
-				}
 			}
 
 			if ((vpu_delay_work_flag &
