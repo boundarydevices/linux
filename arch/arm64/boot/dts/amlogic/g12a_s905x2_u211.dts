@@ -1072,16 +1072,14 @@
 
 &usb3_phy_v2 {
 	status = "okay";
-	portnum = <0>;
-	otg = <1>;
-	gpio-vbus-power = "GPIOH_6";
-	gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+	portnum = <1>;
+	otg = <0>;
 };
 
 &dwc2_a {
 	status = "okay";
 	/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
-	controller-type = <3>;
+	controller-type = <1>;
 };
 &ethmac {
 	status = "okay";
@@ -1240,7 +1238,7 @@
 
 &pcie_A {
 	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disable";
 };
 
 &meson_cooldev {
