@@ -4272,8 +4272,8 @@ static void calculate_panel_max_pq(
 		return;
 	if (panel_max_lumin)
 		max_lin = panel_max_lumin;
-	/*else if (vinfo->hdr_info.sink_flag)*/
-	/*	max_lin = vinfo->hdr_info.lumi_max;*/
+	else if (vinfo->mode == VMODE_LCD)
+		max_lin = vinfo->hdr_info.lumi_max;
 	if (max_lin < 100)
 		max_lin = 100;
 	else if (max_lin > 4000)
