@@ -19,6 +19,7 @@
 
 #include "mesonaxg.dtsi"
 #include "mesonaxg_s400-panel.dtsi"
+#include "partition_mbox_normal.dtsi"
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "axg_s400_1g";
@@ -709,7 +710,7 @@
 	};
 
 	partitions: partitions{
-		parts = <12>;
+		parts = <14>;
 		part-0 = <&logo>;
 		part-1 = <&recovery>;
 		part-2 = <&rsv>;
@@ -718,10 +719,12 @@
 		part-5 = <&misc>;
 		part-6 = <&instaboot>;
 		part-7 = <&boot>;
-		part-8 = <&system>;
-		part-9 = <&cache>;
-		part-10 = <&udisk>;
-		part-11 = <&data>;
+		part-8 = <&vendor>;
+		part-9 = <&odm>;
+		part-10 = <&system>;
+		part-11 = <&cache>;
+		part-12 = <&udisk>;
+		part-13 = <&data>;
 
 		logo:logo{
 			pname = "logo";
@@ -762,6 +765,18 @@
 		{
 			pname = "boot";
 			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		vendor:vendor
+		{
+			pname = "vendor";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		odm:odm
+		{
+			pname = "odm";
+			size = <0x0 0x10000000>;
 			mask = <1>;
 		};
 		system:system
