@@ -911,6 +911,10 @@ int amvecm_on_vs(
 		return 0;
 #endif
 	if (flags & CSC_FLAG_CHECK_OUTPUT) {
+		if (toggle_vf)
+			amvecm_fresh_overscan(toggle_vf);
+		else if (vf)
+			amvecm_fresh_overscan(vf);
 		/* to test if output will change */
 		return amvecm_matrix_process(
 			toggle_vf, vf, flags);
@@ -920,8 +924,10 @@ int amvecm_on_vs(
 		result = amvecm_matrix_process(toggle_vf, vf, flags);
 		if (toggle_vf)
 			ioctrl_get_hdr_metadata(toggle_vf);
-	} else
+	} else {
+		amvecm_reset_overscan();
 		result = amvecm_matrix_process(NULL, NULL, flags);
+	}
 
 	/* add some flag to trigger */
 	if (vf) {
@@ -940,6 +946,10 @@ int amvecm_on_vs(
 
 		vpp_demo_config(vf);
 	}
+	if (vf)
+		amvecm_fresh_overscan(vf);
+	else
+		amvecm_reset_overscan();
 	/* todo:vlock processs only for tv chip */
 	if (is_meson_gxtvbb_cpu() ||
 		is_meson_txl_cpu() || is_meson_txlx_cpu()
@@ -989,12 +999,20 @@ static int amvecm_release(struct inode *inode, struct file *file)
 	return 0;
 }
 static struct am_regs_s amregs_ext;
+struct ve_pq_overscan_s overscan_table[TIMING_MAX];
 
 static long amvecm_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 	void __user *argp;
+	int mem_size;
+	struct ve_pq_load_s vpp_pq_load;
+	struct ve_pq_table_s *vpp_pq_load_table = NULL;
+	int i = 0;
+
+	i = sizeof(struct ve_pq_load_s);
+	pr_info("sizeof(struct ve_pq_load_s) = %d", i);
 
 	pr_amvecm_dbg("[amvecm..] %s: cmd_nr = 0x%x\n",
 			__func__, _IOC_NR(cmd));
@@ -1149,10 +1167,59 @@ static long amvecm_ioctl(struct file *file,
 	case AMVECM_IOC_3D_SYNC_DIS:
 		vecm_latch_flag |= FLAG_3D_SYNC_DIS;
 		break;
+	case AMVECM_IOC_GET_OVERSCAN:
+		if (copy_from_user(&vpp_pq_load,
+				(void __user *)arg,
+				sizeof(struct ve_pq_load_s))) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("[amvecm..] pq ioctl copy fail!!\n");
+			break;
+		}
+		if (!(vpp_pq_load.param_id & TABLE_NAME_OVERSCAN)) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("[amvecm..] overscan ioctl param_id fail!!\n");
+			break;
+		}
+		mem_size = vpp_pq_load.length * sizeof(struct ve_pq_table_s);
+		vpp_pq_load_table = kmalloc(mem_size, GFP_KERNEL);
+		if (vpp_pq_load_table == NULL) {
+			pr_info("vpp_pq_load_table kmalloc fail!!!\n");
+			return -EFAULT;
+		}
+		argp = (void __user *)vpp_pq_load.param_ptr;
+		if (copy_from_user(vpp_pq_load_table, argp, mem_size)) {
+			pr_amvecm_dbg("[amvecm..] ovescan copy fail!!\n");
+			break;
+		}
+		for (i = 0; i < vpp_pq_load.length; i++) {
+			if (i >= TIMING_MAX)
+				break;
+			overscan_table[i].load_flag =
+				(vpp_pq_load_table[i].src_timing >> 31) & 0x1;
+			overscan_table[i].afd_enable =
+				(vpp_pq_load_table[i].src_timing >> 30) & 0x1;
+			overscan_table[i].screen_mode =
+				(vpp_pq_load_table[i].src_timing >> 24) & 0x3f;
+			overscan_table[i].source =
+				(vpp_pq_load_table[i].src_timing >> 16) & 0xff;
+			overscan_table[i].timing =
+				vpp_pq_load_table[i].src_timing & 0xffff;
+			overscan_table[i].hs =
+				vpp_pq_load_table[i].value1 & 0xffff;
+			overscan_table[i].he =
+				(vpp_pq_load_table[i].value1 >> 16) & 0xffff;
+			overscan_table[i].vs =
+				vpp_pq_load_table[i].value2 & 0xffff;
+			overscan_table[i].ve =
+				(vpp_pq_load_table[i].value2 >> 16) & 0xffff;
+		}
+		break;
 	default:
 		ret = -EINVAL;
 		break;
 	}
+	if (vpp_pq_load_table != NULL)
+	kfree(vpp_pq_load_table);
 	return ret;
 }
 #ifdef CONFIG_COMPAT

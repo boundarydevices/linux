@@ -190,5 +190,7 @@ extern struct am_regs_s sr1reg_sd_scale;
 extern struct am_regs_s sr1reg_hd_scale;
 extern struct am_regs_s sr1reg_cvbs;
 extern struct am_regs_s sr1reg_hv_noscale;
+extern void amvecm_fresh_overscan(struct vframe_s *vf);
+extern void amvecm_reset_overscan(void);
 #endif
 

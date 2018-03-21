@@ -2013,3 +2013,66 @@ void amve_sharpness_init(void)
 {
 	am_set_regmap(&sr1reg_sd_scale);
 }
+
+static int overscan_timing = TIMING_MAX;
+module_param(overscan_timing, uint, 0664);
+MODULE_PARM_DESC(overscan_timing, "\n overscan_control\n");
+
+static int overscan_screen_mode = 0xff;
+module_param(overscan_screen_mode, uint, 0664);
+MODULE_PARM_DESC(overscan_screen_mode, "\n overscan_screen_mode\n");
+
+static int overscan_disable;
+module_param(overscan_disable, uint, 0664);
+MODULE_PARM_DESC(overscan_disable, "\n overscan_disable\n");
+
+void amvecm_fresh_overscan(struct vframe_s *vf)
+{
+	unsigned int height = 0;
+	unsigned int cur_overscan_timing = 0;
+
+	if (overscan_disable)
+		return;
+	if (overscan_table[0].load_flag) {
+		height = (vf->type & VIDTYPE_COMPRESS) ?
+			vf->compHeight : vf->height;
+		if (height <= 576)
+			cur_overscan_timing = TIMING_SD;
+		else if (height <= 720)
+			cur_overscan_timing = TIMING_HD;
+		else if (height <= 1088)
+			cur_overscan_timing = TIMING_FHD;
+		else
+			cur_overscan_timing = TIMING_UHD;
+
+
+		overscan_timing = cur_overscan_timing;
+		overscan_screen_mode =
+			overscan_table[overscan_timing].screen_mode;
+
+		vf->pic_mode.AFD_enable =
+			overscan_table[overscan_timing].afd_enable;
+		vf->pic_mode.screen_mode =
+			overscan_table[overscan_timing].screen_mode;
+		vf->pic_mode.hs = overscan_table[overscan_timing].hs;
+		vf->pic_mode.he = overscan_table[overscan_timing].he;
+		vf->pic_mode.vs = overscan_table[overscan_timing].vs;
+		vf->pic_mode.ve = overscan_table[overscan_timing].ve;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+	}
+}
+
+void amvecm_reset_overscan(void)
+{
+	if (overscan_disable)
+		return;
+	if (overscan_timing != TIMING_MAX) {
+		overscan_timing = TIMING_MAX;
+		if ((overscan_table[0].source != SOURCE_DTV) &&
+			(overscan_table[0].source != SOURCE_MPEG)) {
+			overscan_table[0].load_flag = 0;
+			overscan_screen_mode = 0xff;
+		}
+	}
+}
+
