@@ -903,8 +903,12 @@ int amvecm_on_vs(
 {
 	int result = 0;
 
-	if ((probe_ok == 0) || for_dolby_vision_certification())
+	if (probe_ok == 0)
 		return 0;
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	if (for_dolby_vision_certification())
+		return 0;
+#endif
 	if (flags & CSC_FLAG_CHECK_OUTPUT) {
 		/* to test if output will change */
 		return amvecm_matrix_process(
@@ -958,7 +962,9 @@ void refresh_on_vs(struct vframe_s *vf)
 		return;
 	if (vf != NULL) {
 		vpp_get_vframe_hist_info(vf);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (!for_dolby_vision_certification())
+#endif
 			ve_on_vs(vf);
 		vpp_backup_histgram(vf);
 	}
@@ -3179,9 +3185,10 @@ static void amvecm_pq_enable(int enable)
 {
 	if (enable) {
 		vecm_latch_flag |= FLAG_VE_DNLP_EN;
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (!is_dolby_vision_enable())
+#endif
 			amcm_enable();
-
 		WRITE_VPP_REG_BITS(SRSHARP0_PK_NR_ENABLE, 1, 1, 1);
 		WRITE_VPP_REG_BITS(SRSHARP1_PK_NR_ENABLE, 1, 1, 1);
 
@@ -4098,10 +4105,14 @@ static void aml_vecm_dt_parse(struct platform_device *pdev)
 	/* init module status */
 	amvecm_wb_init(wb_en);
 	amvecm_gamma_init(gamma_en);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (!is_dolby_vision_enable())
+#endif
 		WRITE_VPP_REG_BITS(VPP_MISC, 1, 28, 1);
 	if (cm_en) {
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (!is_dolby_vision_enable())
+#endif
 			amcm_enable();
 	}
 	else

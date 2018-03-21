@@ -486,6 +486,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	devp->vfp->size = devp->canvas_max_num;
 	vf_pool_init(devp->vfp, devp->vfp->size);
 	vdin_vf_init(devp);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if ((devp->dv.dolby_input & (1 << devp->index)) ||
 		(devp->dv.dv_flag && is_dolby_vision_enable())) {
 		/* config dolby mem base */
@@ -495,7 +496,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 		if (vdin_dbg_en)
 			pr_info("vdin start dec dv input config\n");
 	}
-
+#endif
 	devp->abnormal_cnt = 0;
 	devp->last_wr_vfe = NULL;
 	irq_max_count = 0;
@@ -527,17 +528,21 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	if (devp->rdma_enable && devp->rdma_handle > 0)
 		devp->flags |= VDIN_FLAG_RDMA_ENABLE;
 #endif
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	/*only for vdin0;vdin1 used for debug*/
 	if ((devp->dv.dolby_input & (1 << 0)) ||
 		(devp->dv.dv_flag && is_dolby_vision_enable()))
 		vf_reg_provider(&devp->dv.vprov_dv);
 	else
+#endif
 		vf_reg_provider(&devp->vprov);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if ((devp->dv.dolby_input & (1 << devp->index)) ||
 		(devp->dv.dv_flag && is_dolby_vision_enable()))
 		vf_notify_receiver("dv_vdin",
 			VFRAME_EVENT_PROVIDER_START, NULL);
 	else
+#endif
 		vf_notify_receiver(devp->name,
 			VFRAME_EVENT_PROVIDER_START, NULL);
 	if ((devp->parm.port != TVIN_PORT_VIU1) ||
@@ -604,7 +609,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 
 	/* reset default canvas  */
 	vdin_set_def_wr_canvas(devp);
-#if 1/*def CONFIG_AM_HDMIIN_DV*/
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (((devp->dv.dolby_input & (1 << devp->index)) ||
 		is_dolby_vision_enable()) &&
 		(devp->dv.dv_config == true))
@@ -1230,12 +1235,14 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_vf_disp_mode_update(devp->last_wr_vfe, devp->vfp);
 
 		devp->last_wr_vfe = NULL;
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (((devp->dv.dolby_input & (1 << devp->index)) ||
 			(devp->dv.dv_flag && is_dolby_vision_enable())) &&
 			(devp->dv.dv_config == true))
 			vf_notify_receiver("dv_vdin",
 				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 		else
+#endif
 			vf_notify_receiver(devp->name,
 				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 	}
@@ -1357,12 +1364,14 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		vdin_drop_cnt++;
 		goto irq_handled;
 	}
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (((devp->dv.dolby_input & (1 << devp->index)) ||
 		(devp->dv.dv_flag && is_dolby_vision_enable())) &&
 		(devp->dv.dv_config == true))
 		vdin2nr = vf_notify_receiver("dv_vdin",
 			VFRAME_EVENT_PROVIDER_QUREY_VDIN2NR, NULL);
 	else
+#endif
 		vdin2nr = vf_notify_receiver(devp->name,
 			VFRAME_EVENT_PROVIDER_QUREY_VDIN2NR, NULL);
 	/*if vdin-nr,di must get
@@ -1468,12 +1477,14 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	next_wr_vfe->vf.ready_jiffies64 = jiffies_64;
 
 	if (!(devp->flags&VDIN_FLAG_RDMA_ENABLE) || (devp->game_mode == true)) {
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (((devp->dv.dolby_input & (1 << devp->index)) ||
 			(devp->dv.dv_flag && is_dolby_vision_enable())) &&
 			(devp->dv.dv_config == true))
 			vf_notify_receiver("dv_vdin",
 				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 		else
+#endif
 			vf_notify_receiver(devp->name,
 				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 	}

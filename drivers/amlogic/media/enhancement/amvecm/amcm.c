@@ -282,8 +282,10 @@ void amcm_level_sel(unsigned int cm_level)
 		am_set_regmap(&cmreg_enhancement);
 	else
 		am_set_regmap(&cmreg_optimize);
-
-	if (!is_dolby_vision_enable()) {
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	if (!is_dolby_vision_enable())
+#endif
+	{
 		if (!(READ_VPP_REG(VPP_MISC) & (0x1 << 28)))
 			WRITE_VPP_REG_BITS(VPP_MISC, 1, 28, 1);
 		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
