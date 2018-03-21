@@ -225,6 +225,7 @@ struct imx_port {
 	dma_cookie_t		rx_cookie;
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
+	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[10];
 	bool			context_saved;
 };
@@ -582,9 +583,18 @@ static void imx_uart_dma_tx_callback(void *data)
 
 	sport->dma_is_txing = 0;
 
+	spin_unlock_irqrestore(&sport->port.lock, flags);
+
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(&sport->port);
 
+	if (waitqueue_active(&sport->dma_wait)) {
+		wake_up(&sport->dma_wait);
+		dev_dbg(sport->port.dev, "exit in %s.\n", __func__);
+		return;
+	}
+
+	spin_lock_irqsave(&sport->port.lock, flags);
 	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&sport->port))
 		imx_uart_dma_tx(sport);
 	else if (sport->port.rs485.flags & SER_RS485_ENABLED) {
