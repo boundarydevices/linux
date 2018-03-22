@@ -697,10 +697,10 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			if (tsync_stat == TSYNC_STAT_PCRSCR_SETUP_NONE) {
 				if (tsync_syncthresh
 					&& (tsync_mode == TSYNC_MODE_AMASTER)) {
-					timestamp_pcrscr_set(param -
-							VIDEO_HOLD_THRESHOLD);
-				} else
-					timestamp_pcrscr_set(param);
+					if (param > VIDEO_HOLD_THRESHOLD)
+						param -= VIDEO_HOLD_THRESHOLD;
+				}
+				timestamp_pcrscr_set(param);
 				tsync_stat = TSYNC_STAT_PCRSCR_SETUP_VIDEO;
 			}
 		}
