@@ -572,7 +572,7 @@ struct codec_mm_s *codec_mm_alloc(const char *owner, int size,
 	mem->align2n = align2n;
 	mem->flags = memflags;
 	ret = codec_mm_alloc_in(mgt, mem);
-	if (ret == -10003 &&
+	if (ret < 0 &&
 		mgt->alloced_for_sc_cnt > 0 && /*have used for scatter.*/
 		!(memflags & CODEC_MM_FLAGS_FOR_SCATTER)) {
 		/*if not scatter, free scatter caches. */
