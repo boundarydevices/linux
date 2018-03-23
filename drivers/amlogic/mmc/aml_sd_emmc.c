@@ -747,7 +747,8 @@ tunning:
 
 	if ((best_win_size != clk_div)
 		|| (aml_card_type_sdio(pdata)
-			&& (host->data->chip_type == MMC_CHIP_GXM))) {
+			&& ((host->data->chip_type == MMC_CHIP_GXM)
+			|| (host->data->chip_type == MMC_CHIP_GXL)))) {
 		adj_delay_find = best_win_start + (best_win_size - 1) / 2
 						+ (best_win_size - 1) % 2;
 		adj_delay_find = adj_delay_find % clk_div;
