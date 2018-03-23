@@ -18,7 +18,6 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/amlogic/cpu_version.h>
-#include <linux/amlogic/scpi_protocol.h>
 #include <linux/printk.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
@@ -62,6 +61,8 @@ struct meson_cooldev {
 	struct thermal_zone_device    *tzd;
 };
 
+static struct meson_cooldev *meson_gcooldev;
+
 static int get_cool_dev_type(char *type)
 {
 	if (!strcmp(type, "cpufreq"))
@@ -91,6 +92,23 @@ static struct cool_dev *get_cool_dev_by_node(struct platform_device *pdev,
 	}
 	return NULL;
 }
+
+static struct cool_dev *get_gcool_dev_by_node(struct meson_cooldev *mgcooldev,
+						struct device_node *np)
+{
+	int i;
+	struct cool_dev *dev;
+
+	if (!np)
+		return NULL;
+	for (i = 0; i < mgcooldev->cool_dev_num; i++) {
+		dev = &mgcooldev->cool_devs[i];
+		if (dev->np == np)
+			return dev;
+	}
+	return NULL;
+}
+
 
 static int meson_set_min_status(struct thermal_cooling_device *cdev,
 				unsigned long min_state)
@@ -136,6 +154,48 @@ end:
 	return err;
 }
 
+int meson_gcooldev_min_update(struct thermal_cooling_device *cdev)
+{
+	struct gpufreq_cooling_device *gf_cdev;
+	struct gpucore_cooling_device *gc_cdev;
+	//struct device_node *parent;
+	struct cool_dev *cool = NULL;
+	long min_state;
+	int ret;
+
+	cool = get_gcool_dev_by_node(meson_gcooldev, cdev->np);
+	if (!cool)
+		return -ENODEV;
+
+	if (cool->cooling_dev == NULL)
+		cool->cooling_dev = cdev;
+
+	if (cool->min_state == 0)
+		return 0;
+
+	switch (get_cool_dev_type(cool->device_type)) {
+	case COOL_DEV_TYPE_GPU_CORE:
+		gc_cdev = (struct gpucore_cooling_device *)cdev->devdata;
+		cdev->ops->get_max_state(cdev, &min_state);
+		min_state = min_state - cool->min_state;
+		break;
+
+	case COOL_DEV_TYPE_GPU_FREQ:
+		gf_cdev = (struct gpufreq_cooling_device *)cdev->devdata;
+		min_state = gf_cdev->get_gpu_freq_level(cool->min_state);
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	ret = meson_set_min_status(cdev, min_state);
+	if (!ret)
+		pr_info("meson_cdev set min sussces\n");
+	return 0;
+}
+EXPORT_SYMBOL(meson_gcooldev_min_update);
+
 int meson_cooldev_min_update(struct platform_device *pdev, int index)
 {
 	struct meson_cooldev *mcooldev = platform_get_drvdata(pdev);
@@ -147,6 +207,8 @@ int meson_cooldev_min_update(struct platform_device *pdev, int index)
 	int ret;
 	int cpu, c_id;
 
+	/*save pdev for mali ko api*/
+	meson_gcooldev = platform_get_drvdata(pdev);
 	cool = get_cool_dev_by_node(pdev, cdev->np);
 	if (!cool)
 		return -ENODEV;
