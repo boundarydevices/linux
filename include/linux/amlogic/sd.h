@@ -190,6 +190,23 @@ enum mmc_chip_e {
 	MMC_CHIP_G12A = 0x28,
 };
 
+struct mmc_phase {
+	unsigned int core_phase;
+	unsigned int tx_phase;
+	unsigned int rx_phase;
+	unsigned int tx_delay;
+};
+
+struct para_e {
+	struct mmc_phase init;
+	struct mmc_phase hs;
+	struct mmc_phase ddr;
+	struct mmc_phase hs2;
+	struct mmc_phase hs4;
+	struct mmc_phase sd_hs;
+	struct mmc_phase sdr104;
+};
+
 struct meson_mmc_data {
 	enum mmc_chip_e chip_type;
 	unsigned int pinmux_base;
@@ -197,6 +214,7 @@ struct meson_mmc_data {
 	unsigned int ds_pin_poll;
 	unsigned int ds_pin_poll_en;
 	unsigned int ds_pin_poll_bit;
+	struct para_e sdmmc;
 };
 
 struct amlsd_host;

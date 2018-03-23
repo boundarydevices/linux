@@ -50,6 +50,7 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	struct amlsd_platform *pdata = host->pdata;
+	struct mmc_phase *init = &(host->data->sdmmc.init);
 
 	writel(0, host->base + SD_EMMC_CLOCK_V3);
 #ifndef SD_EMMC_CLK_CTRL
@@ -61,9 +62,9 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	vclkc = 0;
 	pclkc->div = 60;	 /* 400KHz */
 	pclkc->src = 0;	  /* 0: Crystal 24MHz */
-	pclkc->core_phase = 3;	  /* 2: 180 phase */
-	pclkc->rx_phase = 0;
-	pclkc->tx_phase = 0;
+	pclkc->core_phase = init->core_phase;	  /* 2: 180 phase */
+	pclkc->rx_phase = init->rx_phase;
+	pclkc->tx_phase = init->tx_phase;
 	pclkc->always_on = 1;	  /* Keep clock always on */
 	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
 	pdata->clkc = vclkc;
@@ -216,6 +217,7 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
 	u32 adjust;
 	struct sd_emmc_adjust_v3 *gadjust = (struct sd_emmc_adjust_v3 *)&adjust;
 	u8 clk_div = 0;
+	struct para_e *para = &(host->data->sdmmc);
 
 	vctrl = readl(host->base + SD_EMMC_CFG);
 	if ((timing == MMC_TIMING_MMC_HS400) ||
@@ -227,7 +229,7 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
 				adjust = readl(host->base + SD_EMMC_ADJUST_V3);
 				gadjust->ds_enable = 1;
 				writel(adjust, host->base + SD_EMMC_ADJUST_V3);
-				clkc->tx_delay = pdata->tx_delay;
+				clkc->tx_delay = para->hs4.tx_delay;
 			}
 			pr_info("%s: try set sd/emmc to HS400 mode\n",
 				mmc_hostname(host->mmc));
@@ -238,19 +240,21 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
 			clk_div++;
 		clkc->div = clk_div / 2;
 		if (aml_card_type_mmc(pdata))
-			clkc->core_phase  = 2;
+			clkc->core_phase  = para->ddr.core_phase;
 		pr_info("%s: try set sd/emmc to DDR mode\n",
 			mmc_hostname(host->mmc));
 	} else if (timing == MMC_TIMING_MMC_HS) {
 		if (host->data->chip_type < MMC_CHIP_G12A)
-			clkc->core_phase = 3;
+			clkc->core_phase = para->hs.core_phase;
 		else
 			clkc->core_phase = 2;
-	} else if ((timing == MMC_TIMING_MMC_HS200)
-			|| ((timing == MMC_TIMING_SD_HS)
-				&& aml_card_type_non_sdio(pdata))
-			|| (timing == MMC_TIMING_UHS_SDR104)) {
-		clkc->core_phase = 2;
+	} else if (timing == MMC_TIMING_MMC_HS200) {
+		clkc->core_phase = para->hs2.core_phase;
+	} else if ((timing == MMC_TIMING_SD_HS)
+				&& aml_card_type_non_sdio(pdata)) {
+		clkc->core_phase = para->sd_hs.core_phase;
+	} else if (timing == MMC_TIMING_UHS_SDR104) {
+		clkc->core_phase = para->sdr104.core_phase;
 	} else
 		ctrl->ddr = 0;
 
