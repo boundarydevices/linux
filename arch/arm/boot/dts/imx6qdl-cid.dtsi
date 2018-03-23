@@ -599,16 +599,19 @@
 		blue {
 			gpios = GP_LED_BLUE;
 			default-state = "off";
+			retain-state-suspended;
 		};
 
 		green {
 			gpios = GP_LED_GREEN;
 			default-state = "off";
+			retain-state-suspended;
 		};
 
 		red {
 			gpios = GP_LED_RED;
 			default-state = "off";
+			retain-state-suspended;
 		};
 
 		vibrator {
