@@ -3139,6 +3139,7 @@ static int pxp_2d_op_handler(struct pxps *pxp)
 	uint32_t partial_nodes_used = 0;
 	uint32_t nodes_used_s0 = 0, nodes_used_s1 = 0;
 	uint32_t nodes_in_path_s0, nodes_in_path_s1;
+	uint32_t val;
 
 	output = &task->output[0];
 	if (!output->pitch)
@@ -3272,6 +3273,13 @@ reparse:
 		pr_debug("%s: path_ctrl0 = 0x%x\n",
 			 __func__, *(uint32_t *)&path_ctrl0);
 		pxp_2d_task_config(input, output, op, nodes_used);
+
+		if (is_yuv(input->format) && is_yuv(output->format)) {
+			val = readl(pxp_reg_base + HW_PXP_CSC1_COEF0);
+			val |= (BF_PXP_CSC1_COEF0_YCBCR_MODE(1) |
+					BF_PXP_CSC1_COEF0_BYPASS(1));
+			pxp_writel(val, HW_PXP_CSC1_COEF0);
+		}
 		break;
 	case 2:
 		/* Composite */
