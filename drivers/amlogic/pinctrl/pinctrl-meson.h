@@ -178,7 +178,8 @@ extern int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
 					unsigned int * const num_groups);
 
 /* Common pinconf functions */
-extern int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin);
+extern int meson_pinconf_common_get(struct meson_pinctrl *pc, unsigned int pin,
+				enum pin_config_param param, u16 *arg);
 
-extern int meson_pinconf_set_pull(struct meson_pinctrl *pc, unsigned int pin,
-						enum pin_config_param param);
+extern int meson_pinconf_common_set(struct meson_pinctrl *pc, unsigned int pin,
+					enum pin_config_param param, u16 arg);

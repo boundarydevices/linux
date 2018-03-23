@@ -178,8 +178,8 @@ int meson_pmx_get_groups(struct pinctrl_dev *pcdev,
 	return 0;
 }
 
-int meson_pinconf_set_pull(struct meson_pinctrl *pc, unsigned int pin,
-					enum pin_config_param param)
+int meson_pinconf_common_set(struct meson_pinctrl *pc, unsigned int pin,
+					enum pin_config_param param, u16 arg)
 {
 	struct meson_bank *bank;
 	unsigned int reg, bit;
@@ -242,6 +242,21 @@ int meson_pinconf_set_pull(struct meson_pinctrl *pc, unsigned int pin,
 		if (ret)
 			return ret;
 		break;
+	case PIN_CONFIG_OUTPUT:
+		dev_dbg(pc->dev, "pin %u: output %s\n", pin,
+				arg ? "high" : "low");
+		meson_calc_reg_and_bit(bank, pin, REG_DIR,
+					   &reg, &bit);
+		ret = regmap_update_bits(pc->reg_gpio, reg,
+				 BIT(bit), 0);
+		if (ret)
+			return ret;
+		meson_calc_reg_and_bit(bank, pin, REG_OUT,
+					   &reg, &bit);
+		ret = regmap_update_bits(pc->reg_gpio, reg,
+				 BIT(bit), arg ? BIT(bit) : 0);
+		if (ret)
+			return ret;
 	default:
 		return -ENOTSUPP;
 	}
@@ -260,7 +275,7 @@ static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 		param = pinconf_to_config_param(configs[i]);
 		arg = pinconf_to_config_argument(configs[i]);
 
-		ret = meson_pinconf_set_pull(pc, pin, param);
+		ret = meson_pinconf_common_set(pc, pin, param, arg);
 		if (ret)
 			return ret;
 	}
@@ -268,7 +283,7 @@ static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 	return 0;
 }
 
-int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin)
+static int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin)
 {
 	struct meson_bank *bank;
 	unsigned int reg, bit, val;
@@ -302,25 +317,76 @@ int meson_pinconf_get_pull(struct meson_pinctrl *pc, unsigned int pin)
 	return conf;
 }
 
+static int meson_pinconf_get_pio(struct meson_pinctrl *pc, unsigned int pin,
+					u16 *arg)
+{
+	struct meson_bank *bank;
+	unsigned int reg, bit, val;
+	int ret, conf;
+
+	ret = meson_get_bank(pc, pin, &bank);
+	if (ret)
+		return ret;
+	meson_calc_reg_and_bit(bank, pin, REG_DIR, &reg, &bit);
+
+	reg = regmap_read(pc->reg_gpio, reg, &val);
+	if (ret)
+		return ret;
+	if (val & BIT(bit)) {
+		conf = PIN_CONFIG_INPUT_ENABLE;
+		*arg = 1;
+	} else {
+		meson_calc_reg_and_bit(bank, pin, REG_OUT, &reg, &bit);
+
+		ret = regmap_read(pc->reg_gpio, reg, &val);
+		if (ret)
+			return ret;
+
+		if (val & BIT(bit))
+			*arg = 1;
+		else
+			*arg = 0;
+		conf = PIN_CONFIG_OUTPUT;
+	}
+
+	return conf;
+}
+
+int meson_pinconf_common_get(struct meson_pinctrl *pc, unsigned int pin,
+				enum pin_config_param param, u16 *arg)
+{
+	switch (param) {
+	case PIN_CONFIG_BIAS_DISABLE:
+	case PIN_CONFIG_BIAS_PULL_DOWN:
+	case PIN_CONFIG_BIAS_PULL_UP:
+		if (meson_pinconf_get_pull(pc, pin) == param)
+			*arg = 1;
+		else
+			return -EINVAL;
+		break;
+	case PIN_CONFIG_INPUT_ENABLE:
+	case PIN_CONFIG_OUTPUT:
+		if (meson_pinconf_get_pio(pc, pin, arg) != param)
+			return -EINVAL;
+		break;
+	default:
+		return -ENOTSUPP;
+	}
+
+	return 0;
+}
+
 static int meson_pinconf_get(struct pinctrl_dev *pcdev, unsigned int pin,
 			     unsigned long *config)
 {
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
 	enum pin_config_param param = pinconf_to_config_param(*config);
 	u16 arg;
+	int ret;
 
-	switch (param) {
-	case PIN_CONFIG_BIAS_DISABLE:
-	case PIN_CONFIG_BIAS_PULL_DOWN:
-	case PIN_CONFIG_BIAS_PULL_UP:
-		if (meson_pinconf_get_pull(pc, pin) == param)
-			arg = 1;
-		else
-			return -EINVAL;
-		break;
-	default:
-		return -ENOTSUPP;
-	}
+	ret = meson_pinconf_common_get(pc, pin, param, &arg);
+	if (ret)
+		return ret;
 
 	*config = pinconf_to_config_packed(param, arg);
 	dev_dbg(pc->dev, "pinconf for pin %u is %lu\n", pin, *config);

@@ -112,22 +112,14 @@ static int meson_g12a_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 		param = pinconf_to_config_param(configs[i]);
 		arg = pinconf_to_config_argument(configs[i]);
 
-		switch (param) {
-		case PIN_CONFIG_BIAS_DISABLE:
-		case PIN_CONFIG_BIAS_PULL_UP:
-		case PIN_CONFIG_BIAS_PULL_DOWN:
-		case PIN_CONFIG_INPUT_ENABLE:
-			ret = meson_pinconf_set_pull(pc, pin, param);
-			if (ret)
-				return ret;
-			break;
-		case PIN_CONFIG_DRIVE_STRENGTH:
+		if (param == PIN_CONFIG_DRIVE_STRENGTH) {
 			ret = meson_pinconf_set_drive_strength(pc, pin, arg);
 			if (ret)
 				return ret;
-			break;
-		default:
-			return -ENOTSUPP;
+		} else {
+			ret = meson_pinconf_common_set(pc, pin, param, arg);
+			if (ret)
+				return ret;
 		}
 	}
 
@@ -139,23 +131,17 @@ static int meson_g12a_pinconf_get(struct pinctrl_dev *pcdev, unsigned int pin,
 {
 	struct meson_pinctrl *pc = pinctrl_dev_get_drvdata(pcdev);
 	enum pin_config_param param = pinconf_to_config_param(*config);
+	int ret;
 	u16 arg;
 
-	switch (param) {
-	case PIN_CONFIG_BIAS_DISABLE:
-	case PIN_CONFIG_BIAS_PULL_DOWN:
-	case PIN_CONFIG_BIAS_PULL_UP:
-		if (meson_pinconf_get_pull(pc, pin) == param)
-			arg = 1;
-		else
-			return -EINVAL;
-		break;
-	case PIN_CONFIG_DRIVE_STRENGTH:
-		if (meson_pinconf_get_drive_strength(pc, pin, &arg))
-			return -EINVAL;
-		break;
-	default:
-		return -ENOTSUPP;
+	if (param == PIN_CONFIG_DRIVE_STRENGTH) {
+		ret = meson_pinconf_get_drive_strength(pc, pin, &arg);
+		if (ret)
+			return ret;
+	} else {
+		ret = meson_pinconf_common_get(pc, pin, param, &arg);
+		if (ret)
+			return ret;
 	}
 
 	*config = pinconf_to_config_packed(param, arg);
