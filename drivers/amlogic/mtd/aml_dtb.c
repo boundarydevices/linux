@@ -117,46 +117,6 @@ exit_err:
 
 /* under kernel */
 #ifndef AML_NAND_UBOOT
-ssize_t dtb_show(struct class *class, struct class_attribute *attr,
-		char *buf)
-{
-	pr_info("dtb_show : #####\n");
-	/* fixme, read back and show in log! */
-	return 0;
-}
-
-ssize_t dtb_store(struct class *class, struct class_attribute *attr,
-		const char *buf, size_t count)
-{
-	int ret = 0;
-	u8 *dtb_ptr = NULL;
-
-	pr_info("dtb_store : #####\n");
-	dtb_ptr = kzalloc(aml_chip_dtb->dtbsize, GFP_KERNEL);
-	if (dtb_ptr == NULL) {
-		pr_info("%s: malloc buf failed\n ", __func__);
-		return -ENOMEM;
-	}
-	/* fixme, why read back then write? */
-	ret = amlnf_dtb_read(dtb_ptr, aml_chip_dtb->dtbsize);
-	if (ret) {
-		pr_info("%s: read failed\n", __func__);
-		kfree(dtb_ptr);
-		return -EFAULT;
-	}
-
-	ret = amlnf_dtb_save(dtb_ptr, aml_chip_dtb->dtbsize);
-	if (ret) {
-		pr_info("%s: save failed\n", __func__);
-		kfree(dtb_ptr);
-		return -EFAULT;
-	}
-
-	pr_info("dtb_store : OK #####\n");
-	return count;
-}
-
-static CLASS_ATTR(nfdtb, 0644, dtb_show, dtb_store);
 
 int dtb_open(struct inode *node, struct file *file)
 {
@@ -315,13 +275,6 @@ int amlnf_dtb_init(struct aml_nand_chip *aml_chip)
 		goto exit_err2;
 	}
 
-	ret = class_create_file(amlnf_dtb_class, &class_attr_nfdtb);
-	if (ret) {
-		pr_info("%s dev add failed\n", __func__);
-		ret = -1;
-		goto exit_err2;
-	}
-
 	dtb_dev_nand = device_create(amlnf_dtb_class,
 		NULL,
 		amlnf_dtb_no,
@@ -340,7 +293,6 @@ int amlnf_dtb_init(struct aml_nand_chip *aml_chip)
 	return ret;
 
 exit_err3:
-	class_remove_file(amlnf_dtb_class, &class_attr_nfdtb);
 	class_destroy(amlnf_dtb_class);
 exit_err2:
 	cdev_del(&amlnf_dtb);

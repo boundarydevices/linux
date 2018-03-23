@@ -141,47 +141,6 @@ exit_err:
 #ifndef CONFIG_MTD_ENV_IN_NAND
 #ifndef AML_NAND_UBOOT
 
-ssize_t env_show(struct class *class, struct class_attribute *attr,
-		char *buf)
-{
-	pr_info("env_show : #####\n");
-	return 0;
-}
-
-ssize_t env_store(struct class *class, struct class_attribute *attr,
-		const char *buf, size_t count)
-{
-	int ret = 0;
-	u8 *env_ptr = NULL;
-
-
-	env_ptr = kzalloc(CONFIG_ENV_SIZE, GFP_KERNEL);
-	if (env_ptr == NULL)
-		return -ENOMEM;
-
-	mutex_lock(&env_mutex);
-	pr_info("env_store : #####\n");
-	ret = amlnf_env_read(env_ptr, CONFIG_ENV_SIZE);
-	if (ret) {
-		pr_info("nand_env_read: nand env read failed\n");
-		kfree(env_ptr);
-		return -EFAULT;
-	}
-
-	ret = amlnf_env_save(env_ptr, CONFIG_ENV_SIZE);
-	if (ret) {
-		pr_info("nand_env_read: nand env read failed\n");
-		kfree(env_ptr);
-		return -EFAULT;
-	}
-
-	pr_info("env_store : OK #####\n");
-	mutex_unlock(&env_mutex);
-	return count;
-}
-
-static CLASS_ATTR(env, 0644, env_show, env_store);
-
 int uboot_env_open(struct inode *node, struct file *file)
 {
 	return 0;
@@ -363,13 +322,6 @@ int aml_ubootenv_init(struct aml_nand_chip *aml_chip)
 		goto exit_err2;
 	}
 
-	ret = class_create_file(uboot_env_class, &class_attr_env);
-	if (ret) {
-		pr_info("uboot env dev add failed\n");
-		ret = -1;
-		goto exit_err2;
-	}
-
 	uboot_dev = device_create(uboot_env_class,
 		NULL,
 		uboot_env_no,
@@ -388,7 +340,6 @@ int aml_ubootenv_init(struct aml_nand_chip *aml_chip)
 
 	return ret;
 exit_err3:
-	class_remove_file(uboot_env_class, &class_attr_env);
 	class_destroy(uboot_env_class);
 exit_err2:
 	cdev_del(&uboot_env);
