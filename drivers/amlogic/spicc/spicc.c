@@ -77,6 +77,7 @@ struct spicc {
 	struct pinctrl_state *pullup;
 	struct pinctrl_state *pulldown;
 	int bytes_per_word;
+	int bit_offset;
 	int mode;
 	int speed;
 	unsigned int dma_tx_threshold;
@@ -285,7 +286,15 @@ static inline void spicc_set_flag(
 static inline void spicc_set_bit_width(struct spicc *spicc, u8 bw)
 {
 	setb(spicc->regs, CON_BITS_PER_WORD, bw-1);
-	spicc->bytes_per_word = ((bw - 1) >> 3) + 1;
+	if (bw <= 8)
+		spicc->bytes_per_word = 1;
+	else if (bw <= 16)
+		spicc->bytes_per_word = 2;
+	else if (bw <= 32)
+		spicc->bytes_per_word = 4;
+	else
+		spicc->bytes_per_word = 8;
+	spicc->bit_offset = (spicc->bytes_per_word << 3) - bw;
 }
 
 static void spicc_set_mode(struct spicc *spicc, u8 mode)
@@ -404,7 +413,7 @@ static inline u32 spicc_pull_data(struct spicc *spicc)
 			dat |= *spicc->txp << (i << 3);
 			spicc->txp++;
 		}
-
+	dat >>= spicc->bit_offset;
 	return dat;
 }
 
@@ -413,6 +422,7 @@ static inline void spicc_push_data(struct spicc *spicc, u32 dat)
 	int bytes = spicc->bytes_per_word;
 	int i;
 
+	dat <<= spicc->bit_offset;
 	if (spicc->mode & SPI_LSB_FIRST)
 		for (i = 0; i < bytes; i++)
 			*spicc->rxp++ = dat >> ((bytes - i - 1) << 3);
@@ -554,14 +564,11 @@ static int spicc_dma_xfer(struct spicc *spicc, struct spi_transfer *t)
 	spicc_reset_fifo(spicc);
 	setb(mem_base, CON_XCH, 0);
 	setb(mem_base, WAIT_CYCLES, spicc->speed >> 25);
-	spicc_set_bit_width(spicc, 64);
 	if (t->tx_dma != INVALID_DMA_ADDRESS)
 		writel(t->tx_dma, mem_base + SPICC_REG_DRADDR);
 	if (t->rx_dma != INVALID_DMA_ADDRESS)
 		writel(t->rx_dma, mem_base + SPICC_REG_DWADDR);
 	setb(mem_base, DMA_EN, 1);
-	spicc->remain = ((t->len - 1) >> 3) + 1;
-	spicc->burst_len = 0;
 	spicc_log(spicc, &spicc->remain, 1, DMA_BEGIN);
 	if (spicc->irq) {
 		setb(mem_base, INT_XFER_COM_EN, 1);
@@ -600,7 +607,6 @@ static int spicc_hw_xfer(struct spicc *spicc, u8 *txp, u8 *rxp, int len)
 	spicc_reset_fifo(spicc);
 	setb(mem_base, CON_XCH, 0);
 	setb(mem_base, WAIT_CYCLES, 0);
-	spicc->remain = len / spicc->bytes_per_word;
 	spicc->txp = txp;
 	spicc->rxp = rxp;
 	spicc_log(spicc, &spicc->remain, 1, PIO_BEGIN);
@@ -716,7 +722,7 @@ static int spicc_setup(struct spi_device *spi)
 	spicc = spi_master_get_devdata(spi->master);
 	if (spi->cs_gpio >= 0)
 		gpio_request(spi->cs_gpio, "spicc");
-	dev_info(&spi->dev, "chip_select=%d cs_gpio=%d mode=%d speed=%d\n",
+	dev_info(&spi->dev, "cs=%d cs_gpio=%d mode=0x%x speed=%d\n",
 			spi->chip_select, spi->cs_gpio,
 			spi->mode, spi->max_speed_hz);
 	spicc_chip_select(spi, 0);
@@ -759,6 +765,7 @@ static void spicc_handle_one_msg(struct spicc *spicc, struct spi_message *m)
 		if (t->delay_usecs >> 10)
 			udelay(t->delay_usecs >> 10);
 
+		spicc->remain = t->len / spicc->bytes_per_word;
 		spicc_set_flag(spicc, FLAG_DMA_EN, 0);
 		if (t->bits_per_word == 64) {
 			spicc_set_flag(spicc, FLAG_DMA_EN, 1);
@@ -880,7 +887,7 @@ static ssize_t store_test(
 	u8 *tx_buf, *rx_buf;
 	unsigned long value;
 	char *kstr, *str_temp, *token;
-	int i, ret, bytes_per_word;
+	int i, ret;
 	struct spi_transfer t;
 	struct spi_message m;
 
@@ -889,8 +896,7 @@ static ssize_t store_test(
 		dev_err(dev, "error format\n");
 		return count;
 	}
-	bytes_per_word = ((bits_per_word - 1) >> 3) + 1;
-	if (!speed || !num || !bits_per_word || num % bytes_per_word) {
+	if (!speed || !num || !bits_per_word) {
 		dev_err(dev, "error parameter\n");
 		return count;
 	}
@@ -928,7 +934,7 @@ static ssize_t store_test(
 		m.spi->chip_select = cs_gpio - 1000;
 	}
 	m.spi->max_speed_hz = speed;
-	m.spi->mode = mode;
+	m.spi->mode = mode & 0xffff;
 	m.spi->bits_per_word = bits_per_word;
 	spicc_setup(m.spi);
 	memset(&t, 0, sizeof(t));
@@ -944,7 +950,7 @@ static ssize_t store_test(
 		goto test_end;
 	}
 
-	if (mode & SPI_LOOP) {
+	if (mode & (SPI_LOOP | (1<<16))) {
 		ret = 0;
 		for (i = 0; i < num; i++) {
 			if (tx_buf[i] != rx_buf[i]) {
