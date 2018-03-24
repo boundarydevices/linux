@@ -1393,13 +1393,9 @@
 	};
 	/*spdif*/
 	audio_spdif_pins: audio_spdif_pins {
-		in_mux {
-			groups = "spdif_out_z";
-			function = "spdif_out";
-		};
 		out_mux {
-			groups = "spdif_in_z18";
-			function = "spdif_in";
+			groups = "spdif_out_dv";
+			function = "spdif_out";
 		};
 	};
 	/*pcm*/

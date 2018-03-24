@@ -199,6 +199,7 @@ static const char *const spdif_audio_type_texts[] = {
 	"DTS",
 	"DTS-HD",
 	"TRUEHD",
+	"PAUSE"
 };
 static const struct sppdif_audio_info type_texts[] = {
 	{0, 0, "LPCM"},
@@ -210,12 +211,14 @@ static const struct sppdif_audio_info type_texts[] = {
 	{3, 0x11, "DTS-IV"},
 	{4, 0, "DTS-HD"},
 	{5, 0x16, "TRUEHD"},
+	{6, 0x103, "PAUSE"},
+	{6, 0x003, "PAUSE"},
+	{6, 0x100, "PAUSE"},
 };
 static const struct soc_enum spdif_audio_type_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdif_audio_type_texts),
 			spdif_audio_type_texts);
 
-static int last_audio_type = -1;
 static int aml_spdif_audio_type_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -224,7 +227,7 @@ static int aml_spdif_audio_type_get_enum(
 	int i;
 	int total_num = sizeof(type_texts)/sizeof(struct sppdif_audio_info);
 	int pc = aml_audin_read(AUDIN_SPDIF_NPCM_PCPD)>>16;
-	pc = pc&0xff;
+	pc = pc&0xfff;
 	for (i = 0; i < total_num; i++) {
 		if (pc == type_texts[i].pc) {
 			audio_type = type_texts[i].aud_type;
@@ -232,35 +235,7 @@ static int aml_spdif_audio_type_get_enum(
 		}
 	}
 	ucontrol->value.enumerated.item[0] = audio_type;
-	if (last_audio_type != audio_type) {
-		if (audio_type == 0 || audio_in_source == 3) {
-			/*In LPCM, use old spdif mode*/
-			aml_audin_update_bits(AUDIN_FIFO1_CTRL,
-				(0x7 << AUDIN_FIFO_DIN_SEL),
-				(SPDIF_IN << AUDIN_FIFO_DIN_SEL));
-			/*spdif-in data fromat:(27:4)*/
-			aml_audin_write(AUDIN_FIFO1_CTRL1, 0x88);
-		} else {
-			struct snd_soc_card *card =
-				snd_kcontrol_chip(kcontrol);
-			struct aml_audio_private_data *p_aml_audio =
-					snd_soc_card_get_drvdata(card);
-			struct aml_card_info *p_cardinfo =
-				p_aml_audio->cardinfo;
 
-			/*In RAW data, use PAO mode*/
-			aml_audin_update_bits(AUDIN_FIFO1_CTRL,
-				(0x7 << AUDIN_FIFO_DIN_SEL),
-				(PAO_IN << AUDIN_FIFO_DIN_SEL));
-			/*spdif-in data fromat:(23:0)*/
-			aml_audin_write(AUDIN_FIFO1_CTRL1, 0x8);
-			if (p_aml_audio
-				&& p_cardinfo
-				&& p_cardinfo->chipset_info.spdif_pao)
-				chipset_set_spdif_pao();
-		}
-		last_audio_type = audio_type;
-	}
 	return 0;
 }
 
@@ -1586,6 +1561,7 @@ int txlx_set_audin_source(int audin_src)
 		/* 1=Select HDMIRX SPDIF output as AUDIN source */
 		/* [1:0] i2sin_src_sel: */
 		/* 2=Select HDMIRX I2S output as AUDIN source */
+		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3, 2);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3 << 4,
 						1 << 4);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0xf << 8,
