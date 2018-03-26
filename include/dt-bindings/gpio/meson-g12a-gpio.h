@@ -113,4 +113,7 @@
 #define GPIOX_18	83
 #define GPIOX_19	84
 
+/* virtual GPIO bank for G12A Rev.B */
+#define GPIOV_0		85
+
 #endif /* _DT_BINDINGS_MESON_G12A_GPIO_H */

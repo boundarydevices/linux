@@ -99,6 +99,7 @@ static const struct pinctrl_pin_desc meson_g12a_periphs_pins[] = {
 	MESON_PIN(GPIOX_17),
 	MESON_PIN(GPIOX_18),
 	MESON_PIN(GPIOX_19),
+	MESON_PIN(GPIOV_0),
 };
 
 static const struct pinctrl_pin_desc meson_g12a_aobus_pins[] = {
@@ -158,6 +159,7 @@ static const unsigned int sdio_d2_pins[] = {GPIOX_2};
 static const unsigned int sdio_d3_pins[] = {GPIOX_3};
 static const unsigned int sdio_clk_pins[] = {GPIOX_4};
 static const unsigned int sdio_cmd_pins[] = {GPIOX_5};
+static const unsigned int sdio_dummy_pins[] = {GPIOV_0};
 
 /* sdcard */
 static const unsigned int sdcard_d0_c_pins[] = {GPIOC_0};
@@ -542,6 +544,7 @@ static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GPIO_GROUP(GPIOX_17),
 	GPIO_GROUP(GPIOX_18),
 	GPIO_GROUP(GPIOX_19),
+	GPIO_GROUP(GPIOV_0),
 
 	/* bank BOOT */
 	GROUP(emmc_nand_d0,	1),
@@ -791,6 +794,9 @@ static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GROUP(tdmc_dout3_a,	2),
 	GROUP(mclk0_a,		1),
 	GROUP(mclk1_a,		2),
+
+	/* bank GPIOV */
+	GROUP(sdio_dummy,	1),
 };
 
 /* uart_ao_a */
@@ -975,6 +981,8 @@ static const char * const gpio_periphs_groups[] = {
 	"GPIOX_5", "GPIOX_6", "GPIOX_7", "GPIOX_8", "GPIOX_9",
 	"GPIOX_10", "GPIOX_11", "GPIOX_12", "GPIOX_13", "GPIOX_14",
 	"GPIOX_15", "GPIOX_16", "GPIOX_17", "GPIOX_18", "GPIOX_19",
+
+	"GPIOV_0",
 };
 
 static const char * const emmc_groups[] = {
@@ -1000,7 +1008,7 @@ static const char * const nor_groups[] = {
 
 static const char * const sdio_groups[] = {
 	"sdio_d0", "sdio_d1", "sdio_d2", "sdio_d3",
-	"sdio_cmd", "sdio_clk",
+	"sdio_cmd", "sdio_clk", "sdio_dummy",
 };
 
 static const char * const sdcard_groups[] = {
@@ -1351,6 +1359,8 @@ static struct meson_bank meson_g12a_periphs_banks[] = {
 	5,  0,  5,  0,  16,  0,  17,  0,  18,  0),
 	BANK("X",    GPIOX_0,    GPIOX_19,   77,
 	2,  0,  2,  0,  6,  0,  7,  0,  8,  0),
+	BANK("V",    GPIOV_0,    GPIOV_0,   -1,
+	5,  17,  5,  17,  16,  17,  17,  17,  18,  17),
 };
 
 static struct meson_bank meson_g12a_aobus_banks[] = {
@@ -1371,6 +1381,7 @@ static struct meson_pmx_bank meson_g12a_periphs_pmx_banks[] = {
 	BANK_PMX("C",    GPIOC_0, GPIOC_7, 0x9, 0),
 	BANK_PMX("A",    GPIOA_0, GPIOA_15, 0xd, 0),
 	BANK_PMX("X",    GPIOX_0, GPIOX_19, 0x3, 0),
+	BANK_PMX("V",    GPIOV_0, GPIOV_0, 0x2, 24),
 };
 
 static struct meson_axg_pmx_data meson_g12a_periphs_pmx_banks_data = {
