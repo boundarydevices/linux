@@ -60,6 +60,10 @@ struct lcd_extern_config_s {
 	unsigned char i2c_addr;
 	unsigned char i2c_addr2;
 	unsigned char i2c_bus;
+	unsigned char i2c_sck_gpio;
+	unsigned char i2c_sck_gpio_off;
+	unsigned char i2c_sda_gpio;
+	unsigned char i2c_sda_gpio_off;
 	unsigned char spi_gpio_cs;
 	unsigned char spi_gpio_clk;
 	unsigned char spi_gpio_data;
@@ -70,6 +74,7 @@ struct lcd_extern_config_s {
 	unsigned char table_init_loaded; /* internal use */
 	unsigned char *table_init_on;
 	unsigned char *table_init_off;
+	unsigned int table_init_on_cnt;
 };
 
 /* global API */
@@ -78,8 +83,10 @@ struct aml_lcd_extern_driver_s {
 	struct lcd_extern_config_s config;
 	int (*reg_read)(unsigned char reg, unsigned char *buf);
 	int (*reg_write)(unsigned char reg, unsigned char value);
-	int (*power_on)(void);
-	int (*power_off)(void);
+	int (*power_on)(struct aml_lcd_extern_driver_s *ext_drv);
+	int (*power_off)(struct aml_lcd_extern_driver_s *ext_drv);
+	struct pinctrl *pin;
+	unsigned int pinmux_flag;
 };
 
 extern struct aml_lcd_extern_driver_s *aml_lcd_extern_get_driver(int index);

@@ -45,8 +45,11 @@
 			&gpio GPIOZ_10 GPIO_ACTIVE_HIGH
 			&gpio GPIOH_4 GPIO_ACTIVE_HIGH
 			&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+			/*&gpio GPIOH_2 GPIO_ACTIVE_HIGH*/
+			/*&gpio GPIOH_3 GPIO_ACTIVE_HIGH*/
 		lcd_cpu_gpio_names = "GPIOZ_13","GPIOZ_8",
 			"GPIOZ_9","GPIOZ_10","GPIOH_4","GPIOH_5";
+			/*"GPIOH_2","GPIOH_3"*/
 
 		lvds_0{
 			model_name = "1080p-vfreq";
@@ -453,6 +456,17 @@
 		dev_name = "lcd_extern";
 		status = "okay";
 		key_valid = <0>;
+		i2c_bus = "i2c_bus_c";
+		/*pinctrl-names="extern_pins";*/
+		/*pinctrl_names_uboot = "i2c_c";*/ /* i2c_a, i2c_b, i2c_c */
+		/*pinctrl-0=<&i2c_c_master>;*/
+		/*extern-gpios = <&gpio GPIOH_2 1*/
+				/*&gpio GPIOH_3 1>;*/
+		/*extern_gpio_names = "GPIOH_2","GPIOH_3";*/
+		/*i2c_gpio_off = <0 0 1 0>; */
+		/* I2C_SCK_gpio_index, I2C_SCK_gpio_off,
+		 * I2C_SDA_gpio_index, I2C_SCK_gpio_off
+		 */
 
 		extern_0{
 			index = <0>;

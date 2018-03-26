@@ -2632,6 +2632,7 @@ static void lcd_phy_config_update(unsigned int *para, int cnt)
 	struct lvds_config_s *lvdsconf;
 	int type;
 	unsigned int data32, vswing, preem, ext_pullup;
+	unsigned int rinner_table[] = {0xa, 0xa, 0x6, 0x4};
 
 	pconf = lcd_drv->lcd_config;
 	type = pconf->lcd_basic.lcd_type;
@@ -2642,9 +2643,9 @@ static void lcd_phy_config_update(unsigned int *para, int cnt)
 			if ((para[0] > 7) || (para[1] > 7) ||
 				(para[2] > 3) || (para[3] > 7)) {
 				LCDERR("%s: wrong value:\n", __func__);
-				pr_info("vswing=0x%x, preemphasis=0x%x\n",
+					pr_info("vswing=%d, preem=%d\n",
 					para[0], para[1]);
-				pr_info("clk_vswing=0x%x, clk_preem=0x%x\n",
+					pr_info("clk vswing=%d, preem=%d\n",
 					para[2], para[3]);
 				return;
 			}
@@ -2666,12 +2667,12 @@ static void lcd_phy_config_update(unsigned int *para, int cnt)
 			LCDPR("%s:\n", __func__);
 			pr_info("vswing=0x%x, preemphasis=0x%x\n",
 				para[0], para[1]);
-			pr_info("clk_vswing=0x%x, clk_preemphasis=0x%x\n",
+				pr_info("clk_vswing=0x%x, clk_preem=0x%x\n",
 				para[2], para[3]);
 		} else if (cnt == 2) {
 			if ((para[0] > 7) || (para[1] > 7)) {
 				LCDERR("%s: wrong value:\n", __func__);
-				pr_info("vswing=0x%x, preemphasis=0x%x\n",
+					pr_info("vswing=%d, preem=%d\n",
 					para[0], para[1]);
 				return;
 			}
@@ -2693,12 +2694,12 @@ static void lcd_phy_config_update(unsigned int *para, int cnt)
 		break;
 	case LCD_VBYONE:
 		if (cnt >= 2) {
-			ext_pullup = (para[0] >> 4) & 1;
+			ext_pullup = (para[0] >> 4) & 0x3;
 			vswing = para[0] & 0xf;
 			preem = para[1];
 			if ((vswing > 7) || (preem > 7)) {
 				LCDERR("%s: wrong value:\n", __func__);
-				pr_info("vswing=0x%x, preemphasis=0x%x\n",
+				pr_info("vswing=%d, preemphasis=%d\n",
 					vswing, preem);
 				return;
 			}
@@ -2707,14 +2708,18 @@ static void lcd_phy_config_update(unsigned int *para, int cnt)
 			pconf->lcd_control.vbyone_config->phy_preem = para[1];
 
 			data32 = lcd_hiu_read(HHI_DIF_CSI_PHY_CNTL1);
-			data32 &= ~((0x7 << 3) | (1 << 10));
-			data32 |= ((vswing << 3) | (ext_pullup << 10));
+			data32 &= ~((0x7 << 3) | (1 << 10) |
+				(1 << 15) | (1 << 16));
+			data32 |= (vswing << 3);
 			if (ext_pullup)
-				data32 &= ~(1 << 15);
+				data32 |= ((1 << 10) | (1 << 16));
+			else
+				data32 |= (1 << 15);
 			lcd_hiu_write(HHI_DIF_CSI_PHY_CNTL1, data32);
 			data32 =  lcd_hiu_read(HHI_DIF_CSI_PHY_CNTL2);
-			data32 &= ~(0x7 << 20);
-			data32 |= (preem << 20);
+			data32 &= ~((0x7 << 20) | (0xf << 8));
+			data32 |= ((preem << 20) |
+				(rinner_table[ext_pullup] << 8));
 			lcd_hiu_write(HHI_DIF_CSI_PHY_CNTL2, data32);
 
 			LCDPR("%s: vswing=0x%x, preemphasis=0x%x\n",

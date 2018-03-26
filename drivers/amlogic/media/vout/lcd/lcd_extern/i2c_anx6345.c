@@ -192,7 +192,7 @@ static int SP_TX_AUX_DPCDRead_Bytes(unsigned char addrh, unsigned char addrm,
 	return 0; /* aux ok */
 }
 
-static int lcd_extern_power_on(void)
+static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	unsigned int lane_num;
 	unsigned int link_rate;
@@ -203,6 +203,7 @@ static int lcd_extern_power_on(void)
 	unsigned int count = 0;
 	unsigned int count1 = 0;
 
+	lcd_extern_pinmux_set(ext_drv, 1);
 	lane_num = edp_tx_lane; /* 1 lane */
 	link_rate = VAL_EDP_TX_LINK_BW_SET_270; /* 2.7G */
 	bits = 0; /* 0x00: 6bit;  0x10:8bit */
@@ -344,9 +345,11 @@ static int lcd_extern_power_on(void)
 	return 0;
 }
 
-static int lcd_extern_power_off(void)
+static int lcd_extern_power_off(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret = 0;
+
+	lcd_extern_pinmux_set(ext_drv, 0);
 
 	return ret;
 }
@@ -439,6 +442,10 @@ int aml_lcd_extern_i2c_anx6345_probe(struct aml_lcd_extern_driver_s *ext_drv)
 	int ret = 0;
 
 	ext_config = &ext_drv->config;
+	if (ext_config->i2c_bus == LCD_EXTERN_I2C_BUS_INVALID) {
+		EXTERR("invalid i2c bus\n");
+		return -1;
+	}
 	for (i = 0; i < 2; i++)
 		memset(&i2c_info[i], 0, sizeof(i2c_info[i]));
 

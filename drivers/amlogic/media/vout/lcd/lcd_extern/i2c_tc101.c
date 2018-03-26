@@ -108,12 +108,13 @@ static int i2c_reg_write(unsigned char reg, unsigned char value)
 }
 #endif
 
-static int lcd_extern_power_on(void)
+static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	unsigned char tData[4];
 	int i = 0, ending_flag = 0;
 	int ret = 0;
 
+	lcd_extern_pinmux_set(ext_drv, 1);
 	while (ending_flag == 0) {
 		if ((i2c_init_table[i][0] == 0xff) &&
 			(i2c_init_table[i][1] == 0xff)) { /* special mark */
@@ -133,10 +134,11 @@ static int lcd_extern_power_on(void)
 	return ret;
 }
 
-static int lcd_extern_power_off(void)
+static int lcd_extern_power_off(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret = 0;
 
+	lcd_extern_pinmux_set(ext_drv, 0);
 	return ret;
 }
 
@@ -197,6 +199,10 @@ int aml_lcd_extern_i2c_tc101_probe(struct aml_lcd_extern_driver_s *ext_drv)
 	int ret = 0;
 
 	ext_config = &ext_drv->config;
+	if (ext_drv->config.i2c_bus == LCD_EXTERN_I2C_BUS_INVALID) {
+		EXTERR("invalid i2c bus\n");
+		return -1;
+	}
 	memset(&i2c_info, 0, sizeof(i2c_info));
 
 	adapter = i2c_get_adapter(ext_drv->config.i2c_bus);

@@ -26,9 +26,27 @@
 /* 20170905: fix coverity errors */
 /* 20180122: support txlx, optimize lcd noitfier event */
 /* 20180226: g12a support */
-#define LCD_DRV_VERSION    "20180226"
+#define LCD_DRV_VERSION    "20180321"
 
 #define VPP_OUT_SATURATE            (1 << 0)
+
+/* -------------------------- */
+/* lvsd phy parameters define */
+/* -------------------------- */
+#define LVDS_PHY_CNTL1_G9TV    0x606cca80
+#define LVDS_PHY_CNTL2_G9TV    0x0000006c
+#define LVDS_PHY_CNTL3_G9TV    0x00000800
+/* -------------------------- */
+
+/* -------------------------- */
+/* vbyone phy parameters define */
+/* -------------------------- */
+#define VX1_PHY_CNTL1_G9TV            0x6e0ec900
+#define VX1_PHY_CNTL1_G9TV_PULLUP     0x6e0f4d00
+#define VX1_PHY_CNTL2_G9TV            0x0000007c
+#define VX1_PHY_CNTL3_G9TV            0x00ff0800
+/* -------------------------- */
+
 
 /* ******** mipi_dsi_phy ******** */
 /* bit[15:11] */

@@ -560,7 +560,7 @@ int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 		unsigned char *buf, int key_len, int len)
 {
-	int i;
+	int i, j;
 	unsigned char *p;
 	unsigned int index;
 	int ret;
@@ -571,7 +571,6 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 		LCDPR("power_on step:\n");
 	i = 0;
 	while (i < LCD_PWR_STEP_MAX) {
-		pconf->lcd_power->power_on_step_max = i;
 		len += 5;
 		ret = lcd_unifykey_len_check(key_len, len);
 		if (ret < 0) {
@@ -582,15 +581,15 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 			LCDERR("unifykey power_on length is incorrect\n");
 			return -1;
 		}
-		pconf->lcd_power->power_on_step[i].type = *p;
-		p += LCD_UKEY_PWR_TYPE;
-		pconf->lcd_power->power_on_step[i].index = *p;
-		p += LCD_UKEY_PWR_INDEX;
-		pconf->lcd_power->power_on_step[i].value = *p;
-		p += LCD_UKEY_PWR_VAL;
+		pconf->lcd_power->power_on_step[i].type =
+			*(p + LCD_UKEY_PWR_TYPE + 5*i);
+		pconf->lcd_power->power_on_step[i].index =
+			*(p + LCD_UKEY_PWR_INDEX + 5*i);
+		pconf->lcd_power->power_on_step[i].value =
+			*(p + LCD_UKEY_PWR_VAL + 5*i);
 		pconf->lcd_power->power_on_step[i].delay =
-				(*p | ((*(p + 1)) << 8));
-		p += LCD_UKEY_PWR_DELAY;
+			(*(p + LCD_UKEY_PWR_DELAY + 5*i) |
+			((*(p + LCD_UKEY_PWR_DELAY + 5*i + 1)) << 8));
 
 		/* gpio probe */
 		switch (pconf->lcd_power->power_on_step[i].type) {
@@ -609,40 +608,41 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 				pconf->lcd_power->power_on_step[i].value,
 				pconf->lcd_power->power_on_step[i].delay);
 		}
-		if (pconf->lcd_power->power_on_step[i].type <
+		if (pconf->lcd_power->power_on_step[i].type >=
 			LCD_POWER_TYPE_MAX)
-			i++;
+			break;
+		i++;
 	}
 
 	if (lcd_debug_print_flag)
 		LCDPR("power_off step:\n");
-	i = 0;
-	while (i < LCD_PWR_STEP_MAX) {
-		pconf->lcd_power->power_off_step_max = i;
+	p += (5*(i + 1));
+	j = 0;
+	while (j < LCD_PWR_STEP_MAX) {
 		len += 5;
 		ret = lcd_unifykey_len_check(key_len, len);
 		if (ret < 0) {
-			pconf->lcd_power->power_off_step[i].type = 0xff;
-			pconf->lcd_power->power_off_step[i].index = 0;
-			pconf->lcd_power->power_off_step[i].value = 0;
-			pconf->lcd_power->power_off_step[i].delay = 0;
+			pconf->lcd_power->power_off_step[j].type = 0xff;
+			pconf->lcd_power->power_off_step[j].index = 0;
+			pconf->lcd_power->power_off_step[j].value = 0;
+			pconf->lcd_power->power_off_step[j].delay = 0;
 			LCDERR("unifykey power_off length is incorrect\n");
 			return -1;
 		}
-		pconf->lcd_power->power_off_step[i].type = *p;
-		p += LCD_UKEY_PWR_TYPE;
-		pconf->lcd_power->power_off_step[i].index = *p;
-		p += LCD_UKEY_PWR_INDEX;
-		pconf->lcd_power->power_off_step[i].value = *p;
-		p += LCD_UKEY_PWR_VAL;
-		pconf->lcd_power->power_off_step[i].delay =
-				(*p | ((*(p + 1)) << 8));
-		p += LCD_UKEY_PWR_DELAY;
+		pconf->lcd_power->power_off_step[j].type =
+			*(p + LCD_UKEY_PWR_TYPE + 5*j);
+		pconf->lcd_power->power_off_step[j].index =
+			*(p + LCD_UKEY_PWR_INDEX + 5*j);
+		pconf->lcd_power->power_off_step[j].value =
+			*(p + LCD_UKEY_PWR_VAL + 5*j);
+		pconf->lcd_power->power_off_step[j].delay =
+				(*(p + LCD_UKEY_PWR_DELAY + 5*j) |
+				((*(p + LCD_UKEY_PWR_DELAY + 5*j + 1)) << 8));
 
 		/* gpio probe */
-		switch (pconf->lcd_power->power_off_step[i].type) {
+		switch (pconf->lcd_power->power_off_step[j].type) {
 		case LCD_POWER_TYPE_CPU:
-			index = pconf->lcd_power->power_off_step[i].index;
+			index = pconf->lcd_power->power_off_step[j].index;
 			if (index < LCD_CPU_GPIO_NUM_MAX)
 				lcd_cpu_gpio_probe(index);
 			break;
@@ -651,14 +651,15 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 		}
 		if (lcd_debug_print_flag) {
 			LCDPR("%d: type=%d, index=%d, value=%d, delay=%d\n",
-				i, pconf->lcd_power->power_off_step[i].type,
-				pconf->lcd_power->power_off_step[i].index,
-				pconf->lcd_power->power_off_step[i].value,
-				pconf->lcd_power->power_off_step[i].delay);
+				j, pconf->lcd_power->power_off_step[j].type,
+				pconf->lcd_power->power_off_step[j].index,
+				pconf->lcd_power->power_off_step[j].value,
+				pconf->lcd_power->power_off_step[j].delay);
 		}
-		if (pconf->lcd_power->power_off_step[i].type <
+		if (pconf->lcd_power->power_off_step[j].type >=
 			LCD_POWER_TYPE_MAX)
-			i++;
+			break;
+		j++;
 	}
 
 	return 0;

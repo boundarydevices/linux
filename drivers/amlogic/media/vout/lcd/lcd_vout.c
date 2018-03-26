@@ -257,12 +257,12 @@ static void lcd_power_ctrl(int status)
 			if (ext_drv) {
 				if (status) {
 					if (ext_drv->power_on)
-						ext_drv->power_on();
+						ext_drv->power_on(ext_drv);
 					else
 						LCDERR("no ext power on\n");
 				} else {
 					if (ext_drv->power_off)
-						ext_drv->power_off();
+						ext_drv->power_off(ext_drv);
 					else
 						LCDERR("no ext power off\n");
 				}

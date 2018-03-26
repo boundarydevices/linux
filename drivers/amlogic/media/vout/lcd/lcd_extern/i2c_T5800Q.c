@@ -181,18 +181,20 @@ static int lcd_extern_power_ctrl(int flag)
 	return ret;
 }
 
-static int lcd_extern_power_on(void)
+static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret;
 
+	lcd_extern_pinmux_set(ext_drv, 1);
 	ret = lcd_extern_power_ctrl(1);
 	return ret;
 }
 
-static int lcd_extern_power_off(void)
+static int lcd_extern_power_off(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret;
 
+	lcd_extern_pinmux_set(ext_drv, 0);
 	ret = lcd_extern_power_ctrl(0);
 	return ret;
 }
@@ -344,6 +346,10 @@ int aml_lcd_extern_i2c_T5800Q_probe(struct aml_lcd_extern_driver_s *ext_drv)
 	int ret = 0;
 
 	ext_config = &ext_drv->config;
+	if (ext_drv->config.i2c_bus == LCD_EXTERN_I2C_BUS_INVALID) {
+		EXTERR("invalid i2c bus\n");
+		return -1;
+	}
 	memset(&i2c_info, 0, sizeof(i2c_info));
 
 	adapter = i2c_get_adapter(ext_drv->config.i2c_bus);
