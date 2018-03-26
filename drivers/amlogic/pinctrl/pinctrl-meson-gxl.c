@@ -596,6 +596,7 @@ static struct meson_pmx_group meson_gxl_periphs_groups[] = {
 	GROUP(spi_mosi_0,		4,	2),	/*z13*/
 	GROUP(spdif_in_z14,		3,	21),
 	GROUP(eth_link_led,		4,	25),
+	GROUP(eth_act_led,		4,	24),
 	GROUP(pwm_c,			3,	20),	/*z15*/
 	GROUP(dmic_in_z8,		3,	23),	/*z8*/
 	GROUP(dmic_clk_z9,		3,	22),	/*z9*/
@@ -857,6 +858,7 @@ static const char * const eth_groups[] = {
 	"eth_rxd0", "eth_rxd1", "eth_rxd2", "eth_rxd3",
 	"eth_rgmii_tx_clk", "eth_tx_en",
 	"eth_txd0", "eth_txd1", "eth_txd2", "eth_txd3",
+	"eth_link_led", "eth_act_led",
 };
 
 static const char * const jtag_groups[] = {
