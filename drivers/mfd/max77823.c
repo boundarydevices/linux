@@ -261,6 +261,8 @@ static struct irq_chip max77823_irq_chip = {
 	.irq_unmask		= max77823_irq_unmask,
 };
 
+static struct lock_class_key max77823_irq_lock_class;
+
 static irqreturn_t max77823_irq_thread(int irq, void *data)
 {
 	struct max77823_dev *max77823 = data;
@@ -378,9 +380,11 @@ static int max77823_irq_init(struct max77823_dev *max77823)
 	for (i = 0; i < MAX77823_IRQ_NR; i++) {
 		cur_irq = i + max77823->irq_base;
 		irq_set_chip_data(cur_irq, max77823);
+		irq_set_lockdep_class(cur_irq, &max77823_irq_lock_class);
 		irq_set_chip_and_handler(cur_irq, &max77823_irq_chip,
 					 handle_edge_irq);
 		irq_set_nested_thread(cur_irq, 1);
+		irq_clear_status_flags(cur_irq, IRQ_NOREQUEST);
 		irq_set_noprobe(cur_irq);
 	}
 
