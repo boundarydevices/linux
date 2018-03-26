@@ -103,7 +103,7 @@ obj-$(CONFIG_AMLOGIC_IRBLASTER) += irblaster/
 
 obj-$(CONFIG_AMLOGIC_IIO)       += iio/
 
-obj-$(CONFIG_AMLOGIC_DDR_WINDOW_TOOL)       += ddr_window/
+obj-$(CONFIG_AMLOGIC_DDR_TOOL)       += ddr_tool/
 
 obj-$(CONFIG_DRM_MESON)	+= drm/
 

@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/ddr_window/ddr_window.c
+ * drivers/amlogic/ddr_tool/ddr_window.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

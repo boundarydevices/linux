@@ -1,5 +1,0 @@
-config AMLOGIC_DDR_WINDOW_TOOL
-	tristate "Meson cpu ddr window test tool"
-	default n
-	help
-	  This add ddr window test tools

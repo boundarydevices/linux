@@ -950,4 +950,13 @@ dwc2_b {
 	};
 
 	}; /* end of soc*/
+
+	ddr_bandwidth {
+		compatible = "amlogic, ddr-bandwidth";
+		status = "okay";
+		reg = <0x0 0xc8006000 0x0 0x100
+		       0x0 0xc8000400 0x0 0x100>;
+		interrupts = <0 52 1>;
+		interrupt-names = "ddr_bandwidth";
+	};
 }; /* end of / */

@@ -1,0 +1,28 @@
+config AMLOGIC_DDR_TOOL
+	bool "Meson cpu ddr tool"
+	depends on AMLOGIC_DRIVER
+	default n
+	help
+	  This config add some debug tools for DDR, including test ddr
+	  bandwidth, ddr window and other configs.
+	  For more information.
+	  Please see folllowing configs
+
+config AMLOGIC_DDR_WINDOW_TOOL
+	bool "Meson ddr window tool"
+	default n
+	depends on AMLOGIC_DDR_TOOL
+	help
+	  This config enables test for ddr window.
+	  This driver acts as a kernel agent which set different ddr window
+	  register value from user space, user space can generate large ddr
+	  loading to test each value are stable.
+
+config AMLOGIC_DDR_BANDWIDTH
+	bool "Meson ddr bandwidth"
+	default n
+	depends on AMLOGIC_DDR_TOOL
+	help
+	  This config enables ddr bandwidth measure.
+	  If open it, this driver will export interface to get ddr total
+	  bandwidth, it can be used for ddr DVFS/devfreq system.

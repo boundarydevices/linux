@@ -1406,5 +1406,13 @@
 		clock-names = "clkin0","clkin1","clkin2","clkin3";
 		status = "disabled";
 	};
+	ddr_bandwidth {
+		compatible = "amlogic, ddr-bandwidth";
+		status = "okay";
+		reg = <0x0 0xc8838000 0x0 0x100
+		       0x0 0xc8837000 0x0 0x100>;
+		interrupts = <0 52 1>;
+		interrupt-names = "ddr_bandwidth";
+	};
 };
 
