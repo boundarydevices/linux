@@ -2944,6 +2944,29 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 		if (buf[1] == 'h')
 			value = hdmitx_rd_reg(adr);
 		pr_info(HW "%s reg[%lx]=%lx\n", "HDMI", adr, value);
+	} else if (strncmp(tmpbuf, "prbs", 4) == 0) {
+		switch (hdev->chip_type) {
+		case MESON_CPU_ID_G12A:
+			for (i = 0; i < 4; i++) {
+				hd_write_reg(P_HHI_HDMI_PHY_CNTL1, 0x0390000f);
+				hd_write_reg(P_HHI_HDMI_PHY_CNTL1, 0x0390000e);
+				hd_write_reg(P_HHI_HDMI_PHY_CNTL1, 0x03904002);
+				hd_write_reg(P_HHI_HDMI_PHY_CNTL4, 0x0001efff
+					| (i << 20));
+				hd_write_reg(P_HHI_HDMI_PHY_CNTL1, 0xef904002);
+				mdelay(10);
+				if (i > 0)
+					pr_info("prbs D[%d]:%x\n", i - 1,
+						hd_read_reg
+						(P_HHI_HDMI_PHY_STATUS));
+				else
+					pr_info("prbs clk :%x\n", hd_read_reg
+						(P_HHI_HDMI_PHY_STATUS));
+			}
+			break;
+		default:
+			break;
+		}
 	}
 }
 
