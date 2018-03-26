@@ -672,6 +672,9 @@ static int ci_get_platdata(struct device *dev,
 		/* Get the vbus regulator */
 		platdata->reg_vbus = devm_regulator_get_optional(dev, "vbus");
 		if (PTR_ERR(platdata->reg_vbus) == -EPROBE_DEFER) {
+		} else if (PTR_ERR(platdata->reg_vbus) == -ENODEV) {
+			/* no vbus regulator is needed */
+			platdata->reg_vbus = NULL;
 		} else if (IS_ERR(platdata->reg_vbus)) {
 			dev_err(dev, "Getting regulator error: %ld\n",
 				PTR_ERR(platdata->reg_vbus));
