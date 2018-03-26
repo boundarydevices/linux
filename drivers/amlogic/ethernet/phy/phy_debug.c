@@ -548,6 +548,27 @@ static void am_net_adc_show(void)
 	}
 }
 
+static void am_net_eye_pattern_on(void)
+{
+	unsigned int value;
+
+	c_phy_dev->autoneg = AUTONEG_DISABLE;
+	phy_write(c_phy_dev, 0, 0x2100);
+	value = phy_read(c_phy_dev, 17);
+	pr_info("0x11 %x\n", value);
+	phy_write(c_phy_dev, 17, (value | 0x0004));
+}
+static void am_net_eye_pattern_off(void)
+{
+	unsigned int value;
+
+	c_phy_dev->autoneg = AUTONEG_ENABLE;
+	phy_write(c_phy_dev, 0, 0x1000);
+	value = phy_read(c_phy_dev, 17);
+	pr_info("0x11 %x\n", value);
+	phy_write(c_phy_dev, 17, (value & ~0x0004));
+}
+
 static ssize_t eth_phyreg_func(
 	struct class *class, struct class_attribute *attr,
 	const char *buf, size_t count)
@@ -610,6 +631,17 @@ static ssize_t eth_phyreg_func(
 			tstcntl_dump_phyreg();
 
 		am_close_tst_mode();
+		break;
+	case 'o':
+	case 'O':
+		if (argv[0][1] == 'n' || argv[0][1] == 'N') {
+			am_net_eye_pattern_on();
+			break;
+		}
+		if (argv[0][1] == 'f' || argv[0][1] == 'F') {
+			am_net_eye_pattern_off();
+			break;
+		}
 		break;
 	default:
 		goto end;

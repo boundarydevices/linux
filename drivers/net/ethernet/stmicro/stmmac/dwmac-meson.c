@@ -223,9 +223,9 @@ static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
 	/*use_phy_smi | use_phy_ip | co_clkin from eth_phy_top*/
 	writel(0x260, ETH_PHY_config_addr + ETH_PHY_CNTL2);
 
-	writel(0x74043, ETH_PHY_config_addr + ETH_PHY_CNTL1);
-	writel(0x34043, ETH_PHY_config_addr + ETH_PHY_CNTL1);
-	writel(0x74043, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(0x54147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(0x14147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(0x54147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
 	return 0;
 }
 
