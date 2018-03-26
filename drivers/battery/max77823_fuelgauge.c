@@ -2432,6 +2432,7 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 	if (IS_ERR(fuelgauge->psy_fg)) {
 		pr_err("%s: Failed to Register psy_fg\n", __func__);
 		ret = PTR_ERR(fuelgauge->psy_fg);
+		fuelgauge->psy_fg = NULL;
 		goto err_free;
 	}
 
@@ -2447,7 +2448,8 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 			        IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 				"fuelgauge-irq", fuelgauge);
 		if (ret) {
-			pr_err("%s: Failed to Request IRQ\n", __func__);
+			pr_err("%s: Failed to Request IRQ(%d) %d\n", __func__,
+					fuelgauge->fg_irq, ret);
 			goto err_supply_unreg;
 		}
 	}
@@ -2472,11 +2474,17 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 	return 0;
 
 err_irq:
-	if (fuelgauge->fg_irq)
+	if (fuelgauge->fg_irq) {
 		free_irq(fuelgauge->fg_irq, fuelgauge);
+		fuelgauge->fg_irq = 0;
+	}
 err_supply_unreg:
-	power_supply_unregister(fuelgauge->psy_fg);
+	if (fuelgauge->psy_fg) {
+		power_supply_unregister(fuelgauge->psy_fg);
+		fuelgauge->psy_fg = NULL;
+	}
 err_free:
+	platform_set_drvdata(pdev, NULL);
 	mutex_destroy(&fuelgauge->fg_lock);
 	kfree(pdata->fuelgauge_data);
 	kfree(fuelgauge);
@@ -2489,8 +2497,21 @@ static int max77823_fuelgauge_remove(struct platform_device *pdev)
 	struct max77823_fuelgauge_data *fuelgauge =
 		platform_get_drvdata(pdev);
 
-	if (fuelgauge->pdata->fuel_alert_soc >= 0)
-		wake_lock_destroy(&fuelgauge->fuel_alert_wake_lock);
+	if (fuelgauge) {
+		if (fuelgauge->pdata->fuel_alert_soc >= 0)
+			wake_lock_destroy(&fuelgauge->fuel_alert_wake_lock);
+		if (fuelgauge->fg_irq) {
+			free_irq(fuelgauge->fg_irq, fuelgauge);
+			fuelgauge->fg_irq = 0;
+		}
+		if (fuelgauge->psy_fg) {
+			power_supply_unregister(fuelgauge->psy_fg);
+			fuelgauge->psy_fg = NULL;
+		}
+		mutex_destroy(&fuelgauge->fg_lock);
+		kfree(fuelgauge->pdata);
+		kfree(fuelgauge);
+	}
 
 	return 0;
 }
