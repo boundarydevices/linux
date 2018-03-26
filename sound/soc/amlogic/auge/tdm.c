@@ -580,7 +580,12 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		// set lanes mask acordingly
-		lane_mask = setting->lane_mask_out;
+		if (p_tdm->chipinfo
+			&& p_tdm->chipinfo->oe_fn
+			&& p_tdm->setting.lane_oe_mask_out)
+			lane_mask = setting->lane_oe_mask_out;
+		else
+			lane_mask = setting->lane_mask_out;
 		for (i = 0; i < 4; i++) {
 			if (((1 << i) & lane_mask) && lanes) {
 				aml_tdm_set_channel_mask(p_tdm->actrl,
@@ -592,7 +597,12 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 		aml_tdm_set_lane_channel_swap(p_tdm->actrl,
 			stream, p_tdm->id, swap_val);
 	} else {
-		lane_mask = setting->lane_mask_in;
+		if (p_tdm->chipinfo
+			&& p_tdm->chipinfo->oe_fn
+			&& p_tdm->setting.lane_oe_mask_in)
+			lane_mask = setting->lane_oe_mask_in;
+		else
+			lane_mask = setting->lane_mask_in;
 
 		for (i = 0; i < 4; i++) {
 			if (i < lanes)
@@ -882,7 +892,7 @@ static int aml_dai_set_tdm_slot(struct snd_soc_dai *cpu_dai,
 				p_tdm->setting.lane_lb_mask_in
 					& p_tdm->setting.lane_oe_mask_in);
 
-		if (lanes_oe_in_cnt) {
+		if (lanes_oe_out_cnt) {
 			force_oe = p_tdm->setting.lane_oe_mask_out;
 			oe_val = p_tdm->setting.lane_oe_mask_out;
 		}
@@ -1166,16 +1176,16 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 		p_tdm->id,
 		p_tdm->i2s2hdmitx);
 
-	/* get tdm lanes info. if not, set to default 1 */
+	/* get tdm lanes info. if not, set to default 0 */
 	ret = of_parse_tdm_lane_slot_in(node,
 			&p_tdm->setting.lane_mask_in);
 	if (ret < 0)
-		p_tdm->setting.lane_mask_in = 0x1;
+		p_tdm->setting.lane_mask_in = 0x0;
 
 	ret = of_parse_tdm_lane_slot_out(node,
 			&p_tdm->setting.lane_mask_out);
 	if (ret < 0)
-		p_tdm->setting.lane_mask_out = 0x1;
+		p_tdm->setting.lane_mask_out = 0x0;
 
 	/* get tdm lanes oe info. if not, set to default 0 */
 	ret = of_parse_tdm_lane_oe_slot_in(node,
