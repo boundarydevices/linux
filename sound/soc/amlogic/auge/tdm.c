@@ -490,8 +490,9 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 
 	/* share buffer trigger */
-	if (p_tdm->chipinfo &&
-		p_tdm->chipinfo->same_src_fn) {
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		&& p_tdm->chipinfo
+		&& p_tdm->chipinfo->same_src_fn) {
 		if (p_tdm->samesource_sel >= 0)
 			sharebuffer_trigger(cmd, p_tdm->samesource_sel);
 	}
@@ -672,7 +673,8 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* share buffer trigger */
-	if (p_tdm->chipinfo
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		&& p_tdm->chipinfo
 		&& (p_tdm->chipinfo->same_src_fn)
 		&& (p_tdm->samesource_sel >= 0)) {
 		int mux = 0, ratio = 0;
@@ -700,8 +702,10 @@ static int aml_dai_tdm_hw_free(struct snd_pcm_substream *substream,
 			substream->stream, p_tdm->id, i, 0);
 
 	/* share buffer free */
-	if (p_tdm->chipinfo &&
-		p_tdm->chipinfo->same_src_fn && fr) {
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		&& p_tdm->chipinfo
+		&& p_tdm->chipinfo->same_src_fn
+		&& fr) {
 		if (p_tdm->samesource_sel >= 0)
 			sharebuffer_free(substream,
 				fr, p_tdm->samesource_sel);
