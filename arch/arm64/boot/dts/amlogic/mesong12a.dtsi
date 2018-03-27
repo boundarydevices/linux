@@ -369,7 +369,7 @@
 		status = "disable";
 		reg = <0x0 0xffe09080 0x0 0x20>;
 		phy-reg = <0xff646000>;
-		phy-reg-size = <0x4>;
+		phy-reg-size = <0x2000>;
 		usb2-phy-reg = <0xffe09000>;
 		usb2-phy-reg-size = <0x80>;
 		interrupts = <0 16 4>;

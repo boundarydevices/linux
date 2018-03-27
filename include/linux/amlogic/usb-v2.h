@@ -164,6 +164,10 @@ struct amlogic_usb_v2 {
 	void __iomem	*reset_regs;
 	void __iomem	*phy_cfg[4];
 	void __iomem	*phy3_cfg;
+	void __iomem	*phy3_cfg_r1;
+	void __iomem	*phy3_cfg_r2;
+	void __iomem	*phy3_cfg_r4;
+	void __iomem	*phy3_cfg_r5;
 	void __iomem	*usb2_phy_cfg;
 	u32 pll_setting[3];
 	/* Set VBus Power though GPIO */
@@ -176,5 +180,63 @@ struct amlogic_usb_v2 {
 	int suspend_flag;
 	struct clk		*clk;
 };
+
+union phy3_r1 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_tx1_term_offset:5;
+		unsigned phy_tx0_term_offset:5;
+		unsigned phy_rx1_eq:3;
+		unsigned phy_rx0_eq:3;
+		unsigned phy_los_level:5;
+		unsigned phy_los_bias:3;
+		unsigned phy_ref_clkdiv2:1;
+		unsigned phy_mpll_multiplier:7;
+	} b;
+};
+
+
+union phy3_r2 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned pcs_tx_deemph_gen2_6db:6;
+		unsigned pcs_tx_deemph_gen2_3p5db:6;
+		unsigned pcs_tx_deemph_gen1:6;
+		unsigned phy_tx_vboost_lvl:3;
+		unsigned reserved:11;
+	} b;
+};
+
+
+union phy3_r4 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_cr_write:1;
+		unsigned phy_cr_read:1;
+		unsigned phy_cr_data_in:16;
+		unsigned phy_cr_cap_data:1;
+		unsigned phy_cr_cap_addr:1;
+		unsigned reserved:12;
+	} b;
+};
+
+union phy3_r5 {
+	/** raw register data */
+	uint32_t d32;
+	/** register bits */
+	struct {
+		unsigned phy_cr_data_out:16;
+		unsigned phy_cr_ack:1;
+		unsigned phy_bs_out:1;
+		unsigned reserved:14;
+	} b;
+};
+
 
 #endif
