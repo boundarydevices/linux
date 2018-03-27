@@ -502,7 +502,7 @@
 
 	meson-fb {
 		compatible = "amlogic, meson-g12a";
-		memory-region = <&logo_reserved>;
+		/*memory-region = <&logo_reserved>;*/
 		dev_name = "meson-fb";
 		status = "okay";
 		interrupts = <0 3 1
@@ -517,7 +517,7 @@
 		display_size_default = <1920 1080 1920 2160 32>;
 		/*1920*1080*4*3 = 0x17BB000*/
 		pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
-		mem_alloc = <0>;
+		mem_alloc = <1>;
 		logo_addr = "0x3f800000";
 		clocks = <&clkc CLKID_VPU_CLKC_MUX>;
 		clock-names = "vpu_clkc";
