@@ -4402,13 +4402,24 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		struct vframe_s *vf = NULL;
 
 		while (1) {
-			vf = vf_peek(RECEIVER_NAME);
+			vf = video_vf_peek();
+
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+			if (is_dolby_vision_enable()
+				&& vf && is_dovi_frame(vf)) {
+				pr_info("vsync_isr_in, ignore the omx %d frames drop for dv frame\n",
+					omx_need_drop_frame_num);
+				omx_need_drop_frame_num = 0;
+				omx_drop_done = true;
+				break;
+			}
+#endif
 			if (vf) {
 				if (omx_need_drop_frame_num >= vf->omx_index) {
 					//pr_info("vsync drop omx_index %d\n",
 						//vf->omx_index);
-					vf = vf_get(RECEIVER_NAME);
-					vf_put(vf, RECEIVER_NAME);
+					vf = video_vf_get();
+					video_vf_put(vf);
 				} else {
 					omx_drop_done = true;
 					break;
@@ -6349,6 +6360,14 @@ static void set_omx_pts(u32 *p)
 
 		while (try_cnt--) {
 			vf = vf_peek(RECEIVER_NAME);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+			if (is_dolby_vision_enable()
+				&& vf && is_dovi_frame(vf)) {
+				pr_info("set_omx_pts ignore the omx %d frames drop for dv frame\n",
+					frame_num);
+				break;
+			}
+#endif
 			if (vf) {
 				if (frame_num >= vf->omx_index) {
 					vf = vf_get(RECEIVER_NAME);

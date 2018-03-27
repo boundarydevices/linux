@@ -3399,7 +3399,7 @@ static int dolby_vision_policy_process(
 	return mode_change;
 }
 
-static bool is_dovi_frame(struct vframe_s *vf)
+bool is_dovi_frame(struct vframe_s *vf)
 {
 	struct provider_aux_req_s req;
 	char *p;
@@ -3447,6 +3447,7 @@ static bool is_dovi_frame(struct vframe_s *vf)
 	}
 	return false;
 }
+EXPORT_SYMBOL(is_dovi_frame);
 
 #define signal_color_primaries ((vf->signal_type >> 16) & 0xff)
 #define signal_transfer_characteristic ((vf->signal_type >> 8) & 0xff)

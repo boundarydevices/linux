@@ -49,5 +49,6 @@ extern void tv_dolby_vision_el_info(void);
 extern int enable_rgb_to_yuv_matrix_for_dvll(
 	int32_t on, uint32_t *coeff_orig, uint32_t bits);
 
+extern bool is_dovi_frame(struct vframe_s *vf);
 
 #endif
