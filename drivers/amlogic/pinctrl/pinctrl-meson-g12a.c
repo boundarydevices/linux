@@ -14,6 +14,7 @@
 #include "pinconf-meson-g12a.h"
 
 static const struct pinctrl_pin_desc meson_g12a_periphs_pins[] = {
+	MESON_PIN(GPIOV_0),
 	MESON_PIN(GPIOZ_0),
 	MESON_PIN(GPIOZ_1),
 	MESON_PIN(GPIOZ_2),
@@ -99,7 +100,6 @@ static const struct pinctrl_pin_desc meson_g12a_periphs_pins[] = {
 	MESON_PIN(GPIOX_17),
 	MESON_PIN(GPIOX_18),
 	MESON_PIN(GPIOX_19),
-	MESON_PIN(GPIOV_0),
 };
 
 static const struct pinctrl_pin_desc meson_g12a_aobus_pins[] = {
@@ -459,6 +459,7 @@ static const unsigned int tdmc_dout2_z_pins[] = {GPIOZ_4};
 static const unsigned int tdmc_dout3_z_pins[] = {GPIOZ_5};
 
 static struct meson_pmx_group meson_g12a_periphs_groups[] = {
+	GPIO_GROUP(GPIOV_0),
 	GPIO_GROUP(GPIOZ_0),
 	GPIO_GROUP(GPIOZ_1),
 	GPIO_GROUP(GPIOZ_2),
@@ -544,7 +545,6 @@ static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GPIO_GROUP(GPIOX_17),
 	GPIO_GROUP(GPIOX_18),
 	GPIO_GROUP(GPIOX_19),
-	GPIO_GROUP(GPIOV_0),
 
 	/* bank BOOT */
 	GROUP(emmc_nand_d0,	1),
@@ -956,6 +956,8 @@ static struct meson_pmx_group meson_g12a_aobus_groups[] = {
 };
 
 static const char * const gpio_periphs_groups[] = {
+	"GPIOV_0",
+
 	"GPIOZ_0", "GPIOZ_1", "GPIOZ_2", "GPIOZ_3", "GPIOZ_4",
 	"GPIOZ_5", "GPIOZ_6", "GPIOZ_7", "GPIOZ_8", "GPIOZ_9",
 	"GPIOZ_10", "GPIOZ_11", "GPIOZ_12", "GPIOZ_13", "GPIOZ_14",
@@ -981,8 +983,6 @@ static const char * const gpio_periphs_groups[] = {
 	"GPIOX_5", "GPIOX_6", "GPIOX_7", "GPIOX_8", "GPIOX_9",
 	"GPIOX_10", "GPIOX_11", "GPIOX_12", "GPIOX_13", "GPIOX_14",
 	"GPIOX_15", "GPIOX_16", "GPIOX_17", "GPIOX_18", "GPIOX_19",
-
-	"GPIOV_0",
 };
 
 static const char * const emmc_groups[] = {
@@ -1347,6 +1347,8 @@ static struct meson_pmx_func meson_g12a_aobus_functions[] = {
 
 static struct meson_bank meson_g12a_periphs_banks[] = {
 	/* name  first  last  irq  pullen  pull  dir  out  in */
+	BANK("V",    GPIOV_0,    GPIOV_0,   -1,
+	5,  17,  5,  17,  16,  17,  17,  17,  18,  17),
 	BANK("Z",    GPIOZ_0,    GPIOZ_15, 12,
 	4,  0,  4,  0,  12,  0,  13, 0,  14, 0),
 	BANK("H",    GPIOH_0,    GPIOH_8, 28,
@@ -1359,8 +1361,6 @@ static struct meson_bank meson_g12a_periphs_banks[] = {
 	5,  0,  5,  0,  16,  0,  17,  0,  18,  0),
 	BANK("X",    GPIOX_0,    GPIOX_19,   77,
 	2,  0,  2,  0,  6,  0,  7,  0,  8,  0),
-	BANK("V",    GPIOV_0,    GPIOV_0,   -1,
-	5,  17,  5,  17,  16,  17,  17,  17,  18,  17),
 };
 
 static struct meson_bank meson_g12a_aobus_banks[] = {
@@ -1375,13 +1375,13 @@ static struct meson_bank meson_g12a_aobus_banks[] = {
 
 static struct meson_pmx_bank meson_g12a_periphs_pmx_banks[] = {
 	/*	 name	 first		lask	   reg	offset  */
+	BANK_PMX("V",    GPIOV_0, GPIOV_0, 0x2, 24),
 	BANK_PMX("Z",    GPIOZ_0, GPIOZ_15, 0x6, 0),
 	BANK_PMX("H",    GPIOH_0, GPIOH_8, 0xb, 0),
 	BANK_PMX("BOOT", BOOT_0,  BOOT_15,  0x0, 0),
 	BANK_PMX("C",    GPIOC_0, GPIOC_7, 0x9, 0),
 	BANK_PMX("A",    GPIOA_0, GPIOA_15, 0xd, 0),
 	BANK_PMX("X",    GPIOX_0, GPIOX_19, 0x3, 0),
-	BANK_PMX("V",    GPIOV_0, GPIOV_0, 0x2, 24),
 };
 
 static struct meson_axg_pmx_data meson_g12a_periphs_pmx_banks_data = {
