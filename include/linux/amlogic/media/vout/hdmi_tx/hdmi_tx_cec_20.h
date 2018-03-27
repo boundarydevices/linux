@@ -327,5 +327,6 @@ enum cec_device_menu_state_e {
 
 int cec_ll_tx(const unsigned char *msg, unsigned char len);
 int cec_ll_rx(unsigned char *msg, unsigned char *len);
+extern void cec_enable_arc_pin(bool enable);
 #endif
 

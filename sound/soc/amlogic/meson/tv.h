@@ -68,6 +68,12 @@ struct aml_audio_private_data {
 
 	/* tv info */
 	struct aml_card_info *cardinfo;
+#ifdef CONFIG_AMLOGIC_AO_CEC
+	int arc_enable;
+#endif
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+	int atmos_edid_enable;
+#endif
 };
 
 struct codec_info {
