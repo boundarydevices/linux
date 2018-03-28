@@ -1459,6 +1459,10 @@ static unsigned char is_bypass(vframe_t *vf_in)
 		/*backup vtype,set type as progressive*/
 		vtype = vf_in->type;
 		vf_in->type &= (~VIDTYPE_TYPEMASK);
+		vf_in->type &= (~VIDTYPE_VIU_NV21);
+		vf_in->type |= VIDTYPE_VIU_SINGLE_PLANE;
+		vf_in->type |= VIDTYPE_VIU_FIELD;
+		vf_in->type |= VIDTYPE_PRE_INTERLACE;
 		vf_in->type |= VIDTYPE_VIU_422;
 		ret = get_current_vscale_skip_count(vf_in);
 		di_vscale_skip_count = (ret&0xff);
