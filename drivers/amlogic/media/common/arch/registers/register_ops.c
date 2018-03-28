@@ -27,8 +27,9 @@
 #include <linux/slab.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/utils/log.h>
-
 #include <linux/amlogic/media/registers/register_ops.h>
+#include <linux/amlogic/media/registers/register.h>
+#include <linux/amlogic/cpu_version.h>
 
 static struct chip_register_ops *amports_ops[BUS_MAX];
 
@@ -58,6 +59,14 @@ int codec_reg_read(u32 bus_type, unsigned int reg)
 
 	ops->r_cnt++;
 	CODEC_OPS_START(bus_type, reg, ops->r_cnt);
+
+	/* the AIU fifo short address has been changed on g12a */
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
+		if (bus_type == IO_AIU_BUS &&
+			reg >= AIU_AIFIFO_CTRL &&
+			reg <= AIU_MEM_AIFIFO_MEM_CTL)
+			reg -= 0x80;
+
 	if (ops && ops->read)
 		return ops->read(ops->ext_offset + reg);
 	CODEC_OPS_ERROR(bus_type, reg, ops->r_cnt);
@@ -71,6 +80,14 @@ void codec_reg_write(u32 bus_type, unsigned int reg, unsigned int val)
 
 	ops->w_cnt++;
 	CODEC_OPS_START(bus_type, reg, ops->w_cnt);
+
+	/* the AIU fifo short address has been changed on g12a */
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
+		if (bus_type == IO_AIU_BUS &&
+			reg >= AIU_AIFIFO_CTRL &&
+			reg <= AIU_MEM_AIFIFO_MEM_CTL)
+			reg -= 0x80;
+
 	if (ops && ops->write)
 		return ops->write(ops->ext_offset + reg, val);
 	CODEC_OPS_ERROR(bus_type, reg, ops->w_cnt);
