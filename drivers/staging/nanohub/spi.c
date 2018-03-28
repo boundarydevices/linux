@@ -467,7 +467,7 @@ static int nanohub_spi_probe(struct spi_device *spi)
 	spi_data->data.bl.cmd_update_finished = CMD_UPDATE_FINISHED;
 	nanohub_spi_bl_init(spi_data);
 
-	nanohub_reset(&spi_data->data);
+	nanohub_start(&spi_data->data);
 
 	return 0;
 }

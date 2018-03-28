@@ -112,6 +112,7 @@ void release_wakeup_ex(struct nanohub_data *data, int key, int lock_mode);
 int nanohub_wait_for_interrupt(struct nanohub_data *data);
 int nanohub_wakeup_eom(struct nanohub_data *data, bool repeat);
 struct iio_dev *nanohub_probe(struct device *dev, struct iio_dev *iio_dev);
+void nanohub_start(struct nanohub_data *data);
 int nanohub_reset(struct nanohub_data *data);
 int nanohub_remove(struct iio_dev *iio_dev);
 int nanohub_suspend(struct iio_dev *iio_dev);

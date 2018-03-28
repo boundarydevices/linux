@@ -118,6 +118,7 @@ static const struct file_operations nanohub_fileops = {
 };
 
 enum {
+	ST_RESET,
 	ST_IDLE,
 	ST_ERROR,
 	ST_RUNNING
@@ -1245,10 +1246,15 @@ static int nanohub_kthread(void *arg)
 
 	data->kthread_err_cnt = 0;
 	sched_setscheduler(current, SCHED_FIFO, &param);
-	nanohub_set_state(data, ST_IDLE);
+	nanohub_set_state(data, ST_RESET);
 
 	while (!kthread_should_stop()) {
 		switch (nanohub_get_state(data)) {
+		case ST_RESET:
+			nanohub_reset(data);
+			nanohub_wakeup_unlock(data);
+			nanohub_set_state(data, ST_IDLE);
+			break;
 		case ST_IDLE:
 			wait_event_interruptible(data->kthread_wait,
 						 atomic_read(&data->kthread_run)
@@ -1631,10 +1637,11 @@ struct iio_dev *nanohub_probe(struct device *dev, struct iio_dev *iio_dev)
 	atomic_set(&data->kthread_run, 0);
 	wakeup_source_init(&data->wakesrc_read, "nanohub_wakelock_read");
 
-	atomic_set(&data->lock_mode, LOCK_MODE_NONE);
+	/* hold lock until reset completes */
+	atomic_set(&data->lock_mode, LOCK_MODE_RESET);
 	atomic_set(&data->wakeup_cnt, 0);
-	atomic_set(&data->wakeup_lock_cnt, 0);
-	atomic_set(&data->wakeup_acquired, 0);
+	atomic_set(&data->wakeup_lock_cnt, 1);
+	atomic_set(&data->wakeup_acquired, KEY_WAKEUP_LOCK);
 	init_waitqueue_head(&data->wakeup_wait);
 
 	ret = nanohub_request_gpios(data);
@@ -1655,11 +1662,9 @@ struct iio_dev *nanohub_probe(struct device *dev, struct iio_dev *iio_dev)
 	if (ret)
 		goto fail_dev;
 
-	data->thread = kthread_run(nanohub_kthread, data, "nanohub");
-
-	udelay(30);
-
-	return iio_dev;
+	data->thread = kthread_create(nanohub_kthread, data, "nanohub");
+	if (!IS_ERR(data->thread))
+		return iio_dev;
 
 fail_dev:
 	iio_device_unregister(iio_dev);
@@ -1675,18 +1680,17 @@ fail_vma:
 	return ERR_PTR(ret);
 }
 
+void nanohub_start(struct nanohub_data *data)
+{
+	wake_up_process(data->thread);
+}
+
 int nanohub_reset(struct nanohub_data *data)
 {
 	const struct nanohub_platform_data *pdata = data->pdata;
 
 	gpio_set_value(pdata->nreset_gpio, 1);
 	usleep_range(650000, 700000);
-	enable_irq(data->irq1);
-	if (data->irq2)
-		enable_irq(data->irq2);
-	else
-		nanohub_unmask_interrupt(data, 2);
-
 	return 0;
 }
 
