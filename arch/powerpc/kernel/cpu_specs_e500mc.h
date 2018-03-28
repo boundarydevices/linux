@@ -31,6 +31,7 @@ static struct cpu_spec cpu_specs[] __initdata = {
 		.machine_check		= machine_check_e500mc,
 		.platform		= "ppce500mc",
 		.cpu_down_flush		= cpu_down_flush_e500mc,
+		.cpu_flush_caches       = __flush_caches_e500mc,
 	},
 #endif /* CONFIG_PPC32 */
 	{	/* e5500 */
@@ -51,6 +52,7 @@ static struct cpu_spec cpu_specs[] __initdata = {
 		.machine_check		= machine_check_e500mc,
 		.platform		= "ppce5500",
 		.cpu_down_flush		= cpu_down_flush_e5500,
+		.cpu_flush_caches       = __flush_caches_e5500,
 	},
 	{	/* e6500 */
 		.pvr_mask		= 0xffff0000,
@@ -71,5 +73,6 @@ static struct cpu_spec cpu_specs[] __initdata = {
 		.machine_check		= machine_check_e500mc,
 		.platform		= "ppce6500",
 		.cpu_down_flush		= cpu_down_flush_e6500,
+		.cpu_flush_caches       = __flush_caches_e6500,
 	},
 };

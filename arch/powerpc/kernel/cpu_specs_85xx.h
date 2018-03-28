@@ -40,6 +40,7 @@ static struct cpu_spec cpu_specs[] __initdata = {
 		.machine_check		= machine_check_e500,
 		.platform		= "ppc8548",
 		.cpu_down_flush		= cpu_down_flush_e500v2,
+		.cpu_flush_caches       = __flush_caches_e500v2,
 	},
 	{	/* default match */
 		.pvr_mask		= 0x00000000,
