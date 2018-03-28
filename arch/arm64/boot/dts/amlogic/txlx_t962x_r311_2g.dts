@@ -587,7 +587,7 @@
 		//memory-region = <&amvenc_avc_reserved>;
 		//memory-region = <&avc_cma_reserved>;
 		dev_name = "amvenc_avc";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 45 1>;
 		interrupt-names = "mailbox_2";
 	};
