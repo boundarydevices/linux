@@ -113,8 +113,6 @@
 				0 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
 				44250000>; /*pixel_clk(unit in Hz)*/
-			check_state = <0x04 /* check_reg */
-				3>; /* check_cnt */
 			mipi_attr = <4 /*lane_num*/
 				360 /*bit_rate_max(MHz)*/
 				0 /*factor(*100, default 0 for auto)*/
@@ -128,9 +126,11 @@
 				0>; /*phy_stop_wait(0=auto,1=standard,2=slow)*/
 				/* dsi_init: data_type, num, data... */
 			dsi_init_on = <
+				0xff 10
 				0xf0 3 0 1 30 /* reset high, delay 30ms */
 				0xf0 3 0 0 10 /* reset low, delay 10ms */
 				0xf0 3 0 1 30 /* reset high, delay 30ms */
+				0xfc 2 0x04 3 /* check_reg, check_cnt */
 				0xff 100   /* delay */
 				0xff 0xff>; /* ending flag */
 			dsi_init_off = <0xff 0xff>; /* ending flag */
@@ -162,8 +162,6 @@
 				0 /*clk_ss_level*/
 				1 /*clk_auto_generate*/
 				48715200>; /*pixel_clk(unit in Hz)*/
-			check_state = <0x04 /* check_reg */
-				3>; /* check_cnt */
 			mipi_attr = <4 /*lane_num*/
 				400 /*bit_rate_max(MHz)*/
 				0 /*factor(*100, default 0 for auto)*/
@@ -176,22 +174,25 @@
 				1 /*clk_lp_continuous(0=stop,1=continue)*/
 				0>; /*phy_stop_wait(0=auto,1=standard,2=slow)*/
 				/* dsi_init: data_type, num, data... */
-			dsi_init_on = <0xff 0xff>; /* ending flag */
+			dsi_init_on = <
+				0xff 10
+				0xf0 3 0 1 30 /* reset high, delay 30ms */
+				0xf0 3 0 0 10 /* reset low, delay 10ms */
+				0xf0 3 0 1 30 /* reset high, delay 30ms */
+				0xfc 2 0x04 3 /* check_reg, check_cnt */
+				0xff 0xff>; /* ending flag */
 			dsi_init_off = <0xff 0xff>; /* ending flag */
 				/* extern_init: 0xff for invalid */
 			extern_init = <2>;
 				/* power step: type,index,value,delay(ms) */
 			power_on_step = <
-					0 1 0 200
-					0 0 1 20
-					0 0 0 10
-					0 0 1 20
+					0 1 0 200 /* panel power on */
 					2 0 0 0
 					0xff 0 0 0>;
 			power_off_step = <
 					2 0 0 0
-					0 0 0 20
-					0 1 1 100
+					0 0 0 20  /* reset low */
+					0 1 1 100 /* panel power off */
 					0xff 0 0 0>;
 			backlight_index = <0>;
 		};
