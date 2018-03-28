@@ -1459,7 +1459,7 @@ void hdrbypass_func(enum hdr_module_sel module_sel)
 #endif
 
 	/*mtx parameters*/
-	hdr_mtx_param.mtx_only = MTX_ONLY;
+	hdr_mtx_param.mtx_only = HDR_ONLY;
 	for (i = 0; i < 15; i++) {
 		hdr_mtx_param.mtx_in[i] = bypass_coeff[i];
 		hdr_mtx_param.mtx_cgain[i] = bypass_coeff[i];
@@ -1528,7 +1528,7 @@ void hdr2sdr_func(enum hdr_module_sel module_sel)
 #endif
 
 	/*mtx parameters*/
-	hdr_mtx_param.mtx_only = MTX_ONLY;
+	hdr_mtx_param.mtx_only = HDR_ONLY;
 	for (i = 0; i < 15; i++) {
 		hdr_mtx_param.mtx_in[i] = ycbcr2rgb_ncl2020[i];
 		hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_709[i];
@@ -1592,6 +1592,8 @@ void sdr2hdr_func(enum hdr_module_sel module_sel)
 	hdr_lut_param.bitdepth = bit_depth;
 #endif
 
+	/*mtx parameters*/
+	hdr_mtx_param.mtx_only = HDR_ONLY;
 	for (i = 0; i < 15; i++) {
 		hdr_mtx_param.mtx_in[i] = ycbcr2rgb_709[i];
 		hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_ncl2020[i];
