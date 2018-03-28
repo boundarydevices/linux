@@ -32,6 +32,8 @@
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/sched/rt.h>
+#include <linux/sched/signal.h>
+#include <linux/sched/types.h>
 #include <linux/time.h>
 #include <linux/platform_data/nanohub.h>
 
@@ -306,45 +308,46 @@ static inline void nanohub_clear_err_cnt(struct nanohub_data *data)
 	data->kthread_err_cnt = data->wakeup_err_cnt = 0;
 }
 
+static long do_wait_intr_timeout(wait_queue_head_t *wq,
+			wait_queue_entry_t *wait, long tmo)
+{
+	long ret;
+
+	if (likely(list_empty(&wait->entry)))
+		__add_wait_queue_entry_tail(wq, wait);
+
+	set_current_state(TASK_INTERRUPTIBLE);
+	if (signal_pending(current))
+		return -ERESTARTSYS;
+
+	spin_unlock(&wq->lock);
+	ret = schedule_timeout(tmo);
+	spin_lock(&wq->lock);
+	return ret;
+}
+
 /* the following fragment is based on wait_event_* code from wait.h */
-#define wait_event_interruptible_timeout_locked(q, cond, tmo)		\
+#define wait_event_interruptible_timeout_locked(wq, cond, tmo)		\
 ({									\
 	long __ret = (tmo);						\
 	DEFINE_WAIT(__wait);						\
 	if (!(cond)) {							\
-		for (;;) {						\
-			__wait.flags &= ~WQ_FLAG_EXCLUSIVE;		\
-			if (list_empty(&__wait.task_list))		\
-				__add_wait_queue_tail(&(q), &__wait);	\
-			set_current_state(TASK_INTERRUPTIBLE);		\
-			if ((cond))					\
-				break;					\
-			if (signal_pending(current)) {			\
-				__ret = -ERESTARTSYS;			\
-				break;					\
-			}						\
-			spin_unlock(&(q).lock);				\
-			__ret = schedule_timeout(__ret);		\
-			spin_lock(&(q).lock);				\
+		do {							\
+			__ret = do_wait_intr_timeout(&(wq), &__wait, __ret); \
 			if (!__ret) {					\
 				if ((cond))				\
 					__ret = 1;			\
 				break;					\
-			}						\
-		}							\
+			} else if (__ret < 0)				\
+				break;					\
+		} while (!(cond));					\
+		__remove_wait_queue(&(wq), &__wait);			\
 		__set_current_state(TASK_RUNNING);			\
-		if (!list_empty(&__wait.task_list))			\
-			list_del_init(&__wait.task_list);		\
-		else if (__ret == -ERESTARTSYS &&			\
-			 /*reimplementation of wait_abort_exclusive() */\
-			 waitqueue_active(&(q)))			\
-			__wake_up_locked_key(&(q), TASK_INTERRUPTIBLE,	\
-			NULL);						\
-	} else {							\
+	} else if (__ret == 0) {					\
 		__ret = 1;						\
 	}								\
 	__ret;								\
-})									\
+})
 
 int request_wakeup_ex(struct nanohub_data *data, long timeout_ms,
 		      int key, int lock_mode)
