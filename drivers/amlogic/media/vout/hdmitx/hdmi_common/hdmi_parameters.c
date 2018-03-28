@@ -1548,7 +1548,7 @@ struct hdmi_format_para *hdmi_get_fmt_name(char const *name, char const *attr)
 		sizeof(struct hdmi_format_para *))) {
 		para = all_fmt_paras[i];
 		memset(&para->ext_name[0], 0, sizeof(para->ext_name));
-		memcpy(&para->ext_name[0], name, strlen(name));
+		memcpy(&para->ext_name[0], name, sizeof(para->ext_name));
 		hdmi_parse_attr(para, name);
 		hdmi_parse_attr(para, attr);
 	} else {

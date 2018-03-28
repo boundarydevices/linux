@@ -205,13 +205,6 @@ void Edid_DecodeStandardTiming(struct hdmitx_info *info,
 }
 
 /* ----------------------------------------------------------- */
-void Edid_CompareTimingDescriptors(struct hdmitx_info *info,
-	unsigned char *Data)
-{
-}
-
-
-/* ----------------------------------------------------------- */
 void Edid_ParseCEADetailedTimingDescriptors(struct hdmitx_info *info,
 	unsigned char blk_mun, unsigned char BaseAddr,
 	unsigned char *buff)
@@ -219,7 +212,6 @@ void Edid_ParseCEADetailedTimingDescriptors(struct hdmitx_info *info,
 	unsigned char index_edid;
 
 	for (index_edid = 0; index_edid < blk_mun; index_edid++) {
-		Edid_CompareTimingDescriptors(info, &buff[BaseAddr]);
 		BaseAddr += 18;
 		/* there is not the TimingDescriptors */
 		if ((BaseAddr + 18) > 0x7d)
@@ -1058,7 +1050,7 @@ static int Edid_ParsingY420CMDBBlock(struct hdmitx_info *info,
 		info->bitmap_valid = 1;
 	}
 	while (pos < data_end) {
-		if (i < VIC_MAX_NUM)
+		if (i < Y420CMDB_MAX)
 			info->y420cmdb_bitmap[i] = buf[pos];
 		pos++;
 		i++;

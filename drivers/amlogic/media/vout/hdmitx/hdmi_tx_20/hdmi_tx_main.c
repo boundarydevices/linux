@@ -394,10 +394,11 @@ static int set_disp_mode_auto(void)
 
 	/* get current vinfo */
 	info = hdmitx_get_current_vinfo();
+	if ((info == NULL) || (info->name == NULL))
+		return -1;
+
 	pr_info(SYS "get current mode: %s\n",
 		info ? info->name : "null");
-	if (info == NULL)
-		return -1;
 
 	if (!((strncmp(info->name, "480cvbs", 7) == 0) ||
 		(strncmp(info->name, "576cvbs", 7) == 0) ||
