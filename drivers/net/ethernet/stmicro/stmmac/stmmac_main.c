@@ -1726,17 +1726,9 @@ static int stmmac_hw_setup(struct net_device *dev, bool init_ptp)
 	}
 
 #ifdef CONFIG_DEBUG_FS
-#ifdef CONFIG_AMLOGIC_ETH_PRIVE
-	if (!priv->dbgfs_dir) {
-		ret = stmmac_init_fs(dev);
-		if (ret < 0)
-			pr_warn("%s: failed debugFS registration\n", __func__);
-	}
-#else
 	ret = stmmac_init_fs(dev);
 	if (ret < 0)
 		pr_warn("%s: failed debugFS registration\n", __func__);
-#endif
 #endif
 	/* Start the ball rolling... */
 	pr_debug("%s: DMA RX/TX processes started...\n", dev->name);
