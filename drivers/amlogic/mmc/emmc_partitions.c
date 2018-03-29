@@ -906,7 +906,7 @@ static int add_emmc_partition(struct gendisk *disk,
 			pr_info("[%s] %s: partition exceeds device capacity:\n",
 					__func__, disk->disk_name);
 
-			pr_info("\%20s  offset 0x%012llx, size 0x%012llx\n",
+			pr_info("%20s  offset 0x%012llx, size 0x%012llx\n",
 					pp->name, offset<<9, size<<9);
 
 			break;
@@ -984,7 +984,7 @@ static ssize_t emmc_part_table_get(struct class *class,
 		if (tmp_table[i].mask_flags == STORE_CODE) {
 			strncpy(part_table[part_num].name,
 					tmp_table[i].name,
-					MAX_MMC_PART_NAME_LEN);
+					MAX_PART_NAME_LEN);
 
 			part_table[part_num].size = tmp_table[i].size;
 			part_table[part_num].offset = tmp_table[i].offset;
@@ -1164,7 +1164,7 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
 	 *}
 	 */
 	pr_info("Exit %s %s.\n", __func__, (ret == 0)?"OK":"ERROR");
-	return ret;
+	return 0;
 
 out_class3:
 	class_remove_file(aml_store_class, &aml_part_table);
