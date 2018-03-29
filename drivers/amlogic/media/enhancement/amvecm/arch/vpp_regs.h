@@ -834,5 +834,7 @@
 #define VPP_POST2_MATRIX_PRE_OFFSET0_1	0x39ab
 #define VPP_POST2_MATRIX_PRE_OFFSET2	0x39ac
 #define VPP_POST2_MATRIX_EN_CTRL	    0x39ad
+
+#define ENCL_VIDEO_EN		0x1ca0
 #endif
 

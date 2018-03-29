@@ -3762,6 +3762,9 @@ void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask)
 	int cnt = 0;
 	unsigned long flags = 0;
 
+	if (!(READ_VPP_REG(ENCL_VIDEO_EN) & 0x1))
+		return;
+
 	spin_lock_irqsave(&vpp_lcd_gamma_lock, flags);
 
 	WRITE_VPP_REG_BITS(L_GAMMA_CNTL_PORT,
@@ -3805,6 +3808,9 @@ void amve_write_gamma_table(u16 *data, u32 rgb_mask)
 	int i;
 	int cnt = 0;
 	unsigned long flags = 0;
+
+	if (!(READ_VPP_REG(ENCL_VIDEO_EN) & 0x1))
+		return;
 
 	spin_lock_irqsave(&vpp_lcd_gamma_lock, flags);
 
