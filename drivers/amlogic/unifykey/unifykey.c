@@ -1023,9 +1023,10 @@ static ssize_t list_show(struct class *cla,
 	/* show all the keys*/
 	for (index = 0; index < key_cnt; index++) {
 		unifykey = unifykey_find_item_by_id(&(ukdev->uk_header), index);
-		n += sprintf(&buf[n], "%02d: %s, %s, %x\n",
-			index, unifykey->name,
-			keydev[unifykey->dev], unifykey->permit);
+		if (unifykey != NULL)
+			n += sprintf(&buf[n], "%02d: %s, %s, %x\n",
+				index, unifykey->name,
+				keydev[unifykey->dev], unifykey->permit);
 	}
 	buf[n] = 0;
 	return n;
@@ -1339,8 +1340,8 @@ static ssize_t write_store(struct class *cla,
 
 	}
 _out:
-	if (!IS_ERR_OR_NULL(keydata))
-		kfree(keydata);
+	kfree(keydata);
+	keydata = NULL;
 
 	return count;
 }

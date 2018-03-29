@@ -318,7 +318,7 @@ ssize_t efuse_user_attr_store(char *name, const char *buf, size_t count)
 
 	local_buf = kzalloc(sizeof(char)*(count), GFP_KERNEL);
 
-	memcpy(local_buf, buf, strlen(buf));
+	memcpy(local_buf, buf, count);
 
 	c = ":";
 	s = local_buf;
@@ -569,7 +569,9 @@ int get_efusekey_info(struct device_node *np)
 			pr_err("please config keyname item\n");
 			goto err;
 		}
-		strcpy(efusekey_infos[index].keyname, uname);
+		strncpy(efusekey_infos[index].keyname, uname,
+			strlen(uname) > sizeof(efusekey_infos[index].keyname) ?
+			sizeof(efusekey_infos[index].keyname):strlen(uname));
 		ret = of_property_read_u32(np_key, "offset",
 			&(efusekey_infos[index].offset));
 		if (ret) {

@@ -1,7 +1,9 @@
 #ifndef __LINUX_MEMORY_HOTPLUG_H
 #define __LINUX_MEMORY_HOTPLUG_H
 
+#ifndef CONFIG_AMLOGIC_MODIFY
 #include <linux/mmzone.h>
+#endif
 #include <linux/spinlock.h>
 #include <linux/notifier.h>
 #include <linux/bug.h>

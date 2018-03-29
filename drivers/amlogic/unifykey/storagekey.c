@@ -115,7 +115,7 @@ EXPORT_SYMBOL(storage_ops_write);
 int32_t amlkey_init_gen(uint8_t *seed, uint32_t len, int encrypt_type)
 {
 	int32_t ret = 0;
-	uint32_t actual_size;
+	uint32_t actual_size = 0;
 
 #ifndef OTHER_METHOD_CALL
 	ret = store_operation_init();
@@ -180,7 +180,7 @@ _out:
 int32_t amlkey_init_m8b(uint8_t *seed, uint32_t len, int encrypt_type)
 {
 	int32_t ret = 0;
-	uint32_t actual_size;
+	uint32_t actual_size = 0;
 
 #ifndef OTHER_METHOD_CALL
 	ret = store_operation_init();

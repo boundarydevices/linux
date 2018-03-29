@@ -109,12 +109,10 @@ static irqreturn_t mbox_handler(int irq, void *p)
 	void __iomem *payload = ctlr->payload_base;
 	int idx = chan->index;
 	struct mhu_data_buf *data;
-	unsigned int *pp;
 	u32 status = readl(mbox_base + RX_STATUS(idx));
 
 	if (status && irq == chan->rx_irq) {
 		data = chan->data;
-		pp = (unsigned int *)data->rx_buf;
 		if (!data)
 			return IRQ_NONE; /* spurious */
 		if (data->rx_buf)
