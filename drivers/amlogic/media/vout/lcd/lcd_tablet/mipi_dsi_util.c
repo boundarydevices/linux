@@ -1198,6 +1198,8 @@ int dsi_write_cmd(unsigned char *payload)
 #ifdef DSI_CMD_READ_VALID
 	int k = 0, n = 0;
 	unsigned char rd_data[100];
+	unsigned char str[200];
+	int len;
 #endif
 	struct dsi_cmd_request_s dsi_cmd_req;
 	unsigned char vc_id = MIPI_DSI_VIRTUAL_CHAN_ID;
@@ -1280,14 +1282,18 @@ int dsi_write_cmd(unsigned char *payload)
 					2 : dsi_cmd_req.pld_count;
 				n = dsi_generic_read_packet(&dsi_cmd_req,
 						&rd_data[0]);
-				LCDPR("generic read data");
+				len = 0;
 				for (k = 0; k < dsi_cmd_req.pld_count; k++) {
-					pr_info(" 0x%02x",
+					len += sprintf(str+len, " 0x%02x",
 						dsi_cmd_req.payload[k+2]);
 				}
-				for (k = 0; k < n; k++)
-					pr_info("0x%02x ", rd_data[k]);
-				pr_info("\n");
+				pr_info("generic read data%s:\n", str);
+				len = 0;
+				for (k = 0; k < n; k++) {
+					len += sprintf(str+len, "0x%02x ",
+						rd_data[k]);
+				}
+				pr_info("  %s\n", str);
 				break;
 			case DT_DCS_RD_0:
 				/* need BTA ack */
@@ -1296,9 +1302,12 @@ int dsi_write_cmd(unsigned char *payload)
 					&rd_data[0]);
 				pr_info("dcs read data 0x%02x:\n",
 					dsi_cmd_req.payload[2]);
-				for (k = 0; k < n; k++)
-					pr_info("0x%02x ", rd_data[k]);
-				pr_info("\n");
+				len = 0;
+				for (k = 0; k < n; k++) {
+					len += sprintf(str+len, "0x%02x ",
+						rd_data[k]);
+				}
+				pr_info("  %s\n", str);
 				break;
 #endif
 			default:

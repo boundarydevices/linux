@@ -531,7 +531,7 @@ struct dsi_vid_s {
 	unsigned int vact;
 };
 
-#define DSI_CMD_SIZE_MAX		2000
+#define DSI_CMD_SIZE_MAX		3000
 #define DSI_CMD_READ_VALID
 
 extern void mipi_dsi_print_info(struct lcd_config_s *pconf);

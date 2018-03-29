@@ -1367,7 +1367,7 @@ static int lcd_extern_add_driver(struct lcd_extern_config_s *extconf)
  * debug function
  * *********************************************************
  */
-#define EXT_LEN_MAX   200
+#define EXT_LEN_MAX   2000
 static void lcd_extern_init_table_dynamic_size_print(
 		struct lcd_extern_config_s *econf, int flag)
 {
