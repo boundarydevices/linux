@@ -841,6 +841,7 @@ vpp_set_filters2(u32 process_3d_type, u32 width_in,
 	u32 orig_aspect = 0;
 	u32 screen_aspect = 0;
 	bool skip_policy_check = true;
+	int cur_skip_count = 0;
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) {
 		if (likely(w_in >
@@ -1352,7 +1353,9 @@ RESTART:
 	 * if we need skip half resolution on source side for progressive
 	 * frames.
 	 */
-	if ((next_frame_par->vscale_skip_count < 4)
+	/* one more time to check skip for trigger h skip */
+	if ((next_frame_par->vscale_skip_count
+		< (MAX_VSKIP_COUNT + 1))
 		&& (!(vpp_flags & VPP_FLAG_VSCALE_DISABLE))) {
 		int skip = vpp_process_speed_check(
 			(next_frame_par->VPP_hd_end_lines_ -
@@ -1370,20 +1373,21 @@ RESTART:
 			vf);
 
 		if (skip == SPEED_CHECK_VSKIP) {
-			if (vpp_flags & VPP_FLAG_INTERLACE_IN)
-				next_frame_par->vscale_skip_count += 2;
-			else {
+			if (cur_skip_count < MAX_VSKIP_COUNT) {
+				if (vpp_flags & VPP_FLAG_INTERLACE_IN)
+					next_frame_par->vscale_skip_count += 2;
 #ifdef TV_3D_FUNCTION_OPEN
-				if ((next_frame_par->vpp_3d_mode ==
+				else if ((next_frame_par->vpp_3d_mode ==
 					VPP_3D_MODE_LA)
 					&& (process_3d_type & MODE_3D_ENABLE))
 					next_frame_par->vscale_skip_count += 2;
-				else
 #endif
+				else
 					next_frame_par->vscale_skip_count++;
-			}
-			goto RESTART;
-
+				cur_skip_count++;
+				goto RESTART;
+			} else
+				next_frame_par->hscale_skip_count = 1;
 		} else if (skip == SPEED_CHECK_HSKIP)
 			next_frame_par->hscale_skip_count = 1;
 	}

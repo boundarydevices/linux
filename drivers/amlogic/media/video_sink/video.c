@@ -2579,7 +2579,8 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	u32 r;
 	u32 vphase, vini_phase, vformatter;
 	u32 pat, loop;
-	static const u32 vpat[] = { 0, 0x8, 0x9, 0xa, 0xb, 0xc };
+	static const u32 vpat[MAX_VSKIP_COUNT + 1] = {
+		0, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
 	u32 u, v;
 	u32 type = vf->type, bit_mode = 0;
 	bool vf_with_el = false;
@@ -3131,7 +3132,8 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	u32 r;
 	u32 vphase, vini_phase;
 	u32 pat, loop;
-	static const u32 vpat[] = { 0, 0x8, 0x9, 0xa, 0xb, 0xc };
+	static const u32 vpat[MAX_VSKIP_COUNT + 1] = {
+		0, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
 	u32 u, v;
 	u32 type = vf->type, bit_mode = 0;
 
@@ -3432,8 +3434,8 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	if (type & VIDTYPE_VIU_FIELD) {
 		loop = 0;
 
-	if (type & VIDTYPE_INTERLACE)
-		pat = vpat[frame_par->vscale_skip_count >> 1];
+		if (type & VIDTYPE_INTERLACE)
+			pat = vpat[frame_par->vscale_skip_count >> 1];
 	} else if (type & VIDTYPE_MVC) {
 		loop = 0x11;
 		pat = 0x80;

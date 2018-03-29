@@ -37,6 +37,8 @@
 #define ASPECT_4_3      ((3<<8)/4)
 #define ASPECT_16_9     ((9<<8)/16)
 
+#define MAX_VSKIP_COUNT	8
+
 #define SPEED_CHECK_DONE	0
 #define SPEED_CHECK_HSKIP	1
 #define SPEED_CHECK_VSKIP	2
