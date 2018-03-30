@@ -355,6 +355,10 @@ void rx_modify_edid(unsigned char *buffer,
 			addition_size = (*addition & 0x1f) + 1;
 			cur_data = kmalloc(
 				addition_size + cur_size, GFP_KERNEL);
+			if (cur_data != 0) {
+				rx_pr("allocate cur_data memory failed\n");
+				return;
+			}
 			memcpy(cur_data, buffer + start_addr, cur_size);
 			/*add addition block property to local edid*/
 			rx_mix_block(cur_data, addition);
@@ -395,9 +399,8 @@ void rx_modify_edid(unsigned char *buffer,
 		/*copy current edid data*/
 		memcpy(buffer + start_addr_temp, cur_data,
 						addition_size);
-		if (cur_data != 0)
-			kfree(cur_data);
 	}
+	kfree(cur_data);
 }
 
 void rx_edid_update_audio_info(unsigned char *p_edid,
