@@ -149,7 +149,7 @@ int meson_clk_mux_determine_rate(struct clk_hw *hw,
 				pr_err("Fail! Can not set to %lu, cur rate: %lu\n",
 				   parent_req.rate, best);
 			else {
-			pr_info("success set parent %s rate to %lu\n",
+			pr_debug("success set parent %s rate to %lu\n",
 				clk_hw_get_name(best_parent),
 				clk_hw_get_rate(best_parent));
 			clk_prepare(best_parent->clk);
