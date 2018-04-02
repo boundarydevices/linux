@@ -142,6 +142,23 @@
 		};
 	};
 
+	gpioleds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		net_red {
+			label="net_red";
+			gpios=<&gpio GPIOA_14 GPIO_ACTIVE_LOW>;
+			default-state ="on";
+		};
+
+		net_green {
+			label="net_green";
+			gpios=<&gpio GPIOA_15 GPIO_ACTIVE_HIGH>;
+			default-state ="on";
+		};
+	};
+
 	cvbsout {
 		compatible = "amlogic, cvbsout-g12a";
 		dev_name = "cvbsout";
