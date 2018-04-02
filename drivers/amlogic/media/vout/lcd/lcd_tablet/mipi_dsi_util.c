@@ -126,14 +126,18 @@ static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
 		} else if (dsi_table[i] == 0xf0) {
 			n = (DSI_CMD_SIZE_INDEX + 1) +
 				dsi_table[i+DSI_CMD_SIZE_INDEX];
-			pr_info("  ");
+			len = 0;
 			for (j = 0; j < n; j++) {
-				if (j == 0)
-					pr_info("0x%02x,", dsi_table[i+j]);
-				else
-					pr_info("%d,", dsi_table[i+j]);
+				if (j == 0) {
+					len += sprintf(str+len, "0x%02x,",
+						dsi_table[i+j]);
+				} else {
+					len += sprintf(str+len, "%d,",
+						dsi_table[i+j]);
+				}
 			}
-			pr_info("\n");
+			if (len > 0)
+				pr_info("  %s\n", str);
 		} else if ((dsi_table[i] & 0xf) == 0x0) {
 			pr_info("dsi_init_%s wrong data_type: 0x%02x\n",
 				on_off ? "on" : "off", dsi_table[i]);
@@ -339,7 +343,6 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 				break;
 			}
 			i = i + (DSI_CMD_SIZE_INDEX + 1) + (val & 0xff);
-			i += 4;
 		} else if ((val & 0xf) == 0x0) {
 			LCDERR("get %s wrong data_type: 0x%02x\n",
 				propname, val);
