@@ -27,8 +27,7 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/uaccess.h>
-#include <linux/dma-contiguous.h>
-
+#include <linux/vmalloc.h>
 #include <linux/mmc/emmc_partitions.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/iomap.h>
@@ -41,21 +40,6 @@
 #define		EMMC_BLOCK_SIZE		(0x100)
 #define		MAX_EMMC_BLOCK_SIZE		(128*1024)
 
-static dev_t amlmmc_dtb_no;
-struct cdev amlmmc_dtb;
-struct device *dtb_dev;
-struct class *amlmmc_dtb_class;
-struct mmc_card *card_dtb;
-struct mmc_partitions_fmt *pt_fmt;
-
-/*
- * 2 copies dtb were stored in dtb area.
- * each is 256K.
- * timestamp&checksum are in the tail.
- * |<--------------DTB Area-------------->|
- * |<------DTB1------->|<------DTB2------>|
- */
-
 #define DTB_RESERVE_OFFSET (4 * SZ_1M)
 #define	DTB_BLK_SIZE		(0x200)
 #define	DTB_BLK_CNT			(512)
@@ -66,6 +50,7 @@ struct mmc_partitions_fmt *pt_fmt;
 #define MAX_TRANS_BLK		(256)
 #define	MAX_TRANS_SIZE		(MAX_TRANS_BLK * DTB_BLK_SIZE)
 #define stamp_after(a, b)   ((int)(b) - (int)(a)  < 0)
+
 struct aml_dtb_rsv {
 	u8 data[DTB_BLK_SIZE*DTB_BLK_CNT - 4*sizeof(unsigned int)];
 	unsigned int magic;
@@ -79,7 +64,14 @@ struct aml_dtb_info {
 	u8 valid[2];
 };
 
+static dev_t amlmmc_dtb_no;
+struct cdev amlmmc_dtb;
+struct device *dtb_dev;
+struct class *amlmmc_dtb_class;
+struct mmc_card *card_dtb;
 static struct aml_dtb_info dtb_infos = {{0, 0}, {0, 0} };
+struct mmc_partitions_fmt *pt_fmt;
+
 /* dtb read&write operation with backup updates */
 static unsigned int _calc_dtb_checksum(struct aml_dtb_rsv *dtb)
 {
@@ -92,6 +84,7 @@ static unsigned int _calc_dtb_checksum(struct aml_dtb_rsv *dtb)
 	buffer = (unsigned int *) dtb;
 	while (i < size)
 		checksum += buffer[i++];
+
 	return checksum;
 }
 
@@ -105,6 +98,32 @@ static int _verify_dtb_checksum(struct aml_dtb_rsv *dtb)
 	return !(checksum == dtb->checksum);
 }
 
+static int _dtb_write(struct mmc_card *mmc,
+				int blk, unsigned char *buf)
+{
+	int ret = 0;
+	unsigned char *src = NULL;
+	int bit = mmc->csd.read_blkbits;
+	int cnt = CONFIG_DTB_SIZE >> bit;
+
+	src = (unsigned char *)buf;
+
+	mmc_claim_host(mmc->host);
+	do {
+		ret = mmc_write_internal(mmc, blk, MAX_TRANS_BLK, src);
+		if (ret) {
+			pr_err("%s: save dtb error", __func__);
+			ret = -EFAULT;
+			break;
+		}
+		blk += MAX_TRANS_BLK;
+		cnt -= MAX_TRANS_BLK;
+		src = (unsigned char *)buf + MAX_TRANS_SIZE;
+	} while (cnt != 0);
+	mmc_release_host(mmc->host);
+
+	return ret;
+}
 
 static int _dtb_read(struct mmc_card *mmc,
 				int blk, unsigned char *buf)
@@ -139,17 +158,14 @@ static int _dtb_init(struct mmc_card *mmc)
 	int cpy = 1, valid = 0;
 	int bit = mmc->csd.read_blkbits;
 	int blk;
-	unsigned int pgcnt;
-	struct page *page = NULL;
 
-	pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
 
-	page = dma_alloc_from_contiguous(NULL,
-			pgcnt, get_order(CONFIG_DTB_SIZE));
-
-	if (!page)
+	/* malloc a buffer. */
+	dtb = kmalloc(CONFIG_DTB_SIZE, GFP_KERNEL);
+	if (dtb == NULL) {
+		/*pr_err("%s: malloc buf failed", __func__);*/
 		return -ENOMEM;
-	dtb = page_address(page);
+	}
 
 	/* read dtb2 1st, for compatibility without checksum. */
 	while (cpy >= 0) {
@@ -172,56 +188,56 @@ static int _dtb_init(struct mmc_card *mmc)
 	}
 	pr_info("total valid %d\n", valid);
 
-	dma_release_from_contiguous(NULL, page, pgcnt);
+	kfree(dtb);
 
 	return ret;
 }
 
-int amlmmc_dtb_write(struct mmc_card *card,
+int amlmmc_dtb_write(struct mmc_card *mmc,
 		unsigned char *buf, int len)
 {
-	int ret = 0, start_blk, size, blk_cnt;
-	int bit = card->csd.read_blkbits;
-	unsigned char *src = NULL;
-	unsigned char *buffer = NULL;
+	int ret = 0, blk;
+	int bit = mmc->csd.read_blkbits;
+	int cpy, valid;
+	struct aml_dtb_rsv *dtb = (struct aml_dtb_rsv *) buf;
+	struct aml_dtb_info *info = &dtb_infos;
 
 	if (len > CONFIG_DTB_SIZE) {
 		pr_err("%s dtb data len too much", __func__);
 		return -EFAULT;
 	}
-	start_blk = MMC_DTB_PART_OFFSET;
-	if (start_blk < 0) {
-		ret = -EINVAL;
-		return ret;
+	/* set info */
+	valid = info->valid[0] + info->valid[1];
+	if (valid == 0)
+		dtb->timestamp = 0;
+	else if (valid == 1) {
+		dtb->timestamp = 1 + info->stamp[info->valid[0]?0:1];
+	} else {
+		/* both are valid */
+		if (info->stamp[0] != info->stamp[1]) {
+			pr_info("timestamp are not same %d:%d\n",
+				info->stamp[0], info->stamp[1]);
+			dtb->timestamp = 1 +
+				stamp_after(info->stamp[1], info->stamp[0]) ?
+				info->stamp[1]:info->stamp[0];
+		} else
+			dtb->timestamp = 1 + info->stamp[0];
+	}
+	/*setting version and magic*/
+	dtb->version = 1; /* base version */
+	dtb->magic = 0x00447e41; /*A~D\0*/
+	dtb->checksum = _calc_dtb_checksum(dtb);
+	pr_info("stamp %d, checksum 0x%x, version %d, magic %s\n",
+		dtb->timestamp, dtb->checksum,
+		dtb->version, (char *)&dtb->magic);
+	/* write down... */
+	for (cpy = 0; cpy < DTB_COPIES; cpy++) {
+		blk = ((get_reserve_partition_off_from_tbl()
+					+ DTB_RESERVE_OFFSET) >> bit)
+			+ cpy * DTB_BLK_CNT;
+		ret |= _dtb_write(mmc, blk, buf);
 	}
 
-	buffer = kmalloc(DTB_CELL_SIZE, GFP_KERNEL);
-	if (buffer == NULL) {
-		pr_err("%s kmalloc dtb cell failed\n", __func__);
-		buffer = kmalloc(DTB_CELL_SIZE, GFP_DMA);
-		if (buffer == NULL) {
-			pr_err("%s retry kmalloc dtb cell failed\n", __func__);
-			return -ENOMEM;
-		}
-	}
-	start_blk >>= bit;
-	size = CONFIG_DTB_SIZE;
-	blk_cnt = size>>bit;
-	src = (unsigned char *)buffer;
-	while (blk_cnt != 0) {
-		memcpy(src, buf, DTB_CELL_SIZE);
-		ret = mmc_write_internal(card, start_blk, (DTB_CELL_SIZE>>bit), src);
-		if (ret) {
-			pr_err("%s: save dtb error", __func__);
-			ret = -EFAULT;
-			kfree(buffer);
-			return ret;
-		}
-		start_blk += (DTB_CELL_SIZE>>bit);
-		blk_cnt -= (DTB_CELL_SIZE>>bit);
-		buf += DTB_CELL_SIZE;
-	}
-	kfree(buffer);
 	return ret;
 }
 
@@ -290,8 +306,6 @@ ssize_t mmc_dtb_read(struct file *file,
 	unsigned char *dtb_ptr = NULL;
 	ssize_t read_size = 0;
 	int ret = 0;
-	unsigned int pgcnt;
-	struct page *page = NULL;
 
 	if (*ppos == CONFIG_DTB_SIZE)
 		return 0;
@@ -301,13 +315,9 @@ ssize_t mmc_dtb_read(struct file *file,
 		return -EFAULT;
 	}
 
-	pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
-
-	page = dma_alloc_from_contiguous(NULL,
-			pgcnt, get_order(CONFIG_DTB_SIZE));
-	if (!page)
+	dtb_ptr = vmalloc(CONFIG_DTB_SIZE);
+	if (dtb_ptr == NULL)
 		return -ENOMEM;
-	dtb_ptr = page_address(page);
 
 	mmc_claim_host(card_dtb->host);
 	ret = amlmmc_dtb_read(card_dtb,
@@ -326,7 +336,8 @@ ssize_t mmc_dtb_read(struct file *file,
 	*ppos += read_size;
 
 exit:
-	dma_release_from_contiguous(NULL, page, pgcnt);
+	mmc_release_host(card_dtb->host);
+	vfree(dtb_ptr);
 	return read_size;
 }
 
@@ -337,8 +348,6 @@ ssize_t mmc_dtb_write(struct file *file,
 	unsigned char *dtb_ptr = NULL;
 	ssize_t write_size = 0;
 	int ret = 0;
-	unsigned int pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
-	struct page *page = NULL;
 
 	if (*ppos == CONFIG_DTB_SIZE)
 		return 0;
@@ -348,11 +357,11 @@ ssize_t mmc_dtb_write(struct file *file,
 		return -EFAULT;
 	}
 
-	page = dma_alloc_from_contiguous(NULL,
-			pgcnt, get_order(CONFIG_DTB_SIZE));
-	if (!page)
+	dtb_ptr = kmalloc(CONFIG_DTB_SIZE, GFP_KERNEL);
+	if (dtb_ptr == NULL)
 		return -ENOMEM;
-	dtb_ptr = page_address(page);
+
+	mmc_claim_host(card_dtb->host);
 
 	if ((*ppos + count) > CONFIG_DTB_SIZE)
 		write_size = CONFIG_DTB_SIZE - *ppos;
@@ -371,7 +380,8 @@ ssize_t mmc_dtb_write(struct file *file,
 
 	*ppos += write_size;
 exit:
-	dma_release_from_contiguous(NULL, page, pgcnt);
+	mmc_release_host(card_dtb->host);
+	kfree(dtb_ptr);
 	return write_size;
 }
 
@@ -390,7 +400,6 @@ static const struct file_operations dtb_ops = {
 int amlmmc_dtb_init(struct mmc_card *card)
 {
 	int ret = 0;
-
 	card_dtb = card;
 	pr_info("%s: register dtb chardev", __func__);
 
@@ -528,6 +537,10 @@ unsigned int mmc_capacity(struct mmc_card *card)
 static int mmc_transfer(struct mmc_card *card, unsigned int dev_addr,
 		unsigned int blocks, void *buf, int write)
 {
+	u8 original_part_config;
+	u8 user_part_number = 0;
+	u8 cur_part_number;
+	bool switch_partition = false;
 	unsigned int size;
 	struct scatterlist sg;
 	struct mmc_request mrq = {0};
@@ -535,7 +548,21 @@ static int mmc_transfer(struct mmc_card *card, unsigned int dev_addr,
 	struct mmc_command stop = {0};
 	struct mmc_data data = {0};
 	int ret;
+	cur_part_number = card->ext_csd.part_config
+		&EXT_CSD_PART_CONFIG_ACC_MASK;
+	if (cur_part_number != user_part_number) {
+		switch_partition = true;
+		original_part_config = card->ext_csd.part_config;
+		cur_part_number = original_part_config
+			&(~EXT_CSD_PART_CONFIG_ACC_MASK);
+		ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+				EXT_CSD_PART_CONFIG, cur_part_number,
+				card->ext_csd.part_time);
+		if (ret)
+			return ret;
 
+		card->ext_csd.part_config = cur_part_number;
+	}
 	if ((dev_addr + blocks) >= mmc_capacity(card)) {
 		pr_info("[%s] %s range exceeds device capacity!\n",
 				__func__, write?"write":"read");
@@ -556,6 +583,15 @@ static int mmc_transfer(struct mmc_card *card, unsigned int dev_addr,
 	mmc_wait_for_req(card->host, &mrq);
 
 	ret = mmc_check_result(&mrq);
+	if (switch_partition == true) {
+		ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+				EXT_CSD_PART_CONFIG, original_part_config,
+				card->ext_csd.part_time);
+		if (ret)
+			return ret;
+		card->ext_csd.part_config = original_part_config;
+	}
+
 	return ret;
 }
 
