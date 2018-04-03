@@ -22,6 +22,12 @@
 
 #include <linux/amlogic/media/sound/spdif_info.h>
 
+extern unsigned int aml_spdif_ctrl_read(struct aml_audio_controller *actrl,
+	int stream, int index);
+extern void aml_spdif_ctrl_write(struct aml_audio_controller *actrl,
+	int stream, int index, int val);
+extern void aml_spdifin_chnum_en(struct aml_audio_controller *actrl,
+	int index, bool is_enable);
 extern void aml_spdif_enable(
 	struct aml_audio_controller *actrl,
 	int stream,
@@ -38,6 +44,8 @@ extern void aml_spdif_arb_config(struct aml_audio_controller *actrl);
 
 extern int aml_spdifin_status_check(
 	struct aml_audio_controller *actrl);
+extern void aml_spdifin_clr_irq(struct aml_audio_controller *actrl,
+	bool is_all_bits, int clr_bits_val);
 
 extern void aml_spdif_fifo_reset(
 	struct aml_audio_controller *actrl,
@@ -68,6 +76,8 @@ extern void spdifout_samesource_set(int spdif_index, int fifo_id,
 extern void spdifout_enable(int spdif_id, bool is_enable);
 
 extern int spdifin_get_sample_rate(void);
+
+extern int spdifin_get_ch_status0to31(void);
 
 extern int spdifin_get_audio_type(void);
 

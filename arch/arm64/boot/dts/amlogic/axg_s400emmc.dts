@@ -1016,6 +1016,20 @@
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
 		pinctrl-0 = <&spdifout &spdifin>;
+
+		/*
+		 * whether do asrc for pcm.
+		 * if raw data, asrc is disabled automatically
+		 * 0: "Disable",
+		 * 1: "Enable:32K",
+		 * 2: "Enable:44K",
+		 * 3: "Enable:48K",
+		 * 4: "Enable:88K",
+		 * 5: "Enable:96K",
+		 * 6: "Enable:176K",
+		 * 7: "Enable:192K",
+		 */
+		auto_asrc = <0>;
 		status = "okay";
 	};
 	aml_pdm: pdm {
@@ -1079,6 +1093,49 @@
 		datalb_chmask = <0x1>;
 
 		status = "okay";
+	};
+
+	audioresample: resample {
+		compatible = "amlogic, axg-resample";
+		clocks = <&clkc CLKID_MPLL3
+				&clkaudio CLKID_AUDIO_MCLK_F
+				&clkaudio CLKID_AUDIO_RESAMPLE_CTRL>;
+		clock-names = "resample_pll", "resample_src", "resample_clk";
+		/*same with toddr_src
+		 *	TDMIN_A,
+		 *	TDMIN_B,
+		 *	TDMIN_C,
+		 *	SPDIFIN,
+		 *	PDMIN,
+		 *	NONE,
+		 *	TDMIN_LB,
+		 *	LOOPBACK,
+		 */
+		resample_module = <3>;
+		status = "okay";
+	};
+	aml_pwrdet: pwrdet {
+		compatible = "amlogic, axg-power-detect";
+
+		interrupts = <GIC_SPI 91 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "pwrdet_irq";
+
+		/* pwrdet source sel
+		 * 7: loopback;
+		 * 6: tdmin_lb;
+		 * 5: reserved;
+		 * 4: pdmin;
+		 * 3: spdifin;
+		 * 2: tdmin_c;
+		 * 1: tdmin_b;
+		 * 0: tdmin_a;
+		 */
+		pwrdet_src = <4>;
+
+		hi_th = <0x70000>;
+		lo_th = <0x16000>;
+
+		status = "disabled";
 	};
 }; /* end of audiobus */
 

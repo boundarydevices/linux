@@ -16,15 +16,15 @@
  */
 #ifndef __AML_AUDIO_RESAMPLE_HW_H__
 #define __AML_AUDIO_RESAMPLE_HW_H__
-#include <linux/clk.h>
 
-#include "regs.h"
-#include "iomap.h"
-
-extern int resample_enable(int input_sr);
+extern void resample_enable(bool enable);
+extern int resample_init(int input_sr);
 extern int resample_disable(void);
 extern int resample_set_hw_param(int index);
 extern void resample_src_select(int src);
 extern void resample_format_set(int ch_num, int bits);
+
+extern int resample_ctrl_read(int idx);
+extern void resample_ctrl_write(int idx, int value);
 
 #endif

@@ -14,8 +14,11 @@
  * more details.
  *
  */
+#include <linux/clk.h>
 
 #include "resample_hw.h"
+#include "regs.h"
+#include "iomap.h"
 
 /*Cnt_ctrl = mclk/fs_out-1 ; fest 256fs */
 #define RESAMPLE_CNT_CONTROL 255
@@ -37,22 +40,39 @@ static u32 resample_coef_parameters_table[7][5] = {
 	{0x00800000, 0x0, 0x0, 0x0, 0x0},
 };
 
-int resample_enable(int input_sr)
+void resample_enable(bool enable)
+{
+	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+		0x1 << 31,
+		1 << 31);
+
+	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+		0x1 << 31,
+		0 << 31);
+
+	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+		0x1 << 28,
+		enable << 28);
+}
+
+int resample_init(int input_sr)
 {
 	u16 Avg_cnt_init = 0;
 	unsigned int clk_rate = 167000000;//clk81;
 
-	Avg_cnt_init = (u16)(clk_rate * 4 / input_sr);
+	if (input_sr)
+		Avg_cnt_init = (u16)(clk_rate * 4 / input_sr);
+	else
+		pr_err("unsupport input sample rate:%d\n", input_sr);
+
 	pr_info("clk_rate = %u, input_sr = %d, Avg_cnt_init = %u\n",
 		clk_rate, input_sr, Avg_cnt_init);
 
-	audiobus_write(EE_AUDIO_RESAMPLE_CTRL0, (1 << 31));
-	audiobus_write(EE_AUDIO_RESAMPLE_CTRL0, 0);
-	audiobus_write(EE_AUDIO_RESAMPLE_CTRL0,
-				(1 << 28) /* enable */
-				| (0 << 26) /* method0 */
-				| (RESAMPLE_CNT_CONTROL << 16)
-				| Avg_cnt_init);
+	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+		0x3 << 26 | 0x3ff << 16 | 0xffff << 0,
+		0x0 << 26 | /* method0 */
+		RESAMPLE_CNT_CONTROL << 16 |
+		Avg_cnt_init << 0);
 
 	return 0;
 }
@@ -90,4 +110,14 @@ void resample_format_set(int ch_num, int bits)
 {
 	audiobus_write(EE_AUDIO_RESAMPLE_CTRL3,
 		ch_num << 8 | (bits - 1) << 0);
+}
+
+int resample_ctrl_read(int idx)
+{
+	return audiobus_read(EE_AUDIO_RESAMPLE_CTRL0);
+}
+
+void resample_ctrl_write(int idx, int value)
+{
+	audiobus_write(EE_AUDIO_RESAMPLE_CTRL0, value);
 }

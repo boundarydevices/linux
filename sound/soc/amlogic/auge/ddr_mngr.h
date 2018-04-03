@@ -55,6 +55,16 @@ enum frddr_dest {
 	SPDIFOUT_B,
 };
 
+struct toddr_fmt {
+	unsigned int type;
+	unsigned int msb;
+	unsigned int lsb;
+	unsigned int endian;
+	unsigned int bit_depth;
+	unsigned int ch_num;
+	unsigned int rate;
+};
+
 /* to ddrs */
 int fetch_toddr_index_by_src(int toddr_src);
 struct toddr *fetch_toddr_by_src(int toddr_src);
@@ -69,9 +79,10 @@ unsigned int aml_toddr_get_position(struct toddr *to);
 void aml_toddr_select_src(struct toddr *to, enum toddr_src);
 void aml_toddr_enable(struct toddr *to, bool enable);
 void aml_toddr_set_fifos(struct toddr *to, unsigned int thresh);
-void aml_toddr_set_format(struct toddr *to,
-		unsigned int type, unsigned int msb, unsigned int lsb,
-		int ch_num, int bit_depth);
+void aml_toddr_set_format(struct toddr *to, struct toddr_fmt *fmt);
+void aml_toddr_insert_chanum(struct toddr *to);
+unsigned int aml_toddr_read(struct toddr *to);
+void aml_toddr_write(struct toddr *to, unsigned int val);
 
 /* resample */
 void aml_resample_enable(bool enable, int resample_module);

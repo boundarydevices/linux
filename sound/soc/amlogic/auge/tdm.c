@@ -451,6 +451,7 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 		enum toddr_src src;
 		unsigned int lsb = 32 - bit_depth;
 		unsigned int toddr_type;
+		struct toddr_fmt fmt;
 
 		switch (bit_depth) {
 		case 8:
@@ -484,10 +485,15 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 			return -EINVAL;
 		}
 
+		fmt.type      = toddr_type;
+		fmt.msb       = 31;
+		fmt.lsb       = lsb;
+		fmt.endian    = 0;
+		fmt.bit_depth = bit_depth;
+		fmt.ch_num    = runtime->channels;
+		fmt.rate      = runtime->rate;
 		aml_toddr_select_src(to, src);
-		aml_toddr_set_format(to, toddr_type, 31, lsb,
-			runtime->channels,
-			bit_depth);
+		aml_toddr_set_format(to, &fmt);
 		aml_toddr_set_fifos(to, 0x40);
 	}
 

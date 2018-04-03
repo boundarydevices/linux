@@ -433,6 +433,12 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 		aml_priv_to_props(priv, rtd->num);
 	unsigned int mclk = 0, mclk_fs = 0;
 	int i = 0, ret = 0;
+	int clk_dir = 0;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		clk_dir = SND_SOC_CLOCK_OUT;
+	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		clk_dir = SND_SOC_CLOCK_IN;
 
 	if (priv->mclk_fs)
 		mclk_fs = priv->mclk_fs;
@@ -444,16 +450,15 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 
 		for (i = 0; i < rtd->num_codecs; i++) {
 			codec_dai = rtd->codec_dais[i];
-
 			ret = snd_soc_dai_set_sysclk(codec_dai, 0, mclk,
-				SND_SOC_CLOCK_IN);
+				clk_dir);
 
 			if (ret && ret != -ENOTSUPP)
 				goto err;
 		}
 
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk,
-					     SND_SOC_CLOCK_OUT);
+					     clk_dir);
 		if (ret && ret != -ENOTSUPP)
 			goto err;
 

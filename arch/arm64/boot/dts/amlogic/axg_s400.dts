@@ -1158,6 +1158,20 @@
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
 		pinctrl-0 = <&spdifout &spdifin>;
+
+		/*
+		 * whether do asrc for pcm.
+		 * if raw data, asrc is disabled automatically
+		 * 0: "Disable",
+		 * 1: "Enable:32K",
+		 * 2: "Enable:44K",
+		 * 3: "Enable:48K",
+		 * 4: "Enable:88K",
+		 * 5: "Enable:96K",
+		 * 6: "Enable:176K",
+		 * 7: "Enable:192K",
+		 */
+		auto_asrc = <0>;
 		status = "okay";
 	};
 	aml_pdm: pdm {
@@ -1242,7 +1256,7 @@
 		 *	TDMIN_LB,
 		 *	LOOPBACK,
 		 */
-		resample_module = <4>;
+		resample_module = <3>;
 		status = "okay";
 	};
 	aml_pwrdet: pwrdet {
@@ -1266,7 +1280,7 @@
 		hi_th = <0x70000>;
 		lo_th = <0x16000>;
 
-		status = "okay";
+		status = "disabled";
 	};
 }; /* end of audiobus */
 
