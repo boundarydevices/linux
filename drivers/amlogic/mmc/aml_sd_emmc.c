@@ -120,7 +120,8 @@ static void find_base(struct amlsd_platform *pdata, u8 *is_base_index,
 static int aml_sd_emmc_cali_transfer(struct mmc_host *mmc,
 			u8 opcode, u8 *blk_test, u32 blksz)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	struct mmc_request mrq = {NULL};
 	struct mmc_command cmd = {0};
 	struct mmc_command stop = {0};
@@ -157,8 +158,8 @@ static int aml_sd_emmc_cali_transfer(struct mmc_host *mmc,
 
 static int aml_cali_auto(struct mmc_host *mmc, struct cali_data *c_data)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u8 i, max_cali_i = 0;
 	u32 max_cali_count = 0;
 	u32 cali_tmp[4] = {0};
@@ -192,6 +193,7 @@ static int aml_cali_auto(struct mmc_host *mmc, struct cali_data *c_data)
 			line_delay = 0;
 			line_delay = dly_tmp << (4 * line_x);
 			writel(line_delay, host->base + SD_EMMC_DELAY);
+			pdata->dly1 = line_delay;
 			pdata->caling = 1;
 			aml_sd_emmc_cali_transfer(mmc,
 					MMC_READ_MULTIPLE_BLOCK,
@@ -254,8 +256,8 @@ static int aml_cali_auto(struct mmc_host *mmc, struct cali_data *c_data)
 
 static int aml_cali_index(struct mmc_host *mmc, struct cali_data *c_data)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 line_delay = 0;
 	u8 calout_cmp_num = 0;
 	u32 base_index_val = 0;
@@ -292,6 +294,7 @@ static int aml_cali_index(struct mmc_host *mmc, struct cali_data *c_data)
 			line_delay = 0;
 			line_delay = dly_tmp << (4 * line_x);
 			writel(line_delay, host->base + SD_EMMC_DELAY);
+			pdata->dly1 = line_delay;
 			calout_cmp_num = 0;
 			pdata->c_ctrl.dly_tmp = dly_tmp;
 			/* cal_time */
@@ -365,8 +368,8 @@ static int aml_cali_index(struct mmc_host *mmc, struct cali_data *c_data)
 
 static int aml_cali_find(struct mmc_host *mmc, struct cali_data *c_data)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 line_delay;
 	struct sd_emmc_delay *line_dly = (struct sd_emmc_delay *)&line_delay;
 	u32 max_cal_result = 0;
@@ -459,14 +462,15 @@ static int aml_cali_find(struct mmc_host *mmc, struct cali_data *c_data)
 		mmc_hostname(mmc), line_delay, max_cal_result);
 	/* set delay count into reg*/
 	writel(line_delay, host->base + SD_EMMC_DELAY);
+	pdata->dly1 = line_delay;
 	return 0;
 }
 
 static int aml_sd_emmc_execute_calibration(struct mmc_host *mmc,
 			u32 *adj_win_start, u32 type)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 adjust;
 	struct sd_emmc_adjust *gadjust = (struct sd_emmc_adjust *)&adjust;
 	u32 vclk, cali_retry = 0;
@@ -570,7 +574,8 @@ _cali_retry:
 u32 aml_sd_emmc_tuning_transfer(struct mmc_host *mmc,
 	u32 opcode, const u8 *blk_pattern, u8 *blk_test, u32 blksz)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 vctrl = readl(host->base + SD_EMMC_CFG);
 	struct sd_emmc_config *ctrl = (struct sd_emmc_config *)&vctrl;
 	u32 tuning_err = 0;
@@ -601,7 +606,8 @@ static int aml_tuning_adj(struct mmc_host *mmc, u32 opcode,
 		struct aml_tuning_data *tuning_data,
 		int *best_start, int *best_size)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 adjust;
 	struct sd_emmc_adjust *gadjust = (struct sd_emmc_adjust *)&adjust;
 	u32 vclk;
@@ -696,8 +702,8 @@ int aml_sd_emmc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 					struct aml_tuning_data *tuning_data,
 					u32 adj_win_start)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 vclk;
 	struct sd_emmc_clock *clkc = (struct sd_emmc_clock *)&(vclk);
 	u32 adjust;
@@ -787,7 +793,8 @@ static int aml_sd_emmc_rxclk_find(struct mmc_host *mmc,
 		u8 *rx_tuning_result, u8 total_point,
 		int *best_win_start, int *best_win_size)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	int wrap_win_start = -1, wrap_win_size = 0;
 	int curr_win_start = -1, curr_win_size = 0;
 	u8 n;
@@ -861,8 +868,8 @@ static int aml_sd_emmc_execute_tuning_rxclk(struct mmc_host *mmc, u32 opcode,
 		struct aml_tuning_data *tuning_data)
 {
 	/* need finish later */
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 vclk;
 	struct sd_emmc_clock *clkc = (struct sd_emmc_clock *)&(vclk);
 	u32 vctrl;
@@ -952,8 +959,8 @@ static int aml_sd_emmc_execute_tuning_rxclk(struct mmc_host *mmc, u32 opcode,
 static int aml_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 {
 	int err = 0;
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 adjust;
 	struct sd_emmc_adjust *gadjust = (struct sd_emmc_adjust *)&adjust;
 	u32 vclk = readl(host->base + SD_EMMC_CLOCK);
@@ -1037,10 +1044,11 @@ static int aml_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 }
 
-static void aml_mmc_clk_switch_off(struct amlsd_host *host)
+static void aml_mmc_clk_switch_off(struct amlsd_platform *pdata)
 {
 	u32 vcfg = 0;
 	struct sd_emmc_config *conf = (struct sd_emmc_config *)&vcfg;
+	struct amlsd_host *host = pdata->host;
 
 	if (host->is_gated) {
 		pr_debug("direct return\n");
@@ -1056,13 +1064,13 @@ static void aml_mmc_clk_switch_off(struct amlsd_host *host)
 }
 
 void aml_mmc_clk_switch_on(
-	struct amlsd_host *host, int clk_div, int clk_src_sel)
+	struct amlsd_platform *pdata, int clk_div, int clk_src_sel)
 {
 	u32 vclkc = 0;
 	struct sd_emmc_clock *clkc = (struct sd_emmc_clock *)&vclkc;
 	u32 vcfg = 0;
 	struct sd_emmc_config *conf = (struct sd_emmc_config *)&vcfg;
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 
 	WARN_ON(!clk_div);
 
@@ -1081,50 +1089,96 @@ void aml_mmc_clk_switch_on(
 	host->is_gated = false;
 }
 
-static void aml_mmc_clk_switch(struct amlsd_host *host,
+static void aml_mmc_clk_switch(struct amlsd_platform *pdata,
 	int clk_div, int clk_src_sel)
 {
 	u32 vclkc = 0;
+	struct amlsd_host *host = pdata->host;
 	struct sd_emmc_clock *clkc = (struct sd_emmc_clock *)&vclkc;
 
 	vclkc = readl(host->base + SD_EMMC_CLOCK);
 	if (!host->is_gated && (clkc->div == clk_div)
-				&& (clkc->src == clk_src_sel)) {
+			&& (clkc->src == clk_src_sel))
 		return; /* if the same, return directly */
-	}
 
-	aml_mmc_clk_switch_off(host);
+	aml_mmc_clk_switch_off(pdata);
 	/* mdelay(1); */
 
 	WARN_ON(!clk_div);
 
-	aml_mmc_clk_switch_on(host, clk_div, clk_src_sel);
+	aml_mmc_clk_switch_on(pdata, clk_div, clk_src_sel);
 }
 
-void aml_sd_emmc_set_clkc(struct amlsd_host *host)
+void aml_sd_emmc_set_clkc(struct amlsd_platform *pdata)
 {
 	u32 vclkc = 0;
 	struct sd_emmc_clock *clkc = (struct sd_emmc_clock *)&vclkc;
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 
 	vclkc = readl(host->base + SD_EMMC_CLOCK);
-	if (!host->is_gated && (pdata->clkc == vclkc))
-		return;
 
 	if (host->is_gated)
-		aml_mmc_clk_switch(host, clkc->div, clkc->src);
+		aml_mmc_clk_switch(pdata, clkc->div, clkc->src);
 	else
 		writel(pdata->clkc, host->base + SD_EMMC_CLOCK);
 }
 
-static int meson_mmc_clk_set_rate(struct amlsd_host *host,
+#ifdef AML_MMC_TDMA
+void aml_sd_emmc_save_host_val(struct mmc_host *mmc)
+{
+	u32 adj, dly1, dly2, intf3;
+	u32 vconf = 0;
+	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
+	unsigned long clk_ios;
+
+	strcpy(host->cur_dev, pdata->pinname);
+	host->val_f = 0;
+
+	clk_ios = clk_get_rate(host->cfg_div_clk);
+	vconf = readl(host->base + SD_EMMC_CFG);
+	adj = readl(host->base + SD_EMMC_ADJUST_V3);
+	dly1 = readl(host->base + SD_EMMC_DELAY1_V3);
+	dly2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	intf3 = readl(host->base + SD_EMMC_INTF3);
+
+	if ((pconf->bus_width == pdata->bus_width)
+			&& (pconf->bl_len == pdata->bl_len)
+			&& (mmc->actual_clock == clk_ios)
+			&& (adj == pdata->adj)
+			&& (dly1 == pdata->dly1)
+			&& (dly2 == pdata->dly2)
+			&& (intf3 == pdata->intf3))
+		return;
+
+	clk_ios = mmc->actual_clock;
+	pconf->bus_width = pdata->bus_width;
+	pconf->bl_len = pdata->bl_len;
+	adj = pdata->adj;
+	dly1 = pdata->dly1;
+	dly2 = pdata->dly2;
+	intf3 = pdata->intf3;
+	if (aml_card_type_non_sdio(pdata))
+		pconf->stop_clk = 0;
+
+	clk_set_rate(host->cfg_div_clk, clk_ios);
+	writel(vconf, host->base + SD_EMMC_CFG);
+	writel(adj, host->base + SD_EMMC_ADJUST_V3);
+	writel(dly1, host->base + SD_EMMC_DELAY1_V3);
+	writel(dly2, host->base + SD_EMMC_DELAY2_V3);
+	writel(intf3, host->base + SD_EMMC_INTF3);
+}
+#endif
+
+static int meson_mmc_clk_set_rate(struct mmc_host *mmc,
 		unsigned long clk_ios)
 {
-	struct mmc_host *mmc = host->mmc;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	int ret = 0;
 #ifdef SD_EMMC_CLK_CTRL
 	u32 clk_rate, clk_div, clk_src_sel;
-	struct amlsd_platform *pdata = host->pdata;
 #else
 	u32 vcfg = 0;
 	struct sd_emmc_config *conf = (struct sd_emmc_config *)&vcfg;
@@ -1132,7 +1186,7 @@ static int meson_mmc_clk_set_rate(struct amlsd_host *host,
 
 #ifdef SD_EMMC_CLK_CTRL
 	if (clk_ios == 0) {
-		aml_mmc_clk_switch_off(host);
+		aml_mmc_clk_switch_off(pdata);
 		return ret;
 	}
 
@@ -1166,7 +1220,7 @@ static int meson_mmc_clk_set_rate(struct amlsd_host *host,
 	}
 	clk_div = (clk_rate / clk_ios) + (!!(clk_rate % clk_ios));
 
-	aml_mmc_clk_switch(host, clk_div, clk_src_sel);
+	aml_mmc_clk_switch(pdata, clk_div, clk_src_sel);
 	pdata->clkc = readl(host->base + SD_EMMC_CLOCK);
 
 	mmc->actual_clock = clk_rate / clk_div;
@@ -1195,6 +1249,7 @@ static int meson_mmc_clk_set_rate(struct amlsd_host *host,
 		vcfg = readl(host->base + SD_EMMC_CFG);
 		conf->stop_clk = 0;
 		writel(vcfg, host->base + SD_EMMC_CFG);
+		pdata->clkc = readl(host->base + SD_EMMC_CLOCK);
 	}
 #endif
 
@@ -1204,7 +1259,7 @@ static int meson_mmc_clk_set_rate(struct amlsd_host *host,
 int aml_emmc_clktree_init(struct amlsd_host *host)
 {
 	int i, ret = 0;
-	unsigned int f_min = UINT_MAX, mux_parent_count = 0;
+	unsigned int mux_parent_count = 0;
 	const char *mux_parent_names[MUX_CLK_NUM_PARENTS];
 	struct clk_init_data init;
 	char clk_name[32], name[16];
@@ -1237,17 +1292,8 @@ int aml_emmc_clktree_init(struct amlsd_host *host)
 		pr_debug("rate: %lu, name: %s\n",
 			host->mux_parent_rate[i], mux_parent_names[i]);
 		mux_parent_count++;
-		if (host->mux_parent_rate[i] < f_min)
-			f_min = host->mux_parent_rate[i];
 		ret = clk_prepare_enable(host->mux_parent[i]);
 	}
-
-	/* cacluate f_min based on input clocks, and max divider value */
-	if (f_min != UINT_MAX)
-		f_min = DIV_ROUND_UP(CLK_SRC_XTAL_RATE, CLK_DIV_MAX);
-	else
-		f_min = 400000;  /* default min: 400 KHz */
-	host->mmc->f_min = f_min;
 
 	/* create the mux */
 	snprintf(clk_name, sizeof(clk_name), "%s#mux", dev_name(host->dev));
@@ -1303,7 +1349,6 @@ static int meson_mmc_clk_init(struct amlsd_host *host)
 	struct sd_emmc_clock *pclkc = (struct sd_emmc_clock *)&vclkc;
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
-	struct amlsd_platform *pdata = host->pdata;
 
 	writel(0, host->base + SD_EMMC_CLOCK);
 	ret = aml_emmc_clktree_init(host);
@@ -1319,7 +1364,6 @@ static int meson_mmc_clk_init(struct amlsd_host *host)
 	pclkc->tx_phase = 0;
 	pclkc->always_on = 1;	  /* Keep clock always on */
 	writel(vclkc, host->base + SD_EMMC_CLOCK);
-	pdata->clkc = vclkc;
 
 	vconf = 0;
 	/* 1bit mode */
@@ -1340,9 +1384,9 @@ static int meson_mmc_clk_init(struct amlsd_host *host)
 	return ret;
 }
 
-static void aml_sd_emmc_tx_phase_set(struct amlsd_host *host)
+static void aml_sd_emmc_tx_phase_set(struct amlsd_platform *pdata)
 {
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 	u32 vclkc = 0;
 	struct sd_emmc_clock *pclkc = (struct sd_emmc_clock *)&vclkc;
 
@@ -1355,9 +1399,9 @@ static void aml_sd_emmc_tx_phase_set(struct amlsd_host *host)
 }
 
 static void aml_sd_emmc_set_timing(
-		struct amlsd_host *host, u32 timing)
+		struct amlsd_platform *pdata, u32 timing)
 {
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 	u32 vctrl;
 	struct sd_emmc_config *ctrl = (struct sd_emmc_config *)&vctrl;
 	u32 vclkc;
@@ -1400,11 +1444,11 @@ static void aml_sd_emmc_set_timing(
 
 /*setup bus width, 1bit, 4bits, 8bits*/
 void aml_sd_emmc_set_buswidth(
-		struct amlsd_host *host, u32 busw_ios)
+		struct amlsd_platform *pdata, u32 busw_ios)
 {
-	u32 vconf;
+	u32 vconf, width = 0;
+	struct amlsd_host *host = pdata->host;
 	struct sd_emmc_config *conf = (struct sd_emmc_config *)&vconf;
-	u32 width = 0;
 
 	switch (busw_ios) {
 	case MMC_BUS_WIDTH_1:
@@ -1422,19 +1466,19 @@ void aml_sd_emmc_set_buswidth(
 		break;
 	}
 
-	if (width != host->bus_width) {
+	if (width != pdata->bus_width) {
 		vconf = readl(host->base + SD_EMMC_CFG);
 		conf->bus_width = width;
 		writel(vconf, host->base + SD_EMMC_CFG);
-		host->bus_width = width;
+		pdata->bus_width = width;
 		pr_debug("Bus Width Ios %d\n", busw_ios);
 	}
 }
 
 /*call by mmc, power on, power off ...*/
-static void aml_sd_emmc_set_power(struct amlsd_host *host, u32 power_mode)
+static void aml_sd_emmc_set_power(struct amlsd_platform *pdata, u32 power_mode)
 {
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 
 	switch (power_mode) {
 	case MMC_POWER_ON:
@@ -1460,23 +1504,22 @@ static void aml_sd_emmc_set_power(struct amlsd_host *host, u32 power_mode)
 
 static void meson_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
 
 	if (!pdata->is_in)
 		return;
 
 	/*Set Power*/
-	aml_sd_emmc_set_power(host, ios->power_mode);
+	aml_sd_emmc_set_power(pdata, ios->power_mode);
 
 	/* Set Clock */
-	meson_mmc_clk_set_rate(host, ios->clock);
+	meson_mmc_clk_set_rate(mmc, ios->clock);
 
 	/* Set Bus Width */
-	aml_sd_emmc_set_buswidth(host, ios->bus_width);
+	aml_sd_emmc_set_buswidth(pdata, ios->bus_width);
 
 	/* Set Date Mode */
-	aml_sd_emmc_set_timing(host, ios->timing);
+	aml_sd_emmc_set_timing(pdata, ios->timing);
 
 	if (ios->chip_select == MMC_CS_HIGH)
 		aml_cs_high(mmc);
@@ -1505,6 +1548,7 @@ static void aml_sd_emmc_kunmap_atomic(
  * a linear buffer and an SG list  for amlogic,
  * We don't disable irq in this function
  */
+#ifndef AML_MMC_TDMA
 #ifdef CFG_SDEMMC_PIO
 static u32 aml_sd_emmc_pre_pio(struct amlsd_host *host,
 	struct mmc_request *mrq, struct sd_emmc_desc_info *desc)
@@ -1577,6 +1621,7 @@ err_exit:
 	return ret;
 }
 #endif /* CFG_SDEMMC_PIO */
+#endif
 
 static unsigned int aml_sd_emmc_pre_dma(struct amlsd_host *host,
 	struct mmc_request *mrq, struct sd_emmc_desc_info *desc)
@@ -1755,7 +1800,6 @@ int aml_sd_emmc_post_dma(struct amlsd_host *host,
 	unsigned long flags;
 	int i, ret = 0;
 
-
 	data = mrq->cmd->data;
 	if (data == NULL) {
 		WARN_ON(1);
@@ -1804,11 +1848,15 @@ static void aml_sd_emmc_check_sdio_irq(struct amlsd_host *host)
 }
 int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = NULL;
+	struct amlsd_host *host = NULL;
 	unsigned long flags;
 
+	pdata = mmc_priv(mmc);
+	host = pdata->host;
+#ifndef AML_MMC_TDMA
 	WARN_ON(host->mrq != mrq);
+#endif
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
 	host->xfer_step = XFER_FINISHED;
@@ -1816,10 +1864,14 @@ int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 	host->status = HOST_INVALID;
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
 	if (pdata->xfer_post)
-		pdata->xfer_post(mmc);
+		pdata->xfer_post(pdata);
 
 	aml_sd_emmc_check_sdio_irq(host);
 	mmc_request_done(host->mmc, mrq);
+#ifdef AML_MMC_TDMA
+	if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+		complete(&host->drv_completion);
+#endif
 
 	return 0;
 }
@@ -1864,8 +1916,8 @@ static void __attribute__((unused))
 
 static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	struct sd_emmc_desc_info *desc_cur;
 	struct cmd_cfg *des_cmd_cur = NULL;
 	u32 conf_flag = 0;
@@ -1927,6 +1979,7 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 		if (pconf->bl_len != log2i(mrq->data->blksz)) {
 			conf_flag |= 1 << 3;
 			pconf->bl_len = log2i(mrq->data->blksz);
+			pdata->bl_len = pconf->bl_len;
 		}
 	}
 	if (conf_flag)
@@ -2145,15 +2198,27 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 
 static void meson_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = NULL;
+	struct amlsd_host *host = NULL;
 	unsigned long flags;
 
 	WARN_ON(!mmc);
 	WARN_ON(!mrq);
 
-	if (aml_check_unsupport_cmd(mmc, mrq))
+	pdata = mmc_priv(mmc);
+	host = pdata->host;
+#ifdef AML_MMC_TDMA
+	if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+		wait_for_completion(&host->drv_completion);
+#endif
+
+	if (aml_check_unsupport_cmd(mmc, mrq)) {
+#ifdef AML_MMC_TDMA
+		if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+			complete(&host->drv_completion);
+#endif
 		return;
+	}
 
 	pr_debug("%s: starting CMD%u arg %08x flags %08x\n",
 			mmc_hostname(mmc), mrq->cmd->opcode,
@@ -2168,20 +2233,31 @@ static void meson_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	/*clear pinmux & set pinmux*/
 	if (pdata->xfer_pre)
-		pdata->xfer_pre(mmc);
+		pdata->xfer_pre(pdata);
+
+#ifdef AML_MMC_TDMA
+	if ((aml_card_type_sdio(pdata)
+				|| aml_card_type_non_sdio(pdata))
+			&& (host->data->chip_type == MMC_CHIP_G12A)) {
+		if (strcmp(host->cur_dev, pdata->pinname) || host->val_f)
+			aml_sd_emmc_save_host_val(mmc);
+	}
+#endif
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
 	host->mrq = mrq;
+	host->mmc = mmc;
+	host->xfer_step = XFER_START;
 	host->opcode = mrq->cmd->opcode;
 
 	meson_mmc_start_cmd(mmc, mrq);
-	host->xfer_step = XFER_START;
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
 }
 
 int meson_mmc_read_resp(struct mmc_host *mmc, struct mmc_command *cmd)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	struct sd_emmc_desc_info *desc_info =
 		(struct sd_emmc_desc_info *)host->desc_buf;
 	struct cmd_cfg *des_cmd_cur = NULL;
@@ -2283,10 +2359,10 @@ void mmc_cmd_LBA_show(struct mmc_host *mmc, struct mmc_request *mrq)
 static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 {
 	struct amlsd_host *host = dev_id;
+	struct mmc_host *mmc;
+	struct amlsd_platform *pdata;
 	struct mmc_request *mrq;
 	unsigned long flags;
-	struct amlsd_platform *pdata = host->pdata;
-	struct mmc_host *mmc;
 	u32 vstat = 0;
 	u32 virqc = 0;
 	u32 vstart = 0;
@@ -2319,6 +2395,7 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 	spin_lock_irqsave(&host->mrq_lock, flags);
 	mrq = host->mrq;
 	mmc = host->mmc;
+	pdata = mmc_priv(mmc);
 	vstart = readl(host->base + SD_EMMC_START);
 	if ((desc_start->busy == 1)
 		&& (aml_card_type_mmc(pdata) ||
@@ -2481,7 +2558,7 @@ void aml_sd_emmc_send_stop(struct amlsd_host *host)
 static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 {
 	struct amlsd_host *host = dev_id;
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata;
 	unsigned long flags;
 	struct mmc_request *mrq;
 
@@ -2495,6 +2572,7 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 	struct sd_emmc_clock *clkc = (struct sd_emmc_clock *)&(vclk);
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
+	pdata = mmc_priv(host->mmc);
 	mrq = host->mrq;
 	xfer_step = host->xfer_step;
 	status = host->status;
@@ -2724,8 +2802,8 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 
 static void aml_sd_emmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	unsigned long flags;
 	/* u32 vstat = 0; */
 	u32 vclkc = 0;
@@ -2765,8 +2843,7 @@ static void aml_sd_emmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 /*get readonly: 0 for rw, 1 for ro*/
 static int aml_sd_emmc_get_ro(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
 	u32 ro = 0;
 
 	if (pdata->ro)
@@ -2780,8 +2857,7 @@ static int aml_sd_emmc_get_ro(struct mmc_host *mmc)
  */
 static int meson_mmc_get_cd(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
 
 	return pdata->is_in;
 }
@@ -2794,8 +2870,8 @@ int aml_signal_voltage_switch(struct mmc_host *mmc, struct mmc_ios *ios)
 /* Check if the card is pulling dat[0:3] low */
 static int aml_sd_emmc_card_busy(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	unsigned int status = 0;
 	/* only check data3_0 gpio level?? */
 	u32 vstat;
@@ -2852,9 +2928,9 @@ static const struct mmc_host_ops meson_mmc_ops_v3 = {
 	.post_hs400_timming = aml_post_hs400_timming,
 };
 
-static void aml_reg_print(struct amlsd_host *host)
+static void aml_reg_print(struct amlsd_platform *pdata)
 {
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 
 	pr_debug("%s reg val:\n", pdata->pinname);
 	pr_debug("SD_EMMC_CLOCK = 0x%x\n", readl(host->base + SD_EMMC_CLOCK));
@@ -2869,20 +2945,17 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	struct amlsd_host *host;
 	struct amlsd_platform *pdata = NULL;
 	struct mmc_host *mmc;
-	int ret;
+	int ret = 0, clk = 0, cfg = 0;
+#ifdef AML_MMC_TDMA
+	int i = 0, k = 1;
+#endif
 
 	aml_mmc_ver_msg_show();
 
-	pdata = kzalloc(sizeof(struct amlsd_platform), GFP_KERNEL);
-	if (!pdata)
-		ret = -ENOMEM;
+	host = kzalloc(sizeof(struct amlsd_host), GFP_KERNEL);
+	if (!host)
+		ret = -ENODEV;
 
-	mmc = mmc_alloc_host(sizeof(struct amlsd_host), &pdev->dev);
-	if (!mmc)
-		return -ENOMEM;
-
-	host = mmc_priv(mmc);
-	host->mmc = mmc;
 	host->pdev = pdev;
 	host->dev = &pdev->dev;
 	dev_set_drvdata(&pdev->dev, host);
@@ -2891,19 +2964,19 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		of_device_get_match_data(&pdev->dev);
 	if (!host->data) {
 		ret = -EINVAL;
-		goto free_host;
+		goto fail_init_host;
 	}
 	if (host->data->chip_type >= MMC_CHIP_TXLX)
 		host->ctrl_ver = 3;
-	host->pinmux_base = ioremap(host->data->pinmux_base, 0x200);
+	host->pinmux_base = ioremap(host->data->pinmux_base, 0x400);
 	if (IS_ERR(host->pinmux_base)) {
 		ret = PTR_ERR(host->pinmux_base);
-		goto free_host;
+		goto fail_init_host;
 	}
 	host->clksrc_base = ioremap(host->data->clksrc_base, 0x300);
 	if (IS_ERR(host->clksrc_base)) {
 		ret = PTR_ERR(host->clksrc_base);
-		goto free_host;
+		goto fail_init_host;
 	}
 	host->mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res_mem = host->mem;
@@ -2911,15 +2984,16 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	host->base = devm_ioremap_resource(&pdev->dev, res_mem);
 	if (IS_ERR(host->base)) {
 		ret = PTR_ERR(host->base);
-		goto free_host;
+		goto fail_init_host;
 	}
 
 	host->irq = platform_get_irq(pdev, 0);
 	if (host->irq == 0) {
 		dev_err(&pdev->dev, "failed to get interrupt resource.\n");
 		ret = -EINVAL;
-		goto free_host;
+		goto fail_init_host;
 	}
+
 	if (host->ctrl_ver >= 3)
 		ret = devm_request_threaded_irq(&pdev->dev, host->irq,
 			meson_mmc_irq, meson_mmc_irq_thread_v3,
@@ -2929,20 +3003,25 @@ static int meson_mmc_probe(struct platform_device *pdev)
 			meson_mmc_irq, meson_mmc_irq_thread,
 			IRQF_SHARED, "meson-aml-mmc", host);
 	if (ret)
-		goto free_host;
+		goto fail_init_host;
 
 	host->blk_test = kzalloc((512 * CALI_BLK_CNT), GFP_KERNEL);
 	if (host->blk_test == NULL) {
 		ret = -ENOMEM;
-		goto free_host;
+		goto fail_init_host;
 	}
 
-	host->pdata = pdata;
 	spin_lock_init(&host->mrq_lock);
 	mutex_init(&host->pinmux_lock);
 	host->xfer_step = XFER_INIT;
 	host->init_flag = 1;
 	host->is_gated = false;
+	host->init_flag = 1;
+	host->version = AML_MMC_VERSION;
+	host->pinctrl = NULL;
+	host->status = HOST_INVALID;
+	host->is_tunning = 0;
+	host->is_timming = 0;
 
 	if (host->ctrl_ver >= 3)
 		ret = meson_mmc_clk_init_v3(host);
@@ -2951,16 +3030,54 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_cali;
 
-	ret = mmc_of_parse(mmc);
-	if (ret) {
-		dev_warn(&pdev->dev, "error parsing DT: %d\n", ret);
+	if (host->ctrl_ver >= 3)
+		clk = readl(host->base + SD_EMMC_CLOCK_V3);
+	else
+		clk = readl(host->base + SD_EMMC_CLOCK);
+	cfg = readl(host->base + SD_EMMC_CFG);
+
+	/* data bounce buffer */
+	host->bn_buf =
+		dma_alloc_coherent(host->dev, SD_EMMC_BOUNCE_REQ_SIZE,
+				   &host->bn_dma_buf, GFP_KERNEL);
+	if (host->bn_buf == NULL) {
+		dev_err(host->dev, "Unable to map allocate DMA bounce buffer.\n");
+		ret = -ENOMEM;
 		goto free_cali;
 	}
 
-	if (amlsd_get_platform_data(pdev, pdata, mmc, 0))
+#ifdef AML_MMC_TDMA
+	if ((host->irq == 49) && (host->data->chip_type == MMC_CHIP_G12A)) {
+		init_completion(&host->drv_completion);
+		host->drv_completion.done = 1;
+		k = 2;
+	}
+	for (i = 0; i < k; i++) {
+#endif
+	mmc = mmc_alloc_host(sizeof(struct amlsd_platform), &pdev->dev);
+	if (!mmc) {
+		ret = -ENOMEM;
+		goto free_cali;
+	}
+
+	ret = mmc_of_parse(mmc);
+	if (ret) {
+		dev_warn(&pdev->dev, "error parsing DT: %d\n", ret);
+		goto free_host;
+	}
+
+	pdata = mmc_priv(mmc);
+	memset(pdata, 0, sizeof(struct amlsd_platform));
+#ifdef AML_MMC_TDMA
+	ret = amlsd_get_platform_data(pdev, pdata, mmc, i);
+#else
+	ret = amlsd_get_platform_data(pdev, pdata, mmc, 0);
+#endif
+	if (ret)
 		mmc_free_host(mmc);
 
 	/* data desc buffer */
+#ifndef AML_MMC_TDMA
 #ifdef CFG_SDEMMC_PIO
 	pr_err(">>>>>>>>>>hostbase %p, dmode %s\n", host->base, pdata->dmode);
 	if (!strcmp(pdata->dmode, "pio")) {
@@ -2978,6 +3095,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		}
 	} else {
 #endif
+#endif
 		host->pre_cmd_op = aml_sd_emmc_pre_dma;
 		host->post_cmd_op = aml_sd_emmc_post_dma;
 		host->desc_buf =
@@ -2991,33 +3109,31 @@ static int meson_mmc_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto free_cali;
 		}
+#ifndef AML_MMC_TDMA
 #ifdef CFG_SDEMMC_PIO
 	}
 #endif
-	/* data bounce buffer */
-	host->bn_buf =
-		dma_alloc_coherent(host->dev, SD_EMMC_BOUNCE_REQ_SIZE,
-				   &host->bn_dma_buf, GFP_KERNEL);
-	if (host->bn_buf == NULL) {
-		dev_err(host->dev, "Unable to map allocate DMA bounce buffer.\n");
-		ret = -ENOMEM;
-		goto free_cali;
-	}
+#endif
 
 	if (aml_card_type_mmc(pdata)
 			&& (host->ctrl_ver < 3))
 		/**set emmc tx_phase regs here base on dts**/
-		aml_sd_emmc_tx_phase_set(host);
+		aml_sd_emmc_tx_phase_set(pdata);
 
 	dev_set_name(&mmc->class_dev, "%s", pdata->pinname);
 
+	/* save def clk & cfg */
+	pdata->clkc = clk;
+	pdata->ctrl = cfg;
+
+	if (pdata->caps & MMC_CAP_NONREMOVABLE)
+		pdata->is_in = 1;
+
 	if (pdata->caps & MMC_PM_KEEP_POWER)
 		mmc->pm_caps |= MMC_PM_KEEP_POWER;
-	host->init_flag = 1;
-	host->version = AML_MMC_VERSION;
-	host->pinctrl = NULL;
-	host->status = HOST_INVALID;
-	host->is_tunning = 0;
+
+	pdata->host = host;
+	pdata->mmc = mmc;
 	mmc->ios.clock = 400000;
 	mmc->ios.bus_width = MMC_BUS_WIDTH_1;
 #ifdef CFG_SDEMMC_PIO
@@ -3041,9 +3157,6 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	mmc->f_max = pdata->f_max;
 	mmc->max_current_180 = 300; /* 300 mA in 1.8V */
 	mmc->max_current_330 = 300; /* 300 mA in 3.3V */
-
-	if (mmc->caps & MMC_CAP_NONREMOVABLE)
-		pdata->is_in = 1;
 
 	if (aml_card_type_sdio(pdata)) { /* if sdio_wifi */
 		/*	mmc->host_rescan_disable = true;*/
@@ -3076,11 +3189,11 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		mmc->ops = &meson_mmc_ops_v3;
 	else
 		mmc->ops = &meson_mmc_ops;
-	aml_reg_print(host);
+	aml_reg_print(pdata);
 	ret = mmc_add_host(mmc);
 	if (ret) { /* error */
 		pr_err("Failed to add mmc host.\n");
-		goto free_cali;
+		goto free_host;
 	}
 	if (aml_card_type_sdio(pdata)) /* if sdio_wifi */
 		sdio_host = mmc;
@@ -3100,25 +3213,31 @@ static int meson_mmc_probe(struct platform_device *pdev)
 				"amlsd_cd", host);
 		if (ret) {
 			pr_err("Failed to request SD IN detect\n");
-			goto free_cali;
+			goto free_host;
 		}
 #else
-		INIT_DELAYED_WORK(&host->cd_work, meson_mmc_cd_detect);
-		schedule_delayed_work(&host->cd_work, 50);
+		INIT_DELAYED_WORK(&pdata->cd_detect, meson_mmc_cd_detect);
+		schedule_delayed_work(&pdata->cd_detect, 50);
 #endif
 	}
 #endif /* CONFIG_MESON_CPU_EMULATOR */
+#ifdef AML_MMC_TDMA
+	mdelay(800);
+	}
+#endif
 	pr_info("%s() : success!\n", __func__);
 	return 0;
 
+free_host:
+	mmc_free_host(mmc);
+	kfree(pdata);
 free_cali:
 #ifdef CFG_SDEMMC_PIO
 	kfree(host->desc_bn);
 #endif
 	kfree(host->blk_test);
-free_host:
-	mmc_free_host(mmc);
-	kfree(pdata);
+fail_init_host:
+	kfree(host);
 	pr_err("%s() fail!\n", __func__);
 	return ret;
 }
@@ -3150,6 +3269,7 @@ static int meson_mmc_remove(struct platform_device *pdev)
 	kfree(host->blk_test);
 	mmc_free_host(host->mmc);
 	kfree(pdata);
+	kfree(host);
 	return 0;
 }
 
@@ -3251,6 +3371,15 @@ static struct meson_mmc_data mmc_data_g12a = {
 	.ds_pin_poll = 0x3a,
 	.ds_pin_poll_en = 0x48,
 	.ds_pin_poll_bit = 13,
+	.sdmmc.init.core_phase = 3,
+	.sdmmc.init.tx_phase = 0,
+	.sdmmc.init.rx_phase = 0,
+	.sdmmc.hs.core_phase = 3,
+	.sdmmc.ddr.core_phase = 2,
+	.sdmmc.hs2.core_phase = 3,
+	.sdmmc.hs4.tx_delay = 0,
+	.sdmmc.sd_hs.core_phase = 2,
+	.sdmmc.sdr104.core_phase = 2,
 };
 
 static const struct of_device_id meson_mmc_of_match[] = {

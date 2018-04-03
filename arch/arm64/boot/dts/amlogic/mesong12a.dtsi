@@ -1314,9 +1314,15 @@
 		interrupts = <0 190 1>;
 
 		pinctrl-names = "sd_all_pins",
-			"sd_clk_cmd_pins";
-		pinctrl-0 = <&sd_all_pins>;
-		pinctrl-1 = <&sd_clk_cmd_pins>;
+			"sd_clk_cmd_pins",
+			"sdio_all_pins",
+			"sdio_clk_cmd_pins";
+		pinctrl-0 = <&sdio_x_clr_pins &sd_all_pins>;
+		pinctrl-1 = <&sdio_x_clr_pins &sd_clk_cmd_pins>;
+		pinctrl-2 = <&sd_clr_all_pins
+			 &sdio_x_en_pins &sdio_x_all_pins>;
+		pinctrl-3 = <&sd_clr_all_pins
+			 &sdio_x_en_pins &sdio_x_clk_cmd_pins>;
 
 		clocks = <&clkc CLKID_SD_EMMC_B>,
 			<&clkc CLKID_SD_EMMC_B_P0_COMP>,
@@ -1339,7 +1345,17 @@
 			gpio_cd = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
 			card_type = <5>;
 			/* 3:sdio device(ie:sdio-wifi),
-			 * 4:SD combo (IO+mem) card
+			 * 5:NON sdio device(means sd/mmc card)
+			 */
+		};
+
+		sdio {
+			pinname = "sdio";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			max_req_size = <0x20000>; /**128KB*/
+			card_type = <3>;
+			/* 3:sdio device(ie:sdio-wifi),
+			 * 5:NON sdio device(means sd/mmc card)
 			 */
 		};
 	};
@@ -1776,23 +1792,21 @@
 		};
 	};
 
-	sd_clk_cmd_pins:sd_clk_cmd_pins {
-		mux {
-			groups = "sdcard_cmd_c",
-				   "sdcard_clk_c";
-			function = "sdcard";
-			input-enable;
-			bias-pull-up;
-		};
-	};
 	/* sdemmc portB */
 	sd_clk_cmd_pins:sd_clk_cmd_pins {
 		mux {
-			groups = "sdcard_cmd_c",
-				   "sdcard_clk_c";
+			groups = "sdcard_cmd_c";
 			function = "sdcard";
 			input-enable;
 			bias-pull-up;
+			drive-strength = <3>;
+		};
+		mux1 {
+			groups = "sdcard_clk_c";
+			function = "sdcard";
+			bias-pull-up;
+			output-high;
+			drive-strength = <3>;
 		};
 	};
 
@@ -1802,13 +1816,34 @@
 				   "sdcard_d1_c",
 				   "sdcard_d2_c",
 				   "sdcard_d3_c",
-				   "sdcard_cmd_c",
-				   "sdcard_clk_c";
+				   "sdcard_cmd_c";
 			function = "sdcard";
 			input-enable;
 			bias-pull-up;
+			drive-strength = <3>;
+		};
+		mux1 {
+			groups = "sdcard_clk_c";
+			function = "sdcard";
+			bias-pull-up;
+			output-high;
+			drive-strength = <3>;
 		};
 	};
+
+	sd_clr_all_pins:sd_clr_all_pins {
+		mux {
+			groups = "GPIOC_0",
+				   "GPIOC_1",
+				   "GPIOC_2",
+				   "GPIOC_3",
+				   "GPIOC_4",
+				   "GPIOC_5";
+			function = "gpio_periphs";
+			output-high;
+		};
+	};
+
 	sd_1bit_pins:sd_1bit_pins {
 		mux {
 			groups = "sdcard_d0_c",
@@ -1837,7 +1872,7 @@
 			function = "sdio";
 			input-enable;
 			bias-pull-up;
-			drive-strength = <2 1>;
+			drive-strength = <3>;
 		};
 	};
 
@@ -1852,9 +1887,66 @@
 			function = "sdio";
 			input-enable;
 			bias-pull-up;
-			drive-strength = <1 1 1 1 2 1>;
+			drive-strength = <3>;
 		};
 	};
+
+	sdio_x_clk_cmd_pins:sdio_x_clk_cmd_pins {
+		mux {
+			groups = "GPIOX_5";
+			function = "gpio_periphs";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+		mux1 {
+			groups = "GPIOX_4";
+			function = "gpio_periphs";
+			bias-pull-up;
+			output-high;
+			drive-strength = <3>;
+		};
+	};
+
+	sdio_x_all_pins:sdio_x_all_pins {
+		mux {
+			groups = "GPIOX_0",
+				"GPIOX_1",
+				"GPIOX_2",
+				"GPIOX_3",
+				"GPIOX_5";
+			function = "gpio_periphs";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+		mux1 {
+			groups = "GPIOX_4";
+			function = "gpio_periphs";
+			bias-pull-up;
+			output-high;
+			drive-strength = <3>;
+		};
+	};
+
+	sdio_x_en_pins:sdio_x_en_pins {
+		mux {
+			groups = "sdio_dummy";
+			function = "sdio";
+			bias-pull-up;
+			output-high;
+		};
+	};
+
+	sdio_x_clr_pins:sdio_x_clr_pins {
+		mux {
+			groups = "GPIOV_0";
+			function = "gpio_periphs";
+			bias-pull-up;
+			output-high;
+		};
+	};
+
 	all_nand_pins: all_nand_pins {
 		mux {
 			groups =  "emmc_nand_d0",

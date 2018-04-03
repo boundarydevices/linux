@@ -126,16 +126,13 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 	struct device_node *child;
 	u32 i, prop;
 	const char *str = "none";
-	struct amlsd_host *host = NULL;
 
 #ifdef CONFIG_AMLOGIC_M8B_MMC
 	of_node = pdev->dev.of_node;
-	host = platform_get_drvdata(pdev);
 #else
 	if (!mmc->parent)
 		return 0;
 	of_node = mmc->parent->of_node;
-	host = mmc_priv(mmc);
 #endif
 	if (of_node) {
 		child = of_node->child;
@@ -187,22 +184,16 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 				prop, pdata->card_type);
 		SD_PARSE_U32_PROP_DEC(child, "tx_delay",
 						prop, pdata->tx_delay);
-		if (host->data->chip_type > MMC_CHIP_M8B) {
-			if (aml_card_type_mmc(pdata)) {
-				/*tx_phase set default value first*/
-				if (host->data->chip_type == MMC_CHIP_GXTVBB)
-					pdata->tx_phase = 1;
-				if (host->data->chip_type == MMC_CHIP_TXL)
-					pdata->tx_delay = 3;
-				SD_PARSE_U32_PROP_DEC(child, "tx_phase",
-						prop, pdata->tx_phase);
-			}
-			if (aml_card_type_non_sdio(pdata)) {
-				/*card in default value*/
-				pdata->card_in_delay = 0;
-				SD_PARSE_U32_PROP_DEC(child, "card_in_delay",
-						prop, pdata->card_in_delay);
-			}
+		if (aml_card_type_mmc(pdata)) {
+			/*tx_phase set default value first*/
+			SD_PARSE_U32_PROP_DEC(child, "tx_phase",
+					prop, pdata->tx_phase);
+		}
+		if (aml_card_type_non_sdio(pdata)) {
+			/*card in default value*/
+			pdata->card_in_delay = 0;
+			SD_PARSE_U32_PROP_DEC(child, "card_in_delay",
+					prop, pdata->card_in_delay);
 		}
 		SD_PARSE_GPIO_NUM_PROP(child, "hw_reset",
 				str, pdata->hw_reset);

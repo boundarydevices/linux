@@ -24,7 +24,8 @@ extern int meson_mmc_clk_init_v3(struct amlsd_host *host);
 
 extern void meson_mmc_set_ios_v3(struct mmc_host *mmc, struct mmc_ios *ios);
 
-extern void aml_sd_emmc_set_buswidth(struct amlsd_host *host, u32 busw_ios);
+extern void aml_sd_emmc_set_buswidth(struct amlsd_platform *pdata,
+		u32 busw_ios);
 
 extern int meson_mmc_request_done(struct mmc_host *mmc,
 		struct mmc_request *mrq);
@@ -40,7 +41,7 @@ extern int aml_sd_emmc_post_dma(struct amlsd_host *host,
 extern u32 aml_sd_emmc_tuning_transfer(struct mmc_host *mmc,
 	u32 opcode, const u8 *blk_pattern, u8 *blk_test, u32 blksz);
 
-void aml_mmc_clk_switch_off(struct amlsd_host *host);
+void aml_mmc_clk_switch_off(struct amlsd_platform *pdata);
 
 void aml_mmc_clk_switch(struct amlsd_host *host,
 	int clk_div, int clk_src_sel);

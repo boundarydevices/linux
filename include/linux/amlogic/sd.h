@@ -39,7 +39,7 @@
 #define CALI_PATTERN_OFFSET ((SZ_1M * (36 + 3)) / 512)
 /* #define AML_RESP_WR_EXT */
 /* pio to transfer data */
-#define CFG_SDEMMC_PIO		(1)
+#define CFG_SDEMMC_PIO		(0)
 
 #ifdef AML_CALIBRATION
 #define MAX_CALI_RETRY	3
@@ -236,8 +236,8 @@ struct amlsd_platform {
 #ifdef CONFIG_AMLOGIC_M8B_MMC
 	unsigned int width;
 	unsigned int tune_phase;	/* store tuning result */
-	struct delayed_work cd_detect;
 #endif
+	struct delayed_work cd_detect;
 	unsigned int caps;
 	unsigned int caps2;
 	unsigned int card_capacity;
@@ -249,9 +249,15 @@ struct amlsd_platform {
 	unsigned int clk2;
 	unsigned int clkc_w;
 	unsigned int ctrl;
+	unsigned int adj;
+	unsigned int dly1;
+	unsigned int dly2;
+	unsigned int intf3;
 	unsigned int clock;
 	/* signalling voltage (1.8V or 3.3V) */
 	unsigned char signal_voltage;
+	int	bus_width;
+	int	bl_len;
 
 	unsigned int low_burst;
 	struct mutex in_out_lock;
@@ -261,6 +267,7 @@ struct amlsd_platform {
 	unsigned int gpio_cd_sta;
 	unsigned int gpio_power;
 	unsigned int power_level;
+
 	unsigned int auto_clk_close;
 	unsigned int vol_switch;
 	unsigned int vol_switch_18;
@@ -332,8 +339,8 @@ struct amlsd_platform {
 	unsigned int nr_parts;
 
 	struct resource *resource;
-	void (*xfer_pre)(struct mmc_host *mmc);
-	void (*xfer_post)(struct mmc_host *mmc);
+	void (*xfer_pre)(struct amlsd_platform *pdata);
+	void (*xfer_post)(struct amlsd_platform *pdata);
 
 	int (*port_init)(struct amlsd_platform *pdata);
 	int (*cd)(struct amlsd_platform *pdata);
@@ -401,6 +408,8 @@ struct amlsd_host {
 	char is_tunning;
 	char is_timming;
 	char tuning_mode;
+	char cur_dev[32];
+	unsigned int val_f;
 	unsigned int irq;
 	unsigned int irq_in;
 	unsigned int irq_out;
@@ -410,7 +419,6 @@ struct amlsd_host {
 	int	sdio_irqen;
 	unsigned int error_bak;
 	struct delayed_work	timeout;
-	struct delayed_work	cd_work;
 	struct class debug;
 
 	unsigned int send;
@@ -443,11 +451,12 @@ struct amlsd_host {
 	struct  mmc_request	*mrq2;
 	spinlock_t	mrq_lock;
 	struct mutex	pinmux_lock;
+	struct mutex	pdata_lock;
+	struct completion   drv_completion;
 	int			cmd_is_stop;
 	enum aml_mmc_waitfor	xfer_step;
 	enum aml_mmc_waitfor	xfer_step_prev;
 
-	int			bus_width;
 	int	 port;
 	int	 locked;
 	bool	is_gated;

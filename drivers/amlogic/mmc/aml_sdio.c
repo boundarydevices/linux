@@ -421,7 +421,7 @@ void aml_sdio_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 #endif
 
 	if (pdata->xfer_post)
-		pdata->xfer_post(mmc);
+		pdata->xfer_post(pdata);
 
 	mmc_request_done(host->mmc, mrq);
 }
@@ -636,7 +636,7 @@ void aml_sdio_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	/*clear pinmux & set pinmux*/
 	if (pdata->xfer_pre)
-		pdata->xfer_pre(mmc);
+		pdata->xfer_pre(pdata);
 
 #ifdef CONFIG_MMC_AML_DEBUG
 	aml_dbg_verify_pull_up(pdata);

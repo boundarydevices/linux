@@ -42,6 +42,7 @@ extern const u8 tuning_blk_pattern_8bit[128];
 #define DEBUG_SD_OF		0
 #define MODULE_NAME		"amlsd"
 /* #define CARD_DETECT_IRQ    1 */
+#define AML_MMC_TDMA 1
 
 #if 0
 #define A0_GP_CFG0			(0xc8100240)
@@ -135,7 +136,6 @@ void aml_mmc_ver_msg_show(void);
 extern int sdio_reset_comm(struct mmc_card *card);
 #if 0
 extern int storage_flag;
-
 extern void aml_debug_print_buf(char *buf, int size);
 extern int aml_buf_verify(int *buf, int blocks, int lba);
 extern void aml_sdhc_init_debugfs(struct mmc_host *mmc);
@@ -143,24 +143,8 @@ extern void aml_sdio_init_debugfs(struct mmc_host *mmc);
 extern void aml_sd_emmc_init_debugfs(struct mmc_host *mmc);
 extern void aml_sdio_print_reg(struct amlsd_host *host);
 extern void aml_sd_emmc_print_reg(struct amlsd_host *host);
-
 extern int add_part_table(struct mtd_partition *part, unsigned int nr_part);
 extern int add_emmc_partition(struct gendisk *disk);
-#endif
-#ifdef CONFIG_AMLOGIC_M8B_MMC
-void aml_sdhc_print_reg_(u32 *buf);
-extern void aml_sdhc_print_reg(struct amlsd_host *host);
-void aml_dbg_print_pinmux(void);
-
-extern size_t aml_sg_copy_buffer(struct scatterlist *sgl, unsigned int nents,
-		void *buf, size_t buflen, int to_buffer);
-#endif
-int amlsd_get_platform_data(struct platform_device *pdev,
-		struct amlsd_platform *pdata,
-		struct mmc_host *mmc, u32 index);
-
-int of_amlsd_init(struct amlsd_platform *pdata);
-#if 0
 int amlsd_get_reg_base(struct platform_device *pdev,
 		struct amlsd_host *host);
 
@@ -168,22 +152,6 @@ int amlsd_get_reg_base(struct platform_device *pdev,
 
 int aml_sd_uart_detect(struct amlsd_platform *pdata);
 void aml_sd_uart_detect_clr(struct amlsd_platform *pdata);
-#endif
-void of_amlsd_pwr_prepare(struct amlsd_platform *pdata);
-void of_amlsd_pwr_on(struct amlsd_platform *pdata);
-void of_amlsd_pwr_off(struct amlsd_platform *pdata);
-
-void of_amlsd_xfer_pre(struct mmc_host *mmc);
-void of_amlsd_xfer_post(struct mmc_host *mmc);
-
-#ifdef CARD_DETECT_IRQ
-void of_amlsd_irq_init(struct amlsd_platform *pdata);
-irqreturn_t aml_sd_irq_cd(int irq, void *dev_id);
-irqreturn_t aml_irq_cd_thread(int irq, void *data);
-#else
-void meson_mmc_cd_detect(struct work_struct *work);
-#endif
-#if 0
 void aml_sduart_pre(struct amlsd_platform *pdata);
 
 /* is eMMC/tSD exist */
@@ -196,18 +164,40 @@ void aml_dbg_verify_pull_up(struct amlsd_platform *pdata);
 int aml_dbg_verify_pinmux(struct amlsd_platform *pdata);
 #endif
 #endif
+
+#ifdef CONFIG_AMLOGIC_M8B_MMC
+void aml_sdhc_print_reg_(u32 *buf);
+extern void aml_sdhc_print_reg(struct amlsd_host *host);
+void aml_dbg_print_pinmux(void);
+extern size_t aml_sg_copy_buffer(struct scatterlist *sgl, unsigned int nents,
+		void *buf, size_t buflen, int to_buffer);
+#endif
+
+#ifdef CARD_DETECT_IRQ
+void of_amlsd_irq_init(struct amlsd_platform *pdata);
+irqreturn_t aml_sd_irq_cd(int irq, void *dev_id);
+irqreturn_t aml_irq_cd_thread(int irq, void *data);
+#else
+void meson_mmc_cd_detect(struct work_struct *work);
+#endif
+
+int amlsd_get_platform_data(struct platform_device *pdev,
+		struct amlsd_platform *pdata,
+		struct mmc_host *mmc, u32 index);
+int of_amlsd_init(struct amlsd_platform *pdata);
+void of_amlsd_pwr_prepare(struct amlsd_platform *pdata);
+void of_amlsd_pwr_on(struct amlsd_platform *pdata);
+void of_amlsd_pwr_off(struct amlsd_platform *pdata);
+void of_amlsd_xfer_pre(struct amlsd_platform *pdata);
+void of_amlsd_xfer_post(struct amlsd_platform *pdata);
 /* chip select high */
 void aml_cs_high(struct mmc_host *mmc);
-
 /* chip select don't care */
 void aml_cs_dont_care(struct mmc_host *mmc);
-
 void aml_snprint (char **pp, int *left_size,  const char *fmt, ...);
-
 int of_amlsd_ro(struct amlsd_platform *pdata);
 int aml_sd_voltage_switch(struct mmc_host *mmc, char signal_voltage);
 int aml_signal_voltage_switch(struct mmc_host *mmc, struct mmc_ios *ios);
-
 int aml_check_unsupport_cmd(struct mmc_host *mmc, struct mmc_request *mrq);
 extern void aml_emmc_hw_reset(struct mmc_host *mmc);
 #endif

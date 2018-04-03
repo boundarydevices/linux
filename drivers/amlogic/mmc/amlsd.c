@@ -88,12 +88,8 @@ void aml_mmc_ver_msg_show(void)
 
 static int aml_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
-#else
-	struct amlsd_host *host = mmc_priv(mmc);
-#endif
 	unsigned long flags;
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
@@ -107,12 +103,8 @@ static int aml_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
 #if 0
 static int aml_rpmb_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
-#else
-	struct amlsd_host *host = mmc_priv(mmc);
-#endif
 	unsigned long flags;
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
@@ -128,12 +120,7 @@ static int aml_rpmb_cmd_invalid(struct mmc_host *mmc, struct mmc_request *mrq)
 
 int aml_check_unsupport_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = mmc_priv(mmc);
-#else
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
-#endif
 	u32 opcode, arg;
 
 	opcode = mrq->cmd->opcode;
@@ -183,8 +170,8 @@ int aml_check_unsupport_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 int aml_sd_voltage_switch(struct mmc_host *mmc, char signal_voltage)
 {
 #ifndef CONFIG_AMLOGIC_M8B_MMC
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	int ret = 0;
 
 	/* voltage is the same, return directly */
@@ -253,8 +240,7 @@ void aml_emmc_hw_reset(struct mmc_host *mmc)
 	aml_set_reg32_mask((hw_ctrl + (0x1 << 2)), (1<<9));
 	mdelay(1);
 #else
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
 	u32 ret;
 
 	if (!aml_card_type_mmc(pdata) || !pdata->hw_reset)
@@ -459,19 +445,17 @@ static struct pinctrl * __must_check aml_devm_pinctrl_get_select(
 }
 #endif /* SD_EMMC_PIN_CTRL */
 
-void of_amlsd_xfer_pre(struct mmc_host *mmc)
+void of_amlsd_xfer_pre(struct amlsd_platform *pdata)
 {
-#ifdef CONFIG_AMLOGIC_M8B_MMC
-	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
-#else
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
-#endif
+	struct mmc_host *mmc = pdata->mmc;
 	char pinctrl[30];
 	char *p = pinctrl;
 	int i, size = 0;
 	struct pinctrl *ppin;
+#if 0
+	int val = 0;
+#endif
 
 	size = sizeof(pinctrl);
 #ifdef CONFIG_AMLOGIC_M8B_MMC
@@ -534,13 +518,30 @@ void of_amlsd_xfer_pre(struct mmc_host *mmc)
 			 */
 			mdelay(1);
 		}
+#if 0
+		if (!strcmp(host->pinctrl_name,
+					"sdio_all_pins")
+				|| !strcmp(host->pinctrl_name,
+					"sdio_clk_cmd_pins")) {
+			val = readl(host->pinmux_base + (0x16 << 2));
+			val &= ~(1 << 4);
+			writel(val, host->pinmux_base + (0x16 << 2));
+		} else if (!strcmp(host->pinctrl_name,
+					"sd_all_pins")
+				|| !strcmp(host->pinctrl_name,
+					"sd_clk_cmd_pins")) {
+			val = readl(host->pinmux_base + (0x13 << 2));
+			val &= ~(1 << 4);
+			writel(val, host->pinmux_base + (0x13 << 2));
+		}
+#endif
 		if (i == 100)
 			pr_err("CMD%d: get pinctrl %s fail.\n",
 					host->opcode, pinctrl);
 	}
 }
 
-void of_amlsd_xfer_post(struct mmc_host *mmc)
+void of_amlsd_xfer_post(struct amlsd_platform *pdata)
 {
 }
 
@@ -575,13 +576,8 @@ void aml_snprint (char **pp, int *left_size,  const char *fmt, ...)
 void aml_cs_high(struct mmc_host *mmc) /* chip select high */
 {
 	int ret;
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
-#else
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
-#endif
 
 	if ((mmc->ios.chip_select == MMC_CS_HIGH)
 			&& (pdata->gpio_dat3 != 0)) {
@@ -600,12 +596,7 @@ void aml_cs_high(struct mmc_host *mmc) /* chip select high */
 void aml_cs_dont_care(struct mmc_host *mmc)
 {
 #if 0
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = mmc_priv(mmc);
-#else
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
-#endif
 
 	if ((mmc->ios.chip_select == MMC_CS_DONTCARE)
 			&& (pdata->gpio_dat3 != 0)
@@ -641,11 +632,12 @@ static int aml_is_card_insert(struct amlsd_platform *pdata)
 }
 
 #ifndef CONFIG_AMLOGIC_M8B_MMC
-static int aml_is_sdjtag(struct amlsd_host *host)
+static int aml_is_sdjtag(struct amlsd_platform *pdata)
 {
 	int in = 0, i;
 	int high_cnt = 0, low_cnt = 0;
 	u32 vstat = 0;
+	struct amlsd_host *host = pdata->host;
 	struct sd_emmc_status *ista = (struct sd_emmc_status *)&vstat;
 
 	for (i = 0; ; i++) {
@@ -667,7 +659,7 @@ static int aml_is_sdjtag(struct amlsd_host *host)
 	return !in;
 }
 
-static int aml_is_sduart(struct amlsd_host *host)
+static int aml_is_sduart(struct amlsd_platform *pdata)
 {
 #ifndef SD_EMMC_DEBUG_BOARD
 	return 0;
@@ -676,6 +668,7 @@ static int aml_is_sduart(struct amlsd_host *host)
 	int high_cnt = 0, low_cnt = 0;
 	struct pinctrl *pc;
 	u32 vstat = 0;
+	struct amlsd_host *host = pdata->host;
 	struct sd_emmc_status *ista = (struct sd_emmc_status *)&vstat;
 
 	mutex_lock(&host->pinmux_lock);
@@ -703,7 +696,7 @@ static int aml_is_sduart(struct amlsd_host *host)
 }
 
 /* int n=0; */
-static int aml_uart_switch(struct amlsd_host *host, bool on)
+static int aml_uart_switch(struct amlsd_platform *pdata, bool on)
 {
 #ifndef SD_EMMC_DEBUG_BOARD
 	return on;
@@ -713,7 +706,7 @@ static int aml_uart_switch(struct amlsd_host *host, bool on)
 		"sd_to_ao_uart_pins",
 		"ao_to_sd_uart_pins",
 	};
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 
 	pdata->is_sduart = on;
 	mutex_lock(&host->pinmux_lock);
@@ -766,10 +759,11 @@ void jtag_select_sd(void)
 }
 #endif
 
-static void aml_jtag_switch_sd(struct amlsd_host *host)
+static void aml_jtag_switch_sd(struct amlsd_platform *pdata)
 {
 	struct pinctrl *pc;
 	int i;
+	struct amlsd_host *host = pdata->host;
 
 	for (i = 0; i < 100; i++) {
 		mutex_lock(&host->pinmux_lock);
@@ -788,13 +782,14 @@ static void aml_jtag_switch_sd(struct amlsd_host *host)
 	}
 }
 
-static void aml_jtag_switch_ao(struct amlsd_host *host)
+static void aml_jtag_switch_ao(struct amlsd_platform *pdata)
 {
 #ifndef SD_EMMC_DEBUG_BOARD
 
 #else
 	struct pinctrl *pc;
 	int i;
+	struct amlsd_host *host = pdata->host;
 
 	for (i = 0; i < 100; i++) {
 		mutex_lock(&host->pinmux_lock);
@@ -842,22 +837,21 @@ int aml_sd_uart_detect(struct amlsd_platform *pdata)
 	return 0;
 }
 #else
-int aml_sd_uart_detect(struct amlsd_host *host)
+int aml_sd_uart_detect(struct amlsd_platform *pdata)
 {
 	static bool is_jtag;
-	struct amlsd_platform *pdata = host->pdata;
-	struct mmc_host *mmc  = host->mmc;
+	struct mmc_host *mmc  = pdata->mmc;
 	if (aml_is_card_insert(pdata)) {
 		if (pdata->is_in)
 			return 1;
 		pdata->is_in = true;
 		pdata->gpio_cd_sta = true;
-		if (aml_is_sduart(host)) {
-			aml_uart_switch(host, 1);
+		if (aml_is_sduart(pdata)) {
+			aml_uart_switch(pdata, 1);
 			pr_info("Uart in\n");
 			mmc->caps &= ~MMC_CAP_4_BIT_DATA;
-			if (aml_is_sdjtag(host)) {
-				aml_jtag_switch_sd(host);
+			if (aml_is_sdjtag(pdata)) {
+				aml_jtag_switch_sd(pdata);
 				is_jtag = true;
 				pdata->is_in = false;
 				pr_info("JTAG in\n");
@@ -865,8 +859,8 @@ int aml_sd_uart_detect(struct amlsd_host *host)
 			}
 		} else {
 			pr_info("normal card in\n");
-			aml_uart_switch(host, 0);
-			aml_jtag_switch_ao(host);
+			aml_uart_switch(pdata, 0);
+			aml_jtag_switch_ao(pdata);
 			if (pdata->caps & MMC_CAP_4_BIT_DATA)
 				mmc->caps |= MMC_CAP_4_BIT_DATA;
 		}
@@ -884,8 +878,8 @@ int aml_sd_uart_detect(struct amlsd_host *host)
 		pdata->is_tuned = false;
 		if (mmc && mmc->card)
 			mmc_card_set_removed(mmc->card);
-		aml_uart_switch(host, 0);
-		aml_jtag_switch_ao(host);
+		aml_uart_switch(pdata, 0);
+		aml_jtag_switch_ao(pdata);
 		/* switch to 3.3V */
 		aml_sd_voltage_switch(mmc,
 				MMC_SIGNAL_VOLTAGE_330);
@@ -901,15 +895,9 @@ static int card_dealed;
 #ifdef CARD_DETECT_IRQ
 irqreturn_t aml_irq_cd_thread(int irq, void *data)
 {
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = (struct amlsd_platform *)data;
 	struct mmc_host *mmc = pdata->mmc;
 	struct amlsd_host *host = pdata->host;
-#else
-	struct amlsd_host *host = (struct amlsd_host *)data;
-	struct amlsd_platform *pdata = host->pdata;
-	struct mmc_host *mmc = host->mmc;
-#endif
 	int ret = 0;
 
 	mutex_lock(&pdata->in_out_lock);
@@ -918,11 +906,7 @@ irqreturn_t aml_irq_cd_thread(int irq, void *data)
 		mutex_unlock(&pdata->in_out_lock);
 		return IRQ_HANDLED;
 	}
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	ret = aml_sd_uart_detect(pdata);
-#else
-	ret = aml_sd_uart_detect(host);
-#endif
 	if (ret == 1) {/* the same as the last*/
 		mutex_unlock(&pdata->in_out_lock);
 		return IRQ_HANDLED;
@@ -949,15 +933,9 @@ irqreturn_t aml_sd_irq_cd(int irq, void *dev_id)
 #else
 static int meson_cd_op(void *data)
 {
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = (struct amlsd_platform *)data;
 	struct mmc_host *mmc = pdata->mmc;
 	struct amlsd_host *host = pdata->host;
-#else
-	struct amlsd_host *host = (struct amlsd_host *)data;
-	struct amlsd_platform *pdata = host->pdata;
-	struct mmc_host *mmc = host->mmc;
-#endif
 	int ret = 0;
 
 	mutex_lock(&pdata->in_out_lock);
@@ -966,11 +944,7 @@ static int meson_cd_op(void *data)
 		mutex_unlock(&pdata->in_out_lock);
 		return 0;
 	}
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	ret = aml_sd_uart_detect(pdata);
-#else
-	ret = aml_sd_uart_detect(host);
-#endif
 	if (ret == 1) {/* the same as the last*/
 		mutex_unlock(&pdata->in_out_lock);
 		return 0;
@@ -991,32 +965,18 @@ static int meson_cd_op(void *data)
 
 void meson_mmc_cd_detect(struct work_struct *work)
 {
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	struct amlsd_platform *pdata = container_of(
 			work, struct amlsd_platform, cd_detect.work);
-#else
-	struct amlsd_host *host = container_of(
-			work, struct amlsd_host, cd_work.work);
-	struct amlsd_platform *pdata = host->pdata;
-#endif
 	int i = 0, ret = 0;
 
 	for (i = 0; i < 5; i++) {
 		ret = gpio_get_value(pdata->gpio_cd);
 		if (pdata->gpio_cd_sta != ret)
 			continue;
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 		meson_cd_op(pdata);
-#else
-		meson_cd_op(host);
-#endif
 		mdelay(1);
 	}
-#ifdef CONFIG_AMLOGIC_M8B_MMC
 	schedule_delayed_work(&pdata->cd_detect, 50);
-#else
-	schedule_delayed_work(&host->cd_work, 50);
-#endif
 }
 #endif
 

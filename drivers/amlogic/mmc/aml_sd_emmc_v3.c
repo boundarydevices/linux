@@ -49,7 +49,6 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	struct sd_emmc_clock_v3 *pclkc = (struct sd_emmc_clock_v3 *)&vclkc;
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
-	struct amlsd_platform *pdata = host->pdata;
 	struct mmc_phase *init = &(host->data->sdmmc.init);
 
 	writel(0, host->base + SD_EMMC_CLOCK_V3);
@@ -67,7 +66,6 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	pclkc->tx_phase = init->tx_phase;
 	pclkc->always_on = 1;	  /* Keep clock always on */
 	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
-	pdata->clkc = vclkc;
 
 	vconf = 0;
 	/* 1bit mode */
@@ -88,16 +86,15 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	return ret;
 }
 
-static int meson_mmc_clk_set_rate_v3(struct amlsd_host *host,
+static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 		unsigned long clk_ios)
 {
-	struct mmc_host *mmc = host->mmc;
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	int ret = 0;
 
 #ifdef SD_EMMC_CLK_CTRL
 	u32 clk_rate, clk_div, clk_src_sel;
-	struct amlsd_platform *pdata = host->pdata;
 #else
 	struct clk *src0_clk = NULL;
 	u32 vcfg = 0;
@@ -194,6 +191,7 @@ static int meson_mmc_clk_set_rate_v3(struct amlsd_host *host,
 		vcfg = readl(host->base + SD_EMMC_CFG);
 		conf->stop_clk = 0;
 		writel(vcfg, host->base + SD_EMMC_CFG);
+		pdata->clkc = readl(host->base + SD_EMMC_CLOCK_V3);
 	}
 #endif
 	pr_debug("actual_clock :%u, HHI_nand: 0x%x\n",
@@ -206,10 +204,10 @@ static int meson_mmc_clk_set_rate_v3(struct amlsd_host *host,
 	return ret;
 }
 
-static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
+static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 				u32 timing)
 {
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 	u32 vctrl;
 	struct sd_emmc_config *ctrl = (struct sd_emmc_config *)&vctrl;
 	u32 vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
@@ -230,6 +228,12 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
 				gadjust->ds_enable = 1;
 				writel(adjust, host->base + SD_EMMC_ADJUST_V3);
 				clkc->tx_delay = para->hs4.tx_delay;
+				pdata->adj = adjust;
+				/*TODO: double check!
+				 * overide tx-delay by dts configs
+				 */
+				if (pdata->tx_delay != 0)
+					clkc->tx_delay = pdata->tx_delay;
 			}
 			pr_info("%s: try set sd/emmc to HS400 mode\n",
 				mmc_hostname(host->mmc));
@@ -267,10 +271,10 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_host *host,
 }
 
 /*call by mmc, power on, power off ...*/
-static void aml_sd_emmc_set_power_v3(struct amlsd_host *host,
+static void aml_sd_emmc_set_power_v3(struct amlsd_platform *pdata,
 					u32 power_mode)
 {
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_host *host = pdata->host;
 
 	switch (power_mode) {
 	case MMC_POWER_ON:
@@ -299,40 +303,60 @@ static void aml_sd_emmc_set_power_v3(struct amlsd_host *host,
 void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 				struct mmc_ios *ios)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 
-	if (!pdata->is_in)
+#ifdef AML_MMC_TDMA
+	if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+		wait_for_completion(&host->drv_completion);
+#endif
+	if (!pdata->is_in) {
+#ifdef AML_MMC_TDMA
+		if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+			complete(&host->drv_completion);
+#endif
 		return;
+	}
+
+	if ((aml_card_type_sdio(pdata)
+				|| aml_card_type_non_sdio(pdata))
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		host->val_f = 1;
+
 	/*Set Power*/
-	aml_sd_emmc_set_power_v3(host, ios->power_mode);
+	aml_sd_emmc_set_power_v3(pdata, ios->power_mode);
 
 	/*Set Clock*/
-	meson_mmc_clk_set_rate_v3(host, ios->clock);
+	meson_mmc_clk_set_rate_v3(mmc, ios->clock);
 
 	/*Set Bus Width*/
-	aml_sd_emmc_set_buswidth(host, ios->bus_width);
+	aml_sd_emmc_set_buswidth(pdata, ios->bus_width);
 
 	/* Set Date Mode */
-	aml_sd_emmc_set_timing_v3(host, ios->timing);
+	aml_sd_emmc_set_timing_v3(pdata, ios->timing);
 
 	if (ios->chip_select == MMC_CS_HIGH)
 		aml_cs_high(mmc);
 	else if (ios->chip_select == MMC_CS_DONTCARE)
 		aml_cs_dont_care(mmc);
+#ifdef AML_MMC_TDMA
+		if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+			complete(&host->drv_completion);
+#endif
 }
 
 
 irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 {
 	struct amlsd_host *host = dev_id;
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata;
 	struct mmc_request *mrq;
 	unsigned long flags;
 	enum aml_mmc_waitfor xfer_step;
 	u32 status, xfer_bytes = 0;
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
+	pdata = mmc_priv(host->mmc);
 	mrq = host->mrq;
 	xfer_step = host->xfer_step;
 	status = host->status;
@@ -472,7 +496,8 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 static int aml_sd_emmc_cali_v3(struct mmc_host *mmc,
 	u8 opcode, u8 *blk_test, u32 blksz, u32 blocks)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	struct mmc_request mrq = {NULL};
 	struct mmc_command cmd = {0};
 	struct mmc_command stop = {0};
@@ -541,8 +566,8 @@ static int aml_sd_emmc_cmd_v3(struct mmc_host *mmc)
 
 static int emmc_eyetest_log(struct mmc_host *mmc, u32 line_x)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 adjust = readl(host->base + SD_EMMC_ADJUST_V3);
 	struct sd_emmc_adjust_v3 *gadjust =
 		(struct sd_emmc_adjust_v3 *)&adjust;
@@ -563,6 +588,7 @@ static int emmc_eyetest_log(struct mmc_host *mmc, u32 line_x)
 	gadjust->cali_enable = 1;
 	gadjust->cali_sel = line_x;
 	writel(adjust, host->base + SD_EMMC_ADJUST_V3);
+	pdata->adj = adjust;
 	if (line_x < 9)
 		gintf3->eyetest_exp = 7;
 	else
@@ -571,6 +597,7 @@ RETRY:
 
 	gintf3->eyetest_on = 1;
 	writel(intf3, host->base + SD_EMMC_INTF3);
+	pdata->intf3 = intf3;
 
 	/*****test start*************/
 	udelay(5);
@@ -589,6 +616,7 @@ RETRY:
 			eyetest_out0, eyetest_out1);
 		gintf3->eyetest_on = 0;
 		writel(intf3, host->base + SD_EMMC_INTF3);
+		pdata->intf3 = intf3;
 		retry--;
 		if (retry == 0) {
 			pr_warn("[%s][%d] retry eyetest failed\n",
@@ -601,6 +629,7 @@ RETRY:
 	eyetest_out1 = readl(host->base + SD_EMMC_EYETEST_OUT1);
 	gintf3->eyetest_on = 0;
 	writel(intf3, host->base + SD_EMMC_INTF3);
+	pdata->intf3 = intf3;
 	if (vcfg & 0x4) {
 		if (pdata->count > 32) {
 			eyetest_out1 <<= (32 - (pdata->count - 32));
@@ -645,8 +674,8 @@ static int emmc_detect_base_line(u64 *arr)
 /**************** start all data align ********************/
 static int emmc_all_data_line_alignment(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 delay1 = 0, delay2 = 0;
 	int result;
 	int temp = 0, base_line = 0, line_x = 0;
@@ -673,6 +702,8 @@ static int emmc_all_data_line_alignment(struct mmc_host *mmc)
 	delay2 += readl(host->base + SD_EMMC_DELAY2_V3);
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
 	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+	pdata->dly1 = delay1;
+	pdata->dly2 = delay2;
 	pr_debug("gdelay1: 0x%x, gdelay2: 0x%x\n",
 			readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3));
@@ -682,8 +713,8 @@ static int emmc_all_data_line_alignment(struct mmc_host *mmc)
 
 static int emmc_ds_data_alignment(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 delay1 = readl(host->base + SD_EMMC_DELAY1_V3);
 	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
 	int i, line_x, temp = 0;
@@ -703,6 +734,8 @@ static int emmc_ds_data_alignment(struct mmc_host *mmc)
 				delay2 += 1 << (6 * (line_x - 5));
 			writel(delay1, host->base + SD_EMMC_DELAY1_V3);
 			writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+			pdata->dly1 = delay1;
+			pdata->dly2 = delay2;
 			emmc_eyetest_log(mmc, line_x);
 			if (pdata->align[line_x] & 0xf0)
 				break;
@@ -719,8 +752,7 @@ static int emmc_ds_data_alignment(struct mmc_host *mmc)
 static void update_all_line_eyetest(struct mmc_host *mmc)
 {
 	int line_x;
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
 
 	for (line_x = 0; line_x < 10; line_x++) {
 		if ((line_x == 8) && !(pdata->caps2 & MMC_CAP2_HS400))
@@ -731,8 +763,8 @@ static void update_all_line_eyetest(struct mmc_host *mmc)
 /* first step*/
 static int emmc_ds_core_align(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 delay1 = readl(host->base + SD_EMMC_DELAY1_V3);
 	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
 	u32 delay2_bak = delay2;
@@ -778,6 +810,8 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 	delay2 += (cmd_count<<24);
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
 	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+	pdata->dly1 = delay1;
+	pdata->dly2 = delay2;
 	pr_debug("cmd_count:%d,delay1:0x%x,delay2:0x%x,count: %u\n",
 			cmd_count, readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3), count);
@@ -787,8 +821,8 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 #if 1
 static int emmc_ds_manual_sht(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	/* struct amlsd_platform *pdata = host->pdata; */
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 intf3 = readl(host->base + SD_EMMC_INTF3);
 	struct intf3 *gintf3 = (struct intf3 *)&(intf3);
 	u32 blksz = 512;
@@ -809,6 +843,7 @@ static int emmc_ds_manual_sht(struct mmc_host *mmc)
 	for (i = 0; i < 32; i++) {
 		gintf3->ds_sht_m += 1;
 		writel(intf3, host->base + SD_EMMC_INTF3);
+		pdata->intf3 = intf3;
 		err = aml_sd_emmc_cali_v3(mmc,
 			MMC_READ_MULTIPLE_BLOCK,
 			host->blk_test, blksz, 20);
@@ -854,6 +889,7 @@ static int emmc_ds_manual_sht(struct mmc_host *mmc)
 
 	gintf3->ds_sht_m = (best_start + best_size) / 2;
 	writel(intf3, host->base + SD_EMMC_INTF3);
+	pdata->intf3 = intf3;
 	pr_info("ds_sht:%u, window:%d, intf3:0x%x",
 			gintf3->ds_sht_m, best_size,
 			readl(host->base +  SD_EMMC_INTF3));
@@ -867,8 +903,8 @@ static int emmc_ds_manual_sht(struct mmc_host *mmc)
  */
 static unsigned int aml_sd_emmc_clktest(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 intf3 = readl(host->base + SD_EMMC_INTF3);
 	struct intf3 *gintf3 = (struct intf3 *)&(intf3);
 	u32 clktest = 0, delay_cell = 0, clktest_log = 0, count = 0;
@@ -882,9 +918,12 @@ static unsigned int aml_sd_emmc_clktest(struct mmc_host *mmc)
 	writel(vcfg, host->base + SD_EMMC_CFG);
 	writel(0, host->base + SD_EMMC_DELAY1_V3);
 	writel(0, host->base + SD_EMMC_DELAY2_V3);
+	pdata->dly1 = 0;
+	pdata->dly2 = 0;
 	gintf3->clktest_exp = 8;
 	gintf3->clktest_on_m = 1;
 	writel(intf3, host->base + SD_EMMC_INTF3);
+	pdata->intf3 = intf3;
 
 	clktest_log = readl(host->base + SD_EMMC_CLKTEST_LOG);
 	clktest = readl(host->base + SD_EMMC_CLKTEST_OUT);
@@ -912,6 +951,7 @@ static unsigned int aml_sd_emmc_clktest(struct mmc_host *mmc)
 	intf3 = readl(host->base + SD_EMMC_INTF3);
 	gintf3->clktest_on_m = 0;
 	writel(intf3, host->base + SD_EMMC_INTF3);
+	pdata->intf3 = intf3;
 	vcfg = readl(host->base + SD_EMMC_CFG);
 	vcfg |= (1 << 23);
 	writel(vcfg, host->base + SD_EMMC_CFG);
@@ -925,8 +965,8 @@ static int _aml_sd_emmc_execute_tuning(struct mmc_host *mmc, u32 opcode,
 					u32 adj_win_start)
 {
 #if 1 /* need finish later */
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 vclk;
 	struct sd_emmc_clock_v3 *clkc = (struct sd_emmc_clock_v3 *)&(vclk);
 	u32 adjust = readl(host->base + SD_EMMC_ADJUST_V3);
@@ -963,6 +1003,7 @@ tunning:
 		gadjust->cali_enable = 0;
 		gadjust->cali_rise = 0;
 		writel(adjust, host->base +	SD_EMMC_ADJUST_V3);
+		pdata->adj = adjust;
 		nmatch = aml_sd_emmc_tuning_transfer(mmc, opcode,
 				blk_pattern, host->blk_test, blksz);
 		/*get a ok adjust point!*/
@@ -1044,6 +1085,7 @@ tunning:
 	gadjust->cali_enable = 0;
 	gadjust->cali_rise = 0;
 	writel(adjust, host->base + SD_EMMC_ADJUST_V3);
+	pdata->adj = adjust;
 	host->is_tunning = 0;
 
 	pr_info("%s: sd_emmc_regs->gclock=0x%x,sd_emmc_regs->gadjust=0x%x\n",
@@ -1057,8 +1099,8 @@ tunning:
 
 int aml_emmc_hs200_timming(struct mmc_host *mmc)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 count = 0, delay1 = 0, delay2 = 0, line_x;
 
 	host->is_timming = 1;
@@ -1082,6 +1124,8 @@ int aml_emmc_hs200_timming(struct mmc_host *mmc)
 	}
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
 	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+	pdata->dly1 = delay1;
+	pdata->dly2 = delay2;
 	pr_debug("gdelay1: 0x%x, gdelay2: 0x%x\n",
 			readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3));
@@ -1093,8 +1137,8 @@ int aml_emmc_hs200_timming(struct mmc_host *mmc)
 static int sdio_eyetest_log(struct mmc_host *mmc, u32 line_x, u32 opcode,
 		struct aml_tuning_data *tuning_data)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 adjust = readl(host->base + SD_EMMC_ADJUST_V3);
 	struct sd_emmc_adjust_v3 *gadjust =
 		(struct sd_emmc_adjust_v3 *)&adjust;
@@ -1117,11 +1161,13 @@ static int sdio_eyetest_log(struct mmc_host *mmc, u32 line_x, u32 opcode,
 	gadjust->cali_enable = 1;
 	gadjust->cali_sel = line_x;
 	writel(adjust, host->base + SD_EMMC_ADJUST_V3);
+	pdata->adj = adjust;
 	gintf3->eyetest_exp = 4;
 
 RETRY:
 	gintf3->eyetest_on = 1;
 	writel(intf3, host->base + SD_EMMC_INTF3);
+	pdata->intf3 = intf3;
 	udelay(5);
 
 	for (i = 0; i < 40; i++)
@@ -1138,6 +1184,7 @@ RETRY:
 				eyetest_out0, eyetest_out1);
 		gintf3->eyetest_on = 0;
 		writel(intf3, host->base + SD_EMMC_INTF3);
+		pdata->intf3 = intf3;
 		retry--;
 		if (retry == 0) {
 			pr_warn("[%s][%d] retry eyetest failed\n",
@@ -1151,6 +1198,7 @@ RETRY:
 			eyetest_out0, eyetest_out1);
 	gintf3->eyetest_on = 0;
 	writel(intf3, host->base + SD_EMMC_INTF3);
+	pdata->intf3 = intf3;
 	pdata->align[line_x] = ((tmp | eyetest_out1) << 32) | eyetest_out0;
 	pr_debug("u64 eyetestout 0x%llx\n", pdata->align[line_x]);
 	host->is_tunning = 0;
@@ -1161,8 +1209,8 @@ static int aml_sdio_timing(struct mmc_host *mmc, u32 opcode,
 					struct aml_tuning_data *tuning_data,
 					u32 adj_win_start)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	u32 line_x = 0, delay1 = 0, retry = 1, temp;
 	int ret;
 
@@ -1170,6 +1218,7 @@ static int aml_sdio_timing(struct mmc_host *mmc, u32 opcode,
 	delay1 = 0;
 	for (line_x = 0; line_x < 4; line_x++) {
 		writel(0, host->base + SD_EMMC_DELAY1_V3);
+		pdata->dly1 = 0;
 		retry = 1;
 RETRY:
 		ret = sdio_eyetest_log(mmc, line_x, opcode, tuning_data);
@@ -1178,6 +1227,7 @@ RETRY:
 					__func__, __LINE__);
 			writel(5 << (6 * line_x),
 					host->base + SD_EMMC_DELAY1_V3);
+			pdata->dly1 = readl(host->base + SD_EMMC_DELAY1_V3);
 			delay1 |= (5 << (6 * line_x));
 			retry--;
 			goto RETRY;
@@ -1189,6 +1239,7 @@ RETRY:
 	}
 
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
+	pdata->dly1 = delay1;
 	delay1 = 0;
 	for (line_x = 0; line_x < 4; line_x++) {
 		temp = fbinary(pdata->align[line_x]);
@@ -1202,6 +1253,7 @@ RETRY:
 	}
 	delay1 += readl(host->base + SD_EMMC_DELAY1_V3);
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
+	pdata->dly1 = delay1;
 
 	host->is_tunning = 0;
 	pr_info("%s: gadjust=0x%x, gdelay1=0x%x, gclock=0x%x\n",
@@ -1214,8 +1266,8 @@ RETRY:
 
 int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 {
-	struct amlsd_host *host = mmc_priv(mmc);
-	struct amlsd_platform *pdata = host->pdata;
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
 	struct aml_tuning_data tuning_data;
 	int err = -EINVAL;
 	u32 adj_win_start = 100;
@@ -1240,13 +1292,15 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 	}
 
 	if (aml_card_type_sdio(pdata)) {
-		if (host->data->chip_type == MMC_CHIP_GXLX)
+		if ((host->data->chip_type == MMC_CHIP_GXLX)
+				|| (host->data->chip_type == MMC_CHIP_G12A))
 			err = _aml_sd_emmc_execute_tuning(mmc, opcode,
 					&tuning_data, adj_win_start);
 		else {
 			intf3 = readl(host->base + SD_EMMC_INTF3);
 			intf3 |= (1<<22);
 			writel(intf3, (host->base + SD_EMMC_INTF3));
+			pdata->intf3 = intf3;
 			aml_sd_emmc_clktest(mmc);
 			err = aml_sdio_timing(mmc, opcode,
 					&tuning_data, adj_win_start);
@@ -1256,6 +1310,7 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 			intf3 = readl(host->base + SD_EMMC_INTF3);
 			intf3 |= (1<<22);
 			writel(intf3, (host->base + SD_EMMC_INTF3));
+			pdata->intf3 = intf3;
 			err = aml_emmc_hs200_timming(mmc);
 		} else
 			err = _aml_sd_emmc_execute_tuning(mmc, opcode,
@@ -1264,6 +1319,7 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 		intf3 = readl(host->base + SD_EMMC_INTF3);
 		intf3 |= (1<<22);
 		writel(intf3, (host->base + SD_EMMC_INTF3));
+		pdata->intf3 = intf3;
 		err = 0;
 	}
 
