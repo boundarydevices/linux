@@ -594,7 +594,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 
 	bsi->host_wake_irq =
 		irq_of_parse_and_map(pdev->dev.of_node, 0);
-	if (bsi->host_wake_irq < 0) {
+	if (bsi->host_wake_irq == 0) {
 		BT_ERR("couldn't find host_wake irq");
 		ret = -ENODEV;
 		goto free_bt_ext_wake;

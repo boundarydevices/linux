@@ -203,7 +203,7 @@ static int bt_probe(struct platform_device *pdev)
 	struct bt_dev_runtime_data *prdata;
 
 #ifdef CONFIG_OF
-	if (pdev->dev.of_node) {
+	if (pdev && pdev->dev.of_node) {
 		const char *str;
 		struct gpio_desc *desc;
 
@@ -256,6 +256,8 @@ static int bt_probe(struct platform_device *pdev)
 		if (ret)
 			pdata->power_on_pin_OD = 0;
 		pr_info("bt: power_on_pin_OD = %d;\n", pdata->power_on_pin_OD);
+	} else {
+		pdata = (struct bt_dev_data *)(pdev->dev.platform_data);
 	}
 #else
 	pdata = (struct bt_dev_data *)(pdev->dev.platform_data);
