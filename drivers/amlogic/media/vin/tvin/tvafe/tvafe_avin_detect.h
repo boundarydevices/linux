@@ -110,6 +110,8 @@ void tvafe_cha1_SYNCTIP_close_config(void);
 void tvafe_cha2_SYNCTIP_close_config(void);
 void tvafe_cha1_detect_restart_config(void);
 void tvafe_cha2_detect_restart_config(void);
+void tvafe_avin_detect_ch1_anlog_enable(bool enable);
+void tvafe_avin_detect_ch2_anlog_enable(bool enable);
 
 /*opened port,1:av1, 2:av2, 0:none av*/
 extern unsigned int avport_opened;
