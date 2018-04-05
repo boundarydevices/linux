@@ -507,6 +507,16 @@ static int cvt_ilim_to_ma(int ilim)
 	return ma;
 }
 
+void max77823_set_vbypass(struct max77823_charger_data *charger, unsigned bypass_mv)
+{
+	unsigned val;
+
+	if ((bypass_mv < 3000) || (bypass_mv > 5750))
+		bypass_mv = 4875;
+	val = (bypass_mv - 3000) / 25;
+	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_11, val);
+}
+
 static void max77823_set_chgin_ilim(struct max77823_charger_data *charger, unsigned ilim)
 {
 	charger->chgin_ilim = ilim;
@@ -1453,9 +1463,7 @@ static int max77823_otg_enable(struct max77823_charger_data *charger)
 #ifdef CONFIG_EXTCON_MAX77828
 	max77828_muic_set_chgdeten(DISABLE);
 #endif
-	/* Update CHG_CNFG_11 to 0x54(5.1V) */
-	max77823_write_reg(charger->i2c,
-		MAX77823_CHG_CNFG_11, 0x54);
+	max77823_set_vbypass(charger, charger->pdata->bypass_mv);
 
 	/* OTG on, boost on */
 	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
@@ -1660,6 +1668,10 @@ static int max77823_charger_parse_dt(struct max77823_charger_data *charger, stru
 					&pdata->boost);
 		ret = of_property_read_u32(np, "restart-threshold-mv",
 					&pdata->restart_threshold_mv);
+		ret = of_property_read_u32(np, "bypass-mv",
+					&pdata->bypass_mv);
+		if (ret)
+			pdata->bypass_mv = 4875;
 
 		if (!pdata->charging_current) {
 			p = of_get_property(np, "battery,input_current_limit", &len);
@@ -1838,10 +1850,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 		goto err_wc_irq;
 	}
 
-	/* Update CHG_CNFG_11 to 0x54(5.1V), boost to 5.1V */
-	max77823_write_reg(charger->i2c,
-		MAX77823_CHG_CNFG_11, 0x54);
-
+	max77823_set_vbypass(charger, charger->pdata->bypass_mv);
 	ret = max77823_read_reg(charger->i2c, MAX77823_CHG_INT_OK);
 	if (ret >= 0) {
 		charger->wc_w_state = (ret & MAX77823_WCIN_OK)
