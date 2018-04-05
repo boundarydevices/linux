@@ -9,7 +9,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
+#include <linux/kernel.h>
 #include <linux/mfd/max77823.h>
 #include <linux/mfd/max77823-private.h>
 #include <linux/debugfs.h>
@@ -17,6 +17,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/seq_file.h>
+#include <linux/uaccess.h>
 //#include <linux/usb_notify.h>
 #include <linux/battery/charger/max77823_charger.h>
 #ifdef CONFIG_EXTCON_MAX77828
@@ -1046,6 +1047,42 @@ static int max77823_debugfs_show(struct seq_file *s, void *data)
 	return 0;
 }
 
+static ssize_t max77823_debugfs_reg_write(struct file *s, const char __user *ubuf,
+                               size_t cnt, loff_t *ppos)
+{
+	struct seq_file *m = s->private_data;
+	struct max77823_charger_data *charger = m->private;
+	char buf[100];
+	char *p = buf;
+	ssize_t st;
+	unsigned long reg;
+	unsigned long val;
+	int ret;
+
+	if (cnt > sizeof(buf) - 1)
+		return -EINVAL;
+	st = copy_from_user(p, ubuf, cnt);
+	if (st)
+		return st;
+	p[cnt] = 0;
+	reg = simple_strtoul(p, &p, 16);
+	while (*p == ' ') {
+		p++;
+		if (!*p)
+			return -EINVAL;
+	}
+	ret = kstrtoul(p, 16, &val);
+	if (ret)
+		return ret;
+	if ((reg > 0xff) | (val > 0xffff))
+		return -EINVAL;
+	ret = max77823_write_reg(charger->i2c, reg, val);
+	if (ret)
+		return ret;
+	*ppos += cnt;
+	return cnt;
+}
+
 static int max77823_debugfs_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, max77823_debugfs_show, inode->i_private);
@@ -1054,6 +1091,7 @@ static int max77823_debugfs_open(struct inode *inode, struct file *file)
 static const struct file_operations max77823_debugfs_fops = {
 	.open           = max77823_debugfs_open,
 	.read           = seq_read,
+	.write		= max77823_debugfs_reg_write,
 	.llseek         = seq_lseek,
 	.release        = single_release,
 };
@@ -1744,7 +1782,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	max77823_charger_initialize(charger);
 
 	(void) debugfs_create_file("max77823-regs",
-		S_IRUGO, NULL, (void *)charger, &max77823_debugfs_fops);
+		S_IRUGO | S_IWUSR, NULL, (void *)charger, &max77823_debugfs_fops);
 
 	charger->wqueue =
 	    create_singlethread_workqueue(dev_name(&pdev->dev));
