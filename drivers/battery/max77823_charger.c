@@ -1590,8 +1590,8 @@ static int parse_regulators_dt(struct device *dev, const struct device_node *np,
 
 	parent = of_get_child_by_name(np, "regulators");
 	if (!parent) {
-		dev_err(dev, "regulators node not found\n");
-		return -EINVAL;
+		dev_warn(dev, "regulators node not found\n");
+		return 0;
 	}
 
 	ret = of_regulator_match(dev, parent, reg_matches,
