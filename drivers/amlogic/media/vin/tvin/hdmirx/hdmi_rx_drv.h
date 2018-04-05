@@ -34,7 +34,7 @@
 //#include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2018-03-30"
+#define RX_VER0 "ver.2018-04-05"
 /*
  *
  *
@@ -315,30 +315,6 @@ struct aud_info_s {
 	int real_channel_num;
 	int real_sample_size;
 	int real_sr;
-};
-
-struct rx_audio_stat_s {
-	/* audio packets received */
-	bool aud_rcv_flag;
-	/* audio stable status */
-	bool aud_stb_flag;
-	/* audio sample rate */
-	int aud_sr;
-	/* audio channel count
-	 * 0: refer to stream header,
-	 * 1: 2ch, 2: 3ch, 3: 4ch, 4: 5ch,
-	 * 5: 6ch, 6: 7ch, 7: 8ch
-	 */
-	int aud_channel_cnt;
-	/*  audio coding type
-	 * 0: refer to stream header, 1: IEC60958 PCM,
-	 * 2: AC-3, 3: MPEG1 (Layers 1 and 2),
-	 * 4: MP3 (MPEG1 Layer 3), 5: MPEG2 (multichannel),
-	 * 6: AAC, 7: DTS, 8: ATRAC, 9: One Bit Audio,
-	 * 10: Dolby Digital Plus, 11: DTS-HD,
-	 * 12: MAT (MLP), 13: DST, 14: WMA Pro
-	 */
-	int aud_type;
 };
 
 struct rx_s {

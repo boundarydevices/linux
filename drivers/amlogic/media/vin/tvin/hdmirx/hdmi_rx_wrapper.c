@@ -240,8 +240,7 @@ void rx_tasklet_handler(unsigned long arg)
 	if (irq_flag & IRQ_PACKET_FLAG)
 		rx_pkt_handler(PKT_BUFF_SET_FIFO);
 
-	if ((irq_flag & IRQ_AUD_FLAG) &&
-		(rx.aud_info.real_sr != 0))
+	if (irq_flag & IRQ_AUD_FLAG)
 		hdmirx_audio_fifo_rst();
 
 	/*irq_flag = 0;*/
@@ -1918,6 +1917,7 @@ void rx_main_state_machine(void)
 				//rx_set_eq_run_state(E_EQ_PASS);
 				hdmirx_config_video();
 				rx_aud_pll_ctl(1);
+				hdmirx_audio_fifo_rst();
 				rx.stable_timestamp = rx.timestamp;
 				rx_pr("Sig ready\n");
 				dump_state(1);

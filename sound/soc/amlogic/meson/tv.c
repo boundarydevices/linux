@@ -46,6 +46,9 @@
 #ifdef CONFIG_AMLOGIC_AO_CEC
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_cec_20.h>
 #endif
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+#include <linux/amlogic/media/frame_provider/tvin/tvin.h>
+#endif
 
 #include "i2s.h"
 #include "audio_hw.h"
@@ -455,7 +458,7 @@ static int aml_set_arc_audio(struct snd_kcontrol *kcontrol,
 }
 #endif
 
-#ifdef CONFIG_TVIN_HDMI
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 /* call HDMI CEC API to enable arc audio */
 static int aml_set_atmos_audio_edid(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
@@ -465,7 +468,7 @@ static int aml_set_atmos_audio_edid(struct snd_kcontrol *kcontrol,
 	bool enable = ucontrol->value.integer.value[0];
 
 	p_aml_audio = snd_soc_card_get_drvdata(card);
-	rx_set_atmos_flag(enable);
+	//rx_set_atmos_flag(enable);
 	p_aml_audio->atmos_edid_enable = enable;
 	return 0;
 }
@@ -645,7 +648,8 @@ static int aml_get_hdmiin_audio_format(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = aud_sts.aud_type;
 	return 0;
 }
-#endif /* CONFIG_TVIN_HDMI */
+#endif
+
 #ifdef CONFIG_AM_DVB
 static const char *const atv_audio_is_stable[] = {
 	"false",
@@ -712,7 +716,7 @@ static const struct snd_kcontrol_new aml_tv_controls[] = {
 				aml_get_arc_audio,
 				aml_set_arc_audio),
 #endif
-#ifdef CONFIG_TVIN_HDMI
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 	SOC_ENUM_EXT("HDMIIN audio stable", hdmi_in_status_enum[0],
 				aml_get_hdmiin_audio_stable,
 				NULL),

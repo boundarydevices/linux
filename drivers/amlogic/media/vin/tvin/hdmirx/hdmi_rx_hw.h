@@ -1058,7 +1058,6 @@ extern void rx_get_video_info(void);
 extern void hdmirx_set_video_mute(bool mute);
 extern void hdmirx_config_video(void);
 extern void rx_get_audinfo(struct aud_info_s *audio_info);
-extern void rx_get_audio_status(struct rx_audio_stat_s *aud_sts);
 extern bool rx_clkrate_monitor(void);
 
 extern unsigned char rx_get_hdcp14_sts(void);
