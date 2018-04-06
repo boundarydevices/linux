@@ -584,6 +584,15 @@ calculate_non_linear_ratio(unsigned int middle_ratio,
  * (1.25 * 3840 / 1920) for 1080p mode.
  */
 #define MIN_RATIO_1000	1250
+unsigned int min_skip_ratio = MIN_RATIO_1000;
+MODULE_PARM_DESC(min_skip_ratio, "min_skip_ratio");
+module_param(min_skip_ratio, uint, 0664);
+unsigned int max_proc_height = 2160;
+MODULE_PARM_DESC(max_proc_height, "max_proc_height");
+module_param(max_proc_height, uint, 0664);
+unsigned int cur_proc_height;
+MODULE_PARM_DESC(cur_proc_height, "cur_proc_height");
+module_param(cur_proc_height, uint, 0444);
 unsigned int cur_skip_ratio;
 MODULE_PARM_DESC(cur_skip_ratio, "cur_skip_ratio");
 module_param(cur_skip_ratio, uint, 0444);
@@ -622,6 +631,7 @@ vpp_process_speed_check(s32 width_in,
 	u32 vtotal, htotal = 0, clk_in_pps = 0, clk_vpu = 0, clk_temp;
 	u32 input_time_us = 0, display_time_us = 0, dummy_time_us = 0;
 	u32 width_out = 0;
+	u32 vpu_clk = 0, max_height = 2160; /* 4k mode */
 
 	if (vf)
 		cur_vf_type = vf->type;
@@ -639,8 +649,20 @@ vpp_process_speed_check(s32 width_in,
 		clk_in_pps = get_vpu_clk();
 	}
 
+	vpu_clk = get_vpu_clk();
+	/* the output is only up to 1080p */
+	if (vpu_clk <= 250000000) {
+		/* ((3840 * 2160) / 1920) *  (vpu_clk / 1000000) / 666 */
+		max_height =  4320 *  (vpu_clk / 1000000) / 666;
+	}
+
+	if (max_proc_height < max_height)
+		max_height = max_proc_height;
+
+	cur_proc_height = max_height;
+
 	if (vf->width > 720)
-		min_ratio_1000 =  MIN_RATIO_1000;
+		min_ratio_1000 =  min_skip_ratio;
 	else
 		min_ratio_1000 = 1750;
 
@@ -694,7 +716,7 @@ vpp_process_speed_check(s32 width_in,
 				cur_ratio = div_u64((u64)height_in *
 						(u64)vinfo->height *
 						1000,
-						height_out * 2160);
+						height_out * max_height);
 				/* di process first, need more a bit of ratio */
 				if (vf->type & VIDTYPE_PRE_INTERLACE)
 					cur_ratio = (cur_ratio * 105) / 100;
