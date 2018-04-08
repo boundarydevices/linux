@@ -97,11 +97,12 @@ void aml_spdif_play(int samesrc)
 {
 	if (!is_meson_tv_chipset()) {
 		uint div = 0;
-		static int iec958buf[32 + 16];
+		static int iec958buf[DEFAULT_PLAYBACK_SIZE];
 		struct _aiu_958_raw_setting_t set;
 		struct _aiu_958_channel_status_t chstat;
 		struct snd_pcm_substream substream;
 		struct snd_pcm_runtime runtime;
+		int size = DEFAULT_PLAYBACK_SIZE;
 
 		substream.runtime = &runtime;
 		runtime.rate = 48000;
@@ -141,8 +142,10 @@ void aml_spdif_play(int samesrc)
 		/*clear the same source function as new raw data output */
 		audio_i2s_958_same_source(samesrc);
 		memset(iec958buf, 0, sizeof(iec958buf));
-		audio_set_958outbuf((virt_to_phys(iec958buf) + 63) & (~63),
-					128, 0);
+		audio_set_958outbuf((virt_to_phys(iec958buf)
+			+ (DEFAULT_PLAYBACK_SIZE - 1))
+				& (~(DEFAULT_PLAYBACK_SIZE - 1)),
+			size, 0);
 		audio_set_958_mode(AIU_958_MODE_PCM16, &set);
 		aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM, &substream);
 		audio_hw_958_enable(1);

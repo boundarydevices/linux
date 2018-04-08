@@ -135,6 +135,12 @@ enum {
 #define AUDIO_ALGOUT_DAC_FORMAT_DSP             0
 #define AUDIO_ALGOUT_DAC_FORMAT_LEFT_JUSTIFY    1
 
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
+#define DEFAULT_PLAYBACK_SIZE      256
+#else
+#define DEFAULT_PLAYBACK_SIZE      64
+#endif
+
 extern unsigned int IEC958_MODE;
 extern unsigned int I2S_MODE;
 extern unsigned int audio_in_source;

@@ -55,9 +55,11 @@
 
 #define DRV_NAME "aml_meson_snd_card"
 
-static int i2sbuf[32 + 16];
+static int i2sbuf[DEFAULT_PLAYBACK_SIZE];
 static void aml_i2s_play(void)
 {
+	int size = DEFAULT_PLAYBACK_SIZE;
+
 	audio_util_set_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	audio_set_i2s_mode(AIU_I2S_MODE_PCM16, 2);
@@ -65,8 +67,10 @@ static void aml_i2s_play(void)
 	audio_set_i2s_mode(AIU_I2S_MODE_PCM16);
 #endif
 	memset(i2sbuf, 0, sizeof(i2sbuf));
-	audio_set_aiubuf((virt_to_phys(i2sbuf) + 63) & (~63), 128, 2,
-		SNDRV_PCM_FORMAT_S16_LE);
+	audio_set_aiubuf((virt_to_phys(i2sbuf)
+		+ (DEFAULT_PLAYBACK_SIZE - 1))
+			& (~(DEFAULT_PLAYBACK_SIZE - 1)),
+		size, 2, SNDRV_PCM_FORMAT_S16_LE);
 	audio_out_i2s_enable(1);
 
 }
