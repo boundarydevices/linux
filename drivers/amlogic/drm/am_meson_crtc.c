@@ -166,7 +166,14 @@ void am_meson_crtc_enable(struct drm_crtc *crtc)
 
 void am_meson_crtc_disable(struct drm_crtc *crtc)
 {
-	//DRM_INFO("meson_crtc_disable!!\n");
+	DRM_INFO("%s\n", __func__);
+	if (crtc->state->event && !crtc->state->active) {
+		spin_lock_irq(&crtc->dev->event_lock);
+		drm_crtc_send_vblank_event(crtc, crtc->state->event);
+		spin_unlock_irq(&crtc->dev->event_lock);
+
+		crtc->state->event = NULL;
+	}
 }
 
 void am_meson_crtc_commit(struct drm_crtc *crtc)
