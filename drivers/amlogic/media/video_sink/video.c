@@ -7839,6 +7839,27 @@ static ssize_t video_disable_store(struct class *cla,
 	return count;
 }
 
+static ssize_t video_global_output_show(struct class *cla,
+				struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", video_global_output);
+}
+
+static ssize_t video_global_output_store(struct class *cla,
+				struct class_attribute *attr,
+				const char *buf, size_t count)
+{
+	size_t r;
+
+	r = kstrtoint(buf, 0, &video_global_output);
+	if (r < 0)
+		return -EINVAL;
+
+	pr_info("%s(%d)\n", __func__, video_global_output);
+
+	return count;
+}
+
 static ssize_t video_freerun_mode_show(struct class *cla,
 				       struct class_attribute *attr, char *buf)
 {
@@ -8545,6 +8566,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       0664,
 	       video_disable_show,
 	       video_disable_store),
+	 __ATTR(video_global_output,
+			0664,
+			video_global_output_show,
+			video_global_output_store),
 	__ATTR(zoom,
 	       0664,
 	       video_zoom_show,
