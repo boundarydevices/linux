@@ -3281,12 +3281,10 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 							is_meson_gxl_cpu() ||
 							is_meson_gxm_cpu());
 		width_roundup = bit10_pack_patch ? 16 : width_roundup;
-#if 0 //test for even width&height
 		if (di_force_bit_mode == 10)
 			force_width = roundup(vframe->width, width_roundup);
 		else
 			force_width = 0;
-#endif
 		di_pre_stru.source_trans_fmt = vframe->trans_fmt;
 		di_pre_stru.left_right = di_pre_stru.left_right ? 0 : 1;
 		di_pre_stru.invert_flag =
