@@ -1391,7 +1391,7 @@ int dsi_read_single(unsigned char *payload, unsigned char *rd_data,
 
 static void mipi_dsi_phy_config(struct dsi_phy_s *dphy, unsigned int dsi_ui)
 {
-	unsigned int temp, t_ui, t_req;
+	unsigned int temp, t_ui, t_req_min, t_req_max, t_req, n;
 
 	t_ui = (1000000 * 100) / (dsi_ui / 1000); /* 0.01ns*100 */
 	temp = t_ui * 8; /* lane_byte cycle time */
@@ -1404,19 +1404,89 @@ static void mipi_dsi_phy_config(struct dsi_phy_s *dphy, unsigned int dsi_ui)
 	dphy->lp_ta_get = ((DPHY_TIME_LP_TA_GETX(t_ui) + temp - 1) / temp) &
 			0xff;
 	dphy->hs_exit = ((DPHY_TIME_HS_EXIT(t_ui) + temp - 1) / temp) & 0xff;
-	dphy->hs_trail = ((DPHY_TIME_HS_TRAIL(t_ui) + temp - 1) / temp) & 0xff;
-	dphy->hs_prepare = ((DPHY_TIME_HS_PREPARE(t_ui) + temp - 1) / temp) &
-			0xff;
-	dphy->hs_zero = ((DPHY_TIME_HS_ZERO(t_ui) + temp - 1) / temp) & 0xff;
-	dphy->clk_trail = ((DPHY_TIME_CLK_TRAIL(t_ui) + temp - 1) / temp) &
-			0xff;
-	dphy->clk_post = ((DPHY_TIME_CLK_POST(t_ui) + temp - 1) / temp) & 0xff;
 	dphy->clk_prepare = ((DPHY_TIME_CLK_PREPARE(t_ui) + temp - 1) / temp) &
 			0xff;
 	dphy->clk_zero = ((DPHY_TIME_CLK_ZERO(t_ui) + temp - 1) / temp) & 0xff;
 	dphy->clk_pre = ((DPHY_TIME_CLK_PRE(t_ui) + temp - 1) / temp) & 0xff;
 	dphy->init = (DPHY_TIME_INIT(t_ui) + temp - 1) / temp;
 	dphy->wakeup = (DPHY_TIME_WAKEUP(t_ui) + temp - 1) / temp;
+
+	t_req_max = ((105 * 100 + 12 * t_ui) / 100);
+	for (n = 0; n <= 0xff; n++) {
+		dsi_phy_config.clk_trail = n;
+		if (((temp * dsi_phy_config.clk_trail / 100) > 70) &&
+			((temp * dsi_phy_config.clk_trail / 100) < t_req_max)) {
+			if (lcd_debug_print_flag) {
+				LCDPR("t_ui=%d, t_req_max=%d\n",
+					t_ui, t_req_max);
+				LCDPR("clk_trail=%d, n=%d\n",
+					dsi_phy_config.clk_trail, n);
+			}
+			break;
+		}
+	}
+
+	t_req_min = 2 * ((60 * 100 + 52 * t_ui) / 100);
+	for (n = 0; n <= 0xff; n++) {
+		dsi_phy_config.clk_post = n;
+		if ((temp * dsi_phy_config.clk_post / 100) >= t_req_min) {
+			if (lcd_debug_print_flag) {
+				LCDPR("t_ui=%d, t_req_min=%d\n",
+					t_ui, t_req_min);
+				LCDPR("clk_post=%d, n=%d\n",
+					dsi_phy_config.clk_post, n);
+			}
+			break;
+		}
+	}
+
+	t_req_min = max(8 * t_ui / 100, (60 * 100 + 4 * t_ui) / 100) + 10;
+	t_req_max = ((105 * 100 + 12 * t_ui) / 100);
+	for (n = 0; n <= 0xff; n++) {
+		dsi_phy_config.hs_trail = n;
+		if (((temp * dsi_phy_config.hs_trail / 100) > t_req_min) &&
+			((temp * dsi_phy_config.hs_trail / 100) < t_req_max)) {
+			if (lcd_debug_print_flag) {
+				LCDPR("t_ui=%d, t_req_min=%d, t_req_max=%d\n",
+					t_ui, t_req_min, t_req_max);
+				LCDPR("hs_trail=%d, n=%d\n",
+					dsi_phy_config.hs_trail, n);
+			}
+			break;
+		}
+	}
+
+	t_req_min = (40 * 100 + 4 * t_ui) / 100;
+	t_req_max = ((85 * 100 + 6 * t_ui) / 100);
+	for (n = 0; n <= 0xff; n++) {
+		dsi_phy_config.hs_prepare = n;
+		if (((temp * dsi_phy_config.hs_prepare / 100) > t_req_min) &&
+			((temp * dsi_phy_config.hs_prepare / 100) <
+			t_req_max)) {
+			if (lcd_debug_print_flag) {
+				LCDPR("t_ui=%d, t_req_min=%d, t_req_max=%d\n",
+					t_ui, t_req_min, t_req_max);
+				LCDPR("hs_prepare=%d, n=%d\n",
+					dsi_phy_config.hs_prepare, n);
+			}
+			break;
+		}
+	}
+
+	t_req_min = ((145 * 100 + 10 * t_ui) / 100) -
+		((40 * 100 + 4 * t_ui) / 100);
+	for (n = 0; n <= 0xff; n++) {
+		dsi_phy_config.hs_zero = n;
+		if ((temp * dsi_phy_config.hs_zero / 100) > t_req_min) {
+			if (lcd_debug_print_flag) {
+				LCDPR("t_ui=%d, t_req_min=%d\n",
+					t_ui, t_req_min);
+				LCDPR("hs_zero=%d, n=%d\n",
+					dsi_phy_config.hs_zero, n);
+			}
+			break;
+		}
+	}
 
 	/* check dphy spec: (unit: ns) */
 	if ((temp * dsi_phy_config.lp_tesc / 100) <= 100)

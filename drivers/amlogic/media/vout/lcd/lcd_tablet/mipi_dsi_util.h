@@ -466,19 +466,19 @@ enum tv_enc_lcd_type_e {
 /* 5*lpx */
 #define DPHY_TIME_LP_TA_GETX(ui)    (5 * DPHY_TIME_LP_LPX(ui))
 /* >100ns */
-#define DPHY_TIME_HS_EXIT(ui)       (120 * 100)
+#define DPHY_TIME_HS_EXIT(ui)       (110 * 100)
 /* max(8*ui, 60+4*ui), (teot)<105+12*ui */
 #define DPHY_TIME_HS_TRAIL(ui)      ((ui > (60 * 100 / 4)) ? \
 					(8 * ui) : ((60 * 100) + 4 * ui))
 /* (40+4*ui, 85+6*ui) */
-#define DPHY_TIME_HS_PREPARE(ui)    (50 * 100 + 4 * t_ui)
+#define DPHY_TIME_HS_PREPARE(ui)    (50 * 100 + 4 * ui)
 /* hs_prepare+hs_zero >145+10*ui */
 #define DPHY_TIME_HS_ZERO(ui)       (160 * 100 + 10 * ui - \
 					DPHY_TIME_HS_PREPARE(ui))
 /* >60ns, (teot)<105+12*ui */
 #define DPHY_TIME_CLK_TRAIL(ui)     (70 * 100)
 /* >60+52*ui */
-#define DPHY_TIME_CLK_POST(ui)      (70 * 100 + 52 * ui)
+#define DPHY_TIME_CLK_POST(ui)      (2 * (60 * 100 + 52 * ui))
 /* (38, 95) */
 #define DPHY_TIME_CLK_PREPARE(ui)   (50 * 100)
 /* clk_prepare+clk_zero > 300 */
