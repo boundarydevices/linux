@@ -91,13 +91,14 @@ static bool set_hpll_hclk_v1(unsigned int m, unsigned int frac_val)
 {
 	int ret = 0;
 
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x3b3a0400 | (m & 0xff));
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x0b3a0400 | (m & 0xff));
+	hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 0x3, 28, 2);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL1, frac_val);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x2a29dc00);
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x6a68dc00);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x65771290);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x39272000);
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x50540000);
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x56540000);
 	hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 0x0, 29, 1);
 	WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL0);
 	pr_info("HPLLv1: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL0));
@@ -110,13 +111,14 @@ static bool set_hpll_hclk_v2(unsigned int m, unsigned int frac_val)
 {
 	int ret = 0;
 
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x3b3a0400 | (m & 0xff));
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x0b3a0400 | (m & 0xff));
+	hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 0x3, 28, 2);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL1, frac_val);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0xeaa9dc00);
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x95771290);
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0xea68dc00);
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x65771290);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x39272000);
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x55540028);
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x56540000);
 	hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 0x0, 29, 1);
 	WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL0);
 	pr_info("HPLLv2: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL0));
@@ -129,10 +131,11 @@ static bool set_hpll_hclk_v3(unsigned int m, unsigned int frac_val)
 {
 	int ret = 0;
 
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x3b3a0400 | (m & 0xff));
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x0b3a0400 | (m & 0xff));
+	hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 0x3, 28, 2);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL1, frac_val);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);
-	hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0xea29dc00);
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0xea68dc00);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x65771290);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x39272000);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x55540000);
