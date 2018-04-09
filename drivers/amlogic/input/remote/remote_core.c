@@ -117,6 +117,9 @@ void remote_keydown(struct remote_dev *dev, int scancode, int status)
 	unsigned long flags;
 	u32 keycode;
 
+	if (dev->led_blink)
+		led_trigger_blink_oneshot(dev->led_feedback, &dev->delay_on,
+			 &dev->delay_off, 0);
 
 	if (status != REMOTE_REPEAT) {
 		if (dev->is_valid_custom &&

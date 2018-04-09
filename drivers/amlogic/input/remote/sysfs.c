@@ -251,6 +251,63 @@ static ssize_t map_tables_show(struct device *dev,
 	return len;
 }
 
+static ssize_t led_blink_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+
+	struct remote_chip *chip = dev_get_drvdata(dev);
+	struct remote_dev  *r_dev = chip->r_dev;
+
+	return sprintf(buf, "%u\n", r_dev->led_blink);
+}
+
+static ssize_t led_blink_store(struct device *dev,
+				   struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+
+	struct remote_chip *chip = dev_get_drvdata(dev);
+	struct remote_dev  *r_dev = chip->r_dev;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret != 0)
+		return -EINVAL;
+	r_dev->led_blink = val;
+	return count;
+}
+
+static ssize_t led_frq_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+
+	struct remote_chip *chip = dev_get_drvdata(dev);
+	struct remote_dev  *r_dev = chip->r_dev;
+
+	return sprintf(buf, "%ld\n", r_dev->delay_on);
+}
+
+static ssize_t led_frq_store(struct device *dev,
+				   struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+
+	struct remote_chip *chip = dev_get_drvdata(dev);
+	struct remote_dev  *r_dev = chip->r_dev;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret != 0)
+		return -EINVAL;
+	r_dev->delay_off = val;
+	r_dev->delay_on = val;
+	return count;
+}
+
+DEVICE_ATTR_RW(led_frq);
+DEVICE_ATTR_RW(led_blink);
 DEVICE_ATTR_RW(repeat_enable);
 DEVICE_ATTR_RW(protocol);
 DEVICE_ATTR_RW(keymap);
@@ -265,6 +322,8 @@ static struct attribute *remote_attrs[] = {
 	&dev_attr_debug_enable.attr,
 	&dev_attr_repeat_enable.attr,
 	&dev_attr_debug_log.attr,
+	&dev_attr_led_blink.attr,
+	&dev_attr_led_frq.attr,
 	NULL,
 };
 

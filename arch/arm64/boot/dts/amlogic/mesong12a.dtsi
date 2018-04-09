@@ -781,6 +781,8 @@
 			<0x0 0xff808000 0x00 0x20>; /*Legacy IR controller*/
 		status = "okay";
 		protocol = <REMOTE_TYPE_NEC>;
+		led_blink = <1>;
+		led_blink_frq = <100>;
 		interrupts = <0 196 1>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&remote_pins>;

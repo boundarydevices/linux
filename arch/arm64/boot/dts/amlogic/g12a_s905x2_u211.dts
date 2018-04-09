@@ -157,6 +157,13 @@
 			gpios=<&gpio GPIOA_15 GPIO_ACTIVE_HIGH>;
 			default-state ="on";
 		};
+
+		remote_led {
+			label = "remote_led";
+			gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			linux,default-trigger = "rc_feedback";
+		};
 	};
 
 	cvbsout {

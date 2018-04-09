@@ -23,6 +23,7 @@
 #include <linux/kfifo.h>
 #include <linux/device.h>
 #include <dt-bindings/input/meson_rc.h>
+#include <linux/leds.h>
 
 #define MULTI_IR_TYPE_MASK(type) (type & 0xff)  /*8bit*/
 #define LEGACY_IR_TYPE_MASK(type) ((type >> 8) & 0xff) /*8bit*/
@@ -67,6 +68,12 @@ struct remote_dev {
 	struct list_head aml_list;
 	struct remote_raw_handle *raw;
 	spinlock_t keylock;
+
+#define DEFAULT_LED_BLINK_FRQ	100
+	struct led_trigger *led_feedback;
+	unsigned long delay_on;
+	unsigned long delay_off;
+	int led_blink;
 
 	struct timer_list timer_keyup;
 	unsigned long keyup_jiffies;

@@ -471,7 +471,7 @@ static int ir_get_devtree_pdata(struct platform_device *pdev)
 	resource_size_t *res_start[2];
 	struct pinctrl *p;
 	int ret;
-	int value;
+	int value = 0;
 	unsigned char i;
 
 
@@ -484,6 +484,26 @@ static int ir_get_devtree_pdata(struct platform_device *pdev)
 		chip->protocol = 1;
 	}
 	dev_info(chip->dev, "protocol = 0x%x\n", chip->protocol);
+
+	ret = of_property_read_u32(pdev->dev.of_node,
+			"led_blink", &chip->r_dev->led_blink);
+	if (ret) {
+		dev_err(chip->dev, "don't find the node <led_blink>\n");
+		chip->r_dev->led_blink = 0;
+	}
+	dev_info(chip->dev, "led_blink = %d\n", chip->r_dev->led_blink);
+
+	ret = of_property_read_u32(pdev->dev.of_node,
+			"led_blink_frq", &value);
+	if (ret) {
+		dev_err(chip->dev, "don't find the node <led_blink_frq>\n");
+		chip->r_dev->delay_on = DEFAULT_LED_BLINK_FRQ;
+		chip->r_dev->delay_off = DEFAULT_LED_BLINK_FRQ;
+	} else {
+		chip->r_dev->delay_off = value;
+		chip->r_dev->delay_on = value;
+	}
+	dev_info(chip->dev, "led_blink_frq  = %ld\n", chip->r_dev->delay_on);
 
 	p = devm_pinctrl_get_select_default(&pdev->dev);
 	if (IS_ERR(p)) {
@@ -644,6 +664,8 @@ static int remote_probe(struct platform_device *pdev)
 	device_init_wakeup(&pdev->dev, 1);
 	dev_pm_set_wake_irq(&pdev->dev, chip->irqno);
 
+	led_trigger_register_simple("rc_feedback", &dev->led_feedback);
+
 	return 0;
 
 error_register_remote:
@@ -666,6 +688,7 @@ static int remote_remove(struct platform_device *pdev)
 	tasklet_kill(&tasklet);
 
 	free_irq(chip->irqno, chip); /*irq dev_id is chip address*/
+	led_trigger_unregister_simple(chip->r_dev->led_feedback);
 	ir_cdev_free(chip);
 	remote_unregister_device(chip->r_dev);
 	remote_free_device(chip->r_dev);
