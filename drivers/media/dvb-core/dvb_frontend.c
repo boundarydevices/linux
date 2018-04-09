@@ -1513,6 +1513,7 @@ static int dtv_property_process_get(struct dvb_frontend *fe,
 		break;
 #ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	case DTV_DELIVERY_SUB_SYSTEM:
+	case DTV_TS_INPUT:
 		r = 0;
 		//printk("dvb-core get sub sys\r\n");
 		break;
@@ -2200,6 +2201,8 @@ static int dtv_set_frontend(struct dvb_frontend *fe)
 	/* Request the search algorithm to search */
 	fepriv->algo_status |= DVBFE_ALGO_SEARCH_AGAIN;
 
+	if (fe->ops.set_frontend)
+		fe->ops.set_frontend(fe);
 	dvb_frontend_clear_events(fe);
 	dvb_frontend_add_event(fe, 0);
 	dvb_frontend_wakeup(fe);
