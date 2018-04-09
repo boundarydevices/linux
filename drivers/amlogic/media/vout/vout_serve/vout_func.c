@@ -73,6 +73,30 @@ struct vinfo_s *get_invalid_vinfo(int index)
 }
 EXPORT_SYMBOL(get_invalid_vinfo);
 
+void vout_trim_string(char *str)
+{
+	char *start, *end;
+	int len;
+
+	if (str == NULL)
+		return;
+
+	len = strlen(str);
+	if ((str[len-1] == '\n') || (str[len-1] == '\r')) {
+		len--;
+		str[len] = '\0';
+	}
+
+	start = str;
+	end = str + len - 1;
+	while (*start && (*start == ' '))
+		start++;
+	while (*end && (*end == ' '))
+		*end-- = '\0';
+	strcpy(str, start);
+}
+EXPORT_SYMBOL(vout_trim_string);
+
 struct vout_module_s *vout_func_get_vout_module(void)
 {
 	return &vout_module;

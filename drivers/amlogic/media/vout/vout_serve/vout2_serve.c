@@ -171,6 +171,7 @@ static int set_vout2_mode(char *name)
 	enum vmode_e mode;
 	int ret = 0;
 
+	vout_trim_string(name);
 	VOUTPR("vout2: vmode set to %s\n", name);
 
 	if (strcmp(name, local_name) == 0) {
@@ -205,14 +206,15 @@ static int set_vout2_mode(char *name)
 
 static int set_vout2_init_mode(void)
 {
-	enum vmode_e vmode = VMODE_NULL;
+	enum vmode_e vmode = nulldisp_vinfo.mode;
 	int ret = 0;
 
 	ret = set_current_vmode2(vmode);
 	if (ret) {
 		VOUTERR("vout2: init mode null set error\n");
 	} else {
-		snprintf(vout2_mode, VMODE_NAME_LEN_MAX, "null");
+		snprintf(local_name, VMODE_NAME_LEN_MAX, nulldisp_vinfo.name);
+		snprintf(vout2_mode, VMODE_NAME_LEN_MAX, nulldisp_vinfo.name);
 		VOUTPR("vout2: init mode %s set ok\n", vout2_mode);
 	}
 

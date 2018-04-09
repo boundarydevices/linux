@@ -191,6 +191,7 @@ int set_vout_mode(char *name)
 	enum vmode_e mode;
 	int ret = 0;
 
+	vout_trim_string(name);
 	VOUTPR("vmode set to %s\n", name);
 
 	if (strcmp(name, local_name) == 0) {
@@ -985,6 +986,7 @@ static void vout_init_mode_parse(char *str)
 	 * convert to vmode when vout sever registered
 	 */
 	snprintf(vout_mode_uboot, VMODE_NAME_LEN_MAX, "%s", str);
+	vout_trim_string(vout_mode_uboot);
 	VOUTPR("%s\n", str);
 }
 

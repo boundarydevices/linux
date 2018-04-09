@@ -47,6 +47,7 @@ struct vout_cdev_s {
 extern int get_hpd_state(void);
 #endif
 extern int vout_get_hpd_state(void);
+extern void vout_trim_string(char *str);
 
 extern struct vinfo_s *get_invalid_vinfo(int index);
 extern struct vout_module_s *vout_func_get_vout_module(void);
