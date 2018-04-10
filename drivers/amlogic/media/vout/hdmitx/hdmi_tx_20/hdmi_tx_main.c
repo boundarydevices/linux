@@ -1135,9 +1135,12 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		pr_info("hdmitx: not support DolbyVision\n");
 		return;
 	}
-/*ver0 and ver1_15 use hdmi 1.4b VSIF*/
+	/*ver0 and ver1_15 and ver1_12bit with ll= 0 use hdmi 1.4b VSIF*/
 	if ((hdev->RXCap.dv_info.ver == 0) || ((hdev->RXCap.dv_info.ver == 1)
-		&& (hdev->RXCap.dv_info.length == 0xE))) {
+		&& (hdev->RXCap.dv_info.length == 0xE))
+		|| ((hdev->RXCap.dv_info.ver == 1)
+		&& (hdev->RXCap.dv_info.length == 0xB)
+		&& (hdev->RXCap.dv_info.low_latency == 0))) {
 		if ((vic == HDMI_3840x2160p30_16x9) ||
 		    (vic == HDMI_3840x2160p25_16x9) ||
 		    (vic == HDMI_3840x2160p24_16x9) ||
@@ -1179,6 +1182,8 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		}
 		if (type == EOTF_T_DOLBYVISION) {
 			hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB1, VEN_HB);
+			hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+				CLR_AVI_BT2020);/*BT709*/
 			if (tunnel_mode == RGB_8BIT) {
 				hdev->HWOp.CntlConfig(hdev,
 					CONF_AVI_RGBYCC_INDIC,
@@ -1205,12 +1210,15 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 				CONF_AVI_Q01, RGB_RANGE_LIM);
 			hdev->HWOp.CntlConfig(hdev,
 				CONF_AVI_YQ01, YCC_RANGE_LIM);
+			hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+				CLR_AVI_BT2020);/*BT709*/
 		}
 
 	}
-	/*ver1_12 and ver2 use Dolby VSIF*/
+	/*ver1_12  with low_latency = 1 and ver2 use Dolby VSIF*/
 	if ((hdev->RXCap.dv_info.ver == 2) || ((hdev->RXCap.dv_info.ver == 1)
-		&& (hdev->RXCap.dv_info.length == 0xB))
+		&& (hdev->RXCap.dv_info.length == 0xB)
+		&& (hdev->RXCap.dv_info.low_latency == 1))
 		|| (type == EOTF_T_LL_MODE)) {
 
 		if (data == NULL)
@@ -1253,6 +1261,8 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		/*Dolby Vision standard case*/
 		if (type == EOTF_T_DOLBYVISION) {
 			hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB2, VEN_HB);
+			hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+				CLR_AVI_BT2020);/*BT709*/
 			if (tunnel_mode == RGB_8BIT) {/*RGB444*/
 				hdev->HWOp.CntlConfig(hdev,
 					CONF_AVI_RGBYCC_INDIC,
@@ -1270,6 +1280,13 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		/*Dolby Vision low-latency case*/
 		else if  (type == EOTF_T_LL_MODE) {
 			hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB2, VEN_HB);
+			if (hdev->RXCap.colorimetry_data & 0xe0)
+				/*if RX support BT2020, then output BT2020*/
+				hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+					SET_AVI_BT2020);/*BT2020*/
+			else
+				hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+					CLR_AVI_BT2020);/*BT709*/
 			if (tunnel_mode == RGB_10_12BIT) {/*10/12bit RGB444*/
 				hdev->HWOp.CntlConfig(hdev,
 					CONF_AVI_RGBYCC_INDIC,
@@ -1308,6 +1325,8 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 				CONF_AVI_Q01, RGB_RANGE_LIM);
 			hdev->HWOp.CntlConfig(hdev,
 				CONF_AVI_YQ01, YCC_RANGE_LIM);
+			hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+				CLR_AVI_BT2020);/*BT709*/
 		}
 	}
 }

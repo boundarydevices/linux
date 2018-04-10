@@ -138,7 +138,7 @@ struct dv_info {
 	uint8_t tmaxLUM;
 	uint8_t colorimetry:1;/* ver1*/
 	uint8_t tminLUM;
-	uint8_t low_latency:1;/* ver1_12 and 2*/
+	uint8_t low_latency;/* ver1_12 and 2*/
 	uint8_t sup_backlight_control:1;/*only ver2*/
 	uint8_t backlt_min_luma;/*only ver2*/
 	uint8_t Interface;/*only ver2*/
