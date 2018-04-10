@@ -377,6 +377,12 @@ static int lcd_power_encl_on_notifier(struct notifier_block *nb,
 
 	if (lcd_debug_print_flag)
 		LCDPR("%s: 0x%lx\n", __func__, event);
+
+	if (lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) {
+		LCDPR("lcd is already enabled\n");
+		return NOTIFY_OK;
+	}
+
 	lcd_power_encl_on();
 
 	return NOTIFY_OK;
@@ -413,6 +419,11 @@ static int lcd_power_if_on_notifier(struct notifier_block *nb,
 
 	if (lcd_debug_print_flag)
 		LCDPR("%s: 0x%lx\n", __func__, event);
+
+	if (lcd_driver->lcd_status & LCD_STATUS_IF_ON) {
+		LCDPR("lcd interface is already enabled\n");
+		return NOTIFY_OK;
+	}
 
 	if (lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) {
 		lcd_power_if_on();

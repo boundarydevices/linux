@@ -46,6 +46,7 @@
 #define VPU_VPU_PWM_V2                  0x2732
 #define VPU_VPU_PWM_V3                  0x2733
 
+#define ENCL_VIDEO_EN                   0x1ca0
 #define ENCL_VIDEO_MAX_LNCNT            0x1cbb
 
 

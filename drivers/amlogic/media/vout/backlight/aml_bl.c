@@ -2945,6 +2945,28 @@ static const struct of_device_id bl_dt_match_table[] = {
 };
 #endif
 
+static void aml_bl_init_status_update(void)
+{
+	unsigned int state;
+
+	state = bl_vcbus_read(ENCL_VIDEO_EN);
+	if (state == 0) /* default disable lcd & backlight */
+		return;
+
+	/* update bl status */
+	bl_drv->state = (BL_STATE_LCD_ON |
+			BL_STATE_BL_POWER_ON | BL_STATE_BL_ON);
+	bl_on_request = 1;
+
+	if (brightness_bypass) {
+		aml_bl_set_level(bl_level_uboot);
+		bl_on_level = bl_level_uboot;
+	} else {
+		aml_bl_update_status(bl_drv->bldev);
+		bl_on_level = bl_drv->bconf->level_default;
+	}
+}
+
 static int aml_bl_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -3028,18 +3050,7 @@ static int aml_bl_probe(struct platform_device *pdev)
 #endif
 	aml_bl_creat_class();
 
-	/* update bl status */
-	bl_drv->state = (BL_STATE_LCD_ON |
-			BL_STATE_BL_POWER_ON | BL_STATE_BL_ON);
-	bl_on_request = 1;
-
-	if (brightness_bypass) {
-		aml_bl_set_level(bl_level_uboot);
-		bl_on_level = bl_level_uboot;
-	} else {
-		aml_bl_update_status(bl_drv->bldev);
-		bl_on_level = bconf->level_default;
-	}
+	aml_bl_init_status_update();
 
 	BLPR("probe OK\n");
 	return 0;
