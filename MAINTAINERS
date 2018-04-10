@@ -14137,6 +14137,10 @@ F: driver/amlogic/drm/am_meson_fbdev.c
 F: include/linux/amlogic/meson_drm.h
 F: arch/arm64/boot/dts/amlogic/g12a_skt_buildroot.dts
 F: arch/arm64/boot/dts/amlogic/mesong12a_drm.dtsi
+F: driver/amlogic/drm/am_meson_drv.c
+F: driver/amlogic/drm/am_meson_drv.h
+F: driver/amlogic/drm/am_meson_vpu.c
+F: driver/amlogic/drm/am_meson_vpu.h
 
 AMLOGIC ADD S400EMMC DTS
 M: Yue Gui <yuegui.he@amlogic.com>

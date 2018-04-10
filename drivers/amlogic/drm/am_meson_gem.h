@@ -20,7 +20,8 @@
 #include <drm/drm_gem.h>
 #include <linux/amlogic/meson_drm.h>
 #include <ion/ion_priv.h>
-#include "meson_drv.h"
+
+#include "am_meson_drv.h"
 
 struct am_meson_gem_object {
 	struct drm_gem_object base;
@@ -73,7 +74,7 @@ int am_meson_gem_object_mmap(
 	struct am_meson_gem_object *obj,
 	struct vm_area_struct *vma);
 
-int am_meson_gem_object_get_phyaddr(
+extern int am_meson_gem_object_get_phyaddr(
 	struct meson_drm *drm,
 	struct am_meson_gem_object *meson_gem);
 

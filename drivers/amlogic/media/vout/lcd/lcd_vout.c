@@ -208,6 +208,7 @@ struct aml_lcd_drv_s *aml_lcd_get_driver(void)
 {
 	return lcd_driver;
 }
+EXPORT_SYMBOL(aml_lcd_get_driver);
 /* ********************************************************* */
 
 static void lcd_power_ctrl(int status)

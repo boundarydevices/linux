@@ -7,18 +7,29 @@ config DRM_MESON
 	select VIDEOMODE_HELPERS
 	select REGMAP_MMIO
 
-config DRM_MESON_BYPASS_MODE
-	bool "use the drm display path, but all the implements in other drivers."
+config DRM_MESON_VPU
+	tristate "support drm vpu function for meson drm display."
 	default y
 	depends on DRM_MESON
 	help
-		The MESON DRM want to rewrite all the display component,its a big job,
-		and will meet a lot of bugs which are already handled before.
-		We add bypass mode to implment drm based on amlogic existing driver,
-		it should be easier and more robust.
+		add drm vpu support.
+		Choose this option if you have a aMLOGIC soc chipset.
+		This driver provides KMS.
+		This driver also provides crtcs and planes management.
+
+config DRM_MESON_HDMI
+	tristate "support drm hdmi function for meson drm display."
+	default y
+	depends on DRM_MESON
+	depends on AMLOGIC_HDMITX
+	help
+		add drm hdmi support.
+		use internal amlogic media vout hdmi driver.
+		We should confirm AMLOGIC_HDMITX is configured if
+		DRM_MESON_HDMI is selected.
 
 config DRM_MESON_PANEL
-	bool "support drm panel function for meson drm display."
+	tristate "support drm panel function for meson drm display."
 	default y
 	depends on DRM_MESON
 	depends on AMLOGIC_LCD
@@ -33,7 +44,7 @@ config DRM_MESON_PANEL
 config DRM_MESON_USE_ION
 	bool "gem use ion to alloc/free graphic buffer."
 	default y
-	depends on DRM_MESON && DRM_MESON_BYPASS_MODE
+	depends on DRM_MESON
 	help
 		MESON DRM use CMA HELPER to manage framebuffer.
 		It need reserve memory in CMA pool.
@@ -45,6 +56,6 @@ config DRM_MESON_USE_ION
 config DRM_MESON_EMULATE_FBDEV
 	bool "emulate framebuffer dev by drm."
 	default n
-	depends on DRM_MESON && DRM_MESON_BYPASS_MODE && DRM_MESON_USE_ION
+	depends on DRM_MESON && DRM_MESON_USE_ION
 	help
 		Emulate framebuffer device for device which need use fbdev api.

@@ -19,6 +19,7 @@
 
 #include "mesong12a.dtsi"
 #include "mesong12a_skt-panel.dtsi"
+#include "mesong12a_drm.dtsi"
 
 / {
 	model = "Amlogic";
@@ -803,6 +804,18 @@
 	};
 
 }; /* end of / */
+
+&drm_vpu {
+	status = "okay";
+};
+
+&drm_amhdmitx {
+	status = "okay";
+};
+
+&drm_lcd {
+	status = "okay";
+};
 
 &pwm_AO_cd {
 		status = "okay";

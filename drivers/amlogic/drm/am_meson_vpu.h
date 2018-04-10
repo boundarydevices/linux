@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/drm/am_meson_lcd.h
+ * drivers/amlogic/drm/am_meson_vpu.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -14,11 +14,11 @@
  * more details.
  *
  */
+#ifndef __AM_MESON_VPU_H
+#define __AM_MESON_VPU_H
 
-#ifndef __AM_DRM_LCD_H
-#define __AM_DRM_LCD_H
+struct am_meson_vpu_data {
+	uint32_t version;
+};
 
-#include "am_meson_drv.h"
-
-#endif
-
+#endif /* __AM_MESON_VPU_H */

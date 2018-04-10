@@ -16,50 +16,41 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __MESON_DRV_H
-#define __MESON_DRV_H
+#ifndef __AM_MESON_DRV_H
+#define __AM_MESON_DRV_H
 
 #include <linux/platform_device.h>
-#include <linux/regmap.h>
 #include <linux/of.h>
 #include <drm/drmP.h>
 #ifdef CONFIG_DRM_MESON_USE_ION
 #include <ion/ion_priv.h>
 #endif
 
+#define MESON_MAX_CRTC		2
+
+/*
+ * Amlogic drm private crtc funcs.
+ * @loader_protect: protect loader logo crtc's power
+ * @enable_vblank: enable crtc vblank irq.
+ * @disable_vblank: disable crtc vblank irq.
+ */
+struct meson_crtc_funcs {
+	int (*loader_protect)(struct drm_crtc *crtc, bool on);
+	int (*enable_vblank)(struct drm_crtc *crtc);
+	void (*disable_vblank)(struct drm_crtc *crtc);
+};
+
 struct meson_drm {
 	struct device *dev;
 
-#ifndef CONFIG_DRM_MESON_BYPASS_MODE
-	void __iomem *io_base;
-	struct regmap *hhi;
-	struct regmap *dmc;
-#endif
-
-	int vsync_irq;
-
 	struct drm_device *drm;
 	struct drm_crtc *crtc;
+	const struct meson_crtc_funcs *crtc_funcs[MESON_MAX_CRTC];
 	struct drm_fbdev_cma *fbdev;
 	struct drm_fb_helper *fbdev_helper;
 	struct drm_gem_object *fbdev_bo;
 	struct drm_plane *primary_plane;
 	struct drm_plane *cursor_plane;
-
-#ifndef CONFIG_DRM_MESON_BYPASS_MODE
-	/* Components Data */
-	struct {
-		bool osd1_enabled;
-		bool osd1_interlace;
-		bool osd1_commit;
-		uint32_t osd1_ctrl_stat;
-		uint32_t osd1_blk0_cfg[5];
-	} viu;
-
-	struct {
-		unsigned int current_mode;
-	} venc;
-#endif
 
 #ifdef CONFIG_DRM_MESON_USE_ION
 	struct ion_client *gem_client;
@@ -72,4 +63,8 @@ static inline int meson_vpu_is_compatible(struct meson_drm *priv,
 	return of_device_is_compatible(priv->dev->of_node, compat);
 }
 
-#endif /* __MESON_DRV_H */
+extern int am_meson_register_crtc_funcs(struct drm_crtc *crtc,
+				 const struct meson_crtc_funcs *crtc_funcs);
+extern void am_meson_unregister_crtc_funcs(struct drm_crtc *crtc);
+
+#endif /* __AM_MESON_DRV_H */

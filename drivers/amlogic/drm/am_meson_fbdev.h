@@ -13,12 +13,12 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _MESON_DRM_FBDEV_H
-#define _MESON_DRM_FBDEV_H
+#ifndef __AM_MESON_FBDEV_H
+#define __AM_MESON_FBDEV_H
 
 #ifdef CONFIG_DRM_MESON_EMULATE_FBDEV
-int meson_drm_fbdev_init(struct drm_device *dev);
-void meson_drm_fbdev_fini(struct drm_device *dev);
+int am_meson_drm_fbdev_init(struct drm_device *dev);
+void am_meson_drm_fbdev_fini(struct drm_device *dev);
 #endif
 
-#endif /* _MESON_DRM_FBDEV_H */
+#endif /* __AM_MESON_FBDEV_H */

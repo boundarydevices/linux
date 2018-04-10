@@ -24,7 +24,6 @@
 #include <linux/meson_ion.h>
 #include <ion/ion.h>
 
-#include "meson_drv.h"
 #include "am_meson_gem.h"
 
 #define to_am_meson_gem_obj(x) container_of(x, struct am_meson_gem_object, base)
@@ -229,6 +228,7 @@ int am_meson_gem_object_get_phyaddr(
 
 	return addr;
 }
+EXPORT_SYMBOL(am_meson_gem_object_get_phyaddr);
 
 int am_meson_gem_dumb_create(
 	struct drm_file *file_priv,

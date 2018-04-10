@@ -16,35 +16,42 @@
 */
 
 / {
-	venc-cvbs {
-		status = "okay";
-		compatible = "amlogic,meson-gxbb-cvbs";
-
+	drm_amhdmitx: drm-amhdmitx {
+		status = "disabled";
+		compatible = "amlogic,drm-amhdmitx";
+		dev_name = "meson-amhdmitx";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
+		drm_feature = <1>;
 		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			enc_cvbs_in: port@0 {
-				 #address-cells = <1>;
-				 #size-cells = <0>;
-				 reg = <0>;
-
-				 venc_cvbs_in_vpu: endpoint@0 {
-					 reg = <0>;
-					 remote-endpoint = <&vpu_out_venc_cvbs>;
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				hdmi_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_hdmi>;
 				};
 			};
 		};
 	};
 
-	amhdmitx: amhdmitx {
-		compatible = "amlogic, drm_amhdmitx";
-		dev_name = "amhdmitx";
-		drm_feature = <1>;
+	drm_lcd: drm-lcd {
+		status = "disabled";
+		compatible = "amlogic,drm-lcd";
+		dev_name = "meson-lcd";
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				lcd_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_lcd>;
+				};
+			};
+		};
 	};
 
-	drm_vpu@d0100000 {
-		status = "okay";
+	drm_vpu: drm-vpu@0xff900000  {
+		status = "disabled";
 		compatible = "amlogic,meson-gxbb-vpu";
 		reg = <0x0 0xd0100000 0x0 0x100000>,
 			  <0x0 0xc883c000 0x0 0x1000>,
@@ -52,22 +59,34 @@
 		reg-names = "base", "hhi", "dmc";
 		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
 		dma-coherent;
-		ports {
+		vpu_out: port {
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			vpu_out: port@1 {
-				 #address-cells = <1>;
-				 #size-cells = <0>;
-				 reg = <1>;
-
-				 vpu_out_venc_cvbs: endpoint@0 {
-					 reg = <0>;
-					 remote-endpoint = <&venc_cvbs_in_vpu>;
-				 };
-			 };
+			vpu_out_hdmi: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&hdmi_in_vpu>;
+			};
+			vpu_out_lcd: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&lcd_in_vpu>;
+			};
 		};
 	};
+
+	drm_subsystem: drm-subsystem {
+		status = "okay";
+		compatible = "amlogic,drm-subsystem";
+		ports = <&vpu_out>;
+	};
+};
+
+&drm_vpu {
+	status = "okay";
+};
+
+&drm_amhdmitx {
+	status = "okay";
 };
 
 &gpu{

@@ -22,10 +22,10 @@
 #include <drm/drm_panel.h>
 #include <drm/drm_mipi_dsi.h>
 #include <video/display_timing.h>
+#include <linux/component.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 
-#include "meson_drv.h"
 #include "am_meson_lcd.h"
 
 struct am_drm_lcd_s {
@@ -579,8 +579,15 @@ static void am_drm_lcd_display_mode_timing_init(struct am_drm_lcd_s *lcd)
 	pr_info("am_drm_lcd: %s %d\n", __func__, __LINE__);
 }
 
-int am_drm_lcd_register(struct drm_device *drm)
+static const struct of_device_id am_meson_lcd_dt_ids[] = {
+	{ .compatible = "amlogic,drm-lcd", },
+	{},
+};
+
+static int am_meson_lcd_bind(struct device *dev, struct device *master,
+				    void *data)
 {
+	struct drm_device *drm = data;
 	struct drm_connector *connector;
 	struct drm_encoder *encoder;
 	int encoder_type, connector_type;
@@ -649,15 +656,14 @@ int am_drm_lcd_register(struct drm_device *drm)
 	return ret;
 }
 
-int am_drm_lcd_unregister(struct drm_device *drm)
+static void am_meson_lcd_unbind(struct device *dev, struct device *master,
+				    void *data)
 {
-	int ret = 0;
-
 	if (!am_drm_lcd)
-		return -ENODEV;
+		return;
 
 	if (!am_drm_lcd->lcd_drv)
-		return -ENODEV;
+		return;
 
 	pr_info("am_drm_lcd: %s %d\n", __func__, __LINE__);
 
@@ -666,5 +672,36 @@ int am_drm_lcd_unregister(struct drm_device *drm)
 
 	pr_info("am_drm_lcd: %s %d\n", __func__, __LINE__);
 
-	return ret;
+	return;
 }
+
+static const struct component_ops am_meson_lcd_ops = {
+	.bind	= am_meson_lcd_bind,
+	.unbind	= am_meson_lcd_unbind,
+};
+
+static int am_meson_lcd_probe(struct platform_device *pdev)
+{
+	return component_add(&pdev->dev, &am_meson_lcd_ops);
+}
+
+static int am_meson_lcd_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &am_meson_lcd_ops);
+	return 0;
+}
+
+static struct platform_driver am_meson_lcd_pltfm_driver = {
+	.probe  = am_meson_lcd_probe,
+	.remove = am_meson_lcd_remove,
+	.driver = {
+		.name = "meson-lcd",
+		.of_match_table = am_meson_lcd_dt_ids,
+	},
+};
+
+module_platform_driver(am_meson_lcd_pltfm_driver);
+
+MODULE_AUTHOR("MultiMedia Amlogic <multimedia-sh@amlogic.com>");
+MODULE_DESCRIPTION("Amlogic Meson Drm LCD driver");
+MODULE_LICENSE("GPL");

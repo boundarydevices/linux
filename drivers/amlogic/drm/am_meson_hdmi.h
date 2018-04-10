@@ -17,7 +17,7 @@
 #ifndef __AM_MESON_HDMI_H
 #define __AM_MESON_HDMI_H
 
-#include "meson_drv.h"
+#include "am_meson_drv.h"
 #define DDC_SEGMENT_ADDR		0x30
 #define VIC_MAX_NUM 512
 
@@ -68,9 +68,6 @@ struct am_hdmi_tx {
 };
 
 #define to_am_hdmi(x)	container_of(x, struct am_hdmi_tx, x)
-
-int am_hdmi_connector_create(struct meson_drm *priv);
-int am_hdmi_connector_cleanup(struct drm_device *dev);
 
 #define HDMITX_REG_IDX		6
 #define HDMITX_SEC_REG_IDX	7

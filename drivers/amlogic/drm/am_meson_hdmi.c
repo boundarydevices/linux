@@ -20,6 +20,7 @@
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_atomic_helper.h>
 
+#include <linux/component.h>
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/delay.h>
@@ -139,7 +140,7 @@ static enum drm_connector_status am_hdmi_connector_detect
 		return connector_status_connected;
 	}
 	if (!(hdmitx_hpd_hw_op(HPD_READ_HPD_GPIO))) {
-		DRM_INFO("connector_status_connected\n");
+		DRM_INFO("connector_status_disconnected\n");
 		return connector_status_disconnected;
 	}
 
@@ -439,13 +440,23 @@ static irqreturn_t am_hdmi_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-int am_hdmi_connector_create(struct meson_drm *priv)
+static const struct of_device_id am_meson_hdmi_dt_ids[] = {
+	{ .compatible = "amlogic,drm-amhdmitx", },
+	{},
+};
+
+MODULE_DEVICE_TABLE(of, am_meson_hdmi_dt_ids);
+
+static int am_meson_hdmi_bind(struct device *dev,
+				    struct device *master, void *data)
 {
+	struct platform_device *pdev = to_platform_device(dev);
+	struct drm_device *drm = data;
+	struct meson_drm *priv = drm->dev_private;
 	struct am_hdmi_tx *am_hdmi;
-	struct platform_device *pdev;
-	struct drm_device *drm = priv->drm;
 	struct drm_connector *connector;
 	struct drm_encoder *encoder;
+
 	int ret;
 	int irq;
 
@@ -458,7 +469,6 @@ int am_hdmi_connector_create(struct meson_drm *priv)
 
 	DRM_INFO("hdmi connector init\n");
 	am_hdmi->priv = priv;
-	pdev = to_platform_device(am_hdmi->priv->dev);
 	encoder = &am_hdmi->encoder;
 	connector = &am_hdmi->connector;
 
@@ -512,9 +522,40 @@ int am_hdmi_connector_create(struct meson_drm *priv)
 	return 0;
 }
 
-int am_hdmi_connector_cleanup(struct drm_device *dev)
+static void am_meson_hdmi_unbind(struct device *dev,
+				    struct device *master, void *data)
 {
 	am_hdmi_info.connector.funcs->destroy(&am_hdmi_info.connector);
 	am_hdmi_info.encoder.funcs->destroy(&am_hdmi_info.encoder);
+}
+
+static const struct component_ops am_meson_hdmi_ops = {
+	.bind	= am_meson_hdmi_bind,
+	.unbind	= am_meson_hdmi_unbind,
+};
+
+static int am_meson_hdmi_probe(struct platform_device *pdev)
+{
+	return component_add(&pdev->dev, &am_meson_hdmi_ops);
+}
+
+static int am_meson_hdmi_remove(struct platform_device *pdev)
+{
+	component_del(&pdev->dev, &am_meson_hdmi_ops);
 	return 0;
 }
+
+static struct platform_driver am_meson_hdmi_pltfm_driver = {
+	.probe  = am_meson_hdmi_probe,
+	.remove = am_meson_hdmi_remove,
+	.driver = {
+		.name = "meson-amhdmitx",
+		.of_match_table = am_meson_hdmi_dt_ids,
+	},
+};
+
+module_platform_driver(am_meson_hdmi_pltfm_driver);
+
+MODULE_AUTHOR("MultiMedia Amlogic <multimedia-sh@amlogic.com>");
+MODULE_DESCRIPTION("Amlogic Meson Drm HDMI driver");
+MODULE_LICENSE("GPL");

@@ -3486,6 +3486,7 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 	int val;
 	phandle phandle;
 	struct device_node *init_data;
+	struct device_node *drm_node;
 #endif
 
 	/* HDMITX pinctrl config for hdp and ddc*/
@@ -3559,13 +3560,18 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 				pr_info(SYS "not find pwr_ctl\n");
 		}
 		/* Get drm feature information */
-		ret = of_property_read_u32(pdev->dev.of_node, "drm_feature",
-			&(hdmitx_device.drm_feature));
-		if (ret)
-			pr_info(SYS "not find drm_feature\n");
-		else
-			pr_info(SYS "hdmitx_device.drm_feature : %d\n",
-				hdmitx_device.drm_feature);
+		drm_node = of_find_node_by_path("/drm-amhdmitx");
+		if (drm_node) {
+			ret = of_property_read_u32(drm_node, "drm_feature",
+				&(hdmitx_device.drm_feature));
+			if (ret)
+				pr_info(SYS "not find drm_feature\n");
+			else
+				pr_info(SYS "hdmitx_device.drm_feature : %d\n",
+					hdmitx_device.drm_feature);
+		} else {
+			pr_info(SYS "not find drm_amhdmitx\n");
+		}
 	}
 
 #else
@@ -3841,9 +3847,6 @@ static int amhdmitx_resume(struct platform_device *pdev)
 static const struct of_device_id meson_amhdmitx_dt_match[] = {
 	{
 	.compatible	 = "amlogic, amhdmitx",
-	},
-	{
-	.compatible	 = "amlogic, drm_amhdmitx",
 	},
 	{},
 };

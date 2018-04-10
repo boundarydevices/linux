@@ -56,6 +56,10 @@ Required properties:
 	- GXBB (S905) : "amlogic,meson-gxbb-vpu"
 	- GXL (S905X, S905D) : "amlogic,meson-gxl-vpu"
 	- GXM (S912) : "amlogic,meson-gxm-vpu"
+	- TXL (T962X, T962E) : "amlogic,meson-txl-vpu"
+	- TXLX (T962X, T962E) : "amlogic,meson-txlx-vpu"
+	- AXG (A113G, A113D) : "amlogic,meson-axg-vpu"
+	- G12A (S905D2) : "amlogic,meson-g12a-vpu"
 	followed by the common "amlogic,meson-gx-vpu"
 - reg: base address and size of he following memory-mapped regions :
 	- vpu
@@ -81,32 +85,67 @@ corresponding to each VPU output.
 
 Example:
 
-tv-connector {
-	compatible = "composite-video-connector";
-
-	port {
-		tv_connector_in: endpoint {
-			remote-endpoint = <&cvbs_vdac_out>;
+	drm_amhdmitx: drm-amhdmitx {
+		status = "disabled";
+		compatible = "amlogic,drm-amhdmitx";
+		dev_name = "meson-amhdmitx";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
+		drm_feature = <1>;
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				hdmi_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_hdmi>;
+				};
+			};
 		};
 	};
-};
 
-vpu: vpu@d0100000 {
-	compatible = "amlogic,meson-gxbb-vpu";
-	reg = <0x0 0xd0100000 0x0 0x100000>,
-	      <0x0 0xc883c000 0x0 0x1000>,
-	      <0x0 0xc8838000 0x0 0x1000>;
-	reg-names = "vpu", "hhi", "dmc";
-	interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	/* CVBS VDAC output port */
-	port@0 {
-		reg = <0>;
-
-		cvbs_vdac_out: endpoint {
-			remote-endpoint = <&tv_connector_in>;
+	drm_lcd: drm-lcd {
+		status = "disabled";
+		compatible = "amlogic,drm-lcd";
+		dev_name = "meson-lcd";
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				lcd_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_lcd>;
+				};
+			};
 		};
 	};
-};
+
+	drm_vpu: drm-vpu@0xff900000  {
+		status = "disabled";
+		compatible = "amlogic,meson-g12a-vpu";
+		reg = <0x0 0xff900000 0x0 0x40000>,
+			  <0x0 0xff63c000 0x0 0x2000>,
+			  <0x0 0xff638000 0x0 0x2000>;
+		reg-names = "base", "hhi", "dmc";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
+		dma-coherent;
+		vpu_out: port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			vpu_out_hdmi: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&hdmi_in_vpu>;
+			};
+			vpu_out_lcd: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&lcd_in_vpu>;
+			};
+		};
+	};
+
+	drm_subsystem: drm-subsystem {
+		status = "okay";
+		compatible = "amlogic,drm-subsystem";
+		ports = <&vpu_out>;
+	};
+

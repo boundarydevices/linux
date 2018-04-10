@@ -18,7 +18,7 @@
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_crtc_helper.h>
 
-#include "meson_drv.h"
+#include "am_meson_drv.h"
 #include "am_meson_gem.h"
 #include "am_meson_fb.h"
 #include "am_meson_fbdev.h"
@@ -26,7 +26,7 @@
 #define PREFERRED_BPP		32
 #define MESON_DRM_MAX_CONNECTOR	2
 
-static int meson_fbdev_mmap(struct fb_info *info,
+static int am_meson_fbdev_mmap(struct fb_info *info,
 	struct vm_area_struct *vma)
 {
 	struct drm_fb_helper *helper = info->par;
@@ -40,12 +40,12 @@ static int meson_fbdev_mmap(struct fb_info *info,
 	return am_meson_gem_object_mmap(meson_gem, vma);
 }
 
-static int meson_drm_fbdev_sync(struct fb_info *info)
+static int am_meson_drm_fbdev_sync(struct fb_info *info)
 {
 	return 0;
 }
 
-static int meson_drm_fbdev_ioctl(struct fb_info *info,
+static int am_meson_drm_fbdev_ioctl(struct fb_info *info,
 	unsigned int cmd, unsigned long arg)
 {
 	return 0;
@@ -53,7 +53,7 @@ static int meson_drm_fbdev_ioctl(struct fb_info *info,
 
 static struct fb_ops meson_drm_fbdev_ops = {
 	.owner		= THIS_MODULE,
-	.fb_mmap	= meson_fbdev_mmap,
+	.fb_mmap	= am_meson_fbdev_mmap,
 	.fb_fillrect	= drm_fb_helper_cfb_fillrect,
 	.fb_copyarea	= drm_fb_helper_cfb_copyarea,
 	.fb_imageblit	= drm_fb_helper_cfb_imageblit,
@@ -62,14 +62,14 @@ static struct fb_ops meson_drm_fbdev_ops = {
 	.fb_blank	= drm_fb_helper_blank,
 	.fb_pan_display	= drm_fb_helper_pan_display,
 	.fb_setcmap	= drm_fb_helper_setcmap,
-	.fb_sync	= meson_drm_fbdev_sync,
-	.fb_ioctl       = meson_drm_fbdev_ioctl,
+	.fb_sync	= am_meson_drm_fbdev_sync,
+	.fb_ioctl       = am_meson_drm_fbdev_ioctl,
 #ifdef CONFIG_COMPAT
-	.fb_compat_ioctl = meson_drm_fbdev_ioctl,
+	.fb_compat_ioctl = am_meson_drm_fbdev_ioctl,
 #endif
 };
 
-static int meson_drm_fbdev_create(struct drm_fb_helper *helper,
+static int am_meson_drm_fbdev_create(struct drm_fb_helper *helper,
 	struct drm_fb_helper_surface_size *sizes)
 {
 	struct meson_drm *private = helper->dev->dev_private;
@@ -146,10 +146,10 @@ err_meson_gem_free_object:
 }
 
 static const struct drm_fb_helper_funcs meson_drm_fb_helper_funcs = {
-	.fb_probe = meson_drm_fbdev_create,
+	.fb_probe = am_meson_drm_fbdev_create,
 };
 
-int meson_drm_fbdev_init(struct drm_device *dev)
+int am_meson_drm_fbdev_init(struct drm_device *dev)
 {
 	struct meson_drm *private = dev->dev_private;
 	struct drm_fb_helper *helper;
@@ -199,7 +199,7 @@ err_free:
 	return ret;
 }
 
-void meson_drm_fbdev_fini(struct drm_device *dev)
+void am_meson_drm_fbdev_fini(struct drm_device *dev)
 {
 	struct meson_drm *private = dev->dev_private;
 	struct drm_fb_helper *helper = private->fbdev_helper;
