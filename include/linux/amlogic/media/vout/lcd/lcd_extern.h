@@ -37,7 +37,7 @@ enum lcd_extern_i2c_bus_e {
 
 #define LCD_EXTERN_SPI_CLK_FREQ_DFT   10000 /* default 10k */
 
-#define LCD_EXTERN_INIT_ON_MAX        500
+#define LCD_EXTERN_INIT_ON_MAX        1500
 #define LCD_EXTERN_INIT_OFF_MAX       100
 
 #define LCD_EXTERN_INIT_CMD           0x00

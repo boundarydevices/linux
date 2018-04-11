@@ -410,57 +410,175 @@ static int lcd_extern_init_table_dynamic_size_load_dts(
 		sprintf(propname, "init_off");
 	}
 
-	i = 0;
-	while ((i + 2) < max_len) { /* type & cmd_size detect */
-		/* step1: type */
-		ret = of_property_read_u32_index(of_node, propname, i, &val);
-		if (ret) {
-			EXTERR("get %s %s type failed, step %d\n",
-				extconf->name, propname, step);
-			init_table[i] = LCD_EXTERN_INIT_END;
-			return -1;
-		}
-		init_table[i] = (unsigned char)val;
-		type = init_table[i];
-		if (type == LCD_EXTERN_INIT_END)
-			break;
-		/* step2: cmd_size */
-		ret = of_property_read_u32_index(
-			of_node, propname, (i+1), &val);
-		if (ret) {
-			EXTERR("get %s %s cmd_size failed, step %d\n",
-				extconf->name, propname, step);
-			init_table[i] = LCD_EXTERN_INIT_END;
-			return -1;
-		}
-		init_table[i+1] = (unsigned char)val;
-		cmd_size = init_table[i+1];
-		if (cmd_size == 0) {
-			i += 2;
-			continue;
-		}
-		if ((i + 2 + cmd_size) > max_len)
-			break;
-		/* step3: data */
-		for (j = 0; j < cmd_size; j++) {
+	switch (extconf->type) {
+	case LCD_EXTERN_I2C:
+	case LCD_EXTERN_SPI:
+		i = 0;
+		while ((i + 1) < max_len) { /* type & cmd_size detect */
+			/* step1: type */
 			ret = of_property_read_u32_index(
-				of_node, propname, (i+2+j), &val);
+				of_node, propname, i, &val);
 			if (ret) {
-				EXTERR("get %s %s data failed, step %d\n",
+				EXTERR("get %s %s type failed, step %d\n",
 					extconf->name, propname, step);
 				init_table[i] = LCD_EXTERN_INIT_END;
 				return -1;
 			}
-			init_table[i+2+j] = (unsigned char)val;
+			init_table[i] = (unsigned char)val;
+			type = init_table[i];
+			if (type == LCD_EXTERN_INIT_END)
+				break;
+			/* step2: cmd_size */
+			ret = of_property_read_u32_index(
+				of_node, propname, (i+1), &val);
+			if (ret) {
+				EXTERR("get %s %s cmd_size failed, step %d\n",
+					extconf->name, propname, step);
+				init_table[i] = LCD_EXTERN_INIT_END;
+				return -1;
+			}
+			init_table[i+1] = (unsigned char)val;
+			cmd_size = init_table[i+1];
+			if (cmd_size == 0) {
+				i += 2;
+				continue;
+			}
+			if ((i + 2 + cmd_size) > max_len) {
+				EXTERR("%s %s cmd_size out of max, step %d\n",
+					extconf->name, propname, step);
+				init_table[i] = LCD_EXTERN_INIT_END;
+				init_table[i+1] = 0;
+				break;
+			}
+			/* step3: data */
+			for (j = 0; j < cmd_size; j++) {
+				ret = of_property_read_u32_index(
+					of_node, propname, (i+2+j), &val);
+				if (ret) {
+					EXTERR("get %s%s data failed,step%d\n",
+						extconf->name, propname, step);
+					init_table[i] = LCD_EXTERN_INIT_END;
+					return -1;
+				}
+				init_table[i+2+j] = (unsigned char)val;
+			}
+			if (type == LCD_EXTERN_INIT_GPIO) {
+				/* gpio probe */
+				index = init_table[i+2];
+				if (index < LCD_EXTERN_GPIO_NUM_MAX)
+					lcd_extern_gpio_probe(index);
+			}
+			step++;
+			i += (cmd_size + 2);
 		}
-		if (type == LCD_EXTERN_INIT_GPIO) {
-			/* gpio probe */
-			index = init_table[i+2];
-			if (index < LCD_EXTERN_GPIO_NUM_MAX)
-				lcd_extern_gpio_probe(index);
+		break;
+	case LCD_EXTERN_MIPI:
+		i = 0;
+		while ((i + 1) < max_len) { /* type & cmd_size detect */
+			ret = of_property_read_u32_index(
+				of_node, propname, i, &val);
+			if (ret) {
+				EXTERR("get %s %s type failed\n",
+					extconf->name, propname);
+				init_table[i] = 0xff;
+				init_table[i+1] = 0xff;
+				return -1;
+			}
+			init_table[i] = (unsigned char)val;
+			type = (unsigned char)val;
+			if (type == 0xff) {
+				ret = of_property_read_u32_index(
+					of_node, propname, (i+1), &val);
+				if (ret) {
+					EXTERR("get %s %s cmd_size failed\n",
+						extconf->name, propname);
+					init_table[i] = 0xff;
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				init_table[i+1] = (unsigned char)val;
+				cmd_size = init_table[i+1];
+				if (cmd_size == 0xff)
+					break;
+				i += 2;
+			} else if (type == 0xf0) {
+				ret = of_property_read_u32_index(
+					of_node, propname, (i+1), &val);
+				if (ret) {
+					EXTERR("get %s %s type failed\n",
+						extconf->name, propname);
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				/* gpio probe */
+				init_table[i+1] = val;
+				cmd_size = val;
+				if (cmd_size < 3) {
+					EXTERR("%s %s invalid cmd_size gpio\n",
+						extconf->name, propname);
+					return -1;
+				}
+				if ((i + 2 + cmd_size) >= max_len) {
+					EXTERR("%s %s cmd_size out of max\n",
+						extconf->name, propname);
+					init_table[i] = 0xff;
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				for (j = 0; j < cmd_size; j++) {
+					ret = of_property_read_u32_index(
+						of_node, propname,
+						(i+2+j), &val);
+					if (ret) {
+						EXTERR("get %s %s failed\n",
+							extconf->name,
+							propname);
+						init_table[i] = 0xff;
+						init_table[i+1] = 0xff;
+						return -1;
+					}
+					init_table[i+2+j] = (unsigned char)val;
+				}
+				index = init_table[i+2];
+				if (index < LCD_EXTERN_GPIO_NUM_MAX)
+					lcd_extern_gpio_probe(index);
+				i += (cmd_size + 2);
+			} else {
+				ret = of_property_read_u32_index(
+					of_node, propname, (i+1), &val);
+				init_table[i+1] = val;
+				cmd_size = val;
+				if (cmd_size == 0) {
+					i += 2;
+					continue;
+				}
+				if ((i + 2 + cmd_size) >= max_len) {
+					EXTERR("%s %s cmd_size out of max\n",
+						extconf->name, propname);
+					init_table[i] = 0xff;
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				for (j = 0; j < cmd_size; j++) {
+					ret = of_property_read_u32_index(
+						of_node, propname,
+						(i+2+j), &val);
+					if (ret) {
+						EXTERR("%s %s failed\n",
+							extconf->name,
+							propname);
+						init_table[i] = 0xff;
+						init_table[i+1] = 0xff;
+						return -1;
+					}
+					init_table[i+2+j] = (unsigned char)val;
+				}
+				i += (cmd_size + 2);
+			}
 		}
-		step++;
-		i += (cmd_size + 2);
+		break;
+	default:
+		break;
 	}
 
 	return 0;
@@ -487,7 +605,13 @@ static int lcd_extern_init_table_fixed_size_load_dts(
 	}
 
 	i = 0;
-	while ((i + cmd_size) <= max_len) { /* group detect */
+	while (i < max_len) { /* group detect */
+		if ((i + cmd_size) >= max_len) {
+			EXTERR("%s %s cmd_size out of max\n",
+				extconf->name, propname);
+			init_table[i] = LCD_EXTERN_INIT_END;
+			break;
+		}
 		for (j = 0; j < cmd_size; j++) {
 			ret = of_property_read_u32_index(
 				of_node, propname, (i+j), &val);
@@ -523,6 +647,7 @@ static int lcd_extern_get_config_dts(struct device_node *of_node,
 
 	extconf->index = LCD_EXTERN_INDEX_INVALID;
 	extconf->type = LCD_EXTERN_MAX;
+	extconf->status = 0;
 	extconf->table_init_loaded = 0;
 
 	ret = of_property_read_u32(of_node, "index", &val);
@@ -531,6 +656,11 @@ static int lcd_extern_get_config_dts(struct device_node *of_node,
 		return -1;
 	}
 	extconf->index = (unsigned char)val;
+	if (extconf->index == LCD_EXTERN_INDEX_INVALID) {
+		if (lcd_debug_print_flag)
+			EXTPR("index %d is invalid\n", extconf->index);
+		return -1;
+	}
 
 	ret = of_property_read_string(of_node, "status", &str);
 	if (ret) {
@@ -757,6 +887,31 @@ static int lcd_extern_get_config_dts(struct device_node *of_node,
 			extconf->table_init_loaded = 1;
 		break;
 	case LCD_EXTERN_MIPI:
+		ret = of_property_read_u32(of_node, "cmd_size", &val);
+		if (ret) {
+			EXTPR("%s no cmd_size\n", extconf->name);
+			extconf->cmd_size = 0;
+		} else {
+			extconf->cmd_size = (unsigned char)val;
+		}
+		if (lcd_debug_print_flag) {
+			EXTPR("%s(%d) cmd_size=%d\n",
+				extconf->name, extconf->index,
+				extconf->cmd_size);
+		}
+		if (extconf->cmd_size != LCD_EXTERN_CMD_SIZE_DYNAMIC) {
+			EXTERR("cmd_size %d is invalid\n",
+				extconf->cmd_size);
+			break;
+		}
+		ret = lcd_extern_init_table_dynamic_size_load_dts(
+			of_node, extconf, 1);
+		if (ret)
+			break;
+		ret = lcd_extern_init_table_dynamic_size_load_dts(
+			of_node, extconf, 0);
+		if (ret == 0)
+			extconf->table_init_loaded = 1;
 		break;
 	default:
 		break;
@@ -798,66 +953,197 @@ static int lcd_extern_init_table_dynamic_size_load_unifykey(
 		sprintf(propname, "init_off");
 		buf = p + extconf->table_init_on_cnt;
 	}
+	switch (extconf->type) {
+	case LCD_EXTERN_I2C:
+	case LCD_EXTERN_SPI:
+		i = 0;
+		while ((i + 1) < max_len) { /* type & cmd_size detect */
+			/* step1: type */
+			len += 1;
+			ret = lcd_unifykey_len_check(key_len, len);
+			if (ret) {
+				EXTERR("get %s %s failed\n",
+					extconf->name, propname);
+				init_table[i] = LCD_EXTERN_INIT_END;
+				return -1;
+			}
+			init_table[i] = *(buf + LCD_UKEY_EXT_INIT + i);
+			if (init_table[i] == LCD_EXTERN_INIT_END)
+				break;
 
-	i = 0;
-	while (i < max_len) { /* type & cmd_size detect */
-		/* step1: type */
-		len += 1;
-		ret = lcd_unifykey_len_check(key_len, len);
-		if (ret) {
-			EXTERR("get %s %s failed\n",
-				extconf->name, propname);
-			init_table[i] = LCD_EXTERN_INIT_END;
-			return -1;
-		}
-		init_table[i] = *(buf + LCD_UKEY_EXT_INIT + i);
-		if (init_table[i] == LCD_EXTERN_INIT_END)
-			break;
+			/* step2: cmd_size */
+			len += 1;
+			ret = lcd_unifykey_len_check(key_len, len);
+			if (ret) {
+				EXTERR("get %s %s failed\n",
+					extconf->name, propname);
+				init_table[i] = LCD_EXTERN_INIT_END;
+				init_table[i+1] = 0;
+				return -1;
+			}
+			init_table[i+1] = *(buf + LCD_UKEY_EXT_INIT + i + 1);
+			cmd_size = init_table[i+1];
+			if (cmd_size == 0) {
+				i += 2;
+				continue;
+			}
+			if ((i + 2 + cmd_size) > max_len) {
+				EXTERR("%s %s cmd_size out of max\n",
+					extconf->name, propname);
+				init_table[i] = LCD_EXTERN_INIT_END;
+				init_table[i+1] = 0;
+				return -1;
+			}
 
-		/* step2: cmd_size */
-		len += 1;
-		ret = lcd_unifykey_len_check(key_len, len);
-		if (ret) {
-			EXTERR("get %s %s failed\n",
-				extconf->name, propname);
-			init_table[i] = LCD_EXTERN_INIT_END;
-			return -1;
+			/* step3: data */
+			len += cmd_size;
+			ret = lcd_unifykey_len_check(key_len, len);
+			if (ret) {
+				EXTERR("get %s %s failed\n",
+					extconf->name, propname);
+				init_table[i] = LCD_EXTERN_INIT_END;
+				for (j = 0; j < cmd_size; j++)
+					init_table[i+2+j] = 0x0;
+				return -1;
+			}
+			for (j = 0; j < cmd_size; j++) {
+				init_table[i+2+j] =
+					*(buf + LCD_UKEY_EXT_INIT + i + 2 + j);
+			}
+			if (init_table[i] == LCD_EXTERN_INIT_END) {
+				break;
+			} else if (init_table[i] == LCD_EXTERN_INIT_GPIO) {
+				/* gpio probe */
+				index = init_table[i+1];
+				if (index < LCD_EXTERN_GPIO_NUM_MAX)
+					lcd_extern_gpio_probe(index);
+			}
+			i += (cmd_size + 2);
 		}
-		init_table[i+1] = *(buf + LCD_UKEY_EXT_INIT + i + 1);
-		cmd_size = init_table[i+1];
-		if (cmd_size == 0) {
-			i += 2;
-			continue;
+		if (flag)
+			extconf->table_init_on_cnt = i + 2;
+		break;
+	case LCD_EXTERN_MIPI:
+		i = 0;
+		while ((i + 1) < max_len) { /* type & cmd_size detect */
+			/* step1: type */
+			len += 1;
+			ret = lcd_unifykey_len_check(key_len, len);
+			if (ret) {
+				EXTERR("get %s %s failed\n",
+					extconf->name, propname);
+				init_table[i] = 0xff;
+				init_table[i+1] = 0xff;
+				return -1;
+			}
+			init_table[i] = *(buf + LCD_UKEY_EXT_INIT + i);
+			if (init_table[i] == 0xff) {
+				len += 1;
+				ret = lcd_unifykey_len_check(key_len, len);
+				if (ret) {
+					EXTERR("get %s %s failed\n",
+						extconf->name, propname);
+					init_table[i+1] = 0xff;
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				init_table[i+1] =
+					*(buf + LCD_UKEY_EXT_INIT + i + 1);
+				cmd_size = init_table[i+1];
+				if (cmd_size == 0xff)
+					break;
+				i += 2;
+			} else if (init_table[i] == 0xf0) {
+				len += 1;
+				ret = lcd_unifykey_len_check(key_len, len);
+				if (ret) {
+					EXTERR("get %s %s failed\n",
+						extconf->name, propname);
+					init_table[i+1] = 0xff;
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				init_table[i+1] =
+					*(buf + LCD_UKEY_EXT_INIT + i + 1);
+				/* gpio probe */
+				cmd_size = *(buf + LCD_UKEY_EXT_INIT + i + 1);
+				if (cmd_size < 3) {
+					EXTERR("%s %s wrong cmd_size %d gpio\n",
+						extconf->name, propname,
+						cmd_size);
+					return -1;
+				}
+				if ((i + 2 + cmd_size) >= max_len) {
+					EXTERR("%s %s cmd_size out of max\n",
+						extconf->name, propname);
+					init_table[i] = 0xff;
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				len += cmd_size;
+				ret = lcd_unifykey_len_check(key_len, len);
+				if (ret) {
+					EXTERR("get %s %s failed\n",
+						extconf->name, propname);
+					init_table[i] = LCD_EXTERN_INIT_END;
+					for (j = 0; j < cmd_size; j++)
+						init_table[i+2+j] = 0x0;
+					return -1;
+				}
+				for (j = 0; j < cmd_size; j++) {
+					init_table[i+2+j] = *(buf +
+						LCD_UKEY_EXT_INIT + i + 2 + j);
+				}
+				index = init_table[i+2];
+				if (index < LCD_EXTERN_GPIO_NUM_MAX)
+					lcd_extern_gpio_probe(index);
+				i += (cmd_size + 2);
+			} else {
+				len += 1;
+				ret = lcd_unifykey_len_check(key_len, len);
+				if (ret) {
+					EXTERR("get %s %s failed\n",
+						extconf->name, propname);
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				init_table[i+1] = *(buf + LCD_UKEY_EXT_INIT
+					+ i + 1);
+				cmd_size = *(buf + LCD_UKEY_EXT_INIT + i + 1);
+				if (cmd_size == 0) {
+					i += 2;
+					continue;
+				}
+				if ((i + 2 + cmd_size) >= max_len) {
+					EXTERR("%s %s cmd_size out of max\n",
+						extconf->name, propname);
+					init_table[i] = 0xff;
+					init_table[i+1] = 0xff;
+					return -1;
+				}
+				len += cmd_size;
+				ret = lcd_unifykey_len_check(key_len, len);
+				if (ret) {
+					EXTERR("get %s %s failed\n",
+						extconf->name, propname);
+					init_table[i] = LCD_EXTERN_INIT_END;
+					for (j = 0; j < cmd_size; j++)
+						init_table[i+2+j] = 0xff;
+					return -1;
+				}
+				for (j = 0; j < cmd_size; j++) {
+					init_table[i+2+j] = *(buf +
+						LCD_UKEY_EXT_INIT + i + 2 + j);
+				}
+				i += (cmd_size + 2);
+			}
 		}
-		if ((i + 2 + cmd_size) > max_len)
-			break;
-
-		/* step3: data */
-		len += cmd_size;
-		ret = lcd_unifykey_len_check(key_len, len);
-		if (ret) {
-			EXTERR("get %s %s failed\n",
-				extconf->name, propname);
-			init_table[i] = LCD_EXTERN_INIT_END;
-			for (j = 0; j < cmd_size; j++)
-				init_table[i+2+j] = 0x0;
-			return -1;
-		}
-		for (j = 0; j < cmd_size; j++)
-			init_table[i+2+j] = *(buf +
-				LCD_UKEY_EXT_INIT + i + 2 + j);
-		if (init_table[i] == LCD_EXTERN_INIT_END) {
-			break;
-		} else if (init_table[i] == LCD_EXTERN_INIT_GPIO) {
-			/* gpio probe */
-			index = init_table[i+1];
-			if (index < LCD_EXTERN_GPIO_NUM_MAX)
-				lcd_extern_gpio_probe(index);
-		}
-		i += (cmd_size + 2);
+		if (flag)
+			extconf->table_init_on_cnt = i + 2;
+		break;
+	default:
+		break;
 	}
-	if (flag)
-		extconf->table_init_on_cnt = i + 2;
 
 	return 0;
 }
@@ -887,6 +1173,12 @@ static int lcd_extern_init_table_fixed_size_load_unifykey(
 
 	i = 0;
 	while (i < max_len) {
+		if ((i + cmd_size) >= max_len) {
+			EXTERR("%s %s cmd_size out of max\n",
+				extconf->name, propname);
+			init_table[i] = LCD_EXTERN_INIT_END;
+			return -1;
+		}
 		len += cmd_size;
 		ret = lcd_unifykey_len_check(key_len, len);
 		if (ret) {
@@ -969,6 +1261,13 @@ static int lcd_extern_get_config_unifykey(struct lcd_extern_config_s *extconf)
 	extconf->type = *(p + LCD_UKEY_EXT_TYPE);
 	extconf->status = *(p + LCD_UKEY_EXT_STATUS);
 
+	if (extconf->index == LCD_EXTERN_INDEX_INVALID) {
+		if (lcd_debug_print_flag)
+			EXTPR("index %d is invalid\n", extconf->index);
+		kfree(para);
+		return -1;
+	}
+
 	/* type: 10byte */
 	switch (extconf->type) {
 	case LCD_EXTERN_I2C:
@@ -1049,8 +1348,23 @@ static int lcd_extern_get_config_unifykey(struct lcd_extern_config_s *extconf)
 			extconf->table_init_loaded = 1;
 		break;
 	case LCD_EXTERN_MIPI:
-		/* init */
-		/* to do */
+		extconf->cmd_size = *(p + LCD_UKEY_EXT_TYPE_VAL_0);
+		if (lcd_debug_print_flag) {
+			EXTPR("%s cmd_size=%d\n",
+				extconf->name, extconf->cmd_size);
+		}
+		if (extconf->cmd_size != LCD_EXTERN_CMD_SIZE_DYNAMIC) {
+			EXTERR("cmd_size %d is invalid\n", extconf->cmd_size);
+			break;
+		}
+		ret = lcd_extern_init_table_dynamic_size_load_unifykey(
+			extconf, p, key_len, len, 1);
+		if (ret)
+			break;
+		ret = lcd_extern_init_table_dynamic_size_load_unifykey(
+			extconf, p, key_len, len, 0);
+		if (ret == 0)
+			extconf->table_init_loaded = 1;
 		break;
 	default:
 		break;
@@ -1162,14 +1476,11 @@ static int lcd_extern_add_i2c(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret = 0;
 
+	if (strcmp(ext_drv->config.name, "ext_default") == 0) {
 #ifdef LCD_EXTERN_DEFAULT_ENABLE
-	if (ext_drv->config.index == 0) {
 		ret = aml_lcd_extern_default_probe(ext_drv);
-		return ret;
-	}
 #endif
-
-	if (strcmp(ext_drv->config.name, "i2c_T5800Q") == 0) {
+	} else if (strcmp(ext_drv->config.name, "i2c_T5800Q") == 0) {
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN_I2C_T5800Q
 		ret = aml_lcd_extern_i2c_T5800Q_probe(ext_drv);
 #endif
@@ -1196,14 +1507,11 @@ static int lcd_extern_add_spi(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret = 0;
 
+	if (strcmp(ext_drv->config.name, "ext_default") == 0) {
 #ifdef LCD_EXTERN_DEFAULT_ENABLE
-	if (ext_drv->config.index == 0) {
 		ret = aml_lcd_extern_default_probe(ext_drv);
-		return ret;
-	}
 #endif
-
-	if (strcmp(ext_drv->config.name, "spi_LD070WS2") == 0) {
+	} else if (strcmp(ext_drv->config.name, "spi_LD070WS2") == 0) {
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN_SPI_LD070WS2
 		ret = aml_lcd_extern_spi_LD070WS2_probe(ext_drv);
 #endif
@@ -1218,14 +1526,9 @@ static int lcd_extern_add_mipi(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret = 0;
 
-#ifdef LCD_EXTERN_DEFAULT_ENABLE
-	if (ext_drv->config.index == 0) {
-		ret = aml_lcd_extern_default_probe(ext_drv);
-		return ret;
-	}
-#endif
-
-	if (strcmp(ext_drv->config.name, "mipi_N070ICN") == 0) {
+	if (strcmp(ext_drv->config.name, "mipi_default") == 0) {
+		ret = aml_lcd_extern_mipi_default_probe(ext_drv);
+	} else if (strcmp(ext_drv->config.name, "mipi_N070ICN") == 0) {
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN_MIPI_N070ICN
 		ret = aml_lcd_extern_mipi_N070ICN_probe(ext_drv);
 #endif
@@ -1292,6 +1595,7 @@ static int lcd_extern_add_driver(struct lcd_extern_config_s *extconf)
 	strcpy(ext_drv->config.name, extconf->name);
 	ext_drv->config.type = extconf->type;
 	ext_drv->config.status = extconf->status;
+	ext_drv->config.cmd_size = extconf->cmd_size;
 	ext_drv->config.table_init_on = NULL;
 	ext_drv->config.table_init_off = NULL;
 	ext_drv->config.table_init_loaded = extconf->table_init_loaded;
@@ -1329,7 +1633,6 @@ static int lcd_extern_add_driver(struct lcd_extern_config_s *extconf)
 		ext_drv->config.i2c_sck_gpio_off = extconf->i2c_sck_gpio_off;
 		ext_drv->config.i2c_sda_gpio = extconf->i2c_sda_gpio;
 		ext_drv->config.i2c_sda_gpio_off = extconf->i2c_sda_gpio_off;
-		ext_drv->config.cmd_size = extconf->cmd_size;
 		ret = lcd_extern_add_i2c(ext_drv);
 		break;
 	case LCD_EXTERN_SPI:
@@ -1338,7 +1641,6 @@ static int lcd_extern_add_driver(struct lcd_extern_config_s *extconf)
 		ext_drv->config.spi_gpio_data = extconf->spi_gpio_data;
 		ext_drv->config.spi_clk_freq = extconf->spi_clk_freq;
 		ext_drv->config.spi_clk_pol = extconf->spi_clk_pol;
-		ext_drv->config.cmd_size = extconf->cmd_size;
 		ret = lcd_extern_add_spi(ext_drv);
 		break;
 	case LCD_EXTERN_MIPI:
@@ -1397,21 +1699,70 @@ static void lcd_extern_init_table_dynamic_size_print(
 	}
 
 	i = 0;
-	while (i < max_len) {
-		if (init_table[i] == LCD_EXTERN_INIT_END)
-			break;
-
-		cmd_size = init_table[i+1];
-		k = snprintf(str, EXT_LEN_MAX, "  0x%02x %d",
-			init_table[i], cmd_size);
-		if (cmd_size > 0) {
-			for (j = 0; j < cmd_size; j++) {
-				k += snprintf(str+k, EXT_LEN_MAX, " 0x%02x",
-					init_table[i+2+j]);
+	switch (econf->type) {
+	case LCD_EXTERN_I2C:
+	case LCD_EXTERN_SPI:
+		while ((i + 1) < max_len) {
+			if (init_table[i] == LCD_EXTERN_INIT_END) {
+				pr_info("  0x%02x,%d,\n",
+					init_table[i], init_table[i+1]);
+				break;
 			}
+
+			cmd_size = init_table[i+1];
+			k = snprintf(str, EXT_LEN_MAX, "  0x%02x,%d,",
+				init_table[i], cmd_size);
+			if (cmd_size > 0) {
+				for (j = 0; j < cmd_size; j++) {
+					k += snprintf(str+k, EXT_LEN_MAX,
+						"0x%02x,",
+						init_table[i+2+j]);
+				}
+			}
+			pr_info("%s\n", str);
+			i += (cmd_size + 2);
 		}
-		pr_info("%s\n", str);
-		i += (cmd_size + 2);
+		break;
+	case LCD_EXTERN_MIPI:
+		while ((i + 1) < max_len) {
+			if (init_table[i] == 0xff) { /* ctrl flag */
+				cmd_size = 0;
+				if (init_table[i+1] == 0xff) {
+					pr_info("  0x%02x,0x%02x,\n",
+						init_table[i], init_table[i+1]);
+					break;
+				}
+				pr_info("  0x%02x,%d,\n",
+					init_table[i], init_table[i+1]);
+			} else if (init_table[i] == 0xf0) { /* gpio */
+				cmd_size = init_table[i+DSI_CMD_SIZE_INDEX];
+				k = snprintf(str, EXT_LEN_MAX, "  0x%02x,%d,",
+					init_table[i], cmd_size);
+				for (j = 0; j < cmd_size; j++) {
+					k += snprintf(str+k, EXT_LEN_MAX,
+						"%d,", init_table[i+2+j]);
+				}
+				pr_info("%s\n", str);
+			} else if ((init_table[i] & 0xf) == 0x0) {
+				pr_info("  init_%s wrong data_type: 0x%02x\n",
+					flag ? "on" : "off", init_table[i]);
+				break;
+			} else {
+				cmd_size = init_table[i+DSI_CMD_SIZE_INDEX];
+				k = snprintf(str, EXT_LEN_MAX, "  0x%02x,%d,",
+					init_table[i], cmd_size);
+				for (j = 0; j < cmd_size; j++) {
+					k += snprintf(str+k, EXT_LEN_MAX,
+						"0x%02x,",
+						init_table[i+2+j]);
+				}
+				pr_info("%s\n", str);
+			}
+			i += (cmd_size + 2);
+		}
+		break;
+	default:
+		break;
 	}
 	kfree(str);
 }
@@ -1447,15 +1798,15 @@ static void lcd_extern_init_table_fixed_size_print(
 
 	i = 0;
 	while (i < max_len) {
-		if (init_table[i] == LCD_EXTERN_INIT_END)
-			break;
-
 		k = snprintf(str, EXT_LEN_MAX, " ");
 		for (j = 0; j < cmd_size; j++) {
 			k += snprintf(str+k, EXT_LEN_MAX, " 0x%02x",
 				init_table[i+j]);
 		}
 		pr_info("%s\n", str);
+
+		if (init_table[i] == LCD_EXTERN_INIT_END)
+			break;
 		i += cmd_size;
 	}
 	kfree(str);
@@ -1517,7 +1868,12 @@ static void lcd_extern_config_dump(struct aml_lcd_extern_driver_s *ext_drv)
 		}
 		break;
 	case LCD_EXTERN_MIPI:
-		pr_info("type:        mipi(%d)\n", econf->type);
+		pr_info("type:            mipi(%d)\n", econf->type);
+		pr_info("cmd_size:        %d\n", econf->cmd_size);
+		if (econf->cmd_size != LCD_EXTERN_CMD_SIZE_DYNAMIC)
+			break;
+		lcd_extern_init_table_dynamic_size_print(econf, 1);
+		lcd_extern_init_table_dynamic_size_print(econf, 0);
 		break;
 	default:
 		pr_info("not support extern_type\n");
