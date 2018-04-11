@@ -1756,13 +1756,13 @@ static ssize_t show_aud_cap(struct device *dev,
 				pos += snprintf(buf + pos, PAGE_SIZE, "%s/",
 					aud_sampling_frequency[j+1]);
 		}
-		pos += snprintf(buf + pos - 1, PAGE_SIZE, " kHz, ");
+		pos += snprintf(buf + pos - 1, PAGE_SIZE, " kHz, ") - 1;
 		for (j = 0; j < 3; j++) {
 			if (pRXCap->RxAudioCap[i].cc3 & (1 << j))
 				pos += snprintf(buf + pos, PAGE_SIZE, "%s/",
 					aud_sample_size[j+1]);
 		}
-		pos += snprintf(buf + pos - 1, PAGE_SIZE, " bit\n");
+		pos += snprintf(buf + pos - 1, PAGE_SIZE, " bit\n") - 1;
 	}
 
 	return pos;
