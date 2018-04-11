@@ -1,6 +1,7 @@
 /*
  * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
+ * Copyright 2017 NXP.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -310,7 +311,7 @@ static inline void imx6q_enet_init(void)
 	imx6_enet_mac_init("fsl,imx6q-fec", "fsl,imx6q-ocotp");
 	imx6q_enet_phy_init();
 	imx6q_1588_init();
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
 		imx6q_enet_clk_sel();
 }
 
@@ -318,7 +319,7 @@ static void __init imx6q_init_machine(void)
 {
 	struct device *parent;
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
 		imx_print_silicon_rev("i.MX6QP", IMX_CHIP_REVISION_1_0);
 	else
 		imx_print_silicon_rev(cpu_is_imx6dl() ? "i.MX6DL" : "i.MX6Q",
@@ -373,6 +374,13 @@ static void __init imx6q_opp_check_speed_grading(struct device *cpu_dev)
 	val >>= OCOTP_CFG3_SPEED_SHIFT;
 	val &= 0x3;
 
+	if (cpu_is_imx6q()) {
+		if (!val) {
+			/* fuses not set for IMX_CHIP_REVISION_1_0 */
+			if (imx_get_soc_revision() == IMX_CHIP_REVISION_1_0)
+				val = OCOTP_CFG3_SPEED_996MHZ;
+		}
+	}
 	if ((val != OCOTP_CFG3_SPEED_1P2GHZ) && cpu_is_imx6q())
 		if (dev_pm_opp_disable(cpu_dev, 1200000000))
 			pr_warn("failed to disable 1.2 GHz OPP\n");
@@ -426,8 +434,19 @@ static struct platform_device imx6q_cpufreq_pdev = {
 	.name = "imx6q-cpufreq",
 };
 
+extern unsigned int system_rev;
+
 static void __init imx6q_init_late(void)
 {
+	if (!system_rev) {
+		if (cpu_is_imx6q())
+			system_rev = 0x63000;
+		else if (cpu_is_imx6dl())
+			system_rev = 0x61000;
+		else if (cpu_is_imx6sl())
+			system_rev = 0x60000;
+		system_rev |= imx_get_soc_revision();
+	}
 	/*
 	 * WAIT mode is broken on TO 1.0 and 1.1, so there is no point
 	 * to run cpuidle on them.

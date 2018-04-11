@@ -109,6 +109,7 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 		cfg_param.data_fmt = CSI_SENS_CONF_DATA_FMT_RGB555;
 		break;
 	default:
+		dev_dbg(ipu->dev, "%s:pixel_fmt=%x\n", __func__, pixel_fmt);
 		return -EINVAL;
 	}
 
@@ -132,29 +133,25 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 	ipu_csi_write(ipu, csi, data, CSI_SENS_CONF);
 
 	/* Setup sensor frame size */
-	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_SENS_FRM_SIZE);
+
+	dev_dbg(ipu->dev, "%s: %dx%d\n", __func__, width, height);
 
 	/* Set CCIR registers */
+	ipu_csi_write(ipu, csi,
+			(cfg_param.data_width == IPU_CSI_DATA_WIDTH_10) ?
+			0x03FF00000 : 0x00FF0000, CSI_CCIR_CODE_3);
 	if (cfg_param.clk_mode == IPU_CSI_CLK_MODE_CCIR656_PROGRESSIVE) {
-		ipu_csi_write(ipu, csi, 0x40030, CSI_CCIR_CODE_1);
-		ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
+/*
+ * 		bit 5-3: start of blanking line command
+ * 		bit 18-16: End of active line command
+ * 		bit 21-19: start of active line command
+ * 		10 bit mode of GS2971 interleaves this streams, giving
+ * 		0x3ff,0x3ff,0x000,0x000,0x000,0x000,xy,xy
+ * 		so, it cannot be used in 656 mode. It needs 1120 mode.
+ */
+		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 	} else if (cfg_param.clk_mode == IPU_CSI_CLK_MODE_CCIR656_INTERLACED) {
-		if (width == 720 && height == 625) {
-			/* PAL case */
-			/*
-			 * Field0BlankEnd = 0x6, Field0BlankStart = 0x2,
-			 * Field0ActiveEnd = 0x4, Field0ActiveStart = 0
-			 */
-			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_1);
-			/*
-			 * Field1BlankEnd = 0x7, Field1BlankStart = 0x3,
-			 * Field1ActiveEnd = 0x5, Field1ActiveStart = 0x1
-			 */
-			ipu_csi_write(ipu, csi, 0xD07DF, CSI_CCIR_CODE_2);
-
-			ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
-
-		} else if (width == 720 && height == 525) {
+		if (width == 720 && height <= 525) {
 			/* NTSC case */
 			/*
 			 * Field0BlankEnd = 0x7, Field0BlankStart = 0x3,
@@ -166,7 +163,18 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			 * Field1ActiveEnd = 0x4, Field1ActiveStart = 0
 			 */
 			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_2);
-			ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
+		} else if (width == 720 && height <= 625) {
+			/* PAL case */
+			/*
+			 * Field0BlankEnd = 0x6, Field0BlankStart = 0x2,
+			 * Field0ActiveEnd = 0x4, Field0ActiveStart = 0
+			 */
+			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_1);
+			/*
+			 * Field1BlankEnd = 0x7, Field1BlankStart = 0x3,
+			 * Field1ActiveEnd = 0x5, Field1ActiveStart = 0x1
+			 */
+			ipu_csi_write(ipu, csi, 0xD07DF, CSI_CCIR_CODE_2);
 		} else {
 			dev_err(ipu->dev, "Unsupported CCIR656 interlaced "
 					"video mode\n");
@@ -183,11 +191,11 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_DDR) ||
 		(cfg_param.clk_mode ==
 			IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_SDR)) {
-		ipu_csi_write(ipu, csi, 0x40030, CSI_CCIR_CODE_1);
-		ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
+		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 		_ipu_csi_ccir_err_detection_enable(ipu, csi);
 	} else if ((cfg_param.clk_mode == IPU_CSI_CLK_MODE_GATED_CLK) ||
 		   (cfg_param.clk_mode == IPU_CSI_CLK_MODE_NONGATED_CLK)) {
+		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 		_ipu_csi_ccir_err_detection_disable(ipu, csi);
 	}
 
@@ -326,6 +334,40 @@ void ipu_csi_set_window_pos(struct ipu_soc *ipu, uint32_t left, uint32_t top, ui
 	_ipu_put(ipu);
 }
 EXPORT_SYMBOL(ipu_csi_set_window_pos);
+
+void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t sheight,
+		uint32_t width, uint32_t height, uint32_t left, uint32_t top, uint32_t csi)
+{
+	uint32_t temp;
+
+	if ((left >= (1 << 13)) || (top >= (1 << 12))) {
+		pr_err("%s: Error left=%x top=%x\n", __func__, left, top);
+		left = 0;
+		top = 0;
+		swidth = width;
+		sheight = height;
+	}
+	_ipu_get(ipu);
+
+	/*
+	 * sheight >= top + height
+	 * swidth >= left + width,  unless interlaced
+	 * left = # of lines/field if interlaced
+	 */
+	mutex_lock(&ipu->mutex_lock);
+	ipu_csi_write(ipu, csi, (swidth - 1) | (sheight - 1) << 16, CSI_SENS_FRM_SIZE);
+	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_ACT_FRM_SIZE);
+
+	temp = ipu_csi_read(ipu, csi, CSI_OUT_FRM_CTRL);
+	temp &= ~(CSI_HSC_MASK | CSI_VSC_MASK);
+	temp |= ((top << CSI_VSC_SHIFT) | (left << CSI_HSC_SHIFT));
+	ipu_csi_write(ipu, csi, temp, CSI_OUT_FRM_CTRL);
+
+	mutex_unlock(&ipu->mutex_lock);
+
+	_ipu_put(ipu);
+}
+EXPORT_SYMBOL(ipu_csi_window_size_crop);
 
 /*!
  * _ipu_csi_horizontal_downsize_enable
@@ -733,13 +775,42 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 {
 	uint32_t csi_sens_conf, csi_dest;
 	int retval = 0;
+	uint32_t ctrl = ipu_csi_read(ipu, csi, CSI_CPD_CTRL) & ~0x13;
 
+	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
+	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
 	switch (channel) {
 	case CSI_MEM0:
 	case CSI_MEM1:
 	case CSI_MEM2:
 	case CSI_MEM3:
 		csi_dest = CSI_DATA_DEST_IDMAC;
+
+		if (((csi_sens_conf >> CSI_SENS_CONF_DATA_WIDTH_SHIFT) & 0x0f) == IPU_CSI_DATA_WIDTH_10) {
+			/* Send to compander before memory to reduce to 8 bits */
+			/* y = Min[255, (y1[k] + (((x-x1[k])*slope[k])>>6 + 1))>>1] */
+			int i;
+
+			ctrl |= (1 << 4);
+			ipu_csi_write(ipu, csi, 0, CSI_CPD_OFFSET1);
+			ipu_csi_write(ipu, csi, 0, CSI_CPD_OFFSET2);
+			for (i = 0; i < 16; i += 2) {
+				uint32_t c = ((i+1) << (16 + 5)) | (i << (0 + 5));
+
+				ipu_csi_write(ipu, csi, c, CSI_CPD_RC((i >> 1)));
+				ipu_csi_write(ipu, csi, c, CSI_CPD_GRC((i >> 1)));
+				ipu_csi_write(ipu, csi, c, CSI_CPD_GBC((i >> 1)));
+				ipu_csi_write(ipu, csi, c, CSI_CPD_BC((i >> 1)));
+			}
+			for (i = 0; i < 16; i += 4) {
+				uint32_t slope = 1 << 5;
+				uint32_t s = (slope << 24) | (slope << 16) | (slope << 8) | (slope << 0);
+				ipu_csi_write(ipu, csi, s, CSI_CPD_RS((i >> 2)));
+				ipu_csi_write(ipu, csi, s, CSI_CPD_GRS((i >> 2)));
+				ipu_csi_write(ipu, csi, s, CSI_CPD_GBS((i >> 2)));
+				ipu_csi_write(ipu, csi, s, CSI_CPD_BS((i >> 2)));
+			}
+		}
 		break;
 	case CSI_PRP_ENC_MEM:
 	case CSI_PRP_VF_MEM:
@@ -749,11 +820,12 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 		retval = -EINVAL;
 		goto err;
 	}
+	csi_sens_conf |= csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT;
 
-	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
-	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
-	ipu_csi_write(ipu, csi, csi_sens_conf | (csi_dest <<
-		CSI_SENS_CONF_DATA_DEST_SHIFT), CSI_SENS_CONF);
+	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x, channel=%x\n", __func__,
+			ipu, csi, csi_sens_conf, channel);
+	ipu_csi_write(ipu, csi, ctrl, CSI_CPD_CTRL);
+	ipu_csi_write(ipu, csi, csi_sens_conf, CSI_SENS_CONF);
 err:
 	return retval;
 }

@@ -17,6 +17,7 @@
 #include <linux/highmem.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
@@ -1372,7 +1373,9 @@ void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 			return;
 		}
 		timeout--;
-		mdelay(1);
+		spin_unlock_irq(&host->lock);
+		usleep_range(900, 1100);
+		spin_lock_irq(&host->lock);
 	}
 
 	clk |= SDHCI_CLOCK_CARD_EN;
@@ -1822,6 +1825,9 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	struct sdhci_host *host = mmc_priv(mmc);
 	unsigned long flags;
 
+	if (enable)
+		pm_runtime_get_noresume(host->mmc->parent);
+
 	spin_lock_irqsave(&host->lock, flags);
 	if (enable)
 		host->flags |= SDHCI_SDIO_IRQ_ENABLED;
@@ -1830,6 +1836,9 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 
 	sdhci_enable_sdio_irq_nolock(host, enable);
 	spin_unlock_irqrestore(&host->lock, flags);
+
+	if (!enable)
+		pm_runtime_put_noidle(host->mmc->parent);
 }
 
 static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
@@ -1847,6 +1856,9 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		return 0;
 
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
+
+	if (host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)
+		ios->signal_voltage = MMC_SIGNAL_VOLTAGE_180;
 
 	switch (ios->signal_voltage) {
 	case MMC_SIGNAL_VOLTAGE_330:
@@ -1879,6 +1891,7 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	case MMC_SIGNAL_VOLTAGE_180:
 		if (!(host->flags & SDHCI_SIGNALING_180))
 			return -EINVAL;
+		msleep(2);	/* Helps switching fail in a recoverable way */
 		if (!IS_ERR(mmc->supply.vqmmc)) {
 			ret = mmc_regulator_set_vqmmc(mmc, ios);
 			if (ret) {
@@ -2397,8 +2410,9 @@ static void sdhci_timeout_timer(unsigned long data)
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (host->cmd && !sdhci_data_line_cmd(host->cmd)) {
-		pr_err("%s: Timeout waiting for hardware cmd interrupt.\n",
-		       mmc_hostname(host->mmc));
+		pr_err("%s: Timeout waiting for hardware interrupt. retries left=%d opcode=%x\n",
+				mmc_hostname(host->mmc), host->cmd ? host->cmd->retries : 0,
+				host->cmd ? host->cmd->opcode : 0);
 		sdhci_dumpregs(host);
 
 		host->cmd->error = -ETIMEDOUT;
@@ -2675,7 +2689,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 	do {
 		/* Clear selected interrupts. */
 		mask = intmask & (SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK |
-				  SDHCI_INT_BUS_POWER);
+				  SDHCI_INT_BUS_POWER | SDHCI_INT_RETUNE);
 		sdhci_writel(host, mask, SDHCI_INT_STATUS);
 
 		DBG("*** %s got interrupt: 0x%08x\n",
@@ -3320,7 +3334,8 @@ int sdhci_setup_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
 
 	/* If vqmmc regulator and no 1.8V signalling, then there's no UHS */
-	if (!IS_ERR(mmc->supply.vqmmc)) {
+	if (!IS_ERR(mmc->supply.vqmmc) &&
+		!(host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)) {
 		ret = regulator_enable(mmc->supply.vqmmc);
 		if (!regulator_is_supported_voltage(mmc->supply.vqmmc, 1700000,
 						    1950000))
@@ -3347,12 +3362,19 @@ int sdhci_setup_host(struct sdhci_host *host)
 
 	/* SDR104 supports also implies SDR50 support */
 	if (host->caps1 & SDHCI_SUPPORT_SDR104) {
+		struct device_node *np;
+
 		mmc->caps |= MMC_CAP_UHS_SDR104 | MMC_CAP_UHS_SDR50;
-		/* SD3.0: SDR104 is supported so (for eMMC) the caps2
-		 * field can be promoted to support HS200.
-		 */
-		if (!(host->quirks2 & SDHCI_QUIRK2_BROKEN_HS200))
-			mmc->caps2 |= MMC_CAP2_HS200;
+		np = mmc->parent->of_node;
+		if (of_property_read_bool(np, "no-sd-uhs-sdr104")) {
+			mmc->caps &= ~MMC_CAP_UHS_SDR104;
+		} else {
+			/* SD3.0: SDR104 is supported so (for eMMC) the caps2
+			 * field can be promoted to support HS200.
+			 */
+			if (!(host->quirks2 & SDHCI_QUIRK2_BROKEN_HS200))
+				mmc->caps2 |= MMC_CAP2_HS200;
+		}
 	} else if (host->caps1 & SDHCI_SUPPORT_SDR50) {
 		mmc->caps |= MMC_CAP_UHS_SDR50;
 	}

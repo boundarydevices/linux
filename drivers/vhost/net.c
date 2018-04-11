@@ -537,8 +537,13 @@ static int vhost_net_rx_peek_head_len(struct vhost_net *net, struct sock *sk)
 
 		preempt_enable();
 
-		if (vhost_enable_notify(&net->dev, vq))
+		if (!vhost_vq_avail_empty(&net->dev, vq))
 			vhost_poll_queue(&vq->poll);
+		else if (unlikely(vhost_enable_notify(&net->dev, vq))) {
+			vhost_disable_notify(&net->dev, vq);
+			vhost_poll_queue(&vq->poll);
+		}
+
 		mutex_unlock(&vq->mutex);
 
 		len = peek_head_len(sk);
@@ -1073,6 +1078,7 @@ static long vhost_net_reset_owner(struct vhost_net *n)
 	}
 	vhost_net_stop(n, &tx_sock, &rx_sock);
 	vhost_net_flush(n);
+	vhost_dev_stop(&n->dev);
 	vhost_dev_reset_owner(&n->dev, umem);
 	vhost_net_vq_reset(n);
 done:

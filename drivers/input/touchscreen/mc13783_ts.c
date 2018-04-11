@@ -20,8 +20,6 @@
 #include <linux/slab.h>
 #include <linux/init.h>
 
-#define MC13783_TS_NAME	"mc13783-ts"
-
 #define DEFAULT_SAMPLE_TOLERANCE 300
 
 static unsigned int sample_tolerance = DEFAULT_SAMPLE_TOLERANCE;
@@ -38,7 +36,16 @@ struct mc13783_ts_priv {
 	struct mc13xxx *mc13xxx;
 	struct delayed_work work;
 	unsigned int sample[4];
-	struct mc13xxx_ts_platform_data *touch;
+	const char* name;
+	u8 mc13892;
+	/*
+	 * Delay between Touchscreen polarization and ADC Conversion.
+	 * Given in clock ticks of a 32 kHz clock which gives a granularity of
+	 * about 30.5ms
+	 */
+	u8 ato;
+	/* Use the ATO delay only for the first conversion or for each one */
+	bool atox;
 };
 
 static irqreturn_t mc13783_ts_handler(int irq, void *data)
@@ -70,53 +77,71 @@ static irqreturn_t mc13783_ts_handler(int irq, void *data)
 static void mc13783_ts_report_sample(struct mc13783_ts_priv *priv)
 {
 	struct input_dev *idev = priv->idev;
-	int x0, x1, x2, y0, y1, y2;
 	int cr0, cr1;
 
 	/*
 	 * the values are 10-bit wide only, but the two least significant
 	 * bits are for future 12 bit use and reading yields 0
 	 */
-	x0 = priv->sample[0] & 0xfff;
-	x1 = priv->sample[1] & 0xfff;
-	x2 = priv->sample[2] & 0xfff;
-	y0 = priv->sample[3] & 0xfff;
-	y1 = (priv->sample[0] >> 12) & 0xfff;
-	y2 = (priv->sample[1] >> 12) & 0xfff;
-	cr0 = (priv->sample[2] >> 12) & 0xfff;
-	cr1 = (priv->sample[3] >> 12) & 0xfff;
+	cr0 = ~(priv->sample[2] >> 12) & 0xfff;
+	cr1 = ~(priv->sample[3] >> 12) & 0xfff;
 
-	dev_dbg(&idev->dev,
-		"x: (% 4d,% 4d,% 4d) y: (% 4d, % 4d,% 4d) cr: (% 4d, % 4d)\n",
-		x0, x1, x2, y0, y1, y2, cr0, cr1);
+	cr0 = (cr0 + cr1) >> 1;
+	if (cr0 < 0x800)
+		cr0 = 0;
 
-	sort3(x0, x1, x2);
-	sort3(y0, y1, y2);
-
-	cr0 = (cr0 + cr1) / 2;
-
-	if (!cr0 || !sample_tolerance ||
-			(x2 - x0 < sample_tolerance &&
-			 y2 - y0 < sample_tolerance)) {
+	if (cr0) {
 		/* report the median coordinate and average pressure */
-		if (cr0) {
-			input_report_abs(idev, ABS_X, x1);
-			input_report_abs(idev, ABS_Y, y1);
+		int x0, x1, x2, y0, y1, y2;
 
-			dev_dbg(&idev->dev, "report (%d, %d, %d)\n",
-					x1, y1, 0x1000 - cr0);
-			schedule_delayed_work(&priv->work, HZ / 50);
+		x0 = priv->sample[0] & 0xfff;
+		x1 = priv->sample[1] & 0xfff;
+		x2 = priv->sample[2] & 0xfff;
+		y0 = priv->sample[3] & 0xfff;
+		y1 = (priv->sample[0] >> 12) & 0xfff;
+		y2 = (priv->sample[1] >> 12) & 0xfff;
+
+		dev_dbg(&idev->dev,
+			"x: (% 4d,% 4d,% 4d) y: (% 4d, % 4d,% 4d) cr: (% 4d, % 4d)\n",
+			x0, x1, x2, y0, y1, y2, cr0, cr1);
+
+		if (priv->mc13892) {
+			x2 = x1;
+			if (x0 > x1) {
+				x2 = x0;
+				x0 = x1;
+			}
+			y2 = y1;
+			if (y0 > y1) {
+				y2 = y0;
+				y0 = y1;
+			}
+			x1 = (x0 + x2) >> 1;
+			y1 = (y0 + y2) >> 1;
 		} else {
-			dev_dbg(&idev->dev, "report release\n");
+			sort3(x0, x1, x2);
+			sort3(y0, y1, y2);
 		}
+		if (sample_tolerance && (x2 - x0 >= sample_tolerance ||
+					 y2 - y0 >= sample_tolerance)) {
+			dev_dbg(&idev->dev, "discard event\n");
+			goto exit1;
+		}
+		input_report_abs(idev, ABS_X, x1);
+		input_report_abs(idev, ABS_Y, y1);
 
-		input_report_abs(idev, ABS_PRESSURE,
-				cr0 ? 0x1000 - cr0 : cr0);
-		input_report_key(idev, BTN_TOUCH, cr0);
-		input_sync(idev);
+		dev_dbg(&idev->dev, "report (%d, %d, %d)\n", x1, y1, cr0);
 	} else {
-		dev_dbg(&idev->dev, "discard event\n");
+		dev_dbg(&idev->dev, "report release\n");
 	}
+
+	input_report_abs(idev, ABS_PRESSURE, cr0);
+	input_report_key(idev, BTN_TOUCH, cr0);
+	input_sync(idev);
+	if (!cr0)
+		return;
+exit1:
+	schedule_delayed_work(&priv->work, HZ / 50);
 }
 
 static void mc13783_ts_work(struct work_struct *work)
@@ -128,9 +153,10 @@ static void mc13783_ts_work(struct work_struct *work)
 
 	if (mc13xxx_adc_do_conversion(priv->mc13xxx,
 				mode, channel,
-				priv->touch->ato, priv->touch->atox,
-				priv->sample) == 0)
+				priv->ato, priv->atox,
+				priv->sample) == 0) {
 		mc13783_ts_report_sample(priv);
+	}
 }
 
 static int mc13783_ts_open(struct input_dev *dev)
@@ -143,7 +169,7 @@ static int mc13783_ts_open(struct input_dev *dev)
 	mc13xxx_irq_ack(priv->mc13xxx, MC13XXX_IRQ_TS);
 
 	ret = mc13xxx_irq_request(priv->mc13xxx, MC13XXX_IRQ_TS,
-		mc13783_ts_handler, MC13783_TS_NAME, priv);
+		mc13783_ts_handler, dev->name, priv);
 	if (ret)
 		goto out;
 
@@ -174,7 +200,9 @@ static int __init mc13783_ts_probe(struct platform_device *pdev)
 	struct mc13783_ts_priv *priv;
 	struct input_dev *idev;
 	int ret = -ENOMEM;
+	struct mc13xxx_ts_platform_data *touch;
 
+	pr_info("%s:\n", __func__);
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	idev = input_allocate_device();
 	if (!priv || !idev)
@@ -183,14 +211,17 @@ static int __init mc13783_ts_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&priv->work, mc13783_ts_work);
 	priv->mc13xxx = dev_get_drvdata(pdev->dev.parent);
 	priv->idev = idev;
-	priv->touch = dev_get_platdata(&pdev->dev);
-	if (!priv->touch) {
-		dev_err(&pdev->dev, "missing platform data\n");
-		ret = -ENODEV;
-		goto err_free_mem;
+	touch = dev_get_platdata(&pdev->dev);
+	if (touch) {
+		priv->ato = touch->ato;
+		priv->atox = touch->atox;
+	} else {
+		dev_dbg(&pdev->dev, "missing platform data\n");
 	}
 
-	idev->name = MC13783_TS_NAME;
+	priv->mc13892 = platform_get_device_id(pdev)->driver_data;
+
+	idev->name = platform_get_device_id(pdev)->name;
 	idev->dev.parent = &pdev->dev;
 
 	idev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
@@ -230,11 +261,19 @@ static int mc13783_ts_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct platform_device_id mc13xxx_ids[] = {
+        { "mc13783-ts", 0 },
+        { "mc13892-ts", 1 },
+        { }
+};
+MODULE_DEVICE_TABLE(platform, mc13xxx_ids);
+
 static struct platform_driver mc13783_ts_driver = {
 	.remove		= mc13783_ts_remove,
 	.driver		= {
-		.name	= MC13783_TS_NAME,
+		.name	= "mc13783-ts",
 	},
+	.id_table = mc13xxx_ids,
 };
 
 module_platform_driver_probe(mc13783_ts_driver, mc13783_ts_probe);
@@ -242,4 +281,5 @@ module_platform_driver_probe(mc13783_ts_driver, mc13783_ts_probe);
 MODULE_DESCRIPTION("MC13783 input touchscreen driver");
 MODULE_AUTHOR("Sascha Hauer <s.hauer@pengutronix.de>");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform:" MC13783_TS_NAME);
+MODULE_ALIAS("platform: mc13783-ts");
+MODULE_ALIAS("platform: mc13892-ts");

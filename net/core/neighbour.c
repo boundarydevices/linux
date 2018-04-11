@@ -496,7 +496,7 @@ struct neighbour *__neigh_create(struct neigh_table *tbl, const void *pkey,
 	if (atomic_read(&tbl->entries) > (1 << nht->hash_shift))
 		nht = neigh_hash_grow(tbl, nht->hash_shift + 1);
 
-	hash_val = tbl->hash(pkey, dev, nht->hash_rnd) >> (32 - nht->hash_shift);
+	hash_val = tbl->hash(n->primary_key, dev, nht->hash_rnd) >> (32 - nht->hash_shift);
 
 	if (n->parms->dead) {
 		rc = ERR_PTR(-EINVAL);
@@ -508,7 +508,7 @@ struct neighbour *__neigh_create(struct neigh_table *tbl, const void *pkey,
 	     n1 != NULL;
 	     n1 = rcu_dereference_protected(n1->next,
 			lockdep_is_held(&tbl->lock))) {
-		if (dev == n1->dev && !memcmp(n1->primary_key, pkey, key_len)) {
+		if (dev == n1->dev && !memcmp(n1->primary_key, n->primary_key, key_len)) {
 			if (want_ref)
 				neigh_hold(n1);
 			rc = n1;
@@ -859,7 +859,8 @@ static void neigh_probe(struct neighbour *neigh)
 	if (skb)
 		skb = skb_clone(skb, GFP_ATOMIC);
 	write_unlock(&neigh->lock);
-	neigh->ops->solicit(neigh, skb);
+	if (neigh->ops->solicit)
+		neigh->ops->solicit(neigh, skb);
 	atomic_inc(&neigh->probes);
 	kfree_skb(skb);
 }

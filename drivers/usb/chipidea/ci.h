@@ -13,6 +13,7 @@
 #ifndef __DRIVERS_USB_CHIPIDEA_CI_H
 #define __DRIVERS_USB_CHIPIDEA_CI_H
 
+#include <linux/extcon.h>
 #include <linux/list.h>
 #include <linux/irqreturn.h>
 #include <linux/usb.h>
@@ -223,6 +224,7 @@ struct ci_hdrc {
 	enum otg_fsm_timer		next_otg_timer;
 	struct work_struct		work;
 	struct workqueue_struct		*wq;
+	int				wq_ready;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
@@ -270,6 +272,7 @@ struct ci_hdrc {
 	u32				pm_usbmode;
 	struct work_struct		power_lost_work;
 	struct mutex			mutex;
+	struct extcon_dev		extcon;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)
@@ -465,6 +468,7 @@ int hw_port_test_set(struct ci_hdrc *ci, u8 mode);
 
 u8 hw_port_test_get(struct ci_hdrc *ci);
 
+int hw_vbus_enable(struct ci_hdrc *ci, int enable);
 void ci_platform_configure(struct ci_hdrc *ci);
 int hw_controller_reset(struct ci_hdrc *ci);
 

@@ -33,6 +33,11 @@ config USB_XHCI_PCI
        depends on PCI
        default y
 
+config USB_XHCI_RENESAS_FW_LOADING
+       tristate "xHCI support for Renesas uPD720201/uPD720202 firmware loading"
+       depends on USB_XHCI_PCI
+       default y
+
 config USB_XHCI_PLATFORM
 	tristate "Generic xHCI driver for a platform device"
 	select USB_XHCI_RCAR if ARCH_RENESAS
@@ -45,9 +50,9 @@ config USB_XHCI_PLATFORM
 	  If unsure, say N.
 
 config USB_XHCI_MTK
-	tristate "xHCI support for Mediatek MT65xx"
+	tristate "xHCI support for Mediatek MT65xx/MT7621"
 	select MFD_SYSCON
-	depends on ARCH_MEDIATEK || COMPILE_TEST
+	depends on (MIPS && SOC_MT7621) || ARCH_MEDIATEK || COMPILE_TEST
 	---help---
 	  Say 'Y' to enable the support for the xHCI host controller
 	  found in Mediatek MT65xx SoCs.
@@ -627,14 +632,6 @@ config USB_UHCI_SUPPORT_NON_PCI_HC
 config USB_UHCI_PLATFORM
 	bool
 	default y if ARCH_VT8500
-
-config USB_UHCI_BIG_ENDIAN_MMIO
-	bool
-	default y if SPARC_LEON
-
-config USB_UHCI_BIG_ENDIAN_DESC
-	bool
-	default y if SPARC_LEON
 
 config USB_FHCI_HCD
 	tristate "Freescale QE USB Host Controller support"

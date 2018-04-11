@@ -27,6 +27,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-chip-ident.h>
 #include "v4l2-int-device.h"
@@ -45,6 +46,11 @@
 
 #define OV5640_CHIP_ID_HIGH_BYTE        0x300A
 #define OV5640_CHIP_ID_LOW_BYTE         0x300B
+
+#define OV5640_TIMING_TC_REG20		0x3820
+#define OV5640_TIMING_TC_REG20_VFLIP	0x06
+#define OV5640_TIMING_TC_REG21		0x3821
+#define OV5640_TIMING_TC_REG21_MIRROR	0x06
 
 enum ov5640_mode {
 	ov5640_mode_MIN = 0,
@@ -584,6 +590,7 @@ static s32 ov5640_read_reg(u16 reg, u8 *val);
 static s32 ov5640_write_reg(u16 reg, u8 val);
 
 static const struct i2c_device_id ov5640_id[] = {
+	{"ov5640_int", 0},
 	{"ov564x", 0},
 	{},
 };
@@ -604,7 +611,7 @@ static inline void ov5640_power_down(int enable)
 {
 	gpio_set_value(pwn_gpio, enable);
 
-	msleep(2);
+	msleep(100);
 }
 
 static inline void ov5640_reset(void)
@@ -684,15 +691,17 @@ static int ov5640_regulator_enable(struct device *dev)
 
 static s32 ov5640_write_reg(u16 reg, u8 val)
 {
+	int ret;
 	u8 au8Buf[3] = {0};
 
 	au8Buf[0] = reg >> 8;
 	au8Buf[1] = reg & 0xff;
 	au8Buf[2] = val;
 
-	if (i2c_master_send(ov5640_data.i2c_client, au8Buf, 3) < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x\n",
-			__func__, reg, val);
+	ret = i2c_master_send(ov5640_data.i2c_client, au8Buf, 3);
+	if (ret < 0) {
+		pr_err("%s:error(%d):reg=%x,val=%x\n",
+			__func__, ret, reg, val);
 		return -1;
 	}
 
@@ -701,28 +710,40 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 
 static s32 ov5640_read_reg(u16 reg, u8 *val)
 {
-	u8 au8RegBuf[2] = {0};
-	u8 u8RdVal = 0;
+	struct sensor_data *sensor = &ov5640_data;
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msgs[2];
+	u8 buf[2];
+	int ret;
+	int retry = 0;
 
-	au8RegBuf[0] = reg >> 8;
-	au8RegBuf[1] = reg & 0xff;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = buf;
 
-	if (2 != i2c_master_send(ov5640_data.i2c_client, au8RegBuf, 2)) {
-		pr_err("%s:write reg error:reg=%x\n",
-				__func__, reg);
-		return -1;
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = 1;
+	msgs[1].buf = buf;
+
+	while (1) {
+		ret = i2c_transfer(client->adapter, msgs, 2);
+		if (ret >= 0)
+			break;
+		if (++retry >= 3) {
+			pr_err("%s:reg=%x ret=%d\n", __func__, reg, ret);
+			return ret;
+		}
+		msleep(1);
 	}
-
-	if (1 != i2c_master_recv(ov5640_data.i2c_client, &u8RdVal, 1)) {
-		pr_err("%s:read reg error:reg=%x,val=%x\n",
-				__func__, reg, u8RdVal);
-		return -1;
-	}
-
-	*val = u8RdVal;
-
-	return u8RdVal;
+	*val = buf[0];
+	pr_debug("%s:reg=%x,val=%x\n", __func__, reg, buf[0]);
+	return buf[0];
 }
+
 
 static void ov5640_soft_reset(void)
 {
@@ -1027,6 +1048,7 @@ static void ov5640_turn_on_AE_AG(int enable)
 /* download ov5640 settings to sensor through i2c */
 static int ov5640_download_firmware(struct reg_value *pModeSetting, s32 ArySize)
 {
+	struct sensor_data *sensor = &ov5640_data;
 	register u32 Delay_ms = 0;
 	register u16 RegAddr = 0;
 	register u8 Mask = 0;
@@ -1048,6 +1070,24 @@ static int ov5640_download_firmware(struct reg_value *pModeSetting, s32 ArySize)
 			RegVal &= ~(u8)Mask;
 			Val &= Mask;
 			Val |= RegVal;
+		}
+
+		/* Overwrite vflip value if provided in device tree */
+		if ((RegAddr == OV5640_TIMING_TC_REG20) &&
+		    (sensor->vflip != -1)) {
+			if (sensor->vflip)
+				Val |= OV5640_TIMING_TC_REG20_VFLIP;
+			else
+				Val &= ~(OV5640_TIMING_TC_REG20_VFLIP);
+		}
+
+		/* Overwrite mirror value if provided in device tree */
+		if ((RegAddr == OV5640_TIMING_TC_REG21) &&
+		    (sensor->mirror != -1)) {
+			if (sensor->mirror)
+				Val |= OV5640_TIMING_TC_REG21_MIRROR;
+			else
+				Val &= ~(OV5640_TIMING_TC_REG21_MIRROR);
 		}
 
 		retval = ov5640_write_reg(RegAddr, Val);
@@ -1508,7 +1548,26 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
 	struct sensor_data *sensor = s->priv;
 
-	f->fmt.pix = sensor->pix;
+	switch (f->type) {
+	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		f->fmt.pix = sensor->pix;
+		pr_debug("%s: %dx%d\n", __func__, sensor->pix.width, sensor->pix.height);
+		break;
+
+	case V4L2_BUF_TYPE_SENSOR:
+		pr_debug("%s: left=%d, top=%d, %dx%d\n", __func__,
+			sensor->spix.left, sensor->spix.top,
+			sensor->spix.swidth, sensor->spix.sheight);
+		f->fmt.spix = sensor->spix;
+		break;
+
+	case V4L2_BUF_TYPE_PRIVATE:
+		break;
+
+	default:
+		f->fmt.pix = sensor->pix;
+		break;
+	}
 
 	return 0;
 }
@@ -1835,6 +1894,7 @@ static int ov5640_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
+	struct sensor_data *sensor = &ov5640_data;
 
 	/* ov5640 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
@@ -1887,12 +1947,28 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
+	retval = of_property_read_u32(dev->of_node, "ipu_id",
+					&sensor->ipu_id);
+	if (retval) {
+		dev_err(dev, "ipu_id missing or invalid\n");
+		return retval;
+	}
+
 	retval = of_property_read_u32(dev->of_node, "csi_id",
 					&(ov5640_data.csi));
 	if (retval) {
 		dev_err(dev, "csi_id invalid\n");
 		return retval;
 	}
+
+	/* Get optional mirror/vflip values */
+	retval = of_property_read_u32(dev->of_node, "mirror", &sensor->mirror);
+	if (retval)
+		sensor->mirror = -1;
+
+	retval = of_property_read_u32(dev->of_node, "vflip", &sensor->vflip);
+	if (retval)
+		sensor->vflip= -1;
 
 	clk_prepare_enable(ov5640_data.sensor_clk);
 
@@ -1907,7 +1983,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	ov5640_data.streamcap.timeperframe.numerator = 1;
 
-	ov5640_regulator_enable(&client->dev);
+	ov5640_regulator_enable(dev);
 
 	ov5640_reset();
 
@@ -1916,13 +1992,13 @@ static int ov5640_probe(struct i2c_client *client,
 	retval = ov5640_read_reg(OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
 		clk_disable_unprepare(ov5640_data.sensor_clk);
-		pr_warning("camera ov5640 is not found\n");
+		pr_warning("camera ov5640 is not found, (%x)\n", retval);
 		return -ENODEV;
 	}
 	retval = ov5640_read_reg(OV5640_CHIP_ID_LOW_BYTE, &chip_id_low);
 	if (retval < 0 || chip_id_low != 0x40) {
 		clk_disable_unprepare(ov5640_data.sensor_clk);
-		pr_warning("camera ov5640 is not found\n");
+		pr_warning("camera ov5640 is not found, low(%x)\n", retval);
 		return -ENODEV;
 	}
 

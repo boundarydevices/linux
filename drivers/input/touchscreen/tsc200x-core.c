@@ -119,6 +119,34 @@ struct tsc200x {
 	int			irq;
 };
 
+static int calibration[7];
+module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
+static void tsc200x_translate(u16 *px, u16 *py)
+{
+	int x, y, x1, y1;
+
+	if (calibration[6]) {
+		x1 = *px;
+		y1 = *py;
+
+		x = calibration[0] * x1 +
+			calibration[1] * y1 +
+			calibration[2];
+		x /= calibration[6];
+		if (x < 0)
+			x = 0;
+		y = calibration[3] * x1 +
+			calibration[4] * y1 +
+			calibration[5];
+		y /= calibration[6];
+		if (y < 0)
+			y = 0;
+		*px = x;
+		*py = y;
+	}
+}
+
 static void tsc200x_update_pen_state(struct tsc200x *ts,
 				     int x, int y, int pressure)
 {
@@ -175,6 +203,9 @@ static irqreturn_t tsc200x_irq_thread(int irq, void *_ts)
 	    ts->in_z1 == tsdata.z1 && ts->in_z2 == tsdata.z2) {
 		goto out;
 	}
+
+	/* Do coordinates translation if calibration provided */
+	tsc200x_translate(&tsdata.x, &tsdata.y);
 
 	/*
 	 * At this point we are happy we have a valid and useful reading.
@@ -467,6 +498,7 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 	unsigned int fudge_p = TSC200X_DEF_P_FUZZ;
 	unsigned int x_plate_ohm = TSC200X_DEF_RESISTOR;
 	unsigned int esd_timeout;
+	unsigned int reg;
 	int error;
 
 	if (!np && !pdata) {
@@ -529,9 +561,8 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 
 	ts->vio = devm_regulator_get_optional(dev, "vio");
 	if (IS_ERR(ts->vio)) {
-		error = PTR_ERR(ts->vio);
-		dev_err(dev, "vio regulator missing (%d)", error);
-		return error;
+		ts->vio = NULL;
+		dev_info(dev, "no vio regulator found");
 	}
 
 	if (!ts->reset_gpio && pdata)
@@ -600,6 +631,13 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 		dev_err(dev,
 			"Failed to create sysfs attributes, err: %d\n", error);
 		goto disable_regulator;
+	}
+
+	/* Check if device present */
+	error = regmap_read(ts->regmap, TSC200X_REG_TEMP_HIGH, &reg);
+	if (error) {
+		dev_err(dev, "Device not present: %d\n", error);
+		goto err_remove_sysfs;
 	}
 
 	error = input_register_device(ts->idev);

@@ -18,6 +18,11 @@ config FB_MXC_SYNC_PANEL
 	depends on FB_MXC
 	tristate "Synchronous Panel Framebuffer"
 
+config FB_MXC_LCDIF
+	tristate "lcd parallel display driver"
+	depends on FB_MXC_SYNC_PANEL
+	default y
+
 config FB_MXC_OVERLAY
 	depends on FB_MXC
 	tristate "Overlay Framebuffer"
@@ -40,6 +45,11 @@ config FB_MXC_MIPI_DSI_NORTHWEST
 	depends on FB_MXC_SYNC_PANEL
 	depends on FB_MXS
 
+config FB_MXC_MIPI_RM68200
+	tristate "mipi RM68200 controller panels"
+	depends on FB_MXC_SYNC_PANEL
+	depends on FB_MXC_MIPI_DSI
+
 config FB_MXC_TRULY_WVGA_SYNC_PANEL
 	tristate "TRULY WVGA Panel"
 	depends on FB_MXC_SYNC_PANEL
@@ -54,6 +64,10 @@ config FB_MXC_TRULY_PANEL_TFT3P5581E
 	tristate "TRULY Panel TFT3P5581E"
 	depends on FB_MXC_SYNC_PANEL
 	depends on FB_MXC_MIPI_DSI_SAMSUNG || FB_MXC_MIPI_DSI_NORTHWEST
+
+config FB_MXC_TVOUT_ADV739X
+	tristate "ADV7390/7391 TV Out Encoder"
+	depends on FB_MXC_SYNC_PANEL && I2C
 
 config FB_MXC_LDB
 	tristate "MXC LDB"

@@ -101,10 +101,25 @@ config FSL_OTP
 	  you access to the secure memory pages however.  You will need to
 	  write your own secure code and reader for that.
 
+	  Note that default access is read-only. To enable writes, you
+	  also need to select FSL_OTP_RW
+
 	  To compile this driver as a module, choose M here: the module
 	  will be called fsl_otp.
 
 	  If unsure, it is safe to say Y.
+
+config FSL_OTP_RW
+	bool "Freescale On-Chip OTP Memory Write Access"
+	depends on FSL_OTP
+	default n
+	help
+	  If you say Y here, you will get write access to the One Time
+	  Programmable registers on certain Freescale i.MX processors.
+	  Note that improper writes to these registers may prevent your
+	  processor from booting.
+
+	  If unsure, say N
 
 config PRINTER
 	tristate "Parallel printer support"
@@ -508,6 +523,17 @@ config RAW_DRIVER
           Applications should preferably open the device (eg /dev/hda1)
           with the O_DIRECT flag.
 
+config MAGSTRIPE
+	tristate "Neuron magstripe reader support through GPIO"
+	default n
+	help
+	   This driver enables support for a Neuron MCR-370T-1R-xxxx
+	   insertion-style magnetic stripe card reader, connected via
+	   GPIO. GPIO pin assignments are defined through the device tree.
+	   Only a single instance is currently supported.
+
+	   If compiled as a module, it will be named magdecode.ko
+
 config MAX_RAW_DEVS
 	int "Maximum number of RAW devices to support (1-65536)"
 	depends on RAW_DRIVER
@@ -586,11 +612,29 @@ config TELCLOCK
 	  controlling the behavior of this hardware.
 
 config DEVPORT
-	bool
+	bool "/dev/port character device"
 	depends on ISA || PCI
 	default y
+	help
+	  Say Y here if you want to support the /dev/port device. The /dev/port
+	  device is similar to /dev/mem, but for I/O ports.
 
 source "drivers/s390/char/Kconfig"
+
+config SAS
+	tristate "Slot Accounting Service driver"
+	default n
+	help
+	   This driver enables support for a 9-bit serial driver that
+	   uses MARK/SPACE parity to frame messages for the Slot Accounting
+	   System (SAS) protocol.
+
+	   If compiled as a module, it will be named sas.ko
+
+config SAS_PARTIAL_RX
+	bool "Return received character without regard to message boundaries"
+	depends on SAS
+	default n
 
 config TILE_SROM
 	bool "Character-device access via hypervisor to the Tilera SPI ROM"
@@ -606,5 +650,10 @@ config TILE_SROM
 source "drivers/char/xillybus/Kconfig"
 
 source "drivers/char/imx_amp/Kconfig"
+
+config DUMMY_I2C_DEVICE
+	tristate "dummy clock/regulator/gpio consumer"
+	depends on I2C
+
 endmenu
 

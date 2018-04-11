@@ -17,6 +17,7 @@
 
 #include <linux/acpi.h>
 #include <linux/dmi.h>
+#include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/completion.h>
@@ -258,7 +259,7 @@ enum v4l_dbg_inputs {
 };
 
 static const struct v4l2_file_operations mxt_video_fops = {
-	.owner = THIS_MODULE,
+
 	.open = v4l2_fh_open,
 	.release = vb2_fop_release,
 	.unlocked_ioctl = video_ioctl2,
@@ -322,6 +323,7 @@ struct mxt_data {
 
 	/* for config update handling */
 	struct completion crc_completion;
+	struct gpio_desc *reset_gpio;
 };
 
 struct mxt_vb2_buffer {
@@ -609,6 +611,7 @@ static int __mxt_read_reg(struct i2c_client *client,
 	struct i2c_msg xfer[2];
 	u8 buf[2];
 	int ret;
+	int retry = 0;
 
 	buf[0] = reg & 0xff;
 	buf[1] = (reg >> 8) & 0xff;
@@ -625,16 +628,21 @@ static int __mxt_read_reg(struct i2c_client *client,
 	xfer[1].len = len;
 	xfer[1].buf = val;
 
-	ret = i2c_transfer(client->adapter, xfer, 2);
-	if (ret == 2) {
-		ret = 0;
-	} else {
-		if (ret >= 0)
-			ret = -EIO;
-		dev_err(&client->dev, "%s: i2c transfer failed (%d)\n",
-			__func__, ret);
-	}
+	do {
+		ret = i2c_transfer(client->adapter, xfer, 2);
+		if (ret == 2)
+			return 0;
 
+		if (!retry) {
+			dev_err(&client->dev,
+				"%s: i2c transfer failed (%d) reg=0x%x len=%d\n",
+				__func__, ret, reg, len);
+		}
+		msleep(100);
+	} while (retry++ < 10);
+
+	if (ret >= 0)
+		ret = -EIO;
 	return ret;
 }
 
@@ -644,27 +652,43 @@ static int __mxt_write_reg(struct i2c_client *client, u16 reg, u16 len,
 	u8 *buf;
 	size_t count;
 	int ret;
+	u8 *p;
+	u8 buffer[32];
+	int retry = 0;
 
 	count = len + 2;
-	buf = kmalloc(count, GFP_KERNEL);
-	if (!buf)
-		return -ENOMEM;
+	if (sizeof(buffer) < count) {
+		p = buf = kmalloc(count, GFP_KERNEL);
+		if (!buf)
+			return -ENOMEM;
+	} else {
+		p = NULL;
+		buf = buffer;
+	}
 
 	buf[0] = reg & 0xff;
 	buf[1] = (reg >> 8) & 0xff;
 	memcpy(&buf[2], val, len);
 
-	ret = i2c_master_send(client, buf, count);
-	if (ret == count) {
-		ret = 0;
-	} else {
+	do {
+		ret = i2c_master_send(client, buf, count);
+		if (ret == count) {
+			ret = 0;
+			break;
+		}
+
+		if (!retry) {
+			dev_err(&client->dev,
+				"%s: i2c send failed (%d) reg=0x%x len=%d val=%x\n",
+				__func__, ret, reg, len, buf[2]);
+		}
 		if (ret >= 0)
 			ret = -EIO;
-		dev_err(&client->dev, "%s: i2c send failed (%d)\n",
-			__func__, ret);
-	}
+		msleep(100);
+	} while (retry++ < 10);
 
-	kfree(buf);
+	if (p)
+		kfree(p);
 	return ret;
 }
 
@@ -1930,7 +1954,7 @@ static int mxt_initialize_input_device(struct mxt_data *data)
 	input_dev->open = mxt_input_open;
 	input_dev->close = mxt_input_close;
 
-	input_set_capability(input_dev, EV_KEY, BTN_TOUCH);
+	input_set_capability(input_dev, EV_KEY | EV_ABS, BTN_TOUCH);
 
 	/* For single touch */
 	input_set_abs_params(input_dev, ABS_X, 0, data->max_x, 0, 0);
@@ -3106,21 +3130,52 @@ mxt_get_platform_data(struct i2c_client *client)
 	return ERR_PTR(-EINVAL);
 }
 
+/* Return 0 if detection is successful, -ENODEV otherwise */
+static int detect_device(struct i2c_client *client)
+{
+	struct i2c_adapter *adapter = client->adapter;
+	char buffer;
+	struct i2c_msg pkt = {
+		client->addr,
+		I2C_M_RD,
+		sizeof(buffer),
+		&buffer
+	};
+	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
+		return -ENODEV;
+	if (i2c_transfer(adapter, &pkt, 1) != 1)
+		return -ENODEV;
+	return 0;
+}
+
 static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct mxt_data *data;
 	const struct mxt_platform_data *pdata;
 	int error;
+	struct gpio_desc *gpio;
 
 	pdata = mxt_get_platform_data(client);
 	if (IS_ERR(pdata))
 		return PTR_ERR(pdata);
 
+	gpio = devm_gpiod_get_index(&client->dev, "reset", 0, GPIOD_OUT_HIGH);
+	if (!IS_ERR(gpio)) {
+		gpiod_set_value(gpio, 0);	/* inactive */
+		msleep(100);	/* 70 fails, 75 works */
+	}
+	error = detect_device(client);
+	if (error) {
+		dev_err(&client->dev, "not detected\n");
+		return error;
+	}
 	data = kzalloc(sizeof(struct mxt_data), GFP_KERNEL);
 	if (!data) {
 		dev_err(&client->dev, "Failed to allocate memory\n");
 		return -ENOMEM;
 	}
+	if (!IS_ERR(gpio))
+		data->reset_gpio = gpio;
 
 	snprintf(data->phys, sizeof(data->phys), "i2c-%u-%04x/input0",
 		 client->adapter->nr, client->addr);
@@ -3163,6 +3218,8 @@ err_free_object:
 err_free_irq:
 	free_irq(client->irq, data);
 err_free_mem:
+	if (data->reset_gpio)
+		gpiod_set_value(data->reset_gpio, 1);	/* Set active */
 	kfree(data);
 	return error;
 }
@@ -3171,6 +3228,8 @@ static int mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 
+	if (data->reset_gpio)
+		gpiod_set_value(data->reset_gpio, 1);	/* Set active */
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	free_irq(data->irq, data);
 	mxt_free_input_device(data);

@@ -1390,6 +1390,11 @@ static int acpi_nfit_add_dimm(struct acpi_nfit_desc *acpi_desc,
 				dev_name(&adev_dimm->dev));
 		return -ENXIO;
 	}
+	/*
+	 * Record nfit_mem for the notification path to track back to
+	 * the nfit sysfs attributes for this dimm device object.
+	 */
+	dev_set_drvdata(&adev_dimm->dev, nfit_mem);
 
 	/*
 	 * Until standardization materializes we need to consider 4
@@ -1446,9 +1451,11 @@ static void shutdown_dimm_notify(void *data)
 			sysfs_put(nfit_mem->flags_attr);
 			nfit_mem->flags_attr = NULL;
 		}
-		if (adev_dimm)
+		if (adev_dimm) {
 			acpi_remove_notify_handler(adev_dimm->handle,
 					ACPI_DEVICE_NOTIFY, acpi_nvdimm_notify);
+			dev_set_drvdata(&adev_dimm->dev, NULL);
+		}
 	}
 	mutex_unlock(&acpi_desc->init_mutex);
 }
@@ -1528,6 +1535,9 @@ static int acpi_nfit_register_dimms(struct acpi_nfit_desc *acpi_desc)
 		struct kernfs_node *nfit_kernfs;
 
 		nvdimm = nfit_mem->nvdimm;
+		if (!nvdimm)
+			continue;
+
 		nfit_kernfs = sysfs_get_dirent(nvdimm_kobj(nvdimm)->sd, "nfit");
 		if (nfit_kernfs)
 			nfit_mem->flags_attr = sysfs_get_dirent(nfit_kernfs,
@@ -1617,7 +1627,11 @@ static int cmp_map(const void *m0, const void *m1)
 	const struct nfit_set_info_map *map0 = m0;
 	const struct nfit_set_info_map *map1 = m1;
 
-	return map0->region_offset - map1->region_offset;
+	if (map0->region_offset < map1->region_offset)
+		return -1;
+	else if (map0->region_offset > map1->region_offset)
+		return 1;
+	return 0;
 }
 
 /* Retrieve the nth entry referencing this spa */
@@ -2941,6 +2955,8 @@ static struct acpi_driver acpi_nfit_driver = {
 
 static __init int nfit_init(void)
 {
+	int ret;
+
 	BUILD_BUG_ON(sizeof(struct acpi_table_nfit) != 40);
 	BUILD_BUG_ON(sizeof(struct acpi_nfit_system_address) != 56);
 	BUILD_BUG_ON(sizeof(struct acpi_nfit_memory_map) != 48);
@@ -2968,8 +2984,14 @@ static __init int nfit_init(void)
 		return -ENOMEM;
 
 	nfit_mce_register();
+	ret = acpi_bus_register_driver(&acpi_nfit_driver);
+	if (ret) {
+		nfit_mce_unregister();
+		destroy_workqueue(nfit_wq);
+	}
 
-	return acpi_bus_register_driver(&acpi_nfit_driver);
+	return ret;
+
 }
 
 static __exit void nfit_exit(void)

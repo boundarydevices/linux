@@ -74,6 +74,20 @@ static const struct reg_default sgtl5000_reg_defaults[] = {
 	{ SGTL5000_DAP_AVC_DECAY,		0x0050 },
 };
 
+/* AVC: Threshold dB -> register: pre-calculated values */
+static const u16 avc_thr_db2reg[97] = {
+	0x5168, 0x488E, 0x40AA, 0x39A1, 0x335D, 0x2DC7, 0x28CC, 0x245D, 0x2068,
+	0x1CE2, 0x19BE, 0x16F1, 0x1472, 0x1239, 0x103E, 0x0E7A, 0x0CE6, 0x0B7F,
+	0x0A3F, 0x0922, 0x0824, 0x0741, 0x0677, 0x05C3, 0x0522, 0x0493, 0x0414,
+	0x03A2, 0x033D, 0x02E3, 0x0293, 0x024B, 0x020B, 0x01D2, 0x019F, 0x0172,
+	0x014A, 0x0126, 0x0106, 0x00E9, 0x00D0, 0x00B9, 0x00A5, 0x0093, 0x0083,
+	0x0075, 0x0068, 0x005D, 0x0052, 0x0049, 0x0041, 0x003A, 0x0034, 0x002E,
+	0x0029, 0x0025, 0x0021, 0x001D, 0x001A, 0x0017, 0x0014, 0x0012, 0x0010,
+	0x000E, 0x000D, 0x000B, 0x000A, 0x0009, 0x0008, 0x0007, 0x0006, 0x0005,
+	0x0005, 0x0004, 0x0004, 0x0003, 0x0003, 0x0002, 0x0002, 0x0002, 0x0002,
+	0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0000, 0x0000, 0x0000,
+	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000};
+
 /* regulator supplies for sgtl5000, VDDD is an optional external supply */
 enum sgtl5000_regulator_supplies {
 	VDDA,
@@ -99,6 +113,13 @@ enum sgtl5000_micbias_resistor {
 	SGTL5000_MICBIAS_8K = 8,
 };
 
+enum  {
+	I2S_LRCLK_STRENGTH_DISABLE,
+	I2S_LRCLK_STRENGTH_LOW,
+	I2S_LRCLK_STRENGTH_MEDIUM,
+	I2S_LRCLK_STRENGTH_HIGH,
+};
+
 /* sgtl5000 private structure in codec */
 struct sgtl5000_priv {
 	int sysclk;	/* sysclk rate */
@@ -111,6 +132,9 @@ struct sgtl5000_priv {
 	int revision;
 	u8 micbias_resistor;
 	u8 micbias_voltage;
+	u8 lrclk_strength;
+	u8 ana_power_pending;
+	u8 ana_ctrl_pending;
 };
 
 /*
@@ -146,42 +170,82 @@ static int mic_bias_event(struct snd_soc_dapm_widget *w,
 
 /*
  * As manual described, ADC/DAC only works when VAG powerup,
- * So enabled VAG before ADC/DAC up.
+ * So enabled VAG after ADC/DAC up.
  * In power down case, we need wait 400ms when vag fully ramped down.
  */
 static int power_vag_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
-	const u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP;
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+	u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP |
+			 SGTL5000_LINE_OUT_POWERUP | SGTL5000_HP_POWERUP;
 
-	switch (event) {
-	case SND_SOC_DAPM_POST_PMU:
-		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-			SGTL5000_VAG_POWERUP, SGTL5000_VAG_POWERUP);
-		msleep(400);
-		break;
+	pr_debug("vag %x(%x) %x(%x)\n", sgtl5000->ana_power_pending,
+		snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER),
+		sgtl5000->ana_ctrl_pending, snd_soc_read(codec, SGTL5000_CHIP_ANA_CTRL));
 
-	case SND_SOC_DAPM_PRE_PMD:
-		/*
-		 * Don't clear VAG_POWERUP, when both DAC and ADC are
-		 * operational to prevent inadvertently starving the
-		 * other one of them.
-		 */
-		if ((snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER) &
-				mask) != mask) {
+	if ((sgtl5000->ana_power_pending & mask) || sgtl5000->ana_ctrl_pending) {
+		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_CTRL,
+			SGTL5000_HP_SEL_MASK, sgtl5000->ana_ctrl_pending);
+
+		if (!(sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP)) {
+			mask |= SGTL5000_VAG_POWERUP;
+			sgtl5000->ana_power_pending |= SGTL5000_VAG_POWERUP;
 			snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-				SGTL5000_VAG_POWERUP, 0);
+					mask, sgtl5000->ana_power_pending);
 			msleep(400);
+			pr_debug("vag on\n");
 		}
-		break;
-	default:
-		break;
+		return 0;
 	}
-
+	if (sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP) {
+		pr_debug("vag off\n");
+		sgtl5000->ana_power_pending &= ~SGTL5000_VAG_POWERUP;
+		mask |= SGTL5000_VAG_POWERUP;
+		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+			SGTL5000_VAG_POWERUP, 0);
+		msleep(400);
+	}
+	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+		mask, sgtl5000->ana_power_pending);
+	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_CTRL,
+		SGTL5000_HP_SEL_MASK, sgtl5000->ana_ctrl_pending);
 	return 0;
 }
 
+int ana_power_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+	unsigned int m = 1 << w->shift;
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		sgtl5000->ana_power_pending |= m;
+		if (sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP) {
+			/* vag already powered */
+			snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+				m, m);
+		}
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		sgtl5000->ana_power_pending &= ~m;
+		if (!(sgtl5000->ana_power_pending & SGTL5000_VAG_POWERUP)) {
+			/* vag already off */
+			snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+				m, 0);
+		}
+		break;
+	}
+	pr_debug("event %s, %x(evt %x) %x(%x)\n", SND_SOC_DAPM_EVENT_ON(event) ? "on" : "off",
+		m, event, sgtl5000->ana_power_pending,
+		snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER));
+	return 0;
+}
+
+/* ******************************************/
 /* input sources for ADC */
 static const char *adc_mux_text[] = {
 	"MIC_IN", "LINE_IN"
@@ -194,17 +258,87 @@ static SOC_ENUM_SINGLE_DECL(adc_enum,
 static const struct snd_kcontrol_new adc_mux =
 SOC_DAPM_ENUM("Capture Mux", adc_enum);
 
-/* input sources for DAC */
-static const char *dac_mux_text[] = {
+/* ******************************************/
+/* input sources for Headphone */
+static const char *headphone_mux_text[] = {
 	"DAC", "LINE_IN"
 };
 
+static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+
+	if (ucontrol->value.enumerated.item[0])
+		sgtl5000->ana_ctrl_pending |= SGTL5000_HP_SEL_MASK;
+	else
+		sgtl5000->ana_ctrl_pending &= ~SGTL5000_HP_SEL_MASK;
+	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
+}
+
+static SOC_ENUM_SINGLE_DECL(headphone_enum,
+			    SND_SOC_NOPM, 6,
+			    headphone_mux_text);
+
+static const struct snd_kcontrol_new headphone_mux =
+	SOC_DAPM_ENUM_EXT("Headphone Mux", headphone_enum,
+			snd_soc_dapm_get_enum_double,
+			sgtl5000_hp_select);
+
+/* ******************************************/
+
+static const char *dap_mux_text[] = {
+	"ADC", "AIFIN"
+};
+
+/* input sources for DAP Mixer */
+static SOC_ENUM_SINGLE_DECL(dap_mixer_enum,
+		SGTL5000_CHIP_SSS_CTRL, 8,
+		dap_mux_text);
+
+static const struct snd_kcontrol_new dap_mixer_mux =
+SOC_DAPM_ENUM("DAP mixer Mux", dap_mixer_enum);
+
+/* ******************************************/
+/* input sources for DAP */
+static SOC_ENUM_SINGLE_DECL(dap_enum,
+		SGTL5000_CHIP_SSS_CTRL, 6,
+		dap_mux_text);
+
+static const struct snd_kcontrol_new dap_mux =
+SOC_DAPM_ENUM("DAP Mux", dap_enum);
+
+/* ******************************************/
+
+static const char *dac_aifout_mux_text[] = {
+	"ADC", "AIFIN", "reserved", "DAP"
+};
+
+/* input sources for DAC */
 static SOC_ENUM_SINGLE_DECL(dac_enum,
-			    SGTL5000_CHIP_ANA_CTRL, 6,
-			    dac_mux_text);
+		SGTL5000_CHIP_SSS_CTRL, 4,
+		dac_aifout_mux_text);
 
 static const struct snd_kcontrol_new dac_mux =
-SOC_DAPM_ENUM("Headphone Mux", dac_enum);
+SOC_DAPM_ENUM("DAC Mux", dac_enum);
+
+/* ******************************************/
+/* input sources for I2S_DOUT */
+static SOC_ENUM_SINGLE_DECL(aifout_enum,
+		SGTL5000_CHIP_SSS_CTRL, 0,
+		dac_aifout_mux_text);
+
+static const struct snd_kcontrol_new aifout_mux =
+SOC_DAPM_ENUM("AIFOUT Mux", aifout_enum);
+
+/* ******************************************/
+/* DAP Mixer */
+static const struct snd_kcontrol_new dap_mixer_controls[] = {
+	SOC_DAPM_SINGLE("DAP mix", SGTL5000_DAP_CTRL, 4, 1, 0),
+};
+
+#define SND_SOC_DAPM_PRE_PMUD	(SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD)
 
 static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("LINE_IN"),
@@ -217,11 +351,17 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 			    mic_bias_event,
 			    SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 
-	SND_SOC_DAPM_PGA("HP", SGTL5000_CHIP_ANA_POWER, 4, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("LO", SGTL5000_CHIP_ANA_POWER, 0, 0, NULL, 0),
+	SND_SOC_DAPM_PGA_E("HP", SND_SOC_NOPM, 4, 0, NULL, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
+	SND_SOC_DAPM_PGA_E("LO", SND_SOC_NOPM, 0, 0, NULL, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
 
 	SND_SOC_DAPM_MUX("Capture Mux", SND_SOC_NOPM, 0, 0, &adc_mux),
-	SND_SOC_DAPM_MUX("Headphone Mux", SND_SOC_NOPM, 0, 0, &dac_mux),
+	SND_SOC_DAPM_MUX("Headphone Mux", SND_SOC_NOPM, 0, 0, &headphone_mux),
+	SND_SOC_DAPM_MUX("DAP mixer Mux", SND_SOC_NOPM, 0, 0, &dap_mixer_mux),
+	SND_SOC_DAPM_MUX("DAP Mux", SND_SOC_NOPM, 0, 0, &dap_mux),
+	SND_SOC_DAPM_MUX("DAC Mux", SND_SOC_NOPM, 0, 0, &dac_mux),
+	SND_SOC_DAPM_MUX("AIFOUT Mux", SND_SOC_NOPM, 0, 0, &aifout_mux),
 
 	/* aif for i2s input */
 	SND_SOC_DAPM_AIF_IN("AIFIN", "Playback",
@@ -233,30 +373,51 @@ static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 				0, SGTL5000_CHIP_DIG_POWER,
 				1, 0),
 
-	SND_SOC_DAPM_ADC("ADC", "Capture", SGTL5000_CHIP_ANA_POWER, 1, 0),
-	SND_SOC_DAPM_DAC("DAC", "Playback", SGTL5000_CHIP_ANA_POWER, 3, 0),
+	SND_SOC_DAPM_MIXER("DAP Mixer", SGTL5000_DAP_CTRL, 0, 0, dap_mixer_controls, ARRAY_SIZE(dap_mixer_controls)),
+	SND_SOC_DAPM_MIXER("DAP", SGTL5000_CHIP_DIG_POWER, 4, 0, NULL, 0),
 
-	SND_SOC_DAPM_PRE("VAG_POWER_PRE", power_vag_event),
-	SND_SOC_DAPM_POST("VAG_POWER_POST", power_vag_event),
+	SND_SOC_DAPM_ADC_E("ADC", "Capture", SND_SOC_NOPM, 1, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
+	SND_SOC_DAPM_DAC_E("DAC", "Playback", SND_SOC_NOPM, 3, 0,
+		ana_power_event, SND_SOC_DAPM_PRE_PMUD),
+
+	SND_SOC_DAPM_POST_E("VAG_POWER", power_vag_event, SND_SOC_DAPM_POST_PMU
+		| SND_SOC_DAPM_POST_PMD | SND_SOC_DAPM_POST_NOP),
 };
 
 /* routes for sgtl5000 */
 static const struct snd_soc_dapm_route sgtl5000_dapm_routes[] = {
 	{"Capture Mux", "LINE_IN", "LINE_IN"},	/* line_in --> adc_mux */
 	{"Capture Mux", "MIC_IN", "MIC_IN"},	/* mic_in --> adc_mux */
-
 	{"ADC", NULL, "Capture Mux"},		/* adc_mux --> adc */
-	{"AIFOUT", NULL, "ADC"},		/* adc --> i2s_out */
 
-	{"DAC", NULL, "AIFIN"},			/* i2s-->dac,skip audio mux */
+	{"DAC Mux", "ADC", "ADC"},
+	{"DAC Mux", "AIFIN", "AIFIN"},
+	{"DAC Mux", "DAP", "DAP"},
+	{"DAC", NULL, "DAC Mux"},
+
+	{"AIFOUT Mux", "ADC", "ADC"},
+	{"AIFOUT Mux", "AIFIN", "AIFIN"},
+	{"AIFOUT Mux", "DAP", "DAP"},
+	{"AIFOUT", NULL, "AIFOUT Mux"},
+
 	{"Headphone Mux", "DAC", "DAC"},	/* dac --> hp_mux */
-	{"LO", NULL, "DAC"},			/* dac --> line_out */
-
 	{"Headphone Mux", "LINE_IN", "LINE_IN"},/* line_in --> hp_mux */
 	{"HP", NULL, "Headphone Mux"},		/* hp_mux --> hp */
-
-	{"LINE_OUT", NULL, "LO"},
 	{"HP_OUT", NULL, "HP"},
+
+	{"LO", NULL, "DAC"},			/* dac --> line_out */
+	{"LINE_OUT", NULL, "LO"},
+
+	{"DAP mixer Mux", "ADC", "ADC"},
+	{"DAP mixer Mux", "AIFIN", "AIFIN"},
+
+	{"DAP Mux", "ADC", "ADC"},
+	{"DAP Mux", "AIFIN", "AIFIN"},
+
+	{"DAP Mixer", "DAP mix", "DAP mixer Mux"},
+	{"DAP Mixer", NULL, "DAP Mux"},
+	{"DAP", NULL, "DAP Mixer"},
 };
 
 /* custom function to fetch info of PCM playback volume */
@@ -374,6 +535,65 @@ static int dac_put_volsw(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+/*
+ * custom function to get AVC threshold
+ *
+ * The threshold dB is calculated by rearranging the calculation from the
+ * avc_put_threshold function: register_value = 10^(dB/20) * 0.636 * 2^15 ==>
+ * dB = ( fls(register_value) - 14.347 ) * 6.02
+ *
+ * As this calculation is expensive and the threshold dB values may not exeed
+ * 0 to 96 we use pre-calculated values.
+ */
+static int avc_get_threshold(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	int db, i;
+	u16 reg = snd_soc_read(codec, SGTL5000_DAP_AVC_THRESHOLD);
+
+	/* register value 0 => -96dB */
+	if (!reg) {
+		ucontrol->value.integer.value[0] = 96;
+		ucontrol->value.integer.value[1] = 96;
+		return 0;
+	}
+
+	/* get dB from register value (rounded down) */
+	for (i = 0; avc_thr_db2reg[i] > reg; i++)
+		;
+	db = i;
+
+	ucontrol->value.integer.value[0] = db;
+	ucontrol->value.integer.value[1] = db;
+
+	return 0;
+}
+
+/*
+ * custom function to put AVC threshold
+ *
+ * The register value is calculated by following formula:
+ *                                    register_value = 10^(dB/20) * 0.636 * 2^15
+ * As this calculation is expensive and the threshold dB values may not exeed
+ * 0 to 96 we use pre-calculated values.
+ */
+static int avc_put_threshold(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	int db;
+	u16 reg;
+
+	db = (int)ucontrol->value.integer.value[0];
+	if (db < 0 || db > 96)
+		return -EINVAL;
+	reg = avc_thr_db2reg[db];
+	snd_soc_write(codec, SGTL5000_DAP_AVC_THRESHOLD, reg);
+
+	return 0;
+}
+
 static const DECLARE_TLV_DB_SCALE(capture_6db_attenuate, -600, 600, 0);
 
 /* tlv for mic gain, 0db 20db 30db 40db */
@@ -382,11 +602,22 @@ static const DECLARE_TLV_DB_RANGE(mic_gain_tlv,
 	1, 3, TLV_DB_SCALE_ITEM(2000, 1000, 0)
 );
 
+static const DECLARE_TLV_DB_RANGE(bass_high_filter_freq,
+	0, 0, TLV_DB_SCALE_ITEM(80, 0, 0),
+	1, 6, TLV_DB_SCALE_ITEM(100, 25, 0)
+);
+
 /* tlv for hp volume, -51.5db to 12.0db, step .5db */
 static const DECLARE_TLV_DB_SCALE(headphone_volume, -5150, 50, 0);
 
 /* tlv for lineout volume, 31 steps of .5db each */
 static const DECLARE_TLV_DB_SCALE(lineout_volume, -1550, 50, 0);
+
+/* tlv for dap avc max gain, 0db, 6db, 12db */
+static const DECLARE_TLV_DB_SCALE(avc_max_gain, 0, 600, 0);
+
+/* tlv for dap avc threshold, */
+static const DECLARE_TLV_DB_MINMAX(avc_threshold, -9600, 0);
 
 static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	/* SOC_DOUBLE_S8_TLV with invert */
@@ -426,7 +657,61 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 			0x1f, 1,
 			lineout_volume),
 	SOC_SINGLE("Lineout Playback Switch", SGTL5000_CHIP_ANA_CTRL, 8, 1, 1),
+
+	SOC_SINGLE("DAP Main Volume", SGTL5000_DAP_MAIN_CHAN, 0, 0xffff, 0),
+	SOC_SINGLE("DAP Mix Volume", SGTL5000_DAP_MIX_CHAN, 0, 0xffff, 0),
+
+	/* Automatic Volume Control (DAP AVC) */
+	SOC_SINGLE("AVC Switch", SGTL5000_DAP_AVC_CTRL, 0, 1, 0),
+	SOC_SINGLE("AVC Hard Limiter Switch", SGTL5000_DAP_AVC_CTRL, 5, 1, 0),
+	SOC_SINGLE_TLV("AVC Max Gain Volume", SGTL5000_DAP_AVC_CTRL, 12, 2, 0,
+			avc_max_gain),
+	SOC_SINGLE("AVC Integrator Response", SGTL5000_DAP_AVC_CTRL, 8, 3, 0),
+	SOC_SINGLE_EXT_TLV("AVC Threshold Volume", SGTL5000_DAP_AVC_THRESHOLD,
+			0, 96, 0, avc_get_threshold, avc_put_threshold,
+			avc_threshold),
+	SOC_SINGLE("AVC Attack Rate", SGTL5000_DAP_AVC_ATTACK, 0,
+			0xfff, 0),
+	SOC_SINGLE("AVC Decay Rate", SGTL5000_DAP_AVC_DECAY, 0,
+			0xfff, 0),
+
+	SOC_SINGLE("Surround Enable", SGTL5000_DAP_SURROUND, 1, 1, 0),
+	SOC_SINGLE("Surround Stereo Enable", SGTL5000_DAP_SURROUND, 0, 1, 0),
+	SOC_SINGLE("Surround Width", SGTL5000_DAP_SURROUND, 4, 0x7, 0),
+
+	SOC_SINGLE("Bass Enable", SGTL5000_DAP_BASS_ENHANCE, 0, 1, 0),
+	SOC_SINGLE_TLV("Bass Filter Feq", SGTL5000_DAP_BASS_ENHANCE,
+			4, 7, 0, bass_high_filter_freq),
+	SOC_SINGLE("Bass HPF", SGTL5000_DAP_BASS_ENHANCE, 8, 1, 1),
+	SOC_SINGLE("Bass Volume", SGTL5000_DAP_BASS_ENHANCE_CTRL,
+			8, 0x3f, 1),
+	SOC_SINGLE("Bass Level", SGTL5000_DAP_BASS_ENHANCE_CTRL,
+			0, 0x7f, 1),
+
+	SOC_SINGLE("DAP Mixer Swap LR", SGTL5000_CHIP_SSS_CTRL, 14, 1, 0),
+	SOC_SINGLE("DAP Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 13, 1, 0),
+	SOC_SINGLE("DAC Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 12, 1, 0),
+	SOC_SINGLE("I2S output Swap LR", SGTL5000_CHIP_SSS_CTRL, 10, 1, 0),
 };
+
+static int test_for_adc_direct(struct snd_soc_codec *codec)
+{
+	int sss;
+	int dap;
+
+	sss = snd_soc_read(codec, SGTL5000_CHIP_SSS_CTRL);
+	if (!((sss >> 4) & 3))
+		return 1;	/* DAC is from ADC, powerup vag */
+	if (((sss >> 4) & 3) == 3) {
+		/* DAC is from DAP */
+		if (!((sss >> 6) & 3))
+			return 1;	/* DAP source is ADC */
+		dap = snd_soc_read(codec, SGTL5000_DAP_CTRL);
+		if  ((dap & SGTL5000_DAP_MIX_EN) && !((sss >> 8) & 3))
+			return 1;	/* DAP mixer source is ADC */
+	}
+	return 0;
+}
 
 /* mute the codec used by alsa core */
 static int sgtl5000_digital_mute(struct snd_soc_dai *codec_dai, int mute)
@@ -434,6 +719,10 @@ static int sgtl5000_digital_mute(struct snd_soc_dai *codec_dai, int mute)
 	struct snd_soc_codec *codec = codec_dai->codec;
 	u16 adcdac_ctrl = SGTL5000_DAC_MUTE_LEFT | SGTL5000_DAC_MUTE_RIGHT;
 
+	if (mute) {
+		if (test_for_adc_direct(codec))
+			mute = 0;
+	}
 	snd_soc_update_bits(codec, SGTL5000_CHIP_ADCDAC_CTRL,
 			adcdac_ctrl, mute ? adcdac_ctrl : 0);
 
@@ -774,15 +1063,26 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 static int sgtl5000_set_bias_level(struct snd_soc_codec *codec,
 				   enum snd_soc_bias_level level)
 {
+	struct sgtl5000_priv *sgtl = snd_soc_codec_get_drvdata(codec);
+	int ret;
+
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
 	case SND_SOC_BIAS_STANDBY:
+		regcache_cache_only(sgtl->regmap, false);
+		ret = regcache_sync(sgtl->regmap);
+		if (ret) {
+			regcache_cache_only(sgtl->regmap, true);
+			return ret;
+		}
+
 		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
 				    SGTL5000_REFTOP_POWERUP,
 				    SGTL5000_REFTOP_POWERUP);
 		break;
 	case SND_SOC_BIAS_OFF:
+		regcache_cache_only(sgtl->regmap, true);
 		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
 				    SGTL5000_REFTOP_POWERUP, 0);
 		break;
@@ -1089,6 +1389,7 @@ static int sgtl5000_enable_regulators(struct i2c_client *client)
 static int sgtl5000_probe(struct snd_soc_codec *codec)
 {
 	int ret;
+	u16 reg;
 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
 
 	/* power up sgtl5000 */
@@ -1118,7 +1419,8 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 			SGTL5000_DAC_MUTE_RIGHT |
 			SGTL5000_DAC_MUTE_LEFT);
 
-	snd_soc_write(codec, SGTL5000_CHIP_PAD_STRENGTH, 0x015f);
+	reg = ((sgtl5000->lrclk_strength) << SGTL5000_PAD_I2S_LRCLK_SHIFT | 0x5f);
+	snd_soc_write(codec, SGTL5000_CHIP_PAD_STRENGTH, reg);
 
 	snd_soc_write(codec, SGTL5000_CHIP_ANA_CTRL,
 			SGTL5000_HP_ZCD_EN |
@@ -1131,13 +1433,6 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, SGTL5000_CHIP_MIC_CTRL,
 			SGTL5000_BIAS_VOLT_MASK,
 			sgtl5000->micbias_voltage << SGTL5000_BIAS_VOLT_SHIFT);
-	/*
-	 * disable DAP
-	 * TODO:
-	 * Enable DAP in kcontrol and dapm.
-	 */
-	snd_soc_write(codec, SGTL5000_DAP_CTRL, 0);
-
 	return 0;
 
 err:
@@ -1345,6 +1640,13 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		} else {
 			sgtl5000->micbias_voltage = 0;
 		}
+	}
+
+	sgtl5000->lrclk_strength = I2S_LRCLK_STRENGTH_LOW;
+	if (!of_property_read_u32(np, "lrclk-strength", &value)) {
+		if (value > I2S_LRCLK_STRENGTH_HIGH)
+			value = I2S_LRCLK_STRENGTH_LOW;
+		sgtl5000->lrclk_strength = value;
 	}
 
 	/* Ensure sgtl5000 will start with sane register values */

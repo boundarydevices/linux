@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011-2016 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
+ * Copyright 2017 NXP.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -68,7 +69,7 @@ static const char *ipg_per_sels[] = { "ipg", "osc", };
 static const char *ecspi_sels[] = { "pll3_60m", "osc", };
 static const char *can_sels[] = { "pll3_60m", "osc", "pll3_80m", };
 static const char *cko1_sels[]	= { "pll3_usb_otg", "pll2_bus", "pll1_sys", "pll5_video_div",
-				    "dummy", "axi", "enfc", "ipu1_di0", "ipu1_di1", "ipu2_di0",
+				    "video_27m", "axi", "enfc", "ipu1_di0", "ipu1_di1", "ipu2_di0",
 				    "ipu2_di1", "ahb", "ipg", "ipg_per", "ckil", "pll4_audio_div", };
 static const char *cko2_sels[] = {
 	"mmdc_ch0_axi", "mmdc_ch1_axi", "usdhc4", "usdhc1",
@@ -463,15 +464,20 @@ static void __init init_ipu_clk(void __iomem *anatop_base)
 static void disable_anatop_clocks(void __iomem *anatop_base)
 {
 	unsigned int reg;
+	struct clk *parent = clk_get_parent(clk[IMX6QDL_CLK_PERIPH_PRE]);
 
 	/* Make sure PLL2 PFDs 0-2 are gated */
 	reg = readl_relaxed(anatop_base + CCM_ANALOG_PFD_528);
+	reg |= PFD1_CLKGATE;				/* Disable PFD1 */
+
 	/* Cannot gate PFD2 if pll2_pfd2_396m is the parent of MMDC clock */
-	if (clk_get_parent(clk[IMX6QDL_CLK_PERIPH_PRE]) ==
-	    clk[IMX6QDL_CLK_PLL2_PFD2_396M])
-		reg |= PFD0_CLKGATE | PFD1_CLKGATE;
-	else
-		reg |= PFD0_CLKGATE | PFD1_CLKGATE | PFD2_CLKGATE;
+	if (parent == clk[IMX6QDL_CLK_PLL2_PFD0_352M]) {
+		reg |= PFD2_CLKGATE;			/* Disable PFD2 */
+	} else {
+		reg |= PFD0_CLKGATE;			/* Disable PFD0 */
+		if (parent == clk[IMX6QDL_CLK_PLL2_BUS])
+			reg |= PFD2_CLKGATE;		/* Disable PFD2 */
+	}
 	writel_relaxed(reg, anatop_base + CCM_ANALOG_PFD_528);
 
 	/* Make sure PLL3 PFDs 0-3 are gated */
@@ -626,6 +632,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	base = of_iomap(np, 0);
 	ccm_base = base;
 	WARN_ON(!base);
+	imx6q_mmdc_ch1_mask_handshake(base);
 
 	/*                                              name                reg       shift width parent_names     num_parents */
 	clk[IMX6QDL_CLK_STEP]             = imx_clk_mux("step",	            base + 0xc,  8,  1, step_sels,	   ARRAY_SIZE(step_sels));
@@ -662,13 +669,11 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_IPU1_SEL]         = imx_clk_mux("ipu1_sel",         base + 0x3c, 9,  2, ipu_sels,          ARRAY_SIZE(ipu_sels));
 	clk[IMX6QDL_CLK_IPU2_SEL]         = imx_clk_mux("ipu2_sel",         base + 0x3c, 14, 2, ipu_sels,          ARRAY_SIZE(ipu_sels));
 
-	if (clk_on_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (clk_on_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0) {
 		clk[IMX6QDL_CLK_LDB_DI0_SEL]      = imx_clk_mux_flags("ldb_di0_sel", base + 0x2c, 9,  3, ldb_di_sels,      ARRAY_SIZE(ldb_di_sels), CLK_SET_RATE_PARENT);
 		clk[IMX6QDL_CLK_LDB_DI1_SEL]      = imx_clk_mux_flags("ldb_di1_sel", base + 0x2c, 12, 3, ldb_di_sels,      ARRAY_SIZE(ldb_di_sels), CLK_SET_RATE_PARENT);
 	} else {
 		disable_anatop_clocks(anatop_base);
-
-		imx6q_mmdc_ch1_mask_handshake(base);
 
 		/*
 		 * The LDB_DI0/1_SEL muxes are registered read-only due to a hardware
@@ -990,7 +995,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 		clk_set_parent(clk[IMX6QDL_CLK_GPU3D_CORE_SEL], clk[IMX6QDL_CLK_PLL2_PFD1_594M]);
 		imx_clk_set_rate(clk[IMX6QDL_CLK_GPU3D_CORE], 528000000);
 	} else if (clk_on_imx6q()) {
-		if (imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+		if (imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0) {
 			clk_set_parent(clk[IMX6QDL_CLK_GPU3D_SHADER_SEL], clk[IMX6QDL_CLK_PLL3_PFD0_720M]);
 			imx_clk_set_rate(clk[IMX6QDL_CLK_GPU3D_SHADER], 720000000);
 			clk_set_parent(clk[IMX6QDL_CLK_GPU3D_CORE_SEL], clk[IMX6QDL_CLK_PLL2_PFD1_594M]);
@@ -1087,7 +1092,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	 * for i.MX6QP with speeding grading set to 1.2GHz,
 	 * VPU should run at 396MHz.
 	 */
-	if (clk_on_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (clk_on_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0) {
 		np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-ocotp");
 		WARN_ON(!np);
 

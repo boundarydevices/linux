@@ -16,6 +16,7 @@
  * are also included.
  */
 
+#include <linux/extcon.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/chipidea.h>
@@ -159,6 +160,8 @@ static int ci_is_vbus_glitch(struct ci_hdrc *ci)
 
 void ci_handle_vbus_connected(struct ci_hdrc *ci)
 {
+	int bsv;
+
 	/*
 	 * TODO: if the platform does not supply 5v to udc, or use other way
 	 * to supply 5v, it needs to use other conditions to call
@@ -167,19 +170,29 @@ void ci_handle_vbus_connected(struct ci_hdrc *ci)
 	if (!ci->is_otg)
 		return;
 
-	if (hw_read_otgsc(ci, OTGSC_BSV) && !ci_is_vbus_glitch(ci))
+	bsv = hw_read_otgsc(ci, OTGSC_BSV) ? 1 : 0;
+
+	if (bsv && !ci_is_vbus_glitch(ci))
 		usb_gadget_vbus_connect(&ci->gadget);
+
+	extcon_set_cable_state_(&ci->extcon, 2, bsv);
 }
 
 void ci_handle_vbus_change(struct ci_hdrc *ci)
 {
+	int bsv;
+
 	if (!ci->is_otg)
 		return;
 
-	if (hw_read_otgsc(ci, OTGSC_BSV))
+
+	bsv = hw_read_otgsc(ci, OTGSC_BSV) ? 1 : 0;
+	if (bsv)
 		usb_gadget_vbus_connect(&ci->gadget);
 	else
 		usb_gadget_vbus_disconnect(&ci->gadget);
+
+	extcon_set_cable_state_(&ci->extcon, 2, bsv);
 }
 
 /**
@@ -215,6 +228,10 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 	mutex_lock(&ci->mutex);
 	role = ci_otg_role(ci);
 	if (role != ci->role) {
+		if (ci->is_otg) {
+			dev_info(ci->dev, "role %d to %d\n", ci->role, role);
+			extcon_set_cable_state_(&ci->extcon, role, 1);
+		}
 		dev_dbg(ci->dev, "switching from %s to %s\n",
 			ci_role(ci)->name, ci->roles[role]->name);
 
@@ -244,6 +261,16 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 		if (ret == -ETIMEDOUT)
 			usb_gadget_vbus_connect(&ci->gadget);
 
+		if (ci->is_otg) {
+			role = ci->role;
+			if (role < CI_ROLE_END) {
+				extcon_set_cable_state_(&ci->extcon, role, 1);
+			} else {
+				role = 0;
+				extcon_set_cable_state_(&ci->extcon, role, 0);
+			}
+			extcon_set_cable_state_(&ci->extcon, role ^ 1, 0);
+		}
 	}
 	mutex_unlock(&ci->mutex);
 }
@@ -267,10 +294,8 @@ static void ci_handle_vbus_glitch(struct ci_hdrc *ci)
 			valid_vbus_change = true;
 	}
 
-	if (valid_vbus_change) {
+	if (valid_vbus_change)
 		ci->b_sess_valid_event = true;
-		ci_otg_queue_work(ci);
-	}
 }
 
 /**
@@ -281,13 +306,12 @@ static void ci_otg_work(struct work_struct *work)
 {
 	struct ci_hdrc *ci = container_of(work, struct ci_hdrc, work);
 
+	disable_irq(ci->irq);
 	if (ci->vbus_glitch_check_event) {
 		ci->vbus_glitch_check_event = false;
 		pm_runtime_get_sync(ci->dev);
 		ci_handle_vbus_glitch(ci);
 		pm_runtime_put_sync(ci->dev);
-		enable_irq(ci->irq);
-		return;
 	}
 
 	if (ci_otg_is_fsm_mode(ci) && !ci_otg_fsm_work(ci)) {
@@ -299,13 +323,12 @@ static void ci_otg_work(struct work_struct *work)
 	if (ci->id_event) {
 		ci->id_event = false;
 		ci_handle_id_switch(ci);
-	} else if (ci->b_sess_valid_event) {
+	}
+	if (ci->b_sess_valid_event) {
 		ci->b_sess_valid_event = false;
 		ci_handle_vbus_change(ci);
-	} else
-		dev_err(ci->dev, "unexpected event occurs at %s\n", __func__);
+	}
 	pm_runtime_put_sync(ci->dev);
-
 	enable_irq(ci->irq);
 }
 

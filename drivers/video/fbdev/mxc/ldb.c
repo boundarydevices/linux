@@ -22,6 +22,7 @@
 #include <linux/regmap.h>
 #include <linux/types.h>
 #include <video/of_videomode.h>
+#include <video/of_display_timing.h>
 #include <video/videomode.h>
 #include "mxc_dispdrv.h"
 
@@ -82,6 +83,7 @@ struct ldb_chan {
 	int chno;
 	bool is_used;
 	bool online;
+	int parent_choice_index;
 };
 
 struct ldb_data {
@@ -102,6 +104,7 @@ struct ldb_data {
 	struct clk *div_3_5_clk[2];
 	struct clk *div_7_clk[2];
 	struct clk *div_sel_clk[2];
+	struct clk *clk_ldb_di_choices[4];
 };
 
 static const struct crtc_mux imx6q_lvds0_crtc_mux[] = {
@@ -401,6 +404,10 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 	int ret = 0, id = 0, chno, other_chno;
 	unsigned long serial_clk;
 	u32 mux_val;
+	int i;
+	unsigned long best_diff = ~0;
+	struct clk *best_parent = NULL;
+	int best_i = 0;
 
 	ret = find_ldb_chno(ldb, fbi, &chno);
 	if (ret < 0)
@@ -455,7 +462,46 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 	ldb_di_sel_parent = clk_get_parent(ldb_di_sel);
 	serial_clk = ldb->spl_mode ? chan.vm.pixelclock * 7 / 2 :
 			chan.vm.pixelclock * 7;
-	clk_set_rate(ldb_di_sel_parent, serial_clk);
+	for (i = 0; i < ARRAY_SIZE(ldb->clk_ldb_di_choices); i++) {
+		long rate;
+		unsigned long diff;
+		struct clk *parent;
+
+		parent = ldb->clk_ldb_di_choices[i];
+		if (!parent)
+			continue;
+		if ((i <= 1) && (ldb->chan[other_chno].parent_choice_index != i)) {
+			rate = clk_round_rate(parent, serial_clk);
+			pr_debug("%s: round rate=%ld\n", __func__, rate);
+		} else {
+			rate = clk_get_rate(parent);
+			pr_debug("%s: get rate=%ld\n", __func__, rate);
+		}
+		if (rate > serial_clk)
+			diff = rate - serial_clk;
+		else
+			diff = serial_clk - rate;
+		if (best_diff > diff) {
+			best_diff = diff;
+			best_parent = parent;
+			best_i = i;
+		}
+	}
+
+	if (best_parent && (best_parent != ldb_di_sel_parent)) {
+		int ret = clk_set_parent(ldb_di_sel, best_parent);
+
+		if (ret) {
+			dev_err(dev, "failed(%d) to set parent of %pC to %pC\n",
+				ret, ldb_di_sel, best_parent);
+			best_i = 0;
+		} else {
+			ldb_di_sel_parent = best_parent;
+		}
+	}
+	if ((best_i <= 1) && (ldb->chan[other_chno].parent_choice_index != best_i))
+		clk_set_rate(ldb_di_sel_parent, serial_clk);
+	ldb->chan[chno].parent_choice_index = best_i;
 
 	/*
 	 * split mode or dual mode:
@@ -714,6 +760,8 @@ static int ldb_probe(struct platform_device *pdev)
 	ldb->ctrl_reg = ldb_info->ctrl_reg;
 	ldb->clk_fixup = ldb_info->clk_fixup;
 	ldb->primary_chno = -1;
+	ldb->chan[0].parent_choice_index = -1;
+	ldb->chan[1].parent_choice_index = -1;
 
 	ext_ref = of_property_read_bool(np, "ext-ref");
 	if (!ext_ref && ldb_info->ext_bgref_cap)
@@ -834,7 +882,7 @@ static int ldb_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 
-		ret = of_get_videomode(child, &chan->vm, 0);
+		ret = of_get_videomode(child, &chan->vm, OF_USE_NATIVE_MODE);
 		if (ret)
 			return -EINVAL;
 
@@ -864,6 +912,15 @@ static int ldb_probe(struct platform_device *pdev)
 		if (IS_ERR(ldb->div_sel_clk[i])) {
 			dev_err(dev, "failed to get clk %s\n", clkname);
 			return PTR_ERR(ldb->div_sel_clk[i]);
+		}
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ldb->clk_ldb_di_choices); i++) {
+		sprintf(clkname, "choice%d", i);
+		ldb->clk_ldb_di_choices[i] = devm_clk_get(dev, clkname);
+		if (IS_ERR(ldb->clk_ldb_di_choices[i])) {
+			dev_warn(dev, "failed to get clk %s\n", clkname);
+			ldb->clk_ldb_di_choices[i] = NULL;
 		}
 	}
 

@@ -2070,6 +2070,14 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 #endif
 
 	ablkcipher_unmap(jrdev, edesc, req);
+
+	/*
+	 * The crypto API expects us to set the IV (req->info) to the last
+	 * ciphertext block. This is used e.g. by the CTS mode.
+	 */
+	scatterwalk_map_and_copy(req->info, req->dst, req->nbytes - ivsize,
+				 ivsize, 0);
+
 	kfree(edesc);
 
 	/* Pass IV along for cbc */
@@ -2086,10 +2094,10 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 {
 	struct ablkcipher_request *req = context;
 	struct ablkcipher_edesc *edesc;
-#ifdef DEBUG
 	struct crypto_ablkcipher *ablkcipher = crypto_ablkcipher_reqtfm(req);
 	int ivsize = crypto_ablkcipher_ivsize(ablkcipher);
 
+#ifdef DEBUG
 	dev_err(jrdev, "%s %d: err 0x%x\n", __func__, __LINE__, err);
 #endif
 
@@ -2108,6 +2116,14 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 #endif
 
 	ablkcipher_unmap(jrdev, edesc, req);
+
+	/*
+	 * The crypto API expects us to set the IV (req->info) to the last
+	 * ciphertext block.
+	 */
+	scatterwalk_map_and_copy(req->info, req->src, req->nbytes - ivsize,
+				 ivsize, 0);
+
 	kfree(edesc);
 
 	ablkcipher_request_complete(req, err);
@@ -2640,8 +2656,7 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 	struct crypto_ablkcipher *ablkcipher = crypto_ablkcipher_reqtfm(req);
 	struct caam_ctx *ctx = crypto_ablkcipher_ctx(ablkcipher);
 	struct device *jrdev = ctx->jrdev;
-	gfp_t flags = (req->base.flags & (CRYPTO_TFM_REQ_MAY_BACKLOG |
-					  CRYPTO_TFM_REQ_MAY_SLEEP)) ?
+	gfp_t flags = (req->base.flags & CRYPTO_TFM_REQ_MAY_SLEEP) ?
 		       GFP_KERNEL : GFP_ATOMIC;
 	int src_nents, dst_nents = 0, sec4_sg_bytes;
 	struct ablkcipher_edesc *edesc;
@@ -4685,6 +4700,14 @@ static int __init caam_algapi_init(void)
 
 	ctrldev = &pdev->dev;
 	priv = dev_get_drvdata(ctrldev);
+	if (!priv) {
+		dev_err(ctrldev, "dev_get_drvdata failed\n");
+		msleep(10);
+		priv = dev_get_drvdata(ctrldev);
+		if (!priv)
+			return -ENODEV;
+		dev_err(ctrldev, "dev_get_drvdata succeeded after pause\n");
+	}
 	of_node_put(dev_node);
 
 	/*

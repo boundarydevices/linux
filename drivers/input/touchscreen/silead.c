@@ -29,6 +29,7 @@
 #include <linux/input/touchscreen.h>
 #include <linux/pm.h>
 #include <linux/irq.h>
+#include <linux/regulator/consumer.h>
 
 #include <asm/unaligned.h>
 
@@ -73,6 +74,7 @@ struct silead_ts_data {
 	struct i2c_client *client;
 	struct gpio_desc *gpio_power;
 	struct input_dev *input;
+	struct regulator_bulk_data regulators[2];
 	char fw_name[64];
 	struct touchscreen_properties prop;
 	u32 max_fingers;
@@ -138,6 +140,9 @@ static void silead_ts_read_data(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	u8 *bufp, buf[SILEAD_TS_DATA_LEN];
 	int touch_nr, error, i;
+
+	if (!input)
+		return;
 
 	error = i2c_smbus_read_i2c_block_data(client, SILEAD_REG_DATA,
 					      SILEAD_TS_DATA_LEN, buf);
@@ -259,41 +264,6 @@ static int silead_ts_startup(struct i2c_client *client)
 	return 0;
 }
 
-static int silead_ts_load_fw(struct i2c_client *client)
-{
-	struct device *dev = &client->dev;
-	struct silead_ts_data *data = i2c_get_clientdata(client);
-	unsigned int fw_size, i;
-	const struct firmware *fw;
-	struct silead_fw_data *fw_data;
-	int error;
-
-	dev_dbg(dev, "Firmware file name: %s", data->fw_name);
-
-	error = request_firmware(&fw, data->fw_name, dev);
-	if (error) {
-		dev_err(dev, "Firmware request error %d\n", error);
-		return error;
-	}
-
-	fw_size = fw->size / sizeof(*fw_data);
-	fw_data = (struct silead_fw_data *)fw->data;
-
-	for (i = 0; i < fw_size; i++) {
-		error = i2c_smbus_write_i2c_block_data(client,
-						       fw_data[i].offset,
-						       4,
-						       (u8 *)&fw_data[i].val);
-		if (error) {
-			dev_err(dev, "Firmware load error %d\n", error);
-			break;
-		}
-	}
-
-	release_firmware(fw);
-	return error ?: 0;
-}
-
 static u32 silead_ts_get_status(struct i2c_client *client)
 {
 	int error;
@@ -328,10 +298,75 @@ static int silead_ts_get_id(struct i2c_client *client)
 	return 0;
 }
 
+static void silead_fw_cb(const struct firmware *fw, void *ctx)
+{
+	struct silead_fw_data *fw_data;
+	struct silead_ts_data *data = ctx;
+	struct i2c_client *client = data->client;
+	unsigned int fw_size, i;
+	int error;
+
+	if (!fw) {
+		dev_err(&client->dev, "Firmware %s not found\n", data->fw_name);
+		return;
+	}
+
+	fw_size = fw->size / sizeof(*fw_data);
+	fw_data = (struct silead_fw_data *)fw->data;
+
+	for (i = 0; i < fw_size; i++) {
+		error = i2c_smbus_write_i2c_block_data(client,
+						       fw_data[i].offset,
+						       4,
+						       (u8 *)&fw_data[i].val);
+		if (error) {
+			dev_err(&client->dev,
+				"Firmware load error %d\n", error);
+			break;
+		}
+	}
+
+	release_firmware(fw);
+
+	error = silead_ts_startup(client);
+	if (error)
+		return;
+
+	error = silead_ts_get_status(client);
+	if (error != SILEAD_STATUS_OK) {
+		dev_err(&client->dev,
+			"Initialization error, status: 0x%X\n", error);
+		return;
+	}
+
+	error = silead_ts_request_input_dev(data);
+	if (error)
+		return;
+
+	enable_irq(client->irq);
+}
+
+static int silead_ts_load_fw(struct i2c_client *client)
+{
+	struct device *dev = &client->dev;
+	struct silead_ts_data *data = i2c_get_clientdata(client);
+	int error;
+
+	dev_dbg(dev, "Firmware file name: %s", data->fw_name);
+
+	error = request_firmware_nowait(THIS_MODULE, true, data->fw_name,
+					dev, GFP_KERNEL, data, silead_fw_cb);
+	if (error) {
+		dev_err(dev, "Firmware request error %d\n", error);
+		return error;
+	}
+
+	return 0;
+}
+
 static int silead_ts_setup(struct i2c_client *client)
 {
 	int error;
-	u32 status;
 
 	silead_ts_set_power(client, SILEAD_POWER_OFF);
 	silead_ts_set_power(client, SILEAD_POWER_ON);
@@ -351,17 +386,6 @@ static int silead_ts_setup(struct i2c_client *client)
 	error = silead_ts_load_fw(client);
 	if (error)
 		return error;
-
-	error = silead_ts_startup(client);
-	if (error)
-		return error;
-
-	status = silead_ts_get_status(client);
-	if (status != SILEAD_STATUS_OK) {
-		dev_err(&client->dev,
-			"Initialization error, status: 0x%X\n", status);
-		return -ENODEV;
-	}
 
 	return 0;
 }
@@ -433,6 +457,13 @@ static int silead_ts_set_default_fw_name(struct silead_ts_data *data,
 }
 #endif
 
+static void silead_disable_regulator(void *arg)
+{
+	struct silead_ts_data *data = arg;
+
+	regulator_bulk_disable(ARRAY_SIZE(data->regulators), data->regulators);
+}
+
 static int silead_ts_probe(struct i2c_client *client,
 			   const struct i2c_device_id *id)
 {
@@ -465,6 +496,26 @@ static int silead_ts_probe(struct i2c_client *client,
 	if (client->irq <= 0)
 		return -ENODEV;
 
+	data->regulators[0].supply = "vddio";
+	data->regulators[1].supply = "avdd";
+	error = devm_regulator_bulk_get(dev, ARRAY_SIZE(data->regulators),
+					data->regulators);
+	if (error)
+		return error;
+
+	/*
+	 * Enable regulators at probe and disable them at remove, we need
+	 * to keep the chip powered otherwise it forgets its firmware.
+	 */
+	error = regulator_bulk_enable(ARRAY_SIZE(data->regulators),
+				      data->regulators);
+	if (error)
+		return error;
+
+	error = devm_add_action_or_reset(dev, silead_disable_regulator, data);
+	if (error)
+		return error;
+
 	/* Power GPIO pin */
 	data->gpio_power = devm_gpiod_get_optional(dev, "power", GPIOD_OUT_LOW);
 	if (IS_ERR(data->gpio_power)) {
@@ -477,10 +528,6 @@ static int silead_ts_probe(struct i2c_client *client,
 	if (error)
 		return error;
 
-	error = silead_ts_request_input_dev(data);
-	if (error)
-		return error;
-
 	error = devm_request_threaded_irq(dev, client->irq,
 					  NULL, silead_ts_threaded_irq_handler,
 					  IRQF_ONESHOT, client->name, data);
@@ -490,6 +537,9 @@ static int silead_ts_probe(struct i2c_client *client,
 		return error;
 	}
 
+	/* Only enable interrupts once fw is loaded */
+	disable_irq(client->irq);
+
 	return 0;
 }
 
@@ -497,6 +547,7 @@ static int __maybe_unused silead_ts_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 
+	disable_irq(client->irq);
 	silead_ts_set_power(client, SILEAD_POWER_OFF);
 	return 0;
 }
@@ -521,6 +572,8 @@ static int __maybe_unused silead_ts_resume(struct device *dev)
 		dev_err(dev, "Resume error, status: 0x%02x\n", status);
 		return -ENODEV;
 	}
+
+	enable_irq(client->irq);
 
 	return 0;
 }
@@ -551,12 +604,25 @@ static const struct acpi_device_id silead_ts_acpi_match[] = {
 MODULE_DEVICE_TABLE(acpi, silead_ts_acpi_match);
 #endif
 
+#ifdef CONFIG_OF
+static const struct of_device_id silead_ts_of_match[] = {
+	{ .compatible = "silead,gsl1680" },
+	{ .compatible = "silead,gsl1688" },
+	{ .compatible = "silead,gsl3670" },
+	{ .compatible = "silead,gsl3675" },
+	{ .compatible = "silead,gsl3692" },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, silead_ts_of_match);
+#endif
+
 static struct i2c_driver silead_ts_driver = {
 	.probe = silead_ts_probe,
 	.id_table = silead_ts_id,
 	.driver = {
 		.name = SILEAD_TS_NAME,
 		.acpi_match_table = ACPI_PTR(silead_ts_acpi_match),
+		.of_match_table = of_match_ptr(silead_ts_of_match),
 		.pm = &silead_ts_pm,
 	},
 };

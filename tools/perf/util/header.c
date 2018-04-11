@@ -826,7 +826,7 @@ static int write_group_desc(int fd, struct perf_header *h __maybe_unused,
 
 /*
  * default get_cpuid(): nothing gets recorded
- * actual implementation must be in arch/$(ARCH)/util/header.c
+ * actual implementation must be in arch/$(SRCARCH)/util/header.c
  */
 int __weak get_cpuid(char *buffer __maybe_unused, size_t sz __maybe_unused)
 {
@@ -3184,6 +3184,7 @@ int perf_event__process_event_update(struct perf_tool *tool __maybe_unused,
 	case PERF_EVENT_UPDATE__SCALE:
 		ev_scale = (struct event_update_event_scale *) ev->data;
 		evsel->scale = ev_scale->scale;
+		break;
 	case PERF_EVENT_UPDATE__CPUS:
 		ev_cpus = (struct event_update_event_cpus *) ev->data;
 

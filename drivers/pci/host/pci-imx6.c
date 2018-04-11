@@ -60,8 +60,7 @@ struct imx6_pcie {
 	u32 			ext_osc;
 	int			dis_gpio;
 	int			power_on_gpio;
-	int			reset_gpio;
-	bool			gpio_active_high;
+	struct gpio_desc	*reset_gpios[5];
 	struct clk		*pcie_bus;
 	struct clk		*pcie_inbound_axi;
 	struct clk		*pcie_phy;
@@ -80,6 +79,7 @@ struct imx6_pcie {
 	void __iomem		*phy_base;
 	struct regulator	*pcie_phy_regulator;
 	struct regulator	*pcie_bus_regulator;
+	int			force_detect_state;
 };
 
 /* PCIe Root Complex registers (memory-mapped) */
@@ -296,13 +296,22 @@ static int imx6q_pcie_abort_handler(unsigned long addr,
 	return 0;
 }
 
+#define GPC_CNTR 0
+#define reg32_write(addr, val) __raw_writel(val, addr)
+#define reg32_read(addr)       __raw_readl(addr)
+#define reg32setbit(addr, bitpos) \
+        reg32_write((addr), (reg32_read((addr)) | (1<<(bitpos))))
+
 static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 {
 	struct pcie_port *pp = &imx6_pcie->pp;
-	u32 val, gpr1, gpr12;
+	u32 gpr1, gpr12;
 
 	switch (imx6_pcie->variant) {
 	case IMX6SX:
+	{
+		struct device_node *gpc_np;
+		void __iomem *gpc_reg;
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX6SX_GPR12_PCIE_TEST_POWERDOWN,
 				   IMX6SX_GPR12_PCIE_TEST_POWERDOWN);
@@ -310,7 +319,16 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR5,
 				   IMX6SX_GPR5_PCIE_BTNRST_RESET,
 				   IMX6SX_GPR5_PCIE_BTNRST_RESET);
+		/* map GPC register  */
+		gpc_np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpc");
+		gpc_reg = of_iomap(gpc_np, 0);
+		if (gpc_reg)
+			reg32setbit(gpc_reg + GPC_CNTR, 7);
+		else
+			dev_err(pp->dev, "ioremap failed with gpc base\n");
+		iounmap(gpc_reg);
 		break;
+	}
 	case IMX6QP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				   IMX6Q_GPR1_PCIE_SW_RST,
@@ -335,11 +353,7 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 
 		if ((gpr1 & IMX6Q_GPR1_PCIE_REF_CLK_EN) &&
 		    (gpr12 & IMX6Q_GPR12_PCIE_CTL_2)) {
-			val = dw_pcie_readl_rc(pp, PCIE_PL_PFLR);
-			val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
-			val |= PCIE_PL_PFLR_FORCE_LINK;
-			dw_pcie_writel_rc(pp, PCIE_PL_PFLR, val);
-
+			imx6_pcie->force_detect_state = 1;
 			regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 					   IMX6Q_GPR12_PCIE_CTL_2, 0 << 10);
 		}
@@ -409,6 +423,45 @@ static void pci_imx_phy_pll_locked(struct imx6_pcie *imx6_pcie)
 		udelay(10);
 		if (count == 0)
 			pr_info("pcie phy pll can't be locked.\n");
+	}
+}
+
+void activate_reset(struct imx6_pcie *imx6_pcie)
+{
+	int i;
+
+	for (i = ARRAY_SIZE(imx6_pcie->reset_gpios) - 1; i >= 0; i--) {
+		if (imx6_pcie->reset_gpios[i])
+			gpiod_set_value_cansleep(imx6_pcie->reset_gpios[i], 1);
+	}
+}
+
+void deactivate_reset(struct imx6_pcie *imx6_pcie)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(imx6_pcie->reset_gpios); i++) {
+		if (imx6_pcie->reset_gpios[i])
+			gpiod_set_value_cansleep(imx6_pcie->reset_gpios[i], 0);
+		else
+			break;
+	}
+	if (imx6_pcie->reset_gpios[0]) {
+		/*
+		 * See 'PCI EXPRESS BASE SPECIFICATION, REV 3.0, SECTION 6.6.1'
+		 * for detailed understanding of the PCIe CR reset logic.
+		 *
+		 * The PCIe #PERST reset line _MUST_ be connected, otherwise
+		 * your design does not conform to the specification. You must
+		 * wait at least 20 mS after de-asserting the #PERST so the
+		 * EP device can do self-initialisation.
+		 *
+		 * In case your #PERST pin is connected to a plain GPIO pin of
+		 * the CPU, you can define CONFIG_PCIE_IMX_PERST_GPIO in your
+		 * board's configuration file and the condition below will
+		 * handle the rest of the reset toggling.
+		 */
+		mdelay(20);
 	}
 }
 
@@ -530,14 +583,19 @@ static void imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 		break;
 	}
 
-	/* Some boards don't have PCIe reset GPIO. */
-	if (gpio_is_valid(imx6_pcie->reset_gpio)) {
-		gpio_set_value_cansleep(imx6_pcie->reset_gpio,
-					imx6_pcie->gpio_active_high);
+	activate_reset(imx6_pcie);
+	if (imx6_pcie->reset_gpios[0])
 		mdelay(20);
-		gpio_set_value_cansleep(imx6_pcie->reset_gpio,
-					!imx6_pcie->gpio_active_high);
-		mdelay(20);
+	deactivate_reset(imx6_pcie);
+
+	if (imx6_pcie->force_detect_state) {
+		u32 val;
+
+		imx6_pcie->force_detect_state = 0;
+		val = dw_pcie_readl_rc(pp, PCIE_PL_PFLR);
+		val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
+		val |= PCIE_PL_PFLR_FORCE_LINK;
+		dw_pcie_writel_rc(pp, PCIE_PL_PFLR, val);
 	}
 
 	return;
@@ -715,11 +773,13 @@ static int imx6_pcie_establish_link(struct imx6_pcie *imx6_pcie)
 	}
 
 	if (imx6_pcie->link_gen == 2) {
+#ifndef CONFIG_PCIE_FORCE_GEN1
 		/* Allow Gen2 mode after the link is up. */
 		tmp = dw_pcie_readl_rc(pp, PCIE_RC_LCR);
 		tmp &= ~PCIE_RC_LCR_MAX_LINK_SPEEDS_MASK;
 		tmp |= PCIE_RC_LCR_MAX_LINK_SPEEDS_GEN2;
 		dw_pcie_writel_rc(pp, PCIE_RC_LCR, tmp);
+#endif
 	} else {
 		dev_info(dev, "Link: Gen2 disabled\n");
 		goto out;
@@ -1057,8 +1117,7 @@ static void pci_imx_pm_turn_off(struct imx6_pcie *imx6_pcie)
 	}
 
 	udelay(1000);
-	if (gpio_is_valid(imx6_pcie->reset_gpio))
-		gpio_set_value_cansleep(imx6_pcie->reset_gpio, 0);
+	activate_reset(imx6_pcie);
 }
 
 static int pci_imx_suspend_noirq(struct device *dev)
@@ -1190,6 +1249,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	struct resource *dbi_base;
 	struct device_node *node = dev->of_node;
 	int ret;
+	int i;
 
 	imx6_pcie = devm_kzalloc(dev, sizeof(*imx6_pcie), GFP_KERNEL);
 	if (!imx6_pcie)
@@ -1237,21 +1297,16 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		}
 	}
 
-	imx6_pcie->reset_gpio = of_get_named_gpio(node, "reset-gpio", 0);
-	imx6_pcie->gpio_active_high = of_property_read_bool(node,
-						"reset-gpio-active-high");
-	if (gpio_is_valid(imx6_pcie->reset_gpio)) {
-		ret = devm_gpio_request_one(dev, imx6_pcie->reset_gpio,
-				imx6_pcie->gpio_active_high ?
-					GPIOF_OUT_INIT_HIGH :
-					GPIOF_OUT_INIT_LOW,
-				"PCIe reset");
-		if (ret) {
-			dev_err(dev, "unable to get reset gpio\n");
-			return ret;
-		}
-	} else if (imx6_pcie->reset_gpio == -EPROBE_DEFER) {
-		return imx6_pcie->reset_gpio;
+	for (i = 0; i < ARRAY_SIZE(imx6_pcie->reset_gpios); i++) {
+		struct gpio_desc *gd = devm_gpiod_get_index(&pdev->dev, "reset", i,
+					   GPIOD_OUT_HIGH);
+
+		if (PTR_ERR(gd) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		if (IS_ERR(gd))
+			break;
+		imx6_pcie->reset_gpios[i] = gd;
+		pr_info("%s: reset gp %d\n", __func__, desc_to_gpio(gd));
 	}
 
 	/* Fetch clocks */

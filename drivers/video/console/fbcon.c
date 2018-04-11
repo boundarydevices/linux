@@ -68,6 +68,7 @@
 #include <linux/kd.h>
 #include <linux/slab.h>
 #include <linux/fb.h>
+#include <linux/linux_logo.h>
 #include <linux/vt_kern.h>
 #include <linux/selection.h>
 #include <linux/font.h>
@@ -551,6 +552,27 @@ static int do_fbcon_takeover(int show_logo)
 	return err;
 }
 
+static void update_logo_shown(struct vc_data *vc)
+{
+#ifdef CONFIG_LOGO
+	if (!logo_lines || (fg_console != vc->vc_num))
+		return;
+
+	if (fb_logos_freed()) {
+		logo_shown = FBCON_LOGO_CANSHOW;
+		return;
+	}
+
+	if (logo_lines > vc->vc_bottom) {
+		logo_shown = FBCON_LOGO_CANSHOW;
+		pr_info("fbcon_init: boot-logo may be bigger than screen.\n");
+	} else if (logo_shown != FBCON_LOGO_DONTSHOW) {
+		logo_shown = FBCON_LOGO_DRAW;
+		vc->vc_top = logo_lines;
+	}
+#endif
+}
+
 #ifdef MODULE
 static void fbcon_prepare_logo(struct vc_data *vc, struct fb_info *info,
 			       int cols, int rows, int new_cols, int new_rows)
@@ -632,15 +654,7 @@ static void fbcon_prepare_logo(struct vc_data *vc, struct fb_info *info,
 		vc->vc_pos += logo_lines * vc->vc_size_row;
 		kfree(save);
 	}
-
-	if (logo_lines > vc->vc_bottom) {
-		logo_shown = FBCON_LOGO_CANSHOW;
-		printk(KERN_INFO
-		       "fbcon_init: disable boot-logo (boot-logo bigger than screen).\n");
-	} else if (logo_shown != FBCON_LOGO_DONTSHOW) {
-		logo_shown = FBCON_LOGO_DRAW;
-		vc->vc_top = logo_lines;
-	}
+	update_logo_shown(vc);
 }
 #endif /* MODULE */
 
@@ -1167,6 +1181,8 @@ static void fbcon_free_font(struct display *p, bool freefont)
 	p->userfont = 0;
 }
 
+static void set_vc_hi_font(struct vc_data *vc, bool set);
+
 static void fbcon_deinit(struct vc_data *vc)
 {
 	struct display *p = &fb_display[vc->vc_num];
@@ -1201,6 +1217,9 @@ finished:
 	fbcon_free_font(p, free_font);
 	if (free_font)
 		vc->vc_font.data = NULL;
+
+	if (vc->vc_hi_font_mask)
+		set_vc_hi_font(vc, false);
 
 	if (!con_is_bound(&fb_con))
 		fbcon_exit();
@@ -2182,8 +2201,8 @@ static int fbcon_switch(struct vc_data *vc)
 		if (conp2->vc_top == logo_lines
 		    && conp2->vc_bottom == conp2->vc_rows)
 			conp2->vc_top = 0;
-		logo_shown = FBCON_LOGO_CANSHOW;
 	}
+	update_logo_shown(vc);
 
 	prev_console = ops->currcon;
 	if (prev_console != -1)
@@ -2438,32 +2457,10 @@ static int fbcon_get_font(struct vc_data *vc, struct console_font *font)
 	return 0;
 }
 
-static int fbcon_do_set_font(struct vc_data *vc, int w, int h,
-			     const u8 * data, int userfont)
+/* set/clear vc_hi_font_mask and update vc attrs accordingly */
+static void set_vc_hi_font(struct vc_data *vc, bool set)
 {
-	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
-	struct fbcon_ops *ops = info->fbcon_par;
-	struct display *p = &fb_display[vc->vc_num];
-	int resize;
-	int cnt;
-	char *old_data = NULL;
-
-	if (con_is_visible(vc) && softback_lines)
-		fbcon_set_origin(vc);
-
-	resize = (w != vc->vc_font.width) || (h != vc->vc_font.height);
-	if (p->userfont)
-		old_data = vc->vc_font.data;
-	if (userfont)
-		cnt = FNTCHARCNT(data);
-	else
-		cnt = 256;
-	vc->vc_font.data = (void *)(p->fontdata = data);
-	if ((p->userfont = userfont))
-		REFCOUNT(data)++;
-	vc->vc_font.width = w;
-	vc->vc_font.height = h;
-	if (vc->vc_hi_font_mask && cnt == 256) {
+	if (!set) {
 		vc->vc_hi_font_mask = 0;
 		if (vc->vc_can_do_color) {
 			vc->vc_complement_mask >>= 1;
@@ -2486,7 +2483,7 @@ static int fbcon_do_set_font(struct vc_data *vc, int w, int h,
 			    ((c & 0xfe00) >> 1) | (c & 0xff);
 			vc->vc_attr >>= 1;
 		}
-	} else if (!vc->vc_hi_font_mask && cnt == 512) {
+	} else {
 		vc->vc_hi_font_mask = 0x100;
 		if (vc->vc_can_do_color) {
 			vc->vc_complement_mask <<= 1;
@@ -2518,8 +2515,38 @@ static int fbcon_do_set_font(struct vc_data *vc, int w, int h,
 			} else
 				vc->vc_video_erase_char = c & ~0x100;
 		}
-
 	}
+}
+
+static int fbcon_do_set_font(struct vc_data *vc, int w, int h,
+			     const u8 * data, int userfont)
+{
+	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
+	struct fbcon_ops *ops = info->fbcon_par;
+	struct display *p = &fb_display[vc->vc_num];
+	int resize;
+	int cnt;
+	char *old_data = NULL;
+
+	if (con_is_visible(vc) && softback_lines)
+		fbcon_set_origin(vc);
+
+	resize = (w != vc->vc_font.width) || (h != vc->vc_font.height);
+	if (p->userfont)
+		old_data = vc->vc_font.data;
+	if (userfont)
+		cnt = FNTCHARCNT(data);
+	else
+		cnt = 256;
+	vc->vc_font.data = (void *)(p->fontdata = data);
+	if ((p->userfont = userfont))
+		REFCOUNT(data)++;
+	vc->vc_font.width = w;
+	vc->vc_font.height = h;
+	if (vc->vc_hi_font_mask && cnt == 256)
+		set_vc_hi_font(vc, false);
+	else if (!vc->vc_hi_font_mask && cnt == 512)
+		set_vc_hi_font(vc, true);
 
 	if (resize) {
 		int cols, rows;

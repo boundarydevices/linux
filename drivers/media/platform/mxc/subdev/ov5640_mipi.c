@@ -382,7 +382,7 @@ static s32 ov5640_read_reg(u16 reg, u8 *val);
 static s32 ov5640_write_reg(u16 reg, u8 val);
 
 static const struct i2c_device_id ov5640_id[] = {
-	{"ov5640_mipi", 0},
+	{"ov5640_mipisubdev", 0},
 	{},
 };
 
@@ -391,7 +391,7 @@ MODULE_DEVICE_TABLE(i2c, ov5640_id);
 static struct i2c_driver ov5640_i2c_driver = {
 	.driver = {
 		  .owner = THIS_MODULE,
-		  .name  = "ov5640_mipi",
+		  .name  = "ov5640_mipisubdev",
 		  },
 	.probe  = ov5640_probe,
 	.remove = ov5640_remove,
@@ -528,7 +528,7 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 	au8Buf[2] = val;
 
 	if (i2c_master_send(ov5640_data.i2c_client, au8Buf, 3) < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x\n",
+		pr_err("%s(mipi):write reg error:reg=%x,val=%x\n",
 			__func__, reg, val);
 		return -1;
 	}
@@ -538,27 +538,33 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 
 static s32 ov5640_read_reg(u16 reg, u8 *val)
 {
-	u8 au8RegBuf[2] = {0};
-	u8 u8RdVal = 0;
+	struct ov5640 *sensor = &ov5640_data;
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msgs[2];
+	u8 buf[2];
+	int ret;
 
-	au8RegBuf[0] = reg >> 8;
-	au8RegBuf[1] = reg & 0xff;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = buf;
 
-	if (2 != i2c_master_send(ov5640_data.i2c_client, au8RegBuf, 2)) {
-		pr_err("%s:write reg error:reg=%x\n",
-				__func__, reg);
-		return -1;
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = 1;
+	msgs[1].buf = buf;
+
+	ret = i2c_transfer(client->adapter, msgs, 2);
+	if (ret < 0) {
+		pr_err("%s(mipi):reg=%x ret=%d\n", __func__, reg, ret);
+		return ret;
 	}
 
-	if (1 != i2c_master_recv(ov5640_data.i2c_client, &u8RdVal, 1)) {
-		pr_err("%s:read reg error:reg=%x,val=%x\n",
-				__func__, reg, u8RdVal);
-		return -1;
-	}
-
-	*val = u8RdVal;
-
-	return u8RdVal;
+	*val = buf[0];
+	pr_debug("%s(mipi):reg=%x,val=%x\n", __func__, reg, buf[0]);
+	return buf[0];
 }
 
 static int prev_sysclk, prev_HTS;
@@ -577,39 +583,60 @@ static void OV5640_stream_off(void)
 
 static int OV5640_get_sysclk(void)
 {
-	 /* calculate sysclk */
-	int xvclk = ov5640_data.mclk / 10000;
-	int temp1, temp2;
-	int Multiplier, PreDiv, VCO, SysDiv, Pll_rdiv;
-	int Bit_div2x = 1, sclk_rdiv, sysclk;
+	/* calculate sysclk */
+	int tmp;
+	unsigned Multiplier, PreDiv, SysDiv, Pll_rdiv, Bit_div2x = 1;
+	unsigned div, sclk_rdiv, sysclk;
 	u8 temp;
 
 	int sclk_rdiv_map[] = {1, 2, 4, 8};
 
-	temp1 = ov5640_read_reg(0x3034, &temp);
-	temp2 = temp1 & 0x0f;
-	if (temp2 == 8 || temp2 == 10)
-		Bit_div2x = temp2 / 2;
+	tmp = ov5640_read_reg(0x3034, &temp);
+	if (tmp < 0)
+		return tmp;
+	tmp &= 0x0f;
+	if (tmp == 8 || tmp == 10)
+		Bit_div2x = tmp / 2;
 
-	temp1 = ov5640_read_reg(0x3035, &temp);
-	SysDiv = temp1>>4;
+	tmp = ov5640_read_reg(0x3035, &temp);
+	if (tmp < 0)
+		return tmp;
+	SysDiv = tmp >> 4;
 	if (SysDiv == 0)
 		SysDiv = 16;
 
-	temp1 = ov5640_read_reg(0x3036, &temp);
-	Multiplier = temp1;
+	tmp = ov5640_read_reg(0x3036, &temp);
+	if (tmp < 0)
+		return tmp;
+	Multiplier = tmp;
 
-	temp1 = ov5640_read_reg(0x3037, &temp);
-	PreDiv = temp1 & 0x0f;
-	Pll_rdiv = ((temp1 >> 4) & 0x01) + 1;
+	tmp = ov5640_read_reg(0x3037, &temp);
+	if (tmp < 0)
+		return tmp;
+	PreDiv = tmp & 0x0f;
+	Pll_rdiv = ((tmp >> 4) & 0x01) + 1;
 
-	temp1 = ov5640_read_reg(0x3108, &temp);
-	temp2 = temp1 & 0x03;
-	sclk_rdiv = sclk_rdiv_map[temp2];
+	tmp = ov5640_read_reg(0x3108, &temp);
+	if (tmp < 0)
+		return tmp;
+	sclk_rdiv = sclk_rdiv_map[tmp & 0x03];
 
-	VCO = xvclk * Multiplier / PreDiv;
-
-	sysclk = VCO / SysDiv / Pll_rdiv * 2 / Bit_div2x / sclk_rdiv;
+	sysclk = ov5640_data.mclk / 10000 * Multiplier;
+	div = PreDiv * SysDiv * Pll_rdiv * Bit_div2x * sclk_rdiv;
+	if (!div) {
+		pr_err("%s:Error divide by 0, (%d * %d * %d * %d * %d)\n",
+		       __func__, PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
+		return -EINVAL;
+	}
+	if (!sysclk) {
+		pr_err("%s:Error 0 clk, ov5640_data.mclk=%d, Multiplier=%d\n",
+		       __func__, ov5640_data.mclk, Multiplier);
+		return -EINVAL;
+	}
+	sysclk /= div;
+	pr_debug("%s: sysclk(%d) = %d / 10000 * %d / (%d * %d * %d * %d * %d)\n",
+		 __func__, sysclk, ov5640_data.mclk, Multiplier,
+		 PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
 
 	return sysclk;
 }

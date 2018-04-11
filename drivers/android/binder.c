@@ -2200,8 +2200,12 @@ static void binder_transaction(struct binder_proc *proc,
 	list_add_tail(&t->work.entry, target_list);
 	tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
 	list_add_tail(&tcomplete->entry, &thread->todo);
-	if (target_wait)
-		wake_up_interruptible(target_wait);
+	if (target_wait) {
+		if (reply || !(t->flags & TF_ONE_WAY))
+			wake_up_interruptible_sync(target_wait);
+		else
+			wake_up_interruptible(target_wait);
+	}
 	return;
 
 err_translate_failed:
@@ -3109,6 +3113,10 @@ static unsigned int binder_poll(struct file *filp,
 	binder_lock(__func__);
 
 	thread = binder_get_thread(proc);
+	if (!thread) {
+		binder_unlock(__func__);
+		return POLLERR;
+	}
 
 	wait_for_proc_work = thread->transaction_stack == NULL &&
 		list_empty(&thread->todo) && thread->return_error == BR_OK;

@@ -52,6 +52,14 @@
 
 #define ACCESS_ONCE(x) (*(volatile typeof(x) *)&(x))
 
+#ifndef __fallthrough
+# if defined(__GNUC__) && __GNUC__ >= 7
+#  define __fallthrough __attribute__ ((fallthrough))
+# else
+#  define __fallthrough
+# endif
+#endif
+
 #include <linux/types.h>
 
 /*
@@ -125,5 +133,14 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 
 #define WRITE_ONCE(x, val) \
 	({ union { typeof(x) __val; char __c[1]; } __u = { .__val = (val) }; __write_once_size(&(x), __u.__c, sizeof(x)); __u.__val; })
+
+
+#ifndef __fallthrough
+# if defined(__GNUC__) && __GNUC__ >= 7
+#  define __fallthrough __attribute__ ((fallthrough))
+# else
+#  define __fallthrough
+# endif
+#endif
 
 #endif /* _TOOLS_LINUX_COMPILER_H */

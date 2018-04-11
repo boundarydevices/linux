@@ -442,6 +442,12 @@ config GPIO_VF610
 	help
 	  Say yes here to support Vybrid vf610 GPIOs.
 
+config GPIO_IMX_RPMSG
+	bool "NXP i.MX7ULP RPMSG GPIO support"
+	depends on ARCH_MXC && RPMSG && GPIOLIB
+	help
+	  This driver support i.MX7ULP RPMSG virtual GPIOs.
+
 config GPIO_VR41XX
 	tristate "NEC VR4100 series General-purpose I/O Uint support"
 	depends on CPU_VR41XX
@@ -1186,6 +1192,8 @@ config GPIO_MCP23S08
 	tristate "Microchip MCP23xxx I/O expander"
 	depends on OF_GPIO
 	select GPIOLIB_IRQCHIP
+	select REGMAP_I2C if I2C
+	select REGMAP if SPI_MASTER
 	help
 	  SPI/I2C driver for Microchip MCP23S08/MCP23S17/MCP23008/MCP23017
 	  I/O expanders.

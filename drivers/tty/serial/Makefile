@@ -51,6 +51,7 @@ obj-$(CONFIG_SERIAL_MESON) += meson_uart.o
 obj-$(CONFIG_SERIAL_SB1250_DUART) += sb1250-duart.o
 obj-$(CONFIG_ETRAX_SERIAL) += crisv10.o
 obj-$(CONFIG_SERIAL_ETRAXFS) += etraxfs-uart.o
+obj-$(CONFIG_SERIAL_GPS_MAX7W) += gps_max7w.o
 obj-$(CONFIG_SERIAL_SCCNXP) += sccnxp.o
 obj-$(CONFIG_SERIAL_SC16IS7XX_CORE) += sc16is7xx.o
 obj-$(CONFIG_SERIAL_JSM) += jsm/
@@ -96,3 +97,4 @@ obj-$(CONFIG_SERIAL_MPS2_UART)	+= mps2-uart.o
 
 # GPIOLIB helpers for modem control lines
 obj-$(CONFIG_SERIAL_MCTRL_GPIO)	+= serial_mctrl_gpio.o
+obj-$(CONFIG_SERIAL_XR20M117X) += xrm117x.o

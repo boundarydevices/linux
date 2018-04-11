@@ -527,6 +527,9 @@ static int sur40_probe(struct usb_interface *interface,
 	if (iface_desc->desc.bInterfaceClass != 0xFF)
 		return -ENODEV;
 
+	if (iface_desc->desc.bNumEndpoints < 5)
+		return -ENODEV;
+
 	/* Use endpoint #4 (0x86). */
 	endpoint = &iface_desc->endpoint[4].desc;
 	if (endpoint->bEndpointAddress != TOUCH_ENDPOINT)
@@ -929,7 +932,7 @@ static const struct vb2_queue sur40_queue = {
 };
 
 static const struct v4l2_file_operations sur40_video_fops = {
-	.owner = THIS_MODULE,
+
 	.open = v4l2_fh_open,
 	.release = vb2_fop_release,
 	.unlocked_ioctl = video_ioctl2,

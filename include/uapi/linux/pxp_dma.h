@@ -25,6 +25,7 @@
 
 #ifndef __KERNEL__
 typedef unsigned long dma_addr_t;
+typedef unsigned char bool;
 #endif
 
 /*  PXP Pixel format definitions */
@@ -125,6 +126,8 @@ typedef unsigned long dma_addr_t;
 #define ALPHA_MODE_ROP		0x1
 #define ALPHA_MODE_LEGACY	0x2
 #define ALPHA_MODE_PORTER_DUFF	0x3
+
+#define PXP_DEVICE_LEGACY
 
 /* Order significant! */
 enum pxp_channel_status {
@@ -232,6 +235,7 @@ struct pxp_layer_param {
 	int comp_mask;
 
 	struct pxp_alpha alpha;
+	struct rect crop;
 
 	dma_addr_t paddr;
 };
@@ -311,6 +315,7 @@ struct pxp_proc_data {
 	unsigned char reagl_en;		/* enable reagl/-d */
 	unsigned char reagl_d_en;	/* enable reagl or reagl-d */
 	unsigned char detection_only;
+	bool pxp_legacy;
 	int lut;
 	unsigned char lut_cleanup;
 	unsigned int lut_status_1;

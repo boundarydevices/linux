@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/gpio.h>
 #include <linux/module.h>
@@ -32,17 +33,39 @@ struct pwm_bl_data {
 	unsigned int		*levels;
 	bool			enabled;
 	struct regulator	*power_supply;
-	struct gpio_desc	*enable_gpio;
+	struct gpio_descs	*enable_gpios;
+	struct gpio_descs	legacy_enable;
+	struct gpio_desc	*legacy_desc;	/* part of above struct gpio_descs */
 	unsigned int		scale;
 	bool			legacy;
+	int			disp_cnt;
+	struct device_node	*disp_node[4];
 	int			(*notify)(struct device *,
 					  int brightness);
 	void			(*notify_after)(struct device *,
 					int brightness);
 	int			(*check_fb)(struct device *, struct fb_info *);
 	void			(*exit)(struct device *);
-	char			fb_id[16];
 };
+
+static void set_gpios(struct gpio_descs *d, int active)
+{
+	int i;
+
+	if (active) {
+		for (i = 0; i < d->ndescs; i++) {
+			if (i)
+				msleep(10);
+			gpiod_set_value_cansleep(d->desc[i], active);
+		}
+	} else {
+		for (i = d->ndescs - 1; i >= 0 ; i--) {
+			gpiod_set_value_cansleep(d->desc[i], active);
+			if (i)
+				msleep(10);
+		}
+	}
+}
 
 static void pwm_backlight_power_on(struct pwm_bl_data *pb, int brightness)
 {
@@ -55,8 +78,8 @@ static void pwm_backlight_power_on(struct pwm_bl_data *pb, int brightness)
 	if (err < 0)
 		dev_err(pb->dev, "failed to enable power supply\n");
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 1);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 1);
 
 	pwm_enable(pb->pwm);
 	pb->enabled = true;
@@ -70,8 +93,8 @@ static void pwm_backlight_power_off(struct pwm_bl_data *pb)
 	pwm_config(pb->pwm, 0, pb->period);
 	pwm_disable(pb->pwm);
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 0);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 0);
 
 	regulator_disable(pb->power_supply);
 	pb->enabled = false;
@@ -80,14 +103,17 @@ static void pwm_backlight_power_off(struct pwm_bl_data *pb)
 static int compute_duty_cycle(struct pwm_bl_data *pb, int brightness)
 {
 	unsigned int lth = pb->lth_brightness;
-	int duty_cycle;
+	u64 duty_cycle;
 
 	if (pb->levels)
 		duty_cycle = pb->levels[brightness];
 	else
 		duty_cycle = brightness;
 
-	return (duty_cycle * (pb->period - lth) / pb->scale) + lth;
+	duty_cycle *= pb->period - lth;
+	do_div(duty_cycle, pb->scale);
+
+	return duty_cycle + lth;
 }
 
 static int pwm_backlight_update_status(struct backlight_device *bl)
@@ -104,8 +130,8 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	if (pb->notify)
 		brightness = pb->notify(pb->dev, brightness);
 
-	if (brightness > 0) {
-		duty_cycle = compute_duty_cycle(pb, brightness);
+	duty_cycle = compute_duty_cycle(pb, brightness);
+	if (duty_cycle > 0) {
 		pwm_config(pb->pwm, duty_cycle, pb->period);
 		pwm_backlight_power_on(pb, brightness);
 	} else
@@ -122,6 +148,16 @@ static int pwm_backlight_check_fb(struct backlight_device *bl,
 {
 	struct pwm_bl_data *pb = bl_get_data(bl);
 
+	if (pb->disp_cnt) {
+		struct device_node *np = info->device->of_node;
+		int i;
+
+		for (i = 0 ; i < pb->disp_cnt; i++) {
+			if (np == pb->disp_node[i])
+				return 1;
+		}
+		return 0;
+	}
 	return !pb->check_fb || pb->check_fb(pb->dev, info);
 }
 
@@ -131,26 +167,16 @@ static const struct backlight_ops pwm_backlight_ops = {
 };
 
 #ifdef CONFIG_OF
-static int pwm_backlight_check_fb_name(struct device *dev, struct fb_info *info)
-{
-	struct backlight_device *bl = dev_get_drvdata(dev);
-	struct pwm_bl_data *pb = bl_get_data(bl);
-
-	if (strcmp(info->fix.id, pb->fb_id) == 0)
-		return true;
-
-	return false;
-}
-
 static int pwm_backlight_parse_dt(struct device *dev,
-				  struct platform_pwm_backlight_data *data)
+				  struct platform_pwm_backlight_data *data,
+				  struct pwm_bl_data *pb)
 {
 	struct device_node *node = dev->of_node;
 	struct property *prop;
 	int length;
 	u32 value;
 	int ret;
-	const char *names;
+	int i;
 
 	if (!node)
 		return -ENODEV;
@@ -187,12 +213,13 @@ static int pwm_backlight_parse_dt(struct device *dev,
 		data->max_brightness--;
 	}
 
-	if (!of_property_read_string(node, "fb-names", &names)){
-		strcpy(data->fb_id, names);
-		data->check_fb = &pwm_backlight_check_fb_name;
-	}
-
 	data->enable_gpio = -EINVAL;
+	for (i = 0 ; i < ARRAY_SIZE(pb->disp_node); i++) {
+		pb->disp_node[i] = of_parse_phandle(node, "display", i);
+		if (!pb->disp_node[i])
+			break;
+	}
+	pb->disp_cnt = i;
 	return 0;
 }
 
@@ -204,7 +231,8 @@ static struct of_device_id pwm_backlight_of_match[] = {
 MODULE_DEVICE_TABLE(of, pwm_backlight_of_match);
 #else
 static int pwm_backlight_parse_dt(struct device *dev,
-				  struct platform_pwm_backlight_data *data)
+				  struct platform_pwm_backlight_data *data,
+				  struct pwm_bl_data *pb)
 {
 	return -ENODEV;
 }
@@ -222,8 +250,12 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct pwm_args pargs;
 	int ret;
 
+	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
+	if (!pb)
+		return -ENOMEM;
+
 	if (!data) {
-		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata);
+		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata, pb);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "failed to find platform data\n");
 			return ret;
@@ -236,12 +268,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		ret = data->init(&pdev->dev);
 		if (ret < 0)
 			return ret;
-	}
-
-	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
-	if (!pb) {
-		ret = -ENOMEM;
-		goto err_alloc;
 	}
 
 	if (data->levels) {
@@ -261,12 +287,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->exit = data->exit;
 	pb->dev = &pdev->dev;
 	pb->enabled = false;
-	strcpy(pb->fb_id, data->fb_id);
 
-	pb->enable_gpio = devm_gpiod_get_optional(&pdev->dev, "enable",
-						  GPIOD_ASIS);
-	if (IS_ERR(pb->enable_gpio)) {
-		ret = PTR_ERR(pb->enable_gpio);
+	pb->enable_gpios = devm_gpiod_get_array_optional(&pdev->dev, "enable",
+							 GPIOD_OUT_LOW);
+	if (IS_ERR(pb->enable_gpios)) {
+		ret = PTR_ERR(pb->enable_gpios);
 		goto err_alloc;
 	}
 
@@ -274,7 +299,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	 * Compatibility fallback for drivers still using the integer GPIO
 	 * platform data. Must go away soon.
 	 */
-	if (!pb->enable_gpio && gpio_is_valid(data->enable_gpio)) {
+	if (!pb->enable_gpios && gpio_is_valid(data->enable_gpio)) {
 		ret = devm_gpio_request_one(&pdev->dev, data->enable_gpio,
 					    GPIOF_OUT_INIT_HIGH, "enable");
 		if (ret < 0) {
@@ -283,22 +308,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			goto err_alloc;
 		}
 
-		pb->enable_gpio = gpio_to_desc(data->enable_gpio);
-	}
-
-	if (pb->enable_gpio) {
-		/*
-		 * If the driver is probed from the device tree and there is a
-		 * phandle link pointing to the backlight node, it is safe to
-		 * assume that another driver will enable the backlight at the
-		 * appropriate time. Therefore, if it is disabled, keep it so.
-		 */
-		if (node && node->phandle &&
-		    gpiod_get_direction(pb->enable_gpio) == GPIOF_DIR_OUT &&
-		    gpiod_get_value(pb->enable_gpio) == 0)
-			initial_blank = FB_BLANK_POWERDOWN;
-		else
-			gpiod_direction_output(pb->enable_gpio, 1);
+		pb->legacy_enable.desc[0] = gpio_to_desc(data->enable_gpio);
+		pb->legacy_enable.ndescs = 1;
+		pb->enable_gpios = &pb->legacy_enable;
+		gpiod_direction_output(pb->legacy_enable.desc[0], 1);
 	}
 
 	pb->power_supply = devm_regulator_get(&pdev->dev, "power");

@@ -127,15 +127,18 @@ typedef enum {
 	XY
 } display_addressing_t;
 
+struct mipi_fields {
+	uint32_t id;
+	uint32_t vc;
+	bool en;
+};
 /*!
  * Union of initialization parameters for a logical channel.
  */
 typedef union {
 	struct {
 		uint32_t csi;
-		uint32_t mipi_id;
-		uint32_t mipi_vc;
-		bool mipi_en;
+		struct mipi_fields mipi;
 		bool interlaced;
 	} csi_mem;
 	struct {
@@ -148,9 +151,7 @@ typedef union {
 		uint32_t outh_resize_ratio;
 		uint32_t outv_resize_ratio;
 		uint32_t csi;
-		uint32_t mipi_id;
-		uint32_t mipi_vc;
-		bool mipi_en;
+		struct mipi_fields mipi;
 	} csi_prp_enc_mem;
 	struct {
 		uint32_t in_width;
@@ -189,9 +190,7 @@ typedef union {
 		ipu_motion_sel motion_sel;
 		enum v4l2_field field_fmt;
 		uint32_t csi;
-		uint32_t mipi_id;
-		uint32_t mipi_vc;
-		bool mipi_en;
+		struct mipi_fields mipi;
 	} csi_prp_vf_mem;
 	struct {
 		uint32_t in_width;
@@ -586,7 +585,13 @@ struct ipu_soc;
 /* Common IPU API */
 struct ipu_soc *ipu_get_soc(int id);
 int32_t ipu_init_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params);
-void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel);
+void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params);
+
+struct ipu_chan;
+int32_t ipu_channel_request(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params, struct ipu_chan **p_ipu_chan);
+void ipu_channel_free(struct ipu_chan **p_ipu_chan);
+int32_t ipu_channel_disable(struct ipu_chan *ipu_chan, bool wait_for_stop);
+
 void ipu_disable_hsp_clk(struct ipu_soc *ipu);
 
 static inline bool ipu_can_rotate_in_place(ipu_rotate_mode_t rot)
@@ -597,6 +602,7 @@ static inline bool ipu_can_rotate_in_place(ipu_rotate_mode_t rot)
 	return (rot < IPU_ROTATE_90_RIGHT);
 #endif
 }
+int ipu_update_bt656_mapping(int di_msb);
 
 int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel, ipu_buffer_t type,
 				uint32_t pixel_fmt,
@@ -732,6 +738,9 @@ void ipu_csi_set_window_size(struct ipu_soc *ipu, uint32_t width, uint32_t heigh
 
 void ipu_csi_set_window_pos(struct ipu_soc *ipu, uint32_t left, uint32_t top, uint32_t csi);
 
+void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t sheight,
+		uint32_t width, uint32_t height, uint32_t left, uint32_t top, uint32_t csi);
+
 uint32_t bytes_per_pixel(uint32_t fmt);
 
 bool ipu_ch_param_bad_alpha_pos(uint32_t fmt);
@@ -744,6 +753,7 @@ bool ipu_pixel_format_is_multiplanar_yuv(uint32_t fmt);
 
 struct ipuv3_fb_platform_data {
 	char				disp_dev[32];
+	u32 				fb_pix_fmt;
 	u32				interface_pix_fmt;
 	char				*mode_str;
 	int				default_bpp;

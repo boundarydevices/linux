@@ -516,6 +516,51 @@ int hw_device_reset(struct ci_hdrc *ci)
 	return 0;
 }
 
+int hw_vbus_enable(struct ci_hdrc *ci, int enable)
+{
+	struct regulator *reg_vbus = ci->platdata->reg_vbus;
+	int ret;
+	int retry = 0;
+
+	if (PTR_ERR(reg_vbus) == -EPROBE_DEFER) {
+		if (!enable)
+			return 0;
+
+		while (1) {
+			reg_vbus = devm_regulator_get_optional(ci->platdata->dev, "vbus");
+			if (IS_ERR(reg_vbus)) {
+				if (PTR_ERR(reg_vbus) == -EPROBE_DEFER) {
+					if (retry == 20) {
+						dev_warn(ci->platdata->dev, "regulator EPROBE_DEFER\n");
+						return -EPROBE_DEFER;
+					}
+					msleep(500);
+					retry++;
+					continue;
+				}
+				dev_err(ci->platdata->dev, "Getting regulator error: %ld\n",
+							PTR_ERR(reg_vbus));
+				ci->platdata->reg_vbus = NULL;
+				return PTR_ERR(reg_vbus);
+			}
+			break;
+		}
+		ci->platdata->reg_vbus = reg_vbus;
+	}
+	if (reg_vbus) {
+		if (enable)
+			ret = regulator_enable(reg_vbus);
+		else
+			ret = regulator_disable(reg_vbus);
+		if (ret) {
+			dev_err(ci->dev, "Failed to %s vbus regulator, ret=%d\n",
+				enable ? "enable" : "disable", ret);
+			return ret;
+		}
+	}
+	return 0;
+}
+
 static irqreturn_t ci_irq(int irq, void *data)
 {
 	struct ci_hdrc *ci = data;
@@ -537,36 +582,43 @@ static irqreturn_t ci_irq(int irq, void *data)
 	}
 
 	if (ci->is_otg) {
+		int do_queue = 0;
+
 		otgsc = hw_read_otgsc(ci, ~0);
 		if (ci_otg_is_fsm_mode(ci)) {
 			ret = ci_otg_fsm_irq(ci);
 			if (ret == IRQ_HANDLED)
 				return ret;
 		}
-	}
 
-	/*
-	 * Handle id change interrupt, it indicates device/host function
-	 * switch.
-	 */
-	if (ci->is_otg && (otgsc & OTGSC_IDIE) && (otgsc & OTGSC_IDIS)) {
-		ci->id_event = true;
-		/* Clear ID change irq status */
-		hw_write_otgsc(ci, OTGSC_IDIS, OTGSC_IDIS);
-		ci_otg_queue_work(ci);
-		return IRQ_HANDLED;
-	}
+		/*
+		 * Handle id change interrupt, it indicates device/host function
+		 * switch.
+		 */
+		if (!(otgsc & OTGSC_IDIE)) {
+			otgsc &= ~OTGSC_IDIS;
+		} else if (otgsc & OTGSC_IDIS) {
+			ci->id_event = true;
+			do_queue = 1;
+		}
 
-	/*
-	 * Handle vbus change interrupt, it indicates device connection
-	 * and disconnection events.
-	 */
-	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
-		ci->vbus_glitch_check_event = true;
-		/* Clear BSV irq */
-		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
-		ci_otg_queue_work(ci);
-		return IRQ_HANDLED;
+		/*
+		 * Handle vbus change interrupt, it indicates device connection
+		 * and disconnection events.
+		 */
+		if (!(otgsc & OTGSC_BSVIE)) {
+			otgsc &= ~OTGSC_BSVIS;
+		} else if (otgsc & OTGSC_BSVIS) {
+			ci->vbus_glitch_check_event = true;
+			do_queue = 1;
+		}
+
+		if (do_queue) {
+			hw_write_otgsc(ci, OTGSC_INT_STATUS_BITS,
+				otgsc & (OTGSC_IDIS | OTGSC_BSVIS));
+			ci_otg_queue_work(ci);
+			return IRQ_HANDLED;
+		}
 	}
 
 	/* Handle device/host interrupt */
@@ -607,9 +659,8 @@ static int ci_get_platdata(struct device *dev,
 
 	if (platdata->dr_mode != USB_DR_MODE_PERIPHERAL) {
 		/* Get the vbus regulator */
-		platdata->reg_vbus = devm_regulator_get(dev, "vbus");
+		platdata->reg_vbus = devm_regulator_get_optional(dev, "vbus");
 		if (PTR_ERR(platdata->reg_vbus) == -EPROBE_DEFER) {
-			return -EPROBE_DEFER;
 		} else if (PTR_ERR(platdata->reg_vbus) == -ENODEV) {
 			/* no vbus regulator is needed */
 			platdata->reg_vbus = NULL;
@@ -755,12 +806,17 @@ struct platform_device *ci_hdrc_add_device(struct device *dev,
 {
 	struct platform_device *pdev;
 	int id, ret;
+	u32 start;
 
+	platdata->dev = dev;
 	ret = ci_get_platdata(dev, platdata);
 	if (ret)
 		return ERR_PTR(ret);
 
-	id = ida_simple_get(&ci_ida, 0, 0, GFP_KERNEL);
+	if (of_property_read_u32(dev->of_node, "id", &start) != 0)
+		start = 0;
+
+	id = ida_simple_get(&ci_ida, start, 0, GFP_KERNEL);
 	if (id < 0)
 		return ERR_PTR(id);
 
@@ -877,6 +933,13 @@ static enum ci_role ci_get_role(struct ci_hdrc *ci)
 	}
 }
 
+static const unsigned int extcon_cables[] = {
+	EXTCON_USB_HOST,
+	EXTCON_CHG_USB_SDP,
+	EXTCON_USB,
+	EXTCON_NONE,
+};
+
 static void ci_start_new_role(struct ci_hdrc *ci)
 {
 	enum ci_role role = ci_get_role(ci);
@@ -979,6 +1042,17 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci_get_otg_capable(ci);
+	if (ci->is_otg) {
+		ci->extcon.name = dev_name(dev);
+		ci->extcon.supported_cable = extcon_cables;
+		ci->extcon.dev.parent = &pdev->dev;
+		ret = extcon_dev_register(&ci->extcon);
+		if (ret) {
+			dev_err(&pdev->dev, "could not register extcon device: %d\n",
+				ret);
+			return ret;
+		}
+	}
 
 	dr_mode = ci->platdata->dr_mode;
 	/* initialize role(s) before the interrupt is requested */
@@ -1009,6 +1083,10 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci->role = ci_get_role(ci);
+	if (ci->is_otg) {
+		extcon_set_cable_state_(&ci->extcon, ci->role, 1);
+		extcon_set_cable_state_(&ci->extcon, ci->role ^ 1, 0);
+	}
 	/* only update vbus status for peripheral */
 	if (ci->role == CI_ROLE_GADGET)
 		ci_handle_vbus_connected(ci);
@@ -1050,10 +1128,15 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	mutex_init(&ci->mutex);
 
 	ret = dbg_create_files(ci);
+	ci->wq_ready = 1;
+	if (ci->is_otg)
+		ci_otg_queue_work(ci);
 	if (!ret)
 		return 0;
 
 stop:
+	if (ci->is_otg)
+		extcon_dev_unregister(&ci->extcon);
 	ci_role_destroy(ci);
 deinit_phy:
 	ci_usb_phy_exit(ci);
@@ -1072,6 +1155,8 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	}
 
 	dbg_remove_files(ci);
+	if (ci->is_otg)
+		extcon_dev_unregister(&ci->extcon);
 	ci_role_destroy(ci);
 	ci_hdrc_enter_lpm(ci, true);
 	ci_usb_phy_exit(ci);

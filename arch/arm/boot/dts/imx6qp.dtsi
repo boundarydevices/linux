@@ -154,11 +154,13 @@
 				 <&clks IMX6QDL_CLK_IPU1_DI0>, <&clks IMX6QDL_CLK_IPU1_DI1>,
 				 <&clks IMX6QDL_CLK_IPU1_DI0_SEL>, <&clks IMX6QDL_CLK_IPU1_DI1_SEL>,
 				 <&clks IMX6QDL_CLK_LDB_DI0_DIV_SEL>, <&clks IMX6QDL_CLK_LDB_DI1_DIV_SEL>,
-				 <&clks IMX6QDL_CLK_PRG0_APB>;
+				 <&clks IMX6QDL_CLK_PRG0_APB>, <&clks IMX6QDL_CLK_PLL3_PFD1_540M>,
+				 <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>;
 			clock-names = "bus",
 				      "di0", "di1",
 				      "di0_sel", "di1_sel",
-				      "ldb_di0", "ldb_di1", "prg";
+				      "ldb_di0", "ldb_di1", "prg",
+				      "540m", "video_pll";
 		};
 
 		ipu2: ipu@02800000 {
@@ -167,11 +169,13 @@
 				 <&clks IMX6QDL_CLK_IPU2_DI0>, <&clks IMX6QDL_CLK_IPU2_DI1>,
 				 <&clks IMX6QDL_CLK_IPU2_DI0_SEL>, <&clks IMX6QDL_CLK_IPU2_DI1_SEL>,
 				 <&clks IMX6QDL_CLK_LDB_DI0_DIV_SEL>, <&clks IMX6QDL_CLK_LDB_DI1_DIV_SEL>,
-				 <&clks IMX6QDL_CLK_PRG1_APB>;
+				 <&clks IMX6QDL_CLK_PRG1_APB>, <&clks IMX6QDL_CLK_PLL3_PFD1_540M>,
+				 <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>;
 			clock-names = "bus",
 				      "di0", "di1",
 				      "di0_sel", "di1_sel",
-				      "ldb_di0", "ldb_di1", "prg";
+				      "ldb_di0", "ldb_di1", "prg",
+				      "540m", "video_pll";
 		};
 	};
 };

@@ -37,6 +37,8 @@ endif
 obj-$(CONFIG_TOSHIBA)		+= toshiba.o
 obj-$(CONFIG_DS1620)		+= ds1620.o
 obj-$(CONFIG_HW_RANDOM)		+= hw_random/
+obj-$(CONFIG_MAGSTRIPE)		+= magdecode.o
+obj-$(CONFIG_SAS)		+= sas.o
 obj-$(CONFIG_PPDEV)		+= ppdev.o
 obj-$(CONFIG_NWBUTTON)		+= nwbutton.o
 obj-$(CONFIG_NWFLASH)		+= nwflash.o
@@ -62,3 +64,4 @@ obj-$(CONFIG_TILE_SROM)		+= tile-srom.o
 obj-$(CONFIG_XILLYBUS)		+= xillybus/
 obj-$(CONFIG_POWERNV_OP_PANEL)	+= powernv-op-panel.o
 obj-$(CONFIG_HAVE_IMX_AMP)      += imx_amp/
+obj-$(CONFIG_DUMMY_I2C_DEVICE)	+= dummy_i2c_device.o

@@ -245,10 +245,10 @@ static void __init mx5_clocks_common_init(void __iomem *ccm_base)
 	clk[IMX5_CLK_EMI_FAST_GATE]	= imx_clk_gate2("emi_fast_gate", "dummy", MXC_CCM_CCGR5, 14);
 	clk[IMX5_CLK_EMI_SLOW_GATE]	= imx_clk_gate2("emi_slow_gate", "emi_slow_podf", MXC_CCM_CCGR5, 16);
 	clk[IMX5_CLK_IPU_SEL]		= imx_clk_mux("ipu_sel", MXC_CCM_CBCMR, 6, 2, ipu_sel, ARRAY_SIZE(ipu_sel));
-	clk[IMX5_CLK_IPU_GATE]		= imx_clk_gate2("ipu_gate", "ipu_sel", MXC_CCM_CCGR5, 10);
+	clk[IMX5_CLK_IPU_GATE]		= imx_clk_gate2("ipu1", "ipu_sel", MXC_CCM_CCGR5, 10);
 	clk[IMX5_CLK_NFC_GATE]		= imx_clk_gate2("nfc_gate", "nfc_podf", MXC_CCM_CCGR5, 20);
-	clk[IMX5_CLK_IPU_DI0_GATE]	= imx_clk_gate2("ipu_di0_gate", "ipu_di0_sel", MXC_CCM_CCGR6, 10);
-	clk[IMX5_CLK_IPU_DI1_GATE]	= imx_clk_gate2("ipu_di1_gate", "ipu_di1_sel", MXC_CCM_CCGR6, 12);
+	clk[IMX5_CLK_IPU_DI0_GATE]	= imx_clk_gate2("ipu1_di0", "ipu_di0_sel", MXC_CCM_CCGR6, 10);
+	clk[IMX5_CLK_IPU_DI1_GATE]	= imx_clk_gate2("ipu1_di1", "ipu_di1_sel", MXC_CCM_CCGR6, 12);
 	clk[IMX5_CLK_GPU3D_SEL]		= imx_clk_mux("gpu3d_sel", MXC_CCM_CBCMR, 4, 2, gpu3d_sel, ARRAY_SIZE(gpu3d_sel));
 	clk[IMX5_CLK_GPU2D_SEL]		= imx_clk_mux("gpu2d_sel", MXC_CCM_CBCMR, 16, 2, gpu2d_sel, ARRAY_SIZE(gpu2d_sel));
 	clk[IMX5_CLK_GPU3D_GATE]	= imx_clk_gate2("gpu3d_gate", "gpu3d_sel", MXC_CCM_CCGR5, 2);
@@ -431,7 +431,13 @@ static void __init mx51_clocks_init(struct device_node *np)
 	clk[IMX5_CLK_ESDHC3_PER_GATE]	= imx_clk_gate2("esdhc3_per_gate", "esdhc_c_sel", MXC_CCM_CCGR3, 10);
 	clk[IMX5_CLK_ESDHC4_PER_GATE]	= imx_clk_gate2("esdhc4_per_gate", "esdhc_d_sel", MXC_CCM_CCGR3, 14);
 	clk[IMX5_CLK_USB_PHY_GATE]	= imx_clk_gate2("usb_phy_gate", "usb_phy_sel", MXC_CCM_CCGR2, 0);
-	clk[IMX5_CLK_HSI2C_GATE]	= imx_clk_gate2("hsi2c_gate", "ipg", MXC_CCM_CCGR1, 22);
+
+	clk[IMX5_CLK_HSI2C_SEL]		= imx_clk_mux("hsi2c_sel", MXC_CCM_CSCMR2, 14, 2,
+						standard_pll_sel, ARRAY_SIZE(standard_pll_sel));
+	clk[IMX5_CLK_HSI2C_PRED]	= imx_clk_divider("hsi2c_pred", "hsi2c_sel", MXC_CCM_CSCDR3, 16, 3);
+	clk[IMX5_CLK_HSI2C_PODF]	= imx_clk_divider("hsi2c_podf", "hsi2c_pred", MXC_CCM_CSCDR3, 9, 6);
+	clk[IMX5_CLK_HSI2C_GATE]	= imx_clk_gate2("hsi2c_gate", "hsi2c_podf", MXC_CCM_CCGR1, 22);
+	clk[IMX5_CLK_HSI2C_IPG_GATE]	= imx_clk_gate2("hsi2c_ipg_gate", "ipg", MXC_CCM_CCGR1, 24);
 	clk[IMX5_CLK_MIPI_HSC1_GATE]	= imx_clk_gate2("mipi_hsc1_gate", "ipg", MXC_CCM_CCGR4, 6);
 	clk[IMX5_CLK_MIPI_HSC2_GATE]	= imx_clk_gate2("mipi_hsc2_gate", "ipg", MXC_CCM_CCGR4, 8);
 	clk[IMX5_CLK_MIPI_ESC_GATE]	= imx_clk_gate2("mipi_esc_gate", "ipg", MXC_CCM_CCGR4, 10);
@@ -458,6 +464,8 @@ static void __init mx51_clocks_init(struct device_node *np)
 	/* set SDHC root clock to 166.25MHZ*/
 	clk_set_rate(clk[IMX5_CLK_ESDHC_A_PODF], 166250000);
 	clk_set_rate(clk[IMX5_CLK_ESDHC_B_PODF], 166250000);
+
+	clk_set_rate(clk[IMX5_CLK_HSI2C_PODF], 2000000);
 
 	clk_prepare_enable(clk[IMX5_CLK_IIM_GATE]);
 	imx_print_silicon_rev("i.MX51", mx51_revision());

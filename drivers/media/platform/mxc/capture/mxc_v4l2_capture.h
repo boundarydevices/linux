@@ -35,6 +35,7 @@
 #include <linux/pxp_dma.h>
 #include <linux/ipu-v3.h>
 #include <linux/platform_data/dma-imx.h>
+#include <linux/mipi_csi2.h>
 
 #include <media/v4l2-dev.h>
 #include "v4l2-int-device.h"
@@ -114,6 +115,8 @@ typedef struct _cam_data {
 	struct semaphore busy_lock;
 
 	int open_count;
+	struct delayed_work power_down_work;
+	int power_on;
 
 	/* params lock for this camera */
 	struct semaphore param_lock;
@@ -201,12 +204,18 @@ typedef struct _cam_data {
 	/* misc status flag */
 	bool overlay_on;
 	bool capture_on;
+	bool ipu_enable_csi_called;
+	bool mipi_pixelclk_enabled;
+	struct ipu_chan *ipu_chan;
+	struct ipu_chan *ipu_chan_rot;
 	int overlay_pid;
 	int capture_pid;
 	bool low_power;
 	wait_queue_head_t power_queue;
 	unsigned int ipu_id;
 	unsigned int csi;
+	unsigned mipi_camera;
+	int csi_in_use;
 	u8 mclk_source;
 	bool mclk_on[2];	/* two mclk sources at most now */
 	int current_input;
@@ -237,6 +246,7 @@ struct sensor_data {
 	struct v4l2_int_device *v4l2_int_device;
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
+	struct v4l2_sensor_dimension spix;
 	struct v4l2_captureparm streamcap;
 	bool on;
 
@@ -249,14 +259,98 @@ struct sensor_data {
 	int green;
 	int blue;
 	int ae_mode;
+	int mirror;
+	int vflip;
+	int wb;
 
 	u32 mclk;
 	u8 mclk_source;
 	struct clk *sensor_clk;
+	int ipu_id;
 	int csi;
+	int last_reg;
+	unsigned mipi_camera;
+	unsigned virtual_channel;	/* Used with mipi */
 
 	void (*io_init)(void);
 };
 
 void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);
+void mxc_camera_common_lock(void);
+void mxc_camera_common_unlock(void);
+
+static inline int cam_ipu_enable_csi(cam_data *cam)
+{
+	int ret = ipu_enable_csi(cam->ipu, cam->csi);
+	if (!ret)
+		cam->ipu_enable_csi_called = 1;
+	return ret;
+}
+
+static inline int cam_ipu_disable_csi(cam_data *cam)
+{
+	if (!cam->ipu_enable_csi_called)
+		return 0;
+	cam->ipu_enable_csi_called = 0;
+	return ipu_disable_csi(cam->ipu, cam->csi);
+}
+
+static inline int cam_mipi_csi2_enable(cam_data *cam, struct mipi_fields *mf)
+{
+#ifdef CONFIG_MXC_MIPI_CSI2
+	void *mipi_csi2_info;
+	struct sensor_data *sensor;
+
+	if (!cam->sensor)
+		return 0;
+	sensor = cam->sensor->priv;
+	if (!sensor)
+		return 0;
+	if (!sensor->mipi_camera)
+		return 0;
+	mipi_csi2_info = mipi_csi2_get_info();
+
+	if (!mipi_csi2_info) {
+//		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
+//		       __func__, __FILE__);
+//		return -EPERM;
+		return 0;
+	}
+	if (mipi_csi2_get_status(mipi_csi2_info)) {
+		mf->en = true;
+		mf->vc = 0;//sensor->virtual_channel;
+		mf->id = mipi_csi2_get_datatype(mipi_csi2_info);
+		if (!mipi_csi2_pixelclk_enable(mipi_csi2_info))
+			cam->mipi_pixelclk_enabled = 1;
+		return 0;
+	}
+	mf->en = false;
+	mf->vc = 0;
+	mf->id = 0;
+#endif
+	return 0;
+}
+
+static inline int cam_mipi_csi2_disable(cam_data *cam)
+{
+#ifdef CONFIG_MXC_MIPI_CSI2
+	void *mipi_csi2_info;
+
+	if (!cam->mipi_pixelclk_enabled)
+		return 0;
+	cam->mipi_pixelclk_enabled = 0;
+
+	mipi_csi2_info = mipi_csi2_get_info();
+
+	if (!mipi_csi2_info) {
+//		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
+//		       __func__, __FILE__);
+//		return -EPERM;
+		return 0;
+	}
+	if (mipi_csi2_get_status(mipi_csi2_info))
+		mipi_csi2_pixelclk_disable(mipi_csi2_info);
+#endif
+	return 0;
+}
 #endif				/* __MXC_V4L2_CAPTURE_H__ */

@@ -73,6 +73,7 @@ static const char	hcd_name [] = "ohci_hcd";
 
 #define	STATECHANGE_DELAY	msecs_to_jiffies(300)
 #define	IO_WATCHDOG_DELAY	msecs_to_jiffies(275)
+#define	IO_WATCHDOG_OFF		0xffffff00
 
 #include "ohci.h"
 #include "pci-quirks.h"
@@ -230,8 +231,9 @@ static int ohci_urb_enqueue (
 		}
 
 		/* Start up the I/O watchdog timer, if it's not running */
-		if (!timer_pending(&ohci->io_watchdog) &&
-				list_empty(&ohci->eds_in_use)) {
+		if (ohci->prev_frame_no == IO_WATCHDOG_OFF &&
+				list_empty(&ohci->eds_in_use) &&
+				!(ohci->flags & OHCI_QUIRK_QEMU)) {
 			ohci->prev_frame_no = ohci_frame_no(ohci);
 			mod_timer(&ohci->io_watchdog,
 					jiffies + IO_WATCHDOG_DELAY);
@@ -500,6 +502,7 @@ static int ohci_init (struct ohci_hcd *ohci)
 
 	setup_timer(&ohci->io_watchdog, io_watchdog_func,
 			(unsigned long) ohci);
+	ohci->prev_frame_no = IO_WATCHDOG_OFF;
 
 	ohci->hcca = dma_alloc_coherent (hcd->self.controller,
 			sizeof(*ohci->hcca), &ohci->hcca_dma, GFP_KERNEL);
@@ -729,7 +732,7 @@ static void io_watchdog_func(unsigned long _ohci)
 	u32		head;
 	struct ed	*ed;
 	struct td	*td, *td_start, *td_next;
-	unsigned	frame_no;
+	unsigned	frame_no, prev_frame_no = IO_WATCHDOG_OFF;
 	unsigned long	flags;
 
 	spin_lock_irqsave(&ohci->lock, flags);
@@ -834,7 +837,7 @@ static void io_watchdog_func(unsigned long _ohci)
 			}
 		}
 		if (!list_empty(&ohci->eds_in_use)) {
-			ohci->prev_frame_no = frame_no;
+			prev_frame_no = frame_no;
 			ohci->prev_wdh_cnt = ohci->wdh_cnt;
 			ohci->prev_donehead = ohci_readl(ohci,
 					&ohci->regs->donehead);
@@ -844,6 +847,7 @@ static void io_watchdog_func(unsigned long _ohci)
 	}
 
  done:
+	ohci->prev_frame_no = prev_frame_no;
 	spin_unlock_irqrestore(&ohci->lock, flags);
 }
 
@@ -972,6 +976,7 @@ static void ohci_stop (struct usb_hcd *hcd)
 	if (quirk_nec(ohci))
 		flush_work(&ohci->nec_work);
 	del_timer_sync(&ohci->io_watchdog);
+	ohci->prev_frame_no = IO_WATCHDOG_OFF;
 
 	ohci_writel (ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
 	ohci_usb_reset(ohci);

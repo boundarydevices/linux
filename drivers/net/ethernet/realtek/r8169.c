@@ -326,6 +326,7 @@ enum cfg_version {
 static const struct pci_device_id rtl8169_pci_tbl[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_REALTEK,	0x8129), 0, 0, RTL_CFG_0 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_REALTEK,	0x8136), 0, 0, RTL_CFG_2 },
+	{ PCI_DEVICE(PCI_VENDOR_ID_REALTEK,	0x8161), 0, 0, RTL_CFG_1 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_REALTEK,	0x8167), 0, 0, RTL_CFG_0 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_REALTEK,	0x8168), 0, 0, RTL_CFG_1 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_REALTEK,	0x8169), 0, 0, RTL_CFG_0 },
@@ -896,8 +897,16 @@ static void rtl_unlock_work(struct rtl8169_private *tp)
 
 static void rtl_tx_performance_tweak(struct pci_dev *pdev, u16 force)
 {
+	u16 ctl;
+
+	pcie_capability_read_word(pdev, PCI_EXP_DEVCTL, &ctl);
+	dev_info(&pdev->dev, "MRRS = %d, MPS = %d\n",
+		128 << ((ctl & PCI_EXP_DEVCTL_READRQ) >> 12),
+		128 << ((ctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
+#if 0
 	pcie_capability_clear_and_set_word(pdev, PCI_EXP_DEVCTL,
 					   PCI_EXP_DEVCTL_READRQ, force);
+#endif
 }
 
 struct rtl_cond {
@@ -1386,7 +1395,7 @@ DECLARE_RTL_COND(rtl_ocp_tx_cond)
 {
 	void __iomem *ioaddr = tp->mmio_addr;
 
-	return RTL_R8(IBISR0) & 0x02;
+	return RTL_R8(IBISR0) & 0x20;
 }
 
 static void rtl8168ep_stop_cmac(struct rtl8169_private *tp)
@@ -1394,7 +1403,7 @@ static void rtl8168ep_stop_cmac(struct rtl8169_private *tp)
 	void __iomem *ioaddr = tp->mmio_addr;
 
 	RTL_W8(IBCR2, RTL_R8(IBCR2) & ~0x01);
-	rtl_msleep_loop_wait_low(tp, &rtl_ocp_tx_cond, 50, 2000);
+	rtl_msleep_loop_wait_high(tp, &rtl_ocp_tx_cond, 50, 2000);
 	RTL_W8(IBISR0, RTL_R8(IBISR0) | 0x20);
 	RTL_W8(IBCR0, RTL_R8(IBCR0) & ~0x01);
 }
@@ -2221,19 +2230,14 @@ static bool rtl8169_do_counters(struct net_device *dev, u32 counter_cmd)
 	void __iomem *ioaddr = tp->mmio_addr;
 	dma_addr_t paddr = tp->counters_phys_addr;
 	u32 cmd;
-	bool ret;
 
 	RTL_W32(CounterAddrHigh, (u64)paddr >> 32);
+	RTL_R32(CounterAddrHigh);
 	cmd = (u64)paddr & DMA_BIT_MASK(32);
 	RTL_W32(CounterAddrLow, cmd);
 	RTL_W32(CounterAddrLow, cmd | counter_cmd);
 
-	ret = rtl_udelay_loop_wait_low(tp, &rtl_counters_cond, 10, 1000);
-
-	RTL_W32(CounterAddrLow, 0);
-	RTL_W32(CounterAddrHigh, 0);
-
-	return ret;
+	return rtl_udelay_loop_wait_low(tp, &rtl_counters_cond, 10, 1000);
 }
 
 static bool rtl8169_reset_counters(struct net_device *dev)

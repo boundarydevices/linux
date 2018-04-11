@@ -690,7 +690,7 @@ MMC_DEV_ATTR(manfid, "0x%06x\n", card->cid.manfid);
 MMC_DEV_ATTR(name, "%s\n", card->cid.prod_name);
 MMC_DEV_ATTR(oemid, "0x%04x\n", card->cid.oemid);
 MMC_DEV_ATTR(serial, "0x%08x\n", card->cid.serial);
-MMC_DEV_ATTR(ocr, "%08x\n", card->ocr);
+MMC_DEV_ATTR(ocr, "0x%08x\n", card->ocr);
 
 
 static ssize_t mmc_dsr_show(struct device *dev,
@@ -793,8 +793,7 @@ try_again:
 	 */
 	if (!mmc_host_is_spi(host) && rocr &&
 	   ((*rocr & 0x41000000) == 0x41000000)) {
-		err = mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180,
-					pocr);
+		err = mmc_set_uhs_voltage(host, pocr);
 		if (err == -EAGAIN) {
 			retries--;
 			goto try_again;
@@ -950,6 +949,18 @@ unsigned mmc_sd_get_max_clock(struct mmc_card *card)
 	return max_dtr;
 }
 
+static bool mmc_sd_card_using_v18(struct mmc_card *card)
+{
+	/*
+	 * According to the SD spec., the Bus Speed Mode (function group 1) bits
+	 * 2 to 4 are zero if the card is initialized at 3.3V signal level. Thus
+	 * they can be used to determine if the card has already switched to
+	 * 1.8V signaling.
+	 */
+	return card->sw_caps.sd3_bus_mode &
+	       (SD_MODE_UHS_SDR50 | SD_MODE_UHS_SDR104 | SD_MODE_UHS_DDR50);
+}
+
 /*
  * Handle the detection and initialisation of a card.
  *
@@ -963,10 +974,11 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 	int err;
 	u32 cid[4];
 	u32 rocr = 0;
+	bool v18_fixup_failed = false;
 
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
-
+retry:
 	err = mmc_sd_get_cid(host, ocr, cid, &rocr);
 	if (err)
 		return err;
@@ -1032,6 +1044,36 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 	if (err)
 		goto free_card;
 
+	/*
+	 * If the card has not been power cycled, it may still be using 1.8V
+	 * signaling. Detect that situation and try to initialize a UHS-I (1.8V)
+	 * transfer mode.
+	 */
+	if (!v18_fixup_failed && !mmc_host_is_spi(host) && mmc_host_uhs(host) &&
+	    mmc_sd_card_using_v18(card) &&
+	    host->ios.signal_voltage != MMC_SIGNAL_VOLTAGE_180) {
+		/*
+		 * Re-read switch information in case it has changed since
+		 * oldcard was initialized.
+		 */
+		if (oldcard) {
+			err = mmc_read_switch(card);
+			if (err)
+				goto free_card;
+		}
+		if (mmc_sd_card_using_v18(card)) {
+			if (mmc_host_set_uhs_voltage(host) ||
+			    mmc_sd_init_uhs_card(card)) {
+				v18_fixup_failed = true;
+				mmc_power_cycle(host, ocr);
+				if (!oldcard)
+					mmc_remove_card(card);
+				goto retry;
+			}
+			goto done;
+		}
+	}
+
 	/* Initialization sequence for UHS-I cards */
 	if (rocr & SD_ROCR_S18A) {
 		err = mmc_sd_init_uhs_card(card);
@@ -1064,7 +1106,7 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 			mmc_set_bus_width(host, MMC_BUS_WIDTH_4);
 		}
 	}
-
+done:
 	host->card = card;
 	return 0;
 

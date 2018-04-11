@@ -159,10 +159,8 @@ static long _ipu_pixel_clk_div_round_rate(struct clk_hw *hw, unsigned long rate,
 		div &= 0xFF8;
 	else {
 		/* Round up divider if it gets us closer to desired pix clk */
-		if ((div & 0xC) == 0xC) {
-			div += 0x10;
-			div &= ~0xF;
-		}
+		div += 0x4;
+		div &= ~0x7;
 	}
 	final_rate = parent_rate;
 	do_div(final_rate, div);
@@ -178,21 +176,25 @@ static int _ipu_pixel_clk_div_set_rate(struct clk_hw *hw, unsigned long rate,
 	u64 div, parent_rate;
 	u32 remainder;
 
-	parent_rate = (unsigned long long)parent_clk_rate * 16;
-	div = parent_rate;
-	remainder = do_div(div, rate);
-	/* Round the divider value */
-	if (remainder > (rate/2))
-		div++;
+	if (rate) {
+		parent_rate = (unsigned long long)parent_clk_rate * 16;
+		div = parent_rate;
+		remainder = do_div(div, rate);
+		/* Round the divider value */
+		if (remainder > (rate/2))
+			div++;
 
-	/* Round up divider if it gets us closer to desired pix clk */
-	if ((div & 0xC) == 0xC) {
-		div += 0x10;
-		div &= ~0xF;
+		/* Round up divider if it gets us closer to desired pix clk */
+		div += 0x4;
+		div &= ~0x7;
+		if (div >= 0x1000) {
+			pr_err("Overflow, di:%d, DI_BS_CLKGEN0 div:0x%x desired rate=%ld\n",
+				di_div->di_id, (u32)div, rate);
+			div = 0xff8;
+		}
+	} else {
+		div = 0xff8;
 	}
-	if (div > 0x1000)
-		pr_err("Overflow, di:%d, DI_BS_CLKGEN0 div:0x%x\n",
-				di_div->di_id, (u32)div);
 	_ipu_get(ipu);
 	ipu_di_write(ipu, di_div->di_id, (u32)div, DI_BS_CLKGEN0);
 

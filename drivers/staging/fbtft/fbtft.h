@@ -93,6 +93,7 @@ struct fbtft_ops {
 
 	int (*set_var)(struct fbtft_par *par);
 	int (*set_gamma)(struct fbtft_par *par, unsigned long *curves);
+	int (*read_scanline)(struct fbtft_par *par);
 };
 
 /**
@@ -149,11 +150,43 @@ struct fbtft_platform_data {
 	unsigned int rotate;
 	bool bgr;
 	unsigned int fps;
+	int gpio_int;
+	unsigned int display_fps;
+	unsigned int te_line;
+	int txbuf_cnt;
 	int txbuflen;
 	u8 startbyte;
 	char *gamma;
 	void *extra;
 };
+
+struct txbuf {
+	void *buf;
+	dma_addr_t dma;
+	size_t len;
+};
+
+//#define USE_WORKQ
+#ifdef USE_WORKQ
+struct txbuf_work_struct {
+	struct work_struct work;
+	u8 *vmem8;
+	size_t group_cnt;
+	size_t rem;
+};
+#endif
+
+struct message_transfer_par {
+	struct spi_message m;
+	struct spi_transfer t;
+	size_t max_tx;
+	struct completion complete;
+	int queued;
+#ifdef USE_WORKQ
+	struct txbuf_work_struct txbuf_work;
+#endif
+};
+
 
 /**
  * struct fbtft_par - Main FBTFT data structure
@@ -207,17 +240,24 @@ struct fbtft_par {
 	struct fbtft_platform_data *pdata;
 	u16 *ssbuf;
 	u32 pseudo_palette[16];
-	struct {
-		void *buf;
-		dma_addr_t dma;
-		size_t len;
-	} txbuf;
+#define MAX_TXBUF_CNT	4
+	int txbuf_cnt;
+	struct txbuf txbuf[MAX_TXBUF_CNT];
 	u8 *buf;
 	u8 startbyte;
 	struct fbtft_ops fbtftops;
 	spinlock_t dirty_lock;
 	unsigned int dirty_lines_start;
 	unsigned int dirty_lines_end;
+	unsigned long irq_enabled;
+	unsigned int irq;
+	int gpio_int;
+	unsigned int dls;
+	unsigned int dle;
+	unsigned int display_fps;
+	unsigned int te_line;
+#define FB_IDLE_DISABLE_CNT	6
+	unsigned int fb_idle_cnt;
 	struct {
 		int reset;
 		int dc;
@@ -241,6 +281,10 @@ struct fbtft_par {
 	ktime_t update_time;
 	bool bgr;
 	void *extra;
+	struct message_transfer_par _mtp[MAX_TXBUF_CNT];
+	unsigned char scanline_cmd[64] ____cacheline_aligned;
+	unsigned char scanline_result[64] ____cacheline_aligned;
+	unsigned char tx_high[64] ____cacheline_aligned;
 };
 
 #define NUMARGS(...)  (sizeof((int[]){__VA_ARGS__})/sizeof(int))
@@ -277,10 +321,12 @@ int fbtft_write_vmem8_bus8(struct fbtft_par *par, size_t offset, size_t len);
 int fbtft_write_vmem16_bus16(struct fbtft_par *par, size_t offset, size_t len);
 int fbtft_write_vmem16_bus8(struct fbtft_par *par, size_t offset, size_t len);
 int fbtft_write_vmem16_bus9(struct fbtft_par *par, size_t offset, size_t len);
+int fbtft_write_vmem24_bus9(struct fbtft_par *par, size_t offset, size_t len);
 void fbtft_write_reg8_bus8(struct fbtft_par *par, int len, ...);
 void fbtft_write_reg8_bus9(struct fbtft_par *par, int len, ...);
 void fbtft_write_reg16_bus8(struct fbtft_par *par, int len, ...);
 void fbtft_write_reg16_bus16(struct fbtft_par *par, int len, ...);
+int fbtft_read_reg_n(struct fbtft_par *par, void *tbuf1, size_t len, void *rbuf2, int bits);
 
 #define FBTFT_REGISTER_DRIVER(_name, _compatible, _display)                \
 									   \

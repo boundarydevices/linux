@@ -317,12 +317,12 @@ int t4_wr_mbox_meat_timeout(struct adapter *adap, int mbox, const void *cmd,
 
 	if (v != MBOX_OWNER_DRV) {
 		ret = (v == MBOX_OWNER_FW) ? -EBUSY : -ETIMEDOUT;
-		t4_record_mbox(adap, cmd, MBOX_LEN, access, ret);
+		t4_record_mbox(adap, cmd, size, access, ret);
 		return ret;
 	}
 
 	/* Copy in the new mailbox command and send it on its way ... */
-	t4_record_mbox(adap, cmd, MBOX_LEN, access, 0);
+	t4_record_mbox(adap, cmd, size, access, 0);
 	for (i = 0; i < size; i += 8)
 		t4_write_reg64(adap, data_reg + i, be64_to_cpu(*p++));
 
@@ -371,7 +371,7 @@ int t4_wr_mbox_meat_timeout(struct adapter *adap, int mbox, const void *cmd,
 	}
 
 	ret = (pcie_fw & PCIE_FW_ERR_F) ? -ENXIO : -ETIMEDOUT;
-	t4_record_mbox(adap, cmd, MBOX_LEN, access, ret);
+	t4_record_mbox(adap, cmd, size, access, ret);
 	dev_err(adap->pdev_dev, "command %#x in mailbox %d timed out\n",
 		*(const u8 *)cmd, mbox);
 	t4_report_fw_error(adap);
@@ -2596,7 +2596,6 @@ void t4_get_regs(struct adapter *adap, void *buf, size_t buf_size)
 }
 
 #define EEPROM_STAT_ADDR   0x7bfc
-#define VPD_SIZE           0x800
 #define VPD_BASE           0x400
 #define VPD_BASE_OLD       0
 #define VPD_LEN            1024
@@ -2633,15 +2632,6 @@ int t4_get_raw_vpd_params(struct adapter *adapter, struct vpd_params *p)
 	vpd = vmalloc(VPD_LEN);
 	if (!vpd)
 		return -ENOMEM;
-
-	/* We have two VPD data structures stored in the adapter VPD area.
-	 * By default, Linux calculates the size of the VPD area by traversing
-	 * the first VPD area at offset 0x0, so we need to tell the OS what
-	 * our real VPD size is.
-	 */
-	ret = pci_set_vpd_size(adapter->pdev, VPD_SIZE);
-	if (ret < 0)
-		goto out;
 
 	/* Card information normally starts at VPD_BASE but early cards had
 	 * it at 0.

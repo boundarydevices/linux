@@ -249,7 +249,10 @@ struct pltfm_imx_data {
 		WAIT_FOR_INT,        /* sent CMD12, waiting for response INT */
 	} multiblock_status;
 	u32 is_ddr;
+	u32 disable_caps;
+	u32 enable_caps;
 	struct pm_qos_request pm_qos_req;
+	unsigned max_clock;
 };
 
 static const struct platform_device_id imx_esdhc_devtype[] = {
@@ -343,6 +346,8 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 			val &= ~SDHCI_CAN_DO_ADMA1;
 			val |= SDHCI_CAN_DO_ADMA2;
 		}
+		val &= ~imx_data->disable_caps;
+		val |= imx_data->enable_caps;
 	}
 
 	if (unlikely(reg == SDHCI_CAPABILITIES_1)) {
@@ -353,8 +358,7 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 				/* imx6q/dl does not have cap_1 register, fake one */
 				val = SDHCI_SUPPORT_DDR50 | SDHCI_SUPPORT_SDR104
 					| SDHCI_SUPPORT_SDR50
-					| SDHCI_USE_SDR50_TUNING
-					| (SDHCI_TUNING_MODE_3 << SDHCI_RETUNING_MODE_SHIFT);
+					| SDHCI_USE_SDR50_TUNING;
 
 			if (imx_data->socdata->flags & ESDHC_FLAG_HS400)
 				val |= SDHCI_SUPPORT_HS400;
@@ -524,15 +528,16 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			new_val &= ~ESDHC_VENDOR_SPEC_VSELECT;
 		writel(new_val, host->ioaddr + ESDHC_VENDOR_SPEC);
 		if (imx_data->socdata->flags & ESDHC_FLAG_MAN_TUNING) {
-			new_val = readl(host->ioaddr + ESDHC_MIX_CTRL);
+			u32 m = readl(host->ioaddr + ESDHC_MIX_CTRL);
+
 			if (val & SDHCI_CTRL_TUNED_CLK) {
-				new_val |= ESDHC_MIX_CTRL_SMPCLK_SEL;
-				new_val |= ESDHC_MIX_CTRL_AUTO_TUNE_EN;
+				m |= ESDHC_MIX_CTRL_SMPCLK_SEL;
 			} else {
-				new_val &= ~ESDHC_MIX_CTRL_SMPCLK_SEL;
-				new_val &= ~ESDHC_MIX_CTRL_AUTO_TUNE_EN;
+				m &= ~ESDHC_MIX_CTRL_SMPCLK_SEL;
+				m &= ~ESDHC_MIX_CTRL_FBCLK_SEL;
+				m &= ~ESDHC_MIX_CTRL_AUTO_TUNE_EN;
 			}
-			writel(new_val , host->ioaddr + ESDHC_MIX_CTRL);
+			writel(m, host->ioaddr + ESDHC_MIX_CTRL);
 		} else if (imx_data->socdata->flags & ESDHC_FLAG_STD_TUNING) {
 			u32 v = readl(host->ioaddr + SDHCI_ACMD12_ERR);
 			u32 m = readl(host->ioaddr + ESDHC_MIX_CTRL);
@@ -547,7 +552,6 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			if (val & SDHCI_CTRL_EXEC_TUNING) {
 				v |= ESDHC_MIX_CTRL_EXE_TUNE;
 				m |= ESDHC_MIX_CTRL_FBCLK_SEL;
-				m |= ESDHC_MIX_CTRL_AUTO_TUNE_EN;
 			} else {
 				v &= ~ESDHC_MIX_CTRL_EXE_TUNE;
 			}
@@ -728,7 +732,8 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
 		}
 		return;
 	}
-
+	if (clock > imx_data->max_clock)
+		clock = imx_data->max_clock;
 	if (esdhc_is_usdhc(imx_data) && !imx_data->is_ddr)
 		pre_div = 1;
 
@@ -833,11 +838,14 @@ static void esdhc_prepare_tuning(struct sdhci_host *host, u32 val)
 
 static void esdhc_post_tuning(struct sdhci_host *host)
 {
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = sdhci_pltfm_priv(pltfm_host);
 	u32 reg;
 
 	reg = readl(host->ioaddr + ESDHC_MIX_CTRL);
 	reg &= ~ESDHC_MIX_CTRL_EXE_TUNE;
-	reg |= ESDHC_MIX_CTRL_AUTO_TUNE_EN;
+	if (imx_data->socdata->flags & ESDHC_FLAG_STD_TUNING)
+		reg |= ESDHC_MIX_CTRL_AUTO_TUNE_EN;
 	writel(reg, host->ioaddr + ESDHC_MIX_CTRL);
 }
 
@@ -1159,11 +1167,38 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "fsl,tuning-step", &boarddata->tuning_step);
 	of_property_read_u32(np, "fsl,tuning-start-tap",
 			     &boarddata->tuning_start_tap);
+	of_property_read_u32(np, "max-clock", &boarddata->max_clock);
+
+	if (of_find_property(np, "disable-adma2", NULL))
+		imx_data->disable_caps |= SDHCI_CAN_DO_ADMA2;
+
+	if (of_find_property(np, "disable-adma1", NULL))
+		imx_data->disable_caps |= SDHCI_CAN_DO_ADMA1;
+
+	if (of_find_property(np, "disable-sdma", NULL))
+		imx_data->disable_caps |= SDHCI_CAN_DO_SDMA;
+
+	if (of_find_property(np, "enable-adma2", NULL))
+		imx_data->enable_caps |= SDHCI_CAN_DO_ADMA2;
+
+	if (of_find_property(np, "enable-adma1", NULL))
+		imx_data->enable_caps |= SDHCI_CAN_DO_ADMA1;
+
+	if (of_find_property(np, "enable-sdma", NULL))
+		imx_data->enable_caps |= SDHCI_CAN_DO_SDMA;
+
+	if (imx_data->disable_caps | imx_data->enable_caps) {
+		dev_info(mmc_dev(host->mmc), "disable_caps=%x enable_caps=%x\n",
+				imx_data->disable_caps, imx_data->enable_caps);
+	}
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		boarddata->support_vsel = false;
 	else
 		boarddata->support_vsel = true;
+
+	if (of_find_property(np, "vqmmc-1-8-v", NULL))
+		boarddata->vqmmc_18v = true;
 
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
@@ -1377,10 +1412,19 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	if (imx_data->socdata->flags & ESDHC_FLAG_HS400)
 		host->quirks2 |= SDHCI_QUIRK2_CAPS_BIT63_FOR_HS400;
 
+	if (imx_data->boarddata.vqmmc_18v)
+		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
+
 	if (of_id)
 		err = sdhci_esdhc_imx_probe_dt(pdev, host, imx_data);
 	else
 		err = sdhci_esdhc_imx_probe_nondt(pdev, host, imx_data);
+	imx_data->max_clock = ~0;
+	if (imx_data->boarddata.max_clock) {
+		imx_data->max_clock = imx_data->boarddata.max_clock;
+		dev_info(mmc_dev(host->mmc),
+			"clock limited to %d\n", imx_data->max_clock);
+	}
 	if (err)
 		goto disable_clk;
 

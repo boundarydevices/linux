@@ -747,6 +747,7 @@ isert_connect_error(struct rdma_cm_id *cma_id)
 {
 	struct isert_conn *isert_conn = cma_id->qp->qp_context;
 
+	ib_drain_qp(isert_conn->qp);
 	list_del_init(&isert_conn->node);
 	isert_conn->cm_id = NULL;
 	isert_put_conn(isert_conn);
@@ -1447,7 +1448,7 @@ static void
 isert_login_recv_done(struct ib_cq *cq, struct ib_wc *wc)
 {
 	struct isert_conn *isert_conn = wc->qp->qp_context;
-	struct ib_device *ib_dev = isert_conn->cm_id->device;
+	struct ib_device *ib_dev = isert_conn->device->ib_device;
 
 	if (unlikely(wc->status != IB_WC_SUCCESS)) {
 		isert_print_wc(wc, "login recv");

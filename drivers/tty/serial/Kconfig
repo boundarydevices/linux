@@ -1161,6 +1161,13 @@ config SERIAL_QE
 	  This driver supports the QE serial ports on Freescale embedded
 	  PowerPC that contain a QUICC Engine.
 
+config SERIAL_GPS_MAX7W
+	tristate "i2c serial port gps max7w support"
+	select SERIAL_CORE
+	help
+	  If you have a max7w gps chip using I2C interface you
+	  can enable it with this option.
+
 config SERIAL_SCCNXP
 	tristate "SCCNXP serial port support"
 	select SERIAL_CORE
@@ -1663,6 +1670,13 @@ config SERIAL_MVEBU_CONSOLE
 	  and warnings and which allows logins in single user mode)
 	  Otherwise, say 'N'.
 
+config SERIAL_XR20M117X
+	tristate "SERIAL_XR20M117X serial support"
+	depends on I2C
+	select SERIAL_CORE
+	select REGMAP_I2C if I2C
+	help
+	  This selects support for SERIAL_XR20M117X serial ports.
 endmenu
 
 config SERIAL_MCTRL_GPIO

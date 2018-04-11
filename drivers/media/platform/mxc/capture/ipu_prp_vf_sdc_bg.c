@@ -98,11 +98,6 @@ static int prpvf_start(void *private)
 	u32 offset;
 	u32 bpp, size = 3;
 	int err = 0;
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
-#endif
 
 	if (!cam) {
 		printk(KERN_ERR "private is NULL\n");
@@ -154,39 +149,15 @@ static int prpvf_start(void *private)
 	vf.csi_prp_vf_mem.out_pixel_fmt = format;
 	size = cam->win.w.width * cam->win.w.height * size;
 
-#ifdef CONFIG_MXC_MIPI_CSI2
-	mipi_csi2_info = mipi_csi2_get_info();
+	err = cam_mipi_csi2_enable(cam, &vf.csi_prp_vf_mem.mipi);
+	if (err)
+		return err;
 
-	if (mipi_csi2_info) {
-		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-			csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-			if (cam->ipu == ipu_get_soc(ipu_id)
-				&& cam->csi == csi_id) {
-				vf.csi_prp_vf_mem.mipi_en = true;
-				vf.csi_prp_vf_mem.mipi_vc =
-				mipi_csi2_get_virtual_channel(mipi_csi2_info);
-				vf.csi_prp_vf_mem.mipi_id =
-				mipi_csi2_get_datatype(mipi_csi2_info);
-
-				mipi_csi2_pixelclk_enable(mipi_csi2_info);
-			} else {
-				vf.csi_prp_vf_mem.mipi_en = false;
-				vf.csi_prp_vf_mem.mipi_vc = 0;
-				vf.csi_prp_vf_mem.mipi_id = 0;
-			}
-		} else {
-			vf.csi_prp_vf_mem.mipi_en = false;
-			vf.csi_prp_vf_mem.mipi_vc = 0;
-			vf.csi_prp_vf_mem.mipi_id = 0;
-		}
-	}
-#endif
-
-	err = ipu_init_channel(cam->ipu, CSI_PRP_VF_MEM, &vf);
-	if (err != 0)
+	err = ipu_channel_request(cam->ipu, CSI_PRP_VF_MEM, &vf, &cam->ipu_chan);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d\n", __func__, err);
 		goto out_4;
+	}
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -232,9 +203,9 @@ static int prpvf_start(void *private)
 		printk(KERN_ERR "Error initializing CSI_PRP_VF_MEM\n");
 		goto out_3;
 	}
-	err = ipu_init_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
-	if (err != 0) {
-		printk(KERN_ERR "Error MEM_ROT_VF_MEM channel\n");
+	err = ipu_channel_request(cam->ipu, MEM_ROT_VF_MEM, NULL, &cam->ipu_chan_rot);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d for rot\n", __func__, err);
 		goto out_3;
 	}
 
@@ -313,9 +284,9 @@ static int prpvf_start(void *private)
 out_1:
 	ipu_free_irq(cam->ipu, IPU_IRQ_PRP_VF_OUT_EOF, NULL);
 out_2:
-	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+	ipu_channel_free(&cam->ipu_chan_rot);
 out_3:
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
+	ipu_channel_free(&cam->ipu_chan);
 out_4:
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -354,37 +325,20 @@ out_4:
  */
 static int prpvf_stop(void *private)
 {
+	int err = 0;
 	cam_data *cam = (cam_data *) private;
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
-#endif
 
 	if (cam->overlay_active == false)
 		return 0;
 
 	ipu_free_irq(disp_ipu, IPU_IRQ_BG_SF_END, cam);
 
-	ipu_disable_channel(cam->ipu, CSI_PRP_VF_MEM, true);
-	ipu_disable_channel(cam->ipu, MEM_ROT_VF_MEM, true);
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
-	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+	ipu_channel_disable(cam->ipu_chan, true);
+	ipu_channel_disable(cam->ipu_chan_rot, true);
+	ipu_channel_free(&cam->ipu_chan);
+	ipu_channel_free(&cam->ipu_chan_rot);
 
-#ifdef CONFIG_MXC_MIPI_CSI2
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	if (mipi_csi2_info) {
-		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-			csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-			if (cam->ipu == ipu_get_soc(ipu_id)
-				&& cam->csi == csi_id)
-				mipi_csi2_pixelclk_disable(mipi_csi2_info);
-		}
-	}
-#endif
+	err = cam_mipi_csi2_disable(cam);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -416,7 +370,7 @@ static int prpvf_stop(void *private)
 	buffer_num = 0;
 	buffer_ready = 0;
 	cam->overlay_active = false;
-	return 0;
+	return err;
 }
 
 /*!
@@ -427,9 +381,7 @@ static int prpvf_stop(void *private)
  */
 static int prp_vf_enable_csi(void *private)
 {
-	cam_data *cam = (cam_data *) private;
-
-	return ipu_enable_csi(cam->ipu, cam->csi);
+	return cam_ipu_enable_csi((cam_data *)private);
 }
 
 /*!
@@ -446,8 +398,7 @@ static int prp_vf_disable_csi(void *private)
 	 * when disable csi, wait for idmac eof.
 	 * it requests eof irq again */
 	ipu_free_irq(cam->ipu, IPU_IRQ_PRP_VF_OUT_EOF, cam);
-
-	return ipu_disable_csi(cam->ipu, cam->csi);
+	return cam_ipu_disable_csi(cam);
 }
 
 /*!

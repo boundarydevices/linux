@@ -153,7 +153,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
-		return -ENODEV;
+		return irq;
 
 	/* Try to set 64-bit DMA first */
 	if (WARN_ON(!pdev->dev.dma_mask))
@@ -222,6 +222,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
 
 	if (device_property_read_bool(&pdev->dev, "usb3-lpm-capable"))
 		xhci->quirks |= XHCI_LPM_SUPPORT;
+
+	if (device_property_read_bool(&pdev->dev, "quirk-broken-port-ped"))
+		xhci->quirks |= XHCI_BROKEN_PORT_PED;
 
 	hcd->usb_phy = devm_usb_get_phy_by_phandle(&pdev->dev, "usb-phy", 0);
 	if (IS_ERR(hcd->usb_phy)) {
@@ -332,6 +335,7 @@ MODULE_DEVICE_TABLE(acpi, usb_xhci_acpi_match);
 static struct platform_driver usb_xhci_driver = {
 	.probe	= xhci_plat_probe,
 	.remove	= xhci_plat_remove,
+	.shutdown	= usb_hcd_platform_shutdown,
 	.driver	= {
 		.name = "xhci-hcd",
 		.pm = DEV_PM_OPS,

@@ -22,11 +22,11 @@
 #include <linux/sched.h>
 #include <linux/completion.h>
 #include <linux/scatterlist.h>
+#include <linux/mmc/host.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/core.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/card.h>
-#include <linux/mmc/host.h>
 #include <linux/pm_runtime.h>
 #include <linux/suspend.h>
 #include <linux/errno.h>
@@ -705,7 +705,7 @@ done:
 int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev *sdiodev,
 			   struct sk_buff_head *pktq, uint totlen)
 {
-	struct sk_buff *glom_skb;
+	struct sk_buff *glom_skb = NULL;
 	struct sk_buff *skb;
 	u32 addr = sdiodev->sbwad;
 	int err = 0;
@@ -726,10 +726,8 @@ int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev *sdiodev,
 			return -ENOMEM;
 		err = brcmf_sdiod_buffrw(sdiodev, SDIO_FUNC_2, false, addr,
 					 glom_skb);
-		if (err) {
-			brcmu_pkt_buf_free_skb(glom_skb);
+		if (err)
 			goto done;
-		}
 
 		skb_queue_walk(pktq, skb) {
 			memcpy(skb->data, glom_skb->data, skb->len);
@@ -740,6 +738,7 @@ int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev *sdiodev,
 					    pktq);
 
 done:
+	brcmu_pkt_buf_free_skb(glom_skb);
 	return err;
 }
 
@@ -1106,6 +1105,7 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
 	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_4345),
 	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_4354),
 	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_4356),
+	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_5332),
 	{ /* end: all zeroes */ }
 };
 MODULE_DEVICE_TABLE(sdio, brcmf_sdmmc_ids);

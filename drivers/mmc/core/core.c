@@ -1666,7 +1666,7 @@ u32 mmc_select_voltage(struct mmc_host *host, u32 ocr)
 	return ocr;
 }
 
-int __mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage)
+int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage)
 {
 	int err = 0;
 	int old_signal_voltage = host->ios.signal_voltage;
@@ -1682,20 +1682,35 @@ int __mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage)
 
 }
 
-int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
+int mmc_host_set_uhs_voltage(struct mmc_host *host)
+{
+	u32 clock;
+
+	/*
+	 * During a signal voltage level switch, the clock must be gated
+	 * for 5 ms according to the SD spec
+	 */
+	clock = host->ios.clock;
+	host->ios.clock = 0;
+	mmc_set_ios(host);
+
+	if (mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180))
+		return -EAGAIN;
+
+	/* Keep clock gated for at least 10 ms, though spec only says 5 ms */
+	mmc_delay(10);
+	host->ios.clock = clock;
+	mmc_set_ios(host);
+
+	return 0;
+}
+
+int mmc_set_uhs_voltage(struct mmc_host *host, u32 ocr)
 {
 	struct mmc_command cmd = {0};
 	int err = 0;
-	u32 clock;
 
 	BUG_ON(!host);
-
-	/*
-	 * Send CMD11 only if the request is to switch the card to
-	 * 1.8V signalling.
-	 */
-	if (signal_voltage == MMC_SIGNAL_VOLTAGE_330)
-		return __mmc_set_signal_voltage(host, signal_voltage);
 
 	/*
 	 * If we cannot switch voltages, return failure so the caller
@@ -1727,15 +1742,8 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 		err = -EAGAIN;
 		goto power_cycle;
 	}
-	/*
-	 * During a signal voltage level switch, the clock must be gated
-	 * for 5 ms according to the SD spec
-	 */
-	clock = host->ios.clock;
-	host->ios.clock = 0;
-	mmc_set_ios(host);
 
-	if (__mmc_set_signal_voltage(host, signal_voltage)) {
+	if (mmc_host_set_uhs_voltage(host)) {
 		/*
 		 * Voltages may not have been switched, but we've already
 		 * sent CMD11, so a power cycle is required anyway
@@ -1744,11 +1752,6 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 		goto power_cycle;
 	}
 
-	/* Keep clock gated for at least 10 ms, though spec only says 5 ms */
-	mmc_delay(10);
-	host->ios.clock = clock;
-	mmc_set_ios(host);
-
 	/* Wait for at least 1 ms according to spec */
 	mmc_delay(1);
 
@@ -1756,8 +1759,10 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 	 * Failure to switch is indicated by the card holding
 	 * dat[0:3] low
 	 */
-	if (host->ops->card_busy && host->ops->card_busy(host))
+	if (host->ops->card_busy && host->ops->card_busy(host)) {
 		err = -EAGAIN;
+		pr_debug("%s: power switch failed, err=%d\n", __func__, err);
+	}
 
 power_cycle:
 	if (err) {
@@ -1844,11 +1849,11 @@ void mmc_power_up(struct mmc_host *host, u32 ocr)
 	mmc_set_initial_state(host);
 
 	/* Try to set signal voltage to 3.3V but fall back to 1.8v or 1.2v */
-	if (__mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_330) == 0)
+	if (!mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_330))
 		dev_dbg(mmc_dev(host), "Initial signal voltage of 3.3v\n");
-	else if (__mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180) == 0)
+	else if (!mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180))
 		dev_dbg(mmc_dev(host), "Initial signal voltage of 1.8v\n");
-	else if (__mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_120) == 0)
+	else if (!mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_120))
 		dev_dbg(mmc_dev(host), "Initial signal voltage of 1.2v\n");
 
 	/*

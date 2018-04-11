@@ -143,6 +143,11 @@ config I2C_DEBUG_BUS
 	  a problem with I2C support and want to see more of what is going
 	  on.
 
+config I2C_RESERVE
+	bool "I2C address reserve"
+	help
+	  Say Y here if you want to make some addresses off limits to i2cdetect.
+
 endif # I2C
 
 endmenu

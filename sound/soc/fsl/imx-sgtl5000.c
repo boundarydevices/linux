@@ -14,7 +14,10 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/i2c.h>
+#include <linux/of_gpio.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
+#include <sound/jack.h>
 #include <sound/soc.h>
 
 #include "../codecs/sgtl5000.h"
@@ -29,7 +32,111 @@ struct imx_sgtl5000_data {
 	char platform_name[DAI_NAME_SIZE];
 	struct clk *codec_clk;
 	unsigned int clk_frequency;
+	struct gpio_desc *mute_hp;
+	struct gpio_desc *mute_lo;
+	struct gpio_desc *amp_standby;
+#define AMP_GAIN_CNT 2
+	struct gpio_desc *amp_gain[AMP_GAIN_CNT];
+	unsigned char amp_gain_seq[1 << AMP_GAIN_CNT];
+	char amp_gain_value;
+	char mute_hp_value;
+	char hp_disabled;
+	char hp_det_status;
+	char standby_state;
+#ifdef MUTE_OFF_LAST
+	char standby_set_pending;
+	char mute_clear_pending;
+#endif
+	bool limit_16bit_samples;
+	unsigned amp_standby_enter_wait_ms;
+	unsigned amp_standby_exit_delay_ms;
+	int spk_mute_on_hp_detect;
+	struct snd_soc_jack hp_jack;
+	struct snd_soc_jack_pin hp_jack_pins;
+	struct snd_soc_jack_gpio hp_jack_gpio;
 };
+
+static ssize_t show_headphone(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+	struct snd_soc_card *card = dev_get_drvdata(dev);
+	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(card);
+	int hp_det_status;
+
+	if (data->hp_jack_gpio.desc) {
+		/* Check if headphone is plugged in */
+		hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
+
+		if (hp_det_status)
+			strcpy(buf, "headphone\n");
+		else
+			strcpy(buf, "speaker\n");
+	} else {
+		strcpy(buf, "no detect gpio connected\n");
+	}
+	return strlen(buf);
+}
+
+static DEVICE_ATTR(headphone, S_IRUGO, show_headphone, NULL);
+
+static int hpjack_status_check(void *_data)
+{
+	struct imx_sgtl5000_data *data = _data;
+	int hp_det_status, ret;
+
+	if (!data->hp_jack_gpio.desc)
+		return 0;
+
+	hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
+	if (data->spk_mute_on_hp_detect) {
+		if (hp_det_status && !data->hp_disabled) {
+			int i;
+
+			for (i = 0; i < 5; i++) {
+				hp_det_status = gpiod_get_value_cansleep(
+						data->hp_jack_gpio.desc);
+				if (!hp_det_status)
+					break;
+				msleep(1);
+			}
+		}
+		gpiod_set_value_cansleep(data->mute_hp,
+			hp_det_status | data->hp_disabled);
+	}
+	data->hp_det_status = hp_det_status;
+	if (!hp_det_status)
+		ret = 0;
+	else
+		ret = data->hp_jack_gpio.report;
+	return ret;
+}
+
+static int hp_init(struct device *dev, struct imx_sgtl5000_data *data)
+{
+	int ret;
+
+	data->hp_jack_pins.pin = "Headphone Jack";
+	data->hp_jack_pins.mask = SND_JACK_HEADPHONE;
+	data->hp_jack_gpio.name = "headphone detect";
+	data->hp_jack_gpio.report = SND_JACK_HEADPHONE;
+	data->hp_jack_gpio.debounce_time = 250;
+
+	data->hp_jack_gpio.gpiod_dev = dev;
+	data->hp_jack_gpio.name = "hp-detect";
+	data->hp_jack_gpio.jack_status_check = hpjack_status_check;
+	data->hp_jack_gpio.data = data;
+
+	ret = snd_soc_card_jack_new(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
+		&data->hp_jack, &data->hp_jack_pins, 1);
+
+	ret = snd_soc_jack_add_gpios(&data->hp_jack, 1, &data->hp_jack_gpio);
+	if (!ret)
+		data->hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
+	else
+		snd_soc_jack_report(&data->hp_jack, SND_JACK_HEADPHONE, SND_JACK_HEADPHONE);
+
+	return ret;
+}
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
@@ -47,12 +154,207 @@ static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+int do_mute(struct gpio_desc *gd, int mute)
+{
+	if (!gd)
+		return 0;
+
+	gpiod_set_value(gd, mute);
+	return 0;
+}
+
+static int spk_mute(struct imx_sgtl5000_data *data, int mute)
+{
+	data->hp_disabled = data->mute_hp_value = mute;
+	if (!mute && data->spk_mute_on_hp_detect && data->hp_det_status)
+		mute = 1;
+	pr_debug("mute=%x\n", mute);
+	return do_mute(data->mute_hp, mute);
+}
+
+static int spk_stdby(struct imx_sgtl5000_data *data, int stdby)
+{
+	if (!data->amp_standby)
+		return 0;
+	if (stdby == data->standby_state)
+		return 0;
+
+	if (stdby)
+		msleep(data->amp_standby_enter_wait_ms);
+	data->standby_state = stdby;
+	pr_debug("stdby=%x\n", stdby);
+	gpiod_set_value(data->amp_standby, stdby);
+	if (!stdby)
+		msleep(data->amp_standby_exit_delay_ms);
+	return 0;
+}
+
+static int event_spk(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	if (event & SND_SOC_DAPM_POST_PMU) {
+		spk_stdby(data, 0);
+#ifdef MUTE_OFF_LAST
+		data->mute_clear_pending = 1;
+#else
+		spk_mute(data, 0);
+#endif
+		return 0;
+	}
+	if (event & SND_SOC_DAPM_PRE_PMD) {
+		spk_mute(data, 1);
+#ifdef MUTE_OFF_LAST
+		data->standby_set_pending = 1;
+#else
+		spk_stdby(data, 1);
+#endif
+		return 0;
+	}
+	return 0;
+}
+
+#ifdef MUTE_OFF_LAST
+static int event_spk_last(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	if ((event & SND_SOC_DAPM_POST_PMD) && data->standby_set_pending) {
+		data->standby_set_pending = 0;
+		return spk_stdby(data, 1);
+	}
+	if ((event & SND_SOC_DAPM_POST_PMU) && data->mute_clear_pending) {
+		data->mute_clear_pending = 0;
+		return spk_mute(data, 0);
+	}
+	return 0;
+}
+#define SND_SOC_DAPM_POST2(wname, wevent) \
+{	.id = snd_soc_dapm_post, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD, \
+	.subseq = 1}
+
+#endif
+
+static int event_lo(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	return do_mute(data->mute_lo, SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1);
+}
+
 static const struct snd_soc_dapm_widget imx_sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In Jack", NULL),
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-	SND_SOC_DAPM_SPK("Line Out Jack", NULL),
-	SND_SOC_DAPM_SPK("Ext Spk", NULL),
+	SND_SOC_DAPM_SPK("Line Out Jack", event_lo),
+	SND_SOC_DAPM_SPK("Ext Spk", event_spk),
+#ifdef MUTE_OFF_LAST
+	SND_SOC_DAPM_POST2("SPK_POST", event_spk_last),
+#endif
+};
+
+static int imx_sgtl_startup(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(rtd->card);
+
+	if (data->limit_16bit_samples) {
+		snd_pcm_hw_constraint_minmax(substream->runtime,
+			SNDRV_PCM_HW_PARAM_SAMPLE_BITS, 16, 16);
+	}
+	return 0;
+}
+
+
+static struct snd_soc_ops imx_sgtl_ops = {
+	.startup	= imx_sgtl_startup,
+};
+
+
+static int amp_gain_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+	int value = ucontrol->value.integer.value[0];
+	int i;
+
+	if (value >= (1 << AMP_GAIN_CNT))
+		return -EINVAL;
+
+	data->amp_gain_value = value;
+	value = data->amp_gain_seq[value];
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
+		struct gpio_desc *gd = data->amp_gain[i];
+
+		if (!gd)
+			break;
+		gpiod_set_value(gd, value & 1);
+		value >>= 1;
+	}
+	return 0;
+}
+
+static int amp_gain_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	ucontrol->value.integer.value[0] = data->amp_gain_value;
+	return 0;
+}
+
+static int amp_hp_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+	int value = ucontrol->value.integer.value[0];
+
+	if (value > 1)
+		return -EINVAL;
+	value = (value ^ 1 ) | data->hp_disabled;
+	data->mute_hp_value = value;
+	if (data->mute_hp)
+		gpiod_set_value(data->mute_hp, value);
+	return 0;
+}
+
+static int amp_hp_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	ucontrol->value.integer.value[0] = data->mute_hp_value ^ 1;
+	return 0;
+}
+
+static const struct snd_kcontrol_new more_controls[] = {
+	SOC_SINGLE_EXT("amp_gain", 0, 0, (1 << AMP_GAIN_CNT) - 1, 0,
+		       amp_gain_get, amp_gain_set),
+	SOC_SINGLE_EXT("amp_hp", 0, 0, 1, 0,
+		       amp_hp_get, amp_hp_set),
 };
 
 static int imx_sgtl5000_probe(struct platform_device *pdev)
@@ -62,8 +364,15 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	struct platform_device *ssi_pdev;
 	struct i2c_client *codec_dev;
 	struct imx_sgtl5000_data *data = NULL;
+	struct gpio_desc *gd = NULL;
 	int int_port, ext_port;
+	unsigned amp_standby_enter_wait_ms = 0;
+	unsigned amp_standby_exit_delay_ms = 0;
+	int spk_mute_on_hp_detect;
+	const struct snd_kcontrol_new *kcontrols = more_controls;
+	int kcontrols_cnt = ARRAY_SIZE(more_controls);
 	int ret;
+	int i;
 
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
 	if (ret) {
@@ -75,6 +384,9 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "mux-ext-port missing or invalid\n");
 		return ret;
 	}
+	spk_mute_on_hp_detect = of_property_read_bool(np, "spk-mute-on-hp-detect");
+	of_property_read_u32(np, "amp-standby-enter-wait-ms", &amp_standby_enter_wait_ms);
+	of_property_read_u32(np, "amp-standby-exit-delay-ms", &amp_standby_exit_delay_ms);
 
 	/*
 	 * The port numbering in the hardware manual starts at 1, while
@@ -127,6 +439,9 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	data->spk_mute_on_hp_detect = spk_mute_on_hp_detect;
+	data->amp_standby_enter_wait_ms = amp_standby_enter_wait_ms;
+	data->amp_standby_exit_delay_ms = amp_standby_exit_delay_ms;
 	data->codec_clk = clk_get(&codec_dev->dev, NULL);
 	if (IS_ERR(data->codec_clk)) {
 		ret = PTR_ERR(data->codec_clk);
@@ -142,8 +457,49 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.cpu_of_node = ssi_np;
 	data->dai.platform_of_node = ssi_np;
 	data->dai.init = &imx_sgtl5000_dai_init;
+	data->dai.ops = &imx_sgtl_ops;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
+
+	data->limit_16bit_samples = of_property_read_bool(pdev->dev.of_node, "limit-to-16-bit-samples");
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "mute", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
+	}
+	data->mute_hp = gd;
+	data->mute_hp_value = 1;
+	data->standby_state = 1;
+
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "line-out-mute", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
+	}
+	data->mute_lo = gd;
+
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-standby", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
+	}
+	data->amp_standby = gd;
+
+	for (i = 0; i < (1 << AMP_GAIN_CNT); i++)
+		data->amp_gain_seq[i] = i;
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
+		gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-gain", i, GPIOD_OUT_LOW);
+		if (IS_ERR(gd)) {
+			ret = PTR_ERR(gd);
+			goto fail;
+		}
+		data->amp_gain[i] = gd;
+		if (!gd)
+			break;
+	}
+	of_property_read_u8_array(np, "amp-gain-seq", data->amp_gain_seq,
+			(1 << i));
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
@@ -154,6 +510,16 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		goto fail;
 	data->card.num_links = 1;
 	data->card.owner = THIS_MODULE;
+	if (!data->amp_gain[0]) {
+		kcontrols++;
+		kcontrols_cnt--;
+	}
+	if (!data->mute_hp)
+		kcontrols_cnt--;
+	if (kcontrols_cnt) {
+		data->card.controls	 = kcontrols;
+		data->card.num_controls  = kcontrols_cnt;
+	}
 	data->card.dai_link = &data->dai;
 	data->card.dapm_widgets = imx_sgtl5000_dapm_widgets;
 	data->card.num_dapm_widgets = ARRAY_SIZE(imx_sgtl5000_dapm_widgets);
@@ -169,6 +535,11 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 
 	of_node_put(ssi_np);
 	of_node_put(codec_np);
+	if (!hp_init(&pdev->dev, data)) {
+		ret = device_create_file(&pdev->dev, &dev_attr_headphone);
+		if (ret)
+			dev_err(&pdev->dev, "create hp attr failed (%d)\n", ret);
+	}
 
 	return 0;
 
@@ -185,8 +556,22 @@ static int imx_sgtl5000_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(card);
+	int i;
 
+	if (data->amp_standby)
+		gpiod_set_value(data->amp_standby, 1);
+	if (data->mute_lo)
+		gpiod_set_value(data->mute_lo, 1);
+	if (data->mute_hp)
+		gpiod_set_value(data->mute_hp, 1);
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
+		struct gpio_desc *gd = data->amp_gain[i];
+
+		if (gd)
+			gpiod_set_value(gd, 0);
+	}
 	clk_put(data->codec_clk);
+	device_remove_file(&pdev->dev, &dev_attr_headphone);
 
 	return 0;
 }

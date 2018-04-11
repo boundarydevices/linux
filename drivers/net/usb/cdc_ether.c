@@ -221,7 +221,7 @@ skip:
 			goto bad_desc;
 	}
 
-	if (header.usb_cdc_ether_desc) {
+	if (header.usb_cdc_ether_desc && info->ether->wMaxSegmentSize) {
 		dev->hard_mtu = le16_to_cpu(info->ether->wMaxSegmentSize);
 		/* because of Zaurus, we may be ignoring the host
 		 * side link address we were given.
@@ -743,7 +743,18 @@ static const struct usb_device_id	products[] = {
  * NOTE:  this match must come AFTER entries blacklisting devices
  * because of bugs/quirks in a given product (like Zaurus, above).
  */
-{
+{	/* SierraWirelss HL8548 mode 1*/
+	USB_DEVICE_AND_INTERFACE_INFO(0x1519, 0x0302, USB_CLASS_COMM,
+				      USB_CDC_SUBCLASS_ETHERNET,
+				      USB_CDC_PROTO_NONE),
+	.driver_info = (unsigned long)&wwan_info,
+}, {
+	/* SierraWirelss HL8548-G mode 2*/
+	USB_DEVICE_AND_INTERFACE_INFO(0x1519, 0x0303, USB_CLASS_COMM,
+				      USB_CDC_SUBCLASS_ETHERNET,
+				      USB_CDC_PROTO_NONE),
+	.driver_info = (unsigned long)&wwan_info,
+}, {
 	/* ZTE (Vodafone) K3805-Z */
 	USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1003, USB_CLASS_COMM,
 				      USB_CDC_SUBCLASS_ETHERNET,
