@@ -91,6 +91,7 @@ struct meson_i2c_data {
  * @frequency:	Operating frequency of I2C bus clock
  * @tokens:	Sequence of tokens to be written to the device
  * @num_tokens:	Number of tokens
+ * @retain_fast_mode: low frequency using high mode,for less than 100k
  */
 struct meson_i2c {
 	struct i2c_adapter	adap;
@@ -112,6 +113,7 @@ struct meson_i2c {
 	u32			tokens[2];
 	int			num_tokens;
 
+	int retain_fastmode;
 	struct meson_i2c_data *data;
 };
 
@@ -150,12 +152,6 @@ static void meson_i2c_write_tokens(struct meson_i2c *i2c)
 }
 
 /*
- * According to I2C-BUS Spec 2.1, in FAST-MODE, LOW period should be at
- * least 1.3uS, and HIGH period should be at lease 0.6. HIGH to LOW
- * ratio as 1 to 2 is more safe.
- *
- * So in FAST-MODE, we should control the SCL low time.
- *
  * Count = clk/freq  = H + L
  * Duty  = H/(H + L) = 1/2	-- duty 50%
  * H = n + delay
@@ -165,8 +161,9 @@ static void meson_i2c_write_tokens(struct meson_i2c *i2c)
  *
  * n = Count/2 - delay
  * m = Count/4
+ * Standard Mode : 100k
  */
-static void meson_i2c_set_clk_div_fast(struct meson_i2c *i2c)
+static void meson_i2c_set_clk_div_std(struct meson_i2c *i2c)
 {
 	unsigned long clk_rate = clk_get_rate(i2c->clk);
 	unsigned int div_h, div_l;
@@ -207,7 +204,15 @@ static void meson_i2c_set_clk_div_fast(struct meson_i2c *i2c)
 		__func__, clk_rate, i2c->frequency, div_h, div_l);
 }
 
-static void meson_i2c_set_clk_div_std(struct meson_i2c *i2c)
+/*
+ * According to I2C-BUS Spec 2.1, in FAST-MODE, LOW period should be at
+ * least 1.3uS, and HIGH period should be at lease 0.6. HIGH to LOW
+ * ratio as 1 to 2 is more safe.
+ * Duty  = H/(H + L) = 1/3	-- duty 33%   H/L = 1/2
+ * Fast Mode : 400k
+ * High Mode : 3400k
+ */
+static void meson_i2c_set_clk_div_fast(struct meson_i2c *i2c)
 {
 	unsigned long clk_rate = clk_get_rate(i2c->clk);
 	unsigned int div;
@@ -236,10 +241,13 @@ static void meson_i2c_set_clk_div_std(struct meson_i2c *i2c)
 
 static void meson_i2c_set_clk_div(struct meson_i2c *i2c)
 {
-	if (i2c->frequency > 100000) {
+	if (i2c->frequency >= 400000)
 		meson_i2c_set_clk_div_fast(i2c);
-	} else {
-		meson_i2c_set_clk_div_std(i2c);
+	else {
+		if (!i2c->retain_fastmode)
+			meson_i2c_set_clk_div_std(i2c);
+		else
+			meson_i2c_set_clk_div_fast(i2c);
 	}
 }
 
@@ -498,6 +506,9 @@ static int meson_i2c_probe(struct platform_device *pdev)
 	if (of_property_read_u32(pdev->dev.of_node, "clock-frequency",
 				 &i2c->frequency))
 		i2c->frequency = DEFAULT_FREQ;
+
+	if (fwnode_property_present(&np->fwnode, "retain-fast-mode"))
+		i2c->retain_fastmode = 1;
 
 	i2c->dev = &pdev->dev;
 	platform_set_drvdata(pdev, i2c);
