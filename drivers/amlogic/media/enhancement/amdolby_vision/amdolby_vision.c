@@ -3169,19 +3169,12 @@ static int sink_support_dolby_vision(const struct vinfo_s *vinfo)
 		return 0;
 	if (dolby_vision_flags & FLAG_DISABLE_DOVI_OUT)
 		return 0;
-#if 0
-	/* 2160p60 if TV support */
-	if ((vinfo->vout_device->mode >= VMODE_4K2K_SMPTE_50HZ)
-	&& (vinfo->vout_device->dv_info->sup_2160p60hz == 1))
+	if ((vinfo->width >= 1920) &&
+		(vinfo->height >= 1080) &&
+		(vinfo->field_height >= 1080))
 		return 1;
-	/* 1080p~2160p30 if TV support */
-	else if ((vinfo->vout_device->mode >= VMODE_1080P)
-	&& (vinfo->vout_device->mode <= VMODE_4K2K_SMPTE_30HZ))
-		return 1;
-	return 0;
-#else
-		return 1;
-#endif
+	else
+		return 0;
 }
 
 static int sink_support_hdr(const struct vinfo_s *vinfo)
@@ -3738,6 +3731,37 @@ static int check_primaries(struct vframe_master_display_colour_s *p_mdc)
 	}
 	/* source not usable, use standard bt2020 */
 	return 0;
+}
+
+void prepare_sdr2hdr10_param(void)
+{
+	uint32_t max_lum = 1000 * 10000;
+	uint32_t min_lum = 50;
+
+	hdr10_param.
+	min_display_mastering_luminance
+		= min_lum;
+	hdr10_param.
+	max_display_mastering_luminance
+		= max_lum;
+	hdr10_param.Rx
+		= bt2020_primaries[2][0];
+	hdr10_param.Ry
+		= bt2020_primaries[2][1];
+	hdr10_param.Gx
+		= bt2020_primaries[0][0];
+	hdr10_param.Gy
+		= bt2020_primaries[0][1];
+	hdr10_param.Bx
+		= bt2020_primaries[1][0];
+	hdr10_param.By
+		= bt2020_primaries[1][1];
+	hdr10_param.Wx
+		= bt2020_white_point[0];
+	hdr10_param.Wy
+		= bt2020_white_point[1];
+	hdr10_param.max_content_light_level = 0;
+	hdr10_param.max_pic_average_light_level = 0;
 }
 
 void prepare_hdr10_param(
@@ -4849,7 +4873,14 @@ int dolby_vision_parse_metadata(
 		dst_format = FORMAT_HDR10;
 	else
 		dst_format = FORMAT_SDR;
-
+	if ((src_format == FORMAT_SDR) &&
+		(dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_HDR10) &&
+		!(dolby_vision_flags & FLAG_CERTIFICAION)) {
+		src_format = FORMAT_HDR10;
+		prepare_sdr2hdr10_param();
+		/* for stb with v2.3 may use 12 bit */
+		src_bdp = 10;
+	}
 #ifdef V2_4
 	if ((src_format != dovi_setting.src_format)
 		|| (dst_format != dovi_setting.dst_format))
