@@ -164,6 +164,14 @@
 			default-state = "off";
 			linux,default-trigger = "rc_feedback";
 		};
+
+		sys_led {
+			label="sys_led";
+			gpios=<&gpio_ao GPIOAO_11 GPIO_ACTIVE_LOW>;
+			default-state ="on";
+			retain-state-suspended;
+			linux,default-trigger="cpu0";
+		};
 	};
 
 	cvbsout {
