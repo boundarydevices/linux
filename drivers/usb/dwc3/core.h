@@ -159,6 +159,7 @@
 #ifdef CONFIG_AMLOGIC_USB
 /* Global User Control Register */
 #define DWC3_GUCTL_USBHSTINAUTORETRYEN	(1 << 14)
+#define DWC3_GUCTL_NAKPERENHHS			(1 << 18)
 #endif
 
 /* Global Debug Queue/FIFO Space Available Register */

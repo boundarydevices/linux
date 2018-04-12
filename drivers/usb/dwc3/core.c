@@ -740,6 +740,10 @@ static int dwc3_core_init(struct dwc3 *dwc)
 	if (ret)
 		goto err0;
 #ifdef CONFIG_AMLOGIC_USB
+	reg = dwc3_readl(dwc->regs, DWC3_GUCTL1);
+	reg |= DWC3_GUCTL_NAKPERENHHS;
+	dwc3_writel(dwc->regs, DWC3_GUCTL1, reg);
+
 	reg = dwc3_readl(dwc->regs, DWC3_GUCTL);
 	reg |= DWC3_GUCTL_USBHSTINAUTORETRYEN;
 	dwc3_writel(dwc->regs, DWC3_GUCTL, reg);
