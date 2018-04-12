@@ -4253,7 +4253,7 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 	hdmitx_wr_reg(HDMITX_DWC_FC_DATMAN, 0);
 
 	/* packet scheduller configuration for AVI, GCP, AUDI, ACR. */
-	hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO3, 0xe, 0, 6);
+	hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO3, 0x6, 0, 6);
 	/* If RX  support 2084 or hlg , and the hdr_src_feature is 2020
 	 *  then enable HDR send out
 	 */
@@ -4274,8 +4274,9 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB3,  0);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB4,  0);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB5,  0);
-	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB6,  0);
-	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB7,  0);
+	/* AVI info usb RDRB mode and place in line 10*/
+	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB6, 0x0);
+	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB7, 0x1a);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB8,  0);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB9,  0);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB10, 0);
