@@ -843,25 +843,11 @@ bool is_clk_stable(void)
 unsigned int hdmirx_audio_fifo_rst(void)
 {
 	int error = 0;
-	static bool rst_flag;
 
-	/* for some special devices which send many unvalid subpackets
-	 * in low sample rate audio pattern(e.g 32K), if we only store
-	 * subpackets with sample_present.spX=1, afifo will always
-	 * underflow. In this case, config afifo to store all subpackets
-	 * regardless of sample_present.spX
-	 */
-	if (rst_flag) {
-		hdmirx_wr_dwc(DWC_AUD_FIFO_CTRL, AFIF_SUBPACKETS | AFIF_INIT);
-		udelay(20);
-		hdmirx_wr_dwc(DWC_AUD_FIFO_CTRL, AFIF_SUBPACKETS);
-	} else {
-		hdmirx_wr_dwc(DWC_AUD_FIFO_CTRL, AFIF_INIT);
-		udelay(20);
-		hdmirx_wr_dwc(DWC_AUD_FIFO_CTRL, 0);
-	}
+	hdmirx_wr_bits_dwc(DWC_AUD_FIFO_CTRL, AFIF_INIT, 1);
+	udelay(20);
+	hdmirx_wr_bits_dwc(DWC_AUD_FIFO_CTRL, AFIF_INIT, 0);
 	hdmirx_wr_dwc(DWC_DMI_SW_RST, 0x10);
-	rst_flag = !rst_flag;
 	if (log_level & AUDIO_LOG)
 		rx_pr("%s\n", __func__);
 	return error;
