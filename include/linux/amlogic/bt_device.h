@@ -24,6 +24,7 @@ struct bt_dev_data {
 	int gpio_hostwake;
 	int power_low_level;
 	int power_on_pin_OD;
+	int power_off_flag;
 };
 extern void set_usb_bt_power(int is_power);
 #endif

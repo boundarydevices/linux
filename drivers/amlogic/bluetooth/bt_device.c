@@ -128,27 +128,26 @@ static void bt_device_on(struct bt_dev_data *pdata)
 
 static void bt_device_off(struct bt_dev_data *pdata)
 {
-	if (pdata->gpio_reset > 0) {
-
-		if ((pdata->power_on_pin_OD)
-			&& (pdata->power_low_level)) {
-			gpio_direction_input(pdata->gpio_reset);
-		} else {
-			gpio_direction_output(pdata->gpio_reset,
-				pdata->power_low_level);
+	if (pdata->power_off_flag > 0) { /*bt rc wakeup by bcm.set it by dts*/
+		if (pdata->gpio_reset > 0) {
+			if ((pdata->power_on_pin_OD)
+					&& (pdata->power_low_level)) {
+				gpio_direction_input(pdata->gpio_reset);
+			} else {
+				gpio_direction_output(pdata->gpio_reset,
+						pdata->power_low_level);
+			}
 		}
-	}
-	if (pdata->gpio_en > 0) {
-
-		if ((pdata->power_on_pin_OD)
-			&& (pdata->power_low_level)) {
-			gpio_direction_input(pdata->gpio_en);
-		} else {
-			set_usb_bt_power(0);
+		if (pdata->gpio_en > 0) {
+			if ((pdata->power_on_pin_OD)
+					&& (pdata->power_low_level)) {
+				gpio_direction_input(pdata->gpio_en);
+			} else {
+				set_usb_bt_power(0);
+			}
 		}
+		msleep(20);
 	}
-
-	msleep(20);
 }
 
 static int bt_set_block(void *data, bool blocked)
@@ -256,6 +255,11 @@ static int bt_probe(struct platform_device *pdev)
 		if (ret)
 			pdata->power_on_pin_OD = 0;
 		pr_info("bt: power_on_pin_OD = %d;\n", pdata->power_on_pin_OD);
+		ret = of_property_read_u32(pdev->dev.of_node,
+				"power_off_flag", &pdata->power_off_flag);
+		if (ret)
+			pdata->power_off_flag = 1;/*bt poweroff*/
+		pr_info("bt: power_off_flag = %d;\n", pdata->power_off_flag);
 	} else {
 		pdata = (struct bt_dev_data *)(pdev->dev.platform_data);
 	}
