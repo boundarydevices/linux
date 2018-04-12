@@ -1,0 +1,37 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	ltk080a60a004t_mipi_cmds: ltk080a60a004t-mipi-cmds {
+		mipi-cmds-init = /bits/ 8 <
+			GEN_S1P(0x83,0x00)	/* Page 0 */
+			GEN_S1P(0x84,0x00)
+
+			GEN_S1P(0x8F,0xA5)
+			DELAY(5)
+			DCS_S0P(0x01)		/* Reset */
+			DELAY(20)
+			GEN_S1P(0x8F,0xA5)
+			GEN_S1P(0x83,0xAA)	/* Page 1 */
+			GEN_S1P(0x84,0x11)
+			GEN_S1P(0xA9,0x4B)
+
+			GEN_S1P(0x83,0x00)	/* Page 0 */
+			GEN_S1P(0x84,0x00)
+			GEN_S1P(0x8F,0x00)	/* Leave reset */
+
+			DELAY(50)
+			GEN_S1P(0x3A, 0x77)	/* Interface pixel format, 24 BPP */
+		>;
+		mipi-cmds-enable = /bits/ 8 <
+			DCS_S0P(0x11)		/* Exit sleep */
+			DELAY(120)		/* 5 is what spec says */
+			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
+			DELAY(20)
+		>;
+		mipi-cmds-disable = /bits/ 8 <
+			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
+			DELAY(20)
+			DCS_S0P(0x10)		/* Enter sleep */
+		>;
+	};
+};
