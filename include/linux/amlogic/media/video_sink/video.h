@@ -263,10 +263,17 @@ u32 get_blackout_policy(void);
 int get_video0_frame_info(struct vframe_s *vf);
 
 #define AMVIDEO_UPDATE_OSD_MODE	0x00000001
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
+int amvideo_notifier_call_chain(unsigned long val, void *v);
+#else
+static inline int amvideo_notifier_call_chain(unsigned long val, void *v)
+{
+	return 0;
+}
+#endif
 
 int query_video_status(int type, int *value);
 int get_video0_frame_info(struct vframe_s *vf);
-int amvideo_notifier_call_chain(unsigned long val, void *v);
 struct device *get_video_device(void);
 extern unsigned int DI_POST_REG_RD(unsigned int addr);
 extern int DI_POST_WR_REG_BITS(u32 adr, u32 val, u32 start, u32 len);

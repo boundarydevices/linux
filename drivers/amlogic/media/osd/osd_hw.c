@@ -1230,7 +1230,7 @@ static int notify_to_amvideo(void)
 		"osd notify_to_amvideo vpp misc:0x%08x, mask:0x%08x\n",
 		para[0], para[1]);
 	if (osd_hw.hw_rdma_en) {
-#ifdef CONFIG_AMLOGIC_VIDEO
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 		amvideo_notifier_call_chain(
 			AMVIDEO_UPDATE_OSD_MODE,
 			(void *)&para[0]);
