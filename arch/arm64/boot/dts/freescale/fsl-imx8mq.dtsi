@@ -793,6 +793,28 @@
 		status = "disabled";
 	};
 
+	ecspi2: ecspi@30830000 {
+		compatible = "fsl,imx6ul-ecspi", "fsl,imx51-ecspi";
+		reg = <0x0 0x30820000 0x0 0x10000>;
+		interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clk IMX8MQ_CLK_ECSPI2_ROOT>,
+			 <&clk IMX8MQ_CLK_ECSPI2_ROOT>;
+		clock-names = "ipg", "per";
+		interrupt-parent = <&gpc>;
+		status = "disabled";
+	};
+
+	ecspi3: ecspi@30840000 {
+		compatible = "fsl,imx6ul-ecspi", "fsl,imx51-ecspi";
+		reg = <0x0 0x30820000 0x0 0x10000>;
+		interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clk IMX8MQ_CLK_ECSPI3_ROOT>,
+			 <&clk IMX8MQ_CLK_ECSPI3_ROOT>;
+		clock-names = "ipg", "per";
+		interrupt-parent = <&gpc>;
+		status = "disabled";
+	};
+
 	uart1: serial@30860000 {
 		compatible = "fsl,imx8mq-uart",
 			     "fsl,imx6q-uart", "fsl,imx21-uart";
