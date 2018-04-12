@@ -14409,3 +14409,7 @@ AMLOGIC ADD LCD_EXTERN TL050FHV02CT DRIVER
 M:	Weiming Liu <weiming.liu@amlogic.com>
 F:	drivers/amlogic/media/vout/lcd/lcd_extern/mipi_TL050FHV02CT.c
 
+AMLOGIC ATV DEMOD DRIVER
+M:      nengwen.chen <nengwen.chen@amlogic.com>
+F:      drivers/amlogic/atv_demod/*
+F:      include/linux/amlogic/aml_atvdemod.h

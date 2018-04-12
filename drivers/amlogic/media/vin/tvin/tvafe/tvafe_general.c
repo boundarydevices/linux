@@ -811,6 +811,7 @@ int tvafe_adc_get_pll_flag(void)
 	mutex_unlock(&pll_mutex);
 	return ret;
 }
+EXPORT_SYMBOL(tvafe_adc_get_pll_flag);
 
 /*
  * tvafe init the whole module

@@ -1,0 +1,17 @@
+#
+# ATV driver configuration
+#
+
+menu "Amlogic ATV driver"
+
+config AMLOGIC_ATV_DEMOD
+	tristate "Amlogic ATVDEMOD device driver"
+	default n
+	help
+		ATVDEMOD device driver.
+		Y: enable
+		N: disable
+		M: build as module
+
+endmenu
+

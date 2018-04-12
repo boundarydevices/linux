@@ -49,6 +49,9 @@
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #endif
+#ifdef CONFIG_AMLOGIC_ATV_DEMOD
+#include <linux/amlogic/aml_atvdemod.h>
+#endif
 
 #include "i2s.h"
 #include "audio_hw.h"
@@ -650,7 +653,7 @@ static int aml_get_hdmiin_audio_format(struct snd_kcontrol *kcontrol,
 }
 #endif
 
-#ifdef CONFIG_AM_DVB
+#ifdef CONFIG_AMLOGIC_ATV_DEMOD
 static const char *const atv_audio_is_stable[] = {
 	"false",
 	"true"
@@ -667,7 +670,7 @@ static int aml_get_atv_audio_stable(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[0] = state;
 	return 0;
 }
-#endif /* CONFIG_AM_DVB */
+#endif /* CONFIG_AMLOGIC_ATV_DEMOD */
 #ifdef CONFIG_TVIN_VDIN
 static const char *const av_audio_is_stable[] = {
 	"false",
@@ -733,7 +736,7 @@ static const struct snd_kcontrol_new aml_tv_controls[] = {
 				aml_get_atmos_audio_edid,
 				aml_set_atmos_audio_edid),
 #endif
-#ifdef CONFIG_AM_DVB
+#ifdef CONFIG_AMLOGIC_ATV_DEMOD
 	SOC_ENUM_EXT("ATV audio stable", atv_audio_status_enum,
 				aml_get_atv_audio_stable,
 				NULL),

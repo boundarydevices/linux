@@ -125,5 +125,8 @@ source "drivers/amlogic/ledring/Kconfig"
 source "drivers/amlogic/memory_ext/Kconfig"
 
 source "drivers/amlogic/irqchip/Kconfig"
+
+source "drivers/amlogic/atv_demod/Kconfig"
+
 endmenu
 endif
