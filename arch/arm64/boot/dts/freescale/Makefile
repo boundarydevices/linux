@@ -211,7 +211,6 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-dual-display.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-hummingboard-pulse.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-kontron-pitx-imx8m.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-mnt-reform2.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8mq-nitrogen.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-phanbell.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-pico-pi.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-thor96.dtb
@@ -430,3 +429,6 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-iw612.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8ulp-nitrogen-som.dtb \
 			  imx8ulp-tag.dtb \
+
+dtb-$(CONFIG_ARCH_MXC) += imx8mq-nitrogen8m.dtb imx8mq-nitrogen8m-m4.dtb \
+			  imx8mq-nitrogen8m-edp.dtb \

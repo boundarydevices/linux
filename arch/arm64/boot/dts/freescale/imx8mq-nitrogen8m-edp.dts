@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2017 NXP
+ * Copyright 2018 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M eDP";
+	compatible = "boundary,imx8mq-nitrogen8m-edp", "fsl,imx8mq";
+};
+
+&backlight_edp {
+	status = "okay";
+};
+
+&hdmi {
+	compatible = "cdn,imx8mq-dp";
+	lane-mapping = <0xe4>;
+	status = "okay";
+};
