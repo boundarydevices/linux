@@ -59,7 +59,9 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 fsl-imx8mq-evk-dual-display.dtb \
 				 fsl-imx8mq-evk-ak4497.dtb \
 				 fsl-imx8mq-evk-audio-tdm.dtb \
-				 fsl-imx8mq-evk-drm.dtb
+				 fsl-imx8mq-evk-drm.dtb \
+				 imx8mq-nitrogen8m.dtb \
+				 imx8mq-nitrogen8m-m4.dtb
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
