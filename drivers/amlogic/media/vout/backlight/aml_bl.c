@@ -643,6 +643,11 @@ static void bl_power_on(void)
 
 	mutex_lock(&bl_power_mutex);
 
+	if ((bl_drv->state & BL_STATE_LCD_ON) == 0) {
+		BLPR("%s exit, for lcd is off\n", __func__);
+		goto exit_power_on_bl;
+	}
+
 	if (brightness_bypass == 0) {
 		if ((bl_drv->level == 0) ||
 			(bl_drv->state & BL_STATE_BL_ON)) {

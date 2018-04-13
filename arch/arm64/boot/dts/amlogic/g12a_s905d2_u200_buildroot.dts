@@ -864,6 +864,12 @@
 		reg = <0x2c>; /*reg_address for lp8556*/
 		dev_name = "lp8556";
 	};
+	lcd_extern_i2c {
+		compatible = "amlogic, lcd_i2c_T5800Q";
+		status = "disabled";
+		reg = <0x1c>; /*reg_address for i2c_T5800Q*/
+		dev_name = "i2c_T5800Q";
+	};
 };
 
 &audiobus {

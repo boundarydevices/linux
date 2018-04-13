@@ -28,12 +28,12 @@
 #include <linux/amlogic/media/vout/lcd/lcd_extern.h>
 #include "lcd_extern.h"
 
+#define LCD_EXTERN_NAME			"i2c_tc101"
+
 static struct lcd_extern_config_s *ext_config;
-static struct i2c_client *aml_tc101_i2c_client;
+static struct aml_lcd_extern_i2c_dev_s *i2c_device;
 
-#define LCD_EXTERN_NAME			"lcd_i2c_tc101"
-
-static unsigned char i2c_init_table[][3] = {
+static unsigned char init_on_table[][3] = {
 	/* {0xff, 0xff, 20},//delay mark(20ms) */
 	{0xf8, 0x30, 0xb2},
 	{0xf8, 0x33, 0xc2},
@@ -43,8 +43,8 @@ static unsigned char i2c_init_table[][3] = {
 	{0xff, 0xff, 0xff},/* end mark */
 };
 
-static int aml_i2c_write(struct i2c_client *i2client, unsigned char *buff,
-		unsigned int len)
+static int lcd_extern_i2c_write(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len)
 {
 	int ret = 0;
 	struct i2c_msg msg[] = {
@@ -53,60 +53,15 @@ static int aml_i2c_write(struct i2c_client *i2client, unsigned char *buff,
 			.flags = 0,
 			.len = len,
 			.buf = buff,
-		},
+		}
 	};
 
 	ret = i2c_transfer(i2client->adapter, msg, 1);
-	if (ret < 0) {
-		EXTERR("%s: i2c transfer failed [addr 0x%02x]\n",
-			__func__, i2client->addr);
-	}
+	if (ret < 0)
+		EXTERR("i2c write failed [addr 0x%02x]\n", i2client->addr);
 
 	return ret;
 }
-#if 0
-static int aml_i2c_read(struct i2c_client *i2client, unsigned char *buff,
-		unsigned int len)
-{
-	int ret = 0;
-	struct i2c_msg msgs[] = {
-		{
-			.addr = i2client->addr,
-			.flags = 0,
-			.len = 1,
-			.buf = buff,
-		},
-		{
-			.addr = i2client->addr,
-			.flags = I2C_M_RD,
-			.len = len,
-			.buf = buff,
-		},
-	};
-
-	ret = i2c_transfer(i2client->adapter, msgs, 2);
-	if (ret < 0) {
-		EXTERR("%s: i2c transfer failed [addr 0x%02x]\n",
-			__func__, i2client->addr);
-	}
-
-	return ret;
-}
-
-static int i2c_reg_read(unsigned char reg, unsigned char *buf)
-{
-	int ret = 0;
-
-	return ret;
-}
-
-static int i2c_reg_write(unsigned char reg, unsigned char value)
-{
-	int ret = 0;
-
-	return ret;
-}
-#endif
 
 static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
 {
@@ -115,18 +70,23 @@ static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
 	int ret = 0;
 
 	lcd_extern_pinmux_set(ext_drv, 1);
+
+	if (i2c_device == NULL) {
+		EXTERR("invalid i2c device\n");
+		return -1;
+	}
 	while (ending_flag == 0) {
-		if ((i2c_init_table[i][0] == 0xff) &&
-			(i2c_init_table[i][1] == 0xff)) { /* special mark */
-			if (i2c_init_table[i][2] == 0xff) /* ending flag */
+		if ((init_on_table[i][0] == 0xff) &&
+			(init_on_table[i][1] == 0xff)) { /* special mark */
+			if (init_on_table[i][2] == 0xff) /* ending flag */
 				ending_flag = 1;
 			else /* delay flag */
-				mdelay(i2c_init_table[i][2]);
+				mdelay(init_on_table[i][2]);
 		} else {
-			tData[0] = i2c_init_table[i][0];
-			tData[1] = i2c_init_table[i][1];
-			tData[2] = i2c_init_table[i][2];
-			aml_i2c_write(aml_tc101_i2c_client, tData, 3);
+			tData[0] = init_on_table[i][0];
+			tData[1] = init_on_table[i][1];
+			tData[2] = init_on_table[i][2];
+			lcd_extern_i2c_write(i2c_device->client, tData, 3);
 		}
 		i++;
 	}
@@ -157,86 +117,18 @@ static int lcd_extern_driver_update(struct aml_lcd_extern_driver_s *ext_drv)
 	return ret;
 }
 
-static int aml_tc101_i2c_probe(struct i2c_client *client,
-		const struct i2c_device_id *id)
-{
-
-	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
-		EXTERR("%s: functionality check failed\n", __func__);
-	else
-		aml_tc101_i2c_client = client;
-
-	EXTPR("%s OK\n", __func__);
-	return 0;
-}
-
-static int aml_tc101_i2c_remove(struct i2c_client *client)
-{
-	return 0;
-}
-
-static const struct i2c_device_id aml_tc101_i2c_id[] = {
-	{LCD_EXTERN_NAME, 0},
-	{ }
-};
-/* MODULE_DEVICE_TABLE(i2c, aml_tc101_id); */
-
-static struct i2c_driver aml_tc101_i2c_driver = {
-	.probe    = aml_tc101_i2c_probe,
-	.remove   = aml_tc101_i2c_remove,
-	.id_table = aml_tc101_i2c_id,
-	.driver = {
-		.name = LCD_EXTERN_NAME,
-		.owner = THIS_MODULE,
-	},
-};
-
 int aml_lcd_extern_i2c_tc101_probe(struct aml_lcd_extern_driver_s *ext_drv)
 {
-	struct i2c_board_info i2c_info;
-	struct i2c_adapter *adapter;
-	struct i2c_client *i2c_client;
 	int ret = 0;
 
 	ext_config = &ext_drv->config;
-	if (ext_drv->config.i2c_bus == LCD_EXTERN_I2C_BUS_INVALID) {
-		EXTERR("invalid i2c bus\n");
+	if (i2c_device == NULL) {
+		EXTERR("invalid i2c device\n");
 		return -1;
 	}
-	memset(&i2c_info, 0, sizeof(i2c_info));
-
-	adapter = i2c_get_adapter(ext_drv->config.i2c_bus);
-	if (!adapter) {
-		EXTERR("%s failed to get i2c adapter\n", ext_drv->config.name);
+	if (ext_drv->config.i2c_addr != i2c_device->client->addr) {
+		EXTERR("invalid i2c addr\n");
 		return -1;
-	}
-
-	strncpy(i2c_info.type, ext_drv->config.name, I2C_NAME_SIZE);
-	i2c_info.addr = ext_drv->config.i2c_addr;
-	i2c_info.platform_data = &ext_drv->config;
-	i2c_info.flags = 0;
-	if (i2c_info.addr > 0x7f) {
-		EXTERR("%s invalid i2c address: 0x%02x\n",
-			ext_drv->config.name, ext_drv->config.i2c_addr);
-		return -1;
-	}
-	i2c_client = i2c_new_device(adapter, &i2c_info);
-	if (!i2c_client) {
-		EXTERR("%s failed to new i2c device\n", ext_drv->config.name);
-	} else {
-		if (lcd_debug_print_flag) {
-			EXTPR("%s new i2c device succeed\n",
-				ext_drv->config.name);
-		}
-	}
-
-	if (!aml_tc101_i2c_client) {
-		ret = i2c_add_driver(&aml_tc101_i2c_driver);
-		if (ret) {
-			EXTERR("%s add i2c_driver failed\n",
-				ext_drv->config.name);
-			return -1;
-		}
 	}
 
 	ret = lcd_extern_driver_update(ext_drv);
@@ -245,4 +137,84 @@ int aml_lcd_extern_i2c_tc101_probe(struct aml_lcd_extern_driver_s *ext_drv)
 		EXTPR("%s: %d\n", __func__, ret);
 	return ret;
 }
+
+static int lcd_extern_i2c_config_from_dts(struct device *dev,
+	struct aml_lcd_extern_i2c_dev_s *i2c_device)
+{
+	int ret;
+	struct device_node *np = dev->of_node;
+	const char *str;
+
+	ret = of_property_read_string(np, "dev_name", &str);
+	if (ret) {
+		EXTERR("failed to get dev_i2c_name\n");
+		str = "lcd_extern_i2c_tc101";
+	}
+	strcpy(i2c_device->name, str);
+
+	return 0;
+}
+
+static int aml_lcd_extern_i2c_probe(struct i2c_client *client,
+	const struct i2c_device_id *id)
+{
+	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
+		EXTERR("I2C check functionality failed.");
+		return -ENODEV;
+	}
+
+	i2c_device = kzalloc(sizeof(struct aml_lcd_extern_i2c_dev_s),
+		GFP_KERNEL);
+	if (!i2c_device) {
+		EXTERR("driver malloc error\n");
+		return -ENOMEM;
+	}
+	i2c_device->client = client;
+	lcd_extern_i2c_config_from_dts(&client->dev, i2c_device);
+	EXTPR("I2C %s Address: 0x%02x", i2c_device->name,
+		i2c_device->client->addr);
+
+	return 0;
+}
+
+static int aml_lcd_extern_i2c_remove(struct i2c_client *client)
+{
+	kfree(i2c_device);
+	i2c_set_clientdata(client, NULL);
+
+	return 0;
+}
+
+static const struct i2c_device_id aml_lcd_extern_i2c_id[] = {
+	{"i2c_tc101", 0},
+	{}
+};
+
+#ifdef CONFIG_OF
+static const struct of_device_id aml_lcd_extern_i2c_dt_match[] = {
+	{
+		.compatible = "amlogic, lcd_i2c_tc101",
+	},
+	{},
+};
+#endif
+
+static struct i2c_driver aml_lcd_extern_i2c_driver = {
+	.probe  = aml_lcd_extern_i2c_probe,
+	.remove = aml_lcd_extern_i2c_remove,
+	.id_table   = aml_lcd_extern_i2c_id,
+	.driver = {
+		.name  = "i2c_tc101",
+		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = aml_lcd_extern_i2c_dt_match,
+#endif
+	},
+};
+
+module_i2c_driver(aml_lcd_extern_i2c_driver);
+
+MODULE_AUTHOR("AMLOGIC");
+MODULE_DESCRIPTION("lcd extern driver");
+MODULE_LICENSE("GPL");
 

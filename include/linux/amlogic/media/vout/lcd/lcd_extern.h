@@ -89,6 +89,11 @@ struct aml_lcd_extern_driver_s {
 	unsigned int pinmux_flag;
 };
 
+struct aml_lcd_extern_i2c_dev_s {
+	char name[20];
+	struct i2c_client *client;
+};
+
 extern struct aml_lcd_extern_driver_s *aml_lcd_extern_get_driver(int index);
 
 #endif
