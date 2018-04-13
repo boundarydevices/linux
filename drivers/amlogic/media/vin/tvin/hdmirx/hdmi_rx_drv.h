@@ -34,7 +34,7 @@
 //#include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2018-04-11"
+#define RX_VER0 "ver.2018-04-13"
 /*
  *
  *
@@ -424,6 +424,7 @@ extern int skip_frame_cnt;
 extern bool hdcp_enable;
 extern int log_level;
 extern int sm_pause;
+extern int suspend_pddq_sel;
 extern int rx_set_global_variable(const char *buf, int size);
 extern void rx_get_global_variable(const char *buf);
 extern int rx_pr(const char *fmt, ...);

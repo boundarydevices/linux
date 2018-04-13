@@ -120,8 +120,19 @@ int en_4k_2_2k;
 int en_4k_timing = 1;
 bool hdmi_cec_en;
 int skip_frame_cnt = 1;
-
-
+/* suspend_pddq_sel:
+ * 0: keep phy on when suspend(don't need phy init when
+ *   resume), it doesn't work now because phy VDDIO_3.3V
+ *   will power off when suspend, and tmds clk will be low;
+ * 1&2: when CEC off there's no SDA low issue for MTK box,
+ *   these workaround are not needed
+ * 1: disable phy when suspend, set rxsense 1 and 0 when resume to
+ *   release DDC from hdcp2.2 for MTK box, as LG 49UB8800-CE does
+ * 2: disable phy when suspend, set rxsense 1 and 0 when suspend
+ *   to release DDC from hdcp2.2 for MTK xiaomi box
+ * other value: keep previous logic
+ */
+int suspend_pddq_sel = 1;
 
 struct reg_map reg_maps[MAP_ADDR_MODULE_NUM];
 
@@ -1890,8 +1901,22 @@ static int hdmirx_suspend(struct platform_device *pdev, pm_message_t state)
 	if (!hdmi_cec_en)
 		rx_force_hpd_cfg(0);
 
-	/* phy powerdown */
-	hdmirx_phy_pddq(1);
+	if (suspend_pddq_sel == 0)
+		rx_pr("don't set phy pddq down\n");
+	else {
+		/* there's no SDA low issue on MTK box when CEC off */
+		if (hdmi_cec_en != 0) {
+			if (suspend_pddq_sel == 2) {
+				/* set rxsense pulse */
+				mdelay(10);
+				hdmirx_phy_pddq(1);
+				mdelay(10);
+				hdmirx_phy_pddq(0);
+			}
+		}
+		/* phy powerdown */
+		hdmirx_phy_pddq(1);
+	}
 	if (hdcp22_on)
 		hdcp22_suspend();
 	rx_pr("[hdmirx]: suspend success\n");
@@ -1903,6 +1928,18 @@ static int hdmirx_resume(struct platform_device *pdev)
 	struct hdmirx_dev_s *hdevp;
 
 	hdevp = platform_get_drvdata(pdev);
+	if (hdmi_cec_en != 0) {
+		if (suspend_pddq_sel == 1) {
+			/* set rxsense pulse, if delay time between
+			 * rxsense pulse and phy_int shottern than
+			 * 50ms, SDA may be pulled low 800ms on MTK box
+			 */
+			hdmirx_phy_pddq(0);
+			mdelay(10);
+			hdmirx_phy_pddq(1);
+			mdelay(50);
+		}
+	}
 	hdmirx_phy_init();
 	add_timer(&hdevp->timer);
 	if (hdcp22_on)
