@@ -544,7 +544,7 @@
 			};
 			tdmbcodec: codec {
 				sound-dai = <&dummy_codec &dummy_codec
-				&amlogic_codec &ad82584f_62>;
+					&amlogic_codec>;
 			};
 		};
 
@@ -752,7 +752,7 @@
 };
 
 &i2c3 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names="default";
 	pinctrl-0=<&i2c3_master_pins2>;
 	clock-frequency = <100000>; /* default 100k */
@@ -762,7 +762,7 @@
 		compatible = "ESMT, ad82584f";
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
-		status = "okay";
+		status = "disabled";
 		reset_pin = <&gpio GPIOA_5 0>;
 	};
 
@@ -864,7 +864,7 @@
 
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
-		pinctrl-0 = <&spdifout &spdifin>;
+		pinctrl-0 = <&spdifout>;
 		status = "okay";
 	};
 	aml_spdif_b: spdif_b {
@@ -1050,14 +1050,12 @@
 	};
 
 	/* GPIOH_4 */
-	/*
-	 * spdifout: spdifout {
-	 *	mux {
-	 *		groups = "spdif_out_h";
-	 *		function = "spdif_out";
-	 *	};
-	 *};
-	 */
+	spdifout: spdifout {
+		mux {
+			groups = "spdif_out_h";
+			function = "spdif_out";
+		};
+	};
 
 	pdmin: pdmin {
 		mux { /* gpioa_5, gpioa_6, gpioa_7, gpioa_8, gpioa_9*/
@@ -1073,12 +1071,13 @@
 
 }; /* end of pinctrl_periphs */
 &pinctrl_aobus {
-	spdifout: spdifout {
-		mux { /* gpiao_10 */
-			groups = "spdif_out_ao";
-			function = "spdif_out_ao";
-		};
-	};
+	/*gpiao_10*/
+	/*spdifout: spdifout {			  */
+	/*	mux {						  */
+	/*		groups = "spdif_out_ao";  */
+	/*		function = "spdif_out_ao";*/
+	/*	};							  */
+	/*};							  */
 };  /* end of pinctrl_aobus */
 
 &audio_data {

@@ -520,7 +520,7 @@
 			};
 			tdmbcodec: codec {
 				sound-dai = <&dummy_codec &dummy_codec
-				&amlogic_codec &ad82584f_62>;
+					&amlogic_codec>;
 			};
 		};
 
@@ -728,7 +728,7 @@
 };
 
 &i2c3 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names="default";
 	pinctrl-0=<&i2c3_master_pins2>;
 	clock-frequency = <100000>; /* default 100k */
@@ -738,7 +738,7 @@
 		compatible = "ESMT, ad82584f";
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
-		status = "okay";
+		status = "disabled";
 		reset_pin = <&gpio GPIOA_5 0>;
 	};
 
@@ -840,7 +840,7 @@
 
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
-		pinctrl-0 = <&spdifout &spdifin>;
+		/*pinctrl-0 = <&spdifout &spdifin>;*/
 		status = "okay";
 	};
 	aml_spdif_b: spdif_b {
