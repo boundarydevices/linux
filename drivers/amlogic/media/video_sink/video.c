@@ -2594,9 +2594,14 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	static const u32 vpat[MAX_VSKIP_COUNT + 1] = {
 		0, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
 	u32 u, v;
-	u32 type = vf->type, bit_mode = 0;
+	u32 type, bit_mode = 0;
 	bool vf_with_el = false;
 
+	if (vf == NULL) {
+		pr_info("viu_set_dcu vf NULL, return\n");
+		return;
+	}
+	type = vf->type;
 	pr_debug("set dcu for vd1 %p, type:0x%x\n", vf, type);
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB) {
 		if (frame_par->nocomp)
@@ -6657,7 +6662,9 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 
 	case AMSTREAM_IOC_CLEAR_VBUF:{
 			unsigned long flags;
-
+			while (atomic_read(&video_inirq_flag) > 0 ||
+				atomic_read(&video_unreg_flag) > 0)
+				schedule();
 			spin_lock_irqsave(&lock, flags);
 			cur_dispbuf = NULL;
 			spin_unlock_irqrestore(&lock, flags);
