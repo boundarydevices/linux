@@ -612,6 +612,7 @@
 		compatible = "amlogic, bt-dev";
 		dev_name = "bt-dev";
 		status = "okay";
+		power_down_disable = <1>;
 		gpio_reset = <&gpio_ao GPIOAO_8 GPIO_ACTIVE_HIGH>;
 		//gpio_en = <&gpio_ao GPIOAO_5 GPIO_ACTIVE_HIGH>;
 	};
