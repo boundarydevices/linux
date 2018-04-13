@@ -13674,6 +13674,10 @@ AMLOGIC GPU DEVICETREE
 M:	Jiyu Yang <jiyu.yang@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesongxtvbb-gpu-t83x.dtsi
 
+AMLOGIC GPU SYSTRACE
+M:	Binqi Zhang <binqi.zhang@amlogic.com>
+F:	include/trace/events/meson_atrace.h
+
 AMLOGIC VRTC DRIVER
 M:	Yun Cai <yun.cai@amlogic.com>
 F:	drivers/amlogic/vrtc/
