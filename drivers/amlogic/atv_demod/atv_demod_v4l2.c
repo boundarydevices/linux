@@ -240,11 +240,14 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 #endif
 #else /* Now, force to NTSC_M, Ours demod only support M for NTSC.*/
 		audio = V4L2_STD_NTSC_M;
+		std_bk |= V4L2_COLOR_STD_NTSC;
 #endif
 	} else if (std_bk == V4L2_STD_SECAM) {
 		audio = V4L2_STD_SECAM_L;
+		std_bk |= V4L2_COLOR_STD_SECAM;
 	} else {
 		/*V4L2_COLOR_STD_PAL*/
+		std_bk |= V4L2_COLOR_STD_PAL;
 		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK);
 		audio = aml_audiomode_autodet(fe);
 		audio = demod_fmt_2_v4l2_std(audio);
@@ -996,6 +999,28 @@ static int v4l2_frontend_set_mode(struct v4l2_frontend *v4l2_fe,
 	return ret;
 }
 
+static int v4l2_frontend_read_status(struct v4l2_frontend *v4l2_fe,
+		enum v4l2_status *status)
+{
+	int ret = 0;
+	struct analog_demod_ops *analog_ops = NULL;
+	struct dvb_tuner_ops *tuner_ops = NULL;
+
+	analog_ops = &v4l2_fe->v4l2_ad->fe.ops.analog_ops;
+	tuner_ops = &v4l2_fe->v4l2_ad->fe.ops.tuner_ops;
+
+	if (!status)
+		return -1;
+#if 0
+	if (analog_ops->tuner_status)
+		analog_ops->tuner_status(&v4l2_fe->v4l2_ad->fe, status);
+	else if (tuner_ops->get_status)
+		tuner_ops->get_status(&v4l2_fe->v4l2_ad->fe, status);
+#endif
+
+	return ret;
+}
+
 static void v4l2_frontend_vdev_release(struct video_device *dev)
 {
 	pr_err("%s.\n", __func__);
@@ -1026,7 +1051,7 @@ static unsigned int v4l2_frontend_poll(struct file *filp,
 	if (fepriv->events.eventw != fepriv->events.eventr)
 		return (POLLIN | POLLRDNORM | POLLPRI);
 
-	pr_err("%s.\n", __func__);
+	pr_info("%s.\n", __func__);
 	return 0;
 }
 
@@ -1063,6 +1088,11 @@ static long v4l2_frontend_ioctl(struct file *filp, void *fh, bool valid_prio,
 
 	case V4L2_SET_MODE:
 		ret = v4l2_frontend_set_mode(v4l2_fe, (unsigned long) arg);
+		break;
+
+	case V4L2_READ_STATUS:
+		ret = v4l2_frontend_read_status(v4l2_fe,
+				(enum v4l2_status *) arg);
 		break;
 
 	default:

@@ -67,6 +67,12 @@
 #define V4L2_GET_FRONTEND    _IOR('V', 106, struct v4l2_analog_parameters)
 #define V4L2_GET_EVENT       _IOR('V', 107, struct v4l2_frontend_event)
 #define V4L2_SET_MODE        _IO('V', 108)
+#define V4L2_READ_STATUS     _IOR('V', 109, enum v4l2_status)
+
+/*COLOR MODULATION TYPE*/
+#define V4L2_COLOR_STD_PAL    ((v4l2_std_id) 0x04000000)
+#define V4L2_COLOR_STD_NTSC   ((v4l2_std_id) 0x08000000)
+#define V4L2_COLOR_STD_SECAM  ((v4l2_std_id) 0x10000000)
 
 struct v4l2_analog_parameters {
 	unsigned int frequency;
