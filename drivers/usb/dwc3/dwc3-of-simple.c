@@ -26,6 +26,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/gpio/consumer.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
@@ -90,11 +91,15 @@ static int dwc3_of_simple_probe(struct platform_device *pdev)
 
 	int			ret;
 	int			i;
+	struct gpio_desc *reset_gpio;
 
 	simple = devm_kzalloc(dev, sizeof(*simple), GFP_KERNEL);
 	if (!simple)
 		return -ENOMEM;
 
+	reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+        if (IS_ERR(reset_gpio))
+                return PTR_ERR(reset_gpio);
 	platform_set_drvdata(pdev, simple);
 	simple->dev = dev;
 
@@ -115,6 +120,7 @@ static int dwc3_of_simple_probe(struct platform_device *pdev)
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
+	gpiod_set_value_cansleep(reset_gpio, 0);
 
 	return 0;
 }
