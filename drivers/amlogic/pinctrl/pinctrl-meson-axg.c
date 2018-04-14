@@ -935,7 +935,7 @@ static const char * const tdmc_in_groups[] = {
 };
 
 static const char * const tdmc_out_groups[] = {
-	"tdmc_sclk", "tdmc_fs", "tdmc_dout0", "tdmb_dout1",
+	"tdmc_sclk", "tdmc_fs", "tdmc_dout0", "tdmc_dout1",
 	"tdmc_dout2_a6", "tdmc_dout3_a7",
 	"tdmc_dout2_a15", "tdmc_dout3_a16",
 	"tdmc_slv_sclk", "tdmc_slv_fs",
@@ -1058,10 +1058,24 @@ static struct meson_bank meson_axg_periphs_banks[] = {
 	84,  1,  0,  1,  0,  3,  0,  4,  0,  5,  0),
 };
 
+/*  TEST_N is special pin, only used as gpio output at present.
+ *  the direction control bit from AO_SEC_REG0 bit[0], it
+ *  configured to output when pinctrl driver is initialized.
+ *  to make the api of gpiolib work well, the reserved bit(bit[14])
+ *  seen as direction control bit.
+ *
+ * AO_GPIO_O_EN_N       0x09<<2=0x24     bit[31]     output level
+ * AO_GPIO_I            0x0a<<2=0x28     bit[31]     input level
+ * AO_SEC_REG0          0x50<<2=0x140    bit[0]      input enable
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[14]     pull-up/down
+ * AO_RTI_PULL_UP_REG   0x0b<<2=0x2c     bit[30]     pull-up enable
+ */
 static struct meson_bank meson_axg_aobus_banks[] = {
 	/* name  first  last  irq  pullen  pull  dir  out  in  */
-	BANK("AO",   GPIOAO_0,  GPIOAO_9,
+	BANK("AO",   GPIOAO_0,  GPIOAO_13,
 	0,  0,  16,  0, 0,  0,  0,  0, 16,  1,  0),
+	BANK("TESTN", GPIO_TEST_N, GPIO_TEST_N,
+	-1, 0,  30,  0, 14, 0,  14, 0, 31,  1, 31),
 };
 
 static struct meson_pmx_bank meson_axg_periphs_pmx_banks[] = {
@@ -1080,6 +1094,7 @@ static struct meson_axg_pmx_data meson_axg_periphs_pmx_banks_data = {
 
 static struct meson_pmx_bank meson_axg_aobus_pmx_banks[] = {
 	BANK_PMX("AO", GPIOAO_0, GPIOAO_13, 0x0, 0),
+	BANK_PMX("TESTN", GPIO_TEST_N, GPIO_TEST_N, 0x1, 24),
 };
 
 static struct meson_axg_pmx_data meson_axg_aobus_pmx_banks_data = {
