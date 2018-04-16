@@ -1125,6 +1125,8 @@ struct dwc3 {
 	u16			imod_interval;
 
 	struct usb_otg_caps	otg_caps;
+
+	struct regulator	*vbus_reg;
 };
 
 #define work_to_dwc(w)		(container_of((w), struct dwc3, drd_work))
