@@ -25,6 +25,7 @@
 #include <linux/of.h>
 #include <linux/acpi.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 
 #include <linux/usb/ch9.h>
@@ -167,6 +168,12 @@ static void __dwc3_set_mode(struct work_struct *work)
 				otg_set_vbus(dwc->usb2_phy->otg, true);
 			phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_HOST);
 			phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_HOST);
+			if (dwc->vbus_reg) {
+				ret = regulator_enable(dwc->vbus_reg);
+				if (ret < 0)
+					dev_err(dwc->dev,
+						"failed to enable vbus\n");
+			}
 			phy_calibrate(dwc->usb2_generic_phy);
 		}
 		break;
@@ -177,6 +184,11 @@ static void __dwc3_set_mode(struct work_struct *work)
 			otg_set_vbus(dwc->usb2_phy->otg, false);
 		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
 		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
+		if (dwc->vbus_reg) {
+			ret = regulator_disable(dwc->vbus_reg);
+			if (ret < 0)
+				dev_err(dwc->dev, "failed to disable vbus\n");
+		}
 
 		ret = dwc3_gadget_init(dwc);
 		if (ret)
@@ -1163,6 +1175,11 @@ static int dwc3_core_init_mode(struct dwc3 *dwc)
 			otg_set_vbus(dwc->usb2_phy->otg, false);
 		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
 		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
+		if (dwc->vbus_reg) {
+			ret = regulator_disable(dwc->vbus_reg);
+			if (ret < 0)
+				dev_err(dev, "failed to disable vbus\n");
+		}
 
 		ret = dwc3_gadget_init(dwc);
 		if (ret) {
@@ -1178,6 +1195,11 @@ static int dwc3_core_init_mode(struct dwc3 *dwc)
 			otg_set_vbus(dwc->usb2_phy->otg, true);
 		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_HOST);
 		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_HOST);
+		if (dwc->vbus_reg) {
+			ret = regulator_enable(dwc->vbus_reg);
+			if (ret < 0)
+				dev_err(dev, "failed to enable vbus\n");
+		}
 
 		ret = dwc3_host_init(dwc);
 		if (ret) {
@@ -1228,6 +1250,7 @@ static void dwc3_core_exit_mode(struct dwc3 *dwc)
 static void dwc3_get_properties(struct dwc3 *dwc)
 {
 	struct device		*dev = dwc->dev;
+	struct regulator	*vbus_reg = NULL;
 	u8			lpm_nyet_threshold;
 	u8			tx_de_emphasis;
 	u8			hird_threshold;
@@ -1318,8 +1341,13 @@ static void dwc3_get_properties(struct dwc3 *dwc)
 	device_property_read_u32(dev, "snps,quirk-frame-length-adjustment",
 				 &dwc->fladj);
 
+
 	dwc->dis_metastability_quirk = device_property_read_bool(dev,
 				"snps,dis_metastability_quirk");
+	vbus_reg = devm_regulator_get_optional(dev, "vbus");
+	if (IS_ERR(vbus_reg))
+		dev_err(dev, "vbus regulator failed\n");
+	dwc->vbus_reg = vbus_reg;
 
 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
 	dwc->tx_de_emphasis = tx_de_emphasis;
