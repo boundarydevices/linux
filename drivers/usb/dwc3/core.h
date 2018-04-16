@@ -1098,6 +1098,8 @@ struct dwc3 {
 
 	unsigned		tx_de_emphasis_quirk:1;
 	unsigned		tx_de_emphasis:2;
+
+	struct regulator	*vbus_reg;
 };
 
 #define work_to_dwc(w)		(container_of((w), struct dwc3, drd_work))

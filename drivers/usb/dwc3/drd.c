@@ -401,6 +401,12 @@ void dwc3_otg_update(struct dwc3 *dwc, bool ignore_idstatus)
 			if (dwc->usb2_generic_phy)
 				phy_set_mode(dwc->usb2_generic_phy,
 					     PHY_MODE_USB_HOST);
+			if (dwc->vbus_reg) {
+				ret = regulator_enable(dwc->vbus_reg);
+				if (ret < 0)
+					dev_err(dwc->dev,
+						"failed to enable vbus\n");
+			}
 		}
 		break;
 	case DWC3_OTG_ROLE_DEVICE:
@@ -415,6 +421,12 @@ void dwc3_otg_update(struct dwc3 *dwc, bool ignore_idstatus)
 		if (dwc->usb2_generic_phy)
 			phy_set_mode(dwc->usb2_generic_phy,
 				     PHY_MODE_USB_DEVICE);
+		if (dwc->vbus_reg) {
+			ret = regulator_disable(dwc->vbus_reg);
+			if (ret < 0)
+				dev_err(dwc->dev, "failed to disable vbus\n");
+		}
+
 		ret = dwc3_gadget_init(dwc);
 		if (ret)
 			dev_err(dwc->dev, "failed to initialize peripheral\n");
