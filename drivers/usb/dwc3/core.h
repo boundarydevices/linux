@@ -1297,6 +1297,8 @@ struct dwc3 {
 	unsigned		dis_split_quirk:1;
 
 	u16			imod_interval;
+
+	struct regulator	*vbus_reg;
 };
 
 #define INCRX_BURST_MODE 0
