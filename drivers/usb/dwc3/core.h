@@ -1334,6 +1334,8 @@ struct dwc3 {
 
 	u16			imod_interval;
 
+	struct regulator	*vbus_reg;
+
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);
