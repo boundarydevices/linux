@@ -1349,6 +1349,8 @@ struct dwc3 {
 	int			last_fifo_depth;
 	int			num_ep_resized;
 
+	struct regulator	*vbus_reg;
+
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);
