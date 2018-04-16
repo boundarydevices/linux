@@ -1360,6 +1360,7 @@ struct dwc3 {
 	int			last_fifo_depth;
 	int			num_ep_resized;
 	struct dentry		*debug_root;
+	struct regulator	*vbus_reg;
 };
 
 #define INCRX_BURST_MODE 0
