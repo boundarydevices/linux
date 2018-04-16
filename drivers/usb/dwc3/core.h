@@ -1263,6 +1263,8 @@ struct dwc3 {
 	unsigned		soft_itp_sync_quirk:1;
 
 	u16			imod_interval;
+
+	struct regulator	*vbus_reg;
 };
 
 #define INCRX_BURST_MODE 0
