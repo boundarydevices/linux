@@ -1270,6 +1270,8 @@ struct dwc3 {
 	unsigned		host_vbus_glitches:1;
 
 	u16			imod_interval;
+
+	struct regulator	*vbus_reg;
 };
 
 #define INCRX_BURST_MODE 0
