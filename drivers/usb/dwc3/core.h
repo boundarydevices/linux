@@ -1360,6 +1360,7 @@ struct dwc3 {
 	int			max_cfg_eps;
 	int			last_fifo_depth;
 	int			num_ep_resized;
+	struct regulator	*vbus_reg;
 };
 
 #define INCRX_BURST_MODE 0
