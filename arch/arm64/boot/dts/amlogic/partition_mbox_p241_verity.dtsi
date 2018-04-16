@@ -1,0 +1,143 @@
+/*
+ * Amlogic partition set for normal
+ *
+ * Copyright (c) 2017-2017 Amlogic Ltd
+ *
+ * This file is licensed under a dual GPLv2 or BSD license.
+ *
+ */
+/ {
+    partitions: partitions{
+		parts = <14>;
+		part-0 = <&logo>;
+		part-1 = <&recovery>;
+		part-2 = <&misc>;
+		part-3 = <&dto>;
+		part-4 = <&cri_data>;
+		part-5 = <&param>;
+		part-6 = <&boot>;
+		part-7 = <&rsv>;
+		part-8 = <&tee>;
+		part-9 = <&vendor>;
+		part-10 = <&odm>;
+		part-11 = <&system>;
+		part-12 = <&cache>;
+		part-13 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		recovery:recovery{
+			pname = "recovery";
+			size = <0x0 0x1800000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		dto:dto{
+			pname = "dto";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		cri_data:cri_data
+		{
+			pname = "cri_data";
+			size = <0x0 0x800000>;
+			mask = <2>;
+		};
+		rsv:rsv{
+			pname = "rsv";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		param:param{
+			pname = "param";
+			size = <0x0 0x1000000>;
+			mask = <2>;
+		};
+		boot:boot
+		{
+			pname = "boot";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		vendor:vendor
+		{
+			pname = "vendor";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		odm:odm
+		{
+			pname = "odm";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		system:system
+		{
+			pname = "system";
+			size = <0x0 0x46000000>;
+			mask = <1>;
+		};
+		cache:cache
+		{
+			pname = "cache";
+			size = <0x0 0x25000000>;
+			mask = <2>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
+		};
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			/* vboot 2.0 is not supported yet
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "boot,system,vendor";
+				by_name_prefix="/dev/block";
+			};
+			*/
+		fstab {
+			compatible = "android,fstab";
+			system {
+				compatible = "android,system";
+				dev = "/dev/block/system";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait,verify";
+				};
+
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/vendor";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait,verify";
+				};
+			odm {
+				compatible = "android,odm";
+				dev = "/dev/block/odm";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+			};
+		};
+	};
+};/* end of / */
