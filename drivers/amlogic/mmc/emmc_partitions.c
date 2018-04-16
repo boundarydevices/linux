@@ -33,7 +33,7 @@
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/sd.h>
 #include "emmc_key.h"
-
+#include <linux/dma-contiguous.h>
 #define DTB_NAME	"dtb"
 #define	SZ_1M	0x00100000
 #define		MMC_DTB_PART_OFFSET		(40*SZ_1M)
@@ -49,7 +49,7 @@
 /* pertransfer for internal opearations. */
 #define MAX_TRANS_BLK		(256)
 #define	MAX_TRANS_SIZE		(MAX_TRANS_BLK * DTB_BLK_SIZE)
-#define stamp_after(a, b)   ((int)(b) - (int)(a)  < 0)
+#define stamp_after(a, b)	((int)(b) - (int)(a)  < 0)
 
 struct aml_dtb_rsv {
 	u8 data[DTB_BLK_SIZE*DTB_BLK_CNT - 4*sizeof(unsigned int)];
@@ -158,14 +158,16 @@ static int _dtb_init(struct mmc_card *mmc)
 	int cpy = 1, valid = 0;
 	int bit = mmc->csd.read_blkbits;
 	int blk;
+	unsigned int pgcnt;
+	struct page *page = NULL;
 
+	pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
+	page = dma_alloc_from_contiguous(NULL,
+			pgcnt, get_order(CONFIG_DTB_SIZE));
 
-	/* malloc a buffer. */
-	dtb = kmalloc(CONFIG_DTB_SIZE, GFP_KERNEL);
-	if (dtb == NULL) {
-		/*pr_err("%s: malloc buf failed", __func__);*/
+	if (!page)
 		return -ENOMEM;
-	}
+	dtb = page_address(page);
 
 	/* read dtb2 1st, for compatibility without checksum. */
 	while (cpy >= 0) {
@@ -188,7 +190,7 @@ static int _dtb_init(struct mmc_card *mmc)
 	}
 	pr_info("total valid %d\n", valid);
 
-	kfree(dtb);
+	dma_release_from_contiguous(NULL, page, pgcnt);
 
 	return ret;
 }
@@ -248,6 +250,8 @@ int amlmmc_dtb_read(struct mmc_card *card,
 	int bit = card->csd.read_blkbits;
 	unsigned char *dst = NULL;
 	unsigned char *buffer = NULL;
+	unsigned int pgcnt;
+	struct page *page = NULL;
 
 	if (len > CONFIG_DTB_SIZE) {
 		pr_err("%s dtb data len too much", __func__);
@@ -261,15 +265,14 @@ int amlmmc_dtb_read(struct mmc_card *card,
 		return ret;
 	}
 
-	buffer = kmalloc(DTB_CELL_SIZE, GFP_KERNEL);
-	if (buffer == NULL) {
-		pr_err("%s kmalloc dtb cell failed\n", __func__);
-		buffer = kmalloc(DTB_CELL_SIZE, GFP_DMA);
-		if (buffer == NULL) {
-			pr_err("%s retry kmalloc dtb cell failed\n", __func__);
-			return -ENOMEM;
-		}
-	}
+	pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
+
+	page = dma_alloc_from_contiguous(NULL,
+			pgcnt, get_order(CONFIG_DTB_SIZE));
+	if (!page)
+		return -ENOMEM;
+	buffer = page_address(page);
+
 	start_blk >>= bit;
 	size = CONFIG_DTB_SIZE;
 	blk_cnt = size>>bit;
@@ -280,7 +283,7 @@ int amlmmc_dtb_read(struct mmc_card *card,
 		if (ret) {
 			pr_err("%s read dtb error", __func__);
 			ret = -EFAULT;
-			kfree(buffer);
+			dma_release_from_contiguous(NULL, page, pgcnt);
 			return ret;
 		}
 		start_blk += (DTB_CELL_SIZE>>bit);
@@ -288,7 +291,7 @@ int amlmmc_dtb_read(struct mmc_card *card,
 		memcpy(buf, dst, DTB_CELL_SIZE);
 		buf += DTB_CELL_SIZE;
 	}
-	kfree(buffer);
+	dma_release_from_contiguous(NULL, page, pgcnt);
 	return ret;
 }
 static CLASS_ATTR(emmcdtb, 0644, NULL, NULL);
@@ -306,6 +309,8 @@ ssize_t mmc_dtb_read(struct file *file,
 	unsigned char *dtb_ptr = NULL;
 	ssize_t read_size = 0;
 	int ret = 0;
+	unsigned int pgcnt;
+	struct page *page = NULL;
 
 	if (*ppos == CONFIG_DTB_SIZE)
 		return 0;
@@ -314,10 +319,13 @@ ssize_t mmc_dtb_read(struct file *file,
 		pr_err("%s: out of space!", __func__);
 		return -EFAULT;
 	}
+	pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
 
-	dtb_ptr = vmalloc(CONFIG_DTB_SIZE);
-	if (dtb_ptr == NULL)
+	page = dma_alloc_from_contiguous(NULL,
+			pgcnt, get_order(CONFIG_DTB_SIZE));
+	if (!page)
 		return -ENOMEM;
+	dtb_ptr = page_address(page);
 
 	mmc_claim_host(card_dtb->host);
 	ret = amlmmc_dtb_read(card_dtb,
@@ -337,7 +345,7 @@ ssize_t mmc_dtb_read(struct file *file,
 
 exit:
 	mmc_release_host(card_dtb->host);
-	vfree(dtb_ptr);
+	dma_release_from_contiguous(NULL, page, pgcnt);
 	return read_size;
 }
 
@@ -349,18 +357,23 @@ ssize_t mmc_dtb_write(struct file *file,
 	ssize_t write_size = 0;
 	int ret = 0;
 
+	unsigned int pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
+	struct page *page = NULL;
+
 	if (*ppos == CONFIG_DTB_SIZE)
 		return 0;
-
 	if (*ppos >= CONFIG_DTB_SIZE) {
 		pr_err("%s: out of space!", __func__);
 		return -EFAULT;
 	}
 
-	dtb_ptr = kmalloc(CONFIG_DTB_SIZE, GFP_KERNEL);
-	if (dtb_ptr == NULL)
+	pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
+	page = dma_alloc_from_contiguous(NULL,
+			pgcnt, get_order(CONFIG_DTB_SIZE));
+	if (!page)
 		return -ENOMEM;
 
+	dtb_ptr = page_address(page);
 	mmc_claim_host(card_dtb->host);
 
 	if ((*ppos + count) > CONFIG_DTB_SIZE)
@@ -381,7 +394,7 @@ ssize_t mmc_dtb_write(struct file *file,
 	*ppos += write_size;
 exit:
 	mmc_release_host(card_dtb->host);
-	kfree(dtb_ptr);
+	dma_release_from_contiguous(NULL, page, pgcnt);
 	return write_size;
 }
 
@@ -942,7 +955,7 @@ static int add_emmc_partition(struct gendisk *disk,
 			pr_info("[%s] %s: partition exceeds device capacity:\n",
 					__func__, disk->disk_name);
 
-			pr_info("%20s  offset 0x%012llx, size 0x%012llx\n",
+			pr_info("\%20s	offset 0x%012llx, size 0x%012llx\n",
 					pp->name, offset<<9, size<<9);
 
 			break;
@@ -1020,7 +1033,7 @@ static ssize_t emmc_part_table_get(struct class *class,
 		if (tmp_table[i].mask_flags == STORE_CODE) {
 			strncpy(part_table[part_num].name,
 					tmp_table[i].name,
-					MAX_PART_NAME_LEN);
+					MAX_MMC_PART_NAME_LEN);
 
 			part_table[part_num].size = tmp_table[i].size;
 			part_table[part_num].offset = tmp_table[i].offset;
@@ -1200,7 +1213,7 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
 	 *}
 	 */
 	pr_info("Exit %s %s.\n", __func__, (ret == 0)?"OK":"ERROR");
-	return 0;
+	return ret;
 
 out_class3:
 	class_remove_file(aml_store_class, &aml_part_table);
