@@ -39,7 +39,7 @@
 #define CALI_PATTERN_OFFSET ((SZ_1M * (36 + 3)) / 512)
 /* #define AML_RESP_WR_EXT */
 /* pio to transfer data */
-#define CFG_SDEMMC_PIO		(0)
+#define CFG_SDEMMC_PIO		(1)
 
 #ifdef AML_CALIBRATION
 #define MAX_CALI_RETRY	3
@@ -243,6 +243,7 @@ struct amlsd_platform {
 	unsigned int card_capacity;
 	unsigned int tx_phase;
 	unsigned int tx_delay;
+	unsigned int co_phase;
 	unsigned int f_min;
 	unsigned int f_max;
 	unsigned int clkc;
@@ -451,7 +452,6 @@ struct amlsd_host {
 	struct  mmc_request	*mrq2;
 	spinlock_t	mrq_lock;
 	struct mutex	pinmux_lock;
-	struct mutex	pdata_lock;
 	struct completion   drv_completion;
 	int			cmd_is_stop;
 	enum aml_mmc_waitfor	xfer_step;

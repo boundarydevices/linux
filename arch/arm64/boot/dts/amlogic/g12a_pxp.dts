@@ -675,7 +675,7 @@
 	 */
 	tv_bit_mode = <1>;
 };
-&sd_emmc_b {
+&sd_emmc_b1 {
 	status = "okay";
 	sd {
 		caps = "MMC_CAP_4_BIT_DATA",

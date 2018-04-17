@@ -1548,7 +1548,6 @@ static void aml_sd_emmc_kunmap_atomic(
  * a linear buffer and an SG list  for amlogic,
  * We don't disable irq in this function
  */
-#ifndef AML_MMC_TDMA
 #ifdef CFG_SDEMMC_PIO
 static u32 aml_sd_emmc_pre_pio(struct amlsd_host *host,
 	struct mmc_request *mrq, struct sd_emmc_desc_info *desc)
@@ -1621,7 +1620,6 @@ err_exit:
 	return ret;
 }
 #endif /* CFG_SDEMMC_PIO */
-#endif
 
 static unsigned int aml_sd_emmc_pre_dma(struct amlsd_host *host,
 	struct mmc_request *mrq, struct sd_emmc_desc_info *desc)
@@ -1869,7 +1867,8 @@ int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 	aml_sd_emmc_check_sdio_irq(host);
 	mmc_request_done(host->mmc, mrq);
 #ifdef AML_MMC_TDMA
-	if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+	if ((host->irq == 49)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
 		complete(&host->drv_completion);
 #endif
 
@@ -2208,13 +2207,15 @@ static void meson_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	pdata = mmc_priv(mmc);
 	host = pdata->host;
 #ifdef AML_MMC_TDMA
-	if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+	if ((host->irq == 49)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
 		wait_for_completion(&host->drv_completion);
 #endif
 
 	if (aml_check_unsupport_cmd(mmc, mrq)) {
 #ifdef AML_MMC_TDMA
-		if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+		if ((host->irq == 49)
+				&& (host->data->chip_type == MMC_CHIP_G12A))
 			complete(&host->drv_completion);
 #endif
 		return;
@@ -2945,9 +2946,9 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	struct amlsd_host *host;
 	struct amlsd_platform *pdata = NULL;
 	struct mmc_host *mmc;
-	int ret = 0, clk = 0, cfg = 0;
+	int ret = 0, clk = 0, cfg = 0, i = 0;
 #ifdef AML_MMC_TDMA
-	int i = 0, k = 1;
+	int k = 1;
 #endif
 
 	aml_mmc_ver_msg_show();
@@ -3047,7 +3048,8 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	}
 
 #ifdef AML_MMC_TDMA
-	if ((host->irq == 49) && (host->data->chip_type == MMC_CHIP_G12A)) {
+	if ((host->irq == 49)
+			&& (host->data->chip_type == MMC_CHIP_G12A)) {
 		init_completion(&host->drv_completion);
 		host->drv_completion.done = 1;
 		k = 2;
@@ -3068,16 +3070,12 @@ static int meson_mmc_probe(struct platform_device *pdev)
 
 	pdata = mmc_priv(mmc);
 	memset(pdata, 0, sizeof(struct amlsd_platform));
-#ifdef AML_MMC_TDMA
-	ret = amlsd_get_platform_data(pdev, pdata, mmc, i);
-#else
-	ret = amlsd_get_platform_data(pdev, pdata, mmc, 0);
-#endif
-	if (ret)
+	if (amlsd_get_platform_data(pdev, pdata, mmc, i)) {
 		mmc_free_host(mmc);
+		break;
+	}
 
 	/* data desc buffer */
-#ifndef AML_MMC_TDMA
 #ifdef CFG_SDEMMC_PIO
 	pr_err(">>>>>>>>>>hostbase %p, dmode %s\n", host->base, pdata->dmode);
 	if (!strcmp(pdata->dmode, "pio")) {
@@ -3095,24 +3093,22 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		}
 	} else {
 #endif
-#endif
 		host->pre_cmd_op = aml_sd_emmc_pre_dma;
 		host->post_cmd_op = aml_sd_emmc_post_dma;
-		host->desc_buf =
-			dma_alloc_coherent(host->dev,
-				SD_EMMC_MAX_DESC_MUN
-				* (sizeof(struct sd_emmc_desc_info)),
-				&host->desc_dma_addr, GFP_KERNEL);
+		if (host->desc_buf == NULL)
+			host->desc_buf =
+				dma_alloc_coherent(host->dev,
+					SD_EMMC_MAX_DESC_MUN
+					* (sizeof(struct sd_emmc_desc_info)),
+					&host->desc_dma_addr, GFP_KERNEL);
 
 		if (host->desc_buf == NULL) {
 			dev_err(host->dev, "Unable to map allocate DMA desc buffer.\n");
 			ret = -ENOMEM;
 			goto free_cali;
 		}
-#ifndef AML_MMC_TDMA
 #ifdef CFG_SDEMMC_PIO
 	}
-#endif
 #endif
 
 	if (aml_card_type_mmc(pdata)
@@ -3354,6 +3350,15 @@ static struct meson_mmc_data mmc_data_gxlx = {
 	.ds_pin_poll = 0x3c,
 	.ds_pin_poll_en = 0x4a,
 	.ds_pin_poll_bit = 15,
+	.sdmmc.init.core_phase = 3,
+	.sdmmc.init.tx_phase = 0,
+	.sdmmc.init.rx_phase = 0,
+	.sdmmc.hs.core_phase = 3,
+	.sdmmc.ddr.core_phase = 2,
+	.sdmmc.hs2.core_phase = 2,
+	.sdmmc.hs4.tx_delay = 0,
+	.sdmmc.sd_hs.core_phase = 2,
+	.sdmmc.sdr104.core_phase = 2,
 };
 static struct meson_mmc_data mmc_data_txhd = {
 	.chip_type = MMC_CHIP_TXHD,
@@ -3362,6 +3367,15 @@ static struct meson_mmc_data mmc_data_txhd = {
 	.ds_pin_poll = 0x3c,
 	.ds_pin_poll_en = 0x4a,
 	.ds_pin_poll_bit = 11,
+	.sdmmc.init.core_phase = 3,
+	.sdmmc.init.tx_phase = 0,
+	.sdmmc.init.rx_phase = 0,
+	.sdmmc.hs.core_phase = 3,
+	.sdmmc.ddr.core_phase = 2,
+	.sdmmc.hs2.core_phase = 2,
+	.sdmmc.hs4.tx_delay = 0,
+	.sdmmc.sd_hs.core_phase = 2,
+	.sdmmc.sdr104.core_phase = 2,
 };
 
 static struct meson_mmc_data mmc_data_g12a = {

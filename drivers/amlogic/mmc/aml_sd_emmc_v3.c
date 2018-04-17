@@ -248,10 +248,10 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 		pr_info("%s: try set sd/emmc to DDR mode\n",
 			mmc_hostname(host->mmc));
 	} else if (timing == MMC_TIMING_MMC_HS) {
-		if (host->data->chip_type < MMC_CHIP_G12A)
-			clkc->core_phase = para->hs.core_phase;
-		else
-			clkc->core_phase = 2;
+		clkc->core_phase = para->hs.core_phase;
+		/* overide co-phase by dts */
+		if (pdata->co_phase)
+			clkc->core_phase = pdata->co_phase;
 	} else if (timing == MMC_TIMING_MMC_HS200) {
 		clkc->core_phase = para->hs2.core_phase;
 	} else if ((timing == MMC_TIMING_SD_HS)
@@ -259,6 +259,7 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 		clkc->core_phase = para->sd_hs.core_phase;
 	} else if (timing == MMC_TIMING_UHS_SDR104) {
 		clkc->core_phase = para->sdr104.core_phase;
+
 	} else
 		ctrl->ddr = 0;
 
@@ -307,12 +308,14 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 	struct amlsd_host *host = pdata->host;
 
 #ifdef AML_MMC_TDMA
-	if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+	if ((host->irq == 49)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
 		wait_for_completion(&host->drv_completion);
 #endif
 	if (!pdata->is_in) {
 #ifdef AML_MMC_TDMA
-		if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
+		if ((host->irq == 49)
+				&& (host->data->chip_type == MMC_CHIP_G12A))
 			complete(&host->drv_completion);
 #endif
 		return;
@@ -340,8 +343,9 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 	else if (ios->chip_select == MMC_CS_DONTCARE)
 		aml_cs_dont_care(mmc);
 #ifdef AML_MMC_TDMA
-		if (aml_card_type_sdio(pdata) || aml_card_type_non_sdio(pdata))
-			complete(&host->drv_completion);
+	if ((host->irq == 49)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		complete(&host->drv_completion);
 #endif
 }
 

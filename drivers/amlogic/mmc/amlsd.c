@@ -453,9 +453,6 @@ void of_amlsd_xfer_pre(struct amlsd_platform *pdata)
 	char *p = pinctrl;
 	int i, size = 0;
 	struct pinctrl *ppin;
-#if 0
-	int val = 0;
-#endif
 
 	size = sizeof(pinctrl);
 #ifdef CONFIG_AMLOGIC_M8B_MMC
@@ -518,23 +515,6 @@ void of_amlsd_xfer_pre(struct amlsd_platform *pdata)
 			 */
 			mdelay(1);
 		}
-#if 0
-		if (!strcmp(host->pinctrl_name,
-					"sdio_all_pins")
-				|| !strcmp(host->pinctrl_name,
-					"sdio_clk_cmd_pins")) {
-			val = readl(host->pinmux_base + (0x16 << 2));
-			val &= ~(1 << 4);
-			writel(val, host->pinmux_base + (0x16 << 2));
-		} else if (!strcmp(host->pinctrl_name,
-					"sd_all_pins")
-				|| !strcmp(host->pinctrl_name,
-					"sd_clk_cmd_pins")) {
-			val = readl(host->pinmux_base + (0x13 << 2));
-			val &= ~(1 << 4);
-			writel(val, host->pinmux_base + (0x13 << 2));
-		}
-#endif
 		if (i == 100)
 			pr_err("CMD%d: get pinctrl %s fail.\n",
 					host->opcode, pinctrl);

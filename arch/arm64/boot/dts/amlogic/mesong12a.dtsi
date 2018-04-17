@@ -1297,6 +1297,7 @@
 			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
 			/*caps defined in dts*/
 			tx_delay = <0>;
+			co_phase = <3>;
 			max_req_size = <0x20000>; /**128KB*/
 			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
 			hw_reset = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
@@ -1307,7 +1308,44 @@
 		};
 	};
 
-	sd_emmc_b:sd@ffe05000 {
+	sd_emmc_b1:sd1@ffe05000 {
+		status = "disabled";
+		compatible = "amlogic, meson-mmc-g12a";
+		reg = <0x0 0xffe05000 0x0 0x800>;
+		interrupts = <0 190 1>;
+
+		pinctrl-names = "sd_all_pins",
+			"sd_clk_cmd_pins";
+		pinctrl-0 = <&sd_all_pins>;
+		pinctrl-1 = <&sd_clk_cmd_pins>;
+
+		clocks = <&clkc CLKID_SD_EMMC_B>,
+			<&clkc CLKID_SD_EMMC_B_P0_COMP>,
+			<&clkc CLKID_FCLK_DIV2>,
+			<&clkc CLKID_FCLK_DIV5>,
+			<&xtal>;
+		clock-names = "core", "clkin0", "clkin1", "clkin2", "xtal";
+
+		bus-width = <4>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		max-frequency = <100000000>;
+		disable-wp;
+		sd {
+			pinname = "sd";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			max_req_size = <0x20000>; /**128KB*/
+			gpio_dat3 = <&gpio GPIOC_4 GPIO_ACTIVE_HIGH>;
+			jtag_pin = <&gpio GPIOC_0 GPIO_ACTIVE_HIGH>;
+			gpio_cd = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
+			card_type = <5>;
+			/* 3:sdio device(ie:sdio-wifi),
+			 * 4:SD combo (IO+mem) card
+			 */
+		};
+	};
+
+	sd_emmc_b2:sd2@ffe05000 {
 		status = "disabled";
 		compatible = "amlogic, meson-mmc-g12a";
 		reg = <0x0 0xffe05000 0x0 0x800>;
