@@ -3,9 +3,9 @@
 
 #include <linux/huge_mm.h>
 #include <linux/swap.h>
-#ifdef CONFIG_AMLOGIC_CMA
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 #include <linux/page-isolation.h>
-#endif /* CONFIG_AMLOGIC_CMA */
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 
 /**
  * page_is_file_cache - should the page be on a file LRU or anon LRU?
@@ -49,46 +49,41 @@ static __always_inline void update_lru_size(struct lruvec *lruvec,
 static __always_inline void add_page_to_lru_list(struct page *page,
 				struct lruvec *lruvec, enum lru_list lru)
 {
-#ifdef CONFIG_AMLOGIC_CMA
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 	int nr_pages = hpage_nr_pages(page);
 	int num = NR_INACTIVE_ANON_CMA - NR_INACTIVE_ANON;
 	int migrate_type = 0;
-#endif /* CONFIG_AMLOGIC_CMA */
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 
 	update_lru_size(lruvec, lru, page_zonenum(page), hpage_nr_pages(page));
-#ifdef CONFIG_AMLOGIC_CMA
+	list_add(&page->lru, &lruvec->lists[lru]);
+
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 	migrate_type = get_pageblock_migratetype(page);
-	if (is_migrate_cma(migrate_type) || is_migrate_isolate(migrate_type)) {
+	if (is_migrate_cma(migrate_type) || is_migrate_isolate(migrate_type))
 		__mod_zone_page_state(page_zone(page),
 				      NR_LRU_BASE + lru + num, nr_pages);
-		list_add_tail(&page->lru, lruvec->cma_list[lru]);
-		/* Always to point to first cma page */
-		lruvec->cma_list[lru] = &page->lru;
-	} else
-		list_add(&page->lru, &lruvec->lists[lru]);
-#else
-	list_add(&page->lru, &lruvec->lists[lru]);
-#endif /* CONFIG_AMLOGIC_CMA */
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 }
 
 static __always_inline void del_page_from_lru_list(struct page *page,
 				struct lruvec *lruvec, enum lru_list lru)
 {
-#ifdef CONFIG_AMLOGIC_CMA
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 	int nr_pages = hpage_nr_pages(page);
 	int num = NR_INACTIVE_ANON_CMA - NR_INACTIVE_ANON;
 	int migrate_type = 0;
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 
-	migrate_type = get_pageblock_migratetype(page);
-	if (is_migrate_cma(migrate_type) || is_migrate_isolate(migrate_type)) {
-		__mod_zone_page_state(page_zone(page),
-				      NR_LRU_BASE + lru + num, -nr_pages);
-		if (lruvec->cma_list[lru] == &page->lru)
-			lruvec->cma_list[lru] = page->lru.next;
-	}
-#endif /* CONFIG_AMLOGIC_CMA */
 	list_del(&page->lru);
 	update_lru_size(lruvec, lru, page_zonenum(page), -hpage_nr_pages(page));
+
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+	migrate_type = get_pageblock_migratetype(page);
+	if (is_migrate_cma(migrate_type) || is_migrate_isolate(migrate_type))
+		__mod_zone_page_state(page_zone(page),
+				      NR_LRU_BASE + lru + num, -nr_pages);
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 }
 
 /**

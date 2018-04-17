@@ -244,26 +244,12 @@ struct zone_reclaim_stat {
 struct lruvec {
 	struct list_head		lists[NR_LRU_LISTS];
 	struct zone_reclaim_stat	reclaim_stat;
-#ifdef CONFIG_AMLOGIC_CMA
-	struct list_head *cma_list[NR_LRU_LISTS];
-#endif /* CONFIG_AMLOGIC_CMA */
 	/* Evictions & activations on the inactive file list */
 	atomic_long_t			inactive_age;
 #ifdef CONFIG_MEMCG
 	struct pglist_data *pgdat;
 #endif
 };
-
-#ifdef CONFIG_AMLOGIC_CMA
-static inline bool lru_normal_empty(enum lru_list lru, struct lruvec *lruv)
-{
-	if (lruv->lists[lru].next == lruv->cma_list[lru])
-		return true;
-	else
-		return false;
-}
-#endif /* CONFIG_AMLOGIC_CMA */
-
 
 /* Mask used at gathering information at once (see memcontrol.c) */
 #define LRU_ALL_FILE (BIT(LRU_INACTIVE_FILE) | BIT(LRU_ACTIVE_FILE))

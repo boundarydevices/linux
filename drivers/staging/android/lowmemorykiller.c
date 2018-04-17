@@ -148,7 +148,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int file_cma   = 0;
 	int cma_forbid = 0;
 
-	if (cma_forbidden_mask(sc->gfp_mask)) {
+	if (cma_forbidden_mask(sc->gfp_mask) && !current_is_kswapd()) {
 		free_cma    = global_page_state(NR_FREE_CMA_PAGES);
 		file_cma    = global_page_state(NR_INACTIVE_FILE_CMA) +
 			      global_page_state(NR_ACTIVE_FILE_CMA);

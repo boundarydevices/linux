@@ -93,10 +93,6 @@ void lruvec_init(struct lruvec *lruvec)
 
 	for_each_lru(lru)
 		INIT_LIST_HEAD(&lruvec->lists[lru]);
-#ifdef CONFIG_AMLOGIC_CMA
-	for_each_lru(lru)
-		lruvec->cma_list[lru] = &lruvec->lists[lru];
-#endif /* CONFIG_AMLOGIC_CMA */
 }
 
 #if defined(CONFIG_NUMA_BALANCING) && !defined(LAST_CPUPID_NOT_IN_PAGE_FLAGS)

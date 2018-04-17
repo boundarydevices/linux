@@ -1456,30 +1456,16 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	unsigned long nr_skipped[MAX_NR_ZONES] = { 0, };
 	unsigned long scan, nr_pages;
 	LIST_HEAD(pages_skipped);
-#ifdef CONFIG_AMLOGIC_CMA
+#ifdef CONFIG_AMLOGIC_MODIFY
 	int num = NR_INACTIVE_ANON_CMA - NR_INACTIVE_ANON;
-	bool use_cma = true, is_cma_page;
-
-	if (cma_forbidden_mask(sc->gfp_mask))
-		use_cma = false;
-#endif /* CONFIG_AMLOGIC_CMA */
+	int migrate_type = 0;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	for (scan = 0; scan < nr_to_scan && nr_taken < nr_to_scan &&
 					!list_empty(src);) {
 		struct page *page;
 
-	#ifdef CONFIG_AMLOGIC_CMA
-		page = NULL;
-		if (!use_cma) {
-			if (!lru_normal_empty(lru, lruvec))
-				page = lru_to_page(lruvec->cma_list[lru]);
-		}
-		if (!page)
-			page = lru_to_page(src);
-		is_cma_page = cma_page(page);
-	#else
 		page = lru_to_page(src);
-	#endif /* CONFIG_AMLOGIC_CMA */
 		prefetchw_prev_lru_page(page, src, flags);
 
 		VM_BUG_ON_PAGE(!PageLRU(page), page);
@@ -1501,30 +1487,20 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 			nr_pages = hpage_nr_pages(page);
 			nr_taken += nr_pages;
 			nr_zone_taken[page_zonenum(page)] += nr_pages;
-		#ifdef CONFIG_AMLOGIC_CMA
-			if (is_cma_page) {
-				__mod_zone_page_state(page_zone(page),
-						      NR_LRU_BASE + lru + num,
-						      -nr_pages);
-				if (lruvec->cma_list[lru] == &page->lru)
-					lruvec->cma_list[lru] = page->lru.next;
-			}
-		#endif /* CONFIG_AMLOGIC_CMA */
 			list_move(&page->lru, dst);
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			migrate_type = get_pageblock_migratetype(page);
+			if (is_migrate_cma(migrate_type) ||
+			    is_migrate_isolate(migrate_type))
+				__mod_zone_page_state(page_zone(page),
+					NR_LRU_BASE + lru + num,
+					-nr_pages);
+		#endif /* CONFIG_AMLOGIC_MODIFY */
 			break;
 
 		case -EBUSY:
 			/* else it is being freed elsewhere */
-		#ifdef CONFIG_AMLOGIC_CMA
-			if (is_cma_page) {
-				list_move(&page->lru,
-						lruvec->cma_list[lru]->prev);
-				lruvec->cma_list[lru] = &page->lru;
-			} else
-				list_move(&page->lru, src);
-		#else
 			list_move(&page->lru, src);
-		#endif /* CONFIG_AMLOGIC_CMA */
 			continue;
 
 		default:
@@ -1932,10 +1908,10 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 	unsigned long pgmoved = 0;
 	struct page *page;
 	int nr_pages;
-#ifdef CONFIG_AMLOGIC_CMA
+#ifdef CONFIG_AMLOGIC_MODIFY
 	int num = NR_INACTIVE_ANON_CMA - NR_INACTIVE_ANON;
-	bool is_cma_page;
-#endif /* CONFIG_AMLOGIC_CMA */
+	int migrate_type = 0;
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 	while (!list_empty(list)) {
 		page = lru_to_page(list);
@@ -1946,20 +1922,16 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 
 		nr_pages = hpage_nr_pages(page);
 		update_lru_size(lruvec, lru, page_zonenum(page), nr_pages);
-	#ifdef CONFIG_AMLOGIC_CMA
-		is_cma_page = cma_page(page);
-		if (is_cma_page) {
+		list_move(&page->lru, &lruvec->lists[lru]);
+		pgmoved += nr_pages;
+	#ifdef CONFIG_AMLOGIC_MODIFY
+		migrate_type = get_pageblock_migratetype(page);
+		if (is_migrate_cma(migrate_type) ||
+		    is_migrate_isolate(migrate_type))
 			__mod_zone_page_state(page_zone(page),
 					      NR_LRU_BASE + lru + num,
 					      nr_pages);
-			list_move(&page->lru, lruvec->cma_list[lru]->prev);
-			lruvec->cma_list[lru] = &page->lru;
-		} else
-			list_move(&page->lru, &lruvec->lists[lru]);
-	#else
-		list_move(&page->lru, &lruvec->lists[lru]);
-	#endif /* CONFIG_AMLOGIC_CMA */
-		pgmoved += nr_pages;
+	#endif /* CONFIG_AMLOGIC_MODIFY */
 
 		if (put_page_testzero(page)) {
 			__ClearPageLRU(page);

@@ -210,18 +210,7 @@ static void pagevec_move_tail_fn(struct page *page, struct lruvec *lruvec,
 
 	if (PageLRU(page) && !PageActive(page) && !PageUnevictable(page)) {
 		enum lru_list lru = page_lru_base_type(page);
-	#ifdef CONFIG_AMLOGIC_CMA
-		if (!cma_page(page)) {
-			list_move_tail(&page->lru, lruvec->cma_list[lru]);
-		} else {
-			if ((lruvec->cma_list[lru] == &page->lru) &&
-					(page->lru.next != &lruvec->lists[lru]))
-				lruvec->cma_list[lru] = page->lru.next;
-			list_move_tail(&page->lru, &lruvec->lists[lru]);
-		}
-	#else
 		list_move_tail(&page->lru, &lruvec->lists[lru]);
-	#endif /* CONFIG_AMLOGIC_CMA */
 		(*pgmoved)++;
 	}
 }
@@ -560,18 +549,7 @@ static void lru_deactivate_file_fn(struct page *page, struct lruvec *lruvec,
 		 * The page's writeback ends up during pagevec
 		 * We moves tha page into tail of inactive.
 		 */
-	#ifdef CONFIG_AMLOGIC_CMA
-		if (!cma_page(page)) {
-			list_move_tail(&page->lru, lruvec->cma_list[lru]);
-		} else {
-			if ((lruvec->cma_list[lru] == &page->lru) &&
-					(page->lru.next != &lruvec->lists[lru]))
-				lruvec->cma_list[lru] = page->lru.next;
-			list_move_tail(&page->lru, &lruvec->lists[lru]);
-		}
-	#else
 		list_move_tail(&page->lru, &lruvec->lists[lru]);
-	#endif /* CONFIG_AMLOGIC_CMA */
 		__count_vm_event(PGROTATED);
 	}
 
