@@ -49,6 +49,8 @@
 #define DISP_RATIO_FORCECONFIG          0x80000000
 #define DISP_RATIO_FORCE_NORMALWIDE     0x40000000
 #define DISP_RATIO_FORCE_FULL_STRETCH   0x20000000
+#define DISP_RATIO_ADAPTED_PICMODE   0x10000000
+#define DISP_RATIO_INFOFRAME_AVAIL   0x08000000
 #define DISP_RATIO_CTRL_MASK            0x00000003
 #define DISP_RATIO_NO_KEEPRATIO         0x00000000
 #define DISP_RATIO_KEEPRATIO            0x00000001
@@ -205,6 +207,16 @@ enum vframe_disp_mode_e {
 	VFRAME_DISP_MODE_OK,
 };
 
+struct vframe_pic_mode_s {
+	int hs;
+	int he;
+	int vs;
+	int ve;
+	u32 screen_mode;
+	u32 custom_ar;
+	u32 AFD_enable;
+};
+
 #define BITDEPTH_Y_SHIFT 8
 #define BITDEPTH_Y8    (0 << BITDEPTH_Y_SHIFT)
 #define BITDEPTH_Y9    (1 << BITDEPTH_Y_SHIFT)
@@ -327,6 +339,7 @@ struct vframe_s {
 	void *mem_handle;
 	/*for MMU H265/VP9 compress header*/
 	void *mem_head_handle;
+	struct vframe_pic_mode_s pic_mode;
 } /*vframe_t */;
 
 #if 0

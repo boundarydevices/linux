@@ -2068,6 +2068,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 	u32 first_picture = 0;
 	unsigned long flags = 0;
 	bool vf_with_el = false;
+	bool force_toggle = false;
 
 	if (vf == NULL)
 		return;
@@ -2375,20 +2376,31 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 		vf->type_backup = vf->type;
 	}
 
+	if (cur_dispbuf && vf &&
+		(cur_dispbuf->ratio_control &
+		DISP_RATIO_ADAPTED_PICMODE) &&
+		(cur_dispbuf->ratio_control ==
+		vf->ratio_control) &&
+		memcmp(&cur_dispbuf->pic_mode, &vf->pic_mode,
+		sizeof(struct vframe_pic_mode_s)))
+		force_toggle = true;
+
+	if ((last_process_3d_type != process_3d_type)
+		|| (last_el_status != vf_with_el))
+		force_toggle = true;
+
 	/* enable new config on the new frames */
-	if ((first_picture) ||  (cur_dispbuf &&
-	    ((cur_dispbuf->bufWidth != vf->bufWidth) ||
-	    (cur_dispbuf->width != vf->width) ||
-	    (cur_dispbuf->height != vf->height) ||
-	    (cur_dispbuf->bitdepth != vf->bitdepth) ||
-	    (cur_dispbuf->trans_fmt != vf->trans_fmt) ||
-	    (last_process_3d_type != process_3d_type) ||
-	    (cur_dispbuf->ratio_control != vf->ratio_control) ||
-	    ((cur_dispbuf->type_backup & VIDTYPE_INTERLACE) !=
-	     (vf->type_backup & VIDTYPE_INTERLACE)) ||
-	     (last_el_status != vf_with_el) ||
-	    (cur_dispbuf->type != vf->type)
-	    ))) {
+	if (first_picture || force_toggle ||
+		(cur_dispbuf &&
+		((cur_dispbuf->bufWidth != vf->bufWidth) ||
+		(cur_dispbuf->width != vf->width) ||
+		(cur_dispbuf->height != vf->height) ||
+		(cur_dispbuf->bitdepth != vf->bitdepth) ||
+		(cur_dispbuf->trans_fmt != vf->trans_fmt) ||
+		(cur_dispbuf->ratio_control != vf->ratio_control) ||
+		((cur_dispbuf->type_backup & VIDTYPE_INTERLACE) !=
+		(vf->type_backup & VIDTYPE_INTERLACE)) ||
+		(cur_dispbuf->type != vf->type)))) {
 		last_process_3d_type = process_3d_type;
 		atomic_inc(&video_sizechange);
 		wake_up_interruptible(&amvideo_sizechange_wait);
@@ -7230,7 +7242,7 @@ static ssize_t video_screen_mode_show(struct class *cla,
 		"normal-noscaleup",
 		"4-3 ignore", "4-3 letter box", "4-3 pan scan", "4-3 combined",
 		"16-9 ignore", "16-9 letter box", "16-9 pan scan",
-		"16-9 combined"
+		"16-9 combined", "Custom AR", "AFD"
 	};
 
 	if (wide_setting < ARRAY_SIZE(wide_str)) {
@@ -8532,6 +8544,39 @@ static ssize_t free_cma_buffer_store(struct class *cla,
 	return count;
 }
 
+static ssize_t pic_mode_info_show(struct class *cla,
+			struct class_attribute *attr, char *buf)
+{
+	int ret = 0;
+
+	if (cur_dispbuf) {
+		u32 adapted_mode = (cur_dispbuf->ratio_control
+			& DISP_RATIO_ADAPTED_PICMODE) ? 1 : 0;
+		u32 info_frame = (cur_dispbuf->ratio_control
+			& DISP_RATIO_INFOFRAME_AVAIL) ? 1 : 0;
+
+		ret += sprintf(buf + ret, "ratio_control=0x%x\n",
+			cur_dispbuf->ratio_control);
+		ret += sprintf(buf + ret, "adapted_mode=%d\n",
+			adapted_mode);
+		ret += sprintf(buf + ret, "info_frame=%d\n",
+			info_frame);
+		ret += sprintf(buf + ret,
+			"hs=%d, he=%d, vs=%d, ve=%d\n",
+			cur_dispbuf->pic_mode.hs,
+			cur_dispbuf->pic_mode.he,
+			cur_dispbuf->pic_mode.vs,
+			cur_dispbuf->pic_mode.ve);
+		ret += sprintf(buf + ret, "screen_mode=%d\n",
+			cur_dispbuf->pic_mode.screen_mode);
+		ret += sprintf(buf + ret, "custom_ar=%d\n",
+			cur_dispbuf->pic_mode.custom_ar);
+		ret += sprintf(buf + ret, "AFD_enable=%d\n",
+			cur_dispbuf->pic_mode.AFD_enable);
+		return ret;
+	}
+	return sprintf(buf, "NA\n");
+}
 
 static struct class_attribute amvideo_class_attrs[] = {
 	__ATTR(axis,
@@ -8681,6 +8726,7 @@ static struct class_attribute amvideo_class_attrs[] = {
 	__ATTR_RO(video_state),
 	__ATTR_RO(fps_info),
 	__ATTR_RO(video_layer1_state),
+	__ATTR_RO(pic_mode_info),
 	__ATTR_NULL
 };
 

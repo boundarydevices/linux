@@ -453,6 +453,10 @@ unsigned int force_vskip_cnt;
 MODULE_PARM_DESC(force_vskip_cnt, "force_vskip_cnt");
 module_param(force_vskip_cnt, uint, 0664);
 
+unsigned int disable_adapted;
+MODULE_PARM_DESC(disable_adapted, "disable_adapted");
+module_param(disable_adapted, uint, 0664);
+
 #if 0
 #define DECL_PARM(name)\
 static int name;\
@@ -599,6 +603,10 @@ module_param(cur_skip_ratio, uint, 0444);
 unsigned int cur_vf_type;
 MODULE_PARM_DESC(cur_vf_type, "cur_vf_type");
 module_param(cur_vf_type, uint, 0444);
+
+unsigned int custom_ar;
+MODULE_PARM_DESC(custom_ar, "custom_ar");
+module_param(custom_ar, uint, 0664);
 
 /*
  *test on txlx:
@@ -915,6 +923,15 @@ RESTART:
 
 		orig_aspect = aspect_factor;
 		screen_aspect = 0x90;
+	} else if (wide_mode == VIDEO_WIDEOPTION_CUSTOM) {
+		if (custom_ar != 0)
+			aspect_factor = custom_ar & 0x3ff;
+		wide_mode = VIDEO_WIDEOPTION_NORMAL;
+	} else if (wide_mode == VIDEO_WIDEOPTION_AFD) {
+		if (aspect_factor == 0x90)
+			wide_mode = VIDEO_WIDEOPTION_FULL_STRETCH;
+		else
+			wide_mode = VIDEO_WIDEOPTION_NORMAL;
 	}
 
 	if (super_debug)
@@ -2404,6 +2421,20 @@ vpp_set_filters(u32 process_3d_type, u32 wide_mode,
 		video_source_crop_left = video_crop_left_resv;
 		video_source_crop_bottom = video_crop_bottom_resv;
 		video_source_crop_right = video_crop_right_resv;
+	}
+
+	if ((vf->ratio_control & DISP_RATIO_ADAPTED_PICMODE)
+		&& !disable_adapted) {
+		wide_mode = vf->pic_mode.screen_mode;
+		video_source_crop_top = vf->pic_mode.vs;
+		video_source_crop_left = vf->pic_mode.hs;
+		video_source_crop_bottom = vf->pic_mode.ve;
+		video_source_crop_right = vf->pic_mode.he;
+		if (vf->pic_mode.AFD_enable
+			&& (vf->ratio_control & DISP_RATIO_INFOFRAME_AVAIL))
+			wide_mode = VIDEO_WIDEOPTION_AFD;
+		if (wide_mode == VIDEO_WIDEOPTION_CUSTOM)
+			custom_ar = vf->pic_mode.custom_ar;
 	}
 	vpp_wide_mode = wide_mode;
 	vpp_flags |= wide_mode | (aspect_ratio << VPP_FLAG_AR_BITS);
