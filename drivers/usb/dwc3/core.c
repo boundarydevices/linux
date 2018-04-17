@@ -124,6 +124,33 @@ void dwc3_set_prtcap(struct dwc3 *dwc, u32 mode)
 	dwc->current_dr_role = mode;
 }
 
+void dwc3_set_vbus(struct dwc3 *dwc, bool enabled)
+{
+	u32 ret;
+
+	if (enabled) {
+		if (dwc->usb2_phy)
+			otg_set_vbus(dwc->usb2_phy->otg, true);
+		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_HOST);
+		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_HOST);
+		if (dwc->vbus_reg && !regulator_is_enabled(dwc->vbus_reg)) {
+			ret = regulator_enable(dwc->vbus_reg);
+			if (ret < 0)
+				dev_err(dwc->dev, "failed to enable vbus\n");
+		}
+	} else {
+		if (dwc->usb2_phy)
+			otg_set_vbus(dwc->usb2_phy->otg, false);
+		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
+		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
+		if (dwc->vbus_reg && regulator_is_enabled(dwc->vbus_reg)) {
+			ret = regulator_disable(dwc->vbus_reg);
+			if (ret < 0)
+				dev_err(dwc->dev, "failed to disable vbus\n");
+		}
+	}
+}
+
 static void __dwc3_set_mode(struct work_struct *work)
 {
 	struct dwc3 *dwc = work_to_dwc(work);
@@ -200,20 +227,11 @@ static void __dwc3_set_mode(struct work_struct *work)
 		if (ret) {
 			dev_err(dwc->dev, "failed to initialize host\n");
 		} else {
-			if (dwc->usb2_phy)
-				otg_set_vbus(dwc->usb2_phy->otg, true);
-			phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_HOST);
-			phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_HOST);
+			dwc3_set_vbus(dwc, true);
 			if (dwc->dis_split_quirk) {
 				reg = dwc3_readl(dwc->regs, DWC3_GUCTL3);
 				reg |= DWC3_GUCTL3_SPLITDISABLE;
 				dwc3_writel(dwc->regs, DWC3_GUCTL3, reg);
-			}
-			if (dwc->vbus_reg) {
-				ret = regulator_enable(dwc->vbus_reg);
-				if (ret < 0)
-					dev_err(dwc->dev,
-						"failed to enable vbus\n");
 			}
 		}
 		break;
@@ -222,15 +240,7 @@ static void __dwc3_set_mode(struct work_struct *work)
 
 		dwc3_event_buffers_setup(dwc);
 
-		if (dwc->usb2_phy)
-			otg_set_vbus(dwc->usb2_phy->otg, false);
-		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
-		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
-		if (dwc->vbus_reg) {
-			ret = regulator_disable(dwc->vbus_reg);
-			if (ret < 0)
-				dev_err(dwc->dev, "failed to disable vbus\n");
-		}
+		dwc3_set_vbus(dwc, false);
 
 		ret = dwc3_gadget_init(dwc);
 		if (ret)
@@ -1454,15 +1464,7 @@ static int dwc3_core_init_mode(struct dwc3 *dwc)
 	case USB_DR_MODE_PERIPHERAL:
 		dwc3_set_prtcap(dwc, DWC3_GCTL_PRTCAP_DEVICE);
 
-		if (dwc->usb2_phy)
-			otg_set_vbus(dwc->usb2_phy->otg, false);
-		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
-		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
-		if (dwc->vbus_reg) {
-			ret = regulator_disable(dwc->vbus_reg);
-			if (ret < 0)
-				dev_err(dev, "failed to disable vbus\n");
-		}
+		dwc3_set_vbus(dwc, false);
 
 		ret = dwc3_gadget_init(dwc);
 		if (ret)
@@ -1471,15 +1473,7 @@ static int dwc3_core_init_mode(struct dwc3 *dwc)
 	case USB_DR_MODE_HOST:
 		dwc3_set_prtcap(dwc, DWC3_GCTL_PRTCAP_HOST);
 
-		if (dwc->usb2_phy)
-			otg_set_vbus(dwc->usb2_phy->otg, true);
-		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_HOST);
-		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_HOST);
-		if (dwc->vbus_reg) {
-			ret = regulator_enable(dwc->vbus_reg);
-			if (ret < 0)
-				dev_err(dev, "failed to enable vbus\n");
-		}
+		dwc3_set_vbus(dwc, true);
 
 		ret = dwc3_host_init(dwc);
 		if (ret)
