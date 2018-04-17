@@ -35,6 +35,7 @@
 #include <media/v4l2-fh.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-common.h>
+#include <linux/amlogic/cpu_version.h>
 
 #include <linux/mm.h>
 /* #include <mach/mod_gate.h> */
