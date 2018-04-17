@@ -975,10 +975,10 @@ static void osd_rdma_irq(void *arg)
 	rdma_status = osd_reg_read(RDMA_STATUS);
 	debug_rdma_status = rdma_status;
 	OSD_RDMA_STATUS_CLEAR_REJECT;
+	osd_update_vsync_hit();
 	reset_rdma_table();
 	osd_update_scan_mode();
 	osd_update_3d_mode();
-	osd_update_vsync_hit();
 	osd_hw_reset();
 	rdma_irq_count++;
 	{

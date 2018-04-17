@@ -29,6 +29,7 @@
 
 #define OSD_COUNT (HW_OSD_COUNT)
 #define INVALID_BPP_ITEM {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+#define FBIO_WAITFORVSYNC       _IOW('F', 0x20, __u32)
 
 struct osd_fb_dev_s {
 	struct mutex lock;

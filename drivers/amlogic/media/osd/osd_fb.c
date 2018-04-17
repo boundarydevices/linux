@@ -720,7 +720,8 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	u32 block_windows[8] = {0};
 	u32 block_mode;
 	u32 hwc_enable;
-	unsigned long ret;
+	int ret;
+	s64 vsync_timestamp;
 	u32 flush_rate;
 	int out_fen_fd;
 	int xoffset, yoffset;
@@ -1026,10 +1027,12 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 			? -EFAULT : 0;
 		break;
 #endif
+
 	case FBIO_WAITFORVSYNC:
-		osd_wait_vsync_event();
-		ret = copy_to_user(argp, &ret, sizeof(u32));
+		vsync_timestamp = osd_wait_vsync_event();
+		ret = copy_to_user(argp, &vsync_timestamp, sizeof(s64));
 		break;
+
 	case FBIOPUT_OSD_CURSOR:
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR
 		osd_cursor(info, &cursor);

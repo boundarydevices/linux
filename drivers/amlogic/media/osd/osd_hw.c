@@ -28,6 +28,7 @@
 #include <linux/file.h>
 #include <linux/list.h>
 #include <linux/kthread.h>
+#include <linux/ktime.h>
 /* Android Headers */
 
 /* Amlogic sync headers */
@@ -87,6 +88,7 @@ static DEFINE_MUTEX(osd_mutex);
 static DECLARE_WAIT_QUEUE_HEAD(osd_vsync_wq);
 
 static bool vsync_hit;
+static bool user_vsync_hit;
 static bool osd_update_window_axis;
 static int osd_afbc_dec_enable;
 static int ext_canvas_id[HW_OSD_COUNT];
@@ -390,7 +392,7 @@ static void osd_put_fenceobj(struct fence *fence)
 #endif
 
 static int pxp_mode;
-
+s64 timestamp;
 
 static unsigned int osd_h_filter_mode = 1;
 #define CANVAS_ALIGNED(x)	(((x) + 31) & ~31)
@@ -1104,19 +1106,21 @@ void osd_update_3d_mode(void)
 
 static inline void wait_vsync_wakeup(void)
 {
-	vsync_hit = true;
-	wake_up_interruptible(&osd_vsync_wq);
+	user_vsync_hit = vsync_hit = true;
+	wake_up_interruptible_all(&osd_vsync_wq);
 }
 
 void osd_update_vsync_hit(void)
 {
-	if (!vsync_hit) {
+	ktime_t stime;
+
+	stime = ktime_get();
+	timestamp = stime.tv64;
 #ifdef FIQ_VSYNC
 		fiq_bridge_pulse_trigger(&osd_hw.fiq_handle_item);
 #else
 		wait_vsync_wakeup();
 #endif
-	}
 }
 
 /* the return stride unit is 128bit(16bytes) */
@@ -1656,16 +1660,21 @@ void osd_wait_vsync_hw(void)
 	}
 }
 
-s32 osd_wait_vsync_event(void)
+s64 osd_wait_vsync_event(void)
 {
 	unsigned long timeout;
 
-	vsync_hit = false;
-	/* waiting for 1000ms. */
-	timeout = msecs_to_jiffies(1000);
-	wait_event_interruptible_timeout(osd_vsync_wq, vsync_hit, timeout);
+	user_vsync_hit = false;
 
-	return 0;
+	if (pxp_mode)
+		timeout = msecs_to_jiffies(50);
+	else
+		timeout = msecs_to_jiffies(1000);
+
+	/* waiting for 10ms. */
+	wait_event_interruptible_timeout(osd_vsync_wq, user_vsync_hit, timeout);
+
+	return timestamp;
 }
 
 static int is_interlaced(struct vinfo_s *vinfo)

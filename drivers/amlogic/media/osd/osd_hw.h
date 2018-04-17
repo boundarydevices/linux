@@ -119,7 +119,7 @@ extern int osd_sync_request_render(u32 index, u32 yres,
 	struct sync_req_render_s *request,
 	u32 phys_addr);
 extern int osd_sync_do_hwc(u32 width, u32 height);
-extern s32  osd_wait_vsync_event(void);
+extern s64  osd_wait_vsync_event(void);
 extern void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart,
 			  u32 osd_w, u32 osd_h);
 extern void osd_init_scan_mode(void);
