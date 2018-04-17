@@ -72,7 +72,7 @@ void aml_fe_get_atvaudio_state(int *state)
 	else
 		*state = 0;
 
-	pr_info("aml_fe_get_atvaudio_state: %d, power = %d.\n",
+	pr_dbg("aml_fe_get_atvaudio_state: %d, power = %d.\n",
 			*state, power);
 }
 
@@ -201,10 +201,13 @@ int atv_demod_enter_mode(void)
 	}
 
 	/* set_aft_thread_enable(1, 0); */
-	//memset(&(amlatvdemod_devp->parm), 0, sizeof(amlatvdemod_devp->parm));
+	/*
+	 * memset(&(amlatvdemod_devp->parm), 0,
+	 * sizeof(amlatvdemod_devp->parm));
+	 */
 	atvdemod_state = ATVDEMOD_STATE_WORK;
 
-	pr_info("%s: OK\n", __func__);
+	pr_info("%s: OK.\n", __func__);
 
 	return 0;
 }
@@ -224,10 +227,14 @@ int atv_demod_leave_mode(void)
 	adc_set_pll_cntl(0, 0x1, NULL);
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
 		aud_demod_clk_gate(0);
-	//memset(&(amlatvdemod_devp->parm), 0, sizeof(amlatvdemod_devp->parm));
+
+	/*
+	 * memset(&(amlatvdemod_devp->parm), 0,
+	 * sizeof(amlatvdemod_devp->parm));
+	 */
 	atvdemod_state = ATVDEMOD_STATE_IDEL;
 
-	pr_info("%s: OK\n", __func__);
+	pr_info("%s: OK.\n", __func__);
 
 	return 0;
 }
@@ -288,14 +295,12 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		if (!is_atvdemod_scan_mode())
 			atvauddemod_init();
 
-		pr_info("[amlatvdemod..]%s set std color %lld, audio type %lld.\n",
+		pr_info("%s: set std color %lld, audio type %lld.\n",
 			__func__, amlatvdemod_devp->std, amlatvdemod_devp->std);
-		pr_info("[amlatvdemod..]%s set if_freq %d, if_inv %d.\n",
+		pr_info("%s: set if_freq %d, if_inv %d.\n",
 			__func__, amlatvdemod_devp->if_freq,
 			amlatvdemod_devp->if_inv);
 	}
-
-	pr_err("%s: tuner_id = %d.\n", __func__, atvdemod_param->tuner_id);
 }
 
 static int atv_demod_has_signal(struct dvb_frontend *fe, u16 *signal)
@@ -316,8 +321,6 @@ static int atv_demod_has_signal(struct dvb_frontend *fe, u16 *signal)
 		pr_info("visual carrier lock:unlocked\n");
 	}
 
-	pr_err("%s.\n", __func__);
-
 	return 0;
 }
 
@@ -328,19 +331,17 @@ static void atv_demod_standby(struct dvb_frontend *fe)
 		set_atvdemod_state(ATVDEMOD_STATE_SLEEP);
 	}
 
-	pr_info("%s: OK\n", __func__);
+	pr_info("%s: OK.\n", __func__);
 }
 
 static void atv_demod_tuner_status(struct dvb_frontend *fe)
 {
-	pr_err("%s.\n", __func__);
+	pr_info("%s.\n", __func__);
 }
 
 static int atv_demod_get_afc(struct dvb_frontend *fe, s32 *afc)
 {
 	*afc = retrieve_vpll_carrier_afc();
-
-	pr_info("%s: afc %d.\n", __func__, *afc);
 
 	return 0;
 }
@@ -360,7 +361,7 @@ static void atv_demod_release(struct dvb_frontend *fe)
 
 	fe->analog_demod_priv = NULL;
 
-	pr_err("%s.\n", __func__);
+	pr_info("%s: OK.\n", __func__);
 }
 
 static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
@@ -368,7 +369,7 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 	int *state = (int *) priv_cfg;
 
 	if (!state) {
-		pr_err("%s state == NULL.\n", __func__);
+		pr_err("%s: state == NULL.\n", __func__);
 		return -1;
 	}
 
@@ -391,8 +392,6 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 
 	mutex_unlock(&atv_demod_list_mutex);
 
-	pr_err("%s done.\n", __func__);
-
 	return 0;
 }
 
@@ -414,6 +413,7 @@ struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,
 		struct i2c_adapter *i2c_adap, u8 i2c_addr, u32 tuner_id)
 {
 	int instance = 0;
+	void *p = NULL;
 	struct atv_demod_priv *priv = NULL;
 
 	mutex_lock(&atv_demod_list_mutex);
@@ -449,12 +449,16 @@ struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,
 	case AM_TUNER_R840:
 		break;
 	case AM_TUNER_SI2151:
-		v4l2_attach(si2151_attach, fe, i2c_adap, i2c_addr);
+		p = v4l2_attach(si2151_attach, fe, i2c_adap, i2c_addr);
 		break;
 	case AM_TUNER_MXL661:
-		v4l2_attach(mxl661_attach, fe, i2c_adap, i2c_addr);
+		p = v4l2_attach(mxl661_attach, fe, i2c_adap, i2c_addr);
 		break;
 	}
+
+	if (!p)
+		pr_err("%s: v4l2_attach tuner %d error.\n",
+				__func__, tuner_id);
 
 	return fe;
 }

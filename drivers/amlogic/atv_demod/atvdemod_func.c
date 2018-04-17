@@ -1302,7 +1302,7 @@ void retrieve_vpll_carrier_line_lock(int *lock)
 	line_lock = data & 0x10;
 	line_lock_strong = data & 0x8;
 
-	pr_info("line_lock = 0x%x, line_lock_strong = 0x%x\n",
+	pr_dbg("line_lock = 0x%x, line_lock_strong = 0x%x\n",
 			line_lock, line_lock_strong);
 
 	*lock = (line_lock | line_lock_strong);
@@ -1327,7 +1327,7 @@ void retrieve_vpll_carrier_audio_power(int *power)
 		*power = data & 0xffff;
 	}
 
-	pr_info("retrieve_vpll_carrier_audio_power: %d.\n", *power);
+	pr_dbg("retrieve_vpll_carrier_audio_power: %d.\n", *power);
 }
 
 int retrieve_vpll_carrier_afc(void)
@@ -1343,7 +1343,7 @@ int retrieve_vpll_carrier_afc(void)
 
 	if ((pll_lock == 1) || (line_lock == 0x10)) {
 		/*if pll unlock, afc is invalid*/
-		pr_err("[afc invalid] pll: %d, line: %d, line_strong: %d, field: %d.\n",
+		pr_info("[afc invalid] pll: %d, line: %d, line_strong: %d, field: %d.\n",
 				pll_lock, line_lock,
 				line_lock_strong, field_lock);
 
@@ -1427,9 +1427,9 @@ void atvdemod_afc_tune(void)
 	mix1_freq_cur = atv_dmd_rd_byte(APB_BLOCK_ADDR_MIXER_1, 0x0);
 	delta_mix1_freq = abs(mix1_freq_cur - mix1_freq);
 	if ((lock&0x1) == 0)
-		pr_info("%s visual carrier lock:locked\n", __func__);
+		pr_dbg("%s visual carrier lock:locked\n", __func__);
 	else
-		pr_info("%s visual carrier lock:unlocked\n", __func__);
+		pr_dbg("%s visual carrier lock:unlocked\n", __func__);
 	/* set_pll_lpf(lock); */
 	retrieve_frequency_offset(&freq_offset);
 	/* pr_info("visual carrier offset:%d Hz\n",*/
@@ -2030,23 +2030,23 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 				param->param.std = V4L2_STD_PAL;
 				switch (broad_std) {
 				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK:
-					param->param.std |= V4L2_STD_PAL_DK;
+					param->param.std = V4L2_STD_PAL_DK;
 					param->param.audmode = V4L2_STD_PAL_DK;
 				break;
 				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I:
-					param->param.std |= V4L2_STD_PAL_I;
+					param->param.std = V4L2_STD_PAL_I;
 					param->param.audmode = V4L2_STD_PAL_I;
 				break;
 				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_BG:
-					param->param.std |= V4L2_STD_PAL_BG;
+					param->param.std = V4L2_STD_PAL_BG;
 					param->param.audmode = V4L2_STD_PAL_BG;
 				break;
 				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M:
-					param->param.std |= V4L2_STD_PAL_M;
+					param->param.std = V4L2_STD_PAL_M;
 					param->param.audmode = V4L2_STD_PAL_M;
 				break;
 				default:
-					param->param.std |= V4L2_STD_PAL_DK;
+					param->param.std = V4L2_STD_PAL_DK;
 					param->param.audmode = V4L2_STD_PAL_DK;
 				}
 				param->param.frequency += 1;

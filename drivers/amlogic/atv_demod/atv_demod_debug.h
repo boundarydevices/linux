@@ -16,25 +16,28 @@
 
 extern int atvdemod_debug_en;
 
+#undef pr_fmt
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #undef pr_info
-#define pr_info(args...)\
+#define pr_info(fmt, ...)\
 	do {\
-		if (atvdemod_debug_en)\
-			printk(args);\
+		if (1)\
+			printk(fmt, ##__VA_ARGS__);\
 	} while (0)
 
 #undef pr_dbg
-#define pr_dbg(args...) \
+#define pr_dbg(fmt, ...) \
 	do {\
-		if (atvdemod_debug_en == 2)\
-			printk(args);\
+		if (atvdemod_debug_en)\
+			printk(fmt, ##__VA_ARGS__);\
 	} while (0)
 
 #undef pr_err
-#define pr_err(args...) \
+#define pr_err(fmt, ...) \
 	do {\
 		if (1)\
-			printk(args);\
+			printk(fmt, ##__VA_ARGS__);\
 	} while (0)
 
 #endif /* __ATV_DEMOD_DEBUG_H__ */

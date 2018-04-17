@@ -1158,7 +1158,7 @@ void audio_thd_det(void)
 	if (thd_flag == 0) {
 		thd_tmp_v += adec_rd_reg(OV_CNT_REPORT) & 0xffff;
 
-		pr_info("#0x12:0x%x\n", (adec_rd_reg(OV_CNT_REPORT) & 0xffff));
+		pr_dbg("#0x12:0x%x\n", (adec_rd_reg(OV_CNT_REPORT) & 0xffff));
 		if (thd_cnt == 15) {
 			thd_tmp_v /= 3;
 			if (thd_tmp_v > audio_thd_threshold1) {
@@ -1171,7 +1171,7 @@ void audio_thd_det(void)
 	} else if (thd_flag == 1) {
 		thd_tmp_v += adec_rd_reg(OV_CNT_REPORT) & 0xffff;
 
-		pr_info("#0x13:0x%x\n", (adec_rd_reg(OV_CNT_REPORT) & 0xffff));
+		pr_dbg("#0x13:0x%x\n", (adec_rd_reg(OV_CNT_REPORT) & 0xffff));
 		if (thd_cnt == 15) {
 			thd_tmp_v /= 3;
 			if (thd_tmp_v <= audio_thd_threshold2) {
@@ -1253,7 +1253,7 @@ void audio_mode_det(int mode)
 		last_stereo_flag = stereo_flag;
 		last_sap_flag = sap_flag;
 
-		pr_info("[tuner..] atvdemod_monitor_audio done ....\n");
+		pr_dbg("atvdemod_monitor_audio done ....\n");
 	}
 }
 
