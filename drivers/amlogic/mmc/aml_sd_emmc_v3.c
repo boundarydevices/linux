@@ -308,13 +308,13 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 	struct amlsd_host *host = pdata->host;
 
 #ifdef AML_MMC_TDMA
-	if ((host->irq == 49)
+	if ((host->mem->start == host->data->port_b_base)
 			&& (host->data->chip_type == MMC_CHIP_G12A))
 		wait_for_completion(&host->drv_completion);
 #endif
 	if (!pdata->is_in) {
 #ifdef AML_MMC_TDMA
-		if ((host->irq == 49)
+		if ((host->mem->start == host->data->port_b_base)
 				&& (host->data->chip_type == MMC_CHIP_G12A))
 			complete(&host->drv_completion);
 #endif
@@ -343,7 +343,7 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 	else if (ios->chip_select == MMC_CS_DONTCARE)
 		aml_cs_dont_care(mmc);
 #ifdef AML_MMC_TDMA
-	if ((host->irq == 49)
+	if ((host->mem->start == host->data->port_b_base)
 			&& (host->data->chip_type == MMC_CHIP_G12A))
 		complete(&host->drv_completion);
 #endif

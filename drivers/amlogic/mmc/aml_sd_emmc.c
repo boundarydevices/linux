@@ -1867,7 +1867,7 @@ int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 	aml_sd_emmc_check_sdio_irq(host);
 	mmc_request_done(host->mmc, mrq);
 #ifdef AML_MMC_TDMA
-	if ((host->irq == 49)
+	if ((host->mem->start == host->data->port_b_base)
 			&& (host->data->chip_type == MMC_CHIP_G12A))
 		complete(&host->drv_completion);
 #endif
@@ -2207,14 +2207,14 @@ static void meson_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	pdata = mmc_priv(mmc);
 	host = pdata->host;
 #ifdef AML_MMC_TDMA
-	if ((host->irq == 49)
+	if ((host->mem->start == host->data->port_b_base)
 			&& (host->data->chip_type == MMC_CHIP_G12A))
 		wait_for_completion(&host->drv_completion);
 #endif
 
 	if (aml_check_unsupport_cmd(mmc, mrq)) {
 #ifdef AML_MMC_TDMA
-		if ((host->irq == 49)
+		if ((host->mem->start == host->data->port_b_base)
 				&& (host->data->chip_type == MMC_CHIP_G12A))
 			complete(&host->drv_completion);
 #endif
@@ -3048,7 +3048,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	}
 
 #ifdef AML_MMC_TDMA
-	if ((host->irq == 49)
+	if ((host->mem->start == host->data->port_b_base)
 			&& (host->data->chip_type == MMC_CHIP_G12A)) {
 		init_completion(&host->drv_completion);
 		host->drv_completion.done = 1;
@@ -3218,7 +3218,6 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	}
 #endif /* CONFIG_MESON_CPU_EMULATOR */
 #ifdef AML_MMC_TDMA
-	mdelay(800);
 	}
 #endif
 	pr_info("%s() : success!\n", __func__);
@@ -3271,6 +3270,9 @@ static int meson_mmc_remove(struct platform_device *pdev)
 
 static struct meson_mmc_data mmc_data_gxbb = {
 	.chip_type = MMC_CHIP_GXBB,
+	.port_a_base = 0xd0070000,
+	.port_b_base = 0xd0072000,
+	.port_c_base = 0xd0074000,
 	.pinmux_base = 0xc8834400,
 	.clksrc_base = 0xc883c000,
 	.ds_pin_poll = 0x3c,
@@ -3279,6 +3281,9 @@ static struct meson_mmc_data mmc_data_gxbb = {
 };
 static struct meson_mmc_data mmc_data_gxtvbb = {
 	.chip_type = MMC_CHIP_GXTVBB,
+	.port_a_base = 0xd0070000,
+	.port_b_base = 0xd0072000,
+	.port_c_base = 0xd0074000,
 	.pinmux_base = 0xc8834400,
 	.clksrc_base = 0xc883c000,
 	.ds_pin_poll = 0x3c,
@@ -3287,6 +3292,9 @@ static struct meson_mmc_data mmc_data_gxtvbb = {
 };
 static struct meson_mmc_data mmc_data_gxl = {
 	.chip_type = MMC_CHIP_GXL,
+	.port_a_base = 0xd0070000,
+	.port_b_base = 0xd0072000,
+	.port_c_base = 0xd0074000,
 	.pinmux_base = 0xc8834400,
 	.clksrc_base = 0xc883c000,
 	.ds_pin_poll = 0x3c,
@@ -3295,6 +3303,9 @@ static struct meson_mmc_data mmc_data_gxl = {
 };
 static struct meson_mmc_data mmc_data_gxm = {
 	.chip_type = MMC_CHIP_GXM,
+	.port_a_base = 0xd0070000,
+	.port_b_base = 0xd0072000,
+	.port_c_base = 0xd0074000,
 	.pinmux_base = 0xc8834400,
 	.clksrc_base = 0xc883c000,
 	.ds_pin_poll = 0x3c,
@@ -3303,6 +3314,9 @@ static struct meson_mmc_data mmc_data_gxm = {
 };
 static struct meson_mmc_data mmc_data_txl = {
 	.chip_type = MMC_CHIP_TXL,
+	.port_a_base = 0xd0070000,
+	.port_b_base = 0xd0072000,
+	.port_c_base = 0xd0074000,
 	.pinmux_base = 0xc8834400,
 	.clksrc_base = 0xc883c000,
 	.ds_pin_poll = 0x3c,
@@ -3311,6 +3325,9 @@ static struct meson_mmc_data mmc_data_txl = {
 };
 static struct meson_mmc_data mmc_data_txlx = {
 	.chip_type = MMC_CHIP_TXLX,
+	.port_a_base = 0xffe03000,
+	.port_b_base = 0xffe05000,
+	.port_c_base = 0xffe07000,
 	.pinmux_base = 0xff634400,
 	.clksrc_base = 0xff63c000,
 	.ds_pin_poll = 0x3c,
@@ -3328,6 +3345,9 @@ static struct meson_mmc_data mmc_data_txlx = {
 };
 static struct meson_mmc_data mmc_data_axg = {
 	.chip_type = MMC_CHIP_AXG,
+	.port_a_base = 0xffe03000,
+	.port_b_base = 0xffe05000,
+	.port_c_base = 0xffe07000,
 	.pinmux_base = 0xff634400,
 	.clksrc_base = 0xff63c000,
 	.ds_pin_poll = 0x3e,
@@ -3345,6 +3365,9 @@ static struct meson_mmc_data mmc_data_axg = {
 };
 static struct meson_mmc_data mmc_data_gxlx = {
 	.chip_type = MMC_CHIP_GXLX,
+	.port_a_base = 0xd0070000,
+	.port_b_base = 0xd0072000,
+	.port_c_base = 0xd0074000,
 	.pinmux_base = 0xc8834400,
 	.clksrc_base = 0xc883c000,
 	.ds_pin_poll = 0x3c,
@@ -3362,6 +3385,9 @@ static struct meson_mmc_data mmc_data_gxlx = {
 };
 static struct meson_mmc_data mmc_data_txhd = {
 	.chip_type = MMC_CHIP_TXHD,
+	.port_a_base = 0xffe03000,
+	.port_b_base = 0xffe05000,
+	.port_c_base = 0xffe07000,
 	.pinmux_base = 0xff634400,
 	.clksrc_base = 0xff63c000,
 	.ds_pin_poll = 0x3c,
@@ -3380,6 +3406,9 @@ static struct meson_mmc_data mmc_data_txhd = {
 
 static struct meson_mmc_data mmc_data_g12a = {
 	.chip_type = MMC_CHIP_G12A,
+	.port_a_base = 0xffe03000,
+	.port_b_base = 0xffe05000,
+	.port_c_base = 0xffe07000,
 	.pinmux_base = 0xff634400,
 	.clksrc_base = 0xff63c000,
 	.ds_pin_poll = 0x3a,

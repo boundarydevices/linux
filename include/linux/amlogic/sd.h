@@ -209,6 +209,9 @@ struct para_e {
 
 struct meson_mmc_data {
 	enum mmc_chip_e chip_type;
+	unsigned int port_a_base;
+	unsigned int port_b_base;
+	unsigned int port_c_base;
 	unsigned int pinmux_base;
 	unsigned int clksrc_base;
 	unsigned int ds_pin_poll;
