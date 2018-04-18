@@ -36,7 +36,6 @@
 #include "ddr_mngr.h"
 
 /*#define G12A_PTM*/
-#define CLK_INTEGER_MODE
 
 static struct snd_pcm_hardware aml_pdm_hardware = {
 	.info			=
@@ -725,15 +724,13 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 #ifdef G12A_PTM
 	clk_set_rate(p_pdm->dclk_srcpll, 24576000);
 #else
-#ifdef CLK_INTEGER_MODE
-	clk_set_rate(p_pdm->clk_pdm_sysclk,
-		sysclk_srcpll_freq / 4);
-#else
-	clk_set_rate(p_pdm->clk_pdm_sysclk,
-		sysclk_srcpll_freq / 5);
-#endif
+	clk_set_rate(p_pdm->clk_pdm_sysclk, 133333351);
+
 	if (dclk_srcpll_freq == 0)
 		clk_set_rate(p_pdm->dclk_srcpll, 24576000);
+	else
+		pr_info("pdm dclk_srcpll:%lu\n",
+			clk_get_rate(p_pdm->dclk_srcpll));
 #endif
 	if (pdm_dclk == 1)
 		clk_set_rate(p_pdm->clk_pdm_dclk, 1024000);
