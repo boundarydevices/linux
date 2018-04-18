@@ -833,6 +833,7 @@ static long fsl_hifi4_init_codec(struct fsl_hifi4 *hifi4_priv,
 	ext_msg.phys = hifi4_priv->msg_buf_phys;
 	ext_msg.size = sizeof(struct icm_base_info_t);
 
+	memset(&icm_base_info_t, 0, sizeof(struct icm_base_info_t));
 	icm_base_info_t.process_id = id;
 	icm_base_info_t.codec_id = process_info->codec_id;
 
@@ -1329,6 +1330,7 @@ static long fsl_hifi4_codec_open(struct fsl_hifi4 *hifi4_priv,
 	ext_msg.phys = hifi4_priv->msg_buf_phys;
 	ext_msg.size = sizeof(struct icm_base_info_t);
 
+	memset(&icm_base_info_t, 0, sizeof(struct icm_base_info_t));
 	icm_base_info_t.process_id = id;
 
 	memcpy(hifi4_priv->msg_buf_virt, &icm_base_info_t,
@@ -1373,6 +1375,7 @@ static int fsl_hifi4_codec_close(struct fsl_hifi4 *hifi4_priv,
 	ext_msg.phys = hifi4_priv->msg_buf_phys;
 	ext_msg.size = sizeof(struct icm_base_info_t);
 
+	memset(&icm_base_info_t, 0, sizeof(struct icm_base_info_t));
 	icm_base_info_t.process_id = id;
 
 	memcpy(hifi4_priv->msg_buf_virt, &icm_base_info_t,
@@ -1420,6 +1423,7 @@ static int fsl_hifi4_codec_reset(struct fsl_hifi4 *hifi4_priv,
 	ext_msg.phys = hifi4_priv->msg_buf_phys;
 	ext_msg.size = sizeof(struct icm_base_info_t);
 
+	memset(&icm_base_info_t, 0, sizeof(struct icm_base_info_t));
 	icm_base_info_t.process_id = id;
 
 	memcpy(hifi4_priv->msg_buf_virt, &icm_base_info_t,
