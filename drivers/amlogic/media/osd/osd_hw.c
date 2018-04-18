@@ -6239,6 +6239,17 @@ void  osd_suspend_hw(void)
 		notify_to_amvideo();
 		osd_reg_clr_mask(VPP_MISC, OSD_RELATIVE_BITS);
 		/* VSYNCOSD_CLR_MPEG_REG_MASK(VPP_MISC, OSD_RELATIVE_BITS); */
+	} else {
+		osd_hw.reg_status_save =
+			osd_reg_read(VIU_OSD_BLEND_CTRL);
+		osd_hw.reg_status_save1 =
+			osd_reg_read(OSD1_BLEND_SRC_CTRL);
+		osd_hw.reg_status_save2 =
+			osd_reg_read(OSD2_BLEND_SRC_CTRL);
+		osd_reg_clr_mask(VIU_OSD_BLEND_CTRL, 0xf0000);
+		osd_reg_clr_mask(OSD1_BLEND_SRC_CTRL, 0xf0f);
+		osd_reg_clr_mask(OSD2_BLEND_SRC_CTRL, 0xf0f);
+
 	}
 	osd_log_info("osd_suspended\n");
 }
@@ -6270,6 +6281,13 @@ void osd_resume_hw(void)
 				1 << 0);
 		}
 		notify_to_amvideo();
+	} else {
+		osd_reg_set_mask(VIU_OSD_BLEND_CTRL,
+			osd_hw.reg_status_save);
+		osd_reg_set_mask(OSD1_BLEND_SRC_CTRL,
+			osd_hw.reg_status_save1);
+		osd_reg_set_mask(OSD2_BLEND_SRC_CTRL,
+			osd_hw.reg_status_save2);
 	}
 	osd_log_info("osd_resumed\n");
 }
