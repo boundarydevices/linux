@@ -1868,8 +1868,7 @@ static void hdmitx_set_scdc(struct hdmitx_dev *hdev)
 		break;
 	}
 	set_tmds_clk_div40(hdev->para->tmds_clk_div40);
-	if (hdev->RXCap.scdc_present)
-		scdc_config(hdev);
+	scdc_config(hdev);
 }
 
 void hdmitx_set_enc_hw(struct hdmitx_dev *hdev)
