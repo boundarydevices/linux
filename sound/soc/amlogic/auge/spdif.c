@@ -419,9 +419,44 @@ static int aml_dai_spdif_prepare(
 		/* TOHDMITX_CTRL0 */
 		if (p_spdif->id == 1) {
 			spdifoutb_to_hdmitx_ctrl(p_spdif->id);
-			aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM,
-				substream);
+			if (IEC958_mode_codec == 2) {
+				aout_notifier_call_chain(
+					AOUT_EVENT_RAWDATA_AC_3,
+					substream);
+			} else if (IEC958_mode_codec == 3) {
+				aout_notifier_call_chain(
+					AOUT_EVENT_RAWDATA_DTS,
+					substream);
+			} else if (IEC958_mode_codec == 4) {
+				aout_notifier_call_chain(
+					AOUT_EVENT_RAWDATA_DOBLY_DIGITAL_PLUS,
+					substream);
+			} else if (IEC958_mode_codec == 5) {
+				aout_notifier_call_chain(
+					AOUT_EVENT_RAWDATA_DTS_HD,
+					substream);
+			} else if (IEC958_mode_codec == 7 ||
+						IEC958_mode_codec == 8) {
+				//aml_aiu_write(AIU_958_CHSTAT_L0, 0x1902);
+				//aml_aiu_write(AIU_958_CHSTAT_L1, 0x900);
+				//aml_aiu_write(AIU_958_CHSTAT_R0, 0x1902);
+				//aml_aiu_write(AIU_958_CHSTAT_R1, 0x900);
+				if (IEC958_mode_codec == 8)
+					aout_notifier_call_chain(
+					AOUT_EVENT_RAWDATA_DTS_HD_MA,
+					substream);
+				else
+					aout_notifier_call_chain(
+					AOUT_EVENT_RAWDATA_MAT_MLP,
+					substream);
+			} else {
+					aout_notifier_call_chain(
+						AOUT_EVENT_IEC_60958_PCM,
+						substream);
+			}
+
 		}
+
 	} else {
 		struct toddr *to = p_spdif->tddr;
 		unsigned int msb, lsb, toddr_type;
@@ -563,7 +598,13 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 		p_spdif->sysclk_freq);
 	if (p_spdif->sysclk_freq) {
 		unsigned int mul = 4;
-
+	if (IEC958_mode_codec == 4 || IEC958_mode_codec == 5 ||
+		IEC958_mode_codec == 7 || IEC958_mode_codec == 8) {
+		pr_info("set 4x audio clk for 958\n");
+		p_spdif->sysclk_freq = p_spdif->sysclk_freq * 4;
+	} else {
+		pr_info("set normal 512 fs /4 fs\n");
+	}
 		mpll_freq = p_spdif->sysclk_freq * mul;
 
 #ifdef G12A_PTM

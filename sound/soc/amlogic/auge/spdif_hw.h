@@ -19,6 +19,15 @@
 #define __AML_SPDIF_HW_H__
 #include "audio_io.h"
 #include "regs.h"
+/*
+ * 0 --  other formats except(DD,DD+,DTS)
+ * 1 --  DTS
+ * 2 --  DD
+ * 3 -- DTS with 958 PCM RAW package mode
+ * 4 -- DD+
+ */
+
+extern unsigned int IEC958_mode_codec;
 
 extern void aml_spdif_enable(
 	struct aml_audio_controller *actrl,
