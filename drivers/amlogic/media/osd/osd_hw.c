@@ -3848,7 +3848,7 @@ static void osd_update_color_mode(u32 index)
 			SCAN_MODE_INTERLACE) ? 2 : 0;
 		data32 |= VSYNCOSD_RD_MPEG_REG(
 			osd_reg->osd_blk0_cfg_w0)
-			& 0x30007040;
+			& 0x70007040;
 		data32 |= osd_hw.fb_gem[index].canvas_idx << 16;
 		if ((osd_hw.osd_afbcd[index].enable) &&
 			(osd_hw.osd_meson_dev.afbc_type == MALI_AFBC))

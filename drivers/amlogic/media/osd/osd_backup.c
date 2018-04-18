@@ -700,6 +700,8 @@ static struct reg_item misc_recovery_table_g12a[] = {
 	{VIU_OSD2_BLK1_CFG_W4, 0x0, 0xffffffff, 1},
 	{VIU_OSD2_BLK2_CFG_W4, 0x0, 0xffffffff, 1},
 	{VIU_OSD2_MALI_UNPACK_CTRL, 0x0, 0x9f01ffff, 1},
+	{DOLBY_CORE2A_SWAP_CTRL1, 0x0, 0x0fffffff, 1},
+	{DOLBY_CORE2A_SWAP_CTRL2, 0x0, 0xffffffff, 1},
 };
 
 static void recovery_regs_init_old(void)
@@ -1288,7 +1290,9 @@ static int update_recovery_item_g12a(u32 addr, u32 value)
 		(addr == VIU_OSD2_BLK0_CFG_W4) ||
 		(addr == VIU_OSD2_BLK1_CFG_W4) ||
 		(addr == VIU_OSD2_BLK2_CFG_W4) ||
-		(addr == VIU_OSD2_MALI_UNPACK_CTRL)) {
+		(addr == VIU_OSD2_MALI_UNPACK_CTRL) ||
+		(addr == DOLBY_CORE2A_SWAP_CTRL1) ||
+		(addr == DOLBY_CORE2A_SWAP_CTRL2)) {
 		table = gRecovery[10].table;
 		for (i = 0; i <  gRecovery[10].size; i++) {
 			if (addr == table[i].addr) {
@@ -1487,7 +1491,9 @@ static s32 get_recovery_item_g12a(u32 addr, u32 *value, u32 *mask)
 		(addr == VIU_OSD2_BLK0_CFG_W4) ||
 		(addr == VIU_OSD2_BLK1_CFG_W4) ||
 		(addr == VIU_OSD2_BLK2_CFG_W4) ||
-		(addr == VIU_OSD2_MALI_UNPACK_CTRL)) {
+		(addr == VIU_OSD2_MALI_UNPACK_CTRL) ||
+		(addr == DOLBY_CORE2A_SWAP_CTRL1) ||
+		(addr == DOLBY_CORE2A_SWAP_CTRL2)) {
 		table = gRecovery[10].table;
 		for (i = 0; i <  gRecovery[10].size; i++) {
 			if (addr == table[i].addr) {
