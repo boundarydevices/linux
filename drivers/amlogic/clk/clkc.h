@@ -33,7 +33,7 @@
 #define MESON_PARM_APPLICABLE(p)		(!!((p)->width))
 
 #define PNAME(x) \
-static const char *x[] __initconst
+static const char *x[]
 
 struct parm {
 	u16	reg_off;

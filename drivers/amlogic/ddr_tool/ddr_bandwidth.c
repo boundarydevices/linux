@@ -241,7 +241,12 @@ static struct class aml_ddr_class = {
 	.class_attrs = aml_ddr_tool_attr,
 };
 
-static int ddr_bandwidth_probe(struct platform_device *pdev)
+/*
+ *    ddr_bandwidth_probe only executes before the init process starts
+ * to run, so add __ref to indicate it is okay to call __init function
+ * ddr_find_port_desc
+ */
+static int __ref ddr_bandwidth_probe(struct platform_device *pdev)
 {
 	int r = 0;
 #ifdef CONFIG_OF
