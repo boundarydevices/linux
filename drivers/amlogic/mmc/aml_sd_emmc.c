@@ -3072,8 +3072,21 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	memset(pdata, 0, sizeof(struct amlsd_platform));
 	if (amlsd_get_platform_data(pdev, pdata, mmc, i)) {
 		mmc_free_host(mmc);
+#ifdef AML_MMC_TDMA
 		break;
+#endif
 	}
+	dev_set_name(&mmc->class_dev, "%s", pdata->pinname);
+
+	/* save def clk & cfg */
+	pdata->clkc = clk;
+	pdata->ctrl = cfg;
+
+	if (pdata->caps & MMC_CAP_NONREMOVABLE)
+		pdata->is_in = 1;
+
+	if (pdata->caps & MMC_PM_KEEP_POWER)
+		mmc->pm_caps |= MMC_PM_KEEP_POWER;
 
 	/* data desc buffer */
 #ifdef CFG_SDEMMC_PIO
@@ -3110,23 +3123,6 @@ static int meson_mmc_probe(struct platform_device *pdev)
 #ifdef CFG_SDEMMC_PIO
 	}
 #endif
-
-	if (aml_card_type_mmc(pdata)
-			&& (host->ctrl_ver < 3))
-		/**set emmc tx_phase regs here base on dts**/
-		aml_sd_emmc_tx_phase_set(pdata);
-
-	dev_set_name(&mmc->class_dev, "%s", pdata->pinname);
-
-	/* save def clk & cfg */
-	pdata->clkc = clk;
-	pdata->ctrl = cfg;
-
-	if (pdata->caps & MMC_CAP_NONREMOVABLE)
-		pdata->is_in = 1;
-
-	if (pdata->caps & MMC_PM_KEEP_POWER)
-		mmc->pm_caps |= MMC_PM_KEEP_POWER;
 
 	pdata->host = host;
 	pdata->mmc = mmc;
@@ -3178,6 +3174,11 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		writel(boot_poll_en, host->pinmux_base
 				+ (host->data->ds_pin_poll_en << 2));
 	}
+
+	if (aml_card_type_mmc(pdata)
+			&& (host->ctrl_ver < 3))
+		/**set emmc tx_phase regs here base on dts**/
+		aml_sd_emmc_tx_phase_set(pdata);
 
 	if (pdata->port_init)
 		pdata->port_init(pdata);
