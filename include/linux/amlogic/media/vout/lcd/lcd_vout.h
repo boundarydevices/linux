@@ -418,6 +418,7 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_clk_path; /* 0=hpll, 1=gp0_pll */
 	unsigned char lcd_config_load;
 	unsigned char lcd_resume_type; /* 0=directly, 1=workqueue */
+	unsigned char lcd_auto_test;
 	unsigned char lcd_test_state;
 	unsigned char lcd_test_flag;
 	unsigned char lcd_mute_state;
@@ -432,6 +433,7 @@ struct aml_lcd_drv_s {
 	struct clk *dsi_meas;
 	struct clk *mipi_enable_gate;
 	struct clk *mipi_bandgap_gate;
+	struct clk *gp0_pll;
 
 	struct device *dev;
 	struct lcd_config_s *lcd_config;

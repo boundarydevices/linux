@@ -2427,6 +2427,13 @@ void lcd_clk_gate_switch(int status)
 			break;
 		case LCD_CHIP_G12A:
 		case LCD_CHIP_G12B:
+			if (lcd_drv->lcd_clk_path) {
+				if (IS_ERR(lcd_drv->gp0_pll))
+					LCDERR("%s: gp0_pll\n", __func__);
+				else
+					clk_prepare_enable(lcd_drv->gp0_pll);
+			}
+
 			if (IS_ERR(lcd_drv->dsi_host_gate))
 				LCDERR("%s: dsi_host_gate\n", __func__);
 			else
@@ -2521,6 +2528,13 @@ void lcd_clk_gate_switch(int status)
 			else
 				clk_disable_unprepare(
 					lcd_drv->encl_top_gate);
+
+			if (lcd_drv->lcd_clk_path) {
+				if (IS_ERR(lcd_drv->gp0_pll))
+					LCDERR("%s: gp0_pll\n", __func__);
+				else
+					clk_disable_unprepare(lcd_drv->gp0_pll);
+			}
 			break;
 		default:
 			if (IS_ERR(lcd_drv->encl_int_gate))
@@ -2598,6 +2612,10 @@ static void lcd_clktree_probe(void)
 			lcd_drv->dev, "encl_int_gate");
 		if (IS_ERR(lcd_drv->encl_int_gate))
 			LCDERR("%s: clk encl_int_gate\n", __func__);
+
+		lcd_drv->gp0_pll = devm_clk_get(lcd_drv->dev, "gp0_pll");
+		if (IS_ERR(lcd_drv->gp0_pll))
+			LCDERR("%s: clk gp0_pll\n", __func__);
 		break;
 	default:
 		lcd_drv->encl_top_gate = devm_clk_get(lcd_drv->dev,
@@ -2634,6 +2652,8 @@ static void lcd_clktree_remove(void)
 			devm_clk_put(lcd_drv->dev, lcd_drv->dsi_phy_gate);
 		if (!IS_ERR(lcd_drv->dsi_host_gate))
 			devm_clk_put(lcd_drv->dev, lcd_drv->dsi_host_gate);
+		if (!IS_ERR(lcd_drv->gp0_pll))
+			devm_clk_put(lcd_drv->dev, lcd_drv->gp0_pll);
 		break;
 	case LCD_CHIP_G12A:
 	case LCD_CHIP_G12B:

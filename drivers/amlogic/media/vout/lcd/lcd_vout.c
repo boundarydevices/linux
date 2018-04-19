@@ -936,6 +936,16 @@ static int lcd_config_probe(struct platform_device *pdev)
 		LCDPR("detect lcd_clk_path: %d\n", lcd_driver->lcd_clk_path);
 	}
 
+	ret = of_property_read_u32(lcd_driver->dev->of_node, "auto_test", &val);
+	if (ret) {
+		if (lcd_debug_print_flag)
+			LCDPR("failed to get auto_test\n");
+		lcd_driver->lcd_auto_test = 0;
+	} else {
+		lcd_driver->lcd_auto_test = (unsigned char)val;
+		LCDPR("detect lcd_auto_test: %d\n", lcd_driver->lcd_auto_test);
+	}
+
 	lcd_driver->lcd_info = &lcd_vinfo;
 	lcd_driver->lcd_config = &lcd_config_dft;
 	lcd_driver->lcd_test_state = 0;
@@ -1084,6 +1094,28 @@ static const struct of_device_id lcd_dt_match_table[] = {
 };
 #endif
 
+static struct delayed_work lcd_test_delayed_work;
+static void lcd_auto_test_delayed(struct work_struct *work)
+{
+	LCDPR("%s\n", __func__);
+	mutex_lock(&lcd_driver->power_mutex);
+	aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+	mutex_unlock(&lcd_driver->power_mutex);
+}
+
+static void lcd_auto_test(unsigned char flag)
+{
+	lcd_driver->lcd_test_flag = flag;
+	if (lcd_driver->workqueue) {
+		queue_delayed_work(lcd_driver->workqueue,
+			&lcd_test_delayed_work,
+			msecs_to_jiffies(20000));
+	} else {
+		schedule_delayed_work(&lcd_test_delayed_work,
+			msecs_to_jiffies(20000));
+	}
+}
+
 static int lcd_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -1120,6 +1152,7 @@ static int lcd_probe(struct platform_device *pdev)
 	/* init workqueue */
 	INIT_DELAYED_WORK(&lcd_driver->lcd_probe_delayed_work,
 		lcd_config_probe_delayed);
+	INIT_DELAYED_WORK(&lcd_test_delayed_work, lcd_auto_test_delayed);
 	lcd_driver->workqueue = create_singlethread_workqueue("lcd_work_queue");
 	if (lcd_driver->workqueue == NULL)
 		LCDERR("can't create lcd workqueue\n");
@@ -1131,6 +1164,10 @@ static int lcd_probe(struct platform_device *pdev)
 	lcd_vsync_irq_init();
 
 	LCDPR("%s %s\n", __func__, (ret ? "failed" : "ok"));
+
+	if (lcd_driver->lcd_auto_test)
+		lcd_auto_test(lcd_driver->lcd_auto_test);
+
 	return 0;
 }
 

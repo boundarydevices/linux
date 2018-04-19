@@ -26,12 +26,14 @@
 			&clkc CLKID_MIPI_DSI_PHY
 			&clkc CLKID_DSI_MEAS_COMP
 			&clkc CLKID_VCLK2_ENCL
-			&clkc CLKID_VCLK2_VENCL>;
+			&clkc CLKID_VCLK2_VENCL
+			&clkc CLKID_GP0_PLL>;
 		clock-names = "dsi_host_gate",
 			"dsi_phy_gate",
 			"dsi_meas",
 			"encl_top_gate",
-			"encl_int_gate";
+			"encl_int_gate",
+			"gp0_pll";
 		reg = <0x0 0xffd07000 0x0 0x400    /* dsi_host */
 			0x0 0xff644000 0x0 0x200>; /* dsi_phy */
 		interrupts = <0 3 1>;
