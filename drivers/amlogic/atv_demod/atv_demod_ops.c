@@ -375,6 +375,33 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 
 	mutex_lock(&atv_demod_list_mutex);
 
+	switch (*state) {
+	case AML_ATVDEMOD_INIT:
+		if (get_atvdemod_state() != ATVDEMOD_STATE_WORK) {
+			atv_demod_enter_mode();
+			if (fe->ops.tuner_ops.init)
+				fe->ops.tuner_ops.init(fe);
+		}
+		break;
+
+	case AML_ATVDEMOD_UNINIT:
+		if (get_atvdemod_state() != ATVDEMOD_STATE_IDEL) {
+			atv_demod_leave_mode();
+			if (fe->ops.tuner_ops.release)
+				fe->ops.tuner_ops.release(fe);
+		}
+		break;
+
+	case AML_ATVDEMOD_RESUME:
+		if (get_atvdemod_state() == ATVDEMOD_STATE_SLEEP) {
+			atv_demod_enter_mode();
+			if (fe->ops.tuner_ops.resume)
+				fe->ops.tuner_ops.resume(fe);
+		}
+		break;
+	}
+
+#if 0
 	if (*state == AML_ATVDEMOD_INIT && atvdemod_state != *state) {
 		atv_demod_enter_mode();
 		if (fe->ops.tuner_ops.init)
@@ -389,6 +416,7 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 		if (fe->ops.tuner_ops.resume)
 			fe->ops.tuner_ops.resume(fe);
 	}
+#endif
 
 	mutex_unlock(&atv_demod_list_mutex);
 
