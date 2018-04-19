@@ -136,7 +136,8 @@
 
 struct meson_spicc_data {
 	unsigned int			max_speed_hz;
-	bool				is_enhance;
+	bool				has_oen;
+	bool				has_enhance_clk_div;
 };
 
 struct meson_spicc_device {
@@ -163,6 +164,19 @@ struct meson_spicc_device {
 	u8 test_data;
 #endif /* end MESON_SPICC_TEST_ENTRY */
 };
+
+static void meson_spicc_oen_enable(struct meson_spicc_device *spicc)
+{
+	u32 conf;
+
+	if (!spicc->data->has_oen)
+		return;
+
+	conf = readl_relaxed(spicc->base + SPICC_ENH_CTL0) |
+		SPICC_ENH_MOSI_OEN | SPICC_ENH_CLK_OEN | SPICC_ENH_CS_OEN;
+
+	writel_relaxed(conf, spicc->base + SPICC_ENH_CTL0);
+}
 
 static inline bool meson_spicc_txfull(struct meson_spicc_device *spicc)
 {
@@ -437,14 +451,7 @@ static int meson_spicc_prepare_message(struct spi_master *master,
 
 	writel_bits_relaxed(BIT(24), BIT(24), spicc->base + SPICC_TESTREG);
 
-	if (spicc->data->is_enhance) {
-		conf = readl_relaxed(spicc->base + SPICC_ENH_CTL0);
-		conf |= (SPICC_ENH_MOSI_OEN |
-			SPICC_ENH_CLK_OEN |
-			SPICC_ENH_CS_OEN);
-
-		writel_relaxed(conf, spicc->base + SPICC_ENH_CTL0);
-	}
+	meson_spicc_oen_enable(spicc);
 
 	return 0;
 }
@@ -581,30 +588,50 @@ static struct class_attribute spicc_class_attrs[] = {
 };
 #endif /* end MESON_SPICC_TEST_ENTRY */
 
-static struct clk_fixed_factor spicc_old_div0 = {
+/*
+ * The Clock Mux
+ *            x-----------------x   x------------x    x------\
+ *        |---| 0) fixed factor |---| 1) old div |----|      |
+ *        |   x-----------------x   x------------x    |      |
+ * src ---|                                           |5) mux|-- out
+ *        |   x-----------------x   x------------x    |      |
+ *        |---| 2) fixed factor |---| 3) new div |0---|      |
+ *            x-----------------x   x------------x    x------/
+ *
+ * Clk path for GX series:
+ *    src -> 0 -> 1 -> out
+ *
+ * Clk path for AXG series:
+ *    src -> 0 -> 1 -> 5 -> out
+ *    src -> 2 -> 3 -> 5 -> out
+ */
+
+/* algorithm for div0 + div1: rate = freq / 4 / (2 ^ N) */
+static struct clk_fixed_factor meson_spicc_div0 = {
 	.mult	= 1,
 	.div	= 4,
 };
 
-static struct clk_divider spicc_old_div1 = {
+static struct clk_divider meson_spicc_div1 = {
 	.reg	= (void *) SPICC_CONREG,
 	.shift	= 16,
 	.width	= 3,
 	.flags	= CLK_DIVIDER_POWER_OF_TWO,
 };
 
-static struct clk_fixed_factor spicc_new_div0 = {
+/* algorithm for div2 + div3: rate = freq / 2 / (N + 1) */
+static struct clk_fixed_factor meson_spicc_div2 = {
 	.mult	= 1,
 	.div	= 2,
 };
 
-static struct clk_divider spicc_new_div1 = {
+static struct clk_divider meson_spicc_div3 = {
 	.reg	= (void *) SPICC_ENH_CTL0,
 	.shift	= 16,
 	.width	= 8,
 };
 
-static struct clk_mux spicc_new_sel = {
+static struct clk_mux meson_spicc_sel = {
 	.reg	= (void *) SPICC_ENH_CTL0,
 	.mask	= 0x1,
 	.shift	= 24,
@@ -622,8 +649,8 @@ static int meson_spicc_clk_init(struct meson_spicc_device *spicc)
 	const char *mux_parent_names[2];
 	char name[32];
 
-	div0 = &spicc_old_div0;
-	snprintf(name, sizeof(name), "%s#_old_div0", dev_name(dev));
+	div0 = &meson_spicc_div0;
+	snprintf(name, sizeof(name), "%s#_div0", dev_name(dev));
 	init.name = name;
 	init.ops = &clk_fixed_factor_ops;
 	init.flags = 0;
@@ -637,8 +664,8 @@ static int meson_spicc_clk_init(struct meson_spicc_device *spicc)
 	if (WARN_ON(IS_ERR(clk)))
 		return PTR_ERR(clk);
 
-	div1 = &spicc_old_div1;
-	snprintf(name, sizeof(name), "%s#_old_div1", dev_name(dev));
+	div1 = &meson_spicc_div1;
+	snprintf(name, sizeof(name), "%s#_div1", dev_name(dev));
 	init.name = name;
 	init.ops = &clk_divider_ops;
 	init.flags = CLK_SET_RATE_PARENT;
@@ -653,16 +680,15 @@ static int meson_spicc_clk_init(struct meson_spicc_device *spicc)
 	if (WARN_ON(IS_ERR(clk)))
 		return PTR_ERR(clk);
 
-	if (spicc->data->is_enhance == false) {
+	if (spicc->data->has_enhance_clk_div == false) {
 		spicc->clk = clk;
 		return 0;
 	}
 
-	/* register new divider path */
 	mux_parent_names[0] = __clk_get_name(clk);
 
-	div0 = &spicc_new_div0;
-	snprintf(name, sizeof(name), "%s#_new_div0", dev_name(dev));
+	div0 = &meson_spicc_div2;
+	snprintf(name, sizeof(name), "%s#_div2", dev_name(dev));
 	init.name = name;
 	init.ops = &clk_fixed_factor_ops;
 	init.flags = 0;
@@ -676,8 +702,8 @@ static int meson_spicc_clk_init(struct meson_spicc_device *spicc)
 	if (WARN_ON(IS_ERR(clk)))
 		return PTR_ERR(clk);
 
-	div1 = &spicc_new_div1;
-	snprintf(name, sizeof(name), "%s#_new_div1", dev_name(dev));
+	div1 = &meson_spicc_div3;
+	snprintf(name, sizeof(name), "%s#_div3", dev_name(dev));
 	init.name = name;
 	init.ops = &clk_divider_ops;
 	init.flags = CLK_SET_RATE_PARENT;
@@ -694,7 +720,7 @@ static int meson_spicc_clk_init(struct meson_spicc_device *spicc)
 
 	mux_parent_names[1] = __clk_get_name(clk);
 
-	mux = &spicc_new_sel;
+	mux = &meson_spicc_sel;
 	snprintf(name, sizeof(name), "%s#_sel", dev_name(dev));
 	init.name = name;
 	init.ops = &clk_mux_ops;
@@ -829,13 +855,19 @@ static int meson_spicc_remove(struct platform_device *pdev)
 }
 
 static const struct meson_spicc_data meson_spicc_gx_data = {
-	.max_speed_hz	= 30000000,
-	.is_enhance	= false,
+	.max_speed_hz		= 30000000,
 };
 
 static const struct meson_spicc_data meson_spicc_txlx_data = {
-	.max_speed_hz	= 80000000,
-	.is_enhance	= true,
+	.max_speed_hz		= 80000000,
+	.has_oen		= true,
+	.has_enhance_clk_div	= true,
+};
+
+static const struct meson_spicc_data meson_spicc_axg_data = {
+	.max_speed_hz		= 80000000,
+	.has_oen		= true,
+	.has_enhance_clk_div	= true,
 };
 
 static const struct of_device_id meson_spicc_of_match[] = {
@@ -846,6 +878,10 @@ static const struct of_device_id meson_spicc_of_match[] = {
 	{
 		.compatible	= "amlogic,meson-txlx-spicc",
 		.data		= &meson_spicc_txlx_data,
+	},
+	{
+		.compatible = "amlogic,meson-axg-spicc",
+		.data		= &meson_spicc_axg_data,
 	},
 	{ /* sentinel */ }
 };

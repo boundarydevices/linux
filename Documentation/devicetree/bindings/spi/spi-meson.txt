@@ -30,6 +30,7 @@ Required properties:
  - compatible: should be:
 	"amlogic,meson-gx-spicc" on Amlogic GX and compatible SoCs.
 	"amlogic,meson-txlx-spicc" on Amlogic TXLX and compatible SoCs
+	"amlogic,meson-axg-spicc" on Amlogic AXG and compatible SoCs
  - reg: physical base address and length of the controller registers
  - interrupts: The interrupt specifier
  - clock-names: Must contain "core"
