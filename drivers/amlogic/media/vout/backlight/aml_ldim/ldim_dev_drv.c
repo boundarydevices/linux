@@ -81,18 +81,6 @@ struct ldim_dev_config_s ldim_dev_config = {
 	},
 };
 
-/* ****************************************************** */
-static char *ldim_pinmux_str[] = {
-	"PWM_A",	/* 0 */
-	"PWM_B",	/* 1 */
-	"PWM_C",	/* 2 */
-	"PWM_D",	/* 3 */
-	"PWM_E",	/* 4 */
-	"PWM_F",	/* 5 */
-	"PWM_VS",	/* 6 */
-	"none",
-};
-
 #if 0
 static void ldim_gpio_release(int index)
 {
@@ -380,6 +368,13 @@ void ldim_set_duty_pwm(struct bl_pwm_config_s *ld_pwm)
 	}
 }
 
+/* ****************************************************** */
+static char *ldim_pinmux_str[] = {
+	"ldim_pwm",               /* 0 */
+	"ldim_pwm_vs",            /* 1 */
+	"none",
+};
+
 /* set ldim pwm_vs */
 static int ldim_pwm_pinmux_ctrl(char *pin_str)
 {
@@ -396,14 +391,26 @@ static int ldim_pwm_pinmux_ctrl(char *pin_str)
 
 	bl_pwm_ctrl(ld_pwm, 1);
 	/* request pwm pinmux */
-	ldim_drv->pin = devm_pinctrl_get_select(ldim_drv->dev,
-		ldim_pinmux_str[ld_pwm->pwm_port]);
-	if (IS_ERR(ldim_drv->pin)) {
-		BLERR("set %s pinmux error\n",
-			ldim_pinmux_str[ld_pwm->pwm_port]);
+	if (ld_pwm->pwm_port == BL_PWM_VS) {
+		ldim_drv->pin = devm_pinctrl_get_select(ldim_drv->dev,
+			ldim_pinmux_str[1]);
+		if (IS_ERR(ldim_drv->pin)) {
+			LDIMERR("set %s pinmux error\n",
+				ldim_pinmux_str[1]);
+		} else {
+			LDIMPR("request %s pinmux: %p\n",
+				ldim_pinmux_str[1], ldim_drv->pin);
+		}
 	} else {
-		BLPR("request %s pinmux: %p\n",
-			ldim_pinmux_str[ld_pwm->pwm_port], ldim_drv->pin);
+		ldim_drv->pin = devm_pinctrl_get_select(ldim_drv->dev,
+			ldim_pinmux_str[0]);
+		if (IS_ERR(ldim_drv->pin)) {
+			LDIMERR("set %s pinmux error\n",
+				ldim_pinmux_str[0]);
+		} else {
+			LDIMPR("request %s pinmux: %p\n",
+				ldim_pinmux_str[0], ldim_drv->pin);
+		}
 	}
 
 	return ret;
@@ -756,7 +763,10 @@ static int ldim_dev_add_driver(struct ldim_dev_config_s *ldev_conf, int index)
 {
 	int ret = 0;
 
-	if (strcmp(ldev_conf->name, "ob3350") == 0) {
+	if (strcmp(ldev_conf->name, "iw7027") == 0) {
+		ret = ldim_dev_iw7027_probe();
+		goto ldim_dev_add_driver_next;
+	} else if (strcmp(ldev_conf->name, "ob3350") == 0) {
 		ret = ldim_dev_ob3350_probe();
 		goto ldim_dev_add_driver_next;
 	} else if (strcmp(ldev_conf->name, "global") == 0) {
@@ -783,7 +793,10 @@ static int ldim_dev_remove_driver(struct ldim_dev_config_s *ldev_conf,
 {
 	int ret = 0;
 
-	if (strcmp(ldev_conf->name, "ob3350") == 0) {
+	if (strcmp(ldev_conf->name, "iw7027") == 0) {
+		ret = ldim_dev_iw7027_remove();
+		goto ldim_dev_remove_driver_next;
+	} else if (strcmp(ldev_conf->name, "ob3350") == 0) {
 		ret = ldim_dev_ob3350_remove();
 		goto ldim_dev_remove_driver_next;
 	} else if (strcmp(ldev_conf->name, "global") == 0) {

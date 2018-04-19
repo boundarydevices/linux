@@ -81,7 +81,6 @@ static unsigned int incr_dif_gain = 16;
 static spinlock_t  ldim_isr_lock;
 static spinlock_t  rdma_ldim_isr_lock;
 
-static struct tasklet_struct   ldim_tasklet;
 static struct workqueue_struct *ldim_read_queue;
 static struct work_struct   ldim_read_work;
 
@@ -168,6 +167,7 @@ module_param(ldim_top_en, uint, 0664);
 MODULE_PARM_DESC(ldim_top_en, "ldim_top_en");
 
 static struct aml_ldim_driver_s ldim_driver;
+static void ldim_on_vs_spi(void);
 static void ldim_on_vs_arithmetic(void);
 static void ldim_update_setting(void);
 static void ldim_get_matrix_info_6(void);
@@ -183,6 +183,7 @@ static void ldim_stts_read_region(struct work_struct *work)
 {
 	ldim_read_region(ldim_hist_row, ldim_hist_col);
 	ldim_on_vs_arithmetic();
+	ldim_on_vs_spi();
 }
 
 void LDIM_WR_32Bits(unsigned int addr, unsigned int data)
@@ -1528,7 +1529,6 @@ static irqreturn_t ldim_vsync_isr(int irq, void *dev_id)
 	default:
 		break;
 	}
-	tasklet_schedule(&ldim_tasklet);
 
 	ldim_irq_cnt++;
 	if (ldim_irq_cnt > 0xfffffff)
@@ -1679,7 +1679,7 @@ static void ldim_update_matrix(unsigned int mode)
 	LDIM_WR_32Bits(REG_LD_MISC_CTRL0, data);
 }
 
-static void ldim_on_vs_spi(unsigned long data)
+static void ldim_on_vs_spi(void)
 {
 	unsigned int size;
 	unsigned short *mapping;
@@ -3023,7 +3023,6 @@ int aml_ldim_probe(struct platform_device *pdev)
 		goto err3;
 	}
 
-	tasklet_init(&ldim_tasklet, ldim_on_vs_spi, 123);
 	ldim_read_queue = create_singlethread_workqueue("ldim read");
 	if (!ldim_read_queue) {
 		LDIMERR("ldim_read_queue create failed\n");
@@ -3035,16 +3034,15 @@ int aml_ldim_probe(struct platform_device *pdev)
 	spin_lock_init(&ldim_isr_lock);
 	spin_lock_init(&rdma_ldim_isr_lock);
 
-	ldim_driver.res_ldim_irq = platform_get_resource(pdev,
+	bl_drv->res_ldim_irq = platform_get_resource(pdev,
 		IORESOURCE_IRQ, 0);
-	if (!ldim_driver.res_ldim_irq) {
+	if (!bl_drv->res_ldim_irq) {
 		ret = -ENODEV;
 		goto err;
 	} else {
-		ldim_irq = ldim_driver.res_ldim_irq->start;
+		ldim_irq = bl_drv->res_ldim_irq->start;
 		LDIMPR("ldim_irq: %d\n", ldim_irq);
-
-		if (request_irq(ldim_irq, ldim_vsync_isr, 0,
+		if (request_irq(ldim_irq, ldim_vsync_isr, IRQF_SHARED,
 			"ldim_vsync", (void *)"ldim_vsync"))
 			LDIMERR("can't request ldim_irq\n");
 		else
@@ -3053,16 +3051,16 @@ int aml_ldim_probe(struct platform_device *pdev)
 
 	switch (bl_drv->data->chip_type) {
 	case BL_CHIP_GXTVBB:
-		ldim_driver.res_rdma_irq = platform_get_resource(pdev,
+		bl_drv->res_rdma_irq = platform_get_resource(pdev,
 			IORESOURCE_IRQ, 1);
-		if (!ldim_driver.res_rdma_irq) {
+		if (!bl_drv->res_rdma_irq) {
 			ret = -ENODEV;
 			goto err;
 		} else {
-			rdma_irq = ldim_driver.res_rdma_irq->start;
+			rdma_irq = bl_drv->res_rdma_irq->start;
 			LDIMPR("rdma_irq: %d\n", rdma_irq);
 
-			if (request_irq(rdma_irq, rdma_ldim_intr, 0,
+			if (request_irq(rdma_irq, rdma_ldim_intr, IRQF_SHARED,
 				"rdma_ldim", (void *)"rdma_ldim"))
 				LDIMERR("can't request rdma_ldim\n");
 			else
@@ -3093,6 +3091,7 @@ err:
 int aml_ldim_remove(void)
 {
 	unsigned int i;
+	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 
 	kfree(FDat.SF_BL_matrix);
 	kfree(FDat.TF_BL_matrix);
@@ -3105,9 +3104,8 @@ int aml_ldim_remove(void)
 	kfree(ldim_driver.ldim_test_matrix);
 	kfree(ldim_driver.local_ldim_matrix);
 
-	free_irq(ldim_driver.res_rdma_irq->start, (void *)"rdma_ldim");
-	free_irq(ldim_driver.res_ldim_irq->start, (void *)"ldim_vsync");
-	tasklet_kill(&ldim_tasklet);
+	free_irq(bl_drv->res_rdma_irq->start, (void *)"rdma_ldim");
+	free_irq(bl_drv->res_ldim_irq->start, (void *)"ldim_vsync");
 	cdev_del(aml_ldim_cdevp);
 
 	kfree(aml_ldim_cdevp);

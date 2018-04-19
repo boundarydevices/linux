@@ -82,8 +82,6 @@ struct aml_ldim_driver_s {
 	struct device *dev;
 	struct spi_device *spi;
 	struct spi_board_info *spi_dev;
-	struct resource *res_ldim_irq;
-	struct resource *res_rdma_irq;
 };
 
 extern struct aml_ldim_driver_s *aml_ldim_get_driver(void);

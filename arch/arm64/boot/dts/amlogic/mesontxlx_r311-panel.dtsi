@@ -636,12 +636,12 @@
 			bl_power_attr = <0 /*en_gpio_index*/
 				1 0  /*on_value, off_value*/
 				200 200>; /*on_delay(ms), off_delay(ms)*/
-			bl_ldim_region_row_col = <1 8>;
+			bl_ldim_region_row_col = <1 10>;
 			bl_ldim_mode = <1>; /*1=single_side
 					     *   (top, bottom, left or right),
 					     *2=uniform(top/bottom, left/right)
 					     */
-			bl_ldim_mapping = <0 1 2 3 4 5 6 7>;
+			bl_ldim_mapping = <0 1 2 3 4 5 6 7 8 9>;
 			ldim_dev_index = <2>;
 		};
 		backlight_5{
@@ -681,6 +681,7 @@
 		pinctrl-names = "ldim_pwm","ldim_pwm_vs";
 		pinctrl-0 = <&ldim_pwm_pins>;
 		pinctrl-1 = <&ldim_pwm_vs_pins>;
+		pinctrl_version = <1>; /* for uboot */
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
 		ldim_dev-gpios = <&gpio GPIOZ_12 1
@@ -714,5 +715,53 @@
 			en_gpio_on_off = <2 /*ldim_dev-gpios index*/
 				1 0>; /*on_level, off_level*/
 		};
+		ldim_dev_2 {
+			index = <1>;
+			type = <1>; /* 0=normal,1=spi,2=i2c */
+			ldim_dev_name = "iw7027";
+			ldim_pwm_pinmux_sel = "ldim_pwm_vs";
+			ldim_pwm_port = "PWM_VS";
+			ldim_pwm_attr = <1  /* pol */
+				2 /*freq(pwm:Hz, pwm_vs:multiple of vs)*/
+				50>;/*duty(%)*/
+			spi_bus_num = <0>;
+			spi_chip_select = <0>;
+			spi_max_frequency = <400000>; /* unit: hz */
+			spi_mode = <0>; /* mode: 0, 1, 2, 3 */
+			spi_cs_delay = <10  /* hold_high_delay */
+				100>; /* clk_cs_delay (unit: us) */
+			en_gpio_on_off = <0 /* ldim_dev-gpios index */
+				1 /* on_level */
+				0>; /* off_level */
+			lamp_err_gpio = <0xff>;
+				/* ldim_dev-gpios index, 0xff=invalid */
+			spi_write_check = <0>; /* 0=disable, 1=enable */
+			dim_max_min = <0xfff 0x7f>; /* dim_max, dim_min */
+			cmd_size = <4>;
+			/* init: (type, data..., delay),
+			 * must match cmd_size for every group
+			 */
+			/*   type: 0x00=cmd, 0xff=ending*/
+			/*   data: spi data, fill 0x0 for no use */
+			/*   delay: unit ms */
+			init_on = <
+				0x00 0x23 0x03 0x00
+				0x00 0x24 0xff 0x00
+				0x00 0x25 0x00 0x00
+				0x00 0x26 0x00 0x00
+				0x00 0x27 0x60 0x00
+				0x00 0x29 0x00 0x00
+				0x00 0x2a 0x00 0x00
+				/*0x00 0x2b 0x7f 0x00*/
+				0x00 0x2c 0x73 0x00
+				0x00 0x2d 0x37 0x00
+				0x00 0x31 0x93 0x00
+				0x00 0x32 0x0f 0x00
+				0x00 0x33 0xff 0x00
+				0x00 0x34 0xc8 0x00
+				0x00 0x35 0xbf 0x00
+				0xff 0x00 0x00 0x00>;
+		};
 	};
+
 }; /* end of / */

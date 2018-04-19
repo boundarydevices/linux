@@ -14427,3 +14427,9 @@ AMLOGIC LCD ADD TVCONFIG SUPPORT
 M:	Evoke Zhang <evoke.zhang@amlogic.com>
 F:	drivers/amlogic/media/vout/lcd/lcd_tv/lcd_tv.dts
 F:	drivers/amlogic/media/vout/lcd/lcd_tablet/aml_lcd.dts
+
+AMLOGIC ADD LDIM IW7027 DRIVER
+M:	Weiming Liu <weiming.liu@amlogic.com>
+F:	drivers/amlogic/media/vout/backlight/aml_ldim/iw7027_bl.c
+F:	drivers/amlogic/media/vout/backlight/aml_ldim/iw7027_bl.h
+
