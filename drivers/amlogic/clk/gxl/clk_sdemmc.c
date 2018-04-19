@@ -32,7 +32,7 @@
 #define to_clk_composite(_hw) container_of(_hw, struct clk_composite, hw)
 
 const char *sd_emmc_parent_names[] = { "xtal", "fclk_div2",
-	"fclk_div3", "fclk_div5", "fclk_div7", "mpll2", "mpll3", "gp0" };
+	"fclk_div3", "fclk_div5", "fclk_div7", "mpll2", "mpll3", "gp0_pll" };
 
 static struct clk_mux sd_emmc_p0_mux_A = {
 	.reg = (void *)HHI_SD_EMMC_CLK_CNTL,

@@ -57,7 +57,7 @@ static struct clk_gate g12a_ts_clk_gate = {
 
 static const char * const spicc_parent_names[] = { "xtal",
 	"clk81", "fclk_div4", "fclk_div3", "fclk_div2", "fclk_div5",
-	"fclk_div7", "gp0"};
+	"fclk_div7", "gp0_pll"};
 
 /* spicc clk */
 static struct clk_mux g12a_spicc0_mux = {
