@@ -14418,3 +14418,7 @@ AMLOGIC ATV DEMOD DRIVER
 M:      nengwen.chen <nengwen.chen@amlogic.com>
 F:      drivers/amlogic/atv_demod/*
 F:      include/linux/amlogic/aml_atvdemod.h
+
+AMLOGIC G12A X2 U211 buildroot dts
+M:     wenbiao zhang <wenbiao.zhang@amlogic.com>
+F:     arch/arm64/boot/dts/amlogic/g12a_s905y2_u221_buildroot.dts
