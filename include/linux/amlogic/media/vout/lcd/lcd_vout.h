@@ -276,8 +276,8 @@ struct dsi_config_s {
 	unsigned char operation_mode_init; /* 0=video mode, 1=command mode */
 	unsigned char operation_mode_display; /* 0=video mode, 1=command mode */
 	unsigned char video_mode_type; /* 0=sync_pulse, 1=sync_event, 2=burst */
-	unsigned char clk_lp_continuous; /* 0=stop, 1=continue */
-	unsigned char phy_stop_wait; /* 0=auto, 1=standard, 2=slow */
+	unsigned char clk_always_hs; /* 0=disable, 1=enable */
+	unsigned char phy_switch; /* 0=auto, 1=standard, 2=slow */
 
 	unsigned int venc_data_width;
 	unsigned int dpi_data_format;

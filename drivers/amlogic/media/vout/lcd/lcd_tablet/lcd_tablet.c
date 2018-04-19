@@ -580,10 +580,10 @@ static void lcd_config_print(struct lcd_config_s *pconf)
 			pconf->lcd_control.mipi_config->operation_mode_display);
 		LCDPR("video_mode_type = %d\n",
 			pconf->lcd_control.mipi_config->video_mode_type);
-		LCDPR("clk_lp_continuous = %d\n",
-			pconf->lcd_control.mipi_config->clk_lp_continuous);
-		LCDPR("phy_stop_wait = %d\n",
-			pconf->lcd_control.mipi_config->phy_stop_wait);
+		LCDPR("clk_always_hs = %d\n",
+			pconf->lcd_control.mipi_config->clk_always_hs);
+		LCDPR("phy_switch = %d\n",
+			pconf->lcd_control.mipi_config->phy_switch);
 		LCDPR("extern_init = %d\n",
 			pconf->lcd_control.mipi_config->extern_init);
 	}
@@ -839,9 +839,9 @@ static int lcd_config_load_from_dts(struct lcd_config_s *pconf,
 				= para[4];
 			pconf->lcd_control.mipi_config->video_mode_type
 				= para[5];
-			pconf->lcd_control.mipi_config->clk_lp_continuous
+			pconf->lcd_control.mipi_config->clk_always_hs
 				= para[6];
-			pconf->lcd_control.mipi_config->phy_stop_wait
+			pconf->lcd_control.mipi_config->phy_switch
 				= para[7];
 		}
 

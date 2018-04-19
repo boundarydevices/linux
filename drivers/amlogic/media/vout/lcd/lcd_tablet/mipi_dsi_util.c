@@ -79,7 +79,7 @@ static char *video_data_type_table[] = {
 	"un-support type",
 };
 
-static char *phy_stop_wait_table[] = {
+static char *phy_switch_table[] = {
 	"AUTO",
 	"STANDARD",
 	"SLOW",
@@ -130,7 +130,7 @@ static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
 			for (j = 0; j < n; j++) {
 				if (j == 0) {
 					len += sprintf(str+len, "0x%02x,",
-						dsi_table[i+j]);
+						dsi_table[i]);
 				} else {
 					len += sprintf(str+len, "%d,",
 						dsi_table[i+j]);
@@ -263,8 +263,8 @@ static void mipi_dsi_host_print_info(struct lcd_config_s *pconf)
 		"      init:              %s(%d)\n"
 		"      display:           %s(%d)\n"
 		"  video mode type:       %s(%d)\n"
-		"  clk lp continuous:     %d\n"
-		"  phy stop wait:         %s(%d)\n"
+		"  clk always hs:         %d\n"
+		"  phy switch:            %s(%d)\n"
 		"  data format:           %s\n"
 		"  lp escape clock:       %d.%03dMHz\n",
 		dconf->lane_num, dconf->bit_rate_max,
@@ -276,9 +276,9 @@ static void mipi_dsi_host_print_info(struct lcd_config_s *pconf)
 		dconf->operation_mode_display,
 		video_mode_type_table[dconf->video_mode_type],
 		dconf->video_mode_type,
-		dconf->clk_lp_continuous,
-		phy_stop_wait_table[dconf->phy_stop_wait],
-		dconf->phy_stop_wait,
+		dconf->clk_always_hs,
+		phy_switch_table[dconf->phy_switch],
+		dconf->phy_switch,
 		video_data_type_table[dconf->dpi_data_format],
 		(esc_clk / 1000000), (esc_clk % 1000000) / 1000);
 
@@ -558,7 +558,7 @@ static void dsi_phy_init(struct dsi_phy_s *dphy, unsigned char lane_num)
 	}
 }
 
-static void dsi_phy_config_set(struct lcd_config_s *pconf)
+static void set_dsi_phy_config(struct lcd_config_s *pconf)
 {
 	if (lcd_debug_print_flag)
 		LCDPR("%s\n", __func__);
@@ -588,13 +588,9 @@ static void dsi_phy_config_set(struct lcd_config_s *pconf)
 	dsi_phy_set_mask(MIPI_DSI_PHY_CTRL, (1 << 1));
 
 	/* Startup transfer */
-	if (pconf->lcd_control.mipi_config->clk_lp_continuous) {
-		dsi_host_write(MIPI_DSI_DWC_LPCLK_CTRL_OS,
+	dsi_host_write(MIPI_DSI_DWC_LPCLK_CTRL_OS,
+			(0x1 << BIT_AUTOCLKLANE_CTRL) |
 			(0x1 << BIT_TXREQUESTCLKHS));
-	} else {
-		dsi_host_write(MIPI_DSI_DWC_LPCLK_CTRL_OS,
-			(0x1 << BIT_AUTOCLKLANE_CTRL) | (0x1 << BIT_TXREQUESTCLKHS));
-	}
 }
 
 static void startup_mipi_dsi_host(void)
@@ -614,6 +610,23 @@ static void startup_mipi_dsi_host(void)
 	dsi_host_write(MIPI_DSI_TOP_MEM_PD, 0);
 
 	mdelay(10);
+}
+
+static void set_mipi_dsi_lpclk_ctrl(struct dsi_config_s *dconf,
+		unsigned int operation_mode)
+{
+	unsigned int lpclk = 1;
+
+	if (operation_mode == OPERATION_VIDEO_MODE) {
+		if (dconf->clk_always_hs) /* clk always hs */
+			lpclk = 0;
+		else /* enable clk lp state */
+			lpclk = 1;
+	} else { /* enable clk lp state */
+		lpclk = 1;
+	}
+	dsi_host_setb(MIPI_DSI_DWC_LPCLK_CTRL_OS,
+			lpclk, BIT_AUTOCLKLANE_CTRL, 1);
 }
 
 /* *************************************************************
@@ -1811,24 +1824,6 @@ static void mipi_dsi_vid_mode_config(struct lcd_config_s *pconf)
 	mipi_dsi_video_config(pconf);
 }
 
-static void mipi_dsi_host_init(struct lcd_config_s *pconf)
-{
-	unsigned int op_mode_init;
-
-	if (lcd_debug_print_flag)
-		LCDPR("%s\n", __func__);
-
-	op_mode_init = pconf->lcd_control.mipi_config->operation_mode_init;
-	mipi_dcs_set(MIPI_DSI_CMD_TRANS_TYPE, /* 0: high speed, 1: low power */
-		MIPI_DSI_DCS_ACK_TYPE,        /* if need bta ack check */
-		MIPI_DSI_TEAR_SWITCH);        /* enable tear ack */
-
-	set_mipi_dsi_host(MIPI_DSI_VIRTUAL_CHAN_ID,   /* Virtual channel id */
-		0, /* Chroma sub sample, only for YUV 422 or 420, even or odd */
-		op_mode_init, /* DSI operation mode, video or command */
-		pconf);
-}
-
 static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 {
 	unsigned int op_mode_init, op_mode_disp;
@@ -1843,6 +1838,8 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 	dconf = pconf->lcd_control.mipi_config;
 	op_mode_init = dconf->operation_mode_init;
 	op_mode_disp = dconf->operation_mode_display;
+
+	set_mipi_dsi_lpclk_ctrl(dconf, op_mode_init);
 
 	if (dconf->dsi_init_on) {
 		dsi_write_cmd(dconf->dsi_init_on);
@@ -1871,11 +1868,13 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 			    */
 			op_mode_disp, /* DSI operation mode, video or command */
 			pconf);
+		set_mipi_dsi_lpclk_ctrl(dconf, op_mode_disp);
 	}
 }
 
 void mipi_dsi_link_off(struct lcd_config_s *pconf)
 {
+	unsigned int op_mode_init, op_mode_disp;
 	struct dsi_config_s *dconf;
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
 	struct aml_lcd_extern_driver_s *lcd_ext;
@@ -1885,6 +1884,18 @@ void mipi_dsi_link_off(struct lcd_config_s *pconf)
 		LCDPR("%s\n", __func__);
 
 	dconf = pconf->lcd_control.mipi_config;
+	op_mode_init = dconf->operation_mode_init;
+	op_mode_disp = dconf->operation_mode_display;
+
+	if (op_mode_disp != op_mode_init) {
+		set_mipi_dsi_host(MIPI_DSI_VIRTUAL_CHAN_ID,
+			0, /* Chroma sub sample, only for
+			    * YUV 422 or 420, even or odd
+			    */
+			op_mode_init, /* DSI operation mode, video or command */
+			pconf);
+		set_mipi_dsi_lpclk_ctrl(dconf, op_mode_init);
+	}
 
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
 	if (dconf->extern_init < LCD_EXTERN_INDEX_INVALID) {
@@ -1970,7 +1981,7 @@ void lcd_mipi_dsi_config_set(struct lcd_config_s *pconf)
 	}
 
 	/* Venc resolution format */
-	switch (dconf->phy_stop_wait) {
+	switch (dconf->phy_switch) {
 	case 1: /* standard */
 		dsi_phy_config.state_change = 1;
 		break;
@@ -2035,9 +2046,23 @@ void lcd_mipi_dsi_config_post(struct lcd_config_s *pconf)
 
 static void mipi_dsi_host_on(struct lcd_config_s *pconf)
 {
+	unsigned int op_mode_init;
+
+	if (lcd_debug_print_flag)
+		LCDPR("%s\n", __func__);
+
 	startup_mipi_dsi_host();
-	mipi_dsi_host_init(pconf);
-	dsi_phy_config_set(pconf);
+
+	op_mode_init = pconf->lcd_control.mipi_config->operation_mode_init;
+	mipi_dcs_set(MIPI_DSI_CMD_TRANS_TYPE, /* 0: high speed, 1: low power */
+		MIPI_DSI_DCS_ACK_TYPE,        /* if need bta ack check */
+		MIPI_DSI_TEAR_SWITCH);        /* enable tear ack */
+
+	set_mipi_dsi_host(MIPI_DSI_VIRTUAL_CHAN_ID,   /* Virtual channel id */
+		0, /* Chroma sub sample, only for YUV 422 or 420, even or odd */
+		op_mode_init, /* DSI operation mode, video or command */
+		pconf);
+	set_dsi_phy_config(pconf);
 
 	mipi_dsi_link_on(pconf);
 
