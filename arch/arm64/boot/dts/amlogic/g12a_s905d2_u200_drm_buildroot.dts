@@ -793,6 +793,7 @@
 
 &drm_vpu {
 	status = "okay";
+	logo_addr = "0x7f800000";
 };
 
 &drm_amhdmitx {
