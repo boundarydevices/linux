@@ -110,7 +110,6 @@ struct ov5640 {
 	struct v4l2_captureparm streamcap;
 	struct media_pad pads[OV5640_SENS_PADS_NUM];
 	bool on;
-	bool mipi_csi;
 
 	/* control settings */
 	int brightness;
@@ -451,52 +450,6 @@ static struct reg_value ov5640_pll_1080P_15fps_1920_1080[] = {
 	{0x3824, 0x04, 0, 0}, {0x4837, 0x16, 0, 0},
 };
 
-/* MIPI */
-static struct reg_value ov5640_mipi_pll_VGA_30fps_640_480[] = {
-	{0x3035, 0x14, 0, 0}, {0x3036, 0x38, 0, 0}, {0x460c, 0x22, 0, 0},
-	{0x3824, 0x02, 0, 0}, {0x4837, 0x0a, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_VGA_15fps_640_480[] = {
-	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x460c, 0x22, 0, 0},
-	{0x3824, 0x02, 0, 0}, {0x4837, 0x0a, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_QVGA_30fps_320_240[] = {
-	{0x3035, 0x14, 0, 0}, {0x3036, 0x38, 0, 0}, {0x460c, 0x22, 0, 0},
-	{0x3824, 0x02, 0, 0}, {0x4837, 0x22, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_QVGA_15fps_320_240[] = {
-	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x460c, 0x22, 0, 0},
-	{0x3824, 0x02, 0, 0}, {0x4837, 0x0a, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_30fps_480_272[] = {
-	{0x3035, 0x21, 0, 0}, {0x3036, 0x69, 0, 0}, {0x460c, 0x20, 0, 0},
-	{0x3824, 0x04, 0, 0}, {0x4837, 0x16, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_15fps_480_272[] = {
-	{0x3035, 0x41, 0, 0}, {0x3036, 0x69, 0, 0}, {0x460c, 0x20, 0, 0},
-	{0x3824, 0x04, 0, 0}, {0x4837, 0x16, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_720P_30fps_1280_720[] = {
-	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x460c, 0x20, 0, 0},
-	{0x3824, 0x04, 0, 0}, {0x4837, 0x0a, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_720P_15fps_1280_720[] = {
-	{0x3035, 0x41, 0, 0}, {0x3036, 0x54, 0, 0}, {0x460c, 0x20, 0, 0},
-	{0x3824, 0x04, 0, 0}, {0x4837, 0x0a, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_pll_1080P_15fps_1920_1080[] = {
-	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x460c, 0x20, 0, 0},
-	{0x3824, 0x04, 0, 0}, {0x4837, 0x0a, 0, 0},
-};
-
 static struct reg_value ov5640_config[] = {
 	{0x302C, 0xc2, 0, 0}, /* Driver Capability */
 
@@ -512,36 +465,6 @@ static struct reg_value ov5640_config[] = {
 				             1: hight level
 					         0: low level valid*/
 	{0x5000, 0xa7, 0, 0},
-};
-
-static struct reg_value ov5640_mipi_config[] = {
-	{0x302C, 0xc2, 0, 0}, /* Driver Capability */
-
-	{0x4300, 0x3F, 0, 0}, /* YUV422 YVYU */
-	{0x501f, 0x00, 0, 0}, /* YUV422 YVYU */
-
-	{0x3034, 0x18, 0, 0}, /* MIPI 8bits mode */
-	{0x3017, 0x00, 0, 0},
-	{0x3018, 0x00, 0, 0},
-
-	{0x300e, 0x45, 0, 0}, /* MIPI mode */
-	{0x4800, 0x04, 0, 0},
-
-	{0x4740, 0x23, 0, 0}, /* BIT5: Pixel BIT1: HSYNC BIT0: VSYNC
-				             1: hight level
-					         0: low level valid*/
-	{0x5000, 0xa7, 0, 0},
-};
-
-static struct ov5640_hs_info hs_setting[] = {
-	{1920, 1080, 30, 0x0B},
-	{1920, 1080, 15, 0x10},
-	{1280, 720,  30, 0x11},
-	{1280, 720,  15, 0x16},
-	{640,  480,  30, 0x1E},
-	{640,  480,  15, 0x23},
-	{320,  240,  30, 0x1E},
-	{320,  240,  15, 0x23},
 };
 
 static struct ov5640_mode_info ov5640_mode_info_data[ov5640_mode_MAX + 1] = {
@@ -594,39 +517,6 @@ static struct ov5640_pll_info ov5640_pll_info_data[2][ov5640_mode_MAX + 1] = {
 	},
 };
 
-static struct ov5640_pll_info ov5640_mipi_pll_info_data[2][ov5640_mode_MAX + 1] = {
-	{
-		{ov5640_mode_VGA_640_480, ov5640_mipi_pll_VGA_15fps_640_480,
-		ARRAY_SIZE(ov5640_mipi_pll_VGA_15fps_640_480)},
-
-		{ov5640_mode_QVGA_320_240, ov5640_mipi_pll_QVGA_15fps_320_240,
-		ARRAY_SIZE(ov5640_mipi_pll_QVGA_15fps_320_240)},
-
-		{ov5640_mode_480_272, ov5640_mipi_pll_15fps_480_272,
-		ARRAY_SIZE(ov5640_mipi_pll_15fps_480_272)},
-
-		{ov5640_mode_720P_1280_720, ov5640_mipi_pll_720P_15fps_1280_720,
-		ARRAY_SIZE(ov5640_mipi_pll_720P_15fps_1280_720)},
-
-		{ov5640_mode_1080P_1920_1080, ov5640_mipi_pll_1080P_15fps_1920_1080,
-		ARRAY_SIZE(ov5640_mipi_pll_1080P_15fps_1920_1080)},
-	},
-
-	{
-		{ov5640_mode_VGA_640_480, ov5640_mipi_pll_VGA_30fps_640_480,
-		ARRAY_SIZE(ov5640_mipi_pll_VGA_30fps_640_480)},
-
-		{ov5640_mode_QVGA_320_240, ov5640_mipi_pll_QVGA_30fps_320_240,
-		ARRAY_SIZE(ov5640_mipi_pll_QVGA_30fps_320_240)},
-
-		{ov5640_mode_480_272, ov5640_mipi_pll_30fps_480_272,
-		ARRAY_SIZE(ov5640_mipi_pll_30fps_480_272)},
-
-		{ov5640_mode_720P_1280_720, ov5640_mipi_pll_720P_30fps_1280_720,
-		ARRAY_SIZE(ov5640_mipi_pll_720P_30fps_1280_720)},
-	},
-};
-
 static struct regulator *io_regulator;
 static struct regulator *core_regulator;
 static struct regulator *analog_regulator;
@@ -663,27 +553,6 @@ static const struct ov5640_datafmt ov5640_colour_fmts[] = {
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
 {
 	return container_of(i2c_get_clientdata(client), struct ov5640, subdev);
-}
-
-static uint16_t find_hs_configure(struct ov5640 *sensor)
-{
-	struct device *dev = &sensor->i2c_client->dev;
-	struct v4l2_fract *timeperframe = &sensor->streamcap.timeperframe;
-	struct v4l2_pix_format *pix = &sensor->pix;
-	u32 frame_rate = timeperframe->denominator / timeperframe->numerator;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(hs_setting); i++) {
-		if (hs_setting[i].width == pix->width &&
-			hs_setting[i].height == pix->height &&
-			hs_setting[i].frame_rate == frame_rate)
-		  return hs_setting[i].val;
-	}
-
-	if (i == ARRAY_SIZE(hs_setting))
-		dev_err(dev, "%s can not find hs configure\n", __func__);
-
-	return -EINVAL;
 }
 
 /* Find a data format by a pixel code in an array */
@@ -915,11 +784,6 @@ static int ov5640_config_resolution(enum ov5640_mode mode)
 		ov5640_write_reg(0x3821, 0x06);
 	}
 
-	if (ov5640_data.mipi_csi && mode == ov5640_mode_480_272) {
-		mode = ov5640_mode_VGA_640_480;
-		pr_warn("Not support 480*272, change to 640*480\n");
-	}
-
 	/* Configure ov5640 initial parm */
 	pModeSetting = ov5640_mode_info_data[mode].init_data_ptr;
 	ArySize = ov5640_mode_info_data[mode].init_data_size;
@@ -940,28 +804,15 @@ static int ov5640_config_others(enum ov5640_frame_rate rate,
 	if (mode < ov5640_mode_MIN || mode > ov5640_mode_MAX)
 		return -EINVAL;
 
-	if (ov5640_data.mipi_csi) {
-		mode = (mode == ov5640_mode_480_272) ?
-				ov5640_mode_VGA_640_480 : mode;
-		pModeSetting = ov5640_mipi_pll_info_data[rate][mode].init_data_ptr;
-		ArySize = ov5640_mipi_pll_info_data[rate][mode].init_data_size;
-	} else {
-		pModeSetting = ov5640_pll_info_data[rate][mode].init_data_ptr;
-		ArySize = ov5640_pll_info_data[rate][mode].init_data_size;
-	}
+	pModeSetting = ov5640_pll_info_data[rate][mode].init_data_ptr;
+	ArySize = ov5640_pll_info_data[rate][mode].init_data_size;
 	retval = ov5640_download_firmware(pModeSetting, ArySize);
 	if (retval < 0)
 		return retval;
 
 	/* Configure ov5640 initial parm */
-	if (ov5640_data.mipi_csi) {
-		pModeSetting = ov5640_mipi_config;
-		ArySize = ARRAY_SIZE(ov5640_mipi_config);
-	} else {
-		pModeSetting = ov5640_config;
-		ArySize = ARRAY_SIZE(ov5640_config);
-	}
-
+	pModeSetting = ov5640_config;
+	ArySize = ARRAY_SIZE(ov5640_config);
 	retval = ov5640_download_firmware(pModeSetting, ArySize);
 	if (retval < 0)
 		return retval;
@@ -1217,13 +1068,8 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	if (!fmt) {
-		if (sensor->mipi_csi) {
-			mf->code	= ov5640_colour_fmts[1].code;
-			mf->colorspace	= ov5640_colour_fmts[1].colorspace;
-		} else {
-			mf->code	= ov5640_colour_fmts[0].code;
-			mf->colorspace	= ov5640_colour_fmts[0].colorspace;
-		}
+		mf->code	= ov5640_colour_fmts[0].code;
+		mf->colorspace	= ov5640_colour_fmts[0].colorspace;
 	}
 
 	mf->field	= V4L2_FIELD_NONE;
@@ -1250,17 +1096,12 @@ static int ov5640_get_fmt(struct v4l2_subdev *sd,
 
 	memset(mf, 0, sizeof(struct v4l2_mbus_framefmt));
 
-	if (sensor->mipi_csi) {
-		mf->code = ov5640_colour_fmts[1].code;
-		mf->colorspace = ov5640_colour_fmts[1].colorspace;
-	} else {
-		mf->code = ov5640_colour_fmts[0].code;
-		mf->colorspace = ov5640_colour_fmts[0].colorspace;
-	}
+	mf->code = ov5640_colour_fmts[0].code;
+	mf->colorspace = ov5640_colour_fmts[0].colorspace;
 	mf->width = sensor->pix.width;
 	mf->height = sensor->pix.height;
 	mf->field = V4L2_FIELD_NONE;
-	mf->reserved[1] = (sensor->mipi_csi) ? find_hs_configure(sensor) : 0;
+	mf->reserved[1] = 0;
 
 	dev_dbg(&client->dev, "%s code=0x%x, w/h=(%d,%d), colorspace=%d, field=%d\n",
 		__func__, mf->code, mf->width, mf->height, mf->colorspace, mf->field);
@@ -1419,7 +1260,7 @@ static int ov5640_probe(struct i2c_client *client,
 	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
 	if (!gpio_is_valid(rst_gpio)) {
 		dev_err(dev, "no sensor reset pin available\n");
-		devm_gpio_free(dev, pwn_gpio);
+		devm_gpio_free(dev, rst_gpio);
 		return -EINVAL;
 	}
 	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_LOW,
@@ -1460,8 +1301,6 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
-	ov5640_data.mipi_csi  = of_property_read_bool(dev->of_node, "mipi_csi");
-
 	/* Set mclk rate before clk on */
 	ov5640_set_clk_rate();
 
@@ -1474,8 +1313,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.io_init = ov5640_reset;
 	ov5640_data.i2c_client = client;
 
-	ov5640_data.pix.pixelformat = (ov5640_data.mipi_csi) ?
-		V4L2_PIX_FMT_UYVY : V4L2_PIX_FMT_YVYU;
+	ov5640_data.pix.pixelformat = V4L2_PIX_FMT_YVYU;
 	ov5640_data.pix.width = ov5640_mode_info_data[0].width;
 	ov5640_data.pix.height =  ov5640_mode_info_data[0].height;
 	ov5640_data.streamcap.capability = V4L2_MODE_HIGHQUALITY |
