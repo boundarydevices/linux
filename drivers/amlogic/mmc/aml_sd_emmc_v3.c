@@ -155,6 +155,7 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 	if (!conf->stop_clk) {
 		conf->stop_clk = 1;
 		writel(vcfg, host->base + SD_EMMC_CFG);
+		pdata->stop_clk = 1;
 	}
 
 	if (aml_card_type_mmc(pdata)) {
@@ -192,6 +193,7 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 		conf->stop_clk = 0;
 		writel(vcfg, host->base + SD_EMMC_CFG);
 		pdata->clkc = readl(host->base + SD_EMMC_CLOCK_V3);
+		pdata->stop_clk = 0;
 	}
 #endif
 	pr_debug("actual_clock :%u, HHI_nand: 0x%x\n",
@@ -320,11 +322,6 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 #endif
 		return;
 	}
-
-	if ((aml_card_type_sdio(pdata)
-				|| aml_card_type_non_sdio(pdata))
-			&& (host->data->chip_type == MMC_CHIP_G12A))
-		host->val_f = 1;
 
 	/*Set Power*/
 	aml_sd_emmc_set_power_v3(pdata, ios->power_mode);
@@ -990,6 +987,11 @@ static int _aml_sd_emmc_execute_tuning(struct mmc_host *mmc, u32 opcode,
 	int curr_win_start, curr_win_size;
 	u32 rxdly[3] = {0xA28A28A, 0x15500514, 0x1FF8079E};
 
+#ifdef AML_MMC_TDMA
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		wait_for_completion(&host->drv_completion);
+#endif
 	writel(0, host->base + SD_EMMC_ADJUST_V3);
 
 tunning:
@@ -1076,6 +1078,12 @@ tunning:
 			|| (clkc->div >= 10)) {
 			pr_info("%s: final result of tuning failed\n",
 				 mmc_hostname(host->mmc));
+#ifdef AML_MMC_TDMA
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		complete(&host->drv_completion);
+#endif
+
 			return -1;
 		}
 		clkc->div += 1;
@@ -1112,6 +1120,11 @@ tunning:
 	writel(adjust, host->base + SD_EMMC_ADJUST_V3);
 	pdata->adj = adjust;
 	host->is_tunning = 0;
+#ifdef AML_MMC_TDMA
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		complete(&host->drv_completion);
+#endif
 
 	pr_info("%s: sd_emmc_regs->gclock=0x%x,sd_emmc_regs->gadjust=0x%x\n",
 			mmc_hostname(host->mmc),

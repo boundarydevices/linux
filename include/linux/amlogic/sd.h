@@ -262,6 +262,7 @@ struct amlsd_platform {
 	unsigned char signal_voltage;
 	int	bus_width;
 	int	bl_len;
+	int	stop_clk;
 
 	unsigned int low_burst;
 	struct mutex in_out_lock;
@@ -412,8 +413,6 @@ struct amlsd_host {
 	char is_tunning;
 	char is_timming;
 	char tuning_mode;
-	char cur_dev[32];
-	unsigned int val_f;
 	unsigned int irq;
 	unsigned int irq_in;
 	unsigned int irq_out;

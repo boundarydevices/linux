@@ -1059,6 +1059,7 @@ static void aml_mmc_clk_switch_off(struct amlsd_platform *pdata)
 	vcfg = readl(host->base + SD_EMMC_CFG);
 	conf->stop_clk = 1;
 	writel(vcfg, host->base + SD_EMMC_CFG);
+	pdata->stop_clk = 1;
 
 	host->is_gated = true;
 }
@@ -1133,9 +1134,6 @@ void aml_sd_emmc_save_host_val(struct mmc_host *mmc)
 	struct amlsd_host *host = pdata->host;
 	unsigned long clk_ios;
 
-	strcpy(host->cur_dev, pdata->pinname);
-	host->val_f = 0;
-
 	clk_ios = clk_get_rate(host->cfg_div_clk);
 	vconf = readl(host->base + SD_EMMC_CFG);
 	adj = readl(host->base + SD_EMMC_ADJUST_V3);
@@ -1145,6 +1143,7 @@ void aml_sd_emmc_save_host_val(struct mmc_host *mmc)
 
 	if ((pconf->bus_width == pdata->bus_width)
 			&& (pconf->bl_len == pdata->bl_len)
+			&& (pconf->stop_clk == pdata->stop_clk)
 			&& (mmc->actual_clock == clk_ios)
 			&& (adj == pdata->adj)
 			&& (dly1 == pdata->dly1)
@@ -1152,9 +1151,12 @@ void aml_sd_emmc_save_host_val(struct mmc_host *mmc)
 			&& (intf3 == pdata->intf3))
 		return;
 
+	if (aml_card_type_non_sdio(pdata))
+		vconf = pdata->ctrl;
 	clk_ios = mmc->actual_clock;
 	pconf->bus_width = pdata->bus_width;
 	pconf->bl_len = pdata->bl_len;
+	pconf->stop_clk = pdata->stop_clk;
 	adj = pdata->adj;
 	dly1 = pdata->dly1;
 	dly2 = pdata->dly2;
@@ -1868,7 +1870,8 @@ int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 	mmc_request_done(host->mmc, mrq);
 #ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& (host->data->chip_type == MMC_CHIP_G12A)
+			&& (host->is_tunning == 0))
 		complete(&host->drv_completion);
 #endif
 
@@ -2208,14 +2211,16 @@ static void meson_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	host = pdata->host;
 #ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& (host->data->chip_type == MMC_CHIP_G12A)
+			&& (mrq->cmd->opcode != MMC_SEND_TUNING_BLOCK))
 		wait_for_completion(&host->drv_completion);
 #endif
 
 	if (aml_check_unsupport_cmd(mmc, mrq)) {
 #ifdef AML_MMC_TDMA
 		if ((host->mem->start == host->data->port_b_base)
-				&& (host->data->chip_type == MMC_CHIP_G12A))
+				&& (host->data->chip_type == MMC_CHIP_G12A)
+			&& (mrq->cmd->opcode != MMC_SEND_TUNING_BLOCK))
 			complete(&host->drv_completion);
 #endif
 		return;
@@ -2237,10 +2242,8 @@ static void meson_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		pdata->xfer_pre(pdata);
 
 #ifdef AML_MMC_TDMA
-	if ((aml_card_type_sdio(pdata)
-				|| aml_card_type_non_sdio(pdata))
+		if ((host->mem->start == host->data->port_b_base)
 			&& (host->data->chip_type == MMC_CHIP_G12A)) {
-		if (strcmp(host->cur_dev, pdata->pinname) || host->val_f)
 			aml_sd_emmc_save_host_val(mmc);
 	}
 #endif
@@ -2995,11 +2998,17 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		goto fail_init_host;
 	}
 
-	if (host->ctrl_ver >= 3)
-		ret = devm_request_threaded_irq(&pdev->dev, host->irq,
-			meson_mmc_irq, meson_mmc_irq_thread_v3,
-			IRQF_SHARED, "meson-aml-mmc", host);
-	else
+	if (host->ctrl_ver >= 3) {
+		if ((host->mem->start == host->data->port_b_base)
+				&& (host->data->chip_type == MMC_CHIP_G12A))
+			ret = devm_request_threaded_irq(&pdev->dev, host->irq,
+					meson_mmc_irq, meson_mmc_irq_thread_v3,
+					IRQF_ONESHOT, "meson-aml-mmc", host);
+		else
+			ret = devm_request_threaded_irq(&pdev->dev, host->irq,
+					meson_mmc_irq, meson_mmc_irq_thread_v3,
+					IRQF_SHARED, "meson-aml-mmc", host);
+	} else
 		ret = devm_request_threaded_irq(&pdev->dev, host->irq,
 			meson_mmc_irq, meson_mmc_irq_thread,
 			IRQF_SHARED, "meson-aml-mmc", host);
@@ -3081,6 +3090,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	/* save def clk & cfg */
 	pdata->clkc = clk;
 	pdata->ctrl = cfg;
+	pdata->bl_len = (cfg >> 4) & 0xf;
 
 	if (pdata->caps & MMC_CAP_NONREMOVABLE)
 		pdata->is_in = 1;
