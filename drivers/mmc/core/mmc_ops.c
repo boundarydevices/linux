@@ -563,7 +563,10 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		 * rely on waiting for the stated timeout to be sufficient.
 		 */
 		if (!send_status && !host->ops->card_busy) {
-			mmc_delay(timeout_ms);
+#ifdef CONFIG_AMLOGIC_MMC
+			if (timeout_ms < 5100)
+#endif
+				mmc_delay(timeout_ms);
 			goto out;
 		}
 
