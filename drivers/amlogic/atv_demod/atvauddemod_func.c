@@ -34,6 +34,19 @@ static unsigned int audio_thd_threshold2 = 0xf00;
 module_param(audio_thd_threshold2, uint, 0644);
 MODULE_PARM_DESC(audio_thd_threshold2, "\n audio_thd_threshold2\n");
 
+#undef pr_info
+#define pr_info(args...)\
+	do {\
+		if (ademod_debug_en)\
+			printk(args);\
+	} while (0)
+#undef pr_dbg
+#define pr_dbg(a...) \
+	do {\
+		if (1)\
+			printk(a);\
+	} while (0)
+
 int deem_75u_30[7]   = {10, 6, 0, -971, 0, -44, 97};
 int deem_75u_40[7]   = {10, 6, 0, -971, 0, -26, 80};
 int deem_75u_50[7]   = {10, 6, 0, -971, 0, -16, 69};

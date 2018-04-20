@@ -205,6 +205,8 @@ int atv_demod_enter_mode(void)
 	 * memset(&(amlatvdemod_devp->parm), 0,
 	 * sizeof(amlatvdemod_devp->parm));
 	 */
+	amlatvdemod_devp->std = 0;
+
 	atvdemod_state = ATVDEMOD_STATE_WORK;
 
 	pr_info("%s: OK.\n", __func__);
@@ -232,6 +234,7 @@ int atv_demod_leave_mode(void)
 	 * memset(&(amlatvdemod_devp->parm), 0,
 	 * sizeof(amlatvdemod_devp->parm));
 	 */
+	amlatvdemod_devp->std = 0;
 	atvdemod_state = ATVDEMOD_STATE_IDEL;
 
 	pr_info("%s: OK.\n", __func__);
@@ -273,6 +276,7 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		/* open AGC if needed */
 		if (amlatvdemod_devp->pin != NULL)
 			devm_pinctrl_put(amlatvdemod_devp->pin);
+
 		if (amlatvdemod_devp->pin_name)
 			amlatvdemod_devp->pin =
 			devm_pinctrl_get_select(amlatvdemod_devp->dev,
@@ -295,9 +299,11 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		if (!is_atvdemod_scan_mode())
 			atvauddemod_init();
 
-		pr_info("%s: set std color %lld, audio type %lld.\n",
-			__func__, amlatvdemod_devp->std, amlatvdemod_devp->std);
-		pr_info("%s: set if_freq %d, if_inv %d.\n",
+		pr_info("[%s] set std color %s, audio type %s.\n",
+			__func__,
+			v4l2_std_to_str((0xff000000 & amlatvdemod_devp->std)),
+			v4l2_std_to_str((0xffffff & amlatvdemod_devp->std)));
+		pr_info("[%s] set if_freq %d, if_inv %d.\n",
 			__func__, amlatvdemod_devp->if_freq,
 			amlatvdemod_devp->if_inv);
 	}
@@ -441,7 +447,6 @@ struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,
 		struct i2c_adapter *i2c_adap, u8 i2c_addr, u32 tuner_id)
 {
 	int instance = 0;
-	void *p = NULL;
 	struct atv_demod_priv *priv = NULL;
 
 	mutex_lock(&atv_demod_list_mutex);
@@ -473,20 +478,6 @@ struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,
 	memcpy(&fe->ops.analog_ops, &atvdemod_ops,
 			sizeof(struct analog_demod_ops));
 
-	switch (tuner_id) {
-	case AM_TUNER_R840:
-		break;
-	case AM_TUNER_SI2151:
-		p = v4l2_attach(si2151_attach, fe, i2c_adap, i2c_addr);
-		break;
-	case AM_TUNER_MXL661:
-		p = v4l2_attach(mxl661_attach, fe, i2c_adap, i2c_addr);
-		break;
-	}
-
-	if (!p)
-		pr_err("%s: v4l2_attach tuner %d error.\n",
-				__func__, tuner_id);
-
 	return fe;
 }
+EXPORT_SYMBOL(aml_atvdemod_attach);

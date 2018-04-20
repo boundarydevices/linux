@@ -37,9 +37,4 @@ extern int atv_demod_enter_mode(void);
 struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,
 		struct i2c_adapter *i2c_adap, u8 i2c_addr, u32 tuner_id);
 
-extern struct dvb_frontend *mxl661_attach(struct dvb_frontend *fe,
-		struct i2c_adapter *i2c_adap, u8 i2c_addr);
-extern struct dvb_frontend *si2151_attach(struct dvb_frontend *fe,
-		struct i2c_adapter *i2c_adap, u8 i2c_addr);
-
 #endif /* __ATV_DEMOD_OPS_H__ */

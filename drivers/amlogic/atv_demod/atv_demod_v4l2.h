@@ -14,6 +14,7 @@
 #ifndef __ATV_DEMOD_V4L2_H__
 #define __ATV_DEMOD_V4L2_H__
 
+#include <linux/amlogic/aml_atvdemod.h>
 #include <media/v4l2-device.h>
 #include "drivers/media/dvb-core/dvb_frontend.h"
 
@@ -69,10 +70,10 @@
 #define V4L2_SET_MODE        _IO('V', 108)
 #define V4L2_READ_STATUS     _IOR('V', 109, enum v4l2_status)
 
-/*COLOR MODULATION TYPE*/
-#define V4L2_COLOR_STD_PAL    ((v4l2_std_id) 0x04000000)
-#define V4L2_COLOR_STD_NTSC   ((v4l2_std_id) 0x08000000)
-#define V4L2_COLOR_STD_SECAM  ((v4l2_std_id) 0x10000000)
+
+#define ANALOG_FLAG_ENABLE_AFC           0X00000001
+#define  ANALOG_FLAG_MANUL_SCAN          0x00000011
+
 
 struct v4l2_analog_parameters {
 	unsigned int frequency;
@@ -148,7 +149,11 @@ struct v4l2_adapter {
 };
 
 struct v4l2_frontend {
-	struct v4l2_adapter *v4l2_ad;
+	struct device *dev;
+
+	struct dvb_frontend fe;
+	unsigned int tuner_id;
+	struct i2c_client i2c;
 
 	void *frontend_priv;
 	void *tuner_priv;
@@ -175,8 +180,7 @@ struct v4l2_atvdemod_device {
 	enum v4l2_search (*search)(struct v4l2_atvdemod_device *dev);
 };
 
-int v4l2_resister_frontend(struct v4l2_adapter *v4l2_ad,
-		struct v4l2_frontend *v4l2_fe);
+int v4l2_resister_frontend(struct v4l2_frontend *v4l2_fe);
 int v4l2_unresister_frontend(struct v4l2_frontend *v4l2_fe);
 
 int v4l2_frontend_suspend(struct v4l2_frontend *v4l2_fe);
