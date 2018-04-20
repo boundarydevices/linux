@@ -74,6 +74,18 @@ struct aml_audio_private_data {
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 	int atmos_edid_enable;
 #endif
+	int aml_audio_Hardware_resample;
+	int Speaker0_Channel_Mask;
+	int Speaker1_Channel_Mask;
+	int Speaker2_Channel_Mask;
+	int Speaker3_Channel_Mask;
+	int EQ_DRC_Channel_Mask;
+	int DAC0_Channel_Mask;
+	int DAC1_Channel_Mask;
+	int Spdif_samesource_Channel_Mask;
+	int audio_in_GPIO;
+	int audio_in_GPIO_inv;
+	struct gpio_desc *source_switch;
 };
 
 struct codec_info {

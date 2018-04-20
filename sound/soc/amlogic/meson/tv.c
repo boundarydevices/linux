@@ -59,13 +59,6 @@
 
 #define DRV_NAME "aml_snd_card_tv"
 
-static int aml_audio_Hardware_resample;
-static int Speaker_Channel_Mask = 1;
-static int EQ_DRC_Channel_Mask;
-static int DAC0_Channel_Mask;
-static int DAC1_Channel_Mask;
-static int Spdif_samesource_Channel_Mask;
-
 static unsigned int aml_EQ_param_length = 100;
 static unsigned int aml_EQ_param[100] = {
 	/*channel 1 param*/
@@ -319,7 +312,11 @@ static int aml_hardware_resample_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.enumerated.item[0] = aml_audio_Hardware_resample;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct aml_audio_private_data *p_aml_audio =
+			snd_soc_card_get_drvdata(card);
+	ucontrol->value.enumerated.item[0] =
+			p_aml_audio->aml_audio_Hardware_resample;
 	return 0;
 }
 
@@ -352,7 +349,7 @@ static int aml_hardware_resample_set_enum(
 	else
 		return 0;
 
-	aml_audio_Hardware_resample = index;
+	p_aml_audio->aml_audio_Hardware_resample = index;
 
 	if (index > 0
 		&& p_aml_audio
@@ -367,10 +364,7 @@ static const struct snd_soc_dapm_widget aml_asoc_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("LINEOUT"),
 };
 
-int audio_in_GPIO;
-struct gpio_desc *av_source;
-static const char * const audio_in_switch_texts[] = { "AV", "Karaok"};
-
+static const char * const audio_in_switch_texts[] = { "SPDIF_IN", "ARC_IN"};
 static const struct soc_enum audio_in_switch_enum = SOC_ENUM_SINGLE(
 		SND_SOC_NOPM, 0, ARRAY_SIZE(audio_in_switch_texts),
 		audio_in_switch_texts);
@@ -378,28 +372,40 @@ static const struct soc_enum audio_in_switch_enum = SOC_ENUM_SINGLE(
 static int aml_get_audio_in_switch(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol) {
 
-	if (audio_in_GPIO == 0) {
-		ucontrol->value.enumerated.item[0] = 0;
-		pr_info("audio in source: AV\n");
-	} else if (audio_in_GPIO == 1) {
-		ucontrol->value.enumerated.item[0] = 1;
-		pr_info("audio in source: Karaok\n");
-	}
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct aml_audio_private_data *p_aml_audio;
+
+	p_aml_audio = snd_soc_card_get_drvdata(card);
+	ucontrol->value.integer.value[0] = p_aml_audio->audio_in_GPIO;
 	return 0;
 }
 
 static int aml_set_audio_in_switch(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol) {
+
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct aml_audio_private_data *p_aml_audio;
+
+	p_aml_audio = snd_soc_card_get_drvdata(card);
+
 	if (ucontrol->value.enumerated.item[0] == 0) {
-		gpiod_direction_output(av_source,
-					   GPIOF_OUT_INIT_LOW);
-		audio_in_GPIO = 0;
-		pr_info("Set audio in source: AV\n");
-	} else if (ucontrol->value.enumerated.item[0] == 1) {
-		gpiod_direction_output(av_source,
+		if (p_aml_audio->audio_in_GPIO_inv == 0) {
+			gpiod_direction_output(p_aml_audio->source_switch,
 					   GPIOF_OUT_INIT_HIGH);
-		audio_in_GPIO = 1;
-		pr_info("Set audio in source: Karaok\n");
+		} else {
+			gpiod_direction_output(p_aml_audio->source_switch,
+					   GPIOF_OUT_INIT_LOW);
+		}
+		p_aml_audio->audio_in_GPIO = 0;
+	} else if (ucontrol->value.enumerated.item[0] == 1) {
+		if (p_aml_audio->audio_in_GPIO_inv == 0) {
+			gpiod_direction_output(p_aml_audio->source_switch,
+					   GPIOF_OUT_INIT_LOW);
+		} else {
+			gpiod_direction_output(p_aml_audio->source_switch,
+					   GPIOF_OUT_INIT_HIGH);
+		}
+		p_aml_audio->audio_in_GPIO = 1;
 	}
 	return 0;
 }
@@ -1304,11 +1310,19 @@ static int aml_asoc_init(struct snd_soc_pcm_runtime *rtd)
 					hp_controls, ARRAY_SIZE(hp_controls));
 	}
 
-	/*It is used for KaraOK, */
-	av_source = gpiod_get(card->dev, "av_source", GPIOD_OUT_LOW);
-	if (!IS_ERR(av_source)) {
-		pr_info("%s, make av_source gpio low!\n", __func__);
-		gpiod_direction_output(av_source, GPIOF_OUT_INIT_LOW);
+	/*It is used for switch of ARC_IN & SPDIF_IN */
+	p_aml_audio->source_switch = gpiod_get(card->dev,
+				"source_switch", GPIOF_OUT_INIT_HIGH);
+	if (!IS_ERR(p_aml_audio->source_switch)) {
+		of_property_read_u32(card->dev->of_node, "source_switch_inv",
+				&p_aml_audio->audio_in_GPIO_inv);
+		if (p_aml_audio->audio_in_GPIO_inv == 0) {
+			gpiod_direction_output(p_aml_audio->source_switch,
+				GPIOF_OUT_INIT_HIGH);
+		} else {
+			gpiod_direction_output(p_aml_audio->source_switch,
+				GPIOF_OUT_INIT_LOW);
+		}
 		snd_soc_add_card_controls(card, av_controls,
 					ARRAY_SIZE(av_controls));
 	}
@@ -1362,9 +1376,12 @@ static int check_channel_mask(const char *str)
 
 static void parse_speaker_channel_mask(struct snd_soc_card *card)
 {
+	struct aml_audio_private_data *p_aml_audio;
 	struct device_node *np;
 	const char *str;
 	int ret;
+
+	p_aml_audio = snd_soc_card_get_drvdata(card);
 
 	/* channel mask */
 	np = of_get_child_by_name(card->dev->of_node,
@@ -1376,28 +1393,48 @@ static void parse_speaker_channel_mask(struct snd_soc_card *card)
 		return;
 	}
 
-	/* Speaker need Audio Effcet from user space by i2s2/3,
-	 * mux i2s2/3 to layout pin
-	 */
-	of_property_read_string(np, "Speaker_Channel_Mask", &str);
+	/* ext Speaker mask*/
+	of_property_read_string(np, "Speaker0_Channel_Mask", &str);
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
-		Speaker_Channel_Mask = ret;
+		p_aml_audio->Speaker0_Channel_Mask = ret;
 		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
-				0x3 << (Speaker_Channel_Mask * 2),
-				1 << (Speaker_Channel_Mask * 2));
-		if (Speaker_Channel_Mask == 0) {
-			aml_aiu_update_bits(AIU_I2S_OUT_CFG,
-				0x3 << 2, 0 << 2);
-		}
+				0x3, p_aml_audio->Speaker0_Channel_Mask);
+	}
+	of_property_read_string(np, "Speaker1_Channel_Mask", &str);
+	ret = check_channel_mask(str);
+	if (ret >= 0) {
+		p_aml_audio->Speaker1_Channel_Mask = ret;
+		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
+				0x3 << 2,
+				p_aml_audio->Speaker1_Channel_Mask << 2);
+	}
+	of_property_read_string(np, "Speaker2_Channel_Mask", &str);
+	ret = check_channel_mask(str);
+	if (ret >= 0) {
+		p_aml_audio->Speaker2_Channel_Mask = ret;
+		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
+				0x3 << 4,
+				p_aml_audio->Speaker2_Channel_Mask << 4);
+	}
+	of_property_read_string(np, "Speaker3_Channel_Mask", &str);
+	ret = check_channel_mask(str);
+	if (ret >= 0) {
+		p_aml_audio->Speaker3_Channel_Mask = ret;
+		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
+				0x3 << 6,
+				p_aml_audio->Speaker3_Channel_Mask << 6);
 	}
 }
 
 static void parse_dac_channel_mask(struct snd_soc_card *card)
 {
+	struct aml_audio_private_data *p_aml_audio;
 	struct device_node *np;
 	const char *str;
 	int ret;
+
+	p_aml_audio = snd_soc_card_get_drvdata(card);
 
 	/* channel mask */
 	np = of_get_child_by_name(card->dev->of_node,
@@ -1413,25 +1450,28 @@ static void parse_dac_channel_mask(struct snd_soc_card *card)
 	of_property_read_string(np, "DAC0_Channel_Mask", &str);
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
-		DAC0_Channel_Mask = ret;
+		p_aml_audio->DAC0_Channel_Mask = ret;
 		aml_aiu_update_bits(AIU_ACODEC_CTRL, 0x3,
-				DAC0_Channel_Mask);
+				p_aml_audio->DAC0_Channel_Mask);
 	}
 	/*Acodec DAC1 selects i2s source*/
 	of_property_read_string(np, "DAC1_Channel_Mask", &str);
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
-		DAC1_Channel_Mask = ret;
+		p_aml_audio->DAC1_Channel_Mask = ret;
 		aml_aiu_update_bits(AIU_ACODEC_CTRL, 0x3 << 8,
-				DAC1_Channel_Mask << 8);
+				p_aml_audio->DAC1_Channel_Mask << 8);
 	}
 }
 
 static void parse_eqdrc_channel_mask(struct snd_soc_card *card)
 {
+	struct aml_audio_private_data *p_aml_audio;
 	struct device_node *np;
 	const char *str;
 	int ret;
+
+	p_aml_audio = snd_soc_card_get_drvdata(card);
 
 	/* channel mask */
 	np = of_get_child_by_name(card->dev->of_node,
@@ -1447,10 +1487,10 @@ static void parse_eqdrc_channel_mask(struct snd_soc_card *card)
 	of_property_read_string(np, "EQ_DRC_Channel_Mask", &str);
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
-		EQ_DRC_Channel_Mask = ret;
+		p_aml_audio->EQ_DRC_Channel_Mask = ret;
 		 /*i2s in sel*/
 		aml_eqdrc_update_bits(AED_TOP_CTL, (0x7 << 1),
-			(EQ_DRC_Channel_Mask << 1));
+			(p_aml_audio->EQ_DRC_Channel_Mask << 1));
 		aml_eqdrc_write(AED_ED_CTL, 1);
 		/* disable noise gate*/
 		aml_eqdrc_write(AED_NG_CTL, (3 << 30));
@@ -1464,9 +1504,9 @@ static void parse_eqdrc_channel_mask(struct snd_soc_card *card)
 			"Spdif_samesource_Channel_Mask", &str);
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
-		Spdif_samesource_Channel_Mask = ret;
+		p_aml_audio->Spdif_samesource_Channel_Mask = ret;
 		aml_aiu_update_bits(AIU_I2S_MISC, 0x7 << 5,
-				Spdif_samesource_Channel_Mask << 5);
+			p_aml_audio->Spdif_samesource_Channel_Mask << 5);
 	}
 
 }
@@ -1474,9 +1514,12 @@ static void parse_eqdrc_channel_mask(struct snd_soc_card *card)
 /* spdif same source with i2s */
 static void parse_samesource_channel_mask(struct snd_soc_card *card)
 {
+	struct aml_audio_private_data *p_aml_audio;
 	struct device_node *np;
 	const char *str;
 	int ret;
+
+	p_aml_audio = snd_soc_card_get_drvdata(card);
 
 	/* channel mask */
 	np = of_get_child_by_name(card->dev->of_node,
@@ -1495,9 +1538,9 @@ static void parse_samesource_channel_mask(struct snd_soc_card *card)
 			"Spdif_samesource_Channel_Mask", &str);
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
-		Spdif_samesource_Channel_Mask = ret;
+		p_aml_audio->Spdif_samesource_Channel_Mask = ret;
 		aml_aiu_update_bits(AIU_I2S_MISC, 0x7 << 5,
-				Spdif_samesource_Channel_Mask << 5);
+			p_aml_audio->Spdif_samesource_Channel_Mask << 5);
 	}
 
 }

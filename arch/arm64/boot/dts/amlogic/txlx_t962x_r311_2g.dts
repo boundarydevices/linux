@@ -1160,8 +1160,9 @@
 	spdif_codec: spdif_codec{
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml-spdif-codec";
-		pinctrl-names = "audio_spdif";
-		pinctrl-0 = <&audio_spdif_pins>;
+		pinctrl-names = "audio_spdif_out", "audio_spdif_out_mute";
+		pinctrl-0 = <&audio_spdif_out_pins>;
+		pinctrl-1 = <&audio_spdif_out_mute_pins>;
 	};
 
 	pcm_codec: pcm_codec{
@@ -1225,7 +1226,7 @@
 		};
 		Channel_Mask {
 			/*i2s has 4 pins, 8channel, mux output*/
-			Speaker_Channel_Mask = "i2s_0/1";
+			Speaker0_Channel_Mask = "i2s_2/3";
 			DAC0_Channel_Mask = "i2s_2/3";
 			DAC1_Channel_Mask = "i2s_2/3";
 			EQ_DRC_Channel_Mask = "i2s_2/3";
@@ -1457,10 +1458,17 @@
 		};
 	};
 	/*spdif*/
-	audio_spdif_pins: audio_spdif_pins {
-		out_mux {
+	/*spdif*/
+	audio_spdif_out_pins: audio_spdif_out_pins {
+		mux {
 			groups = "spdif_out_dv";
 			function = "spdif_out";
+		};
+	};
+	audio_spdif_out_mute_pins: audio_spdif_out_mute_pins {
+		mux {
+			groups = "GPIODV_6";
+			function = "gpio_periphs";
 		};
 	};
 	/*pcm*/

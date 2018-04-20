@@ -1500,21 +1500,6 @@ static ssize_t store_config(struct device *dev,
 			hdmitx_device.flag_3dss = 0;
 			hdmi_set_3d(&hdmitx_device, T3D_DISABLE, 0);
 		}
-	} else if (strncmp(buf, "audio_", 6) == 0) {
-		if (strncmp(buf+6, "off", 3) == 0) {
-			hdmitx_audio_mute_op(0);
-			pr_info(AUD "configure off\n");
-		} else if (strncmp(buf+6, "on", 2) == 0) {
-			hdmitx_audio_mute_op(1);
-			pr_info(AUD "configure on\n");
-		} else if (strncmp(buf+6, "auto", 4) == 0) {
-			/* auto mode. if sink doesn't support current
-			 * audio format, then no audio output
-			 */
-			hdmitx_device.tx_aud_cfg = 2;
-			pr_info(AUD "configure auto\n");
-		} else
-			pr_info(AUD "configure error\n");
 	} else if (strncmp(buf, "sdr", 3) == 0) {
 		data.features = 0x00010100;
 		hdmitx_set_drm_pkt(&data);
@@ -1533,37 +1518,48 @@ static ssize_t store_config(struct device *dev,
 	return count;
 }
 
-static ssize_t show_aud_mute(struct device *dev,
-	struct device_attribute *attr, char *buf)
+void hdmitx_ext_set_audio_output(int enable)
 {
-	int pos = 0;
-
-	pos += snprintf(buf+pos, PAGE_SIZE, "%d\n",
-		atomic_read(&(hdmitx_device.kref_audio_mute)));
-	return pos;
+	hdmitx_audio_mute_op(enable);
 }
 
-static ssize_t store_aud_mute(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
+int hdmitx_ext_get_audio_status(void)
 {
-	atomic_t kref_audio_mute = hdmitx_device.kref_audio_mute;
+	return !!hdmitx_device.tx_aud_cfg;
+}
 
-	if (buf[0] == '1') {
-		atomic_inc(&kref_audio_mute);
-		if (atomic_read(&kref_audio_mute) == 1)
-			hdmitx_audio_mute_op(0);
-	}
-	if (buf[0] == '0') {
-		if (!(atomic_sub_and_test(0, &kref_audio_mute))) {
-			atomic_dec(&kref_audio_mute);
-			if (atomic_sub_and_test(0, &kref_audio_mute))
-				hdmitx_audio_mute_op(1);
+void hdmitx_ext_set_i2s_mask(char ch_num, char ch_msk)
+{
+	struct hdmitx_dev *hdev = &hdmitx_device;
+	static unsigned int update_flag = -1;
+
+	if (!((ch_num == 2) || (ch_num == 4) || (ch_num == 6)
+		|| (ch_num == 8))) {
+		pr_info("err chn setting, must be 2, 4, 6 or 8, Rst as def\n");
+		hdev->aud_output_ch = 0;
+		if (update_flag != hdev->aud_output_ch) {
+			update_flag = hdev->aud_output_ch;
+			hdev->hdmi_ch = 0;
+			hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
 		}
 	}
+	if (ch_msk == 0) {
+		pr_info("err chn msk, must larger than 0\n");
+		return;
+	}
+	hdev->aud_output_ch = (ch_num << 4) + ch_msk;
+	if (update_flag != hdev->aud_output_ch) {
+		update_flag = hdev->aud_output_ch;
+		hdev->hdmi_ch = 0;
+		hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
+	}
+}
 
-	hdmitx_device.kref_audio_mute = kref_audio_mute;
+char hdmitx_ext_get_i2s_mask(void)
+{
+	struct hdmitx_dev *hdev = &hdmitx_device;
 
-	return count;
+	return hdev->aud_output_ch & 0xf;
 }
 
 static ssize_t show_vid_mute(struct device *dev,
@@ -2107,70 +2103,6 @@ static ssize_t store_aud_ch(struct device *dev,
 	return count;
 }
 
-/* hdmitx audio output channel */
-static ssize_t show_aud_output_chs(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct hdmitx_dev *hdev = &hdmitx_device;
-	int pos = 0;
-
-	if (hdev->aud_output_ch)
-		pos += snprintf(buf + pos, PAGE_SIZE,
-			"Audio Output Channels: %x:%x\n",
-			(hdev->aud_output_ch >> 4) & 0xf,
-			(hdev->aud_output_ch & 0xf));
-
-	return pos;
-}
-
-/*
- * aud_output_chs CONFIGURE:
- *     [7:4] -- Output Channel Numbers, must be 2/4/6/8
- *     [3:0] -- Output Channel Mask, matched as CH3/2/1/0 R/L
- */
-static ssize_t store_aud_output_chs(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct hdmitx_dev *hdev = &hdmitx_device;
-	int tmp = -1;
-	int ret = 0;
-	unsigned long msk;
-	static unsigned int update_flag = -1;
-
-	if (isdigit(buf[0]))
-		tmp = buf[0] - '0';
-
-	if (!((tmp == 2) || (tmp == 4) || (tmp == 6) || (tmp == 8))) {
-		pr_info("err chn setting, must be 2, 4, 6 or 8, Rst as def\n");
-		hdev->aud_output_ch = 0;
-		if (update_flag != hdev->aud_output_ch) {
-			update_flag = hdev->aud_output_ch;
-			hdev->hdmi_ch = 0;
-			hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
-		}
-		return count;
-	}
-
-	/* get channel no. For I2S, there are 4 I2S_in[3:0] */
-	if ((buf[1] == ':') && (isxdigit(buf[2])))
-		ret = kstrtoul(&buf[2], 16, &msk);
-	else
-		msk = 0;
-	if (ret || (msk == 0)) {
-		pr_info("err chn msk, must larger than 0\n");
-		return count;
-	}
-
-	hdev->aud_output_ch = (tmp << 4) + msk;
-
-	if (update_flag != hdev->aud_output_ch) {
-		update_flag = hdev->aud_output_ch;
-		hdev->hdmi_ch = 0;
-		hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
-	}
-	return count;
-}
-
 /*
  *  1: set avmute
  * -1: clear avmute
@@ -2675,7 +2607,6 @@ static ssize_t show_support_3d(struct device *dev,
 static DEVICE_ATTR(disp_mode, 0664, show_disp_mode, store_disp_mode);
 static DEVICE_ATTR(attr, 0664, show_attr, store_attr);
 static DEVICE_ATTR(aud_mode, 0644, show_aud_mode, store_aud_mode);
-static DEVICE_ATTR(aud_mute, 0644, show_aud_mute, store_aud_mute);
 static DEVICE_ATTR(vid_mute, 0644, show_vid_mute, store_vid_mute);
 static DEVICE_ATTR(edid, 0644, show_edid, store_edid);
 static DEVICE_ATTR(rawedid, 0444, show_rawedid, NULL);
@@ -2691,8 +2622,6 @@ static DEVICE_ATTR(dv_cap, 0444, show_dv_cap, NULL);
 static DEVICE_ATTR(dc_cap, 0444, show_dc_cap, NULL);
 static DEVICE_ATTR(valid_mode, 0664, show_valid_mode, store_valid_mode);
 static DEVICE_ATTR(aud_ch, 0664, show_aud_ch, store_aud_ch);
-static DEVICE_ATTR(aud_output_chs, 0664, show_aud_output_chs,
-	store_aud_output_chs);
 static DEVICE_ATTR(avmute, 0664, show_avmute, store_avmute);
 static DEVICE_ATTR(vic, 0664, show_vic, store_vic);
 static DEVICE_ATTR(phy, 0664, show_phy, store_phy);
@@ -3737,7 +3666,6 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_disp_mode);
 	ret = device_create_file(dev, &dev_attr_attr);
 	ret = device_create_file(dev, &dev_attr_aud_mode);
-	ret = device_create_file(dev, &dev_attr_aud_mute);
 	ret = device_create_file(dev, &dev_attr_vid_mute);
 	ret = device_create_file(dev, &dev_attr_edid);
 	ret = device_create_file(dev, &dev_attr_rawedid);
@@ -3752,7 +3680,6 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_hdr_cap);
 	ret = device_create_file(dev, &dev_attr_dv_cap);
 	ret = device_create_file(dev, &dev_attr_aud_ch);
-	ret = device_create_file(dev, &dev_attr_aud_output_chs);
 	ret = device_create_file(dev, &dev_attr_avmute);
 	ret = device_create_file(dev, &dev_attr_vic);
 	ret = device_create_file(dev, &dev_attr_phy);
@@ -3832,7 +3759,6 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_disp_mode);
 	device_remove_file(dev, &dev_attr_attr);
 	device_remove_file(dev, &dev_attr_aud_mode);
-	device_remove_file(dev, &dev_attr_aud_mute);
 	device_remove_file(dev, &dev_attr_vid_mute);
 	device_remove_file(dev, &dev_attr_edid);
 	device_remove_file(dev, &dev_attr_rawedid);
@@ -3857,7 +3783,6 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_sspll);
 	device_remove_file(dev, &dev_attr_rxsense_policy);
 	device_remove_file(dev, &dev_attr_hdcp_pwr);
-	device_remove_file(dev, &dev_attr_aud_output_chs);
 	device_remove_file(dev, &dev_attr_div40);
 	device_remove_file(dev, &dev_attr_hdcp_repeater);
 	device_remove_file(dev, &dev_attr_hdcp22_type);
