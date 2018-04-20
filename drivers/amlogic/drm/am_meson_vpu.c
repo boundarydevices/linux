@@ -392,6 +392,8 @@ static const struct drm_plane_helper_funcs am_osd_helper_funcs = {
 static const uint32_t supported_drm_formats[] = {
 	DRM_FORMAT_ARGB8888,
 	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_ABGR8888,
+	DRM_FORMAT_XBGR8888,
 	DRM_FORMAT_RGB888,
 	DRM_FORMAT_RGB565,
 };
