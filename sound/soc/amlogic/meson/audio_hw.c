@@ -130,10 +130,12 @@ bool is_audbuf_gate_rm(void)
 	return aml_chipinfo.audbuf_gate_rm;
 }
 
+#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 static bool is_split_fully_support(void)
 {
 	return aml_chipinfo.split_complete;
 }
+#endif
 
 static bool is_spdif_pao_support(void)
 {
@@ -237,8 +239,8 @@ void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel,
 void audio_set_958outbuf(u32 addr, u32 size, int flag)
 {
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
-	aml_aiu_write(AIU_MEM_IEC958_START_PTR, addr & 0xffffff00);
-	aml_aiu_write(AIU_MEM_IEC958_RD_PTR, addr & 0xffffff00);
+	aml_aiu_write(AIU_MEM_IEC958_START_PTR, addr & 0xffffffff);
+	aml_aiu_write(AIU_MEM_IEC958_RD_PTR, addr & 0xffffffff);
 #else
 	aml_aiu_write(AIU_MEM_IEC958_START_PTR, addr & 0xffffffc0);
 	aml_aiu_write(AIU_MEM_IEC958_RD_PTR, addr & 0xffffffc0);
@@ -247,8 +249,8 @@ void audio_set_958outbuf(u32 addr, u32 size, int flag)
 		/* this is for 16bit 2 channel */
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
-			       (addr & 0xffffff00) +
-			       (size & 0xffffff00) - 256);
+			       (addr & 0xffffffff) +
+			       (size & 0xffffffff) - 1);
 #else
 		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
 			       (addr & 0xffffffc0) +
@@ -258,8 +260,8 @@ void audio_set_958outbuf(u32 addr, u32 size, int flag)
 		/* this is for RAW mode */
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
-					(addr & 0xffffff00) +
-					(size & 0xffffff00) - 256);
+					(addr & 0xffffffff) +
+					(size & 0xffffffff) - 1);
 #else
 		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
 			       (addr & 0xffffffc0) +

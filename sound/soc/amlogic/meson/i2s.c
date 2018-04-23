@@ -755,27 +755,27 @@ static int aml_i2s_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 	struct aml_runtime_data *prtd = runtime->private_data;
 	struct snd_dma_buffer *buffer = &substream->dma_buffer;
 	struct aml_audio_buffer *tmp_buf = buffer->private_data;
-	void *ubuf = tmp_buf->buffer_start;
 	struct audio_stream *s = &prtd->s;
 	struct device *dev = substream->pcm->card->dev;
 #ifndef CONFIG_AMLOGIC_SND_SPLIT_MODE
+	void *ubuf = tmp_buf->buffer_start;
 	int i = 0, j = 0;
 	int align = runtime->channels * 32;
 	int cached_len = tmp_buf->cached_len;
 	char *cache_buffer_bytes = tmp_buf->cache_buffer_bytes;
 #endif
-
 	n = frames_to_bytes(runtime, count);
 	if (n > tmp_buf->buffer_size) {
 		dev_err(dev, "FATAL_ERR:UserData/%d > buffer_size/%d\n",
 				n, tmp_buf->buffer_size);
 		return -EFAULT;
 	}
+
+#ifndef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	res = copy_from_user(ubuf, buf, n);
 	if (res)
 		return -EFAULT;
 
-#ifndef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	/*mask align byte(64 or 256)*/
 	if ((cached_len != 0 || (n % align) != 0)) {
 		int byte_size = n;
@@ -824,7 +824,9 @@ static int aml_i2s_copy_playback(struct snd_pcm_runtime *runtime, int channel,
 
 	if (access_ok(VERIFY_READ, buf, frames_to_bytes(runtime, count))) {
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
-		memcpy(hwbuf, ubuf, n);
+		res = copy_from_user(hwbuf, buf, n);
+		if (res)
+			return -EFAULT;
 #else
 		if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
 			int16_t *tfrom, *to;
