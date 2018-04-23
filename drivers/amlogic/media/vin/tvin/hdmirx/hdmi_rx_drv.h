@@ -41,7 +41,7 @@
  *
  *
  */
-#define RX_VER1 "ver.2018/04/12"
+#define RX_VER1 "ver.2018/04/20"
 
 
 
@@ -296,7 +296,9 @@ struct aud_info_s {
 	int sample_frequency;
 	int sample_size;
 	int coding_extension;
-	int channel_allocation;
+	int auds_ch_alloc;
+	int auds_layout;
+
 	/*
 	 *int down_mix_inhibit;
 	 *int level_shift_value;

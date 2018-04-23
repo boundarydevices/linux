@@ -88,6 +88,8 @@ int hdcp22_on;
 MODULE_PARM_DESC(hdcp22_on, "\n hdcp22_on\n");
 module_param(hdcp22_on, int, 0664);
 
+int aud_ch_map;
+
 /*------------------------variable define end------------------------------*/
 
 static int check_regmap_flag(unsigned int addr)
@@ -738,8 +740,10 @@ void rx_get_audinfo(struct aud_info_s *audio_info)
 		hdmirx_rd_bits_dwc(DWC_PDEC_AIF_PB0, SAMPLE_SIZE);
 	audio_info->coding_extension =
 		hdmirx_rd_bits_dwc(DWC_PDEC_AIF_PB0, AIF_DATA_BYTE_3);
-	audio_info->channel_allocation =
+	audio_info->auds_ch_alloc =
 		hdmirx_rd_bits_dwc(DWC_PDEC_AIF_PB0, CH_SPEAK_ALLOC);
+	audio_info->auds_layout =
+		hdmirx_rd_bits_dwc(DWC_PDEC_STS, PD_AUD_LAYOUT);
 
 	audio_info->aud_packet_received =
 			hdmirx_rd_dwc(DWC_PDEC_AUD_STS) &
@@ -1440,7 +1444,6 @@ void hdmirx_20_init(void)
 int hdmirx_audio_init(void)
 {
 	/* 0=I2S 2-channel; 1=I2S 4 x 2-channel. */
-	#define RX_8_CHANNEL        1
 	int err = 0;
 	unsigned long data32 = 0;
 
@@ -1489,7 +1492,7 @@ int hdmirx_audio_init(void)
 	data32  = 0;
 	data32 |= 0	<< 8;
 	data32 |= 1	<< 7;
-	data32 |= (RX_8_CHANNEL ? 0x13:0x00) << 2;
+	data32 |= aud_ch_map << 2;
 	data32 |= 1	<< 0;
 	hdmirx_wr_dwc(DWC_AUD_CHEXTR_CTRL, data32);
 
@@ -2039,6 +2042,25 @@ void hdmirx_set_video_mute(bool mute)
 void hdmirx_config_video(void)
 {
 	hdmirx_set_video_mute(0);
+}
+
+/*
+ * hdmirx_config_audio - audio channel map
+ */
+void hdmirx_config_audio(void)
+{
+	/* if audio layout bit = 1, set audio channel map
+	 * according to audio speaker allocation, if layout
+	 * bit = 0, use ch1 & ch2 by default.
+	 */
+	if (rx.aud_info.auds_layout) {
+		hdmirx_wr_bits_dwc(DWC_AUD_CHEXTR_CTRL,
+			AUD_CH_MAP_CFG,
+			rx.aud_info.auds_ch_alloc);
+	} else {
+		hdmirx_wr_bits_dwc(DWC_AUD_CHEXTR_CTRL,
+			AUD_CH_MAP_CFG, 0);
+	}
 }
 
 /*

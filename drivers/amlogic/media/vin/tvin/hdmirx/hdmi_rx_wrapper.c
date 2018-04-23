@@ -533,18 +533,27 @@ static uint32_t get_real_sample_rate(void)
 	return ret_sr;
 }
 
-static unsigned char is_sample_rate_stable(int sample_rate_pre,
+static unsigned char is_sample_rate_change(int sample_rate_pre,
 					   int sample_rate_cur)
 {
-	unsigned char ret = 0;
+	unsigned char ret = 1;
 
 	if (ABS(sample_rate_pre - sample_rate_cur) <
 		AUD_SR_RANGE)
-		ret = 1;
-
+		ret = 0;
 	return ret;
 }
+
 #endif
+
+static unsigned char is_aud_ch_map_change(int pre, int cur)
+{
+	unsigned char ret = 0;
+
+	if (pre != cur)
+		ret = 1;
+	return ret;
+}
 
 static const struct freq_ref_s freq_ref[] = {
 	/* interlace 420 3d hac vac index */
@@ -1508,6 +1517,8 @@ int rx_set_global_variable(const char *buf, int size)
 	#endif
 	if (set_pr_var(tmpbuf, suspend_pddq_sel, value, &index, ret))
 		return pr_var(suspend_pddq_sel, index);
+	if (set_pr_var(tmpbuf, aud_ch_map, value, &index, ret))
+		return pr_var(aud_ch_map, index);
 	return 0;
 }
 
@@ -1605,6 +1616,7 @@ void rx_get_global_variable(const char *buf)
 	pr_var(sig_unstable_reset_hpd_max, i++);
 	#endif
 	pr_var(suspend_pddq_sel, i++);
+	pr_var(aud_ch_map, i++);
 }
 
 void skip_frame(void)
@@ -1793,6 +1805,8 @@ void rx_err_monitor(void)
  */
 void rx_main_state_machine(void)
 {
+	int pre_auds_ch_alloc;
+
 	switch (rx.state) {
 	case FSM_5V_LOST:
 		if (rx.cur_5v_sts)
@@ -1919,6 +1933,8 @@ void rx_main_state_machine(void)
 					//sizeof(struct aud_info_s));
 				//rx_set_eq_run_state(E_EQ_PASS);
 				hdmirx_config_video();
+				rx_get_audinfo(&rx.aud_info);
+				hdmirx_config_audio();
 				rx_aud_pll_ctl(1);
 				hdmirx_audio_fifo_rst();
 				rx.stable_timestamp = rx.timestamp;
@@ -1986,12 +2002,19 @@ void rx_main_state_machine(void)
 			break;
 
 		packet_update();
-
+		pre_auds_ch_alloc = rx.aud_info.auds_ch_alloc;
 		rx_get_audinfo(&rx.aud_info);
 
 		if (check_real_sr_change())
 			rx_audio_pll_sw_update();
-
+		if (is_aud_ch_map_change
+			(pre_auds_ch_alloc, rx.aud_info.auds_ch_alloc)) {
+			if (log_level & AUDIO_LOG)
+				dump_state(2);
+			hdmirx_config_audio();
+			hdmirx_audio_fifo_rst();
+			rx_audio_pll_sw_update();
+		}
 		if (is_aud_pll_error()) {
 			rx.aud_sr_unstable_cnt++;
 			if (rx.aud_sr_unstable_cnt > aud_sr_stb_max) {
@@ -2028,6 +2051,7 @@ void rx_main_state_machine(void)
 {
 	int pre_sample_rate;
 	int aud_pll_sts;
+	int pre_auds_ch_alloc;
 
 	if (clk_debug)
 		rx_cable_clk_monitor();
@@ -2210,6 +2234,8 @@ void rx_main_state_machine(void)
 					sizeof(struct aud_info_s));
 				//rx_set_eq_run_state(E_EQ_PASS);
 				hdmirx_config_video();
+				rx_get_audinfo(&rx.aud_info);
+				hdmirx_config_audio();
 				hdmirx_audio_fifo_rst();
 				rx_pr("STABLE->READY\n");
 				if (log_level & VIDEO_LOG)
@@ -2299,12 +2325,15 @@ void rx_main_state_machine(void)
 			break;
 
 		pre_sample_rate = rx.aud_info.real_sr;
+		pre_auds_ch_alloc = rx.aud_info.auds_ch_alloc;
 		rx_get_audinfo(&rx.aud_info);
 		rx.aud_info.real_sr =
 			get_real_sample_rate();
 
-		if (!is_sample_rate_stable
-			(pre_sample_rate, rx.aud_info.real_sr)) {
+		if (is_sample_rate_change
+			(pre_sample_rate, rx.aud_info.real_sr) ||
+			is_aud_ch_map_change
+			(pre_auds_ch_alloc, rx.aud_info.auds_ch_alloc)) {
 			if (log_level & AUDIO_LOG)
 				dump_state(2);
 			rx.aud_sr_stable_cnt = 0;
@@ -2324,6 +2353,7 @@ void rx_main_state_machine(void)
 				if (log_level & AUDIO_LOG)
 					rx_pr("afifo err\n");
 			}
+			hdmirx_config_audio();
 			hdmirx_audio_fifo_rst();
 			rx_pr("update audio\n");
 			rx_audio_pll_sw_update();
@@ -2521,7 +2551,7 @@ void dump_state(unsigned char enable)
 				a.sample_frequency,
 				a.sample_size);
 		rx_pr(" CA=%u",
-			a.channel_allocation);
+			a.auds_ch_alloc);
 		rx_pr(" CTS=%d, N=%d,",
 				a.cts, a.n);
 		rx_pr("recovery clock is %d\n",

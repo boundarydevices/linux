@@ -468,6 +468,7 @@
 #define DWC_AUD_FIFO_FILLSTS     (0x250UL)
 /** Register address: audio output interface configuration */
 #define DWC_AUD_CHEXTR_CTRL     (0x254UL)
+#define AUD_CH_MAP_CFG MSK(5, 2)
 /** Register address: audio mute control */
 #define DWC_AUD_MUTE_CTRL        (0x258UL)
 /** Manual/automatic audio mute control */
@@ -605,6 +606,7 @@
 /** Register address: packet decoder status, see packet interrupts */
 #define PD_NEW_ENTRY	MSK(1, 8)
 #define PD_TH_START		MSK(1, 2)
+#define PD_AUD_LAYOUT	_BIT(11)
 #define DWC_PDEC_STS             (0x360UL)
 /** Register address: Packet Decoder Audio Status*/
 #define DWC_PDEC_AUD_STS         (0x364UL)
@@ -983,6 +985,7 @@ extern int pdec_ists_en;
 extern int pd_fifo_start_cnt;
 extern int md_ists_en;
 extern int eq_ref_voltage;
+extern int aud_ch_map;
 
 extern void wr_reg_hhi(unsigned int offset, unsigned int val);
 extern unsigned int rd_reg_hhi(unsigned int offset);
@@ -1057,6 +1060,7 @@ extern void hdmirx_phy_pddq(unsigned int enable);
 extern void rx_get_video_info(void);
 extern void hdmirx_set_video_mute(bool mute);
 extern void hdmirx_config_video(void);
+extern void hdmirx_config_audio(void);
 extern void rx_get_audinfo(struct aud_info_s *audio_info);
 extern bool rx_clkrate_monitor(void);
 
