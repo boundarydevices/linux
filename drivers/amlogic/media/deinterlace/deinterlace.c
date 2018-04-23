@@ -5125,8 +5125,10 @@ static int process_post_vframe(void)
 		if (ready_count >= buffer_keep_count) {
 			di_lock_irqfiq_save(irq_flag2);
 			di_buf = get_di_buf_head(QUEUE_POST_FREE);
-			if (check_di_buf(di_buf, 17))
+			if (check_di_buf(di_buf, 17)) {
+				di_unlock_irqfiq_restore(irq_flag2);
 				return 0;
+			}
 
 			queue_out(di_buf);
 			di_unlock_irqfiq_restore(irq_flag2);
@@ -5276,8 +5278,10 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 
 				di_lock_irqfiq_save(irq_flag2);
 				di_buf = get_di_buf_head(QUEUE_POST_FREE);
-				if (check_di_buf(di_buf, 19))
+				if (check_di_buf(di_buf, 19)) {
+					di_unlock_irqfiq_restore(irq_flag2);
 					return 0;
+				}
 
 				queue_out(di_buf);
 				di_unlock_irqfiq_restore(irq_flag2);
@@ -5400,8 +5404,10 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 			di_lock_irqfiq_save(irq_flag2);
 			di_buf = get_di_buf_head(QUEUE_POST_FREE);
 
-			if (check_di_buf(di_buf, 20))
+			if (check_di_buf(di_buf, 20)) {
+				di_unlock_irqfiq_restore(irq_flag2);
 				return 0;
+			}
 
 			queue_out(di_buf);
 			di_unlock_irqfiq_restore(irq_flag2);
@@ -5537,7 +5543,6 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 				VIDTYPE_INTERLACE_BOTTOM) {
 				di_buf->di_buf[1] =
 					di_buf->di_buf_dup_p[1] = NULL;
-				di_lock_irqfiq_save(irq_flag2);
 				queue_in(di_buf, QUEUE_TMP);
 				recycle_vframe_type_post(di_buf);
 				pr_dbg("%s drop field %d.\n", __func__,
@@ -5622,11 +5627,11 @@ static void di_unreg_process_irq(void)
 	ulong flags = 0;
 	spin_lock_irqsave(&plist_lock, flags);
 #endif
+	init_flag = 0;
 	mirror_disable = get_blackout_policy();
 	di_lock_irqfiq_save(irq_flag2);
 	di_print("%s: di_uninit_buf\n", __func__);
 	di_uninit_buf(mirror_disable);
-	init_flag = 0;
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (di_pre_rdma_enable)
 		rdma_clear(de_devp->rdma_handle);
@@ -6240,6 +6245,7 @@ static int di_receiver_event_fun(int type, void *data, void *arg)
 				reg_unreg_timeout_cnt++;
 				pr_err("%s:unreg_reg_flag timeout!!!\n",
 					__func__);
+				di_unreg_process();
 				break;
 			}
 		}
@@ -6421,7 +6427,12 @@ light_unreg:
 		}
 		bypass_state = 0;
 		di_pre_stru.reg_req_flag = 1;
-		pr_dbg("%s: vframe provider reg\n", __func__);
+		pr_dbg("%s: vframe provider reg %s\n", __func__,
+			provider_name);
+		if (reg_flag) {
+			pr_err("[DI] no muti instance.\n");
+			return -1;
+		}
 		trigger_pre_di_process(TRIGGER_PRE_BY_PROVERDER_REG);
 		di_pre_stru.reg_req_flag_cnt = 0;
 		while (di_pre_stru.reg_req_flag) {
@@ -6635,6 +6646,10 @@ get_vframe:
 		di_lock_irqfiq_save(irq_flag2);
 
 		di_buf = get_di_buf_head(QUEUE_POST_READY);
+		if (check_di_buf(di_buf, 21)) {
+			di_unlock_irqfiq_restore(irq_flag2);
+			return NULL;
+		}
 		queue_out(di_buf);
 		queue_in(di_buf, QUEUE_DISPLAY); /* add it into display_list */
 
