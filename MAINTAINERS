@@ -14478,3 +14478,8 @@ F:     arch/arm64/boot/dts/amlogic/g12a_s905x2_u211_512m.dts
 AMLOGIC TXLX T962E R321 buildroot dts
 M:     liangzhuo.xie <liangzhuo.xie@amlogic.com>
 F:     arch/arm64/boot/dts/amlogic/txlx_t962e_r321_buildroot.dts
+
+AMLOGIC G12B
+M: Yan Wang <yan.wang@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/mesong12b.dtsi
+F: arch/arm64/boot/dts/amlogic/g12b_pxp.dts
