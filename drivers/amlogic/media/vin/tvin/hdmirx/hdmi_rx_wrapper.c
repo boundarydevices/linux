@@ -1518,6 +1518,8 @@ int rx_set_global_variable(const char *buf, int size)
 	if (set_pr_var(tmpbuf, sig_unstable_reset_hpd_max, value, &index, ret))
 		return pr_var(sig_unstable_reset_hpd_max, index);
 	#endif
+	if (set_pr_var(tmpbuf, atmos_edid_update_hpd_en, value, &index, ret))
+		return pr_var(atmos_edid_update_hpd_en, index);
 	if (set_pr_var(tmpbuf, suspend_pddq_sel, value, &index, ret))
 		return pr_var(suspend_pddq_sel, index);
 	if (set_pr_var(tmpbuf, aud_ch_map, value, &index, ret))
@@ -1618,6 +1620,7 @@ void rx_get_global_variable(const char *buf)
 	pr_var(enable_hpd_reset, i++);
 	pr_var(sig_unstable_reset_hpd_max, i++);
 	#endif
+	pr_var(atmos_edid_update_hpd_en, i++);
 	pr_var(suspend_pddq_sel, i++);
 	pr_var(aud_ch_map, i++);
 }

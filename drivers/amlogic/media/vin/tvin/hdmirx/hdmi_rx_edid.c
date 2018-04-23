@@ -36,7 +36,7 @@
 #include "hdmi_rx_hw.h"
 
 static unsigned char edid_temp[EDID_SIZE];
-static char edid_buf[MAX_EDID_BUF_SIZE];
+static char edid_buf[MAX_EDID_BUF_SIZE] = {0x0};
 static int edid_size;
 struct edid_data_s tmp_edid_data;
 int arc_port_id;
@@ -51,6 +51,13 @@ module_param(port_map, int, 0664);
 bool new_hdr_lum;
 MODULE_PARM_DESC(new_hdr_lum, "\n new_hdr_lum\n");
 module_param(new_hdr_lum, bool, 0664);
+
+/*
+ * 1:reset hpd after atmos edid update
+ * 0:not reset hpd after atmos edid update
+ */
+bool atmos_edid_update_hpd_en = 1;
+
 
 /* hdmi1.4 edid */
 static unsigned char edid_14[] = {
@@ -375,19 +382,35 @@ unsigned char *edid_list[] = {
 
 unsigned char rx_get_edid_index(void)
 {
-	if (edid_mode == 0) {
-		if ((edid_buf[0] == 'E') &&
-			(edid_buf[1] == 'D') &&
-			(edid_buf[2] == 'I') &&
-			(edid_buf[3] == 'D')) {
-			rx_pr("edid: use Top edid\n");
-			return EDID_LIST_BUFF;
-		} else
-			return EDID_LIST_14;
-	} else if (edid_mode < EDID_LIST_NUM)
+	/* if ((edid_mode == 0) && */
+	/*	edid_size > 4 && */
+	/*	edid_buf[0] == 'E' && */
+	/*	edid_buf[1] == 'D' && */
+	/*	edid_buf[2] == 'I' && */
+	/*	edid_buf[3] == 'D') { */
+	/*	rx_pr("edid: use Top edid\n"); */
+	/*	return EDID_LIST_BUFF; */
+	/* } else { */
+	/*	if (edid_mode == 0) */
+	/*		return EDID_LIST_14; */
+	/*	else if (edid_mode < EDID_LIST_NUM) */
+	/*		return edid_mode; */
+	/*	else */
+	/*		return EDID_LIST_14; */
+	/* } */
+	if ((edid_mode < EDID_LIST_NUM) &&
+		(edid_mode > EDID_LIST_BUFF))
 		return edid_mode;
-	else
-		return EDID_LIST_14;
+	else {
+		if ((edid_mode == 0) &&
+			edid_size > 4 &&
+			edid_buf[0] == 'E' &&
+			edid_buf[1] == 'D' &&
+			edid_buf[2] == 'I' &&
+			edid_buf[3] == 'D')
+			rx_pr("edid: use Top edid\n");
+		return EDID_LIST_BUFF;
+	}
 }
 
 unsigned char *rx_get_edid_buffer(unsigned char index)
@@ -696,9 +719,10 @@ unsigned char rx_parse_arc_aud_type(const unsigned char *buff)
 		((aud_data & 0xff) == 1)) {
 		if (!need_support_atmos_bit) {
 			need_support_atmos_bit = true;
+			hdmi_rx_top_edid_update();
 			if (rx.open_fg) {
-				hdmi_rx_top_edid_update();
-				rx_send_hpd_pulse();
+				if (atmos_edid_update_hpd_en)
+					rx_send_hpd_pulse();
 				rx_pr("*update edid-atmos*\n");
 			} else
 				pre_port = 0xff;
@@ -706,9 +730,10 @@ unsigned char rx_parse_arc_aud_type(const unsigned char *buff)
 	} else {
 		if (need_support_atmos_bit) {
 			need_support_atmos_bit = false;
+			hdmi_rx_top_edid_update();
 			if (rx.open_fg) {
-				hdmi_rx_top_edid_update();
-				rx_send_hpd_pulse();
+				if (atmos_edid_update_hpd_en)
+					rx_send_hpd_pulse();
 				rx_pr("*update edid-no atmos*\n");
 			} else
 				pre_port = 0xff;
@@ -717,6 +742,30 @@ unsigned char rx_parse_arc_aud_type(const unsigned char *buff)
 
 	return 0;
 }
+
+/*
+ * audio parse the atmos info and inform hdmirx via a flag
+ */
+void rx_set_atmos_flag(bool en)
+{
+	if (need_support_atmos_bit != en) {
+		need_support_atmos_bit = en;
+		hdmi_rx_top_edid_update();
+		if (rx.open_fg) {
+			if (atmos_edid_update_hpd_en)
+				rx_send_hpd_pulse();
+			rx_pr("*update edid-atmos*\n");
+		} else
+			pre_port = 0xff;
+	}
+}
+EXPORT_SYMBOL(rx_set_atmos_flag);
+
+bool rx_get_atmos_flag(void)
+{
+	return need_support_atmos_bit;
+}
+EXPORT_SYMBOL(rx_get_atmos_flag);
 
 unsigned char get_atmos_offset(unsigned char *p_edid)
 {
@@ -755,7 +804,10 @@ unsigned char rx_edid_update_atmos(unsigned char *p_edid)
 	if (offset == 0)
 		rx_pr("can not find atmos info\n");
 	else {
-		p_edid[offset] = 1;
+		if (need_support_atmos_bit)
+			p_edid[offset] = 1;
+		else
+			p_edid[offset] = 0;
 		rx_pr("offset = %d\n", offset);
 	}
 	return 0;
@@ -783,8 +835,8 @@ unsigned int hdmi_rx_top_edid_update(void)
 				rx_get_edid_size(edid_index));
 	}
 
-	if (need_support_atmos_bit)
-		rx_edid_update_atmos(pedid_data);
+	/* if (need_support_atmos_bit) */
+	rx_edid_update_atmos(pedid_data);
 
 	/* caculate physical address and checksum */
 	sts = rx_edid_cal_phy_addr(brepeat,

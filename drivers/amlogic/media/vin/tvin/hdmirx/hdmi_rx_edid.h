@@ -17,7 +17,7 @@
 
 #define EDID_SIZE			256
 #define EDID_HDR_SIZE		7
-#define MAX_EDID_BUF_SIZE	512
+#define MAX_EDID_BUF_SIZE	(256+4)
 #define MAX_HDR_LUMI		3
 
 /* CEA861F Table 44~46 CEA data block tag code*/
@@ -534,6 +534,7 @@ enum hdmi_vic_e {
 extern int edid_mode;
 extern int port_map;
 extern bool new_hdr_lum;
+extern bool atmos_edid_update_hpd_en;
 int rx_set_hdr_lumi(unsigned char *data, int len);
 void rx_edid_physical_addr(int a, int b, int c, int d);
 unsigned char rx_parse_arc_aud_type(const unsigned char *buff);
