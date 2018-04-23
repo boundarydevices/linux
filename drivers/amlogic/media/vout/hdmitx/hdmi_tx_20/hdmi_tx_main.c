@@ -962,22 +962,45 @@ void hdmitx_video_mute_op(unsigned int flag)
 }
 EXPORT_SYMBOL(hdmitx_video_mute_op);
 
+/*
+ *  SDR/HDR uevent
+ *  1: SDR to HDR
+ *  0: HDR to SDR
+ */
+static void hdmitx_sdr_hdr_uevent(struct hdmitx_dev *hdev)
+{
+	if ((hdev->hdmi_last_hdr_mode == 0) &&
+		(hdev->hdmi_current_hdr_mode != 0)) {
+		/* SDR -> HDR*/
+		hdev->hdmi_last_hdr_mode = hdev->hdmi_current_hdr_mode;
+		extcon_set_state_sync(hdmitx_extcon_hdr, EXTCON_DISP_HDMI, 1);
+	} else if ((hdev->hdmi_last_hdr_mode != 0) &&
+			(hdev->hdmi_current_hdr_mode == 0)) {
+		/* HDR -> SDR*/
+		hdev->hdmi_last_hdr_mode = hdev->hdmi_current_hdr_mode;
+		extcon_set_state_sync(hdmitx_extcon_hdr, EXTCON_DISP_HDMI, 0);
+	}
+}
+
 static void hdr_work_func(struct work_struct *work)
 {
 	struct hdmitx_dev *hdev =
 		container_of(work, struct hdmitx_dev, work_hdr);
 
-	unsigned char DRM_HB[3] = {0x87, 0x1, 26};
-	unsigned char DRM_DB[26] = {0x0};
-
-	hdev->HWOp.SetPacket(HDMI_PACKET_DRM, DRM_DB, DRM_HB);
-	hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020, CLR_AVI_BT2020);
-	msleep(1500);/*delay 1.5s*/
-
 	if (hdev->hdr_transfer_feature == T_BT709 &&
-		hdev->hdr_color_feature == C_BT709)
+		hdev->hdr_color_feature == C_BT709) {
+		unsigned char DRM_HB[3] = {0x87, 0x1, 26};
+		unsigned char DRM_DB[26] = {0x0};
+
+		hdev->HWOp.SetPacket(HDMI_PACKET_DRM, DRM_DB, DRM_HB);
+		hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020, CLR_AVI_BT2020);
+		msleep(1500);/*delay 1.5s*/
 		hdev->HWOp.SetPacket(HDMI_PACKET_DRM, NULL, NULL);
-	/* switch_set_state(&hdmi_hdr, hdev->hdr_src_feature); */
+		hdev->hdmi_current_hdr_mode = 0;
+		hdmitx_sdr_hdr_uevent(hdev);
+	} else {
+		hdmitx_sdr_hdr_uevent(hdev);
+	}
 }
 
 #define GET_LOW8BIT(a)	((a) & 0xff)
@@ -1043,8 +1066,6 @@ static void hdmitx_set_drm_pkt(struct master_display_info_s *data)
 	DRM_DB[24] = GET_LOW8BIT(data->max_frame_average);
 	DRM_DB[25] = GET_HIGH8BIT(data->max_frame_average);
 
-	/*eliminate the work of work_hdr*/
-	cancel_work(&hdev->work_hdr);
 	/* bt2020 + gamma transfer */
 	if (hdev->hdr_transfer_feature == T_BT709 &&
 		hdev->hdr_color_feature == C_BT2020) {
@@ -1069,45 +1090,65 @@ static void hdmitx_set_drm_pkt(struct master_display_info_s *data)
 		return;
 	}
 
+	/*must clear hdr mode*/
+	hdev->hdmi_current_hdr_mode = 0;
+
 	/* SMPTE ST 2084 and (BT2020 or NON_STANDARD) */
 	if (hdev->RXCap.hdr_sup_eotf_smpte_st_2084) {
 		if (hdev->hdr_transfer_feature == T_SMPTE_ST_2084 &&
-			hdev->hdr_color_feature == C_BT2020) {
-			DRM_DB[0] = 0x02; /* SMPTE ST 2084 */
-			hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
-				DRM_DB, DRM_HB);
-			hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
-				CONF_AVI_BT2020, SET_AVI_BT2020);
-			return;
-		} else if (hdev->hdr_transfer_feature == T_SMPTE_ST_2084 &&
-			hdev->hdr_color_feature != C_BT2020) {
-			DRM_DB[0] = 0x02; /* no standard SMPTE ST 2084 */
-			hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
-				DRM_DB, DRM_HB);
-			hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
-				CONF_AVI_BT2020, CLR_AVI_BT2020);
-			return;
-		}
+			hdev->hdr_color_feature == C_BT2020)
+			hdev->hdmi_current_hdr_mode = 1;
+		else if (hdev->hdr_transfer_feature == T_SMPTE_ST_2084 &&
+			hdev->hdr_color_feature != C_BT2020)
+			hdev->hdmi_current_hdr_mode = 2;
 	}
 
 	/*HLG and BT2020*/
 	if (hdev->RXCap.hdr_sup_eotf_hlg) {
 		if (hdev->hdr_color_feature == C_BT2020 &&
 			(hdev->hdr_transfer_feature == T_BT2020_10 ||
-			hdev->hdr_transfer_feature == T_HLG)) {
-			DRM_DB[0] = 0x03;/* HLG is 0x03 */
-			hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
-				DRM_DB, DRM_HB);
-			hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
-				CONF_AVI_BT2020, SET_AVI_BT2020);
-			return;
-		}
+			hdev->hdr_transfer_feature == T_HLG))
+			hdev->hdmi_current_hdr_mode = 3;
 	}
 
-	/*other case*/
-	hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM, NULL, NULL);
-	hdmitx_device.HWOp.CntlConfig(&hdmitx_device, CONF_AVI_BT2020,
+	switch (hdev->hdmi_current_hdr_mode) {
+	case 1:
+		/*standard HDR*/
+		DRM_DB[0] = 0x02; /* SMPTE ST 2084 */
+		hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
+			DRM_DB, DRM_HB);
+		hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
+			CONF_AVI_BT2020, SET_AVI_BT2020);
+		break;
+	case 2:
+		/*non standard*/
+		DRM_DB[0] = 0x02; /* no standard SMPTE ST 2084 */
+		hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
+			DRM_DB, DRM_HB);
+		hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
+			CONF_AVI_BT2020, CLR_AVI_BT2020);
+		break;
+	case 3:
+		/*HLG*/
+		DRM_DB[0] = 0x03;/* HLG is 0x03 */
+		hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
+			DRM_DB, DRM_HB);
+		hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
+			CONF_AVI_BT2020, SET_AVI_BT2020);
+		break;
+	case 0:
+	default:
+		/*other case*/
+		hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM, NULL, NULL);
+		hdmitx_device.HWOp.CntlConfig(&hdmitx_device, CONF_AVI_BT2020,
 		CLR_AVI_BT2020);
+		break;
+	}
+
+	/* if sdr/hdr mode change ,notify uevent to userspace*/
+	if (hdev->hdmi_current_hdr_mode != hdev->hdmi_last_hdr_mode)
+		schedule_work(&hdev->work_hdr);
+
 }
 
 static void hdmitx_set_vsif_pkt(enum eotf_type type,
@@ -3446,7 +3487,8 @@ static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)
 	/* init para for NULL protection */
 	hdmitx_device.para = hdmi_get_fmt_name("invalid",
 						hdmitx_device.fmt_attr);
-
+	hdmitx_device.hdmi_last_hdr_mode = 0;
+	hdmitx_device.hdmi_current_hdr_mode = 0;
 	hdmitx_device.unplug_powerdown = 0;
 	hdmitx_device.vic_count = 0;
 	hdmitx_device.auth_process_timer = 0;

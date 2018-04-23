@@ -2730,6 +2730,37 @@ static void hdmitx_set_fake_vic(struct hdmitx_dev *hdev)
 	set_vmode_clk(hdev);
 }
 
+static void hdmitx_dump_drm_reg(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+
+	reg_addr = HDMITX_DWC_FC_AVICONF1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_AVICONF2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_DRM_HB01;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_DRM_HB02;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	for (reg_addr = HDMITX_DWC_FC_DRM_PB00;
+		reg_addr <= HDMITX_DWC_FC_DRM_PB26; reg_addr++) {
+		reg_val = hdmitx_rd_reg(reg_addr);
+		pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	}
+	reg_addr = HDMITX_DWC_FC_DATAUTO3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+}
+
 static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 {
 	char tmpbuf[128];
@@ -2973,6 +3004,17 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 		default:
 			break;
 		}
+	} else if (strncmp(tmpbuf, "hdr_info", 8) == 0) {
+		pr_info("hdev->hdr_transfer_feature: 0x%x\n",
+			hdev->hdr_transfer_feature);
+		pr_info("hdev->hdr_color_feature: 0x%x\n",
+			hdev->hdr_color_feature);
+		pr_info("hdev->hdmi_current_hdr_mode: %d\n",
+			hdev->hdmi_current_hdr_mode);
+		pr_info("hdev->hdmi_last_hdr_mode: %d\n",
+			hdev->hdmi_last_hdr_mode);
+		hdmitx_dump_drm_reg();
+		return;
 	}
 }
 
