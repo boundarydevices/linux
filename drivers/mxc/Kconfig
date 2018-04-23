@@ -4,6 +4,9 @@ if ARCH_MXC
 
 menu "MXC support drivers"
 
+# drivers common to MXC and MX8 go here:
+source "drivers/mxc/gpu-viv/Kconfig"
+
 config MXC_SIM
 	tristate "MXC SIM support"
 	default n
