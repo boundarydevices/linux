@@ -37,7 +37,7 @@ extern void aml_spdif_enable(
 
 extern void aml_spdif_arb_config(struct aml_audio_controller *actrl);
 
-extern void aml_spdifin_status_check(
+extern int aml_spdifin_status_check(
 	struct aml_audio_controller *actrl);
 
 extern void aml_spdif_fifo_reset(
@@ -67,4 +67,8 @@ extern void spdifoutb_to_hdmitx_ctrl(int spdif_index);
 extern void spdifout_samesource_set(int spdif_index, int fifo_id,
 	int bitwidth, bool is_enable);
 extern void spdifout_enable(int spdif_id, bool is_enable);
+
+extern int spdifin_get_sample_rate(void);
+
+extern int spdifin_get_audio_type(void);
 #endif

@@ -55,7 +55,7 @@ void aml_spdif_arb_config(struct aml_audio_controller *actrl)
 	aml_audiobus_write(actrl, EE_AUDIO_ARB_CTRL, 1<<31|0xff<<0);
 }
 
-void aml_spdifin_status_check(struct aml_audio_controller *actrl)
+int aml_spdifin_status_check(struct aml_audio_controller *actrl)
 {
 	unsigned int val;
 
@@ -72,6 +72,8 @@ void aml_spdifin_status_check(struct aml_audio_controller *actrl)
 			EE_AUDIO_SPDIFIN_CTRL0,
 			1<<26,
 			0);
+
+	return val;
 }
 
 void aml_spdif_fifo_reset(
@@ -370,4 +372,25 @@ void spdifout_samesource_set(int spdif_index, int fifo_id,
 		spdifout_fifo_ctrl(spdif_id, fifo_id, bitwidth);
 	} else
 		spdifout_clk_ctrl(spdif_id, false);
+}
+
+int spdifin_get_sample_rate(void)
+{
+	unsigned int val;
+
+	val = audiobus_read(EE_AUDIO_SPDIFIN_STAT0);
+
+	return (val >> 28) & 0x7;
+}
+
+int spdifin_get_audio_type(void)
+{
+	unsigned int val;
+
+	/* set ch_status_sel to read Pc*/
+	audiobus_update_bits(EE_AUDIO_SPDIFIN_CTRL0, 0xf << 8, 0x6 << 8);
+
+	val = audiobus_read(EE_AUDIO_SPDIFIN_STAT1);
+
+	return (val >> 16) & 0xff;
 }

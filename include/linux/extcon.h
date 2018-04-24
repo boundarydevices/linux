@@ -64,7 +64,10 @@
 #define EXTCON_JACK_VIDEO_OUT	25
 #define EXTCON_JACK_SPDIF_IN	26	/* Sony Philips Digital InterFace */
 #define EXTCON_JACK_SPDIF_OUT	27
-
+#ifdef CONFIG_AMLOGIC_SND_SOC_AUGE
+#define EXTCON_SPDIFIN_SAMPLERATE 28	/* spdif in sample rate changed */
+#define EXTCON_SPDIFIN_AUDIOTYPE  29	/* spdif in PcPd detect */
+#endif
 /* Display external connector */
 #define EXTCON_DISP_HDMI	40	/* High-Definition Multimedia Interface */
 #define EXTCON_DISP_MHL		41	/* Mobile High-Definition Link */

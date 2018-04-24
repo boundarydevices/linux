@@ -25,6 +25,7 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/clk.h>
+#include <linux/extcon.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/initval.h>
@@ -75,6 +76,9 @@ struct aml_spdif {
 	struct toddr *tddr;
 	struct frddr *fddr;
 
+	/* external connect */
+	struct extcon_dev *edev;
+
 	unsigned int id;
 	struct spdif_chipinfo *chipinfo;
 };
@@ -101,6 +105,172 @@ static const struct snd_pcm_hardware aml_spdif_hardware = {
 	.channels_max = 32,
 };
 
+static const unsigned int spdifin_extcon[] = {
+	EXTCON_SPDIFIN_SAMPLERATE,
+	EXTCON_SPDIFIN_AUDIOTYPE,
+	EXTCON_NONE,
+};
+
+/* current sample mode and its sample rate */
+int sample_mode[] = {
+	24000,
+	32000,
+	44100,
+	46000,
+	48000,
+	96000,
+	192000,
+};
+
+static const char *const spdifin_samplerate[] = {
+	"N/A",
+	"24000",
+	"32000",
+	"44100",
+	"46000",
+	"48000",
+	"96000",
+	"192000"
+};
+
+static int spdifin_samplerate_get_enum(struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	int val = spdifin_get_sample_rate();
+
+	if (val == 0x7)
+		val = 0;
+	else
+		val += 1;
+
+	ucontrol->value.integer.value[0] = val;
+
+	return 0;
+}
+
+static const struct soc_enum spdifin_sample_rate_enum[] = {
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdifin_samplerate),
+			spdifin_samplerate),
+};
+
+/* spdif in audio format detect: LPCM or NONE-LPCM */
+struct sppdif_audio_info {
+	unsigned char aud_type;
+	/*IEC61937 package presamble Pc value*/
+	short pc;
+	char *aud_type_str;
+};
+
+static const char *const spdif_audio_type_texts[] = {
+	"LPCM",
+	"AC3",
+	"EAC3",
+	"DTS",
+	"DTS-HD",
+	"TRUEHD",
+	"PAUSE"
+};
+
+static const struct sppdif_audio_info type_texts[] = {
+	{0, 0, "LPCM"},
+	{1, 0x1, "AC3"},
+	{2, 0x15, "EAC3"},
+	{3, 0xb, "DTS-I"},
+	{3, 0x0c, "DTS-II"},
+	{3, 0x0d, "DTS-III"},
+	{3, 0x11, "DTS-IV"},
+	{4, 0, "DTS-HD"},
+	{5, 0x16, "TRUEHD"},
+	{6, 0x103, "PAUSE"},
+	{6, 0x003, "PAUSE"},
+	{6, 0x100, "PAUSE"},
+};
+static const struct soc_enum spdif_audio_type_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdif_audio_type_texts),
+			spdif_audio_type_texts);
+
+static int spdifin_audio_type_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int audio_type = 0;
+	int i;
+	int total_num = sizeof(type_texts)/sizeof(struct sppdif_audio_info);
+	int pc = spdifin_get_audio_type();
+
+	for (i = 0; i < total_num; i++) {
+		if (pc == type_texts[i].pc) {
+			audio_type = type_texts[i].aud_type;
+			break;
+		}
+	}
+	ucontrol->value.enumerated.item[0] = audio_type;
+
+	return 0;
+}
+
+static const struct snd_kcontrol_new snd_spdif_controls[] = {
+
+	SOC_ENUM_EXT("SPDIFIN Sample Rate", spdifin_sample_rate_enum,
+				spdifin_samplerate_get_enum,
+				NULL),
+
+	SOC_ENUM_EXT("SPDIFIN Audio Type",
+			 spdif_audio_type_enum,
+			 spdifin_audio_type_get_enum,
+			 NULL),
+};
+
+static void spdifin_status_event(struct aml_spdif *p_spdif)
+{
+	int intrpt_status;
+
+	if (p_spdif == NULL)
+		return;
+
+	/*
+	 * interrupt status, check and clear by reg_clk_interrupt;
+	 */
+	intrpt_status = aml_spdifin_status_check(p_spdif->actrl);
+
+	if (intrpt_status & 0x1)
+		pr_warn_once("over flow!!\n");
+	if (intrpt_status & 0x2)
+		pr_warn_once("parity error\n");
+
+	if (intrpt_status & 0x4) {
+		int mode = (intrpt_status >> 28) & 0x7;
+
+		pr_warn_once("sample mode changed\n");
+		if (mode == 0x7) {
+			pr_debug("Default value, not detect sample rate\n");
+			extcon_set_state(p_spdif->edev,
+				EXTCON_SPDIFIN_SAMPLERATE, 0);
+		} else if (mode >= 0) {
+			pr_debug("Event: EXTCON_SPDIFIN_SAMPLERATE, new sample rate:%d\n",
+				sample_mode[mode]);
+
+			extcon_set_state(p_spdif->edev,
+				EXTCON_SPDIFIN_SAMPLERATE, 1);
+		}
+	}
+
+	if (intrpt_status & 0x8) {
+		pr_warn_once("Pc changed, try to read spdifin audio type\n");
+		extcon_set_state(p_spdif->edev,
+			EXTCON_SPDIFIN_AUDIOTYPE, 1);
+	} else
+		extcon_set_state(p_spdif->edev,
+			EXTCON_SPDIFIN_AUDIOTYPE, 0);
+
+	if (intrpt_status & 0x10)
+		pr_warn_once("Pd changed\n");
+	if (intrpt_status & 0x20)
+		pr_warn_once("nonpcm to pcm\n");
+	if (intrpt_status & 0x40)
+		pr_warn_once("valid changed\n");
+}
+
 static irqreturn_t aml_spdif_ddr_isr(int irq, void *devid)
 {
 	struct snd_pcm_substream *substream =
@@ -117,6 +287,8 @@ static irqreturn_t aml_spdifin_status_isr(int irq, void *devid)
 	struct aml_spdif *p_spdif = (struct aml_spdif *)devid;
 
 	aml_spdifin_status_check(p_spdif->actrl);
+
+	spdifin_status_event(p_spdif);
 
 	return IRQ_HANDLED;
 }
@@ -160,7 +332,6 @@ static int aml_spdif_open(struct snd_pcm_substream *substream)
 						p_spdif->irq_spdifin);
 			return ret;
 		}
-
 	}
 
 	runtime->private_data = p_spdif;
@@ -300,6 +471,16 @@ struct snd_soc_platform_driver aml_spdif_platform = {
 
 static int aml_dai_spdif_probe(struct snd_soc_dai *cpu_dai)
 {
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+	int ret = 0;
+
+	if (p_spdif->id == SPDIF_A) {
+		ret = snd_soc_add_dai_controls(cpu_dai, snd_spdif_controls,
+					ARRAY_SIZE(snd_spdif_controls));
+		if (ret < 0)
+			pr_err("%s, failed add snd spdif controls\n", __func__);
+	}
+
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
 
 	return 0;
@@ -856,6 +1037,21 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 	}
 
 	pr_info("%s, register soc platform\n", __func__);
+
+	/* spdifin sample rate change event */
+	aml_spdif->edev = devm_extcon_dev_allocate(dev, spdifin_extcon);
+	if (IS_ERR(aml_spdif->edev)) {
+		pr_err("failed to allocate spdifin extcon!!!\n");
+		ret = -ENOMEM;
+	} else {
+		aml_spdif->edev->dev.parent  = dev;
+		aml_spdif->edev->name = "spdifin_event";
+
+		dev_set_name(&aml_spdif->edev->dev, "spdifin_event");
+		ret = extcon_dev_register(aml_spdif->edev);
+		if (ret < 0)
+			pr_err("SPDIF IN extcon failed to register!!, ignore it\n");
+	}
 
 	return devm_snd_soc_register_platform(dev, &aml_spdif_platform);
 }

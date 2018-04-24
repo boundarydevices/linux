@@ -140,7 +140,18 @@ struct __extcon_info {
 		.id = EXTCON_JACK_SPDIF_OUT,
 		.name = "SPDIF-OUT",
 	},
-
+#ifdef CONFIG_AMLOGIC_SND_SOC_AUGE
+	[EXTCON_SPDIFIN_SAMPLERATE] = {
+		.type = EXTCON_TYPE_MISC,
+		.id = EXTCON_SPDIFIN_SAMPLERATE,
+		.name = "SPDIFIN-SAMPLERATE",
+	},
+	[EXTCON_SPDIFIN_AUDIOTYPE] = {
+		.type = EXTCON_TYPE_MISC,
+		.id = EXTCON_SPDIFIN_AUDIOTYPE,
+		.name = "SPDIFIN-AUDIOTYPE",
+	},
+#endif
 	/* Display external connector */
 	[EXTCON_DISP_HDMI] = {
 		.type = EXTCON_TYPE_DISP,
