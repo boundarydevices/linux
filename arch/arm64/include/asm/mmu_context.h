@@ -128,7 +128,7 @@ static inline void cpu_install_idmap(void)
  * Atomically replaces the active TTBR1_EL1 PGD with a new VA-compatible PGD,
  * avoiding the possibility of conflicting TLB entries being allocated.
  */
-static inline void cpu_replace_ttbr1(pgd_t *pgd)
+static inline void __nocfi cpu_replace_ttbr1(pgd_t *pgd)
 {
 	typedef void (ttbr_replace_func)(phys_addr_t);
 	extern ttbr_replace_func idmap_cpu_replace_ttbr1;
@@ -176,9 +176,10 @@ static inline void update_saved_ttbr0(struct task_struct *tsk,
 				      struct mm_struct *mm)
 {
 	if (system_uses_ttbr0_pan()) {
+		u64 ttbr;
 		BUG_ON(mm->pgd == swapper_pg_dir);
-		task_thread_info(tsk)->ttbr0 =
-			virt_to_phys(mm->pgd) | ASID(mm) << 48;
+		ttbr = virt_to_phys(mm->pgd) | ASID(mm) << 48;
+		WRITE_ONCE(task_thread_info(tsk)->ttbr0, ttbr);
 	}
 }
 #else
@@ -226,5 +227,6 @@ switch_mm(struct mm_struct *prev, struct mm_struct *next,
 #define activate_mm(prev,next)	switch_mm(prev, next, current)
 
 void verify_cpu_asid_bits(void);
+void post_ttbr_update_workaround(void);
 
 #endif

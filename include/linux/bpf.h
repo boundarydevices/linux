@@ -36,17 +36,26 @@ struct bpf_map_ops {
 };
 
 struct bpf_map {
-	atomic_t refcnt;
+	/* 1st cacheline with read-mostly members of which some
+	 * are also accessed in fast-path (e.g. ops, max_entries).
+	 */
+	const struct bpf_map_ops *ops ____cacheline_aligned;
 	enum bpf_map_type map_type;
 	u32 key_size;
 	u32 value_size;
 	u32 max_entries;
 	u32 map_flags;
 	u32 pages;
-	struct user_struct *user;
-	const struct bpf_map_ops *ops;
-	struct work_struct work;
+	bool unpriv_array;
+	/* 7 bytes hole */
+
+	/* 2nd cacheline with misc members to avoid false sharing
+	 * particularly with refcounting.
+	 */
+	struct user_struct *user ____cacheline_aligned;
+	atomic_t refcnt;
 	atomic_t usercnt;
+	struct work_struct work;
 #ifdef CONFIG_SECURITY
 	void *security;
 #endif
@@ -195,6 +204,7 @@ struct bpf_prog_aux {
 struct bpf_array {
 	struct bpf_map map;
 	u32 elem_size;
+	u32 index_mask;
 	/* 'ownership' of prog_array is claimed by the first program that
 	 * is going to use this map or by the first program which FD is stored
 	 * in the map to make sure that all callers and callees have the same
@@ -296,6 +306,9 @@ static inline void bpf_long_memcpy(void *dst, const void *src, u32 size)
 
 /* verify correctness of eBPF program */
 int bpf_check(struct bpf_prog **fp, union bpf_attr *attr);
+
+struct bpf_prog *bpf_prog_get_type_path(const char *name, enum bpf_prog_type type);
+
 #else
 static inline void bpf_register_prog_type(struct bpf_prog_type_list *tl)
 {
@@ -320,6 +333,16 @@ static inline void bpf_prog_put(struct bpf_prog *prog)
 {
 }
 static inline struct bpf_prog *bpf_prog_inc(struct bpf_prog *prog)
+{
+	return ERR_PTR(-EOPNOTSUPP);
+}
+static inline int bpf_obj_get_user(const char __user *pathname)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline struct bpf_prog *bpf_prog_get_type_path(const char *name,
+				enum bpf_prog_type type)
 {
 	return ERR_PTR(-EOPNOTSUPP);
 }
