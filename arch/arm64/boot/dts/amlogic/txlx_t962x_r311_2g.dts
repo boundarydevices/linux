@@ -25,7 +25,7 @@
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "txlx_t962x_r311";
+	amlogic-dt-id = "txlx_t962x_r311-2g";
 	compatible = "amlogic, txlx";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;

@@ -25,7 +25,7 @@
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "txlx_t962x_r311";
+	amlogic-dt-id = "txlx_t962x_r311-1g";
 	compatible = "amlogic, txlx";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
@@ -54,6 +54,14 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
+		ramoops@0x07400000 {
+			compatible = "ramoops";
+			reg = <0x0 0x07400000 0x0 0x00100000>;
+			record-size = <0x8000>;
+			console-size = <0x8000>;
+			ftrace-size = <0x0>;
+			pmsg-size = <0x8000>;
+		};
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -384,6 +392,7 @@
 			"fclk_div4",
 			"vpu_clkb_tmp_composite",
 			"vpu_clkb_composite";
+		clock-range = <250 500>;
 		/* buffer-size = <3621952>;(yuv422 8bit) */
 		buffer-size = <4179008>;/*yuv422 fullpack*/
 		/* reserve-iomap = "true"; */
@@ -604,7 +613,7 @@
 		dev_name = "bt-dev";
 		status = "okay";
 		power_down_disable = <1>;
-		gpio_reset = <&gpio_ao GPIOAO_13 GPIO_ACTIVE_HIGH>;
+		gpio_reset = <&gpio_ao GPIOAO_8 GPIO_ACTIVE_HIGH>;
 		//gpio_en = <&gpio_ao GPIOAO_5 GPIO_ACTIVE_HIGH>;
 	};
 
@@ -758,7 +767,7 @@
 		compatible = "amlogic, unifykey";
 		status = "okay";
 
-		unifykey-num = <16>;
+		unifykey-num = <19>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
@@ -775,6 +784,9 @@
 		unifykey-index-13 = <&keysn_13>;
 		unifykey-index-14 = <&keysn_14>;
 		unifykey-index-15 = <&keysn_15>;
+		unifykey-index-16 = <&keysn_16>;
+		unifykey-index-17 = <&keysn_17>;
+		unifykey-index-18 = <&keysn_18>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -859,6 +871,21 @@
 		keysn_15:key_15{
 			key-name = "prprivkeybox";// PlayReady
 			key-device = "secure";
+			key-permit = "read","write","del";
+		};
+		keysn_16:key_16{
+			key-name = "lcd";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_17:key_17{
+			key-name = "lcd_extern";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_18:key_18{
+			key-name = "backlight";
+			key-device = "normal";
 			key-permit = "read","write","del";
 		};
 	}; /* End unifykey */
