@@ -346,6 +346,8 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6x-st7789.dtb \
 	imx6q-nitrogen6x-careview.dtb \
+	imx6q-nitrogen6x-cwc.dtb \
+	imx6q-nitrogen6x-cwc-ov5640.dtb \
 	imx6q-nw2.dtb \
 	imx6q-per.dtb \
 	imx6q-phytec-pbab01.dtb \
