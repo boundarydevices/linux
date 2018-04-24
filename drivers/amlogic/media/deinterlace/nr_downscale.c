@@ -96,7 +96,7 @@ void nr_ds_buf_uninit(unsigned int cma_flag, struct device *dev)
 			nrds_dev.nrds_addr = 0;
 			nrds_dev.nrds_pages = NULL;
 		} else
-			pr_err("DI: release nr ds mem error.\n");
+			pr_info("DI: no release nr ds mem.\n");
 	}
 	for (i = 0; i < NR_DS_BUF_NUM; i++)
 		nrds_dev.buf[i] = 0;

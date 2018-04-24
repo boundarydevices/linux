@@ -2333,14 +2333,9 @@ void enable_di_post_2(
 	}
 
 	set_di_if1_mif(di_buf1_mif, di_vpp_en, hold_line, vskip_cnt);
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
-		if (blend_en) {
-			set_di_if2_mif(di_buf2_mif,
-				di_vpp_en, hold_line, vskip_cnt);
-		} else {
-			DI_VSYNC_WR_MPEG_REG(DI_IF2_GEN_REG, 0);
-		}
-	}
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL))
+		set_di_if2_mif(di_buf2_mif,
+			di_vpp_en, hold_line, vskip_cnt);
 	/* motion for current display field. */
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 		set_post_mtnrd_mif_g12(di_mtnprd_mif);
