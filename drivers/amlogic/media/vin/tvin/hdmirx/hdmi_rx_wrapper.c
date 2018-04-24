@@ -431,6 +431,9 @@ static int hdmi_rx_ctrl_irq_handler(void)
 	if (rx.irq_flag)
 		tasklet_schedule(&rx_tasklet);
 
+	if (irq_need_clr)
+		error = 1;
+
 	return error;
 }
 
