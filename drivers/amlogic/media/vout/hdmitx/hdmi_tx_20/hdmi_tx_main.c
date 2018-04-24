@@ -1197,6 +1197,9 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		pr_info("hdmitx: not support DolbyVision\n");
 		return;
 	}
+
+	hdev->hdmi_current_eotf_type = type;
+	hdev->hdmi_current_tunnel_mode = tunnel_mode;
 	/*ver0 and ver1_15 and ver1_12bit with ll= 0 use hdmi 1.4b VSIF*/
 	if ((hdev->RXCap.dv_info.ver == 0) || ((hdev->RXCap.dv_info.ver == 1)
 		&& (hdev->RXCap.dv_info.length == 0xE))

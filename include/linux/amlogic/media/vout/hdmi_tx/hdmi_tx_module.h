@@ -363,6 +363,8 @@ struct hdmitx_dev {
 	unsigned int hdmi_current_hdr_mode;
 	unsigned int dv_src_feature;
 	unsigned int sdr_hdr_feature;
+	enum eotf_type hdmi_current_eotf_type;
+	enum mode_type hdmi_current_tunnel_mode;
 	unsigned int flag_3dfp:1;
 	unsigned int flag_3dtb:1;
 	unsigned int flag_3dss:1;

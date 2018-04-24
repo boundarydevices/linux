@@ -2708,6 +2708,57 @@ static void hdmitx_dump_drm_reg(void)
 	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
 }
 
+static void hdmitx_dump_vsif_reg(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+
+	for (reg_addr = HDMITX_DWC_FC_VSDIEEEID0;
+		reg_addr <= HDMITX_DWC_FC_VSDPAYLOAD23; reg_addr++) {
+		reg_val = hdmitx_rd_reg(reg_addr);
+		pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	}
+	reg_addr = HDMITX_DWC_FC_DATAUTO0;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+}
+
+static void hdmitx_dump_avi_reg(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+
+	pr_info("hdmitx avi info reg config\n");
+
+	reg_addr = HDMITX_DWC_FC_AVICONF0;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_AVICONF1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_AVICONF2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_AVIVID;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_AVICONF3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_PRCONF;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_DATAUTO3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+}
+
 static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 {
 	char tmpbuf[128];
@@ -2961,6 +3012,18 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 		pr_info("hdev->hdmi_last_hdr_mode: %d\n",
 			hdev->hdmi_last_hdr_mode);
 		hdmitx_dump_drm_reg();
+		return;
+	} else if (strncmp(tmpbuf, "dv_info", 7) == 0) {
+		pr_info("hdev->hdmi_current_eotf_type: 0x%x\n",
+			hdev->hdmi_current_eotf_type);
+		pr_info("hdev->hdmi_current_tunnel_mode: 0x%x\n",
+			hdev->hdmi_current_tunnel_mode);
+		pr_info("hdev->dv_src_feature: %d\n",
+			hdev->dv_src_feature);
+		hdmitx_dump_vsif_reg();
+		return;
+	} else if (strncmp(tmpbuf, "avi_info", 8) == 0) {
+		hdmitx_dump_avi_reg();
 		return;
 	}
 }
