@@ -1849,8 +1849,8 @@ static void di_cma_release(struct di_dev_s *devp)
 				pr_err("DI CMA  release buf[%d] fail.\n", i);
 			}
 		} else {
-			if (!IS_ERR_OR_NULL(buf_p->pages)) {
-				pr_err("DI buf[%d] page:0x%p no release.\n",
+			if (!IS_ERR_OR_NULL(buf_p->pages) && cma_print) {
+				pr_info("DI buf[%d] page:0x%p no release.\n",
 					buf_p->index, buf_p->pages);
 			}
 		}
@@ -2163,14 +2163,14 @@ static void di_uninit_buf(unsigned int disable_mirror)
 
 	if (!IS_ERR_OR_NULL(di_post_stru.keep_buf)) {
 		keep_buf = di_post_stru.keep_buf;
-		pr_info("%s keep cur di_buf %d (",
+		pr_dbg("%s keep cur di_buf %d (",
 			__func__, keep_buf->index);
 		for (i = 0; i < USED_LOCAL_BUF_MAX; i++) {
 			if (!IS_ERR_OR_NULL(keep_buf->di_buf_dup_p[i]))
-				pr_info("%d\t",
+				pr_dbg("%d\t",
 					keep_buf->di_buf_dup_p[i]->index);
 		}
-		pr_info(")\n");
+		pr_dbg(")\n");
 	}
 	queue_init(0);
 	/* decoder'buffer had been releae no need put */
@@ -5662,7 +5662,7 @@ static void di_unreg_process_irq(void)
 			!is_meson_gxbb_cpu() && !is_meson_txlx_cpu())
 			switch_vpu_clk_gate_vmod(VPU_VPU_CLKB,
 				VPU_CLK_GATE_OFF);
-			pr_info("%s disable di mirror image.\n", __func__);
+		pr_info("%s disable di mirror image.\n", __func__);
 	}
 	if (post_wr_en && post_wr_support)
 		diwr_set_power_control(0);
