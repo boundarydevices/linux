@@ -434,8 +434,7 @@ static int aml_atvdemod_probe(struct platform_device *pdev)
 	int size_io_reg = 0;
 	struct aml_atvdemod_device *dev = NULL;
 
-	dev = devm_kmalloc(&pdev->dev, sizeof(struct aml_atvdemod_device),
-			GFP_KERNEL);
+	dev = kzalloc(sizeof(struct aml_atvdemod_device), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
@@ -517,8 +516,7 @@ static int aml_atvdemod_probe(struct platform_device *pdev)
 
 fail_register_v4l2:
 fail_get_resource:
-	/*devm_kfree(&pdev->dev, dev->cls.name);*/
-	devm_kfree(&pdev->dev, dev);
+	kfree(dev);
 
 	pr_info("%s: fail.\n", __func__);
 
@@ -536,8 +534,7 @@ static int aml_atvdemod_remove(struct platform_device *pdev)
 
 	amlatvdemod_devp = NULL;
 
-	/*devm_kfree(&pdev->dev, dev->cls.name);*/
-	devm_kfree(&pdev->dev, dev);
+	kfree(dev);
 
 	pr_info("%s: OK.\n", __func__);
 

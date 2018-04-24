@@ -1009,14 +1009,14 @@ static int v4l2_get_frontend(struct v4l2_frontend *v4l2_fe,
 }
 
 static int v4l2_frontend_set_mode(struct v4l2_frontend *v4l2_fe,
-		unsigned long params)
+		int params)
 {
 	int ret = 0;
 	struct v4l2_frontend_private *fepriv = v4l2_fe->frontend_priv;
 	struct analog_demod_ops *analog_ops = NULL;
 	int priv_cfg = 0;
 
-	pr_dbg("%s: params = %ld.\n", __func__, params);
+	pr_dbg("%s: params = %d.\n", __func__, params);
 
 	fepriv->state = V4L2FE_STATE_IDLE;
 
@@ -1132,7 +1132,7 @@ static long v4l2_frontend_ioctl(struct file *filp, void *fh, bool valid_prio,
 		break;
 
 	case V4L2_SET_MODE: /* 0x566c */
-		ret = v4l2_frontend_set_mode(v4l2_fe, (unsigned long) arg);
+		ret = v4l2_frontend_set_mode(v4l2_fe, *((int *) arg));
 		break;
 
 	case V4L2_READ_STATUS:
