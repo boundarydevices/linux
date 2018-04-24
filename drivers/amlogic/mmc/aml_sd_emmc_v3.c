@@ -891,7 +891,7 @@ static int emmc_ds_manual_sht(struct mmc_host *mmc)
 		cur_size = -1;
 	}
 
-	gintf3->ds_sht_m = (best_start + best_size) / 2;
+	gintf3->ds_sht_m = best_start + best_size / 2;
 	writel(intf3, host->base + SD_EMMC_INTF3);
 	pdata->intf3 = intf3;
 	pr_info("ds_sht:%u, window:%d, intf3:0x%x",
