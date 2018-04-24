@@ -606,15 +606,6 @@
 	status = "okay";
 };
 
-&usbh2 {
-	pinctrl-names = "idle", "active";
-	pinctrl-0 = <&pinctrl_usbh2_idle>;
-	pinctrl-1 = <&pinctrl_usbh2_active>;
-	reset-gpios = GP_USBH2_HUB_RESET;
-	osc-clkgate-delay = <0x3>;
-	status = "okay";
-};
-
 &usbotg {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
