@@ -1677,25 +1677,26 @@
 
 	vddcpu0: pwmao_d-regulator {
 		compatible = "pwm-regulator";
-		pwms = <&pwm_AO_cd MESON_PWM_1 1210 0>;
+		pwms = <&pwm_AO_cd MESON_PWM_1 1250 0>;
 		regulator-name = "vddcpu0";
-		regulator-min-microvolt = <731000>;
-		regulator-max-microvolt = <1011000>;
+		regulator-min-microvolt = <721000>;
+		regulator-max-microvolt = <1022000>;
 		regulator-always-on;
-		max-duty-cycle = <1210>;
+		max-duty-cycle = <1250>;
 		/* Voltage Duty-Cycle */
-		voltage-table = <1011000 0>,
+		voltage-table = <1022000 0>,
+                	<1011000 3>,
 			<1001000 6>,
-			<991000 9>,
-			<981000 12>,
+			<991000 10>,
+			<981000 13>,
 			<971000 16>,
-			<961000 19>,
+			<961000 20>,
 			<951000 23>,
 			<941000 26>,
-			<931000 29>,
+			<931000 30>,
 			<921000 33>,
 			<911000 36>,
-			<901000 39>,
+			<901000 40>,
 			<891000 43>,
 			<881000 46>,
 			<871000 50>,
@@ -1706,13 +1707,14 @@
 			<821000 67>,
 			<811000 70>,
 			<801000 73>,
-			<791000 77>,
+			<791000 76>,
 			<781000 80>,
-			<771000 84>,
-			<761000 87>,
+			<771000 83>,
+			<761000 86>,
 			<751000 90>,
-			<741000 94>,
-			<731000 100>;
+			<741000 93>,
+			<731000 96>,
+			<721000 100>;
 		status = "okay";
 	 };
 
