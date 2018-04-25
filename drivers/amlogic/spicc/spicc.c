@@ -283,6 +283,12 @@ static inline void spicc_set_flag(
 		spicc->flags &= ~(1<<flag);
 }
 
+static inline void spicc_main_clk_ao(struct spicc *spicc, bool on)
+{
+	if (spicc_get_flag(spicc, FLAG_ENHANCE))
+		setb(spicc->regs, MAIN_CLK_AO, on);
+}
+
 static inline void spicc_set_bit_width(struct spicc *spicc, u8 bw)
 {
 	setb(spicc->regs, CON_BITS_PER_WORD, bw-1);
@@ -305,6 +311,7 @@ static void spicc_set_mode(struct spicc *spicc, u8 mode)
 	if (mode == spicc->mode)
 		return;
 
+	spicc_main_clk_ao(spicc, 1);
 	spicc->mode = mode;
 	if (!spicc_get_flag(spicc, FLAG_ENHANCE)) {
 		if (cpol && !IS_ERR_OR_NULL(spicc->pullup))
@@ -312,9 +319,12 @@ static void spicc_set_mode(struct spicc *spicc, u8 mode)
 		else if (!cpol && !IS_ERR_OR_NULL(spicc->pulldown))
 			pinctrl_select_state(spicc->pinctrl, spicc->pulldown);
 	}
+
+
 	setb(spicc->regs, CON_CLK_PHA, cpha);
 	setb(spicc->regs, CON_CLK_POL, cpol);
 	setb(spicc->regs, LOOPBACK_EN, !!(mode & SPI_LOOP));
+	spicc_main_clk_ao(spicc, 0);
 }
 
 static void spicc_set_clk(struct spicc *spicc, int speed)
@@ -564,6 +574,7 @@ static int spicc_dma_xfer(struct spicc *spicc, struct spi_transfer *t)
 	spicc_reset_fifo(spicc);
 	setb(mem_base, CON_XCH, 0);
 	setb(mem_base, WAIT_CYCLES, spicc->speed >> 25);
+	spicc->remain = t->len / spicc->bytes_per_word;
 	if (t->tx_dma != INVALID_DMA_ADDRESS)
 		writel(t->tx_dma, mem_base + SPICC_REG_DRADDR);
 	if (t->rx_dma != INVALID_DMA_ADDRESS)
@@ -609,6 +620,7 @@ static int spicc_hw_xfer(struct spicc *spicc, u8 *txp, u8 *rxp, int len)
 	setb(mem_base, WAIT_CYCLES, 0);
 	spicc->txp = txp;
 	spicc->rxp = rxp;
+	spicc->remain = len / spicc->bytes_per_word;
 	spicc_log(spicc, &spicc->remain, 1, PIO_BEGIN);
 	if (spicc->irq) {
 		setb(mem_base, INT_XFER_COM_EN, 1);
@@ -726,6 +738,11 @@ static int spicc_setup(struct spi_device *spi)
 			spi->chip_select, spi->cs_gpio,
 			spi->mode, spi->max_speed_hz);
 	spicc_chip_select(spi, 0);
+	spicc_set_bit_width(spicc,
+			spi->bits_per_word ? : SPICC_DEFAULT_BIT_WIDTH);
+	spicc_set_clk(spicc,
+			spi->max_speed_hz ? : SPICC_DEFAULT_SPEED_HZ);
+	spicc_set_mode(spicc, spi->mode);
 	return 0;
 }
 
@@ -765,7 +782,6 @@ static void spicc_handle_one_msg(struct spicc *spicc, struct spi_message *m)
 		if (t->delay_usecs >> 10)
 			udelay(t->delay_usecs >> 10);
 
-		spicc->remain = t->len / spicc->bytes_per_word;
 		spicc_set_flag(spicc, FLAG_DMA_EN, 0);
 		if (t->bits_per_word == 64) {
 			spicc_set_flag(spicc, FLAG_DMA_EN, 1);

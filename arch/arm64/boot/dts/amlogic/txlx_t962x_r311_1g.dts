@@ -1496,8 +1496,16 @@
 
 
 &spicc_a {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi_a_pins>;
+	cs-gpios = <&gpio GPIOZ_3 0>;
+};
+
+&spicc0 {
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi_a_pins>;
 	cs-gpios = <&gpio GPIOZ_3 0>;
+	num_chipselect = <1>;
 };

@@ -657,6 +657,23 @@
 				status = "disabled";
 			};
 
+			spicc0: spicc0 {
+				compatible = "amlogic, spicc";
+				reg = <0x0 0x13000 0x0 0x40>;
+				clock-names = "spicc_clk";
+				clocks = <&clkc CLKID_SPICC0>;
+				device_id = <0>;
+				enhance = <1>;
+				ssctl = <0>;
+				dma_tx_threshold = <3>;
+				dma_num_per_read_burst = <13>;
+				dma_auto_param = <1>;
+				delay_control = <0x15>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
 			spicc_a: spi@13000 {
 				compatible = "amlogic,meson-txlx-spicc";
 				reg = <0x0 0x13000 0x0 0x3c>;
