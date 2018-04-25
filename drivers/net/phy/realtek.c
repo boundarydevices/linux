@@ -113,6 +113,17 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		reg &= ~RTL8211F_TX_DELAY;
 
 	phy_write(phydev, 0x11, reg);
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	/*disable clk_out pin 35 set page 0x0a43 reg25.0 as 0*/
+	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0a43);
+	reg = phy_read(phydev, 0x19);
+	/*set reg25 bit0 as 0*/
+	reg = phy_write(phydev, 0x19, reg & 0xfffe);
+	/* switch to page 0 */
+	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
+	/*reset phy to apply*/
+	reg = phy_write(phydev, 0x0, 0x9200);
+#endif
 	/* restore to default page 0 */
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
 
