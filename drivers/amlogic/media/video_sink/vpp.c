@@ -689,8 +689,8 @@ vpp_process_speed_check(s32 width_in,
 		if (clk_temp)
 			input_time_us = height_in * width_in / clk_temp;
 		clk_temp = clk_vpu / 1000000;
-		width_out = next_frame_par->VPP_vsc_endp -
-			next_frame_par->VPP_vsc_startp + 1;
+		width_out = next_frame_par->VPP_hsc_endp -
+			next_frame_par->VPP_hsc_startp + 1;
 		if (clk_temp)
 			dummy_time_us = (vtotal * htotal -
 			height_out * width_out) / clk_temp;
