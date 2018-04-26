@@ -2760,9 +2760,9 @@ void di_pre_gate_control(bool gate, bool mc_enable)
 		/* enable mc clk */
 		DI_Wr_reg_bits(VIUB_GCLK_CTRL0, 1, 11, 1);
 		/* enable pd clk gate */
-		DI_Wr_reg_bits(VIUB_GCLK_CTRL2, 0, 2, 2);
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL2, 2, 2, 2);
 		/* enable motion clk gate */
-		DI_Wr_reg_bits(VIUB_GCLK_CTRL2, 0, 4, 2);
+		DI_Wr_reg_bits(VIUB_GCLK_CTRL2, 2, 4, 2);
 		/* enable deband clk gate freerun for hw issue */
 		DI_Wr_reg_bits(VIUB_GCLK_CTRL2, 2, 6, 2);
 		/* enable input mif external gate */
@@ -3044,7 +3044,9 @@ void pulldown_vof_win_config(struct pulldown_detected_s *wins)
 
 void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 {
-	unsigned int i = 0, addr = 0, value = 0, mask = 0, len;
+	unsigned int i = 0, j = 0, addr = 0, value = 0, mask = 0, len;
+	unsigned int ctrl_reg[6] = {0x1707, 0x1718, 0x2d60,
+		0x2dff, 0x2f04, 0x2f70};
 	struct am_reg_s *regs_p;
 
 	if (pq_load_dbg == 1)
@@ -3066,9 +3068,21 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 		if (pq_load_dbg == 2)
 			pr_info("[%u][0x%x] = [0x%x]&[0x%x]\n",
 				i, addr, value, mask);
+
+		for (j = 0; j < 6; j++) {
+			if (addr == ctrl_reg[j])
+			break;
+		}
+
 		if (regs_p->mask != 0xffffffff) {
 			value = ((Rd(addr) & (~(mask))) |
 				(value & mask));
+		}
+		if (j < 6) {
+			if (pq_load_dbg == 3)
+				pr_info("%s skip [0x%x]=[0x%x].\n",
+					__func__, addr, value);
+			break;
 		}
 		regs_p++;
 		DI_Wr(addr, value);
