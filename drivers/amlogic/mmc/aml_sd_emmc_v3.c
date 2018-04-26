@@ -985,13 +985,22 @@ static int _aml_sd_emmc_execute_tuning(struct mmc_host *mmc, u32 opcode,
 	u8 tuning_num = 0;
 	u32 clk_div;
 	u32 adj_delay_find;
-	int wrap_win_start = -1, wrap_win_size = 0;
-	int best_win_start = -1, best_win_size = 0;
-	int curr_win_start = -1, curr_win_size = 0;
+	int wrap_win_start, wrap_win_size;
+	int best_win_start, best_win_size;
+	int curr_win_start, curr_win_size;
+	u32 rxdly[3] = {0xA28A28A, 0x15500514, 0x1FF8079E};
 
 	writel(0, host->base + SD_EMMC_ADJUST_V3);
 
 tunning:
+	/* renew */
+	wrap_win_start = -1;
+	wrap_win_size = 0;
+	best_win_start = -1;
+	best_win_size = 0;
+	curr_win_start = -1;
+	curr_win_size = 0;
+
 	spin_lock_irqsave(&host->mrq_lock, flags);
 	pdata->need_retuning = false;
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
@@ -1074,6 +1083,18 @@ tunning:
 		pdata->clkc = readl(host->base + SD_EMMC_CLOCK_V3);
 		pr_info("%s: tuning failed, reduce freq and retuning\n",
 			mmc_hostname(host->mmc));
+		goto tunning;
+	} else if (best_win_size == clk_div) {
+		if (++tuning_num > MAX_TUNING_RETRY) {
+			pr_err("%s: tuning failed\n",
+				mmc_hostname(host->mmc));
+			return -1;
+		}
+		pr_warn("wave is not sharp, again\n");
+		/* add basic data rx delay */
+		writel(rxdly[tuning_num-1], host->base + SD_EMMC_DELAY1_V3);
+		writel(rxdly[tuning_num-1], host->base + SD_EMMC_DELAY2_V3);
+		pr_warn("rxdly @ %x\n", rxdly[tuning_num-1]);
 		goto tunning;
 	} else
 		pr_info("%s: best_win_start =%d, best_win_size =%d\n",
