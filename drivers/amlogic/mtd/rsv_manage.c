@@ -308,6 +308,18 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 			}
 		}
 
+		if (aml_chip->mfr_type  == NAND_MFR_DOSILICON ||
+		    aml_chip->mfr_type  == NAND_MFR_ATO) {
+			if (col0_oob != 0xFF) {
+				pr_info("factory Bad blk:%llx blk=%d chip=%d\n",
+				       (uint64_t)addr, start_blk, i);
+			aml_chip->nand_bbt_info->nand_bbt[bad_blk_cnt++] =
+				start_blk|0x8000;
+			aml_chip->block_status[start_blk] = NAND_FACTORY_BAD;
+				break;
+			}
+		}
+
 		if (aml_chip->mfr_type  == 0xef) {
 			if (col0_oob != 0xFF) {
 				pr_info("factory Bad blk:%llx blk=%d chip=%d\n",
