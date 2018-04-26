@@ -79,7 +79,6 @@ static struct ttl_config_s lcd_ttl_config = {
 };
 
 static struct lvds_config_s lcd_lvds_config = {
-	.lvds_vswing = 1,
 	.lvds_repack = 1,
 	.dual_port = 0,
 	.pn_swap = 0,
@@ -88,6 +87,8 @@ static struct lvds_config_s lcd_lvds_config = {
 	.port_sel = 0,
 	.phy_vswing = LVDS_PHY_VSWING_DFT,
 	.phy_preem = LVDS_PHY_PREEM_DFT,
+	.phy_clk_vswing = LVDS_PHY_CLK_VSWING_DFT,
+	.phy_clk_preem = LVDS_PHY_CLK_PREEM_DFT,
 };
 
 static struct vbyone_config_s lcd_vbyone_config = {
@@ -125,9 +126,7 @@ static struct dsi_config_s lcd_mipi_config = {
 	.dsi_init_on  = &dsi_init_on_table[0],
 	.dsi_init_off = &dsi_init_off_table[0],
 	.extern_init = 0xff,
-		/* ext_index if needed, must match ext_config index;
-		 *    0xff for invalid
-		 */
+		/* ext_index if needed, 0xff for invalid */
 	.check_en = 0,
 	.check_reg = 0,
 	.check_cnt = 0,

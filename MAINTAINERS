@@ -14422,3 +14422,8 @@ F:      include/linux/amlogic/aml_atvdemod.h
 AMLOGIC G12A X2 U211 buildroot dts
 M:     wenbiao zhang <wenbiao.zhang@amlogic.com>
 F:     arch/arm64/boot/dts/amlogic/g12a_s905y2_u221_buildroot.dts
+
+AMLOGIC LCD ADD TVCONFIG SUPPORT
+M:	Evoke Zhang <evoke.zhang@amlogic.com>
+F:	drivers/amlogic/media/vout/lcd/lcd_tv/lcd_tv.dts
+F:	drivers/amlogic/media/vout/lcd/lcd_tablet/aml_lcd.dts

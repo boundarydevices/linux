@@ -1407,12 +1407,12 @@ static void lcd_debug_change_clk_change(unsigned int pclk)
 	pconf->lcd_timing.sync_duration_den = 100;
 
 	switch (lcd_drv->lcd_mode) {
-#ifdef CONFIG_AML_LCD_TV
+#ifdef CONFIG_AMLOGIC_LCD_TV
 	case LCD_MODE_TV:
 		lcd_tv_clk_config_change(pconf);
 		break;
 #endif
-#ifdef CONFIG_AML_LCD_TABLET
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
 	case LCD_MODE_TABLET:
 		lcd_tablet_clk_config_change(pconf);
 		break;

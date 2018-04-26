@@ -502,11 +502,15 @@ static void bl_set_pwm(struct bl_pwm_config_s *bl_pwm)
 	case BL_PWM_F:
 		pwm_period = 1000000000 / bl_pwm->pwm_freq;
 		pwm_duty = (pwm_period * bl_pwm->pwm_duty) / 100;
+		if (bl_debug_print_flag) {
+			pr_info("pwm=0x%p, port_index=%d, meson_index=%d\n",
+			bl_pwm->pwm_data.pwm, bl_pwm->pwm_data.port_index,
+			bl_pwm->pwm_data.meson_index);
+		}
 		if ((!IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) &&
 			((bl_pwm->pwm_data.port_index % 2) ==
 			bl_pwm->pwm_data.meson_index) &&
-			(bl_pwm->pwm_data.port_index ==
-			bl_pwm->pwm_port)) {
+			(bl_pwm->pwm_data.port_index == bl_pwm->pwm_port)) {
 			bl_pwm->pwm_data.state.polarity = pol;
 			bl_pwm->pwm_data.state.duty_cycle = pwm_duty;
 			bl_pwm->pwm_data.state.period = pwm_period;
@@ -1862,7 +1866,7 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 	return 0;
 }
 
-static int pwm_channel_conf(struct bl_config_s *bconf,
+static int aml_bl_pwm_channel_register(struct bl_config_s *bconf,
 		struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1896,11 +1900,12 @@ static int pwm_channel_conf(struct bl_config_s *bconf,
 		if (ret) {
 			BLERR("invalid %d meson_pwm_index\n", index1);
 			return ret;
-			}
+		}
 
 		if (index0 >= BL_PWM_VS)
 			continue;
 
+		bl_pwm = NULL;
 		switch (bconf->method) {
 		case BL_CTRL_PWM:
 			if ((index0 == bconf->bl_pwm->pwm_port) &&
@@ -1917,9 +1922,10 @@ static int pwm_channel_conf(struct bl_config_s *bconf,
 			break;
 		default:
 			break;
-			}
+		}
 		if (bl_pwm == NULL)
 			continue;
+
 		bl_pwm->pwm_data.port_index = index0;
 		bl_pwm->pwm_data.meson_index = index1;
 		bl_pwm->pwm_data.pwm = devm_of_pwm_get(
@@ -1932,9 +1938,11 @@ static int pwm_channel_conf(struct bl_config_s *bconf,
 		bl_pwm->pwm_data.meson = to_meson_pwm(
 			bl_pwm->pwm_data.pwm->chip);
 		pwm_init_state(bl_pwm->pwm_data.pwm, &(bl_pwm->pwm_data.state));
+		BLPR("register pwm_ch(%d) 0x%p\n",
+			bl_pwm->pwm_data.port_index, bl_pwm->pwm_data.pwm);
 	}
 
-	BLPR(" bl pwm config ok\n");
+	BLPR("%s ok\n", __func__);
 
 	return ret;
 
@@ -1991,7 +1999,7 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 	switch (bconf->method) {
 	case BL_CTRL_PWM:
 	case BL_CTRL_PWM_COMBO:
-		ret = pwm_channel_conf(bconf, pdev);
+		ret = aml_bl_pwm_channel_register(bconf, pdev);
 		bl_pwm_pinmux_set(bconf);
 		break;
 #ifdef CONFIG_AMLOGIC_BL_EXTERN

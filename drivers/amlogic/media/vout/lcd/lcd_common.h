@@ -26,7 +26,8 @@
 /* 20170905: fix coverity errors */
 /* 20180122: support txlx, optimize lcd noitfier event */
 /* 20180226: g12a support */
-#define LCD_DRV_VERSION    "20180321"
+/* 20180425: tvconfig suuport */
+#define LCD_DRV_VERSION    "20180425"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 
@@ -100,6 +101,7 @@ extern int lcd_class_remove(void);
 extern void lcd_tv_vout_server_init(void);
 extern void lcd_tv_vout_server_remove(void);
 extern void lcd_vbyone_interrupt_enable(int flag);
+extern void lcd_tv_clk_config_change(struct lcd_config_s *pconf);
 extern void lcd_tv_clk_update(struct lcd_config_s *pconf);
 extern int lcd_tv_probe(struct device *dev);
 extern int lcd_tv_remove(struct device *dev);
@@ -107,6 +109,7 @@ extern int lcd_tv_remove(struct device *dev);
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
 extern void lcd_tablet_vout_server_init(void);
 extern void lcd_tablet_vout_server_remove(void);
+extern void lcd_tablet_clk_config_change(struct lcd_config_s *pconf);
 extern void lcd_tablet_clk_update(struct lcd_config_s *pconf);
 extern int lcd_tablet_probe(struct device *dev);
 extern int lcd_tablet_remove(struct device *dev);

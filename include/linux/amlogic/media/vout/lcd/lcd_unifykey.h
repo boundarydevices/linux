@@ -21,11 +21,12 @@
 #define LCD_UNIFYKEY_WAIT_TIMEOUT    300
 
 /* declare external unifykey function */
-extern int key_unify_read(char *keyname, unsigned char *keydata,
+extern void *get_ukdev(void);
+extern int key_unify_read(void *ukdev, char *keyname, unsigned char *keydata,
 	unsigned int datalen, unsigned int *reallen);
-extern int key_unify_size(char *keyname, unsigned int *reallen);
-extern int key_unify_query(char *keyname, unsigned int *keystate,
-	unsigned int *keypermit);
+extern int key_unify_size(void *ukdev, char *keyname, unsigned int *reallen);
+extern int key_unify_query(void *ukdev, char *keyname,
+	unsigned int *keystate, unsigned int *keypermit);
 extern int key_unify_get_init_flag(void);
 
 
