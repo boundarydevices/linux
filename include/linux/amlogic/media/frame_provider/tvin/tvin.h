@@ -291,6 +291,11 @@ enum tvin_color_fmt_range_e {
 	TVIN_COLOR_FMT_RANGE_MAX,
 };
 
+enum tvin_force_color_range_e {
+	COLOR_RANGE_AUTO = 0,
+	COLOR_RANGE_FULL,
+	COLOR_RANGE_LIMIT,
+};
 const char *tvin_color_fmt_str(enum tvin_color_fmt_e color_fmt);
 enum tvin_scan_mode_e {
 	TVIN_SCAN_MODE_NULL = 0,
@@ -421,6 +426,10 @@ struct tvafe_pin_mux_s {
 #define TVIN_IOC_UNFREEZE_VF        _IO(_TM_T, 0x46)
 #define TVIN_IOC_SNOWON             _IO(_TM_T, 0x47)
 #define TVIN_IOC_SNOWOFF            _IO(_TM_T, 0x48)
+#define TVIN_IOC_GET_COLOR_RANGE	_IOR(_TM_T, 0X49,\
+	enum tvin_force_color_range_e)
+#define TVIN_IOC_SET_COLOR_RANGE	_IOW(_TM_T, 0X4a,\
+	enum tvin_force_color_range_e)
 
 /* TVAFE */
 #define TVIN_IOC_S_AFE_VGA_PARM     _IOW(_TM_T, 0x16, struct tvafe_vga_parm_s)

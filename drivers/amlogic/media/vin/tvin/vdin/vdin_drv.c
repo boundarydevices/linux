@@ -139,6 +139,8 @@ MODULE_PARM_DESC(game_mode, "game_mode");
 
 static int irq_max_count;
 
+enum tvin_force_color_range_e color_range_force = COLOR_RANGE_AUTO;
+
 static void vdin_backup_histgram(struct vframe_s *vf, struct vdin_dev_s *devp);
 
 char *vf_get_receiver_name(const char *provider_name);
@@ -2138,6 +2140,26 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		devp->flags &= (~VDIN_FLAG_SNOW_FLAG);
 		if (vdin_dbg_en)
 			pr_info("TVIN_IOC_SNOWOFF(%d) ok\n\n", devp->index);
+		break;
+	case TVIN_IOC_GET_COLOR_RANGE:
+		if (copy_to_user(argp,
+						&color_range_force,
+			sizeof(enum tvin_force_color_range_e))) {
+			ret = -EFAULT;
+			pr_info("TVIN_IOC_GET_COLOR_RANGE err\n\n");
+			break;
+		}
+		pr_info("get color range-%d\n\n", color_range_force);
+		break;
+	case TVIN_IOC_SET_COLOR_RANGE:
+		if (copy_from_user(&color_range_force,
+						argp,
+		sizeof(enum tvin_force_color_range_e))) {
+			ret = -EFAULT;
+			pr_info("TVIN_IOC_SET_COLOR_RANGE err\n\n");
+			break;
+		}
+		pr_info("force color range-%d\n\n", color_range_force);
 		break;
 	default:
 		ret = -ENOIOCTLCMD;

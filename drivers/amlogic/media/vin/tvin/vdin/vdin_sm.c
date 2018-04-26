@@ -140,6 +140,25 @@ MODULE_PARM_DESC(nosig2_unstable_cnt, "nosig2_unstable_cnt");
 static int signal_status = TVIN_SIG_STATUS_NULL;
 module_param(signal_status, int, 0664);
 MODULE_PARM_DESC(signal_status, "signal_status");
+enum tvin_color_fmt_range_e tvin_get_force_fmt_range(
+	enum tvin_color_fmt_range_e fmt_range,
+	enum tvin_color_fmt_e color_fmt)
+{
+	if (color_fmt == TVIN_YUV444 ||
+		color_fmt == TVIN_YUV422) {
+		if (color_range_force == COLOR_RANGE_FULL)
+			fmt_range = TVIN_YUV_FULL;
+		else if (color_range_force == COLOR_RANGE_LIMIT)
+			fmt_range = TVIN_YUV_LIMIT;
+	} else if (color_fmt == TVIN_RGB444) {
+		if (color_range_force == COLOR_RANGE_FULL)
+			fmt_range = TVIN_RGB_FULL;
+		else if (color_range_force == COLOR_RANGE_LIMIT)
+			fmt_range = TVIN_RGB_LIMIT;
+	}
+	return fmt_range;
+}
+
 /*
  * check hdmirx color format
  */
@@ -181,6 +200,10 @@ static void hdmirx_color_fmt_handler(struct vdin_dev_s *devp)
 		vdin_hdr_flag = prop->vdin_hdr_Flag;
 		pre_vdin_hdr_flag = pre_prop->vdin_hdr_Flag;
 
+		if (color_range_force)
+			prop->color_fmt_range =
+			tvin_get_force_fmt_range(pre_prop->color_fmt_range,
+			pre_prop->color_format);
 		vdin_fmt_range = prop->color_fmt_range;
 		pre_vdin_fmt_range = pre_prop->color_fmt_range;
 
