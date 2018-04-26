@@ -56,6 +56,7 @@ typedef int (*key_unify_dev_init)(struct key_info_t *uk_info,
 typedef int (*key_unify_dev_uninit)(void);
 
 static int module_init_flag;
+static struct aml_unifykey_dev *ukdev_global;
 
 static char hex_to_asc(char para)
 {
@@ -899,6 +900,11 @@ static long unifykey_compat_ioctl(struct file *file,
 }
 #endif
 
+void  *get_ukdev(void)
+{
+	return ukdev_global;
+}
+
 static ssize_t unifykey_read(struct file *file,
 	char __user *buf,
 	size_t count,
@@ -1523,6 +1529,7 @@ static int aml_unifykeys_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto out;
 	}
+	ukdev_global = ukdev;
 	ukdev->pdev = pdev;
 	platform_set_drvdata(pdev, ukdev);
 

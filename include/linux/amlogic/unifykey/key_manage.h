@@ -34,4 +34,6 @@ void storage_ops_write(store_key_ops read)
 }
 #endif /*CONFIG_KEY_MANAGE*/
 
+void  *get_ukdev(void);
+
 #endif /*__KEYMANAGE1__*/
