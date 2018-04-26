@@ -52,7 +52,7 @@ static void gxl_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 	writel(val, db->ddr_reg + port_reg[channel]);
 }
 
-static unsigned long gxl_get_ddr_freq_quick(struct ddr_bandwidth *db)
+static unsigned long gxl_get_dmc_freq_quick(struct ddr_bandwidth *db)
 {
 	unsigned int val;
 	unsigned int od, n, m, od1;
@@ -155,7 +155,7 @@ static int gxl_dump_reg(struct ddr_bandwidth *db, char *buf)
 struct ddr_bandwidth_ops gxl_ddr_bw_ops = {
 	.init             = gxl_dmc_bandwidth_init,
 	.config_port      = gxl_dmc_port_config,
-	.get_freq         = gxl_get_ddr_freq_quick,
+	.get_freq         = gxl_get_dmc_freq_quick,
 	.handle_irq       = gxl_handle_irq,
 	.bandwidth_enable = gxl_dmc_bandwidth_enable,
 #if DDR_BANDWIDTH_DEBUG

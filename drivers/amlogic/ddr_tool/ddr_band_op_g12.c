@@ -60,7 +60,7 @@ static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 	}
 }
 
-static unsigned long g12_get_ddr_freq_quick(struct ddr_bandwidth *db)
+static unsigned long g12_get_dmc_freq_quick(struct ddr_bandwidth *db)
 {
 	unsigned int val;
 	unsigned int n, m, od1;
@@ -98,7 +98,7 @@ static unsigned long g12_get_ddr_freq_quick(struct ddr_bandwidth *db)
 	n = ((val >> 10) & 0x1f);
 	od1 = (((val >> 19) & 0x1)) == 1 ? 2 : 1;
 	if (n)
-		freq = 2 * (((DEFAULT_XTAL_FREQ * m) / n) >> od1) / od_div;
+		freq = (((DEFAULT_XTAL_FREQ * m) / n) >> od1) / od_div;
 
 	return freq;
 }
@@ -185,7 +185,7 @@ static int g12_dump_reg(struct ddr_bandwidth *db, char *buf)
 struct ddr_bandwidth_ops g12_ddr_bw_ops = {
 	.init             = g12_dmc_bandwidth_init,
 	.config_port      = g12_dmc_port_config,
-	.get_freq         = g12_get_ddr_freq_quick,
+	.get_freq         = g12_get_dmc_freq_quick,
 	.handle_irq       = g12_handle_irq,
 	.bandwidth_enable = g12_dmc_bandwidth_enable,
 #if DDR_BANDWIDTH_DEBUG
