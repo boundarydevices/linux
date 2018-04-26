@@ -136,10 +136,6 @@ static bool hdcp_mode_sel;
 MODULE_PARM_DESC(hdcp_mode_sel, "\n hdcp_mode_sel\n");
 module_param(hdcp_mode_sel, bool, 0664);
 
-
-
-static int hdcp22_reset_max = 20;
-
 static int hdcp22_auth_sts = 0xff;
 
 /*the esm reset flag for hdcp_rx22*/
@@ -1021,7 +1017,11 @@ void rx_dwc_reset(void)
 	else
 		rx_sw_reset(1);
 	rx_irq_en(true);
-	if (hdcp22_on) {
+	/* for hdcp1.4 interact very early cases, don't do
+	 * esm reset to avoid interaction be interferenced.
+	 */
+	if (hdcp22_on &&
+		(rx.hdcp.hdcp_version != HDCP_VER_14)) {
 		if (esm_recovery_mode == ESM_REC_MODE_TMDS)
 			rx_esm_tmdsclk_en(true);
 		esm_set_stable(true);
@@ -1091,20 +1091,6 @@ void rx_esm_exception_monitor(void)
 	}
 }
 #endif
-
-void esm_rst_monitor(void)
-{
-	static int esm_rst_cnt;
-
-	if (video_stable_to_esm == 0) {
-		if (esm_rst_cnt++ > hdcp22_reset_max) {
-			if (log_level & HDCP_LOG)
-				rx_pr("esm=1\n");
-			esm_set_stable(true);
-			esm_rst_cnt = 0;
-		}
-	}
-}
 
 bool is_unnormal_format(uint8_t wait_cnt)
 {
@@ -1424,8 +1410,6 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(repeat_plug, index);
 	if (set_pr_var(tmpbuf, up_phy_addr, value, &index, ret))
 		return pr_var(up_phy_addr, index);
-	if (set_pr_var(tmpbuf, hdcp22_reset_max, value, &index, ret))
-		return pr_var(hdcp22_reset_max, index);
 	if (set_pr_var(tmpbuf, hpd_to_esm, value, &index, ret))
 		return pr_var(hpd_to_esm, index);
 	if (set_pr_var(tmpbuf, esm_reset_flag, value, &index, ret))
@@ -1570,7 +1554,6 @@ void rx_get_global_variable(const char *buf)
 	pr_var(new_hdcp, i++);
 	pr_var(repeat_plug, i++);
 	pr_var(up_phy_addr, i++);
-	pr_var(hdcp22_reset_max, i++);
 	pr_var(hpd_to_esm, i++);
 	pr_var(esm_reset_flag, i++);
 	pr_var(video_stable_to_esm, i++);
@@ -2066,7 +2049,6 @@ void rx_main_state_machine(void)
 		rx_esm_exception_monitor();/* only for debug */
 	if ((hdcp22_on) && (rx.state > FSM_SIG_UNSTABLE)) {
 		/*monitor_hdcp22_sts();*/
-		esm_rst_monitor();
 	}
 
 	switch (rx.state) {
@@ -2160,16 +2142,6 @@ void rx_main_state_machine(void)
 			if (pll_lock_cnt++ > pll_lock_max) {
 				rx.state = FSM_SIG_WAIT_STABLE;
 				rx_dwc_reset();
-				rx_irq_en(true);
-				if (hdcp22_on) {
-					if (esm_recovery_mode ==
-						ESM_REC_MODE_TMDS)
-						rx_esm_tmdsclk_en(true);
-					esm_set_stable(true);
-					if (rx.hdcp.hdcp_version ==
-						HDCP_VER_22)
-						hdmirx_hdcp22_reauth();
-				}
 				pll_lock_cnt = 0;
 				pll_unlock_check_times = 0;
 				rx_pr("UNSTABLE->WAIT_STABLE\n");
