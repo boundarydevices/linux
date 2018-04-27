@@ -217,6 +217,7 @@ struct meson_mmc_data {
 	unsigned int ds_pin_poll;
 	unsigned int ds_pin_poll_en;
 	unsigned int ds_pin_poll_bit;
+	unsigned int latest_dat;
 	struct para_e sdmmc;
 };
 
@@ -300,6 +301,7 @@ struct amlsd_platform {
 	unsigned char caling;
 	unsigned char calout[20][20];
 #endif
+	unsigned int latest_dat;
 	u64 align[10];
 	int base_line;
 	unsigned int count;

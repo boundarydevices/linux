@@ -1132,40 +1132,106 @@ tunning:
 	return 0;
 }
 
+int aml_get_data_eyetest(struct mmc_host *mmc)
+{
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
+	u32 delay1 = readl(host->base + SD_EMMC_DELAY1_V3);
+	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	int ret = 0, retry = 10, line_x;
+
+	host->is_timming = 1;
+	host->is_tunning = 1;
+	pr_info("[%s] 2018-4-18 emmc HS200 Timming\n", __func__);
+	aml_sd_emmc_clktest(mmc);
+	for (line_x = 0; line_x < 10; line_x++) {
+		if (line_x == 8)
+			continue;
+RETRY:
+		ret = emmc_eyetest_log(mmc, line_x);
+		if (ret && retry) {
+			pr_info("add dly [%d],retry%d...\n",
+				line_x, retry);
+			if (line_x < 5) {
+				delay1 += (2<<(6*line_x));
+				writel(delay1,
+					(host->base + SD_EMMC_DELAY1_V3));
+			} else {
+				delay2 += (2<<(6*(line_x-5)));
+				writel(delay2,
+					(host->base + SD_EMMC_DELAY2_V3));
+			}
+			pr_debug("gdelay1: 0x%x, gdelay2: 0x%x\n",
+				readl(host->base + SD_EMMC_DELAY1_V3),
+				readl(host->base + SD_EMMC_DELAY2_V3));
+			retry--;
+			goto RETRY;
+		} else if (ret && !retry) {
+			pr_info("retry failed,line:%d\n",
+				line_x);
+			return 1;
+		}
+		retry = 10;
+	}
+	pr_debug("gadjust:0x%x,intf3:0x%x\n",
+		readl(host->base + SD_EMMC_ADJUST_V3),
+		readl(host->base + SD_EMMC_INTF3));
+	pr_info("gdelay1: 0x%x, gdelay2: 0x%x\n",
+		readl(host->base + SD_EMMC_DELAY1_V3),
+		readl(host->base + SD_EMMC_DELAY2_V3));
+	update_all_line_eyetest(mmc);
+	host->is_timming = 0;
+	host->is_tunning = 0;
+	return 0;
+}
+
 int aml_emmc_hs200_timming(struct mmc_host *mmc)
 {
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
-	u32 count = 0, delay1 = 0, delay2 = 0, line_x;
+	u32 count = 0, delay1 = 0, delay2 = 0;
+	u32 dat = host->data->latest_dat;
+	int ret = 0;
 
-	host->is_timming = 1;
-	pr_info("[%s] 2017-8-30 emmc HS200 Timming\n", __func__);
-	aml_sd_emmc_clktest(mmc);
-	update_all_line_eyetest(mmc);
-	for (line_x = 0; line_x < 8; line_x++) {
-		count = fbinary(pdata->align[line_x]);
-		if (count < (pdata->count / 2))
-			count = (pdata->count / 2) - count;
-		else
-			count = 0;
-		if (line_x < 5)
-			delay1 |= count << (6 * line_x);
-		else
-			delay2 |= count << (6 * (line_x - 5));
-		pr_debug("gadjust:0x%x,intf3:0x%x,count:%u,line_x:%d\n",
-			readl(host->base + SD_EMMC_ADJUST_V3),
-			readl(host->base + SD_EMMC_INTF3),
-			count, line_x);
+	ret = aml_get_data_eyetest(mmc);
+	if (ret) {
+		pr_info("[%s]hs200 timing err!\n",
+				__func__);
+		return 1;
 	}
-	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
-	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
-	pdata->dly1 = delay1;
-	pdata->dly2 = delay2;
-	pr_debug("gdelay1: 0x%x, gdelay2: 0x%x\n",
-			readl(host->base + SD_EMMC_DELAY1_V3),
-			readl(host->base + SD_EMMC_DELAY2_V3));
+	delay1 = readl(host->base + SD_EMMC_DELAY1_V3);
+	delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	if (pdata->latest_dat != 0)
+		dat = pdata->latest_dat;
+	count = fbinary(pdata->align[dat]);
+	if (count <= pdata->count/3)
+		count = pdata->count/3 - count;
+	else if (count <= (pdata->count*2)/3)
+		count = 0;
+	else
+		count = pdata->count/2;
+	delay1 = (count<<0)|(count<<6)|(count<<12)
+		|(count<<18)|(count<<24);
+	writel(delay1, (host->base + SD_EMMC_DELAY1_V3));
+	delay2 = (count<<0)|(count<<6)|(count<<12);
+	writel(delay2, (host->base + SD_EMMC_DELAY2_V3));
+	pr_info("delay1: 0x%x , delay2: 0x%x\n",
+		readl(host->base + SD_EMMC_DELAY1_V3),
+		readl(host->base + SD_EMMC_DELAY2_V3));
+
+	count = fbinary(pdata->align[9]);
+	if (count <= pdata->count/4)
+		count = pdata->count/4 - count;
+	else if (count <= pdata->count*3/4)
+		count = 0;
+	else
+		count = (64 - count) + pdata->count/4;
+	delay2 += (count<<24);
+	writel(delay2, (host->base + SD_EMMC_DELAY2_V3));
+	pr_info("delay1: 0x%x , delay2: 0x%x, latest_dat:%d\n",
+	    readl(host->base + SD_EMMC_DELAY1_V3),
+		readl(host->base + SD_EMMC_DELAY2_V3), dat);
 	update_all_line_eyetest(mmc);
-	host->is_timming = 0;
 	return 0;
 }
 
