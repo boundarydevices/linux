@@ -164,7 +164,8 @@ static int meson_pwm_calc(struct meson_pwm *meson,
 			  unsigned int duty, unsigned int period)
 {
 	unsigned int pre_div, cnt, duty_cnt;
-	unsigned long fin_freq = -1, fin_ns;
+	unsigned long fin_freq = -1;
+	u64 fin_ps;
 
 	if (~(meson->inverter_mask >> id) & 0x1)
 		duty = period - duty;
@@ -180,13 +181,15 @@ static int meson_pwm_calc(struct meson_pwm *meson,
 	}
 
 	dev_dbg(meson->chip.dev, "fin_freq: %lu Hz\n", fin_freq);
-	fin_ns = NSEC_PER_SEC / fin_freq;
+	fin_ps = (u64)NSEC_PER_SEC * 1000;
+	do_div(fin_ps, fin_freq);
 
 	/* Calc pre_div with the period */
 	for (pre_div = 0; pre_div < MISC_CLK_DIV_MASK; pre_div++) {
-		cnt = DIV_ROUND_CLOSEST(period, fin_ns * (pre_div + 1));
-		dev_dbg(meson->chip.dev, "fin_ns=%lu pre_div=%u cnt=%u\n",
-			fin_ns, pre_div, cnt);
+		cnt = DIV_ROUND_CLOSEST_ULL((u64)period * 1000,
+				fin_ps * (pre_div + 1));
+		dev_dbg(meson->chip.dev, "fin_ns=%llu pre_div=%u cnt=%u\n",
+			fin_ps, pre_div, cnt);
 		if (cnt <= 0xffff)
 			break;
 	}
@@ -201,15 +204,16 @@ static int meson_pwm_calc(struct meson_pwm *meson,
 
 	if (duty == period) {
 		channel->pre_div = pre_div;
-		channel->hi = cnt;
+		channel->hi = cnt - 1;
 		channel->lo = 0;
 	} else if (duty == 0) {
 		channel->pre_div = pre_div;
 		channel->hi = 0;
-		channel->lo = cnt;
+		channel->lo = cnt - 1;
 	} else {
 		/* Then check is we can have the duty with the same pre_div */
-		duty_cnt = DIV_ROUND_CLOSEST(duty, fin_ns * (pre_div + 1));
+		duty_cnt = DIV_ROUND_CLOSEST_ULL((u64)duty * 1000,
+					fin_ps * (pre_div + 1));
 		if (duty_cnt > 0xffff) {
 			dev_err(meson->chip.dev, "unable to get duty cycle\n");
 			return -EINVAL;
