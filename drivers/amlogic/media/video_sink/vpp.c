@@ -1863,10 +1863,12 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 	/* step1: judge core0&core1 vertical enable or disable*/
 	if (ver_sc_multiple_num >= 2*SUPER_SCALER_V_FACTOR) {
 		next_frame_par->supsc0_vert_ratio =
-			(src_width < SUPER_CORE0_WIDTH_MAX/2) ? 1 : 0;
+			((src_width < SUPER_CORE0_WIDTH_MAX/2) &&
+			(sr_support & SUPER_CORE0_SUPPORT)) ? 1 : 0;
 		next_frame_par->supsc1_vert_ratio =
 			((width_out < SUPER_CORE1_WIDTH_MAX) &&
-			(src_width < SUPER_CORE1_WIDTH_MAX/2)) ? 1 : 0;
+			(src_width < SUPER_CORE1_WIDTH_MAX/2) &&
+			(sr_support & SUPER_CORE1_SUPPORT)) ? 1 : 0;
 		if (next_frame_par->supsc0_vert_ratio &&
 			(ver_sc_multiple_num < 4*SUPER_SCALER_V_FACTOR))
 			next_frame_par->supsc1_vert_ratio = 0;
@@ -1889,7 +1891,7 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 			(((src_width << 1) > SUPER_CORE1_WIDTH_MAX/2) &&
 			next_frame_par->supsc1_vert_ratio))
 			next_frame_par->supsc0_hori_ratio = 0;
-		else
+		else if (sr_support & SUPER_CORE0_SUPPORT)
 			next_frame_par->supsc0_hori_ratio = 1;
 		if (((width_out >> 1) > SUPER_CORE1_WIDTH_MAX) ||
 			(((width_out >> 1) > SUPER_CORE1_WIDTH_MAX/2) &&
@@ -1897,7 +1899,7 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 			(next_frame_par->supsc0_hori_ratio &&
 			(hor_sc_multiple_num < 4)))
 			next_frame_par->supsc1_hori_ratio = 0;
-		else
+		else if (sr_support & SUPER_CORE1_SUPPORT)
 			next_frame_par->supsc1_hori_ratio = 1;
 		next_frame_par->supsc0_enable =
 			(next_frame_par->supsc0_hori_ratio ||
