@@ -743,7 +743,7 @@
 	};
 
 	meson-fb {
-		compatible = "amlogic, meson-fb";
+		compatible = "amlogic, meson-gxm";
 		dev_name = "meson-fb";
 		status = "okay";
 		interrupts = <0 3 1
