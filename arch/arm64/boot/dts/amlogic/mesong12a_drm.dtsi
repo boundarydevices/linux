@@ -42,7 +42,6 @@
 		compatible = "amlogic,drm-amhdmitx";
 		dev_name = "meson-amhdmitx";
 		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
-		drm_feature = <1>;
 		ports {
 			port {
 				#address-cells = <1>;

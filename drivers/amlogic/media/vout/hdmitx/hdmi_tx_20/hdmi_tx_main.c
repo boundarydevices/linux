@@ -3529,6 +3529,7 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 	phandle phandle;
 	struct device_node *init_data;
 	struct device_node *drm_node;
+	unsigned char *drm_status;
 #endif
 
 	/* HDMITX pinctrl config for hdp and ddc*/
@@ -3604,13 +3605,18 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 		/* Get drm feature information */
 		drm_node = of_find_node_by_path("/drm-amhdmitx");
 		if (drm_node) {
-			ret = of_property_read_u32(drm_node, "drm_feature",
-				&(hdmitx_device.drm_feature));
+			ret = of_property_read_string(drm_node, "status",
+				(const char **)&(drm_status));
 			if (ret)
 				pr_info(SYS "not find drm_feature\n");
-			else
+			else {
+				if (memcmp(drm_status, "okay", 4) == 0)
+					hdmitx_device.drm_feature = 1;
+				else
+					hdmitx_device.drm_feature = 0;
 				pr_info(SYS "hdmitx_device.drm_feature : %d\n",
 					hdmitx_device.drm_feature);
+			}
 		} else {
 			pr_info(SYS "not find drm_amhdmitx\n");
 		}

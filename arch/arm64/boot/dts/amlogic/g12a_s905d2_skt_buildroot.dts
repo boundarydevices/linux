@@ -632,18 +632,6 @@
 	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 };
 
-&drm_vpu {
-	status = "okay";
-};
-
-&drm_amhdmitx {
-	status = "okay";
-};
-
-&drm_lcd {
-	status = "okay";
-};
-
 &i2c0 {
 	status = "okay";
 	pinctrl-names="default";
