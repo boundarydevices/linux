@@ -14175,6 +14175,7 @@ F: driver/amlogic/drm/am_meson_drv.c
 F: driver/amlogic/drm/am_meson_drv.h
 F: driver/amlogic/drm/am_meson_vpu.c
 F: driver/amlogic/drm/am_meson_vpu.h
+F: drivers/amlogic/media/enhancement/amvecm/amvecm_drm.c
 
 AMLOGIC ADD S400EMMC DTS
 M: Yue Gui <yuegui.he@amlogic.com>

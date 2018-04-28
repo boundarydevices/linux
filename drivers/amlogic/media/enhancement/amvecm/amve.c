@@ -338,12 +338,12 @@ void ve_on_vs(struct vframe_s *vf)
 
 void vpp_enable_lcd_gamma_table(void)
 {
-	WRITE_VPP_REG_BITS(L_GAMMA_CNTL_PORT, 1, GAMMA_EN, 1);
+	VSYNC_WR_MPEG_REG_BITS(L_GAMMA_CNTL_PORT, 1, GAMMA_EN, 1);
 }
 
 void vpp_disable_lcd_gamma_table(void)
 {
-	WRITE_VPP_REG_BITS(L_GAMMA_CNTL_PORT, 0, GAMMA_EN, 1);
+	VSYNC_WR_MPEG_REG_BITS(L_GAMMA_CNTL_PORT, 0, GAMMA_EN, 1);
 }
 
 void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask)
@@ -387,7 +387,7 @@ void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask)
 				    (0x1 << rgb_mask)   |
 				    (0x23 << HADR));
 
-	WRITE_VPP_REG_BITS(L_GAMMA_CNTL_PORT,
+	VSYNC_WR_MPEG_REG_BITS(L_GAMMA_CNTL_PORT,
 					gamma_en, GAMMA_EN, 1);
 
 	spin_unlock_irqrestore(&vpp_lcd_gamma_lock, flags);

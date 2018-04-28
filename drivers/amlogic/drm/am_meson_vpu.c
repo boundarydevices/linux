@@ -34,6 +34,7 @@
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
+#include <linux/amlogic/media/amvecm/amvecm.h>
 
 #include "osd.h"
 #include "osd_drm.h"
@@ -254,7 +255,6 @@ int am_meson_crtc_dts_info_set(const void *dt_match_data)
 
 	return 0;
 }
-
 
 static const struct drm_plane_funcs am_osd_plane_funs = {
 	.update_plane		= drm_atomic_helper_update_plane,
@@ -667,6 +667,26 @@ void am_meson_crtc_atomic_begin(struct drm_crtc *crtc,
 void am_meson_crtc_atomic_flush(struct drm_crtc *crtc,
 			     struct drm_crtc_state *old_crtc_state)
 {
+	struct drm_color_ctm *ctm;
+	struct drm_color_lut *lut;
+	int gamma_lut_size = 0;
+
+	if (crtc->state->color_mgmt_changed) {
+		DRM_INFO("%s color_mgmt_changed!\n", __func__);
+		if (crtc->state->ctm) {
+			DRM_INFO("%s color_mgmt_changed 1!\n", __func__);
+			ctm = (struct drm_color_ctm *)
+				crtc->state->ctm->data;
+			am_meson_ctm_set(0, ctm);
+		}
+		if (crtc->state->gamma_lut) {
+			DRM_INFO("%s color_mgmt_changed 2!\n", __func__);
+			lut = (struct drm_color_lut *)
+				crtc->state->gamma_lut->data;
+			gamma_lut_size = amvecm_drm_get_gamma_size(0);
+			amvecm_drm_gamma_set(0, lut, gamma_lut_size);
+		}
+	}
 }
 
 static const struct drm_crtc_helper_funcs am_crtc_helper_funcs = {
@@ -682,6 +702,7 @@ int am_meson_crtc_create(struct am_meson_crtc *amcrtc)
 {
 	struct meson_drm *priv = amcrtc->priv;
 	struct drm_crtc *crtc = &amcrtc->base;
+	int gamma_lut_size = 0;
 	int ret;
 
 	DRM_INFO("%s\n", __func__);
@@ -695,6 +716,12 @@ int am_meson_crtc_create(struct am_meson_crtc *amcrtc)
 
 	drm_crtc_helper_add(crtc, &am_crtc_helper_funcs);
 	osd_drm_init(&osd_meson_dev);
+
+	amvecm_drm_init(0);
+	amvecm_drm_gamma_enable(0);
+	gamma_lut_size = amvecm_drm_get_gamma_size(0);
+	drm_mode_crtc_set_gamma_size(crtc, gamma_lut_size);
+	drm_crtc_enable_color_mgmt(crtc, 0, true, gamma_lut_size);
 
 	priv->crtc = crtc;
 	return 0;
@@ -830,6 +857,8 @@ static void am_meson_vpu_unbind(struct device *dev,
 	struct meson_drm *private = drm_dev->dev_private;
 
 	am_meson_unregister_crtc_funcs(private->crtc);
+	amvecm_drm_gamma_disable(0);
+	am_meson_ctm_disable();
 	osd_drm_debugfs_exit();
 }
 

@@ -143,6 +143,9 @@ extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 /* unsigned long long ve_get_vs_cnt(void); */
 /* #endif */
 extern int video_rgb_ogo_xvy_mtx;
+
+#define GAMMA_SIZE 256
+
 extern unsigned int dnlp_sel;
 extern void ve_dnlp_load_reg(void);
 
@@ -161,5 +164,8 @@ extern int vpp_set_lut3d(int enable, int bLut3DLoad,
 extern void vpp_lut3d_table_init(int *pLut3D, int bitdepth);
 extern void dump_plut3d_table(void);
 extern void dump_plut3d_reg_table(void);
+
+extern void amvecm_gamma_init(bool en);
+
 #endif
 

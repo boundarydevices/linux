@@ -5198,7 +5198,7 @@ void init_pq_setting(void)
 }
 /* #endif*/
 
-static void amvecm_gamma_init(bool en)
+void amvecm_gamma_init(bool en)
 {
 	unsigned int i;
 	unsigned short data[256];

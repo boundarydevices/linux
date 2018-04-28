@@ -23,6 +23,8 @@
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/utils/amstream.h>
 #include <linux/amlogic/cpu_version.h>
+#include <drm/drmP.h>
+
 
 /* struct ve_dnlp_s          video_ve_dnlp; */
 
@@ -429,5 +431,15 @@ extern int VSYNC_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
 extern u32 VSYNC_RD_MPEG_REG(u32 adr);
 extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 #endif
+extern int amvecm_drm_get_gamma_size(u32 index);
+extern void amvecm_drm_init(u32 index);
+extern int amvecm_drm_gamma_set(u32 index,
+			 struct drm_color_lut *lut, int lut_size);
+extern int amvecm_drm_gamma_get(u32 index, u16 *red, u16 *green, u16 *blue);
+extern int amvecm_drm_gamma_enable(u32 index);
+extern int amvecm_drm_gamma_disable(u32 index);
+extern int am_meson_ctm_set(u32 index, struct drm_color_ctm *ctm);
+extern int am_meson_ctm_disable(void);
+
 #endif /* AMVECM_H */
 
