@@ -14483,3 +14483,8 @@ AMLOGIC G12B
 M: Yan Wang <yan.wang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/mesong12b.dtsi
 F: arch/arm64/boot/dts/amlogic/g12b_pxp.dts
+
+AMLOGIC Energy model
+M: Jianxin Pan <jianxin.pan@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/g12b-sched-energy.dtsi
+
