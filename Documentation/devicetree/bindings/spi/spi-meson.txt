@@ -31,6 +31,9 @@ Required properties:
 	"amlogic,meson-gx-spicc" on Amlogic GX and compatible SoCs.
 	"amlogic,meson-txlx-spicc" on Amlogic TXLX and compatible SoCs
 	"amlogic,meson-axg-spicc" on Amlogic AXG and compatible SoCs
+	"amlogic,meson-g12a-spicc" on Amlogic G12A and compatible SoCs
+	"amlogic,meson-g12b-spicc", "amlogic,meson-g12a-spicc"
+				   on Amlogic G12B and compatible SoCs
  - reg: physical base address and length of the controller registers
  - interrupts: The interrupt specifier
  - clock-names: Must contain "core"
@@ -55,7 +58,7 @@ Example :
 		#size-cells = <0>;
 	};
 
-	spicc_a: spi@13000 {
+	spicc0: spi@13000 {
 		compatible = "amlogic,meson-txlx-spicc";
 		reg = <0x0 0x13000 0x0 0x3c>;
 		interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
@@ -63,16 +66,56 @@ Example :
 		clock-names = "core";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		status = "disabled";
 	};
 
-	spicc_b: spi@15000 {
+	spicc1: spi@15000 {
 		compatible = "amlogic,meson-txlx-spicc";
 		reg = <0x0 0x15000 0x0 0x3c>;
-		interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc CLKID_SPICC1>;
 		clock-names = "core";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		status = "disabled";
+	};
+
+	spicc0: spi@13000 {
+		compatible = "amlogic,meson-axg-spicc";
+		reg = <0x0 0x13000 0x0 0x40>;
+		interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc CLKID_SPICC0>,
+			 <&clkc CLKID_SPICC_COMP>;
+		clock-names = "core", "delay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	spicc1: spi@15000 {
+		compatible = "amlogic,meson-axg-spicc";
+		reg = <0x0 0x15000 0x0 0x40>;
+		interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc CLKID_SPICC1>,
+			 <&clkc CLKID_SPICC_COMP>;
+		clock-names = "core", "delay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	spicc0: spi@13000 {
+		compatible = "amlogic,meson-g12a-spicc";
+		reg = <0x0 0x13000 0x0 0x40>;
+		interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc CLKID_SPICC0_COMP>;
+		clock-names = "core";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	spicc1: spi@15000 {
+		compatible = "amlogic,meson-g12a-spicc";
+		reg = <0x0 0x15000 0x0 0x40>;
+		interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc CLKID_SPICC1_COMP>;
+		clock-names = "core";
+		#address-cells = <1>;
+		#size-cells = <0>;
 	};
