@@ -73,6 +73,12 @@
 #define OSD_TYPE_TOP_FIELD 0
 #define OSD_TYPE_BOT_FIELD 1
 
+#define OSD_DISP_DEBUG    1
+#define ENCP_LINE         16
+#define OSD_OLD_HWC         (0x01 << 0)
+#define OSD_OTHER_NEW_HWC   (0x01 << 1)
+#define OSD_G12A_NEW_HWC    (0x01 << 2)
+
 #define WAIT_AFBC_READY_COUNT 100
 #define osd_tprintk(...)
 
@@ -316,12 +322,6 @@ static void osd_pan_display_single_fence(
 static void osd_pan_display_layers_fence(
 	struct osd_layers_fence_map_s *fence_map);
 
-#define OSD_DISP_DEBUG    1
-#define ENCP_LINE         16
-#define OSD_OLD_HWC         (0x01 << 0)
-#define OSD_OTHER_NEW_HWC   (0x01 << 1)
-#define OSD_G12A_NEW_HWC    (0x01 << 2)
-
 static void *osd_timeline_create(void)
 {
 	const char *tlName = "osd_timeline";
@@ -551,6 +551,7 @@ static bool osd_hdr_on;
 #endif
 
 static int cnt;
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 static int get_encp_line(void)
 {
 	int enc_line = 0;
@@ -571,6 +572,7 @@ static int get_encp_line(void)
 	}
 	return enc_line;
 }
+#endif
 
 static int get_enter_encp_line(void)
 {
@@ -2878,8 +2880,9 @@ void osd_set_single_step_mode(u32 osd_single_step_mode)
 	osd_hw.osd_debug.osd_single_step_mode = osd_single_step_mode;
 	if ((osd_hw.osd_debug.wait_fence_release) &&
 		(osd_hw.osd_debug.osd_single_step_mode == 0)) {
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 		osd_timeline_increase();
-		osd_log_info("signal fence\n");
+#endif
 		osd_hw.osd_debug.wait_fence_release = false;
 	}
 
@@ -2890,8 +2893,9 @@ void osd_set_single_step(u32 osd_single_step)
 	osd_hw.osd_debug.osd_single_step = osd_single_step;
 	if ((osd_hw.osd_debug.wait_fence_release) &&
 		(osd_hw.osd_debug.osd_single_step > 0)) {
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 		osd_timeline_increase();
-		osd_log_info("signal fence\n");
+#endif
 		osd_hw.osd_debug.wait_fence_release = false;
 	}
 }
@@ -2916,39 +2920,6 @@ int osd_get_capbility(u32 index)
 				| OSD_UBOOT_LOGO;
 	}
 	return capbility;
-}
-
-static void clear_backup_info(void)
-{
-	struct osd_debug_backup_s *osd_backup;
-	int count = osd_hw.osd_debug.backup_count;
-	int i;
-
-	osd_backup = &osd_hw.osd_debug.osd_backup[count];
-	for (i = 0; i < HW_OSD_COUNT; i++)
-		memset(&(osd_backup->layer[i]), 0x0,
-			sizeof(struct layer_info_s));
-}
-
-static void save_layer_info(struct layer_fence_map_s *layer_map)
-{
-	struct osd_debug_backup_s *osd_backup;
-	int count = osd_hw.osd_debug.backup_count;
-	u32 index = layer_map->fb_index;
-
-	osd_backup = &osd_hw.osd_debug.osd_backup[count];
-	osd_backup->layer[index].enable = layer_map->enable;
-	osd_backup->layer[index].ext_addr = layer_map->ext_addr;
-	osd_backup->layer[index].src_x = layer_map->src_x;
-	osd_backup->layer[index].src_y = layer_map->src_y;
-	osd_backup->layer[index].src_w = layer_map->src_w;
-	osd_backup->layer[index].src_h = layer_map->src_h;
-	osd_backup->layer[index].dst_x = layer_map->dst_x;
-	osd_backup->layer[index].dst_y = layer_map->dst_y;
-	osd_backup->layer[index].dst_w = layer_map->dst_w;
-	osd_backup->layer[index].dst_h = layer_map->dst_h;
-	osd_backup->layer[index].zorder = layer_map->zorder;
-	osd_backup->layer[index].blend_mode = layer_map->blend_mode;
 }
 
 static void save_blend_reg(struct layer_blend_reg_s *blend_reg)
@@ -3097,6 +3068,39 @@ const struct color_bit_define_s extern_color_format_array[] = {
 		0, 32
 	},
 };
+
+static void clear_backup_info(void)
+{
+	struct osd_debug_backup_s *osd_backup;
+	int count = osd_hw.osd_debug.backup_count;
+	int i;
+
+	osd_backup = &osd_hw.osd_debug.osd_backup[count];
+	for (i = 0; i < HW_OSD_COUNT; i++)
+		memset(&(osd_backup->layer[i]), 0x0,
+			sizeof(struct layer_info_s));
+}
+
+static void save_layer_info(struct layer_fence_map_s *layer_map)
+{
+	struct osd_debug_backup_s *osd_backup;
+	int count = osd_hw.osd_debug.backup_count;
+	u32 index = layer_map->fb_index;
+
+	osd_backup = &osd_hw.osd_debug.osd_backup[count];
+	osd_backup->layer[index].enable = layer_map->enable;
+	osd_backup->layer[index].ext_addr = layer_map->ext_addr;
+	osd_backup->layer[index].src_x = layer_map->src_x;
+	osd_backup->layer[index].src_y = layer_map->src_y;
+	osd_backup->layer[index].src_w = layer_map->src_w;
+	osd_backup->layer[index].src_h = layer_map->src_h;
+	osd_backup->layer[index].dst_x = layer_map->dst_x;
+	osd_backup->layer[index].dst_y = layer_map->dst_y;
+	osd_backup->layer[index].dst_w = layer_map->dst_w;
+	osd_backup->layer[index].dst_h = layer_map->dst_h;
+	osd_backup->layer[index].zorder = layer_map->zorder;
+	osd_backup->layer[index].blend_mode = layer_map->blend_mode;
+}
 
 static const struct color_bit_define_s *convert_hal_format(u32 format)
 {
@@ -7153,6 +7157,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		osd_set_dummy_data(idx, 0xff);
 	}
 	/* hwc_enable == 0 handler */
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	osd_hw.osd_fence[DISABLE].sync_fence_handler =
 		sync_render_single_fence;
 	osd_hw.osd_fence[DISABLE].toggle_buffer_handler =
@@ -7162,6 +7167,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		sync_render_layers_fence;
 	osd_hw.osd_fence[ENABLE].toggle_buffer_handler =
 		osd_toggle_buffer_layers;
+#endif
 	osd_hw.fb_gem[OSD1].canvas_idx = OSD1_CANVAS_INDEX;
 	osd_hw.fb_gem[OSD2].canvas_idx = OSD2_CANVAS_INDEX;
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
