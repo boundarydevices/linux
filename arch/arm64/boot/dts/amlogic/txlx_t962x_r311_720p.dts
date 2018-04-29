@@ -1239,21 +1239,6 @@
 	};
 	/* end of AUDIO board specific */
 
-	dvb {
-		compatible = "amlogic, dvb";
-		dev_name = "dvb";
-		status = "disabled";
-		/*"parallel","serial","disable"*/
-		ts2 = "parallel";
-		ts2_control = <0>;
-		ts2_invert = <0>;
-		//resets = <&clock GCLK_IDX_DEMUX
-		//		&clock GCLK_IDX_ASYNC_FIFO
-		//		&clock GCLK_IDX_AHB_ARB0
-		//		&clock GCLK_IDX_U_PARSER_TOP>;
-		//reset-names = "demux", "asyncfifo", "ahbarb0", "uparsertop";
-	};
-
 	aml_sensor0: aml-sensor@0 {
 		compatible = "amlogic, aml-thermal";
 		device_name = "thermal";
@@ -1300,21 +1285,39 @@
 	dvb {
 		compatible = "amlogic, dvb";
 		dev_name = "dvb";
-		status = "disabled";
+		status = "okay";
+		demod = "internal";
+		tuner0 = "si2151_tuner";
+		tuner0_i2c_adap_id = <&i2c1>;
+		tuner0_i2c_addr = <0x60>;
 		/*"parallel","serial","disable"*/
 		ts2 = "parallel";
 		ts2_control = <0>;
 		ts2_invert = <0>;
-		//resets = <&clock GCLK_IDX_DEMUX
-		//		&clock GCLK_IDX_ASYNC_FIFO
-		//		&clock GCLK_IDX_AHB_ARB0
-		//		&clock GCLK_IDX_U_PARSER_TOP>;
-		//reset-names = "demux", "asyncfifo", "ahbarb0", "uparsertop";
+		interrupts = <0 23 1
+					0 5 1
+					0 21 1
+					0 19 1
+					0 25 1
+					0 18 1
+					0 24 1>;
+		interrupt-names = "demux0_irq",
+						"demux1_irq",
+						"demux2_irq",
+						"dvr0_irq",
+						"dvr1_irq",
+						"dvrfill0_fill",
+						"dvrfill1_flush";
+		clocks = <&clkc CLKID_DEMUX
+			&clkc CLKID_ASYNC_FIFO
+			&clkc CLKID_AHB_ARB0
+			&clkc CLKID_DOS_PARSER>;
+		clock-names = "demux", "asyncfifo", "ahbarb0", "uparsertop";
 	};
 	aml_dtv_demod {
 		compatible = "amlogic, ddemod-txlx";
 		dev_name = "aml_dtv_demod";
-		status = "disable";
+		status = "okay";
 
 		//pinctrl-names="dtvdemod_agc";
 		//pinctrl-0=<&dtvdemod_agc>;
