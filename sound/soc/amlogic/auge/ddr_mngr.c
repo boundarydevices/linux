@@ -854,6 +854,49 @@ static void aml_check_aed(bool enable, int dst)
 	}
 }
 
+void frddr_init_default(unsigned int frddr_index, unsigned int src0_sel)
+{
+	unsigned int offset, reg;
+	unsigned int start_addr, end_addr, int_addr;
+	static int buf[256];
+
+	memset(buf, 0x0, sizeof(buf));
+	start_addr = virt_to_phys(buf);
+	end_addr = start_addr + sizeof(buf) - 1;
+	int_addr = sizeof(buf) / 64;
+
+	offset = EE_AUDIO_FRDDR_B_START_ADDR - EE_AUDIO_FRDDR_A_START_ADDR;
+	reg = EE_AUDIO_FRDDR_A_START_ADDR + offset * frddr_index;
+	audiobus_write(reg, start_addr);
+
+	offset = EE_AUDIO_FRDDR_B_INIT_ADDR - EE_AUDIO_FRDDR_A_INIT_ADDR;
+	reg = EE_AUDIO_FRDDR_A_INIT_ADDR + offset * frddr_index;
+	audiobus_write(reg, start_addr);
+
+	offset = EE_AUDIO_FRDDR_B_FINISH_ADDR - EE_AUDIO_FRDDR_A_FINISH_ADDR;
+	reg = EE_AUDIO_FRDDR_A_FINISH_ADDR + offset * frddr_index;
+	audiobus_write(reg, end_addr);
+
+	offset = EE_AUDIO_FRDDR_B_INT_ADDR - EE_AUDIO_FRDDR_A_INT_ADDR;
+	reg = EE_AUDIO_FRDDR_A_INT_ADDR + offset * frddr_index;
+	audiobus_write(reg, int_addr);
+
+	offset = EE_AUDIO_FRDDR_B_CTRL1 - EE_AUDIO_FRDDR_A_CTRL1;
+	reg = EE_AUDIO_FRDDR_A_CTRL1 + offset * frddr_index;
+	audiobus_write(reg,
+		(0x40 - 1) << 24 | (0x20 - 1) << 16 | 2 << 8 | 0 << 0);
+
+	offset = EE_AUDIO_FRDDR_B_CTRL0 - EE_AUDIO_FRDDR_A_CTRL0;
+	reg = EE_AUDIO_FRDDR_A_CTRL0 + offset * frddr_index;
+	audiobus_write(reg,
+		1 << 31
+		| 0 << 24
+		| 4 << 16
+		| 1 << 3 /* src0 enable */
+		| src0_sel << 0 /* src0 sel */
+	);
+}
+
 static struct ddr_chipinfo g12a_ddr_chipinfo = {
 	.addr_separated        = true,
 	.same_src_fn           = true,

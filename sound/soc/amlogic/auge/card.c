@@ -510,15 +510,18 @@ static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 	bool idle_clk = false;
 	int ret, i;
 
+	/* enable dai-link mclk when CONTINUOUS clk setted */
+	idle_clk = !!(rtd->dai_link->dai_fmt & SND_SOC_DAIFMT_CONT);
+
 	for (i = 0; i < rtd->num_codecs; i++) {
 		codec = rtd->codec_dais[i];
 
-		ret = aml_card_init_dai(codec, &dai_props->codec_dai);
+		ret = aml_card_init_dai(codec, &dai_props->codec_dai, idle_clk);
 		if (ret < 0)
 			return ret;
 	}
 
-	ret = aml_card_init_dai(cpu, &dai_props->cpu_dai);
+	ret = aml_card_init_dai(cpu, &dai_props->cpu_dai, idle_clk);
 	if (ret < 0)
 		return ret;
 
@@ -526,14 +529,6 @@ static int aml_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 		aml_card_init_hp(rtd->card, &priv->hp_jack, PREFIX);
 		aml_card_init_mic(rtd->card, &priv->mic_jack, PREFIX);
 		hp_mic_detect_cnt = 1;
-	}
-	/* enable dai-link mclk when CONTINUOUS clk setted */
-	idle_clk = !!(rtd->dai_link->dai_fmt & SND_SOC_DAIFMT_CONT);
-	if (idle_clk && dai_props->cpu_dai.clk) {
-		clk_set_rate(dai_props->cpu_dai.clk, dai_props->cpu_dai.sysclk);
-		ret = clk_prepare_enable(dai_props->cpu_dai.clk);
-		if (ret)
-			return ret;
 	}
 
 	return 0;

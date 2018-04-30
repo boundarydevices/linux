@@ -242,11 +242,11 @@ codec_confs_end:
 }
 
 int aml_card_init_dai(struct snd_soc_dai *dai,
-			struct aml_dai *aml_dai)
+			struct aml_dai *aml_dai, bool cont_clk)
 {
 	int ret;
 
-	if (aml_dai->sysclk) {
+	if (aml_dai->sysclk && cont_clk) {
 		ret = snd_soc_dai_set_sysclk(dai, 0, aml_dai->sysclk, 0);
 		if (ret && ret != -ENOTSUPP) {
 			dev_err(dai->dev, "aml-card: set_sysclk error\n");

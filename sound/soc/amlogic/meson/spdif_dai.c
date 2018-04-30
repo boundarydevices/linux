@@ -50,16 +50,6 @@
 #include <linux/amlogic/media/sound/audin_regs.h>
 #include <linux/amlogic/media/sound/audio_iomap.h>
 
-/*
- * 0 --  other formats except(DD,DD+,DTS)
- * 1 --  DTS
- * 2 --  DD
- * 3 -- DTS with 958 PCM RAW package mode
- * 4 -- DD+
- */
-unsigned int IEC958_mode_codec;
-EXPORT_SYMBOL(IEC958_mode_codec);
-
 struct aml_spdif {
 	struct clk *clk_mpl1;
 	struct clk *clk_i958;
@@ -99,7 +89,7 @@ void aml_spdif_play(int samesrc)
 		uint div = 0;
 		static int iec958buf[DEFAULT_PLAYBACK_SIZE];
 		struct _aiu_958_raw_setting_t set;
-		struct _aiu_958_channel_status_t chstat;
+		struct iec958_chsts chstat;
 		struct snd_pcm_substream substream;
 		struct snd_pcm_runtime runtime;
 		int size = DEFAULT_PLAYBACK_SIZE;
@@ -203,7 +193,7 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 void aml_hw_iec958_init(struct snd_pcm_substream *substream, int samesrc)
 {
 	struct _aiu_958_raw_setting_t set;
-	struct _aiu_958_channel_status_t chstat;
+	struct iec958_chsts chstat;
 	unsigned int i2s_mode, iec958_mode;
 	unsigned int start, size;
 	int sample_rate;

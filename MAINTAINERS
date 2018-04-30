@@ -14454,3 +14454,13 @@ F:      drivers/amlogic/media/dtv_demod/*
 AMLOGIC DEFENDKEY DRIVER
 M:	Zhongfu Luo <zhongfu.luo@amlogic.com>
 F:	drivers/amlogic/defendkey/*
+
+AMLOGIC DEBUG
+M: Jianxin Pan <jianxin.pan@amlogic.com>
+F:  drivers/amlogic/debug/
+
+AMLOGIC G12A spdif channel status
+M: xing wang<xing.wang@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/g12a_*
+F: include/linux/amlogic/media/sound/spdif_info.h
+F: sound/soc/amlogic/auge*

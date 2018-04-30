@@ -71,7 +71,7 @@ int aml_card_parse_codec_confs(struct device_node *codec_np,
 				struct snd_soc_card *card);
 
 int aml_card_init_dai(struct snd_soc_dai *dai,
-				struct aml_dai *aml_dai);
+				struct aml_dai *aml_dai, bool cont_clk);
 
 int aml_card_canonicalize_dailink(struct snd_soc_dai_link *dai_link);
 void aml_card_canonicalize_cpu(struct snd_soc_dai_link *dai_link,

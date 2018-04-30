@@ -99,5 +99,7 @@ void aml_frddr_set_fifos(struct frddr *fr,
 unsigned int aml_frddr_get_fifo_id(struct frddr *fr);
 /* audio eq drc */
 void aml_aed_enable(bool enable, int aed_module);
+
+void frddr_init_default(unsigned int frddr_index, unsigned int src0_sel);
 #endif
 

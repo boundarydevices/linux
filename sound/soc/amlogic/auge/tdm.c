@@ -139,6 +139,9 @@ static irqreturn_t aml_tdm_ddr_isr(int irq, void *devid)
 {
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)devid;
 
+	if (!snd_pcm_running(substream))
+		return IRQ_HANDLED;
+
 	snd_pcm_period_elapsed(substream);
 
 	return IRQ_HANDLED;
@@ -314,6 +317,7 @@ static snd_pcm_uframes_t aml_tdm_pointer(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_tdm *p_tdm = runtime->private_data;
 	unsigned int addr, start_addr;
+	snd_pcm_uframes_t frames;
 
 	start_addr = runtime->dma_addr;
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -321,7 +325,11 @@ static snd_pcm_uframes_t aml_tdm_pointer(struct snd_pcm_substream *substream)
 	else
 		addr = aml_toddr_get_position(p_tdm->tddr);
 
-	return bytes_to_frames(runtime, addr - start_addr);
+	frames = bytes_to_frames(runtime, addr - start_addr);
+	if (frames > runtime->buffer_size)
+		frames = 0;
+
+	return frames;
 }
 
 static int aml_tdm_mmap(struct snd_pcm_substream *substream,

@@ -587,6 +587,7 @@
 
 		aml-audio-card,dai-link@4 {
 			mclk-fs = <128>;
+			//continuous-clock;
 			/* suffix-name, sync with android audio hal
 			 * what's the dai link used for
 			 */
@@ -602,6 +603,7 @@
 		/* spdif_b to hdmi, only playback */
 		aml-audio-card,dai-link@5 {
 			mclk-fs = <128>;
+			continuous-clock;
 			/* suffix-name, sync with android audio hal
 			 * what's the dai link used for
 			 */

@@ -1,5 +1,5 @@
 /*
- * sound/soc/amlogic/meson/notify.c
+ * sound/soc/amlogic/common/notify.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

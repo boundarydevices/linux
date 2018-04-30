@@ -28,6 +28,7 @@ static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int bit_depth;
+	struct iec958_chsts chsts;
 
 	bit_depth = snd_pcm_format_width(runtime->format);
 
@@ -35,11 +36,13 @@ static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 		aml_frddr_get_fifo_id(fr),
 		bit_depth, true);
 
-	/* spdif b, notify hdmitx audio */
-	if (spdif_id == 1) {
-		spdifoutb_to_hdmitx_ctrl(spdif_id);
-		aout_notifier_call_chain(0x1, substream);
-	}
+	/* spdif to hdmitx */
+	spdifoutb_to_hdmitx_ctrl(spdif_id);
+	/* check and set channel status */
+	spdif_get_channel_status_info(&chsts, runtime->rate);
+	spdif_set_channel_status_info(&chsts, spdif_id);
+	/* notify hdmitx audio */
+	aout_notifier_call_chain(0x1, substream);
 
 	return 0;
 }
@@ -52,9 +55,11 @@ static int sharebuffer_spdifout_free(struct snd_pcm_substream *substream,
 
 	bit_depth = snd_pcm_format_width(runtime->format);
 
-	spdifout_samesource_set(spdif_id,
-		aml_frddr_get_fifo_id(fr),
-		bit_depth, false);
+	/* spdif b is always on */
+	if (spdif_id != 1)
+		spdifout_samesource_set(spdif_id,
+			aml_frddr_get_fifo_id(fr),
+			bit_depth, false);
 
 	return 0;
 }

@@ -19,15 +19,8 @@
 #define __AML_SPDIF_HW_H__
 #include "audio_io.h"
 #include "regs.h"
-/*
- * 0 --  other formats except(DD,DD+,DTS)
- * 1 --  DTS
- * 2 --  DD
- * 3 -- DTS with 958 PCM RAW package mode
- * 4 -- DD+
- */
 
-extern unsigned int IEC958_mode_codec;
+#include <linux/amlogic/media/sound/spdif_info.h>
 
 extern void aml_spdif_enable(
 	struct aml_audio_controller *actrl,
@@ -71,4 +64,9 @@ extern void spdifout_enable(int spdif_id, bool is_enable);
 extern int spdifin_get_sample_rate(void);
 
 extern int spdifin_get_audio_type(void);
+
+extern void spdif_set_channel_status_info(
+	struct iec958_chsts *chsts, int spdif_id);
+
+extern void spdifout_play_with_zerodata(unsigned int spdif_id);
 #endif

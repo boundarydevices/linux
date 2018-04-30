@@ -19,6 +19,7 @@
 #define __AML_AUDIO_HW_H__
 
 #include "sound/asound.h"
+#include <linux/amlogic/media/sound/spdif_info.h>
 
 #define AUDIO_CLK_GATE_ON(a) CLK_GATE_ON(a)
 #define AUDIO_CLK_GATE_OFF(a) CLK_GATE_OFF(a)
@@ -27,13 +28,6 @@ struct _aiu_clk_setting_t {
 	unsigned short pll;
 	unsigned short mux;
 	unsigned short devisor;
-};
-
-struct _aiu_958_channel_status_t {
-	unsigned short chstat0_l;
-	unsigned short chstat1_l;
-	unsigned short chstat0_r;
-	unsigned short chstat1_r;
 };
 
 struct audio_output_config_t {
@@ -55,7 +49,7 @@ struct audio_output_config_t {
 	unsigned short brst;
 	unsigned short length;
 	unsigned short paddsize;
-	struct _aiu_958_channel_status_t chan_status;
+	struct iec958_chsts chan_status;
 };
 
 struct _aiu_958_raw_setting_t {
@@ -64,7 +58,7 @@ struct _aiu_958_raw_setting_t {
 	unsigned short brst;
 	unsigned short length;
 	unsigned short paddsize;
-	struct _aiu_958_channel_status_t *chan_stat;
+	struct iec958_chsts *chan_stat;
 };
 
 struct aml_chipset_info {

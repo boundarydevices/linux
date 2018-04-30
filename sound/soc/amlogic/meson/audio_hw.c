@@ -1011,7 +1011,7 @@ void audio_hw_958_raw(void)
 
 }
 
-void set_958_channel_status(struct _aiu_958_channel_status_t *set)
+void set_958_channel_status(struct iec958_chsts *set)
 {
 	if (set) {
 		aml_aiu_write(AIU_958_CHSTAT_L0, set->chstat0_l);
