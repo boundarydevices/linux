@@ -7412,15 +7412,29 @@ void  osd_suspend_hw(void)
 		osd_reg_clr_mask(VPP_MISC, OSD_RELATIVE_BITS);
 		/* VSYNCOSD_CLR_MPEG_REG_MASK(VPP_MISC, OSD_RELATIVE_BITS); */
 	} else {
+		int i = 0;
+
+		for (i = 0; i < osd_hw.osd_meson_dev.osd_count; i++) {
+			if (osd_hw.enable[i]) {
+				osd_hw.enable_save[i] = ENABLE;
+				osd_hw.enable[i] = DISABLE;
+				osd_hw.reg[OSD_ENABLE]
+					.update_func(i);
+			} else
+				osd_hw.enable_save[i] = DISABLE;
+		}
 		osd_hw.reg_status_save =
 			osd_reg_read(VIU_OSD_BLEND_CTRL);
 		osd_hw.reg_status_save1 =
 			osd_reg_read(OSD1_BLEND_SRC_CTRL);
 		osd_hw.reg_status_save2 =
 			osd_reg_read(OSD2_BLEND_SRC_CTRL);
+		osd_hw.reg_status_save3 =
+			osd_reg_read(VPP_RDARB_REQEN_SLV);
 		osd_reg_clr_mask(VIU_OSD_BLEND_CTRL, 0xf0000);
 		osd_reg_clr_mask(OSD1_BLEND_SRC_CTRL, 0xf0f);
 		osd_reg_clr_mask(OSD2_BLEND_SRC_CTRL, 0xf0f);
+		osd_reg_clr_mask(VPP_RDARB_REQEN_SLV, 0xffff);
 
 	}
 	osd_log_info("osd_suspended\n");
@@ -7454,12 +7468,23 @@ void osd_resume_hw(void)
 		}
 		notify_to_amvideo();
 	} else {
+		int i = 0;
+
+		for (i = 0; i < osd_hw.osd_meson_dev.osd_count; i++) {
+			if (osd_hw.enable_save[i]) {
+				osd_hw.enable[i] = ENABLE;
+				osd_hw.reg[OSD_ENABLE]
+					.update_func(i);
+			}
+		}
 		osd_reg_set_mask(VIU_OSD_BLEND_CTRL,
 			osd_hw.reg_status_save);
 		osd_reg_set_mask(OSD1_BLEND_SRC_CTRL,
 			osd_hw.reg_status_save1);
 		osd_reg_set_mask(OSD2_BLEND_SRC_CTRL,
 			osd_hw.reg_status_save2);
+		osd_reg_set_mask(VPP_RDARB_REQEN_SLV,
+			osd_hw.reg_status_save3);
 	}
 	osd_log_info("osd_resumed\n");
 }
