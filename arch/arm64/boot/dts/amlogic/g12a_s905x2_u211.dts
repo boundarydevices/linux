@@ -1301,4 +1301,6 @@
 	status = "okay";
 };
 
-
+&saradc {
+	status = "disabled";
+};
