@@ -4482,26 +4482,16 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 
 	if (is_meson_txlx_cpu() && dmc_adjust) {
 		bool force_adjust = false;
+		struct vframe_s *chk_vf;
 
-		if (vf)
+		chk_vf = (vf != NULL) ? vf : cur_dispbuf;
+		if (chk_vf)
 			force_adjust =
-				((vf->type & (VIDTYPE_VIU_444
-				| VIDTYPE_PIC))
-				== (VIDTYPE_VIU_444
-				| VIDTYPE_PIC)) ? true : false;
-		else if (cur_dispbuf)
-			force_adjust =
-				((cur_dispbuf->type & (VIDTYPE_VIU_444
-				| VIDTYPE_PIC))
-				== (VIDTYPE_VIU_444
-				| VIDTYPE_PIC)) ? true : false;
-		if (vf)
+				(chk_vf->type & VIDTYPE_VIU_444) ? true : false;
+		if (chk_vf)
 			dmc_adjust_for_mali_vpu(
-				vf->width, vf->height, force_adjust);
-		else if (cur_dispbuf)
-			dmc_adjust_for_mali_vpu(
-				cur_dispbuf->width,
-				cur_dispbuf->height,
+				chk_vf->width,
+				chk_vf->height,
 				force_adjust);
 		else
 			dmc_adjust_for_mali_vpu(
