@@ -829,11 +829,6 @@ static unsigned int vf_keep_current_locked(
 		return 0;
 	}
 
-	if (0 == (READ_VCBUS_REG(VPP_MISC + get_video_cur_dev()->vpp_off) &
-		VPP_VD1_POSTBLEND)) {
-		pr_info("keep exit is skip VPP_VD1_POSTBLEND\n");
-		return 0;
-	}
 	video_keeper_frame_keep_locked(cur_dispbuf,
 		cur_dispbuf_el);
 
