@@ -349,6 +349,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			/*i2c-B*/
@@ -362,6 +363,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			/*i2c-C*/
@@ -375,6 +377,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 
 			/*i2c-D*/
@@ -388,6 +391,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 		}; /* end of cbus */
 
@@ -417,6 +421,7 @@
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_I2C>;
 				clock-names = "clk_i2c";
+				clock-frequency = <100000>;
 			};
 		};/* end of aobus */
 

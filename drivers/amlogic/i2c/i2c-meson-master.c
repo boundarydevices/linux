@@ -46,6 +46,7 @@
 #define REG_CTRL_CLKDIV_MASK		GENMASK(21, 12)
 #define REG_CTRL_CLKDIVEXT_SHIFT	28
 #define REG_CTRL_CLKDIVEXT_MASK		GENMASK(29, 28)
+#define REG_FULL_MASK				GENMASK(31, 0)
 
 #define I2C_TIMEOUT_MS				500
 #define DEFAULT_FREQ				100000
@@ -169,7 +170,6 @@ static void meson_i2c_set_clk_div_std(struct meson_i2c *i2c)
 	unsigned int div_h, div_l;
 	unsigned int div_temp;
 
-
 	div_temp = DIV_ROUND_UP(clk_rate, i2c->frequency);
 	div_h = DIV_ROUND_UP(div_temp, 2) - i2c->data->delay_ajust;
 	div_l = DIV_ROUND_UP(div_temp, 4);
@@ -195,7 +195,7 @@ static void meson_i2c_set_clk_div_std(struct meson_i2c *i2c)
 
 	/* set SCL low delay */
 	meson_i2c_set_mask(i2c, REG_SLAVE_ADDR, GENMASK(27, 16),
-		(div_l << 16 ) & GENMASK(27, 16));
+		(div_l << 16) & GENMASK(27, 16));
 
 	/* enable to control SCL low time */
 	meson_i2c_set_mask(i2c, REG_SLAVE_ADDR, BIT(28), BIT(28));
@@ -207,36 +207,48 @@ static void meson_i2c_set_clk_div_std(struct meson_i2c *i2c)
 /*
  * According to I2C-BUS Spec 2.1, in FAST-MODE, LOW period should be at
  * least 1.3uS, and HIGH period should be at lease 0.6. HIGH to LOW
- * ratio as 1 to 2 is more safe.
- * Duty  = H/(H + L) = 1/3	-- duty 33%   H/L = 1/2
+ * ratio as 2 to 5 is more safe.
+ * Duty  = H/(H + L) = 2/5	-- duty 40%%   H/L = 2/3
  * Fast Mode : 400k
  * High Mode : 3400k
  */
 static void meson_i2c_set_clk_div_fast(struct meson_i2c *i2c)
 {
 	unsigned long clk_rate = clk_get_rate(i2c->clk);
-	unsigned int div;
+	unsigned int div_h, div_l;
 	unsigned int div_temp;
 
+	div_temp = DIV_ROUND_UP(clk_rate * 2, i2c->frequency * 5);
+	div_h = div_temp - i2c->data->delay_ajust;
+	div_l = DIV_ROUND_UP(clk_rate * 3, i2c->frequency * 10);
 
-	div_temp = DIV_ROUND_UP(clk_rate, i2c->frequency) -
-	 i2c->data->delay_ajust;
-	div = DIV_ROUND_UP(div_temp, i2c->data->div_factor);
 	/* clock divider has 12 bits */
-	if (div >= (1 << 12)) {
+	if (div_h >= (1 << 12)) {
 		dev_err(i2c->dev, "requested bus frequency too low\n");
-		div = (1 << 12) - 1;
+		div_h = (1 << 12) - 1;
+	}
+
+	if (div_l >= (1 << 12)) {
+		dev_err(i2c->dev, "requested bus frequency too low\n");
+		div_l = (1 << 12) - 1;
 	}
 
 	/*control reg:12-21 bits*/
 	meson_i2c_set_mask(i2c, REG_CTRL, REG_CTRL_CLKDIV_MASK,
-			   (div & GENMASK(9, 0)) << REG_CTRL_CLKDIV_SHIFT);
-
+			   (div_h & GENMASK(9, 0)) << REG_CTRL_CLKDIV_SHIFT);
 	meson_i2c_set_mask(i2c, REG_CTRL, REG_CTRL_CLKDIVEXT_MASK,
-			   (div >> 10) << REG_CTRL_CLKDIVEXT_SHIFT);
+			   (div_h >> 10) << REG_CTRL_CLKDIVEXT_SHIFT);
 
-	dev_dbg(i2c->dev, "%s: clk %lu, freq %u, div %u\n", __func__,
-		clk_rate, i2c->frequency, div);
+
+	/* set SCL low delay */
+	meson_i2c_set_mask(i2c, REG_SLAVE_ADDR, GENMASK(27, 16),
+		(div_l << 16) & GENMASK(27, 16));
+
+	/* enable to control SCL low time */
+	meson_i2c_set_mask(i2c, REG_SLAVE_ADDR, BIT(28), BIT(28));
+
+	dev_dbg(i2c->dev, "%s: clk %lu, freq %u, div_h %u, div_l %u\n",
+		__func__, clk_rate, i2c->frequency, div_h, div_l);
 }
 
 static void meson_i2c_set_clk_div(struct meson_i2c *i2c)
@@ -492,12 +504,45 @@ static const struct i2c_algorithm meson_i2c_algorithm = {
 	.functionality	= meson_i2c_func,
 };
 
+static ssize_t meson_i2c_speed_show(struct device *child,
+			       struct device_attribute *attr, char *buf)
+{
+	struct meson_i2c *i2c =
+		(struct meson_i2c *)dev_get_drvdata(child);
+	return sprintf(buf, "%d\n", i2c->frequency);
+}
+
+static ssize_t meson_i2c_speed_store(struct device *child,
+				  struct device_attribute *attr,
+				  const char *buf, size_t size)
+{
+	struct meson_i2c *i2c =
+		(struct meson_i2c *)dev_get_drvdata(child);
+	int ret, val;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret)
+		return ret;
+	i2c->frequency = val;
+
+	return ret ? : size;
+}
+
+static DEVICE_ATTR(speed, 0644, meson_i2c_speed_show,
+						meson_i2c_speed_store);
+
+int meson_i2c_speed_debug(struct device *dev)
+{
+	return sysfs_create_file(&dev->kobj, &dev_attr_speed.attr);
+}
+
 static int meson_i2c_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct meson_i2c *i2c;
 	struct resource *mem;
 	int ret = 0;
+	int i;
 
 	i2c = devm_kzalloc(&pdev->dev, sizeof(struct meson_i2c), GFP_KERNEL);
 	if (!i2c)
@@ -558,10 +603,20 @@ static int meson_i2c_probe(struct platform_device *pdev)
 	i2c->adap.algo_data = i2c;
 
 	/*
+	 * When the i2c controller has been used in U-boot, it may affect
+	 * kernel i2c driver
+	 */
+	for (i = 0; i < 8; i++)
+		meson_i2c_set_mask(i2c, REG_CTRL + 4*i, REG_FULL_MASK, 0);
+	/*
 	 * A transfer is triggered when START bit changes from 0 to 1.
 	 * Ensure that the bit is set to 0 after probe
 	 */
 	meson_i2c_set_mask(i2c, REG_CTRL, REG_CTRL_START, 0);
+
+	ret = meson_i2c_speed_debug(&pdev->dev);
+	if (ret)
+		dev_err(&pdev->dev, "Creat speed debug sysfs failed\n");
 
 	ret = i2c_add_adapter(&i2c->adap);
 	if (ret < 0) {
