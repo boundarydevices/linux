@@ -919,7 +919,7 @@ static int codec_mm_page_alloc_from_slot(
 			codec_mm_list_lock(smgt);
 			slot->on_alloc_free--;	/*alloc use end */
 			if (slot->alloced_page_num < slot->page_num &&
-				list_empty(&smgt->free_list)) {
+				list_empty(&slot->free_list)) {
 				DBG_LOG("slot have free: %p, t:%d,a:%d,%d\n",
 					slot, slot->page_num,
 					slot->alloced_page_num, alloced);
