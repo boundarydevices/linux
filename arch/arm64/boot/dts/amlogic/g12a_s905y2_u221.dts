@@ -497,7 +497,7 @@
 			};
 			tdmbcodec: codec {
 				sound-dai = <&dummy_codec &dummy_codec
-					&amlogic_codec>;
+					/*&amlogic_codec*/>;
 			};
 		};
 
