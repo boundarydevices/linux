@@ -27,6 +27,9 @@
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
 
+/* local frac_rate flag */
+static uint32_t frac_rate;
+
 /*
  * HDMITX Clock configuration
  */
@@ -419,10 +422,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned int frac_rate, unsigned int clk)
 
 static void set_hpll_clk_out(unsigned int clk)
 {
-	uint32_t frac_rate;
 	struct hdmitx_dev *hdev = get_hdmitx_device();
-
-	frac_rate = hdev->frac_rate_policy;
 
 	pr_info("config HPLL = %d frac_rate = %d\n", clk, frac_rate);
 
@@ -997,12 +997,13 @@ static void hdmitx_check_frac_rate(struct hdmitx_dev *hdev)
 	enum hdmi_vic vic = hdev->cur_VIC;
 	struct hdmi_format_para *para = NULL;
 
+	frac_rate = hdev->frac_rate_policy;
 	para = hdmi_get_fmt_paras(vic);
 	if (para && (para->name) && likely_frac_rate_mode(para->name))
 		;
 	else {
 		pr_info("%s doesn't have frac_rate\n", para->name);
-		hdev->frac_rate_policy = 0;
+		frac_rate = 0;
 	}
 
 	pr_info("frac_rate = %d\n", hdev->frac_rate_policy);
