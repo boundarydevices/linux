@@ -731,7 +731,7 @@ static void video_keeper_update_keeper_mem(
 		*id = ret;
 	}
 }
-static void video_keeper_frame_keep_locked(
+static int video_keeper_frame_keep_locked(
 	struct vframe_s *cur_dispbuf,
 	struct vframe_s *cur_dispbuf_el)
 {
@@ -761,6 +761,7 @@ static void video_keeper_frame_keep_locked(
 			MEM_TYPE_CODEC_MM,
 			&keep_el_head_id);
 	}
+	return (keep_id + keep_head_id) > 0;
 }
 
 /*
@@ -802,6 +803,7 @@ static unsigned int vf_keep_current_locked(
 	u32 cur_index;
 	u32 y_index, u_index, v_index;
 	struct canvas_s cs0, cs1, cs2, cd;
+	int ret;
 
 	if (!cur_dispbuf) {
 		pr_info("keep exit without cur_dispbuf\n");
@@ -829,9 +831,12 @@ static unsigned int vf_keep_current_locked(
 		return 0;
 	}
 
-	video_keeper_frame_keep_locked(cur_dispbuf,
+	ret = video_keeper_frame_keep_locked(cur_dispbuf,
 		cur_dispbuf_el);
-
+	if (ret) {
+		/*keeped ok with codec keeper!*/
+		return 1;
+	}
 #ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 	if (codec_mm_video_tvp_enabled()) {
 		pr_info("keep exit is TVP\n");
@@ -1020,7 +1025,7 @@ static unsigned int vf_keep_current_locked(
 	}
 	keep_video_on = 1;
 	pr_info("%s: keep video on with keep\n", __func__);
-	return 0;
+	return 1;
 
 }
 unsigned int vf_keep_current(

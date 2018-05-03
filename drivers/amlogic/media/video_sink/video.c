@@ -343,6 +343,7 @@ static u32 hdmiin_frame_check_cnt;
 		CLEAR_VCBUS_REG_MASK(VPP_MISC + cur_dev->vpp_off, \
 		VPP_VD1_PREBLEND | VPP_VD2_PREBLEND|\
 		VPP_VD2_POSTBLEND | VPP_VD1_POSTBLEND); \
+		WRITE_VCBUS_REG(AFBC_ENABLE, 0);\
 		VIDEO_LAYER_OFF(); \
 		VD1_MEM_POWER_OFF(); \
 		video_prot.video_started = 0; \
@@ -357,6 +358,7 @@ static u32 hdmiin_frame_check_cnt;
 		CLEAR_VCBUS_REG_MASK(VPP_MISC + cur_dev->vpp_off, \
 		VPP_VD1_PREBLEND | VPP_VD2_PREBLEND|\
 		VPP_VD2_POSTBLEND | VPP_VD1_POSTBLEND); \
+		WRITE_VCBUS_REG(AFBC_ENABLE, 0);\
 		if (debug_flag & DEBUG_FLAG_BLACKOUT) {  \
 			pr_info("DisableVideoLayer_NoDelay()\n"); \
 		} \
@@ -370,6 +372,7 @@ static u32 hdmiin_frame_check_cnt;
 		CLEAR_VCBUS_REG_MASK(VPP_MISC + cur_dev->vpp_off, \
 		VPP_VD2_PREBLEND | VPP_PREBLEND_EN | \
 		(0x1ff << VPP_VD2_ALPHA_BIT)); \
+		WRITE_VCBUS_REG(VD2_AFBC_ENABLE, 0); \
 		VD2_MEM_POWER_OFF(); \
 	} while (0)
 #else
@@ -385,6 +388,7 @@ static u32 hdmiin_frame_check_cnt;
 #define DisableVideoLayer_PREBELEND() \
 	do { CLEAR_VCBUS_REG_MASK(VPP_MISC + cur_dev->vpp_off, \
 		VPP_VD1_PREBLEND | VPP_VD2_PREBLEND); \
+		WRITE_VCBUS_REG(AFBC_ENABLE, 0);\
 		if (debug_flag & DEBUG_FLAG_BLACKOUT) {  \
 			pr_info("DisableVideoLayer_PREBELEND()\n"); \
 		} \
@@ -3277,8 +3281,8 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 					VD2_IF0_GEN_REG3 + cur_dev->viu_off,
 					(bit_mode&0x3), 8, 2);
 			}
-
-			VSYNC_WR_MPEG_REG(VD2_AFBC_ENABLE, 0);
+			if (!(VSYNC_RD_MPEG_REG(VIU_MISC_CTRL1) & 0x1))
+				VSYNC_WR_MPEG_REG(VD2_AFBC_ENABLE, 0);
 			if (type & VIDTYPE_VIU_NV21)
 				VSYNC_WR_MPEG_REG_BITS(
 					VD2_IF0_GEN_REG2 +
@@ -5979,7 +5983,7 @@ static void video_vf_unreg_provider(void)
 {
 	ulong flags;
 	struct vframe_s *el_vf = NULL;
-
+	int keeped = 0;
 	new_frame_count = 0;
 	first_frame_toggled = 0;
 
@@ -6033,7 +6037,7 @@ static void video_vf_unreg_provider(void)
 	if (cur_dispbuf) {
 		/* TODO: mod gate */
 		/* switch_mod_gate_by_name("ge2d", 1); */
-		vf_keep_current(cur_dispbuf, el_vf);
+		keeped = vf_keep_current(cur_dispbuf, el_vf);
 		/* TODO: mod gate */
 		/* switch_mod_gate_by_name("ge2d", 0); */
 	}
@@ -6042,11 +6046,17 @@ static void video_vf_unreg_provider(void)
 #else
 	/* if (!trickmode_fffb) */
 	if (cur_dispbuf)
-		vf_keep_current(cur_dispbuf, el_vf);
+		keeped = vf_keep_current(cur_dispbuf, el_vf);
 	if (hdmi_in_onvideo == 0)
 		tsync_avevent(VIDEO_STOP, 0);
 #endif
+	if (keeped < 0) {/*keep failed.*/
+		pr_info("video keep failed, disable video now!\n");
+		safe_disble_videolayer();
+		try_free_keep_video(1);
+	}
 	atomic_set(&video_unreg_flag, 0);
+	pr_info("VD1 AFBC 0x%x.\n", READ_VCBUS_REG(AFBC_ENABLE));
 	enable_video_discontinue_report = 1;
 	show_first_picture = false;
 	show_first_frame_nosync = false;
