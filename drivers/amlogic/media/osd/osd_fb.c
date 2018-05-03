@@ -1059,8 +1059,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		break;
 	case FBIOPUT_OSD_DO_HWC:
 		do_hwc_cmd.out_fen_fd =
-			osd_sync_do_hwc(do_hwc_cmd.background_w,
-				do_hwc_cmd.background_h);
+			osd_sync_do_hwc(&do_hwc_cmd);
 		ret = copy_to_user(argp,
 			&do_hwc_cmd,
 			sizeof(struct do_hwc_cmd_s));
@@ -2650,82 +2649,55 @@ static ssize_t show_osd_background_size(struct device *device,
 				struct device_attribute *attr,
 				char *buf)
 {
-	u32 osd_background_size_w, osd_background_size_h;
+	struct display_flip_info_s disp_info;
 
-	osd_get_background_size(&osd_background_size_w,
-		&osd_background_size_h);
-	return snprintf(buf, 40, "%d %d\n",
-		osd_background_size_w,
-		osd_background_size_h);
+	osd_get_background_size(&disp_info);
+	return snprintf(buf, 80, "%d %d %d %d %d %d %d %d\n",
+		disp_info.background_w,
+		disp_info.background_h,
+		disp_info.fullscreen_w,
+		disp_info.fullscreen_h,
+		disp_info.position_x,
+		disp_info.position_y,
+		disp_info.position_w,
+		disp_info.position_h);
 }
 
 static ssize_t store_osd_background_size(struct device *device,
 			   struct device_attribute *attr,
 			   const char *buf, size_t count)
 {
-	int parsed[2];
+	int parsed[8];
 
-	if (likely(parse_para(buf, 2, parsed) == 2))
+	if (likely(parse_para(buf, 8, parsed) == 8)) {
 		osd_set_background_size(
-				parsed[0], parsed[1]);
-	else
+				(struct display_flip_info_s *)&parsed);
+	} else
 		osd_log_err("set background size error\n");
 
 	return count;
 }
-
-static ssize_t show_osd_premult(
-	struct device *device, struct device_attribute *attr,
-	char *buf)
-{
-	struct fb_info *fb_info = dev_get_drvdata(device);
-	u32 premult_en;
-
-	premult_en = osd_get_premult(fb_info->node);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", premult_en);
-}
-
-static ssize_t store_osd_premult(
-	struct device *device, struct device_attribute *attr,
-	const char *buf, size_t count)
-{
-	u32 res = 0;
-	int ret = 0;
-	struct fb_info *fb_info = dev_get_drvdata(device);
-
-	ret = kstrtoint(buf, 0, &res);
-	osd_log_info("premult_en: %d\n", res);
-
-	osd_set_premult(fb_info->node, res);
-
-	return count;
-}
-
-static ssize_t show_osd_afbc_debug(struct device *device,
+static ssize_t show_osd_hdr_mode(struct device *device,
 				struct device_attribute *attr,
 				char *buf)
 {
-	u32 debug_val[4];
+	u32 hdr_used;
 
-	osd_get_afbc_debug(&debug_val[0], &debug_val[1],
-		&debug_val[2], &debug_val[3]);
-	return snprintf(buf, 40, "%d %d %d %d\n",
-		debug_val[0], debug_val[1],
-		debug_val[2], debug_val[3]);
+	osd_get_hdr_used(&hdr_used);
+	return snprintf(buf, 40, "%d\n", hdr_used);
 }
 
-static ssize_t store_osd_afbc_debug(struct device *device,
+static ssize_t store_osd_hdr_mode(struct device *device,
 			   struct device_attribute *attr,
 			   const char *buf, size_t count)
 {
-	int parsed[4];
+	int res = 0;
+	int ret = 0;
 
-	if (likely(parse_para(buf, 4, parsed) == 4))
-		osd_set_afbc_debug(
-				parsed[0], parsed[1], parsed[2], parsed[3]);
-	else
-		osd_log_err("set afbc debug size error\n");
+	ret = kstrtoint(buf, 0, &res);
+	if (ret < 0)
+		return -EINVAL;
+	osd_set_hdr_used(res);
 
 	return count;
 }
@@ -3080,10 +3052,8 @@ static struct device_attribute osd_attrs[] = {
 			show_osd_display_debug, store_osd_display_debug),
 	__ATTR(osd_background_size, 0644,
 			show_osd_background_size, store_osd_background_size),
-	__ATTR(osd_premult, 0644,
-			show_osd_premult, store_osd_premult),
-	__ATTR(osd_afbc_debug, 0644,
-			show_osd_afbc_debug, store_osd_afbc_debug),
+	__ATTR(osd_hdr_mode, 0644,
+			show_osd_hdr_mode, store_osd_hdr_mode),
 	__ATTR(osd_afbc_format, 0644,
 			show_osd_afbc_format, store_osd_afbc_format),
 	__ATTR(osd_hwc_enable, 0644,
@@ -3139,8 +3109,6 @@ static struct device_attribute osd_attrs_viu2[] = {
 			show_osd_display_debug, store_osd_display_debug),
 	__ATTR(osd_background_size, 0644,
 			show_osd_background_size, store_osd_background_size),
-	__ATTR(osd_afbc_debug, 0644,
-			show_osd_afbc_debug, store_osd_afbc_debug),
 	__ATTR(osd_afbc_format, 0644,
 			show_osd_afbc_format, store_osd_afbc_format),
 	__ATTR(osd_rotate, 0644,
@@ -3516,7 +3484,7 @@ static int osd_probe(struct platform_device *pdev)
 	} else
 		osd_log_info("viu vsync irq: %d\n", int_viu_vsync);
 	if (osd_meson_dev.has_viu2) {
-	int_viu2_vsync = platform_get_irq_byname(pdev, "viu2-vsync");
+		int_viu2_vsync = platform_get_irq_byname(pdev, "viu2-vsync");
 		if (int_viu2_vsync  == -ENXIO) {
 			osd_log_err("cannot get viu2 irq resource\n");
 			goto failed1;

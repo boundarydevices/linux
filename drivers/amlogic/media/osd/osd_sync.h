@@ -97,9 +97,18 @@ struct fb_sync_request_s {
 	};
 };
 
-struct do_hwc_cmd_s {
-	int out_fen_fd;
+struct display_flip_info_s {
 	unsigned int  background_w;
 	unsigned int  background_h;
+	unsigned int  fullscreen_w;
+	unsigned int  fullscreen_h;
+	unsigned int  position_x;
+	unsigned int  position_y;
+	unsigned int  position_w;
+	unsigned int  position_h;
+};
+struct do_hwc_cmd_s {
+	int out_fen_fd;
+	struct display_flip_info_s disp_info;
 };
 #endif

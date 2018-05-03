@@ -50,6 +50,8 @@ enum color_index_e {
 	COLOR_INDEX_32_ARGB = 32,
 
 	COLOR_INDEX_YUV_422 = 33,
+
+	COLOR_INDEX_RGBA_1010102 = 34,
 };
 
 #define VPP_OSD2_PREBLEND           (1 << 17)
@@ -149,6 +151,7 @@ enum color_index_e {
 #define OSD_VIDEO_CONFLICT      (1 << 1)
 #define OSD_FREESCALE           (1 << 2)
 #define OSD_UBOOT_LOGO          (1 << 3)
+#define OSD_ZORDER              (1 << 4)
 #define OSD_LAYER_ENABLE        (1 << 31)
 
 #define BYPASS_DIN        (1 << 7)
@@ -328,15 +331,18 @@ enum osd_blend_mode_e {
 };
 
 enum afbc_pix_format_e {
-	R8 = 0,
-	YUV422_8B,
-	RGB565,
+	RGB565 = 0,
 	RGBA5551,
-	RGBA4444,
-	RGBA8888,
-	RGB888 = 7,
-	YUV422_10B,
 	RGBA1010102,
+	YUV420_10B,
+	RGB888,
+	RGBA8888,
+	RGBA4444,
+	R8,
+	RG88,
+	YUV420_8B,
+	YUV422_8B = 11,
+	YUV422_10B = 14,
 };
 
 enum viu2_rotate_format {
@@ -440,14 +446,14 @@ struct layer_fence_map_s {
 	u32 zorder;
 	u32 blend_mode;
 	u32 plane_alpha;
+	struct file *buf_file;
 	struct fence *in_fence;
 };
 
 struct osd_layers_fence_map_s {
 	struct list_head list;
 	int out_fd;
-	u32 background_w;
-	u32 background_h;
+	struct display_flip_info_s disp_info;
 	struct layer_fence_map_s layer_map[HW_OSD_COUNT];
 };
 
@@ -572,15 +578,21 @@ struct hw_osd_blending_s {
 	u32 din_reoder_sel;
 	u32 layer_cnt;
 	bool change_order;
-	bool b_continuous;
 	bool b_exchange_din;
 	bool b_exchange_blend_in;
 	bool osd1_freescale_used;
 	bool osd1_freescale_disable;
+	bool bscaler_down[HW_OSD_COUNT];
 	u32 background_w;
 	u32 background_h;
 	u32 vinfo_width;
 	u32 vinfo_height;
+	u32 screen1_ratio_w;
+	u32 screen1_ratio_h;
+	u32 screen2_ratio_w;
+	u32 screen2_ratio_h;
+	u32 pic_w_ratio;
+	u32 pic_h_ratio;
 	struct layer_blend_reg_s blend_reg;
 	struct layer_blend_s layer_blend;
 };
@@ -670,9 +682,7 @@ struct hw_para_s {
 	u32 scan_mode[HW_OSD_COUNT];
 	u32 order[HW_OSD_COUNT];
 	u32 premult_en[HW_OSD_COUNT];
-	u32 background_w;
-	u32 background_h;
-
+	struct display_flip_info_s disp_info;
 	struct osd_3d_mode_s mode_3d[HW_OSD_COUNT];
 	u32 updated[HW_OSD_COUNT];
 	/* u32 block_windows[HW_OSD_COUNT][HW_OSD_BLOCK_REG_COUNT]; */
@@ -707,6 +717,7 @@ struct hw_para_s {
 	u32 osd_clear[HW_OSD_COUNT];
 	u32 vinfo_width;
 	u32 vinfo_height;
+	u32 b_interlaced;
 	u32 fb_drvier_probe;
 	u32 afbc_force_reset;
 	u32 afbc_regs_backup;
@@ -718,6 +729,9 @@ struct hw_para_s {
 	u32 hw_rdma_en;
 	u32 blend_bypass;
 	u32 hdr_used;
+	u32 workaround_hdr;
+	u32 workaround_not_hdr;
+	u32 blend_reg_reset;
 	u32 basic_urgent;
 	u32 two_ports;
 	u32 afbc_err_cnt;

@@ -124,7 +124,7 @@ extern int osd_sync_request(u32 index, u32 yres,
 extern int osd_sync_request_render(u32 index, u32 yres,
 	struct sync_req_render_s *request,
 	u32 phys_addr);
-extern int osd_sync_do_hwc(u32 width, u32 height);
+extern int osd_sync_do_hwc(struct do_hwc_cmd_s *hwc_cmd);
 extern s64  osd_wait_vsync_event(void);
 extern void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart,
 			  u32 osd_w, u32 osd_h);
@@ -174,12 +174,10 @@ void set_logo_loaded(void);
 int set_osd_logo_freescaler(void);
 void osd_get_display_debug(u32 *osd_display_debug_enable);
 void osd_set_display_debug(u32 osd_display_debug_enable);
-void osd_get_background_size(u32 *background_w, u32 *background_h);
-void osd_set_background_size(u32 background_w, u32 background_h);
-u32 osd_get_premult(u32 index);
-void osd_set_premult(u32 index, u32 premult);
-void osd_get_afbc_debug(u32 *val1, u32 *val2, u32 *val3, u32 *val4);
-void osd_set_afbc_debug(u32 val1, u32 val2, u32 val3, u32 val4);
+void osd_get_background_size(struct display_flip_info_s *disp_info);
+void osd_set_background_size(struct display_flip_info_s *disp_info);
+void osd_get_hdr_used(u32 *val);
+void osd_set_hdr_used(u32 val);
 void osd_get_afbc_format(u32 index, u32 *format, u32 *inter_format);
 void osd_set_afbc_format(u32 index, u32 format, u32 inter_format);
 void osd_get_hwc_enable(u32 *hwc_enable);
