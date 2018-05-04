@@ -2592,16 +2592,14 @@ static int imx_uart_probe(struct platform_device *pdev)
 	ucr2 &= ~UCR2_ATEN;
 	imx_uart_writel(sport, ucr2, UCR2);
 
-	if (!imx_uart_is_imx1(sport) && sport->dte_mode) {
+	if (!imx_uart_is_imx1(sport)) {
 		/*
 		 * The DCEDTE bit changes the direction of DSR, DCD, DTR and RI
 		 * and influences if UCR3_RI and UCR3_DCD changes the level of RI
 		 * and DCD (when they are outputs) or enables the respective
 		 * irqs. So set this bit early, i.e. before requesting irqs.
 		 */
-		u32 ufcr = imx_uart_readl(sport, UFCR);
-		if (!(ufcr & UFCR_DCEDTE))
-			imx_uart_writel(sport, ufcr | UFCR_DCEDTE, UFCR);
+		imx_uart_writel(sport, sport->dte_mode ? UFCR_DCEDTE : 0, UFCR);
 
 		/*
 		 * Disable UCR3_RI and UCR3_DCD irqs. They are also not
