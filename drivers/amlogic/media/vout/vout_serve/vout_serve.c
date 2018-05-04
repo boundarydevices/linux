@@ -90,27 +90,50 @@ static struct vout_cdev_s *vout_cdev;
  * null display support
  * **********************************************************
  */
-static struct vinfo_s nulldisp_vinfo = {
-	.name              = "null",
-	.mode              = VMODE_NULL,
-	.width             = 1920,
-	.height            = 1080,
-	.field_height      = 1080,
-	.aspect_ratio_num  = 16,
-	.aspect_ratio_den  = 9,
-	.sync_duration_num = 60,
-	.sync_duration_den = 1,
-	.video_clk         = 148500000,
-	.htotal            = 2200,
-	.vtotal            = 1125,
-	.viu_color_fmt     = COLOR_FMT_RGB444,
-	.viu_mux           = VIU_MUX_MAX,
-	.vout_device       = NULL,
+static int nulldisp_index = VMODE_NULL_DISP_MAX;
+static struct vinfo_s nulldisp_vinfo[] = {
+	{
+		.name              = "null",
+		.mode              = VMODE_NULL,
+		.width             = 1920,
+		.height            = 1080,
+		.field_height      = 1080,
+		.aspect_ratio_num  = 16,
+		.aspect_ratio_den  = 9,
+		.sync_duration_num = 60,
+		.sync_duration_den = 1,
+		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
+		.viu_color_fmt     = COLOR_FMT_RGB444,
+		.viu_mux           = VIU_MUX_MAX,
+		.vout_device       = NULL,
+	},
+	{
+		.name              = "invalid",
+		.mode              = VMODE_INVALID,
+		.width             = 1920,
+		.height            = 1080,
+		.field_height      = 1080,
+		.aspect_ratio_num  = 16,
+		.aspect_ratio_den  = 9,
+		.sync_duration_num = 60,
+		.sync_duration_den = 1,
+		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
+		.viu_color_fmt     = COLOR_FMT_RGB444,
+		.viu_mux           = VIU_MUX_MAX,
+		.vout_device       = NULL,
+	},
 };
 
 static struct vinfo_s *nulldisp_get_current_info(void)
 {
-	return &nulldisp_vinfo;
+	if (nulldisp_index >= ARRAY_SIZE(nulldisp_vinfo))
+		return NULL;
+
+	return &nulldisp_vinfo[nulldisp_index];
 }
 
 static int nulldisp_set_current_vmode(enum vmode_e mode)
@@ -120,18 +143,28 @@ static int nulldisp_set_current_vmode(enum vmode_e mode)
 
 static enum vmode_e nulldisp_validate_vmode(char *name)
 {
-	if (strncmp(nulldisp_vinfo.name, name,
-		strlen(nulldisp_vinfo.name)) == 0) {
-		return nulldisp_vinfo.mode;
+	enum vmode_e vmode = VMODE_MAX;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(nulldisp_vinfo); i++) {
+		if (strcmp(nulldisp_vinfo[i].name, name) == 0) {
+			vmode = nulldisp_vinfo[i].mode;
+			nulldisp_index = i;
+			break;
+		}
 	}
 
-	return VMODE_MAX;
+	return vmode;
 }
 
 static int nulldisp_vmode_is_supported(enum vmode_e mode)
 {
-	if (nulldisp_vinfo.mode == mode)
-		return true;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(nulldisp_vinfo); i++) {
+		if (nulldisp_vinfo[i].mode == (mode & VMODE_MODE_BIT_MASK))
+			return true;
+	}
 	return false;
 }
 
@@ -195,13 +228,13 @@ int set_vout_mode(char *name)
 	VOUTPR("vmode set to %s\n", name);
 
 	if (strcmp(name, local_name) == 0) {
-		VOUTPR("don't set the same mode as current\n");
+		VOUTPR("don't set the same mode as current, exit\n");
 		return -1;
 	}
 
 	mode = validate_vmode(name);
 	if (mode == VMODE_MAX) {
-		VOUTERR("no matched vout mode\n");
+		VOUTERR("no matched vout mode, exit\n");
 		return -1;
 	}
 	memset(local_name, 0, sizeof(local_name));
@@ -227,13 +260,18 @@ int set_vout_mode(char *name)
 static int set_vout_init_mode(void)
 {
 	enum vmode_e vmode;
+	char init_mode_str[VMODE_NAME_LEN_MAX];
 	int ret = 0;
 
+	strncpy(init_mode_str, vout_mode_uboot, VMODE_NAME_LEN_MAX);
 	vout_init_vmode = validate_vmode(vout_mode_uboot);
 	if (vout_init_vmode >= VMODE_MAX) {
-		VOUTERR("no matched vout_init mode %s\n",
+		VOUTERR("no matched vout_init mode %s, force to invalid\n",
 			vout_mode_uboot);
-		return -1;
+		nulldisp_index = 1;
+		vout_init_vmode = nulldisp_vinfo[nulldisp_index].mode;
+		strncpy(init_mode_str, nulldisp_vinfo[nulldisp_index].name,
+			VMODE_NAME_LEN_MAX);
 	}
 	last_vmode = vout_init_vmode;
 
@@ -243,12 +281,12 @@ static int set_vout_init_mode(void)
 		vmode = vout_init_vmode;
 
 	memset(local_name, 0, sizeof(local_name));
-	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", vout_mode_uboot);
+	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", init_mode_str);
 	ret = set_current_vmode(vmode);
 	if (ret)
-		VOUTERR("init mode %s set error\n", vout_mode_uboot);
+		VOUTERR("init mode %s set error\n", init_mode_str);
 	else {
-		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", vout_mode_uboot);
+		snprintf(vout_mode, VMODE_NAME_LEN_MAX, "%s", init_mode_str);
 		VOUTPR("init mode %s set ok\n", vout_mode);
 	}
 
@@ -327,7 +365,7 @@ static ssize_t vout_mode_show(struct class *class,
 static ssize_t vout_mode_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
-	char mode[64];
+	char mode[VMODE_NAME_LEN_MAX];
 
 	mutex_lock(&vout_serve_mutex);
 	tvout_monitor_flag = 0;
@@ -753,7 +791,7 @@ static void aml_vout_late_resume(struct early_suspend *h)
 static int refresh_tvout_mode(void)
 {
 	enum vmode_e cur_vmode = VMODE_MAX;
-	char *cur_mode_str;
+	char cur_mode_str[VMODE_NAME_LEN_MAX];
 	int hpd_state = 0;
 
 	if (tvout_monitor_flag == 0)
@@ -762,23 +800,29 @@ static int refresh_tvout_mode(void)
 	hpd_state = vout_get_hpd_state();
 	if (hpd_state) {
 		cur_vmode = validate_vmode(hdmimode);
-		cur_mode_str = hdmimode;
+		strncpy(cur_mode_str, hdmimode, VMODE_NAME_LEN_MAX);
 	} else {
 		cur_vmode = validate_vmode(cvbsmode);
-		cur_mode_str = cvbsmode;
+		strncpy(cur_mode_str, cvbsmode, VMODE_NAME_LEN_MAX);
 	}
 	if (cur_vmode >= VMODE_MAX) {
-		VOUTERR("%s: no matched cur_mode: %s\n",
+		VOUTERR("%s: no matched cur_mode: %s, force to invalid\n",
 			__func__, cur_mode_str);
-		return -1;
+		nulldisp_index = 1;
+		cur_vmode = nulldisp_vinfo[nulldisp_index].mode;
+		strncpy(cur_mode_str, nulldisp_vinfo[nulldisp_index].name,
+			VMODE_NAME_LEN_MAX);
 	}
 
 	/* not box platform */
-	if ((cur_vmode != VMODE_HDMI) && (cur_vmode != VMODE_CVBS))
+	if ((cur_vmode != VMODE_HDMI) &&
+		(cur_vmode != VMODE_CVBS) &&
+		(cur_vmode != VMODE_NULL) &&
+		(cur_vmode != VMODE_INVALID))
 		return -1;
 
 	if (cur_vmode != last_vmode) {
-		VOUTPR("%s: mode chang\n", __func__);
+		VOUTPR("%s: mode chang to %s\n", __func__, cur_mode_str);
 		set_vout_mode(cur_mode_str);
 		last_vmode = cur_vmode;
 	}
@@ -806,7 +850,10 @@ static void aml_tvout_mode_work(struct work_struct *work)
 
 static void aml_tvout_mode_monitor(void)
 {
-	if ((vout_init_vmode != VMODE_HDMI) && (vout_init_vmode != VMODE_CVBS))
+	if ((vout_init_vmode != VMODE_HDMI) &&
+		(vout_init_vmode != VMODE_CVBS) &&
+		(vout_init_vmode != VMODE_NULL) &&
+		(vout_init_vmode != VMODE_INVALID))
 		return;
 
 	VOUTPR("%s\n", __func__);
@@ -1036,10 +1083,8 @@ __setup("hdmimode=", get_hdmi_mode);
 
 static int __init get_cvbs_mode(char *str)
 {
-	if ((strncmp("480", str, 3) == 0) || (strncmp("576", str, 3) == 0))
-		snprintf(cvbsmode, VMODE_NAME_LEN_MAX, "%s", str);
-	else if (strncmp("nocvbs", str, 6) == 0)
-		snprintf(cvbsmode, VMODE_NAME_LEN_MAX, "invalid");
+	snprintf(cvbsmode, VMODE_NAME_LEN_MAX, "%s", str);
+
 	VOUTPR("get cvbsmode: %s\n", cvbsmode);
 	return 0;
 }

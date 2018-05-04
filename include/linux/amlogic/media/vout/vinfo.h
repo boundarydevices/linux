@@ -23,12 +23,14 @@
 /* the MSB is represent vmode set by vmode_init */
 #define	VMODE_INIT_BIT_MASK	0x8000
 #define	VMODE_MODE_BIT_MASK	0xff
+#define VMODE_NULL_DISP_MAX	2
 
 enum vmode_e {
 	VMODE_HDMI = 0,
 	VMODE_CVBS,
 	VMODE_LCD,
 	VMODE_NULL, /* null mode is used as temporary witch mode state */
+	VMODE_INVALID,
 	VMODE_MAX,
 	VMODE_INIT_NULL,
 	VMODE_MASK = 0xFF,

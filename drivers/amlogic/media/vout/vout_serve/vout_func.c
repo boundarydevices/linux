@@ -50,7 +50,7 @@ static struct vout_module_s vout2_module = {
 
 static struct vinfo_s invalid_vinfo = {
 	.name              = "invalid",
-	.mode              = VMODE_INIT_NULL,
+	.mode              = VMODE_INVALID,
 	.width             = 1920,
 	.height            = 1080,
 	.field_height      = 1080,
@@ -203,7 +203,7 @@ void vout_func_update_viu(int index)
 
 	if (p_server->op.get_vinfo)
 		vinfo = p_server->op.get_vinfo();
-	else
+	if (vinfo == NULL)
 		vinfo = get_invalid_vinfo(index);
 
 	switch (index) {

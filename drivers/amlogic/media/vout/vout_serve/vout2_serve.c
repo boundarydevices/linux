@@ -116,7 +116,7 @@ static enum vmode_e nulldisp_validate_vmode(char *name)
 
 static int nulldisp_vmode_is_supported(enum vmode_e mode)
 {
-	if (nulldisp_vinfo.mode == mode)
+	if (nulldisp_vinfo.mode == (mode & VMODE_MODE_BIT_MASK))
 		return true;
 	return false;
 }
