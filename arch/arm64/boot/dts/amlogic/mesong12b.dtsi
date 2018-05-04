@@ -1131,14 +1131,14 @@
 	canvas: canvas{
 		compatible = "amlogic, meson, canvas";
 		dev_name = "amlogic-canvas";
-		status = "disabled";
+		status = "okay";
 		reg = <0x0 0xff638000 0x0 0x2000>;
 	};
 
 	ge2d {
 		compatible = "amlogic, ge2d-g12a";
 		dev_name = "ge2d";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 146 1>;
 		interrupt-names = "ge2d";
 		clocks = <&clkc CLKID_VAPB_MUX>,
@@ -1160,7 +1160,7 @@
 
 	codec_io: codec_io {
 		compatible = "amlogic, codec_io";
-		status = "disabled";
+		status = "okay";
 		#address-cells=<2>;
 		#size-cells=<2>;
 		ranges;
@@ -1251,11 +1251,29 @@
 	rdma{
 		compatible = "amlogic, meson, rdma";
 		dev_name = "amlogic-rdma";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 89 1>;
 		interrupt-names = "rdma";
 	};
 
+	meson_fb: meson-fb {
+		compatible = "amlogic, meson-g12b";
+		memory-region = <&logo_reserved>;
+		dev_name = "meson-fb";
+		status = "disable";
+		interrupts = <0 3 1
+			0 56 1
+			0 89 1>;
+		interrupt-names = "viu-vsync", "viu2-vsync", "rdma";
+		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x01851000*/
+		display_mode_default = "1080p60hz";
+		scale_mode = <1>;
+		/** 0:VPU free scale 1:OSD free scale 2:OSD super scale */
+		display_size_default = <1920 1080 1920 2160 32>;
+		/*1920*1080*4*3 = 0x17BB000*/
+		clocks = <&clkc CLKID_VPU_CLKC_MUX>;
+		clock-names = "vpu_clkc";
+	};
 	irblaster: meson-irblaster {
 		compatible = "amlogic, meson_irblaster";
 		dev_name = "meson-irblaster";

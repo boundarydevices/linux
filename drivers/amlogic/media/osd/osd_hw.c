@@ -1438,6 +1438,7 @@ static u32 osd_get_hw_reset_flag(void)
 		break;
 #endif
 	case __MESON_CPU_MAJOR_ID_G12A:
+	case __MESON_CPU_MAJOR_ID_G12B:
 		{
 		int i, afbc_enable = 0;
 
@@ -6967,7 +6968,8 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	else if ((osd_meson->cpu_id >= __MESON_CPU_MAJOR_ID_GXL)
 		&& (osd_meson->cpu_id < __MESON_CPU_MAJOR_ID_TXL))
 		backup_regs_init(HW_RESET_OSD1_REGS);
-	else if (osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_G12A)
+	else if ((osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_G12A)
+		|| (osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_G12B))
 		backup_regs_init(HW_RESET_MALI_AFBCD_REGS);
 	else
 		backup_regs_init(HW_RESET_NONE);

@@ -1401,7 +1401,8 @@ static int malloc_osd_memory(struct fb_info *info)
 	/* clear osd buffer if not logo layer */
 	if (((logo_index < 0) || (logo_index != fb_index)) ||
 		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_AXG) ||
-		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12A)) {
+		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12A) ||
+		((osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12B))) {
 		osd_log_info("---------------clear fb%d memory %p\n",
 			fb_index, fbdev->fb_mem_vaddr);
 		set_logo_loaded();
@@ -3375,6 +3376,21 @@ static struct osd_device_data_s osd_g12a = {
 	.has_viu2 = 1,
 };
 
+static struct osd_device_data_s osd_g12b = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_G12B,
+	.osd_ver = OSD_HIGH_ONE,
+	.afbc_type = MALI_AFBC,
+	.osd_count = 4,
+	.has_deband = 1,
+	.has_lut = 1,
+	.has_rdma = 1,
+	.has_dolby_vision = 1,
+	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
+	.vpp_fifo_len = 0xfff,/* 2048 */
+	.dummy_data = 0x00808000,
+	.has_viu2 = 1,
+};
+
 static const struct of_device_id meson_fb_dt_match[] = {
 	{
 		.compatible = "amlogic, meson-gxbb",
@@ -3412,6 +3428,10 @@ static const struct of_device_id meson_fb_dt_match[] = {
 	{
 		.compatible = "amlogic, meson-g12a",
 		.data = &osd_g12a,
+	},
+	{
+		.compatible = "amlogic, meson-g12b",
+		.data = &osd_g12b,
 	},
 	{},
 };

@@ -844,7 +844,8 @@ void recovery_regs_init(void)
 		return;
 	memset(gRecovery, 0, sizeof(gRecovery));
 
-	if (cpu_id == __MESON_CPU_MAJOR_ID_G12A)
+	if ((cpu_id == __MESON_CPU_MAJOR_ID_G12A) ||
+		(cpu_id == __MESON_CPU_MAJOR_ID_G12B))
 		recovery_regs_init_g12a();
 	else
 		recovery_regs_init_old();
@@ -1539,7 +1540,8 @@ int update_recovery_item(u32 addr, u32 value)
 	if (!recovery_enable)
 		return ret;
 
-	if (cpu_id == __MESON_CPU_MAJOR_ID_G12A)
+	if ((cpu_id == __MESON_CPU_MAJOR_ID_G12A) ||
+		(cpu_id == __MESON_CPU_MAJOR_ID_G12B))
 		ret = update_recovery_item_g12a(addr, value);
 	else
 		ret = update_recovery_item_old(addr, value);
@@ -1555,7 +1557,8 @@ s32 get_recovery_item(u32 addr, u32 *value, u32 *mask)
 	if (!recovery_enable)
 		return ret;
 
-	if (cpu_id == __MESON_CPU_MAJOR_ID_G12A)
+	if ((cpu_id == __MESON_CPU_MAJOR_ID_G12A) ||
+		(cpu_id == __MESON_CPU_MAJOR_ID_G12B))
 		ret = get_recovery_item_g12a(addr, value, mask);
 	else
 		ret = get_recovery_item_old(addr, value, mask);

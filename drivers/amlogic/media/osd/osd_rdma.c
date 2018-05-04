@@ -1227,8 +1227,10 @@ int osd_rdma_reset_and_flush(u32 reset_bit)
 	}
 
 	if ((reset_bit & HW_RESET_MALI_AFBCD_REGS)
-		&& (osd_hw.osd_meson_dev.cpu_id
-		== __MESON_CPU_MAJOR_ID_G12A))
+		&& ((osd_hw.osd_meson_dev.cpu_id
+		== __MESON_CPU_MAJOR_ID_G12A) ||
+		(osd_hw.osd_meson_dev.cpu_id
+		== __MESON_CPU_MAJOR_ID_G12B)))
 		wrtie_reg_internal(VPU_MAFBC_COMMAND, 1);
 
 	if (item_count < 500)
