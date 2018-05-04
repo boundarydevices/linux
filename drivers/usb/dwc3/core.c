@@ -1278,6 +1278,17 @@ err0:
 	return ret;
 }
 
+#ifdef CONFIG_AMLOGIC_USB
+void dwc3_shutdown(struct platform_device *pdev)
+{
+	struct dwc3 *dwc = platform_get_drvdata(pdev);
+
+	dev_dbg(dwc->dev, "%s\n", __func__);
+	usb_phy_shutdown(dwc->usb2_phy);
+	usb_phy_shutdown(dwc->usb3_phy);
+}
+#endif
+
 static int dwc3_remove(struct platform_device *pdev)
 {
 	struct dwc3	*dwc = platform_get_drvdata(pdev);
@@ -1529,6 +1540,9 @@ MODULE_DEVICE_TABLE(acpi, dwc3_acpi_match);
 static struct platform_driver dwc3_driver = {
 	.probe		= dwc3_probe,
 	.remove		= dwc3_remove,
+#ifdef CONFIG_AMLOGIC_USB
+	.shutdown	= dwc3_shutdown,
+#endif
 	.driver		= {
 		.name	= "dwc3",
 		.of_match_table	= of_match_ptr(of_dwc3_match),
