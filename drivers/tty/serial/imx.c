@@ -2427,16 +2427,15 @@ static int serial_imx_probe(struct platform_device *pdev)
 		 UCR1_TXMPTYEN | UCR1_RTSDEN);
 	writel_relaxed(reg, sport->port.membase + UCR1);
 
-	if (!is_imx1_uart(sport) && sport->dte_mode) {
+	if (!is_imx1_uart(sport)) {
 		/*
 		 * The DCEDTE bit changes the direction of DSR, DCD, DTR and RI
 		 * and influences if UCR3_RI and UCR3_DCD changes the level of RI
 		 * and DCD (when they are outputs) or enables the respective
 		 * irqs. So set this bit early, i.e. before requesting irqs.
 		 */
-		reg = readl(sport->port.membase + UFCR);
-		if (!(reg & UFCR_DCEDTE))
-			writel(reg | UFCR_DCEDTE, sport->port.membase + UFCR);
+		writel(sport->dte_mode ? UFCR_DCEDTE : 0,
+				sport->port.membase + UFCR);
 
 		/*
 		 * Disable UCR3_RI and UCR3_DCD irqs. They are also not
