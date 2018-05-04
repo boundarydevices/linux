@@ -265,7 +265,7 @@
 	vpu {
 		/*compatible = "amlogic, vpu-g12a";*/
 		dev_name = "vpu";
-		status = "disabled";
+		status = "okay";
 		clocks = <&clkc CLKID_VAPB_MUX>,
 			<&clkc CLKID_VPU_INTR>,
 			<&clkc CLKID_VPU_P0_COMP>,
@@ -1016,7 +1016,7 @@
 	amhdmitx: amhdmitx{
 		compatible = "amlogic, amhdmitx";
 		dev_name = "amhdmitx";
-		status = "disabled";
+		status = "okay";
 		vend-data = <&vend_data>;
 		pinctrl-names="default", "hdmitx_i2c";
 		pinctrl-0=<&hdmitx_hpd &hdmitx_ddc>;
@@ -1109,7 +1109,7 @@
 	vout {
 		compatible = "amlogic, vout";
 		dev_name = "vout";
-		status = "disabled";
+		status = "okay";
 	};
 
 	vout2 {
