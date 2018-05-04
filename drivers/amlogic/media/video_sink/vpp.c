@@ -669,7 +669,7 @@ vpp_process_speed_check(s32 width_in,
 
 	cur_proc_height = max_height;
 
-	if (vf->width > 720)
+	if (width_in > 720)
 		min_ratio_1000 =  min_skip_ratio;
 	else
 		min_ratio_1000 = 1750;
