@@ -194,6 +194,7 @@ int pre_port = 0xff;
 /*uint32_t irq_flag;*/
 /*for some device pll unlock too long,send a hpd reset*/
 bool hdmi5v_lost_flag;
+static int hdcp_none_wait_max = 100;
 
 #ifndef USE_NEW_FSM_METHODE
 int pll_unlock_check_times;
@@ -1153,7 +1154,13 @@ bool is_unnormal_format(uint8_t wait_cnt)
 		if (log_level & VIDEO_LOG)
 			rx_pr("hdcp14 unfinished\n");
 		}
-		#endif
+	#endif
+	if (rx.hdcp.hdcp_version == HDCP_VER_NONE) {
+		if (wait_cnt < hdcp_none_wait_max)
+			ret = true;
+		if (log_level & VIDEO_LOG)
+			rx_pr("hdcp none waiting\n");
+	}
 	return ret;
 }
 
@@ -1508,6 +1515,8 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(suspend_pddq_sel, index);
 	if (set_pr_var(tmpbuf, aud_ch_map, value, &index, ret))
 		return pr_var(aud_ch_map, index);
+	if (set_pr_var(tmpbuf, hdcp_none_wait_max, value, &index, ret))
+		return pr_var(hdcp_none_wait_max, index);
 	return 0;
 }
 
@@ -1606,6 +1615,7 @@ void rx_get_global_variable(const char *buf)
 	pr_var(atmos_edid_update_hpd_en, i++);
 	pr_var(suspend_pddq_sel, i++);
 	pr_var(aud_ch_map, i++);
+	pr_var(hdcp_none_wait_max, i++);
 }
 
 void skip_frame(void)
@@ -2089,7 +2099,10 @@ void rx_main_state_machine(void)
 		pre_port = rx.port;
 		rx_set_hpd(1);
 		set_scdc_cfg(0, 1);
-		rx.hdcp.hdcp_version = HDCP_VER_NONE;
+		/* some box init hdcp authentication too early
+		 * and it may make the hdcp_version error
+		 */
+		/* rx.hdcp.hdcp_version = HDCP_VER_NONE; */
 		rx.state = FSM_WAIT_CLK_STABLE;
 		rx_pr("HPD_HIGH->CLK_STABLE\n");
 		break;
