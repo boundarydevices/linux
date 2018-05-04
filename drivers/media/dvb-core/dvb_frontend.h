@@ -264,6 +264,10 @@ struct dvb_tuner_ops {
 	 */
 	int (*set_frequency)(struct dvb_frontend *fe, u32 frequency);
 	int (*set_bandwidth)(struct dvb_frontend *fe, u32 bandwidth);
+
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+	int (*get_strength)(struct dvb_frontend *fe, s16 *strength);
+#endif
 };
 
 /**

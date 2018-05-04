@@ -279,7 +279,6 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 		audio = V4L2_STD_SECAM_L;
 	} else {
 		/*V4L2_COLOR_STD_PAL*/
-		*video_fmt |= V4L2_COLOR_STD_PAL;
 		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK);
 		audio = aml_audiomode_autodet(fe);
 		pr_info("autodet audmode 0x%x\n", audio);
@@ -481,7 +480,7 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	 * and need tvafe identify signal type.
 	 */
 	if (p->std == 0) {
-		p->std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_DK;
+		p->std = V4L2_COLOR_STD_NTSC | V4L2_STD_NTSC_M;
 		auto_search_std = true;
 		pr_dbg("[%s] user analog.std is 0, so set it to PAL | DK.\n",
 				__func__);

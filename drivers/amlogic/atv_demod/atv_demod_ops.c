@@ -285,7 +285,7 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		last_frq = atvdemod_param->param.frequency;
 		last_std = atvdemod_param->param.std;
 #endif
-		if (atvdemod_param->param.std != amlatvdemod_devp->std) {
+		if (1/*atvdemod_param->param.std != amlatvdemod_devp->std*/) {
 			amlatvdemod_devp->std = atvdemod_param->param.std;
 			amlatvdemod_devp->if_freq = atvdemod_param->if_freq;
 			amlatvdemod_devp->if_inv = atvdemod_param->if_inv;
@@ -385,8 +385,8 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 	case AML_ATVDEMOD_INIT:
 		if (get_atvdemod_state() != ATVDEMOD_STATE_WORK) {
 			atv_demod_enter_mode();
-			if (fe->ops.tuner_ops.init)
-				fe->ops.tuner_ops.init(fe);
+			if (fe->ops.tuner_ops.set_config)
+				fe->ops.tuner_ops.set_config(fe, NULL);
 		}
 		break;
 
@@ -406,23 +406,6 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 		}
 		break;
 	}
-
-#if 0
-	if (*state == AML_ATVDEMOD_INIT && atvdemod_state != *state) {
-		atv_demod_enter_mode();
-		if (fe->ops.tuner_ops.init)
-			fe->ops.tuner_ops.init(fe);
-	} else if (*state == AML_ATVDEMOD_UNINIT && atvdemod_state != *state) {
-		atv_demod_leave_mode();
-		if (fe->ops.tuner_ops.release)
-			fe->ops.tuner_ops.release(fe);
-	} else if (*state == AML_ATVDEMOD_RESUME && atvdemod_state != *state) {
-		if (get_atvdemod_state() == ATVDEMOD_STATE_SLEEP)
-			atv_demod_enter_mode();
-		if (fe->ops.tuner_ops.resume)
-			fe->ops.tuner_ops.resume(fe);
-	}
-#endif
 
 	mutex_unlock(&atv_demod_list_mutex);
 
