@@ -5091,9 +5091,7 @@ SET_FILTER:
 #endif
 
 		if (platform_type == 1) {
-			if ((cur_frame_par->hscale_skip_count)
-				&& cur_dispbuf &&
-				(cur_dispbuf->type & VIDTYPE_VIU_FIELD)) {
+			if (cur_frame_par->hscale_skip_count) {
 				VSYNC_WR_MPEG_REG_BITS(VIU_VD1_FMT_CTRL +
 					cur_dev->viu_off, 1, 20, 1);
 				/* HFORMATTER_EN */

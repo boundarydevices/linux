@@ -849,7 +849,7 @@ vpp_set_filters2(u32 process_3d_type, u32 width_in,
 	u32 orig_aspect = 0;
 	u32 screen_aspect = 0;
 	bool skip_policy_check = true;
-	int cur_skip_count = 0;
+	u32 vskip_step;
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) {
 		if (likely(w_in >
@@ -891,8 +891,18 @@ vpp_set_filters2(u32 process_3d_type, u32 width_in,
 	if (vpp_flags & VPP_FLAG_INTERLACE_OUT)
 		height_shift++;
 
-RESTART:
+	if (vpp_flags & VPP_FLAG_INTERLACE_IN)
+		vskip_step = 2;
+#ifdef TV_3D_FUNCTION_OPEN
+	else if ((next_frame_par->vpp_3d_mode
+		== VPP_3D_MODE_LA)
+		&& (process_3d_type & MODE_3D_ENABLE))
+		vskip_step = 2;
+#endif
+	else
+		vskip_step = 1;
 
+RESTART:
 	aspect_factor = (vpp_flags & VPP_FLAG_AR_MASK) >> VPP_FLAG_AR_BITS;
 	wide_mode = vpp_flags & VPP_FLAG_WIDEMODE_MASK;
 
@@ -1348,14 +1358,6 @@ RESTART:
 
 		next_frame_par->VPP_hsc_endp = end;
 	}
-	next_frame_par->video_input_h = next_frame_par->VPP_vd_end_lines_ -
-		next_frame_par->VPP_vd_start_lines_ + 1;
-	next_frame_par->video_input_h = next_frame_par->video_input_h /
-		(next_frame_par->vscale_skip_count + 1);
-	next_frame_par->video_input_w = next_frame_par->VPP_hd_end_lines_ -
-		next_frame_par->VPP_hd_start_lines_ + 1;
-	next_frame_par->video_input_w = next_frame_par->video_input_w /
-		(next_frame_par->hscale_skip_count + 1);
 
 	if ((wide_mode == VIDEO_WIDEOPTION_NONLINEAR) && (end > start)) {
 		calculate_non_linear_ratio(ratio_x, end - start,
@@ -1370,9 +1372,9 @@ RESTART:
 	 * if we need skip half resolution on source side for progressive
 	 * frames.
 	 */
-	/* one more time to check skip for trigger h skip */
-	if ((next_frame_par->vscale_skip_count
-		< (MAX_VSKIP_COUNT + 1))
+	/* check vskip and hskip */
+	if (((next_frame_par->vscale_skip_count < MAX_VSKIP_COUNT)
+		|| !next_frame_par->hscale_skip_count)
 		&& (!(vpp_flags & VPP_FLAG_VSCALE_DISABLE))) {
 		int skip = vpp_process_speed_check(
 			(next_frame_par->VPP_hd_end_lines_ -
@@ -1390,18 +1392,11 @@ RESTART:
 			vf);
 
 		if (skip == SPEED_CHECK_VSKIP) {
-			if (cur_skip_count < MAX_VSKIP_COUNT) {
-				if (vpp_flags & VPP_FLAG_INTERLACE_IN)
-					next_frame_par->vscale_skip_count += 2;
-#ifdef TV_3D_FUNCTION_OPEN
-				else if ((next_frame_par->vpp_3d_mode ==
-					VPP_3D_MODE_LA)
-					&& (process_3d_type & MODE_3D_ENABLE))
-					next_frame_par->vscale_skip_count += 2;
-#endif
-				else
-					next_frame_par->vscale_skip_count++;
-				cur_skip_count++;
+			u32 next_vskip =
+				next_frame_par->vscale_skip_count + vskip_step;
+
+			if (next_vskip <= MAX_VSKIP_COUNT) {
+				next_frame_par->vscale_skip_count = next_vskip;
 				goto RESTART;
 			} else
 				next_frame_par->hscale_skip_count = 1;
@@ -1443,6 +1438,15 @@ RESTART:
 			}
 		}
 	}
+
+	next_frame_par->video_input_h = next_frame_par->VPP_vd_end_lines_ -
+		next_frame_par->VPP_vd_start_lines_ + 1;
+	next_frame_par->video_input_h = next_frame_par->video_input_h /
+		(next_frame_par->vscale_skip_count + 1);
+	next_frame_par->video_input_w = next_frame_par->VPP_hd_end_lines_ -
+		next_frame_par->VPP_hd_start_lines_ + 1;
+	next_frame_par->video_input_w = next_frame_par->video_input_w /
+		(next_frame_par->hscale_skip_count + 1);
 
 	filter->vpp_hsc_start_phase_step = ratio_x << 6;
 
