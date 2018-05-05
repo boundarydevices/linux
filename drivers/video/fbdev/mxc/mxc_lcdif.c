@@ -209,7 +209,6 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .sync = FB_SYNC_CLK_LAT_FALL,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
-	 fb_lcd=
 	{
 	 /*
 	  * GCX119:m18:19958400,800,280,88,40,16,7,128,12
