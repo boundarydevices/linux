@@ -211,6 +211,17 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .flag = 0,},
 	{
 	 /*
+	  * GCX119:m18:19958400,800,280,88,40,16,7,128,12
+	  */
+	 "GCX119", 60, 800, 280, 1000000000000ULL / (800+88+40+128) / (280+16+7+12) / 60,	//55586 ps, (17.98 MHz)
+	 .left_margin = 88, .right_margin = 40,
+	 .upper_margin = 16, .lower_margin = 7,
+	 .hsync_len = 128, .vsync_len = 12,
+	 .sync = 0,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
+	{
+	 /*
 	  * AT035GT-07ET3 320x240
 	  * vsync = 60
 	  * hsync = 260 * vsync = 15.6 Khz
