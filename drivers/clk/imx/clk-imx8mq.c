@@ -647,6 +647,8 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
 	clk_set_parent(hws[IMX8MQ_CLK_CSI2_CORE]->clk, hws[IMX8MQ_SYS1_PLL_266M]->clk);
 	clk_set_parent(hws[IMX8MQ_CLK_CSI2_PHY_REF]->clk, hws[IMX8MQ_SYS2_PLL_1000M]->clk);
 	clk_set_parent(hws[IMX8MQ_CLK_CSI2_ESC]->clk, hws[IMX8MQ_SYS1_PLL_800M]->clk);
+	clk_set_rate(hws[IMX8MQ_CLK_MON_SYS_PLL1_DIV]->clk, 100000000);
+	clk_set_parent(hws[IMX8MQ_CLK_MON_SEL]->clk, hws[IMX8MQ_CLK_MON_SYS_PLL1_DIV]->clk);
 
 	imx_register_uart_clocks(4);
 
