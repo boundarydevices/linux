@@ -1308,6 +1308,10 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 				dev_info(imx_pcie->pci->dev,
 					"PHY Initialization End!.\n");
 			}
+			ret = clk_prepare_enable(imx_pcie->pcie_ext_src);
+			if (ret)
+				dev_err(imx_pcie->pp.dev,
+					"unable to enable pcie_ext_src clock\n");
 		} else {
 			if (imx_pcie->variant == IMX8MM) {
 				/* Configure the internal PLL as REF clock */
@@ -1574,6 +1578,7 @@ static void pci_imx_clk_disable(struct device *dev)
 		regmap_update_bits(imx_pcie->iomuxc_gpr, val,
 				IMX8MQ_GPR_PCIE_CLK_REQ_OVERRIDE_EN,
 				0);
+		clk_disable_unprepare(imx_pcie->pcie_ext_src);
 		break;
 	case IMX8QXP:
 	case IMX8QM:
@@ -2543,7 +2548,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	} else if (imx_pcie->variant == IMX8MQ || imx_pcie->variant == IMX8MM) {
 		imx_pcie->iomuxc_gpr =
 			 syscon_regmap_lookup_by_compatible
-			 ("fsl,imx7d-iomuxc-gpr");
+			 ("fsl,imx8mq-iomuxc-gpr");
 		imx_pcie->reg_src =
 			 syscon_regmap_lookup_by_compatible("fsl,imx8mq-src");
 		if (IS_ERR(imx_pcie->reg_src)) {
@@ -2557,6 +2562,15 @@ static int imx_pcie_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"imx8mq pcie phy src missing or invalid\n");
 			return PTR_ERR(imx_pcie->reg_gpc);
+		}
+		imx_pcie->pcie_ext_src = devm_clk_get(&pdev->dev,
+				"pcie_ext_src");
+		if (IS_ERR(imx_pcie->pcie_ext_src)) {
+			if (PTR_ERR(imx_pcie->pcie_ext_src) == -EPROBE_DEFER)
+				return PTR_ERR(imx_pcie->pcie_ext_src);
+			imx_pcie->pcie_ext_src = NULL;
+			dev_info(&pdev->dev,
+				"pcie_ext_src clk src missing or invalid\n");
 		}
 	} else if (imx_pcie->variant == IMX6SX) {
 		imx_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
