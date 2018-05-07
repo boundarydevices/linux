@@ -165,6 +165,11 @@ static inline bool is_meson_g12a_cpu(void)
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_G12A;
 }
 
+static inline bool is_meson_g12b_cpu(void)
+{
+	return get_cpu_type() == MESON_CPU_MAJOR_ID_G12B;
+}
+
 static inline bool cpu_after_eq(unsigned int id)
 {
 	return get_cpu_type() >= id;
