@@ -15,7 +15,7 @@
 
 unsigned long long phy_mipi_dphy_get_hs_clk(unsigned long pixel_clock,
 	unsigned int bpp, unsigned int lanes, unsigned long dsi_mode_flags,
-	unsigned int min_hs_clock_multiple)
+	unsigned int min_hs_clock_multiple, unsigned int mipi_dsi_multiple)
 {
 	unsigned long long hs_clk_rate = pixel_clock;
 
@@ -34,6 +34,12 @@ unsigned long long phy_mipi_dphy_get_hs_clk(unsigned long pixel_clock,
 		if (hs_clk_rate < bit_clkm)
 			hs_clk_rate = bit_clkm;
 	}
+	if (mipi_dsi_multiple) {
+		hs_clk_rate += mipi_dsi_multiple - 1;
+		do_div(hs_clk_rate, mipi_dsi_multiple);
+
+		hs_clk_rate *= mipi_dsi_multiple;
+	}
 	return hs_clk_rate;
 }
 
@@ -47,7 +53,8 @@ int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 				     unsigned int lanes,
 				     struct phy_configure_opts_mipi_dphy *cfg,
 				     unsigned long dsi_mode_flags,
-				     unsigned int min_hs_clock_multiple)
+				     unsigned int min_hs_clock_multiple,
+				     unsigned int mipi_dsi_multiple)
 {
 	unsigned long long hs_clk_rate;
 	unsigned long long ui;
@@ -56,7 +63,7 @@ int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 		return -EINVAL;
 
 	hs_clk_rate = phy_mipi_dphy_get_hs_clk(pixel_clock, bpp, lanes,
-			dsi_mode_flags, min_hs_clock_multiple);
+			dsi_mode_flags, min_hs_clock_multiple, mipi_dsi_multiple);
 
 	ui = ALIGN(PSEC_PER_SEC, hs_clk_rate);
 	do_div(ui, hs_clk_rate);
