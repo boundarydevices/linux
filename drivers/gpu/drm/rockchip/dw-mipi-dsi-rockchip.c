@@ -567,7 +567,7 @@ dw_mipi_dsi_get_lane_mbps(void *priv_data, const struct drm_display_mode *mode,
 		phy_mipi_dphy_get_default_config(mode->clock * 1000 * 10 / 8,
 						 bpp, lanes,
 						 &dsi->phy_opts.mipi_dphy,
-						 0, 0);
+						 0, 0, 0);
 		dsi->lane_mbps = target_mbps;
 		*lane_mbps = dsi->lane_mbps;
 

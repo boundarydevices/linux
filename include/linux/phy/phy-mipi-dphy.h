@@ -279,13 +279,15 @@ unsigned long long phy_mipi_dphy_get_hs_clk(unsigned long pixel_clock,
 					    unsigned int bpp,
 					    unsigned int lanes,
 					    unsigned long dsi_mode_flags,
-					    unsigned int min_hs_clock_multiple);
+					    unsigned int min_hs_clock_multiple,
+					    unsigned int mipi_dsi_multiple);
 int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 				     unsigned int bpp,
 				     unsigned int lanes,
 				     struct phy_configure_opts_mipi_dphy *cfg,
 				     unsigned long dsi_mode_flags,
-				     unsigned int min_hs_clock_multiple);
+				     unsigned int min_hs_clock_multiple,
+				     unsigned int mipi_dsi_multiple);
 int phy_mipi_dphy_config_validate(struct phy_configure_opts_mipi_dphy *cfg);
 
 #endif /* __PHY_MIPI_DPHY_H_ */
