@@ -2138,8 +2138,16 @@ void rx_main_state_machine(void)
 					if (esm_recovery_mode
 						== ESM_REC_MODE_RESET)
 						esm_set_reset(true);
-					else
-						rx_esm_tmdsclk_en(false);
+					/* for some hdcp2.2 devices which
+					 * don't retry 2.2 interaction
+					 * continuously and don't response
+					 * to re-auth, such as chroma 2403,
+					 * esm needs to be on work even
+					 * before tmds is valid so that to
+					 * not miss 2.2 interaction
+					 */
+					/* else */
+						/* rx_esm_tmdsclk_en(false); */
 				}
 				break;
 			}
@@ -2447,8 +2455,8 @@ void rx_main_state_machine(void)
 					if (esm_recovery_mode ==
 						ESM_REC_MODE_RESET)
 						esm_set_reset(true);
-					else
-						rx_esm_tmdsclk_en(false);
+					/* else */
+						/* rx_esm_tmdsclk_en(false); */
 				}
 				memset(&rx.pre, 0,
 					sizeof(struct rx_video_info));
