@@ -150,6 +150,26 @@ static struct sysrq_key_op sysrq_crash_op = {
 	.enable_mask	= SYSRQ_ENABLE_DUMP,
 };
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static DEFINE_SPINLOCK(wdt_lock);
+static void sysrq_handle_wdt_sw_rst(int key)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&wdt_lock, flags);
+	while (1)
+		;
+	/* wait for wdt fiq to kick in. */
+}
+
+static struct sysrq_key_op sysrq_wdt_sw_op = {
+	.handler	= sysrq_handle_wdt_sw_rst,
+	.help_msg	= "dis intr to riggger wdt rst(x)",
+	.action_msg	= "Trigger a sw wdt reset",
+	.enable_mask	= SYSRQ_ENABLE_DUMP,
+};
+#endif
+
 static void sysrq_handle_reboot(int key)
 {
 	lockdep_off();
@@ -484,7 +504,9 @@ static struct sysrq_key_op *sysrq_key_table[36] = {
 	/* x: May be registered on mips for TLB dump */
 	/* x: May be registered on ppc/powerpc for xmon */
 	/* x: May be registered on sparc64 for global PMU dump */
-	NULL,				/* x */
+#ifdef CONFIG_AMLOGIC_MODIFY
+	&sysrq_wdt_sw_op,		/* x */
+#endif
 	/* y: May be registered on sparc64 for global register dump */
 	NULL,				/* y */
 	&sysrq_ftrace_dump_op,		/* z */
