@@ -2042,7 +2042,9 @@ __acquires(&pool->lock)
 #endif
 #ifdef CONFIG_AMLOGIC_MODIFY
 	if (!pwq) {
-		WARN_ONCE(1, "Warning: pool_workqueue is NULL!!!!!!!!!!!!.\n");
+		WARN_ONCE(1, "<%s> pwq_NULL <%lx> <%pf>, <%pf> %s\n",
+			__func__, atomic_long_read(&work->data),
+			work->func, worker->current_func, worker->desc);
 		return;
 	}
 
