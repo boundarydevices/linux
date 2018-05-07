@@ -103,6 +103,34 @@ static struct meson_clk_pll g12a_sys_pll = {
 	},
 };
 
+static struct meson_clk_pll g12b_sys1_pll = {
+	.m = {
+		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.shift   = 0,
+		.width   = 9,
+	},
+	.n = {
+		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.shift   = 10,
+		.width   = 5,
+	},
+	.od = {
+		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.shift   = 16,
+		.width   = 3,
+	},
+	.rate_table = g12a_pll_rate_table,
+	.rate_count = ARRAY_SIZE(g12a_pll_rate_table),
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "sys1_pll",
+		.ops = &meson_g12a_pll_ops,
+		.parent_names = (const char *[]){ "xtal" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
 static struct meson_clk_pll g12a_gp0_pll = {
 	.m = {
 		.reg_off = HHI_GP0_PLL_CNTL0,
@@ -752,6 +780,7 @@ static MESON_GATE(g12a_ao_i2c, HHI_GCLK_AO, 4);
 
 static struct clk_hw *g12a_clk_hws[] = {
 	[CLKID_SYS_PLL]         = &g12a_sys_pll.hw,
+	[CLKID_SYS1_PLL]         = &g12b_sys1_pll.hw,
 	[CLKID_FIXED_PLL]       = &g12a_fixed_pll.hw,
 	[CLKID_GP0_PLL]         = &g12a_gp0_pll.hw,
 	[CLKID_HIFI_PLL]        = &g12a_hifi_pll.hw,
@@ -861,6 +890,7 @@ static struct clk_hw *g12a_clk_hws[] = {
 static struct meson_clk_pll *const g12a_clk_plls[] = {
 	&g12a_fixed_pll,
 	&g12a_sys_pll,
+	&g12b_sys1_pll,
 	&g12a_gp0_pll,
 	&g12a_hifi_pll,
 	&g12a_pcie_pll,

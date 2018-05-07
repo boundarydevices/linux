@@ -105,6 +105,16 @@
 #define HHI_SYS_PLL_CNTL5		0x308 /* 0xc2 offset in data sheet */
 #define HHI_SYS_PLL_CNTL6		0x30c /* 0xc3 offset in data sheet */
 
+/* For G12B only */
+#define HHI_SYS1_PLL_CNTL0		0x380 /* 0xe0 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL1		0x384 /* 0xe1 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL2		0x388 /* 0xe2 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL3		0x38c /* 0xe3 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL4		0x390 /* 0xe4 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL5		0x394 /* 0xe5 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL6		0x398 /* 0xe6 offset in data sheet */
+/*****************/
+
 #define HHI_SPICC_CLK_CNTL      0x3dc /* 0xf7 offset in data sheet */
 /* AO registers*/
 #define AO_RTI_PWR_CNTL_REG0 0x10 /* 0x4 offset in data sheet */

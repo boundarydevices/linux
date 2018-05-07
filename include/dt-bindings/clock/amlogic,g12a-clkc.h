@@ -257,7 +257,11 @@
 #define CLKID_SPICC1_COMP        (CLKID_MISC_BASE + 7)
 #define CLKID_TS_COMP           (CLKID_MISC_BASE + 8)
 
-#define CLKID_AO_BASE           (CLKID_MISC_BASE + 9)
+/*G12B clk*/
+#define CLKID_G12B_ADD_BASE     (CLKID_MISC_BASE + 9)
+#define CLKID_SYS1_PLL          (CLKID_G12B_ADD_BASE + 0)
+
+#define CLKID_AO_BASE           (CLKID_G12B_ADD_BASE + 1)
 #define CLKID_AO_CLK81          (CLKID_AO_BASE + 0)
 #define CLKID_SARADC_MUX        (CLKID_AO_BASE + 1)
 #define CLKID_SARADC_DIV        (CLKID_AO_BASE + 2)
