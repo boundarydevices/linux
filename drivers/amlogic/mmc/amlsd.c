@@ -414,6 +414,9 @@ static struct pinctrl * __must_check aml_devm_pinctrl_get_select(
 		devm_pinctrl_put(p);
 		return ERR_PTR(ret);
 	}
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		strlcpy(host->pinctrl_name, name, sizeof(host->pinctrl_name));
 	return p;
 }
 #else /* SD_EMMC_PIN_CTRL */
@@ -463,9 +466,16 @@ void of_amlsd_xfer_pre(struct amlsd_platform *pdata)
 	if (mmc->ios.chip_select == MMC_CS_DONTCARE) {
 		if ((mmc->caps & MMC_CAP_4_BIT_DATA)
 		|| (strcmp(pdata->pinname, "sd"))
-		|| (mmc->caps & MMC_CAP_8_BIT_DATA))
-			aml_snprint(&p, &size, "%s_all_pins", pdata->pinname);
-		else {
+		|| (mmc->caps & MMC_CAP_8_BIT_DATA)) {
+			if (aml_card_type_sdio(pdata)
+				&& (host->data->chip_type == MMC_CHIP_G12A)
+				&& host->is_sduart)
+				aml_snprint(&p, &size,
+					"%s_noclr_all_pins", pdata->pinname);
+			else
+				aml_snprint(&p, &size,
+						"%s_all_pins", pdata->pinname);
+		} else {
 			if (pdata->is_sduart && (!strcmp(pdata->pinname, "sd")))
 				aml_snprint(&p, &size,
 						"%s_1bit_uart_pins",
@@ -479,7 +489,14 @@ void of_amlsd_xfer_pre(struct amlsd_platform *pdata)
 			aml_snprint(&p, &size,
 					"%s_clk_cmd_uart_pins", pdata->pinname);
 		} else {
-			aml_snprint(&p, &size,
+			if (aml_card_type_sdio(pdata)
+				&& (host->data->chip_type == MMC_CHIP_G12A)
+				&& host->is_sduart)
+				aml_snprint(&p, &size,
+						"%s_noclr_clk_cmd_pins",
+						pdata->pinname);
+			else
+				aml_snprint(&p, &size,
 					"%s_clk_cmd_pins", pdata->pinname);
 		}
 	}
@@ -617,8 +634,12 @@ static int aml_is_sdjtag(struct amlsd_platform *pdata)
 	int in = 0, i;
 	int high_cnt = 0, low_cnt = 0;
 	u32 vstat = 0;
+	struct pinctrl *pc;
 	struct amlsd_host *host = pdata->host;
 	struct sd_emmc_status *ista = (struct sd_emmc_status *)&vstat;
+
+	mutex_lock(&host->pinmux_lock);
+	pc = aml_devm_pinctrl_get_select(host, "sd_to_ao_uart_pins");
 
 	for (i = 0; ; i++) {
 		mdelay(1);
@@ -636,6 +657,7 @@ static int aml_is_sdjtag(struct amlsd_platform *pdata)
 
 	if (low_cnt > 50)
 		in = 1;
+	mutex_unlock(&host->pinmux_lock);
 	return !in;
 }
 
@@ -821,6 +843,8 @@ int aml_sd_uart_detect(struct amlsd_platform *pdata)
 {
 	static bool is_jtag;
 	struct mmc_host *mmc  = pdata->mmc;
+	struct amlsd_host *host = pdata->host;
+
 	if (aml_is_card_insert(pdata)) {
 		if (pdata->is_in)
 			return 1;
@@ -830,6 +854,8 @@ int aml_sd_uart_detect(struct amlsd_platform *pdata)
 			aml_uart_switch(pdata, 1);
 			pr_info("Uart in\n");
 			mmc->caps &= ~MMC_CAP_4_BIT_DATA;
+			if (host->data->chip_type == MMC_CHIP_G12A)
+				host->is_sduart = 1;
 			if (aml_is_sdjtag(pdata)) {
 				aml_jtag_switch_sd(pdata);
 				is_jtag = true;
@@ -918,6 +944,11 @@ static int meson_cd_op(void *data)
 	struct amlsd_host *host = pdata->host;
 	int ret = 0;
 
+#ifdef AML_MMC_TDMA
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		wait_for_completion(&host->drv_completion);
+#endif
 	mutex_lock(&pdata->in_out_lock);
 	if (card_dealed == 1) {
 		card_dealed = 0;
@@ -940,6 +971,11 @@ static int meson_cd_op(void *data)
 		mmc_detect_change(mmc, msecs_to_jiffies(0));
 
 	card_dealed = 0;
+#ifdef AML_MMC_TDMA
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		complete(&host->drv_completion);
+#endif
 	return 0;
 }
 

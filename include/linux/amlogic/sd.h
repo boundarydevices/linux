@@ -413,6 +413,7 @@ struct amlsd_host {
 	char is_tunning;
 	char is_timming;
 	char tuning_mode;
+	unsigned int is_sduart;
 	unsigned int irq;
 	unsigned int irq_in;
 	unsigned int irq_out;
