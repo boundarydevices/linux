@@ -1056,7 +1056,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_dsi *dsi,
 	phy_mipi_dphy_get_default_config(clock,
 		mipi_dsi_pixel_format_to_bpp(dsi->format),
 		lanes, &phy_opts.mipi_dphy, 0,
-		0);
+		0, 0);
 	phy_opts.mipi_dphy.lp_clk_rate = clk_get_rate(dsi->tx_esc_clk);
 
 	while (i < num_rates) {
@@ -1146,7 +1146,7 @@ static int nwl_dsi_get_dphy_params(struct nwl_dsi *dsi,
 	ret = phy_mipi_dphy_get_default_config(mode->clock * 1000,
 		mipi_dsi_pixel_format_to_bpp(dsi->format), dsi->lanes,
 		&phy_opts->mipi_dphy, 0,
-		0);
+		0, 0);
 	if (ret < 0)
 		return ret;
 
