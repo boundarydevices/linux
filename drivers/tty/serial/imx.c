@@ -1639,13 +1639,19 @@ static void imx_uart_shutdown(struct uart_port *port)
 		ret = wait_event_interruptible_timeout(sport->dma_wait,
 			!sport->dma_is_rxing && !sport->dma_is_txing,
 			msecs_to_jiffies(1));
-		if (ret <= 0) {
-			sport->dma_is_rxing = 0;
-			sport->dma_is_txing = 0;
-			dmaengine_terminate_all(sport->dma_chan_tx);
-			dmaengine_terminate_all(sport->dma_chan_rx);
-		}
 
+		dmaengine_terminate_sync(sport->dma_chan_tx);
+		if (sport->dma_is_txing) {
+			dma_unmap_sg(sport->port.dev, &sport->tx_sgl[0],
+				     sport->dma_tx_nents, DMA_TO_DEVICE);
+			sport->dma_is_txing = 0;
+		}
+		dmaengine_terminate_sync(sport->dma_chan_rx);
+		if (sport->dma_is_rxing) {
+			dma_unmap_sg(sport->port.dev, &sport->rx_buf.sgl,
+				     1, DMA_FROM_DEVICE);
+			sport->dma_is_rxing = 0;
+		}
 		cancel_work_sync(&sport->tsk_dma_tx);
 
 		spin_lock_irqsave(&sport->port.lock, flags);
