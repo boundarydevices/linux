@@ -33,6 +33,7 @@ enum vpu_chip_e {
 	VPU_CHIP_TXLX,
 	VPU_CHIP_AXG,
 	VPU_CHIP_G12A,
+	VPU_CHIP_G12B,
 	VPU_CHIP_MAX,
 };
 

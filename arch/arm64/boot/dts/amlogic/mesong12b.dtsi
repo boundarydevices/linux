@@ -263,7 +263,7 @@
 	};
 
 	vpu {
-		/*compatible = "amlogic, vpu-g12a";*/
+		compatible = "amlogic, vpu-g12b";
 		dev_name = "vpu";
 		status = "okay";
 		clocks = <&clkc CLKID_VAPB_MUX>,

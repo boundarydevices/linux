@@ -1339,6 +1339,28 @@ static struct vpu_data_s vpu_data_g12a = {
 	.power_off = vpu_power_off_txlx,
 };
 
+static struct vpu_data_s vpu_data_g12b = {
+	.chip_type = VPU_CHIP_G12B,
+	.chip_name = "g12b",
+	.clk_level_dft = CLK_LEVEL_DFT_G12A,
+	.clk_level_max = CLK_LEVEL_MAX_G12A,
+	.fclk_div_table = fclk_div_table_g12a,
+
+	.gp_pll_valid = 0,
+	.mem_pd_reg1_valid = 1,
+	.mem_pd_reg2_valid = 1,
+
+	.mem_pd_table_cnt =
+		sizeof(vpu_mem_pd_g12a) / sizeof(struct vpu_ctrl_s),
+	.clk_gate_table_cnt =
+		sizeof(vpu_clk_gate_g12a) / sizeof(struct vpu_ctrl_s),
+	.mem_pd_table = vpu_mem_pd_g12a,
+	.clk_gate_table = vpu_clk_gate_g12a,
+
+	.power_on  = vpu_power_on_txlx,
+	.power_off = vpu_power_off_txlx,
+};
+
 static const struct of_device_id vpu_of_table[] = {
 	{
 		.compatible = "amlogic, vpu-gxbb",
@@ -1367,6 +1389,10 @@ static const struct of_device_id vpu_of_table[] = {
 	{
 		.compatible = "amlogic, vpu-g12a",
 		.data = &vpu_data_g12a,
+	},
+	{
+		.compatible = "amlogic, vpu-g12b",
+		.data = &vpu_data_g12b,
 	},
 	{},
 };
