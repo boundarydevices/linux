@@ -126,6 +126,7 @@ struct imx6_pcie {
 	struct clk		*pcie_aux;
 	struct clk		*phy_per;
 	struct clk		*misc_per;
+	struct clk		*pcie_ext_src;
 	struct regmap		*iomuxc_gpr;
 	u32			controller_id;
 	struct reset_control	*pciephy_reset;
@@ -1039,6 +1040,8 @@ static void imx6_pcie_clk_disable(struct imx6_pcie *imx6_pcie)
 	default:
 		break;
 	}
+	if (imx6_pcie->ext_osc && imx6_pcie->pcie_ext_src)
+		clk_disable_unprepare(imx6_pcie->pcie_ext_src);
 }
 
 #define GPC_CNTR 0
@@ -1463,6 +1466,15 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 {
 	int i;
 	unsigned int offset, val;
+
+	if (imx6_pcie->ext_osc && imx6_pcie->pcie_ext_src) {
+		int ret;
+
+		ret = clk_prepare_enable(imx6_pcie->pcie_ext_src);
+		if (ret)
+			dev_err(imx6_pcie->pci->dev,
+				"unable to enable pcie_ext_src clock\n");
+	}
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QXP:
@@ -2570,6 +2582,16 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	if (IS_ERR(imx6_pcie->pcie))
 		return dev_err_probe(dev, PTR_ERR(imx6_pcie->pcie),
 				     "pcie clock source missing or invalid\n");
+
+	imx6_pcie->pcie_ext_src = devm_clk_get(&pdev->dev,
+			"pcie_ext_src");
+	if (IS_ERR(imx6_pcie->pcie_ext_src)) {
+		if (PTR_ERR(imx6_pcie->pcie_ext_src) == -EPROBE_DEFER)
+			return PTR_ERR(imx6_pcie->pcie_ext_src);
+		imx6_pcie->pcie_ext_src = NULL;
+		dev_info(&pdev->dev,
+			"pcie_ext_src clk src missing or invalid\n");
+	}
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX6SX:
