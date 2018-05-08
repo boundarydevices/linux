@@ -496,6 +496,7 @@ static int set_disp_mode_auto(void)
 		hdev->cur_VIC = vic;
 		hdev->output_blank_flag = 1;
 		hdev->ready = 1;
+		recalc_vinfo_sync_duration(info, hdev->frac_rate_policy);
 		return 1;
 	}
 
@@ -3495,8 +3496,8 @@ static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)
 	hdmitx_device.force_audio_flag = 0;
 	hdmitx_device.hdcp_mode = 0;
 	hdmitx_device.ready = 0;
-	/* no 1.000/1.001 modes by default */
-	hdmitx_device.frac_rate_policy = 0;
+	/* 59.94(60/1.001) modes by default */
+	hdmitx_device.frac_rate_policy = 1;
 	hdmitx_device.rxsense_policy = 0; /* no RxSense by default */
 	/* enable or disable HDMITX SSPLL, enable by default */
 	hdmitx_device.sspll = 1;
