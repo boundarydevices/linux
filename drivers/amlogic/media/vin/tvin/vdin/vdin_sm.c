@@ -323,10 +323,11 @@ void tvin_smr(struct vdin_dev_s *devp)
 	switch (sm_p->state) {
 	case TVIN_SM_STATUS_NOSIG:
 		++sm_p->state_cnt;
-		/*if ((port == TVIN_PORT_CVBS3) &&
-		 *	(devp->flags & VDIN_FLAG_SNOW_FLAG))
-		 *	tvafe_snow_config_clamp(1);
-		 */
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AFE
+		if ((port == TVIN_PORT_CVBS3) &&
+			(devp->flags & VDIN_FLAG_SNOW_FLAG))
+			tvafe_snow_config_clamp(1);
+#endif
 		if (sm_ops->nosig(devp->frontend)) {
 			sm_p->exit_nosig_cnt = 0;
 			if (sm_p->state_cnt >= nosig_in_cnt) {
@@ -462,10 +463,11 @@ void tvin_smr(struct vdin_dev_s *devp)
 		bool nosig = false, fmt_changed = false;
 		unsigned int prestable_out_cnt = 0;
 		devp->unstable_flag = true;
-		/*if ((port == TVIN_PORT_CVBS3) &&
-		 *	(devp->flags & VDIN_FLAG_SNOW_FLAG))
-		 *	tvafe_snow_config_clamp(0);
-		 */
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AFE
+		if ((port == TVIN_PORT_CVBS3) &&
+			(devp->flags & VDIN_FLAG_SNOW_FLAG))
+			tvafe_snow_config_clamp(0);
+#endif
 		if (sm_ops->nosig(devp->frontend)) {
 			nosig = true;
 			if (sm_debug_enable && !(sm_print_prestable&0x1)) {
