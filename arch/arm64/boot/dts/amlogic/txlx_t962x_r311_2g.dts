@@ -1288,7 +1288,7 @@
 		dev_name = "dvb";
 		status = "okay";
 		demod = "internal";
-		tuner0 = "si2151_tuner";
+		tuner0 = "mxl661_tuner";
 		tuner0_i2c_adap_id = <&i2c1>;
 		tuner0_i2c_addr = <0x60>;
 		/*"parallel","serial","disable"*/
