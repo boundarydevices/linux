@@ -226,6 +226,8 @@ static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
 	writel(0x54147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
 	writel(0x14147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
 	writel(0x54147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	/*wait phy to reset cause Power Up Reset need 5.2~2.6 ms*/
+	mdelay(10);
 	return 0;
 }
 
