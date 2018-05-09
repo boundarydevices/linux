@@ -40,7 +40,7 @@ void tuner_set_params(struct dvb_frontend *fe)
 int tuner_get_ch_power(struct dvb_frontend *fe)
 {
 	int strength = 0;
-	u16 strengtha = 0;
+	s16 strengtha = 0;
 
 	if (fe != NULL) {
 #if 0
@@ -49,9 +49,9 @@ int tuner_get_ch_power(struct dvb_frontend *fe)
 		else
 			PR_INFO("no tuner get_strength\n");
 #endif
-		if (fe->ops.tuner_ops.get_rf_strength) {
-			fe->ops.tuner_ops.get_rf_strength(fe, &strengtha);
-			strength = strengtha; /* - 256;*/
+		if (fe->ops.tuner_ops.get_strength) {
+			fe->ops.tuner_ops.get_strength(fe, &strengtha);
+			strength = (int)strengtha;
 		} else {
 			PR_INFO("no tuner get_strength\n");
 		}
@@ -63,16 +63,16 @@ int tuner_get_ch_power(struct dvb_frontend *fe)
 
 int tuner_get_ch_power2(void)
 {
-#if 0
+
 	int strength = 0;
-	u16 strengtha = 0;
+	s16 strengtha = 0;
 	struct dvb_frontend *fe;
 
 	fe = aml_get_fe();
 	if (fe != NULL) {
 
-		if (fe->ops.tuner_ops.get_rf_strength) {
-			fe->ops.tuner_ops.get_rf_strength(fe, &strengtha);
+		if (fe->ops.tuner_ops.get_strength) {
+			fe->ops.tuner_ops.get_strength(fe, &strengtha);
 			//strength = strengtha - 256;
 			strength = (int)strengtha;
 		} else {
@@ -82,9 +82,35 @@ int tuner_get_ch_power2(void)
 
 
 	return strength;
-#endif
-	return 0;
 }
+
+u16 tuner_get_ch_power3(void)
+{
+
+	u16 strength = 0;
+	s16 strengtha = 0;
+	struct dvb_frontend *fe;
+
+	fe = aml_get_fe();
+	if (fe != NULL) {
+
+		if (fe->ops.tuner_ops.get_strength) {
+			fe->ops.tuner_ops.get_strength(fe, &strengtha);
+			/*from negative to positive*/
+			if (strengtha < -100)
+				strength = 0;
+			else
+				strength = strengtha + 100;
+
+		} else {
+			PR_INFO("no tuner get_strength\n");
+		}
+	}
+
+
+	return strength;
+}
+
 
 struct dvb_tuner_info *tuner_get_info(int type, int mode)
 {

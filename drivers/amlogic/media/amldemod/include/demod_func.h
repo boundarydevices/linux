@@ -443,6 +443,7 @@ extern void tuner_set_params(struct dvb_frontend *fe);
 int tuner_get_ch_power(struct dvb_frontend *fe);
 int tuner_get_ch_power2(void);
 
+u16 tuner_get_ch_power3(void);
 
 int dtmb_get_power_strength(int agc_gain);
 
