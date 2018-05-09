@@ -204,12 +204,12 @@ static int meson_pwm_calc(struct meson_pwm *meson,
 
 	if (duty == period) {
 		channel->pre_div = pre_div;
-		channel->hi = cnt - 1;
+		channel->hi = cnt;
 		channel->lo = 0;
 	} else if (duty == 0) {
 		channel->pre_div = pre_div;
 		channel->hi = 0;
-		channel->lo = cnt - 1;
+		channel->lo = cnt;
 	} else {
 		/* Then check is we can have the duty with the same pre_div */
 		duty_cnt = DIV_ROUND_CLOSEST_ULL((u64)duty * 1000,
@@ -226,6 +226,16 @@ static int meson_pwm_calc(struct meson_pwm *meson,
 		channel->hi = duty_cnt - 1;
 		channel->lo = cnt - duty_cnt - 1;
 	}
+	/*
+	 * duty_cycle equal 0% and 100%,constant should be enabled,
+	 * high and low count will not incease one;
+	 * otherwise, high and low count increase one.
+	 */
+	if (duty == period || duty == 0)
+		pwm_constant_enable(meson, id);
+	else
+		pwm_constant_disable(meson, id);
+
 
 	return 0;
 }
