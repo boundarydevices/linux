@@ -174,12 +174,14 @@ int debug_log_printk(struct remote_dev *dev, const char *fmt)
 	char *p;
 	int len;
 
-	len = strlen(fmt);
+	len = strlen(fmt) + 1;
+	if (len > dev->debug_buffer_size)
+		return 0;
 	if (dev->debug_current + len > dev->debug_buffer_size)
 		dev->debug_current = 0;
 	p = (char *)(dev->debug_buffer+dev->debug_current);
 	strcpy(p, fmt);
-	dev->debug_current += len;
+	dev->debug_current += (len-1);
 	return 0;
 }
 
