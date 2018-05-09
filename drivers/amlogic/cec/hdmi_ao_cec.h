@@ -18,7 +18,7 @@
 #ifndef __AO_CEC_H__
 #define __AO_CEC_H__
 
-#define CEC_DRIVER_VERSION	"2018/03/27\n"
+#define CEC_DRIVER_VERSION	"2018/05/15\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
@@ -345,7 +345,7 @@
 #define EECEC_IRQ_TX_ERR_INITIATOR	(1 << 20)
 #define EECEC_IRQ_RX_ERR_FOLLOWER	(1 << 21)
 #define EECEC_IRQ_RX_WAKEUP		(1 << 22)
-#define EE_CEC_IRQ_EN_MASK		(0xf << 16)
+#define EE_CEC_IRQ_EN_MASK		(0x1f << 16)
 
 /* cec irq bit flags for AO_CEC_B */
 #define CECB_IRQ_TX_DONE		(1 << 0)
@@ -355,7 +355,7 @@
 #define CECB_IRQ_TX_ERR_INITIATOR	(1 << 4)
 #define CECB_IRQ_RX_ERR_FOLLOWER	(1 << 5)
 #define CECB_IRQ_RX_WAKEUP		(1 << 6)
-#define CECB_IRQ_EN_MASK		(0xf << 0)
+#define CECB_IRQ_EN_MASK		(0x1f << 0)
 
 /* common mask */
 #define CEC_IRQ_TX_DONE			(1 << (16 - shift))
