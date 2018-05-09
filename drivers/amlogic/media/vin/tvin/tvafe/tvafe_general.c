@@ -875,8 +875,13 @@ void tvafe_set_apb_bus_err_ctrl(void)
  */
 static void tvafe_reset_module(void)
 {
+	pr_info("tvafe_reset_module.\n");
 	W_APB_BIT(TVFE_RST_CTRL, 1, ALL_CLK_RST_BIT, ALL_CLK_RST_WID);
 	W_APB_BIT(TVFE_RST_CTRL, 0, ALL_CLK_RST_BIT, ALL_CLK_RST_WID);
+	/*reset vdin asynchronous fifo*/
+	/*for greenscreen on repeatly power on/off*/
+	W_APB_BIT(TVFE_RST_CTRL, 1, SAMPLE_OUT_RST_BIT, SAMPLE_OUT_RST_WID);
+	W_APB_BIT(TVFE_RST_CTRL, 0, SAMPLE_OUT_RST_BIT, SAMPLE_OUT_RST_WID);
 }
 
 /*
