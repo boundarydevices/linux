@@ -1037,7 +1037,8 @@ static void hdmitx_set_drm_pkt(struct master_display_info_s *data)
 	/*SDR*/
 	if (hdev->hdr_transfer_feature == T_BT709 &&
 		hdev->hdr_color_feature == C_BT709) {
-		schedule_work(&hdev->work_hdr);
+		if (hdev->hdmi_last_hdr_mode != 0)
+			schedule_work(&hdev->work_hdr);
 		return;
 	}
 
@@ -1459,6 +1460,7 @@ static ssize_t store_config(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
+	struct master_display_info_s data = {0};
 
 	pr_info("hdmitx: config: %s\n", buf);
 
@@ -1513,26 +1515,22 @@ static ssize_t store_config(struct device *dev,
 			pr_info(AUD "configure auto\n");
 		} else
 			pr_info(AUD "configure error\n");
-	} else if (strncmp(buf, "drm", 3) == 0) {
-		unsigned char DRM_HB[3] = {0x87, 0x1, 26};
-		unsigned char DRM_DB[26] = {
-			0x00, 0x00, 0xc2, 0x33, 0xc4, 0x86, 0x4c, 0x1d,
-			0xb8, 0x0b, 0xd0, 0x84, 0x80, 0x3e, 0x13, 0x3d,
-			0x42, 0x40, 0x4c, 0x04, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00,
-		};
-
-		if (hdmitx_device.chip_type >= MESON_CPU_ID_GXTVBB)
-			hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
-				DRM_DB, DRM_HB);
+	} else if (strncmp(buf, "sdr", 3) == 0) {
+		data.features = 0x00010100;
+		hdmitx_set_drm_pkt(&data);
+	} else if (strncmp(buf, "hdr", 3) == 0) {
+		data.features = 0x00091000;
+		hdmitx_set_drm_pkt(&data);
+	} else if (strncmp(buf, "hlg", 3) == 0) {
+		data.features = 0x00091200;
+		hdmitx_set_drm_pkt(&data);
 	} else if (strncmp(buf, "vsif", 4) == 0)
 		hdmitx_set_vsif_pkt(buf[4] - '0', buf[5] == '1', NULL);
 	else if (strncmp(buf, "emp", 3) == 0) {
 		if (hdmitx_device.chip_type >= MESON_CPU_ID_G12A)
 			hdmitx_set_emp_pkt();
 	}
-
-	return 16;
+	return count;
 }
 
 static ssize_t show_aud_mute(struct device *dev,
