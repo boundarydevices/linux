@@ -31,7 +31,7 @@
 #include "../tvin_frontend.h"
 //#include "hdmirx_repeater.h"
 //#include "hdmi_rx_pktinfo.h"
-//#include "hdmi_rx_edid.h"
+#include "hdmi_rx_edid.h"
 
 
 #define RX_VER0 "ver.2018-05-17"
@@ -41,7 +41,7 @@
  *
  *
  */
-#define RX_VER1 "ver.2018/05/10"
+#define RX_VER1 "ver.2018/05/11"
 
 
 
@@ -214,11 +214,11 @@ struct rx_video_info {
 	/** AVI Y1-0, video format */
 	uint8_t colorspace;
 	/** AVI VIC6-0, video identification code */
-	uint8_t hw_vic;
+	enum hdmi_vic_e hw_vic;
 	/** AVI PR3-0, pixel repetition factor */
 	uint8_t repeat;
 	/* for sw info */
-	uint8_t sw_vic;
+	enum hdmi_vic_e sw_vic;
 	uint8_t sw_dvi;
 	unsigned int it_content;
 	/** AVI Q1-0, RGB quantization range */

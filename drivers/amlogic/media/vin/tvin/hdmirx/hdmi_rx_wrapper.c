@@ -67,6 +67,9 @@ static int hpd_wait_max = 20;
 static int sig_unstable_cnt;
 static int sig_unstable_max = 80;
 
+bool vic_check_en;
+bool dvi_check_en;
+
 static int sig_unready_cnt;
 static int sig_unready_max = 5;/* 10; */
 
@@ -559,40 +562,44 @@ static unsigned char is_aud_ch_map_change(int pre, int cur)
 static const struct freq_ref_s freq_ref[] = {
 	/* interlace 420 3d hac vac index */
 	/* 420mode */
-	{0,	3,	0,	1920,	2160,	HDMI_3840x2160_420},
-	{0, 3,	0,	2048,	2160,	HDMI_4096x2160_420},
+	{0,	3,	0,	1920,	2160,	HDMI_2160p50_16x9_Y420},
+	{0, 3,	0,	2048,	2160,	HDMI_4096p50_256x135_Y420},
 	{0, 3,	0,	960,	1080,	HDMI_1080p_420},
 	/* interlace */
-	{1,	0,	0,	720,	240,	HDMI_720x480i},
-	{1,	0,	0,	1440,	240,	HDMI_1440x480i},
-	{1, 0,	0,	720,	288,	HDMI_720x576i},
-	{1, 0,	0,	1440,	288,	HDMI_1440x576i},
-	{1, 0,	0,	1920,	540,	HDMI_1080i},
+	/* {1,	0,	0,	720,	240,	HDMI_720x480i}, */
+	{1,	0,	0,	1440,	240,	HDMI_480i60},
+	/* {1, 0,	0,	720,	288,	HDMI_720x576i}, */
+	{1, 0,	0,	1440,	288,	HDMI_576i50},
+	{1, 0,	0,	1920,	540,	HDMI_1080i50},
 	{1, 0,	2,	1920,	1103,	HDMI_1080i_ALTERNATIVE},
 	{1, 0,	1,	1920,	2228,	HDMI_1080i_FRAMEPACKING},
 
-	{0, 0,	0,	1440,	240,	HDMI_1440x240p},
-	{0, 0,	0,	2880,	240,	HDMI_2880x240p},
-	{0, 0,	0,	1440,	288,	HDMI_1440x288p},
-	{0, 0,	0,	2880,	288,	HDMI_2880x288p},
+	{0, 0,	0,	1440,	240,	HDMI_1440x240p60},
+	{0, 0,	0,	2880,	240,	HDMI_2880x240p60},
+	{0, 0,	0,	1440,	288,	HDMI_1440x288p50},
+	{0, 0,	0,	2880,	288,	HDMI_2880x288p50},
 
-	{0, 0,	0,	720,	480,	HDMI_720x480p},
-	{0, 0,	0,	1440,	480,	HDMI_1440x480p},
+	{0, 0,	0,	720,	480,	HDMI_480p60},
+	{0, 0,	0,	1440,	480,	HDMI_1440x480p60},
 	{0, 0,	1,	720,	1005,	HDMI_480p_FRAMEPACKING},
 
-	{0, 0,	0,	720,	576,	HDMI_720x576p},
-	{0, 0,	0,	1440,	576,	HDMI_1440x576p},
+	{0, 0,	0,	720,	576,	HDMI_576p50},
+	{0, 0,	0,	1440,	576,	HDMI_1440x576p50},
 	{0, 0,	1,	720,	1201,	HDMI_576p_FRAMEPACKING},
 
-	{0, 0,	0,	1280,	720,	HDMI_720p},
+	{0, 0,	0,	1280,	720,	HDMI_720p50},
 	{0, 0,	1,	1280,	1470,	HDMI_720p_FRAMEPACKING},
 
-	{0, 0,	0,	1920,	1080,	HDMI_1080p},
+	{0, 0,	0,	1920,	1080,	HDMI_1080p50},
 	{0, 0,	2,	1920,	2160,	HDMI_1080p_ALTERNATIVE},
 	{0, 0,	1,	1920,	2205,	HDMI_1080p_FRAMEPACKING},
 
+	{1, 0,	0,	2880,	240,	HDMI_2880x480i60},
+	{1, 0,	0,	2880,	288,	HDMI_2880x576i50},
+	{0, 0,	0,	2880,	480,	HDMI_2880x480p60},
+	{0, 0,	0,	2880,	576,	HDMI_2880x576p50},
 	/* vesa format*/
-	{0, 0,	0,	640,	480,	HDMI_640_480},
+	{0, 0,	0,	640,	480,	HDMI_640x480p60},
 	{0, 0,	0,	720,	400,	HDMI_720_400},
 	{0, 0,	0,	800,	600,	HDMI_800_600},
 	{0, 0,	0,	1024,	768,	HDMI_1024_768},
@@ -610,45 +617,85 @@ static const struct freq_ref_s freq_ref[] = {
 	{0, 0,	0,	1920,	1200,	HDMI_1920_1200},
 
 	/* 4k2k mode */
-	{0, 0,	0,	3840,	2160,	HDMI_3840x2160},
-	{0, 0,	0,	4096,	2160,	HDMI_4096x2160},
+	{0, 0,	0,	3840,	2160,	HDMI_2160p24_16x9},
+	{0, 0,	0,	4096,	2160,	HDMI_4096p24_256x135},
 	{0, 0,	0,	2560,	1440,	HDMI_2560_1440},
 	{0, 0,	1,	2560,	3488,	HDMI_2560_1440},
 	{0, 0,	2,	2560,	2986,	HDMI_2560_1440},
 
 	/* for AG-506 */
-	{0, 0,	0,	720,	483,	HDMI_720x480p},
+	{0, 0,	0,	720,	483,	HDMI_480p60},
 	{0, 0,	0,	0,		0,		HDMI_UNKNOWN}
 };
+
+static bool fmt_vic_abnormal(void)
+{
+	/* if format is unknown or unsupported after
+	 * timing match, but TX send normal VIC, then
+	 * abnormal format is detected.
+	 */
+	if (((rx.pre.sw_vic == HDMI_UNKNOWN) ||
+		(rx.pre.sw_vic == HDMI_UNSUPPORT)) &&
+		(rx.pre.hw_vic != HDMI_UNKNOWN))
+		return true;
+	else
+		return false;
+}
 
 enum tvin_sig_fmt_e hdmirx_hw_get_fmt(void)
 {
 	enum tvin_sig_fmt_e fmt = TVIN_SIG_FMT_NULL;
-	unsigned int vic = rx.pre.sw_vic;
+	enum hdmi_vic_e vic = HDMI_UNKNOWN;
 
+	if (fmt_vic_abnormal())
+		vic = rx.pre.hw_vic;
+	else
+		vic = rx.pre.sw_vic;
 	if (force_vic)
 		vic = force_vic;
 
 	switch (vic) {
-	case HDMI_640_480:
+	case HDMI_640x480p60:
 		fmt = TVIN_SIG_FMT_HDMI_640X480P_60HZ;
 		break;
-	case HDMI_720x480p:
+	case HDMI_480p60:	/*2 */
+	case HDMI_480p60_16x9:	/*3 */
+	case HDMI_480p120:	/* 48 */
+	case HDMI_480p120_16x9:	/* 49 */
+	case HDMI_480p240:	/* 56 */
+	case HDMI_480p240_16x9:	/* 57 */
 		fmt = TVIN_SIG_FMT_HDMI_720X480P_60HZ;
 		break;
-	case HDMI_1440x480p:
+	case HDMI_1440x480p60:	/* 14 */
+	case HDMI_1440x480p60_16x9:	/* 15 */
 		fmt = TVIN_SIG_FMT_HDMI_1440X480P_60HZ;
 		break;
 	case HDMI_480p_FRAMEPACKING:
 		fmt = TVIN_SIG_FMT_HDMI_720X480P_60HZ_FRAME_PACKING;
 		break;
-	case HDMI_720p:
+	case HDMI_720p24:	/* 60 */
+	case HDMI_720p25:	/* 61 */
+	case HDMI_720p30:	/* 62 */
+	case HDMI_720p50:	/* 19 */
+	case HDMI_720p60:	/* 4 */
+	case HDMI_720p100:	/* 41 */
+	case HDMI_720p120:	/* 47 */
+	case HDMI_720p24_64x27:	/* 65 */
+	case HDMI_720p25_64x27:	/* 66 */
+	case HDMI_720p30_64x27:	/* 67 */
+	case HDMI_720p50_64x27:	/* 68 */
+	case HDMI_720p60_64x27:	/* 69 */
+	case HDMI_720p100_64x27:	/* 70 */
+	case HDMI_720p120_64x27:	/* 71 */
 		fmt = TVIN_SIG_FMT_HDMI_1280X720P_60HZ;
 		break;
 	case HDMI_720p_FRAMEPACKING:
 		fmt = TVIN_SIG_FMT_HDMI_1280X720P_60HZ_FRAME_PACKING;
 		break;
-	case HDMI_1080i:
+	case HDMI_1080i50:	/* 20 */
+	case HDMI_1080i100:	/* 40 */
+	case HDMI_1080i60:	/* 5 */
+	case HDMI_1080i120:	/* 46 */
 		fmt = TVIN_SIG_FMT_HDMI_1920X1080I_60HZ;
 		break;
 	case HDMI_1080i_FRAMEPACKING:
@@ -657,11 +704,28 @@ enum tvin_sig_fmt_e hdmirx_hw_get_fmt(void)
 	case HDMI_1080i_ALTERNATIVE:
 		fmt = TVIN_SIG_FMT_HDMI_1920X1080I_60HZ_ALTERNATIVE;
 		break;
-	case HDMI_720x480i:
-	case HDMI_1440x480i:
+	case HDMI_480i60:	/* 6 */
+	case HDMI_480i60_16x9:	/* 7 */
+	case HDMI_480i120:	/* 50 */
+	case HDMI_480i120_16x9:	/* 51 */
+	case HDMI_480i240:	/* 58 */
+	case HDMI_480i240_16x9:	/* 59 */
 		fmt = TVIN_SIG_FMT_HDMI_1440X480I_60HZ;
 		break;
-	case HDMI_1080p:
+	case HDMI_1080p24:	/* 32 */
+	case HDMI_1080p24_64x27: /* 72 */
+	case HDMI_1080p25:	/* 33 */
+	case HDMI_1080p25_64x27:	/* 73 */
+	case HDMI_1080p30:	/* 34 */
+	case HDMI_1080p30_64x27:	/* 74 */
+	case HDMI_1080p50:	/* 31 */
+	case HDMI_1080p60:	/* 16 */
+	case HDMI_1080p50_64x27:	/* 75 */
+	case HDMI_1080p60_64x27:	/* 76 */
+	case HDMI_1080p100:	/* 64 */
+	case HDMI_1080p120:	/* 63 */
+	case HDMI_1080p100_64x27:	/* 77 */
+	case HDMI_1080p120_64x27:	/* 78 */
 	case HDMI_1080p_420:
 		fmt = TVIN_SIG_FMT_HDMI_1920X1080P_60HZ;
 		break;
@@ -671,29 +735,66 @@ enum tvin_sig_fmt_e hdmirx_hw_get_fmt(void)
 	case HDMI_1080p_ALTERNATIVE:
 		fmt = TVIN_SIG_FMT_HDMI_1920X1080P_24HZ_ALTERNATIVE;
 		break;
-	case HDMI_720x576p:
-	case HDMI_1440x576p:
+	case HDMI_576p50:	/* 17 */
+	case HDMI_576p50_16x9: /* 18 */
+	case HDMI_576p100:	/* 42 */
+	case HDMI_576p100_16x9: /* 43 */
+	case HDMI_576p200:	/* 52 */
+	case HDMI_576p200_16x9: /* 53 */
 		fmt = TVIN_SIG_FMT_HDMI_720X576P_50HZ;
+		break;
+	case HDMI_1440x576p50:	/* 29 */
+	case HDMI_1440x576p50_16x9:	/* 30 */
+		fmt = TVIN_SIG_FMT_HDMI_1440X576P_50HZ;
 		break;
 	case HDMI_576p_FRAMEPACKING:
 		fmt = TVIN_SIG_FMT_HDMI_720X576P_50HZ_FRAME_PACKING;
 		break;
-	case HDMI_720x576i:
-	case HDMI_1440x576i:
+	case HDMI_576i50:	/* 21 */
+	case HDMI_576i50_16x9:	/* 22 */
+	case HDMI_576i100:	/* 44 */
+	case HDMI_576i100_16x9:	/* 45 */
+	case HDMI_576i200:	/* 54 */
+	case HDMI_576i200_16x9:	/* 55 */
 		fmt = TVIN_SIG_FMT_HDMI_1440X576I_50HZ;
 		break;
-	case HDMI_1440x240p:
+	case HDMI_1440x240p60:	/* 8 */
+	case HDMI_1440x240p60_16x9:	/* 9 */
 		fmt = TVIN_SIG_FMT_HDMI_1440X240P_60HZ;
 		break;
-	case HDMI_2880x240p:
+	case HDMI_2880x240p60:	/* 12 */
+	case HDMI_2880x240p60_16x9: /* 13 */
 		fmt = TVIN_SIG_FMT_HDMI_2880X240P_60HZ;
 		break;
-	case HDMI_1440x288p:
+	case HDMI_1440x288p50:	/* 23 */
+	case HDMI_1440x288p50_16x9: /* 24 */
 		fmt = TVIN_SIG_FMT_HDMI_1440X288P_50HZ;
 		break;
-	case HDMI_2880x288p:
+	case HDMI_2880x288p50:	/* 27 */
+	case HDMI_2880x288p50_16x9: /* 28 */
 		fmt = TVIN_SIG_FMT_HDMI_2880X288P_50HZ;
 		break;
+	case HDMI_2880x480i60:	/* 10 */
+	case HDMI_2880x480i60_16x9:	/* 11 */
+		fmt = TVIN_SIG_FMT_HDMI_2880X480I_60HZ;
+		break;
+	case HDMI_2880x576i50:	/* 25 */
+	case HDMI_2880x576i50_16x9:	/* 26 */
+		fmt = TVIN_SIG_FMT_HDMI_2880X576I_50HZ;
+		break;
+	case HDMI_2880x480p60:	/* 35 */
+	case HDMI_2880x480p60_16x9:	/* 36 */
+		fmt = TVIN_SIG_FMT_HDMI_2880X480P_60HZ;
+		break;
+	case HDMI_2880x576p50:	/* 37 */
+	case HDMI_2880x576p50_16x9: /* 38 */
+		fmt = TVIN_SIG_FMT_HDMI_2880X576P_50HZ;
+		break;
+	case HDMI_1080i50_1250: /* 39 */
+		fmt = TVIN_SIG_FMT_HDMI_1920X1080I_50HZ_B;
+		break;
+
+	/* VESA mode*/
 	case HDMI_800_600:
 		fmt = TVIN_SIG_FMT_HDMI_800X600_00HZ;
 		break;
@@ -739,15 +840,32 @@ enum tvin_sig_fmt_e hdmirx_hw_get_fmt(void)
 	case HDMI_1680_1050:
 		fmt = TVIN_SIG_FMT_HDMI_1680X1050_00HZ;
 		break;
-	case HDMI_3840x2160:
-	case HDMI_3840x2160_420:
+	case HDMI_2160p24_16x9:
+	case HDMI_2160p25_16x9:
+	case HDMI_2160p30_16x9:
+	case HDMI_2160p50_16x9:
+	case HDMI_2160p60_16x9:
+	case HDMI_2160p24_64x27:
+	case HDMI_2160p25_64x27:
+	case HDMI_2160p30_64x27:
+	case HDMI_2160p50_64x27:
+	case HDMI_2160p60_64x27:
+	case HDMI_2160p50_16x9_Y420:
+	case HDMI_2160p60_16x9_Y420:
+	case HDMI_2160p50_64x27_Y420:
+	case HDMI_2160p60_64x27_Y420:
 		if (en_4k_timing)
 			fmt = TVIN_SIG_FMT_HDMI_3840_2160_00HZ;
 		else
 			fmt = TVIN_SIG_FMT_NULL;
 		break;
-	case HDMI_4096x2160:
-	case HDMI_4096x2160_420:
+	case HDMI_4096p24_256x135:
+	case HDMI_4096p25_256x135:
+	case HDMI_4096p30_256x135:
+	case HDMI_4096p50_256x135:
+	case HDMI_4096p60_256x135:
+	case HDMI_4096p50_256x135_Y420:
+	case HDMI_4096p60_256x135_Y420:
 		if (en_4k_timing)
 			fmt = TVIN_SIG_FMT_HDMI_4096_2160_00HZ;
 		else
@@ -897,7 +1015,7 @@ static int get_timing_fmt(void)
 	int i;
 	int size = sizeof(freq_ref)/sizeof(struct freq_ref_s);
 
-	rx.pre.sw_vic = 0;
+	rx.pre.sw_vic = HDMI_UNKNOWN;
 	rx.pre.sw_dvi = 0;
 	rx.pre.sw_fp = 0;
 	rx.pre.sw_alternative = 0;
@@ -914,8 +1032,11 @@ static int get_timing_fmt(void)
 			continue;
 		break;
 	}
-	if (i == size)
+	if (i == size) {
+		/* if format is not matched, sw_vic will be UNSUPPORT */
+		rx.pre.sw_vic = HDMI_UNSUPPORT;
 		return i;
+	}
 
 	rx.pre.sw_vic = freq_ref[i].vic;
 	rx.pre.sw_dvi = rx.pre.hw_dvi;
@@ -934,7 +1055,6 @@ static void signal_status_init(void)
 	pll_unlock_cnt = 0;
 	pll_lock_cnt = 0;
 	sig_unstable_cnt = 0;
-	sig_stable_cnt = 0;
 	sig_stable_cnt = 0;
 	sig_unstable_cnt = 0;
 	sig_unready_cnt = 0;
@@ -1173,6 +1293,8 @@ void fsm_restart(void)
 		esm_set_stable(false);
 	}
 	set_scdc_cfg(1, 0);
+	vic_check_en = true;
+	dvi_check_en = true;
 	rx.state = FSM_INIT;
 	rx_pr("force_fsm_init\n");
 }
@@ -1639,6 +1761,8 @@ void hdmirx_open_port(enum tvin_port_e port)
 	rx.port = (port - TVIN_PORT_HDMI0) & 0xf;
 	//rx.no_signal = false;
 	//rx.wait_no_sig_cnt = 0;
+	vic_check_en = true;
+	dvi_check_en = true;
 	if (hdmirx_repeat_support())
 		rx.hdcp.repeat = repeat_plug;
 	else
@@ -1737,6 +1861,8 @@ void rx_5v_monitor(void)
 			#else
 			set_fsm_state(FSM_HPD_LOW);
 			#endif
+			vic_check_en = true;
+			dvi_check_en = true;
 		}
 	}
 	rx.cur_5v_sts = (pwr_sts >> rx.port) & 1;
@@ -1927,7 +2053,26 @@ void rx_main_state_machine(void)
 				get_timing_fmt();
 				if (is_unnormal_format(sig_stable_cnt))
 					break;
+				/* if format vic is abnormal, do hw
+				 * reset once to try to recover.
+				 */
+				if (fmt_vic_abnormal() &&
+					(vic_check_en == true)) {
+					hdmirx_hw_config();
+					rx.state = FSM_HPD_LOW;
+					vic_check_en = false;
+					break;
+				}
 				sig_unready_cnt = 0;
+				/* if DVI signal is detected, then try
+				 * hpd reset once to recovery, to avoid
+				 * recognition to DVI of low probability
+				 */
+				if (rx.pre.sw_dvi && dvi_check_en) {
+					rx.state = FSM_HPD_LOW;
+					dvi_check_en = false;
+					break;
+				}
 				rx.skip = 0;
 				rx.state = FSM_SIG_READY;
 				rx.aud_sr_stable_cnt = 0;
@@ -1984,6 +2129,7 @@ void rx_main_state_machine(void)
 				rx.hdcp.hdcp_version = HDCP_VER_NONE;
 				rx.state = FSM_WAIT_CLK_STABLE;
 				/* rx.pre_state = FSM_SIG_READY; */
+				vic_check_en = true;
 				rx.skip = 0;
 				rx.aud_sr_stable_cnt = 0;
 				rx.aud_sr_unstable_cnt = 0;
@@ -2216,8 +2362,20 @@ void rx_main_state_machine(void)
 				get_timing_fmt();
 				if (is_unnormal_format(sig_stable_cnt))
 					break;
+				if (fmt_vic_abnormal() &&
+					(vic_check_en == true)) {
+					hdmirx_hw_config();
+					rx.state = FSM_HPD_LOW;
+					vic_check_en = false;
+					break;
+				}
 				sig_stable_cnt = 0;
 				sig_unstable_cnt = 0;
+				if (rx.pre.sw_dvi && dvi_check_en) {
+					rx.state = FSM_HPD_LOW;
+					dvi_check_en = false;
+					break;
+				}
 				rx.skip = 0;
 				if ((rx.pre.hdcp14_state == 0) ||
 					(rx.pre.hdcp14_state == 2))
@@ -2281,6 +2439,7 @@ void rx_main_state_machine(void)
 				rx.state = FSM_WAIT_CLK_STABLE;
 				rx.pre_state = FSM_SIG_READY;
 				rx.skip = 0;
+				vic_check_en = true;
 				rx.aud_sr_stable_cnt = 0;
 				rx.aud_sr_unstable_cnt = 0;
 				if (hdcp22_on) {
@@ -2733,8 +2892,8 @@ void hdmirx_timer_handler(unsigned long arg)
 		rx_pkt_check_content();
 		#ifdef USE_NEW_FSM_METHODE
 		rx_err_monitor();
-		#endif
 		rx_clkrate_monitor();
+		#endif
 	}
 	devp->timer.expires = jiffies + TIMER_STATE_CHECK;
 	add_timer(&devp->timer);
