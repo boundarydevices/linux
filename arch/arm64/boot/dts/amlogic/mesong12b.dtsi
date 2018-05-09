@@ -2000,6 +2000,27 @@
 		};
 	};
 
+	pwm_b_pins3: pwm_b_pins3 {
+		mux {
+			groups = "pwm_b_h";
+			function = "pwm_b";
+		};
+	};
+
+	pwm_b_pins4: pwm_b_pins4 {
+		mux {
+			groups = "pwm_b_z0";
+			function = "pwm_b";
+		};
+	};
+
+	pwm_b_pins5: pwm_b_pins5 {
+		mux {
+			groups = "pwm_b_z13";
+			function = "pwm_b";
+		};
+	};
+
 	pwm_c_pins1: pwm_c_pins1 {
 		mux {
 			groups = "pwm_c_c4";
@@ -2021,6 +2042,13 @@
 		};
 	};
 
+	pwm_c_pins4: pwm_c_pins4 {
+		mux {
+			groups = "pwm_c_z";
+			function = "pwm_c";
+		};
+	};
+
 	pwm_d_pins1: pwm_d_pins1 {
 		mux {
 			groups = "pwm_d_x3";
@@ -2031,6 +2059,20 @@
 	pwm_d_pins2: pwm_d_pins2 {
 		mux {
 			groups = "pwm_d_x6";
+			function = "pwm_d";
+		};
+	};
+
+	pwm_d_pins3: pwm_d_pins3 {
+		mux {
+			groups = "pwm_d_z";
+			function = "pwm_d";
+		};
+	};
+
+	pwm_d_pins4: pwm_d_pins4 {
+		mux {
+			groups = "pwm_d_a4";
 			function = "pwm_d";
 		};
 	};
@@ -2052,6 +2094,20 @@
 	pwm_f_pins2: pwm_f_pins2 {
 		mux {
 			groups = "pwm_f_h";
+			function = "pwm_f";
+		};
+	};
+
+	pwm_f_pins3: pwm_f_pins3 {
+		mux {
+			groups = "pwm_f_z";
+			function = "pwm_f";
+		};
+	};
+
+	pwm_f_pins4: pwm_f_pins4 {
+		mux {
+			groups = "pwm_f_a11";
 			function = "pwm_f";
 		};
 	};
@@ -2169,6 +2225,20 @@
 			drive-strength = <3>;
 		};
 	};
+
+	irblaster_pins2:irblaster_pins2 {
+		mux {
+			groups = "remote_out_h";
+			function = "remote_out";
+		};
+	};
+
+	irblaster_pins3:irblaster_pins3 {
+		mux {
+			groups = "remote_out_z";
+			function = "remote_out";
+		};
+	};
 };
 
 &pinctrl_aobus {
@@ -2182,6 +2252,13 @@
 	irblaster_pins:irblaster_pin {
 		mux {
 			groups = "remote_out_ao";
+			function = "remote_out_ao";
+		};
+	};
+
+	irblaster_pins1:irblaster_pin1 {
+		mux {
+			groups = "remote_out_ao9";
 			function = "remote_out_ao";
 		};
 	};
