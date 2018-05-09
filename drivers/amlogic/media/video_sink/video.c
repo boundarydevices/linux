@@ -5361,6 +5361,8 @@ SET_FILTER:
 		/* for bypass pps debug */
 		if ((vpp_filter->vpp_hsc_start_phase_step == 0x1000000) &&
 			(vpp_filter->vpp_vsc_start_phase_step == 0x1000000) &&
+			(vpp_filter->vpp_hsc_start_phase_step ==
+			vpp_filter->vpp_hf_start_phase_step) &&
 			!vpp_filter->vpp_pre_vsc_en &&
 			!vpp_filter->vpp_pre_hsc_en &&
 			bypass_pps)
