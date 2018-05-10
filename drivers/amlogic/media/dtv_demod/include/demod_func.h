@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/include/demod_func.h
+ * drivers/amlogic/media/dtv_demod/include/demod_func.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

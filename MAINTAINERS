@@ -14444,8 +14444,10 @@ F:	drivers/amlogic/media/vout/backlight/aml_ldim/iw7027_bl.h
 AMLOGIC DTV DEMOD DRIVER
 M:      Jihong Sui <jihong.sui@amlogic.com>
 F:      include/uapi/linux/dvb/aml_demod.h
-F:      drivers/amlogic/media/aml_demod/*
+F:      drivers/amlogic/media/amldemod/*
 
-AMLOGIC DEBUG
-M: Jianxin Pan <jianxin.pan@amlogic.com>
-F:  drivers/amlogic/debug/
+AMLOGIC DTV DEMOD DRIVER
+M:      Jihong Sui <jihong.sui@amlogic.com>
+F:      drivers/amlogic/media/amldemod/*
+F:      drivers/amlogic/media/dtv_demod/*
+

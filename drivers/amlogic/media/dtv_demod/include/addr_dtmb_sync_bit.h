@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/include/addr_dtmb_sync_bit.h
+ * drivers/amlogic/media/dtv_demod/include/addr_dtmb_sync_bit.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

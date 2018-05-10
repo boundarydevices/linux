@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/dvbt_v2.c
+ * drivers/amlogic/media/dtv_demod/dvbt_v2.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

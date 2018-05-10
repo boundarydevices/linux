@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/include/acf_filter_coefficient.h
+ * drivers/amlogic/media/dtv_demod/include/acf_filter_coefficient.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

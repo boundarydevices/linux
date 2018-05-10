@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/aml_demod.c
+ * drivers/amlogic/media/dtv_demod/aml_demod.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

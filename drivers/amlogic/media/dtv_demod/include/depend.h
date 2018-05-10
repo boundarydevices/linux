@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/include/depend.h
+ * drivers/amlogic/media/dtv_demod/include/depend.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

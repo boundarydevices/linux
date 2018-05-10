@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/i2c_func.c
+ * drivers/amlogic/media/dtv_demod/i2c_func.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

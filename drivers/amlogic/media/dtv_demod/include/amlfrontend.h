@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/include/amlfrontend.h
+ * drivers/amlogic/media/dtv_demod/include/amlfrontend.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *

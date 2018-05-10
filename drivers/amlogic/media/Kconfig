@@ -53,5 +53,5 @@ source "drivers/amlogic/media/vin/Kconfig"
 source "drivers/amlogic/media/video_processor/Kconfig"
 source "drivers/amlogic/media/enhancement/Kconfig"
 endif
-source "drivers/amlogic/media/amldemod/Kconfig"
+source "drivers/amlogic/media/dtv_demod/Kconfig"
 endmenu

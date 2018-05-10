@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/amlfrontend.c
+ * drivers/amlogic/media/dtv_demod/amlfrontend.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -1425,18 +1425,7 @@ static int gxtv_demod_atsc_read_status
 	if (aml_demod_debug & DBG_ATSC) {
 		if ((dbg_lst_status != s) || (last_lock != ilock)) {
 			/* check tuner */
-			/*dvbfe = aml_get_fe();*//*get_si2177_tuner();*/
-			/*if (dvbfe != NULL) {*/
-#if 0
-				if (dvbfe->ops.tuner_ops.get_strength) {
-					strength =
-				dvbfe->ops.tuner_ops.get_strength(dvbfe);
-				}
-#else
-				strength = tuner_get_ch_power2();
-#endif
-			/*	strength -= 100;*/
-			/*}*/
+			strength = tuner_get_ch_power2();
 
 			PR_ATSC("s=%d(1 is lock),lock=%d\n", s, ilock);
 			PR_ATSC("[rsj_test]freq[%d] strength[%d]\n",
@@ -3847,10 +3836,12 @@ static int aml_dtvdm_tune(struct dvb_frontend *fe, bool re_tune,
 
 	if (nmode == AM_FE_UNKNOWN_N) {
 		*delay = HZ * 5;
+		*status = 0;
 		return 0;
 	}
 	if (is_not_active(fe)) {
-		PR_DBG("tune :not active\n");
+		*status = 0;
+		PR_DBGL("tune :not active\n");
 		return 0;
 	}
 

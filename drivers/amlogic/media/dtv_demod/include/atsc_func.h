@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/amldemod/include/atsc_func.h
+ * drivers/amlogic/media/dtv_demod/include/atsc_func.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
