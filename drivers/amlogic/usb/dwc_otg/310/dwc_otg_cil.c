@@ -348,6 +348,9 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t *core_if)
 	if (core_if->srp_timer)
 		DWC_TIMER_FREE(core_if->srp_timer);
 
+	if (core_if->device_connect_timer)
+		DWC_TIMER_FREE(core_if->device_connect_timer);
+
 	DWC_FREE(core_if);
 	core_if = NULL;
 }
@@ -1560,6 +1563,8 @@ void dwc_otg_enable_device_interrupts(dwc_otg_core_if_t *core_if)
 	intr_mask.b.enumdone = 1;
 	/* Disable Disconnect interrupt in Device mode */
 	intr_mask.b.disconnect = 0;
+	if (core_if->phy_interface == 0)
+		intr_mask.b.sofintr = 1;
 
 	if (!core_if->multiproc_int_enable) {
 		intr_mask.b.inepintr = 1;

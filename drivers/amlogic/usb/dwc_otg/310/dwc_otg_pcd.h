@@ -274,5 +274,8 @@ void dwc_otg_iso_buffer_done(dwc_otg_pcd_t *pcd, dwc_otg_pcd_ep_t *ep,
 			     void *req_handle);
 
 extern void do_test_mode(void *data);
+#ifdef CONFIG_AMLOGIC_USB3PHY
+extern void set_usb_phy_device_tuning(int port, int default_val);
+#endif
 #endif
 #endif /* DWC_HOST_ONLY */

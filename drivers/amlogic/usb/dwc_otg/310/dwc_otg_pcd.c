@@ -1157,6 +1157,16 @@ static void srp_timeout(void *ptr)
 	}
 }
 
+static void sof_timeout(void *ptr)
+{
+#ifdef CONFIG_AMLOGIC_USB3PHY
+	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *) ptr;
+
+	if (core_if->phy_interface == 0)
+		set_usb_phy_device_tuning(1, 1);
+#endif
+}
+
 /**
  * Tasklet
  *
@@ -1360,6 +1370,10 @@ dwc_otg_pcd_t *dwc_otg_pcd_init(dwc_otg_core_if_t *core_if)
 
 	/* Initialize SRP timer */
 	core_if->srp_timer = DWC_TIMER_ALLOC("SRP TIMER", srp_timeout, core_if);
+
+	/* Initialize SRP timer */
+	core_if->device_connect_timer =
+		DWC_TIMER_ALLOC("DEVICE CONNECT TIMER", sof_timeout, core_if);
 
 	if (core_if->core_params->dev_out_nak) {
 		/**

@@ -551,6 +551,11 @@ static void xhci_clear_port_change_bit(struct xhci_hcd *xhci, u16 wValue,
 	port_status = readl(addr);
 	xhci_dbg(xhci, "clear port %s change, actual port %d status  = 0x%x\n",
 			port_change_bit, wIndex, port_status);
+#ifdef CONFIG_AMLOGIC_USB
+	if (DEV_HIGHSPEED(port_status) &&
+		(wValue == USB_PORT_FEAT_C_RESET))
+		set_usb_phy_host_tuning(wIndex, 0);
+#endif
 }
 
 static int xhci_get_ports(struct usb_hcd *hcd, __le32 __iomem ***port_array)

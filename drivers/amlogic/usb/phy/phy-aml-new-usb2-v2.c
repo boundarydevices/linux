@@ -29,6 +29,63 @@
 #include <linux/amlogic/usb-v2.h>
 #include "phy-aml-new-usb-v2.h"
 
+struct amlogic_usb_v2	*g_phy2_v2;
+
+void set_usb_phy_host_tuning(int port, int default_val)
+{
+	void __iomem	*phy_reg_base;
+
+	if (!g_phy2_v2)
+		return;
+	if (port > g_phy2_v2->portnum)
+		return;
+	if (default_val == g_phy2_v2->phy_cfg_state[port])
+		return;
+
+	phy_reg_base = g_phy2_v2->phy_cfg[port];
+	dev_info(g_phy2_v2->dev, "---%s port(%d) tuning for host cf(%pf)--\n",
+		default_val ? "Recovery" : "Set",
+		port, __builtin_return_address(0));
+	if (!default_val) {
+		writel(g_phy2_v2->pll_setting[3], phy_reg_base + 0x50);
+		writel(g_phy2_v2->pll_setting[4], phy_reg_base + 0x10);
+		writel(g_phy2_v2->pll_setting[6], phy_reg_base + 0x38);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+	} else {
+		writel(0, phy_reg_base + 0x38);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+	}
+	g_phy2_v2->phy_cfg_state[port] = default_val;
+}
+
+void set_usb_phy_device_tuning(int port, int default_val)
+{
+	void __iomem	*phy_reg_base;
+
+	if (!g_phy2_v2)
+		return;
+	if (port > g_phy2_v2->portnum)
+		return;
+	if (default_val == g_phy2_v2->phy_cfg_state[port])
+		return;
+
+	phy_reg_base = g_phy2_v2->phy_cfg[port];
+	dev_info(g_phy2_v2->dev, "---%s port(%d) tuning for device cf(%pf)--\n",
+		default_val ? "Recovery" : "Set",
+		port, __builtin_return_address(0));
+	if (!default_val) {
+		writel(g_phy2_v2->pll_setting[3], phy_reg_base + 0x50);
+		writel(g_phy2_v2->pll_setting[4], phy_reg_base + 0x10);
+		writel(g_phy2_v2->pll_setting[7], phy_reg_base + 0x38);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+	} else {
+		writel(0, phy_reg_base + 0x38);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+	}
+	g_phy2_v2->phy_cfg_state[port] = default_val;
+}
+
+
 void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 {
 	/* TO DO set usb  PLL */
@@ -141,7 +198,7 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	const void *prop;
 	int i = 0;
 	u32 retval;
-	u32 pll_setting[3];
+	u32 pll_setting[8];
 
 	prop = of_get_property(dev->of_node, "portnum", NULL);
 	if (prop)
@@ -195,6 +252,31 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	if (retval < 0)
 		return -EINVAL;
 
+	retval = of_property_read_u32(dev->of_node,
+		"pll-setting-4", &(pll_setting[3]));
+	if (retval < 0)
+		return -EINVAL;
+
+	retval = of_property_read_u32(dev->of_node,
+		"pll-setting-5", &(pll_setting[4]));
+	if (retval < 0)
+		return -EINVAL;
+
+	retval = of_property_read_u32(dev->of_node,
+		"pll-setting-6", &(pll_setting[5]));
+	if (retval < 0)
+		return -EINVAL;
+
+	retval = of_property_read_u32(dev->of_node,
+			"pll-setting-7", &(pll_setting[6]));
+	if (retval < 0)
+		return -EINVAL;
+
+	retval = of_property_read_u32(dev->of_node,
+			"pll-setting-8", &(pll_setting[7]));
+	if (retval < 0)
+		return -EINVAL;
+
 	dev_info(&pdev->dev, "USB2 phy probe:phy_mem:0x%lx, iomap phy_base:0x%lx\n",
 			(unsigned long)phy_mem->start, (unsigned long)phy_base);
 
@@ -211,15 +293,25 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	phy->pll_setting[0] = pll_setting[0];
 	phy->pll_setting[1] = pll_setting[1];
 	phy->pll_setting[2] = pll_setting[2];
+	phy->pll_setting[3] = pll_setting[3];
+	phy->pll_setting[4] = pll_setting[4];
+	phy->pll_setting[5] = pll_setting[5];
+	phy->pll_setting[6] = pll_setting[6];
+	phy->pll_setting[7] = pll_setting[7];
 	phy->suspend_flag = 0;
-	for (i = 0; i < portnum; i++)
+	for (i = 0; i < portnum; i++) {
 		phy->phy_cfg[i] = phy_cfg_base[i];
+		/* set port default tuning state */
+		phy->phy_cfg_state[i] = 1;
+	}
 
 	usb_add_phy_dev(&phy->phy);
 
 	platform_set_drvdata(pdev, phy);
 
 	pm_runtime_enable(phy->dev);
+
+	g_phy2_v2 = phy;
 
 	return 0;
 }

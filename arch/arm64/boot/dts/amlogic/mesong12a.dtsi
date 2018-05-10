@@ -370,6 +370,11 @@
 		pll-setting-1 = <0x09400414>;
 		pll-setting-2 = <0x927E0000>;
 		pll-setting-3 = <0xac5f49e5>;
+		pll-setting-4 = <0xfe18>;
+		pll-setting-5 = <0xfff>;
+		pll-setting-6 = <0xc8000>;
+		pll-setting-7 = <0xe0004>;
+		pll-setting-8 = <0xe000c>;
 	};
 
 	usb3_phy_v2: usb3phy@ffe09080 {

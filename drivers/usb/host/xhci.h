@@ -2012,6 +2012,7 @@ int xhci_start(struct xhci_hcd *xhci);
 int xhci_test_single_step(struct xhci_hcd *xhci, gfp_t mem_flags,
 		struct urb *urb, int slot_id,
 		unsigned int ep_index, int testflag);
+extern void set_usb_phy_host_tuning(int port, int default_val);
 #endif
 
 #endif /* __LINUX_XHCI_HCD_H */
