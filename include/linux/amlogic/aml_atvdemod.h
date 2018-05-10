@@ -102,6 +102,8 @@ static inline const char *v4l2_std_to_str(v4l2_std_id std)
 		return "V4L2_STD_NTSC";
 	case V4L2_STD_SECAM_DK:
 		return "V4L2_STD_SECAM_DK";
+	case (V4L2_STD_SECAM_B | V4L2_STD_SECAM_G):
+		return "V4L2_STD_SECAM_BG";
 	case V4L2_STD_SECAM:
 		return "V4L2_STD_SECAM";
 	case V4L2_STD_525_60:

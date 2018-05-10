@@ -114,62 +114,42 @@ static v4l2_std_id demod_fmt_2_v4l2_std(int fmt)
 static v4l2_std_id trans_tvin_fmt_to_v4l2_std(int fmt)
 {
 	v4l2_std_id std = 0;
-#if 0 /* Want to remove ours define V4L2_COLOR_STD_NTSC/PAL/SECAM.*/
+
 	switch (fmt) {
 	case TVIN_SIG_FMT_CVBS_NTSC_M:
-		std = V4L2_STD_NTSC;
+		std = V4L2_COLOR_STD_NTSC | V4L2_STD_NTSC_M;
 		break;
 	case TVIN_SIG_FMT_CVBS_NTSC_443:
-		std = V4L2_STD_NTSC_443;
+		std = V4L2_COLOR_STD_NTSC | V4L2_STD_NTSC_443;
+		break;
+	case TVIN_SIG_FMT_CVBS_NTSC_50:
+		std = V4L2_COLOR_STD_NTSC | V4L2_STD_NTSC_M;
 		break;
 	case TVIN_SIG_FMT_CVBS_PAL_I:
-		std = V4L2_STD_PAL_I;
+		std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_I;
 		break;
 	case TVIN_SIG_FMT_CVBS_PAL_M:
-		std = V4L2_STD_PAL_M;
+		std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_M;
 		break;
 	case TVIN_SIG_FMT_CVBS_PAL_60:
-		std = V4L2_STD_PAL_60;
+		std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_60;
 		break;
 	case TVIN_SIG_FMT_CVBS_PAL_CN:
-		std = V4L2_STD_PAL_Nc;
+		std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_Nc;
 		break;
 	case TVIN_SIG_FMT_CVBS_SECAM:
-		std = V4L2_STD_SECAM;
+		std = V4L2_COLOR_STD_SECAM | V4L2_STD_SECAM_L;
 		break;
 	default:
 		pr_err("%s: Unsupport fmt: 0x%x\n", __func__, fmt);
 		break;
 	}
-#else
-	switch (fmt) {
-	case TVIN_SIG_FMT_CVBS_NTSC_M:
-	case TVIN_SIG_FMT_CVBS_NTSC_443:
-	case TVIN_SIG_FMT_CVBS_NTSC_50:
-		std = V4L2_COLOR_STD_NTSC;
-		break;
-
-	case TVIN_SIG_FMT_CVBS_PAL_I:
-	case TVIN_SIG_FMT_CVBS_PAL_M:
-	case TVIN_SIG_FMT_CVBS_PAL_60:
-	case TVIN_SIG_FMT_CVBS_PAL_CN:
-		std = V4L2_COLOR_STD_PAL;
-		break;
-
-	case TVIN_SIG_FMT_CVBS_SECAM:
-		std = V4L2_COLOR_STD_SECAM;
-		break;
-	default:
-		pr_err("%s Unsupport fmt: 0x%x\n", __func__, fmt);
-		break;
-	}
-#endif
 
 	return std;
 }
 
 static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
-		bool auto_search_std, v4l2_std_id *video_fmt,
+		int auto_search_std, v4l2_std_id *video_fmt,
 		unsigned int *audio_fmt)
 {
 	struct dvb_frontend *fe = &v4l2_fe->fe;
@@ -181,7 +161,7 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 	v4l2_std_id std_bk = 0;
 	unsigned int audio = 0;
 
-	if (auto_search_std == true) {
+	if (auto_search_std & 0x01) {
 		for (i = 0; i < try_vfmt_cnt; i++) {
 			if (aml_fe_hook_get_fmt == NULL) {
 				pr_err("%s: aml_fe_hook_get_fmt == NULL.\n",
@@ -209,16 +189,18 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 				if (p->std & V4L2_COLOR_STD_PAL)
 					p->std = V4L2_COLOR_STD_NTSC
 					| V4L2_STD_NTSC_M;
+/*
 				else if (p->std & V4L2_COLOR_STD_NTSC)
 					p->std = V4L2_COLOR_STD_SECAM
 					| V4L2_STD_SECAM;
-				else if (p->std & V4L2_COLOR_STD_SECAM)
+*/
+				else if (p->std & V4L2_COLOR_STD_NTSC)
 					p->std = V4L2_COLOR_STD_PAL
 					| V4L2_STD_PAL_DK;
 
 				p->frequency += 1;
 				params.frequency = p->frequency;
-				params.mode = p->flag;
+				params.mode = p->afc_range;
 				params.audmode = p->audmode;
 				params.std = p->std;
 
@@ -239,7 +221,7 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 			p->audmode = V4L2_STD_PAL_DK;
 
 			params.frequency = p->frequency;
-			params.mode = p->flag;
+			params.mode = p->afc_range;
 			params.audmode = p->audmode;
 			params.std = p->std;
 
@@ -258,7 +240,12 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 
 	*video_fmt = std_bk;
 
-	if (std_bk == V4L2_COLOR_STD_NTSC) {
+	if (!(auto_search_std & 0x02)) {
+		*audio_fmt = p->audmode;
+		return;
+	}
+
+	if (std_bk & V4L2_COLOR_STD_NTSC) {
 #if 1 /* For TV Signal Generator(TG39) test, NTSC need support other audio.*/
 		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK);
 		audio = aml_audiomode_autodet(fe);
@@ -275,8 +262,16 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 		audio = V4L2_STD_NTSC_M;
 		*video_fmt |= V4L2_STD_NTSC_M;
 #endif
-	} else if (std_bk == V4L2_COLOR_STD_SECAM) {
+	} else if (std_bk & V4L2_COLOR_STD_SECAM) {
+#if 1 /* For support SECAM-DK/BG/I/L */
+		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_SECAM_L);
+		audio = aml_audiomode_autodet(fe);
+		pr_info("autodet audmode 0x%x\n", audio);
+		audio = demod_fmt_2_v4l2_std(audio);
+		pr_info("v4l2_std audmode 0x%x\n", audio);
+#else
 		audio = V4L2_STD_SECAM_L;
+#endif
 	} else {
 		/*V4L2_COLOR_STD_PAL*/
 		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK);
@@ -292,7 +287,6 @@ static void v4l2_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 #endif
 	}
 
-	*video_fmt |= audio;
 	*audio_fmt = audio;
 }
 
@@ -412,7 +406,7 @@ static int v4l2_fe_afc_closer(struct v4l2_frontend *v4l2_fe, int minafcfreq,
 			p->frequency++;
 			if (fe->ops.tuner_ops.set_analog_params) {
 				params.frequency = p->frequency;
-				params.mode = p->flag;
+				params.mode = p->afc_range;
 				params.audmode = p->audmode;
 				params.std = p->std;
 				fe->ops.tuner_ops.set_analog_params(fe,
@@ -445,8 +439,9 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	v4l2_std_id std_bk = 0;
 	unsigned int audio = 0;
 	int double_check_cnt = 1;
-	bool auto_search_std = false;
+	int auto_search_std = 0;
 	int search_count = 0;
+	bool try_secam = false;
 	int ret = -1;
 	unsigned int tuner_id = v4l2_fe->tuner_id;
 
@@ -458,7 +453,8 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 
 	if (unlikely(!fe || !p ||
 			!fe->ops.tuner_ops.get_status ||
-			!fe->ops.analog_ops.has_signal)) {
+			!fe->ops.analog_ops.has_signal ||
+			!fe->ops.analog_ops.set_params)) {
 		pr_err("[%s] error: NULL function or pointer.\n", __func__);
 		return V4L2_SEARCH_INVALID;
 	}
@@ -481,9 +477,27 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	 */
 	if (p->std == 0) {
 		p->std = V4L2_COLOR_STD_NTSC | V4L2_STD_NTSC_M;
-		auto_search_std = true;
-		pr_dbg("[%s] user analog.std is 0, so set it to PAL | DK.\n",
+		auto_search_std = 0x01;
+		pr_dbg("[%s] user std is 0, so set it to NTSC | M.\n",
 				__func__);
+	}
+
+	if (p->audmode == 0) {
+		if (auto_search_std)
+			p->audmode = p->std & 0x00FFFFFF;
+		else {
+			if (p->std & V4L2_COLOR_STD_PAL)
+				p->audmode = V4L2_STD_PAL_DK;
+			else if (p->std & V4L2_COLOR_STD_NTSC)
+				p->audmode = V4L2_STD_NTSC_M;
+			else if (p->std & V4L2_COLOR_STD_SECAM)
+				p->audmode = V4L2_STD_PAL_DK;
+
+			p->std = (p->std & 0xFF000000) | p->audmode;
+		}
+		auto_search_std |= 0x02;
+		pr_dbg("[%s] user audmode is 0, so set it to %s.\n",
+				__func__, v4l2_std_to_str(p->audmode));
 	}
 
 	/*afc tune disable*/
@@ -508,8 +522,8 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	}
 
 	/**enter auto search mode**/
-	pr_dbg("[%s] Auto search std: 0x%08x\n",
-			__func__, (unsigned int) p->std);
+	pr_dbg("[%s] Auto search std: 0x%08x, audmode: 0x%08x\n",
+			__func__, (unsigned int) p->std, p->audmode);
 
 #ifdef DEBUG_TIME_CUS
 	time_end = jiffies_to_msecs(jiffies);
@@ -521,13 +535,11 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	while (minafcfreq <= p->frequency &&
 			p->frequency <= maxafcfreq) {
 
-		if (fe->ops.analog_ops.set_params) {
-			params.frequency = p->frequency;
-			params.mode = p->flag;
-			params.audmode = p->audmode;
-			params.std = p->std;
-			fe->ops.analog_ops.set_params(fe, &params);
-		}
+		params.frequency = p->frequency;
+		params.mode = p->afc_range;
+		params.audmode = p->audmode;
+		params.std = p->std;
+		fe->ops.analog_ops.set_params(fe, &params);
 
 		pr_dbg("[%s] [%d] is processing, [min=%d, max=%d].\n",
 				__func__, p->frequency, minafcfreq, maxafcfreq);
@@ -558,9 +570,53 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 				break;
 			}
 
-			if (tuner_status_cnt_local == 0)
+			if (tuner_status_cnt_local == 0) {
+				if (auto_search_std &&
+					!(p->std & V4L2_COLOR_STD_SECAM) &&
+					!(p->std & V4L2_STD_SECAM_L)) {
+					/* backup the std and audio mode */
+					std_bk = p->std;
+					audio = p->audmode;
+
+					p->std = (V4L2_COLOR_STD_SECAM
+							| V4L2_STD_SECAM_L);
+					p->audmode = V4L2_STD_SECAM_L;
+
+					params.frequency = p->frequency;
+					params.mode = p->afc_range;
+					params.audmode = p->audmode;
+					params.std = p->std;
+					fe->ops.analog_ops.set_params(fe,
+							&params);
+
+					try_secam = true;
+
+					tuner_status_cnt_local =
+						tuner_status_cnt / 2;
+
+					continue;
+				}
+
+				if (try_secam) {
+					p->std = std_bk;
+					p->audmode = audio;
+
+					params.frequency = p->frequency;
+					params.mode = p->afc_range;
+					params.audmode = p->audmode;
+					params.std = p->std;
+					fe->ops.analog_ops.set_params(fe,
+							&params);
+
+					try_secam = false;
+				}
+
 				break;
+			}
 		} while (1);
+
+		std_bk = 0;
+		audio = 0;
 
 		if (pll_lock) {
 
@@ -592,6 +648,7 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 					/*avoid std unenable */
 					p->frequency -= 1;
 					std_bk = 0;
+					audio = 0;
 				}
 #ifdef DEBUG_TIME_CUS
 				time_end = jiffies_to_msecs(jiffies);
@@ -609,16 +666,18 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 		}
 
 		/*avoid sound format is not match after search over */
-		if (std_bk != 0) {
+		if (std_bk != 0 && audio != 0) {
 			p->std = std_bk;
+			p->audmode = audio;
 
 			params.frequency = p->frequency;
-			params.mode = p->flag;
+			params.mode = p->afc_range;
 			params.audmode = p->audmode;
 			params.std = p->std;
 
 			fe->ops.analog_ops.set_params(fe, &params);
 			std_bk = 0;
+			audio = 0;
 		}
 
 		pr_dbg("[%s] freq[analog.std:0x%08x] is[%d] unlock\n",
@@ -987,6 +1046,7 @@ static int v4l2_set_frontend(struct v4l2_frontend *v4l2_fe,
 	} else if (fe->ops.analog_ops.set_params) {
 		/* TODO:*/
 		p.frequency = params->frequency;
+		p.mode = params->afc_range;
 		p.std = params->std;
 		p.audmode = params->audmode;
 		fe->ops.analog_ops.set_params(fe, &p);

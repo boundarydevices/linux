@@ -272,7 +272,8 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	if ((atvdemod_param->param.std != amlatvdemod_devp->std) ||
 		(atvdemod_param->tuner_id == AM_TUNER_R840) ||
 		(atvdemod_param->tuner_id == AM_TUNER_SI2151) ||
-		(atvdemod_param->tuner_id == AM_TUNER_MXL661)) {
+		(atvdemod_param->tuner_id == AM_TUNER_MXL661) ||
+		(atvdemod_param->tuner_id == AM_TUNER_SI2159)) {
 		/* open AGC if needed */
 		if (amlatvdemod_devp->pin != NULL)
 			devm_pinctrl_put(amlatvdemod_devp->pin);
@@ -285,8 +286,14 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		last_frq = atvdemod_param->param.frequency;
 		last_std = atvdemod_param->param.std;
 #endif
-		if (1/*atvdemod_param->param.std != amlatvdemod_devp->std*/) {
+		if (1) {
+		/*
+		 * atvdemod_param->param.std != amlatvdemod_devp->std ||
+		 * atvdemod_param->param.audmode != amlatvdemod_devp->audmode
+		 */
 			amlatvdemod_devp->std = atvdemod_param->param.std;
+			amlatvdemod_devp->audmode =
+					atvdemod_param->param.audmode;
 			amlatvdemod_devp->if_freq = atvdemod_param->if_freq;
 			amlatvdemod_devp->if_inv = atvdemod_param->if_inv;
 			amlatvdemod_devp->tuner_id = atvdemod_param->tuner_id;
