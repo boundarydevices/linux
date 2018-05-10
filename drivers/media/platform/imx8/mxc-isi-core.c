@@ -105,6 +105,8 @@ static int mxc_isi_parse_dt(struct mxc_isi_dev *mxc_isi)
 
 	dev_dbg(dev, "%s, isi_%d,interface(%d, %d, %d)\n", __func__, mxc_isi->id,
 			mxc_isi->interface[0], mxc_isi->interface[1], mxc_isi->interface[2]);
+
+	mxc_isi->chain_buf = of_property_read_bool(node, "fsl,chain_buf");
 	return 0;
 }
 
