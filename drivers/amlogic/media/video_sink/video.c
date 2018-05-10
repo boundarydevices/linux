@@ -3366,7 +3366,8 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if ((is_meson_txlx_cpu()
-		|| is_meson_g12a())
+		|| is_meson_g12a_cpu()
+		|| is_meson_g12b_cpu())
 		&& is_dolby_vision_on()
 		&& is_dolby_vision_stb_mode()
 		&& (vf->source_type ==
@@ -3832,7 +3833,8 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if ((is_meson_txlx_cpu()
-		|| is_meson_g12a())
+		|| is_meson_g12a_cpu()
+		|| is_meson_g12b_cpu())
 		&& is_dolby_vision_on()
 		&& is_dolby_vision_stb_mode()
 		&& (vf->source_type ==
@@ -6317,10 +6319,10 @@ SET_FILTER:
 				VSYNC_WR_MPEG_REG_BITS(
 					VIU_MISC_CTRL1,
 					1, 16, 1); /* bypass core1 */
-			else if (is_meson_g12a())
+			else if (is_meson_g12a_cpu()
+				|| is_meson_g12b_cpu())
 				VSYNC_WR_MPEG_REG_BITS(
-								DOLBY_PATH_CTRL,
-								1, 0, 1);
+					DOLBY_PATH_CTRL, 1, 0, 1);
 		}
 		if (cur_dispbuf && (cur_dispbuf == &vf_local))
 			cur_dispbuf = NULL;
@@ -10001,7 +10003,7 @@ static int __init video_init(void)
 	}
 #endif
 
-	if (is_meson_g12a_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 		cur_dev->viu_off = 0x3200 - 0x1a50;
 		legacy_vpp = false;
 	}

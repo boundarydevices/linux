@@ -222,14 +222,16 @@ void vpp_extend_mode_osd2(bool mode)
 /**/
 void vpp_vd1_if_bits_mode(enum vd_if_bits_mode_e bits_mode)
 {
-	u32 reg = (is_meson_g12a_cpu() ?
+	u32 reg = ((is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu()) ?
 		G12_VD1_IF0_GEN_REG3 :
 		VD1_IF0_GEN_REG3);
 	WRITE_VPP_REG_BITS(reg, (bits_mode & 0x3), 8, 2);
 }
 void vpp_vd2_if_bits_mode(enum vd_if_bits_mode_e bits_mode)
 {
-	u32 reg = (is_meson_g12a_cpu() ?
+	u32 reg = ((is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu()) ?
 		G12_VD2_IF0_GEN_REG3 :
 		VD2_IF0_GEN_REG3);
 	WRITE_VPP_REG_BITS(reg, (bits_mode & 0x3), 8, 2);
@@ -384,7 +386,7 @@ void vpp_set_12bit_datapath_g12a(void)
 	vpp_set_vd1_ext_mod(0);
 	vpp_set_vd1_bypass_dolby(1);
 
-	if (is_meson_g12a_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 		/*vd1 mux config*/
 		vpp_set_vd1_mux0(0);
 		vpp_set_vd1_mux1(0);
@@ -652,7 +654,7 @@ void vpp_datapath_status(void)
 	unsigned int chroma_coring_en, black_ext_en, bluestretch_en;
 	unsigned int vadj1_en, vadj2_en;
 
-	if (is_meson_g12a_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 		vd1_out_format =
 			READ_VPP_REG_BITS(G12_VD1_IF0_GEN_REG3, 8, 2);
 		vd2_out_format =

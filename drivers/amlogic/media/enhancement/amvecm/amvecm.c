@@ -4612,7 +4612,7 @@ static int aml_vecm_probe(struct platform_device *pdev)
 		/* amvecm_vpp_mtx_debug(mtx_sel_dbg, 1);*/
 	} else if (is_meson_txhd_cpu())
 		vpp_set_10bit_datapath1();
-	else if (is_meson_g12a_cpu())
+	else if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
 		vpp_set_12bit_datapath_g12a();
 	memset(&vpp_hist_param.vpp_histgram[0],
 		0, sizeof(unsigned short) * 64);

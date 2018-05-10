@@ -2657,7 +2657,7 @@ void vpp_super_scaler_support(void)
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
 	scaler_path_sel = SCALER_PATH_MAX;
-	if (is_meson_g12a_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 		sr_reg_offt = 0xc00;
 		super_scaler = false;
 	} else
