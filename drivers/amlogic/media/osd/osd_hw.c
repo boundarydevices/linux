@@ -2078,6 +2078,12 @@ void osd_setup_hw(u32 index,
 				sizeof(struct pandata_s));
 		memcpy(&osd_hw.dispdata_backup[index], &disp_data,
 				sizeof(struct pandata_s));
+		osd_hw.src_data[index].x = osd_hw.pandata[index].x_start;
+		osd_hw.src_data[index].y = osd_hw.pandata[index].y_start;
+		osd_hw.src_data[index].w = osd_hw.pandata[index].x_end
+			- osd_hw.pandata[index].x_start + 1;
+		osd_hw.src_data[index].h = osd_hw.pandata[index].y_end
+			- osd_hw.pandata[index].y_start + 1;
 	}
 	spin_lock_irqsave(&osd_lock, lock_flags);
 	if (update_color_mode)
@@ -3830,6 +3836,12 @@ void osd_pan_display_hw(u32 index, unsigned int xoffset, unsigned int yoffset)
 		osd_hw.pandata[index].x_end   += diff_x;
 		osd_hw.pandata[index].y_start += diff_y;
 		osd_hw.pandata[index].y_end   += diff_y;
+		osd_hw.src_data[index].x = osd_hw.pandata[index].x_start;
+		osd_hw.src_data[index].y = osd_hw.pandata[index].y_start;
+		osd_hw.src_data[index].w = osd_hw.pandata[index].x_end
+			- osd_hw.pandata[index].x_start + 1;
+		osd_hw.src_data[index].h = osd_hw.pandata[index].y_end
+			- osd_hw.pandata[index].y_start + 1;
 		add_to_update_list(index, DISP_GEOMETRY);
 		if (osd_hw.osd_fps_start)
 			osd_hw.osd_fps++;
