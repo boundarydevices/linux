@@ -691,3 +691,8 @@
 	};
 };
 
+
+&defendkey {
+	status = "okay";
+};
+

@@ -1305,4 +1305,7 @@
 	status = "okay";
 };
 
+&defendkey {
+	status = "okay";
+};
 

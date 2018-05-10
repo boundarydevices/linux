@@ -1311,3 +1311,8 @@
 &saradc {
 	status = "disabled";
 };
+
+&defendkey {
+	status = "okay";
+};
+

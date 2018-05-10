@@ -1391,3 +1391,8 @@
 &meson_cooldev {
 	status = "okay";
 };
+
+&defendkey {
+	status = "okay";
+};
+
