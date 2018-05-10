@@ -388,9 +388,10 @@
 	};
 
 	custom_maps: custom_maps {
-		mapnum = <2>;
+		mapnum = <3>;
 		map0 = <&map_0>;
 		map1 = <&map_1>;
+		map2 = <&map_2>;
 		map_0: map_0{
 			mapname = "amlogic-remote-1";
 			customcode = <0xfb04>;
@@ -510,6 +511,29 @@
 				REMOTE_KEY(0x0b, KEY_QUESTION)
 				REMOTE_KEY(0x00, KEY_CHAT)
 				REMOTE_KEY(0x13, KEY_SEARCH)>;
+		};
+		map_2: map_2{
+			mapname = "amlogic-remote-3";
+			customcode = <0xbd02>;
+			release_delay = <80>;
+			size  = <17>;
+			keymap = <REMOTE_KEY(0xca,103)
+			REMOTE_KEY(0xd2,108)
+			REMOTE_KEY(0x99,105)
+			REMOTE_KEY(0xc1,106)
+			REMOTE_KEY(0xce,KEY_ENTER)
+			REMOTE_KEY(0x45,116)
+			REMOTE_KEY(0xc5,133)
+			REMOTE_KEY(0x80,113)
+			REMOTE_KEY(0xd0,15)
+			REMOTE_KEY(0xd6,125)
+			REMOTE_KEY(0x95,102)
+			REMOTE_KEY(0xdd,104)
+			REMOTE_KEY(0x8c,109)
+			REMOTE_KEY(0x89,131)
+			REMOTE_KEY(0x9c,130)
+			REMOTE_KEY(0x9a,120)
+			REMOTE_KEY(0xcd,121)>;
 		};
 	};
 
