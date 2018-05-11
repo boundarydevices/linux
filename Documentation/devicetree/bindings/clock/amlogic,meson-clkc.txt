@@ -14,6 +14,9 @@ Required Properties:
 	"amlogic,txlx-aoclkc"    - for txlx ao clock
 	"amlogic,g12a-clkc"	- for g12a ee clock
 	"amlogic,g12a-aoclkc"   - for g12a ao clock
+	"amlogic,g12b-clkc-1"   - for g12b ee part1 clock
+	"amlogic,g12b-clkc-2"   - for g12b ee part2 clock
+        "amlogic,g12b-aoclkc"   - for g12b ao clock
 
 - reg: physical base address of the clock controller and length of memory
        mapped region.

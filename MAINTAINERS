@@ -14491,3 +14491,8 @@ F: arch/arm64/boot/dts/amlogic/g12b-sched-energy.dtsi
 AMLOGIC G12B skt dts
 M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/g12b_a311d_skt.dts
+
+AMLOGIC G12B clock
+M: Qiufang Dai <qiufang.dai@amlogic.com>
+F: drivers/amlogic/clk/g12b/*
+
