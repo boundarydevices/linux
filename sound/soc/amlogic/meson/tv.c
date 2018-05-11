@@ -114,18 +114,6 @@ static u32 aml_hw_resample_table[7][5] = {
 	{0x00800000, 0x0, 0x0, 0x0, 0x0},
 };
 
-static int DRC0_enable(int enable)
-{
-	if (enable == 1) {
-		aml_eqdrc_write(AED_DRC_THD0, aml_drc_tko_table[2]);
-		aml_eqdrc_write(AED_DRC_K0, aml_drc_tko_table[4]);
-	} else {
-		aml_eqdrc_write(AED_DRC_THD0, 0xbf000000);
-		aml_eqdrc_write(AED_DRC_K0, 0x40000);
-	}
-	return 0;
-}
-
 static const char *const audio_in_source_texts[] = {
 	"LINEIN", "ATV", "HDMI", "SPDIFIN" };
 
@@ -432,7 +420,8 @@ static int set_internal_EQ_volume(
 			| (channel_1_volume << 8) /* channel 1 volume: 0dB*/
 			| (channel_2_volume << 0) /* channel 2 volume: 0dB*/
 			);
-	aml_eqdrc_write(AED_EQ_VOLUME_SLEW_CNT, 0x40);
+	/*fast attrack*/
+	aml_eqdrc_write(AED_EQ_VOLUME_SLEW_CNT, 0x5);
 	aml_eqdrc_write(AED_MUTE, 0);
 	return 0;
 }
@@ -1806,13 +1795,9 @@ int gxtvbb_set_audin_source(int audin_src)
 	if (audin_src == 0) {
 		/* select external codec ADC as I2S source */
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 3, 0);
-
-		External_Mute(0);
 	} else if (audin_src == 1) {
 		/* select ATV output as I2S source */
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 3, 1);
-
-		External_Mute(0);
 	} else if (audin_src == 2) {
 		/* select HDMI-rx as Audio In source */
 		/* [14:12]cntl_hdmirx_chsts_sel: */
@@ -1831,8 +1816,6 @@ int gxtvbb_set_audin_source(int audin_src)
 						0);
 	}  else if (audin_src == 3) {
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3 << 4, 0);
-
-		External_Mute(0);
 	}
 
 	return 0;
@@ -1843,15 +1826,9 @@ int txl_set_audin_source(int audin_src)
 	if (audin_src == 0) {
 		/* select internal codec ADC in TXL as I2S source */
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 3, 3);
-
-		DRC0_enable(1);
-		External_Mute(0);
 	} else if (audin_src == 1) {
 		/* select ATV output as I2S source */
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 3, 1);
-
-		DRC0_enable(1);
-		External_Mute(0);
 	} else if (audin_src == 2) {
 		/* select HDMI-rx as Audio In source */
 		/* [14:12]cntl_hdmirx_chsts_sel: */
@@ -1868,11 +1845,8 @@ int txl_set_audin_source(int audin_src)
 						0xf << 8);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x7 << 12,
 						0);
-		DRC0_enable(0);
 	}  else if (audin_src == 3) {
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3 << 4, 0);
-		DRC0_enable(0);
-		External_Mute(0);
 	}
 
 	return 0;
@@ -1884,13 +1858,8 @@ int txlx_set_audin_source(int audin_src)
 		/* select internal codec ADC in TXLX as HDMI-i2s*/
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 3 << 16,
 					3 << 16);
-
-		DRC0_enable(1);
-		External_Mute(0);
 	} else if (audin_src == 1) {
 		/* select ATV output as I2S source */
-		DRC0_enable(1);
-		External_Mute(0);
 	} else if (audin_src == 2) {
 		/* select HDMI-rx as Audio In source */
 		/* [14:12]cntl_hdmirx_chsts_sel: */
@@ -1900,18 +1869,14 @@ int txlx_set_audin_source(int audin_src)
 		/* 1=Select HDMIRX SPDIF output as AUDIN source */
 		/* [1:0] i2sin_src_sel: */
 		/* 2=Select HDMIRX I2S output as AUDIN source */
-		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3, 2);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3 << 4,
 						1 << 4);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0xf << 8,
 						0xf << 8);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x7 << 12,
 						0);
-		DRC0_enable(0);
 	}  else if (audin_src == 3) {
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3 << 4, 0);
-		DRC0_enable(0);
-		External_Mute(0);
 	}
 
 	return 0;
@@ -1923,14 +1888,8 @@ int txhd_set_audin_source(int audin_src)
 		/* select internal codec ADC in TXLX as HDMI-i2s*/
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 3 << 16,
 					3 << 16);
-
-		DRC0_enable(1);
-		External_Mute(0);
 	} else if (audin_src == 1) {
 		/* select ATV output as I2S source */
-
-		DRC0_enable(1);
-		External_Mute(0);
 	} else if (audin_src == 2) {
 		/* select HDMI-rx as Audio In source */
 		/* [14:12]cntl_hdmirx_chsts_sel: */
@@ -1940,18 +1899,14 @@ int txhd_set_audin_source(int audin_src)
 		/* 1=Select HDMIRX SPDIF output as AUDIN source */
 		/* [1:0] i2sin_src_sel: */
 		/* 2=Select HDMIRX I2S output as AUDIN source */
-
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3 << 4,
 						1 << 4);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0xf << 8,
 						0xf << 8);
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x7 << 12,
 						0);
-		DRC0_enable(0);
 	}  else if (audin_src == 3) {
 		aml_audin_update_bits(AUDIN_SOURCE_SEL, 0x3 << 4, 0);
-		DRC0_enable(0);
-		External_Mute(0);
 	}
 
 	return 0;
