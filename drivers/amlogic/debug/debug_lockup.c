@@ -294,7 +294,9 @@ static ssize_t x##_write(struct file *file, const char __user *userbuf,\
 	if (copy_from_user(buf, userbuf, count))		\
 		return -EFAULT;				\
 	buf[count] = 0;					\
-	ret = sscanf(buf, "%ld", &val);			\
+	ret = kstrtoul(buf, 0, &val);			\
+	if (ret)					\
+		return -1;				\
 	x = (typeof(x))val;				\
 	if (irq_check_en || isr_check_en)			\
 		aml_wdt_disable_dbg();			\
