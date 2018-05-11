@@ -577,7 +577,6 @@ static int emmc_eyetest_log(struct mmc_host *mmc, u32 line_x)
 	u32 eyetest_out0 = 0, eyetest_out1 = 0;
 	u32 intf3 = readl(host->base + SD_EMMC_INTF3);
 	struct intf3 *gintf3 = (struct intf3 *)&(intf3);
-	u32 vcfg = readl(host->base + SD_EMMC_CFG);
 	int retry = 3;
 	u64 tmp = 0;
 	u32 blksz = 512;
@@ -612,16 +611,16 @@ RETRY:
 	eyetest_log = readl(host->base + SD_EMMC_EYETEST_LOG);
 
 	if (!(geyetest_log->eyetest_done & 0x1)) {
-		pr_warn("testing eyetest times: 0x%x, out: 0x%x, 0x%x\n",
+		pr_warn("testing eyetest times:0x%x,out:0x%x,0x%x,line:%d\n",
 			readl(host->base + SD_EMMC_EYETEST_LOG),
-			eyetest_out0, eyetest_out1);
+			eyetest_out0, eyetest_out1, line_x);
 		gintf3->eyetest_on = 0;
 		writel(intf3, host->base + SD_EMMC_INTF3);
 		pdata->intf3 = intf3;
 		retry--;
 		if (retry == 0) {
-			pr_warn("[%s][%d] retry eyetest failed\n",
-					__func__, __LINE__);
+			pr_warn("[%s][%d] retry eyetest failed-line:%d\n",
+					__func__, __LINE__, line_x);
 			return 1;
 		}
 		goto RETRY;
@@ -631,15 +630,11 @@ RETRY:
 	gintf3->eyetest_on = 0;
 	writel(intf3, host->base + SD_EMMC_INTF3);
 	pdata->intf3 = intf3;
-	if (vcfg & 0x4) {
-		if (pdata->count > 32) {
-			eyetest_out1 <<= (32 - (pdata->count - 32));
-			eyetest_out1 >>= (32 - (pdata->count - 32));
-		} else
-			eyetest_out1 = 0x0;
-	}
 	pdata->align[line_x] = ((tmp | eyetest_out1) << 32) | eyetest_out0;
-	pr_debug("u64 eyetestout 0x%llx\n", pdata->align[line_x]);
+	pr_debug("d1:0x%x,d2:0x%x,u64eyet:0x%016llx,l_x:%d\n",
+			readl(host->base + SD_EMMC_DELAY1_V3),
+			readl(host->base + SD_EMMC_DELAY2_V3),
+			pdata->align[line_x], line_x);
 	host->is_tunning = 0;
 	return 0;
 }
@@ -774,8 +769,8 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 
 	ds_count = fbinary(pdata->align[8]);
 	if (ds_count == 0)
-		if ((pdata->align[8] & 0xf0) == 0)
-			return 0;
+		if ((pdata->align[8] & 0x1e0) == 0)
+			goto out_cmd;
 	pr_debug("ds_count:%d,delay1:0x%x,delay2:0x%x\n",
 			ds_count, readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3));
@@ -794,10 +789,11 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 	}
 	delay1 = readl(host->base + SD_EMMC_DELAY1_V3);
 	delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
-	ds_count = fbinary(pdata->align[8]);
 	count = ((delay2>>18) & 0x3f) - ((delay2_bak>>18) & 0x3f);
 	delay1 += (count<<0)|(count<<6)|(count<<12)|(count<<18)|(count<<24);
 	delay2 += (count<<0)|(count<<6)|(count<<12);
+
+out_cmd:
 
 	cmd_count = fbinary(pdata->align[9]);
 	if (cmd_count <= (pdata->count/3))
@@ -813,7 +809,7 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
 	pdata->dly1 = delay1;
 	pdata->dly2 = delay2;
-	pr_debug("cmd_count:%d,delay1:0x%x,delay2:0x%x,count: %u\n",
+	pr_info("cmd_count:%d,delay1:0x%x,delay2:0x%x,count: %u\n",
 			cmd_count, readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3), count);
 	return 0;
@@ -891,9 +887,10 @@ static int emmc_ds_manual_sht(struct mmc_host *mmc)
 	gintf3->ds_sht_m = best_start + best_size / 2;
 	writel(intf3, host->base + SD_EMMC_INTF3);
 	pdata->intf3 = intf3;
-	pr_info("ds_sht:%u, window:%d, intf3:0x%x",
+	pr_info("ds_sht:%u, window:%d, intf3:0x%x, clock:0x%x",
 			gintf3->ds_sht_m, best_size,
-			readl(host->base +  SD_EMMC_INTF3));
+			readl(host->base + SD_EMMC_INTF3),
+			readl(host->base + SD_EMMC_CLOCK_V3));
 	host->is_tunning = 0;
 	return 0;
 }
