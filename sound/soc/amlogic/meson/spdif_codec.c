@@ -28,6 +28,7 @@
 #ifdef CONFIG_AMLOGIC_HDMITX
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ext.h>
 #endif
+#include "spdif_dai.h"
 
 #define DRV_NAME "spdif-dit"
 
@@ -83,6 +84,7 @@ void aml_spdif_pinmux_init(struct device *dev)
 				"audio_spdif_out_mute");
 		if (IS_ERR(v_spdif_codec.p_pinctrl_out_mute_state)) {
 			devm_pinctrl_put(v_spdif_codec.p_pinctrl_out_mute);
+			v_spdif_codec.p_pinctrl_out_mute_state = NULL;
 			dev_err(dev, "audio_spdif_out_mute can't get pinctrl\n");
 		}
 	}
@@ -98,6 +100,7 @@ void aml_spdif_pinmux_init(struct device *dev)
 				"audio_spdif_out");
 		if (IS_ERR(v_spdif_codec.p_pinctrl_out_state)) {
 			devm_pinctrl_put(v_spdif_codec.p_pinctrl_out);
+			v_spdif_codec.p_pinctrl_out_state = NULL;
 			dev_err(dev, "audio_spdif_out can't get pinctrl\n");
 		}
 	}
@@ -158,6 +161,38 @@ static int aml_audio_get_spdif_mute(struct snd_kcontrol *kcontrol,
 {
 	ucontrol->value.integer.value[0] =
 			v_spdif_codec.spdif_pinmux_out;
+	return 0;
+}
+
+static const char *const spdif_format_texts[10] = {
+	"2 CH PCM", "DTS RAW Mode", "Dolby Digital", "DTS",
+	"DD+", "DTS-HD", "Multi-channel LPCM", "TrueHD", "DTS-HD MA",
+	"HIGH SR Stereo LPCM"
+};
+
+static const struct soc_enum spdif_format_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdif_format_texts),
+			spdif_format_texts);
+
+static int spdif_format_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = IEC958_mode_codec;
+	return 0;
+}
+
+static int spdif_format_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int index = ucontrol->value.enumerated.item[0];
+
+	if (index >= 10) {
+		pr_err("bad parameter for spdif format set\n");
+		return -1;
+	}
+	IEC958_mode_codec = index;
 	return 0;
 }
 
@@ -252,8 +287,12 @@ static int aml_set_hdmi_out_channel_mask(struct snd_kcontrol *kcontrol,
 
 static const struct snd_kcontrol_new spdif_controls[] = {
 	SOC_SINGLE_BOOL_EXT("Audio spdif mute",
-			    0, aml_audio_get_spdif_mute,
-			    aml_audio_set_spdif_mute),
+				0, aml_audio_get_spdif_mute,
+				aml_audio_set_spdif_mute),
+	SOC_ENUM_EXT("Audio spdif format",
+				spdif_format_enum,
+				spdif_format_get_enum,
+				spdif_format_set_enum),
 #ifdef CONFIG_AMLOGIC_HDMITX
 	SOC_SINGLE_BOOL_EXT("Audio hdmi-out mute",
 				0, aml_get_hdmi_out_audio,
