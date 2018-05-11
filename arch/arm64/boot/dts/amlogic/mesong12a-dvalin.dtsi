@@ -21,7 +21,7 @@
 		interrupts = <0 160 4>, <0 161 4>, <0 162 4>;
 		interrupt-names = "GPU", "MMU", "JOB";
 
-		num_of_pp = <3>;
+		num_of_pp = <2>;
 		sc_mpp = <1>; /* number of shader cores used most of time. */
 		clocks = <&clkc CLKID_GPU_MUX &clkc CLKID_GP0_PLL>;
 		clock-names = "gpu_mux","gp0_pll";

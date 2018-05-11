@@ -45,6 +45,7 @@ enum cool_dev_type {
 struct cool_dev {
 	int min_state;
 	int coeff;
+	int gpupp;
 	int cluster_id;
 	char *device_type;
 	struct device_node *np;
@@ -264,7 +265,6 @@ static int register_cool_dev(struct platform_device *pdev, int index)
 {
 	struct meson_cooldev *mcooldev = platform_get_drvdata(pdev);
 	struct cool_dev *cool = &mcooldev->cool_devs[index];
-	int pp;
 	struct cpumask *mask;
 	int id = cool->cluster_id;
 
@@ -284,9 +284,7 @@ static int register_cool_dev(struct platform_device *pdev, int index)
 		break;
 	/* GPU is KO, just save these parameters */
 	case COOL_DEV_TYPE_GPU_FREQ:
-		if (of_property_read_u32(cool->np, "num_of_pp", &pp))
-			pr_err("thermal: read num_of_pp failed\n");
-		save_gpu_cool_para(cool->coeff, cool->np, pp);
+		save_gpu_cool_para(cool->coeff, cool->np, cool->gpupp);
 		return 0;
 
 	case COOL_DEV_TYPE_GPU_CORE:
@@ -341,6 +339,11 @@ static int parse_cool_device(struct platform_device *pdev)
 			pr_err("thermal: read dyn_coeff failed\n");
 		else
 			cool->coeff = temp;
+
+		if (of_property_read_u32(child, "gpu_pp", &temp))
+			pr_err("thermal: read gpupp failed\n");
+		else
+			cool->gpupp = temp;
 
 		if (of_property_read_u32(child, "cluster_id", &temp))
 			pr_err("thermal: read cluster_id failed\n");

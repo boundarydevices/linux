@@ -1525,7 +1525,7 @@
 			cooling_devices {
 				cpufreq_cool_cluster0 {
 					min_state = <1000000>;
-					dyn_coeff = <140>;
+					dyn_coeff = <115>;
 					cluster_id = <0>;
 					node_name = "cpufreq_cool0";
 					device_type = "cpufreq";
@@ -1539,7 +1539,8 @@
 				};
 				gpufreq_cool {
 					min_state = <400>;
-					dyn_coeff = <437>;
+					dyn_coeff = <358>;
+					gpu_pp = <2>;
 					cluster_id = <0>;
 					node_name = "gpufreq_cool0";
 					device_type = "gpufreq";
@@ -1571,7 +1572,7 @@
 		soc_thermal: soc_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <2150>;
+			sustainable-power = <1460>;
 			thermal-sensors = <&p_tsensor 0>;
 			trips {
 				pswitch_on: trip-point@0 {
