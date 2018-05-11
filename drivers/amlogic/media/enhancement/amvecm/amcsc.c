@@ -4837,27 +4837,54 @@ static int vpp_eye_protection_process(
 			sdr_process_mode)
 		return 0;
 
+	if (vinfo->viu_color_fmt == COLOR_FMT_RGB444)
+		return 0;
 	/* post matrix bypass */
-	if ((vinfo->viu_color_fmt != COLOR_FMT_RGB444) &&
-		(cur_eye_protect_mode == 0))
-		/* yuv2rgb for eye protect mode */
-		set_vpp_matrix(VPP_MATRIX_POST,
-			bypass_coeff,
-			CSC_ON);
-	else /* matrix yuv2rgb for LCD */
-		set_vpp_matrix(VPP_MATRIX_POST,
-			YUV709l_to_RGB709_coeff,
-			CSC_ON);
+
+	if (cur_eye_protect_mode == 0) {
+	/* yuv2rgb for eye protect mode */
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
+			mtx_setting(POST2_MTX, MATRIX_YUV709_RGB,
+				MTX_OFF);
+		else
+			set_vpp_matrix(VPP_MATRIX_POST,
+				bypass_coeff,
+				CSC_ON);
+	} else {/* matrix yuv2rgb for LCD */
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
+			mtx_setting(POST2_MTX, MATRIX_YUV709_RGB,
+				MTX_ON);
+		else
+			set_vpp_matrix(VPP_MATRIX_POST,
+				YUV709l_to_RGB709_coeff,
+				CSC_ON);
+	}
 
 	/* xvycc matrix bypass */
-	if ((vinfo->viu_color_fmt != COLOR_FMT_RGB444) &&
-		(cur_eye_protect_mode == 1))
+	if (cur_eye_protect_mode == 1) {
 		/*  for eye protect mode */
-		video_rgb_ogo_xvy_mtx_latch &= MTX_RGB2YUVL_RGB_OGO;
-	else /* matrix yuv2rgb for LCD */
-		set_vpp_matrix(VPP_MATRIX_XVYCC,
-			bypass_coeff,
-			CSC_ON);
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
+			if (video_rgb_ogo_xvy_mtx)
+				video_rgb_ogo_xvy_mtx_latch |=
+					MTX_RGB2YUVL_RGB_OGO;
+		} else {
+			if (video_rgb_ogo_xvy_mtx) {
+				video_rgb_ogo_xvy_mtx_latch |=
+					MTX_RGB2YUVL_RGB_OGO;
+				mtx_en_mux |= XVY_MTX_EN_MASK;
+			} else
+				set_vpp_matrix(VPP_MATRIX_XVYCC,
+					RGB709_to_YUV709l_coeff,
+					CSC_ON);
+		}
+	} else /* matrix yuv2rgb for LCD */
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
+			mtx_setting(POST_MTX, MATRIX_RGB_YUV709,
+				MTX_OFF);
+		else
+			set_vpp_matrix(VPP_MATRIX_XVYCC,
+				bypass_coeff,
+				CSC_ON);
 
 	vpp_set_mtx_en_write();
 	return 0;
