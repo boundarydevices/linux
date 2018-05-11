@@ -113,13 +113,14 @@ struct edid_hdr_block_t {
 };
 
 enum edid_list_e {
-	EDID_LIST_BUFF,
+	EDID_LIST_TOP,
 	EDID_LIST_14,
 	EDID_LIST_14_AUD,
 	EDID_LIST_14_420C,
 	EDID_LIST_14_420VD,
 	EDID_LIST_20,
-	EDID_LIST_NUM
+	EDID_LIST_NUM,
+	EDID_LIST_NULL
 };
 
 struct detailed_timing_desc {
@@ -534,6 +535,7 @@ enum hdmi_vic_e {
 extern int edid_mode;
 extern int port_map;
 extern bool new_hdr_lum;
+extern bool atmos_edid_update_hpd_en;
 int rx_set_hdr_lumi(unsigned char *data, int len);
 void rx_edid_physical_addr(int a, int b, int c, int d);
 unsigned char rx_parse_arc_aud_type(const unsigned char *buff);
