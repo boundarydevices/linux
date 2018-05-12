@@ -701,6 +701,7 @@ struct hw_para_s {
 	u32 vinfo_height;
 	u32 fb_drvier_probe;
 	u32 afbc_force_reset;
+	u32 afbc_regs_backup;
 	u32 afbc_status_err_reset;
 	u32 afbc_use_latch;
 	u32 hwc_enable;

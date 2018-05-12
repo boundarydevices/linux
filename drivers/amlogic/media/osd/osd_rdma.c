@@ -1215,22 +1215,21 @@ int osd_rdma_reset_and_flush(u32 reset_bit)
 			addr, value);
 		i++;
 	}
-	i = 0;
-	base = VPU_MAFBC_IRQ_MASK;
-	while ((reset_bit & HW_RESET_MALI_AFBCD_REGS)
-		&& (i < MALI_AFBC_REG_BACKUP_COUNT)) {
-		addr = mali_afbc_reg_backup[i];
-		value = mali_afbc_backup[addr - base];
-		wrtie_reg_internal(
-			addr, value);
-		i++;
-	}
 
-	if ((reset_bit & HW_RESET_MALI_AFBCD_REGS)
-		&& ((osd_hw.osd_meson_dev.cpu_id
-		== __MESON_CPU_MAJOR_ID_G12A) ||
-		(osd_hw.osd_meson_dev.cpu_id
-		== __MESON_CPU_MAJOR_ID_G12B)))
+	if (osd_hw.afbc_regs_backup) {
+		i = 0;
+		base = VPU_MAFBC_IRQ_MASK;
+		while ((reset_bit & HW_RESET_MALI_AFBCD_REGS)
+			&& (i < MALI_AFBC_REG_BACKUP_COUNT)) {
+			addr = mali_afbc_reg_backup[i];
+			value = mali_afbc_backup[addr - base];
+			wrtie_reg_internal(
+				addr, value);
+			i++;
+		}
+	}
+	if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) &&
+		(osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE))
 		wrtie_reg_internal(VPU_MAFBC_COMMAND, 1);
 
 	if (item_count < 500)

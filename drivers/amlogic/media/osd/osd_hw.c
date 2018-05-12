@@ -1528,16 +1528,19 @@ void osd_hw_reset(void)
 		if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC)
 			&& (reset_bit & HW_RESET_MALI_AFBCD_REGS)) {
 			/* restore mali afbcd regs */
-			int i;
-			u32 addr;
-			u32 value;
-			u32 base = VPU_MAFBC_IRQ_MASK;
+			if (osd_hw.afbc_regs_backup) {
+				int i;
+				u32 addr;
+				u32 value;
+				u32 base = VPU_MAFBC_IRQ_MASK;
 
-			for (i = 0; i < MALI_AFBC_REG_BACKUP_COUNT; i++) {
-				addr = mali_afbc_reg_backup[i];
-				value = mali_afbc_backup[addr - base];
-				VSYNCOSD_IRQ_WR_MPEG_REG(
-					addr, value);
+				for (i = 0; i < MALI_AFBC_REG_BACKUP_COUNT;
+					i++) {
+					addr = mali_afbc_reg_backup[i];
+					value = mali_afbc_backup[addr - base];
+					VSYNCOSD_IRQ_WR_MPEG_REG(
+						addr, value);
+				}
 			}
 			VSYNCOSD_IRQ_WR_MPEG_REG(VPU_MAFBC_COMMAND, 1);
 		}
@@ -7086,8 +7089,20 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 				MALI_AFBC_32X8_PIXEL << 1 |
 				MALI_AFBC_SPLIT_ON;
 			osd_hw.osd_afbcd[idx].afbc_start = 0;
-			osd_hw.afbc_force_reset = 1;
+
 			osd_hw.osd_afbcd[idx].out_addr_id = idx + 1;
+			if (osd_hw.osd_meson_dev.cpu_id ==
+				__MESON_CPU_MAJOR_ID_G12A) {
+				osd_hw.afbc_force_reset = 1;
+				osd_hw.afbc_regs_backup = 1;
+			} else {
+				osd_hw.afbc_force_reset = 1;
+				osd_hw.afbc_regs_backup = 0;
+				data32 = osd_reg_read(MALI_AFBCD_TOP_CTRL);
+				osd_reg_write(MALI_AFBCD_TOP_CTRL,
+					data32 | 0x800000);
+			}
+
 			if (idx < osd_hw.osd_meson_dev.osd_count - 1) {
 				/* TODO: temp set at here,
 				 * need move it to uboot
