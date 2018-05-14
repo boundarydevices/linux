@@ -1070,7 +1070,9 @@ int tsync_set_apts(unsigned int pts)
 		t = timestamp_vpts_get();
 	else
 		t = timestamp_pcrscr_get();
-	if ((abs(oldpts - pts) > tsync_av_threshold_min)
+	/* do not switch tsync mode until first video toggled. */
+	if ((abs(oldpts - pts) > tsync_av_threshold_min) &&
+		(timestamp_firstvpts_get() > 0)
 			/*&&*/
 	/*(!get_vsync_pts_inc_mode())*//*DEBUG_TMP*/) {/* is discontinue */
 		apts_discontinue = 1;
