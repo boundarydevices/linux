@@ -47,6 +47,7 @@
 #include "i2s.h"
 #include "audio_hw.h"
 
+#if 0
 static int aml_i2s2in_clk_support(struct aml_i2s2 *i2s2)
 {
 	int ret = 0;
@@ -60,6 +61,7 @@ static int aml_i2s2in_clk_support(struct aml_i2s2 *i2s2)
 
 	return ret;
 }
+#endif
 
 static int aml_i2s2in_set_clks(struct aml_i2s2 *i2s2, unsigned int rate)
 {
@@ -161,7 +163,7 @@ static int aml_dai_i2s2_prepare(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_runtime_data *prtd = runtime->private_data;
 	struct audio_stream *s = &prtd->s;
-	struct aml_i2s2 *i2s2 = snd_soc_dai_get_drvdata(dai);
+	// struct aml_i2s2 *i2s2 = snd_soc_dai_get_drvdata(dai);
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		/* dev_info(substream->pcm->card->dev,
@@ -189,7 +191,7 @@ static int aml_dai_i2s2_prepare(struct snd_pcm_substream *substream,
 		}
 
 		/* i2s in module clk */
-		if (aml_i2s2in_clk_support(i2s2))
+		if (0/* aml_i2s2in_clk_support(i2s2) */)
 			audio_in_clk_sel();
 	} else {
 		dev_info(substream->pcm->card->dev,

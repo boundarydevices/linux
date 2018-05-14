@@ -508,9 +508,17 @@ static int aml_dai_spdif_prepare(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		aml_hw_iec958_init(substream, 0);
 	} else {
-		audio_in_spdif_set_buf(runtime->dma_addr,
+		if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
+			audio_in_spdif_set_buf(runtime->dma_addr,
 				       runtime->dma_bytes * 2, spdif_p->src);
-		memset((void *)runtime->dma_area, 0, runtime->dma_bytes * 2);
+			memset((void *)runtime->dma_area,
+				0, runtime->dma_bytes * 2);
+		} else {
+			audio_in_spdif_set_buf(runtime->dma_addr,
+				       runtime->dma_bytes, spdif_p->src);
+			memset((void *)runtime->dma_area,
+				0, runtime->dma_bytes);
+		}
 	}
 
 	return 0;
@@ -623,7 +631,8 @@ static struct snd_soc_dai_driver aml_spdif_dai[] = {
 			SNDRV_PCM_RATE_44100 |
 			SNDRV_PCM_RATE_48000 |
 			SNDRV_PCM_RATE_96000),
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.ops = &spdif_dai_ops,
 		.suspend = aml_dai_spdif_suspend,
