@@ -1058,7 +1058,7 @@ int tsync_set_apts(unsigned int pts)
 	unsigned int t;
 	/* ssize_t r; */
 	unsigned int oldpts = timestamp_apts_get();
-	/*int oldmod = tsync_mode;*/
+	int oldmod = tsync_mode;
 
 	if (tsync_abreak)
 		tsync_abreak = 0;
@@ -1084,7 +1084,7 @@ int tsync_set_apts(unsigned int pts)
 
 	if (tsync_mode == TSYNC_MODE_AMASTER)
 		t = timestamp_pcrscr_get();
-#if 0//DEBUG_TMP
+
 	if (tsync_mode == TSYNC_MODE_AMASTER) {
 		/* special used for Dobly Certification AVSync test */
 		if (dobly_avsync_test) {
@@ -1133,7 +1133,7 @@ int tsync_set_apts(unsigned int pts)
 		}
 	} else if (oldmod != tsync_mode && tsync_mode == TSYNC_MODE_VMASTER)
 		timestamp_pcrscr_set(timestamp_vpts_get());
-#endif
+
 	return 0;
 }
 EXPORT_SYMBOL(tsync_set_apts);

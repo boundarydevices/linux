@@ -131,6 +131,7 @@ static int receive_frame_count;
 static int display_frame_count;
 static int omx_need_drop_frame_num;
 static bool omx_drop_done;
+static bool video_start_post;
 
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
@@ -4655,10 +4656,12 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		vf = video_vf_peek();
 
 		if (vf) {
-			if (hdmi_in_onvideo == 0)
+			if (hdmi_in_onvideo == 0) {
 				tsync_avevent_locked(VIDEO_START,
 						     (vf->pts) ? vf->pts :
 						     timestamp_vpts_get());
+				video_start_post = true;
+			}
 
 			if (show_first_frame_nosync || show_first_picture)
 				show_nosync = true;
@@ -6043,14 +6046,18 @@ static void video_vf_unreg_provider(void)
 		/* TODO: mod gate */
 		/* switch_mod_gate_by_name("ge2d", 0); */
 	}
-	if (hdmi_in_onvideo == 0)
+	if ((hdmi_in_onvideo == 0) && (video_start_post)) {
 		tsync_avevent(VIDEO_STOP, 0);
+		video_start_post = false;
+	}
 #else
 	/* if (!trickmode_fffb) */
 	if (cur_dispbuf)
 		keeped = vf_keep_current(cur_dispbuf, el_vf);
-	if (hdmi_in_onvideo == 0)
+	if ((hdmi_in_onvideo == 0) && (video_start_post)) {
 		tsync_avevent(VIDEO_STOP, 0);
+		video_start_post = false;
+	}
 #endif
 	if (keeped < 0) {/*keep failed.*/
 		pr_info("video keep failed, disable video now!\n");
