@@ -647,6 +647,7 @@
 	};
 	/* Audio Related end */
 
+	/*DCDC for SY8120B1ABC*/
 	cpu_opp_table0: cpu_opp_table0 {
 		compatible = "operating-points-v2";
 		opp-shared;
@@ -692,7 +693,7 @@
 			opp-microvolt = <861000>;
 		};
 		opp10 {
-			opp-hz = /bits/ 64 <1896000000>;
+			opp-hz = /bits/ 64 <1920000000>;
 			opp-microvolt = <981000>;
 		};
 	};
