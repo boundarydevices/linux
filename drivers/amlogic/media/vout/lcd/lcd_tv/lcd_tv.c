@@ -308,18 +308,17 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 	/* do not change mode value here, for bit mask is useful */
 	lcd_vmode_vinfo_update(mode & VMODE_MODE_BIT_MASK);
 
-	if (!(mode & VMODE_INIT_BIT_MASK)) {
-		switch (mode & VMODE_MODE_BIT_MASK) {
-		case VMODE_LCD:
+	if (VMODE_LCD == (mode & VMODE_MODE_BIT_MASK)) {
+		if (mode & VMODE_INIT_BIT_MASK) {
+			lcd_clk_gate_switch(1);
+		} else {
 			mutex_lock(&lcd_vout_mutex);
 			ret = lcd_drv->driver_change();
 			mutex_unlock(&lcd_vout_mutex);
-			break;
-		default:
-			ret = -EINVAL;
 		}
-	} else
-		lcd_clk_gate_switch(1);
+	} else {
+		ret = -EINVAL;
+	}
 
 	lcd_drv->lcd_status |= LCD_STATUS_VMODE_ACTIVE;
 
@@ -602,6 +601,7 @@ static int lcd_resume(void)
 			LCDPR("Warning: no lcd workqueue\n");
 			lcd_resume_flag = 1;
 			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+			lcd_if_enable_retry(lcd_drv->lcd_config);
 			LCDPR("%s finished\n", __func__);
 			mutex_unlock(&lcd_drv->power_mutex);
 		}
@@ -610,6 +610,7 @@ static int lcd_resume(void)
 		LCDPR("directly lcd late resume\n");
 		lcd_resume_flag = 1;
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+		lcd_if_enable_retry(lcd_drv->lcd_config);
 		LCDPR("%s finished\n", __func__);
 		mutex_unlock(&lcd_drv->power_mutex);
 	}

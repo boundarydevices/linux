@@ -85,13 +85,16 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 
 	mutex_lock(&lcd_drv->power_mutex);
 
-	if (!(mode & VMODE_INIT_BIT_MASK)) {
-		if (VMODE_LCD == (mode & VMODE_MODE_BIT_MASK))
+	if (VMODE_LCD == (mode & VMODE_MODE_BIT_MASK)) {
+		if (mode & VMODE_INIT_BIT_MASK) {
+			lcd_clk_gate_switch(1);
+		} else {
 			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
-		else
-			ret = -EINVAL;
-	} else
-		lcd_clk_gate_switch(1);
+			lcd_if_enable_retry(lcd_drv->lcd_config);
+		}
+	} else {
+		ret = -EINVAL;
+	}
 
 	lcd_drv->lcd_status |= LCD_STATUS_VMODE_ACTIVE;
 	mutex_unlock(&lcd_drv->power_mutex);
@@ -344,6 +347,7 @@ static int lcd_resume(void)
 			LCDPR("Warning: no lcd workqueue\n");
 			lcd_resume_flag = 1;
 			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+			lcd_if_enable_retry(lcd_drv->lcd_config);
 			LCDPR("%s finished\n", __func__);
 			mutex_unlock(&lcd_drv->power_mutex);
 		}
@@ -352,6 +356,7 @@ static int lcd_resume(void)
 		LCDPR("directly lcd late resume\n");
 		lcd_resume_flag = 1;
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+		lcd_if_enable_retry(lcd_drv->lcd_config);
 		LCDPR("%s finished\n", __func__);
 		mutex_unlock(&lcd_drv->power_mutex);
 	}

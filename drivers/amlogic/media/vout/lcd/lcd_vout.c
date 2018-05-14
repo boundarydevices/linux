@@ -193,6 +193,7 @@ static struct lcd_config_s lcd_config_dft = {
 	.lcd_power = &lcd_power_config,
 	.pinmux_flag = 0,
 	.change_flag = 0,
+	.retry_enable = 0,
 };
 
 static struct vinfo_s lcd_vinfo = {
@@ -361,6 +362,7 @@ static void lcd_resume_work(struct work_struct *p_work)
 {
 	mutex_lock(&lcd_driver->power_mutex);
 	aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+	lcd_if_enable_retry(lcd_driver->lcd_config);
 	LCDPR("%s finished\n", __func__);
 	mutex_unlock(&lcd_driver->power_mutex);
 }
@@ -1071,6 +1073,7 @@ static int lcd_resume(struct platform_device *pdev)
 			mutex_lock(&lcd_driver->power_mutex);
 			LCDPR("Warning: no lcd workqueue\n");
 			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+			lcd_if_enable_retry(lcd_driver->lcd_config);
 			LCDPR("%s finished\n", __func__);
 			mutex_unlock(&lcd_driver->power_mutex);
 		}
@@ -1079,6 +1082,7 @@ static int lcd_resume(struct platform_device *pdev)
 		LCDPR("directly lcd resume\n");
 		lcd_resume_flag = 1;
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+		lcd_if_enable_retry(lcd_driver->lcd_config);
 		LCDPR("%s finished\n", __func__);
 		mutex_unlock(&lcd_driver->power_mutex);
 	}

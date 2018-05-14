@@ -92,6 +92,8 @@ extern void lcd_hdr_vinfo_update(void);
 extern void lcd_timing_init_config(struct lcd_config_s *pconf);
 extern int lcd_vmode_change(struct lcd_config_s *pconf);
 extern void lcd_venc_change(struct lcd_config_s *pconf);
+extern void lcd_if_enable_retry(struct lcd_config_s *pconf);
+
 /* lcd debug */
 extern int lcd_class_creat(void);
 extern int lcd_class_remove(void);

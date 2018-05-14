@@ -362,6 +362,7 @@ struct lcd_clk_gate_ctrl_s {
 	struct reset_control *vencl;
 };
 
+#define LCD_ENABLE_RETRY_MAX    2
 struct lcd_config_s {
 	char *lcd_propname;
 	unsigned int backlight_index;
@@ -373,6 +374,7 @@ struct lcd_config_s {
 	struct pinctrl *pin;
 	unsigned char pinmux_flag;
 	unsigned char change_flag;
+	unsigned char retry_enable;
 	struct lcd_clk_gate_ctrl_s rstc;
 };
 

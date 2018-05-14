@@ -1156,6 +1156,7 @@ static void lcd_power_interface_ctrl(int state)
 		if (lcd_drv->lcd_status & LCD_STATUS_ENCL_ON) {
 			aml_lcd_notifier_call_chain(
 				LCD_EVENT_IF_POWER_ON, NULL);
+			lcd_if_enable_retry(lcd_drv->lcd_config);
 		} else {
 			LCDERR("%s: can't power on when controller is off\n",
 				__func__);
@@ -1562,6 +1563,7 @@ static ssize_t lcd_debug_enable_store(struct class *class,
 	if (temp) {
 		mutex_lock(&lcd_drv->power_mutex);
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+		lcd_if_enable_retry(lcd_drv->lcd_config);
 		mutex_unlock(&lcd_drv->power_mutex);
 	} else {
 		mutex_lock(&lcd_drv->power_mutex);
@@ -2882,10 +2884,14 @@ static ssize_t lcd_mipi_state_debug_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	unsigned int state_save;
 
-	return sprintf(buf, "state: %d, check_en: %d\n",
+	state_save = lcd_vcbus_getb(L_VCOM_VS_ADDR, 12, 1);
+
+	return sprintf(buf, "state: %d, check_en: %d, state_save: %d\n",
 		lcd_drv->lcd_config->lcd_control.mipi_config->check_state,
-		lcd_drv->lcd_config->lcd_control.mipi_config->check_en);
+		lcd_drv->lcd_config->lcd_control.mipi_config->check_en,
+		state_save);
 }
 
 static struct class_attribute lcd_interface_debug_class_attrs[] = {
