@@ -24,6 +24,11 @@
 #include <linux/amlogic/media/vout/lcd/aml_bl.h>
 #include <linux/spi/spi.h>
 
+#define _VE_LDIM  'C'
+
+/* VPP.ldim IOCTL command list */
+#define LDIM_IOC_PARA  _IOW(_VE_LDIM, 0x50, struct vpu_ldim_param_s)
+
 enum ldim_dev_type_e {
 	LDIM_DEV_TYPE_NORMAL = 0,
 	LDIM_DEV_TYPE_SPI,
@@ -82,6 +87,33 @@ struct aml_ldim_driver_s {
 	struct device *dev;
 	struct spi_device *spi;
 	struct spi_board_info *spi_dev;
+};
+
+struct vpu_ldim_param_s {
+	/* beam model */
+	int rgb_base;
+	int boost_gain;
+	int lpf_res;
+	int fw_ld_th_sf; /* spatial filter threshold */
+	/* beam curve */
+	int ld_vgain;
+	int ld_hgain;
+	int ld_litgain;
+	int ld_lut_vdg_lext;
+	int ld_lut_hdg_lext;
+	int ld_lut_vhk_lext;
+	int ld_lut_hdg[32];
+	int ld_lut_vdg[32];
+	int ld_lut_vhk[32];
+	/* beam shape minor adjustment */
+	int ld_lut_vhk_pos[32];
+	int ld_lut_vhk_neg[32];
+	int ld_lut_hhk[32];
+	int ld_lut_vho_pos[32];
+	int ld_lut_vho_neg[32];
+	/* remapping */
+	int lit_idx_th;
+	int comp_gain;
 };
 
 extern struct aml_ldim_driver_s *aml_ldim_get_driver(void);

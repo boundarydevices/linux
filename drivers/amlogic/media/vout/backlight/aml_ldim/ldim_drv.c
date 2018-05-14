@@ -21,6 +21,8 @@
 #include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/device.h>
+#include <linux/cdev.h>
+#include <linux/uaccess.h>
 #include <linux/timer.h>
 #include <linux/delay.h>
 #include <linux/major.h>
@@ -54,6 +56,17 @@
 #define AML_LDIM_DEV_NAME            "aml_ldim"
 const char ldim_dev_id[] = "ldim-dev";
 
+struct ldim_dev_s {
+	struct cdev		cdev;
+	struct device   *dev;
+	dev_t aml_ldim_devno;
+	struct class *aml_ldim_clsp;
+	struct cdev *aml_ldim_cdevp;
+};
+static struct ldim_dev_s ldim_dev;
+struct vpu_ldim_param_s vpu_ldim_para;
+static unsigned int LDIM_DATA_FROM_DB;
+static unsigned int print_db_flag;
 static int ldim_on_flag;
 static unsigned int ldim_func_en;
 static unsigned int ldim_remap_en;
@@ -1041,6 +1054,109 @@ static void ldim_stts_initial(unsigned int pic_h, unsigned int pic_v,
 		row_start, col_start, BLK_Hnum);
 }
 
+void ldim_db_load_update(struct LDReg *mLDReg)
+{
+	int i;
+
+	if (LDIM_DATA_FROM_DB == 1) {
+		LDIMPR("ldim_db_load_update\n");
+		/* beam model */
+		rgb_base = (unsigned long)vpu_ldim_para.rgb_base;
+		boost_gain = (unsigned long)vpu_ldim_para.boost_gain;
+		lpf_res = (unsigned long)vpu_ldim_para.lpf_res;
+		fw_LD_ThSF_l = (unsigned long)vpu_ldim_para.fw_ld_th_sf;
+
+		/* beam curve */
+		mLDReg->reg_LD_Vgain = vpu_ldim_para.ld_vgain;
+		mLDReg->reg_LD_Hgain = vpu_ldim_para.ld_hgain;
+		mLDReg->reg_LD_Litgain = vpu_ldim_para.ld_litgain;
+
+		mLDReg->reg_LD_LUT_Vdg_LEXT = vpu_ldim_para.ld_lut_vdg_lext;
+		mLDReg->reg_LD_LUT_Hdg_LEXT = vpu_ldim_para.ld_lut_hdg_lext;
+		mLDReg->reg_LD_LUT_VHk_LEXT = vpu_ldim_para.ld_lut_vhk_lext;
+
+		for (i = 0; i < 32; i++) {
+			mLDReg->reg_LD_LUT_Hdg[i] = vpu_ldim_para.ld_lut_hdg[i];
+			mLDReg->reg_LD_LUT_Vdg[i] = vpu_ldim_para.ld_lut_vdg[i];
+			mLDReg->reg_LD_LUT_VHk[i] = vpu_ldim_para.ld_lut_vhk[i];
+		}
+
+		/* beam shape minor adjustment */
+		for (i = 0; i < 32; i++) {
+			mLDReg->reg_LD_LUT_VHk_pos[i] =
+				vpu_ldim_para.ld_lut_vhk_pos[i];
+			mLDReg->reg_LD_LUT_VHk_neg[i] =
+				vpu_ldim_para.ld_lut_vhk_neg[i];
+			mLDReg->reg_LD_LUT_HHk[i] =
+				vpu_ldim_para.ld_lut_hhk[i];
+			mLDReg->reg_LD_LUT_VHo_pos[i] =
+				vpu_ldim_para.ld_lut_vho_pos[i];
+			mLDReg->reg_LD_LUT_VHo_neg[i] =
+				vpu_ldim_para.ld_lut_vho_neg[i];
+			}
+
+		/* remapping */
+		/*vpu_ldim_para.lit_idx_th;*/
+		/*vpu_ldim_para.comp_gain;*/
+	}
+
+	if (print_db_flag == 1) {
+		LDIMPR("rgb_base = %ld\n", rgb_base);
+		LDIMPR("\n");
+		LDIMPR("boost_gain = %ld\n", boost_gain);
+		LDIMPR("\n");
+		LDIMPR("lpf_res = %ld\n", lpf_res);
+		LDIMPR("\n");
+		LDIMPR("fw_LD_ThSF = %ld\n", fw_LD_ThSF_l);
+		LDIMPR("\n");
+
+		LDIMPR("ld_vgain = %d\n", mLDReg->reg_LD_Vgain);
+		LDIMPR("\n");
+		LDIMPR("ld_hgain = %d\n", mLDReg->reg_LD_Hgain);
+		LDIMPR("\n");
+		LDIMPR("ld_litgain = %d\n", mLDReg->reg_LD_Litgain);
+		LDIMPR("\n");
+
+		LDIMPR("ld_lut_vdg_lext = %d\n", mLDReg->reg_LD_LUT_Vdg_LEXT);
+		LDIMPR("\n");
+		LDIMPR("ld_lut_hdg_lext = %d\n", mLDReg->reg_LD_LUT_Hdg_LEXT);
+		LDIMPR("\n");
+		LDIMPR("ld_lut_vhk_lext = %d\n", mLDReg->reg_LD_LUT_VHk_LEXT);
+		LDIMPR("\n");
+
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_hdg = %d\n", mLDReg->reg_LD_LUT_Hdg[i]);
+		LDIMPR("\n");
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_vdg = %d\n", mLDReg->reg_LD_LUT_Vdg[i]);
+		LDIMPR("\n");
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_vhk = %d\n", mLDReg->reg_LD_LUT_VHk[i]);
+		LDIMPR("\n");
+
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_vhk_pos = %d\n",
+				mLDReg->reg_LD_LUT_VHk_pos[i]);
+		LDIMPR("\n");
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_vhk_neg = %d\n",
+				mLDReg->reg_LD_LUT_VHk_neg[i]);
+		LDIMPR("\n");
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_hhk = %d\n",
+				mLDReg->reg_LD_LUT_HHk[i]);
+		LDIMPR("\n");
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_vho_pos = %d\n",
+				mLDReg->reg_LD_LUT_VHo_pos[i]);
+		LDIMPR("\n");
+		for (i = 0; i < 32; i++)
+			LDIMPR("ld_lut_vho_neg = %d\n",
+				mLDReg->reg_LD_LUT_VHo_neg[i]);
+		LDIMPR("\n");
+	}
+}
+
 static void LDIM_Initial_GXTVBB(unsigned int ldim_bl_en,
 		unsigned int ldim_hvcnt_bypass)
 {
@@ -1420,6 +1536,7 @@ static void LDIM_Initial(unsigned int pic_h, unsigned int pic_v,
 	nPRM.reg_LD_BackLit_mode = BackLit_mode;
 	/*config params end */
 	ld_fw_cfg_once(&nPRM);
+	ldim_db_load_update(&nPRM);
 
 	switch (bl_drv->data->chip_type) {
 	case BL_CHIP_TXLX:
@@ -1434,35 +1551,66 @@ static void LDIM_Initial(unsigned int pic_h, unsigned int pic_v,
 
 }
 
-static int aml_ldim_open(struct inode *inode, struct file *file)
+static int ldim_open(struct inode *inode, struct file *file)
 {
-    /* @todo */
+	struct ldim_dev_s *devp;
+	/* Get the per-device structure that contains this cdev */
+	devp = container_of(inode->i_cdev, struct ldim_dev_s, cdev);
+	file->private_data = devp;
 	return 0;
 }
 
-static int aml_ldim_release(struct inode *inode, struct file *file)
+static int ldim_release(struct inode *inode, struct file *file)
 {
-    /* @todo */
+	file->private_data = NULL;
 	return 0;
 }
 
-static long aml_ldim_ioctl(struct file *file, unsigned int cmd,
+static long ldim_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
-    /* @todo */
-	return 0;
+	int ret = 0;
+
+	switch (cmd) {
+	/*********local dimming ioctl************/
+	case LDIM_IOC_PARA:
+		if (!LDIM_DATA_FROM_DB)
+			return -EINVAL;
+
+		if (copy_from_user(&vpu_ldim_para, (void __user *)arg,
+			sizeof(struct vpu_ldim_param_s)))
+			ret = -EFAULT;
+		break;
+
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
 }
 
-static const struct file_operations aml_ldim_fops = {
-	.owner          = THIS_MODULE,
-	.open           = aml_ldim_open,
-	.release        = aml_ldim_release,
-	.unlocked_ioctl = aml_ldim_ioctl,
-};
+#ifdef CONFIG_COMPAT
+static long ldim_compat_ioctl(struct file *file, unsigned int cmd,
+	unsigned long arg)
+{
+	unsigned long ret;
 
-static dev_t aml_ldim_devno;
-static struct class *aml_ldim_clsp;
-static struct cdev *aml_ldim_cdevp;
+	arg = (unsigned long)compat_ptr(arg);
+	ret = ldim_ioctl(file, cmd, arg);
+	return ret;
+}
+#endif
+
+static const struct file_operations ldim_fops = {
+	.owner   = THIS_MODULE,
+	.open    = ldim_open,
+	.release = ldim_release,
+	.unlocked_ioctl   = ldim_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = ldim_compat_ioctl,
+#endif
+};
 
 static void ldim_dump_histgram(void)
 {
@@ -2335,6 +2483,7 @@ static ssize_t ldim_attr_store(struct class *cla,
 	unsigned long blk_vnum = 0, blk_hnum = 0, hist_row = 0, hist_col = 0;
 	unsigned long backlit_mod = 0, ldim_bl_en = 0, ldim_hvcnt_bypass = 0;
 	unsigned long val1 = 0, val2 = 0;
+	unsigned long db_data;
 
 	if (!buf)
 		return len;
@@ -2355,6 +2504,16 @@ static ssize_t ldim_attr_store(struct class *cla,
 
 	if (!strcmp(parm[0], "histgram_ldim")) {
 		ldim_dump_histgram();
+	} else if (!strcmp(parm[0], "data_db_enable")) {
+		if (parm[1] != NULL) {
+			if (kstrtoul(parm[1], 10, &db_data) < 0)
+				return -EINVAL;
+		}
+		LDIM_DATA_FROM_DB =	(unsigned int)db_data;
+		pr_info("set LDIM_DATA_FROM_DB=%lu\n", db_data);
+	} else if (!strcmp(parm[0], "print_db_flag")) {
+		print_db_flag = 1;
+		ldim_db_load_update(&nPRM);
 	} else if (!strcmp(parm[0], "ldim_init")) {
 		if (parm[7] != NULL) {
 			if (kstrtoul(parm[1], 10, &pic_h) < 0)
@@ -2982,6 +3141,7 @@ int aml_ldim_probe(struct platform_device *pdev)
 	int ret = 0;
 	unsigned int i;
 	unsigned int ldim_irq = 0, rdma_irq = 0;
+	struct ldim_dev_s *devp = &ldim_dev;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 
 	/* function flag */
@@ -3004,6 +3164,7 @@ int aml_ldim_probe(struct platform_device *pdev)
 	avg_gain = LD_DATA_MAX;
 	invalid_val_cnt = 0;
 
+	memset(devp, 0, (sizeof(struct ldim_dev_s)));
 	nPRM.val_1 = &val_1[0];
 	nPRM.bin_1 = &bin_1[0];
 	nPRM.val_2 = &val_2[0];
@@ -3011,39 +3172,47 @@ int aml_ldim_probe(struct platform_device *pdev)
 	aml_ldim_get_config(&ldim_config, &pdev->dev);
 	aml_ldim_kzalloc(ldim_blk_row, ldim_blk_col);
 
-	ret = alloc_chrdev_region(&aml_ldim_devno, 0, 1, AML_LDIM_DEVICE_NAME);
+	ret = alloc_chrdev_region(&devp->aml_ldim_devno, 0, 1,
+		AML_LDIM_DEVICE_NAME);
 	if (ret < 0) {
 		pr_err("ldim: failed to alloc major number\n");
 		ret = -ENODEV;
 		goto err;
 	}
 
-	aml_ldim_clsp = class_create(THIS_MODULE, "aml_ldim");
-	if (IS_ERR(aml_ldim_clsp)) {
-		ret = PTR_ERR(aml_ldim_clsp);
+	devp->aml_ldim_clsp = class_create(THIS_MODULE, "aml_ldim");
+	if (IS_ERR(devp->aml_ldim_clsp)) {
+		ret = PTR_ERR(devp->aml_ldim_clsp);
 		return ret;
 	}
 	for (i = 0; aml_ldim_class_attrs[i].attr.name; i++) {
-		if (class_create_file(aml_ldim_clsp,
+		if (class_create_file(devp->aml_ldim_clsp,
 				&aml_ldim_class_attrs[i]) < 0)
 			goto err1;
 	}
 
-	aml_ldim_cdevp = kmalloc(sizeof(struct cdev), GFP_KERNEL);
-	if (!aml_ldim_cdevp) {
+	devp->aml_ldim_cdevp = kmalloc(sizeof(struct cdev), GFP_KERNEL);
+	if (!devp->aml_ldim_cdevp) {
 		ret = -ENOMEM;
 		goto err2;
 	}
 
 	/* connect the file operations with cdev */
-	cdev_init(aml_ldim_cdevp, &aml_ldim_fops);
-	aml_ldim_cdevp->owner = THIS_MODULE;
+	cdev_init(devp->aml_ldim_cdevp, &ldim_fops);
+	devp->aml_ldim_cdevp->owner = THIS_MODULE;
 
 	/* connect the major/minor number to the cdev */
-	ret = cdev_add(aml_ldim_cdevp, aml_ldim_devno, 1);
+	ret = cdev_add(devp->aml_ldim_cdevp, devp->aml_ldim_devno, 1);
 	if (ret) {
 		pr_err("aml_ldim: failed to add device\n");
 		goto err3;
+	}
+
+	devp->dev = device_create(devp->aml_ldim_clsp, NULL,
+		devp->aml_ldim_devno, NULL, AML_LDIM_CLASS_NAME);
+	if (IS_ERR(devp->dev)) {
+		ret = PTR_ERR(devp->dev);
+		goto err4;
 	}
 
 	ldim_read_queue = create_singlethread_workqueue("ldim read");
@@ -3099,14 +3268,19 @@ int aml_ldim_probe(struct platform_device *pdev)
 
 	LDIMPR("%s ok\n", __func__);
 	return 0;
+
+err4:
+	cdev_del(&devp->cdev);
 err3:
-	kfree(aml_ldim_cdevp);
+	kfree(devp->aml_ldim_cdevp);
 err2:
-	for (i = 0; aml_ldim_class_attrs[i].attr.name; i++)
-		class_remove_file(aml_ldim_clsp, &aml_ldim_class_attrs[i]);
-	class_destroy(aml_ldim_clsp);
+	for (i = 0; aml_ldim_class_attrs[i].attr.name; i++) {
+		class_remove_file(devp->aml_ldim_clsp,
+			&aml_ldim_class_attrs[i]);
+	}
+	class_destroy(devp->aml_ldim_clsp);
 err1:
-	unregister_chrdev_region(aml_ldim_devno, 1);
+	unregister_chrdev_region(devp->aml_ldim_devno, 1);
 err:
 	return ret;
 }
@@ -3114,6 +3288,7 @@ err:
 int aml_ldim_remove(void)
 {
 	unsigned int i;
+	struct ldim_dev_s *devp = &ldim_dev;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 
 	kfree(FDat.SF_BL_matrix);
@@ -3129,15 +3304,15 @@ int aml_ldim_remove(void)
 
 	free_irq(bl_drv->res_rdma_irq->start, (void *)"rdma_ldim");
 	free_irq(bl_drv->res_ldim_irq->start, (void *)"ldim_vsync");
-	cdev_del(aml_ldim_cdevp);
 
-	kfree(aml_ldim_cdevp);
+	cdev_del(devp->aml_ldim_cdevp);
+	kfree(devp->aml_ldim_cdevp);
 	for (i = 0; aml_ldim_class_attrs[i].attr.name; i++) {
-		class_remove_file(aml_ldim_clsp,
+		class_remove_file(devp->aml_ldim_clsp,
 				&aml_ldim_class_attrs[i]);
 	}
-	class_destroy(aml_ldim_clsp);
-	unregister_chrdev_region(aml_ldim_devno, 1);
+	class_destroy(devp->aml_ldim_clsp);
+	unregister_chrdev_region(devp->aml_ldim_devno, 1);
 
 	LDIMPR("%s ok\n", __func__);
 	return 0;
