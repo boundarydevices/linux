@@ -145,7 +145,7 @@ static int internal_phy_read_status(struct phy_device *phydev)
 	val = ((1 << 15) | (1 << 11) | (1 << 10) | (12 << 5));
 	phy_write(phydev, 0x14, val);
 	wol_reg12 = phy_read(phydev, 0x15);
-	if (phydev->link) {
+	if ((phydev->link) && (phydev->speed != SPEED_10)) {
 		if ((wol_reg12 & 0x1000))
 			reg12_error_count = 0;
 		if (!(wol_reg12 & 0x1000)) {
