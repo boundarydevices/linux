@@ -4893,7 +4893,8 @@ static int vpp_matrix_update(
 	if (sdr_mode == 2) { /* auto */
 		if ((vinfo->hdr_info.hdr_support & 0x4) &&
 		((get_cpu_type() == MESON_CPU_MAJOR_ID_GXL) ||
-		 (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)))
+		 (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
+		 || (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)))
 			sdr_process_mode = 1; /*box sdr->hdr*/
 		else if ((vinfo->viu_color_fmt == COLOR_FMT_RGB444) &&
 			((get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB) ||
