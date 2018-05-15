@@ -43,12 +43,6 @@
 static DEFINE_MUTEX(v4l2_fe_mutex);
 /* static int v4l2_shutdown_timeout;*/
 
-
-#define AFC_BEST_LOCK    50
-#define ATV_AFC_500KHZ   500000
-#define ATV_AFC_1_0MHZ   1000000
-#define ATV_AFC_2_0MHZ   2000000
-
 static int tuner_status_cnt = 8; /* 4-->16 test on sky mxl661 */
 module_param(tuner_status_cnt, int, 0644);
 MODULE_DESCRIPTION("after write a freq, max cnt value of read tuner status\n");
@@ -444,6 +438,7 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	bool try_secam = false;
 	int ret = -1;
 	unsigned int tuner_id = v4l2_fe->tuner_id;
+	int priv_cfg = 0;
 
 #ifdef DEBUG_TIME_CUS
 	unsigned int time_start, time_end, time_delta;
@@ -454,7 +449,8 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	if (unlikely(!fe || !p ||
 			!fe->ops.tuner_ops.get_status ||
 			!fe->ops.analog_ops.has_signal ||
-			!fe->ops.analog_ops.set_params)) {
+			!fe->ops.analog_ops.set_params ||
+			!fe->ops.analog_ops.set_config)) {
 		pr_err("[%s] error: NULL function or pointer.\n", __func__);
 		return V4L2_SEARCH_INVALID;
 	}
@@ -500,9 +496,8 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 				__func__, v4l2_std_to_str(p->audmode));
 	}
 
-	/*afc tune disable*/
-	//TODO: afc_timer_disable();
-	//analog_search_flag = 1;
+	priv_cfg = AML_ATVDEMOD_SCAN_MODE;
+	fe->ops.analog_ops.set_config(fe, &priv_cfg);
 
 	/*set the afc_range and start freq*/
 	minafcfreq = p->frequency - p->afc_range;
@@ -658,9 +653,8 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 #endif
 				/*sync param */
 				//aml_fe_analog_sync_frontend(fe);
-				/*afc tune enable*/
-				//analog_search_flag = 0;
-				//afc_timer_enable(fe);
+				priv_cfg = AML_ATVDEMOD_UNSCAN_MODE;
+				fe->ops.analog_ops.set_config(fe, &priv_cfg);
 				return V4L2_SEARCH_SUCCESS;
 			}
 		}
@@ -711,9 +705,10 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 	pr_dbg("[%s] [%d] over of range [min=%d, max=%d], search failed.\n",
 			__func__, p->frequency, minafcfreq, maxafcfreq);
 	p->frequency = set_freq;
-	/*afc tune enable*/
-	//analog_search_flag = 0;
-	//afc_timer_enable(fe);
+
+	priv_cfg = AML_ATVDEMOD_UNSCAN_MODE;
+	fe->ops.analog_ops.set_config(fe, &priv_cfg);
+
 	return DVBFE_ALGO_SEARCH_FAILED;
 }
 
@@ -1149,6 +1144,157 @@ static unsigned int v4l2_frontend_poll(struct file *filp,
 	return 0;
 }
 
+static void v4l2_property_dump(struct v4l2_frontend *v4l2_fe,
+		bool is_set, struct v4l2_property *tvp)
+{
+
+	/*int i = 0;*/
+
+	if (tvp->cmd <= 0 || tvp->cmd > DTV_MAX_COMMAND) {
+		pr_warn("%s: %s tvp.cmd = 0x%08x undefined\n",
+				__func__,
+				is_set ? "SET" : "GET",
+				tvp->cmd);
+		return;
+	}
+#if 0
+	pr_dbg("%s: %s tvp.cmd    = 0x%08x (%s)\n", __func__,
+		is_set ? "SET" : "GET",
+		tvp->cmd,
+		v4l2_cmds[tvp->cmd].name);
+
+	if (v4l2_cmds[tvp->cmd].buffer) {
+		pr_dbg("%s: tvp.u.buffer.len = 0x%02x\n",
+			__func__, tvp->u.buffer.len);
+
+		for (i = 0; i < tvp->u.buffer.len; i++)
+			pr_dbg("%s: tvp.u.buffer.data[0x%02x] = 0x%02x\n",
+					__func__, i, tvp->u.buffer.data[i]);
+	} else {
+		pr_dbg("%s: tvp.u.data = 0x%08x\n", __func__,
+				tvp->u.data);
+	}
+#endif
+}
+
+static int v4l2_property_process_set(struct v4l2_frontend *v4l2_fe,
+		struct v4l2_property *tvp, struct file *file)
+{
+	int r = 0;
+
+	v4l2_property_dump(v4l2_fe, true, tvp);
+
+	switch (tvp->cmd) {
+	case V4L2_TUNE:
+		break;
+	case V4L2_NICAM:
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return r;
+}
+
+static int v4l2_property_process_get(struct v4l2_frontend *v4l2_fe,
+		struct v4l2_property *tvp, struct file *file)
+{
+	switch (tvp->cmd) {
+	case V4L2_NICAM:
+		tvp->u.data = 0;
+		break;
+
+	default:
+		pr_dbg("%s: V4L2 property %d doesn't exist\n",
+				__func__, tvp->cmd);
+		return -EINVAL;
+	}
+
+	v4l2_property_dump(v4l2_fe, false, tvp);
+
+	return 0;
+}
+
+static int v4l2_frontend_ioctl_properties(struct file *filp,
+			unsigned int cmd, void *parg)
+{
+	struct v4l2_frontend *v4l2_fe = video_get_drvdata(video_devdata(filp));
+	int err = 0;
+
+	struct v4l2_properties *tvps = parg;
+	struct v4l2_property *tvp = NULL;
+	int i = 0;
+
+	pr_dbg("%s.\n", __func__);
+
+	if (cmd == V4L2_SET_PROPERTY) {
+		pr_dbg("%s: properties.num = %d\n", __func__, tvps->num);
+		pr_dbg("%s: properties.props = %p\n", __func__, tvps->props);
+
+		/* Put an arbitrary limit on the number of messages that can
+		 * be sent at once
+		 */
+		if ((tvps->num == 0) || (tvps->num > V4L2_IOCTL_MAX_MSGS))
+			return -EINVAL;
+
+		tvp = memdup_user(tvps->props, tvps->num * sizeof(*tvp));
+		if (IS_ERR(tvp))
+			return PTR_ERR(tvp);
+
+		for (i = 0; i < tvps->num; i++) {
+			err = v4l2_property_process_set(v4l2_fe, tvp + i, filp);
+			if (err < 0)
+				goto out;
+			(tvp + i)->result = err;
+		}
+	} else if (cmd == FE_GET_PROPERTY) {
+		pr_dbg("%s: properties.num = %d\n", __func__, tvps->num);
+		pr_dbg("%s: properties.props = %p\n", __func__, tvps->props);
+
+		/* Put an arbitrary limit on the number of messages that can
+		 * be sent at once
+		 */
+		if ((tvps->num == 0) || (tvps->num > V4L2_IOCTL_MAX_MSGS))
+			return -EINVAL;
+
+		tvp = memdup_user(tvps->props, tvps->num * sizeof(*tvp));
+		if (IS_ERR(tvp))
+			return PTR_ERR(tvp);
+
+		/*
+		 * Let's use our own copy of property cache, in order to
+		 * avoid mangling with DTV zigzag logic, as drivers might
+		 * return crap, if they don't check if the data is available
+		 * before updating the properties cache.
+		 */
+#if 0
+		if (fepriv->state != V4L2FE_STATE_IDLE) {
+			err = v4l2_get_frontend(v4l2_fe, &getp, NULL);
+			if (err < 0)
+				goto out;
+		}
+#endif
+		for (i = 0; i < tvps->num; i++) {
+			err = v4l2_property_process_get(v4l2_fe, tvp + i, filp);
+			if (err < 0)
+				goto out;
+			(tvp + i)->result = err;
+		}
+
+		if (copy_to_user((void __user *)tvps->props, tvp,
+				 tvps->num * sizeof(struct v4l2_property))) {
+			err = -EFAULT;
+			goto out;
+		}
+
+	} else
+		err = -EOPNOTSUPP;
+
+out:
+	kfree(tvp);
+	return err;
+}
+
 static long v4l2_frontend_ioctl(struct file *filp, void *fh, bool valid_prio,
 		unsigned int cmd, void *arg)
 {
@@ -1197,6 +1343,11 @@ static long v4l2_frontend_ioctl(struct file *filp, void *fh, bool valid_prio,
 	case V4L2_READ_STATUS:
 		ret = v4l2_frontend_read_status(v4l2_fe,
 				(enum v4l2_status *) arg);
+		break;
+
+	case V4L2_SET_PROPERTY:
+	case V4L2_GET_PROPERTY:
+		ret = v4l2_frontend_ioctl_properties(filp, cmd, arg);
 		break;
 
 	default:
@@ -1449,6 +1600,16 @@ int v4l2_unresister_frontend(struct v4l2_frontend *v4l2_fe)
 	pr_info("%s: OK.\n", __func__);
 
 	return 0;
+}
+
+void v4l2_frontend_detach(struct v4l2_frontend *v4l2_fe)
+{
+	if (v4l2_fe->fe.ops.tuner_ops.release)
+		v4l2_fe->fe.ops.tuner_ops.release(&v4l2_fe->fe);
+	if (v4l2_fe->fe.ops.analog_ops.release)
+		v4l2_fe->fe.ops.analog_ops.release(&v4l2_fe->fe);
+	if (v4l2_fe->fe.ops.release)
+		v4l2_fe->fe.ops.release(&v4l2_fe->fe);
 }
 
 int v4l2_frontend_suspend(struct v4l2_frontend *v4l2_fe)

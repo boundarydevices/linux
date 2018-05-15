@@ -77,7 +77,7 @@ static ssize_t aml_atvdemod_store(struct class *class,
 		if (ret)
 			pr_info("atv init error.\n");
 	} else if (!strncmp(parm[0], "audout_mode", 11)) {
-		if (get_atvdemod_state() == ATVDEMOD_STATE_WORK) {
+		if (atv_demod_get_state() == ATVDEMOD_STATE_WORK) {
 			if (is_meson_txlx_cpu()) {
 				atvauddemod_set_outputmode();
 				pr_info("atvauddemod_set_outputmode done ....\n");
@@ -88,7 +88,7 @@ static ssize_t aml_atvdemod_store(struct class *class,
 	} else if (!strncmp(parm[0], "signal_audmode", 14)) {
 		int stereo_flag, sap_flag;
 
-		if (get_atvdemod_state() == ATVDEMOD_STATE_WORK) {
+		if (atv_demod_get_state() == ATVDEMOD_STATE_WORK) {
 			if (is_meson_txlx_cpu()) {
 				update_btsc_mode(1, &stereo_flag, &sap_flag);
 				pr_info("get signal_audmode done ....\n");
@@ -427,6 +427,18 @@ int aml_attach_demod_tuner(struct aml_atvdemod_device *dev)
 	return 0;
 }
 
+static int aml_detach_demod_tuner(struct aml_atvdemod_device *dev)
+{
+	struct v4l2_frontend *v4l2_fe = &dev->v4l2_fe;
+
+	v4l2_frontend_detach(v4l2_fe);
+
+	dev->analog_attached = false;
+	dev->tuner_attached = false;
+
+	return 0;
+}
+
 static int aml_atvdemod_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -531,6 +543,7 @@ static int aml_atvdemod_remove(struct platform_device *pdev)
 		return -1;
 
 	v4l2_unresister_frontend(&dev->v4l2_fe);
+	aml_detach_demod_tuner(dev);
 
 	amlatvdemod_devp = NULL;
 

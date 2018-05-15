@@ -29,7 +29,7 @@ extern int atvdemod_debug_en;
 #undef pr_dbg
 #define pr_dbg(fmt, ...) \
 	do {\
-		if (atvdemod_debug_en)\
+		if (atvdemod_debug_en & 01)\
 			printk(fmt, ##__VA_ARGS__);\
 	} while (0)
 
@@ -40,4 +40,24 @@ extern int atvdemod_debug_en;
 			printk(fmt, ##__VA_ARGS__);\
 	} while (0)
 
+#undef pr_afc
+#define pr_afc(fmt, ...) \
+	do {\
+		if (atvdemod_debug_en & 0x02)\
+			printk(fmt, ##__VA_ARGS__);\
+	} while (0)
+
+#undef pr_warn
+#define pr_warn(fmt, ...) \
+	do {\
+		if (1)\
+			printk(fmt, ##__VA_ARGS__);\
+	} while (0)
+
+#undef pr_audio
+#define pr_audio(fmt, ...) \
+	do {\
+		if (atvdemod_debug_en & 0x04)\
+			printk(fmt, ##__VA_ARGS__);\
+	} while (0)
 #endif /* __ATV_DEMOD_DEBUG_H__ */

@@ -34,12 +34,18 @@
 	__r; \
 })
 
+#define v4l2_detach(FUNCTION)    symbol_put_addr(FUNCTION)
+
 #else
 
 #define v4l2_attach(FUNCTION, ARGS...) ({ \
 	FUNCTION(ARGS); \
 })
+
+#define v4l2_detach(FUNCTION)    {}
+
 #endif /* CONFIG_MEDIA_ATTACH */
+
 
 #define V4L2_FE_NO_EXIT 0
 #define V4L2_FE_NORMAL_EXIT 1
@@ -64,15 +70,22 @@
 #define V4L2FE_STATE_LOSTLOCK (V4L2FE_STATE_ZIGZAG_FAST |\
 		V4L2FE_STATE_ZIGZAG_SLOW)
 
+#define V4L2_IOCTL_MAX_MSGS 64
+
 #define V4L2_SET_FRONTEND    _IOW('V', 105, struct v4l2_analog_parameters)
 #define V4L2_GET_FRONTEND    _IOR('V', 106, struct v4l2_analog_parameters)
 #define V4L2_GET_EVENT       _IOR('V', 107, struct v4l2_frontend_event)
 #define V4L2_SET_MODE        _IOW('V', 108, int)
 #define V4L2_READ_STATUS     _IOR('V', 109, enum v4l2_status)
+#define V4L2_SET_PROPERTY    _IOW('V', 111, struct v4l2_properties)
+#define V4L2_GET_PROPERTY    _IOR('V', 112, struct v4l2_properties)
 
+#define ANALOG_FLAG_ENABLE_AFC          0X00000001
+#define ANALOG_FLAG_MANUL_SCAN          0x00000011
 
-#define ANALOG_FLAG_ENABLE_AFC           0X00000001
-#define  ANALOG_FLAG_MANUL_SCAN          0x00000011
+#define V4L2_UNDEFINED    0
+#define V4L2_TUNE         1
+#define V4L2_NICAM        2
 
 
 struct v4l2_analog_parameters {
@@ -95,6 +108,26 @@ enum v4l2_status {
 	V4L2_REINIT      = 0x40, /* frontend was reinitialized, */
 };				/* application is recommended to reset */
 				/* DiSEqC, tone and parameters */
+
+struct v4l2_property {
+	__u32 cmd;
+	__u32 reserved[3];
+	union {
+		__u32 data;
+		struct {
+			__u8 data[32];
+			__u32 len;
+			__u32 reserved1[3];
+			void *reserved2;
+		} buffer;
+	} u;
+	int result;
+} __attribute__ ((__packed__));
+
+struct v4l2_properties {
+	__u32 num;
+	struct v4l2_property *props;
+};
 
 enum v4l2_search {
 	V4L2_SEARCH_SUCCESS = (1 << 0),
@@ -183,6 +216,7 @@ struct v4l2_atvdemod_device {
 int v4l2_resister_frontend(struct v4l2_frontend *v4l2_fe);
 int v4l2_unresister_frontend(struct v4l2_frontend *v4l2_fe);
 
+void v4l2_frontend_detach(struct v4l2_frontend *v4l2_fe);
 int v4l2_frontend_suspend(struct v4l2_frontend *v4l2_fe);
 int v4l2_frontend_resume(struct v4l2_frontend *v4l2_fe);
 

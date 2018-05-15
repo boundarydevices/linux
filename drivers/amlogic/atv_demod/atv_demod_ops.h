@@ -14,9 +14,16 @@
 #ifndef __ATV_DEMOD_OPS_H__
 #define __ATV_DEMOD_OPS_H__
 
-#define AML_ATVDEMOD_RESUME		0x2
-#define AML_ATVDEMOD_INIT		0x1
-#define AML_ATVDEMOD_UNINIT		0x0
+#define AML_ATVDEMOD_UNINIT         0x0
+#define AML_ATVDEMOD_INIT           0x1
+#define AML_ATVDEMOD_RESUME         0x2
+#define AML_ATVDEMOD_SCAN_MODE      0x3
+#define AML_ATVDEMOD_UNSCAN_MODE    0x4
+
+#define AFC_BEST_LOCK    50
+#define ATV_AFC_500KHZ   500000
+#define ATV_AFC_1_0MHZ   1000000
+#define ATV_AFC_2_0MHZ   2000000
 
 #include "drivers/media/dvb-core/dvb_frontend.h"
 #include "drivers/media/tuners/tuner-i2c.h"
@@ -30,6 +37,7 @@ struct atv_demod_priv {
 	bool standby;
 
 	struct aml_atvdemod_parameters atvdemod_param;
+	struct work_struct demod_wq;
 };
 
 extern int atv_demod_enter_mode(void);
