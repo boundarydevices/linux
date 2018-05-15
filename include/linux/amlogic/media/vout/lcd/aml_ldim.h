@@ -117,7 +117,7 @@ struct vpu_ldim_param_s {
 };
 
 extern struct aml_ldim_driver_s *aml_ldim_get_driver(void);
-extern int aml_ldim_probe(struct platform_device *pdev);
+extern int aml_ldim_probe(struct platform_device *pdev, int load_id);
 extern int aml_ldim_remove(void);
 
 #endif

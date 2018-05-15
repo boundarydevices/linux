@@ -52,6 +52,8 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/utils/vdec_reg.h>
+#include <linux/amlogic/media/vout/lcd/lcd_unifykey.h>
+
 
 #define AML_LDIM_DEV_NAME            "aml_ldim"
 const char ldim_dev_id[] = "ldim-dev";
@@ -2960,7 +2962,7 @@ static struct class_attribute aml_ldim_class_attrs[] = {
 	__ATTR_NULL,
 };
 
-static int aml_ldim_get_config(struct ldim_config_s *ldconf,
+static int aml_ldim_get_config_dts(struct ldim_config_s *ldconf,
 		struct device *dev)
 {
 	struct vinfo_s *vinfo = get_current_vinfo();
@@ -3041,6 +3043,98 @@ static int aml_ldim_get_config(struct ldim_config_s *ldconf,
 	else
 		ldim_driver.dev_index = para[0];
 	LDIMPR("get ldim_dev_index = %d\n", ldim_driver.dev_index);
+
+	kfree(para);
+	return 0;
+}
+
+static int aml_ldim_get_config_unifykey(struct ldim_config_s *ldconf)
+{
+	unsigned char *para;
+	int key_len, len;
+	unsigned char *p;
+	struct aml_lcd_unifykey_header_s bl_header;
+	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
+	struct vinfo_s *vinfo = get_current_vinfo();
+	int i, ret;
+
+	ldconf->hsize = vinfo->width;
+	ldconf->vsize = vinfo->height;
+	for (i = 0; i < LD_BLKREGNUM; i++)
+		ldconf->bl_mapping[i] = (unsigned short)i;
+
+	para = kmalloc((sizeof(unsigned char) * LCD_UKEY_BL_SIZE), GFP_KERNEL);
+	if (!para) {
+		BLERR("%s: Not enough memory\n", __func__);
+		return -1;
+	}
+
+	key_len = LCD_UKEY_BL_SIZE;
+	memset(para, 0, (sizeof(unsigned char) * key_len));
+	ret = lcd_unifykey_get("backlight", para, &key_len);
+	if (ret < 0) {
+		kfree(para);
+		return -1;
+	}
+
+	/* step 1: check header */
+	len = LCD_UKEY_HEAD_SIZE;
+	ret = lcd_unifykey_len_check(key_len, len);
+	if (ret < 0) {
+		BLERR("unifykey header length is incorrect\n");
+		kfree(para);
+		return -1;
+	}
+
+	lcd_unifykey_header_check(para, &bl_header);
+	BLPR("unifykey version: 0x%04x\n", bl_header.version);
+	switch (bl_header.version) {
+	case 2:
+		len = 10 + 30 + 12 + 8 + 32 + 10;
+		break;
+	default:
+		len = 10 + 30 + 12 + 8 + 32;
+		break;
+	}
+
+	/* step 2: check backlight parameters */
+	ret = lcd_unifykey_len_check(key_len, len);
+	if (ret < 0) {
+		BLERR("unifykey length is incorrect\n");
+		kfree(para);
+		return -1;
+	}
+
+	/* 60byte */
+	p = para + 60;
+
+	/* ldim: 24byte */
+	switch (bl_drv->bconf->method) {
+	case BL_CTRL_LOCAL_DIMING:
+		/* get bl_ldim_region_row_col 4byte*/
+		ldim_blk_row = (*p | ((*(p + 1)) << 8));
+		ldim_blk_col = (*(p + 2) | ((*(p + 3)) << 8));
+		ldim_hist_row = ldim_blk_row;
+		ldim_hist_col = ldim_blk_col;
+		if (ldim_debug_print) {
+			LDIMPR("get region row = %d, col = %d\n",
+				ldim_blk_row, ldim_blk_col);
+		}
+
+		/* get ldim_dev_index 1byte*/
+		ldim_driver.dev_index = *(p + 4);
+		if (ldim_debug_print)
+			LDIMPR("get dev_index = %d\n", ldim_driver.dev_index);
+
+		/* get bl_ldim_mode 1byte*/
+		ldconf->bl_mode = *(p + 5);
+		if (ldim_debug_print)
+			LDIMPR("get bl_mode = %d\n", ldconf->bl_mode);
+
+		break;
+	default:
+		break;
+	}
 
 	kfree(para);
 	return 0;
@@ -3136,7 +3230,7 @@ err0:
 
 }
 
-int aml_ldim_probe(struct platform_device *pdev)
+int aml_ldim_probe(struct platform_device *pdev, int load_id)
 {
 	int ret = 0;
 	unsigned int i;
@@ -3169,7 +3263,11 @@ int aml_ldim_probe(struct platform_device *pdev)
 	nPRM.bin_1 = &bin_1[0];
 	nPRM.val_2 = &val_2[0];
 	nPRM.bin_2 = &bin_2[0];
-	aml_ldim_get_config(&ldim_config, &pdev->dev);
+	if (load_id)
+		aml_ldim_get_config_unifykey(&ldim_config);
+	else
+		aml_ldim_get_config_dts(&ldim_config, &pdev->dev);
+
 	aml_ldim_kzalloc(ldim_blk_row, ldim_blk_col);
 
 	ret = alloc_chrdev_region(&devp->aml_ldim_devno, 0, 1,

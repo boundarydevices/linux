@@ -1863,6 +1863,11 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 		bl_pwm_config_init(pwm_combo0);
 		bl_pwm_config_init(pwm_combo1);
 		break;
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
+	case BL_CTRL_LOCAL_DIMING:
+		bconf->ldim_flag = 1;
+		break;
+#endif
 	default:
 		break;
 	}
@@ -1998,7 +2003,7 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 	if (bconf->ldim_flag)
-		aml_ldim_probe(pdev);
+		aml_ldim_probe(pdev, load_id);
 #endif
 
 	switch (bconf->method) {
