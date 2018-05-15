@@ -355,27 +355,32 @@ static void recalc_vinfo_sync_duration(struct vinfo_s *info, unsigned int frac)
 		info->sync_duration_num, info->sync_duration_den);
 }
 
-static void hdmi_physcial_size_update(struct vinfo_s *info,
-		struct hdmitx_dev *hdev)
+static void hdmi_physcial_size_update(struct hdmitx_dev *hdev)
 {
 	unsigned int width, height;
+	struct vinfo_s *info = NULL;
 
-	if (info == NULL) {
+	info = hdmitx_get_current_vinfo();
+	if ((info == NULL) || (info->name == NULL)) {
 		pr_info(SYS "cann't get valid mode\n");
 		return;
 	}
 
-	width = hdev->RXCap.physcial_weight;
-	height = hdev->RXCap.physcial_height;
-	if ((width == 0) || (height == 0)) {
-		info->screen_real_width = info->aspect_ratio_num;
-		info->screen_real_height = info->aspect_ratio_den;
-	} else {
-		info->screen_real_width = width * 10; /* transfer mm */
-		info->screen_real_height = height * 10; /* transfer mm */
+	if (info->mode == VMODE_HDMI) {
+		width = hdev->RXCap.physcial_weight;
+		height = hdev->RXCap.physcial_height;
+		if ((width == 0) || (height == 0)) {
+			info->screen_real_width = info->aspect_ratio_num;
+			info->screen_real_height = info->aspect_ratio_den;
+		} else {
+			/* transfer mm */
+			info->screen_real_width = width * 10;
+			info->screen_real_height = height * 10;
+		}
+		pr_info(SYS "update physcial size: %d %d\n",
+			info->screen_real_width, info->screen_real_height);
 	}
-	pr_info(SYS "update physcial size: %d %d\n",
-		info->screen_real_width, info->screen_real_height);
+
 }
 
 static int set_disp_mode_auto(void)
@@ -415,7 +420,7 @@ static int set_disp_mode_auto(void)
 		pr_info(SYS "update rx hdr info %x\n",
 			info->hdr_info.hdr_support);
 	}
-	hdmi_physcial_size_update(info, hdev);
+	hdmi_physcial_size_update(hdev);
 
 	/* If info->name equals to cvbs, then set mode to I mode to hdmi
 	 */
@@ -2970,6 +2975,7 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	if (hdev->repeater_tx)
 		rx_repeat_hpd_state(1);
 	hdmitx_get_edid(hdev);
+	hdmi_physcial_size_update(hdev);
 	mutex_lock(&getedid_mutex);
 	hdev->HWOp.CntlMisc(hdev, MISC_I2C_REACTIVE, 0);
 	mutex_unlock(&getedid_mutex);
@@ -3050,6 +3056,7 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdev->HWOp.CntlMisc(hdev, MISC_ESM_RESET, 0);
 	clear_hdr_info(hdev);
 	hdmitx_edid_clear(hdev);
+	hdmi_physcial_size_update(hdev);
 	hdmitx_edid_ram_buffer_clear(hdev);
 	hdev->hpd_state = 0;
 	hdmitx_notify_hpd(hdev->hpd_state);
