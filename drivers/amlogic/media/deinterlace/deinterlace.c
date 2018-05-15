@@ -2042,7 +2042,7 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 	}
 #ifdef CONFIG_CMA
 	if (de_devp->flag_cma == 1) {
-		pr_dbg("%s:cma alloc req time: %d ms\n",
+		pr_dbg("%s:cma alloc req time: %u ms\n",
 			__func__, jiffies_to_msecs(jiffies));
 		atomic_set(&de_devp->mem_flag, 0);
 		di_pre_stru.cma_alloc_req = 1;
@@ -5640,9 +5640,10 @@ static void di_unreg_process_irq(void)
 	enable_di_pre_mif(false, mcpre_en);
 	di_hw_uninit();
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()
-		|| is_meson_g12a_cpu())
+		|| is_meson_g12a_cpu()) {
 		di_pre_gate_control(false, mcpre_en);
-	else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) {
+		nr_gate_control(false);
+	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) {
 		DI_Wr(DI_CLKG_CTRL, 0x80f60000);
 		DI_Wr(DI_PRE_CTRL, 0);
 	} else
@@ -5888,6 +5889,7 @@ static void di_reg_process_irq(void)
 			de_devp->flags |= DI_VPU_CLKB_SET;
 			enable_di_pre_mif(true, mcpre_en);
 			di_pre_gate_control(true, mcpre_en);
+			nr_gate_control(true);
 		} else {
 			/* if mcdi enable DI_CLKG_CTRL should be 0xfef60000 */
 			DI_Wr(DI_CLKG_CTRL, 0xfef60001);

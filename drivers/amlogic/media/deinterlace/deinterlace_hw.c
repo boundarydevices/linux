@@ -29,6 +29,7 @@
 #include <linux/amlogic/media/vfm/vframe_provider.h>
 #include "deinterlace_hw.h"
 #include "register.h"
+#include "register_nr4.h"
 #ifdef DET3D
 #include "detect3d.h"
 #endif
@@ -56,9 +57,7 @@ static unsigned int pq_load_dbg;
 module_param_named(pq_load_dbg, pq_load_dbg, uint, 0644);
 
 static bool pd22_flg_calc_en = true;
-#ifdef DEBUG_SUPPORT
-module_param_named(pd22_flg_calc_en, pd22_flg_calc_en, bool, 0644);
-#endif
+static unsigned int ctrl_regs[SKIP_CTRE_NUM];
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 extern u32 VSYNC_RD_MPEG_REG(u32 adr);
@@ -421,7 +420,26 @@ static void pre_hold_block_mode_config(void)
 		DI_Wr(DI_PRE_HOLD, (1 << 31) | (31 << 16) | 31);
 	}
 }
-
+/*
+ * ctrl or size related regs configured
+ * in software base on real size and condition
+ */
+static void set_skip_ctrl_size_regs(void)
+{
+	ctrl_regs[0] = DI_CLKG_CTRL;
+	ctrl_regs[1] = DI_MTN_1_CTRL1;
+	ctrl_regs[2] = MCDI_MOTINEN;
+	ctrl_regs[3] = MCDI_CTRL_MODE;
+	ctrl_regs[4] = MCDI_MC_CRTL;
+	ctrl_regs[5] = MCDI_PD_22_CHK_WND0_X;
+	ctrl_regs[6] = MCDI_PD_22_CHK_WND0_Y;
+	ctrl_regs[7] = MCDI_PD_22_CHK_WND1_X;
+	ctrl_regs[8] = MCDI_PD_22_CHK_WND1_Y;
+	ctrl_regs[9] = NR4_MCNR_LUMA_STAT_LIMTX;
+	ctrl_regs[10] = NR4_MCNR_LUMA_STAT_LIMTY;
+	ctrl_regs[11] = NR4_NM_X_CFG;
+	ctrl_regs[12] = NR4_NM_Y_CFG;
+}
 void di_hw_init(bool pd_enable, bool mc_enable)
 {
 	unsigned short fifo_size_vpp = 0xc0;
@@ -473,7 +491,7 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 	}
 
 	pre_hold_block_mode_config();
-
+	set_skip_ctrl_size_regs();
 	ma_di_init();
 	ei_hw_init();
 	nr_hw_init();
@@ -2987,7 +3005,6 @@ void combing_pd22_window_config(unsigned int width, unsigned int height)
 	DI_Wr_reg_bits(MCDI_PD_22_CHK_WND0_X, (width-1), 16, 13);/* pd22 x1 */
 	DI_Wr_reg_bits(MCDI_PD_22_CHK_WND0_Y, 0, 0, 13);/* pd22 y0 */
 	DI_Wr_reg_bits(MCDI_PD_22_CHK_WND0_Y, y1, 16, 13);/* pd y1 */
-
 	DI_Wr_reg_bits(MCDI_PD_22_CHK_WND1_X, 0, 0, 13);/* pd x0 */
 	DI_Wr_reg_bits(MCDI_PD_22_CHK_WND1_X, (width-1), 16, 13);/* pd x1 */
 	DI_Wr_reg_bits(MCDI_PD_22_CHK_WND1_Y, (y1+1), 0, 13);/* pd y0 */
@@ -3042,12 +3059,13 @@ void pulldown_vof_win_config(struct pulldown_detected_s *wins)
 		wins->regs[3].blend_mode, 14, 2);
 }
 
+
 void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 {
 	unsigned int i = 0, j = 0, addr = 0, value = 0, mask = 0, len;
-	unsigned int ctrl_reg[6] = {0x1707, 0x1718, 0x2d60,
-		0x2dff, 0x2f04, 0x2f70};
-	struct am_reg_s *regs_p;
+	unsigned int table_name = 0, nr_table = 0;
+	bool ctrl_reg_flag = false;
+	struct am_reg_s *regs_p = NULL;
 
 	if (pq_load_dbg == 1)
 		return;
@@ -3059,9 +3077,12 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 		pr_err("[DI] table ptr error.\n");
 		return;
 	}
+	nr_table = TABLE_NAME_NR | TABLE_NAME_DEBLOCK | TABLE_NAME_DEMOSQUITO;
 	regs_p = (struct am_reg_s *)di_pq_ptr->regs;
 	len = di_pq_ptr->pq_parm.table_len;
+	table_name = di_pq_ptr->pq_parm.table_name;
 	for (i = 0; i < len; i++) {
+		ctrl_reg_flag = false;
 		addr = regs_p->addr;
 		value = regs_p->val;
 		mask = regs_p->mask;
@@ -3069,8 +3090,8 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 			pr_info("[%u][0x%x] = [0x%x]&[0x%x]\n",
 				i, addr, value, mask);
 
-		for (j = 0; j < 6; j++) {
-			if (addr == ctrl_reg[j])
+		for (j = 0; j < SKIP_CTRE_NUM; j++) {
+			if (addr == ctrl_regs[j])
 			break;
 		}
 
@@ -3078,14 +3099,17 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 			value = ((Rd(addr) & (~(mask))) |
 				(value & mask));
 		}
-		if (j < 6) {
+		regs_p++;
+		if (j < SKIP_CTRE_NUM) {
 			if (pq_load_dbg == 3)
 				pr_info("%s skip [0x%x]=[0x%x].\n",
 					__func__, addr, value);
-			break;
+			continue;
 		}
-		regs_p++;
-		DI_Wr(addr, value);
+		if (table_name & nr_table)
+			ctrl_reg_flag = set_nr_ctrl_reg_table(addr, value);
+		if (!ctrl_reg_flag)
+			DI_Wr(addr, value);
 		if (pq_load_dbg == 2)
 			pr_info("[%u][0x%x] = [0x%x] %s\n", i, addr,
 				value, Rd(addr) != value?"fail":"success");
@@ -3098,4 +3122,5 @@ module_param_named(pre_hold_line, pre_hold_line, ushort, 0644);
 module_param_named(pre_ctrl, pre_ctrl, uint, 0644);
 module_param_named(line_num_post_frst, line_num_post_frst, ushort, 0644);
 module_param_named(line_num_pre_frst, line_num_pre_frst, ushort, 0644);
+module_param_named(pd22_flg_calc_en, pd22_flg_calc_en, bool, 0644);
 #endif

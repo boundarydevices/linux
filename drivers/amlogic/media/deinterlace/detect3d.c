@@ -21,7 +21,9 @@
 
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include <linux/amlogic/iomap.h>
+#include <linux/amlogic/cpu_version.h>
 #include "register.h"
+#include "register_nr4.h"
 #include "detect3d.h"
 
 /*******************Local defines**********************/
@@ -111,13 +113,21 @@ void det3d_config(bool flag)
 		DI_Wr_reg_bits(DET3D_MOTN_CFG, 1,
 DET3D_INTR_EN_BIT, DET3D_INTR_EN_WID);
 		/* enable 3D detection */
-		DI_Wr_reg_bits(NR2_SW_EN, 1, DET3D_EN_BIT, DET3D_EN_WID);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
+			DI_Wr_reg_bits(NR4_TOP_CTRL, 1, 14, 1);
+		else
+			DI_Wr_reg_bits(NR2_SW_EN, 1,
+				DET3D_EN_BIT, DET3D_EN_WID);
 	} else{
 		/* Det 3D interrupt disable */
 		DI_Wr_reg_bits(DET3D_MOTN_CFG, 0,
 DET3D_INTR_EN_BIT, DET3D_INTR_EN_WID);
 		/* disable 3D detection */
-		DI_Wr_reg_bits(NR2_SW_EN, 0, DET3D_EN_BIT, DET3D_EN_WID);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
+			DI_Wr_reg_bits(NR4_TOP_CTRL, 0, 14, 1);
+		else
+			DI_Wr_reg_bits(NR2_SW_EN, 0,
+				DET3D_EN_BIT, DET3D_EN_WID);
 		memset(&det3d_info, 0, sizeof(det3d_info));
 	}
 }

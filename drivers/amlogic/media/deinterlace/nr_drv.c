@@ -44,6 +44,8 @@ module_param_named(dnr_en, dnr_en, bool, 0644);
 static unsigned int nr2_en = 0x1;
 module_param_named(nr2_en, nr2_en, uint, 0644);
 
+static bool nr_ctrl_reg;
+
 int global_bs_calc_sw(int *pGbsVldCnt,
 			  int *pGbsVldFlg,
 			  int *pGbs,
@@ -393,7 +395,6 @@ void nr_all_config(unsigned short width, unsigned short height,
 	nr_param.height = height;
 	nr_param.frame_count = 0;
 	nr_param.prog_flag = field_type?false:true;
-	nr_gate_control(true);
 	nr2_config(width, height);
 	dnr_config(nr_param.pdnr_parm, width, height);
 
@@ -728,9 +729,52 @@ void adaptive_cue_adjust(unsigned int frame_diff, unsigned int field_diff)
 	}
 }
 
+/*
+ * insert nr ctrl regs into ctrl table
+ */
+bool set_nr_ctrl_reg_table(unsigned int addr, unsigned int value)
+{
+	unsigned int i = 0;
+	struct NR_CTRL_REGS_s *pnr_regs = NULL;
+
+	pnr_regs = nr_param.pnr_regs;
+	for (i = 0; i < NR_CTRL_REG_NUM; i++) {
+		if (pnr_regs->regs[i].addr == addr) {
+			pnr_regs->regs[i].addr = addr;
+			pnr_regs->regs[i].value = value;
+			atomic_set(&pnr_regs->regs[i].load_flag, 1);
+			if (nr_ctrl_reg)
+				pr_info("NR_CTRL_REG[0x%x]=[0x%x].\n",
+					addr, value);
+			return true;
+		}
+	}
+	return false;
+}
+
+/* load nr related ctrl regs */
+static void nr_ctrl_reg_load(struct NR_CTRL_REGS_s *pnr_regs)
+{
+	unsigned int i = 0;
+
+	for (i = 0; i < pnr_regs->reg_num; i++) {
+		if (atomic_read(&pnr_regs->regs[i].load_flag)) {
+			DI_Wr(pnr_regs->regs[i].addr,
+				pnr_regs->regs[i].value);
+			atomic_set(&pnr_regs->regs[i].load_flag, 0);
+			if (nr_ctrl_reg) {
+				pr_info("LOAD NR[0x%x]=[0x%x]\n",
+					pnr_regs->regs[i].addr,
+					pnr_regs->regs[i].value);
+			}
+		}
+	}
+}
+
 void nr_process_in_irq(void)
 {
 	nr_param.frame_count++;
+	nr_ctrl_reg_load(nr_param.pnr_regs);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXLX))
 		cue_process_irq();
 	if (dnr_en)
@@ -1123,13 +1167,36 @@ void nr_gate_control(bool gate)
 		DI_Wr_reg_bits(NR4_TOP_CTRL, 1, 20, 2);
 	}
 }
+/*
+ * set ctrl reg address need load in irq
+ */
+static void nr_ctrl_regs_init(struct NR_CTRL_REGS_s *pnr_regs)
+{
+	unsigned int i = 0;
+
+	pnr_regs->regs[0].addr = NR4_TOP_CTRL;
+	pnr_regs->regs[1].addr = NR_DB_FLT_CTRL;
+	pnr_regs->regs[2].addr = DNR_DM_CTRL;
+	pnr_regs->regs[3].addr = DI_NR_CTRL0;
+	pnr_regs->regs[4].addr = DNR_CTRL;
+	pnr_regs->regs[5].addr = NR2_CUE_PRG_DIF;
+	pnr_regs->reg_num = NR_CTRL_REG_NUM;
+	for (i = 0; i < pnr_regs->reg_num; i++) {
+		pnr_regs->regs[i].value = 0;
+		atomic_set(&pnr_regs->regs[i].load_flag, 0);
+	}
+}
+
 void nr_drv_uninit(struct device *dev)
 {
 	if (nr_param.pnr4_parm) {
 		vfree(nr_param.pnr4_parm);
 		nr_param.pnr4_parm = NULL;
 	}
-
+	if (nr_param.pnr_regs) {
+		vfree(nr_param.pnr_regs);
+		nr_param.pnr_regs = NULL;
+	}
 	if (nr_param.pcue_parm) {
 		vfree(nr_param.pcue_parm);
 		nr_param.pcue_parm = NULL;
@@ -1151,6 +1218,11 @@ void nr_drv_init(struct device *dev)
 			device_create_file(dev, &dev_attr_nr4_param);
 		}
 	}
+	nr_param.pnr_regs = vmalloc(sizeof(struct NR_CTRL_REGS_s));
+	if (IS_ERR(nr_param.pnr_regs))
+		pr_err("%s allocate ctrl regs error.\n", __func__);
+	else
+		nr_ctrl_regs_init(nr_param.pnr_regs);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXLX)) {
 		nr_param.pcue_parm = vmalloc(sizeof(struct CUE_PARM_s));
 		if (IS_ERR(nr_param.pcue_parm))

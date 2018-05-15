@@ -26,6 +26,8 @@
 #define MIN_POST_WIDTH  80
 #define MIN_BLEND_WIDTH  27
 
+#define	SKIP_CTRE_NUM	13
+
 struct DI_MIF_s {
 	unsigned short	luma_x_start0;
 	unsigned short	luma_x_end0;

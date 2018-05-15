@@ -17,6 +17,7 @@
 
 #ifndef _DNR_H
 #define _DNR_H
+#include <linux/atomic.h>
 
 struct nr_param_s {
 	char *name;
@@ -76,6 +77,19 @@ struct CUE_PARM_s {
 	int frame_count;
 };
 
+#define	NR_CTRL_REG_NUM	6
+/* nr ctrl reg addr,value, flag*/
+struct NR_CTRL_REG_s {
+	unsigned int addr;
+	unsigned int value;
+	atomic_t load_flag;
+};
+
+struct NR_CTRL_REGS_s {
+	struct NR_CTRL_REG_s regs[NR_CTRL_REG_NUM];
+	unsigned int reg_num;
+};
+
 struct NR_PARM_s {
 	unsigned short width;
 	unsigned short height;
@@ -84,6 +98,7 @@ struct NR_PARM_s {
 	struct DNR_PARM_s *pdnr_parm;
 	struct NR4_PARM_s *pnr4_parm;
 	struct CUE_PARM_s *pcue_parm;
+	struct NR_CTRL_REGS_s *pnr_regs;
 };
 #ifndef SGN2
 #define SGN2(x) ((x) > 0 ? 1 : ((x) < 0 ? -1 : 0))
@@ -153,5 +168,6 @@ void nr_drv_uninit(struct device *dev);
 void nr_process_in_irq(void);
 void nr_all_config(unsigned short nCol, unsigned short nRow,
 	unsigned short type);
+bool set_nr_ctrl_reg_table(unsigned int addr, unsigned int value);
 #endif
 
