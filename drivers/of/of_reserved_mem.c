@@ -302,12 +302,7 @@ void __init fdt_init_reserved_mem(void)
 			err = __reserved_mem_alloc_size(node, rmem->name,
 						 &rmem->base, &rmem->size);
 		if (err == 0)
-			err = __reserved_mem_init_node(rmem);
-
-		if (err < 0) {
-			pr_info("Couldn't allocate %s area", rmem->name);
-			memblock_free(rmem->base, rmem->size);
-		}
+			__reserved_mem_init_node(rmem);
 	}
 }
 
