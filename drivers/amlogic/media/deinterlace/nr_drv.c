@@ -896,6 +896,8 @@ static ssize_t nr4_param_store(struct device *dev,
 	buf_orig = kstrdup(buff, GFP_KERNEL);
 	parse_cmd_params(buf_orig, (char **)(&parm));
 	for (i = 0; i < 30; i++) {
+		if (IS_ERR_OR_NULL(nr4_params[i].name))
+			continue;
 		if (!strcmp(parm[0], nr4_params[i].name)) {
 			if (parm[1]) {
 				if (kstrtol(parm[1], 10, &value) < 0)
@@ -916,9 +918,13 @@ static ssize_t nr4_param_show(struct device *dev,
 	ssize_t len = 0;
 	int i = 0;
 
-	for (i = 0; i < 30; i++)
+	for (i = 0; i < 30; i++) {
+		if (IS_ERR_OR_NULL(nr4_params[i].name))
+			continue;
 		len += sprintf(buff+len, "%s=%d.\n",
 		nr4_params[i].name, *(nr4_params[i].addr));
+	}
+
 	return len;
 }
 
