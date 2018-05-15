@@ -273,15 +273,16 @@ static int goodix_ts_read_input_report(struct goodix_ts_data *ts, u8 *data)
 
 			return touch_num;
 		}
-
+		if (time_after(jiffies, max_timeout))
+			break;
 		usleep_range(1000, 2000); /* Poll every 1 - 2 ms */
-	} while (time_before(jiffies, max_timeout));
+	} while (1);
 
 	/*
 	 * The Goodix panel will send spurious interrupts after a
 	 * 'finger up' event, which will always cause a timeout.
 	 */
-	return 0;
+	return -EAGAIN;
 }
 
 static void goodix_ts_report_touch(struct goodix_ts_data *ts, u8 *coor_data)
