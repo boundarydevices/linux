@@ -121,10 +121,12 @@ static int output_fps;
 static u32 omx_pts;
 static u32 omx_pts_set_index;
 static bool omx_run;
-static u32 omx_version = 2;
+static u32 omx_version = 3;
 static int omx_pts_interval_upper = 11000;
 static int omx_pts_interval_lower = -5500;
 static int omx_pts_set_from_hwc_count;
+static bool omx_check_previous_session;
+static u32 omx_cur_session = 0xffffffff;
 static int drop_frame_count;
 #define OMX_MAX_COUNT_RESET_SYSTEMTIME 2
 static int receive_frame_count;
@@ -2079,6 +2081,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 		return;
 	frame_count++;
 	toggle_count++;
+
 	if (is_dolby_vision_enable())
 		vf_with_el = has_enhanced_layer(vf);
 	ori_start_x_lines = 0;
@@ -6149,6 +6152,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		display_frame_count = 0;
 		omx_run = false;
 		omx_pts_set_from_hwc_count = 0;
+		omx_check_previous_session = true;
 		omx_need_drop_frame_num = 0;
 		omx_drop_done = false;
 		omx_pts_set_index = 0;
@@ -6360,14 +6364,33 @@ static void set_omx_pts(u32 *p)
 	u32 set_from_hwc = p[2];
 	u32 frame_num = p[3];
 	u32 not_reset = p[4];
+	u32 session = p[5];
 	unsigned int try_cnt = 0x1000;
 
 	mutex_lock(&omx_mutex);
 	if (omx_pts_set_index < frame_num)
 		omx_pts_set_index = frame_num;
 
+	if (omx_check_previous_session) {
+		if (session != omx_cur_session) {
+			omx_cur_session = session;
+			omx_check_previous_session = false;
+		} else {
+			mutex_unlock(&omx_mutex);
+			pr_info("check session return: tmp_pts %d"
+				"session=0x%x\n", tmp_pts, omx_cur_session);
+			return;
+		}
+	}
+
 	if (not_reset == 0)
 		omx_pts = tmp_pts;
+	/* kodi may render first frame, then drop dozens of frames */
+	if (set_from_hwc == 0 && omx_run == true && frame_num <= 2
+			&& not_reset == 0) {
+		pr_info("reset omx_run to false.\n");
+		omx_run = false;
+	}
 	if (set_from_hwc == 1) {
 		if (!omx_run) {
 			omx_need_drop_frame_num =
@@ -6395,6 +6418,8 @@ static void set_omx_pts(u32 *p)
 			}
 #endif
 			if (vf) {
+				pr_debug("drop frame_num=%d, vf->omx_index=%d\n",
+						frame_num, vf->omx_index);
 				if (frame_num >= vf->omx_index) {
 					vf = vf_get(RECEIVER_NAME);
 					if (vf)
