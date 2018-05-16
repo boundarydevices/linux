@@ -95,6 +95,10 @@
 #define MTX_BYPASS_RGB_OGO			(1 << 0)
 #define MTX_RGB2YUVL_RGB_OGO		(1 << 1)
 
+#define SDR_SOURCE    (1 << 0)
+#define HDR10_SOURCE  (1 << 1)
+#define HLG_SOURCE    (1 << 2)
+
 enum pq_table_name_e {
 	TABLE_NAME_SHARPNESS0 = 0x1,/*in vpp*/
 	TABLE_NAME_SHARPNESS1 = 0x2,/*in vpp*/
@@ -292,6 +296,7 @@ static inline uint32_t READ_VPP_REG_BITS(uint32_t reg,
 
 extern signed int vd1_brightness, vd1_contrast;
 extern bool gamma_en;
+extern unsigned int hdr_source_type;
 
 #define CSC_FLAG_TOGGLE_FRAME	1
 #define CSC_FLAG_CHECK_OUTPUT	2

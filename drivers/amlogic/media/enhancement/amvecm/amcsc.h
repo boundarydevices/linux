@@ -69,6 +69,9 @@ enum vpp_matrix_csc_e {
 	VPP_MATRIX_YUV709F_RGB = 0x24,
 	VPP_MATRIX_YUV709F_YUV601 = 0x25,
 	VPP_MATRIX_YUV709F_YUV709 = 0x26,
+	VPP_MATRIX_YUV601L_YUV709L = 0x27,
+	VPP_MATRIX_YUV709L_YUV601L = 0x28,
+	VPP_MATRIX_YUV709F_YUV601F = 0x29,
 	VPP_MATRIX_BT2020YUV_BT2020RGB = 0x40,
 	VPP_MATRIX_BT2020RGB_709RGB,
 	VPP_MATRIX_BT2020RGB_CUSRGB,
@@ -108,6 +111,9 @@ enum mtx_en_e {
 #define XVY_MTX_EN_MASK  (1 << XVY_MTX_EN)
 #define OSD1_MTX_EN_MASK (1 << OSD1_MTX_EN)
 
+#define HDR_SUPPORT		(1 << 2)
+#define HLG_SUPPORT		(1 << 3)
+
 #define LUT_289_SIZE	289
 extern unsigned int lut_289_mapping[LUT_289_SIZE];
 extern int dnlp_en;
@@ -136,6 +142,6 @@ extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 #endif
 
 extern u32 get_video_enabled(void);
-
+extern void get_hdr_source_type(void);
 #endif /* AM_CSC_H */
 
