@@ -14464,3 +14464,9 @@ M: xing wang<xing.wang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/g12a_*
 F: include/linux/amlogic/media/sound/spdif_info.h
 F: sound/soc/amlogic/auge*
+
+AMLOGIC TVIN vlock
+M:      Wenfeng Guo <wenfeng.guo@amlogic.com>
+F:      drivers/amlogic/media/enhancement/amvecm/vlock.c
+F:      drivers/amlogic/media/enhancement/amvecm/vlock.h
+

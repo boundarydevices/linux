@@ -20,24 +20,22 @@
 
 #include <linux/amlogic/media/amvecm/cm.h>
 
-/* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
-/* TV_ENC_LCD720x480 */
-static struct am_regs_s vlock_enc_lcd720x480 = {
+static struct am_regs_s vlock_enc_setting = {
 	20,
 	{
 	/* optimize */
-	{REG_TYPE_VCBUS, 0x3000,     0xffffffff, 0xE0f50f1b  },
+	{REG_TYPE_VCBUS, 0x3000,     0xffffffff, 0xE3f50f10  },
 	{REG_TYPE_VCBUS, 0x3001,     0xffffffff, 0x41E3c3c   },
 	{REG_TYPE_VCBUS, 0x3002,     0xffffffff, 0x6000000   },
-	{REG_TYPE_VCBUS, 0x3003,     0xffffffff, 0x40280280  },
+	{REG_TYPE_VCBUS, 0x3003,     0xffffffff, 0x20680680  },
 	{REG_TYPE_VCBUS, 0x3004,     0xffffffff, 0x280280    },
 	{REG_TYPE_VCBUS, 0x3005,     0xffffffff, 0x8020000   },
 	{REG_TYPE_VCBUS, 0x3006,     0xffffffff, 0x0008000   },
-	{REG_TYPE_VCBUS, 0x3007,     0xffffffff, 0x6000000   },
-	{REG_TYPE_VCBUS, 0x3008,     0xffffffff, 0x6000000   },
+	{REG_TYPE_VCBUS, 0x3007,     0xffffffff, 0x0000000   },
+	{REG_TYPE_VCBUS, 0x3008,     0xffffffff, 0x0000000   },
 	{REG_TYPE_VCBUS, 0x3009,     0xffffffff, 0x0008000   },
 	{REG_TYPE_VCBUS, 0x300a,     0xffffffff, 0x8000000   },
-	{REG_TYPE_VCBUS, 0x300b,     0xffffffff, 0x0008000   },
+	{REG_TYPE_VCBUS, 0x300b,     0xffffffff, 0x000a000   },
 	{REG_TYPE_VCBUS, 0x300c,     0xffffffff, 0xa000000   },
 	{REG_TYPE_VCBUS, 0x300d,     0xffffffff, 0x0004000   },
 	{REG_TYPE_VCBUS, 0x3010,     0xffffffff, 0x20001000  },
@@ -49,22 +47,21 @@ static struct am_regs_s vlock_enc_lcd720x480 = {
 	{0}
 	}
 };
-/* out:TV_ENC_LCD1920x1080P60;in:50hz pal av */
-static struct am_regs_s vlock_pll_in50hz_out60hz = {
+static struct am_regs_s vlock_pll_setting = {
 	20,
 	{
 	/* optimize */
-	{REG_TYPE_VCBUS, 0x3000,     0xffffffff, 0x07f13f1b   },
+	{REG_TYPE_VCBUS, 0x3000,     0xffffffff, 0x07f13f1a   },
 	{REG_TYPE_VCBUS, 0x3001,     0xffffffff, 0x04053c32   },
 	{REG_TYPE_VCBUS, 0x3002,     0xffffffff, 0x06000000   },
-	{REG_TYPE_VCBUS, 0x3003,     0xffffffff, 0x20680680   },
+	{REG_TYPE_VCBUS, 0x3003,     0xffffffff, 0x20780780   },
 	{REG_TYPE_VCBUS, 0x3004,     0xffffffff, 0x00000000   },
 	{REG_TYPE_VCBUS, 0x3005,     0xffffffff, 0x00080000   },
 	{REG_TYPE_VCBUS, 0x3006,     0xffffffff, 0x00070000   },
 	{REG_TYPE_VCBUS, 0x3007,     0xffffffff, 0x00000000   },
 	{REG_TYPE_VCBUS, 0x3008,     0xffffffff, 0x00000000   },
 	{REG_TYPE_VCBUS, 0x3009,     0xffffffff, 0x00100000   },
-	{REG_TYPE_VCBUS, 0x300a,     0xffffffff, 0x00004000   },
+	{REG_TYPE_VCBUS, 0x300a,     0xffffffff, 0x00008000   },
 	{REG_TYPE_VCBUS, 0x300b,     0xffffffff, 0x00100000   },
 	{REG_TYPE_VCBUS, 0x300c,     0xffffffff, 0x00000000   },
 	{REG_TYPE_VCBUS, 0x300d,     0xffffffff, 0x00004000   },
@@ -77,8 +74,6 @@ static struct am_regs_s vlock_pll_in50hz_out60hz = {
 	{0}
 	}
 };
-
-/* #endif */
 
 #endif
 

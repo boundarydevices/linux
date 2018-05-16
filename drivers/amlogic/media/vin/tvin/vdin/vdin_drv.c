@@ -1262,6 +1262,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	last_field_type = devp->curr_field_type;
 	devp->curr_field_type = vdin_get_curr_field_type(devp);
+	vdin_vlock_input_sel(devp->curr_field_type,
+		devp->curr_wr_vfe->vf.source_type);
 
 	/* ignore the unstable signal */
 	state = tvin_get_sm_status(devp->index);

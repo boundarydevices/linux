@@ -534,12 +534,26 @@
 #define HHI_HDMI_PLL_CNTL2			    0x10c9
 #define HHI_VID_LOCK_CLK_CNTL			0x10f2
 #define HHI_HDMI_PLL_CNTL6			    0x10cd
+/* for vlock enc mode adjust begin */
+#define ENCL_VIDEO_MAX_LNCNT            0x1cbb
+#define ENCL_VIDEO_MAX_PXCNT 0x1cb0
 #define ENCL_MAX_LINE_SWITCH_POINT		0x1cc8
-/* #define P_ENCL_MAX_LINE_SWITCH_POINT */
-/* VCBUS_REG_ADDR(ENCL_MAX_LINE_SWITCH_POINT) */
+#define ENCL_VIDEO_MODE 0x1ca7
+#define ENCL_VIDEO_MODE_ADV 0x1ca8
+
+#define ENCP_VIDEO_MAX_LNCNT 0x1bae
+#define ENCP_VIDEO_MAX_PXCNT 0x1b97
+#define ENCP_VIDEO_MODE 0x1b8d
+#define ENCP_MAX_LINE_SWITCH_POINT 0x1c0f
+
+#define ENCT_VIDEO_MAX_LNCNT 0x1c7b
+#define ENCT_VIDEO_MAX_PXCNT 0x1c70
+#define ENCT_VIDEO_MODE 0x1c67
+#define ENCT_MAX_LINE_SWITCH_POINT 0x1c88
+/* for vlock enc mode adjust end */
+
 #define HHI_VID_LOCK_CLK_CNTL			0x10f2
 
-#define ENCL_VIDEO_MAX_LNCNT            0x1cbb
 #define VDIN_MEAS_VS_COUNT_LO 0x125c
 /*after GXL new add CNTL1,same with CNTL2 on G9TV/GXTVBB*/
 #define HHI_HDMI_PLL_CNTL1			    0x10c9

@@ -57,6 +57,7 @@
 #include "bitdepth.h"
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 #include "dnlp_cal.h"
+#include "vlock.h"
 
 #define pr_amvecm_dbg(fmt, args...)\
 	do {\
@@ -526,6 +527,8 @@ static ssize_t amvecm_vlock_show(struct class *cla,
 	len += sprintf(buf+len,
 		"echo vlock_dis_cnt_no_vf_limit val(D) > /sys/class/amvecm/vlock\n");
 	len += sprintf(buf+len,
+		"echo vlock_line_limit val(D) > /sys/class/amvecm/vlock\n");
+	len += sprintf(buf+len,
 		"echo enable > /sys/class/amvecm/vlock\n");
 	len += sprintf(buf+len,
 		"echo disable > /sys/class/amvecm/vlock\n");
@@ -597,11 +600,21 @@ static ssize_t amvecm_vlock_store(struct class *cla,
 			return -EINVAL;
 		temp_val = val;
 		sel = VLOCK_DYNAMIC_ADJUST;
+	} else if (!strncmp(parm[0], "vlock_line_limit", 17)) {
+		if (kstrtol(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		temp_val = val;
+		sel = VLOCK_LINE_LIMIT;
 	} else if (!strncmp(parm[0], "vlock_dis_cnt_no_vf_limit", 25)) {
 		if (kstrtol(parm[1], 10, &val) < 0)
 			return -EINVAL;
 		temp_val = val;
 		sel = VLOCK_DIS_CNT_NO_VF_LIMIT;
+	} else if (!strncmp(parm[0], "vlock_line_limit", 16)) {
+		if (kstrtol(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		temp_val = val;
+		sel = VLOCK_LINE_LIMIT;
 	} else if (!strncmp(parm[0], "enable", 6)) {
 		vecm_latch_flag |= FLAG_VLOCK_EN;
 	} else if (!strncmp(parm[0], "disable", 7)) {
@@ -4598,9 +4611,17 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	/*config vlock mode*/
 	/*todo:txlx & g9tv support auto pll,*/
 	/*but support not good,need vlsi support optimize*/
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+	if (is_meson_txhd_cpu())
 		vlock_mode = VLOCK_MODE_MANUAL_PLL;
-	else
+	else if (is_meson_txlx_cpu() && !is_meson_txlx_package_962E()) {
+		struct vinfo_s *vinfo = get_current_vinfo();
+
+		if (vinfo->width > 1920)
+			vlock_mode = VLOCK_MODE_MANUAL_PLL;
+		else
+			vlock_mode = VLOCK_MODE_MANUAL_SOFT_ENC;
+
+	} else
 		vlock_mode = VLOCK_MODE_MANUAL_PLL;
 	if (is_meson_gxtvbb_cpu() ||
 		is_meson_txl_cpu() || is_meson_txlx_cpu()

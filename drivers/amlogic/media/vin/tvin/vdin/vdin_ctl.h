@@ -197,5 +197,8 @@ extern void vdin_source_bitdepth_reinit(struct vdin_dev_s *devp);
 extern void set_invert_top_bot(bool invert_flag);
 extern void vdin_clk_onoff(struct vdin_dev_s *devp, bool onoff);
 extern enum tvin_force_color_range_e color_range_force;
+
+extern void vdin_vlock_input_sel(unsigned int type,
+	enum vframe_source_type_e source_type);
 #endif
 
