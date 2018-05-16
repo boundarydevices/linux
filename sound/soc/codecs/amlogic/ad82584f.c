@@ -846,12 +846,17 @@ static int ad82584f_suspend(struct snd_soc_codec *codec)
 {
 	dev_info(codec->dev, "ad82584f_suspend!\n");
 
+	ad82584f_set_bias_level(codec, SND_SOC_BIAS_OFF);
+
 	return 0;
 }
 
 static int ad82584f_resume(struct snd_soc_codec *codec)
 {
 	dev_info(codec->dev, "ad82584f_resume!\n");
+
+	ad82584f_init(codec);
+	ad82584f_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return 0;
 }
