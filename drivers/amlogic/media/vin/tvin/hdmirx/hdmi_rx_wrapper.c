@@ -184,7 +184,7 @@ static int stable_check_lvl = 0x7df;
  * Compared with other brands TV, delay 1.5S to avoid this noise.
  */
 static int edid_update_delay = 150;
-
+int skip_frame_cnt = 1;
 static bool hdcp22_reauth_enable;
 unsigned int edid_update_flag;
 static bool hdcp22_stop_auth_enable;
@@ -291,6 +291,7 @@ static int hdmi_rx_ctrl_irq_handler(void)
 
 	if (intr_hdcp22 != 0) {
 		hdmirx_wr_dwc(DWC_HDMI2_ICLR, intr_hdcp22);
+		skip_frame(skip_frame_cnt);
 		if (log_level & HDCP_LOG)
 			rx_pr("intr=%#x\n", intr_hdcp22);
 		switch (intr_hdcp22) {
@@ -1503,6 +1504,8 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(new_hdr_lum, index);
 	if (set_pr_var(tmpbuf, skip_frame_cnt, value, &index, ret))
 		return pr_var(skip_frame_cnt, index);
+	if (set_pr_var(tmpbuf, vdin_drop_frame_cnt, value, &index, ret))
+		return pr_var(vdin_drop_frame_cnt, index);
 	#ifndef USE_NEW_FSM_METHODE
 	if (set_pr_var(tmpbuf, enable_hpd_reset, value, &index, ret))
 		return pr_var(enable_hpd_reset, index);
@@ -1608,6 +1611,7 @@ void rx_get_global_variable(const char *buf)
 	pr_var(port_map, i++);
 	pr_var(new_hdr_lum, i++);
 	pr_var(skip_frame_cnt, i++);
+	pr_var(vdin_drop_frame_cnt, i++);
 	#ifndef USE_NEW_FSM_METHODE
 	pr_var(enable_hpd_reset, i++);
 	pr_var(sig_unstable_reset_hpd_max, i++);
@@ -1618,12 +1622,13 @@ void rx_get_global_variable(const char *buf)
 	pr_var(hdcp_none_wait_max, i++);
 }
 
-void skip_frame(void)
+void skip_frame(unsigned int cnt)
 {
-	if (rx.state == FSM_SIG_READY)
+	if (rx.state == FSM_SIG_READY) {
 		rx.skip = (1000 * 100 / rx.pre.frame_rate / 10) + 1;
-	if (log_level & VIDEO_LOG)
-		rx_pr("rx.skip = %d\n", rx.skip);
+		rx.skip = cnt * rx.skip;
+	}
+	rx_pr("rx.skip = %d", rx.skip);
 }
 
 /***********************
@@ -1963,7 +1968,7 @@ void rx_main_state_machine(void)
 		/* video info change */
 		if ((!is_tmds_valid()) ||
 			(!rx_is_timing_stable())) {
-			skip_frame();
+			skip_frame(skip_frame_cnt);
 			if (++sig_unready_cnt >= sig_unready_max) {
 				/*sig_lost_lock_cnt = 0;*/
 				rx.unready_timestamp = rx.timestamp;
@@ -2266,7 +2271,7 @@ void rx_main_state_machine(void)
 		/* video info change */
 		if ((is_tmds_valid() == false) ||
 			(rx_is_timing_stable() == false)) {
-			skip_frame();
+			skip_frame(skip_frame_cnt);
 			if (++sig_unready_cnt >= sig_unready_max) {
 				/*sig_lost_lock_cnt = 0;*/
 				sig_unready_cnt = 0;

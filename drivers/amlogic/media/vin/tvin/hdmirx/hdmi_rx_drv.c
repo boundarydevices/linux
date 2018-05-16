@@ -119,7 +119,7 @@ bool en_4096_2_3840;
 int en_4k_2_2k;
 int en_4k_timing = 1;
 bool hdmi_cec_en;
-int skip_frame_cnt = 1;
+int vdin_drop_frame_cnt = 1;
 /* suspend_pddq_sel:
  * 0: keep phy on when suspend(don't need phy init when
  *   resume), it doesn't work now because phy VDDIO_3.3V
@@ -811,7 +811,7 @@ void hdmirx_get_sig_property(struct tvin_frontend_s *fe,
 	hdmirx_set_timing_info(prop);
 	hdmirx_get_hdr_info(prop);
 	hdmirx_get_vsi_info(prop);
-	prop->skip_vf_num = skip_frame_cnt;
+	prop->skip_vf_num = vdin_drop_frame_cnt;
 }
 
 /*

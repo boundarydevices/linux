@@ -1312,6 +1312,9 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		pre_prop->vdin_hdr_Flag = prop->vdin_hdr_Flag;
 		pre_prop->color_fmt_range = prop->color_fmt_range;
 		pre_prop->dest_cfmt = prop->dest_cfmt;
+		ignore_frames = 0;
+		vdin_drop_cnt++;
+		goto irq_handled;
 	}
 	/* change cutwindow */
 	if ((devp->cutwindow_cfg != 0) && (devp->auto_cutwindow_en == 1)) {

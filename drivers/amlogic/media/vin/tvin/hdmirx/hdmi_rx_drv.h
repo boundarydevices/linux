@@ -34,7 +34,7 @@
 //#include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2018-05-11"
+#define RX_VER0 "ver.2018-05-17"
 /*
  *
  *
@@ -393,6 +393,7 @@ extern struct device *hdmirx_dev;
 extern struct rx_s rx;
 extern struct reg_map reg_maps[MAP_ADDR_MODULE_NUM];
 extern void rx_tasklet_handler(unsigned long arg);
+extern void skip_frame(unsigned int cnt);
 
 
 /* reg */
@@ -421,7 +422,7 @@ extern bool en_4096_2_3840;
 extern int en_4k_2_2k;
 extern bool hdmi_cec_en;
 extern int hdmi_yuv444_enable;
-extern int skip_frame_cnt;
+extern int vdin_drop_frame_cnt;
 /* debug */
 extern bool hdcp_enable;
 extern int log_level;
