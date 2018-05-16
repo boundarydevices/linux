@@ -123,7 +123,7 @@ static struct clk_mux gpu_mux = {
 		.parent_names = (const char *[]){ "gpu_p0_composite",
 			"gpu_p1_composite"},
 		.num_parents = 2,
-		.flags = CLK_GET_RATE_NOCACHE,
+		.flags = CLK_GET_RATE_NOCACHE | CLK_SET_RATE_UNGATE,
 	},
 };
 

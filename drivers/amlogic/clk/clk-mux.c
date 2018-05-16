@@ -139,7 +139,7 @@ int meson_clk_mux_determine_rate(struct clk_hw *hw,
 
 	if ((num_parents == 2) && (mux->flags == CLK_PARENT_ALTERNATE)) {
 		i = meson_clk_mux_get_parent(hw);
-		i = (i+1)%2;
+		i = (i + 1) % 2;
 
 		best_parent = clk_hw_get_parent_by_index(hw, i);
 		best = clk_hw_get_rate(best_parent);
@@ -149,11 +149,14 @@ int meson_clk_mux_determine_rate(struct clk_hw *hw,
 				pr_err("Fail! Can not set to %lu, cur rate: %lu\n",
 				   parent_req.rate, best);
 			else {
-			pr_debug("success set parent %s rate to %lu\n",
-				clk_hw_get_name(best_parent),
-				clk_hw_get_rate(best_parent));
-			clk_prepare(best_parent->clk);
-			clk_enable(best_parent->clk);
+				best = clk_hw_get_rate(best_parent);
+				pr_debug("success set parent %s rate to %lu\n",
+					clk_hw_get_name(best_parent), best);
+				if (!(clk_hw_get_flags(hw) &
+						CLK_SET_RATE_UNGATE)) {
+					clk_prepare(best_parent->clk);
+					clk_enable(best_parent->clk);
+				}
 			}
 		}
 	} else {
