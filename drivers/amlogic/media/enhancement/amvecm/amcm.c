@@ -29,6 +29,7 @@
 #include "amcm.h"
 #include "amcm_regmap.h"
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
+#include "amcsc.h"
 
 #define pr_amcm_dbg(fmt, args...)\
 	do {\
@@ -55,6 +56,10 @@ MODULE_PARM_DESC(cm_en, "\n enable or disable cm\n");
 static unsigned int cm_width_limit = 50;/* vlsi adjust */
 module_param(cm_width_limit, uint, 0664);
 MODULE_PARM_DESC(cm_width_limit, "\n cm_width_limit\n");
+
+int pq_reg_wr_rdma = 1;/* 0:disabel;1:enable */
+module_param(pq_reg_wr_rdma, int, 0664);
+MODULE_PARM_DESC(pq_reg_wr_rdma, "\n pq_reg_wr_rdma\n");
 
 #if 0
 struct cm_region_s cm_region;
@@ -189,12 +194,16 @@ void am_set_regmap(struct am_regs_s *p)
 			break;
 /* #if (MESON_CPU_TYPE >= MESON_CPU_TYPE_MESONG9TV) */
 		case REG_TYPE_VCBUS:
-			if (p->am_reg[i].mask == 0xffffffff)
+			if (p->am_reg[i].mask == 0xffffffff) {
 				/* WRITE_VCBUS_REG(p->am_reg[i].addr,*/
 				/* p->am_reg[i].val); */
-				aml_write_vcbus(p->am_reg[i].addr,
+				if (pq_reg_wr_rdma)
+					VSYNC_WR_MPEG_REG(p->am_reg[i].addr,
 						p->am_reg[i].val);
-			else
+				else
+					aml_write_vcbus(p->am_reg[i].addr,
+							p->am_reg[i].val);
+			} else
 				/* WRITE_VCBUS_REG(p->am_reg[i].addr, */
 				/* (READ_VCBUS_REG(p->am_reg[i].addr) & */
 				/* (~(p->am_reg[i].mask))) | */
@@ -220,7 +229,13 @@ void am_set_regmap(struct am_regs_s *p)
 			} else {
 				if (p->am_reg[i].addr == 0x1d26)
 					break;
-				aml_write_vcbus(p->am_reg[i].addr,
+				if (pq_reg_wr_rdma)
+					VSYNC_WR_MPEG_REG(p->am_reg[i].addr,
+					(aml_read_vcbus(p->am_reg[i].addr) &
+					(~(p->am_reg[i].mask))) |
+					(p->am_reg[i].val & p->am_reg[i].mask));
+				else
+					aml_write_vcbus(p->am_reg[i].addr,
 					(aml_read_vcbus(p->am_reg[i].addr) &
 					(~(p->am_reg[i].mask))) |
 					(p->am_reg[i].val & p->am_reg[i].mask));
