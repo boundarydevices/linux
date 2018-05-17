@@ -1222,6 +1222,15 @@
 	dvb {
 		compatible = "amlogic, dvb";
 		dev_name = "dvb";
+
+		demod = "external";
+		demod0 = "Atbm8881";
+		demod0_i2c_adap_id = <&i2c1>;
+		demod0_i2c_addr = <0xc0>;
+		demod0_ts = <0>;
+		demod0_reset_value = <0>;
+		demod0_reset_gpio = <&gpio GPIODV_14 GPIO_ACTIVE_HIGH>;
+
 		ts0 = "parallel";
 		ts0_control = <0>;
 		ts0_invert = <0>;
@@ -1247,18 +1256,6 @@
 		&clkc CLKID_AHB_ARB0
 		&clkc CLKID_HIU_IFACE>;
 		clock-names = "demux", "asyncfifo", "ahbarb0", "uparsertop";
-	};
-	dvbfe {
-		compatible = "amlogic, dvbfe";
-		dev_name = "dvbfe";
-		dtv_demod0 = "Atbm8881";
-		dtv_demod0_i2c_adap = <&i2c1>;
-		dtv_demod0_i2c_addr = <0xc0>;
-		dtv_demod0_reset_value = <0>;
-		dtv_demod0_reset_gpio = <&gpio GPIODV_14 GPIO_ACTIVE_HIGH>;
-		fe0_dtv_demod = <0>;
-		fe0_ts = <0>;
-		fe0_dev = <0>;
 	};
 };
 &efuse {
