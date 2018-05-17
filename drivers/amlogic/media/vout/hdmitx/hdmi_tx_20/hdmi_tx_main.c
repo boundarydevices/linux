@@ -1328,6 +1328,9 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 				VEN_DB1[4] = 0x4;
 		}
 		if (type == EOTF_T_DOLBYVISION) {
+			/*first disable drm package*/
+			hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
+				NULL, NULL);
 			hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB1, VEN_HB);
 			hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
 				CLR_AVI_BT2020);/*BT709*/
@@ -1407,6 +1410,9 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 
 		/*Dolby Vision standard case*/
 		if (type == EOTF_T_DOLBYVISION) {
+			/*first disable drm package*/
+			hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
+				NULL, NULL);
 			hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB2, VEN_HB);
 			hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
 				CLR_AVI_BT2020);/*BT709*/
@@ -1426,6 +1432,9 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		}
 		/*Dolby Vision low-latency case*/
 		else if  (type == EOTF_T_LL_MODE) {
+			/*first disable drm package*/
+			hdmitx_device.HWOp.SetPacket(HDMI_PACKET_DRM,
+				NULL, NULL);
 			hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB2, VEN_HB);
 			if (hdev->RXCap.colorimetry_data & 0xe0)
 				/*if RX support BT2020, then output BT2020*/

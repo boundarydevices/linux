@@ -4373,6 +4373,16 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 0, 7, 1);
 	}
 
+	/* If RX  support 3D, then enable 3D send out */
+	if (hdev->flag_3dfp || hdev->flag_3dtb || hdev->flag_3dss) {
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 1, 3, 1);
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 1, 4, 1);
+	} else {
+	  /* after changing mode, dv will call vsif function again*/
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 0, 3, 1);
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 0, 4, 1);
+	}
+
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB0,  0);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB1,  0);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB2,  0);

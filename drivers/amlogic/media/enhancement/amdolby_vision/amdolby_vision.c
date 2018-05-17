@@ -4071,6 +4071,8 @@ static int prepare_vsif_pkt(
 }
 #endif
 
+/* #define HDMI_SEND_ALL_PKT */
+static u32 last_dst_format = FORMAT_SDR;
 static bool send_hdmi_pkt(
 	enum signal_format_e dst_format,
 	const struct vinfo_s *vinfo)
@@ -4187,10 +4189,12 @@ static bool send_hdmi_pkt(
 		if (vinfo && vinfo->vout_device &&
 			vinfo->vout_device->fresh_tx_hdr_pkt)
 			vinfo->vout_device->fresh_tx_hdr_pkt(&hdr10_data);
+#ifdef HDMI_SEND_ALL_PKT
 		if (vinfo && vinfo->vout_device &&
 			vinfo->vout_device->fresh_tx_vsif_pkt)
 			vinfo->vout_device->fresh_tx_vsif_pkt(0, 0, NULL);
-
+#endif
+		last_dst_format = dst_format;
 		if (flag) {
 			pr_dolby_dbg("Info frame for hdr10 changed:\n");
 			for (i = 0; i < 3; i++)
@@ -4216,10 +4220,11 @@ static bool send_hdmi_pkt(
 
 		memset(&vsif, 0, sizeof(vsif));
 #ifdef V2_4
-	if (vinfo)
-		prepare_vsif_pkt(
-			&vsif, &dovi_setting, vinfo);
+		if (vinfo)
+			prepare_vsif_pkt(
+				&vsif, &dovi_setting, vinfo);
 #endif
+#ifdef HDMI_SEND_ALL_PKT
 		hdr10_data.features =
 			  (1 << 29)	/* video available */
 			| (5 << 26)	/* unspecified */
@@ -4241,6 +4246,7 @@ static bool send_hdmi_pkt(
 		if (vinfo && vinfo->vout_device &&
 			vinfo->vout_device->fresh_tx_hdr_pkt)
 			vinfo->vout_device->fresh_tx_hdr_pkt(&hdr10_data);
+#endif
 		if (vinfo && vinfo->vout_device &&
 			vinfo->vout_device->fresh_tx_vsif_pkt) {
 #ifdef V2_4
@@ -4258,31 +4264,38 @@ static bool send_hdmi_pkt(
 					DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL
 					? RGB_8BIT : YUV422_BIT12, &vsif);
 		}
-	} else {
-		hdr10_data.features =
-			  (1 << 29)	/* video available */
-			| (5 << 26)	/* unspecified */
-			| (0 << 25)	/* limit */
-			| (1 << 24)	/* color available */
-			| (1 << 16)	/* bt709 */
-			| (1 << 8)	/* bt709 */
-			| (1 << 0);	/* bt709 */
-		for (i = 0; i < 3; i++) {
-			hdr10_data.primaries[i][0] = 0;
-			hdr10_data.primaries[i][1] = 0;
+		last_dst_format = dst_format;
+	} else if (last_dst_format != dst_format) {
+		if (last_dst_format == FORMAT_HDR10) {
+			hdr10_data.features =
+				  (1 << 29)	/* video available */
+				| (5 << 26)	/* unspecified */
+				| (0 << 25)	/* limit */
+				| (1 << 24)	/* color available */
+				| (1 << 16)	/* bt709 */
+				| (1 << 8)	/* bt709 */
+				| (1 << 0);	/* bt709 */
+			for (i = 0; i < 3; i++) {
+				hdr10_data.primaries[i][0] = 0;
+				hdr10_data.primaries[i][1] = 0;
+			}
+			hdr10_data.white_point[0] = 0;
+			hdr10_data.white_point[1] = 0;
+			hdr10_data.luminance[0] = 0;
+			hdr10_data.luminance[1] = 0;
+			hdr10_data.max_content = 0;
+			hdr10_data.max_frame_average = 0;
+			if (vinfo && vinfo->vout_device &&
+				vinfo->vout_device->fresh_tx_hdr_pkt)
+				vinfo->vout_device->fresh_tx_hdr_pkt(
+					&hdr10_data);
+		} else if (last_dst_format == FORMAT_DOVI) {
+			if (vinfo && vinfo->vout_device &&
+				vinfo->vout_device->fresh_tx_vsif_pkt)
+				vinfo->vout_device->fresh_tx_vsif_pkt(
+					0, 0, NULL);
 		}
-		hdr10_data.white_point[0] = 0;
-		hdr10_data.white_point[1] = 0;
-		hdr10_data.luminance[0] = 0;
-		hdr10_data.luminance[1] = 0;
-		hdr10_data.max_content = 0;
-		hdr10_data.max_frame_average = 0;
-		if (vinfo && vinfo->vout_device &&
-			vinfo->vout_device->fresh_tx_hdr_pkt)
-			vinfo->vout_device->fresh_tx_hdr_pkt(&hdr10_data);
-		if (vinfo && vinfo->vout_device &&
-			vinfo->vout_device->fresh_tx_vsif_pkt)
-			vinfo->vout_device->fresh_tx_vsif_pkt(0, 0, NULL);
+		last_dst_format = dst_format;
 	}
 	return flag;
 }
