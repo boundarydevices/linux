@@ -14451,3 +14451,6 @@ M:      Jihong Sui <jihong.sui@amlogic.com>
 F:      drivers/amlogic/media/amldemod/*
 F:      drivers/amlogic/media/dtv_demod/*
 
+AMLOGIC DEFENDKEY DRIVER
+M:	Zhongfu Luo <zhongfu.luo@amlogic.com>
+F:	drivers/amlogic/defendkey/*

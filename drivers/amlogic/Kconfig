@@ -129,5 +129,8 @@ source "drivers/amlogic/irqchip/Kconfig"
 source "drivers/amlogic/atv_demod/Kconfig"
 
 source "drivers/amlogic/debug/Kconfig"
+
+source "drivers/amlogic/defendkey/Kconfig"
+
 endmenu
 endif

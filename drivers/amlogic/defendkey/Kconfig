@@ -1,0 +1,14 @@
+#
+# amlogic encrypt img judge
+#
+
+menu "Amlogic defend img file update support"
+
+config AMLOGIC_DEFENDKEY
+	bool "defend img update"
+	default n
+	help
+		defend update system for board, when system is encrypted, the system img
+		must be encrypted with same key in board
+
+endmenu
