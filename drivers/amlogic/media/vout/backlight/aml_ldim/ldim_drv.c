@@ -56,6 +56,7 @@ const char ldim_dev_id[] = "ldim-dev";
 
 static int ldim_on_flag;
 static unsigned int ldim_func_en;
+static unsigned int ldim_remap_en;
 static unsigned int ldim_func_bypass;
 
 struct LDReg nPRM;
@@ -2056,10 +2057,28 @@ static void ldim_set_matrix(unsigned int *data, unsigned int reg_sel,
 		LDIM_WR_BASE_LUT(REG_LD_LUT_VDG_BASE, data, 16, cnt);
 }
 
+static void ldim_remap_ctrl(int status)
+{
+	unsigned int temp;
+
+	temp = ldim_matrix_update_en;
+	if (status) {
+		ldim_matrix_update_en = 0;
+		LDIM_WR_32Bits(0x0a, 0x706);
+		msleep(20);
+		ldim_matrix_update_en = temp;
+	} else {
+		ldim_matrix_update_en = 0;
+		LDIM_WR_32Bits(0x0a, 0x600);
+		msleep(20);
+		ldim_matrix_update_en = temp;
+	}
+	LDIMPR("%s: %d\n", __func__, status);
+}
+
 static void ldim_func_ctrl(int status)
 {
 	if (status) {
-		/*ldim_remap_ctrl(ldim_matrix_update_en);*/
 		/* enable other flag */
 		ldim_top_en = 1;
 		ldim_hist_en = 1;
@@ -2067,7 +2086,11 @@ static void ldim_func_ctrl(int status)
 		/* enable update */
 		ldim_avg_update_en = 1;
 		/*ldim_matrix_update_en = 1;*/
+
+		ldim_remap_ctrl(ldim_remap_en);
 	} else {
+		/* disable remap */
+		ldim_remap_ctrl(0);
 		/* disable update */
 		ldim_avg_update_en = 0;
 		/*ldim_matrix_update_en = 0;*/
@@ -2075,12 +2098,11 @@ static void ldim_func_ctrl(int status)
 		ldim_top_en = 0;
 		ldim_hist_en = 0;
 		ldim_alg_en = 0;
-		/* disable remap */
-		/*ldim_remap_ctrl(0);*/
 
 		/* refresh system brightness */
 		ldim_level_update = 1;
 	}
+	LDIMPR("%s: %d\n", __func__, status);
 }
 
 static int ldim_on_init(void)
@@ -2382,19 +2404,19 @@ static ssize_t ldim_attr_store(struct class *cla,
 				goto ldim_attr_store_end;
 		}
 		if (val1) {
-			ldim_matrix_update_en = 0;
-			LDIM_WR_32Bits(0x0a, 0x706);
-			msleep(20);
-			ldim_matrix_update_en = 1;
+			if (ldim_func_en) {
+				ldim_remap_en = 1;
+				ldim_remap_ctrl(1);
+			} else {
+				pr_info("error: ldim_func is disabled\n");
+			}
 		} else {
-			ldim_matrix_update_en = 0;
-			LDIM_WR_32Bits(0x0a, 0x600);
-			msleep(20);
-			ldim_matrix_update_en = 1;
+			ldim_remap_en = 0;
+			ldim_remap_ctrl(0);
 		}
-		pr_info("ldim_remap_en: %d\n", (unsigned int)val1);
+		pr_info("ldim_remap_en: %d\n", ldim_remap_en);
 	} else if (!strcmp(parm[0], "remap_get")) {
-		pr_info("ldim_remap_en: %d\n", ldim_matrix_update_en);
+		pr_info("ldim_remap_en: %d\n", ldim_remap_en);
 	} else if (!strcmp(parm[0], "ldim_matrix_get")) {
 		unsigned int data[32] = {0};
 		unsigned int k, g;
@@ -2467,27 +2489,6 @@ static ssize_t ldim_attr_store(struct class *cla,
 		ldim_data_min = (unsigned int)val1;
 		ldim_set_level(ldim_brightness_level);
 		pr_info("**********ldim brightness data_min update*********\n");
-	} else if (!strcmp(parm[0], "ldim_info")) {
-		pr_info("ldim_on_flag          = %d\n"
-			"ldim_func_en          = %d\n"
-			"ldim_test_en          = %d\n"
-			"ldim_avg_update_en    = %d\n"
-			"ldim_matrix_update_en = %d\n"
-			"ldim_alg_en           = %d\n"
-			"ldim_top_en           = %d\n"
-			"ldim_hist_en          = %d\n"
-			"ldim_data_min         = %d\n"
-			"ldim_data_max         = %d\n",
-			ldim_on_flag, ldim_func_en, ldim_test_en,
-			ldim_avg_update_en, ldim_matrix_update_en,
-			ldim_alg_en, ldim_top_en, ldim_hist_en,
-			ldim_data_min, LD_DATA_MAX);
-		pr_info("nPRM.reg_LD_BLK_Hnum   = %d\n"
-			"nPRM.reg_LD_BLK_Vnum   = %d\n"
-			"nPRM.reg_LD_pic_RowMax = %d\n"
-			"nPRM.reg_LD_pic_ColMax = %d\n",
-			nPRM.reg_LD_BLK_Hnum, nPRM.reg_LD_BLK_Vnum,
-			nPRM.reg_LD_pic_RowMax, nPRM.reg_LD_pic_ColMax);
 	} else if (!strcmp(parm[0], "test_mode")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
@@ -2735,12 +2736,29 @@ static ssize_t ldim_attr_store(struct class *cla,
 		pr_info("set avg_gain=%ld\n", avg_gain);
 	} else if (!strcmp(parm[0], "info")) {
 		ldim_driver.config_print();
-		pr_info("ldim_on_flag          = %d\n"
+		pr_info("\nldim_on_flag          = %d\n"
 			"ldim_func_en          = %d\n"
 			"ldim_remap_en         = %d\n"
-			"ldim_test_en          = %d\n\n",
-			ldim_on_flag, ldim_func_en,
-			ldim_matrix_update_en, ldim_test_en);
+			"ldim_func_bypass      = %d\n"
+			"ldim_test_en          = %d\n"
+			"ldim_avg_update_en    = %d\n"
+			"ldim_matrix_update_en = %d\n"
+			"ldim_alg_en           = %d\n"
+			"ldim_top_en           = %d\n"
+			"ldim_hist_en          = %d\n"
+			"ldim_data_min         = %d\n"
+			"ldim_data_max         = %d\n",
+			ldim_on_flag, ldim_func_en, ldim_remap_en,
+			ldim_func_bypass, ldim_test_en,
+			ldim_avg_update_en, ldim_matrix_update_en,
+			ldim_alg_en, ldim_top_en, ldim_hist_en,
+			ldim_data_min, LD_DATA_MAX);
+		pr_info("nPRM.reg_LD_BLK_Hnum   = %d\n"
+			"nPRM.reg_LD_BLK_Vnum   = %d\n"
+			"nPRM.reg_LD_pic_RowMax = %d\n"
+			"nPRM.reg_LD_pic_ColMax = %d\n",
+			nPRM.reg_LD_BLK_Hnum, nPRM.reg_LD_BLK_Vnum,
+			nPRM.reg_LD_pic_RowMax, nPRM.reg_LD_pic_ColMax);
 	} else
 		pr_info("no support cmd!!!\n");
 
@@ -2966,20 +2984,25 @@ int aml_ldim_probe(struct platform_device *pdev)
 	unsigned int ldim_irq = 0, rdma_irq = 0;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 
-	invalid_val_cnt = 0;
-	ldim_brightness_level = 0;
-	ldim_data_min = LD_DATA_MIN;
+	/* function flag */
 	ldim_on_flag = 0;
 	ldim_func_en = 0;
+	ldim_remap_en = 0;
 	ldim_func_bypass = 0;
 	ldim_test_en = 0;
+
+	ldim_brightness_level = 0;
+	ldim_data_min = LD_DATA_MIN;
 	ldim_level_update = 0;
+
+	/* alg flag */
 	ldim_avg_update_en = 0;
 	ldim_matrix_update_en = 0;
 	ldim_alg_en = 0;
 	ldim_top_en = 0;
 	ldim_hist_en = 0;
 	avg_gain = LD_DATA_MAX;
+	invalid_val_cnt = 0;
 
 	nPRM.val_1 = &val_1[0];
 	nPRM.bin_1 = &bin_1[0];
