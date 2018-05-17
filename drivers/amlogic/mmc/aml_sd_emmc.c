@@ -2811,7 +2811,8 @@ static void aml_sd_emmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	unsigned long flags;
 	/* u32 vstat = 0; */
 	u32 vclkc = 0;
-	struct sd_emmc_clock *pclock = (struct sd_emmc_clock *)&vclkc;
+	struct sd_emmc_clock *pclock = NULL;
+	struct sd_emmc_clock_v3 *pclock_v3 = NULL;
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	u32 virqc = 0;
@@ -2819,12 +2820,9 @@ static void aml_sd_emmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 
 	host->sdio_irqen = enable;
 	spin_lock_irqsave(&host->mrq_lock, flags);
-	vclkc = readl(host->base + SD_EMMC_CLOCK);
 	vconf = readl(host->base + SD_EMMC_CFG);
 	virqc = readl(host->base + SD_EMMC_IRQ_EN);
 
-	pclock->irq_sdio_sleep = 1;
-	pclock->irq_sdio_sleep_ds = 0;
 	pconf->irq_ds = 0;
 
 	/* vstat = sd_emmc_regs->gstatus&SD_EMMC_IRQ_ALL; */
@@ -2834,8 +2832,20 @@ static void aml_sd_emmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		irqc->irq_sdio = 0;
 
 	writel(virqc, host->base + SD_EMMC_IRQ_EN);
-	writel(vclkc, host->base + SD_EMMC_CLOCK);
 	writel(vconf, host->base + SD_EMMC_CFG);
+	if (host->ctrl_ver >= 3) {
+		pclock_v3 = (struct sd_emmc_clock_v3 *)&vclkc;
+		vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
+		pclock_v3->irq_sdio_sleep = 1;
+		pclock_v3->irq_sdio_sleep_ds = 0;
+		writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
+	} else {
+		pclock = (struct sd_emmc_clock *)&vclkc;
+		vclkc = readl(host->base + SD_EMMC_CLOCK);
+		pclock->irq_sdio_sleep = 1;
+		pclock->irq_sdio_sleep_ds = 0;
+		writel(vclkc, host->base + SD_EMMC_CLOCK);
+	}
 	pdata->clkc = vclkc;
 
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
@@ -3217,7 +3227,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 				IRQF_TRIGGER_RISING
 				| IRQF_TRIGGER_FALLING
 				| IRQF_ONESHOT,
-				"amlsd_cd", host);
+				"amlsd_cd", pdata);
 		if (ret) {
 			pr_err("Failed to request SD IN detect\n");
 			goto free_host;

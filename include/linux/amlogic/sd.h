@@ -1315,21 +1315,21 @@ struct sd_emmc_clock_v3 {
 	 */
 	u32 rx_phase:2;
 	u32 sram_pd:2;
-	/*[19:16]   TX clock delay line. 0: no delay,
+	/*[21:16]   TX clock delay line. 0: no delay,
 	 *n: delay n*200ps. Maximum delay 3ns.
 	 */
 	u32 tx_delay:6;
-	/*[23:20]   RX clock delay line. 0: no delay,
+	/*[27:22]   RX clock delay line. 0: no delay,
 	 *n: delay n*200ps. Maximum delay 3ns.
 	 */
 	u32 rx_delay:6;
-	/*[24]	  1: Keep clock always on.
+	/*[28]	  1: Keep clock always on.
 	 *0: Clock on/off controlled by activities.
 	 */
 	u32 always_on:1;
-	/*[25]	1: enable IRQ sdio when in sleep mode. */
+	/*[29]	1: enable IRQ sdio when in sleep mode. */
 	u32 irq_sdio_sleep:1;
-	/*[26]	1: select DS as IRQ source during sleep.. */
+	/*[30]	1: select DS as IRQ source during sleep.. */
 	u32 irq_sdio_sleep_ds:1;
 	u32 reserved31:1;
 };
