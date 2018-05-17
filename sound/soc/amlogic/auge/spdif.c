@@ -928,6 +928,21 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 			dev_info(dev, "aml_spdif_get_pins error!\n");
 			return PTR_ERR(p_spdif->pin_ctl);
 		}
+
+		/* spdifin sample rate change event */
+		p_spdif->edev = devm_extcon_dev_allocate(dev, spdifin_extcon);
+		if (IS_ERR(p_spdif->edev)) {
+			pr_err("failed to allocate spdifin extcon!!!\n");
+			ret = -ENOMEM;
+			return ret;
+		}
+		p_spdif->edev->dev.parent  = dev;
+		p_spdif->edev->name = "spdifin_event";
+
+		dev_set_name(&p_spdif->edev->dev, "spdifin_event");
+		ret = extcon_dev_register(p_spdif->edev);
+		if (ret < 0)
+			pr_err("SPDIF IN extcon failed to register!!, ignore it\n");
 	}
 
 	/* clock for spdif in */
@@ -1055,21 +1070,6 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 	}
 
 	pr_info("%s, register soc platform\n", __func__);
-
-	/* spdifin sample rate change event */
-	aml_spdif->edev = devm_extcon_dev_allocate(dev, spdifin_extcon);
-	if (IS_ERR(aml_spdif->edev)) {
-		pr_err("failed to allocate spdifin extcon!!!\n");
-		ret = -ENOMEM;
-	} else {
-		aml_spdif->edev->dev.parent  = dev;
-		aml_spdif->edev->name = "spdifin_event";
-
-		dev_set_name(&aml_spdif->edev->dev, "spdifin_event");
-		ret = extcon_dev_register(aml_spdif->edev);
-		if (ret < 0)
-			pr_err("SPDIF IN extcon failed to register!!, ignore it\n");
-	}
 
 	return devm_snd_soc_register_platform(dev, &aml_spdif_platform);
 }
