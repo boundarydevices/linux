@@ -99,6 +99,9 @@ struct am_meson_gem_object *am_meson_gem_object_create(
 		return ERR_PTR(-EINVAL);
 	}
 
+	size = roundup(size, PAGE_SIZE);
+	if (size == 0)
+		return ERR_PTR(-EINVAL);
 	meson_gem_obj = kzalloc(sizeof(*meson_gem_obj), GFP_KERNEL);
 	if (!meson_gem_obj)
 		return ERR_PTR(-ENOMEM);
