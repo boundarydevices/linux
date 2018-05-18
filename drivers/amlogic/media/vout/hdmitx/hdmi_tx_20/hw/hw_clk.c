@@ -999,9 +999,15 @@ static void hdmitx_check_frac_rate(struct hdmitx_dev *hdev)
 
 	frac_rate = hdev->frac_rate_policy;
 	para = hdmi_get_fmt_paras(vic);
-	if (para && (para->name) && likely_frac_rate_mode(para->name))
-		;
-	else {
+	if (para && (para->name) && likely_frac_rate_mode(para->name)) {
+		if (hdev->chip_type == MESON_CPU_ID_G12A)
+			if ((vic == HDMI_3840x2160p60_16x9) ||
+				(vic == HDMI_4096x2160p60_256x135))
+				if (para->cs != COLORSPACE_YUV420) {
+					pr_info("g12a 6GHz doesn't have frac_rate\n");
+					frac_rate = 0;
+				}
+	} else {
 		pr_info("%s doesn't have frac_rate\n", para->name);
 		frac_rate = 0;
 	}

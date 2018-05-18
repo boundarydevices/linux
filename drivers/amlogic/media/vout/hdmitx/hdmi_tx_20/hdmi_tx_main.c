@@ -333,6 +333,7 @@ static struct frac_rate_table fr_tab[] = {
 static void recalc_vinfo_sync_duration(struct vinfo_s *info, unsigned int frac)
 {
 	struct frac_rate_table *fr = &fr_tab[0];
+	struct hdmitx_dev *hdev = &hdmitx_device;
 
 	pr_info(SYS "recalc before %s %d %d\n", info->name,
 		info->sync_duration_num, info->sync_duration_den);
@@ -346,6 +347,19 @@ static void recalc_vinfo_sync_duration(struct vinfo_s *info, unsigned int frac)
 				info->sync_duration_num = fr->sync_num_int;
 				info->sync_duration_den = fr->sync_den_int;
 			}
+
+			if (hdev->chip_type == MESON_CPU_ID_G12A)
+				if ((hdev->cur_VIC ==
+						HDMI_3840x2160p60_16x9) ||
+					(hdev->cur_VIC ==
+						HDMI_4096x2160p60_256x135))
+					if (hdev->para->cs !=
+						COLORSPACE_YUV420) {
+						info->sync_duration_num
+							= fr->sync_num_int;
+						info->sync_duration_den
+							= fr->sync_den_int;
+					}
 			break;
 		}
 		fr++;
