@@ -60,4 +60,5 @@
 #include "general_handler.h"
 #include "sink_pif.h"
 #include "sink_mhl_hd.h"
+#include "sink_car.h"
 #include "API_HDMIRX.h"
