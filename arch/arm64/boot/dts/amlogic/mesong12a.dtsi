@@ -2292,6 +2292,16 @@
 		};
 	};
 
+	spicc0_pins_c: spicc0_pins_c {
+		mux {
+			groups = "spi0_mosi_c",
+					"spi0_miso_c",
+					"spi0_ss0_c",
+					"spi0_clk_c";
+			function = "spi0";
+		};
+	};
+
 	spicc1_pins: spicc1_pins {
 		mux {
 			groups = "spi1_mosi",
