@@ -553,6 +553,8 @@ static void am_net_eye_pattern_on(void)
 	unsigned int value;
 
 	c_phy_dev->autoneg = AUTONEG_DISABLE;
+	/*stop check wol when doing eye pattern, otherwise it will reset phy*/
+	enable_wol_check = 0;
 	phy_write(c_phy_dev, 0, 0x2100);
 	value = phy_read(c_phy_dev, 17);
 	pr_info("0x11 %x\n", value);
@@ -563,10 +565,18 @@ static void am_net_eye_pattern_off(void)
 	unsigned int value;
 
 	c_phy_dev->autoneg = AUTONEG_ENABLE;
+	enable_wol_check = 1;
 	phy_write(c_phy_dev, 0, 0x1000);
 	value = phy_read(c_phy_dev, 17);
 	pr_info("0x11 %x\n", value);
 	phy_write(c_phy_dev, 17, (value & ~0x0004));
+}
+
+static void am_net_debug_mode(void)
+{	/*disable autoneg*/
+	c_phy_dev->autoneg = AUTONEG_DISABLE;
+	/*disable wol check*/
+	enable_wol_check = 0;
 }
 
 static ssize_t eth_phyreg_func(
@@ -640,6 +650,10 @@ static ssize_t eth_phyreg_func(
 		}
 		if (argv[0][1] == 'f' || argv[0][1] == 'F') {
 			am_net_eye_pattern_off();
+			break;
+		}
+		if (argv[0][1] == 'd' || argv[0][1] == 'D') {
+			am_net_debug_mode();
 			break;
 		}
 		break;

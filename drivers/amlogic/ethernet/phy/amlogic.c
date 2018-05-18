@@ -126,6 +126,7 @@ void reset_internal_phy(struct phy_device *phydev)
 	pr_info("reset phy\n");
 }
 
+unsigned int enable_wol_check = 1;
 static int internal_phy_read_status(struct phy_device *phydev)
 {
 	int err;
@@ -142,22 +143,28 @@ static int internal_phy_read_status(struct phy_device *phydev)
 	/*Bit 9:5: Read Address*/
 	/*Bit 4:0: Write Address*/
 	/*read wol bank reg12*/
-	val = ((1 << 15) | (1 << 11) | (1 << 10) | (12 << 5));
-	phy_write(phydev, 0x14, val);
-	wol_reg12 = phy_read(phydev, 0x15);
-	if ((phydev->link) && (phydev->speed != SPEED_10)) {
-		if ((wol_reg12 & 0x1000))
+
+	/*add enable/disable to stop the check for debug*/
+	/*cause this part will involve many issue*/
+	if (enable_wol_check) {
+		val = ((1 << 15) | (1 << 11) | (1 << 10) | (12 << 5));
+		phy_write(phydev, 0x14, val);
+		wol_reg12 = phy_read(phydev, 0x15);
+		if ((phydev->link) && (phydev->speed != SPEED_10)) {
+			if ((wol_reg12 & 0x1000))
+				reg12_error_count = 0;
+			if (!(wol_reg12 & 0x1000)) {
+				reg12_error_count++;
+				pr_info("wol_reg12[12]==0, error\n");
+			}
+			if (reg12_error_count >=
+					(phydev->drv->features & 0xff)) {
+				reg12_error_count = 0;
+				reset_internal_phy(phydev);
+			}
+		} else {
 			reg12_error_count = 0;
-		if (!(wol_reg12 & 0x1000)) {
-			reg12_error_count++;
-			pr_info("wol_reg12[12]==0, error\n");
 		}
-		if (reg12_error_count >= (phydev->drv->features & 0xff)) {
-			reg12_error_count = 0;
-			reset_internal_phy(phydev);
-		}
-	} else {
-		reg12_error_count = 0;
 	}
 	linkup = phydev->link;
 	err = genphy_update_link(phydev);
