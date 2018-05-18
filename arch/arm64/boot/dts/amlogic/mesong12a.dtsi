@@ -425,6 +425,11 @@
 		clocks = <&xtal>;
 	};
 
+	ram-dump {
+		compatible = "amlogic, ram_dump";
+		status = "okay";
+	};
+
 	jtag {
 		compatible = "amlogic, jtag";
 		status = "okay";
@@ -438,7 +443,6 @@
 				&gpio       GPIOC_4     0
 				&gpio       GPIOC_5     0>;
 	};
-
 
 	saradc:saradc {
 		compatible = "amlogic,meson-g12a-saradc";

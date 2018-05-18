@@ -33,6 +33,10 @@
 #include <asm/compiler.h>
 #include <linux/kdebug.h>
 #include <linux/arm-smccc.h>
+#ifdef CONFIG_AMLOGIC_RAMDUMP
+#include <linux/amlogic/ramdump.h>
+#define RAMDUMP_REPLACE_MSG	"ramdump disabled, replase panic to normal\n"
+#endif /* CONFIG_AMLOGIC_RAMDUMP */
 
 static u32 psci_function_id_restart;
 static u32 psci_function_id_poweroff;
@@ -59,8 +63,17 @@ static u32 parse_reason(const char *cmd)
 			reboot_reason = MESON_UBOOT_SUSPEND;
 	} else {
 		if (kernel_panic) {
-			if (strcmp(kernel_panic, "kernel_panic") == 0)
+			if (strcmp(kernel_panic, "kernel_panic") == 0) {
+			#ifdef CONFIG_AMLOGIC_RAMDUMP
+				if (ramdump_disabled()) {
+					reboot_reason = MESON_NORMAL_BOOT;
+					pr_info(RAMDUMP_REPLACE_MSG);
+				} else
+					reboot_reason = MESON_KERNEL_PANIC;
+			#else
 				reboot_reason = MESON_KERNEL_PANIC;
+			#endif
+			}
 		}
 
 	}

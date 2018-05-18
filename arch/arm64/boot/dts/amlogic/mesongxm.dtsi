@@ -243,7 +243,7 @@
 
 	watchdog {
 		compatible = "amlogic, meson-wdt";
-		status = "disabled";
+		status = "okay";
 		default_timeout=<10>;
 		reset_watchdog_method=<1>; /* 0:sysfs,1:kernel */
 		reset_watchdog_time=<2>;
@@ -253,6 +253,11 @@
 		reg = <0x0 0xc11098d0 0x0 0x10>;
 		clock-names = "xtal";
 		clocks = <&xtal>;
+	};
+
+	ram-dump {
+		compatible = "amlogic, ram_dump";
+		status = "okay";
 	};
 
 	jtag {

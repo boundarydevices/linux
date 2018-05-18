@@ -13505,6 +13505,7 @@ F: drivers/amlogic/cpufreq/*
 AMLOGIC driver for memory extend
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/memory_ext/*
+F: include/linux/amlogic/ramdump.h
 
 AMLOGIC driver for memory extend
 M: Tao Zeng <tao.zeng@amlogic.com>

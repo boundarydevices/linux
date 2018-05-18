@@ -19,6 +19,17 @@ config AMLOGIC_PAGE_TRACE
 		with allocate page count information of each caller functions from
 		/proc/pagetrace
 
+config AMLOGIC_RAMDUMP
+	bool "Amlogic RAM DUMP support"
+	depends on AMLOGIC_MEMORY_EXTEND
+	depends on PANIC_TIMEOUT != 0
+	default n
+	help
+		RAM dump support for amlogic platform, when system is rebooted
+		after panic/watch dog reboot, you may need this option to save
+		whole ram to /data/ partition. Which can be used for analyze
+		crash reason.
+
 config AMLOGIC_CMA
 	bool "Amlogic CMA change"
 	depends on AMLOGIC_MEMORY_EXTEND

@@ -25,6 +25,9 @@
 #include <linux/nmi.h>
 #include <linux/console.h>
 #include <linux/bug.h>
+#ifdef CONFIG_AMLOGIC_RAMDUMP
+#include <linux/amlogic/ramdump.h>
+#endif
 
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
@@ -179,6 +182,9 @@ void panic(const char *fmt, ...)
 		dump_stack();
 #endif
 
+#ifdef CONFIG_AMLOGIC_RAMDUMP
+	ramdump_sync_data();
+#endif
 	/*
 	 * If we have crashed and we have a crash kernel loaded let it handle
 	 * everything else.
