@@ -56,7 +56,7 @@
 #define MM_ALIGN_UP2N(addr, alg2n) ((addr+(1<<alg2n)-1)&(~((1<<alg2n)-1)))
 
 #define RES_IS_MAPED
-#define DEFAULT_TVP_SIZE_FOR_4K (256 * SZ_1M)
+#define DEFAULT_TVP_SIZE_FOR_4K (192 * SZ_1M)
 #define DEFAULT_TVP_SIZE_FOR_NO4K (160 * SZ_1M)
 
 #define ALLOC_MAX_RETRY 1
