@@ -1648,8 +1648,10 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 	}
 	osd_log_info("current vmode=%s, cmd: 0x%lx\n",
 		vinfo->name, cmd);
-	if (!strcmp(vinfo->name, "invalid"))
+	if ((!strcmp(vinfo->name, "invalid")) ||
+		(!strcmp(vinfo->name, "null")))
 		return -1;
+
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
 		set_osd_logo_freescaler();
