@@ -62,7 +62,7 @@ static int debug_flag;
 /* burst size 0=16; 1=24; 2=32; 3=48.*/
 static int ctrl_ahb_rd_burst_size = 3;
 static int ctrl_ahb_wr_burst_size = 3;
-static int rdma_watchdog = 10;
+static int rdma_watchdog = 20;
 static int reset_count;
 static int rdma_watchdog_count;
 static int rdma_force_reset = -1;

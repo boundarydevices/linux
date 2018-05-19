@@ -22,6 +22,8 @@
 #include "osd_io.h"
 #include "osd_reg.h"
 
+extern int rdma_watchdog_setting(int flag);
+
 struct rdma_table_item {
 	u32 addr;
 	u32 val;

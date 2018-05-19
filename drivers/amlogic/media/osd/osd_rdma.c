@@ -81,7 +81,9 @@ static unsigned int rdma_recovery_count;
 #ifdef OSD_RDMA_ISR
 static unsigned int second_rdma_irq;
 #endif
+static unsigned int vsync_irq_count;
 
+static bool osd_rdma_done;
 static int osd_rdma_handle = -1;
 static struct rdma_table_item *rdma_temp_tbl;
 
@@ -216,12 +218,41 @@ static int update_table_item(u32 addr, u32 val, u8 irq_mode)
 	struct rdma_table_item request_item;
 	int reject1 = 0, reject2 = 0, ret = 0;
 	u32 paddr;
+	static int pace_logging;
 
 	if ((item_count > 500) || rdma_reset_tigger_flag) {
+		int i;
+		struct rdma_table_item reset_item[2] = {
+			{
+				.addr = OSD_RDMA_FLAG_REG,
+				.val = OSD_RDMA_STATUS_MARK_TBL_RST,
+			},
+			{
+				.addr = OSD_RDMA_FLAG_REG,
+				.val = OSD_RDMA_STATUS_MARK_TBL_DONE,
+			}
+		};
+
 		/* rdma table is full */
-		/* pr_info("update_table_item overflow!\n"); */
+		if (!(pace_logging++ % 50))
+			pr_info("update_table_item overflow!vsync_cnt=%d, rdma_cnt=%d\n",
+				vsync_irq_count, rdma_irq_count);
+		/* update rdma table */
+		for (i = 1; i < item_count - 1; i++)
+			osd_reg_write(rdma_table[i].addr, rdma_table[i].val);
+
+		osd_reg_write(addr, val);
+		update_recovery_item(addr, val);
+
+		item_count = 2;
+		osd_rdma_mem_cpy(rdma_table, &reset_item[0], 8);
+		osd_rdma_mem_cpy(&rdma_table[item_count - 1],
+			&reset_item[1], 8);
+		osd_reg_write(END_ADDR,
+			(table_paddr + item_count * 8 - 1));
 		return -1;
 	}
+
 	/* pr_debug("%02dth, ctrl: 0x%x, status: 0x%x, auto:0x%x, flag:0x%x\n",
 	 *	item_count, osd_reg_read(RDMA_CTRL),
 	 *	osd_reg_read(RDMA_STATUS),
@@ -981,6 +1012,7 @@ static void osd_rdma_irq(void *arg)
 	osd_update_3d_mode();
 	osd_hw_reset();
 	rdma_irq_count++;
+	osd_rdma_done = true;
 	{
 		/*This is a memory barrier*/
 		wmb();
@@ -1066,6 +1098,14 @@ static int stop_rdma(char channel)
 void osd_rdma_interrupt_done_clear(void)
 {
 	u32 rdma_status;
+
+	vsync_irq_count++;
+
+	if (osd_rdma_done)
+		rdma_watchdog_setting(0);
+	else
+		rdma_watchdog_setting(1);
+	osd_rdma_done = false;
 
 	if (rdma_reset_tigger_flag) {
 		rdma_status =
@@ -1409,3 +1449,6 @@ module_param(rdma_recovery_count, uint, 0664);
 
 MODULE_PARM_DESC(rdma_hdr_delay, "\n rdma_hdr_delay\n");
 module_param(rdma_hdr_delay, uint, 0664);
+
+MODULE_PARM_DESC(vsync_irq_count, "\n vsync_irq_count\n");
+module_param(vsync_irq_count, uint, 0664);
