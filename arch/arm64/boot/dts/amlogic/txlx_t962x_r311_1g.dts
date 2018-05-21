@@ -364,7 +364,7 @@
 		compatible = "amlogic, picdec";
 		memory-region = <&picdec_cma_reserved>;
 		dev_name = "picdec";
-		status = "disabled";
+		status = "okay";
 	};
 
 	ppmgr {
