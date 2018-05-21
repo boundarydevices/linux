@@ -41,6 +41,7 @@
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/of_gpio.h>
 #include <linux/io.h>
+#include <asm/unaligned.h>
 #include <linux/amlogic/media/sound/aiu_regs.h>
 #include <linux/amlogic/media/sound/audio_iomap.h>
 #ifdef CONFIG_AMLOGIC_AO_CEC
@@ -59,8 +60,11 @@
 
 #define DRV_NAME "aml_snd_card_tv"
 
-static unsigned int aml_EQ_param_length = 100;
-static unsigned int aml_EQ_param[100] = {
+#define AML_EQ_PARAM_LENGTH 100
+#define AML_DRC_PARAM_LENGTH 12
+#define AML_REG_BYTES 4
+
+static u32 aml_EQ_table[AML_EQ_PARAM_LENGTH] = {
 	/*channel 1 param*/
 	0x800000, 0x00, 0x00, 0x00, 0x00, /*eq_ch1_coef0*/
 	0x800000, 0x00, 0x00, 0x00, 0x00, /*eq_ch1_coef1*/
@@ -85,16 +89,12 @@ static unsigned int aml_EQ_param[100] = {
 	0x800000, 0x00, 0x00, 0x00, 0x00, /*eq_ch1_coef9*/
 };
 
-static unsigned int aml_DRC_param_length = 6;
-static u32 aml_drc_table[6] = {
+static u32 aml_DRC_table[AML_DRC_PARAM_LENGTH] = {
 	0x0000111c, 0x00081bfc, 0x00001571,  /*drc_ae, drc_aa, drc_ad*/
 	0x0380111c, 0x03881bfc, 0x03801571,  /*drc_ae_1m, drc_aa_1m, drc_ad_1m*/
-};
-
-static u32 aml_drc_tko_table[6] = {
-	0x0,		0x0,	 /*offset0, offset1*/
-	0xcb000000, 0x0,	 /*thd0, thd1*/
-	0xa0000,	0x40000, /*k0, k1*/
+	0x0,		0x0,	                 /*offset0, offset1*/
+	0xcb000000, 0x0,	                 /*thd0, thd1*/
+	0xa0000,	0x40000,                 /*k0, k1*/
 };
 
 static u32 aml_hw_resample_table[7][5] = {
@@ -837,43 +837,61 @@ static int aml_set_audin_reg(struct snd_kcontrol *kcontrol,
 static int set_aml_EQ_param(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	unsigned int value = ucontrol->value.integer.value[0];
-	int i = 0;
-	u32 *reg_ptr = &aml_EQ_param[0];
+	struct soc_bytes_ext *params = (void *)kcontrol->private_value;
+	int bytes_num = params->max;
+	int i = 0, reg_num = bytes_num / AML_REG_BYTES;
+	u32 *value = (u32 *)ucontrol->value.bytes.data;
 
-	if (value == 1) {
-		for (i = 0; i < 100; i++) {
-			aml_eqdrc_write(AED_EQ_CH1_COEF00 + i, *reg_ptr);
-			/*pr_info("EQ value[%d]: 0x%x\n", i, *reg_ptr);*/
-			reg_ptr++;
-		}
+	for (i = 0; i < reg_num; i++, value++) {
+		aml_EQ_table[i] = be32_to_cpu(*value);
+		aml_eqdrc_write(AED_EQ_CH1_COEF00 + i, aml_EQ_table[i]);
 	}
-	aml_eqdrc_update_bits(AED_EQ_EN, 1, value);
+	return 0;
+}
+
+static int get_aml_EQ_param(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_bytes_ext *params = (void *)kcontrol->private_value;
+	int bytes_num = params->max;
+	int i = 0, reg_num = bytes_num / AML_REG_BYTES;
+	u32 *value = (u32 *)ucontrol->value.bytes.data;
+
+	for (i = 0; i < reg_num; i++, value++) {
+		aml_EQ_table[i] = (u32)aml_eqdrc_read(AED_EQ_CH1_COEF00 + i);
+		*value = cpu_to_be32(aml_EQ_table[i]);
+	}
 	return 0;
 }
 
 static int set_aml_DRC_param(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	unsigned int value = ucontrol->value.integer.value[0];
-	int i = 0;
-	u32 *reg_ptr = &aml_drc_table[0];
+	struct soc_bytes_ext *params = (void *)kcontrol->private_value;
+	int bytes_num = params->max;
+	int i = 0, reg_num = bytes_num / AML_REG_BYTES;
+	u32 *value = (u32 *)ucontrol->value.bytes.data;
 
-	if (value == 1) {
-		for (i = 0; i < 6; i++) {
-			aml_eqdrc_write(AED_DRC_AE + i, *reg_ptr);
-			/*pr_info("DRC table value[%d]: 0x%x\n", i, *reg_ptr);*/
-			reg_ptr++;
-		}
-
-		reg_ptr = &aml_drc_tko_table[0];
-		for (i = 0; i < 6; i++) {
-			aml_eqdrc_write(AED_DRC_OFFSET0 + i, *reg_ptr);
-			/*pr_info("DRC tko value[%d]: 0x%x\n", i, *reg_ptr);*/
-			reg_ptr++;
-		}
+	for (i = 0; i < reg_num; i++, value++) {
+		aml_DRC_table[i] = be32_to_cpu(*value);
+		aml_eqdrc_write(AED_DRC_AE + i, aml_DRC_table[i]);
 	}
-	aml_eqdrc_update_bits(AED_DRC_EN, 1, value);
+	return 0;
+}
+
+static int get_aml_DRC_param(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_bytes_ext *params = (void *)kcontrol->private_value;
+	int bytes_num = params->max;
+	int i = 0, reg_num = bytes_num / AML_REG_BYTES;
+	u32 *value = (u32 *)ucontrol->value.bytes.data;
+
+	for (i = 0; i < reg_num; i++, value++) {
+		aml_DRC_table[i] = (u32)aml_eqdrc_read(AED_DRC_AE + i);
+		*value = cpu_to_be32(aml_DRC_table[i]);
+		/*pr_info("value = 0x%x\n", aml_DRC_table[i]);*/
+	}
 	return 0;
 }
 
@@ -903,12 +921,12 @@ static const struct snd_kcontrol_new aml_EQ_DRC_controls[] = {
 
 	SOC_SINGLE_EXT_TLV("EQ enable",
 			 AED_EQ_EN, 0, 0x1, 0,
-			 aml_get_eqdrc_reg, set_aml_EQ_param,
+			 aml_get_eqdrc_reg, aml_set_eqdrc_reg,
 			 NULL),
 
 	SOC_SINGLE_EXT_TLV("DRC enable",
 			 AED_DRC_EN, 0, 0x1, 0,
-			 aml_get_eqdrc_reg, set_aml_DRC_param,
+			 aml_get_eqdrc_reg, aml_set_eqdrc_reg,
 			 NULL),
 
 	SOC_SINGLE_EXT_TLV("NG enable",
@@ -930,6 +948,16 @@ static const struct snd_kcontrol_new aml_EQ_DRC_controls[] = {
 			 AED_NG_CNT_THD, 0, 0xFFFF, 0,
 			 aml_get_eqdrc_reg, aml_set_eqdrc_reg,
 			 NULL),
+
+	SND_SOC_BYTES_EXT("EQ table",
+			 (AML_EQ_PARAM_LENGTH*AML_REG_BYTES),
+			 get_aml_EQ_param,
+			 set_aml_EQ_param),
+
+	SND_SOC_BYTES_EXT("DRC table",
+			 (AML_DRC_PARAM_LENGTH*AML_REG_BYTES),
+			 get_aml_DRC_param,
+			 set_aml_DRC_param),
 };
 
 static const struct snd_kcontrol_new aml_EQ_RESAMPLE_controls[] = {
@@ -939,7 +967,7 @@ static const struct snd_kcontrol_new aml_EQ_RESAMPLE_controls[] = {
 	 */
 	SOC_SINGLE_EXT_TLV("EQ Volume Pos",
 			 AED_EQ_VOLUME, 28, 0x1, 0,
-			 aml_get_eqdrc_reg, set_aml_EQ_param,
+			 aml_get_eqdrc_reg, aml_set_eqdrc_reg,
 			 NULL),
 
 	SOC_SINGLE_EXT_TLV("Hw resample pause enable",
@@ -2086,15 +2114,6 @@ static struct platform_driver aml_tv_audio_driver = {
 	.probe			= aml_tv_audio_probe,
 	.shutdown		= aml_tv_audio_shutdown,
 };
-
-module_param_array(aml_EQ_param, uint, &aml_EQ_param_length, 0664);
-MODULE_PARM_DESC(aml_EQ_param, "An array of aml EQ param");
-
-module_param_array(aml_drc_table, uint, &aml_DRC_param_length, 0664);
-MODULE_PARM_DESC(aml_drc_table, "An array of aml DRC table param");
-
-module_param_array(aml_drc_tko_table, uint, &aml_DRC_param_length, 0664);
-MODULE_PARM_DESC(aml_drc_tko_table, "An array of aml DRC tko table param");
 
 module_platform_driver(aml_tv_audio_driver);
 

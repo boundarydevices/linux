@@ -69,8 +69,9 @@ struct reg_default tas5707_reg_defaults[TAS5707_REGISTER_COUNT] = {
 	{0x1D, 0x02}
 };
 
-static unsigned int tas5707_EQ_table_length = 280;
-static unsigned int tas5707_EQ_table[280] = {
+#define TAS5707_EQ_LENGTH 280
+#define TAS5707_EQ_PARAM_LENGTH 20
+static u8 tas5707_EQ_table[TAS5707_EQ_LENGTH] = {
 	/*0x29---ch1_bq[0]*/
 	0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -115,21 +116,22 @@ static unsigned int tas5707_EQ_table[280] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-static unsigned int tas5707_drc1_table_length = 24;
-static unsigned int tas5707_drc1_table[24] = {
+#define TAS5707_DRC_LENGTH 36
+#define TAS5707_DRC_PARAM_LENGTH 8
+#define TAS5707_DRC_TKO_LENGTH 4
+static u8 tas5707_drc1_table[TAS5707_DRC_LENGTH] = {
 	/* 0x3A drc1_ae */
 	0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	/* 0x3B drc1_aa */
 	0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	/* 0x3C drc1_ad */
 	0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-};
-
-static unsigned int tas5707_drc1_tko_length = 12;
-static unsigned int tas5707_drc1_tko_table[12] = {
-	0xFD, 0xA2, 0x14, 0x90, /*0x40---drc1_t*/
-	0x03, 0x84, 0x21, 0x09, /*0x41---drc1_k*/
-	0x00, 0x08, 0x42, 0x10, /*0x42---drc1_o*/
+	/* 0x40---drc1_t */
+	0xFD, 0xA2, 0x14, 0x90,
+	/* 0x41---drc1_k */
+	0x03, 0x84, 0x21, 0x09,
+	/* 0x42---drc1_o */
+	0x00, 0x08, 0x42, 0x10,
 };
 
 /* codec private data */
@@ -162,6 +164,14 @@ static int tas5707_set_DRC_enum(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol);
 static int tas5707_get_DRC_enum(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol);
+static int tas5707_get_EQ_param(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol);
+static int tas5707_set_EQ_param(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol);
+static int tas5707_get_DRC_param(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol);
+static int tas5707_set_DRC_param(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol);
 
 static const DECLARE_TLV_DB_SCALE(mvol_tlv, -12700, 50, 1);
 static const DECLARE_TLV_DB_SCALE(chvol_tlv, -10300, 50, 1);
@@ -181,6 +191,10 @@ static const struct snd_kcontrol_new tas5707_snd_controls[] = {
 			   tas5707_get_EQ_enum, tas5707_set_EQ_enum),
 	SOC_SINGLE_BOOL_EXT("Set DRC Enable", 0,
 			   tas5707_get_DRC_enum, tas5707_set_DRC_enum),
+	SND_SOC_BYTES_EXT("EQ table", TAS5707_EQ_LENGTH,
+			   tas5707_get_EQ_param, tas5707_set_EQ_param),
+	SND_SOC_BYTES_EXT("DRC table", TAS5707_DRC_LENGTH,
+			   tas5707_get_DRC_param, tas5707_set_DRC_param),
 };
 
 static int tas5707_set_dai_sysclk(struct snd_soc_dai *codec_dai,
@@ -320,39 +334,230 @@ static int tas5707_set_master_vol(struct snd_soc_codec *codec)
 	return 0;
 }
 
+static int tas5707_set_DRC_param(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	struct soc_bytes_ext *params = (void *)kcontrol->private_value;
+	void *data;
+	u8 *val, *p = &tas5707_drc1_table[0];
+	unsigned int i, addr;
+
+	data = kmemdup(ucontrol->value.bytes.data,
+		params->max, GFP_KERNEL | GFP_DMA);
+	if (!data)
+		return -ENOMEM;
+
+	val = (u8 *)data;
+	memcpy(p, val, params->max / sizeof(u8));
+
+	for (i = 0; i < 3; i++) {
+		addr = DDX_DRC1_AE + i;
+		regmap_raw_write(tas5707->regmap,
+			addr, p, TAS5707_DRC_PARAM_LENGTH);
+		p += TAS5707_DRC_PARAM_LENGTH;
+	}
+	for (i = 0; i < 3; i++) {
+		addr = DDX_DRC1_T + i;
+		regmap_raw_write(tas5707->regmap,
+			addr, p, TAS5707_DRC_TKO_LENGTH);
+		p += TAS5707_DRC_TKO_LENGTH;
+	}
+	kfree(data);
+	return 0;
+}
+
+static int tas5707_get_DRC_param(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	/*struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	 *struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	 *struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	 */
+	unsigned int i, addr;
+	u8 *val, *p = &tas5707_drc1_table[0];
+
+	val = (u8 *)ucontrol->value.bytes.data;
+	for (i = 0; i < 3; i++) {
+		addr = DDX_DRC1_AE + i;
+		/*regmap_raw_read(tas5707->regmap,
+		 *	addr, p, TAS5707_DRC_PARAM_LENGTH);
+		 */
+		memcpy(val, p, TAS5707_DRC_PARAM_LENGTH);
+		p += TAS5707_DRC_PARAM_LENGTH;
+		val += TAS5707_DRC_PARAM_LENGTH;
+	}
+	for (i = 0; i < 3; i++) {
+		addr = DDX_DRC1_T + i;
+		/*regmap_raw_read(tas5707->regmap,
+		 *	addr, p, TAS5707_DRC_TKO_LENGTH);
+		 */
+		memcpy(val, p, TAS5707_DRC_TKO_LENGTH);
+		p += TAS5707_DRC_TKO_LENGTH;
+		val += TAS5707_DRC_TKO_LENGTH;
+	}
+	return 0;
+}
+
+static int tas5707_set_EQ_param(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	struct soc_bytes_ext *params = (void *)kcontrol->private_value;
+	void *data;
+	u8 *val, *p = &tas5707_EQ_table[0];
+	unsigned int i = 0, addr;
+
+	data = kmemdup(ucontrol->value.bytes.data,
+		params->max, GFP_KERNEL | GFP_DMA);
+	if (!data)
+		return -ENOMEM;
+
+	val = (u8 *)data;
+	memcpy(p, val, params->max / sizeof(u8));
+
+	for (i = 0; i < 14; i++) {
+		addr = DDX_CH1_BQ_0 + i;
+		regmap_raw_write(tas5707->regmap,
+			addr, p, TAS5707_EQ_PARAM_LENGTH);
+		p += TAS5707_EQ_PARAM_LENGTH;
+	}
+	kfree(data);
+
+	return 0;
+}
+
+static int tas5707_get_EQ_param(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	/*struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	 *struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	 *struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	 */
+	unsigned int i, addr;
+	u8 *val = (u8 *)ucontrol->value.bytes.data;
+	u8 *p = &tas5707_EQ_table[0];
+
+	for (i = 0; i < 14; i++) {
+		addr = DDX_CH1_BQ_0 + i;
+		/*regmap_raw_read(tas5707->regmap,
+		 *  addr, p, TAS5707_EQ_PARAM_LENGTH);
+		 */
+		memcpy(val, p, TAS5707_EQ_PARAM_LENGTH);
+		p += TAS5707_EQ_PARAM_LENGTH;
+		val += TAS5707_EQ_PARAM_LENGTH;
+	}
+	return 0;
+}
+
+static int tas5707_set_EQ_enum(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	u8 tas5707_eq_ctl_table[] = { 0x00, 0x00, 0x00, 0x80 };
+
+	tas5707->EQ_enum_value = ucontrol->value.integer.value[0];
+
+	if (tas5707->EQ_enum_value == 1)
+		tas5707_eq_ctl_table[3] &= 0x7F;
+
+	regmap_raw_write(tas5707->regmap,
+		DDX_BANKSWITCH_AND_EQCTL,
+		tas5707_eq_ctl_table, 4);
+
+	return 0;
+}
+
+static int tas5707_get_EQ_enum(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	bool enable = (bool)tas5707->EQ_enum_value & 0x1;
+
+	ucontrol->value.integer.value[0] = enable;
+	return 0;
+}
+
+static int tas5707_set_DRC_enum(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	u8 tas5707_drc_ctl_table[] = { 0x00, 0x00, 0x00, 0x00 };
+
+	tas5707->DRC_enum_value = ucontrol->value.integer.value[0];
+
+	if (tas5707->DRC_enum_value == 1)
+		tas5707_drc_ctl_table[3] |= 0x01;
+
+	regmap_raw_write(tas5707->regmap, DDX_DRC_CTL,
+		tas5707_drc_ctl_table, 4);
+
+	return 0;
+}
+
+static int tas5707_get_DRC_enum(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	bool enable = (bool)tas5707->DRC_enum_value & 0x1;
+
+	ucontrol->value.integer.value[0] = enable;
+	return 0;
+}
+
+static int reset_tas5707_GPIO(struct snd_soc_codec *codec)
+{
+	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
+	struct tas57xx_platform_data *pdata = tas5707->pdata;
+	int ret = 0;
+
+	if (pdata->reset_pin < 0)
+		return 0;
+
+	ret = devm_gpio_request_one(codec->dev, pdata->reset_pin,
+					    GPIOF_OUT_INIT_LOW,
+					    "tas5707-reset-pin");
+	if (ret < 0)
+		return -1;
+
+	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_LOW);
+	udelay(1000);
+	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_HIGH);
+	mdelay(15);
+
+	return 0;
+}
+
 /* tas5707 DRC for channel L/R */
 static int tas5707_set_drc1(struct snd_soc_codec *codec)
 {
 	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
-	int i = 0, j = 0;
-	unsigned int *p = NULL;
-	u8 tas5707_drc1_table_tmp[8];
-	u8 tas5707_drc1_tko_table_tmp[4];
+	unsigned int i, addr;
+	u8 *p = &tas5707_drc1_table[0];
 
-	p = &tas5707_drc1_table[0];
 	for (i = 0; i < 3; i++) {
-		for (j = 0; j < 8; j++)
-			tas5707_drc1_table_tmp[j] = p[i * 8 + j];
-
-		regmap_raw_write(tas5707->regmap, DDX_DRC1_AE + i,
-					tas5707_drc1_table_tmp, 8);
-		/* for (j = 0; j < 8; j++)
-		 *	pr_info("TAS5707_drc1_table[%d][%d]: %x\n",
-		 *			i, j, tas5707_drc1_table_tmp[j]);
-		 */
+		addr = DDX_DRC1_AE + i;
+		regmap_raw_write(tas5707->regmap,
+			addr, p, TAS5707_DRC_PARAM_LENGTH);
+		p += TAS5707_DRC_PARAM_LENGTH;
 	}
-
-	p = &tas5707_drc1_tko_table[0];
 	for (i = 0; i < 3; i++) {
-		for (j = 0; j < 4; j++)
-			tas5707_drc1_tko_table_tmp[j] = p[i * 4 + j];
-
-		regmap_raw_write(tas5707->regmap, DDX_DRC1_T + i,
-					tas5707_drc1_tko_table_tmp, 4);
-		/* for (j = 0; j < 4; j++)
-		 *	pr_info("tas5707_drc1_tko_table[%d][%d]: %x\n",
-		 *			i, j, tas5707_drc1_tko_table_tmp[j]);
-		 */
+		addr = DDX_DRC1_T + i;
+		regmap_raw_write(tas5707->regmap,
+			addr, p, TAS5707_DRC_TKO_LENGTH);
+		p += TAS5707_DRC_TKO_LENGTH;
 	}
 
 	return 0;
@@ -378,27 +583,15 @@ static int tas5707_set_drc(struct snd_soc_codec *codec)
 static int tas5707_set_eq_biquad(struct snd_soc_codec *codec)
 {
 	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
-	int i = 0, j = 0, k = 0;
-	unsigned int *p = NULL;
-	u8 addr;
-	u8 tas5707_bq_table[20];
+	int i = 0;
+	u8 addr, *p = &tas5707_EQ_table[0];
 
-	p = &tas5707_EQ_table[0];
-	for (i = 0; i < 2; i++) {
-		for (j = 0; j < 7; j++) {
-			addr = (DDX_CH1_BQ_0 + i * 7 + j);
-			for (k = 0; k < 20; k++)
-				tas5707_bq_table[k] =
-					p[i * 7 * 20 + j * 20 + k];
-			regmap_raw_write(tas5707->regmap, addr,
-					tas5707_bq_table, 20);
-			/* for (k = 0; k < 20; k++)
-			 *	pr_info("tas5707_bq_table[%d]: %x\n",
-			 *		k, tas5707_bq_table[k]);
-			 */
-		}
+	for (i = 0; i < 14; i++) {
+		addr = DDX_CH1_BQ_0 + i;
+		regmap_raw_write(tas5707->regmap,
+			addr, p, TAS5707_EQ_PARAM_LENGTH);
+		p += TAS5707_EQ_PARAM_LENGTH;
 	}
-
 	return 0;
 }
 
@@ -413,90 +606,6 @@ static int tas5707_set_eq(struct snd_soc_codec *codec)
 	tas5707_eq_ctl_table[3] &= 0x7F;
 	regmap_raw_write(tas5707->regmap, DDX_BANKSWITCH_AND_EQCTL,
 			 tas5707_eq_ctl_table, 4);
-
-	return 0;
-}
-
-static int tas5707_set_EQ_enum(struct snd_kcontrol *kcontrol,
-				   struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
-	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
-	u8 tas5707_eq_ctl_table[] = { 0x00, 0x00, 0x00, 0x80 };
-
-	tas5707->EQ_enum_value = ucontrol->value.integer.value[0];
-
-	if (tas5707->EQ_enum_value == 1)
-		tas5707_set_eq(codec);
-	else
-		regmap_raw_write(tas5707->regmap,
-			DDX_BANKSWITCH_AND_EQCTL,
-			tas5707_eq_ctl_table, 4);
-
-	return 0;
-}
-static int tas5707_get_EQ_enum(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
-	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.integer.value[0] = tas5707->EQ_enum_value;
-
-	return 0;
-}
-
-static int tas5707_set_DRC_enum(struct snd_kcontrol *kcontrol,
-				   struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
-	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
-	u8 tas5707_drc_ctl_table[] = { 0x00, 0x00, 0x00, 0x00 };
-
-	tas5707->DRC_enum_value = ucontrol->value.integer.value[0];
-
-	if (tas5707->DRC_enum_value == 1)
-		tas5707_set_drc(codec);
-	else
-		regmap_raw_write(tas5707->regmap, DDX_DRC_CTL,
-			tas5707_drc_ctl_table, 4);
-
-	return 0;
-}
-static int tas5707_get_DRC_enum(struct snd_kcontrol *kcontrol,
-				    struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
-	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
-
-	ucontrol->value.integer.value[0] = tas5707->DRC_enum_value;
-
-	return 0;
-}
-
-static int reset_tas5707_GPIO(struct snd_soc_codec *codec)
-{
-	struct tas5707_priv *tas5707 = snd_soc_codec_get_drvdata(codec);
-	struct tas57xx_platform_data *pdata = tas5707->pdata;
-	int ret = 0;
-
-	if (pdata->reset_pin < 0)
-		return 0;
-
-	ret = devm_gpio_request_one(codec->dev, pdata->reset_pin,
-					    GPIOF_OUT_INIT_LOW,
-					    "tas5707-reset-pin");
-	if (ret < 0)
-		return -1;
-
-	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_LOW);
-	udelay(1000);
-	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_HIGH);
-	mdelay(15);
 
 	return 0;
 }
@@ -526,10 +635,10 @@ static int tas5707_init(struct snd_soc_codec *codec)
 	regmap_raw_write(tas5707->regmap, DDX_PWM_MUX, burst_data[2], 4);
 
 	/*drc */
-	if (tas5707->EQ_enum_value)
+	if (tas5707->DRC_enum_value)
 		tas5707_set_drc(codec);
 	/*eq */
-	if (tas5707->DRC_enum_value)
+	if (tas5707->EQ_enum_value)
 		tas5707_set_eq(codec);
 
 	snd_soc_write(codec, DDX_VOLUME_CONFIG, 0xD1);
@@ -772,21 +881,6 @@ static struct i2c_driver tas5707_i2c_driver = {
 	.id_table = tas5707_i2c_id,
 };
 module_i2c_driver(tas5707_i2c_driver);
-
-module_param_array(tas5707_EQ_table,
-		uint, &tas5707_EQ_table_length, 0664);
-MODULE_PARM_DESC(tas5707_EQ_table,
-		"An array of tas5707 EQ param");
-
-module_param_array(tas5707_drc1_table,
-		uint, &tas5707_drc1_table_length, 0664);
-MODULE_PARM_DESC(tas5707_drc1_table,
-		"An array of tas5707 DRC table param");
-
-module_param_array(tas5707_drc1_tko_table,
-		uint, &tas5707_drc1_tko_length, 0664);
-MODULE_PARM_DESC(tas5707_drc1_tko_table,
-		"An array of tas5707 DRC tko table param");
 
 MODULE_DESCRIPTION("ASoC Tas5707 driver");
 MODULE_AUTHOR("AML MM team");
