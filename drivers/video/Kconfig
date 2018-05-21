@@ -35,6 +35,12 @@ config DVI_TFP410
 	help
 	  This initializes the tfp410 i2c for output.
 
+config SN65DSI83
+	tristate "Mipi to LVDS bridge (SN65DSI83)"
+	depends on I2C
+	---help---
+	  This initializes the Texas Instruments SN65DSI83 bridge for output.
+
 config VIDEOMODE_HELPERS
 	bool
 
