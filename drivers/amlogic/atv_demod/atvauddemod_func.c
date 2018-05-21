@@ -14,25 +14,14 @@
 
 /* #define AUDIO_MOD_DET_INTERNAL */
 
-int ademod_debug_en;
-module_param(ademod_debug_en, int, 0644);
-MODULE_PARM_DESC(ademod_debug_en, "\n ademod_debug_en for audio demod debug\n");
-
-static int btsc_detect_delay = 10;
-module_param(btsc_detect_delay, int, 0644);
-MODULE_PARM_DESC(btsc_detect_delay, "\n btsc_detect_delay for btsc detect delay\n");
-
-int signal_audmode;
-module_param(signal_audmode, int, 0644);
-MODULE_PARM_DESC(signal_audmode, "\n signal_audmode for btsc signal audio mode\n");
-
-static unsigned int audio_thd_threshold1 = 0x1000;
-module_param(audio_thd_threshold1, uint, 0644);
-MODULE_PARM_DESC(audio_thd_threshold1, "\n audio_thd_threshold1\n");
-
-static unsigned int audio_thd_threshold2 = 0xf00;
-module_param(audio_thd_threshold2, uint, 0644);
-MODULE_PARM_DESC(audio_thd_threshold2, "\n audio_thd_threshold2\n");
+/* ademod_debug_en for audio demod debug */
+unsigned int ademod_debug_en;
+/* btsc_detect_delay for btsc detect delay */
+unsigned int btsc_detect_delay = 10;
+/* signal_audmode for btsc signal audio mode */
+unsigned int signal_audmode;
+unsigned int audio_thd_threshold1 = 0x1000;
+unsigned int audio_thd_threshold2 = 0xf00;
 
 #undef pr_info
 #define pr_info(args...)\

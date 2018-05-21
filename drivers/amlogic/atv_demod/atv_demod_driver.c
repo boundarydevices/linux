@@ -592,7 +592,7 @@ static const struct of_device_id aml_atvdemod_dt_match[] = {
 
 static struct platform_driver aml_atvdemod_driver = {
 	.driver = {
-		.name = "aml_atvdemod",
+		.name = ATVDEMOD_DRIVER_NAME,
 		.owner = THIS_MODULE,
 		.of_match_table = aml_atvdemod_dt_match,
 	},
@@ -611,9 +611,17 @@ static int __init aml_atvdemod_init(void)
 	if (ret < 0)
 		return ret;
 
+	ret = aml_atvdemod_create_debugfs(ATVDEMOD_DRIVER_NAME);
+	if (ret < 0) {
+		pr_err("%s: failed to create debugfs.\n", __func__);
+		class_unregister(&aml_atvdemod_class);
+		return ret;
+	}
+
 	ret = platform_driver_register(&aml_atvdemod_driver);
 	if (ret < 0) {
 		pr_err("%s: failed to register driver.\n", __func__);
+		aml_atvdemod_remove_debugfs();
 		class_unregister(&aml_atvdemod_class);
 		return ret;
 	}
@@ -626,6 +634,7 @@ static int __init aml_atvdemod_init(void)
 static void __exit aml_atvdemod_exit(void)
 {
 	platform_driver_unregister(&aml_atvdemod_driver);
+	aml_atvdemod_remove_debugfs();
 	class_unregister(&aml_atvdemod_class);
 
 	pr_info("%s: OK.\n", __func__);

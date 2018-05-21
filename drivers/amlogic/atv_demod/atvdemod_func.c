@@ -31,109 +31,36 @@
 #include "atv_demod_ops.h"
 #include "atv_demod_driver.h"
 
-static int broad_std = AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC;
-module_param(broad_std, int, 0644);
-MODULE_PARM_DESC(broad_std, "\n broad_std\n");
+unsigned int broad_std = AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC;
+unsigned int aud_std = AUDIO_STANDARD_NICAM_DK;
+unsigned int aud_mode = AUDIO_OUTMODE_STEREO;
+bool aud_auto = true;
+unsigned long over_threshold = 0xffff;
+unsigned long input_amplitude = 0xffff;
+bool audio_det_en;
 
-int aud_std = AUDIO_STANDARD_NICAM_DK;
-module_param(aud_std, int, 0644);
-MODULE_PARM_DESC(aud_std, "\n audio std\n");
+unsigned int non_std_en;
+bool non_std_onoff;
+unsigned int non_std_times = 50;
+int non_std_thld_4c_h = 100;
+int non_std_thld_4c_l = 30;
+int non_std_thld_54_h = 500;
+int non_std_thld_54_l = 300;
+int sum1_thd_h;
+int sum1_thd_l = 0x7fffffff;
+int sum2_thd_h;
+int sum2_thd_l = 0x7fffffff;
 
-int aud_mode = AUDIO_OUTMODE_STEREO;
-module_param(aud_mode, int, 0644);
-MODULE_PARM_DESC(aud_mode, "\n audio demod output mode val\n");
+unsigned int atv_video_gain;
+unsigned int carrier_amplif_val = 0xc030901;
+unsigned int extra_input_fil_val = 0x1030501;
+unsigned int audio_det_mode = AUDIO_AUTO_DETECT;
+bool aud_dmd_jilinTV;
+unsigned int if_freq = 4250000;	/*PAL-DK:3250000;NTSC-M:4250000*/
+unsigned int if_inv;
 
-int aud_auto = 1;
-module_param(aud_auto, int, 0644);
-MODULE_PARM_DESC(aud_auto, "\n audio demod auto detec\n");
+int afc_default = CARR_AFC_DEFAULT_VAL;
 
-static unsigned long over_threshold = 0xffff;
-module_param(over_threshold, ulong, 0644);
-MODULE_PARM_DESC(over_threshold, "\n over_threshold\n");
-
-static unsigned long input_amplitude = 0xffff;
-module_param(input_amplitude, ulong, 0644);
-MODULE_PARM_DESC(input_amplitude, "\n input_amplitude\n");
-
-static bool audio_det_en;
-module_param(audio_det_en, bool, 0644);
-MODULE_PARM_DESC(audio_det_en, "\n audio_det_en\n");
-
-static int non_std_en;
-module_param(non_std_en, int, 0644);
-MODULE_PARM_DESC(non_std_en, "\n non_std_en\n");
-
-static int non_std_onoff;
-module_param(non_std_onoff, int, 0644);
-MODULE_PARM_DESC(non_std_onoff, "\n non_std_onoff\n");
-
-static int non_std_times = 50;
-module_param(non_std_times, int, 0644);
-MODULE_PARM_DESC(non_std_times, "\n non_std_times\n");
-
-static int non_std_thld_4c_h = 100;
-module_param(non_std_thld_4c_h, int, 0644);
-MODULE_PARM_DESC(non_std_thld_4c_h, "\n non_std_thld_4c_h\n");
-
-static int non_std_thld_4c_l = 30;
-module_param(non_std_thld_4c_l, int, 0644);
-MODULE_PARM_DESC(non_std_thld_4c_l, "\n non_std_thld_4c_l\n");
-
-static int non_std_thld_54_h = 500;
-module_param(non_std_thld_54_h, int, 0644);
-MODULE_PARM_DESC(non_std_thld_54_h, "\n non_std_thld_54_h\n");
-
-static int non_std_thld_54_l = 300;
-module_param(non_std_thld_54_l, int, 0644);
-MODULE_PARM_DESC(non_std_thld_54_l, "\n non_std_thld_54_l\n");
-
-static int sum1_thd_h;
-module_param(sum1_thd_h, int, 0644);
-MODULE_PARM_DESC(sum1_thd_h, "\n sum1_thd_h\n");
-
-static int sum1_thd_l = 0x7fffffff;
-module_param(sum1_thd_l, int, 0644);
-MODULE_PARM_DESC(sum1_thd_l, "\n sum1_thd_l\n");
-
-static int sum2_thd_h;
-module_param(sum2_thd_h, int, 0644);
-MODULE_PARM_DESC(sum2_thd_h, "\n sum2_thd_h\n");
-
-static int sum2_thd_l = 0x7fffffff;
-module_param(sum2_thd_l, int, 0644);
-MODULE_PARM_DESC(sum2_thd_l, "\n sum2_thd_l\n");
-
-static int atv_video_gain;
-module_param(atv_video_gain, int, 0644);
-MODULE_PARM_DESC(atv_video_gain, "\n atv_video_gain reg:0x0f44\n");
-
-static int carrier_amplif_val = 0xc030901;
-module_param(carrier_amplif_val, int, 0644);
-MODULE_PARM_DESC(carrier_amplif_val, "\ncarrier_amplif_val (reg 0x0624)\n");
-
-static int extra_input_fil_val = 0x1030501;
-module_param(extra_input_fil_val, int, 0644);
-MODULE_PARM_DESC(extra_input_fil_val, "\nextra_input_fil_val (reg 0x0900)\n");
-
-static int audio_det_mode = AUDIO_AUTO_DETECT;
-module_param(audio_det_mode, int, 0644);
-MODULE_PARM_DESC(audio_det_mode, "\n audio_det_mode\n");
-
-static int aud_dmd_jilinTV;
-module_param(aud_dmd_jilinTV, int, 0644);
-MODULE_PARM_DESC(aud_dmd_jilinTV, "\naud dmodulation setting for jilin TV\n");
-
-static unsigned int if_freq = 4250000;	/*PAL-DK:3250000;NTSC-M:4250000*/
-module_param(if_freq, uint, 0644);
-MODULE_PARM_DESC(if_freq, "\n if_freq\n");
-
-static int if_inv;
-module_param(if_inv, int, 0644);
-MODULE_PARM_DESC(if_inv, "\n if_inv\n");
-
-static int afc_default = CARR_AFC_DEFAULT_VAL;
-module_param(afc_default, int, 0644);
-MODULE_PARM_DESC(afc_default, "\n afc_default\n");
 
 /*
  * GDE_Curve
@@ -148,74 +75,26 @@ MODULE_PARM_DESC(afc_default, "\n afc_default\n");
  * I --> BYPASS
  * SECAM --> BYPASS
  */
-static int gde_curve;
-module_param(gde_curve, int, 0644);
-MODULE_PARM_DESC(gde_curve, "\n gde_curve\n");
+unsigned int gde_curve;
 
-static int sound_format;
-module_param(sound_format, int, 0644);
-MODULE_PARM_DESC(sound_format, "\n sound_format\n");
-
-static unsigned int freq_hz_cvrt = AML_ATV_DEMOD_FREQ_60HZ_VERT;
-module_param(freq_hz_cvrt, int, 0644);
-MODULE_PARM_DESC(freq_hz_cvrt, "\n freq_hz\n");
-
-int atvdemod_debug_en;
-module_param(atvdemod_debug_en, int, 0644);
-MODULE_PARM_DESC(atvdemod_debug_en, "\n atvdemod_debug_en\n");
+unsigned int sound_format;
+unsigned int freq_hz_cvrt = AML_ATV_DEMOD_FREQ_60HZ_VERT;
+unsigned int atvdemod_debug_en;
 
 /*1:gpio mode output low;2:pwm mode*/
-static unsigned int atvdemod_agc_pinmux = 2;
-module_param(atvdemod_agc_pinmux, int, 0644);
-MODULE_PARM_DESC(atvdemod_agc_pinmux, "\n atvdemod_agc_pinmux\n");
-
-static unsigned int atvdemod_afc_range = 5;
-module_param(atvdemod_afc_range, uint, 0644);
-MODULE_PARM_DESC(atvdemod_afc_range, "\n atvdemod_afc_range\n");
-
-static unsigned int atvdemod_afc_offset = 500;
-module_param(atvdemod_afc_offset, uint, 0644);
-MODULE_PARM_DESC(atvdemod_afc_offset, "\n atvdemod_afc_offset\n");
-
-static unsigned int atvdemod_timer_en = 1;
-module_param(atvdemod_timer_en, uint, 0644);
-MODULE_PARM_DESC(atvdemod_timer_en, "\n atvdemod_timer_en\n");
-
-static unsigned int atvdemod_afc_en;
-module_param(atvdemod_afc_en, uint, 0644);
-MODULE_PARM_DESC(atvdemod_afc_en, "\n atvdemod_afc_en\n");
-
-static unsigned int atvdemod_monitor_en;
-module_param(atvdemod_monitor_en, uint, 0644);
-MODULE_PARM_DESC(atvdemod_monitor_en, "\n atvdemod_monitor_en\n");
-
-static unsigned int atvdemod_det_snr_en = 1;
-module_param(atvdemod_det_snr_en, uint, 0644);
-MODULE_PARM_DESC(atvdemod_det_snr_en, "\n atvdemod_det_snr_en\n");
-
-static unsigned int audio_thd_en = 1;
-module_param(audio_thd_en, uint, 0644);
-MODULE_PARM_DESC(audio_thd_en, "\n audio_thd_en\n");
-
-static unsigned int pwm_kp = 0x19;
-module_param(pwm_kp, uint, 0644);
-MODULE_PARM_DESC(pwm_kp, "\n pwm_kp\n");
-
-static unsigned int reg_dbg_en;
-module_param(reg_dbg_en, uint, 0644);
-MODULE_PARM_DESC(reg_dbg_en, "\n reg_dbg_en\n");
-
-static unsigned int audio_gain_val = 512;
-module_param(audio_gain_val, uint, 0644);
-MODULE_PARM_DESC(audio_gain_val, "\n audio_gain_val\n");
-
-static unsigned int audio_a2_threshold = 0x800;
-module_param(audio_a2_threshold, uint, 0644);
-MODULE_PARM_DESC(audio_a2_threshold, "\n audio_a2_threshold\n");
-
-static unsigned int audio_a2_delay = 10;
-module_param(audio_a2_delay, uint, 0644);
-MODULE_PARM_DESC(audio_a2_delay, "\n audio_a2_delay\n");
+unsigned int atvdemod_agc_pinmux = 2;
+unsigned int atvdemod_afc_range = 5;
+unsigned int atvdemod_afc_offset = 500;
+unsigned int atvdemod_timer_en = 1;
+unsigned int atvdemod_afc_en;
+unsigned int atvdemod_monitor_en;
+unsigned int atvdemod_det_snr_en = 1;
+unsigned int audio_thd_en = 1;
+unsigned int pwm_kp = 0x19;
+unsigned int reg_dbg_en;
+unsigned int audio_gain_val = 512;
+unsigned int audio_a2_threshold = 0x800;
+unsigned int audio_a2_delay = 10;
 
 
 enum AUDIO_SCAN_ID {

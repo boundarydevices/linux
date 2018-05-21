@@ -14420,8 +14420,8 @@ F:	drivers/amlogic/media/vout/lcd/lcd_extern/mipi_TL050FHV02CT.c
 
 AMLOGIC ATV DEMOD DRIVER
 M:      nengwen.chen <nengwen.chen@amlogic.com>
-F:      drivers/amlogic/atv_demod/*
 F:      include/linux/amlogic/aml_atvdemod.h
+F:      drivers/amlogic/atv_demod/*
 
 AMLOGIC ADD EXT MIPI DEFAULT DRIVER
 M:      Weiming Liu <weiming.liu@amlogic.com>

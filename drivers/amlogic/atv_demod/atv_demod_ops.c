@@ -39,19 +39,10 @@ static DEFINE_MUTEX(atv_demod_list_mutex);
 static LIST_HEAD(hybrid_tuner_instance_list);
 
 unsigned int reg_23cf = 0x88188832; /*IIR filter*/
-module_param(reg_23cf, uint, 0664);
-MODULE_PARM_DESC(reg_23cf, "\n reg_23cf\n");
+unsigned int btsc_sap_mode = 1;	/*0: off 1:monitor 2:auto */
 
-static int btsc_sap_mode = 1;	/*0: off 1:monitor 2:auto */
-module_param(btsc_sap_mode, int, 0644);
-MODULE_DESCRIPTION("btsc sap mode\n");
-
-static int afc_offset;
-module_param(afc_offset, int, 0644);
-MODULE_PARM_DESC(afc_offset, "\n afc_offset\n");
-static unsigned int afc_limit = 2100;/*+-2.1Mhz*/
-module_param(afc_limit, uint, 0644);
-MODULE_PARM_DESC(afc_limit, "\n afc_limit\n");
+int afc_offset;
+unsigned int afc_limit = 2100;/*+-2.1Mhz*/
 
 static int no_sig_cnt;
 struct timer_list aml_timer;
@@ -59,25 +50,13 @@ struct timer_list aml_timer;
 static unsigned int timer_init_state;
 static unsigned int aft_thread_enable;
 static unsigned int aft_thread_delaycnt;
-static unsigned int aml_timer_en = 1;
-module_param(aml_timer_en, uint, 0644);
-MODULE_PARM_DESC(aml_timer_en, "\n aml_timer_en\n");
 
-static unsigned int timer_delay = 1;
-module_param(timer_delay, uint, 0644);
-MODULE_PARM_DESC(timer_delay, "\n timer_delay\n");
 
-static unsigned int timer_delay2 = 10;
-module_param(timer_delay2, uint, 0644);
-MODULE_PARM_DESC(timer_delay2, "\n timer_delay2\n");
-
-static unsigned int timer_delay3 = 10;/*100ms*/
-module_param(timer_delay3, uint, 0644);
-MODULE_PARM_DESC(timer_delay3, "\n timer_delay3\n");
-
-static unsigned int afc_wave_cnt = 4;
-module_param(afc_wave_cnt, uint, 0644);
-MODULE_PARM_DESC(afc_wave_cnt, "\n afc_wave_cnt\n");
+bool aml_timer_en = true;
+unsigned int timer_delay = 1;
+unsigned int timer_delay2 = 10;
+unsigned int timer_delay3 = 10;/*100ms*/
+unsigned int afc_wave_cnt = 4;
 
 
 #define AFC_LOCK_STATUS_NULL 0
@@ -287,7 +266,7 @@ void aml_timer_handler(unsigned long arg)
 		return;
 	}
 
-	if ((aml_timer_en == 0) || (fe->ops.info.type != FE_ANALOG))
+	if ((aml_timer_en == false) || (fe->ops.info.type != FE_ANALOG))
 		return;
 
 	schedule_work(&priv->demod_wq);
@@ -297,7 +276,7 @@ static void afc_timer_disable(struct dvb_frontend *fe)
 {
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
-	if ((aml_timer_en == 1) && (timer_init_state == 1)) {
+	if (aml_timer_en && (timer_init_state == 1)) {
 		del_timer_sync(&aml_timer);
 		cancel_work_sync(&priv->demod_wq);
 		timer_init_state = 0;
@@ -306,7 +285,7 @@ static void afc_timer_disable(struct dvb_frontend *fe)
 
 static void afc_timer_enable(struct dvb_frontend *fe)
 {
-	if (fe && (aml_timer_en == 1) && (timer_init_state == 0)) {
+	if (fe && aml_timer_en && (timer_init_state == 0)) {
 		init_timer(&aml_timer);
 		aml_timer.function = aml_timer_handler;
 		aml_timer.data = (ulong) fe;
@@ -372,8 +351,6 @@ int aml_atvdemod_get_btsc_sap_mode(void)
 }
 
 unsigned int atvdemod_scan_mode; /*IIR filter*/
-module_param(atvdemod_scan_mode, uint, 0664);
-MODULE_PARM_DESC(atvdemod_scan_mode, "\n atvdemod_scan_mode\n");
 
 /* ret:5~100;the val is bigger,the signal is better */
 int aml_atvdemod_get_snr(struct dvb_frontend *fe)
@@ -608,7 +585,8 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 
 	/* afc tune enable */
 	if ((fe->ops.info.type == FE_ANALOG)
-			&& (atv_demod_get_scan_mode() == 0))
+			&& (atv_demod_get_scan_mode() == 0)
+			&& (atvdemod_param->param.mode == 0))
 		afc_timer_enable(fe);
 }
 
@@ -689,9 +667,9 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 	switch (*state) {
 	case AML_ATVDEMOD_INIT:
 		if (atv_demod_get_state() != ATVDEMOD_STATE_WORK) {
-			atv_demod_enter_mode();
 			if (fe->ops.tuner_ops.set_config)
 				fe->ops.tuner_ops.set_config(fe, NULL);
+			atv_demod_enter_mode();
 		}
 		break;
 

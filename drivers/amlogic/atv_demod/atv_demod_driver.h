@@ -14,7 +14,6 @@
 #ifndef __ATV_DEMOD_DRIVER_H__
 #define __ATV_DEMOD_DRIVER_H__
 
-extern int atvdemod_debug_en;
 
 #include <media/v4l2-device.h>
 #include "drivers/media/dvb-core/dvb_frontend.h"

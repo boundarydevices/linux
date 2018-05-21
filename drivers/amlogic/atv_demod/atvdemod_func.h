@@ -27,7 +27,6 @@ struct dvb_frontend;
 
 #define HHI_ATV_DMD_SYS_CLK_CNTL		0x10f3
 
-extern int atvdemod_debug_en;
 extern unsigned int reg_23cf; /* IIR filter */
 extern int broad_std_except_pal_m;
 

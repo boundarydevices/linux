@@ -43,13 +43,9 @@
 static DEFINE_MUTEX(v4l2_fe_mutex);
 /* static int v4l2_shutdown_timeout;*/
 
-static int tuner_status_cnt = 8; /* 4-->16 test on sky mxl661 */
-module_param(tuner_status_cnt, int, 0644);
-MODULE_DESCRIPTION("after write a freq, max cnt value of read tuner status\n");
+unsigned int tuner_status_cnt = 8; /* 4-->16 test on sky mxl661 */
 
-static int slow_mode;
-module_param(slow_mode, int, 0644);
-MODULE_DESCRIPTION("search the channel by slow_mode,by add +1MHz\n");
+bool slow_mode;
 
 typedef int (*hook_func_t) (void);
 hook_func_t aml_fe_hook_atv_status;
