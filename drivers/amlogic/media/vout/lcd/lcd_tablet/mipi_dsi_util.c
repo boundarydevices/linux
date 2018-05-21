@@ -1293,10 +1293,13 @@ static int mipi_dsi_check_state(unsigned char reg, int cnt)
 	unsigned char payload[3] = {DT_GEN_RD_1, 1, 0x04};
 	char str[100];
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	struct dsi_config_s *dconf;
 
-	if (lcd_drv->lcd_config->lcd_control.mipi_config->check_en == 0)
+	dconf = lcd_drv->lcd_config->lcd_control.mipi_config;
+	if (dconf->check_en == 0)
 		return 0;
-	LCDPR("%s\n", __func__);
+	if (lcd_debug_print_flag)
+		LCDPR("%s\n", __func__);
 
 	rd_data = kmalloc_array(cnt, sizeof(unsigned char), GFP_KERNEL);
 	if (rd_data == NULL) {
@@ -1306,20 +1309,13 @@ static int mipi_dsi_check_state(unsigned char reg, int cnt)
 
 	payload[2] = reg;
 	ret = dsi_read_single(payload, rd_data, cnt);
-	if (ret < 0) {
-		lcd_drv->lcd_config->lcd_control.mipi_config->check_state = 0;
-		lcd_vcbus_setb(L_VCOM_VS_ADDR, 0, 12, 1);
-		kfree(rd_data);
-		return -1;
-	}
+	if (ret < 0)
+		goto mipi_dsi_check_state_err;
 	if (ret > cnt) {
 		LCDERR("%s: read back cnt is wrong\n", __func__);
-		kfree(rd_data);
-		return -1;
+		goto mipi_dsi_check_state_err;
 	}
 
-	lcd_drv->lcd_config->lcd_control.mipi_config->check_state = 1;
-	lcd_vcbus_setb(L_VCOM_VS_ADDR, 1, 12, 1);
 	len = sprintf(str, "read reg 0x%02x: ", reg);
 	for (i = 0; i < ret; i++) {
 		if (i == 0)
@@ -1329,8 +1325,22 @@ static int mipi_dsi_check_state(unsigned char reg, int cnt)
 	}
 	pr_info("%s\n", str);
 
+	dconf->check_state = 1;
+	lcd_vcbus_setb(L_VCOM_VS_ADDR, 1, 12, 1);
+	lcd_drv->lcd_config->retry_enable_flag = 0;
+	LCDPR("%s: %d\n", __func__, dconf->check_state);
 	kfree(rd_data);
 	return 0;
+
+mipi_dsi_check_state_err:
+	if (lcd_drv->lcd_config->retry_enable_cnt >= LCD_ENABLE_RETRY_MAX) {
+		dconf->check_state = 0;
+		lcd_vcbus_setb(L_VCOM_VS_ADDR, 0, 12, 1);
+		LCDPR("%s: %d\n", __func__, dconf->check_state);
+	}
+	lcd_drv->lcd_config->retry_enable_flag = 1;
+	kfree(rd_data);
+	return -1;
 }
 
 /* *************************************************************
@@ -1864,13 +1874,6 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 	}
 #endif
 
-	if (dconf->check_en) {
-		if (dconf->check_state == 0)
-			pconf->retry_enable = 1;
-		else
-			pconf->retry_enable = 0;
-	}
-
 	if (op_mode_disp != op_mode_init) {
 		set_mipi_dsi_host(MIPI_DSI_VIRTUAL_CHAN_ID,
 			0, /* Chroma sub sample, only for
@@ -1990,6 +1993,10 @@ void lcd_mipi_dsi_config_set(struct lcd_config_s *pconf)
 		}
 	}
 
+	/* update check_state */
+	if (dconf->check_en)
+		dconf->check_state = lcd_vcbus_getb(L_VCOM_VS_ADDR, 12, 1);
+
 	/* Venc resolution format */
 	switch (dconf->phy_switch) {
 	case 1: /* standard */
@@ -2048,10 +2055,6 @@ void lcd_mipi_dsi_config_post(struct lcd_config_s *pconf)
 
 	/* phy config */
 	mipi_dsi_phy_config(&dsi_phy_config, dconf->bit_rate);
-
-	/* update check_state */
-	if (dconf->check_en)
-		dconf->check_state = lcd_vcbus_getb(L_VCOM_VS_ADDR, 12, 1);
 }
 
 static void mipi_dsi_host_on(struct lcd_config_s *pconf)

@@ -193,7 +193,8 @@ static struct lcd_config_s lcd_config_dft = {
 	.lcd_power = &lcd_power_config,
 	.pinmux_flag = 0,
 	.change_flag = 0,
-	.retry_enable = 0,
+	.retry_enable_flag = 0,
+	.retry_enable_cnt = 0,
 };
 
 static struct vinfo_s lcd_vinfo = {

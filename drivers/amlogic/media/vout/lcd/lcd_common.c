@@ -999,15 +999,15 @@ void lcd_venc_change(struct lcd_config_s *pconf)
 
 void lcd_if_enable_retry(struct lcd_config_s *pconf)
 {
-	int retry_cnt = 0;
-
-	while (pconf->retry_enable) {
-		if (retry_cnt++ > LCD_ENABLE_RETRY_MAX)
+	pconf->retry_enable_cnt = 0;
+	while (pconf->retry_enable_flag) {
+		if (pconf->retry_enable_cnt++ >= LCD_ENABLE_RETRY_MAX)
 			break;
-		LCDPR("retry enable...%d\n", retry_cnt);
+		LCDPR("retry enable...%d\n", pconf->retry_enable_cnt);
 		aml_lcd_notifier_call_chain(LCD_EVENT_IF_POWER_OFF, NULL);
 		msleep(1000);
 		aml_lcd_notifier_call_chain(LCD_EVENT_IF_POWER_ON, NULL);
 	}
+	pconf->retry_enable_cnt = 0;
 }
 
