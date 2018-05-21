@@ -1223,13 +1223,13 @@
 		compatible = "amlogic, dvb";
 		dev_name = "dvb";
 
-		demod = "external";
-		demod0 = "Atbm8881";
-		demod0_i2c_adap_id = <&i2c1>;
-		demod0_i2c_addr = <0xc0>;
-		demod0_ts = <0>;
-		demod0_reset_value = <0>;
-		demod0_reset_gpio = <&gpio GPIODV_14 GPIO_ACTIVE_HIGH>;
+		fe0_mode = "external";
+		fe0_demod = "Atbm8881";
+		fe0_i2c_adap_id = <&i2c1>;
+		fe0_demod_i2c_addr = <0xc0>;
+		fe0_ts = <0>;
+		fe0_reset_value = <0>;
+		fe0_reset_gpio = <&gpio GPIODV_14 GPIO_ACTIVE_HIGH>;
 
 		ts0 = "parallel";
 		ts0_control = <0>;

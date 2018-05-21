@@ -1287,10 +1287,10 @@
 		compatible = "amlogic, dvb";
 		dev_name = "dvb";
 		status = "okay";
-		demod = "internal";
-		tuner0 = "mxl661_tuner";
-		tuner0_i2c_adap_id = <&i2c1>;
-		tuner0_i2c_addr = <0x60>;
+		fe0_mode = "internal";
+		fe0_tuner = "mxl661_tuner";
+		fe0_i2c_adap_id = <&i2c1>;
+		fe0_tuner_i2c_addr = <0x60>;
 		/*"parallel","serial","disable"*/
 		ts2 = "parallel";
 		ts2_control = <0>;
