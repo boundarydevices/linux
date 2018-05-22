@@ -16,6 +16,16 @@
 #include <linux/phy.h>
 #include <linux/module.h>
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+#include <linux/types.h>
+#include <linux/input.h>
+#include <linux/kernel.h>
+#include <linux/delay.h>
+#include <linux/netdevice.h>
+
+#include <linux/amlogic/pm.h>
+#endif
+
 #define RTL821x_PHYSR		0x11
 #define RTL821x_PHYSR_DUPLEX	0x2000
 #define RTL821x_PHYSR_SPEED	0xc000
@@ -33,6 +43,9 @@ MODULE_DESCRIPTION("Realtek PHY driver");
 MODULE_AUTHOR("Johnson Leung");
 MODULE_LICENSE("GPL");
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+unsigned int support_external_phy_wol;
+#endif
 static int rtl821x_ack_interrupt(struct phy_device *phydev)
 {
 	int err;
@@ -98,6 +111,9 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 	int ret;
 	u16 reg;
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	unsigned char *mac_addr = NULL;
+#endif
 	ret = genphy_config_init(phydev);
 	if (ret < 0)
 		return ret;
@@ -123,6 +139,16 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
 	/*reset phy to apply*/
 	reg = phy_write(phydev, 0x0, 0x9200);
+	/* config mac address for wol*/
+	if ((phydev->attached_dev) && (support_external_phy_wol)) {
+		mac_addr = phydev->attached_dev->dev_addr;
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd8c);
+		phy_write(phydev, 0x10, mac_addr[0] | (mac_addr[1] << 8));
+		phy_write(phydev, 0x11, mac_addr[2] | (mac_addr[3] << 8));
+		phy_write(phydev, 0x12, mac_addr[4] | (mac_addr[5] << 8));
+	} else {
+		pr_debug("not set wol mac\n");
+	}
 #endif
 	/* restore to default page 0 */
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
@@ -130,6 +156,59 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 	return 0;
 }
 
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+int rtl8211f_suspend(struct phy_device *phydev)
+{
+	int value = 0;
+
+	if (support_external_phy_wol) {
+		mutex_lock(&phydev->lock);
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd8a);
+		/*set magic packet for wol*/
+		phy_write(phydev, 0x10, 0x1000);
+		phy_write(phydev, 0x11, 0x9fff);
+		/*pad isolation*/
+		value = phy_read(phydev, 0x13);
+		phy_write(phydev, 0x13, value | (0x1 << 15));
+		/*pin 31 pull high*/
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd40);
+		value = phy_read(phydev, 0x16);
+		phy_write(phydev, 0x16, value | (1 << 5));
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0);
+
+		mutex_unlock(&phydev->lock);
+	} else {
+		genphy_suspend(phydev);
+	}
+	return 0;
+}
+
+int rtl8211f_resume(struct phy_device *phydev)
+{
+	int value;
+
+	if (support_external_phy_wol) {
+		mutex_lock(&phydev->lock);
+
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd8a);
+		phy_write(phydev, 0x10, 0x0);
+		/*reset wol*/
+		value = phy_read(phydev, 0x11);
+		phy_write(phydev, 0x11, value & ~(0x1 << 15));
+		/*pad isolantion*/
+		value = phy_read(phydev, 0x13);
+		phy_write(phydev, 0x13, value & ~(0x1 << 15));
+
+		phy_write(phydev, RTL8211F_PAGE_SELECT, 0);
+		mutex_unlock(&phydev->lock);
+	} else {
+		genphy_resume(phydev);
+	}
+	pr_debug("%s %d\n", __func__, __LINE__);
+
+	return 0;
+}
+#endif
 static struct phy_driver realtek_drvs[] = {
 	{
 		.phy_id         = 0x00008201,
@@ -184,8 +263,13 @@ static struct phy_driver realtek_drvs[] = {
 		.read_status	= &genphy_read_status,
 		.ack_interrupt	= &rtl8211f_ack_interrupt,
 		.config_intr	= &rtl8211f_config_intr,
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+		.suspend	= rtl8211f_suspend,
+		.resume		= rtl8211f_resume,
+#else
 		.suspend	= genphy_suspend,
 		.resume		= genphy_resume,
+#endif
 	},
 };
 

@@ -101,6 +101,10 @@ static void meson6_dwmac_fix_mac_speed(void *priv, unsigned int speed)
 #define CFG_MODE (0x7 << 4)
 #define CFG_EN_HIGH BIT(3)
 #define ETH_REG3_2_RESERVED 0x7
+
+/*these two store the define of wol in dts*/
+extern unsigned int support_internal_phy_wol;
+extern unsigned int support_external_phy_wol;
 static void __iomem *network_interface_setup(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -151,6 +155,16 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 		}
 		if (internal_phy == 1) {
 			pr_debug("internal phy\n");
+			/*merge wol from 3.14 start*/
+			if (of_property_read_u32(np,
+						"wol",
+						&support_internal_phy_wol))
+				pr_debug("wol not set\n");
+			else
+				pr_debug("Ethernet :got wol %d .set it\n",
+						support_internal_phy_wol);
+			/*merge wol from 3.14 end*/
+
 			/* Get mec mode & ting value  set it in cbus2050 */
 			if (of_property_read_u32(np, "mc_val_internal_phy",
 						 &mc_val)) {
@@ -342,6 +356,15 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 
 	/*config extern phy*/
 	if (internal_phy == 0) {
+		/* only exphy support wol since g12a*/
+		/*we enable/disable wol with item in dts with "wol=<1>"*/
+		if (of_property_read_u32(np, "wol",
+						&support_external_phy_wol))
+			pr_debug("exphy wol not set\n");
+		else
+			pr_debug("exphy Ethernet :got wol %d .set it\n",
+						support_external_phy_wol);
+
 		/*switch to extern phy*/
 		writel(0x0, ETH_PHY_config_addr + ETH_PHY_CNTL2);
 		pin_ctl = devm_pinctrl_get_select
