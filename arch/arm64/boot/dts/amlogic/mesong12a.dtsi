@@ -1425,7 +1425,7 @@
 		status = "disabled";
 		compatible = "amlogic, meson-mmc-g12a";
 		reg = <0x0 0xffe05000 0x0 0x800>;
-		interrupts = <0 190 1>;
+		interrupts = <0 190 4>;
 
 		pinctrl-names = "sd_all_pins",
 			"sd_clk_cmd_pins",
@@ -2058,10 +2058,14 @@
 				   "GPIOC_1",
 				   "GPIOC_2",
 				   "GPIOC_3",
-				   "GPIOC_4",
 				   "GPIOC_5";
 			function = "gpio_periphs";
 			output-high;
+		};
+		mux1 {
+			groups = "GPIOC_4";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 
@@ -2165,7 +2169,12 @@
 			groups = "GPIOV_0";
 			function = "gpio_periphs";
 			bias-pull-up;
-			output-high;
+			output-low;
+		};
+		mux1 {
+			groups = "GPIOX_4";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 

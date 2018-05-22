@@ -470,6 +470,7 @@ struct amlsd_host {
 
 	int	 status; /* host status: xx_error/ok */
 	int init_flag;
+	int init_volt;
 
 	char	*msg_buf;
 #define MESSAGE_BUF_SIZE			512

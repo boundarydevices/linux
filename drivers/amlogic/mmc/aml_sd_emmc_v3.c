@@ -62,6 +62,9 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	pclkc->div = 60;	 /* 400KHz */
 	pclkc->src = 0;	  /* 0: Crystal 24MHz */
 	pclkc->core_phase = init->core_phase;	  /* 2: 180 phase */
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		pclkc->core_phase = 2;
 	pclkc->rx_phase = init->rx_phase;
 	pclkc->tx_phase = init->tx_phase;
 	pclkc->always_on = 1;	  /* Keep clock always on */
@@ -307,17 +310,19 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 				struct mmc_ios *ios)
 {
 	struct amlsd_platform *pdata = mmc_priv(mmc);
+#ifdef AML_MMC_TDMA
 	struct amlsd_host *host = pdata->host;
 
-#ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& (host->data->chip_type == MMC_CHIP_G12A)
+			&& (host->init_volt == 0))
 		wait_for_completion(&host->drv_completion);
 #endif
 	if (!pdata->is_in) {
 #ifdef AML_MMC_TDMA
 		if ((host->mem->start == host->data->port_b_base)
-				&& (host->data->chip_type == MMC_CHIP_G12A))
+				&& (host->data->chip_type == MMC_CHIP_G12A)
+				&& (host->init_volt == 0))
 			complete(&host->drv_completion);
 #endif
 		return;
@@ -341,7 +346,8 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 		aml_cs_dont_care(mmc);
 #ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& (host->data->chip_type == MMC_CHIP_G12A)
+			&& (host->init_volt == 0))
 		complete(&host->drv_completion);
 #endif
 }
@@ -581,7 +587,6 @@ static int emmc_eyetest_log(struct mmc_host *mmc, u32 line_x)
 	u64 tmp = 0;
 	u32 blksz = 512;
 
-	host->is_tunning = 1;
 	pr_debug("delay1: 0x%x , delay2: 0x%x, line_x: %d\n",
 			readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3), line_x);
@@ -601,12 +606,14 @@ RETRY:
 
 	/*****test start*************/
 	udelay(5);
+	host->is_tunning = 1;
 	if (line_x < 9)
 		aml_sd_emmc_cali_v3(mmc,
 			MMC_READ_MULTIPLE_BLOCK,
 			host->blk_test, blksz, 40);
 	else
 		aml_sd_emmc_cmd_v3(mmc);
+	host->is_tunning = 0;
 	udelay(1);
 	eyetest_log = readl(host->base + SD_EMMC_EYETEST_LOG);
 
@@ -635,7 +642,6 @@ RETRY:
 			readl(host->base + SD_EMMC_DELAY1_V3),
 			readl(host->base + SD_EMMC_DELAY2_V3),
 			pdata->align[line_x], line_x);
-	host->is_tunning = 0;
 	return 0;
 }
 
@@ -1075,12 +1081,12 @@ tunning:
 			|| (clkc->div >= 10)) {
 			pr_info("%s: final result of tuning failed\n",
 				 mmc_hostname(host->mmc));
+			host->is_tunning = 0;
 #ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
 			&& (host->data->chip_type == MMC_CHIP_G12A))
 		complete(&host->drv_completion);
 #endif
-
 			return -1;
 		}
 		clkc->div += 1;
@@ -1093,6 +1099,12 @@ tunning:
 		if (++tuning_num > MAX_TUNING_RETRY) {
 			pr_err("%s: tuning failed\n",
 				mmc_hostname(host->mmc));
+			host->is_tunning = 0;
+#ifdef AML_MMC_TDMA
+	if ((host->mem->start == host->data->port_b_base)
+			&& (host->data->chip_type == MMC_CHIP_G12A))
+		complete(&host->drv_completion);
+#endif
 			return -1;
 		}
 		pr_warn("wave is not sharp, again\n");
@@ -1116,6 +1128,11 @@ tunning:
 	gadjust->cali_rise = 0;
 	writel(adjust, host->base + SD_EMMC_ADJUST_V3);
 	pdata->adj = adjust;
+
+	pr_info("%s: sd_emmc_regs->gclock=0x%x,sd_emmc_regs->gadjust=0x%x\n",
+			mmc_hostname(host->mmc),
+			readl(host->base + SD_EMMC_CLOCK_V3),
+			readl(host->base + SD_EMMC_ADJUST_V3));
 	host->is_tunning = 0;
 #ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
@@ -1123,10 +1140,6 @@ tunning:
 		complete(&host->drv_completion);
 #endif
 
-	pr_info("%s: sd_emmc_regs->gclock=0x%x,sd_emmc_regs->gadjust=0x%x\n",
-			mmc_hostname(host->mmc),
-			readl(host->base + SD_EMMC_CLOCK_V3),
-			readl(host->base + SD_EMMC_ADJUST_V3));
 	return ret;
 #endif
 	return 0;
@@ -1253,7 +1266,6 @@ static int sdio_eyetest_log(struct mmc_host *mmc, u32 line_x, u32 opcode,
 	const u8 *blk_pattern = tuning_data->blk_pattern;
 	unsigned int blksz = tuning_data->blksz;
 
-	host->is_tunning = 1;
 	/****** calculate  line_x ***************************/
 	/******* init eyetest register ************************/
 	pr_debug("delay1: 0x%x , delay2: 0x%x, line_x: %d\n",
@@ -1271,9 +1283,11 @@ RETRY:
 	pdata->intf3 = intf3;
 	udelay(5);
 
+	host->is_tunning = 1;
 	for (i = 0; i < 40; i++)
 		aml_sd_emmc_tuning_transfer(mmc, opcode,
 				blk_pattern, host->blk_test, blksz);
+	host->is_tunning = 0;
 	udelay(1);
 	eyetest_log = readl(host->base + SD_EMMC_EYETEST_LOG);
 	eyetest_out0 = readl(host->base + SD_EMMC_EYETEST_OUT0);
@@ -1302,7 +1316,6 @@ RETRY:
 	pdata->intf3 = intf3;
 	pdata->align[line_x] = ((tmp | eyetest_out1) << 32) | eyetest_out0;
 	pr_debug("u64 eyetestout 0x%llx\n", pdata->align[line_x]);
-	host->is_tunning = 0;
 	return 0;
 }
 
@@ -1315,7 +1328,6 @@ static int aml_sdio_timing(struct mmc_host *mmc, u32 opcode,
 	u32 line_x = 0, delay1 = 0, retry = 1, temp;
 	int ret;
 
-	host->is_tunning = 1;
 	delay1 = 0;
 	for (line_x = 0; line_x < 4; line_x++) {
 		writel(0, host->base + SD_EMMC_DELAY1_V3);
@@ -1356,7 +1368,6 @@ RETRY:
 	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
 	pdata->dly1 = delay1;
 
-	host->is_tunning = 0;
 	pr_info("%s: gadjust=0x%x, gdelay1=0x%x, gclock=0x%x\n",
 			mmc_hostname(host->mmc),
 			readl(host->base + SD_EMMC_ADJUST_V3),
