@@ -21,6 +21,9 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
+#include <linux/debugfs.h>
+#include <linux/uaccess.h>
+
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/vfm/video_common.h>
 #include <linux/amlogic/media/amvecm/amvecm.h>
@@ -47,6 +50,136 @@ signed int vd1_contrast_offset;
 
 signed int saturation_offset;
 
+/*hdr------------------------------------*/
+static struct hdr_data_t *phdr;
+
+struct hdr_data_t *hdr_get_data(void)
+{
+	return phdr;
+}
+
+int is_hdr_cfg_osd_100(void)
+{
+	int ret = 0;
+
+	if (phdr) {
+		if (phdr->hdr_cfg.en_osd_lut_100)
+			ret = 1;
+	}
+
+	return ret;
+}
+void hdr_set_cfg_osd_100(int val)
+{
+	if (val == 1)
+		phdr->hdr_cfg.en_osd_lut_100 = 1;
+	else
+		phdr->hdr_cfg.en_osd_lut_100 = 0;
+}
+static ssize_t read_file_hdr_cfgosd(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
+{
+	char buf[20];
+	ssize_t len;
+
+	len = snprintf(buf, 20, "%d\n", phdr->hdr_cfg.en_osd_lut_100);
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+static ssize_t write_file_hdr_cfgosd(
+	struct file *file, const char __user *userbuf,
+	size_t count, loff_t *ppos)
+{
+	int val;
+	char buf[20];
+	int ret = 0;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+	buf[count] = 0;
+	ret = kstrtoint(buf, 0, &val);
+	if (ret != 0) {
+		pr_info("cfg_en_osd_100 do nothing!\n");
+		return -EINVAL;
+	}
+
+	hdr_set_cfg_osd_100(val);
+
+	pr_info("hdr:en_osd_lut_100: %d\n", phdr->hdr_cfg.en_osd_lut_100);
+
+	return count;
+}
+
+static const struct file_operations file_ops_hdr_cfgosd = {
+	.open		= simple_open,
+	.read		= read_file_hdr_cfgosd,
+	.write		= write_file_hdr_cfgosd,
+};
+
+struct hdr_debugfs_files_t {
+	const char *name;
+	const umode_t mode;
+	const struct file_operations *fops;
+};
+
+static struct hdr_debugfs_files_t hdr_debugfs_files[] = {
+	{"cfg_en_osd_100", S_IFREG | 0644, &file_ops_hdr_cfgosd},
+
+};
+
+
+static void hdr_debugfs_init(void)
+{
+	int i;
+	struct dentry *ent;
+
+	if (phdr == NULL)
+		return;
+
+	if (phdr->dbg_root)
+		return;
+
+	phdr->dbg_root = debugfs_create_dir("hdr", NULL);
+	if (!phdr->dbg_root) {
+		pr_err("can't create debugfs dir hdr\n");
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(hdr_debugfs_files); i++) {
+		ent = debugfs_create_file(hdr_debugfs_files[i].name,
+			hdr_debugfs_files[i].mode,
+			phdr->dbg_root, NULL,
+			hdr_debugfs_files[i].fops);
+		if (!ent)
+			pr_err("debugfs create failed\n");
+	}
+
+}
+static void hdr_debugfs_exit(void)
+{
+	if (phdr && phdr->dbg_root)
+		debugfs_remove(phdr->dbg_root);
+}
+
+void hdr_init(struct hdr_data_t *phdr_data)
+{
+	if (phdr_data) {
+		phdr = phdr_data;
+	} else {
+		phdr = NULL;
+		pr_err("%s failed\n", __func__);
+		return;
+	}
+
+	hdr_debugfs_init();
+}
+void hdr_exit(void)
+{
+	hdr_debugfs_exit();
+}
+
+/*-----------------------------------------*/
 static void vpp_set_mtx_en_write(void);
 
 struct hdr_osd_reg_s hdr_osd_reg = {
@@ -1420,6 +1553,25 @@ static unsigned int osd_oetf_41_2084_mapping[OSD_OETF_LUT_SIZE] = {
 	 536,  549,  561,  574,  585,  596,  606,  616,
 	 624,  632,  642,  661,  684,  706,  727,  749,
 	1023
+};
+
+/* osd eotf lut: 709 from baozheng */
+static unsigned int osd_eotf_33_709_mapping_100[EOTF_LUT_SIZE] = {
+	    0,     8,    37,    90,   169,   276,   412,   579,
+	  776,  1006,  1268,  1564,  1894,  2258,  2658,  3094,
+	 3566,  4075,  4621,  5204,  5826,  6486,  7185,  7923,
+	 8701,  9518, 10376, 11274, 12213, 13194, 14215, 15279,
+	16384
+};
+
+/* osd oetf lut: 2084 from baozheng */
+static unsigned int osd_oetf_41_2084_mapping_100[OSD_OETF_LUT_SIZE] = {
+	   0,  110,  141,  162,  178,  191,  203,  212,
+	 221,  270,  302,  325,  344,  360,  374,  386,
+	 396,  406,  415,  423,  431,  438,  445,  451,
+	 457,  462,  468,  473,  478,  482,  487,  491,
+	 495,  499,  503,  507,  510,  514,  517,  520,
+	 523
 };
 
 /* osd eotf lut: sdr->hlg */
@@ -4206,12 +4358,20 @@ static int hdr_process(
 		/*(VIU_OSD1_BLK0_CFG_W0,0, 7, 1); */
 
 		/* eotf lut 709 */
-		set_vpp_lut(VPP_LUT_OSD_EOTF,
-			osd_eotf_33_709_mapping, /* R */
-			osd_eotf_33_709_mapping, /* G */
-			osd_eotf_33_709_mapping, /* B */
-			CSC_ON);
+		if (is_hdr_cfg_osd_100()) {
+			set_vpp_lut(VPP_LUT_OSD_EOTF,
+				osd_eotf_33_709_mapping_100, /* R */
+				osd_eotf_33_709_mapping_100, /* G */
+				osd_eotf_33_709_mapping_100, /* B */
+				CSC_ON);
 
+		} else {
+			set_vpp_lut(VPP_LUT_OSD_EOTF,
+				osd_eotf_33_709_mapping, /* R */
+				osd_eotf_33_709_mapping, /* G */
+				osd_eotf_33_709_mapping, /* B */
+				CSC_ON);
+		}
 		/* eotf matrix 709->2020 */
 		osd_mtx[EOTF_COEFF_SIZE - 1] = osd_m.right_shift;
 		for (i = 0; i < 3; i++)
@@ -4227,12 +4387,19 @@ static int hdr_process(
 			CSC_ON);
 
 		/* oetf lut 2084 */
-		set_vpp_lut(VPP_LUT_OSD_OETF,
-			osd_oetf_41_2084_mapping, /* R */
-			osd_oetf_41_2084_mapping, /* G */
-			osd_oetf_41_2084_mapping, /* B */
-			CSC_ON);
-
+		if (is_hdr_cfg_osd_100()) {
+			set_vpp_lut(VPP_LUT_OSD_OETF,
+				osd_oetf_41_2084_mapping_100, /* R */
+				osd_oetf_41_2084_mapping_100, /* G */
+				osd_oetf_41_2084_mapping_100, /* B */
+				CSC_ON);
+		} else {
+			set_vpp_lut(VPP_LUT_OSD_OETF,
+				osd_oetf_41_2084_mapping, /* R */
+				osd_oetf_41_2084_mapping, /* G */
+				osd_oetf_41_2084_mapping, /* B */
+				CSC_ON);
+		}
 		/* osd matrix RGB2020 to YUV2020 limit */
 		set_vpp_matrix(VPP_MATRIX_OSD,
 			RGB2020_to_YUV2020l_coeff,
@@ -4601,19 +4768,27 @@ static void bypass_hdr_process(
 			(vinfo->viu_color_fmt != COLOR_FMT_RGB444))) {
 			/* OSD convert to HDR to match HDR video */
 			/* osd eotf lut 709 */
-			if (get_hdr_type() & HLG_FLAG)
+			if (get_hdr_type() & HLG_FLAG) {
 				set_vpp_lut(VPP_LUT_OSD_EOTF,
 					osd_eotf_33_sdr2hlg_mapping, /* R */
 					osd_eotf_33_sdr2hlg_mapping, /* G */
 					osd_eotf_33_sdr2hlg_mapping, /* B */
 					CSC_ON);
-			else
-				set_vpp_lut(VPP_LUT_OSD_EOTF,
-					osd_eotf_33_709_mapping, /* R */
-					osd_eotf_33_709_mapping, /* G */
-					osd_eotf_33_709_mapping, /* B */
-					CSC_ON);
-
+			} else {
+				if (is_hdr_cfg_osd_100()) {
+					set_vpp_lut(VPP_LUT_OSD_EOTF,
+						osd_eotf_33_709_mapping_100,
+						osd_eotf_33_709_mapping_100,
+						osd_eotf_33_709_mapping_100,
+						CSC_ON);
+				} else {
+					set_vpp_lut(VPP_LUT_OSD_EOTF,
+						osd_eotf_33_709_mapping, /*R*/
+						osd_eotf_33_709_mapping, /*G*/
+						osd_eotf_33_709_mapping, /*B*/
+						CSC_ON);
+				}
+			}
 			/* osd eotf matrix 709->2020 */
 			if (master_info->present_flag & 1) {
 				pr_csc("\tMaster_display_colour available.\n");
@@ -4646,19 +4821,27 @@ static void bypass_hdr_process(
 				CSC_ON);
 
 			/* osd oetf lut 2084 */
-			if (get_hdr_type() & HLG_FLAG)
+			if (get_hdr_type() & HLG_FLAG) {
 				set_vpp_lut(VPP_LUT_OSD_OETF,
 					osd_oetf_41_sdr2hlg_mapping, /* R */
 					osd_oetf_41_sdr2hlg_mapping, /* G */
 					osd_oetf_41_sdr2hlg_mapping, /* B */
 					CSC_ON);
-			else
-				set_vpp_lut(VPP_LUT_OSD_OETF,
-					osd_oetf_41_2084_mapping, /* R */
-					osd_oetf_41_2084_mapping, /* G */
-					osd_oetf_41_2084_mapping, /* B */
-					CSC_ON);
-
+			} else {
+				if (is_hdr_cfg_osd_100()) {
+					set_vpp_lut(VPP_LUT_OSD_OETF,
+						osd_oetf_41_2084_mapping_100,
+						osd_oetf_41_2084_mapping_100,
+						osd_oetf_41_2084_mapping_100,
+						CSC_ON);
+				} else {
+					set_vpp_lut(VPP_LUT_OSD_OETF,
+						osd_oetf_41_2084_mapping,
+						osd_oetf_41_2084_mapping,
+						osd_oetf_41_2084_mapping,
+						CSC_ON);
+				}
+			}
 			/* osd matrix RGB2020 to YUV2020 limit */
 			set_vpp_matrix(VPP_MATRIX_OSD,
 				RGB2020_to_YUV2020l_coeff,

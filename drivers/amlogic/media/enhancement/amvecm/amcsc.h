@@ -143,5 +143,25 @@ extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 
 extern u32 get_video_enabled(void);
 extern void get_hdr_source_type(void);
+
+/*hdr*/
+/*#define DBG_BUF_SIZE (1024)*/
+
+struct hdr_cfg_t {
+	unsigned int en_osd_lut_100;
+};
+struct hdr_data_t {
+	struct hdr_cfg_t hdr_cfg;
+
+	/*debug_fs*/
+	struct dentry *dbg_root;
+	/*char dbg_buf[DBG_BUF_SIZE];*/
+
+};
+
+extern void hdr_init(struct hdr_data_t *phdr_data);
+extern void hdr_exit(void);
+extern void hdr_set_cfg_osd_100(int val);
+
 #endif /* AM_CSC_H */
 

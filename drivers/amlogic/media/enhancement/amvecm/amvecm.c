@@ -79,6 +79,9 @@ struct amvecm_dev_s {
 	struct device               *dev;
 	struct class                *clsp;
 	wait_queue_head_t           hdr_queue;
+	/*hdr*/
+	struct hdr_data_t	hdr_d;
+
 };
 
 static struct amvecm_dev_s amvecm_dev;
@@ -4470,6 +4473,16 @@ static void aml_vecm_dt_parse(struct platform_device *pdev)
 			pr_info("Can't find  wb_sel.\n");
 		else
 			video_rgb_ogo_xvy_mtx = val;
+		/*hdr:cfg:osd_100*/
+		ret = of_property_read_u32(node, "cfg_en_osd_100", &val);
+		if (ret) {
+			hdr_set_cfg_osd_100(0);
+			pr_info("hdr:Can't find  cfg_en_osd_100.\n");
+
+		} else {
+			hdr_set_cfg_osd_100((int)val);
+		}
+
 	}
 	/* init module status */
 	amvecm_wb_init(wb_en);
@@ -4595,7 +4608,9 @@ static int aml_vecm_probe(struct platform_device *pdev)
 		vlock_en = 1;
 	else
 		vlock_en = 0;
+	hdr_init(&amvecm_dev.hdr_d);
 	aml_vecm_dt_parse(pdev);
+
 	probe_ok = 1;
 	pr_info("%s: ok\n", __func__);
 	return 0;
@@ -4624,6 +4639,8 @@ fail_alloc_region:
 static int __exit aml_vecm_remove(struct platform_device *pdev)
 {
 	struct amvecm_dev_s *devp = &amvecm_dev;
+
+	hdr_exit();
 	device_destroy(devp->clsp, devp->devno);
 	cdev_del(&devp->cdev);
 	class_destroy(devp->clsp);
@@ -4660,6 +4677,7 @@ static void amvecm_shutdown(struct platform_device *pdev)
 {
 	struct amvecm_dev_s *devp = &amvecm_dev;
 
+	hdr_exit();
 	ve_disable_dnlp();
 	amcm_disable();
 	WRITE_VPP_REG(VPP_VADJ_CTRL, 0x0);
