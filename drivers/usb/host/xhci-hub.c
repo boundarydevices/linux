@@ -931,8 +931,6 @@ static void xhci_port_set_test_mode(struct xhci_hcd *xhci,
 	temp |= test_mode << PORT_TEST_MODE_SHIFT;
 	writel(temp, port_array[wIndex] + PORTPMSC);
 	xhci->test_mode = test_mode;
-	if (test_mode == TEST_FORCE_EN)
-		xhci_start(xhci);
 }
 
 int xhci_disable_slot(struct xhci_hcd *xhci, struct xhci_command *command,
@@ -1422,13 +1420,14 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			if (test_mode > 6 || test_mode < 1)
 				goto error;
 
-			if ((test_mode >= 1) && (test_mode <= 5))
+			if ((test_mode >= 1) && (test_mode <= 4))
 				retval = xhci_enter_test_mode(xhci,
-				test_mode, wIndex);
-			else if (test_mode == 6)
-				retval = xhci_test_suspend_resume(hcd, wIndex);
+					test_mode, wIndex);
+			else if (test_mode == 5)
+				xhci_port_set_test_mode(xhci,
+					test_mode, wIndex);
 			else
-				retval = 0;
+				retval = xhci_test_suspend_resume(hcd, wIndex);
 			break;
 #endif
 		default:
