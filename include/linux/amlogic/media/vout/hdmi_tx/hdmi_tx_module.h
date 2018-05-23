@@ -360,6 +360,7 @@ struct hdmitx_dev {
 	enum hdmi_hdr_transfer hdr_transfer_feature;
 	enum hdmi_hdr_color hdr_color_feature;
 	/* 0: sdr 1:standard HDR 2:non standard 3:HLG*/
+	unsigned int colormetry;
 	unsigned int hdmi_last_hdr_mode;
 	unsigned int hdmi_current_hdr_mode;
 	unsigned int dv_src_feature;
