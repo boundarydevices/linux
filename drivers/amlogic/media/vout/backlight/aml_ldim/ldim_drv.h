@@ -18,6 +18,7 @@
 #ifndef _AML_LDIM_DRV_H_
 #define _AML_LDIM_DRV_H_
 #include <linux/cdev.h>
+#include <linux/amlogic/media/vout/lcd/aml_ldim.h>
 
 #define AML_LDIM_MODULE_NAME "aml_ldim"
 #define AML_LDIM_DRIVER_NAME "aml_ldim"
@@ -29,7 +30,7 @@
 
 /*#define LDIM_EXT_DEBUG_INFO*/
 #define LDIMPR(fmt, args...)     pr_info("ldim: "fmt"", ## args)
-#define LDIMERR(fmt, args...)    pr_info("ldim: error: "fmt"", ## args)
+#define LDIMERR(fmt, args...)    pr_err("ldim: error: "fmt"", ## args)
 
 extern unsigned int ldim_debug_print;
 
@@ -106,17 +107,10 @@ extern unsigned int ldim_debug_print;
 #define LD_LUT_LEN 32
 #define LD_BLKHMAX 32
 #define LD_BLKVMAX 32
-#define LD_BLKREGNUM 384  /* maximum support 24*16*/
+
 
 #define LD_DATA_DEPTH   12
 #define LD_DATA_MAX     0xfff
-
-struct ldim_config_s {
-	unsigned short hsize;
-	unsigned short vsize;
-	unsigned char bl_mode;
-	unsigned short bl_mapping[LD_BLKREGNUM];
-};
 
 struct LDReg {
 	int reg_LD_pic_RowMax;            /*u13*/

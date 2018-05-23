@@ -44,11 +44,11 @@ static int global_hw_init_on(void)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
-	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
-		ldim_drv->ldev_conf->en_gpio_on);
-	mdelay(2);
 	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));
 	ldim_drv->pinmux_ctrl(ldim_drv->ldev_conf->pinmux_name);
+	mdelay(2);
+	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
+		ldim_drv->ldev_conf->en_gpio_on);
 	mdelay(20);
 
 	return 0;

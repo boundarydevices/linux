@@ -179,8 +179,8 @@ struct aml_lcd_unifykey_header_s {
  * *********************************
  */
 /* V1: 92 */
-/* V2: 102 */
-#define LCD_UKEY_BL_SIZE            102
+/* V2: 118 */
+#define LCD_UKEY_BL_SIZE            118
 
 /* header (10Byte) */
 /* LCD_UKEY_HEAD_SIZE */
@@ -221,12 +221,23 @@ struct aml_lcd_unifykey_header_s {
 #define LCD_UKEY_BL_PWM_LEVEL_MIN   (LCD_UKEY_BL_NAME + 76)
 #define LCD_UKEY_BL_PWM2_LEVEL_MAX  (LCD_UKEY_BL_NAME + 78)
 #define LCD_UKEY_BL_PWM2_LEVEL_MIN  (LCD_UKEY_BL_NAME + 80)
+/* local dimming (16Byte) */ /* V2 */
+#define LCD_UKEY_BL_LDIM_ROW        (LCD_UKEY_BL_NAME + 82)
+#define LCD_UKEY_BL_LDIM_COL        (LCD_UKEY_BL_NAME + 83)
+#define LCD_UKEY_BL_LDIM_MODE       (LCD_UKEY_BL_NAME + 84)
+#define LCD_UKEY_BL_LDIM_DEV_INDEX  (LCD_UKEY_BL_NAME + 85)
+#define LCD_UKEY_BL_LDIM_ATTR_4     (LCD_UKEY_BL_NAME + 86)
+#define LCD_UKEY_BL_LDIM_ATTR_5     (LCD_UKEY_BL_NAME + 88)
+#define LCD_UKEY_BL_LDIM_ATTR_6     (LCD_UKEY_BL_NAME + 90)
+#define LCD_UKEY_BL_LDIM_ATTR_7     (LCD_UKEY_BL_NAME + 92)
+#define LCD_UKEY_BL_LDIM_ATTR_8     (LCD_UKEY_BL_NAME + 94)
+#define LCD_UKEY_BL_LDIM_ATTR_9     (LCD_UKEY_BL_NAME + 96)
 /* customer(10Byte) */ /* V2 */
-#define LCD_UKEY_BL_CUST_VAL_0      (LCD_UKEY_BL_NAME + 82)
-#define LCD_UKEY_BL_CUST_VAL_1      (LCD_UKEY_BL_NAME + 84)
-#define LCD_UKEY_BL_CUST_VAL_2      (LCD_UKEY_BL_NAME + 86)
-#define LCD_UKEY_BL_CUST_VAL_3      (LCD_UKEY_BL_NAME + 88)
-#define LCD_UKEY_BL_CUST_VAL_4      (LCD_UKEY_BL_NAME + 90)
+#define LCD_UKEY_BL_CUST_VAL_0      (LCD_UKEY_BL_NAME + 98)
+#define LCD_UKEY_BL_CUST_VAL_1      (LCD_UKEY_BL_NAME + 100)
+#define LCD_UKEY_BL_CUST_VAL_2      (LCD_UKEY_BL_NAME + 102)
+#define LCD_UKEY_BL_CUST_VAL_3      (LCD_UKEY_BL_NAME + 104)
+#define LCD_UKEY_BL_CUST_VAL_4      (LCD_UKEY_BL_NAME + 106)
 
 /* ********************************
  * API

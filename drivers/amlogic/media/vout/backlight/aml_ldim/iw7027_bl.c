@@ -330,14 +330,10 @@ static int iw7027_spi_dump_dim(char *buf)
 	return len;
 }
 
-static unsigned int iw7027_get_value(unsigned int level)
+static unsigned int dim_max, dim_min;
+static inline unsigned int iw7027_get_value(unsigned int level)
 {
-	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 	unsigned int val;
-	unsigned int dim_max, dim_min;
-
-	dim_max = ldim_drv->ldev_conf->dim_max;
-	dim_min = ldim_drv->ldev_conf->dim_min;
 
 	val = dim_min + ((level * (dim_max - dim_min)) / LD_DATA_MAX);
 
@@ -349,6 +345,8 @@ static int iw7027_smr(unsigned short *buf, unsigned char len)
 	int i, j;
 	unsigned int value_flag = 0;
 	unsigned char val[20];
+	unsigned short *mapping;
+	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
 	if (iw7027_on_flag == 0) {
 		if (ldim_debug_print)
@@ -369,62 +367,64 @@ static int iw7027_smr(unsigned short *buf, unsigned char len)
 
 	iw7027_spi_op_flag = 1;
 
+	mapping = &ldim_drv->ldev_conf->bl_mapping[0];
+	dim_max = ldim_drv->ldev_conf->dim_max;
+	dim_min = ldim_drv->ldev_conf->dim_min;
+
 	for (i = 0; i < 10; i++)
 		value_flag = value_flag || buf[i];
-
-	if (value_flag) {
-		if (bl_iw7027->test_mode) {
-			val[0] = (test_brightness[0] & 0xf00) >> 8;
-			val[1] = test_brightness[0] & 0xff;
-			val[2] = (test_brightness[1] & 0xf00) >> 8;
-			val[3] = test_brightness[1] & 0xff;
-			val[4] = (test_brightness[2] & 0xf00) >> 8;
-			val[5] = test_brightness[2] & 0xff;
-			val[6] = (test_brightness[3] & 0xf00) >> 8;
-			val[7] = test_brightness[3] & 0xff;
-			val[8] = (test_brightness[4] & 0xf00) >> 8;
-			val[9] = test_brightness[4] & 0xff;
-			val[10] = (test_brightness[5] & 0xf00) >> 8;
-			val[11] = test_brightness[5] & 0xff;
-			val[12] = (test_brightness[6] & 0xf00) >> 8;
-			val[13] = test_brightness[6] & 0xff;
-			val[14] = (test_brightness[7] & 0xf00) >> 8;
-			val[15] = test_brightness[7] & 0xff;
-			val[16] = (test_brightness[8] & 0xf00) >> 8;
-			val[17] = test_brightness[8] & 0xff;
-			val[18] = (test_brightness[9] & 0xf00) >> 8;
-			val[19] = test_brightness[9] & 0xff;
-
-			iw7027_wregs(bl_iw7027->spi, 0x40, val, 20);
-		} else {
-			val[0] = ((iw7027_get_value(buf[0])) & 0xf00) >> 8;
-			val[1] = (iw7027_get_value(buf[0])) & 0xff;
-			val[2] = ((iw7027_get_value(buf[1])) & 0xf00) >> 8;
-			val[3] = (iw7027_get_value(buf[1])) & 0xff;
-			val[4] = ((iw7027_get_value(buf[2])) & 0xf00) >> 8;
-			val[5] = (iw7027_get_value(buf[2])) & 0xff;
-			val[6] = ((iw7027_get_value(buf[3])) & 0xf00) >> 8;
-			val[7] = (iw7027_get_value(buf[3])) & 0xff;
-			val[8] = ((iw7027_get_value(buf[4])) & 0xf00) >> 8;
-			val[9] = (iw7027_get_value(buf[4])) & 0xff;
-			val[10] = ((iw7027_get_value(buf[5])) & 0xf00) >> 8;
-			val[11] = (iw7027_get_value(buf[5])) & 0xff;
-			val[12] = ((iw7027_get_value(buf[6])) & 0xf00) >> 8;
-			val[13] = (iw7027_get_value(buf[6])) & 0xff;
-			val[14] = ((iw7027_get_value(buf[7])) & 0xf00) >> 8;
-			val[15] = (iw7027_get_value(buf[7])) & 0xff;
-			val[16] = ((iw7027_get_value(buf[8])) & 0xf00) >> 8;
-			val[17] = (iw7027_get_value(buf[8])) & 0xff;
-			val[18] = ((iw7027_get_value(buf[9])) & 0xf00) >> 8;
-			val[19] = (iw7027_get_value(buf[9])) & 0xff;
-
-			iw7027_wregs(bl_iw7027->spi, 0x40, val, 20);
-		}
-	} else {
+	if (value_flag == 0) {
 		for (j = 0; j < 20; j++)
 			val[j] = 0;
-		iw7027_wregs(bl_iw7027->spi, 0x40, val, 20);
+		goto iw7027_smr_end;
 	}
+
+	if (bl_iw7027->test_mode) {
+		val[0] = (test_brightness[0] & 0xf00) >> 8;
+		val[1] = test_brightness[0] & 0xff;
+		val[2] = (test_brightness[1] & 0xf00) >> 8;
+		val[3] = test_brightness[1] & 0xff;
+		val[4] = (test_brightness[2] & 0xf00) >> 8;
+		val[5] = test_brightness[2] & 0xff;
+		val[6] = (test_brightness[3] & 0xf00) >> 8;
+		val[7] = test_brightness[3] & 0xff;
+		val[8] = (test_brightness[4] & 0xf00) >> 8;
+		val[9] = test_brightness[4] & 0xff;
+		val[10] = (test_brightness[5] & 0xf00) >> 8;
+		val[11] = test_brightness[5] & 0xff;
+		val[12] = (test_brightness[6] & 0xf00) >> 8;
+		val[13] = test_brightness[6] & 0xff;
+		val[14] = (test_brightness[7] & 0xf00) >> 8;
+		val[15] = test_brightness[7] & 0xff;
+		val[16] = (test_brightness[8] & 0xf00) >> 8;
+		val[17] = test_brightness[8] & 0xff;
+		val[18] = (test_brightness[9] & 0xf00) >> 8;
+		val[19] = test_brightness[9] & 0xff;
+	} else {
+		val[0] = ((iw7027_get_value(buf[mapping[0]])) & 0xf00) >> 8;
+		val[1] = (iw7027_get_value(buf[mapping[0]])) & 0xff;
+		val[2] = ((iw7027_get_value(buf[mapping[1]])) & 0xf00) >> 8;
+		val[3] = (iw7027_get_value(buf[mapping[1]])) & 0xff;
+		val[4] = ((iw7027_get_value(buf[mapping[2]])) & 0xf00) >> 8;
+		val[5] = (iw7027_get_value(buf[mapping[2]])) & 0xff;
+		val[6] = ((iw7027_get_value(buf[mapping[3]])) & 0xf00) >> 8;
+		val[7] = (iw7027_get_value(buf[mapping[3]])) & 0xff;
+		val[8] = ((iw7027_get_value(buf[mapping[4]])) & 0xf00) >> 8;
+		val[9] = (iw7027_get_value(buf[mapping[4]])) & 0xff;
+		val[10] = ((iw7027_get_value(buf[mapping[5]])) & 0xf00) >> 8;
+		val[11] = (iw7027_get_value(buf[mapping[5]])) & 0xff;
+		val[12] = ((iw7027_get_value(buf[mapping[6]])) & 0xf00) >> 8;
+		val[13] = (iw7027_get_value(buf[mapping[6]])) & 0xff;
+		val[14] = ((iw7027_get_value(buf[mapping[7]])) & 0xf00) >> 8;
+		val[15] = (iw7027_get_value(buf[mapping[7]])) & 0xff;
+		val[16] = ((iw7027_get_value(buf[mapping[8]])) & 0xf00) >> 8;
+		val[17] = (iw7027_get_value(buf[mapping[8]])) & 0xff;
+		val[18] = ((iw7027_get_value(buf[mapping[9]])) & 0xf00) >> 8;
+		val[19] = (iw7027_get_value(buf[mapping[9]])) & 0xff;
+	}
+
+iw7027_smr_end:
+	iw7027_wregs(bl_iw7027->spi, 0x40, val, 20);
 
 	iw7027_spi_op_flag = 0;
 	return 0;

@@ -27,13 +27,23 @@
 #define _VE_LDIM  'C'
 
 /* VPP.ldim IOCTL command list */
-#define LDIM_IOC_PARA  _IOW(_VE_LDIM, 0x50, struct vpu_ldim_param_s)
+#define LDIM_IOC_PARA  _IOW(_VE_LDIM, 0x50, struct ldim_param_s)
 
 enum ldim_dev_type_e {
 	LDIM_DEV_TYPE_NORMAL = 0,
 	LDIM_DEV_TYPE_SPI,
 	LDIM_DEV_TYPE_I2C,
 	LDIM_DEV_TYPE_MAX,
+};
+
+#define LD_BLKREGNUM 384  /* maximum support 24*16*/
+
+struct ldim_config_s {
+	unsigned short hsize;
+	unsigned short vsize;
+	unsigned char row;
+	unsigned char col;
+	unsigned char bl_mode;
 };
 
 #define LDIM_SPI_INIT_ON_SIZE     300
@@ -58,6 +68,8 @@ struct ldim_dev_config_s {
 	unsigned char *init_off;
 
 	struct bl_pwm_config_s pwm_config;
+
+	unsigned short bl_mapping[LD_BLKREGNUM];
 };
 
 /*******global API******/
@@ -65,6 +77,8 @@ struct aml_ldim_driver_s {
 	int valid_flag;
 	int dev_index;
 	int static_pic_flag;
+
+	struct ldim_config_s *ldim_conf;
 	struct ldim_dev_config_s *ldev_conf;
 	unsigned short *ldim_matrix_buf;
 	unsigned int *hist_matrix;
@@ -89,7 +103,7 @@ struct aml_ldim_driver_s {
 	struct spi_board_info *spi_dev;
 };
 
-struct vpu_ldim_param_s {
+struct ldim_param_s {
 	/* beam model */
 	int rgb_base;
 	int boost_gain;
@@ -117,7 +131,10 @@ struct vpu_ldim_param_s {
 };
 
 extern struct aml_ldim_driver_s *aml_ldim_get_driver(void);
-extern int aml_ldim_probe(struct platform_device *pdev, int load_id);
+
+extern int aml_ldim_get_config_dts(struct device_node *child);
+extern int aml_ldim_get_config_unifykey(unsigned char *buf);
+extern int aml_ldim_probe(struct platform_device *pdev);
 extern int aml_ldim_remove(void);
 
 #endif

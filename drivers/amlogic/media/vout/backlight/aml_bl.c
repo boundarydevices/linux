@@ -121,12 +121,12 @@ struct bl_method_match_s {
 };
 
 static struct bl_method_match_s bl_method_match_table[] = {
-	{"gpio",         BL_CTRL_GPIO},
-	{"pwm",          BL_CTRL_PWM},
-	{"pwm_combo",    BL_CTRL_PWM_COMBO},
-	{"local_diming", BL_CTRL_LOCAL_DIMING},
-	{"extern",       BL_CTRL_EXTERN},
-	{"invalid",      BL_CTRL_MAX},
+	{"gpio",          BL_CTRL_GPIO},
+	{"pwm",           BL_CTRL_PWM},
+	{"pwm_combo",     BL_CTRL_PWM_COMBO},
+	{"local_dimming", BL_CTRL_LOCAL_DIMMING},
+	{"extern",        BL_CTRL_EXTERN},
+	{"invalid",       BL_CTRL_MAX},
 };
 
 static char *bl_method_type_to_str(int type)
@@ -661,7 +661,7 @@ static void bl_power_on(void)
 		bl_power_en_ctrl(bconf, 1);
 		break;
 	case BL_CTRL_PWM:
-		if (bconf->pwm_en_sequence_reverse) {
+		if (bconf->en_sequence_reverse) {
 			/* step 1: power on enable */
 			bl_power_en_ctrl(bconf, 1);
 			if (bconf->pwm_on_delay > 0)
@@ -678,7 +678,7 @@ static void bl_power_on(void)
 		}
 		break;
 	case BL_CTRL_PWM_COMBO:
-		if (bconf->pwm_en_sequence_reverse) {
+		if (bconf->en_sequence_reverse) {
 			/* step 1: power on enable */
 			bl_power_en_ctrl(bconf, 1);
 			if (bconf->pwm_on_delay > 0)
@@ -697,44 +697,66 @@ static void bl_power_on(void)
 		}
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
-		/* step 1: power on enable */
-		bl_power_en_ctrl(bconf, 1);
-		/* step 2: power on ldim */
+	case BL_CTRL_LOCAL_DIMMING:
 		ldim_drv = aml_ldim_get_driver();
 		if (ldim_drv == NULL) {
 			BLERR("no ldim driver\n");
-		} else {
+			goto exit_power_on_bl;
+		}
+		if (bconf->en_sequence_reverse) {
+			/* step 1: power on enable */
+			bl_power_en_ctrl(bconf, 1);
+			/* step 2: power on ldim */
 			if (ldim_drv->power_on) {
 				ret = ldim_drv->power_on();
-				if (ret) {
+				if (ret)
 					BLERR("ldim: power on error\n");
-					goto exit_power_on_bl;
-				}
 			} else {
 				BLPR("ldim: power on is null\n");
 			}
+		} else {
+			/* step 1: power on ldim */
+			if (ldim_drv->power_on) {
+				ret = ldim_drv->power_on();
+				if (ret)
+					BLERR("ldim: power on error\n");
+			} else {
+				BLPR("ldim: power on is null\n");
+			}
+			/* step 2: power on enable */
+			bl_power_en_ctrl(bconf, 1);
 		}
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
-		/* step 1: power on enable */
-		bl_power_en_ctrl(bconf, 1);
-		/* step 2: power on bl_extern */
 		bl_ext = aml_bl_extern_get_driver();
 		if (bl_ext == NULL) {
 			BLERR("no bl_extern driver\n");
-		} else {
+			goto exit_power_on_bl;
+		}
+		if (bconf->en_sequence_reverse) {
+			/* step 1: power on enable */
+			bl_power_en_ctrl(bconf, 1);
+			/* step 2: power on bl_extern */
 			if (bl_ext->power_on) {
 				ret = bl_ext->power_on();
-				if (ret) {
+				if (ret)
 					BLERR("bl_extern: power on error\n");
-					goto exit_power_on_bl;
-				}
 			} else {
 				BLERR("bl_extern: power on is null\n");
 			}
+		} else {
+			/* step 1: power on bl_extern */
+			if (bl_ext->power_on) {
+				ret = bl_ext->power_on();
+				if (ret)
+					BLERR("bl_extern: power on error\n");
+			} else {
+				BLERR("bl_extern: power on is null\n");
+			}
+			/* step 2: power on enable */
+			bl_power_en_ctrl(bconf, 1);
 		}
 		break;
 #endif
@@ -775,7 +797,7 @@ static void bl_power_off(void)
 		bl_power_en_ctrl(bconf, 0);
 		break;
 	case BL_CTRL_PWM:
-		if (bconf->pwm_en_sequence_reverse) {
+		if (bconf->en_sequence_reverse) {
 			/* step 1: power off pwm */
 			bl_pwm_ctrl(bconf->bl_pwm, 0);
 			if (bconf->pwm_off_delay > 0)
@@ -792,7 +814,7 @@ static void bl_power_off(void)
 		}
 		break;
 	case BL_CTRL_PWM_COMBO:
-		if (bconf->pwm_en_sequence_reverse) {
+		if (bconf->en_sequence_reverse) {
 			/* step 1: power off pwm_combo */
 			bl_pwm_ctrl(bconf->bl_pwm_combo0, 0);
 			bl_pwm_ctrl(bconf->bl_pwm_combo1, 0);
@@ -811,12 +833,27 @@ static void bl_power_off(void)
 		}
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
-		/* step 1: power off ldim */
+	case BL_CTRL_LOCAL_DIMMING:
 		ldim_drv = aml_ldim_get_driver();
 		if (ldim_drv == NULL) {
 			BLERR("no ldim driver\n");
+			goto exit_power_off_bl;
+		}
+		if (bconf->en_sequence_reverse) {
+			/* step 1: power off ldim */
+			if (ldim_drv->power_off) {
+				ret = ldim_drv->power_off();
+				if (ret)
+					BLERR("ldim: power off error\n");
+			} else {
+				BLERR("ldim: power off is null\n");
+			}
+			/* step 2: power off enable */
+			bl_power_en_ctrl(bconf, 0);
 		} else {
+			/* step 1: power off enable */
+			bl_power_en_ctrl(bconf, 0);
+			/* step 2: power off ldim */
 			if (ldim_drv->power_off) {
 				ret = ldim_drv->power_off();
 				if (ret)
@@ -825,17 +862,30 @@ static void bl_power_off(void)
 				BLERR("ldim: power off is null\n");
 			}
 		}
-		/* step 2: power off enable */
-		bl_power_en_ctrl(bconf, 0);
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
-		/* step 1: power off bl_extern */
 		bl_ext = aml_bl_extern_get_driver();
 		if (bl_ext == NULL) {
 			BLERR("no bl_extern driver\n");
+			goto exit_power_off_bl;
+		}
+		if (bconf->en_sequence_reverse) {
+			/* step 1: power off bl_extern */
+			if (bl_ext->power_off) {
+				ret = bl_ext->power_off();
+				if (ret)
+					BLERR("bl_extern: power off error\n");
+			} else {
+				BLERR("bl_extern: power off is null\n");
+			}
+			/* step 2: power off enable */
+			bl_power_en_ctrl(bconf, 0);
 		} else {
+			/* step 1: power off enable */
+			bl_power_en_ctrl(bconf, 0);
+			/* step 2: power off bl_extern */
 			if (bl_ext->power_off) {
 				ret = bl_ext->power_off();
 				if (ret)
@@ -844,8 +894,6 @@ static void bl_power_off(void)
 				BLERR("bl_extern: power off is null\n");
 			}
 		}
-		/* step 2: power off enable */
-		bl_power_en_ctrl(bconf, 0);
 		break;
 #endif
 	default:
@@ -857,6 +905,8 @@ static void bl_power_off(void)
 
 	bl_drv->state &= ~BL_STATE_BL_ON;
 	BLPR("backlight power off\n");
+
+exit_power_off_bl:
 	mutex_unlock(&bl_power_mutex);
 }
 
@@ -1048,7 +1098,7 @@ static void aml_bl_set_level(unsigned int level)
 		}
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
+	case BL_CTRL_LOCAL_DIMMING:
 		bl_set_level_ldim(level);
 		break;
 #endif
@@ -1204,8 +1254,8 @@ static void aml_bl_config_print(struct bl_config_s *bconf)
 	case BL_CTRL_PWM:
 		BLPR("pwm_on_delay        = %dms\n", bconf->pwm_on_delay);
 		BLPR("pwm_off_delay       = %dms\n", bconf->pwm_off_delay);
-		BLPR("pwm_en_sequence_reverse = %d\n",
-			bconf->pwm_en_sequence_reverse);
+		BLPR("en_sequence_reverse = %d\n",
+			bconf->en_sequence_reverse);
 		if (bconf->bl_pwm) {
 			bl_pwm = bconf->bl_pwm;
 			BLPR("pwm_index     = %d\n", bl_pwm->index);
@@ -1233,8 +1283,8 @@ static void aml_bl_config_print(struct bl_config_s *bconf)
 	case BL_CTRL_PWM_COMBO:
 		BLPR("pwm_on_delay        = %dms\n", bconf->pwm_on_delay);
 		BLPR("pwm_off_delay       = %dms\n", bconf->pwm_off_delay);
-		BLPR("pwm_en_sequence_reverse = %d\n",
-			bconf->pwm_en_sequence_reverse);
+		BLPR("en_sequence_reverse = %d\n",
+			bconf->en_sequence_reverse);
 		/* pwm_combo_0 */
 		if (bconf->bl_pwm_combo0) {
 			bl_pwm = bconf->bl_pwm_combo0;
@@ -1464,9 +1514,9 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 			"bl_pwm_en_sequence_reverse", &val);
 		if (ret) {
 			BLPR("don't find bl_pwm_en_sequence_reverse\n");
-			bconf->pwm_en_sequence_reverse = 0;
+			bconf->en_sequence_reverse = 0;
 		} else
-			bconf->pwm_en_sequence_reverse = val;
+			bconf->en_sequence_reverse = val;
 
 		bl_pwm->pwm_duty = bl_pwm->pwm_duty_min;
 		/* init pwm config */
@@ -1591,9 +1641,9 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 			"bl_pwm_en_sequence_reverse", &val);
 		if (ret) {
 			BLPR("don't find bl_pwm_en_sequence_reverse\n");
-			bconf->pwm_en_sequence_reverse = 0;
+			bconf->en_sequence_reverse = 0;
 		} else
-			bconf->pwm_en_sequence_reverse = val;
+			bconf->en_sequence_reverse = val;
 
 		pwm_combo0->pwm_duty = pwm_combo0->pwm_duty_min;
 		pwm_combo1->pwm_duty = pwm_combo1->pwm_duty_min;
@@ -1602,25 +1652,35 @@ static int aml_bl_config_load_from_dts(struct bl_config_s *bconf,
 		bl_pwm_config_init(pwm_combo1);
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
+	case BL_CTRL_LOCAL_DIMMING:
 		bconf->ldim_flag = 1;
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
-	/* get bl_extern_index from dts */
-	ret = of_property_read_u32(child, "bl_extern_index", &bl_para[0]);
-	if (ret)
-		BLERR("failed to get bl_extern_index\n");
-	else {
-		bconf->bl_extern_index = bl_para[0];
-		BLPR("get bl_extern_index = %d\n", bconf->bl_extern_index);
+		/* get bl_extern_index from dts */
+		ret = of_property_read_u32(child, "bl_extern_index",
+			&bl_para[0]);
+		if (ret) {
+			BLERR("failed to get bl_extern_index\n");
+		} else {
+			bconf->bl_extern_index = bl_para[0];
+			BLPR("get bl_extern_index = %d\n",
+				bconf->bl_extern_index);
 		}
 		break;
 #endif
 	default:
 		break;
 	}
+
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
+	if (bconf->ldim_flag) {
+		ret = aml_ldim_get_config_dts(child);
+		if (ret < 0)
+			return -1;
+	}
+#endif
 
 	return 0;
 }
@@ -1770,11 +1830,11 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 		bl_pwm->pwm_duty_min = *(p + LCD_UKEY_BL_PWM_DUTY_MIN);
 
 		if (bl_header.version == 2)
-			bconf->pwm_en_sequence_reverse =
+			bconf->en_sequence_reverse =
 				(*(p + LCD_UKEY_BL_CUST_VAL_0) |
 				((*(p + LCD_UKEY_BL_CUST_VAL_0 + 1)) << 8));
 		else
-			bconf->pwm_en_sequence_reverse = 0;
+			bconf->en_sequence_reverse = 0;
 
 		bl_pwm->pwm_duty = bl_pwm->pwm_duty_min;
 		bl_pwm_config_init(bl_pwm);
@@ -1852,11 +1912,11 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 			((*(p + LCD_UKEY_BL_PWM2_LEVEL_MIN + 1)) << 8));
 
 		if (bl_header.version == 2)
-			bconf->pwm_en_sequence_reverse = (*(p +
+			bconf->en_sequence_reverse = (*(p +
 				LCD_UKEY_BL_CUST_VAL_0) |
 				((*(p + LCD_UKEY_BL_CUST_VAL_0 + 1)) << 8));
 		else
-			bconf->pwm_en_sequence_reverse = 0;
+			bconf->en_sequence_reverse = 0;
 
 		pwm_combo0->pwm_duty = pwm_combo0->pwm_duty_min;
 		pwm_combo1->pwm_duty = pwm_combo1->pwm_duty_min;
@@ -1864,13 +1924,23 @@ static int aml_bl_config_load_from_unifykey(struct bl_config_s *bconf)
 		bl_pwm_config_init(pwm_combo1);
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
+	case BL_CTRL_LOCAL_DIMMING:
 		bconf->ldim_flag = 1;
 		break;
 #endif
 	default:
 		break;
 	}
+
+#ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
+	if (bconf->ldim_flag) {
+		ret = aml_ldim_get_config_unifykey(para);
+		if (ret < 0) {
+			kfree(para);
+			return -1;
+		}
+	}
+#endif
 
 	kfree(para);
 	return 0;
@@ -2003,7 +2073,7 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
 	if (bconf->ldim_flag)
-		aml_ldim_probe(pdev, load_id);
+		aml_ldim_probe(pdev);
 #endif
 
 	switch (bconf->method) {
@@ -2157,7 +2227,7 @@ static int aml_bl_lcd_update_notifier(struct notifier_block *nb,
 		}
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
+	case BL_CTRL_LOCAL_DIMMING:
 		if (ldim_drv->pwm_vs_update)
 			ldim_drv->pwm_vs_update();
 		break;
@@ -2194,7 +2264,7 @@ static int aml_bl_lcd_test_notifier(struct notifier_block *nb,
 	flag = (int *)data;
 	switch (bl_drv->bconf->method) {
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
+	case BL_CTRL_LOCAL_DIMMING:
 		if (ldim_drv->test_ctrl)
 			ldim_drv->test_ctrl(*flag);
 		break;
@@ -2295,11 +2365,11 @@ static ssize_t bl_status_read(struct class *class,
 			"pwm_duty_min:       %d\n"
 			"pwm_on_delay:       %d\n"
 			"pwm_off_delay:      %d\n"
-			"pwm_en_sequence_reverse: %d\n\n",
+			"en_sequence_reverse: %d\n\n",
 			bl_pwm->pwm_method, bl_pwm->pwm_port, bl_pwm->pwm_freq,
 			bl_pwm->pwm_duty_max, bl_pwm->pwm_duty_min,
 			bconf->pwm_on_delay, bconf->pwm_off_delay,
-			bconf->pwm_en_sequence_reverse);
+			bconf->en_sequence_reverse);
 		break;
 	case BL_CTRL_PWM_COMBO:
 		pwm_combo0 = bconf->bl_pwm_combo0;
@@ -2321,7 +2391,7 @@ static ssize_t bl_status_read(struct class *class,
 			"pwm_1_duty_min:     %d\n"
 			"pwm_on_delay:       %d\n"
 			"pwm_off_delay:      %d\n"
-			"pwm_en_sequence_reverse: %d\n\n",
+			"en_sequence_reverse: %d\n\n",
 			pwm_combo0->level_max, pwm_combo0->level_min,
 			pwm_combo0->pwm_method, pwm_combo0->pwm_port,
 			pwm_combo0->pwm_freq,
@@ -2331,10 +2401,10 @@ static ssize_t bl_status_read(struct class *class,
 			pwm_combo1->pwm_freq,
 			pwm_combo1->pwm_duty_max, pwm_combo1->pwm_duty_min,
 			bconf->pwm_on_delay, bconf->pwm_off_delay,
-			bconf->pwm_en_sequence_reverse);
+			bconf->en_sequence_reverse);
 		break;
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
-	case BL_CTRL_LOCAL_DIMING:
+	case BL_CTRL_LOCAL_DIMMING:
 		if (ldim_drv->config_print)
 			ldim_drv->config_print();
 		break;
@@ -2397,12 +2467,11 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 				}
 				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 				len += sprintf(buf+len,
-					"\n"
 					"pwm state:\n"
-					"period:             %d\n"
-					"duty_cycle:         %d\n"
-					"polarity:           %d\n"
-					"enabled:            %d\n",
+					"  period:           %d\n"
+					"  duty_cycle:       %d\n"
+					"  polarity:         %d\n"
+					"  enabled:          %d\n",
 					pstate.period, pstate.duty_cycle,
 					pstate.polarity, pstate.enabled);
 				value = bl_cbus_read(bl_drv->data->pwm_reg[
@@ -2461,12 +2530,11 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 				}
 				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 				len += sprintf(buf+len,
-					"\n"
 					"pwm state:\n"
-					"period:             %d\n"
-					"duty_cycle:         %d\n"
-					"polarity:           %d\n"
-					"enabled:            %d\n",
+					"  period:           %d\n"
+					"  duty_cycle:       %d\n"
+					"  polarity:         %d\n"
+					"  enabled:          %d\n",
 					pstate.period, pstate.duty_cycle,
 					pstate.polarity, pstate.enabled);
 				value = bl_cbus_read(bl_drv->data->pwm_reg[
@@ -2493,6 +2561,7 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 		if (bconf->bl_pwm_combo1) {
 			bl_pwm = bconf->bl_pwm_combo1;
 			len += sprintf(buf+len,
+				"\n"
 				"pwm_1_index:        %d\n"
 				"pwm_1_method:       %d\n"
 				"pwm_1_port:         %d\n"
@@ -2519,12 +2588,11 @@ static ssize_t bl_debug_pwm_show(struct class *class,
 				}
 				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 				len += sprintf(buf+len,
-					"\n"
 					"pwm state:\n"
-					"period:             %d\n"
-					"duty_cycle:         %d\n"
-					"polarity:           %d\n"
-					"enabled:            %d\n",
+					"  period:           %d\n"
+					"  duty_cycle:       %d\n"
+					"  polarity:         %d\n"
+					"  enabled:          %d\n",
 					pstate.period, pstate.duty_cycle,
 					pstate.polarity, pstate.enabled);
 				value = bl_cbus_read(bl_drv->data->pwm_reg[

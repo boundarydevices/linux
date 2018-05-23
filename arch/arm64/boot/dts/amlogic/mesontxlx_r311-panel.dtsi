@@ -629,7 +629,7 @@
 		};
 		backlight_4{
 			index = <4>;
-			bl_name = "backlight_4";
+			bl_name = "ldim_iw7027";
 			bl_level_default_uboot_kernel = <100 100>;
 			bl_level_attr = <255 10 /*max, min*/
 				128 128>; /*mid, mid_mapping*/
@@ -642,12 +642,11 @@
 					     *   (top, bottom, left or right),
 					     *2=uniform(top/bottom, left/right)
 					     */
-			bl_ldim_mapping = <0 1 2 3 4 5 6 7 8 9>;
 			ldim_dev_index = <2>;
 		};
 		backlight_5{
 			index = <5>;
-			bl_name = "backlight_5";
+			bl_name = "ldim_global";
 			bl_level_default_uboot_kernel = <100 100>;
 			bl_level_attr = <255 10 /*max, min*/
 				128 128>; /*mid, mid_mapping*/
@@ -675,7 +674,7 @@
 		};
 	};
 
-	local_diming_device {
+	local_dimming_device {
 		compatible = "amlogic, ldim_dev";
 		dev_name = "ldim_dev";
 		status = "okay";
@@ -685,9 +684,9 @@
 		pinctrl_version = <1>; /* for uboot */
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
-		ldim_dev-gpios = <&gpio GPIOZ_12 1
-			&gpio GPIOZ_6 1
-			&gpio GPIOZ_7 1>;
+		ldim_dev-gpios = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH
+			&gpio GPIOZ_6 GPIO_ACTIVE_HIGH
+			&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
 		ldim_dev_gpio_names = "GPIOZ_12","GPIOZ_6","GPIOZ_7";
 
 		ldim_dev_0 {
@@ -709,15 +708,15 @@
 			ldim_dev_name = "global";
 			ldim_pwm_pinmux_sel = "ldim_pwm";
 			ldim_pwm_port = "PWM_B";
-			ldim_pwm_attr = <0 /* pol */
-				200 /*freq(pwm:Hz, pwm_vs:multiple of vs)*/
+			ldim_pwm_attr = <1 /* pol */
+				180 /*freq(pwm:Hz, pwm_vs:multiple of vs)*/
 				50>;/*duty(%)*/
 			dim_max_min = <100 20>; /*dim_max, dim_min*/
 			en_gpio_on_off = <2 /*ldim_dev-gpios index*/
 				1 0>; /*on_level, off_level*/
 		};
 		ldim_dev_2 {
-			index = <1>;
+			index = <2>;
 			type = <1>; /* 0=normal,1=spi,2=i2c */
 			ldim_dev_name = "iw7027";
 			ldim_pwm_pinmux_sel = "ldim_pwm_vs";
@@ -737,7 +736,10 @@
 			lamp_err_gpio = <0xff>;
 				/* ldim_dev-gpios index, 0xff=invalid */
 			spi_write_check = <0>; /* 0=disable, 1=enable */
+
 			dim_max_min = <0xfff 0x7f>; /* dim_max, dim_min */
+			ldim_region_mapping = <0 1 2 3 4 5 6 7 8 9>;
+
 			cmd_size = <4>;
 			/* init: (type, data..., delay),
 			 * must match cmd_size for every group
@@ -753,7 +755,7 @@
 				0x00 0x27 0x60 0x00
 				0x00 0x29 0x00 0x00
 				0x00 0x2a 0x00 0x00
-				/*0x00 0x2b 0x7f 0x00*/
+				0x00 0x2b 0x00 0x00
 				0x00 0x2c 0x73 0x00
 				0x00 0x2d 0x37 0x00
 				0x00 0x31 0x93 0x00

@@ -979,7 +979,7 @@ static char *lcd_enc_tst_str[] = {
 	"8-Black",       /* 8 */
 };
 
-static unsigned int lcd_enc_tst[][8] = {
+static unsigned int lcd_enc_tst[][7] = {
 /*tst_mode,    Y,       Cb,     Cr,     tst_en,  vfifo_en  rgbin*/
 	{0,    0x200,   0x200,  0x200,   0,      1,        3},  /* 0 */
 	{1,    0x200,   0x200,  0x200,   1,      0,        1},  /* 1 */
