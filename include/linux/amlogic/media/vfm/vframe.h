@@ -140,6 +140,8 @@ struct vframe_view_s {
 	unsigned int height;
 } /*vframe_view_t */;
 
+#define SEI_PicTiming         1
+#define SEI_MasteringDisplayColorVolume 137
 #define SEI_ContentLightLevel 144
 struct vframe_content_light_level_s {
 	u32 present_flag;
@@ -147,7 +149,6 @@ struct vframe_content_light_level_s {
 	u32 max_pic_average;
 }; /* content_light_level from SEI */
 
-#define SEI_MasteringDisplayColorVolume 137
 struct vframe_master_display_colour_s {
 	u32 present_flag;
 	u32 primaries[3][2];
