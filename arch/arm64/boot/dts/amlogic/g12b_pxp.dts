@@ -387,11 +387,59 @@
 		};
 	};
 
+	cpu_opp_table1: cpu_opp_table1 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp00 {
+			opp-hz = /bits/ 64 <100000000>;
+			opp-microvolt = <751000>;
+		};
+		opp01 {
+			opp-hz = /bits/ 64 <250000000>;
+			opp-microvolt = <751000>;
+		};
+		opp02 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <751000>;
+		};
+		opp03 {
+			opp-hz = /bits/ 64 <667000000>;
+			opp-microvolt = <751000>;
+		};
+		opp04 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <771000>;
+		};
+		opp05 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <771000>;
+		};
+		opp06 {
+			opp-hz = /bits/ 64 <1398000000>;
+			opp-microvolt = <791000>;
+		};
+		opp07 {
+			opp-hz = /bits/ 64 <1512000000>;
+			opp-microvolt = <821000>;
+		};
+		opp08 {
+			opp-hz = /bits/ 64 <1608000000>;
+			opp-microvolt = <861000>;
+		};
+		opp09 {
+			opp-hz = /bits/ 64 <1704000000>;
+			opp-microvolt = <891000>;
+		};
+		opp10 {
+			opp-hz = /bits/ 64 <1896000000>;
+			opp-microvolt = <981000>;
+		};
+	};
+
 	cpufreq-meson {
 		compatible = "amlogic, cpufreq-meson";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pwm_ao_d_pins3>;
-		status = "okay";
+		status = "disable";
 	};
 
 
@@ -408,7 +456,12 @@
 
 &pwm_AO_cd {
 		status = "okay";
-	};
+};
+
+&pwm_ab {
+		status = "okay";
+};
+
 
 &audiobus {
 	aml_tdma: tdma {

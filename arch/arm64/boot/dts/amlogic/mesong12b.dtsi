@@ -66,6 +66,16 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A53 &CLUSTER_COST_A53>;
+			clocks = <&clkc CLKID_CPU_CLK>,
+				<&clkc CLKID_CPU_FCLK_P>,
+				<&clkc CLKID_SYS1_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table0>;
+			cpu-supply = <&vddcpu0>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU1:cpu@1 {
@@ -74,6 +84,16 @@
 			reg = <0x0 0x1>;
 			enable-method = "psci";
 			sched-energy-costs = <&CPU_COST_A53 &CLUSTER_COST_A53>;
+			clocks = <&clkc CLKID_CPU_CLK>,
+				<&clkc CLKID_CPU_FCLK_P>,
+				<&clkc CLKID_SYS1_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table0>;
+			cpu-supply = <&vddcpu0>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU2:cpu@100 {
@@ -83,6 +103,17 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A73 &CLUSTER_COST_A73>;
+			clocks = <&clkc CLKID_CPUB_CLK>,
+				<&clkc CLKID_CPUB_FCLK_P>,
+				<&clkc CLKID_SYS_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table1>;
+			cpu-supply = <&vddcpu1>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
+
 		};
 
 		CPU3:cpu@101 {
@@ -92,6 +123,17 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A73 &CLUSTER_COST_A73>;
+			clocks = <&clkc CLKID_CPUB_CLK>,
+				<&clkc CLKID_CPUB_FCLK_P>,
+				<&clkc CLKID_SYS_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table1>;
+			cpu-supply = <&vddcpu1>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
+
 		};
 
 		CPU4:cpu@102 {
@@ -101,6 +143,16 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A73 &CLUSTER_COST_A73>;
+			clocks = <&clkc CLKID_CPUB_CLK>,
+				<&clkc CLKID_CPUB_FCLK_P>,
+				<&clkc CLKID_SYS_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table1>;
+			cpu-supply = <&vddcpu1>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU5:cpu@103 {
@@ -110,6 +162,16 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A73 &CLUSTER_COST_A73>;
+			clocks = <&clkc CLKID_CPUB_CLK>,
+				<&clkc CLKID_CPUB_FCLK_P>,
+				<&clkc CLKID_SYS_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table1>;
+			cpu-supply = <&vddcpu1>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		idle-states {
@@ -1585,25 +1647,28 @@
 
 	vddcpu0: pwmao_d-regulator {
 		compatible = "pwm-regulator";
-		pwms = <&pwm_AO_cd MESON_PWM_1 1210 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm_ao_d_pins3>;
+		pwms = <&pwm_AO_cd MESON_PWM_1 1250 0>;
 		regulator-name = "vddcpu0";
-		regulator-min-microvolt = <731000>;
-		regulator-max-microvolt = <1011000>;
+		regulator-min-microvolt = <721000>;
+		regulator-max-microvolt = <1022000>;
 		regulator-always-on;
-		max-duty-cycle = <1210>;
+		max-duty-cycle = <1250>;
 		/* Voltage Duty-Cycle */
-		voltage-table = <1011000 0>,
+		voltage-table = <1022000 0>,
+			<1011000 3>,
 			<1001000 6>,
-			<991000 9>,
-			<981000 12>,
+			<991000 10>,
+			<981000 13>,
 			<971000 16>,
-			<961000 19>,
+			<961000 20>,
 			<951000 23>,
 			<941000 26>,
-			<931000 29>,
+			<931000 30>,
 			<921000 33>,
 			<911000 36>,
-			<901000 39>,
+			<901000 40>,
 			<891000 43>,
 			<881000 46>,
 			<871000 50>,
@@ -1614,13 +1679,59 @@
 			<821000 67>,
 			<811000 70>,
 			<801000 73>,
-			<791000 77>,
+			<791000 76>,
 			<781000 80>,
-			<771000 84>,
-			<761000 87>,
+			<771000 83>,
+			<761000 86>,
 			<751000 90>,
-			<741000 94>,
-			<731000 100>;
+			<741000 93>,
+			<731000 96>,
+			<721000 100>;
+		status = "okay";
+	 };
+
+	vddcpu1: pwmab_a-regulator {
+		compatible = "pwm-regulator";
+		pinctrl-names = "default";
+		pinctrl-1 = <&pwm_a_e2>;
+		pwms = <&pwm_ab MESON_PWM_0 1250 0>;
+		regulator-name = "vddcpu1";
+		regulator-min-microvolt = <721000>;
+		regulator-max-microvolt = <1022000>;
+		regulator-always-on;
+		max-duty-cycle = <1250>;
+		/* Voltage Duty-Cycle */
+		voltage-table = <1022000 0>,
+			<1011000 3>,
+			<1001000 6>,
+			<991000 10>,
+			<981000 13>,
+			<971000 16>,
+			<961000 20>,
+			<951000 23>,
+			<941000 26>,
+			<931000 30>,
+			<921000 33>,
+			<911000 36>,
+			<901000 40>,
+			<891000 43>,
+			<881000 46>,
+			<871000 50>,
+			<861000 53>,
+			<851000 56>,
+			<841000 60>,
+			<831000 63>,
+			<821000 67>,
+			<811000 70>,
+			<801000 73>,
+			<791000 76>,
+			<781000 80>,
+			<771000 83>,
+			<761000 86>,
+			<751000 90>,
+			<741000 93>,
+			<731000 96>,
+			<721000 100>;
 		status = "okay";
 	 };
 
@@ -1749,6 +1860,12 @@
 		mux {
 			groups = "cec_ao_b";
 			function = "cec_ao";
+		};
+	};
+	pwm_a_e2: pwm_a_e2 {
+		mux {
+			groups = "pwm_a_e2";
+			function = "pwm_a_gpioe";
 		};
 	};
 };
