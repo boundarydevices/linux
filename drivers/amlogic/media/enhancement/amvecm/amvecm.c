@@ -153,6 +153,12 @@ unsigned int pq_user_latch_flag;
 module_param(pq_user_latch_flag, uint, 0664);
 MODULE_PARM_DESC(pq_user_latch_flag, "\n pq_user_latch_flag\n");
 
+/*0: 709/601	1: bt2020*/
+int tx_op_color_primary;
+module_param(tx_op_color_primary, int, 0664);
+MODULE_PARM_DESC(tx_op_color_primary,
+		"tx output color_primary");
+
 unsigned int pq_user_value;
 unsigned int hdr_source_type = 0x1;
 
@@ -4495,7 +4501,11 @@ static void aml_vecm_dt_parse(struct platform_device *pdev)
 		} else {
 			hdr_set_cfg_osd_100((int)val);
 		}
-
+		ret = of_property_read_u32(node, "tx_op_color_primary", &val);
+		if (ret)
+			pr_info("Can't find  tx_op_color_primary.\n");
+		else
+			tx_op_color_primary = val;
 	}
 	/* init module status */
 	amvecm_wb_init(wb_en);

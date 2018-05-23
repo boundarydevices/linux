@@ -126,6 +126,7 @@ extern uint sdr_mode;
 extern uint hdr_flag;
 extern int video_rgb_ogo_xvy_mtx_latch;
 extern int video_rgb_ogo_xvy_mtx;
+extern int tx_op_color_primary;
 
 extern int amvecm_matrix_process(
 	struct vframe_s *vf, struct vframe_s *vf_rpt, int flags);
