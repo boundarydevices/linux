@@ -1108,9 +1108,9 @@
 		interrupt-names = "hdmitx_hpd";
 		/* 0:M8B 1:GXBB 2:GXTVBB 3:GXL 4:GXM
 		 * 5:TXL 6:TXLX 7:AXG 8:GXLX 9:TXHD
-		 * 10:G12A
+		 * 10:G12A 11:G12B
 		 */
-		ic_type = <10>;
+		ic_type = <11>;
 		vend_data: vend_data{ /* Should modified by Customer */
 			vendor_name = "Amlogic"; /* Max Chars: 8 */
 			/* standards.ieee.org/develop/regauth/oui/oui.txt */

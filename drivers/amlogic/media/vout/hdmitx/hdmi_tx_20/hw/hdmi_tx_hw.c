@@ -116,6 +116,7 @@ int hdmitx_hpd_hw_op(enum hpd_op cmd)
 	case MESON_CPU_ID_TXLX:
 		return hdmitx_hpd_hw_op_txlx(cmd);
 	case MESON_CPU_ID_G12A:
+	case MESON_CPU_ID_G12B:
 		return hdmitx_hpd_hw_op_g12a(cmd);
 	default:
 		break;
@@ -138,6 +139,7 @@ int read_hpd_gpio(void)
 		return read_hpd_gpio_gxl();
 	case MESON_CPU_ID_TXLX:
 	case MESON_CPU_ID_G12A:
+	case MESON_CPU_ID_G12B:
 		return read_hpd_gpio_txlx();
 	default:
 		break;
@@ -160,6 +162,7 @@ int hdmitx_ddc_hw_op(enum ddc_op cmd)
 		return hdmitx_ddc_hw_op_gxl(cmd);
 	case MESON_CPU_ID_TXLX:
 	case MESON_CPU_ID_G12A:
+	case MESON_CPU_ID_G12B:
 		return hdmitx_ddc_hw_op_txlx(cmd);
 	default:
 		break;
@@ -357,6 +360,7 @@ static unsigned int hdmitx_get_format(void)
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
 	case MESON_CPU_ID_G12A:
+	case MESON_CPU_ID_G12B:
 		ret = hdmitx_get_format_txlx();
 		break;
 	case MESON_CPU_ID_GXBB:
@@ -402,6 +406,7 @@ void hdmitx_sys_reset(void)
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_TXLX:
 	case MESON_CPU_ID_G12A:
+	case MESON_CPU_ID_G12B:
 		hdmitx_sys_reset_txlx();
 		break;
 	case MESON_CPU_ID_GXBB:
@@ -1620,6 +1625,7 @@ static void set_phy_by_mode(unsigned int mode)
 
 	switch (hdev->chip_type) {
 	case MESON_CPU_ID_G12A:
+	case MESON_CPU_ID_G12B:
 		switch (mode) {
 		case 1: /* 5.94/4.5/3.7Gbps */
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x37eb65c4);
@@ -3004,6 +3010,7 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 	} else if (strncmp(tmpbuf, "prbs", 4) == 0) {
 		switch (hdev->chip_type) {
 		case MESON_CPU_ID_G12A:
+		case MESON_CPU_ID_G12B:
 			for (i = 0; i < 4; i++) {
 				hd_write_reg(P_HHI_HDMI_PHY_CNTL1, 0x0390000f);
 				hd_write_reg(P_HHI_HDMI_PHY_CNTL1, 0x0390000e);

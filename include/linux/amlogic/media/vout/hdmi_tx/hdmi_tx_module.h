@@ -41,6 +41,8 @@
 #define MESON_CPU_ID_GXLX		8
 #define MESON_CPU_ID_TXHD		9
 #define MESON_CPU_ID_G12A		10
+#define MESON_CPU_ID_G12B		11
+
 
 /*****************************
  *    hdmitx attr management
