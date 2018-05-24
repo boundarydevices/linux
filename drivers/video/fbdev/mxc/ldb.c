@@ -104,7 +104,7 @@ struct ldb_data {
 	struct clk *div_3_5_clk[2];
 	struct clk *div_7_clk[2];
 	struct clk *div_sel_clk[2];
-	struct clk *clk_ldb_di_choices[4];
+	struct clk *clk_ldb_di_choices[5];
 };
 
 static const struct crtc_mux imx6q_lvds0_crtc_mux[] = {
