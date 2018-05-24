@@ -610,11 +610,11 @@
 
 		aml-audio-card,dai-link@4 {
 			mclk-fs = <128>;
-			//continuous-clock;
+			continuous-clock;
 			/* suffix-name, sync with android audio hal
 			 * what's the dai link used for
 			 */
-			suffix-name = "alsaPORT-spdif";
+			suffix-name = "alsaPORT-spdifb2hdmi";
 			cpu {
 				sound-dai = <&aml_spdif>;
 				system-clock-frequency = <6144000>;
@@ -630,7 +630,7 @@
 			/* suffix-name, sync with android audio hal
 			 * what's the dai link used for
 			 */
-			suffix-name = "alsaPORT-spdifb2hdmi";
+			suffix-name = "alsaPORT-spdif";
 			cpu {
 				sound-dai = <&aml_spdif_b>;
 				system-clock-frequency = <6144000>;
@@ -643,29 +643,28 @@
 		 * dai link for i2s to hdmix,
 		 * Notice to select a tdm lane not used by hw
 		 */
-		aml-audio-card,dai-link@6 {
-			format = "i2s";
-			mclk-fs = <256>;
-			//continuous-clock;
-			//bitclock-inversion;
-			//frame-inversion;
-			bitclock-master = <&aml_i2s2hdmi>;
-			frame-master = <&aml_i2s2hdmi>;
-			/* suffix-name, sync with android audio hal
-			 * what's the dai link used for
-			 */
-			suffix-name = "alsaPORT-i2s2hdmi";
-			cpu {
-				sound-dai = <&aml_i2s2hdmi>;
-				dai-tdm-slot-tx-mask = <1 1>;
-				dai-tdm-slot-num = <2>;
-				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <12288000>;
-			};
-			codec {
-				sound-dai = <&dummy_codec>;
-			};
-		};
+		/*
+		 * aml-audio-card,dai-link@6 {
+		 * format = "i2s";
+		 * mclk-fs = <256>;
+		 * //continuous-clock;
+		 * //bitclock-inversion;
+		 * //frame-inversion;
+		 * bitclock-master = <&aml_i2s2hdmi>;
+		 * frame-master = <&aml_i2s2hdmi>;
+		 * suffix-name = "alsaPORT-i2s2hdmi";
+		 * cpu {
+		 * sound-dai = <&aml_i2s2hdmi>;
+		 * dai-tdm-slot-tx-mask = <1 1>;
+		 * dai-tdm-slot-num = <2>;
+		 * dai-tdm-slot-width = <32>;
+		 * system-clock-frequency = <12288000>;
+		 * };
+		 * codec {
+		 * sound-dai = <&dummy_codec>;
+		 * };
+		 * };
+		 */
 	};
 	audiolocker: locker {
 		compatible = "amlogic, audiolocker";
@@ -892,7 +891,7 @@
 
 		i2s2hdmi = <1>;
 
-		status = "okay";
+		status = "disabled";
 	};
 
 	aml_spdif: spdif {

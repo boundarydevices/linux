@@ -463,6 +463,19 @@ static struct snd_pcm_ops aml_spdif_ops = {
 #define PREALLOC_BUFFER_MAX	(256 * 1024)
 static int aml_spdif_new(struct snd_soc_pcm_runtime *rtd)
 {
+	struct device *dev = rtd->platform->dev;
+	struct aml_spdif *p_spdif;
+
+	p_spdif = (struct aml_spdif *)dev_get_drvdata(dev);
+
+	pr_info("%s spdif_%s, clk continuous:%d\n",
+		__func__,
+		(p_spdif->id == 0) ? "a":"b",
+		p_spdif->clk_cont);
+	/* keep frddr, when spdif init done, frddr can be released. */
+	if (p_spdif->clk_cont)
+		spdifout_play_with_zerodata_free(p_spdif->id);
+
 	return snd_pcm_lib_preallocate_pages_for_all(
 			rtd->pcm, SNDRV_DMA_TYPE_DEV,
 			rtd->card->snd_card->dev,
@@ -732,7 +745,12 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 			dev_info(substream->pcm->card->dev, "spdif capture disable\n");
 			aml_toddr_enable(p_spdif->tddr, 0);
 		}
-		if (!p_spdif->clk_cont)
+		/* continuous, spdif out is only mute, not disable */
+		if (p_spdif->clk_cont
+			&& (substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
+			aml_spdif_mute(p_spdif->actrl,
+				substream->stream, p_spdif->id, true);
+		else
 			aml_spdif_enable(p_spdif->actrl,
 				substream->stream, p_spdif->id, false);
 		break;
@@ -1034,11 +1052,8 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 		/* for spdif_b, clk be continuous,
 		 * and keep silence when no valid data
 		 */
-		if (aml_spdif->id == 1)
+		/*if (aml_spdif->id == 1)*/
 			aml_spdif->clk_cont = 1;
-
-		if (aml_spdif->clk_cont)
-			spdifout_play_with_zerodata(aml_spdif->id);
 
 		aml_spdif->chipinfo = p_spdif_chipinfo;
 	} else
@@ -1061,6 +1076,9 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 	ret = aml_spdif_parse_of(pdev);
 	if (ret)
 		return -EINVAL;
+
+	if (aml_spdif->clk_cont)
+		spdifout_play_with_zerodata(aml_spdif->id);
 
 	ret = devm_snd_soc_register_component(dev, &aml_spdif_component,
 		&aml_spdif_dai[aml_spdif->id], 1);

@@ -50,6 +50,30 @@ void aml_spdif_enable(
 	}
 }
 
+void aml_spdif_mute(
+	struct aml_audio_controller *actrl,
+	int stream,
+	int index,
+	bool is_mute)
+{
+	int mute_lr = 0;
+
+	if (is_mute)
+		mute_lr = 0x3;
+
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		unsigned int offset, reg;
+
+		offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
+		reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * index;
+		aml_audiobus_update_bits(actrl,
+			reg, 0x3 << 21, mute_lr << 21);
+	} else {
+		aml_audiobus_update_bits(actrl,
+			EE_AUDIO_SPDIFIN_CTRL0, 0x3 << 6, mute_lr << 6);
+	}
+}
+
 void aml_spdif_arb_config(struct aml_audio_controller *actrl)
 {
 	/* config ddr arb */
@@ -351,16 +375,6 @@ void spdifout_fifo_ctrl(int spdif_id, int fifo_id, int bitwidth)
 	audiobus_update_bits(reg, 1<<28, 1<<28);
 }
 
-static void spdifout_mute(int spdif_id)
-{
-	unsigned int offset, reg;
-
-	/* mute */
-	offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
-	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * spdif_id;
-	audiobus_update_bits(reg, 0x3 << 21, 0x3 << 21);
-}
-
 static bool spdifout_is_enable(int spdif_id)
 {
 	unsigned int offset, reg, val;
@@ -403,8 +417,8 @@ void spdifout_samesource_set(int spdif_index, int fifo_id,
 		spdif_id = 0;
 
 	/* clk for spdif_b is always on */
-	if (!spdif_id)
-		spdifout_clk_ctrl(spdif_id, is_enable);
+	/*if (!spdif_id)*/
+		spdifout_clk_ctrl(spdif_id, /*is_enable*/true);
 
 	if (is_enable)
 		spdifout_fifo_ctrl(spdif_id, fifo_id, bitwidth);
@@ -507,7 +521,7 @@ void spdifout_play_with_zerodata(unsigned int spdif_id)
 		struct snd_pcm_runtime runtime;
 
 		substream.runtime = &runtime;
-		runtime.rate = 48000;
+		runtime.rate = sample_rate;
 		runtime.format = SNDRV_PCM_FORMAT_S16_LE;
 		runtime.channels = 2;
 		runtime.sample_bits = 16;
@@ -515,6 +529,11 @@ void spdifout_play_with_zerodata(unsigned int spdif_id)
 		/* check whether fix to spdif a */
 		if (spdif_id == 0)
 			src0_sel = 3;
+
+		/* spdif clk */
+		spdifout_clk_ctrl(spdif_id, true);
+		/* spdif to hdmitx */
+		spdifoutb_to_hdmitx_ctrl(spdif_id);
 
 		/* spdif ctrl */
 		spdifout_fifo_ctrl(spdif_id, frddr_index, bitwidth);
@@ -524,13 +543,20 @@ void spdifout_play_with_zerodata(unsigned int spdif_id)
 		spdif_set_channel_status_info(&chsts, spdif_id);
 
 		/* notify hdmitx audio */
-		spdifoutb_to_hdmitx_ctrl(spdif_id);
 		aout_notifier_call_chain(0x1, &substream);
 
-		frddr_init_default(frddr_index, src0_sel);
+		/* init frddr to output zero data. */
+		frddr_init_without_mngr(frddr_index, src0_sel);
 
+		/* spdif enable */
 		spdifout_enable(spdif_id, true);
-
-		spdifout_mute(spdif_id);
 	}
+}
+
+void spdifout_play_with_zerodata_free(unsigned int spdif_id)
+{
+	pr_info("%s, spdif id:%d\n", __func__, spdif_id);
+
+	/* free frddr, then frddr in mngr */
+	frddr_deinit_without_mngr(spdif_id);
 }

@@ -28,6 +28,12 @@ extern void aml_spdif_enable(
 	int index,
 	bool is_enable);
 
+extern void aml_spdif_mute(
+	struct aml_audio_controller *actrl,
+	int stream,
+	int index,
+	bool is_mute);
+
 extern void aml_spdif_arb_config(struct aml_audio_controller *actrl);
 
 extern int aml_spdifin_status_check(
@@ -69,4 +75,5 @@ extern void spdif_set_channel_status_info(
 	struct iec958_chsts *chsts, int spdif_id);
 
 extern void spdifout_play_with_zerodata(unsigned int spdif_id);
+extern void spdifout_play_with_zerodata_free(unsigned int spdif_id);
 #endif

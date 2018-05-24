@@ -739,6 +739,7 @@ void aml_frddr_enable(struct frddr *fr, bool enable)
 	unsigned int reg;
 
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
+	/* ensure disable before enable frddr */
 	aml_audiobus_update_bits(actrl,	reg, 1<<31, enable<<31);
 
 	if (!enable)
@@ -886,7 +887,7 @@ static void aml_check_aed(bool enable, int dst)
 	}
 }
 
-void frddr_init_default(unsigned int frddr_index, unsigned int src0_sel)
+void frddr_init_without_mngr(unsigned int frddr_index, unsigned int src0_sel)
 {
 	unsigned int offset, reg;
 	unsigned int start_addr, end_addr, int_addr;
@@ -927,6 +928,15 @@ void frddr_init_default(unsigned int frddr_index, unsigned int src0_sel)
 		| 1 << 3 /* src0 enable */
 		| src0_sel << 0 /* src0 sel */
 	);
+}
+
+void frddr_deinit_without_mngr(unsigned int frddr_index)
+{
+	unsigned int offset, reg;
+
+	offset = EE_AUDIO_FRDDR_B_CTRL0 - EE_AUDIO_FRDDR_A_CTRL0;
+	reg = EE_AUDIO_FRDDR_A_CTRL0 + offset * frddr_index;
+	audiobus_write(reg, 0x0);
 }
 
 static struct ddr_chipinfo g12a_ddr_chipinfo = {
