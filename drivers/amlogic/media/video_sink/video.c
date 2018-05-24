@@ -7689,9 +7689,9 @@ static u32 rgb2yuv(u32 rgb)
 	int b = rgb & 0xff;
 	int y, u, v;
 
-	y = ((66*r + 129*g + 25*b + 128) >> 8) + 16;
-	u = ((-38*r - 74*g + 112*b + 128) >> 8) + 128;
-	v = ((112*r - 94*g - 18*b + 128) >> 8) + 128;
+	y = ((47*r + 157*g + 16*b + 128) >> 8) + 16;
+	u = ((-26*r - 87*g + 112*b + 128) >> 8) + 128;
+	v = ((112*r - 102*g - 10*b + 128) >> 8) + 128;
 
 	return  (y << 16) | (u << 8) | v;
 }
@@ -7766,6 +7766,7 @@ static ssize_t video_rgb_screen_store(struct class *cla,
 				       const char *buf, size_t count)
 {
 	size_t r;
+	u32 yuv_eight;
 
 	/* unsigned data = 0x0; */
 	r = kstrtoint(buf, 0, &rgb_screen);
@@ -7797,12 +7798,13 @@ static ssize_t video_rgb_screen_store(struct class *cla,
 		data &= (~VPP_VD2_POSTBLEND);
 #endif
 	/* show test screen  YUV blend*/
+	yuv_eight = rgb2yuv(rgb_screen & 0x00ffffff);
 	if (is_meson_gxtvbb_cpu())   {
 		WRITE_VCBUS_REG(VPP_DUMMY_DATA1,
 			rgb_screen & 0x00ffffff);
 	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
 		WRITE_VCBUS_REG(VPP_DUMMY_DATA1,
-			rgb2yuv(rgb_screen & 0x00ffffff));
+			eight2ten(yuv_eight & 0x00ffffff));
 	}
 	/* WRITE_VCBUS_REG(VPP_MISC, data); */
 
