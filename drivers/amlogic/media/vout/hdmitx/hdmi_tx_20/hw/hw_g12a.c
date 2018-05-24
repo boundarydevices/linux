@@ -16,6 +16,7 @@
  */
 
 #include <linux/printk.h>
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 #include "common.h"
 #include "mach_reg.h"
 
@@ -90,16 +91,26 @@
 static bool set_hpll_hclk_v1(unsigned int m, unsigned int frac_val)
 {
 	int ret = 0;
+	struct hdmitx_dev *hdev = get_hdmitx_device();
 
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL0, 0x0b3a0400 | (m & 0xff));
 	hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL0, 0x3, 28, 2);
 	hd_write_reg(P_HHI_HDMI_PLL_CNTL1, frac_val);
+	hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);
+
 	if (frac_val == 0x8148) {
-		hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);
-		hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x6a685c00);
-		hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x44331290);
+		if (((hdev->para->vic == HDMI_3840x2160p50_16x9) ||
+			(hdev->para->vic == HDMI_3840x2160p60_16x9) ||
+			(hdev->para->vic == HDMI_3840x2160p50_64x27) ||
+			(hdev->para->vic == HDMI_3840x2160p60_64x27)) &&
+			(hdev->para->cs != COLORSPACE_YUV420)) {
+			hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x6a685c00);
+			hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x11551293);
+		} else {
+			hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x6a685c00);
+			hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x44331290);
+		}
 	} else {
-		hd_write_reg(P_HHI_HDMI_PLL_CNTL2, 0x00000000);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x6a68dc00);
 		hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x65771290);
 	}
@@ -160,9 +171,9 @@ void set_g12a_hpll_clk_out(unsigned int frac_rate, unsigned int clk)
 	case 5940000:
 		if (set_hpll_hclk_v1(0xf7, frac_rate ? 0x8148 : 0x10000))
 			break;
-		else if (set_hpll_hclk_v2(0x7b, frac_rate ? 0x140b4 : 0x18000))
+		else if (set_hpll_hclk_v2(0x7b, 0x18000))
 			break;
-		else if (set_hpll_hclk_v3(0xf7, frac_rate ? 0x8148 : 0x10000))
+		else if (set_hpll_hclk_v3(0xf7, 0x10000))
 			break;
 		else
 			break;
