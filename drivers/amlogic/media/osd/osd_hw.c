@@ -6418,15 +6418,15 @@ static void osd_setting_old_hwc(void)
 int osd_setting_blend(void)
 {
 	int ret;
-	const struct vinfo_s *vinfo;
+	struct vinfo_s *vinfo;
 
 	vinfo = get_current_vinfo();
 	if (vinfo) {
-		osd_hw.vinfo_width = vinfo->width;
-		osd_hw.vinfo_height = vinfo->height;
-	} else {
-		osd_hw.vinfo_width = 1920;
-		osd_hw.vinfo_height = 1080;
+		if ((strcmp(vinfo->name, "invalid")) &&
+			(strcmp(vinfo->name, "null"))) {
+			osd_hw.vinfo_width = vinfo->width;
+			osd_hw.vinfo_height = vinfo->height;
+		}
 	}
 
 	if (osd_hw.osd_meson_dev.osd_ver < OSD_HIGH_ONE)
@@ -7072,6 +7072,8 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		//osd_hw.osd_blend_mode = OSD_BLEND_NONE;
 		osd_hw.background_w = 1920;
 		osd_hw.background_h = 1080;
+		osd_hw.vinfo_width = 1920;
+		osd_hw.vinfo_height = 1080;
 		for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count; idx++) {
 			osd_hw.premult_en[idx] = 0;
 			osd_hw.osd_afbcd[idx].format = COLOR_INDEX_32_ABGR;
