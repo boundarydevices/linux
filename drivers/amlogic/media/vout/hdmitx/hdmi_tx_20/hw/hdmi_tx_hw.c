@@ -168,6 +168,7 @@ int hdmitx_ddc_hw_op(enum ddc_op cmd)
 }
 EXPORT_SYMBOL(hdmitx_ddc_hw_op);
 
+static int hdcp_topo_st = -1;
 int hdmitx_hdcp_opr(unsigned int val)
 {
 	struct arm_smccc_res res;
@@ -208,6 +209,13 @@ int hdmitx_hdcp_opr(unsigned int val)
 	}
 	if (val == 0xc) { /* HDCP22_KEY_SET_DUK */
 		arm_smccc_smc(0x8200001c, 0, 0, 0, 0, 0, 0, 0, &res);
+		return (unsigned int)((res.a0)&0xffffffff);
+	}
+	if (val == 0xd) { /* HDCP22_SET_TOPO */
+		arm_smccc_smc(0x82000083, hdcp_topo_st, 0, 0, 0, 0, 0, 0, &res);
+	}
+	if (val == 0xe) { /* HDCP22_GET_TOPO */
+		arm_smccc_smc(0x82000084, 0, 0, 0, 0, 0, 0, 0, &res);
 		return (unsigned int)((res.a0)&0xffffffff);
 	}
 	return -1;
@@ -2864,6 +2872,9 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 			pr_info(HW "set hdmi vic count = %d\n",
 				hdev->vic_count);
 		}
+	} else if (strncmp(tmpbuf, "topo", 4) == 0) {
+		pr_info("topo: %d\n", hdmitx_hdcp_opr(0xe));
+		return;
 	} else if (strncmp(tmpbuf, "dumphdmireg", 11) == 0) {
 		unsigned char reg_val = 0;
 		unsigned int reg_adr = 0;
@@ -3361,6 +3372,8 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 {
 	int i = 0;
 	unsigned char *tmp_char = NULL;
+	struct hdcprp14_topo *topo14 = NULL;
+	unsigned int val;
 
 	if ((cmd & CMD_DDC_OFFSET) != CMD_DDC_OFFSET) {
 		pr_err(HW "ddc: invalid cmd 0x%x\n", cmd);
@@ -3454,6 +3467,27 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 		return hdmitx_hdcp_opr(0xa);
 	case DDC_HDCP_22_LSTORE:
 		return hdmitx_hdcp_opr(0xb);
+	case DDC_HDCP14_GET_TOPO_INFO:
+		topo14 = (struct hdcprp14_topo *)argv;
+		/* if rx is not repeater, directly return */
+		if (!(hdmitx_rd_reg(HDMITX_DWC_A_HDCPOBS3) & (1 << 6)))
+			return 0;
+		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 1, 0, 1);
+		hdmitx_poll_reg(HDMITX_DWC_A_KSVMEMCTRL, (1<<1), 2 * HZ);
+		val = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_0);
+		topo14->device_count = val & 0x7f;
+		topo14->max_devs_exceeded = !!(val & 0x80);
+		val = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_1);
+		topo14->depth = val & 0x7;
+		topo14->max_cascade_exceeded = !!(val & 0x8);
+		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 0, 0, 1);
+		return 1;
+	case DDC_HDCP_SET_TOPO_INFO:
+		if (hdcp_topo_st != argv) {
+			hdcp_topo_st = argv;
+			hdmitx_hdcp_opr(0xd);
+		}
+		break;
 	case DDC_SCDC_DIV40_SCRAMB:
 		if (argv == 1) {
 			scdc_wr_sink(TMDS_CFG, 0x3); /* TMDS 1/40 & Scramble */

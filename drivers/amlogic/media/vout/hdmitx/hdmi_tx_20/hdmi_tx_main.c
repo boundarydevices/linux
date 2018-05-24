@@ -928,6 +928,94 @@ static ssize_t store_hdcp_repeater(struct device *dev,
 	return count;
 }
 
+/*
+ * hdcp_topo_info attr
+ * For hdcp 22, hdcp_tx22 will write to store_hdcp_topo_info
+ * For hdcp 14, directly get from HW
+ */
+
+static ssize_t show_hdcp_topo_info(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	struct hdmitx_dev *hdev = &hdmitx_device;
+	struct hdcprp_topo *topoinfo = hdev->topo_info;
+
+	if (!hdev->hdcp_mode) {
+		pos += snprintf(buf+pos, PAGE_SIZE, "hdcp mode: 0\n");
+		return pos;
+	}
+	if (!topoinfo)
+		return pos;
+
+	if (hdev->hdcp_mode == 1) {
+		memset(topoinfo, 0, sizeof(struct hdcprp_topo));
+		hdev->HWOp.CntlDDC(hdev, DDC_HDCP14_GET_TOPO_INFO,
+			(unsigned long)&topoinfo->topo.topo14);
+	}
+
+	pos += snprintf(buf+pos, PAGE_SIZE, "hdcp mode: %s\n",
+		hdev->hdcp_mode == 1 ? "14" : "22");
+	if (hdev->hdcp_mode == 2) {
+		topoinfo->hdcp_ver = HDCPVER_22;
+		pos += snprintf(buf+pos, PAGE_SIZE, "max_devs_exceeded: %d\n",
+			topoinfo->topo.topo22.max_devs_exceeded);
+		pos += snprintf(buf+pos, PAGE_SIZE,
+			"max_cascade_exceeded: %d\n",
+			topoinfo->topo.topo22.max_cascade_exceeded);
+		pos += snprintf(buf+pos, PAGE_SIZE, "v2_0_repeater_down: %d\n",
+			topoinfo->topo.topo22.v2_0_repeater_down);
+		pos += snprintf(buf+pos, PAGE_SIZE, "v1_X_device_down: %d\n",
+			topoinfo->topo.topo22.v1_X_device_down);
+		pos += snprintf(buf+pos, PAGE_SIZE, "device_count: %d\n",
+			topoinfo->topo.topo22.device_count);
+		pos += snprintf(buf+pos, PAGE_SIZE, "depth: %d\n",
+			topoinfo->topo.topo22.depth);
+		return pos;
+	}
+	if (hdev->hdcp_mode == 1) {
+		topoinfo->hdcp_ver = HDCPVER_14;
+		pos += snprintf(buf+pos, PAGE_SIZE, "max_devs_exceeded: %d\n",
+			topoinfo->topo.topo14.max_devs_exceeded);
+		pos += snprintf(buf+pos, PAGE_SIZE,
+			"max_cascade_exceeded: %d\n",
+			topoinfo->topo.topo14.max_cascade_exceeded);
+		pos += snprintf(buf+pos, PAGE_SIZE, "device_count: %d\n",
+			topoinfo->topo.topo14.device_count);
+		pos += snprintf(buf+pos, PAGE_SIZE, "depth: %d\n",
+			topoinfo->topo.topo14.depth);
+		return pos;
+	}
+
+	return pos;
+}
+
+static ssize_t store_hdcp_topo_info(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct hdmitx_dev *hdev = &hdmitx_device;
+	struct hdcprp_topo *topoinfo = hdev->topo_info;
+	int cnt;
+
+	if (!topoinfo)
+		return count;
+
+	if (hdev->hdcp_mode == 2) {
+		memset(topoinfo, 0, sizeof(struct hdcprp_topo));
+		cnt = sscanf(buf, "%x %x %x %x %x %x",
+			(int *)&topoinfo->topo.topo22.max_devs_exceeded,
+			(int *)&topoinfo->topo.topo22.max_cascade_exceeded,
+			(int *)&topoinfo->topo.topo22.v2_0_repeater_down,
+			(int *)&topoinfo->topo.topo22.v1_X_device_down,
+			(int *)&topoinfo->topo.topo22.device_count,
+			(int *)&topoinfo->topo.topo22.depth);
+		if (cnt < 0)
+			return count;
+	}
+
+	return count;
+}
+
 static ssize_t show_hdcp22_type(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -941,10 +1029,17 @@ static ssize_t show_hdcp22_type(struct device *dev,
 static ssize_t store_hdcp22_type(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	if (buf[0] == '0')
-		hdmitx_device.hdcp22_type = 0;
+	int type = 0;
+	struct hdmitx_dev *hdev = &hdmitx_device;
+
 	if (buf[0] == '1')
-		hdmitx_device.hdcp22_type = 1;
+		type = 1;
+	else
+		type = 0;
+	hdev->hdcp22_type = type;
+
+	pr_info("hdmitx: set hdcp22 content type %d\n", type);
+	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_SET_TOPO_INFO, type);
 
 	return count;
 }
@@ -2658,6 +2753,8 @@ static DEVICE_ATTR(hdcp_mode, 0664, show_hdcp_mode, store_hdcp_mode);
 static DEVICE_ATTR(hdcp_lstore, 0664, show_hdcp_lstore, store_hdcp_lstore);
 static DEVICE_ATTR(hdcp_repeater, 0644, show_hdcp_repeater,
 	store_hdcp_repeater);
+static DEVICE_ATTR(hdcp_topo_info, 0644, show_hdcp_topo_info,
+	store_hdcp_topo_info);
 static DEVICE_ATTR(hdcp22_type, 0644, show_hdcp22_type, store_hdcp22_type);
 static DEVICE_ATTR(hdcp22_base, 0444, show_hdcp22_base, NULL);
 static DEVICE_ATTR(div40, 0664, show_div40, store_div40);
@@ -3068,6 +3165,7 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdev->HWOp.CntlConfig(hdev, CONF_CLR_AVI_PACKET, 0);
 	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_MUX_INIT, 1);
 	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP, HDCP14_OFF);
+	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_SET_TOPO_INFO, 0);
 	hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
 	hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGOUT;
 	hdev->HWOp.CntlMisc(hdev, MISC_ESM_RESET, 0);
@@ -3467,6 +3565,10 @@ static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)
 	hdmitx_device.audio_param_update_flag = 0;
 	/* 1: 2ch */
 	hdmitx_device.hdmi_ch = 1;
+	hdmitx_device.topo_info =
+		kmalloc(sizeof(struct hdcprp_topo), GFP_KERNEL);
+	if (!hdmitx_device.topo_info)
+		pr_info("failed to alloc hdcp topo info\n");
 	hdmitx_init_parameters(&hdmitx_device.hdmi_info);
 
 	return 0;
@@ -3717,6 +3819,7 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_hdcp_byp);
 	ret = device_create_file(dev, &dev_attr_hdcp_mode);
 	ret = device_create_file(dev, &dev_attr_hdcp_repeater);
+	ret = device_create_file(dev, &dev_attr_hdcp_topo_info);
 	ret = device_create_file(dev, &dev_attr_hdcp22_type);
 	ret = device_create_file(dev, &dev_attr_hdcp22_base);
 	ret = device_create_file(dev, &dev_attr_hdcp_lstore);
@@ -3809,6 +3912,7 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_hdcp_pwr);
 	device_remove_file(dev, &dev_attr_div40);
 	device_remove_file(dev, &dev_attr_hdcp_repeater);
+	device_remove_file(dev, &dev_attr_hdcp_topo_info);
 	device_remove_file(dev, &dev_attr_hdcp22_type);
 	device_remove_file(dev, &dev_attr_hdcp22_base);
 

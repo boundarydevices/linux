@@ -342,6 +342,7 @@ struct hdmitx_dev {
 	unsigned int audio_notify_flag;
 	unsigned int audio_step;
 	unsigned int repeater_tx;
+	struct hdcprp_topo *topo_info;
 	/* 0.1% clock shift, 1080p60hz->59.94hz */
 	unsigned int frac_rate_policy;
 	unsigned int rxsense_policy;
@@ -402,6 +403,8 @@ struct hdmitx_dev {
 #define DDC_HDCP_22_LSTORE	(CMD_DDC_OFFSET + 0x10)
 #define DDC_SCDC_DIV40_SCRAMB	(CMD_DDC_OFFSET + 0x20)
 #define DDC_HDCP14_GET_BCAPS_RP	(CMD_DDC_OFFSET + 0x30)
+#define DDC_HDCP14_GET_TOPO_INFO (CMD_DDC_OFFSET + 0x31)
+#define DDC_HDCP_SET_TOPO_INFO (CMD_DDC_OFFSET + 0x32)
 
 /***********************************************************************
  *             CONFIG CONTROL //CntlConfig
