@@ -30,4 +30,6 @@ extern int get_vsync_pts_inc_mode(void);
 
 int tsync_pcr_init(void);
 void tsync_pcr_exit(void);
+extern int tsync_pcr_demux_pcr_used(void);
+
 #endif

@@ -153,6 +153,34 @@ static int vpause_flag;
 static int apause_flag;
 static bool dobly_avsync_test;
 static int slowsync_enable;
+
+pfun_tsdemux_pcrscr_valid tsdemux_pcrscr_valid_cb;
+EXPORT_SYMBOL(tsdemux_pcrscr_valid_cb);
+
+pfun_tsdemux_pcrscr_get tsdemux_pcrscr_get_cb;
+EXPORT_SYMBOL(tsdemux_pcrscr_get_cb);
+
+pfun_tsdemux_first_pcrscr_get tsdemux_first_pcrscr_get_cb;
+EXPORT_SYMBOL(tsdemux_first_pcrscr_get_cb);
+
+pfun_tsdemux_pcraudio_valid tsdemux_pcraudio_valid_cb;
+EXPORT_SYMBOL(tsdemux_pcraudio_valid_cb);
+
+pfun_tsdemux_pcrvideo_valid tsdemux_pcrvideo_valid_cb;
+EXPORT_SYMBOL(tsdemux_pcrvideo_valid_cb);
+
+pfun_get_buf_by_type get_buf_by_type_cb;
+EXPORT_SYMBOL(get_buf_by_type_cb);
+
+pfun_stbuf_level stbuf_level_cb;
+EXPORT_SYMBOL(stbuf_level_cb);
+
+pfun_stbuf_space stbuf_space_cb;
+EXPORT_SYMBOL(stbuf_space_cb);
+
+pfun_stbuf_size stbuf_size_cb;
+EXPORT_SYMBOL(stbuf_size_cb);
+
 /*
  *used to set player start sync mode, 0-none; 1-smoothsync; 2-droppcm;
  *default drop pcm
@@ -637,8 +665,8 @@ static void tsync_state_switch_timer_fun(unsigned long arg)
 					&& abs(timestamp_apts_get() -
 						   timestamp_pcrscr_get()) >
 					(TIME_UNIT90K * 50 / 1000)) {
-					timestamp_pcrscr_set(timestamp_apts_get
-							());
+					timestamp_pcrscr_set(
+						timestamp_apts_get());
 				}
 			}
 		}
@@ -678,7 +706,6 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 		 *by avpts-diff too much
 		 *threshold 120s is an arbitrary value
 		 */
-#if 0//DEBUG_TMP
 		if (tsync_enable && !get_vsync_pts_inc_mode())
 			tsync_mode = TSYNC_MODE_AMASTER;
 		else {
@@ -686,7 +713,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			if (get_vsync_pts_inc_mode())
 				tsync_stat = TSYNC_STAT_PCRSCR_SETUP_NONE;
 		}
-#endif
+
 		if (tsync_dec_reset_flag)
 			tsync_dec_reset_video_start = 1;
 
@@ -697,9 +724,9 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			if (tsync_stat == TSYNC_STAT_PCRSCR_SETUP_NONE) {
 				if (tsync_syncthresh
 					&& (tsync_mode == TSYNC_MODE_AMASTER)) {
-					if (param > VIDEO_HOLD_THRESHOLD)
-						param -= VIDEO_HOLD_THRESHOLD;
-				}
+					timestamp_pcrscr_set(param -
+							VIDEO_HOLD_THRESHOLD);
+				} else
 				timestamp_pcrscr_set(param);
 				tsync_stat = TSYNC_STAT_PCRSCR_SETUP_VIDEO;
 			}
@@ -758,7 +785,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 		 *"VIDEO_TSTAMP_DISCONTINUITY, 0x%x, 0x%x\n", t, param);
 		 */
 		if ((abs(param - oldpts) > tsync_av_threshold_min)
-			/*&& (!get_vsync_pts_inc_mode())*/) {
+			&& (!get_vsync_pts_inc_mode())) {
 			vpts_discontinue = 1;
 			vpts_discontinue_diff = abs(param - t);
 			tsync_mode_switch('V', abs(param - t),
@@ -794,7 +821,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 				"AUDIO_TSTAMP_DISCONTINUITY, 0x%x, 0x%x\n",
 				t, param);
 		if ((abs(param - oldpts) > tsync_av_threshold_min)
-			/*&& (!get_vsync_pts_inc_mode())*/) {
+			&& (!get_vsync_pts_inc_mode())) {
 			apts_discontinue = 1;
 			apts_discontinue_diff = abs(param - t);
 			tsync_mode_switch('A', abs(param - t),
@@ -1070,19 +1097,16 @@ int tsync_set_apts(unsigned int pts)
 		t = timestamp_vpts_get();
 	else
 		t = timestamp_pcrscr_get();
-	/* do not switch tsync mode until first video toggled. */
 	if ((abs(oldpts - pts) > tsync_av_threshold_min) &&
-		(timestamp_firstvpts_get() > 0)
-			/*&&*/
-	/*(!get_vsync_pts_inc_mode())*//*DEBUG_TMP*/) {/* is discontinue */
+		(!get_vsync_pts_inc_mode())) {	/* is discontinue */
 		apts_discontinue = 1;
 		tsync_mode_switch('A', abs(pts - t),
 				pts - oldpts);	/*if in VMASTER ,just wait */
 	}
 	timestamp_apts_set(pts);
 
-	/*if (get_vsync_pts_inc_mode() && (tsync_mode != TSYNC_MODE_VMASTER))*/
-		/*tsync_mode = TSYNC_MODE_VMASTER;*//*DEBUG_TMP*/
+	if (get_vsync_pts_inc_mode() && (tsync_mode != TSYNC_MODE_VMASTER))
+		tsync_mode = TSYNC_MODE_VMASTER;
 
 	if (tsync_mode == TSYNC_MODE_AMASTER)
 		t = timestamp_pcrscr_get();
@@ -1133,40 +1157,11 @@ int tsync_set_apts(unsigned int pts)
 				timestamp_pcrscr_set(pts);
 			}
 		}
-	} else if (oldmod != tsync_mode && tsync_mode == TSYNC_MODE_VMASTER)
+	} else if ((oldmod != tsync_mode) && (tsync_mode == TSYNC_MODE_VMASTER))
 		timestamp_pcrscr_set(timestamp_vpts_get());
-
 	return 0;
 }
 EXPORT_SYMBOL(tsync_set_apts);
-
-void tsync_init(void)
-{
-	if (tsync_flag & TSYNC_INIT_STATE)
-		return;
-
-	tsync_flag |= TSYNC_INIT_STATE;
-
-	/* init audio pts to -1, others to 0 */
-	timestamp_apts_set(-1);
-	timestamp_vpts_set(0);
-	timestamp_pcrscr_set(0);
-
-	init_timer(&tsync_pcr_recover_timer);
-
-	tsync_pcr_recover_timer.function = tsync_pcr_recover_timer_func;
-	tsync_pcr_recover_timer.expires = jiffies + PCR_CHECK_INTERVAL;
-	pcr_sync_stat = PCR_SYNC_UNSET;
-	pcr_recover_trigger = 0;
-
-	add_timer(&tsync_pcr_recover_timer);
-
-	init_timer(&tsync_state_switch_timer);
-	tsync_state_switch_timer.function = tsync_state_switch_timer_fun;
-	tsync_state_switch_timer.expires = jiffies + msecs_to_jiffies(10);
-
-	add_timer(&tsync_state_switch_timer);
-}
 
 /*********************************************************/
 
@@ -2087,22 +2082,34 @@ static int __init tsync_module_init(void)
 		return r;
 	}
 
-	tsync_pcr_init();
+	/* init audio pts to -1, others to 0 */
+	timestamp_apts_set(-1);
+	timestamp_vpts_set(0);
+	timestamp_pcrscr_set(0);
 
+	init_timer(&tsync_pcr_recover_timer);
+
+	tsync_pcr_recover_timer.function = tsync_pcr_recover_timer_func;
+	tsync_pcr_recover_timer.expires = jiffies + PCR_CHECK_INTERVAL;
+	pcr_sync_stat = PCR_SYNC_UNSET;
+	pcr_recover_trigger = 0;
+
+	add_timer(&tsync_pcr_recover_timer);
+
+	init_timer(&tsync_state_switch_timer);
+	tsync_state_switch_timer.function = tsync_state_switch_timer_fun;
+	tsync_state_switch_timer.expires = jiffies + 1;
+
+	add_timer(&tsync_state_switch_timer);
 	REG_PATH_CONFIGS("media.tsync", tsync_configs);
-
 	return 0;
 }
 
 static void __exit tsync_module_exit(void)
 {
-	if (tsync_flag & TSYNC_INIT_STATE) {
 		del_timer_sync(&tsync_pcr_recover_timer);
-		del_timer_sync(&tsync_state_switch_timer);
-	}
 
 	class_unregister(&tsync_class);
-	tsync_pcr_exit();
 }
 
 module_init(tsync_module_init);

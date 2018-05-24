@@ -231,49 +231,55 @@ int calculation_stream_delayed_ms(u8 type, u32 *latestbitrate,
 		outtime = pTable->last_checkout_pts;
 	timestampe_delayed = (pTable->last_checkin_pts - outtime) / 90;
 	pTable->last_pts_delay_ms = timestampe_delayed;
-#if 0
-	if ((timestampe_delayed < 10
-		 || abs(pTable->last_pts_delay_ms - timestampe_delayed) > 3000)
-		&& pTable->last_avg_bitrate > 0) {
-		int diff =
-			pTable->last_checkin_offset -
+	if (get_buf_by_type_cb && stbuf_level_cb && stbuf_space_cb) {
+		if ((timestampe_delayed < 10)
+			|| ((abs(pTable->last_pts_delay_ms - timestampe_delayed)
+			> 3000) && (pTable->last_avg_bitrate > 0))) {
+			int diff = pTable->last_checkin_offset -
 			pTable->last_checkout_offset;
 		int diff2;
 		int delay_ms;
 
 		/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 		if (has_hevc_vdec()) {
-			if (pTable->hevc) {
-				diff2 =
-					stbuf_level(get_buf_by_type(
+			if (pTable->hevc)
+				diff2 = stbuf_level_cb
+						(get_buf_by_type_cb(
 								PTS_TYPE_HEVC));
-			} else
-				diff2 = stbuf_level(get_buf_by_type(type));
-		} else
+			else
+				diff2 = stbuf_level_cb
+						(get_buf_by_type_cb(type));
+			} else{
 			/* #endif */
-			diff2 = stbuf_level(get_buf_by_type(type));
+					diff2 = stbuf_level_cb
+						(get_buf_by_type_cb(type));
+				}
 		/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
-		if (has_hevc_vdec()) {
-			if (pTable->hevc) {
-				if (diff2 >
-					stbuf_space(get_buf_by_type(
+		if (has_hevc_vdec() == 1) {
+			if (pTable->hevc > 0) {
+				if (diff2 > stbuf_space_cb(
+						get_buf_by_type_cb(
 							PTS_TYPE_HEVC)))
 					diff = diff2;
 			} else {
-				if (diff2 > stbuf_space(get_buf_by_type(type)))
+					if (diff2 > stbuf_space_cb(
+						get_buf_by_type_cb(
+						type)))
 					diff = diff2;
 			}
 		} else
 			/* #endif */
 		{
-			if (diff2 > stbuf_space(get_buf_by_type(type)))
+			if (diff2 > stbuf_space_cb(
+						get_buf_by_type_cb(
+						type)))
 				diff = diff2;
 		}
 		delay_ms = diff * 1000 / (1 + pTable->last_avg_bitrate / 8);
-
-		if (timestampe_delayed < 10
-			|| (abs(timestampe_delayed - delay_ms) > 3 * 1000
-				&& delay_ms > 1000)) {
+		if ((timestampe_delayed < 10) ||
+			((abs
+			(timestampe_delayed - delay_ms) > (3 * 1000))
+			&& (delay_ms > 1000))) {
 			/*
 			 *pr_info
 			 *("%d:recalculated ptsdelay=%dms bitratedelay=%d ",
@@ -285,7 +291,8 @@ int calculation_stream_delayed_ms(u8 type, u32 *latestbitrate,
 			timestampe_delayed = delay_ms;
 		}
 	}
-#endif
+	}
+
 	if (latestbitrate)
 		*latestbitrate = pTable->last_bitrate;
 
@@ -1343,9 +1350,6 @@ int pts_start(u8 type)
 	ulong flags;
 	struct pts_table_s *pTable;
 
-	/*tsync init.*/
-	tsync_init();
-
 	if (type >= PTS_TYPE_MAX)
 		return -EINVAL;
 	/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
@@ -1492,10 +1496,6 @@ int pts_stop(u8 type)
 
 		if (type == PTS_TYPE_AUDIO)
 			timestamp_apts_set(-1);
-
-		if (type == PTS_TYPE_VIDEO || type == PTS_TYPE_HEVC)
-			timestamp_checkin_firstvpts_set(0xffffffff);
-
 		tsync_mode_reinit();
 		return 0;
 

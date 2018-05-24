@@ -46,6 +46,33 @@ enum tsync_mode_e {
 
 extern bool disable_slow_sync;
 
+typedef u8 (*pfun_tsdemux_pcrscr_valid)(void);
+extern pfun_tsdemux_pcrscr_valid tsdemux_pcrscr_valid_cb;
+
+typedef u32 (*pfun_tsdemux_pcrscr_get)(void);
+extern pfun_tsdemux_pcrscr_get tsdemux_pcrscr_get_cb;
+
+typedef u32 (*pfun_tsdemux_first_pcrscr_get)(void);
+extern pfun_tsdemux_first_pcrscr_get tsdemux_first_pcrscr_get_cb;
+
+typedef u8 (*pfun_tsdemux_pcraudio_valid)(void);
+extern pfun_tsdemux_pcraudio_valid tsdemux_pcraudio_valid_cb;
+
+typedef u8 (*pfun_tsdemux_pcrvideo_valid)(void);
+extern pfun_tsdemux_pcrvideo_valid tsdemux_pcrvideo_valid_cb;
+
+typedef struct stream_buf_s *(*pfun_get_buf_by_type)(u32 type);
+extern pfun_get_buf_by_type get_buf_by_type_cb;
+
+typedef u32 (*pfun_stbuf_level)(struct stream_buf_s *buf);
+extern pfun_stbuf_level stbuf_level_cb;
+
+typedef u32 (*pfun_stbuf_space)(struct stream_buf_s *buf);
+extern pfun_stbuf_space stbuf_space_cb;
+
+typedef u32 (*pfun_stbuf_size)(struct stream_buf_s *buf);
+extern pfun_stbuf_size stbuf_size_cb;
+
 #ifdef MODIFY_TIMESTAMP_INC_WITH_PLL
 extern void set_timestamp_inc_factor(u32 factor);
 #endif

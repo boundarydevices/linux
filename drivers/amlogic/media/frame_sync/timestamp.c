@@ -18,6 +18,7 @@
 #define DEBUG
 #include <linux/module.h>
 #include <linux/amlogic/media/frame_sync/tsync.h>
+#include <linux/amlogic/media/frame_sync/tsync_pcr.h>
 #include <linux/amlogic/media/utils/vdec_reg.h>
 #include <linux/amlogic/media/registers/register.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -34,8 +35,9 @@ static u32 system_time_up;
 static u32 audio_pts_up;
 static u32 audio_pts_started;
 static u32 first_vpts;
-static u32 first_checkin_vpts = 0xffffffff;
+static u32 first_checkin_vpts;
 static u32 first_apts;
+static u32 pcrscr_lantcy = 800*90;
 
 static u32 system_time_scale_base = 1;
 static u32 system_time_scale_remainder;
@@ -112,6 +114,17 @@ EXPORT_SYMBOL(timestamp_apts_started);
 
 u32 timestamp_pcrscr_get(void)
 {
+	if (tsdemux_pcrscr_valid_cb && tsdemux_pcrscr_valid_cb()) {
+		if (tsync_pcr_demux_pcr_used() == 0) {
+			return system_time;
+			}
+		else {
+			if (tsdemux_pcrscr_get_cb)
+				return tsdemux_pcrscr_get_cb()-pcrscr_lantcy;
+			else
+				return system_time;
+		}
+	} else
 	return system_time;
 }
 EXPORT_SYMBOL(timestamp_pcrscr_get);
@@ -125,7 +138,7 @@ EXPORT_SYMBOL(timestamp_pcrscr_set);
 void timestamp_firstvpts_set(u32 pts)
 {
 	first_vpts = pts;
-	pr_debug("video first pts = %x\n", first_vpts);
+	pr_info("video first pts = %x\n", first_vpts);
 }
 EXPORT_SYMBOL(timestamp_firstvpts_set);
 
@@ -138,7 +151,7 @@ EXPORT_SYMBOL(timestamp_firstvpts_get);
 void timestamp_checkin_firstvpts_set(u32 pts)
 {
 	first_checkin_vpts = pts;
-	pr_debug("video first checkin pts = %x\n", first_checkin_vpts);
+	pr_info("video first checkin pts = %x\n", first_checkin_vpts);
 }
 EXPORT_SYMBOL(timestamp_checkin_firstvpts_set);
 
