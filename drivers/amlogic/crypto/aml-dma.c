@@ -42,6 +42,9 @@
 #include <linux/of_platform.h>
 #include "aml-crypto-dma.h"
 
+int debug = 2;
+/*module_param(debug, int, 0644);*/
+
 void __iomem *cryptoreg;
 
 struct meson_dma_data {

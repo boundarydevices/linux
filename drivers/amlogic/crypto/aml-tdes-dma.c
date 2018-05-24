@@ -323,9 +323,11 @@ static int aml_tdes_crypt_dma(struct aml_tdes_dev *dd, struct dma_dsc *dsc,
 			PAGE_SIZE, DMA_TO_DEVICE);
 
 	aml_dma_debug(dsc, nents, __func__, dd->thread, dd->status);
+
+	/* Start DMA transfer */
 	aml_write_crypto_reg(dd->thread,
 			(uintptr_t) dd->dma_descript_tab | 2);
-	return 0;
+	return -EINPROGRESS;
 }
 
 static int aml_tdes_crypt_dma_start(struct aml_tdes_dev *dd)
@@ -449,7 +451,7 @@ static int aml_tdes_handle_queue(struct aml_tdes_dev *dd,
 	if (!err)
 		err = aml_tdes_crypt_dma_start(dd);
 
-	if (err) {
+	if (err != -EINPROGRESS) {
 		/* tdes_task will not finish it, so do it here */
 		aml_tdes_finish_req(dd, err);
 		tasklet_schedule(&dd->queue_task);
@@ -784,7 +786,7 @@ static void aml_tdes_done_task(unsigned long data)
 
 		if (!err)
 			err = aml_tdes_crypt_dma_start(dd);
-		if (!err)
+		if (err == -EINPROGRESS)
 			return; /* DMA started. Not fininishing. */
 	}
 

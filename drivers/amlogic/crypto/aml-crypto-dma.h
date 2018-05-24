@@ -128,4 +128,14 @@ u32 get_dma_t0_offset(void);
 u32 get_dma_sts0_offset(void);
 
 extern void __iomem *cryptoreg;
+
+extern int debug;
+#define dbgp(level, fmt, arg...)                 \
+	do {                                            \
+		if (debug >= level)                         \
+			pr_debug("%s: " fmt, __func__, ## arg);\
+		else                                            \
+			pr_info("%s: " fmt, __func__, ## arg); \
+	} while (0)
+
 #endif

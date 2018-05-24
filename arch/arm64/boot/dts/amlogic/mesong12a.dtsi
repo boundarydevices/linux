@@ -1762,6 +1762,24 @@
 	mem_size = <0x0 0x1000>;
 	status = "disabled";
 	};
+
+	aml_dma {
+		compatible = "amlogic,aml_txlx_dma";
+		reg = <0x0 0xff63e000 0x0 0x48>;
+		interrupts = <0 180 1>;
+
+		aml_aes {
+			compatible = "amlogic,aes_g12a_dma";
+			dev_name = "aml_aes_dma";
+			status = "okay";
+		};
+
+		aml_sha {
+			compatible = "amlogic,sha_dma";
+			dev_name = "aml_sha_dma";
+			status = "okay";
+		};
+	};
 };/* end of / */
 
 &pinctrl_aobus {

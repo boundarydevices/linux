@@ -5,7 +5,7 @@ These are the HW cryptographic accelerators found on Amlogic products.
 * Advanced Encryption Standard (AES)
 
 Required properties:
-- compatible : Should be "amlogic,aes".
+- compatible : Should be "amlogic,aes" for aes-128/192/256 or "amlogic,aes_g12a_dma" for aes-128/256
 - dev_name : Should be "aml_aes"
 - interrupts: Should contain the IRQ line for the AES.
 - resets: Should contain the clock to enable the module

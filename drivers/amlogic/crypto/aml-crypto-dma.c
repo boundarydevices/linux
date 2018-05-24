@@ -75,41 +75,41 @@ void aml_dma_debug(struct dma_dsc *dsc, u32 nents, const char *msg,
 {
 	u32 i = 0;
 
-	pr_debug("begin %s\n", msg);
-	pr_debug("reg(%u) = 0x%8x\n", thread,
+	dbgp(0, "begin %s\n", msg);
+	dbgp(0, "reg(%u) = 0x%8x\n", thread,
 			aml_read_crypto_reg(thread));
-	pr_debug("reg(%u) = 0x%8x\n", status,
+	dbgp(0, "reg(%u) = 0x%8x\n", status,
 			aml_read_crypto_reg(status));
 	for (i = 0; i < nents; i++) {
-		pr_debug("desc (%4x) (len) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (len) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.length);
-		pr_debug("desc (%4x) (irq) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (irq) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.irq);
-		pr_debug("desc (%4x) (eoc) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (eoc) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.eoc);
-		pr_debug("desc (%4x) (lop) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (lop) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.loop);
-		pr_debug("desc (%4x) (mod) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (mod) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.mode);
-		pr_debug("desc (%4x) (beg) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (beg) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.begin);
-		pr_debug("desc (%4x) (end) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (end) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.end);
-		pr_debug("desc (%4x) (opm) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (opm) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.op_mode);
-		pr_debug("desc (%4x) (enc) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (enc) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.enc_sha_only);
-		pr_debug("desc (%4x) (blk) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (blk) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.block);
-		pr_debug("desc (%4x) (err) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (err) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.error);
-		pr_debug("desc (%4x) (own) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (own) = 0x%8x\n", i,
 				dsc[i].dsc_cfg.b.owner);
-		pr_debug("desc (%4x) (src) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (src) = 0x%8x\n", i,
 				dsc[i].src_addr);
-		pr_debug("desc (%4x) (tgt) = 0x%8x\n", i,
+		dbgp(0, "desc (%4x) (tgt) = 0x%8x\n", i,
 				dsc[i].tgt_addr);
 	}
-	pr_debug("end %s\n", msg);
+	dbgp(0, "end %s\n", msg);
 }
 EXPORT_SYMBOL_GPL(aml_dma_debug);

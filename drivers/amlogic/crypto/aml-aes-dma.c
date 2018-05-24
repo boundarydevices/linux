@@ -40,6 +40,8 @@
 #include <crypto/hash.h>
 #include <crypto/internal/hash.h>
 #include <linux/amlogic/iomap.h>
+#include <linux/of_platform.h>
+#include <crypto/skcipher.h>
 #include "aml-crypto-dma.h"
 
 /* AES flags */
@@ -65,6 +67,7 @@ struct aml_aes_ctx {
 	u32		key[AES_KEYSIZE_256 / sizeof(u32)];
 
 	u16		block_size;
+	struct crypto_skcipher	*fallback;
 };
 
 struct aml_aes_reqctx {
@@ -116,6 +119,11 @@ struct aml_aes_dev {
 struct aml_aes_drv {
 	struct list_head	dev_list;
 	spinlock_t		lock;
+};
+
+struct aml_aes_info {
+	struct crypto_alg *algs;
+	uint32_t num_algs;
 };
 
 static struct aml_aes_drv aml_aes = {
@@ -220,6 +228,7 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 		uint32_t *nents, size_t total)
 {
 	size_t count = 0;
+	size_t process = 0;
 	size_t count_total = 0;
 	size_t count_sg = 0;
 	uint32_t i = 0;
@@ -229,10 +238,12 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 	dma_addr_t addr_in, addr_out;
 
 	while (total && in_sg && out_sg && (in_sg->length == out_sg->length)
+			&& IS_ALIGNED(in_sg->length, AES_BLOCK_SIZE)
 			&& *nents < MAX_NUM_TABLES) {
-		count += min_t(unsigned int, total, in_sg->length);
+		process = min_t(unsigned int, total, in_sg->length);
+		count += process;
 		*nents += 1;
-		total -= count;
+		total -= process;
 		in_sg = sg_next(in_sg);
 		out_sg = sg_next(out_sg);
 	}
@@ -304,9 +315,12 @@ static int aml_aes_hw_init(struct aml_aes_dev *dd)
 static void aml_aes_finish_req(struct aml_aes_dev *dd, int32_t err)
 {
 	struct ablkcipher_request *req = dd->req;
+	unsigned long flags;
 
 	dd->flags &= ~AES_FLAGS_BUSY;
+	spin_lock_irqsave(&dd->dma->dma_lock, flags);
 	dd->dma->dma_busy = 0;
+	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 	req->base.complete(&req->base, err);
 }
 
@@ -339,8 +353,10 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 			PAGE_SIZE, DMA_TO_DEVICE);
 
 	aml_dma_debug(dsc, nents, __func__, dd->thread, dd->status);
+
+	/* Start DMA transfer */
 	aml_write_crypto_reg(dd->thread, dd->dma_descript_tab | 2);
-	return 0;
+	return -EINPROGRESS;
 }
 
 static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
@@ -371,37 +387,34 @@ static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
 		dd->flags |= AES_FLAGS_FAST;
 		nents = dd->fast_nents;
 		dd->fast_total = count;
+		dbgp(1, "use fast dma: n:%u, t:%zd\n",
+				dd->fast_nents, dd->fast_total);
 	} else {
 		/* slow dma */
 		/* use cache buffers */
 		count = aml_aes_sg_copy(&dd->in_sg, &dd->in_offset,
-				dd->buf_in, dd->buflen,
-				((dd->total + dd->ctx->block_size - 1)
-				 / dd->ctx->block_size)
-				* dd->ctx->block_size, 0);
+				dd->buf_in, dd->buflen, dd->total, 0);
 		addr_in = dd->dma_addr_in;
 		addr_out = dd->dma_addr_out;
 		dd->dma_size = count;
-		dma_sync_single_for_device(dd->dev, addr_in, dd->dma_size,
+		dma_sync_single_for_device(dd->dev, addr_in,
+				((dd->dma_size + AES_BLOCK_SIZE - 1)
+				/ AES_BLOCK_SIZE) * AES_BLOCK_SIZE,
 				DMA_TO_DEVICE);
 		dsc->src_addr = (uint32_t)addr_in;
 		dsc->tgt_addr = (uint32_t)addr_out;
 		dsc->dsc_cfg.d32 = 0;
-		dsc->dsc_cfg.b.length = ((count + dd->ctx->block_size - 1)
-				/ dd->ctx->block_size) * dd->ctx->block_size;
+		/* We align data to AES_BLOCK_SIZE for old aml-dma devices */
+		dsc->dsc_cfg.b.length = ((count + AES_BLOCK_SIZE - 1)
+				/ AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
 		nents = 1;
 		dd->flags &= ~AES_FLAGS_FAST;
+		dbgp(1, "use slow dma: cnt:%zd, len:%d\n",
+				count, dsc->dsc_cfg.b.length);
 	}
 	dd->total -= count;
 
 	err = aml_aes_crypt_dma(dd, dsc, nents);
-
-	if (err && (dd->flags & AES_FLAGS_FAST)) {
-		dma_unmap_sg(dd->dev, dd->in_sg,
-				dd->fast_nents, DMA_TO_DEVICE);
-		dma_unmap_sg(dd->dev, dd->out_sg,
-				dd->fast_nents, DMA_TO_DEVICE);
-	}
 
 	return err;
 }
@@ -487,7 +500,7 @@ static int aml_aes_handle_queue(struct aml_aes_dev *dd,
 			err = -EINVAL;
 		}
 	}
-	if (err) {
+	if (err != -EINPROGRESS) {
 		/* aes_task will not finish it, so do it here */
 		aml_aes_finish_req(dd, err);
 		tasklet_schedule(&dd->queue_task);
@@ -516,7 +529,9 @@ static int aml_aes_crypt_dma_stop(struct aml_aes_dev *dd)
 						16, 0);
 		} else {
 			dma_sync_single_for_cpu(dd->dev, dd->dma_addr_out,
-					dd->dma_size, DMA_FROM_DEVICE);
+					((dd->dma_size + AES_BLOCK_SIZE - 1)
+				/ AES_BLOCK_SIZE) * AES_BLOCK_SIZE,
+					DMA_FROM_DEVICE);
 
 			/* copy data */
 			count = aml_aes_sg_copy(&dd->out_sg, &dd->out_offset,
@@ -526,6 +541,7 @@ static int aml_aes_crypt_dma_stop(struct aml_aes_dev *dd)
 				err = -EINVAL;
 				pr_err("not all data converted: %zu\n", count);
 			}
+			/* install IV for CBC */
 			if (dd->flags & AES_FLAGS_CBC) {
 				memcpy(dd->req->info, dd->buf_out +
 						dd->dma_size - 16, 16);
@@ -617,6 +633,7 @@ static int aml_aes_crypt(struct ablkcipher_request *req, unsigned long mode)
 			crypto_ablkcipher_reqtfm(req));
 	struct aml_aes_reqctx *rctx = ablkcipher_request_ctx(req);
 	struct aml_aes_dev *dd;
+	int ret;
 
 	if (!IS_ALIGNED(req->nbytes, AES_BLOCK_SIZE) &&
 			!(mode & AES_FLAGS_CTR)) {
@@ -624,6 +641,30 @@ static int aml_aes_crypt(struct ablkcipher_request *req, unsigned long mode)
 		return -EINVAL;
 	}
 	ctx->block_size = AES_BLOCK_SIZE;
+
+	if (ctx->fallback && ctx->keylen == AES_KEYSIZE_192) {
+		char *__subreq_desc = kzalloc(sizeof(struct skcipher_request) +
+				crypto_skcipher_reqsize(ctx->fallback),
+				GFP_ATOMIC);
+		struct skcipher_request *subreq = (void *)__subreq_desc;
+
+		if (!subreq)
+			return -ENOMEM;
+
+		skcipher_request_set_tfm(subreq, ctx->fallback);
+		skcipher_request_set_callback(subreq, req->base.flags, NULL,
+					      NULL);
+		skcipher_request_set_crypt(subreq, req->src, req->dst,
+					   req->nbytes, req->info);
+
+		if (mode & AES_FLAGS_ENCRYPT)
+			ret = crypto_skcipher_encrypt(subreq);
+		else
+			ret = crypto_skcipher_decrypt(subreq);
+
+		skcipher_request_free(subreq);
+		return ret;
+	}
 
 	dd = aml_aes_find_dev(ctx);
 	if (!dd)
@@ -642,6 +683,7 @@ static int aml_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *key,
 	if (keylen != AES_KEYSIZE_128 && keylen != AES_KEYSIZE_192 &&
 			keylen != AES_KEYSIZE_256) {
 		crypto_ablkcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
+		pr_err("aml-aes:invalid keysize: %d\n", keylen);
 		return -EINVAL;
 	}
 
@@ -649,6 +691,32 @@ static int aml_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *key,
 	ctx->keylen = keylen;
 
 	return 0;
+}
+
+static int aml_aes_lite_setkey(struct crypto_ablkcipher *tfm, const u8 *key,
+		unsigned int keylen)
+{
+	struct aml_aes_ctx *ctx = crypto_ablkcipher_ctx(tfm);
+	int ret = 0;
+
+	if (keylen != AES_KEYSIZE_128 && keylen != AES_KEYSIZE_192 &&
+			keylen != AES_KEYSIZE_256) {
+		crypto_ablkcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
+		pr_err("aml-aes-lite:invalid keysize: %d\n", keylen);
+		return -EINVAL;
+	}
+
+	memcpy(ctx->key, key, keylen);
+	ctx->keylen = keylen;
+
+	if (keylen == AES_KEYSIZE_192) {
+		crypto_skcipher_clear_flags(ctx->fallback, CRYPTO_TFM_REQ_MASK);
+		crypto_skcipher_set_flags(ctx->fallback, tfm->base.crt_flags &
+				CRYPTO_TFM_REQ_MASK);
+		ret = crypto_skcipher_setkey(ctx->fallback, key, keylen);
+	}
+
+	return ret;
 }
 
 static int aml_aes_ecb_encrypt(struct ablkcipher_request *req)
@@ -690,7 +758,10 @@ static int aml_aes_ctr_decrypt(struct ablkcipher_request *req)
 
 static int aml_aes_cra_init(struct crypto_tfm *tfm)
 {
+	struct aml_aes_ctx *ctx = crypto_tfm_ctx(tfm);
+
 	tfm->crt_ablkcipher.reqsize = sizeof(struct aml_aes_reqctx);
+	ctx->fallback = NULL;
 
 	return 0;
 }
@@ -703,11 +774,11 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name         = "ecb(aes)",
 		.cra_driver_name  = "ecb-aes-aml",
-		.cra_priority   = 100,
+		.cra_priority   = 200,
 		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize  = AES_BLOCK_SIZE,
 		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
-		.cra_alignmask  = 0,
+		.cra_alignmask  = 0xf,
 		.cra_type       = &crypto_ablkcipher_type,
 		.cra_module     = THIS_MODULE,
 		.cra_init       = aml_aes_cra_init,
@@ -724,11 +795,11 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name         = "cbc(aes)",
 		.cra_driver_name  = "cbc-aes-aml",
-		.cra_priority   = 100,
+		.cra_priority   = 200,
 		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize  = AES_BLOCK_SIZE,
 		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
-		.cra_alignmask  = 0,
+		.cra_alignmask  = 0xf,
 		.cra_type       = &crypto_ablkcipher_type,
 		.cra_module     = THIS_MODULE,
 		.cra_init       = aml_aes_cra_init,
@@ -745,11 +816,11 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name        = "ctr(aes)",
 		.cra_driver_name = "ctr-aes-aml",
-		.cra_priority    = 100,
+		.cra_priority    = 200,
 		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
-		.cra_blocksize  = AES_BLOCK_SIZE,
+		.cra_blocksize  = 1,
 		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
-		.cra_alignmask  = 0,
+		.cra_alignmask  = 0xf,
 		.cra_type       = &crypto_ablkcipher_type,
 		.cra_module     = THIS_MODULE,
 		.cra_init       = aml_aes_cra_init,
@@ -764,6 +835,129 @@ static struct crypto_alg aes_algs[] = {
 		}
 	}
 };
+
+static int aml_aes_lite_cra_init(struct crypto_tfm *tfm)
+{
+	struct aml_aes_ctx *ctx = crypto_tfm_ctx(tfm);
+	const char *alg_name = crypto_tfm_alg_name(tfm);
+	const u32 flags = CRYPTO_ALG_ASYNC | CRYPTO_ALG_NEED_FALLBACK;
+
+	tfm->crt_ablkcipher.reqsize = sizeof(struct aml_aes_reqctx);
+
+	/* Allocate a fallback and abort if it failed. */
+	ctx->fallback = crypto_alloc_skcipher(alg_name, 0,
+					    flags);
+	if (IS_ERR(ctx->fallback)) {
+		pr_err("aml-aes: fallback '%s' could not be loaded.\n",
+				alg_name);
+		return PTR_ERR(ctx->fallback);
+	}
+
+	return 0;
+}
+
+static void aml_aes_lite_cra_exit(struct crypto_tfm *tfm)
+{
+	struct aml_aes_ctx *ctx = crypto_tfm_ctx(tfm);
+
+	if (ctx->fallback)
+		crypto_free_skcipher(ctx->fallback);
+
+	ctx->fallback = NULL;
+}
+
+static struct crypto_alg aes_lite_algs[] = {
+	{
+		.cra_name         = "ecb(aes)",
+		.cra_driver_name  = "ecb-aes-lite-aml",
+		.cra_priority   = 200,
+		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER |
+			CRYPTO_ALG_ASYNC | CRYPTO_ALG_NEED_FALLBACK,
+		.cra_blocksize  = AES_BLOCK_SIZE,
+		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
+		.cra_alignmask  = 0xf,
+		.cra_type       = &crypto_ablkcipher_type,
+		.cra_module     = THIS_MODULE,
+		.cra_init       = aml_aes_lite_cra_init,
+		.cra_exit       = aml_aes_lite_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize	=    AES_MIN_KEY_SIZE,
+			.max_keysize	=    AES_MAX_KEY_SIZE,
+			.ivsize		=    AES_BLOCK_SIZE,
+			.setkey		=    aml_aes_lite_setkey,
+			.encrypt	=    aml_aes_ecb_encrypt,
+			.decrypt	=    aml_aes_ecb_decrypt,
+		}
+	},
+	{
+		.cra_name         = "cbc(aes)",
+		.cra_driver_name  = "cbc-aes-lite-aml",
+		.cra_priority   = 200,
+		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER |
+			CRYPTO_ALG_ASYNC | CRYPTO_ALG_NEED_FALLBACK,
+		.cra_blocksize  = AES_BLOCK_SIZE,
+		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
+		.cra_alignmask  = 0xf,
+		.cra_type       = &crypto_ablkcipher_type,
+		.cra_module     = THIS_MODULE,
+		.cra_init       = aml_aes_lite_cra_init,
+		.cra_exit       = aml_aes_lite_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize	=    AES_MIN_KEY_SIZE,
+			.max_keysize	=    AES_MAX_KEY_SIZE,
+			.ivsize		=    AES_BLOCK_SIZE,
+			.setkey		=    aml_aes_lite_setkey,
+			.encrypt	=    aml_aes_cbc_encrypt,
+			.decrypt	=    aml_aes_cbc_decrypt,
+		}
+	},
+	{
+		.cra_name        = "ctr(aes)",
+		.cra_driver_name = "ctr-aes-lite-aml",
+		.cra_priority    = 200,
+		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER |
+			CRYPTO_ALG_ASYNC | CRYPTO_ALG_NEED_FALLBACK,
+		.cra_blocksize  = 1,
+		.cra_ctxsize    = sizeof(struct aml_aes_ctx),
+		.cra_alignmask  = 0xf,
+		.cra_type       = &crypto_ablkcipher_type,
+		.cra_module     = THIS_MODULE,
+		.cra_init       = aml_aes_lite_cra_init,
+		.cra_exit       = aml_aes_lite_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize	=    AES_MIN_KEY_SIZE,
+			.max_keysize	=    AES_MAX_KEY_SIZE,
+			.ivsize		=    AES_BLOCK_SIZE,
+			.setkey		=    aml_aes_lite_setkey,
+			.encrypt	=    aml_aes_ctr_encrypt,
+			.decrypt	=    aml_aes_ctr_decrypt,
+		}
+	},
+};
+
+struct aml_aes_info aml_gxl_aes = {
+	.algs = aes_algs,
+	.num_algs = ARRAY_SIZE(aes_algs),
+};
+
+struct aml_aes_info aml_aes_lite = {
+	.algs = aes_lite_algs,
+	.num_algs = ARRAY_SIZE(aes_lite_algs),
+};
+
+#ifdef CONFIG_OF
+static const struct of_device_id aml_aes_dt_match[] = {
+	{	.compatible = "amlogic,aes_dma",
+		.data = &aml_gxl_aes,
+	},
+	{	.compatible = "amlogic,aes_g12a_dma",
+		.data = &aml_aes_lite,
+	},
+	{},
+};
+#else
+#define aml_aes_dt_match NULL
+#endif
 
 static void aml_aes_queue_task(unsigned long data)
 {
@@ -791,14 +985,16 @@ static void aml_aes_done_task(unsigned long data)
 			for (i = 0; i < dd->fast_nents; i++) {
 				dd->in_sg = sg_next(dd->in_sg);
 				dd->out_sg = sg_next(dd->out_sg);
-				if (!dd->in_sg || !dd->out_sg)
+				if (!dd->in_sg || !dd->out_sg) {
+					pr_err("aml-aes: sg invalid\n");
 					err = -EINVAL;
+				}
 			}
 		}
 
 		if (!err)
 			err = aml_aes_crypt_dma_start(dd);
-		if (!err)
+		if (err == -EINPROGRESS)
 			return; /* DMA started. Not fininishing. */
 	}
 
@@ -826,20 +1022,22 @@ static irqreturn_t aml_aes_irq(int irq, void *dev_id)
 	return IRQ_NONE;
 }
 
-static void aml_aes_unregister_algs(struct aml_aes_dev *dd)
+static void aml_aes_unregister_algs(struct aml_aes_dev *dd,
+		const struct aml_aes_info *aes_info)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(aes_algs); i++)
-		crypto_unregister_alg(&aes_algs[i]);
+	for (i = 0; i < aes_info->num_algs; i++)
+		crypto_unregister_alg(&(aes_info->algs[i]));
 }
 
-static int aml_aes_register_algs(struct aml_aes_dev *dd)
+static int aml_aes_register_algs(struct aml_aes_dev *dd,
+		const struct aml_aes_info *aes_info)
 {
 	int err, i, j;
 
-	for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
-		err = crypto_register_alg(&aes_algs[i]);
+	for (i = 0; i < aes_info->num_algs; i++) {
+		err = crypto_register_alg(&(aes_info->algs[i]));
 		if (err)
 			goto err_aes_algs;
 	}
@@ -857,7 +1055,9 @@ static int aml_aes_probe(struct platform_device *pdev)
 {
 	struct aml_aes_dev *aes_dd;
 	struct device *dev = &pdev->dev;
+	const struct of_device_id *match;
 	int err = -EPERM;
+	const struct aml_aes_info *aes_info = NULL;
 
 	aes_dd = kzalloc(sizeof(struct aml_aes_dev), GFP_KERNEL);
 	if (aes_dd == NULL) {
@@ -865,6 +1065,14 @@ static int aml_aes_probe(struct platform_device *pdev)
 		goto aes_dd_err;
 	}
 
+	match = of_match_device(aml_aes_dt_match, &pdev->dev);
+	if (!match) {
+		pr_err("%s: cannot find match dt\n", __func__);
+		err = -EINVAL;
+		kfree(aes_dd);
+		goto aes_dd_err;
+	}
+	aes_info = match->data;
 	aes_dd->dev = dev;
 	aes_dd->dma = dev_get_drvdata(dev->parent);
 	aes_dd->thread = aes_dd->dma->thread;
@@ -899,7 +1107,7 @@ static int aml_aes_probe(struct platform_device *pdev)
 	list_add_tail(&aes_dd->list, &aml_aes.dev_list);
 	spin_unlock(&aml_aes.lock);
 
-	err = aml_aes_register_algs(aes_dd);
+	err = aml_aes_register_algs(aes_dd, aes_info);
 	if (err)
 		goto err_algs;
 
@@ -929,15 +1137,23 @@ aes_dd_err:
 static int aml_aes_remove(struct platform_device *pdev)
 {
 	static struct aml_aes_dev *aes_dd;
+	const struct of_device_id *match;
+	const struct aml_aes_info *aes_info = NULL;
 
 	aes_dd = platform_get_drvdata(pdev);
 	if (!aes_dd)
 		return -ENODEV;
+	match = of_match_device(aml_aes_dt_match, &pdev->dev);
+	if (!match) {
+		pr_err("%s: cannot find match dt\n", __func__);
+		return -EINVAL;
+	}
+	aes_info = match->data;
 	spin_lock(&aml_aes.lock);
 	list_del(&aes_dd->list);
 	spin_unlock(&aml_aes.lock);
 
-	aml_aes_unregister_algs(aes_dd);
+	aml_aes_unregister_algs(aes_dd, aes_info);
 
 	tasklet_kill(&aes_dd->done_task);
 	tasklet_kill(&aes_dd->queue_task);
@@ -950,16 +1166,6 @@ static int aml_aes_remove(struct platform_device *pdev)
 
 	return 0;
 }
-
-#ifdef CONFIG_OF
-static const struct of_device_id aml_aes_dt_match[] = {
-	{	.compatible = "amlogic,aes_dma",
-	},
-	{},
-};
-#else
-#define aml_aes_dt_match NULL
-#endif
 
 static struct platform_driver aml_aes_driver = {
 	.probe		= aml_aes_probe,
