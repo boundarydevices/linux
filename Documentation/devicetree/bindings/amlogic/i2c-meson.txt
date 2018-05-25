@@ -7,6 +7,7 @@ Required properties:
 					or "amlogic,meson-txlx-i2c"
 					or "amlogic,meson8b-i2c"
   					or "amlogic,meson-g12a-i2c"
+					or "amlogic,meson-g12b-i2c"
 
  - reg: physical address and length of the device registers
  - interrupts: a single interrupt specifier

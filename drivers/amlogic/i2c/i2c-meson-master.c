@@ -673,6 +673,7 @@ static const struct of_device_id meson_i2c_match[] = {
 	{ .compatible = "amlogic,meson-axg-i2c", .data = &i2c_axg_data },
 	{ .compatible = "amlogic,meson-txlx-i2c", .data = &i2c_txlx_data },
 	{ .compatible = "amlogic,meson-g12a-i2c", .data = &i2c_g12a_data },
+	{ .compatible = "amlogic,meson-g12b-i2c", .data = &i2c_g12a_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, meson_i2c_match);
