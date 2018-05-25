@@ -186,7 +186,9 @@ static void push_ip(struct page_trace *base, struct page_trace *ip)
 		base[i] = base[i - 1];
 
 	/* debug check */
+#if DEBUG_PAGE_TRACE
 	check_trace_valid(base);
+#endif
 	end = (((unsigned long)trace_buffer) + ptrace_size);
 	WARN_ON((unsigned long)(base + trace_step - 1) >= end);
 
