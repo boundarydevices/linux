@@ -1551,7 +1551,7 @@ int v4l2_resister_frontend(struct v4l2_frontend *v4l2_fe)
 
 	v4l2dev->video_dev->dev.init_name = DEVICE_NAME;
 	ret = video_register_device(v4l2dev->video_dev,
-			VFL_TYPE_GRABBER, -1);
+			VFL_TYPE_GRABBER, 36);/* -1 --> 36 */
 	if (ret) {
 		pr_err("register video device fail.\n");
 		goto vdev_fail;
