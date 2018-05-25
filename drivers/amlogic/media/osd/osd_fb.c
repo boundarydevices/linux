@@ -1488,7 +1488,7 @@ static int osd_open(struct fb_info *info, int arg)
 	/* clear osd buffer if not logo layer */
 	if (((logo_index < 0) || (logo_index != fb_index)) ||
 		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_AXG) ||
-		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12A)) {
+		(osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_G12A)) {
 		osd_log_info("set logo loaded\n");
 		set_logo_loaded();
 	}

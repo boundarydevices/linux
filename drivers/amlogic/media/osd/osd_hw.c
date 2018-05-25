@@ -1635,7 +1635,7 @@ u32 osd_get_afbc(u32 index)
 		if (osd_hw.osd_meson_dev.cpu_id ==
 			__MESON_CPU_MAJOR_ID_GXM)
 			afbc_type = 1;
-		else if (osd_hw.osd_meson_dev.cpu_id ==
+		else if (osd_hw.osd_meson_dev.cpu_id >=
 			__MESON_CPU_MAJOR_ID_G12A)
 			afbc_type = 2;
 		else
@@ -7000,6 +7000,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		/* init vpu fifo control register */
 		data32 = osd_reg_read(VPP_OFIFO_SIZE);
 		if (osd_hw.osd_meson_dev.osd_ver >= OSD_HIGH_ONE) {
+			data32 = 0; /* reset value 0xfff0fff */
 			data32 |= (osd_hw.osd_meson_dev.vpp_fifo_len) << 20;
 			data32 |= osd_hw.osd_meson_dev.vpp_fifo_len + 1;
 		} else
