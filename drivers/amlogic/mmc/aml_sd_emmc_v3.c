@@ -1394,7 +1394,8 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 
 	if (aml_card_type_sdio(pdata)) {
 		if ((host->data->chip_type == MMC_CHIP_GXLX)
-				|| (host->data->chip_type == MMC_CHIP_G12A))
+				|| (host->data->chip_type == MMC_CHIP_G12A)
+				|| (host->data->chip_type == MMC_CHIP_G12B))
 			err = _aml_sd_emmc_execute_tuning(mmc, opcode,
 					&tuning_data, adj_win_start);
 		else {

@@ -17,6 +17,7 @@
 
 /dts-v1/;
 
+#include "partition_mbox_normal.dtsi"
 #include "mesong12b.dtsi"
 
 / {
@@ -157,6 +158,40 @@
 			0x1b05  0xfd
 			0x1c59  0xf752
 			0xffff  0x0>; /* ending flag */
+	};
+
+	bt-dev{
+		compatible = "amlogic, bt-dev";
+		dev_name = "bt-dev";
+		status = "okay";
+		gpio_reset = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
+		gpio_hostwake = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
+	};
+
+	wifi{
+		compatible = "amlogic, aml_wifi";
+		dev_name = "aml_wifi";
+		status = "okay";
+		interrupt_pin = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
+		irq_trigger_type = "GPIO_IRQ_LOW";
+		power_on_pin = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
+		dhd_static_buf;	//if use bcm wifi, config dhd_static_buf
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm_e_pins>;
+		pwm_config = <&wifi_pwm_conf>;
+	};
+
+	wifi_pwm_conf:wifi_pwm_conf{
+		pwm_channel1_conf {
+			pwms = <&pwm_ef MESON_PWM_0 30040 0>;
+			duty-cycle = <15020>;
+			times = <10>;
+		};
+		pwm_channel2_conf {
+			pwms = <&pwm_ef MESON_PWM_2 30030 0>;
+			duty-cycle = <15015>;
+			times = <12>;
+		};
 	};
 
 	codec_mm {
@@ -716,9 +751,39 @@
 	 */
 	tv_bit_mode = <1>;
 };
+
+&sd_emmc_c {
+	status = "okay";
+	emmc {
+		caps = "MMC_CAP_8_BIT_DATA",
+			 "MMC_CAP_MMC_HIGHSPEED",
+			 "MMC_CAP_SD_HIGHSPEED",
+			 "MMC_CAP_NONREMOVABLE",
+			/* "MMC_CAP_1_8V_DDR", */
+			 "MMC_CAP_HW_RESET",
+			 "MMC_CAP_ERASE",
+			 "MMC_CAP_CMD23";
+	/*	caps2 = "MMC_CAP2_HS200";*/
+		/* "MMC_CAP2_HS400";*/
+		f_min = <400000>;
+		f_max = <200000000>;
+	};
+};
+
 &sd_emmc_b {
-	status = "disabled";
+	status = "okay";
 	sd {
+		caps = "MMC_CAP_4_BIT_DATA",
+			 "MMC_CAP_MMC_HIGHSPEED",
+			 "MMC_CAP_SD_HIGHSPEED";
+		f_min = <400000>;
+		f_max = <50000000>;
+	};
+};
+
+&sd_emmc_a {
+	status = "okay";
+	sdio {
 		caps = "MMC_CAP_4_BIT_DATA",
 			 "MMC_CAP_MMC_HIGHSPEED",
 			 "MMC_CAP_SD_HIGHSPEED",
@@ -726,8 +791,9 @@
 			 "MMC_CAP_UHS_SDR12",
 			 "MMC_CAP_UHS_SDR25",
 			 "MMC_CAP_UHS_SDR50",
+			 "MMC_CAP_UHS_SDR104",
 			 "MMC_PM_KEEP_POWER",
-			 "MMC_CAP_NONREMOVABLE"; /**ptm debug */
+			 "MMC_CAP_SDIO_IRQ";
 		f_min = <400000>;
 		f_max = <200000000>;
 	};

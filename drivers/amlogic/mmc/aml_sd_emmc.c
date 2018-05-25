@@ -3459,6 +3459,27 @@ static struct meson_mmc_data mmc_data_g12a = {
 	.sdmmc.sdr104.core_phase = 2,
 };
 
+static struct meson_mmc_data mmc_data_g12b = {
+	.chip_type = MMC_CHIP_G12B,
+	.port_a_base = 0xffe03000,
+	.port_b_base = 0xffe05000,
+	.port_c_base = 0xffe07000,
+	.pinmux_base = 0xff634400,
+	.clksrc_base = 0xff63c000,
+	.ds_pin_poll = 0x3a,
+	.ds_pin_poll_en = 0x48,
+	.ds_pin_poll_bit = 13,
+	.sdmmc.init.core_phase = 3,
+	.sdmmc.init.tx_phase = 0,
+	.sdmmc.init.rx_phase = 0,
+	.sdmmc.hs.core_phase = 2,
+	.sdmmc.ddr.core_phase = 2,
+	.sdmmc.hs2.core_phase = 3,
+	.sdmmc.hs4.tx_delay = 0,
+	.sdmmc.sd_hs.core_phase = 2,
+	.sdmmc.sdr104.core_phase = 2,
+};
+
 static const struct of_device_id meson_mmc_of_match[] = {
 	{
 		.compatible = "amlogic, meson-mmc-gxbb",
@@ -3500,6 +3521,11 @@ static const struct of_device_id meson_mmc_of_match[] = {
 		.compatible = "amlogic, meson-mmc-g12a",
 		.data = &mmc_data_g12a,
 	},
+	{
+		.compatible = "amlogic, meson-mmc-g12b",
+		.data = &mmc_data_g12b,
+	},
+
 	{}
 };
 MODULE_DEVICE_TABLE(of, meson_mmc_of_match);
