@@ -28,6 +28,10 @@
 
 	aliases {
 		serial0 = &uart_AO;
+		serial1 = &uart_A;
+		serial2 = &uart_B;
+		serial3 = &uart_C;
+		serial4 = &uart_AO_B;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -727,5 +731,45 @@
 		f_min = <400000>;
 		f_max = <200000000>;
 	};
+};
+
+&dwc3 {
+	status = "okay";
+};
+
+&usb2_phy_v2 {
+	status = "okay";
+	portnum = <2>;
+};
+
+&usb3_phy_v2 {
+	status = "okay";
+	portnum = <0>;
+	otg = <1>;
+	gpio-vbus-power = "GPIOH_6";
+	gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+};
+
+&dwc2_a {
+	status = "okay";
+	/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
+	controller-type = <3>;
+};
+&ethmac {
+	status = "okay";
+	pinctrl-names = "internal_eth_pins";
+	pinctrl-0 = <&internal_eth_pins>;
+	mc_val = <0x4be04>;
+
+	internal_phy=<1>;
+};
+
+&uart_A {
+	status = "okay";
+};
+
+&pcie_A {
+	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
+	status = "okay";
 };
 

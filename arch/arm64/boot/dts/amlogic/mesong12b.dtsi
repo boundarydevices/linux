@@ -424,6 +424,11 @@
 		pll-setting-1 = <0x09400414>;
 		pll-setting-2 = <0x927E0000>;
 		pll-setting-3 = <0xac5f49e5>;
+		pll-setting-4 = <0xfe18>;
+		pll-setting-5 = <0xfff>;
+		pll-setting-6 = <0xc8000>;
+		pll-setting-7 = <0xe0004>;
+		pll-setting-8 = <0xe000c>;
 	};
 
 	usb3_phy_v2: usb3phy@ffe09080 {
@@ -431,7 +436,7 @@
 		status = "disabled";
 		reg = <0x0 0xffe09080 0x0 0x20>;
 		phy-reg = <0xff646000>;
-		phy-reg-size = <0x4>;
+		phy-reg-size = <0x2000>;
 		usb2-phy-reg = <0xffe09000>;
 		usb2-phy-reg-size = <0x80>;
 		interrupts = <0 16 4>;
@@ -762,7 +767,7 @@
 				xtal_tick_en = <1>;
 				fifosize = < 64 >;
 				pinctrl-names = "default";
-				pinctrl-0 = <&ao_uart_pins>;
+				/*pinctrl-0 = <&ao_uart_pins>;*/
 				support-sysrq = <0>;  /* 0 not support*/
 			};
 
