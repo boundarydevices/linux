@@ -684,45 +684,16 @@ static int __aml_cma_free_check(struct page *page, int order, unsigned int *cnt)
 	return 0;
 }
 
-static inline unsigned long
-__find_buddy_index(unsigned long page_idx, unsigned int order)
+static int aml_cma_get_page_order(unsigned long pfn)
 {
-	return page_idx ^ (1 << order);
-}
+	int i, mask = 1;
 
-static int aml_cma_get_page_order(struct page *page, int cur_order)
-{
-	int order, ret = 0;
-	unsigned long page_idx, buddy_idx, combined_idx, flags;
-	struct page *buddy, *raw;
-	struct zone *zone;
-
-	/*
-	 * same as __free_one_page, but we only need to find out freed buddy
-	 * and it's order of it.
-	 */
-	buddy = page;
-	raw   = page;
-	page_idx = page_to_pfn(page) & ((1 << MAX_ORDER) - 1);
-	zone = page_zone(page);
-	spin_lock_irqsave(&zone->lock, flags);
-	for (order = cur_order; order < MAX_ORDER; order++) {
-		buddy_idx = __find_buddy_index(page_idx, order);
-		buddy = page + (buddy_idx - page_idx);
-		combined_idx = buddy_idx & page_idx;
-		page = page + (combined_idx - page_idx);
-		page_idx = combined_idx;
-		if (PageBuddy(buddy)) {
-			ret = page_private(buddy);
+	for (i = 0; i < (MAX_ORDER - 1); i++) {
+		if (pfn & (mask << i))
 			break;
-		}
 	}
-	spin_unlock_irqrestore(&zone->lock, flags);
 
-	WARN(ret >= MAX_ORDER, "%s page:%lx, buddy:%lx:%ld, corder:%d,ret:%d\n",
-		__func__, page_to_pfn(raw), page_to_pfn(buddy),
-		page_private(buddy), cur_order, ret);
-	return 0;
+	return i;
 }
 
 void aml_cma_free(unsigned long pfn, unsigned int nr_pages)
@@ -734,26 +705,7 @@ void aml_cma_free(unsigned long pfn, unsigned int nr_pages)
 
 	while (nr_pages) {
 		page = pfn_to_page(pfn);
-		batch = (1 << start_order);
-		if (__aml_cma_free_check(page, start_order, &count))
-			break;
-
-		__free_pages(page, start_order);
-		free_order = aml_cma_get_page_order(page, start_order);
-		pr_debug("pages:%4d, free:%2d, start:%2d, batch:%4d, pfn:%lx\n",
-			nr_pages, free_order,
-			start_order, batch, pfn);
-		nr_pages -= batch;
-		pfn += batch;
-		/*
-		 * since pages are contigunous, and it's buddy already has large
-		 * order, we can try to free same oder as free_order to get more
-		 * quickly free speed.
-		 */
-		if (free_order < 0) {
-			start_order = 0;
-			continue;
-		}
+		free_order = aml_cma_get_page_order(pfn);
 		if (nr_pages >= (1 << free_order)) {
 			start_order = free_order;
 		} else {
@@ -763,6 +715,15 @@ void aml_cma_free(unsigned long pfn, unsigned int nr_pages)
 				start_order++;
 			start_order--;
 		}
+		batch = (1 << start_order);
+		if (__aml_cma_free_check(page, start_order, &count))
+			break;
+		__free_pages(page, start_order);
+		pr_debug("pages:%4d, free:%2d, start:%2d, batch:%4d, pfn:%lx\n",
+			nr_pages, free_order,
+			start_order, batch, pfn);
+		nr_pages -= batch;
+		pfn += batch;
 	}
 	WARN(count != 0, "%d pages are still in use!\n", count);
 }
