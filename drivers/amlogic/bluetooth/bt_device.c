@@ -49,8 +49,38 @@ struct bt_dev_runtime_data {
 	struct bt_dev_data *pdata;
 };
 
+
+static void bt_device_off(struct bt_dev_data *pdata)
+{
+	if (pdata->power_down_disable == 0) {
+		if (pdata->power_off_flag > 0) { /*bt rc wakeup flag for bcm.*/
+			if (pdata->gpio_reset > 0) {
+				if ((pdata->power_on_pin_OD)
+					 && (pdata->power_low_level)) {
+					gpio_direction_input(pdata->gpio_reset);
+				} else {
+					gpio_direction_output(pdata->gpio_reset,
+						pdata->power_low_level);
+				}
+			}
+			if (pdata->gpio_en > 0) {
+				if ((pdata->power_on_pin_OD)
+						&& (pdata->power_low_level)) {
+					gpio_direction_input(pdata->gpio_en);
+				} else {
+					set_usb_bt_power(0);
+				}
+			}
+			msleep(20);
+		}
+	}
+}
+
+
 static void bt_device_init(struct bt_dev_data *pdata)
 {
+	int tmp = 0;
+
 	if (pdata->gpio_reset > 0)
 		gpio_request(pdata->gpio_reset, BT_RFKILL);
 
@@ -59,14 +89,13 @@ static void bt_device_init(struct bt_dev_data *pdata)
 
 	if (pdata->gpio_hostwake > 0) {
 		gpio_request(pdata->gpio_hostwake, BT_RFKILL);
-
-	if ((pdata->power_on_pin_OD) && (!pdata->power_low_level)) {
-		gpio_direction_input(pdata->gpio_hostwake);
-		} else {
-			gpio_direction_output(pdata->gpio_hostwake,
-				!pdata->power_low_level);
-		}
+		gpio_direction_output(pdata->gpio_hostwake, 1);
 	}
+
+	tmp = pdata->power_down_disable;
+	pdata->power_down_disable = 0;
+	bt_device_off(pdata);
+	pdata->power_down_disable = tmp;
 
 }
 
@@ -125,32 +154,6 @@ static void bt_device_on(struct bt_dev_data *pdata)
 		}
 	}
 	msleep(200);
-}
-
-static void bt_device_off(struct bt_dev_data *pdata)
-{
-	if (pdata->power_down_disable == 0) {
-		if (pdata->power_off_flag > 0) { /*bt rc wakeup flag for bcm.*/
-			if (pdata->gpio_reset > 0) {
-				if ((pdata->power_on_pin_OD)
-					 && (pdata->power_low_level)) {
-					gpio_direction_input(pdata->gpio_reset);
-				} else {
-					gpio_direction_output(pdata->gpio_reset,
-						pdata->power_low_level);
-				}
-			}
-			if (pdata->gpio_en > 0) {
-				if ((pdata->power_on_pin_OD)
-						&& (pdata->power_low_level)) {
-					gpio_direction_input(pdata->gpio_en);
-				} else {
-					set_usb_bt_power(0);
-				}
-			}
-			msleep(20);
-		}
-	}
 }
 
 static int bt_set_block(void *data, bool blocked)
