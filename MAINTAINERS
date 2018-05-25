@@ -14488,3 +14488,6 @@ AMLOGIC Energy model
 M: Jianxin Pan <jianxin.pan@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/g12b-sched-energy.dtsi
 
+AMLOGIC G12B skt dts
+M: Qiufang Dai <qiufang.dai@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/g12b_a311d_skt.dts
