@@ -370,6 +370,12 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 {
 	unsigned int i = 0;
 
+	/*disable vbi*/
+	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x14);
+	W_APB_REG(ACD_REG_22, 0x07080000);
+	/* manuel reset vbi */
+	W_APB_REG(ACD_REG_22, 0x87080000);
+
 	/* reset CVD2 */
 	W_APB_BIT(CVD2_RESET_REGISTER, 1, SOFT_RST_BIT, SOFT_RST_WID);
 
@@ -378,7 +384,8 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 		(cvd2->vd_port == TVIN_PORT_CVBS0)) {
 
 		for (i = 0; i < (ACD_REG_NUM+1); i++) {
-
+			if (i == 0x21 || i == 0x22 || i == 0x2f)
+				continue;
 			W_APB_REG(((ACD_BASE_ADD+i)<<2),
 					(rf_acd_table[cvd2->config_fmt-
 					TVIN_SIG_FMT_CVBS_NTSC_M][i]));
@@ -389,7 +396,7 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 
 		for (i = 0; i < (ACD_REG_NUM+1); i++) {
 
-			if (i == 0x21 || i == 0x2f)
+			if (i == 0x21 || i == 0x22 || i == 0x2f)
 				continue;
 			W_APB_REG(((ACD_BASE_ADD+i)<<2),
 					(cvbs_acd_table[cvd2->config_fmt-
@@ -415,6 +422,15 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 				(cvd_part2_table[cvd2->config_fmt-
 				TVIN_SIG_FMT_CVBS_NTSC_M][i]));
 	}
+
+	/*patch for Very low probability hanging issue on atv close*/
+	/*only appeared in one project,this for reserved debug*/
+	if (cvd2->nonstd_detect_dis) {
+		/*disable the nonstandard signal detect*/
+		W_APB_REG(CVD2_NON_STANDARD_SIGNAL_THRESHOLD, 0x0);
+		W_APB_REG(CVD2_REG_B6, 0x0);
+	}
+
 	if (((cvd2->vd_port == TVIN_PORT_CVBS1) ||
 		(cvd2->vd_port == TVIN_PORT_CVBS2)) &&
 		(cvd2->config_fmt == TVIN_SIG_FMT_CVBS_NTSC_M))
@@ -458,7 +474,7 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 	W_APB_REG(CVD2_VSYNC_VBI_LOCKOUT_END, 0x00000025);
 	W_APB_REG(CVD2_VSYNC_TIME_CONSTANT, 0x0000000a);
 	W_APB_REG(CVD2_VBI_CC_START, 0x00000054);
-	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x00000015);
+	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x15);
 	W_APB_REG(ACD_REG_22, 0x82080000); /* manuel reset vbi */
 	W_APB_REG(ACD_REG_22, 0x04080000);
 	/* vbi reset release, vbi agent enable */
@@ -509,11 +525,11 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 	/* be care the polarity bellow!!! */
 	if (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_CN)
 		W_APB_BIT(CVD2_VSYNC_TIME_CONSTANT, 0, 7, 1);
+
+	W_APB_REG(ACD_REG_22, 0x04080000);
 	/*enable vbi*/
 	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x15);
-	/* manuel reset vbi */
-	W_APB_REG(ACD_REG_22, 0x82080000);
-	W_APB_REG(ACD_REG_22, 0x04080000);
+	pr_info("[tvafe..] %s: enable vbi\n", __func__);
 #endif
 	/*for palm moonoscope pattern color flash*/
 	if (cvd2->config_fmt == TVIN_SIG_FMT_CVBS_PAL_M) {
@@ -2468,9 +2484,21 @@ inline void tvafe_cvd2_check_3d_comb(struct tvafe_cvd2_s *cvd2)
 	}
 }
 
-/*tvafe cvd2 set reset to high*/
-inline void tvafe_cvd2_hold_rst(struct tvafe_cvd2_s *cvd2)
+/* tvafe cvd2 set reset*/
+/* vbi disable*/
+/* vbi disagent*/
+/* 3dcomb disagent*/
+/* ddr rw disable*/
+void tvafe_cvd2_hold_rst(void)
 {
+	pr_info("[tvafe..] %s.\n", __func__);
+
+	W_APB_BIT(ACD_REG_22, 1, 25, 1);
+	W_APB_BIT(CVD2_VBI_FRAME_CODE_CTL, 0, 0, 1);
+	W_APB_BIT(CVD2_REG_B2, 1, 7, 1);
+	msleep(30);
+	W_APB_BIT(ACD_REG_22, 1, 24, 1);
+	W_APB_BIT(ACD_REG_5C, 0, 0, 1);
 	W_APB_BIT(CVD2_RESET_REGISTER, 1, SOFT_RST_BIT, SOFT_RST_WID);
 }
 

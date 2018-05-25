@@ -159,6 +159,7 @@ struct tvafe_cvd2_s {
 	enum tvin_sig_fmt_e config_fmt;
 	enum tvin_sig_fmt_e manual_fmt;
 	bool cvd2_init_en;
+	bool nonstd_detect_dis;
 };
 
 /* ***************************************** */
@@ -191,7 +192,7 @@ extern enum tvafe_cvbs_video_e tvafe_cvd2_get_lock_status(
 			struct tvafe_cvd2_s *cvd2);
 extern int tvafe_cvd2_get_atv_format(void);
 extern int tvafe_cvd2_get_hv_lock(void);
-extern void tvafe_cvd2_hold_rst(struct tvafe_cvd2_s *cvd2);
+extern void tvafe_cvd2_hold_rst(void);
 extern void tvafe_cvd2_set_reg8a(unsigned int v);
 extern void tvafe_snow_config(unsigned int onoff);
 extern void tvafe_snow_config_clamp(unsigned int onoff);

@@ -283,6 +283,24 @@ static ssize_t tvafe_store(struct device *dev,
 			devp->frame_skip_enable);
 	} else if (!strncmp(buff, "state", strlen("state"))) {
 		tvafe_state(devp);
+	} else if (!strncmp(buff, "nonstd_detect_dis",
+		strlen("nonstd_detect_dis"))) {
+		/*patch for Very low probability hanging issue on atv close*/
+		/*only appeared in one project,this for reserved debug*/
+		/*default setting to disable the nonstandard signal detect*/
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		if (val) {
+			devp->tvafe.cvd2.nonstd_detect_dis = true;
+			pr_info("[tvafe..]%s:disable nonstd detect\n",
+				__func__);
+		} else {
+			devp->tvafe.cvd2.nonstd_detect_dis = false;
+			pr_info("[tvafe..]%s:enable nonstd detect\n",
+				__func__);
+		}
 	} else
 		tvafe_pr_info("[%s]:invaild command.\n", __func__);
 	kfree(buf_orig);
