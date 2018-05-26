@@ -439,7 +439,7 @@
 
 	cpufreq-meson {
 		compatible = "amlogic, cpufreq-meson";
-		status = "disable";
+		status = "okay";
 	};
 
 
