@@ -61,10 +61,16 @@ int arch_big_cpu(int cpu)
 }
 EXPORT_SYMBOL(arch_big_cpu);
 
+static unsigned int cpu_version_init;
 int __init meson_cpu_version_init(void)
 {
 	unsigned int ver;
 	struct device_node *cpu_version;
+
+	if (!cpu_version_init)
+		cpu_version_init = 1;
+	else
+		return 0;
 
 	cpu_version = of_find_node_by_name(NULL, "cpu_version");
 	if (cpu_version)

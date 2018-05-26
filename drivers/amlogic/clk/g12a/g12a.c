@@ -23,13 +23,13 @@
 #include <linux/slab.h>
 #include <dt-bindings/clock/amlogic,g12a-clkc.h>
 
+#include <linux/amlogic/cpu_version.h>
 #include "../clkc.h"
 #include "g12a.h"
 
 static struct clk_onecell_data clk_data;
 /* #undef pr_debug */
 /* #define pr_debug pr_info */
-
 static const struct clk_div_table cpu_div_table[] = {
 	{ .val = 1, .div = 1 },
 	{ .val = 2, .div = 2 },
@@ -96,6 +96,34 @@ static struct meson_clk_pll g12a_sys_pll = {
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "sys_pll",
+		.ops = &meson_g12a_pll_ops,
+		.parent_names = (const char *[]){ "xtal" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct meson_clk_pll g12b_sys1_pll = {
+	.m = {
+		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.shift   = 0,
+		.width   = 9,
+	},
+	.n = {
+		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.shift   = 10,
+		.width   = 5,
+	},
+	.od = {
+		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.shift   = 16,
+		.width   = 3,
+	},
+	.rate_table = g12a_pll_rate_table,
+	.rate_count = ARRAY_SIZE(g12a_pll_rate_table),
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "sys1_pll",
 		.ops = &meson_g12a_pll_ops,
 		.parent_names = (const char *[]){ "xtal" },
 		.num_parents = 1,
@@ -503,6 +531,24 @@ static struct meson_clk_cpu g12a_cpu_clk = {
 	},
 };
 
+static struct meson_clk_cpu g12b_cpu_clk1 = {
+	.reg_off = HHI_SYS_CPU_CLK_CNTL0,
+	.clk_nb.notifier_call = meson_clk_cpu_notifier_cb,
+	.mux.reg = (void *)HHI_SYS_CPU_CLK_CNTL0,
+	.mux.shift = 11,
+	.mux.mask = 0x1,
+	.mux.lock = &clk_lock,
+	.mux.table = mux_table_cpu_px,
+	.mux.hw.init = &(struct clk_init_data){
+		.name = "cpu_clk",
+		.ops = &meson_clk_cpu_ops,
+		.parent_names = (const char *[]){ "cpu_fixedpll_p", "sys1_pll"},
+		.num_parents = 2,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+
 
 static u32 mux_table_clk81[] = { 6, 5, 7 };
 
@@ -636,7 +682,7 @@ static MESON_GATE(g12a_ao_i2c, HHI_GCLK_AO, 4);
 /* Array of all clocks provided by this provider */
 
 static struct clk_hw *g12a_clk_hws[] = {
-	[CLKID_SYS_PLL]         = &g12a_sys_pll.hw,
+	//[CLKID_SYS_PLL]         = &g12a_sys_pll.hw,
 	[CLKID_FIXED_PLL]       = &g12a_fixed_pll.hw,
 	[CLKID_GP0_PLL]         = &g12a_gp0_pll.hw,
 	[CLKID_HIFI_PLL]        = &g12a_hifi_pll.hw,
@@ -745,7 +791,7 @@ static struct clk_hw *g12a_clk_hws[] = {
 
 static struct meson_clk_pll *const g12a_clk_plls[] = {
 	&g12a_fixed_pll,
-	&g12a_sys_pll,
+	//&g12a_sys_pll,
 	&g12a_gp0_pll,
 	&g12a_hifi_pll,
 	&g12a_pcie_pll,
@@ -841,6 +887,8 @@ static void __init g12a_clkc_init(struct device_node *np)
 	struct clk_hw *parent_hw;
 	struct clk *parent_clk;
 
+	meson_cpu_version_init();
+
 	/*  Generic clocks and PLLs */
 	if (!clk_base)
 		clk_base = of_iomap(np, 0);
@@ -854,13 +902,25 @@ static void __init g12a_clkc_init(struct device_node *np)
 	for (i = 0; i < ARRAY_SIZE(g12a_clk_plls); i++)
 		g12a_clk_plls[i]->base = clk_base;
 
+	if (is_meson_g12b_cpu())
+		g12b_sys1_pll.base = clk_base;
+	else
+		g12a_sys_pll.base = clk_base;
+
 	/* Populate base address for MPLLs */
 	for (i = 0; i < ARRAY_SIZE(g12a_clk_mplls); i++)
 		g12a_clk_mplls[i]->base = clk_base;
 
 	/* Populate the base address for CPU clk */
-	g12a_cpu_clk.base = clk_base;
-	g12a_cpu_clk.mux.reg = clk_base + (u64)g12a_cpu_clk.mux.reg;
+	if (is_meson_g12b_cpu()) {
+		g12a_clk_hws[CLKID_CPU_CLK] = &g12b_cpu_clk1.mux.hw;
+		g12b_cpu_clk1.base = clk_base;
+		g12b_cpu_clk1.mux.reg = clk_base + (u64)g12b_cpu_clk1.mux.reg;
+	} else {
+		g12a_cpu_clk.base = clk_base;
+		g12a_cpu_clk.mux.reg = clk_base + (u64)g12a_cpu_clk.mux.reg;
+	}
+
 #if 0
 	g12a_cpu_fixedpll_p00.reg = clk_base + (u64)g12a_cpu_fixedpll_p00.reg;
 	g12a_cpu_fixedpll_p01.reg = clk_base + (u64)g12a_cpu_fixedpll_p01.reg;
@@ -895,6 +955,16 @@ static void __init g12a_clkc_init(struct device_node *np)
 	 * register all clks
 	 */
 
+	if (is_meson_g12b_cpu()) {
+		clks[CLKID_SYS1_PLL] = clk_register(NULL, &g12b_sys1_pll.hw);
+		if (IS_ERR(clks[CLKID_SYS1_PLL])) {
+			pr_err("%s: failed to register %s\n", __func__,
+				clk_hw_get_name(&g12b_sys1_pll.hw));
+			goto iounmap;
+		}
+	} else
+		g12a_clk_hws[CLKID_SYS_PLL] = &g12a_sys_pll.hw;
+
 	for (clkid = 0; clkid < ARRAY_SIZE(g12a_clk_hws); clkid++) {
 		if (g12a_clk_hws[clkid]) {
 			clks[clkid] = clk_register(NULL, g12a_clk_hws[clkid]);
@@ -926,9 +996,16 @@ static void __init g12a_clkc_init(struct device_node *np)
 	 * a new clk_hw, and this hack will no longer work. Releasing the ccr
 	 * feature before that time solves the problem :-)
 	 */
-	parent_hw = clk_hw_get_parent(&g12a_cpu_clk.mux.hw);
-	parent_clk = parent_hw->clk;
-	ret = clk_notifier_register(parent_clk, &g12a_cpu_clk.clk_nb);
+	if (is_meson_g12b_cpu()) {
+		parent_hw = clk_hw_get_parent(&g12b_cpu_clk1.mux.hw);
+		parent_clk = parent_hw->clk;
+		ret = clk_notifier_register(parent_clk, &g12b_cpu_clk1.clk_nb);
+	} else {
+		parent_hw = clk_hw_get_parent(&g12a_cpu_clk.mux.hw);
+		parent_clk = parent_hw->clk;
+		ret = clk_notifier_register(parent_clk, &g12a_cpu_clk.clk_nb);
+	}
+
 	if (ret) {
 		pr_err("%s: failed to register clock notifier for cpu_clk\n",
 				__func__);

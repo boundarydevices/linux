@@ -26,19 +26,19 @@
 #include "../clkc.h"
 #include "../g12a/g12a.h"
 
-static struct meson_clk_pll g12b_sys1_pll = {
+static struct meson_clk_pll g12b_sys_pll = {
 	.m = {
-		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.reg_off = HHI_SYS_PLL_CNTL0,
 		.shift   = 0,
 		.width   = 9,
 	},
 	.n = {
-		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.reg_off = HHI_SYS_PLL_CNTL0,
 		.shift   = 10,
 		.width   = 5,
 	},
 	.od = {
-		.reg_off = HHI_SYS1_PLL_CNTL0,
+		.reg_off = HHI_SYS_PLL_CNTL0,
 		.shift   = 16,
 		.width   = 3,
 	},
@@ -46,7 +46,7 @@ static struct meson_clk_pll g12b_sys1_pll = {
 	.rate_count = ARRAY_SIZE(g12a_pll_rate_table),
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
-		.name = "sys1_pll",
+		.name = "sys_pll",
 		.ops = &meson_g12a_pll_ops,
 		.parent_names = (const char *[]){ "xtal" },
 		.num_parents = 1,
@@ -118,7 +118,7 @@ static struct meson_clk_cpu g12b_cpu_clk = {
 		.name = "cpub_clk",
 		.ops = &meson_clk_cpu_ops,
 		.parent_names = (const char *[]){ "cpub_fixedpll_p",
-					"sys1_pll"},
+					"sys_pll"},
 		.num_parents = 2,
 		.flags = CLK_GET_RATE_NOCACHE,
 	},
@@ -211,13 +211,13 @@ static struct clk_gate cts_gdc_axi_clk_gate = {
 };
 
 static struct clk_hw *g12b_clk_hws[] = {
-	[CLKID_SYS1_PLL - CLKID_G12B_ADD_BASE] = &g12b_sys1_pll.hw,
+//	[CLKID_SYS_PLL - CLKID_G12B_ADD_BASE] = &g12b_sys_pll.hw,
 	[CLKID_CPUB_FCLK_P - CLKID_G12B_ADD_BASE] = &g12b_cpu_fclk_p.hw,
 	[CLKID_CPUB_CLK - CLKID_G12B_ADD_BASE] = &g12b_cpu_clk.mux.hw,
 };
 
 static struct meson_clk_pll *const g12b_clk_plls[] = {
-	&g12b_sys1_pll,
+	&g12b_sys_pll,
 };
 #if 0
 static struct clk_gate *g12b_clk_gates[] = {
@@ -270,6 +270,13 @@ static void __init g12b_clkc_init(struct device_node *np)
 	/*
 	 * register all clks
 	 */
+	clks[CLKID_SYS_PLL]	= clk_register(NULL, &g12b_sys_pll.hw);
+	if (IS_ERR(clks[CLKID_SYS_PLL])) {
+		pr_err("%s: failed to register %s\n", __func__,
+			clk_hw_get_name(&g12b_sys_pll.hw));
+		goto iounmap;
+	}
+
 	for (clkid = 0; clkid < ARRAY_SIZE(g12b_clk_hws); clkid++) {
 		if (g12b_clk_hws[clkid]) {
 			clks[clkid + CLKID_G12B_ADD_BASE]
