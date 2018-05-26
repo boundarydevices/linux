@@ -761,7 +761,7 @@
 };
 
 &sd_emmc_c {
-	status = "okay";
+	status = "disabled";
 	emmc {
 		caps = "MMC_CAP_8_BIT_DATA",
 			 "MMC_CAP_MMC_HIGHSPEED",
@@ -807,6 +807,72 @@
 	};
 };
 
+&nand {
+	status = "disabled";
+	plat-names = "bootloader","nandnormal";
+	plat-num = <2>;
+	plat-part-0 = <&bootloader>;
+	plat-part-1 = <&nandnormal>;
+	bootloader: bootloader{
+		enable_pad ="ce0";
+		busy_pad = "rb0";
+		timming_mode = "mode5";
+		bch_mode = "bch8_1k";
+		t_rea = <20>;
+		t_rhoh = <15>;
+		chip_num = <1>;
+		part_num = <0>;
+		rb_detect = <1>;
+	};
+	nandnormal: nandnormal{
+		enable_pad ="ce0";
+		busy_pad = "rb0";
+		timming_mode = "mode5";
+		bch_mode = "bch8_1k";
+		plane_mode = "twoplane";
+		t_rea = <20>;
+		t_rhoh = <15>;
+		chip_num = <2>;
+		part_num = <3>;
+		partition = <&nand_partitions>;
+		rb_detect = <1>;
+	};
+	nand_partitions:nand_partition{
+		/*
+		 * if bl_mode is 1, tpl size was generate by
+		 * fip_copies * fip_size which
+		 * will not skip bad when calculating
+		 * the partition size;
+		 *
+		 * if bl_mode is 0,
+		 * tpl partition must be comment out.
+		 */
+		tpl{
+			offset=<0x0 0x0>;
+			size=<0x0 0x0>;
+		};
+		logo{
+			offset=<0x0 0x0>;
+			size=<0x0 0x200000>;
+		};
+		recovery{
+			offset=<0x0 0x0>;
+			size=<0x0 0x1000000>;
+		};
+		boot{
+			offset=<0x0 0x0>;
+			size=<0x0 0x1000000>;
+		};
+		system{
+			offset=<0x0 0x0>;
+			size=<0x0 0x4000000>;
+		};
+		data{
+			offset=<0xffffffff 0xffffffff>;
+			size=<0x0 0x0>;
+		};
+	};
+};
 &dwc3 {
 	status = "okay";
 };
