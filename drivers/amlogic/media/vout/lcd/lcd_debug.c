@@ -868,6 +868,7 @@ static int lcd_reg_print(char *buf, int offset)
 		}
 		break;
 	case LCD_CHIP_G12A:
+	case LCD_CHIP_G12B:
 		if (lcd_drv->lcd_clk_path) {
 			for (i = 0; i < ARRAY_SIZE(lcd_reg_dump_clk_gp0_g12a);
 				i++) {

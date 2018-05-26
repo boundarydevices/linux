@@ -81,6 +81,7 @@ enum lcd_chip_e {
 	LCD_CHIP_TXLX,  /* 3 */
 	LCD_CHIP_AXG,   /* 4 */
 	LCD_CHIP_G12A,  /* 5 */
+	LCD_CHIP_G12B,  /* 6 */
 	LCD_CHIP_MAX,
 };
 

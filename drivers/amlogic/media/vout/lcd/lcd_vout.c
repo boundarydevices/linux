@@ -960,6 +960,12 @@ static struct lcd_data_s lcd_data_g12a = {
 	.reg_map_table = &lcd_reg_axg[0],
 };
 
+static struct lcd_data_s lcd_data_g12b = {
+	.chip_type = LCD_CHIP_G12B,
+	.chip_name = "g12b",
+	.reg_map_table = &lcd_reg_axg[0],
+};
+
 static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-gxtvbb",
@@ -984,6 +990,10 @@ static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-g12a",
 		.data = &lcd_data_g12a,
+	},
+	{
+		.compatible = "amlogic, lcd-g12b",
+		.data = &lcd_data_g12b,
 	},
 	{},
 };

@@ -14496,3 +14496,7 @@ AMLOGIC G12B clock
 M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: drivers/amlogic/clk/g12b/*
 
+AMLOGIC LCD Driver
+M:	Evoke Zhang <evoke.zhang@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/mesong12b_skt-panel.dtsi
+
