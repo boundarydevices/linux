@@ -1774,7 +1774,7 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 	}
 
 	/*ve input size setting*/
-	if (is_meson_txhd_cpu() || is_meson_g12a_cpu())
+	if (is_meson_txhd_cpu() || is_meson_g12a_cpu() || is_meson_g12b_cpu())
 		tmp_data = ((reg_srscl0_hsize & 0x1fff) << 16) |
 			(reg_srscl0_vsize & 0x1fff);
 	else
@@ -1784,7 +1784,8 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 	if (tmp_data != tmp_data2)
 		VSYNC_WR_MPEG_REG(VPP_VE_H_V_SIZE, tmp_data);
 	/*chroma blue stretch size setting*/
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu() || is_meson_g12a_cpu()) {
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu() || is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu()) {
 		tmp_data = (((vpp_postblend_out_width & 0x1fff) << 16) |
 			(vpp_postblend_out_height & 0x1fff));
 		VSYNC_WR_MPEG_REG(VPP_OUT_H_V_SIZE, tmp_data);
@@ -1816,13 +1817,13 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 	if ((scaler_path_sel == CORE0_PPS_CORE1) ||
 		(scaler_path_sel == CORE1_BEFORE_PPS) ||
 		(scaler_path_sel == CORE0_BEFORE_PPS)) {
-		if (is_meson_g12a_cpu())
+		if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
 			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
 		else
 			VSYNC_WR_MPEG_REG_BITS(VPP_VE_ENABLE_CTRL,
 				0, data_path_chose, 1);
 	} else {
-		if (is_meson_g12a_cpu()) {
+		if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 			if (scaler_path_sel == CORE0_AFTER_PPS)
 				VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
 			else
@@ -1958,7 +1959,8 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 				next_frame_par->supscl_path = CORE1_BEFORE_PPS;
 			else
 				next_frame_par->supscl_path = CORE1_AFTER_PPS;
-		} else if (is_meson_txhd_cpu() || is_meson_g12a_cpu()) {
+		} else if (is_meson_txhd_cpu() || is_meson_g12a_cpu() ||
+			is_meson_g12b_cpu()) {
 			next_frame_par->supscl_path = CORE0_BEFORE_PPS;
 		} else
 			next_frame_par->supscl_path = CORE0_PPS_CORE1;
@@ -2641,7 +2643,8 @@ void vpp_super_scaler_support(void)
 	if (is_meson_gxlx_cpu()) {
 		sr_support &= ~SUPER_CORE0_SUPPORT;
 		sr_support |= SUPER_CORE1_SUPPORT;
-	} else if (is_meson_txhd_cpu() || is_meson_g12a_cpu()) {
+	} else if (is_meson_txhd_cpu() || is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu()) {
 		sr_support |= SUPER_CORE0_SUPPORT;
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	} else if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu() ||
@@ -2657,10 +2660,9 @@ void vpp_super_scaler_support(void)
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
 	scaler_path_sel = SCALER_PATH_MAX;
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
 		sr_reg_offt = 0xc00;
-		super_scaler = false;
-	} else
+	else
 		sr_reg_offt = 0;
 }
 /*for gxlx only have core1 which will affact pip line*/

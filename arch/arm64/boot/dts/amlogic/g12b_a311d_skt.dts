@@ -203,7 +203,7 @@
 
 	deinterlace {
 		compatible = "amlogic, deinterlace";
-		status = "disabled";
+		status = "okay";
 		/* 0:use reserved; 1:use cma; 2:use cma as reserved */
 		flag_cma = <1>;
 		//memory-region = <&di_reserved>;
@@ -329,7 +329,7 @@
 	amlvecm {
 		compatible = "amlogic, vecm";
 		dev_name = "aml_vecm";
-		status = "disabled";
+		status = "okay";
 		gamma_en = <0>;/*1:enabel ;0:disable*/
 		wb_en = <0>;/*1:enabel ;0:disable*/
 		cm_en = <0>;/*1:enabel ;0:disable*/
@@ -974,7 +974,7 @@
 /*if you want to use vdin just modify status to "ok"*/
 &vdin0 {
 	memory-region = <&vdin0_cma_reserved>;
-	status = "disabled";
+	status = "okay";
 	/*vdin write mem color depth support:
 	 *bit0:support 8bit
 	 *bit1:support 9bit
@@ -986,7 +986,7 @@
 };
 &vdin1 {
 	memory-region = <&vdin1_cma_reserved>;
-	status = "disabled";
+	status = "okay";
 	/*vdin write mem color depth support:
 	 *bit0:support 8bit
 	 *bit1:support 9bit

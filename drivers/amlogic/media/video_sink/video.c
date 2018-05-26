@@ -6138,6 +6138,9 @@ SET_FILTER:
 			if (process_3d_type)
 				vpp_misc_set &= ~(VPP_VD2_PREBLEND |
 					VPP_VD2_POSTBLEND | VPP_PREBLEND_EN);
+			/*auto disable sr when video off*/
+			VSYNC_WR_MPEG_REG(VPP_SRSHARP0_CTRL, 0);
+			VSYNC_WR_MPEG_REG(VPP_SRSHARP1_CTRL, 0);
 			video_onoff_state = VIDEO_ENABLE_STATE_IDLE;
 			vpu_delay_work_flag |=
 				VPU_VIDEO_LAYER1_CHANGED;
