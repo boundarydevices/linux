@@ -521,6 +521,8 @@ static const struct meson_pwm_data pwm_m8b_data = {
 static const struct of_device_id meson_pwm_matches[] = {
 	{ .compatible = "amlogic,g12a-ee-pwm", .data = &pwm_g12a_ee_data },
 	{ .compatible = "amlogic,g12a-ao-pwm", .data = &pwm_g12a_ao_data },
+	{ .compatible = "amlogic,g12b-ee-pwm", .data = &pwm_g12a_ee_data },
+	{ .compatible = "amlogic,g12b-ao-pwm", .data = &pwm_g12a_ao_data },
 	{ .compatible = "amlogic,txlx-ee-pwm", .data = &pwm_txlx_ee_data },
 	{ .compatible = "amlogic,txlx-ao-pwm", .data = &pwm_txlx_ao_data },
 	{ .compatible = "amlogic,axg-ee-pwm", .data = &pwm_axg_ee_data },

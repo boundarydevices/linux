@@ -13,7 +13,11 @@ Required properties:
 					amlogic,g12a-ee-pwm
 				ao
 					amlogic,g12a-ao-pwm
-
+			-for g12b
+				ee
+					amlogic,g12b-ee-pwm
+				ao
+					amlogic,g12b-ao-pwm
 			-for axg
 				ee
 					amlogic,axg-ee-pwm

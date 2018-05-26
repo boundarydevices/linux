@@ -497,6 +497,14 @@
 	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 };
 
+&pwm_ab {
+		status = "okay";
+	};
+
+&pwm_ef {
+		status = "okay";
+	};
+
 &pwm_AO_cd {
 		status = "okay";
 	};
