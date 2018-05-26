@@ -818,7 +818,7 @@
 		};/* end of ion_dev*/
 
 		audiobus: audiobus@0xff642000 {
-		//compatible = "amlogic, audio-controller", "simple-bus";
+			compatible = "amlogic, audio-controller", "simple-bus";
 			reg = <0x0 0xff642000 0x0 0x2000>;
 			#address-cells = <2>;
 			#size-cells = <2>;
@@ -1634,7 +1634,7 @@
 	/* Sound iomap */
 	aml_snd_iomap {
 		compatible = "amlogic, snd-iomap";
-		status = "disabled";
+		status = "okay";
 		#address-cells=<2>;
 		#size-cells=<2>;
 		ranges;
@@ -1648,7 +1648,7 @@
 			reg = <0x0 0xFF64A000 0x0 0x2000>;
 		};
 		eqdrc_base {
-			reg = <0x0 0xFF642800 0x0 0x1800>;
+			reg = <0x0 0xFF656000 0x0 0x1800>;
 		};
 		reset_base {
 			reg = <0x0 0xFFD01000 0x0 0x1000>;
