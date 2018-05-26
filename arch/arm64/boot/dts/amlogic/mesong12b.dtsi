@@ -1777,6 +1777,8 @@
 			groups = "i2c_ao_sck",
 				"i2c_ao_sda";
 			function = "i2c_ao";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -1785,6 +1787,8 @@
 			groups = "i2c_ao_sck_e",
 				"i2c_ao_sda_e";
 			function = "i2c_ao";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2028,6 +2032,8 @@
 			groups = "i2c0_sda_c",
 				"i2c0_sck_c";
 			function = "i2c0";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2036,6 +2042,8 @@
 			groups = "i2c0_sda_z0",
 				"i2c0_sck_z1";
 			function = "i2c0";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2044,6 +2052,8 @@
 			groups = "i2c0_sda_z7",
 				"i2c0_sck_z8";
 			function = "i2c0";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2052,6 +2062,8 @@
 			groups = "i2c1_sda_x",
 				"i2c1_sck_x";
 			function = "i2c1";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2060,6 +2072,8 @@
 			groups = "i2c1_sda_h2",
 				"i2c1_sck_h3";
 			function = "i2c1";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2068,6 +2082,8 @@
 			groups = "i2c1_sda_h6",
 				"i2c1_sck_h7";
 			function = "i2c1";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2076,6 +2092,8 @@
 			groups = "i2c2_sda_x",
 				"i2c2_sck_x";
 			function = "i2c2";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2084,6 +2102,8 @@
 			groups = "i2c2_sda_z",
 				"i2c2_sck_z";
 			function = "i2c2";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2092,6 +2112,8 @@
 			groups = "i2c3_sda_h",
 				"i2c3_sck_h";
 			function = "i2c3";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
@@ -2100,6 +2122,8 @@
 			groups = "i2c3_sda_a",
 				"i2c3_sck_a";
 			function = "i2c3";
+			bias-pull-up;
+			drive-strength = <2>;
 		};
 	};
 
