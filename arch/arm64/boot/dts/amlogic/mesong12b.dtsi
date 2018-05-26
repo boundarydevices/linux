@@ -1262,9 +1262,10 @@
 	mesonstream {
 		compatible = "amlogic, codec, streambuf";
 		dev_name = "mesonstream";
-		status = "disabled";
+		status = "okay";
 		clocks = <&clkc CLKID_DOS_PARSER
 			&clkc CLKID_DEMUX
+			&clkc CLKID_AHB_ARB0
 			&clkc CLKID_DOS
 			&clkc CLKID_VDEC_MUX
 			&clkc CLKID_HCODEC_MUX
@@ -1272,6 +1273,7 @@
 			&clkc CLKID_HEVCF_MUX>;
 		clock-names = "parser_top",
 			"demux",
+			"ahbarb0",
 			"vdec",
 			"clk_vdec_mux",
 			"clk_hcodec_mux",
@@ -1282,7 +1284,7 @@
 	vdec {
 		compatible = "amlogic, vdec";
 		dev_name = "vdec.0";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 3 1
 			0 23 1
 			0 32 1
