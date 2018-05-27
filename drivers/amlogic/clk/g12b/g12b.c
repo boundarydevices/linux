@@ -124,7 +124,7 @@ static struct meson_clk_cpu g12b_cpu_clk = {
 	},
 };
 
-static const char * const gdc_parent_names[] = { "xtal",
+static const char * const media_parent_names[] = { "xtal",
 	"gp0_pll", "hifi_pll", "fclk_div2p5", "fclk_div3", "fclk_div4",
 	"fclk_div5",  "fclk_div7"};
 
@@ -136,7 +136,7 @@ static struct clk_mux cts_gdc_core_clk_mux = {
 	.hw.init = &(struct clk_init_data){
 		.name = "cts_gdc_core_clk_mux",
 		.ops = &clk_mux_ops,
-		.parent_names = gdc_parent_names,
+		.parent_names = media_parent_names,
 		.num_parents = 8,
 		.flags = CLK_GET_RATE_NOCACHE,
 	},
@@ -177,7 +177,7 @@ static struct clk_mux cts_gdc_axi_clk_mux = {
 	.hw.init = &(struct clk_init_data){
 		.name = "cts_gdc_axi_clk_mux",
 		.ops = &clk_mux_ops,
-		.parent_names = gdc_parent_names,
+		.parent_names = media_parent_names,
 		.num_parents = 8,
 		.flags = CLK_GET_RATE_NOCACHE,
 	},
@@ -210,19 +210,281 @@ static struct clk_gate cts_gdc_axi_clk_gate = {
 	},
 };
 
-static struct clk_hw *g12b_clk_hws[] = {
-//	[CLKID_SYS_PLL - CLKID_G12B_ADD_BASE] = &g12b_sys_pll.hw,
-	[CLKID_CPUB_FCLK_P - CLKID_G12B_ADD_BASE] = &g12b_cpu_fclk_p.hw,
-	[CLKID_CPUB_CLK - CLKID_G12B_ADD_BASE] = &g12b_cpu_clk.mux.hw,
+static struct clk_mux cts_vipnanoq_core_clk_mux = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_core_clk_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_vipnanoq_core_clk_div = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_core_clk_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_core_clk_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_vipnanoq_core_clk_gate = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "cts_vipnanoq_core_clk_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_core_clk_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux cts_vipnanoq_axi_clk_mux = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 25,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_axi_clk_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_vipnanoq_axi_clk_div = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.shift = 16,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_axi_clk_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_axi_clk_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_vipnanoq_axi_clk_gate = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.bit_idx = 24,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "cts_vipnanoq_axi_clk_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_axi_clk_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux cts_vipnanoq_mux = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.mask = 0x1,
+	.shift = 31,
+	.lock = &clk_lock,
+	.flags = CLK_PARENT_ALTERNATE,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_mux",
+		.ops = &meson_clk_mux_ops,
+		.parent_names = (const char *[]) {
+			"cts_vipnanoq_core_clk_composite",
+			"cts_vipnanoq_axi_clk_composite"
+		},
+		.num_parents = 2,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux cts_mipi_isp_clk_mux = {
+	.reg = (void *)HHI_MIPI_ISP_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_isp_clk_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_mipi_isp_clk_div = {
+	.reg = (void *)HHI_MIPI_ISP_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_isp_clk_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_mipi_isp_clk_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_mipi_isp_clk_gate = {
+	.reg = (void *)HHI_MIPI_ISP_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "cts_mipi_isp_clk_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_mipi_isp_clk_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux cts_mipi_csi_phy_clk0_mux = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_csi_phy_clk0_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_mipi_csi_phy_clk0_div = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_csi_phy_clk0_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_mipi_csi_phy_clk0_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_mipi_csi_phy_clk0_gate = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "cts_mipi_csi_phy_clk0_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_mipi_csi_phy_clk0_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux cts_mipi_csi_phy_clk1_mux = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 25,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_csi_phy_clk1_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_mipi_csi_phy_clk1_div = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.shift = 16,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_csi_phy_clk1_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_mipi_csi_phy_clk1_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_mipi_csi_phy_clk1_gate = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.bit_idx = 24,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "cts_mipi_csi_phy_clk1_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_mipi_csi_phy_clk1_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux cts_mipi_sci_phy_mux = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.mask = 0x1,
+	.shift = 31,
+	.lock = &clk_lock,
+	.flags = CLK_PARENT_ALTERNATE,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_sci_phy_mux",
+		.ops = &meson_clk_mux_ops,
+		.parent_names = (const char *[]) {
+			"cts_mipi_csi_phy_clk0_composite",
+			"cts_mipi_csi_phy_clk1_composite"
+		},
+		.num_parents = 2,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
 };
 
 static struct meson_clk_pll *const g12b_clk_plls[] = {
 	&g12b_sys_pll,
 };
-#if 0
+
+static MESON_GATE(g12b_csi_dig, HHI_GCLK_MPEG1, 18);
+static MESON_GATE(g12b_vipnanoq, HHI_GCLK_MPEG1, 19);
+
+static MESON_GATE(g12b_gdc, HHI_GCLK_MPEG2, 16);
+static MESON_GATE(g12b_mipi_isp, HHI_GCLK_MPEG2, 17);
+static MESON_GATE(g12b_csi2_phy1, HHI_GCLK_MPEG2, 28);
+static MESON_GATE(g12b_csi2_phy0, HHI_GCLK_MPEG2, 29);
+
+
 static struct clk_gate *g12b_clk_gates[] = {
+	&g12b_csi_dig,
+	&g12b_vipnanoq,
+	&g12b_gdc,
+	&g12b_mipi_isp,
+	&g12b_csi2_phy1,
+	&g12b_csi2_phy0,
 };
-#endif
+
+static struct clk_hw *g12b_clk_hws[] = {
+	[CLKID_CPUB_FCLK_P - CLKID_G12B_ADD_BASE] = &g12b_cpu_fclk_p.hw,
+	[CLKID_CPUB_CLK - CLKID_G12B_ADD_BASE] = &g12b_cpu_clk.mux.hw,
+	[CLKID_CSI_DIG - CLKID_G12B_ADD_BASE] = &g12b_csi_dig.hw,
+	[CLKID_VIPNANOQ - CLKID_G12B_ADD_BASE] = &g12b_vipnanoq.hw,
+	[CLKID_GDC - CLKID_G12B_ADD_BASE] = &g12b_gdc.hw,
+	[CLKID_MIPI_ISP - CLKID_G12B_ADD_BASE] = &g12b_mipi_isp.hw,
+	[CLKID_CSI2_PHY1 - CLKID_G12B_ADD_BASE] = &g12b_csi2_phy1.hw,
+	[CLKID_CSI2_PHY0 - CLKID_G12B_ADD_BASE] = &g12b_csi2_phy0.hw,
+};
+
+
 static void __init g12b_clkc_init(struct device_node *np)
 {
 	int ret = 0, clkid, i;
@@ -249,12 +511,50 @@ static void __init g12b_clkc_init(struct device_node *np)
 	cts_gdc_axi_clk_mux.reg = clk_base + (u64)(cts_gdc_axi_clk_mux.reg);
 	cts_gdc_axi_clk_gate.reg = clk_base + (u64)(cts_gdc_axi_clk_gate.reg);
 	cts_gdc_axi_clk_div.reg = clk_base + (u64)(cts_gdc_axi_clk_div.reg);
-#if 0
+
+	cts_vipnanoq_core_clk_mux.reg = clk_base
+		+ (u64)(cts_vipnanoq_core_clk_mux.reg);
+	cts_vipnanoq_core_clk_gate.reg = clk_base
+		+ (u64)(cts_vipnanoq_core_clk_gate.reg);
+	cts_vipnanoq_core_clk_div.reg = clk_base
+		+ (u64)(cts_vipnanoq_core_clk_div.reg);
+	cts_vipnanoq_axi_clk_mux.reg = clk_base
+		+ (u64)(cts_vipnanoq_axi_clk_mux.reg);
+	cts_vipnanoq_axi_clk_gate.reg = clk_base
+		+ (u64)(cts_vipnanoq_axi_clk_gate.reg);
+	cts_vipnanoq_axi_clk_div.reg = clk_base
+		+ (u64)(cts_vipnanoq_axi_clk_div.reg);
+	cts_vipnanoq_mux.reg = clk_base
+		+ (u64)(cts_vipnanoq_mux.reg);
+
+	cts_mipi_isp_clk_mux.reg = clk_base
+		+ (u64)(cts_mipi_isp_clk_mux.reg);
+	cts_mipi_isp_clk_gate.reg = clk_base
+		+ (u64)(cts_mipi_isp_clk_gate.reg);
+	cts_mipi_isp_clk_div.reg = clk_base
+		+ (u64)(cts_mipi_isp_clk_div.reg);
+
+	cts_mipi_csi_phy_clk0_mux.reg = clk_base
+		+ (u64)(cts_mipi_csi_phy_clk0_mux.reg);
+	cts_mipi_csi_phy_clk0_div.reg = clk_base
+		+ (u64)(cts_mipi_csi_phy_clk0_div.reg);
+	cts_mipi_csi_phy_clk0_gate.reg = clk_base
+		+ (u64)(cts_mipi_csi_phy_clk0_gate.reg);
+	cts_mipi_csi_phy_clk1_mux.reg = clk_base
+		+ (u64)(cts_mipi_csi_phy_clk1_mux.reg);
+	cts_mipi_csi_phy_clk1_div.reg = clk_base
+		+ (u64)(cts_mipi_csi_phy_clk1_div.reg);
+	cts_mipi_csi_phy_clk1_gate.reg = clk_base
+		+ (u64)(cts_mipi_csi_phy_clk1_gate.reg);
+	cts_mipi_sci_phy_mux.reg = clk_base
+		+ (u64)(cts_mipi_sci_phy_mux.reg);
+
+
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(g12b_clk_gates); i++)
 		g12b_clk_gates[i]->reg = clk_base +
 			(u64)g12b_clk_gates[i]->reg;
-#endif
+
 	/* Populate base address for PLLs */
 	for (i = 0; i < ARRAY_SIZE(g12b_clk_plls); i++)
 		g12b_clk_plls[i]->base = clk_base;
@@ -291,7 +591,7 @@ static void __init g12b_clkc_init(struct device_node *np)
 
 	clks[CLKID_GDC_CORE_CLK_COMP] = clk_register_composite(NULL,
 		"cts_gdc_core_clk_composite",
-		gdc_parent_names, 8,
+		media_parent_names, 8,
 		&cts_gdc_core_clk_mux.hw,
 		&clk_mux_ops,
 		&cts_gdc_core_clk_div.hw,
@@ -304,7 +604,7 @@ static void __init g12b_clkc_init(struct device_node *np)
 
 	clks[CLKID_GDC_AXI_CLK_COMP] = clk_register_composite(NULL,
 		"cts_gdc_axi_clk_composite",
-		gdc_parent_names, 8,
+		media_parent_names, 8,
 		&cts_gdc_axi_clk_mux.hw,
 		&clk_mux_ops,
 		&cts_gdc_axi_clk_div.hw,
@@ -314,6 +614,83 @@ static void __init g12b_clkc_init(struct device_node *np)
 	if (IS_ERR(clks[CLKID_GDC_AXI_CLK_COMP]))
 		panic("%s: %d register cts_gdc_axi_clk_composite error\n",
 			__func__, __LINE__);
+
+	clks[CLKID_VNANOQ_CORE_CLK_COMP] = clk_register_composite(NULL,
+		"cts_vipnanoq_core_clk_composite",
+		media_parent_names, 8,
+		&cts_vipnanoq_core_clk_mux.hw,
+		&clk_mux_ops,
+		&cts_vipnanoq_core_clk_div.hw,
+		&clk_divider_ops,
+		&cts_vipnanoq_core_clk_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_VNANOQ_CORE_CLK_COMP]))
+		panic("%s: %d register cts_vipnanoq_core_clk_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_VNANOQ_AXI_CLK_COMP] = clk_register_composite(NULL,
+		"cts_vipnanoq_axi_clk_composite",
+		media_parent_names, 8,
+		&cts_vipnanoq_axi_clk_mux.hw,
+		&clk_mux_ops,
+		&cts_vipnanoq_axi_clk_div.hw,
+		&clk_divider_ops,
+		&cts_vipnanoq_axi_clk_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_VNANOQ_AXI_CLK_COMP]))
+		panic("%s: %d register cts_vipnanoq_axi_clk_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_VNANOQ_MUX] = clk_register(NULL,
+		&cts_vipnanoq_mux.hw);
+	if (IS_ERR(clks[CLKID_VNANOQ_MUX]))
+		panic("%s: %d clk_register %s error\n",
+			__func__, __LINE__, cts_vipnanoq_mux.hw.init->name);
+
+	clks[CLKID_MIPI_ISP_CLK_COMP] = clk_register_composite(NULL,
+		"cts_mipi_isp_clk_composite",
+		media_parent_names, 8,
+		&cts_mipi_isp_clk_mux.hw,
+		&clk_mux_ops,
+		&cts_mipi_isp_clk_div.hw,
+		&clk_divider_ops,
+		&cts_mipi_isp_clk_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_MIPI_ISP_CLK_COMP]))
+		panic("%s: %d register cts_mipi_isp_clk_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_MIPI_CSI_PHY_CLK0_COMP] = clk_register_composite(NULL,
+		"cts_mipi_csi_phy_clk0_composite",
+		media_parent_names, 8,
+		&cts_mipi_csi_phy_clk0_mux.hw,
+		&clk_mux_ops,
+		&cts_mipi_csi_phy_clk0_div.hw,
+		&clk_divider_ops,
+		&cts_mipi_csi_phy_clk0_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_MIPI_CSI_PHY_CLK0_COMP]))
+		panic("%s: %d register cts_mipi_csi_phy_clk0_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_MIPI_CSI_PHY_CLK1_COMP] = clk_register_composite(NULL,
+		"cts_mipi_csi_phy_clk1_composite",
+		media_parent_names, 8,
+		&cts_mipi_csi_phy_clk1_mux.hw,
+		&clk_mux_ops,
+		&cts_mipi_csi_phy_clk1_div.hw,
+		&clk_divider_ops,
+		&cts_mipi_csi_phy_clk1_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_MIPI_CSI_PHY_CLK1_COMP]))
+		panic("%s: %d register cts_mipi_csi_phy_clk1_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_MIPI_CSI_PHY_MUX] = clk_register(NULL,
+		&cts_mipi_sci_phy_mux.hw);
+	if (IS_ERR(clks[CLKID_MIPI_CSI_PHY_MUX]))
+		panic("%s: %d clk_register %s error\n",
+			__func__, __LINE__, cts_mipi_sci_phy_mux.hw.init->name);
 
 	pr_debug("%s: register all clk ok!", __func__);
 	/*

@@ -57,7 +57,10 @@
 #define HHI_VPU_CLKC_CNTL		0x1b4 /* 0x6d offset in data sheet */
 #define HHI_VPU_CLK_CNTL		0x1bC /* 0x6f offset in data sheet */
 
-#define HHI_HDMI_CLK_CNTL		0x1CC /* 0x73 offset in data sheet */
+#define HHI_MIPI_ISP_CLK_CNTL   0x1c0 /* 0x70 offset in data sheet */
+
+#define HHI_VIPNANOQ_CLK_CNTL   0x1c8 /* 0x72 offset in data sheet */
+#define HHI_HDMI_CLK_CNTL       0x1CC /* 0x73 offset in data sheet */
 
 #define HHI_VDEC_CLK_CNTL		0x1E0 /* 0x78 offset in data sheet */
 #define HHI_VDEC2_CLK_CNTL		0x1E4 /* 0x79 offset in data sheet */
@@ -103,13 +106,14 @@
 #define HHI_SYS_PLL_CNTL6		0x30c /* 0xc3 offset in data sheet */
 
 /* For G12B only */
-#define HHI_SYS1_PLL_CNTL0		0x380 /* 0xe0 offset in data sheet */
-#define HHI_SYS1_PLL_CNTL1		0x384 /* 0xe1 offset in data sheet */
-#define HHI_SYS1_PLL_CNTL2		0x388 /* 0xe2 offset in data sheet */
-#define HHI_SYS1_PLL_CNTL3		0x38c /* 0xe3 offset in data sheet */
-#define HHI_SYS1_PLL_CNTL4		0x390 /* 0xe4 offset in data sheet */
-#define HHI_SYS1_PLL_CNTL5		0x394 /* 0xe5 offset in data sheet */
-#define HHI_SYS1_PLL_CNTL6		0x398 /* 0xe6 offset in data sheet */
+#define HHI_MIPI_CSI_PHY_CLK_CNTL 0x340 /* 0xd0 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL0        0x380 /* 0xe0 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL1        0x384 /* 0xe1 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL2        0x388 /* 0xe2 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL3        0x38c /* 0xe3 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL4        0x390 /* 0xe4 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL5        0x394 /* 0xe5 offset in data sheet */
+#define HHI_SYS1_PLL_CNTL6        0x398 /* 0xe6 offset in data sheet */
 /*****************/
 
 #define HHI_SPICC_CLK_CNTL      0x3dc /* 0xf7 offset in data sheet */

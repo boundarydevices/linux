@@ -379,90 +379,6 @@ static struct meson_clk_mpll g12a_mpll3 = {
 	},
 };
 
-#if 0
-static struct clk_mux g12a_pcie_mux = {
-	.reg = (void *)HHI_PCIE_PLL_CNTL6,
-	.mask = 0x1,
-	.shift = 2,
-	.lock = &clk_lock,
-	.hw.init = &(struct clk_init_data){
-		.name = "g12a_pcie_mux",
-		.ops = &clk_mux_ops,
-		.parent_names = (const char *[]){ "mpll3", "pcie_pll" },
-		.num_parents = 2,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
-	},
-};
-
-static struct clk_mux g12a_pcie_ref = {
-	.reg = (void *)HHI_PCIE_PLL_CNTL6,
-	.mask = 0x1,
-	.shift = 1,
-	.lock = &clk_lock,
-	.hw.init = &(struct clk_init_data){
-		.name = "g12a_pcie_ref",
-		.ops = &clk_mux_ops,
-		//.parent_names = (const char *[]){ "g12a_pcie_input_gate",
-		.parent_names = (const char *[]){ "NULL",
-			"g12a_pcie_mux" },
-		.num_parents = 2,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
-	},
-};
-
-static struct clk_gate g12a_pcie_cml_en0 = {
-	.reg = (void *)HHI_PCIE_PLL_CNTL6,
-	.bit_idx = 4,
-	.lock = &clk_lock,
-	.hw.init = &(struct clk_init_data) {
-		.name = "g12a_pcie_cml_en0",
-		.ops = &clk_gate_ops,
-		.parent_names = (const char *[]){ "g12a_pcie_ref" },
-		.num_parents = 1,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
-	},
-};
-
-static struct clk_gate g12a_pcie_cml_en1 = {
-	.reg = (void *)HHI_PCIE_PLL_CNTL6,
-	.bit_idx = 3,
-	.lock = &clk_lock,
-	.hw.init = &(struct clk_init_data) {
-		.name = "g12a_pcie_cml_en1",
-		.ops = &clk_gate_ops,
-		.parent_names = (const char *[]){ "g12a_pcie_ref" },
-		.num_parents = 1,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
-	},
-};
-
-static struct clk_gate g12a_mipi_enable_gate = {
-	.reg = (void *)HHI_MIPI_CNTL0,
-	.bit_idx = 29,
-	.lock = &clk_lock,
-	.hw.init = &(struct clk_init_data) {
-		.name = "g12a_mipi_enable_gate",
-		.ops = &clk_gate_ops,
-		.parent_names = (const char *[]){ "NULL" },
-		.num_parents = 0,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
-	},
-};
-
-static struct clk_gate g12a_mipi_bandgap_gate = {
-	.reg = (void *)HHI_MIPI_CNTL0,
-	.bit_idx = 26,
-	.lock = &clk_lock,
-	.hw.init = &(struct clk_init_data) {
-		.name = "g12a_mipi_bandgap_gate",
-		.ops = &clk_gate_ops,
-		.parent_names = (const char *[]){ "NULL" },
-		.num_parents = 0,
-		.flags = (CLK_GET_RATE_NOCACHE | CLK_IGNORE_UNUSED),
-	},
-};
-#endif
-
 static u32 mux_table_cpu_p[]	= { 0, 1, 2 };
 static u32 mux_table_cpu_px[]   = { 0, 1 };
 static struct meson_cpu_mux_divider g12a_cpu_fclk_p = {
@@ -671,14 +587,6 @@ static MESON_GATE(g12a_vclk2_venclmmc, HHI_GCLK_OTHER, 24);
 static MESON_GATE(g12a_vclk2_vencl, HHI_GCLK_OTHER, 25);
 static MESON_GATE(g12a_vclk2_other1, HHI_GCLK_OTHER, 26);
 
-/* Always On (AO) domain gates */
-#if 0
-static MESON_GATE(g12a_ao_media_cpu, HHI_GCLK_AO, 0);
-static MESON_GATE(g12a_ao_ahb_sram, HHI_GCLK_AO, 1);
-static MESON_GATE(g12a_ao_ahb_bus, HHI_GCLK_AO, 2);
-static MESON_GATE(g12a_ao_iface, HHI_GCLK_AO, 3);
-static MESON_GATE(g12a_ao_i2c, HHI_GCLK_AO, 4);
-#endif
 /* Array of all clocks provided by this provider */
 
 static struct clk_hw *g12a_clk_hws[] = {
@@ -767,21 +675,6 @@ static struct clk_hw *g12a_clk_hws[] = {
 	[CLKID_VCLK2_VENCL]     = &g12a_vclk2_vencl.hw,
 	[CLKID_VCLK2_OTHER1]    = &g12a_vclk2_other1.hw,
 
-#if 0
-	[CLKID_AO_MEDIA_CPU]    = &g12a_ao_media_cpu.hw,
-	[CLKID_AO_AHB_SRAM]     = &g12a_ao_ahb_sram.hw,
-	[CLKID_AO_AHB_BUS]      = &g12a_ao_ahb_bus.hw,
-	[CLKID_AO_IFACE]        = &g12a_ao_iface.hw,
-	[CLKID_AO_I2C]          = &g12a_ao_i2c.hw,
-#endif
-#if 0
-	[CLKID_CPU_FCLK_P00]    = &g12a_cpu_fixedpll_p00.hw,
-	[CLKID_CPU_FCLK_P01]    = &g12a_cpu_fixedpll_p01.hw,
-	[CLKID_CPU_FCLK_P0]     = &g12a_cpu_fixedpll_p0.hw,
-	[CLKID_CPU_FCLK_P10]    = &g12a_cpu_fixedpll_p10.hw,
-	[CLKID_CPU_FCLK_P11]    = &g12a_cpu_fixedpll_p11.hw,
-	[CLKID_CPU_FCLK_P1]     = &g12a_cpu_fixedpll_p1.hw,
-#endif
 	[CLKID_CPU_FCLK_P]      = &g12a_cpu_fclk_p.hw,
 	[CLKID_CPU_CLK]         = &g12a_cpu_clk.mux.hw,
 
@@ -791,7 +684,6 @@ static struct clk_hw *g12a_clk_hws[] = {
 
 static struct meson_clk_pll *const g12a_clk_plls[] = {
 	&g12a_fixed_pll,
-	//&g12a_sys_pll,
 	&g12a_gp0_pll,
 	&g12a_hifi_pll,
 	&g12a_pcie_pll,
@@ -870,15 +762,6 @@ static struct clk_gate *g12a_clk_gates[] = {
 	&g12a_vclk2_venclmmc,
 	&g12a_vclk2_vencl,
 	&g12a_vclk2_other1,
-#if 0
-	&g12a_ao_media_cpu,
-	&g12a_ao_ahb_sram,
-	&g12a_ao_ahb_bus,
-	&g12a_ao_iface,
-	&g12a_ao_i2c,
-	&g12a_mipi_enable_gate,
-	&g12a_mipi_bandgap_gate,
-#endif
 };
 
 static void __init g12a_clkc_init(struct device_node *np)
@@ -897,7 +780,6 @@ static void __init g12a_clkc_init(struct device_node *np)
 		pr_err("%s: Unable to map clk base\n", __func__);
 		return;
 	}
-	/* pr_debug("%s: iomap clk_base ok!", __func__); */
 	/* Populate base address for PLLs */
 	for (i = 0; i < ARRAY_SIZE(g12a_clk_plls); i++)
 		g12a_clk_plls[i]->base = clk_base;
@@ -921,14 +803,6 @@ static void __init g12a_clkc_init(struct device_node *np)
 		g12a_cpu_clk.mux.reg = clk_base + (u64)g12a_cpu_clk.mux.reg;
 	}
 
-#if 0
-	g12a_cpu_fixedpll_p00.reg = clk_base + (u64)g12a_cpu_fixedpll_p00.reg;
-	g12a_cpu_fixedpll_p01.reg = clk_base + (u64)g12a_cpu_fixedpll_p01.reg;
-	g12a_cpu_fixedpll_p10.reg = clk_base + (u64)g12a_cpu_fixedpll_p10.reg;
-	g12a_cpu_fixedpll_p11.reg = clk_base + (u64)g12a_cpu_fixedpll_p11.reg;
-	g12a_cpu_fixedpll_p0.reg = clk_base + (u64)g12a_cpu_fixedpll_p0.reg;
-	g12a_cpu_fixedpll_p1.reg = clk_base + (u64)g12a_cpu_fixedpll_p1.reg;
-#endif
 	g12a_cpu_fclk_p.reg = clk_base + (u64)g12a_cpu_fclk_p.reg;
 
 	/* Populate the base address for the MPEG clks */
