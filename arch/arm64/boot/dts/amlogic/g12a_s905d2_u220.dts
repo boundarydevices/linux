@@ -973,7 +973,7 @@
 		hi_th = <0x70000>;
 		lo_th = <0x16000>;
 
-		status = "okay";
+		status = "disabled";
 	};
 }; /* end of audiobus */
 
