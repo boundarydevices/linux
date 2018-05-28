@@ -60,6 +60,7 @@ Required properties:
 	- TXLX (T962X, T962E) : "amlogic,meson-txlx-vpu"
 	- AXG (A113G, A113D) : "amlogic,meson-axg-vpu"
 	- G12A (S905D2) : "amlogic,meson-g12a-vpu"
+	- G12B (W400) : "amlogic,meson-g12b-vpu"
 	followed by the common "amlogic,meson-gx-vpu"
 - reg: base address and size of he following memory-mapped regions :
 	- vpu

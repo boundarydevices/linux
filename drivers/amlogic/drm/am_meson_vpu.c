@@ -216,6 +216,21 @@ static struct osd_device_data_s osd_g12a = {
 	.has_viu2 = 1,
 };
 
+static struct osd_device_data_s osd_g12b = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_G12B,
+	.osd_ver = OSD_HIGH_ONE,
+	.afbc_type = MALI_AFBC,
+	.osd_count = 3,
+	.has_deband = 1,
+	.has_lut = 1,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
+	.vpp_fifo_len = 0xfff,/* 2048 */
+	.dummy_data = 0x00808000,
+	.has_viu2 = 1,
+};
+
 static struct osd_device_data_s osd_meson_dev;
 static u32 logo_memsize;
 static struct page *logo_page;
@@ -803,6 +818,8 @@ static const struct of_device_id am_meson_vpu_driver_dt_match[] = {
 	 .data = &osd_axg, },
 	{ .compatible = "amlogic,meson-g12a-vpu",
 	 .data = &osd_g12a, },
+	{ .compatible = "amlogic,meson-g12b-vpu",
+	.data = &osd_g12b, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, am_meson_vpu_driver_dt_match);

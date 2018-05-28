@@ -7800,7 +7800,6 @@ static bool osd_direct_render(struct osd_plane_map_s *plane_map)
 			osd_hw.osd_afbcd[index].enable);
 		osd_log_dbg2("osd_afbcd_inter_format=%d\n",
 			osd_hw.osd_afbcd[index].inter_format);
-
 		return 0;
 	}
 
@@ -7814,6 +7813,11 @@ static bool osd_direct_render(struct osd_plane_map_s *plane_map)
 	height_src = osd_hw.free_src_data_backup[index].y_end -
 		osd_hw.free_src_data_backup[index].y_start + 1;
 	osd_hw.free_scale_enable[index] = 1;
+
+	osd_hw.src_data[index].x = plane_map->src_x;
+	osd_hw.src_data[index].y = plane_map->src_y;
+	osd_hw.src_data[index].w = plane_map->src_w;
+	osd_hw.src_data[index].h = plane_map->src_h;
 
 	if (osd_hw.free_scale_enable[index] ||
 		(width_src != width_dst) ||
@@ -7894,6 +7898,16 @@ static bool osd_direct_render(struct osd_plane_map_s *plane_map)
 				&freescale_dst[index],
 				sizeof(struct pandata_s));
 			freescale_update = true;
+			osd_hw.dst_data[index].x =
+				osd_hw.free_dst_data[index].x_start;
+			osd_hw.dst_data[index].y =
+				osd_hw.free_dst_data[index].x_start;
+			osd_hw.dst_data[index].w =
+				osd_hw.free_dst_data[index].x_end -
+				osd_hw.free_dst_data[index].x_start + 1;
+			osd_hw.dst_data[index].h =
+				osd_hw.free_dst_data[index].y_end -
+				osd_hw.free_dst_data[index].y_start + 1;
 
 			if ((height_dst != height_src) ||
 				(width_dst != width_src))
@@ -7957,6 +7971,17 @@ static bool osd_direct_render(struct osd_plane_map_s *plane_map)
 			osd_hw.dispdata[index].y_start = y_start;
 			osd_hw.dispdata[index].y_end = y_end;
 		}
+		osd_hw.dst_data[index].x =
+			osd_hw.dispdata[index].x_start;
+		osd_hw.dst_data[index].y =
+			osd_hw.dispdata[index].x_start;
+		osd_hw.dst_data[index].w =
+			osd_hw.dispdata[index].x_end -
+			osd_hw.dispdata[index].x_start + 1;
+		osd_hw.dst_data[index].h =
+			osd_hw.dispdata[index].y_end -
+			osd_hw.dispdata[index].y_start + 1;
+
 	}
 	return freescale_update;
 }
