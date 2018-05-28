@@ -163,7 +163,8 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
 	if (devp->force_yuv444_malloc == 1) {
-		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
+		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
+			(devp->color_depth_mode != 1))
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		else
@@ -305,7 +306,8 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
 	if (devp->force_yuv444_malloc == 1) {
-		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
+		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
+			(devp->color_depth_mode != 1))
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		else
@@ -388,17 +390,18 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 }
 
 #ifdef CONFIG_CMA
+/* need to be static for pointer use in codec_mm */
+static char vdin_name[6];
 /* return val:1: fail;0: ok */
 unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 {
-	char vdin_name[6];
 	unsigned int mem_size, h_size, v_size;
 	int flags = CODEC_MM_FLAGS_CMA_FIRST|CODEC_MM_FLAGS_CMA_CLEAR|
 		CODEC_MM_FLAGS_CPU;
 	unsigned int max_buffer_num = min_buf_num;
 	unsigned int i;
 
-	if (devp->rdma_enable && (devp->game_mode == 0))
+	if (devp->rdma_enable)
 		max_buffer_num++;
 	/*todo: need update if vf_skip_cnt used by other port*/
 	if (devp->vfp->skip_vf_num &&
@@ -431,7 +434,8 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_GBR) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG) ||
 		(devp->force_yuv444_malloc == 1)) {
-		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) {
+		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
+			(devp->color_depth_mode != 1)) {
 			h_size = roundup(h_size *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE,
 				devp->canvas_align);

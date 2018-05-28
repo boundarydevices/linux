@@ -133,9 +133,6 @@ static unsigned int vdin_drop_cnt;
 module_param(vdin_drop_cnt, uint, 0664);
 MODULE_PARM_DESC(vdin_drop_cnt, "vdin_drop_cnt");
 
-static bool game_mode;
-module_param(game_mode, bool, 0664);
-MODULE_PARM_DESC(game_mode, "game_mode");
 
 static int irq_max_count;
 
@@ -262,7 +259,18 @@ void vdin_close_fe(struct vdin_dev_s *devp)
 
 	pr_info("%s ok\n", __func__);
 }
-
+static void vdin_game_mode_check(struct vdin_dev_s *devp)
+{
+	if ((game_mode == 1) &&
+		(devp->parm.port != TVIN_PORT_CVBS3)) {
+		if (devp->h_active > 720 && ((devp->parm.info.fps == 50) ||
+			(devp->parm.info.fps == 60)))
+			devp->game_mode = 3;
+		else
+			devp->game_mode = 1;
+	} else
+		devp->game_mode = 0;
+}
 /*
  *based on the bellow parameters:
  *	a.h_active	(vf->width = devp->h_active)
@@ -298,6 +306,8 @@ static void vdin_vf_init(struct vdin_dev_s *devp)
 		vf->index = i;
 		vf->width = devp->h_active;
 		vf->height = devp->v_active;
+		if (devp->game_mode != 0)
+			vf->flag |= VFRAME_FLAG_GAME_MODE;
 		scan_mode = devp->fmt_info_p->scan_mode;
 		if (((scan_mode == TVIN_SCAN_MODE_INTERLACED) &&
 			(!(devp->parm.flag & TVIN_PARM_FLAG_2D_TO_3D) &&
@@ -435,11 +445,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	vdin_get_format_convert(devp);
 	devp->curr_wr_vfe = NULL;
-	devp->game_mode = game_mode;
-	if (game_mode)
-		devp->vfp->skip_vf_num = 1;
-	else
-		devp->vfp->skip_vf_num = devp->prop.skip_vf_num;
+	devp->vfp->skip_vf_num = devp->prop.skip_vf_num;
 	if (devp->vfp->skip_vf_num >= VDIN_CANVAS_MAX_CNT)
 		devp->vfp->skip_vf_num = 0;
 	devp->canvas_config_mode = canvas_config_mode;
@@ -487,6 +493,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	devp->vfp->size = devp->canvas_max_num;
 	vf_pool_init(devp->vfp, devp->vfp->size);
+	vdin_game_mode_check(devp);
 	vdin_vf_init(devp);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if ((devp->dv.dolby_input & (1 << devp->index)) ||
@@ -1200,14 +1207,14 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (!devp->curr_wr_vfe) {
 		devp->curr_wr_vfe = provider_vf_get(devp->vfp);
 		devp->curr_wr_vfe->vf.ready_jiffies64 = jiffies_64;
+		devp->curr_wr_vfe->vf.ready_clock[0] = sched_clock();
 		/*save the first field stamp*/
 		devp->stamp = stamp;
 		devp->vdin_irq_flag = 3;
-		vdin_drop_cnt++;
 		goto irq_handled;
 	}
 	if (devp->last_wr_vfe && (devp->flags&VDIN_FLAG_RDMA_ENABLE) &&
-		(devp->game_mode == false)) {
+		!(devp->game_mode & (1 << 1))) {
 		/*dolby vision metadata process*/
 		if (dv_dbg_mask & DV_UPDATE_DATA_MODE_DELBY_WORK
 			&& devp->dv.dv_config) {
@@ -1225,9 +1232,16 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		} else
 			devp->dv.dv_crc_check = true;
 		if ((devp->dv.dv_crc_check == true) ||
-			(!(dv_dbg_mask & DV_CRC_CHECK)))
+			(!(dv_dbg_mask & DV_CRC_CHECK))) {
 			provider_vf_put(devp->last_wr_vfe, devp->vfp);
-		else {
+			if (time_en) {
+				devp->last_wr_vfe->vf.ready_clock[1] =
+					sched_clock();
+				pr_info("vdin put latency %lld us. first %lld us.\n",
+				devp->last_wr_vfe->vf.ready_clock[1]/1000,
+				devp->last_wr_vfe->vf.ready_clock[0]/1000);
+			}
+		} else {
 			devp->vdin_irq_flag = 15;
 			vdin_drop_cnt++;
 			goto irq_handled;
@@ -1369,6 +1383,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (!next_wr_vfe) {
 		devp->vdin_irq_flag = 14;
 		vdin_drop_cnt++;
+		vf_drop_cnt = vdin_drop_cnt;/*avoid do skip*/
 		goto irq_handled;
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
@@ -1384,7 +1399,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	/*if vdin-nr,di must get
 	 * vdin current field type which di pre will read
 	 */
-	if (vdin2nr || (devp->flags & VDIN_FLAG_RDMA_ENABLE))
+	if ((vdin2nr || (devp->flags & VDIN_FLAG_RDMA_ENABLE)) &&
+		!(devp->game_mode & (1 << 1)))
 		curr_wr_vf->type = devp->curr_field_type;
 	else
 		curr_wr_vf->type = last_field_type;
@@ -1439,7 +1455,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (devp->auto_ratio_en && (devp->parm.port >= TVIN_PORT_CVBS0) &&
 		(devp->parm.port <= TVIN_PORT_CVBS3))
 		vdin_set_display_ratio(devp, curr_wr_vf);
-	if (devp->flags&VDIN_FLAG_RDMA_ENABLE && (devp->game_mode == false)) {
+	if ((devp->flags&VDIN_FLAG_RDMA_ENABLE) &&
+		!(devp->game_mode & (1 << 1))) {
 		devp->last_wr_vfe = curr_wr_vfe;
 	} else {
 		/*dolby vision metadata process*/
@@ -1457,9 +1474,15 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		} else
 			devp->dv.dv_crc_check = true;
 		if ((devp->dv.dv_crc_check == true) ||
-			(!(dv_dbg_mask & DV_CRC_CHECK)))
+			(!(dv_dbg_mask & DV_CRC_CHECK))) {
 			provider_vf_put(curr_wr_vfe, devp->vfp);
-		else {
+			if (vdin_dbg_en) {
+				curr_wr_vfe->vf.ready_clock[1] = sched_clock();
+				pr_info("vdin put latency %lld us. first %lld us.\n",
+					curr_wr_vfe->vf.ready_clock[1]/1000,
+					curr_wr_vfe->vf.ready_clock[0]/1000);
+			}
+		} else {
 			devp->vdin_irq_flag = 15;
 			vdin_drop_cnt++;
 			goto irq_handled;
@@ -1482,8 +1505,10 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	devp->curr_wr_vfe = next_wr_vfe;
 	/* debug for video latency */
 	next_wr_vfe->vf.ready_jiffies64 = jiffies_64;
+	next_wr_vfe->vf.ready_clock[0] = sched_clock();
 
-	if (!(devp->flags&VDIN_FLAG_RDMA_ENABLE) || (devp->game_mode == true)) {
+	if (!(devp->flags&VDIN_FLAG_RDMA_ENABLE) ||
+		(devp->game_mode & (1 << 1))) {
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (((devp->dv.dolby_input & (1 << devp->index)) ||
 			(devp->dv.dv_flag && is_dolby_vision_enable())) &&
@@ -2146,6 +2171,14 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (vdin_dbg_en)
 			pr_info("TVIN_IOC_SNOWOFF(%d) ok\n\n", devp->index);
 		break;
+	case TVIN_IOC_GAME_MODE:
+		if (copy_from_user(&game_mode, argp, sizeof(unsigned int))) {
+			ret = -EFAULT;
+			break;
+		}
+		if (vdin_dbg_en)
+			pr_info("TVIN_IOC_GAME_MODE(%d) done\n\n", game_mode);
+		break;
 	case TVIN_IOC_GET_COLOR_RANGE:
 		if (copy_to_user(argp,
 						&color_range_force,
@@ -2514,7 +2547,6 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	vdevp->rdma_enable = 1;
 	/*set vdin_dev_s size*/
 	vdevp->vdin_dev_ssize = sizeof(struct vdin_dev_s);
-	vdevp->game_mode = game_mode;
 	vdevp->canvas_config_mode = canvas_config_mode;
 	INIT_DELAYED_WORK(&vdevp->dv.dv_dwork, vdin_dv_dwork);
 

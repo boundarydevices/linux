@@ -105,6 +105,7 @@ struct ldim_max_s {
 };
 #endif
 
+extern unsigned int game_mode;
 
 /* ************************************************************************ */
 /* ******** GLOBAL FUNCTION CLAIM ******** */

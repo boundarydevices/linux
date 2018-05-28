@@ -74,6 +74,7 @@
 #define VFRAME_FLAG_HIGH_BANDWIDTH	4
 #define VFRAME_FLAG_ERROR_RECOVERY		8
 #define VFRAME_FLAG_SYNCFRAME			0x10
+#define VFRAME_FLAG_GAME_MODE		0x20
 
 enum pixel_aspect_ratio_e {
 	PIXEL_ASPECT_RATIO_1_1,
@@ -321,6 +322,8 @@ struct vframe_s {
 	/* pixel aspect ratio */
 	enum pixel_aspect_ratio_e pixel_ratio;
 	u64 ready_jiffies64;	/* ready from decode on  jiffies_64 */
+	long long ready_clock[5];/*ns*/
+	long long ready_clock_hist[2];/*ns*/
 	atomic_t use_cnt;
 	u32 frame_dirty;
 	/*

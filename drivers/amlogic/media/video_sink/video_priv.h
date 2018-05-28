@@ -26,7 +26,7 @@
 #define DEBUG_FLAG_RDMA_WAIT_1		     0x40000
 #define DEBUG_FLAG_VSYNC_DONONE                0x80000
 #define DEBUG_FLAG_GOFIELD_MANUL             0x100000
-
+#define DEBUG_FLAG_LATENCY             0x200000
 /*for video.c's static int debug_flag;*/
 
 #define VOUT_TYPE_TOP_FIELD 0

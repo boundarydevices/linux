@@ -159,6 +159,9 @@ module_param(tx_op_color_primary, int, 0664);
 MODULE_PARM_DESC(tx_op_color_primary,
 		"tx output color_primary");
 
+unsigned int debug_game_mode_1;
+module_param(debug_game_mode_1, uint, 0664);
+MODULE_PARM_DESC(debug_game_mode_1, "\n debug_game_mode_1\n");
 unsigned int pq_user_value;
 unsigned int hdr_source_type = 0x1;
 
@@ -676,7 +679,7 @@ void vpp_get_hist_en(void)
 	WRITE_VPP_REG(VI_HIST_GCLK_CTRL, 0xffffffff);
 	WRITE_VPP_REG_BITS(VI_HIST_CTRL, 2, VI_HIST_POW_BIT, VI_HIST_POW_WID);
 }
-
+static unsigned int vpp_luma_max;
 void vpp_get_vframe_hist_info(struct vframe_s *vf)
 {
 	unsigned int hist_height, hist_width;
@@ -838,6 +841,14 @@ void vpp_get_vframe_hist_info(struct vframe_s *vf)
 			VI_HIST_ON_BIN_62_BIT, VI_HIST_ON_BIN_62_WID);
 	vf->prop.hist.vpp_gamma[63]  = READ_VPP_REG_BITS(VI_DNLP_HIST31,
 			VI_HIST_ON_BIN_63_BIT, VI_HIST_ON_BIN_63_WID);
+	if (debug_game_mode_1 &&
+		(vpp_luma_max != vf->prop.hist.vpp_luma_max)) {
+		vf->ready_clock_hist[1] = sched_clock();
+		pr_info("vpp output done %lld us. luma_max(0x%x-->0x%x)\n",
+			vf->ready_clock_hist[1]/1000,
+			vpp_luma_max, vf->prop.hist.vpp_luma_max);
+		vpp_luma_max = vf->prop.hist.vpp_luma_max;
+	}
 }
 
 static void ioctrl_get_hdr_metadata(struct vframe_s *vf)

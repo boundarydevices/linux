@@ -54,7 +54,7 @@ struct provider_aux_req_s {
 struct provider_disp_mode_req_s {
 	/*input*/
 	struct vframe_s *vf;
-	unsigned int req_mode;/*0:peak;1:get*/
+	unsigned int req_mode;/*0:get;1:check*/
 	/*output*/
 	enum vframe_disp_mode_e disp_mode;
 };

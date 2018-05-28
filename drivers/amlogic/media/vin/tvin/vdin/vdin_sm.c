@@ -59,8 +59,9 @@ static int sm_print_fmt_chg;
 static int sm_atv_prestable_fmt;
 static int sm_print_prestable;
 
-static bool sm_debug_enable = true;
-module_param(sm_debug_enable, bool, 0664);
+/*bit0:general debug bit;bit1:hdmirx color change*/
+static unsigned int sm_debug_enable = 1;
+module_param(sm_debug_enable, uint, 0664);
 MODULE_PARM_DESC(sm_debug_enable,
 		"enable/disable state machine debug message");
 
@@ -211,12 +212,13 @@ static void hdmirx_color_fmt_handler(struct vdin_dev_s *devp)
 			(vdin_hdr_flag != pre_vdin_hdr_flag) ||
 			(vdin_fmt_range != pre_vdin_fmt_range) ||
 			(cur_dest_color_fmt != pre_dest_color_fmt)) {
-			pr_info("[smr.%d] cur color fmt(%d->%d), hdr_flag(%d->%d), dest color fmt(%d->%d), csc_cfg:0x%x\n",
-				devp->index,
-				pre_color_fmt, cur_color_fmt,
-				pre_vdin_hdr_flag, vdin_hdr_flag,
-				pre_dest_color_fmt, cur_dest_color_fmt,
-				devp->csc_cfg);
+			if (sm_debug_enable & (1 << 1))
+				pr_info("[smr.%d] cur color fmt(%d->%d), hdr_flag(%d->%d), dest color fmt(%d->%d), csc_cfg:0x%x\n",
+					devp->index,
+					pre_color_fmt, cur_color_fmt,
+					pre_vdin_hdr_flag, vdin_hdr_flag,
+					pre_dest_color_fmt, cur_dest_color_fmt,
+					devp->csc_cfg);
 			vdin_get_format_convert(devp);
 			devp->csc_cfg = 1;
 		} else
@@ -670,4 +672,13 @@ enum tvin_sm_status_e tvin_get_sm_status(int index)
 	return sm_dev[index].state;
 }
 EXPORT_SYMBOL(tvin_get_sm_status);
+
+int tvin_get_av_status(void)
+{
+	if (tvin_get_sm_status(0) == TVIN_SM_STATUS_STABLE)
+		return true;
+
+	return false;
+}
+EXPORT_SYMBOL(tvin_get_av_status);
 

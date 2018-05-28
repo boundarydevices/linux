@@ -2171,6 +2171,21 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 #else
 			video_vf_put(cur_dispbuf);
 #endif
+			if (debug_flag & DEBUG_FLAG_LATENCY) {
+				vf->ready_clock[3] = sched_clock();
+				pr_info("video toggle latency %lld ms video get latency %lld ms vdin put latency %lld ms. first %lld ms.\n",
+					vf->ready_clock[3]/1000,
+					vf->ready_clock[2]/1000,
+					vf->ready_clock[1]/1000,
+					vf->ready_clock[0]/1000);
+				cur_dispbuf->ready_clock[4] = sched_clock();
+				pr_info("video put latency %lld ms video toggle latency %lld ms video get latency %lld ms vdin put latency %lld ms. first %lld ms.\n",
+					cur_dispbuf->ready_clock[4]/1000,
+					cur_dispbuf->ready_clock[3]/1000,
+					cur_dispbuf->ready_clock[2]/1000,
+					cur_dispbuf->ready_clock[1]/1000,
+					cur_dispbuf->ready_clock[0]/1000);
+			}
 		}
 
 	} else
@@ -3660,6 +3675,9 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 
 	if ((freerun_mode == FREERUN_NODUR) || hdmi_in_onvideo)
 		return true;
+	/*freerun for game mode*/
+	if (next_vf->flag & VFRAME_FLAG_GAME_MODE)
+		return true;
 
 	if (step_enable) {
 		if (step_flag)
@@ -4783,6 +4801,13 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			vf = video_vf_get();
 			if (!vf)
 				break;
+			if (debug_flag & DEBUG_FLAG_LATENCY) {
+				vf->ready_clock[2] = sched_clock();
+				pr_info("video get latency %lld ms vdin put latency %lld ms. first %lld ms.\n",
+				vf->ready_clock[2]/1000,
+				vf->ready_clock[1]/1000,
+				vf->ready_clock[0]/1000);
+			}
 			if (video_vf_dirty_put(vf))
 				break;
 			if (vf && hdmiin_frame_check && (vf->source_type ==

@@ -106,6 +106,10 @@ static int vdin_ctl_dbg;
 module_param(vdin_ctl_dbg, int, 0664);
 MODULE_PARM_DESC(vdin_ctl_dbg, "vdin_ctl_dbg");
 
+/*bit0/1:game mode enable for vdin0/1*/
+unsigned int game_mode;
+module_param(game_mode, uint, 0664);
+MODULE_PARM_DESC(game_mode, "game_mode");
 static unsigned int vpu_reg_27af = 0x3;
 
 /***************************Local defines**********************************/
@@ -1815,7 +1819,7 @@ static inline void vdin_set_wr_ctrl(struct vdin_dev_s *devp,
 	/* win_ve */
 	wr_bits(offset, VDIN_WR_V_START_END, (v - 1), WR_VEND_BIT, WR_VEND_WID);
 	/* hconv_mode */
-	wr_bits(offset, VDIN_WR_CTRL, 0, HCONV_MODE_BIT, HCONV_MODE_WID);
+	wr_bits(offset, VDIN_WR_CTRL, 2, HCONV_MODE_BIT, HCONV_MODE_WID);
 	/* vconv_mode */
 	wr_bits(offset, VDIN_WR_CTRL, 0, VCONV_MODE_BIT, VCONV_MODE_WID);
 	if (write_format444 == 2) {
@@ -1914,6 +1918,7 @@ void vdin_set_wr_ctrl_vsync(struct vdin_dev_s *devp,
 	} else if (write_format444 == 1) {
 		vconv_mode = 3;
 	} else {
+		hconv_mode = 2;
 		swap_cbcr = 0;
 	}
 #ifdef CONFIG_AML_RDMA
@@ -2191,7 +2196,7 @@ static void vdin_set_ldim_max_init(unsigned int offset,
 	wr_bits(offset, VDIN_HIST_CTRL, 1, 8, 1);
 }
 #endif
-
+static unsigned int vdin_luma_max;
 void vdin_set_vframe_prop_info(struct vframe_s *vf,
 		struct vdin_dev_s *devp)
 {
@@ -2390,6 +2395,14 @@ void vdin_set_vframe_prop_info(struct vframe_s *vf,
 	/* fetch meas info - For M2 or further chips only, not for M1 chip */
 	vf->prop.meas.vs_stamp = devp->stamp;
 	vf->prop.meas.vs_cycle = devp->cycle;
+	if ((vdin_ctl_dbg & (1 << 8)) &&
+		(vdin_luma_max != vf->prop.hist.luma_max)) {
+		vf->ready_clock_hist[0] = sched_clock();
+		pr_info("vdin write done %lld us. lum_max(0x%x-->0x%x)\n",
+			vf->ready_clock_hist[0]/1000,
+			vdin_luma_max, vf->prop.hist.luma_max);
+		vdin_luma_max = vf->prop.hist.luma_max;
+	}
 #if 0
 /*#ifdef CONFIG_AML_LOCAL_DIMMING*/
 	/* get ldim max */
@@ -3784,15 +3797,18 @@ int vdin_event_cb(int type, void *data, void *op_arg)
 		}
 		index_disp = req->vf->index_disp & 0xff;
 		if (index_disp >= VFRAME_DISP_MAX_NUM) {
-			if (vdin_ctl_dbg)
+			if (vdin_ctl_dbg&(1<<2))
 				pr_info("%s:req->vf->index_disp(%d) is overflow!\n",
 					__func__, index_disp);
 			return -1;
 		}
-		req->disp_mode = p->disp_mode[index_disp];
+		if (game_mode)
+			req->disp_mode = VFRAME_DISP_MODE_NULL;
+		else
+			req->disp_mode = p->disp_mode[index_disp];
 		if ((req->req_mode == 1) && (p->skip_vf_num))
 			p->disp_mode[index_disp] = VFRAME_DISP_MODE_UNKNOWN;
-		if (vdin_ctl_dbg)
+		if (vdin_ctl_dbg&(1<<1))
 			pr_info("%s(type 0x%x vf index 0x%x)=>disp_mode %d,req_mode:%d\n",
 				__func__, type, index_disp, req->disp_mode,
 				req->req_mode);

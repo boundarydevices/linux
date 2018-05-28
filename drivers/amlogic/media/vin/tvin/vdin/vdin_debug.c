@@ -491,8 +491,8 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	vdin_dump_vf_state(devp->vfp);
 	if (vf) {
 		pr_info("current vframe index(%u):\n", vf->index);
-		pr_info("\t buf(w%u, h%u),type(0x%x, %u), duration(%d),",
-		vf->width, vf->height, vf->type, vf->type, vf->duration);
+		pr_info("\t buf(w%u, h%u),type(0x%x),flag(0x%x), duration(%d),",
+		vf->width, vf->height, vf->type, vf->flag, vf->duration);
 		pr_info("\t ratio_control(0x%x).\n", vf->ratio_control);
 		pr_info("\t trans fmt %u, left_start_x %u,",
 			vf->trans_fmt, vf->left_eye.start_x);
@@ -518,8 +518,8 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 		curparm->reserved, devp->flags);
 	pr_info("max buffer num %u, msr_clk_val:%d.\n",
 		devp->canvas_max_num, devp->msr_clk_val);
-	pr_info("canvas buffer size %u, rdma_enable: %d, game_mode: %d.\n",
-		devp->canvas_max_size, devp->rdma_enable, devp->game_mode);
+	pr_info("canvas buffer size %u, rdma_enable: %d.\n",
+		devp->canvas_max_size, devp->rdma_enable);
 	pr_info("range(%d),csc_cfg:0x%x,urgent_en:%d\n",
 		devp->prop.color_fmt_range,
 		devp->csc_cfg, devp->urgent_en);

@@ -45,7 +45,7 @@
 #include "vdin_vf.h"
 #include "vdin_regs.h"
 
-#define VDIN_VER "Ref.2017/011/17"
+#define VDIN_VER "Ref.2018/04/28"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -282,7 +282,12 @@ struct vdin_dev_s {
 	unsigned int color_range_mode;
 	/*auto detect av/atv input ratio*/
 	unsigned int auto_ratio_en;
-	bool	game_mode;/*1:game mode for hdmi*/
+	/*
+	 *game_mode:
+	 *bit0:enable/disable
+	 *bit1:for true bypas and put vframe in advance one vsync
+	 */
+	unsigned int game_mode;
 	unsigned int rdma_enable;
 	unsigned int canvas_config_mode;
 	bool	prehsc_en;
