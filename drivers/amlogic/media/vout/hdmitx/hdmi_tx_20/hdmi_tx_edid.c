@@ -247,13 +247,12 @@ static void set_vsdb_phy_addr(struct hdmitx_dev *hdev,
 	hdmitx_event_notify(HDMITX_PHY_ADDR_VALID, &phy_addr);
 }
 
-static void set_vsdb_dc_cap(struct rx_cap *pRXCap,
-	unsigned char *edid_offset)
+static void set_vsdb_dc_cap(struct rx_cap *pRXCap)
 {
-	pRXCap->dc_y444 = !!(edid_offset[6] & (1 << 3));
-	pRXCap->dc_30bit = !!(edid_offset[6] & (1 << 4));
-	pRXCap->dc_36bit = !!(edid_offset[6] & (1 << 5));
-	pRXCap->dc_48bit = !!(edid_offset[6] & (1 << 6));
+	pRXCap->dc_y444 = !!(pRXCap->ColorDeepSupport & (1 << 3));
+	pRXCap->dc_30bit = !!(pRXCap->ColorDeepSupport & (1 << 4));
+	pRXCap->dc_36bit = !!(pRXCap->ColorDeepSupport & (1 << 5));
+	pRXCap->dc_48bit = !!(pRXCap->ColorDeepSupport & (1 << 6));
 }
 
 static void set_vsdb_dc_420_cap(struct rx_cap *pRXCap,
@@ -307,7 +306,6 @@ int Edid_Parse_check_HDMI_VSDB(struct hdmitx_dev *hdev,
 				info->vsdb_phy_addr.c,
 				info->vsdb_phy_addr.d);
 	}
-	set_vsdb_dc_cap(&hdev->RXCap, &buff[BlockAddr]);
 
 	if (temp_addr >= VSpecificBoundary)
 		ret = -1;
@@ -899,7 +897,6 @@ static void Edid_ParsingVendSpec(struct rx_cap *pRXCap,
 
 	if (pos > dv->length)
 		pr_info("hdmitx: edid: maybe invalid dv%d data\n", dv->ver);
-	return;
 }
 
 /* ----------------------------------------------------------- */
@@ -1382,6 +1379,7 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 				pRXCap->IEEEOUI = 0x000c03;
 				pRXCap->ColorDeepSupport =
 					(count > 5) ? BlockBuf[offset+5] : 0;
+				set_vsdb_dc_cap(pRXCap);
 				pRXCap->Max_TMDS_Clock1 =
 					(count > 6) ? BlockBuf[offset+6] : 0;
 
