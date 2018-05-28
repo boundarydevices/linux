@@ -335,20 +335,18 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 	struct mtd_partition *parts;
 	int nr, i, ret = 0;
 	loff_t adjust_offset = 0;
-	uint64_t mini_part_size, part_size;
+	uint64_t part_size;
 	int reserved_part_blk_num = RESERVED_BLOCK_NUM;
 	uint8_t bl_mode, base_part = 0;
 	uint32_t fip_copies, fip_size, fip_part_size = 0;
 #ifndef CONFIG_NOT_SKIP_BAD_BLOCK
-	uint64_t start_blk = 0;
+	uint64_t start_blk = 0, part_blk = 0;
 	loff_t offset;
 	int phys_erase_shift, error = 0;
 
 	phys_erase_shift = fls(mtd->erasesize) - 1;
 #endif
 
-	mini_part_size =
-	(mtd->erasesize > MINI_PART_SIZE) ? mtd->erasesize : MINI_PART_SIZE;
 	parts = plat->platform_nand_data.chip.partitions;
 	nr = plat->platform_nand_data.chip.nr_partitions;
 	if (!strncmp((char *)plat->name,
@@ -399,15 +397,13 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 				return -ENOMEM;
 			}
 			temp_parts->offset = adjust_offset;
-			if (temp_parts->size < mini_part_size)
-				part_size = mini_part_size;
-			else
-				part_size = temp_parts->size;
-			if ((i == nr - 1) && (mtd->size > adjust_offset))
+			part_size = temp_parts->size;
+			if (i == nr - 1)
 				part_size = mtd->size - adjust_offset;
 	#ifndef CONFIG_NOT_SKIP_BAD_BLOCK
 			offset = 0;
 			start_blk = 0;
+			part_blk = part_size >> phys_erase_shift;
 			do {
 				offset = adjust_offset + start_blk *
 					mtd->erasesize;
@@ -415,12 +411,15 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 				if (error) {
 					pr_info("%s:%d factory bad addr=%llx\n",
 						__func__, __LINE__,
-					(uint64_t)(offset >> phys_erase_shift));
-					adjust_offset += mtd->erasesize;
-					continue;
+					(uint64_t)(offset >>
+						phys_erase_shift));
+					if (i != nr - 1) {
+						adjust_offset += mtd->erasesize;
+						continue;
+					}
 				}
 				start_blk++;
-			} while (start_blk < (part_size >> phys_erase_shift));
+			} while (start_blk < part_blk);
 	#endif
 			if (temp_parts->name == NULL) {
 				temp_parts->name =
