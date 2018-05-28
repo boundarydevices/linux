@@ -647,8 +647,8 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 				pr_dbg("[%s] time_delta:%d ms\n",
 						__func__, time_delta);
 #endif
-				/*sync param */
-				//aml_fe_analog_sync_frontend(fe);
+				/* sync param */
+				/* aml_fe_analog_sync_frontend(fe); */
 				priv_cfg = AML_ATVDEMOD_UNSCAN_MODE;
 				fe->ops.analog_ops.set_config(fe, &priv_cfg);
 				return V4L2_SEARCH_SUCCESS;
@@ -674,16 +674,17 @@ static enum v4l2_search v4l2_frontend_search(struct v4l2_frontend *v4l2_fe)
 				__func__,
 				(uint32_t) p->std, p->frequency);
 
-		++search_count;
 		if (p->frequency >= 44200000 &&
 			p->frequency <= 44300000 &&
 			double_check_cnt) {
 			double_check_cnt--;
 			p->frequency -= afc_step;
 			pr_err("%s 44.25Mhz double check\n", __func__);
-		} else
+		} else {
+			++search_count;
 			p->frequency += afc_step * ((search_count % 2) ?
 					-search_count : search_count);
+		}
 
 #ifdef DEBUG_TIME_CUS
 		time_end = jiffies_to_msecs(jiffies);

@@ -333,7 +333,7 @@ void aml_fe_get_atvaudio_state(int *state)
 		if ((vpll_lock == 0) && (line_lock == 0))
 			retrieve_vpll_carrier_audio_power(&power);
 	} else
-		pr_err("%s, atv is not work, atv_state: %d.\n",
+		pr_audio("%s, atv is not work, atv_state: %d.\n",
 				__func__, atv_state);
 
 	if (power >= 150)
@@ -554,11 +554,11 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		last_frq = atvdemod_param->param.frequency;
 		last_std = atvdemod_param->param.std;
 #endif
-		if (1) {
-		/*
-		 * atvdemod_param->param.std != amlatvdemod_devp->std ||
-		 * atvdemod_param->param.audmode != amlatvdemod_devp->audmode
-		 */
+		if (amlatvdemod_devp->std != atvdemod_param->param.std ||
+		amlatvdemod_devp->audmode != atvdemod_param->param.audmode ||
+		amlatvdemod_devp->if_freq != atvdemod_param->if_freq ||
+		amlatvdemod_devp->if_inv != atvdemod_param->if_inv ||
+		amlatvdemod_devp->tuner_id != atvdemod_param->tuner_id) {
 			amlatvdemod_devp->std = atvdemod_param->param.std;
 			amlatvdemod_devp->audmode =
 					atvdemod_param->param.audmode;
@@ -584,6 +584,7 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	}
 
 	/* afc tune enable */
+	/* analog_search_flag == 0 or afc_range != 0 means searching */
 	if ((fe->ops.info.type == FE_ANALOG)
 			&& (atv_demod_get_scan_mode() == 0)
 			&& (atvdemod_param->param.mode == 0))
@@ -701,6 +702,8 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 	}
 
 	mutex_unlock(&atv_demod_list_mutex);
+
+	pr_info("%s: OK.\n", __func__);
 
 	return 0;
 }
