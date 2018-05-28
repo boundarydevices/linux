@@ -6713,7 +6713,9 @@ sd_init(struct sched_domain_topology_level *tl,
 					| 1*SD_BALANCE_EXEC
 					| 1*SD_BALANCE_FORK
 					| 0*SD_BALANCE_WAKE
+#ifndef CONFIG_AMLOGIC_MODIFY
 					| 1*SD_WAKE_AFFINE
+#endif
 					| 0*SD_SHARE_CPUCAPACITY
 					| 0*SD_SHARE_PKG_RESOURCES
 					| 0*SD_SERIALIZE
