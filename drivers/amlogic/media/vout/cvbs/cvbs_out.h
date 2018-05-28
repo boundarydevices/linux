@@ -48,6 +48,7 @@ enum cvbs_cpu_type {
 	CVBS_CPU_TYPE_GXM    = 2,
 	CVBS_CPU_TYPE_TXLX   = 3,
 	CVBS_CPU_TYPE_G12A   = 4,
+	CVBS_CPU_TYPE_G12B   = 5,
 };
 
 struct meson_cvbsout_data {

@@ -131,9 +131,9 @@
 	};
 
 	cvbsout {
-		compatible = "amlogic, cvbsout-g12a";
+		compatible = "amlogic, cvbsout-g12b";
 		dev_name = "cvbsout";
-		status = "disabled";
+		status = "okay";
 		clocks = <&clkc CLKID_VCLK2_ENCI
 			&clkc CLKID_VCLK2_VENCI0
 			&clkc CLKID_VCLK2_VENCI1
@@ -144,12 +144,18 @@
 			"vdac_clk_gate";
 
 		/* performance: reg_address, reg_value */
-		/* s905x */
+		/* g12b */
 		performance = <0x1bf0  0x9
-			0x1b56  0x343
+			0x1b56  0x333
 			0x1b12  0x8080
 			0x1b05  0xfd
-			0x1c59  0xf752
+			0x1c59  0xf850
+			0xffff  0x0>; /* ending flag */
+		performance_sarft = <0x1bf0  0x9
+			0x1b56  0x333
+			0x1b12  0x0
+			0x1b05  0x9
+			0x1c59  0xfc48
 			0xffff  0x0>; /* ending flag */
 	};
 

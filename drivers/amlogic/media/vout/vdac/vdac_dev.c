@@ -172,7 +172,8 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 
 	if (is_meson_txlx_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 9, 1);
-	else if (is_meson_g12a_cpu())
+	else if (is_meson_g12a_cpu() ||
+			is_meson_g12b_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0_G12A, ~enable, 9, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, ~enable, 9, 1);
@@ -187,7 +188,7 @@ void vdac_out_cntl0_bit10(bool on, unsigned int module_sel)
 	bool enable = 0;
 
 	/*bit10 is for bandgap startup setting in g12a*/
-	if (is_meson_g12a_cpu())
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
 		return;
 
 	switch (module_sel & 0xf) {
@@ -273,7 +274,7 @@ void vdac_out_cntl0_bit0(bool on, unsigned int module_sel)
 	else
 		enable = 1;
 
-	if (is_meson_g12a_cpu())
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0_G12A, enable, 0, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 0, 1);
@@ -332,7 +333,7 @@ EXPORT_SYMBOL(vdac_out_cntl1_bit3);
 
 void vdac_set_ctrl0_ctrl1(unsigned int ctrl0, unsigned int ctrl1)
 {
-	if (is_meson_g12a_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 		vdac_hiu_reg_write(HHI_VDAC_CNTL0_G12A, ctrl0);
 		vdac_hiu_reg_write(HHI_VDAC_CNTL1_G12A, ctrl1);
 	} else {
@@ -368,7 +369,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			/*Cdac pwd*/
 			vdac_out_cntl1_bit3(1, VDAC_MODULE_ATV_DEMOD);
 			/* enable AFE output buffer */
-			if (!is_meson_g12a_cpu())
+			if (!is_meson_g12a_cpu() && !is_meson_g12b_cpu())
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			vdac_out_cntl0_bit0(1, VDAC_MODULE_ATV_DEMOD);
 		} else {
@@ -378,7 +379,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 				break;
 			vdac_out_cntl0_bit0(0, VDAC_MODULE_ATV_DEMOD);
 			/* Disable AFE output buffer */
-			if (!is_meson_g12a_cpu())
+			if (!is_meson_g12a_cpu() && !is_meson_g12b_cpu())
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			/* enable dac output */
 			vdac_out_cntl1_bit3(0, 0x4);
@@ -448,7 +449,8 @@ void vdac_enable(bool on, unsigned int module_sel)
 			pri_flag &= ~VDAC_MODULE_CVBS_OUT;
 			if (pri_flag & VDAC_MODULE_ATV_DEMOD) {
 				vdac_out_cntl1_bit3(1, VDAC_MODULE_ATV_DEMOD);
-				if (!is_meson_g12a_cpu())
+				if (!is_meson_g12a_cpu() &&
+					!is_meson_g12b_cpu())
 					vdac_hiu_reg_setb(HHI_VDAC_CNTL0,
 						0, 10, 1);
 				vdac_out_cntl0_bit0(1, VDAC_MODULE_ATV_DEMOD);

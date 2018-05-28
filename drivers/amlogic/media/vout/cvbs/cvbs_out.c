@@ -818,13 +818,15 @@ static void cvbs_performance_regs_dump(void)
 		pr_info("vcbus [0x%x] = 0x%x\n", performance_regs_enci[i],
 			cvbs_out_reg_read(performance_regs_enci[i]));
 	}
-	if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A)
+	if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A ||
+		cvbs_cpu_type() == CVBS_CPU_TYPE_G12B)
 		size = sizeof(performance_regs_vdac_g12a)/sizeof(unsigned int);
 	else
 		size = sizeof(performance_regs_vdac)/sizeof(unsigned int);
 	pr_info("------------------------\n");
 	for (i = 0; i < size; i++) {
-		if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A)
+		if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A ||
+			cvbs_cpu_type() == CVBS_CPU_TYPE_G12B)
 			pr_info("hiu [0x%x] = 0x%x\n",
 			performance_regs_vdac_g12a[i],
 			cvbs_out_hiu_read(performance_regs_vdac_g12a[i]));
@@ -1113,8 +1115,9 @@ static void cvbs_debug_store(char *buf)
 		cvbs_performance_config_dump();
 		break;
 	case CMD_VP_SET_PLLPATH:
-		if (cvbs_cpu_type() != CVBS_CPU_TYPE_G12A) {
-			print_info("ERR:Only g12a chip supported\n");
+		if (cvbs_cpu_type() != CVBS_CPU_TYPE_G12A &&
+			cvbs_cpu_type() != CVBS_CPU_TYPE_G12B) {
+			print_info("ERR:Only g12a/b chip supported\n");
 			break;
 		}
 		if (argc != 2) {
@@ -1331,6 +1334,12 @@ struct meson_cvbsout_data meson_g12a_cvbsout_data = {
 	.name = "meson-g12a-cvbsout",
 };
 
+struct meson_cvbsout_data meson_g12b_cvbsout_data = {
+	.cntl0_val = 0x906001,
+	.cpu_id = CVBS_CPU_TYPE_G12B,
+	.name = "meson-g12b-cvbsout",
+};
+
 static const struct of_device_id meson_cvbsout_dt_match[] = {
 	{
 		.compatible = "amlogic, cvbsout-gxl",
@@ -1344,6 +1353,9 @@ static const struct of_device_id meson_cvbsout_dt_match[] = {
 	}, {
 		.compatible = "amlogic, cvbsout-g12a",
 		.data		= &meson_g12a_cvbsout_data,
+	}, {
+		.compatible = "amlogic, cvbsout-g12b",
+		.data		= &meson_g12b_cvbsout_data,
 	},
 	{},
 };
