@@ -1703,7 +1703,7 @@
 	vddcpu1: pwmab_a-regulator {
 		compatible = "pwm-regulator";
 		pinctrl-names = "default";
-		pinctrl-1 = <&pwm_a_e2>;
+		pinctrl-0 = <&pwm_a_e2>;
 		pwms = <&pwm_ab MESON_PWM_0 1250 0>;
 		regulator-name = "vddcpu1";
 		regulator-min-microvolt = <721000>;
