@@ -35,6 +35,13 @@
 #endif
 #include <trace/events/power.h>
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static unsigned int freqmax0;
+core_param(freqmax0, freqmax0, uint, 0644);
+static unsigned int freqmax1;
+core_param(freqmax1, freqmax1, uint, 0644);
+#endif
+
 static LIST_HEAD(cpufreq_policy_list);
 
 static inline bool policy_is_inactive(struct cpufreq_policy *policy)
@@ -1282,6 +1289,19 @@ static int cpufreq_online(unsigned int cpu)
 	}
 
 	down_write(&policy->rwsem);
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (topology_physical_package_id(cpu) == 0 && freqmax0) {
+		if (freqmax0 >= policy->min && freqmax0 < policy->max)
+			policy->max = freqmax0;
+		pr_notice(" freqmax0:%d, max:%d\n", freqmax0, policy->max);
+	}
+	if (topology_physical_package_id(cpu) == 1 && freqmax1) {
+		if (freqmax1 >= policy->min && freqmax1 < policy->max)
+			policy->max = freqmax1;
+		pr_notice(" freqmax1:%d, max:%d\n", freqmax1, policy->max);
+	}
+#endif
 
 	if (new_policy) {
 		/* related_cpus should at least include policy->cpus. */
