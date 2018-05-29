@@ -1121,7 +1121,7 @@
 	aocec: aocec {
 		compatible = "amlogic, aocec-g12a";
 		device_name = "aocec";
-		status = "disabled";
+		status = "okay";
 		vendor_name = "Amlogic"; /* Max Chars: 8     */
 		/* Refer to the following URL at:
 		 * http://standards.ieee.org/develop/regauth/oui/oui.txt
