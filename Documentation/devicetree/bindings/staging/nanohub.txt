@@ -20,6 +20,7 @@ Example:
 		sensorhub,wakeup-gpio = <&msm_gpio 65 0>;
 		sensorhub,irq1-gpio = <&msm_gpio 66 0>;
 		sensorhub,spi-cs-gpio = <&msm_gpio 43 0>;
+		sensorhub,bl-max-frequency = <1000000>;
 		sensorhub,bl-addr = <0x08000000>;
 		sensorhub,kernel-addr = <0x0800C000>;
 		sensorhub,shared-addr = <0x08020000>;

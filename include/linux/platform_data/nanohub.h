@@ -16,6 +16,7 @@ struct nanohub_platform_data {
 	u32 irq1_gpio;
 	u32 irq2_gpio;
 	u32 spi_cs_gpio;
+	u32 bl_max_speed_hz;
 	u32 bl_addr;
 	u32 num_flash_banks;
 	struct nanohub_flash_bank *flash_banks;

@@ -63,6 +63,7 @@ struct nanohub_data {
 	const struct nanohub_platform_data *pdata;
 	int irq1;
 	int irq2;
+	uint32_t max_speed_hz;
 
 	atomic_t kthread_run;
 	atomic_t thread_state;

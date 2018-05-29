@@ -56,6 +56,7 @@
 #define KTHREAD_WARN_CNT	10
 #define WAKEUP_ERR_TIME_NS	(60LL * NSEC_PER_SEC)
 #define WAKEUP_ERR_CNT		4
+#define BL_MAX_SPEED_HZ		1000000
 
 /**
  * struct gpio_config - this is a binding between platform data and driver data
@@ -1404,6 +1405,12 @@ static struct nanohub_platform_data *nanohub_parse_dt(struct device *dev)
 	/* optional (spi) */
 	pdata->spi_cs_gpio = of_get_named_gpio(dt, "sensorhub,spi-cs-gpio", 0);
 
+	/* optional (bl-max-frequency) */
+	pdata->bl_max_speed_hz = BL_MAX_SPEED_HZ;
+	ret = of_property_read_u32(dt, "sensorhub,bl-max-frequency", &u);
+	if (!ret)
+		pdata->bl_max_speed_hz = u;
+
 	/* optional (stm32f bootloader) */
 	of_property_read_u32(dt, "sensorhub,bl-addr", &pdata->bl_addr);
 
@@ -1492,6 +1499,7 @@ static struct nanohub_platform_data *nanohub_parse_dt(struct device *dev)
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
+	pdata->bl_max_speed_hz = BL_MAX_SPEED_HZ;
 	return pdata;
 }
 #endif

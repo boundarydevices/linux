@@ -24,6 +24,7 @@
 
 #define SPI_TIMEOUT		65535
 #define SPI_MIN_DMA		48
+#define SPI_MAX_SPEED_HZ	10000000
 
 struct nanohub_spi_data {
 	struct nanohub_data data;
@@ -168,7 +169,7 @@ static int spi_bl_open(const void *data)
 	int ret;
 
 	spi_bus_lock(spi_data->device->master);
-	spi_data->device->max_speed_hz = 1000000;
+	spi_data->device->max_speed_hz = spi_data->data.pdata->bl_max_speed_hz;
 	spi_data->device->mode = SPI_MODE_0;
 	spi_data->device->bits_per_word = 8;
 	ret = spi_setup(spi_data->device);
@@ -374,7 +375,7 @@ static int nanohub_spi_open(void *data)
 
 	down(&spi_data->spi_sem);
 	spi_bus_lock(spi_data->device->master);
-	spi_data->device->max_speed_hz = 10000000;
+	spi_data->device->max_speed_hz = spi_data->data.max_speed_hz;
 	spi_data->device->mode = SPI_MODE_0;
 	spi_data->device->bits_per_word = 8;
 	ret = spi_setup(spi_data->device);
@@ -455,6 +456,7 @@ static int nanohub_spi_probe(struct spi_device *spi)
 	}
 
 	spi_data->device = spi;
+	spi_data->data.max_speed_hz = spi->max_speed_hz ? : SPI_MAX_SPEED_HZ;
 	nanohub_spi_comms_init(spi_data);
 
 	spi_data->data.bl.cmd_erase = CMD_ERASE;
