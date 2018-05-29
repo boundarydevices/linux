@@ -530,7 +530,7 @@ enum blk_eh_timer_return ata_scsi_timed_out(struct scsi_cmnd *cmd)
 	DPRINTK("ENTER\n");
 
 	if (ap->ops->error_handler) {
-		ret = BLK_EH_NOT_HANDLED;
+		ret = BLK_EH_DONE;
 		goto out;
 	}
 
@@ -541,7 +541,7 @@ enum blk_eh_timer_return ata_scsi_timed_out(struct scsi_cmnd *cmd)
 		WARN_ON(qc->scsicmd != cmd);
 		qc->flags |= ATA_QCFLAG_EH_SCHEDULED;
 		qc->err_mask |= AC_ERR_TIMEOUT;
-		ret = BLK_EH_NOT_HANDLED;
+		ret = BLK_EH_DONE;
 	}
 	spin_unlock_irqrestore(ap->lock, flags);
 
