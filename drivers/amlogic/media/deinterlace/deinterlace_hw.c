@@ -133,7 +133,11 @@ static void ma_di_init(void)
 	DI_Wr(DI_MTN_1_CTRL4, 0x01800880);
 	DI_Wr(DI_MTN_1_CTRL7, 0x0a800480);
 	/* mtn setting */
-	DI_Wr(DI_MTN_1_CTRL1, 0xa0202015);
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B)) {
+		DI_Wr_reg_bits(DI_MTN_CTRL, 1, 0, 1);
+		DI_Wr(DI_MTN_1_CTRL1, 0x202015);
+	} else
+		DI_Wr(DI_MTN_1_CTRL1, 0xa0202015);
 	/* invert chan2 field num */
 	DI_Wr(DI_MTN_CTRL1, (1 << 17) | 2);
 		/* no invert chan2 field num from gxlx*/
@@ -698,7 +702,10 @@ void enable_di_pre_aml(
 	/*
 	 * enable&disable contwr txt
 	 */
-	RDMA_WR_BITS(DI_MTN_1_CTRL1, madi_en?5:0, 29, 3);
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B))
+		RDMA_WR_BITS(DI_MTN_CTRL, madi_en?5:0, 29, 3);
+	else
+		RDMA_WR_BITS(DI_MTN_1_CTRL1, madi_en?5:0, 29, 3);
 
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		if (madi_en) {
@@ -725,7 +732,7 @@ void enable_di_pre_aml(
 	/* chan 2 enable for 2:2 pull down check.*/
 		((chan2_disable ? 0 : 1) << 9) |/* line buffer 2 enable */
 				(0 << 10) |	/* pre drop first. */
-				(1 << 11) | /* mem enable */
+				(1 << 11) | /* nrds mif enable */
 				(0 << 12) | /* pre viu link */
 			(pre_vdin_link << 13) |
 			(pre_vdin_link << 14) |/* pre go line link */
@@ -2586,10 +2593,11 @@ void pulldown_info_clear_g12a(void)
 }
 
 /*
- * frame reset for pre which have nothing with encoder
- * go field
+ * manual reset contrd, cont2rd, mcinford mif
+ * which fix after g12a
  */
-void pre_frame_reset_g12a(unsigned char madi_en, unsigned char mcdi_en)
+static void reset_pre_simple_rd_mif_g12(unsigned char madi_en,
+	unsigned char mcdi_en)
 {
 	unsigned int reg_val = 0;
 
@@ -2607,17 +2615,36 @@ void pre_frame_reset_g12a(unsigned char madi_en, unsigned char mcdi_en)
 		RDMA_WR_BITS(CONTRD_CTRL2, 0, 31, 1);
 		RDMA_WR_BITS(CONT2RD_CTRL2, 0, 31, 1);
 		RDMA_WR_BITS(MCINFRD_CTRL2, 0, 31, 1);
-		/* reset simple mif which framereset not cover */
-		RDMA_WR_BITS(CONTWR_CAN_SIZE, 1, 14, 1);
-		RDMA_WR_BITS(MTNWR_CAN_SIZE, 1, 14, 1);
-		RDMA_WR_BITS(MCVECWR_CAN_SIZE, 1, 14, 1);
-		RDMA_WR_BITS(MCINFWR_CAN_SIZE, 1, 14, 1);
-
-		RDMA_WR_BITS(CONTWR_CAN_SIZE, 0, 14, 1);
-		RDMA_WR_BITS(MTNWR_CAN_SIZE, 0, 14, 1);
-		RDMA_WR_BITS(MCVECWR_CAN_SIZE, 0, 14, 1);
-		RDMA_WR_BITS(MCINFWR_CAN_SIZE, 0, 14, 1);
 	}
+}
+/*
+ * frame reset for pre which have nothing with encoder
+ * go field
+ */
+void pre_frame_reset_g12a(unsigned char madi_en,
+	unsigned char mcdi_en)
+{
+	unsigned int reg_val = 0;
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B))
+		reset_pre_simple_rd_mif_g12(madi_en, mcdi_en);
+	else {
+		if (madi_en)
+			reg_val |= (1<<25);
+		if (mcdi_en)
+			reg_val |= (1<<10);
+		RDMA_WR(DI_PRE_CTRL, reg_val);
+	}
+	/* reset simple mif which framereset not cover */
+	RDMA_WR_BITS(CONTWR_CAN_SIZE, 1, 14, 1);
+	RDMA_WR_BITS(MTNWR_CAN_SIZE, 1, 14, 1);
+	RDMA_WR_BITS(MCVECWR_CAN_SIZE, 1, 14, 1);
+	RDMA_WR_BITS(MCINFWR_CAN_SIZE, 1, 14, 1);
+
+	RDMA_WR_BITS(CONTWR_CAN_SIZE, 0, 14, 1);
+	RDMA_WR_BITS(MTNWR_CAN_SIZE, 0, 14, 1);
+	RDMA_WR_BITS(MCVECWR_CAN_SIZE, 0, 14, 1);
+	RDMA_WR_BITS(MCINFWR_CAN_SIZE, 0, 14, 1);
 
 	reg_val = 0xc3200000 | line_num_pre_frst;
 	RDMA_WR(DI_PRE_GL_CTRL, reg_val);

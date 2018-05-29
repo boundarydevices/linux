@@ -1647,6 +1647,7 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define DI_CHAN2_FMT_W                   ((0x17b9)) /* << 2) + 0xd0100000) */
 #define DI_CANVAS_URGENT0                ((0x170a)) /* << 2) + 0xd0100000) */
 #define DI_CANVAS_URGENT1                ((0x170b)) /* << 2) + 0xd0100000) */
+#define DI_MTN_CTRL                      ((0x170b)) /* << 2) + 0xd0100000) */
 #define DI_CANVAS_URGENT2                ((0x170e)) /* << 2) + 0xd0100000) */
 
 #define VD1_IF0_GEN_REG				    0x1a50
