@@ -226,6 +226,11 @@
 		nrds-enable = <1>;
 		pps-enable = <1>;
 	};
+	ionvideo {
+		compatible = "amlogic, ionvideo";
+		dev_name = "ionvideo";
+		status = "okay";
+	};
 
 	unifykey{
 		compatible = "amlogic, unifykey";
