@@ -37,3 +37,5 @@ make ARCH=arm64 g12a_s905d2_skt.dtb || echo "Compile dtb Fail!!"
 make ARCH=arm64 g12b_pxp.dtb || echo "Compile dtb Fail!!"
 
 make ARCH=arm64 g12b_a311d_skt.dtb || echo "Compile dtb Fail!!"
+
+make ARCH=arm64 g12b_a311d_w400.dtb || echo "Compile dtb Fail!!"
