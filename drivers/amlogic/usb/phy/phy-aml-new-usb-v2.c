@@ -49,10 +49,8 @@ EXPORT_SYMBOL_GPL(amlogic_new_usbphy_reset_v2);
 
 int amlogic_new_usbphy_reset_phycfg_v2(struct amlogic_usb_v2 *phy, int cnt)
 {
-	int i = 0;
-
 	if (phy->reset_regs)
-		writel((readl(phy->reset_regs) | (1 << (16 + i))),
+		writel((readl(phy->reset_regs) | (1 << (16 + cnt))),
 			phy->reset_regs);
 
 	return 0;
