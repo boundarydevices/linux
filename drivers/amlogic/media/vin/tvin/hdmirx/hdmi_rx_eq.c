@@ -185,6 +185,7 @@ void eq_dwork_handler(struct work_struct *work)
 			if (eq_maxvsmin(eq_ch0.bestsetting,
 					eq_ch1.bestsetting,
 					eq_ch2.bestsetting) == 1) {
+				eq_sts = E_EQ_PASS;
 				if (log_level & EQ_LOG)
 					rx_pr("pass\n");
 				break;
@@ -199,9 +200,9 @@ void eq_dwork_handler(struct work_struct *work)
 		eq_ch2.bestsetting = ErrorcableSetting;
 		if (log_level & EQ_LOG)
 			rx_pr("EQ fail-retry\n");
+		eq_sts = E_EQ_FAIL;
 	}
 	eq_cfg();
-	eq_sts = E_EQ_FINISH;
 	/*rx_set_eq_run_state(E_EQ_FINISH);*/
 	/*return;*/
 }
@@ -488,13 +489,14 @@ int rx_eq_algorithm(void)
 		return 0;
 	}
 	if (pre_eq_freq == pll_rate) {
-		if ((eq_sts == E_EQ_FINISH) ||
+		if ((eq_sts == E_EQ_PASS) ||
 			(eq_sts == E_EQ_SAME)) {
 			eq_sts = E_EQ_SAME;
 			rx_pr("same pll rate\n");
 			return 0;
 		}
-	} else if ((pll_rate&0x2) == E_EQ_SD) {
+	}
+	if ((pll_rate&0x2) == E_EQ_SD) {
 		eq_sts = E_EQ_FINISH;
 		pre_eq_freq = pll_rate;
 		rx_pr("low pll rate\n");

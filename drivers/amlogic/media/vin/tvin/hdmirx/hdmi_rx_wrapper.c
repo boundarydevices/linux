@@ -198,6 +198,12 @@ int pre_port = 0xff;
 /*for some device pll unlock too long,send a hpd reset*/
 bool hdmi5v_lost_flag;
 static int hdcp_none_wait_max = 100;
+/* for no signal after esd test issue, phy
+ * does't work, cable clock or PLL can't
+ * lock, need to do phy reset.
+ */
+static int esd_phy_rst_cnt;
+static int esd_phy_rst_max = 2;
 
 #ifndef USE_NEW_FSM_METHODE
 int pll_unlock_check_times;
@@ -1642,6 +1648,10 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(aud_ch_map, index);
 	if (set_pr_var(tmpbuf, hdcp_none_wait_max, value, &index, ret))
 		return pr_var(hdcp_none_wait_max, index);
+	if (set_pr_var(tmpbuf, pll_unlock_max, value, &index, ret))
+		return pr_var(pll_unlock_max, index);
+	if (set_pr_var(tmpbuf, esd_phy_rst_max, value, &index, ret))
+		return pr_var(esd_phy_rst_max, index);
 	return 0;
 }
 
@@ -1742,6 +1752,8 @@ void rx_get_global_variable(const char *buf)
 	pr_var(suspend_pddq_sel, i++);
 	pr_var(aud_ch_map, i++);
 	pr_var(hdcp_none_wait_max, i++);
+	pr_var(pll_unlock_max, i++);
+	pr_var(esd_phy_rst_max, i++);
 }
 
 void skip_frame(unsigned int cnt)
@@ -1965,10 +1977,11 @@ void rx_main_state_machine(void)
 		}
 		hpd_wait_cnt = 0;
 		clk_unstable_cnt = 0;
+		esd_phy_rst_cnt = 0;
 		pre_port = rx.port;
 		rx_set_hpd(1);
 		set_scdc_cfg(0, 1);
-		//rx.hdcp.hdcp_version = HDCP_VER_NONE;
+		/* rx.hdcp.hdcp_version = HDCP_VER_NONE; */
 		rx.state = FSM_WAIT_CLK_STABLE;
 		break;
 	case FSM_WAIT_CLK_STABLE:
@@ -1985,12 +1998,17 @@ void rx_main_state_machine(void)
 				clk_unstable_cnt++;
 				break;
 			}
-			if (rx.err_rec_mode != ERR_REC_END) {
-				rx_set_hpd(0);
-				rx.state = FSM_HPD_HIGH;
-				rx.err_rec_mode = ERR_REC_END;
-			} else
-				rx.err_code = ERR_CLK_UNSTABLE;
+			clk_unstable_cnt = 0;
+			/* do phy reset for ESD no signal issue.
+			 * sometimes after phy reset, phy is
+			 * still not work, need to do phy reset
+			 * again. do reset twice at most.
+			 */
+			if (esd_phy_rst_cnt < esd_phy_rst_max) {
+				hdmirx_phy_init();
+				esd_phy_rst_cnt++;
+			}
+			rx.err_code = ERR_CLK_UNSTABLE;
 		}
 		break;
 	case FSM_EQ_START:
@@ -1998,8 +2016,7 @@ void rx_main_state_machine(void)
 		rx.state = FSM_WAIT_EQ_DONE;
 		break;
 	case FSM_WAIT_EQ_DONE:
-		if ((rx_get_eq_run_state() == E_EQ_FINISH) ||
-			(rx_get_eq_run_state() == E_EQ_SAME)) {
+		if (rx_get_eq_run_state() != E_EQ_START) {
 			rx.state = FSM_SIG_UNSTABLE;
 			pll_lock_cnt = 0;
 			pll_unlock_cnt = 0;
@@ -2021,14 +2038,22 @@ void rx_main_state_machine(void)
 			}
 			if (rx.err_rec_mode == ERR_REC_EQ_RETRY) {
 				rx.state = FSM_WAIT_CLK_STABLE;
-				rx.err_rec_mode = ERR_REC_HPD_RST;
-				rx_set_eq_run_state(E_EQ_START);
+				/* pll unlock after ESD test, phy does't
+				 * work well, do phy reset twice at most.
+				 */
+				if (esd_phy_rst_cnt++ < esd_phy_rst_max)
+					hdmirx_phy_init();
+				else
+					rx.err_rec_mode = ERR_REC_HPD_RST;
 			} else if (rx.err_rec_mode == ERR_REC_HPD_RST) {
 				rx_set_hpd(0);
 				rx.state = FSM_HPD_HIGH;
 				rx.err_rec_mode = ERR_REC_END;
-			} else
+			} else {
+				rx.state = FSM_WAIT_CLK_STABLE;
 				rx.err_code = ERR_PHY_UNLOCK;
+			}
+			rx_set_eq_run_state(E_EQ_START);
 		}
 		break;
 	case FSM_SIG_WAIT_STABLE:
@@ -2110,6 +2135,7 @@ void rx_main_state_machine(void)
 		break;
 	case FSM_SIG_READY:
 		rx_get_video_info();
+		rx.err_rec_mode = ERR_REC_EQ_RETRY;
 		/* video info change */
 		if ((!is_tmds_valid()) ||
 			(!rx_is_timing_stable())) {
@@ -2133,6 +2159,7 @@ void rx_main_state_machine(void)
 				rx.skip = 0;
 				rx.aud_sr_stable_cnt = 0;
 				rx.aud_sr_unstable_cnt = 0;
+				esd_phy_rst_cnt = 0;
 				if (hdcp22_on) {
 					esm_set_stable(false);
 					if (esm_recovery_mode
