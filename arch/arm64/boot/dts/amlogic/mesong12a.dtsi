@@ -730,7 +730,7 @@
 				status = "okay";
 				clocks = <&xtal>;
 				clock-names = "clk_uart";
-				xtal_tick_en = <1>;
+				xtal_tick_en = <2>;
 				fifosize = < 64 >;
 				pinctrl-names = "default";
 				/*pinctrl-0 = <&ao_uart_pins>;*/
