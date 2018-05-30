@@ -92,6 +92,8 @@
 
 static const unsigned int mux_reg_shifts[] = {
 	MISC_A_CLK_SEL_SHIFT,
+	MISC_B_CLK_SEL_SHIFT,
+	MISC_A_CLK_SEL_SHIFT,
 	MISC_B_CLK_SEL_SHIFT
 };
 
