@@ -45,7 +45,7 @@ static int vx1_fsm_acq_st;
 static int vx1_training_wait_cnt;
 static int vx1_training_stable_cnt;
 static int vx1_timeout_reset_flag;
-static struct tasklet_struct  lcd_vx1_reset_tasklet;
+static struct work_struct lcd_vx1_reset_work;
 static int lcd_vx1_intr_request;
 
 #define VX1_HPLL_INTERVAL (HZ)
@@ -879,7 +879,7 @@ static void lcd_vx1_hold_reset(void)
 	lcd_vcbus_setb(VBO_INTR_UNMASK, VBYONE_INTR_UNMASK, 0, 15);
 }
 
-static void lcd_vx1_timeout_reset(unsigned long data)
+static void lcd_vx1_timeout_reset(struct work_struct *p_work)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
@@ -947,8 +947,12 @@ static irqreturn_t lcd_vbyone_vsync_isr(int irq, void *dev_id)
 		if ((lcd_vcbus_read(VBO_STATUS_L) & 0x3f) != 0x20) {
 			if (vx1_timeout_reset_flag == 0) {
 				vx1_timeout_reset_flag = 1;
-					tasklet_schedule(
-						&lcd_vx1_reset_tasklet);
+				if (lcd_drv->workqueue) {
+					queue_work(lcd_drv->workqueue,
+						&lcd_vx1_reset_work);
+				} else {
+					schedule_work(&lcd_vx1_reset_work);
+				}
 			}
 		} else {
 			vx1_training_stable_cnt++;
@@ -1020,8 +1024,13 @@ static irqreturn_t lcd_vbyone_interrupt_handler(int irq, void *dev_id)
 			if (vx1_lockn_wait_cnt++ > VX1_LOCKN_WAIT_CNT_MAX) {
 				if (vx1_timeout_reset_flag == 0) {
 					vx1_timeout_reset_flag = 1;
-					tasklet_schedule(
-						&lcd_vx1_reset_tasklet);
+					if (lcd_drv->workqueue) {
+						queue_work(lcd_drv->workqueue,
+							&lcd_vx1_reset_work);
+					} else {
+						schedule_work(
+							&lcd_vx1_reset_work);
+					}
 					vx1_lockn_wait_cnt = 0;
 					return IRQ_HANDLED;
 				}
@@ -1414,7 +1423,7 @@ int lcd_vbyone_interrupt_up(void)
 	lcd_vx1_intr_request = 0;
 	lcd_encl_clk_err_cnt = 0;
 
-	tasklet_init(&lcd_vx1_reset_tasklet, lcd_vx1_timeout_reset, 123);
+	INIT_WORK(&lcd_vx1_reset_work, lcd_vx1_timeout_reset);
 
 	INIT_DELAYED_WORK(&lcd_drv->lcd_vx1_delayed_work,
 		lcd_vx1_wait_stable_delayed);
@@ -1472,7 +1481,7 @@ void lcd_vbyone_interrupt_down(void)
 	lcd_vbyone_interrupt_enable(0);
 	free_irq(lcd_drv->res_vx1_irq->start, (void *)"vbyone");
 	free_irq(lcd_drv->res_vsync_irq->start, (void *)"vbyone_vsync");
-	tasklet_kill(&lcd_vx1_reset_tasklet);
+	cancel_work_sync(&lcd_vx1_reset_work);
 	cancel_delayed_work(&lcd_drv->lcd_vx1_delayed_work);
 
 	if (lcd_debug_print_flag)
