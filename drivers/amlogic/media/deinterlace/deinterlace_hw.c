@@ -1095,7 +1095,7 @@ static void set_di_inp_mif(struct DI_MIF_s *mif, int urgent, int hold_line)
 	/* ---------------------- */
 	/* General register */
 	/* ---------------------- */
-	reset_on_gofield = 0;
+	reset_on_gofield = 1;/* default enable according to vlsi */
 	RDMA_WR(DI_INP_GEN_REG, (reset_on_gofield << 29) |
 				(urgent << 28)	|/* chroma urgent bit */
 				(urgent << 27)	|/* luma urgent bit. */
@@ -1305,7 +1305,7 @@ static void set_di_mem_mif(struct DI_MIF_s *mif, int urgent, int hold_line)
 	/* ---------------------- */
 	/* General register */
 	/* ---------------------- */
-	reset_on_gofield = 0;
+	reset_on_gofield = 1;/* default enable according to vlsi */
 	RDMA_WR(DI_MEM_GEN_REG, (reset_on_gofield << 29) |
 						/* reset on go field */
 				(urgent << 28)	| /* urgent bit. */
@@ -1519,7 +1519,7 @@ static void set_di_if2_mif(struct DI_MIF_s *mif, int urgent,
 	/* General register */
 	/* ---------------------- */
 
-	DI_VSYNC_WR_MPEG_REG(DI_IF2_GEN_REG, (0 << 29) | /* reset on go field */
+	DI_VSYNC_WR_MPEG_REG(DI_IF2_GEN_REG, (1 << 29) | /* reset on go field */
 			(urgent << 28)	|/* urgent */
 			(urgent << 27)	|/* luma urgent */
 			(1 << 25)|/* no dummy data. */
@@ -1619,7 +1619,7 @@ static void set_di_if1_mif(struct DI_MIF_s *mif, int urgent,
 	/* General register */
 	/* ---------------------- */
 
-	DI_VSYNC_WR_MPEG_REG(DI_IF1_GEN_REG, (0 << 29) | /* reset on go field */
+	DI_VSYNC_WR_MPEG_REG(DI_IF1_GEN_REG, (1 << 29) | /* reset on go field */
 			(urgent << 28)	|/* urgent */
 			(urgent << 27)	|/* luma urgent */
 			(1 << 25)|/* no dummy data. */
@@ -1742,7 +1742,7 @@ static void set_di_chan2_mif(struct DI_MIF_s *mif, int urgent, int hold_line)
 	/* ---------------------- */
 	/* General register */
 	/* ---------------------- */
-	reset_on_gofield = 0;
+	reset_on_gofield = 1;/* default enable according to vlsi */
 	RDMA_WR(DI_CHAN2_GEN_REG, (reset_on_gofield << 29) |
 				(urgent << 28) | /* urgent */
 				(urgent << 27) | /* luma urgent */
@@ -1979,7 +1979,7 @@ static void set_di_if0_mif_g12(struct DI_MIF_s *mif, int urgent, int hold_line,
 			mif->set_separate_en ? 0 : (mif->video_mode ? 2 : 1);
 		demux_mode = mif->video_mode;
 		DI_VSYNC_WR_MPEG_REG(DI_IF0_GEN_REG,
-(0 << 29) | /* reset on go field */
+(1 << 29) | /* reset on go field */
 (urgent << 28)		|	/* urgent */
 (urgent << 27)		|	/* luma urgent */
 (1 << 25)		|	/* no dummy data. */

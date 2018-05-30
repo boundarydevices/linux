@@ -2772,6 +2772,8 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	if (frame_par->hscale_skip_count)
 		r |= VDIF_CHROMA_HZ_AVG | VDIF_LUMA_HZ_AVG;
 
+	/*enable go field reset default according to vlsi*/
+	r |= VDIF_RESET_ON_GO_FIELD;
 	VSYNC_WR_MPEG_REG(VD1_IF0_GEN_REG + cur_dev->viu_off, r);
 	if (!vf_with_el)
 		VSYNC_WR_MPEG_REG(
