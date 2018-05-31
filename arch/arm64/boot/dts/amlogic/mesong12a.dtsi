@@ -1089,7 +1089,7 @@
 		cec_osd_string = "AML_MBOX"; /* Max Chars: 14    */
 		cec_version = <5>;/*5:1.4;6:2.0*/
 		port_num = <1>;
-		ee_cec;
+		/*ee_cec;*/ /*user default cec*/
 		arc_port_mask = <0x2>;
 		interrupts = <0 203 1>;
 		interrupt-names = "hdmi_aocecb";
