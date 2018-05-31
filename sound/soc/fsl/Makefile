@@ -122,5 +122,6 @@ obj-$(CONFIG_SND_SOC_IMX_AK5558) += snd-soc-imx-ak5558.o
 obj-$(CONFIG_SND_SOC_IMX_CDNHDMI) += snd-soc-imx-cdnhdmi.o
 obj-$(CONFIG_SND_SOC_IMX_HDMI) += snd-soc-imx-hdmi.o
 obj-$(CONFIG_SND_SOC_IMX_DSP) += snd-soc-imx-dsp.o
+obj-$(CONFIG_SND_SOC_IMX_MICFIL) += snd-soc-imx-micfil.o
 
 AFLAGS_hdmi_pcm.o := -march=armv7-a -mtune=cortex-a9 -mfpu=neon -mfloat-abi=softfp
