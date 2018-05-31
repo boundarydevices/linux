@@ -1154,3 +1154,7 @@
 	status = "okay";
 };
 
+&saradc {
+	status = "okay";
+};
+
