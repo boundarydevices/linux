@@ -2487,15 +2487,14 @@ void di_hw_disable(bool mc_enable)
 	enable_di_pre_mif(false, mc_enable);
 	DI_Wr(DI_POST_SIZE, (32-1) | ((128-1) << 16));
 	DI_Wr_reg_bits(DI_IF1_GEN_REG, 0, 0, 1);
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL))
 		DI_Wr_reg_bits(DI_IF2_GEN_REG, 0, 0, 1);
-		/* disable ma,enable if0 to vpp,enable afbc to vpp */
-		if (!cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
-			if (Rd_reg_bits(VIU_MISC_CTRL0, 16, 4) != 0)
-				DI_Wr_reg_bits(VIU_MISC_CTRL0, 0, 16, 4);
-			/* DI inp(current data) switch to memory */
-			DI_Wr_reg_bits(VIUB_MISC_CTRL0, 0, 16, 1);
-		}
+	/* disable ma,enable if0 to vpp,enable afbc to vpp */
+	if (!cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
+		if (Rd_reg_bits(VIU_MISC_CTRL0, 16, 4) != 0)
+			DI_Wr_reg_bits(VIU_MISC_CTRL0, 0, 16, 4);
+		/* DI inp(current data) switch to memory */
+		DI_Wr_reg_bits(VIUB_MISC_CTRL0, 0, 16, 1);
 	}
 }
 /*
