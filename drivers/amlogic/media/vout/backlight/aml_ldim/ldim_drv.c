@@ -112,6 +112,7 @@ static unsigned long alpha = 256; /*256;*/
 static unsigned long alpha_delta = 255;/* to fix flicker */
 static unsigned long boost_gain_neg = 3;
 static unsigned long Dbprint_lv;
+static unsigned int  db_cnt;
 static unsigned int bl_remap_curve[16] = {
 	436, 479, 551, 651, 780, 938, 1125, 1340,
 	1584, 1856, 2158, 2488, 2847, 3234, 3650, 4095
@@ -378,8 +379,8 @@ static void ldim_bl_remap_curve_print(void)
 	kfree(buf);
 }
 
-#define FW_ALG_DEBUG_PRINT    0
-void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
+#if 0
+static void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 	unsigned int *max_matrix, unsigned int *hist_matrix)
 {
 	/* Notes, nPRM will be set here in SW algorithm too */
@@ -403,16 +404,12 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 	unsigned int fw_hist_mx;
 	unsigned int SF_sum = 0, TF_sum = 0, dif_sum = 0;
 	int gain_neg_delta = 0;
-#if (FW_ALG_DEBUG_PRINT == 1)
 	int pr_flag = 0;
-	unsigned int  db_cnt = 0;
-#endif
 
 	fw_LD_ThSF = fw_LD_ThSF_l;
 	fw_LD_ThTF = fw_LD_ThTF_l;
 	tBL_matrix = FDat1->TF_BL_matrix_2;
 
-#if (FW_ALG_DEBUG_PRINT == 1)
 	/* first 8 frame & every 2 min print*/
 	pr_flag = (db_cnt < 8) || (db_cnt % 120 == 0);
 	if (Dbprint_lv == 1) {
@@ -445,7 +442,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 			}
 		}
 	}
-#endif
 
 	/* calculate the current frame */
 	for (blkRow = 0; blkRow < Vnum; blkRow++) {
@@ -472,7 +468,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 		}
 	}
 
-#if (FW_ALG_DEBUG_PRINT == 1)
 	if (Dbprint_lv == 1) {
 		if (pr_flag) {
 			pr_info("BL_0[%d * %d] info(LD_STA_BIN_NUM: %d): [\n ",
@@ -487,7 +482,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 			pr_info(" ]\n\n ");
 		}
 	}
-#endif
 
 	/* Spatial Filter the BackLits */
 	sum = 0;
@@ -516,7 +510,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 		}
 	}
 
-#if (FW_ALG_DEBUG_PRINT == 1)
 	if (Dbprint_lv == 1) {
 		if (pr_flag) {
 			pr_info("BL_SF[%d * %d] info: [\n ", Vnum, Hnum);
@@ -531,7 +524,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 			pr_info(" ]\n\n ");
 		}
 	}
-#endif
 
 	/* boost the bright region lights a little bit. */
 	avg = ((sum*7/fw_blk_num)>>3);
@@ -568,7 +560,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 		}
 	}
 
-#if (FW_ALG_DEBUG_PRINT == 1)
 	if (Dbprint_lv == 1) {
 		if (pr_flag) {
 			pr_info("BL_boost_SF [%d * %d] info:\n",
@@ -588,7 +579,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 			pr_info(" ]\n\n");
 		}
 	}
-#endif
 
 	/* Temperary filter */
 	sum = 0; Bmin = 4096; Bmax = 0;
@@ -640,7 +630,6 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 		}
 	}
 
-#if (FW_ALG_DEBUG_PRINT == 1)
 	if (Dbprint_lv == 1) {
 		if (pr_flag) {
 			pr_info("BL_TF(final out)[%d*%d] info(alpha:%ld,): [\n",
@@ -656,7 +645,10 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 			pr_info(" ]\n\n ");
 		}
 	}
-#endif
+
+	db_cnt++;
+	if (db_cnt > 4095)
+		db_cnt = 0;
 
 	/* set the DC reduction for the BL_modeling */
 	if (fw_LD_BLEst_ACmode == 0)
@@ -673,6 +665,7 @@ void ld_fw_alg_frm_txlx(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 		nPRM1->reg_BL_matrix_AVG = 1024;
 	nPRM1->reg_BL_matrix_Compensate = nPRM1->reg_BL_matrix_AVG;
 }
+#endif
 
 static void ld_fw_alg_frm_gxtvbb(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 	unsigned int *max_matrix, unsigned int *hist_matrix)
@@ -700,7 +693,6 @@ static void ld_fw_alg_frm_gxtvbb(struct LDReg *nPRM1, struct FW_DAT *FDat1,
 			(nPRM1->reg_LD_pic_RowMax) * (nPRM1->reg_LD_pic_ColMax);
 	int fw_LD_ThSF = 1600;
 	unsigned int fw_LD_ThTF = 32;
-	unsigned int  db_cnt = 0;
 	unsigned long Debug = 0;
 	unsigned int  Tf_luma_avg_frm[FRM_NUM_DBG] = {0, 0, 0, 0, 0};
 	unsigned int  Tf_blkLuma_avg[FRM_NUM_DBG][16];
@@ -2114,13 +2106,33 @@ static void ldim_off_vs_brightness(void)
 	}
 }
 
+static inline void ld_fw_alg_frm(struct LDReg *nPRM1, struct FW_DAT *FDat1,
+	unsigned int *max_matrix, unsigned int *hist_matrix)
+{
+#if 0
+	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
+
+	switch (bl_drv->data->chip_type) {
+	case BL_CHIP_TXLX:
+		ld_fw_alg_frm_txlx(nPRM1, FDat1, max_matrix, hist_matrix);
+		break;
+	case BL_CHIP_GXTVBB:
+		ld_fw_alg_frm_gxtvbb(nPRM1, FDat1, max_matrix, hist_matrix);
+		break;
+	default:
+		break;
+	}
+#else
+	ld_fw_alg_frm_gxtvbb(nPRM1, FDat1, max_matrix, hist_matrix);
+#endif
+}
+
 static void ldim_on_vs_arithmetic(void)
 {
 	unsigned int *local_ldim_hist = NULL;
 	unsigned int *local_ldim_max = NULL;
 	unsigned int *local_ldim_max_rgb = NULL;
 	unsigned int i;
-	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 
 	if (ldim_top_en == 0)
 		return;
@@ -2156,20 +2168,8 @@ static void ldim_on_vs_arithmetic(void)
 			(*(local_ldim_max+i))>>20&0x3ff;
 	}
 	if (ldim_alg_en) {
-		switch (bl_drv->data->chip_type) {
-		case BL_CHIP_TXLX:
-			ld_fw_alg_frm_txlx(&nPRM, &FDat,
-				local_ldim_max_rgb,
-				local_ldim_hist);
-			break;
-		case BL_CHIP_GXTVBB:
-			ld_fw_alg_frm_gxtvbb(&nPRM, &FDat,
-				local_ldim_max_rgb,
-				local_ldim_hist);
-			break;
-		default:
-			break;
-		}
+		ld_fw_alg_frm(&nPRM, &FDat,
+			local_ldim_max_rgb, local_ldim_hist);
 	}
 
 	kfree(local_ldim_hist);
@@ -2836,7 +2836,7 @@ static ssize_t ldim_attr_store(struct class *cla,
 			if (kstrtoul(parm[7], 10, &ldim_hvcnt_bypass) < 0)
 				goto ldim_attr_store_end;
 		}
-		pr_info("****ldim init param:%lu,%lu,%lu,%lu,%lu,%lu,%lu*********\n",
+		pr_info("****ldim init param:%lu,%lu,%lu,%lu,%lu,%lu,%lu****\n",
 			pic_h, pic_v, blk_vnum, blk_hnum,
 			backlit_mod, ldim_bl_en, ldim_hvcnt_bypass);
 		ldim_blk_row = blk_vnum;
@@ -2938,7 +2938,7 @@ static ssize_t ldim_attr_store(struct class *cla,
 		pr_info("**************ldim matrix info over*************\n");
 	} else if (!strcmp(parm[0], "ldim_nPRM_bl_matrix_info")) {
 		ldim_nPRM_bl_matrix_info();
-		pr_info("**************ldim matrix(nPRM) info over*************\n");
+		pr_info("**************ldim matrix(nPRM) info over*********\n");
 	} else if (!strcmp(parm[0], "ldim_enable")) {
 		ldim_func_en = 1;
 		ldim_func_ctrl(1);
@@ -3482,6 +3482,8 @@ int aml_ldim_probe(struct platform_device *pdev)
 	ldim_hist_en = 0;
 	avg_gain = LD_DATA_MAX;
 	invalid_val_cnt = 0;
+	Dbprint_lv = 0;
+	db_cnt = 0;
 
 	memset(devp, 0, (sizeof(struct ldim_dev_s)));
 	nPRM.val_1 = &val_1[0];
