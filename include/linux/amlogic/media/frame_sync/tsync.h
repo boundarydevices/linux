@@ -44,6 +44,19 @@ enum tsync_mode_e {
 	TSYNC_MODE_PCRMASTER,
 };
 
+enum tysnc_func_type_e {
+	TSYNC_PCRSCR_VALID,
+	TSYNC_PCRSCR_GET,
+	TSYNC_FIRST_PCRSCR_GET,
+	TSYNC_PCRAUDIO_VALID,
+	TSYNC_PCRVIDEO_VALID,
+	TSYNC_BUF_BY_BYTE,
+	TSYNC_STBUF_LEVEL,
+	TSYNC_STBUF_SPACE,
+	TSYNC_STBUF_SIZE,
+	TSYNC_FUNC_TYPE_MAX,
+};
+
 extern bool disable_slow_sync;
 
 typedef u8 (*pfun_tsdemux_pcrscr_valid)(void);
@@ -72,6 +85,9 @@ extern pfun_stbuf_space stbuf_space_cb;
 
 typedef u32 (*pfun_stbuf_size)(struct stream_buf_s *buf);
 extern pfun_stbuf_size stbuf_size_cb;
+
+extern int register_tsync_callbackfunc(
+	enum tysnc_func_type_e ntype, void *pfunc);
 
 #ifdef MODIFY_TIMESTAMP_INC_WITH_PLL
 extern void set_timestamp_inc_factor(u32 factor);

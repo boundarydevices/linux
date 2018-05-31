@@ -155,31 +155,23 @@ static bool dobly_avsync_test;
 static int slowsync_enable;
 
 pfun_tsdemux_pcrscr_valid tsdemux_pcrscr_valid_cb;
-EXPORT_SYMBOL(tsdemux_pcrscr_valid_cb);
 
 pfun_tsdemux_pcrscr_get tsdemux_pcrscr_get_cb;
-EXPORT_SYMBOL(tsdemux_pcrscr_get_cb);
 
 pfun_tsdemux_first_pcrscr_get tsdemux_first_pcrscr_get_cb;
-EXPORT_SYMBOL(tsdemux_first_pcrscr_get_cb);
 
 pfun_tsdemux_pcraudio_valid tsdemux_pcraudio_valid_cb;
-EXPORT_SYMBOL(tsdemux_pcraudio_valid_cb);
 
 pfun_tsdemux_pcrvideo_valid tsdemux_pcrvideo_valid_cb;
-EXPORT_SYMBOL(tsdemux_pcrvideo_valid_cb);
 
 pfun_get_buf_by_type get_buf_by_type_cb;
-EXPORT_SYMBOL(get_buf_by_type_cb);
 
 pfun_stbuf_level stbuf_level_cb;
-EXPORT_SYMBOL(stbuf_level_cb);
 
 pfun_stbuf_space stbuf_space_cb;
-EXPORT_SYMBOL(stbuf_space_cb);
 
 pfun_stbuf_size stbuf_size_cb;
-EXPORT_SYMBOL(stbuf_size_cb);
+
 
 /*
  *used to set player start sync mode, 0-none; 1-smoothsync; 2-droppcm;
@@ -240,6 +232,58 @@ static int debug_apts;
 #define PTS_CACHED_NORMAL_LO_TIME (45000)
 #define PTS_CACHED_HI_NORMAL_TIME (135000)
 #define PTS_CACHED_NORMAL_HI_TIME (180000)
+
+int register_tsync_callbackfunc(enum tysnc_func_type_e ntype, void *pfunc)
+{
+	if (ntype >= TSYNC_FUNC_TYPE_MAX) {
+		pr_info("register_tync_func ntype is err.\n");
+		return -1;
+	}
+	switch (ntype) {
+	case TSYNC_PCRSCR_VALID:
+		tsdemux_pcrscr_valid_cb =
+				(pfun_tsdemux_pcrscr_valid)pfunc;
+		break;
+	case TSYNC_PCRSCR_GET:
+		tsdemux_pcrscr_get_cb =
+				(pfun_tsdemux_pcrscr_get)pfunc;
+		break;
+	case TSYNC_FIRST_PCRSCR_GET:
+		tsdemux_first_pcrscr_get_cb =
+				(pfun_tsdemux_first_pcrscr_get)pfunc;
+		break;
+	case TSYNC_PCRAUDIO_VALID:
+		tsdemux_pcraudio_valid_cb  =
+				(pfun_tsdemux_pcraudio_valid)pfunc;
+		break;
+	case TSYNC_PCRVIDEO_VALID:
+		tsdemux_pcrvideo_valid_cb =
+				(pfun_tsdemux_pcrvideo_valid)pfunc;
+		break;
+	case TSYNC_BUF_BY_BYTE:
+		get_buf_by_type_cb =
+				(pfun_get_buf_by_type)pfunc;
+		break;
+	case TSYNC_STBUF_LEVEL:
+		stbuf_level_cb =
+				(pfun_stbuf_level)pfunc;
+		break;
+	case TSYNC_STBUF_SPACE:
+		stbuf_space_cb =
+				(pfun_stbuf_space)pfunc;
+		break;
+	case TSYNC_STBUF_SIZE:
+		stbuf_size_cb =
+				(pfun_stbuf_size)pfunc;
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(register_tsync_callbackfunc);
+
+
 
 static void tsync_pcr_recover_with_audio(void)
 {
