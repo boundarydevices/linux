@@ -1089,7 +1089,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spicc0_pins_x>;
 	cs-gpios = <&gpio GPIOX_10 0>;
-	num_chipselect = <1>;
 };
 
 &spicc1 {
@@ -1097,7 +1096,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spicc1_pins>;
 	cs-gpios = <&gpio GPIOH_6 0>;
-	num_chipselect = <1>;
 };
 
 &pwm_ef {

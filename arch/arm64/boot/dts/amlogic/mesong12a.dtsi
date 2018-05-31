@@ -630,38 +630,24 @@
 			};
 
 			spicc0: spi@13000 {
-				compatible = "amlogic, spicc";
-				reg = <0x0 0x13000 0x0 0x40>;
+				compatible = "amlogic,meson-g12a-spicc";
+				reg = <0x0 0x13000 0x0 0x44>;
 				interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
-				clock-names = "spicc_clk";
-				clocks = <&clkc CLKID_SPICC0_COMP>;
-				clk_rate = <666666666>;
-				device_id = <0>;
-				enhance = <1>;
-				ssctl = <0>;
-				dma_tx_threshold = <3>;
-				dma_num_per_read_burst = <13>;
-				dma_auto_param = <1>;
-				delay_control = <0x15>;
+				clocks = <&clkc CLKID_SPICC0>,
+					 <&clkc CLKID_SPICC0_COMP>;
+				clock-names = "core", "comp";
 				#address-cells = <1>;
 				#size-cells = <0>;
 				status = "disabled";
 			};
 
 			spicc1: spi@15000 {
-				compatible = "amlogic, spicc";
-				reg = <0x0 0x15000 0x0 0x40>;
+				compatible = "amlogic,meson-g12a-spicc";
+				reg = <0x0 0x15000 0x0 0x44>;
 				interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
-				clock-names = "spicc_clk";
-				clocks = <&clkc CLKID_SPICC1_COMP>;
-				clk_rate = <666666666>;
-				device_id = <1>;
-				enhance = <1>;
-				ssctl = <0>;
-				dma_tx_threshold = <3>;
-				dma_num_per_read_burst = <13>;
-				dma_auto_param = <1>;
-				delay_control = <0x15>;
+				clocks = <&clkc CLKID_SPICC1>,
+					 <&clkc CLKID_SPICC1_COMP>;
+				clock-names = "core", "comp";
 				#address-cells = <1>;
 				#size-cells = <0>;
 				status = "disabled";
@@ -2380,6 +2366,7 @@
 				 //"spi0_ss0_x",
 				 "spi0_clk_x";
 			function = "spi0";
+			drive-strength = <1>;
 		};
 	};
 
@@ -2390,6 +2377,7 @@
 					"spi0_ss0_c",
 					"spi0_clk_c";
 			function = "spi0";
+			drive-strength = <1>;
 		};
 	};
 
@@ -2400,6 +2388,7 @@
 				 //"spi1_ss0",
 				 "spi1_clk";
 			function = "spi1";
+			drive-strength = <1>;
 		};
 	};
 

@@ -943,22 +943,18 @@
 }; /* end of pinctrl_periphs */
 /* Audio Related End */
 
-&spicc_a{
+&spicc0 {
 	status = "okay";
-	num_chipselect = <1>;
-	dma_en = <0>;
-	delay_control = <0x15>;
-	cs_delay = <10>;
-	enhance_dlyctl = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins>;
+	cs-gpios = <&gpio GPIOZ_3 0>;
 };
 
-&spicc_b{
+&spicc1 {
 	status = "disabled";
-	num_chipselect = <1>;
-	dma_en = <0>;
-	delay_control = <0x15>;
-	cs_delay = <10>;
-	enhance_dlyctl = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi1_x_pins>;
+	cs-gpios = <&gpio GPIOX_16 0>;
 };
 
 &aobus{

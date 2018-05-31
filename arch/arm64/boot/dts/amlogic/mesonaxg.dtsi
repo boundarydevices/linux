@@ -409,6 +409,30 @@
 				clock-names = "clk_i2c";
 				clock-frequency = <100000>;
 			};
+
+			spicc0: spi@13000 {
+				compatible = "amlogic,meson-axg-spicc";
+				reg = <0x0 0x13000 0x0 0x40>;
+				interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc CLKID_SPICC0>,
+					 <&clkc CLKID_SPICC_COMP>;
+				clock-names = "core", "comp";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			spicc1: spi@15000 {
+				compatible = "amlogic,meson-axg-spicc";
+				reg = <0x0 0x15000 0x0 0x40>;
+				interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc CLKID_SPICC1>,
+					 <&clkc CLKID_SPICC_COMP>;
+				clock-names = "core", "comp";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
 		}; /* end of cbus */
 
 		aobus: aobus@ff800000 {
@@ -527,46 +551,6 @@
 		clocks = <&xtal>,<&xtal>,<&xtal>,<&xtal>;
 		clock-names = "clkin0","clkin1","clkin2","clkin3";
 		status = "disabled";
-	};
-
-	spicc_a:spicc_a {
-		compatible = "amlogic, spicc";
-		status = "disabled";
-		reg = <0x0 0xffd13000 0x0 0x3c>;
-		clocks = <&clkc CLKID_SPICC0>,
-			<&clkc CLKID_SPICC_COMP>;
-		clock-names = "spicc_clk",
-			"cts_spicc_hclk";
-		interrupts = <0 81 1>;
-		device_id = <0>;
-		enhance = <1>;
-		pinctrl-names= "default";
-		pinctrl-0=<&spicc_a_pins>;
-		dma_tx_threshold = <3>;
-		dma_rx_threshold = <3>;
-		dma_num_per_read_burst = <3>;
-		dma_num_per_write_burst = <3>;
-		ssctl = <0>;
-	};
-
-	spicc_b:spicc_b {
-		compatible = "amlogic, spicc";
-		status = "disabled";
-		reg = <0x0 0xffd15000 0x0 0x3c>;
-		clocks = <&clkc CLKID_SPICC1>,
-			<&clkc CLKID_SPICC_COMP>;
-		clock-names = "spicc_clk",
-			"cts_spicc_hclk";
-		interrupts = <0 82 1>;
-		device_id = <1>;
-		enhance = <1>;
-		pinctrl-names= "default";
-		pinctrl-0=<&spicc_b_pins_X>;
-		dma_tx_threshold = <3>;
-		dma_rx_threshold = <3>;
-		dma_num_per_read_burst = <3>;
-		dma_num_per_write_burst = <3>;
-		ssctl = <0>;
 	};
 
 	remote:rc@0xff808040 {
@@ -998,32 +982,29 @@
 		};
 	};
 
-	spicc_a_pins: spicc_a_pins{
+	spi0_pins: spi0 {
 		mux {
 			groups = "spi0_clk",
 				"spi0_mosi",
-				"spi0_miso",
-				"spi0_ss0";
+				"spi0_miso";
 			function = "spi0";
 		};
 	};
 
-	spicc_b_pins_A: spicc_b_pins_A{
+	spi1_a_pins: spi1_a {
 		mux {
-			groups ="spi1_mosi_a",
-				"spi1_miso_a",
-				"spi1_clk_a",
-				"spi1_ss0_a";
+			groups = "spi1_clk_a",
+				"spi1_mosi_a",
+				"spi1_miso_a";
 			function = "spi1";
 		};
 	};
 
-	spicc_b_pins_X: spicc_b_pins_X{
+	spi1_x_pins: spi1_x {
 		mux {
-			groups = "spi1_mosi_x",
-				"spi1_miso_x",
-				"spi1_clk_x",
-				"spi1_ss0_x";
+			groups = "spi1_clk_x",
+				"spi1_mosi_x",
+				"spi1_miso_x";
 			function = "spi1";
 		};
 	};

@@ -1511,8 +1511,7 @@
 	status = "okay";
 };
 
-
-&spicc_a {
+&spicc0 {
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi_a_pins>;
