@@ -9236,7 +9236,8 @@ static int __init video_early_init(void)
 		 */
 		WRITE_VCBUS_REG(VPP_DUMMY_DATA1, 0x1020080);
 		WRITE_VCBUS_REG(VPP_DUMMY_DATA, 0x42020);
-	} else if (is_meson_txlx_cpu()) {
+	} else if (is_meson_txlx_cpu() ||
+		cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		/*black 10bit*/
 		WRITE_VCBUS_REG(VPP_DUMMY_DATA, 0x4080200);
 	}
