@@ -37,7 +37,7 @@ extern void ldim_set_region(unsigned int resolution, unsigned int blk_height,
 	unsigned int blk_hnum);
 extern void LD_ConLDReg(struct LDReg *Reg);
 extern void ld_fw_cfg_once(struct LDReg *nPRM);
-extern void ldim_read_region(unsigned int nrow, unsigned int ncol);
+extern void ldim_stts_read_region(unsigned int nrow, unsigned int ncol);
 
 extern void ldim_set_matrix_ycbcr2rgb(void);
 extern void ldim_set_matrix_rgb2ycbcr(int mode);

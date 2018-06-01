@@ -617,7 +617,7 @@ void ldim_set_region(unsigned int resolution, unsigned int blk_height,
 	}
 }
 
-void ldim_read_region(unsigned int nrow, unsigned int ncol)
+void ldim_stts_read_region(unsigned int nrow, unsigned int ncol)
 {
 	unsigned int i, j, k;
 	unsigned int data32;
