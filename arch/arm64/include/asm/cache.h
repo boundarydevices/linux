@@ -18,7 +18,11 @@
 
 #include <asm/cachetype.h>
 
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+#define L1_CACHE_SHIFT		6
+#else
 #define L1_CACHE_SHIFT		7
+#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 #define L1_CACHE_BYTES		(1 << L1_CACHE_SHIFT)
 
 /*
