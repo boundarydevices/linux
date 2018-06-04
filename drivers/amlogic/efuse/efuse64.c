@@ -64,16 +64,8 @@ unsigned int efuse_get_max_cmd;
 						char *buf)	\
 	{	\
 		ssize_t ret;	\
-		int i = 0; \
 		\
 		ret = efuse_user_attr_show(#keyname, buf); \
-		pr_info("efuse read data\n"); \
-		while (i < ret) { \
-			pr_info("%02x%s", buf[i], \
-				((i+1)%16 == 0)?"\n":":"); \
-			i++; \
-		} \
-		pr_info("\n"); \
 		return ret; \
 	}
 DEFINE_EFUEKEY_SHOW_ATTR(mac)
@@ -364,6 +356,7 @@ ssize_t efuse_user_attr_show(char *name, char *buf)
 {
 	char *local_buf;
 	ssize_t ret;
+	ssize_t len = 0;
 	int i;
 	struct efusekey_info info;
 	loff_t pos;
@@ -386,8 +379,15 @@ ssize_t efuse_user_attr_show(char *name, char *buf)
 		pr_err("ERROR: read %zd byte(s) not %d byte(s) data\n",
 			ret, info.size);
 
-	for (i = 0; i < info.size; i++)
-		buf[i] = local_buf[i];
+	for (i = 0; i < info.size; i++) {
+		if (i%16 == 0)
+			len += sprintf(buf + len, "\n");
+		if (i%16 == 0)
+			len += sprintf(buf + len, "0x%02x: ", i);
+		len += sprintf(buf + len, "%02x ", local_buf[i]);
+	}
+	len += sprintf(buf + len, "\n");
+	ret = len;
 
 error_exit:
 	kfree(local_buf);
@@ -399,6 +399,7 @@ static ssize_t userdata_show(struct class *cla,
 {
 	char *op;
 	int ret;
+	ssize_t len = 0;
 	int i;
 	loff_t offset;
 	unsigned int max_size;
@@ -426,18 +427,18 @@ static ssize_t userdata_show(struct class *cla,
 		return -1;
 	}
 
-	pr_debug("user area %d bytes data,", max_size);
-	pr_info("%d bytes data read:\n", ret);
 	for (i = 0; i < ret; i++) {
 		if ((i != 0) && (i%16 == 0))
-			pr_info("\n");
+			len += sprintf(buf + len, "\n");
 		if (i%16 == 0)
-			pr_info("0x%x: ", i);
-		pr_info("%02x ", op[i]);
+			len += sprintf(buf + len, "0x%02x: ", i);
+
+		len += sprintf(buf + len, "%02x ", op[i]);
 	}
+	len += sprintf(buf + len, "\n");
 
 	kfree(op);
-	return ret;
+	return len;
 }
 
 #ifndef EFUSE_READ_ONLY
