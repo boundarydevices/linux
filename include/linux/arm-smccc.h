@@ -22,7 +22,6 @@
  * http://infocenter.arm.com/help/topic/com.arm.doc.den0028a/index.html
  */
 
-/* This constant is shifted by 31, make sure it's of an unsigned type */
 #define ARM_SMCCC_STD_CALL	        _AC(0,U)
 #define ARM_SMCCC_FAST_CALL	        _AC(1,U)
 #define ARM_SMCCC_TYPE_SHIFT		31

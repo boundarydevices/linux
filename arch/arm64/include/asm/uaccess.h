@@ -337,8 +337,6 @@ do {									\
 	(void)0;							\
 })
 
-#define __put_user_unaligned __put_user
-
 #define __put_user(x, ptr)						\
 ({									\
 	int __pu_err = 0;						\
@@ -346,12 +344,13 @@ do {									\
 	__pu_err;							\
 })
 
+#define __put_user_unaligned __put_user
+
 #define put_user	__put_user
 
 extern unsigned long __must_check __arch_copy_from_user(void *to, const void __user *from, unsigned long n);
 extern unsigned long __must_check __arch_copy_to_user(void __user *to, const void *from, unsigned long n);
-extern unsigned long __must_check __copy_in_user(void __user *to, const void __user *from, unsigned long n);
-extern unsigned long __must_check __clear_user(void __user *addr, unsigned long n);
+extern unsigned long __must_check __arch_copy_in_user(void __user *to, const void __user *from, unsigned long n);
 
 static inline unsigned long __must_check __copy_from_user(void *to, const void __user *from, unsigned long n)
 {
@@ -371,9 +370,9 @@ static inline unsigned long __must_check copy_from_user(void *to, const void __u
 {
 	unsigned long res = n;
 	kasan_check_write(to, n);
-	check_object_size(to, n, false);
 
 	if (access_ok(VERIFY_READ, from, n)) {
+		check_object_size(to, n, false);
 		res = __arch_copy_from_user(to, __uaccess_mask_ptr(from), n);
 	}
 	if (unlikely(res))
@@ -384,30 +383,33 @@ static inline unsigned long __must_check copy_from_user(void *to, const void __u
 static inline unsigned long __must_check copy_to_user(void __user *to, const void *from, unsigned long n)
 {
 	kasan_check_read(from, n);
-	check_object_size(from, n, true);
 
 	if (access_ok(VERIFY_WRITE, to, n)) {
+		check_object_size(from, n, true);
 		n = __arch_copy_to_user(__uaccess_mask_ptr(to), from, n);
 	}
 	return n;
 }
 
-static inline unsigned long __must_check copy_in_user(void __user *to, const void __user *from, unsigned long n)
+static inline unsigned long __must_check __copy_in_user(void __user *to, const void __user *from, unsigned long n)
 {
 	if (access_ok(VERIFY_READ, from, n) && access_ok(VERIFY_WRITE, to, n))
-		n = __copy_in_user(__uaccess_mask_ptr(to), __uaccess_mask_ptr(from), n);
+		n = __arch_copy_in_user(__uaccess_mask_ptr(to), __uaccess_mask_ptr(from), n);
 	return n;
 }
+#define copy_in_user __copy_in_user
 
 #define __copy_to_user_inatomic __copy_to_user
 #define __copy_from_user_inatomic __copy_from_user
 
-static inline unsigned long __must_check clear_user(void __user *to, unsigned long n)
+extern unsigned long __must_check __arch_clear_user(void __user *to, unsigned long n);
+static inline unsigned long __must_check __clear_user(void __user *to, unsigned long n)
 {
 	if (access_ok(VERIFY_WRITE, to, n))
-		n = __clear_user(__uaccess_mask_ptr(to), n);
+		n = __arch_clear_user(__uaccess_mask_ptr(to), n);
 	return n;
 }
+#define clear_user	__clear_user
 
 extern long strncpy_from_user(char *dest, const char __user *src, long count);
 

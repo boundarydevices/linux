@@ -20,6 +20,8 @@
 
 #ifndef __ASSEMBLY__
 
+#include <linux/percpu.h>
+
 typedef struct {
 	atomic64_t	id;
 	void		*vdso;
