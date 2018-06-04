@@ -610,7 +610,7 @@
 		};
 	};
 
-	display-subsystem {
+	fb_dcss: display-subsystem {
 		compatible = "fsl,imx-display-subsystem";
 		ports = <&dcss_disp0>;
 	};
