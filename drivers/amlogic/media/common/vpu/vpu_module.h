@@ -73,6 +73,8 @@ static char *vpu_mod_table[] = {
 	"osd_bld34",
 	"prime_dolby_ram",
 	"vd2_ofifo",
+	"lut3d",
+	"viu2_osd_rotation",
 	"rdma",
 
 	"vpu_mod_max",

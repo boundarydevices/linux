@@ -73,6 +73,8 @@ enum vpu_mod_e {
 	VPU_OSD_BLD34,        /* reg2[13:12] //G12A */
 	VPU_PRIME_DOLBY_RAM,  /* reg2[15:14] //G12A */
 	VPU_VD2_OFIFO,        /* reg2[17:16] //G12A */
+	VPU_LUT3D,            /* reg2[21:20] //G12B */
+	VPU_VIU2_OSD_ROT,     /* reg2[23:22] //G12B */
 	VPU_RDMA,             /* reg2[31:30] //G12A */
 
 	VPU_MOD_MAX,
