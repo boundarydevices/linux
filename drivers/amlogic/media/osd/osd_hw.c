@@ -660,6 +660,8 @@ static void osd_vpu_power_on_viu2(void)
 			VPU_MEM_POWER_ON);
 		switch_vpu_mem_pd_vmod(VPU_VIU2_OFIFO,
 			VPU_MEM_POWER_ON);
+		switch_vpu_mem_pd_vmod(VPU_VIU2_OSD_ROT,
+			VPU_MEM_POWER_ON);
 		val = osd_reg_read(VPU_CLK_GATE);
 		val =  val | 0x30000;
 		osd_reg_write(VPU_CLK_GATE, val);
@@ -2922,6 +2924,20 @@ void osd_set_single_step(u32 osd_single_step)
 	}
 }
 
+void osd_get_rotate(u32 index, u32 *osd_rotate)
+{
+	*osd_rotate = osd_hw.osd_rotate[index];
+}
+
+void osd_set_rotate(u32 index, u32 osd_rotate)
+{
+	if (index != OSD4)
+		osd_log_err("osd%d not support rotate\n", index);
+	osd_hw.osd_rotate[index] = osd_rotate;
+	add_to_update_list(index, DISP_OSD_ROTATE);
+	osd_wait_vsync_hw();
+}
+
 int osd_get_capbility(u32 index)
 {
 	u32 capbility = 0;
@@ -4428,6 +4444,98 @@ static void osd_update_disp_osd_reverse(u32 index)
 
 static void osd_update_disp_osd_rotate(u32 index)
 {
+	u32 rotate_en = osd_hw.osd_rotate[index];
+	u32 src_fmt = RGBA;
+	u32 x_start, x_end, y_start, y_end;
+	u32 src_width, src_height;
+	u32 rot_hsize, blk_vsize, rd_blk_hsize;
+	u32 reg_fmt_buf_en, reg_fmt_444_mode, line5_mode;
+	u32 y_reverse = 0, x_reverse = 0;
+	u32 data32;
+	enum color_index_e idx;
+	struct dispdata_s src_data;
+	const struct vinfo_s *vinfo;
+	int out_y_crop_start, out_y_crop_end;
+
+	if (osd_hw.osd_meson_dev.cpu_id < __MESON_CPU_MAJOR_ID_G12B)
+		return;
+	src_data.x = 0;
+	src_data.y = 0;
+	src_data.w = osd_hw.fb_gem[index].xres;
+	src_data.h = osd_hw.fb_gem[index].yres;
+	vinfo = get_current_vinfo2();
+	if (!vinfo) {
+		osd_log_err("current vinfo NULL\n");
+		return;
+	}
+	out_y_crop_start = 0;
+	out_y_crop_end = vinfo->height;
+	src_width = src_data.w;
+	src_height = src_data.h;
+
+	x_start = src_data.x;
+	x_end = src_data.x + src_data.w - 1;
+	y_start = src_data.y;
+	y_end = src_data.y + src_data.h - 1;
+	/* x/y start end can be crop axis */
+	switch (src_fmt) {
+	case YUV422:
+		blk_vsize		  = 30;
+		rd_blk_hsize	  = 32;
+		reg_fmt_buf_en	  = 1;
+		reg_fmt_444_mode  = 0;
+		line5_mode		  = 1;
+		break;
+	case RGB:
+		blk_vsize		  = 20;
+		rd_blk_hsize	  = 22;
+		reg_fmt_buf_en	  = 0;
+		reg_fmt_444_mode  = 1;
+		line5_mode		  = 0;
+		break;
+	case RGBA:
+		blk_vsize		  = 15;
+		rd_blk_hsize	  = 16;
+		reg_fmt_buf_en	  = 0;
+		reg_fmt_444_mode  = 1;
+		line5_mode		  = 0;
+		break;
+	}
+	osd_reg_set_bits(VPP2_MISC, rotate_en, 16, 1);
+	rotate_en = 0;
+	osd_reg_set_bits(VPU_VIU_VENC_MUX_CTRL,
+		rotate_en, 20, 1);
+	idx = osd_hw.color_info[index]->color_index;
+	data32 = (osd_hw.fb_gem[index].canvas_idx << 16) |
+		(2 << 8) | (1 << 7) | (0 << 6) |
+		(y_reverse << 5) |
+		(x_reverse << 4) | src_fmt;
+	osd_reg_set_bits(VIU2_RMIF_CTRL1, data32, 0, 32);
+	osd_reg_set_bits(VIU2_RMIF_SCOPE_X,
+		x_end << 16 | x_start, 0, 32);
+	osd_reg_set_bits(VIU2_RMIF_SCOPE_Y,
+		y_end << 16 | y_start, 0, 32);
+
+	rot_hsize = (src_height + blk_vsize - 1) / blk_vsize;
+	osd_reg_set_bits(
+		VIU2_ROT_BLK_SIZE,
+		rd_blk_hsize | (blk_vsize << 8), 0, 32);
+	osd_reg_set_bits(
+		VIU2_ROT_LBUF_SIZE,
+		rot_hsize * rd_blk_hsize |
+		(rot_hsize << 16), 0, 32);
+	osd_reg_set_bits(
+		VIU2_ROT_FMT_CTRL,
+		reg_fmt_buf_en |
+		(line5_mode << 1) |
+		(reg_fmt_444_mode << 2) |
+		(180	<< 8) | (0xe4 << 24), 0, 32);
+	osd_reg_set_bits(VIU2_ROT_OUT_VCROP,
+		out_y_crop_end |
+		out_y_crop_start << 16, 0, 32);
+	osd_reg_set_bits(
+		VPP2_OFIFO_SIZE,
+		src_height - 1, 20, 12);
 	remove_from_update_list(index, DISP_OSD_ROTATE);
 }
 
@@ -7231,7 +7339,6 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			hw_osd_reg_array[OSD1].osd_fifo_ctrl_stat, data32);
 	}
 	osd_set_deband(osd_hw.osd_deband_enable);
-	/* memset(osd_hw.rotate, 0, sizeof(struct osd_rotate_s)); */
 	if (osd_hw.fb_drvier_probe) {
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 		INIT_LIST_HEAD(&post_fence_list);

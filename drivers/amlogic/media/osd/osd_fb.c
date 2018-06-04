@@ -653,10 +653,18 @@ static int osd_set_par(struct fb_info *info)
 	struct osd_ctl_s *osd_ctrl = &fbdev->osd_ctl;
 	u32 virt_end_x, virt_end_y;
 
-	vinfo = get_current_vinfo();
-	if (!vinfo) {
-		osd_log_err("current vinfo NULL\n");
-		return -1;
+	if (fbdev->fb_index <= OSD3) {
+		vinfo = get_current_vinfo();
+		if (!vinfo) {
+			osd_log_err("current vinfo NULL\n");
+			return -1;
+		}
+	} else {
+		vinfo = get_current_vinfo2();
+		if (!vinfo) {
+			osd_log_err("current vinfo NULL\n");
+			return -1;
+		}
 	}
 	virt_end_x = osd_ctrl->disp_start_x + info->var.xres;
 	virt_end_y = osd_ctrl->disp_start_y + info->var.yres;
@@ -2862,6 +2870,34 @@ static ssize_t store_osd_single_step(struct device *device,
 	return count;
 }
 
+static ssize_t show_osd_rotate(
+	struct device *device, struct device_attribute *attr,
+	char *buf)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	u32 rotate;
+
+	osd_get_rotate(fb_info->node, &rotate);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", rotate);
+}
+
+static ssize_t store_osd_rotate(
+	struct device *device, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	if (ret < 0)
+		return -EINVAL;
+
+	osd_set_rotate(fb_info->node, res);
+	return count;
+}
+
 static inline  int str2lower(char *str)
 {
 	while (*str != '\0') {
@@ -3112,6 +3148,8 @@ static struct device_attribute osd_attrs_viu2[] = {
 			show_osd_afbc_debug, store_osd_afbc_debug),
 	__ATTR(osd_afbc_format, 0644,
 			show_osd_afbc_format, store_osd_afbc_format),
+	__ATTR(osd_rotate, 0644,
+			show_osd_rotate, store_osd_rotate),
 };
 
 #ifdef CONFIG_PM
@@ -3481,7 +3519,7 @@ static int osd_probe(struct platform_device *pdev)
 		goto failed1;
 	} else
 		osd_log_info("viu vsync irq: %d\n", int_viu_vsync);
-	if (osd_hw.osd_meson_dev.has_viu2) {
+	if (osd_meson_dev.has_viu2) {
 	int_viu2_vsync = platform_get_irq_byname(pdev, "viu2-vsync");
 		if (int_viu2_vsync  == -ENXIO) {
 			osd_log_err("cannot get viu2 irq resource\n");

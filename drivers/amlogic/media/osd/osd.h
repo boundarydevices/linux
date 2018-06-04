@@ -339,6 +339,12 @@ enum afbc_pix_format_e {
 	RGBA1010102,
 };
 
+enum viu2_rotate_format {
+	YUV422 = 4,
+	RGB = 6,
+	RGBA = 8,
+};
+
 struct pandata_s {
 	s32 x_start;
 	s32 x_end;
@@ -673,6 +679,7 @@ struct hw_para_s {
 	u32 free_scale_mode[HW_OSD_COUNT];
 	u32 free_scale_mode_backup[HW_OSD_COUNT];
 	u32 osd_reverse[HW_OSD_COUNT];
+	u32 osd_rotate[HW_OSD_COUNT];
 	/* struct osd_rotate_s rotate[HW_OSD_COUNT]; */
 	int use_h_filter_mode[HW_OSD_COUNT];
 	int use_v_filter_mode[HW_OSD_COUNT];

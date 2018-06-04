@@ -198,4 +198,6 @@ void osd_get_urgent_info(u32 *ports, u32 *basic_urgent);
 void osd_set_single_step_mode(u32 osd_single_step_mode);
 void osd_set_single_step(u32 osd_single_step);
 void output_save_info(void);
+void osd_get_rotate(u32 index, u32 *osd_rotate);
+void osd_set_rotate(u32 index, u32 osd_rotate);
 #endif

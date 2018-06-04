@@ -1187,7 +1187,7 @@
 	vout2 {
 		compatible = "amlogic, vout2";
 		dev_name = "vout";
-		status = "disabled";
+		status = "okay";
 		clocks = <&clkc CLKID_VPU_CLKC_P0_COMP>,
 			<&clkc CLKID_VPU_CLKC_MUX>;
 		clock-names = "vpu_clkc0",

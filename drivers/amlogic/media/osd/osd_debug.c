@@ -299,47 +299,81 @@ static void osd_debug_dump_register_all(void)
 		if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) &&
 			(osd_hw.osd_afbcd[index].enable)) {
 			reg = osd_reg->afbc_header_buf_addr_low_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_header_buf_addr_high_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_format_specifier_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_buffer_width_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_buffer_hight_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_boundings_box_x_start_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_boundings_box_x_end_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_boundings_box_y_start_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_boundings_box_y_end_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_output_buf_addr_low_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_output_buf_addr_high_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_output_buf_stride_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 			reg = osd_reg->afbc_prefetch_cfg_s;
-			osd_log_info("reg[0x%x]: 0x%08x\n\n",
+			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));
 		}
 	}
 
+	if (osd_hw.osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_G12B) {
+		if (osd_hw.osd_meson_dev.has_viu2) {
+			reg = VPP2_MISC;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VPU_VIU_VENC_MUX_CTRL;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VIU2_RMIF_CTRL1;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VIU2_RMIF_SCOPE_X;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VIU2_RMIF_SCOPE_Y;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VIU2_ROT_BLK_SIZE;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VIU2_ROT_LBUF_SIZE;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VIU2_ROT_FMT_CTRL;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VIU2_ROT_OUT_VCROP;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+			reg = VPP2_OFIFO_SIZE;
+			osd_log_info("reg[0x%x]: 0x%08x\n",
+				reg, osd_reg_read(reg));
+		}
+	}
 	if (osd_hw.osd_meson_dev.afbc_type == MESON_AFBC) {
 		reg = VIU_MISC_CTRL1;
 			osd_log_info("reg[0x%x]: 0x%08x\n",
