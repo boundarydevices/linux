@@ -447,14 +447,14 @@ static int meson_gpio_direction_output(struct gpio_chip *chip,
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, gpio, REG_DIR, &reg, &bit);
-	ret = regmap_update_bits(pc->reg_gpio, reg, BIT(bit), 0);
+	meson_calc_reg_and_bit(bank, gpio, REG_OUT, &reg, &bit);
+	ret = regmap_update_bits(pc->reg_gpio, reg, BIT(bit),
+				  value ? BIT(bit) : 0);
 	if (ret)
 		return ret;
 
-	meson_calc_reg_and_bit(bank, gpio, REG_OUT, &reg, &bit);
-	return regmap_update_bits(pc->reg_gpio, reg, BIT(bit),
-				  value ? BIT(bit) : 0);
+	meson_calc_reg_and_bit(bank, gpio, REG_DIR, &reg, &bit);
+	return regmap_update_bits(pc->reg_gpio, reg, BIT(bit), 0);
 }
 
 static void meson_gpio_set(struct gpio_chip *chip, unsigned int gpio,
