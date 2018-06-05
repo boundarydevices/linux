@@ -371,7 +371,7 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 	unsigned int i = 0;
 
 	/*disable vbi*/
-	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x14);
+	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x10);
 	W_APB_REG(ACD_REG_22, 0x07080000);
 	/* manuel reset vbi */
 	W_APB_REG(ACD_REG_22, 0x87080000);
@@ -474,7 +474,7 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 	W_APB_REG(CVD2_VSYNC_VBI_LOCKOUT_END, 0x00000025);
 	W_APB_REG(CVD2_VSYNC_TIME_CONSTANT, 0x0000000a);
 	W_APB_REG(CVD2_VBI_CC_START, 0x00000054);
-	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x15);
+	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x11);
 	W_APB_REG(ACD_REG_22, 0x82080000); /* manuel reset vbi */
 	W_APB_REG(ACD_REG_22, 0x04080000);
 	/* vbi reset release, vbi agent enable */
@@ -504,7 +504,7 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 		W_APB_REG(CVD2_OUTPUT_CONTROL, CVD_REG07_PAL);
 
 	/*disable vbi*/
-	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x14);
+	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x10);
 
 	/* 3D comb filter buffer assignment */
 	tvafe_cvd2_memory_init(mem, cvd2->config_fmt);
@@ -519,6 +519,9 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 	W_APB_REG(CVD2_VBI_WSS_DTO_MSB, 0x20);
 	W_APB_REG(CVD2_VBI_WSS_DTO_LSB, 0x66);
 
+	/*0x40[2]=0 Use a fixed vbi threshold 0x30*/
+	W_APB_REG(CVD2_VBI_DATA_HLVL, 0x30);
+
 	/* config vbi start line */
 	cvd_vbi_config();
 
@@ -528,7 +531,7 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 
 	W_APB_REG(ACD_REG_22, 0x04080000);
 	/*enable vbi*/
-	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x15);
+	W_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x11);
 	pr_info("[tvafe..] %s: enable vbi\n", __func__);
 #endif
 	/*for palm moonoscope pattern color flash*/
@@ -1881,7 +1884,9 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 	struct tvafe_cvd2_lines_s *lines = &cvd2->info.vlines;
 	unsigned int i = 0, l_ave = 0, l_max = 0, l_min = 0xff;
 
-	if (!cvd2->hw.line625 || (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I))
+	if (!cvd2->hw.line625 ||
+		((cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I) &&
+		(cvd2->config_fmt != TVIN_SIG_FMT_CVBS_NTSC_M)))
 		return;
 	if (auto_de_en == 0) {
 		lines->val[0] = lines->val[1];
@@ -2191,16 +2196,20 @@ inline void tvafe_cvd2_adj_hs(struct tvafe_cvd2_s *cvd2,
 	unsigned int hcnt64_max, hcnt64_min, temp, delta;
 	unsigned int diff, hcnt64_ave, i, hcnt64_standard;
 
-	if (tvafe_cpu_type() >= CPU_TYPE_GXTVBB)
-		hcnt64_standard = 0x31380;
-	else
+	if (tvafe_cpu_type() >= CPU_TYPE_GXTVBB) {
+		if (cvd2->config_fmt == TVIN_SIG_FMT_CVBS_PAL_I)
+			hcnt64_standard = 0x31380;
+		else if (cvd2->config_fmt == TVIN_SIG_FMT_CVBS_NTSC_M)
+			hcnt64_standard = 0x30e0e;
+	} else
 		hcnt64_standard = 0x17a00;
 
 	if ((cvd_isr_en & 0x1000) == 0)
 		return;
 
 	/* only for pal-i adjusment */
-	if (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I)
+	if ((cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I) &&
+		(cvd2->config_fmt != TVIN_SIG_FMT_CVBS_NTSC_M))
 		return;
 
 	cvd2->info.hcnt64[0] = cvd2->info.hcnt64[1];
@@ -2299,6 +2308,69 @@ inline void tvafe_cvd2_adj_hs(struct tvafe_cvd2_s *cvd2,
 		}
 	}
 }
+
+inline void tvafe_cvd2_adj_hs_ntsc(struct tvafe_cvd2_s *cvd2,
+			unsigned int hcnt64)
+{
+	unsigned int hcnt64_max, hcnt64_min;
+	unsigned int diff, hcnt64_ave, i, hcnt64_standard;
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
+		hcnt64_standard = 0x30e0e;
+	else
+		hcnt64_standard = 0x17a00;
+
+	if ((cvd_isr_en & 0x1000) == 0)
+		return;
+
+	/* only for ntsc-m adjusment */
+	if (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_NTSC_M)
+		return;
+
+	cvd2->info.hcnt64[0] = cvd2->info.hcnt64[1];
+	cvd2->info.hcnt64[1] = cvd2->info.hcnt64[2];
+	cvd2->info.hcnt64[2] = cvd2->info.hcnt64[3];
+	cvd2->info.hcnt64[3] = hcnt64;
+	hcnt64_ave = 0;
+	hcnt64_max = 0;
+	hcnt64_min = 0xffffffff;
+	for (i = 0; i < 4; i++) {
+		if (hcnt64_max < cvd2->info.hcnt64[i])
+			hcnt64_max = cvd2->info.hcnt64[i];
+		if (hcnt64_min > cvd2->info.hcnt64[i])
+			hcnt64_min = cvd2->info.hcnt64[i];
+		hcnt64_ave += cvd2->info.hcnt64[i];
+	}
+	if (++cvd2->info.hcnt64_cnt >= 300)
+		cvd2->info.hcnt64_cnt = 300;
+	if (cvd2->info.hcnt64_cnt == 300) {
+		hcnt64_ave = (hcnt64_ave - hcnt64_max - hcnt64_min + 1) >> 1;
+		if (hcnt64_ave == 0)  /* to avoid kernel crash */
+			return;
+		diff = abs(hcnt64_ave - hcnt64_standard);
+		if (diff > hs_adj_th_level0) {
+			cvd2->info.hs_adj_en = 1;
+			if (diff > hs_adj_th_level4)
+				cvd2->info.hs_adj_level = 4;
+			else if (diff > hs_adj_th_level3)
+				cvd2->info.hs_adj_level = 3;
+			else if (diff > hs_adj_th_level2)
+				cvd2->info.hs_adj_level = 2;
+			else if (diff > hs_adj_th_level1)
+				cvd2->info.hs_adj_level = 1;
+			else
+				cvd2->info.hs_adj_level = 0;
+			if (hcnt64_ave > hcnt64_standard)
+				cvd2->info.hs_adj_dir = 1;
+			else
+				cvd2->info.hs_adj_dir = 0;
+		} else {
+			cvd2->info.hs_adj_en = 0;
+			cvd2->info.hs_adj_level = 0;
+		}
+	}
+}
+
 /*
  * tvafe cvd2 cdto adjustment in vsync interval
  */

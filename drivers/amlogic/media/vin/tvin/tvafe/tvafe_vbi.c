@@ -275,10 +275,10 @@ static void vbi_hw_init(struct vbi_dev_s *devp)
 	memset(devp->pac_addr_start, 0, devp->mem_size);
 	cvd_vbi_mem_set(devp->mem_start >> 4, devp->mem_size >> 4);
 	/*disable vbi*/
-	W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL,   0x14);
+	W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL,   0x10);
 	cvd_vbi_config();
 	/*enable vbi*/
-	W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL,   0x15);
+	W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL,   0x11);
 	tvafe_pr_info("%s: vbi hw init done.\n", __func__);
 }
 
@@ -1090,7 +1090,7 @@ static int vbi_release(struct inode *inode, struct file *file)
 	if (tvafe_clk_status) {
 		/* vbi reset release, vbi agent enable */
 		/*W_VBI_APB_REG(ACD_REG_22, 0x06080000);*/
-		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x14);
+		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x10);
 	}
 	tvafe_pr_info("[vbi..]%s: device release OK.\n", __func__);
 	return ret;
@@ -1163,7 +1163,7 @@ static long vbi_ioctl(struct file *file,
 		/* vbi reset release, vbi agent enable*/
 			/*W_VBI_APB_REG(ACD_REG_22, 0x06080000);*/
 		/*WAPB_REG(CVD2_VBI_CC_START, 0x00000054);*/
-		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x14);
+		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x10);
 		}
 		mutex_unlock(&vbi_slicer->mutex);
 		tvafe_pr_info("%s: stop slicer state:%d\n",
@@ -1444,7 +1444,7 @@ static ssize_t vbi_store(struct device *dev,
 		/* manuel reset vbi */
 		/* vbi reset release, vbi agent enable*/
 		W_VBI_APB_REG(ACD_REG_22, 0x06080000);
-		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x14);
+		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x10);
 		tvafe_pr_info(" disable vbi function\n");
 		tvafe_pr_info("stop done!!!\n");
 	} else if (!strncmp(parm[0], "set_size", strlen("set_size"))) {
@@ -1485,7 +1485,7 @@ static ssize_t vbi_store(struct device *dev,
 		devp->irq_free_status = 0;
 		/* vbi reset release, vbi agent enable */
 		W_VBI_APB_REG(ACD_REG_22, 0x06080000);
-		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x14);
+		W_VBI_APB_REG(CVD2_VBI_FRAME_CODE_CTL, 0x10);
 		tvafe_pr_info("[vbi..]device release OK.\n");
 	} else {
 		tvafe_pr_info("[vbi..]unsupport cmd!!!\n");

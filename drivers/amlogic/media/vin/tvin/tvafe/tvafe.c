@@ -99,7 +99,7 @@ static int cutwindow_val_v_level4 = 24;
 static int cutwindow_val_h_level1 = 10;
 static int cutwindow_val_h_level2 = 18;
 static int cutwindow_val_h_level3 = 20;
-static int cutwindow_val_h_level4 = 48;
+static int cutwindow_val_h_level4 = 62;/*48-->62 for ntsc-m*/
 
 /*1: snow function on;*/
 /*0: off snow function*/
@@ -554,6 +554,8 @@ int tvafe_dec_isr(struct tvin_frontend_s *fe, unsigned int hcnt64)
 #endif
 	if (tvafe->parm.info.fmt == TVIN_SIG_FMT_CVBS_PAL_I)
 		tvafe_cvd2_adj_hs(&tvafe->cvd2, hcnt64);
+	else if (tvafe->parm.info.fmt == TVIN_SIG_FMT_CVBS_NTSC_M)
+		tvafe_cvd2_adj_hs_ntsc(&tvafe->cvd2, hcnt64);
 
 	if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3)) {
 		aspect_ratio = tvafe_cvd2_get_wss();

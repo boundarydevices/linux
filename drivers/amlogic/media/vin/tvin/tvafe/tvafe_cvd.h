@@ -183,6 +183,8 @@ extern void tvafe_cvd2_adj_cdto(struct tvafe_cvd2_s *cvd2,
 #endif
 extern void tvafe_cvd2_adj_hs(struct tvafe_cvd2_s *cvd2,
 			unsigned int hcnt64);
+extern void tvafe_cvd2_adj_hs_ntsc(struct tvafe_cvd2_s *cvd2,
+			unsigned int hcnt64);
 
 extern void tvafe_cvd2_set_default_cdto(struct tvafe_cvd2_s *cvd2);
 extern void tvafe_cvd2_set_default_de(struct tvafe_cvd2_s *cvd2);
