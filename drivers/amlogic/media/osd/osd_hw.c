@@ -7322,6 +7322,8 @@ void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart, u32 osd_w,
 		   u32 osd_h)
 {
 	struct pandata_s disp_tmp;
+	int w = 0, h = 0;
+	int w_diff = 0;
 
 	if (index != 1)
 		return;
@@ -7339,6 +7341,22 @@ void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart, u32 osd_w,
 	} else
 		memcpy(&disp_tmp, &osd_hw.dispdata[OSD1],
 				sizeof(struct pandata_s));
+
+	if (osd_hw.osd_reverse[OSD2] == REVERSE_TRUE) {
+		if (osd_hw.free_scale_enable[OSD1]) {
+			w = osd_hw.free_src_data[OSD1].x_end -
+				osd_hw.free_src_data[OSD1].x_start + 1;
+			h = osd_hw.free_src_data[OSD1].y_end -
+				osd_hw.free_src_data[OSD1].y_start + 1;
+		} else {
+			w = osd_hw.pandata[OSD1].x_end -
+				osd_hw.pandata[OSD1].x_start + 1;
+			h = osd_hw.pandata[OSD1].y_end -
+				osd_hw.pandata[OSD1].y_start + 1;
+		}
+		x = w - x;
+		y = h - y;
+	}
 	if (osd_hw.scale[OSD1].h_enable)
 		osd_hw.scaledata[OSD2].x_end *= 2;
 	if (osd_hw.scale[OSD1].v_enable)
@@ -7355,6 +7373,19 @@ void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart, u32 osd_w,
 	}
 	x += xstart;
 	y += ystart;
+	if (osd_hw.osd_reverse[OSD2] == REVERSE_TRUE) {
+		if (osd_w >= osd_h)
+			w_diff = osd_w - osd_h;
+		else
+			w_diff = 0;
+		osd_hw.pandata[OSD2].x_start = w_diff;
+		osd_hw.pandata[OSD2].x_end = osd_w - 1;
+		osd_hw.pandata[OSD2].y_start = 0;
+		osd_hw.pandata[OSD2].y_end = osd_h - 1;
+		x -= osd_w;
+		y -= osd_h;
+		osd_log_dbg2("x=%d,y=%d\n", x, y);
+	}
 	/*
 	 * Use pandata to show a partial cursor when it is at the edge because
 	 * the registers can't have negative values and because we need to
@@ -7363,38 +7394,66 @@ void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart, u32 osd_w,
 	 */
 	osd_hw.dispdata[OSD2].x_start = x;
 	osd_hw.dispdata[OSD2].y_start = y;
-	if (x <  disp_tmp.x_start) {
-		/* if negative position, set osd to 0,y and pan. */
-		if ((disp_tmp.x_start - x) < osd_w) {
-			osd_hw.pandata[OSD2].x_start = disp_tmp.x_start - x;
-			osd_hw.pandata[OSD2].x_end = osd_w - 1;
+	if (osd_hw.osd_reverse[OSD2] == REVERSE_TRUE) {
+		if (x <  disp_tmp.x_start) {
+			/* if negative position, set osd x pan. */
+			if ((disp_tmp.x_start - x) < osd_w) {
+				osd_hw.pandata[OSD2].x_start =
+					w_diff;
+				osd_hw.pandata[OSD2].x_end =
+					osd_w - 1 - (disp_tmp.x_start - x);
+			}
+			/* set osd x to disp_tmp.x_start */
+			osd_hw.dispdata[OSD2].x_start = disp_tmp.x_start;
 		}
-		osd_hw.dispdata[OSD2].x_start = 0;
-	} else {
-		osd_hw.pandata[OSD2].x_start = 0;
-		if (x + osd_w > disp_tmp.x_end) {
-			/*
-			 * if past positive edge,
-			 * set osd to inside of the edge and pan.
-			 */
-			if (x < disp_tmp.x_end)
-				osd_hw.pandata[OSD2].x_end = disp_tmp.x_end - x;
-		} else
-			osd_hw.pandata[OSD2].x_end = osd_w - 1;
-	}
-	if (y < disp_tmp.y_start) {
-		if ((disp_tmp.y_start - y) < osd_h) {
-			osd_hw.pandata[OSD2].y_start = disp_tmp.y_start - y;
-			osd_hw.pandata[OSD2].y_end = osd_h - 1;
+		if (y < disp_tmp.y_start) {
+			/* if negative position, set osd y pan. */
+			if ((disp_tmp.y_start - y) < osd_h) {
+				osd_hw.pandata[OSD2].y_start = 0;
+				osd_hw.pandata[OSD2].y_end =
+					osd_h - 1 - (disp_tmp.y_start - y);
+			}
+			/* set osd y to disp_tmp.y_start */
+			osd_hw.dispdata[OSD2].y_start = disp_tmp.y_start;
 		}
-		osd_hw.dispdata[OSD2].y_start = 0;
 	} else {
-		osd_hw.pandata[OSD2].y_start = 0;
-		if (y + osd_h > disp_tmp.y_end) {
-			if (y < disp_tmp.y_end)
-				osd_hw.pandata[OSD2].y_end = disp_tmp.y_end - y;
-		} else
-			osd_hw.pandata[OSD2].y_end = osd_h - 1;
+		if (x <  disp_tmp.x_start) {
+			/* if negative position, set osd to 0,y and pan. */
+			if ((disp_tmp.x_start - x) < osd_w) {
+				osd_hw.pandata[OSD2].x_start =
+					disp_tmp.x_start - x;
+				osd_hw.pandata[OSD2].x_end = osd_w - 1;
+			}
+			osd_hw.dispdata[OSD2].x_start = 0;
+		} else {
+			osd_hw.pandata[OSD2].x_start = 0;
+			if (x + osd_w > disp_tmp.x_end) {
+				/*
+				 * if past positive edge,
+				 * set osd to inside of the edge and pan.
+				 */
+				if (x < disp_tmp.x_end)
+					osd_hw.pandata[OSD2].x_end =
+					disp_tmp.x_end - x;
+			} else
+				osd_hw.pandata[OSD2].x_end = osd_w - 1;
+		}
+		if (y < disp_tmp.y_start) {
+			if ((disp_tmp.y_start - y) < osd_h) {
+				osd_hw.pandata[OSD2].y_start =
+					disp_tmp.y_start - y;
+				osd_hw.pandata[OSD2].y_end = osd_h - 1;
+			}
+			osd_hw.dispdata[OSD2].y_start = 0;
+		} else {
+			osd_hw.pandata[OSD2].y_start = 0;
+			if (y + osd_h > disp_tmp.y_end) {
+				if (y < disp_tmp.y_end)
+					osd_hw.pandata[OSD2].y_end =
+					disp_tmp.y_end - y;
+			} else
+				osd_hw.pandata[OSD2].y_end = osd_h - 1;
+		}
 	}
 	osd_hw.dispdata[OSD2].x_end = osd_hw.dispdata[OSD2].x_start +
 		osd_hw.pandata[OSD2].x_end - osd_hw.pandata[OSD2].x_start;
@@ -7402,6 +7461,9 @@ void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart, u32 osd_w,
 		osd_hw.pandata[OSD2].y_end - osd_hw.pandata[OSD2].y_start;
 	add_to_update_list(OSD2, OSD_COLOR_MODE);
 	add_to_update_list(OSD2, DISP_GEOMETRY);
+	osd_log_dbg2("dispdata: %d,%d,%d,%d\n",
+		osd_hw.dispdata[OSD2].x_start, osd_hw.dispdata[OSD2].x_end,
+		osd_hw.dispdata[OSD2].y_start, osd_hw.dispdata[OSD2].y_end);
 }
 
 void  osd_suspend_hw(void)
