@@ -1903,8 +1903,11 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 		if (l_ave > TVAFE_CVD2_AUTO_VS_TH) {
 			cvd2->info.vs_adj_en = 1;
 			/*vlsi test result*/
-			if (R_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE) != 3)
+			/*0x3 for test colobar pattern*/
+			if (cvd2->info.hs_adj_en == 0)
 				W_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE, 0x3);
+			else
+				W_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE, 0xa);
 		} else {
 			cvd2->info.vs_adj_en = 0;
 			if (R_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE) != 0xa)
