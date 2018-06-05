@@ -1496,6 +1496,8 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 			wr_bits(offset, VDIN_MATRIX_CTRL, 0,
 				VDIN_MATRIX_EN_BIT, VDIN_MATRIX_EN_WID);
 #endif
+		wr_bits(offset, VDIN_MATRIX_CTRL, 3,
+			VDIN_PROBE_SEL_BIT, VDIN_PROBE_SEL_WID);
 	} else {
 		format_convert_matrix0 = vdin_get_format_convert_matrix0(devp);
 		format_convert_matrix1 = vdin_get_format_convert_matrix1(devp);
