@@ -39,6 +39,8 @@
 #include "../lcd_reg.h"
 #include "../lcd_common.h"
 
+static struct delayed_work lcd_vx1_stable_delayed_work;
+
 static int vx1_fsm_acq_st;
 
 #define VX1_TRAINING_TIMEOUT    60  /* vsync cnt */
@@ -797,9 +799,10 @@ static void lcd_vbyone_wait_hpd(struct lcd_config_s *pconf)
 	} else {
 		LCDPR("%s: hpd=%d, i=%d\n", __func__,
 			((lcd_vcbus_read(VBO_STATUS_L) >> 6) & 0x1), i);
+		/* force low only actived for actual hpd is low */
+		lcd_vcbus_setb(VBO_INSGN_CTRL, 1, 2, 2);
 	}
 
-	lcd_vcbus_setb(VBO_INSGN_CTRL, 1, 2, 2);
 	if ((pconf->lcd_control.vbyone_config->ctrl_flag) & 0x2) {
 		LCDPR("ctrl_flag for hpd_data delay\n");
 		msleep(pconf->lcd_control.vbyone_config->hpd_data_delay);
@@ -893,7 +896,7 @@ static void lcd_vx1_timeout_reset(struct work_struct *p_work)
 	vx1_timeout_reset_flag = 0;
 }
 
-#define VSYNC_CNT_VX1_RESET  5
+#define VSYNC_CNT_VX1_RESET   5
 #define VSYNC_CNT_VX1_STABLE  20
 static unsigned short vsync_cnt = VSYNC_CNT_VX1_STABLE;
 static irqreturn_t lcd_vbyone_vsync_isr(int irq, void *dev_id)
@@ -927,7 +930,7 @@ static irqreturn_t lcd_vbyone_vsync_isr(int irq, void *dev_id)
 				vsync_cnt = VSYNC_CNT_VX1_STABLE;
 			else
 				vsync_cnt++;
-			}
+		}
 	} else if (vx1_conf->vsync_intr_en == 2) {
 		if (vsync_cnt >= 5) {
 			vsync_cnt = 0;
@@ -939,31 +942,32 @@ static irqreturn_t lcd_vbyone_vsync_isr(int irq, void *dev_id)
 
 				lcd_vcbus_setb(VBO_INTR_STATE_CTRL, 0, 15, 1);
 				lcd_vcbus_setb(VBO_INTR_STATE_CTRL, 1, 15, 1);
-	}
+			}
 		} else
 			vsync_cnt++;
 	} else {
-	if (vx1_training_wait_cnt >= VX1_TRAINING_TIMEOUT) {
-		if ((lcd_vcbus_read(VBO_STATUS_L) & 0x3f) != 0x20) {
-			if (vx1_timeout_reset_flag == 0) {
-				vx1_timeout_reset_flag = 1;
-				if (lcd_drv->workqueue) {
-					queue_work(lcd_drv->workqueue,
-						&lcd_vx1_reset_work);
-				} else {
-					schedule_work(&lcd_vx1_reset_work);
+		if (vx1_training_wait_cnt >= VX1_TRAINING_TIMEOUT) {
+			if ((lcd_vcbus_read(VBO_STATUS_L) & 0x3f) != 0x20) {
+				if (vx1_timeout_reset_flag == 0) {
+					vx1_timeout_reset_flag = 1;
+					if (lcd_drv->workqueue) {
+						queue_work(lcd_drv->workqueue,
+							&lcd_vx1_reset_work);
+					} else {
+						schedule_work(
+							&lcd_vx1_reset_work);
+					}
+				}
+			} else {
+				vx1_training_stable_cnt++;
+				if (vx1_training_stable_cnt >= 5) {
+					vx1_training_wait_cnt = 0;
+					vx1_training_stable_cnt = 0;
 				}
 			}
 		} else {
-			vx1_training_stable_cnt++;
-			if (vx1_training_stable_cnt >= 5) {
-				vx1_training_wait_cnt = 0;
-				vx1_training_stable_cnt = 0;
-			}
+			vx1_training_wait_cnt++;
 		}
-	} else {
-		vx1_training_wait_cnt++;
-	}
 	}
 
 	return IRQ_HANDLED;
@@ -1304,9 +1308,14 @@ int lcd_tv_driver_init(void)
 		lcd_vbyone_wait_hpd(pconf);
 		lcd_vbyone_phy_set(pconf, 1);
 		lcd_vx1_intr_request = 1;
-		queue_delayed_work(lcd_drv->workqueue,
-			&lcd_drv->lcd_vx1_delayed_work,
-			msecs_to_jiffies(LCD_VX1_WAIT_STABLE_DELAY));
+		if (lcd_drv->workqueue) {
+			queue_delayed_work(lcd_drv->workqueue,
+				&lcd_vx1_stable_delayed_work,
+				msecs_to_jiffies(LCD_VX1_WAIT_STABLE_DELAY));
+		} else {
+			schedule_delayed_work(&lcd_vx1_stable_delayed_work,
+				msecs_to_jiffies(LCD_VX1_WAIT_STABLE_DELAY));
+		}
 		break;
 	default:
 		break;
@@ -1425,7 +1434,7 @@ int lcd_vbyone_interrupt_up(void)
 
 	INIT_WORK(&lcd_vx1_reset_work, lcd_vx1_timeout_reset);
 
-	INIT_DELAYED_WORK(&lcd_drv->lcd_vx1_delayed_work,
+	INIT_DELAYED_WORK(&lcd_vx1_stable_delayed_work,
 		lcd_vx1_wait_stable_delayed);
 
 	if (!lcd_drv->res_vsync_irq) {
@@ -1482,7 +1491,7 @@ void lcd_vbyone_interrupt_down(void)
 	free_irq(lcd_drv->res_vx1_irq->start, (void *)"vbyone");
 	free_irq(lcd_drv->res_vsync_irq->start, (void *)"vbyone_vsync");
 	cancel_work_sync(&lcd_vx1_reset_work);
-	cancel_delayed_work(&lcd_drv->lcd_vx1_delayed_work);
+	cancel_delayed_work(&lcd_vx1_stable_delayed_work);
 
 	if (lcd_debug_print_flag)
 		LCDPR("free vbyone irq\n");

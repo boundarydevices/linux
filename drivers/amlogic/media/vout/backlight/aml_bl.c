@@ -2141,10 +2141,9 @@ static int aml_bl_on_notifier(struct notifier_block *nb,
 				&bl_drv->bl_delayed_work,
 				msecs_to_jiffies(bconf->power_on_delay));
 		} else {
-			BLPR("Warning: no bl workqueue\n");
-			if (bconf->power_on_delay)
-				msleep(bconf->power_on_delay);
-			aml_bl_on_function();
+			schedule_delayed_work(
+				&bl_drv->bl_delayed_work,
+				msecs_to_jiffies(bconf->power_on_delay));
 		}
 	} else
 		BLERR("wrong backlight control method\n");

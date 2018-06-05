@@ -906,13 +906,9 @@ static int lcd_config_probe(struct platform_device *pdev)
 				&lcd_driver->lcd_probe_delayed_work,
 				msecs_to_jiffies(2000));
 		} else {
-			LCDPR("Warning: no lcd_probe_delayed workqueue\n");
-			ret = lcd_mode_probe(lcd_driver->dev);
-			if (ret) {
-				kfree(lcd_driver);
-				lcd_driver = NULL;
-				LCDERR("probe exit\n");
-			}
+			schedule_delayed_work(
+				&lcd_driver->lcd_probe_delayed_work,
+				msecs_to_jiffies(2000));
 		}
 	} else {
 		ret = lcd_mode_probe(lcd_driver->dev);
@@ -1044,6 +1040,7 @@ static int lcd_probe(struct platform_device *pdev)
 static int lcd_remove(struct platform_device *pdev)
 {
 	cancel_delayed_work(&lcd_driver->lcd_probe_delayed_work);
+	cancel_work_sync(&(lcd_driver->lcd_resume_work));
 	if (lcd_driver->workqueue)
 		destroy_workqueue(lcd_driver->workqueue);
 
@@ -1071,12 +1068,7 @@ static int lcd_resume(struct platform_device *pdev)
 			queue_work(lcd_driver->workqueue,
 				&(lcd_driver->lcd_resume_work));
 		} else {
-			mutex_lock(&lcd_driver->power_mutex);
-			LCDPR("Warning: no lcd workqueue\n");
-			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
-			lcd_if_enable_retry(lcd_driver->lcd_config);
-			LCDPR("%s finished\n", __func__);
-			mutex_unlock(&lcd_driver->power_mutex);
+			schedule_work(&(lcd_driver->lcd_resume_work));
 		}
 	} else {
 		mutex_lock(&lcd_driver->power_mutex);

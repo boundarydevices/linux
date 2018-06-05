@@ -343,13 +343,7 @@ static int lcd_resume(void)
 			queue_work(lcd_drv->workqueue,
 				&(lcd_drv->lcd_resume_work));
 		} else {
-			mutex_lock(&lcd_drv->power_mutex);
-			LCDPR("Warning: no lcd workqueue\n");
-			lcd_resume_flag = 1;
-			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
-			lcd_if_enable_retry(lcd_drv->lcd_config);
-			LCDPR("%s finished\n", __func__);
-			mutex_unlock(&lcd_drv->power_mutex);
+			schedule_work(&(lcd_drv->lcd_resume_work));
 		}
 	} else {
 		mutex_lock(&lcd_drv->power_mutex);
