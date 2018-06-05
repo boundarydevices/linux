@@ -292,23 +292,7 @@ static struct clk_gate cts_vipnanoq_axi_clk_gate = {
 	},
 };
 
-static struct clk_mux cts_vipnanoq_mux = {
-	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
-	.mask = 0x1,
-	.shift = 31,
-	.lock = &clk_lock,
-	.flags = CLK_PARENT_ALTERNATE,
-	.hw.init = &(struct clk_init_data){
-		.name = "cts_vipnanoq_mux",
-		.ops = &meson_clk_mux_ops,
-		.parent_names = (const char *[]) {
-			"cts_vipnanoq_core_clk_composite",
-			"cts_vipnanoq_axi_clk_composite"
-		},
-		.num_parents = 2,
-		.flags = CLK_GET_RATE_NOCACHE,
-	},
-};
+
 
 static struct clk_mux cts_mipi_isp_clk_mux = {
 	.reg = (void *)HHI_MIPI_ISP_CLK_CNTL,
@@ -524,8 +508,7 @@ static void __init g12b_clkc_init(struct device_node *np)
 		+ (u64)(cts_vipnanoq_axi_clk_gate.reg);
 	cts_vipnanoq_axi_clk_div.reg = clk_base
 		+ (u64)(cts_vipnanoq_axi_clk_div.reg);
-	cts_vipnanoq_mux.reg = clk_base
-		+ (u64)(cts_vipnanoq_mux.reg);
+
 
 	cts_mipi_isp_clk_mux.reg = clk_base
 		+ (u64)(cts_mipi_isp_clk_mux.reg);
@@ -641,11 +624,7 @@ static void __init g12b_clkc_init(struct device_node *np)
 		panic("%s: %d register cts_vipnanoq_axi_clk_composite error\n",
 			__func__, __LINE__);
 
-	clks[CLKID_VNANOQ_MUX] = clk_register(NULL,
-		&cts_vipnanoq_mux.hw);
-	if (IS_ERR(clks[CLKID_VNANOQ_MUX]))
-		panic("%s: %d clk_register %s error\n",
-			__func__, __LINE__, cts_vipnanoq_mux.hw.init->name);
+
 
 	clks[CLKID_MIPI_ISP_CLK_COMP] = clk_register_composite(NULL,
 		"cts_mipi_isp_clk_composite",
