@@ -262,6 +262,7 @@ unsigned int hdmirx_rd_top(unsigned int addr)
 	ulong flags;
 	int data;
 	unsigned int dev_offset = 0;
+
 	spin_lock_irqsave(&reg_rw_lock, flags);
 	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_addr_port | dev_offset, addr);
 	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_addr_port | dev_offset, addr);
@@ -559,6 +560,26 @@ void hdmirx_wr_ctl_port(unsigned int offset, unsigned int data)
 
 	spin_lock_irqsave(&reg_rw_lock, flags);
 	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_ctrl_port+offset, data);
+	spin_unlock_irqrestore(&reg_rw_lock, flags);
+}
+
+/*
+ * hdmirx_top_sw_reset
+ */
+void hdmirx_top_sw_reset(void)
+{
+	ulong flags;
+	unsigned long dev_offset = 0;
+
+	spin_lock_irqsave(&reg_rw_lock, flags);
+	wr_reg(MAP_ADDR_MODULE_TOP,
+		hdmirx_addr_port | dev_offset, TOP_SW_RESET);
+	wr_reg(MAP_ADDR_MODULE_TOP,
+		hdmirx_data_port | dev_offset, 1);
+	udelay(1);
+	wr_reg(MAP_ADDR_MODULE_TOP,
+		hdmirx_addr_port | dev_offset, TOP_SW_RESET);
+	wr_reg(MAP_ADDR_MODULE_TOP, hdmirx_data_port | dev_offset, 0);
 	spin_unlock_irqrestore(&reg_rw_lock, flags);
 }
 
@@ -1172,6 +1193,9 @@ void control_reset(void)
 {
 	unsigned long data32;
 
+	/* disable functional modules */
+	hdmirx_top_sw_reset();
+
 	/* Enable functional modules */
 	data32  = 0;
 	data32 |= 1 << 5;   /* [5]      cec_enable */
@@ -1746,6 +1770,7 @@ void hdmirx_hw_config(void)
 	DWC_init();
 	hdmirx_irq_hdcp_enable(true);
 	hdmirx_phy_init();
+	hdmirx_wr_top(TOP_INTR_MASKN, top_intr_maskn_value);
 	rx_pr("%s  %d Done!\n", __func__, rx.port);
 }
 
@@ -1853,6 +1878,7 @@ bool is_aud_pll_error(void)
 void rx_aud_pll_ctl(bool en)
 {
 	int tmp = 0;
+
 	if (en) {
 		tmp = hdmirx_rd_phy(PHY_MAINFSM_STATUS1);
 		wr_reg_hhi(HHI_AUD_PLL_CNTL, 0x20000000);
@@ -2081,6 +2107,7 @@ unsigned int hdmirx_get_clock(int index)
 unsigned int hdmirx_get_tmds_clock(void)
 {
 	uint32_t clk = clk_util_clk_msr(25);
+
 	if (clk == 0) {
 		clk = hdmirx_rd_dwc(DWC_HDMI_CKM_RESULT) & 0xffff;
 		clk = clk * 158000 / 4095 * 1000;

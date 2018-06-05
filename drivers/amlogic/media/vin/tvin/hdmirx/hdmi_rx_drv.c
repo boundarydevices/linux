@@ -572,6 +572,9 @@ void hdmirx_set_timing_info(struct tvin_sig_property_s *prop)
 		prop->ve = 1;
 }
 
+/*
+ * hdmirx_get_connect_info - get 5v info
+ */
 int hdmirx_get_connect_info(void)
 {
 	return pwr_sts;

@@ -1312,6 +1312,7 @@ void fsm_restart(void)
 			rx_esm_tmdsclk_en(false);
 		esm_set_stable(false);
 	}
+	hdmirx_hw_config();
 	set_scdc_cfg(1, 0);
 	vic_check_en = true;
 	dvi_check_en = true;
@@ -1967,6 +1968,7 @@ void rx_main_state_machine(void)
 	case FSM_5V_LOST:
 		if (rx.cur_5v_sts)
 			rx.state = FSM_INIT;
+		fsm_restart();
 		break;
 	case FSM_HPD_LOW:
 		rx_set_hpd(0);

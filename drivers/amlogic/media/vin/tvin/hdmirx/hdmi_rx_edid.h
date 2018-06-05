@@ -622,4 +622,8 @@ unsigned char *rx_get_edid(int edid_index);
 void edid_parse_block0(uint8_t *p_edid, struct edid_info_s *edid_info);
 void edid_parse_cea_block(uint8_t *p_edid, struct edid_info_s *edid_info);
 void rx_edid_parse_print(struct edid_info_s *edid_info);
+void rx_modify_edid(unsigned char *buffer,
+				int len, unsigned char *addition);
+void rx_edid_update_audio_info(unsigned char *p_edid,
+						unsigned int len);
 #endif

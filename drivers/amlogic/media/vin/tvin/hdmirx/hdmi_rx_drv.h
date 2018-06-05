@@ -46,15 +46,25 @@
  *
  *
  */
-#define RX_VER2 "ver.2018/07/30"
+#define RX_VER2 "ver.2018/07/30a"
 
+/*print type*/
+#define	LOG_EN		0x01
+#define VIDEO_LOG	0x02
+#define AUDIO_LOG	0x04
+#define HDCP_LOG	0x08
+#define PACKET_LOG	0x10
+#define EQ_LOG		0x20
+#define REG_LOG		0x40
+#define ERR_LOG		0x80
+#define VSI_LOG		0x800
 
 /* 50ms timer for hdmirx main loop (HDMI_STATE_CHECK_FREQ is 20) */
 
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 
-
+#define EDID_MIX_MAX_SIZE 64
 
 #define ESM_KILL_WAIT_TIMES 250
 #define str_cmp(buff, str) ((strlen((str)) == strlen((buff))) &&	\
@@ -366,6 +376,7 @@ struct rx_s {
 	struct aud_info_s aud_info;
 	struct vsi_info_s vs_info_details;
 	struct tvin_hdr_info_s hdr_info;
+	unsigned char edid_mix_buf[EDID_MIX_MAX_SIZE];
 	unsigned int pwr_sts;
 	/* for debug */
 	/*struct pd_infoframe_s dbg_info;*/

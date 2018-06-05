@@ -24,6 +24,7 @@
 #define MAX_REPEAT_COUNT	127
 #define MAX_REPEAT_DEPTH	7
 #define MAX_KSV_LIST_SIZE	(MAX_KSV_SIZE*MAX_REPEAT_COUNT)
+#define DETAILED_TIMING_LEN	18
 /*size of one format in edid*/
 #define FORMAT_SIZE			sizeof(struct edid_audio_block_t)
 #define EDID_DEFAULT_START		132
@@ -56,15 +57,11 @@ extern bool downstream_rp_en;
 
 void rx_set_repeater_support(bool enable);
 extern int rx_set_receiver_edid(unsigned char *data, int len);
-extern void rx_modify_edid(unsigned char *buffer,
-				int len, unsigned char *addition);
 extern void rx_start_repeater_auth(void);
-extern void rx_edid_update_audio_info(unsigned char *p_edid,
-						unsigned int len);
 extern void rx_set_repeat_signal(bool repeat);
 extern bool rx_set_repeat_aksv(unsigned char *data, int len, int depth,
 		bool dev_exceed, bool cascade_exceed);
-
+extern unsigned char *rx_get_receiver_edid(void);
 extern void repeater_dwork_handle(struct work_struct *work);
 bool rx_set_receive_hdcp(unsigned char *data,
 	int len, int depth, bool cas_exceed, bool devs_exceed);

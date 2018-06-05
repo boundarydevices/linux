@@ -18,17 +18,6 @@
 #ifndef HDMI_RX_WRAPPER_H_
 #define HDMI_RX_WRAPPER_H_
 
-
-#define	LOG_EN		0x01
-#define VIDEO_LOG	0x02
-#define AUDIO_LOG	0x04
-#define HDCP_LOG	0x08
-#define PACKET_LOG	0x10
-#define EQ_LOG		0x20
-#define REG_LOG		0x40
-#define ERR_LOG		0x80
-#define VSI_LOG		0x800
-
 /* stable_check_lvl */
 #define HACTIVE_EN		0x01
 #define VACTIVE_EN		0x02
