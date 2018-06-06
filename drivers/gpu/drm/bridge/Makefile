@@ -16,3 +16,4 @@ obj-$(CONFIG_DRM_I2C_ADV7511) += adv7511/
 obj-$(CONFIG_DRM_TI_TFP410) += ti-tfp410.o
 obj-y += synopsys/
 obj-$(CONFIG_DRM_NWL_DSI) += nwl-dsi.o
+obj-$(CONFIG_DRM_SEC_MIPI_DSIM) += sec-dsim.o
