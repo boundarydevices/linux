@@ -480,6 +480,11 @@ static const unsigned int pwm_d_a4_pins[] = {GPIOA_4};
 static const unsigned int pwm_f_z_pins[] = {GPIOZ_12};
 static const unsigned int pwm_f_a11_pins[] = {GPIOA_11};
 
+/* gpio 12m/24m */
+static const unsigned int clk12_24_z_pins[] = {GPIOZ_13};
+static const unsigned int clk12_24_ao_pins[] = {GPIOAO_10};
+static const unsigned int clk12_24_e_pins[] = {GPIOE_2};
+
 static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GPIO_GROUP(GPIOV_0),
 	GPIO_GROUP(GPIOZ_0),
@@ -672,6 +677,7 @@ static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GROUP(pwm_c_z,		5),
 	GROUP(pwm_d_z,		2),
 	GROUP(pwm_f_z,		5),
+	GROUP(clk12_24_z,	2),
 
 	/* bank GPIOX */
 	GROUP(sdio_d0,		1),
@@ -995,6 +1001,8 @@ static struct meson_pmx_group meson_g12a_aobus_groups[] = {
 	GROUP(mclk0_ao,		5),
 	GROUP(remote_out_ao9,	2),
 	GROUP(pwm_a_e2,		3),
+	GROUP(clk12_24_ao,	7),
+	GROUP(clk12_24_e,	2),
 };
 
 static const char * const gpio_periphs_groups[] = {
@@ -1335,6 +1343,14 @@ static const char * const pwm_a_gpioe_groups[] = {
 	"pwm_a_e2",
 };
 
+static const char * const clk12_24_ee_groups[] = {
+	"clk12_24_z",
+};
+
+static const char * const clk12_24_ao_groups[] = {
+	"clk12_24_ao", "clk12_24_e",
+};
+
 static struct meson_pmx_func meson_g12a_periphs_functions[] = {
 	FUNCTION(gpio_periphs),
 	FUNCTION(emmc),
@@ -1378,6 +1394,7 @@ static struct meson_pmx_func meson_g12a_periphs_functions[] = {
 	FUNCTION(tdmc_in),
 	FUNCTION(tdmc_out),
 	FUNCTION(remote_out),
+	FUNCTION(clk12_24_ee),
 };
 
 static struct meson_pmx_func meson_g12a_aobus_functions[] = {
@@ -1400,6 +1417,7 @@ static struct meson_pmx_func meson_g12a_aobus_functions[] = {
 	FUNCTION(tdmb_in_ao),
 	FUNCTION(mclk0_ao),
 	FUNCTION(pwm_a_gpioe),
+	FUNCTION(clk12_24_ao),
 };
 
 static struct meson_bank meson_g12a_periphs_banks[] = {
