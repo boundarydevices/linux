@@ -349,7 +349,7 @@
 	amdolby_vision {
 		compatible = "amlogic, dolby_vision_g12a";
 		dev_name = "aml_amdolby_vision_driver";
-		status = "disabled";
+		status = "okay";
 		tv_mode = <0>;/*1:enabel ;0:disable*/
 	};
 
