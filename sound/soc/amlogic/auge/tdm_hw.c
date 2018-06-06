@@ -38,14 +38,14 @@ void aml_tdm_enable(
 	unsigned int offset, reg;
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		pr_info("tdm playback enable\n");
+		pr_debug("tdm playback enable\n");
 
 		offset = EE_AUDIO_TDMOUT_B_CTRL0
 				- EE_AUDIO_TDMOUT_A_CTRL0;
 		reg = EE_AUDIO_TDMOUT_A_CTRL0 + offset * index;
 		aml_audiobus_update_bits(actrl, reg, 1<<31, is_enable<<31);
 	} else {
-		pr_info("tdm capture enable\n");
+		pr_debug("tdm capture enable\n");
 
 		offset = EE_AUDIO_TDMIN_B_CTRL
 				- EE_AUDIO_TDMIN_A_CTRL;
@@ -167,7 +167,7 @@ void aml_tdm_fifo_ctrl(
 	}
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		pr_info("tdm prepare----playback\n");
+		pr_debug("tdm prepare----playback\n");
 		// from ddr, 63bit split into 2 samples
 		offset = EE_AUDIO_TDMOUT_B_CTRL1
 				- EE_AUDIO_TDMOUT_A_CTRL1;
@@ -176,7 +176,7 @@ void aml_tdm_fifo_ctrl(
 				0x3<<24|0x1f<<8|0x7<<4,
 				fifo_id<<24|(bitwidth-1)<<8|frddr_type<<4);
 	} else {
-		pr_info("tdm prepare----capture\n");
+		pr_debug("tdm prepare----capture\n");
 	}
 
 }
@@ -303,7 +303,7 @@ void aml_tdm_set_format(
 
 	p_config->pcm_mode = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
 
-	pr_info("pad clk ctl value:%x\n", clkctl);
+	pr_debug("pad clk ctl value:%x\n", clkctl);
 	/* set lrclk/bclk invertion */
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_IB_IF:
@@ -332,7 +332,7 @@ void aml_tdm_set_format(
 	default:
 		return;
 	}
-	pr_info("sclk_ph0 (pad) clk ctl set:%x\n", clkctl);
+	pr_debug("sclk_ph0 (pad) clk ctl set:%x\n", clkctl);
 	/* clk ctrl: delay line and invert clk */
 	/*clkctl |= 0x88880000;*/
 #ifdef G12A_PTM
@@ -472,7 +472,7 @@ void aml_tdm_set_lane_channel_swap(
 		offset = EE_AUDIO_TDMOUT_B_MASK0 - EE_AUDIO_TDMOUT_A_MASK0;
 		reg = EE_AUDIO_TDMOUT_A_MASK0 + offset * index;
 
-		pr_info("\ttdmout swap val = %#x\n", swap);
+		pr_debug("\ttdmout swap val = %#x\n", swap);
 		offset = EE_AUDIO_TDMOUT_B_SWAP - EE_AUDIO_TDMOUT_A_SWAP;
 		reg = EE_AUDIO_TDMOUT_A_SWAP + offset * index;
 		aml_audiobus_write(actrl, reg, swap);
@@ -480,7 +480,7 @@ void aml_tdm_set_lane_channel_swap(
 		offset = EE_AUDIO_TDMIN_B_MASK0 - EE_AUDIO_TDMIN_A_MASK0;
 		reg = EE_AUDIO_TDMIN_A_MASK0 + offset * index;
 
-		pr_info("\ttdmin swap val = %#x\n", swap);
+		pr_debug("\ttdmin swap val = %#x\n", swap);
 		offset = EE_AUDIO_TDMIN_B_SWAP - EE_AUDIO_TDMIN_A_SWAP;
 		reg = EE_AUDIO_TDMIN_A_SWAP + offset * index;
 		aml_audiobus_write(actrl, reg, swap);
@@ -506,7 +506,7 @@ void aml_tdm_set_lrclkdiv(
 {
 	unsigned int reg, reg_step = 2;
 
-	pr_info("aml_dai_set_clkdiv, clksel(%d), ratio(%d)\n",
+	pr_debug("aml_dai_set_clkdiv, clksel(%d), ratio(%d)\n",
 			clk_sel, ratio);
 
 	reg = EE_AUDIO_MST_A_SCLK_CTRL0 + reg_step * clk_sel;
