@@ -195,8 +195,9 @@ struct page *dma_alloc_from_contiguous(struct device *dev, size_t count,
 
 	return cma_alloc(dev_get_cma_area(dev), count, align);
 }
+#ifdef CONFIG_AMLOGIC_MODIFY
 EXPORT_SYMBOL(dma_alloc_from_contiguous);
-
+#endif
 /**
  * dma_release_from_contiguous() - release allocated pages
  * @dev:   Pointer to device for which the pages were allocated.
@@ -212,7 +213,9 @@ bool dma_release_from_contiguous(struct device *dev, struct page *pages,
 {
 	return cma_release(dev_get_cma_area(dev), pages, count);
 }
+#ifdef CONFIG_AMLOGIC_MODIFY
 EXPORT_SYMBOL(dma_release_from_contiguous);
+#endif
 /*
  * Support for reserved memory regions defined in device tree
  */
