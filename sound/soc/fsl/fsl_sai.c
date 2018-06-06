@@ -392,9 +392,10 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(dai);
 	unsigned int ofs = sai->soc_data->reg_offset;
 	unsigned long clk_rate;
-	u32 savediv = 0, ratio, savesub = freq;
 	int adir = tx ? RX : TX;
 	int dir = tx ? TX : RX;
+	unsigned int reg = 0;
+	u32 ratio, savesub = freq, saveratio = 0, savediv = 0;
 	u32 id;
 	int ret = 0;
 
@@ -429,22 +430,21 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 			"ratio %d for freq %dHz based on clock %ldHz\n",
 			ratio, freq, clk_rate);
 
-		if (ratio % 2 == 0 && ratio >= 2 && ratio <= 512)
-			ratio /= 2;
-		else
-			continue;
+		if ((ratio % 2 == 0 && ratio >= 2 && ratio <= 512) ||
+		    (ratio == 1 && sai->verid.major >= 3 && sai->verid.minor >= 1)) {
 
-		if (ret < savesub) {
-			savediv = ratio;
-			sai->mclk_id[tx] = id;
-			savesub = ret;
+			if (ret < savesub) {
+				saveratio = ratio;
+				sai->mclk_id[tx] = id;
+				savesub = ret;
+			}
+
+			if (ret == 0)
+				break;
 		}
-
-		if (ret == 0)
-			break;
 	}
 
-	if (savediv == 0) {
+	if (saveratio == 0) {
 		dev_err(dai->dev, "failed to derive required %cx rate: %d\n",
 				tx ? 'T' : 'R', freq);
 		return -EINVAL;
@@ -460,18 +460,22 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 	 * 4) For Tx and Rx are both Synchronous with another SAI, we just
 	 *    ignore it.
 	 */
-	if (fsl_sai_dir_is_synced(sai, adir)) {
-		regmap_update_bits(sai->regmap, FSL_SAI_xCR2(!tx, ofs),
-				   FSL_SAI_CR2_MSEL_MASK,
-				   FSL_SAI_CR2_MSEL(sai->mclk_id[tx]));
-		regmap_update_bits(sai->regmap, FSL_SAI_xCR2(!tx, ofs),
-				   FSL_SAI_CR2_DIV_MASK, savediv - 1);
-	} else if (!sai->synchronous[dir]) {
-		regmap_update_bits(sai->regmap, FSL_SAI_xCR2(tx, ofs),
-				   FSL_SAI_CR2_MSEL_MASK,
-				   FSL_SAI_CR2_MSEL(sai->mclk_id[tx]));
-		regmap_update_bits(sai->regmap, FSL_SAI_xCR2(tx, ofs),
-				   FSL_SAI_CR2_DIV_MASK, savediv - 1);
+	if (fsl_sai_dir_is_synced(sai, adir))
+		reg = FSL_SAI_xCR2(!tx, ofs);
+	else if (!sai->synchronous[dir])
+		reg = FSL_SAI_xCR2(tx, ofs);
+
+	if (reg) {
+		regmap_update_bits(sai->regmap, reg, FSL_SAI_CR2_MSEL_MASK,
+			   FSL_SAI_CR2_MSEL(sai->mclk_id[tx]));
+
+		savediv = (saveratio == 1 ? 0 : (saveratio >> 1) - 1);
+		regmap_update_bits(sai->regmap, reg, FSL_SAI_CR2_DIV_MASK, savediv);
+
+		if (sai->verid.major >= 3 && sai->verid.minor >= 1) {
+			regmap_update_bits(sai->regmap, reg, FSL_SAI_CR2_BYP,
+				   (saveratio == 1 ? FSL_SAI_CR2_BYP : 0));
+		}
 	}
 
 	if (sai->verid.major >= 3 && sai->verid.minor >= 1) {
@@ -480,8 +484,8 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 				FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
 	}
 
-	dev_dbg(dai->dev, "best fit: clock id=%d, div=%d, deviation =%d\n",
-			sai->mclk_id[tx], savediv, savesub);
+	dev_dbg(dai->dev, "best fit: clock id=%d, ratio=%d, deviation=%d\n",
+			sai->mclk_id[tx], saveratio, savesub);
 
 	return 0;
 }
