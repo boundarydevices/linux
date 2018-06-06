@@ -466,7 +466,7 @@ static int aml_set_atmos_audio_edid(struct snd_kcontrol *kcontrol,
 	bool enable = ucontrol->value.integer.value[0];
 
 	p_aml_audio = snd_soc_card_get_drvdata(card);
-	//rx_set_atmos_flag(enable);
+	rx_set_atmos_flag(enable);
 	p_aml_audio->atmos_edid_enable = enable;
 	return 0;
 }

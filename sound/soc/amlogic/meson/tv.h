@@ -98,4 +98,6 @@ extern int External_Mute(int mute_flag);
 #else
 int External_Mute(int mute_flag) { return 0; }
 #endif
+extern void rx_set_atmos_flag(bool en);
+extern void rx_get_atmos_flag(void);
 #endif
