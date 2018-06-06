@@ -9,3 +9,4 @@ obj-$(CONFIG_AMLOGIC_MEDIA_VIN)		+=	vin/
 obj-$(CONFIG_AMLOGIC_MEDIA_VIDEO_PROCESSOR)	+=	video_processor/
 obj-$(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT) += enhancement/
 obj-$(CONFIG_AMLOGIC_DTV_DEMOD) += dtv_demod/
+obj-$(CONFIG_AMLOGIC_MEDIA_GDC) += gdc/

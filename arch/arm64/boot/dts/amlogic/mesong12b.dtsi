@@ -1272,6 +1272,21 @@
 		};
 	};
 
+	gdc:gdc {
+		#address-cells=<2>;
+		#size-cells=<2>;
+		status = "ok";
+		compatible = "amlogic, g12b-gdc";
+		reg = <0 0xFF950000 0 0x0000100
+			   0 0xFF63C16C 0 0x0000004
+			   0 0xFF63C100 0 0x0000004>;
+		interrupts = <0 144 1>;
+		interrupt-names = "GDC";
+		clocks = <&clkc CLKID_GDC_CORE_CLK_COMP
+				  &clkc CLKID_GDC_AXI_CLK_COMP >;
+		clock-names = "core","axi";
+	};
+
 	mesonstream {
 		compatible = "amlogic, codec, streambuf";
 		dev_name = "mesonstream";

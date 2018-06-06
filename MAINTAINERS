@@ -14398,6 +14398,10 @@ AMLOGIC G12A Media codec io bus
 M:	Nanxin Qin <nanxin.qin@amlogic.com>
 F:	include/linux/amlogic/media/registers/regs/efuse_regs.h
 
+AMLOGIC Geometric Distorition Correction
+M:	Jiyu Yang <Jiyu.Yang@amlogic.com>
+F:	drivers/amlogic/media/gdc/*
+
 AMLOGIC G12A CVBS DRIVER
 M:	Nian Jing <nian.jing@amlogic.com>
 F:	drivers/amlogic/media/vout/cvbs/
