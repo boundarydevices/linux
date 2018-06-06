@@ -14474,3 +14474,7 @@ F:      drivers/amlogic/media/enhancement/amvecm/vlock.h
 AMLOGIC G12A X2 U211 buildroot dts
 M:     Sandy Luo <sandy.luo@amlogic.com>
 F:     arch/arm64/boot/dts/amlogic/g12a_s905x2_u211_512m.dts
+
+AMLOGIC TXLX T962E R321 buildroot dts
+M:     liangzhuo.xie <liangzhuo.xie@amlogic.com>
+F:     arch/arm64/boot/dts/amlogic/txlx_t962e_r321_buildroot.dts
