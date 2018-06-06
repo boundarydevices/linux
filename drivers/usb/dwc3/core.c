@@ -938,10 +938,11 @@ static int dwc3_core_get_phy(struct dwc3 *dwc)
 	}
 
 #ifdef CONFIG_AMLOGIC_USB
-	if (dwc->usb3_phy->flags == AML_USB3_PHY_ENABLE)
-		dwc->super_speed_support = 1;
-	else
-		dwc->super_speed_support = 0;
+	dwc->super_speed_support = 0;
+
+	if (dwc->usb3_phy)
+		if (dwc->usb3_phy->flags == AML_USB3_PHY_ENABLE)
+			dwc->super_speed_support = 1;
 #endif
 
 	dwc->usb2_generic_phy = devm_phy_get(dev, "usb2-phy");

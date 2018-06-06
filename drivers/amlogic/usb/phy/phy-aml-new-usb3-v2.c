@@ -108,8 +108,12 @@ static void amlogic_new_usb3phy_shutdown(struct usb_phy *x)
 void aml_new_usb_v2_init(void)
 {
 	union usb_r5_v2 r5 = {.d32 = 0};
-	unsigned long reg_addr = (unsigned long)
-		g_phy_v2->usb2_phy_cfg;
+	unsigned long reg_addr;
+
+	if (!g_phy_v2)
+		return;
+
+	reg_addr = (unsigned long)g_phy_v2->usb2_phy_cfg;
 
 	r5.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[5]);
 	if (r5.b.iddig_curr == 0) {
