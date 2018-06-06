@@ -28,6 +28,7 @@
 #include <drm/drm_plane_helper.h>
 #include <drm/drm_of.h>
 #include <video/imx-ipu-v3.h>
+#include <video/imx-lcdif.h>
 
 #include "imx-drm.h"
 #include "ipuv3-plane.h"
@@ -116,6 +117,18 @@ static int compare_of(struct device *dev, void *data)
 	/* Special case for DI, dev->of_node may not be set yet */
 	if (strcmp(dev->driver->name, "imx-ipuv3-crtc") == 0) {
 		struct ipu_client_platformdata *pdata = dev->platform_data;
+
+		return pdata->of_node == np;
+	} else if (strcmp(dev->driver->name, "imx-lcdif-crtc") == 0) {
+		struct lcdif_client_platformdata *pdata = dev->platform_data;
+#if IS_ENABLED(CONFIG_DRM_FBDEV_EMULATION)
+		/* set legacyfb_depth to be 32 for lcdif, since
+		 * default format of the connectors attached to
+		 * lcdif is usually RGB888
+		 */
+		if (pdata->of_node == np)
+			legacyfb_depth = 32;
+#endif
 
 		return pdata->of_node == np;
 	}
