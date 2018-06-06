@@ -2840,15 +2840,15 @@ unsigned int vdin_get_field_type(unsigned int offset)
 {
 	return rd_bits(offset, VDIN_COM_STATUS0, 0, 1);
 }
-
-int vdin_vsync_reset_mif(int index)
+static unsigned int vdin_reset_flag;
+inline int vdin_vsync_reset_mif(int index)
 {
 	int i;
-#if 0
 	int start_line = aml_read_vcbus(VDIN_LCNT_STATUS) & 0xfff;
-#endif
-	if (!enable_reset)
+
+	if (!enable_reset || vdin_reset_flag || (start_line > 0))
 		return 0;
+	vdin_reset_flag = 1;
 	if (index == 0) {
 		W_VCBUS_BIT(VDIN_WR_CTRL, 0, VDIN0_VCP_WR_EN_BIT,
 			VDIN0_VCP_WR_EN_WID); /* vdin->vdin mif wr en */
@@ -2917,6 +2917,7 @@ int vdin_vsync_reset_mif(int index)
 		W_VCBUS_BIT(VDIN1_WR_CTRL2, 0,
 			VDIN1_VCP_WR_EN_BIT, VDIN1_VCP_WR_EN_WID);
 	}
+	vdin_reset_flag = 0;
 #if 0 /* TODO: if start or end line > 0, should drop this frame! */
 	if ((aml_read_vcbus(VDIN_LCNT_STATUS) & 0xfff) > 0) {
 		pr_info("============== !!! line counter = %d -> %d !!!\n",
