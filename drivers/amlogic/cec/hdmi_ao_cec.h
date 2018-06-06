@@ -18,7 +18,7 @@
 #ifndef __AO_CEC_H__
 #define __AO_CEC_H__
 
-#define CEC_DRIVER_VERSION	"2018/05/15\n"
+#define CEC_DRIVER_VERSION	"2018/06/13\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
@@ -32,7 +32,6 @@
 #define ONE_TOUCH_PLAY_MASK		1
 #define ONE_TOUCH_STANDBY_MASK		2
 #define AUTO_POWER_ON_MASK		3
-
 
 #define AO_BASE				0xc8100000
 
@@ -58,6 +57,7 @@
 #define AO_DEBUG_REG1			((0x29 << 2))
 #define AO_DEBUG_REG2			((0x2a << 2))
 #define AO_DEBUG_REG3			((0x2b << 2))
+/* for new add after g12a/b ...*/
 #define AO_CEC_STICKY_DATA0			((0xca << 2))
 #define AO_CEC_STICKY_DATA1			((0xcb << 2))
 #define AO_CEC_STICKY_DATA2			((0xcc << 2))
@@ -371,16 +371,8 @@
 
 #define HHI_32K_CLK_CNTL		(0x89 << 2)
 
-#ifdef CONFIG_AMLOGIC_AO_CEC
-unsigned int aocec_rd_reg(unsigned long addr);
-void aocec_wr_reg(unsigned long addr, unsigned long data);
-void cecrx_irq_handle(void);
-void cec_logicaddr_set(int l_add);
-void cec_arbit_bit_time_set(unsigned int bit_set,
-				unsigned int time_set, unsigned int flag);
-void cec_irq_enable(bool enable);
-void aocec_irq_enable(bool enable);
-#endif
+
+
 
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 extern unsigned long hdmirx_rd_top(unsigned long addr);
@@ -404,6 +396,23 @@ static inline uint32_t hdmirx_rd_dwc(uint16_t addr)
 static inline void hdmirx_wr_dwc(uint16_t addr, uint32_t data)
 {
 }
+#endif
+
+extern int hdmirx_get_connect_info(void);
+int __attribute__((weak))hdmirx_get_connect_info(void)
+{
+	return 0;
+}
+
+#ifdef CONFIG_AMLOGIC_AO_CEC
+unsigned int aocec_rd_reg(unsigned long addr);
+void aocec_wr_reg(unsigned long addr, unsigned long data);
+void cecrx_irq_handle(void);
+void cec_logicaddr_set(int l_add);
+void cec_arbit_bit_time_set(unsigned int bit_set,
+				unsigned int time_set, unsigned int flag);
+void cec_irq_enable(bool enable);
+void aocec_irq_enable(bool enable);
 #endif
 
 #endif	/* __AO_CEC_H__ */

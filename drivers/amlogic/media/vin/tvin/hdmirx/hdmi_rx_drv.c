@@ -567,6 +567,12 @@ void hdmirx_set_timing_info(struct tvin_sig_property_s *prop)
 		prop->ve = 1;
 }
 
+int hdmirx_get_connect_info(void)
+{
+	return pwr_sts;
+}
+EXPORT_SYMBOL(hdmirx_get_connect_info);
+
 /*
  * hdmirx_get_color_fmt - get video color format
  */

@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2018-05-30"
+#define RX_VER0 "ver.2018-06-13"
 /*
  *
  *
@@ -465,4 +465,5 @@ extern unsigned int *pd_fifo_buf;
 extern int External_Mute(int mute_flag);
 extern void vdac_enable(bool on, unsigned int module_sel);
 extern int rx_is_hdcp22_support(void);
+extern int hdmirx_get_connect_info(void);
 #endif

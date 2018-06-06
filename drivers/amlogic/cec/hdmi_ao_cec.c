@@ -91,6 +91,12 @@ struct cec_platform_data_s {
 	bool ee_to_ao;/*ee cec hw module mv to ao;ao cec delete*/
 };
 
+struct cec_wakeup_t {
+	unsigned int wk_logic_addr:8;
+	unsigned int wk_phy_addr:16;
+	unsigned int wk_port_id:8;
+};
+
 /* global struct for tx and rx */
 struct ao_cec_dev {
 	unsigned long dev_type;
@@ -116,6 +122,8 @@ struct ao_cec_dev {
 	spinlock_t cec_reg_lock;
 	struct mutex cec_mutex;
 	struct mutex cec_ioctl_mutex;
+	struct cec_wakeup_t wakup_data;
+	unsigned int wakeup_reason;
 #ifdef CONFIG_PM
 	int cec_suspend;
 #endif
@@ -155,7 +163,7 @@ static unsigned int  new_msg;
 static bool wake_ok = 1;
 static bool ee_cec;
 static bool pin_status;
-static bool cec_msg_dbg_en;
+bool cec_msg_dbg_en;
 
 #define CEC_ERR(format, args...)				\
 	{if (cec_dev->dbg_dev)					\
@@ -169,12 +177,15 @@ static bool cec_msg_dbg_en;
 
 static unsigned char msg_log_buf[128] = { 0 };
 
+static void cec_hw_reset(void);
+
 #define waiting_aocec_free(r) \
 	do {\
 		unsigned long cnt = 0;\
 		while (readl(cec_dev->cec_reg + r) & (1<<23)) {\
 			if (cnt++ == 3500) { \
 				pr_info("waiting aocec %x free time out\n", r);\
+				cec_hw_reset();\
 				break;\
 			} \
 		} \
@@ -196,8 +207,8 @@ unsigned int aocec_rd_reg(unsigned long addr)
 	unsigned int data32;
 	unsigned long flags;
 
-	waiting_aocec_free(AO_CEC_RW_REG);
 	spin_lock_irqsave(&cec_dev->cec_reg_lock, flags);
+	waiting_aocec_free(AO_CEC_RW_REG);
 	data32 = 0;
 	data32 |= 0 << 16; /* [16]	 cec_reg_wr */
 	data32 |= 0 << 8; /* [15:8]   cec_reg_wrdata */
@@ -215,8 +226,8 @@ void aocec_wr_reg(unsigned long addr, unsigned long data)
 	unsigned long data32;
 	unsigned long flags;
 
-	waiting_aocec_free(AO_CEC_RW_REG);
 	spin_lock_irqsave(&cec_dev->cec_reg_lock, flags);
+	waiting_aocec_free(AO_CEC_RW_REG);
 	data32 = 0;
 	data32 |= 1 << 16; /* [16]	 cec_reg_wr */
 	data32 |= data << 8; /* [15:8]   cec_reg_wrdata */
@@ -749,7 +760,7 @@ static void cec_hw_reset(void)
 	cec_arbit_bit_time_set(7, 0x2aa, 0);
 
 	CEC_INFO("hw reset :logical addr:0x%x\n",
-		aocec_rd_reg(CEC_LOGICAL_ADDR0));
+	aocec_rd_reg(CEC_LOGICAL_ADDR0));
 }
 
 void cec_rx_buf_clear(void)
@@ -934,6 +945,8 @@ static int cec_ll_trigle_tx(const unsigned char *msg, int len)
 		}
 		cec_timeout_cnt = 0;
 		return 0;
+	} else {
+		CEC_ERR("error msg sts:0x%x\n", reg);
 	}
 	return -1;
 }
@@ -1857,14 +1870,14 @@ static ssize_t port_status_show(struct class *cla,
 	if (cec_dev->dev_type == DEV_TYPE_PLAYBACK) {
 		tmp = tx_hpd;
 		return sprintf(buf, "%x\n", tmp);
+	} else {
+		tmp = hdmirx_rd_top(TOP_HPD_PWR5V);
+		CEC_INFO("TOP_HPD_PWR5V:%x\n", tmp);
+		tmp >>= 20;
+		tmp &= 0xf;
+		tmp |= (tx_hpd << 16);
+		return sprintf(buf, "%x\n", tmp);
 	}
-
-	tmp = hdmirx_rd_top(TOP_HPD_PWR5V);
-	CEC_INFO("TOP_HPD_PWR5V:%x\n", tmp);
-	tmp >>= 20;
-	tmp &= 0xf;
-	tmp |= (tx_hpd << 16);
-	return sprintf(buf, "%x\n", tmp);
 }
 
 static ssize_t pin_status_show(struct class *cla,
@@ -1908,6 +1921,7 @@ static ssize_t physical_addr_store(struct class *cla,
 
 	if (kstrtouint(buf, 16, &addr) != 0)
 		return -EINVAL;
+
 	if (addr > 0xffff || addr < 0) {
 		CEC_ERR("invalid input:%s\n", buf);
 		phy_addr_test = 0;
@@ -1986,6 +2000,7 @@ static ssize_t fun_cfg_show(struct class *cla,
 static ssize_t cec_version_show(struct class *cla,
 	struct class_attribute *attr, char *buf)
 {
+	CEC_INFO("driver date:%s\n", CEC_DRIVER_VERSION);
 	return sprintf(buf, "%d\n", cec_dev->cec_info.cec_version);
 }
 
@@ -2327,7 +2342,7 @@ static long hdmitx_cec_ioctl(struct file *f,
 			if (!a && cec_dev->dev_type == DEV_TYPE_TUNER)
 				tmp = tx_hpd;
 			else {	/* mixed for rx */
-				tmp = (hdmirx_rd_top(TOP_HPD_PWR5V) >> 20);
+				tmp = hdmirx_get_connect_info();
 				if (tmp & (1 << (a - 1)))
 					tmp = 1;
 				else
@@ -2374,7 +2389,23 @@ static long hdmitx_cec_ioctl(struct file *f,
 		cec_enable_arc_pin(arg);
 		break;
 
+	case CEC_IOC_GET_BOOT_ADDR:
+		tmp = (cec_dev->wakup_data.wk_logic_addr << 16) |
+				cec_dev->wakup_data.wk_phy_addr;
+		CEC_ERR("Boot addr:%#x\n", (unsigned int)tmp);
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+			return -EINVAL;
+		break;
+
+	case CEC_IOC_GET_BOOT_REASON:
+		tmp = cec_dev->wakeup_reason;
+		CEC_ERR("Boot reason:%#x\n", (unsigned int)tmp);
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+			return -EINVAL;
+		break;
+
 	default:
+		CEC_ERR("error ioctrl\n");
 		break;
 	}
 	mutex_unlock(&cec_dev->cec_ioctl_mutex);
@@ -2490,7 +2521,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto tag_cec_devm_err;
 	}
-	CEC_ERR("cec driver date:%s\n", CEC_DRIVER_VERSION);
 	cec_dev->dev_type = DEV_TYPE_PLAYBACK;
 	cec_dev->dbg_dev  = &pdev->dev;
 	cec_dev->tx_dev   = get_hdmitx_device();
@@ -2573,7 +2603,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 		ee_cec = 1;
 	else
 		ee_cec = 0;
-	CEC_INFO("using cec:%d\n", ee_cec);
+	CEC_ERR("using EE cec:%d\n", ee_cec);
 
 	/* pinmux set */
 	if (of_get_property(node, "pinctrl-names", NULL)) {
@@ -2679,7 +2709,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 	if (r) {
 		/* default set to 2.0 */
 		CEC_INFO("not find cec_version\n");
-		cec_dev->cec_info.cec_version = CEC_VERSION_20;
+		cec_dev->cec_info.cec_version = CEC_VERSION_14A;
 	}
 
 	/* irq set */
@@ -2695,10 +2725,14 @@ static int aml_cec_probe(struct platform_device *pdev)
 		if (!r && !ee_cec) {
 			r = request_irq(irq_idx, &cec_isr_handler, IRQF_SHARED,
 					irq_name, (void *)cec_dev);
+			if (r < 0)
+				CEC_INFO("aocec irq request fail\n");
 		}
 		if (!r && ee_cec) {
 			r = request_irq(irq_idx, &cecrx_isr, IRQF_SHARED,
 					irq_name, (void *)cec_dev);
+			if (r < 0)
+				CEC_INFO("cecb irq request fail\n");
 		}
 	}
 #endif
@@ -2725,10 +2759,12 @@ static int aml_cec_probe(struct platform_device *pdev)
 	/* for init */
 	cec_pre_init();
 	queue_delayed_work(cec_dev->cec_thread, &cec_dev->cec_work, 0);
-
+	CEC_ERR("cec driver date:%s\n", CEC_DRIVER_VERSION);
+	CEC_ERR("boot:%#x;%#x\n", *((unsigned int *)&cec_dev->wakup_data),
+						cec_dev->wakeup_reason);
 	CEC_ERR("%s success end\n", __func__);
-
 	return 0;
+
 tag_cec_msg_alloc_err:
 		input_free_device(cec_dev->cec_info.remote_cec_dev);
 tag_cec_alloc_input_err:
