@@ -257,8 +257,13 @@
 #define CLKID_SPICC1_COMP        (CLKID_MISC_BASE + 7)
 #define CLKID_TS_COMP           (CLKID_MISC_BASE + 8)
 
+/*gpio 12M/24M */
+#define CLKID_24M               (CLKID_MISC_BASE + 9)
+#define CLKID_12M_DIV           (CLKID_MISC_BASE + 10)
+#define CLKID_12M_GATE          (CLKID_MISC_BASE + 11)
+
 /*G12B clk*/
-#define CLKID_G12B_ADD_BASE           (CLKID_MISC_BASE + 9)
+#define CLKID_G12B_ADD_BASE           (CLKID_MISC_BASE + 12)
 #define CLKID_CPUB_FCLK_P             (CLKID_G12B_ADD_BASE + 0)
 #define CLKID_CPUB_CLK                (CLKID_G12B_ADD_BASE + 1)
 /*G12B gate*/

@@ -518,6 +518,49 @@ static struct clk_gate g12a_clk81 = {
 	},
 };
 
+/* GPIO 24M */
+static struct clk_gate g12a_24m = {
+	.reg = (void *)HHI_XTAL_DIVN_CNTL,
+	.bit_idx = 11,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "g12a_24m",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "xtal" },
+		.num_parents = 1,
+		.flags = (CLK_SET_RATE_PARENT | CLK_IS_CRITICAL),
+	},
+};
+
+/* GPIO 12M */
+static struct clk_divider g12a_12m_div = {
+	.reg = (void *)HHI_XTAL_DIVN_CNTL,
+	.shift = 10,
+	.width = 1,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "g12a_12m_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "xtal" },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+static struct clk_gate g12a_12m_gate = {
+	.reg = (void *)HHI_XTAL_DIVN_CNTL,
+	.bit_idx = 11,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "g12a_12m_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "g12a_12m_div" },
+		.num_parents = 1,
+		.flags = (CLK_SET_RATE_PARENT | CLK_IS_CRITICAL),
+	},
+};
+
+
 /* Everything Else (EE) domain gates */
 static MESON_GATE(g12a_ddr, HHI_GCLK_MPEG0, 0);
 static MESON_GATE(g12a_dos, HHI_GCLK_MPEG0, 1);
@@ -679,6 +722,9 @@ static struct clk_hw *g12a_clk_hws[] = {
 	[CLKID_CPU_CLK]         = &g12a_cpu_clk.mux.hw,
 
 	[CLKID_PCIE_PLL]        = &g12a_pcie_pll.hw,
+	[CLKID_24M]             = &g12a_24m.hw,
+	[CLKID_12M_DIV]         = &g12a_12m_div.hw,
+	[CLKID_12M_GATE]        = &g12a_12m_gate.hw,
 };
 /* Convenience tables to populate base addresses in .probe */
 
@@ -762,6 +808,8 @@ static struct clk_gate *g12a_clk_gates[] = {
 	&g12a_vclk2_venclmmc,
 	&g12a_vclk2_vencl,
 	&g12a_vclk2_other1,
+	&g12a_24m,
+	&g12a_12m_gate,
 };
 
 static void __init g12a_clkc_init(struct device_node *np)
@@ -808,6 +856,8 @@ static void __init g12a_clkc_init(struct device_node *np)
 	/* Populate the base address for the MPEG clks */
 	g12a_mpeg_clk_sel.reg = clk_base + (u64)g12a_mpeg_clk_sel.reg;
 	g12a_mpeg_clk_div.reg = clk_base + (u64)g12a_mpeg_clk_div.reg;
+
+	g12a_12m_div.reg = clk_base + (u64)g12a_12m_div.reg;
 
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(g12a_clk_gates); i++)

@@ -35,6 +35,7 @@
 
 #define HHI_PCIE_PLL_CNTL0		0x98 /* 0x26 offset in data sheet */
 #define HHI_PCIE_PLL_CNTL1		0x9c /* 0x27 offset in data sheet */
+#define HHI_XTAL_DIVN_CNTL		0xbc /* 0x2f offset in data sheet */
 //#define HHI_PCIE_PLL_CNTL6	0xf0 /* 0x3c offset in data sheet */
 
 #define HHI_HIFI_PLL_CNTL0		0xD8 /* 0x36 offset in data sheet */
