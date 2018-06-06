@@ -19,6 +19,19 @@
 #include "sched.h"
 #include "tune.h"
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#define UP_MAX_TIME    1000
+#define DOWN_MIN_TIME  80000
+static void sugov_up_down_first_limit(unsigned int *up_us,
+		unsigned int *down_us)
+{
+	if (*up_us > UP_MAX_TIME)
+		*up_us = UP_MAX_TIME;
+	if (*down_us < DOWN_MIN_TIME)
+		*down_us = DOWN_MIN_TIME;
+}
+#endif
+
 unsigned long boosted_cpu_util(int cpu);
 
 /* Stub out fast switch routines present on mainline to reduce the backport
@@ -647,6 +660,10 @@ static int sugov_init(struct cpufreq_policy *policy)
                 }
 	}
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	sugov_up_down_first_limit(&tunables->up_rate_limit_us,
+			&tunables->down_rate_limit_us);
+#endif
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
 
