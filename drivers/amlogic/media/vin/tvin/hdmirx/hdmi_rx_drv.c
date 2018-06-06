@@ -1001,7 +1001,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 		memset(&pkt_info, 0, sizeof(pkt_info));
 		srcbuff = &pkt_info;
 		size = sizeof(struct pd_infoframe_s);
-		rx_get_pd_fifo_param(param, &pkt_info, size);
+		rx_get_pd_fifo_param(param, &pkt_info);
 
 		/*return pkt info*/
 		if ((size > 0) && (srcbuff != NULL) && (argp != NULL)) {
@@ -1137,7 +1137,7 @@ int rx_pr(const char *fmt, ...)
 			else
 				break;
 
-		strcpy(buf + 5, fmt + pos);
+		strncpy(buf + 5, fmt + pos, (sizeof(buf) - 5));
 	} else
 		strcpy(buf, fmt);
 	/* if (fmt[strlen(fmt) - 1] == '\n') */
@@ -1468,19 +1468,19 @@ static void hdmirx_get_base_addr(struct device_node *node)
 	}
 }
 
-static int hdmirx_switch_pinmux(struct device  dev)
+static int hdmirx_switch_pinmux(struct device *dev)
 {
 	struct pinctrl *pin;
 	const char *pin_name;
 	int ret = 0;
 
 	/* pinmux set */
-	if (dev.of_node) {
-		ret = of_property_read_string_index(dev.of_node,
+	if (dev->of_node) {
+		ret = of_property_read_string_index(dev->of_node,
 					    "pinctrl-names",
 					    0, &pin_name);
 		if (!ret)
-			pin = devm_pinctrl_get_select(&dev, pin_name);
+			pin = devm_pinctrl_get_select(dev, pin_name);
 			/* rx_pr("hdmirx: pinmux:%p, name:%s\n", */
 			/* pin, pin_name); */
 	}
@@ -1523,6 +1523,12 @@ static int hdmirx_probe(struct platform_device *pdev)
 	log_init(DEF_LOG_BUF_SIZE);
 	pEdid_buffer = (unsigned char *) pdev->dev.platform_data;
 	hdmirx_dev = &pdev->dev;
+	/*get compatible matched device, to get chip related data*/
+	of_id = of_match_device(hdmirx_dt_match, &pdev->dev);
+	if (!of_id) {
+		rx_pr("unable to get matched device\n");
+		return -1;
+	}
 	/* allocate memory for the per-device structure */
 	hdevp = kmalloc(sizeof(struct hdmirx_dev_s), GFP_KERNEL);
 	if (!hdevp) {
@@ -1531,10 +1537,6 @@ static int hdmirx_probe(struct platform_device *pdev)
 		goto fail_kmalloc_hdev;
 	}
 	memset(hdevp, 0, sizeof(struct hdmirx_dev_s));
-	/*get compatible matched device, to get chip related data*/
-	of_id = of_match_device(hdmirx_dt_match, &pdev->dev);
-	if (!of_id)
-		rx_pr("unable to get matched device\n");
 	hdevp->data = of_id->data;
 	if (hdevp->data)
 		rx.chip_id = hdevp->data->chip_id;
@@ -1780,7 +1782,7 @@ static int hdmirx_probe(struct platform_device *pdev)
 		en_4k_timing = 1;
 
 	hdmirx_hw_probe();
-	hdmirx_switch_pinmux(pdev->dev);
+	hdmirx_switch_pinmux(&(pdev->dev));
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	register_early_suspend(&hdmirx_early_suspend_handler);
 #endif

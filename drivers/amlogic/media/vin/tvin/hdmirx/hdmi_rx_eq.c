@@ -49,7 +49,10 @@ struct st_eq_data eq_ch2;
 enum eq_sts_e eq_sts = E_EQ_START;
 /* variable define*/
 int long_cable_best_setting = 6;
-int delay_ms_cnt = 10; /* 5 */
+int delay_ms_cnt = 5; /* 5 */
+MODULE_PARM_DESC(delay_ms_cnt, "\n delay_ms_cnt\n");
+module_param(delay_ms_cnt, int, 0664);
+
 int eq_max_setting = 7;
 int eq_dbg_ch0;
 int eq_dbg_ch1;
@@ -325,7 +328,7 @@ uint8_t testType(uint16_t setting, struct st_eq_data *ch_data)
 uint8_t aquireEarlyCnt(uint16_t setting)
 {
 	uint16_t lockVector = 0x0001;
-	int timeout_cnt = 20;
+	int timeout_cnt = 10;
 
 	lockVector = lockVector << setting;
 	hdmi_rx_phy_ConfEqualSetting(lockVector);

@@ -186,8 +186,7 @@ void rx_pkt_debug(void)
 
 
 void rx_get_pd_fifo_param(enum pkt_type_e pkt_type,
-		struct pd_infoframe_s *pkt_info,
-		unsigned int size)
+		struct pd_infoframe_s *pkt_info)
 {
 	switch (pkt_type) {
 	case PKT_TYPE_INFOFRAME_VSI:
@@ -288,15 +287,12 @@ void rx_get_pd_fifo_param(enum pkt_type_e pkt_type,
 			rx_pkt_get_amp_ex(&pkt_info);
 		break;
 	default:
-		size = PFIFO_SIZE * sizeof(uint32_t);
 		if (pd_fifo_buf != NULL)
 			/* srcbuff = pd_fifo_buf; */
 			memcpy(&pkt_info, &pd_fifo_buf,
 				sizeof(struct pd_infoframe_s));
-		else {
-			size = 0;
+		else
 			pr_err("err:pd_fifo_buf is empty\n");
-		}
 		break;
 		}
 }
@@ -1351,7 +1347,7 @@ void rx_get_vsi_info(void)
 		/*3d VSI*/
 		if (pkt->sbpkt.vsi_3Dext.vdfmt == VSI_FORMAT_3D_FORMAT) {
 			rx.vs_info_details._3d_structure =
-				rx.vs_info_details._3d_structure;
+				pkt->sbpkt.vsi_3Dext.threeD_st;
 			rx.vs_info_details._3d_ext_data =
 				pkt->sbpkt.vsi_3Dext.threeD_ex;
 			if (log_level & VSI_LOG)

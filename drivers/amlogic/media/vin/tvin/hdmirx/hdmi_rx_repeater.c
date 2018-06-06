@@ -355,7 +355,7 @@ void rx_modify_edid(unsigned char *buffer,
 			addition_size = (*addition & 0x1f) + 1;
 			cur_data = kmalloc(
 				addition_size + cur_size, GFP_KERNEL);
-			if (cur_data != 0) {
+			if (!cur_data) {
 				rx_pr("allocate cur_data memory failed\n");
 				return;
 			}

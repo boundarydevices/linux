@@ -971,8 +971,7 @@ extern void rx_pkt_clr_attach_drm(void);
 extern uint32_t rx_pkt_chk_busy_vsi(void);
 extern uint32_t rx_pkt_chk_busy_drm(void);
 extern void rx_get_pd_fifo_param(enum pkt_type_e pkt_type,
-		struct pd_infoframe_s *pkt_info,
-		unsigned int size);
+		struct pd_infoframe_s *pkt_info);
 
 #endif
 
