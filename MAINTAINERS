@@ -14483,6 +14483,10 @@ AMLOGIC TXLX T962E R321 buildroot dts
 M:     liangzhuo.xie <liangzhuo.xie@amlogic.com>
 F:     arch/arm64/boot/dts/amlogic/txlx_t962e_r321_buildroot.dts
 
+AMLOGIC BACKLIGHT LOCAL DIMMING
+M:      evoke.zhang <evoke.zhang@amlogic.com>
+F:      drivers/amlogic/media/vout/backlight/aml_ldim/iw7027_bl.h
+
 AMLOGIC G12B
 M: Yan Wang <yan.wang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/mesong12b.dtsi

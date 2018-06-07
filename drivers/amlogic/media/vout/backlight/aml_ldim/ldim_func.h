@@ -18,8 +18,6 @@
 #include <linux/cdev.h>
 #include <linux/amlogic/iomap.h>
 
-extern unsigned int invalid_val_cnt;
-
 #define Wr_reg_bits(adr, val, start, len)  \
 		aml_vcbus_update_bits(adr, ((1<<len)-1)<<start, val<<start)
 /*	#define Rd_reg_bits(adr, start, len)  \

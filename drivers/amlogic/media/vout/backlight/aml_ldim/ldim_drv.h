@@ -32,7 +32,9 @@
 #define LDIMPR(fmt, args...)     pr_info("ldim: "fmt"", ## args)
 #define LDIMERR(fmt, args...)    pr_err("ldim: error: "fmt"", ## args)
 
-extern unsigned int ldim_debug_print;
+#define LDIM_DRV_VER    "20180629"
+
+extern unsigned char ldim_debug_print;
 
 /*** GXTVBB & TXLX common use register*/
 /* each base has 16 address space */
@@ -110,6 +112,7 @@ extern unsigned int ldim_debug_print;
 
 
 #define LD_DATA_DEPTH   12
+#define LD_DATA_MIN     10
 #define LD_DATA_MAX     0xfff
 
 struct LDReg {

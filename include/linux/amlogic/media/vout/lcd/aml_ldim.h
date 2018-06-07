@@ -24,6 +24,11 @@
 #include <linux/amlogic/media/vout/lcd/aml_bl.h>
 #include <linux/spi/spi.h>
 
+extern int  dirspi_write(struct spi_device *spi, u8 *buf, int len);
+extern int  dirspi_read(struct spi_device *spi, u8 *buf, int len);
+extern void dirspi_start(struct spi_device *spi);
+extern void dirspi_stop(struct spi_device *spi);
+
 #define _VE_LDIM  'C'
 
 /* VPP.ldim IOCTL command list */
