@@ -287,6 +287,11 @@ static void hdmirx_dv_check(struct vdin_dev_s *devp,
 	}
 }
 
+void reset_tvin_smr(unsigned int index)
+{
+	sm_dev[index].sig_status = TVIN_SIG_STATUS_NULL;
+}
+
 /*
  * tvin state machine routine
  *

@@ -1969,6 +1969,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("TVIN_IOC_STOP_DEC(%d) port %s, decode stop ok\n\n",
 				parm->index, tvin_port_str(parm->port));
 		mutex_unlock(&devp->fe_lock);
+		reset_tvin_smr(parm->index);
 		break;
 	}
 	case TVIN_IOC_VF_REG:
