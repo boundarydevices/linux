@@ -1093,12 +1093,15 @@
 		cec_osd_string = "AML_MBOX"; /* Max Chars: 14    */
 		cec_version = <5>;/*5:1.4;6:2.0*/
 		port_num = <1>;
-		/*ee_cec;*/ /*user default cec*/
+		ee_cec;
 		arc_port_mask = <0x2>;
-		interrupts = <0 203 1>;
-		interrupt-names = "hdmi_aocecb";
-		pinctrl-names = "default";
+		interrupts = <0 203 1
+					0 203 1>;
+		interrupt-names = "hdmi_aocecb","hdmi_aocec";
+		pinctrl-names = "default","hdmitx_aocecb","cec_pin_sleep";
 		pinctrl-0=<&eecec_b>;
+		pinctrl-1=<&eecec_b>;
+		pinctrl-2=<&eecec_b>;
 		reg = <0x0 0xFF80023c 0x0 0x4
 		       0x0 0xFF800000 0x0 0x400>;
 	};
