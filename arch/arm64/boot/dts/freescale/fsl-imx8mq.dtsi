@@ -617,6 +617,7 @@
 
 	mipi_dsi_phy: dsi_phy@30A00300 {
 		#address-cells = <1>;
+		#clock-cells = <1>;
 		#size-cells = <0>;
 		compatible = "mixel,imx8mq-mipi-dsi-phy";
 		reg = <0x0 0x30A00300 0x0 0x100>;
