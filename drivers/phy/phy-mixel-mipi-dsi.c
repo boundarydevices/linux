@@ -12,6 +12,8 @@
  * for more details.
  */
 
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
@@ -75,6 +77,8 @@ struct mixel_mipi_phy_priv {
 	struct pll_divider divider;
 	struct mutex	lock;
 	unsigned long	data_rate;
+	struct clk_hw	dsi_clk;
+	unsigned long	frequency;
 };
 
 struct devtype {
@@ -95,6 +99,82 @@ static inline void phy_write(struct phy *phy, u32 value, unsigned int reg)
 	writel(value, priv->base + reg);
 }
 
+#ifdef CONFIG_COMMON_CLK
+#define dsi_clk_to_data(_hw) container_of(_hw, struct mixel_mipi_phy_priv, dsi_clk)
+
+static unsigned long mixel_dsi_clk_recalc_rate(struct clk_hw *hw,
+					    unsigned long parent_rate)
+{
+	pr_info("%s:%ld\n", __func__, dsi_clk_to_data(hw)->frequency);
+	return dsi_clk_to_data(hw)->frequency;
+}
+
+static long mixel_dsi_clk_round_rate(struct clk_hw *hw, unsigned long rate,
+				  unsigned long *prate)
+{
+	pr_info("%s:%ld\n", __func__, dsi_clk_to_data(hw)->frequency);
+	return dsi_clk_to_data(hw)->frequency;
+}
+
+static int mixel_dsi_clk_set_rate(struct clk_hw *hw, unsigned long rate,
+			       unsigned long parent_rate)
+{
+	return 0;
+}
+
+static int mixel_dsi_clk_prepare(struct clk_hw *hw)
+{
+	return 0;
+}
+
+static void mixel_dsi_clk_unprepare(struct clk_hw *hw)
+{
+	return;
+}
+
+static int mixel_dsi_clk_is_prepared(struct clk_hw *hw)
+{
+	struct mixel_mipi_phy_priv *priv = dsi_clk_to_data(hw);
+
+	if (priv->divider.cm < 16 || priv->divider.cm > 255 ||
+		priv->divider.cn < 1 || priv->divider.cn > 32 ||
+		priv->divider.co < 1 || priv->divider.co > 8)
+		return 0;
+	return 1;
+}
+
+static const struct clk_ops mixel_dsi_clk_ops = {
+	.prepare = mixel_dsi_clk_prepare,
+	.unprepare = mixel_dsi_clk_unprepare,
+	.is_prepared = mixel_dsi_clk_is_prepared,
+	.recalc_rate = mixel_dsi_clk_recalc_rate,
+	.round_rate = mixel_dsi_clk_round_rate,
+	.set_rate = mixel_dsi_clk_set_rate,
+};
+
+static struct clk *mixel_dsi_clk_register_clk(struct mixel_mipi_phy_priv *priv)
+{
+	struct clk *clk;
+	struct clk_init_data init;
+
+	init.name = "mixel-dsi-clk";
+	init.ops = &mixel_dsi_clk_ops;
+	init.flags = 0;
+	init.parent_names = NULL;
+	init.num_parents = 0;
+	priv->dsi_clk.init = &init;
+
+	/* optional override of the clockname */
+	of_property_read_string(priv->dev->of_node, "clock-output-names", &init.name);
+
+	/* register the clock */
+	clk = clk_register(priv->dev, &priv->dsi_clk);
+	if (!IS_ERR(clk))
+		of_clk_add_provider(priv->dev->of_node, of_clk_src_simple_get, clk);
+
+	return clk;
+}
+#endif
 /*
  * mixel_phy_mipi_set_phy_speed:
  * Input params:
@@ -158,7 +238,10 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 	priv->divider.cm = numerator;
 
 	priv->data_rate = bit_clk;
-
+	priv->frequency = (ref_clk / 2) * numerator / denominator;
+	if (priv->dsi_clk.clk)
+		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
+	pr_info("%s:%ld\n", __func__, priv->frequency);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mixel_phy_mipi_set_phy_speed);
@@ -407,6 +490,9 @@ static int mixel_mipi_phy_probe(struct platform_device *pdev)
 	phy_set_drvdata(phy, priv);
 
 	phy_provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
+#ifdef CONFIG_COMMON_CLK
+	mixel_dsi_clk_register_clk(priv);
+#endif
 
 	return PTR_ERR_OR_ZERO(phy_provider);
 }
