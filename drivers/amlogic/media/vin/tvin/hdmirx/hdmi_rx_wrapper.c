@@ -1257,8 +1257,9 @@ bool is_unnormal_format(uint8_t wait_cnt)
 		}
 	}
 	if ((ret == false) && (wait_cnt != sig_stable_max))
-		rx_pr("unnormal_format wait cnt = %d\n",
-			wait_cnt-sig_stable_max);
+		if (log_level & VIDEO_LOG)
+			rx_pr("unnormal_format wait cnt = %d\n",
+				wait_cnt-sig_stable_max);
 	#else
 	if ((rx.pre.sw_vic == HDMI_UNSUPPORT) ||
 		(rx.pre.sw_vic == HDMI_UNKNOWN)) {

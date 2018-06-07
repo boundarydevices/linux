@@ -2134,6 +2134,42 @@ bool is_wr_only_reg(uint32_t addr)
 
 void rx_debug_load22key(void)
 {
+	int ret = 0;
+	int wait_kill_done_cnt = 0;
+
+	ret = rx_sec_set_duk();
+	rx_pr("22 = %d\n", ret);
+	if (ret == 1) {
+		rx_pr("load 2.2 key\n");
+		sm_pause = 1;
+		rx_set_hpd(0);
+		hdcp22_on = 1;
+		hdcp22_kill_esm = 1;
+		while (wait_kill_done_cnt++ < 10) {
+			if (!hdcp22_kill_esm)
+				break;
+			msleep(20);
+		}
+		hdcp22_kill_esm = 0;
+		extcon_set_state_sync(rx.rx_excton_rx22,
+			EXTCON_DISP_HDMI, 0);
+		hdmirx_wr_dwc(DWC_HDCP22_CONTROL, 0x0);
+		hdmirx_hdcp22_esm_rst();
+		mdelay(110);
+		rx_is_hdcp22_support();
+		hdmirx_wr_dwc(DWC_HDCP22_CONTROL,
+					0x1000);
+		rx_hdcp22_wr_top(TOP_SKP_CNTL_STAT, 0x1);
+		hdcp22_clk_en(1);
+		extcon_set_state_sync(rx.rx_excton_rx22,
+			EXTCON_DISP_HDMI, 1);
+		mdelay(100);
+		hdmirx_hw_config();
+		hpd_to_esm = 1;
+		/* mdelay(900); */
+		rx_set_hpd(1);
+		sm_pause = 0;
+	}
 }
 
 void rx_debug_loadkey(void)
