@@ -1494,7 +1494,8 @@ static int aml_nand_scan_ident(struct mtd_info *mtd, int maxchips)
 	chip->waitfunc = aml_nand_wait;
 	chip->erase = aml_nand_erase_cmd;
 	chip->write_page = aml_nand_write_page;
-
+	/* slc default*/
+	chip->bits_per_cell = 1;
 	/* Get buswidth to select the correct functions */
 	busw = chip->options & NAND_BUSWIDTH_16;
 
