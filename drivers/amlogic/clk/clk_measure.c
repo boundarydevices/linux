@@ -34,6 +34,7 @@
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/clk_measure.h>
+#include <linux/amlogic/scpi_protocol.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "clkmsr: " fmt
@@ -118,7 +119,7 @@ static unsigned int gxbb_clk_util_clk_msr(unsigned int clk_mux)
 
 }
 
-static unsigned int gxbb_clk_util_ring_msr(unsigned int clk_mux)
+static unsigned int meson_clk_util_ring_msr(unsigned int clk_mux)
 {
 	unsigned int  msr;
 	unsigned int regval = 0;
@@ -872,7 +873,7 @@ int g12a_clk_measure(struct seq_file *s, void *what, unsigned int index)
 	return 0;
 }
 
-int g12a_ring_measure(struct seq_file *s, void *what, unsigned int index)
+int g12_ring_measure(struct seq_file *s, void *what, unsigned int index)
 {
 	static const char * const clk_table[] = {
 			[11] = "sys_cpu_ring_osc_clk[1] ",
@@ -890,22 +891,44 @@ int g12a_ring_measure(struct seq_file *s, void *what, unsigned int index)
 		};
 	const int tb[] = {0, 1, 2, 99, 100, 101, 102, 103, 104, 105, 3, 33};
 	unsigned long i;
+	unsigned char ringinfo[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-	msr_ring_reg0 = ioremap(0xff6345fc, 1);
 	/*RING_OSCILLATOR       0x7f: set slow ring*/
-	writel_relaxed(0x555555, msr_ring_reg0);
-	for (i = 0; i < 12; i++) {
-		seq_printf(s, "[%10d]: %s\n",
-					   gxbb_clk_util_ring_msr(tb[i]),
-						clk_table[i]);
-
+	if (msr_ring_reg0 != NULL) {
+		writel_relaxed(0x555555, msr_ring_reg0);
+		for (i = 0; i < 12; i++)
+			seq_printf(s, "%s	:%10d	KHz\n",
+			  clk_table[i], meson_clk_util_ring_msr(tb[i]));
+	} else {
+		seq_puts(s, "fail test osc ring info\n");
 	}
-	iounmap(msr_ring_reg0);
+
+	if (scpi_get_ring_value(ringinfo) != 0) {
+		seq_puts(s, "fail get osc ring efuse info\n");
+		return 0;
+	}
+
+	seq_puts(s, "osc ring efuse info:\n");
+
+	for (i = 0; i < 8; i++)
+		seq_printf(s, "0x%x ", ringinfo[i]);
+	seq_puts(s, "\n");
+
+	/*efuse to test value*/
+	seq_puts(s, "ee[9], ee[1], ee[0], cpu[1], cpu[0], iddee, iddcpu\n");
+
+	for (i = 1; i <= 5; i++)
+		seq_printf(s, "%d KHz ", (ringinfo[i] * 20));
+
+	for (i = 6; i <= 7; i++)
+		seq_printf(s, "%d uA ", (ringinfo[i] * 200));
+
+	seq_puts(s, "\n");
+
 	return 0;
 }
 
-
-int  meson_clk_measure(unsigned int clk_mux)
+int meson_clk_measure(unsigned int clk_mux)
 {
 	int clk_val;
 
@@ -952,7 +975,7 @@ static int dump_clk(struct seq_file *s, void *what)
 static int dump_ring(struct seq_file *s, void *what)
 {
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
-		g12a_ring_measure(s, what, clk_msr_index);
+		g12_ring_measure(s, what, clk_msr_index);
 	return 0;
 }
 
@@ -1019,6 +1042,7 @@ static int aml_clkmsr_probe(struct platform_device *pdev)
 {
 	static struct dentry *debugfs_root;
 	struct device_node *np;
+	u32 ringctrl;
 
 	np = pdev->dev.of_node;
 	debugfs_root = debugfs_create_dir("aml_clkmsr", NULL);
@@ -1037,6 +1061,17 @@ static int aml_clkmsr_probe(struct platform_device *pdev)
 	msr_clk_reg2 = of_iomap(np, 1);
 	pr_info("msr_clk_reg0=%p,msr_clk_reg2=%p\n",
 		msr_clk_reg0, msr_clk_reg2);
+
+	if (of_property_read_u32(pdev->dev.of_node,
+				"ringctrl", &ringctrl)) {
+		dev_err(&pdev->dev,
+			"failed to get msr ring reg0\n");
+		msr_ring_reg0 = NULL;
+	} else {
+		msr_ring_reg0 = ioremap(ringctrl, 1);
+		pr_info("msr_ring_reg0=%p\n", msr_ring_reg0);
+	}
+
 	return 0;
 }
 

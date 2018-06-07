@@ -461,3 +461,23 @@ int scpi_set_vrtc(u32 vrtc_val)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(scpi_set_vrtc);
+
+int scpi_get_ring_value(unsigned char *val)
+{
+	struct scpi_data_buf sdata;
+	struct mhu_data_buf mdata;
+	struct __packed {
+		unsigned int status;
+		unsigned char ringinfo[8];
+	} buf;
+	int ret;
+	u32 temp = 0;
+
+	SCPI_SETUP_DBUF(sdata, mdata, SCPI_CL_NONE, SCPI_CMD_OSCRING_VALUE,
+			temp, buf);
+	ret = scpi_execute_cmd(&sdata);
+	if (ret == 0)
+		memcpy(val, &buf.ringinfo, sizeof(buf.ringinfo));
+	return ret;
+}
+EXPORT_SYMBOL_GPL(scpi_get_ring_value);
