@@ -128,6 +128,10 @@ static const char * const media_parent_names[] = { "xtal",
 	"gp0_pll", "hifi_pll", "fclk_div2p5", "fclk_div3", "fclk_div4",
 	"fclk_div5",  "fclk_div7"};
 
+static const char * const media_parent_names_mipi[] = { "xtal",
+	"gp0_pll", "mpll1", "mpll2", "fclk_div3", "fclk_div4",
+	"fclk_div5",  "fclk_div7"};
+
 static struct clk_mux cts_gdc_core_clk_mux = {
 	.reg = (void *)HHI_APICALGDC_CNTL,
 	.mask = 0x7,
@@ -343,7 +347,7 @@ static struct clk_mux cts_mipi_csi_phy_clk0_mux = {
 	.hw.init = &(struct clk_init_data){
 		.name = "cts_mipi_csi_phy_clk0_mux",
 		.ops = &clk_mux_ops,
-		.parent_names = media_parent_names,
+		.parent_names = media_parent_names_mipi,
 		.num_parents = 8,
 		.flags = CLK_GET_RATE_NOCACHE,
 	},
@@ -641,7 +645,7 @@ static void __init g12b_clkc_init(struct device_node *np)
 
 	clks[CLKID_MIPI_CSI_PHY_CLK0_COMP] = clk_register_composite(NULL,
 		"cts_mipi_csi_phy_clk0_composite",
-		media_parent_names, 8,
+		media_parent_names_mipi, 8,
 		&cts_mipi_csi_phy_clk0_mux.hw,
 		&clk_mux_ops,
 		&cts_mipi_csi_phy_clk0_div.hw,
