@@ -58,9 +58,13 @@ enum hdr_lut_sel {
 };
 
 enum hdr_process_sel {
-	HDR_SDR = 0x1,
-	SDR_HDR = 0x2,
-	HDR_BYPASS = 0x4,
+	HDR_BYPASS = 0x1,
+	HDR_SDR = 0x2,
+	SDR_HDR = 0x4,
+	HLG_BYPASS = 0x8,
+	HLG_SDR = 0x10,
+	HLG_HDR = 0x20,
+	HDRPLUS_SDR = 0x40,
 	HDR_p_MAX
 };
 
@@ -103,9 +107,8 @@ typedef int64_t(*MenuFun)(int64_t);
 void eotf_float_gen(int64_t *o_out, MenuFun eotf);
 void oetf_float_gen(int64_t *bin_e, MenuFun oetf);
 void nolinear_lut_gen(int64_t *bin_c, MenuFun cgain);
-extern void hdrbypass_func(enum hdr_module_sel module_sel);
-extern void hdr2sdr_func(enum hdr_module_sel module_sel);
-extern void sdr2hdr_func(enum hdr_module_sel module_sel);
+extern void hdr_func(enum hdr_module_sel module_sel,
+	enum hdr_process_sel hdr_process_select);
 /*G12A vpp matrix*/
 enum vpp_matrix_e {
 	VD1_MTX = 0x1,

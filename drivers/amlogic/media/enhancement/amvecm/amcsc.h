@@ -131,16 +131,6 @@ extern int tx_op_color_primary;
 extern int amvecm_matrix_process(
 	struct vframe_s *vf, struct vframe_s *vf_rpt, int flags);
 extern int amvecm_hdr_dbg(u32 sel);
-#ifndef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-#define VSYNC_WR_MPEG_REG(adr, val) WRITE_VPP_REG(adr, val)
-#define VSYNC_RD_MPEG_REG(adr) READ_VPP_REG(adr)
-#define VSYNC_WR_MPEG_REG_BITS(adr, val, start, len) \
-	WRITE_VPP_REG_BITS(adr, val, start, len)
-#else
-extern int VSYNC_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
-extern u32 VSYNC_RD_MPEG_REG(u32 adr);
-extern int VSYNC_WR_MPEG_REG(u32 adr, u32 val);
-#endif
 
 extern u32 get_video_enabled(void);
 extern void get_hdr_source_type(void);

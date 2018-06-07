@@ -4324,6 +4324,12 @@ static int hdr_process(
 	};
 	int i, j;
 
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
+		hdr_func(VD1_HDR, HDR_SDR);
+		hdr_func(OSD1_HDR, HDR_BYPASS);
+		return need_adjust_contrast_saturation;
+	}
+
 	if (master_info->present_flag & 1) {
 		pr_csc("\tMaster_display_colour available.\n");
 		print_primaries_info(master_info);
@@ -4553,6 +4559,12 @@ static int hlg_process(
 	};
 	int i, j;
 
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
+		hdr_func(VD1_HDR, HDR_SDR);
+		hdr_func(OSD1_HDR, HDR_BYPASS);
+		return need_adjust_contrast_saturation;
+	}
+
 	if (master_info->present_flag & 1) {
 		pr_csc("\tMaster_display_colour available.\n");
 		print_primaries_info(master_info);
@@ -4765,6 +4777,17 @@ static void bypass_hdr_process(
 		EOTF_COEFF_RIGHTSHIFT
 	};
 	int i, j;
+
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
+		hdr_func(VD1_HDR, HDR_BYPASS);
+		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+			((vinfo->hdr_info.hdr_support & 0xc) &&
+			(vinfo->viu_color_fmt != COLOR_FMT_RGB444)))
+			hdr_func(OSD1_HDR, SDR_HDR);
+		else
+			hdr_func(OSD1_HDR, HDR_BYPASS);
+		return;
+	}
 	/*vpp matrix mux read*/
 	vpp_set_mtx_en_read();
 	if (get_cpu_type() > MESON_CPU_MAJOR_ID_GXTVBB) {
@@ -5379,6 +5402,11 @@ static void hlg_hdr_process(
 	};
 	int i, j;
 
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
+		hdr_func(VD1_HDR, HLG_HDR);
+		hdr_func(OSD1_HDR, SDR_HDR);
+		return;
+	}
 	/*vpp matrix mux read*/
 	vpp_set_mtx_en_read();
 	if ((get_cpu_type() > MESON_CPU_MAJOR_ID_GXTVBB)
@@ -5615,9 +5643,12 @@ static void sdr_hdr_process(
 	struct vinfo_s *vinfo,
 	struct vframe_master_display_colour_s *master_info)
 {
-	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXL) ||
-		(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM) ||
-		(get_cpu_type() == MESON_CPU_MAJOR_ID_GXLX)) {
+	if (vinfo->viu_color_fmt != COLOR_FMT_RGB444) {
+		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
+			hdr_func(VD1_HDR, SDR_HDR);
+			hdr_func(OSD1_HDR, SDR_HDR);
+			return;
+		}
 		/*vpp matrix mux read*/
 		vpp_set_mtx_en_read();
 		/* OSD convert to 709 limited to match SDR video */
@@ -5701,10 +5732,8 @@ static void sdr_hdr_process(
 			CSC_ON);
 		/*vpp matrix mux write*/
 		vpp_set_mtx_en_write();
-	} else if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB) ||
-				(get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)) {
+	} else
 		bypass_hdr_process(csc_type, vinfo, master_info);
-	}
 }
 
 static int vpp_eye_protection_process(
@@ -6056,16 +6085,12 @@ static int vpp_matrix_update(
 				if (get_hdr_type() & HLG_FLAG)
 					need_adjust_contrast_saturation =
 						hlg_process(csc_type, vinfo, p);
-				else {
-					if (get_cpu_type() ==
-						MESON_CPU_MAJOR_ID_G12A) {
-						hdr2sdr_func(VD1_HDR);
-						hdrbypass_func(OSD1_HDR);
-					} else
-						need_adjust_contrast_saturation
-							= hdr_process(csc_type,
-								vinfo, p);
-				}
+				else
+					need_adjust_contrast_saturation
+					= hdr_process(csc_type, vinfo, p);
+				pr_csc("hdr_process_mode = 0x%x\n"
+					"hlg_process_mode = 0x%x.\n",
+				hdr_process_mode, hlg_process_mode);
 			}
 		} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
 			(hdr_process_mode == 0) &&
@@ -6085,6 +6110,9 @@ static int vpp_matrix_update(
 					hlg_hdr_process(csc_type, vinfo, p);
 				else
 					bypass_hdr_process(csc_type, vinfo, p);
+				pr_csc("hdr_process_mode = 0x%x\n"
+					"hlg_process_mode = 0x%x.\n",
+					hdr_process_mode, hlg_process_mode);
 			}
 		} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
 			(hdr_process_mode == 1) && (hlg_process_mode == 0)) {
@@ -6104,6 +6132,9 @@ static int vpp_matrix_update(
 				else
 					need_adjust_contrast_saturation =
 						hdr_process(csc_type, vinfo, p);
+				pr_csc("hdr_process_mode = 0x%x\n"
+					"hlg_process_mode = 0x%x.\n",
+					hdr_process_mode, hlg_process_mode);
 			}
 		} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
 			(hdr_process_mode == 0) && (hlg_process_mode == 0)) {
@@ -6117,44 +6148,36 @@ static int vpp_matrix_update(
 				SIG_HLG_MODE)) ||
 				(cur_csc_type <
 					VPP_MATRIX_BT2020YUV_BT2020RGB)) {
-				if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
-					hdrbypass_func(VD1_HDR);
-					hdrbypass_func(OSD1_HDR);
-				} else
-					bypass_hdr_process(csc_type, vinfo, p);
+				bypass_hdr_process(csc_type, vinfo, p);
+				pr_csc("bypass_hdr_process: 0x%x, 0x%x.\n",
+					hdr_process_mode, hlg_process_mode);
 			}
 		} else {
 			if ((csc_type < VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-				sdr_process_mode) {
-				if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
-					sdr2hdr_func(VD1_HDR);
-					sdr2hdr_func(OSD1_HDR);
-				} else
+				sdr_process_mode)
 				/* for gxl and gxm SDR to HDR process */
 					sdr_hdr_process(csc_type, vinfo, p);
-			} else {
-				if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
-					hdrbypass_func(VD1_HDR);
-					hdrbypass_func(OSD1_HDR);
-				} else {
+			else {
 				/* for gxtvbb and gxl HDR bypass process */
-					if (((vinfo->hdr_info.hdr_support &
-						HDR_SUPPORT) ||
-						(vinfo->hdr_info.hdr_support &
-						HLG_SUPPORT)) &&
-						(csc_type <
-						VPP_MATRIX_BT2020YUV_BT2020RGB)
-						&& tx_op_color_primary)
-						set_bt2020csc_process(csc_type,
-						vinfo, p);
-					else
-						bypass_hdr_process(csc_type,
-						vinfo, p);
-				}
+				if (((vinfo->hdr_info.hdr_support &
+					HDR_SUPPORT) ||
+					(vinfo->hdr_info.hdr_support &
+					HLG_SUPPORT)) &&
+					(csc_type <
+					VPP_MATRIX_BT2020YUV_BT2020RGB)
+					&& tx_op_color_primary)
+					set_bt2020csc_process(csc_type,
+					vinfo, p);
+				else
+					bypass_hdr_process(csc_type,
+					vinfo, p);
+				pr_csc("csc_type = 0x%x\n"
+					"sdr_process_mode = 0x%x.\n",
+					csc_type, sdr_process_mode);
 			}
 		}
 
-		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
+		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
 			if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
 				mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);
 			else
@@ -6342,6 +6365,7 @@ int amvecm_matrix_process(
 					CSC_FLAG_CHECK_OUTPUT);
 			last_vf = NULL;
 			fg_vf_sw_dbg = 4;
+			dbg_vf = NULL;
 		}
 		if (null_vf_cnt <= null_vf_max)
 			null_vf_cnt++;

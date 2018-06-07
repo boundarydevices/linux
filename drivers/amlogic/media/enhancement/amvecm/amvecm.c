@@ -1048,9 +1048,6 @@ static long amvecm_ioctl(struct file *file,
 	struct ve_pq_table_s *vpp_pq_load_table = NULL;
 	int i = 0;
 
-	i = sizeof(struct ve_pq_load_s);
-	pr_info("sizeof(struct ve_pq_load_s) = %d", i);
-
 	pr_amvecm_dbg("[amvecm..] %s: cmd_nr = 0x%x\n",
 			__func__, _IOC_NR(cmd));
 
