@@ -39,6 +39,7 @@ static void _bitblt(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->hsc_rpt_p0_num = 0;
 	ge2d_cmd_cfg->vsc_rpt_l0_num = 0;
 	ge2d_cmd_cfg->hsc_div_en = 0;
+	ge2d_cmd_cfg->hsc_adv_num = 0;
 
 	ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
 	ge2d_cmd_cfg->color_logic_op   = LOGIC_OPERATION_COPY;
@@ -75,6 +76,7 @@ static void _bitblt_noalpha(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->hsc_rpt_p0_num = 0;
 	ge2d_cmd_cfg->vsc_rpt_l0_num = 0;
 	ge2d_cmd_cfg->hsc_div_en = 0;
+	ge2d_cmd_cfg->hsc_adv_num = 0;
 
 	ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
 	ge2d_cmd_cfg->color_logic_op   = LOGIC_OPERATION_COPY;

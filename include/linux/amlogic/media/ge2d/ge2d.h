@@ -31,6 +31,7 @@
 #define MAX_BITBLT_WORK_CONFIG 4
 #define MAX_GE2D_CMD  32   /* 64 */
 
+/* #define CONFIG_GE2D_ADV_NUM */
 #define CONFIG_GE2D_SRC2
 #define GE2D_STATE_IDLE                 0
 #define GE2D_STATE_RUNNING              1

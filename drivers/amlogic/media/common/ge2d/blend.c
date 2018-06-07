@@ -51,12 +51,19 @@ void blend(struct ge2d_context_s *wq,
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 1;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 1;
 		ge2d_cmd_cfg->hsc_div_en = 1;
+#ifdef CONFIG_GE2D_ADV_NUM
+		ge2d_cmd_cfg->hsc_adv_num =
+			((dst_w - 1) < 1024) ? (dst_w - 1) : 0;
+#else
+		ge2d_cmd_cfg->hsc_adv_num = 0;
+#endif
 	} else {
 		ge2d_cmd_cfg->sc_hsc_en = 0;
 		ge2d_cmd_cfg->sc_vsc_en = 0;
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 0;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 0;
 		ge2d_cmd_cfg->hsc_div_en = 0;
+		ge2d_cmd_cfg->hsc_adv_num = 0;
 	}
 
 	ge2d_cmd_cfg->color_blend_mode = (op >> 24) & 0xff;
@@ -115,12 +122,19 @@ void blend_noblk(struct ge2d_context_s *wq,
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 1;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 1;
 		ge2d_cmd_cfg->hsc_div_en = 1;
+#ifdef CONFIG_GE2D_ADV_NUM
+		ge2d_cmd_cfg->hsc_adv_num =
+			((dst_w - 1) < 1024) ? (dst_w - 1) : 0;
+#else
+		ge2d_cmd_cfg->hsc_adv_num = 0;
+#endif
 	} else {
 		ge2d_cmd_cfg->sc_hsc_en = 0;
 		ge2d_cmd_cfg->sc_vsc_en = 0;
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 0;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 0;
 		ge2d_cmd_cfg->hsc_div_en = 0;
+		ge2d_cmd_cfg->hsc_adv_num = 0;
 	}
 
 	ge2d_cmd_cfg->color_blend_mode = (op >> 24) & 0xff;
@@ -177,12 +191,19 @@ void blend_noalpha(struct ge2d_context_s *wq,
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 1;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 1;
 		ge2d_cmd_cfg->hsc_div_en = 1;
+#ifdef CONFIG_GE2D_ADV_NUM
+		ge2d_cmd_cfg->hsc_adv_num =
+			((dst_w - 1) < 1024) ? (dst_w - 1) : 0;
+#else
+		ge2d_cmd_cfg->hsc_adv_num = 0;
+#endif
 	} else {
 		ge2d_cmd_cfg->sc_hsc_en = 0;
 		ge2d_cmd_cfg->sc_vsc_en = 0;
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 0;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 0;
 		ge2d_cmd_cfg->hsc_div_en = 0;
+		ge2d_cmd_cfg->hsc_adv_num = 0;
 	}
 
 	ge2d_cmd_cfg->color_blend_mode = (op >> 24) & 0xff;
@@ -238,12 +259,19 @@ void blend_noalpha_noblk(struct ge2d_context_s *wq,
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 1;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 1;
 		ge2d_cmd_cfg->hsc_div_en = 1;
+#ifdef CONFIG_GE2D_ADV_NUM
+		ge2d_cmd_cfg->hsc_adv_num =
+			((dst_w - 1) < 1024) ? (dst_w - 1) : 0;
+#else
+		ge2d_cmd_cfg->hsc_adv_num = 0;
+#endif
 	} else {
 		ge2d_cmd_cfg->sc_hsc_en = 0;
 		ge2d_cmd_cfg->sc_vsc_en = 0;
 		ge2d_cmd_cfg->hsc_rpt_p0_num = 0;
 		ge2d_cmd_cfg->vsc_rpt_l0_num = 0;
 		ge2d_cmd_cfg->hsc_div_en = 0;
+		ge2d_cmd_cfg->hsc_adv_num = 0;
 	}
 
 	ge2d_cmd_cfg->color_blend_mode = (op >> 24) & 0xff;

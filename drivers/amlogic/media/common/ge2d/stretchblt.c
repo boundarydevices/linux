@@ -40,7 +40,12 @@ static void _stretchblt(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->hsc_rpt_p0_num = 1;
 	ge2d_cmd_cfg->vsc_rpt_l0_num = 1;
 	ge2d_cmd_cfg->hsc_div_en = 1;
-
+#ifdef CONFIG_GE2D_ADV_NUM
+	ge2d_cmd_cfg->hsc_adv_num =
+		((dst_w - 1) < 1024) ? (dst_w - 1) : 0;
+#else
+	ge2d_cmd_cfg->hsc_adv_num = 0;
+#endif
 	ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
 	ge2d_cmd_cfg->color_logic_op   = LOGIC_OPERATION_COPY;
 	ge2d_cmd_cfg->alpha_blend_mode = OPERATION_LOGIC;
@@ -100,7 +105,12 @@ static void _stretchblt_noalpha(struct ge2d_context_s *wq,
 	ge2d_cmd_cfg->hsc_rpt_p0_num = 1;
 	ge2d_cmd_cfg->vsc_rpt_l0_num = 1;
 	ge2d_cmd_cfg->hsc_div_en = 1;
-
+#ifdef CONFIG_GE2D_ADV_NUM
+	ge2d_cmd_cfg->hsc_adv_num =
+		((dst_w - 1) < 1024) ? (dst_w - 1) : 0;
+#else
+	ge2d_cmd_cfg->hsc_adv_num = 0;
+#endif
 	ge2d_cmd_cfg->color_blend_mode = OPERATION_LOGIC;
 	ge2d_cmd_cfg->color_logic_op   = LOGIC_OPERATION_COPY;
 	ge2d_cmd_cfg->alpha_blend_mode = OPERATION_LOGIC;
