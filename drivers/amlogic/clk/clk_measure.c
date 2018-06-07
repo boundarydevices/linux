@@ -41,6 +41,8 @@
 void __iomem *msr_clk_reg0;
 void __iomem *msr_clk_reg2;
 void __iomem *msr_clk_reg3;
+void __iomem *msr_ring_reg0;
+
 
 #define CLKMSR_DEVICE_NAME	"clkmsr"
 unsigned int clk_msr_index = 0xff;
@@ -113,6 +115,38 @@ static unsigned int gxbb_clk_util_clk_msr(unsigned int clk_mux)
 	msr = (readl_relaxed(msr_clk_reg2)+31)&0x000FFFFF;
     /* Return value in MHz*measured_val */
 	return (msr>>6)*1000000;
+
+}
+
+static unsigned int gxbb_clk_util_ring_msr(unsigned int clk_mux)
+{
+	unsigned int  msr;
+	unsigned int regval = 0;
+	unsigned int val;
+
+	writel_relaxed(0, msr_clk_reg0);
+    /* Set the measurement gate to 50uS */
+	val = readl_relaxed(msr_clk_reg0);
+	val = (val & (~0xFFFF)) | (10000-1);
+	writel_relaxed(val, msr_clk_reg0);
+    /* Disable continuous measurement */
+    /* disable interrupts */
+	val = readl_relaxed(msr_clk_reg0);
+	val = val & (~((1<<18)|(1<<17)));
+	writel_relaxed(val, msr_clk_reg0);
+	val = readl_relaxed(msr_clk_reg0);
+	val = (val & (~(0x7f<<20))) | (clk_mux<<20)|(1<<19)|(1<<16);
+	writel_relaxed(val, msr_clk_reg0);
+    /* Wait for the measurement to be done */
+	do {
+		regval = readl_relaxed(msr_clk_reg0);
+	} while (regval & (1 << 31));
+    /* disable measuring */
+	val = readl_relaxed(msr_clk_reg0);
+	val = val & (~(1<<16));
+	msr = (readl_relaxed(msr_clk_reg2)+31)&0x000FFFFF;
+    /* Return value in MHz*measured_val */
+	return (msr / 10);
 
 }
 
@@ -838,6 +872,39 @@ int g12a_clk_measure(struct seq_file *s, void *what, unsigned int index)
 	return 0;
 }
 
+int g12a_ring_measure(struct seq_file *s, void *what, unsigned int index)
+{
+	static const char * const clk_table[] = {
+			[11] = "sys_cpu_ring_osc_clk[1] ",
+			[10] = "sys_cpu_ring_osc_clk[0] ",
+			[9] = "am_ring_osc_clk_out_ee[9] ",
+			[8] = "am_ring_osc_clk_out_ee[8] ",
+			[7] = "am_ring_osc_clk_out_ee[7] ",
+			[6] = "am_ring_osc_clk_out_ee[6] ",
+			[5] = "am_ring_osc_clk_out_ee[5] ",
+			[4] = "am_ring_osc_clk_out_ee[4] ",
+			[3] = "am_ring_osc_clk_out_ee[3] ",
+			[2] = "am_ring_osc_clk_out_ee[2] ",
+			[1] = "am_ring_osc_clk_out_ee[1] ",
+			[0] = "am_ring_osc_clk_out_ee[0] ",
+		};
+	const int tb[] = {0, 1, 2, 99, 100, 101, 102, 103, 104, 105, 3, 33};
+	unsigned long i;
+
+	msr_ring_reg0 = ioremap(0xff6345fc, 1);
+	/*RING_OSCILLATOR       0x7f: set slow ring*/
+	writel_relaxed(0x555555, msr_ring_reg0);
+	for (i = 0; i < 12; i++) {
+		seq_printf(s, "[%10d]: %s\n",
+					   gxbb_clk_util_ring_msr(tb[i]),
+						clk_table[i]);
+
+	}
+	iounmap(msr_ring_reg0);
+	return 0;
+}
+
+
 int  meson_clk_measure(unsigned int clk_mux)
 {
 	int clk_val;
@@ -882,6 +949,14 @@ static int dump_clk(struct seq_file *s, void *what)
 	return 0;
 }
 
+static int dump_ring(struct seq_file *s, void *what)
+{
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
+		g12a_ring_measure(s, what, clk_msr_index);
+	return 0;
+}
+
+
 static ssize_t clkmsr_write(struct file *file, const char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
@@ -906,10 +981,22 @@ static ssize_t clkmsr_write(struct file *file, const char __user *userbuf,
 	return count;
 }
 
+static ssize_t ringmsr_write(struct file *file, const char __user *userbuf,
+				   size_t count, loff_t *ppos)
+{
+	return count;
+}
+
 static int clkmsr_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, dump_clk, inode->i_private);
 }
+
+static int ringmsr_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dump_ring, inode->i_private);
+}
+
 
 static const struct file_operations clkmsr_file_ops = {
 	.open		= clkmsr_open,
@@ -918,6 +1005,15 @@ static const struct file_operations clkmsr_file_ops = {
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
+
+static const struct file_operations ringmsr_file_ops = {
+	.open		= ringmsr_open,
+	.read		= seq_read,
+	.write		= ringmsr_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 
 static int aml_clkmsr_probe(struct platform_device *pdev)
 {
@@ -931,9 +1027,11 @@ static int aml_clkmsr_probe(struct platform_device *pdev)
 		debugfs_root = NULL;
 		return -1;
 	}
-
 	debugfs_create_file("clkmsr", S_IFREG | 0444,
 			    debugfs_root, NULL, &clkmsr_file_ops);
+
+	debugfs_create_file("ringmsr", S_IFREG | 0444,
+			    debugfs_root, NULL, &ringmsr_file_ops);
 
 	msr_clk_reg0 = of_iomap(np, 0);
 	msr_clk_reg2 = of_iomap(np, 1);
