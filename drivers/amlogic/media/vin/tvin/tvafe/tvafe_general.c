@@ -576,6 +576,11 @@ int adc_set_pll_cntl(bool on, unsigned int module_sel, void *pDtvPara)
 				__func__, adc_pll_chg);
 			break;
 		}
+		if (adc_pll_chg & ADC_EN_ATV_DEMOD) {
+			tvafe_pr_info("%s:ADEMOD ATV had done!:%d\n",
+				__func__, adc_pll_chg);
+			break;
+		}
 		mutex_lock(&pll_mutex);
 		do {
 			if (tvafe_cpu_type() == CPU_TYPE_TXL ||

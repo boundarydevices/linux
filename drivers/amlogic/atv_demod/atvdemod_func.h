@@ -29,6 +29,8 @@ struct dvb_frontend;
 
 extern unsigned int reg_23cf; /* IIR filter */
 extern int broad_std_except_pal_m;
+extern unsigned int aud_std;
+extern unsigned int aud_mode;
 
 #define ATVDEMOD_INTERVAL	(HZ/100)	/*10ms, #define HZ 100*/
 

@@ -95,7 +95,7 @@ unsigned int reg_dbg_en;
 unsigned int audio_gain_val = 512;
 unsigned int audio_a2_threshold = 0x800;
 unsigned int audio_a2_delay = 10;
-
+unsigned int audio_nicam_delay = 100;
 
 enum AUDIO_SCAN_ID {
 	ID_PAL_I = 0,
@@ -1369,10 +1369,10 @@ void retrieve_vpll_carrier_line_lock(int *lock)
 	data = atv_dmd_rd_byte(APB_BLOCK_ADDR_VDAGC, 0x4f);
 	line_lock = data & 0x10;
 	line_lock_strong = data & 0x8;
-
-	pr_dbg("line_lock = 0x%x, line_lock_strong = 0x%x\n",
-			line_lock, line_lock_strong);
-
+	/*
+	 * pr_dbg("line_lock = 0x%x, line_lock_strong = 0x%x\n",
+	 * line_lock, line_lock_strong);
+	 */
 	*lock = (line_lock | line_lock_strong);
 }
 
@@ -1395,7 +1395,7 @@ void retrieve_vpll_carrier_audio_power(int *power)
 		*power = data & 0xffff;
 	}
 
-	pr_dbg("retrieve_vpll_carrier_audio_power: %d.\n", *power);
+	pr_audio("retrieve_vpll_carrier_audio_power: %d.\n", *power);
 }
 
 int retrieve_vpll_carrier_afc(void)
@@ -1670,9 +1670,12 @@ void atvdemod_timer_handler(unsigned long arg)
 		atvdemod_det_snr_serice();
 	if (audio_thd_en)
 		audio_thd_det();
+/*
 	if (aml_atvdemod_get_btsc_sap_mode() == 1 &&
 			aud_std == AUDIO_STANDARD_BTSC)
 		audio_mode_det(aud_mode);
+*/
+	set_outputmode(aud_std, aud_mode);
 
 	if (non_std_onoff)
 		atv_dmd_non_std_set(true);
@@ -1753,7 +1756,7 @@ int amlfmt_aud_standard(int broad_std)
 
 	switch (broad_std) {
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC:
-		std = AUDIO_STANDARD_BTSC;
+		std = AUDIO_STANDARD_A2_K;
 		configure_adec(std);
 		adec_soft_reset();
 		msleep(audio_a2_delay);
@@ -1773,11 +1776,11 @@ int amlfmt_aud_standard(int broad_std)
 		std = AUDIO_STANDARD_NICAM_BG;
 		configure_adec(std);
 		adec_soft_reset();
-		mdelay(2);
+		mdelay(audio_nicam_delay);
 		/* need wait */
-		reg_value = adec_rd_reg(0x1a3);
+		reg_value = adec_rd_reg(NICAM_LEVEL_REPORT);
 		nicam_lock = (reg_value>>28)&1;
-
+		pr_info("\n%s 0x%x\n", __func__, reg_value);
 		if (nicam_lock)
 			std = AUDIO_STANDARD_NICAM_BG;
 		else
@@ -1785,12 +1788,13 @@ int amlfmt_aud_standard(int broad_std)
 		break;
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK:
 		std = AUDIO_STANDARD_NICAM_DK;
-		configure_adec(aud_std);
+		configure_adec(std);
 		adec_soft_reset();
-		mdelay(2);
+		mdelay(audio_nicam_delay);
 		/* need wait */
-		reg_value = adec_rd_reg(0x1a3);
+		reg_value = adec_rd_reg(NICAM_LEVEL_REPORT);
 		nicam_lock = (reg_value>>28)&1;
+		pr_info("\n%s 0x%x\n", __func__, reg_value);
 		if (nicam_lock)
 			std = AUDIO_STANDARD_NICAM_DK;
 		else
@@ -1982,10 +1986,18 @@ void atv_dmd_set_std(void)
 		if_inv = amlatvdemod_devp->if_inv;
 	}
 
-	pr_info
-	("[atvdemod..]%s: broad_std %d,hz_cvrt:0x%x, offset:%d,std:0x%x.\n",
-	__func__, broad_std, freq_hz_cvrt, amlatvdemod_devp->fre_offset,
-		 (unsigned int) ptstd);
+	pr_info("[%s] set broad_std %d, hz_cvrt 0x%x, offset %d.\n",
+			__func__, broad_std, freq_hz_cvrt,
+			amlatvdemod_devp->fre_offset);
+
+	pr_info("[%s] set std color %s, audio type %s.\n",
+		__func__,
+		v4l2_std_to_str((0xff000000 & amlatvdemod_devp->std)),
+		v4l2_std_to_str((0xffffff & amlatvdemod_devp->std)));
+
+	pr_info("[%s] set if_freq %d, if_inv %d.\n",
+		__func__, amlatvdemod_devp->if_freq,
+		amlatvdemod_devp->if_inv);
 
 	if (atvdemod_init())
 		pr_info("[%s]: atv restart error.\n", __func__);

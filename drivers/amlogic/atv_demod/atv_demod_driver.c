@@ -39,7 +39,7 @@
 #include "atvauddemod_func.h"
 
 
-#define AMLATVDEMOD_VER "Ref.2015/09/01a"
+#define AMLATVDEMOD_VER "V2.00"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 
@@ -71,6 +71,9 @@ static ssize_t aml_atvdemod_store(struct class *class,
 			continue;
 		parm[n++] = token;
 	}
+
+	if (parm[0] == NULL)
+		goto EXIT;
 
 	if (!strncmp(parm[0], "init", 4)) {
 		ret = atv_demod_enter_mode();
@@ -236,18 +239,16 @@ static ssize_t aml_atvdemod_store(struct class *class,
 
 		retrieve_adc_power(&adc_power);
 		pr_info("adc_power:%d\n", adc_power);
-	} else if (!strncmp(parm[0], "demod_set", 9)) {
-
 	} else if (!strncmp(parm[0], "mode_set", 8)) {
 		int priv_cfg = AML_ATVDEMOD_INIT;
 		struct dvb_frontend *fe = NULL;
 
-		if (aml_atvdemod_dev == NULL)
-			pr_info("aml_atvdemod_dev == NULL\n");
+		if (amlatvdemod_devp == NULL)
+			pr_info("amlatvdemod_devp == NULL\n");
 
-		fe = &aml_atvdemod_dev->v4l2_fe.fe;
+		fe = &amlatvdemod_devp->v4l2_fe.fe;
 
-		if (kstrtoul(parm[1], 10, &tmp) == 0)
+		if (parm[1] && kstrtoul(parm[1], 10, &tmp) == 0)
 			priv_cfg = tmp;
 
 		if (fe != NULL) {
@@ -257,9 +258,86 @@ static ssize_t aml_atvdemod_store(struct class *class,
 				pr_info("fe->ops.analog_ops.set_config == NULL\n");
 		} else
 			pr_info("fe == NULL\n");
+
+		pr_info("mode_set mode %d\n", priv_cfg);
+	} else if (!strncmp(parm[0], "params_set", 8)) {
+		struct dvb_frontend *fe = NULL;
+		struct analog_parameters params;
+		struct v4l2_analog_parameters *p = NULL;
+		unsigned int std = 0;
+
+		if (amlatvdemod_devp == NULL)
+			pr_info("amlatvdemod_devp == NULL\n");
+
+		fe = &amlatvdemod_devp->v4l2_fe.fe;
+		p = &amlatvdemod_devp->v4l2_fe.params;
+
+		if (fe != NULL && p != NULL) {
+			if (parm[1] && kstrtoul(parm[1], 0, &tmp) == 0)
+				std = tmp;
+			else
+				std = p->std;
+
+			params.frequency = p->frequency;
+			params.mode = p->afc_range;
+			params.audmode = p->audmode;
+			params.std = std;
+
+			if (fe->ops.analog_ops.set_params != NULL)
+				fe->ops.analog_ops.set_params(fe, &params);
+			else
+				pr_info("fe->ops.analog_ops.set_params == NULL\n");
+		} else
+			pr_info("fe == NULL\n");
+
+		pr_info("params_set std 0x%x\n", std);
+	} else if (!strncmp(parm[0], "audio_set", 9)) {
+		int std = AUDIO_STANDARD_A2_K;
+
+		if (parm[1] && kstrtoul(parm[1], 10, &tmp) == 0)
+			std = tmp;
+
+		configure_adec(std);
+		adec_soft_reset();
+
+		pr_info("audio_set std %d\n", std);
+	} else if (!strncmp(parm[0], "atvdemod_status", 15)) {
+		struct v4l2_analog_parameters *p = NULL;
+
+		if (amlatvdemod_devp != NULL) {
+			p = &amlatvdemod_devp->v4l2_fe.params;
+			if (p != NULL) {
+				pr_info("[atvdemod] afc_range: %d\n",
+						p->afc_range);
+				pr_info("[atvdemod] frequency: %d\n",
+						p->frequency);
+				pr_info("[atvdemod] soundsys: %d\n",
+						p->soundsys);
+				pr_info("[atvdemod] std: 0x%x (%s %s)\n",
+					(unsigned int) amlatvdemod_devp->std,
+					v4l2_std_to_str(
+					(0xff000000 & amlatvdemod_devp->std)),
+					v4l2_std_to_str(
+					(0xffffff & amlatvdemod_devp->std)));
+				pr_info("[atvdemod] audmode: 0x%x\n",
+						amlatvdemod_devp->audmode);
+				pr_info("[atvdemod] flag: %d\n", p->flag);
+				pr_info("[atvdemod] tuner_id: %d\n",
+						amlatvdemod_devp->tuner_id);
+				pr_info("[atvdemod] if_freq: %d\n",
+						amlatvdemod_devp->if_freq);
+				pr_info("[atvdemod] if_inv: %d\n",
+						amlatvdemod_devp->if_inv);
+				pr_info("[atvdemod] fre_offset: %d\n",
+						amlatvdemod_devp->fre_offset);
+				pr_info("[atvdemod] version: %s.\n",
+						AMLATVDEMOD_VER);
+			}
+		}
 	} else
 		pr_dbg("invalid command\n");
 
+EXIT:
 	kfree(buf_orig);
 
 	return count;
@@ -355,6 +433,7 @@ static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 				pr_err("can't find tuner: %s.\n", str);
 		}
 
+		/* Get i2c adapter by i2c node */
 		node_i2c = of_parse_phandle(node, "tuner_i2c_ada_id", 0);
 		if (node_i2c) {
 			pdev->i2c_adp = of_find_i2c_adapter_by_node(node_i2c);
@@ -363,7 +442,7 @@ static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 			if (!pdev->i2c_adp)
 				pr_err("can't find tuner_i2c_adap.\n");
 		}
-#if 0
+#if 0 /* Get adapter by ID */
 		ret = of_property_read_u32(node, "tuner_i2c_ada_id", &val);
 		if (ret)
 			pr_err("can't find tuner_i2c_ada_id.\n");
@@ -385,7 +464,7 @@ int aml_attach_demod_tuner(struct aml_atvdemod_device *dev)
 	struct dvb_frontend *fe = &v4l2_fe->fe;
 
 	if (!dev->analog_attached) {
-		p = v4l2_attach(aml_atvdemod_attach, fe,
+		p = v4l2_attach(aml_atvdemod_attach, fe, v4l2_fe,
 				dev->i2c_adp, dev->i2c_addr, dev->tuner_id);
 		if (p != NULL)
 			dev->analog_attached = true;
@@ -503,6 +582,11 @@ static int aml_atvdemod_probe(struct platform_device *pdev)
 		dev->periphs_reg_base = ioremap(0xc8834000, 0x2000);
 
 	pr_info("periphs_reg_base = 0x%p.\n", dev->periphs_reg_base);
+
+	/* add for audio system control */
+	dev->audio_demod_reg_base = ioremap(round_down(0xffd0d340, 0x3), 4);
+
+	pr_info("audio_demod_reg_base = 0x%p.\n", dev->audio_demod_reg_base);
 
 	aml_atvdemod_dt_parse(dev);
 
@@ -626,7 +710,7 @@ static int __init aml_atvdemod_init(void)
 		return ret;
 	}
 
-	pr_info("%s: OK.\n", __func__);
+	pr_info("%s: OK, atv demod version: %s.\n", __func__, AMLATVDEMOD_VER);
 
 	return 0;
 }

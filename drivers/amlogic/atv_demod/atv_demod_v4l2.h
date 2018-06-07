@@ -77,16 +77,19 @@
 #define V4L2_GET_EVENT       _IOR('V', 107, struct v4l2_frontend_event)
 #define V4L2_SET_MODE        _IOW('V', 108, int)
 #define V4L2_READ_STATUS     _IOR('V', 109, enum v4l2_status)
-#define V4L2_SET_PROPERTY    _IOW('V', 111, struct v4l2_properties)
-#define V4L2_GET_PROPERTY    _IOR('V', 112, struct v4l2_properties)
+#define V4L2_SET_PROPERTY    _IOWR('V', 110, struct v4l2_properties)
+#define V4L2_GET_PROPERTY    _IOWR('V', 111, struct v4l2_properties)
 
-#define ANALOG_FLAG_ENABLE_AFC          0X00000001
+#define ANALOG_FLAG_ENABLE_AFC          0x00000001
 #define ANALOG_FLAG_MANUL_SCAN          0x00000011
 
-#define V4L2_UNDEFINED    0
-#define V4L2_TUNE         1
-#define V4L2_NICAM        2
+#define V4L2_UNDEFINED           0
+#define V4L2_TUNE                1
+#define V4L2_SOUND_SYS           2
+#define V4L2_SLOW_SEARCH_MODE    3
 
+
+struct v4l2_frontend;
 
 struct v4l2_analog_parameters {
 	unsigned int frequency;
@@ -110,23 +113,17 @@ enum v4l2_status {
 				/* DiSEqC, tone and parameters */
 
 struct v4l2_property {
-	__u32 cmd;
-	__u32 reserved[3];
-	union {
-		__u32 data;
-		struct {
-			__u8 data[32];
-			__u32 len;
-			__u32 reserved1[3];
-			void *reserved2;
-		} buffer;
-	} u;
+	unsigned int cmd;
+	unsigned int data;
 	int result;
-} __attribute__ ((__packed__));
+};
 
 struct v4l2_properties {
-	__u32 num;
-	struct v4l2_property *props;
+	unsigned int num;
+	union {
+		struct v4l2_property *props;
+		__u64 reserved;
+	};
 };
 
 enum v4l2_search {
@@ -181,6 +178,15 @@ struct v4l2_adapter {
 	unsigned int tuner_id;
 };
 
+struct v4l2_frontend_ops {
+	int (*set_property)(struct v4l2_frontend *fe,
+			struct v4l2_property *tvp);
+	int (*get_property)(struct v4l2_frontend *fe,
+			struct v4l2_property *tvp);
+
+	enum v4l2_search (*search)(struct v4l2_frontend *v4l2_fe);
+};
+
 struct v4l2_frontend {
 	struct device *dev;
 
@@ -190,11 +196,11 @@ struct v4l2_frontend {
 
 	void *frontend_priv;
 	void *tuner_priv;
-	void *analog_priv;
+	void *analog_demod_priv;
 
 	struct v4l2_analog_parameters params;
 
-	enum v4l2_search (*search)(struct v4l2_frontend *v4l2_fe);
+	struct v4l2_frontend_ops ops;
 };
 
 struct v4l2_atvdemod_device {
@@ -209,8 +215,6 @@ struct v4l2_atvdemod_device {
 
 	struct i2c_client i2c;
 	unsigned int tuner_id;
-
-	enum v4l2_search (*search)(struct v4l2_atvdemod_device *dev);
 };
 
 int v4l2_resister_frontend(struct v4l2_frontend *v4l2_fe);

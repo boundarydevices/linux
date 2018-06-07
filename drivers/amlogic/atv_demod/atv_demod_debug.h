@@ -29,7 +29,7 @@ extern unsigned int atvdemod_debug_en;
 #undef pr_dbg
 #define pr_dbg(fmt, ...)\
 	do {\
-		if (atvdemod_debug_en & 01)\
+		if (atvdemod_debug_en & 0x01)\
 			printk(fmt, ##__VA_ARGS__);\
 	} while (0)
 

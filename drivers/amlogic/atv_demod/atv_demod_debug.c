@@ -68,6 +68,7 @@
 	DEBUGFS_CREATE_NODE(if_inv, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(ademod_debug_en, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(btsc_detect_delay, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(nicam_detect_delay, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(signal_audmode, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_thd_threshold1, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(gde_curve, 0640, dentry, u32)\
@@ -86,6 +87,9 @@
 	DEBUGFS_CREATE_NODE(audio_gain_val, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_a2_threshold, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_a2_delay, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(audio_nicam_delay, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(audio_a2_auto, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(audio_a2_power_threshold, 0640, dentry, u32)\
 }
 
 
