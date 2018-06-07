@@ -61,11 +61,15 @@ struct logo_info_s {
 	u32 vmode;
 	u32 debug;
 	u32 loaded;
+	u32 fb_width;
+	u32 fb_height;
 } logo_info = {
 	.index = -1,
 	.vmode = VMODE_MAX,
 	.debug = 0,
 	.loaded = 0,
+	.fb_width = 1920,
+	.fb_height = 1080,
 };
 
 static int get_value_by_name(char *name, struct para_pair_s *pair, u32 cnt)
@@ -158,6 +162,23 @@ static int __init logo_setup(char *str)
 	return 0;
 }
 
+static int __init get_logo_width(char *str)
+{
+	int ret;
+
+	ret = kstrtoint(str, 0, &logo_info.fb_width);
+	pr_info("logo_info.fb_width=%d\n", logo_info.fb_width);
+	return 0;
+}
+
+static int __init get_logo_height(char *str)
+{
+	int ret;
+
+	ret = kstrtoint(str, 0, &logo_info.fb_height);
+	pr_info("logo_info.fb_height=%d\n", logo_info.fb_height);
+	return 0;
+}
 
 int set_osd_logo_freescaler(void)
 {
@@ -176,8 +197,10 @@ int set_osd_logo_freescaler(void)
 	osd_set_free_scale_mode_hw(index, 1);
 	osd_set_free_scale_enable_hw(index, 0);
 
-	osd_set_free_scale_axis_hw(index, 0, 0, 1919, 1079);
-	osd_update_disp_axis_hw(index, 0, 1919, 0, 1079, 0, 0, 0);
+	osd_set_free_scale_axis_hw(index, 0, 0,
+		logo_info.fb_width - 1, logo_info.fb_height - 1);
+	osd_update_disp_axis_hw(index, 0, logo_info.fb_width - 1,
+		0, logo_info.fb_height - 1, 0, 0, 0);
 	vinfo = get_current_vinfo();
 	if (vinfo) {
 		pr_info("outputmode changed to %s, reset osd%d scaler\n",
@@ -200,6 +223,9 @@ void set_logo_loaded(void)
 
 __setup("logo=", logo_setup);
 
+__setup("fb_width=", get_logo_width);
+
+__setup("fb_height=", get_logo_height);
 
 int logo_work_init(void)
 {
