@@ -143,6 +143,22 @@
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
+
+		isp_cma_reserved:linux,isp_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
+			size = <0x0 0x08000000>;
+			alignment = <0x0 0x400000>;
+		};
+
+		adapt_cma_reserved:linux,adapt_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
+			size = <0x0 0x03000000>;
+			alignment = <0x0 0x400000>;
+		};
 	};
 	galcore {
 		status = "okay";
@@ -642,8 +658,41 @@
 		status = "okay";
 	};
 
-
+	sensor: sensor {
+		compatible = "soc, sensor";
+		status = "okay";
+		pinctrl-names="default";
+		pinctrl-0=<&clk12_24_z_pins>;
+		clocks = <&clkc CLKID_24M>;
+		clock-names = "g12a_24m";
+		reset = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
+	};
 }; /* end of / */
+&i2c2 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c2_master_pins2>;
+	clock-frequency = <100000>; /* default 100k */
+	sensor-i2c@6c {
+		compatible = "arm, i2c-sensor";
+		reg = <0x6c>;
+		reg-names = "i2c-sensor";
+		slave-addr = <0x6c>;
+		reg-type = <2>;
+		reg-data-type = <1>;
+		link-device = <&phycsi>;
+	};
+};
+
+&isp {
+	status = "okay";
+	memory-region = <&isp_cma_reserved>;
+};
+
+&adapter {
+	status = "okay";
+	memory-region = <&adapt_cma_reserved>;
+};
 
 &meson_fb {
 	status = "okay";

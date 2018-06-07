@@ -1833,6 +1833,50 @@
 		interrupts = <0 52 1>;
 		interrupt-names = "ddr_bandwidth";
 	};
+
+	isp: isp@ff140000 {
+		compatible = "arm, isp";
+		reg = <0x0 0xff140000 0x0 0x00040000>;
+		reg-names = "ISP";
+		interrupts = <0 142 4>;
+		interrupt-names = "ISP";
+		clocks = <&clkc CLKID_MIPI_ISP_CLK_COMP>,
+			<&clkc CLKID_MIPI_CSI_PHY_CLK0_COMP>;
+		clock-names = "cts_mipi_isp_clk_composite",
+			"cts_mipi_csi_phy_clk0_composite";
+	};
+
+	adapter: isp-adapter@ff650000 {
+		compatible = "amlogic, isp-adapter";
+		reg = <0x0 0xff650000 0x0 0x00006000>;
+		reg-names = "adapter";
+		interrupts = <0 179 0>;
+		interrupt-names = "adapter-irq";
+	};
+
+	phycsi: phy-csi@ff650000 {
+		compatible = "amlogic, phy-csi";
+		reg = <0x0 0xff650000 0x0 0x00002000>,
+				<0x0 0xff652000 0x0 0x00002000>,
+				<0x0 0xff63c300 0x0 0x00000100>,
+				<0x0 0xff654000 0x0 0x00000100>,
+				<0x0 0xff654400 0x0 0x00000100>;
+		reg-names = "csi2_phy0", "csi2_phy1", "aphy_reg",
+					"csi0_host", "csi1_host";
+		interrupts = <0 41 0>,
+					<0 42 0>,
+					<0 72 0>,
+					<0 74 0>,
+					<0 87 0>,
+					<0 88 0>;
+		interrupt-names = "phy0-irq",
+					"phy1-irq",
+					"csi-host0-intr2",
+					"csi-host0-intr1",
+					"csi-host1-intr2",
+					"csi-host1-intr1";
+		link-device = <&adapter>;
+	};
 };/* end of / */
 
 &pinctrl_aobus {
@@ -2337,6 +2381,14 @@
 		mux {
 			groups = "pwm_f_a11";
 			function = "pwm_f";
+		};
+	};
+
+	clk12_24_z_pins:clk12_24_z_pins {
+		mux {
+			groups = "clk12_24_z";
+			function = "clk12_24_ee";
+			drive-strength = <3>;
 		};
 	};
 
