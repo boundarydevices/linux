@@ -143,14 +143,12 @@ static int phy_write(struct phy *phy, u32 value, unsigned int reg)
 static unsigned long mixel_dsi_clk_recalc_rate(struct clk_hw *hw,
 					    unsigned long parent_rate)
 {
-	pr_info("%s:%ld\n", __func__, dsi_clk_to_data(hw)->frequency);
 	return dsi_clk_to_data(hw)->frequency;
 }
 
 static long mixel_dsi_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 				  unsigned long *prate)
 {
-	pr_info("%s:%ld\n", __func__, dsi_clk_to_data(hw)->frequency);
 	return dsi_clk_to_data(hw)->frequency;
 }
 
@@ -429,7 +427,8 @@ static int mixel_dphy_configure(struct phy *phy, union phy_configure_opts *opts)
 	priv->frequency = (ref_clk / 2) * cfg.cm / (cfg.co * cfg.cn);
 	if (priv->dsi_clk.clk)
 		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
-	pr_info("%s:%ld\n", __func__, priv->frequency);
+	pr_info("%s:%ld, ref_clk=%ld, cm=%d, co=%d cn=%d\n",
+		__func__, priv->frequency, ref_clk, cfg.cm, cfg.co, cfg.cn);
 
 	phy_write(phy, 0x00, DPHY_LOCK_BYP);
 	phy_write(phy, 0x01, priv->devdata->reg_tx_rcal);
