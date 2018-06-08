@@ -913,6 +913,7 @@ void lcd_tablet_driver_init_pre(void)
 	lcd_clk_set(pconf);
 	lcd_venc_set(pconf);
 	lcd_encl_tcon_set(pconf);
+	lcd_mute_setting(1);
 
 	lcd_vcbus_write(VENC_INTCTRL, 0x200);
 

@@ -95,6 +95,7 @@ extern void lcd_venc_change(struct lcd_config_s *pconf);
 extern void lcd_if_enable_retry(struct lcd_config_s *pconf);
 
 /* lcd debug */
+extern void lcd_mute_setting(unsigned char flag);
 extern int lcd_class_creat(void);
 extern int lcd_class_remove(void);
 
