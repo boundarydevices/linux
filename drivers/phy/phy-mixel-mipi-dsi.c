@@ -105,14 +105,12 @@ static inline void phy_write(struct phy *phy, u32 value, unsigned int reg)
 static unsigned long mixel_dsi_clk_recalc_rate(struct clk_hw *hw,
 					    unsigned long parent_rate)
 {
-	pr_info("%s:%ld\n", __func__, dsi_clk_to_data(hw)->frequency);
 	return dsi_clk_to_data(hw)->frequency;
 }
 
 static long mixel_dsi_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 				  unsigned long *prate)
 {
-	pr_info("%s:%ld\n", __func__, dsi_clk_to_data(hw)->frequency);
 	return dsi_clk_to_data(hw)->frequency;
 }
 
@@ -241,7 +239,8 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 	priv->frequency = (ref_clk / 2) * numerator / denominator;
 	if (priv->dsi_clk.clk)
 		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
-	pr_info("%s:%ld\n", __func__, priv->frequency);
+	pr_info("%s:%ld, ref_clk=%ld, numerator=%d, denominator=%d\n",
+		__func__, priv->frequency, ref_clk, numerator, denominator);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mixel_phy_mipi_set_phy_speed);
