@@ -86,7 +86,9 @@ static int meson_rng_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct meson_rng_data *data;
 	struct resource *res;
-
+#ifdef CONFIG_OF
+	int of_ret = 0;
+#endif
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
@@ -100,7 +102,20 @@ static int meson_rng_probe(struct platform_device *pdev)
 
 	data->rng.name = pdev->name;
 	data->rng.read = meson_rng_read;
-
+#ifdef CONFIG_OF
+	of_ret =
+		of_property_read_u16(pdev->dev.of_node, "quality",
+				&data->rng.quality);
+	if (of_ret) {
+		pr_info("Unable to get quality(%d)\n", of_ret);
+		// If there is no quality value specified in dts,
+		// set default quality to 1000 for the reason that
+		// HW RNG should be good source of entropy, and it
+		// also leaves room for others to give better
+		// entropy source
+		data->rng.quality = 1000;
+	}
+#endif
 	platform_set_drvdata(pdev, data);
 
 	return devm_hwrng_register(dev, &data->rng);

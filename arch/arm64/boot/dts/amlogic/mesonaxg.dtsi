@@ -184,6 +184,7 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		reg = <0x0 0xff634018 0x0 0x4>;
+		quality = /bits/ 16 <1000>;
 	};
 
 	mailbox: mhu@c883c400 {
