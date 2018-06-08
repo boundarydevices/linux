@@ -540,6 +540,7 @@ static int pts_trace_his_rd;
 #endif
 
 static DEFINE_MUTEX(video_module_mutex);
+static DEFINE_MUTEX(video_inuse_mutex);
 static DEFINE_SPINLOCK(lock);
 static u32 frame_par_ready_to_set, frame_par_force_to_set;
 static u32 vpts_remainder;
@@ -843,6 +844,9 @@ module_param_named(dmc_adjust, dmc_adjust, bool, 0644);
 static u32 dmc_config_state;
 static u32 last_toggle_count;
 static u32 toggle_same_count;
+
+/* video_inuse */
+static u32 video_inuse;
 
 void set_freerun_mode(int mode)
 {
@@ -8755,6 +8759,42 @@ static ssize_t pic_mode_info_show(struct class *cla,
 	return sprintf(buf, "NA\n");
 }
 
+static ssize_t video_inuse_show(struct class *class,
+			struct class_attribute *attr, char *buf)
+{
+	size_t r;
+
+	mutex_lock(&video_inuse_mutex);
+	if (video_inuse == 0) {
+		r = sprintf(buf, "%d\n", video_inuse);
+		video_inuse = 1;
+		pr_info("video_inuse return 0,set 1\n");
+	} else {
+		r = sprintf(buf, "%d\n", video_inuse);
+		pr_info("video_inuse = %d\n", video_inuse);
+	}
+	mutex_unlock(&video_inuse_mutex);
+	return r;
+}
+
+static ssize_t video_inuse_store(struct class *class,
+			struct class_attribute *attr,
+			const char *buf, size_t count)
+{
+	size_t r;
+	int val;
+
+	mutex_lock(&video_inuse_mutex);
+	r = kstrtoint(buf, 0, &val);
+	pr_info("set video_inuse val:%d\n", val);
+	video_inuse = val;
+	mutex_unlock(&video_inuse_mutex);
+	if (r != 1)
+		return -EINVAL;
+
+	return count;
+}
+
 static struct class_attribute amvideo_class_attrs[] = {
 	__ATTR(axis,
 	       0664,
@@ -8894,6 +8934,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 #ifdef PTS_TRACE_DEBUG
 	__ATTR_RO(pts_trace),
 #endif
+	__ATTR(video_inuse,
+	       0664,
+	       video_inuse_show,
+	       video_inuse_store),
 	__ATTR_RO(frame_addr),
 	__ATTR_RO(frame_canvas_width),
 	__ATTR_RO(frame_canvas_height),
