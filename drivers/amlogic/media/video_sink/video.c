@@ -5899,6 +5899,12 @@ SET_FILTER:
 		VPP_SC_HBANK_LENGTH_BIT,
 		VPP_SC_BANK_LENGTH_WID);
 
+		/* fix the pps last line dummy issue */
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B))
+			VSYNC_WR_MPEG_REG_BITS(
+				VPP_SC_MISC + cur_dev->vpp_off,
+				1, 24, 1);
+
 		/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 		if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_M8)
 		    && !is_meson_mtvd_cpu()) {
