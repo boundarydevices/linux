@@ -1261,7 +1261,8 @@ static int malloc_osd_memory(struct fb_info *info)
 		}
 	} else {
 #ifdef CONFIG_AMLOGIC_ION
-		pr_info("use ion buffer for fb memory\n");
+		pr_info("use ion buffer for fb memory, fb_index=%d\n",
+			fb_index);
 		if (osd_meson_dev.afbc_type && osd_get_afbc(fb_index)) {
 			pr_info("OSD%d as afbcd mode,afbc_type=%d\n",
 				fb_index, osd_meson_dev.afbc_type);
@@ -1274,6 +1275,11 @@ static int malloc_osd_memory(struct fb_info *info)
 					0,
 					(1 << ION_HEAP_TYPE_DMA),
 					0);
+				if (IS_ERR(fb_ion_handle[fb_index][j])) {
+					osd_log_err("%s: size=%x, FAILED.\n",
+					__func__, fb_memsize[fb_index + 1]);
+					return -ENOMEM;
+				}
 				ret = ion_phys(fb_ion_client,
 					fb_ion_handle[fb_index][j],
 					(ion_phys_addr_t *)
@@ -1324,6 +1330,11 @@ static int malloc_osd_memory(struct fb_info *info)
 					0,
 					(1 << ION_HEAP_TYPE_DMA),
 					0);
+			if (IS_ERR(fb_ion_handle[fb_index][0])) {
+				osd_log_err("%s: size=%x, FAILED.\n",
+					__func__, fb_memsize[fb_index + 1]);
+				return -ENOMEM;
+			}
 			ret = ion_phys(fb_ion_client,
 				fb_ion_handle[fb_index][0],
 				(ion_phys_addr_t *)
