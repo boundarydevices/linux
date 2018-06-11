@@ -79,7 +79,7 @@ static struct reg_map reg_maps_def[] = {
 /* For txlx */
 static struct reg_map reg_maps_txlx[] = {
 	[CBUS_REG_IDX] = { /* CBUS */
-		.phy_addr = 0xffd0f000,
+		.phy_addr = 0xffd00000,
 		.size = 0xa00000,
 	},
 	[PERIPHS_REG_IDX] = { /* PERIPHS */
@@ -99,7 +99,7 @@ static struct reg_map reg_maps_txlx[] = {
 		.size = 0x2000,
 	},
 	[RESET_CBUS_REG_IDX] = { /* RESET */
-		.phy_addr = 0xffd01000,
+		.phy_addr = 0xffd00000,
 		.size = 0x100,
 	},
 	[HDMITX_SEC_REG_IDX] = { /* HDMITX SECURE */
@@ -119,7 +119,7 @@ static struct reg_map reg_maps_txlx[] = {
 /* For g12a */
 static struct reg_map reg_maps_g12a[] = {
 	[CBUS_REG_IDX] = { /* CBUS */
-		.phy_addr = 0xffd0f000,
+		.phy_addr = 0xffd00000,
 		.size = 0xa00000,
 	},
 	[PERIPHS_REG_IDX] = { /* PERIPHS */
@@ -139,7 +139,7 @@ static struct reg_map reg_maps_g12a[] = {
 		.size = 0x2000,
 	},
 	[RESET_CBUS_REG_IDX] = { /* RESET */
-		.phy_addr = 0xffd01000,
+		.phy_addr = 0xffd00000,
 		.size = 0x100,
 	},
 	[HDMITX_SEC_REG_IDX] = { /* HDMITX DWC LEVEL*/
