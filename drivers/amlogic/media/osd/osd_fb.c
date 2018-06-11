@@ -728,7 +728,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	u32 block_windows[8] = {0};
 	u32 block_mode;
 	u32 hwc_enable;
-	int ret;
+	int ret = 0;
 	s32 vsync_timestamp;
 	s64 vsync_timestamp_64;
 	u32 flush_rate;
@@ -1021,6 +1021,8 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	case FBIOGET_OSD_DMABUF:
 #ifdef CONFIG_ION
 		if (osd_get_afbc(info->node)) {
+			if (dmaexp.buffer_idx > OSD_MAX_BUF_NUM - 1)
+				dmaexp.buffer_idx = OSD_MAX_BUF_NUM - 1;
 			dmaexp.fd =
 				ion_share_dma_buf_fd(
 				fb_ion_client,
@@ -1444,7 +1446,8 @@ static int malloc_osd_memory(struct fb_info *info)
 
 static int osd_open(struct fb_info *info, int arg)
 {
-	u32 fb_index, logo_index;
+	u32 fb_index;
+	int logo_index;
 	struct osd_fb_dev_s *fbdev;
 	struct fb_fix_screeninfo *fix = NULL;
 	int ret = 0;
@@ -2014,6 +2017,8 @@ static int parse_para(const char *para, int para_num, int *result)
 	params = kstrdup(para, GFP_KERNEL);
 	params_base = params;
 	token = params;
+	if (!token)
+		return 0;
 	len = strlen(token);
 	do {
 		token = strsep(&params, " ");
@@ -2027,6 +2032,8 @@ static int parse_para(const char *para, int para_num, int *result)
 		ret = kstrtoint(token, 0, &res);
 		if (ret < 0)
 			break;
+		if (!token)
+			return 0;
 		len = strlen(token);
 		*out++ = res;
 		count++;
@@ -2444,29 +2451,6 @@ static ssize_t store_antiflicker(struct device *device,
 	else
 		osd_set_antiflicker_hw(fb_info->node,
 				vinfo, fb_info->var.yres);
-	return count;
-}
-
-static ssize_t show_update_freescale(struct device *device,
-				     struct device_attribute *attr,
-				     char *buf)
-{
-	unsigned int update_state = 0;
-
-	return snprintf(buf, PAGE_SIZE, "update_state:[%s]\n",
-			update_state ? "TRUE" : "FALSE");
-}
-
-static ssize_t store_update_freescale(struct device *device,
-				      struct device_attribute *attr,
-				      const char *buf, size_t count)
-{
-	unsigned int update_state = 0;
-	int res = 0;
-	int ret = 0;
-
-	ret = kstrtoint(buf, 0, &res);
-	update_state = res;
 	return count;
 }
 
@@ -3073,8 +3057,6 @@ static struct device_attribute osd_attrs[] = {
 			show_osd_reverse, store_osd_reverse),
 	__ATTR(osd_antiflicker, 0644,
 			show_antiflicker, store_antiflicker),
-	__ATTR(update_freescale, 0644,
-			show_update_freescale, store_update_freescale),
 	__ATTR(ver_clone, 0644,
 			show_ver_clone, store_ver_clone),
 	__ATTR(ver_update_pan, 0220,
@@ -3639,6 +3621,8 @@ static int osd_probe(struct platform_device *pdev)
 	vinfo = get_current_vinfo();
 	for (index = 0; index < osd_meson_dev.osd_count; index++) {
 		/* register frame buffer memory */
+		if (index > OSD_COUNT - 1)
+			break;
 		if (!fb_memsize[index + 1])
 			continue;
 		fbi = framebuffer_alloc(sizeof(struct osd_fb_dev_s),
@@ -3784,6 +3768,8 @@ static int osd_remove(struct platform_device *pdev)
 	for (i = 0; i < osd_meson_dev.osd_count; i++) {
 		int j;
 
+		if (i > OSD_COUNT - 1)
+			break;
 		if (gp_fbdev_list[i]) {
 			struct osd_fb_dev_s *fbdev = gp_fbdev_list[i];
 
@@ -3800,7 +3786,7 @@ static int osd_remove(struct platform_device *pdev)
 			}
 			iounmap(fbdev->fb_mem_vaddr);
 			if (osd_get_afbc(i)) {
-				for (j = 1; j < OSD_MAX_BUF_NUM; j++)
+				for (j = 0; j < OSD_MAX_BUF_NUM; j++)
 					iounmap(fbdev->fb_mem_afbc_vaddr[j]);
 			}
 			kfree(fbi->pseudo_palette);

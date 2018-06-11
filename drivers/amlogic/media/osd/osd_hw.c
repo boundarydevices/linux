@@ -911,14 +911,14 @@ static int sync_render_single_fence(u32 index, u32 yres,
 	int out_fence_fd = -1;
 	int buf_num = 0;
 	u32 xoffset, yoffset;
-	struct osd_fence_map_s *fence_map =
-		kzalloc(sizeof(struct osd_fence_map_s), GFP_KERNEL);
+	struct osd_fence_map_s *fence_map =  NULL;
 
 	if (index > OSD1)
 		return -1;
 	xoffset = request->xoffset;
 	yoffset = request->yoffset;
 	buf_num = find_buf_num(yres, yoffset);
+	fence_map = kzalloc(sizeof(struct osd_fence_map_s), GFP_KERNEL);
 	if (!fence_map) {
 		osd_log_err("could not allocate osd_fence_map\n");
 		return -ENOMEM;
@@ -1448,9 +1448,10 @@ void walk_through_update_list(void)
 
 	for (i = 0; i < HW_OSD_COUNT; i++) {
 		j = 0;
-		while (osd_hw.updated[i] && j < 32) {
+		while (osd_hw.updated[i] && j < HW_REG_INDEX_MAX) {
 			if (osd_hw.updated[i] & (1 << j)) {
-				osd_hw.reg[j].update_func(i);
+				if (osd_hw.reg[j].update_func)
+					osd_hw.reg[j].update_func(i);
 				remove_from_update_list(i, j);
 			}
 			j++;
@@ -1488,9 +1489,22 @@ static u32 osd_get_hw_reset_flag(void)
 		/* same bit, but gxm only reset hardware, not top reg*/
 		if (osd_hw.osd_afbcd[OSD1].enable)
 			hw_reset_flag |= HW_RESET_AFBCD_HARDWARE;
-#ifndef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+		if (((hdr_osd_reg.viu_osd1_matrix_ctrl & 0x00000001)
+			!= 0x0) ||
+			((hdr_osd_reg.viu_osd1_eotf_ctl & 0x80000000)
+			!= 0) ||
+			((hdr_osd_reg.viu_osd1_oetf_ctl & 0xe0000000)
+			!= 0)) {
+			hw_reset_flag |= HW_RESET_OSD1_REGS;
+			osd_hdr_on = true;
+		} else if (osd_hdr_on) {
+			hw_reset_flag |= HW_RESET_OSD1_REGS;
+			osd_hdr_on = false;
+		}
+#endif
 		break;
-#else
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 	case __MESON_CPU_MAJOR_ID_GXL:
 	case __MESON_CPU_MAJOR_ID_TXL:
 		if (((hdr_osd_reg.viu_osd1_matrix_ctrl & 0x00000001)
@@ -1699,8 +1713,10 @@ void osd_set_afbc(u32 index, u32 enable)
 u32 osd_get_afbc(u32 index)
 {
 	u32 afbc_type = 0;
+	u32 afbc_enalbe;
 
-	if (osd_hw.osd_afbcd[index].enable) {
+	afbc_enalbe = osd_hw.osd_afbcd[index].enable;
+	if (afbc_enalbe) {
 		if (osd_hw.osd_meson_dev.cpu_id ==
 			__MESON_CPU_MAJOR_ID_GXM)
 			afbc_type = 1;
@@ -2557,20 +2573,24 @@ void osd_get_flush_rate_hw(u32 *break_rate)
 
 void osd_set_antiflicker_hw(u32 index, struct vinfo_s *vinfo, u32 yres)
 {
+#ifdef NEED_ANTIFLICKER
 	bool osd_need_antiflicker = false;
 
 	if (is_interlaced(vinfo))
 		osd_need_antiflicker = false;
+	else
+		osd_need_antiflicker = true;
 	if (osd_need_antiflicker) {
 		osd_hw.antiflicker_mode = 1;
 		osd_antiflicker_task_start();
 		osd_antiflicker_enable(1);
 		osd_antiflicker_update_pan(osd_hw.pandata[index].y_start, yres);
-	} else {
-		if (osd_hw.antiflicker_mode)
-			osd_antiflicker_task_stop();
-		osd_hw.antiflicker_mode = 0;
 	}
+#else
+	if (osd_hw.antiflicker_mode)
+		osd_antiflicker_task_stop();
+	osd_hw.antiflicker_mode = 0;
+#endif
 }
 
 void osd_get_antiflicker_hw(u32 index, u32 *on_off)
@@ -4872,16 +4892,15 @@ static int check_order_continuous(u32 *order)
 }
 
 
-static int blend_din_to_osd(
+static u32 blend_din_to_osd(
 	u32 blend_din_index, struct hw_osd_blending_s *blending)
 {
 	u32 osd_index = 0;
 
 	osd_index =
 		blending->osd_to_bdin_table[blend_din_index];
-	if ((osd_index > OSD3)
-		|| (osd_index < OSD1))
-		return -1;
+	if (osd_index > OSD3)
+		return OSD_MAX;
 	else
 		return osd_index;
 }
@@ -4940,7 +4959,7 @@ static void generate_blend_din_table(struct hw_osd_blending_s *blending)
 		break;
 	case 2:
 	{
-		int temp_index[2];
+		int temp_index[2] = {0};
 		int j = 0;
 
 		for (i = 0; i < osd_count; i++) {
@@ -5061,51 +5080,7 @@ static void generate_blend_din_table(struct hw_osd_blending_s *blending)
 		blending->osd_to_bdin_table[3]);
 	blending->blend_reg.din_reoder_sel =
 		blending->din_reoder_sel;
-	osd_log_dbg("blend_din1 == osd%d\n",
-		blend_din_to_osd(BLEND_DIN1, blending) + 1);
-	osd_log_dbg("blend_din3 == osd%d\n",
-		blend_din_to_osd(BLEND_DIN3, blending) + 1);
-	osd_log_dbg("blend_din4 == osd%d\n",
-		blend_din_to_osd(BLEND_DIN4, blending) + 1);
 }
-
-#if 0
-static void adjust_blend_din_table(struct hw_osd_blending_s *blending)
-{
-	int i = 0;
-
-	/* adjust osd_to_bdin_table */
-	/* reorder[i] = osd[i]'s display layer */
-	/* tow osd_x input to vpp, default osd2 is top */
-	blending->din_reoder_sel = 0;
-	for (i = 0; i < osd_hw.osd_meson_dev.osd_count - 1; i++) {
-		switch (blending->reorder[i]) {
-		/* blend_din1 is top, blend_din(3 4) is bottom layer */
-		case LAYER_1:
-			blending->din_reoder_sel |= (i + 1) << 8;//blend_din3
-			blending->osd_to_bdin_table[2] = i;//blend_din3 -- osdx
-			break;
-		case LAYER_2:
-			blending->din_reoder_sel |= (i + 1) << 0;//blend_din1
-			blending->osd_to_bdin_table[0] = i;//blend_din4 -- osdx
-			break;
-		case LAYER_3:
-			blending->din_reoder_sel |= (i + 1) << 12;//blend_din4
-			blending->osd_to_bdin_table[3] = i;//blend_din4 -- osdx
-			break;
-		}
-	}
-	osd_log_dbg("osd_to_bdin_table[i]=[%x,%x,%x,%x]\n",
-		blending->osd_to_bdin_table[0],
-		blending->osd_to_bdin_table[1],
-		blending->osd_to_bdin_table[2],
-		blending->osd_to_bdin_table[3]);
-	osd_log_dbg("blending->din_reoder_sel=%d\n",
-		blending->din_reoder_sel);
-	blending->blend_reg.din_reoder_sel =
-		blending->din_reoder_sel;
-}
-#endif
 
 static bool is_freescale_para_changed(u32 index)
 {
@@ -5349,6 +5324,8 @@ static void osd_setting_blend0(struct hw_osd_blending_s *blending)
 	if (layer_blend->input1 != BLEND_NO_DIN) {
 		/* calculate osd blend din scope */
 		index = blend_din_to_osd(layer_blend->input1, blending);
+		if (index >= OSD_MAX)
+			return;
 		bld_osd_h_start =
 			layer_blend->input1_data.x;
 		bld_osd_h_end =
@@ -5426,6 +5403,8 @@ static void osd_setting_blend1(struct hw_osd_blending_s *blending)
 
 	if (layer_blend->input1 != BLEND_NO_DIN) {
 		index = blend_din_to_osd(layer_blend->input1, blending);
+		if (index >= OSD_MAX)
+			return;
 		/* calculate osd blend din scope */
 		bld_osd_h_start =
 			layer_blend->input1_data.x;
@@ -5450,6 +5429,8 @@ static void osd_setting_blend1(struct hw_osd_blending_s *blending)
 	}
 	if (layer_blend->input2 != BLEND_NO_DIN) {
 		index = blend_din_to_osd(layer_blend->input2, blending);
+		if (index >= OSD_MAX)
+			return;
 		/* calculate osd blend din scope */
 		bld_osd_h_start =
 			layer_blend->input2_data.x;
@@ -5844,6 +5825,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			layer_blend->input1 |= BYPASS_DIN;
 		layer_blend->input2 = BLEND_NO_DIN;
 		index = blend_din_to_osd(BLEND_DIN1, blending);
+		if (index >= OSD_MAX)
+			return;
 		osd_setting_blend0_input(index, blending);
 		osd_setting_blend0(blending);
 
@@ -5903,6 +5886,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 		layer_blend->input1 = input1;
 		layer_blend->input2 = BLEND_NO_DIN;
 		index = blend_din_to_osd(input1, blending);
+		if (index >= OSD_MAX)
+			return;
 		osd_setting_blend0_input(index, blending);
 		if (index != OSD1) {
 			/* here used freescale osd1/osd2 */
@@ -5916,6 +5901,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			sizeof(struct dispdata_s));
 
 		index = blend_din_to_osd(input2, blending);
+		if (index >= OSD_MAX)
+			return;
 		if (index != OSD1) {
 			osd_log_dbg("before blend1: set osd%d freescale\n",
 				index);
@@ -5978,6 +5965,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			layer_blend->input1 |= BYPASS_DIN;
 		layer_blend->input2 = BLEND_NO_DIN;
 		index = blend_din_to_osd(BLEND_DIN1, blending);
+		if (index >= OSD_MAX)
+			return;
 		osd_setting_blend0_input(index, blending);
 		osd_setting_blend0(blending);
 
@@ -6007,6 +5996,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			osd_hw.free_dst_data[index].y_start + 1;
 
 		index = blend_din_to_osd(BLEND_DIN4, blending);
+		if (index >= OSD_MAX)
+			return;
 		/* here freescale osd1/osd2 used */
 		osd_log_dbg("before blend1: set osd%d freescale\n", index);
 		osd_set_freescale(index, blending->background_w,
@@ -6063,6 +6054,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 		layer_blend->input1 = input1;
 		layer_blend->input2 = BLEND_NO_DIN;
 		index = blend_din_to_osd(input1, blending);
+		if (index >= OSD_MAX)
+			return;
 		osd_setting_blend0_input(index, blending);
 		if (index != OSD1)
 			osd_log_err("not support case!!!\n");
@@ -6090,6 +6083,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			osd_hw.free_dst_data[index].y_end -
 			osd_hw.free_dst_data[index].y_start + 1;
 		index = blend_din_to_osd(layer_blend->input2, blending);
+		if (index >= OSD_MAX)
+			return;
 		if (index != OSD1) {
 			osd_log_dbg("before blend1: set osd%d freescale\n",
 				index);
@@ -6139,6 +6134,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			layer_blend->input1 |= BYPASS_DIN;
 		layer_blend->input2 = BLEND_NO_DIN;
 		index = blend_din_to_osd(BLEND_DIN1, blending);
+		if (index >= OSD_MAX)
+			return;
 		osd_setting_blend0_input(index, blending);
 		osd_setting_blend0(blending);
 
@@ -6168,6 +6165,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			osd_hw.free_dst_data[index].y_start + 1;
 
 		index = blend_din_to_osd(BLEND_DIN3, blending);
+		if (index >= OSD_MAX)
+			return;
 		osd_log_dbg("before blend1: set osd%d freescale\n", index);
 		osd_set_freescale(index, blending->background_w,
 			blending->background_h, blending);
@@ -6183,6 +6182,8 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			osd_hw.free_dst_data[index].y_start + 1;
 
 		index = blend_din_to_osd(BLEND_DIN4, blending);
+		if (index >= OSD_MAX)
+			return;
 		osd_log_dbg("before blend1: set osd%d freescale\n", index);
 		osd_set_freescale(index, blending->background_w,
 			blending->background_h, blending);

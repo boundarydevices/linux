@@ -61,6 +61,8 @@ static int parse_para(const char *para, int para_num, int *result)
 	params = kstrdup(para, GFP_KERNEL);
 	params_base = params;
 	token = params;
+	if (!token)
+		return 0;
 	len = strlen(token);
 	do {
 		token = strsep(&params, " ");
@@ -74,6 +76,8 @@ static int parse_para(const char *para, int para_num, int *result)
 		ret = kstrtoint(token, 0, &res);
 		if (ret < 0)
 			break;
+		if (!token)
+			return 0;
 		len = strlen(token);
 		*out++ = res;
 		count++;
@@ -217,7 +221,7 @@ static ssize_t free_scale_read_file(struct file *file, char __user *userbuf,
 	unsigned int free_scale_enable;
 
 	osd_get_free_scale_enable_hw(osd_id, &free_scale_enable);
-	len = snprintf(buf, PAGE_SIZE, "free_scale_enable:[0x%x]\n",
+	len = snprintf(buf, 128, "free_scale_enable:[0x%x]\n",
 			free_scale_enable);
 	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
 }
@@ -697,9 +701,10 @@ void osd_drm_debugfs_add(
 
 	plane_osd_id[osd_id] = osd_id;
 	*plane_debugfs_dir = debugfs_create_dir(name, osd_debugfs_root);
-	if (!plane_debugfs_dir)
+	if (!*plane_debugfs_dir) {
 		osd_log_info("debugfs_create_dir failed: name=%s\n", name);
-
+		return;
+	}
 	for (i = 0; i < ARRAY_SIZE(osd_drm_debugfs_files); i++) {
 		ent = debugfs_create_file(osd_drm_debugfs_files[i].name,
 			osd_drm_debugfs_files[i].mode,

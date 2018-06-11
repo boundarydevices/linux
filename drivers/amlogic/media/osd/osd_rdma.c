@@ -62,7 +62,6 @@ int rdma_reset_tigger_flag;
 static DEFINE_SPINLOCK(rdma_lock);
 static struct rdma_table_item *rdma_table;
 static struct device *osd_rdma_dev;
-static struct page *table_pages;
 static void *osd_rdma_table_virt;
 static dma_addr_t osd_rdma_table_phy;
 static u32 table_paddr;
@@ -1338,7 +1337,6 @@ static int osd_rdma_init(void)
 		goto error1;
 	}
 	of_dma_configure(osd_rdma_dev, osd_rdma_dev->of_node);
-	table_pages = dma_alloc_from_contiguous(osd_rdma_dev, 1, 4);
 	osd_rdma_table_virt = dma_alloc_coherent(osd_rdma_dev, PAGE_SIZE,
 					&osd_rdma_table_phy, GFP_KERNEL);
 
