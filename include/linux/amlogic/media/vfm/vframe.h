@@ -252,6 +252,8 @@ struct vframe_s {
 	u32 duration_pulldown;
 	u32 pts;
 	u64 pts_us64;
+	bool next_vf_pts_valid;
+	u32 next_vf_pts;
 	u32 disp_pts;
 	u64 disp_pts_us64;
 	u32 flag;

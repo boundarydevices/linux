@@ -527,6 +527,18 @@ struct video_pm_state_s {
 
 #endif
 
+#define PTS_THROTTLE
+/* #define PTS_TRACE_DEBUG */
+/* #define PTS_TRACE_START */
+
+#ifdef PTS_TRACE_DEBUG
+static int pts_trace;
+static int pts_trace_his[16];
+static u32 pts_his[16];
+static u32 scr_his[16];
+static int pts_trace_his_rd;
+#endif
+
 static DEFINE_MUTEX(video_module_mutex);
 static DEFINE_SPINLOCK(lock);
 static u32 frame_par_ready_to_set, frame_par_force_to_set;
@@ -777,6 +789,10 @@ static u32 vsync_pts_100;
 static u32 vsync_freerun;
 static u32 vsync_slow_factor = 1;
 
+/* pts alignment */
+static bool vsync_pts_aligned;
+static s32 vsync_pts_align;
+
 /* frame rate calculate */
 static u32 last_frame_count;
 static u32 frame_count;
@@ -833,6 +849,12 @@ void set_freerun_mode(int mode)
 	freerun_mode = mode;
 }
 EXPORT_SYMBOL(set_freerun_mode);
+
+void set_pts_realign(void)
+{
+	vsync_pts_aligned = false;
+}
+EXPORT_SYMBOL(set_pts_realign);
 
 static const enum f2v_vphase_type_e vpp_phase_table[4][3] = {
 	{F2V_P2IT, F2V_P2IB, F2V_P2P},	/* VIDTYPE_PROGRESSIVE */
@@ -2084,6 +2106,23 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 
 	if (is_dolby_vision_enable())
 		vf_with_el = has_enhanced_layer(vf);
+
+#ifdef PTS_TRACE_DEBUG
+#ifdef PTS_TRACE_START
+		if (pts_trace_his_rd < 15) {
+#endif
+			pts_trace_his[pts_trace_his_rd] = pts_trace;
+			pts_his[pts_trace_his_rd] = vf->pts;
+			scr_his[pts_trace_his_rd] = timestamp_pcrscr_get();
+			pts_trace_his_rd++;
+			if (pts_trace_his_rd >= 16)
+				pts_trace_his_rd = 0;
+#ifdef PTS_TRACE_START
+		}
+#endif
+		pts_trace = 0;
+#endif
+
 	ori_start_x_lines = 0;
 	ori_end_x_lines = ((vf->type & VIDTYPE_COMPRESS) ?
 		vf->compWidth : vf->width) - 1;
@@ -2526,6 +2565,24 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 	}
 	if (cur_dispbuf != &vf_local)
 		video_keeper_new_frame_notify();
+
+	if ((vf != &vf_local) && (vf) && !vsync_pts_aligned) {
+#ifdef PTS_TRACE_DEBUG
+		pr_info("####timestamp_pcrscr_get() = 0x%x, vf->pts = 0x%x, vsync_pts_inc = %d\n",
+			timestamp_pcrscr_get(), vf->pts, vsync_pts_inc);
+#endif
+		if ((abs(timestamp_pcrscr_get() - vf->pts) <= (vsync_pts_inc))
+			  && ((int)(timestamp_pcrscr_get() - vf->pts) >= 0)) {
+			vsync_pts_align =  vsync_pts_inc / 4 -
+				(timestamp_pcrscr_get() - vf->pts);
+			vsync_pts_aligned = true;
+#ifdef PTS_TRACE_DEBUG
+			pts_trace_his_rd = 0;
+			pr_info("####vsync_pts_align set to %d\n",
+				vsync_pts_align);
+#endif
+		}
+	}
 }
 static inline void vd1_path_select(bool afbc)
 {
@@ -3658,14 +3715,19 @@ static inline bool duration_expire(struct vframe_s *cur_vf,
 #define VPTS_RESET_THRO
 
 static inline bool vpts_expire(struct vframe_s *cur_vf,
-			       struct vframe_s *next_vf)
+			       struct vframe_s *next_vf,
+			       int toggled_cnt)
 {
-	u32 pts = next_vf->pts;
+	u32 pts;
 #ifdef VIDEO_PTS_CHASE
 	u32 vid_pts, scr_pts;
 #endif
 	u32 systime;
 	u32 adjust_pts, org_vpts;
+	bool expired;
+
+	if (next_vf == NULL)
+		return false;
 
 	if (debug_flag & DEBUG_FLAG_TOGGLE_FRAME_PER_VSYNC)
 		return true;
@@ -3712,6 +3774,7 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 		return true;
 
 	systime = timestamp_pcrscr_get();
+	pts = next_vf->pts;
 
 	if (((pts == 0) && (cur_dispbuf != &vf_local))
 	    || (freerun_mode == FREERUN_DUR)) {
@@ -3902,7 +3965,27 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 		}
 	}
 
-	return (int)(timestamp_pcrscr_get() - pts) >= 0;
+	expired = (int)(timestamp_pcrscr_get() + vsync_pts_align - pts) >= 0;
+
+#ifdef PTS_THROTTLE
+	if (expired && next_vf && next_vf->next_vf_pts_valid &&
+		(vsync_slow_factor == 1) &&
+		next_vf->next_vf_pts &&
+		(toggled_cnt > 0) &&
+		((int)(timestamp_pcrscr_get() + vsync_pts_inc +
+		vsync_pts_align - next_vf->next_vf_pts) < 0)) {
+		expired = false;
+	} else if (!expired && next_vf && next_vf->next_vf_pts_valid &&
+		(vsync_slow_factor == 1) &&
+		next_vf->next_vf_pts &&
+		(toggled_cnt == 0) &&
+		((int)(timestamp_pcrscr_get() + vsync_pts_inc +
+		vsync_pts_align - next_vf->next_vf_pts) >= 0)) {
+		expired = true;
+	}
+#endif
+
+		return expired;
 #endif
 }
 
@@ -4396,9 +4479,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	bool show_nosync = false;
 	u32 vpp_misc_save, vpp_misc_set;
 	int first_set = 0;
-#ifdef CONFIG_AM_VIDEO_LOG
 	int toggle_cnt;
-#endif
 	struct vframe_s *toggle_vf = NULL;
 	struct vframe_s *toggle_frame = NULL;
 	int video1_off_req = 0;
@@ -4485,9 +4566,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			old_vmode = new_vmode;
 		}
 	}
-#ifdef CONFIG_AM_VIDEO_LOG
 	toggle_cnt = 0;
-#endif
 	vsync_count++;
 	timer_count++;
 
@@ -4752,7 +4831,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	}
 
 	while (vf) {
-		if (vpts_expire(cur_dispbuf, vf) || show_nosync) {
+		if (vpts_expire(cur_dispbuf, vf, toggle_cnt) || show_nosync) {
 			amlog_mask(LOG_MASK_TIMESTAMP,
 			"vpts = 0x%x, c.dur=0x%x, n.pts=0x%x, scr = 0x%x\n",
 				   timestamp_vpts_get(),
@@ -4971,9 +5050,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			break;
 		}
 
-#ifdef CONFIG_AM_VIDEO_LOG
 		toggle_cnt++;
-#endif
 	}
 
 #ifdef INTERLACE_FIELD_MATCH_PROCESS
@@ -5580,6 +5657,9 @@ SET_FILTER:
 	}
 
  exit:
+#ifdef PTS_TRACE_DEBUG
+		pts_trace++;
+#endif
 	vpp_misc_save = READ_VCBUS_REG(VPP_MISC + cur_dev->vpp_off);
 	vpp_misc_set = vpp_misc_save;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
@@ -6058,6 +6138,8 @@ static void video_vf_unreg_provider(void)
 	vsync_pts_112 = 0;
 	vsync_pts_125 = 0;
 	vsync_freerun = 0;
+	vsync_pts_align = 0;
+	vsync_pts_aligned = false;
 	video_prot.video_started = 0;
 	spin_unlock_irqrestore(&lock, flags);
 
@@ -7379,6 +7461,33 @@ static ssize_t video_seek_flag_store(struct class *cla,
 
 	return count;
 }
+
+#ifdef PTS_TRACE_DEBUG
+static ssize_t pts_trace_show(struct class *cla,
+			struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d %d %d %d %d %d %d %d\n"
+				"%d %d %d %d %d %d %d %d\n"
+				"%0x %0x %0x %0x %0x %0x %0x %0x\n"
+				"%0x %0x %0x %0x %0x %0x %0x %0x\n"
+				"%0x %0x %0x %0x %0x %0x %0x %0x\n"
+				"%0x %0x %0x %0x %0x %0x %0x %0x\n",
+		pts_trace_his[0], pts_trace_his[1], pts_trace_his[2],
+		pts_trace_his[3], pts_trace_his[4], pts_trace_his[5],
+		pts_trace_his[6], pts_trace_his[7], pts_trace_his[8],
+		pts_trace_his[9], pts_trace_his[10], pts_trace_his[11],
+		pts_trace_his[12], pts_trace_his[13], pts_trace_his[14],
+		pts_trace_his[15],
+		pts_his[0], pts_his[1], pts_his[2], pts_his[3],
+		pts_his[4], pts_his[5], pts_his[6], pts_his[7],
+		pts_his[8], pts_his[9], pts_his[10], pts_his[11],
+		pts_his[12], pts_his[13], pts_his[14], pts_his[15],
+		scr_his[0], scr_his[1], scr_his[2], scr_his[3],
+		scr_his[4], scr_his[5], scr_his[6], scr_his[7],
+		scr_his[8], scr_his[9], scr_his[10], scr_his[11],
+		scr_his[12], scr_his[13], scr_his[14], scr_his[15]);
+}
+#endif
 
 static ssize_t video_brightness_show(struct class *cla,
 				     struct class_attribute *attr, char *buf)
@@ -8781,6 +8890,9 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       free_cma_buffer_store),
 #ifdef CONFIG_AM_VOUT
 	__ATTR_RO(device_resolution),
+#endif
+#ifdef PTS_TRACE_DEBUG
+	__ATTR_RO(pts_trace),
 #endif
 	__ATTR_RO(frame_addr),
 	__ATTR_RO(frame_canvas_width),
