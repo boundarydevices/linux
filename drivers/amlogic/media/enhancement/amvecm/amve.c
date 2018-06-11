@@ -590,21 +590,40 @@ void vpp_set_rgb_ogo(struct tcon_rgb_ogo_s *p)
 		WRITE_VPP_REG_BITS(VPP_MATRIX_CLIP,
 			m[22], 5, 3);
 	} else {
-		WRITE_VPP_REG(VPP_GAINOFF_CTRL0,
+		/*for txlx and txhd, pre_offset and post_offset become 13 bit*/
+		if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL0,
 				((p->en << 31) & 0x80000000) |
 				((p->r_gain << 16) & 0x07ff0000) |
 				((p->g_gain <<  0) & 0x000007ff));
-		WRITE_VPP_REG(VPP_GAINOFF_CTRL1,
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL1,
+				((p->b_gain << 16) & 0x07ff0000) |
+				((p->r_post_offset <<  0) & 0x00001fff));
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL2,
+				((p->g_post_offset << 16) & 0x1fff0000) |
+				((p->b_post_offset <<  0) & 0x00001fff));
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL3,
+				((p->r_pre_offset  << 16) & 0x1fff0000) |
+				((p->g_pre_offset  <<  0) & 0x00001fff));
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL4,
+				((p->b_pre_offset  <<  0) & 0x00001fff));
+		} else {
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL0,
+				((p->en << 31) & 0x80000000) |
+				((p->r_gain << 16) & 0x07ff0000) |
+				((p->g_gain <<  0) & 0x000007ff));
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL1,
 				((p->b_gain << 16) & 0x07ff0000) |
 				((p->r_post_offset <<  0) & 0x000007ff));
-		WRITE_VPP_REG(VPP_GAINOFF_CTRL2,
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL2,
 				((p->g_post_offset << 16) & 0x07ff0000) |
 				((p->b_post_offset <<  0) & 0x000007ff));
-		WRITE_VPP_REG(VPP_GAINOFF_CTRL3,
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL3,
 				((p->r_pre_offset  << 16) & 0x07ff0000) |
 				((p->g_pre_offset  <<  0) & 0x000007ff));
-		WRITE_VPP_REG(VPP_GAINOFF_CTRL4,
+			WRITE_VPP_REG(VPP_GAINOFF_CTRL4,
 				((p->b_pre_offset  <<  0) & 0x000007ff));
+		}
 	}
 }
 
