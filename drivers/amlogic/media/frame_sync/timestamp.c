@@ -37,7 +37,7 @@ static u32 audio_pts_started;
 static u32 first_vpts;
 static u32 first_checkin_vpts;
 static u32 first_apts;
-static u32 pcrscr_lantcy = 800*90;
+static u32 pcrscr_lantcy = 200*90;
 
 static u32 system_time_scale_base = 1;
 static u32 system_time_scale_remainder;
