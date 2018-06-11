@@ -2140,7 +2140,9 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 		} else
 			break;
 	}
-	if (cec_dev->dev_type == DEV_TYPE_TUNER)
+	if ((cec_dev->dev_type == DEV_TYPE_TUNER) ||
+		(cec_dev->dev_type == DEV_TYPE_PLAYBACK) ||
+		(cec_dev->dev_type == DEV_TYPE_AUDIO_SYSTEM))
 		b = cec_dev->port_num - 1;
 	else
 		b = cec_dev->port_num;
@@ -2173,7 +2175,9 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 			break;
 	}
 
-	if (cec_dev->dev_type == DEV_TYPE_TUNER) {
+	if ((cec_dev->dev_type == DEV_TYPE_TUNER) ||
+		(cec_dev->dev_type == DEV_TYPE_PLAYBACK) ||
+		(cec_dev->dev_type == DEV_TYPE_AUDIO_SYSTEM)) {
 		/* last port is for tx in mixed tx/rx */
 		port[e].type = HDMI_OUTPUT;
 		port[e].port_id = 0;		/* 0 for tx port id */
