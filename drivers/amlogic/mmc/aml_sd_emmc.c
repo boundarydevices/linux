@@ -2243,6 +2243,8 @@ static void meson_mmc_start_cmd(struct mmc_host *mmc, struct mmc_request *mrq)
 		des_cmd_cur->timeout = 0xb;
 	if (mrq->cmd->opcode == MMC_ERASE)
 		des_cmd_cur->timeout = 0xf;
+	if (mrq->cmd->opcode == MMC_SWITCH)
+		des_cmd_cur->timeout = 0xf;
 
 	host->cmd = mrq->cmd;
 
