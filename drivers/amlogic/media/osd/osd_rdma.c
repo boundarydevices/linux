@@ -342,7 +342,7 @@ static inline u32 is_rdma_reg(u32 addr)
 {
 	u32 rdma_en = 1;
 
-	if ((addr >= 0x1e10) && (addr <= 0x1e50))
+	if ((addr >= VIU2_OSD1_CTRL_STAT) && (addr <= VIU2_OSD1_BLK3_CFG_W4))
 		rdma_en = 0;
 	else
 		rdma_en = 1;

@@ -2898,6 +2898,17 @@ static ssize_t store_osd_rotate(
 	return count;
 }
 
+static ssize_t show_afbc_err_cnt(
+	struct device *device, struct device_attribute *attr,
+	char *buf)
+{
+	u32 err_cnt;
+
+	osd_get_afbc_err_cnt(&err_cnt);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", err_cnt);
+}
+
 static inline  int str2lower(char *str)
 {
 	while (*str != '\0') {
@@ -3102,7 +3113,8 @@ static struct device_attribute osd_attrs[] = {
 			NULL, store_osd_single_step_mode),
 	__ATTR(osd_single_step, 0220,
 			NULL, store_osd_single_step),
-
+	__ATTR(afbc_err_cnt, 0444,
+			show_afbc_err_cnt, NULL),
 };
 
 static struct device_attribute osd_attrs_viu2[] = {

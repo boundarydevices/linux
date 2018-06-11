@@ -1401,8 +1401,10 @@ static bool mali_afbc_get_error(void)
 	status = VSYNCOSD_RD_MPEG_REG(VPU_MAFBC_IRQ_RAW_STATUS);
 	if (status & 0x3c) {
 		osd_log_dbg("afbc error happened\n");
+		osd_hw.afbc_err_cnt++;
 		error = true;
 	}
+	status = VSYNCOSD_WR_MPEG_REG(VPU_MAFBC_IRQ_CLEAR, 0x3f);
 	return error;
 }
 static u32 osd_get_hw_reset_flag(void)
@@ -1449,9 +1451,8 @@ static u32 osd_get_hw_reset_flag(void)
 		if (afbc_enable &&
 			osd_hw.afbc_force_reset)
 			hw_reset_flag |= HW_RESET_MALI_AFBCD_REGS;
-		if (afbc_enable &&
-			osd_hw.afbc_status_err_reset &&
-			mali_afbc_get_error())
+		if (afbc_enable && mali_afbc_get_error() &&
+			osd_hw.afbc_status_err_reset)
 			hw_reset_flag |= HW_RESET_MALI_AFBCD_REGS;
 		}
 		break;
@@ -2936,6 +2937,11 @@ void osd_set_rotate(u32 index, u32 osd_rotate)
 	osd_hw.osd_rotate[index] = osd_rotate;
 	add_to_update_list(index, DISP_OSD_ROTATE);
 	osd_wait_vsync_hw();
+}
+
+void osd_get_afbc_err_cnt(u32 *err_cnt)
+{
+	*err_cnt = osd_hw.afbc_err_cnt;
 }
 
 int osd_get_capbility(u32 index)
@@ -4442,10 +4448,15 @@ static void osd_update_disp_osd_reverse(u32 index)
 	remove_from_update_list(index, DISP_OSD_REVERSE);
 }
 
+static int get_viu2_src_format(void)
+{
+	return RGBA;
+}
+
 static void osd_update_disp_osd_rotate(u32 index)
 {
 	u32 rotate_en = osd_hw.osd_rotate[index];
-	u32 src_fmt = RGBA;
+	u32 src_fmt;
 	u32 x_start, x_end, y_start, y_end;
 	u32 src_width, src_height;
 	u32 rot_hsize, blk_vsize, rd_blk_hsize;
@@ -4459,6 +4470,7 @@ static void osd_update_disp_osd_rotate(u32 index)
 
 	if (osd_hw.osd_meson_dev.cpu_id < __MESON_CPU_MAJOR_ID_G12B)
 		return;
+	src_fmt = get_viu2_src_format();
 	src_data.x = 0;
 	src_data.y = 0;
 	src_data.w = osd_hw.fb_gem[index].xres;
@@ -7331,6 +7343,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	osd_hw.osd_deband_enable = 1;
 	osd_hw.out_fence_fd = -1;
 	osd_hw.blend_bypass = 0;
+	osd_hw.afbc_err_cnt = 0;
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_SIMPLE) {
 		data32 = osd_reg_read(
 			hw_osd_reg_array[OSD1].osd_fifo_ctrl_stat);

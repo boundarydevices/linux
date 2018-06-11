@@ -200,4 +200,5 @@ void osd_set_single_step(u32 osd_single_step);
 void output_save_info(void);
 void osd_get_rotate(u32 index, u32 *osd_rotate);
 void osd_set_rotate(u32 index, u32 osd_rotate);
+void osd_get_afbc_err_cnt(u32 *err_cnt);
 #endif

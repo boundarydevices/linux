@@ -341,7 +341,8 @@ static void osd_debug_dump_register_all(void)
 	}
 
 	if (osd_hw.osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_G12B) {
-		if (osd_hw.osd_meson_dev.has_viu2) {
+		if (osd_hw.osd_meson_dev.has_viu2 &&
+			osd_hw.powered[OSD4]) {
 			reg = VPP2_MISC;
 			osd_log_info("reg[0x%x]: 0x%08x\n",
 				reg, osd_reg_read(reg));

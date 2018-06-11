@@ -719,6 +719,7 @@ struct hw_para_s {
 	u32 hdr_used;
 	u32 basic_urgent;
 	u32 two_ports;
+	u32 afbc_err_cnt;
 	struct hw_debug_s osd_debug;
 	int out_fence_fd;
 	int in_fd[HW_OSD_COUNT];
