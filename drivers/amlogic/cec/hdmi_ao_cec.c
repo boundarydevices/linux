@@ -2603,8 +2603,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 		ee_cec = 1;
 	else
 		ee_cec = 0;
-	CEC_ERR("using EE cec:%d\n", ee_cec);
-
+	CEC_ERR("using cec:%d\n", ee_cec);
 	/* pinmux set */
 	if (of_get_property(node, "pinctrl-names", NULL)) {
 		pin = devm_pinctrl_get(&pdev->dev);
@@ -2714,12 +2713,16 @@ static int aml_cec_probe(struct platform_device *pdev)
 
 	/* irq set */
 	cec_irq_enable(false);
-	if (ee_cec)
+	if (of_irq_count(node) > 1) {
+		if (ee_cec)
+			irq_idx = of_irq_get(node, 0);
+		else
+			irq_idx = of_irq_get(node, 1);
+	} else {
 		irq_idx = of_irq_get(node, 0);
-	else
-		irq_idx = of_irq_get(node, 1);
+	}
 	cec_dev->irq_cec = irq_idx;
-	/*CEC_INFO("irq no:%d\n", irq_idx);*/
+	CEC_ERR("irq cnt:%d,cur no:%d\n", of_irq_count(node), irq_idx);
 	if (of_get_property(node, "interrupt-names", NULL)) {
 		r = of_property_read_string(node, "interrupt-names", &irq_name);
 		if (!r && !ee_cec) {
