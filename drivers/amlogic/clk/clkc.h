@@ -286,4 +286,5 @@ void meson_g12a_media_init(void);
 void meson_g12a_gpu_init(void);
 void meson_g12a_misc_init(void);
 
+extern int clk_numbers;
 #endif /* __CLKC_H */

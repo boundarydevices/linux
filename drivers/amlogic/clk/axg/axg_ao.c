@@ -125,6 +125,7 @@ static void __init axg_aoclkc_init(struct device_node *np)
 			/* return -ENOMEM; */
 			return;
 		}
+		clk_numbers = NR_CLKS;
 	}
 
 	for (clkid = CLKID_AO_BASE; clkid < NR_CLKS; clkid++) {

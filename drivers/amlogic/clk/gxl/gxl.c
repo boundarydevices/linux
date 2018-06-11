@@ -28,6 +28,7 @@
 
 DEFINE_SPINLOCK(clk_lock);
 struct clk **clks;
+int clk_numbers;
 static struct clk_onecell_data clk_data;
 void __iomem *clk_base;
 /* #undef pr_debug */
@@ -1071,6 +1072,7 @@ static void __init gxl_clkc_init(struct device_node *np)
 		/* return -ENOMEM; */
 		return;
 	}
+	clk_numbers = NR_CLKS;
 	/* pr_debug("%s: kzalloc clks ok!", __func__); */
 	clk_data.clks = clks;
 	clk_data.clk_num = NR_CLKS;

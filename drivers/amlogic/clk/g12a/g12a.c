@@ -871,6 +871,7 @@ static void __init g12a_clkc_init(struct device_node *np)
 			/* return -ENOMEM; */
 			return;
 		}
+		clk_numbers = NR_CLKS;
 	}
 
 	clk_data.clks = clks;

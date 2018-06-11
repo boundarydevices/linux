@@ -871,6 +871,7 @@ static void __init axg_clkc_init(struct device_node *np)
 			/* return -ENOMEM; */
 			return;
 		}
+		clk_numbers = NR_CLKS;
 	}
 
 	if (NULL == clks) {

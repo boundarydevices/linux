@@ -552,6 +552,7 @@ static void __init g12b_clkc_init(struct device_node *np)
 			pr_err("%s: alloc clks fail!", __func__);
 			return;
 		}
+		clk_numbers = NR_CLKS;
 	}
 
 	/*

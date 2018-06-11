@@ -975,7 +975,7 @@ static void __init txlx_clkc_init(struct device_node *np)
 		pr_err("%s: error: not kzalloc clks in eeclk!", __func__);
 		return;
 	}
-
+	clk_numbers = NR_CLKS;
 	clk_data.clks = clks;
 	clk_data.clk_num = NR_CLKS;
 

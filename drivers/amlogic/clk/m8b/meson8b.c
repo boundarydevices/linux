@@ -30,6 +30,7 @@ DEFINE_SPINLOCK(clk_lock);
 struct clk **clks;
 void __iomem *clk_base;
 static struct clk_onecell_data clk_data;
+int clk_numbers;
 
 static const struct pll_rate_table sys_pll_rate_table[] = {
 	PLL_RATE(312000000, 52, 1, 2),
@@ -732,6 +733,7 @@ static void __init meson8b_clkc_init(struct device_node *np)
 		/* return -ENOMEM; */
 		return;
 	}
+	clk_numbers = NR_CLKS;
 	clk_data.clks = clks;
 	clk_data.clk_num = NR_CLKS;
 	/*

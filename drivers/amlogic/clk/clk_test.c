@@ -29,7 +29,8 @@
 #include "clkc.h"
 
 static struct dentry *debugfs_root;
-#define NR_CLKS 221
+//#define NR_CLKS 221
+
 void usage(void)
 {
 	pr_info("\nclk_test:\n");
@@ -44,7 +45,7 @@ struct clk *aml_get_clk_by_name(char *name)
 	int idx;
 	struct clk *cur_clk;
 
-	for (idx = 0; idx < NR_CLKS; idx++) {
+	for (idx = 0; idx < clk_numbers; idx++) {
 		if (!clks[idx]) {
 			pr_debug("no such clk clks[%d]\n", idx);
 			continue;
