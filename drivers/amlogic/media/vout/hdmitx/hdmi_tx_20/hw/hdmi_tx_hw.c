@@ -2476,11 +2476,25 @@ static int hdmitx_cntl(struct hdmitx_dev *hdev, unsigned int cmd,
 		return 0;
 	} else if (cmd == HDMITX_EARLY_SUSPEND_RESUME_CNTL) {
 		if (argv == HDMITX_EARLY_SUSPEND) {
-			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0, 30, 1);
+			/* RESET set as 1, delay 50us, Enable set as 0 */
+			/* G12A reset/enable bit position is different */
+			switch (hdev->chip_type) {
+			case MESON_CPU_ID_G12A:
+				hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 1, 29, 1);
+				udelay(50);
+				hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0, 28, 1);
+				break;
+			default:
+				hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 1, 28, 1);
+				udelay(50);
+				hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0, 30, 1);
+				break;
+			}
 			hdmi_phy_suspend();
 		}
 		if (argv == HDMITX_LATE_RESUME) {
-			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 1, 30, 1);
+			/* No need below, will be set at set_disp_mode_auto() */
+			/* hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 1, 30, 1); */
 			hw_reset_dbg();
 			pr_info(HW "swrstzreq\n");
 		}
