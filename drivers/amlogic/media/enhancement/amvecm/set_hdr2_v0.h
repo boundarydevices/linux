@@ -64,7 +64,8 @@ enum hdr_process_sel {
 	HLG_BYPASS = 0x8,
 	HLG_SDR = 0x10,
 	HLG_HDR = 0x20,
-	HDRPLUS_SDR = 0x40,
+	SDR_HLG = 0X40,
+	HDRPLUS_SDR = 0x80,
 	HDR_p_MAX
 };
 

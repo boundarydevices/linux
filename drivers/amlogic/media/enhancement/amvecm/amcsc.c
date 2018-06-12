@@ -263,7 +263,7 @@ struct hdr_osd_reg_s hdr_osd_reg = {
 	-1 /* shadow mode */
 };
 
-#define HDR_VERSION   "----v4_20180516-----\n"
+#define HDR_VERSION   "----gxl_20180516---g12a_20180614-----\n"
 
 static struct vframe_s *dbg_vf;
 static struct master_display_info_s dbg_hdr_send;
@@ -4560,7 +4560,7 @@ static int hlg_process(
 	int i, j;
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-		hdr_func(VD1_HDR, HDR_SDR);
+		hdr_func(VD1_HDR, HLG_SDR);
 		hdr_func(OSD1_HDR, HDR_BYPASS);
 		return need_adjust_contrast_saturation;
 	}
@@ -4782,9 +4782,13 @@ static void bypass_hdr_process(
 		hdr_func(VD1_HDR, HDR_BYPASS);
 		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
 			((vinfo->hdr_info.hdr_support & 0xc) &&
-			(vinfo->viu_color_fmt != COLOR_FMT_RGB444)))
-			hdr_func(OSD1_HDR, SDR_HDR);
-		else
+			(vinfo->viu_color_fmt != COLOR_FMT_RGB444))) {
+			if (get_hdr_type() & HLG_FLAG)
+				hdr_func(OSD1_HDR, SDR_HLG);
+			else
+				hdr_func(OSD1_HDR, SDR_HDR);
+			pr_csc("\t osd sdr->hdr/hlg\n");
+		} else
 			hdr_func(OSD1_HDR, HDR_BYPASS);
 		return;
 	}
@@ -5853,7 +5857,8 @@ static int vpp_matrix_update(
 	} else {
 		hdr_process_mode = 0;
 		if (vinfo->hdr_info.hdr_support & HDR_SUPPORT) {
-			if (force_pure_hlg)
+			if ((vinfo->hdr_info.hdr_support & HLG_SUPPORT) ||
+				(force_pure_hlg))
 				hlg_process_mode = 0;
 			else
 				hlg_process_mode = 1;
@@ -6040,6 +6045,7 @@ static int vpp_matrix_update(
 					| (1 << 16)	/* bt709 */
 					| (1 << 8)	/* bt709 */
 					| (1 << 0);	/* bt709 */
+			amvecm_cp_hdr_info(&send_info, p);
 			if (vdev) {
 				if (vdev->fresh_tx_hdr_pkt)
 					vdev->fresh_tx_hdr_pkt(&send_info);
