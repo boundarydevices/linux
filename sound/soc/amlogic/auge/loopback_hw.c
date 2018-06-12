@@ -122,35 +122,46 @@ void datalb_ctrl(struct loopback_cfg *lb_cfg)
 		return;
 	}
 
-	/*swap same as tdmout */
-	reg = reg_base + offset * id;
-	audiobus_write(EE_AUDIO_TDMIN_LB_SWAP,
-		audiobus_read(reg));
+	if (lb_cfg->datain_datalb_total > 8) {
+		audiobus_write(
+				EE_AUDIO_TDMIN_LB_SWAP,
+				lb_cfg->datalb_chswap);
 
-	/*mask same as datalb*/
-	/* mask 0 */
-	reg += 1;
-	audiobus_write(
-		EE_AUDIO_TDMIN_LB_MASK0,
-		audiobus_read(reg));
+		audiobus_write(EE_AUDIO_TDMIN_LB_MASK0, 3);
+		audiobus_write(EE_AUDIO_TDMIN_LB_MASK1, 3);
+		audiobus_write(EE_AUDIO_TDMIN_LB_MASK2, 3);
+		audiobus_write(EE_AUDIO_TDMIN_LB_MASK3, 3);
+	} else {
+		/*swap same as tdmout */
+		reg = reg_base + offset * id;
+		audiobus_write(EE_AUDIO_TDMIN_LB_SWAP,
+				audiobus_read(reg));
 
-	/* mask 1 */
-	reg += 1;
-	audiobus_write(
-		EE_AUDIO_TDMIN_LB_MASK1,
-		audiobus_read(reg));
+		/*mask same as datalb*/
+		/* mask 0 */
+		reg += 1;
+		audiobus_write(
+				EE_AUDIO_TDMIN_LB_MASK0,
+				audiobus_read(reg));
 
-	/* mask 2 */
-	reg += 1;
-	audiobus_write(
-		EE_AUDIO_TDMIN_LB_MASK2,
-		audiobus_read(reg));
+		/* mask 1 */
+		reg += 1;
+		audiobus_write(
+				EE_AUDIO_TDMIN_LB_MASK1,
+				audiobus_read(reg));
 
-	/* mask 3 */
-	reg += 1;
-	audiobus_write(
-		EE_AUDIO_TDMIN_LB_MASK3,
-		audiobus_read(reg));
+		/* mask 2 */
+		reg += 1;
+		audiobus_write(
+				EE_AUDIO_TDMIN_LB_MASK2,
+				audiobus_read(reg));
+
+		/* mask 3 */
+		reg += 1;
+		audiobus_write(
+				EE_AUDIO_TDMIN_LB_MASK3,
+				audiobus_read(reg));
+	}
 }
 
 void lb_mode(int mode)

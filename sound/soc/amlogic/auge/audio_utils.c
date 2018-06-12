@@ -38,6 +38,7 @@ struct snd_elem_info {
 
 static unsigned int loopback_enable;
 static unsigned int loopback_is_running;
+static unsigned int datain_datalb_total;
 
 static const char *const loopback_enable_texts[] = {
 	"Disable",
@@ -69,6 +70,23 @@ static int loopback_enable_set_enum(
 	return 0;
 }
 
+static int datain_datalb_total_get_param(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.bytes.data[0] = datain_datalb_total;
+
+	return 0;
+}
+
+static int datain_datalb_total_set_param(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	datain_datalb_total = ucontrol->value.bytes.data[0];
+
+	return 0;
+}
 
 static unsigned int loopback_datain;
 
@@ -626,6 +644,10 @@ static const struct snd_kcontrol_new snd_auge_controls[] = {
 		     loopback_enable_get_enum,
 		     loopback_enable_set_enum),
 
+	SND_SOC_BYTES_EXT("datain_datalb_total", 1,
+			   datain_datalb_total_get_param,
+			   datain_datalb_total_set_param),
+
 	/* loopback data in source */
 	SOC_ENUM_EXT("Loopback datain source",
 		     loopback_datain_enum,
@@ -995,6 +1017,7 @@ int loopback_parse_of(struct device_node *node,
 		ret = -EINVAL;
 		goto fail;
 	}
+
 	of_slot_mask = of_get_property(node, "datalb-lane-mask-in", &val);
 	if (!of_slot_mask) {
 		pr_err("if use extern loopback, pls set datalb-lane-mask-in\n");
@@ -1012,8 +1035,30 @@ int loopback_parse_of(struct device_node *node,
 					(i * 2 + 1) << (set_num++ * 4);
 			}
 		}
-
 	}
+	ret = of_property_read_u32(node, "datalb_clk",
+		&lb_cfg->datalb_clk);
+	if (ret) {
+		pr_err("if no datalb_clk on dts, it equal is datalb_src\n");
+		lb_cfg->datalb_clk = lb_cfg->datalb_src;
+	}
+
+	ret = of_property_read_u32(node, "datain_datalb_total",
+		&lb_cfg->datain_datalb_total);
+	if (ret) {
+		pr_err("no register datain_datalb_total,it also can work\n");
+		lb_cfg->datain_datalb_total = 0;
+	} else {
+		if (lb_cfg->datain_datalb_total > 8) {
+			lb_cfg->datain_chnum = 8;
+			lb_cfg->datain_chmask = 0xff;
+			lb_cfg->datalb_chnum = 8;
+			lb_cfg->datalb_chmask = 0xff;
+			lb_cfg->datalb_chswap = 0x76543210;
+		}
+	}
+	datain_datalb_total = lb_cfg->datain_datalb_total;
+
 	loopback_datain = lb_cfg->datain_src;
 	loopback_tdminlb = lb_cfg->datalb_src;
 
@@ -1026,7 +1071,7 @@ int loopback_parse_of(struct device_node *node,
 	pr_info("\tdatalb_src:%d, datalb_chnum:%d\n",
 		lb_cfg->datalb_src,
 		lb_cfg->datalb_chnum);
-	pr_info("\tdatalb_chswap:0x%x,datalb_chumask:%x\n",
+	pr_info("\tdatalb_chswap:0x%x,datalb_chmask:%x\n",
 		lb_cfg->datalb_chswap,
 		lb_cfg->datalb_chmask);
 
@@ -1189,6 +1234,15 @@ int loopback_prepare(
 	datain_config(&datain);
 	datalb_config(&datalb);
 
+	lb_cfg->datain_datalb_total = datain_datalb_total;
+
+	if (lb_cfg->datain_datalb_total > 8) {
+		lb_cfg->datain_chnum = 8;
+		lb_cfg->datain_chmask = 0xff;
+		lb_cfg->datalb_chnum = 8;
+		lb_cfg->datalb_chmask = 0xff;
+		lb_cfg->datalb_chswap = 0x76543210;
+	}
 	datalb_ctrl(lb_cfg);
 	lb_mode(lb_cfg->lb_mode);
 

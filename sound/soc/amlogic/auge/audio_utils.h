@@ -123,10 +123,12 @@ struct loopback_cfg {
 	int toddr_index;
 
 	enum tdmin_lb_src datalb_src;
+	enum tdmin_lb_src datalb_clk;
 	unsigned int datalb_chnum;
 	unsigned int datalb_chswap;
 	unsigned int datalb_chmask;
 	int frddr_index;
+	unsigned int datain_datalb_total;
 };
 
 extern void loopback_set_status(int is_running);
