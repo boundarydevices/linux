@@ -1335,7 +1335,7 @@ struct meson_cvbsout_data meson_g12a_cvbsout_data = {
 };
 
 struct meson_cvbsout_data meson_g12b_cvbsout_data = {
-	.cntl0_val = 0x906001,
+	.cntl0_val = 0x8f6001,
 	.cpu_id = CVBS_CPU_TYPE_G12B,
 	.name = "meson-g12b-cvbsout",
 };
