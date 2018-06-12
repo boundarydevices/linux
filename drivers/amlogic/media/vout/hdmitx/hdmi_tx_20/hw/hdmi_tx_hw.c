@@ -2483,6 +2483,7 @@ static int hdmitx_cntl(struct hdmitx_dev *hdev, unsigned int cmd,
 			/* G12A reset/enable bit position is different */
 			switch (hdev->chip_type) {
 			case MESON_CPU_ID_G12A:
+			case MESON_CPU_ID_G12B:
 				hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 1, 29, 1);
 				udelay(50);
 				hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0, 28, 1);
