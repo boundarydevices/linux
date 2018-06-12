@@ -47,7 +47,7 @@
 #define SCRAMBLE_SEL 1
 #define HYST_HDMI_TO_DVI 5
 /* must = 0, other agilent source fail */
-#define HYST_DVI_TO_HDMI 0
+#define HYST_DVI_TO_HDMI 1
 #define GCP_GLOBAVMUTE_EN 1 /* ag506 must clear this bit */
 #define EDID_CLK_DIV 9 /* sys clk/(9+1) = 20M */
 #define HDCP_KEY_WR_TRIES		(5)
@@ -1081,7 +1081,19 @@ void rx_hdcp14_config(const struct hdmi_rx_hdcp *hdcp)
 	unsigned int i = 0;
 	unsigned int k = 0;
 
-	hdmirx_wr_bits_dwc(DWC_HDCP_SETTINGS, HDCP_FAST_MODE, 0);
+	unsigned int data32 = 0;
+	/* I2C_SPIKE_SUPPR */
+	data32 |= 1 << 16;
+	/* FAST_I2C */
+	data32 |= 0 << 12;
+	/* ONE_DOT_ONE */
+	data32 |= 0 << 9;
+	/* FAST_REAUTH */
+	data32 |= 0 << 8;
+	/* DDC_ADDR */
+	data32 |= 0x3a << 1;
+	hdmirx_wr_dwc(DWC_HDCP_SETTINGS, data32);
+	/* hdmirx_wr_bits_dwc(DWC_HDCP_SETTINGS, HDCP_FAST_MODE, 0); */
 	/* Enable hdcp bcaps bit(bit7). In hdcp1.4 spec: Use of
 	 * this bit is reserved, hdcp Receivers not capable of
 	 * supporting HDMI must clear this bit to 0. For YAMAHA

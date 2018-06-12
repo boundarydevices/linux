@@ -1812,8 +1812,8 @@ void hdmirx_open_port(enum tvin_port_e port)
 
 void hdmirx_close_port(void)
 {
-	if (sm_pause)
-		return;
+	/* if (sm_pause) */
+	/*	return; */
 	/* External_Mute(1); */
 }
 
@@ -1967,14 +1967,13 @@ void rx_main_state_machine(void)
 	case FSM_HPD_HIGH:
 		hpd_wait_cnt++;
 		if (rx_get_cur_hpd_sts() == 0) {
-			if ((edid_update_flag) || (rx.boot_flag)) {
+			if (edid_update_flag) {
 				if (hpd_wait_cnt <= hpd_wait_max*10)
 					break;
 			} else {
 				if (hpd_wait_cnt <= hpd_wait_max)
 					break;
 			}
-			rx.boot_flag = false;
 		}
 		hpd_wait_cnt = 0;
 		clk_unstable_cnt = 0;
@@ -1987,7 +1986,10 @@ void rx_main_state_machine(void)
 		break;
 	case FSM_WAIT_CLK_STABLE:
 		if (is_clk_stable()) {
-			clk_unstable_cnt = 0;
+			if (clk_unstable_cnt != 0) {
+				rx_pr("wait clk cnt %d\n", clk_unstable_cnt);
+				clk_unstable_cnt = 0;
+			}
 			if (++clk_stable_cnt > clk_stable_max) {
 				rx.state = FSM_EQ_START;
 				clk_stable_cnt = 0;
@@ -2094,7 +2096,9 @@ void rx_main_state_machine(void)
 				 * hpd reset once to recovery, to avoid
 				 * recognition to DVI of low probability
 				 */
-				if (rx.pre.sw_dvi && dvi_check_en) {
+				if (rx.pre.sw_dvi && dvi_check_en &&
+					(rx.hdcp.hdcp_version ==
+						HDCP_VER_NONE)) {
 					rx.state = FSM_HPD_LOW;
 					dvi_check_en = false;
 					break;
@@ -2273,14 +2277,13 @@ void rx_main_state_machine(void)
 		}
 		hpd_wait_cnt++;
 		if (rx_get_cur_hpd_sts() == 0) {
-			if ((edid_update_flag) || (rx.boot_flag)) {
+			if (edid_update_flag) {
 				if (hpd_wait_cnt <= hpd_wait_max*10)
 					break;
 			} else {
 				if (hpd_wait_cnt <= hpd_wait_max)
 					break;
 			}
-			rx.boot_flag = false;
 		}
 		hpd_wait_cnt = 0;
 		pre_port = rx.port;
@@ -2407,7 +2410,9 @@ void rx_main_state_machine(void)
 				}
 				sig_stable_cnt = 0;
 				sig_unstable_cnt = 0;
-				if (rx.pre.sw_dvi && dvi_check_en) {
+				if (rx.pre.sw_dvi && dvi_check_en &&
+					(rx.hdcp.hdcp_version ==
+						HDCP_VER_NONE)) {
 					rx.state = FSM_HPD_LOW;
 					dvi_check_en = false;
 					break;
@@ -2910,6 +2915,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("------------------\n");
 		rx_pr("Hdmirx version0: %s\n", RX_VER0);
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
+		rx_pr("Hdmirx version2: %s\n", RX_VER2);
 		rx_pr("------------------\n");
 	}
 	return 0;

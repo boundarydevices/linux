@@ -1146,10 +1146,10 @@ int rx_pr(const char *fmt, ...)
 		strncpy(buf + 5, fmt + pos, (sizeof(buf) - 5));
 	} else
 		strcpy(buf, fmt);
-	/* if (fmt[strlen(fmt) - 1] == '\n') */
-		/* last_break = 1; */
-	/* else */
-		/* last_break = 0; */
+	if (fmt[strlen(fmt) - 1] == '\n')
+		last_break = 1;
+	else
+		last_break = 0;
 	if (log_level & LOG_EN) {
 		va_start(args, fmt);
 		vprintk(buf, args);
