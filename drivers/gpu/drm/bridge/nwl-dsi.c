@@ -407,7 +407,21 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 
 	if (burst_mode) {
 		nwl_dsi_write(dsi, VIDEO_MODE, 0x2);
-		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, 256);
+		/*
+		 *
+		 * minimum of
+		 * (hactive - x)/dpi_rate = hactive / mipi_rate
+		 * (hactive - x) = hactive * dpi_rate / mipi_rate
+		 * x = hactive - hactive * dpi_rate / mipi_rate
+		 * x = hactive(1 - dpi_rate/mipi_rate)
+		 *
+		 * So, if dpi_rate/mipi_rate = 3/4, hactive = 1920
+		 * 1920(1 - 3/4) = 1920 / 4 = 480
+		 * 1280/4 = 320
+		 *
+		 * maximum of about h. blanking period more.(just a guess)
+		 */
+		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, 0 ? 480 : 256);
 	} else {
 		nwl_dsi_write(dsi, VIDEO_MODE,
 			(dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) ? 0 : 1);
