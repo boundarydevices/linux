@@ -265,47 +265,6 @@ err_register:
 	return ret;
 }
 
-static int dcss_clks_init(struct dcss_soc *dcss)
-{
-	int ret, i, j;
-	struct {
-		const char *id;
-		struct clk **clk;
-		bool required;
-	} clks[] = {
-		{"apb",   &dcss->apb_clk, true},
-		{"axi",   &dcss->axi_clk, true},
-		{"pix",   &dcss->pix_clk, true},
-		{"rtrm",  &dcss->rtrm_clk, true},
-		{"dtrc",  &dcss->dtrc_clk, true},
-		{"pll_src",  &dcss->pll_src_clk, dcss->hdmi_output},
-		{"pll_phy_ref",  &dcss->pll_phy_ref_clk, dcss->hdmi_output},
-	};
-
-	for (i = 0; i < ARRAY_SIZE(clks); i++) {
-		*clks[i].clk = devm_clk_get(dcss->dev, clks[i].id);
-		if (IS_ERR(*clks[i].clk) && clks[i].required) {
-			dev_err(dcss->dev, "failed to get %s clock\n",
-				clks[i].id);
-			ret = PTR_ERR(*clks[i].clk);
-			goto err;
-		}
-
-		if (clks[i].required)
-			clk_prepare_enable(*clks[i].clk);
-	}
-
-	dcss->clks_on = true;
-
-	return 0;
-
-err:
-	for (j = 0; j < i; j++)
-		clk_disable_unprepare(*clks[j].clk);
-
-	return ret;
-}
-
 static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 {
 	if (en && !dcss->clks_on) {
@@ -333,6 +292,37 @@ static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 	}
 
 	dcss->clks_on = en;
+}
+
+static int dcss_clks_init(struct dcss_soc *dcss)
+{
+	int ret, i;
+	struct {
+		const char *id;
+		struct clk **clk;
+		bool required;
+	} clks[] = {
+		{"apb",   &dcss->apb_clk, true},
+		{"axi",   &dcss->axi_clk, true},
+		{"pix",   &dcss->pix_clk, true},
+		{"rtrm",  &dcss->rtrm_clk, true},
+		{"dtrc",  &dcss->dtrc_clk, true},
+		{"pll_src",  &dcss->pll_src_clk, dcss->hdmi_output},
+		{"pll_phy_ref",  &dcss->pll_phy_ref_clk, dcss->hdmi_output},
+	};
+
+	for (i = 0; i < ARRAY_SIZE(clks); i++) {
+		*clks[i].clk = devm_clk_get(dcss->dev, clks[i].id);
+		if (IS_ERR(*clks[i].clk) && clks[i].required) {
+			dev_err(dcss->dev, "failed to get %s clock\n",
+				clks[i].id);
+			ret = PTR_ERR(*clks[i].clk);
+			return ret;
+		}
+	}
+
+	dcss_clocks_enable(dcss, 1);
+	return 0;
 }
 
 #ifdef CONFIG_DEBUG_FS
