@@ -404,10 +404,19 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 		const char *bf;
 		struct panel_desc *ds = &panel->dt_desc;
 		struct device_node *np = dev->of_node;
+		u32 bridge_de_active;
+		u32 bridge_sync_active;
 
 		of_property_read_u32(np, "panel-width-mm", &ds->size.width);
 		of_property_read_u32(np, "panel-height-mm", &ds->size.height);
 		err = of_get_videomode(np, &vm, 0);
+		if (of_property_read_u32(np, "bridge-de-active", &bridge_de_active)) {
+			bridge_de_active = -1;
+		}
+		if (of_property_read_u32(np, "bridge-sync-active", &bridge_sync_active)) {
+			bridge_sync_active = -1;
+		}
+
 		if (err < 0)
 			return err;
 		drm_display_mode_from_videomode(&vm, dm);
@@ -415,6 +424,20 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 			ds->bus_flags |= DRM_BUS_FLAG_DE_HIGH;
 		if (vm.flags & DISPLAY_FLAGS_DE_LOW)
 			ds->bus_flags |= DRM_BUS_FLAG_DE_LOW;
+		if (bridge_de_active <= 1) {
+			ds->bus_flags &= ~(DRM_BUS_FLAG_DE_HIGH |
+					DRM_BUS_FLAG_DE_LOW);
+			ds->bus_flags |= bridge_de_active ? DRM_BUS_FLAG_DE_HIGH
+					: DRM_BUS_FLAG_DE_LOW;
+		}
+		if (bridge_sync_active <= 1) {
+			dm->flags &= ~(
+				DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC |
+				DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC);
+			dm->flags |= bridge_sync_active ?
+				DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC :
+				DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC;
+		}
 		if (vm.flags & DISPLAY_FLAGS_PIXDATA_NEGEDGE)
 			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_NEGEDGE;
 		if (vm.flags & DISPLAY_FLAGS_PIXDATA_POSEDGE)
