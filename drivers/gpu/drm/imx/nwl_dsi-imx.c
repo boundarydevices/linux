@@ -54,18 +54,6 @@
 #define PXL_VLD(x)	SC_C_PXL_LINK_MST ## x ## _VLD
 #define PXL_ADDR(x)	SC_C_PXL_LINK_MST ## x ## _ADDR
 
-/* Possible clocks */
-#define CLK_PIXEL	"pixel"
-#define CLK_CORE	"core"
-#define CLK_BYPASS	"bypass"
-#define CLK_PHYREF	"phy_ref"
-
-/* Possible valid PHY reference clock rates*/
-u32 phyref_rates[] = {
-	24000000,
-	25000000,
-	27000000,
-};
 
 struct imx_mipi_dsi {
 	struct drm_encoder		encoder;
@@ -90,7 +78,6 @@ struct imx_mipi_dsi {
 	unsigned long			pix_clk;
 	u32				phyref_rate;
 	u32				instance;
-	u32				sync_pol;
 	u32				power_on_delay;
 	bool				enabled;
 	bool				suspended;
@@ -117,7 +104,20 @@ struct devtype {
 	u32 tx_ulps_reg;
 	u32 pxl2dpi_reg;
 	u8 max_instances;
-	struct clk_config clk_config[4];
+
+/* Possible clocks */
+#define CLK_CORE	"core"
+#define CLK_PIXEL	"pixel"
+#define CLK_BYPASS	"bypass"
+#define CLK_PHYREF	"phy_ref"
+#define CLK_PIXEL_PLL	"pixel_pll"
+
+#define NCLK_CORE	0
+#define NCLK_PIXEL	1
+#define NCLK_BYPASS	2
+#define NCLK_PHYREF	3
+#define NCLK_PIXEL_PLL	4
+	struct clk_config clk_config[5];
 };
 
 static int imx8qm_dsi_poweron(struct imx_mipi_dsi *dsi);
@@ -126,10 +126,11 @@ static struct devtype imx8qm_dev = {
 	.poweron = &imx8qm_dsi_poweron,
 	.poweroff = &imx8qm_dsi_poweroff,
 	.clk_config = {
-		{ .id = CLK_CORE,   .present = false },
-		{ .id = CLK_PIXEL,  .present = true },
-		{ .id = CLK_BYPASS, .present = true },
-		{ .id = CLK_PHYREF, .present = true },
+		[NCLK_CORE]      = { .id = CLK_CORE,   .present = false },
+		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
+		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
+		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
+		[NCLK_PIXEL_PLL] = { .id = CLK_PIXEL_PLL,  .present = false },
 	},
 	.ext_regs = IMX_REG_CSR,
 	.tx_ulps_reg   = 0x00,
@@ -143,10 +144,11 @@ static struct devtype imx8qxp_dev = {
 	.poweron = &imx8qxp_dsi_poweron,
 	.poweroff = &imx8qxp_dsi_poweroff,
 	.clk_config = {
-		{ .id = CLK_CORE,   .present = false },
-		{ .id = CLK_PIXEL,  .present = true },
-		{ .id = CLK_BYPASS, .present = true },
-		{ .id = CLK_PHYREF, .present = true },
+		[NCLK_CORE]      = { .id = CLK_CORE,   .present = false },
+		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
+		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
+		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
+		[NCLK_PIXEL_PLL] = { .id = CLK_PIXEL_PLL,  .present = false },
 	},
 	.ext_regs = IMX_REG_CSR,
 	.tx_ulps_reg   = 0x30,
@@ -160,10 +162,11 @@ static struct devtype imx8mq_dev = {
 	.poweron = &imx8mq_dsi_poweron,
 	.poweroff = &imx8mq_dsi_poweroff,
 	.clk_config = {
-		{ .id = CLK_CORE,   .present = true },
-		{ .id = CLK_PIXEL,  .present = false },
-		{ .id = CLK_BYPASS, .present = false },
-		{ .id = CLK_PHYREF, .present = true },
+		[NCLK_CORE]      = { .id = CLK_CORE,   .present = true },
+		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = false },
+		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = false },
+		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
+		[NCLK_PIXEL_PLL] = { .id = CLK_PIXEL_PLL,  .present = true },
 	},
 	.ext_regs = IMX_REG_SRC | IMX_REG_GPR,
 	.max_instances = 1,
@@ -201,7 +204,7 @@ static void imx_nwl_dsi_set_clocks(struct imx_mipi_dsi *dsi, bool enable)
 		enabled = dsi->clk_config[i].enabled;
 
 		/* BYPASS clk must have the same rate as PHY_REF clk */
-		if (!strcmp(id, CLK_BYPASS) || !strcmp(id, CLK_PHYREF))
+		if (i == NCLK_BYPASS || i == NCLK_PHYREF)
 			new_rate = dsi->phyref_rate;
 
 		if (enable) {
@@ -487,6 +490,7 @@ static void imx_nwl_dsi_enable(struct imx_mipi_dsi *dsi)
 	 * into the DSI host driver.
 	 */
 	bit_clk = nwl_dsi_get_bit_clock(dsi->next_bridge, dsi->pix_clk);
+//	bit_clk = (bit_clk / 3) * 4;
 	if (bit_clk != dsi->bit_clk) {
 		mixel_phy_mipi_set_phy_speed(dsi->phy,
 			bit_clk,
@@ -543,35 +547,21 @@ static void imx_nwl_dsi_disable(struct imx_mipi_dsi *dsi)
 	dsi->enabled = false;
 }
 
-static void imx_nwl_update_sync_polarity(unsigned int *flags, u32 sync_pol)
-{
-	/* Make sure all flags are set-up accordingly */
-	if (sync_pol) {
-		*flags |= DRM_MODE_FLAG_PHSYNC;
-		*flags |= DRM_MODE_FLAG_PVSYNC;
-		*flags &= ~DRM_MODE_FLAG_NHSYNC;
-		*flags &= ~DRM_MODE_FLAG_NVSYNC;
-	} else {
-		*flags &= ~DRM_MODE_FLAG_PHSYNC;
-		*flags &= ~DRM_MODE_FLAG_PVSYNC;
-		*flags |= DRM_MODE_FLAG_NHSYNC;
-		*flags |= DRM_MODE_FLAG_NVSYNC;
-	}
-}
-
-/*
- * This function will try the required phy speed for current mode
- * If the phy speed can be achieved, the phy will save the speed
- * configuration
- */
-static int imx_nwl_try_phy_speed(struct imx_mipi_dsi *dsi,
-			    struct drm_display_mode *mode)
+static bool do_imx_nwl_dsi_bridge_mode_fixup(struct imx_mipi_dsi *dsi,
+		struct drm_display_mode *mode)
 {
 	struct device *dev = dsi->dev;
 	unsigned long pixclock;
 	unsigned long bit_clk;
-	size_t i, num_rates = ARRAY_SIZE(phyref_rates);
+	unsigned long phyref_rate;
 	int ret = 0;
+	struct clk *clk;
+
+	/*
+	 * Now try the required phy speed for current mode
+	 * If the phy speed can be achieved, the phy will save the speed
+	 * configuration
+	 */
 
 	pixclock = mode->clock * 1000;
 	/*
@@ -579,23 +569,30 @@ static int imx_nwl_try_phy_speed(struct imx_mipi_dsi *dsi,
 	 * about bits-per-pixel and number of lanes from DSI device
 	 */
 	bit_clk = nwl_dsi_get_bit_clock(dsi->next_bridge, pixclock);
+	clk = dsi->clk_config[NCLK_PIXEL_PLL].clk;
+	if (dsi->clk_config[NCLK_PIXEL_PLL].present)
+		clk_set_rate(clk, bit_clk);
+
+//	bit_clk = (bit_clk / 3) * 4;
 
 	/* If bit_clk is the same with current, we're good */
 	if (bit_clk == dsi->bit_clk)
 		return 0;
 
-	for (i = 0; i < num_rates; i++) {
-		dsi->phyref_rate = phyref_rates[i];
-		DRM_DEV_DEBUG_DRIVER(dev, "Trying PHY ref rate: %u\n",
-			dsi->phyref_rate);
-		ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
-			bit_clk,
-			dsi->phyref_rate,
-			false);
-		/* Pick the first non-failing rate */
-		if (!ret)
-			break;
-	}
+	phyref_rate = bit_clk;
+	while (phyref_rate >= 48000000)
+		phyref_rate >>= 1;
+
+	clk = dsi->clk_config[NCLK_PHYREF].clk;
+	phyref_rate = clk_round_rate(clk, phyref_rate);
+	dsi->phyref_rate = phyref_rate;
+	DRM_DEV_DEBUG_DRIVER(dev, "Trying PHY ref rate: %u\n",
+		dsi->phyref_rate);
+	ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
+		bit_clk,
+		dsi->phyref_rate,
+		false);
+
 	if (ret < 0) {
 		DRM_DEV_ERROR(dev,
 			"Cannot setup PHY for mode: %ux%u @%d kHz\n",
@@ -634,13 +631,9 @@ static int imx_nwl_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 {
 	struct imx_crtc_state *imx_crtc_state = to_imx_crtc_state(crtc_state);
 	struct imx_mipi_dsi *dsi = encoder_to_dsi(encoder);
-	unsigned int *flags = &crtc_state->adjusted_mode.flags;
 
 	imx_crtc_state->bus_format = MEDIA_BUS_FMT_RGB101010_1X30;
-	imx_nwl_update_sync_polarity(flags, dsi->sync_pol);
-
-	/* Try to see if the phy can satisfy the current mode */
-	return imx_nwl_try_phy_speed(dsi, &crtc_state->adjusted_mode);
+	return do_imx_nwl_dsi_bridge_mode_fixup(dsi, &crtc_state->adjusted_mode);
 }
 
 static const struct drm_encoder_helper_funcs
@@ -680,12 +673,7 @@ static bool imx_nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			   const struct drm_display_mode *mode,
 			   struct drm_display_mode *adjusted_mode)
 {
-	struct imx_mipi_dsi *dsi = bridge->driver_private;
-	unsigned int *flags = &adjusted_mode->flags;
-
-	imx_nwl_update_sync_polarity(flags, dsi->sync_pol);
-
-	return (imx_nwl_try_phy_speed(dsi, adjusted_mode) == 0);
+	return (do_imx_nwl_dsi_bridge_mode_fixup(bridge->driver_private, adjusted_mode) == 0);
 }
 
 static int imx_nwl_dsi_bridge_attach(struct drm_bridge *bridge)
@@ -793,7 +781,6 @@ static int imx_nwl_dsi_parse_of(struct device *dev, bool as_bridge)
 	dsi->tx_ulps_reg = devtype->tx_ulps_reg;
 	dsi->pxl2dpi_reg = devtype->pxl2dpi_reg;
 
-	of_property_read_u32(np, "sync-pol", &dsi->sync_pol);
 	of_property_read_u32(np, "pwr-delay", &dsi->power_on_delay);
 
 	/* Look for optional regmaps */
