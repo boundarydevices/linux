@@ -3683,12 +3683,6 @@ static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 		return hdmitx_hpd_hw_op(argv);
 	case MISC_HPD_GPI_ST:
 		return hdmitx_hpd_hw_op(HPD_READ_HPD_GPIO);
-	case MISC_HPLL_OP:
-		if (argv == HPLL_ENABLE)
-			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 1, 30, 1);
-		if (argv == HPLL_DISABLE)
-			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0, 30, 1);
-		break;
 	case MISC_HPLL_FAKE:
 		hdmitx_set_fake_vic(hdev);
 		break;

@@ -212,7 +212,9 @@ static int hdmitx_reboot_notifier(struct notifier_block *nb,
 	hdev->HWOp.CntlMisc(hdev, MISC_AVMUTE_OP, SET_AVMUTE);
 	mdelay(100);
 	hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
-	hdev->HWOp.CntlMisc(hdev, MISC_HPLL_OP, HPLL_DISABLE);
+	hdev->HWOp.Cntl(hdev, HDMITX_EARLY_SUSPEND_RESUME_CNTL,
+		HDMITX_EARLY_SUSPEND);
+
 	return NOTIFY_OK;
 }
 
