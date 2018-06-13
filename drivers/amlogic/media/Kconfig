@@ -39,6 +39,15 @@ config AMLOGIC_MEDIA_MULTI_DEC
 	bool "Support multi-instance decoding"
 	default n
 
+config AMLOGIC_AVSP_LONG_CABAC
+	bool "GXL support avs long cabac"
+	default n
+	help
+		This option is used only to configure GXL avs
+		decode, other platform behind GXL is not need.
+		disable it to save memory default.
+
+
 if AMLOGIC_MEDIA_COMMON
 source "drivers/amlogic/media/common/Kconfig"
 endif
