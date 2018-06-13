@@ -265,9 +265,30 @@ err_register:
 	return ret;
 }
 
+static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
+{
+	if (en && !dcss->clks_on) {
+		clk_prepare_enable(dcss->axi_clk);
+		clk_prepare_enable(dcss->apb_clk);
+		clk_prepare_enable(dcss->rtrm_clk);
+		clk_prepare_enable(dcss->dtrc_clk);
+		clk_prepare_enable(dcss->pix_clk);
+	}
+
+	if (!en && dcss->clks_on) {
+		clk_disable_unprepare(dcss->pix_clk);
+		clk_disable_unprepare(dcss->dtrc_clk);
+		clk_disable_unprepare(dcss->rtrm_clk);
+		clk_disable_unprepare(dcss->apb_clk);
+		clk_disable_unprepare(dcss->axi_clk);
+	}
+
+	dcss->clks_on = en;
+}
+
 static int dcss_clks_init(struct dcss_soc *dcss)
 {
-	int ret, i, j;
+	int ret, i;
 	struct {
 		const char *id;
 		struct clk **clk;
@@ -290,43 +311,12 @@ static int dcss_clks_init(struct dcss_soc *dcss)
 			dev_err(dcss->dev, "failed to get %s clock\n",
 				clks[i].id);
 			ret = PTR_ERR(*clks[i].clk);
-			goto err;
+			return ret;
 		}
-
-		if (!clks[i].optional)
-			clk_prepare_enable(*clks[i].clk);
 	}
 
-	dcss->clks_on = true;
-
+	dcss_clocks_enable(dcss, 1);
 	return 0;
-
-err:
-	for (j = 0; j < i; j++)
-		clk_disable_unprepare(*clks[j].clk);
-
-	return ret;
-}
-
-static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
-{
-	if (en && !dcss->clks_on) {
-		clk_prepare_enable(dcss->axi_clk);
-		clk_prepare_enable(dcss->apb_clk);
-		clk_prepare_enable(dcss->rtrm_clk);
-		clk_prepare_enable(dcss->dtrc_clk);
-		clk_prepare_enable(dcss->pix_clk);
-	}
-
-	if (!en && dcss->clks_on) {
-		clk_disable_unprepare(dcss->pix_clk);
-		clk_disable_unprepare(dcss->dtrc_clk);
-		clk_disable_unprepare(dcss->rtrm_clk);
-		clk_disable_unprepare(dcss->apb_clk);
-		clk_disable_unprepare(dcss->axi_clk);
-	}
-
-	dcss->clks_on = en;
 }
 
 #ifdef CONFIG_DEBUG_FS
