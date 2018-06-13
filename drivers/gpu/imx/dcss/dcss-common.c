@@ -263,44 +263,6 @@ err_register:
 	return ret;
 }
 
-static int dcss_clks_init(struct dcss_soc *dcss)
-{
-	int ret, i, j;
-	struct {
-		const char *id;
-		struct clk **clk;
-	} clks[] = {
-		{"apb",   &dcss->apb_clk},
-		{"axi",   &dcss->axi_clk},
-		{"pix_div", &dcss->pdiv_clk},
-		{"pix_out", &dcss->pout_clk},
-		{"rtrm",  &dcss->apb_clk},
-		{"dtrc",  &dcss->dtrc_clk},
-	};
-
-	for (i = 0; i < ARRAY_SIZE(clks); i++) {
-		*clks[i].clk = devm_clk_get(dcss->dev, clks[i].id);
-		if (IS_ERR(*clks[i].clk)) {
-			dev_err(dcss->dev, "failed to get %s clock\n",
-				clks[i].id);
-			ret = PTR_ERR(*clks[i].clk);
-			goto err;
-		}
-
-		clk_prepare_enable(*clks[i].clk);
-	}
-
-	dcss->clks_on = true;
-
-	return 0;
-
-err:
-	for (j = 0; j < i; j++)
-		clk_disable_unprepare(*clks[j].clk);
-
-	return ret;
-}
-
 static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 {
 	if (en && !dcss->clks_on) {
@@ -322,6 +284,35 @@ static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 	}
 
 	dcss->clks_on = en;
+}
+
+static int dcss_clks_init(struct dcss_soc *dcss)
+{
+	int ret, i;
+	struct {
+		const char *id;
+		struct clk **clk;
+	} clks[] = {
+		{"apb",   &dcss->apb_clk},
+		{"axi",   &dcss->axi_clk},
+		{"pix_div", &dcss->pdiv_clk},
+		{"pix_out", &dcss->pout_clk},
+		{"rtrm",  &dcss->apb_clk},
+		{"dtrc",  &dcss->dtrc_clk},
+	};
+
+	for (i = 0; i < ARRAY_SIZE(clks); i++) {
+		*clks[i].clk = devm_clk_get(dcss->dev, clks[i].id);
+		if (IS_ERR(*clks[i].clk)) {
+			dev_err(dcss->dev, "failed to get %s clock\n",
+				clks[i].id);
+			ret = PTR_ERR(*clks[i].clk);
+			return ret;
+		}
+	}
+
+	dcss_clocks_enable(dcss, 1);
+	return 0;
 }
 
 #ifdef CONFIG_DEBUG_FS
