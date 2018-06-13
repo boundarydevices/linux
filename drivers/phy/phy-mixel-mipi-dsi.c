@@ -198,9 +198,11 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 
 	/* simulated fixed point with 3 decimals */
 	div_rate = (bit_clk * 1000) / ref_clk;
+	if (div_rate % 1000 >= 995)
+		div_rate = (bit_clk * 1000) / (ref_clk - 1);
 
 	while (denominator <= 256) {
-		if (div_rate % 1000 == 0)
+		if (div_rate % 1000 <= 2)
 			numerator = div_rate / 1000;
 		if (numerator > 15)
 			break;
@@ -221,8 +223,11 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 		}
 	}
 
-	if (numerator < 16 || numerator > 255)
+	if (numerator < 16 || numerator > 255) {
+		pr_info("%s: bit_clk=%ld ref_clk=%ld, numerator=%d, denominator=%d\n",
+			__func__, bit_clk, ref_clk, numerator, denominator);
 		return -EINVAL;
+	}
 
 	if (best_match)
 		numerator = DIV_ROUND_UP(numerator, denominator) * denominator;
@@ -236,7 +241,7 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 	priv->divider.cm = numerator;
 
 	priv->data_rate = bit_clk;
-	priv->frequency = (ref_clk / 2) * numerator / denominator;
+	priv->frequency = ref_clk * numerator / (2 * denominator);
 	if (priv->dsi_clk.clk)
 		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
 	pr_info("%s:%ld, ref_clk=%ld, numerator=%d, denominator=%d\n",
@@ -327,7 +332,7 @@ static void mixel_phy_set_prg_regs(struct phy *phy)
 	}
 }
 
-int mixel_mipi_phy_init(struct phy *phy)
+static int mixel_mipi_phy_init(struct phy *phy)
 {
 	struct mixel_mipi_phy_priv *priv = dev_get_drvdata(phy->dev.parent);
 
