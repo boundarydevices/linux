@@ -424,7 +424,7 @@ static int mixel_dphy_configure(struct phy *phy, union phy_configure_opts *opts)
 	memcpy(&priv->cfg, &cfg, sizeof(struct mixel_dphy_cfg));
 
 	ref_clk = clk_get_rate(priv->phy_ref_clk);
-	priv->frequency = (ref_clk / 2) * cfg.cm / (cfg.co * cfg.cn);
+	priv->frequency = ref_clk * cfg.cm / (cfg.co * cfg.cn * 2);
 	if (priv->dsi_clk.clk)
 		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
 	pr_info("%s:%ld, ref_clk=%ld, cm=%d, co=%d cn=%d\n",
