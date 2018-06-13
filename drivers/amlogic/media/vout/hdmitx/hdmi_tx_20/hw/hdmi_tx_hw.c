@@ -732,7 +732,7 @@ static void hdmi_tvenc1080i_set(struct hdmitx_vidpara *param)
 
 	if (param->VIC == HDMI_1080i60) {
 		INTERLACE_MODE = 1;
-		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (1920*(1+PIXEL_REPEAT_HDMI));
 		ACTIVE_LINES = (1080/(1+INTERLACE_MODE));
@@ -747,7 +747,7 @@ static void hdmi_tvenc1080i_set(struct hdmitx_vidpara *param)
 		TOTAL_FRAMES = 4;
 	} else if (param->VIC == HDMI_1080i50) {
 		INTERLACE_MODE = 1;
-		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS = (1920*(1+PIXEL_REPEAT_HDMI));
 		ACTIVE_LINES = (1080/(1+INTERLACE_MODE));
@@ -840,7 +840,7 @@ static void hdmi_tvenc1080i_set(struct hdmitx_vidpara *param)
 		(VSYNC_POLARITY << 3) |
 		(0 << 4) |
 		(4 << 5) |
-		(1 << 8) |
+		(0 << 8) |
 		(0 << 12)
 	);
 	hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 1, 1);
@@ -1314,7 +1314,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	case HDMI_480p60_16x9:
 	case HDMI_480p60_16x9_rpt:
 		INTERLACE_MODE = 0U;
-		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (720*(1+PIXEL_REPEAT_HDMI));
 		ACTIVE_LINES = (480/(1+INTERLACE_MODE));
@@ -1332,7 +1332,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 	case HDMI_576p50_16x9:
 	case HDMI_576p50_16x9_rpt:
 		INTERLACE_MODE = 0U;
-		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (720*(1+PIXEL_REPEAT_HDMI));
 		ACTIVE_LINES = (576/(1+INTERLACE_MODE));
@@ -1348,7 +1348,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		break;
 	case HDMI_720p60:
 		INTERLACE_MODE = 0U;
-		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (1280*(1+PIXEL_REPEAT_HDMI));
 		ACTIVE_LINES = (720/(1+INTERLACE_MODE));
@@ -1364,7 +1364,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 		break;
 	case HDMI_720p50:
 		INTERLACE_MODE = 0U;
-		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_VENC = 0;
 		PIXEL_REPEAT_HDMI = 0;
 		ACTIVE_PIXELS	= (1280*(1+PIXEL_REPEAT_HDMI));
 		ACTIVE_LINES = (720/(1+INTERLACE_MODE));
@@ -1521,7 +1521,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 				(VSYNC_POLARITY << 3) |
 				(0 << 4) |
 				(0 << 5) |
-				(1 << 8) |
+				(0 << 8) |
 				(0 << 12)
 		);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 1, 1);
@@ -1564,7 +1564,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 				(0 << 3) |
 				(0 << 4) |
 				(4 << 5) |
-				(1 << 8) |
+				(0 << 8) |
 				(0 << 12)
 		);
 		if ((param->VIC == HDMI_480p60_16x9_rpt) ||
@@ -1580,7 +1580,7 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 				(VSYNC_POLARITY << 3) |
 				(0 << 4) |
 				(4 << 5) |
-				(1 << 8) |
+				(0 << 8) |
 				(0 << 12)
 		);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 1, 1);
@@ -1886,7 +1886,6 @@ void hdmitx_set_enc_hw(struct hdmitx_dev *hdev)
 	if (hdev->para->cs == COLORSPACE_YUV422) {
 		hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 1, 0, 2);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 4, 4);
-		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 8, 1);
 	}
 
 	switch (hdev->para->cd) {

@@ -2166,6 +2166,10 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 			if (para->cd != COLORDEPTH_48B)
 				return 0;
 		break;
+	case HDMI_720x480i60_16x9:
+	case HDMI_720x576i50_16x9:
+		if (para->cs == COLORSPACE_YUV422)
+			return 0;
 	default:
 		break;
 	}
