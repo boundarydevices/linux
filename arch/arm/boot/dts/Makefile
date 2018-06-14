@@ -476,6 +476,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-sabresd-ldo.dtb \
 	imx6q-sabresd-enetirq.dtb \
 	imx6q-sbc6x.dtb \
+	imx6q-ses.dtb \
 	imx6q-snap.dtb \
 	imx6q-ta.dtb \
 	imx6q-tbs2910.dtb \
