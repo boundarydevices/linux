@@ -117,6 +117,13 @@ config POWER_RESET_LINKSTATION
 
 	  Say Y here if you have a Buffalo LinkStation LS421D/E.
 
+config POWER_RESET_SNVS
+	bool "IMX SNVS communication reboot driver"
+	depends on ARM || ARM64
+	help
+	  This driver support communication to the bootloader using the SNVS
+	  LPGPR0 register to pass on information.
+
 config POWER_RESET_MSM
 	bool "Qualcomm MSM power-off driver"
 	depends on ARCH_QCOM
