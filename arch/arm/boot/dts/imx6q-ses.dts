@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2018 Boundary Devices, Inc.
+ */
+/dts-v1/;
+
+#include "imx6q.dtsi"
+#include "imx6qdl-ses.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX6 Quad SES Board";
+	compatible = "boundary,imx6q-ses", "fsl,imx6q";
+};
