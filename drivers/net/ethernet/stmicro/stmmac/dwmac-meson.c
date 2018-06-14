@@ -236,10 +236,10 @@ static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
 
 	/*use_phy_smi | use_phy_ip | co_clkin from eth_phy_top*/
 	writel(0x260, ETH_PHY_config_addr + ETH_PHY_CNTL2);
-
-	writel(0x54147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
-	writel(0x14147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
-	writel(0x54147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	/*led signal is inverted*/
+	writel(0x41054147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(0x41014147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(0x41054147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
 	/*wait phy to reset cause Power Up Reset need 5.2~2.6 ms*/
 	mdelay(10);
 	return 0;
@@ -418,11 +418,21 @@ static int dwmac_meson_recover_analog(struct device *dev)
 static int meson6_dwmac_suspend(struct device *dev)
 {
 	int ret;
+	struct pinctrl *pin_ctrl;
+	struct pinctrl_state *turnoff_tes = NULL;
 
 	/*shudown internal phy analog*/
 	pr_info("suspend inter = %d\n", is_internal_phy);
-	if (is_internal_phy)
+	if (is_internal_phy) {
+		/*turn off led*/
+		pin_ctrl = devm_pinctrl_get(dev);
+		turnoff_tes = pinctrl_lookup_state
+					(pin_ctrl, "internal_gpio_pins");
+		pinctrl_select_state(pin_ctrl, turnoff_tes);
+		devm_pinctrl_put(pin_ctrl);
+		pin_ctrl = NULL;
 		dwmac_meson_disable_analog(dev);
+	}
 	ret = stmmac_pltfr_suspend(dev);
 
 	return ret;
@@ -431,15 +441,49 @@ static int meson6_dwmac_suspend(struct device *dev)
 static int meson6_dwmac_resume(struct device *dev)
 {
 	int ret;
+	struct pinctrl *pin_ctrl;
+	struct pinctrl_state *turnon_tes = NULL;
 
 	pr_info("resuem inter = %d\n", is_internal_phy);
-	if (is_internal_phy)
+	if (is_internal_phy) {
+		pin_ctrl = devm_pinctrl_get(dev);
+		turnon_tes = pinctrl_lookup_state
+					(pin_ctrl, "internal_eth_pins");
+		pinctrl_select_state(pin_ctrl, turnon_tes);
+		devm_pinctrl_put(pin_ctrl);
+		pin_ctrl = NULL;
 		dwmac_meson_recover_analog(dev);
+	}
 	ret = stmmac_pltfr_resume(dev);
 
 	return ret;
 }
 EXPORT_SYMBOL_GPL(meson6_dwmac_resume);
+
+void meson6_dwmac_shutdown(struct platform_device *pdev)
+{
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct stmmac_priv *priv = netdev_priv(ndev);
+	struct pinctrl *pin_ctrl;
+	struct pinctrl_state *turnoff_tes = NULL;
+
+	/*shudown internal phy analog*/
+	if (is_internal_phy) {
+		pin_ctrl = devm_pinctrl_get(&pdev->dev);
+		turnoff_tes = pinctrl_lookup_state
+					(pin_ctrl, "internal_gpio_pins");
+		pinctrl_select_state(pin_ctrl, turnoff_tes);
+		devm_pinctrl_put(pin_ctrl);
+		pin_ctrl = NULL;
+		dwmac_meson_disable_analog(&pdev->dev);
+	}
+	//stmmac_release(ndev);
+	stmmac_pltfr_suspend(&pdev->dev);
+	if (priv->phydev)
+		genphy_suspend(ndev->phydev);
+	if (priv->plat->exit)
+		priv->plat->exit(pdev, priv->plat->bsp_priv);
+}
 
 #endif
 static int meson6_dwmac_probe(struct platform_device *pdev)
@@ -539,6 +583,9 @@ SIMPLE_DEV_PM_OPS(stmmac_pltfr_pm_ops, meson6_dwmac_suspend,
 static struct platform_driver meson6_dwmac_driver = {
 	.probe  = meson6_dwmac_probe,
 	.remove = stmmac_pltfr_remove,
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	.shutdown = meson6_dwmac_shutdown,
+#endif
 	.driver = {
 		.name           = "meson6-dwmac",
 		.pm		= &stmmac_pltfr_pm_ops,
