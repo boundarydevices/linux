@@ -24,7 +24,8 @@
 #ifdef CONFIG_BLK_DEV_MD
 extern void md_autodetect_dev(dev_t dev);
 #endif
- 
+
+#define AMLOGIC_ADD_PARTITION
 /*
  * disk_name() is used by partition check code and the genhd driver.
  * It formats the devicename of the indicated disk into
@@ -289,7 +290,9 @@ struct hd_struct *add_partition(struct gendisk *disk, int partno,
 	struct disk_part_tbl *ptbl;
 	const char *dname;
 	int err;
-
+#ifdef AMLOGIC_ADD_PARTITION
+	char *info_name = NULL;
+#endif
 	err = disk_expand_part_tbl(disk, partno);
 	if (err)
 		return ERR_PTR(err);
@@ -330,10 +333,25 @@ struct hd_struct *add_partition(struct gendisk *disk, int partno,
 	}
 
 	dname = dev_name(ddev);
+
+#ifdef AMLOGIC_ADD_PARTITION
+	if (info) {
+		info_name = (char *)info->volname;
+	}
+
+	if (info_name && (strlen(info_name) > 1)) {
+		dname = (char *)info->volname;
+		dev_set_name(pdev, "%s", dname);
+	} else if (isdigit(dname[strlen(dname) - 1]))
+		dev_set_name(pdev, "%sp%d", dname, partno);
+	else
+		dev_set_name(pdev, "%s%d", dname, partno);
+#else
 	if (isdigit(dname[strlen(dname) - 1]))
 		dev_set_name(pdev, "%sp%d", dname, partno);
 	else
 		dev_set_name(pdev, "%s%d", dname, partno);
+#endif
 
 	device_initialize(pdev);
 	pdev->class = &block_class;

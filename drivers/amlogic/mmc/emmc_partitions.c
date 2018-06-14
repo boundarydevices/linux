@@ -51,6 +51,8 @@
 #define	MAX_TRANS_SIZE		(MAX_TRANS_BLK * DTB_BLK_SIZE)
 #define stamp_after(a, b)	((int)(b) - (int)(a)  < 0)
 
+#define GPT_HEADER_SIGNATURE 0x5452415020494645ULL
+
 struct aml_dtb_rsv {
 	u8 data[DTB_BLK_SIZE*DTB_BLK_CNT - 4*sizeof(unsigned int)];
 	unsigned int magic;
@@ -62,6 +64,27 @@ struct aml_dtb_rsv {
 struct aml_dtb_info {
 	unsigned int stamp[2];
 	u8 valid[2];
+};
+
+struct  efi_guid_t {
+	u8 b[16];
+};
+
+struct gpt_header {
+	__le64 signature;
+	__le32 revision;
+	__le32 header_size;
+	__le32 header_crc32;
+	__le32 reserved1;
+	__le64 my_lba;
+	__le64 alternate_lba;
+	__le64 first_usable_lba;
+	__le64 last_usable_lba;
+	struct efi_guid_t disk_guid;
+	__le64 partition_entry_lba;
+	__le32 num_partition_entries;
+	__le32 sizeof_partition_entry;
+	__le32 partition_entry_array_crc32;
 };
 
 static dev_t amlmmc_dtb_no;
@@ -1150,23 +1173,53 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
 	struct disk_part_iter piter;
 	struct hd_struct *part;
 	struct class *aml_store_class = NULL;
+	struct gpt_header *gpt_h = NULL;
+	unsigned char *buffer = NULL;
+	unsigned int pgcnt;
+	struct page *page = NULL;
 
 	pr_info("Enter %s\n", __func__);
 
-	if (!is_card_emmc(card)) /* not emmc, nothing to do */
+	if (is_card_emmc(card) == 0) /* not emmc, nothing to do */
 		return 0;
 
+	pgcnt = PAGE_ALIGN(512) >> PAGE_SHIFT;
+	page = dma_alloc_from_contiguous(NULL, pgcnt, get_order(512));
+
+	if (!page)
+		return -ENOMEM;
+	buffer = page_address(page);
+
+	mmc_claim_host(card->host);
+
+	/*self adapting*/
+	ret = mmc_read_internal(card, 1, 1, buffer);
+	if (ret) {
+		pr_err("%s: save dtb error", __func__);
+		goto out;
+	}
+
+	gpt_h = (struct gpt_header *) buffer;
+
+	if (le64_to_cpu(gpt_h->signature) == GPT_HEADER_SIGNATURE) {
+		dma_release_from_contiguous(NULL, page, pgcnt);
+		mmc_release_host(card->host);
+		return 0;
+	}
+
+	dma_release_from_contiguous(NULL, page, pgcnt);
+
 	store_device = host->storage_flag;
+
 	pt_fmt = kmalloc(sizeof(struct mmc_partitions_fmt), GFP_KERNEL);
 	if (pt_fmt == NULL) {
 		/*	pr_info(
 		 *	"[%s] malloc failed for struct mmc_partitions_fmt!\n",
 		 *	__func__);
 		 */
+		mmc_release_host(card->host);
 		return -ENOMEM;
 	}
-
-	mmc_claim_host(card->host);
 	disk_part_iter_init(&piter, disk, DISK_PITER_INCL_EMPTY);
 
 	while ((part = disk_part_iter_next(&piter))) {
