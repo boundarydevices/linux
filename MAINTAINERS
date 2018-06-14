@@ -14520,3 +14520,9 @@ F: arch/arm64/boot/dts/amlogic/firmware_normal.dtsi
 F: arch/arm64/boot/dts/amlogic/partition_mbox_normal_P_32.dtsi
 F: arch/arm64/boot/dts/amlogic/partition_mbox_normal_P_64.dtsi
 F: arch/arm64/boot/dts/amlogic/partition_mbox_p241_P.dtsi
+
+AMLOGIC TXL CLOCK
+M:	Jian Hu <jian.hu@amlogic.com>
+F:	include/dt-bindings/clock/amlogic,txl-clkc.h
+F:	drivers/amlogic/clk/txl/*
+

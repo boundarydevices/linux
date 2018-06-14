@@ -14,6 +14,7 @@ obj-$(CONFIG_AMLOGIC_GX_CLK) += clk-cpu.o clk-mpll.o clk_test.o clk-cpu-fclk-com
 obj-$(CONFIG_AMLOGIC_GX_CLK) += gxl/
 obj-$(CONFIG_AMLOGIC_GX_CLK) += axg/
 obj-$(CONFIG_AMLOGIC_GX_CLK) += txlx/
+obj-$(CONFIG_AMLOGIC_GX_CLK) += txl/
 obj-$(CONFIG_AMLOGIC_GX_CLK) += g12a/
 obj-$(CONFIG_AMLOGIC_GX_CLK) += g12b/
 
