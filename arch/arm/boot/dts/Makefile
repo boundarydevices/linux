@@ -642,6 +642,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-sabresd-pcie-ep.dtb \
 	imx6q-savageboard.dtb \
 	imx6q-sbc6x.dtb \
+	imx6q-ses.dtb \
 	imx6q-tbs2910.dtb \
 	imx6q-ts4900.dtb \
 	imx6q-ts7970.dtb \
