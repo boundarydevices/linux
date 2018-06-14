@@ -1099,6 +1099,14 @@ int ieee80211_register_hw(struct ieee80211_hw *hw)
 			wiphy_warn(local->hw.wiphy,
 				   "Failed to add default virtual iface\n");
 	}
+	/* add p2p interface for icomm wifi*/
+	if (local->hw.wiphy->interface_modes & (BIT(NL80211_IFTYPE_P2P_GO) |
+		BIT(NL80211_IFTYPE_P2P_CLIENT))) {
+		result = ieee80211_if_add(local, "p2p%d", NET_NAME_ENUM, NULL,
+					  NL80211_IFTYPE_STATION, NULL);
+		if (result)
+			wiphy_warn(local->hw.wiphy, "Failed to add default virtual iface\n");
+	}
 
 	rtnl_unlock();
 
