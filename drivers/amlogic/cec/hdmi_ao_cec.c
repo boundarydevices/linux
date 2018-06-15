@@ -1363,7 +1363,7 @@ static void cec_pre_init(void)
 static int cec_late_check_rx_buffer(void)
 {
 	int ret;
-	struct delayed_work *dwork = &cec_dev->cec_work;
+	/*struct delayed_work *dwork = &cec_dev->cec_work;*/
 
 	ret = cec_rx_buf_check();
 	if (!ret)
@@ -1376,7 +1376,7 @@ static int cec_late_check_rx_buffer(void)
 		cec_rx_buf_clear();
 		return 0;
 	} else {
-		mod_delayed_work(cec_dev->cec_thread, dwork, 0);
+		/*mod_delayed_work(cec_dev->cec_thread, dwork, 0);*/
 		return 1;
 	}
 }
@@ -1678,8 +1678,19 @@ static void cec_task(struct work_struct *work)
 	if (cec_dev && (!wake_ok || cec_service_suspended()))
 		cec_rx_process();
 
-	if (!cec_late_check_rx_buffer())
-		queue_delayed_work(cec_dev->cec_thread, dwork, CEC_FRAME_DELAY);
+
+	/*for check rx buffer for old chip version, cec rx irq process*/
+	/*in internal hdmi rx, for avoid msg lose */
+	if ((cec_dev->cpu_type < MESON_CPU_MAJOR_ID_TXLX) &&
+		(cec_config(0, 0) == CEC_FUNC_CFG_ALL)) {
+		if (cec_late_check_rx_buffer()) {
+			/*msg in*/
+			mod_delayed_work(cec_dev->cec_thread, dwork, 0);
+			return;
+		}
+	}
+	/*triger next process*/
+	queue_delayed_work(cec_dev->cec_thread, dwork, CEC_FRAME_DELAY);
 }
 
 static irqreturn_t cec_isr_handler(int irq, void *dev_instance)
@@ -2306,12 +2317,12 @@ static long hdmitx_cec_ioctl(struct file *f,
 		tmp = (1 << HDMI_OPTION_ENABLE_CEC);
 		if (arg) {
 			cec_dev->hal_flag |= tmp;
-			cec_config(0x2f, 1);
+			cec_config(CEC_FUNC_CFG_ALL, 1);
 			cec_pre_init();
 		} else {
 			cec_dev->hal_flag &= ~(tmp);
 			CEC_INFO("disable CEC\n");
-			cec_config(0x0, 1);
+			cec_config(CEC_FUNC_CFG_NONE, 1);
 			cec_keep_reset();
 		}
 		break;
@@ -2320,7 +2331,7 @@ static long hdmitx_cec_ioctl(struct file *f,
 		tmp = (1 << HDMI_OPTION_SYSTEM_CEC_CONTROL);
 		if (arg) {
 			cec_dev->hal_flag |= tmp;
-			cec_config(0x2f, 1);
+			cec_config(CEC_FUNC_CFG_ALL, 1);
 		} else
 			cec_dev->hal_flag &= ~(tmp);
 		cec_dev->hal_flag |= (1 << HDMI_OPTION_SERVICE_FLAG);
