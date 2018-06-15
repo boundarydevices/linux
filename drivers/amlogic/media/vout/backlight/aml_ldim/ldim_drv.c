@@ -3172,6 +3172,7 @@ static struct aml_ldim_driver_s ldim_driver = {
 	.valid_flag = 0, /* default invalid, active when bl_ctrl_method=ldim */
 	.dev_index = 0xff,
 	.static_pic_flag = 0,
+	.pinmux_flag = 0,
 	.ldim_conf = &ldim_config,
 	.ldev_conf = NULL,
 	.ldim_matrix_buf = NULL,
@@ -3999,8 +4000,7 @@ static ssize_t ldim_attr_store(struct class *cla,
 			fw_print_frequent,
 			Dbprint_lv);
 	} else if (!strcmp(parm[0], "info")) {
-		pr_info("ldim_drv_ver          = %s\n",
-			LDIM_DRV_VER);
+		pr_info("ldim_drv_ver: %s\n", LDIM_DRV_VER);
 		ldim_driver.config_print();
 		pr_info("\nldim_blk_row          = %d\n"
 			"ldim_blk_col          = %d\n"
@@ -4134,7 +4134,7 @@ int aml_ldim_get_config_dts(struct device_node *child)
 	if (ret)
 		LDIMERR("failed to get ldim_dev_index\n");
 	else
-		ldim_driver.dev_index = para[0];
+		ldim_driver.dev_index = (unsigned char)para[0];
 	LDIMPR("get ldim_dev_index = %d\n", ldim_driver.dev_index);
 
 	return 0;
@@ -4268,6 +4268,10 @@ int aml_ldim_probe(struct platform_device *pdev)
 	unsigned int ldim_vsync_irq = 0, ldim_rdma_irq = 0;
 	struct ldim_dev_s *devp = &ldim_dev;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
+
+#ifdef LDIM_DEBUG_INFO
+	ldim_debug_print = 1;
+#endif
 
 	/* function flag */
 	ldim_on_flag = 0;

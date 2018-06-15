@@ -204,7 +204,6 @@ static int iw7027_hw_init_on(void)
 	/* step 1: system power_on */
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
 		ldim_drv->ldev_conf->en_gpio_on);
-	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));
 
 	/* step 2: delay for internal logic stable */
 	mdelay(10);
@@ -266,6 +265,7 @@ static int iw7027_hw_init_off(void)
 
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
 		ldim_drv->ldev_conf->en_gpio_off);
+	ldim_pwm_off(&(ldim_drv->ldev_conf->pwm_config));
 
 	return 0;
 }

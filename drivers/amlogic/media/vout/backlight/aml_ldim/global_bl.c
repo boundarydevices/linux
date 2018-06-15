@@ -44,7 +44,6 @@ static int global_hw_init_on(void)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
-	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));
 	ldim_drv->pinmux_ctrl(ldim_drv->ldev_conf->pinmux_name);
 	mdelay(2);
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
@@ -60,29 +59,16 @@ static int global_hw_init_off(void)
 
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
 		ldim_drv->ldev_conf->en_gpio_off);
+	ldim_pwm_off(&(ldim_drv->ldev_conf->pwm_config));
 
 	return 0;
-}
-
-static unsigned int global_get_value(unsigned int level)
-{
-	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-
-	unsigned int val;
-	unsigned int dim_max, dim_min;
-
-	dim_max = ldim_drv->ldev_conf->dim_max;
-	dim_min = ldim_drv->ldev_conf->dim_min;
-
-	val = dim_min + ((level * (dim_max - dim_min)) / LD_DATA_MAX);
-
-	return val;
 }
 
 static int global_smr(unsigned short *buf, unsigned char len)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-	unsigned short val;
+	unsigned int dim_max, dim_min;
+	unsigned int level, val;
 
 	if (global_on_flag == 0) {
 		if (ldim_debug_print)
@@ -95,7 +81,10 @@ static int global_smr(unsigned short *buf, unsigned char len)
 		return -1;
 	}
 
-	val = global_get_value(buf[0]);
+	dim_max = ldim_drv->ldev_conf->dim_max;
+	dim_min = ldim_drv->ldev_conf->dim_min;
+	level = buf[0];
+	val = dim_min + ((level * (dim_max - dim_min)) / LD_DATA_MAX);
 
 	ldim_drv->ldev_conf->pwm_config.pwm_duty = val;
 	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));

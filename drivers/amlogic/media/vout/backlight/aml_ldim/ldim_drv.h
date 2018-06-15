@@ -28,11 +28,13 @@
 #define Wr(reg, val)   aml_write_vcbus(reg, val)
 #define Rd(adr)       aml_read_vcbus(adr)
 
-/*#define LDIM_EXT_DEBUG_INFO*/
+/*#define LDIM_DEBUG_INFO*/
 #define LDIMPR(fmt, args...)     pr_info("ldim: "fmt"", ## args)
 #define LDIMERR(fmt, args...)    pr_err("ldim: error: "fmt"", ## args)
 
-#define LDIM_DRV_VER    "20180629"
+/*20180629: initial version */
+/*20180725: new pwm control flow support */
+#define LDIM_DRV_VER    "20180725"
 
 extern unsigned char ldim_debug_print;
 

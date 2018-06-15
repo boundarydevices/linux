@@ -18,14 +18,19 @@
 #ifndef __LDIM_DEV_DRV_H
 #define __LDIM_DEV_DRV_H
 
+/* ldim global api */
 extern void ldim_gpio_set(int index, int value);
 extern unsigned int ldim_gpio_get(int index);
+extern void ldim_set_duty_pwm(struct bl_pwm_config_s *ld_pwm);
+extern void ldim_pwm_off(struct bl_pwm_config_s *ld_pwm);
 
+/* ldim dev api */
 extern int ldim_dev_iw7027_probe(void);
 extern int ldim_dev_iw7027_remove(void);
+
 extern int ldim_dev_ob3350_probe(void);
 extern int ldim_dev_ob3350_remove(void);
-extern void ldim_set_duty_pwm(struct bl_pwm_config_s *ld_pwm);
+
 extern int ldim_dev_global_probe(void);
 extern int ldim_dev_global_remove(void);
 

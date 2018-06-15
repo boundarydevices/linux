@@ -47,7 +47,7 @@ static int ob3350_hw_init_on(void)
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
 		ldim_drv->ldev_conf->en_gpio_on);
 	mdelay(2);
-	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));
+
 	ldim_drv->pinmux_ctrl(ldim_drv->ldev_conf->pinmux_name);
 	mdelay(20);
 
@@ -60,42 +60,32 @@ static int ob3350_hw_init_off(void)
 
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
 		ldim_drv->ldev_conf->en_gpio_off);
+	ldim_pwm_off(&(ldim_drv->ldev_conf->pwm_config));
 
 	return 0;
-}
-
-static unsigned int ob3350_get_value(unsigned int level)
-{
-	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-
-	unsigned int val;
-	unsigned int dim_max, dim_min;
-
-	dim_max = ldim_drv->ldev_conf->dim_max;
-	dim_min = ldim_drv->ldev_conf->dim_min;
-
-	val = dim_min + ((level * (dim_max - dim_min)) / LD_DATA_MAX);
-
-	return val;
 }
 
 static int ob3350_smr(unsigned short *buf, unsigned char len)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-	unsigned short val;
+	unsigned int dim_max, dim_min;
+	unsigned int level, val;
 
 	if (ob3350_on_flag == 0) {
 		if (ldim_debug_print)
 			LDIMPR("%s: on_flag=%d\n", __func__, ob3350_on_flag);
 		return 0;
-		}
+	}
 
 	if (len != 1) {
 		LDIMERR("%s: data len %d invalid\n", __func__, len);
 		return -1;
 	}
 
-	val = ob3350_get_value(buf[0]);
+	dim_max = ldim_drv->ldev_conf->dim_max;
+	dim_min = ldim_drv->ldev_conf->dim_min;
+	level = buf[0];
+	val = dim_min + ((level * (dim_max - dim_min)) / LD_DATA_MAX);
 
 	ldim_drv->ldev_conf->pwm_config.pwm_duty = val;
 	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));

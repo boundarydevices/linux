@@ -273,101 +273,33 @@ unsigned int ldim_gpio_get(int index)
 	return gpiod_get_value(ld_gpio->gpio);
 }
 
-static unsigned int pwm_reg[6] = {
-	PWM_PWM_A,
-	PWM_PWM_B,
-	PWM_PWM_C,
-	PWM_PWM_D,
-	PWM_PWM_E,
-	PWM_PWM_F,
-};
-
-static unsigned int pwm_reg_txlx[6] = {
-	PWM_PWM_A_TXLX,
-	PWM_PWM_B_TXLX,
-	PWM_PWM_C_TXLX,
-	PWM_PWM_D_TXLX,
-	PWM_PWM_E_TXLX,
-	PWM_PWM_F_TXLX,
-};
-
-void ldim_set_duty_pwm(struct bl_pwm_config_s *ld_pwm)
+void ldim_set_duty_pwm(struct bl_pwm_config_s *bl_pwm)
 {
-	unsigned int pwm_hi = 0, pwm_lo = 0;
-	unsigned int port = ld_pwm->pwm_port;
-	unsigned int vs[4], ve[4], sw, n, i;
-	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
+	unsigned long temp;
 
-	if (ld_pwm->pwm_port >= BL_PWM_MAX)
+	if (bl_pwm->pwm_port >= BL_PWM_MAX)
 		return;
-	ld_pwm->pwm_level = ld_pwm->pwm_cnt * ld_pwm->pwm_duty / 100;
+
+	temp = bl_pwm->pwm_cnt;
+	temp = (((temp * bl_pwm->pwm_duty) + 50) / 100);
+	bl_pwm->pwm_level = (unsigned int)temp;
 
 	if (ldim_debug_print) {
-		LDIMPR("pwm port %d: duty=%d%%, duty_max=%d, duty_min=%d\n",
-			ld_pwm->pwm_port, ld_pwm->pwm_duty,
-			ld_pwm->pwm_duty_max, ld_pwm->pwm_duty_min);
+		LDIMPR(
+	"pwm port %d: duty=%d%%, pwm_max=%d, pwm_min=%d, pwm_level=%d\n",
+			bl_pwm->pwm_port, bl_pwm->pwm_duty,
+			bl_pwm->pwm_max, bl_pwm->pwm_min, bl_pwm->pwm_level);
 	}
 
-	switch (ld_pwm->pwm_method) {
-	case BL_PWM_POSITIVE:
-		pwm_hi = ld_pwm->pwm_level;
-		pwm_lo = ld_pwm->pwm_cnt - ld_pwm->pwm_level;
-		break;
-	case BL_PWM_NEGATIVE:
-		pwm_lo = ld_pwm->pwm_level;
-		pwm_hi = ld_pwm->pwm_cnt - ld_pwm->pwm_level;
-		break;
-	default:
-		LDIMERR("port %d: invalid pwm_method %d\n",
-			port, ld_pwm->pwm_method);
-		break;
-	}
-	if (ldim_debug_print) {
-		LDIMPR("port %d: pwm_cnt=%d, pwm_hi=%d, pwm_lo=%d\n",
-			port, ld_pwm->pwm_cnt, pwm_hi, pwm_lo);
-	}
+	bl_pwm_ctrl(bl_pwm, 1);
+}
 
-	switch (port) {
-	case BL_PWM_A:
-	case BL_PWM_B:
-	case BL_PWM_C:
-	case BL_PWM_D:
-	case BL_PWM_E:
-	case BL_PWM_F:
-		if (bl_drv->data->chip_type == BL_CHIP_TXLX)
-			bl_cbus_write(pwm_reg_txlx[port],
-				(pwm_hi << 16) | pwm_lo);
-		else
-			bl_cbus_write(pwm_reg[port], (pwm_hi << 16) | pwm_lo);
-		break;
-	case BL_PWM_VS:
-		n = ld_pwm->pwm_freq;
-		sw = (ld_pwm->pwm_cnt * 10 / n + 5) / 10;
-		pwm_hi = (pwm_hi * 10 / n + 5) / 10;
-		pwm_hi = (pwm_hi > 1) ? pwm_hi : 1;
-		if (ldim_debug_print)
-			LDIMPR("n=%d, sw=%d, pwm_high=%d\n", n, sw, pwm_hi);
-		for (i = 0; i < n; i++) {
-			vs[i] = 1 + (sw * i);
-			ve[i] = vs[i] + pwm_hi - 1;
-			if (ldim_debug_print) {
-				LDIMPR("vs[%d]=%d, ve[%d]=%d\n",
-					i, vs[i], i, ve[i]);
-			}
-		}
-		for (i = n; i < 4; i++) {
-			vs[i] = 0xffff;
-			ve[i] = 0xffff;
-		}
-		bl_vcbus_write(VPU_VPU_PWM_V0, (2 << 14) | /* vsync latch */
-				(ve[0] << 16) | (vs[0]));
-		bl_vcbus_write(VPU_VPU_PWM_V1, (ve[1] << 16) | (vs[1]));
-		bl_vcbus_write(VPU_VPU_PWM_V2, (ve[2] << 16) | (vs[2]));
-		bl_vcbus_write(VPU_VPU_PWM_V3, (ve[3] << 16) | (vs[3]));
-		break;
-	default:
-		break;
-	}
+void ldim_pwm_off(struct bl_pwm_config_s *bl_pwm)
+{
+	if (bl_pwm->pwm_port >= BL_PWM_MAX)
+		return;
+
+	bl_pwm_ctrl(bl_pwm, 0);
 }
 
 /* ****************************************************** */
@@ -381,19 +313,23 @@ static char *ldim_pinmux_str[] = {
 static int ldim_pwm_pinmux_ctrl(char *pin_str)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-	struct bl_pwm_config_s *ld_pwm;
+	struct bl_pwm_config_s *bl_pwm;
 	int ret = 0;
 
 	if (strcmp(pin_str, "invalid") == 0)
 		return 0;
 
-	ld_pwm = &ldim_drv->ldev_conf->pwm_config;
-	if (ld_pwm->pwm_port >= BL_PWM_MAX)
+	bl_pwm = &ldim_drv->ldev_conf->pwm_config;
+	if (bl_pwm->pwm_port >= BL_PWM_MAX)
 		return 0;
 
-	bl_pwm_ctrl(ld_pwm, 1);
+	ldim_set_duty_pwm(bl_pwm);
+
+	if (ldim_drv->pinmux_flag)
+		return 0;
+
 	/* request pwm pinmux */
-	if (ld_pwm->pwm_port == BL_PWM_VS) {
+	if (bl_pwm->pwm_port == BL_PWM_VS) {
 		ldim_drv->pin = devm_pinctrl_get_select(ldim_drv->dev,
 			ldim_pinmux_str[1]);
 		if (IS_ERR(ldim_drv->pin)) {
@@ -414,6 +350,7 @@ static int ldim_pwm_pinmux_ctrl(char *pin_str)
 				ldim_pinmux_str[0], ldim_drv->pin);
 		}
 	}
+	ldim_drv->pinmux_flag = 1;
 
 	return ret;
 }
@@ -433,7 +370,10 @@ static int ldim_pwm_vs_update(void)
 static void ldim_config_print(void)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-	struct bl_pwm_config_s *ld_pwm;
+	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
+	struct bl_pwm_config_s *bl_pwm;
+	struct pwm_state pstate;
+	unsigned int value;
 	int i, n, len = 0;
 	char *str = NULL;
 
@@ -444,7 +384,7 @@ static void ldim_config_print(void)
 		ldim_drv->valid_flag,
 		ldim_drv->dev_index);
 	if (ldim_drv->ldev_conf) {
-		ld_pwm = &ldim_drv->ldev_conf->pwm_config;
+		bl_pwm = &ldim_drv->ldev_conf->pwm_config;
 		pr_info("dev_name              = %s\n"
 			"type                  = %d\n"
 			"en_gpio               = %d\n"
@@ -508,19 +448,123 @@ static void ldim_config_print(void)
 		default:
 			break;
 		}
-		if (ld_pwm->pwm_port < BL_PWM_MAX) {
-			pr_info("pwm_port              = %d\n"
-				"pwm_pol               = %d\n"
-				"pwm_freq              = %d\n"
-				"pwm_duty              = %d%%\n"
-				"pwm_pointer           = %p\n",
-				ld_pwm->pwm_port, ld_pwm->pwm_method,
-				ld_pwm->pwm_freq, ld_pwm->pwm_duty,
-				ld_pwm->pwm_data.pwm);
+		if (bl_pwm->pwm_port < BL_PWM_MAX) {
+			pr_info("pwm_port:           %d\n"
+				"pwm_pol:            %d\n"
+				"pwm_freq:           %d\n"
+				"pwm_cnt:            %d\n"
+				"pwm_level:          %d\n"
+				"pwm_duty:           %d%%\n",
+				bl_pwm->pwm_port, bl_pwm->pwm_method,
+				bl_pwm->pwm_freq, bl_pwm->pwm_cnt,
+				bl_pwm->pwm_level, bl_pwm->pwm_duty);
+			switch (bl_pwm->pwm_port) {
+			case BL_PWM_A:
+			case BL_PWM_B:
+			case BL_PWM_C:
+			case BL_PWM_D:
+			case BL_PWM_E:
+			case BL_PWM_F:
+				if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
+					pr_info("pwm invalid\n");
+					break;
+				}
+				pr_info("pwm_pointer:        %p\n",
+					bl_pwm->pwm_data.pwm);
+				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
+				pr_info("pwm state:\n"
+					"  period:           %d\n"
+					"  duty_cycle:       %d\n"
+					"  polarity:         %d\n"
+					"  enabled:          %d\n",
+					pstate.period, pstate.duty_cycle,
+					pstate.polarity, pstate.enabled);
+				value = bl_cbus_read(bl_drv->data->pwm_reg[
+					bl_pwm->pwm_port]);
+				pr_info("pwm_reg:            0x%08x\n",
+					value);
+				break;
+			case BL_PWM_VS:
+				pr_info("pwm_reg0:           0x%08x\n"
+					"pwm_reg1:           0x%08x\n"
+					"pwm_reg2:           0x%08x\n"
+					"pwm_reg3:           0x%08x\n",
+					bl_vcbus_read(VPU_VPU_PWM_V0),
+					bl_vcbus_read(VPU_VPU_PWM_V1),
+					bl_vcbus_read(VPU_VPU_PWM_V2),
+					bl_vcbus_read(VPU_VPU_PWM_V3));
+				break;
+			default:
+				break;
+			}
 		}
 	} else {
 		pr_info("device config is null\n");
 	}
+}
+
+static int ldim_dev_pwm_channel_register(struct bl_pwm_config_s *bl_pwm,
+		struct device_node *blnode)
+{
+	int ret = 0;
+	int index0 = BL_PWM_MAX;
+	int index1 = BL_PWM_MAX;
+	phandle pwm_phandle;
+	struct device_node *pnode = NULL;
+	struct device_node *child;
+	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
+
+	ret = of_property_read_u32(blnode, "bl_pwm_config", &pwm_phandle);
+	if (ret) {
+		LDIMERR("not match bl_pwm_config node\n");
+		return -1;
+	}
+	pnode = of_find_node_by_phandle(pwm_phandle);
+	if (!pnode) {
+		LDIMERR("can't find bl_pwm_config node\n");
+		return -1;
+	}
+
+	/*request for pwm device */
+	for_each_child_of_node(pnode, child) {
+		ret = of_property_read_u32(child, "pwm_port_index", &index0);
+		if (ret) {
+			LDIMERR("failed to get pwm_port_index\n");
+			return ret;
+		}
+		ret = of_property_read_u32_index(child, "pwms", 1, &index1);
+		if (ret) {
+			LDIMERR("failed to get meson_pwm_index\n");
+			return ret;
+		}
+
+		if (index0 >= BL_PWM_VS)
+			continue;
+		if ((index0 % 2) != index1)
+			continue;
+		if (index0 != bl_pwm->pwm_port)
+			continue;
+
+		bl_pwm->pwm_data.port_index = index0;
+		bl_pwm->pwm_data.meson_index = index1;
+		bl_pwm->pwm_data.pwm = devm_of_pwm_get(
+			ldim_drv->dev, child, NULL);
+		if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
+			ret = PTR_ERR(bl_pwm->pwm_data.pwm);
+			LDIMERR("unable to request bl_pwm\n");
+			return ret;
+		}
+		bl_pwm->pwm_data.meson = to_meson_pwm(
+			bl_pwm->pwm_data.pwm->chip);
+		pwm_init_state(bl_pwm->pwm_data.pwm, &(bl_pwm->pwm_data.state));
+		LDIMPR("register pwm_ch(%d) 0x%p\n",
+			bl_pwm->pwm_data.port_index, bl_pwm->pwm_data.pwm);
+	}
+
+	LDIMPR("%s ok\n", __func__);
+
+	return ret;
+
 }
 
 static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
@@ -598,6 +642,11 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 			ldim_dev_config.pwm_config.pwm_duty);
 
 		bl_pwm_config_init(&ldim_dev_config.pwm_config);
+
+		if (ldim_dev_config.pwm_config.pwm_port < BL_PWM_VS) {
+			ldim_dev_pwm_channel_register(
+				&ldim_dev_config.pwm_config, np);
+		}
 	}
 
 	ret = of_property_read_u32_array(child, "en_gpio_on_off", temp, 3);

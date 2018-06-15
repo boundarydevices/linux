@@ -80,9 +80,10 @@ struct ldim_dev_config_s {
 
 /*******global API******/
 struct aml_ldim_driver_s {
-	int valid_flag;
-	int dev_index;
-	int static_pic_flag;
+	unsigned char valid_flag;
+	unsigned char dev_index;
+	unsigned char static_pic_flag;
+	unsigned char pinmux_flag;
 
 	struct ldim_config_s *ldim_conf;
 	struct ldim_dev_config_s *ldev_conf;
