@@ -330,17 +330,22 @@ void aml_fe_get_atvaudio_state(int *state)
 	if (atv_state == ATVDEMOD_STATE_WORK) {
 		retrieve_vpll_carrier_lock(&vpll_lock);
 		retrieve_vpll_carrier_line_lock(&line_lock);
-		if ((vpll_lock == 0) && (line_lock == 0))
+		if ((vpll_lock == 0) && (line_lock == 0)) {
 			retrieve_vpll_carrier_audio_power(&power);
-	} else
+			*state = 1;
+		} else
+			*state = 0;
+	} else {
+		*state = 0;
 		pr_audio("%s, atv is not work, atv_state: %d.\n",
 				__func__, atv_state);
-
+	}
+#if 0
 	if (power >= 150)
 		*state = 1;
 	else
 		*state = 0;
-
+#endif
 	pr_audio("aml_fe_get_atvaudio_state: %d, power = %d.\n",
 			*state, power);
 }
