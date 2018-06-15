@@ -188,7 +188,7 @@
 	wifi{
 		compatible = "amlogic, aml_wifi";
 		dev_name = "aml_wifi";
-		status = "disable";
+		status = "okay";
 		interrupt_pin = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
 		power_on_pin = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
