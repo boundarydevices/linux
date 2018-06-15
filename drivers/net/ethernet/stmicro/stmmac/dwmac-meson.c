@@ -428,7 +428,11 @@ static int meson6_dwmac_suspend(struct device *dev)
 		pin_ctrl = devm_pinctrl_get(dev);
 		turnoff_tes = pinctrl_lookup_state
 					(pin_ctrl, "internal_gpio_pins");
-		pinctrl_select_state(pin_ctrl, turnoff_tes);
+		if (IS_ERR_OR_NULL(turnoff_tes))
+			pr_info("Not support gpio low\n");
+		else
+			pinctrl_select_state(pin_ctrl, turnoff_tes);
+
 		devm_pinctrl_put(pin_ctrl);
 		pin_ctrl = NULL;
 		dwmac_meson_disable_analog(dev);
@@ -472,7 +476,12 @@ void meson6_dwmac_shutdown(struct platform_device *pdev)
 		pin_ctrl = devm_pinctrl_get(&pdev->dev);
 		turnoff_tes = pinctrl_lookup_state
 					(pin_ctrl, "internal_gpio_pins");
-		pinctrl_select_state(pin_ctrl, turnoff_tes);
+		if (IS_ERR_OR_NULL(turnoff_tes))
+			pr_info("Not support gpio low\n");
+		else
+			pinctrl_select_state(pin_ctrl, turnoff_tes);
+
+		//pinctrl_select_state(pin_ctrl, turnoff_tes);
 		devm_pinctrl_put(pin_ctrl);
 		pin_ctrl = NULL;
 		dwmac_meson_disable_analog(&pdev->dev);
