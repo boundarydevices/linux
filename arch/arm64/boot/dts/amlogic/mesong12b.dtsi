@@ -2384,14 +2384,6 @@
 		};
 	};
 
-	clk12_24_z_pins:clk12_24_z_pins {
-		mux {
-			groups = "clk12_24_z";
-			function = "clk12_24_ee";
-			drive-strength = <3>;
-		};
-	};
-
 	spicc0_pins_x: spicc0_pins_x {
 		mux {
 			groups = "spi0_mosi_x",
