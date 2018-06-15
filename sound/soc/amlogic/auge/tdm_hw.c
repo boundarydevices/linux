@@ -246,9 +246,9 @@ void aml_tdm_set_format(
 			bclkout_skew = 1;
 		bclkin_skew = 3;
 
-		clkctl |= MST_CLK_INVERT_PH0_PAD_FCLK;
-		if (!master_mode)
-			finv = 1;
+		clkctl |= MST_CLK_INVERT_PH0_PAD_FCLK
+			| MST_CLK_INVERT_PH2_TDMOUT_FCLK;
+		finv = 1;
 
 		if (master_mode) {
 			clkctl |= MST_CLK_INVERT_PH0_PAD_BCLK;
