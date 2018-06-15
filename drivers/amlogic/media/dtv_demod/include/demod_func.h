@@ -563,7 +563,7 @@ void ofdm_initial(int bandwidth,
 		  int tc_mode
 		  /* 0: Unsigned, 1:TC */);
 
-void monitor_isdbt(void);
+/*no use void monitor_isdbt(void);*/
 void demod_set_reg(struct aml_demod_reg *demod_reg);
 void demod_get_reg(struct aml_demod_reg *demod_reg);
 

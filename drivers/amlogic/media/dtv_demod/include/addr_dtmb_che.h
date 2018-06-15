@@ -18,7 +18,7 @@
 #ifndef __ADDR_DTMB_CHE_H__
 #define __ADDR_DTMB_CHE_H__
 
-#include "addr_dtmb_top.h"
+/*#include "addr_dtmb_top.h"*/
 
 #define  DTMB_CHE_ADDR(x) (DTMB_DEMOD_BASE + (x << 2))
 

@@ -850,7 +850,7 @@ void dvbc_isr(struct aml_demod_sta *demod_sta)
 	mask = dvbc_read_reg(0xd0);
 	stat &= mask;
 
-	for (dvbc_irq = 0; dvbc_irq < 20; dvbc_irq++) {
+	for (dvbc_irq = 0; dvbc_irq < ARRAY_SIZE(dvbc_irq_name); dvbc_irq++) {
 		if (stat >> dvbc_irq & 1) {
 			if (demod_sta->debug)
 				PR_DVBC("irq: dvbc %2d %s %8x\n",

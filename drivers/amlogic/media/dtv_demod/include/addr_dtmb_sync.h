@@ -18,7 +18,7 @@
 #ifndef __ADDR_DTMB_SYNC_H__
 #define __ADDR_DTMB_SYNC_H__
 
-#include "addr_dtmb_top.h"
+/*#include "addr_dtmb_top.h"*/
 #define  DTMB_SYNC_ADDR(x) (DTMB_DEMOD_BASE + (x << 2))
 
 #define  DTMB_SYNC_TS_CFO_PN_VALUE           DTMB_SYNC_ADDR(0x57)

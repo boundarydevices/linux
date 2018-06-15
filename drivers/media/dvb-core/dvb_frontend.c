@@ -2201,8 +2201,8 @@ static int dtv_set_frontend(struct dvb_frontend *fe)
 	/* Request the search algorithm to search */
 	fepriv->algo_status |= DVBFE_ALGO_SEARCH_AGAIN;
 
-	if (fe->ops.set_frontend)
-		fe->ops.set_frontend(fe);
+//	if (fe->ops.set_frontend)
+//		fe->ops.set_frontend(fe);
 	dvb_frontend_clear_events(fe);
 	dvb_frontend_add_event(fe, 0);
 	dvb_frontend_wakeup(fe);

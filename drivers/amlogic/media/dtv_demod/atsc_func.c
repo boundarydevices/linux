@@ -837,7 +837,7 @@ int cfo_run(void)
 	int scan_range;
 	int Offset;
 	int detec_cfo_times = 3;
-	int ret = 0;
+
 
 	if (cfo_count == 1)
 		max_count = 3;
@@ -917,20 +917,20 @@ int cfo_run(void)
 			/*atsc_reset();*/
 			PR_ATSC("fsm[%x][autoscan]atsc_reset\n",
 			read_atsc_fsm());
-			/*return Cfo_Ok;*/
-			ret = Cfo_Ok;
+			return Cfo_Ok;
+
 		} else {
 			if (table_count >= (max_count-1)) {
 				PR_ATSC("cfo not lock,will try again\n");
-				/*return Cfo_Fail;*/
-				ret = Cfo_Fail;
-			} else {
-				table_count++;
-				Offset = freq_table[table_count];
+				return Cfo_Fail;
+
 			}
+			table_count++;
+			Offset = freq_table[table_count];
+
 		}
 	}
-	return ret;
+	return 0;
 }
 
 int AR_run(void)
@@ -1102,8 +1102,8 @@ void atsc_thread(void)
 		/*step:check AR*/
 		if (ar_enable)
 			AR_run();
-		if (cci_enable && !field_test_version)
-			ret = cci_run();
+//		if (cci_enable && !field_test_version)
+//			ret = cci_run();
 		atsc_reset();
 		time[1] = jiffies_to_msecs(jiffies);
 		time_table[0] = (time[1]-time[0]);
@@ -1125,6 +1125,8 @@ void atsc_thread(void)
 			read_atsc_fsm(), time_table[1]);
 		if (ret == Cfo_Fail)
 			return;
+		if (cci_enable)
+			ret = cci_run();
 		for (i = 0; i < 80; i++) {
 			fsm_status = read_atsc_fsm();
 			if (fsm_status >= Atsc_Lock) {
@@ -1175,9 +1177,8 @@ void atsc_thread(void)
 						atsc_set_performance_register
 						(TASK8_R22, 0);
 						PR_ATSC("snr(16,23)\n");
-					} else {
-						awgn_flag = TASK8_R22;
 					}
+
 				}
 				register_set_flag = 1;
 				msleep(200);
@@ -1194,6 +1195,7 @@ void atsc_thread(void)
 	}
 
 }
+
 
 
 #if 0

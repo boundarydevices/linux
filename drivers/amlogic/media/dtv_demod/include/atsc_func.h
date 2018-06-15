@@ -19,7 +19,7 @@
 #else
 #define ATSC_FUNC_H
 
-#include "demod_func.h"
+/*#include "demod_func.h"*/
 
 enum atsc_state_machine {
 	Idle = 0x20,

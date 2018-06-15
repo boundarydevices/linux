@@ -190,7 +190,7 @@ void dtmb_all_reset(void)
 void dtmb_initial(struct aml_demod_sta *demod_sta)
 {
 /* dtmb_write_reg(0x049, memstart);		//only for init */
-	dtmb_spectrum = 1;
+	/*dtmb_spectrum = 1; no use */
 	dtmb_spectrum = demod_sta->spectrum;
 	dtmb_register_reset();
 	dtmb_all_reset();

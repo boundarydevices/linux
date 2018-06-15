@@ -67,7 +67,8 @@ int dvbt_set_ch(struct aml_demod_sta *demod_sta,
 		ret = -1;
 	}
 
-	if (demod_mode < 0 || demod_mode > 4) {
+	/*if (demod_mode < 0 || demod_mode > 4) {*/
+	if (demod_mode > 4) {
 		/* PR_DVBT("Error: Invalid demod mode option %d\n",*/
 		/* demod_mode); */
 		demod_mode = 1;

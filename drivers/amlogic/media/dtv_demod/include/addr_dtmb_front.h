@@ -18,7 +18,7 @@
 #ifndef __ADDR_DTMB_FRONT_H__
 #define __ADDR_DTMB_FRONT_H__
 
-#include "addr_dtmb_top.h"
+/*#include "addr_dtmb_top.h"*/
 
 #define  DTMB_FRONT_ADDR(x) (DTMB_DEMOD_BASE + (x << 2))
 

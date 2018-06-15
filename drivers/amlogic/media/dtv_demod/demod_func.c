@@ -985,7 +985,7 @@ void demod_set_reg(struct aml_demod_reg *demod_reg)
 		case AMLOGIC_DEMOD_FPGA:
 			break;
 		case AMLOGIC_DEMOD_OTHERS:
-			demod_reg->addr = demod_reg->addr;
+			/*not change: demod_reg->addr = demod_reg->addr;*/
 			break;
 		case AMLOGIC_DEMOD_COLLECT_DATA:
 			break;
@@ -1033,7 +1033,8 @@ void demod_get_reg(struct aml_demod_reg *demod_reg)
 		else if (demod_reg->mode == AMLOGIC_DEMOD_FPGA)
 			;
 		else if (demod_reg->mode == AMLOGIC_DEMOD_OTHERS)
-			demod_reg->addr = demod_reg->addr;
+			/*demod_reg->addr = demod_reg->addr;*/
+			;
 		else if (demod_reg->mode == AMLOGIC_DEMOD_COLLECT_DATA)
 			;
 
@@ -1100,7 +1101,7 @@ int app_apb_write_reg(int addr, int data)
 	demod_set_demod_reg(data, addr);
 	return 0;
 }
-
+#if 0
 void monitor_isdbt(void)
 {
 	int SNR;
@@ -1187,7 +1188,7 @@ void monitor_isdbt(void)
 	    );
 	PR_DBG("\n");
 }
-
+#endif
 /* new api */
 unsigned int demod_reg_get_abs_ddr(unsigned int reg_mode, unsigned int  reg_add)
 {

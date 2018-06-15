@@ -174,7 +174,10 @@ void qam_auto_scan(int auto_qam_enable)
 		qam_write_reg(0x4e, 0x12000012);
 
 }
-
+static unsigned int get_adc_freq(void)
+{
+	return 24000;
+}
 
 void dvbc_reg_initial(struct aml_demod_sta *demod_sta)
 {
@@ -192,8 +195,8 @@ void dvbc_reg_initial(struct aml_demod_sta *demod_sta)
 	int max_frq_off, tmp, adc_format;
 
 	clk_freq = demod_sta->clk_freq;	/* kHz */
-	adc_freq = demod_sta->adc_freq;	/* kHz */
-	adc_freq  = 24000;
+	/*no use adc_freq = demod_sta->adc_freq;*/	/* kHz */
+	adc_freq  = get_adc_freq();/*24000*/;
 	adc_format = 1;
 	/*ary no use tuner = demod_sta->tuner;*/
 	ch_mode = demod_sta->ch_mode;

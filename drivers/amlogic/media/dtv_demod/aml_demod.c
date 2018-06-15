@@ -129,7 +129,7 @@ void wait_capture(int cap_cur_addr, int depth_MB, int start)
 	read_start = readfirst + 0x40000000;
 	pr_dbg("read_start is %x\n", read_start);
 }
-
+#if 0 /*no use*/
 int cap_adc_data(struct aml_cap_data *cap)
 {
 	int tmp;
@@ -202,7 +202,7 @@ int cap_adc_data(struct aml_cap_data *cap)
 	/* close tb; */
 	return 0;
 }
-
+#endif
 static DECLARE_WAIT_QUEUE_HEAD(lock_wq);
 
 static ssize_t aml_demod_info(struct class *cla,
@@ -467,11 +467,16 @@ static ssize_t aml_demod_ui_read(struct file *file, char __user *buf,
 	char *capture_buf = buf_all;
 	int res = 0;
 
+#if 0
 	if (count >= 4 * 1024 * 1024)
 		count = 4 * 1024 * 1024;
 	else if (count == 0)
 		return 0;
+#endif
+	if (count == 0)
+		return 0;
 
+	count = min_t(size_t, count, (sizeof(buf_all)-1));
 	res = copy_to_user((void *)buf, (char *)capture_buf, count);
 	if (res < 0) {
 		pr_dbg("[aml_demod_ui_read]res is %d", res);
