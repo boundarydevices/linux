@@ -10,3 +10,4 @@ obj-$(CONFIG_AMLOGIC_PINCTRL_MESON_GXL) += pinctrl-meson-gxl.o
 obj-$(CONFIG_AMLOGIC_PINCTRL_MESON_AXG) += pinctrl-meson-axg.o
 obj-$(CONFIG_AMLOGIC_PINCTRL_MESON_TXLX) += pinctrl-meson-txlx.o
 obj-$(CONFIG_AMLOGIC_PINCTRL_MESON_G12A) += pinctrl-meson-g12a.o
+obj-$(CONFIG_AMLOGIC_PINCTRL_MESON_TXL) += pinctrl-meson-txl.o

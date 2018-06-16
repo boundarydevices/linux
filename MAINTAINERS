@@ -14526,3 +14526,7 @@ M:	Jian Hu <jian.hu@amlogic.com>
 F:	include/dt-bindings/clock/amlogic,txl-clkc.h
 F:	drivers/amlogic/clk/txl/*
 
+AMLOGIC TXL PINCTRL DRIVER
+M:	Xingyu Chen <xingyu.chen@amlogic.com>
+F:	drivers/amlogic/pinctrl/pinctrl-meson-txl.c
+F:	include/dt-bindings/gpio/meson-txl-gpio.h

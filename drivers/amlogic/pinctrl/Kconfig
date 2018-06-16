@@ -42,6 +42,12 @@ config AMLOGIC_PINCTRL_MESON_G12A
 	select AMLOGIC_PINCONF_MESON_G12A
 	default n
 
+config AMLOGIC_PINCTRL_MESON_TXL
+	bool "Meson txl SoC pinctrl driver"
+	depends on ARM64
+	select AMLOGIC_PINCTRL_MESON8_PMX
+	default n
+
 config AMLOGIC_PINCONF_MESON_G12A
 	bool
 
