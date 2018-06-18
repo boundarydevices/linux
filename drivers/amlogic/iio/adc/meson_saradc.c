@@ -1325,6 +1325,17 @@ struct meson_sar_adc_data meson_sar_adc_axg_data = {
 	},
 };
 
+struct meson_sar_adc_data meson_sar_adc_txl_data = {
+	.obt_temp_chan6 = false,
+	.has_bl30_integration = true,
+	.vref_sel = CALIB_VOL_AS_VREF,
+	.resolution = SAR_ADC_12BIT,
+	.name = "meson-txl-saradc",
+	.regs_diff = {
+		.reg3_ring_counter_disable = BIT_HIGH,
+	},
+};
+
 struct meson_sar_adc_data meson_sar_adc_gxl_data = {
 	.obt_temp_chan6 = false,
 	.has_bl30_integration = true,
@@ -1368,6 +1379,9 @@ static const struct of_device_id meson_sar_adc_of_match[] = {
 	}, {
 		.compatible = "amlogic,meson-axg-saradc",
 		.data = &meson_sar_adc_axg_data,
+	}, {
+		.compatible = "amlogic,meson-txl-saradc",
+		.data = &meson_sar_adc_txl_data,
 	}, {
 		.compatible = "amlogic,meson-gxl-saradc",
 		.data = &meson_sar_adc_gxl_data,
