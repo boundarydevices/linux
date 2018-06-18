@@ -28,6 +28,8 @@ struct rt5645_platform_data {
 
 	/* Value to asign to snd_soc_card.long_name */
 	const char *long_name;
+	/* Toggle HPO_L voltage low during a jack detect event */
+	bool jd_low_volt_enable;
 };
 
 #endif
