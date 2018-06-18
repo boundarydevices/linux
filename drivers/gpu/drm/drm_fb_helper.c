@@ -1587,6 +1587,9 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 
 
 	info->var.pixclock = 0;
+	if (info->fbops->fb_set_par)
+		info->fbops->fb_set_par(info);
+
 	if (register_framebuffer(info) < 0)
 		return -EINVAL;
 
