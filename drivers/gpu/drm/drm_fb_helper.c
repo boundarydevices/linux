@@ -2490,6 +2490,9 @@ __drm_fb_helper_initial_config_and_unlock(struct drm_fb_helper *fb_helper,
 	info = fb_helper->fbdev;
 	info->var.pixclock = 0;
 
+	if (info->fbops->fb_set_par)
+		info->fbops->fb_set_par(info);
+
 	/* Need to drop locks to avoid recursive deadlock in
 	 * register_framebuffer. This is ok because the only thing left to do is
 	 * register the fbdev emulation instance in kernel_fb_helper_list. */
