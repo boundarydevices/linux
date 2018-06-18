@@ -205,6 +205,7 @@ static int gpio_set_irq_type(struct irq_data *d, u32 type)
 			port->both_edges |= 1 << gpio_idx;
 		}
 		break;
+	case IRQ_TYPE_NONE:
 	case IRQ_TYPE_LEVEL_LOW:
 		edge = GPIO_INT_LOW_LEV;
 		break;
