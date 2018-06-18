@@ -1056,6 +1056,8 @@ static int goodix_ts_probe(struct i2c_client *client,
 
 	error = goodix_i2c_test(client);
 	if (error) {
+		if (ts->client->irq)
+			irq_set_irq_type(ts->client->irq, IRQ_TYPE_NONE);
 		dev_err(&client->dev, "I2C communication failure: %d\n", error);
 		return error;
 	}
