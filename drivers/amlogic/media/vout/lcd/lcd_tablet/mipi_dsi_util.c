@@ -1559,126 +1559,77 @@ int dsi_write_cmd(unsigned char *payload)
 
 static void mipi_dsi_phy_config(struct dsi_phy_s *dphy, unsigned int dsi_ui)
 {
-	unsigned int temp, t_ui, t_req_min, t_req_max, t_req, n;
+	unsigned int temp, t_ui, t_req_min, t_req_max;
+	unsigned int val;
 
-	t_ui = (1000000 * 100) / (dsi_ui / 1000); /* 0.01ns*100 */
+	if (dsi_ui == 0) {
+		LCDERR("%s: dsi_ui is 0\n", __func__);
+		return;
+	}
+
+	t_ui = (1000000 * 100) / (dsi_ui / 1000); /*100*ns */
 	temp = t_ui * 8; /* lane_byte cycle time */
 
 	dphy->lp_tesc = ((DPHY_TIME_LP_TESC(t_ui) + temp - 1) / temp) & 0xff;
 	dphy->lp_lpx = ((DPHY_TIME_LP_LPX(t_ui) + temp - 1) / temp) & 0xff;
-	dphy->lp_ta_sure = ((DPHY_TIME_LP_TA_SURE(t_ui) + temp - 1) / temp) &
-			0xff;
+	dphy->lp_ta_sure =
+		((DPHY_TIME_LP_TA_SURE(t_ui) + temp - 1) / temp) & 0xff;
 	dphy->lp_ta_go = ((DPHY_TIME_LP_TA_GO(t_ui) + temp - 1) / temp) & 0xff;
-	dphy->lp_ta_get = ((DPHY_TIME_LP_TA_GETX(t_ui) + temp - 1) / temp) &
-			0xff;
-	dphy->hs_exit = ((DPHY_TIME_HS_EXIT(t_ui) + temp - 1) / temp) & 0xff;
-	dphy->clk_prepare = ((DPHY_TIME_CLK_PREPARE(t_ui) + temp - 1) / temp) &
-			0xff;
-	dphy->clk_zero = ((DPHY_TIME_CLK_ZERO(t_ui) + temp - 1) / temp) & 0xff;
-	dphy->clk_pre = ((DPHY_TIME_CLK_PRE(t_ui) + temp - 1) / temp) & 0xff;
+	dphy->lp_ta_get =
+		((DPHY_TIME_LP_TA_GETX(t_ui) + temp - 1) / temp) & 0xff;
 	dphy->init = (DPHY_TIME_INIT(t_ui) + temp - 1) / temp;
 	dphy->wakeup = (DPHY_TIME_WAKEUP(t_ui) + temp - 1) / temp;
 
-	t_req_max = ((105 * 100 + 12 * t_ui) / 100);
-	for (n = 0; n <= 0xff; n++) {
-		dsi_phy_config.clk_trail = n;
-		if (((temp * dsi_phy_config.clk_trail / 100) > 70) &&
-			((temp * dsi_phy_config.clk_trail / 100) < t_req_max)) {
-			if (lcd_debug_print_flag) {
-				LCDPR("t_ui=%d, t_req_max=%d\n",
-					t_ui, t_req_max);
-				LCDPR("clk_trail=%d, n=%d\n",
-					dsi_phy_config.clk_trail, n);
-			}
-			break;
-		}
-	}
+	dphy->clk_pre = ((DPHY_TIME_CLK_PRE(t_ui) + temp - 1) / temp) & 0xff;
 
-	t_req_min = 2 * ((60 * 100 + 52 * t_ui) / 100);
-	for (n = 0; n <= 0xff; n++) {
-		dsi_phy_config.clk_post = n;
-		if ((temp * dsi_phy_config.clk_post / 100) >= t_req_min) {
-			if (lcd_debug_print_flag) {
-				LCDPR("t_ui=%d, t_req_min=%d\n",
-					t_ui, t_req_min);
-				LCDPR("clk_post=%d, n=%d\n",
-					dsi_phy_config.clk_post, n);
-			}
-			break;
-		}
-	}
+	t_req_max = 95 * 100;
+	t_req_min = 38 * 100;
+	val = (t_req_max + t_req_min) / 2;
+	dphy->clk_prepare = val / temp;
+	if ((dphy->clk_prepare * temp) < t_req_min)
+		dphy->clk_prepare += 1;
 
-	t_req_min = max(8 * t_ui / 100, (60 * 100 + 4 * t_ui) / 100) + 10;
-	t_req_max = ((105 * 100 + 12 * t_ui) / 100);
-	for (n = 0; n <= 0xff; n++) {
-		dsi_phy_config.hs_trail = n;
-		if (((temp * dsi_phy_config.hs_trail / 100) > t_req_min) &&
-			((temp * dsi_phy_config.hs_trail / 100) < t_req_max)) {
-			if (lcd_debug_print_flag) {
-				LCDPR("t_ui=%d, t_req_min=%d, t_req_max=%d\n",
-					t_ui, t_req_min, t_req_max);
-				LCDPR("hs_trail=%d, n=%d\n",
-					dsi_phy_config.hs_trail, n);
-			}
-			break;
-		}
-	}
+	t_req_min = 300 * 100 - dphy->clk_prepare * temp + 10 * 100;
+	dphy->clk_zero = t_req_min / temp;
+	if ((dphy->clk_zero * temp) < t_req_min)
+		dphy->clk_zero += 1;
 
-	t_req_min = (40 * 100 + 4 * t_ui) / 100;
-	t_req_max = ((85 * 100 + 6 * t_ui) / 100);
-	for (n = 0; n <= 0xff; n++) {
-		dsi_phy_config.hs_prepare = n;
-		if (((temp * dsi_phy_config.hs_prepare / 100) > t_req_min) &&
-			((temp * dsi_phy_config.hs_prepare / 100) <
-			t_req_max)) {
-			if (lcd_debug_print_flag) {
-				LCDPR("t_ui=%d, t_req_min=%d, t_req_max=%d\n",
-					t_ui, t_req_min, t_req_max);
-				LCDPR("hs_prepare=%d, n=%d\n",
-					dsi_phy_config.hs_prepare, n);
-			}
-			break;
-		}
-	}
+	//t_req_max = 105 + (12 * t_ui) / 100;
+	t_req_min = 60 * 100;
+	//val = (t_req_max + t_req_min) / 2;
+	dphy->clk_trail = t_req_min / temp;
+	if ((dphy->clk_trail * temp) < t_req_min)
+		dphy->clk_trail += 1;
 
-	t_req_min = ((145 * 100 + 10 * t_ui) / 100) -
-		((40 * 100 + 4 * t_ui) / 100);
-	for (n = 0; n <= 0xff; n++) {
-		dsi_phy_config.hs_zero = n;
-		if ((temp * dsi_phy_config.hs_zero / 100) > t_req_min) {
-			if (lcd_debug_print_flag) {
-				LCDPR("t_ui=%d, t_req_min=%d\n",
-					t_ui, t_req_min);
-				LCDPR("hs_zero=%d, n=%d\n",
-					dsi_phy_config.hs_zero, n);
-			}
-			break;
-		}
-	}
+	t_req_min = 60 * 100 + 52 * t_ui + 10 * 100;
+	dphy->clk_post = t_req_min / temp;
+	if ((dphy->clk_post * temp) < t_req_min)
+		dphy->clk_post += 1;
 
-	/* check dphy spec: (unit: ns) */
-	if ((temp * dsi_phy_config.lp_tesc / 100) <= 100)
-		LCDERR("lp_tesc timing error\n");
-	if ((temp * dsi_phy_config.lp_lpx / 100) <= 50)
-		LCDERR("lp_lpx timing error\n");
-	if ((temp * dsi_phy_config.hs_exit / 100) <= 100)
-		LCDERR("hs_exit timing error\n");
-	t_req = ((t_ui > (60 * 100 / 4)) ?
-		(8 * t_ui) : ((60 * 100) + 4 * t_ui));
-	if ((temp * dsi_phy_config.hs_trail / 100) <= ((t_req + 50) / 100))
-		LCDERR("hs_trail timing error\n");
-	t_req = temp * dsi_phy_config.hs_prepare / 100;
-	if ((t_req <= (40 + (t_ui * 4 / 100))) ||
-		(t_req >= (85 + (t_ui * 6 / 100))))
-		LCDERR("hs_prepare timing error\n");
-	t_req = 145 + (t_ui * 10 / 100);
-	if (((temp * dsi_phy_config.hs_zero / 100) +
-		(temp * dsi_phy_config.hs_prepare / 100)) <= t_req)
-		LCDERR("hs_zero timing error\n");
-	if ((temp * dsi_phy_config.init / 100) <= 100000)
-		LCDERR("init timing error\n");
-	if ((temp * dsi_phy_config.wakeup / 100) <= 1000000)
-		LCDERR("wakeup timing error\n");
+	t_req_min = 100 * 100;
+	dphy->hs_exit = t_req_min / temp;
+	if ((dphy->hs_exit * temp) < t_req_min)
+		dphy->hs_exit += 1;
+
+	//t_req_max = 105 + (12 * t_ui) / 100;
+	t_req_min = ((8 * t_ui) > (60 * 100 + 4 * t_ui)) ?
+		(8 * t_ui) : (60 * 100 + 4 * t_ui);
+	//val = (t_req_max + t_req_min) / 2;
+	dphy->hs_trail = t_req_min / temp;
+	if ((dphy->hs_trail * temp) < t_req_min)
+		dphy->hs_trail += 1;
+
+	t_req_min = 40 * 100 + 4 * t_ui;
+	t_req_max = 85 * 100 + 6 * t_ui;
+	val = (t_req_max + t_req_min) / 2;
+	dphy->hs_prepare = val / temp;
+	if ((dphy->hs_prepare * temp) < t_req_min)
+		dphy->hs_prepare += 1;
+
+	t_req_min = 145 * 100 + 10 * t_ui - dphy->hs_prepare * temp;
+	dphy->hs_zero = t_req_min / temp;
+	if ((dphy->hs_zero * temp) < t_req_min)
+		dphy->hs_zero += 1;
 
 	if (lcd_debug_print_flag) {
 		LCDPR("%s:\n"
