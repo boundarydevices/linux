@@ -41,6 +41,7 @@
 #include <linux/slab.h>
 #include <linux/poll.h>
 #include <linux/clk.h>
+#include <linux/debugfs.h>
 #include <linux/amlogic/media/canvas/canvas.h>
 #include <linux/amlogic/media/canvas/canvas_mgr.h>
 #include <linux/dma-mapping.h>
@@ -527,16 +528,47 @@ struct video_pm_state_s {
 
 #endif
 
+#define PTS_LOGGING
 #define PTS_THROTTLE
 /* #define PTS_TRACE_DEBUG */
 /* #define PTS_TRACE_START */
 
 #ifdef PTS_TRACE_DEBUG
-static int pts_trace;
 static int pts_trace_his[16];
 static u32 pts_his[16];
 static u32 scr_his[16];
 static int pts_trace_his_rd;
+#endif
+
+#if defined(PTS_LOGGING) || defined(PTS_TRACE_DEBUG)
+static int pts_trace;
+#endif
+
+#if defined(PTS_LOGGING)
+#define PTS_32_PATTERN_DETECT_RANGE 10
+#define PTS_22_PATTERN_DETECT_RANGE 10
+#define PTS_41_PATTERN_DETECT_RANGE 2
+
+enum video_refresh_pattern {
+	PTS_32_PATTERN = 0,
+	PTS_22_PATTERN,
+	PTS_41_PATTERN,
+	PTS_MAX_NUM_PATTERNS
+};
+
+int n_patterns = PTS_MAX_NUM_PATTERNS;
+
+static int pts_pattern[3] = {0, 0, 0};
+static int pts_pattern_enter_cnt[3] = {0, 0, 0};
+static int pts_pattern_exit_cnt[3] = {0, 0, 0};
+static int pts_log_enable[3] = {0, 0, 0};
+static int pre_pts_trace;
+
+#define PTS_41_PATTERN_SINK_MAX 4
+static int pts_41_pattern_sink[PTS_41_PATTERN_SINK_MAX];
+static int pts_41_pattern_sink_index;
+static int pts_pattern_detected = -1;
+static bool pts_enforce_pulldown = true;
 #endif
 
 static DEFINE_MUTEX(video_module_mutex);
@@ -592,6 +624,165 @@ int video_property_notify(int flag)
 {
 	video_property_changed = flag;
 	return 0;
+}
+
+#if defined(PTS_LOGGING)
+static ssize_t pts_pattern_enter_cnt_read_file(struct file *file,
+			char __user *userbuf, size_t count, loff_t *ppos)
+{
+	char buf[20];
+	ssize_t len;
+
+	len = snprintf(buf, 20, "%d,%d,%d\n", pts_pattern_enter_cnt[0],
+			pts_pattern_enter_cnt[1], pts_pattern_enter_cnt[2]);
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+static ssize_t pts_pattern_exit_cnt_read_file(struct file *file,
+			char __user *userbuf, size_t count, loff_t *ppos)
+{
+	char buf[20];
+	ssize_t len;
+
+	len = snprintf(buf, 20, "%d,%d,%d\n", pts_pattern_exit_cnt[0],
+			pts_pattern_exit_cnt[1], pts_pattern_exit_cnt[2]);
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+static ssize_t pts_log_enable_read_file(struct file *file,
+			char __user *userbuf, size_t count, loff_t *ppos)
+{
+	char buf[20];
+	ssize_t len;
+
+	len = snprintf(buf, 20, "%d,%d,%d\n", pts_log_enable[0],
+			pts_log_enable[1], pts_log_enable[2]);
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+static ssize_t pts_log_enable_write_file(struct file *file,
+			const char __user *userbuf, size_t count, loff_t *ppos)
+{
+	char buf[20];
+	int ret;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+	buf[count] = 0;
+	/* pts_pattern_log_enable (3:2) (2:2) (4:1) */
+	ret = sscanf(buf, "%d,%d,%d", &pts_log_enable[0], &pts_log_enable[1],
+			&pts_log_enable[2]);
+	if (ret != 3) {
+		pr_info("use echo 0/1,0/1,0/1 > /sys/kernel/debug/pts_log_enable\n");
+	} else {
+		pr_info("pts_log_enable: %d,%d,%d\n", pts_log_enable[0],
+			pts_log_enable[1], pts_log_enable[2]);
+	}
+	return count;
+}
+static ssize_t pts_enforce_pulldown_read_file(struct file *file,
+			char __user *userbuf, size_t count, loff_t *ppos)
+{
+	char buf[16];
+	ssize_t len;
+
+	len = snprintf(buf, 16, "%d\n", pts_enforce_pulldown);
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+static ssize_t pts_enforce_pulldown_write_file(struct file *file,
+			const char __user *userbuf, size_t count, loff_t *ppos)
+{
+	unsigned int write_val;
+	char buf[16];
+	int ret;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+	buf[count] = 0;
+	ret = kstrtoint(buf, 0, &write_val);
+	if (ret != 0)
+		return -EINVAL;
+	pr_info("pts_enforce_pulldown: %d->%d\n",
+		pts_enforce_pulldown, write_val);
+	pts_enforce_pulldown = write_val;
+	return count;
+}
+
+static const struct file_operations pts_pattern_enter_cnt_file_ops = {
+	.open		= simple_open,
+	.read		= pts_pattern_enter_cnt_read_file,
+};
+
+static const struct file_operations pts_pattern_exit_cnt_file_ops = {
+	.open		= simple_open,
+	.read		= pts_pattern_exit_cnt_read_file,
+};
+
+static const struct file_operations pts_log_enable_file_ops = {
+	.open		= simple_open,
+	.read		= pts_log_enable_read_file,
+	.write		= pts_log_enable_write_file,
+};
+
+static const struct file_operations pts_enforce_pulldown_file_ops = {
+	.open		= simple_open,
+	.read		= pts_enforce_pulldown_read_file,
+	.write		= pts_enforce_pulldown_write_file,
+};
+#endif
+
+struct video_debugfs_files_s {
+	const char *name;
+	const umode_t mode;
+	const struct file_operations *fops;
+};
+
+static struct video_debugfs_files_s video_debugfs_files[] = {
+#if defined(PTS_LOGGING)
+	{"pts_pattern_enter_cnt", S_IFREG | 0444,
+		&pts_pattern_enter_cnt_file_ops
+	},
+	{"pts_pattern_exit_cnt", S_IFREG | 0444,
+		&pts_pattern_exit_cnt_file_ops
+	},
+	{"pts_log_enable", S_IFREG | 0644,
+		&pts_log_enable_file_ops
+	},
+	{"pts_enforce_pulldown", S_IFREG | 0644,
+		&pts_enforce_pulldown_file_ops
+	},
+#endif
+};
+
+static struct dentry *video_debugfs_root;
+static void video_debugfs_init(void)
+{
+	struct dentry *ent;
+	int i;
+
+	if (video_debugfs_root)
+		return;
+	video_debugfs_root = debugfs_create_dir("video", NULL);
+	if (!video_debugfs_root)
+		pr_err("can't create video debugfs dir\n");
+
+	for (i = 0; i < ARRAY_SIZE(video_debugfs_files); i++) {
+		ent = debugfs_create_file(video_debugfs_files[i].name,
+			video_debugfs_files[i].mode,
+			video_debugfs_root, NULL,
+			video_debugfs_files[i].fops);
+		if (!ent)
+			pr_info("debugfs create file %s failed\n",
+				video_debugfs_files[i].name);
+	}
+}
+
+static void video_debugfs_exit(void)
+{
+	debugfs_remove(video_debugfs_root);
 }
 
 #ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
@@ -2070,6 +2261,115 @@ static void vframe_canvas_set(struct canvas_config_s *config, u32 planes,
 		canvas_config_config(*canvas_index, cfg);
 }
 
+#ifdef PTS_LOGGING
+static void log_vsync_video_pattern(int pattern)
+{
+	int factor1 = 0, factor2 = 0, pattern_range = 0;
+
+	if (pattern >= PTS_MAX_NUM_PATTERNS)
+		return;
+
+	if (pattern == PTS_32_PATTERN) {
+		factor1 = 3;
+		factor2 = 2;
+		pattern_range =  PTS_32_PATTERN_DETECT_RANGE;
+	} else if (pattern == PTS_22_PATTERN) {
+		factor1 = 2;
+		factor2 = 2;
+		pattern_range =  PTS_22_PATTERN_DETECT_RANGE;
+	} else if (pattern == PTS_41_PATTERN) {
+		/* update 2111 mode detection */
+		if (pts_trace == 2) {
+			if ((pts_41_pattern_sink[1] == 1) &&
+				(pts_41_pattern_sink[2] == 1) &&
+				(pts_41_pattern_sink[3] == 1) &&
+				(pts_pattern[PTS_41_PATTERN] <
+				PTS_41_PATTERN_DETECT_RANGE)) {
+				pts_pattern[PTS_41_PATTERN]++;
+				if (pts_pattern[PTS_41_PATTERN] ==
+					PTS_41_PATTERN_DETECT_RANGE) {
+					pts_pattern_enter_cnt[PTS_41_PATTERN]++;
+					pts_pattern_detected = pattern;
+					if (pts_log_enable[PTS_41_PATTERN])
+						pr_info("video 4:1 mode detected\n");
+				}
+			}
+			pts_41_pattern_sink[0] = 2;
+			pts_41_pattern_sink_index = 1;
+		} else if (pts_trace == 1) {
+			if ((pts_41_pattern_sink_index <
+				PTS_41_PATTERN_SINK_MAX) &&
+				(pts_41_pattern_sink_index > 0)) {
+				pts_41_pattern_sink[pts_41_pattern_sink_index]
+					= 1;
+				pts_41_pattern_sink_index++;
+			} else if (pts_pattern[PTS_41_PATTERN] ==
+				PTS_41_PATTERN_DETECT_RANGE) {
+				pts_pattern[PTS_41_PATTERN] = 0;
+				pts_41_pattern_sink_index = 0;
+				pts_pattern_exit_cnt[PTS_41_PATTERN]++;
+				memset(&pts_41_pattern_sink[0], 0,
+					PTS_41_PATTERN_SINK_MAX);
+				if (pts_log_enable[PTS_41_PATTERN])
+					pr_info("video 4:1 mode broken\n");
+			} else {
+				pts_pattern[PTS_41_PATTERN] = 0;
+				pts_41_pattern_sink_index = 0;
+				memset(&pts_41_pattern_sink[0], 0,
+					PTS_41_PATTERN_SINK_MAX);
+			}
+		} else if (pts_pattern[PTS_41_PATTERN] ==
+			PTS_41_PATTERN_DETECT_RANGE) {
+			pts_pattern[PTS_41_PATTERN] = 0;
+			pts_41_pattern_sink_index = 0;
+			memset(&pts_41_pattern_sink[0], 0,
+				PTS_41_PATTERN_SINK_MAX);
+			pts_pattern_exit_cnt[PTS_41_PATTERN]++;
+			if (pts_log_enable[PTS_41_PATTERN])
+				pr_info("video 4:1 mode broken\n");
+		} else {
+			pts_pattern[PTS_41_PATTERN] = 0;
+			pts_41_pattern_sink_index = 0;
+			memset(&pts_41_pattern_sink[0], 0,
+				PTS_41_PATTERN_SINK_MAX);
+		}
+		return;
+	}
+
+
+	/* update 3:2 or 2:2 mode detection */
+	if (((pre_pts_trace == factor1) && (pts_trace == factor2)) ||
+		((pre_pts_trace == factor2) && (pts_trace == factor1))) {
+		if (pts_pattern[pattern] < pattern_range) {
+			pts_pattern[pattern]++;
+			if (pts_pattern[pattern] == pattern_range) {
+				pts_pattern_enter_cnt[pattern]++;
+				pts_pattern_detected = pattern;
+				if (pts_log_enable[pattern])
+					pr_info("video %d:%d mode detected\n",
+						factor1, factor2);
+			}
+		}
+	} else if (pts_pattern[pattern] == pattern_range) {
+		pts_pattern[pattern] = 0;
+		pts_pattern_exit_cnt[pattern]++;
+		if (pts_log_enable[pattern])
+			pr_info("video %d:%d mode broken\n", factor1, factor2);
+	} else
+		pts_pattern[pattern] = 0;
+}
+
+static void vsync_video_pattern(void)
+{
+	/* Check for 3:2*/
+	log_vsync_video_pattern(PTS_32_PATTERN);
+	/* Check for 2:2*/
+	log_vsync_video_pattern(PTS_22_PATTERN);
+	/* Check for 4:1*/
+	log_vsync_video_pattern(PTS_41_PATTERN);
+}
+#endif
+
 /* for sdr/hdr/single dv switch with dual dv */
 static u32 last_el_status;
 /* for dual dv switch with different el size */
@@ -2113,7 +2413,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 
 #ifdef PTS_TRACE_DEBUG
 #ifdef PTS_TRACE_START
-		if (pts_trace_his_rd < 15) {
+		if (pts_trace_his_rd < 16) {
 #endif
 			pts_trace_his[pts_trace_his_rd] = pts_trace;
 			pts_his[pts_trace_his_rd] = vf->pts;
@@ -2124,7 +2424,15 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 #ifdef PTS_TRACE_START
 		}
 #endif
-		pts_trace = 0;
+#endif
+
+#ifdef PTS_LOGGING
+	vsync_video_pattern();
+	pre_pts_trace = pts_trace;
+#endif
+
+#if defined(PTS_LOGGING) || defined(PTS_TRACE_DEBUG)
+	pts_trace = 0;
 #endif
 
 	ori_start_x_lines = 0;
@@ -3718,6 +4026,89 @@ static inline bool duration_expire(struct vframe_s *cur_vf,
 
 #define VPTS_RESET_THRO
 
+#ifdef PTS_LOGGING
+static inline void vpts_perform_pulldown(struct vframe_s *next_vf,
+					bool *expired)
+{
+	int pattern_range, expected_curr_interval;
+	int expected_prev_interval;
+
+	/* Dont do anything if we have invalid data */
+	if (!next_vf || !next_vf->pts || !next_vf->next_vf_pts_valid)
+		return;
+
+	switch (pts_pattern_detected) {
+	case PTS_32_PATTERN:
+		pattern_range = PTS_32_PATTERN_DETECT_RANGE;
+		switch (pre_pts_trace) {
+		case 3:
+			expected_prev_interval = 3;
+			expected_curr_interval = 2;
+			break;
+		case 2:
+			expected_prev_interval = 2;
+			expected_curr_interval = 3;
+			break;
+		default:
+			return;
+		}
+		break;
+	case PTS_22_PATTERN:
+		if (pre_pts_trace != 2)
+			return;
+		pattern_range =  PTS_22_PATTERN_DETECT_RANGE;
+		expected_prev_interval = 2;
+		expected_curr_interval = 2;
+		break;
+	case PTS_41_PATTERN:
+		/* TODO */
+	default:
+		return;
+	}
+
+	/* We do nothing if  we dont have enough data*/
+	if (pts_pattern[pts_pattern_detected] != pattern_range)
+		return;
+
+	if (*expired) {
+		if (pts_trace < expected_curr_interval) {
+			/* 232323...223 -> 232323...232 */
+			/* check if next frame will toggle after 3 vsyncs */
+			int nextPts = timestamp_pcrscr_get() + vsync_pts_align;
+
+			if (((int)(nextPts + expected_prev_interval *
+				vsync_pts_inc - next_vf->next_vf_pts) < 0) &&
+				((int)(nextPts + expected_curr_interval *
+				vsync_pts_inc - next_vf->next_vf_pts) >= 0)) {
+				*expired = false;
+				if (pts_log_enable[PTS_32_PATTERN])
+					pr_info("hold frame for pattern: %d",
+						pts_pattern_detected);
+			}
+		}
+	} else {
+		if (pts_trace == expected_curr_interval) {
+			/* 232323...332 -> 232323...323 */
+			/* check if this frame will expire next vsyncs and */
+			/* next frame will expire after 2 vsyncs */
+			int nextPts = timestamp_pcrscr_get() + vsync_pts_align;
+
+			if (((int)(nextPts + vsync_pts_inc - next_vf->pts)
+				>= 0) &&
+			    ((int)(nextPts + vsync_pts_inc -
+				next_vf->next_vf_pts) < 0) &&
+			    ((int)(nextPts + expected_curr_interval *
+				vsync_pts_inc - next_vf->next_vf_pts) >= 0)) {
+				*expired = true;
+				if (pts_log_enable[PTS_32_PATTERN])
+					pr_info("pull frame for pattern: %d",
+						pts_pattern_detected);
+			}
+		}
+	}
+}
+#endif
+
 static inline bool vpts_expire(struct vframe_s *cur_vf,
 			       struct vframe_s *next_vf,
 			       int toggled_cnt)
@@ -3989,7 +4380,13 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 	}
 #endif
 
-		return expired;
+#ifdef PTS_LOGGING
+	if (pts_enforce_pulldown) {
+		/* Perform Pulldown if needed*/
+		vpts_perform_pulldown(next_vf, &expired);
+	}
+#endif
+	return expired;
 #endif
 }
 
@@ -5661,7 +6058,7 @@ SET_FILTER:
 	}
 
  exit:
-#ifdef PTS_TRACE_DEBUG
+#if defined(PTS_LOGGING) || defined(PTS_TRACE_DEBUG)
 		pts_trace++;
 #endif
 	vpp_misc_save = READ_VCBUS_REG(VPP_MISC + cur_dev->vpp_off);
@@ -6183,6 +6580,30 @@ static void video_vf_unreg_provider(void)
 	enable_video_discontinue_report = 1;
 	show_first_picture = false;
 	show_first_frame_nosync = false;
+
+#ifdef PTS_LOGGING
+	{
+		int pattern;
+		/* Print what we have right now*/
+		if (pts_pattern_detected >= PTS_32_PATTERN &&
+			pts_pattern_detected < PTS_MAX_NUM_PATTERNS) {
+			pr_info("pattern detected = %d, pts_enter_pattern_cnt =%d, pts_exit_pattern_cnt =%d",
+				pts_pattern_detected,
+				pts_pattern_enter_cnt[pts_pattern_detected],
+				pts_pattern_exit_cnt[pts_pattern_detected]);
+		}
+		/* Reset all metrics now*/
+		for (pattern = 0; pattern < PTS_MAX_NUM_PATTERNS; pattern++) {
+			pts_pattern[pattern] = 0;
+			pts_pattern_exit_cnt[pattern] = 0;
+			pts_pattern_enter_cnt[pattern] = 0;
+		}
+		/* Reset 4:1 data*/
+		memset(&pts_41_pattern_sink[0], 0, PTS_41_PATTERN_SINK_MAX);
+		pts_pattern_detected = -1;
+		pre_pts_trace = 0;
+	}
+#endif
 }
 
 static void video_vf_light_unreg_provider(void)
@@ -9724,6 +10145,7 @@ static int __init video_init(void)
 	set_clone_frame_rate(android_clone_rate, 0);
 #endif
 	REG_PATH_CONFIGS("media.video", video_configs);
+	video_debugfs_init();
 	return 0;
  err5:
 	device_destroy(&amvideo_class, MKDEV(AMVIDEO_MAJOR, 0));
@@ -9751,6 +10173,7 @@ static int __init video_init(void)
 
 static void __exit video_exit(void)
 {
+	video_debugfs_exit();
 	vf_unreg_receiver(&video_vf_recv);
 
 	vf_unreg_receiver(&video4osd_vf_recv);
