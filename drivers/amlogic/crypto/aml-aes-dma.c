@@ -988,6 +988,7 @@ static void aml_aes_done_task(unsigned long data)
 				if (!dd->in_sg || !dd->out_sg) {
 					pr_err("aml-aes: sg invalid\n");
 					err = -EINVAL;
+					break;
 				}
 			}
 		}

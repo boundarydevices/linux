@@ -777,10 +777,13 @@ static void aml_tdes_done_task(unsigned long data)
 			uint32_t i = 0;
 
 			for (i = 0; i < dd->fast_nents; i++) {
-				if (!dd->in_sg || !dd->out_sg)
-					err = -EINVAL;
 				dd->in_sg = sg_next(dd->in_sg);
 				dd->out_sg = sg_next(dd->out_sg);
+				if (!dd->in_sg || !dd->out_sg) {
+					pr_err("aml-tdes: sg invalid\n");
+					err = -EINVAL;
+					break;
+				}
 			}
 		}
 

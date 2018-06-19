@@ -124,6 +124,7 @@ static int aml_dma_probe(struct platform_device *pdev)
 	return err;
 
 dma_err:
+	kfree(dma_dd);
 	dev_err(dev, "initialization failed.\n");
 
 	return err;
