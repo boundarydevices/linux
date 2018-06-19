@@ -59,7 +59,7 @@ static int debug_flag;
 static int dump_file_flag;
 static int p2p_mode = 2;
 static int output_format_mode = 1;
-static int txlx_output_format_mode;
+static int txlx_output_format_mode = 1;
 
 #define NO_TASK_MODE
 
@@ -1716,7 +1716,7 @@ static int picdec_driver_probe(struct platform_device *pdev)
 	init_picdec_device();
 	picdec_device.p2p_mode = 0;
 	picdec_device.output_format_mode = 0;
-	txlx_output_format_mode = 0;
+	txlx_output_format_mode = 1;
 	return r;
 }
 
