@@ -1,15 +1,23 @@
 /*
- * Amlogic G12a Platform gpu
+ * arch/arm64/boot/dts/amlogic/mesong12a-bifrost.dtsi
  *
- * Copyright (c) 2017-2017 Amlogic Ltd
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
- * This file is licensed under a dual GPLv2 or BSD license.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
  */
 
 / {
 
-	gpu:dvalin@0xffe40000 {
+	gpu:bifrost {
 		compatible = "arm,malit60x", "arm,malit6xx", "arm,mali-midgard";
 		#cooling-cells = <2>;		/* min followed by max */
 		reg = <0 0xFFE40000 0 0x04000>, /*mali APB bus base address*/
@@ -20,6 +28,8 @@
 		interrupt-parent = <&gic>;
 		interrupts = <0 160 4>, <0 161 4>, <0 162 4>;
 		interrupt-names = "GPU", "MMU", "JOB";
+		/* ACE-Lite = 0; ACE = 1; No-coherency = 31; */
+		/* system-coherency = <31>; */
 
 		num_of_pp = <2>;
 		sc_mpp = <1>; /* number of shader cores used most of time. */

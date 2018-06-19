@@ -26,7 +26,7 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
 #include <dt-bindings/phy/phy-amlogic-pcie.h>
-#include "mesong12a-dvalin.dtsi"
+#include "mesong12a-bifrost.dtsi"
 #include "g12b-sched-energy.dtsi"
 
 / {
@@ -2474,6 +2474,10 @@
 			function = "remote_out";
 		};
 	};
+};
+
+&gpu{
+	system-coherency = <0>;
 };
 
 &pinctrl_aobus {
