@@ -218,11 +218,10 @@ static int aml_dai_i2s_prepare(struct snd_pcm_substream *substream,
 		if (IEC958_mode_codec == 0) {
 			aml_hw_iec958_init(substream, 1);
 			/* use the hw same sync for i2s/958 */
-			dev_info(substream->pcm->card->dev, "i2s/958 same source\n");
+			pr_debug("i2s/958 same source\n");
 		}
 		if (runtime->channels == 8) {
-			dev_info(substream->pcm->card->dev,
-				"8ch PCM output->notify HDMI\n");
+			pr_debug("8ch PCM output->notify HDMI\n");
 			aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM,
 				substream);
 		}
@@ -238,10 +237,10 @@ static int aml_dai_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			dev_info(substream->pcm->card->dev, "I2S playback enable\n");
+			pr_debug("I2S playback enable\n");
 			audio_out_i2s_enable(1);
 			if (IEC958_mode_codec == 0) {
-				dev_info(substream->pcm->card->dev, "IEC958 playback enable\n");
+				pr_debug("IEC958 playback enable\n");
 				audio_hw_958_enable(1);
 			}
 		} else {
@@ -256,10 +255,10 @@ static int aml_dai_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			dev_info(substream->pcm->card->dev, "I2S playback disable\n");
+			pr_debug("I2S playback disable\n");
 			audio_out_i2s_enable(0);
 			if (IEC958_mode_codec == 0) {
-				dev_info(substream->pcm->card->dev, "IEC958 playback disable\n");
+				pr_debug("IEC958 playback disable\n");
 				audio_hw_958_enable(0);
 			}
 		} else {
