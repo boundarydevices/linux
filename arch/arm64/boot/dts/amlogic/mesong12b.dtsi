@@ -1834,6 +1834,14 @@
 		interrupt-names = "ddr_bandwidth";
 	};
 
+	isp_sc: isp-sc@ff655400 {
+		compatible = "amlogic, isp-sc";
+		reg = <0x0 0xff655400 0x0 0x00001000>;
+		reg-names = "isp_sc";
+		interrupts = <0 17 0>;
+		interrupt-names = "isp_sc";
+	};
+
 	isp: isp@ff140000 {
 		compatible = "arm, isp";
 		reg = <0x0 0xff140000 0x0 0x00040000>;
@@ -1844,6 +1852,7 @@
 			<&clkc CLKID_MIPI_CSI_PHY_CLK0_COMP>;
 		clock-names = "cts_mipi_isp_clk_composite",
 			"cts_mipi_csi_phy_clk0_composite";
+		link-device = <&isp_sc>;
 	};
 
 	adapter: isp-adapter@ff650000 {
