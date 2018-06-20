@@ -276,17 +276,17 @@ static void SetAVI_Info(struct AVIType_s *AVI, BYTE *Data)
 	bAVI = Data[IF_HEADER_LENGTH] & ColorSpaceMask;
 	if (bAVI == RGB)
 		AVI->bInputColorSpace = SiI_RX_ICP_RGB;
-	else if (bAVI == YCbCr422)
+	else if (bAVI == (BYTE)YCbCr422)
 		AVI->bInputColorSpace = SiI_RX_ICP_YCbCr422;
-	else if (bAVI == YCbCr444)
+	else if (bAVI == (BYTE)YCbCr444)
 		AVI->bInputColorSpace = SiI_RX_ICP_YCbCr444;
 
 	bAVI = Data[IF_HEADER_LENGTH + 1] & ColorimetryMask;
 	if (bAVI == NoInfo)
 		AVI->bColorimetry = SiI_RX_ColorimetryNoInfo;
-	else if (bAVI == ITU601)
+	else if (bAVI == (BYTE)ITU601)
 		AVI->bColorimetry = SiI_RX_ITU_601;
-	else if (bAVI == ITU709)
+	else if (bAVI == (BYTE)ITU709)
 		AVI->bColorimetry = SiI_RX_ITU_709;
 
 	AVI->bPixRepl = Data[IF_HEADER_LENGTH + 4] & PixReplicationMask;

@@ -51,7 +51,7 @@ BYTE siiGetPCB_Id(void)
  */
 void InitEEPROMWithDefaults(void)
 {
-	BYTE abData[6];
+	BYTE abData[7];
 
 	abData[0] = RX_API_ID_L;
 	abData[1] = RX_API_ID_H;
@@ -182,7 +182,7 @@ static void PrintIntilizeSystemWith(BYTE *pbInitData)
  */
 static BYTE siiRXAPIConfig(void)
 {
-	BYTE abData[6];
+	BYTE abData[8];
 	BYTE bError;
 	WORD wDevId;
 

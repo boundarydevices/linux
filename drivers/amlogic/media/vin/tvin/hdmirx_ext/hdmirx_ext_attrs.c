@@ -219,10 +219,14 @@ static ssize_t hdmirx_ext_video_mode_show(struct device *dev,
 
 	mode_str = __plat_get_video_mode_name(mode);
 
-	if (strcmp(mode_str, "invalid") != 0)
-		strcat(hdmi_mode_str, mode_str);
-	else
-		strcpy(hdmi_mode_str, mode_str);
+	if (strcmp(mode_str, "invalid") != 0) {
+		if (strlen(mode_str) <
+			(sizeof(hdmi_mode_str) - strlen(hdmi_mode_str)))
+			strcat(hdmi_mode_str, mode_str);
+	} else {
+		if (strlen(mode_str) < sizeof(hdmi_mode_str))
+			strcpy(hdmi_mode_str, mode_str);
+	}
 	return sprintf(buf, "%s\n", hdmi_mode_str);
 }
 
@@ -268,7 +272,8 @@ static ssize_t hdmirx_ext_audio_sr_show(struct device *dev,
 	};
 
 	audio_sr = __hw_get_audio_sample_rate();
-	if ((audio_sr < 0) || (audio_sr > sizeof(audio_sr_array)))
+	if ((audio_sr < 0) ||
+		(audio_sr >= (sizeof(audio_sr_array)/sizeof(char *))))
 		audio_sr = 0;
 
 	return sprintf(buf, "%s\n", audio_sr_array[audio_sr]);

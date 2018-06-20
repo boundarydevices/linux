@@ -193,7 +193,10 @@ int __hw_enable(void)
 {
 	struct hdmirx_ext_drv_s *hdrv = hdmirx_ext_get_driver();
 
-	if ((hdrv) && (hdrv->hw.enable))
+	if (!hdrv)
+		return -1;
+
+	if (hdrv->hw.enable)
 		return hdrv->hw.enable();
 	hdrv->state = 1;
 
@@ -206,8 +209,12 @@ void __hw_disable(void)
 {
 	struct hdmirx_ext_drv_s *hdrv = hdmirx_ext_get_driver();
 
+	if (!hdrv)
+		return;
+
 	hdrv->state = 0;
-	if ((hdrv) && (hdrv->hw.disable))
+
+	if (hdrv->hw.disable)
 		hdrv->hw.disable();
 }
 

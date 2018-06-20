@@ -449,7 +449,7 @@ static void tvafe_avin_detect_state(struct tvafe_avin_det_s *avdev)
 static void tvafe_avin_detect_parse_param(char *buf_orig, char **parm)
 {
 	char *ps, *token;
-	char delim1[2] = " ";
+	char delim1[3] = " ";
 	char delim2[2] = "\n";
 	unsigned int n = 0;
 

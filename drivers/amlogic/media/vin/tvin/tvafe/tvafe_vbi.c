@@ -348,7 +348,8 @@ static int vbi_buffer_write(struct vbi_ringbuffer_s *buf,
 			tvafe_pr_info("%s: buffer len is zero\n", __func__);
 		return 0;
 	}
-	if (!buf->data) {
+
+	if ((buf == NULL) || (buf->data == NULL)) {
 		if (capture_print_en)
 			tvafe_pr_info("%s: buffer data pointer is zero\n",
 			__func__);
@@ -464,9 +465,6 @@ unsigned char *search_table(unsigned char *table_start_addr,
 		(search_point > table_end_addr)) {
 		tvafe_pr_info("search_table add err: start=%p,search=%p,end=%p\n",
 			table_start_addr, search_point, table_end_addr);
-		return NULL;
-	} else if (search_size > VBI_BUFF2_SIZE) {
-		tvafe_pr_info("search_size out of range\n");
 		return NULL;
 	}
 
@@ -834,7 +832,7 @@ void vbi_ringbuffer_reset(struct vbi_ringbuffer_s *rbuf)
 }
 
 static int vbi_set_buffer_size(struct vbi_dev_s *dev,
-		      unsigned long size)
+		      unsigned int size)
 {
 	struct vbi_slicer_s *vbi_slicer = dev->slicer;
 	struct vbi_ringbuffer_s *buf = &vbi_slicer->buffer;
@@ -960,7 +958,7 @@ static ssize_t vbi_buffer_read(struct vbi_ringbuffer_s *src,
 	ssize_t ret = 0;
 	ssize_t timeout = 0;
 
-	if (!src->data) {
+	if ((src == NULL) || (src->data == NULL)) {
 		tvafe_pr_info("%s: data null\n", __func__);
 		return 0;
 	}
@@ -1102,7 +1100,7 @@ static long vbi_ioctl(struct file *file,
 {
 	int ret = 0;
 	void __user *argp = (void __user *)arg;
-	unsigned long buffer_size_t;
+	unsigned int buffer_size_t;
 
 	struct vbi_dev_s *vbi_dev = file->private_data;
 	struct vbi_slicer_s *vbi_slicer = vbi_dev->slicer;
@@ -1282,7 +1280,7 @@ static struct resource vbi_memobj;
 static void vbi_parse_param(char *buf_orig, char **parm)
 {
 	char *ps, *token;
-	char delim1[2] = " ";
+	char delim1[3] = " ";
 	char delim2[2] = "\n";
 	unsigned int n = 0;
 
@@ -1378,13 +1376,17 @@ static ssize_t vbi_store(struct device *dev,
 	char *buf_orig;
 	char *parm[6] = {NULL};
 	struct vbi_dev_s *devp = dev_get_drvdata(dev);
-	struct vbi_slicer_s *vbi_slicer = devp->slicer;
-	struct vbi_ringbuffer_s *vbi_buffer = &(vbi_slicer->buffer);
+	struct vbi_slicer_s *vbi_slicer;
+	struct vbi_ringbuffer_s *vbi_buffer;
 	long val;
 	int ret = 0;
 
 	if (!buff || !devp)
 		return len;
+
+	vbi_slicer = devp->slicer;
+	vbi_buffer = &(vbi_slicer->buffer);
+
 	buf_orig = kstrdup(buff, GFP_KERNEL);
 	vbi_parse_param(buf_orig, (char **)&parm);
 	if (!strncmp(parm[0], "dumpmem", strlen("dumpmem"))) {
@@ -1450,7 +1452,7 @@ static ssize_t vbi_store(struct device *dev,
 	} else if (!strncmp(parm[0], "set_size", strlen("set_size"))) {
 		if (kstrtol(parm[1], 10, &val) < 0)
 			return -EINVAL;
-		vbi_set_buffer_size(devp, val);
+		vbi_set_buffer_size(devp, (unsigned int)val);
 		tvafe_pr_info(" set buf size to %d\n",
 			vbi_slicer->buffer.size);
 	} else if (!strncmp(parm[0], "set_type", strlen("set_type"))) {

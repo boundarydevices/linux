@@ -178,7 +178,7 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 static void tvafe_parse_param(char *buf_orig, char **parm)
 {
 	char *ps, *token;
-	char delim1[2] = " ";
+	char delim1[3] = " ";
 	char delim2[2] = "\n";
 	unsigned int n = 0;
 
@@ -355,7 +355,7 @@ static ssize_t tvafe_dumpmem_store(struct device *dev,
 	char *buf_orig, *ps, *token;
 	char *parm[6] = {NULL};
 	struct tvafe_dev_s *devp;
-	char delim1[2] = " ";
+	char delim1[3] = " ";
 	char delim2[2] = "\n";
 
 	strcat(delim1, delim2);
@@ -372,7 +372,7 @@ static ssize_t tvafe_dumpmem_store(struct device *dev,
 		if (*token == '\0')
 			continue;
 		parm[n++] = token;
-		}
+	}
 	if (!strncmp(parm[0], "dumpmem", strlen("dumpmem"))) {
 		if (parm[1] != NULL) {
 			struct file *filp = NULL;

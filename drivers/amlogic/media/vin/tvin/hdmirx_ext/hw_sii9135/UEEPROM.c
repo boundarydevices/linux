@@ -94,7 +94,7 @@ void siiBlockWriteEEPROM(WORD Addr, BYTE NBytes, BYTE *Data)
 	hlBlockWrite_8BAS((struct I2CShortCommandType_s *)&I2CComm, Data);
 #endif
 
-	hlWaitForAck(bEEPROMSlaveAddr, 100);
+	/*hlWaitForAck(bEEPROMSlaveAddr, 100);*/
 }
 /*----------------------------------------------------------------------*/
 

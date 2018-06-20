@@ -3776,7 +3776,7 @@ int vdin_event_cb(int type, void *data, void *op_arg)
 		req->low_latency = 0;
 		if (req->bot_flag)
 			index = (req->vf->index >> 8) & 0xff;
-		if (index != 0xff && index >= 0
+		if (index != 0xff
 			&& index < p->size
 			&& p->dv_buf[index]) {
 			req->aux_buf = p->dv_buf[index];

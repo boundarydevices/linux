@@ -76,7 +76,7 @@ static void vdin_set_before_after_mat0(unsigned int offset,
 static void vdin_parse_param(char *buf_orig, char **parm)
 {
 	char *ps, *token;
-	char delim1[2] = " ";
+	char delim1[3] = " ";
 	char delim2[2] = "\n";
 	unsigned int n = 0;
 	ps = buf_orig;
@@ -1673,7 +1673,7 @@ static ssize_t vdin_cm2_store(struct device *dev,
 	unsigned int addr_port = VDIN_CHROMA_ADDR_PORT;
 	unsigned int data_port = VDIN_CHROMA_DATA_PORT;
 	long val;
-	char delim1[2] = " ";
+	char delim1[3] = " ";
 	char delim2[2] = "\n";
 
 	strcat(delim1, delim2);

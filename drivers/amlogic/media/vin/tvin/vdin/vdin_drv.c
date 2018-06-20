@@ -1160,7 +1160,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	unsigned int stamp = 0;
 	struct tvin_state_machine_ops_s *sm_ops;
 	int vdin2nr = 0;
-	unsigned int offset, vf_drop_cnt;
+	unsigned int offset = 0, vf_drop_cnt = 0;
 	enum tvin_trans_fmt trans_fmt;
 	struct tvin_sig_property_s *prop, *pre_prop;
 
@@ -1170,6 +1170,15 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	 * because the spinlock may affect the system time.
 	 */
 
+	/* avoid null pointer oops */
+	if (!devp)
+		return IRQ_HANDLED;
+
+	if (!devp->frontend) {
+		devp->vdin_irq_flag = 1;
+		goto irq_handled;
+	}
+
 	/* ignore fake irq caused by sw reset*/
 	if (devp->vdin_reset_flag) {
 		devp->vdin_reset_flag = 0;
@@ -1177,11 +1186,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	}
 	vf_drop_cnt = vdin_drop_cnt;
 
-	/* avoid null pointer oops */
-	if (!devp || !devp->frontend) {
-		devp->vdin_irq_flag = 1;
-		goto irq_handled;
-	}
 	offset = devp->addr_offset;
 
 	isr_log(devp->vfp);
@@ -1840,7 +1844,7 @@ static int vdin_release(struct inode *inode, struct file *file)
 static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	long ret = 0;
-	int callmaster_status;
+	int callmaster_status = 0;
 	struct vdin_dev_s *devp = NULL;
 	void __user *argp = (void __user *)arg;
 
