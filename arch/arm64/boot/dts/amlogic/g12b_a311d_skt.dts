@@ -264,6 +264,30 @@
 		status = "okay";
 	};
 
+	gpio_keypad {
+		compatible = "amlogic, gpio_keypad";
+		status = "okay";
+		scan_period = <20>;
+		key_num = <1>;
+		key_name = "power";
+		key_code = <116>;
+		key_pin = <&gpio_ao  GPIOAO_3  GPIO_ACTIVE_HIGH>;
+	};
+
+	adc_keypad {
+		compatible = "amlogic, adc_keypad";
+		status = "okay";
+		key_name = "menu", "vol-", "vol+", "esc", "home";
+		key_num = <5>;
+		io-channels = <&saradc SARADC_CH2>;
+		io-channel-names = "key-chan-2";
+		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2
+			SARADC_CH2 SARADC_CH2>;
+		key_code = <139 114 115 1 102>;
+		key_val = <0 143 266 389 512>; //val=voltage/1800mV*1023
+		key_tolerance = <40 40 40 40 40>;
+	};
+
 	unifykey{
 		compatible = "amlogic, unifykey";
 		status = "ok";
