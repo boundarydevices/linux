@@ -437,9 +437,6 @@ static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 		hdev->ready = 1;
 		/* Get uboot output color space from AVI */
 		switch (hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3) {
-		case 0:
-			hdev->para->cs = COLORSPACE_RGB444;
-			break;
 		case 1:
 			hdev->para->cs = COLORSPACE_YUV422;
 			break;
@@ -450,6 +447,7 @@ static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 			hdev->para->cs = COLORSPACE_YUV420;
 			break;
 		default:
+			hdev->para->cs = COLORSPACE_RGB444;
 			break;
 		}
 		/* If color space is not 422, then get depth from VP_PR_CD */
@@ -3616,12 +3614,14 @@ static int hdmitx_cntl_config(struct hdmitx_dev *hdev, unsigned int cmd,
 		break;
 	case CONF_EMP_NUMBER:
 		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL0, argv, 16, 16);
+		break;
 	case CONF_EMP_PHY_ADDR:
 		hdmitx_rd_check_reg(HDMITX_TOP_EMP_STAT0, 0, 0x3fffffff);
 		hdmitx_wr_reg(HDMITX_TOP_EMP_MEMADDR_START, argv);/*phys_ptr*/
 		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL1, 1, 17, 1); /*little*/
 		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL1, 120, 0, 16);
 		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL0, 1, 0, 1);/*emp_tx_en*/
+		break;
 	default:
 		break;
 	}

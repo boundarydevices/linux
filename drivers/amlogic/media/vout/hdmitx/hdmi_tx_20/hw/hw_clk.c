@@ -1002,7 +1002,7 @@ static void hdmitx_check_frac_rate(struct hdmitx_dev *hdev)
 	if (para && (para->name) && likely_frac_rate_mode(para->name))
 		;
 	else {
-		pr_info("%s doesn't have frac_rate\n", para->name);
+		pr_info("this mode doesn't have frac_rate\n");
 		frac_rate = 0;
 	}
 

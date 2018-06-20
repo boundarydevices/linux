@@ -404,8 +404,7 @@ static int set_disp_mode_auto(void)
 	if ((info == NULL) || (info->name == NULL))
 		return -1;
 
-	pr_info(SYS "get current mode: %s\n",
-		info ? info->name : "null");
+	pr_info(SYS "get current mode: %s\n", info->name);
 
 	if (!((strncmp(info->name, "480cvbs", 7) == 0) ||
 		(strncmp(info->name, "576cvbs", 7) == 0) ||
@@ -440,7 +439,7 @@ static int set_disp_mode_auto(void)
 		hdev->para = hdmi_get_fmt_name("invalid", hdev->fmt_attr);
 		return -1;
 	}
-	memcpy(mode, info->name, strlen(info->name));
+	memcpy(mode, info->name, sizeof(mode));
 	if (strstr(mode, "fp")) {
 		int i = 0;
 
@@ -1325,10 +1324,8 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 				VEN_DB1[4] = 0x2;
 			else if (vic == HDMI_3840x2160p24_16x9)
 				VEN_DB1[4] = 0x3;
-			else if (vic == HDMI_4096x2160p24_256x135)
+			else/*vic == HDMI_4096x2160p24_256x135*/
 				VEN_DB1[4] = 0x4;
-			else
-				VEN_DB1[4] = 0x0;
 		}
 		if (type == EOTF_T_DOLBYVISION) {
 			hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB1, VEN_HB);
@@ -1772,7 +1769,7 @@ static ssize_t show_disp_cap(struct device *dev,
 	} else {
 		for (i = 0; disp_mode_t[i]; i++) {
 			memset(mode_tmp, 0, sizeof(mode_tmp));
-			strncpy(mode_tmp, disp_mode_t[i], sizeof(mode_tmp));
+			strncpy(mode_tmp, disp_mode_t[i], 31);
 			vic = hdmitx_edid_get_VIC(&hdmitx_device, mode_tmp, 0);
 			/* Handling only 4k420 mode */
 			if (vic == HDMI_Unknown) {
@@ -2655,11 +2652,9 @@ static ssize_t show_hdcp_ver(struct device *dev,
 	}
 next:	/* Detect RX support HDCP14 */
 	/* Here, must assume RX support HDCP14, otherwise affect 1A-03 */
-	if (ver == 0U) {
-		pos += snprintf(buf+pos, PAGE_SIZE, "14\n\r");
-		return pos;
-	}
+	pos += snprintf(buf+pos, PAGE_SIZE, "14\n\r");
 	return pos;
+
 }
 
 static ssize_t show_hpd_state(struct device *dev,
@@ -3626,7 +3621,7 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 			hdmitx_device.config_data.vend_data = kzalloc(
 				sizeof(struct vendor_info_data), GFP_KERNEL);
 			if (!hdmitx_device.config_data.vend_data)
-				ret = -ENOMEM;
+				pr_info(SYS "not allocate memory\n");
 			ret = get_dt_vend_init_data(init_data,
 				hdmitx_device.config_data.vend_data);
 			if (ret)
