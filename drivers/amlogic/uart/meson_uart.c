@@ -30,9 +30,8 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/clk-provider.h>
 #include <linux/amlogic/iomap.h>
-#include <linux/serial_core.h>
 
-#ifdef CONFIG_SUPPORT_SYSRQ
+#if defined(CONFIG_AMLOGIC_SERIAL_MESON_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ
 #endif
 #include <linux/serial_core.h>
