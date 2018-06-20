@@ -374,13 +374,15 @@ int cvbs_out_setmode(void)
 {
 	int ret;
 
-	if (local_cvbs_mode >= MODE_MAX)
-		cvbs_log_err("cvbs_out_setmode:cvbsmode error.");
-	mutex_lock(&setmode_mutex);
 	cvbs_log_info("SET cvbs mode:%s(%d)\n",
 		(local_cvbs_mode == 0) ? "480cvbs" :
 		((local_cvbs_mode == 1) ? "576cvbs" :
 		"invalid"), local_cvbs_mode);
+	if (local_cvbs_mode >= MODE_MAX) {
+		cvbs_log_err("cvbs_out_setmode:cvbsmode error.");
+		return -1;
+	}
+	mutex_lock(&setmode_mutex);
 
 	cvbs_out_vpu_power_ctrl(1);
 	cvbs_out_clk_gate_ctrl(1);
@@ -507,8 +509,7 @@ static const struct vinfo_s *get_valid_vinfo(char  *mode)
 	for (i = 0; i < count; i++) {
 		if (strncmp(cvbs_info[i].name, mode,
 			    strlen(cvbs_info[i].name)) == 0) {
-			if ((vinfo == NULL)
-			    || (strlen(cvbs_info[i].name) > mode_name_len)) {
+			if (strlen(cvbs_info[i].name) > mode_name_len) {
 				vinfo = &cvbs_info[i];
 				mode_name_len = strlen(cvbs_info[i].name);
 				local_cvbs_mode = i;
@@ -517,7 +518,8 @@ static const struct vinfo_s *get_valid_vinfo(char  *mode)
 		}
 	}
 	if (vinfo)
-		strcpy(vinfo->ext_name, mode);
+		strncpy(vinfo->ext_name, mode,
+		(strlen(mode) < 32) ? strlen(mode) : 31);
 	else
 		local_cvbs_mode = MODE_MAX;
 	return vinfo;
@@ -1147,8 +1149,6 @@ static void cvbs_debug_store(char *buf)
 		"\tclkdump\n"
 		"\tset_clkpath 0/1/2/3\n");
 		break;
-	default:
-		break;
 	}
 
 DEBUG_END:
@@ -1201,7 +1201,6 @@ fail_create_device:
 	cdev_del(info->cdev);
 fail_add_cdev:
 	cvbs_log_info("[cvbs.] : cvbs add device error.\n");
-	kfree(info);
 fail_class_create_file:
 	cvbs_log_info("[cvbs.] : cvbs class create file error.\n");
 	for (i = 0; i < ARRAY_SIZE(cvbs_attr); i++)

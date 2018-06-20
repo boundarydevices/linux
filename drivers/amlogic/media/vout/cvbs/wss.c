@@ -320,7 +320,7 @@ static void wss_process_cmd(unsigned int cmd, unsigned int param)
 	else if (cmd == WSS_480I_CMD_OFF)
 		wss_close_output(480);
 	else {
-		if ((cmd >= WSS_576I_CMD_AR) && (cmd <= WSS_576I_CMD_OFF))
+		if (cmd <= WSS_576I_CMD_OFF)
 			mode = 576;
 		else if ((cmd >= WSS_480I_CMD_AR) && (cmd <= WSS_480I_CMD_OFF))
 			mode = 480;
@@ -357,7 +357,7 @@ static void wss_show_status(unsigned int mode, char *wss_cmd)
 /* pr_info("[%s] mode = %d, wss_cmd = |%s|\n", __FUNCTION__, mode, wss_cmd); */
 	if (mode == MODE_576CVBS) {
 		if (!strncmp(wss_cmd, "cgms", strlen("cgms"))) {
-			data = (data>>WSS_576I_CGMS_A_START) &
+			data = (data >> WSS_576I_CGMS_A_START) &
 							WSS_576I_CGMS_A_MASK;
 			switch (data) {
 			case 0:
@@ -371,8 +371,6 @@ static void wss_show_status(unsigned int mode, char *wss_cmd)
 				break;
 			case 3:
 				pr_info("cgms 3: copy right asserted / copying restricted\n");
-				break;
-			default:
 				break;
 			}
 		}
@@ -404,7 +402,7 @@ static void wss_dispatch_cmd(char *p)
 		cmd = 0xee;
 	else {
 		if (get_local_cvbs_mode() == MODE_480CVBS) {
-			cmd_max = sizeof(wss_480i_cmd);
+			cmd_max = sizeof(wss_480i_cmd)/sizeof(char *);
 			for (i = 0; i < cmd_max; i++) {
 				if (!strncmp(argv[0], wss_480i_cmd[i],
 						strlen(wss_480i_cmd[i]))) {
@@ -413,7 +411,7 @@ static void wss_dispatch_cmd(char *p)
 				}
 			}
 		} else if (get_local_cvbs_mode() == MODE_576CVBS) {
-			cmd_max = sizeof(wss_576i_cmd);
+			cmd_max = sizeof(wss_576i_cmd)/sizeof(char *);
 			for (i = 0; i < cmd_max; i++) {
 				if (!strncmp(argv[0], wss_576i_cmd[i],
 						strlen(wss_576i_cmd[i]))) {
