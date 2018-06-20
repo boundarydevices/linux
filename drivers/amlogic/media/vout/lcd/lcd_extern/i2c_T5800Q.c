@@ -114,8 +114,7 @@ static int lcd_extern_power_cmd(unsigned char *init_table, int flag)
 				EXTERR("invalid i2c device\n");
 				return -1;
 			}
-			ret = lcd_extern_i2c_write(
-				i2c_device->client,
+			ret = lcd_extern_i2c_write(i2c_device->client,
 				&init_table[i+1], (cmd_size-2));
 		} else {
 			EXTERR("%s(%d: %s): power_type %d is invalid\n",

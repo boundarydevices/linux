@@ -118,6 +118,10 @@ static int SP_TX_Write_Reg(unsigned char addr, unsigned char reg,
 	else if (addr == 0x72)
 		client = aml_anx6345_72_client;
 
+	if (client == NULL) {
+		EXTERR("%s: invalid i2c client\n", __func__);
+		return -1;
+	}
 	ret = aml_i2c_write(client, buff, 1);
 	return ret;
 }
@@ -134,6 +138,10 @@ static int SP_TX_Read_Reg(unsigned char addr, unsigned char reg,
 	else if (addr == 0x72)
 		client = aml_anx6345_72_client;
 
+	if (client == NULL) {
+		EXTERR("%s: invalid i2c client\n", __func__);
+		return -1;
+	}
 	ret = aml_i2c_read(client, data, 1);
 	return ret;
 }

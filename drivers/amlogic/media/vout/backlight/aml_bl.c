@@ -330,7 +330,8 @@ static void bl_gpio_set(int index, int value)
 }
 
 /* ****************************************************** */
-static char *bl_pinmux_str[] = {
+#define BL_PINMUX_MAX    6
+static char *bl_pinmux_str[BL_PINMUX_MAX] = {
 	"pwm_on",               /* 0 */
 	"pwm_vs_on",            /* 1 */
 	"pwm_combo_0_1_on",     /* 2 */
@@ -366,6 +367,11 @@ static void bl_pwm_pinmux_set(struct bl_config_s *bconf)
 	default:
 		BLERR("%s: wrong ctrl_mothod=%d\n", __func__, bconf->method);
 		break;
+	}
+
+	if (index >= BL_PINMUX_MAX) {
+		BLERR("%s: pinmux index %d is invalid\n", __func__, index);
+		return;
 	}
 
 	/* request pwm pinmux */

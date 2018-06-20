@@ -2227,16 +2227,16 @@ static ssize_t lcd_debug_dump_show(struct class *class,
 	switch (lcd_debug_dump_state) {
 	case LCD_DEBUG_DUMP_INFO:
 		len = lcd_info_print(print_buf, 0);
-		len += lcd_power_info_print((print_buf+len), len);
+		lcd_power_info_print((print_buf+len), len);
 		break;
 	case LCD_DEBUG_DUMP_REG:
-		len = lcd_reg_print(print_buf, 0);
+		lcd_reg_print(print_buf, 0);
 		break;
 	case LCD_DEBUG_DUMP_HDR:
-		len = lcd_hdr_info_print(print_buf, 0);
+		lcd_hdr_info_print(print_buf, 0);
 		break;
 	default:
-		len = sprintf(print_buf, "%s: invalid command\n", __func__);
+		sprintf(print_buf, "%s: invalid command\n", __func__);
 		break;
 	}
 	len = sprintf(buf, "%s\n", print_buf);

@@ -2127,10 +2127,13 @@ void lcd_clk_generate_parameter(struct lcd_config_s *pconf)
 	}
 }
 
+static char lcd_ss_str[10] = {
+	'u', 'n', 'k', 'n', 'o', 'w', 'n', '\0',
+};
 char *lcd_get_spread_spectrum(void)
 {
 	char *ss_str;
-	int ss_level;
+	unsigned int ss_level;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	ss_level = lcd_drv->lcd_config->lcd_timing.ss_level;
@@ -2143,7 +2146,7 @@ char *lcd_get_spread_spectrum(void)
 		ss_str = lcd_pll_ss_table_txlx[ss_level];
 		break;
 	default:
-		ss_str = "unknown";
+		ss_str = lcd_ss_str;
 		break;
 	}
 

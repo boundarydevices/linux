@@ -90,7 +90,7 @@ struct aml_lcd_extern_driver_s {
 };
 
 struct aml_lcd_extern_i2c_dev_s {
-	char name[20];
+	char name[30];
 	struct i2c_client *client;
 };
 

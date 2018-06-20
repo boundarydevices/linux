@@ -291,23 +291,30 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 		sprintf(propname, "dsi_init_off");
 	}
 
-	para = kmalloc(sizeof(unsigned int)*100, GFP_KERNEL);
+	para = kcalloc(n_max, sizeof(unsigned int), GFP_KERNEL);
 	if (para == NULL) {
 		LCDERR("%s: Not enough memory\n", __func__);
 		return -1;
 	}
 	ret = of_property_read_u32_index(m_node, propname, 0, &para[0]);
 	if (ret) {
-		LCDERR("faild to get %s\n", propname);
-		kfree(para);
-		return -1;
+		LCDERR("failed to get %s\n", propname);
+		goto lcd_mipi_dsi_init_table_detect_err;
 	}
 	i = 0;
 	while ((i + 1) < n_max) {
 		ret = of_property_read_u32_index(m_node, propname, i, &val);
+		if (ret) {
+			LCDERR("failed to get %s\n", propname);
+			goto lcd_mipi_dsi_init_table_detect_err;
+		}
 		if (val == 0xff) {
 			ret = of_property_read_u32_index(m_node,
 				propname, (i+1), &val);
+			if (ret) {
+				LCDERR("failed to get %s\n", propname);
+				goto lcd_mipi_dsi_init_table_detect_err;
+			}
 			i += 2;
 			if (val == 0xff)
 				break;
@@ -315,11 +322,19 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 			/*  probe gpio */
 			ret = of_property_read_u32_index(m_node,
 				propname, (i + DSI_GPIO_INDEX), &val);
+			if (ret) {
+				LCDERR("failed to get %s\n", propname);
+				goto lcd_mipi_dsi_init_table_detect_err;
+			}
 			lcd_cpu_gpio_probe(val);
 
-			/*  cmd size */
+			/* cmd size */
 			ret = of_property_read_u32_index(m_node,
 				propname, (i + DSI_CMD_SIZE_INDEX), &val);
+			if (ret) {
+				LCDERR("failed to get %s\n", propname);
+				goto lcd_mipi_dsi_init_table_detect_err;
+			}
 			if (val < 3) {
 				LCDERR("get %s wrong cmd_size %d for gpio\n",
 					propname, val);
@@ -334,6 +349,10 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 		} else if (val == 0xfc) { /* check state */
 			ret = of_property_read_u32_index(m_node,
 				propname, (i + DSI_CMD_SIZE_INDEX), &val);
+			if (ret) {
+				LCDERR("failed to get %s\n", propname);
+				goto lcd_mipi_dsi_init_table_detect_err;
+			}
 			if ((i + 2 + val) >= n_max) {
 				LCDERR("get %s cmd_size out of max for check\n",
 					propname);
@@ -342,8 +361,16 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 
 			ret = of_property_read_u32_index(m_node, propname,
 				(i + DSI_CMD_SIZE_INDEX + 1), &para[0]);
+			if (ret) {
+				LCDERR("failed to get %s\n", propname);
+				goto lcd_mipi_dsi_init_table_detect_err;
+			}
 			ret = of_property_read_u32_index(m_node, propname,
 				(i + DSI_CMD_SIZE_INDEX + 2), &para[1]);
+			if (ret) {
+				LCDERR("failed to get %s\n", propname);
+				goto lcd_mipi_dsi_init_table_detect_err;
+			}
 			dconf->check_reg = para[0];
 			dconf->check_cnt = para[1];
 			if (dconf->check_cnt > 0)
@@ -356,6 +383,10 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 		} else {
 			ret = of_property_read_u32_index(m_node,
 				propname, (i + DSI_CMD_SIZE_INDEX), &val);
+			if (ret) {
+				LCDERR("failed to get %s\n", propname);
+				goto lcd_mipi_dsi_init_table_detect_err;
+			}
 			if ((i + 2 + val) >= n_max) {
 				LCDERR("get %s cmd_size out of max\n",
 					propname);
@@ -367,7 +398,8 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 	i = (i > n_max) ? n_max : i;
 	ret = of_property_read_u32_array(m_node, propname, &para[0], i);
 	if (ret) {
-		LCDERR("faild to get %s\n", propname);
+		LCDERR("failed to get %s\n", propname);
+		goto lcd_mipi_dsi_init_table_detect_err;
 	} else {
 		for (j = 0; j < i; j++)
 			dsi_table[j] = (unsigned char)(para[j] & 0xff);
@@ -376,6 +408,10 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 	if (lcd_debug_print_flag)
 		mipi_dsi_init_table_print(dconf, on_off);
 
+	kfree(para);
+	return 0;
+
+lcd_mipi_dsi_init_table_detect_err:
 	kfree(para);
 	return ret;
 }

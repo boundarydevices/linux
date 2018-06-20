@@ -55,14 +55,13 @@ static unsigned char init_off_table[] = {
 	0xff, 0x00, 0x00, 0x00, //ending
 };
 
-static int i2c_lp8556_write(unsigned char *buff, unsigned int len)
+static int i2c_lp8556_write(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len)
 {
 	int ret = 0;
-	struct aml_bl_extern_i2c_dev_s *i2c_dev = aml_bl_extern_i2c_get_dev();
-
 	struct i2c_msg msg[] = {
 		{
-			.addr = i2c_dev->client->addr,
+			.addr = i2client->addr,
 			.flags = 0,
 			.len = len,
 			.buf = buff,
@@ -70,15 +69,9 @@ static int i2c_lp8556_write(unsigned char *buff, unsigned int len)
 	};
 	BLEX("%s\n", __func__);
 
-	if (i2c_dev == NULL) {
-		BLEXERR("invalid i2c device\n");
-		return -1;
-	}
-
-	ret = i2c_transfer(i2c_dev->client->adapter, msg, 1);
+	ret = i2c_transfer(i2client->adapter, msg, 1);
 	if (ret < 0)
-		BLEXERR("i2c write failed [addr 0x%02x]\n",
-			i2c_dev->client->addr);
+		BLEXERR("i2c write failed [addr 0x%02x]\n", i2client->addr);
 
 	return ret;
 }
@@ -88,6 +81,8 @@ static int i2c_lp8556_power_cmd(unsigned char *init_table)
 	int i = 0, len;
 	int ret = 0;
 	struct aml_bl_extern_driver_s *bl_extern = aml_bl_extern_get_driver();
+	struct aml_bl_extern_i2c_dev_s *i2c_dev = aml_bl_extern_i2c_get_dev();
+
 	BLEX("%s\n", __func__);
 
 	len = BL_EXTERN_CMD_SIZE;
@@ -97,7 +92,11 @@ static int i2c_lp8556_power_cmd(unsigned char *init_table)
 		} else if (init_table[i] == BL_EXTERN_INIT_NONE) {
 			/* do nothing, only for delay */
 		} else if (init_table[i] == BL_EXTERN_INIT_CMD) {
-			ret = i2c_lp8556_write(
+			if (i2c_dev == NULL) {
+				BLEXERR("invalid i2c device\n");
+				return -1;
+			}
+			ret = i2c_lp8556_write(i2c_dev->client,
 				&init_table[i+1], (len-2));
 		} else {
 			BLEXERR("%s(%d: %s): power_type %d is invalid\n",
@@ -157,6 +156,7 @@ static int i2c_lp8556_set_level(unsigned int level)
 	int ret = 0;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 	struct aml_bl_extern_driver_s *bl_extern = aml_bl_extern_get_driver();
+	struct aml_bl_extern_i2c_dev_s *i2c_dev = aml_bl_extern_i2c_get_dev();
 	unsigned int level_max, level_min;
 	unsigned int dim_max, dim_min;
 
@@ -170,10 +170,14 @@ static int i2c_lp8556_set_level(unsigned int level)
 			(level_max - level_min);
 	level &= 0xff;
 
+	if (i2c_dev == NULL) {
+		BLEXERR("invalid i2c device\n");
+		return -1;
+	}
 	if (bl_status) {
 		tData[0] = 0x0;
 		tData[1] = level;
-		ret = i2c_lp8556_write(tData, 2);
+		ret = i2c_lp8556_write(i2c_dev->client, tData, 2);
 	}
 	return ret;
 }

@@ -27,7 +27,8 @@
 /* 20180122: support txlx, optimize lcd noitfier event */
 /* 20180226: g12a support */
 /* 20180425: tvconfig suuport */
-#define LCD_DRV_VERSION    "20180425"
+/* 20180620: fix coverity errors */
+#define LCD_DRV_VERSION    "20180620"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 

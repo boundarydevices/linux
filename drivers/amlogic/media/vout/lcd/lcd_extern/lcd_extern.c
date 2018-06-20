@@ -1402,6 +1402,7 @@ static int lcd_extern_get_config(void)
 			GFP_KERNEL);
 	if (lcd_ext_init_off_table == NULL) {
 		EXTERR("failed to alloc default init table\n");
+		kfree(lcd_ext_init_on_table);
 		return -1;
 	}
 	lcd_ext_init_on_table[0] = LCD_EXTERN_INIT_END;

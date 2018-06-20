@@ -494,8 +494,8 @@ static void lcd_vbyone_clk_util_set(struct lcd_config_s *pconf)
 	unsigned int div_sel, phy_div;
 
 	phy_div = pconf->lcd_control.vbyone_config->phy_div;
+	lcd_bits = pconf->lcd_basic.lcd_bits;
 
-	lcd_bits = 10;
 	switch (lcd_bits) {
 	case 6:
 		div_sel = 0;
@@ -965,6 +965,7 @@ int lcd_tablet_driver_init(void)
 		lcd_vx1_wait_hpd();
 		lcd_vbyone_phy_set(pconf, 1);
 		lcd_tablet_vbyone_wait_stable();
+		break;
 	case LCD_MIPI:
 		lcd_mipi_phy_set(pconf, 1);
 		lcd_mipi_control_set(pconf, 1);
@@ -1003,6 +1004,7 @@ void lcd_tablet_driver_disable(void)
 		lcd_vbyone_phy_set(pconf, 0);
 		lcd_vbyone_pinmux_set(0);
 		lcd_vbyone_disable();
+		break;
 	case LCD_MIPI:
 		mipi_dsi_link_off(pconf);
 		lcd_mipi_phy_set(pconf, 0);
