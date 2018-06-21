@@ -1803,10 +1803,12 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 		if ((hdmi_vic >= 1) && (hdmi_vic <= 64)) {
 			rx_pr("vic: %3d, format: %s\n",
 				hdmi_vic, hdmi_fmt[hdmi_vic]);
-		} else if ((hdmi_vic >= 65) && (hdmi_vic <= 127)) {
+		} else if ((hdmi_vic >= 65) && (hdmi_vic <= 107)) {
 			/* from first new set */
 			rx_pr("vic: %3d, format: %s\n",
 			hdmi_vic, hdmi_fmt[hdmi_vic]);
+		} else if ((hdmi_vic >= 108) && (hdmi_vic <= 127)) {
+			/* from first new set: 8bit VIC */
 		} else if ((hdmi_vic >= 129) && (hdmi_vic <= 192)) {
 			hdmi_vic &= 0x7F;
 			rx_pr("vic: %3d, native format: %s\n",
@@ -1844,7 +1846,7 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 				if (bit_rate->pcm.size_20bit)
 					rx_pr("\t20bit\n");
 				if (bit_rate->pcm.size_24bit)
-					rx_pr("\t24bit: %d\n");
+					rx_pr("\t24bit\n");
 			} else if ((fmt >= AUDIO_FORMAT_AC3) &&
 				(fmt <= AUDIO_FORMAT_ATRAC)) {
 				rx_pr("max bit rate: %dkHz\n",

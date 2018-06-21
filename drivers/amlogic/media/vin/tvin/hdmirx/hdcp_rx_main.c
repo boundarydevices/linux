@@ -155,7 +155,7 @@ static long set_data(struct esm_device *esm, void __user *arg)
 		unsigned char buf[sizeof(struct esm_ioc_data) + 1];
 	} u;
 
-	if (copy_from_user(&u.data, arg, sizeof(u.buf)) != 0)
+	if (copy_from_user(&u.data, arg, sizeof(u.data)) != 0)
 		return -EFAULT;
 
 	if (esm->data_size < u.data.len)
