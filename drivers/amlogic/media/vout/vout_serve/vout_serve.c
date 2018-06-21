@@ -263,15 +263,15 @@ static int set_vout_init_mode(void)
 	char init_mode_str[VMODE_NAME_LEN_MAX];
 	int ret = 0;
 
-	strncpy(init_mode_str, vout_mode_uboot, VMODE_NAME_LEN_MAX);
+	snprintf(init_mode_str, VMODE_NAME_LEN_MAX, "%s", vout_mode_uboot);
 	vout_init_vmode = validate_vmode(vout_mode_uboot);
 	if (vout_init_vmode >= VMODE_MAX) {
 		VOUTERR("no matched vout_init mode %s, force to invalid\n",
 			vout_mode_uboot);
 		nulldisp_index = 1;
 		vout_init_vmode = nulldisp_vinfo[nulldisp_index].mode;
-		strncpy(init_mode_str, nulldisp_vinfo[nulldisp_index].name,
-			VMODE_NAME_LEN_MAX);
+		snprintf(init_mode_str, VMODE_NAME_LEN_MAX, "%s",
+			nulldisp_vinfo[nulldisp_index].name);
 	}
 	last_vmode = vout_init_vmode;
 
@@ -800,18 +800,18 @@ static int refresh_tvout_mode(void)
 	hpd_state = vout_get_hpd_state();
 	if (hpd_state) {
 		cur_vmode = validate_vmode(hdmimode);
-		strncpy(cur_mode_str, hdmimode, VMODE_NAME_LEN_MAX);
+		snprintf(cur_mode_str, VMODE_NAME_LEN_MAX, "%s", hdmimode);
 	} else {
 		cur_vmode = validate_vmode(cvbsmode);
-		strncpy(cur_mode_str, cvbsmode, VMODE_NAME_LEN_MAX);
+		snprintf(cur_mode_str, VMODE_NAME_LEN_MAX, "%s", cvbsmode);
 	}
 	if (cur_vmode >= VMODE_MAX) {
 		VOUTERR("%s: no matched cur_mode: %s, force to invalid\n",
 			__func__, cur_mode_str);
 		nulldisp_index = 1;
 		cur_vmode = nulldisp_vinfo[nulldisp_index].mode;
-		strncpy(cur_mode_str, nulldisp_vinfo[nulldisp_index].name,
-			VMODE_NAME_LEN_MAX);
+		snprintf(cur_mode_str, VMODE_NAME_LEN_MAX, "%s",
+			nulldisp_vinfo[nulldisp_index].name);
 	}
 
 	/* not box platform */

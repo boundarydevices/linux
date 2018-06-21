@@ -157,6 +157,11 @@ void vout_func_set_state(int index, enum vmode_e mode)
 		p_module = &vout2_module;
 #endif
 
+	if (p_module == NULL) {
+		VOUTERR("vout%d: %s: vout_module is NULL\n", index, __func__);
+		mutex_unlock(&vout_mutex);
+		return;
+	}
 	list_for_each_entry(p_server, &p_module->vout_server_list, list) {
 		if (p_server->op.vmode_is_supported == NULL) {
 			p_server->op.disable(mode);
@@ -192,32 +197,31 @@ void vout_func_update_viu(int index)
 
 	mutex_lock(&vout_mutex);
 
-	if (index == 1)
+	if (index == 1) {
 		p_module = &vout_module;
-#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
-	else if (index == 2)
-		p_module = &vout2_module;
-#endif
-
-	p_server = p_module->curr_vout_server;
-
-	if (p_server->op.get_vinfo)
-		vinfo = p_server->op.get_vinfo();
-	if (vinfo == NULL)
-		vinfo = get_invalid_vinfo(index);
-
-	switch (index) {
-	case 1:
 		mux_bit = 0;
 		clk_sel = 0;
-		break;
-	case 2:
+	} else if (index == 2) {
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+		p_module = &vout2_module;
 		mux_bit = 2;
 		clk_sel = 1;
-		break;
-	default:
-		break;
+#endif
 	}
+
+	if (p_module == NULL) {
+		VOUTERR("vout%d: %s: vout_module is NULL\n", index, __func__);
+		mutex_unlock(&vout_mutex);
+		return;
+	}
+	p_server = p_module->curr_vout_server;
+
+	if (p_server) {
+		if (p_server->op.get_vinfo)
+			vinfo = p_server->op.get_vinfo();
+	}
+	if (vinfo == NULL)
+		vinfo = get_invalid_vinfo(index);
 
 	mux_sel = vinfo->viu_mux;
 	switch (mux_sel) {
@@ -262,6 +266,12 @@ int vout_func_set_vmode(int index, enum vmode_e mode)
 	else if (index == 2)
 		p_module = &vout2_module;
 #endif
+
+	if (p_module == NULL) {
+		VOUTERR("vout%d: %s: vout_module is NULL\n", index, __func__);
+		mutex_unlock(&vout_mutex);
+		return -1;
+	}
 	ret = p_module->curr_vout_server->op.set_vmode(mode);
 
 	mutex_unlock(&vout_mutex);
@@ -301,6 +311,11 @@ enum vmode_e vout_func_validate_vmode(int index, char *name)
 		p_module = &vout2_module;
 #endif
 
+	if (p_module == NULL) {
+		VOUTERR("vout%d: %s: vout_module is NULL\n", index, __func__);
+		mutex_unlock(&vout_mutex);
+		return VMODE_MAX;
+	}
 	list_for_each_entry(p_server, &p_module->vout_server_list, list) {
 		/* check state for another vout */
 		if (p_server->op.get_state) {
@@ -490,6 +505,10 @@ int vout_func_vout_shutdown(int index)
 		p_module = &vout2_module;
 #endif
 
+	if (p_module == NULL) {
+		VOUTERR("vout%d: %s: vout_module is NULL\n", index, __func__);
+		return -1;
+	}
 	list_for_each_entry(p_server, &p_module->vout_server_list, list) {
 		if (p_server->op.vout_shutdown)
 			ret = p_server->op.vout_shutdown();
@@ -531,6 +550,11 @@ int vout_func_vout_register_server(int index,
 		p_module = &vout2_module;
 #endif
 
+	if (p_module == NULL) {
+		VOUTERR("vout%d: %s: vout_module is NULL\n", index, __func__);
+		mutex_unlock(&vout_mutex);
+		return -1;
+	}
 	list_for_each(p_iter, &p_module->vout_server_list) {
 		p_server = list_entry(p_iter, struct vout_server_s, list);
 
@@ -570,6 +594,11 @@ int vout_func_vout_unregister_server(int index,
 		p_module = &vout2_module;
 #endif
 
+	if (p_module == NULL) {
+		VOUTERR("vout%d: %s: vout_module is NULL\n", index, __func__);
+		mutex_unlock(&vout_mutex);
+		return -1;
+	}
 	list_for_each_entry(p_server, &p_module->vout_server_list, list) {
 		if (p_server->name && mem_server->name &&
 			(strcmp(p_server->name, mem_server->name) == 0)) {
