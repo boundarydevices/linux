@@ -664,7 +664,7 @@ void ve_set_dnlp_2(void)
 	/* init tgt & lpf */
 	for (i = 0; i < 64; i++) {
 		ve_dnlp_tgt[i] = i << 2;
-		ve_dnlp_lpf[i] = ve_dnlp_tgt[i] << ve_dnlp_rt;
+		ve_dnlp_lpf[i] = (ulong)ve_dnlp_tgt[i] << ve_dnlp_rt;
 	}
 	/* calculate dnlp reg data */
 	ve_dnlp_calculate_reg();
@@ -975,16 +975,10 @@ void ve_ogo_param_update(void)
 		video_rgb_ogo.b_pre_offset = -1024;
 	if (video_rgb_ogo.r_gain > 2047)
 		video_rgb_ogo.r_gain = 2047;
-	if (video_rgb_ogo.r_gain < 0)
-		video_rgb_ogo.r_gain = 0;
 	if (video_rgb_ogo.g_gain > 2047)
 		video_rgb_ogo.g_gain = 2047;
-	if (video_rgb_ogo.g_gain < 0)
-		video_rgb_ogo.g_gain = 0;
 	if (video_rgb_ogo.b_gain > 2047)
 		video_rgb_ogo.b_gain = 2047;
-	if (video_rgb_ogo.b_gain < 0)
-		video_rgb_ogo.b_gain = 0;
 	if (video_rgb_ogo.r_post_offset > 1023)
 		video_rgb_ogo.r_post_offset = 1023;
 	if (video_rgb_ogo.r_post_offset < -1024)

@@ -739,9 +739,9 @@ void set_hdr_matrix(
 	int gmut_coef[3][3];
 	int gmut_shift;
 	int adpscl_enable[3];
-	int adpscl_alpha[3];
+	int adpscl_alpha[3] = {0, 0, 0};
 	int adpscl_shift[3];
-	int adpscl_ys_coef[3];
+	int adpscl_ys_coef[3] = {0, 0, 0};
 	int adpscl_beta[3];
 	int adpscl_beta_s[3];
 
@@ -1071,7 +1071,7 @@ void set_hdr_matrix(
 	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_on, 13, 1);
 
 	if (mtx_sel & HDR_IN_MTX) {
-		if (hdr_mtx_param->mtx_in) {
+		if (hdr_mtx_param->mtx_in[14]) {
 			for (i = 0; i < 15; i++)
 				mtx[i] = hdr_mtx_param->mtx_in[i];
 		}
@@ -1105,14 +1105,14 @@ void set_hdr_matrix(
 			yuv2rgbpre[2]);
 
 	} else if (mtx_sel & HDR_GAMUT_MTX) {
-		if (hdr_mtx_param->mtx_gamut) {
+		if (hdr_mtx_param->mtx_gamut[8]) {
 			for (i = 0; i < 9; i++)
 				gmut_coef[i/3][i%3] =
 					hdr_mtx_param->mtx_gamut[i];
 		}
 		gmut_shift = 11;
 
-		if (hdr_mtx_param->mtx_cgain) {
+		if (hdr_mtx_param->mtx_cgain[2]) {
 			for (i = 0; i < 3; i++)
 				c_gain_lim_coef[i] =
 					hdr_mtx_param->mtx_cgain[i] << 2;
@@ -1139,7 +1139,7 @@ void set_hdr_matrix(
 				adpscl_alpha[i] = 1 *
 					(1 << adp_scal_shift) / in_luma;
 			adpscl_shift[i] = adp_scal_shift;
-			if (hdr_mtx_param->mtx_ogain)
+			if (hdr_mtx_param->mtx_ogain[2])
 				adpscl_ys_coef[i] =
 					hdr_mtx_param->mtx_ogain[i] << 1;
 			adpscl_beta_s[i] = 0;
@@ -1193,7 +1193,7 @@ void set_hdr_matrix(
 	    VSYNC_WR_MPEG_REG(ADPS_COEF1, adpscl_ys_coef[2]);
 
 	} else if (mtx_sel & HDR_OUT_MTX) {
-		if (hdr_mtx_param->mtx_out) {
+		if (hdr_mtx_param->mtx_out[14]) {
 			for (i = 0; i < 15; i++)
 				mtx[i] = hdr_mtx_param->mtx_out[i];
 		}

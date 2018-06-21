@@ -127,6 +127,9 @@ enum pq_table_name_e {
 	TABLE_NAME_MAX,
 };
 
+/*check pq_table length copy_from_user*/
+#define PQ_TABLE_MAX_LENGTH		10000
+
 #define _VE_CM  'C'
 
 #define AMVECM_IOC_G_HIST_AVG   _IOW(_VE_CM, 0x22, struct ve_hist_s)

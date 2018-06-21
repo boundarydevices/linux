@@ -390,7 +390,13 @@ void vlock_vmode_check(void)
 	vinfo = get_current_vinfo();
 	vlock_vmode_changed = 0;
 	memset(cur_vout_mode, 0, sizeof(cur_vout_mode));
+
+	if (vinfo->name == NULL)
+		return;
+	if (strlen(cur_vout_mode) < (strlen(vinfo->name)+1))
+		return;
 	strcpy(cur_vout_mode, vinfo->name);
+
 	if (strcmp(cur_vout_mode, pre_vout_mode) != 0) {
 		if ((vlock_mode == VLOCK_MODE_MANUAL_PLL) ||
 			(vlock_mode == VLOCK_MODE_AUTO_PLL)) {

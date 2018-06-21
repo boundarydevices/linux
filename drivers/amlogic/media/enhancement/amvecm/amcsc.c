@@ -2450,7 +2450,7 @@ void enable_osd_path(int on, int shadow_mode)
 	} else {
 		set_vpp_matrix(VPP_MATRIX_OSD, osd1_mtx_backup, CSC_ON);
 		hdr_osd_reg.viu_osd1_eotf_ctl = osd1_eotf_ctl_backup;
-		hdr_osd_reg.viu_osd1_eotf_ctl = osd1_oetf_ctl_backup;
+		hdr_osd_reg.viu_osd1_oetf_ctl = osd1_oetf_ctl_backup;
 		hdr_osd_reg.shadow_mode = shadow_mode;
 	}
 }
@@ -2568,7 +2568,6 @@ static void print_vpp_lut(
 		addr_port = VIU_OSD1_EOTF_LUT_ADDR_PORT;
 		data_port = VIU_OSD1_EOTF_LUT_DATA_PORT;
 		ctrl_port = VIU_OSD1_EOTF_CTL;
-		return;
 	} else if (lut_sel == VPP_LUT_EOTF) {
 		addr_port = VIU_EOTF_LUT_ADDR_PORT;
 		data_port = VIU_EOTF_LUT_DATA_PORT;
@@ -2577,7 +2576,6 @@ static void print_vpp_lut(
 		addr_port = VIU_OSD1_OETF_LUT_ADDR_PORT;
 		data_port = VIU_OSD1_OETF_LUT_DATA_PORT;
 		ctrl_port = VIU_OSD1_OETF_CTL;
-		return;
 	} else if (lut_sel == VPP_LUT_OETF) {
 		addr_port = XVYCC_LUT_R_ADDR_PORT;
 		data_port = XVYCC_LUT_R_DATA_PORT;
@@ -3476,13 +3474,13 @@ int signal_type_changed(struct vframe_s *vf, struct vinfo_s *vinfo)
 			signal_type &= 0xffffff00;
 			signal_type |= 0x00000001;
 		}
-		if (((signal_type & 0xff00) != 1) &&
-			((signal_type & 0xff00) != 3)) {
+		if (((signal_type & 0xff00) >> 8 != 1) &&
+			((signal_type & 0xff00) >> 8 != 3)) {
 			signal_type &= 0xffff00ff;
 			signal_type |= 0x00000100;
 		}
-		if (((signal_type & 0xff0000) != 1) &&
-			((signal_type & 0xff0000) != 3)) {
+		if (((signal_type & 0xff0000) >> 16 != 1) &&
+			((signal_type & 0xff0000) >> 16 != 3)) {
 			signal_type &= 0xff00ffff;
 			signal_type |= 0x00010000;
 		}
@@ -3624,20 +3622,13 @@ enum vpp_matrix_csc_e get_csc_type(void)
 			/* smpte st-2084 */
 			if (signal_color_primaries != 9)
 				pr_csc("\tWARNING: non-standard HDR!!!\n");
-
 			if (signal_range == 0)
-				csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-			else {
 				pr_csc("\tWARNING: full range HDR!!!\n");
-				csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-			}
+			csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
 		} else if (signal_transfer_characteristic == 14) {
 			/* bt2020-10 */
 			pr_csc("\tWARNING: bt2020-10 HDR!!!\n");
-			if (signal_range == 0)
-				csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-			else
-				csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
+			csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
 		} else if (signal_transfer_characteristic == 15) {
 			/* bt2020-12 */
 			pr_csc("\tWARNING: bt2020-12 HDR!!!\n");
@@ -3648,10 +3639,7 @@ enum vpp_matrix_csc_e get_csc_type(void)
 		} else if (signal_transfer_characteristic == 18) {
 			/* bt2020-12 */
 			pr_csc("\tWARNING: HLG!!!\n");
-			if (signal_range == 0)
-				csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-			else
-				csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
+			csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
 		} else {
 			/* unknown transfer characteristic */
 			pr_csc("\tWARNING: unknown HDR!!!\n");
@@ -3708,7 +3696,7 @@ static void cal_out_curve(uint panel_luma)
 	} else {
 		if (panel_luma > 1000)
 			panel_luma = 1000;
-		index = ((500 - 240) / 20) + (panel_luma - 500) / 100;
+		index = ((500 - 260) / 20) + (panel_luma - 500) / 100;
 	}
 	memcpy(eotf_33_2084_mapping,
 		eotf_33_2084_table[index], sizeof(int) * EOTF_LUT_SIZE);
@@ -3781,7 +3769,7 @@ static void inverse_3x3(
 }
 
 static void calc_T(
-	int32_t (*prmy)[2], int64_t (*Tout)[3],
+	int64_t (*prmy)[2], int64_t (*Tout)[3],
 	int32_t norm, int32_t obl)
 {
 	int i, j;
@@ -3812,7 +3800,7 @@ static void calc_T(
 }
 
 static void gamut_mtx(
-	int32_t (*src_prmy)[2], int32_t (*dst_prmy)[2],
+	int64_t (*src_prmy)[2], int64_t (*dst_prmy)[2],
 	int64_t (*Tout)[3], int32_t norm, int32_t obl)
 {
 	int64_t Tsrc[3][3];
@@ -3892,7 +3880,7 @@ static int check_primaries(
 	/* dst display info from vinfo */
 	const struct vinfo_s *v,
 	/* prepare src and dst color info array */
-	int32_t (*si)[4][2], int32_t (*di)[4][2])
+	int64_t (*si)[4][2], int64_t (*di)[4][2])
 {
 	int i, j;
 	/* always calculate to apply scale factor */
@@ -4012,8 +4000,8 @@ enum vpp_matrix_csc_e prepare_customer_matrix(
 	struct matrix_s *m,
 	bool inverse_flag)
 {
-	int32_t prmy_src[4][2];
-	int32_t prmy_dst[4][2];
+	int64_t prmy_src[4][2];
+	int64_t prmy_dst[4][2];
 	int64_t out[3][3];
 	int i, j;
 
@@ -4170,12 +4158,10 @@ static void amvecm_cp_hdr_info(struct master_display_info_s *hdr_data,
 		hdr_data->luminance[0] = hdr_data->luminance[0] / 10000;
 		hdr_data->present_flag = 1;
 	} else
-		memset(hdr_data->primaries, 0, 10 * sizeof(unsigned int));
-
+		memset(hdr_data->primaries, 0, sizeof(hdr_data->primaries));
 	/* hdr send information debug */
 	memcpy(&dbg_hdr_send, hdr_data,
 			sizeof(struct master_display_info_s));
-
 }
 
 static void hdr_process_pq_enable(int enable)
@@ -5028,10 +5014,16 @@ static void bypass_hdr_process(
 				set_vpp_matrix(VPP_MATRIX_XVYCC,
 					bypass_coeff,
 					CSC_OFF);
-			else
-				set_vpp_matrix(VPP_MATRIX_XVYCC,
-					bypass_coeff,
-					CSC_OFF);
+			else {
+				if (range_control)
+					set_vpp_matrix(VPP_MATRIX_XVYCC,
+						YUV709f_to_YUV709l_coeff,
+						CSC_ON);
+				else
+					set_vpp_matrix(VPP_MATRIX_XVYCC,
+						bypass_coeff,
+						CSC_OFF);
+			}
 		}
 	} else {
 		/* OSD */
@@ -5821,9 +5813,10 @@ static int vpp_matrix_update(
 	int hdmi_scs_type_changed = 0;
 	struct vout_device_s *vdev = NULL;
 
+	if (vinfo == NULL)
+		return 0;
 	if (vinfo->vout_device)
 		vdev = vinfo->vout_device;
-
 	/* Tx hdr information */
 	memcpy(&receiver_hdr_info, &vinfo->hdr_info,
 			sizeof(struct hdr_info));

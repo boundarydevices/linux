@@ -814,9 +814,7 @@ void GetGmScurve_apl_var(unsigned int *rGmOt, unsigned int luma_avg4,
 			pre_scurve[i] = (i << 4); /* 0 ~1024 */
 	}
 
-	if (luma_avg4 < 0)
-		luma_avg4 = 0;
-	else if (luma_avg4 > 255)
+	if (luma_avg4 > 255)
 		luma_avg4 = 255;/* luma_avg = 0~255 */
 
 	if ((dnlp_printk >> 3) & 0x1)
@@ -1396,7 +1394,8 @@ void get_hist_cross_curve(unsigned int *oMap, unsigned int *iHst, int hist_sum,
 			xidx_rightmost_valid_hist = xidx;
 	}
 
-
+	if (xross_num < 0)
+		xross_num = 0;
 	/*right most valid peak rightshift to */
 	/* the right most valid peak	(patch)*/
 	xidx_final_peak = xross_xidx[xross_num];
@@ -1417,6 +1416,8 @@ void get_hist_cross_curve(unsigned int *oMap, unsigned int *iHst, int hist_sum,
 
 	/*step 4.2 right most peak ramp to max_range curve*/
 	xross_num += 1;
+	if (xross_num > 8)
+		xross_num = 8;
 	xross_xidx[xross_num] =
 		(xidx_rightmost_valid_hist >= 22) ? 32 :
 		(xidx_rightmost_valid_hist <= 13) ? 23 :
@@ -1971,7 +1972,7 @@ void get_clahe_curve(unsigned int *oMap, unsigned int *olAvg4,
 		return;/* set to oMap as 45 degree map */
 
 	lAvg4 = (lAvg4 << 2) + tsum / 2;
-	lAvg4 = lAvg4 / tsum;/*luminance avgerage (0~255)*/
+	lAvg4 = lAvg4 / (tsum + 1);/*luminance avgerage (0~255)*/
 	lAvg1 = (lAvg4 + 2) >> 2;/* bin num of average (0~63)*/
 
 	if ((dnlp_printk >> 4) & 0x1)/* echo 4 */
@@ -2103,12 +2104,15 @@ void get_clahe_curve(unsigned int *oMap, unsigned int *olAvg4,
 	if (debug_add_curve_en)	{
 		glb_clash_curve = kzalloc(65*sizeof(unsigned short),
 			GFP_KERNEL);
+		if (glb_clash_curve == NULL)
+			return;
 		for (i = 0; i < 65; i++) {
 			oMap[i] = ((128 - glb_clash_curve_bld_rate) * oMap[i] +
 				glb_clash_curve_bld_rate *
 				(glb_clash_curve[i]<<2) +
 				64) >> 7;
 		}
+		kfree(glb_clash_curve);
 	}
 
 	if ((dnlp_printk >> 4) & 0x1)
@@ -2357,8 +2361,8 @@ int curve_rfrsh_chk_v2(int hstSum, int rbase)
 	/*cal bld_lvl*/
 	tLumAvg[7] = (ve_dnlp_luma_sum + (hstSum >> 1)) / hstSum;
 	tLumAvg[7] = ((tLumAvg[7] + 4) >> 3);
-	tAvgDif[7] = (tLumAvg[7] > tLumAvg[18]) ?
-		(tLumAvg[7] - tLumAvg[7]) : (tLumAvg[7] - tLumAvg[7]);
+	tAvgDif[7] = (tLumAvg[7] > tLumAvg[6]) ?
+		(tLumAvg[7] - tLumAvg[6]) : (tLumAvg[6] - tLumAvg[7]);
 
 	bld_lvl = tAvgDif[7];
 	bld_lvl = (bld_lvl << dnlp_alg_param.dnlp_schg_sft);
@@ -2765,8 +2769,11 @@ static void dnlp_gmma_cuvs(unsigned int gmma_rate,
 	if (debug_add_curve_en) {
 		glb_scurve = kzalloc(65*sizeof(unsigned short),
 			GFP_KERNEL);
+		if (glb_scurve == NULL)
+			return;
 		nTmp = ((128 - glb_scurve_bld_rate)*nTmp +
 			glb_scurve_bld_rate*(glb_scurve[i]<<4) + 64)>>7;
+		kfree(glb_scurve);
 	}
 
 		if (nTmp < 0)
@@ -3524,7 +3531,7 @@ int get_hist_bgn_end(unsigned int *iRgnBgn, unsigned int *iRgnEnd,
 /*  output: mMaxLst[], mMaxIdx[], *low_lsum, *low_bsum,*/
 /*  *rgn_hstSum, *rgn_hstMax, *lsft_avg, *luma_avg4, *low_lavg4,*/
 /*max4_sum  */
-unsigned int get_hist_max4_avgs(unsigned int *mMaxLst, unsigned int *mMaxIdx,
+int get_hist_max4_avgs(unsigned int *mMaxLst, unsigned int *mMaxIdx,
 	unsigned int *low_lsum, unsigned int *low_bsum,
 	unsigned int *rgn_lumSum, unsigned int *rgn_hstSum,
 	unsigned int *rgn_hstMax, unsigned int *lsft_avg,
@@ -3978,7 +3985,7 @@ void ve_dnlp_calculate_tgtx_v3(struct vframe_s *vf)
 	/* only used in get_hist_max4_avgs */
 	unsigned int rgn_lumSum, rgn_hstSum, rgn_hstMax;
 	unsigned int low_sum = 0;
-	unsigned int low_lsum;
+	unsigned int low_lsum = 0;
 
 	unsigned int lsft_avg = 0; /* luma shift average */
 	/* luma average(64),luma average(256) */
@@ -4483,7 +4490,7 @@ void ve_set_v3_dnlp(struct ve_dnlp_curve_param_s *p)
 		/* init tgt & lpf */
 		for (i = 0; i < 64; i++) {
 			ve_dnlp_tgt[i] = i << 2;
-			ve_dnlp_lpf[i] = ve_dnlp_tgt[i] << ve_dnlp_rt;
+			ve_dnlp_lpf[i] = (ulong)ve_dnlp_tgt[i] << ve_dnlp_rt;
 		}
 		/* calculate dnlp reg data */
 		ve_dnlp_calculate_reg();
