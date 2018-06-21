@@ -732,20 +732,6 @@ static int am_meson_vpu_bind(struct device *dev,
 
 	dev_set_drvdata(dev, amcrtc);
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
-		dev_err(dev, "cannot find irq for vpu\n");
-		return irq;
-	}
-	amcrtc->irq = (unsigned int)irq;
-
-	ret = devm_request_irq(dev, amcrtc->irq, am_meson_vpu_irq,
-		IRQF_SHARED, dev_name(dev), drm_dev);
-	if (ret)
-		return ret;
-	/* IRQ is initially disabled; it gets enabled in crtc_enable */
-	disable_irq(amcrtc->irq);
-
 	/* init reserved memory */
 	ret = of_reserved_mem_device_init(&pdev->dev);
 	if (ret != 0)
@@ -782,6 +768,22 @@ static int am_meson_vpu_bind(struct device *dev,
 		return ret;
 
 	am_meson_register_crtc_funcs(private->crtc, &meson_private_crtc_funcs);
+
+	/*vsync irq.*/
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0) {
+		dev_err(dev, "cannot find irq for vpu\n");
+		return irq;
+	}
+	amcrtc->irq = (unsigned int)irq;
+
+	ret = devm_request_irq(dev, amcrtc->irq, am_meson_vpu_irq,
+		IRQF_SHARED, dev_name(dev), drm_dev);
+	if (ret)
+		return ret;
+	/* IRQ is initially disabled; it gets enabled in crtc_enable */
+	disable_irq(amcrtc->irq);
+
 	INIT_DELAYED_WORK(&osd_dwork, mem_free_work);
 	schedule_delayed_work(&osd_dwork, msecs_to_jiffies(60 * 1000));
 
