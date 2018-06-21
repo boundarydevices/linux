@@ -3006,7 +3006,32 @@ struct wireless_dev* __wlan_hdd_add_virtual_intf(
 #endif
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
+/**
+ * wlan_hdd_add_virtual_intf() - Add virtual interface wrapper
+ * @wiphy: wiphy pointer
+ * @name: User-visible name of the interface
+ * @name_assign_type: the name of assign type of the netdev
+ * @nl80211_iftype: (virtual) interface types
+ * @vif_params: virtual interface parameters (not used)
+ *
+ * Return: the pointer of wireless dev, otherwise NULL.
+ */
+struct wireless_dev *wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+                                               const char *name,
+                                               unsigned char name_assign_type,
+                                               enum nl80211_iftype type,
+                                               struct vif_params *params)
+{
+    struct wireless_dev *wdev;
+
+    vos_ssr_protect(__func__);
+    wdev = __wlan_hdd_add_virtual_intf(wiphy, name, name_assign_type,
+                                       type, &params->flags, params);
+    vos_ssr_unprotect(__func__);
+    return wdev;
+}
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
 /**
  * wlan_hdd_add_virtual_intf() - Add virtual interface wrapper
  * @wiphy: wiphy pointer

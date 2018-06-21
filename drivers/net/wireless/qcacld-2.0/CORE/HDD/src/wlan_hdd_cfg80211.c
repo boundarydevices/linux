@@ -20128,6 +20128,21 @@ done:
  * FUNCTION: wlan_hdd_cfg80211_change_iface
  * wrapper function to protect the actual implementation from SSR.
  */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
+static int wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
+                                          struct net_device *ndev,
+                                          enum nl80211_iftype type,
+                                          struct vif_params *params)
+{
+    int ret;
+
+    vos_ssr_protect(__func__);
+    ret = __wlan_hdd_cfg80211_change_iface(wiphy, ndev, type, &params->flags, params);
+    vos_ssr_unprotect(__func__);
+
+    return ret;
+}
+#else
 static int wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
                                           struct net_device *ndev,
                                           enum nl80211_iftype type,
@@ -20142,6 +20157,7 @@ static int wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
 
     return ret;
 }
+#endif
 
 #ifdef FEATURE_WLAN_TDLS
 static int wlan_hdd_tdls_add_station(struct wiphy *wiphy,
@@ -28837,8 +28853,13 @@ static int wlan_hdd_cfg80211_sched_scan_start(struct wiphy *wiphy,
  * FUNCTION: __wlan_hdd_cfg80211_sched_scan_stop
  * Function to disable PNO
  */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
+static int __wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
+          struct net_device *dev, u64 reqid)
+#else
 static int __wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
           struct net_device *dev)
+#endif
 {
     eHalStatus status = eHAL_STATUS_FAILURE;
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
@@ -28934,13 +28955,22 @@ static int __wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
  * FUNCTION: wlan_hdd_cfg80211_sched_scan_stop
  * NL interface to disable PNO
  */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
+static int wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
+          struct net_device *dev, u64 reqid)
+#else
 static int wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
           struct net_device *dev)
+#endif
 {
     int ret;
 
     vos_ssr_protect(__func__);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
+    ret = __wlan_hdd_cfg80211_sched_scan_stop(wiphy, dev, reqid);
+#else
     ret = __wlan_hdd_cfg80211_sched_scan_stop(wiphy, dev);
+#endif
     vos_ssr_unprotect(__func__);
 
     return ret;
