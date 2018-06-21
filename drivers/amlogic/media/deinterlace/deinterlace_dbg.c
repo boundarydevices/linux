@@ -401,6 +401,8 @@ void dump_di_pre_stru(struct di_pre_stru_s *di_pre_stru_p)
 		di_pre_stru_p->pre_de_busy_timer_count);
 	pr_info("pre_de_process_done   = %d\n",
 		di_pre_stru_p->pre_de_process_done);
+	pr_info("pre_de_process_flag   = %d\n",
+		di_pre_stru_p->pre_de_process_flag);
 	pr_info("pre_de_irq_timeout_count=%d\n",
 		di_pre_stru_p->pre_de_irq_timeout_count);
 	pr_info("unreg_req_flag		   = %d\n",
@@ -423,6 +425,8 @@ void dump_di_pre_stru(struct di_pre_stru_s *di_pre_stru_p)
 		di_pre_stru_p->cur_prog_flag);
 	pr_info("source_change_flag	   = %d\n",
 		di_pre_stru_p->source_change_flag);
+	pr_info("bypass_flag = %s\n",
+		di_pre_stru_p->bypass_flag?"true":"false");
 	pr_info("prog_proc_type		   = %d\n",
 		di_pre_stru_p->prog_proc_type);
 	pr_info("madi_enable		   = %u\n",

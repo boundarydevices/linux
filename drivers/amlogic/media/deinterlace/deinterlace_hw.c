@@ -21,6 +21,7 @@
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
+#include <linux/atomic.h>
 
 #include <linux/amlogic/media/vpu/vpu.h>
 #include <linux/amlogic/cpu_version.h>
@@ -1862,7 +1863,7 @@ static void set_di_if0_mif(struct DI_MIF_s *mif, int urgent, int hold_line,
 			mif->set_separate_en ? 0 : (mif->video_mode ? 2 : 1);
 		demux_mode = mif->video_mode;
 		DI_VSYNC_WR_MPEG_REG(VD1_IF0_GEN_REG,
-(0 << 29) | /* reset on go field */
+(1 << 29) | /* reset on go field */
 (urgent << 28)		|	/* urgent */
 (urgent << 27)		|	/* luma urgent */
 (1 << 25)		|	/* no dummy data. */
@@ -2999,10 +3000,16 @@ static void di_pre_data_mif_ctrl(bool enable)
 }
 
 static bool pre_mif_gate;
+static atomic_t mif_flag;
 void enable_di_pre_mif(bool en, bool mc_enable)
 {
+	if (atomic_read(&mif_flag))
+		return;
+
 	if (pre_mif_gate && !en)
 		return;
+	atomic_set(&mif_flag, 1);
+
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		if (mc_enable)
 			mc_pre_mif_ctrl_g12(en);
@@ -3013,6 +3020,7 @@ void enable_di_pre_mif(bool en, bool mc_enable)
 		ma_pre_mif_ctrl(en);
 	}
 	di_pre_data_mif_ctrl(en);
+	atomic_set(&mif_flag, 0);
 }
 
 void combing_pd22_window_config(unsigned int width, unsigned int height)

@@ -262,6 +262,7 @@ struct di_pre_stru_s {
 	int	pre_de_busy;            /* 1 if pre_de is not done */
 	int	pre_de_busy_timer_count;
 	int	pre_de_process_done;    /* flag when irq done */
+	int	pre_de_process_flag;    /* flag when pre_de_process done */
 	int	pre_de_clear_flag;
 	/* flag is set when VFRAME_EVENT_PROVIDER_UNREG*/
 	int	unreg_req_flag;
@@ -335,7 +336,7 @@ struct di_pre_stru_s {
 	int cma_alloc_done;
 	int cma_release_req;
 	/* for performance debug */
-	unsigned long irq_time;
+	unsigned long irq_time[2];
 	/* combing adaptive */
 	struct combing_status_s *mtn_status;
 };

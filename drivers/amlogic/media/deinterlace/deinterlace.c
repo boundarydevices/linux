@@ -2178,6 +2178,7 @@ static void di_uninit_buf(unsigned int disable_mirror)
 		vframe_in[i] = NULL;
 	di_pre_stru.pre_de_process_done = 0;
 	di_pre_stru.pre_de_busy = 0;
+	di_pre_stru.pre_de_process_flag = 0;
 	if (post_wr_en && post_wr_support) {
 		di_post_stru.cur_post_buf = NULL;
 		di_post_stru.post_de_busy = 0;
@@ -2615,7 +2616,7 @@ static void pre_de_process(void)
 	unsigned short cur_inp_field_type = VIDTYPE_TYPEMASK;
 	unsigned short int_mask = 0x7f;
 
-	di_pre_stru.pre_de_busy = 1;
+	di_pre_stru.pre_de_process_flag = 1;
 	di_pre_stru.pre_de_busy_timer_count = 0;
 	#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 	pre_inp_canvas_config(di_pre_stru.di_inp_buf->vframe);
@@ -2780,17 +2781,22 @@ static void pre_de_process(void)
 		/* enable mc pre mif*/
 		enable_di_pre_mif(true, mcpre_en);
 	}
+	/*reinit pre busy flag*/
+	di_pre_stru.pre_de_busy_timer_count = 0;
+	di_pre_stru.pre_de_busy = 1;
 	#ifdef SUPPORT_MPEG_TO_VDIN
 	if (mpeg2vdin_flag)
 		RDMA_WR_BITS(DI_PRE_CTRL, 1, 13, 1);
 	#endif
-	di_pre_stru.irq_time = sched_clock()/NSEC_PER_MSEC;
+	di_pre_stru.irq_time[0] = sched_clock()/NSEC_PER_MSEC;
+	di_pre_stru.irq_time[1] = sched_clock()/NSEC_PER_MSEC;
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (di_pre_rdma_enable & 0x2)
 		rdma_config(de_devp->rdma_handle, RDMA_TRIGGER_MANUAL);
 	else if (di_pre_rdma_enable & 1)
 		rdma_config(de_devp->rdma_handle, RDMA_DEINT_IRQ);
 #endif
+	di_pre_stru.pre_de_process_flag = 0;
 }
 
 static void pre_de_done_buf_clear(void)
@@ -2871,7 +2877,6 @@ static void pre_de_done_buf_config(void)
 				di_pre_stru.di_wr_buf->vframe);
 		}
 #endif
-	}
 		if (!di_pre_rdma_enable)
 			di_pre_stru.di_post_wr_buf = di_pre_stru.di_wr_buf;
 		post_wr_buf = di_pre_stru.di_post_wr_buf;
@@ -3036,7 +3041,7 @@ static void pre_de_done_buf_config(void)
 				di_pre_stru.di_wr_buf = NULL;
 			}
 		}
-
+	}
 	if (di_pre_stru.di_post_inp_buf && di_pre_rdma_enable) {
 #ifdef DI_BUFFER_DEBUG
 		di_print("%s: %s[%d] => recycle_list\n", __func__,
@@ -4075,11 +4080,11 @@ static irqreturn_t de_irq(int irq, void *dev_instance)
 	}
 
 	if (flag) {
-		di_pre_stru.irq_time =
-			(sched_clock()/NSEC_PER_MSEC - di_pre_stru.irq_time);
+		di_pre_stru.irq_time[0] =
+			(sched_clock()/NSEC_PER_MSEC - di_pre_stru.irq_time[0]);
 		trace_di_pre("PRE-IRQ-0",
 			di_pre_stru.field_count_for_cont,
-			di_pre_stru.irq_time);
+			di_pre_stru.irq_time[0]);
 		if (mcpre_en) {
 			get_mcinfo_from_reg_in_irq();
 			if ((is_meson_gxlx_cpu() &&
@@ -6031,18 +6036,17 @@ static void di_process(void)
 			}
 		}
 		di_unlock_irqfiq_restore(irq_flag2);
-
-			if ((di_pre_stru.pre_de_busy == 0) &&
-				(di_pre_stru.pre_de_process_done == 0)) {
-				if ((pre_run_flag == DI_RUN_FLAG_RUN) ||
-					(pre_run_flag == DI_RUN_FLAG_STEP)) {
-					if (pre_run_flag == DI_RUN_FLAG_STEP)
-						pre_run_flag =
-							DI_RUN_FLAG_STEP_DONE;
-					if (pre_de_buf_config())
-						pre_de_process();
-				}
+		if ((di_pre_stru.pre_de_busy == 0) &&
+			(di_pre_stru.pre_de_process_done == 0)) {
+			if ((pre_run_flag == DI_RUN_FLAG_RUN) ||
+				(pre_run_flag == DI_RUN_FLAG_STEP)) {
+				if (pre_run_flag == DI_RUN_FLAG_STEP)
+					pre_run_flag = DI_RUN_FLAG_STEP_DONE;
+				if (pre_de_buf_config() &&
+					(di_pre_stru.pre_de_process_flag == 0))
+					pre_de_process();
 			}
+		}
 		di_post_stru.di_post_process_cnt = 0;
 		while (process_post_vframe()) {
 			if (di_post_stru.di_post_process_cnt++ >
@@ -6072,7 +6076,9 @@ static void di_pre_trigger_work(struct di_pre_stru_s *pre_stru_p)
 
 	if (pre_stru_p->pre_de_busy && init_flag) {
 		pre_stru_p->pre_de_busy_timer_count++;
-		if (pre_stru_p->pre_de_busy_timer_count >= nr_done_check_cnt) {
+		if (pre_stru_p->pre_de_busy_timer_count >= nr_done_check_cnt &&
+		((sched_clock()/NSEC_PER_MSEC - di_pre_stru.irq_time[1]) >
+		(10*nr_done_check_cnt))) {
 			if (di_dbg_mask & 4) {
 				dump_mif_size_state(&di_pre_stru,
 					&di_post_stru);
@@ -6087,9 +6093,12 @@ static void di_pre_trigger_work(struct di_pre_stru_s *pre_stru_p)
 			pre_stru_p->pre_de_clear_flag = 2;
 			if ((pre_stru_p->field_count_for_cont < 10) ||
 				(di_dbg_mask&0x2)) {
-				pr_info("DI*****wait %d timeout 0x%x*****\n",
+				pr_info("DI*****wait %d timeout 0x%x(%d ms)*****\n",
 					pre_stru_p->field_count_for_cont,
-					Rd(DI_INTR_CTRL));
+					Rd(DI_INTR_CTRL),
+					(unsigned int)(sched_clock()/
+					NSEC_PER_MSEC -
+					di_pre_stru.irq_time[1]));
 			}
 		}
 	} else {
@@ -6528,7 +6537,8 @@ static void fast_process(void)
 					if (pre_run_flag == DI_RUN_FLAG_STEP)
 						pre_run_flag =
 							DI_RUN_FLAG_STEP_DONE;
-					if (pre_de_buf_config())
+					if (pre_de_buf_config() &&
+					(di_pre_stru.pre_de_process_flag == 0))
 						pre_de_process();
 				}
 			}
@@ -7659,6 +7669,8 @@ module_param_named(nr10bit_support, nr10bit_support, uint, 0664);
 module_param_named(di_stop_reg_flag, di_stop_reg_flag, uint, 0664);
 module_param(di_dbg_mask, uint, 0664);
 MODULE_PARM_DESC(di_dbg_mask, "\n di_dbg_mask\n");
+module_param(nr_done_check_cnt, uint, 0664);
+MODULE_PARM_DESC(nr_done_check_cnt, "\n nr_done_check_cnt\n");
 module_param_array(di_stop_reg_addr, uint, &num_di_stop_reg_addr,
 	0664);
 module_param_named(mcpre_en, mcpre_en, bool, 0664);
