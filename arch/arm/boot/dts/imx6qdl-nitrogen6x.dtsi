@@ -676,7 +676,7 @@
 			regulator-name = "usb_otg_vbus";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
-			gpio = <&gpio3 22 0>;
+			gpio = GP_REG_USBOTG;
 			enable-active-high;
 		};
 
@@ -688,7 +688,7 @@
 			regulator-name = "reg_wlan_vmmc";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio6 15 GPIO_ACTIVE_HIGH>;
+			gpio = GP_REG_WLAN_EN;
 			startup-delay-us = <70000>;
 			enable-active-high;
 		};
@@ -699,7 +699,7 @@
 			     "fsl,imx-audio-sgtl5000";
 		model = "sgtl5000-audio";
 		ssi-controller = <&ssi1>;
-		audio-codec = <&codec>;
+		audio-codec = <&sgtl5000>;
 		audio-routing =
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
@@ -865,7 +865,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
-	codec: sgtl5000@0a {
+	sgtl5000: codec@0a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000>;
@@ -875,7 +875,7 @@
 		VDDIO-supply = <&reg_3p3v>;
 	};
 
-	rtc: isl1208@6f {
+	isl1208@6f {
 		compatible = "isil,isl1208";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_isl1208>;
@@ -1062,7 +1062,7 @@
 		status = "okay";
 		primary;
 
- 		display-timings {
+		display-timings {
 			t_lvds: t_lvds_default {
 				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
@@ -1160,6 +1160,7 @@
 	bus-width = <4>;
 	non-removable;
 	vmmc-supply = <&reg_wlan_vmmc>;
+	vqmmc-1-8-v;
 	cap-power-off-card;
 	keep-power-in-suspend;
 	status = "okay";
