@@ -1907,14 +1907,17 @@ void osd_update_disp_axis_hw(
 	disp_data.x_end = display_h_end;
 	disp_data.y_end = display_v_end;
 	pan_data.x_start = xoffset;
-	pan_data.x_end = xoffset + (display_h_end - display_h_start);
+	pan_data.x_end = xoffset +
+		osd_hw.pandata[index].x_end -
+		osd_hw.pandata[index].x_start;
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	pan_data.y_start = osd_hw.pandata[index].y_start;
 	pan_data.y_end = osd_hw.pandata[index].y_start +
-					(display_v_end - display_v_start);
+		osd_hw.pandata[index].y_end - osd_hw.pandata[index].y_start;
 #else
 	pan_data.y_start = yoffset;
-	pan_data.y_end = yoffset + (display_v_end - display_v_start);
+	pan_data.y_end = yoffset +
+		osd_hw.pandata[index].y_end - osd_hw.pandata[index].y_start;
 #endif
 	/* if output mode change then reset pan ofFfset. */
 	memcpy(&osd_hw.pandata[index], &pan_data, sizeof(struct pandata_s));
@@ -1969,8 +1972,8 @@ void osd_setup_hw(u32 index,
 	disp_data.x_start = disp_start_x;
 	disp_data.y_start = disp_start_y;
 
-	pan_data.x_end = xoffset + (disp_end_x - disp_start_x);
-	pan_data.y_end = yoffset + (disp_end_y - disp_start_y);
+	pan_data.x_end = xoffset + xres - 1;
+	pan_data.y_end = yoffset + yres - 1;
 	disp_data.x_end = disp_end_x;
 	disp_data.y_end = disp_end_y;
 
