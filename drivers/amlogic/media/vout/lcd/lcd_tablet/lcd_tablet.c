@@ -435,6 +435,26 @@ static void lcd_tablet_vinfo_update(void)
 		vinfo->video_clk = pconf->lcd_timing.lcd_clk;
 		vinfo->htotal = pconf->lcd_basic.h_period;
 		vinfo->vtotal = pconf->lcd_basic.v_period;
+		switch (pconf->lcd_timing.fr_adjust_type) {
+		case 0:
+			vinfo->fr_adj_type = VOUT_FR_ADJ_CLK;
+			break;
+		case 1:
+			vinfo->fr_adj_type = VOUT_FR_ADJ_HTOTAL;
+			break;
+		case 2:
+			vinfo->fr_adj_type = VOUT_FR_ADJ_VTOTAL;
+			break;
+		case 3:
+			vinfo->fr_adj_type = VOUT_FR_ADJ_COMBO;
+			break;
+		case 4:
+			vinfo->fr_adj_type = VOUT_FR_ADJ_HDMI;
+			break;
+		default:
+			vinfo->fr_adj_type = VOUT_FR_ADJ_NONE;
+			break;
+		}
 
 		lcd_hdr_vinfo_update();
 	}
@@ -474,6 +494,7 @@ static void lcd_tablet_vinfo_update_default(void)
 		vinfo->video_clk = 0;
 		vinfo->htotal = h_total;
 		vinfo->vtotal = v_total;
+		vinfo->fr_adj_type = VOUT_FR_ADJ_NONE;
 	}
 }
 

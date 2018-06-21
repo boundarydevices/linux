@@ -43,6 +43,16 @@ enum viu_mux_e {
 	VIU_MUX_MAX,
 };
 
+enum vout_fr_adj_type_e {
+	VOUT_FR_ADJ_CLK = 0,
+	VOUT_FR_ADJ_HTOTAL,
+	VOUT_FR_ADJ_VTOTAL,
+	VOUT_FR_ADJ_COMBO, /* vtotal + htotal + clk */
+	VOUT_FR_ADJ_HDMI,  /* 50<->60: htotal; 60<->59.94: clk */
+	VOUT_FR_ADJ_NONE,  /* disable fr_adj */
+	VOUT_FR_ADJ_MAX,
+};
+
 #define SUPPORT_2020	0x01
 
 /* master_display_info for display device */
@@ -186,6 +196,7 @@ struct vinfo_s {
 	u32 video_clk;
 	u32 htotal;
 	u32 vtotal;
+	enum vout_fr_adj_type_e fr_adj_type;
 	enum color_fmt_e viu_color_fmt;
 	enum viu_mux_e viu_mux;
 	struct master_display_info_s master_display_info;

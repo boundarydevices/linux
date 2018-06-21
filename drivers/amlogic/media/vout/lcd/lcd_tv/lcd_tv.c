@@ -239,6 +239,26 @@ static void lcd_vmode_vinfo_update(enum vmode_e mode)
 	lcd_drv->lcd_info->htotal = pconf->lcd_basic.h_period;
 	lcd_drv->lcd_info->vtotal = pconf->lcd_basic.v_period;
 	lcd_drv->lcd_info->viu_mux = VIU_MUX_ENCL;
+	switch (pconf->lcd_timing.fr_adjust_type) {
+	case 0:
+		lcd_drv->lcd_info->fr_adj_type = VOUT_FR_ADJ_CLK;
+		break;
+	case 1:
+		lcd_drv->lcd_info->fr_adj_type = VOUT_FR_ADJ_HTOTAL;
+		break;
+	case 2:
+		lcd_drv->lcd_info->fr_adj_type = VOUT_FR_ADJ_VTOTAL;
+		break;
+	case 3:
+		lcd_drv->lcd_info->fr_adj_type = VOUT_FR_ADJ_COMBO;
+		break;
+	case 4:
+		lcd_drv->lcd_info->fr_adj_type = VOUT_FR_ADJ_HDMI;
+		break;
+	default:
+		lcd_drv->lcd_info->fr_adj_type = VOUT_FR_ADJ_NONE;
+		break;
+	}
 
 	lcd_hdr_vinfo_update();
 }
@@ -672,6 +692,7 @@ static void lcd_vinfo_update_default(void)
 		vinfo->video_clk = 0;
 		vinfo->htotal = h_total;
 		vinfo->vtotal = v_total;
+		vinfo->fr_adj_type = VOUT_FR_ADJ_NONE;
 	}
 }
 

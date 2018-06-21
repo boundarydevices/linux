@@ -4811,10 +4811,11 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	else if (is_meson_txlx_cpu() && !is_meson_txlx_package_962E()) {
 		struct vinfo_s *vinfo = get_current_vinfo();
 
-		if (vinfo->width > 1920)
-			vlock_mode = VLOCK_MODE_MANUAL_PLL;
-		else
+		if ((vinfo->fr_adj_type != VOUT_FR_ADJ_HDMI) &&
+			(vinfo->width <= 1920))
 			vlock_mode = VLOCK_MODE_MANUAL_SOFT_ENC;
+		else
+			vlock_mode = VLOCK_MODE_MANUAL_PLL;
 
 	} else
 		vlock_mode = VLOCK_MODE_MANUAL_PLL;
