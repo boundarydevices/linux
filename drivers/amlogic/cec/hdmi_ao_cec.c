@@ -2189,9 +2189,9 @@ static long hdmitx_cec_ioctl(struct file *f,
 	void __user *argp = (void __user *)arg;
 	unsigned long tmp;
 	struct hdmi_port_info *port;
-	int a, b, c, d;
+	unsigned int a, b, c, d;
 	struct hdmitx_dev *tx_dev;
-	int tx_hpd;
+	unsigned int tx_hpd;
 
 	mutex_lock(&cec_dev->cec_ioctl_mutex);
 	switch (cmd) {
@@ -2354,10 +2354,15 @@ static long hdmitx_cec_ioctl(struct file *f,
 				tmp = tx_hpd;
 			else {	/* mixed for rx */
 				tmp = hdmirx_get_connect_info();
-				if (tmp & (1 << (a - 1)))
-					tmp = 1;
-				else
+				if (a >= 1) {
+					if (tmp & (1 << (a - 1)))
+						tmp = 1;
+					else
+						tmp = 0;
+				} else {
 					tmp = 0;
+					CEC_INFO("err port number %d\n", a);
+				}
 			}
 		}
 		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
@@ -2374,8 +2379,8 @@ static long hdmitx_cec_ioctl(struct file *f,
 		cec_dev->cec_info.power_status = POWER_ON;
 
 		cec_dev->cec_info.vendor_id = cec_dev->v_data.vendor_id;
-		strcpy(cec_dev->cec_info.osd_name,
-		       cec_dev->v_data.cec_osd_string);
+		strncpy(cec_dev->cec_info.osd_name,
+		       cec_dev->v_data.cec_osd_string, 14);
 
 		if (cec_dev->dev_type == DEV_TYPE_PLAYBACK)
 			cec_dev->cec_info.menu_status = DEVICE_MENU_ACTIVE;
@@ -2527,7 +2532,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 
 	cec_dev = devm_kzalloc(&pdev->dev, sizeof(struct ao_cec_dev),
 			GFP_KERNEL);
-	if (!cec_dev) {
+	if (IS_ERR(cec_dev)) {
 		CEC_ERR("device malloc err!\n");
 		ret = -ENOMEM;
 		goto tag_cec_devm_err;
@@ -2567,9 +2572,10 @@ static int aml_cec_probe(struct platform_device *pdev)
 
 	/*get compatible matched device, to get chip related data*/
 	of_id = of_match_device(aml_cec_dt_match, &pdev->dev);
-	if (!of_id)
+	if (of_id != NULL)
+		cec_dev->plat_data = (struct cec_platform_data_s *)of_id->data;
+	else
 		CEC_ERR("unable to get matched device\n");
-	cec_dev->plat_data = (struct cec_platform_data_s *)of_id->data;
 
 	cec_dev->cec_info.open_count.counter = 0;
 	init_completion(&cec_dev->rx_ok);
