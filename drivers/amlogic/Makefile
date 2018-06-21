@@ -49,6 +49,9 @@ obj-$(CONFIG_AMLOGIC_EFUSE)             += efuse/
 
 obj-$(CONFIG_AMLOGIC_REBOOT)		+= reboot/
 
+obj-$(CONFIG_AMLOGIC_BATTERY_DUMMY)     += battery/
+obj-$(CONFIG_AMLOGIC_CHARGER_DUMMY)     += battery/
+
 obj-$(CONFIG_AMLOGIC_INTERNAL_PHY)	+= ethernet/phy/
 
 obj-$(CONFIG_AMLOGIC_CPU_HOTPLUG)	+= cpu_hotplug/

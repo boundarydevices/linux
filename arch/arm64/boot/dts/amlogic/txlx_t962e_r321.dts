@@ -212,6 +212,15 @@
 		};
 	};
 
+	dummy-battery {
+		compatible = "amlogic, dummy-battery";
+		status = "okay";
+	};
+	dummy-charger {
+		compatible = "amlogic, dummy-charger";
+		status = "okay";
+	};
+
 	ethmac: ethernet@0xff3f0000 {
 		compatible = "amlogic, gxbb-eth-dwmac";
 		status = "okay";

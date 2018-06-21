@@ -1,0 +1,15 @@
+config AMLOGIC_BATTERY_DUMMY
+	tristate "Dummy battery driver for Amlogic"
+	help
+	  Say Y to enable generic support for battery charging according
+	  to common Android policies.
+	  This driver adds periodic battery level and health monitoring,
+	  kernel log reporting and other debugging features, common board
+	  battery file glue logic for battery/case temperature sensors,
+	  etc.
+
+config AMLOGIC_CHARGER_DUMMY
+	tristate "Dummy charger driver for Amlogic"
+	help
+	  Say Y to enable dummy support for battery charging according
+	  to common Android policies

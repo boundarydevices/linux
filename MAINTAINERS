@@ -13437,6 +13437,12 @@ AMLOGIC MAILBOX DRIVER
 M:      Yun Cai <yun.cai@amlogic.com>
 F:      drivers/amlogic/mailbox/
 
+AMLOGIC DUMMY BATTERY DRIVER
+M:      Shuide <shuide.chen@amlogic.com>
+F:      drivers/amlogic/battery/
+F:      drivers/amlogic/battery/amlogic_battery.c
+F:      drivers/amlogic/battery/amlogic_charger.c
+
 AMLOGIC REGISTER DEBUG DRIVER
 M:      Yun Cai <yun.cai@amlogic.com>
 F:	drivers/amlogic/reg_access/

@@ -139,6 +139,16 @@
 		};
 	};
 
+	dummy-battery {
+		compatible = "amlogic, dummy-battery";
+		status = "okay";
+	};
+
+	dummy-charger {
+		compatible = "amlogic, dummy-charger";
+		status = "okay";
+	};
+
 	bt-dev{
 		compatible = "amlogic, bt-dev";
 		dev_name = "bt-dev";
