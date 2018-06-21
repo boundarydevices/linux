@@ -503,6 +503,8 @@ const char video_dev_id2[] = "amvideo-dev2";
 
 int onwaitendframe;
 
+static u32 vpp_hold_line = 8;
+
 struct video_dev_s video_dev[2] = {
 	{0x1d00 - 0x1d00, 0x1a50 - 0x1a50},
 	{0x1900 - 0x1d00, 0x1e00 - 0x1a50}
@@ -3001,7 +3003,7 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 
 		if (type & VIDTYPE_COMPRESS) {
 			r = (3 << 24) |
-			    (17 << 16) |
+			    (vpp_hold_line << 16) |
 			    ((legacy_vpp ? 1 : 2) << 14) | /* burst1 */
 			    (vf->bitdepth & BITDEPTH_MASK);
 
@@ -3134,7 +3136,7 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	}
 
 	r = (3 << VDIF_URGENT_BIT) |
-	    (17 << VDIF_HOLD_LINES_BIT) |
+	    (vpp_hold_line << VDIF_HOLD_LINES_BIT) |
 	    VDIF_FORMAT_SPLIT |
 	    VDIF_CHRO_RPT_LAST | VDIF_ENABLE;
 	/*  | VDIF_RESET_ON_GO_FIELD;*/
@@ -3556,7 +3558,7 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXBB) {
 		if (type & VIDTYPE_COMPRESS) {
 			r = (3 << 24) |
-			    (17 << 16) |
+			    (vpp_hold_line << 16) |
 			    ((legacy_vpp ? 1 : 2) << 14) | /* burst1 */
 			    (vf->bitdepth & BITDEPTH_MASK);
 
@@ -3685,7 +3687,7 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	}
 
 	r = (3 << VDIF_URGENT_BIT) |
-	    (17 << VDIF_HOLD_LINES_BIT) |
+	    (vpp_hold_line << VDIF_HOLD_LINES_BIT) |
 	    VDIF_FORMAT_SPLIT |
 	    VDIF_CHRO_RPT_LAST | VDIF_ENABLE;
 	/*  | VDIF_RESET_ON_GO_FIELD;*/
@@ -9760,6 +9762,8 @@ static int __init video_early_init(void)
 	/*(3<<9) | (1<<8) | (0)); // fclk_div7/1 = 364M*/
 	/*moved to vpu.c, default config by dts */
 
+	u32 cur_hold_line;
+
 #if 0	/* if (0 >= VMODE_MAX) //DEBUG_TMP */
 #if 1				/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
@@ -9852,6 +9856,14 @@ static int __init video_early_init(void)
 	/*disable sr default when power up*/
 	WRITE_VCBUS_REG(VPP_SRSHARP0_CTRL, 0);
 	WRITE_VCBUS_REG(VPP_SRSHARP1_CTRL, 0);
+
+	cur_hold_line = READ_VCBUS_REG(VPP_HOLD_LINES + cur_dev->vpp_off);
+	cur_hold_line = cur_hold_line & 0xff;
+
+	if (cur_hold_line > 0x1f)
+		vpp_hold_line = 0x1f;
+	else
+		vpp_hold_line = cur_hold_line;
 
 	/* Temp force set dmc */
 	if (!legacy_vpp)
@@ -10343,6 +10355,9 @@ MODULE_PARM_DESC(reverse, "reverse /disable reverse");
 
 MODULE_PARM_DESC(toggle_count, "\n toggle count\n");
 module_param(toggle_count, uint, 0664);
+
+MODULE_PARM_DESC(vpp_hold_line, "\n vpp_hold_line\n");
+module_param(vpp_hold_line, uint, 0664);
 
 MODULE_DESCRIPTION("AMLOGIC video output driver");
 MODULE_LICENSE("GPL");
