@@ -47,8 +47,6 @@ void set_usb_phy_host_tuning(int port, int default_val)
 		default_val ? "Recovery" : "Set",
 		port, __builtin_return_address(0));
 	if (!default_val) {
-		writel(g_phy2_v2->pll_setting[3], phy_reg_base + 0x50);
-		writel(g_phy2_v2->pll_setting[4], phy_reg_base + 0x10);
 		writel(g_phy2_v2->pll_setting[6], phy_reg_base + 0x38);
 		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
 	} else {
@@ -74,8 +72,6 @@ void set_usb_phy_device_tuning(int port, int default_val)
 		default_val ? "Recovery" : "Set",
 		port, __builtin_return_address(0));
 	if (!default_val) {
-		writel(g_phy2_v2->pll_setting[3], phy_reg_base + 0x50);
-		writel(g_phy2_v2->pll_setting[4], phy_reg_base + 0x10);
 		writel(g_phy2_v2->pll_setting[7], phy_reg_base + 0x38);
 		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
 	} else {
@@ -94,6 +90,10 @@ void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 	writel(phy->pll_setting[2], reg + 0x48);
 	udelay(100);
 	writel((0x10000000 | (phy->pll_setting[0])), reg + 0x40);
+	/* PHY Tune */
+	writel(phy->pll_setting[3], reg + 0x50);
+	writel(phy->pll_setting[4], reg + 0x10);
+	writel(phy->pll_setting[5], reg + 0x34);
 }
 
 static int amlogic_new_usb2_init(struct usb_phy *x)
