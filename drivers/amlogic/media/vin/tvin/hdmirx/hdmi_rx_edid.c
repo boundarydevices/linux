@@ -353,6 +353,51 @@ const char *hdmi_fmt[] = {
 	"HDMI_RESERVED",
 };
 
+const char *_3d_structure[] = {
+	/* hdmi1.4 spec, Table H-7 */
+	/* value: 0x0000 */
+	"Frame packing",
+	"Field alternative",
+	"Line alternative",
+	"Side-by-Side(Full)",
+	"L + depth",
+	"L + depth + graphics + graphics-depth",
+	"Top-and-Bottom",
+	/* value 0x0111: Reserved for future use */
+	"Resvrd",
+	/* value 0x1000 */
+	"Side-by-Side(Half) with horizontal sub-sampling",
+	/* value 0x1001-0x1110:Reserved for future use */
+	"Resvrd",
+	"Resvrd",
+	"Resvrd",
+	"Resvrd",
+	"Resvrd",
+	"Resvrd",
+	"Side-by-Side(Half) with all quincunx sub-sampling",
+};
+
+const char *_3d_detail_x[] = {
+	/* hdmi1.4 spec, Table H-8 */
+	/* value: 0x0000 */
+	"All horizontal sub-sampling and quincunx matrix",
+	"Horizontal sub-sampling",
+	"Not_in_Use1",
+	"Not_in_Use2",
+	"Not_in_Use3",
+	"Not_in_Use4",
+	"All_Quincunx",
+	"ODD_left_ODD_right",
+	"ODD_left_EVEN_right",
+	"EVEN_left_ODD_right",
+	"EVEN_left_EVEN_right",
+	"Resvrd1",
+	"Resvrd2",
+	"Resvrd3",
+	"Resvrd4",
+	"Resvrd5",
+};
+
 const char *aud_fmt[] = {
 	"HEADER",
 	"L-PCM",
@@ -846,6 +891,28 @@ unsigned int hdmi_rx_top_edid_update(void)
 	return true;
 }
 
+void rx_edid_print_vic_fmt(unsigned char i,
+	unsigned char hdmi_vic)
+{
+	/* CTA-861-G: Table-18 */
+	/* SVD = 128, 254, 255 are reserved */
+	if ((hdmi_vic >= 1) && (hdmi_vic <= 64)) {
+		rx_pr("\tSVD#%2d: vic(%3d), format: %s\n",
+			i+1, hdmi_vic, hdmi_fmt[hdmi_vic]);
+	} else if ((hdmi_vic >= 65) && (hdmi_vic <= 107)) {
+		/* from first new set */
+		rx_pr("\tSVD#%2d: vic(%3d), format: %s\n",
+			i+1, hdmi_vic, hdmi_fmt[hdmi_vic]);
+	} else if ((hdmi_vic >= 108) && (hdmi_vic <= 127)) {
+		/* from first new set: 8bit VIC */
+	} else if ((hdmi_vic >= 129) && (hdmi_vic <= 192)) {
+		hdmi_vic &= 0x7F;
+		rx_pr("\tSVD#%2d: vic(%3d), native format: %s\n",
+			i+1, hdmi_vic, hdmi_fmt[hdmi_vic]);
+	} else if ((hdmi_vic >= 193) && (hdmi_vic <= 253)) {
+		/* from second new set: 8bit VIC */
+	}
+}
 
 /* edid header of base block
  * offset 0x00 ~ 0x07
@@ -980,11 +1047,11 @@ static void get_edid_established_timings(unsigned char *buff,
 	rx_pr("established timing:\n");
 	/* each bit for an established timing */
 	if (buff[start] & (1 << 5))
-		rx_pr("640*480p60hz is supported\n");
+		rx_pr("\t640*480p60hz\n");
 	if (buff[start] & (1 << 0))
-		rx_pr("800*600p60hz is supported\n");
+		rx_pr("\t800*600p60hz\n");
 	if (buff[start+1] & (1 << 3))
-		rx_pr("1024*768p60hz is supported\n");
+		rx_pr("\t1024*768p60hz\n");
 }
 
 /* Standard timings are those either recognized by VESA
@@ -1019,7 +1086,7 @@ static void get_edid_standard_timing(unsigned char *buff, unsigned char start,
 			vactive_pixel =
 				hactive_pixel*asp_ratio[img_aspect_ratio]/80;
 			refresh_rate = (int)(buff[start+i+1] & 0x3F) + 60;
-			rx_pr("%d*%dP%dHz\n", hactive_pixel,
+			rx_pr("\t%d*%dP%dHz\n", hactive_pixel,
 				vactive_pixel, refresh_rate);
 		}
 	}
@@ -1317,8 +1384,14 @@ static void get_edid_vsdb(unsigned char *buff, unsigned char start,
 	unsigned char _3d_present_offset;
 	unsigned char hdmi_vic_len;
 	unsigned char hdmi_vic_offset;
-	unsigned char i;
+	unsigned char i, j;
 	unsigned int ieee_oui;
+	unsigned char _3d_struct_all_offset;
+	unsigned char hdmi_3d_len;
+	unsigned char _3d_struct;
+	unsigned char _2d_vic_order_offset;
+	unsigned char temp_3d_len;
+
 	/* basic 5 bytes; others: extension fields */
 	if (len < 5) {
 		rx_pr("invalid VSDB length: %d!\n", len);
@@ -1404,6 +1477,10 @@ static void get_edid_vsdb(unsigned char *buff, unsigned char start,
 	if (edid_info->vsdb.hdmi_video_present) {
 		/* if hdmi video present,
 		 * 2 additonal bytes at least will present
+		 * 1 byte containing the 3D_present flag and other flags
+		 * 1 byte with length fields HDMI_VIC_LEN and HDMI_3D_LEN
+		 * 0 or more bytes for info about HDMI_VIC formats supported
+		 * 0 or more bytes for info about 3D formats supported
 		 */
 		if (len < _3d_present_offset + 2) {
 			rx_pr("invalid vsdb length for hdmi video: %d\n", len);
@@ -1422,10 +1499,16 @@ static void get_edid_vsdb(unsigned char *buff, unsigned char start,
 		/* parse 4k2k video format, 4 4k2k format maximum*/
 		hdmi_vic_offset = _3d_present_offset + 2;
 		hdmi_vic_len = edid_info->vsdb.hdmi_vic_len;
-		if ((hdmi_vic_len > 4) || (hdmi_vic_len == 0)) {
+		if (hdmi_vic_len > 4) {
 			rx_pr("invalid hdmi vic len: %d\n",
 				edid_info->vsdb.hdmi_vic_len);
+			return;
 		} else {
+			/* HDMI_VIC_LEN may be 0 */
+			if (len < hdmi_vic_offset + hdmi_vic_len) {
+				rx_pr("invalid length for 4k2k: %d\n", len);
+				return;
+			}
 			for (i = 0; i < hdmi_vic_len; i++) {
 				if (buff[start+hdmi_vic_offset+i] == 1)
 					edid_info->vsdb.hdmi_4k2k_30hz_sup = 1;
@@ -1437,7 +1520,82 @@ static void get_edid_vsdb(unsigned char *buff, unsigned char start,
 					edid_info->vsdb.hdmi_smpte_sup = 1;
 			}
 		}
-		/* 3D:todo */
+
+		/* 3D info parse */
+		_3d_struct_all_offset =
+			hdmi_vic_offset + hdmi_vic_len;
+		hdmi_3d_len = edid_info->vsdb.hdmi_3d_len;
+		/* there may be additional 0 present after 3D info  */
+		if (len < _3d_struct_all_offset + hdmi_3d_len) {
+			rx_pr("invalid vsdb length for 3d: %d\n", len);
+			return;
+		}
+		/* 3d_multi_present: hdmi1.4 spec page155:
+		 * 0: neither structure or mask present,
+		 * 1: only 3D_Structure_ALL_15бн0 is present
+		 *    and assigns 3D formats to all of the
+		 *    VICs listed in the first 16 entries
+		 *    in the EDID
+		 * 2: 3D_Structure_ALL_15бн0 and 3D_MASK_15бн0
+		 *    are present and assign 3D formats to
+		 *    some of the VICs listed in the first
+		 *    16 entries in the EDID.
+		 * 3: neither structure or mask present,
+		 *    Reserved for future use.
+		 */
+		if (edid_info->vsdb._3d_multi_present == 1) {
+			edid_info->vsdb._3d_struct_all =
+				(buff[start+_3d_struct_all_offset] << 8) +
+				buff[start+_3d_struct_all_offset+1];
+			_2d_vic_order_offset =
+				_3d_struct_all_offset + 2;
+			temp_3d_len = 2;
+		} else if (edid_info->vsdb._3d_multi_present == 2) {
+			edid_info->vsdb._3d_struct_all =
+				(buff[start+_3d_struct_all_offset] << 8) +
+				buff[start+_3d_struct_all_offset+1];
+			edid_info->vsdb._3d_mask_15_0 =
+				(buff[start+_3d_struct_all_offset+2] << 8) +
+				buff[start+_3d_struct_all_offset+3];
+			_2d_vic_order_offset =
+				_3d_struct_all_offset + 4;
+			temp_3d_len = 4;
+		} else {
+			_2d_vic_order_offset =
+				_3d_struct_all_offset;
+			temp_3d_len = 0;
+		}
+		i = _2d_vic_order_offset;
+		for (j = 0; (temp_3d_len < hdmi_3d_len)
+			&& (j < 16); j++) {
+			edid_info->vsdb._2d_vic[j]._2d_vic_order =
+				(buff[start+i] >> 4) & 0xF;
+			edid_info->vsdb._2d_vic[j]._3d_struct =
+				buff[start+i] & 0xF;
+			_3d_struct =
+				edid_info->vsdb._2d_vic[j]._3d_struct;
+			/* hdmi1.4 spec page156
+			 * if 3D_Structure_X is 0000~0111,
+			 * 3D_Detail_X shall not be present,
+			 * otherwise shall be present
+			 */
+			if ((_3d_struct	>= 0x8) &&
+				(_3d_struct <= 0xF)) {
+				edid_info->vsdb._2d_vic[j]._3d_detail =
+					(buff[start+i+1] >> 4) & 0xF;
+				i += 2;
+				temp_3d_len += 2;
+				if (temp_3d_len > hdmi_3d_len) {
+					rx_pr("invalid len for 3d_detail: %d\n",
+						len);
+					break;
+				}
+			} else {
+				i++;
+				temp_3d_len++;
+			}
+		}
+		edid_info->vsdb._2d_vic_num = j;
 		return;
 	}
 hf_vsdb:
@@ -1769,10 +1927,14 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 	unsigned char hdmi_vic;
 	enum edid_audio_format_e fmt;
 	union bit_rate_u *bit_rate;
+	unsigned char svd_num;
+	unsigned char _2d_vic_order;
+	unsigned char _3d_struct;
+	unsigned char _3d_detail;
 
 	if (!edid_info)
 		return;
-	rx_pr("----EDID Basic Block----\n");
+	rx_pr("****EDID Basic Block****\n");
 	rx_pr("manufacturer_name: %s\n", edid_info->manufacturer_name);
 	rx_pr("product code: 0x%04x\n", edid_info->product_code);
 	rx_pr("serial_number: 0x%08x\n", edid_info->serial_number);
@@ -1788,37 +1950,22 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 	rx_pr("extension_flag: %d\n", edid_info->extension_flag);
 	rx_pr("block0_chk_sum: 0x%x\n", edid_info->block0_chk_sum);
 
-	rx_pr("----CEA block header----\n");
+	rx_pr("****CEA block header****\n");
 	rx_pr("underscan_sup: %d\n", edid_info->underscan_sup);
 	rx_pr("basic_aud_sup: %d\n", edid_info->basic_aud_sup);
 	rx_pr("ycc444_sup: %d\n", edid_info->ycc444_sup);
 	rx_pr("ycc422_sup: %d\n", edid_info->ycc422_sup);
 	rx_pr("native_dtd_num: %d\n", edid_info->native_dtd_num);
 
-	rx_pr("----Video Data Block----\n");
+	rx_pr("****Video Data Block****\n");
 	rx_pr("support SVD list:\n");
+	svd_num = edid_info->video_db.svd_num;
 	for (i = 0; i < edid_info->video_db.svd_num; i++) {
 		hdmi_vic = edid_info->video_db.hdmi_vic[i];
-		/* SVD = 128, 254, 255 are reserved*/
-		if ((hdmi_vic >= 1) && (hdmi_vic <= 64)) {
-			rx_pr("vic: %3d, format: %s\n",
-				hdmi_vic, hdmi_fmt[hdmi_vic]);
-		} else if ((hdmi_vic >= 65) && (hdmi_vic <= 107)) {
-			/* from first new set */
-			rx_pr("vic: %3d, format: %s\n",
-			hdmi_vic, hdmi_fmt[hdmi_vic]);
-		} else if ((hdmi_vic >= 108) && (hdmi_vic <= 127)) {
-			/* from first new set: 8bit VIC */
-		} else if ((hdmi_vic >= 129) && (hdmi_vic <= 192)) {
-			hdmi_vic &= 0x7F;
-			rx_pr("vic: %3d, native format: %s\n",
-				hdmi_vic, hdmi_fmt[hdmi_vic]);
-		} else if ((hdmi_vic >= 193) && (hdmi_vic <= 253)) {
-			/* from second new set */
-		}
+		rx_edid_print_vic_fmt(i, hdmi_vic);
 	}
 
-	rx_pr("----Audio Data Block----\n");
+	rx_pr("****Audio Data Block****\n");
 	for (fmt = AUDIO_FORMAT_LPCM; fmt <= AUDIO_FORMAT_WMAPRO; fmt++) {
 		if (edid_info->audio_db.aud_fmt_sup[fmt]) {
 			rx_pr("audio fmt: %s\n", aud_fmt[fmt]);
@@ -1849,16 +1996,16 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 					rx_pr("\t24bit\n");
 			} else if ((fmt >= AUDIO_FORMAT_AC3) &&
 				(fmt <= AUDIO_FORMAT_ATRAC)) {
-				rx_pr("max bit rate: %dkHz\n",
+				rx_pr("\tmax bit rate: %dkHz\n",
 					bit_rate->others*8);
 			} else {
-				rx_pr("format dependent value: 0x%x\n",
+				rx_pr("\tformat dependent value: 0x%x\n",
 					bit_rate->others);
 			}
 		}
 	}
 
-	rx_pr("----Speaker Allocation Data Block----\n");
+	rx_pr("****Speaker Allocation Data Block****\n");
 	if (edid_info->speaker_alloc.flw_frw)
 		rx_pr("FLW/FRW\n");
 	if (edid_info->speaker_alloc.rlc_rrc)
@@ -1882,7 +2029,7 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 	if (edid_info->speaker_alloc.flh_frh)
 		rx_pr("FLH_FRH\n");
 
-	rx_pr("----Vender Specific Data Block----\n");
+	rx_pr("****Vender Specific Data Block****\n");
 	rx_pr("IEEE OUI: %06X\n",
 		edid_info->vsdb.ieee_oui);
 	rx_pr("phy addr: %d.%d.%d.%d\n",
@@ -1904,25 +2051,102 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 			edid_info->vsdb.max_tmds_clk*5);
 	rx_pr("hdmi_video_present: %d\n",
 		edid_info->vsdb.hdmi_video_present);
-	rx_pr("cnc3=%d,cnc2=%d,cnc1=%d,cnc0=%d\n",
-		edid_info->vsdb.cnc3,
-		edid_info->vsdb.cnc2,
-		edid_info->vsdb.cnc1,
-		edid_info->vsdb.cnc0);
-	rx_pr("supproted hdmi vic:\n");
+	rx_pr("Content types:\n");
+	if (edid_info->vsdb.cnc3)
+		rx_pr("\tcnc3: Game\n");
+	if (edid_info->vsdb.cnc2)
+		rx_pr("\tcnc2: Cinema\n");
+	if (edid_info->vsdb.cnc1)
+		rx_pr("\tcnc1: Photo\n");
+	if (edid_info->vsdb.cnc0)
+		rx_pr("\tcnc0: Grahpics(text)\n");
+
+	if (edid_info->vsdb.hdmi_vic_len > 0)
+		rx_pr("Supproted 4k2k format:\n");
 	if (edid_info->vsdb.hdmi_4k2k_30hz_sup)
-		rx_pr("hdmi vic1: 4k30hz\n");
+		rx_pr("\thdmi vic1: 4k30hz\n");
 	if (edid_info->vsdb.hdmi_4k2k_25hz_sup)
-		rx_pr("hdmi vic2: 4k25hz\n");
+		rx_pr("\thdmi vic2: 4k25hz\n");
 	if (edid_info->vsdb.hdmi_4k2k_24hz_sup)
-		rx_pr("hdmi vic3: 4k24hz\n");
+		rx_pr("\thdmi vic3: 4k24hz\n");
 	if (edid_info->vsdb.hdmi_smpte_sup)
-		rx_pr("hdmi vic4: smpte\n");
-	rx_pr("3D present: %d\n",
-		edid_info->vsdb._3d_present);
+		rx_pr("\thdmi vic4: smpte\n");
+	/* Mandatory 3D format: HDMI1.4 spec page157 */
+	if (edid_info->vsdb._3d_present) {
+		rx_pr("Basic(Mandatory) 3D formats supported\n");
+		rx_pr("Image Size:\n");
+		switch (edid_info->vsdb.image_size) {
+		case 0:
+			rx_pr("\tNo additional information\n");
+			break;
+		case 1:
+			rx_pr("\tOnly indicate correct aspect ratio\n");
+			break;
+		case 2:
+			rx_pr("\tCorrect size: Accurate to 1(cm)\n");
+			break;
+		case 3:
+			rx_pr("\tCorrect size: multiply by 5(cm)\n");
+			break;
+		default:
+			break;
+		}
+	} else
+		rx_pr("No 3D support\n");
+	if (edid_info->vsdb._3d_multi_present == 1) {
+		/* For each bit in _3d_struct which is set (=1),
+		 * Sink supports the corresponding 3D_Structure
+		 * for all of the VICs listed in the first 16
+		 * entries in the EDID.
+		 */
+		rx_pr("General 3D format, on the first 16 SVDs:\n");
+		for (i = 0; i < 16; i++) {
+			if ((edid_info->vsdb._3d_struct_all >> i) & 0x1)
+				rx_pr("\t%s\n",	_3d_structure[i]);
+		}
+	} else if (edid_info->vsdb._3d_multi_present == 2) {
+		/* Where a bit is set (=1), for the corresponding
+		 * VIC within the first 16 entries in the EDID,
+		 * the Sink indicates 3D support as designate
+		 * by the 3D_Structure_ALL_15бн0 field.
+		 */
+		rx_pr("General 3D format, on the SVDs below:\n");
+		for (i = 0; i < 16; i++) {
+			if ((edid_info->vsdb._3d_struct_all >> i) & 0x1)
+				rx_pr("\t%s\n",	_3d_structure[i]);
+		}
+		rx_pr("For SVDs:\n");
+		for (i = 0; (i < svd_num) && (i < 16); i++) {
+			hdmi_vic = edid_info->video_db.hdmi_vic[i];
+			if ((edid_info->vsdb._3d_mask_15_0 >> i) & 0x1)
+				rx_edid_print_vic_fmt(i, hdmi_vic);
+		}
+	}
+
+	if (edid_info->vsdb._2d_vic_num > 0)
+		rx_pr("Specific VIC 3D information:\n");
+	for (i = 0; (i < edid_info->vsdb._2d_vic_num)
+		&& (i < svd_num) && (i < 16); i++) {
+		_2d_vic_order =
+			edid_info->vsdb._2d_vic[i]._2d_vic_order;
+		_3d_struct =
+			edid_info->vsdb._2d_vic[i]._3d_struct;
+		hdmi_vic =
+			edid_info->video_db.hdmi_vic[_2d_vic_order];
+		rx_edid_print_vic_fmt(_2d_vic_order, hdmi_vic);
+		rx_pr("\t\t3d format: %s\n",
+			_3d_structure[_3d_struct]);
+		if ((_3d_struct >= 0x8) &&
+			(_3d_struct <= 0xF)) {
+			_3d_detail =
+				edid_info->vsdb._2d_vic[i]._3d_detail;
+			rx_pr("\t\t3d_detail: %s\n",
+				_3d_detail_x[_3d_detail]);
+		}
+	}
 
 	if (edid_info->contain_hf_vsdb) {
-		rx_pr("----HF-VSDB----\n");
+		rx_pr("****HF-VSDB****\n");
 		rx_pr("IEEE OUI: %06X\n",
 			edid_info->hf_vsdb.ieee_oui);
 		rx_pr("hf-vsdb version: %d\n",
@@ -1951,18 +2175,74 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 	}
 
 	if (edid_info->contain_vcdb) {
-		rx_pr("----Video Cap Data Block----\n");
-		rx_pr("quant_range selectable ycc:%d, rgb:%d\n",
-			edid_info->vcdb.quanti_range_ycc,
-			edid_info->vcdb.quanti_range_rgb);
-		rx_pr("scan mode for PT:%d, IT:%d, CE:%d\n",
-			edid_info->vcdb.s_PT,
-			edid_info->vcdb.s_IT,
-			edid_info->vcdb.s_CE);
+		rx_pr("****Video Cap Data Block****\n");
+		rx_pr("YCC Quant Range:\n");
+		if (edid_info->vcdb.quanti_range_ycc)
+			rx_pr("\tSelectable(via AVI YQ)\n");
+		else
+			rx_pr("\tNo Data\n");
+
+		rx_pr("RGB Quant Range:\n");
+		if (edid_info->vcdb.quanti_range_rgb)
+			rx_pr("\tSelectable(via AVI Q)\n");
+		else
+			rx_pr("\tNo Data\n");
+
+		rx_pr("PT Scan behavior:\n");
+		switch (edid_info->vcdb.s_PT) {
+		case 0:
+			rx_pr("\trefer to CE/IT fields\n");
+			break;
+		case 1:
+			rx_pr("\tAlways Overscanned\n");
+			break;
+		case 2:
+			rx_pr("\tAlways Underscanned\n");
+			break;
+		case 3:
+			rx_pr("\tSupport both over and underscan\n");
+			break;
+		default:
+			break;
+		}
+		rx_pr("IT Scan behavior:\n");
+		switch (edid_info->vcdb.s_IT) {
+		case 0:
+			rx_pr("\tIT video format not support\n");
+			break;
+		case 1:
+			rx_pr("\tAlways Overscanned\n");
+			break;
+		case 2:
+			rx_pr("\tAlways Underscanned\n");
+			break;
+		case 3:
+			rx_pr("\tSupport both over and underscan\n");
+			break;
+		default:
+			break;
+		}
+		rx_pr("CE Scan behavior:\n");
+		switch (edid_info->vcdb.s_CE) {
+		case 0:
+			rx_pr("\tCE video format not support\n");
+			break;
+		case 1:
+			rx_pr("\tAlways Overscanned\n");
+			break;
+		case 2:
+			rx_pr("\tAlways Underscanned\n");
+			break;
+		case 3:
+			rx_pr("\tSupport both over and underscan\n");
+			break;
+		default:
+			break;
+		}
 	}
 
 	if (edid_info->contain_vsvdb) {
-		rx_pr("----VSVDB(dolby vision)----\n");
+		rx_pr("****VSVDB(dolby vision)****\n");
 		rx_pr("IEEE_OUI: %06X\n",
 			edid_info->dv_vsvdb.ieee_oui);
 		rx_pr("vsvdb version: %d\n",
@@ -2001,38 +2281,38 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 	}
 
 	if (edid_info->contain_cdb) {
-		rx_pr("----Colorimetry Data Block----\n");
+		rx_pr("****Colorimetry Data Block****\n");
 		rx_pr("supported colorimetry:\n");
 		if (edid_info->color_db.BT2020_RGB)
-			rx_pr("BT2020_RGB\n");
+			rx_pr("\tBT2020_RGB\n");
 		if (edid_info->color_db.BT2020_YCC)
-			rx_pr("BT2020_YCC\n");
+			rx_pr("\tBT2020_YCC\n");
 		if (edid_info->color_db.BT2020_cYCC)
-			rx_pr("BT2020_cYCC\n");
+			rx_pr("\tBT2020_cYCC\n");
 		if (edid_info->color_db.Adobe_RGB)
-			rx_pr("Adobe_RGB\n");
+			rx_pr("\tAdobe_RGB\n");
 		if (edid_info->color_db.Adobe_YCC601)
-			rx_pr("Adobe_YCC601\n");
+			rx_pr("\tAdobe_YCC601\n");
 		if (edid_info->color_db.sYCC601)
-			rx_pr("sYCC601\n");
+			rx_pr("\tsYCC601\n");
 		if (edid_info->color_db.xvYCC709)
-			rx_pr("xvYCC709\n");
+			rx_pr("\txvYCC709\n");
 		if (edid_info->color_db.xvYCC601)
-			rx_pr("xvYCC601\n");
+			rx_pr("\txvYCC601\n");
 
 		rx_pr("supported colorimetry metadata:\n");
 		if (edid_info->color_db.MD3)
-			rx_pr("MD3\n");
+			rx_pr("\tMD3\n");
 		if (edid_info->color_db.MD2)
-			rx_pr("MD2\n");
+			rx_pr("\tMD2\n");
 		if (edid_info->color_db.MD1)
-			rx_pr("MD1\n");
+			rx_pr("\tMD1\n");
 		if (edid_info->color_db.MD0)
-			rx_pr("MD0\n");
+			rx_pr("\tMD0\n");
 	}
 
 	if (edid_info->contain_hdr_db) {
-		rx_pr("----HDR Static Metadata Data Block----\n");
+		rx_pr("****HDR Static Metadata Data Block****\n");
 		rx_pr("eotf_hlg: %d\n",
 			edid_info->hdr_db.eotf_hlg);
 		rx_pr("eotf_smpte_st_2084: %d\n",
@@ -2046,22 +2326,21 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 	}
 
 	if (edid_info->contain_y420_vdb) {
-		rx_pr("----Y420 Video Data Block----\n");
+		rx_pr("****Y420 Video Data Block****\n");
 		for (i = 0; i < edid_info->y420_vic_len; i++)
-			rx_pr("y420 vic: %3d\n",
-			edid_info->y420_vdb_vic[i]);
+			rx_edid_print_vic_fmt(i,
+				edid_info->y420_vdb_vic[i]);
 	}
 
 	if (edid_info->contain_y420_cmdb) {
-		rx_pr("----Yc420 capability map----\n");
+		rx_pr("****Yc420 capability map****\n");
 		if (edid_info->y420_all_vic)
 			rx_pr("all vic support y420\n");
 		else {
 			for (i = 0; i < 31; i++) {
 				hdmi_vic = edid_info->y420_cmdb_vic[i];
 				if (hdmi_vic) {
-					rx_pr("y420cmdb vic:%3d, format: %s\n",
-						hdmi_vic, hdmi_fmt[hdmi_vic]);
+					rx_edid_print_vic_fmt(i, hdmi_vic);
 				}
 			}
 		}

@@ -111,7 +111,7 @@ int log_level = LOG_EN;/*| HDCP_LOG;*/
 static bool auto_switch_off;	/* only for hardware test */
 
 int clk_unstable_cnt;
-static int clk_unstable_max = 100;
+static int clk_unstable_max = 200;
 
 int clk_stable_cnt;
 static int clk_stable_max = 3;

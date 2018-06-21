@@ -167,6 +167,13 @@ struct speaker_alloc_db_s {
 	unsigned char resvd2;
 };
 
+struct specific_vic_3d {
+	unsigned char _2d_vic_order:4;
+	unsigned char _3d_struct:4;
+	unsigned char _3d_detail:4;
+	unsigned char resvrd:4;
+};
+
 struct vsdb_s {
 	unsigned int ieee_oui;
 	/* phy addr 2 bytes */
@@ -226,6 +233,10 @@ struct vsdb_s {
 	unsigned char hdmi_smpte_sup;
 
 	/*3D*/
+	uint16_t _3d_struct_all;
+	uint16_t _3d_mask_15_0;
+	struct specific_vic_3d _2d_vic[16];
+	unsigned char _2d_vic_num;
 };
 
 struct hf_vsdb_s {
