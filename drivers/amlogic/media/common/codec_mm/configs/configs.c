@@ -786,6 +786,7 @@ static int configs_get_node_path_config(
 			if (node == NULL) {
 				if (parent_node != root_node) {
 					node = parent_node;
+					err = -EPERM;
 					goto out;
 				}
 				/*for reset refs. */
