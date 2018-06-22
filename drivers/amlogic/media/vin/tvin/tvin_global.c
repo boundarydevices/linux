@@ -60,10 +60,20 @@ const char *tvin_aspect_ratio_str(enum tvin_aspect_ratio_e aspect_ratio)
 	switch (aspect_ratio) {
 	case TVIN_ASPECT_1x1:
 		return "TVIN_ASPECT_1x1";
-	case TVIN_ASPECT_4x3:
-		return "TVIN_ASPECT_4x3";
-	case TVIN_ASPECT_16x9:
-		return "TVIN_ASPECT_16x9";
+	case TVIN_ASPECT_4x3_FULL:
+		return "TVIN_ASPECT_4x3_FULL";
+	case TVIN_ASPECT_14x9_FULL:
+		return "TVIN_ASPECT_14x9_FULL";
+	case TVIN_ASPECT_14x9_LB_CENTER:
+		return "TVIN_ASPECT_14x9_LETTERBOX_CENTER";
+	case TVIN_ASPECT_14x9_LB_TOP:
+		return "TVIN_ASPECT_14x9_LETTERBOX_TOP";
+	case TVIN_ASPECT_16x9_FULL:
+		return "TVIN_ASPECT_16x9_FULL";
+	case TVIN_ASPECT_16x9_LB_CENTER:
+		return "TVIN_ASPECT_16x9_LETTERBOX_CENTER";
+	case TVIN_ASPECT_16x9_LB_TOP:
+		return "TVIN_ASPECT_16x9_LETTERBOX_TOP";
 	default:
 		return "TVIN_ASPECT_NULL";
 	}

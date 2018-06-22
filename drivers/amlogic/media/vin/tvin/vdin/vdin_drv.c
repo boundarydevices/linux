@@ -2204,6 +2204,19 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		pr_info("force color range-%d\n\n", color_range_force);
 		break;
+	case TVIN_IOC_SET_AUTO_RATIO_EN:
+		if (devp->index != 0)
+			break;
+		if (copy_from_user(&(devp->auto_ratio_en),
+			argp, sizeof(unsigned int))) {
+			ret = -EFAULT;
+			break;
+		}
+		if (vdin_dbg_en) {
+			pr_info("TVIN_IOC_SET_AUTO_RATIO_EN(%d) done\n\n",
+				devp->auto_ratio_en);
+		}
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 	/* pr_info("%s %d is not supported command\n", __func__, cmd); */
@@ -2211,6 +2224,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 	return ret;
 }
+
 #ifdef CONFIG_COMPAT
 static long vdin_compat_ioctl(struct file *file, unsigned int cmd,
 	unsigned long arg)
@@ -2544,7 +2558,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	/*enable auto cutwindow for atv*/
 	if (vdevp->index == 0) {
 		vdevp->auto_cutwindow_en = 1;
-		vdevp->auto_ratio_en = 1;
+		vdevp->auto_ratio_en = 0;
 		#ifdef CONFIG_CMA
 		vdevp->cma_mem_mode = 1;
 		#endif

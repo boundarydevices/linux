@@ -2648,14 +2648,29 @@ enum tvin_aspect_ratio_e tvafe_cvd2_get_wss(void)
 	enum tvin_aspect_ratio_e aspect_ratio = TVIN_ASPECT_NULL;
 
 	full_format = R_APB_BIT(CVD2_VBI_WSS_DATA1, 0, 4);
-	if (full_format == 0x8)
-		aspect_ratio = TVIN_ASPECT_4x3;
-	else if (full_format == 0x7)
-		aspect_ratio = TVIN_ASPECT_16x9;
+
+	if (full_format == TVIN_AR_14x9_LB_CENTER_VAL)
+		aspect_ratio = TVIN_ASPECT_14x9_LB_CENTER;
+	else if (full_format == TVIN_AR_14x9_LB_TOP_VAL)
+		aspect_ratio = TVIN_ASPECT_14x9_LB_TOP;
+	else if (full_format == TVIN_AR_16x9_LB_TOP_VAL)
+		aspect_ratio = TVIN_ASPECT_16x9_LB_TOP;
+	else if (full_format == TVIN_AR_16x9_FULL_VAL)
+		aspect_ratio = TVIN_ASPECT_16x9_FULL;
+	else if (full_format == TVIN_AR_4x3_FULL_VAL)
+		aspect_ratio = TVIN_ASPECT_4x3_FULL;
+	else if (full_format == TVIN_AR_16x9_LB_CENTER_VAL)
+		aspect_ratio = TVIN_ASPECT_16x9_LB_CENTER;
+	else if (full_format == TVIN_AR_16x9_LB_CENTER1_VAL)
+		aspect_ratio = TVIN_ASPECT_16x9_LB_CENTER;
+	else if (full_format == TVIN_AR_14x9_FULL_VAL)
+		aspect_ratio = TVIN_ASPECT_14x9_FULL;
 	else
 		aspect_ratio = TVIN_ASPECT_NULL;
+
 	return aspect_ratio;
 }
+
 /*only for develop debug*/
 #ifdef TVAFE_CVD_DEBUG
 module_param(hs_adj_th_level0, uint, 0664);

@@ -431,6 +431,8 @@ struct tvafe_pin_mux_s {
 #define TVIN_IOC_SET_COLOR_RANGE	_IOW(_TM_T, 0X4a,\
 	enum tvin_force_color_range_e)
 #define TVIN_IOC_GAME_MODE          _IOW(_TM_T, 0x4b, unsigned int)
+#define TVIN_IOC_SET_AUTO_RATIO_EN  _IOW(_TM_T, 0x4c, unsigned int)
+
 /* TVAFE */
 #define TVIN_IOC_S_AFE_VGA_PARM     _IOW(_TM_T, 0x16, struct tvafe_vga_parm_s)
 #define TVIN_IOC_G_AFE_VGA_PARM     _IOR(_TM_T, 0x17, struct tvafe_vga_parm_s)

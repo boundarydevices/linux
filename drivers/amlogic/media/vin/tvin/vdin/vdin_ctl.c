@@ -22,6 +22,7 @@
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-contiguous.h>
+#include <linux/amlogic/media/video_sink/video.h>
 #include "../tvin_global.h"
 #include "../tvin_format_table.h"
 #include "vdin_ctl.h"
@@ -4161,10 +4162,81 @@ void vdin_set_display_ratio(struct vdin_dev_s *devp,
 	else
 		vf->ratio_control = 0x0 << DISP_RATIO_ASPECT_RATIO_BIT;
 
-	if (aspect_ratio == TVIN_ASPECT_4x3)
-		vf->ratio_control = 0xc0 << DISP_RATIO_ASPECT_RATIO_BIT;
-	else if (aspect_ratio == TVIN_ASPECT_16x9)
-		vf->ratio_control = 0x90 << DISP_RATIO_ASPECT_RATIO_BIT;
+	switch (aspect_ratio) {
+	case TVIN_ASPECT_4x3_FULL:
+		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.hs = 0;
+		vf->pic_mode.he = 0;
+		vf->pic_mode.vs = 1;
+		vf->pic_mode.ve = 0;
+		/* 3*256/4=0xc0 */
+		vf->pic_mode.custom_ar = 0xc0;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+		break;
+	case TVIN_ASPECT_14x9_FULL:
+		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.hs = 0;
+		vf->pic_mode.he = 0;
+		vf->pic_mode.vs = 1;
+		vf->pic_mode.ve = 0;
+		/* 9*256/14=0xc0 */
+		vf->pic_mode.custom_ar = 0xa4;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+		break;
+	case TVIN_ASPECT_16x9_FULL:
+		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.hs = 0;
+		vf->pic_mode.he = 0;
+		vf->pic_mode.vs = 1;
+		vf->pic_mode.ve = 0;
+		/* 9*256/16=0xc0 */
+		vf->pic_mode.custom_ar = 0x90;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+		break;
+	case TVIN_ASPECT_14x9_LB_CENTER:
+		/**720/462=14/9;(576-462)/2=57;57/2=28**/
+		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.hs = 0;
+		vf->pic_mode.he = 0;
+		vf->pic_mode.vs = 28;
+		vf->pic_mode.ve = 28;
+		vf->pic_mode.custom_ar = 0xa4;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+		break;
+	case TVIN_ASPECT_14x9_LB_TOP:
+		/**720/462=14/9;(576-462)/2=57**/
+		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.hs = 0;
+		vf->pic_mode.he = 0;
+		vf->pic_mode.vs = 0;
+		vf->pic_mode.ve = 57;
+		vf->pic_mode.custom_ar = 0xa4;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+		break;
+	case TVIN_ASPECT_16x9_LB_CENTER:
+		/**720/405=16/9;(576-405)/2=85;85/2=42**/
+		/**need cut more**/
+		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.hs = 0;
+		vf->pic_mode.he = 0;
+		vf->pic_mode.vs = 70;
+		vf->pic_mode.ve = 70;
+		vf->pic_mode.custom_ar = 0x90;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+		break;
+	case TVIN_ASPECT_16x9_LB_TOP:
+		/**720/405=16/9;(576-405)/2=85**/
+		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.hs = 0;
+		vf->pic_mode.he = 0;
+		vf->pic_mode.vs = 0;
+		vf->pic_mode.ve = 85;
+		vf->pic_mode.custom_ar = 0x90;
+		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
+		break;
+	default:
+		break;
+	}
 }
 
 /*function:set source bitdepth
