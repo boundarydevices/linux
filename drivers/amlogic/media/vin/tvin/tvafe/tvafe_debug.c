@@ -82,6 +82,8 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 	tvafe_pr_info("tvafe_cvd2_s->manual_fmt:0x%x\n", cvd2->manual_fmt);
 	tvafe_pr_info("tvafe_cvd2_s->vd_port:0x%x\n", cvd2->vd_port);
 	tvafe_pr_info("tvafe_cvd2_s->cvd2_init_en:%d\n", cvd2->cvd2_init_en);
+	tvafe_pr_info("tvafe_cvd2_s->nonstd_detect_dis:%d\n",
+		cvd2->nonstd_detect_dis);
 	/* tvin_parm_s->tvin_info_s struct info */
 	tvafe_pr_info("\n!!tvin_parm_s->tvin_info_s struct info:\n");
 	tvafe_pr_info("tvin_info_s->trans_fmt:0x%x\n", tvin_info->trans_fmt);
@@ -299,6 +301,20 @@ static ssize_t tvafe_store(struct device *dev,
 		} else {
 			devp->tvafe.cvd2.nonstd_detect_dis = false;
 			pr_info("[tvafe..]%s:enable nonstd detect\n",
+				__func__);
+		}
+	} else if (!strncmp(buff, "rf_ntsc50_en", strlen("rf_ntsc50_en"))) {
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		if (val) {
+			tvafe_cvd2_rf_ntsc50_en(true);
+			pr_info("[tvafe..]%s:tvafe_cvd2_rf_ntsc50_en\n",
+				__func__);
+		} else {
+			tvafe_cvd2_rf_ntsc50_en(false);
+			pr_info("[tvafe..]%s:tvafe_cvd2_rf_ntsc50_dis\n",
 				__func__);
 		}
 	} else

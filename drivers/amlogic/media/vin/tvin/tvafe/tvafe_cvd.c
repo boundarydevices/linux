@@ -115,6 +115,7 @@ static int auto_de_en = 1;
 static int lock_cnt;
 static unsigned int cvd_reg8a = 0xa;
 static int auto_vs_en = 1;
+static bool ntsc50_en;
 
 module_param(auto_vs_en, int, 0664);
 MODULE_PARM_DESC(auto_vs_en, "auto_vs_en\n");
@@ -1635,11 +1636,13 @@ static void tvafe_cvd2_search_video_mode(struct tvafe_cvd2_s *cvd2,
 				/* line625+brust358+pal*/
 				/*-> pal_cn */
 				cvd2->info.state = TVAFE_CVD2_STATE_FIND;
-			} else if (cvd2->hw.line625 &&
+			} else if (((cvd2->vd_port == TVIN_PORT_CVBS1) ||
+				(cvd2->vd_port == TVIN_PORT_CVBS2) || ntsc50_en)
+				&& (cvd2->hw.line625 &&
 				cvd2->hw.fsc_358 &&
 				!cvd2->hw.pal &&
 				!cvd2->hw.fsc_443 &&
-				!cvd2->hw.secam)
+				!cvd2->hw.secam))
 				tvafe_cvd2_try_format(cvd2, mem,
 					TVIN_SIG_FMT_CVBS_NTSC_50);
 			else {
@@ -2589,6 +2592,12 @@ void tvafe_cvd2_set_reg8a(unsigned int v)
 	cvd_reg8a = v;
 	W_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE, cvd_reg8a);
 }
+
+void tvafe_cvd2_rf_ntsc50_en(bool v)
+{
+	ntsc50_en = v;
+}
+
 void tvafe_snow_config(unsigned int onoff)
 {
 	if (tvafe_snow_function_flag == 0 ||

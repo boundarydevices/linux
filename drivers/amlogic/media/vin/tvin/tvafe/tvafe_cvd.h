@@ -204,6 +204,7 @@ extern enum tvin_aspect_ratio_e tvafe_cvd2_get_wss(void);
 extern void tvafe_cvd2_get_signal_status(struct tvafe_cvd2_s *cvd2);
 extern void cvd_vbi_mem_set(unsigned int offset, unsigned int size);
 extern void cvd_vbi_config(void);
+extern void tvafe_cvd2_rf_ntsc50_en(bool v);
 
 extern bool tvafe_snow_function_flag;
 
