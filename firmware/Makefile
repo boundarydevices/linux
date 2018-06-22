@@ -64,7 +64,7 @@ fw-shipped-$(CONFIG_DRM_RADEON) += radeon/R100_cp.bin radeon/R200_cp.bin \
 ifdef CONFIG_SOC_IMX6Q
 fw-shipped-$(CONFIG_IMX_SDMA) += imx/sdma/sdma-imx6q.bin
 endif
-ifdef CONFIG_SOC_IMX7D
+ifndef ($(call ifdef_any_of,CONFIG_SOC_IMX7D CONFIG_ARCH_FSL_IMX8MQ),)
 fw-shipped-$(CONFIG_IMX_SDMA) += imx/sdma/sdma-imx7d.bin
 endif
 ifdef CONFIG_SOC_IMX51
