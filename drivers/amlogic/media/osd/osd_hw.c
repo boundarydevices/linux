@@ -81,6 +81,8 @@
 #define OSD_G12A_NEW_HWC    (0x01 << 2)
 
 #define WAIT_AFBC_READY_COUNT 100
+#define NEW_PPS_PHASE
+
 #define osd_tprintk(...)
 
 struct hw_para_s osd_hw;
@@ -547,6 +549,70 @@ static unsigned int *filter_table[] = {
 	vpp_filter_coefs_4point_bspline,
 	osd_filter_coefs_3point_bspline
 };
+
+#ifdef NEW_PPS_PHASE
+#define OSD_ZOOM_BITS 20
+#define OSD_PHASE_BITS 16
+
+enum osd_f2v_vphase_type_e {
+	OSD_F2V_IT2IT = 0,
+	OSD_F2V_IB2IB,
+	OSD_F2V_IT2IB,
+	OSD_F2V_IB2IT,
+	OSD_F2V_P2IT,
+	OSD_F2V_P2IB,
+	OSD_F2V_IT2P,
+	OSD_F2V_IB2P,
+	OSD_F2V_P2P,
+	OSD_F2V_TYPE_MAX
+};
+
+struct osd_f2v_vphase_s {
+	u8 rcv_num;
+	u8 rpt_num;
+	u16 phase;
+};
+
+static void f2v_get_vertical_phase(
+	u32 zoom_ratio, enum osd_f2v_vphase_type_e type,
+	u8 bank_length, struct osd_f2v_vphase_s *vphase)
+{
+	u8 f2v_420_in_pos_luma[OSD_F2V_TYPE_MAX] = {
+		0, 2, 0, 2, 0, 0, 0, 2, 0};
+	u8 f2v_420_out_pos[OSD_F2V_TYPE_MAX] = {
+		0, 2, 2, 0, 0, 2, 0, 0, 0};
+	s32 offset_in, offset_out;
+
+	/* luma */
+	offset_in = f2v_420_in_pos_luma[type]
+		<< OSD_PHASE_BITS;
+	offset_out = (f2v_420_out_pos[type] * zoom_ratio)
+		>> (OSD_ZOOM_BITS - OSD_PHASE_BITS);
+
+	vphase->rcv_num = bank_length;
+	if (bank_length == 4 || bank_length == 3)
+		vphase->rpt_num = 1;
+	else
+		vphase->rpt_num = 0;
+
+	if (offset_in > offset_out) {
+		vphase->rpt_num = vphase->rpt_num + 1;
+		vphase->phase =
+			((4 << OSD_PHASE_BITS) + offset_out - offset_in)
+			>> 2;
+	} else {
+		while ((offset_in + (4 << OSD_PHASE_BITS))
+			<= offset_out) {
+			if (vphase->rpt_num == 1)
+				vphase->rpt_num = 0;
+			else
+				vphase->rcv_num++;
+			offset_in += 4 << OSD_PHASE_BITS;
+		}
+		vphase->phase = (offset_out - offset_in) >> 2;
+	}
+}
+#endif
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 static bool osd_hdr_on;
@@ -3938,7 +4004,7 @@ static void osd_update_disp_freescale_enable(u32 index)
 {
 	int hf_phase_step, vf_phase_step;
 	int src_w, src_h, dst_w, dst_h;
-	int bot_ini_phase;
+	int bot_ini_phase, top_ini_phase;
 	int vsc_ini_rcv_num, vsc_ini_rpt_p0_num;
 	int vsc_bot_rcv_num = 0, vsc_bot_rpt_p0_num = 0;
 	int hsc_ini_rcv_num, hsc_ini_rpt_p0_num;
@@ -3955,6 +4021,7 @@ static void osd_update_disp_freescale_enable(u32 index)
 	else
 		vf_bank_len = 4;
 
+#ifndef NEW_PPS_PHASE
 	if (osd_hw.bot_type == 1) {
 		vsc_bot_rcv_num = 4;
 		vsc_bot_rpt_p0_num = 1;
@@ -3965,12 +4032,13 @@ static void osd_update_disp_freescale_enable(u32 index)
 		vsc_bot_rcv_num = 8;
 		vsc_bot_rpt_p0_num = 3;
 	}
-
-	hsc_ini_rcv_num = hf_bank_len;
 	vsc_ini_rcv_num = vf_bank_len;
-	hsc_ini_rpt_p0_num = hf_bank_len / 2 - 1;
 	vsc_ini_rpt_p0_num =
 		(vf_bank_len / 2 - 1) > 0 ? (vf_bank_len / 2 - 1) : 0;
+#endif
+
+	hsc_ini_rcv_num = hf_bank_len;
+	hsc_ini_rpt_p0_num = hf_bank_len / 2 - 1;
 
 	src_w = osd_hw.free_src_data[index].x_end -
 		osd_hw.free_src_data[index].x_start + 1;
@@ -4003,12 +4071,47 @@ static void osd_update_disp_freescale_enable(u32 index)
 	hf_phase_step = (src_w << 18) / dst_w;
 	hf_phase_step = (hf_phase_step << 6);
 	vf_phase_step = (src_h << 20) / dst_h;
+
+#ifdef NEW_PPS_PHASE
+	if (osd_hw.field_out_en) {
+		struct osd_f2v_vphase_s vphase;
+
+		f2v_get_vertical_phase(
+			vf_phase_step, OSD_F2V_P2IT,
+			vf_bank_len, &vphase);
+		vsc_ini_rcv_num = vphase.rcv_num;
+		vsc_ini_rpt_p0_num = vphase.rpt_num;
+		top_ini_phase = vphase.phase;
+
+		f2v_get_vertical_phase(
+			vf_phase_step, OSD_F2V_P2IB,
+			vf_bank_len, &vphase);
+		vsc_bot_rcv_num = vphase.rcv_num;
+		vsc_bot_rpt_p0_num = vphase.rpt_num;
+		bot_ini_phase = vphase.phase;
+	} else {
+		struct osd_f2v_vphase_s vphase;
+
+		f2v_get_vertical_phase(
+			vf_phase_step, OSD_F2V_P2P,
+			vf_bank_len, &vphase);
+		vsc_ini_rcv_num = vphase.rcv_num;
+		vsc_ini_rpt_p0_num = vphase.rpt_num;
+		top_ini_phase = vphase.phase;
+
+		vsc_bot_rcv_num = 0;
+		vsc_bot_rpt_p0_num = 0;
+		bot_ini_phase = 0;
+	}
+#else
 	if (osd_hw.field_out_en)   /* interface output */
 		bot_ini_phase = ((vf_phase_step / 2) >> 4);
 	else
 		bot_ini_phase = 0;
-	vf_phase_step = (vf_phase_step << 4);
+	top_ini_phase = 0;
+#endif
 
+	vf_phase_step = (vf_phase_step << 4);
 	/* config osd scaler in/out hv size */
 	data32 = 0x0;
 	if (osd_hw.free_scale_enable[index]) {
@@ -4046,7 +4149,7 @@ static void osd_update_disp_freescale_enable(u32 index)
 	}
 	VSYNCOSD_WR_MPEG_REG(osd_reg->osd_hsc_ctrl0, data32);
 
-	data32 = 0x0;
+	data32 = top_ini_phase;
 	if (osd_hw.free_scale_enable[index]) {
 		data32 |= (bot_ini_phase & 0xffff) << 16;
 		VSYNCOSD_WR_MPEG_REG_BITS(
