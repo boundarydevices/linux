@@ -636,6 +636,56 @@ int key_unify_query(struct aml_unifykey_dev *ukdev, char *keyname,
 }
 EXPORT_SYMBOL(key_unify_query);
 
+int key_unify_secure(struct aml_unifykey_dev *ukdev,
+	char *keyname, unsigned int *secure)
+{
+	int ret = 0;
+	struct key_item_t *unifykey;
+	unsigned int keystate, keypermit;
+
+	unifykey = unifykey_find_item_by_name(&(ukdev->uk_header), keyname);
+	if (unifykey == NULL) {
+		pr_err("%s:%d,%s key name is not exist\n",
+			__func__,
+			__LINE__,
+			keyname);
+		return -EINVAL;
+	}
+
+	if (unifykey_item_verify_check(unifykey)) {
+		pr_err("%s:%d,%s key name is invalid\n",
+			__func__,
+			__LINE__,
+			keyname);
+		return -EINVAL;
+	}
+
+	/* check key burned or not */
+	ret = key_unify_query(ukdev, unifykey->name, &keystate, &keypermit);
+	if (ret < 0) {
+		pr_err("%s:%d, key_unify_query failed!\n",
+			__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	*secure = 0;
+	/* if burned, ask bl31, else using dts */
+	if (keystate) {
+		ret = amlkey_issecure(unifykey->name);
+		if (ret < 0)
+			goto _out;
+		*secure = ret;
+	} else {
+		if (unifykey->dev == KEY_M_SECURE)
+			*secure = 1;
+		else
+			*secure = 0;
+	}
+
+_out:
+	return ret;
+}
+EXPORT_SYMBOL(key_unify_secure);
 
 /*
  *function name: key_unify_encrypt
@@ -1077,6 +1127,42 @@ static ssize_t exist_show(struct class *cla,
 	return n;
 }
 
+static ssize_t secure_show(struct class *cla,
+	struct class_attribute *attr,
+	char *buf)
+{
+	struct aml_unifykey_dev *ukdev;
+	struct key_item_t      *curkey;
+	ssize_t n = 0;
+	int ret;
+	unsigned int secure = 0;
+	static const char * const state[] = {"false", "true", "error"};
+
+	ukdev = container_of(cla, struct aml_unifykey_dev, cls);
+	curkey = ukdev->curkey;
+	if (curkey == NULL) {
+		pr_err("please set key name first, %s:%d\n",
+			__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	/* using current key*/
+	ret = key_unify_secure(ukdev, curkey->name, &secure);
+	if (ret < 0) {
+		pr_err("%s:%d, key_unify_secure failed!\n",
+			__func__, __LINE__);
+		secure = 2;
+		goto _out;
+	}
+
+	if (secure > 1)
+		secure = 1;
+_out:
+	n += sprintf(&buf[n], "%s\n", state[secure]);
+	buf[n] = 0;
+	return n;
+}
+
 static ssize_t encrypt_show(struct class *cla,
 	struct class_attribute *attr,
 	char *buf)
@@ -1509,6 +1595,7 @@ static struct class_attribute unifykey_class_attrs[] = {
 	__ATTR_RO(list),
 	__ATTR_RO(exist),
 	__ATTR_RO(encrypt),
+	__ATTR_RO(secure),
 	__ATTR_RO(size),
 	__ATTR_RO(help),
 	__ATTR(name, KEY_RW_ATTR, name_show, name_store),
