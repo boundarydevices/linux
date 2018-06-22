@@ -716,6 +716,7 @@ int aml_sd_emmc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 	u32 clock, clk_div;
 	u32 adj_delay_find;
 	int best_win_start = -1, best_win_size = 0;
+	u32 rxdly[4] = {0x44444444, 0x88888888, 0xcccccccc, 0xFFFFFFFF};
 
 	writel(0, host->base + SD_EMMC_ADJUST);
 
@@ -745,6 +746,17 @@ tunning:
 		pdata->clkc = vclk;
 		pr_err("%s: tuning failed, reduce freq and retuning\n",
 			mmc_hostname(host->mmc));
+		goto tunning;
+	} else if (best_win_size == clk_div) {
+		if (++tuning_num > MAX_TUNING_RETRY) {
+			pr_err("%s: tuning failed\n",
+				mmc_hostname(host->mmc));
+			return -1;
+		}
+		pr_warn("wave is not sharp, again\n");
+		/* add basic data rx delay */
+		writel(rxdly[tuning_num-1], host->base + SD_EMMC_DELAY);
+		pr_warn("rxdly @ %x\n", rxdly[tuning_num-1]);
 		goto tunning;
 	} else {
 		pr_info("%s: best_win_start =%d, best_win_size =%d\n",
