@@ -22,4 +22,5 @@ extern int amlogic_gpio_direction_output(unsigned int pin, int value,
 	const char *owner);
 extern int amlogic_gpio_request(unsigned int pin, const char *label);
 extern unsigned long get_mpeg_clk(void);
+extern long smc_get_reg_base(void);
 #endif

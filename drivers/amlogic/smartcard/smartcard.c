@@ -156,10 +156,14 @@ while (0)
 static struct file *debug_filp;
 static loff_t debug_file_pos;
 static int smc_debug;
+#ifdef MEM_DEBUG
 static char *dbuf;
 static int dread, dwrite;
 static int dcnt;
-static struct reset_control *aml_smartcard_reset_ctrl;
+#endif
+/*no used reset ctl,need use clk in 4.9 kernel*/
+static struct clk *aml_smartcard_clk;
+
 #define REG_READ 0
 #define REG_WRITE 1
 void operate_reg(unsigned int reg, int read_write, unsigned int *value)
@@ -191,6 +195,8 @@ void debug_write(const char __user *buf, size_t count)
 
 	set_fs(old_fs);
 }
+
+#ifdef MEM_DEBUG
 static void open_debug(void)
 {
 	debug_filp = filp_open(DEBUG_FILE_NAME, O_WRONLY, 0);
@@ -222,6 +228,7 @@ static size_t print_time(u64 ts, char *buf)
 	return sprintf(buf, "[%5lu.%06lu] ",
 			(unsigned long)ts, rem_nsec / 1000);
 }
+#endif
 
 #ifdef CONFIG_OF
 static const struct of_device_id smc_dt_match[] = {
@@ -386,6 +393,7 @@ static struct mutex smc_lock;
 static int		 smc_major;
 static struct smc_dev	smc_dev[SMC_DEV_COUNT];
 static int ENA_GPIO_PULL = 1;
+static int DIV_SMC = 3;
 
 #ifdef SW_INVERT
 static const unsigned char inv_table[256] = {
@@ -530,6 +538,30 @@ static ssize_t store_freq(struct class *class,
 	return count;
 }
 
+static ssize_t show_div_smc(struct class *class,
+	struct class_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "div -> %d\n", DIV_SMC);
+}
+
+static ssize_t store_div_smc(struct class *class,
+	struct class_attribute *attr,
+	const char *buf,
+	size_t count)
+{
+	int div = 0;
+
+	if (kstrtoint(buf, 0, &div))
+		return -EINVAL;
+
+	if (div)
+		DIV_SMC = div;
+
+	pr_dbg("div -> %d\n", DIV_SMC);
+	return count;
+}
+
 #ifdef MEM_DEBUG
 static ssize_t show_debug(struct class *class,
 	struct class_attribute *attr,
@@ -598,6 +630,7 @@ static struct class_attribute smc_class_attrs[] = {
 	__ATTR(smc_gpio_pull, 0644, show_gpio_pull, set_gpio_pull),
 	__ATTR(ctrl_5v3v, 0644, show_5v3v, store_5v3v),
 	__ATTR(freq, 0644, show_freq, store_freq),
+	__ATTR(div_smc, 0644, show_div_smc, store_div_smc),
 #ifdef MEM_DEBUG
 	__ATTR(debug, 0644, show_debug, store_debug),
 #endif
@@ -609,76 +642,17 @@ static struct class smc_class = {
 	.class_attrs = smc_class_attrs,
 };
 
-static unsigned long get_clk(char *name)
+
+
+long smc_get_reg_base(void)
 {
-	struct clk *clk = NULL;
+	int newbase = 0;
 
-	clk = clk_get_sys(name, NULL);
-	if (clk)
-		return clk_get_rate(clk);
-	return 0;
-}
-
-static unsigned long get_module_clk(int sel)
-{
-#ifdef CONFIG_ARCH_ARC700
-	return get_mpeg_clk();
-#else
-
-	unsigned long clk = 0;
-#ifdef CONFIG_ARCH_MESON6/*M6*/
-	/*sel = [0:clk81, 1:ddr-pll, 2:fclk-div5, 3:XTAL]*/
-	switch (sel) {
-	case 0:
-		clk = get_clk("clk81");
-		break;
-	case 1:
-		clk = get_clk("pll_ddr");
-		break;
-	case 2:
-		clk = get_clk("fixed")/5;
-		break;
-	case 3:
-		clk = get_clk("xtal");
-		break;
+	if (get_cpu_type() > MESON_CPU_MAJOR_ID_TXL &&
+		get_cpu_type() != MESON_CPU_MAJOR_ID_GXLX) {
+		newbase = 1;
 	}
-#else
-	/*
-	 * sel = [0:fclk-div2/fclk-div4(M8 and further),
-	 * 1:fclk-div3, 2:fclk-div5, 3:XTAL]
-	 */
-	switch (sel) {
-#if defined(MESON_CPU_TYPE_MESON8) && (MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8)
-	case 0:
-		clk = get_clk("pll_fixed") / 4;
-		break;
-#else/*M6TV/TVD/TVLITE*/
-	case 0:
-		clk = 1000000000;
-		break;
-			/*
-			 * case 0: clk = get_clk("fixed")/2;
-			 * break;
-			 */
-#endif
-	case 1:
-		clk = get_clk("pll_fixed") / 3;
-		break;
-	case 2:
-		clk = get_clk("pll_fixed") / 5;
-		break;
-	case 3:
-		clk = get_clk("xtal");
-		break;
-	}
-#endif /*M6*/
-
-	if (!clk)
-		pr_error("fail: unknown clk source");
-
-	return clk;
-
-#endif
+	return (newbase) ? 0x9400 : 0x2110;
 }
 
 #ifndef CONFIG_OF
@@ -767,9 +741,7 @@ static int smc_hw_set_param(struct smc_dev *smc)
 	 * SMC_ANSWER_TO_RST *reg1;
 	 * SMC_INTERRUPT_Reg *reg_int;
 	 */
-	unsigned int sys_clk_rate = get_module_clk(clock_source);
-	unsigned long freq_cpu =
-	    sys_clk_rate / 1000 * 22; /**10 adjust freq temporarily*/
+	unsigned long freq_cpu = clk_get_rate(aml_smartcard_clk)/1000*DIV_SMC;
 
 	pr_error("hw set param\n");
 
@@ -813,6 +785,7 @@ static int smc_hw_set_param(struct smc_dev *smc)
 	pr_error("xmit_par:%d\n", smc->param.xmit_parity);
 	pr_error("xmit_rep:%d\n", smc->param.xmit_repeat_dis);
 	pr_error("xmit_try:%d\n", smc->param.xmit_retries);
+	pr_error("clk_tcnt:%d freq_cpu:%ld\n", reg2->clk_tcnt, freq_cpu);
 
 	v = SMC_READ_REG(REG5);
 	reg5 = (struct SMCCARD_HW_Reg5 *)&v;
@@ -870,10 +843,7 @@ static int smc_hw_setup(struct smc_dev *smc)
 	struct SMCCARD_HW_Reg5 *reg5;
 	struct SMCCARD_HW_Reg6 *reg6;
 
-	unsigned int sys_clk_rate = get_module_clk(clock_source);
-
-	unsigned long freq_cpu = sys_clk_rate
-	    / 1000 * 22; /**10 adjust freq temporarily*/
+	unsigned long freq_cpu = clk_get_rate(aml_smartcard_clk)/1000*DIV_SMC;
 
 	pr_error("SMC CLK SOURCE - %luKHz\n", freq_cpu);
 
@@ -938,6 +908,7 @@ static int smc_hw_setup(struct smc_dev *smc)
 	pr_error("xmit_par:%d\n", smc->param.xmit_parity);
 	pr_error("xmit_rep:%d\n", smc->param.xmit_repeat_dis);
 	pr_error("xmit_try:%d\n", smc->param.xmit_retries);
+	pr_error("clk_tcnt:%d freq_cpu:%ld\n", reg2->clk_tcnt, freq_cpu);
 
 	v = SMC_READ_REG(INTR);
 	reg_int = (struct SMC_INTERRUPT_Reg *)&v;
@@ -1088,7 +1059,7 @@ static int smc_hw_deactive(struct smc_dev *smc)
 		} else {
 			if (smc->use_enable_pin)
 				_gpio_out(smc->enable_pin,
-					!smc->enable_level,
+					smc->enable_level,
 					SMC_ENABLE_PIN_NAME);
 		}
 		if (ENA_GPIO_PULL > 0) {
@@ -1800,7 +1771,7 @@ static void smc_dev_deinit(struct smc_dev *smc)
 	}
 	if (smc->use_enable_pin)
 		_gpio_free(smc->enable_pin, SMC_ENABLE_PIN_NAME);
-	reset_control_assert(aml_smartcard_reset_ctrl);
+	clk_disable_unprepare(aml_smartcard_clk);
 #if 0
 	if (smc->pin_clk_pin != -1)
 		_gpio_free(smc->pin_clk_pin, SMC_CLK_PIN_NAME);
@@ -1846,7 +1817,7 @@ static int _set_gpio(struct smc_dev *smc, struct gpio_desc **gpiod,
 	} else if (input_output == INPUT)	{
 		*gpiod = gpiod_get(&smc->pdev->dev, str, GPIOD_IN);
 		ret = gpiod_direction_input(*gpiod);
-		//ret |= gpiod_set_pullup(*gpiod, 1);
+		ret |= gpiod_set_pull(*gpiod, GPIOD_PULL_UP);
 	} else
 		pr_dbg("SMC Request gpio direction invalid\n");
 
@@ -1861,6 +1832,7 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 	u32 value;
 	char buf[32];
 	const char *dts_str;
+	struct resource *res;
 #endif
 
 #if defined(MESON_CPU_TYPE_MESON8) && (MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8)
@@ -1910,7 +1882,7 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 				pr_error("%s: %d\n", buf, smc->enable_level);
 				if (smc->enable_pin != NULL) {
 					_gpio_out(smc->enable_pin,
-						!smc->enable_level,
+						smc->enable_level,
 						SMC_ENABLE_PIN_NAME);
 					pr_error("enable_pin: -->(%d)\n",
 						(!smc->enable_level)?1:0);
@@ -1953,7 +1925,7 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 	smc->irq_num = smc0_irq;
 	if (smc->irq_num == -1) {
 		snprintf(buf, sizeof(buf), "smc%d_irq", id);
-#ifdef CONFIG_OF
+#if 0
 		ret = of_property_read_u32(smc->pdev->dev.of_node, buf, &value);
 		if (!ret) {
 			smc->irq_num = value;
@@ -2183,7 +2155,7 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 	}
 #endif
 
-#if 0
+#if 1
 	smc->enable_5v3v_level = 0;
 	if (1) {
 		snprintf(buf, sizeof(buf), "smc%d_5v3v_level", id);
@@ -2192,7 +2164,7 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 		if (!ret) {
 			smc->enable_5v3v_level = value;
 			pr_error("%s: %d\n", buf, smc->enable_5v3v_level);
-			if (smc->enable_5v3v_pin != -1) {
+			if (smc->enable_5v3v_pin != NULL) {
 				_gpio_out(smc->enable_5v3v_pin,
 					smc->enable_5v3v_level,
 					SMC_ENABLE_5V3V_PIN_NAME);
@@ -2236,7 +2208,7 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 #else
 	smc->irq_num = request_irq(smc->irq_num,
 			(irq_handler_t)smc_irq_handler,
-			IRQF_SHARED, "smc", smc);
+			IRQF_SHARED|IRQF_TRIGGER_RISING, "smc", smc);
 	if (smc->irq_num < 0) {
 		pr_error("request irq error!\n");
 		smc_dev_deinit(smc);
@@ -2586,9 +2558,13 @@ static int smc_probe(struct platform_device *pdev)
 			break;
 		}
 	}
-	aml_smartcard_reset_ctrl =
-		devm_reset_control_get(&pdev->dev, "smartcard");
-	reset_control_deassert(aml_smartcard_reset_ctrl);
+	aml_smartcard_clk =
+		devm_clk_get(&pdev->dev, "smartcard");
+	if (IS_ERR_OR_NULL(aml_smartcard_clk)) {
+		dev_err(&pdev->dev, "get smartcard clk fail\n");
+		return -1;
+	}
+	clk_prepare_enable(aml_smartcard_clk);
 	if (smc) {
 		smc->init = 1;
 		smc->pdev = pdev;

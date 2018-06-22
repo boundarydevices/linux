@@ -825,6 +825,16 @@
 		};
 	};
 
+	sd_iso7816_pins:sd_iso7816_pins {
+		mux {
+			groups = "iso7816_clk_dv",
+				"iso7816_data_dv";
+			function = "iso7816";
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
 	nand_pulldown: nand_pulldown {
 		mux {
 			groups = "emmc_nand_d07",
