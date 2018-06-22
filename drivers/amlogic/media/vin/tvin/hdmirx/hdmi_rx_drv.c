@@ -133,6 +133,10 @@ int vdin_drop_frame_cnt = 1;
  * other value: keep previous logic
  */
 int suspend_pddq_sel = 1;
+/* as cvt required, set hpd low if cec off when boot */
+static int hpd_low_cec_off = 1;
+int disable_port_num;
+int disable_port_en;
 
 struct reg_map reg_maps[MAP_ADDR_MODULE_NUM];
 
@@ -1335,14 +1339,20 @@ static ssize_t cec_set_state(struct device *dev,
 	cnt = kstrtoint(buf, 0, &val);
 	if (cnt < 0 || val > 0xff)
 		return -EINVAL;
-	if (val == 0)
+	if (val == 0) {
 		hdmi_cec_en = 0;
-	else if (val == 1)
+		/* fix source can't get edid if cec off */
+		if (rx.boot_flag) {
+			if (hpd_low_cec_off == 0)
+				rx_force_hpd_rxsense_cfg(1);
+		}
+	} else if (val == 1)
 		hdmi_cec_en = 1;
 	else if (val == 2) {
 		hdmi_cec_en = 1;
-		rx_set_port_hpd(ALL_PORTS, 1);
+		rx_force_hpd_rxsense_cfg(1);
 	}
+	rx.boot_flag = false;
 	rx_pr("cec sts = %d\n", val);
 	return count;
 }
@@ -1542,6 +1552,7 @@ static int hdmirx_probe(struct platform_device *pdev)
 	struct clk *tmds_clk_fs;
 	int clk_rate;
 	const struct of_device_id *of_id;
+	int disable_port;
 
 	log_init(DEF_LOG_BUF_SIZE);
 	pEdid_buffer = (unsigned char *) pdev->dev.platform_data;
@@ -1805,6 +1816,20 @@ static int hdmirx_probe(struct platform_device *pdev)
 	if (ret)
 		en_4k_timing = 1;
 
+	ret = of_property_read_u32(pdev->dev.of_node,
+				"hpd_low_cec_off", &hpd_low_cec_off);
+	if (ret)
+		hpd_low_cec_off = 1;
+	ret = of_property_read_u32(pdev->dev.of_node,
+				"disable_port", &disable_port);
+	if (ret) {
+		/* don't disable port if dts not indicate */
+		disable_port_en = 0;
+	} else {
+		/* bit4: enable feature, bit3~0: port_num */
+		disable_port_en = (disable_port >> 4) & 0x1;
+		disable_port_num = disable_port & 0xF;
+	}
 	hdmirx_hw_probe();
 	hdmirx_switch_pinmux(&(pdev->dev));
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -1966,13 +1991,13 @@ static int hdmirx_resume(struct platform_device *pdev)
 			mdelay(50);
 		}
 	}
+	rx.boot_flag = true;
 	hdmirx_phy_init();
 	add_timer(&hdevp->timer);
 	if (hdcp22_on)
 		hdcp22_resume();
 	rx_pr("hdmirx: resume\n");
 	pre_port = 0xff;
-	rx.boot_flag = true;
 	return 0;
 }
 #endif

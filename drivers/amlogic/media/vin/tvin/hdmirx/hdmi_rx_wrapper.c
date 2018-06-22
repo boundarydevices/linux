@@ -1177,7 +1177,6 @@ void rx_dwc_reset(void)
 	hdmirx_packet_fifo_rst();
 }
 
-
 int rx_get_cur_hpd_sts(void)
 {
 	int tmp;
@@ -1803,7 +1802,9 @@ void hdmirx_open_port(enum tvin_port_e port)
 		rx.hdcp.repeat = 0;
 
 	if ((pre_port != rx.port) ||
-		(rx_get_cur_hpd_sts()) == 0) {
+		(rx_get_cur_hpd_sts() == 0) ||
+		/* when open specific port, force to enable it */
+		(disable_port_en && (rx.port == disable_port_num))) {
 		if (hdcp22_on) {
 			esm_set_stable(false);
 			esm_set_reset(true);
@@ -1836,6 +1837,9 @@ void hdmirx_close_port(void)
 	/* if (sm_pause) */
 	/*	return; */
 	/* External_Mute(1); */
+	/* when exit hdmi, disable termination & hpd of specific port */
+	if (disable_port_en)
+		rx_set_port_hpd(disable_port_num, 0);
 }
 
 void rx_nosig_monitor(void)

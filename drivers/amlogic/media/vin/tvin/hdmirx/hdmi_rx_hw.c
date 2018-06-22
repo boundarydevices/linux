@@ -56,7 +56,7 @@
 static DEFINE_SPINLOCK(reg_rw_lock);
 /* should enable fast switching, since some devices in non-current port */
 /* will suspend because of RxSense = 0, such as xiaomi-mtk box */
-static bool phy_fast_switching = true;
+static bool phy_fast_switching;
 static bool phy_fsm_enhancement = true;
 unsigned int last_clk_rate;
 
@@ -1260,17 +1260,58 @@ void rx_set_cur_hpd(uint8_t val)
 	rx_set_port_hpd(rx.port, val);
 }
 
-
 /*
  * rx_force_hpd_config - force config hpd level on all ports
  * @hpd_level: hpd level
  */
 void rx_force_hpd_cfg(uint8_t hpd_level)
 {
-	if (hpd_level)
-		hdmirx_wr_bits_top(TOP_HPD_PWR5V, MSK(4, 0), 0xf);
-	else
+	unsigned int hpd_value;
+
+	if (hpd_level) {
+		if (disable_port_en)
+			hpd_value = (~(1 << disable_port_num)) & 0xF;
+		else
+			hpd_value = 0xF;
+
+		hdmirx_wr_bits_top(TOP_HPD_PWR5V,
+			MSK(4, 0), hpd_value);
+	} else
 		hdmirx_wr_bits_top(TOP_HPD_PWR5V, MSK(4, 0), 0x0);
+}
+
+/*
+ * rx_force_rxsense_cfg - force config rxsense level on all ports
+ * @level: rxsense level
+ */
+void rx_force_rxsense_cfg(uint8_t level)
+{
+	unsigned int term_ovr_value;
+
+	if (level) {
+		if (disable_port_en)
+			term_ovr_value = (~(1 << disable_port_num)) & 0xF;
+		else
+			term_ovr_value = 0xF;
+
+		hdmirx_wr_bits_phy(PHY_MAIN_FSM_OVERRIDE1,
+			PHY_TERM_OV_VALUE, term_ovr_value);
+	} else
+		hdmirx_wr_bits_phy(PHY_MAIN_FSM_OVERRIDE1,
+			PHY_TERM_OV_VALUE, 0x0);
+}
+
+/*
+ * rx_force_hpd_rxsense_cfg - force config
+ * hpd & rxsense level on all ports
+ * @level: hpd & rxsense level
+ */
+void rx_force_hpd_rxsense_cfg(uint8_t level)
+{
+	rx_force_hpd_cfg(level);
+	rx_force_rxsense_cfg(level);
+	if (log_level & LOG_EN)
+		rx_pr("hpd & rxsense force val:%d\n", level);
 }
 
 /*
@@ -1754,10 +1795,10 @@ void hdmirx_phy_init(void)
 	last_clk_rate = 0;
 
 	#if 1
-	/* enable all ports's termination*/
+	/* enable all ports's termination */
 	data32 = 0;
 	data32 |= 1 << 8;
-	data32 |= ((term_value  & 0xF) << 4);
+	data32 |= ((term_value & 0xF) << 4);
 	hdmirx_wr_phy(PHY_MAIN_FSM_OVERRIDE1, data32);
 	#endif
 

@@ -46,7 +46,7 @@
  *
  *
  */
-#define RX_VER2 "ver.2018/8/13"
+#define RX_VER2 "ver.2018/8/20"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -442,6 +442,8 @@ extern bool hdcp_enable;
 extern int log_level;
 extern int sm_pause;
 extern int suspend_pddq_sel;
+extern int disable_port_num;
+extern int disable_port_en;
 extern int rx_set_global_variable(const char *buf, int size);
 extern void rx_get_global_variable(const char *buf);
 extern int rx_pr(const char *fmt, ...);
