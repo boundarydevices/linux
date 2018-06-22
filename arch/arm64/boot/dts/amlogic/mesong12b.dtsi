@@ -1087,7 +1087,8 @@
 			"cts_vipnanoq_core_clk_composite";
 		interrupts = <0 147 1>;
 		interrupt-names = "galcore";
-		reg = <0x0 0xff100000 0x0 0x800>;
+		reg = <0x0 0xff100000 0x0 0x800
+		       0x0 0xff000000 0x0 0x400000>;
 	};
 
 	aocec: aocec {

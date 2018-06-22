@@ -139,7 +139,7 @@
 		galcore_reserved:linux,galcore {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x4000000>;
+			size = <0x0 0x1000000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
