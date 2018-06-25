@@ -88,7 +88,7 @@ struct ov5640_mode_info {
 	enum ov5640_downsize_mode dn_mode;
 	u32 width;
 	u32 height;
-	struct reg_value *init_data_ptr;
+	const struct reg_value *init_data_ptr;
 	u32 init_data_size;
 };
 
@@ -136,7 +136,7 @@ struct ov5640_res ov5640_valid_res[] = {
 	[4] = {2592, 1944},
 };
 
-static struct reg_value ov5640_init_setting_30fps_VGA[] = {
+static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 
 	{0x3103, 0x11, 0, 0}, {0x3008, 0x82, 0, 5}, {0x3008, 0x42, 0, 0},
 	{0x3103, 0x03, 0, 0}, {0x3017, 0x00, 0, 0}, {0x3018, 0x00, 0, 0},
@@ -225,7 +225,7 @@ static struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x3a1f, 0x14, 0, 0}, {0x3008, 0x42, 0, 0}, {0x3c00, 0x04, 0, 300},
 };
 
-static struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
+static const struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3035, 0x12, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -248,7 +248,7 @@ static struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
 	{0x4005, 0x1a, 0, 0}, {0x3008, 0x02, 0, 0}, {0x3503, 0x00, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
+static const struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3035, 0x12, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -271,7 +271,7 @@ static struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
 	{0x4005, 0x1a, 0, 0}, {0x3008, 0x02, 0, 0}, {0x3503, 0, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
+static const struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x3c07, 0x07, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -294,7 +294,7 @@ static struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
 	{0x3008, 0x02, 0, 0}, {0x3503, 0,    0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_1080P_1920_1080[] = {
+static const struct reg_value ov5640_setting_30fps_1080P_1920_1080[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -331,7 +331,7 @@ static struct reg_value ov5640_setting_30fps_1080P_1920_1080[] = {
 	{0x3503, 0, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
+static const struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x4202, 0x0f, 0, 0},	/* stream off the sensor */
 	{0x3820, 0x40, 0, 0}, {0x3821, 0x06, 0, 0}, /*disable flip*/
@@ -356,7 +356,7 @@ static struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{0x4202, 0x00, 0, 0},	/* stream on the sensor */
 };
 
-static struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
+static const struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
 	{
 		{ov5640_mode_VGA_640_480, -1, 0, 0, NULL, 0},
 		{ov5640_mode_NTSC_720_480, -1, 0, 0, NULL, 0},
@@ -894,7 +894,7 @@ static void ov5640_set_virtual_channel(struct ov5640 *sensor, int channel)
 }
 
 /* download ov5640 settings to sensor through i2c */
-static int ov5640_download_firmware(struct ov5640 *sensor, struct reg_value *pModeSetting, s32 ArySize)
+static int ov5640_download_firmware(struct ov5640 *sensor, const struct reg_value *pModeSetting, s32 ArySize)
 {
 	register u32 Delay_ms = 0;
 	register u16 RegAddr = 0;
@@ -913,6 +913,9 @@ static int ov5640_download_firmware(struct ov5640 *sensor, struct reg_value *pMo
 			retval = ov5640_read_reg(sensor, RegAddr, &RegVal);
 			if (retval < 0)
 				goto err;
+
+			if ((sensor->mclk == OV5640_XCLK_20MHZ) && (RegAddr == 0x3037))
+				Val = 0x17;
 
 			RegVal &= ~(u8)Mask;
 			Val &= Mask;
@@ -936,7 +939,7 @@ err:
 static int ov5640_change_mode_exposure_calc(struct ov5640 *sensor,
 		enum ov5640_frame_rate frame_rate, enum ov5640_mode mode)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	u8 average;
 	int prev_shutter, prev_gain16;
@@ -1065,7 +1068,7 @@ err:
 static int ov5640_change_mode_direct(struct ov5640 *sensor,
 		enum ov5640_frame_rate frame_rate, enum ov5640_mode mode)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
 
@@ -1104,7 +1107,7 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 		enum ov5640_frame_rate frame_rate,
 		enum ov5640_mode mode, enum ov5640_mode orig_mode)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
 	u32 msec_wait4stable = 0;
@@ -1554,20 +1557,6 @@ static struct v4l2_subdev_ops ov5640_subdev_ops = {
 	.pad	= &ov5640_subdev_pad_ops,
 };
 
-static void ov5640_adjust_setting_20mhz(void)
-{
-	struct reg_value *regsetting;
-	int i, array_size;
-
-	/* adjust for INIT mode */
-	regsetting = ov5640_init_setting_30fps_VGA;
-	array_size = ARRAY_SIZE(ov5640_init_setting_30fps_VGA);
-
-	for (i = 0; i < array_size; i++, regsetting++)
-		if (regsetting->u16RegAddr == 0x3037)
-			regsetting->u8Val = 0x17;
-}
-
 /*!
  * ov5640 I2C probe function
  *
@@ -1634,9 +1623,6 @@ static int ov5640_probe(struct i2c_client *client,
 		dev_err(dev, "mclk missing or invalid\n");
 		return retval;
 	}
-
-	if (sensor->mclk == OV5640_XCLK_20MHZ)
-		ov5640_adjust_setting_20mhz();
 
 	retval = of_property_read_u32(dev->of_node, "mclk_source",
 					(u32 *) &(sensor->mclk_source));
