@@ -658,7 +658,7 @@ static int ov5640_set_clk_rate(struct ov5640 *sensor)
 
 /* download ov5640 settings to sensor through i2c */
 static int ov5640_download_firmware(struct ov5640 *sensor,
-				struct reg_value *pModeSetting, s32 ArySize)
+				const struct reg_value *pModeSetting, s32 ArySize)
 {
 	register u32 Delay_ms = 0;
 	register u16 RegAddr = 0;
@@ -696,7 +696,7 @@ err:
 
 static int ov5640_config_init(struct ov5640 *sensor)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	int ArySize = 0, retval = 0;
 
 	/* Configure ov5640 initial parm */
@@ -724,7 +724,7 @@ static void ov5640_start(struct ov5640 *sensor)
 
 static int ov5640_change_mode(struct ov5640 *sensor)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	enum ov5640_mode mode = sensor->streamcap.capturemode;
 	enum ov5640_frame_rate frame_rate =
 				to_ov5640_frame_rate(&sensor->streamcap.timeperframe);
