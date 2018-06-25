@@ -502,7 +502,6 @@ static int set_disp_mode_auto(void)
 		hdev->cur_VIC = vic;
 		hdev->output_blank_flag = 1;
 		hdev->ready = 1;
-		recalc_vinfo_sync_duration(info, hdev->frac_rate_policy);
 		return 1;
 	}
 
@@ -511,8 +510,6 @@ static int set_disp_mode_auto(void)
 	hdev->cur_VIC = HDMI_Unknown;
 /* if vic is HDMI_Unknown, hdmitx_set_display will disable HDMI */
 	ret = hdmitx_set_display(hdev, vic);
-
-	recalc_vinfo_sync_duration(info, hdev->frac_rate_policy);
 
 	if (ret >= 0) {
 		hdev->HWOp.Cntl(hdev, HDMITX_AVMUTE_CNTL, AVMUTE_CLEAR);
@@ -1141,7 +1138,7 @@ static void hdmitx_set_drm_pkt(struct master_display_info_s *data)
 	/*SDR*/
 	if (hdev->hdr_transfer_feature == T_BT709 &&
 		hdev->hdr_color_feature == C_BT709) {
-			schedule_work(&hdev->work_hdr);
+		schedule_work(&hdev->work_hdr);
 		return;
 	}
 
@@ -2769,7 +2766,15 @@ static struct vinfo_s *hdmitx_get_current_vinfo(void)
 
 static int hdmitx_set_current_vmode(enum vmode_e mode)
 {
+	struct vinfo_s *vinfo;
+
 	pr_info("%s[%d]\n", __func__, __LINE__);
+	/* get current vinfo and refesh */
+	vinfo = hdmitx_get_current_vinfo();
+	if ((vinfo != NULL) && (vinfo->name != NULL))
+		recalc_vinfo_sync_duration(vinfo,
+			hdmitx_device.frac_rate_policy);
+
 	if (!(mode & VMODE_INIT_BIT_MASK))
 		set_disp_mode_auto();
 	else
@@ -3545,8 +3550,6 @@ static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)
 	hdmitx_device.force_audio_flag = 0;
 	hdmitx_device.hdcp_mode = 0;
 	hdmitx_device.ready = 0;
-	/* 59.94(60/1.001) modes by default */
-	hdmitx_device.frac_rate_policy = 1;
 	hdmitx_device.rxsense_policy = 0; /* no RxSense by default */
 	/* enable or disable HDMITX SSPLL, enable by default */
 	hdmitx_device.sspll = 1;
@@ -3629,7 +3632,7 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 				pr_info(SYS "not find device node\n");
 			hdmitx_device.config_data.vend_data = kzalloc(
 				sizeof(struct vendor_info_data), GFP_KERNEL);
-			if (!hdmitx_device.config_data.vend_data)
+			if (!(hdmitx_device.config_data.vend_data))
 				pr_info(SYS "not allocate memory\n");
 			ret = get_dt_vend_init_data(init_data,
 				hdmitx_device.config_data.vend_data);
@@ -4073,3 +4076,17 @@ static  int __init hdmitx_boot_para_setup(char *s)
 }
 
 __setup("hdmitx=", hdmitx_boot_para_setup);
+
+static int __init hdmitx_boot_frac_rate(char *str)
+{
+	if (strncmp("0", str, 1) == 0)
+		hdmitx_device.frac_rate_policy = 0;
+	else
+		hdmitx_device.frac_rate_policy = 1;
+
+	pr_info("hdmitx boot frac_rate_policy: %d",
+		hdmitx_device.frac_rate_policy);
+	return 0;
+}
+
+__setup("frac_rate_policy=", hdmitx_boot_frac_rate);
