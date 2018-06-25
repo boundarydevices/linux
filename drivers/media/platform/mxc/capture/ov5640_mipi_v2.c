@@ -122,6 +122,10 @@ struct ov5640 {
 	int AE_low;
 	int AE_high;
 	int AE_Target;
+	struct regulator *io_regulator;
+	struct regulator *core_regulator;
+	struct regulator *analog_regulator;
+	struct regulator *gpo_regulator;
 };
 
 struct ov5640_res {
@@ -388,11 +392,6 @@ static const struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 
 	},
 };
 
-static struct regulator *io_regulator;
-static struct regulator *core_regulator;
-static struct regulator *analog_regulator;
-static struct regulator *gpo_regulator;
-
 static int ov5640_probe(struct i2c_client *adapter,
 				const struct i2c_device_id *device_id);
 static int ov5640_remove(struct i2c_client *client);
@@ -484,16 +483,16 @@ static void ov5640_reset(struct ov5640 *sensor)
 	msleep(5);
 }
 
-static int ov5640_regulator_enable(struct device *dev)
+static int ov5640_regulator_enable(struct ov5640 *sensor, struct device *dev)
 {
 	int ret = 0;
 
-	io_regulator = devm_regulator_get(dev, "DOVDD");
-	if (!IS_ERR(io_regulator)) {
-		regulator_set_voltage(io_regulator,
+	sensor->io_regulator = devm_regulator_get(dev, "DOVDD");
+	if (!IS_ERR(sensor->io_regulator)) {
+		regulator_set_voltage(sensor->io_regulator,
 				      OV5640_VOLTAGE_DIGITAL_IO,
 				      OV5640_VOLTAGE_DIGITAL_IO);
-		ret = regulator_enable(io_regulator);
+		ret = regulator_enable(sensor->io_regulator);
 		if (ret) {
 			pr_err("%s:io set voltage error\n", __func__);
 			return ret;
@@ -503,15 +502,15 @@ static int ov5640_regulator_enable(struct device *dev)
 		}
 	} else {
 		pr_err("%s: cannot get io voltage error\n", __func__);
-		io_regulator = NULL;
+		sensor->io_regulator = NULL;
 	}
 
-	core_regulator = devm_regulator_get(dev, "DVDD");
-	if (!IS_ERR(core_regulator)) {
-		regulator_set_voltage(core_regulator,
+	sensor->core_regulator = devm_regulator_get(dev, "DVDD");
+	if (!IS_ERR(sensor->core_regulator)) {
+		regulator_set_voltage(sensor->core_regulator,
 				      OV5640_VOLTAGE_DIGITAL_CORE,
 				      OV5640_VOLTAGE_DIGITAL_CORE);
-		ret = regulator_enable(core_regulator);
+		ret = regulator_enable(sensor->core_regulator);
 		if (ret) {
 			pr_err("%s:core set voltage error\n", __func__);
 			return ret;
@@ -520,16 +519,16 @@ static int ov5640_regulator_enable(struct device *dev)
 				"%s:core set voltage ok\n", __func__);
 		}
 	} else {
-		core_regulator = NULL;
+		sensor->core_regulator = NULL;
 		pr_err("%s: cannot get core voltage error\n", __func__);
 	}
 
-	analog_regulator = devm_regulator_get(dev, "AVDD");
-	if (!IS_ERR(analog_regulator)) {
-		regulator_set_voltage(analog_regulator,
+	sensor->analog_regulator = devm_regulator_get(dev, "AVDD");
+	if (!IS_ERR(sensor->analog_regulator)) {
+		regulator_set_voltage(sensor->analog_regulator,
 				      OV5640_VOLTAGE_ANALOG,
 				      OV5640_VOLTAGE_ANALOG);
-		ret = regulator_enable(analog_regulator);
+		ret = regulator_enable(sensor->analog_regulator);
 		if (ret) {
 			pr_err("%s:analog set voltage error\n",
 				__func__);
@@ -539,7 +538,7 @@ static int ov5640_regulator_enable(struct device *dev)
 				"%s:analog set voltage ok\n", __func__);
 		}
 	} else {
-		analog_regulator = NULL;
+		sensor->analog_regulator = NULL;
 		pr_err("%s: cannot get analog voltage error\n", __func__);
 	}
 
@@ -1184,27 +1183,27 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 	struct ov5640 *sensor = to_ov5640(client);
 
 	if (on && !sensor->on) {
-		if (io_regulator)
-			if (regulator_enable(io_regulator) != 0)
+		if (sensor->io_regulator)
+			if (regulator_enable(sensor->io_regulator) != 0)
 				return -EIO;
-		if (core_regulator)
-			if (regulator_enable(core_regulator) != 0)
+		if (sensor->core_regulator)
+			if (regulator_enable(sensor->core_regulator) != 0)
 				return -EIO;
-		if (gpo_regulator)
-			if (regulator_enable(gpo_regulator) != 0)
+		if (sensor->gpo_regulator)
+			if (regulator_enable(sensor->gpo_regulator) != 0)
 				return -EIO;
-		if (analog_regulator)
-			if (regulator_enable(analog_regulator) != 0)
+		if (sensor->analog_regulator)
+			if (regulator_enable(sensor->analog_regulator) != 0)
 				return -EIO;
 	} else if (!on && sensor->on) {
-		if (analog_regulator)
-			regulator_disable(analog_regulator);
-		if (core_regulator)
-			regulator_disable(core_regulator);
-		if (io_regulator)
-			regulator_disable(io_regulator);
-		if (gpo_regulator)
-			regulator_disable(gpo_regulator);
+		if (sensor->analog_regulator)
+			regulator_disable(sensor->analog_regulator);
+		if (sensor->core_regulator)
+			regulator_disable(sensor->core_regulator);
+		if (sensor->io_regulator)
+			regulator_disable(sensor->io_regulator);
+		if (sensor->gpo_regulator)
+			regulator_disable(sensor->gpo_regulator);
 	}
 
 	sensor->on = on;
@@ -1653,7 +1652,7 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor->streamcap.timeperframe.denominator = DEFAULT_FPS;
 	sensor->streamcap.timeperframe.numerator = 1;
 
-	ov5640_regulator_enable(&client->dev);
+	ov5640_regulator_enable(sensor, dev);
 
 	ov5640_reset(sensor);
 
@@ -1710,17 +1709,17 @@ static int ov5640_remove(struct i2c_client *client)
 
 	ov5640_power_down(sensor, 1);
 
-	if (gpo_regulator)
-		regulator_disable(gpo_regulator);
+	if (sensor->gpo_regulator)
+		regulator_disable(sensor->gpo_regulator);
 
-	if (analog_regulator)
-		regulator_disable(analog_regulator);
+	if (sensor->analog_regulator)
+		regulator_disable(sensor->analog_regulator);
 
-	if (core_regulator)
-		regulator_disable(core_regulator);
+	if (sensor->core_regulator)
+		regulator_disable(sensor->core_regulator);
 
-	if (io_regulator)
-		regulator_disable(io_regulator);
+	if (sensor->io_regulator)
+		regulator_disable(sensor->io_regulator);
 
 	return 0;
 }
