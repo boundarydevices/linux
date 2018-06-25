@@ -58,7 +58,7 @@ enum ov5640_frame_rate {
 	ov5640_30_fps
 };
 
-static int ov5640_framerates[] = {
+static const int ov5640_framerates[] = {
 	[ov5640_15_fps] = 15,
 	[ov5640_30_fps] = 30,
 };
@@ -115,7 +115,8 @@ struct ov5640 {
 	struct clk *sensor_clk;
 	int csi;
 
-	void (*io_init)(void);
+	int pwn_gpio;
+	int rst_gpio;
 };
 
 struct ov5640_res {
@@ -126,7 +127,6 @@ struct ov5640_res {
 /*!
  * Maintains the information on the current state of the sesor.
  */
-static int pwn_gpio, rst_gpio;
 
 struct ov5640_res ov5640_valid_res[] = {
 	[0] = {640, 480},
@@ -444,38 +444,38 @@ static const struct ov5640_datafmt
 	return NULL;
 }
 
-static inline void ov5640_power_down(int enable)
+static inline void ov5640_power_down(struct ov5640 *sensor, int enable)
 {
-	if (pwn_gpio < 0)
+	if (sensor->pwn_gpio < 0)
 		return;
 
 	if (!enable)
-		gpio_set_value_cansleep(pwn_gpio, 0);
+		gpio_set_value_cansleep(sensor->pwn_gpio, 0);
 	else
-		gpio_set_value_cansleep(pwn_gpio, 1);
+		gpio_set_value_cansleep(sensor->pwn_gpio, 1);
 
 	msleep(2);
 }
 
-static void ov5640_reset(void)
+static void ov5640_reset(struct ov5640 *sensor)
 {
-	if (rst_gpio < 0 || pwn_gpio < 0)
+	if (sensor->rst_gpio < 0 || sensor->pwn_gpio < 0)
 		return;
 
 	/* camera reset */
-	gpio_set_value(rst_gpio, 1);
+	gpio_set_value(sensor->rst_gpio, 1);
 
 	/* camera power dowmn */
-	gpio_set_value(pwn_gpio, 1);
+	gpio_set_value(sensor->pwn_gpio, 1);
 	msleep(5);
 
-	gpio_set_value(rst_gpio, 0);
+	gpio_set_value(sensor->rst_gpio, 0);
 	msleep(1);
 
-	gpio_set_value(pwn_gpio, 0);
+	gpio_set_value(sensor->pwn_gpio, 0);
 	msleep(5);
 
-	gpio_set_value(rst_gpio, 1);
+	gpio_set_value(sensor->rst_gpio, 1);
 	msleep(5);
 }
 
@@ -1588,12 +1588,16 @@ static int ov5640_probe(struct i2c_client *client,
 	if (IS_ERR(pinctrl))
 		dev_warn(dev, "no pin available\n");
 
+	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
+	if (!sensor)
+		return -ENOMEM;
+
 	/* request power down pin */
-	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(pwn_gpio))
+	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
+	if (!gpio_is_valid(sensor->pwn_gpio))
 		dev_warn(dev, "no sensor pwdn pin available");
 	else {
-		retval = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
+		retval = devm_gpio_request_one(dev, sensor->pwn_gpio, GPIOF_OUT_INIT_HIGH,
 						"ov5640_mipi_pwdn");
 		if (retval < 0) {
 			dev_warn(dev, "Failed to set power pin\n");
@@ -1603,11 +1607,11 @@ static int ov5640_probe(struct i2c_client *client,
 	}
 
 	/* request reset pin */
-	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(rst_gpio))
+	sensor->rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
+	if (!gpio_is_valid(sensor->rst_gpio))
 		dev_warn(dev, "no sensor reset pin available");
 	else {
-		retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_HIGH,
+		retval = devm_gpio_request_one(dev, sensor->rst_gpio, GPIOF_OUT_INIT_HIGH,
 						"ov5640_mipi_reset");
 		if (retval < 0) {
 			dev_warn(dev, "Failed to set reset pin\n");
@@ -1615,9 +1619,6 @@ static int ov5640_probe(struct i2c_client *client,
 		}
 	}
 
-	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
-	if (!sensor)
-		return -ENOMEM;
 			/* Set initial values for the sensor struct. */
 	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(sensor->sensor_clk)) {
@@ -1653,7 +1654,6 @@ static int ov5640_probe(struct i2c_client *client,
 
 	clk_prepare_enable(sensor->sensor_clk);
 
-	sensor->io_init = ov5640_reset;
 	sensor->i2c_client = client;
 	sensor->pix.pixelformat = V4L2_PIX_FMT_YUYV;
 	sensor->pix.width = 640;
@@ -1666,9 +1666,9 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640_regulator_enable(&client->dev);
 
-	ov5640_reset();
+	ov5640_reset(sensor);
 
-	ov5640_power_down(0);
+	ov5640_power_down(sensor, 0);
 
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
@@ -1687,7 +1687,7 @@ static int ov5640_probe(struct i2c_client *client,
 	if (retval < 0) {
 		clk_disable_unprepare(sensor->sensor_clk);
 		pr_warning("camera ov5640 init failed\n");
-		ov5640_power_down(1);
+		ov5640_power_down(sensor, 1);
 		return retval;
 	}
 
@@ -1719,7 +1719,7 @@ static int ov5640_remove(struct i2c_client *client)
 
 	clk_disable_unprepare(sensor->sensor_clk);
 
-	ov5640_power_down(1);
+	ov5640_power_down(sensor, 1);
 
 	if (gpo_regulator)
 		regulator_disable(gpo_regulator);
