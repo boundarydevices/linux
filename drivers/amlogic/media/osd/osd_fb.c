@@ -1675,7 +1675,8 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 	if ((!strcmp(vinfo->name, "invalid")) ||
 		(!strcmp(vinfo->name, "null")))
 		return -1;
-
+	osd_hw.vinfo_width = vinfo->width;
+	osd_hw.vinfo_height = vinfo->field_height;
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
 		set_osd_logo_freescaler();
@@ -2677,6 +2678,7 @@ static ssize_t store_osd_background_size(struct device *device,
 
 	return count;
 }
+
 static ssize_t show_osd_hdr_mode(struct device *device,
 				struct device_attribute *attr,
 				char *buf)

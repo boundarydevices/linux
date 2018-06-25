@@ -320,6 +320,7 @@ enum osd_zorder_e {
  * OSD_BLEND_ABC: (OSD1 & (OSD2+SC & OSD3+SC)) +SC
  * OSD_BLEND_AB_C: (OSD1 & OSD2 + SC) + SC, OSD3+SC
  * OSD_BLEND_A_BC: OSD1+SC, (OSD2 +SC & OSD3 +SC)
+ * OSD_BLEND_AB_C: ((OSD+ (OSD2+SC)) + SC) & (OSD3+SC)
  */
 enum osd_blend_mode_e {
 	OSD_BLEND_NONE,
@@ -328,6 +329,7 @@ enum osd_blend_mode_e {
 	OSD_BLEND_A_C,
 	OSD_BLEND_ABC,
 	OSD_BLEND_A_BC,
+	OSD_BLEND_AB_C,
 };
 
 enum afbc_pix_format_e {
@@ -570,6 +572,7 @@ struct layer_blend_s {
 	struct dispdata_s output_data;
 	u32 background_w;
 	u32 background_h;
+	u32 blend_core1_bypass;
 };
 struct hw_osd_blending_s {
 	u8 osd_blend_mode;
@@ -731,7 +734,6 @@ struct hw_para_s {
 	u32 hdr_used;
 	u32 workaround_hdr;
 	u32 workaround_not_hdr;
-	u32 blend_reg_reset;
 	u32 basic_urgent;
 	u32 two_ports;
 	u32 afbc_err_cnt;
