@@ -193,6 +193,29 @@ static struct vpu_ctrl_s vpu_mem_pd_gxl[] = {
 	{VPU_MOD_MAX,       VPU_REG_END,           0,   0},
 };
 
+static struct vpu_ctrl_s vpu_mem_pd_txl[] = {
+	/* vpu module,      reg,                  bit,  len */
+	{VPU_VIU_OSD1,      HHI_VPU_MEM_PD_REG0,   0,   2},
+	{VPU_VIU_OSD2,      HHI_VPU_MEM_PD_REG0,   2,   2},
+	{VPU_VIU_VD1,       HHI_VPU_MEM_PD_REG0,   4,   2},
+	{VPU_VIU_VD2,       HHI_VPU_MEM_PD_REG0,   6,   2},
+	{VPU_VIU_CHROMA,    HHI_VPU_MEM_PD_REG0,   8,   2},
+	{VPU_VIU_OFIFO,     HHI_VPU_MEM_PD_REG0,  10,   2},
+	{VPU_VIU_SCALE,     HHI_VPU_MEM_PD_REG0,  12,   2},
+	{VPU_VIU_OSD_SCALE, HHI_VPU_MEM_PD_REG0,  14,   2},
+	{VPU_VIU_VDIN0,     HHI_VPU_MEM_PD_REG0,  16,   2},
+	{VPU_VIU_VDIN1,     HHI_VPU_MEM_PD_REG0,  18,   2},
+	{VPU_DI_PRE,        HHI_VPU_MEM_PD_REG0,  26,   2},
+	{VPU_DI_POST,       HHI_VPU_MEM_PD_REG0,  28,   2},
+	{VPU_SHARP,         HHI_VPU_MEM_PD_REG0,  30,   2},
+	{VPU_VPU_ARB,       HHI_VPU_MEM_PD_REG1,  14,   2},
+	{VPU_AFBC_DEC,      HHI_VPU_MEM_PD_REG1,  16,   2},
+	{VPU_VENCP,         HHI_VPU_MEM_PD_REG1,  20,   2},
+	{VPU_VENCL,         HHI_VPU_MEM_PD_REG1,  22,   2},
+	{VPU_VENCI,         HHI_VPU_MEM_PD_REG1,  24,   2},
+	{VPU_MOD_MAX,       VPU_REG_END,           0,   0},
+};
+
 static struct vpu_ctrl_s vpu_mem_pd_txlx[] = {
 	/* vpu module,      reg,                  bit,  len */
 	{VPU_VIU_OSD1,      HHI_VPU_MEM_PD_REG0,   0,   2},
@@ -366,6 +389,37 @@ static struct vpu_ctrl_s vpu_clk_gate_gxl[] = {
 	/* vpu module,      reg,                  bit,  len */
 	{VPU_VPU_TOP,       VPU_CLK_GATE,          1,   1}, /* vpu_system_clk */
 	{VPU_VPU_CLKB,      VPU_CLK_GATE,         16,   2},
+	{VPU_RDMA,          VPU_CLK_GATE,         15,   1}, /* rdma_clk */
+	{VPU_VLOCK,         VPU_CLK_GATE,         14,   1},
+	{VPU_MISC,          VPU_CLK_GATE,          6,   1}, /* hs,vs interrupt*/
+	{VPU_VENCP,         VPU_CLK_GATE,          3,   1},
+	{VPU_VENCP,         VPU_CLK_GATE,          0,   1},
+	{VPU_VENCL,         VPU_CLK_GATE,          4,   2},
+	{VPU_VENCI,         VPU_CLK_GATE,         10,   2},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL,  24,   6},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL,   4,  18},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL,   1,   1},
+	{VPU_VIU_VDIN0,     VDIN0_COM_GCLK_CTRL2,  0,   4},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL,  24,   6},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL,   4,  18},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL,   1,   1},
+	{VPU_VIU_VDIN1,     VDIN1_COM_GCLK_CTRL2,  0,   4},
+	{VPU_DI,            DI_CLKG_CTRL,         26,   5},
+	{VPU_DI,            DI_CLKG_CTRL,         24,   1},
+	{VPU_DI,            DI_CLKG_CTRL,         17,   5},
+	{VPU_DI,            DI_CLKG_CTRL,          0,   2},
+	{VPU_VPP,           VPP_GCLK_CTRL0,        2,  30},
+	{VPU_VPP,           VPP_GCLK_CTRL1,        0,  12},
+	{VPU_VPP,           VPP_SC_GCLK_CTRL,     18,   8},
+	{VPU_VPP,           VPP_SC_GCLK_CTRL,      2,  10},
+	{VPU_VPP,           VPP_XVYCC_GCLK_CTRL,   0,  18},
+	{VPU_MAX,           VPU_REG_END,           0,   0},
+};
+
+static struct vpu_ctrl_s vpu_clk_gate_txl[] = {
+	/* vpu module,      reg,                  bit,  len */
+	{VPU_VPU_TOP,       VPU_CLK_GATE,          1,   1}, /* vpu_system_clk */
+	{VPU_VPU_CLKB,      VPU_CLK_GATE,         16,   1},
 	{VPU_RDMA,          VPU_CLK_GATE,         15,   1}, /* rdma_clk */
 	{VPU_VLOCK,         VPU_CLK_GATE,         14,   1},
 	{VPU_MISC,          VPU_CLK_GATE,          6,   1}, /* hs,vs interrupt*/

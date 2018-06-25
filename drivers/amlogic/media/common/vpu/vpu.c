@@ -37,7 +37,8 @@
 /* v02: add axg support */
 /* v03: add txlx support */
 /* v04: add g12a support */
-#define VPU_VERION        "v04"
+/* v05: add txl support */
+#define VPU_VERION        "v05"
 
 int vpu_debug_print_flag;
 static spinlock_t vpu_mem_lock;
@@ -1273,6 +1274,28 @@ static struct vpu_data_s vpu_data_gxm = {
 	.power_off = vpu_power_off_gx,
 };
 
+static struct vpu_data_s vpu_data_txl = {
+	.chip_type = VPU_CHIP_TXL,
+	.chip_name = "txl",
+	.clk_level_dft = CLK_LEVEL_DFT_TXLX,
+	.clk_level_max = CLK_LEVEL_MAX_TXLX,
+	.fclk_div_table = fclk_div_table_gxb,
+
+	.gp_pll_valid = 0,
+	.mem_pd_reg1_valid = 1,
+	.mem_pd_reg2_valid = 0,
+
+	.mem_pd_table_cnt =
+		sizeof(vpu_mem_pd_txl) / sizeof(struct vpu_ctrl_s),
+	.clk_gate_table_cnt =
+		sizeof(vpu_clk_gate_txl) / sizeof(struct vpu_ctrl_s),
+	.mem_pd_table = vpu_mem_pd_txl,
+	.clk_gate_table = vpu_clk_gate_txl,
+
+	.power_on  = vpu_power_on_txlx,
+	.power_off = vpu_power_off_txlx,
+};
+
 static struct vpu_data_s vpu_data_txlx = {
 	.chip_type = VPU_CHIP_TXLX,
 	.chip_name = "txlx",
@@ -1377,6 +1400,10 @@ static const struct of_device_id vpu_of_table[] = {
 	{
 		.compatible = "amlogic, vpu-gxm",
 		.data = &vpu_data_gxm,
+	},
+	{
+		.compatible = "amlogic, vpu-txl",
+		.data = &vpu_data_txl,
 	},
 	{
 		.compatible = "amlogic, vpu-txlx",
