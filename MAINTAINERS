@@ -14505,3 +14505,6 @@ AMLOGIC LCD Driver
 M:	Evoke Zhang <evoke.zhang@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesong12b_skt-panel.dtsi
 
+AMLOGIC G12B w400 buildroot dts
+M: 	liangzhuo xie <liangzhuo.xie@amlogic.com>
+F:      arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot.dts
