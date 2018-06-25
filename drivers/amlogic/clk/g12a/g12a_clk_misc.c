@@ -56,8 +56,8 @@ static struct clk_gate g12a_ts_clk_gate = {
 };
 
 static const char * const spicc_parent_names[] = { "xtal",
-	"clk81", "fclk_div4", "fclk_div3", "fclk_div2", "fclk_div5",
-	"fclk_div7", "gp0_pll"};
+	"clk81", "fclk_div4", "fclk_div3", "", "fclk_div5",
+	"fclk_div7", ""};
 
 /* spicc clk */
 static struct clk_mux g12a_spicc0_mux = {
@@ -79,6 +79,7 @@ static struct clk_divider g12a_spicc0_div = {
 	.shift = 0,
 	.width = 6,
 	.lock = &clk_lock,
+	.flags = CLK_DIVIDER_ROUND_CLOSEST,
 	.hw.init = &(struct clk_init_data){
 		.name = "spicc0_div",
 		.ops = &clk_divider_ops,
@@ -120,6 +121,7 @@ static struct clk_divider g12a_spicc1_div = {
 	.shift = 16,
 	.width = 6,
 	.lock = &clk_lock,
+	.flags = CLK_DIVIDER_ROUND_CLOSEST,
 	.hw.init = &(struct clk_init_data){
 		.name = "spicc_p1_div",
 		.ops = &clk_divider_ops,
