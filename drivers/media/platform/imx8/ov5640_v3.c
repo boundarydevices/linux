@@ -90,13 +90,13 @@ struct ov5640_mode_info {
 	enum ov5640_mode mode;
 	u32 width;
 	u32 height;
-	struct reg_value *init_data_ptr;
+	const struct reg_value *init_data_ptr;
 	u32 init_data_size;
 };
 
 struct ov5640_pll_info {
 	enum ov5640_mode mode;
-	struct reg_value *init_data_ptr;
+	const struct reg_value *init_data_ptr;
 	u32 init_data_size;
 };
 
@@ -136,7 +136,7 @@ struct ov5640 {
 	int rst_gpio;
 };
 
-static struct reg_value ov5640_global_init_setting[] = {
+static const struct reg_value ov5640_global_init_setting[] = {
     {0x3008, 0x42, 0, 0},
 
     /* System setting.0*/
@@ -351,7 +351,7 @@ static struct reg_value ov5640_global_init_setting[] = {
     {0x4740, 0x23, 0, 0},
 };
 
-static struct reg_value ov5640_init_setting_30fps_VGA[] = {
+static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3103, 0x03, 0, 0}, {0x3017, 0xff, 0, 0}, {0x3018, 0xff, 0, 0},
 	{0x3034, 0x1a, 0, 0}, {0x3035, 0x11, 0, 0}, {0x3036, 0x46, 0, 0},
@@ -440,7 +440,7 @@ static struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
+static const struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -458,7 +458,7 @@ static struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0}, {0x3503, 0x00, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_VGA_640_480[] = {
+static const struct reg_value ov5640_setting_15fps_VGA_640_480[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -476,7 +476,7 @@ static struct reg_value ov5640_setting_15fps_VGA_640_480[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0}, {0x3503, 0x00, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
+static const struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -494,7 +494,7 @@ static struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_QVGA_320_240[] = {
+static const struct reg_value ov5640_setting_15fps_QVGA_320_240[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -512,7 +512,7 @@ static struct reg_value ov5640_setting_15fps_QVGA_320_240[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
+static const struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -530,7 +530,7 @@ static struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_NTSC_720_480[] = {
+static const struct reg_value ov5640_setting_15fps_NTSC_720_480[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -548,7 +548,7 @@ static struct reg_value ov5640_setting_15fps_NTSC_720_480[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_PAL_720_576[] = {
+static const struct reg_value ov5640_setting_30fps_PAL_720_576[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x60, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -566,7 +566,7 @@ static struct reg_value ov5640_setting_30fps_PAL_720_576[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_PAL_720_576[] = {
+static const struct reg_value ov5640_setting_15fps_PAL_720_576[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x60, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -584,7 +584,7 @@ static struct reg_value ov5640_setting_15fps_PAL_720_576[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
+static const struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
 	{0x3035, 0x21, 0, 0}, {0x3036, 0x69, 0, 0}, {0x3c07, 0x07, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
 	{0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0}, {0x3801, 0x00, 0, 0},
@@ -602,7 +602,7 @@ static struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
 	{0x3503, 0x00, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_720P_1280_720[] = {
+static const struct reg_value ov5640_setting_15fps_720P_1280_720[] = {
 	{0x3035, 0x41, 0, 0}, {0x3036, 0x69, 0, 0}, {0x3c07, 0x07, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
 	{0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0}, {0x3801, 0x00, 0, 0},
@@ -620,7 +620,7 @@ static struct reg_value ov5640_setting_15fps_720P_1280_720[] = {
 	{0x3503, 0x00, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_QCIF_176_144[] = {
+static const struct reg_value ov5640_setting_30fps_QCIF_176_144[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -638,7 +638,7 @@ static struct reg_value ov5640_setting_30fps_QCIF_176_144[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_QCIF_176_144[] = {
+static const struct reg_value ov5640_setting_15fps_QCIF_176_144[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -656,7 +656,7 @@ static struct reg_value ov5640_setting_15fps_QCIF_176_144[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_XGA_1024_768[] = {
+static const struct reg_value ov5640_setting_30fps_XGA_1024_768[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -674,7 +674,7 @@ static struct reg_value ov5640_setting_30fps_XGA_1024_768[] = {
 	{0x3036, 0x69, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_XGA_1024_768[] = {
+static const struct reg_value ov5640_setting_15fps_XGA_1024_768[] = {
 	{0x3c07, 0x08, 0, 0}, {0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0},
 	{0x3814, 0x31, 0, 0}, {0x3815, 0x31, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0},
@@ -692,7 +692,7 @@ static struct reg_value ov5640_setting_15fps_XGA_1024_768[] = {
 	{0x3036, 0x46, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_1080P_1920_1080[] = {
+static const struct reg_value ov5640_setting_15fps_1080P_1920_1080[] = {
 	{0x3c07, 0x07, 0, 0}, {0x3820, 0x40, 0, 0}, {0x3821, 0x06, 0, 0},
 	{0x3814, 0x11, 0, 0}, {0x3815, 0x11, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0xee, 0, 0},
@@ -710,7 +710,7 @@ static struct reg_value ov5640_setting_15fps_1080P_1920_1080[] = {
 	{0x3036, 0x69, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
+static const struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{0x3c07, 0x07, 0, 0}, {0x3820, 0x40, 0, 0}, {0x3821, 0x06, 0, 0},
 	{0x3814, 0x11, 0, 0}, {0x3815, 0x11, 0, 0}, {0x3800, 0x00, 0, 0},
 	{0x3801, 0x00, 0, 0}, {0x3802, 0x00, 0, 0}, {0x3803, 0x00, 0, 0},
@@ -728,7 +728,7 @@ static struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{0x3036, 0x69, 0, 0}, {0x3037, 0x13, 0, 0},
 };
 
-static struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
+static const struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
 	{
 		{ov5640_mode_1080P_1920_1080, 1920, 1080,
 		ov5640_setting_15fps_1080P_1920_1080,
@@ -1005,7 +1005,7 @@ static int ov5640_set_clk_rate(struct ov5640 *sensor)
 }
 
 /* download ov5640 settings to sensor through i2c */
-static int ov5640_download_firmware(struct ov5640 *sensor, struct reg_value *pModeSetting, s32 ArySize)
+static int ov5640_download_firmware(struct ov5640 *sensor, const struct reg_value *pModeSetting, s32 ArySize)
 {
 	register u32 Delay_ms = 0;
 	register u16 RegAddr = 0;
@@ -1061,7 +1061,7 @@ static void ov5640_soft_reset(struct ov5640 *sensor)
 
 static int ov5640_config_init(struct ov5640 *sensor)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	int ArySize = 0, retval = 0;
 
 	/* Configure ov5640 initial parm */
