@@ -117,6 +117,11 @@ struct ov5640 {
 
 	int pwn_gpio;
 	int rst_gpio;
+	int prev_sysclk;
+	int prev_HTS;
+	int AE_low;
+	int AE_high;
+	int AE_Target;
 };
 
 struct ov5640_res {
@@ -588,9 +593,6 @@ static s32 ov5640_read_reg(struct ov5640 *sensor, u16 reg, u8 *val)
 	return buf[0];
 }
 
-static int prev_sysclk, prev_HTS;
-static int AE_low, AE_high, AE_Target = 52;
-
 static void OV5640_stream_on(struct ov5640 *sensor)
 {
 	ov5640_write_reg(sensor, 0x4202, 0x00);
@@ -810,16 +812,16 @@ static void OV5640_set_bandingfilter(struct ov5640 *sensor)
 	int band_step60, max_band60, band_step50, max_band50;
 
 	/* read preview PCLK */
-	prev_sysclk = OV5640_get_sysclk(sensor);
+	sensor->prev_sysclk = OV5640_get_sysclk(sensor);
 	/* read preview HTS */
-	prev_HTS = OV5640_get_HTS(sensor);
+	sensor->prev_HTS = OV5640_get_HTS(sensor);
 
 	/* read preview VTS */
 	prev_VTS = OV5640_get_VTS(sensor);
 
 	/* calculate banding filter */
 	/* 60Hz */
-	band_step60 = prev_sysclk * 100/prev_HTS * 100/120;
+	band_step60 = sensor->prev_sysclk * 100/sensor->prev_HTS * 100/120;
 	ov5640_write_reg(sensor, 0x3a0a, (band_step60 >> 8));
 	ov5640_write_reg(sensor, 0x3a0b, (band_step60 & 0xff));
 
@@ -827,7 +829,7 @@ static void OV5640_set_bandingfilter(struct ov5640 *sensor)
 	ov5640_write_reg(sensor, 0x3a0d, max_band60);
 
 	/* 50Hz */
-	band_step50 = prev_sysclk * 100/prev_HTS;
+	band_step50 = sensor->prev_sysclk * 100/sensor->prev_HTS;
 	ov5640_write_reg(sensor, 0x3a08, (band_step50 >> 8));
 	ov5640_write_reg(sensor, 0x3a09, (band_step50 & 0xff));
 
@@ -839,19 +841,19 @@ static int OV5640_set_AE_target(struct ov5640 *sensor, int target)
 {
 	/* stable in high */
 	int fast_high, fast_low;
-	AE_low = target * 23 / 25;	/* 0.92 */
-	AE_high = target * 27 / 25;	/* 1.08 */
+	sensor->AE_low = target * 23 / 25;	/* 0.92 */
+	sensor->AE_high = target * 27 / 25;	/* 1.08 */
 
-	fast_high = AE_high<<1;
+	fast_high = sensor->AE_high<<1;
 	if (fast_high > 255)
 		fast_high = 255;
 
-	fast_low = AE_low >> 1;
+	fast_low = sensor->AE_low >> 1;
 
-	ov5640_write_reg(sensor, 0x3a0f, AE_high);
-	ov5640_write_reg(sensor, 0x3a10, AE_low);
-	ov5640_write_reg(sensor, 0x3a1b, AE_high);
-	ov5640_write_reg(sensor, 0x3a1e, AE_low);
+	ov5640_write_reg(sensor, 0x3a0f, sensor->AE_high);
+	ov5640_write_reg(sensor, 0x3a10, sensor->AE_low);
+	ov5640_write_reg(sensor, 0x3a1b, sensor->AE_high);
+	ov5640_write_reg(sensor, 0x3a1e, sensor->AE_low);
 	ov5640_write_reg(sensor, 0x3a11, fast_high);
 	ov5640_write_reg(sensor, 0x3a1f, fast_low);
 
@@ -1012,15 +1014,15 @@ static int ov5640_change_mode_exposure_calc(struct ov5640 *sensor,
 	cap_maxband = (int)((cap_VTS - 4)/cap_bandfilt);
 
 	/* calculate capture shutter/gain16 */
-	if (average > AE_low && average < AE_high) {
+	if (average > sensor->AE_low && average < sensor->AE_high) {
 		/* in stable range */
 		cap_gain16_shutter =
-		  prev_gain16 * prev_shutter * cap_sysclk/prev_sysclk
-		  * prev_HTS/cap_HTS * AE_Target / average;
+		  prev_gain16 * prev_shutter * cap_sysclk/sensor->prev_sysclk
+		  * sensor->prev_HTS/cap_HTS * sensor->AE_Target / average;
 	} else {
 		cap_gain16_shutter =
-		  prev_gain16 * prev_shutter * cap_sysclk/prev_sysclk
-		  * prev_HTS/cap_HTS;
+		  prev_gain16 * prev_shutter * cap_sysclk/sensor->prev_sysclk
+		  * sensor->prev_HTS/cap_HTS;
 	}
 
 	/* gain to shutter */
@@ -1148,7 +1150,7 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 	if (retval < 0)
 		goto err;
 
-	OV5640_set_AE_target(sensor, AE_Target);
+	OV5640_set_AE_target(sensor, sensor->AE_Target);
 	OV5640_get_light_freq(sensor);
 	OV5640_set_bandingfilter(sensor);
 	ov5640_set_virtual_channel(sensor, sensor->csi);
@@ -1580,6 +1582,7 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
 	if (!sensor)
 		return -ENOMEM;
+	sensor->AE_Target = 52;
 
 	/* request power down pin */
 	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
