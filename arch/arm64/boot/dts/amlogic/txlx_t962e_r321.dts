@@ -1179,6 +1179,7 @@
 		mute_gpio-gpios = <&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
 		/*switch ARC_IN & SPDIF_IN*/
 		source_switch-gpios = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH>;
+		source_switch_inv = <1>;
 		/*analog amp mute*/
 		/*amp_mute_gpio-gpios = <&gpio GPIOZ_18 GPIO_ACTIVE_LOW>;*/
 		aux_dev = <&tas5707>;
