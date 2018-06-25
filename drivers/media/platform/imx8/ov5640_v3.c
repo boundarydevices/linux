@@ -127,13 +127,13 @@ struct ov5640 {
 	struct clk *sensor_clk;
 	int csi;
 
-	void (*io_init)(void);
+	int pwn_gpio;
+	int rst_gpio;
 };
 
 /*!
  * Maintains the information on the current state of the sesor.
  */
-static int pwn_gpio, rst_gpio;
 
 static struct reg_value ov5640_init_parm[] = {
     {0x3008, 0x42, 0, 0},
@@ -695,23 +695,23 @@ static const struct ov5640_datafmt
 	return NULL;
 }
 
-static inline void ov5640_power_down(int enable)
+static inline void ov5640_power_down(struct ov5640 *sensor, int enable)
 {
-	gpio_set_value_cansleep(pwn_gpio, enable);
+	gpio_set_value_cansleep(sensor->pwn_gpio, enable);
 
 	msleep(2);
 }
 
-static inline void ov5640_reset(void)
+static inline void ov5640_reset(struct ov5640 *sensor)
 {
-	gpio_set_value_cansleep(pwn_gpio, 1);
-	gpio_set_value_cansleep(rst_gpio, 0);
+	gpio_set_value_cansleep(sensor->pwn_gpio, 1);
+	gpio_set_value_cansleep(sensor->rst_gpio, 0);
 	msleep(5);
 
-	gpio_set_value_cansleep(pwn_gpio, 0);
+	gpio_set_value_cansleep(sensor->pwn_gpio, 0);
 	msleep(1);
 
-	gpio_set_value_cansleep(rst_gpio, 1);
+	gpio_set_value_cansleep(sensor->rst_gpio, 1);
 	msleep(20);
 }
 
@@ -1406,27 +1406,27 @@ static int ov5640_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	/* request power down pin */
-	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(pwn_gpio)) {
+	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
+	if (!gpio_is_valid(sensor->pwn_gpio)) {
 		dev_err(dev, "no sensor pwdn pin available\n");
 		return -ENODEV;
 	}
-	retval = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
+	retval = devm_gpio_request_one(dev, sensor->pwn_gpio, GPIOF_OUT_INIT_HIGH,
 					"ov5640_pwdn");
 	if (retval < 0)
 		return retval;
 
 	/* request reset pin */
-	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(rst_gpio)) {
+	sensor->rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
+	if (!gpio_is_valid(sensor->rst_gpio)) {
 		dev_err(dev, "no sensor reset pin available\n");
-		devm_gpio_free(dev, pwn_gpio);
+		devm_gpio_free(dev, sensor->pwn_gpio);
 		return -EINVAL;
 	}
-	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_LOW,
+	retval = devm_gpio_request_one(dev, sensor->rst_gpio, GPIOF_OUT_INIT_LOW,
 					"ov5640_reset");
 	if (retval < 0) {
-		devm_gpio_free(dev, pwn_gpio);
+		devm_gpio_free(dev, sensor->pwn_gpio);
 		return retval;
 	}
 
@@ -1434,8 +1434,8 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(sensor->sensor_clk)) {
 		dev_err(dev, "get mclk failed\n");
-		devm_gpio_free(dev, pwn_gpio);
-		devm_gpio_free(dev, rst_gpio);
+		devm_gpio_free(dev, sensor->pwn_gpio);
+		devm_gpio_free(dev, sensor->rst_gpio);
 		return PTR_ERR(sensor->sensor_clk);
 	}
 
@@ -1471,7 +1471,6 @@ static int ov5640_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
-	sensor->io_init = ov5640_reset;
 	sensor->i2c_client = client;
 
 	sensor->pix.pixelformat = (sensor->mipi_csi) ?
@@ -1486,7 +1485,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640_regulator_enable(&client->dev);
 
-	ov5640_reset();
+	ov5640_reset(sensor);
 
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
@@ -1549,7 +1548,7 @@ static int ov5640_remove(struct i2c_client *client)
 
 	clk_unprepare(sensor->sensor_clk);
 
-	ov5640_power_down(1);
+	ov5640_power_down(sensor, 1);
 
 	if (analog_regulator)
 		regulator_disable(analog_regulator);
