@@ -136,6 +136,7 @@ struct vpp_frame_par_s {
 	u32 spsc1_h_in;
 	u32 video_input_w;
 	u32 video_input_h;
+	u32 clk_in_pps;
 
 	bool nocomp;
 

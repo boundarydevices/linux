@@ -657,6 +657,7 @@ vpp_process_speed_check(s32 width_in,
 		clk_in_pps = get_vpu_clk();
 	}
 
+	next_frame_par->clk_in_pps = clk_in_pps;
 	vpu_clk = get_vpu_clk();
 	/* the output is only up to 1080p */
 	if (vpu_clk <= 250000000) {
@@ -2671,7 +2672,10 @@ void vpp_bypass_ratio_config(void)
 	if (is_meson_gxbb_cpu() || is_meson_gxl_cpu() ||
 		is_meson_gxm_cpu())
 		bypass_ratio = 125;
-	else if (is_meson_txlx_cpu() || is_meson_txl_cpu())
+	else if (is_meson_txlx_cpu())
+		/*change from 247 to 210 for bandwidth @20180627*/
+		bypass_ratio = 210;
+	else if (is_meson_txl_cpu())
 		bypass_ratio = 247;/*0x110 * (100/110)=0xf7*/
 	else
 		bypass_ratio = 205;

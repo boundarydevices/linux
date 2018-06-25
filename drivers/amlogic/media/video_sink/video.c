@@ -7660,6 +7660,8 @@ static ssize_t video_state_show(struct class *cla,
 		    cur_frame_par->video_input_w);
 	len += sprintf(buf + len, "video_input_h %u.\n",
 		    cur_frame_par->video_input_h);
+	len += sprintf(buf + len, "clk_in_pps %u.\n",
+			    cur_frame_par->clk_in_pps);
 #ifdef TV_3D_FUNCTION_OPEN
 	len += sprintf(buf + len, "vpp_2pic_mode %u.\n",
 		    cur_frame_par->vpp_2pic_mode);
