@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2018/06/21"
+#define RX_VER0 "ver.2018-06-27"
 /*
  *
  *
@@ -413,6 +413,7 @@ extern void rx_send_hpd_pulse(void);
 /* irq */
 extern void rx_irq_en(bool enable);
 extern irqreturn_t irq_handler(int irq, void *params);
+extern void cecrx_irq_handle(void);
 
 /* user interface */
 extern int pc_mode_en;

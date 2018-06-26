@@ -259,6 +259,7 @@ static int hdmi_rx_ctrl_irq_handler(void)
 	uint32_t intr_hdmi = 0;
 	uint32_t intr_md = 0;
 	uint32_t intr_pedc = 0;
+	uint32_t intr_aud_cec = 0;
 	/* uint32_t intr_aud_clk = 0; */
 	uint32_t intr_aud_fifo = 0;
 	uint32_t intr_hdcp22 = 0;
@@ -296,6 +297,16 @@ static int hdmi_rx_ctrl_irq_handler(void)
 		intr_hdcp22 =
 			hdmirx_rd_dwc(DWC_HDMI2_ISTS) &
 		    hdmirx_rd_dwc(DWC_HDMI2_IEN);
+	}
+
+	if (is_meson_txl_cpu()) {
+		intr_aud_cec =
+				hdmirx_rd_dwc(DWC_AUD_CEC_ISTS) &
+				hdmirx_rd_dwc(DWC_AUD_CEC_IEN);
+		if (intr_aud_cec != 0) {
+			cecrx_irq_handle();
+			hdmirx_wr_dwc(DWC_AUD_CEC_ICLR, intr_aud_cec);
+		}
 	}
 
 	if (intr_hdcp22 != 0) {

@@ -442,7 +442,6 @@ void cecrx_irq_handle(void)
 
 	if (!ee_cec)
 		return;
-
 	if (cec_dev->plat_data->ee_to_ao)
 		shift = 16;
 	/* TX DONE irq, increase tx buffer pointer */
@@ -945,9 +944,9 @@ static int cec_ll_trigle_tx(const unsigned char *msg, int len)
 		}
 		cec_timeout_cnt = 0;
 		return 0;
-	} else {
-		CEC_ERR("error msg sts:0x%x\n", reg);
 	}
+	CEC_ERR("error msg sts:0x%x\n", reg);
+
 	return -1;
 }
 
@@ -1375,10 +1374,9 @@ static int cec_late_check_rx_buffer(void)
 		CEC_INFO("buffer got unrecorgnized msg\n");
 		cec_rx_buf_clear();
 		return 0;
-	} else {
-		/*mod_delayed_work(cec_dev->cec_thread, dwork, 0);*/
-		return 1;
 	}
+
+	return 1;
 }
 
 void cec_key_report(int suspend)
@@ -1884,14 +1882,14 @@ static ssize_t port_status_show(struct class *cla,
 	if (cec_dev->dev_type == DEV_TYPE_PLAYBACK) {
 		tmp = tx_hpd;
 		return sprintf(buf, "%x\n", tmp);
-	} else {
-		tmp = hdmirx_rd_top(TOP_HPD_PWR5V);
-		CEC_INFO("TOP_HPD_PWR5V:%x\n", tmp);
-		tmp >>= 20;
-		tmp &= 0xf;
-		tmp |= (tx_hpd << 16);
-		return sprintf(buf, "%x\n", tmp);
 	}
+
+	tmp = hdmirx_rd_top(TOP_HPD_PWR5V);
+	CEC_INFO("TOP_HPD_PWR5V:%x\n", tmp);
+	tmp >>= 20;
+	tmp &= 0xf;
+	tmp |= (tx_hpd << 16);
+	return sprintf(buf, "%x\n", tmp);
 }
 
 static ssize_t pin_status_show(struct class *cla,
@@ -2516,6 +2514,11 @@ static const struct cec_platform_data_s cec_g12a_data = {
 	.ee_to_ao = 1,
 };
 
+static const struct cec_platform_data_s cec_txl_data = {
+	.line_bit = 7,
+	.ee_to_ao = 0,
+};
+
 static const struct of_device_id aml_cec_dt_match[] = {
 	{
 		.compatible = "amlogic, amlogic-aocec",
@@ -2528,6 +2531,10 @@ static const struct of_device_id aml_cec_dt_match[] = {
 	{
 		.compatible = "amlogic, aocec-g12a",
 		.data = &cec_g12a_data,
+	},
+	{
+		.compatible = "amlogic, aocec-txl",
+		.data = &cec_txl_data,
 	},
 };
 #endif
