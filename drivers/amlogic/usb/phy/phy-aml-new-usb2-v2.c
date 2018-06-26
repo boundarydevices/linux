@@ -90,9 +90,12 @@ void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 	writel(phy->pll_setting[2], reg + 0x48);
 	udelay(100);
 	writel((0x10000000 | (phy->pll_setting[0])), reg + 0x40);
+
 	/* PHY Tune */
 	writel(phy->pll_setting[3], reg + 0x50);
 	writel(phy->pll_setting[4], reg + 0x10);
+	/* Recovery analog status */
+	writel(0, reg + 0x38);
 	writel(phy->pll_setting[5], reg + 0x34);
 }
 
