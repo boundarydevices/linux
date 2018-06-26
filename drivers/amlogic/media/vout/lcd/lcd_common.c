@@ -679,28 +679,28 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 	return 0;
 }
 
-void lcd_hdr_vinfo_update(void)
+void lcd_optical_vinfo_update(void)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct lcd_config_s *pconf;
-	struct master_display_info_s *hdr_vinfo;
+	struct master_display_info_s *disp_vinfo;
 
 	pconf = lcd_drv->lcd_config;
-	hdr_vinfo = &lcd_drv->lcd_info->master_display_info;
-	hdr_vinfo->present_flag = pconf->hdr_info.hdr_support;
-	hdr_vinfo->features = pconf->hdr_info.features;
-	hdr_vinfo->primaries[0][0] = pconf->hdr_info.primaries_g_x;
-	hdr_vinfo->primaries[0][1] = pconf->hdr_info.primaries_g_y;
-	hdr_vinfo->primaries[1][0] = pconf->hdr_info.primaries_b_x;
-	hdr_vinfo->primaries[1][1] = pconf->hdr_info.primaries_b_y;
-	hdr_vinfo->primaries[2][0] = pconf->hdr_info.primaries_r_x;
-	hdr_vinfo->primaries[2][1] = pconf->hdr_info.primaries_r_y;
-	hdr_vinfo->white_point[0] = pconf->hdr_info.white_point_x;
-	hdr_vinfo->white_point[1] = pconf->hdr_info.white_point_y;
-	hdr_vinfo->luminance[0] = pconf->hdr_info.luma_max;
-	hdr_vinfo->luminance[1] = pconf->hdr_info.luma_min;
+	disp_vinfo = &lcd_drv->lcd_info->master_display_info;
+	disp_vinfo->present_flag = 1; /* valid parameters */
+	disp_vinfo->features = pconf->optical_info.features;
+	disp_vinfo->primaries[0][0] = pconf->optical_info.primaries_g_x;
+	disp_vinfo->primaries[0][1] = pconf->optical_info.primaries_g_y;
+	disp_vinfo->primaries[1][0] = pconf->optical_info.primaries_b_x;
+	disp_vinfo->primaries[1][1] = pconf->optical_info.primaries_b_y;
+	disp_vinfo->primaries[2][0] = pconf->optical_info.primaries_r_x;
+	disp_vinfo->primaries[2][1] = pconf->optical_info.primaries_r_y;
+	disp_vinfo->white_point[0] = pconf->optical_info.white_point_x;
+	disp_vinfo->white_point[1] = pconf->optical_info.white_point_y;
+	disp_vinfo->luminance[0] = pconf->optical_info.luma_max;
+	disp_vinfo->luminance[1] = pconf->optical_info.luma_min;
 
-	lcd_drv->lcd_info->hdr_info.lumi_max = pconf->hdr_info.luma_max;
+	lcd_drv->lcd_info->hdr_info.lumi_max = pconf->optical_info.luma_max;
 }
 
 void lcd_timing_init_config(struct lcd_config_s *pconf)

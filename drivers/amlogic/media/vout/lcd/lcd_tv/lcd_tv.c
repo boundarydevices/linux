@@ -260,7 +260,7 @@ static void lcd_vmode_vinfo_update(enum vmode_e mode)
 		break;
 	}
 
-	lcd_hdr_vinfo_update();
+	lcd_optical_vinfo_update();
 }
 
 /* ************************************************** *

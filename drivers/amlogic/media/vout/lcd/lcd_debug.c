@@ -935,7 +935,7 @@ static int lcd_reg_print(char *buf, int offset)
 	return len;
 }
 
-static int lcd_hdr_info_print(char *buf, int offset)
+static int lcd_optical_info_print(char *buf, int offset)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct lcd_config_s *pconf;
@@ -944,7 +944,7 @@ static int lcd_hdr_info_print(char *buf, int offset)
 	pconf = lcd_drv->lcd_config;
 	n = lcd_debug_info_len(len + offset);
 	len += snprintf((buf+len), n,
-		"\nlcd hdr info:\n"
+		"\nlcd optical info:\n"
 		"hdr_support          %d\n"
 		"features             %d\n"
 		"primaries_r_x        %d\n"
@@ -957,12 +957,18 @@ static int lcd_hdr_info_print(char *buf, int offset)
 		"white_point_y        %d\n"
 		"luma_max             %d\n"
 		"luma_min             %d\n\n",
-		pconf->hdr_info.hdr_support, pconf->hdr_info.features,
-		pconf->hdr_info.primaries_r_x, pconf->hdr_info.primaries_r_y,
-		pconf->hdr_info.primaries_g_x, pconf->hdr_info.primaries_g_y,
-		pconf->hdr_info.primaries_b_x, pconf->hdr_info.primaries_b_y,
-		pconf->hdr_info.white_point_x, pconf->hdr_info.white_point_y,
-		pconf->hdr_info.luma_max, pconf->hdr_info.luma_min);
+		pconf->optical_info.hdr_support,
+		pconf->optical_info.features,
+		pconf->optical_info.primaries_r_x,
+		pconf->optical_info.primaries_r_y,
+		pconf->optical_info.primaries_g_x,
+		pconf->optical_info.primaries_g_y,
+		pconf->optical_info.primaries_b_x,
+		pconf->optical_info.primaries_b_y,
+		pconf->optical_info.white_point_x,
+		pconf->optical_info.white_point_y,
+		pconf->optical_info.luma_max,
+		pconf->optical_info.luma_min);
 
 	return len;
 }
@@ -1352,7 +1358,7 @@ static ssize_t lcd_debug_store(struct class *class,
 		lcd_reg_print(print_buf, 0);
 		lcd_debug_info_print(print_buf);
 		memset(print_buf, 0, PR_BUF_MAX);
-		lcd_hdr_info_print(print_buf, 0);
+		lcd_optical_info_print(print_buf, 0);
 		lcd_debug_info_print(print_buf);
 		kfree(print_buf);
 		break;
@@ -1368,7 +1374,7 @@ static ssize_t lcd_debug_store(struct class *class,
 			LCDERR("%s: buf malloc error\n", __func__);
 			return -EINVAL;
 		}
-		lcd_hdr_info_print(print_buf, 0);
+		lcd_optical_info_print(print_buf, 0);
 		lcd_debug_info_print(print_buf);
 		kfree(print_buf);
 		break;
@@ -2255,7 +2261,7 @@ static ssize_t lcd_debug_dump_show(struct class *class,
 		lcd_reg_print(print_buf, 0);
 		break;
 	case LCD_DEBUG_DUMP_HDR:
-		lcd_hdr_info_print(print_buf, 0);
+		lcd_optical_info_print(print_buf, 0);
 		break;
 	default:
 		sprintf(print_buf, "%s: invalid command\n", __func__);

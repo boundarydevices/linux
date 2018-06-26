@@ -91,7 +91,7 @@ extern int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 extern int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 		unsigned char *buf, int key_len, int len);
 
-extern void lcd_hdr_vinfo_update(void);
+extern void lcd_optical_vinfo_update(void);
 extern void lcd_timing_init_config(struct lcd_config_s *pconf);
 extern int lcd_vmode_change(struct lcd_config_s *pconf);
 extern void lcd_venc_change(struct lcd_config_s *pconf);

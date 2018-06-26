@@ -173,7 +173,7 @@ struct lcd_timing_s {
  * HDR info define
  * **********************************
  */
-struct lcd_hdr_info_s {
+struct lcd_optical_info_s {
 	unsigned int hdr_support;
 	unsigned int features;
 	unsigned int primaries_r_x;
@@ -387,7 +387,7 @@ struct lcd_config_s {
 	unsigned int extern_index;
 	struct lcd_basic_s lcd_basic;
 	struct lcd_timing_s lcd_timing;
-	struct lcd_hdr_info_s hdr_info;
+	struct lcd_optical_info_s optical_info;
 	struct lcd_control_config_s lcd_control;
 	struct lcd_power_ctrl_s *lcd_power;
 	struct pinctrl *pin;
@@ -476,8 +476,8 @@ extern struct aml_lcd_drv_s *aml_lcd_get_driver(void);
 #define LCD_IOC_NR_SET_HDR_INFO    0x1
 
 #define LCD_IOC_CMD_GET_HDR_INFO   \
-	_IOR(LCD_IOC_TYPE, LCD_IOC_NR_GET_HDR_INFO, struct lcd_hdr_info_s)
+	_IOR(LCD_IOC_TYPE, LCD_IOC_NR_GET_HDR_INFO, struct lcd_optical_info_s)
 #define LCD_IOC_CMD_SET_HDR_INFO   \
-	_IOW(LCD_IOC_TYPE, LCD_IOC_NR_SET_HDR_INFO, struct lcd_hdr_info_s)
+	_IOW(LCD_IOC_TYPE, LCD_IOC_NR_SET_HDR_INFO, struct lcd_optical_info_s)
 
 #endif

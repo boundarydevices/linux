@@ -169,7 +169,7 @@ static struct lcd_config_s lcd_config_dft = {
 		.ss_level = 0,
 		.fr_adjust_type = 0,
 	},
-	.hdr_info = {
+	.optical_info = {
 		.hdr_support = 0,
 		.features = 0,
 		.primaries_r_x = 0,
@@ -666,8 +666,9 @@ static long lcd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int ret = 0;
 	void __user *argp;
 	int mcd_nr;
-	struct lcd_hdr_info_s *hdr_info = &lcd_driver->lcd_config->hdr_info;
+	struct lcd_optical_info_s *opt_info;
 
+	opt_info = &lcd_driver->lcd_config->optical_info;
 	mcd_nr = _IOC_NR(cmd);
 	LCDPR("%s: cmd_dir = 0x%x, cmd_nr = 0x%x\n",
 		__func__, _IOC_DIR(cmd), mcd_nr);
@@ -675,17 +676,19 @@ static long lcd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	argp = (void __user *)arg;
 	switch (mcd_nr) {
 	case LCD_IOC_NR_GET_HDR_INFO:
-		if (copy_to_user(argp, hdr_info, sizeof(struct lcd_hdr_info_s)))
+		if (copy_to_user(argp, opt_info,
+			sizeof(struct lcd_optical_info_s))) {
 			ret = -EFAULT;
+		}
 		break;
 	case LCD_IOC_NR_SET_HDR_INFO:
-		if (copy_from_user(hdr_info, argp,
-			sizeof(struct lcd_hdr_info_s))) {
+		if (copy_from_user(opt_info, argp,
+			sizeof(struct lcd_optical_info_s))) {
 			ret = -EFAULT;
 		} else {
-			lcd_hdr_vinfo_update();
+			lcd_optical_vinfo_update();
 			if (lcd_debug_print_flag) {
-				LCDPR("set hdr_info:\n"
+				LCDPR("set optical info:\n"
 					"hdr_support          %d\n"
 					"features             %d\n"
 					"primaries_r_x        %d\n"
@@ -698,18 +701,18 @@ static long lcd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 					"white_point_y        %d\n"
 					"luma_max             %d\n"
 					"luma_min             %d\n\n",
-					hdr_info->hdr_support,
-					hdr_info->features,
-					hdr_info->primaries_r_x,
-					hdr_info->primaries_r_y,
-					hdr_info->primaries_g_x,
-					hdr_info->primaries_g_y,
-					hdr_info->primaries_b_x,
-					hdr_info->primaries_b_y,
-					hdr_info->white_point_x,
-					hdr_info->white_point_y,
-					hdr_info->luma_max,
-					hdr_info->luma_min);
+					opt_info->hdr_support,
+					opt_info->features,
+					opt_info->primaries_r_x,
+					opt_info->primaries_r_y,
+					opt_info->primaries_g_x,
+					opt_info->primaries_g_y,
+					opt_info->primaries_b_x,
+					opt_info->primaries_b_y,
+					opt_info->white_point_x,
+					opt_info->white_point_y,
+					opt_info->luma_max,
+					opt_info->luma_min);
 			}
 		}
 		break;

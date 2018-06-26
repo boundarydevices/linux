@@ -456,7 +456,7 @@ static void lcd_tablet_vinfo_update(void)
 			break;
 		}
 
-		lcd_hdr_vinfo_update();
+		lcd_optical_vinfo_update();
 	}
 }
 
