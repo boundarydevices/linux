@@ -1204,7 +1204,7 @@ int aml_emmc_hs200_timming(struct mmc_host *mmc)
 	struct amlsd_host *host = pdata->host;
 	u32 count = 0, delay1 = 0, delay2 = 0;
 	u32 dat = host->data->latest_dat;
-	int ret = 0;
+	int ret = 0, add = 0;
 
 	ret = aml_get_data_eyetest(mmc);
 	if (ret) {
@@ -1216,21 +1216,27 @@ int aml_emmc_hs200_timming(struct mmc_host *mmc)
 	delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
 	if (pdata->latest_dat != 0)
 		dat = pdata->latest_dat;
+	if (dat < 5)
+		add = (delay1 >> (dat * 6)) & 0x3f;
+	else
+		add = (delay2 >> (dat * 6)) & 0x3f;
 	count = fbinary(pdata->align[dat]);
-	if (count <= pdata->count/3)
+	if (count <= pdata->count/3) {
 		count = pdata->count/3 - count;
-	else if (count <= (pdata->count*2)/3)
+		if (add)
+			count += add;
+	} else if (count <= (pdata->count*2)/3)
 		count = 0;
 	else
-		count = pdata->count/2;
+		count = (pdata->count - count) + pdata->count/3;
 	delay1 = (count<<0)|(count<<6)|(count<<12)
 		|(count<<18)|(count<<24);
 	writel(delay1, (host->base + SD_EMMC_DELAY1_V3));
 	delay2 = (count<<0)|(count<<6)|(count<<12);
 	writel(delay2, (host->base + SD_EMMC_DELAY2_V3));
-	pr_info("delay1: 0x%x , delay2: 0x%x\n",
+	pr_info("delay1: 0x%x, delay2: 0x%x, add:%d\n",
 		readl(host->base + SD_EMMC_DELAY1_V3),
-		readl(host->base + SD_EMMC_DELAY2_V3));
+		readl(host->base + SD_EMMC_DELAY2_V3), add);
 
 	count = fbinary(pdata->align[9]);
 	if (count <= pdata->count/4)
