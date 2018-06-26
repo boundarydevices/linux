@@ -530,7 +530,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
-				sound-dai = <&dummy_codec &dummy_codec>;
+				sound-dai = <&tlv320adc3101_32 &dummy_codec>;
 			};
 		};
 
@@ -565,6 +565,7 @@
 		/* spdif_b to hdmi, only playback */
 		aml-audio-card,dai-link@5 {
 			mclk-fs = <128>;
+			continuous-clock;
 			/* suffix-name, sync with android audio hal
 			 * what's the dai link used for
 			 */
@@ -741,6 +742,14 @@
 		reset_pin = <&gpio GPIOA_5 0>;
 	};
 
+	tlv320adc3101_32: tlv320adc3101_32@32 {
+		compatible = "ti,tlv320adc3101";
+		#sound-dai-cells = <0>;
+		reg = <0x19>;
+		differential_pair = <1>;
+		status = "okay";
+	};
+
 	tas5707_36: tas5707_36@36 {
 		compatible = "ti,tas5707";
 		#sound-dai-cells = <0>;
@@ -803,10 +812,10 @@
 	aml_tdmc: tdmc {
 		compatible = "amlogic, g12a-snd-tdmc";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask-in = <0 1 0 0>;
+		dai-tdm-lane-slot-mask-in = <1 0 0 0>;
 		#dai-tdm-lane-slot-mask-out = <1 0 1 1>;
 		#dai-tdm-lane-oe-slot-mask-in = <0 0 0 0>;
-		dai-tdm-lane-oe-slot-mask-out = <1 0 0 0>;
+		#dai-tdm-lane-oe-slot-mask-out = <1 0 0 0>;
 		dai-tdm-clk-sel = <2>;
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
 				&clkc CLKID_MPLL2>;
@@ -1214,10 +1223,14 @@
 			 "MMC_CAP_MMC_HIGHSPEED",
 			 "MMC_CAP_SD_HIGHSPEED",
 			 "MMC_CAP_NONREMOVABLE",
+			 "MMC_CAP_UHS_SDR12",
+			 "MMC_CAP_UHS_SDR25",
+			 "MMC_CAP_UHS_SDR50",
+			 "MMC_CAP_UHS_SDR104",
 			 "MMC_PM_KEEP_POWER",
 			 "MMC_CAP_SDIO_IRQ";
 		f_min = <400000>;
-		f_max = <50000000>;
+		f_max = <200000000>;
 	};
 };
 
@@ -1290,7 +1303,7 @@
 
 &pcie_A {
 	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disable";
 };
 
 &meson_cooldev {
