@@ -94,6 +94,7 @@ static struct lcd_clk_config_s clk_conf = { /* unit: kHz */
 	.fout = 0,
 
 	/* pll parameters */
+	.pll_mode = 0, /* txl */
 	.od_fb = 0,
 	.pll_m = 0,
 	.pll_n = 0,
@@ -357,6 +358,25 @@ static void lcd_clk_config_chip_init(void)
 		cConf->div_in_fmax = CLK_DIV_IN_MAX_GXM;
 		cConf->div_out_fmax = CRT_VID_CLK_IN_MAX_GXM;
 		cConf->xd_out_fmax = ENCL_CLK_IN_MAX_GXM;
+		break;
+	case LCD_CHIP_TXL:
+		cConf->od_fb = PLL_FRAC_OD_FB_TXL;
+		cConf->ss_level_max = SS_LEVEL_MAX_TXL;
+		cConf->pll_m_max = PLL_M_MAX_TXL;
+		cConf->pll_m_min = PLL_M_MIN_TXL;
+		cConf->pll_n_max = PLL_N_MAX_TXL;
+		cConf->pll_n_min = PLL_N_MIN_TXL;
+		cConf->pll_frac_range = PLL_FRAC_RANGE_TXL;
+		cConf->pll_od_sel_max = PLL_OD_SEL_MAX_TXL;
+		cConf->pll_ref_fmax = PLL_FREF_MAX_TXL;
+		cConf->pll_ref_fmin = PLL_FREF_MIN_TXL;
+		cConf->pll_vco_fmax = PLL_VCO_MAX_TXL;
+		cConf->pll_vco_fmin = PLL_VCO_MIN_TXL;
+		cConf->pll_out_fmax = CLK_DIV_IN_MAX_TXL;
+		cConf->pll_out_fmin = cConf->pll_vco_fmin / 16;
+		cConf->div_in_fmax = CLK_DIV_IN_MAX_TXL;
+		cConf->div_out_fmax = CRT_VID_CLK_IN_MAX_TXL;
+		cConf->xd_out_fmax = ENCL_CLK_IN_MAX_TXL;
 		break;
 	case LCD_CHIP_TXLX:
 		cConf->od_fb = PLL_FRAC_OD_FB_TXLX;
@@ -2109,6 +2129,7 @@ void lcd_clk_generate_parameter(struct lcd_config_s *pconf)
 		break;
 	case LCD_CHIP_GXL:
 	case LCD_CHIP_GXM:
+	case LCD_CHIP_TXL:
 	case LCD_CHIP_TXLX:
 		lcd_clk_generate_txl(pconf);
 		break;
@@ -2142,6 +2163,9 @@ char *lcd_get_spread_spectrum(void)
 	case LCD_CHIP_GXTVBB:
 		ss_str = lcd_pll_ss_table_gxtvbb[ss_level];
 		break;
+	case LCD_CHIP_TXL:
+		ss_str = lcd_pll_ss_table_txl[ss_level];
+		break;
 	case LCD_CHIP_TXLX:
 		ss_str = lcd_pll_ss_table_txlx[ss_level];
 		break;
@@ -2169,6 +2193,9 @@ void lcd_set_spread_spectrum(void)
 	switch (lcd_drv->data->chip_type) {
 	case LCD_CHIP_GXTVBB:
 		lcd_set_pll_ss_gxtvbb(&clk_conf);
+		break;
+	case LCD_CHIP_TXL:
+		lcd_set_pll_ss_txl(&clk_conf);
 		break;
 	case LCD_CHIP_TXLX:
 		lcd_set_pll_ss_txlx(&clk_conf);
@@ -2204,6 +2231,7 @@ void lcd_pll_reset(void)
 		break;
 	case LCD_CHIP_GXL:
 	case LCD_CHIP_GXM:
+	case LCD_CHIP_TXL:
 	case LCD_CHIP_TXLX:
 		lcd_pll_reset_txl();
 		break;
@@ -2240,6 +2268,7 @@ void lcd_clk_update(struct lcd_config_s *pconf)
 		break;
 	case LCD_CHIP_GXL:
 	case LCD_CHIP_GXM:
+	case LCD_CHIP_TXL:
 	case LCD_CHIP_TXLX:
 		lcd_pll_frac_generate_txl(pconf);
 		lcd_update_pll_frac_txl(&clk_conf);
@@ -2283,6 +2312,7 @@ void lcd_clk_set(struct lcd_config_s *pconf)
 		break;
 	case LCD_CHIP_GXL:
 	case LCD_CHIP_GXM:
+	case LCD_CHIP_TXL:
 		lcd_set_pll_txl(&clk_conf);
 		lcd_set_vid_pll_div(&clk_conf);
 		break;
@@ -2334,6 +2364,7 @@ void lcd_clk_disable(void)
 		break;
 	case LCD_CHIP_GXL:
 	case LCD_CHIP_GXM:
+	case LCD_CHIP_TXL:
 	case LCD_CHIP_TXLX:
 		/* disable hdmi_pll: 0x10c8[30] */
 		lcd_hiu_setb(HHI_HDMI_PLL_CNTL, 0, LCD_PLL_EN_TXL, 1);

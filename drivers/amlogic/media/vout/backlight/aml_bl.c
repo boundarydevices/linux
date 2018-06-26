@@ -143,7 +143,7 @@ static char *bl_method_type_to_str(int type)
 	return str;
 }
 
-static unsigned int pwm_reg_gxtvbb[6] = {
+static unsigned int pwm_reg_txl[6] = {
 	PWM_PWM_A,
 	PWM_PWM_B,
 	PWM_PWM_C,
@@ -2011,7 +2011,7 @@ static int aml_bl_pwm_channel_register(struct bl_config_s *bconf,
 			bl_drv->dev, child, NULL);
 		if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
 			ret = PTR_ERR(bl_pwm->pwm_data.pwm);
-			BLERR("unable to request bl_pwm\n");
+			BLERR("unable to request bl_pwm(%d)\n", index0);
 			return ret;
 		}
 		bl_pwm->pwm_data.meson = to_meson_pwm(
@@ -2967,19 +2967,25 @@ static int aml_bl_resume(struct platform_device *pdev)
 static struct bl_data_s bl_data_gxtvbb = {
 	.chip_type = BL_CHIP_GXTVBB,
 	.chip_name = "gxtvbb",
-	.pwm_reg = pwm_reg_gxtvbb,
+	.pwm_reg = pwm_reg_txl,
 };
 
 static struct bl_data_s bl_data_gxl = {
 	.chip_type = BL_CHIP_GXL,
 	.chip_name = "gxl",
-	.pwm_reg = pwm_reg_gxtvbb,
+	.pwm_reg = pwm_reg_txl,
 };
 
 static struct bl_data_s bl_data_gxm = {
 	.chip_type = BL_CHIP_GXM,
 	.chip_name = "gxm",
-	.pwm_reg = pwm_reg_gxtvbb,
+	.pwm_reg = pwm_reg_txl,
+};
+
+static struct bl_data_s bl_data_txl = {
+	.chip_type = BL_CHIP_TXL,
+	.chip_name = "txl",
+	.pwm_reg = pwm_reg_txl,
 };
 
 static struct bl_data_s bl_data_txlx = {
@@ -3018,6 +3024,10 @@ static const struct of_device_id bl_dt_match_table[] = {
 	{
 		.compatible = "amlogic, backlight-gxm",
 		.data = &bl_data_gxm,
+	},
+	{
+		.compatible = "amlogic, backlight-txl",
+		.data = &bl_data_txl,
 	},
 	{
 		.compatible = "amlogic, backlight-txlx",

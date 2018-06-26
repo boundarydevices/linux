@@ -31,7 +31,7 @@ struct lcd_clk_config_s { /* unit: kHz */
 	unsigned int fout;
 
 	/* pll parameters */
-	unsigned int pll_mode;
+	unsigned int pll_mode; /* txl */
 	unsigned int od_fb;
 	unsigned int pll_m;
 	unsigned int pll_n;
@@ -43,8 +43,6 @@ struct lcd_clk_config_s { /* unit: kHz */
 	unsigned int pll_frac;
 	unsigned int pll_fout;
 	unsigned int ss_level;
-	/*unsigned int edp_div0;*/
-	/*unsigned int edp_div1;*/
 	unsigned int div_sel;
 	unsigned int xd;
 

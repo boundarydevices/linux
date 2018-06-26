@@ -680,14 +680,9 @@ static void lcd_vbyone_interrupt_init(struct aml_lcd_drv_s *lcd_drv)
 	struct vbyone_config_s *vx1_conf;
 
 	vx1_conf = lcd_drv->lcd_config->lcd_control.vbyone_config;
+
 	/* release sw filter ctrl in uboot */
-	switch (lcd_drv->data->chip_type) {
-	case LCD_CHIP_TXLX:
-		lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 0, 1);
-		break;
-	default:
-		break;
-	}
+	lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 0, 1);
 
 	/* set hold in FSM_ACQ */
 	if (vx1_conf->vsync_intr_en == 3)

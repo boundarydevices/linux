@@ -28,7 +28,8 @@
 /* 20180226: g12a support */
 /* 20180425: tvconfig suuport */
 /* 20180620: fix coverity errors */
-#define LCD_DRV_VERSION    "20180620"
+/* 20180626: txl suuport */
+#define LCD_DRV_VERSION    "20180626"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 

@@ -45,6 +45,7 @@ enum bl_chip_type_e {
 	BL_CHIP_GXTVBB,
 	BL_CHIP_GXL,
 	BL_CHIP_GXM,
+	BL_CHIP_TXL,
 	BL_CHIP_TXLX,
 	BL_CHIP_AXG,
 	BL_CHIP_G12A,
