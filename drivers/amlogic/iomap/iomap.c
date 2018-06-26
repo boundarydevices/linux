@@ -27,7 +27,6 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/amlogic/iomap.h>
-#include <linux/amlogic/cpu_version.h>
 #include <asm/compiler.h>
 #undef pr_fmt
 #define pr_fmt(fmt) "aml_iomap: " fmt
@@ -37,11 +36,12 @@ static const struct of_device_id iomap_dt_match[] = {
 	{ .compatible = "amlogic, iomap" },
 	{ /* sentinel */ },
 };
-void __iomem *meson_reg_map[IO_BUS_MAX];
+
+static void __iomem *meson_reg_map[IO_BUS_MAX] = { NULL };
 
 int aml_reg_read(u32 bus_type, unsigned int reg, unsigned int *val)
 {
-	if (bus_type < IO_BUS_MAX) {
+	if (bus_type < IO_BUS_MAX && (meson_reg_map[bus_type] != NULL)) {
 		*val = readl((meson_reg_map[bus_type]+reg));
 		return 0;
 	} else
@@ -51,7 +51,7 @@ EXPORT_SYMBOL(aml_reg_read);
 
 int aml_reg_write(u32 bus_type, unsigned int reg, unsigned int val)
 {
-	if (bus_type < IO_BUS_MAX) {
+	if (bus_type < IO_BUS_MAX && (meson_reg_map[bus_type] != NULL)) {
 		writel(val, (meson_reg_map[bus_type]+reg));
 		return 0;
 	} else
@@ -63,7 +63,7 @@ int aml_regmap_update_bits(u32 bus_type,
 					unsigned int reg, unsigned int mask,
 					unsigned int val)
 {
-	if (bus_type < IO_BUS_MAX) {
+	if (bus_type < IO_BUS_MAX && (meson_reg_map[bus_type] != NULL)) {
 		unsigned int tmp, orig;
 
 		aml_reg_read(bus_type, reg, &orig);
