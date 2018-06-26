@@ -6737,16 +6737,11 @@ static void osd_basic_update_disp_geometry(u32 index)
 			/* osd swtich to mali */
 			VSYNCOSD_WR_MPEG_REG_BITS(
 				OSD_PATH_MISC_CTRL, 0x01, (index + 4), 1);
-
 			/*  0:canvas_araddr
 			 *  1:linear_araddr
 			 */
 			VSYNCOSD_WR_MPEG_REG_BITS(
 				osd_reg->osd_ctrl_stat, 0x1, 2, 1);
-			/* set lens 0 */
-			VSYNCOSD_WR_MPEG_REG_BITS(
-				osd_reg->osd_fifo_ctrl_stat,
-				0x2, 22, 2);
 			/* read from mali afbd decoder */
 			VSYNCOSD_WR_MPEG_REG_BITS(
 				osd_reg->osd_blk0_cfg_w0, 0x1, 30, 1);
@@ -6797,9 +6792,6 @@ static void osd_basic_update_disp_geometry(u32 index)
 			/* use canvas addr */
 			VSYNCOSD_WR_MPEG_REG_BITS(
 				osd_reg->osd_ctrl_stat, 0x0, 2, 1);
-			/* set lens 0 */
-			VSYNCOSD_WR_MPEG_REG_BITS(osd_reg->osd_fifo_ctrl_stat,
-				0x0, 22, 2);
 		}
 	}
 	if (osd_hw.free_scale_enable[index]
