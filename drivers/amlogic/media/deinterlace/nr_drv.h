@@ -24,6 +24,7 @@ struct nr_param_s {
 	int *addr;
 };
 
+#define NR4_PARAMS_NUM 25
 #define dnr_param_t struct nr_param_s
 #define nr4_param_t struct nr_param_s
 

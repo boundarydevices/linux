@@ -343,6 +343,11 @@ unsigned int di_filt_coef2[] =  //2 point bilinear, bank_length == 2
 #define ZOOM_BITS       20
 #define PHASE_BITS      16
 
+static enum f2v_vphase_type_e top_conv_type = F2V_P2P;
+static enum f2v_vphase_type_e bot_conv_type = F2V_P2P;
+static unsigned int prehsc_en;
+static unsigned int prevsc_en;
+
 static const unsigned char f2v_420_in_pos_luma[F2V_TYPE_MAX] = {
 0, 2, 0, 2, 0, 0, 0, 2, 0};
 //static const unsigned char f2v_420_in_pos_chroma[F2V_TYPE_MAX] = {
@@ -386,16 +391,14 @@ static void f2v_get_vertical_phase(unsigned int zoom_ratio,
 /*
  * patch 1: inp scaler 0: di wr scaler
  */
+
 void di_pps_config(unsigned char path, int src_w, int src_h,
 	int dst_w, int dst_h)
 {
-	enum f2v_vphase_type_e top_conv_type = F2V_P2P;
-	enum f2v_vphase_type_e bot_conv_type = F2V_P2P;
 	struct pps_f2v_vphase_s vphase;
 
 	int i;
 	int hsc_en = 0, vsc_en = 0;
-	int prehsc_en = 0, prevsc_en = 0;
 	int vsc_double_line_mode;
 	unsigned int p_src_w, p_src_h;
 	unsigned int vert_phase_step, horz_phase_step;

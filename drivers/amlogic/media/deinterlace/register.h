@@ -27,7 +27,7 @@
 #define Wr_reg_bits(adr, val, start, len)  \
 		aml_vcbus_update_bits(adr, ((1<<len)-1)<<start, val<<start)
 #define Rd_reg_bits(adr, start, len)  \
-		((aml_read_vcbus(adr)&(((1<<len)-1)<<start))>>start)
+		((aml_read_vcbus(adr)&(((1UL<<len)-1UL)<<start))>>start)
 
 unsigned int RDMA_WR(unsigned int adr, unsigned int val);
 unsigned int RDMA_RD(unsigned int adr);

@@ -1579,7 +1579,7 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 		if (nFlgCk20 < flm22_chk20_sml)
 			nFlm22Lvl = nFlm22Lvl + flm22_comlev1 - nFlgCk20;
 		if (nFlgCk21 < flm22_chk21_sml)
-			nFlm22Lvl = nFlm22Lvl + flm22_comlev1 - nFlgCk20;
+			nFlm22Lvl = nFlm22Lvl + flm22_comlev1 - nFlgCk21;
 		if (prt_flg) {
 			pr_info("nFlm22Lvl=%d, nFlgCk20=%d, nFlgCk21=%d\n",
 				nFlm22Lvl, nFlgCk20, nFlgCk21);
@@ -1624,9 +1624,7 @@ static int DIweavedetec(struct sFlmSftPar *pPar, int nDif01)
 		else
 			difflag = 0;
 		if (difflag^predifflag) {
-			if (numdif > 255)
-				numdif = numdif;
-			else
+			if (numdif <= 255)
 				numdif = numdif + 1;
 			predifflag = difflag;
 		} else if (numdif > numthd) {

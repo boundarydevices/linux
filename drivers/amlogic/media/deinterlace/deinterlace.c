@@ -118,7 +118,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-02-11a";
+static const char version_s[] = "2018-07-17a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -303,9 +303,8 @@ void trigger_pre_di_process(unsigned char idx)
 	if (di_sema_init_flag == 0)
 		return;
 
-	if (idx != 'p')
-		log_buffer_state((idx == 'i') ? "irq" : ((idx == 'p') ?
-			"put" : ((idx == 'r') ? "rdy" : "oth")));
+	log_buffer_state((idx == 'i') ? "irq" : ((idx == 'p') ?
+		"put" : ((idx == 'r') ? "rdy" : "oth")));
 
 	/* tasklet_hi_schedule(&di_pre_tasklet); */
 	tasklet_schedule(&di_pre_tasklet);
@@ -1181,15 +1180,13 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
 	struct vframe_s *post_vf = NULL;
 	char *buf_orig, *ps, *token;
 	char *parm[3] = { NULL };
-	char delim1[2] = " ";
+	char delim1[3] = " ";
 	char delim2[2] = "\n";
 	struct file *filp = NULL;
 	loff_t pos = 0;
 	void *buff = NULL;
 	mm_segment_t old_fs;
 
-	if (!buf)
-		return len;
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	ps = buf_orig;
 	strcat(delim1, delim2);
@@ -1239,7 +1236,7 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
 			buff = (void *)phys_to_virt(dump_adr);
 		else
 			buff = ioremap(dump_adr, nr_size);
-		if (buff == NULL)
+		if (IS_ERR_OR_NULL(buff))
 			pr_err("%s: ioremap error.\n", __func__);
 		vfs_write(filp, buff, nr_size, &pos);
 /*	pr_dbg("di_chan2_buf_dup_p:\n	nr:%u,mtn:%u,cnt:%u\n",
@@ -6802,22 +6799,6 @@ static int di_event_cb(int type, void *data, void *private_data)
 		pr_info("%s: RECEIVER_FORCE_UNREG return\n",
 			__func__);
 		return 0;
-		di_pre_stru.force_unreg_req_flag = 1;
-
-		trigger_pre_di_process(TRIGGER_PRE_BY_FORCE_UNREG);
-		di_pre_stru.unreg_req_flag_cnt = 0;
-		while (di_pre_stru.force_unreg_req_flag) {
-			usleep_range(1000, 1001);
-			di_pr_info("%s:unreg_req_flag_cnt:%d!!!\n",
-				__func__, di_pre_stru.unreg_req_flag_cnt);
-			if (di_pre_stru.unreg_req_flag_cnt++ >
-				di_reg_unreg_cnt) {
-				di_pre_stru.unreg_req_flag_cnt = 0;
-				di_pr_info("%s:unreg_reg_flag timeout!!!\n",
-					__func__);
-				break;
-			}
-		}
 	}
 	return 0;
 }
@@ -6913,6 +6894,11 @@ static long di_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		mm_size = sizeof(struct am_pq_parm_s);
 		if (copy_from_user(&tmp_pq_s, argp, mm_size)) {
 			pr_err("[DI] set pq parm errors\n");
+			return -EFAULT;
+		}
+		if (tmp_pq_s.table_len >= TABLE_LEN_MAX) {
+			pr_err("[DI] load 0x%x wrong pq table_len.\n",
+				tmp_pq_s.table_len);
 			return -EFAULT;
 		}
 		tab_flag = TABLE_NAME_DI | TABLE_NAME_NR | TABLE_NAME_MCDI |

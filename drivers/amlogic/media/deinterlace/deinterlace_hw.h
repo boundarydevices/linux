@@ -20,7 +20,6 @@
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #include "pulldown_drv.h"
 #include "nr_drv.h"
-#include "deinterlace_hw.h"
 
 /* if post size < 80, filter of ei can't work */
 #define MIN_POST_WIDTH  80
