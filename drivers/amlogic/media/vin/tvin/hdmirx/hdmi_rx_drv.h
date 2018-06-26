@@ -41,7 +41,7 @@
  *
  *
  */
-#define RX_VER1 "ver.2018/06/07"
+#define RX_VER1 "ver.2018/06/26"
 /*
  *
  *
@@ -74,7 +74,7 @@ enum chip_id_e {
 	CHIP_ID_GXTVBB,
 	CHIP_ID_TXL,
 	CHIP_ID_TXLX,
-	CHIP_ID_TXHD = CHIP_ID_TXLX,
+	CHIP_ID_TXHD,
 };
 
 struct meson_hdmirx_data {

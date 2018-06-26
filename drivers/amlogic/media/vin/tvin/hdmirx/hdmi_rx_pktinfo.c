@@ -168,7 +168,7 @@ void rx_pkt_debug(void)
 	data32 |= (rx_pkt_type_mapping(PKT_TYPE_INFOFRAME_AUD));
 	data32 |= (rx_pkt_type_mapping(PKT_TYPE_INFOFRAME_VSI));
 	data32 |= (rx_pkt_type_mapping(PKT_TYPE_INFOFRAME_MPEGSRC));
-	if (!is_meson_txhd_cpu()) {
+	if (rx.chip_id != CHIP_ID_TXHD) {
 		data32 |= (rx_pkt_type_mapping(PKT_TYPE_INFOFRAME_NVBI));
 		data32 |= (rx_pkt_type_mapping(PKT_TYPE_INFOFRAME_DRM));
 		data32 |= (rx_pkt_type_mapping(PKT_TYPE_AUD_META));
@@ -337,7 +337,8 @@ void rx_debug_pktinfo(char input[][20])
 		rx_pr("pdec_ists_en=0x%x\n", pdec_ists_en);
 		rx_irq_en(1);
 	} else if (strncmp(input[1], "debugext", 8) == 0) {
-		if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+		if ((rx.chip_id == CHIP_ID_TXLX) ||
+			(rx.chip_id == CHIP_ID_TXHD))
 			enable |= _BIT(30);/* DRC_RCV*/
 		else
 			enable |= _BIT(9);/* DRC_RCV*/
@@ -362,7 +363,8 @@ void rx_debug_pktinfo(char input[][20])
 		if (strncmp(input[2], "fifo", 4) == 0)
 			sts = (PD_FIFO_START_PASS|PD_FIFO_OVERFL);
 		else if (strncmp(input[2], "drm", 3) == 0) {
-			if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+			if ((rx.chip_id == CHIP_ID_TXLX) ||
+				(rx.chip_id == CHIP_ID_TXHD))
 				sts = _BIT(30);
 			else
 				sts = _BIT(9);
@@ -390,7 +392,8 @@ void rx_debug_pktinfo(char input[][20])
 		if (strncmp(input[2], "fifo", 4) == 0)
 			enable |= (PD_FIFO_START_PASS|PD_FIFO_OVERFL);
 		else if (strncmp(input[2], "drm", 3) == 0) {
-			if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+			if ((rx.chip_id == CHIP_ID_TXLX) ||
+				(rx.chip_id == CHIP_ID_TXHD))
 				enable |= _BIT(30);
 			else
 				enable |= _BIT(9);
@@ -1084,7 +1087,7 @@ void rx_pkt_get_vsi_ex(void *pktinfo)
 	pkt->ver_st.version = 0;
 	pkt->ver_st.chgbit = 0;
 
-	if (!is_meson_txhd_cpu()) {
+	if (rx.chip_id != CHIP_ID_TXHD) {
 		pkt->sbpkt.payload.data[0] =
 			hdmirx_rd_dwc(DWC_PDEC_VSI_PLAYLOAD0);
 		pkt->sbpkt.payload.data[1] =
@@ -1112,7 +1115,7 @@ void rx_pkt_get_amp_ex(void *pktinfo)
 	}
 
 	/*memset(pkt, 0, sizeof(struct pd_infoframe_s));*/
-	if (!is_meson_txhd_cpu()) {
+	if (rx.chip_id != CHIP_ID_TXHD) {
 		HB = hdmirx_rd_dwc(DWC_PDEC_AMP_HB);
 		pkt->HB = (HB << 8) | PKT_TYPE_AUD_META;
 		pkt->PB0 = hdmirx_rd_dwc(DWC_PDEC_AMP_PB0);
@@ -1192,7 +1195,7 @@ void rx_pkt_get_drm_ex(void *pktinfo)
 	}
 
 	drmpkt->pkttype = PKT_TYPE_INFOFRAME_DRM;
-	if (!is_meson_txhd_cpu()) {
+	if (rx.chip_id != CHIP_ID_TXHD) {
 		drmpkt->length = (hdmirx_rd_dwc(DWC_PDEC_DRM_HB) >> 8);
 		drmpkt->version = hdmirx_rd_dwc(DWC_PDEC_DRM_HB);
 
@@ -1223,7 +1226,7 @@ void rx_pkt_get_ntscvbi_ex(void *pktinfo)
 		return;
 	}
 
-	if (!is_meson_txhd_cpu()) {
+	if (rx.chip_id != CHIP_ID_TXHD) {
 		/*byte 0 , 1*/
 		pkt->HB = hdmirx_rd_dwc(DWC_PDEC_NTSCVBI_HB);
 		pkt->PB0 = hdmirx_rd_dwc(DWC_PDEC_NTSCVBI_PB0);

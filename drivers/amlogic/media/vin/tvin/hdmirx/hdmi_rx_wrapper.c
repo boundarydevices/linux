@@ -384,7 +384,7 @@ static int hdmi_rx_ctrl_irq_handler(void)
 			if (log_level & 0x200)
 				rx_pr("[irq] FIFO MIN\n");
 		}
-		if (!is_meson_txlx_cpu()) {
+		if (rx.chip_id != CHIP_ID_TXLX) {
 			if (rx_get_bits(intr_pedc,
 				DRM_RCV_EN) != 0) {
 				if (log_level & 0x400)
@@ -2921,6 +2921,18 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
 		rx_pr("Hdmirx version2: %s\n", RX_VER2);
 		rx_pr("------------------\n");
+	}  else if (strncmp(input[0], "port0", 5) == 0) {
+		hdmirx_open_port(TVIN_PORT_HDMI0);
+		rx.open_fg = 1;
+	} else if (strncmp(input[0], "port1", 5) == 0) {
+		hdmirx_open_port(TVIN_PORT_HDMI1);
+		rx.open_fg = 1;
+	} else if (strncmp(input[0], "port2", 5) == 0) {
+		hdmirx_open_port(TVIN_PORT_HDMI2);
+		rx.open_fg = 1;
+	} else if (strncmp(input[0], "port3", 5) == 0) {
+		hdmirx_open_port(TVIN_PORT_HDMI3);
+		rx.open_fg = 1;
 	}
 	return 0;
 }

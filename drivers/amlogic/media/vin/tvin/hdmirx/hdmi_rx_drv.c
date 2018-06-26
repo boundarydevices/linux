@@ -166,7 +166,7 @@ static const struct of_device_id hdmirx_dt_match[] = {
 		.data           = &rx_txlx_data
 	},
 	{
-		.compatible     = "amlogic, hdmirx_txl",
+		.compatible     = "amlogic, hdmirx-txl",
 		.data           = &rx_txl_data
 	},
 	{
@@ -923,7 +923,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 		#if 0
 		else {
 			if (hdmi_cec_en) {
-				if (is_meson_gxtvbb_cpu())
+				if (rx.chip_id == CHIP_ID_GXTVBB)
 					rx_force_hpd_cfg(0);
 				else
 					rx_force_hpd_cfg(1);
@@ -1720,7 +1720,8 @@ static int hdmirx_probe(struct platform_device *pdev)
 			clk_rate = clk_get_rate(hdevp->skp_clk);
 		}
 	}
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
+	if ((rx.chip_id == CHIP_ID_TXLX) ||
+		(rx.chip_id == CHIP_ID_TXHD)) {
 		tmds_clk_fs = clk_get(&pdev->dev, "hdmirx_aud_pll2fs");
 		if (IS_ERR(tmds_clk_fs))
 			rx_pr("get tmds_clk_fs err\n");

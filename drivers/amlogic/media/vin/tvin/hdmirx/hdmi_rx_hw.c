@@ -571,7 +571,7 @@ void rx_irq_en(bool enable)
 	unsigned int data32 = 0;
 
 	if (enable) {
-		if (is_meson_txlx_cpu()) {
+		if (rx.chip_id == CHIP_ID_TXLX) {
 			data32 |= 1 << 31; /* DRC_CKS_CHG */
 			data32 |= 1 << 30; /* DRC_RCV */
 			data32 |= 0 << 29; /* AUD_TYPE_CHG */
@@ -598,7 +598,7 @@ void rx_irq_en(bool enable)
 			data32 |= 0 << 1; /* PD_FIFO_TH_MAX_PASS */
 			data32 |= 0 << 0; /* PD_FIFO_TH_MIN_PASS */
 			data32 |= pdec_ists_en;
-		} else if (is_meson_txhd_cpu()) {
+		} else if (rx.chip_id == CHIP_ID_TXHD) {
 			/* data32 |= 1 << 31;  DRC_CKS_CHG */
 			/* data32 |= 1 << 30; DRC_RCV */
 			data32 |= 0 << 29; /* AUD_TYPE_CHG */
@@ -777,7 +777,7 @@ unsigned int rx_get_hpd_sts(void)
  */
 unsigned int rx_get_scdc_clkrate_sts(void)
 {
-	if (is_meson_txhd_cpu())
+	if (rx.chip_id == CHIP_ID_TXHD)
 		return 0;
 	else
 		return (hdmirx_rd_dwc(DWC_SCDC_REGS0) >> 17) & 1;
@@ -859,7 +859,7 @@ int hdmirx_control_clk_range(unsigned long min, unsigned long max)
  */
 void set_scdc_cfg(int hpdlow, int pwrprovided)
 {
-	if (is_meson_txhd_cpu())
+	if (rx.chip_id == CHIP_ID_TXHD)
 		return;
 
 	hdmirx_wr_dwc(DWC_SCDC_CONFIG,
@@ -969,7 +969,7 @@ static int TOP_init(void)
 	data32 |= 0	<< 0;
 	hdmirx_wr_top(TOP_VID_CNTL,	data32);
 
-	if (!is_meson_txhd_cpu()) {
+	if (rx.chip_id != CHIP_ID_TXHD) {
 		data32 = 0;
 		data32 |= 0	<< 20;
 		data32 |= 0	<< 8;
@@ -1128,7 +1128,7 @@ void rx_hdcp14_config(const struct hdmi_rx_hdcp *hdcp)
 	}
 	hdmirx_wr_dwc(DWC_HDCP_BKSV1, hdcp->bksv[0]);
 	hdmirx_wr_dwc(DWC_HDCP_BKSV0, hdcp->bksv[1]);
-	if (!is_meson_txhd_cpu()) {
+	if (rx.chip_id != CHIP_ID_TXHD) {
 		hdmirx_wr_bits_dwc(DWC_HDCP_RPT_CTRL,
 			REPEATER, hdcp->repeat ? 1 : 0);
 		/* nothing attached downstream */
@@ -1355,7 +1355,8 @@ void clk_init(void)
 	data32 |= 2	<< 0;
 	wr_reg_hhi(HHI_HDMIRX_AUD_CLK_CNTL, data32);
 	#endif
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())  {
+	if ((rx.chip_id == CHIP_ID_TXLX) ||
+		(rx.chip_id == CHIP_ID_TXHD)) {
 		/* [15] hdmirx_aud_pll4x_en override enable */
 		/* [14] hdmirx_aud_pll4x_en override value */
 		/* [6:5] clk_sel for cts_hdmirx_aud_pll_clk: */
@@ -1667,7 +1668,7 @@ bool rx_clkrate_monitor(void)
 	int i;
 	int error = 0;
 
-	if (is_meson_txhd_cpu())
+	if (rx.chip_id == CHIP_ID_TXHD)
 		return false;
 
 	if (force_clk_rate & 0x10)
@@ -1738,7 +1739,7 @@ void hdmirx_hw_config(void)
 	rx_hdcp_init();
 	hdmirx_audio_init();
 	packet_init();
-	if (!is_meson_txhd_cpu())
+	if (rx.chip_id != CHIP_ID_TXHD)
 		hdmirx_20_init();
 	DWC_init();
 	hdmirx_irq_hdcp_enable(true);
@@ -1766,7 +1767,7 @@ void hdmirx_hw_probe(void)
 	hdcp22_clk_en(1);
 	hdmirx_audio_init();
 	packet_init();
-	if (!is_meson_txhd_cpu())
+	if (rx.chip_id != CHIP_ID_TXHD)
 		hdmirx_20_init();
 	hdmirx_phy_init();
 	hdmirx_wr_top(TOP_PORT_SEL, 0x10);
