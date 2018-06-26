@@ -980,6 +980,22 @@
 #define TMDS_CLK_MIN			(24000UL)
 #define TMDS_CLK_MAX			(340000UL)
 
+/*
+ * SMC CMD define
+ * call BL31 interface
+ */
+#define HDMIRX_RD_SEC_TOP	0x8200001d
+#define HDMIRX_WR_SEC_TOP	0x8200001e
+#define HDCP22_RX_ESM_READ	0x8200001f
+#define HDCP22_RX_ESM_WRITE	0x8200002f
+#define HDCP22_RX_SET_DUK_KEY	0x8200002e
+#define HDCP14_RX_SETKEY	0x8200002d
+
+enum hdcp14_key_mode_e {
+	NORMAL_MODE,
+	SECURE_MODE,
+};
+
 extern unsigned int hdmirx_addr_port;
 extern unsigned int hdmirx_data_port;
 extern unsigned int hdmirx_ctrl_port;
@@ -993,6 +1009,7 @@ extern int pd_fifo_start_cnt;
 extern int md_ists_en;
 extern int eq_ref_voltage;
 extern int aud_ch_map;
+extern int hdcp14_key_mode;
 
 extern void wr_reg_hhi(unsigned int offset, unsigned int val);
 extern unsigned int rd_reg_hhi(unsigned int offset);

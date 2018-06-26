@@ -88,6 +88,13 @@ int hdcp22_on;
 MODULE_PARM_DESC(hdcp22_on, "\n hdcp22_on\n");
 module_param(hdcp22_on, int, 0664);
 
+/*
+ * hdcp14_key_mode:hdcp1.4 key handle method select
+ * NORMAL_MODE:systemcontrol path
+ * SECURE_MODE:secure OS path
+ */
+int hdcp14_key_mode = NORMAL_MODE;
+
 int aud_ch_map;
 
 /*------------------------variable define end------------------------------*/
@@ -488,7 +495,7 @@ void sec_top_write(unsigned int *addr, unsigned int value)
 {
 	struct arm_smccc_res res;
 
-	arm_smccc_smc(0x8200001e, (unsigned long)(uintptr_t)addr,
+	arm_smccc_smc(HDMIRX_WR_SEC_TOP, (unsigned long)(uintptr_t)addr,
 					value, 0, 0, 0, 0, 0, &res);
 }
 
@@ -499,7 +506,7 @@ unsigned int sec_top_read(unsigned int *addr)
 {
 	struct arm_smccc_res res;
 
-	arm_smccc_smc(0x8200001d, (unsigned long)(uintptr_t)addr,
+	arm_smccc_smc(HDMIRX_RD_SEC_TOP, (unsigned long)(uintptr_t)addr,
 					0, 0, 0, 0, 0, 0, &res);
 
 	return (unsigned int)((res.a0)&0xffffffff);
@@ -512,7 +519,7 @@ void rx_sec_reg_write(unsigned int *addr, unsigned int value)
 {
 	struct arm_smccc_res res;
 
-	arm_smccc_smc(0x8200002f, (unsigned long)(uintptr_t)addr,
+	arm_smccc_smc(HDCP22_RX_ESM_WRITE, (unsigned long)(uintptr_t)addr,
 				value, 0, 0, 0, 0, 0, &res);
 }
 
@@ -523,7 +530,7 @@ unsigned int rx_sec_reg_read(unsigned int *addr)
 {
 	struct arm_smccc_res res;
 
-	arm_smccc_smc(0x8200001f, (unsigned long)(uintptr_t)addr,
+	arm_smccc_smc(HDCP22_RX_ESM_READ, (unsigned long)(uintptr_t)addr,
 					0, 0, 0, 0, 0, 0, &res);
 
 	return (unsigned int)((res.a0)&0xffffffff);
@@ -536,7 +543,22 @@ unsigned int rx_sec_set_duk(void)
 {
 	struct arm_smccc_res res;
 
-	arm_smccc_smc(0x8200002e, 0, 0, 0, 0, 0, 0, 0, &res);
+	arm_smccc_smc(HDCP22_RX_SET_DUK_KEY, 0, 0, 0, 0, 0, 0, 0, &res);
+
+	return (unsigned int)((res.a0)&0xffffffff);
+}
+
+/*
+ * rx_set_hdcp14_secure_key
+ */
+unsigned int rx_set_hdcp14_secure_key(void)
+{
+	struct arm_smccc_res res;
+
+	/* 0x8200002d is the SMC cmd defined in BL31,this CMD
+	 * will call set hdcp1.4 key function
+	 */
+	arm_smccc_smc(HDCP14_RX_SETKEY, 0, 0, 0, 0, 0, 0, 0, &res);
 
 	return (unsigned int)((res.a0)&0xffffffff);
 }
@@ -1110,16 +1132,37 @@ static int DWC_init(void)
 	return err;
 }
 
+void rx_hdcp14_set_normal_key(const struct hdmi_rx_hdcp *hdcp)
+{
+	unsigned int i = 0;
+	unsigned int k = 0;
+	int error = 0;
+
+	for (i = 0; i < HDCP_KEYS_SIZE; i += 2) {
+		for (k = 0; k < HDCP_KEY_WR_TRIES; k++) {
+			if (hdmirx_rd_bits_dwc(DWC_HDCP_STS,
+				HDCP_KEY_WR_OK_STS) != 0) {
+				break;
+			}
+		}
+		if (k < HDCP_KEY_WR_TRIES) {
+			hdmirx_wr_dwc(DWC_HDCP_KEY1, hdcp->keys[i + 0]);
+			hdmirx_wr_dwc(DWC_HDCP_KEY0, hdcp->keys[i + 1]);
+		} else {
+			error = -EAGAIN;
+			break;
+		}
+	}
+	hdmirx_wr_dwc(DWC_HDCP_BKSV1, hdcp->bksv[0]);
+	hdmirx_wr_dwc(DWC_HDCP_BKSV0, hdcp->bksv[1]);
+}
 /*
  * hdmi_rx_ctrl_hdcp_config - config hdcp1.4 keys
  */
 void rx_hdcp14_config(const struct hdmi_rx_hdcp *hdcp)
 {
-	int error = 0;
-	unsigned int i = 0;
-	unsigned int k = 0;
-
 	unsigned int data32 = 0;
+
 	/* I2C_SPIKE_SUPPR */
 	data32 |= 1 << 16;
 	/* FAST_I2C */
@@ -1143,24 +1186,13 @@ void rx_hdcp14_config(const struct hdmi_rx_hdcp *hdcp)
 	/* hdmirx_wr_bits_dwc(ctx, DWC_HDCP_CTRL, KEY_DECRYPT_ENABLE, 1); */
 	hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, KEY_DECRYPT_ENABLE, 0);
 	hdmirx_wr_dwc(DWC_HDCP_SEED, hdcp->seed);
-	for (i = 0; i < HDCP_KEYS_SIZE; i += 2) {
-
-		for (k = 0; k < HDCP_KEY_WR_TRIES; k++) {
-			if (hdmirx_rd_bits_dwc(DWC_HDCP_STS,
-				HDCP_KEY_WR_OK_STS) != 0) {
-				break;
-			}
-		}
-		if (k < HDCP_KEY_WR_TRIES) {
-			hdmirx_wr_dwc(DWC_HDCP_KEY1, hdcp->keys[i + 0]);
-			hdmirx_wr_dwc(DWC_HDCP_KEY0, hdcp->keys[i + 1]);
-		} else {
-			error = -EAGAIN;
-			break;
-		}
+	if (hdcp14_key_mode == SECURE_MODE) {
+		rx_set_hdcp14_secure_key();
+		rx_pr("hdcp1.4 secure mode\n");
+	} else {
+		rx_hdcp14_set_normal_key(&rx.hdcp);
+		rx_pr("hdcp1.4 normal mode\n");
 	}
-	hdmirx_wr_dwc(DWC_HDCP_BKSV1, hdcp->bksv[0]);
-	hdmirx_wr_dwc(DWC_HDCP_BKSV0, hdcp->bksv[1]);
 	if (rx.chip_id != CHIP_ID_TXHD) {
 		hdmirx_wr_bits_dwc(DWC_HDCP_RPT_CTRL,
 			REPEATER, hdcp->repeat ? 1 : 0);

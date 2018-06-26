@@ -1026,6 +1026,15 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 		}
 		/*mutex_unlock(&pktbuff_lock);*/
 		break;
+	case HDMI_IOC_HDCP14_KEY_MODE:
+		if (copy_from_user(&hdcp14_key_mode, argp,
+			sizeof(enum hdcp14_key_mode_e))) {
+			ret = -EFAULT;
+			pr_info("HDMI_IOC_HDCP14_KEY_MODE err\n\n");
+			break;
+		}
+		rx_pr("hdcp1.4 key mode-%d\n", hdcp14_key_mode);
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 		break;

@@ -1262,8 +1262,8 @@ bool is_unnormal_format(uint8_t wait_cnt)
 		if (sig_stable_max == wait_cnt)
 			rx_pr("hdcp14 unfinished\n");
 		if (unnormal_wait_max == wait_cnt) {
-			if ((rx.hdcp.bksv[0] == 0) &&
-				(rx.hdcp.bksv[1] == 0))
+			if ((hdmirx_rd_dwc(DWC_HDCP_KEY1) == 0) &&
+				(hdmirx_rd_dwc(DWC_HDCP_KEY0) == 0))
 				rx.err_code = ERR_NO_HDCP14_KEY;
 			ret = false;
 		}
@@ -2720,9 +2720,9 @@ static void dump_hdcp_data(void)
 	rx_pr("\n hdcp-seed = %d ",
 		rx.hdcp.seed);
 	/* KSV CONFIDENTIAL */
-	rx_pr("\n hdcp-ksv = %x---%x",
-		rx.hdcp.bksv[0],
-		rx.hdcp.bksv[1]);
+	rx_pr("hdcp-bksv = %x---%x",
+		hdmirx_rd_dwc(DWC_HDCP_BKSV1),
+		hdmirx_rd_dwc(DWC_HDCP_BKSV0));
 	rx_pr("\n*************HDCP end**********\n");
 }
 

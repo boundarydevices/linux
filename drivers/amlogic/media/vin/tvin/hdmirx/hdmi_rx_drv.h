@@ -41,7 +41,7 @@
  *
  *
  */
-#define RX_VER1 "ver.2018/06/26"
+#define RX_VER1 "ver.2018/07/19"
 /*
  *
  *
@@ -129,6 +129,8 @@ struct hdmirx_dev_s {
 		uint32_t)
 #define HDMI_IOC_GET_PD_FIFO_PARAM _IOWR(HDMI_IOC_MAGIC, 0x0c,\
 	struct pd_infoframe_s)
+#define HDMI_IOC_HDCP14_KEY_MODE _IOR(HDMI_IOC_MAGIC, 0x0d,\
+	enum hdcp14_key_mode_e)
 
 #define IOC_SPD_INFO  _BIT(0)
 #define IOC_AUD_INFO  _BIT(1)
