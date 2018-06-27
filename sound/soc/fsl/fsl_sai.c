@@ -5,6 +5,7 @@
 // Copyright 2012-2015 Freescale Semiconductor, Inc.
 
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/dmaengine.h>
 #include <linux/module.h>
@@ -204,6 +205,50 @@ static int fsl_sai_set_dai_sysclk_tr(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
+static int fsl_sai_set_mclk_rate(struct snd_soc_dai *dai, int clk_id,
+		unsigned int freq)
+{
+	struct fsl_sai *sai = snd_soc_dai_get_drvdata(dai);
+	struct clk *p = sai->mclk_clk[clk_id], *pll = 0, *npll = 0;
+	u64 ratio = freq;
+	int ret;
+
+	while (p && sai->pll8k_clk && sai->pll11k_clk) {
+		struct clk *pp = clk_get_parent(p);
+
+		if (clk_is_match(pp, sai->pll8k_clk) ||
+		    clk_is_match(pp, sai->pll11k_clk)) {
+			pll = pp;
+			break;
+		}
+		p = pp;
+	}
+
+	if (pll) {
+		npll = (do_div(ratio, 8000) ? sai->pll11k_clk : sai->pll8k_clk);
+		if (!clk_is_match(pll, npll)) {
+			if (sai->mclk_streams == 0) {
+				ret = clk_set_parent(p, npll);
+				if (ret < 0)
+					dev_warn(dai->dev,
+						"failed to set parent %s: %d\n",
+						__clk_get_name(npll), ret);
+			} else {
+				dev_err(dai->dev,
+					"PLL %s is in use by a running stream.\n",
+					__clk_get_name(pll));
+				return -EINVAL;
+			}
+		}
+	}
+
+	ret = clk_set_rate(sai->mclk_clk[clk_id], freq);
+	if (ret < 0)
+		dev_err(dai->dev, "failed to set clock rate (%u): %d\n",
+				freq, ret);
+	return ret;
+}
+
 static int fsl_sai_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 		int clk_id, unsigned int freq, int dir)
 {
@@ -224,12 +269,9 @@ static int fsl_sai_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 			return -EINVAL;
 		}
 
-		ret = clk_set_rate(sai->mclk_clk[clk_id], freq);
-		if (ret < 0) {
-			dev_err(cpu_dai->dev, "failed to set clock rate (%u): %d\n",
-					freq, ret);
+		ret = fsl_sai_set_mclk_rate(cpu_dai, clk_id, freq);
+		if (ret < 0)
 			return ret;
-		}
 	}
 
 	ret = fsl_sai_set_dai_sysclk_tr(cpu_dai, clk_id, freq,
@@ -1238,6 +1280,14 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		sai->mclk_clk[0] = sai->mclk_clk[1];
 	else
 		sai->mclk_clk[0] = sai->bus_clk;
+
+	sai->pll8k_clk = devm_clk_get(&pdev->dev, "pll8k");
+	if (IS_ERR(sai->pll8k_clk))
+		sai->pll8k_clk = NULL;
+
+	sai->pll11k_clk = devm_clk_get(&pdev->dev, "pll11k");
+	if (IS_ERR(sai->pll11k_clk))
+		sai->pll11k_clk = NULL;
 
 	if (of_find_property(np, "fsl,sai-multi-lane", NULL))
 		sai->is_multi_lane = true;
