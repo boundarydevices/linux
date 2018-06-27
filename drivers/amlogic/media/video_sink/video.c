@@ -219,6 +219,7 @@ static u32 next_peek_underflow;
 
 static DEFINE_SPINLOCK(video_onoff_lock);
 static int video_onoff_state = VIDEO_ENABLE_STATE_IDLE;
+static u32 video_onoff_time;
 static DEFINE_SPINLOCK(video2_onoff_lock);
 static int video2_onoff_state = VIDEO_ENABLE_STATE_IDLE;
 static u32 hdmiin_frame_check;
@@ -6291,6 +6292,7 @@ SET_FILTER:
 				VPP_POSTBLEND_EN;
 
 			video_onoff_state = VIDEO_ENABLE_STATE_IDLE;
+			video_onoff_time = jiffies_to_msecs(jiffies);
 
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
 				pr_info("VsyncEnableVideoLayer\n");
@@ -6306,6 +6308,7 @@ SET_FILTER:
 			VSYNC_WR_MPEG_REG(VPP_SRSHARP0_CTRL, 0);
 			VSYNC_WR_MPEG_REG(VPP_SRSHARP1_CTRL, 0);
 			video_onoff_state = VIDEO_ENABLE_STATE_IDLE;
+			video_onoff_time = jiffies_to_msecs(jiffies);
 			vpu_delay_work_flag |=
 				VPU_VIDEO_LAYER1_CHANGED;
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
@@ -6349,6 +6352,7 @@ SET_FILTER:
 			else
 				vpp_misc_set |= (0x1ff << VPP_VD2_ALPHA_BIT);
 			video2_onoff_state = VIDEO_ENABLE_STATE_IDLE;
+			video_onoff_time = jiffies_to_msecs(jiffies);
 
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
 				pr_info("VsyncEnableVideoLayer2\n");
@@ -6356,6 +6360,7 @@ SET_FILTER:
 			vpp_misc_set &= ~(VPP_VD2_PREBLEND |
 				VPP_VD2_POSTBLEND | VPP_PREBLEND_EN);
 			video2_onoff_state = VIDEO_ENABLE_STATE_IDLE;
+			video_onoff_time = jiffies_to_msecs(jiffies);
 
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
 				pr_info("VsyncDisableVideoLayer2\n");
@@ -7600,9 +7605,23 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		put_user(video_global_output, (u32 __user *)argp);
 		break;
 
-	case AMSTREAM_IOC_GET_VIDEO_LAYER1_ON:
-		put_user(video_onoff_state, (u32 __user *)argp);
-		break;
+	case AMSTREAM_IOC_GET_VIDEO_LAYER1_ON: {
+			u32 vsync_duration;
+			u32 video_onoff_diff = 0;
+
+			vsync_duration = vsync_pts_inc / 90;
+			video_onoff_diff =
+				jiffies_to_msecs(jiffies) - video_onoff_time;
+
+			if (video_onoff_state == VIDEO_ENABLE_STATE_IDLE) {
+				/* wait until 5ms after next vsync */
+				msleep(video_onoff_diff < vsync_duration
+					? vsync_duration - video_onoff_diff + 5
+					: 0);
+			}
+			put_user(video_onoff_state, (u32 __user *)argp);
+			break;
+		}
 
 	case AMSTREAM_IOC_SET_VIDEOPEEK:
 		videopeek = true;
