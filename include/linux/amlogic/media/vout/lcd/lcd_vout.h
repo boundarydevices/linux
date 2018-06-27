@@ -291,6 +291,8 @@ struct dsi_config_s {
 	unsigned char check_reg;
 	unsigned char check_cnt;
 	unsigned char check_state;
+
+	unsigned char current_mode;
 };
 
 struct lcd_control_config_s {

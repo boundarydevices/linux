@@ -614,6 +614,7 @@ static void set_mipi_dsi_host(unsigned int vcid, unsigned int chroma_subsample,
 	struct dsi_config_s *dconf;
 
 	dconf = p->lcd_control.mipi_config;
+	dconf->current_mode = operation_mode;
 	venc_data_width = dconf->venc_data_width;
 	dpi_data_format = dconf->dpi_data_format;
 	lane_num        = (unsigned int)(dconf->lane_num);
@@ -757,6 +758,32 @@ static void set_mipi_dsi_host(unsigned int vcid, unsigned int chroma_subsample,
 		dsi_host_write(MIPI_DSI_DWC_PHY_TMR_LPCLK_CFG_OS, 0x870025);
 	else
 		dsi_host_write(MIPI_DSI_DWC_PHY_TMR_LPCLK_CFG_OS, 0x260017);
+}
+
+int dsi_set_operation_mode(unsigned char op_mode)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	struct lcd_config_s *pconf;
+	unsigned char cur_mode;
+
+	op_mode = (op_mode == 0) ? 0 : 1;
+	pconf = lcd_drv->lcd_config;
+	cur_mode = pconf->lcd_control.mipi_config->current_mode;
+	if (cur_mode != op_mode) {
+		set_mipi_dsi_host(MIPI_DSI_VIRTUAL_CHAN_ID,
+			0, /* Chroma sub sample, only for
+			    * YUV 422 or 420, even or odd
+			    */
+			op_mode, /* DSI operation mode, video or command */
+			pconf);
+		LCDPR("set mipi-dsi operation mode: %s(%d)\n",
+			operation_mode_table[op_mode], op_mode);
+	} else {
+		LCDPR("same mipi-dsi operation mode: %s(%d), exit\n",
+			operation_mode_table[op_mode], op_mode);
+	}
+
+	return 0;
 }
 
 /* *************************************************************

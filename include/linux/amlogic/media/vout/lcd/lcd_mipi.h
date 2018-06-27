@@ -49,4 +49,7 @@ extern int dsi_write_cmd(unsigned char *payload);
  */
 extern int dsi_read_single(unsigned char *payload, unsigned char *rd_data,
 		unsigned int rd_byte_len);
+
+extern int dsi_set_operation_mode(unsigned char op_mode);
+
 #endif

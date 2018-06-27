@@ -2880,6 +2880,80 @@ static ssize_t lcd_mipi_cmd_debug_store(struct class *class,
 	return count;
 }
 
+/* [0]=reg_addr, [1]=read_cnt */
+static unsigned char lcd_mipi_read_buf[2] = {0xff, 0};
+static ssize_t lcd_mipi_read_debug_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	int ret = 0, i, len;
+	unsigned char reg, cnt, *rd_data;
+	unsigned char payload[3] = {DT_GEN_RD_1, 1, 0x04};
+
+	if ((lcd_drv->lcd_status & LCD_STATUS_IF_ON) == 0)
+		return sprintf(buf, "error: panel is disabled\n");
+
+	reg = lcd_mipi_read_buf[0];
+	cnt = lcd_mipi_read_buf[1];
+	if (reg == 0xff)
+		return sprintf(buf, "reg address is invalid\n");
+	if (cnt == 0)
+		return sprintf(buf, "read count is invalid\n");
+
+	rd_data = kcalloc(cnt, sizeof(unsigned char), GFP_KERNEL);
+	if (rd_data == NULL)
+		return sprintf(buf, "rd_data buf error\n");
+
+	payload[2] = reg;
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+	ret = dsi_read_single(payload, rd_data, cnt);
+	if (ret < 0) {
+		kfree(rd_data);
+		return sprintf(buf, "mipi-dsi read error\n");
+	}
+	if (ret > cnt) {
+		kfree(rd_data);
+		return sprintf(buf, "mipi-dsi read 0x%02x back cnt is wrong\n",
+			reg);
+	}
+#endif
+
+	len = sprintf(buf, "read reg 0x%02x: ", reg);
+	for (i = 0; i < ret; i++) {
+		if (i == 0)
+			len += sprintf(buf+len, "0x%02x", rd_data[i]);
+		else
+			len += sprintf(buf+len, ",0x%02x", rd_data[i]);
+	}
+	len += sprintf(buf+len, "\n");
+
+	kfree(rd_data);
+	return len;
+}
+
+static ssize_t lcd_mipi_read_debug_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	unsigned int para[2];
+	int ret = 0;
+
+	if ((lcd_drv->lcd_status & LCD_STATUS_IF_ON) == 0) {
+		LCDERR("panel is disabled\n");
+		return count;
+	}
+
+	ret = sscanf(buf, "%x %d", &para[0], &para[1]);
+	if (ret < 2) {
+		pr_info("invalid data\n");
+		return count;
+	}
+	lcd_mipi_read_buf[0] = (unsigned char)para[0];
+	lcd_mipi_read_buf[1] = (unsigned char)para[1];
+
+	return count;
+}
+
 static ssize_t lcd_mipi_state_debug_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -2892,6 +2966,46 @@ static ssize_t lcd_mipi_state_debug_show(struct class *class,
 		lcd_drv->lcd_config->lcd_control.mipi_config->check_state,
 		lcd_drv->lcd_config->lcd_control.mipi_config->check_en,
 		state_save);
+}
+
+static ssize_t lcd_mipi_mode_debug_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	unsigned char mode;
+
+	if ((lcd_drv->lcd_status & LCD_STATUS_IF_ON) == 0)
+		return sprintf(buf, "error: panel is disabled\n");
+
+	mode = lcd_drv->lcd_config->lcd_control.mipi_config->current_mode;
+	return sprintf(buf, "current mipi-dsi operation mode: %s(%d)\n",
+		(mode ? "command" : "video"), mode);
+}
+
+static ssize_t lcd_mipi_mode_debug_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	unsigned int temp;
+	unsigned char mode;
+	int ret = 0;
+
+	if ((lcd_drv->lcd_status & LCD_STATUS_IF_ON) == 0) {
+		LCDERR("panel is disabled\n");
+		return count;
+	}
+
+	ret = kstrtouint(buf, 10, &temp);
+	if (ret) {
+		pr_info("invalid data\n");
+		return -EINVAL;
+	}
+	mode = (unsigned char)temp;
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+	dsi_set_operation_mode(mode);
+#endif
+
+	return count;
 }
 
 static struct class_attribute lcd_interface_debug_class_attrs[] = {
@@ -2915,7 +3029,11 @@ static struct class_attribute lcd_phy_debug_class_attrs[] = {
 static struct class_attribute lcd_mipi_debug_class_attrs[] = {
 	__ATTR(mpcmd,    0644,
 		lcd_mipi_cmd_debug_show, lcd_mipi_cmd_debug_store),
+	__ATTR(mpread,   0644,
+		lcd_mipi_read_debug_show, lcd_mipi_read_debug_store),
 	__ATTR(mpstate,  0644, lcd_mipi_state_debug_show, NULL),
+	__ATTR(mpmode,   0644,
+		lcd_mipi_mode_debug_show, lcd_mipi_mode_debug_store),
 };
 
 int lcd_class_creat(void)
