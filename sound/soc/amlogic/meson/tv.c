@@ -63,7 +63,35 @@
 #define AML_EQ_PARAM_LENGTH 100
 #define AML_DRC_PARAM_LENGTH 12
 #define AML_REG_BYTES 4
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+static int hdmiin_fifo_disable_count;
 
+/* copy from drivers/amlogic/tvin/hdmirx/hdmirx_drv.h */
+struct hdmi_in_audio_status {
+	/*audio packets received*/
+	bool aud_rcv_flag;
+	/*audio stable status*/
+	bool aud_stb_flag;
+	/*audio sample rate*/
+	int aud_sr;
+	/*audio channel count*/
+	/*0: refer to stream header,*/
+	/*1: 2ch, 2: 3ch, 3: 4ch, 4: 5ch,*/
+	/*5: 6ch, 6: 7ch, 7: 8ch*/
+	int aud_channel_cnt;
+	/*audio coding type*/
+	/*0: refer to stream header, 1: IEC60958 PCM,*/
+	/*2: AC-3, 3: MPEG1 (Layers 1 and 2),*/
+	/*4: MP3 (MPEG1 Layer 3), 5: MPEG2 (multichannel),*/
+	/*6: AAC, 7: DTS, 8: ATRAC, 9: One Bit Audio,*/
+	/*10: Dolby Digital Plus, 11: DTS-HD,*/
+	/*12: MAT (MLP), 13: DST, 14: WMA Pro*/
+	int aud_type;
+	/* indicate if audio FIFO start threshold is crossed */
+	bool afifo_thres_pass;
+};
+
+#endif
 static u32 aml_EQ_table[AML_EQ_PARAM_LENGTH] = {
 	/*channel 1 param*/
 	0x800000, 0x00, 0x00, 0x00, 0x00, /*eq_ch1_coef0*/
@@ -224,6 +252,22 @@ static int aml_spdif_audio_type_get_enum(
 			break;
 		}
 	}
+	/* HDMI in,also check the hdmirx  fifo status*/
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+	if (audio_in_source == 2) {
+		struct hdmi_in_audio_status aud_sts;
+		struct rx_audio_stat_s *rx_aud_sts;
+
+		rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
+		rx_get_audio_status(rx_aud_sts);
+		if (aud_sts.afifo_thres_pass == true)
+			hdmiin_fifo_disable_count = 0;
+		else
+			hdmiin_fifo_disable_count++;
+		if (hdmiin_fifo_disable_count > 200)
+			audio_type = 6/*PAUSE*/;
+	}
+#endif
 	ucontrol->value.enumerated.item[0] = audio_type;
 
 	return 0;
@@ -480,28 +524,7 @@ static int aml_get_atmos_audio_edid(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[0] = p_aml_audio->atmos_edid_enable;
 	return 0;
 }
-/* copy from drivers/amlogic/tvin/hdmirx/hdmirx_drv.h */
-struct hdmi_in_audio_status {
-	/*audio packets received*/
-	bool aud_rcv_flag;
-	/*audio stable status*/
-	bool aud_stb_flag;
-	/*audio sample rate*/
-	int aud_sr;
-	/*audio channel count*/
-	/*0: refer to stream header,*/
-	/*1: 2ch, 2: 3ch, 3: 4ch, 4: 5ch,*/
-	/*5: 6ch, 6: 7ch, 7: 8ch*/
-	int aud_channel_cnt;
-	/*audio coding type*/
-	/*0: refer to stream header, 1: IEC60958 PCM,*/
-	/*2: AC-3, 3: MPEG1 (Layers 1 and 2),*/
-	/*4: MP3 (MPEG1 Layer 3), 5: MPEG2 (multichannel),*/
-	/*6: AAC, 7: DTS, 8: ATRAC, 9: One Bit Audio,*/
-	/*10: Dolby Digital Plus, 11: DTS-HD,*/
-	/*12: MAT (MLP), 13: DST, 14: WMA Pro*/
-	int aud_type;
-};
+;
 static const char *const hdmi_in_is_stable[] = {
 	"false",
 	"true"

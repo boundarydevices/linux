@@ -480,6 +480,8 @@ struct rx_audio_stat_s {
 	/*10: Dolby Digital Plus, 11: DTS-HD,*/
 	/*12: MAT (MLP), 13: DST, 14: WMA Pro*/
 	int aud_type;
+	/* indicate if audio fifo start threshold is crossed */
+	bool afifo_thres_pass;
 };
 
 extern int adc_set_pll_cntl(bool on, unsigned int module_sel, void *pDtvPara);

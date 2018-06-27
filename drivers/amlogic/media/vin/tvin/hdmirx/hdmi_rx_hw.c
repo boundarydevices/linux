@@ -746,6 +746,9 @@ void rx_get_audio_status(struct rx_audio_stat_s *aud_sts)
 		aud_sts->aud_sr = rx.aud_info.real_sr;
 		aud_sts->aud_channel_cnt = rx.aud_info.channel_count;
 		aud_sts->aud_type = rx.aud_info.coding_type;
+		aud_sts->afifo_thres_pass =
+			((hdmirx_rd_dwc(DWC_AUD_FIFO_STS) &
+			THS_PASS_STS) == 0) ? false : true;
 	} else {
 		memset(aud_sts, 0,
 			sizeof(struct rx_audio_stat_s));

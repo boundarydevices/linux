@@ -487,8 +487,9 @@
 #define DWC_AUD_PAO_CTRL         (0x264UL)
 /** Register address: audio FIFO status */
 #define DWC_AUD_FIFO_STS         (0x27CUL)
-	#define OVERFL_STS		_BIT(4)
-	#define UNDERFL_STS		_BIT(3)
+#define OVERFL_STS _BIT(4)
+#define UNDERFL_STS _BIT(3)
+#define THS_PASS_STS _BIT(2)
 
 #define DWC_AUDPLL_GEN_CTS       (0x280UL)
 #define DWC_AUDPLL_GEN_N         (0x284UL)
