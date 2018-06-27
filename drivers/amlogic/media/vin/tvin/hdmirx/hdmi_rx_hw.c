@@ -76,7 +76,7 @@ bool hdcp_enable = 1;
 int acr_mode;
 int auto_aclk_mute = 2;
 int aud_avmute_en = 1;
-int aud_mute_sel;
+int aud_mute_sel = 2;
 int force_clk_rate;
 int md_ists_en = VIDEO_MODE;
 int pdec_ists_en;/* = AVI_CKS_CHG | DVIDET | DRM_CKS_CHG | DRM_RCV_EN;*/
@@ -738,7 +738,8 @@ void rx_get_audinfo(struct aud_info_s *audio_info)
  */
 void rx_get_audio_status(struct rx_audio_stat_s *aud_sts)
 {
-	if (rx.state == FSM_SIG_READY) {
+	if ((rx.state == FSM_SIG_READY) &&
+		(rx.avmute_skip == 0)) {
 		aud_sts->aud_rcv_flag =
 			(rx.aud_info.aud_packet_received == 0) ? false : true;
 		aud_sts->aud_stb_flag = true;

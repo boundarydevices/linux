@@ -1256,6 +1256,14 @@ bool is_unnormal_format(uint8_t wait_cnt)
 			ret = false;
 		}
 	}
+	if (rx.hdcp.hdcp_version == HDCP_VER_NONE) {
+		ret = true;
+		if (wait_cnt == hdcp_none_wait_max) {
+			ret = false;
+			if (log_level & VIDEO_LOG)
+				rx_pr("hdcp none waiting\n");
+		}
+	}
 	if ((ret == false) && (wait_cnt != sig_stable_max))
 		if (log_level & VIDEO_LOG)
 			rx_pr("unnormal_format wait cnt = %d\n",
@@ -1283,12 +1291,6 @@ bool is_unnormal_format(uint8_t wait_cnt)
 			rx_pr("hdcp14 unfinished\n");
 		}
 	#endif
-	if (rx.hdcp.hdcp_version == HDCP_VER_NONE) {
-		if (wait_cnt < hdcp_none_wait_max)
-			ret = true;
-		if (log_level & VIDEO_LOG)
-			rx_pr("hdcp none waiting\n");
-	}
 	return ret;
 }
 
