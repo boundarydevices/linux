@@ -716,7 +716,7 @@ int aml_sd_emmc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 	u32 clock, clk_div;
 	u32 adj_delay_find;
 	int best_win_start = -1, best_win_size = 0;
-	u32 rxdly[4] = {0x44444444, 0x88888888, 0xcccccccc, 0xFFFFFFFF};
+	u32 rxdly[4] = {0, 0x55555555, 0xAAAAAAAA, 0xFFFFFFFF};
 
 	writel(0, host->base + SD_EMMC_ADJUST);
 
@@ -756,7 +756,7 @@ tunning:
 		pr_warn("wave is not sharp, again\n");
 		/* add basic data rx delay */
 		writel(rxdly[tuning_num-1], host->base + SD_EMMC_DELAY);
-		pr_warn("rxdly @ %x\n", rxdly[tuning_num-1]);
+		pr_warn("rxdly @ %d is %x\n", tuning_num, rxdly[tuning_num-1]);
 		goto tunning;
 	} else {
 		pr_info("%s: best_win_start =%d, best_win_size =%d\n",
