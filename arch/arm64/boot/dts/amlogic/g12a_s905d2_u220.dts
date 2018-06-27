@@ -821,7 +821,7 @@
 		 * 3: spdifout;
 		 * 4: spdifout_b;
 		 */
-		samesource_sel = <4>;
+		samesource_sel = <3>;
 	};
 
 	aml_tdmc: tdmc {
