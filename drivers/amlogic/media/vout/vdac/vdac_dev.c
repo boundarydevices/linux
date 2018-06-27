@@ -152,7 +152,7 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 			vdac_cntl0_bit9 &= ~VDAC_MODULE_CVBS_OUT;
 		break;
 	case VDAC_MODULE_AUDIO_OUT: /* audio out ctrl*/
-		if (is_meson_txlx_cpu()) {
+		if (is_meson_txl_cpu() || is_meson_txlx_cpu()) {
 			if (on)
 				vdac_cntl0_bit9 |= VDAC_MODULE_AUDIO_OUT;
 			else
@@ -170,7 +170,7 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 	else
 		enable = 1;
 
-	if (is_meson_txlx_cpu())
+	if (is_meson_txl_cpu() || is_meson_txlx_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 9, 1);
 	else if (is_meson_g12a_cpu() ||
 			is_meson_g12b_cpu())
@@ -324,7 +324,7 @@ void vdac_out_cntl1_bit3(bool on, unsigned int module_sel)
 	else
 		enable = 1;
 
-	if (is_meson_txlx_cpu())
+	if (is_meson_txl_cpu() || is_meson_txlx_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, enable, 3, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, ~enable, 3, 1);
@@ -466,7 +466,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 		}
 		break;
 	case VDAC_MODULE_AUDIO_OUT: /* audio demod */
-		if (is_meson_txlx_cpu()) {
+		if (is_meson_txl_cpu() || is_meson_txlx_cpu()) {
 			if (on)
 				ana_ref_cntl0_bit9(1, VDAC_MODULE_AUDIO_OUT);
 			else
