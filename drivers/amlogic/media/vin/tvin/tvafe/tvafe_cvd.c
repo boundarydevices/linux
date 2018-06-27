@@ -32,6 +32,7 @@
 #include "tvafe_debug.h"
 #include "tvafe_general.h"
 #include "../vdin/vdin_regs.h"
+#include "../vdin/vdin_ctl.h"
 /***************************Local defines**********************************/
 
 #define TVAFE_CVD2_SHIFT_CNT                6
@@ -413,6 +414,12 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 		W_APB_REG(((CVD_BASE_ADD+CVD_PART1_REG_MIN+i)<<2),
 				(cvd_part1_table[cvd2->config_fmt-
 				TVIN_SIG_FMT_CVBS_NTSC_M][i]));
+	}
+
+	/*setting for txhd snow*/
+	if (tvafe_cpu_type() == CPU_TYPE_TXHD) {
+		W_APB_BIT(CVD2_OUTPUT_CONTROL, 3, 5, 2);
+		W_APB_REG(ACD_REG_6C, 0x80500000);
 	}
 
 	/* load CVD2 reg 0x70~ff (char) */
@@ -2584,7 +2591,8 @@ void tvafe_cvd2_set_reg8a(unsigned int v)
 }
 void tvafe_snow_config(unsigned int onoff)
 {
-	if (tvafe_snow_function_flag == 0)
+	if (tvafe_snow_function_flag == 0 ||
+		tvafe_cpu_type() == CPU_TYPE_TXHD)
 		return;
 	if (onoff)
 		W_APB_BIT(CVD2_OUTPUT_CONTROL, 3, BLUE_MODE_BIT, BLUE_MODE_WID);
@@ -2594,6 +2602,11 @@ void tvafe_snow_config(unsigned int onoff)
 
 void tvafe_snow_config_clamp(unsigned int onoff)
 {
+	if (tvafe_cpu_type() == CPU_TYPE_TXHD) {
+		if (onoff)
+			vdin_adjust_tvafesnow_brightness();
+		return;
+	}
 	if (tvafe_snow_function_flag == 0)
 		return;
 	if (onoff)

@@ -909,6 +909,16 @@ void vdin_set_cutwin(struct vdin_dev_s *devp)
 
 }
 
+/*adjust the brightness for txhd hardware snow*/
+void vdin_adjust_tvafesnow_brightness(void)
+{
+	wr(0, VDIN_MATRIX_CTRL, 0x7);
+	wr(0, VDIN_MATRIX_OFFSET0_1, 0x200);
+	wr(0, VDIN_MATRIX_OFFSET2, 0x200);
+	wr(0, VDIN_MATRIX_COEF00_01, 0x6000000);
+}
+EXPORT_SYMBOL(vdin_adjust_tvafesnow_brightness);
+
 void vdin_set_config(struct vdin_dev_s *devp)
 {
 	if (is_meson_gxbb_cpu() || is_meson_gxm_cpu() || is_meson_gxl_cpu())
