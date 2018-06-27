@@ -541,13 +541,13 @@ static MESON_GATE(txlx_audio_locker, HHI_GCLK_MPEG0, 2);
 static MESON_GATE(txlx_isa, HHI_GCLK_MPEG0, 5);
 static MESON_GATE(txlx_pl301, HHI_GCLK_MPEG0, 6);
 static MESON_GATE(txlx_periphs, HHI_GCLK_MPEG0, 7);
-static MESON_GATE(txlx_spicc_0, HHI_GCLK_MPEG0, 8);
+//static MESON_GATE(txlx_spicc_0, HHI_GCLK_MPEG0, 8);
 static MESON_GATE(txlx_i2c, HHI_GCLK_MPEG0, 9);
 static MESON_GATE(txlx_sana, HHI_GCLK_MPEG0, 10);
 static MESON_GATE(txlx_smart_card, HHI_GCLK_MPEG0, 11);
 static MESON_GATE(txlx_rng0, HHI_GCLK_MPEG0, 12);
 static MESON_GATE(txlx_uart0, HHI_GCLK_MPEG0, 13);
-static MESON_GATE(txlx_spicc_1, HHI_GCLK_MPEG0, 14);
+//static MESON_GATE(txlx_spicc_1, HHI_GCLK_MPEG0, 14);
 static MESON_GATE(txlx_stream, HHI_GCLK_MPEG0, 15);
 static MESON_GATE(txlx_async_fifo, HHI_GCLK_MPEG0, 16);
 static MESON_GATE(txlx_hiu_reg, HHI_GCLK_MPEG0, 19);
@@ -628,6 +628,32 @@ static MESON_GATE(txlx_ao_ahb_sram, HHI_GCLK_AO, 1);
 static MESON_GATE(txlx_ao_ahb_bus, HHI_GCLK_AO, 2);
 static MESON_GATE(txlx_ao_iface, HHI_GCLK_AO, 3);
 static MESON_GATE(txlx_ao_i2c, HHI_GCLK_AO, 4);
+
+static struct clk_gate txlx_spicc_0 = {
+	.reg = (void *)HHI_GCLK_MPEG0,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "txlx_spicc_0",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "clk81" },
+		.num_parents = 1,
+		.flags = 0,
+	},
+};
+
+static struct clk_gate txlx_spicc_1 = {
+	.reg = (void *)HHI_GCLK_MPEG0,
+	.bit_idx = 14,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "txlx_spicc_1",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "clk81" },
+		.num_parents = 1,
+		.flags = 0,
+	},
+};
 
 /* Array of all clocks provided by this provider */
 

@@ -619,6 +619,31 @@ static struct clk_gate axg_clk81 = {
 	},
 };
 
+static struct clk_gate axg_spicc_0 = {
+	.reg = (void *)HHI_GCLK_MPEG0,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "axg_spicc_0",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "clk81" },
+		.num_parents = 1,
+		.flags = 0,
+	},
+};
+
+static struct clk_gate axg_spicc_1 = {
+	.reg = (void *)HHI_GCLK_MPEG0,
+	.bit_idx = 15,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "axg_spicc_1",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "clk81" },
+		.num_parents = 1,
+		.flags = 0,
+	},
+};
 /* Everything Else (EE) domain gates */
 static MESON_GATE(axg_ddr, HHI_GCLK_MPEG0, 0);
 static MESON_GATE(axg_audio_locker, HHI_GCLK_MPEG0, 2);
@@ -626,12 +651,12 @@ static MESON_GATE(axg_mipi_dsi_host, HHI_GCLK_MPEG0, 3);
 static MESON_GATE(axg_isa, HHI_GCLK_MPEG0, 5);
 static MESON_GATE(axg_pl301, HHI_GCLK_MPEG0, 6);
 static MESON_GATE(axg_periphs, HHI_GCLK_MPEG0, 7);
-static MESON_GATE(axg_spicc_0, HHI_GCLK_MPEG0, 8);
+//static MESON_GATE(axg_spicc_0, HHI_GCLK_MPEG0, 8);
 static MESON_GATE(axg_i2c, HHI_GCLK_MPEG0, 9);
 static MESON_GATE(axg_rng0, HHI_GCLK_MPEG0, 12);
 static MESON_GATE(axg_uart0, HHI_GCLK_MPEG0, 13);
 static MESON_GATE(axg_mipi_dsi_phy, HHI_GCLK_MPEG0, 14);
-static MESON_GATE(axg_spicc_1, HHI_GCLK_MPEG0, 15);
+//static MESON_GATE(axg_spicc_1, HHI_GCLK_MPEG0, 15);
 static MESON_GATE(axg_pcie_a, HHI_GCLK_MPEG0, 16);
 static MESON_GATE(axg_pcie_b, HHI_GCLK_MPEG0, 17);
 static MESON_GATE(axg_hiu_reg, HHI_GCLK_MPEG0, 19);

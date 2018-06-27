@@ -404,6 +404,19 @@ struct clk_gate meson8b_clk81 = {
 	},
 };
 
+static struct clk_gate meson8b_spicc = {
+	.reg = (void *)HHI_GCLK_MPEG0,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "meson8b_spicc",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "clk81" },
+		.num_parents = 1,
+		.flags = 0,
+	},
+};
+
 /* Everything Else (EE) domain gates */
 
 static MESON_GATE(meson8b_ddr, HHI_GCLK_MPEG0, 0);
@@ -411,7 +424,7 @@ static MESON_GATE(meson8b_dos, HHI_GCLK_MPEG0, 1);
 static MESON_GATE(meson8b_isa, HHI_GCLK_MPEG0, 5);
 static MESON_GATE(meson8b_pl301, HHI_GCLK_MPEG0, 6);
 static MESON_GATE(meson8b_periphs, HHI_GCLK_MPEG0, 7);
-static MESON_GATE(meson8b_spicc, HHI_GCLK_MPEG0, 8);
+//static MESON_GATE(meson8b_spicc, HHI_GCLK_MPEG0, 8);
 static MESON_GATE(meson8b_i2c, HHI_GCLK_MPEG0, 9);
 static MESON_GATE(meson8b_sar_adc, HHI_GCLK_MPEG0, 10);
 static MESON_GATE(meson8b_smart_card, HHI_GCLK_MPEG0, 11);
