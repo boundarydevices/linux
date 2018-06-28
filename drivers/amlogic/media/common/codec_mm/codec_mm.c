@@ -33,10 +33,13 @@
 #include <linux/genalloc.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-contiguous.h>
+#include <linux/delay.h>
 
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/amlogic/media/codec_mm/codec_mm_scatter.h>
 #include <linux/amlogic/media/codec_mm/configs.h>
+#include <linux/amlogic/media/video_sink/video_keeper.h>
+#include <linux/amlogic/media/utils/vdec_reg.h>
 
 #include "codec_mm_priv.h"
 #include "codec_mm_scatter_priv.h"
@@ -50,6 +53,7 @@
 
 
 #define MM_ALIGN_DOWN(addr, size)  ((addr) & (~((size) - 1)))
+#define MM_ALIGN_UP2N(addr, alg2n) ((addr+(1<<alg2n)-1)&(~((1<<alg2n)-1)))
 
 #define RES_IS_MAPED
 #define DEFAULT_TVP_SIZE_FOR_4K (256 * SZ_1M)
@@ -70,6 +74,7 @@
 
 #define RES_MEM_FLAGS_HAVE_MAPED 0x4
 static int dump_mem_infos(void *buf, int size);
+static int dump_free_mem_infos(void *buf, int size);
 
 /*
  *debug_mode:
@@ -577,6 +582,7 @@ struct codec_mm_s *codec_mm_alloc(const char *owner, int size,
 		!(memflags & CODEC_MM_FLAGS_FOR_SCATTER)) {
 		/*if not scatter, free scatter caches. */
 		pr_err(" No mem ret=%d, clear scatter cache!!\n", ret);
+		dump_free_mem_infos(NULL, 0);
 		codec_mm_scatter_free_all_ignorecache(1);
 		ret = codec_mm_alloc_in(mgt, mem);
 	}
@@ -1236,6 +1242,64 @@ static int dump_mem_infos(void *buf, int size)
 	return tsize;
 }
 
+
+static int dump_free_mem_infos(void *buf, int size)
+{
+	struct codec_mm_mgt_s *mgt = get_mem_mgt();
+	struct codec_mm_s *mem;
+	unsigned long flags;
+	int i = 0, j, k;
+	unsigned long minphy;
+	u32 cma_base_phy, cma_end_phy;
+	struct dump_buf_s {
+		unsigned long phy_addr;
+		int buffer_size;
+		int align2n;
+	} *usedb, *freeb;
+	int total_free_size = 0;
+
+	usedb = kzalloc(sizeof(struct dump_buf_s) * 256, GFP_KERNEL);
+	if (usedb == NULL)
+		return 0;
+	freeb = usedb + 128;
+
+	spin_lock_irqsave(&mgt->lock, flags);
+	list_for_each_entry(mem, &mgt->mem_list, list) {
+		usedb[i].phy_addr = mem->phy_addr;
+		usedb[i].buffer_size = mem->buffer_size;
+		usedb[i].align2n = mem->align2n;
+		if (++i >= 128) {
+			pr_info("too many memlist in codec_mm, break;\n");
+			break;
+		}
+	};
+	cma_base_phy = cma_get_base(dev_get_cma_area(mgt->dev));
+	cma_end_phy = cma_base_phy + dma_get_cma_size_int_byte(mgt->dev);
+	spin_unlock_irqrestore(&mgt->lock, flags);
+	pr_info("free cma idea[%x-%x] from codec_mm items %d\n", cma_base_phy,
+				cma_end_phy, i);
+	for (j = 0; j < i; j++) { /* free */
+		freeb[j].phy_addr = usedb[j].phy_addr +
+			MM_ALIGN_UP2N(usedb[j].buffer_size, usedb[j].align2n);
+		minphy = cma_end_phy;
+		for (k = 0; k < i; k++) { /* used */
+			if (usedb[k].phy_addr >= freeb[j].phy_addr &&
+						usedb[k].phy_addr < minphy)
+				minphy = usedb[k].phy_addr;
+		}
+		freeb[j].buffer_size = minphy - freeb[j].phy_addr;
+		total_free_size += freeb[j].buffer_size;
+		if (freeb[j].buffer_size > 0)
+			pr_info("\t[%d] free buf phyaddr=%p, used [%p,%x], size=%x\n",
+				j, (void *)freeb[j].phy_addr,
+				(void *)usedb[j].phy_addr,
+				usedb[j].buffer_size, freeb[j].buffer_size);
+	}
+	pr_info("total_free_size %x\n", total_free_size);
+	kfree(usedb);
+	return 0;
+}
+
 int codec_mm_video_tvp_enabled(void)
 {
 	struct codec_mm_mgt_s *mgt = get_mem_mgt();
@@ -1306,6 +1370,7 @@ int codec_mm_enough_for_size(int size, int with_wait)
 			return 1;
 		if (debug_mode & 0x20)
 			dump_mem_infos(NULL, 0);
+		msleep(50);
 		return 0;
 	}
 	return 1;
@@ -1710,6 +1775,9 @@ static ssize_t codec_mm_debug_store(struct class *class,
 		break;
 	case 11:
 		dump_mem_infos(NULL, 0);
+		break;
+	case 12:
+		dump_free_mem_infos(NULL, 0);
 		break;
 	case 20: {
 		int cmd, len;
