@@ -251,6 +251,40 @@
 #define VLD_MEM_VBUF2_RD_PTR 0x0c54
 #define VLD_MEM_SWAP_ADDR 0x0c55
 #define VLD_MEM_SWAP_CTL 0x0c56
+// bit[12]  -- zero_use_cbp_blk
+// bit[11]  -- mv_use_abs (only calculate abs)
+// bit[10]  -- mv_use_simple_mode (every size count has same weight)
+// bit[9]   -- use_simple_mode (every size count has same weight)
+// bit[8]   -- reseet_all_count // write only
+// bit[7:5] Reserved
+// bit[4:0] pic_quality_rd_idx
+#define VDEC_PIC_QUALITY_CTRL                      0x0c57
+// idx  -- read out
+//   0  -- blk88_y_count // 4k will use 20 bits
+//   1  -- qp_y_sum // 4k use 27 bits
+//   2  -- intra_y_oount // 4k use 20 bits
+//   3  -- skipped_y_count // 4k use 20 bits
+//   4  -- coeff_non_zero_y_count // 4k use 20 bits
+//   5  -- blk66_c_count // 4k will use 20 bits
+//   6  -- qp_c_sum // 4k use 26 bits
+//   7  -- intra_c_oount // 4k use 20 bits
+//   8  -- skipped_cu_c_count // 4k use 20 bits
+//   9  -- coeff_non_zero_c_count // 4k use 20 bits
+//  10  -- { 1'h0, qp_c_max[6:0], 1'h0, qp_c_min[6:0],
+//			1'h0, qp_y_max[6:0], 1'h0, qp_y_min[6:0]}
+//  11  -- blk22_mv_count
+//  12  -- {mvy_L1_count[39:32], mvx_L1_count[39:32],
+//			mvy_L0_count[39:32], mvx_L0_count[39:32]}
+//  13  -- mvx_L0_count[31:0]
+//  14  -- mvy_L0_count[31:0]
+//  15  -- mvx_L1_count[31:0]
+//  16  -- mvy_L1_count[31:0]
+//  17  -- {mvx_L0_max, mvx_L0_min} // format : {sign, abs[14:0]}
+//  18  -- {mvy_L0_max, mvy_L0_min}
+//  19  -- {mvx_L1_max, mvx_L1_min}
+//  20  -- {mvy_L1_max, mvy_L1_min}
+#define VDEC_PIC_QUALITY_DATA                      0x0c58
+
 #define VCOP_CTRL_REG 0x0e00
 #define QP_CTRL_REG 0x0e01
 #define INTRA_QUANT_MATRIX 0x0e02
