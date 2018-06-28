@@ -805,10 +805,8 @@
 		key_num = <1>;
 		key_name = "power";
 		key_code = <116>;
-		key_pin = <&gpio_ao  GPIOAO_2  GPIO_ACTIVE_HIGH>;
-		interrupts = <0 70 1
-				0 71 2>;
-		interrupt-names = "irq_keyup", "irq_keydown";
+		key-gpios = <&gpio_ao  GPIOAO_2  GPIO_ACTIVE_HIGH>;
+		detect_mode = <0>;/*0:polling mode, 1:irq mode*/
 	};
 	meson-fb {
 		compatible = "amlogic, meson-gxl";
