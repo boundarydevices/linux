@@ -732,7 +732,7 @@
 		arc_port_mask = <0x0>;
 		interrupts = <0 199 1>;
 		interrupt-names = "hdmi_aocec";
-		pinctrl-names = "hdmitx_aocec";
+		pinctrl-names = "default";
 		pinctrl-0=<&hdmitx_aocec>;
 		reg = <0x0 0xc810023c 0x0 0x4
 		       0x0 0xc8100000 0x0 0x200>;
