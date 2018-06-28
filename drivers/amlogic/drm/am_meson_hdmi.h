@@ -18,8 +18,9 @@
 #define __AM_MESON_HDMI_H
 
 #include "am_meson_drv.h"
-#define DDC_SEGMENT_ADDR		0x30
-#define VIC_MAX_NUM 512
+#define DDC_SEGMENT_ADDR   0x30
+#define VIC_MAX_NUM        512
+#define DRM_HDMITX_VER     "20180705"
 
 struct am_hdmi_data {
 	unsigned int vic;
@@ -65,6 +66,16 @@ struct am_hdmi_tx {
 	const char *hpd_pin;
 	const char *ddc_pin;
 	unsigned int hpd_flag;/*0:none   1:up    2:down*/
+	struct mutex hdcp_mutex;
+	unsigned int hdcp_feature;
+	unsigned int hdcp_tx_type;/*bit0:hdcp14 bit 1:hdcp22*/
+	unsigned int hdcp_rx_type;/*bit0:hdcp14 bit 1:hdcp22*/
+	struct timer_list hdcp_timer;
+	unsigned int hdcp_mode;
+	unsigned int hdcp_state;
+	unsigned int hdcp_stop_flag;/*turn off hdcp state machine*/
+	unsigned int hdcp_try_times;
+	struct task_struct *hdcp_work;
 };
 
 #define to_am_hdmi(x)	container_of(x, struct am_hdmi_tx, x)

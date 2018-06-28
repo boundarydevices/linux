@@ -19,17 +19,21 @@
 #include <drm/drm_edid.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_atomic_helper.h>
+#include <drm/drm_connector.h>
 
 #include <linux/component.h>
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
+#include <linux/kthread.h>
+#include <linux/device.h>
+
 #include <linux/workqueue.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
-
 #include "am_meson_hdmi.h"
+#include "am_meson_hdcp.h"
 
 #define DEVICE_NAME "amhdmitx"
 struct am_hdmi_tx am_hdmi_info;
@@ -174,16 +178,42 @@ static enum drm_connector_status am_hdmi_connector_detect
 	return connector_status_unknown;
 }
 
-static int
-am_hdmi_probe_single_connector_modes(struct drm_connector *connector,
-				       uint32_t maxX, uint32_t maxY)
+static int am_hdmi_connector_set_property(struct drm_connector *connector,
+	struct drm_property *property, uint64_t val)
 {
-	return drm_helper_probe_single_connector_modes(connector, 1920, 1080);
+	struct am_hdmi_tx *am_hdmi = to_am_hdmi(connector);
+	struct drm_connector_state *state = am_hdmi->connector.state;
+
+	if (property == connector->content_protection_property) {
+		DRM_INFO("property:%s       val: %lld\n", property->name, val);
+		if (val == DRM_MODE_CONTENT_PROTECTION_ENABLED) {
+			DRM_DEBUG_KMS("only drivers can set CP Enabled\n");
+			return -EINVAL;
+		}
+		state->content_protection = val;
+	}
+	/*other parperty todo*/
+	return 0;
+}
+
+static int am_hdmi_connector_atomic_get_property
+	(struct drm_connector *connector,
+	const struct drm_connector_state *state,
+	struct drm_property *property, uint64_t *val)
+{
+	if (property == connector->content_protection_property) {
+		DRM_INFO("get content_protection val: %d\n",
+			state->content_protection);
+		*val = state->content_protection;
+	} else {
+		DRM_DEBUG_ATOMIC("Unknown property %s\n", property->name);
+		return -EINVAL;
+	}
+	return 0;
 }
 
 static void am_hdmi_connector_destroy(struct drm_connector *connector)
 {
-
 	drm_connector_unregister(connector);
 	drm_connector_cleanup(connector);
 }
@@ -198,7 +228,9 @@ struct drm_connector_helper_funcs am_hdmi_connector_helper_funcs = {
 static const struct drm_connector_funcs am_hdmi_connector_funcs = {
 	.dpms			= drm_atomic_helper_connector_dpms,
 	.detect			= am_hdmi_connector_detect,
-	.fill_modes		= am_hdmi_probe_single_connector_modes,
+	.fill_modes		= drm_helper_probe_single_connector_modes,
+	.set_property		= am_hdmi_connector_set_property,
+	.atomic_get_property	= am_hdmi_connector_atomic_get_property,
 	.destroy		= am_hdmi_connector_destroy,
 	.reset			= drm_atomic_helper_connector_reset,
 	.atomic_duplicate_state	= drm_atomic_helper_connector_duplicate_state,
@@ -209,7 +241,8 @@ void am_hdmi_encoder_mode_set(struct drm_encoder *encoder,
 				   struct drm_display_mode *mode,
 				   struct drm_display_mode *adjusted_mode)
 {
-	char *attr;
+	const char attr1[16] = "rgb,8bit";
+	const char attr2[16] = "420,8bit";
 	int vic;
 	struct am_hdmi_tx *am_hdmi = &am_hdmi_info;
 
@@ -223,16 +256,16 @@ void am_hdmi_encoder_mode_set(struct drm_encoder *encoder,
 		sizeof(am_hdmi->previous_mode));
 	if ((vic == 96) || (vic == 97) || (vic == 101) || (vic == 102)
 		|| (vic == 106) || (vic == 107))
-		attr = "420,8bit";
+		setup_attr(attr2);
 	else
-		attr = "rgb,8bit";
-	setup_attr(attr);
+		setup_attr(attr1);
 }
 
-void am_hdmi_encoder_enable(
-	struct drm_encoder *encoder)
+void am_hdmi_encoder_enable(struct drm_encoder *encoder)
 {
 	enum vmode_e vmode = get_current_vmode();
+	struct am_hdmi_tx *am_hdmi = to_am_hdmi(encoder);
+	struct drm_connector_state *state = am_hdmi->connector.state;
 
 	if (vmode == VMODE_HDMI)
 		DRM_INFO("am_hdmi_encoder_enable\n");
@@ -242,13 +275,58 @@ void am_hdmi_encoder_enable(
 	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE_PRE, &vmode);
 	set_vout_vmode(vmode);
 	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE, &vmode);
-	return;
+	mdelay(1000);
+	if (state->content_protection ==
+		DRM_MODE_CONTENT_PROTECTION_DESIRED) {
+		if (am_hdmi->hdcp_tx_type) {
+			am_hdmi->hdcp_stop_flag = 0;
+			am_hdmi->hdcp_work = kthread_run(am_hdcp_work,
+				(void *)am_hdmi, "kthread_hdcp_task");
+		} else
+			DRM_INFO("hdmitx doesn't has hdcp key\n");
+	}
+}
+
+void am_hdmi_encoder_disable(struct drm_encoder *encoder)
+{
+	struct am_hdmi_tx *am_hdmi = to_am_hdmi(encoder);
+	struct drm_connector_state *state = am_hdmi->connector.state;
+
+	/*need to add hdmitx disable function ..todo*/
+	if (state->content_protection !=
+		DRM_MODE_CONTENT_PROTECTION_UNDESIRED) {
+		state->content_protection =
+			DRM_MODE_CONTENT_PROTECTION_UNDESIRED;
+		am_hdmi->hdcp_stop_flag = 1;
+		kthread_stop(am_hdmi->hdcp_work);
+		am_hdcp_disable(am_hdmi);
+	}
+}
+
+static int am_hdmi_encoder_atomic_check(struct drm_encoder *encoder,
+				struct drm_crtc_state *crtc_state,
+				struct drm_connector_state *conn_state)
+{
+	struct am_hdmi_tx *am_hdmi = to_am_hdmi(encoder);
+
+	DRM_INFO("content_protection:%d\n", conn_state->content_protection);
+
+	if (conn_state->content_protection ==
+		DRM_MODE_CONTENT_PROTECTION_ENABLED) {
+		kthread_stop(am_hdmi->hdcp_work);
+		am_hdcp_disable(am_hdmi);
+		conn_state->content_protection =
+			DRM_MODE_CONTENT_PROTECTION_DESIRED;
+	}
+	return 0;
 }
 
 static const struct drm_encoder_helper_funcs
-				am_hdmi_encoder_helper_funcs = {
+	am_hdmi_encoder_helper_funcs = {
 	.mode_set	= am_hdmi_encoder_mode_set,
 	.enable		= am_hdmi_encoder_enable,
+	.disable	= am_hdmi_encoder_disable,
+	.atomic_check	= am_hdmi_encoder_atomic_check,
 };
 
 static const struct drm_encoder_funcs am_hdmi_encoder_funcs = {
@@ -279,8 +357,6 @@ static int am_hdmi_i2c_write(struct am_hdmi_tx *am_hdmi,
 		stat = wait_for_completion_timeout(&i2c->cmp, HZ / 100);
 
 		stat = 1;
-		if (!stat)
-			return -EAGAIN;
 		/* Check for error condition on the bus */
 		if (i2c->stat & 1)
 			return -EIO;
@@ -313,8 +389,6 @@ static int am_hdmi_i2c_read(struct am_hdmi_tx *am_hdmi,
 		stat = wait_for_completion_timeout(&i2c->cmp, HZ / 100);
 
 		stat = 1;
-		if (!stat)
-			return -EAGAIN;
 
 		/* Check for error condition on the bus */
 		if (i2c->stat & 0x1)
@@ -408,8 +482,10 @@ static struct i2c_adapter *am_hdmi_i2c_adapter(struct am_hdmi_tx *am_hdmi)
 	int ret;
 
 	i2c = devm_kzalloc(am_hdmi->priv->dev, sizeof(*i2c), GFP_KERNEL);
-	if (!i2c)
+	if (!i2c) {
 		ret = -ENOMEM;
+		DRM_INFO("error : %d\n", ret);
+	}
 
 	mutex_init(&i2c->lock);
 	init_completion(&i2c->cmp);
@@ -473,6 +549,33 @@ static irqreturn_t am_hdmi_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int amhdmitx_get_dt_info(struct am_hdmi_tx *am_hdmi)
+{
+	struct device_node *hdcp_node;
+	unsigned char *hdcp_status;
+	int ret = 0;
+
+	hdcp_node = of_find_node_by_path("/drm-amhdmitx");
+	if (hdcp_node) {
+		ret = of_property_read_string(hdcp_node, "hdcp",
+			(const char **)&(hdcp_status));
+		if (ret)
+			DRM_INFO("not find hdcp_feature\n");
+		else {
+			if (memcmp(hdcp_status, "okay", 4) == 0)
+				am_hdmi->hdcp_feature = 1;
+			else
+				am_hdmi->hdcp_feature = 0;
+			DRM_INFO("hdcp_feature: %d\n",
+				am_hdmi->hdcp_feature);
+		}
+	} else {
+		DRM_INFO("not find drm_amhdmitx\n");
+	}
+	return 0;
+}
+
+
 static const struct of_device_id am_meson_hdmi_dt_ids[] = {
 	{ .compatible = "amlogic,drm-amhdmitx", },
 	{},
@@ -481,7 +584,7 @@ static const struct of_device_id am_meson_hdmi_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, am_meson_hdmi_dt_ids);
 
 static int am_meson_hdmi_bind(struct device *dev,
-				    struct device *master, void *data)
+	struct device *master, void *data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct drm_device *drm = data;
@@ -489,7 +592,6 @@ static int am_meson_hdmi_bind(struct device *dev,
 	struct am_hdmi_tx *am_hdmi;
 	struct drm_connector *connector;
 	struct drm_encoder *encoder;
-
 	int ret;
 	int irq;
 
@@ -500,7 +602,7 @@ static int am_meson_hdmi_bind(struct device *dev,
 	memcpy(&am_hdmi_info, am_hdmi, sizeof(*am_hdmi));
 	am_hdmi = &am_hdmi_info;
 
-	DRM_INFO("hdmi connector init\n");
+	DRM_INFO("drm hdmitx init and version:%s\n", DRM_HDMITX_VER);
 	am_hdmi->priv = priv;
 	encoder = &am_hdmi->encoder;
 	connector = &am_hdmi->connector;
@@ -549,14 +651,21 @@ static int am_meson_hdmi_bind(struct device *dev,
 		dev_err(am_hdmi->priv->dev,
 			"failed to request hdmi irq: %d\n", ret);
 	}
-	hdmitx_hpd_hw_op(HPD_UNMUX_HPD);
-	mdelay(20);
-	hdmitx_hpd_hw_op(HPD_MUX_HPD);
+
+	/*HDCP INIT*/
+	amhdmitx_get_dt_info(am_hdmi);
+	if (am_hdmi->hdcp_feature) {
+		if (is_hdcp_hdmitx_supported(am_hdmi)) {
+			ret = am_hdcp_init(am_hdmi);
+			if (ret)
+				DRM_DEBUG_KMS("HDCP init failed, skipping.\n");
+		}
+	}
 	return 0;
 }
 
 static void am_meson_hdmi_unbind(struct device *dev,
-				    struct device *master, void *data)
+	struct device *master, void *data)
 {
 	am_hdmi_info.connector.funcs->destroy(&am_hdmi_info.connector);
 	am_hdmi_info.encoder.funcs->destroy(&am_hdmi_info.encoder);

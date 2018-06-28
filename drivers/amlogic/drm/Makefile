@@ -15,7 +15,7 @@ ifneq ($(CONFIG_DRM_MESON_VPU),)
 endif
 
 ifneq ($(CONFIG_DRM_MESON_HDMI),)
-	meson_hdmi-y += am_meson_hdmi.o
+	meson_hdmi-y += am_meson_hdmi.o am_meson_hdcp.o
 endif
 
 ifneq ($(CONFIG_DRM_MESON_PANEL),)

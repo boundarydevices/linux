@@ -39,6 +39,7 @@
 
 	drm_amhdmitx: drm-amhdmitx {
 		status = "disabled";
+		hdcp = "disabled";
 		compatible = "amlogic,drm-amhdmitx";
 		dev_name = "meson-amhdmitx";
 		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;

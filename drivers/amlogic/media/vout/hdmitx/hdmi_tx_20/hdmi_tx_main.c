@@ -574,7 +574,10 @@ ssize_t store_attr(struct device *dev,
 
 void setup_attr(const char *buf)
 {
-	store_attr(NULL, NULL, buf, 0);
+	char attr[16] = {0};
+
+	memcpy(attr, buf, sizeof(attr));
+	memcpy(hdmitx_device.fmt_attr, attr, sizeof(hdmitx_device.fmt_attr));
 }
 EXPORT_SYMBOL(setup_attr);
 

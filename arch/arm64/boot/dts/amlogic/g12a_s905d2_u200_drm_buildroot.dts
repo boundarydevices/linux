@@ -822,6 +822,7 @@
 
 &drm_amhdmitx {
 	status = "okay";
+	hdcp = "disabled";
 };
 
 &drm_lcd {
