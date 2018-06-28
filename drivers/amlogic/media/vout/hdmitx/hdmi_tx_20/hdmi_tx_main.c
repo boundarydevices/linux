@@ -3941,7 +3941,11 @@ static int amhdmitx_suspend(struct platform_device *pdev,
 
 static int amhdmitx_resume(struct platform_device *pdev)
 {
-	pr_info("amhdmitx: resume module %d\n", __LINE__);
+	struct hdmitx_dev *hdev = &hdmitx_device;
+
+	pr_debug("amhdmitx: I2C_REACTIVE\n");
+	hdev->HWOp.CntlMisc(hdev, MISC_I2C_REACTIVE, 0);
+
 	return 0;
 }
 #endif
