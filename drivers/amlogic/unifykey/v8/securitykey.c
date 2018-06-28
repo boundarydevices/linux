@@ -396,6 +396,7 @@ static int storage_probe(struct platform_device *pdev)
 
 static const struct of_device_id securitykey_dt_match[] = {
 	{ .compatible = "aml, securitykey" },
+	{ .compatible = "amlogic, securitykey" },
 	{ /* sentinel */ },
 };
 
