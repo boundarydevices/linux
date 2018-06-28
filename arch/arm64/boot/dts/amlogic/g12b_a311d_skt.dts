@@ -739,6 +739,24 @@
 		status = "okay";
 	};
 
+&i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_master_pins2>;
+	clock-frequency = <400000>;
+
+	touchscreen@38 {
+		compatible = "focaltech,fts";
+		status = "disabled";
+		reg = <0x38>;
+		reset-gpio = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH>;
+		irq-gpio = <&gpio GPIOZ_3 GPIO_ACTIVE_HIGH>;
+		x_max = <720>;
+		y_max = <1280>;
+		max-touch-number = <10>;
+	};
+};
+
 &i2c3 {
 	status = "okay";
 	pinctrl-names="default";
