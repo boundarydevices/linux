@@ -58,6 +58,7 @@ struct ve_regs_s {
 };
 
 extern struct ve_hist_s video_ve_hist;
+extern void ve_hist_gamma_reset(void);
 extern unsigned int ve_size;
 extern struct ve_dnlp_s am_ve_dnlp;
 extern struct tcon_gamma_table_s video_gamma_table_r;

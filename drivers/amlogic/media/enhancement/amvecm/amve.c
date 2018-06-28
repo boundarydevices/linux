@@ -163,8 +163,12 @@ static void ve_hist_gamma_tgt(struct vframe_s *vf)
 	}
 }
 
-
-
+void ve_hist_gamma_reset(void)
+{
+	if ((video_ve_hist.height != 0) ||
+		(video_ve_hist.width != 0))
+		memset(&video_ve_hist, 0, sizeof(struct ve_hist_s));
+}
 
 void ve_dnlp_load_reg(void)
 {

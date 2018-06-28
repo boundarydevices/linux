@@ -72,6 +72,8 @@
 #define AMVECM_MODULE_NAME        "amvecm"
 #define AMVECM_DEVICE_NAME        "amvecm"
 #define AMVECM_CLASS_NAME         "amvecm"
+#define AMVECM_VER				"Ref.2018/06/29"
+
 
 struct amvecm_dev_s {
 	dev_t                       devt;
@@ -95,8 +97,6 @@ static int hue_pre;  /*-25~25*/
 static int saturation_pre;  /*-128~127*/
 static int hue_post;  /*-25~25*/
 static int saturation_post;  /*-128~127*/
-/*contrast add saturation add*/
-static int satu_shift_by_con;  /*-128~127*/
 
 static s16 saturation_ma;
 static s16 saturation_mb;
@@ -113,8 +113,8 @@ static struct hdr_metadata_info_s vpp_hdr_metadata_s;
 
 void __iomem *amvecm_hiu_reg_base;/* = *ioremap(0xc883c000, 0x2000); */
 
-static bool debug_amvecm;
-module_param(debug_amvecm, bool, 0664);
+static int debug_amvecm;
+module_param(debug_amvecm, int, 0664);
 MODULE_PARM_DESC(debug_amvecm, "\n debug_amvecm\n");
 
 unsigned int vecm_latch_flag;
@@ -963,6 +963,7 @@ int amvecm_on_vs(
 	} else {
 		amvecm_reset_overscan();
 		result = amvecm_matrix_process(NULL, NULL, flags);
+		ve_hist_gamma_reset();
 	}
 
 	if (!is_dolby_vision_on())
@@ -979,8 +980,7 @@ int amvecm_on_vs(
 			vd1_contrast + vd1_contrast_offset, vf);
 
 		amvecm_color_process(
-			saturation_pre + saturation_offset
-			+ satu_shift_by_con,
+			saturation_pre + saturation_offset,
 			hue_pre, vf);
 
 		vpp_demo_config(vf);
@@ -1050,7 +1050,8 @@ static long amvecm_ioctl(struct file *file,
 	struct ve_pq_table_s *vpp_pq_load_table = NULL;
 	int i = 0;
 
-	pr_amvecm_dbg("[amvecm..] %s: cmd_nr = 0x%x\n",
+	if (debug_amvecm & 2)
+		pr_info("[amvecm..] %s: cmd_nr = 0x%x\n",
 			__func__, _IOC_NR(cmd));
 
 	if (probe_ok == 0)
@@ -1875,11 +1876,6 @@ static ssize_t amvecm_contrast_store(struct class *cla,
 	vd1_contrast = val;
 	/*vecm_latch_flag |= FLAG_BRI_CON;*/
 	vecm_latch_flag |= FLAG_VADJ1_CON;
-
-	if (val > 0)
-		satu_shift_by_con = val >> 3;
-	else
-		satu_shift_by_con = 0;
 	vecm_latch_flag |= FLAG_VADJ1_COLOR;
 	return count;
 }
@@ -1909,6 +1905,14 @@ static ssize_t amvecm_saturation_hue_store(struct class *cla,
 
 	ma += saturation_ma_shift;
 	mb += saturation_mb_shift;
+	if (ma > 511)
+		ma = 511;
+	if (ma < -512)
+		ma = -512;
+	if (mb > 511)
+		mb = 511;
+	if (mb < -512)
+		mb = -512;
 	mab =  ((ma & 0x3ff) << 16) | (mb & 0x3ff);
 	WRITE_VPP_REG(VPP_VADJ1_MA_MB, mab);
 	mc = (s16)((mab<<22)>>22); /* mc = -mb */
@@ -4017,6 +4021,8 @@ static ssize_t amvecm_debug_store(struct class *cla,
 	parse_param_amvecm(buf_orig, (char **)&parm);
 	if (!strncmp(parm[0], "vpp_size", 8))
 		dump_vpp_size_info();
+	else if (!strncmp(parm[0], "vpp_state", 9))
+		pr_info("amvecm driver version :  %s\n", AMVECM_VER);
 	else if (!strncmp(parm[0], "wb", 2)) {
 		if (!strncmp(parm[1], "enable", 6)) {
 			amvecm_wb_enable(1);
@@ -4966,6 +4972,7 @@ static void __exit aml_vecm_exit(void)
 module_init(aml_vecm_init);
 module_exit(aml_vecm_exit);
 
+MODULE_VERSION(AMVECM_VER);
 MODULE_DESCRIPTION("AMLOGIC amvecm driver");
 MODULE_LICENSE("GPL");
 
