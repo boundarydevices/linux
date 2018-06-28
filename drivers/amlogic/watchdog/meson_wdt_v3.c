@@ -182,6 +182,7 @@ static const struct of_device_id meson_wdt_dt_ids[] = {
 	 { .compatible = "amlogic,meson-gxbb-wdt", },
 	 { .compatible = "amlogic,meson-gxl-wdt", },
 	 { .compatible = "amlogic,meson-axg-wdt", },
+	 { .compatible = "amlogic,meson-txl-wdt", },
 	 { .compatible = "amlogic,meson-txlx-wdt", },
 	 { .compatible = "amlogic,meson-g12a-wdt", },
 	 { /* sentinel */ },

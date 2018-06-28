@@ -13815,6 +13815,7 @@ F: drivers/amlogic/pm/*
 
 AMLOGIC WATCHDOG DRIVER SUPPORT
 M:	Bo Yang <bo.yang@amlogic.com>
+F:	Documentation/devicetree/bindings/amlogic/meson-wdt.txt
 F:	drivers/amlogic/watchdog/*
 
 AMLOGIC LED DRIVER SUPPORT
