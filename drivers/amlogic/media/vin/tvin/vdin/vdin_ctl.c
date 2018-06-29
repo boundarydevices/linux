@@ -3939,6 +3939,16 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 					(vf->signal_type & (~0xFF00)));
 				vf->signal_type = ((9 << 0) |
 					(vf->signal_type & (~0xFF)));
+			} else if (devp->prop.hdr_info.hdr_data.eotf ==
+					EOTF_HLG) {
+				vf->signal_type |= (1 << 29);
+				vf->signal_type |= (0 << 25);/*0:limit*/
+				vf->signal_type = ((9 << 16) |
+					(vf->signal_type & (~0xFF0000)));
+				vf->signal_type = ((14 << 8) |
+					(vf->signal_type & (~0xFF00)));
+				vf->signal_type = ((9 << 0) |
+					(vf->signal_type & (~0xFF)));
 			} else {
 				vf->signal_type &= ~(1 << 29);
 				vf->signal_type &= ~(1 << 25);

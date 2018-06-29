@@ -389,6 +389,7 @@ enum tvin_hdr_eotf_e {
 	EOTF_SDR,
 	EOTF_HDR,
 	EOTF_SMPTE_ST_2048,
+	EOTF_HLG,
 	EOTF_MAX,
 };
 
