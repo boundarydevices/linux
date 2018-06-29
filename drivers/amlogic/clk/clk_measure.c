@@ -35,6 +35,7 @@
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/clk_measure.h>
 #include <linux/amlogic/scpi_protocol.h>
+#include <linux/spinlock.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "clkmsr: " fmt
@@ -44,6 +45,7 @@ void __iomem *msr_clk_reg2;
 void __iomem *msr_clk_reg3;
 void __iomem *msr_ring_reg0;
 
+static DEFINE_SPINLOCK(clk_measure_lock);
 
 #define CLKMSR_DEVICE_NAME	"clkmsr"
 unsigned int clk_msr_index = 0xff;
@@ -1078,7 +1080,9 @@ int g12b_clk_measure(struct seq_file *s, void *what, unsigned int index)
 int meson_clk_measure(unsigned int clk_mux)
 {
 	int clk_val;
+	unsigned long flags;
 
+	spin_lock_irqsave(&clk_measure_lock, flags);
 	switch (get_cpu_type()) {
 	case MESON_CPU_MAJOR_ID_M8B:
 		clk_val = m8b_clk_util_clk_msr(clk_mux);
@@ -1098,6 +1102,8 @@ int meson_clk_measure(unsigned int clk_mux)
 		clk_val = 0;
 		break;
 	}
+	spin_unlock_irqrestore(&clk_measure_lock, flags);
+
 	return clk_val;
 
 }
