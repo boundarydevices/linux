@@ -153,6 +153,7 @@ void dcss_dec400d_addr_set(struct dcss_soc *dcss,
 			   uint32_t caddr);
 void dcss_dec400d_read_config(struct dcss_soc *dcss,
 			      uint32_t read_id,
-			      bool compress_en);
+			      bool compress_en,
+			      uint32_t compress_format);
 void dcss_dec400d_enable(struct dcss_soc *dcss);
 #endif /* __IMX_DCSS_H__ */
