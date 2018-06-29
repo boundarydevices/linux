@@ -213,6 +213,7 @@ static size_t aml_tdes_sg_dma(struct aml_tdes_dev *dd, struct dma_dsc *dsc,
 		uint32_t *nents, size_t total)
 {
 	size_t count = 0;
+	size_t process = 0;
 	uint32_t i = 0;
 	int err = 0;
 	struct scatterlist *in_sg = dd->in_sg;
@@ -221,9 +222,10 @@ static size_t aml_tdes_sg_dma(struct aml_tdes_dev *dd, struct dma_dsc *dsc,
 
 	while (total && in_sg && out_sg && (in_sg->length == out_sg->length)
 			&& *nents < MAX_NUM_TABLES) {
-		count += min_t(unsigned int, total, in_sg->length);
+		process = min_t(unsigned int, total, in_sg->length);
+		count += process;
 		*nents += 1;
-		total -= count;
+		total -= process;
 		in_sg = sg_next(in_sg);
 		out_sg = sg_next(out_sg);
 	}
@@ -291,9 +293,12 @@ static int aml_tdes_hw_init(struct aml_tdes_dev *dd)
 static void aml_tdes_finish_req(struct aml_tdes_dev *dd, int err)
 {
 	struct ablkcipher_request *req = dd->req;
+	unsigned long flags;
 
+	spin_lock_irqsave(&dd->dma->dma_lock, flags);
 	dd->flags &= ~TDES_FLAGS_BUSY;
-	dd->dma->dma_busy = 0;
+	dd->dma->dma_busy &= ~DMA_FLAG_MAY_OCCUPY;
+	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 	req->base.complete(&req->base, err);
 }
 
@@ -302,8 +307,8 @@ static int aml_tdes_crypt_dma(struct aml_tdes_dev *dd, struct dma_dsc *dsc,
 {
 	uint32_t op_mode = OP_MODE_ECB;
 	uint32_t i = 0;
+	unsigned long flags;
 
-	dd->flags |= TDES_FLAGS_DMA;
 
 	if (dd->flags & TDES_FLAGS_CBC)
 		op_mode = OP_MODE_CBC;
@@ -325,6 +330,11 @@ static int aml_tdes_crypt_dma(struct aml_tdes_dev *dd, struct dma_dsc *dsc,
 	aml_dma_debug(dsc, nents, __func__, dd->thread, dd->status);
 
 	/* Start DMA transfer */
+	spin_lock_irqsave(&dd->dma->dma_lock, flags);
+	dd->dma->dma_busy |= DMA_FLAG_TDES_IN_USE;
+	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
+
+	dd->flags |= TDES_FLAGS_DMA;
 	aml_write_crypto_reg(dd->thread,
 			(uintptr_t) dd->dma_descript_tab | 2);
 	return -EINPROGRESS;
@@ -412,7 +422,7 @@ static int aml_tdes_handle_queue(struct aml_tdes_dev *dd,
 	if (req)
 		ret = ablkcipher_enqueue_request(&dd->queue, req);
 
-	if (dd->flags & TDES_FLAGS_BUSY || dd->dma->dma_busy) {
+	if ((dd->flags & TDES_FLAGS_BUSY) || dd->dma->dma_busy) {
 		spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 		return ret;
 	}
@@ -420,7 +430,7 @@ static int aml_tdes_handle_queue(struct aml_tdes_dev *dd,
 	async_req = crypto_dequeue_request(&dd->queue);
 	if (async_req) {
 		dd->flags |= TDES_FLAGS_BUSY;
-		dd->dma->dma_busy = 1;
+		dd->dma->dma_busy |= DMA_FLAG_MAY_OCCUPY;
 	}
 	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 
@@ -670,7 +680,7 @@ static struct crypto_alg des_algs[] = {
 	{
 		.cra_name        = "ecb(des)",
 		.cra_driver_name = "ecb-des-aml",
-		.cra_priority  =  100,
+		.cra_priority  =  200,
 		.cra_flags     =  CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize =  DES_BLOCK_SIZE,
 		.cra_ctxsize   =  sizeof(struct aml_tdes_ctx),
@@ -690,7 +700,7 @@ static struct crypto_alg des_algs[] = {
 	{
 		.cra_name        =  "cbc(des)",
 		.cra_driver_name =  "cbc-des-aml",
-		.cra_priority  =  100,
+		.cra_priority  =  200,
 		.cra_flags     =  CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize =  DES_BLOCK_SIZE,
 		.cra_ctxsize   =  sizeof(struct aml_tdes_ctx),
@@ -714,7 +724,7 @@ static struct crypto_alg tdes_algs[] = {
 	{
 		.cra_name        = "ecb(des3_ede)",
 		.cra_driver_name = "ecb-tdes-aml",
-		.cra_priority   = 100,
+		.cra_priority   = 200,
 		.cra_flags      = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize  = DES_BLOCK_SIZE,
 		.cra_ctxsize    = sizeof(struct aml_tdes_ctx),
@@ -734,7 +744,7 @@ static struct crypto_alg tdes_algs[] = {
 	{
 		.cra_name        = "cbc(des3_ede)",
 		.cra_driver_name = "cbc-tdes-aml",
-		.cra_priority  = 100,
+		.cra_priority  = 200,
 		.cra_flags     = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = DES_BLOCK_SIZE,
 		.cra_ctxsize   = sizeof(struct aml_tdes_ctx),
@@ -805,8 +815,12 @@ static irqreturn_t aml_tdes_irq(int irq, void *dev_id)
 	if (status) {
 		if (status == 0x1)
 			pr_err("irq overwrite\n");
-		if (TDES_FLAGS_DMA & tdes_dd->flags) {
+		if (tdes_dd->dma->dma_busy == DMA_FLAG_MAY_OCCUPY)
+			return IRQ_HANDLED;
+		if ((tdes_dd->dma->dma_busy & DMA_FLAG_TDES_IN_USE) &&
+				(tdes_dd->flags & TDES_FLAGS_DMA)) {
 			aml_write_crypto_reg(tdes_dd->status, 0xf);
+			tdes_dd->dma->dma_busy &= ~DMA_FLAG_TDES_IN_USE;
 			tasklet_schedule(&tdes_dd->done_task);
 			return IRQ_HANDLED;
 		} else {

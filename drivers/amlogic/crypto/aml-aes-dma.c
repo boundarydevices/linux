@@ -319,7 +319,7 @@ static void aml_aes_finish_req(struct aml_aes_dev *dd, int32_t err)
 
 	dd->flags &= ~AES_FLAGS_BUSY;
 	spin_lock_irqsave(&dd->dma->dma_lock, flags);
-	dd->dma->dma_busy = 0;
+	dd->dma->dma_busy &= ~DMA_FLAG_MAY_OCCUPY;
 	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 	req->base.complete(&req->base, err);
 }
@@ -330,8 +330,7 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 {
 	uint32_t op_mode = OP_MODE_ECB;
 	uint32_t i = 0;
-
-	dd->flags |= AES_FLAGS_DMA;
+	unsigned long flags;
 
 	if (dd->flags & AES_FLAGS_CBC)
 		op_mode = OP_MODE_CBC;
@@ -355,6 +354,11 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 	aml_dma_debug(dsc, nents, __func__, dd->thread, dd->status);
 
 	/* Start DMA transfer */
+	spin_lock_irqsave(&dd->dma->dma_lock, flags);
+	dd->dma->dma_busy |= DMA_FLAG_AES_IN_USE;
+	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
+
+	dd->flags |= AES_FLAGS_DMA;
 	aml_write_crypto_reg(dd->thread, dd->dma_descript_tab | 2);
 	return -EINPROGRESS;
 }
@@ -431,7 +435,7 @@ static int aml_aes_write_ctrl(struct aml_aes_dev *dd)
 	if (dd->flags & AES_FLAGS_CBC)
 		err = set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
 				dd->req->info, 0);
-	else if  (dd->flags & AES_FLAGS_CTR)
+	else if (dd->flags & AES_FLAGS_CTR)
 		err = set_aes_key_iv(dd, dd->ctx->key, dd->ctx->keylen,
 				dd->req->info, 1);
 	else
@@ -454,7 +458,7 @@ static int aml_aes_handle_queue(struct aml_aes_dev *dd,
 	if (req)
 		ret = ablkcipher_enqueue_request(&dd->queue, req);
 
-	if (dd->flags & AES_FLAGS_BUSY || dd->dma->dma_busy) {
+	if ((dd->flags & AES_FLAGS_BUSY) || dd->dma->dma_busy) {
 		spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 		return ret;
 	}
@@ -462,7 +466,7 @@ static int aml_aes_handle_queue(struct aml_aes_dev *dd,
 	async_req = crypto_dequeue_request(&dd->queue);
 	if (async_req) {
 		dd->flags |= AES_FLAGS_BUSY;
-		dd->dma->dma_busy = 1;
+		dd->dma->dma_busy |= DMA_FLAG_MAY_OCCUPY;
 	}
 	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 
@@ -1011,8 +1015,12 @@ static irqreturn_t aml_aes_irq(int irq, void *dev_id)
 	if (status) {
 		if (status == 0x1)
 			pr_err("irq overwrite\n");
-		if (AES_FLAGS_DMA & aes_dd->flags) {
+		if (aes_dd->dma->dma_busy == DMA_FLAG_MAY_OCCUPY)
+			return IRQ_HANDLED;
+		if ((aes_dd->flags & AES_FLAGS_DMA) &&
+				(aes_dd->dma->dma_busy & DMA_FLAG_AES_IN_USE)) {
 			aml_write_crypto_reg(aes_dd->status, 0xf);
+			aes_dd->dma->dma_busy &= ~DMA_FLAG_AES_IN_USE;
 			tasklet_schedule(&aes_dd->done_task);
 			return IRQ_HANDLED;
 		} else {

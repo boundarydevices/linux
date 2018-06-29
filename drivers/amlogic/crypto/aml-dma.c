@@ -43,7 +43,9 @@
 #include "aml-crypto-dma.h"
 
 int debug = 2;
-/*module_param(debug, int, 0644);*/
+#ifdef CRYPTO_DEBUG
+module_param(debug, int, 0644);
+#endif
 
 void __iomem *cryptoreg;
 

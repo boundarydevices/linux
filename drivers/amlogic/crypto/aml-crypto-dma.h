@@ -19,6 +19,8 @@
 #define _AML_CRYPTO_H_
 #include <linux/io.h>
 
+/* #define CRYPTO_DEBUG */
+
  /* Reserved 4096 bytes and table is 12 bytes each */
 #define MAX_NUM_TABLES 341
 
@@ -110,6 +112,11 @@ struct dma_dsc {
 	uint32_t tgt_addr;
 };
 
+#define DMA_FLAG_MAY_OCCUPY    BIT(0)
+#define DMA_FLAG_TDES_IN_USE   BIT(1)
+#define DMA_FLAG_AES_IN_USE    BIT(2)
+#define DMA_FLAG_SHA_IN_USE    BIT(3)
+
 struct aml_dma_dev {
 	spinlock_t dma_lock;
 	uint32_t thread;
@@ -130,12 +137,16 @@ u32 get_dma_sts0_offset(void);
 extern void __iomem *cryptoreg;
 
 extern int debug;
+#ifndef CRYPTO_DEBUG
+#define dbgp(level, fmt, arg...)
+#else
 #define dbgp(level, fmt, arg...)                 \
 	do {                                            \
-		if (debug >= level)                         \
+		if (likely(debug >= level))                         \
 			pr_debug("%s: " fmt, __func__, ## arg);\
 		else                                            \
 			pr_info("%s: " fmt, __func__, ## arg); \
 	} while (0)
 
+#endif
 #endif

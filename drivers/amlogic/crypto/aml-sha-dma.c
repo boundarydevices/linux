@@ -229,6 +229,7 @@ static int aml_sha_xmit_dma(struct aml_sha_dev *dd,
 	struct aml_sha_ctx *tctx = crypto_tfm_ctx(req->base.tfm);
 	struct aml_sha_reqctx *ctx = ahash_request_ctx(req);
 	size_t length = 0;
+	unsigned long flags;
 
 	dbgp(1, "xmit_dma:ctx:%p,digcnt:0x%llx 0x%llx,nents: %u,final:%d\n",
 		ctx, ctx->digcnt[1], ctx->digcnt[0], nents, final);
@@ -286,6 +287,10 @@ static int aml_sha_xmit_dma(struct aml_sha_dev *dd,
 		ctx, ctx->digcnt[1], ctx->digcnt[0], length, final);
 
 	/* Start DMA transfer */
+	spin_lock_irqsave(&dd->dma->dma_lock, flags);
+	dd->dma->dma_busy |= DMA_FLAG_SHA_IN_USE;
+	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
+
 	dd->flags |=  SHA_FLAGS_DMA_ACTIVE;
 	aml_write_crypto_reg(dd->thread,
 			(uintptr_t) ctx->dma_descript_tab | 2);
@@ -454,7 +459,9 @@ static int aml_sha_update_dma_stop(struct aml_sha_dev *dd)
 static int aml_sha_update_req(struct aml_sha_dev *dd, struct ahash_request *req)
 {
 	int err;
+#ifdef CRYPTO_DEBUG
 	struct aml_sha_reqctx *ctx = ahash_request_ctx(req);
+#endif
 
 	dbgp(1, "update_req: ctx: %p, total: %u, digcnt: 0x%llx 0x%llx\n",
 		ctx, ctx->total, ctx->digcnt[1], ctx->digcnt[0]);
@@ -467,7 +474,9 @@ static int aml_sha_update_req(struct aml_sha_dev *dd, struct ahash_request *req)
 static int aml_sha_final_req(struct aml_sha_dev *dd, struct ahash_request *req)
 {
 	int err = 0;
+#ifdef CRYPTO_DEBUG
 	struct aml_sha_reqctx *ctx = ahash_request_ctx(req);
+#endif
 
 	err = aml_sha_update_dma_slow(dd, req);
 
@@ -624,7 +633,7 @@ static void aml_sha_finish_req(struct ahash_request *req, int err)
 	}
 
 	spin_lock_irqsave(&dd->dma->dma_lock, flags);
-	dd->dma->dma_busy = 0;
+	dd->dma->dma_busy &= ~DMA_FLAG_MAY_OCCUPY;
 	dd->flags &= ~(SHA_FLAGS_BUSY | SHA_FLAGS_OUTPUT_READY);
 	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 
@@ -806,7 +815,7 @@ static int aml_sha_handle_queue(struct aml_sha_dev *dd,
 	if (req)
 		ret = ahash_enqueue_request(&dd->queue, req);
 
-	if (SHA_FLAGS_BUSY & dd->flags || dd->dma->dma_busy) {
+	if ((dd->flags & SHA_FLAGS_BUSY) || dd->dma->dma_busy) {
 		spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 		return ret;
 	}
@@ -815,7 +824,7 @@ static int aml_sha_handle_queue(struct aml_sha_dev *dd,
 	async_req = crypto_dequeue_request(&dd->queue);
 	if (async_req) {
 		dd->flags |= SHA_FLAGS_BUSY;
-		dd->dma->dma_busy = 1;
+		dd->dma->dma_busy |= DMA_FLAG_MAY_OCCUPY;
 	}
 	spin_unlock_irqrestore(&dd->dma->dma_lock, flags);
 
@@ -1277,15 +1286,20 @@ static irqreturn_t aml_sha_irq(int irq, void *dev_id)
 	if (status) {
 		if (status == 0x1)
 			pr_err("irq overwrite\n");
-		if (SHA_FLAGS_DMA_ACTIVE & sha_dd->flags) {
+		if (sha_dd->dma->dma_busy == DMA_FLAG_MAY_OCCUPY)
+			return IRQ_HANDLED;
+		if (sha_dd->flags & SHA_FLAGS_DMA_ACTIVE &&
+				(sha_dd->dma->dma_busy & DMA_FLAG_SHA_IN_USE)) {
 			sha_dd->flags |= SHA_FLAGS_OUTPUT_READY;
 			aml_write_crypto_reg(sha_dd->status, 0xf);
+			sha_dd->dma->dma_busy &= ~DMA_FLAG_SHA_IN_USE;
 			tasklet_schedule(&sha_dd->done_task);
 			return IRQ_HANDLED;
 		} else {
 			return IRQ_NONE;
 		}
 	}
+
 	return IRQ_NONE;
 }
 
