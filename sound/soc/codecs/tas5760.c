@@ -318,7 +318,7 @@ static int tas5760_remove(struct snd_soc_codec *codec)
 
 	/* Put the device in shutdown */
 	if (gpio_is_valid(priv->gpio_spk_sd)) {
-        dev_info("set gpio %d to 0\n", priv->gpio_spk_sd);
+		dev_info(codec->dev, "set gpio %d to 0\n", priv->gpio_spk_sd);
 		gpio_set_value(priv->gpio_spk_sd, 0);
 	}
 
