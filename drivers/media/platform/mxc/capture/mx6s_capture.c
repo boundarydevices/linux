@@ -262,6 +262,12 @@ static struct mx6s_fmt formats[] = {
 		.mbus_code	= MEDIA_BUS_FMT_YUYV8_2X8,
 		.bpp		= 2,
 	}, {
+		.name		= "YVYU-16",
+		.fourcc		= V4L2_PIX_FMT_YVYU,
+		.pixelformat	= V4L2_PIX_FMT_YVYU,
+		.mbus_code	= MEDIA_BUS_FMT_YVYU8_2X8,
+		.bpp		= 2,
+	}, {
 		.name		= "YUV32 (X-Y-U-V)",
 		.fourcc		= V4L2_PIX_FMT_YUV32,
 		.pixelformat	= V4L2_PIX_FMT_YUV32,
@@ -838,6 +844,7 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 		break;
 	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_YVYU:
 		if (csi_dev->csi_mipi_mode == true)
 			width = pix->width;
 		else
@@ -862,6 +869,7 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 		switch (csi_dev->fmt->pixelformat) {
 		case V4L2_PIX_FMT_UYVY:
 		case V4L2_PIX_FMT_YUYV:
+		case V4L2_PIX_FMT_YVYU:
 			cr18 |= BIT_MIPI_DATA_FORMAT_YUV422_8B;
 			break;
 		case V4L2_PIX_FMT_SBGGR8:
