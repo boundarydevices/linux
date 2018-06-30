@@ -111,7 +111,6 @@ struct ov5640 {
 	int ae_mode;
 
 	u32 mclk;
-	u8 mclk_source;
 	struct clk *sensor_clk;
 	int csi;
 
@@ -1623,13 +1622,6 @@ static int ov5640_probe(struct i2c_client *client,
 					&(sensor->mclk));
 	if (retval) {
 		dev_err(dev, "mclk missing or invalid\n");
-		return retval;
-	}
-
-	retval = of_property_read_u32(dev->of_node, "mclk_source",
-					(u32 *) &(sensor->mclk_source));
-	if (retval) {
-		dev_err(dev, "mclk_source missing or invalid\n");
 		return retval;
 	}
 
