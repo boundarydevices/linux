@@ -1778,7 +1778,11 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
-	clk_prepare_enable(sensor->sensor_clk);
+	retval = clk_prepare_enable(sensor->sensor_clk);
+	if (retval < 0) {
+		dev_err(dev, "%s: enable sensor clk fail\n", __func__);
+		return -EINVAL;
+	}
 
 	sensor->io_init = ov5640_reset;
 	sensor->i2c_client = client;
