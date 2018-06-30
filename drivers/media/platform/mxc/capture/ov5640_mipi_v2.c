@@ -1632,7 +1632,11 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
-	clk_prepare_enable(sensor->sensor_clk);
+	retval = clk_prepare_enable(sensor->sensor_clk);
+	if (retval < 0) {
+		dev_err(dev, "%s: enable sensor clk fail\n", __func__);
+		return -EINVAL;
+	}
 
 	sensor->i2c_client = client;
 	sensor->pix.pixelformat = V4L2_PIX_FMT_YUYV;
