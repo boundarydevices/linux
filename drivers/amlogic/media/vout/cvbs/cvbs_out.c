@@ -78,7 +78,7 @@ static struct vinfo_s cvbs_info[] = {
 		.viu_mux           = VIU_MUX_ENCI,
 		.vout_device       = NULL,
 	},
-	{ /* MODE_576I */
+	{ /* MODE_576CVBS */
 		.name              = "576cvbs",
 		.mode              = VMODE_CVBS,
 		.width             = 720,
@@ -92,6 +92,40 @@ static struct vinfo_s cvbs_info[] = {
 		.htotal            = 1728,
 		.vtotal            = 625,
 		.fr_adj_type       = VOUT_FR_ADJ_NONE,
+		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCI,
+		.vout_device       = NULL,
+	},
+	{ /* MODE_PAL_M */
+		.name              = "pal_m",
+		.mode              = VMODE_CVBS,
+		.width             = 720,
+		.height            = 480,
+		.field_height      = 240,
+		.aspect_ratio_num  = 4,
+		.aspect_ratio_den  = 3,
+		.sync_duration_num = 60,
+		.sync_duration_den = 1,
+		.video_clk         = 27000000,
+		.htotal            = 1716,
+		.vtotal            = 525,
+		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCI,
+		.vout_device       = NULL,
+	},
+	{ /* MODE_PAL_N */
+		.name              = "pal_n",
+		.mode              = VMODE_CVBS,
+		.width             = 720,
+		.height            = 576,
+		.field_height      = 288,
+		.aspect_ratio_num  = 4,
+		.aspect_ratio_den  = 3,
+		.sync_duration_num = 50,
+		.sync_duration_den = 1,
+		.video_clk         = 27000000,
+		.htotal            = 1728,
+		.vtotal            = 625,
 		.viu_color_fmt     = COLOR_FMT_YUV444,
 		.viu_mux           = VIU_MUX_ENCI,
 		.vout_device       = NULL,
@@ -376,12 +410,26 @@ int cvbs_out_setmode(void)
 {
 	int ret;
 
-	cvbs_log_info("SET cvbs mode:%s(%d)\n",
-		(local_cvbs_mode == 0) ? "480cvbs" :
-		((local_cvbs_mode == 1) ? "576cvbs" :
-		"invalid"), local_cvbs_mode);
+	switch (local_cvbs_mode) {
+	case MODE_480CVBS:
+		cvbs_log_info("SET cvbs mode: 480cvbs\n");
+		break;
+	case MODE_576CVBS:
+		cvbs_log_info("SET cvbs mode: 576cvbs\n");
+		break;
+	case MODE_PAL_M:
+		cvbs_log_info("SET cvbs mode: pal_m\n");
+		break;
+	case MODE_PAL_N:
+		cvbs_log_info("SET cvbs mode: pal_n\n");
+		break;
+	default:
+		cvbs_log_err("cvbs_out_setmode:invalid cvbs mode");
+		break;
+	}
+
 	if (local_cvbs_mode >= MODE_MAX) {
-		cvbs_log_err("cvbs_out_setmode:cvbsmode error.");
+		cvbs_log_err("cvbs_out_setmode:mode error.return");
 		return -1;
 	}
 	mutex_lock(&setmode_mutex);
@@ -718,6 +766,8 @@ static void bist_test_store(char *para)
 		switch (local_cvbs_mode) {
 		case MODE_480CVBS:
 		case MODE_576CVBS:
+		case MODE_PAL_M:
+		case MODE_PAL_N:
 			cvbs_out_reg_write(ENCI_TST_EN, 0);
 			break;
 		default:
@@ -730,6 +780,8 @@ static void bist_test_store(char *para)
 		switch (local_cvbs_mode) {
 		case MODE_480CVBS:
 		case MODE_576CVBS:
+		case MODE_PAL_M:
+		case MODE_PAL_N:
 			cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
 			cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
 			cvbs_out_reg_write(ENCI_TST_MDSEL, (unsigned int)num);
@@ -959,7 +1011,10 @@ static void cvbs_debug_store(char *buf)
 		cmd = CMD_VP_SET_PLLPATH;
 	else if (!strncmp(argv[0], "help", strlen("help")))
 		cmd = CMD_HELP;
-	else {
+	else if (!strncmp(argv[0], "cvbs_ver", strlen("cvbs_ver"))) {
+		print_info("cvbsout version : %s\n", CVBSOUT_VER);
+		goto DEBUG_END;
+	} else {
 		print_info("[%s] invalid cmd = %s!\n", __func__, argv[0]);
 		goto DEBUG_END;
 	}
@@ -1152,7 +1207,8 @@ static void cvbs_debug_store(char *buf)
 		"\twb value_hex c/h/v address_hex start_dec length_dec\n"
 		"\tbist 0/1/2/3/off\n"
 		"\tclkdump\n"
-		"\tset_clkpath 0/1/2/3\n");
+		"\tset_clkpath 0/1/2/3\n"
+		"\tcvbs_ver\n");
 		break;
 	}
 

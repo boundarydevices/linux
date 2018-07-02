@@ -25,6 +25,8 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include "cvbs_mode.h"
 
+#define CVBSOUT_VER "Ref.2018/07/02"
+
 #define CVBS_CLASS_NAME	"cvbs"
 #define CVBS_NAME	"cvbs"
 #define	MAX_NUMBER_PARA  10
