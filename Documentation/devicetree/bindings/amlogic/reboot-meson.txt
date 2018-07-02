@@ -1,0 +1,16 @@
+Amlogic Meson Reboot
+
+Required properties:
+ - compatible: must be "amlogic,reboot"
+
+ - sys_reset: should be 0x84000009
+ - sys_poweroff: should be 0x84000008
+   refere to Power_State_Coordination_Interface_PDD_v1_1_DEN0022D.pdf,page 34.
+
+Examples:
+
+	reboot {
+		compatible = "amlogic,reboot";
+		sys_reset = <0x84000009>;
+		sys_poweroff = <0x84000008>;
+	};

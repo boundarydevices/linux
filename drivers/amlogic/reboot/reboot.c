@@ -151,6 +151,7 @@ static int aml_restart_probe(struct platform_device *pdev)
 
 static const struct of_device_id of_aml_restart_match[] = {
 	{ .compatible = "aml, reboot", },
+	{ .compatible = "amlogic,reboot", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, of_aml_restart_match);

@@ -14535,3 +14535,7 @@ F:	include/dt-bindings/gpio/meson-txl-gpio.h
 AMLOGIC TXL PANEL DRIVER
 M:	evoke zhang <evoke.zhang@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesontxl_p321-panel.dtsi
+
+AMLOGIC REBOOT
+M:	Jian Hu <jian.hu@amlogic.com>
+F:	Documentation/devicetree/bindings/amlogic/reboot-meson.txt
