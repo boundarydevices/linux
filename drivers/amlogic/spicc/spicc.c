@@ -671,7 +671,6 @@ static void spicc_hw_init(struct spicc *spicc)
 					0x0<<0),
 					mem_base + SPICC_REG_DMA);
 	spicc_set_bit_width(spicc, SPICC_DEFAULT_BIT_WIDTH);
-	spicc_set_mode(spicc, SPI_MODE_0);
 	spicc_set_clk(spicc, SPICC_DEFAULT_SPEED_HZ);
 	if (spicc_get_flag(spicc, FLAG_ENHANCE)) {
 		setb(spicc->regs, MOSI_OEN, 1);
@@ -682,6 +681,7 @@ static void spicc_hw_init(struct spicc *spicc)
 		writel(spicc->enhance_dlyctl,
 			spicc->regs + SPICC_REG_ENHANCE_CNTL1);
 	}
+	spicc_set_mode(spicc, SPI_MODE_0);
 	/* spicc_enable(spicc, 0); */
 }
 
