@@ -141,6 +141,19 @@
 		};
 	};
 
+	gpioleds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		sys_led {
+			label="sys_led";
+			gpios=<&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
+			default-state ="on";
+			retain-state-suspended;
+			linux,default-trigger="cpu0";
+		};
+	};
+
 	cvbsout {
 		compatible = "amlogic, cvbsout-g12a";
 		dev_name = "cvbsout";
