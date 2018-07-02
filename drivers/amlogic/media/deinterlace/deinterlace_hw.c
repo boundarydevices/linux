@@ -459,7 +459,8 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 	else
 		DI_Wr(DI_CLKG_CTRL, 0x1); /* di no clock gate */
 
-	if (is_meson_txlx_cpu() ||
+	if (is_meson_txl_cpu() ||
+		is_meson_txlx_cpu() ||
 		is_meson_gxlx_cpu() ||
 		is_meson_txhd_cpu() ||
 		is_meson_g12a_cpu() ||
@@ -516,14 +517,13 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 		di_pre_gate_control(false, true);
 		di_post_gate_control(false);
 		di_top_gate_control(false, false);
-	} else if (is_meson_gxlx_cpu()) {
+	} else if (is_meson_txl_cpu() || is_meson_gxlx_cpu()) {
 		/* di clock div enable for pq load */
 		DI_Wr(DI_CLKG_CTRL, 0x80000000);
 	} else {
 		DI_Wr(DI_CLKG_CTRL, 0x2); /* di clock gate all */
 	}
-	switch_vpu_clk_gate_vmod(VPU_VPU_CLKB,
-		VPU_CLK_GATE_OFF);
+	switch_vpu_clk_gate_vmod(VPU_VPU_CLKB, VPU_CLK_GATE_OFF);
 
 }
 

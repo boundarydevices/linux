@@ -4662,6 +4662,15 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 	if ((di_buf->di_buf_dup_p[1]->vframe == NULL) ||
 		di_buf->di_buf_dup_p[0]->vframe == NULL)
 		return 0;
+
+	if (is_meson_txl_cpu() && overturn && di_buf->di_buf_dup_p[2]) {
+		/*sync from kernel 3.14 txl*/
+		if (post_blend == PULL_DOWN_BLEND_2)
+			post_blend = PULL_DOWN_BLEND_0;
+		else if (post_blend == PULL_DOWN_BLEND_0)
+			post_blend = PULL_DOWN_BLEND_2;
+	}
+
 	switch (post_blend) {
 	case PULL_DOWN_BLEND_0:
 	case PULL_DOWN_NORMAL:
@@ -4677,11 +4686,21 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 			di_buf->di_buf_dup_p[2]->nr_canvas_idx;
 		di_post_stru.di_mtnprd_mif.canvas_num =
 			di_buf->di_buf_dup_p[2]->mtn_canvas_idx;
-		mc_pre_flag = (overturn?0:1);
-		if (di_buf->pd_config.global_mode == PULL_DOWN_NORMAL)
+		//mc_pre_flag = is_meson_txl_cpu()?2:(overturn?0:1);
+		mc_pre_flag = overturn?0:1;
+		if (di_buf->pd_config.global_mode == PULL_DOWN_NORMAL) {
 			post_blend_mode = 3;
-		else
+			/*if pulldown, mcdi_mcpreflag is 1,*/
+			/*it means use previous field for MC*/
+			/*else not pulldown,mcdi_mcpreflag is 2*/
+			/*it means use forward & previous field for MC*/
+			if (is_meson_txhd_cpu())
+				mc_pre_flag = 2;
+		} else {
+			if (is_meson_txhd_cpu())
+				mc_pre_flag = 1;
 			post_blend_mode = 1;
+		}
 		if (mcpre_en) {
 			di_post_stru.di_mcvecrd_mif.canvas_num =
 				di_buf->di_buf_dup_p[2]->mcvec_canvas_idx;
@@ -4704,10 +4723,14 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 			di_buf->di_buf_dup_p[0]->nr_canvas_idx;
 		di_post_stru.di_mtnprd_mif.canvas_num =
 			di_buf->di_buf_dup_p[2]->mtn_canvas_idx;
+		if (is_meson_txl_cpu() && overturn) {
+			di_post_stru.di_buf1_mif.canvas0_addr0 =
+			di_post_stru.di_buf2_mif.canvas0_addr0;
+		}
 		if (mcpre_en) {
 			di_post_stru.di_mcvecrd_mif.canvas_num =
 				di_buf->di_buf_dup_p[2]->mcvec_canvas_idx;
-			mc_pre_flag = (overturn?1:0);
+			mc_pre_flag = is_meson_txl_cpu()?0:(overturn?1:0);
 			if (is_meson_txlx_cpu() || is_meson_gxlx_cpu() ||
 				is_meson_txhd_cpu())
 				invert_mv = true;
@@ -4715,10 +4738,19 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 				di_post_stru.di_buf2_mif.canvas0_addr0 =
 			di_buf->di_buf_dup_p[2]->nr_canvas_idx;
 		}
-		if (di_buf->pd_config.global_mode == PULL_DOWN_NORMAL_2)
+		if (di_buf->pd_config.global_mode == PULL_DOWN_NORMAL_2) {
 			post_blend_mode = 3;
-		else
+			/*if pulldown, mcdi_mcpreflag is 1,*/
+			/*it means use previous field for MC*/
+			/*else not pulldown,mcdi_mcpreflag is 2*/
+			/*it means use forward & previous field for MC*/
+			if (is_meson_txhd_cpu())
+				mc_pre_flag = 2;
+		} else {
+			if (is_meson_txhd_cpu())
+				mc_pre_flag = 1;
 			post_blend_mode = 1;
+		}
 		blend_mtn_en = 1;
 		post_ei = ei_en = 1;
 		post_blend_en = 1;
@@ -4862,8 +4894,13 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 			);
 	}
 
-	if (is_meson_txlx_cpu() || is_meson_gxlx_cpu() ||
-		is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
+		if (is_meson_gxtvbb_cpu()   ||
+			is_meson_txl_cpu()  ||
+			is_meson_txlx_cpu() ||
+			is_meson_gxlx_cpu() ||
+			is_meson_txhd_cpu() ||
+			is_meson_g12a_cpu() ||
+			is_meson_g12b_cpu()) {
 		di_post_read_reverse_irq(overturn, mc_pre_flag,
 			post_blend_en ? mcpre_en : false);
 		/* disable mc for first 2 fieldes mv unreliable */
@@ -4874,7 +4911,9 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 		if (di_buf->di_buf_dup_p[2])
 			set_post_mcinfo(&di_buf->di_buf_dup_p[2]
 				->curr_field_mcinfo);
-	} else if (is_meson_gxlx_cpu() || is_meson_txlx_cpu())
+	} else if (is_meson_gxlx_cpu()
+		|| is_meson_txl_cpu()
+		|| is_meson_txlx_cpu())
 		DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL, 0, 0, 2);
 
 
@@ -5760,7 +5799,9 @@ static void di_pre_size_change(unsigned short width,
 	if (pulldown_enable) {
 		pulldown_init(width, height);
 		init_field_mode(height);
-		if (is_meson_txlx_cpu() ||
+
+		if (is_meson_txl_cpu() ||
+			is_meson_txlx_cpu() ||
 			is_meson_gxlx_cpu() ||
 			is_meson_txhd_cpu() ||
 			is_meson_g12a_cpu() ||
@@ -7110,7 +7151,8 @@ unsigned int RDMA_WR_BITS(unsigned int adr, unsigned int val,
 
 static void set_di_flag(void)
 {
-	if (is_meson_txlx_cpu() ||
+	if (is_meson_txl_cpu() ||
+		is_meson_txlx_cpu() ||
 		is_meson_gxlx_cpu() ||
 		is_meson_txhd_cpu() ||
 		is_meson_g12a_cpu() ||
@@ -7126,7 +7168,8 @@ static void set_di_flag(void)
 		di_vscale_skip_enable = (is_meson_txlx_cpu()
 				|| is_meson_txhd_cpu())?12:4;
 		use_2_interlace_buff = is_meson_gxlx_cpu()?0:1;
-		if (is_meson_txlx_cpu() ||
+		if (is_meson_txl_cpu() ||
+			is_meson_txlx_cpu() ||
 			is_meson_gxlx_cpu() ||
 			is_meson_txhd_cpu() ||
 			is_meson_g12a_cpu() ||
@@ -7289,7 +7332,7 @@ static int di_probe(struct platform_device *pdev)
 #endif
 	di_pr_info("%s allocate rdma channel %d.\n", __func__,
 		di_devp->rdma_handle);
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
 		di_get_vpu_clkb(&pdev->dev, di_devp);
 		#ifdef CLK_TREE_SUPPORT
 		clk_prepare_enable(di_devp->vpu_clkb);
@@ -7504,7 +7547,7 @@ static int di_resume(struct device *dev)
 	struct di_dev_s *di_devp = NULL;
 
 	di_devp = dev_get_drvdata(dev);
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL))
 		clk_prepare_enable(di_devp->vpu_clkb);
 	init_flag = save_init_flag;
 	di_devp->flags &= ~DI_SUSPEND_FLAG;
