@@ -329,9 +329,11 @@ static void alc_fill_eapd_coef(struct hda_codec *codec)
 		break;
 	case 0x10ec0225:
 	case 0x10ec0233:
+	case 0x10ec0235:
 	case 0x10ec0236:
 	case 0x10ec0255:
 	case 0x10ec0256:
+	case 0x10ec0257:
 	case 0x10ec0282:
 	case 0x10ec0283:
 	case 0x10ec0286:
@@ -2662,6 +2664,7 @@ enum {
 	ALC269_TYPE_ALC298,
 	ALC269_TYPE_ALC255,
 	ALC269_TYPE_ALC256,
+	ALC269_TYPE_ALC257,
 	ALC269_TYPE_ALC225,
 	ALC269_TYPE_ALC294,
 	ALC269_TYPE_ALC700,
@@ -2694,6 +2697,7 @@ static int alc269_parse_auto_config(struct hda_codec *codec)
 	case ALC269_TYPE_ALC298:
 	case ALC269_TYPE_ALC255:
 	case ALC269_TYPE_ALC256:
+	case ALC269_TYPE_ALC257:
 	case ALC269_TYPE_ALC225:
 	case ALC269_TYPE_ALC294:
 	case ALC269_TYPE_ALC700:
@@ -3494,6 +3498,7 @@ static void alc280_fixup_hp_gpio4(struct hda_codec *codec,
 	}
 }
 
+#if IS_REACHABLE(INPUT)
 static void gpio2_mic_hotkey_event(struct hda_codec *codec,
 				   struct hda_jack_callback *event)
 {
@@ -3626,6 +3631,10 @@ static void alc233_fixup_lenovo_line2_mic_hotkey(struct hda_codec *codec,
 		spec->kb_dev = NULL;
 	}
 }
+#else /* INPUT */
+#define alc280_fixup_hp_gpio2_mic_hotkey	NULL
+#define alc233_fixup_lenovo_line2_mic_hotkey	NULL
+#endif /* INPUT */
 
 static void alc269_fixup_hp_line1_mic1_led(struct hda_codec *codec,
 				const struct hda_fixup *fix, int action)
@@ -6359,6 +6368,7 @@ static int patch_alc269(struct hda_codec *codec)
 	case 0x10ec0298:
 		spec->codec_variant = ALC269_TYPE_ALC298;
 		break;
+	case 0x10ec0235:
 	case 0x10ec0255:
 		spec->codec_variant = ALC269_TYPE_ALC255;
 		break;
@@ -6367,6 +6377,10 @@ static int patch_alc269(struct hda_codec *codec)
 		spec->codec_variant = ALC269_TYPE_ALC256;
 		spec->gen.mixer_nid = 0; /* ALC256 does not have any loopback mixer path */
 		alc_update_coef_idx(codec, 0x36, 1 << 13, 1 << 5); /* Switch pcbeep path to Line in path*/
+		break;
+	case 0x10ec0257:
+		spec->codec_variant = ALC269_TYPE_ALC257;
+		spec->gen.mixer_nid = 0;
 		break;
 	case 0x10ec0225:
 	case 0x10ec0295:
@@ -7354,6 +7368,7 @@ static const struct hda_device_id snd_hda_id_realtek[] = {
 	HDA_CODEC_ENTRY(0x10ec0236, "ALC236", patch_alc269),
 	HDA_CODEC_ENTRY(0x10ec0255, "ALC255", patch_alc269),
 	HDA_CODEC_ENTRY(0x10ec0256, "ALC256", patch_alc269),
+	HDA_CODEC_ENTRY(0x10ec0257, "ALC257", patch_alc269),
 	HDA_CODEC_ENTRY(0x10ec0260, "ALC260", patch_alc260),
 	HDA_CODEC_ENTRY(0x10ec0262, "ALC262", patch_alc262),
 	HDA_CODEC_ENTRY(0x10ec0267, "ALC267", patch_alc268),
