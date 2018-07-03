@@ -84,12 +84,14 @@ extern void vlock_log_print(void);
 #define VLOCK_DEBUG_ENC_LINE_ADJ_DIS (1 << 2)
 #define VLOCK_DEBUG_ENC_PIXEL_ADJ_DIS (1 << 3)
 #define VLOCK_DEBUG_AUTO_MODE_LOG_EN (1 << 4)
+#define VLOCK_DEBUG_PLL2ENC_DIS (1 << 5)
 
 /* 0:enc;1:pll;2:manual pll */
 extern unsigned int vlock_mode;
 extern unsigned int vlock_en;
 extern unsigned int vecm_latch_flag;
 extern void __iomem *amvecm_hiu_reg_base;
+extern unsigned int probe_ok;
 
 extern void lcd_ss_enable(bool flag);
 extern unsigned int lcd_ss_status(void);

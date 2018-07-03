@@ -453,6 +453,7 @@ static ssize_t vout_vinfo_show(struct class *class,
 		"    screen_real_height:    %d\n"
 		"    htotal:                %d\n"
 		"    vtotal:                %d\n"
+		"    fr_adj_type:           %d\n"
 		"    video_clk:             %d\n"
 		"    viu_color_fmt:         %d\n"
 		"    viu_mux:               %d\n\n",
@@ -461,7 +462,7 @@ static ssize_t vout_vinfo_show(struct class *class,
 		info->aspect_ratio_num, info->aspect_ratio_den,
 		info->sync_duration_num, info->sync_duration_den,
 		info->screen_real_width, info->screen_real_height,
-		info->htotal, info->vtotal,
+		info->htotal, info->vtotal, info->fr_adj_type,
 		info->video_clk, info->viu_color_fmt, info->viu_mux);
 	len += sprintf(buf+len, "master_display_info:\n"
 		"    present_flag          %d\n"

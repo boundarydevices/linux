@@ -313,6 +313,7 @@ extern int amvecm_on_vs(
 extern void refresh_on_vs(struct vframe_s *vf);
 extern void pc_mode_process(void);
 extern void pq_user_latch_process(void);
+extern void vlock_process(struct vframe_s *vf);
 
 /* master_display_info for display device */
 struct hdr_metadata_info_s {

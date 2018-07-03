@@ -989,15 +989,6 @@ int amvecm_on_vs(
 		amvecm_fresh_overscan(vf);
 	else
 		amvecm_reset_overscan();
-	/* todo:vlock processs only for tv chip */
-	if (is_meson_gxtvbb_cpu() ||
-		is_meson_txl_cpu() || is_meson_txlx_cpu()
-		|| is_meson_txhd_cpu()) {
-		if (vf != NULL)
-			amve_vlock_process(vf);
-		else
-			amve_vlock_resume();
-	}
 
 	/* pq latch process */
 	amvecm_video_latch();
@@ -4835,19 +4826,7 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	/*config vlock mode*/
 	/*todo:txlx & g9tv support auto pll,*/
 	/*but support not good,need vlsi support optimize*/
-	if (is_meson_txhd_cpu())
-		vlock_mode = VLOCK_MODE_MANUAL_PLL;
-	else if (is_meson_txlx_cpu() && !is_meson_txlx_package_962E()) {
-		struct vinfo_s *vinfo = get_current_vinfo();
-
-		if ((vinfo->fr_adj_type != VOUT_FR_ADJ_HDMI) &&
-			(vinfo->width <= 1920))
-			vlock_mode = VLOCK_MODE_MANUAL_SOFT_ENC;
-		else
-			vlock_mode = VLOCK_MODE_MANUAL_PLL;
-
-	} else
-		vlock_mode = VLOCK_MODE_MANUAL_PLL;
+	vlock_mode = VLOCK_MODE_MANUAL_PLL;
 	if (is_meson_gxtvbb_cpu() ||
 		is_meson_txl_cpu() || is_meson_txlx_cpu()
 		|| is_meson_txhd_cpu())

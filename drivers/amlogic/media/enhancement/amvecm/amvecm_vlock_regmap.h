@@ -18,61 +18,58 @@
 #ifndef __AMVECM_VLOCK_REGMAP_H
 #define __AMVECM_VLOCK_REGMAP_H
 
-#include <linux/amlogic/media/amvecm/cm.h>
 
-static struct am_regs_s vlock_enc_setting = {
-	20,
-	{
-	/* optimize */
-	{REG_TYPE_VCBUS, 0x3000,     0xffffffff, 0xE3f50f10  },
-	{REG_TYPE_VCBUS, 0x3001,     0xffffffff, 0x41E3c3c   },
-	{REG_TYPE_VCBUS, 0x3002,     0xffffffff, 0x6000000   },
-	{REG_TYPE_VCBUS, 0x3003,     0xffffffff, 0x20680680  },
-	{REG_TYPE_VCBUS, 0x3004,     0xffffffff, 0x280280    },
-	{REG_TYPE_VCBUS, 0x3005,     0xffffffff, 0x8020000   },
-	{REG_TYPE_VCBUS, 0x3006,     0xffffffff, 0x0008000   },
-	{REG_TYPE_VCBUS, 0x3007,     0xffffffff, 0x0000000   },
-	{REG_TYPE_VCBUS, 0x3008,     0xffffffff, 0x0000000   },
-	{REG_TYPE_VCBUS, 0x3009,     0xffffffff, 0x0008000   },
-	{REG_TYPE_VCBUS, 0x300a,     0xffffffff, 0x8000000   },
-	{REG_TYPE_VCBUS, 0x300b,     0xffffffff, 0x000a000   },
-	{REG_TYPE_VCBUS, 0x300c,     0xffffffff, 0xa000000   },
-	{REG_TYPE_VCBUS, 0x300d,     0xffffffff, 0x0004000   },
-	{REG_TYPE_VCBUS, 0x3010,     0xffffffff, 0x20001000  },
-	{REG_TYPE_VCBUS, 0x3016,     0xffffffff, 0x18000     },
-	{REG_TYPE_VCBUS, 0x3017,     0xffffffff, 0x01080     },
-	{REG_TYPE_VCBUS, 0x301d,     0xffffffff, 0x30501080  },
-	{REG_TYPE_VCBUS, 0x301e,     0xffffffff, 0x7	    },
-	{REG_TYPE_VCBUS, 0x301f,     0xffffffff, 0x6000000   },
-	{0}
-	}
+struct vlock_regs_s {
+	unsigned int addr;
+	unsigned int val;
 };
-static struct am_regs_s vlock_pll_setting = {
-	20,
-	{
+
+#define VLOCK_DEFAULT_REG_SIZE 20
+static struct vlock_regs_s vlock_enc_setting[VLOCK_DEFAULT_REG_SIZE] = {
 	/* optimize */
-	{REG_TYPE_VCBUS, 0x3000,     0xffffffff, 0x07f13f1a   },
-	{REG_TYPE_VCBUS, 0x3001,     0xffffffff, 0x04053c32   },
-	{REG_TYPE_VCBUS, 0x3002,     0xffffffff, 0x06000000   },
-	{REG_TYPE_VCBUS, 0x3003,     0xffffffff, 0x20780780   },
-	{REG_TYPE_VCBUS, 0x3004,     0xffffffff, 0x00000000   },
-	{REG_TYPE_VCBUS, 0x3005,     0xffffffff, 0x00080000   },
-	{REG_TYPE_VCBUS, 0x3006,     0xffffffff, 0x00070000   },
-	{REG_TYPE_VCBUS, 0x3007,     0xffffffff, 0x00000000   },
-	{REG_TYPE_VCBUS, 0x3008,     0xffffffff, 0x00000000   },
-	{REG_TYPE_VCBUS, 0x3009,     0xffffffff, 0x00100000   },
-	{REG_TYPE_VCBUS, 0x300a,     0xffffffff, 0x00008000   },
-	{REG_TYPE_VCBUS, 0x300b,     0xffffffff, 0x00100000   },
-	{REG_TYPE_VCBUS, 0x300c,     0xffffffff, 0x00000000   },
-	{REG_TYPE_VCBUS, 0x300d,     0xffffffff, 0x00004000   },
-	{REG_TYPE_VCBUS, 0x3010,     0xffffffff, 0x20001000   },
-	{REG_TYPE_VCBUS, 0x3016,     0xffffffff, 0x0003de00   },
-	{REG_TYPE_VCBUS, 0x3017,     0xffffffff, 0x00001080   },
-	{REG_TYPE_VCBUS, 0x301d,     0xffffffff, 0x30501080   },
-	{REG_TYPE_VCBUS, 0x301e,     0xffffffff, 0x00000007   },
-	{REG_TYPE_VCBUS, 0x301f,     0xffffffff, 0x06000000   },
-	{0}
-	}
+	{0x3000,     0xE3f50f10  },
+	{0x3001,     0x41E3c3c   },
+	{0x3002,     0x6000000   },
+	{0x3003,     0x20680680  },
+	{0x3004,     0x280280    },
+	{0x3005,     0x8020000   },
+	{0x3006,     0x0008000   },
+	{0x3007,     0x0000000   },
+	{0x3008,     0x0000000   },
+	{0x3009,     0x0008000   },
+	{0x300a,     0x8000000   },
+	{0x300b,     0x000a000   },
+	{0x300c,     0xa000000   },
+	{0x300d,     0x0004000   },
+	{0x3010,     0x20001000  },
+	{0x3016,     0x18000     },
+	{0x3017,     0x01080     },
+	{0x301d,     0x30501080  },
+	{0x301e,     0x7	 },
+	{0x301f,     0x6000000   },
+};
+static struct vlock_regs_s vlock_pll_setting[VLOCK_DEFAULT_REG_SIZE] = {
+	/* optimize */
+	{0x3000,     0x07f13f1a   },
+	{0x3001,     0x04053c32   },
+	{0x3002,     0x06000000   },
+	{0x3003,     0x20780780   },
+	{0x3004,     0x00000000   },
+	{0x3005,     0x00080000   },
+	{0x3006,     0x00070000   },
+	{0x3007,     0x00000000   },
+	{0x3008,     0x00000000   },
+	{0x3009,     0x00100000   },
+	{0x300a,     0x00008000   },
+	{0x300b,     0x00100000   },
+	{0x300c,     0x00000000   },
+	{0x300d,     0x00004000   },
+	{0x3010,     0x20001000   },
+	{0x3016,     0x0003de00   },
+	{0x3017,     0x00001080   },
+	{0x301d,     0x30501080   },
+	{0x301e,     0x00000007   },
+	{0x301f,     0x06000000   }
 };
 
 #endif
