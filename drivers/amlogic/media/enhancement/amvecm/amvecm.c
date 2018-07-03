@@ -72,7 +72,7 @@
 #define AMVECM_MODULE_NAME        "amvecm"
 #define AMVECM_DEVICE_NAME        "amvecm"
 #define AMVECM_CLASS_NAME         "amvecm"
-#define AMVECM_VER				"Ref.2018/06/29"
+#define AMVECM_VER				"Ref.2018/07/03"
 
 
 struct amvecm_dev_s {
@@ -4284,6 +4284,29 @@ static ssize_t amvecm_debug_store(struct class *cla,
 			color_mode = 0;
 		vpp_clip_config(mode_sel, color, color_mode);
 		pr_info("vpp_clip_config done!\n");
+		} else if (!strcmp(parm[0], "3dlut_set")) {
+			int *PLut3D;
+
+			PLut3D = kzalloc(14739 * sizeof(int), GFP_KERNEL);
+			if (PLut3D == NULL) {
+				kfree(buf_orig);
+				return -EINVAL;
+			}
+			vpp_lut3d_table_init(PLut3D);
+			if (!strcmp(parm[1], "enable"))
+				vpp_set_lut3d(1, 1, PLut3D, 1);
+			else if (!strcmp(parm[1], "disable"))
+				vpp_set_lut3d(0, 0, PLut3D, 0);
+			else
+				pr_info("unsupprt cmd!\n");
+			kfree(PLut3D);
+		} else if (!strcmp(parm[0], "3dlut_dump")) {
+			if (!strcmp(parm[1], "init_tab"))
+				dump_plut3d_table();
+			else if (!strcmp(parm[1], "reg_tab"))
+				dump_plut3d_reg_table();
+			else
+				pr_info("unsupprt cmd!\n");
 	} else {
 		pr_info("unsupport cmd\n");
 	}
@@ -4949,7 +4972,7 @@ static int __init aml_vecm_init(void)
 	pr_info("%s:module init\n", __func__);
 	/* remap the hiu bus */
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu() ||
-		is_meson_g12a_cpu())
+		is_meson_g12a_cpu() || is_meson_g12b_cpu())
 		hiu_reg_base = 0xff63c000;
 	else
 		hiu_reg_base = 0xc883c000;

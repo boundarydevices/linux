@@ -849,6 +849,11 @@
 #define VPP_POST2_MATRIX_PRE_OFFSET2	0x39ac
 #define VPP_POST2_MATRIX_EN_CTRL	    0x39ad
 
+#define VPP_LUT3D_CTRL					0x39d0
+#define VPP_LUT3D_CBUS2RAM_CTRL			0x39d1
+#define VPP_LUT3D_RAM_ADDR				0x39d2
+#define VPP_LUT3D_RAM_DATA				0x39d3
+
 #define ENCL_VIDEO_EN		0x1ca0
 #endif
 

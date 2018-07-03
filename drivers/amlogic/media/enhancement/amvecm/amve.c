@@ -1458,3 +1458,173 @@ void amvecm_reset_overscan(void)
 	}
 }
 
+static int P3dlut_tab[289] = {0};
+static int P3dlut_regtab[291] = {0};
+/*------------------------------------------------*/
+/*pLut3D[]: 17*17*17*3*12bit*/
+int vpp_set_lut3d(int enable, int bLut3DLoad,
+	int *pLut3D, int bLut3DCheck)
+{
+	int i;
+	uint32_t dwTemp, wRgb[3];
+
+	if (bLut3DLoad) {
+		WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 1);
+		WRITE_VPP_REG(VPP_LUT3D_RAM_ADDR, 0|(0<<31));
+		for (i = 0; i < 17*17*17; i++) {
+			//{comp0, comp1, comp2}
+			WRITE_VPP_REG(VPP_LUT3D_RAM_DATA,
+				((pLut3D[i*3+1]&0xfff)<<16)|
+				(pLut3D[i*3+2]&0xfff));
+			WRITE_VPP_REG(VPP_LUT3D_RAM_DATA,
+				(pLut3D[i*3+0]&0xfff)); /*MSB*/
+		}
+		pr_info("%s: Lut3d load ok!!\n", __func__);
+	}
+	if (bLut3DCheck) {
+		WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 1);
+		WRITE_VPP_REG(VPP_LUT3D_RAM_ADDR, 0|(1<<31));
+		for (i = 0; i < 17*17*17; i++) {
+			dwTemp  = READ_VPP_REG(VPP_LUT3D_RAM_DATA);
+			wRgb[2] = dwTemp & 0xfff;
+			wRgb[1] = (dwTemp>>16)&0xfff;
+			dwTemp  = READ_VPP_REG(VPP_LUT3D_RAM_DATA);
+			wRgb[0] = dwTemp & 0xfff;
+			if (i < 97) {
+				P3dlut_regtab[i*3+2] = wRgb[2];
+				P3dlut_regtab[i*3+1] = wRgb[1];
+				P3dlut_regtab[i*3+0] = wRgb[0];
+			}
+			if (wRgb[0] != pLut3D[i*3+0]) {
+				pr_info("%s:Error: Lut3d check error at R[%d]\n",
+					__func__, i);
+				return 1;
+			}
+			if (wRgb[1] != pLut3D[i*3+1]) {
+				pr_info("%s:Error: Lut3d check error at G[%d]\n",
+					__func__, i);
+				return 1;
+			}
+			if (wRgb[2] != pLut3D[i*3+2]) {
+				pr_info("%s:\n", __func__);
+				return 1;
+			}
+		}
+		pr_info("%s: Lut3d check ok!!\n", __func__);
+	}
+
+	WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 0);
+	WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, 7, 4, 3);/*reg_lut3d_extnd_en[6:4]*/
+	WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, enable&0x1, 0, 1);/*reg_lut3d_en*/
+	pr_info("%s: Lut3d set done!!\n", __func__);
+	return 0;
+}
+
+static void ycbcr2rgbpc_nb(int *R, int *G, int *B,
+	int Y, int Cb, int Cr, int bitdepth)
+{
+	int y = 0;
+	int cb = 0;
+	int cr = 0;
+	int r = 0;
+	int g = 0;
+	int b = 0;
+	int norm = (1<<bitdepth)-1;
+
+	y  = Y  - (1<<(bitdepth-4));
+	cb = Cb - (1<<(bitdepth-1));
+	cr = Cr - (1<<(bitdepth-1));
+
+	r = (298 * y + 408 * cr) / 256;
+	g = (298 * y - 208 * cr - 100 * cb) / 256;
+	b = (298 * y + 516 * cb) / 256;
+
+	if (r > norm)
+		r = norm;
+	if (g > norm)
+		g = norm;
+	if (b > norm)
+		b = norm;
+
+	if (r < 0)
+		r = 0;
+	if (g < 0)
+		g = 0;
+	if (b < 0)
+		b = 0;
+
+	*R = r;
+	*G = g;
+	*B = b;
+}
+
+/*table: use for yuv->rgb*/
+void vpp_lut3d_table_init(int *pLut3D)
+{
+	int d0, d1, d2, ncmp;
+	unsigned int i;
+	int step[3]; /*steps of each input components lut-nodes*/
+	int max_val = (1<<12) - 1;
+	/*step*/
+	for (ncmp = 0; ncmp < 3; ncmp++)
+		step[ncmp] = (1<<(12-4));
+
+	/*initialize the lut3d ad same input and output;*/
+	for (d0 = 0; d0 < 17; d0++) {
+		for (d1 = 0; d1 < 17; d1++) {
+			for (d2 = 0; d2 < 17; d2++) {
+				pLut3D[d0*17*17*3+d1*17*3+d2*3+0] =
+					(d0*step[0] < max_val) ?
+					d0*step[0] : max_val;/* 1st components*/
+				pLut3D[d0*17*17*3+d1*17*3+d2*3+1] =
+					(d1*step[1] < max_val) ?
+					d1*step[1] : max_val;/*2nd components*/
+				pLut3D[d0*17*17*3+d1*17*3+d2*3+2] =
+					(d2*step[2] < max_val) ?
+					d2*step[2] : max_val;/*3rd components*/
+				ycbcr2rgbpc_nb(
+					&pLut3D[d0*17*17*3+d1*17*3+d2*3+0],
+					&pLut3D[d0*17*17*3+d1*17*3+d2*3+1],
+					&pLut3D[d0*17*17*3+d1*17*3+d2*3+2],
+					pLut3D[d0*17*17*3+d1*17*3+d2*3+0],
+					pLut3D[d0*17*17*3+d1*17*3+d2*3+1],
+					pLut3D[d0*17*17*3+d1*17*3+d2*3+2],
+					12);
+			}
+		}
+	}
+	for (i = 0; i < 289; i++)
+		P3dlut_tab[i] = pLut3D[i];
+}
+
+void dump_plut3d_table(void)
+{
+	unsigned int i, j;
+
+	pr_info("*****dump_plut3d_table:pLut3D[0]~pLut3D[288]*****\n");
+	for (i = 0; i < 17; i++) {
+		pr_info("*****dump pLut3D:17* %d*****\n", i);
+		for (j = 0; j < 17; j++) {
+			if ((j % 16) == 0)
+				pr_info("\n");
+			pr_info("%d\t", P3dlut_tab[i*17+j]);
+		}
+	}
+}
+
+void dump_plut3d_reg_table(void)
+{
+	unsigned int i, j;
+
+	pr_info("*****dump_plut3d_reg_table:[0]~[288]*****\n");
+	for (i = 0; i < 17; i++) {
+		pr_info("*****dump pLut3D regtab:17* %d*****\n", i);
+		for (j = 0; j < 17; j++) {
+			if ((j % 16) == 0)
+				pr_info("\n");
+			pr_info("%d\t", P3dlut_regtab[i*17+j]);
+		}
+	}
+}
+
+
