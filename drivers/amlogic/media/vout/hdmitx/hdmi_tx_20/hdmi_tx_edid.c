@@ -1454,6 +1454,8 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 				case EXTENSION_DRM_TAG:
 					Edid_ParsingDRMBlock(pRXCap,
 						&BlockBuf[offset]);
+					rx_set_hdr_lumi(&BlockBuf[offset],
+						(BlockBuf[offset] & 0x1f) + 1);
 					break;
 				case EXTENSION_VFPDB_TAG:
 /* Just record VFPDB offset address, call Edid_ParsingVFPDB() after DTD
@@ -2330,6 +2332,7 @@ void hdmitx_edid_ram_buffer_clear(struct hdmitx_dev *hdmitx_device)
 /* Clear the Parse result of HDMI Sink's EDID. */
 void hdmitx_edid_clear(struct hdmitx_dev *hdmitx_device)
 {
+	char tmp[2] = {0};
 	struct rx_cap *pRXCap = &(hdmitx_device->RXCap);
 
 	memset(pRXCap, 0, sizeof(struct rx_cap));
@@ -2350,6 +2353,8 @@ void hdmitx_edid_clear(struct hdmitx_dev *hdmitx_device)
 		sizeof(hdmitx_device->EDID_hash));
 	hdmitx_device->edid_parsing = 0;
 	hdmitx_edid_set_default_aud(hdmitx_device);
+	rx_set_hdr_lumi(&tmp[0], 2);
+	rx_set_receiver_edid(&tmp[0], 2);
 }
 
 /*

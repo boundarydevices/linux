@@ -549,6 +549,12 @@ void __attribute__((weak))rx_edid_physical_addr(unsigned char a,
 {
 }
 
+extern int rx_set_hdr_lumi(unsigned char *data, int len);
+int __attribute__((weak))rx_set_hdr_lumi(unsigned char *data, int len)
+{
+	return 0;
+}
+
 extern void rx_set_repeater_support(bool enable);
 void __attribute__((weak))rx_set_repeater_support(bool enable)
 {
