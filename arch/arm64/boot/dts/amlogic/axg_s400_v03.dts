@@ -492,12 +492,12 @@
 			tdmacpu: cpu {
 				sound-dai = <&aml_tdma>;
 				dai-tdm-slot-tx-mask =
-							<1 1 1 1 1 1 1 1>;
+							<1>;
 				dai-tdm-slot-rx-mask =
-							<1 1 1 1 1 1 1 1>;
-				dai-tdm-slot-num = <8>;
+							<1>;
+				dai-tdm-slot-num = <1>;
 				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <24576000>;
+				system-clock-frequency = <512000>;
 			};
 			tdmacodec: codec {
 				sound-dai = <&dummy_codec &dummy_codec>;
