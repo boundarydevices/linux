@@ -155,6 +155,7 @@
 			"venci_0_gate",
 			"venci_1_gate",
 			"vdac_clk_gate";
+		clk_path = <0>;
 
 		/* performance: reg_address, reg_value */
 		/* g12a */

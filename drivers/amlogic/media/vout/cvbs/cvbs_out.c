@@ -1326,6 +1326,21 @@ static void cvbsout_get_config(struct device *dev)
 		}
 	}
 
+	/*clk path*/
+	/*0:vid_pll vid2_clk*/
+	/*1:gp0_pll vid2_clk*/
+	/*2:vid_pll vid1_clk*/
+	/*3:gp0_pll vid1_clk*/
+	ret = of_property_read_u32(dev->of_node, "clk_path", &val);
+	if (ret)
+		cvbs_log_info("clk_path config null\n");
+	else if (val > 3)
+		cvbs_log_err("error: invalid clk_path\n");
+	else {
+		cvbs_clk_path = val;
+		cvbs_log_info("clk path:%d\n", cvbs_clk_path);
+	}
+
 	/* vdac config */
 	ret = of_property_read_u32(dev->of_node, "vdac_config", &val);
 	if (ret)
