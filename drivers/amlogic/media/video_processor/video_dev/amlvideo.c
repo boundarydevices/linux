@@ -535,8 +535,8 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		pts_us64 = dev->last_pts_us64
 			+ (DUR2PTS(dev->vf->duration))*100/9;
 		dev->vf->pts = pts_us64*9/100;
-		AMLVIDEO_WARN("pts= %d, dev->vf->duration= %d\n",
-			dev->vf->pts, (DUR2PTS(dev->vf->duration)));
+		/*AMLVIDEO_WARN("pts= %d, dev->vf->duration= %d\n",*/
+			/*dev->vf->pts, (DUR2PTS(dev->vf->duration)));*/
 	}
 	next_vf = vf_peek(dev->vf_receiver_name);
 	dev->vf->next_vf_pts_valid = next_vf != NULL;
