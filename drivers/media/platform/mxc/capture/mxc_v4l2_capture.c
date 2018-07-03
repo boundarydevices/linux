@@ -2212,6 +2212,8 @@ static long mxc_v4l_do_ioctl(struct file *file,
 		}
 		cap->bounds = cam->crop_bounds;
 		cap->defrect = cam->crop_defrect;
+		cap->pixelaspect.numerator = 1;
+		cap->pixelaspect.denominator = 1;
 		break;
 	}
 
