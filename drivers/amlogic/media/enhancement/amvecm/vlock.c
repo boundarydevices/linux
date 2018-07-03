@@ -390,10 +390,8 @@ void vlock_vmode_check(void)
 	vinfo = get_current_vinfo();
 	vlock_vmode_changed = 0;
 	memset(cur_vout_mode, 0, sizeof(cur_vout_mode));
-
-	if (vinfo->name == NULL)
-		return;
-	if (strlen(cur_vout_mode) < (strlen(vinfo->name)+1))
+	if ((vinfo->name == NULL) ||
+		(strlen(vinfo->name) > sizeof(cur_vout_mode)))
 		return;
 	strcpy(cur_vout_mode, vinfo->name);
 
