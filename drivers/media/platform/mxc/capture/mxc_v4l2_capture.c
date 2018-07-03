@@ -1593,9 +1593,10 @@ static int mxc_v4l2_g_std(cam_data *cam, v4l2_std_id *e)
 		}
 
 		*e = tv_fmt.fmt.pix.pixelformat;
+		return 0;
 	}
 
-	return 0;
+	return -ENOIOCTLCMD;
 }
 
 /*!
@@ -2036,9 +2037,9 @@ static long mxc_v4l_do_ioctl(struct file *file,
 		pr_debug("   case VIDIOC_QUERYCAP\n");
 		strcpy(cap->driver, "mxc_v4l2");
 		cap->version = KERNEL_VERSION(0, 1, 11);
-		cap->capabilities = V4L2_CAP_VIDEO_CAPTURE |
+		cap->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
+		cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS |
 				    V4L2_CAP_VIDEO_OVERLAY |
-				    V4L2_CAP_STREAMING |
 				    V4L2_CAP_READWRITE;
 
 		if (cam && cam->sensor)
