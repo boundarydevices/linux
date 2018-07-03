@@ -1513,17 +1513,17 @@
 			cooling_devices {
 				cpufreq_cool_cluster0 {
 					min_state = <1000000>;
-					dyn_coeff = <140>;
+					dyn_coeff = <120>;
 					cluster_id = <0>;
-					gpu_pp = <3>;
+					gpu_pp = <2>;
 					node_name = "cpufreq_cool0";
 					device_type = "cpufreq";
 				};
 				cpufreq_cool_cluster1 {
 					min_state = <1000000>;
-					dyn_coeff = <140>;
+					dyn_coeff = <460>;
 					cluster_id = <1>;
-					gpu_pp = <3>;
+					gpu_pp = <2>;
 					node_name = "cpufreq_cool1";
 					device_type = "cpufreq";
 				};
@@ -1531,7 +1531,7 @@
 					min_state = <1>;
 					dyn_coeff = <0>;
 					cluster_id = <0>;
-					gpu_pp = <3>;
+					gpu_pp = <2>;
 					node_name = "cpucore_cool0";
 					device_type = "cpucore";
 				};
@@ -1539,15 +1539,15 @@
 					min_state = <0>;
 					dyn_coeff = <0>;
 					cluster_id = <1>;
-					gpu_pp = <3>;
+					gpu_pp = <2>;
 					node_name = "cpucore_cool1";
 					device_type = "cpucore";
 				};
 				gpufreq_cool {
 					min_state = <400>;
-					dyn_coeff = <437>;
+					dyn_coeff = <358>;
 					cluster_id = <0>;
-					gpu_pp = <3>;
+					gpu_pp = <2>;
 					node_name = "gpufreq_cool0";
 					device_type = "gpufreq";
 				};
@@ -1555,7 +1555,7 @@
 					min_state = <1>;
 					dyn_coeff = <0>;
 					cluster_id = <0>;
-					gpu_pp = <3>;
+					gpu_pp = <2>;
 					node_name = "gpucore_cool0";
 					device_type = "gpucore";
 				};
@@ -1585,7 +1585,7 @@
 		soc_thermal: soc_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <2150>;
+			sustainable-power = <3550>;
 			thermal-sensors = <&p_tsensor 0>;
 			trips {
 				pswitch_on: trip-point@0 {
@@ -1646,7 +1646,7 @@
 		ddr_thermal: ddr_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <2150>;
+			sustainable-power = <3550>;
 			thermal-sensors = <&d_tsensor 1>;
 			trips {
 				dswitch_on: trip-point@0 {
