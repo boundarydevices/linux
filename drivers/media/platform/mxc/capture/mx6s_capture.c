@@ -1565,6 +1565,8 @@ static int mx6s_vidioc_cropcap(struct file *file, void *fh,
 	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 	dev_dbg(csi_dev->dev, "VIDIOC_CROPCAP not implemented\n");
+	a->pixelaspect.numerator = 1;
+	a->pixelaspect.denominator = 1;
 
 	return 0;
 }
