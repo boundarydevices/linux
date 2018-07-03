@@ -3183,6 +3183,7 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 	if (fsize->index > ov5640_mode_MAX)
 		return -EINVAL;
 
+	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 	fsize->pixel_format = ov5640_data.pix.pixelformat;
 	fsize->discrete.width =
 			max(ov5640_mode_info_data[0][fsize->index].width,
@@ -3206,21 +3207,31 @@ static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
 {
 	int i, j, count = 0;
 
+	if (fival->index < 0 || fival->index > ov5640_mode_MAX)
+		return -EINVAL;
+
+	if (fival->width == 0 || fival->height == 0) {
+		pr_warning("Please assign pixel format, width and height.\n");
+		return -EINVAL;
+	}
+
 	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
 	fival->discrete.numerator = 1;
 
-	for (i = 0; i < ARRAY_SIZE(ov5640_mode_info_data); i++)
-		for (j = 0; j < (ov5640_mode_MAX + 1); j++)
-			if (fival->pixel_format == ov5640_data.pix.pixelformat
-			 && fival->width == ov5640_mode_info_data[i][j].width
+	for (i = 0; i < ARRAY_SIZE(ov5640_mode_info_data); i++) {
+		for (j = 0; j < (ov5640_mode_MAX + 1); j++) {
+			if (fival->width == ov5640_mode_info_data[i][j].width
 			 && fival->height == ov5640_mode_info_data[i][j].height
-			 && ov5640_mode_info_data[i][j].init_data_ptr != NULL
-			 && fival->index == count++) {
+			 && ov5640_mode_info_data[i][j].init_data_ptr != NULL) {
+				count++;
+			}
+			if (fival->index == (count - 1)) {
 				fival->discrete.denominator =
 						ov5640_framerates[i];
 				return 0;
 			}
-
+		}
+	}
 	return -EINVAL;
 }
 
