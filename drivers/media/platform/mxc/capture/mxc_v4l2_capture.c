@@ -2548,7 +2548,7 @@ static long mxc_v4l_do_ioctl(struct file *file,
 	case VIDIOC_S_FREQUENCY:
 	default:
 		pr_debug("   case default or not supported\n");
-		retval = -EINVAL;
+		retval = -ENOIOCTLCMD;
 		break;
 	}
 
