@@ -83,7 +83,11 @@
 static DEFINE_IDR(loop_index_idr);
 static DEFINE_MUTEX(loop_index_mutex);
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static int max_part = 4;
+#else
 static int max_part;
+#endif
 static int part_shift;
 
 static int transfer_xor(struct loop_device *lo, int cmd,
