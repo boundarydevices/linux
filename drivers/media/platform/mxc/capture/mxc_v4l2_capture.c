@@ -1659,7 +1659,7 @@ static int mxc_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 	cam->frame[frame->index].buffer.field = cam->device_type ?
 				V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
 
-	buf->bytesused = cam->v2f.fmt.pix.sizeimage;
+	buf->length = buf->bytesused = cam->v2f.fmt.pix.sizeimage;
 	buf->index = frame->index;
 	buf->flags = frame->buffer.flags;
 	buf->m = cam->frame[frame->index].buffer.m;
