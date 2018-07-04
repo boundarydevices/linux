@@ -534,9 +534,17 @@ static int gt1x_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 	gt1x_i2c_client = client;
 	spin_lock_init(&irq_lock);
 
+	gt1x_wq = create_singlethread_workqueue("gt1x_wq");
+	if (!gt1x_wq) {
+		GTP_ERROR("Create workqueue failed.");
+		ret = -ENOMEM;
+		goto err_create_workqueue;
+	}
+
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		GTP_ERROR("I2C check functionality failed.");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto err_i2c_check_func;
 	}
 
 #ifdef GTP_CONFIG_OF	/* device tree support */
@@ -548,7 +556,7 @@ static int gt1x_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 	ret = gt1x_request_io_port();
 	if (ret < 0) {
 		GTP_ERROR("GTP request IO port failed.");
-		return ret;
+		goto err_request_io_port;
 	}
 
 	gt1x_init();
@@ -558,6 +566,7 @@ static int gt1x_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 	ret = gt1x_request_input_dev();
 	if (ret < 0) {
 		GTP_ERROR("GTP request input dev failed");
+		goto err_request_input_dev;
 	}
 
 	ret = gt1x_request_irq();
@@ -589,6 +598,15 @@ static int gt1x_ts_probe(struct i2c_client *client, const struct i2c_device_id *
 #endif
 	gt1x_register_powermanger();
 	return 0;
+
+err_request_input_dev:
+	gt1x_remove_gpio_and_power();
+err_request_io_port:
+err_i2c_check_func:
+	destroy_workqueue(gt1x_wq);
+err_create_workqueue:
+	return ret;
+
 }
 
 /**
@@ -605,11 +623,14 @@ static int gt1x_ts_remove(struct i2c_client *client)
 #if GTP_GESTURE_WAKEUP
 	disable_irq_wake(client->irq);
 #endif
-    gt1x_deinit();
+	gt1x_deinit();
 	input_unregister_device(input_dev);
-    gt1x_remove_gpio_and_power();
+	gt1x_remove_gpio_and_power();
 
-    return 0;
+	if (gt1x_wq)
+		destroy_workqueue(gt1x_wq);
+
+	return 0;
 }
 
 #if   defined(CONFIG_FB)
@@ -751,39 +772,7 @@ static struct i2c_driver gt1x_ts_driver = {
 		   },
 };
 
-/**
- * gt1x_ts_init - Driver Install function.
- * Return   0---succeed.
- */
-static int __init gt1x_ts_init(void)
-{
-	GTP_DEBUG_FUNC();
-	GTP_INFO("GTP driver installing...");
-	gt1x_wq = create_singlethread_workqueue("gt1x_wq");
-	if (!gt1x_wq) {
-		GTP_ERROR("Creat workqueue failed.");
-		return -ENOMEM;
-	}
-
-	return i2c_add_driver(&gt1x_ts_driver);
-}
-
-/**
- * gt1x_ts_exit - Driver uninstall function.
- * Return   0---succeed.
- */
-static void __exit gt1x_ts_exit(void)
-{
-	GTP_DEBUG_FUNC();
-	GTP_INFO("GTP driver exited.");
-	i2c_del_driver(&gt1x_ts_driver);
-	if (gt1x_wq) {
-		destroy_workqueue(gt1x_wq);
-	}
-}
-
-module_init(gt1x_ts_init);
-module_exit(gt1x_ts_exit);
+module_i2c_driver(gt1x_ts_driver);
 
 MODULE_DESCRIPTION("GTP Series Driver");
 MODULE_LICENSE("GPL");

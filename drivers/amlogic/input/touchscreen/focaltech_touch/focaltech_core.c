@@ -1449,41 +1449,7 @@ static struct i2c_driver fts_ts_driver =
     .id_table = fts_ts_id,
 };
 
-/*****************************************************************************
-*  Name: fts_ts_init
-*  Brief:
-*  Input:
-*  Output:
-*  Return:
-*****************************************************************************/
-static int __init fts_ts_init(void)
-{
-    int ret = 0;
-
-    FTS_FUNC_ENTER();
-    ret = i2c_add_driver(&fts_ts_driver);
-    if ( ret != 0 )
-    {
-        FTS_ERROR("Focaltech touch screen driver init failed!");
-    }
-    FTS_FUNC_EXIT();
-    return ret;
-}
-
-/*****************************************************************************
-*  Name: fts_ts_exit
-*  Brief:
-*  Input:
-*  Output:
-*  Return:
-*****************************************************************************/
-static void __exit fts_ts_exit(void)
-{
-    i2c_del_driver(&fts_ts_driver);
-}
-
-module_init(fts_ts_init);
-module_exit(fts_ts_exit);
+module_i2c_driver(fts_ts_driver);
 
 MODULE_AUTHOR("FocalTech Driver Team");
 MODULE_DESCRIPTION("FocalTech Touchscreen Driver");

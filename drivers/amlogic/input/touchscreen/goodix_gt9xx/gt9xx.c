@@ -2408,18 +2408,37 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     GTP_INFO("GTP Driver Version: %s", GTP_DRIVER_VERSION);
     GTP_INFO("GTP I2C Address: 0x%02x", client->addr);
 
+    goodix_wq = create_singlethread_workqueue("goodix_wq");
+    if (!goodix_wq) {
+       GTP_ERROR("Create workqueue failed.");
+       ret = -ENOMEM;
+       goto err_create_workqueue;
+    }
+
+#if GTP_ESD_PROTECT
+    INIT_DELAYED_WORK(&gtp_esd_check_work, gtp_esd_check_func);
+    gtp_esd_check_workqueue = create_workqueue("gtp_esd_check");
+    if (!gtp_esd_check_workqueue) {
+       GTP_ERROR("Create esd workqueue failed.");
+       ret = -ENOMEM;
+       goto err_create_esd_work;
+    }
+#endif
+
     i2c_connect_client = client;
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
     {
         GTP_ERROR("I2C check functionality failed.");
-        return -ENODEV;
+        ret = -ENODEV;
+        goto err_i2c_check_func;
     }
     ts = kzalloc(sizeof(*ts), GFP_KERNEL);
     if (ts == NULL)
     {
         GTP_ERROR("Alloc GFP_KERNEL memory failed.");
-        return -ENOMEM;
+        ret = -ENOMEM;
+        goto err_mem_alloc;
     }
 
 #ifdef GTP_CONFIG_OF	/* device tree support */
@@ -2429,7 +2448,8 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     ret = gtp_power_switch(client, 1);
 	if (ret) {
 		GTP_ERROR("GTP power on failed.");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err_power_switch;
 	}
 #else			/* use gpio defined in gt9xx.h */
 	gtp_rst_gpio = GTP_RST_PORT;
@@ -2452,8 +2472,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     if (ret < 0)
     {
         GTP_ERROR("GTP request IO port failed.");
-        kfree(ts);
-        return ret;
+        goto err_request_io_port;
     }
 
 #if GTP_COMPATIBLE_MODE
@@ -2472,14 +2491,14 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     if (ret < 0)
     {
         GTP_ERROR("I2C communication ERROR!");
-        goto goodix_ts_probe_err;
+        goto err_chip_init;
     }
 
     ret = gtp_read_version(client, &version_info);
     if (ret < 0)
     {
         GTP_ERROR("Read version failed.");
-        goto goodix_ts_probe_err;
+        goto err_chip_init;
     }
 
     ret = gtp_init_panel(ts);
@@ -2489,7 +2508,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
         ts->abs_x_max = GTP_MAX_WIDTH;
         ts->abs_y_max = GTP_MAX_HEIGHT;
         ts->int_trigger_type = GTP_INT_TRIGGER;
-        goto goodix_ts_probe_err;
+        goto err_chip_init;
     }
 
     // Create proc file system
@@ -2519,7 +2538,7 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
     if (ret < 0)
     {
         GTP_ERROR("GTP request input dev failed");
-        goto goodix_ts_probe_err;
+        goto err_request_input_dev;
     }
 
     ret = gtp_request_irq(ts);
@@ -2548,10 +2567,29 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 #endif
     return 0;
 
-goodix_ts_probe_err:
+err_request_input_dev:
+#if GTP_ESD_PROTECT
+	gtp_esd_switch(client, SWITCH_OFF);
+#endif
+err_chip_init:
 	GTP_GPIO_FREE(gtp_int_gpio);
 	GTP_GPIO_FREE(gtp_rst_gpio);
-	return -ENODEV;
+err_request_io_port:
+#ifdef GTP_CONFIG_OF
+	gtp_power_switch(client, 0);
+err_power_switch:
+#endif
+	kfree(ts);
+err_mem_alloc:
+err_i2c_check_func:
+#if GTP_ESD_PROTECT
+	destroy_workqueue(gtp_esd_check_workqueue);
+err_create_esd_work:
+#endif
+	destroy_workqueue(goodix_wq);
+err_create_workqueue:
+	return ret;
+
 }
 
 
@@ -2597,6 +2635,9 @@ static int goodix_ts_remove(struct i2c_client *client)
     i2c_set_clientdata(client, NULL);
     input_unregister_device(ts->input_dev);
     kfree(ts);
+
+    if (goodix_wq)
+       destroy_workqueue(goodix_wq);
 
     return 0;
 }
@@ -3081,55 +3122,7 @@ static struct i2c_driver goodix_ts_driver = {
     },
 };
 
-/*******************************************************
-Function:
-    Driver Install function.
-Input:
-    None.
-Output:
-    Executive Outcomes. 0---succeed.
-********************************************************/
-static int __init goodix_ts_init(void)
-{
-    s32 ret;
-
-    GTP_DEBUG_FUNC();
-    GTP_INFO("GTP driver installing....");
-    goodix_wq = create_singlethread_workqueue("goodix_wq");
-    if (!goodix_wq)
-    {
-        GTP_ERROR("Creat workqueue failed.");
-        return -ENOMEM;
-    }
-#if GTP_ESD_PROTECT
-    INIT_DELAYED_WORK(&gtp_esd_check_work, gtp_esd_check_func);
-    gtp_esd_check_workqueue = create_workqueue("gtp_esd_check");
-#endif
-    ret = i2c_add_driver(&goodix_ts_driver);
-    return ret;
-}
-
-/*******************************************************
-Function:
-    Driver uninstall function.
-Input:
-    None.
-Output:
-    Executive Outcomes. 0---succeed.
-********************************************************/
-static void __exit goodix_ts_exit(void)
-{
-    GTP_DEBUG_FUNC();
-    GTP_INFO("GTP driver exited.");
-    i2c_del_driver(&goodix_ts_driver);
-    if (goodix_wq)
-    {
-        destroy_workqueue(goodix_wq);
-    }
-}
-
-module_init(goodix_ts_init);
-module_exit(goodix_ts_exit);
+module_i2c_driver(goodix_ts_driver);
 
 MODULE_DESCRIPTION("GTP Series Driver");
 MODULE_LICENSE("GPL");
