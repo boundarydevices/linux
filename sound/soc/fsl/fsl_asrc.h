@@ -321,6 +321,7 @@ struct fsl_asrc_pair {
 	struct dma_chan *dma_chan[2];
 	struct imx_dma_data dma_data;
 	unsigned int pos;
+	unsigned int pair_streams;
 
 	void *private;
 };
@@ -364,7 +365,6 @@ struct fsl_asrc {
 	struct fsl_asrc_pair *pair[ASRC_PAIR_MAX_NUM];
 	unsigned int channel_bits;
 	unsigned int channel_avail;
-	unsigned int pair_streams;
 
 	int asrc_rate;
 	int asrc_width;
