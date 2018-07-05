@@ -271,6 +271,10 @@ static int _next_div(const struct clk_div_table *table, int div,
 		return __roundup_pow_of_two(div);
 	if (table)
 		return _round_up_table(table, div);
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if ((flags & CLK_DIVIDER_PROHIBIT_ZERO) && (div == 1))
+		div++;
+#endif
 
 	return div;
 }
