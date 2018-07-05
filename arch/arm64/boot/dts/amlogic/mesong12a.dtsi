@@ -1800,6 +1800,17 @@
 			status = "okay";
 		};
 	};
+
+	efuse: efuse{
+		compatible = "amlogic, efuse";
+		read_cmd = <0x82000030>;
+		write_cmd = <0x82000031>;
+		get_max_cmd = <0x82000033>;
+		key = <&efusekey>;
+		clocks = <&clkc CLKID_EFUSE>;
+		clock-names = "efuse_clk";
+		status = "disabled";
+	};
 };/* end of / */
 
 &pinctrl_aobus {
