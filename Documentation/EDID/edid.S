@@ -167,6 +167,7 @@ estbl_timing2:	.byte	ESTABLISHED_TIMING2_BITS
 estbl_timing3:	.byte	ESTABLISHED_TIMING3_BITS
 
 /* Standard timing */
+#if (XPIX <= 2288)
 /* X resolution, less 31, divided by 8 (256-2288 pixels) */
 std_xres:	.byte	(XPIX/8)-31
 /* Y resolution, X:Y pixel ratio
@@ -174,6 +175,9 @@ std_xres:	.byte	(XPIX/8)-31
    Bits 5-0	Vertical frequency, less 60 (60-123 Hz) */
 std_vres:	.byte	(XY_RATIO<<6)+VFREQ-60
 		.fill	7,2,0x0101	/* Unused */
+#else
+		.fill	8,2,0x0101	/* Unused */
+#endif
 
 descriptor1:
 /* Pixel clock in 10 kHz units. (0.-655.35 MHz, little-endian) */
