@@ -2280,9 +2280,21 @@ static void osd_set_free_scale_enable_mode1(u32 index, u32 enable)
 
 void osd_set_free_scale_enable_hw(u32 index, u32 enable)
 {
-	if (osd_hw.free_scale_mode[index] && (index != OSD4))
+	if (osd_hw.free_scale_mode[index] && (index != OSD4)) {
 		osd_set_free_scale_enable_mode1(index, enable);
-	else if (enable)
+		if (osd_hw.osd_meson_dev.osd_ver == OSD_NORMAL) {
+			u32 height_dst, height_src;
+
+			height_dst = osd_hw.free_dst_data[index].y_end -
+				osd_hw.free_dst_data[index].y_start + 1;
+			height_src = osd_hw.free_src_data[index].y_end -
+				osd_hw.free_src_data[index].y_start + 1;
+			if (height_dst != height_src)
+				osd_set_dummy_data(index, 0);
+			else
+				osd_set_dummy_data(index, 0xff);
+		}
+	} else if (enable)
 		osd_log_info(
 			"osd[%d] free_scale_enable_hw mode is error %d\n",
 			index, osd_hw.free_scale_mode[index]);
@@ -7470,7 +7482,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			err_num = request_irq(int_viu2_vsync, &vsync_viu2_isr,
 				IRQF_SHARED, "osd-vsync-viu2", osd_setup_hw);
 			if (err_num)
-				osd_log_err("can't request irq for vsync,err_num=%d\n",
+				osd_log_err("can't request irq for viu2 vsync,err_num=%d\n",
 				-err_num);
 		}
 #endif
