@@ -404,6 +404,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 		const char *bf;
 		struct panel_desc *ds = &panel->dt_desc;
 		struct device_node *np = dev->of_node;
+		struct device_node *cmds_np;
 		u32 bridge_de_active;
 		u32 bridge_sync_active;
 
@@ -464,9 +465,15 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 		ds->modes = dm;
 		ds->num_modes = 1;
 		panel->desc = ds;
-		check_for_cmds(np, "mipi-cmds-init", &panel->mipi_cmds_init);
-		check_for_cmds(np, "mipi-cmds-enable", &panel->mipi_cmds_enable);
-		check_for_cmds(np, "mipi-cmds-disable", &panel->mipi_cmds_disable);
+		cmds_np = of_parse_phandle(np, "mipi-cmds", 0);
+		if (cmds_np) {
+			check_for_cmds(cmds_np, "mipi-cmds-init",
+				       &panel->mipi_cmds_init);
+			check_for_cmds(cmds_np, "mipi-cmds-enable",
+				       &panel->mipi_cmds_enable);
+			check_for_cmds(cmds_np, "mipi-cmds-disable",
+				       &panel->mipi_cmds_disable);
+		}
 	}
 
 	panel->supply = devm_regulator_get(dev, "power");
