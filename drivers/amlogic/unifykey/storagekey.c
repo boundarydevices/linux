@@ -402,7 +402,9 @@ ssize_t amlkey_write(const uint8_t *name,
 		retval = (ssize_t)len;
 		/* write down! */
 		if (storagekey_info.buffer != NULL) {
-			buf = kzalloc(storagekey_info.size, GFP_KERNEL);
+			buf = kmalloc(storagekey_info.size, GFP_KERNEL);
+			if (!buf)
+				return -ENOMEM;
 			memcpy(buf, storagekey_info.buffer,
 					storagekey_info.size);
 			if (store_key_write)

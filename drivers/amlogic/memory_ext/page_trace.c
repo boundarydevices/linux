@@ -381,7 +381,7 @@ static void __init find_static_common_symbol(void)
 	for (i = 0; i < COMMON_CALLER_SIZE; i++) {
 		s = &common_func[i];
 		if (!s->name)
-			break;	/* end */
+			break;  /* end */
 		if (s->full_match) {
 			addr = kallsyms_contain_name(s->name, 1, NULL);
 			if (addr)
@@ -557,7 +557,6 @@ unsigned int pack_ip(unsigned long ip, int order, gfp_t flag)
 	}
 
 	trace.ret_ip = (ip - text) >> 2;
-	WARN_ON(trace.ret_ip > IP_RANGE_MASK);
 #ifdef CONFIG_AMLOGIC_CMA
 	if (flag == __GFP_BDEV)
 		trace.migrate_type = MIGRATE_CMA;

@@ -610,6 +610,7 @@ int get_efusekey_info(struct device_node *np)
 	char *propname;
 	const char *uname;
 	int ret;
+	int size;
 
 	phandle = of_get_property(np, "key", NULL);
 	if (!phandle) {
@@ -658,9 +659,9 @@ int get_efusekey_info(struct device_node *np)
 			pr_err("please config keyname item\n");
 			goto err;
 		}
+		size = sizeof(efusekey_infos[index].keyname) - 1;
 		strncpy(efusekey_infos[index].keyname, uname,
-			strlen(uname) > sizeof(efusekey_infos[index].keyname) ?
-			sizeof(efusekey_infos[index].keyname):strlen(uname));
+			strlen(uname) > size ? size:strlen(uname));
 		ret = of_property_read_u32(np_key, "offset",
 			&(efusekey_infos[index].offset));
 		if (ret) {

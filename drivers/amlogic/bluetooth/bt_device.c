@@ -272,8 +272,11 @@ static int bt_probe(struct platform_device *pdev)
 		if (ret)
 			pdata->power_down_disable = 0;
 		pr_info("dis power down = %d;\n", pdata->power_down_disable);
-	} else {
+	} else if (pdev) {
 		pdata = (struct bt_dev_data *)(pdev->dev.platform_data);
+	} else {
+		ret = -ENOENT;
+		goto err_res;
 	}
 #else
 	pdata = (struct bt_dev_data *)(pdev->dev.platform_data);
@@ -324,6 +327,7 @@ err_rfkill:
 	rfkill_destroy(bt_rfk);
 err_rfk_alloc:
 	bt_device_deinit(pdata);
+err_res:
 	return ret;
 
 }

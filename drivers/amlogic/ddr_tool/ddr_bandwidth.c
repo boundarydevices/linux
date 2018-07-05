@@ -357,9 +357,9 @@ static int ddr_bandwidth_remove(struct platform_device *pdev)
 		class_destroy(&aml_ddr_class);
 		free_irq(aml_db->irq_num, aml_db);
 		kfree(aml_db->port_desc);
-		kfree(aml_db);
 		iounmap(aml_db->ddr_reg);
 		iounmap(aml_db->pll_reg);
+		kfree(aml_db);
 		aml_db = NULL;
 	}
 

@@ -96,6 +96,8 @@ static int aml_dma_probe(struct platform_device *pdev)
 	}
 
 	match = of_match_device(aml_dma_dt_match, &pdev->dev);
+	if (!match)
+		goto dma_err;
 	priv_data = match->data;
 	dma_dd->thread = priv_data->thread;
 	dma_dd->status = priv_data->status;

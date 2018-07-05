@@ -125,6 +125,8 @@ static struct wifi_plat_info *wifi_get_driver_data
 	const struct of_device_id *match;
 
 	match = of_match_node(wifi_match, pdev->dev.of_node);
+	if (!match)
+		return NULL;
 	return (struct wifi_plat_info *)match->data;
 }
 #else
@@ -338,7 +340,12 @@ static long wifi_power_ioctl(struct file *filp,
 		WIFI_INFO("ioctl Set sdio wifi power down!\n");
 		break;
 	case SDIO_GET_DEV_TYPE:
-		memcpy(dev_type, get_wifi_inf(), strlen(get_wifi_inf()));
+		if (strlen(get_wifi_inf()) >= sizeof(dev_type))
+			memcpy(dev_type, get_wifi_inf(),
+				(sizeof(dev_type) - 1));
+		else
+			memcpy(dev_type, get_wifi_inf(),
+				strlen(get_wifi_inf()));
 		WIFI_INFO("wifi interface dev type: %s, length = %d\n",
 				dev_type, (int)strlen(dev_type));
 		if (copy_to_user((char __user *)arg,

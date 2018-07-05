@@ -275,7 +275,9 @@ static int key_storage_query(char *keyname, unsigned int *keystate)
 static int key_efuse_init(struct key_info_t *uk_info,
 	char *buf, unsigned int len)
 {
-	unifykey_get_efuse_version(uk_info);
+	char var = 0;
+
+	var = unifykey_get_efuse_version(uk_info);
 
 	return 0;
 }
@@ -812,7 +814,6 @@ static long unifykey_unlocked_ioctl(struct file *file,
 			char *keyname;
 			int ret;
 
-
 			key_item_info = kmalloc(sizeof(struct key_item_info_t),
 				GFP_KERNEL);
 			if (!key_item_info)
@@ -825,6 +826,7 @@ static long unifykey_unlocked_ioctl(struct file *file,
 				kfree(key_item_info);
 				return ret;
 			}
+			key_item_info->name[KEY_UNIFY_NAME_LEN - 1] = '\0';
 			index = key_item_info->id;
 			keyname = key_item_info->name;
 			if (strlen(keyname) > KEY_UNIFY_NAME_LEN - 1) {
@@ -860,7 +862,8 @@ static long unifykey_unlocked_ioctl(struct file *file,
 			key_item_info->flag = keystate;
 			key_item_info->id = kkey->id;
 			strncpy(key_item_info->name,
-					kkey->name, KEY_UNIFY_NAME_LEN);
+					kkey->name, (KEY_UNIFY_NAME_LEN - 1));
+			key_item_info->name[KEY_UNIFY_NAME_LEN - 1] = '\0';
 			ret = key_unify_size(ukdev, kkey->name, &reallen);
 			if (ret < 0) {
 				pr_err("%s() %d, get size fail\n",
