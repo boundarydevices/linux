@@ -1100,15 +1100,18 @@
 		 * http://standards.ieee.org/develop/regauth/oui/oui.txt
 		 */
 		vendor_id = <0x000000>;
-		product_desc = "G12A"; /* Max Chars: 16    */
+		product_desc = "G12B"; /* Max Chars: 16    */
 		cec_osd_string = "AML_MBOX"; /* Max Chars: 14    */
 		port_num = <1>;
 		ee_cec;
 		arc_port_mask = <0x2>;
-		interrupts = <0 203 1>;
-		interrupt-names = "hdmi_aocecb";
-		pinctrl-names = "default";
-		pinctrl-0=<&eecec_b>;
+		interrupts = <0 203 1
+					0 199 1>;	/*0:snps 1:ts*/
+		interrupt-names = "hdmi_aocecb","hdmi_aocec";
+		pinctrl-names = "default","hdmitx_aocecb","cec_pin_sleep";
+		pinctrl-0=<&eecec_a>;
+		pinctrl-1=<&eecec_b>;
+		pinctrl-2=<&eecec_b>;
 		reg = <0x0 0xFF80023c 0x0 0x4
 		       0x0 0xFF800000 0x0 0x400>;
 	};
