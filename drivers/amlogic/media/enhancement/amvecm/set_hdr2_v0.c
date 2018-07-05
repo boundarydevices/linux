@@ -1068,13 +1068,13 @@ void set_hdr_matrix(
 		hdr_ctrl = VDIN1_HDR2_CTRL;
 	}
 
+	if (hdr_mtx_param == NULL)
+		return;
 	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_on, 13, 1);
 
 	if (mtx_sel & HDR_IN_MTX) {
-		if (hdr_mtx_param->mtx_in[14]) {
-			for (i = 0; i < 15; i++)
-				mtx[i] = hdr_mtx_param->mtx_in[i];
-		}
+		for (i = 0; i < 15; i++)
+			mtx[i] = hdr_mtx_param->mtx_in[i];
 		VSYNC_WR_MPEG_REG(MATRIXI_EN_CTRL, hdr_mtx_param->mtx_on);
 		/*yuv in*/
 		VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_mtx_param->mtx_on, 4, 1);
@@ -1105,19 +1105,13 @@ void set_hdr_matrix(
 			yuv2rgbpre[2]);
 
 	} else if (mtx_sel & HDR_GAMUT_MTX) {
-		if (hdr_mtx_param->mtx_gamut[8]) {
-			for (i = 0; i < 9; i++)
-				gmut_coef[i/3][i%3] =
-					hdr_mtx_param->mtx_gamut[i];
-		}
+		for (i = 0; i < 9; i++)
+			gmut_coef[i/3][i%3] =
+				hdr_mtx_param->mtx_gamut[i];
 		gmut_shift = 11;
-
-		if (hdr_mtx_param->mtx_cgain[2]) {
-			for (i = 0; i < 3; i++)
-				c_gain_lim_coef[i] =
-					hdr_mtx_param->mtx_cgain[i] << 2;
-		}
-
+		for (i = 0; i < 3; i++)
+			c_gain_lim_coef[i] =
+				hdr_mtx_param->mtx_cgain[i] << 2;
 		/*0, nolinear input, 1, max linear, 2, adpscl mode*/
 		adpscl_mode = 1;
 		for (i = 0; i < 3; i++) {
@@ -1139,9 +1133,8 @@ void set_hdr_matrix(
 				adpscl_alpha[i] = 1 *
 					(1 << adp_scal_shift) / in_luma;
 			adpscl_shift[i] = adp_scal_shift;
-			if (hdr_mtx_param->mtx_ogain[2])
-				adpscl_ys_coef[i] =
-					hdr_mtx_param->mtx_ogain[i] << 1;
+			adpscl_ys_coef[i] =
+				hdr_mtx_param->mtx_ogain[i] << 1;
 			adpscl_beta_s[i] = 0;
 			adpscl_beta[i] = FLTZERO;
 		}
@@ -1193,11 +1186,8 @@ void set_hdr_matrix(
 	    VSYNC_WR_MPEG_REG(ADPS_COEF1, adpscl_ys_coef[2]);
 
 	} else if (mtx_sel & HDR_OUT_MTX) {
-		if (hdr_mtx_param->mtx_out[14]) {
-			for (i = 0; i < 15; i++)
-				mtx[i] = hdr_mtx_param->mtx_out[i];
-		}
-
+		for (i = 0; i < 15; i++)
+			mtx[i] = hdr_mtx_param->mtx_out[i];
 		VSYNC_WR_MPEG_REG(CGAIN_OFFT,
 			(rgb2yuvpos[2] << 16) | rgb2yuvpos[1]);
 		VSYNC_WR_MPEG_REG(MATRIXO_EN_CTRL, hdr_mtx_param->mtx_on);
