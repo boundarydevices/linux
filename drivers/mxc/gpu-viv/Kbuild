@@ -58,7 +58,7 @@
 #
 AQROOT := $(srctree)/drivers/mxc/gpu-viv
 
-include $(AQROOT)/config
+-include $(AQROOT)/config
 
 soc_vendor    := $(firstword $(subst -, ,$(SOC_PLATFORM)))
 soc_board     := $(lastword  $(subst -, ,$(SOC_PLATFORM)))
