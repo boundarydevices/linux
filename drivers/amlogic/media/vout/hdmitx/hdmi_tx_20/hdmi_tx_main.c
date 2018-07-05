@@ -181,6 +181,8 @@ static void hdmitx_late_resume(struct early_suspend *h)
 		hdmitx_device.hpd_state =
 		!!(hdmitx_device.HWOp.CntlMisc(&hdmitx_device,
 		MISC_HPD_GPI_ST, 0));
+
+		pr_info("hdmitx hpd state: %d\n", hdmitx_device.hpd_state);
 		hdmitx_notify_hpd(hdmitx_device.hpd_state);
 
 		/*force to get EDID after resume for Amplifer Power case*/
@@ -194,6 +196,8 @@ static void hdmitx_late_resume(struct early_suspend *h)
 		extcon_set_state_sync(hdmitx_extcon_hdmi, EXTCON_DISP_HDMI,
 			hdmitx_device.hpd_state);
 		extcon_set_state_sync(hdmitx_extcon_power, EXTCON_DISP_HDMI,
+			hdmitx_device.hpd_state);
+		extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI,
 			hdmitx_device.hpd_state);
 
 		pr_info("amhdmitx: late resume module %d\n", __LINE__);
