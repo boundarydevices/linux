@@ -3584,6 +3584,7 @@ static int parse_sei_and_meta(
 	unsigned long flags;
 	bool parser_overflow = false;
 	int nextId;
+	int rpu_ret = 0;
 
 	nextId = currentId ^ 1;
 	if ((req->aux_buf == NULL)
@@ -3659,13 +3660,14 @@ static int parse_sei_and_meta(
 			}
 
 			md_size = comp_size = 0;
-			if (p_funcs->metadata_parser_process(
+			rpu_ret = p_funcs->metadata_parser_process(
 				meta_buf, size + 2,
 				comp_buf[nextId] + *total_comp_size,
 				&comp_size,
 				md_buf[nextId] + *total_md_size,
 				&md_size,
-				true)) {
+				true);
+			if (rpu_ret < 0) {
 				pr_dolby_error(
 					"meta(%d), pts(%lld) -> metadata parser process fail\n",
 					size, vf->pts_us64);
