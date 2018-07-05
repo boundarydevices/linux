@@ -1089,6 +1089,10 @@
 	};
 };  /* end of pinctrl_aobus */
 
+&irblaster {
+	status = "disabled";
+};
+
 &audio_data {
 	status = "okay";
 };
