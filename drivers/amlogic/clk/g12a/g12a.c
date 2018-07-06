@@ -654,6 +654,7 @@ static MESON_GATE(g12a_vclk2_encl, HHI_GCLK_OTHER, 23);
 static MESON_GATE(g12a_vclk2_venclmmc, HHI_GCLK_OTHER, 24);
 static MESON_GATE(g12a_vclk2_vencl, HHI_GCLK_OTHER, 25);
 static MESON_GATE(g12a_vclk2_other1, HHI_GCLK_OTHER, 26);
+static MESON_GATE(g12a_efuse, HHI_GCLK_SP_MPEG, 1);
 
 /* Array of all clocks provided by this provider */
 
@@ -742,6 +743,7 @@ static struct clk_hw *g12a_clk_hws[] = {
 	[CLKID_VCLK2_VENCLMMC]  = &g12a_vclk2_venclmmc.hw,
 	[CLKID_VCLK2_VENCL]     = &g12a_vclk2_vencl.hw,
 	[CLKID_VCLK2_OTHER1]    = &g12a_vclk2_other1.hw,
+	[CLKID_EFUSE]           = &g12a_efuse.hw,
 
 	[CLKID_CPU_FCLK_P]      = &g12a_cpu_fclk_p.hw,
 	[CLKID_CPU_CLK]         = &g12a_cpu_clk.mux.hw,
@@ -833,6 +835,7 @@ static struct clk_gate *g12a_clk_gates[] = {
 	&g12a_vclk2_venclmmc,
 	&g12a_vclk2_vencl,
 	&g12a_vclk2_other1,
+	&g12a_efuse,
 	&g12a_24m,
 	&g12a_12m_gate,
 };

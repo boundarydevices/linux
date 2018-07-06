@@ -132,7 +132,11 @@
 #define CLKID_VCLK2_VENCL       (GATE_BASE3 + 17)
 #define CLKID_VCLK2_OTHER1      (GATE_BASE3 + 18)
 
-#define GATE_AO_BASE            (GATE_BASE3 + 19)
+/*HHI_GCLK_SP_MPEG: 0x55*/
+#define GATE_BASE4              (GATE_BASE3 + 19)
+#define CLKID_EFUSE             (GATE_BASE4 + 0)
+
+#define GATE_AO_BASE            (GATE_BASE4 + 1)
 #define CLKID_AO_MEDIA_CPU      (GATE_AO_BASE + 0)
 #define CLKID_AO_AHB_SRAM       (GATE_AO_BASE + 1)
 #define CLKID_AO_AHB_BUS        (GATE_AO_BASE + 2)
