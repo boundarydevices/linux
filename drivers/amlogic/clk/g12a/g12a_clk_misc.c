@@ -150,15 +150,15 @@ void meson_g12a_misc_init(void)
 	/* Populate base address for reg */
 	pr_info("%s: register amlogic g12a misc clks\n", __func__);
 
-	g12a_ts_clk_div.reg = clk_base + (u64)(g12a_ts_clk_div.reg);
-	g12a_ts_clk_gate.reg = clk_base + (u64)(g12a_ts_clk_gate.reg);
+	g12a_ts_clk_div.reg = clk_base + (unsigned long)(g12a_ts_clk_div.reg);
+	g12a_ts_clk_gate.reg = clk_base + (unsigned long)(g12a_ts_clk_gate.reg);
 
-	g12a_spicc0_mux.reg = clk_base + (u64)(g12a_spicc0_mux.reg);
-	g12a_spicc0_div.reg = clk_base + (u64)(g12a_spicc0_div.reg);
-	g12a_spicc0_gate.reg = clk_base + (u64)(g12a_spicc0_gate.reg);
-	g12a_spicc1_mux.reg = clk_base + (u64)(g12a_spicc1_mux.reg);
-	g12a_spicc1_div.reg = clk_base + (u64)(g12a_spicc1_div.reg);
-	g12a_spicc1_gate.reg = clk_base + (u64)(g12a_spicc1_gate.reg);
+	g12a_spicc0_mux.reg = clk_base + (unsigned long)(g12a_spicc0_mux.reg);
+	g12a_spicc0_div.reg = clk_base + (unsigned long)(g12a_spicc0_div.reg);
+	g12a_spicc0_gate.reg = clk_base + (unsigned long)(g12a_spicc0_gate.reg);
+	g12a_spicc1_mux.reg = clk_base + (unsigned long)(g12a_spicc1_mux.reg);
+	g12a_spicc1_div.reg = clk_base + (unsigned long)(g12a_spicc1_div.reg);
+	g12a_spicc1_gate.reg = clk_base + (unsigned long)(g12a_spicc1_gate.reg);
 
 	clks[CLKID_TS_COMP] = clk_register_composite(NULL,
 		"ts_comp",

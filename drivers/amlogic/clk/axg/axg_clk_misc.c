@@ -84,9 +84,9 @@ void axg_amlogic_init_misc(void)
 	/* Populate base address for reg */
 	pr_info("%s: register amlogic axg misc clks\n", __func__);
 
-	spicc_mux.reg = clk_base + (u64)(spicc_mux.reg);
-	spicc_div.reg = clk_base + (u64)(spicc_div.reg);
-	spicc_gate.reg = clk_base + (u64)(spicc_gate.reg);
+	spicc_mux.reg = clk_base + (unsigned long)(spicc_mux.reg);
+	spicc_div.reg = clk_base + (unsigned long)(spicc_div.reg);
+	spicc_gate.reg = clk_base + (unsigned long)(spicc_gate.reg);
 
 	clks[CLKID_SPICC_COMP] = clk_register_composite(NULL,
 		"spicc_comp",

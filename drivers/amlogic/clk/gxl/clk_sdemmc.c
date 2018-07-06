@@ -183,15 +183,24 @@ void amlogic_init_sdemmc(void)
 {
 	/* Populate base address for reg */
 	pr_info("%s: register amlogic sdemmc clk\n", __func__);
-	sd_emmc_p0_mux_A.reg = clk_base + (u64)(sd_emmc_p0_mux_A.reg);
-	sd_emmc_p0_div_A.reg = clk_base + (u64)(sd_emmc_p0_div_A.reg);
-	sd_emmc_p0_gate_A.reg = clk_base + (u64)(sd_emmc_p0_gate_A.reg);
-	sd_emmc_p0_mux_B.reg = clk_base + (u64)(sd_emmc_p0_mux_B.reg);
-	sd_emmc_p0_div_B.reg = clk_base + (u64)(sd_emmc_p0_div_B.reg);
-	sd_emmc_p0_gate_B.reg = clk_base + (u64)(sd_emmc_p0_gate_B.reg);
-	sd_emmc_p0_mux_C.reg = clk_base + (u64)(sd_emmc_p0_mux_C.reg);
-	sd_emmc_p0_div_C.reg = clk_base + (u64)(sd_emmc_p0_div_C.reg);
-	sd_emmc_p0_gate_C.reg = clk_base + (u64)(sd_emmc_p0_gate_C.reg);
+	sd_emmc_p0_mux_A.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_mux_A.reg);
+	sd_emmc_p0_div_A.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_div_A.reg);
+	sd_emmc_p0_gate_A.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_gate_A.reg);
+	sd_emmc_p0_mux_B.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_mux_B.reg);
+	sd_emmc_p0_div_B.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_div_B.reg);
+	sd_emmc_p0_gate_B.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_gate_B.reg);
+	sd_emmc_p0_mux_C.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_mux_C.reg);
+	sd_emmc_p0_div_C.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_div_C.reg);
+	sd_emmc_p0_gate_C.reg = clk_base
+			+ (unsigned long)(sd_emmc_p0_gate_C.reg);
 
 	clks[CLKID_SD_EMMC_A_P0_COMP] = clk_register_composite(NULL,
 		"sd_emmc_p0_A_comp",

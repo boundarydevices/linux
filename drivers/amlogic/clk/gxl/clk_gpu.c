@@ -140,13 +140,13 @@ static struct clk_hw *gpu_clk_hws[] = {
 
 void amlogic_init_gpu(void)
 {
-	gpu_p0_mux.reg = clk_base + (u64)(gpu_p0_mux.reg);
-	gpu_p0_div.reg = clk_base + (u64)(gpu_p0_div.reg);
-	gpu_p0_gate.reg = clk_base + (u64)(gpu_p0_gate.reg);
-	gpu_p1_mux.reg = clk_base + (u64)(gpu_p1_mux.reg);
-	gpu_p1_div.reg = clk_base + (u64)(gpu_p1_div.reg);
-	gpu_p1_gate.reg = clk_base + (u64)(gpu_p1_gate.reg);
-	gpu_mux.reg = clk_base + (u64)(gpu_mux.reg);
+	gpu_p0_mux.reg = clk_base + (unsigned long)(gpu_p0_mux.reg);
+	gpu_p0_div.reg = clk_base + (unsigned long)(gpu_p0_div.reg);
+	gpu_p0_gate.reg = clk_base + (unsigned long)(gpu_p0_gate.reg);
+	gpu_p1_mux.reg = clk_base + (unsigned long)(gpu_p1_mux.reg);
+	gpu_p1_div.reg = clk_base + (unsigned long)(gpu_p1_div.reg);
+	gpu_p1_gate.reg = clk_base + (unsigned long)(gpu_p1_gate.reg);
+	gpu_mux.reg = clk_base + (unsigned long)(gpu_mux.reg);
 
 	clks[CLKID_GPU_P0_COMP] = clk_register_composite(NULL,
 		"gpu_p0_composite",

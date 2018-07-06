@@ -947,81 +947,82 @@ static struct clk_hw *vpu_clkc_hws[] = {
 void meson_g12a_media_init(void)
 {
 	/* cts_dsi_meas_clk */
-	dsi_meas_mux.reg = clk_base + (u64)(dsi_meas_mux.reg);
-	dsi_meas_div.reg = clk_base + (u64)(dsi_meas_div.reg);
-	dsi_meas_gate.reg = clk_base + (u64)(dsi_meas_gate.reg);
+	dsi_meas_mux.reg = clk_base + (unsigned long)(dsi_meas_mux.reg);
+	dsi_meas_div.reg = clk_base + (unsigned long)(dsi_meas_div.reg);
+	dsi_meas_gate.reg = clk_base + (unsigned long)(dsi_meas_gate.reg);
 
 	/* cts_vdec_clk */
-	vdec_p0_mux.reg = clk_base + (u64)(vdec_p0_mux.reg);
-	vdec_p0_div.reg = clk_base + (u64)(vdec_p0_div.reg);
-	vdec_p0_gate.reg = clk_base + (u64)(vdec_p0_gate.reg);
-	vdec_p1_mux.reg = clk_base + (u64)(vdec_p1_mux.reg);
-	vdec_p1_div.reg = clk_base + (u64)(vdec_p1_div.reg);
-	vdec_p1_gate.reg = clk_base + (u64)(vdec_p1_gate.reg);
-	vdec_mux.reg = clk_base + (u64)(vdec_mux.reg);
+	vdec_p0_mux.reg = clk_base + (unsigned long)(vdec_p0_mux.reg);
+	vdec_p0_div.reg = clk_base + (unsigned long)(vdec_p0_div.reg);
+	vdec_p0_gate.reg = clk_base + (unsigned long)(vdec_p0_gate.reg);
+	vdec_p1_mux.reg = clk_base + (unsigned long)(vdec_p1_mux.reg);
+	vdec_p1_div.reg = clk_base + (unsigned long)(vdec_p1_div.reg);
+	vdec_p1_gate.reg = clk_base + (unsigned long)(vdec_p1_gate.reg);
+	vdec_mux.reg = clk_base + (unsigned long)(vdec_mux.reg);
 
 	/* cts_hcodec_clk */
-	hcodec_p0_mux.reg = clk_base + (u64)(hcodec_p0_mux.reg);
-	hcodec_p0_div.reg = clk_base + (u64)(hcodec_p0_div.reg);
-	hcodec_p0_gate.reg = clk_base + (u64)(hcodec_p0_gate.reg);
-	hcodec_p1_mux.reg = clk_base + (u64)(hcodec_p1_mux.reg);
-	hcodec_p1_div.reg = clk_base + (u64)(hcodec_p1_div.reg);
-	hcodec_p1_gate.reg = clk_base + (u64)(hcodec_p1_gate.reg);
-	hcodec_mux.reg = clk_base + (u64)(hcodec_mux.reg);
+	hcodec_p0_mux.reg = clk_base + (unsigned long)(hcodec_p0_mux.reg);
+	hcodec_p0_div.reg = clk_base + (unsigned long)(hcodec_p0_div.reg);
+	hcodec_p0_gate.reg = clk_base + (unsigned long)(hcodec_p0_gate.reg);
+	hcodec_p1_mux.reg = clk_base + (unsigned long)(hcodec_p1_mux.reg);
+	hcodec_p1_div.reg = clk_base + (unsigned long)(hcodec_p1_div.reg);
+	hcodec_p1_gate.reg = clk_base + (unsigned long)(hcodec_p1_gate.reg);
+	hcodec_mux.reg = clk_base + (unsigned long)(hcodec_mux.reg);
 
 	/* cts_hevc_clk */
-	hevc_p0_mux.reg = clk_base + (u64)(hevc_p0_mux.reg);
-	hevc_p0_div.reg = clk_base + (u64)(hevc_p0_div.reg);
-	hevc_p0_gate.reg = clk_base + (u64)(hevc_p0_gate.reg);
-	hevc_p1_mux.reg = clk_base + (u64)(hevc_p1_mux.reg);
-	hevc_p1_div.reg = clk_base + (u64)(hevc_p1_div.reg);
-	hevc_p1_gate.reg = clk_base + (u64)(hevc_p1_gate.reg);
-	hevc_mux.reg = clk_base + (u64)(hevc_mux.reg);
+	hevc_p0_mux.reg = clk_base + (unsigned long)(hevc_p0_mux.reg);
+	hevc_p0_div.reg = clk_base + (unsigned long)(hevc_p0_div.reg);
+	hevc_p0_gate.reg = clk_base + (unsigned long)(hevc_p0_gate.reg);
+	hevc_p1_mux.reg = clk_base + (unsigned long)(hevc_p1_mux.reg);
+	hevc_p1_div.reg = clk_base + (unsigned long)(hevc_p1_div.reg);
+	hevc_p1_gate.reg = clk_base + (unsigned long)(hevc_p1_gate.reg);
+	hevc_mux.reg = clk_base + (unsigned long)(hevc_mux.reg);
 
 	/* cts_hevcf_clk */
-	hevcf_p0_mux.reg = clk_base + (u64)(hevcf_p0_mux.reg);
-	hevcf_p0_div.reg = clk_base + (u64)(hevcf_p0_div.reg);
-	hevcf_p0_gate.reg = clk_base + (u64)(hevcf_p0_gate.reg);
-	hevcf_p1_mux.reg = clk_base + (u64)(hevcf_p1_mux.reg);
-	hevcf_p1_div.reg = clk_base + (u64)(hevcf_p1_div.reg);
-	hevcf_p1_gate.reg = clk_base + (u64)(hevcf_p1_gate.reg);
-	hevcf_mux.reg = clk_base + (u64)(hevcf_mux.reg);
+	hevcf_p0_mux.reg = clk_base + (unsigned long)(hevcf_p0_mux.reg);
+	hevcf_p0_div.reg = clk_base + (unsigned long)(hevcf_p0_div.reg);
+	hevcf_p0_gate.reg = clk_base + (unsigned long)(hevcf_p0_gate.reg);
+	hevcf_p1_mux.reg = clk_base + (unsigned long)(hevcf_p1_mux.reg);
+	hevcf_p1_div.reg = clk_base + (unsigned long)(hevcf_p1_div.reg);
+	hevcf_p1_gate.reg = clk_base + (unsigned long)(hevcf_p1_gate.reg);
+	hevcf_mux.reg = clk_base + (unsigned long)(hevcf_mux.reg);
 
 	/* cts_vpu_clk */
-	vpu_p0_mux.reg = clk_base + (u64)(vpu_p0_mux.reg);
-	vpu_p0_div.reg = clk_base + (u64)(vpu_p0_div.reg);
-	vpu_p0_gate.reg = clk_base + (u64)(vpu_p0_gate.reg);
-	vpu_p1_mux.reg = clk_base + (u64)(vpu_p1_mux.reg);
-	vpu_p1_div.reg = clk_base + (u64)(vpu_p1_div.reg);
-	vpu_p1_gate.reg = clk_base + (u64)(vpu_p1_gate.reg);
-	vpu_mux.reg = clk_base + (u64)(vpu_mux.reg);
+	vpu_p0_mux.reg = clk_base + (unsigned long)(vpu_p0_mux.reg);
+	vpu_p0_div.reg = clk_base + (unsigned long)(vpu_p0_div.reg);
+	vpu_p0_gate.reg = clk_base + (unsigned long)(vpu_p0_gate.reg);
+	vpu_p1_mux.reg = clk_base + (unsigned long)(vpu_p1_mux.reg);
+	vpu_p1_div.reg = clk_base + (unsigned long)(vpu_p1_div.reg);
+	vpu_p1_gate.reg = clk_base + (unsigned long)(vpu_p1_gate.reg);
+	vpu_mux.reg = clk_base + (unsigned long)(vpu_mux.reg);
 	/* cts_vapbclk */
-	vapb_p0_mux.reg = clk_base + (u64)(vapb_p0_mux.reg);
-	vapb_p0_div.reg = clk_base + (u64)(vapb_p0_div.reg);
-	vapb_p0_gate.reg = clk_base + (u64)(vapb_p0_gate.reg);
-	vapb_p1_mux.reg = clk_base + (u64)(vapb_p1_mux.reg);
-	vapb_p1_div.reg = clk_base + (u64)(vapb_p1_div.reg);
-	vapb_p1_gate.reg = clk_base + (u64)(vapb_p1_gate.reg);
-	vapb_mux.reg = clk_base + (u64)(vapb_mux.reg);
+	vapb_p0_mux.reg = clk_base + (unsigned long)(vapb_p0_mux.reg);
+	vapb_p0_div.reg = clk_base + (unsigned long)(vapb_p0_div.reg);
+	vapb_p0_gate.reg = clk_base + (unsigned long)(vapb_p0_gate.reg);
+	vapb_p1_mux.reg = clk_base + (unsigned long)(vapb_p1_mux.reg);
+	vapb_p1_div.reg = clk_base + (unsigned long)(vapb_p1_div.reg);
+	vapb_p1_gate.reg = clk_base + (unsigned long)(vapb_p1_gate.reg);
+	vapb_mux.reg = clk_base + (unsigned long)(vapb_mux.reg);
 	/* cts_ge2d_clk */
-	ge2d_gate.reg = clk_base + (u64)(ge2d_gate.reg);
+	ge2d_gate.reg = clk_base + (unsigned long)(ge2d_gate.reg);
 
 	/* vpu_clkb_tmp */
-	vpu_clkb_tmp_mux.reg = clk_base + (u64)(vpu_clkb_tmp_mux.reg);
-	vpu_clkb_tmp_div.reg = clk_base + (u64)(vpu_clkb_tmp_div.reg);
-	vpu_clkb_tmp_gate.reg = clk_base + (u64)(vpu_clkb_tmp_gate.reg);
+	vpu_clkb_tmp_mux.reg = clk_base + (unsigned long)(vpu_clkb_tmp_mux.reg);
+	vpu_clkb_tmp_div.reg = clk_base + (unsigned long)(vpu_clkb_tmp_div.reg);
+	vpu_clkb_tmp_gate.reg = clk_base
+			+ (unsigned long)(vpu_clkb_tmp_gate.reg);
 
-	vpu_clkb_div.reg = clk_base + (u64)(vpu_clkb_div.reg);
-	vpu_clkb_gate.reg = clk_base + (u64)(vpu_clkb_gate.reg);
+	vpu_clkb_div.reg = clk_base + (unsigned long)(vpu_clkb_div.reg);
+	vpu_clkb_gate.reg = clk_base + (unsigned long)(vpu_clkb_gate.reg);
 
 	/* cts_vpu_clkc */
-	vpu_clkc_p0_mux.reg = clk_base + (u64)(vpu_clkc_p0_mux.reg);
-	vpu_clkc_p0_div.reg = clk_base + (u64)(vpu_clkc_p0_div.reg);
-	vpu_clkc_p0_gate.reg = clk_base + (u64)(vpu_clkc_p0_gate.reg);
-	vpu_clkc_p1_mux.reg = clk_base + (u64)(vpu_clkc_p1_mux.reg);
-	vpu_clkc_p1_div.reg = clk_base + (u64)(vpu_clkc_p1_div.reg);
-	vpu_clkc_p1_gate.reg = clk_base + (u64)(vpu_clkc_p1_gate.reg);
-	vpu_clkc_mux.reg = clk_base + (u64)(vpu_clkc_mux.reg);
+	vpu_clkc_p0_mux.reg = clk_base + (unsigned long)(vpu_clkc_p0_mux.reg);
+	vpu_clkc_p0_div.reg = clk_base + (unsigned long)(vpu_clkc_p0_div.reg);
+	vpu_clkc_p0_gate.reg = clk_base + (unsigned long)(vpu_clkc_p0_gate.reg);
+	vpu_clkc_p1_mux.reg = clk_base + (unsigned long)(vpu_clkc_p1_mux.reg);
+	vpu_clkc_p1_div.reg = clk_base + (unsigned long)(vpu_clkc_p1_div.reg);
+	vpu_clkc_p1_gate.reg = clk_base + (unsigned long)(vpu_clkc_p1_gate.reg);
+	vpu_clkc_mux.reg = clk_base + (unsigned long)(vpu_clkc_mux.reg);
 
 	clks[CLKID_DSI_MEAS_COMP] = clk_register_composite(NULL,
 		"dsi_meas_composite",

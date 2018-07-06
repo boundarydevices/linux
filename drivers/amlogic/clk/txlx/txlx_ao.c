@@ -109,10 +109,10 @@ static int txlx_aoclkc_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 	/* Populate the base address for ao clk */
-	aoclk81.reg = aoclk_base + (u64)aoclk81.reg;
-	txlx_saradc_mux.reg = aoclk_base + (u64)txlx_saradc_mux.reg;
-	txlx_saradc_div.reg = aoclk_base + (u64)txlx_saradc_div.reg;
-	txlx_saradc_gate.reg = aoclk_base + (u64)txlx_saradc_gate.reg;
+	aoclk81.reg = aoclk_base + (unsigned long)aoclk81.reg;
+	txlx_saradc_mux.reg = aoclk_base + (unsigned long)txlx_saradc_mux.reg;
+	txlx_saradc_div.reg = aoclk_base + (unsigned long)txlx_saradc_div.reg;
+	txlx_saradc_gate.reg = aoclk_base + (unsigned long)txlx_saradc_gate.reg;
 
 	for (clkid = CLKID_AO_BASE; clkid < NR_CLKS; clkid++) {
 		if (txlx_ao_clk_hws[clkid-CLKID_AO_BASE]) {

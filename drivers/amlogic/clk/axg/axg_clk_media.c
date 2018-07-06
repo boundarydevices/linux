@@ -318,28 +318,28 @@ static struct clk_gate ge2d_gate = {
 void axg_amlogic_init_media(void)
 {
 	/* cts_dsi_meas_clk */
-	dsi_meas_mux.reg = clk_base + (u64)(dsi_meas_mux.reg);
-	dsi_meas_div.reg = clk_base + (u64)(dsi_meas_div.reg);
-	dsi_meas_gate.reg = clk_base + (u64)(dsi_meas_gate.reg);
+	dsi_meas_mux.reg = clk_base + (unsigned long)(dsi_meas_mux.reg);
+	dsi_meas_div.reg = clk_base + (unsigned long)(dsi_meas_div.reg);
+	dsi_meas_gate.reg = clk_base + (unsigned long)(dsi_meas_gate.reg);
 
 	/* cts_vpu_clk */
-	vpu_p0_mux.reg = clk_base + (u64)(vpu_p0_mux.reg);
-	vpu_p0_div.reg = clk_base + (u64)(vpu_p0_div.reg);
-	vpu_p0_gate.reg = clk_base + (u64)(vpu_p0_gate.reg);
-	vpu_p1_mux.reg = clk_base + (u64)(vpu_p1_mux.reg);
-	vpu_p1_div.reg = clk_base + (u64)(vpu_p1_div.reg);
-	vpu_p1_gate.reg = clk_base + (u64)(vpu_p1_gate.reg);
-	vpu_mux.reg = clk_base + (u64)(vpu_mux.reg);
+	vpu_p0_mux.reg = clk_base + (unsigned long)(vpu_p0_mux.reg);
+	vpu_p0_div.reg = clk_base + (unsigned long)(vpu_p0_div.reg);
+	vpu_p0_gate.reg = clk_base + (unsigned long)(vpu_p0_gate.reg);
+	vpu_p1_mux.reg = clk_base + (unsigned long)(vpu_p1_mux.reg);
+	vpu_p1_div.reg = clk_base + (unsigned long)(vpu_p1_div.reg);
+	vpu_p1_gate.reg = clk_base + (unsigned long)(vpu_p1_gate.reg);
+	vpu_mux.reg = clk_base + (unsigned long)(vpu_mux.reg);
 	/* cts_vapbclk */
-	vapb_p0_mux.reg = clk_base + (u64)(vapb_p0_mux.reg);
-	vapb_p0_div.reg = clk_base + (u64)(vapb_p0_div.reg);
-	vapb_p0_gate.reg = clk_base + (u64)(vapb_p0_gate.reg);
-	vapb_p1_mux.reg = clk_base + (u64)(vapb_p1_mux.reg);
-	vapb_p1_div.reg = clk_base + (u64)(vapb_p1_div.reg);
-	vapb_p1_gate.reg = clk_base + (u64)(vapb_p1_gate.reg);
-	vapb_mux.reg = clk_base + (u64)(vapb_mux.reg);
+	vapb_p0_mux.reg = clk_base + (unsigned long)(vapb_p0_mux.reg);
+	vapb_p0_div.reg = clk_base + (unsigned long)(vapb_p0_div.reg);
+	vapb_p0_gate.reg = clk_base + (unsigned long)(vapb_p0_gate.reg);
+	vapb_p1_mux.reg = clk_base + (unsigned long)(vapb_p1_mux.reg);
+	vapb_p1_div.reg = clk_base + (unsigned long)(vapb_p1_div.reg);
+	vapb_p1_gate.reg = clk_base + (unsigned long)(vapb_p1_gate.reg);
+	vapb_mux.reg = clk_base + (unsigned long)(vapb_mux.reg);
 	/* cts_ge2d_clk */
-	ge2d_gate.reg = clk_base + (u64)(ge2d_gate.reg);
+	ge2d_gate.reg = clk_base + (unsigned long)(ge2d_gate.reg);
 
 	clks[CLKID_DSI_MEAS_COMP] = clk_register_composite(NULL,
 		"dsi_meas_composite",

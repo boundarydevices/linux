@@ -62,12 +62,18 @@ void meson_txlx_sdemmc_init(void)
 	int length = ARRAY_SIZE(sdemmc_comp);
 
 	/* Populate base address for reg */
-	sd_emmc_p0_mux_B.reg = clk_base + (u64)(sd_emmc_p0_mux_B.reg);
-	sd_emmc_p0_div_B.reg = clk_base + (u64)(sd_emmc_p0_div_B.reg);
-	sd_emmc_p0_gate_B.reg = clk_base + (u64)(sd_emmc_p0_gate_B.reg);
-	sd_emmc_p0_mux_C.reg = clk_base + (u64)(sd_emmc_p0_mux_C.reg);
-	sd_emmc_p0_div_C.reg = clk_base + (u64)(sd_emmc_p0_div_C.reg);
-	sd_emmc_p0_gate_C.reg = clk_base + (u64)(sd_emmc_p0_gate_C.reg);
+	sd_emmc_p0_mux_B.reg = clk_base
+				+ (unsigned long)(sd_emmc_p0_mux_B.reg);
+	sd_emmc_p0_div_B.reg = clk_base
+				+ (unsigned long)(sd_emmc_p0_div_B.reg);
+	sd_emmc_p0_gate_B.reg = clk_base
+				+ (unsigned long)(sd_emmc_p0_gate_B.reg);
+	sd_emmc_p0_mux_C.reg = clk_base
+				+ (unsigned long)(sd_emmc_p0_mux_C.reg);
+	sd_emmc_p0_div_C.reg = clk_base
+				+ (unsigned long)(sd_emmc_p0_div_C.reg);
+	sd_emmc_p0_gate_C.reg = clk_base
+				+ (unsigned long)(sd_emmc_p0_gate_C.reg);
 
 	meson_clk_register_composite(clks, sdemmc_comp, length);
 }

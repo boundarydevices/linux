@@ -85,13 +85,13 @@ void meson_init_gpu(void)
 	/* Populate base address for gpu muxes, divs,gates */
 	for (i = 0; i < ARRAY_SIZE(txlx_gpu_clk_muxes); i++)
 		txlx_gpu_clk_muxes[i]->reg = clk_base +
-			(u64)txlx_gpu_clk_muxes[i]->reg;
+			(unsigned long)txlx_gpu_clk_muxes[i]->reg;
 	for (i = 0; i < ARRAY_SIZE(txlx_gpu_clk_divs); i++)
 		txlx_gpu_clk_divs[i]->reg = clk_base +
-			(u64)txlx_gpu_clk_divs[i]->reg;
+			(unsigned long)txlx_gpu_clk_divs[i]->reg;
 	for (i = 0; i < ARRAY_SIZE(txlx_gpu_clk_gates); i++)
 		txlx_gpu_clk_gates[i]->reg = clk_base +
-			(u64)txlx_gpu_clk_gates[i]->reg;
+			(unsigned long)txlx_gpu_clk_gates[i]->reg;
 
 	meson_clk_register_composite(clks, gpu_composite, length);
 
