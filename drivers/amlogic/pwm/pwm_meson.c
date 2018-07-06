@@ -355,7 +355,10 @@ static int meson_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	    state->duty_cycle != channel->state.duty_cycle ||
 	    state->polarity != channel->state.polarity) {
 		if (channel->state.enabled) {
-			meson_pwm_disable(meson, pwm->hwpwm);
+			/*
+			 *Don't disable pwm when setting duty repeatedly
+			 *meson_pwm_disable(meson, pwm->hwpwm);
+			 */
 			channel->state.enabled = false;
 		}
 
