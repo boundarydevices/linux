@@ -923,23 +923,21 @@ static int ge2d_probe(struct platform_device *pdev)
 			ge2d_log_info("clock source clk_vapb_0 %p\n",
 				clk_vapb0);
 			vapb_rate =  ge2d_meson_dev.ge2d_rate;
+			vpu_rate = get_vpu_clk();
+			ge2d_log_info(
+				"ge2d init clock is %d HZ, VPU clock is %d HZ\n",
+				vapb_rate, vpu_rate);
+
+			if (vpu_rate >= ge2d_meson_dev.ge2d_rate)
+				vapb_rate = ge2d_meson_dev.ge2d_rate;
+			else if (vpu_rate == 333330000)
+				vapb_rate = 333333333;
+			else if (vpu_rate == 166660000)
+				vapb_rate = 166666667;
+			else if (vapb_rate > vpu_rate)
+				vapb_rate = vpu_rate;
 			clk_set_rate(clk_vapb0, vapb_rate);
 			clk_prepare_enable(clk_vapb0);
-			vapb_rate = clk_get_rate(clk_vapb0);
-			ge2d_log_info("ge2d init clock is %d HZ\n",
-				vapb_rate);
-			vpu_rate = get_vpu_clk();
-			ge2d_log_info("vpu clock is %d HZ\n",
-					vpu_rate);
-			if (vpu_rate >= ge2d_meson_dev.ge2d_rate)
-				clk_set_rate(clk_vapb0,
-					ge2d_meson_dev.ge2d_rate);
-			else if (vpu_rate == 333330000)
-				clk_set_rate(clk_vapb0, 333333333);
-			else if (vpu_rate == 166660000)
-				clk_set_rate(clk_vapb0, 166666667);
-			else
-				clk_set_rate(clk_vapb0, vpu_rate);
 			vapb_rate = clk_get_rate(clk_vapb0);
 			ge2d_log_info("ge2d clock is %d MHZ\n",
 				vapb_rate/1000000);
