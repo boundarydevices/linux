@@ -7747,7 +7747,7 @@ void  osd_suspend_hw(void)
 		osd_reg_clr_mask(VIU_OSD_BLEND_CTRL, 0xf0000);
 		osd_reg_clr_mask(OSD1_BLEND_SRC_CTRL, 0xf0f);
 		osd_reg_clr_mask(OSD2_BLEND_SRC_CTRL, 0xf0f);
-		osd_reg_clr_mask(VPP_RDARB_REQEN_SLV, 0xffff);
+		osd_reg_clr_mask(VPP_RDARB_REQEN_SLV, 0xff7f);
 
 	}
 	osd_log_info("osd_suspended\n");
