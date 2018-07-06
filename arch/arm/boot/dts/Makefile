@@ -115,6 +115,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx53-smd.dtb \
 	imx6dl-hl.dtb \
 	imx6dl-lshore.dtb \
+	imx6dl-lshore-r0.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6_vm.dtb \
 	imx6dl-nitrogen6_vm-magstripe.dtb \
