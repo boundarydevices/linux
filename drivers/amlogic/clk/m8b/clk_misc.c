@@ -275,30 +275,30 @@ static struct clk_gate pcm_sclk_gate = {
 void amlogic_init_misc(void)
 {
 	/* cts_vdin_meas_clk */
-	vdin_meas_mux.reg = clk_base + (u32)(vdin_meas_mux.reg);
-	vdin_meas_div.reg = clk_base + (u32)(vdin_meas_div.reg);
-	vdin_meas_gate.reg = clk_base + (u32)(vdin_meas_gate.reg);
+	vdin_meas_mux.reg = clk_base + (unsigned long)(vdin_meas_mux.reg);
+	vdin_meas_div.reg = clk_base + (unsigned long)(vdin_meas_div.reg);
+	vdin_meas_gate.reg = clk_base + (unsigned long)(vdin_meas_gate.reg);
 
 	/* cts_amclk */
-	amclk_mux.reg = clk_base + (u32)(amclk_mux.reg);
-	amclk_div.reg = clk_base + (u32)(amclk_div.reg);
-	amclk_gate.reg = clk_base + (u32)(amclk_gate.reg);
+	amclk_mux.reg = clk_base + (unsigned long)(amclk_mux.reg);
+	amclk_div.reg = clk_base + (unsigned long)(amclk_div.reg);
+	amclk_gate.reg = clk_base + (unsigned long)(amclk_gate.reg);
 
 	/* cts_clk_i958 */
-	i958_mux.reg = clk_base + (u32)(i958_mux.reg);
-	i958_div.reg = clk_base + (u32)(i958_div.reg);
-	i958_gate.reg = clk_base + (u32)(i958_gate.reg);
+	i958_mux.reg = clk_base + (unsigned long)(i958_mux.reg);
+	i958_div.reg = clk_base + (unsigned long)(i958_div.reg);
+	i958_gate.reg = clk_base + (unsigned long)(i958_gate.reg);
 
 	/*clk_i958 spdif*/
-	i958_comp_spdif.reg = clk_base + (u32)(i958_comp_spdif.reg);
+	i958_comp_spdif.reg = clk_base + (unsigned long)(i958_comp_spdif.reg);
 	/* cts_pclk_mclk */
-	pcm_mclk_mux.reg = clk_base + (u32)(pcm_mclk_mux.reg);
-	pcm_mclk_div.reg = clk_base + (u32)(pcm_mclk_div.reg);
-	pcm_mclk_gate.reg = clk_base + (u32)(pcm_mclk_gate.reg);
+	pcm_mclk_mux.reg = clk_base + (unsigned long)(pcm_mclk_mux.reg);
+	pcm_mclk_div.reg = clk_base + (unsigned long)(pcm_mclk_div.reg);
+	pcm_mclk_gate.reg = clk_base + (unsigned long)(pcm_mclk_gate.reg);
 
 	/* cts_pclk_sclk */
-	pcm_sclk_div.reg = clk_base + (u32)(pcm_sclk_div.reg);
-	pcm_sclk_gate.reg = clk_base + (u32)(pcm_sclk_gate.reg);
+	pcm_sclk_div.reg = clk_base + (unsigned long)(pcm_sclk_div.reg);
+	pcm_sclk_gate.reg = clk_base + (unsigned long)(pcm_sclk_gate.reg);
 
 	clks[CLKID_VDIN_MEAS_COMP] = clk_register_composite(NULL,
 		"vdin_meas_composite",

@@ -33,7 +33,7 @@
 
 #define to_meson_clk_mpll(_hw) container_of(_hw, struct meson_clk_mpll, hw)
 
-static unsigned long rate_from_params(unsigned long parent_rate,
+static unsigned long rate_from_params(u64 parent_rate,
 				      unsigned long sdm,
 				      unsigned long n2)
 {

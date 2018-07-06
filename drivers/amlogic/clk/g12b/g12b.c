@@ -489,58 +489,66 @@ static void __init g12b_clkc_init(struct device_node *np)
 	}
 
 	g12b_cpu_clk.base = clk_base;
-	g12b_cpu_fclk_p.reg = clk_base + (u64)g12b_cpu_fclk_p.reg;
-	g12b_cpu_clk.mux.reg = clk_base + (u64)g12b_cpu_clk.mux.reg;
+	g12b_cpu_fclk_p.reg = clk_base
+		+ (unsigned long)g12b_cpu_fclk_p.reg;
+	g12b_cpu_clk.mux.reg = clk_base
+		+ (unsigned long)g12b_cpu_clk.mux.reg;
 
-	cts_gdc_core_clk_mux.reg = clk_base + (u64)(cts_gdc_core_clk_mux.reg);
-	cts_gdc_core_clk_gate.reg = clk_base + (u64)(cts_gdc_core_clk_gate.reg);
-	cts_gdc_core_clk_div.reg = clk_base + (u64)(cts_gdc_core_clk_div.reg);
+	cts_gdc_core_clk_mux.reg = clk_base
+		+ (unsigned long)(cts_gdc_core_clk_mux.reg);
+	cts_gdc_core_clk_gate.reg = clk_base
+		+ (unsigned long)(cts_gdc_core_clk_gate.reg);
+	cts_gdc_core_clk_div.reg = clk_base
+		+ (unsigned long)(cts_gdc_core_clk_div.reg);
 
-	cts_gdc_axi_clk_mux.reg = clk_base + (u64)(cts_gdc_axi_clk_mux.reg);
-	cts_gdc_axi_clk_gate.reg = clk_base + (u64)(cts_gdc_axi_clk_gate.reg);
-	cts_gdc_axi_clk_div.reg = clk_base + (u64)(cts_gdc_axi_clk_div.reg);
+	cts_gdc_axi_clk_mux.reg = clk_base
+		+ (unsigned long)(cts_gdc_axi_clk_mux.reg);
+	cts_gdc_axi_clk_gate.reg = clk_base
+		+ (unsigned long)(cts_gdc_axi_clk_gate.reg);
+	cts_gdc_axi_clk_div.reg = clk_base
+		+ (unsigned long)(cts_gdc_axi_clk_div.reg);
 
 	cts_vipnanoq_core_clk_mux.reg = clk_base
-		+ (u64)(cts_vipnanoq_core_clk_mux.reg);
+		+ (unsigned long)(cts_vipnanoq_core_clk_mux.reg);
 	cts_vipnanoq_core_clk_gate.reg = clk_base
-		+ (u64)(cts_vipnanoq_core_clk_gate.reg);
+		+ (unsigned long)(cts_vipnanoq_core_clk_gate.reg);
 	cts_vipnanoq_core_clk_div.reg = clk_base
-		+ (u64)(cts_vipnanoq_core_clk_div.reg);
+		+ (unsigned long)(cts_vipnanoq_core_clk_div.reg);
 	cts_vipnanoq_axi_clk_mux.reg = clk_base
-		+ (u64)(cts_vipnanoq_axi_clk_mux.reg);
+		+ (unsigned long)(cts_vipnanoq_axi_clk_mux.reg);
 	cts_vipnanoq_axi_clk_gate.reg = clk_base
-		+ (u64)(cts_vipnanoq_axi_clk_gate.reg);
+		+ (unsigned long)(cts_vipnanoq_axi_clk_gate.reg);
 	cts_vipnanoq_axi_clk_div.reg = clk_base
-		+ (u64)(cts_vipnanoq_axi_clk_div.reg);
+		+ (unsigned long)(cts_vipnanoq_axi_clk_div.reg);
 
 
 	cts_mipi_isp_clk_mux.reg = clk_base
-		+ (u64)(cts_mipi_isp_clk_mux.reg);
+		+ (unsigned long)(cts_mipi_isp_clk_mux.reg);
 	cts_mipi_isp_clk_gate.reg = clk_base
-		+ (u64)(cts_mipi_isp_clk_gate.reg);
+		+ (unsigned long)(cts_mipi_isp_clk_gate.reg);
 	cts_mipi_isp_clk_div.reg = clk_base
-		+ (u64)(cts_mipi_isp_clk_div.reg);
+		+ (unsigned long)(cts_mipi_isp_clk_div.reg);
 
 	cts_mipi_csi_phy_clk0_mux.reg = clk_base
-		+ (u64)(cts_mipi_csi_phy_clk0_mux.reg);
+		+ (unsigned long)(cts_mipi_csi_phy_clk0_mux.reg);
 	cts_mipi_csi_phy_clk0_div.reg = clk_base
-		+ (u64)(cts_mipi_csi_phy_clk0_div.reg);
+		+ (unsigned long)(cts_mipi_csi_phy_clk0_div.reg);
 	cts_mipi_csi_phy_clk0_gate.reg = clk_base
-		+ (u64)(cts_mipi_csi_phy_clk0_gate.reg);
+		+ (unsigned long)(cts_mipi_csi_phy_clk0_gate.reg);
 	cts_mipi_csi_phy_clk1_mux.reg = clk_base
-		+ (u64)(cts_mipi_csi_phy_clk1_mux.reg);
+		+ (unsigned long)(cts_mipi_csi_phy_clk1_mux.reg);
 	cts_mipi_csi_phy_clk1_div.reg = clk_base
-		+ (u64)(cts_mipi_csi_phy_clk1_div.reg);
+		+ (unsigned long)(cts_mipi_csi_phy_clk1_div.reg);
 	cts_mipi_csi_phy_clk1_gate.reg = clk_base
-		+ (u64)(cts_mipi_csi_phy_clk1_gate.reg);
+		+ (unsigned long)(cts_mipi_csi_phy_clk1_gate.reg);
 	cts_mipi_sci_phy_mux.reg = clk_base
-		+ (u64)(cts_mipi_sci_phy_mux.reg);
+		+ (unsigned long)(cts_mipi_sci_phy_mux.reg);
 
 
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(g12b_clk_gates); i++)
 		g12b_clk_gates[i]->reg = clk_base +
-			(u64)g12b_clk_gates[i]->reg;
+			(unsigned long)g12b_clk_gates[i]->reg;
 
 	/* Populate base address for PLLs */
 	for (i = 0; i < ARRAY_SIZE(g12b_clk_plls); i++)

@@ -36,7 +36,7 @@ struct parm {
 };
 
 struct pll_rate_table {
-	unsigned long	rate;
+	u64		rate;
 	u16		m;
 	u16		n;
 	u16		od;

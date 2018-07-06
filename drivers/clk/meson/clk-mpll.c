@@ -75,6 +75,7 @@ static unsigned long mpll_recalc_rate(struct clk_hw *hw,
 	struct parm *p;
 	unsigned long rate = 0;
 	unsigned long reg, sdm, n2;
+	u64 pRate = parent_rate;
 
 	p = &mpll->sdm;
 	reg = readl(mpll->base + p->reg_off);
@@ -84,7 +85,7 @@ static unsigned long mpll_recalc_rate(struct clk_hw *hw,
 	reg = readl(mpll->base + p->reg_off);
 	n2 = PARM_GET(p->width, p->shift, reg);
 
-	rate = (parent_rate * SDM_MAX) / ((SDM_MAX * n2) + sdm);
+	rate = (pRate * SDM_MAX) / ((SDM_MAX * n2) + sdm);
 
 	return rate;
 }

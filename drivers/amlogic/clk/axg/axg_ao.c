@@ -113,10 +113,10 @@ static void __init axg_aoclkc_init(struct device_node *np)
 	}
 	/* pr_debug("%s: iomap clk_base ok!", __func__); */
 	/* Populate the base address for ao clk */
-	aoclk81.reg = ao_clk_base + (u64)aoclk81.reg;
-	axg_saradc_mux.reg = ao_clk_base + (u64)axg_saradc_mux.reg;
-	axg_saradc_div.reg = ao_clk_base + (u64)axg_saradc_div.reg;
-	axg_saradc_gate.reg = ao_clk_base + (u64)axg_saradc_gate.reg;
+	aoclk81.reg = ao_clk_base + (unsigned long)aoclk81.reg;
+	axg_saradc_mux.reg = ao_clk_base + (unsigned long)axg_saradc_mux.reg;
+	axg_saradc_div.reg = ao_clk_base + (unsigned long)axg_saradc_div.reg;
+	axg_saradc_gate.reg = ao_clk_base + (unsigned long)axg_saradc_gate.reg;
 
 	if (!clks) {
 		clks = kzalloc(NR_CLKS*sizeof(struct clk *), GFP_KERNEL);

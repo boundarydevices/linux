@@ -42,7 +42,7 @@
 #include <linux/amlogic/cpu_version.h>
 #include <dt-bindings/clock/amlogic,axg-clkc.h>
 
-#ifdef CONFIG_ARM64
+#if (defined CONFIG_ARM64) || (defined CONFIG_ARM64_A32)
 #include "../clkc.h"
 #else
 #include "m8b/clkc.h"
@@ -82,10 +82,11 @@ static unsigned long meson_axg_pll_recalc_rate(struct clk_hw *hw,
 {
 	struct meson_clk_pll *pll = to_meson_clk_pll(hw);
 	struct parm *p;
-	unsigned long parent_rate_mhz = parent_rate;
+	u64 parent_rate_mhz = parent_rate;
 	unsigned long rate_mhz;
 	u16 n, m, frac = 0, od, od2 = 0;
 	u32 reg;
+	u64 tmp64;
 
 	p = &pll->n;
 	reg = readl(pll->base + p->reg_off);
@@ -110,12 +111,15 @@ static unsigned long meson_axg_pll_recalc_rate(struct clk_hw *hw,
 	if (p->width) {
 		reg = readl(pll->base + p->reg_off);
 		frac = PARM_GET(p->width, p->shift, reg);
-		rate_mhz = (parent_rate_mhz * m +
-				(parent_rate_mhz * frac >> 12)) / n;
+		tmp64 = parent_rate_mhz * m + (parent_rate_mhz * frac >> 12);
+		do_div(tmp64, n);
+		rate_mhz = (unsigned long)tmp64;
 		rate_mhz = rate_mhz >> od >> od2;
-	} else
-		rate_mhz = (parent_rate_mhz * m / n) >> od >> od2;
-
+	} else {
+		tmp64 = parent_rate_mhz * m;
+		do_div(tmp64, n);
+		rate_mhz = tmp64 >> od >> od2;
+	}
 	return rate_mhz;
 }
 
@@ -207,25 +211,42 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		void *cntlbase = pll->base + p->reg_off;
 
 		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-			writel(AXG_PCIE_PLL_CNTL, cntlbase + (u64)(0*4));
-			writel(AXG_PCIE_PLL_CNTL1, cntlbase + (u64)(1*4));
-			writel(AXG_PCIE_PLL_CNTL2, cntlbase + (u64)(2*4));
-			writel(AXG_PCIE_PLL_CNTL3, cntlbase + (u64)(3*4));
-			writel(AXG_PCIE_PLL_CNTL4, cntlbase + (u64)(4*4));
-			writel(AXG_PCIE_PLL_CNTL5, cntlbase + (u64)(5*4));
-			writel(AXG_PCIE_PLL_CNTL6, cntlbase + (u64)(6*4));
+			writel(AXG_PCIE_PLL_CNTL,
+					cntlbase + (unsigned long)(0*4));
+			writel(AXG_PCIE_PLL_CNTL1,
+					cntlbase + (unsigned long)(1*4));
+			writel(AXG_PCIE_PLL_CNTL2,
+					cntlbase + (unsigned long)(2*4));
+			writel(AXG_PCIE_PLL_CNTL3,
+					cntlbase + (unsigned long)(3*4));
+			writel(AXG_PCIE_PLL_CNTL4,
+					cntlbase + (unsigned long)(4*4));
+			writel(AXG_PCIE_PLL_CNTL5,
+					cntlbase + (unsigned long)(5*4));
+			writel(AXG_PCIE_PLL_CNTL6,
+					cntlbase + (unsigned long)(6*4));
 		} else if (!strcmp(clk_hw_get_name(hw), "hifi_pll")) {
-			writel(AXG_HIFI_PLL_CNTL1, cntlbase + (u64)6*4);
-			writel(AXG_HIFI_PLL_CNTL2, cntlbase + (u64)1*4);
-			writel(AXG_HIFI_PLL_CNTL3, cntlbase + (u64)2*4);
-			writel(AXG_HIFI_PLL_CNTL4, cntlbase + (u64)3*4);
-			writel(AXG_HIFI_PLL_CNTL5, cntlbase + (u64)4*4);
+			writel(AXG_HIFI_PLL_CNTL1,
+					cntlbase + (unsigned long)(6*4));
+			writel(AXG_HIFI_PLL_CNTL2,
+					cntlbase + (unsigned long)(1*4));
+			writel(AXG_HIFI_PLL_CNTL3,
+					cntlbase + (unsigned long)(2*4));
+			writel(AXG_HIFI_PLL_CNTL4,
+					cntlbase + (unsigned long)(3*4));
+			writel(AXG_HIFI_PLL_CNTL5,
+					cntlbase + (unsigned long)(4*4));
 		} else {
-			writel(GXL_GP0_CNTL1, cntlbase + (u64)6*4);
-			writel(GXL_GP0_CNTL2, cntlbase + (u64)1*4);
-			writel(GXL_GP0_CNTL3, cntlbase + (u64)2*4);
-			writel(GXL_GP0_CNTL4, cntlbase + (u64)3*4);
-			writel(GXL_GP0_CNTL5, cntlbase + (u64)4*4);
+			writel(GXL_GP0_CNTL1,
+					cntlbase + (unsigned long)(6*4));
+			writel(GXL_GP0_CNTL2,
+					cntlbase + (unsigned long)(1*4));
+			writel(GXL_GP0_CNTL3,
+					cntlbase + (unsigned long)(2*4));
+			writel(GXL_GP0_CNTL4,
+					cntlbase + (unsigned long)(3*4));
+			writel(GXL_GP0_CNTL5,
+					cntlbase + (unsigned long)(4*4));
 		}
 
 		reg = readl(pll->base + p->reg_off);
@@ -311,13 +332,16 @@ static int meson_axg_pll_enable(struct clk_hw *hw)
 		void *cntlbase = pll->base + p->reg_off;
 
 		if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-			if (readl(cntlbase + (u64)(6*4)) == AXG_PCIE_PLL_CNTL6)
+			if (readl(cntlbase + (unsigned long)(6*4))
+						== AXG_PCIE_PLL_CNTL6)
 				first_set = 0;
 		} else if (!strcmp(clk_hw_get_name(hw), "hifi_pll")) {
-			if (readl(cntlbase + (u64)(4*4)) == AXG_HIFI_PLL_CNTL5)
+			if (readl(cntlbase + (unsigned long)(4*4))
+						== AXG_HIFI_PLL_CNTL5)
 				first_set = 0;
 		} else {
-			if (readl(cntlbase + (u64)(4*4)) == GXL_GP0_CNTL5)
+			if (readl(cntlbase + (unsigned long)(4*4))
+						== GXL_GP0_CNTL5)
 				first_set = 0;
 		}
 	}

@@ -708,17 +708,17 @@ void meson_txl_media_init(void)
 	/* Populate base address for media muxes */
 	for (i = 0; i < ARRAY_SIZE(txl_media_clk_muxes); i++)
 		txl_media_clk_muxes[i]->reg = clk_base +
-			(u64)txl_media_clk_muxes[i]->reg;
+			(unsigned long)txl_media_clk_muxes[i]->reg;
 
 	/* Populate base address for media divs */
 	for (i = 0; i < ARRAY_SIZE(txl_media_clk_divs); i++)
 		txl_media_clk_divs[i]->reg = clk_base +
-			(u64)txl_media_clk_divs[i]->reg;
+			(unsigned long)txl_media_clk_divs[i]->reg;
 
 	/* Populate base address for media gates */
 	for (i = 0; i < ARRAY_SIZE(txl_media_clk_gates); i++)
 		txl_media_clk_gates[i]->reg = clk_base +
-			(u64)txl_media_clk_gates[i]->reg;
+			(unsigned long)txl_media_clk_gates[i]->reg;
 
 	meson_clk_register_composite(clks, m_composite, length);
 

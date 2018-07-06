@@ -41,6 +41,7 @@ static unsigned long mpll_recalc_rate(struct clk_hw *hw,
 	struct parm *p;
 	unsigned long rate = 0;
 	unsigned long reg, sdm, n2;
+	uint64_t rate64 = parent_rate;
 
 	p = &mpll->sdm;
 	reg = readl(mpll->base + p->reg_off);
@@ -50,7 +51,13 @@ static unsigned long mpll_recalc_rate(struct clk_hw *hw,
 	reg = readl(mpll->base + p->reg_off);
 	n2 = PARM_GET(p->width, p->shift, reg);
 
-	rate = (parent_rate * SDM_MAX) / ((SDM_MAX * n2) + sdm);
+	if (n2 == 0 && sdm == 0) {
+		rate = 0;
+	} else {
+		rate64 = rate64 * SDM_MAX;
+		do_div(rate64, ((SDM_MAX * n2) + sdm));
+		rate = rate64;
+	}
 
 	return rate;
 }
@@ -77,6 +84,7 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long old_rate = 0;
 	unsigned long reg, old_sdm, old_n2, sdm, n2;
 	unsigned long flags = 0;
+	uint64_t rate64 = parent_rate;
 
 	if ((rate > MAX_RATE) || (rate < MIN_RATE)) {
 		pr_err("Err: can not set rate to %lu!\n", rate);
@@ -95,7 +103,13 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	reg = readl(mpll->base + p->reg_off);
 	old_n2 = PARM_GET(p->width, p->shift, reg);
 
-	old_rate = (parent_rate * SDM_MAX) / ((SDM_MAX * old_n2) + old_sdm);
+	if (old_n2 == 0 && old_sdm == 0) {
+		old_rate = 0;
+	} else {
+		rate64 = rate64 * SDM_MAX;
+		do_div(rate64, ((SDM_MAX * old_n2) + old_sdm));
+		old_rate = rate64;
+	}
 	pr_debug("%s: old_sdm: %lu old_n2: %lu old_rate: %lu\n", __func__,
 		old_sdm, old_n2, old_rate);
 /*
@@ -103,8 +117,13 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
  *		return 0;
  */
 	/* calculate new n2 and sdm */
-	n2 = parent_rate / rate;
-	sdm = DIV_ROUND_UP((parent_rate - n2 * rate) * SDM_MAX, rate);
+	rate64 = parent_rate;
+	do_div(rate64, rate);
+	n2 = rate64;
+
+	rate64 = (parent_rate - n2 * rate) * SDM_MAX;
+	do_div(rate64, rate);
+	sdm = rate64;
 	pr_debug("%s: sdm: %lu n2: %lu rate: %lu\n", __func__, sdm, n2, rate);
 
 	/*if (old_n2 != n2 || old_sdm != sdm)*/ {
@@ -126,12 +145,14 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 		writel(reg, mpll->base + p->reg_off);
 		/* mpll top misc for cpu after txlx */
 		if (mpll->top_misc_reg)
-			writel(readl(mpll->base + (u64)(mpll->top_misc_reg)) |
+			writel(readl(mpll->base
+				+ (unsigned long)(mpll->top_misc_reg)) |
 			(1<<mpll->top_misc_bit),
-			(mpll->base + (u64)(mpll->top_misc_reg)));
+			(mpll->base + (unsigned long)(mpll->top_misc_reg)));
 		udelay(100);
 		pr_debug("%s: mpll->base+mpll->top_misc_reg: 0x%x\n",
-			__func__, readl(mpll->base+(u64)mpll->top_misc_reg));
+			__func__, readl(mpll->base
+					+(unsigned long)mpll->top_misc_reg));
 	}
 
 	if (mpll->lock)

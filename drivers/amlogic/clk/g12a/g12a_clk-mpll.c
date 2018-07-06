@@ -45,6 +45,7 @@ static unsigned long mpll_recalc_rate(struct clk_hw *hw,
 	struct parm *p;
 	unsigned long rate = 0;
 	unsigned long reg, sdm, n2;
+	u64 rate64 = parent_rate;
 
 	p = &mpll->sdm;
 	reg = readl(mpll->base + p->reg_off);
@@ -54,7 +55,13 @@ static unsigned long mpll_recalc_rate(struct clk_hw *hw,
 	reg = readl(mpll->base + p->reg_off);
 	n2 = PARM_GET(p->width, p->shift, reg);
 
-	rate = (parent_rate * SDM_MAX) / ((SDM_MAX * n2) + sdm);
+	if (n2 == 0 && sdm == 0) {
+		rate = 0;
+	} else {
+		rate64 = rate64 * SDM_MAX;
+		do_div(rate64, ((SDM_MAX * n2) + sdm));
+		rate = rate64;
+	}
 
 	return rate;
 }
@@ -102,7 +109,7 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	writel(G12A_MPLL_CNTL0, mpll->base + mpll->mpll_cntl0_reg);
 
 	p = &mpll->sdm;
-	writel(G12A_MPLL_CNTL2, mpll->base + p->reg_off + (u64)(1*4));
+	writel(G12A_MPLL_CNTL2, mpll->base + p->reg_off + (unsigned long)(1*4));
 	reg = readl(mpll->base + p->reg_off);
 	reg = PARM_SET(p->width, p->shift, reg, sdm);
 	p = &mpll->n2;

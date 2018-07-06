@@ -644,6 +644,7 @@ static struct clk_gate axg_spicc_1 = {
 		.flags = 0,
 	},
 };
+
 /* Everything Else (EE) domain gates */
 static MESON_GATE(axg_ddr, HHI_GCLK_MPEG0, 0);
 static MESON_GATE(axg_audio_locker, HHI_GCLK_MPEG0, 2);
@@ -864,29 +865,43 @@ static void __init axg_clkc_init(struct device_node *np)
 		axg_clk_mplls[i]->base = clk_base;
 
 	/* Populate the base address for CPU clk */
-	axg_cpu_clk.mux.reg = clk_base + (u64)axg_cpu_clk.mux.reg;
-	axg_cpu_fixedpll_p00.reg = clk_base + (u64)axg_cpu_fixedpll_p00.reg;
-	axg_cpu_fixedpll_p01.reg = clk_base + (u64)axg_cpu_fixedpll_p01.reg;
-	axg_cpu_fixedpll_p10.reg = clk_base + (u64)axg_cpu_fixedpll_p10.reg;
-	axg_cpu_fixedpll_p11.reg = clk_base + (u64)axg_cpu_fixedpll_p11.reg;
-	axg_cpu_fixedpll_p0.reg = clk_base + (u64)axg_cpu_fixedpll_p0.reg;
-	axg_cpu_fixedpll_p1.reg = clk_base + (u64)axg_cpu_fixedpll_p1.reg;
-	axg_cpu_fixedpll_p.reg = clk_base + (u64)axg_cpu_fixedpll_p.reg;
+	axg_cpu_clk.mux.reg = clk_base
+			+ (unsigned long)axg_cpu_clk.mux.reg;
+	axg_cpu_fixedpll_p00.reg = clk_base
+			+ (unsigned long)axg_cpu_fixedpll_p00.reg;
+	axg_cpu_fixedpll_p01.reg = clk_base
+			+ (unsigned long)axg_cpu_fixedpll_p01.reg;
+	axg_cpu_fixedpll_p10.reg = clk_base
+			+ (unsigned long)axg_cpu_fixedpll_p10.reg;
+	axg_cpu_fixedpll_p11.reg = clk_base
+			+ (unsigned long)axg_cpu_fixedpll_p11.reg;
+	axg_cpu_fixedpll_p0.reg = clk_base
+			+ (unsigned long)axg_cpu_fixedpll_p0.reg;
+	axg_cpu_fixedpll_p1.reg = clk_base
+			+ (unsigned long)axg_cpu_fixedpll_p1.reg;
+	axg_cpu_fixedpll_p.reg = clk_base
+			+ (unsigned long)axg_cpu_fixedpll_p.reg;
 
 	/* Populate the base address for the MPEG clks */
-	axg_mpeg_clk_sel.reg = clk_base + (u64)axg_mpeg_clk_sel.reg;
-	axg_mpeg_clk_div.reg = clk_base + (u64)axg_mpeg_clk_div.reg;
+	axg_mpeg_clk_sel.reg = clk_base
+			+ (unsigned long)axg_mpeg_clk_sel.reg;
+	axg_mpeg_clk_div.reg = clk_base
+			+ (unsigned long)axg_mpeg_clk_div.reg;
 
-	axg_pcie_mux.reg = clk_base + (u64)axg_pcie_mux.reg;
-	axg_pcie_ref.reg = clk_base + (u64)axg_pcie_ref.reg;
+	axg_pcie_mux.reg = clk_base
+			+ (unsigned long)axg_pcie_mux.reg;
+	axg_pcie_ref.reg = clk_base
+			+ (unsigned long)axg_pcie_ref.reg;
 
-	axg_pcie_cml_en0.reg = clk_base + (u64)axg_pcie_cml_en0.reg;
-	axg_pcie_cml_en1.reg = clk_base + (u64)axg_pcie_cml_en1.reg;
+	axg_pcie_cml_en0.reg = clk_base
+			+ (unsigned long)axg_pcie_cml_en0.reg;
+	axg_pcie_cml_en1.reg = clk_base
+			+ (unsigned long)axg_pcie_cml_en1.reg;
 
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(axg_clk_gates); i++)
 		axg_clk_gates[i]->reg = clk_base +
-			(u64)axg_clk_gates[i]->reg;
+			(unsigned long)axg_clk_gates[i]->reg;
 
 
 	if (!clks) {

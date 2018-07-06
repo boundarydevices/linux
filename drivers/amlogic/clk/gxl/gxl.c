@@ -1061,23 +1061,33 @@ static void __init gxl_clkc_init(struct device_node *np)
 		gxl_clk_mplls[i]->base = clk_base;
 
 	/* Populate the base address for CPU clk */
-	gxl_cpu_clk.mux.reg = clk_base + (u64)gxl_cpu_clk.mux.reg;
-	gxl_cpu_fixedpll_p00.reg = clk_base + (u64)gxl_cpu_fixedpll_p00.reg;
-	gxl_cpu_fixedpll_p01.reg = clk_base + (u64)gxl_cpu_fixedpll_p01.reg;
-	gxl_cpu_fixedpll_p10.reg = clk_base + (u64)gxl_cpu_fixedpll_p10.reg;
-	gxl_cpu_fixedpll_p11.reg = clk_base + (u64)gxl_cpu_fixedpll_p11.reg;
-	gxl_cpu_fixedpll_p0.reg = clk_base + (u64)gxl_cpu_fixedpll_p0.reg;
-	gxl_cpu_fixedpll_p1.reg = clk_base + (u64)gxl_cpu_fixedpll_p1.reg;
-	gxl_cpu_fixedpll_p.reg = clk_base + (u64)gxl_cpu_fixedpll_p.reg;
+	gxl_cpu_clk.mux.reg = clk_base
+			+ (unsigned long)gxl_cpu_clk.mux.reg;
+	gxl_cpu_fixedpll_p00.reg = clk_base
+			+ (unsigned long)gxl_cpu_fixedpll_p00.reg;
+	gxl_cpu_fixedpll_p01.reg = clk_base
+			+ (unsigned long)gxl_cpu_fixedpll_p01.reg;
+	gxl_cpu_fixedpll_p10.reg = clk_base
+			+ (unsigned long)gxl_cpu_fixedpll_p10.reg;
+	gxl_cpu_fixedpll_p11.reg = clk_base
+			+ (unsigned long)gxl_cpu_fixedpll_p11.reg;
+	gxl_cpu_fixedpll_p0.reg = clk_base
+			+ (unsigned long)gxl_cpu_fixedpll_p0.reg;
+	gxl_cpu_fixedpll_p1.reg = clk_base
+			+ (unsigned long)gxl_cpu_fixedpll_p1.reg;
+	gxl_cpu_fixedpll_p.reg = clk_base
+			+ (unsigned long)gxl_cpu_fixedpll_p.reg;
 
 	/* Populate the base address for the MPEG clks */
-	gxl_mpeg_clk_sel.reg = clk_base + (u64)gxl_mpeg_clk_sel.reg;
-	gxl_mpeg_clk_div.reg = clk_base + (u64)gxl_mpeg_clk_div.reg;
+	gxl_mpeg_clk_sel.reg = clk_base
+			+ (unsigned long)gxl_mpeg_clk_sel.reg;
+	gxl_mpeg_clk_div.reg = clk_base
+			+ (unsigned long)gxl_mpeg_clk_div.reg;
 
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(gxl_clk_gates); i++)
 		gxl_clk_gates[i]->reg = clk_base +
-			(u64)gxl_clk_gates[i]->reg;
+			(unsigned long)gxl_clk_gates[i]->reg;
 
 	clks = kzalloc(NR_CLKS*sizeof(struct clk *), GFP_KERNEL);
 	if (!clks) {
