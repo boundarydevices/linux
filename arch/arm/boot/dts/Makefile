@@ -275,6 +275,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-hl.dtb \
 	imx6dl-hp.dtb \
 	imx6dl-lshore.dtb \
+	imx6dl-lshore-r0.dtb \
 	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
 	imx6dl-neol.dtb \
