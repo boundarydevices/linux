@@ -1153,7 +1153,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
 	assigned-clocks = <&clk IMX8MQ_CLK_UART3_SRC>;
-	assigned-clock-parents = <&clk IMX8MQ_CLK_25M>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 	uart-has-rtscts;
 	status = "okay";
 };
