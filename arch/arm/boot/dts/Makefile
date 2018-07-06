@@ -438,6 +438,8 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-icore-mipi.dtb \
 	imx6dl-icore-rqs.dtb \
 	imx6dl-lshore.dtb \
+	imx6dl-lshore-r0.dtb \
+	imx6dl-lshore-r1.dtb \
 	imx6dl-mamoj.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
@@ -538,6 +540,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-jlm.dtb \
 	imx6q-kp-tpc.dtb \
 	imx6q-ls.dtb \
+	imx6q-lshore-r1.dtb \
 	imx6q-marsboard.dtb \
 	imx6q-mccmon6.dtb \
 	imx6q-nitrogen6x.dtb \
