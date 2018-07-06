@@ -18,6 +18,9 @@
 #define __ASM_PERF_EVENT_H
 
 #include <asm/stack_pointer.h>
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <linux/hrtimer.h>
+#endif
 
 #define	ARMV8_PMU_MAX_COUNTERS	32
 #define	ARMV8_PMU_COUNTER_MASK	(ARMV8_PMU_MAX_COUNTERS - 1)
@@ -87,5 +90,52 @@ extern unsigned long perf_misc_flags(struct pt_regs *regs);
 	(regs)->sp = current_stack_pointer; \
 	(regs)->pstate = PSR_MODE_EL1h;	\
 }
+
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+
+extern void armv8pmu_handle_irq_ipi(void);
+
+struct amlpmu_fixup_cpuinfo {
+	int irq_num;
+
+	int fix_done;
+
+	unsigned long irq_cnt;
+	unsigned long empty_irq_cnt;
+
+	unsigned long irq_time;
+	unsigned long empty_irq_time;
+
+	unsigned long last_irq_cnt;
+	unsigned long last_empty_irq_cnt;
+
+	unsigned long last_irq_time;
+	unsigned long last_empty_irq_time;
+};
+
+struct amlpmu_fixup_context {
+	struct amlpmu_fixup_cpuinfo __percpu *cpuinfo;
+
+	/* struct arm_pmu */
+	void *dev;
+
+	/* sys_cpu_status0 reg */
+	unsigned int *sys_cpu_status0;
+
+	/*
+	 * In main pmu irq route wait for other cpu fix done may cause lockup,
+	 * when lockup we disable main irq for a while.
+	 * relax_timer will enable main irq again.
+	 */
+	struct hrtimer relax_timer;
+
+	/* dts prop */
+	unsigned int sys_cpu_status0_offset;
+	unsigned int sys_cpu_status0_pmuirq_mask;
+	unsigned int relax_timer_ns;
+	unsigned int max_wait_cnt;
+};
+#endif
 
 #endif

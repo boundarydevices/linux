@@ -55,6 +55,10 @@
 #include <asm/ptrace.h>
 #include <asm/virt.h>
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <asm/perf_event.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/ipi.h>
 
@@ -76,7 +80,12 @@ enum ipi_msg_type {
 	IPI_CPU_STOP,
 	IPI_TIMER,
 	IPI_IRQ_WORK,
+#ifdef CONFIG_AMLOGIC_MODIFY
+	IPI_WAKEUP,
+	IPI_AML_PMU
+#else
 	IPI_WAKEUP
+#endif
 };
 
 #ifdef CONFIG_ARM64_VHE
@@ -756,6 +765,9 @@ static const char *ipi_types[NR_IPI] __tracepoint_string = {
 	S(IPI_TIMER, "Timer broadcast interrupts"),
 	S(IPI_IRQ_WORK, "IRQ work interrupts"),
 	S(IPI_WAKEUP, "CPU wake-up interrupts"),
+#ifdef CONFIG_AMLOGIC_MODIFY
+	S(IPI_AML_PMU, "AML pmu cross interrupts"),
+#endif
 };
 
 static void smp_cross_call(const struct cpumask *target, unsigned int ipinr)
@@ -763,6 +775,13 @@ static void smp_cross_call(const struct cpumask *target, unsigned int ipinr)
 	trace_ipi_raise(target, ipi_types[ipinr]);
 	__smp_cross_call(target, ipinr);
 }
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+void smp_send_aml_pmu(int cpu)
+{
+	smp_cross_call(cpumask_of(cpu), IPI_AML_PMU);
+}
+#endif
 
 void show_ipi_list(struct seq_file *p, int prec)
 {
@@ -827,6 +846,7 @@ static void ipi_cpu_stop(unsigned int cpu)
 		cpu_relax();
 }
 
+
 /*
  * Main handler for inter-processor interrupts
  */
@@ -878,6 +898,12 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		WARN_ONCE(!acpi_parking_protocol_valid(cpu),
 			  "CPU%u: Wake-up IPI outside the ACPI parking protocol\n",
 			  cpu);
+		break;
+#endif
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+	case IPI_AML_PMU:
+		armv8pmu_handle_irq_ipi();
 		break;
 #endif
 
