@@ -686,6 +686,32 @@
 	pinctrl-0 = <&i2c0_master_pins2>;
 	clock-frequency = <400000>;
 
+	touchscreen@5d {
+		compatible = "goodix,gt9xx";
+		status = "disabled";
+		reg = <0x5d>;
+		reset-gpio = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH>;
+		irq-gpio = <&gpio GPIOZ_3 GPIO_ACTIVE_HIGH>;
+		goodix,cfg-group0 = [
+			41 00 04 58 02 05 0C 00 02 54 07
+			0F 50 2D 03 05 00 00 00 00 40 00
+			04 20 10 F3 AA 07 28 0A 2C 2E 7C
+			06 00 00 00 C9 03 24 00 01 00 00
+			00 00 FF 5D 66 98 32 28 64 94 C5
+			02 08 00 00 01 91 2C 00 8A 34 00
+			8A 3F 00 7E 4C 00 78 5B 00 78 00
+			00 00 00 00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 00 00 00
+			00 00 02 04 06 08 0A 0C 0E 10 12
+			14 FF FF FF FF 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 00 00 00
+			02 04 06 08 0A 0C 1D 1E 1F 20 21
+			22 24 26 FF FF FF FF FF FF FF FF
+			FF FF FF 00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 E3 01];
+	};
+
 	touchscreen@38 {
 		compatible = "focaltech,fts";
 		status = "disabled";
