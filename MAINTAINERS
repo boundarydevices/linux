@@ -14595,3 +14595,8 @@ F:    Documentation/devicetree/bindings/spi/spidev.txt
 AMLOGIC SOUND ADC3101
 M: Renjun Xu <renjun.xu@amlogic.com>
 F: Documentation/devicetree/bindings/amlogic/axg-sound-adc3010-d608mic-pcm.txt
+
+AMLOGIC SYSTEM AS ROOT
+M:	Xindong Xu  <xindong.xu@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/firmware_avb_system.dtsi
+F:      arch/arm64/boot/dts/amlogic/firmware_system.dtsi
