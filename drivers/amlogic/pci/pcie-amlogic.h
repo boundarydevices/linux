@@ -33,6 +33,12 @@
 #define PCIE_CFG_STATUS12	0x30
 #define PCIE_CFG_STATUS17	0x44
 
+/* PCIe Port Logic registers */
+#define PLR_OFFSET			0x700
+#define PCIE_PHY_DEBUG_R1		(PLR_OFFSET + 0x2c)
+#define PCIE_PHY_DEBUG_R1_LINK_UP	(0x1 << 4)
+#define PCIE_PHY_DEBUG_R1_LINK_IN_TRAINING	(0x1 << 29)
+
 #define    WAIT_LINKUP_TIMEOUT         2000
 
 enum pcie_data_rate {

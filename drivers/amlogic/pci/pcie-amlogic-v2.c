@@ -554,7 +554,15 @@ static int amlogic_pcie_link_up(struct pcie_port *pp)
 	u32   speed_okay = 0;
 	u32   current_data_rate;
 	int   cnt = 0;
+	u32   val = 0;
+	u32   linkup = 0;
 	struct amlogic_pcie *amlogic_pcie = to_amlogic_pcie(pp);
+
+	val = readl(pp->dbi_base + PCIE_PHY_DEBUG_R1);
+	linkup = ((val & PCIE_PHY_DEBUG_R1_LINK_UP) &&
+		(!(val & PCIE_PHY_DEBUG_R1_LINK_IN_TRAINING)));
+	if (linkup)
+		return linkup;
 
 	while (smlh_up == 0 || rdlh_up == 0
 		|| ltssm_up == 0 || speed_okay == 0) {
