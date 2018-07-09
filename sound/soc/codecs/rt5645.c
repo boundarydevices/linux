@@ -3180,9 +3180,14 @@ static int rt5645_jack_detect(struct snd_soc_component *component, int jack_inse
 	if (jack_insert) {
 		regmap_write(rt5645->regmap, RT5645_CHARGE_PUMP, 0x0e06);
 
+		/* If the DT says we need low voltage, we need to raise
+		   the HP amp detection threshold for the headphone
+		   charge pump to prevent misdetects because the GPIO
+		   used for the interrupt is most-likely wired directly
+		   off of HPO_L. Failing to do this causes the HPO_L
+		   line to hover at 2V, which is enough to cause
+		   mis-reads of the GPIO value. */
 		if (rt5645->pdata.jd_low_volt_enable) {
-			/* Enable the headphone output voltage bias on the HPO_L
-			   line to improve jack detection */
 			regmap_update_bits(rt5645->regmap, RT5645_CHARGE_PUMP,
 					   3 << 11, 3 << 11);
 		}
@@ -3285,6 +3290,23 @@ int rt5645_set_jack_detect(struct snd_soc_component *component,
 				RT5645_GP1_PIN_IRQ, RT5645_GP1_PIN_IRQ);
 		regmap_update_bits(rt5645->regmap, RT5645_GEN_CTRL1,
 				RT5645_DIG_GATE_CTRL, RT5645_DIG_GATE_CTRL);
+	} else if (rt5645->codec_type == CODEC_TYPE_RT5645) {
+		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL2,
+				   RT5645_CBJ_DET_MODE, RT5645_CBJ_DET_MODE);
+		regmap_update_bits(rt5645->regmap, RT5645_GEN_CTRL2,
+				   0x1 << 4, 0x1 << 4);
+
+		/* Turn on combo jack input buffer power */
+		regmap_update_bits(rt5645->regmap, RT5645_GEN_CTRL3,
+				   0x1 << 8, 0x1 << 8);
+
+		/* Turn on MIC input from RING2 */
+		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL1,
+				   RT5645_CBJ_MIC_SEL_L, RT5645_CBJ_MIC_SEL_L);
+
+		/* De-ground the RING2 MIC input */
+		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL3,
+				   0x1 << 15, 0);
 	}
 	rt5645_irq(0, rt5645);
 
@@ -3791,9 +3813,12 @@ static int rt5645_parse_dt(struct rt5645_priv *rt5645, struct device *dev)
 		"realtek,dmic2-data-pin", &rt5645->pdata.dmic2_data_pin);
 	device_property_read_u32(dev,
 		"realtek,jd-mode", &rt5645->pdata.jd_mode);
-	device_property_read_u32(dev,
-		 "realtek,jd-low-volt-enable",
-		 &rt5645->pdata.jd_low_volt_enable);
+	rt5645->pdata.jd_low_volt_enable =
+		device_property_read_bool(dev, "realtek,jd-low-volt-enable");
+
+	if (rt5645->pdata.jd_low_volt_enable) {
+		printk("rt5645: Raising HP amp charge pump to prevent jack presence mis-detects.\n");
+	}
 
 	return 0;
 }
