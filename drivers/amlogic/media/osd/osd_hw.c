@@ -1405,18 +1405,14 @@ static void osd_update_interlace_mode(int index)
 {
 	/* only called by vsync irq or rdma irq */
 	unsigned int fb0_cfg_w0 = 0, fb1_cfg_w0 = 0;
-	unsigned int fb2_cfg_w0 = 0;
+	unsigned int fb3_cfg_w0 = 0;
 	unsigned int scan_line_number = 0;
 	unsigned int odd_even;
 
 	spin_lock_irqsave(&osd_lock, lock_flags);
-	if ((index & (1 << OSD1)) == (1 << OSD1)) {
+	if ((index & (1 << OSD1)) == (1 << OSD1))
 		fb0_cfg_w0 = VSYNCOSD_RD_MPEG_REG(
 		hw_osd_reg_array[OSD1].osd_blk0_cfg_w0);
-		if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE)
-			fb2_cfg_w0 = VSYNCOSD_RD_MPEG_REG(
-			hw_osd_reg_array[OSD3].osd_blk0_cfg_w0);
-	}
 	if ((index & (1 << OSD2)) == (1 << OSD2))
 		fb1_cfg_w0 = VSYNCOSD_RD_MPEG_REG(
 		hw_osd_reg_array[OSD2].osd_blk0_cfg_w0);
@@ -1457,10 +1453,8 @@ static void osd_update_interlace_mode(int index)
 			OSD_TYPE_BOT_FIELD : OSD_TYPE_TOP_FIELD;
 	fb0_cfg_w0 &= ~1;
 	fb1_cfg_w0 &= ~1;
-	fb2_cfg_w0 &= ~1;
 	fb0_cfg_w0 |= odd_even;
 	fb1_cfg_w0 |= odd_even;
-	fb2_cfg_w0 |= odd_even;
 	if ((index & (1 << OSD1)) == (1 << OSD1)) {
 		VSYNCOSD_IRQ_WR_MPEG_REG(
 		hw_osd_reg_array[OSD1].osd_blk0_cfg_w0, fb0_cfg_w0);
@@ -1472,6 +1466,27 @@ static void osd_update_interlace_mode(int index)
 		VSYNCOSD_IRQ_WR_MPEG_REG(
 		hw_osd_reg_array[OSD2].osd_blk0_cfg_w0, fb1_cfg_w0);
 
+	if (osd_hw.powered[OSD4]) {
+		if (osd_hw.powered[OSD4])
+			fb3_cfg_w0 = VSYNCOSD_RD_MPEG_REG(
+			hw_osd_reg_array[OSD4].osd_blk0_cfg_w0);
+		if (osd_hw.scan_mode[OSD4] == SCAN_MODE_INTERLACE) {
+			if ((osd_hw.pandata[OSD4].y_start % 2) == 1) {
+				odd_even = (osd_reg_read(ENCI_INFO_READ) &
+					(1 << 29)) ? OSD_TYPE_TOP_FIELD :
+					OSD_TYPE_BOT_FIELD;
+			} else {
+				odd_even = (osd_reg_read(ENCI_INFO_READ)
+				& (1 << 29)) ? OSD_TYPE_BOT_FIELD :
+				OSD_TYPE_TOP_FIELD;
+			}
+		}
+		fb3_cfg_w0 &= ~1;
+		fb3_cfg_w0 |= odd_even;
+		if ((index & (1 << OSD4)) == (1 << OSD4))
+			VSYNCOSD_IRQ_WR_MPEG_REG(
+			hw_osd_reg_array[OSD4].osd_blk0_cfg_w0, fb3_cfg_w0);
+	}
 	spin_unlock_irqrestore(&osd_lock, lock_flags);
 }
 
@@ -1503,6 +1518,21 @@ void osd_update_scan_mode(void)
 		}
 		break;
 	}
+	if (osd_hw.powered[OSD4]) {
+		output_type = (osd_reg_read(VPU_VIU_VENC_MUX_CTRL) >> 2) & 0x3;
+		switch (output_type) {
+		case VOUT_ENCP:
+			if (osd_reg_read(ENCP_VIDEO_MODE) & (1 << 12))
+				/* 1080i */
+				osd_hw.scan_mode[OSD4] = SCAN_MODE_INTERLACE;
+			break;
+		case VOUT_ENCI:
+			if (osd_reg_read(ENCI_VIDEO_EN) & 1)
+				osd_hw.scan_mode[OSD4] = SCAN_MODE_INTERLACE;
+			break;
+		}
+
+	}
 	if (osd_hw.hw_cursor_en) {
 		/* 3 layers osd don't support osd2 cursor */
 		if (osd_hw.free_scale_enable[OSD1])
@@ -1526,9 +1556,9 @@ void osd_update_scan_mode(void)
 				index |= 1 << i;
 		}
 	}
-
 	if ((osd_hw.scan_mode[OSD1] == SCAN_MODE_INTERLACE)
-		|| (osd_hw.scan_mode[OSD2] == SCAN_MODE_INTERLACE))
+		|| (osd_hw.scan_mode[OSD2] == SCAN_MODE_INTERLACE)
+		|| (osd_hw.scan_mode[OSD4] == SCAN_MODE_INTERLACE))
 		osd_update_interlace_mode(index);
 }
 
