@@ -769,7 +769,7 @@
 		compatible = "amlogic, unifykey";
 		status = "okay";
 
-		unifykey-num = <20>;
+		unifykey-num = <21>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
@@ -790,6 +790,7 @@
 		unifykey-index-17 = <&keysn_17>;
 		unifykey-index-18 = <&keysn_18>;
 		unifykey-index-19 = <&keysn_19>;
+		unifykey-index-20 = <&keysn_20>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -894,6 +895,11 @@
 		keysn_19:key_19{
 			key-name = "attestationkeybox";// attestation key
 			key-device = "secure";
+			key-permit = "read","write","del";
+		};
+		keysn_20:key_20{
+			key-name = "region_code";
+			key-device = "normal";
 			key-permit = "read","write","del";
 		};
 	}; /* End unifykey */
