@@ -344,14 +344,13 @@ static inline u32 get_table_max(struct cpufreq_frequency_table *table)
 static int meson_cpufreq_init(struct cpufreq_policy *policy)
 {
 	u32 cur_cluster;
-	struct dev_pm_opp *opp;
 	struct device *cpu_dev;
 	struct device_node *np;
 	struct regulator *cpu_reg = NULL;
 	struct meson_cpufreq_driver_data *cpufreq_data;
 	struct clk *low_freq_clk_p, *high_freq_clk_p = NULL;
 	unsigned int transition_latency = CPUFREQ_ETERNAL;
-	unsigned int volt_new = 0, volt_old = 0, volt_tol = 0;
+	unsigned int volt_tol = 0;
 	unsigned long freq_hz = 0;
 	int cpu = 0;
 	int ret = 0;
@@ -470,12 +469,6 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 		freq_hz = policy->suspend_freq*1000;
 	else
 		freq_hz =  policy->cur*1000;
-
-	opp = dev_pm_opp_find_freq_ceil(cpu_dev, &freq_hz);
-	volt_new = dev_pm_opp_get_voltage(opp);
-	volt_old = regulator_get_voltage(cpu_reg);
-	volt_tol = volt_new * cpufreq_data->volt_tol / 100;
-	ret = meson_regulator_set_volate(cpu_reg, volt_old, volt_new, volt_tol);
 
 	dev_info(cpu_dev, "%s: CPU %d initialized\n", __func__, policy->cpu);
 	return ret;
