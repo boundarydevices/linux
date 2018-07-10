@@ -332,8 +332,11 @@ void tvin_smr(struct vdin_dev_s *devp)
 		++sm_p->state_cnt;
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AFE
 		if ((port == TVIN_PORT_CVBS3) &&
-			(devp->flags & VDIN_FLAG_SNOW_FLAG))
+			(devp->flags & VDIN_FLAG_SNOW_FLAG)) {
 			tvafe_snow_config_clamp(1);
+			/*fix black side when config atv snow*/
+			tvafe_snow_config_acd();
+		}
 #endif
 		if (sm_ops->nosig(devp->frontend)) {
 			sm_p->exit_nosig_cnt = 0;
@@ -472,8 +475,11 @@ void tvin_smr(struct vdin_dev_s *devp)
 		devp->unstable_flag = true;
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AFE
 		if ((port == TVIN_PORT_CVBS3) &&
-			(devp->flags & VDIN_FLAG_SNOW_FLAG))
+			(devp->flags & VDIN_FLAG_SNOW_FLAG)) {
 			tvafe_snow_config_clamp(0);
+			/*fix black side when config atv snow*/
+			tvafe_snow_config_acd_resume();
+		}
 #endif
 		if (sm_ops->nosig(devp->frontend)) {
 			nosig = true;

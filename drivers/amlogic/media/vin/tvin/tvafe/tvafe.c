@@ -643,22 +643,9 @@ bool tvafe_is_nosig(struct tvin_frontend_s *fe)
 	if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3)) {
 		ret = tvafe_cvd2_no_sig(&tvafe->cvd2, &devp->mem);
 
-		/*fix black side when config atv snow*/
-		if (ret && (port == TVIN_PORT_CVBS3) &&
-			(devp->flags & TVAFE_FLAG_DEV_SNOW_FLAG) &&
-			(tvafe->cvd2.config_fmt == TVIN_SIG_FMT_CVBS_PAL_I) &&
-			(tvafe->cvd2.info.state != TVAFE_CVD2_STATE_FIND))
-			tvafe_snow_config_acd();
-		else if ((tvafe->cvd2.config_fmt == TVIN_SIG_FMT_CVBS_PAL_I) &&
-			(tvafe->cvd2.info.state == TVAFE_CVD2_STATE_FIND) &&
-			(port == TVIN_PORT_CVBS3))
-			tvafe_snow_config_acd_resume();
-
 		/* normal sigal & adc reg error, reload source mux */
 		if (tvafe->cvd2.info.adc_reload_en && !ret)
-
 			tvafe_set_source_muxing(port, devp->pinmux);
-
 	}
 
 	return ret;

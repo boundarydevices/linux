@@ -640,13 +640,11 @@ static void tvafe_cvd2_non_std_config(struct tvafe_cvd2_s *cvd2)
 		if ((cvd2->vd_port == TVIN_PORT_CVBS3) ||
 			(cvd2->vd_port == TVIN_PORT_CVBS0)) {
 
-#if ((defined CONFIG_AM_R840) || (defined CONFIG_AM_MXL661))
+			/*config 0 for tuner R840/mxl661*/
+			/*si2151 si2159 r842 may need set 1*/
 			W_APB_BIT(CVD2_VSYNC_SIGNAL_THRESHOLD, 0,
 				VS_SIGNAL_AUTO_TH_BIT, VS_SIGNAL_AUTO_TH_WID);
-#else
-			W_APB_BIT(CVD2_VSYNC_SIGNAL_THRESHOLD, 1,
-				VS_SIGNAL_AUTO_TH_BIT, VS_SIGNAL_AUTO_TH_WID);
-#endif
+
 			/* vsync signal is not good */
 			W_APB_REG(CVD2_NOISE_THRESHOLD, 0x00);
 
@@ -2631,6 +2629,7 @@ void tvafe_snow_config_acd(void)
 	/*0x8e035e is debug test result*/
 	if (acd_h_config)
 		W_APB_REG(ACD_REG_2D, acd_h_config);
+	acd_h = acd_h_back;
 }
 /*only for pal-i*/
 void tvafe_snow_config_acd_resume(void)

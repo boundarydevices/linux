@@ -335,6 +335,8 @@ extern void ldim_get_matrix(int *data, int reg_sel);
 extern void ldim_set_matrix(int *data, int reg_sel);
 extern void tvafe_snow_config(unsigned int onoff);
 extern void tvafe_snow_config_clamp(unsigned int onoff);
+extern void tvafe_snow_config_acd(void);
+extern void tvafe_snow_config_acd_resume(void);
 extern void vdin_vf_reg(struct vdin_dev_s *devp);
 extern void vdin_vf_unreg(struct vdin_dev_s *devp);
 extern void vdin_pause_dec(struct vdin_dev_s *devp);
