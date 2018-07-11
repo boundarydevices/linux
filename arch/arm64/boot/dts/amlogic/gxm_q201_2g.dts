@@ -58,6 +58,7 @@
 			ftrace-size = <0x0>;
 			pmsg-size = <0x8000>;
 		};
+
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
