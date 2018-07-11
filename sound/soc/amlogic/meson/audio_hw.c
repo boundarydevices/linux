@@ -409,6 +409,8 @@ static void i2sin_fifo0_set_buf(u32 addr, u32 size, u32 i2s_mode,
 
 static void i2sin_fifo2_set_buf(u32 addr, u32 size, u32 src, u32 ch)
 {
+	if (audio_in_source == 3)
+		src = SPDIF_IN;
 	aml_audin_write(AUDIN_FIFO2_START, addr & 0xffffffc0);
 	aml_audin_write(AUDIN_FIFO2_PTR, (addr & 0xffffffc0));
 	aml_audin_write(AUDIN_FIFO2_END,
