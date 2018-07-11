@@ -418,7 +418,9 @@ int rx_set_receiver_edid(unsigned char *data, int len)
 	if ((data == NULL) || (len == 0) || (len > MAX_RECEIVE_EDID))
 		return false;
 
-	memcpy(receive_edid, data, len);
+	memset(receive_edid, 0, sizeof(receive_edid));
+	if ((len > 0) && (*data != 0))
+		memcpy(receive_edid, data, len);
 	new_edid = true;
 	return true;
 }

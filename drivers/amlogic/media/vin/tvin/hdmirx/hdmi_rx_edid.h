@@ -19,8 +19,9 @@
 
 #define EDID_SIZE			256
 #define EDID_HDR_SIZE		7
+#define EDID_HDR_HEAD_LEN	4
+#define MAX_HDR_LUMI_LEN	3
 #define MAX_EDID_BUF_SIZE	512
-#define MAX_HDR_LUMI		3
 
 /* CEA861F Table 44~46 CEA data block tag code*/
 /* tag code 0x0: reserved */

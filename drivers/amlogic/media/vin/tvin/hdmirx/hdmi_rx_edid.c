@@ -430,18 +430,16 @@ unsigned char rx_get_edid_index(void)
 	if ((edid_mode < EDID_LIST_NUM) &&
 		(edid_mode > EDID_LIST_TOP))
 		return edid_mode;
-	else {
-		if ((edid_mode == 0) &&
-			edid_size > 4 &&
-			edid_buf[0] == 'E' &&
-			edid_buf[1] == 'D' &&
-			edid_buf[2] == 'I' &&
-			edid_buf[3] == 'D') {
-			rx_pr("edid: use Top edid\n");
-			return EDID_LIST_TOP;
-		}
-		return EDID_LIST_NULL;
+	if ((edid_mode == 0) &&
+		edid_size > 4 &&
+		edid_buf[0] == 'E' &&
+		edid_buf[1] == 'D' &&
+		edid_buf[2] == 'I' &&
+		edid_buf[3] == 'D') {
+		rx_pr("edid: use Top edid\n");
+		return EDID_LIST_TOP;
 	}
+	return EDID_LIST_NULL;
 }
 
 unsigned char *rx_get_edid_buffer(unsigned char index)
@@ -519,12 +517,15 @@ void rx_edid_update_hdr_info(
 
 	if (p_edid == NULL)
 		return;
-
+	/*check if data is updated*/
+	if (!(receive_hdr_lum[0] | receive_hdr_lum[1]
+			| receive_hdr_lum[2]))
+		return;
 	/* update hdr info */
 	hdr_edid[0] = ((EDID_TAG_HDR >> 3)&0xE0) + (6 & 0x1f);
 	hdr_edid[1] = EDID_TAG_HDR & 0xFF;
 	memcpy(hdr_edid + 4, receive_hdr_lum,
-				sizeof(unsigned char)*3);
+				sizeof(receive_hdr_lum));
 	rx_modify_edid(p_edid, rx_get_edid_size(idx),
 						hdr_edid);
 }
@@ -1503,22 +1504,22 @@ static void get_edid_vsdb(unsigned char *buff, unsigned char start,
 			rx_pr("invalid hdmi vic len: %d\n",
 				edid_info->vsdb.hdmi_vic_len);
 			return;
-		} else {
-			/* HDMI_VIC_LEN may be 0 */
-			if (len < hdmi_vic_offset + hdmi_vic_len) {
-				rx_pr("invalid length for 4k2k: %d\n", len);
-				return;
-			}
-			for (i = 0; i < hdmi_vic_len; i++) {
-				if (buff[start+hdmi_vic_offset+i] == 1)
-					edid_info->vsdb.hdmi_4k2k_30hz_sup = 1;
-				else if (buff[start+hdmi_vic_offset+i] == 2)
-					edid_info->vsdb.hdmi_4k2k_25hz_sup = 1;
-				else if (buff[start+hdmi_vic_offset+i] == 3)
-					edid_info->vsdb.hdmi_4k2k_24hz_sup = 1;
-				else if (buff[start+hdmi_vic_offset+i] == 4)
-					edid_info->vsdb.hdmi_smpte_sup = 1;
-			}
+		}
+
+		/* HDMI_VIC_LEN may be 0 */
+		if (len < hdmi_vic_offset + hdmi_vic_len) {
+			rx_pr("invalid length for 4k2k: %d\n", len);
+			return;
+		}
+		for (i = 0; i < hdmi_vic_len; i++) {
+			if (buff[start+hdmi_vic_offset+i] == 1)
+				edid_info->vsdb.hdmi_4k2k_30hz_sup = 1;
+			else if (buff[start+hdmi_vic_offset+i] == 2)
+				edid_info->vsdb.hdmi_4k2k_25hz_sup = 1;
+			else if (buff[start+hdmi_vic_offset+i] == 3)
+				edid_info->vsdb.hdmi_4k2k_24hz_sup = 1;
+			else if (buff[start+hdmi_vic_offset+i] == 4)
+				edid_info->vsdb.hdmi_smpte_sup = 1;
 		}
 
 		/* 3D info parse */
@@ -2339,9 +2340,8 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 		else {
 			for (i = 0; i < 31; i++) {
 				hdmi_vic = edid_info->y420_cmdb_vic[i];
-				if (hdmi_vic) {
+				if (hdmi_vic)
 					rx_edid_print_vic_fmt(i, hdmi_vic);
-				}
 			}
 		}
 	}
@@ -2349,10 +2349,13 @@ void rx_edid_parse_print(struct edid_info_s *edid_info)
 
 int rx_set_hdr_lumi(unsigned char *data, int len)
 {
-	if ((data == NULL) || (len == 0) || (len > MAX_HDR_LUMI))
+	if ((data == NULL) || (len == 0))
 		return false;
 
-	memcpy(receive_hdr_lum, data, len);
+	memset(receive_hdr_lum, 0, sizeof(receive_hdr_lum));
+	if ((len == EDID_HDR_SIZE) && (*data != 0))
+		memcpy(receive_hdr_lum, data + EDID_HDR_HEAD_LEN,
+					len - EDID_HDR_HEAD_LEN);
 	new_hdr_lum = true;
 	return true;
 }
