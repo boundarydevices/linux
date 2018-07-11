@@ -152,6 +152,8 @@ enum color_index_e {
 #define OSD_FREESCALE           (1 << 2)
 #define OSD_UBOOT_LOGO          (1 << 3)
 #define OSD_ZORDER              (1 << 4)
+#define OSD_VIU2                (1 << 29)
+#define OSD_VIU1                (1 << 30)
 #define OSD_LAYER_ENABLE        (1 << 31)
 
 #define BYPASS_DIN        (1 << 7)
@@ -351,6 +353,11 @@ enum viu2_rotate_format {
 	YUV422 = 4,
 	RGB = 6,
 	RGBA = 8,
+};
+
+enum viu_type {
+	VIU1,
+	VIU2,
 };
 
 struct pandata_s {
@@ -737,6 +744,7 @@ struct hw_para_s {
 	u32 basic_urgent;
 	u32 two_ports;
 	u32 afbc_err_cnt;
+	u32 viu_type;
 	struct hw_debug_s osd_debug;
 	int out_fence_fd;
 	int in_fd[HW_OSD_COUNT];

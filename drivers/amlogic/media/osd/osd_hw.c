@@ -331,6 +331,7 @@ static void osd_pan_display_single_fence(
 static void osd_pan_display_layers_fence(
 	struct osd_layers_fence_map_s *fence_map);
 
+
 static void *osd_timeline_create(void)
 {
 	const char *tlName = "osd_timeline";
@@ -581,6 +582,53 @@ struct osd_f2v_vphase_s {
 	u8 rpt_num;
 	u16 phase;
 };
+
+#define COEFF_NORM(a) ((int)((((a) * 2048.0) + 1) / 2))
+#define MATRIX_5x3_COEF_SIZE 24
+
+static int RGB709_to_YUV709l_coeff[MATRIX_5x3_COEF_SIZE] = {
+	0, 0, 0, /* pre offset */
+	COEFF_NORM(0.181873),	COEFF_NORM(0.611831),	COEFF_NORM(0.061765),
+	COEFF_NORM(-0.100251),	COEFF_NORM(-0.337249),	COEFF_NORM(0.437500),
+	COEFF_NORM(0.437500),	COEFF_NORM(-0.397384),	COEFF_NORM(-0.040116),
+	0, 0, 0, /* 10'/11'/12' */
+	0, 0, 0, /* 20'/21'/22' */
+	64, 512, 512, /* offset */
+	0, 0, 0 /* mode, right_shift, clip_en */
+};
+
+/*for G12A, set osd3 matrix(10bit) RGB2YUV*/
+static void set_viu2_rgb2yuv(bool on)
+{
+
+	if (osd_hw.osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12A) {
+		/* RGB -> 709 limit */
+		int *m = RGB709_to_YUV709l_coeff;
+
+		/* VPP WRAP OSD3 matrix */
+		osd_reg_write(VIU2_OSD1_MATRIX_PRE_OFFSET0_1,
+			((m[0] & 0xfff) << 16) | (m[1] & 0xfff));
+		osd_reg_write(VIU2_OSD1_MATRIX_PRE_OFFSET2,
+			m[2] & 0xfff);
+		osd_reg_write(VIU2_OSD1_MATRIX_COEF00_01,
+			((m[3] & 0x1fff) << 16) | (m[4] & 0x1fff));
+		osd_reg_write(VIU2_OSD1_MATRIX_COEF02_10,
+			((m[5]  & 0x1fff) << 16) | (m[6] & 0x1fff));
+		osd_reg_write(VIU2_OSD1_MATRIX_COEF11_12,
+			((m[7] & 0x1fff) << 16) | (m[8] & 0x1fff));
+		osd_reg_write(VIU2_OSD1_MATRIX_COEF20_21,
+			((m[9] & 0x1fff) << 16) | (m[10] & 0x1fff));
+		osd_reg_write(VIU2_OSD1_MATRIX_COEF22,
+			m[11] & 0x1fff);
+
+		osd_reg_write(VIU2_OSD1_MATRIX_OFFSET0_1,
+			((m[18] & 0xfff) << 16) | (m[19] & 0xfff));
+		osd_reg_write(VIU2_OSD1_MATRIX_OFFSET2,
+			m[20] & 0xfff);
+
+		osd_reg_set_bits(VIU2_OSD1_MATRIX_EN_CTRL, on, 0, 1);
+	}
+}
 
 static void f2v_get_vertical_phase(
 	u32 zoom_ratio, enum osd_f2v_vphase_type_e type,
@@ -1055,6 +1103,10 @@ int osd_sync_request_render(u32 index, u32 yres,
 		osd_hw.hwc_enable = 0;
 	else if (request->magic == FB_SYNC_REQUEST_RENDER_MAGIC_V2)
 		osd_hw.hwc_enable = 1;
+	if (index == OSD4)
+		osd_hw.viu_type = VIU2;
+	else
+		osd_hw.viu_type = VIU1;
 	osd_hw.osd_fence[osd_hw.hwc_enable].sync_fence_handler(
 		index, yres, request, phys_addr);
 	return request->out_fen_fd;
@@ -3185,17 +3237,21 @@ int osd_get_capbility(u32 index)
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 		if (index == OSD1)
 			capbility |= OSD_LAYER_ENABLE | OSD_FREESCALE
-				| OSD_UBOOT_LOGO | OSD_ZORDER;
+				| OSD_UBOOT_LOGO | OSD_ZORDER | OSD_VIU1;
 		else if ((index == OSD2) || (index == OSD3))
 			capbility |= OSD_LAYER_ENABLE |
-				OSD_VIDEO_CONFLICT | OSD_FREESCALE | OSD_ZORDER;
+				OSD_VIDEO_CONFLICT | OSD_FREESCALE |
+				OSD_ZORDER | OSD_VIU1;
+		else if (index == OSD4)
+			capbility |= OSD_LAYER_ENABLE | OSD_VIU2;
 	} else if (osd_hw.osd_meson_dev.osd_ver == OSD_NORMAL) {
 		if (index == OSD1)
-			capbility |= OSD_LAYER_ENABLE | OSD_FREESCALE;
+			capbility |= OSD_LAYER_ENABLE | OSD_FREESCALE
+				| OSD_VIU1;
 		else if (index == OSD2)
 			capbility |= OSD_LAYER_ENABLE |
 				OSD_HW_CURSOR | OSD_FREESCALE
-				| OSD_UBOOT_LOGO;
+				| OSD_UBOOT_LOGO | OSD_VIU1;
 	}
 	return capbility;
 }
@@ -7350,6 +7406,19 @@ static void osd_setting_old_hwc(void)
 	osd_wait_vsync_hw();
 }
 
+static void osd_setting_viu2(void)
+{
+	int index = OSD4;
+
+	osd_hw.reg[OSD_COLOR_MODE].update_func(index);
+	/* geometry and freescale need update with ioctl */
+	osd_hw.reg[DISP_GEOMETRY].update_func(index);
+	if (!osd_hw.osd_display_debug)
+		osd_hw.reg[OSD_ENABLE]
+		.update_func(index);
+}
+
+
 int osd_setting_blend(void)
 {
 	int ret;
@@ -7358,9 +7427,12 @@ int osd_setting_blend(void)
 		osd_setting_old_hwc();
 	else {
 		if (osd_hw.hwc_enable) {
-			ret = osd_setting_order();
-			if (ret < 0)
-				return -1;
+			if (osd_hw.viu_type == VIU1) {
+				ret = osd_setting_order();
+				if (ret < 0)
+					return -1;
+			} else if (osd_hw.viu_type == VIU2)
+				osd_setting_viu2();
 		} else
 			osd_setting_default_hwc();
 	}
@@ -8197,6 +8269,8 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 void osd_init_viu2(void)
 {
 	u32 idx, data32;
+
+	set_viu2_rgb2yuv(1);
 
 	osd_vpu_power_on_viu2();
 
