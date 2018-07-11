@@ -2435,10 +2435,19 @@ vpp_set_filters(u32 process_3d_type, u32 wide_mode,
 	if ((vf->ratio_control & DISP_RATIO_ADAPTED_PICMODE)
 		&& !disable_adapted) {
 		wide_mode = vf->pic_mode.screen_mode;
-		video_source_crop_top = vf->pic_mode.vs;
-		video_source_crop_left = vf->pic_mode.hs;
-		video_source_crop_bottom = vf->pic_mode.ve;
-		video_source_crop_right = vf->pic_mode.he;
+		if (vf->pic_mode.provider == PIC_MODE_PROVIDER_WSS) {
+			/* from wss, need add global setting */
+			video_source_crop_top += vf->pic_mode.vs;
+			video_source_crop_left += vf->pic_mode.hs;
+			video_source_crop_bottom += vf->pic_mode.ve;
+			video_source_crop_right += vf->pic_mode.he;
+		} else {
+			/* from PQ database, final setting */
+			video_source_crop_top = vf->pic_mode.vs;
+			video_source_crop_left = vf->pic_mode.hs;
+			video_source_crop_bottom = vf->pic_mode.ve;
+			video_source_crop_right = vf->pic_mode.he;
+		}
 		if (vf->pic_mode.AFD_enable
 			&& (vf->ratio_control & DISP_RATIO_INFOFRAME_AVAIL))
 			wide_mode = VIDEO_WIDEOPTION_AFD;

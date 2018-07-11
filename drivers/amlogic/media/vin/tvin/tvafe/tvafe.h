@@ -58,7 +58,6 @@ struct tvafe_info_s {
 	struct tvafe_cvd2_s cvd2;
 	/*WSS INFO for av/atv*/
 	enum tvin_aspect_ratio_e aspect_ratio;
-	enum tvin_aspect_ratio_e aspect_ratio_last;
 	unsigned int aspect_ratio_cnt;
 };
 

@@ -4165,9 +4165,10 @@ void vdin_set_display_ratio(struct vdin_dev_s *devp,
 	switch (aspect_ratio) {
 	case TVIN_ASPECT_4x3_FULL:
 		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.provider = PIC_MODE_PROVIDER_WSS;
 		vf->pic_mode.hs = 0;
 		vf->pic_mode.he = 0;
-		vf->pic_mode.vs = 1;
+		vf->pic_mode.vs = 0;
 		vf->pic_mode.ve = 0;
 		/* 3*256/4=0xc0 */
 		vf->pic_mode.custom_ar = 0xc0;
@@ -4175,9 +4176,10 @@ void vdin_set_display_ratio(struct vdin_dev_s *devp,
 		break;
 	case TVIN_ASPECT_14x9_FULL:
 		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.provider = PIC_MODE_PROVIDER_WSS;
 		vf->pic_mode.hs = 0;
 		vf->pic_mode.he = 0;
-		vf->pic_mode.vs = 1;
+		vf->pic_mode.vs = 0;
 		vf->pic_mode.ve = 0;
 		/* 9*256/14=0xc0 */
 		vf->pic_mode.custom_ar = 0xa4;
@@ -4185,9 +4187,10 @@ void vdin_set_display_ratio(struct vdin_dev_s *devp,
 		break;
 	case TVIN_ASPECT_16x9_FULL:
 		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.provider = PIC_MODE_PROVIDER_WSS;
 		vf->pic_mode.hs = 0;
 		vf->pic_mode.he = 0;
-		vf->pic_mode.vs = 1;
+		vf->pic_mode.vs = 0;
 		vf->pic_mode.ve = 0;
 		/* 9*256/16=0xc0 */
 		vf->pic_mode.custom_ar = 0x90;
@@ -4195,17 +4198,20 @@ void vdin_set_display_ratio(struct vdin_dev_s *devp,
 		break;
 	case TVIN_ASPECT_14x9_LB_CENTER:
 		/**720/462=14/9;(576-462)/2=57;57/2=28**/
+		/**need cut more**/
 		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.provider = PIC_MODE_PROVIDER_WSS;
 		vf->pic_mode.hs = 0;
 		vf->pic_mode.he = 0;
-		vf->pic_mode.vs = 28;
-		vf->pic_mode.ve = 28;
+		vf->pic_mode.vs = 36;
+		vf->pic_mode.ve = 36;
 		vf->pic_mode.custom_ar = 0xa4;
 		vf->ratio_control |= DISP_RATIO_ADAPTED_PICMODE;
 		break;
 	case TVIN_ASPECT_14x9_LB_TOP:
 		/**720/462=14/9;(576-462)/2=57**/
 		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.provider = PIC_MODE_PROVIDER_WSS;
 		vf->pic_mode.hs = 0;
 		vf->pic_mode.he = 0;
 		vf->pic_mode.vs = 0;
@@ -4217,6 +4223,7 @@ void vdin_set_display_ratio(struct vdin_dev_s *devp,
 		/**720/405=16/9;(576-405)/2=85;85/2=42**/
 		/**need cut more**/
 		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.provider = PIC_MODE_PROVIDER_WSS;
 		vf->pic_mode.hs = 0;
 		vf->pic_mode.he = 0;
 		vf->pic_mode.vs = 70;
@@ -4227,6 +4234,7 @@ void vdin_set_display_ratio(struct vdin_dev_s *devp,
 	case TVIN_ASPECT_16x9_LB_TOP:
 		/**720/405=16/9;(576-405)/2=85**/
 		vf->pic_mode.screen_mode = VIDEO_WIDEOPTION_CUSTOM;
+		vf->pic_mode.provider = PIC_MODE_PROVIDER_WSS;
 		vf->pic_mode.hs = 0;
 		vf->pic_mode.he = 0;
 		vf->pic_mode.vs = 0;

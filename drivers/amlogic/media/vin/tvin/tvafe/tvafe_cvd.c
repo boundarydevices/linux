@@ -2647,7 +2647,7 @@ enum tvin_aspect_ratio_e tvafe_cvd2_get_wss(void)
 	unsigned int full_format = 0;
 	enum tvin_aspect_ratio_e aspect_ratio = TVIN_ASPECT_NULL;
 
-	full_format = R_APB_BIT(CVD2_VBI_WSS_DATA1, 0, 4);
+	full_format = R_APB_REG(CVD2_VBI_WSS_DATA1);
 
 	if (full_format == TVIN_AR_14x9_LB_CENTER_VAL)
 		aspect_ratio = TVIN_ASPECT_14x9_LB_CENTER;

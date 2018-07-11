@@ -210,6 +210,12 @@ enum vframe_disp_mode_e {
 	VFRAME_DISP_MODE_OK,
 };
 
+enum pic_mode_provider_e {
+	PIC_MODE_PROVIDER_DB = 0,
+	PIC_MODE_PROVIDER_WSS,
+	PIC_MODE_UNKNOWN,
+};
+
 struct vframe_pic_mode_s {
 	int hs;
 	int he;
@@ -218,6 +224,7 @@ struct vframe_pic_mode_s {
 	u32 screen_mode;
 	u32 custom_ar;
 	u32 AFD_enable;
+	enum pic_mode_provider_e provider;
 };
 
 #define BITDEPTH_Y_SHIFT 8
