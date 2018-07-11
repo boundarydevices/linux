@@ -1672,21 +1672,24 @@ static bool cec_service_suspended(void)
 
 static void cec_task(struct work_struct *work)
 {
-	struct delayed_work *dwork;
+	struct delayed_work *dwork = &cec_dev->cec_work;
+	unsigned int cec_cfg;
 
-	dwork = &cec_dev->cec_work;
-	if (cec_dev && (!wake_ok || cec_service_suspended()))
-		cec_rx_process();
+	cec_cfg = cec_config(0, 0);
+	if (cec_cfg & (1 << HDMI_OPTION_ENABLE_CEC)) {
+		/*cec module on*/
+		if (cec_dev && (!wake_ok || cec_service_suspended()))
+			cec_rx_process();
 
-
-	/*for check rx buffer for old chip version, cec rx irq process*/
-	/*in internal hdmi rx, for avoid msg lose */
-	if ((cec_dev->cpu_type < MESON_CPU_MAJOR_ID_TXLX) &&
-		(cec_config(0, 0) == CEC_FUNC_CFG_ALL)) {
-		if (cec_late_check_rx_buffer()) {
-			/*msg in*/
-			mod_delayed_work(cec_dev->cec_thread, dwork, 0);
-			return;
+		/*for check rx buffer for old chip version, cec rx irq process*/
+		/*in internal hdmi rx, for avoid msg lose*/
+		if ((cec_dev->cpu_type < MESON_CPU_MAJOR_ID_TXLX) &&
+			(cec_cfg == CEC_FUNC_CFG_ALL)) {
+			if (cec_late_check_rx_buffer()) {
+				/*msg in*/
+				mod_delayed_work(cec_dev->cec_thread, dwork, 0);
+				return;
+			}
 		}
 	}
 	/*triger next process*/
@@ -1994,7 +1997,7 @@ static ssize_t fun_cfg_store(struct class *cla, struct class_attribute *attr,
 		return -EINVAL;
 	cec_config(val, 1);
 	if (val == 0)
-		cec_keep_reset();
+		cec_clear_logical_addr();/*cec_keep_reset();*/
 	else
 		cec_pre_init();
 	return count;
@@ -2098,7 +2101,8 @@ static ssize_t hdmitx_cec_write(struct file *f, const char __user *buf,
 			    size_t size, loff_t *p)
 {
 	unsigned char tempbuf[16] = {};
-	int ret;
+	int ret = CEC_FAIL_OTHER;
+	unsigned int cec_cfg;
 
 	if (size > 16)
 		size = 16;
@@ -2108,9 +2112,17 @@ static ssize_t hdmitx_cec_write(struct file *f, const char __user *buf,
 	if (copy_from_user(tempbuf, buf, size))
 		return -EINVAL;
 
-	ret = cec_ll_tx(tempbuf, size);
+	cec_cfg = cec_config(0, 0);
+	if (cec_cfg & (1 << HDMI_OPTION_ENABLE_CEC)) {
+		/*cec module on*/
+		ret = cec_ll_tx(tempbuf, size);
+	} else {
+		CEC_ERR("err:cec module disabled\n");
+	}
+
 	return ret;
 }
+
 
 static void init_cec_port_info(struct hdmi_port_info *port,
 			       struct ao_cec_dev *cec_dev)
@@ -2327,7 +2339,8 @@ static long hdmitx_cec_ioctl(struct file *f,
 			cec_dev->hal_flag &= ~(tmp);
 			CEC_INFO("disable CEC\n");
 			cec_config(CEC_FUNC_CFG_NONE, 1);
-			cec_keep_reset();
+			/*cec_keep_reset();*/
+			cec_clear_logical_addr();
 		}
 		break;
 
