@@ -63,7 +63,8 @@ static unsigned long gxl_get_dmc_freq_quick(struct ddr_bandwidth *db)
 	m    = (val >>  4) & 0x1ff;
 	n    = (val >> 16) & 0x1f;
 	od1  = (val >>  0) & 0x03;
-	freq = (DEFAULT_XTAL_FREQ * m / (n * (1 + od))) >> od1;
+	freq = DEFAULT_XTAL_FREQ / 1000;	/* avoid overflow */
+	freq = ((freq * m / (n * (1 + od))) >> od1) * 1000;
 	return freq;
 }
 

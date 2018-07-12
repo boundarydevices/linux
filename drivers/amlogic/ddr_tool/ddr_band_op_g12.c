@@ -97,8 +97,9 @@ static unsigned long g12_get_dmc_freq_quick(struct ddr_bandwidth *db)
 	m = val & 0x1ff;
 	n = ((val >> 10) & 0x1f);
 	od1 = (((val >> 19) & 0x1)) == 1 ? 2 : 1;
+	freq = DEFAULT_XTAL_FREQ / 1000;	/* avoid overflow */
 	if (n)
-		freq = (((DEFAULT_XTAL_FREQ * m) / n) >> od1) / od_div;
+		freq = ((((freq * m) / n) >> od1) / od_div) * 1000;
 
 	return freq;
 }

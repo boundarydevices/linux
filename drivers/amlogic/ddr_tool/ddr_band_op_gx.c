@@ -70,7 +70,8 @@ static unsigned long gx_get_dmc_freq_quick(struct ddr_bandwidth *db)
 		    (db->cpu_type < MESON_CPU_MAJOR_ID_GXL)) {
 		od1 = (val >> 14) & 0x03;
 	}
-	freq = (DEFAULT_XTAL_FREQ * m / (n * (1 + od))) >> od1;
+	freq = DEFAULT_XTAL_FREQ / 1000;	/* avoid overflow */
+	freq = ((freq * m / (n * (1 + od))) >> od1) * 1000;
 	return freq;
 }
 
