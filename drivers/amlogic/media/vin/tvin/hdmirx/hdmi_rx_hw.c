@@ -1069,7 +1069,8 @@ static int DWC_init(void)
 	data32 |= (HYST_DVI_TO_HDMI	<< 8);
 	data32 |= (0	<< 6);
 	data32 |= (0	<< 4);
-	data32 |= (0	<< 2);
+	/* Force OESS mode to fix Google Chromecast box black screen issue */
+	data32 |= (1	<< 2);
 	data32 |= (0	<< 0);
 	hdmirx_wr_dwc(DWC_HDMI_MODE_RECOVER, data32);
 

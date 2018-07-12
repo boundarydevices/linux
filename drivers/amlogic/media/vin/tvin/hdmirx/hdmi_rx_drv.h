@@ -46,7 +46,7 @@
  *
  *
  */
-#define RX_VER2 "ver.2018/06/27"
+#define RX_VER2 "ver.2018/07/12"
 
 
 /* 50ms timer for hdmirx main loop (HDMI_STATE_CHECK_FREQ is 20) */

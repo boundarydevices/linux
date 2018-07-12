@@ -2634,20 +2634,22 @@ unsigned int hdmirx_show_info(unsigned char *buf, int size)
 		"TMDS clock: %d\n", hdmirx_get_tmds_clock());
 	pos += snprintf(buf+pos, size-pos,
 		"Pixel clock: %d\n", hdmirx_get_pixel_clock());
-	/*
-	 *if (drmpkt->des_u.tp1.eotf == EOTF_SDR)
-	 *	pos += snprintf(buf+pos, size-pos,
-	 *		"HDR EOTF: %s\n", "SDR");
-	 * else if (drmpkt->des_u.tp1.eotf == EOTF_HDR)
-	 *	pos += snprintf(buf+pos, size-pos,
-	 *	"HDR EOTF: %s\n", "HDR");
-	 * else if (drmpkt->des_u.tp1.eotf == EOTF_SMPTE_ST_2048)
-	 *	pos += snprintf(buf+pos, size-pos,
-	 *	"HDR EOTF: %s\n", "SMPTE_ST_2048");
-	 * pos += snprintf(buf+pos, size-pos,
-	 *	"Dolby Vision: %s\n",
-	 *	(rx.vs_info_details.dolby_vision?"on":"off"));
-	 */
+	if (drmpkt->des_u.tp1.eotf == EOTF_SDR)
+		pos += snprintf(buf+pos, size-pos,
+		"HDR EOTF: %s\n", "SDR");
+	else if (drmpkt->des_u.tp1.eotf == EOTF_HDR)
+		pos += snprintf(buf+pos, size-pos,
+		"HDR EOTF: %s\n", "HDR");
+	else if (drmpkt->des_u.tp1.eotf == EOTF_SMPTE_ST_2048)
+		pos += snprintf(buf+pos, size-pos,
+		"HDR EOTF: %s\n", "SMPTE_ST_2048");
+	else if (drmpkt->des_u.tp1.eotf == EOTF_HLG)
+		pos += snprintf(buf+pos, size-pos,
+		"HDR EOTF: %s\n", "HLG");
+	pos += snprintf(buf+pos, size-pos,
+		"Dolby Vision: %s\n",
+		(rx.vs_info_details.dolby_vision?"on":"off"));
+
 	pos += snprintf(buf+pos, size-pos,
 		"\n\nAudio info\n\n");
 	pos += snprintf(buf+pos, size-pos,
