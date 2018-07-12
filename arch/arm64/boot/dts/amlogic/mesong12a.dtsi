@@ -1811,6 +1811,10 @@
 		clock-names = "efuse_clk";
 		status = "disabled";
 	};
+
+	cpu_ver_name {
+		compatible = "amlogic, cpu-major-id-g12a";
+	};
 };/* end of / */
 
 &pinctrl_aobus {

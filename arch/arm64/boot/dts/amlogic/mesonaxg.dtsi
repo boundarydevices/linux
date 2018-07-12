@@ -816,6 +816,10 @@
 		interrupts = <0 52 1>;
 		interrupt-names = "ddr_bandwidth";
 	};
+
+	cpu_ver_name{
+		compatible = "amlogic, cpu-major-id-axg";
+	};
 };/* end of / */
 
 &pinctrl_aobus {

@@ -633,6 +633,10 @@
 			ranges = <0x0 0x0 0x0 0xd0000000 0x0 0x200000>;
 		};
 	}; /* end of soc */
+
+	cpu_ver_name {
+		compatible = "amlogic, cpu-major-id-gxm";
+	};
 }; /* end of root */
 
 &pinctrl_aobus {
