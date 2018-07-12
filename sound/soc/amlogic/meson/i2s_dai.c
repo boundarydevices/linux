@@ -405,7 +405,7 @@ static const struct snd_soc_component_driver aml_component = {
 /*
  * vdac_clk should be managed in audio module for kernel4.9,
  * not in vpu for kernel3.14
- * aud_buf has been remove from txlx/txhd
+ * aud_buf has been remove from txl/txlx/txhd
  */
 static const char *const gate_names[] = {
 	"top_glue", "aud_buf", "i2s_out", "amclk_measure",

@@ -494,6 +494,7 @@ static struct meson_pmx_group meson_txl_periphs_groups[] = {
 	GROUP(uart_rts_c,	4,	22),
 	GROUP(spdif_out,	3,	30),
 	GROUP(spdif_in,		3,	31),
+	GROUP(i2s_aoclk_out_z,  4,  9),
 	GROUP(i2s_lrclk_out_z,	4,	8),
 	GROUP(i2s_aoclk_in_z,	4,	3),
 	GROUP(i2s_lrclk_in_z,	4,	2),
@@ -812,7 +813,7 @@ static const char * const hdmirx_d_groups[] = {
 static const char * const i2s_groups[] = {
 	"i2s_lrclk_out_dv", "i2s_aoclk_in_dv", "i2s_lrclk_in_dv",
 	"i2s_amclk_dv", "i2s_out_ch01_dv", "i2s_in_ch01_dv",
-
+	"i2s_aoclk_out_z",
 	"i2s_lrclk_out_z", "i2s_aoclk_in_z", "i2s_lrclk_in_z",
 	"i2s_amclk_z", "i2s_out_ch01_z", "i2s_in_ch01_z",
 

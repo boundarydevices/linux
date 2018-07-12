@@ -46,7 +46,7 @@ struct aml_T9015S_audio_priv {
 };
 
 static const struct reg_default t9015s_init_list[] = {
-	{AUDIO_CONFIG_BLOCK_ENABLE, 0x1403BCFF},
+	{AUDIO_CONFIG_BLOCK_ENABLE, 0x34003CFF},
 	{ADC_VOL_CTR_PGA_IN_CONFIG, 0x50502929},
 	{DAC_VOL_CTR_DAC_SOFT_MUTE, 0xFBFB0000},
 	{LINE_OUT_CONFIG, 0x00004444},
@@ -106,7 +106,7 @@ static int aml_DAC_Gain_set_enum(
 		pr_info("It has risk of distortion!\n");
 	}
 
-	snd_soc_write(codec, val, add);
+	snd_soc_write(codec, add, val);
 	return 0;
 }
 
@@ -230,7 +230,7 @@ static const struct snd_soc_dapm_widget T9015S_audio_dapm_widgets[] = {
 	SND_SOC_DAPM_PGA("PGAL_IN_EN", AUDIO_CONFIG_BLOCK_ENABLE,
 			 PGAL_IN_EN, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("PGAR_IN_EN", AUDIO_CONFIG_BLOCK_ENABLE,
-			 PGAL_IN_EN, 0, NULL, 0),
+			 PGAR_IN_EN, 0, NULL, 0),
 
 	/*PGA input source select */
 	SND_SOC_DAPM_MUX("Linein left switch", SND_SOC_NOPM,
@@ -381,11 +381,8 @@ static int aml_T9015S_audio_set_bias_level(struct snd_soc_codec *codec,
 		break;
 
 	case SND_SOC_BIAS_STANDBY:
-		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF) {
-			codec->cache_only = false;
-			codec->cache_sync = 1;
+		if (codec->component.dapm.bias_level == SND_SOC_BIAS_OFF)
 			snd_soc_cache_sync(codec);
-		}
 		break;
 
 	case SND_SOC_BIAS_OFF:
@@ -395,7 +392,7 @@ static int aml_T9015S_audio_set_bias_level(struct snd_soc_codec *codec,
 	default:
 		break;
 	}
-	codec->dapm.bias_level = level;
+	codec->component.dapm.bias_level = level;
 
 	return 0;
 }
@@ -403,7 +400,23 @@ static int aml_T9015S_audio_set_bias_level(struct snd_soc_codec *codec,
 static int aml_T9015S_prepare(struct snd_pcm_substream *substream,
 			    struct snd_soc_dai *dai)
 {
-	/*struct snd_soc_codec *codec = dai->codec;*/
+	struct snd_soc_codec *codec = dai->codec;
+	u32 value = snd_soc_read(codec, AUDIO_CONFIG_BLOCK_ENABLE);
+	bool Vmid_eanble = (bool)((value >> VMID_GEN_EN) & 0x1);
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE && !Vmid_eanble) {
+		pr_info("aml_T9015S_prepare caputre!\n");
+		value |= 0x1 << VMID_GEN_EN;
+		snd_soc_write(codec, AUDIO_CONFIG_BLOCK_ENABLE, value);
+	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		pr_info("aml_T9015S_prepare playback!\n");
+		value &= ~(0x1 << VMID_GEN_EN);
+		snd_soc_write(codec, AUDIO_CONFIG_BLOCK_ENABLE, value);
+		msleep(20);
+		value |= 0x1 << VMID_GEN_EN;
+		snd_soc_write(codec, AUDIO_CONFIG_BLOCK_ENABLE, value);
+	}
+
 	return 0;
 
 }
@@ -466,7 +479,7 @@ static int aml_T9015S_audio_probe(struct snd_soc_codec *codec)
 
 	aml_audin_update_bits(AUDIN_SOURCE_SEL, 3, 3);
 
-	codec->dapm.bias_level = SND_SOC_BIAS_STANDBY;
+	codec->component.dapm.bias_level = SND_SOC_BIAS_STANDBY;
 	T9015S_audio->codec = codec;
 
 	return 0;
@@ -492,7 +505,7 @@ static int aml_T9015S_audio_resume(struct snd_soc_codec *codec)
 	aml_T9015S_audio_reset(codec);
 	aml_T9015S_audio_start_up(codec);
 	aml_T9015S_audio_reg_init(codec);
-	codec->dapm.bias_level = SND_SOC_BIAS_STANDBY;
+	codec->component.dapm.bias_level = SND_SOC_BIAS_STANDBY;
 	aml_T9015S_audio_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	return 0;
 }

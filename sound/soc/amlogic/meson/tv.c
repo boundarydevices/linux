@@ -1963,6 +1963,13 @@ int txhd_set_audin_source(int audin_src)
 	return 0;
 }
 
+int txl_set_resample_param(int index)
+{
+	set_hw_resample_param(index);
+
+	return 0;
+}
+
 int txlx_set_resample_param(int index)
 {
 	set_hw_resample_param(index);
@@ -1994,6 +2001,7 @@ static struct aml_card_info tv_txl_info = {
 	},
 	.chipset_init        = txl_chipset_init,
 	.set_audin_source    = txl_set_audin_source,
+	.set_resample_param  = txl_set_resample_param,
 };
 
 static struct aml_card_info tv_txlx_info = {
