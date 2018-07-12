@@ -48,6 +48,8 @@ struct atv_demod_priv {
 	struct work_struct demod_wq;
 };
 
+extern int atv_demod_get_scan_mode(void);
+extern void atv_demod_set_scan_mode(int val);
 extern int atv_demod_enter_mode(void);
 
 struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,

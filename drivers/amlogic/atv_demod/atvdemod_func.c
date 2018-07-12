@@ -947,7 +947,7 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 	|| (Broadcast_Standard == AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC_BG)) {
 		sif_co_mx = 0xa6;
 		sif_fi_mx = 0x10;
-		sif_ic_bw = 0x2;
+		sif_ic_bw = 0x0;
 		sif_bb_bw = 0x0;
 		sif_deemp = 0x2;
 		sif_cfg_demod = (sound_format == 0) ? 0x0:0x2;
@@ -1764,13 +1764,20 @@ int amlfmt_aud_standard(int broad_std)
 		/* maybe need wait */
 		reg_value = adec_rd_reg(CARRIER_MAG_REPORT);
 		pr_info("\n%s 0x%x\n", __func__, (reg_value>>16)&0xffff);
-		if (((reg_value>>16)&0xffff) > audio_a2_threshold)
+		if (((reg_value>>16)&0xffff) > audio_a2_threshold) {
 			std = AUDIO_STANDARD_A2_K;
-		else
+			aud_mode = AUDIO_OUTMODE_A2_STEREO;
+		} else {
 			std = AUDIO_STANDARD_BTSC;
+			aud_mode = AUDIO_OUTMODE_STEREO;
+			configure_adec(std);
+			adec_soft_reset();
+		}
 		break;
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC_J:
 		std = AUDIO_STANDARD_EIAJ;
+		configure_adec(std);
+		adec_soft_reset();
 		break;
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_BG:
 		std = AUDIO_STANDARD_NICAM_BG;
@@ -1778,13 +1785,22 @@ int amlfmt_aud_standard(int broad_std)
 		adec_soft_reset();
 		mdelay(audio_nicam_delay);
 		/* need wait */
+		pr_info("pll lock: 0x%lx.\n",
+				atv_dmd_rd_byte(0x06, 0x43) & 0x01);
+		pr_info("line lock: 0x%lx.\n",
+				atv_dmd_rd_byte(0x0f, 0x4f) & 0x10);
 		reg_value = adec_rd_reg(NICAM_LEVEL_REPORT);
 		nicam_lock = (reg_value>>28)&1;
 		pr_info("\n%s 0x%x\n", __func__, reg_value);
-		if (nicam_lock)
+		if (nicam_lock) {
 			std = AUDIO_STANDARD_NICAM_BG;
-		else
+			aud_mode = AUDIO_OUTMODE_NICAM_STEREO;
+		} else {
 			std = AUDIO_STANDARD_A2_BG;
+			aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			configure_adec(std);
+			adec_soft_reset();
+		}
 		break;
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK:
 		std = AUDIO_STANDARD_NICAM_DK;
@@ -1792,19 +1808,32 @@ int amlfmt_aud_standard(int broad_std)
 		adec_soft_reset();
 		mdelay(audio_nicam_delay);
 		/* need wait */
+		pr_info("pll lock: 0x%lx.\n",
+				atv_dmd_rd_byte(0x06, 0x43) & 0x01);
+		pr_info("line lock: 0x%lx.\n",
+				atv_dmd_rd_byte(0x0f, 0x4f) & 0x10);
 		reg_value = adec_rd_reg(NICAM_LEVEL_REPORT);
 		nicam_lock = (reg_value>>28)&1;
 		pr_info("\n%s 0x%x\n", __func__, reg_value);
-		if (nicam_lock)
+		if (nicam_lock) {
 			std = AUDIO_STANDARD_NICAM_DK;
-		else
+			aud_mode = AUDIO_OUTMODE_NICAM_STEREO;
+		} else {
 			std = AUDIO_STANDARD_A2_DK2;
+			aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			configure_adec(std);
+			adec_soft_reset();
+		}
 		break;
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I:
 		std = AUDIO_STANDARD_NICAM_I;
+		configure_adec(std);
+		adec_soft_reset();
 		break;
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_SECAM_L:
 		std = AUDIO_STANDARD_NICAM_L;
+		configure_adec(std);
+		adec_soft_reset();
 		break;
 	}
 	pr_err("%s detect aud std:%d\n", __func__, std);
@@ -1816,8 +1845,8 @@ int atvauddemod_init(void)
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
 		if (aud_auto)
 			aud_std = amlfmt_aud_standard(broad_std);
-		configure_adec(aud_std);
-		adec_soft_reset();
+		/* configure_adec(aud_std); */
+		/* adec_soft_reset(); */
 		set_outputmode(aud_std, aud_mode);
 	}
 	return 0;
@@ -1831,7 +1860,7 @@ void atvauddemod_set_outputmode(void)
 int atvdemod_init(void)
 {
 	/* unsigned long data32; */
-	if (atvdemod_timer_en == 1) {
+	if (atvdemod_timer_en == 1 && !atv_demod_get_scan_mode()) {
 		if (timer_init_flag == 1) {
 			del_timer_sync(&atvdemod_timer);
 			timer_init_flag = 0;
@@ -1865,15 +1894,15 @@ int atvdemod_init(void)
 	 * }
 	 */
 	#if 1/* temp mark */
-	if (atvdemod_timer_en == 1) {
+	if (atvdemod_timer_en == 1 && !atv_demod_get_scan_mode()) {
 		if (audio_thd_en)
 			audio_thd_init();
 		/*atvdemod timer handler*/
 		init_timer(&atvdemod_timer);
 		/* atvdemod_timer.data = (ulong) devp; */
 		atvdemod_timer.function = atvdemod_timer_handler;
-		/* after 3s enable demod auto detect */
-		atvdemod_timer.expires = jiffies + ATVDEMOD_INTERVAL*300;
+		/* after 1s enable demod auto detect */
+		atvdemod_timer.expires = jiffies + ATVDEMOD_INTERVAL*100;
 		add_timer(&atvdemod_timer);
 		mix1_freq = atv_dmd_rd_byte(APB_BLOCK_ADDR_MIXER_1, 0x0);
 		timer_init_flag = 1;

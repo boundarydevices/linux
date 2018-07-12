@@ -431,12 +431,12 @@ int is_atvdemod_work(void)
 	return ret;
 }
 
-static int atv_demod_get_scan_mode(void)
+int atv_demod_get_scan_mode(void)
 {
 	return atvdemod_scan_mode;
 }
 
-static void atv_demod_set_scan_mode(int val)
+void atv_demod_set_scan_mode(int val)
 {
 	atvdemod_scan_mode = val;
 }
@@ -465,14 +465,14 @@ int atv_demod_enter_mode(void)
 				amlatvdemod_devp->pin_name);
 
 	adc_set_pll_cntl(1, 0x1, NULL);
-	/* vdac_enable(1, 1); */
+	vdac_enable(1, 1);
 	usleep_range(2000, 2100);
 	atvdemod_clk_init();
-	err_code = atvdemod_init();
+	/* err_code = atvdemod_init(); */
 
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
 		aud_demod_clk_gate(1);
-		atvauddemod_init();
+		/* atvauddemod_init(); */
 	}
 	if (err_code) {
 		pr_dbg("[amlatvdemod..]%s init atvdemod error.\n", __func__);
@@ -506,7 +506,7 @@ int atv_demod_leave_mode(void)
 		amlatvdemod_devp->pin = NULL;
 	}
 
-	/* vdac_enable(0, 1); */
+	vdac_enable(0, 1);
 	adc_set_pll_cntl(0, 0x1, NULL);
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
 		aud_demod_clk_gate(0);
@@ -1111,6 +1111,10 @@ static int atvdemod_fe_set_property(struct v4l2_frontend *v4l2_fe,
 	case V4L2_SOUND_SYS:
 		aud_mode = tvp->data & 0xFF;
 		priv->sound_sys.output_mode = tvp->data & 0xFF;
+		if (atv_demod_get_state() == ATVDEMOD_STATE_WORK) {
+			if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+				atvauddemod_set_outputmode();
+		}
 		break;
 
 	case V4L2_SLOW_SEARCH_MODE:
