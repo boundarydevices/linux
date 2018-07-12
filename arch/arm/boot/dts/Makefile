@@ -579,6 +579,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-logicpd.dtb \
 	imx6q-ls.dtb \
 	imx6q-lshore-r1.dtb \
+	imx6q-ltch.dtb \
 	imx6q-marsboard.dtb \
 	imx6q-mccmon6.dtb \
 	imx6q-nitrogen6x.dtb \
