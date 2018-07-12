@@ -20,6 +20,9 @@
 
 void __iomem *get_secmon_sharemem_input_base(void);
 void __iomem *get_secmon_sharemem_output_base(void);
+long get_secmon_phy_input_base(void);
+long get_secmon_phy_output_base(void);
+
 void sharemem_mutex_lock(void);
 void sharemem_mutex_unlock(void);
 

@@ -31,6 +31,7 @@
 #endif
 #include <linux/amlogic/secmon.h>
 #include <linux/arm-smccc.h>
+#include <asm/cacheflush.h>
 
 static long meson_efuse_fn_smc(struct efuse_hal_api_arg *arg)
 {
@@ -80,6 +81,55 @@ int meson_trustzone_efuse(struct efuse_hal_api_arg *arg)
 	set_cpus_allowed_ptr(current, cpumask_of(0));
 	ret = meson_efuse_fn_smc(arg);
 	set_cpus_allowed_ptr(current, cpu_all_mask);
+	return ret;
+}
+
+unsigned long efuse_aml_sec_boot_check(unsigned long nType,
+	unsigned long pBuffer,
+	unsigned long nLength,
+	unsigned long nOption)
+{
+	struct arm_smccc_res res;
+	long sharemem_phy_base;
+
+	sharemem_phy_base = get_secmon_phy_input_base();
+	if ((!sharemem_input_base) || (!sharemem_phy_base))
+		return -1;
+
+	sharemem_mutex_lock();
+
+	memcpy((void *)sharemem_input_base,
+		(const void *)pBuffer, nLength);
+
+	__flush_dcache_area(sharemem_input_base, nLength);
+
+	asm __volatile__("" : : : "memory");
+
+	do {
+		arm_smccc_smc((unsigned long)AML_DATA_PROCESS,
+					(unsigned long)nType,
+					(unsigned long)sharemem_phy_base,
+					(unsigned long)nLength,
+					(unsigned long)nOption,
+					0, 0, 0, &res);
+	} while (0);
+
+	sharemem_mutex_unlock();
+
+	return res.a0;
+}
+
+unsigned long efuse_amlogic_set(char *buf, size_t count)
+{
+	unsigned long ret;
+
+	set_cpus_allowed_ptr(current, cpumask_of(0));
+
+	ret = efuse_aml_sec_boot_check(AML_D_P_W_EFUSE_AMLOGIC,
+		(unsigned long)buf, (unsigned long)count, 0);
+
+	set_cpus_allowed_ptr(current, cpu_all_mask);
+
 	return ret;
 }
 

@@ -483,6 +483,43 @@ static ssize_t userdata_write(struct class *cla,
 }
 #endif
 
+static ssize_t amlogic_set_store(struct class *cla,
+	struct class_attribute *attr, const char *buf, size_t count)
+{
+	int i;
+	int ret;
+	char *op = NULL;
+
+	if (count != GXB_EFUSE_PATTERN_SIZE) {
+		pr_err("efuse: bad size, only support size %d!\n",
+			GXB_EFUSE_PATTERN_SIZE);
+		return -EINVAL;
+	}
+
+	op = kzalloc((sizeof(char)*count), GFP_KERNEL);
+	if (!op) {
+		ret = -ENOMEM;
+		pr_err("efuse: failed to allocate memory!\n");
+		return ret;
+	}
+
+	memset(op, 0, count);
+	for (i = 0; i < count; i++)
+		op[i] = buf[i];
+
+	ret = efuse_amlogic_set(op, count);
+	kfree(op);
+
+	if (ret) {
+		pr_err("EFUSE pattern programming fail! ret: %d\n", ret);
+		return -EINVAL;
+	}
+
+	pr_info("EFUSE pattern programming success!\n");
+
+	return count;
+}
+
 static struct class_attribute efuse_class_attrs[] = {
 
 	#ifndef EFUSE_READ_ONLY
@@ -501,6 +538,8 @@ static struct class_attribute efuse_class_attrs[] = {
 	__ATTR(mac_wifi, 0700, show_mac_wifi, store_mac_wifi),
 
 	__ATTR(usid, 0700, show_usid, store_usid),
+
+	__ATTR_WO(amlogic_set),
 
 	__ATTR_NULL
 

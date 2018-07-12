@@ -148,3 +148,12 @@ void __iomem *get_secmon_sharemem_output_base(void)
 {
 	return sharemem_out_base;
 }
+
+long get_secmon_phy_input_base(void)
+{
+	return phy_in_base;
+}
+long get_secmon_phy_output_base(void)
+{
+	return phy_out_base;
+}

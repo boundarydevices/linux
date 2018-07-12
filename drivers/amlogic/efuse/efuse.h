@@ -46,6 +46,10 @@
 #define EFUSE_HAL_API_WRITE 1
 #define EFUSE_HAL_API_USER_MAX 3
 
+#define AML_DATA_PROCESS            (0x820000FF)
+#define AML_D_P_W_EFUSE_AMLOGIC     (0x20)
+#define GXB_EFUSE_PATTERN_SIZE      (0x400)
+
 #define ASSIST_HW_REV 0x1f53
 
 extern int efuseinfo_num;
@@ -97,6 +101,7 @@ extern struct clk *efuse_clk;
 ssize_t efuse_get_max(void);
 ssize_t efuse_read_usr(char *buf, size_t count, loff_t *ppos);
 ssize_t efuse_write_usr(char *buf, size_t count, loff_t *ppos);
+unsigned long efuse_amlogic_set(char *buf, size_t count);
 
 #endif
 
