@@ -342,6 +342,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-ioc.dtb \
 	imx6q-jlm.dtb \
 	imx6q-ls.dtb \
+	imx6q-ltch.dtb \
 	imx6q-mcs.dtb \
 	imx6q-mtp.dtb \
 	imx6q-neol.dtb \
