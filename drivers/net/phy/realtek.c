@@ -25,7 +25,7 @@
 
 #include <linux/amlogic/pm.h>
 #endif
-
+#define RTL821x_LCR		0x10
 #define RTL821x_PHYSR		0x11
 #define RTL821x_PHYSR_DUPLEX	0x2000
 #define RTL821x_PHYSR_SPEED	0xc000
@@ -150,6 +150,9 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		pr_debug("not set wol mac\n");
 	}
 #endif
+	phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd04); /*set page 0xd04*/
+	phy_write(phydev, RTL821x_LCR, 0XC171); /*led configuration*/
+
 	/* restore to default page 0 */
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
 
