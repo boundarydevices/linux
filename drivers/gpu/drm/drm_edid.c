@@ -193,6 +193,10 @@ static const struct edid_quirk {
 
 	/* Sony PlayStation VR Headset */
 	{ "SNY", 0x0704, EDID_QUIRK_NON_DESKTOP },
+
+	/* Quantum data 980 */
+	{ "QDI", 980, EDID_QUIRK_PREFER_LARGE_60 },
+	{ "QDI", 178, EDID_QUIRK_PREFER_LARGE_60 },
 };
 
 /*
