@@ -235,6 +235,9 @@ static const struct regulator_desc bd71837_regulators[] = {
 		.vsel_mask = BUCK1_RUN_MASK,
 		.enable_reg = BD71837_REG_BUCK1_CTRL,
 		.enable_mask = BUCK1_SEL|BUCK1_EN,
+		.disable_val = BUCK1_SEL,
+		.enable_val = BUCK1_SEL|BUCK1_EN,
+		.enable_time  = 500,
 		.owner = THIS_MODULE,
 	},
 	{
@@ -249,6 +252,9 @@ static const struct regulator_desc bd71837_regulators[] = {
 		.vsel_mask = BUCK2_RUN_MASK,
 		.enable_reg = BD71837_REG_BUCK2_CTRL,
 		.enable_mask = BUCK2_SEL|BUCK2_EN,
+		.disable_val = BUCK2_SEL,
+		.enable_val = BUCK2_SEL|BUCK2_EN,
+		.enable_time  = 500,
 		.owner = THIS_MODULE,
 	},
 	{
@@ -263,6 +269,9 @@ static const struct regulator_desc bd71837_regulators[] = {
 		.vsel_mask = BUCK3_RUN_MASK,
 		.enable_reg = BD71837_REG_BUCK3_CTRL,
 		.enable_mask = BUCK3_SEL|BUCK3_EN,
+		.disable_val = BUCK3_SEL,
+		.enable_val = BUCK3_SEL|BUCK3_EN,
+		.enable_time  = 500,
 		.owner = THIS_MODULE,
 	},
 	{
@@ -277,6 +286,9 @@ static const struct regulator_desc bd71837_regulators[] = {
 		.vsel_mask = BUCK4_RUN_MASK,
 		.enable_reg = BD71837_REG_BUCK4_CTRL,
 		.enable_mask = BUCK4_SEL|BUCK4_EN,
+		.enable_time  = 500,
+		.disable_val = BUCK4_SEL,
+		.enable_val = BUCK4_SEL|BUCK4_EN,
 		.owner = THIS_MODULE,
 	},
 	{
