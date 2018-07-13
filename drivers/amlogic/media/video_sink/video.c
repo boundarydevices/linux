@@ -139,6 +139,8 @@ static bool video_start_post;
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
 
+static struct vframe_master_display_colour_s vf_hdr;
+static bool has_hdr_info;
 static DEFINE_MUTEX(omx_mutex);
 
 #define DURATION_GCD 750
@@ -576,6 +578,8 @@ static bool pts_enforce_pulldown = true;
 static DEFINE_MUTEX(video_module_mutex);
 static DEFINE_MUTEX(video_inuse_mutex);
 static DEFINE_SPINLOCK(lock);
+static DEFINE_SPINLOCK(omx_hdr_lock);
+
 static u32 frame_par_ready_to_set, frame_par_force_to_set;
 static u32 vpts_remainder;
 static int video_property_changed;
@@ -4865,6 +4869,30 @@ void correct_vd2_mif_size_for_DV(
 	}
 }
 
+void set_hdr_to_frame(struct vframe_s *vf)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&omx_hdr_lock, flags);
+
+	if (has_hdr_info) {
+		vf->prop.master_display_colour = vf_hdr;
+
+		//config static signal_type for vp9
+		vf->signal_type = (1 << 29)
+			| (5 << 26) /* unspecified */
+			| (0 << 25) /* limit */
+			| (1 << 24) /* color available */
+			| (9 << 16) /* 2020 */
+			| (16 << 8) /* 2084 */
+			| (9 << 0); /* 2020 */
+
+		//pr_info("set_hdr_to_frame %d, signal_type 0x%x",
+		//vf->prop.master_display_colour.present_flag,vf->signal_type);
+	}
+	spin_unlock_irqrestore(&omx_hdr_lock, flags);
+}
+
 #ifdef FIQ_VSYNC
 void vsync_fisr_in(void)
 #else
@@ -5248,7 +5276,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			amlog_mask_if(toggle_cnt > 0, LOG_MASK_FRAMESKIP,
 				      "skipped\n");
 
-
+			set_hdr_to_frame(vf);
 
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 			refresh_on_vs(vf);
@@ -6677,6 +6705,17 @@ static int  get_display_info(void *data)
 	return 0;
 }
 
+void init_hdr_info(void)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&omx_hdr_lock, flags);
+
+	has_hdr_info = false;
+	memset(&vf_hdr, 0, sizeof(vf_hdr));
+
+	spin_unlock_irqrestore(&omx_hdr_lock, flags);
+}
 static int video_receiver_event_fun(int type, void *data, void *private_data)
 {
 #ifdef CONFIG_AM_VIDEO2
@@ -6690,6 +6729,8 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		drop_frame_count = 0;
 		receive_frame_count = 0;
 		display_frame_count = 0;
+		//init_hdr_info();
+
 	} else if (type == VFRAME_EVENT_PROVIDER_RESET) {
 		video_vf_light_unreg_provider();
 	} else if (type == VFRAME_EVENT_PROVIDER_LIGHT_UNREG)
@@ -6705,6 +6746,8 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		omx_need_drop_frame_num = 0;
 		omx_drop_done = false;
 		omx_pts_set_index = 0;
+		//init_hdr_info();
+
 #ifdef CONFIG_AM_VIDEO2
 		provider_name = (char *)data;
 		if (strncmp(provider_name, "decoder", 7) == 0
@@ -6905,7 +6948,41 @@ static void _set_video_window(int *p)
 		video_property_changed = true;
 	}
 }
+static void config_hdr_info(const struct vframe_master_display_colour_s p)
+{
+	struct vframe_master_display_colour_s tmp = {0};
+	bool valid_hdr = false;
+	unsigned long flags;
 
+	tmp.present_flag = p.present_flag;
+	if (tmp.present_flag == 1) {
+		tmp = p;
+
+		if (tmp.primaries[0][0] == 0 &&
+			tmp.primaries[0][1] == 0 &&
+			tmp.primaries[1][0] == 0 &&
+			tmp.primaries[1][1] == 0 &&
+			tmp.primaries[2][0] == 0 &&
+			tmp.primaries[2][1] == 0 &&
+			tmp.white_point[0] == 0 &&
+			tmp.white_point[1] == 0 &&
+			tmp.luminance[0] == 0 &&
+			tmp.luminance[1] == 0 &&
+			tmp.content_light_level.max_content == 0 &&
+			tmp.content_light_level.max_pic_average == 0) {
+			valid_hdr = false;
+		} else {
+			valid_hdr = true;
+		}
+	}
+
+	spin_lock_irqsave(&omx_hdr_lock, flags);
+	vf_hdr = tmp;
+	has_hdr_info = valid_hdr;
+	spin_unlock_irqrestore(&omx_hdr_lock, flags);
+
+	pr_debug("has_hdr_info %d\n", has_hdr_info);
+}
 static void set_omx_pts(u32 *p)
 {
 	u32 tmp_pts = p[0];
@@ -7021,6 +7098,13 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 	void __user *argp = (void __user *)arg;
 
 	switch (cmd) {
+	case AMSTREAM_IOC_SET_HDR_INFO:{
+			struct vframe_master_display_colour_s tmp;
+
+			if (copy_from_user(&tmp, argp, sizeof(tmp)) == 0)
+				config_hdr_info(tmp);
+		}
+		break;
 	case AMSTREAM_IOC_SET_OMX_VPTS:{
 			u32 pts[6];
 			if (copy_from_user(pts, argp, sizeof(pts)) == 0)
@@ -7371,6 +7455,7 @@ static long amvideo_compat_ioctl(struct file *file, unsigned int cmd, ulong arg)
 	long ret = 0;
 
 	switch (cmd) {
+	case AMSTREAM_IOC_SET_HDR_INFO:
 	case AMSTREAM_IOC_SET_OMX_VPTS:
 	case AMSTREAM_IOC_GET_OMX_VPTS:
 	case AMSTREAM_IOC_GET_OMX_VERSION:
