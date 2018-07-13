@@ -29,6 +29,7 @@
 #include <linux/list.h>
 #include <linux/kthread.h>
 #include <linux/ktime.h>
+
 /* Android Headers */
 
 /* Amlogic sync headers */
@@ -95,6 +96,7 @@ static bool osd_update_window_axis;
 static int osd_afbc_dec_enable;
 static int ext_canvas_id[HW_OSD_COUNT];
 static int osd_extra_idx[HW_OSD_COUNT][2];
+static bool suspend_flag;
 
 static void osd_clone_pan(u32 index, u32 yoffset, int debug_flag);
 static void osd_set_dummy_data(u32 index, u32 alpha);
@@ -423,6 +425,10 @@ static u32 osd_vpp_misc;
 static u32 osd_vpp_misc_mask = OSD_RELATIVE_BITS;
 module_param(osd_vpp_misc, uint, 0444);
 MODULE_PARM_DESC(osd_vpp_misc, "osd_vpp_misc");
+
+static unsigned int rdarb_reqen_slv = 0xff7f;
+module_param(rdarb_reqen_slv, uint, 0664);
+MODULE_PARM_DESC(rdarb_reqen_slv, "rdarb_reqen_slv");
 
 static int vsync_enter_line_max;
 static int vsync_exit_line_max;
@@ -3623,7 +3629,8 @@ static void osd_pan_display_single_fence(struct osd_fence_map_s *fence_map)
 				osd_update_window_axis = false;
 			}
 			if ((osd_enable != osd_hw.enable[index])
-				&& skip == false) {
+				&& (skip == false)
+				&& (suspend_flag == false)) {
 				osd_hw.enable[index] = osd_enable;
 				if (!osd_hw.osd_display_debug)
 					osd_hw.reg[OSD_ENABLE]
@@ -3741,7 +3748,8 @@ static void osd_pan_display_single_fence(struct osd_fence_map_s *fence_map)
 				osd_update_window_axis = false;
 			}
 			if ((osd_enable != osd_hw.enable[index])
-				&& skip == false) {
+				&& (skip == false)
+				&& (suspend_flag == false)) {
 				osd_hw.enable[index] = osd_enable;
 				if (!osd_hw.osd_display_debug)
 					osd_hw.reg[OSD_ENABLE]
@@ -3752,7 +3760,8 @@ static void osd_pan_display_single_fence(struct osd_fence_map_s *fence_map)
 			spin_unlock_irqrestore(&osd_lock, lock_flags);
 			osd_wait_vsync_hw();
 		} else if ((osd_enable != osd_hw.enable[index])
-					&& skip == false) {
+			&& (skip == false)
+			&& (suspend_flag == false)) {
 			spin_lock_irqsave(&osd_lock, lock_flags);
 			osd_hw.enable[index] = osd_enable;
 			if (!osd_hw.osd_display_debug)
@@ -6651,7 +6660,8 @@ static void osd_setting_old_hwc(void)
 				.update_func(index);
 		osd_update_window_axis = false;
 	}
-	if (!osd_hw.osd_display_debug)
+	if (!osd_hw.osd_display_debug
+		&& (suspend_flag == false))
 		osd_hw.reg[OSD_ENABLE]
 		.update_func(index);
 	spin_unlock_irqrestore(&osd_lock, lock_flags);
@@ -7728,7 +7738,8 @@ void  osd_suspend_hw(void)
 		/* VSYNCOSD_CLR_MPEG_REG_MASK(VPP_MISC, OSD_RELATIVE_BITS); */
 	} else {
 		int i = 0;
-
+		spin_lock_irqsave(&osd_lock, lock_flags);
+		suspend_flag = true;
 		for (i = 0; i < osd_hw.osd_meson_dev.osd_count; i++) {
 			if (osd_hw.enable[i]) {
 				osd_hw.enable_save[i] = ENABLE;
@@ -7746,11 +7757,15 @@ void  osd_suspend_hw(void)
 			osd_reg_read(OSD2_BLEND_SRC_CTRL);
 		osd_hw.reg_status_save3 =
 			osd_reg_read(VPP_RDARB_REQEN_SLV);
+		osd_hw.reg_status_save4 =
+			osd_reg_read(VPU_MAFBC_SURFACE_CFG);
 		osd_reg_clr_mask(VIU_OSD_BLEND_CTRL, 0xf0000);
 		osd_reg_clr_mask(OSD1_BLEND_SRC_CTRL, 0xf0f);
 		osd_reg_clr_mask(OSD2_BLEND_SRC_CTRL, 0xf0f);
-		osd_reg_clr_mask(VPP_RDARB_REQEN_SLV, 0xff7f);
-
+		osd_reg_clr_mask(VPP_RDARB_REQEN_SLV,
+			rdarb_reqen_slv);
+		osd_reg_clr_mask(VPU_MAFBC_SURFACE_CFG, 0xffffffff);
+		spin_unlock_irqrestore(&osd_lock, lock_flags);
 	}
 	osd_log_info("osd_suspended\n");
 }
@@ -7784,7 +7799,8 @@ void osd_resume_hw(void)
 		notify_to_amvideo();
 	} else {
 		int i = 0;
-
+		spin_lock_irqsave(&osd_lock, lock_flags);
+		suspend_flag = false;
 		for (i = 0; i < osd_hw.osd_meson_dev.osd_count; i++) {
 			if (osd_hw.enable_save[i]) {
 				osd_hw.enable[i] = ENABLE;
@@ -7800,6 +7816,9 @@ void osd_resume_hw(void)
 			osd_hw.reg_status_save2);
 		osd_reg_set_mask(VPP_RDARB_REQEN_SLV,
 			osd_hw.reg_status_save3);
+		osd_reg_set_mask(VPU_MAFBC_SURFACE_CFG,
+			osd_hw.reg_status_save4);
+		spin_unlock_irqrestore(&osd_lock, lock_flags);
 	}
 	osd_log_info("osd_resumed\n");
 }
@@ -8438,7 +8457,8 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 				osd_update_window_axis = false;
 			}
 			if ((osd_hw.osd_afbcd[index].enable == DISABLE)
-				&& (osd_enable != osd_hw.enable[index])) {
+				&& (osd_enable != osd_hw.enable[index])
+				&& (suspend_flag == false)) {
 				osd_hw.enable[index] = osd_enable;
 				if (!osd_hw.osd_display_debug)
 					osd_hw.reg[OSD_ENABLE]
@@ -8459,7 +8479,8 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 				osd_cursor_move(plane_map);
 			osd_hw.reg[OSD_COLOR_MODE].update_func(index);
 			osd_hw.reg[DISP_GEOMETRY].update_func(index);
-			if (osd_enable != osd_hw.enable[index]) {
+			if ((osd_enable != osd_hw.enable[index])
+				&& (suspend_flag == false)) {
 				osd_hw.enable[index] = osd_enable;
 				if (!osd_hw.osd_display_debug)
 					osd_hw.reg[OSD_ENABLE]
@@ -8501,7 +8522,8 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 				}
 			}
 			if ((osd_hw.osd_afbcd[index].enable == DISABLE)
-				&& (osd_enable != osd_hw.enable[index])) {
+				&& (osd_enable != osd_hw.enable[index])
+				&& (suspend_flag == false)) {
 				osd_hw.enable[index] = osd_enable;
 				if (!osd_hw.osd_display_debug)
 					osd_hw.reg[OSD_ENABLE]
