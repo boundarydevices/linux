@@ -309,7 +309,8 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 		}
 
 		if (aml_chip->mfr_type  == NAND_MFR_DOSILICON ||
-		    aml_chip->mfr_type  == NAND_MFR_ATO) {
+		    aml_chip->mfr_type  == NAND_MFR_ATO ||
+			aml_chip->mfr_type  == NAND_MFR_HYNIX) {
 			if (col0_oob != 0xFF) {
 				pr_info("factory Bad blk:%llx blk=%d chip=%d\n",
 				       (uint64_t)addr, start_blk, i);
@@ -381,31 +382,6 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 				break;
 			}
 		}
-
-	if (aml_chip->mfr_type  == NAND_MFR_HYNIX) {
-		if (col0_oob != 0xFF) {
-			pr_info("factory Bad blk:%llx blk=%d chip=%d\n",
-				(uint64_t)addr, start_blk, i);
-		aml_chip->nand_bbt_info->nand_bbt[bad_blk_cnt++] =
-			start_blk|0x8000;
-		aml_chip->block_status[start_blk] = NAND_FACTORY_BAD;
-		/* if  plane 0 is bad block,just set plane 1 to bad */
-		if ((start_blk % 2) == 0) {
-			start_blk += 1;
-			aml_chip->nand_bbt_info->nand_bbt[bad_blk_cnt++] =
-				start_blk|0x8000;
-			aml_chip->block_status[start_blk] = NAND_FACTORY_BAD;
-			pr_info(" pl0 is bad block,just set plane 1 to bad:\n");
-		} else {
-			aml_chip->nand_bbt_info->nand_bbt[bad_blk_cnt++] =
-				(start_blk - 1)|0x8000;
-			aml_chip->block_status[start_blk - 1] =
-				NAND_FACTORY_BAD;
-			pr_info(" pl1 is bad block,just set plane 0 to bad:\n");
-		}
-			break;
-		}
-	}
 	}
 		}
 		/* } */
