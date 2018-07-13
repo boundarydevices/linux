@@ -2501,8 +2501,10 @@ static int xfrm_user_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 	int type, err;
 
 #ifdef CONFIG_COMPAT
+#ifndef CONFIG_AMLOGIC_MODIFY
 	if (in_compat_syscall())
 		return -EOPNOTSUPP;
+#endif
 #endif
 
 	type = nlh->nlmsg_type;
