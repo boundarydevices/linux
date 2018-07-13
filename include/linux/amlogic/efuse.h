@@ -30,6 +30,7 @@ extern int efusekeynum;
 int efuse_getinfo(char *item, struct efusekey_info *info);
 ssize_t efuse_user_attr_show(char *name, char *buf);
 ssize_t efuse_user_attr_store(char *name, const char *buf, size_t count);
+ssize_t efuse_user_attr_read(char *name, char *buf);
 #else
 int efuse_read_intlItem(char *intl_item, char *buf, int size);
 #endif

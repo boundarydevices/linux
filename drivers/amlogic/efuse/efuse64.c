@@ -309,6 +309,11 @@ ssize_t efuse_user_attr_store(char *name, const char *buf, size_t count)
 	}
 
 	local_buf = kzalloc(sizeof(char)*(count), GFP_KERNEL);
+	if (!local_buf) {
+		ret = -ENOMEM;
+		pr_err("efuse: failed to allocate memory!\n");
+		return ret;
+	}
 
 	memcpy(local_buf, buf, count);
 
@@ -367,6 +372,12 @@ ssize_t efuse_user_attr_show(char *name, char *buf)
 	}
 
 	local_buf = kzalloc(sizeof(char)*(info.size), GFP_KERNEL);
+	if (!local_buf) {
+		ret = -ENOMEM;
+		pr_err("efuse: failed to allocate memory!\n");
+		return ret;
+	}
+
 	memset(local_buf, 0, info.size);
 
 	pos = ((loff_t)(info.offset)) & 0xffffffff;
@@ -388,6 +399,44 @@ ssize_t efuse_user_attr_show(char *name, char *buf)
 	}
 	len += sprintf(buf + len, "\n");
 	ret = len;
+
+error_exit:
+	kfree(local_buf);
+	return ret;
+}
+
+ssize_t efuse_user_attr_read(char *name, char *buf)
+{
+	char *local_buf;
+	ssize_t ret;
+	struct efusekey_info info;
+	loff_t pos;
+
+	if (efuse_getinfo(name, &info) < 0) {
+		pr_err("%s is not found\n", name);
+		return -EFAULT;
+	}
+
+	local_buf = kzalloc(sizeof(char)*(info.size), GFP_KERNEL);
+	if (!local_buf) {
+		ret = -ENOMEM;
+		pr_err("efuse: failed to allocate memory!\n");
+		return ret;
+	}
+
+	memset(local_buf, 0, info.size);
+
+	pos = ((loff_t)(info.offset)) & 0xffffffff;
+	ret = efuse_read_usr(local_buf, info.size, &pos);
+	if (ret == -1) {
+		pr_err("ERROR: efuse read user data fail!\n");
+		goto error_exit;
+	}
+	if (ret != info.size)
+		pr_err("ERROR: read %zd byte(s) not %d byte(s) data\n",
+			ret, info.size);
+
+	memcpy(buf, local_buf, info.size);
 
 error_exit:
 	kfree(local_buf);
