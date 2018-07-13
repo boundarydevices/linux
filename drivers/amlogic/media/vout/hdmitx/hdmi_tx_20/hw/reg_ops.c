@@ -100,7 +100,7 @@ static struct reg_map reg_maps_txlx[] = {
 	},
 	[RESET_CBUS_REG_IDX] = { /* RESET */
 		.phy_addr = 0xffd00000,
-		.size = 0x100,
+		.size = 0x1100,
 	},
 	[HDMITX_SEC_REG_IDX] = { /* HDMITX SECURE */
 		.phy_addr = 0xff63a000,
@@ -140,7 +140,7 @@ static struct reg_map reg_maps_g12a[] = {
 	},
 	[RESET_CBUS_REG_IDX] = { /* RESET */
 		.phy_addr = 0xffd00000,
-		.size = 0x100,
+		.size = 0x1100,
 	},
 	[HDMITX_SEC_REG_IDX] = { /* HDMITX DWC LEVEL*/
 		.phy_addr = 0xff600000,
