@@ -180,6 +180,7 @@ config DRM_KMS_CMA_HELPER
 config DRM_VM
 	bool
 	depends on DRM && MMU
+	default y
 
 config DRM_SCHED
 	tristate
@@ -254,6 +255,13 @@ config DRM_VKMS
 	  a VKMS.
 
 	  If M is selected the module will be called vkms.
+
+config DRM_VIVANTE
+	tristate "Vivante GCCore"
+	depends on DRM
+	help
+	  Choose this option if you have a Vivante graphics card.
+	  If M is selected, the module will be called vivante.
 
 source "drivers/gpu/drm/exynos/Kconfig"
 
