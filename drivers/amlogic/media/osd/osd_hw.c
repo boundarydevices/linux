@@ -7455,6 +7455,8 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_SIMPLE) {
 		data32 = osd_reg_read(
 			hw_osd_reg_array[OSD1].osd_fifo_ctrl_stat);
+		/* bit[9:5]: HOLD_FIFO_LINES */
+		data32 &= ~(0x1f << 5);
 		data32 |= 0x18 << 5;
 		osd_reg_write(
 			hw_osd_reg_array[OSD1].osd_fifo_ctrl_stat, data32);
