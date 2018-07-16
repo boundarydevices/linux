@@ -1022,6 +1022,7 @@ static int lcd_probe(struct platform_device *pdev)
 		return -1;
 	}
 	lcd_driver->data = (struct lcd_data_s *)match->data;
+	strcpy(lcd_driver->version, LCD_DRV_VERSION);
 	LCDPR("driver version: %s(%d-%s)\n",
 		lcd_driver->version,
 		lcd_driver->data->chip_type,

@@ -1393,7 +1393,6 @@ int lcd_tv_probe(struct device *dev)
 	int ret;
 
 	memset(lcd_output_name, 0, sizeof(lcd_output_name));
-	lcd_drv->version = LCD_DRV_VERSION;
 	lcd_drv->driver_init_pre = lcd_tv_driver_init_pre;
 	lcd_drv->driver_disable_post = lcd_tv_driver_disable_post;
 	lcd_drv->driver_init = lcd_tv_driver_init;

@@ -1285,7 +1285,6 @@ int lcd_tablet_probe(struct device *dev)
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	int ret;
 
-	lcd_drv->version = LCD_DRV_VERSION;
 	lcd_drv->driver_init_pre = lcd_tablet_driver_init_pre;
 	lcd_drv->driver_disable_post = lcd_tablet_driver_disable_post;
 	lcd_drv->driver_init = lcd_tablet_driver_init;

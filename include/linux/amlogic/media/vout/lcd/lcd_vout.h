@@ -393,7 +393,7 @@ struct lcd_duration_s {
 #define LCD_STATUS_ON         (LCD_STATUS_IF_ON | LCD_STATUS_ENCL_ON)
 
 struct aml_lcd_drv_s {
-	char *version;
+	char version[20];
 	struct lcd_data_s *data;
 	unsigned char lcd_mode;
 	unsigned char lcd_status;
