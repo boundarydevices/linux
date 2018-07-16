@@ -87,10 +87,8 @@ static struct early_suspend aocec_suspend_handler;
 #define MAX_INT    0x7ffffff
 
 struct cec_platform_data_s {
-	unsigned char line_reg;/*cec gpio_i reg:0  ao;1 periph*/
 	unsigned int line_bit;/*cec gpio position in reg*/
 	bool ee_to_ao;/*ee cec hw module mv to ao;ao cec delete*/
-	enum reg_map_e map_index[REG_MAP_NUM];
 };
 
 struct cec_wakeup_t {
@@ -114,7 +112,6 @@ struct ao_cec_dev {
 	void __iomem *cec_reg;
 	void __iomem *hdmi_rxreg;
 	void __iomem *hhi_reg;
-	void __iomem *periphs_reg;
 	struct hdmitx_dev *tx_dev;
 	struct workqueue_struct *cec_thread;
 	struct device *dbg_dev;
@@ -948,8 +945,9 @@ static int cec_ll_trigle_tx(const unsigned char *msg, int len)
 		}
 		cec_timeout_cnt = 0;
 		return 0;
+	} else {
+		CEC_ERR("error msg sts:0x%x\n", reg);
 	}
-	CEC_ERR("error msg sts:0x%x\n", reg);
 	return -1;
 }
 
@@ -992,10 +990,7 @@ static int get_line(void)
 {
 	int reg, ret = -EINVAL;
 
-	if (cec_dev->plat_data->line_reg == 1)
-		reg = readl(cec_dev->periphs_reg + PREG_PAD_GPIO3_I);
-	else
-		reg = readl(cec_dev->cec_reg + AO_GPIO_I);
+	reg = readl(cec_dev->cec_reg + AO_GPIO_I);
 	ret = (reg & (1 << cec_dev->plat_data->line_bit));
 
 	return ret;
@@ -1380,9 +1375,10 @@ static int cec_late_check_rx_buffer(void)
 		CEC_INFO("buffer got unrecorgnized msg\n");
 		cec_rx_buf_clear();
 		return 0;
+	} else {
+		/*mod_delayed_work(cec_dev->cec_thread, dwork, 0);*/
+		return 1;
 	}
-	/*mod_delayed_work(cec_dev->cec_thread, dwork, 0);*/
-	return 1;
 }
 
 void cec_key_report(int suspend)
@@ -1885,13 +1881,14 @@ static ssize_t port_status_show(struct class *cla,
 	if (cec_dev->dev_type == DEV_TYPE_PLAYBACK) {
 		tmp = tx_hpd;
 		return sprintf(buf, "%x\n", tmp);
+	} else {
+		tmp = hdmirx_rd_top(TOP_HPD_PWR5V);
+		CEC_INFO("TOP_HPD_PWR5V:%x\n", tmp);
+		tmp >>= 20;
+		tmp &= 0xf;
+		tmp |= (tx_hpd << 16);
+		return sprintf(buf, "%x\n", tmp);
 	}
-	tmp = hdmirx_rd_top(TOP_HPD_PWR5V);
-	CEC_INFO("TOP_HPD_PWR5V:%x\n", tmp);
-	tmp >>= 20;
-	tmp &= 0xf;
-	tmp |= (tx_hpd << 16);
-	return sprintf(buf, "%x\n", tmp);
 }
 
 static ssize_t pin_status_show(struct class *cla,
@@ -2492,28 +2489,18 @@ static void aocec_late_resume(struct early_suspend *h)
 
 #ifdef CONFIG_OF
 static const struct cec_platform_data_s cec_gxl_data = {
-	.line_reg = 0,
 	.line_bit = 8,
 	.ee_to_ao = 0,
-	.map_index = {	REG_MAP_EXIT,
-			REG_MAP_AO},
 };
 
 static const struct cec_platform_data_s cec_txlx_data = {
-	.line_reg = 0,
 	.line_bit = 7,
 	.ee_to_ao = 1,
-	.map_index = {	REG_MAP_EXIT,
-			REG_MAP_AO},
 };
 
 static const struct cec_platform_data_s cec_g12a_data = {
-	.line_reg = 1,
-	.line_bit = 3,
+	.line_bit = 7,
 	.ee_to_ao = 1,
-	.map_index = {	REG_MAP_EXIT,
-			REG_MAP_AO,
-			REG_MAP_PERIHPS},
 };
 
 static const struct of_device_id aml_cec_dt_match[] = {
@@ -2537,7 +2524,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 	struct device *cdev;
 	int ret = 0;
 	const struct of_device_id *of_id;
-	int i = 0;
 #ifdef CONFIG_OF
 	struct device_node *node = pdev->dev.of_node;
 	int irq_idx = 0, r;
@@ -2674,30 +2660,38 @@ static int aml_cec_probe(struct platform_device *pdev)
 			CEC_ERR("select state error:0x%x\n", ret);
 	}
 
-	do {
-		res = platform_get_resource(pdev, IORESOURCE_MEM, i++);
-		if (res) {
-			base = ioremap(res->start, res->end - res->start);
-			if (cec_dev->plat_data->map_index[i] == REG_MAP_EXIT)
-				cec_dev->exit_reg = (void *)base;
-			else if (cec_dev->plat_data->map_index[i] ==
-								REG_MAP_AO)
-				cec_dev->cec_reg = (void *)base;
-			else if (cec_dev->plat_data->map_index[i] ==
-								REG_MAP_HDMIRX)
-				cec_dev->hdmi_rxreg = (void *)base;
-			else if (cec_dev->plat_data->map_index[i] ==
-								REG_MAP_HHI)
-				cec_dev->hhi_reg = (void *)base;
-			else if (cec_dev->plat_data->map_index[i] ==
-							REG_MAP_PERIHPS)
-				cec_dev->periphs_reg = (void *)base;
-			else
-				CEC_ERR("error define map index:%d\n",
-				cec_dev->plat_data->map_index[i]);
-		} else
-			break;
-	} while (res && (i < REG_MAP_NUM));
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (res) {
+		base = ioremap(res->start, res->end - res->start);
+		cec_dev->exit_reg = (void *)base;
+	} else {
+		CEC_INFO("no memory resource\n");
+		cec_dev->exit_reg = NULL;
+	}
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (res) {
+		base = ioremap(res->start, res->end - res->start);
+		cec_dev->cec_reg = (void *)base;
+	} else {
+		CEC_ERR("no CEC reg resource\n");
+		cec_dev->cec_reg = NULL;
+	}
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	if (res) {
+		base = ioremap(res->start, res->end - res->start);
+		cec_dev->hdmi_rxreg = (void *)base;
+	} else {
+		CEC_ERR("no hdmirx reg resource\n");
+		cec_dev->hdmi_rxreg = NULL;
+	}
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 3);
+	if (res) {
+		base = ioremap(res->start, res->end - res->start);
+		cec_dev->hhi_reg = (void *)base;
+	} else {
+		CEC_ERR("no hhi reg resource\n");
+		cec_dev->hhi_reg = NULL;
+	}
 	r = of_property_read_u32(node, "port_num", &(cec_dev->port_num));
 	if (r) {
 		CEC_ERR("not find 'port_num'\n");

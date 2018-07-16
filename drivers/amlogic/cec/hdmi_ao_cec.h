@@ -18,16 +18,7 @@
 #ifndef __AO_CEC_H__
 #define __AO_CEC_H__
 
-#define CEC_DRIVER_VERSION	"Ver**2018/07/12**\n"
-
-enum reg_map_e {
-	REG_MAP_EXIT,
-	REG_MAP_AO,
-	REG_MAP_HDMIRX,
-	REG_MAP_HHI,
-	REG_MAP_PERIHPS,
-	REG_MAP_NUM,
-};
+#define CEC_DRIVER_VERSION	"Ver**2018/07/03**\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
@@ -48,8 +39,6 @@ enum reg_map_e {
 #define AO_BASE				0xc8100000
 
 #define AO_GPIO_I			((0x0A << 2))
-#define PREG_PAD_GPIO3_I	(0x01b << 2)
-
 
 #define AO_CEC_GEN_CNTL			((0x40 << 2))
 #define AO_CEC_RW_REG			((0x41 << 2))
