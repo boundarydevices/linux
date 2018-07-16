@@ -39,6 +39,8 @@
 #define AO_BASE				0xc8100000
 
 #define AO_GPIO_I			((0x0A << 2))
+#define PREG_PAD_GPIO3_I	(0x01b << 2)
+
 
 #define AO_CEC_GEN_CNTL			((0x40 << 2))
 #define AO_CEC_RW_REG			((0x41 << 2))

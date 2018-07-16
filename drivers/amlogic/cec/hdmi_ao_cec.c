@@ -87,6 +87,7 @@ static struct early_suspend aocec_suspend_handler;
 #define MAX_INT    0x7ffffff
 
 struct cec_platform_data_s {
+	unsigned char line_reg;/*cec gpio_i reg:0  ao;1 periph*/
 	unsigned int line_bit;/*cec gpio position in reg*/
 	bool ee_to_ao;/*ee cec hw module mv to ao;ao cec delete*/
 };
@@ -112,6 +113,7 @@ struct ao_cec_dev {
 	void __iomem *cec_reg;
 	void __iomem *hdmi_rxreg;
 	void __iomem *hhi_reg;
+	void __iomem *periphs_reg;
 	struct hdmitx_dev *tx_dev;
 	struct workqueue_struct *cec_thread;
 	struct device *dbg_dev;
@@ -946,7 +948,6 @@ static int cec_ll_trigle_tx(const unsigned char *msg, int len)
 		return 0;
 	}
 	CEC_ERR("error msg sts:0x%x\n", reg);
-
 	return -1;
 }
 
@@ -989,7 +990,10 @@ static int get_line(void)
 {
 	int reg, ret = -EINVAL;
 
-	reg = readl(cec_dev->cec_reg + AO_GPIO_I);
+	if (cec_dev->plat_data->line_reg == 1)
+		reg = readl(cec_dev->periphs_reg + PREG_PAD_GPIO3_I);
+	else
+		reg = readl(cec_dev->cec_reg + AO_GPIO_I);
 	ret = (reg & (1 << cec_dev->plat_data->line_bit));
 
 	return ret;
@@ -1375,7 +1379,6 @@ static int cec_late_check_rx_buffer(void)
 		cec_rx_buf_clear();
 		return 0;
 	}
-
 	return 1;
 }
 
@@ -1895,7 +1898,6 @@ static ssize_t port_status_show(struct class *cla,
 		tmp = tx_hpd;
 		return sprintf(buf, "%x\n", tmp);
 	}
-
 	tmp = hdmirx_rd_top(TOP_HPD_PWR5V);
 	CEC_INFO("TOP_HPD_PWR5V:%x\n", tmp);
 	tmp >>= 20;
@@ -2512,21 +2514,25 @@ static void aocec_late_resume(struct early_suspend *h)
 
 #ifdef CONFIG_OF
 static const struct cec_platform_data_s cec_gxl_data = {
+	.line_reg = 0,
 	.line_bit = 8,
 	.ee_to_ao = 0,
 };
 
 static const struct cec_platform_data_s cec_txlx_data = {
+	.line_reg = 0,
 	.line_bit = 7,
 	.ee_to_ao = 1,
 };
 
 static const struct cec_platform_data_s cec_g12a_data = {
-	.line_bit = 7,
+	.line_reg = 1,
+	.line_bit = 3,
 	.ee_to_ao = 1,
 };
 
 static const struct cec_platform_data_s cec_txl_data = {
+	.line_reg = 0,
 	.line_bit = 7,
 	.ee_to_ao = 0,
 };
@@ -2691,39 +2697,63 @@ static int aml_cec_probe(struct platform_device *pdev)
 		if (ret > 0)
 			CEC_ERR("select state error:0x%x\n", ret);
 	}
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ao_exit");
 	if (res) {
-		base = ioremap(res->start, res->end - res->start);
+		base = devm_ioremap(&pdev->dev, res->start,
+						res->end - res->start);
+		if (!base) {
+			CEC_ERR("Unable to map ao_exit base\n");
+			goto tag_cec_reg_map_err;
+		}
 		cec_dev->exit_reg = (void *)base;
-	} else {
-		CEC_INFO("no memory resource\n");
-		cec_dev->exit_reg = NULL;
-	}
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	} else
+		CEC_ERR("no ao_exit regs\n")
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ao");
 	if (res) {
-		base = ioremap(res->start, res->end - res->start);
+		base = devm_ioremap(&pdev->dev, res->start,
+						res->end - res->start);
+		if (!base) {
+			CEC_ERR("Unable to map ao base\n");
+			goto tag_cec_reg_map_err;
+		}
 		cec_dev->cec_reg = (void *)base;
 	} else {
-		CEC_ERR("no CEC reg resource\n");
-		cec_dev->cec_reg = NULL;
+		CEC_ERR("no ao regs\n");
+		goto tag_cec_reg_map_err;
 	}
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "hdmirx");
 	if (res) {
-		base = ioremap(res->start, res->end - res->start);
+		base = devm_ioremap(&pdev->dev, res->start,
+						res->end - res->start);
+		if (!base) {
+			CEC_ERR("Unable to map hdmirx base\n");
+			goto tag_cec_reg_map_err;
+		}
 		cec_dev->hdmi_rxreg = (void *)base;
-	} else {
-		CEC_ERR("no hdmirx reg resource\n");
-		cec_dev->hdmi_rxreg = NULL;
-	}
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 3);
+	} else
+		CEC_ERR("no hdmirx regs\n")
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "hhi");
 	if (res) {
-		base = ioremap(res->start, res->end - res->start);
+		base = devm_ioremap(&pdev->dev, res->start,
+						res->end - res->start);
+		if (!base) {
+			CEC_ERR("Unable to map hhi base\n");
+			goto tag_cec_reg_map_err;
+		}
 		cec_dev->hhi_reg = (void *)base;
-	} else {
-		CEC_ERR("no hhi reg resource\n");
-		cec_dev->hhi_reg = NULL;
-	}
+	} else
+		CEC_ERR("no hhi regs\n")
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "periphs");
+	if (res) {
+		base = devm_ioremap(&pdev->dev, res->start,
+						res->end - res->start);
+		if (!base) {
+			CEC_ERR("Unable to map periphs base\n");
+			goto tag_cec_reg_map_err;
+		}
+		cec_dev->periphs_reg = (void *)base;
+	} else
+		CEC_ERR("no periphs regs\n")
 	r = of_property_read_u32(node, "port_num", &(cec_dev->port_num));
 	if (r) {
 		CEC_ERR("not find 'port_num'\n");
@@ -2822,6 +2852,8 @@ static int aml_cec_probe(struct platform_device *pdev)
 	return 0;
 
 tag_cec_msg_alloc_err:
+		free_irq(cec_dev->irq_cec, (void *)cec_dev);
+tag_cec_reg_map_err:
 		input_free_device(cec_dev->cec_info.remote_cec_dev);
 tag_cec_alloc_input_err:
 		destroy_workqueue(cec_dev->cec_thread);
