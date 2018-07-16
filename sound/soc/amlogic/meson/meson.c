@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
+#include <linux/dma-mapping.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -55,10 +56,13 @@
 
 #define DRV_NAME "aml_meson_snd_card"
 
-static int i2sbuf[DEFAULT_PLAYBACK_SIZE];
-static void aml_i2s_play(void)
+#define I2S_PLAY_BUF_SIZE 512
+#define I2S_PLAY_BUF_EXT_SIZE 64
+
+static void aml_i2s_play(struct aml_audio_private_data *p_aml_audio)
 {
-	int size = DEFAULT_PLAYBACK_SIZE;
+	struct snd_soc_card *card = (struct snd_soc_card *)p_aml_audio->data;
+	size_t size = I2S_PLAY_BUF_SIZE+I2S_PLAY_BUF_EXT_SIZE;
 
 	audio_util_set_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
@@ -66,14 +70,24 @@ static void aml_i2s_play(void)
 #else
 	audio_set_i2s_mode(AIU_I2S_MODE_PCM16);
 #endif
-	memset(i2sbuf, 0, sizeof(i2sbuf));
-	audio_set_aiubuf((virt_to_phys(i2sbuf)
-		+ (DEFAULT_PLAYBACK_SIZE - 1))
-			& (~(DEFAULT_PLAYBACK_SIZE - 1)),
-		size, 2, SNDRV_PCM_FORMAT_S16_LE);
+	p_aml_audio->area = dmam_alloc_coherent(card->dev,
+			size, &p_aml_audio->addr, GFP_KERNEL);
+	memset(p_aml_audio->area, 0, size);
+	audio_set_aiubuf(p_aml_audio->addr, I2S_PLAY_BUF_SIZE,
+		2, SNDRV_PCM_FORMAT_S16_LE);
 	audio_out_i2s_enable(1);
-
 }
+
+static void aml_i2s_stop(struct aml_audio_private_data *p_aml_audio)
+{
+	struct snd_soc_card *card = (struct snd_soc_card *)p_aml_audio->data;
+	size_t size = I2S_PLAY_BUF_SIZE+I2S_PLAY_BUF_EXT_SIZE;
+
+	audio_out_i2s_enable(0);
+	dmam_free_coherent(card->dev, size, p_aml_audio->area,
+			p_aml_audio->addr);
+}
+
 static void aml_audio_start_timer(struct aml_audio_private_data *p_aml_audio,
 				  unsigned long delay)
 {
@@ -769,12 +783,13 @@ static int aml_audio_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	p_aml_audio->data = (void *)card;
+
 	ret = of_property_read_bool(np, "i2sclk_disable_startup");
 	if (!ret) {
 		pr_info("enable i2sclk in startup\n");
-		aml_i2s_play();
+		aml_i2s_play(p_aml_audio);
 	}
-	p_aml_audio->data = (void *)card;
 	INIT_WORK(&p_aml_audio->pinmux_work, aml_pinmux_work_func);
 	schedule_work(&p_aml_audio->pinmux_work);
 
@@ -801,6 +816,8 @@ static void aml_audio_shutdown(struct platform_device *pdev)
 	state = pinctrl_lookup_state(p_audio->pin_ctl, "aml_snd_suspend");
 	if (!IS_ERR(state))
 		pinctrl_select_state(p_audio->pin_ctl, state);
+
+	aml_i2s_stop(p_audio);
 }
 
 static const struct of_device_id amlogic_audio_of_match[] = {

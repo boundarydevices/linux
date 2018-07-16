@@ -71,6 +71,8 @@ struct aml_audio_private_data {
 	struct switch_dev mic_sdev; /* for android */
 #endif
 	struct work_struct pinmux_work;
+	unsigned char *area;
+	dma_addr_t addr;
 };
 
 #endif
