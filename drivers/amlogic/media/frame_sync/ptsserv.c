@@ -510,9 +510,9 @@ static int pts_checkin_offset_inline(u8 type, u32 offset, u32 val, u64 uS64)
 				pr_info("init apts[%d] at 0x%x\n", type, val);
 
 			if (type == PTS_TYPE_VIDEO)
-				WRITE_PARSER_REG(VIDEO_PTS, val);
+				timestamp_vpts_set(val);
 			else if (type == PTS_TYPE_AUDIO)
-				WRITE_PARSER_REG(AUDIO_PTS, val);
+				timestamp_apts_set(val);
 
 			pTable->status = PTS_RUNNING;
 		}
@@ -1391,7 +1391,7 @@ int pts_start(u8 type)
 			pTable->buf_size = READ_VREG(HEVC_STREAM_END_ADDR)
 							- pTable->buf_start;
 #endif
-			WRITE_PARSER_REG(VIDEO_PTS, 0);
+			timestamp_vpts_set(0);
 			timestamp_pcrscr_set(0);
 			/* video always need the pcrscr,*/
 			/*Clear it to use later */
@@ -1424,8 +1424,7 @@ int pts_start(u8 type)
 				 * streaming buffer though.
 				 */
 				/* BUG_ON(pTable->buf_size <= 0x10000); */
-
-				WRITE_PARSER_REG(VIDEO_PTS, 0);
+				timestamp_vpts_set(0);
 				timestamp_pcrscr_set(0);
 				/* video always need the pcrscr, */
 				/*Clear it to use later*/
@@ -1442,8 +1441,7 @@ int pts_start(u8 type)
 					- pTable->buf_start + 8;
 
 				/* BUG_ON(pTable->buf_size <= 0x10000); */
-
-				WRITE_PARSER_REG(AUDIO_PTS, 0);
+				timestamp_apts_set(0);
 				timestamp_firstapts_set(0);
 				pTable->first_checkin_pts = -1;
 				pTable->first_lookup_ok = 0;

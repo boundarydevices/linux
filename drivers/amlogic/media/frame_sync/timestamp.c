@@ -38,6 +38,8 @@ static u32 first_vpts;
 static u32 first_checkin_vpts;
 static u32 first_apts;
 static u32 pcrscr_lantcy = 200*90;
+static u32 video_pts;
+static u32 audio_pts;
 
 static u32 system_time_scale_base = 1;
 static u32 system_time_scale_remainder;
@@ -53,31 +55,31 @@ void set_timestamp_inc_factor(u32 factor)
 
 u32 timestamp_vpts_get(void)
 {
-	return (u32) READ_PARSER_REG(VIDEO_PTS);
+	return video_pts;
 }
 EXPORT_SYMBOL(timestamp_vpts_get);
 
 void timestamp_vpts_set(u32 pts)
 {
-	WRITE_PARSER_REG(VIDEO_PTS, pts);
+	video_pts = pts;
 }
 EXPORT_SYMBOL(timestamp_vpts_set);
 
 void timestamp_vpts_inc(s32 val)
 {
-	WRITE_PARSER_REG(VIDEO_PTS, READ_PARSER_REG(VIDEO_PTS) + val);
+	video_pts += val;
 }
 EXPORT_SYMBOL(timestamp_vpts_inc);
 
 u32 timestamp_apts_get(void)
 {
-	return (u32) READ_PARSER_REG(AUDIO_PTS);
+	return audio_pts;
 }
 EXPORT_SYMBOL(timestamp_apts_get);
 
 void timestamp_apts_set(u32 pts)
 {
-	WRITE_PARSER_REG(AUDIO_PTS, pts);
+	audio_pts = pts;
 }
 EXPORT_SYMBOL(timestamp_apts_set);
 
@@ -87,7 +89,7 @@ void timestamp_apts_inc(s32 inc)
 #ifdef MODIFY_TIMESTAMP_INC_WITH_PLL
 		inc = inc * timestamp_inc_factor / PLL_FACTOR;
 #endif
-		WRITE_PARSER_REG(AUDIO_PTS, READ_PARSER_REG(AUDIO_PTS) + inc);
+		audio_pts += inc;
 	}
 }
 EXPORT_SYMBOL(timestamp_apts_inc);
