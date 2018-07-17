@@ -506,12 +506,12 @@ int dtmb_check_status_txl(struct dvb_frontend *fe)
 	int time_cnt;
 
 	time_cnt = 0;
-	/*ary temp dtmb_information();*/
+	dtmb_information();
 	if (check_dtmb_fec_lock() != 1) {
 		while ((time_cnt < 10) && (check_dtmb_fec_lock() != 1)) {
 			msleep(demod_timeout);
 			time_cnt++;
-			/*ary temp dtmb_information();*/
+			dtmb_information();
 			if (((dtmb_read_reg(DTMB_TOP_CTRL_CHE_WORKCNT)
 				>> 21) & 0x1) == 0x1) {
 				PR_DTMB("4qam-nr,need set spectrum\n");
@@ -527,8 +527,7 @@ int dtmb_check_status_txl(struct dvb_frontend *fe)
 				}
 			}
 			if (time_cnt > 8)
-				PR_DTMB
-					("* time_cnt = %d\n", time_cnt);
+				PR_DTMB("* time_cnt = %d\n", time_cnt);
 		}
 		if (time_cnt >= 10 && (check_dtmb_fec_lock() != 1)) {
 			time_cnt = 0;
@@ -538,8 +537,7 @@ int dtmb_check_status_txl(struct dvb_frontend *fe)
 				dtmb_spectrum = 1;
 			else
 				dtmb_spectrum = 0;
-			PR_DTMB
-				("*all reset,timeout is %d\n", demod_timeout);
+			PR_DTMB("*all reset,timeout is %d\n", demod_timeout);
 		}
 	} else {
 		dtmb_bch_check();
@@ -723,6 +721,7 @@ unsigned int dtmb_detect_first(void)
 
 	/*fsm status is 4,maybe analog signal*/
 	dtmb_status = dtmb_read_reg(DTMB_TOP_CTRL_FSM_STATE0);
+	PR_DTMB("fsm_status is %x\n", dtmb_status);
 
 	for (i = 0 ; i < 8 ; i++) {
 		if (((dtmb_status >> (i*4)) & 0xf) > 4) {
@@ -738,6 +737,7 @@ unsigned int dtmb_detect_first(void)
 		/*(7->8) 8ms,(8->9) 55ms, (9->a) 350ms*/
 		msleep(500);
 		dtmb_status = dtmb_read_reg(DTMB_TOP_CTRL_FSM_STATE0);
+		PR_DTMB("fsm_status2 is %x\n", dtmb_status);
 		for (i = 0 ; i < 8 ; i++) {
 			if (((dtmb_status >> (i*4))
 				& 0xf) > 6) {
@@ -750,7 +750,8 @@ unsigned int dtmb_detect_first(void)
 
 	PR_DTMB("[DTV]has_signal is %d\n", has_signal);
 	if ((has_signal == 0) || (has_signal == 0x1)) {
-		timeout = 1;	/*FE_TIMEDOUT;*/
+		//timeout = 1;	/*FE_TIMEDOUT;*/
+		timeout = 0;	/*FE_TIMEDOUT;*/
 		PR_DTMB("\t timeout\n");
 
 	} else {
