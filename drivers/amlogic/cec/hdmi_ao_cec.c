@@ -1651,8 +1651,20 @@ static void cec_rx_process(void)
 			cec_menu_status_smp(initiator, DEVICE_MENU_ACTIVE);
 		break;
 
+	case CEC_OC_IMAGE_VIEW_ON:
+	case CEC_OC_TEXT_VIEW_ON:
+		/* request active source needed */
+		dest_phy_addr = 0xffff;
+		dest_phy_addr =	(dest_phy_addr << 0) | (initiator << 16);
+		writel(dest_phy_addr, cec_dev->cec_reg + AO_RTI_STATUS_REG1);
+		CEC_INFO("weak up by otp\n");
+		cec_key_report(0);
+		break;
+
 	default:
 		CEC_ERR("unsupported command:%x\n", opcode);
+		CEC_ERR("wake_ok=%d,hal_flag=0x%x\n",
+			wake_ok, cec_dev->hal_flag);
 		break;
 	}
 	new_msg = 0;
