@@ -220,7 +220,12 @@ out:
 
 static int spi_imx_bytes_per_word(const int bits_per_word)
 {
-	return DIV_ROUND_UP(bits_per_word, BITS_PER_BYTE);
+	if (bits_per_word <= 8)
+		return 1;
+	else if (bits_per_word <= 16)
+		return 2;
+	else
+		return 4;
 }
 
 static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
