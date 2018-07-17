@@ -136,6 +136,7 @@ enum aml_tuner_type_t {
 	AM_TUNER_MXL661 = 10,
 	AM_TUNER_MXL608 = 11,
 	AM_TUNER_SI2159 = 12,
+	AM_TUNER_R842 = 13,
 };
 
 extern struct dvb_frontend *mxl661_attach(struct dvb_frontend *fe,
@@ -143,6 +144,10 @@ extern struct dvb_frontend *mxl661_attach(struct dvb_frontend *fe,
 extern struct dvb_frontend *si2151_attach(struct dvb_frontend *fe,
 		struct i2c_adapter *i2c_adap, u8 i2c_addr);
 extern struct dvb_frontend *si2159_attach(struct dvb_frontend *fe,
+		struct i2c_adapter *i2c_adap, u8 i2c_addr);
+extern struct dvb_frontend *r840_attach(struct dvb_frontend *fe,
+		struct i2c_adapter *i2c_adap, u8 i2c_addr);
+extern struct dvb_frontend *r842_attach(struct dvb_frontend *fe,
 		struct i2c_adapter *i2c_adap, u8 i2c_addr);
 /* For attach tuner driver end*/
 

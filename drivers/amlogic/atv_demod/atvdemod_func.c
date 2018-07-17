@@ -349,7 +349,8 @@ void atv_dmd_misc(void)
 	atv_dmd_wr_byte(0x0f, 0x45, 0x90);	/*zhuangwei*/
 
 	atv_dmd_wr_long(0x0f, 0x44, 0x5c8808c1);/*zhuangwei*/
-	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840) {
+	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840 ||
+		amlatvdemod_devp->tuner_id == AM_TUNER_R842) {
 		atv_dmd_wr_long(0x0f, 0x3c, reg_23cf);/*zhuangwei*/
 		/*guanzhong@20150804a*/
 		atv_dmd_wr_byte(APB_BLOCK_ADDR_SIF_STG_2, 0x00, 0x1);
@@ -1059,7 +1060,8 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 		atv_dmd_wr_long(APB_BLOCK_ADDR_ADC_SE, 0x0, 0x03180e0f);
 	else
 		atv_dmd_wr_long(APB_BLOCK_ADDR_ADC_SE, 0x0, 0x03150e0f);
-	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840) {
+	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840 ||
+		amlatvdemod_devp->tuner_id == AM_TUNER_R842) {
 		/*config pwm for tuner r840*/
 		atv_dmd_wr_byte(APB_BLOCK_ADDR_ADC_SE, 1, 0xf);
 	}
@@ -1336,7 +1338,8 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 	atv_dmd_wr_long(APB_BLOCK_ADDR_AGC_PWM, 0x04, 0xc8);
 	/*26 dB dynamic range*/
 	atv_dmd_wr_byte(APB_BLOCK_ADDR_AGC_PWM, 0x09, 0xa);
-	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840) {
+	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840 ||
+		amlatvdemod_devp->tuner_id == AM_TUNER_R842) {
 		/*config pwm for tuner r840*/
 		atv_dmd_wr_long(APB_BLOCK_ADDR_AGC_PWM, 0, 0xc80);
 		/* guanzhong for Tuner AGC shock */
@@ -1675,7 +1678,8 @@ void atvdemod_timer_handler(unsigned long arg)
 			aud_std == AUDIO_STANDARD_BTSC)
 		audio_mode_det(aud_mode);
 */
-	set_outputmode(aud_std, aud_mode);
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+		set_outputmode(aud_std, aud_mode);
 
 	if (non_std_onoff)
 		atv_dmd_non_std_set(true);
@@ -2002,6 +2006,9 @@ void atv_dmd_set_std(void)
 	}
 
 	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840) {
+		if_freq = amlatvdemod_devp->if_freq;
+		if_inv = amlatvdemod_devp->if_inv;
+	} else if (amlatvdemod_devp->tuner_id == AM_TUNER_R842) {
 		if_freq = amlatvdemod_devp->if_freq;
 		if_inv = amlatvdemod_devp->if_inv;
 	} else if (amlatvdemod_devp->tuner_id == AM_TUNER_MXL661) {
@@ -2515,7 +2522,7 @@ int amlatvdemod_reg_read(unsigned int reg, unsigned int *val)
 			return 0;
 		}
 	} else if (0 == (ADC_EN_ATV_DEMOD & tvafe_adc_get_pll_flag())) {
-		pr_info("%s atv demod pll not init\n", __func__);
+		pr_dbg("%s atv demod pll not init\n", __func__);
 		return 0;
 	}
 
@@ -2534,7 +2541,7 @@ int amlatvdemod_reg_write(unsigned int reg, unsigned int val)
 			return 0;
 		}
 	} else if (0 == (ADC_EN_ATV_DEMOD & tvafe_adc_get_pll_flag())) {
-		pr_info("%s atv demod pll not init\n", __func__);
+		pr_dbg("%s atv demod pll not init\n", __func__);
 		return 0;
 	}
 
@@ -2580,24 +2587,36 @@ int atvaudiodem_reg_write(unsigned int reg, unsigned int val)
 
 int amlatvdemod_hiu_reg_read(unsigned int reg, unsigned int *val)
 {
-	*val = readl(amlatvdemod_devp->hiu_reg_base + ((reg - 0x1000)<<2));
+	if (amlatvdemod_devp->hiu_reg_base)
+		*val = readl(amlatvdemod_devp->hiu_reg_base +
+				((reg - 0x1000) << 2));
+
 	return 0;
 }
 
 int amlatvdemod_hiu_reg_write(unsigned int reg, unsigned int val)
 {
-	writel(val, (amlatvdemod_devp->hiu_reg_base + ((reg - 0x1000)<<2)));
+	if (amlatvdemod_devp->hiu_reg_base)
+		writel(val, (amlatvdemod_devp->hiu_reg_base +
+				((reg - 0x1000) << 2)));
+
 	return 0;
 }
 
 int amlatvdemod_periphs_reg_read(unsigned int reg, unsigned int *val)
 {
-	*val = readl(amlatvdemod_devp->periphs_reg_base + ((reg - 0x1000)<<2));
+	if (amlatvdemod_devp->periphs_reg_base)
+		*val = readl(amlatvdemod_devp->periphs_reg_base +
+				((reg - 0x1000) << 2));
+
 	return 0;
 }
 
 int amlatvdemod_periphs_reg_write(unsigned int reg, unsigned int val)
 {
-	writel(val, (amlatvdemod_devp->periphs_reg_base + ((reg - 0x1000)<<2)));
+	if (amlatvdemod_devp->periphs_reg_base)
+		writel(val, (amlatvdemod_devp->periphs_reg_base +
+				((reg - 0x1000) << 2)));
+
 	return 0;
 }

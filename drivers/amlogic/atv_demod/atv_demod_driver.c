@@ -204,12 +204,6 @@ static ssize_t aml_atvdemod_store(struct class *class,
 				block_reg, block_val);
 		block_val = atv_dmd_rd_long(block_addr, block_reg);
 		pr_dbg("readback_val:0x%x\n", block_val);
-	} else if (!strncmp(parm[0], "pin_mux", 7)) {
-		aml_atvdemod_dev->pin = devm_pinctrl_get_select(
-				aml_atvdemod_dev->dev,
-				aml_atvdemod_dev->pin_name);
-		pr_dbg("atvdemod agc pinmux name:%s\n",
-				aml_atvdemod_dev->pin_name);
 	} else if (!strncmp(parm[0], "snr_cur", 7)) {
 		data_snr_avg = aml_atvdemod_get_snr_ex();
 		pr_dbg("**********snr_cur:%d*********\n", data_snr_avg);
@@ -400,12 +394,12 @@ static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 		ret = of_property_read_string(node, "pinctrl-names",
 				&pdev->pin_name);
 		if (ret) {
-			pdev->pin = NULL;
+			pdev->agc_pin = NULL;
 			pr_err("can't find agc pinmux.\n");
 		} else {
-#if 0
-			amlatvdemod_devp->pin = devm_pinctrl_get_select(
-				&pdev->dev, pdev->pin_name);
+#if 0 /* Get it when you actually use it */
+			pdev->agc_pin = devm_pinctrl_get_select(
+				pdev->dev, pdev->pin_name);
 #endif
 			pr_err("atvdemod agc pinmux name: %s\n",
 					pdev->pin_name);
@@ -429,6 +423,8 @@ static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 				pdev->tuner_id = AM_TUNER_SI2159;
 			else if (!strncmp(str, "r840_tuner", 10))
 				pdev->tuner_id = AM_TUNER_R840;
+			else if (!strncmp(str, "r842_tuner", 10))
+				pdev->tuner_id = AM_TUNER_R842;
 			else
 				pr_err("can't find tuner: %s.\n", str);
 		}
@@ -479,6 +475,12 @@ int aml_attach_demod_tuner(struct aml_atvdemod_device *dev)
 	if (!dev->tuner_attached) {
 		switch (dev->tuner_id) {
 		case AM_TUNER_R840:
+			p = v4l2_attach(r840_attach, fe,
+					dev->i2c_adp, dev->i2c_addr);
+			break;
+		case AM_TUNER_R842:
+			p = v4l2_attach(r842_attach, fe,
+					dev->i2c_adp, dev->i2c_addr);
 			break;
 		case AM_TUNER_SI2151:
 			p = v4l2_attach(si2151_attach, fe,
@@ -553,6 +555,42 @@ static int aml_atvdemod_probe(struct platform_device *pdev)
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!res) {
+		pr_err("no hiu demod memory resource.\n");
+		dev->hiu_reg_base = NULL;
+	} else {
+		size_io_reg = resource_size(res);
+		dev->hiu_reg_base = devm_ioremap_nocache(
+				&pdev->dev, res->start, size_io_reg);
+		if (!dev->hiu_reg_base) {
+			pr_err("hiu ioremap failed.\n");
+			goto fail_get_resource;
+		}
+
+		pr_info("hiu start = 0x%p, size = 0x%x, hiu_reg_base = 0x%p.\n",
+					(void *) res->start, size_io_reg,
+					dev->hiu_reg_base);
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	if (!res) {
+		pr_err("no periphs demod memory resource.\n");
+		dev->periphs_reg_base = NULL;
+	} else {
+		size_io_reg = resource_size(res);
+		dev->periphs_reg_base = devm_ioremap_nocache(
+				&pdev->dev, res->start, size_io_reg);
+		if (!dev->periphs_reg_base) {
+			pr_err("periphs ioremap failed.\n");
+			goto fail_get_resource;
+		}
+
+		pr_info("periphs start = 0x%p, size = 0x%x, periphs_reg_base = 0x%p.\n",
+					(void *) res->start, size_io_reg,
+					dev->periphs_reg_base);
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 3);
+	if (!res) {
 		pr_err("no audio demod memory resource.\n");
 		dev->audio_reg_base = NULL;
 	} else {
@@ -569,6 +607,7 @@ static int aml_atvdemod_probe(struct platform_device *pdev)
 					dev->audio_reg_base);
 	}
 
+#if 0 /* form dts config */
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
 		dev->hiu_reg_base = ioremap(0xff63c000, 0x2000);
 	else
@@ -582,11 +621,16 @@ static int aml_atvdemod_probe(struct platform_device *pdev)
 		dev->periphs_reg_base = ioremap(0xc8834000, 0x2000);
 
 	pr_info("periphs_reg_base = 0x%p.\n", dev->periphs_reg_base);
+#endif
 
-	/* add for audio system control */
-	dev->audio_demod_reg_base = ioremap(round_down(0xffd0d340, 0x3), 4);
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
+		/* add for audio system control */
+		dev->audio_demod_reg_base = ioremap(
+				round_down(0xffd0d340, 0x3), 4);
 
-	pr_info("audio_demod_reg_base = 0x%p.\n", dev->audio_demod_reg_base);
+		pr_info("audio_demod_reg_base = 0x%p.\n",
+				dev->audio_demod_reg_base);
+	}
 
 	aml_atvdemod_dt_parse(dev);
 
@@ -668,7 +712,7 @@ int aml_atvdemod_resume(struct platform_device *pdev)
 
 static const struct of_device_id aml_atvdemod_dt_match[] = {
 	{
-		.compatible = "amlogic, aml_atvdemod",
+		.compatible = "amlogic, atv-demod",
 	},
 	{
 	},

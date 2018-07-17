@@ -460,7 +460,7 @@ int atv_demod_enter_mode(void)
 		return 0;
 #endif
 	if (amlatvdemod_devp->pin_name != NULL)
-		amlatvdemod_devp->pin =
+		amlatvdemod_devp->agc_pin =
 			devm_pinctrl_get_select(amlatvdemod_devp->dev,
 				amlatvdemod_devp->pin_name);
 
@@ -501,9 +501,9 @@ int atv_demod_leave_mode(void)
 
 	set_aft_thread_enable(0, 0);
 	atvdemod_uninit();
-	if (amlatvdemod_devp->pin != NULL) {
-		devm_pinctrl_put(amlatvdemod_devp->pin);
-		amlatvdemod_devp->pin = NULL;
+	if (amlatvdemod_devp->agc_pin != NULL) {
+		devm_pinctrl_put(amlatvdemod_devp->agc_pin);
+		amlatvdemod_devp->agc_pin = NULL;
 	}
 
 	vdac_enable(0, 1);
@@ -553,17 +553,11 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 
 	if ((p->param.std != amlatvdemod_devp->std) ||
 		(p->tuner_id == AM_TUNER_R840) ||
+		(p->tuner_id == AM_TUNER_R842) ||
 		(p->tuner_id == AM_TUNER_SI2151) ||
 		(p->tuner_id == AM_TUNER_MXL661) ||
 		(p->tuner_id == AM_TUNER_SI2159)) {
-		/* open AGC if needed */
-		if (amlatvdemod_devp->pin != NULL)
-			devm_pinctrl_put(amlatvdemod_devp->pin);
 
-		if (amlatvdemod_devp->pin_name)
-			amlatvdemod_devp->pin =
-			devm_pinctrl_get_select(amlatvdemod_devp->dev,
-					amlatvdemod_devp->pin_name);
 #if 0 /* unused */
 		last_frq = p->param.frequency;
 		last_std = p->param.std;
@@ -849,7 +843,8 @@ static void atvdemod_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 				pr_dbg("get varify_cnt:%d, cnt:%d, std_bk:0x%x\n",
 						varify_cnt, i,
 						(unsigned int) std_bk);
-				if ((v4l2_fe->tuner_id == AM_TUNER_R840
+				if (((v4l2_fe->tuner_id == AM_TUNER_R840
+					|| v4l2_fe->tuner_id == AM_TUNER_R842)
 					&& varify_cnt > 0)
 					|| varify_cnt > 3)
 					break;
@@ -1003,13 +998,15 @@ static int atvdemod_fe_afc_closer(struct v4l2_frontend *v4l2_fe, int minafcfreq,
 		while (abs(afc) > AFC_BEST_LOCK) {
 			if (tuner_id == AM_TUNER_SI2151 ||
 				tuner_id == AM_TUNER_SI2159 ||
-				tuner_id == AM_TUNER_R840)
+				tuner_id == AM_TUNER_R840 ||
+				tuner_id == AM_TUNER_R842)
 				usleep_range(20 * 1000, 20 * 1000 + 100);
 			else if (tuner_id == AM_TUNER_MXL661)
 				usleep_range(30 * 1000, 30 * 1000 + 100);
 
 			if (fe->ops.analog_ops.get_afc &&
 			((tuner_id == AM_TUNER_R840) ||
+			(tuner_id == AM_TUNER_R842) ||
 			(tuner_id == AM_TUNER_SI2151) ||
 			(tuner_id == AM_TUNER_SI2159) ||
 			(tuner_id == AM_TUNER_MXL661)))
@@ -1237,8 +1234,9 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 
 	/*from the current freq start, and set the afc_step*/
 	/*if step is 2Mhz,r840 will miss program*/
-	if (slow_mode || (tuner_id == AM_TUNER_R840)
-			|| (p->afc_range == ATV_AFC_1_0MHZ)) {
+	if (slow_mode ||
+		(tuner_id == AM_TUNER_R840 || tuner_id == AM_TUNER_R842) ||
+		(p->afc_range == ATV_AFC_1_0MHZ)) {
 		pr_dbg("[%s] slow mode to search the channel\n", __func__);
 		afc_step = ATV_AFC_1_0MHZ;
 	} else if (!slow_mode) {
@@ -1269,7 +1267,8 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 		do {
 			if (tuner_id == AM_TUNER_MXL661) {
 				usleep_range(30 * 1000, 30 * 1000 + 100);
-			} else if (tuner_id == AM_TUNER_R840) {
+			} else if (tuner_id == AM_TUNER_R840 ||
+					tuner_id == AM_TUNER_R842) {
 				usleep_range(20 * 1000, 20 * 1000 + 100);
 				fe->ops.tuner_ops.get_status(fe,
 						&tuner_state);
@@ -1282,10 +1281,12 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 			tuner_status_cnt_local--;
 			if (((ade_state == V4L2_HAS_LOCK ||
 				tuner_state == V4L2_HAS_LOCK) &&
-				(tuner_id != AM_TUNER_R840)) ||
+				(tuner_id != AM_TUNER_R840 &&
+				tuner_id != AM_TUNER_R842)) ||
 				((ade_state == V4L2_HAS_LOCK &&
 				tuner_state == V4L2_HAS_LOCK) &&
-				(tuner_id == AM_TUNER_R840))) {
+				(tuner_id == AM_TUNER_R840 ||
+				tuner_id == AM_TUNER_R842))) {
 				pll_lock = true;
 				break;
 			}
