@@ -45,7 +45,7 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x0 0x0100000 0x0 0x3ff00000>;
+		linux,usable-memory = <0x0 0x100000 0x0 0x3ff00000>;
 	};
 
 	reserved-memory {
@@ -53,6 +53,15 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
+                ramoops@0x07400000 {
+			compatible = "ramoops";
+			reg = <0x0 0x07400000 0x0 0x00100000>;
+			record-size = <0x8000>;
+			console-size = <0x8000>;
+			ftrace-size = <0x0>;
+			pmsg-size = <0x8000>;
+		};
+
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -76,7 +85,7 @@
 		ion_cma_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x4c00000>;
+			size = <0x0 0x8000000>;
 			alignment = <0x0 0x400000>;
 		};
 		//di_reserved:linux,di {
@@ -113,7 +122,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x0 0x13400000>;
+			size = <0x0 0xC400000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
@@ -632,29 +641,28 @@
 		 * dai link for i2s to hdmix,
 		 * Notice to select a tdm lane not used by hw
 		 */
-		aml-audio-card,dai-link@6 {
-			format = "i2s";
-			mclk-fs = <256>;
-			//continuous-clock;
-			//bitclock-inversion;
-			//frame-inversion;
-			bitclock-master = <&aml_i2s2hdmi>;
-			frame-master = <&aml_i2s2hdmi>;
-			/* suffix-name, sync with android audio hal
-			 * what's the dai link used for
-			 */
-			suffix-name = "alsaPORT-i2s2hdmi";
-			cpu {
-				sound-dai = <&aml_i2s2hdmi>;
-				dai-tdm-slot-tx-mask = <1 1>;
-				dai-tdm-slot-num = <2>;
-				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <12288000>;
-			};
-			codec {
-				sound-dai = <&dummy_codec>;
-			};
-		};
+		/*
+		 * aml-audio-card,dai-link@6 {
+		 * format = "i2s";
+		 * mclk-fs = <256>;
+		 * //continuous-clock;
+		 * //bitclock-inversion;
+		 * //frame-inversion;
+		 * bitclock-master = <&aml_i2s2hdmi>;
+		 * frame-master = <&aml_i2s2hdmi>;
+		 * suffix-name = "alsaPORT-i2s2hdmi";
+		 * cpu {
+		 * sound-dai = <&aml_i2s2hdmi>;
+		 * dai-tdm-slot-tx-mask = <1 1>;
+		 * dai-tdm-slot-num = <2>;
+		 * dai-tdm-slot-width = <32>;
+		 * system-clock-frequency = <12288000>;
+		 * };
+		 * codec {
+		 * sound-dai = <&dummy_codec>;
+		 * };
+		 * };
+		 */
 	};
 	audiolocker: locker {
 		compatible = "amlogic, audiolocker";
@@ -881,7 +889,7 @@
 
 		i2s2hdmi = <1>;
 
-		status = "okay";
+		status = "disabled";
 	};
 
 	aml_spdif: spdif {
