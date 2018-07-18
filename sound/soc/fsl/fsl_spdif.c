@@ -1163,7 +1163,8 @@ static u32 fsl_spdif_txclk_caldiv(struct fsl_spdif_priv *spdif_priv,
 {
 	static const u32 rate[] = { 32000, 44100, 48000, 96000, 192000 };
 	bool is_sysclk = clk_is_match(clk, spdif_priv->sysclk);
-	u64 rate_actual, sub, arate;
+	u64 rate_actual, sub;
+	u32 arate;
 	u16 sysclk_dfmin, sysclk_dfmax, sysclk_df;
 	u8 txclk_df;
 
