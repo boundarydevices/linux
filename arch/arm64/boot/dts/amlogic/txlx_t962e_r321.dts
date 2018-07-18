@@ -592,18 +592,19 @@
 		interrupt-names = "mailbox_2";
 	};
 
-	aml_atvdemod {
-		compatible = "amlogic, aml_atvdemod";
-		dev_name = "aml_atvdemod";
+	atv-demod {
+		compatible = "amlogic, atv-demod";
 		status = "okay";
 		tuner = "si2151_tuner";
 		tuner_i2c_ada_id = <&i2c1>;
 		tuner_i2c_addr = <0x60>;
 		btsc_sap_mode = <1>;
-		////pinctrl-names="atvdemod_agc";
-		////pinctrl-0=<&atvdemod_agc>;
-		reg = <0x0 0xff640000 0x0 0x2000
-				0x0 0xff648000 0x0 0x2000>;
+		/* pinctrl-names="atvdemod_agc_pins"; */
+		/* pinctrl-0=<&atvdemod_agc_pins>; */
+		reg = <0x0 0xff640000 0x0 0x2000 /* demod reg */
+				0x0 0xff63c000 0x0 0x2000 /* hiu reg */
+				0x0 0xff634000 0x0 0x2000 /* periphs reg */
+				0x0 0xff648000 0x0 0x2000>; /* audio reg */
 		reg_23cf = <0x88188832>;
 		/*default:0x88188832;r840 on haier:0x48188832*/
 	};
