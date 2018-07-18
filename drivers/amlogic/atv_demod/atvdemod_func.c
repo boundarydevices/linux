@@ -37,10 +37,9 @@ unsigned int aud_mode = AUDIO_OUTMODE_STEREO;
 bool aud_auto = true;
 unsigned long over_threshold = 0xffff;
 unsigned long input_amplitude = 0xffff;
-bool audio_det_en;
 
 unsigned int non_std_en;
-bool non_std_onoff;
+
 unsigned int non_std_times = 50;
 int non_std_thld_4c_h = 100;
 int non_std_thld_4c_l = 30;
@@ -85,11 +84,7 @@ unsigned int atvdemod_debug_en;
 unsigned int atvdemod_agc_pinmux = 2;
 unsigned int atvdemod_afc_range = 5;
 unsigned int atvdemod_afc_offset = 500;
-unsigned int atvdemod_timer_en = 1;
-unsigned int atvdemod_afc_en;
-unsigned int atvdemod_monitor_en;
-unsigned int atvdemod_det_snr_en = 1;
-unsigned int audio_thd_en = 1;
+
 unsigned int pwm_kp = 0x19;
 unsigned int reg_dbg_en;
 unsigned int audio_gain_val = 512;
@@ -106,10 +101,9 @@ enum AUDIO_SCAN_ID {
 };
 
 static unsigned int mix1_freq;
-static unsigned int timer_init_flag;
-struct timer_list atvdemod_timer;
 static int snr_val;
 int broad_std_except_pal_m;
+
 
 int get_atvdemod_snr_val(void)
 {
@@ -1523,6 +1517,63 @@ void atvdemod_afc_tune(void)
 	/* pr_info("horizontal frequency:%d Hz\n",fh*190735/100000); */
 }
 
+/* ret:5~100;the val is bigger,the signal is better */
+int aml_atvdemod_get_snr(struct dvb_frontend *fe)
+{
+#if 1
+	return get_atvdemod_snr_val();
+#else
+	unsigned int snr_val;
+	int ret;
+
+	snr_val = atv_dmd_rd_long(APB_BLOCK_ADDR_VDAGC, 0x50) >> 8;
+	/* snr_val:900000~0xffffff,ret:5~15 */
+	if (snr_val > 900000)
+		ret = 15 - (snr_val - 900000)*10/(0xffffff - 900000);
+	/* snr_val:158000~900000,ret:15~30 */
+	else if (snr_val > 158000)
+		ret = 30 - (snr_val - 158000)*15/(900000 - 158000);
+	/* snr_val:31600~158000,ret:30~50 */
+	else if (snr_val > 31600)
+		ret = 50 - (snr_val - 31600)*20/(158000 - 31600);
+	/* snr_val:316~31600,ret:50~80 */
+	else if (snr_val > 316)
+		ret = 80 - (snr_val - 316)*30/(31600 - 316);
+	/* snr_val:0~316,ret:80~100 */
+	else
+		ret = 100 - (316 - snr_val)*20/316;
+	return ret;
+#endif
+}
+
+int aml_atvdemod_get_snr_ex(void)
+{
+#if 1
+	return get_atvdemod_snr_val();
+#else
+	unsigned int snr_val;
+	int ret;
+
+	snr_val = atv_dmd_rd_long(APB_BLOCK_ADDR_VDAGC, 0x50) >> 8;
+	/* snr_val:900000~0xffffff,ret:5~15 */
+	if (snr_val > 900000)
+		ret = 15 - (snr_val - 900000)*10/(0xffffff - 900000);
+	/* snr_val:158000~900000,ret:15~30 */
+	else if (snr_val > 158000)
+		ret = 30 - (snr_val - 158000)*15/(900000 - 158000);
+	/* snr_val:31600~158000,ret:30~50 */
+	else if (snr_val > 31600)
+		ret = 50 - (snr_val - 31600)*20/(158000 - 31600);
+	/* snr_val:316~31600,ret:50~80 */
+	else if (snr_val > 316)
+		ret = 80 - (snr_val - 316)*30/(31600 - 316);
+	/* snr_val:0~316,ret:80~100 */
+	else
+		ret = 100 - (316 - snr_val)*20/316;
+	return ret;
+#endif
+}
+
 static enum amlatvdemod_snr_level_e aml_atvdemod_get_snr_level(void)
 {
 	unsigned int snr_val, i, snr_d[8];
@@ -1651,38 +1702,6 @@ static int atvdemod_get_snr(struct dvb_frontend *fe)
 void atvdemod_det_snr_serice(void)
 {
 	snr_val = atvdemod_get_snr(NULL);
-}
-
-void atvdemod_timer_handler(unsigned long arg)
-{
-	if (atvdemod_timer_en == 0)
-		return;
-
-	if (vdac_enable_check_dtv())
-		return;
-
-	atvdemod_timer.expires = jiffies + ATVDEMOD_INTERVAL*10;/*100ms timer*/
-	add_timer(&atvdemod_timer);
-	if (atvdemod_afc_en)
-		atvdemod_afc_tune();
-	if (atvdemod_monitor_en)
-		atvdemod_monitor_serice();
-	if (audio_det_en)
-		aml_atvdemod_overmodule_det();
-	if (atvdemod_det_snr_en)
-		atvdemod_det_snr_serice();
-	if (audio_thd_en)
-		audio_thd_det();
-/*
-	if (aml_atvdemod_get_btsc_sap_mode() == 1 &&
-			aud_std == AUDIO_STANDARD_BTSC)
-		audio_mode_det(aud_mode);
-*/
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
-		set_outputmode(aud_std, aud_mode);
-
-	if (non_std_onoff)
-		atv_dmd_non_std_set(true);
 }
 
 int atvdemod_clk_init(void)
@@ -1847,12 +1866,16 @@ int amlfmt_aud_standard(int broad_std)
 int atvauddemod_init(void)
 {
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
+		if (audio_thd_en)
+			audio_thd_init();
+
 		if (aud_auto)
 			aud_std = amlfmt_aud_standard(broad_std);
 		/* configure_adec(aud_std); */
 		/* adec_soft_reset(); */
 		set_outputmode(aud_std, aud_mode);
 	}
+
 	return 0;
 }
 
@@ -1863,15 +1886,6 @@ void atvauddemod_set_outputmode(void)
 
 int atvdemod_init(void)
 {
-	/* unsigned long data32; */
-	if (atvdemod_timer_en == 1 && !atv_demod_get_scan_mode()) {
-		if (timer_init_flag == 1) {
-			del_timer_sync(&atvdemod_timer);
-			timer_init_flag = 0;
-			atv_dmd_non_std_set(false);
-		}
-	}
-
 	/* 1.set system clock when atv enter*/
 
 	pr_err("%s do configure_receiver ...\n", __func__);
@@ -1897,34 +1911,17 @@ int atvdemod_init(void)
 	 *	delay_us(400);
 	 * }
 	 */
-	#if 1/* temp mark */
-	if (atvdemod_timer_en == 1 && !atv_demod_get_scan_mode()) {
-		if (audio_thd_en)
-			audio_thd_init();
-		/*atvdemod timer handler*/
-		init_timer(&atvdemod_timer);
-		/* atvdemod_timer.data = (ulong) devp; */
-		atvdemod_timer.function = atvdemod_timer_handler;
-		/* after 1s enable demod auto detect */
-		atvdemod_timer.expires = jiffies + ATVDEMOD_INTERVAL*100;
-		add_timer(&atvdemod_timer);
-		mix1_freq = atv_dmd_rd_byte(APB_BLOCK_ADDR_MIXER_1, 0x0);
-		timer_init_flag = 1;
-	}
-	#endif
+
+	mix1_freq = atv_dmd_rd_byte(APB_BLOCK_ADDR_MIXER_1, 0x0);
+
 	pr_err("%s done\n", __func__);
+
 	return 0;
 }
+
 void atvdemod_uninit(void)
 {
-	/* del the timer */
-	if (atvdemod_timer_en == 1) {
-		if (timer_init_flag == 1) {
-			del_timer_sync(&atvdemod_timer);
-			timer_init_flag = 0;
-			atv_dmd_non_std_set(false);
-		}
-	}
+	atv_dmd_non_std_set(false);
 }
 
 void atv_dmd_set_std(void)

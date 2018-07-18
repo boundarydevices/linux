@@ -39,7 +39,7 @@
 #include "atvauddemod_func.h"
 
 
-#define AMLATVDEMOD_VER "V2.01"
+#define AMLATVDEMOD_VER "V2.02"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 
@@ -76,7 +76,7 @@ static ssize_t aml_atvdemod_store(struct class *class,
 		goto EXIT;
 
 	if (!strncmp(parm[0], "init", 4)) {
-		ret = atv_demod_enter_mode();
+		ret = atv_demod_enter_mode(&amlatvdemod_devp->v4l2_fe.fe);
 		if (ret)
 			pr_info("atv init error.\n");
 	} else if (!strncmp(parm[0], "audout_mode", 11)) {
@@ -162,7 +162,7 @@ static ssize_t aml_atvdemod_store(struct class *class,
 		pr_dbg("aml_atvdemod_ver %s.\n",
 				AMLATVDEMOD_VER);
 	} else if (!strncmp(parm[0], "audio_autodet", 13)) {
-		aml_audiomode_autodet(NULL);
+		aml_audiomode_autodet(&amlatvdemod_devp->v4l2_fe.fe);
 	} else if (!strncmp(parm[0], "overmodule_det", 14)) {
 		/* unsigned long over_threshold, */
 		/* int det_mode = auto_det_mode; */

@@ -31,8 +31,7 @@ extern unsigned int reg_23cf; /* IIR filter */
 extern int broad_std_except_pal_m;
 extern unsigned int aud_std;
 extern unsigned int aud_mode;
-
-#define ATVDEMOD_INTERVAL	(HZ/100)	/*10ms, #define HZ 100*/
+extern bool audio_thd_en;
 
 extern int amlatvdemod_reg_read(unsigned int reg, unsigned int *val);
 extern int amlatvdemod_reg_write(unsigned int reg, unsigned int val);
@@ -177,8 +176,12 @@ extern void retrieve_vpll_carrier_audio_power(int *power);
 extern void retrieve_video_lock(int *lock);
 extern int retrieve_vpll_carrier_afc(void);
 
+extern void atv_dmd_non_std_set(bool enable);
+extern void atvdemod_monitor_serice(void);
+extern void atvdemod_det_snr_serice(void);
 extern int get_atvdemod_snr_val(void);
 extern int aml_atvdemod_get_snr(struct dvb_frontend *fe);
+extern void atvdemod_afc_tune(void);
 
 /*atv demod block address*/
 /*address interval is 4, because it's 32bit interface,*/
