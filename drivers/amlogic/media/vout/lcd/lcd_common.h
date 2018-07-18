@@ -29,7 +29,8 @@
 /* 20180425: tvconfig suuport */
 /* 20180620: fix coverity errors */
 /* 20180626: txl suuport */
-#define LCD_DRV_VERSION    "20180626"
+/* 20180718: mute: wait vsync for display shadow */
+#define LCD_DRV_VERSION    "20180718"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 
@@ -97,6 +98,7 @@ extern void lcd_venc_change(struct lcd_config_s *pconf);
 extern void lcd_if_enable_retry(struct lcd_config_s *pconf);
 
 /* lcd debug */
+extern void lcd_debug_test(unsigned int num);
 extern void lcd_mute_setting(unsigned char flag);
 extern int lcd_class_creat(void);
 extern int lcd_class_remove(void);

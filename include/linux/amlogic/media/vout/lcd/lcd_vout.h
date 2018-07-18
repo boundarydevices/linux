@@ -393,6 +393,8 @@ struct lcd_duration_s {
 #define LCD_STATUS_VMODE_ACTIVE  (1 << 2)
 #define LCD_STATUS_ON         (LCD_STATUS_IF_ON | LCD_STATUS_ENCL_ON)
 
+#define LCD_MUTE_UPDATE       (1 << 4)
+#define LCD_TEST_UPDATE       (1 << 4)
 struct aml_lcd_drv_s {
 	char version[20];
 	struct lcd_data_s *data;
@@ -401,9 +403,11 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_key_valid;
 	unsigned char lcd_clk_path; /* 0=hpll, 1=gp0_pll */
 	unsigned char lcd_config_load;
-	unsigned char lcd_test_flag;
 	unsigned char lcd_resume_type; /* 0=directly, 1=workqueue */
-	unsigned char lcd_mute;
+	unsigned char lcd_test_state;
+	unsigned char lcd_test_flag;
+	unsigned char lcd_mute_state;
+	unsigned char lcd_mute_flag;
 
 	unsigned char clk_gate_state;
 	struct clk *encl_top_gate;

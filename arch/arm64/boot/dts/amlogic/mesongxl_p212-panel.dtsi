@@ -28,6 +28,8 @@
 		 * "vencl_int_gate";
 		 */
 		reg = <0x0 0xc8834400 0x0 0x100>;
+		interrupts = <0 3 1>;
+		interrupt-names = "vsync";
 		pinctrl_version = <1>; /* for uboot */
 
 		/* power type:

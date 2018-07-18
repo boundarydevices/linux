@@ -967,6 +967,16 @@ static int lcd_hdr_info_print(char *buf, int offset)
 	return len;
 }
 
+static struct work_struct lcd_test_check_work;
+static void lcd_test_pattern_check(struct work_struct *p_work)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	int flag;
+
+	flag = (lcd_drv->lcd_test_state > 0) ? 1 : 0;
+	aml_lcd_notifier_call_chain(LCD_EVENT_TEST_PATTERN, &flag);
+}
+
 #define LCD_ENC_TST_NUM_MAX    9
 static char *lcd_enc_tst_str[] = {
 	"0-None",        /* 0 */
@@ -993,15 +1003,17 @@ static unsigned int lcd_enc_tst[][7] = {
 	{0,      0x0,     0x0,    0x0,   1,      0,        3},  /* 8 */
 };
 
-static void lcd_debug_test(unsigned int num)
+void lcd_debug_test(unsigned int num)
 {
 	unsigned int h_active, video_on_pixel;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-	int flag;
 
 	num = (num >= LCD_ENC_TST_NUM_MAX) ? 0 : num;
-	flag = (num > 0) ? 1 : 0;
-	aml_lcd_notifier_call_chain(LCD_EVENT_TEST_PATTERN, &flag);
+
+	if (lcd_drv->workqueue)
+		queue_work(lcd_drv->workqueue, &lcd_test_check_work);
+	else
+		schedule_work(&lcd_test_check_work);
 
 	h_active = lcd_drv->lcd_config->lcd_basic.h_active;
 	video_on_pixel = lcd_drv->lcd_config->lcd_timing.video_on_pixel;
@@ -1022,7 +1034,6 @@ static void lcd_debug_test(unsigned int num)
 
 void lcd_mute_setting(unsigned char flag)
 {
-	LCDPR("set lcd mute: %d\n", flag);
 	if (flag) {
 		lcd_vcbus_write(ENCL_VIDEO_RGBIN_CTRL, 3);
 		lcd_vcbus_write(ENCL_TST_MDSEL, 0);
@@ -1042,14 +1053,14 @@ static void lcd_screen_restore(void)
 	unsigned int h_active, video_on_pixel;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	unsigned int num;
-	int flag;
-
-	lcd_drv->lcd_mute = 0;
 
 	num = lcd_drv->lcd_test_flag;
 	num = (num >= LCD_ENC_TST_NUM_MAX) ? 0 : num;
-	flag = (num > 0) ? 1 : 0;
-	aml_lcd_notifier_call_chain(LCD_EVENT_TEST_PATTERN, &flag);
+
+	if (lcd_drv->workqueue)
+		queue_work(lcd_drv->workqueue, &lcd_test_check_work);
+	else
+		schedule_work(&lcd_test_check_work);
 
 	h_active = lcd_drv->lcd_config->lcd_basic.h_active;
 	video_on_pixel = lcd_drv->lcd_config->lcd_timing.video_on_pixel;
@@ -1267,8 +1278,8 @@ static ssize_t lcd_debug_store(struct class *class,
 	case 't': /* test */
 		ret = sscanf(buf, "test %d", &temp);
 		if (ret == 1) {
-			lcd_drv->lcd_test_flag = (unsigned char)temp;
-			lcd_debug_test(temp);
+			lcd_drv->lcd_test_flag =
+				(unsigned char)(temp | LCD_TEST_UPDATE);
 		} else {
 			LCDERR("invalid data\n");
 			return -EINVAL;
@@ -1826,14 +1837,14 @@ static ssize_t lcd_debug_test_show(struct class *class,
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
-	return sprintf(buf, "test pattern: %d\n", lcd_drv->lcd_test_flag);
+	return sprintf(buf, "test pattern: %d\n", lcd_drv->lcd_test_state);
 }
 
 static ssize_t lcd_debug_test_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
-	unsigned int temp = 0;
+	unsigned int temp = 0, i = 0;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	ret = kstrtouint(buf, 10, &temp);
@@ -1841,8 +1852,13 @@ static ssize_t lcd_debug_test_store(struct class *class,
 		pr_info("invalid data\n");
 		return -EINVAL;
 	}
-	lcd_drv->lcd_test_flag = (unsigned char)temp;
-	lcd_debug_test(temp);
+	temp = (temp >= LCD_ENC_TST_NUM_MAX) ? 0 : temp;
+	lcd_drv->lcd_test_flag = (unsigned char)(temp | LCD_TEST_UPDATE);
+	while (i++ < 5000) {
+		if (lcd_drv->lcd_test_state == temp)
+			break;
+		udelay(20);
+	}
 
 	return count;
 }
@@ -1852,14 +1868,15 @@ static ssize_t lcd_debug_mute_show(struct class *class,
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
-	return sprintf(buf, "get lcd mute state: %d\n", lcd_drv->lcd_mute);
+	return sprintf(buf, "get lcd mute state: %d\n",
+		lcd_drv->lcd_mute_state);
 }
 
 static ssize_t lcd_debug_mute_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
-	unsigned int temp = 0;
+	unsigned int temp = 0, i = 0;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	ret = kstrtouint(buf, 10, &temp);
@@ -1867,8 +1884,13 @@ static ssize_t lcd_debug_mute_store(struct class *class,
 		pr_info("invalid data\n");
 		return -EINVAL;
 	}
-	lcd_drv->lcd_mute = (unsigned char)temp;
-	lcd_mute_setting(lcd_drv->lcd_mute);
+	temp = temp ? 1 : 0;
+	lcd_drv->lcd_mute_flag = (unsigned char)(temp | LCD_MUTE_UPDATE);
+	while (i++ < 5000) {
+		if (lcd_drv->lcd_mute_state == temp)
+			break;
+		udelay(20);
+	}
 
 	return count;
 }
@@ -3044,6 +3066,8 @@ int lcd_class_creat(void)
 
 	lcd_drv->lcd_screen_restore = lcd_screen_restore;
 	lcd_drv->lcd_screen_black = lcd_screen_black;
+
+	INIT_WORK(&lcd_test_check_work, lcd_test_pattern_check);
 
 	lcd_drv->lcd_debug_class = class_create(THIS_MODULE, "lcd");
 	if (IS_ERR(lcd_drv->lcd_debug_class)) {

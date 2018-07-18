@@ -328,7 +328,8 @@ static void lcd_power_screen_black(void)
 {
 	mutex_lock(&lcd_vout_mutex);
 
-	lcd_driver->lcd_screen_black();
+	lcd_driver->lcd_mute_flag = (unsigned char)(1 | LCD_MUTE_UPDATE);
+	LCDPR("set mute\n");
 
 	mutex_unlock(&lcd_vout_mutex);
 }
@@ -337,7 +338,8 @@ static void lcd_power_screen_restore(void)
 {
 	mutex_lock(&lcd_vout_mutex);
 
-	lcd_driver->lcd_screen_restore();
+	lcd_driver->lcd_mute_flag = (unsigned char)(0 | LCD_MUTE_UPDATE);
+	LCDPR("clear mute\n");
 
 	mutex_unlock(&lcd_vout_mutex);
 }
@@ -366,6 +368,41 @@ static void lcd_resume_work(struct work_struct *p_work)
 	lcd_if_enable_retry(lcd_driver->lcd_config);
 	LCDPR("%s finished\n", __func__);
 	mutex_unlock(&lcd_driver->power_mutex);
+}
+
+static irqreturn_t lcd_vsync_isr(int irq, void *dev_id)
+{
+	int flag;
+
+	if ((lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) == 0)
+		return IRQ_HANDLED;
+
+	if (lcd_driver->lcd_mute_flag & LCD_MUTE_UPDATE) {
+		flag = lcd_driver->lcd_mute_flag & 0x1;
+		if (flag) {
+			if (lcd_driver->lcd_mute_state == 0) {
+				lcd_driver->lcd_mute_state = 1;
+				lcd_driver->lcd_screen_black();
+			}
+		} else {
+			if (lcd_driver->lcd_mute_state) {
+				lcd_driver->lcd_mute_state = 0;
+				lcd_driver->lcd_screen_restore();
+			}
+		}
+		lcd_driver->lcd_mute_flag &= ~(LCD_MUTE_UPDATE);
+	}
+
+	if (lcd_driver->lcd_test_flag & LCD_TEST_UPDATE) {
+		flag = lcd_driver->lcd_test_flag & 0xf;
+		if (flag != lcd_driver->lcd_test_state) {
+			lcd_driver->lcd_test_state = (unsigned char)flag;
+			lcd_debug_test(flag);
+		}
+		lcd_driver->lcd_test_flag &= ~(LCD_TEST_UPDATE);
+	}
+
+	return IRQ_HANDLED;
 }
 
 /* ****************************************
@@ -888,7 +925,10 @@ static int lcd_config_probe(struct platform_device *pdev)
 
 	lcd_driver->lcd_info = &lcd_vinfo;
 	lcd_driver->lcd_config = &lcd_config_dft;
+	lcd_driver->lcd_test_state = 0;
 	lcd_driver->lcd_test_flag = 0;
+	lcd_driver->lcd_mute_state = 0;
+	lcd_driver->lcd_mute_flag = 0;
 	lcd_driver->lcd_resume_type = 1; /* default workqueue */
 	lcd_driver->power_ctrl = lcd_power_ctrl;
 	lcd_driver->module_reset = lcd_module_reset;
@@ -920,6 +960,28 @@ static int lcd_config_probe(struct platform_device *pdev)
 	}
 
 	return 0;
+}
+
+static int lcd_vsync_irq_init(void)
+{
+	if (!lcd_driver->res_vsync_irq) {
+		LCDERR("res_vsync_irq is null\n");
+		return -1;
+	}
+
+	if (request_irq(lcd_driver->res_vsync_irq->start, lcd_vsync_isr,
+		IRQF_SHARED, "lcd_vsync", (void *)"lcd_vsync"))
+		LCDERR("can't request lcd_vsync_irq\n");
+	else
+		LCDPR("request lcd_vsync_irq successful\n");
+
+	return 0;
+}
+
+static void lcd_vsync_irq_remove(void)
+{
+	if (lcd_driver->res_vsync_irq)
+		free_irq(lcd_driver->res_vsync_irq->start, (void *)"lcd_vsync");
 }
 
 #ifdef CONFIG_OF
@@ -1053,6 +1115,7 @@ static int lcd_probe(struct platform_device *pdev)
 
 	lcd_ioremap(pdev);
 	ret = lcd_config_probe(pdev);
+	lcd_vsync_irq_init();
 
 	LCDPR("%s %s\n", __func__, (ret ? "failed" : "ok"));
 	return 0;
@@ -1066,6 +1129,7 @@ static int lcd_remove(struct platform_device *pdev)
 		destroy_workqueue(lcd_driver->workqueue);
 
 	if (lcd_driver) {
+		lcd_vsync_irq_remove();
 		lcd_fops_remove();
 		lcd_class_remove();
 		lcd_config_remove(lcd_driver->dev);

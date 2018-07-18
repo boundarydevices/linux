@@ -371,6 +371,14 @@ static void lcd_venc_set(struct lcd_config_s *pconf)
 	lcd_vcbus_write(ENCL_VIDEO_VSO_ELINE, pconf->lcd_timing.vs_ve_addr);
 	lcd_vcbus_write(ENCL_VIDEO_RGBIN_CTRL, 3);
 
+	/* default black pattern */
+	lcd_vcbus_write(ENCL_TST_MDSEL, 0);
+	lcd_vcbus_write(ENCL_TST_Y, 0);
+	lcd_vcbus_write(ENCL_TST_CB, 0);
+	lcd_vcbus_write(ENCL_TST_CR, 0);
+	lcd_vcbus_write(ENCL_TST_EN, 1);
+	lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV, 0, 3, 1);
+
 	lcd_vcbus_write(ENCL_VIDEO_EN, 1);
 
 	aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, NULL);
@@ -915,7 +923,7 @@ void lcd_tablet_driver_init_pre(void)
 	lcd_clk_set(pconf);
 	lcd_venc_set(pconf);
 	lcd_encl_tcon_set(pconf);
-	lcd_mute_setting(1);
+	lcd_drv->lcd_mute_state = 1;
 
 	lcd_vcbus_write(VENC_INTCTRL, 0x200);
 
