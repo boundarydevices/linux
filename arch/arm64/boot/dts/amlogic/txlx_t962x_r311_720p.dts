@@ -480,7 +480,9 @@
 		dev_name = "vdin0";
 		status = "okay";
 		reserve-iomap = "true";
-		flag_cma = <1>;/*1:share with codec_mm;2:cma alone*/
+		/*bit0:(1:share with codec_mm;0:cma alone)*/
+		/*bit8:(1:alloc in discontinus way;0:alone in continuous way)*/
+		flag_cma = <0x101>;
 		/* MByte, if 10bit disable: 64M(YUV422),
 		 * if 10bit enable: 64*1.5 = 96M(YUV422)
 		 * if support 4K2K-YUV444-10bit-WR:3840*2160*4*4 ~= 128M
