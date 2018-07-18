@@ -894,7 +894,7 @@ int aml_sd_uart_detect(struct amlsd_platform *pdata)
 		aml_sd_voltage_switch(mmc,
 				MMC_SIGNAL_VOLTAGE_330);
 
-		if (pdata->caps & MMC_CAP_4_BIT_DATA)
+		if (pdata->caps & MMC_CAP_4_BIT_DATA && mmc)
 			mmc->caps |= MMC_CAP_4_BIT_DATA;
 	}
 	return 0;

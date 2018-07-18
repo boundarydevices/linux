@@ -1298,10 +1298,10 @@ int aml_emmc_clktree_init(struct amlsd_host *host)
 		snprintf(name, sizeof(name), "clkin%d", i);
 		host->mux_parent[i] = devm_clk_get(host->dev, name);
 		if (IS_ERR(host->mux_parent[i])) {
-			ret = PTR_ERR(host->mux_parent[i]);
 			if (PTR_ERR(host->mux_parent[i]) != -EPROBE_DEFER)
 				dev_err(host->dev, "Missing clock %s\n", name);
 			host->mux_parent[i] = NULL;
+			ret = PTR_ERR(host->mux_parent[i]);
 			return ret;
 		}
 		host->mux_parent_rate[i] = clk_get_rate(host->mux_parent[i]);
@@ -1572,7 +1572,6 @@ static u32 aml_sd_emmc_pre_pio(struct amlsd_host *host,
 	struct mmc_data *data = NULL;
 	u8 direction = 0, data_rw = 0, block_mode, data_num = 0;
 	u32 data_size, data_len, ret = 0;
-	u32 desc_cnt = 0;
 	u32 bl_len;
 	struct sd_emmc_desc_info *desc_cur = NULL;
 	struct cmd_cfg *des_cmd_cur = NULL;
@@ -1614,10 +1613,6 @@ static u32 aml_sd_emmc_pre_pio(struct amlsd_host *host,
 
 	desc_cur = desc;
 	des_cmd_cur = (struct cmd_cfg *)&(desc_cur->cmd_info);
-	if (desc_cnt != 0) { /* for first desc, */
-		des_cmd_cur->no_resp = 1;
-		des_cmd_cur->no_cmd = 1;
-	}
 	des_cmd_cur->data_io = 1;
 	des_cmd_cur->owner = 1;
 	des_cmd_cur->timeout = 0xc;
@@ -2579,8 +2574,10 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 			host->xfer_step = XFER_IRQ_TASKLET_BUSY;
 		else
 			host->xfer_step = XFER_IRQ_OCCUR;
+	} else {
+		spin_unlock_irqrestore(&host->mrq_lock, flags);
+		return IRQ_NONE;
 	}
-
 	/* ack all (enabled) interrupts */
 	writel(0x7fff, host->base + SD_EMMC_STATUS);
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
@@ -2707,12 +2704,9 @@ static irqreturn_t meson_mmc_irq_thread(int irq, void *dev_id)
 
 	if (!mrq) {
 		pr_err("%s: !mrq xfer_step %d\n",
-				mmc_hostname(host->mmc), xfer_step);
-		if (xfer_step == XFER_FINISHED ||
-			xfer_step == XFER_TIMER_TIMEOUT){
-			spin_unlock_irqrestore(&host->mrq_lock, flags);
-			return IRQ_HANDLED;
-		}
+		mmc_hostname(host->mmc), xfer_step);
+		spin_unlock_irqrestore(&host->mrq_lock, flags);
+		return IRQ_HANDLED;
 /*		aml_sd_emmc_print_err(host);*/
 	}
 
@@ -3040,8 +3034,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 
 	host = kzalloc(sizeof(struct amlsd_host), GFP_KERNEL);
 	if (!host)
-		ret = -ENODEV;
-
+		return  -ENODEV;
 	host->pdev = pdev;
 	host->dev = &pdev->dev;
 	dev_set_drvdata(&pdev->dev, host);
@@ -3050,6 +3043,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		of_device_get_match_data(&pdev->dev);
 	if (!host->data) {
 		ret = -EINVAL;
+		pr_err("%s() fail!\n", __func__);
 		goto fail_init_host;
 	}
 	if (host->data->chip_type >= MMC_CHIP_TXLX)

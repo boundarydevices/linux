@@ -253,8 +253,8 @@ int amlmmc_dtb_write(struct mmc_card *mmc,
 			pr_info("timestamp are not same %d:%d\n",
 				info->stamp[0], info->stamp[1]);
 			dtb->timestamp = 1 +
-				stamp_after(info->stamp[1], info->stamp[0]) ?
-				info->stamp[1]:info->stamp[0];
+				(stamp_after(info->stamp[1], info->stamp[0]) ?
+				info->stamp[1]:info->stamp[0]);
 		} else
 			dtb->timestamp = 1 + info->stamp[0];
 	}
@@ -293,10 +293,6 @@ int amlmmc_dtb_read(struct mmc_card *card,
 	memset(buf, 0x0, len);
 
 	start_blk = MMC_DTB_PART_OFFSET;
-	if (start_blk < 0) {
-		ret = -EINVAL;
-		return ret;
-	}
 
 	pgcnt = PAGE_ALIGN(CONFIG_DTB_SIZE) >> PAGE_SHIFT;
 
@@ -988,7 +984,7 @@ static int add_emmc_partition(struct gendisk *disk,
 			pr_info("[%s] %s: partition exceeds device capacity:\n",
 					__func__, disk->disk_name);
 
-			pr_info("\%20s	offset 0x%012llx, size 0x%012llx\n",
+			pr_info("%20s	offset 0x%012llx, size 0x%012llx\n",
 					pp->name, offset<<9, size<<9);
 
 			break;
@@ -1233,7 +1229,10 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
 
 	if (ret == 0) /* ok */
 		ret = emmc_key_init(card);
-
+	if (ret) {
+		kfree(pt_fmt);
+		goto out;
+	}
 	amlmmc_dtb_init(card);
 
 	aml_store_class = class_create(THIS_MODULE, "aml_store");

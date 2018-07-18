@@ -376,11 +376,8 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 	if (!mrq) {
 		pr_err("%s: !mrq xfer_step %d\n",
 				mmc_hostname(host->mmc), xfer_step);
-		if (xfer_step == XFER_FINISHED ||
-			xfer_step == XFER_TIMER_TIMEOUT){
 			spin_unlock_irqrestore(&host->mrq_lock, flags);
 			return IRQ_HANDLED;
-		}
 		/* aml_sd_emmc_print_err(host); */
 	}
 	/* process stop cmd we sent on porpos */
