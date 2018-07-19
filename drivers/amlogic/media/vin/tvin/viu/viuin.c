@@ -178,7 +178,11 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 	/*open the venc to vdin path*/
 	switch (rd_bits_viu(VPU_VIU_VENC_MUX_CTRL, 0, 2)) {
 	case 0:
-		viu_mux = 0x8;/* wr_bits(VPU_VIU_VENC_MUX_CTRL,0x88,4,8); */
+		if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
+			viu_mux = 0x4;
+		else
+			viu_mux = 0x8;
+		/* wr_bits(VPU_VIU_VENC_MUX_CTRL,0x88,4,8); */
 		devp->enc_info_addr = ENCL_INFO_READ;
 		break;
 	case 1:
@@ -208,7 +212,7 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 			wr_viu(VPU_VIU2VDIN_HDN_CTRL, 0x40f00);
 	} else
 		wr_bits_viu(VPU_VIU2VDIN_HDN_CTRL, devp->parm.h_active, 0, 14);
-	if (is_meson_g12a_cpu()  || is_meson_g12b_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 		if (((port >= TVIN_PORT_VIU1_WB0_VD1) &&
 			(port <= TVIN_PORT_VIU1_WB0_POST_BLEND)) ||
 			((port >= TVIN_PORT_VIU2_WB0_VD1) &&
@@ -305,6 +309,7 @@ static void viuin_close(struct tvin_frontend_s *fe)
 	if (open_cnt == 0) {
 		if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 			wr_viu(VPU_VIU_VDIN_IF_MUX_CTRL, 0);
+			wr_viu(VPU_VIU_VENC_MUX_CTRL, 0);
 			wr_viu(VPP_WRBAK_CTRL, 0);
 
 		} else {

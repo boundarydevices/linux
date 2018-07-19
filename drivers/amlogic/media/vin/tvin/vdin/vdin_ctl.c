@@ -145,7 +145,7 @@ static unsigned int vpu_reg_27af = 0x3;
 #define MEAS_MUX_ISP                    8
 #define MEAS_MUX_656_B                  9
 #define MEAS_MUX_VIU1                   6
-#define MEAS_MUX_VIU2                   9
+#define MEAS_MUX_VIU2                   8
 
 #define HDMI_DE_REPEAT_DONE_FLAG	0xF0
 #define DECIMATION_REAL_RANGE		0x0F
