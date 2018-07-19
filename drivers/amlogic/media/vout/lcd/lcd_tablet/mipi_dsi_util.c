@@ -452,10 +452,10 @@ static void mipi_dcs_set(int trans_type, int req_ack, int tear_en)
 
 	if (tear_en == MIPI_DCS_ENABLE_TEAR) {
 		/* Enable Tear Interrupt if tear_en is valid */
-		lcd_vcbus_set_mask(MIPI_DSI_TOP_INTR_CNTL_STAT,
+		dsi_host_set_mask(MIPI_DSI_TOP_INTR_CNTL_STAT,
 			(0x1 << BIT_EDPITE_INT_EN));
 		/* Enable Measure Vsync */
-		lcd_vcbus_set_mask(MIPI_DSI_TOP_MEAS_CNTL,
+		dsi_host_set_mask(MIPI_DSI_TOP_MEAS_CNTL,
 			(0x1 << BIT_VSYNC_MEAS_EN) | (0x1 << BIT_TE_MEAS_EN));
 	}
 
@@ -1883,6 +1883,8 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 			    */
 			op_mode_disp, /* DSI operation mode, video or command */
 			pconf);
+		if (op_mode_disp == MIPI_DSI_OPERATION_MODE_VIDEO)
+			lcd_vcbus_write(ENCL_VIDEO_EN, 1);
 	}
 }
 
@@ -2064,7 +2066,13 @@ static void mipi_dsi_host_on(struct lcd_config_s *pconf)
 	if (lcd_debug_print_flag)
 		LCDPR("%s\n", __func__);
 
+	/* disable encl */
+	lcd_vcbus_write(ENCL_VIDEO_EN, 0);
+	udelay(100);
+
 	startup_mipi_dsi_host();
+
+	set_dsi_phy_config(pconf->lcd_control.mipi_config);
 
 	op_mode_init = pconf->lcd_control.mipi_config->operation_mode_init;
 	mipi_dcs_set(MIPI_DSI_CMD_TRANS_TYPE, /* 0: high speed, 1: low power */
@@ -2075,10 +2083,12 @@ static void mipi_dsi_host_on(struct lcd_config_s *pconf)
 		0, /* Chroma sub sample, only for YUV 422 or 420, even or odd */
 		op_mode_init, /* DSI operation mode, video or command */
 		pconf);
-	set_dsi_phy_config(pconf->lcd_control.mipi_config);
 
 	/* Startup transfer */
 	mipi_dsi_lpclk_ctrl(pconf->lcd_control.mipi_config);
+	if (op_mode_init == MIPI_DSI_OPERATION_MODE_VIDEO)
+		lcd_vcbus_write(ENCL_VIDEO_EN, 1);
+
 	mipi_dsi_link_on(pconf);
 
 	if (lcd_debug_print_flag)

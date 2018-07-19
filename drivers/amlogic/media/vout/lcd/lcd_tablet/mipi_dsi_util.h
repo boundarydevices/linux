@@ -362,6 +362,11 @@ struct dsi_cmd_request_s {
 #define BIT_ACK_ERR_1               1
 #define BIT_ACK_ERR_0               0
 
+
+/* operation mode */
+#define MIPI_DSI_OPERATION_MODE_VIDEO      0
+#define MIPI_DSI_OPERATION_MODE_COMMAND    1
+
 /* Command transfer type in command mode */
 #define DCS_TRANS_HS                0
 #define DCS_TRANS_LP                1
