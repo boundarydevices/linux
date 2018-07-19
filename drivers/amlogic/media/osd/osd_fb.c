@@ -758,7 +758,13 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 				sizeof(struct fb_sync_request_s));
 		break;
 	case FBIO_WAITFORVSYNC:
+		vsync_timestamp = (s32)osd_wait_vsync_event();
+		ret = copy_to_user(argp, &vsync_timestamp, sizeof(s32));
+		break;
 	case FBIO_WAITFORVSYNC_64:
+		vsync_timestamp_64 = osd_wait_vsync_event();
+		ret = copy_to_user(argp, &vsync_timestamp_64, sizeof(s64));
+		break;
 	case FBIOGET_OSD_SCALE_AXIS:
 	case FBIOPUT_OSD_ORDER:
 	case FBIOGET_OSD_ORDER:
@@ -1039,15 +1045,6 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 			? -EFAULT : 0;
 		break;
 #endif
-
-	case FBIO_WAITFORVSYNC:
-		vsync_timestamp = (s32)osd_wait_vsync_event();
-		ret = copy_to_user(argp, &vsync_timestamp, sizeof(s32));
-		break;
-	case FBIO_WAITFORVSYNC_64:
-		vsync_timestamp_64 = osd_wait_vsync_event();
-		ret = copy_to_user(argp, &vsync_timestamp_64, sizeof(s64));
-		break;
 	case FBIOPUT_OSD_CURSOR:
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD2_CURSOR
 		osd_cursor(info, &cursor);
