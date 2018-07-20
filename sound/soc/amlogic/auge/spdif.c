@@ -43,6 +43,9 @@
 #define SPDIF_A	0
 #define SPDIF_B	1
 
+/* Debug by PTM when bringup */
+/* #define G12A_PTM */
+
 struct spdif_chipinfo {
 	unsigned int id;
 
@@ -472,7 +475,10 @@ static int aml_spdif_new(struct snd_soc_pcm_runtime *rtd)
 		__func__,
 		(p_spdif->id == 0) ? "a":"b",
 		p_spdif->clk_cont);
-	/* keep frddr, when spdif init done, frddr can be released. */
+	/* keep frddr when probe, after spdif_frddr_init done
+	 * frddr can be released, and spdif outputs zero data
+	 * without frddr used.
+	 */
 	if (p_spdif->clk_cont)
 		spdifout_play_with_zerodata_free(p_spdif->id);
 
@@ -519,11 +525,6 @@ static int aml_dai_spdif_startup(
 	int ret;
 
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
-
-	if (!p_spdif->clk_cont)
-		aml_spdif_fifo_reset(p_spdif->actrl,
-			substream->stream,
-			p_spdif->id);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 
@@ -647,13 +648,13 @@ static int aml_dai_spdif_prepare(
 		spdif_get_channel_status_info(&chsts, runtime->rate);
 		spdif_set_channel_status_info(&chsts, p_spdif->id);
 
-		/* TOHDMITX_CTRL0 */
-		if (p_spdif->id == 1) {
-			spdifoutb_to_hdmitx_ctrl(p_spdif->id);
+		/* TOHDMITX_CTRL0
+		 * Both spdif_a/spdif_b would notify to hdmitx
+		 */
+		spdifout_to_hdmitx_ctrl(p_spdif->id);
+		/* notify to hdmitx */
+		spdif_notify_to_hdmitx(substream);
 
-			/* notify to hdmitx */
-			spdif_notify_to_hdmitx(substream);
-		}
 	} else {
 		struct toddr *to = p_spdif->tddr;
 		unsigned int msb, lsb, toddr_type;
@@ -725,13 +726,19 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		/* reset fifo */
+		aml_spdif_fifo_reset(p_spdif->actrl,
+			substream->stream,
+			p_spdif->id);
+
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			dev_info(substream->pcm->card->dev, "spdif playback enable\n");
+			dev_info(substream->pcm->card->dev, "S/PDIF Playback enable\n");
 			aml_frddr_enable(p_spdif->fddr, 1);
 		} else {
-			dev_info(substream->pcm->card->dev, "spdif capture enable\n");
+			dev_info(substream->pcm->card->dev, "S/PDIF Capture enable\n");
 			aml_toddr_enable(p_spdif->tddr, 1);
 		}
+
 		aml_spdif_enable(p_spdif->actrl,
 			substream->stream, p_spdif->id, true);
 		break;
@@ -739,13 +746,15 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			dev_info(substream->pcm->card->dev, "spdif playback disable\n");
+			dev_info(substream->pcm->card->dev, "S/PDIF Playback disable\n");
 			aml_frddr_enable(p_spdif->fddr, 0);
 		} else {
-			dev_info(substream->pcm->card->dev, "spdif capture disable\n");
+			dev_info(substream->pcm->card->dev, "S/PDIF Capture disable\n");
 			aml_toddr_enable(p_spdif->tddr, 0);
 		}
-		/* continuous, spdif out is only mute, not disable */
+		/* continuous-clock, spdif out is not disable,
+		 * only mute, ensure spdif outputs zero data.
+		 */
 		if (p_spdif->clk_cont
 			&& (substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
 			aml_spdif_mute(p_spdif->actrl,
@@ -790,8 +799,6 @@ static int aml_dai_set_spdif_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 
 	return 0;
 }
-
-/*#define G12A_PTM*/
 
 static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 {
@@ -903,7 +910,6 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct aml_spdif *p_spdif = dev_get_drvdata(dev);
-
 	int ret = 0;
 
 	/* clock for spdif in */
@@ -940,7 +946,10 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 		if (p_spdif->irq_spdifin < 0)
 			dev_err(dev, "platform_get_irq_byname failed\n");
 
-		/* spdif pinmux */
+		/* spdif pinmux
+		 * only for spdif_a
+		 * spdif_b has no pin to output yet
+		 */
 		p_spdif->pin_ctl = devm_pinctrl_get_select(dev, "spdif_pins");
 		if (IS_ERR(p_spdif->pin_ctl)) {
 			dev_info(dev, "aml_spdif_get_pins error!\n");
@@ -963,7 +972,7 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 			pr_err("SPDIF IN extcon failed to register!!, ignore it\n");
 	}
 
-	/* clock for spdif in */
+	/* clock for spdif out */
 	/* clock gate */
 	p_spdif->gate_spdifout = devm_clk_get(dev, "gate_spdifout");
 	if (IS_ERR(p_spdif->gate_spdifout)) {
@@ -987,7 +996,7 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 }
 
 struct spdif_chipinfo axg_spdif_chipinfo = {
-	.id = SPDIF_A,
+	.id           = SPDIF_A,
 };
 
 struct spdif_chipinfo g12a_spdif_a_chipinfo = {
@@ -1102,7 +1111,7 @@ struct platform_driver aml_spdif_driver = {
 module_platform_driver(aml_spdif_driver);
 
 MODULE_AUTHOR("Amlogic, Inc.");
-MODULE_DESCRIPTION("Amlogic SPDIF ASoc driver");
+MODULE_DESCRIPTION("Amlogic S/PDIF ASoc driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:" DRV_NAME);
 MODULE_DEVICE_TABLE(of, aml_spdif_device_id);

@@ -61,7 +61,7 @@ extern void aml_spdifout_select_aed(bool enable, int spdifout_id);
 extern void aml_spdifout_get_aed_info(int spdifout_id,
 	int *bitwidth, int *frddrtype);
 
-extern void spdifoutb_to_hdmitx_ctrl(int spdif_index);
+extern void spdifout_to_hdmitx_ctrl(int spdif_index);
 
 extern void spdifout_samesource_set(int spdif_index, int fifo_id,
 	int bitwidth, bool is_enable);

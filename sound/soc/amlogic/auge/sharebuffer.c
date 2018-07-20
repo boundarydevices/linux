@@ -37,7 +37,7 @@ static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 		bit_depth, true);
 
 	/* spdif to hdmitx */
-	spdifoutb_to_hdmitx_ctrl(spdif_id);
+	spdifout_to_hdmitx_ctrl(spdif_id);
 	/* check and set channel status */
 	spdif_get_channel_status_info(&chsts, runtime->rate);
 	spdif_set_channel_status_info(&chsts, spdif_id);

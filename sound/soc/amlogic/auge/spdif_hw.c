@@ -297,15 +297,17 @@ void aml_spdifout_get_aed_info(int spdifout_id,
 		*frddrtype = (val >> 4) & 0x7;
 }
 
-/*value for spdif_index is only 0, 1 */
-void spdifoutb_to_hdmitx_ctrl(int spdif_index)
+/* spdifout to hdmix ctrl
+ * allow spdif out data to hdmitx
+ */
+void spdifout_to_hdmitx_ctrl(int spdif_index)
 {
 	audiobus_write(EE_AUDIO_TOHDMITX_CTRL0,
 		1 << 31
 		| 1 << 3 /* spdif_clk_cap_inv */
 		| 0 << 2 /* spdif_clk_inv */
-		| spdif_index << 1 /* spdif_out_b */
-		| spdif_index << 0 /* spdif_clk_b */
+		| spdif_index << 1 /* spdif_out */
+		| spdif_index << 0 /* spdif_clk */
 	);
 }
 
@@ -533,7 +535,7 @@ void spdifout_play_with_zerodata(unsigned int spdif_id)
 		/* spdif clk */
 		spdifout_clk_ctrl(spdif_id, true);
 		/* spdif to hdmitx */
-		spdifoutb_to_hdmitx_ctrl(spdif_id);
+		spdifout_to_hdmitx_ctrl(spdif_id);
 
 		/* spdif ctrl */
 		spdifout_fifo_ctrl(spdif_id, frddr_index, bitwidth);
