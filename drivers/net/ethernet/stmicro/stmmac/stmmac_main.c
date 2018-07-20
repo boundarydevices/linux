@@ -124,6 +124,8 @@ static void stmmac_exit_fs(struct net_device *dev);
 
 #define STMMAC_COAL_TIMER(x) (jiffies + usecs_to_jiffies(x))
 
+static struct workqueue_struct *moniter_tx_wq;
+static struct delayed_work moniter_tx_worker;
 /**
  * stmmac_verify_args - verify the driver parameters.
  * Description: it checks the driver parameters and set a default in case of
@@ -1451,8 +1453,9 @@ static void stmmac_tx_err(struct stmmac_priv *priv)
 			priv->hw->desc->init_tx_desc(&priv->dma_tx[i],
 						     priv->mode,
 						     (i == DMA_TX_SIZE - 1));
-	priv->dirty_tx = 0;
-	priv->cur_tx = 0;
+	//priv->dirty_tx = 0;
+	//priv->cur_tx = 0;
+	priv->cur_tx = priv->dirty_tx;
 	netdev_reset_queue(priv->dev);
 	priv->hw->dma->start_tx(priv->ioaddr);
 
@@ -1877,6 +1880,7 @@ static int stmmac_open(struct net_device *dev)
 	napi_enable(&priv->napi);
 	netif_start_queue(dev);
 
+	queue_delayed_work(moniter_tx_wq, &moniter_tx_worker, HZ);
 	return 0;
 
 lpiirq_error:
@@ -2722,12 +2726,14 @@ static int stmmac_poll(struct napi_struct *napi, int budget)
  *   netdev structure and arrange for the device to be reset to a sane state
  *   in order to transmit a new packet.
  */
+unsigned int timeout_err;
 static void stmmac_tx_timeout(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 
 	/* Clear Tx resources and restart transmitting again */
 	stmmac_tx_err(priv);
+	timeout_err = 1;
 }
 
 /**
@@ -3248,6 +3254,21 @@ static int stmmac_hw_init(struct stmmac_priv *priv)
 	return 0;
 }
 
+struct stmmac_priv *priv_monitor;
+static void moniter_tx_handler(struct work_struct *work)
+{
+	if (priv_monitor) {
+		if (timeout_err) {
+			pr_info("recover eth\n");
+			stmmac_release(priv_monitor->dev);
+			stmmac_open(priv_monitor->dev);
+			timeout_err = 0;
+		}
+	} else {
+		pr_info("device not init yet!\n");
+	}
+	queue_delayed_work(moniter_tx_wq, &moniter_tx_worker, HZ);
+}
 /**
  * stmmac_dvr_probe
  * @device: device pointer
@@ -3266,6 +3287,8 @@ int stmmac_dvr_probe(struct device *device,
 	struct net_device *ndev = NULL;
 	struct stmmac_priv *priv;
 
+	moniter_tx_wq = create_singlethread_workqueue("eth_moniter_tx_wq");
+	INIT_DELAYED_WORK(&moniter_tx_worker, moniter_tx_handler);
 	ndev = alloc_etherdev(sizeof(struct stmmac_priv));
 	if (!ndev)
 		return -ENOMEM;
@@ -3415,6 +3438,7 @@ int stmmac_dvr_probe(struct device *device,
 	ret = gmac_create_sysfs(
 		mdiobus_get_phy(priv->mii, priv->plat->phy_addr), priv->ioaddr);
 #endif
+	priv_monitor = priv;
 	return ret;
 
 error_netdev_register:
@@ -3485,6 +3509,7 @@ int stmmac_suspend(struct device *dev)
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	unsigned long flags;
 
+	cancel_delayed_work_sync(&moniter_tx_worker);
 	if (!ndev || !netif_running(ndev))
 		return 0;
 
@@ -3590,7 +3615,6 @@ int stmmac_resume(struct device *dev)
 
 	stmmac_init_tx_coalesce(priv);
 	stmmac_set_rx_mode(ndev);
-
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
 	netif_device_attach(ndev);
 #endif
@@ -3603,6 +3627,8 @@ int stmmac_resume(struct device *dev)
 	if (priv->phydev)
 		phy_start(priv->phydev);
 
+	queue_delayed_work(moniter_tx_wq, &moniter_tx_worker, HZ);
+	timeout_err = 1;
 	return 0;
 }
 EXPORT_SYMBOL_GPL(stmmac_resume);
