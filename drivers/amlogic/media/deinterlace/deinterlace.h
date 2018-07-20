@@ -227,6 +227,7 @@ struct di_dev_s {
 	unsigned int	   flag_cma;
 	struct page			*total_pages;
 	atomic_t			mem_flag;
+	struct dentry *dbg_root;	/*dbg_fs*/
 };
 
 struct di_pre_stru_s {

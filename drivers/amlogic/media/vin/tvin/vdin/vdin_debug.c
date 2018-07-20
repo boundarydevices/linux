@@ -31,6 +31,9 @@
 #include "vdin_drv.h"
 #include "vdin_ctl.h"
 #include "vdin_regs.h"
+/*2018-07-18 add debugfs*/
+#include <linux/seq_file.h>
+#include <linux/debugfs.h>
 
 static void vdin_get_vdin_yuv_rgb_mat0(unsigned int offset,
 		unsigned int *rgb_yuv0,
@@ -550,6 +553,138 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 		devp->dv.dv_flag, devp->dv.dv_config, devp->prop.dolby_vision);
 	pr_info("size of struct vdin_dev_s: %d\n", devp->vdin_dev_ssize);
 	pr_info("Vdin driver version :  %s\n", VDIN_VER);
+}
+
+/*2018-07-18 add debugfs*/
+struct vdin_dev_s *vdin_get_dev(unsigned int index);
+
+/*same as vdin_dump_state*/
+static int seq_file_vdin_state_show(struct seq_file *seq, void *v)
+{
+	struct vdin_dev_s *devp;
+	unsigned int i;
+	struct vframe_s *vf;
+	struct tvin_parm_s *curparm;
+	struct vf_pool *vfp;
+
+	devp = vdin_get_dev(0);
+	vf = &devp->curr_wr_vfe->vf;
+	curparm = &devp->parm;
+	vfp = devp->vfp;
+
+	seq_printf(seq, "h_active = %d, v_active = %d\n",
+		devp->h_active, devp->v_active);
+	seq_printf(seq, "canvas_w = %d, canvas_h = %d\n",
+		devp->canvas_w, devp->canvas_h);
+	seq_printf(seq, "canvas_alin_w = %d, canvas_active_w = %d\n",
+		devp->canvas_alin_w, devp->canvas_active_w);
+	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x1))
+		seq_printf(seq, "mem_start = %ld, mem_size = %d\n",
+			devp->mem_start, devp->mem_size);
+	else
+		for (i = 0; i < devp->canvas_max_num; i++)
+			seq_printf(seq, "buf[%d]mem_start = %ld, mem_size = %d\n",
+			i, devp->vfmem_start[i], devp->vfmem_size);
+	seq_printf(seq, "signal format	= %s(0x%x)\n",
+		tvin_sig_fmt_str(devp->parm.info.fmt),
+		devp->parm.info.fmt);
+	seq_printf(seq, "trans_fmt	= %s(%d)\n",
+		tvin_trans_fmt_str(devp->prop.trans_fmt),
+		devp->prop.trans_fmt);
+	seq_printf(seq, "color_format	= %s(%d)\n",
+		tvin_color_fmt_str(devp->prop.color_format),
+		devp->prop.color_format);
+	seq_printf(seq, "format_convert = %s(%d)\n",
+		vdin_fmt_convert_str(devp->format_convert),
+		devp->format_convert);
+	seq_printf(seq, "aspect_ratio	= %s(%d)\ndecimation_ratio/dvi	= %u / %u\n",
+		tvin_aspect_ratio_str(devp->prop.aspect_ratio),
+		devp->prop.aspect_ratio,
+		devp->prop.decimation_ratio, devp->prop.dvi_info);
+	seq_printf(seq, "[pre->cur]:hs(%d->%d),he(%d->%d),vs(%d->%d),ve(%d->%d)\n",
+		devp->prop.pre_hs, devp->prop.hs,
+		devp->prop.pre_he, devp->prop.he,
+		devp->prop.pre_vs, devp->prop.vs,
+		devp->prop.pre_ve, devp->prop.ve);
+	seq_printf(seq, "frontend_fps:%d\n", devp->prop.fps);
+	seq_printf(seq, "frontend_colordepth:%d\n", devp->prop.colordepth);
+	seq_printf(seq, "source_bitdepth:%d\n", devp->source_bitdepth);
+	seq_printf(seq, "color_depth_config:%d\n", devp->color_depth_config);
+	seq_printf(seq, "color_depth_mode:%d\n", devp->color_depth_mode);
+	seq_printf(seq, "color_depth_support:0x%x\n",
+		devp->color_depth_support);
+	seq_printf(seq, "cma_flag:0x%x\n", devp->cma_config_flag);
+	seq_printf(seq, "auto_cutwindow_en:%d\n", devp->auto_cutwindow_en);
+	seq_printf(seq, "auto_ratio_en:%d\n", devp->auto_ratio_en);
+	seq_printf(seq, "cma_mem_alloc:%d\n", devp->cma_mem_alloc);
+	seq_printf(seq, "cma_mem_size:0x%x\n", devp->cma_mem_size);
+	seq_printf(seq, "cma_mem_mode:%d\n", devp->cma_mem_mode);
+	seq_printf(seq, "force_yuv444_malloc:%d\n", devp->force_yuv444_malloc);
+	vdin_dump_vf_state_seq(devp->vfp, seq);
+	if (vf) {
+		seq_printf(seq, "current vframe index(%u):\n", vf->index);
+		seq_printf(seq, "\t buf(w%u, h%u),type(0x%x),flag(0x%x), duration(%d),\n",
+		vf->width, vf->height, vf->type, vf->flag, vf->duration);
+		seq_printf(seq, "\t ratio_control(0x%x).\n", vf->ratio_control);
+		seq_printf(seq, "\t trans fmt %u, left_start_x %u,\n",
+			vf->trans_fmt, vf->left_eye.start_x);
+		seq_printf(seq, "\t right_start_x %u, width_x %u\n",
+			vf->right_eye.start_x, vf->left_eye.width);
+		seq_printf(seq, "\t left_start_y %u, right_start_y %u, height_y %u\n",
+			vf->left_eye.start_y, vf->right_eye.start_y,
+			vf->left_eye.height);
+	}
+	if (vfp) {
+		seq_printf(seq, "skip_vf_num:%d\n", vfp->skip_vf_num);
+		seq_puts(seq, "**************disp_mode**************\n");
+		for (i = 0; i < VFRAME_DISP_MAX_NUM; i++)
+			seq_printf(seq, "[%d]:%-5d\n", i, vfp->disp_mode[i]);
+		seq_puts(seq, "\n**************disp_index**************\n");
+		for (i = 0; i < VFRAME_DISP_MAX_NUM; i++)
+			seq_printf(seq, "[%d]:%-5d\n", i, vfp->disp_index[i]);
+	}
+	seq_puts(seq, "\n current parameters:\n");
+	seq_printf(seq, "\t frontend of vdin index :  %d, 3d flag : 0x%x\n",
+		curparm->index,  curparm->flag);
+	seq_printf(seq, "\t reserved 0x%x, devp->flags:0x%x\n",
+		curparm->reserved, devp->flags);
+	seq_printf(seq, "max buffer num %u, msr_clk_val:%d.\n",
+		devp->canvas_max_num, devp->msr_clk_val);
+	seq_printf(seq, "canvas buffer size %u, rdma_enable: %d.\n",
+		devp->canvas_max_size, devp->rdma_enable);
+	seq_printf(seq, "range(%d),csc_cfg:0x%x,urgent_en:%d\n",
+		devp->prop.color_fmt_range,
+		devp->csc_cfg, devp->urgent_en);
+	seq_printf(seq, "black_bar_enable: %d, hist_bar_enable: %d, use_frame_rate: %d\n ",
+		devp->black_bar_enable,
+		devp->hist_bar_enable, devp->use_frame_rate);
+	seq_printf(seq, "vdin_irq_flag: %d, vdin_rest_flag: %d, irq_cnt: %d, rdma_irq_cnt: %d\n",
+		devp->vdin_irq_flag, devp->vdin_reset_flag,
+		devp->irq_cnt, devp->rdma_irq_cnt);
+	seq_printf(seq, "rdma_enable :  %d\n", devp->rdma_enable);
+	seq_printf(seq, "dolby_input :  %d\n", devp->dv.dolby_input);
+	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x100))
+		seq_printf(seq, "dolby_mem_start = %ld, dolby_mem_size = %d\n",
+			(devp->mem_start +
+			devp->mem_size - devp->canvas_max_num*dolby_size_byte),
+			dolby_size_byte);
+	else
+		for (i = 0; i < devp->canvas_max_num; i++)
+			seq_printf(seq, "dolby_mem_start[%d] = %ld, dolby_mem_size = %d\n",
+				i, (devp->vfmem_start[i] + devp->vfmem_size -
+				dolby_size_byte), dolby_size_byte);
+	for (i = 0; i < devp->canvas_max_num; i++) {
+		seq_printf(seq, "dv_mem(%d):0x%x\n",
+			devp->vfp->dv_buf_size[i],
+			devp->vfp->dv_buf_mem[i]);
+	}
+	seq_printf(seq, "dv_flag:%d;dv_config:%d,dolby_vision:%d\n",
+		devp->dv.dv_flag, devp->dv.dv_config, devp->prop.dolby_vision);
+	seq_printf(seq, "size of struct vdin_dev_s: %d\n",
+		devp->vdin_dev_ssize);
+	seq_printf(seq, "Vdin driver version :  %s\n", VDIN_VER);
+
+	return 0;
 }
 
 static void vdin_dump_histgram(struct vdin_dev_s *devp)
@@ -2007,4 +2142,82 @@ void vdin_remove_class_files(struct class *vdin_clsp)
 	class_remove_file(vdin_clsp, &class_attr_memp);
 }
 
+
 #endif
+
+/*2018-07-18 add debugfs*/
+#define DEFINE_SHOW_VDIN(__name) \
+static int __name ## _open(struct inode *inode, struct file *file)	\
+{ \
+	return single_open(file, __name ## _show, inode->i_private);	\
+} \
+									\
+static const struct file_operations __name ## _fops = {			\
+	.owner = THIS_MODULE,		\
+	.open = __name ## _open,	\
+	.read = seq_read,		\
+	.llseek = seq_lseek,		\
+	.release = single_release,	\
+}
+
+DEFINE_SHOW_VDIN(seq_file_vdin_state);
+
+struct vdin_debugfs_files_t {
+	const char *name;
+	const umode_t mode;
+	const struct file_operations *fops;
+};
+
+static struct vdin_debugfs_files_t vdin_debugfs_files[] = {
+	{"state", S_IFREG | 0644, &seq_file_vdin_state_fops},
+
+};
+
+
+void vdin_debugfs_init(struct vdin_dev_s *vdevp)
+{
+	int i;
+	struct dentry *ent;
+	unsigned int nub;
+
+	nub = vdevp->index;
+
+	if (nub > 0) {
+		pr_info("%s only support debug vdin0 %d\n", __func__, nub);
+		return;
+	}
+
+	if (vdevp->dbg_root)
+		return;
+
+	vdevp->dbg_root = debugfs_create_dir("vdin0", NULL);
+
+	if (!vdevp->dbg_root) {
+		pr_err("can't create debugfs dir di\n");
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(vdin_debugfs_files); i++) {
+		ent = debugfs_create_file(vdin_debugfs_files[i].name,
+			vdin_debugfs_files[i].mode,
+			vdevp->dbg_root, NULL,
+			vdin_debugfs_files[i].fops);
+		if (!ent)
+			pr_err("debugfs create failed\n");
+	}
+
+}
+void vdin_debugfs_exit(struct vdin_dev_s *vdevp)
+{
+	unsigned int nub;
+
+	nub = vdevp->index;
+	if (nub > 0) {
+		pr_info("%s only support debug vdin0 %d\n", __func__, nub);
+		return;
+	}
+
+	debugfs_remove(vdevp->dbg_root);
+}
+/*------------------------------------------*/
+

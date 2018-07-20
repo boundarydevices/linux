@@ -185,6 +185,7 @@ extern void vdin_vf_freeze(struct vf_pool *p, unsigned int hold_num);
 extern void vdin_vf_unfreeze(struct vf_pool *p);
 
 extern void vdin_dump_vf_state(struct vf_pool *p);
+extern void vdin_dump_vf_state_seq(struct vf_pool *p, struct seq_file *seq);
 
 extern void vdin_vf_disp_mode_update(struct vf_entry *vfe, struct vf_pool *p);
 extern void vdin_vf_disp_mode_skip(struct vf_pool *p);

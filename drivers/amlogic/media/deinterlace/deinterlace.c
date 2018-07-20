@@ -67,6 +67,12 @@
 #include "di_pps.h"
 #define CREATE_TRACE_POINTS
 #include "deinterlace_trace.h"
+
+/*2018-07-18 add debugfs*/
+#include <linux/seq_file.h>
+#include <linux/debugfs.h>
+/*2018-07-18 -----------*/
+
 #ifdef DET3D
 #include "detect3d.h"
 #endif
@@ -1168,7 +1174,98 @@ static bool is_in_queue(struct di_buf_s *di_buf, int queue_idx)
 	return ret;
 }
 
+/*2018-07-18 add debugfs*/
+/*same as dump_di_pre_stru*/
+static int dump_di_pre_stru_seq(struct seq_file *seq, void *v)
+{
+	seq_puts(seq, "di_pre_stru:\n");
 
+	seq_printf(seq, "%-25s = 0x%p\n", "di_mem_buf_dup_p",
+			di_pre_stru.di_mem_buf_dup_p);
+	seq_printf(seq, "%-25s = 0x%p\n", "di_chan2_buf_dup_p",
+		di_pre_stru.di_chan2_buf_dup_p);
+	seq_printf(seq, "%-25s = %d\n", "in_seq",
+		di_pre_stru.in_seq);
+	seq_printf(seq, "%-25s = %d\n", "recycle_seq",
+		di_pre_stru.recycle_seq);
+	seq_printf(seq, "%-25s = %d\n", "pre_ready_seq",
+		di_pre_stru.pre_ready_seq);
+	seq_printf(seq, "%-25s = %d\n", "pre_de_busy",
+		di_pre_stru.pre_de_busy);
+	seq_printf(seq, "%-25s = %d\n", "pre_de_busy_timer_count",
+		di_pre_stru.pre_de_busy_timer_count);
+	seq_printf(seq, "%-25s = %d\n", "pre_de_process_done",
+		di_pre_stru.pre_de_process_done);
+	seq_printf(seq, "%-25s = %d\n", "pre_de_process_flag",
+		di_pre_stru.pre_de_process_flag);
+	seq_printf(seq, "%-25s =%d\n", "pre_de_irq_timeout_count",
+		di_pre_stru.pre_de_irq_timeout_count);
+	seq_printf(seq, "%-25s = %d\n", "unreg_req_flag",
+		di_pre_stru.unreg_req_flag);
+	seq_printf(seq, "%-25s = %d\n", "unreg_req_flag_irq",
+		di_pre_stru.unreg_req_flag_irq);
+	seq_printf(seq, "%-25s = %d\n", "reg_req_flag",
+		di_pre_stru.reg_req_flag);
+	seq_printf(seq, "%-25s = %d\n", "reg_req_flag_irq",
+		di_pre_stru.reg_req_flag_irq);
+	seq_printf(seq, "%-25s = %d\n", "cur_width",
+		di_pre_stru.cur_width);
+	seq_printf(seq, "%-25s = %d\n", "cur_height",
+		di_pre_stru.cur_height);
+	seq_printf(seq, "%-25s = 0x%x\n", "cur_inp_type",
+		di_pre_stru.cur_inp_type);
+	seq_printf(seq, "%-25s = %d\n", "cur_source_type",
+		di_pre_stru.cur_source_type);
+	seq_printf(seq, "%-25s = %d\n", "cur_prog_flag",
+		di_pre_stru.cur_prog_flag);
+	seq_printf(seq, "%-25s = %d\n", "source_change_flag",
+		di_pre_stru.source_change_flag);
+	seq_printf(seq, "%-25s = %s\n", "bypass_flag",
+		di_pre_stru.bypass_flag?"true":"false");
+	seq_printf(seq, "%-25s = %d\n", "prog_proc_type",
+		di_pre_stru.prog_proc_type);
+	seq_printf(seq, "%-25s = %d\n", "madi_enable",
+		di_pre_stru.madi_enable);
+	seq_printf(seq, "%-25s = %d\n", "mcdi_enable",
+		di_pre_stru.mcdi_enable);
+#ifdef DET3D
+	seq_printf(seq, "%-25s = %d\n", "vframe_interleave_flag",
+		di_pre_stru.vframe_interleave_flag);
+#endif
+	seq_printf(seq, "%-25s = %d\n", "left_right",
+		di_pre_stru.left_right);
+	seq_printf(seq, "%-25s = %s\n", "force_interlace",
+		di_pre_stru.force_interlace ? "true" : "false");
+	seq_printf(seq, "%-25s = %d\n", "vdin2nr",
+		di_pre_stru.vdin2nr);
+	seq_printf(seq, "%-25s = %s\n", "bypass_pre",
+		di_pre_stru.bypass_pre ? "true" : "false");
+	seq_printf(seq, "%-25s = %s\n", "invert_flag",
+		di_pre_stru.invert_flag ? "true" : "false");
+
+	return 0;
+}
+
+/*2018-07-18 add debugfs*/
+/*same as dump_di_post_stru*/
+static int dump_di_post_stru_seq(struct seq_file *seq, void *v)
+{
+	seq_puts(seq, "di_post_stru:\n");
+	seq_printf(seq, "run_early_proc_fun_flag	= %d\n",
+		di_post_stru.run_early_proc_fun_flag);
+	seq_printf(seq, "cur_disp_index = %d\n",
+		di_post_stru.cur_disp_index);
+	seq_printf(seq, "post_de_busy			= %d\n",
+		di_post_stru.post_de_busy);
+	seq_printf(seq, "de_post_process_done	= %d\n",
+		di_post_stru.de_post_process_done);
+	seq_printf(seq, "cur_post_buf			= 0x%p\n",
+		di_post_stru.cur_post_buf);
+	seq_printf(seq, "post_peek_underflow	= %u\n",
+		di_post_stru.post_peek_underflow);
+
+	return 0;
+}
 
 static ssize_t
 store_dump_mem(struct device *dev, struct device_attribute *attr,
@@ -2259,6 +2356,47 @@ static void log_buffer_state(unsigned char *tag)
 	}
 }
 
+/*2018-07-18 add debugfs*/
+static void print_di_buf_seq(struct di_buf_s *di_buf, int format,
+					struct seq_file *seq)
+{
+	if (!di_buf)
+		return;
+	if (format == 1) {
+		seq_printf(seq,
+		"\t+index %d, 0x%p, type %d, vframetype 0x%x\n",
+			di_buf->index,
+			di_buf,
+			di_buf->type,
+			di_buf->vframe->type);
+		seq_printf(seq, "\t+trans_fmt %u,bitdepath %d pages %p\n",
+			di_buf->vframe->trans_fmt,
+			di_buf->vframe->bitdepth,
+			di_buf->pages);
+		if (di_buf->di_wr_linked_buf) {
+			seq_printf(seq, "\tlinked  +index %d, 0x%p, type %d\n",
+				di_buf->di_wr_linked_buf->index,
+				di_buf->di_wr_linked_buf,
+				di_buf->di_wr_linked_buf->type);
+		}
+	} else if (format == 2) {
+		seq_printf(seq, "index %d, 0x%p(vframe 0x%p), type %d pages %p\n",
+			di_buf->index, di_buf,
+			di_buf->vframe, di_buf->type, di_buf->pages);
+		seq_printf(seq, "vframetype 0x%x, trans_fmt %u,duration %d pts %d,bitdepth %d\n",
+			di_buf->vframe->type,
+			di_buf->vframe->trans_fmt,
+			di_buf->vframe->duration,
+			di_buf->vframe->pts,
+			di_buf->vframe->bitdepth);
+		if (di_buf->di_wr_linked_buf) {
+			seq_printf(seq, "linked index %d, 0x%p, type %d\n",
+				di_buf->di_wr_linked_buf->index,
+				di_buf->di_wr_linked_buf,
+				di_buf->di_wr_linked_buf->type);
+		}
+	}
+}
 
 static void dump_state(void)
 {
@@ -2368,6 +2506,121 @@ static void dump_state(void)
 		vf_peek(VFM_NAME), video_peek_cnt);
 	pr_info("reg_unreg_timerout = %lu\n", reg_unreg_timeout_cnt);
 	dump_state_flag = 0;
+}
+
+/*2018-07-18 add debugfs*/
+/*same as dump_state*/
+static int seq_file_di_state_show(struct seq_file *seq, void *v)
+{
+	int itmp, i;
+	struct di_buf_s *p = NULL, *keep_buf;;/* , *ptmp; */
+
+	dump_state_flag = 1;
+	seq_printf(seq, "version %s, init_flag %d, is_bypass %d\n",
+			version_s, init_flag, is_bypass(NULL));
+	seq_printf(seq, "recovery_flag = %d, recovery_log_reason=%d, di_blocking=%d",
+		recovery_flag, recovery_log_reason, di_blocking);
+seq_printf(seq, "recovery_log_queue_idx=%d, recovery_log_di_buf=0x%p\n",
+		recovery_log_queue_idx, recovery_log_di_buf);
+	seq_printf(seq, "buffer_size=%d, mem_flag=%d, cma_flag=%d\n",
+		de_devp->buffer_size, atomic_read(&de_devp->mem_flag),
+		de_devp->flag_cma);
+	keep_buf = di_post_stru.keep_buf;
+	seq_printf(seq, "used_post_buf_index %d(0x%p),",
+		IS_ERR_OR_NULL(keep_buf) ?
+		-1 : keep_buf->index, keep_buf);
+	if (!IS_ERR_OR_NULL(keep_buf)) {
+		seq_puts(seq, "used_local_buf_index:\n");
+		for (i = 0; i < USED_LOCAL_BUF_MAX; i++) {
+			p = keep_buf->di_buf_dup_p[i];
+			seq_printf(seq, "%d(0x%p) ",
+				IS_ERR_OR_NULL(p) ? -1 : p->index, p);
+		}
+	}
+	seq_printf(seq, "\nin_free_list (max %d):\n", MAX_IN_BUF_NUM);
+	queue_for_each_entry(p, ptmp, QUEUE_IN_FREE, list) {
+		seq_printf(seq, "index %2d, 0x%p, type %d\n",
+			p->index, p, p->type);
+	}
+	seq_printf(seq, "local_free_list (max %d):\n", de_devp->buf_num_avail);
+	queue_for_each_entry(p, ptmp, QUEUE_LOCAL_FREE, list) {
+		seq_printf(seq, "index %2d, 0x%p, type %d\n",
+			p->index, p, p->type);
+	}
+
+	seq_puts(seq, "post_doing_list:\n");
+	queue_for_each_entry(p, ptmp, QUEUE_POST_DOING, list) {
+		print_di_buf_seq(p, 2, seq);
+	}
+	seq_puts(seq, "pre_ready_list:\n");
+	queue_for_each_entry(p, ptmp, QUEUE_PRE_READY, list) {
+		print_di_buf_seq(p, 2, seq);
+	}
+	seq_printf(seq, "post_free_list (max %d):\n",
+		di_post_stru.di_post_num);
+	queue_for_each_entry(p, ptmp, QUEUE_POST_FREE, list) {
+		seq_printf(seq, "index %2d, 0x%p, type %d, vframetype 0x%x\n",
+			p->index, p, p->type, p->vframe->type);
+	}
+	seq_puts(seq, "post_ready_list:\n");
+	queue_for_each_entry(p, ptmp, QUEUE_POST_READY, list) {
+		print_di_buf_seq(p, 2, seq);
+		print_di_buf_seq(p->di_buf[0], 1, seq);
+		print_di_buf_seq(p->di_buf[1], 1, seq);
+	}
+	seq_puts(seq, "display_list:\n");
+	queue_for_each_entry(p, ptmp, QUEUE_DISPLAY, list) {
+		print_di_buf_seq(p, 2, seq);
+		print_di_buf_seq(p->di_buf[0], 1, seq);
+		print_di_buf_seq(p->di_buf[1], 1, seq);
+	}
+	seq_puts(seq, "recycle_list:\n");
+	queue_for_each_entry(p, ptmp, QUEUE_RECYCLE, list) {
+		seq_printf(seq,
+			"index %d, 0x%p, type %d, vframetype 0x%x pre_ref_count %d post_ref_count %d\n",
+			p->index, p, p->type,
+			p->vframe->type,
+			p->pre_ref_count,
+			p->post_ref_count);
+		if (p->di_wr_linked_buf) {
+			seq_printf(seq,
+				"linked index %2d, 0x%p, type %d pre_ref_count %d post_ref_count %d\n",
+				p->di_wr_linked_buf->index,
+				p->di_wr_linked_buf,
+				p->di_wr_linked_buf->type,
+				p->di_wr_linked_buf->pre_ref_count,
+				p->di_wr_linked_buf->post_ref_count);
+		}
+	}
+	if (di_pre_stru.di_inp_buf) {
+		seq_printf(seq, "di_inp_buf:index %d, 0x%p, type %d\n",
+			di_pre_stru.di_inp_buf->index,
+			di_pre_stru.di_inp_buf,
+			di_pre_stru.di_inp_buf->type);
+	} else {
+		seq_puts(seq, "di_inp_buf: NULL\n");
+	}
+	if (di_pre_stru.di_wr_buf) {
+		seq_printf(seq, "di_wr_buf:index %d, 0x%p, type %d\n",
+			di_pre_stru.di_wr_buf->index,
+			di_pre_stru.di_wr_buf,
+			di_pre_stru.di_wr_buf->type);
+	} else {
+		seq_puts(seq, "di_wr_buf: NULL\n");
+	}
+	dump_di_pre_stru_seq(seq, v);/*dump_di_pre_stru();*/
+	dump_di_post_stru_seq(seq, v);/*dump_di_post_stru();*/
+	seq_puts(seq, "vframe_in[]:");
+
+	for (i = 0; i < MAX_IN_BUF_NUM; i++)
+		seq_printf(seq, "0x%p\n", vframe_in[i]);
+
+	seq_puts(seq, "\n");
+	seq_printf(seq, "vf_peek()=>0x%p, video_peek_cnt = %d\n",
+	vf_peek(VFM_NAME), video_peek_cnt);
+	seq_printf(seq, "reg_unreg_timerout = %lu\n", reg_unreg_timeout_cnt);
+	dump_state_flag = 0;
+	return 0;
 }
 
 static unsigned char check_di_buf(struct di_buf_s *di_buf, int reason)
@@ -7255,6 +7508,65 @@ static void di_get_vpu_clkb(struct device *dev, struct di_dev_s *pdev)
 	#endif
 }
 
+/*2018-07-18 add debugfs*/
+#define DEFINE_SHOW_DI(__name) \
+static int __name ## _open(struct inode *inode, struct file *file)	\
+{ \
+	return single_open(file, __name ## _show, inode->i_private);	\
+} \
+									\
+static const struct file_operations __name ## _fops = {			\
+	.owner = THIS_MODULE,		\
+	.open = __name ## _open,	\
+	.read = seq_read,		\
+	.llseek = seq_lseek,		\
+	.release = single_release,	\
+}
+
+DEFINE_SHOW_DI(seq_file_di_state);
+
+struct di_debugfs_files_t {
+	const char *name;
+	const umode_t mode;
+	const struct file_operations *fops;
+};
+
+static struct di_debugfs_files_t di_debugfs_files[] = {
+	{"state", S_IFREG | 0644, &seq_file_di_state_fops},
+
+};
+
+
+static void di_debugfs_init(void)
+{
+	int i;
+	struct dentry *ent;
+
+	if (de_devp->dbg_root)
+		return;
+
+	de_devp->dbg_root = debugfs_create_dir("di", NULL);
+	if (!de_devp->dbg_root) {
+		pr_err("can't create debugfs dir di\n");
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(di_debugfs_files); i++) {
+		ent = debugfs_create_file(di_debugfs_files[i].name,
+			di_debugfs_files[i].mode,
+			de_devp->dbg_root, NULL,
+			di_debugfs_files[i].fops);
+		if (!ent)
+			pr_err("debugfs create failed\n");
+	}
+
+}
+static void di_debugfs_exit(void)
+{
+	if (de_devp && de_devp->dbg_root)
+		debugfs_remove(de_devp->dbg_root);
+}
+/*-----------------------*/
 
 static int di_probe(struct platform_device *pdev)
 {
@@ -7420,6 +7732,7 @@ static int di_probe(struct platform_device *pdev)
 	di_devp->task = kthread_run(di_task_handle, di_devp, "kthread_di");
 	if (IS_ERR(di_devp->task))
 		pr_err("%s create kthread error.\n", __func__);
+	di_debugfs_init();	/*2018-07-18 add debugfs*/
 fail_kmalloc_dev:
 	return ret;
 }
@@ -7620,6 +7933,7 @@ fail_alloc_cdev_region:
 static void __exit di_module_exit(void)
 {
 	class_destroy(di_clsp);
+	di_debugfs_exit();
 	unregister_chrdev_region(di_devno, DI_COUNT);
 	platform_driver_unregister(&di_driver);
 }

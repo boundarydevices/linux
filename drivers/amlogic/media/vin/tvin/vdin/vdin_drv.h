@@ -303,6 +303,8 @@ struct vdin_dev_s {
 	unsigned int vdin_reset_flag;
 	unsigned int vdin_dev_ssize;
 	wait_queue_head_t queue;
+
+	struct dentry *dbg_root;	/*dbg_fs*/
 };
 
 extern struct vframe_provider_s *vf_get_provider_by_name(
@@ -338,5 +340,9 @@ extern void vdin_vf_unreg(struct vdin_dev_s *devp);
 extern void vdin_pause_dec(struct vdin_dev_s *devp);
 extern void vdin_resume_dec(struct vdin_dev_s *devp);
 extern bool is_dolby_vision_enable(void);
+
+extern void vdin_debugfs_init(struct vdin_dev_s *vdevp);
+extern void vdin_debugfs_exit(struct vdin_dev_s *vdevp);
+
 #endif /* __TVIN_VDIN_DRV_H */
 

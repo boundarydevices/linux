@@ -945,6 +945,63 @@ void vdin_dump_vf_state(struct vf_pool *p)
 
 }
 
+/*2018-07-18 add debugfs*/
+/*same as vdin_dump_vf_state*/
+void vdin_dump_vf_state_seq(struct vf_pool *p, struct seq_file *seq)
+{
+	unsigned long flags;
+	struct vf_entry *pos = NULL, *tmp = NULL;
+
+	seq_puts(seq, "buffers in writeable list:\n");
+	spin_lock_irqsave(&p->wr_lock, flags);
+	list_for_each_entry_safe(pos, tmp, &p->wr_list, list) {
+		seq_printf(seq, "index: %2u,status %u, canvas index0: 0x%x,\n",
+			pos->vf.index, pos->status, pos->vf.canvas0Addr);
+		seq_printf(seq, "\t canvas index1: 0x%x, vframe type: 0x%x.\n",
+			pos->vf.canvas1Addr, pos->vf.type);
+		seq_printf(seq, "\t ratio_control(0x%x).\n",
+			pos->vf.ratio_control);
+	}
+	spin_unlock_irqrestore(&p->wr_lock, flags);
+
+	seq_puts(seq, "buffer in readable list:\n");
+	spin_lock_irqsave(&p->rd_lock, flags);
+	list_for_each_entry_safe(pos, tmp, &p->rd_list, list) {
+		seq_printf(seq, "index: %u,status %u, canvas index0: 0x%x,\n",
+			pos->vf.index, pos->status, pos->vf.canvas0Addr);
+		seq_printf(seq, "\t canvas index1: 0x%x, vframe type: 0x%x.\n",
+			pos->vf.canvas1Addr, pos->vf.type);
+		seq_printf(seq, "\t ratio_control(0x%x).\n",
+			pos->vf.ratio_control);
+	}
+	spin_unlock_irqrestore(&p->rd_lock, flags);
+
+	seq_puts(seq, "buffer in waiting list:\n");
+	spin_lock_irqsave(&p->wt_lock, flags);
+	list_for_each_entry_safe(pos, tmp, &p->wt_list, list) {
+		seq_printf(seq, "index: %u, status %u, canvas index0: 0x%x,\n",
+			pos->vf.index, pos->status, pos->vf.canvas0Addr);
+		seq_printf(seq, "\t canvas index1: 0x%x, vframe type: 0x%x.\n",
+			pos->vf.canvas1Addr, pos->vf.type);
+		seq_printf(seq, "\t ratio_control(0x%x).\n",
+			pos->vf.ratio_control);
+	}
+	spin_unlock_irqrestore(&p->wt_lock, flags);
+	seq_puts(seq, "buffer in temp list:\n");
+	spin_lock_irqsave(&p->tmp_lock, flags);
+	list_for_each_entry_safe(pos, tmp, &p->tmp_list, list) {
+		seq_printf(seq, "index: %u, status %u, canvas index0: 0x%x,\n",
+			pos->vf.index, pos->status, pos->vf.canvas0Addr);
+		seq_printf(seq, "\t canvas index1: 0x%x, vframe type: 0x%x.\n",
+			pos->vf.canvas1Addr, pos->vf.type);
+		seq_printf(seq, "\t ratio_control(0x%x).\n",
+			pos->vf.ratio_control);
+	}
+	spin_unlock_irqrestore(&p->tmp_lock, flags);
+	seq_printf(seq, "buffer get count %d.\n", atomic_read(&p->buffer_cnt));
+
+}
+
 /*update the vframe disp_mode
  *	a.VFRAME_DISP_MODE_UNKNOWN
  *	b. VFRAME_DISP_MODE_OK
