@@ -2558,7 +2558,7 @@ static int codec_mm_scatter_mgt_alloc_in(struct codec_mm_scatter_mgt **psmgt)
 	smgt->reserved_block_mm_M = 64;
 	smgt->keep_size_PAGE = 20 * SZ_1M >> PAGE_SHIFT;
 	smgt->alloc_from_cma_first = 1;
-	smgt->enable_slot_from_sys = 1;
+	smgt->enable_slot_from_sys = 0;
 	smgt->support_from_slot_sys =
 		smgt->enable_slot_from_sys;
 	smgt->mem_flags = CODEC_MM_FLAGS_CMA_FIRST |
