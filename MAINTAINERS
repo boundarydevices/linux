@@ -14539,3 +14539,7 @@ F:	arch/arm64/boot/dts/amlogic/mesontxl_p321-panel.dtsi
 AMLOGIC REBOOT
 M:	Jian Hu <jian.hu@amlogic.com>
 F:	Documentation/devicetree/bindings/amlogic/reboot-meson.txt
+
+AMLOGIC PARTITION DTSI
+M: Jiaming Huang <jiaming.huang@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/partition_tv_4G.dtsi

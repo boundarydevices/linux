@@ -18,7 +18,7 @@
 /dts-v1/;
 
 #include "mesontxl.dtsi"
-#include "partition_mbox_normal.dtsi"
+#include "partition_tv_4G.dtsi"
 #include "mesontxl_p321-panel.dtsi"
 
 / {
