@@ -39,6 +39,8 @@ struct imx_wm8960_data {
 	unsigned int hp_det[2];
 	u32 asrc_rate;
 	u32 asrc_format;
+	struct gpio_desc *mute_hp;
+	struct gpio_desc *standby_hp;
 };
 
 struct imx_priv {
@@ -312,6 +314,13 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 			return ret;
 	}
 
+	if (data->standby_hp) {
+		gpiod_set_value(data->standby_hp, 0);
+		mdelay(1);
+	}
+	if (data->mute_hp)
+		gpiod_set_value(data->mute_hp, 0);
+
 	return ret;
 }
 
@@ -321,6 +330,11 @@ static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
 	struct snd_soc_card *card = rtd->card;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+
+	if (data->mute_hp)
+		gpiod_set_value(data->mute_hp, 1);
+	if (data->standby_hp)
+		gpiod_set_value(data->standby_hp, 1);
 
 	data->is_stream_opened[tx] = false;
 }
@@ -493,6 +507,7 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	struct device_node *asrc_np;
 	struct snd_soc_dai_link_component dlc = { 0 };
 	struct snd_soc_dai *codec_dai;
+	struct gpio_desc *gd = NULL;
 	u32 width;
 	int ret;
 
@@ -568,6 +583,18 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		}
 	}
 
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "mute-hp", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
+	}
+	data->mute_hp = gd;
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "standby-hp", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
+	}
+	data->standby_hp = gd;
 	if (of_property_read_bool(pdev->dev.of_node, "codec-master"))
 		data->is_codec_master = true;
 
@@ -716,6 +743,13 @@ fail:
 
 static int imx_wm8960_remove(struct platform_device *pdev)
 {
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+
+	if (data->mute_hp)
+		gpiod_set_value(data->mute_hp, 1);
+	if (data->standby_hp)
+		gpiod_set_value(data->standby_hp, 1);
 	driver_remove_file(pdev->dev.driver, &driver_attr_micphone);
 	driver_remove_file(pdev->dev.driver, &driver_attr_headphone);
 
