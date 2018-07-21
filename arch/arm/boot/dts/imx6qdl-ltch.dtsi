@@ -573,6 +573,8 @@
 		model = "wm8960-audio";
 		cpu-dai = <&ssi1>;
 		audio-codec = <&wm8960>;
+		mute-hp-gpios = GP_WM8960_AMP_MUTE;
+		standby-hp-gpios = GP_WM8960_AMP_STDBY;
 #ifdef USE_ASRC
 		asrc-controller = <&asrc>;
 #endif
