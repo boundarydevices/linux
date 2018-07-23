@@ -1073,3 +1073,10 @@
 	mem_alloc = <0>;
 	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 };
+
+&spicc {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc_pins>;
+	cs-gpios = <&gpio GPIOZ_3 0>;
+};

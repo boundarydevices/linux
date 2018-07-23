@@ -30,6 +30,8 @@ Required properties:
  - compatible: should be:
 	"amlogic,meson-gx-spicc" on Amlogic GX and compatible SoCs.
 	"amlogic,meson-txlx-spicc" on Amlogic TXLX and compatible SoCs
+	"amlogic,meson-txl-spicc", "amlogic,meson-txlx-spicc"
+				   on Amlogic TXL and compatible SoCs
 	"amlogic,meson-axg-spicc" on Amlogic AXG and compatible SoCs
 	"amlogic,meson-g12a-spicc" on Amlogic G12A and compatible SoCs
 	"amlogic,meson-g12b-spicc", "amlogic,meson-g12a-spicc"

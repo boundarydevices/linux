@@ -464,14 +464,16 @@
 				status = "disabled";
 			};
 
-			spicc: spicc@8d80 {
-				compatible = "amlogic, spicc";
+			spicc: spi@8d80 {
+				compatible = "amlogic,meson-txl-spicc",
+					     "amlogic,meson-txlx-spicc";
+				reg = <0x0 0x8d80 0x0 0x3c>;
+				interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc CLKID_SPICC0>;
+				clock-names = "core";
+				#address-cells = <1>;
+				#size-cells = <0>;
 				status = "disabled";
-				reg = <0x0 0x8d80 0x0 0x28>;
-				//clocks = <&clkc CLKID_SPICC>;
-				clock-names = "spicc_clk";
-				interrupts = <0 81 1>;
-				device_id = <0>;
 			};
 
 			uart_A: serial@84c0 {
@@ -1409,6 +1411,15 @@
 		mux {
 			groups = "dtv_if_agc";
 			function = "dtv";
+		};
+	};
+
+	spicc_pins: spicc {
+		mux {
+			groups = "spi_miso_a",
+				"spi_mosi_a",
+				"spi_clk_a";
+			function = "spi_a";
 		};
 	};
 };
