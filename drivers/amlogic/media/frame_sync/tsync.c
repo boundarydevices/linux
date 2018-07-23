@@ -153,7 +153,7 @@ static int vpause_flag;
 static int apause_flag;
 static bool dobly_avsync_test;
 static int slowsync_enable;
-
+static int apts_lookup_offset;
 pfun_tsdemux_pcrscr_valid tsdemux_pcrscr_valid_cb;
 
 pfun_tsdemux_pcrscr_get tsdemux_pcrscr_get_cb;
@@ -1509,6 +1509,12 @@ static ssize_t show_pcrscr(struct class *class,
 	return sprintf(buf, "0x%x\n", timestamp_pcrscr_get());
 }
 
+static ssize_t show_aptscheckin_flag(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", first_pts_checkin_complete(PTS_TYPE_AUDIO));
+}
+
 static ssize_t store_pcrscr(struct class *class,
 		struct class_attribute *attr,
 		const char *buf, size_t size)
@@ -1914,6 +1920,31 @@ static ssize_t show_startsync_mode(struct class *class,
 	return sprintf(buf, "0x%x\n", tsync_get_startsync_mode());
 }
 
+
+static ssize_t show_apts_lookup(struct class *class,
+	struct class_attribute *attrr, char *buf)
+{
+	unsigned int  pts = 0xffffffff;
+	pts_lookup_offset(PTS_TYPE_AUDIO, apts_lookup_offset, &pts, 300);
+	return sprintf(buf, "0x%x\n", pts);
+}
+
+static ssize_t store_apts_lookup(struct class *class,
+	 struct class_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int offset;
+	ssize_t r;
+
+	/*r = sscanf(buf, "%d", &mode);*/
+	r = kstrtoint(buf, 0, &offset);
+
+	if (r != 0)
+		return -EINVAL;
+	apts_lookup_offset = offset;
+	return size;
+}
+
+
 static ssize_t store_startsync_mode(struct class *class,
 		struct class_attribute *attr,
 		const char *buf, size_t size)
@@ -1937,6 +1968,7 @@ static struct class_attribute tsync_class_attrs[] = {
 	dobly_store_sync),
 	__ATTR(pts_pcrscr, 0664, show_pcrscr,
 	store_pcrscr),
+	__ATTR(apts_checkin_flag, 0664, show_aptscheckin_flag, NULL),
 	__ATTR(event, 0664, NULL, store_event),
 	__ATTR(mode, 0664, show_mode, store_mode),
 	__ATTR(enable, 0664, show_enable, store_enable),
@@ -1969,6 +2001,8 @@ static struct class_attribute tsync_class_attrs[] = {
 	store_firstapts),
 	__ATTR(checkin_firstvpts, 0644, show_checkin_firstvpts,
 	NULL),
+	__ATTR(apts_lookup, 0644, show_apts_lookup,
+		store_apts_lookup),
 	__ATTR_NULL
 };
 
