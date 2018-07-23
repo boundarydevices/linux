@@ -25,6 +25,11 @@
 #include <linux/sort.h>
 #include <linux/slab.h>
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <linux/kmemleak.h>
+#endif
+
+
 #define MAX_RESERVED_REGIONS	16
 static struct reserved_mem reserved_mem[MAX_RESERVED_REGIONS];
 static int reserved_mem_count;
@@ -291,6 +296,11 @@ void __init fdt_init_reserved_mem(void)
 		if (rmem->size == 0)
 			err = __reserved_mem_alloc_size(node, rmem->name,
 						 &rmem->base, &rmem->size);
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+		kmemleak_no_scan(phys_to_virt(rmem->base));
+#endif
+
 		if (err == 0)
 			__reserved_mem_init_node(rmem);
 	}
