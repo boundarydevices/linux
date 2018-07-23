@@ -9,6 +9,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/i2c.h>
