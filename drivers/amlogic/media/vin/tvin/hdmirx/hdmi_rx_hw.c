@@ -739,6 +739,8 @@ void rx_get_audinfo(struct aud_info_s *audio_info)
 void rx_get_audio_status(struct rx_audio_stat_s *aud_sts)
 {
 	if ((rx.state == FSM_SIG_READY) &&
+		(rx.pre.sw_vic != HDMI_UNKNOWN) &&
+		(rx.pre.sw_vic != HDMI_UNSUPPORT) &&
 		(rx.avmute_skip == 0)) {
 		aud_sts->aud_rcv_flag =
 			(rx.aud_info.aud_packet_received == 0) ? false : true;
