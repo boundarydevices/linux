@@ -568,24 +568,21 @@
 	};
 
 	sound {
-		compatible = "fsl,imx6q-ltch-wm8960",
-			     "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&ssi1>;
-		audio-codec = <&wm8960>;
-		mute-hp-gpios = GP_WM8960_AMP_MUTE;
-		standby-hp-gpios = GP_WM8960_AMP_STDBY;
+		amp-mute-gpios = GP_WM8960_AMP_MUTE;
+		/* delay between mute and standby enter */
+		amp-standby-enter-wait-ms = <50>;
+		/* delay between standby exit and unmute */
+		amp-standby-exit-delay-ms = <100>;
+		amp-standby-gpios = GP_WM8960_AMP_STDBY;
+		amp-gain-gpios = GP_WM8960_AMP_G0, GP_WM8960_AMP_G1;
+		/* amp-gain-seq = /bits/ 8 <0 1 2 3>; */ /* default */
 #ifdef USE_ASRC
 		asrc-controller = <&asrc>;
 #endif
-		codec-master;
-		/* JD2: hp detect high for headphone*/
-		hp-det = <2 0>;
+		audio-codec = <&wm8960>;
 		audio-routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
-			"Ext Spk", "SPK_RP",
-			"Ext Spk", "SPK_RN",
+			"Ext Spk", "HP_L",
+			"Ext Spk", "HP_R",
 			"LINPUT1", "Main MIC",
 			"Main MIC", "MICB"
 #ifdef USE_ASRC
@@ -595,6 +592,12 @@
 			"CPU-Capture", "Capture"
 #endif
 			;
+
+		codec-master;
+		compatible = "fsl,imx6q-ltch-wm8960",
+			     "fsl,imx-audio-wm8960";
+		cpu-dai = <&ssi1>;
+		model = "wm8960-audio";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 	};
