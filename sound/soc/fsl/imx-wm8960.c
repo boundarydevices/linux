@@ -54,8 +54,21 @@ struct imx_wm8960_data {
 	struct snd_soc_jack_pin imx_mic_jack_pin;
 	struct snd_soc_jack_gpio imx_mic_jack_gpio;
 	struct snd_soc_dai_link imx_wm8960_dai[3];
-	struct gpio_desc *mute_hp;
-	struct gpio_desc *standby_hp;
+	struct gpio_desc *amp_mute;
+	struct gpio_desc *amp_standby;
+	unsigned amp_standby_enter_wait_ms;
+	unsigned amp_standby_exit_delay_ms;
+#define AMP_GAIN_CNT 2
+	struct gpio_desc *amp_gain[AMP_GAIN_CNT];
+	unsigned char amp_gain_seq[1 << AMP_GAIN_CNT];
+	char amp_gain_value;
+	char amp_mute_value;
+	char amp_disabled;
+	char hp_det_status;
+	char amp_standby_state;
+	char amp_mute_on_hp_detect;
+	char amp_standby_set_pending;
+	char amp_mute_clear_pending;
 };
 
 static int hp_jack_status_check(void *data)
@@ -106,11 +119,93 @@ static int mic_jack_status_check(void *data)
 	return ret;
 }
 
+static int do_mute(struct gpio_desc *gd, int mute)
+{
+	if (!gd)
+		return 0;
+
+	gpiod_set_value(gd, mute);
+	return 0;
+}
+
+static int amp_mute(struct imx_wm8960_data *data, int mute)
+{
+	data->amp_disabled = data->amp_mute_value = mute;
+	if (!mute && data->amp_mute_on_hp_detect && data->hp_det_status)
+		mute = 1;
+	pr_debug("mute=%x\n", mute);
+	return do_mute(data->amp_mute, mute);
+}
+
+static int amp_stdby(struct imx_wm8960_data *data, int stdby)
+{
+	if (!data->amp_standby)
+		return 0;
+	if (stdby == data->amp_standby_state)
+		return 0;
+
+	if (stdby)
+		msleep(data->amp_standby_enter_wait_ms);
+	data->amp_standby_state = stdby;
+	pr_debug("stdby=%x\n", stdby);
+	gpiod_set_value(data->amp_standby, stdby);
+	if (!stdby)
+		msleep(data->amp_standby_exit_delay_ms);
+	return 0;
+}
+
+static int event_amp(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_wm8960_data *data = container_of(card,
+			struct imx_wm8960_data, card);
+
+	if (event & SND_SOC_DAPM_POST_PMU) {
+		amp_stdby(data, 0);
+		data->amp_mute_clear_pending = 1;
+		return 0;
+	}
+	if (event & SND_SOC_DAPM_PRE_PMD) {
+		amp_mute(data, 1);
+		data->amp_standby_set_pending = 1;
+		return 0;
+	}
+	return 0;
+}
+
+static int event_amp_last(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_wm8960_data *data = container_of(card,
+			struct imx_wm8960_data, card);
+
+	if ((event & SND_SOC_DAPM_POST_PMD) && data->amp_standby_set_pending) {
+		data->amp_standby_set_pending = 0;
+		return amp_stdby(data, 1);
+	}
+	if ((event & SND_SOC_DAPM_POST_PMU) && data->amp_mute_clear_pending) {
+		data->amp_mute_clear_pending = 0;
+		return amp_mute(data, 0);
+	}
+	return 0;
+}
+#define SND_SOC_DAPM_POST2(wname, wevent) \
+{	.id = snd_soc_dapm_post, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD, \
+	.subseq = 1}
+
+
 static const struct snd_soc_dapm_widget imx_wm8960_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_MIC("Main MIC", NULL),
+	SND_SOC_DAPM_SPK("Ext Spk", event_amp),
+	SND_SOC_DAPM_POST2("amp_post", event_amp_last),
 };
 
 static int imx_wm8960_jack_init(struct snd_soc_card *card,
@@ -299,13 +394,6 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 			return ret;
 	}
 
-	if (data->standby_hp) {
-		gpiod_set_value(data->standby_hp, 0);
-		mdelay(1);
-	}
-	if (data->mute_hp)
-		gpiod_set_value(data->mute_hp, 0);
-
 	return ret;
 }
 
@@ -315,11 +403,6 @@ static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
 	struct snd_soc_card *card = rtd->card;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
-
-	if (data->mute_hp)
-		gpiod_set_value(data->mute_hp, 1);
-	if (data->standby_hp)
-		gpiod_set_value(data->standby_hp, 1);
 
 	data->is_stream_opened[tx] = false;
 }
@@ -347,10 +430,9 @@ static int imx_wm8960_late_probe(struct snd_soc_card *card)
 	/* GPIO1 used as headphone detect output */
 	snd_soc_component_update_bits(codec_dai->component, WM8960_ADDCTL4, 7<<4, 3<<4);
 
-	if (data->hp_det[0] > 3) {
-		snd_soc_dapm_enable_pin(&card->dapm, "Ext Spk");
+	if (data->hp_det[0] > 3)
 		return 0;
-	}
+
 	/* Enable headphone jack detect */
 	snd_soc_component_update_bits(codec_dai->component, WM8960_ADDCTL2, 1<<6, 1<<6);
 	snd_soc_component_update_bits(codec_dai->component, WM8960_ADDCTL2, 1<<5, data->hp_det[1]<<5);
@@ -463,16 +545,94 @@ static int setup_audmux(struct device *dev)
 	return ret;
 }
 
+static int amp_gain_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_wm8960_data *data = container_of(card,
+			struct imx_wm8960_data, card);
+	int value = ucontrol->value.integer.value[0];
+	int i;
+
+	if (value >= (1 << AMP_GAIN_CNT))
+		return -EINVAL;
+
+	data->amp_gain_value = value;
+	value = data->amp_gain_seq[value];
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
+		struct gpio_desc *gd = data->amp_gain[i];
+
+		if (!gd)
+			break;
+		gpiod_set_value(gd, value & 1);
+		value >>= 1;
+	}
+	return 0;
+}
+
+static int amp_gain_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_wm8960_data *data = container_of(card,
+			struct imx_wm8960_data, card);
+
+	ucontrol->value.integer.value[0] = data->amp_gain_value;
+	return 0;
+}
+
+static int amp_enable_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_wm8960_data *data = container_of(card,
+			struct imx_wm8960_data, card);
+	int value = ucontrol->value.integer.value[0];
+
+	if (value > 1)
+		return -EINVAL;
+	value = (value ^ 1 ) | data->amp_disabled;
+	data->amp_mute_value = value;
+	if (data->amp_mute)
+		gpiod_set_value(data->amp_mute, value);
+	return 0;
+}
+
+static int amp_enable_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_wm8960_data *data = container_of(card,
+			struct imx_wm8960_data, card);
+
+	ucontrol->value.integer.value[0] = data->amp_mute_value ^ 1;
+	return 0;
+}
+
+static const struct snd_kcontrol_new more_controls[] = {
+	SOC_SINGLE_EXT("amp_gain", 0, 0, (1 << AMP_GAIN_CNT) - 1, 0,
+		       amp_gain_get, amp_gain_set),
+	SOC_SINGLE_EXT("amp_enable", 0, 0, 1, 0,
+		       amp_enable_get, amp_enable_set),
+};
+
 static int imx_wm8960_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct device_node *cpu_np = NULL, *codec_np = NULL;
 	struct platform_device *cpu_pdev;
 	struct imx_wm8960_data *data;
 	struct platform_device *asrc_pdev = NULL;
 	struct device_node *asrc_np;
 	struct gpio_desc *gd = NULL;
+	unsigned amp_standby_enter_wait_ms = 0;
+	unsigned amp_standby_exit_delay_ms = 0;
+	const struct snd_kcontrol_new *kcontrols = more_controls;
+	int kcontrols_cnt = ARRAY_SIZE(more_controls);
 	u32 width;
 	int ret;
+	int i;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
@@ -500,7 +660,7 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	if (of_property_read_bool(pdev->dev.of_node, "codec-rpmsg"))
 		data->is_codec_rpmsg = true;
 
-	cpu_np = of_parse_phandle(pdev->dev.of_node, "cpu-dai", 0);
+	cpu_np = of_parse_phandle(np, "cpu-dai", 0);
 	if (!cpu_np) {
 		dev_err(&pdev->dev, "cpu dai phandle missing or invalid\n");
 		ret = -EINVAL;
@@ -520,7 +680,7 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	codec_np = of_parse_phandle(pdev->dev.of_node, "audio-codec", 0);
+	codec_np = of_parse_phandle(np, "audio-codec", 0);
 	if (!codec_np) {
 		dev_err(&pdev->dev, "phandle missing or invalid\n");
 		ret = -EINVAL;
@@ -561,19 +721,42 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		}
 	}
 
-	gd = devm_gpiod_get_index_optional(&pdev->dev, "mute-hp", 0, GPIOD_OUT_HIGH);
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-mute", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd)) {
 		ret = PTR_ERR(gd);
 		goto fail;
 	}
-	data->mute_hp = gd;
-	gd = devm_gpiod_get_index_optional(&pdev->dev, "standby-hp", 0, GPIOD_OUT_HIGH);
+	data->amp_mute = gd;
+	data->amp_mute_value = 1;
+	data->amp_standby_state = 1;
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-standby", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd)) {
 		ret = PTR_ERR(gd);
 		goto fail;
 	}
-	data->standby_hp = gd;
-	if (of_property_read_bool(pdev->dev.of_node, "codec-master"))
+	data->amp_standby = gd;
+
+	of_property_read_u32(np, "amp-standby-enter-wait-ms", &amp_standby_enter_wait_ms);
+	of_property_read_u32(np, "amp-standby-exit-delay-ms", &amp_standby_exit_delay_ms);
+	data->amp_standby_enter_wait_ms = amp_standby_enter_wait_ms;
+	data->amp_standby_exit_delay_ms = amp_standby_exit_delay_ms;
+	for (i = 0; i < (1 << AMP_GAIN_CNT); i++)
+		data->amp_gain_seq[i] = i;
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
+		gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-gain", i, GPIOD_OUT_LOW);
+		if (IS_ERR(gd)) {
+			ret = PTR_ERR(gd);
+			goto fail;
+		}
+		data->amp_gain[i] = gd;
+		if (!gd)
+			break;
+	}
+	of_property_read_u8_array(np, "amp-gain-seq", data->amp_gain_seq,
+			(1 << i));
+
+	if (of_property_read_bool(np, "codec-master"))
 		data->is_codec_master = true;
 
 	if (of_property_read_bool(pdev->dev.of_node, "capture-only"))
@@ -643,14 +826,25 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail;
 
-	of_property_read_u32_array(pdev->dev.of_node, "hp-det", data->hp_det, 2);
+	data->hp_det[0] = ~0;
+	of_property_read_u32_array(np, "hp-det", data->hp_det, 2);
 
-	asrc_np = of_parse_phandle(pdev->dev.of_node, "asrc-controller", 0);
+	asrc_np = of_parse_phandle(np, "asrc-controller", 0);
 	if (asrc_np) {
 		asrc_pdev = of_find_device_by_node(asrc_np);
 		data->asrc_pdev = asrc_pdev;
 	}
 
+	if (!data->amp_gain[0]) {
+		kcontrols++;
+		kcontrols_cnt--;
+	}
+	if (!data->amp_mute)
+		kcontrols_cnt--;
+	if (kcontrols_cnt) {
+		data->card.controls	 = kcontrols;
+		data->card.num_controls  = kcontrols_cnt;
+	}
 	data->card.dai_link = data->imx_wm8960_dai;
 
 	if (data->is_codec_rpmsg) {
@@ -717,11 +911,11 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	data->imx_hp_jack_gpio.gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+	data->imx_hp_jack_gpio.gpio = of_get_named_gpio_flags(np,
 							      "hp-det-gpios", 0,
 							      &data->hp_active_low);
 
-	data->imx_mic_jack_gpio.gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+	data->imx_mic_jack_gpio.gpio = of_get_named_gpio_flags(np,
 							       "mic-det-gpios", 0,
 							       &data->mic_active_low);
 
@@ -783,10 +977,10 @@ static int imx_wm8960_remove(struct platform_device *pdev)
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 
-	if (data->mute_hp)
-		gpiod_set_value(data->mute_hp, 1);
-	if (data->standby_hp)
-		gpiod_set_value(data->standby_hp, 1);
+	if (data->amp_mute)
+		gpiod_set_value(data->amp_mute, 1);
+	if (data->amp_standby)
+		gpiod_set_value(data->amp_standby, 1);
 	device_remove_file(&pdev->dev, &dev_attr_micphone);
 	device_remove_file(&pdev->dev, &dev_attr_headphone);
 
