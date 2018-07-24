@@ -79,6 +79,8 @@ struct ldim_dev_config_s ldim_dev_config = {
 		.pwm_duty_max = 100,
 		.pwm_duty_min = 1,
 	},
+
+	.bl_regnum = 0,
 };
 
 #if 0
@@ -457,7 +459,9 @@ static void ldim_config_print(void)
 			ldim_drv->ldev_conf->en_gpio_off,
 			ldim_drv->ldev_conf->dim_min,
 			ldim_drv->ldev_conf->dim_max);
-		n = ldim_drv->ldim_conf->row * ldim_drv->ldim_conf->col;
+		pr_info("region_num            = %d\n",
+			ldim_drv->ldev_conf->bl_regnum);
+		n = ldim_drv->ldev_conf->bl_regnum;
 		len = (n * 4) + 50;
 		str = kcalloc(len, sizeof(char), GFP_KERNEL);
 		if (str == NULL) {
@@ -466,7 +470,7 @@ static void ldim_config_print(void)
 			len = sprintf(str, "region_mapping:\n  ");
 			for (i = 0; i < n; i++) {
 				len += sprintf(str+len, "%d,",
-					ldim_dev_config.bl_mapping[i]);
+					ldim_drv->ldev_conf->bl_mapping[i]);
 			}
 			pr_info("%s\n\n", str);
 			kfree(str);
@@ -634,6 +638,7 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 		for (i = 0; i < val; i++)
 			ldim_dev_config.bl_mapping[i] = (unsigned short)temp[i];
 	}
+	ldim_dev_config.bl_regnum = (unsigned short)val;
 
 	ret = of_property_read_u32(child, "type", &val);
 	if (ret) {

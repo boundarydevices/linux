@@ -74,6 +74,7 @@ struct ldim_dev_config_s {
 
 	struct bl_pwm_config_s pwm_config;
 
+	unsigned short bl_regnum;
 	unsigned short bl_mapping[LD_BLKREGNUM];
 };
 
