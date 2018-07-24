@@ -105,7 +105,7 @@ static unsigned int regmap_debugfs_get_dump_start(struct regmap *map,
 	if (list_empty(&map->debugfs_off_cache)) {
 		for (; i <= map->max_register; i += map->reg_stride) {
 			/* Skip unprinted registers, closing off cache entry */
-			if (!regmap_readable(map, i) ||
+			if ( //!regmap_readable(map, i) ||
 			    regmap_precious(map, i)) {
 				if (c) {
 					c->max = p - 1;
@@ -205,8 +205,8 @@ static ssize_t regmap_read_debugfs(struct regmap *map, unsigned int from,
 	start_reg = regmap_debugfs_get_dump_start(map, from, *ppos, &p);
 
 	for (i = start_reg; i <= to; i += map->reg_stride) {
-		if (!regmap_readable(map, i))
-			continue;
+//		if (!regmap_readable(map, i))
+//			continue;
 
 		if (regmap_precious(map, i))
 			continue;
