@@ -3008,9 +3008,13 @@ static void dtvdemod_set_agc_pinmux(int on)
 	if (on) {
 		dtvdd_devp->pin = devm_pinctrl_get_select(dtvdd_devp->dev,
 							dtvdd_devp->pin_name);
+		if (IS_ERR(dtvdd_devp->pin)) {
+			dtvdd_devp->pin = NULL;
+			PR_ERR("get agc pins fail\n");
+		}
 	} else {
 		/*off*/
-		if (dtvdd_devp->pin != NULL) {
+		if (!IS_ERR_OR_NULL(dtvdd_devp->pin)) {
 			devm_pinctrl_put(dtvdd_devp->pin);
 			dtvdd_devp->pin = NULL;
 		}
@@ -4064,7 +4068,7 @@ static struct dvb_frontend_ops aml_dtvdm_gxtvbb_ops = {
 };
 
 static struct dvb_frontend_ops aml_dtvdm_txl_ops = {
-	.delsys = { /*SYS_DVBC_ANNEX_A,*/ SYS_DTMB, SYS_ANALOG},
+	.delsys = { SYS_DVBC_ANNEX_A, SYS_DTMB, SYS_ANALOG},
 	.info = {
 		/*in aml_fe, it is 'amlogic dvb frontend' */
 		.name = "amlogic dtv demod txl",

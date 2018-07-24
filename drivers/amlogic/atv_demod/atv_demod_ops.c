@@ -468,10 +468,15 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 	if (atv_demod_get_state() == ATVDEMOD_STATE_WORK)
 		return 0;
 #endif
-	if (amlatvdemod_devp->pin_name != NULL)
+	if (amlatvdemod_devp->pin_name != NULL) {
 		amlatvdemod_devp->agc_pin =
 			devm_pinctrl_get_select(amlatvdemod_devp->dev,
 				amlatvdemod_devp->pin_name);
+		if (IS_ERR(amlatvdemod_devp->agc_pin)) {
+			amlatvdemod_devp->agc_pin = NULL;
+			pr_err("%s: get agc pins fail\n", __func__);
+		}
+	}
 
 	adc_set_pll_cntl(1, 0x1, NULL);
 	vdac_enable(1, 1);
@@ -510,7 +515,7 @@ int atv_demod_leave_mode(struct dvb_frontend *fe)
 	aml_afc_timer_disable(fe);
 
 	atvdemod_uninit();
-	if (amlatvdemod_devp->agc_pin != NULL) {
+	if (!IS_ERR_OR_NULL(amlatvdemod_devp->agc_pin)) {
 		devm_pinctrl_put(amlatvdemod_devp->agc_pin);
 		amlatvdemod_devp->agc_pin = NULL;
 	}
