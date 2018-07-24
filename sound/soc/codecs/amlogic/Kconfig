@@ -166,4 +166,14 @@ config AMLOGIC_SND_SOC_AD82584F
 		Enable Support for ESMT AD82584f CODEC.
 		Select this if your AD82584F is connected via an I2C bus.
 
+config AMLOGIC_SND_SOC_CS42528
+	bool "Cirrus Logic CS42528"
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable Support for Cirrus Logic CS42528 CODEC.
+		Select this if your CS425X8 is connected via an I2C bus.
+		Enable Support for Cirrus Logic CS42528 CODEC.
+		Select this if your CS42528 is connected via an I2C bus.
 #endif #AMLOGIC_SND_SOC_CODECS

@@ -14558,3 +14558,23 @@ F: arch/arm64/boot/dts/amlogic/partition_tv_4G.dtsi
 AMLOGIC AVIN DETECT DRIVER
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
 F:	drivers/amlogic/input/avin_detect/*
+
+AMLOGIC DTS
+M:	Xindong Xu <xindong.xu@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/atom.dts
+F:	arch/arm64/boot/dts/amlogic/gxl_sei210_1g.dts
+F:	arch/arm64/boot/dts/amlogic/gxl_sei210_2g.dts
+F:	arch/arm64/boot/dts/amlogic/mesongxl_sei210.dtsi
+F:	arch/arm64/boot/dts/amlogic/partition_mbox_normal_P_32_atom.dtsi
+F:	arch/arm64/boot/dts/amlogic/partition_mbox_normal_P_32_sei.dtsi
+F:	arch/arm64/boot/dts/amlogic/partition_mbox_normal_sei32bit.dtsi
+
+AMLOGIC ADD CS42528 CODEC DRIVER
+M: Ivan Nie <ivan.nie@amlogic.com>
+F: Documentation/devicetree/bindings/sound/cs42528.txt
+F: sound/soc/codecs/amlogic/cs42528.c
+F: sound/soc/codecs/amlogic/cs42528.h
+
+AMLOGIC SPIDEV
+M:    Ivan Nie <Ivan.nie@amlogic.com>
+F:    Documentation/devicetree/bindings/spi/spidev.txt

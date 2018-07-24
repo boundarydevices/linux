@@ -1299,7 +1299,7 @@ static int aml_asoc_init(struct snd_soc_pcm_runtime *rtd)
 	p_aml_audio->av_mute_desc =
 		gpiod_get(card->dev,
 				"mute_gpio",
-				GPIOD_OUT_HIGH);
+				0);
 	of_property_read_u32(card->dev->of_node, "av_mute_inv",
 		&p_aml_audio->av_mute_inv);
 	of_property_read_u32(card->dev->of_node, "sleep_time",
@@ -1309,7 +1309,7 @@ static int aml_asoc_init(struct snd_soc_pcm_runtime *rtd)
 	p_aml_audio->amp_mute_desc =
 		gpiod_get(card->dev,
 				"amp_mute_gpio",
-				GPIOD_OUT_HIGH);
+				0);
 	of_property_read_u32(card->dev->of_node, "amp_mute_inv",
 		&p_aml_audio->amp_mute_inv);
 

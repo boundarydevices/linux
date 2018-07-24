@@ -1,0 +1,21 @@
+CS42518/CS42528 audio CODEC
+
+Required properties:
+
+  - compatible : must contain one of "cirrus,cs42518" and "cirrus,cs42528"
+
+  - reg : the I2C address of the device for I2C
+
+  - VA-supply, VD-supply, VLS-supply, VLC-supply: power supplies for the device,
+    as covered in Documentation/devicetree/bindings/regulator/regulator.txt
+
+Example:
+
+codec: cs42528@4C {
+	compatible = "cirrus,cs42528";
+	#sound-dai-cells = <0>;
+	codec_name = "cs425x8";
+	reg = <0x1C>;
+	reset_pin = <&gpio GPIOZ_17 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};

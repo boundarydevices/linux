@@ -477,7 +477,7 @@
 			mapname = "amlogic-remote-2";
 			customcode = <0xfe01>;
 			release_delay = <80>;
-			size  = <53>;
+			size  = <57>;
 			keymap = <REMOTE_KEY(0x01, KEY_1)
 				REMOTE_KEY(0x02, KEY_2)
 				REMOTE_KEY(0x03, KEY_3)
@@ -530,7 +530,11 @@
 				REMOTE_KEY(0x41, KEY_SOUND)
 				REMOTE_KEY(0x0b, KEY_QUESTION)
 				REMOTE_KEY(0x00, KEY_CHAT)
-				REMOTE_KEY(0x13, KEY_SEARCH)>;
+				REMOTE_KEY(0x13, KEY_SEARCH)
+				REMOTE_KEY(0x60, KEY_CONNECT)
+				REMOTE_KEY(0x61, KEY_PROG1)
+				REMOTE_KEY(0x62, KEY_PROG2)
+				REMOTE_KEY(0x63, KEY_PROG3)>;
 		};
 		map_2: map_2{
 			mapname = "amlogic-remote-3";

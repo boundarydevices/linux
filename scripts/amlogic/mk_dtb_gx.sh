@@ -12,6 +12,10 @@ make ARCH=arm64 gxl_p212_2g.dtb || echo "Compile dtb Fail !!"
 
 make ARCH=arm64 gxl_p212_1g.dtb || echo "Compile dtb Fail !!"
 
+make ARCH=arm64 gxl_sei210_2g.dtb || echo "Compile dtb Fail !!"
+
+make ARCH=arm64 gxl_sei210_1g.dtb || echo "Compile dtb Fail !!"
+
 make ARCH=arm64 gxl_p400_2g.dtb || echo "Compile dtb Fail !!"
 
 make ARCH=arm64 gxl_p401_2g.dtb || echo "Compile dtb Fail !!"
