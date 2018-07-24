@@ -141,6 +141,7 @@ struct cec_msg_last {
 	unsigned long last_jiffies;
 };
 static struct cec_msg_last *last_cec_msg;
+static struct dbgflg stdbgflg;
 
 static int phy_addr_test;
 
@@ -165,7 +166,9 @@ static unsigned int  new_msg;
 static bool wake_ok = 1;
 static bool ee_cec;
 static bool pin_status;
-bool cec_msg_dbg_en;
+static unsigned int cec_msg_dbg_en;
+
+static void cec_hw_reset(void);
 
 #define CEC_ERR(format, args...)				\
 	{if (cec_dev->dbg_dev)					\
@@ -177,9 +180,12 @@ bool cec_msg_dbg_en;
 		dev_info(cec_dev->dbg_dev, format, ##args);	\
 	}
 
-static unsigned char msg_log_buf[128] = { 0 };
+#define CEC_INFO_L(level, format, args...)				\
+	{if ((cec_msg_dbg_en >= level) && cec_dev->dbg_dev)		\
+		dev_info(cec_dev->dbg_dev, format, ##args);	\
+	}
 
-static void cec_hw_reset(void);
+static unsigned char msg_log_buf[128] = { 0 };
 
 #define waiting_aocec_free(r) \
 	do {\
@@ -314,6 +320,11 @@ static inline void hdmirx_set_bits_dwc(uint32_t reg, uint32_t bits,
 	tmp &= ~(((1 << len) - 1) << start);
 	tmp |=  (bits << start);
 	hdmirx_cec_write(reg, tmp);
+}
+
+void cec_dbg_init(void)
+{
+	stdbgflg.hal_cmd_bypass = 0;
 }
 
 void cecrx_hw_reset(void)
@@ -462,15 +473,18 @@ void cecrx_irq_handle(void)
 	if ((intr_cec & CEC_IRQ_TX_NACK)     ||
 	    (intr_cec & CEC_IRQ_TX_ARB_LOST) ||
 	    (intr_cec & CEC_IRQ_TX_ERR_INITIATOR)) {
-		if (!(intr_cec & CEC_IRQ_TX_NACK))
-			CEC_ERR("tx msg failed, flag:%08x\n", intr_cec);
-		if (intr_cec & CEC_IRQ_TX_NACK)
+		if (intr_cec & CEC_IRQ_TX_NACK) {
 			cec_tx_result = CEC_FAIL_NACK;
-		else if (intr_cec & CEC_IRQ_TX_ARB_LOST) {
+			CEC_INFO_L(L_2, "warning:TX_NACK\n");
+		} else if (intr_cec & CEC_IRQ_TX_ARB_LOST) {
 			cec_tx_result = CEC_FAIL_BUSY;
 			/* clear start */
 			hdmirx_cec_write(DWC_CEC_TX_CNT, 0);
 			hdmirx_set_bits_dwc(DWC_CEC_CTRL, 0, 0, 3);
+			CEC_ERR("warning:ARB_LOST\n");
+		} else if (intr_cec & CEC_IRQ_TX_ERR_INITIATOR) {
+			CEC_ERR("warning:INITIATOR\n");
+			cec_tx_result = CEC_FAIL_OTHER;
 		} else
 			cec_tx_result = CEC_FAIL_OTHER;
 		complete(&cec_dev->tx_ok);
@@ -478,18 +492,20 @@ void cecrx_irq_handle(void)
 
 	/* RX error irq flag */
 	if (intr_cec & CEC_IRQ_RX_ERR_FOLLOWER) {
-		CEC_ERR("rx msg failed\n");
+		CEC_ERR("warning:FOLLOWER\n");
+		hdmirx_cec_write(DWC_CEC_LOCK, 0);
 		/* TODO: need reset cec hw logic? */
 	}
 
+	/* wakeup op code will triger this int*/
 	if (intr_cec & CEC_IRQ_RX_WAKEUP) {
-		CEC_INFO("rx wake up\n");
-		hdmirx_cec_write(DWC_CEC_WKUPCTRL, 0);
+		CEC_ERR("warning:RX_WAKEUP\n");
+		hdmirx_cec_write(DWC_CEC_WKUPCTRL, WAKEUP_EN_MASK);
 		/* TODO: wake up system if needed */
 	}
 }
 
-static irqreturn_t cecrx_isr(int irq, void *dev_instance)
+static irqreturn_t cecb_rx_isr(int irq, void *dev_instance)
 {
 	cecrx_irq_handle();
 	return IRQ_HANDLED;
@@ -543,7 +559,7 @@ static void ao_cecb_init(void)
 
 	/* Enable all AO_CECB interrupt sources */
 	cec_irq_enable(true);
-	hdmirx_cec_write(DWC_CEC_WKUPCTRL, 0);
+	hdmirx_cec_write(DWC_CEC_WKUPCTRL, WAKEUP_EN_MASK);
 }
 
 void eecec_irq_enable(bool enable)
@@ -873,7 +889,7 @@ int cec_ll_rx(unsigned char *msg, unsigned char *len)
 	ret = rx_stat;
 
 	/* ignore ping message */
-	if (cec_msg_dbg_en  == 1 && *len > 1) {
+	if (cec_msg_dbg_en && *len > 1) {
 		pos = 0;
 		pos += sprintf(msg_log_buf + pos,
 			"CEC: rx msg len: %d   dat: ", *len);
@@ -930,7 +946,7 @@ static int cec_ll_trigle_tx(const unsigned char *msg, int len)
 		aocec_wr_reg(CEC_TX_MSG_LENGTH, len-1);
 		aocec_wr_reg(CEC_TX_MSG_CMD, TX_REQ_CURRENT);
 
-		if (cec_msg_dbg_en  == 1) {
+		if (cec_msg_dbg_en) {
 			pos = 0;
 			pos += sprintf(msg_log_buf + pos,
 				       "CEC: tx msg len: %d   dat: ", len);
@@ -968,7 +984,7 @@ void tx_irq_handle(void)
 		break;
 
 	case TX_ERROR:
-		if (cec_msg_dbg_en  == 1)
+		if (cec_msg_dbg_en)
 			CEC_ERR("TX ERROR!!!\n");
 		aocec_wr_reg(CEC_TX_MSG_CMD, TX_ABORT);
 		cec_hw_reset();
@@ -1709,7 +1725,7 @@ static void cec_task(struct work_struct *work)
 	queue_delayed_work(cec_dev->cec_thread, dwork, CEC_FRAME_DELAY);
 }
 
-static irqreturn_t cec_isr_handler(int irq, void *dev_instance)
+static irqreturn_t ceca_isr_handler(int irq, void *dev_instance)
 {
 	unsigned int intr_stat = 0;
 	struct delayed_work *dwork;
@@ -1734,6 +1750,27 @@ static void check_wake_up(void)
 {
 	if (wake_ok == 0)
 		cec_request_active_source();
+}
+
+static void cec_dump_info(void)
+{
+	CEC_ERR("dev_type:%d\n", (unsigned int)cec_dev->dev_type);
+	CEC_ERR("wk_logic_addr:0x%x\n", cec_dev->wakup_data.wk_logic_addr);
+	CEC_ERR("wk_phy_addr:0x%x\n", cec_dev->wakup_data.wk_phy_addr);
+	CEC_ERR("wk_port_id:0x%x\n", cec_dev->wakup_data.wk_port_id);
+	CEC_ERR("wakeup_reason:0x%x\n", cec_dev->wakeup_reason);
+	CEC_ERR("phy_addr:0x%x\n", cec_dev->phy_addr);
+	CEC_ERR("cec_version:0x%x\n", cec_dev->cec_info.cec_version);
+	CEC_ERR("hal_ctl:0x%x\n", cec_dev->cec_info.hal_ctl);
+	CEC_ERR("menu_lang:0x%x\n", cec_dev->cec_info.menu_lang);
+	CEC_ERR("menu_status:0x%x\n", cec_dev->cec_info.menu_status);
+	CEC_ERR("open_count:%d\n", cec_dev->cec_info.open_count.counter);
+	CEC_ERR("vendor_id:0x%x\n", cec_dev->v_data.vendor_id);
+	CEC_ERR("port_num:0x%x\n", cec_dev->port_num);
+	CEC_ERR("hal_flag:0x%x\n", cec_dev->hal_flag);
+	CEC_ERR("hpd_state:0x%x\n", cec_dev->tx_dev->hpd_state);
+	CEC_ERR("cec_config:0x%x\n", cec_config(0, 0));
+	dump_reg();
 }
 
 /******************** cec class interface *************************/
@@ -1972,7 +2009,7 @@ static ssize_t dbg_en_store(struct class *cla, struct class_attribute *attr,
 	if (kstrtouint(buf, 16, &en) != 0)
 		return -EINVAL;
 
-	cec_msg_dbg_en = en ? 1 : 0;
+	cec_msg_dbg_en = en;
 	return count;
 }
 
@@ -2052,6 +2089,114 @@ static ssize_t log_addr_show(struct class *cla,
 	return sprintf(buf, "0x%x\n", cec_dev->cec_info.log_addr);
 }
 
+static ssize_t dbg_store(struct class *cla, struct class_attribute *attr,
+	const char *bu, size_t count)
+{
+	const char *delim = " ";
+	char *token;
+	char *cur = (char *)bu;
+	struct dbgflg *dbg = &stdbgflg;
+	unsigned int addr, val;
+
+	token = strsep(&cur, delim);
+	if (token && strncmp(token, "bypass", 6) == 0) {
+		/*get the second param*/
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+
+		dbg->hal_cmd_bypass = val ? 1 : 0;
+		CEC_ERR("cmdbypass:%d\n", val);
+	} else if (token && strncmp(token, "dbgen", 5) == 0) {
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+
+		cec_msg_dbg_en = val;
+		CEC_ERR("msg_dbg_en:%d\n", val);
+	} else if (token && strncmp(token, "ra", 2) == 0) {
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &addr) < 0)
+			return count;
+
+		CEC_ERR("rd ceca reg:0x%x val:0x%x\n", addr,
+				aocec_rd_reg(addr));
+	} else if (token && strncmp(token, "wa", 2) == 0) {
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &addr) < 0)
+			return count;
+
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+
+		CEC_ERR("wa ceca reg:0x%x val:0x%x\n", addr, val);
+		aocec_wr_reg(addr, val);
+	} else if (token && strncmp(token, "rb", 2) == 0) {
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &addr) < 0)
+			return count;
+
+		CEC_ERR("rd cecb reg:0x%x val:0x%x\n", addr,
+				hdmirx_cec_read(addr));
+	} else if (token && strncmp(token, "wb", 2) == 0) {
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &addr) < 0)
+			return count;
+
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+
+		CEC_ERR("wb cecb reg:0x%x val:0x%x\n", addr, val);
+		hdmirx_cec_write(addr, val);
+	} else if (token && strncmp(token, "dump", 4) == 0) {
+		cec_dump_info();
+	} else if (token && strncmp(token, "rao", 3) == 0) {
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &addr) < 0)
+			return count;
+
+		val = readl(cec_dev->cec_reg + addr);
+		CEC_ERR("rao addr:0x%x, val:0x%x", val, addr);
+	} else if (token && strncmp(token, "wao", 3) == 0) {
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &addr) < 0)
+			return count;
+
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+
+		writel(val, cec_dev->cec_reg + addr);
+		CEC_ERR("wao addr:0x%x, val:0x%x", val, addr);
+	} else {
+		if (token)
+			CEC_ERR("no cmd:%s\n", token);
+	}
+
+	return count;
+}
+
+static ssize_t dbg_show(struct class *cla,
+	struct class_attribute *attr, char *buf)
+{
+	CEC_INFO("dbg_show\n");
+	return 0;
+}
+
+
 static struct class_attribute aocec_class_attr[] = {
 	__ATTR_WO(cmd),
 	__ATTR_RO(port_num),
@@ -2070,6 +2215,7 @@ static struct class_attribute aocec_class_attr[] = {
 	__ATTR(dbg_en, 0664, dbg_en_show, dbg_en_store),
 	__ATTR(log_addr, 0664, log_addr_show, log_addr_store),
 	__ATTR(fun_cfg, 0664, fun_cfg_show, fun_cfg_store),
+	__ATTR(dbg, 0664, dbg_show, dbg_store),
 	__ATTR_NULL
 };
 
@@ -2116,6 +2262,9 @@ static ssize_t hdmitx_cec_write(struct file *f, const char __user *buf,
 	int ret = CEC_FAIL_OTHER;
 	unsigned int cec_cfg;
 
+	if (stdbgflg.hal_cmd_bypass)
+		return -EINVAL;
+
 	if (size > 16)
 		size = 16;
 	if (size <= 0)
@@ -2134,7 +2283,6 @@ static ssize_t hdmitx_cec_write(struct file *f, const char __user *buf,
 
 	return ret;
 }
-
 
 static void init_cec_port_info(struct hdmi_port_info *port,
 			       struct ao_cec_dev *cec_dev)
@@ -2438,15 +2586,19 @@ static long hdmitx_cec_ioctl(struct file *f,
 		tmp = (cec_dev->wakup_data.wk_logic_addr << 16) |
 				cec_dev->wakup_data.wk_phy_addr;
 		CEC_ERR("Boot addr:%#x\n", (unsigned int)tmp);
-		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		break;
 
 	case CEC_IOC_GET_BOOT_REASON:
 		tmp = cec_dev->wakeup_reason;
 		CEC_ERR("Boot reason:%#x\n", (unsigned int)tmp);
-		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd)))
+		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
+		}
 		break;
 
 	default:
@@ -2579,13 +2731,14 @@ static int aml_cec_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto tag_cec_devm_err;
 	}
+	CEC_ERR("cec driver date:%s\n", CEC_DRIVER_VERSION);
 	cec_dev->dev_type = DEV_TYPE_PLAYBACK;
 	cec_dev->dbg_dev  = &pdev->dev;
 	cec_dev->tx_dev   = get_hdmitx_device();
 	cec_dev->cpu_type = get_cpu_type();
 	cec_dev->node = pdev->dev.of_node;
 	phy_addr_test = 0;
-
+	cec_dbg_init();
 	/* cdev registe */
 	r = class_register(&aocec_class);
 	if (r) {
@@ -2809,13 +2962,13 @@ static int aml_cec_probe(struct platform_device *pdev)
 	if (of_get_property(node, "interrupt-names", NULL)) {
 		r = of_property_read_string(node, "interrupt-names", &irq_name);
 		if (!r && !ee_cec) {
-			r = request_irq(irq_idx, &cec_isr_handler, IRQF_SHARED,
+			r = request_irq(irq_idx, &ceca_isr_handler, IRQF_SHARED,
 					irq_name, (void *)cec_dev);
 			if (r < 0)
 				CEC_INFO("aocec irq request fail\n");
 		}
 		if (!r && ee_cec) {
-			r = request_irq(irq_idx, &cecrx_isr, IRQF_SHARED,
+			r = request_irq(irq_idx, &cecb_rx_isr, IRQF_SHARED,
 					irq_name, (void *)cec_dev);
 			if (r < 0)
 				CEC_INFO("cecb irq request fail\n");
@@ -2845,7 +2998,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 	/* for init */
 	cec_pre_init();
 	queue_delayed_work(cec_dev->cec_thread, &cec_dev->cec_work, 0);
-	CEC_ERR("cec driver date:%s\n", CEC_DRIVER_VERSION);
 	CEC_ERR("boot:%#x;%#x\n", *((unsigned int *)&cec_dev->wakup_data),
 						cec_dev->wakeup_reason);
 	CEC_ERR("%s success end\n", __func__);
