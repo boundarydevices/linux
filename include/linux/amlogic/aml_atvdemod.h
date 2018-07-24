@@ -123,7 +123,7 @@ static inline const char *v4l2_std_to_str(v4l2_std_id std)
 extern void aml_fe_get_atvaudio_state(int *state);
 
 /* For attach tuner driver start*/
-enum aml_tuner_type_t {
+enum tuner_type {
 	AM_TUNER_SI2176 = 1,
 	AM_TUNER_SI2196 = 2,
 	AM_TUNER_FQ1216 = 3,
@@ -139,16 +139,25 @@ enum aml_tuner_type_t {
 	AM_TUNER_R842 = 13,
 };
 
+/* For configure different tuners */
+/* It can add fields as extensions */
+struct tuner_config {
+	u8 id;
+	u8 i2c_addr;
+	u8 xtal;
+	u8 xtal_cap;
+};
+
 extern struct dvb_frontend *mxl661_attach(struct dvb_frontend *fe,
-		struct i2c_adapter *i2c_adap, u8 i2c_addr);
+		struct i2c_adapter *i2c_adap, struct tuner_config *cfg);
 extern struct dvb_frontend *si2151_attach(struct dvb_frontend *fe,
-		struct i2c_adapter *i2c_adap, u8 i2c_addr);
+		struct i2c_adapter *i2c_adap, struct tuner_config *cfg);
 extern struct dvb_frontend *si2159_attach(struct dvb_frontend *fe,
-		struct i2c_adapter *i2c_adap, u8 i2c_addr);
+		struct i2c_adapter *i2c_adap, struct tuner_config *cfg);
 extern struct dvb_frontend *r840_attach(struct dvb_frontend *fe,
-		struct i2c_adapter *i2c_adap, u8 i2c_addr);
+		struct i2c_adapter *i2c_adap, struct tuner_config *cfg);
 extern struct dvb_frontend *r842_attach(struct dvb_frontend *fe,
-		struct i2c_adapter *i2c_adap, u8 i2c_addr);
+		struct i2c_adapter *i2c_adap, struct tuner_config *cfg);
 /* For attach tuner driver end*/
 
 #endif /* __AML_ATVDEMOD_H__ */

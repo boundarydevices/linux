@@ -23,6 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
+#include <linux/amlogic/aml_atvdemod.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
@@ -39,7 +40,7 @@
 #include "atvauddemod_func.h"
 
 
-#define AMLATVDEMOD_VER "V2.02"
+#define AMLATVDEMOD_VER "V2.03"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 
@@ -365,53 +366,60 @@ struct class aml_atvdemod_class = {
 static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 {
 	struct device_node *node = NULL;
+	struct device_node *node_tuner = NULL;
 	struct device_node *node_i2c = NULL;
 	unsigned int val = 0;
 	const char *str = NULL;
 	int ret = 0;
 
 	node = pdev->dev->of_node;
-	if (node) {
-		ret = of_property_read_u32(node, "reg_23cf", &val);
-		if (ret)
-			pr_err("can't find reg_23cf.\n");
-		else
-			pdev->reg_23cf = val;
+	if (node == NULL) {
+		pr_err("atv demod node == NULL.\n");
+		return;
+	}
 
-		ret = of_property_read_u32(node, "audio_gain_val", &val);
-		if (ret)
-			pr_err("can't find audio_gain_val.\n");
-		else
-			set_audio_gain_val(val);
+	ret = of_property_read_u32(node, "reg_23cf", &val);
+	if (ret)
+		pr_err("can't find reg_23cf.\n");
+	else
+		pdev->reg_23cf = val;
 
-		ret = of_property_read_u32(node, "video_gain_val", &val);
-		if (ret)
-			pr_err("can't find video_gain_val.\n");
-		else
-			set_video_gain_val(val);
+	ret = of_property_read_u32(node, "audio_gain_val", &val);
+	if (ret)
+		pr_err("can't find audio_gain_val.\n");
+	else
+		set_audio_gain_val(val);
 
-		/* agc pin mux */
-		ret = of_property_read_string(node, "pinctrl-names",
-				&pdev->pin_name);
-		if (ret) {
-			pdev->agc_pin = NULL;
-			pr_err("can't find agc pinmux.\n");
-		} else {
+	ret = of_property_read_u32(node, "video_gain_val", &val);
+	if (ret)
+		pr_err("can't find video_gain_val.\n");
+	else
+		set_video_gain_val(val);
+
+	/* agc pin mux */
+	ret = of_property_read_string(node, "pinctrl-names", &pdev->pin_name);
+	if (ret) {
+		pdev->agc_pin = NULL;
+		pr_err("can't find agc pinmux.\n");
+	} else {
 #if 0 /* Get it when you actually use it */
-			pdev->agc_pin = devm_pinctrl_get_select(
-				pdev->dev, pdev->pin_name);
+		pdev->agc_pin = devm_pinctrl_get_select(
+			pdev->dev, pdev->pin_name);
 #endif
-			pr_err("atvdemod agc pinmux name: %s\n",
-					pdev->pin_name);
-		}
+		pr_err("atvdemod agc pinmux name: %s\n",
+				pdev->pin_name);
+	}
 
-		ret = of_property_read_u32(node, "btsc_sap_mode", &val);
-		if (ret)
-			pr_err("can't find btsc_sap_mode.\n");
-		else
-			pdev->btsc_sap_mode = val;
+	ret = of_property_read_u32(node, "btsc_sap_mode", &val);
+	if (ret)
+		pr_err("can't find btsc_sap_mode.\n");
+	else
+		pdev->btsc_sap_mode = val;
 
-		ret = of_property_read_string(node, "tuner", &str);
+	/* get tuner config node */
+	node_tuner = of_parse_phandle(node, "tuner", 0);
+	if (node_tuner) {
+		ret = of_property_read_string(node_tuner, "tuner_name", &str);
 		if (ret)
 			pr_err("can't find tuner.\n");
 		else {
@@ -426,11 +434,10 @@ static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 			else if (!strncmp(str, "r842_tuner", 10))
 				pdev->tuner_id = AM_TUNER_R842;
 			else
-				pr_err("can't find tuner: %s.\n", str);
+				pr_err("nonsupport tuner: %s.\n", str);
 		}
 
-		/* Get i2c adapter by i2c node */
-		node_i2c = of_parse_phandle(node, "tuner_i2c_ada_id", 0);
+		node_i2c = of_parse_phandle(node_tuner, "tuner_i2c_adap", 0);
 		if (node_i2c) {
 			pdev->i2c_adp = of_find_i2c_adapter_by_node(node_i2c);
 			of_node_put(node_i2c);
@@ -438,18 +445,26 @@ static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 			if (!pdev->i2c_adp)
 				pr_err("can't find tuner_i2c_adap.\n");
 		}
-#if 0 /* Get adapter by ID */
-		ret = of_property_read_u32(node, "tuner_i2c_ada_id", &val);
-		if (ret)
-			pr_err("can't find tuner_i2c_ada_id.\n");
-		else
-			pdev->i2c_adapter_id = val;
-#endif
-		ret = of_property_read_u32(node, "tuner_i2c_addr", &val);
+
+		ret = of_property_read_u32(node_tuner, "tuner_i2c_addr", &val);
 		if (ret)
 			pr_err("can't find tuner_i2c_addr.\n");
 		else
 			pdev->i2c_addr = val;
+
+		ret = of_property_read_u32(node_tuner, "tuner_xtal", &val);
+		if (ret)
+			pr_err("can't find tuner_xtal.\n");
+		else
+			pdev->tuner_xtal = val;
+
+		ret = of_property_read_u32(node_tuner, "tuner_xtal_cap", &val);
+		if (ret)
+			pr_err("can't find tuner_xtal_cap.\n");
+		else
+			pdev->tuner_xtal = val;
+
+		of_node_put(node_tuner);
 	}
 }
 
@@ -458,6 +473,7 @@ int aml_attach_demod_tuner(struct aml_atvdemod_device *dev)
 	void *p = NULL;
 	struct v4l2_frontend *v4l2_fe = &dev->v4l2_fe;
 	struct dvb_frontend *fe = &v4l2_fe->fe;
+	struct tuner_config cfg = { 0 };
 
 	if (!dev->analog_attached) {
 		p = v4l2_attach(aml_atvdemod_attach, fe, v4l2_fe,
@@ -472,27 +488,32 @@ int aml_attach_demod_tuner(struct aml_atvdemod_device *dev)
 
 	p = NULL;
 
+	cfg.id = dev->tuner_id;
+	cfg.i2c_addr = dev->i2c_addr;
+	cfg.xtal = dev->tuner_xtal;
+	cfg.xtal_cap = dev->tuner_xtal_cap;
+
 	if (!dev->tuner_attached) {
 		switch (dev->tuner_id) {
 		case AM_TUNER_R840:
 			p = v4l2_attach(r840_attach, fe,
-					dev->i2c_adp, dev->i2c_addr);
+					dev->i2c_adp, &cfg);
 			break;
 		case AM_TUNER_R842:
 			p = v4l2_attach(r842_attach, fe,
-					dev->i2c_adp, dev->i2c_addr);
+					dev->i2c_adp, &cfg);
 			break;
 		case AM_TUNER_SI2151:
 			p = v4l2_attach(si2151_attach, fe,
-					dev->i2c_adp, dev->i2c_addr);
+					dev->i2c_adp, &cfg);
 			break;
 		case AM_TUNER_SI2159:
 			p = v4l2_attach(si2159_attach, fe,
-					dev->i2c_adp, dev->i2c_addr);
+					dev->i2c_adp, &cfg);
 			break;
 		case AM_TUNER_MXL661:
 			p = v4l2_attach(mxl661_attach, fe,
-					dev->i2c_adp, dev->i2c_addr);
+					dev->i2c_adp, &cfg);
 			break;
 		}
 

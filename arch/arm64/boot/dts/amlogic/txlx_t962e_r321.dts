@@ -594,12 +594,19 @@
 		interrupt-names = "mailbox_2";
 	};
 
+	tuner: tuner {
+		status = "okay";
+		tuner_name = "si2151_tuner";
+		tuner_i2c_adap = <&i2c1>;
+		tuner_i2c_addr = <0x60>;
+		/* tuner_xtal = <0>; */
+		/* tuner_xtal_cap = <0>; */
+	};
+
 	atv-demod {
 		compatible = "amlogic, atv-demod";
 		status = "okay";
-		tuner = "si2151_tuner";
-		tuner_i2c_ada_id = <&i2c1>;
-		tuner_i2c_addr = <0x60>;
+		tuner = <&tuner>;
 		btsc_sap_mode = <1>;
 		/* pinctrl-names="atvdemod_agc_pins"; */
 		/* pinctrl-0=<&atvdemod_agc_pins>; */
@@ -1285,9 +1292,7 @@
 		dev_name = "dvb";
 		status = "okay";
 		fe0_mode = "internal";
-		fe0_tuner = "si2151_tuner";
-		fe0_i2c_adap_id = <&i2c1>;
-		fe0_tuner_i2c_addr = <0x60>;
+		fe0_tuner = <&tuner>;
 
 		/*"parallel","serial","disable"*/
 		ts2 = "parallel";
