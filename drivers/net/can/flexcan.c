@@ -1543,7 +1543,6 @@ static int flexcan_probe(struct platform_device *pdev)
  failed_rpm_disable:
 	pm_runtime_disable(&pdev->dev);
  failed_offload:
- failed_register:
 	free_candev(dev);
 
 	return err;
