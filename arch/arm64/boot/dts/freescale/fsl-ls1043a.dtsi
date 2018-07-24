@@ -301,6 +301,7 @@
 		#size-cells = <2>;
 		ranges;
 		dma-ranges = <0x0 0x0 0x0 0x0 0x10000 0x00000000>;
+		dma-coherent;
 
 		clockgen: clocking@1ee1000 {
 			compatible = "fsl,ls1043a-clockgen";
@@ -925,7 +926,6 @@
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
-			dma-coherent;
 			iommu-map = <0 &smmu 0 1>;	/* update by bootloader */
 			num-viewport = <6>;
 			bus-range = <0x0 0xff>;
@@ -954,7 +954,6 @@
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
-			dma-coherent;
 			iommu-map = <0 &smmu 0 1>;	/* update by bootloader */
 			num-viewport = <6>;
 			bus-range = <0x0 0xff>;
@@ -983,7 +982,6 @@
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
-			dma-coherent;
 			iommu-map = <0 &smmu 0 1>;	/* update by bootloader */
 			num-viewport = <6>;
 			bus-range = <0x0 0xff>;
