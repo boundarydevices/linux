@@ -1061,6 +1061,8 @@ struct dwc_otg_core_if {
 	uint32_t phy_interface;
 
 	dwc_timer_t *device_connect_timer;
+
+	uint64_t sof_counter;
 };
 
 #ifdef DEBUG

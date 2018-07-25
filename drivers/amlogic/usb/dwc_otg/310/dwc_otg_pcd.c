@@ -1161,9 +1161,17 @@ static void sof_timeout(void *ptr)
 {
 #ifdef CONFIG_AMLOGIC_USB3PHY
 	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *) ptr;
+	dwc_timer_t *timer = core_if->device_connect_timer;
+	static uint64_t sof_cnt_pre;
 
-	if (core_if->phy_interface == 0)
-		set_usb_phy_device_tuning(1, 1);
+	if (core_if->phy_interface == 0) {
+		if (sof_cnt_pre == core_if->sof_counter) {
+			set_usb_phy_device_tuning(1, 1);
+		} else {
+			sof_cnt_pre = core_if->sof_counter;
+			DWC_TIMER_SCHEDULE(timer, 1000);
+		}
+	}
 #endif
 }
 

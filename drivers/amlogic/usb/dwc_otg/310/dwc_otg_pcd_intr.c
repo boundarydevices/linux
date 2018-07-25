@@ -294,18 +294,14 @@ void start_next_request(dwc_otg_pcd_ep_t *ep)
 int32_t dwc_otg_pcd_handle_sof_intr(dwc_otg_pcd_t *pcd)
 {
 	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
-
 	gintsts_data_t gintsts;
 
 	DWC_DEBUGPL(DBG_PCD, "SOF\n");
-	DWC_TIMER_CANCEL(core_if->device_connect_timer);
-
+	core_if->sof_counter++;
 	/* Clear interrupt */
 	gintsts.d32 = 0;
 	gintsts.b.sofintr = 1;
 	DWC_WRITE_REG32(&core_if->core_global_regs->gintsts, gintsts.d32);
-
-	DWC_TIMER_SCHEDULE(core_if->device_connect_timer, 10);
 
 	return 1;
 }
@@ -857,7 +853,7 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	DWC_PRINTF("USB RESET\n");
 
 	if (core_if->phy_interface == 0)
-		DWC_TIMER_SCHEDULE(core_if->device_connect_timer, 100);
+		DWC_TIMER_SCHEDULE(core_if->device_connect_timer, 1000);
 
 #ifdef DWC_EN_ISOC
 	for (i = 1; i < 16; ++i) {
