@@ -176,7 +176,70 @@ struct ve_pq_table_s {
 	unsigned int reserved2;
 };
 
-#define AMVECM_IOC_GET_OVERSCAN  _IOR(_VE_CM, 0x52, struct ve_pq_load_s)
+#define AMVECM_IOC_SET_OVERSCAN  _IOW(_VE_CM, 0x52, struct ve_pq_load_s)
+enum dnlp_state_e {
+	DNLP_OFF = 0,
+	DNLP_ON,
+};
+/*DNLP IOCTL command list*/
+#define AMVECM_IOC_G_DNLP_STATE _IOR(_VE_CM, 0x53, enum dnlp_state_e)
+#define AMVECM_IOC_S_DNLP_STATE _IOW(_VE_CM, 0x54, enum dnlp_state_e)
+enum pc_mode_e {
+	PCMODE_OFF = 0,
+	PCMODE_ON,
+};
+/*PCMODE IOCTL command list*/
+#define AMVECM_IOC_G_PQMODE _IOR(_VE_CM, 0x55, enum pc_mode_e)
+#define AMVECM_IOC_S_PQMODE _IOW(_VE_CM, 0x56, enum pc_mode_e)
+
+/*CUR_CSCTYPE IOCTL command list*/
+#define AMVECM_IOC_G_CSCTYPE _IOR(_VE_CM, 0x57, enum vpp_matrix_csc_e)
+#define AMVECM_IOC_S_CSCTYPE _IOW(_VE_CM, 0x58, enum vpp_matrix_csc_e)
+
+/*PIC_MODE IOCTL command list*/
+#define AMVECM_IOC_G_PIC_MODE _IOR(_VE_CM, 0x59, struct am_vdj_mode_s)
+#define AMVECM_IOC_S_PIC_MODE _IOW(_VE_CM, 0x60, struct am_vdj_mode_s)
+
+struct am_vdj_mode_s {
+	int flag;
+	int brightness;
+	int brightness2;
+	int saturation_hue;
+	int saturation_hue_post;
+	int contrast;
+	int contrast2;
+};
+
+enum vpp_matrix_csc_e {
+	VPP_MATRIX_NULL = 0,
+	VPP_MATRIX_RGB_YUV601 = 0x1,
+	VPP_MATRIX_RGB_YUV601F = 0x2,
+	VPP_MATRIX_RGB_YUV709 = 0x3,
+	VPP_MATRIX_RGB_YUV709F = 0x4,
+	VPP_MATRIX_YUV601_RGB = 0x10,
+	VPP_MATRIX_YUV601_YUV601F = 0x11,
+	VPP_MATRIX_YUV601_YUV709 = 0x12,
+	VPP_MATRIX_YUV601_YUV709F = 0x13,
+	VPP_MATRIX_YUV601F_RGB = 0x14,
+	VPP_MATRIX_YUV601F_YUV601 = 0x15,
+	VPP_MATRIX_YUV601F_YUV709 = 0x16,
+	VPP_MATRIX_YUV601F_YUV709F = 0x17,
+	VPP_MATRIX_YUV709_RGB = 0x20,
+	VPP_MATRIX_YUV709_YUV601 = 0x21,
+	VPP_MATRIX_YUV709_YUV601F = 0x22,
+	VPP_MATRIX_YUV709_YUV709F = 0x23,
+	VPP_MATRIX_YUV709F_RGB = 0x24,
+	VPP_MATRIX_YUV709F_YUV601 = 0x25,
+	VPP_MATRIX_YUV709F_YUV709 = 0x26,
+	VPP_MATRIX_YUV601L_YUV709L = 0x27,
+	VPP_MATRIX_YUV709L_YUV601L = 0x28,
+	VPP_MATRIX_YUV709F_YUV601F = 0x29,
+	VPP_MATRIX_BT2020YUV_BT2020RGB = 0x40,
+	VPP_MATRIX_BT2020RGB_709RGB,
+	VPP_MATRIX_BT2020RGB_CUSRGB,
+	VPP_MATRIX_DEFAULT_CSCTYPE = 0xffff,
+};
+
 
 enum ve_source_input_e {
 	SOURCE_INVALID = -1,

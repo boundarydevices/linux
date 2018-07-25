@@ -47,36 +47,6 @@ enum vpp_matrix_sel_e {
 /*	video1->cm->lut->vadj1->matrix1-^*/
 /*			  video2->matrix6-^*/
 
-
-enum vpp_matrix_csc_e {
-	VPP_MATRIX_NULL = 0,
-	VPP_MATRIX_RGB_YUV601 = 0x1,
-	VPP_MATRIX_RGB_YUV601F = 0x2,
-	VPP_MATRIX_RGB_YUV709 = 0x3,
-	VPP_MATRIX_RGB_YUV709F = 0x4,
-	VPP_MATRIX_YUV601_RGB = 0x10,
-	VPP_MATRIX_YUV601_YUV601F = 0x11,
-	VPP_MATRIX_YUV601_YUV709 = 0x12,
-	VPP_MATRIX_YUV601_YUV709F = 0x13,
-	VPP_MATRIX_YUV601F_RGB = 0x14,
-	VPP_MATRIX_YUV601F_YUV601 = 0x15,
-	VPP_MATRIX_YUV601F_YUV709 = 0x16,
-	VPP_MATRIX_YUV601F_YUV709F = 0x17,
-	VPP_MATRIX_YUV709_RGB = 0x20,
-	VPP_MATRIX_YUV709_YUV601 = 0x21,
-	VPP_MATRIX_YUV709_YUV601F = 0x22,
-	VPP_MATRIX_YUV709_YUV709F = 0x23,
-	VPP_MATRIX_YUV709F_RGB = 0x24,
-	VPP_MATRIX_YUV709F_YUV601 = 0x25,
-	VPP_MATRIX_YUV709F_YUV709 = 0x26,
-	VPP_MATRIX_YUV601L_YUV709L = 0x27,
-	VPP_MATRIX_YUV709L_YUV601L = 0x28,
-	VPP_MATRIX_YUV709F_YUV601F = 0x29,
-	VPP_MATRIX_BT2020YUV_BT2020RGB = 0x40,
-	VPP_MATRIX_BT2020RGB_709RGB,
-	VPP_MATRIX_BT2020RGB_CUSRGB,
-};
-
 #define CSC_ON              1
 #define CSC_OFF             0
 
@@ -127,6 +97,8 @@ extern uint hdr_flag;
 extern int video_rgb_ogo_xvy_mtx_latch;
 extern int video_rgb_ogo_xvy_mtx;
 extern int tx_op_color_primary;
+extern uint cur_csc_type;
+
 
 extern int amvecm_matrix_process(
 	struct vframe_s *vf, struct vframe_s *vf_rpt, int flags);

@@ -57,7 +57,7 @@ static unsigned int cm_width_limit = 50;/* vlsi adjust */
 module_param(cm_width_limit, uint, 0664);
 MODULE_PARM_DESC(cm_width_limit, "\n cm_width_limit\n");
 
-int pq_reg_wr_rdma = 1;/* 0:disabel;1:enable */
+int pq_reg_wr_rdma;/* 0:disabel;1:enable */
 module_param(pq_reg_wr_rdma, int, 0664);
 MODULE_PARM_DESC(pq_reg_wr_rdma, "\n pq_reg_wr_rdma\n");
 

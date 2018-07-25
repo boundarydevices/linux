@@ -766,23 +766,9 @@ void ve_frame_size_patch(unsigned int width, unsigned int height)
 
 void ve_dnlp_latch_process(void)
 {
-	if (vecm_latch_flag & FLAG_VE_DNLP) {
-		vecm_latch_flag &= ~FLAG_VE_DNLP;
-		/*ve_set_dnlp(&am_ve_dnlp);*/
-	}
 	if (vecm_latch_flag & FLAG_VE_NEW_DNLP) {
 		vecm_latch_flag &= ~FLAG_VE_NEW_DNLP;
 		ve_set_v3_dnlp(&dnlp_curve_param_load);
-	}
-	if (vecm_latch_flag & FLAG_VE_DNLP_EN) {
-		vecm_latch_flag &= ~FLAG_VE_DNLP_EN;
-		ve_enable_dnlp();
-		pr_amve_dbg("\n[amve..] set vpp_enable_dnlp OK!!!\n");
-	}
-	if (vecm_latch_flag & FLAG_VE_DNLP_DIS) {
-		vecm_latch_flag &= ~FLAG_VE_DNLP_DIS;
-		ve_disable_dnlp();
-		pr_amve_dbg("\n[amve..] set vpp_disable_dnlp OK!!!\n");
 	}
 	if (dnlp_en && dnlp_status) {
 		dnlp_status = 0;

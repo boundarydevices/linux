@@ -306,7 +306,7 @@ module_param_array(wb_val, int, &num_wb_val, 0664);
 MODULE_PARM_DESC(wb_val, "\n white balance setting\n");
 
 static enum vframe_source_type_e pre_src_type = VFRAME_SOURCE_TYPE_COMP;
-static uint cur_csc_type = 0xffff;
+uint cur_csc_type = 0xffff;
 module_param(cur_csc_type, uint, 0444);
 MODULE_PARM_DESC(cur_csc_type, "\n current color space convert type\n");
 

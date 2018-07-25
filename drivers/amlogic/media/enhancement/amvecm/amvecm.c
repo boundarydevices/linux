@@ -72,7 +72,7 @@
 #define AMVECM_MODULE_NAME        "amvecm"
 #define AMVECM_DEVICE_NAME        "amvecm"
 #define AMVECM_CLASS_NAME         "amvecm"
-#define AMVECM_VER				"Ref.2018/07/03"
+#define AMVECM_VER				"Ref.2018/08/29"
 
 
 struct amvecm_dev_s {
@@ -110,6 +110,16 @@ static unsigned int pre_hist_height, pre_hist_width;
 static unsigned int pc_mode = 0xff;
 static unsigned int pc_mode_last = 0xff;
 static struct hdr_metadata_info_s vpp_hdr_metadata_s;
+
+/*bit0: brightness
+ *bit1: brightness2
+ *bit2: saturation_hue
+ *bit3: saturation_hue_post
+ *bit4: contrast
+ *bit5: contrast2
+ */
+static int vdj_mode_flg;
+struct am_vdj_mode_s vdj_mode_s;
 
 void __iomem *amvecm_hiu_reg_base;/* = *ioremap(0xc883c000, 0x2000); */
 
@@ -212,6 +222,26 @@ static int __init amvecm_load_pq_val(char *str)
 }
 __setup("pq=", amvecm_load_pq_val);
 
+static int amvecm_set_contrast2(int val)
+{
+	val += 0x80;
+	WRITE_VPP_REG_BITS(VPP_VADJ2_Y,
+		val, 0, 8);
+	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
+	return 0;
+}
+
+static int amvecm_set_brightness2(int val)
+{
+	if (get_cpu_type() <= MESON_CPU_MAJOR_ID_GXTVBB)
+		WRITE_VPP_REG_BITS(VPP_VADJ2_Y,
+			vdj_mode_s.brightness2, 8, 9);
+	else
+		WRITE_VPP_REG_BITS(VPP_VADJ2_Y,
+			vdj_mode_s.brightness2 << 1, 8, 10);
+	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
+	return 0;
+}
 
 static void amvecm_size_patch(void)
 {
@@ -317,14 +347,7 @@ static ssize_t video_adj2_brightness_store(struct class *cla,
 	r = sscanf(buf, "%d\n", &val);
 	if ((r != 1) || (val < -255) || (val > 255))
 		return -EINVAL;
-
-	if (get_cpu_type() <= MESON_CPU_MAJOR_ID_GXTVBB)
-		WRITE_VPP_REG_BITS(VPP_VADJ2_Y, val, 8, 9);
-	else
-		WRITE_VPP_REG_BITS(VPP_VADJ2_Y, val << 1, 8, 10);
-
-	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
-
+	amvecm_set_brightness2(val);
 	return count;
 }
 
@@ -345,13 +368,9 @@ static ssize_t video_adj2_contrast_store(struct class *cla,
 	r = sscanf(buf, "%d\n", &val);
 	if ((r != 1) || (val < -127) || (val > 127))
 		return -EINVAL;
-
-	val += 0x80;
-
-	WRITE_VPP_REG_BITS(VPP_VADJ2_Y, val, 0, 8);
-	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
-
+	amvecm_set_contrast2(val);
 	return count;
+
 }
 
 static ssize_t amvecm_usage_show(struct class *cla,
@@ -1034,6 +1053,130 @@ static int amvecm_release(struct inode *inode, struct file *file)
 static struct am_regs_s amregs_ext;
 struct ve_pq_overscan_s overscan_table[TIMING_MAX];
 
+static int parse_para_pq(const char *para, int para_num, int *result)
+{
+	char *token = NULL;
+	char *params, *params_base;
+	int *out = result;
+	int len = 0, count = 0;
+	int res = 0;
+
+	if (!para)
+		return 0;
+
+	params = kstrdup(para, GFP_KERNEL);
+	params_base = params;
+	token = params;
+	len = strlen(token);
+	do {
+		token = strsep(&params, " ");
+		while (token && (isspace(*token)
+				|| !isgraph(*token)) && len) {
+			token++;
+			len--;
+		}
+		if (len == 0)
+			break;
+		if (!token || kstrtoint(token, 0, &res) < 0)
+			break;
+		len = strlen(token);
+		*out++ = res;
+		count++;
+	} while ((token) && (count < para_num) && (len > 0));
+
+	kfree(params_base);
+	return count;
+}
+
+static int amvecm_set_saturation_hue(int mab)
+{
+	s16 mc = 0, md = 0;
+	s16 ma, mb;
+
+	if (mab&0xfc00fc00)
+		return -EINVAL;
+	ma = (s16)((mab << 6) >> 22);
+	mb = (s16)((mab << 22) >> 22);
+
+	saturation_ma = ma - 0x100;
+	saturation_mb = mb;
+
+	ma += saturation_ma_shift;
+	mb += saturation_mb_shift;
+	if (ma > 511)
+		ma = 511;
+	if (ma < -512)
+		ma = -512;
+	if (mb > 511)
+		mb = 511;
+	if (mb < -512)
+		mb = -512;
+	mab =  ((ma & 0x3ff) << 16) | (mb & 0x3ff);
+	WRITE_VPP_REG(VPP_VADJ1_MA_MB, mab);
+	mc = (s16)((mab<<22)>>22); /* mc = -mb */
+	mc = 0 - mc;
+	if (mc > 511)
+		mc = 511;
+	if (mc <  -512)
+		mc = -512;
+	md = (s16)((mab<<6)>>22);  /* md =  ma; */
+	mab = ((mc&0x3ff)<<16)|(md&0x3ff);
+	WRITE_VPP_REG(VPP_VADJ1_MC_MD, mab);
+	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 0, 1);
+	pr_amvecm_dbg("%s set video_saturation_hue OK!!!\n", __func__);
+	return 0;
+}
+
+static int amvecm_set_saturation_hue_post(int val1,
+	int val2)
+{
+	int i, ma, mb, mab, mc, md;
+	int hue_cos[] = {
+		/*0~12*/
+		256, 256, 256, 255, 255, 254, 253, 252, 251, 250,
+		248, 247, 245, 243, 241, 239, 237, 234, 231, 229,
+		226, 223, 220, 216, 213, 209  /*13~25*/
+	};
+	int hue_sin[] = {
+		-147, -142, -137, -132, -126, -121, -115, -109, -104,
+		-98, -92, -86, -80, /*-25~-13*/-74,  -68,  -62,  -56,
+		-50,  -44,  -38,  -31,  -25, -19, -13,  -6, /*-12~-1*/
+		0, /*0*/
+		6,   13,   19,	25,   31,   38,   44,	50,   56,
+		62,	68,  74,      /*1~12*/	80,   86,   92,	98,  104,
+		109,  115,  121,  126,  132, 137, 142, 147 /*13~25*/
+	};
+
+	saturation_post = val1;
+	hue_post = val2;
+	i = (hue_post > 0) ? hue_post : -hue_post;
+	ma = (hue_cos[i]*(saturation_post + 128)) >> 7;
+	mb = (hue_sin[25+hue_post]*(saturation_post + 128)) >> 7;
+	if (ma > 511)
+		ma = 511;
+	if (ma < -512)
+		ma = -512;
+	if (mb > 511)
+		mb = 511;
+	if (mb < -512)
+		mb = -512;
+	mab =  ((ma & 0x3ff) << 16) | (mb & 0x3ff);
+	pr_info("\n[amvideo..] saturation_post:%d hue_post:%d mab:%x\n",
+			saturation_post, hue_post, mab);
+	WRITE_VPP_REG(VPP_VADJ2_MA_MB, mab);
+	mc = (s16)((mab<<22)>>22); /* mc = -mb */
+	mc = 0 - mc;
+	if (mc > 511)
+		mc = 511;
+	if (mc < -512)
+		mc = -512;
+	md = (s16)((mab<<6)>>22);  /* md =	ma; */
+	mab = ((mc&0x3ff)<<16)|(md&0x3ff);
+	WRITE_VPP_REG(VPP_VADJ2_MC_MD, mab);
+	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
+	return 0;
+}
+
 static long amvecm_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
@@ -1075,12 +1218,6 @@ static long amvecm_ioctl(struct file *file,
 			ret = -EFAULT;
 		} else
 			ret = cm_load_reg(&amregs_ext);
-		break;
-	case AMVECM_IOC_VE_DNLP_EN:
-		vecm_latch_flag |= FLAG_VE_DNLP_EN;
-		break;
-	case AMVECM_IOC_VE_DNLP_DIS:
-		vecm_latch_flag |= FLAG_VE_DNLP_DIS;
 		break;
 	case AMVECM_IOC_VE_NEW_DNLP:
 		if (copy_from_user(&dnlp_curve_param_load,
@@ -1198,7 +1335,7 @@ static long amvecm_ioctl(struct file *file,
 	case AMVECM_IOC_3D_SYNC_DIS:
 		vecm_latch_flag |= FLAG_3D_SYNC_DIS;
 		break;
-	case AMVECM_IOC_GET_OVERSCAN:
+	case AMVECM_IOC_SET_OVERSCAN:
 		if (copy_from_user(&vpp_pq_load,
 				(void __user *)arg,
 				sizeof(struct ve_pq_load_s))) {
@@ -1250,6 +1387,114 @@ static long amvecm_ioctl(struct file *file,
 				vpp_pq_load_table[i].value2 & 0xffff;
 			overscan_table[i].ve =
 				(vpp_pq_load_table[i].value2 >> 16) & 0xffff;
+		}
+		break;
+	case AMVECM_IOC_G_DNLP_STATE:
+		if (copy_to_user((void __user *)arg,
+				&dnlp_en, sizeof(enum dnlp_state_e)))
+			ret = -EFAULT;
+		break;
+	case AMVECM_IOC_S_DNLP_STATE:
+		if (copy_from_user(&dnlp_en,
+			(void __user *)arg, sizeof(enum dnlp_state_e)))
+			ret = -EFAULT;
+		break;
+	case AMVECM_IOC_G_PQMODE:
+		argp = (void __user *)arg;
+		if (copy_to_user(argp,
+				&pc_mode, sizeof(enum pc_mode_e)))
+			ret = -EFAULT;
+		break;
+	case AMVECM_IOC_S_PQMODE:
+		if (copy_from_user(&pc_mode,
+			(void __user *)arg, sizeof(enum pc_mode_e)))
+			ret = -EFAULT;
+		else
+			pc_mode_last = 0xff;
+		break;
+	case AMVECM_IOC_G_CSCTYPE:
+		argp = (void __user *)arg;
+		if (copy_to_user(argp,
+				&cur_csc_type, sizeof(enum vpp_matrix_csc_e)))
+			ret = -EFAULT;
+		break;
+	case AMVECM_IOC_S_CSCTYPE:
+		if (copy_from_user(&cur_csc_type,
+				(void __user *)arg,
+				sizeof(enum vpp_matrix_csc_e))) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("[amvecm..] cur_csc_type ioctl copy fail!!\n");
+		}
+		break;
+	case AMVECM_IOC_G_PIC_MODE:
+		argp = (void __user *)arg;
+		if (copy_to_user(argp,
+			&vdj_mode_s, sizeof(struct am_vdj_mode_s)))
+			ret = -EFAULT;
+		break;
+	case AMVECM_IOC_S_PIC_MODE:
+		if (copy_from_user(&vdj_mode_s,
+				(void __user *)arg,
+				sizeof(struct am_vdj_mode_s))) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("[amvecm..] vdj_mode_s ioctl copy fail!!\n");
+			break;
+		}
+		vdj_mode_flg = vdj_mode_s.flag;
+		if (vdj_mode_flg & 0x1) { /*brightness*/
+			vd1_brightness = vdj_mode_s.brightness;
+			vecm_latch_flag |= FLAG_VADJ1_BRI;
+		}
+		if (vdj_mode_flg & 0x2) { /*brightness2*/
+			if ((vdj_mode_s.brightness2 < -255) ||
+				(vdj_mode_s.brightness2 > 255)) {
+				pr_amvecm_dbg("load brightness2 value invalid!!!\n");
+				return -EINVAL;
+			}
+			ret = amvecm_set_brightness2(vdj_mode_s.brightness2);
+		}
+		if (vdj_mode_flg & 0x4)	{ /*saturation_hue*/
+			ret =
+			amvecm_set_saturation_hue(vdj_mode_s.saturation_hue);
+		}
+		if (vdj_mode_flg & 0x8) { /*saturation_hue_post*/
+			int parsed[2];
+			int saturation_hue_post;
+			char *buf;
+
+			saturation_hue_post = vdj_mode_s.saturation_hue_post;
+			buf = (char *) &saturation_hue_post;
+			if (likely(parse_para_pq(buf, 2, parsed) != 2)) {
+				ret = -EINVAL;
+				break;
+			}
+			if ((parsed[0] < -128) || (parsed[0] > 128) ||
+				(parsed[1] < -25) || (parsed[1] > 25)) {
+				ret = -EINVAL;
+				break;
+			}
+			ret = amvecm_set_saturation_hue_post(parsed[0],
+				 parsed[1]);
+		}
+		if (vdj_mode_flg & 0x10) { /*contrast*/
+			if ((vdj_mode_s.contrast < -1024)
+				|| (vdj_mode_s.contrast > 1024)) {
+				ret = -EINVAL;
+				pr_amvecm_dbg("[amvecm..] ioctrl contrast value invalid!!\n");
+				break;
+			}
+			vd1_contrast = vdj_mode_s.contrast;
+			vecm_latch_flag |= FLAG_VADJ1_CON;
+			vecm_latch_flag |= FLAG_VADJ1_COLOR;
+		}
+		if (vdj_mode_flg & 0x20) { /*constract2*/
+			if ((vdj_mode_s.contrast2 < -127)
+				|| (vdj_mode_s.contrast2 > 127)) {
+				ret = -EINVAL;
+				pr_amvecm_dbg("[amvecm..] ioctrl contrast2 value invalid!!\n");
+				break;
+			}
+			ret = amvecm_set_contrast2(vdj_mode_s.contrast2);
 		}
 		break;
 	default:
@@ -1827,77 +2072,13 @@ static ssize_t amvecm_saturation_hue_store(struct class *cla,
 {
 	size_t r;
 	s32 mab = 0;
-	s16 mc = 0, md = 0;
-	s16 ma, mb;
 
 	r = sscanf(buf, "0x%x", &mab);
 	if ((r != 1) || (mab&0xfc00fc00))
 		return -EINVAL;
-	ma = (s16)((mab << 6) >> 22);
-	mb = (s16)((mab << 22) >> 22);
-
-	saturation_ma = ma - 0x100;
-	saturation_mb = mb;
-
-	ma += saturation_ma_shift;
-	mb += saturation_mb_shift;
-	if (ma > 511)
-		ma = 511;
-	if (ma < -512)
-		ma = -512;
-	if (mb > 511)
-		mb = 511;
-	if (mb < -512)
-		mb = -512;
-	mab =  ((ma & 0x3ff) << 16) | (mb & 0x3ff);
-	WRITE_VPP_REG(VPP_VADJ1_MA_MB, mab);
-	mc = (s16)((mab<<22)>>22); /* mc = -mb */
-	mc = 0 - mc;
-	if (mc > 511)
-		mc = 511;
-	if (mc <  -512)
-		mc = -512;
-	md = (s16)((mab<<6)>>22);  /* md =  ma; */
-	mab = ((mc&0x3ff)<<16)|(md&0x3ff);
-	WRITE_VPP_REG(VPP_VADJ1_MC_MD, mab);
-	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 0, 1);
-	pr_amvecm_dbg("%s set video_saturation_hue OK!!!\n", __func__);
+	amvecm_set_saturation_hue(mab);
 	return count;
-}
 
-static int parse_para_pq(const char *para, int para_num, int *result)
-{
-	char *token = NULL;
-	char *params, *params_base;
-	int *out = result;
-	int len = 0, count = 0;
-	int res = 0;
-
-	if (!para)
-		return 0;
-
-	params = kstrdup(para, GFP_KERNEL);
-	params_base = params;
-	token = params;
-	len = strlen(token);
-	do {
-		token = strsep(&params, " ");
-		while (token && (isspace(*token)
-				|| !isgraph(*token)) && len) {
-			token++;
-			len--;
-		}
-		if (len == 0)
-			break;
-		if (!token || kstrtoint(token, 0, &res) < 0)
-			break;
-		len = strlen(token);
-		*out++ = res;
-		count++;
-	} while ((token) && (count < para_num) && (len > 0));
-
-	kfree(params_base);
-	return count;
 }
 
 void vpp_vd_adj1_saturation_hue(signed int sat_val,
@@ -1989,58 +2170,17 @@ static ssize_t amvecm_saturation_hue_post_store(struct class *cla,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
 	int parsed[2];
-	int i, ma, mb, mab, mc, md;
-	int hue_cos[] = {
-		/*0~12*/
-		256, 256, 256, 255, 255, 254, 253, 252, 251, 250,
-		248, 247, 245, 243, 241, 239, 237, 234, 231, 229,
-		226, 223, 220, 216, 213, 209  /*13~25*/
-	};
-	int hue_sin[] = {
-		-147, -142, -137, -132, -126, -121, -115, -109, -104,
-		-98, -92, -86, -80, /*-25~-13*/-74,  -68,  -62,  -56,
-		-50,  -44,  -38,  -31,  -25, -19, -13,  -6, /*-12~-1*/
-		0, /*0*/
-		6,   13,   19,	25,   31,   38,   44,	50,   56,
-		62,	68,  74,      /*1~12*/	80,   86,   92,	98,  104,
-		109,  115,  121,  126,  132, 137, 142, 147 /*13~25*/
-	};
+
 	if (likely(parse_para_pq(buf, 2, parsed) != 2))
 		return -EINVAL;
-
 	if ((parsed[0] < -128) ||
 		(parsed[0] > 128) ||
 		(parsed[1] < -25) ||
-		(parsed[1] > 25)) {
+		(parsed[1] > 25))
 		return -EINVAL;
-	}
-	saturation_post = parsed[0];
-	hue_post = parsed[1];
-	i = (hue_post > 0) ? hue_post : -hue_post;
-	ma = (hue_cos[i]*(saturation_post + 128)) >> 7;
-	mb = (hue_sin[25+hue_post]*(saturation_post + 128)) >> 7;
-	if (ma > 511)
-		ma = 511;
-	if (ma < -512)
-		ma = -512;
-	if (mb > 511)
-		mb = 511;
-	if (mb < -512)
-		mb = -512;
-	mab =  ((ma & 0x3ff) << 16) | (mb & 0x3ff);
-	pr_info("\n[amvideo..] saturation_post:%d hue_post:%d mab:%x\n",
-			saturation_post, hue_post, mab);
-	WRITE_VPP_REG(VPP_VADJ2_MA_MB, mab);
-	mc = (s16)((mab<<22)>>22); /* mc = -mb */
-	mc = 0 - mc;
-	if (mc > 511)
-		mc = 511;
-	if (mc < -512)
-		mc = -512;
-	md = (s16)((mab<<6)>>22);  /* md =	ma; */
-	mab = ((mc&0x3ff)<<16)|(md&0x3ff);
-	WRITE_VPP_REG(VPP_VADJ2_MC_MD, mab);
-	WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
+	amvecm_set_saturation_hue_post(parsed[0],
+		parsed[1]);
+
 	return count;
 }
 
