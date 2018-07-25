@@ -242,8 +242,8 @@ enum div_sel_e {
 #define PLL_OD_SEL_MAX_TXL          3
 #define PLL_FREF_MIN_TXL            (5 * 1000)
 #define PLL_FREF_MAX_TXL            (25 * 1000)
-#define PLL_VCO_MIN_TXL             (3000 * 1000)
-#define PLL_VCO_MAX_TXL             (6000 * 1000)
+#define PLL_VCO_MIN_TXL             (2950 * 1000)
+#define PLL_VCO_MAX_TXL             (5900 * 1000)
 
 /* video */
 #define CLK_DIV_IN_MAX_TXL          (3100 * 1000)

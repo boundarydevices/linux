@@ -91,6 +91,10 @@ extern int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 		struct device_node *child);
 extern int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 		unsigned char *buf, int key_len, int len);
+extern int lcd_vlock_param_load_from_dts(struct lcd_config_s *pconf,
+		struct device_node *child);
+extern int lcd_vlock_param_load_from_unifykey(struct lcd_config_s *pconf,
+		unsigned char *buf);
 
 extern void lcd_optical_vinfo_update(void);
 extern void lcd_timing_init_config(struct lcd_config_s *pconf);

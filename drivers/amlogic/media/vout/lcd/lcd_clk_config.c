@@ -1661,6 +1661,7 @@ static void lcd_pll_frac_generate_gxtvbb(struct lcd_config_s *pconf)
 static int check_pll_txl(struct lcd_clk_config_s *cConf,
 		unsigned int pll_fout)
 {
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	unsigned int m, n;
 	unsigned int od1_sel, od2_sel, od3_sel, od1, od2, od3;
 	unsigned int pll_fod2_in, pll_fod3_in, pll_fvco;
@@ -1697,7 +1698,15 @@ static int check_pll_txl(struct lcd_clk_config_s *cConf,
 				}
 				cConf->pll_fvco = pll_fvco;
 				n = 1;
-				od_fb = cConf->od_fb;
+				if (lcd_drv->data->chip_type == LCD_CHIP_TXL) {
+					if (pll_fvco < 3700000)
+						od_fb = 0;
+					else
+						od_fb = 1;
+					cConf->od_fb = od_fb;
+				} else {
+					od_fb = cConf->od_fb;
+				}
 				pll_fvco = pll_fvco / od_fb_table[od_fb];
 				m = pll_fvco / cConf->fin;
 				pll_frac = (pll_fvco % cConf->fin) *
@@ -1874,6 +1883,7 @@ static void lcd_pll_frac_generate_txl(struct lcd_config_s *pconf)
 	od3 = od_table[cConf->pll_od3_sel];
 	m = cConf->pll_m;
 	n = cConf->pll_n;
+	od_fb = cConf->od_fb;
 
 	if (lcd_debug_print_flag == 2) {
 		LCDPR("m=%d, n=%d, od1=%d, od2=%d, od3=%d\n",
@@ -1925,7 +1935,6 @@ static void lcd_pll_frac_generate_txl(struct lcd_config_s *pconf)
 		LCDPR("%s pll_fvco=%d\n", __func__, pll_fvco);
 
 	cConf->pll_fvco = pll_fvco;
-	od_fb = cConf->od_fb; /* pll default */
 	pll_fvco = pll_fvco / od_fb_table[od_fb];
 	temp = cConf->fin * m / n;
 	if (pll_fvco >= temp) {

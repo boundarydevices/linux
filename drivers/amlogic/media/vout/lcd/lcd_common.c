@@ -677,6 +677,50 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 	return 0;
 }
 
+int lcd_vlock_param_load_from_dts(struct lcd_config_s *pconf,
+		struct device_node *child)
+{
+	unsigned int para[4];
+	int ret;
+
+	ret = of_property_read_u32_array(child, "vlock_attr", &para[0], 4);
+	if (ret) {
+		pconf->lcd_control.vlock_param[0] = 0;
+	} else {
+		LCDPR("find vlock_attr\n");
+		pconf->lcd_control.vlock_param[0] = 1; /* vlock_param valid */
+		pconf->lcd_control.vlock_param[1] = para[0];
+		pconf->lcd_control.vlock_param[2] = para[1];
+		pconf->lcd_control.vlock_param[3] = para[2];
+		pconf->lcd_control.vlock_param[4] = para[3];
+	}
+
+	return 0;
+}
+
+int lcd_vlock_param_load_from_unifykey(struct lcd_config_s *pconf,
+		unsigned char *buf)
+{
+	unsigned char *p;
+
+	p = buf;
+
+	pconf->lcd_control.vlock_param[0] = 0;
+	pconf->lcd_control.vlock_param[1] = *(p + LCD_UKEY_VLOCK_VAL_0);
+	pconf->lcd_control.vlock_param[2] = *(p + LCD_UKEY_VLOCK_VAL_1);
+	pconf->lcd_control.vlock_param[3] = *(p + LCD_UKEY_VLOCK_VAL_2);
+	pconf->lcd_control.vlock_param[4] = *(p + LCD_UKEY_VLOCK_VAL_3);
+	if (pconf->lcd_control.vlock_param[1] ||
+		pconf->lcd_control.vlock_param[2] ||
+		pconf->lcd_control.vlock_param[3] ||
+		pconf->lcd_control.vlock_param[4]) {
+		LCDPR("find vlock_attr\n");
+		pconf->lcd_control.vlock_param[0] = 1;
+	}
+
+	return 0;
+}
+
 void lcd_optical_vinfo_update(void)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();

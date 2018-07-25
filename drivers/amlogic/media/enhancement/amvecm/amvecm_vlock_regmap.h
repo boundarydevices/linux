@@ -60,7 +60,7 @@ static struct vlock_regs_s vlock_pll_setting[VLOCK_DEFAULT_REG_SIZE] = {
 	{0x3007,     0x00000000   },
 	{0x3008,     0x00000000   },
 	{0x3009,     0x00100000   },
-	{0x300a,     0x00008000   },
+	{0x300a,     0x00600000   },
 	{0x300b,     0x00100000   },
 	{0x300c,     0x00000000   },
 	{0x300d,     0x00004000   },

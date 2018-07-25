@@ -18,8 +18,12 @@
 #ifndef __AM_VLOCK_H
 #define __AM_VLOCK_H
 
+#include <linux/device.h>
+#include <linux/of.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include "linux/amlogic/media/amvecm/ve.h"
+
+#define VLOCK_VER "Ref.2018/09/04a"
 
 #define VLOCK_REG_NUM	33
 
@@ -43,6 +47,8 @@ enum vlock_param_e {
 	VLOCK_MODE,
 	VLOCK_DIS_CNT_LIMIT,
 	VLOCK_DELTA_LIMIT,
+	VLOCK_PLL_M_LIMIT,
+	VLOCK_DELTA_CNT_LIMIT,
 	VLOCK_DEBUG,
 	VLOCK_DYNAMIC_ADJUST,
 	VLOCK_STATE,
@@ -70,13 +76,18 @@ extern void vlock_log_print(void);
 #define VLOCK_STATE_ENABLE_FORCE_RESET 5
 
 /* video lock */
-#define VLOCK_MODE_AUTO_ENC 0
-#define VLOCK_MODE_AUTO_PLL 1
-#define VLOCK_MODE_MANUAL_PLL 2
-#define VLOCK_MODE_MANUAL_ENC 3
-#define VLOCK_MODE_MANUAL_SOFT_ENC 4
+#define VLOCK_MODE_AUTO_ENC (1 << 0)
+#define VLOCK_MODE_AUTO_PLL (1 << 1)
+#define VLOCK_MODE_MANUAL_PLL (1 << 2)
+#define VLOCK_MODE_MANUAL_ENC (1 << 3)
+#define VLOCK_MODE_MANUAL_SOFT_ENC (1 << 4)
+#define VLOCK_MODE_MANUAL_MIX_PLL_ENC (1 << 5)
 
 #define XTAL_VLOCK_CLOCK   24000000/*vlock use xtal clock*/
+
+#define VLOCK_PLL_STABLE_CNT	180/*vlock pll stabel cnt limit*/
+#define VLOCK_ENC_STABLE_CNT	180/*vlock enc stabel cnt limit*/
+#define VLOCK_PLL_ADJ_LIMIT 9/*vlock pll adj limit(0x300a default)*/
 
 /*vlock_debug mask*/
 #define VLOCK_DEBUG_INFO (1 << 0)
@@ -99,5 +110,6 @@ extern int amvecm_hiu_reg_read(unsigned int reg, unsigned int *val);
 extern int amvecm_hiu_reg_write(unsigned int reg, unsigned int val);
 extern void vdin_vlock_input_sel(unsigned int type,
 	enum vframe_source_type_e source_type);
+extern void vlock_param_config(struct device_node *node);
 #endif
 

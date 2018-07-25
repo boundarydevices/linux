@@ -90,7 +90,10 @@ struct aml_lcd_unifykey_header_s {
 #define LCD_UKEY_V_PERIOD_MAX    (LCD_UKEY_MODEL_NAME + 67)
 #define LCD_UKEY_PCLK_MIN        (LCD_UKEY_MODEL_NAME + 69)
 #define LCD_UKEY_PCLK_MAX        (LCD_UKEY_MODEL_NAME + 73)
-#define LCD_UKEY_CUST_VAL_8      (LCD_UKEY_MODEL_NAME + 77)
+#define LCD_UKEY_VLOCK_VAL_0     (LCD_UKEY_MODEL_NAME + 77)
+#define LCD_UKEY_VLOCK_VAL_1     (LCD_UKEY_MODEL_NAME + 78)
+#define LCD_UKEY_VLOCK_VAL_2     (LCD_UKEY_MODEL_NAME + 79)
+#define LCD_UKEY_VLOCK_VAL_3     (LCD_UKEY_MODEL_NAME + 80)
 #define LCD_UKEY_CUST_VAL_9      (LCD_UKEY_MODEL_NAME + 81)
 /* interface (20Byte) */
 #define LCD_UKEY_IF_ATTR_0       (LCD_UKEY_MODEL_NAME + 85)/* +36+18+31 byte */
@@ -136,6 +139,7 @@ struct aml_lcd_unifykey_header_s {
 #define LCD_UKEY_PHY_ATTR_7     (LCD_UKEY_MODEL_NAME + 156)
 #define LCD_UKEY_PHY_ATTR_8     (LCD_UKEY_MODEL_NAME + 157)
 #define LCD_UKEY_PHY_ATTR_9     (LCD_UKEY_MODEL_NAME + 158)
+
 #define LCD_UKEY_DATA_LEN_V1        (LCD_UKEY_MODEL_NAME + 105)
 #define LCD_UKEY_DATA_LEN_V2        (LCD_UKEY_MODEL_NAME + 159)
 /* power (5Byte * n) */

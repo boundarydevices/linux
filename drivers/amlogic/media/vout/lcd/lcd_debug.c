@@ -2253,6 +2253,26 @@ static ssize_t lcd_debug_dither_store(struct class *class,
 	return count;
 }
 
+static ssize_t lcd_debug_vlock_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	ssize_t len = 0;
+
+	len = sprintf(buf, "custome vlock attr:\n"
+		"vlock_valid:        %d\n"
+		"vlock_en:           %d\n"
+		"vlock_work_mode:    %d\n"
+		"vlock_pll_m_limit:  %d\n"
+		"vlock_line_limit:   %d\n",
+		lcd_drv->lcd_config->lcd_control.vlock_param[0],
+		lcd_drv->lcd_config->lcd_control.vlock_param[1],
+		lcd_drv->lcd_config->lcd_control.vlock_param[2],
+		lcd_drv->lcd_config->lcd_control.vlock_param[3],
+		lcd_drv->lcd_config->lcd_control.vlock_param[4]);
+
+	return len;
+}
 
 #define LCD_DEBUG_DUMP_INFO         0
 #define LCD_DEBUG_DUMP_REG          1
@@ -2364,6 +2384,7 @@ static struct class_attribute lcd_debug_class_attrs[] = {
 	__ATTR(reg,         0200, NULL, lcd_debug_reg_store),
 	__ATTR(dither,      0644,
 		lcd_debug_dither_show, lcd_debug_dither_store),
+	__ATTR(vlock,       0644, lcd_debug_vlock_show, NULL),
 	__ATTR(dump,        0644,
 		lcd_debug_dump_show, lcd_debug_dump_store),
 	__ATTR(print,       0644, lcd_debug_print_show, lcd_debug_print_store),

@@ -321,6 +321,7 @@ struct lcd_control_config_s {
 	struct lvds_config_s *lvds_config;
 	struct vbyone_config_s *vbyone_config;
 	struct dsi_config_s *mipi_config;
+	unsigned int *vlock_param;
 };
 
 /* **********************************

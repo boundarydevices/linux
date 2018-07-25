@@ -5051,6 +5051,10 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	vsync_count++;
 	timer_count++;
 
+#if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
+	vlock_process(vf);/*need call every vsync*/
+#endif
+
 	switch (READ_VCBUS_REG(VPU_VIU_VENC_MUX_CTRL) & 0x3) {
 	case 0:
 		enc_line = (READ_VCBUS_REG(ENCL_INFO_READ) >> 16) & 0x1fff;
@@ -5313,9 +5317,6 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		/* determine the out frame is L or R or blank */
 		judge_3d_fa_out_mode();
 	}
-#if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
-	vlock_process(cur_dispbuf);
-#endif
 	while (vf) {
 		if (vpts_expire(cur_dispbuf, vf, toggle_cnt) || show_nosync) {
 			amlog_mask(LOG_MASK_TIMESTAMP,

@@ -399,6 +399,18 @@
 				0 0 0 100 /*panel power off*/
 				0xff 0 0 0>; /*ending*/
 			backlight_index = <3>;
+
+			/*vlock_attr = <1 // vlock_en: 1=enable,0=disable */
+			/*	0x4 // vlock work mode:           */
+			/*		 *bit0:auto ENC           */
+			/*		 *bit1:auto PLL           */
+			/*		 *bit2:manual PLL         */
+			/*		 *bit3:manual ENC         */
+			/*		 *bit4:manual soft ENC    */
+			/*		 *bit5:manual MIX PLL ENC */
+			/*	     */
+			/*	1   // vlock_pll_m_limit */
+			/*	3>; // vlock_line_limit  */
 		};
 	}; /* end of lcd */
 

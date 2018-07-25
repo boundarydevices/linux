@@ -892,6 +892,7 @@ static int lcd_config_load_from_dts(struct lcd_config_s *pconf,
 		break;
 	}
 
+	lcd_vlock_param_load_from_dts(pconf, child);
 	ret = lcd_power_load_from_dts(pconf, child);
 
 	return ret;
@@ -1147,6 +1148,8 @@ static int lcd_config_load_from_unifykey(struct lcd_config_s *pconf)
 				((*(p + LCD_UKEY_PHY_ATTR_1 + 1)) << 8)) & 0xff;
 		}
 	}
+
+	lcd_vlock_param_load_from_unifykey(pconf, para);
 
 	/* step 3: check power sequence */
 	ret = lcd_power_load_from_unifykey(pconf, para, key_len, len);

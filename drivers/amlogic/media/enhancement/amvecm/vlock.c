@@ -26,6 +26,9 @@
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/io.h>
+#ifdef CONFIG_AMLOGIC_LCD
+#include <linux/amlogic/media/vout/lcd/lcd_notify.h>
+#endif
 #include "arch/vpp_regs.h"
 #include "vlock.h"
 #include "amvecm_vlock_regmap.h"
@@ -45,8 +48,17 @@ unsigned int vlock_en = 1;
 static unsigned int vlock_adapt;
 static unsigned int vlock_dis_cnt_limit = 2;
 static unsigned int vlock_delta_limit = 2;
+/*limit vlock pll m adj*/
+static unsigned int vlock_pll_m_limit = 1;
+/*for 24MHZ clock, 50hz input, delta value (10) of(0x3011-0x3012) == 0.001HZ */
+static unsigned int vlock_delta_cnt_limit = 10;
+static unsigned int vlock_pll_stable_flag;
+static unsigned int vlock_enc_stable_flag;
 static unsigned int vlock_pll_stable_cnt;
-static unsigned int vlock_pll_stable_limit = 180;/*3s for 60hz input*/
+static unsigned int vlock_pll_stable_limit = 600;/*10s for 60hz input*/
+static unsigned int vlock_pll_adj_limit;
+static unsigned int vlock_pll_val_last;
+static unsigned int vlock_intput_type;
 /* [reg(0x3009) x linemax_num)]>>24 is the limit line of enc mode
  * change from 4 to 3,for 4 may cause shake issue for 60.3hz input
  */
@@ -78,6 +90,7 @@ static unsigned int enc_max_pixel_addr;
 static unsigned int enc_video_mode_addr;
 static unsigned int enc_video_mode_adv_addr;
 static unsigned int enc_max_line_switch_addr;
+static unsigned int pre_video_clk;
 
 static unsigned int vlock_dis_cnt_no_vf;
 static unsigned int vlock_dis_cnt_no_vf_limit = 5;
@@ -215,7 +228,7 @@ static void vlock_enable(bool enable)
 	amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL6, &tmp_value);
 
 	if (is_meson_gxtvbb_cpu()) {
-		if (vlock_mode == VLOCK_MODE_MANUAL_PLL) {
+		if (vlock_mode & VLOCK_MODE_MANUAL_PLL) {
 			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6, 0, 20, 1);
 			/*vlsi suggest config:don't enable load signal,
 			 *on gxtvbb this load signal will effect SSG,
@@ -229,7 +242,7 @@ static void vlock_enable(bool enable)
 			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6,
 				enable, 20, 1);
 	} else if (is_meson_txl_cpu() || is_meson_txlx_cpu()) {
-		if (vlock_mode == VLOCK_MODE_MANUAL_PLL)
+		if (vlock_mode & VLOCK_MODE_MANUAL_PLL)
 			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL5, 0, 3, 1);
 		else
 			amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL5,
@@ -253,9 +266,9 @@ static void vlock_setting(struct vframe_s *vf,
 	unsigned int hiu_m_val, hiu_frac_val, temp_value;
 
 	amvecm_hiu_reg_write(HHI_VID_LOCK_CLK_CNTL, 0x80);
-	if ((vlock_mode == VLOCK_MODE_AUTO_ENC) ||
-		(vlock_mode == VLOCK_MODE_MANUAL_ENC) ||
-		(vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC)) {
+	if ((vlock_mode & (VLOCK_MODE_AUTO_ENC |
+		VLOCK_MODE_MANUAL_ENC |
+		VLOCK_MODE_MANUAL_SOFT_ENC))) {
 		/*init default config for enc mode*/
 		vlock_hw_reinit(vlock_enc_setting, VLOCK_DEFAULT_REG_SIZE);
 		/*vlock line limit*/
@@ -265,12 +278,14 @@ static void vlock_setting(struct vframe_s *vf,
 		/* disable to adjust pll */
 		WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 0, 29, 1);
 		/* CFG_VID_LOCK_ADJ_EN enable */
-		if ((vlock_mode == VLOCK_MODE_MANUAL_ENC) ||
-			(vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC)) {
+		if ((vlock_mode & (VLOCK_MODE_MANUAL_ENC |
+			VLOCK_MODE_MANUAL_SOFT_ENC))) {
 			/*auto vlock off*/
 			WRITE_VPP_REG_BITS(enc_max_line_switch_addr,
 				0, 13, 1);
 			WRITE_VPP_REG_BITS(enc_video_mode_adv_addr, 1, 14, 1);
+			WRITE_VPP_REG_BITS(enc_max_line_switch_addr,
+				pre_enc_max_pixel, 0, 13);
 		} else {
 			WRITE_VPP_REG_BITS(enc_max_line_switch_addr,
 				1, 13, 1);
@@ -289,7 +304,7 @@ static void vlock_setting(struct vframe_s *vf,
 		 *bit8~15:output freq
 		 */
 		if ((vf->type_original & VIDTYPE_TYPEMASK) &&
-			(vlock_mode != VLOCK_MODE_MANUAL_SOFT_ENC))
+			!(vlock_mode & VLOCK_MODE_MANUAL_SOFT_ENC))
 			input_hz = input_hz >> 1;
 		freq_hz = input_hz | (output_hz << 8);
 		WRITE_VPP_REG_BITS(VPU_VLOCK_MISC_CTRL, freq_hz, 0, 16);
@@ -310,8 +325,8 @@ static void vlock_setting(struct vframe_s *vf,
 			vlock_latch_en_cnt, 8, 8);
 		WRITE_VPP_REG_BITS(enc_video_mode_addr, 0, 15, 1);
 	}
-	if ((vlock_mode == VLOCK_MODE_AUTO_PLL) ||
-		(vlock_mode == VLOCK_MODE_MANUAL_PLL)) {
+	if ((vlock_mode & (VLOCK_MODE_AUTO_PLL |
+		VLOCK_MODE_MANUAL_PLL))) {
 		/* av pal in,1080p60 hdmi out as default */
 		vlock_hw_reinit(vlock_pll_setting, VLOCK_DEFAULT_REG_SIZE);
 		/*
@@ -354,6 +369,10 @@ static void vlock_setting(struct vframe_s *vf,
 				+ (hiu_frac_val << 2);
 		}
 		WRITE_VPP_REG_BITS(VPU_VLOCK_MX4096, reg_value, 0, 21);
+		/*vlock_pll_adj_limit = (reg_value * 0x8000) >> 24;*/
+		vlock_pll_adj_limit = reg_value >> VLOCK_PLL_ADJ_LIMIT;
+		vlock_pll_val_last = ((reg_value & 0x3fff000) << 4) |
+			(reg_value & 0x3fff);
 
 		/*enable vlock to adj pll*/
 		/* CFG_VID_LOCK_ADJ_EN disable */
@@ -391,7 +410,7 @@ static void vlock_setting(struct vframe_s *vf,
 void vlock_vmode_check(void)
 {
 	const struct vinfo_s *vinfo;
-	unsigned int tmp_value, hiu_reg_addr;
+	unsigned int t0, t1, hiu_reg_addr, cur_video_clk;
 	char cur_vout_mode[64];
 
 	if (vlock_en == 0)
@@ -402,22 +421,39 @@ void vlock_vmode_check(void)
 		hiu_reg_addr = HHI_HDMI_PLL_CNTL2;
 	vinfo = get_current_vinfo();
 	vlock_vmode_changed = 0;
+	cur_video_clk = vinfo->video_clk;
 	memset(cur_vout_mode, 0, sizeof(cur_vout_mode));
 	if ((vinfo->name == NULL) ||
 		(strlen(vinfo->name) > sizeof(cur_vout_mode)))
 		return;
 	strcpy(cur_vout_mode, vinfo->name);
 	if (strcmp(cur_vout_mode, pre_vout_mode) != 0) {
-		if ((vlock_mode == VLOCK_MODE_MANUAL_PLL) ||
-			(vlock_mode == VLOCK_MODE_AUTO_PLL)) {
-			amvecm_hiu_reg_read(hiu_reg_addr, &tmp_value);
-			pre_hiu_reg_frac = tmp_value & 0xfff;
-			amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL, &tmp_value);
-			pre_hiu_reg_m = tmp_value & 0x1ff;
+		if (vlock_mode & (VLOCK_MODE_MANUAL_PLL |
+			VLOCK_MODE_AUTO_PLL)) {
+			amvecm_hiu_reg_read(hiu_reg_addr, &t0);
+			amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL, &t1);
+			if (cur_video_clk != pre_video_clk) {
+				pre_hiu_reg_frac = t0 & 0xfff;
+				pre_hiu_reg_m = t1 & 0x1ff;
+				pre_video_clk = cur_video_clk;
+			} else {
+				if ((t0 & 0xfff) != pre_hiu_reg_frac) {
+					t0 = (t0 & 0xfffff000) |
+						(pre_hiu_reg_frac & 0xfff);
+					amvecm_hiu_reg_write(hiu_reg_addr, t0);
+				}
+				if (((t1 & 0x1ff) != pre_hiu_reg_m) &&
+					(pre_hiu_reg_m != 0)) {
+					t1 = (t1 & 0xfffffe00) |
+						(pre_hiu_reg_m & 0x1ff);
+					amvecm_hiu_reg_write(HHI_HDMI_PLL_CNTL,
+						t1);
+				}
+			}
 		}
-		if ((vlock_mode == VLOCK_MODE_MANUAL_ENC) ||
-			(vlock_mode == VLOCK_MODE_AUTO_ENC) ||
-			(vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC)) {
+		if ((vlock_mode & (VLOCK_MODE_MANUAL_ENC |
+			VLOCK_MODE_AUTO_ENC |
+			VLOCK_MODE_MANUAL_SOFT_ENC))) {
 			switch (READ_VPP_REG_BITS(VPU_VIU_VENC_MUX_CTRL,
 				0, 2)) {
 			case 0:
@@ -475,17 +511,16 @@ static void vlock_disable_step1(void)
 	/* VLOCK_CNTL_EN disable */
 	vlock_enable(0);
 	vlock_vmode_check();
-	if ((vlock_mode == VLOCK_MODE_MANUAL_PLL) ||
-		(vlock_mode == VLOCK_MODE_AUTO_PLL) ||
-		(vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC)) {
+	if ((vlock_mode & (VLOCK_MODE_MANUAL_PLL |
+		VLOCK_MODE_AUTO_PLL |
+		VLOCK_MODE_MANUAL_SOFT_ENC))) {
 		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL)
 			hiu_reg_addr = HHI_HDMI_PLL_CNTL1;
 		else
 			hiu_reg_addr = HHI_HDMI_PLL_CNTL2;
 		amvecm_hiu_reg_read(hiu_reg_addr, &tmp_value);
 		m_reg_value = tmp_value & 0xfff;
-		if ((m_reg_value != pre_hiu_reg_frac) &&
-			(pre_hiu_reg_frac != 0)) {
+		if (m_reg_value != pre_hiu_reg_frac) {
 			tmp_value = (tmp_value & 0xfffff000) |
 				(pre_hiu_reg_frac & 0xfff);
 			amvecm_hiu_reg_write(hiu_reg_addr, tmp_value);
@@ -499,24 +534,23 @@ static void vlock_disable_step1(void)
 			amvecm_hiu_reg_write(HHI_HDMI_PLL_CNTL, tmp_value);
 		}
 	}
-	if ((vlock_mode == VLOCK_MODE_MANUAL_ENC) ||
-		(vlock_mode == VLOCK_MODE_AUTO_ENC) ||
-		(vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC)) {
+	if ((vlock_mode & (VLOCK_MODE_MANUAL_ENC |
+		VLOCK_MODE_AUTO_ENC |
+		VLOCK_MODE_MANUAL_SOFT_ENC))) {
 		err_accum = 0;
 		WRITE_VPP_REG_BITS(enc_video_mode_adv_addr, 0, 14, 1);
 		enc_max_line = READ_VPP_REG(enc_max_line_addr);
-		enc_max_pixel = READ_VPP_REG(enc_max_pixel_addr);
+		enc_max_pixel = READ_VPP_REG_BITS(enc_max_line_switch_addr,
+			0, 13);
 		if (!(vlock_debug & VLOCK_DEBUG_ENC_LINE_ADJ_DIS) &&
 			(enc_max_line != pre_enc_max_line) &&
 			(pre_enc_max_line != 0) && (enc_max_line_addr != 0))
 			WRITE_VPP_REG(enc_max_line_addr, pre_enc_max_line);
 		if (!(vlock_debug & VLOCK_DEBUG_ENC_PIXEL_ADJ_DIS) &&
 			(enc_max_pixel != pre_enc_max_pixel) &&
-			(enc_max_line_addr != 0) && (enc_max_pixel_addr != 0)) {
+			(enc_max_line_switch_addr != 0))
 			WRITE_VPP_REG_BITS(enc_max_line_switch_addr,
 				0x1fff, 0, 13);
-			WRITE_VPP_REG(enc_max_pixel_addr, pre_enc_max_pixel);
-		}
 	}
 	vlock_dis_cnt = vlock_dis_cnt_limit;
 	memset(pre_vout_mode, 0, sizeof(pre_vout_mode));
@@ -526,7 +560,13 @@ static void vlock_disable_step1(void)
 	pre_input_freq = 0;
 	pre_output_freq = 0;
 	vlock_state = VLOCK_STATE_DISABLE_STEP1_DONE;
-	vlock_mode = VLOCK_MODE_MANUAL_PLL;
+	if (vlock_mode & VLOCK_MODE_MANUAL_MIX_PLL_ENC) {
+		vlock_mode &= ~VLOCK_MODE_MANUAL_MIX_PLL_ENC;
+		vlock_mode |= VLOCK_MODE_MANUAL_PLL;
+	}
+	vlock_pll_stable_cnt = 0;
+	vlock_pll_stable_flag = 0;
+	vlock_enc_stable_flag = 0;
 }
 
 static void vlock_disable_step2(void)
@@ -578,6 +618,8 @@ static void vlock_enable_step1(struct vframe_s *vf, struct vinfo_s *vinfo,
 	vlock_state = VLOCK_STATE_ENABLE_STEP1_DONE;
 	vlock_pll_stable_cnt = 0;
 	vlock_log_cnt = 0;
+	vlock_pll_stable_flag = 0;
+	vlock_enc_stable_flag = 0;
 }
 
 void vlock_log_start(void)
@@ -784,25 +826,37 @@ static void vlock_enable_step3_soft_enc(void)
 
 	line_adj = nT0 >> 14;
 
+	tfrac = nT0 - (line_adj << 14);
+
+	pixel_adj = (tfrac * pre_enc_max_pixel + 8192) >> 14;
+
+	while ((pixel_adj < 0) && (pre_enc_max_pixel > 0)) {
+		line_adj = line_adj - 1;
+		pixel_adj = pre_enc_max_pixel + pixel_adj;
+	}
+
+	while (((pixel_adj + pre_enc_max_pixel) > 0x1fff) &&
+		(pre_enc_max_pixel > 0)) {
+		line_adj = line_adj + 1;
+		pixel_adj = pixel_adj - pre_enc_max_pixel;
+	}
+
 	if (line_adj > vlock_line_limit)
 		line_adj = vlock_line_limit;
 	else if (line_adj < -vlock_line_limit)
 		line_adj = -vlock_line_limit;
 
-	tfrac = nT0 - (line_adj << 14);
-
-	pixel_adj = (tfrac * pre_enc_max_pixel + 8192) >> 14;
-
-	if ((pixel_adj + pre_enc_max_pixel) > 0x1fff) {
-		line_adj = line_adj + 1;
-		pixel_adj = pixel_adj - pre_enc_max_pixel;
-	}
-
 	pixel_adj &= 0xfffffffe;/*clean bit0*/
 
-	WRITE_VPP_REG(ENCL_VIDEO_MAX_LNCNT, pre_enc_max_line + line_adj);
-	WRITE_VPP_REG(ENCL_MAX_LINE_SWITCH_POINT,
-		pre_enc_max_pixel + pixel_adj);
+	if (vlock_enc_stable_flag++ > VLOCK_ENC_STABLE_CNT)
+		vlock_enc_stable_flag = VLOCK_ENC_STABLE_CNT;
+	if ((vlock_enc_stable_flag < VLOCK_ENC_STABLE_CNT) &&
+		(!(vlock_debug & VLOCK_DEBUG_ENC_LINE_ADJ_DIS)))
+		WRITE_VPP_REG(ENCL_VIDEO_MAX_LNCNT,
+			pre_enc_max_line + line_adj);
+	if (!(vlock_debug & VLOCK_DEBUG_ENC_PIXEL_ADJ_DIS))
+		WRITE_VPP_REG(ENCL_MAX_LINE_SWITCH_POINT,
+			pre_enc_max_pixel + pixel_adj);
 
 	last_i_vsync = READ_VPP_REG(0x3011);
 
@@ -819,10 +873,32 @@ static void vlock_enable_step3_soft_enc(void)
 		vlock_log_cnt++;
 	}
 }
+/*check pll adj value (0x3020),otherwise may cause blink*/
+static void vlock_pll_adj_limit_check(unsigned int *pll_val)
+{
+	unsigned int m_reg_value, pll_cur, pll_last, pll_ret;
 
+	m_reg_value = *pll_val;
+
+	if (m_reg_value != 0) {
+		pll_cur = ((m_reg_value & 0x3fff0000) >> 4) |
+			(m_reg_value & 0x3fff);
+		pll_last = ((vlock_pll_val_last & 0x3fff0000) >> 4) |
+			(vlock_pll_val_last & 0x3fff);
+		if (abs(pll_cur - pll_last) > vlock_pll_adj_limit) {
+			if (pll_cur > pll_last)
+				pll_ret = pll_last + vlock_pll_adj_limit;
+			else
+				pll_ret = pll_last - vlock_pll_adj_limit;
+			*pll_val = ((pll_ret & 0x3fff000) << 4) |
+				(pll_ret & 0x3fff);
+		}
+	}
+}
 static void vlock_enable_step3_pll(void)
 {
 	unsigned int m_reg_value, tmp_value, abs_val, hiu_reg_addr;
+	unsigned int ia, oa, abs_cnt;
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_GXL)
 		hiu_reg_addr = HHI_HDMI_PLL_CNTL1;
@@ -854,8 +930,10 @@ static void vlock_enable_step3_pll(void)
 
 	m_reg_value = READ_VPP_REG(VPU_VLOCK_RO_M_INT_FRAC);
 	if (vlock_log_en && (vlock_log_cnt < vlock_log_size)) {
-		vlock_log[vlock_log_cnt]->pll_frac = (m_reg_value & 0xfff) >> 2;
-		vlock_log[vlock_log_cnt]->pll_m = (m_reg_value >> 16) & 0x1ff;
+		vlock_log[vlock_log_cnt]->pll_frac =
+			(vlock_pll_val_last & 0xfff) >> 2;
+		vlock_log[vlock_log_cnt]->pll_m =
+			(vlock_pll_val_last >> 16) & 0x1ff;
 		vlock_reg_get();
 		vlock_log_cnt++;
 	}
@@ -866,6 +944,9 @@ static void vlock_enable_step3_pll(void)
 				__func__);
 		return;
 	}
+	/*check adjust delta limit*/
+	vlock_pll_adj_limit_check(&m_reg_value);
+
 	/*vlsi suggest config:don't enable load signal,
 	 *on gxtvbb this load signal will effect SSG,
 	 *which may result in flashes black
@@ -873,6 +954,14 @@ static void vlock_enable_step3_pll(void)
 	amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL6, &tmp_value);
 	if (is_meson_gxtvbb_cpu() && (((tmp_value >> 21) & 0x3) != 2))
 		amvecm_hiu_reg_write_bits(HHI_HDMI_PLL_CNTL6, 2, 21, 2);
+	/*add delta count check*/
+	/*for interlace input need div 2*/
+	if (vlock_intput_type)
+		ia = READ_VPP_REG(VPU_VLOCK_RO_VS_I_DIST) / 2;
+	else
+		ia = READ_VPP_REG(VPU_VLOCK_RO_VS_I_DIST);
+	oa = READ_VPP_REG(VPU_VLOCK_RO_VS_O_DIST);
+	abs_cnt = abs(ia - oa);
 	/*frac*/
 	amvecm_hiu_reg_read(hiu_reg_addr, &tmp_value);
 	abs_val = abs(((m_reg_value & 0xfff) >> 2) - (tmp_value & 0xfff));
@@ -880,30 +969,40 @@ static void vlock_enable_step3_pll(void)
 		pr_info("vlock frac delta:%d(0x%x,0x%x)\n",
 			abs_val, ((m_reg_value & 0xfff) >> 2),
 			(tmp_value & 0xfff));
-	if (abs_val >= vlock_delta_limit) {
+	if ((abs_val >= vlock_delta_limit) &&
+		(abs_cnt > vlock_delta_cnt_limit)) {
 		tmp_value = (tmp_value & 0xfffff000) |
 			((m_reg_value & 0xfff) >> 2);
 		amvecm_hiu_reg_write(hiu_reg_addr, tmp_value);
+		vlock_pll_val_last &= 0xffff0000;
+		vlock_pll_val_last |= (m_reg_value & 0xfff);
 	}
 	/*check stable by diff frac*/
-	if (abs_val < (2 * vlock_delta_limit))
+	if ((abs_val < (2 * vlock_delta_limit)) &&
+		(abs_cnt < vlock_enc_adj_limit))
 		vlock_pll_stable_cnt++;
 	else
 		vlock_pll_stable_cnt = 0;
+	if (vlock_pll_stable_flag++ > VLOCK_PLL_STABLE_CNT)
+		vlock_pll_stable_flag = VLOCK_PLL_STABLE_CNT;
 	/*m*/
 	amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL, &tmp_value);
-	abs_val = abs(((m_reg_value >> 16) & 0x1ff) - (tmp_value & 0x1ff));
+	abs_val = abs(((m_reg_value >> 16) & 0x1ff) - (pre_hiu_reg_m & 0x1ff));
 	if ((abs_val > vlock_log_delta_m) && (vlock_log_delta_en&(1<<4)))
 		pr_info("vlock m delta:%d(0x%x,0x%x)\n",
 			abs_val, ((m_reg_value >> 16) & 0x1ff),
 			(tmp_value & 0x1ff));
-	if (((m_reg_value >> 16) & 0x1ff) != (tmp_value & 0x1ff)) {
+	if ((abs_val <= vlock_pll_m_limit) &&
+		(((m_reg_value >> 16) & 0x1ff) != (tmp_value & 0x1ff)) &&
+		(abs_cnt > vlock_delta_cnt_limit)) {
 		tmp_value = (tmp_value & 0xfffffe00) |
 			((m_reg_value >> 16) & 0x1ff);
 		amvecm_hiu_reg_write(HHI_HDMI_PLL_CNTL, tmp_value);
+		vlock_pll_val_last &= 0x0000ffff;
+		vlock_pll_val_last |= (m_reg_value & 0xffff0000);
 	}
 	/*check stable by diff m*/
-	if (abs_val)
+	if (((m_reg_value >> 16) & 0x1ff) != (tmp_value & 0x1ff))
 		vlock_pll_stable_cnt = 0;
 }
 /* won't change this function internal seqence,
@@ -965,14 +1064,16 @@ void amve_vlock_process(struct vframe_s *vf)
 			(vlock_state >= VLOCK_STATE_ENABLE_STEP1_DONE)) {
 			vlock_sync_limit_flag++;
 			if ((vlock_sync_limit_flag <= 3) &&
-				(vlock_mode == VLOCK_MODE_MANUAL_ENC)) {
+				((vlock_mode & (VLOCK_MODE_MANUAL_ENC |
+				VLOCK_MODE_MANUAL_PLL)))) {
 				WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 1, 5, 1);
 				WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 1, 2, 1);
 				WRITE_VPP_REG(VPU_VLOCK_OVWRITE_ACCUM0, 0);
 				WRITE_VPP_REG(VPU_VLOCK_OVWRITE_ACCUM1, 0);
 			}
 			if ((vlock_sync_limit_flag == 4) &&
-				(vlock_mode == VLOCK_MODE_MANUAL_ENC)) {
+				((vlock_mode & (VLOCK_MODE_MANUAL_ENC |
+				VLOCK_MODE_MANUAL_PLL)))) {
 				WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 0, 5, 1);
 				WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 0, 2, 1);
 			}
@@ -998,32 +1099,35 @@ void amve_vlock_process(struct vframe_s *vf)
 			(vlock_sync_limit_flag > 5) &&
 			(vlock_state == VLOCK_STATE_ENABLE_STEP2_DONE) &&
 			(cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) &&
-			((vlock_mode == VLOCK_MODE_MANUAL_PLL) ||
-			(vlock_mode == VLOCK_MODE_MANUAL_ENC) ||
-			(vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC))) {
-			if (vlock_mode == VLOCK_MODE_MANUAL_ENC)
+			((vlock_mode & (VLOCK_MODE_MANUAL_PLL |
+			VLOCK_MODE_MANUAL_ENC |
+			VLOCK_MODE_MANUAL_SOFT_ENC)))) {
+			if (vlock_mode & VLOCK_MODE_MANUAL_ENC)
 				vlock_enable_step3_enc();
-			else if (vlock_mode == VLOCK_MODE_MANUAL_PLL)
+			else if (vlock_mode & VLOCK_MODE_MANUAL_PLL)
 				vlock_enable_step3_pll();
-			else if (vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC)
+			else if (vlock_mode & VLOCK_MODE_MANUAL_SOFT_ENC)
 				vlock_enable_step3_soft_enc();
 			/*check stable*/
 			if ((vinfo->fr_adj_type != VOUT_FR_ADJ_HDMI) &&
 				(vinfo->width <= 1920) &&
 				!(vlock_debug & VLOCK_DEBUG_PLL2ENC_DIS) &&
+				(vlock_mode &
+				VLOCK_MODE_MANUAL_MIX_PLL_ENC) &&
 				(vlock_pll_stable_cnt >
 				vlock_pll_stable_limit)) {
 				/*reinit pre_vout_mode for trace mode check*/
 				memset(pre_vout_mode, 0, sizeof(pre_vout_mode));
-				vlock_mode = VLOCK_MODE_MANUAL_SOFT_ENC;
+				vlock_mode &= ~VLOCK_MODE_MANUAL_MIX_PLL_ENC;
+				vlock_mode |= VLOCK_MODE_MANUAL_SOFT_ENC;
 				vlock_state = VLOCK_STATE_ENABLE_FORCE_RESET;
 				if (vlock_debug & VLOCK_DEBUG_INFO)
-				pr_info("[%s]force reset for switch pll to enc mode!!!\n",
+					pr_info("[%s]force reset for switch pll to enc mode!!!\n",
 					__func__);
 			}
 		}
-		if (((vlock_mode == VLOCK_MODE_AUTO_PLL) ||
-			(vlock_mode == VLOCK_MODE_AUTO_ENC)) &&
+		if (((vlock_mode & (VLOCK_MODE_AUTO_PLL |
+			VLOCK_MODE_AUTO_ENC))) &&
 			vlock_log_en && (vlock_log_cnt < vlock_log_size) &&
 			(vlock_debug & VLOCK_DEBUG_AUTO_MODE_LOG_EN)) {
 			vlock_reg_get();
@@ -1058,14 +1162,14 @@ void amve_vlock_resume(void)
 		(vlock_sync_limit_flag > 5) &&
 		(vlock_state == VLOCK_STATE_ENABLE_STEP2_DONE) &&
 		(cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) &&
-		((vlock_mode == VLOCK_MODE_MANUAL_PLL) ||
-		(vlock_mode == VLOCK_MODE_MANUAL_ENC) ||
-		(vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC))) {
-		if (vlock_mode == VLOCK_MODE_MANUAL_ENC)
+		((vlock_mode & (VLOCK_MODE_MANUAL_PLL |
+		VLOCK_MODE_MANUAL_ENC |
+		VLOCK_MODE_MANUAL_SOFT_ENC)))) {
+		if (vlock_mode & VLOCK_MODE_MANUAL_ENC)
 			vlock_enable_step3_enc();
-		else if (vlock_mode == VLOCK_MODE_MANUAL_PLL)
+		else if (vlock_mode & VLOCK_MODE_MANUAL_PLL)
 			vlock_enable_step3_pll();
-		else if (vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC)
+		else if (vlock_mode & VLOCK_MODE_MANUAL_SOFT_ENC)
 			vlock_enable_step3_soft_enc();
 	}
 }
@@ -1108,6 +1212,12 @@ void vlock_param_set(unsigned int val, enum vlock_param_e sel)
 	case VLOCK_DELTA_LIMIT:
 		vlock_delta_limit = val;
 		break;
+	case VLOCK_PLL_M_LIMIT:
+		vlock_pll_m_limit = val;
+		break;
+	case VLOCK_DELTA_CNT_LIMIT:
+		vlock_delta_cnt_limit = val;
+		break;
 	case VLOCK_DEBUG:
 		vlock_debug = val;
 		break;
@@ -1134,6 +1244,8 @@ void vlock_status(void)
 	pr_info("vlock_adapt:%d\n", vlock_adapt);
 	pr_info("vlock_dis_cnt_limit:%d\n", vlock_dis_cnt_limit);
 	pr_info("vlock_delta_limit:%d\n", vlock_delta_limit);
+	pr_info("vlock_pll_m_limit:%d\n", vlock_pll_m_limit);
+	pr_info("vlock_delta_cnt_limit:%d\n", vlock_delta_cnt_limit);
 	pr_info("vlock_debug:0x%x\n", vlock_debug);
 	pr_info("vlock_dynamic_adjust:%d\n", vlock_dynamic_adjust);
 	pr_info("vlock_state:%d\n", vlock_state);
@@ -1156,6 +1268,12 @@ void vlock_status(void)
 	pr_info("vlock_pll_stable_cnt:%d\n", vlock_pll_stable_cnt);
 	pr_info("vlock_pll_stable_limit:%d\n", vlock_pll_stable_limit);
 	pr_info("vlock_enc_adj_limit:%d\n", vlock_enc_adj_limit);
+	pr_info("vlock_pll_stable_flag:%d\n", vlock_pll_stable_flag);
+	pr_info("vlock_enc_stable_flag:%d\n", vlock_enc_stable_flag);
+	pr_info("vlock_intput_type:%d\n", vlock_intput_type);
+	pr_info("vlock_pll_adj_limit:%d\n", vlock_pll_adj_limit);
+	pr_info("vlock_pll_val_last:%d\n", vlock_pll_val_last);
+	pr_info("vlock driver version :  %s\n", VLOCK_VER);
 }
 void vlock_reg_dump(void)
 {
@@ -1177,10 +1295,11 @@ void vlock_reg_dump(void)
 void vdin_vlock_input_sel(unsigned int type,
 	enum vframe_source_type_e source_type)
 {
-	type = type & VIDTYPE_TYPEMASK;
-	if ((type == 0) || (vlock_mode == VLOCK_MODE_MANUAL_SOFT_ENC))
+	vlock_intput_type = type & VIDTYPE_TYPEMASK;
+	if ((vlock_intput_type == 0) ||
+		(vlock_mode & VLOCK_MODE_MANUAL_SOFT_ENC))
 		return;
-	if (type == VIDTYPE_INTERLACE_TOP) {
+	if (vlock_intput_type == VIDTYPE_INTERLACE_TOP) {
 		if ((source_type == VFRAME_SOURCE_TYPE_TUNER) ||
 			(source_type == VFRAME_SOURCE_TYPE_CVBS))
 			/* Input Vsync source select from tv-decoder */
@@ -1192,5 +1311,50 @@ void vdin_vlock_input_sel(unsigned int type,
 		WRITE_VPP_REG_BITS(VPU_VLOCK_CTRL, 7, 16, 3);
 }
 EXPORT_SYMBOL(vdin_vlock_input_sel);
+
+void vlock_param_config(struct device_node *node)
+{
+#ifdef CONFIG_AMLOGIC_LCD
+	unsigned int param[LCD_VLOCK_PARAM_NUM] = {0};
+#endif
+	unsigned int val;
+	int ret;
+
+	ret = of_property_read_u32(node, "vlock_en", &val);
+	if (ret)
+		pr_info("Can't find  vlock_en.\n");
+	else
+		vlock_en = val;
+	ret = of_property_read_u32(node, "vlock_mode", &val);
+	if (ret)
+		pr_info("Can't find  vlock_mode.\n");
+	else
+		vlock_mode = val;
+	ret = of_property_read_u32(node, "vlock_pll_m_limit", &val);
+	if (ret)
+		pr_info("Can't find  vlock_pll_m_limit.\n");
+	else
+		vlock_pll_m_limit = val;
+	ret = of_property_read_u32(node, "vlock_line_limit", &val);
+	if (ret)
+		pr_info("Can't find  vlock_line_limit.\n");
+	else
+		vlock_line_limit = val;
+
+#ifdef CONFIG_AMLOGIC_LCD
+	aml_lcd_notifier_call_chain(LCD_EVENT_VLOCK_PARAM, &param);
+	if (param[0]) { /* lcd vlock param is valid */
+		vlock_en = param[1];
+		vlock_mode = param[2];
+		vlock_pll_m_limit = param[3];
+		vlock_line_limit = param[4];
+	}
+#endif
+
+	if (vlock_mode & VLOCK_MODE_MANUAL_MIX_PLL_ENC) {
+		vlock_mode &= ~VLOCK_MODE_MANUAL_MIX_PLL_ENC;
+		vlock_mode |= VLOCK_MODE_MANUAL_PLL;
+	}
+}
 /*video lock end*/
 
