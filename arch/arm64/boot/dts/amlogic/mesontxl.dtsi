@@ -645,10 +645,6 @@
 			};
 		};/* end of hiubus*/
 
-		ion_dev {
-			compatible = "amlogic, ion_dev";
-			memory-region = <&ion_cma_reserved>;
-		};/* end of ion_dev*/
 	}; /* end of soc*/
 
 	custom_maps: custom_maps {

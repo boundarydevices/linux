@@ -39,6 +39,11 @@
 		i2c4 = &i2c_AO;
 	};
 
+	ion_dev {
+		compatible = "amlogic, ion_dev";
+		memory-region = <&ion_reserved>;
+	};
+
 	memory@00000000 {
 		device_type = "memory";
 		linux,usable-memory = <0x0 0x100000 0x0 0x7ff00000>;
@@ -73,7 +78,7 @@
 			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
 		};
 
-		ion_cma_reserved:linux,ion-dev {
+		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0x0 0x8000000>;

@@ -39,6 +39,11 @@
 		i2c4 = &i2c_AO;
 	};
 
+	ion_dev {
+		compatible = "amlogic, ion_dev";
+		memory-region = <&ion_reserved>;
+	};
+
 	memory@00000000 {
 		device_type = "memory";
 		linux,usable-memory = <0x0 0x100000 0x0 0x3ff00000>;
@@ -58,12 +63,12 @@
 			alloc-ranges = <0x0 0x05000000 0x0 0x400000>;
 		};
 
-		secos_reserved:linux,secos {
-			compatible = "amlogic, aml_secos_memory";
-			status = "disable";
-			reg = <0x0 0x05300000 0x0 0x2000000>;
-			no-map;
-		};
+		//secos_reserved:linux,secos {
+		//	status = "disabled";
+		//	compatible = "amlogic, aml_secos_memory";
+		//	reg = <0x0 0x05300000 0x0 0x2000000>;
+		//	no-map;
+		//};
 
 		logo_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
@@ -73,10 +78,10 @@
 			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
 		};
 
-		ion_cma_reserved:linux,ion-dev {
+		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x8000000>;
+			size = <0x0 0x2000000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -142,15 +147,6 @@
 			reusable;
 			/* 5M */
 			size = <0x0 0x0800000>;
-			alignment = <0x0 0x400000>;
-		};
-
-		/*  vdin0 CMA pool */
-		vdin0_cma_reserved:linux,vdin0_cma {
-			compatible = "shared-dma-pool";
-			reusable;
-		/* 1920x1080x2x4  =16+4 M */
-			size = <0x0 0x04000000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -319,9 +315,9 @@
 
 	vdin@1 {
 		compatible = "amlogic, vdin";
-		status = "okay";
 		memory-region = <&vdin1_cma_reserved>;
 		dev_name = "vdin1";
+		status = "okay";
 		reserve-iomap = "true";
 		flag_cma = <0>;/*1:share with codec_mm;0:cma alone*/
 		interrupts = <0 85 1>;
