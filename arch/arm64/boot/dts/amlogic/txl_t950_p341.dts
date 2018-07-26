@@ -930,7 +930,7 @@
 		};
 		Channel_Mask {
 			/*i2s has 4 pins, 8channel, mux output*/
-			Speaker0_Channel_Mask = "i2s_2/3";
+			DAC0_Channel_Mask = "i2s_2/3";
 		};
 	};
 

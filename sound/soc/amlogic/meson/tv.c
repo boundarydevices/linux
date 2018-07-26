@@ -1797,6 +1797,8 @@ int txl_chipset_init(struct snd_soc_card *card)
 
 	/* channel mask */
 	parse_speaker_channel_mask(card);
+	/* dac mask */
+	parse_dac_channel_mask(card);
 
 	return 0;
 }
