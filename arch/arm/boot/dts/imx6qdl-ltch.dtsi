@@ -821,12 +821,12 @@
 &i2c2b {
 	clock-frequency = <100000>;
 
-	isl28022@40 {
+	isl28022@44 {
 		compatible = "isl28022";
 		interrupts-extended = GPIRQ_ISL28022;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2b_isl28022>;
-		reg = <0x40>;
+		reg = <0x44>;
 		bus-voltage-max = <16>; 	/* 16/32/60 Volts for full range */
 		shunt-voltage-max = <320>;	/* 40/80/160/320 mV */
 		bus-adc-cfg = <2>;		/* 2 means 14-bit, 258 uSec */
