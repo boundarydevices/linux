@@ -811,9 +811,9 @@
 &i2c2a {
 	clock-frequency = <100000>;
 
-	isl76534@74 {
+	isl76534@75 {
 		compatible = "isl76534";
-		reg = <0x74>;
+		reg = <0x75>;
 		vref-supply = <&reg_isl76534>;
 	};
 };
