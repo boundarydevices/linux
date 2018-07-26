@@ -757,7 +757,7 @@
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1b_ft5x06>;
+		pinctrl-0 = <&pinctrl_i2c1d_ft5x06>;
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_I2C1D_J6;
 		wakeup-gpios = GP_I2C1D_J6;
