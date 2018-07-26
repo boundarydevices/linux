@@ -50,6 +50,7 @@ struct aml_atvdemod_device {
 	unsigned int if_inv;
 	u64 std;
 	unsigned int audmode;
+	unsigned int soundsys;
 	int fre_offset;
 
 	struct pinctrl *agc_pin;

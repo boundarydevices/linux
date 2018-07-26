@@ -332,9 +332,10 @@ static int v4l2_set_frontend(struct v4l2_frontend *v4l2_fe,
 {
 	u32 freq_min = 0;
 	u32 freq_max = 0;
-	struct analog_parameters p;
+	struct analog_parameters p = { 0 };
 	struct v4l2_frontend_private *fepriv = v4l2_fe->frontend_priv;
 	struct dvb_frontend *fe = &v4l2_fe->fe;
+	struct v4l2_property tvp = { 0 };
 
 	pr_dbg("%s.\n", __func__);
 
@@ -376,6 +377,12 @@ static int v4l2_set_frontend(struct v4l2_frontend *v4l2_fe,
 		p.mode = params->afc_range;
 		p.std = params->std;
 		p.audmode = params->audmode;
+
+		tvp.cmd = V4L2_SOUND_SYS;
+		tvp.data = params->soundsys;
+		if (v4l2_fe->ops.set_property)
+			v4l2_fe->ops.set_property(v4l2_fe, &tvp);
+
 		fe->ops.analog_ops.set_params(fe, &p);
 	}
 

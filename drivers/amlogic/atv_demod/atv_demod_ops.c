@@ -493,11 +493,12 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 		return err_code;
 	}
 
-	aml_afc_timer_enable(fe);
-	aml_demod_timer_enable(fe);
+	/* aml_afc_timer_enable(fe); */
+	/* aml_demod_timer_enable(fe); */
 
 	amlatvdemod_devp->std = 0;
 	amlatvdemod_devp->audmode = 0;
+	amlatvdemod_devp->soundsys = 0xFF;
 
 	atv_demod_set_state(ATVDEMOD_STATE_WORK);
 
@@ -527,6 +528,7 @@ int atv_demod_leave_mode(struct dvb_frontend *fe)
 
 	amlatvdemod_devp->std = 0;
 	amlatvdemod_devp->audmode = 0;
+	amlatvdemod_devp->soundsys = 0xFF;
 	atv_demod_set_state(ATVDEMOD_STATE_IDEL);
 
 	pr_info("%s: OK.\n", __func__);
@@ -1113,12 +1115,17 @@ static int atvdemod_fe_set_property(struct v4l2_frontend *v4l2_fe,
 
 	switch (tvp->cmd) {
 	case V4L2_SOUND_SYS:
-		aud_mode = tvp->data & 0xFF;
+		/* aud_mode = tvp->data & 0xFF; */
+		amlatvdemod_devp->soundsys = tvp->data & 0xFF;
+		if (amlatvdemod_devp->soundsys != 0xFF)
+			aud_mode = amlatvdemod_devp->soundsys;
 		priv->sound_sys.output_mode = tvp->data & 0xFF;
+#if 0
 		if (atv_demod_get_state() == ATVDEMOD_STATE_WORK) {
 			if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
 				atvauddemod_set_outputmode();
 		}
+#endif
 		break;
 
 	case V4L2_SLOW_SEARCH_MODE:

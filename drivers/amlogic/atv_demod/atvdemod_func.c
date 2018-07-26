@@ -1789,10 +1789,16 @@ int amlfmt_aud_standard(int broad_std)
 		pr_info("\n%s 0x%x\n", __func__, (reg_value>>16)&0xffff);
 		if (((reg_value>>16)&0xffff) > audio_a2_threshold) {
 			std = AUDIO_STANDARD_A2_K;
-			aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			if (amlatvdemod_devp->soundsys == 0xFF)
+				aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			else
+				aud_mode = amlatvdemod_devp->soundsys;
 		} else {
 			std = AUDIO_STANDARD_BTSC;
-			aud_mode = AUDIO_OUTMODE_STEREO;
+			if (amlatvdemod_devp->soundsys == 0xFF)
+				aud_mode = AUDIO_OUTMODE_STEREO;
+			else
+				aud_mode = amlatvdemod_devp->soundsys;
 			configure_adec(std);
 			adec_soft_reset();
 		}
@@ -1806,7 +1812,7 @@ int amlfmt_aud_standard(int broad_std)
 		std = AUDIO_STANDARD_NICAM_BG;
 		configure_adec(std);
 		adec_soft_reset();
-		mdelay(audio_nicam_delay);
+		msleep(audio_nicam_delay);
 		/* need wait */
 		pr_info("pll lock: 0x%lx.\n",
 				atv_dmd_rd_byte(0x06, 0x43) & 0x01);
@@ -1817,10 +1823,16 @@ int amlfmt_aud_standard(int broad_std)
 		pr_info("\n%s 0x%x\n", __func__, reg_value);
 		if (nicam_lock) {
 			std = AUDIO_STANDARD_NICAM_BG;
-			aud_mode = AUDIO_OUTMODE_NICAM_STEREO;
+			if (amlatvdemod_devp->soundsys == 0xFF)
+				aud_mode = AUDIO_OUTMODE_NICAM_STEREO;
+			else
+				aud_mode = amlatvdemod_devp->soundsys;
 		} else {
 			std = AUDIO_STANDARD_A2_BG;
-			aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			if (amlatvdemod_devp->soundsys == 0xFF)
+				aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			else
+				aud_mode = amlatvdemod_devp->soundsys;
 			configure_adec(std);
 			adec_soft_reset();
 		}
@@ -1840,10 +1852,16 @@ int amlfmt_aud_standard(int broad_std)
 		pr_info("\n%s 0x%x\n", __func__, reg_value);
 		if (nicam_lock) {
 			std = AUDIO_STANDARD_NICAM_DK;
-			aud_mode = AUDIO_OUTMODE_NICAM_STEREO;
+			if (amlatvdemod_devp->soundsys == 0xFF)
+				aud_mode = AUDIO_OUTMODE_NICAM_STEREO;
+			else
+				aud_mode = amlatvdemod_devp->soundsys;
 		} else {
-			std = AUDIO_STANDARD_A2_DK2;
-			aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			std = AUDIO_STANDARD_A2_DK1;
+			if (amlatvdemod_devp->soundsys == 0xFF)
+				aud_mode = AUDIO_OUTMODE_A2_STEREO;
+			else
+				aud_mode = amlatvdemod_devp->soundsys;
 			configure_adec(std);
 			adec_soft_reset();
 		}
@@ -1874,6 +1892,9 @@ int atvauddemod_init(void)
 		/* configure_adec(aud_std); */
 		/* adec_soft_reset(); */
 		set_outputmode(aud_std, aud_mode);
+	} else {
+		/* for non support adec */
+		aud_std = 0;
 	}
 
 	return 0;
