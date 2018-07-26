@@ -252,6 +252,12 @@
 		nr10bit-support = <1>;
 	};
 
+	ionvideo {
+		compatible = "amlogic, ionvideo";
+		dev_name = "ionvideo";
+		status = "okay";
+	};
+
 	hdmirx {
 		compatible = "amlogic, hdmirx-txl";
 		status = "okay";
