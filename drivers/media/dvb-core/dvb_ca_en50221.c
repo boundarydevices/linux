@@ -1688,8 +1688,9 @@ static long dvb_ca_en50221_compat_ioctl(struct file *filp,
 			unsigned int cmd, unsigned long args)
 {
 	unsigned long ret;
-
+#ifdef CONFIG_COMPAT
 	args = (unsigned long)compat_ptr(args);
+#endif
 	ret = dvb_ca_en50221_io_ioctl(filp, cmd, args);
 	return ret;
 }

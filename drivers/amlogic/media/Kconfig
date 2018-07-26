@@ -1,4 +1,35 @@
 #
+# Amlogic DVB configuration
+#
+
+menu "Amlogic dvb configuration"
+
+config AMLOGIC_DVB
+	bool "Amlogic dvb support"
+	select DVB_CORE
+	select AMLOGIC_DVB_COMPAT
+	default y
+	help
+		This option is used only to control the
+		compilation of dvb related driver code, for
+		example hw_demux, it is enabled by default,
+		When it is turned on,it will automatically
+		select DVB_CORE and AMLOGIC_DVB_COMPAT.
+
+config AMLOGIC_DVB_COMPAT
+	bool "Compat amlogic dvb"
+	depends on AMLOGIC_DVB && DVB_CORE
+	default y
+	help
+		This option is used only to compatible with
+		amlogic dvb related code, for example dvb-core,
+		it is enabled by default,depending on
+		AMLOGIC_DVB and DVB_CORE.
+
+endmenu
+
+
+#
 # Amlogic multimedia configuration
 #
 
@@ -66,3 +97,5 @@ source "drivers/amlogic/media/algorithm/Kconfig"
 endif
 source "drivers/amlogic/media/dtv_demod/Kconfig"
 endmenu
+
+

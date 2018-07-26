@@ -2665,14 +2665,16 @@ static long dvb_frontend_compat_ioctl(struct file *filp,
 {
 	unsigned long ret;
 	struct dtv_properties tvps;
-
+#ifdef CONFIG_COMPAT
 	args  = (unsigned long)compat_ptr(args);
-
+#endif
 	if ((cmd == FE_SET_PROPERTY) || (cmd == FE_GET_PROPERTY)) {
 		if (copy_from_user(&tvps, (void *)args,
 			sizeof(struct dtv_properties)))
 			return -EFAULT;
+#ifdef CONFIG_COMPAT
 		tvps.props = compat_ptr((unsigned long)tvps.props);
+#endif
 		if (copy_to_user((void *)args, (void *)&tvps,
 			sizeof(struct dtv_properties)))
 			return -EFAULT;
