@@ -174,4 +174,5 @@ void pre_frame_reset(void);
 void di_interrupt_ctrl(unsigned char ma_en,
 	unsigned char det3d_en, unsigned char nrds_en,
 	unsigned char post_wr, unsigned char mc_en);
+void di_txl_patch_prog(int prog_flg, unsigned int cnt, bool mc_en);
 #endif

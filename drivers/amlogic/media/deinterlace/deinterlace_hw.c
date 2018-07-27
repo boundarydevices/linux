@@ -3156,6 +3156,57 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 				value, Rd(addr) != value?"fail":"success");
 	}
 }
+/*note:*/
+/*	function: patch for txl for progressive source	*/
+/*		480p/576p/720p from hdmi will timeout	*/
+/*	prog_flg: in:	1:progressive;			*/
+/*	cnt:	in:	di_pre_stru.field_count_for_cont*/
+/*	mc_en:	in:	mcpre_en*/
+void di_txl_patch_prog(int prog_flg, unsigned int cnt, bool mc_en)
+{
+	unsigned int di_mtn_1_ctrl1 = 0; /*ary add tmp*/
+
+	if (!prog_flg || !is_meson_txl_cpu())
+		return;
+
+	/*printk("prog patch\n");*/
+	if (cnt >= 3) {
+		di_mtn_1_ctrl1 |= 1 << 29;/* enable txt */
+
+		if (mc_en) {
+			RDMA_WR(DI_MTN_CTRL1,
+					(0xffffcfff & RDMA_RD(DI_MTN_CTRL1)));
+
+			/* enable me(mc di) */
+			if (cnt == 4) {
+				di_mtn_1_ctrl1 &= (~(1 << 30));
+				/* enable contp2rd and contprd */
+				RDMA_WR(MCDI_MOTINEN, 1 << 1 | 1);
+
+			}
+			if (cnt == 5)
+				RDMA_WR(MCDI_CTRL_MODE, 0x1bfff7ff);
+
+
+		}
+
+	} else {
+		if (mc_en) {
+			/* txtdet_en mode */
+			RDMA_WR_BITS(MCDI_CTRL_MODE, 0, 1, 1);
+			RDMA_WR_BITS(MCDI_CTRL_MODE, 1, 9, 1);
+			RDMA_WR_BITS(MCDI_CTRL_MODE, 1, 16, 1);
+			RDMA_WR_BITS(MCDI_CTRL_MODE, 0, 28, 1);
+			RDMA_WR(MCDI_MOTINEN, 0);
+			RDMA_WR(DI_MTN_CTRL1,
+				(0xffffcfff & RDMA_RD(DI_MTN_CTRL1)));
+			/* disable me(mc di) */
+		}
+		RDMA_WR(DNR_CTRL, 0);
+	}
+	RDMA_WR(DI_MTN_1_CTRL1, di_mtn_1_ctrl1);
+
+}
 #ifdef DEBUG_SUPPORT
 module_param_named(pre_mif_gate, pre_mif_gate, bool, 0644);
 module_param_named(pre_urgent, pre_urgent, ushort, 0644);

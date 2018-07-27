@@ -3011,6 +3011,8 @@ static void pre_de_process(void)
 	}
 
 	di_pre_stru.field_count_for_cont++;
+	di_txl_patch_prog(di_pre_stru.cur_prog_flag,
+		di_pre_stru.field_count_for_cont, mcpre_en);
 
 #ifdef SUPPORT_MPEG_TO_VDIN
 	if (mpeg2vdin_flag) {
