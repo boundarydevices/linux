@@ -3291,6 +3291,7 @@ void vdin_set_hvscale(struct vdin_dev_s *devp)
 	if (vdin_ctl_dbg)
 		pr_info(" dst vactive:%u.\n", devp->v_active);
 }
+
 /*set source_bitdepth
  *	base on color_depth_config:
  *		10, 8, 0, other
@@ -3298,6 +3299,17 @@ void vdin_set_hvscale(struct vdin_dev_s *devp)
 void vdin_set_bitdepth(struct vdin_dev_s *devp)
 {
 	unsigned int offset = devp->addr_offset;
+	unsigned int set_width = 0;
+
+	if ((devp->output_color_depth) &&
+		((devp->prop.fps == 50) || (devp->prop.fps == 60)) &&
+		((devp->parm.info.fmt == TVIN_SIG_FMT_HDMI_3840_2160_00HZ) ||
+		(devp->parm.info.fmt == TVIN_SIG_FMT_HDMI_4096_2160_00HZ)) &&
+		(devp->prop.colordepth == 10)) {
+		set_width = devp->output_color_depth;
+		pr_info("set output color depth %d bit from dts\n", set_width);
+	}
+
 	switch (devp->color_depth_config) {
 	case 8:
 		devp->source_bitdepth = 8;
@@ -3314,27 +3326,33 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 		devp->source_bitdepth is controlled by colordepth
 		change default to 10bit for 8in8out detail maybe lost
 		 */
-		if (((devp->prop.color_format == TVIN_RGB444) ||
+		if ((devp->prop.color_format == TVIN_RGB444) ||
 			(devp->prop.color_format == TVIN_YUV444) ||
 			(devp->prop.color_format == TVIN_BGGR) ||
 			(devp->prop.color_format == TVIN_RGGB) ||
 			(devp->prop.color_format == TVIN_GBRG) ||
-			(devp->prop.color_format == TVIN_GRBG)) &&
-			((devp->prop.colordepth <= 8) ||
-			is_meson_txlx_cpu())) {
-			/*txlx dmc is diff & bandwidth tension*/
+			(devp->prop.color_format == TVIN_GRBG)) {
+			devp->source_bitdepth = 8;
+			wr_bits(offset, VDIN_WR_CTRL2, 0,
+				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+		} else if (devp->prop.colordepth == 8) {
 			devp->source_bitdepth = 8;
 			wr_bits(offset, VDIN_WR_CTRL2, 0,
 				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
 		} else if ((devp->color_depth_support &
 			VDIN_WR_COLOR_DEPTH_10BIT) &&
-			(devp->dv.dv_flag == false) &&
-			((devp->dv.dolby_input &
-				(1 << devp->index)) == false) &&
-			(is_dolby_vision_enable() == false)) {
-			devp->source_bitdepth = 10;
-			wr_bits(offset, VDIN_WR_CTRL2, 1,
-				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+			(devp->prop.colordepth == 10)) {
+			if (set_width == 8) {
+				devp->source_bitdepth = 8;
+				wr_bits(offset, VDIN_WR_CTRL2, 0,
+					VDIN_WR_10BIT_MODE_BIT,
+					VDIN_WR_10BIT_MODE_WID);
+			} else {
+				devp->source_bitdepth = 10;
+				wr_bits(offset, VDIN_WR_CTRL2, 1,
+					VDIN_WR_10BIT_MODE_BIT,
+					VDIN_WR_10BIT_MODE_WID);
+			}
 		} else {
 			devp->source_bitdepth = 8;
 			wr_bits(offset, VDIN_WR_CTRL2, 0,

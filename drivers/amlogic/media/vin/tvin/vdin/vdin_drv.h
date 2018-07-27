@@ -272,6 +272,11 @@ struct vdin_dev_s {
 	 *0: config 10bit as 12bit
 	 */
 	unsigned int color_depth_mode;
+	/* output_color_depth:
+	 * when tv_input is 4k50hz_10bit or 4k60hz_10bit,
+	 * choose output color depth from dts
+	 */
+	unsigned int output_color_depth;
 	/* cutwindow config */
 	bool cutwindow_cfg;
 	bool auto_cutwindow_en;

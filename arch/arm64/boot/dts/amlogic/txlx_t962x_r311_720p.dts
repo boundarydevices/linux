@@ -497,15 +497,16 @@
 		clocks = <&clkc CLKID_FCLK_DIV5>,
 			<&clkc CLKID_VDIN_MEAS_COMP>;
 		clock-names = "fclk_div5", "cts_vdin_meas_clk";
-		vdin_id = <0>;
 		/* vdin write mem color depth support:
 		 * bit0:support 8bit
 		 * bit1:support 9bit
 		 * bit2:support 10bit
 		 * bit3:support 12bit
 		 * bit4:support yuv422 10bit full pack mode (from txl new add)
+		 * bit8:use 8bit  at 4k_50/60hz_10bit
+		 * bit9:use 10bit at 4k_50/60hz_10bit
 		 */
-		tv_bit_mode = <21>;
+		tv_bit_mode = <0x215>;
 	};
 
 	vdin1 {

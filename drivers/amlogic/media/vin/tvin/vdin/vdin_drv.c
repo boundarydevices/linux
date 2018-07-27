@@ -2444,8 +2444,16 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	if (ret)
 		pr_info("no bit mode found, set 8bit as default\n");
 
-	vdevp->color_depth_support = bit_mode;
+	vdevp->color_depth_support = bit_mode & 0xff;
 	vdevp->color_depth_config = 0;
+
+	ret = (bit_mode >> 8) & 0xff;
+	if (ret == 0)
+		vdevp->output_color_depth = 0;
+	else if (ret == 1)
+		vdevp->output_color_depth = 8;
+	else if (ret == 2)
+		vdevp->output_color_depth = 10;
 
 	if (vdevp->color_depth_support&VDIN_WR_COLOR_DEPTH_10BIT_FULL_PCAK_MODE)
 		vdevp->color_depth_mode = 1;
