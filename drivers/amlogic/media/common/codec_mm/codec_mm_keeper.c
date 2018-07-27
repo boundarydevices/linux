@@ -120,6 +120,11 @@ int codec_mm_keeper_mask_keep_mem(void *mem_handle, int type)
 		if (!have_samed)
 			keep_id = -1;
 	}
+	if (codec_mm_get_keep_debug_mode() & 1) {
+		/*keeped info */
+		pr_err("codec_mm_keeper_mask_keep_mem %p id=%d\n",
+			mem_handle, keep_id);
+	}
 	if (keep_id < 0 || have_samed) {
 		if (type == MEM_TYPE_CODEC_MM_SCATTER)
 			ret = codec_mm_scatter_dec_keeper_user(mem_handle, 0);
@@ -129,11 +134,7 @@ int codec_mm_keeper_mask_keep_mem(void *mem_handle, int type)
 			pr_err("keep mem failed because keep buffer fulled!!!\n");
 	}
 	spin_unlock_irqrestore(&mgr->lock, flags);
-	if (codec_mm_get_keep_debug_mode() & 1) {
-		/*keeped info */
-		pr_err("codec_mm_keeper_mask_keep_mem %p id=%d\n",
-			mem_handle, keep_id);
-	}
+
 	return keep_id;
 }
 EXPORT_SYMBOL(codec_mm_keeper_mask_keep_mem);

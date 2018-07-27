@@ -431,7 +431,7 @@ static int codec_mm_set_slot_in_hash(
 
 	page_sid_type sid = SLOT_TO_SID(slot);
 
-	if (sid < 0 || sid > MAX_SID) {
+	if (sid > MAX_SID) {
 		ERR_LOG("ERROR sid %d", sid);
 		return -1;
 	}
@@ -469,7 +469,7 @@ static struct codec_mm_slot *codec_mm_find_slot_in_hash(
 {
 	struct codec_mm_slot *fslot, *slot;
 
-	if (!VALID_SID(sid))
+	if (!VALID_SID(sid) || SID_OF_ONEPAGE(sid))
 		return NULL;
 	codec_mm_list_lock(smgt);
 	fslot = smgt->slot_list_map[sid];
@@ -756,13 +756,14 @@ static int codec_mm_slot_alloc_pages(
 	int need = num;
 	int can_alloced;
 	phy_addr_type page;
-	int tryn = slot->page_num;
+	int tryn;
 	int i;
 
 	if (!slot || !slot->pagemap)
 		return -1;
 	if (slot->alloced_page_num >= slot->page_num)
 		return -2;
+	tryn = slot->page_num;
 	can_alloced = slot->page_num - slot->alloced_page_num;
 	need = need > can_alloced ? can_alloced : need;
 	i = slot->next_bit;

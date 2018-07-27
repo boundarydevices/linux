@@ -477,6 +477,7 @@ static int configs_config2str(struct mconfig *config,
 	case CONFIG_TYPE_BOOL:
 		ret = snprintf(buf, size, "%s",
 			config->pboolval ? "true" : "false");
+		break;
 	case CONFIG_TYPE_I32:
 		ret = snprintf(buf, size, "%d", config->ival);
 		break;
@@ -707,9 +708,10 @@ static int configs_list_nodes_in(struct mconfig_node *node,
 		struct list_head *node_list, *next;
 
 		if (mode & LIST_MODE_PATH_PREFIX) {
-			if (node->depth > 0)/*not root.*/
+			if (node->depth > 0) {/*not root.*/
 				strncat(cprefix, node->name,
-					MAX_PREFIX_NAME + MAX_ITEM_NAME);
+					MAX_PREFIX_NAME + MAX_ITEM_NAME - 1);
+			}
 		}
 		list_for_each_safe(node_list, next, &node->son_node_list) {
 			snode = list_entry(node_list,
@@ -871,8 +873,10 @@ static int configs_setget_config_value(struct mconfig *config,
 		s = min_t(int, size - 1, config->size - 1);
 		if (s > 0)
 			strncpy(dst, src, s);
-		else
+		else {
 			ret = -3;
+			break;
+		}
 		ret = s;
 		break;
 	case CONFIG_TYPE_U32:

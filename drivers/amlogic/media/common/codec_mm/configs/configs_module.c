@@ -340,6 +340,7 @@ static long configs_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		priv->access_get_cnt++;
 		r = copy_from_user(&io.cmd_path,
 				user_io->cmd_path, sizeof(io.cmd_path));
+		io.cmd_path[sizeof(io.cmd_path) - 1] = '\0';
 		if (r) {
 			r = -EIO;
 			break;

@@ -1935,7 +1935,7 @@ int codec_mm_trigger_help_fun(const char *trigger, int id, char *sbuf, int size)
 	void *buf, *getbuf = NULL;
 
 	if (size < PAGE_SIZE) {
-		void *getbuf = (void *)__get_free_page(GFP_KERNEL);
+		getbuf = (void *)__get_free_page(GFP_KERNEL);
 
 		if (!getbuf)
 			return -ENOMEM;
@@ -1958,7 +1958,7 @@ int codec_mm_trigger_help_fun(const char *trigger, int id, char *sbuf, int size)
 		ret = -1;
 	}
 	if (ret > 0 && getbuf != NULL) {
-		int ret = min_t(int, ret, size);
+		ret = min_t(int, ret, size);
 
 		strncpy(sbuf, buf, ret);
 	}
