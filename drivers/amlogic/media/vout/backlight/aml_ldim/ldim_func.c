@@ -20,37 +20,26 @@
 #include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
-#include <linux/device.h>
 #include <linux/timer.h>
 #include <linux/delay.h>
 #include <linux/major.h>
-#include <linux/sched.h>
-#include <linux/vmalloc.h>
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
-#include <linux/interrupt.h>
-#include <linux/fs.h>
-#include <linux/miscdevice.h>
-#include <linux/platform_device.h>
-#include <linux/moduleparam.h>
 #include <linux/timer.h>
-/* #include <mach/am_regs.h> */
-#include <linux/amlogic/media/vfm/vframe.h>
-#include <linux/spinlock.h>
-#include <linux/amlogic/iomap.h>
-#include "ldim_drv.h"
-#include "ldim_func.h"
-#include "ldim_reg.h"
-#include <linux/amlogic/media/vout/lcd/aml_bl.h>
 #include <linux/amlogic/media/vout/lcd/aml_ldim.h>
+#include "ldim_drv.h"
+#include "ldim_reg.h"
 
 #ifndef MIN
 #define MIN(a, b)   ((a < b) ? a:b)
 #endif
+
+#define Wr(reg, val)    Wr_reg(reg, val)
+#define Rd(reg)         Rd_reg(reg)
 
 static int LD_STA1max_Hidx[25] = {
 	/*  U12* 25	*/
@@ -759,7 +748,7 @@ void LD_MtxInv(int *oDat, int *iDat, int nRow, int nCol)
 	}
 }
 
-static int Remap_lut[16][32] = {
+int LD_remap_lut[16][32] = {
 	{
 		128, 258, 387, 517, 646, 776, 905, 1034,
 		1163, 1291, 1420, 1548, 1676, 1804, 1932, 2059,
@@ -859,7 +848,7 @@ static int Remap_lut[16][32] = {
 };
 
 static int Remap_lut2[16][16] = {};
-void LD_LUTInit(struct LDReg *Reg)
+void LD_LUTInit(struct LDReg_s *Reg)
 {
 	int i, j, k, t;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
@@ -868,8 +857,8 @@ void LD_LUTInit(struct LDReg *Reg)
 	case BL_CHIP_TXLX:
 		for (i = 0; i < 16; i++) {
 			for (j = 0; j < 16; j++)
-				Remap_lut2[i][j] = Remap_lut[i][j * 2] |
-					(Remap_lut[i][j * 2 + 1] << 16);
+				Remap_lut2[i][j] = LD_remap_lut[i][j * 2] |
+					(LD_remap_lut[i][j * 2 + 1] << 16);
 		}
 		/* Emulate the FW to set the LUTs */
 		for (k = 0; k < 16; k++) {
@@ -892,9 +881,9 @@ void LD_LUTInit(struct LDReg *Reg)
 			Reg->X_idx[0][k] = 4095 - 256 * k;
 			Reg->X_nrm[0][k] = 8;
 			for (t = 0; t < 32; t++) {
-				Reg->X_lut[0][k][t] = Remap_lut[k][t];
-				Reg->X_lut[1][k][t] = Remap_lut[k][t];
-				Reg->X_lut[2][k][t] = Remap_lut[k][t];
+				Reg->X_lut[0][k][t] = LD_remap_lut[k][t];
+				Reg->X_lut[1][k][t] = LD_remap_lut[k][t];
+				Reg->X_lut[2][k][t] = LD_remap_lut[k][t];
 			}
 		}
 		break;
@@ -903,7 +892,7 @@ void LD_LUTInit(struct LDReg *Reg)
 	}
 }
 
-static void ConLDReg_GXTVBB(struct LDReg *Reg)
+static void ConLDReg_GXTVBB(struct LDReg_s *Reg)
 {
 	unsigned int T = 0;
 	unsigned int Vnum = 0;
@@ -1147,7 +1136,7 @@ static void ConLDReg_GXTVBB(struct LDReg *Reg)
 }
 
 
-static void ConLDReg_TXLX(struct LDReg *Reg)
+static void ConLDReg_TXLX(struct LDReg_s *Reg)
 {
 	int i, j;
 	unsigned int T = 0;
@@ -1402,7 +1391,7 @@ static void ConLDReg_TXLX(struct LDReg *Reg)
 
 
 #if 1
-void LD_ConLDReg(struct LDReg *Reg)
+void LD_ConLDReg(struct LDReg_s *Reg)
 {
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 
@@ -1422,7 +1411,7 @@ void LD_ConLDReg(struct LDReg *Reg)
 	/* 0: left/top side,
 	 *	1: right/bot side, others: non-one-side
 	 */
-void ld_fw_cfg_once(struct LDReg *nPRM)
+void ld_fw_cfg_once(struct LDReg_s *nPRM)
 {
 	int k, dlt, j, i;
 	int hofst = 4;

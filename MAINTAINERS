@@ -14555,6 +14555,11 @@ AMLOGIC PARTITION DTSI
 M: Jiaming Huang <jiaming.huang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/partition_tv_4G.dtsi
 
+AMLOGIC LCD BACKLIGHT LDIM
+M:      evoke zhang <evoke.zhang@amlogic.com>
+F:      drivers/amlogic/media/algorithm/*
+F:      drivers/amlogic/media/vout/backlight/aml_ldim/ldim_func.h
+
 AMLOGIC AVIN DETECT DRIVER
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
 F:	drivers/amlogic/input/avin_detect/*

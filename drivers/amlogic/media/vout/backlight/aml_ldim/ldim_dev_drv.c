@@ -989,7 +989,7 @@ static struct platform_driver ldim_dev_platform_driver = {
 static int __init ldim_dev_init(void)
 {
 	if (platform_driver_register(&ldim_dev_platform_driver)) {
-		BLPR("failed to register bl driver module\n");
+		LDIMPR("failed to register ldim_dev driver module\n");
 		return -ENODEV;
 	}
 	return 0;
@@ -1004,7 +1004,7 @@ late_initcall(ldim_dev_init);
 module_exit(ldim_dev_exit);
 
 
-MODULE_DESCRIPTION("LDIM Driver for LCD Backlight");
+MODULE_DESCRIPTION("LDIM device Driver for LCD Backlight");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Amlogic, Inc.");
 
