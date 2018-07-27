@@ -1191,9 +1191,9 @@ int aml_emmc_hs200_timming(struct mmc_host *mmc)
 {
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
-	u32 count = 0, delay1 = 0, delay2 = 0;
+	u32 count = 0, delay1 = 0, delay2 = 0, line_x = 0;
 	u32 dat = host->data->latest_dat;
-	int ret = 0, add = 0;
+	int ret = 0, add = 0, base, temp, result;
 
 	ret = aml_get_data_eyetest(mmc);
 	if (ret) {
@@ -1223,9 +1223,29 @@ int aml_emmc_hs200_timming(struct mmc_host *mmc)
 	writel(delay1, (host->base + SD_EMMC_DELAY1_V3));
 	delay2 = (count<<0)|(count<<6)|(count<<12);
 	writel(delay2, (host->base + SD_EMMC_DELAY2_V3));
+	update_all_line_eyetest(mmc);
 	pr_info("delay1: 0x%x, delay2: 0x%x, add:%d\n",
 		readl(host->base + SD_EMMC_DELAY1_V3),
 		readl(host->base + SD_EMMC_DELAY2_V3), add);
+	/* align all data */
+	base = fbinary(pdata->align[dat]);
+	delay1 = readl(host->base + SD_EMMC_DELAY1_V3);
+	delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	for (line_x = 0; line_x < 8; line_x++) {
+		temp = fbinary(pdata->align[line_x]);
+		result = base - temp;
+		pr_debug("*****line_x: %d, result: %d\n",
+				line_x, result);
+		if (result < 0)
+			continue;
+		if (line_x < 5)
+			delay1 += result << (6 * line_x);
+		else
+			delay2 += result << (6 * (line_x - 5));
+	}
+	writel(delay1, (host->base + SD_EMMC_DELAY1_V3));
+	writel(delay2, (host->base + SD_EMMC_DELAY2_V3));
+	/* end */
 
 	count = fbinary(pdata->align[9]);
 	if (count <= pdata->count/4)
