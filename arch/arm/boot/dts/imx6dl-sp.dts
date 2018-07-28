@@ -19,6 +19,6 @@
 
 / {
 	model = "Freescale i.MX6 Solo SP Board";
-	compatible = "fsl,imx6dl-sp", "fsl,imx6dl", "fsl,imx6q";
+	compatible = "fsl,imx6dl-sp", "fsl,imx6dl";
 };
 
