@@ -19,5 +19,5 @@
 
 / {
 	model = "Freescale i.MX6 hl Board";
-	compatible = "fsl,imx6dl-hl", "fsl,imx6dl", "fsl,imx6q";
+	compatible = "fsl,imx6dl-hl", "fsl,imx6dl";
 };
