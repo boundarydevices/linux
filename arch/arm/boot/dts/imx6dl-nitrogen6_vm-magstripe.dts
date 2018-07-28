@@ -19,7 +19,7 @@
 
 / {
 	model = "Freescale i.MX6 Solo Nitrogen6_vm Board with Magstripe reader";
-	compatible = "fsl,imx6dl-nitrogen6_vm", "fsl,imx6dl", "fsl,imx6q";
+	compatible = "fsl,imx6dl-nitrogen6_vm", "fsl,imx6dl";
 };
 
 &magstripe {
