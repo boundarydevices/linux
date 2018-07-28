@@ -17,5 +17,5 @@
 
 / {
 	model = "Freescale i.MX6 Solo L-Shore Board";
-	compatible = "fsl,imx6dl-lshore", "fsl,imx6dl", "fsl,imx6q";
+	compatible = "fsl,imx6dl-lshore", "fsl,imx6dl";
 };
