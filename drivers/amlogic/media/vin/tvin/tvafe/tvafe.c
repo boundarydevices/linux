@@ -286,7 +286,9 @@ int tvafe_dec_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 			W_APB_BIT(TVFE_CLAMP_INTF, 1,
 					CLAMP_EN_BIT, CLAMP_EN_WID);
 		}
-	}
+	} else
+		W_APB_BIT(TVFE_CLAMP_INTF, 1,
+					CLAMP_EN_BIT, CLAMP_EN_WID);
 #else
 	W_APB_BIT(TVFE_CLAMP_INTF, 1,
 					CLAMP_EN_BIT, CLAMP_EN_WID);
