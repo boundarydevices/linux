@@ -1028,6 +1028,10 @@
 	controller-type = <1>;
 };
 
+&audio_data{
+	status = "okay";
+};
+
 &pwm_ab {
 	status = "okay";
 };
