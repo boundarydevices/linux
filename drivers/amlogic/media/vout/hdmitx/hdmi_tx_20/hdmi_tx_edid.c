@@ -296,16 +296,14 @@ int Edid_Parse_check_HDMI_VSDB(struct hdmitx_dev *hdev,
 	}
 
 	set_vsdb_phy_addr(hdev, &info->vsdb_phy_addr, &buff[BlockAddr]);
-	if (hdev->repeater_tx) {
-		if ((check_fbc_special(&hdev->EDID_buf[0])) ||
-		    (check_fbc_special(&hdev->EDID_buf1[0])))
-			rx_edid_physical_addr(0, 0, 0, 0);
-		else
-			rx_edid_physical_addr(info->vsdb_phy_addr.a,
-				info->vsdb_phy_addr.b,
-				info->vsdb_phy_addr.c,
-				info->vsdb_phy_addr.d);
-	}
+	if ((check_fbc_special(&hdev->EDID_buf[0])) ||
+	    (check_fbc_special(&hdev->EDID_buf1[0])))
+		rx_edid_physical_addr(0, 0, 0, 0);
+	else
+		rx_edid_physical_addr(info->vsdb_phy_addr.a,
+			info->vsdb_phy_addr.b,
+			info->vsdb_phy_addr.c,
+			info->vsdb_phy_addr.d);
 
 	if (temp_addr >= VSpecificBoundary)
 		ret = -1;

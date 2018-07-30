@@ -3092,8 +3092,7 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	pr_info(SYS "plugin\n");
 	hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGIN;
 	/* start reading E-EDID */
-	if (hdev->repeater_tx)
-		rx_repeat_hpd_state(1);
+	rx_repeat_hpd_state(1);
 	hdmitx_get_edid(hdev);
 	hdmi_physcial_size_update(hdev);
 	if (hdev->RXCap.IEEEOUI != 0x000c03)
@@ -3182,6 +3181,7 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGOUT;
 	hdev->HWOp.CntlMisc(hdev, MISC_ESM_RESET, 0);
 	clear_hdr_info(hdev);
+	rx_edid_physical_addr(0, 0, 0, 0);
 	hdmitx_edid_clear(hdev);
 	hdmi_physcial_size_update(hdev);
 	hdmitx_edid_ram_buffer_clear(hdev);
