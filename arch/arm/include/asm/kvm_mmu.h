@@ -72,6 +72,13 @@
 #define HYP_PAGE_OFFSET_HIGH_MASK	((UL(1) << VA_BITS) - 1)
 #define HYP_PAGE_OFFSET_LOW_MASK	((UL(1) << (VA_BITS - 1)) - 1)
 
+/* Contrary to arm64, there is no need to generate a PC-relative address */
+#define hyp_symbol_addr(s)						\
+	({								\
+		typeof(s) *addr = &(s);					\
+		addr;							\
+	})
+
 #ifdef __ASSEMBLY__
 
 #include <asm/alternative.h>
@@ -366,6 +373,11 @@ static inline int kvm_map_vectors(void)
 	return 0;
 }
 #endif
+
+static inline int hyp_map_aux_data(void)
+{
+	return 0;
+}
 
 #endif /* __ASSEMBLY__ */
 #endif /* __ARM64_KVM_MMU_H__ */
