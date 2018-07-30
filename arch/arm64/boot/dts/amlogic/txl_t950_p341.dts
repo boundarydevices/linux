@@ -203,6 +203,17 @@
 		key_tolerance = <40 40 40 40 40 40 40>;
 	};
 
+	avin_detect {
+		compatible = "amlogic, avin_detect";
+		status = "okay";
+		avin_device_num = <2>;
+		gpios = <&gpio  GPIODV_8  GPIO_ACTIVE_HIGH>,
+			<&gpio  GPIODV_6  GPIO_ACTIVE_HIGH>;
+		detect_interval_length = <100>;
+		set_detect_times = <5>;
+		set_fault_tolerance = <1>;
+	};
+
 	picdec {
 		compatible = "amlogic, picdec";
 		status = "okay";

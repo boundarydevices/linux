@@ -1,0 +1,9 @@
+#
+# avin detect driver configuration
+#
+
+config AMLOGIC_AVIN_DETECT
+	tristate "tv av-in detect module support"
+	default n
+	help
+		Amlogic TV AV-IN detect management.

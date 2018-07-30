@@ -14554,3 +14554,7 @@ F:	Documentation/devicetree/bindings/amlogic/reboot-meson.txt
 AMLOGIC PARTITION DTSI
 M: Jiaming Huang <jiaming.huang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/partition_tv_4G.dtsi
+
+AMLOGIC AVIN DETECT DRIVER
+M:	Xingyu Chen <xingyu.chen@amlogic.com>
+F:	drivers/amlogic/input/avin_detect/*
