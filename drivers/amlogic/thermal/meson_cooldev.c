@@ -100,6 +100,10 @@ static struct cool_dev *get_gcool_dev_by_node(struct meson_cooldev *mgcooldev,
 	int i;
 	struct cool_dev *dev;
 
+	if (!meson_gcooldev) {
+		pr_info("meson_gcooldev is null, no set min status\n");
+		return NULL;
+	}
 	if (!np)
 		return NULL;
 	for (i = 0; i < mgcooldev->cool_dev_num; i++) {
@@ -159,8 +163,7 @@ int meson_gcooldev_min_update(struct thermal_cooling_device *cdev)
 {
 	struct gpufreq_cooling_device *gf_cdev;
 	struct gpucore_cooling_device *gc_cdev;
-	//struct device_node *parent;
-	struct cool_dev *cool = NULL;
+	struct cool_dev *cool;
 	long min_state;
 	int ret;
 
@@ -187,6 +190,7 @@ int meson_gcooldev_min_update(struct thermal_cooling_device *cdev)
 		break;
 
 	default:
+		pr_info("can not find cool devices type\n");
 		return -EINVAL;
 	}
 
@@ -208,14 +212,12 @@ int meson_cooldev_min_update(struct platform_device *pdev, int index)
 	int ret;
 	int cpu, c_id;
 
-	/*save pdev for mali ko api*/
-	meson_gcooldev = platform_get_drvdata(pdev);
 	cool = get_cool_dev_by_node(pdev, cdev->np);
 	if (!cool)
 		return -ENODEV;
 
-	if (cool->cooling_dev == NULL)
-		cool->cooling_dev = cdev;
+	if (!cdev)
+		return -ENODEV;
 
 	if (cool->min_state == 0)
 		return 0;
@@ -298,6 +300,7 @@ static int register_cool_dev(struct platform_device *pdev, int index)
 
 	if (IS_ERR(cool->cooling_dev)) {
 		pr_err("thermal: register %s failed\n", cool->device_type);
+		cool->cooling_dev = NULL;
 		return -EINVAL;
 	}
 	return 0;
@@ -405,7 +408,7 @@ static int meson_cooldev_probe(struct platform_device *pdev)
 	}
 
 	if (parse_cool_device(pdev))
-		return -EINVAL;
+		pr_info("meson_cdev one or more cooldev register fail\n");
 
 	/* update min state for each device */
 	for (i = 0; i < mcooldev->cool_dev_num; i++) {
@@ -413,6 +416,9 @@ static int meson_cooldev_probe(struct platform_device *pdev)
 		if (cool->cooling_dev)
 			meson_cooldev_min_update(pdev, i);
 	}
+	/*save pdev for mali ko api*/
+	meson_gcooldev = platform_get_drvdata(pdev);
+
 	pr_info("meson_cdev probe done\n");
 	return 0;
 }
