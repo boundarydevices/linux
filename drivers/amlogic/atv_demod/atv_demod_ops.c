@@ -196,7 +196,7 @@ static void aml_afc_do_work(struct work_struct *work)
 		return;
 	}
 
-	if (!lock) {
+	if (!lock || (lock && !field_lock)) {
 		afc_lock_status = AFC_LOCK_STATUS_POST_UNLOCK;
 		afc_pre_lock_cnt = 0;
 		param->frequency -= afc_offset * 1000;

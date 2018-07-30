@@ -594,7 +594,7 @@ void set_eiaj(void)
 	adec_wr_reg(ADDR_DDC_FREQ0, aa);
 
 	aa = (int)((15.734e3*2)/(FCLK/4/16)*1024.0*1024.0*8.0);
-	aa = (0x80e40);
+	/* aa = (0x80e40); */
 	adec_wr_reg(ADDR_DDC_FREQ1, aa);
 
 

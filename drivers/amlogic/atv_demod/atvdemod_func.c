@@ -128,7 +128,7 @@ void atv_dmd_wr_reg(unsigned char block, unsigned char reg, unsigned long data)
 unsigned long atv_dmd_rd_reg(unsigned char block, unsigned char reg)
 {
 	unsigned long data = 0;
-	unsigned long reg_addr = (block<<8) + reg * 4;
+	unsigned int reg_addr = (block<<8) + reg * 4;
 
 	amlatvdemod_reg_read(reg_addr, (unsigned int *)&data);
 	return data;
@@ -578,7 +578,7 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 			int Tuner_Input_IF_inverted, int GDE_Curve,
 			int sound_format)
 {
-	int tmp_int;
+	int tmp_int = 0;
 	int mixer1 = 0;
 	int mixer3 = 0;
 	int mixer3_bypass = 0;
@@ -589,8 +589,8 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 	int super_coef0 = 0;
 	int super_coef1 = 0;
 	int super_coef2 = 0;
-	int gp_coeff_1[37];
-	int gp_coeff_2[37];
+	int gp_coeff_1[37] = { 0 };
+	int gp_coeff_2[37] = { 0 };
 	int gp_cv_g1 = 0;
 	int gp_cv_g2 = 0;
 	int crvy_reg_1 = 0;
@@ -602,8 +602,8 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 	int sif_deemp = 0;
 	int sif_cfg_demod = 0;
 	int sif_fm_gain = 0;
-	int gd_coeff[6];
-	int gd_bypass;
+	int gd_coeff[6] = { 0 };
+	int gd_bypass = 0;
 
 	pr_info("ATV-DMD configure receiver register\n");
 
@@ -1576,9 +1576,9 @@ int aml_atvdemod_get_snr_ex(void)
 
 static enum amlatvdemod_snr_level_e aml_atvdemod_get_snr_level(void)
 {
-	unsigned int snr_val, i, snr_d[8];
-	enum amlatvdemod_snr_level_e ret;
-	unsigned long fsnr;
+	unsigned int snr_val = 0, i = 0, snr_d[8] = { 0 };
+	enum amlatvdemod_snr_level_e ret = very_low;
+	unsigned long fsnr = 0;
 
 	snr_val = atv_dmd_rd_long(APB_BLOCK_ADDR_VDAGC, 0x50) >> 8;
 	fsnr = snr_val;
