@@ -273,6 +273,8 @@ struct mxc_isi_dev {
 	u32 interface[MAX_PORTS];
 	u32 flags;
 
+	atomic_t open_count;
+
 	/* scale factor */
 	u32	xfactor;
 	u32	yfactor;
