@@ -864,6 +864,66 @@ static void update_all_line_eyetest(struct mmc_host *mmc)
 		emmc_eyetest_log(mmc, line_x);
 	}
 }
+
+static unsigned int get_emmc_cmd_win(struct mmc_host *mmc)
+{
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
+	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	u32 max = 0, i, temp;
+	u32 str[64] = {0};
+	int best_start = -1, best_size = -1;
+	int cur_start = -1, cur_size = 0;
+
+	for (i = 0; i < 64; i++) {
+		delay2 &= ~(0x3f << 24);
+		delay2 |= (i << 24);
+		writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+		emmc_eyetest_log(mmc, 9);
+		temp = fbinary(pdata->align[9]);
+		str[i] = temp;
+		if (max < temp)
+			max = temp;
+	}
+	for (i = 0; i < 64; i++) {
+		if (str[i] >= 4) {
+			if (cur_start < 0)
+				cur_start = i;
+			cur_size++;
+		} else {
+			if (cur_start >= 0) {
+				if (best_start < 0) {
+					best_start = cur_start;
+					best_size = cur_size;
+				} else {
+					if (best_size < cur_size) {
+						best_start = cur_start;
+						best_size = cur_size;
+					}
+				}
+				cur_start = -1;
+				cur_size = 0;
+			}
+		}
+	}
+	if (cur_start >= 0) {
+		if (best_start < 0) {
+			best_start = cur_start;
+			best_size = cur_size;
+		} else if (best_size < cur_size) {
+			best_start = cur_start;
+			best_size = cur_size;
+		}
+		cur_start = -1;
+		cur_size = -1;
+	}
+	delay2 &= ~(0x3f << 24);
+	delay2 |= ((best_start + best_size / 2) << 24);
+	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+	emmc_eyetest_log(mmc, 9);
+	return max;
+}
+
 /* first step*/
 static int emmc_ds_core_align(struct mmc_host *mmc)
 {
@@ -872,8 +932,7 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 	u32 delay1 = readl(host->base + SD_EMMC_DELAY1_V3);
 	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
 	u32 delay2_bak = delay2;
-	u32 count = 0;
-	u32 ds_count = 0, cmd_count = 0;
+	u32 count = 0, ds_count = 0, cmd_count = 0;
 
 	ds_count = fbinary(pdata->align[8]);
 	if (ds_count == 0)
@@ -900,26 +959,19 @@ static int emmc_ds_core_align(struct mmc_host *mmc)
 	count = ((delay2>>18) & 0x3f) - ((delay2_bak>>18) & 0x3f);
 	delay1 += (count<<0)|(count<<6)|(count<<12)|(count<<18)|(count<<24);
 	delay2 += (count<<0)|(count<<6)|(count<<12);
+	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
+	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
 
 out_cmd:
 
-	cmd_count = fbinary(pdata->align[9]);
-	if (cmd_count <= (pdata->count/3))
-		cmd_count = (pdata->count/3)-cmd_count;
-	else if (cmd_count <= 2*pdata->count/3)
-		cmd_count = 0;
-	else if (cmd_count <= pdata->count)
-		cmd_count = (pdata->count-cmd_count)+pdata->count/3;
-	else
-		cmd_count = pdata->count/3;
-	delay2 += (cmd_count<<24);
-	writel(delay1, host->base + SD_EMMC_DELAY1_V3);
-	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
-	pdata->dly1 = delay1;
-	pdata->dly2 = delay2;
-	pr_info("cmd_count:%d,delay1:0x%x,delay2:0x%x,count: %u\n",
-			cmd_count, readl(host->base + SD_EMMC_DELAY1_V3),
-			readl(host->base + SD_EMMC_DELAY2_V3), count);
+	cmd_count = get_emmc_cmd_win(mmc);
+	pdata->dly1 = readl(host->base + SD_EMMC_DELAY1_V3);
+	pdata->dly2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	pr_info("ds_count:%u,count:%d, cmd_count:%u\n",
+			ds_count, count, cmd_count);
+	pr_info("delay1:0x%x,delay2:0x%x\n",
+			readl(host->base + SD_EMMC_DELAY1_V3),
+			readl(host->base + SD_EMMC_DELAY2_V3));
 	return 0;
 }
 
