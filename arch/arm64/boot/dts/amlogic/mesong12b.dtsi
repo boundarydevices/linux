@@ -84,6 +84,16 @@
 			reg = <0x0 0x1>;
 			enable-method = "psci";
 			sched-energy-costs = <&CPU_COST_A53 &CLUSTER_COST_A53>;
+			clocks = <&clkc CLKID_CPU_CLK>,
+			       <&clkc CLKID_CPU_FCLK_P>,
+			       <&clkc CLKID_SYS1_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table0>;
+			cpu-supply = <&vddcpu0>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU2:cpu@100 {
@@ -103,7 +113,6 @@
 			cpu-supply = <&vddcpu1>;
 			voltage-tolerance = <0>;
 			clock-latency = <50000>;
-
 		};
 
 		CPU3:cpu@101 {
@@ -113,6 +122,16 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A73 &CLUSTER_COST_A73>;
+			clocks = <&clkc CLKID_CPUB_CLK>,
+			       <&clkc CLKID_CPUB_FCLK_P>,
+			       <&clkc CLKID_SYS_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table1>;
+			cpu-supply = <&vddcpu1>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU4:cpu@102 {
@@ -122,6 +141,16 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A73 &CLUSTER_COST_A73>;
+			clocks = <&clkc CLKID_CPUB_CLK>,
+			       <&clkc CLKID_CPUB_FCLK_P>,
+			       <&clkc CLKID_SYS_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table1>;
+			cpu-supply = <&vddcpu1>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		CPU5:cpu@103 {
@@ -131,6 +160,16 @@
 			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0>;
 			sched-energy-costs = <&CPU_COST_A73 &CLUSTER_COST_A73>;
+			clocks = <&clkc CLKID_CPUB_CLK>,
+			       <&clkc CLKID_CPUB_FCLK_P>,
+			       <&clkc CLKID_SYS_PLL>;
+			clock-names = "core_clk",
+				"low_freq_clk_parent",
+				"high_freq_clk_parent";
+			operating-points-v2 = <&cpu_opp_table1>;
+			cpu-supply = <&vddcpu1>;
+			voltage-tolerance = <0>;
+			clock-latency = <50000>;
 		};
 
 		idle-states {

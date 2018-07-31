@@ -8,19 +8,24 @@ menuconfig AMLOGIC_CPUFREQ
 		CPU DVFS driver support for Amlogic SOC chips;
 		You can use this driver to change cpu frequency.
 
-choice
-	prompt "Meson CPU Freq driver select"
-	depends on AMLOGIC_CPUFREQ
-	default AMLOGIC_M8B_CPUFREQ
-
 config AMLOGIC_M8B_CPUFREQ
 	bool "Meson CPU Frequency scaling support for m8/m8b"
 	depends on MACH_MESON8B && AMLOGIC_CPUFREQ
+	default n
 	help
 		cpufreq driver support for m8/m8b, select
 		it if your chip belongs this group
 
-endchoice #AMLOGIC_CPUFREQ
+config AMLOGIC_MESON_CPUFREQ
+	bool  "MESON based CPUfreq driver"
+	depends on AMLOGIC_CPUFREQ
+	default n
+        help
+          This adds the CPUfreq driver support for ARM big.LITTLE platforms
+          using MESON dt for CPU power management.
+
+          This driver uses meson cpufreq driver to interact with the
+          firmware providing the CPU DVFS functionality.
 
 config AMLOGIC_INPUT_BOOST
     bool "Meson BOOST cpufreq when key input"

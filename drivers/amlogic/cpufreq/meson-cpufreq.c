@@ -1,20 +1,18 @@
 /*
- * Generic big.LITTLE CPUFreq Interface driver
+ * drivers/amlogic/cpufreq/meson-cpufreq.c
  *
- * It provides necessary ops to arm_big_little cpufreq driver and gets
- * Frequency information from Device Tree. Freq table in DT must be in KHz.
- *
- * Copyright (C) 2013 Linaro.
- * Viresh Kumar <viresh.kumar@linaro.org>
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * This program is distributed "as is" WITHOUT ANY WARRANTY of any
- * kind, whether express or implied; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
  */
 
 //#define DEBUG  0
@@ -40,9 +38,8 @@
 #include <linux/delay.h>
 #include <linux/regulator/driver.h>
 
-#include "arm_big_little.h"
-#include "../regulator/internal.h"
-
+#include "../../regulator/internal.h"
+#include "../../base/power/opp/opp.h"
 /* Currently we support only two clusters */
 #define MAX_CLUSTERS	2
 
@@ -56,7 +53,7 @@
 
 static struct thermal_cooling_device *cdev[MAX_CLUSTERS];
 static struct clk *clk[MAX_CLUSTERS];
-static struct cpufreq_frequency_table *freq_table[MAX_CLUSTERS + 1];
+static struct cpufreq_frequency_table *freq_table[MAX_CLUSTERS];
 
 /* Default voltage_tolerance */
 #define DEF_VOLT_TOL		0
@@ -426,7 +423,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 			per_cpu(physical_cluster, cpu) = cur_cluster;
 	}
 
-	ret = dev_pm_opp_of_add_table(cpu_dev);
+	ret = dev_pm_opp_of_cpumask_add_table(policy->cpus);
 	if (ret) {
 		pr_err("%s: init_opp_table failed, cpu: %d, cluster: %d, err: %d\n",
 				__func__, cpu_dev->id, cur_cluster, ret);
@@ -458,7 +455,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	policy->driver_data = cpufreq_data;
 	policy->clk = clk[cur_cluster];
 	policy->cpuinfo.transition_latency = transition_latency;
-	policy->suspend_freq = get_table_max(freq_table[0]);
+	policy->suspend_freq = get_table_max(freq_table[cur_cluster]);
 	policy->cur = clk_get_rate(clk[cur_cluster]) / 1000;
 
 	/*
@@ -628,5 +625,5 @@ static struct platform_driver meson_cpufreq_platdrv = {
 module_platform_driver(meson_cpufreq_platdrv);
 
 MODULE_AUTHOR("Amlogic cpufreq driver owner");
-MODULE_DESCRIPTION("Generic ARM big LITTLE cpufreq driver via DT");
+MODULE_DESCRIPTION("Generic ARM big LITTLE cpufreq driver via DTS");
 MODULE_LICENSE("GPL v2");
