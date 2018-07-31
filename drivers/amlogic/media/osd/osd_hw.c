@@ -814,20 +814,6 @@ static int out_fence_create(int *release_fence_fd)
 {
 	int out_fence_fd = -1;
 
-
-	if (!timeline_created) {
-		/* timeline has not been created */
-		if (osd_timeline_create()) {
-			kthread_init_worker(&buffer_toggle_worker);
-			buffer_toggle_thread = kthread_run(
-				kthread_worker_fn,
-				&buffer_toggle_worker,
-				"aml_buf_toggle");
-			kthread_init_work(
-				&buffer_toggle_work, osd_toggle_buffer);
-			timeline_created = 1;
-		}
-	}
 	/* hwc_enable disable create fence every time */
 	if (!osd_hw.hwc_enable) {
 		out_fence_fd = osd_timeline_create_fence();
@@ -7195,6 +7181,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 {
 	u32 idx, data32;
 	int err_num = 0;
+	struct sched_param param = {.sched_priority = 2};
 
 	osd_hw.fb_drvier_probe = osd_probe;
 
@@ -7505,6 +7492,27 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	}
 	if (osd_hw.hw_rdma_en)
 		osd_rdma_enable(1);
+
+	if (!timeline_created) {
+		/* timeline has not been created */
+		if (osd_timeline_create()) {
+			kthread_init_worker(&buffer_toggle_worker);
+			buffer_toggle_thread = kthread_run(
+				kthread_worker_fn,
+				&buffer_toggle_worker,
+				"aml_buf_toggle");
+			if (IS_ERR(buffer_toggle_thread)) {
+				osd_log_err("create osd toggle kthread failed");
+				return;
+			}
+			sched_setscheduler(buffer_toggle_thread,
+				SCHED_FIFO, &param);
+			kthread_init_work(
+				&buffer_toggle_work, osd_toggle_buffer);
+			timeline_created = 1;
+		}
+	}
+
 }
 
 void osd_init_viu2(void)
