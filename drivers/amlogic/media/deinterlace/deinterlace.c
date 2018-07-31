@@ -124,7 +124,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-07-17a";
+static const char version_s[] = "2018-07-31a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -3024,7 +3024,7 @@ static void pre_de_process(void)
 #endif
 	enable_di_pre_mif(true, mcpre_en);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
-		pre_frame_reset_g12a(di_pre_stru.madi_enable,
+		pre_frame_reset_g12(di_pre_stru.madi_enable,
 			di_pre_stru.mcdi_enable);
 	} else {
 		pre_frame_reset();

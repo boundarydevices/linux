@@ -2622,7 +2622,7 @@ static void reset_pre_simple_rd_mif_g12(unsigned char madi_en,
  * frame reset for pre which have nothing with encoder
  * go field
  */
-void pre_frame_reset_g12a(unsigned char madi_en,
+void pre_frame_reset_g12(unsigned char madi_en,
 	unsigned char mcdi_en)
 {
 	unsigned int reg_val = 0;
@@ -2630,6 +2630,7 @@ void pre_frame_reset_g12a(unsigned char madi_en,
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B))
 		reset_pre_simple_rd_mif_g12(madi_en, mcdi_en);
 	else {
+		reg_val = RDMA_RD(DI_PRE_CTRL);
 		if (madi_en)
 			reg_val |= (1<<25);
 		if (mcdi_en)
