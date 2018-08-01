@@ -2469,8 +2469,9 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 			first_picture = 1;
 		}
 	} else {
-		if (DI_POST_REG_RD(DI_IF1_GEN_REG) & 0x1) {
-			/* disable post di */
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
+		if ((DI_POST_REG_RD(DI_IF1_GEN_REG) & 0x1) != 0) {
+			/* check mif enable status, disable post di */
 			VSYNC_WR_MPEG_REG(DI_POST_CTRL, 0x3 << 30);
 			VSYNC_WR_MPEG_REG(DI_POST_SIZE,
 					  (32 - 1) | ((128 - 1) << 16));
@@ -2478,6 +2479,7 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 					  READ_VCBUS_REG(DI_IF1_GEN_REG) &
 					  0xfffffffe);
 		}
+#endif
 	}
 
 	timer_count = 0;
@@ -2592,8 +2594,12 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 		VSYNC_WR_MPEG_REG(AFBC_HEAD_BADDR, vf->compHeadAddr>>4);
 		VSYNC_WR_MPEG_REG(AFBC_BODY_BADDR, vf->compBodyAddr>>4);
 	}
-	if ((vf->canvas0Addr != 0) &&
-	(DI_POST_REG_RD(DI_POST_CTRL) & 0x1000) == 0) {
+	if ((vf->canvas0Addr != 0)
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
+		&& ((DI_POST_REG_RD(DI_POST_CTRL) & 0x1000) == 0)
+		/* check di_post_viu_link   */
+#endif
+		) {
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		if (vf->canvas0Addr != (u32)-1) {
@@ -2946,7 +2952,11 @@ static inline void vd1_path_select(bool afbc)
 			/* afbc0 gclk ctrl */
 			(0 << 0),
 			0, 22);
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
+		if (!cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+			return;
 		if ((DI_POST_REG_RD(DI_POST_CTRL) & 0x100) != 0) {
+			/* check di_vpp_out_en bit */
 			VSYNC_WR_MPEG_REG_BITS(
 				VD1_AFBCD0_MISC_CTRL,
 				/* vd1 mif to di */
@@ -2958,8 +2968,12 @@ static inline void vd1_path_select(bool afbc)
 				1,
 				20, 2);
 		}
+#endif
 	} else {
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		if ((DI_POST_REG_RD(DI_POST_CTRL) & 0x100) == 0)
+		/* mif sel */
+#endif
 			VSYNC_WR_MPEG_REG_BITS(
 				VIU_MISC_CTRL0 + misc_off,
 				0, 16, 3);
@@ -3143,6 +3157,7 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 						cur_dev->viu_off,
 						(bit_mode & 0x3), 8, 2);
 			}
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 			DI_POST_WR_REG_BITS(DI_IF1_GEN_REG3,
 				(bit_mode&0x3), 8, 2);
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
@@ -3151,7 +3166,7 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 				DI_POST_WR_REG_BITS(DI_IF0_GEN_REG3,
 					(bit_mode & 0x3), 8, 2);
-
+#endif
 			vd1_path_select(false);
 			VSYNC_WR_MPEG_REG(AFBC_ENABLE, 0);
 		}
@@ -5225,9 +5240,12 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		} else if ((cur_dispbuf == &vf_local)
 			   && (video_property_changed)) {
 			if (!(blackout | force_blackout)) {
-				if (cur_dispbuf &&
-					(DI_POST_REG_RD(DI_IF1_GEN_REG) &
-					0x1) == 0) {
+				if (cur_dispbuf
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
+				&& ((DI_POST_REG_RD(DI_IF1_GEN_REG) & 0x1)
+					== 0)
+#endif
+					) {
 					/* setting video display*/
 					/*property in unregister mode */
 					u32 cur_index =
@@ -5375,14 +5393,15 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			if (trickmode_fffb == 1) {
 				trickmode_vpts = vf->pts;
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
+	#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 				if ((DI_POST_REG_RD(DI_IF1_GEN_REG) & 0x1)
-					== 0)
-					to_notify_trick_wait = true;
-				else {
+					!= 0) {
 					atomic_set(&trickmode_framedone, 1);
 					video_notify_flag |=
 					    VIDEO_NOTIFY_TRICK_WAIT;
-				}
+				} else
+	#endif
+					to_notify_trick_wait = true;
 #else
 				atomic_set(&trickmode_framedone, 1);
 				video_notify_flag |= VIDEO_NOTIFY_TRICK_WAIT;
