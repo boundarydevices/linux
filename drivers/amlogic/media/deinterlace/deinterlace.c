@@ -124,7 +124,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-08-03a";
+static const char version_s[] = "2018-08-06a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -2271,7 +2271,6 @@ static void di_uninit_buf(unsigned int disable_mirror)
 	for (i = 0; i < MAX_IN_BUF_NUM; i++)
 		vframe_in[i] = NULL;
 	di_pre_stru.pre_de_process_done = 0;
-	di_pre_stru.pre_de_busy = 0;
 	di_pre_stru.pre_de_process_flag = 0;
 	if (post_wr_en && post_wr_support) {
 		di_post_stru.cur_post_buf = NULL;
@@ -2860,6 +2859,7 @@ static void pre_inp_canvas_config(struct vframe_s *vf);
 #endif
 static void pre_de_process(void)
 {
+	ulong irq_flag2 = 0;
 	unsigned short pre_width = 0, pre_height = 0;
 	unsigned char chan2_field_num = 1;
 	int canvases_idex = di_pre_stru.field_count_for_cont % 2;
@@ -3024,7 +3024,10 @@ static void pre_de_process(void)
 			vdin_ops->tvin_vdin_func(0, &vdin_arg);
 	}
 #endif
-	enable_di_pre_mif(true, mcpre_en);
+	/* must make sure follow part issue without iterrupts,
+	 * otherwise may cause watch dog reboot
+	 */
+	di_lock_irqfiq_save(irq_flag2);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		pre_frame_reset_g12(di_pre_stru.madi_enable,
 			di_pre_stru.mcdi_enable);
@@ -3033,6 +3036,7 @@ static void pre_de_process(void)
 		/* enable mc pre mif*/
 		enable_di_pre_mif(true, mcpre_en);
 	}
+	di_unlock_irqfiq_restore(irq_flag2);
 	/*reinit pre busy flag*/
 	di_pre_stru.pre_de_busy_timer_count = 0;
 	di_pre_stru.pre_de_busy = 1;
@@ -5905,7 +5909,6 @@ static void di_unreg_process(void)
 		if (unreg_cnt > 0x3fffffff)
 			unreg_cnt = 0;
 		pr_dbg("%s unreg stop %d.\n", __func__, reg_flag);
-		di_pre_stru.pre_de_busy = 0;
 		di_pre_stru.unreg_req_flag_irq = 1;
 		reg_flag = 0;
 		trigger_pre_di_process(TRIGGER_PRE_BY_UNREG);
@@ -6194,7 +6197,7 @@ static void di_reg_process_irq(void)
 				di_top_gate_control(true, false);
 			}
 			de_devp->flags |= DI_VPU_CLKB_SET;
-			enable_di_pre_mif(true, mcpre_en);
+			enable_di_pre_mif(false, mcpre_en);
 			di_pre_gate_control(true, mcpre_en);
 			nr_gate_control(true);
 		} else {
@@ -6500,7 +6503,12 @@ static void di_pre_process_irq(struct di_pre_stru_s *pre_stru_p)
 	int i;
 
 	if (active_flag) {
-		if (pre_stru_p->unreg_req_flag_irq)
+		/* must wait pre de done or time out to clear the de_busy
+		 * otherwise may appear watch dog reboot probablity
+		 * caused by disable mif in unreg_process_irq
+		 */
+		if (pre_stru_p->unreg_req_flag_irq &&
+			(di_pre_stru.pre_de_busy == 0))
 			di_unreg_process_irq();
 		if (init_flag == 0 && pre_stru_p->reg_req_flag_irq == 0)
 			di_reg_process_irq();
