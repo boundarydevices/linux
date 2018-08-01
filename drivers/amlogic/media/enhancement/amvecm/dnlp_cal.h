@@ -70,11 +70,6 @@ struct dnlp_parse_cmd_s {
 extern struct ve_dnlp_table_s am_ve_new_dnlp;
 extern struct ve_dnlp_curve_param_s dnlp_curve_param_load;
 extern unsigned int ve_dnlp_rt;
-extern unsigned char ve_dnlp_tgt[65];
-extern int GmScurve[65];
-extern int clash_curve[65];
-extern int clsh_scvbld[65];
-extern int blkwht_ebld[65];
 extern bool ve_en;
 extern unsigned int ve_dnlp_rt;
 extern unsigned int ve_dnlp_luma_sum;
@@ -83,26 +78,37 @@ extern ulong ve_dnlp_reg[16];
 extern ulong ve_dnlp_reg_def[16];
 extern struct dnlp_parse_cmd_s dnlp_parse_cmd[];
 
-extern int dnlp_scurv_low[65];
-extern int dnlp_scurv_mid1[65];
-extern int dnlp_scurv_mid2[65];
-extern int dnlp_scurv_hgh1[65];
-extern int dnlp_scurv_hgh2[65];
-extern int gain_var_lut49[49];
-extern int wext_gain[48];
-
-extern int ro_luma_avg4;
-extern int ro_var_d8;
-extern int ro_scurv_gain;
-extern int ro_blk_wht_ext0;
-extern int ro_blk_wht_ext1;
-extern int ro_dnlp_brightness;
-
-extern void ve_dnlp_calculate_tgtx_v3(struct vframe_s *vf);
+extern int ve_dnlp_calculate_tgtx(struct vframe_s *vf);
 extern void ve_set_v3_dnlp(struct ve_dnlp_curve_param_s *p);
 extern void ve_dnlp_calculate_lpf(void);
 extern void ve_dnlp_calculate_reg(void);
 extern void dnlp_alg_param_init(void);
+
+extern int *dnlp_scurv_low_copy;
+extern int *dnlp_scurv_mid1_copy;
+extern int *dnlp_scurv_mid2_copy;
+extern int *dnlp_scurv_hgh1_copy;
+extern int *dnlp_scurv_hgh2_copy;
+extern int *gain_var_lut49_copy;
+extern int *wext_gain_copy;
+
+extern int *ro_luma_avg4_copy;
+extern int *ro_var_d8_copy;
+extern int *ro_scurv_gain_copy;
+extern int *ro_blk_wht_ext0_copy;
+extern int *ro_blk_wht_ext1_copy;
+extern int *ro_dnlp_brightness_copy;
+extern int *GmScurve_copy;
+extern int *clash_curve_copy;
+extern int *clsh_scvbld_copy;
+extern int *blkwht_ebld_copy;
+
+extern unsigned int *ve_dnlp_luma_sum_copy;
+extern unsigned char *ve_dnlp_tgt_copy;
+
+extern void dnlp_dbg_node_copy(void);
+extern bool dnlp_insmod_ok; /*0:fail, 1:ok*/
+extern int *dnlp_printk_copy;
 #endif
 
 

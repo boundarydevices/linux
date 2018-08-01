@@ -292,13 +292,14 @@ void ve_on_vs(struct vframe_s *vf)
 
 	if (dnlp_en_2 || ve_en) {
 		/* calculate dnlp target data */
-		ve_dnlp_calculate_tgtx_v3(vf);
-		/* calculate dnlp low-pass-filter data */
-		ve_dnlp_calculate_lpf();
-		/* calculate dnlp reg data */
-		ve_dnlp_calculate_reg();
-		/* load dnlp reg data */
-		ve_dnlp_load_reg();
+		if (ve_dnlp_calculate_tgtx(vf)) {
+			/* calculate dnlp low-pass-filter data */
+			ve_dnlp_calculate_lpf();
+			/* calculate dnlp reg data */
+			ve_dnlp_calculate_reg();
+			/* load dnlp reg data */
+			ve_dnlp_load_reg();
+		}
 	}
 	ve_hist_gamma_tgt(vf);
 
@@ -664,11 +665,13 @@ void ve_set_dnlp_2(void)
 {
 	ulong i = 0;
 	/* clear historic luma sum */
-	ve_dnlp_luma_sum = 0;
+	if (dnlp_insmod_ok == 0)
+		return;
+	*ve_dnlp_luma_sum_copy = 0;
 	/* init tgt & lpf */
 	for (i = 0; i < 64; i++) {
-		ve_dnlp_tgt[i] = i << 2;
-		ve_dnlp_lpf[i] = (ulong)ve_dnlp_tgt[i] << ve_dnlp_rt;
+		ve_dnlp_tgt_copy[i] = i << 2;
+		ve_dnlp_lpf[i] = (ulong)ve_dnlp_tgt_copy[i] << ve_dnlp_rt;
 	}
 	/* calculate dnlp reg data */
 	ve_dnlp_calculate_reg();

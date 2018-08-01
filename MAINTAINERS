@@ -13896,6 +13896,7 @@ M:	Mingliang Dong <mingliang.dong@amlogic.com>
 F:	drivers/amlogic/media/enhancement/amvecm/*
 F:	drivers/amlogic/media/enhancement/amvecm/dolby_vision/*
 F:	drivers/amlogic/media/enhancement/amvecm/arch/*
+F:	drivers/amlogic/media/enhancement/amvecm/dnlp_algorithm/*
 F:	include/linux/amlogic/media/amvecm/*
 
 AMLOGIC GXL ADD SKT DTS
