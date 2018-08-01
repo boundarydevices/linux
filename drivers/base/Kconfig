@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0
 menu "Generic Driver Options"
 
+source "drivers/base/arm/Kconfig"
+
 config AUXILIARY_BUS
 	bool
 
