@@ -156,7 +156,13 @@ static ssize_t audio_data_read(struct file *filp, char __user *buf,
 {
 	int err = 0;
 	loff_t pos = 0;
-	char buftmp[EFUSE_BUF_SIZE] = {0};
+	char *buftmp;
+
+	buftmp = kzalloc(EFUSE_BUF_SIZE, GFP_KERNEL);
+	if (!buftmp) {
+		MYPRT("kzalloc fail.\n");
+		return -ENOMEM;
+	}
 
 	MYPRT("[%s]\n", __func__);
 	if (count > EFUSE_BUF_SIZE) {
@@ -175,6 +181,8 @@ static ssize_t audio_data_read(struct file *filp, char __user *buf,
 			}
 		}
 	}
+
+	kfree(buftmp);
 	if (!err)
 		return count;
 	else

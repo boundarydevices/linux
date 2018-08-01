@@ -158,6 +158,7 @@ static int _dtb_init(struct mmc_card *mmc)
 	int cpy = 1, valid = 0;
 	int bit = mmc->csd.read_blkbits;
 	int blk;
+#ifdef CONFIG_ARM64
 	unsigned int pgcnt;
 	struct page *page = NULL;
 
@@ -168,6 +169,11 @@ static int _dtb_init(struct mmc_card *mmc)
 	if (!page)
 		return -ENOMEM;
 	dtb = page_address(page);
+#else
+	dtb = kmalloc(CONFIG_DTB_SIZE, GFP_KERNEL);
+	if (!dtb)
+		return -ENOMEM;
+#endif
 
 	/* read dtb2 1st, for compatibility without checksum. */
 	while (cpy >= 0) {
@@ -190,7 +196,11 @@ static int _dtb_init(struct mmc_card *mmc)
 	}
 	pr_info("total valid %d\n", valid);
 
+#ifdef CONFIG_ARM64
 	dma_release_from_contiguous(NULL, page, pgcnt);
+#else
+	kfree(dtb);
+#endif
 
 	return ret;
 }
