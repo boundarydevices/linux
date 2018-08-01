@@ -1220,9 +1220,9 @@ static int dump_mem_infos(void *buf, int size)
 			atomic_read(&mem->use_cnt)
 			);
 		s += snprintf(pbuf + s, size - tsize,
-			"flags=%d,used:%lld ms\n",
-			mem->flags,
-			(get_jiffies_64() - mem->alloced_jiffies) * 100/HZ);
+			"flags=%d,used:%u ms\n",
+			mem->flags, jiffies_to_msecs(get_jiffies_64() -
+			mem->alloced_jiffies));
 
 		tsize += s;
 		if (buf) {

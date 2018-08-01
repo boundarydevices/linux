@@ -120,7 +120,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		if (ret < 0)
 			LOG(LOG_DEBUG, "copy from user failed\n");
 
-		LOG(LOG_DEBUG, "sizeof(gs)=%ld, magic=%d\n",
+		LOG(LOG_DEBUG, "sizeof(gs)=%zu, magic=%d\n",
 				sizeof(*gs), gs->magic);
 
 		//configure gdc config, buffer address and resolution

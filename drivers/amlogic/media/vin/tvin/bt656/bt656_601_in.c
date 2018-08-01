@@ -232,7 +232,7 @@ static void init_656in_dec_hdmi_parameter(struct am656in_dev_s *devp)
 
 static void reset_bt656in_module(struct am656in_dev_s *devp)
 {
-	int temp_data;
+	int temp_data = 0;
 	unsigned int offset = devp->index;
 
 	temp_data = bt656_rd(offset, BT_CTRL);

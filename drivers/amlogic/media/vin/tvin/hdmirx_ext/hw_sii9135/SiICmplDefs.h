@@ -46,7 +46,7 @@
 #define F_OSC_28_3
 #ifdef F_OSC_28_3
 /* XCLOCK is used for measureament of Vertical Refreshment Rate */
-#define SII_XCLOCK_OSC_SCALED_AND_MUL100 (2810073437)
+#define SII_XCLOCK_OSC_SCALED_AND_MUL100 (2810073437u)
 /*   ( F_OSC * 100  * 1016 ) / 1024
  * where  F_OSC = 28322000
  */
@@ -55,7 +55,7 @@
 /* ((F_OSC * 1016 )/1000) */
 
 
-#define SII_XCLOCK_OSC_SCALED2047_AND_MUL100 (2832200000)
+#define SII_XCLOCK_OSC_SCALED2047_AND_MUL100 (2832200000u)
 /* F_OSC * 100 where F_OSC = 28322000 */
 #define SII_XCLOCK_OSC_SCALED2047_FOR_CALK_FPIX (464027)
 /* ( (F_OSC * 16384 )/1000000) to yield units of MHz for pixel clock */
@@ -63,7 +63,7 @@
 #else
 
 /* XCLOCK is used for measureament of Vertical Refreshment Rate */
-#define SII_XCLOCK_OSC_SCALED_AND_MUL100 (2679233671)
+#define SII_XCLOCK_OSC_SCALED_AND_MUL100 (2679233671u)
 /*   ( F_OSC * 100  * 1016 ) / 1024
  * where  F_OSC = 27003300
  */

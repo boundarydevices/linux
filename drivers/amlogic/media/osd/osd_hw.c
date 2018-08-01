@@ -6730,7 +6730,7 @@ static void osd_basic_update_disp_geometry(u32 index)
 
 	if (osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) {
 		if (osd_hw.osd_afbcd[index].enable) {
-			long int headr_addr, out_addr;
+			u64 headr_addr, out_addr;
 
 			/* set frame addr in linear: out_addr_id */
 			headr_addr = osd_hw.osd_afbcd[index].phy_addr;

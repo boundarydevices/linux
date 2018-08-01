@@ -263,7 +263,7 @@ static int bt656_reg_write(u32 index, unsigned int reg, unsigned int val)
 
 static inline uint32_t bt656_rd(u32 index, uint32_t reg)
 {
-	int val;
+	int val = 0;
 
 	bt656_reg_read(index, (reg<<2), &val);
 	return val;

@@ -569,7 +569,7 @@ static void spicc_dma_unmap(struct spicc *spicc, struct spi_transfer *t)
 static int spicc_dma_xfer(struct spicc *spicc, struct spi_transfer *t)
 {
 	void __iomem *mem_base = spicc->regs;
-	int ret;
+	int ret = 0;
 
 	spicc_reset_fifo(spicc);
 	setb(mem_base, CON_XCH, 0);

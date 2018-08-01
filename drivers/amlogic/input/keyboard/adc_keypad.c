@@ -364,7 +364,7 @@ static ssize_t table_store(struct class *cls, struct class_attribute *attr,
 
 	/*count inclued '\0'*/
 	if (count > TMP_BUF_MAX) {
-		dev_err(dev, "write data is too long[max:%d]: %ld\n",
+		dev_err(dev, "write data is too long[max:%d]: %zu\n",
 			TMP_BUF_MAX, count);
 		return -EINVAL;
 	}

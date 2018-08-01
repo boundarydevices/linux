@@ -920,7 +920,7 @@ void dolby_vision_update_pq_config(char *pq_config_buf)
 {
 	memcpy((struct pq_config_s *)pq_config_fake,
 		pq_config_buf, sizeof(struct pq_config_s));
-	pr_info("update_pq_config[%ld] %x %x %x %x\n",
+	pr_info("update_pq_config[%zu] %x %x %x %x\n",
 		sizeof(struct pq_config_s),
 		pq_config_buf[1],
 		pq_config_buf[2],

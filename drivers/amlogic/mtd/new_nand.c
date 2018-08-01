@@ -660,7 +660,7 @@ void aml_nand_get_read_default_value_hynix(struct mtd_info *mtd)
 			(addr + page_list[i]*mtd->writesize), &aml_oob_ops);
 			aml_chip->new_nand_info.type = nand_type;
 			if ((error != 0) && (error != -EUCLEAN)) {
-				pr_info("%s %d read failed at blk:%ld pg:%ld\n",
+				pr_info("%s %d read failed at blk:%zu pg:%zu\n",
 					__func__, __LINE__,
 					addr >> phys_erase_shift,
 			(addr + page_list[i]*mtd->writesize) / mtd->writesize);
@@ -766,7 +766,7 @@ void aml_nand_save_read_default_value_hynix(struct mtd_info *mtd)
 	while (total_blk < RETRY_NAND_BLK_NUM) {
 		error = mtd->_block_isbad(mtd, addr);
 		if (error) {
-			pr_info("%s %d detect bad blk at blk:%ld\n",
+			pr_info("%s %d detect bad blk at blk:%zu\n",
 				__func__, __LINE__, addr >> phys_erase_shift);
 			addr += mtd->erasesize;
 			total_blk++;
@@ -780,7 +780,7 @@ void aml_nand_save_read_default_value_hynix(struct mtd_info *mtd)
 
 		error = mtd->_erase(mtd, &erase_info_read);
 		if (error) {
-			pr_info("%s %d erase failed at blk:%ld\n",
+			pr_info("%s %d erase failed at blk:%zu\n",
 				__func__, __LINE__, addr >> phys_erase_shift);
 			mtd->_block_markbad(mtd, addr);
 			addr += mtd->erasesize;
@@ -826,7 +826,7 @@ void aml_nand_save_read_default_value_hynix(struct mtd_info *mtd)
 					(addr/mtd->writesize)+i);
 
 			if (error) {
-				pr_info("%s %d write failed blk:%ld page:%ld\n",
+				pr_info("%s %d write failed blk:%zu page:%zu\n",
 					__func__, __LINE__,
 					addr >> phys_erase_shift,
 		(addr + page_list[i] * mtd->writesize) / mtd->writesize);

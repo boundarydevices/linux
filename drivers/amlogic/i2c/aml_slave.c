@@ -191,7 +191,7 @@ static int i2c_slave_probe(struct platform_device *pdev)
 		return PTR_ERR(res_start);
 
 	slave->slave_regs = (struct aml_i2c_reg_slave __iomem *)(res_start);
-	pr_info("res:%llx res_start:%llx\n",  res->start, *res_start);
+	pr_info("res:%pa res_start:%pa\n",  &res->start, res_start);
 
 	i2c_slave_dts_parse(pdev, slave);
 

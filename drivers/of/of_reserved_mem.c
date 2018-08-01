@@ -157,8 +157,9 @@ static int __init __reserved_mem_alloc_size(unsigned long node,
 
 		#ifdef CONFIG_AMLOGIC_MODIFY
 		#ifdef CONFIG_PHYS_ADDR_T_64BIT
-			pr_info("%s, start:%llx, end:%llx, len:%llx\n",
-				__func__, start, end, end - start);
+			pr_info("%s, start:%pa, end:%pa, len:%ld MiB\n",
+				__func__, &start, &end,
+				(unsigned long)((end - start)/SZ_1M));
 		#endif
 		#endif /* CONFIG_AMLOGIC_MODIFY */
 			ret = early_init_dt_alloc_reserved_memory_arch(size,

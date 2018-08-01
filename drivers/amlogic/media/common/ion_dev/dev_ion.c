@@ -282,7 +282,7 @@ static int ion_dev_mem_init(struct reserved_mem *rmem, struct device *dev)
 	my_ion_heap[num_heaps].base = (ion_phys_addr_t) rmem->base;
 	my_ion_heap[num_heaps].size = rmem->size;
 
-	pr_info("ion_dev_mem_init size=0x%llx\n", rmem->size);
+	pr_info("ion_dev_mem_init size=%pa\n", &rmem->size);
 	num_heaps++;
 
 	return 0;

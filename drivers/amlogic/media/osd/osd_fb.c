@@ -1183,8 +1183,8 @@ static int malloc_osd_memory(struct fb_info *info)
 	size = fb_rmem.size;
 #endif
 
-	osd_log_info("%s, %d, base:%llx, size:%ld\n",
-		__func__, __LINE__, base, size);
+	osd_log_info("%s, %d, base:%pa, size:%ld\n",
+		__func__, __LINE__, &base, size);
 	fbdev = (struct osd_fb_dev_s *)info->par;
 	pdev = fbdev->dev;
 	fb_index = fbdev->fb_index;
@@ -1214,7 +1214,7 @@ static int malloc_osd_memory(struct fb_info *info)
 				+ fb_memsize[1] + fb_memsize[2]
 				+ fb_memsize[3];
 		}
-		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
+		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%zu\n",
 			__func__, __LINE__, fb_index,
 			fb_rmem_size[fb_index]);
 		if ((fb_rmem_paddr[fb_index] > 0) &&
@@ -1242,7 +1242,7 @@ static int malloc_osd_memory(struct fb_info *info)
 					>> PAGE_SHIFT,
 					0);
 				if (!osd_page[fb_index+1]) {
-					pr_err("allocate buffer failed:%ld\n",
+					pr_err("allocate buffer failed:%zu\n",
 						fb_rmem_size[fb_index]);
 					return -ENOMEM;
 				}
@@ -1266,7 +1266,7 @@ static int malloc_osd_memory(struct fb_info *info)
 				osd_log_err("fb[%d] ioremap error", fb_index);
 			pr_info("%s, reserved mem\n", __func__);
 #endif
-			osd_log_dbg("fb_index=%d dma_alloc=%ld\n",
+			osd_log_dbg("fb_index=%d dma_alloc=%zu\n",
 				fb_index, fb_rmem_size[fb_index]);
 		}
 	} else {
@@ -1304,7 +1304,7 @@ static int malloc_osd_memory(struct fb_info *info)
 					fb_ion_client,
 					fb_ion_handle[fb_index][j]);
 				dev_alert(&pdev->dev,
-					"ion memory(%d): created fb at 0x%p, size %ld MiB\n",
+					"ion memory(%d): created fb at 0x%p, size %lu MiB\n",
 					fb_index,
 					(void *)fb_rmem_afbc_paddr
 					[fb_index][j],
@@ -1487,7 +1487,7 @@ static int osd_open(struct fb_info *info, int arg)
 		fix = &info->fix;
 
 		fb_rmem_size[fb_index] = fb_memsize[fb_index + 1];
-		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%ld\n",
+		pr_info("%s, %d, fb_index=%d,fb_rmem_size=%zu\n",
 			__func__, __LINE__, fb_index, fb_rmem_size[fb_index]);
 
 		fix->smem_start = 0;
@@ -3481,6 +3481,7 @@ static int osd_probe(struct platform_device *pdev)
 	const char *str;
 	#ifdef CONFIG_CMA
 	struct cma *cma;
+	phys_addr_t base_addr;
 	#endif
 	int i;
 	int ret = 0;
@@ -3569,9 +3570,10 @@ static int osd_probe(struct platform_device *pdev)
 		b_reserved_mem = true;
 #ifdef CONFIG_CMA
 		cma = dev_get_cma_area(&pdev->dev);
+		base_addr = cma_get_base(cma);
 		if (cma) {
-			pr_info("reserved memory base:%llx, size:%lx\n",
-				cma_get_base(cma), cma_get_size(cma));
+			pr_info("reserved memory base:%pa, size:%lx\n",
+				&base_addr, cma_get_size(cma));
 			if (fb_memsize[0] > 0) {
 				osd_page[0] = dma_alloc_from_contiguous(
 					&pdev->dev,

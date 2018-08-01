@@ -453,7 +453,7 @@ static ssize_t osd_dump_read_file(struct file *file,
 	char __iomem *buf;
 	struct seq_file *s = file->private_data;
 	int osd_id = *(int *)s;
-	ssize_t len;
+	unsigned long len;
 
 	osd_restore_screen_info(osd_id, &buf, &len);
 	if (buf && len)
