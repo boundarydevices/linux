@@ -1,7 +1,7 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 / {
-	ltk080a60a004t_mipi_cmds: ltk080a60a004t-mipi-cmds {
+	mipi_cmds_ltk080a60a004t: mipi-cmds-ltk080a60a004t {
 		mipi-cmds-init = /bits/ 8 <
 			GEN_S1P(0x83,0x00)	/* Page 0 */
 			GEN_S1P(0x84,0x00)
