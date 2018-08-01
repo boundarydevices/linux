@@ -1075,10 +1075,7 @@ void apb_write_reg(unsigned int addr, unsigned int data)
 
 unsigned long apb_read_reg_high(unsigned long addr)
 {
-	unsigned long tmp;
-
-	tmp = 0;
-	return (tmp >> 32) & 0xffffffff;
+	return 0;
 }
 
 unsigned long apb_read_reg(unsigned long addr)

@@ -1384,6 +1384,7 @@ static long picdec_ioctl(struct file *filp, unsigned int cmd,
 	context = (struct ge2d_context_s *) filp->private_data;
 	argp = (void __user *)args;
 	switch (cmd) {
+#ifdef CONFIG_COMPAT
 	case PICDEC_IOC_FRAME_RENDER32:
 		aml_pr_info(1, "PICDEC_IOC_FRAME_RENDER32\n");
 		{
@@ -1404,6 +1405,7 @@ static long picdec_ioctl(struct file *filp, unsigned int cmd,
 			render_frame_block();
 		}
 		break;
+#endif
 	case PICDEC_IOC_FRAME_RENDER:
 		aml_pr_info(1, "PICDEC_IOC_FRAME_RENDER\n");
 		if (copy_from_user

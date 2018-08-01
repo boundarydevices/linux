@@ -85,9 +85,11 @@ static unsigned int vsync_irq_count;
 static bool osd_rdma_done;
 static int osd_rdma_handle = -1;
 static struct rdma_table_item *rdma_temp_tbl;
+void *memcpy(void *dest, const void *src, size_t len);
 
 static int osd_rdma_init(void);
 
+#ifdef CONFIG_ARM64
 static inline void osd_rdma_mem_cpy(struct rdma_table_item *dst,
 					struct rdma_table_item *src, u32 len)
 {
@@ -106,6 +108,13 @@ static inline void osd_rdma_mem_cpy(struct rdma_table_item *dst,
 		: "r" (src), "r" (dst), "r" (len)
 		: "x5", "x6");
 }
+#else
+inline void osd_rdma_mem_cpy(struct rdma_table_item *dst,
+			struct rdma_table_item *src, u32 len)
+{
+	memcpy(dst, src, len);
+}
+#endif
 
 static inline void reset_rdma_table(void)
 {
@@ -132,7 +141,7 @@ static inline void reset_rdma_table(void)
 
 		if ((item_count * (sizeof(struct rdma_table_item))) >
 			RDMA_TEMP_TBL_SIZE) {
-			pr_info("more memory: allocate(%x), expect(%lx)\n",
+			pr_info("more memory: allocate(%x), expect(%zu)\n",
 					(unsigned int) RDMA_TEMP_TBL_SIZE,
 					sizeof(struct rdma_table_item) *
 					item_count);

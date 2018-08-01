@@ -40,7 +40,9 @@ void tuner_set_params(struct dvb_frontend *fe)
 int tuner_get_ch_power(struct dvb_frontend *fe)
 {
 	int strength = 0;
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	s16 strengtha = 0;
+#endif
 
 	if (fe != NULL) {
 #if 0
@@ -49,12 +51,14 @@ int tuner_get_ch_power(struct dvb_frontend *fe)
 		else
 			PR_INFO("no tuner get_strength\n");
 #endif
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 		if (fe->ops.tuner_ops.get_strength) {
 			fe->ops.tuner_ops.get_strength(fe, &strengtha);
 			strength = (int)strengtha;
 		} else {
 			PR_INFO("no tuner get_strength\n");
 		}
+#endif
 	}
 
 
@@ -65,12 +69,14 @@ int tuner_get_ch_power2(void)
 {
 
 	int strength = 0;
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	s16 strengtha = 0;
+#endif
 	struct dvb_frontend *fe;
 
 	fe = aml_get_fe();
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	if (fe != NULL) {
-
 		if (fe->ops.tuner_ops.get_strength) {
 			fe->ops.tuner_ops.get_strength(fe, &strengtha);
 			//strength = strengtha - 256;
@@ -79,7 +85,7 @@ int tuner_get_ch_power2(void)
 			PR_INFO("no tuner get_strength\n");
 		}
 	}
-
+#endif
 
 	return strength;
 }
@@ -88,10 +94,13 @@ u16 tuner_get_ch_power3(void)
 {
 
 	u16 strength = 0;
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	s16 strengtha = 0;
+#endif
 	struct dvb_frontend *fe;
 
 	fe = aml_get_fe();
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	if (fe != NULL) {
 
 		if (fe->ops.tuner_ops.get_strength) {
@@ -106,7 +115,7 @@ u16 tuner_get_ch_power3(void)
 			PR_INFO("no tuner get_strength\n");
 		}
 	}
-
+#endif
 
 	return strength;
 }

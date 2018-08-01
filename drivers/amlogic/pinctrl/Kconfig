@@ -19,32 +19,32 @@ config AMLOGIC_PINCTRL_MESON8B
 
 config AMLOGIC_PINCTRL_MESON_GXL
 	bool "Meson gxl SoC pinctrl driver"
-	depends on ARM64
+	depends on ARM64 || ARM64_A32
 	select AMLOGIC_PINCTRL_MESON8_PMX
 	default n
 
 config AMLOGIC_PINCTRL_MESON_AXG
 	bool "Meson axg SoC pinctrl driver"
-	depends on ARM64
+	depends on ARM64 || ARM64_A32
 	select AMLOGIC_PINCTRL_MESON_AXG_PMX
 	default n
 
 config AMLOGIC_PINCTRL_MESON_TXLX
 	bool "Meson txlx SoC pinctrl driver"
-	depends on ARM64
+	depends on ARM64 || ARM64_A32
 	select AMLOGIC_PINCTRL_MESON8_PMX
 	default n
 
 config AMLOGIC_PINCTRL_MESON_G12A
 	bool "Meson g12a SoC pinctrl driver"
-	depends on ARM64
+	depends on ARM64 || ARM64_A32
 	select AMLOGIC_PINCTRL_MESON_AXG_PMX
 	select AMLOGIC_PINCONF_MESON_G12A
 	default n
 
 config AMLOGIC_PINCTRL_MESON_TXL
 	bool "Meson txl SoC pinctrl driver"
-	depends on ARM64
+	depends on ARM64 || ARM64_A32
 	select AMLOGIC_PINCTRL_MESON8_PMX
 	default n
 

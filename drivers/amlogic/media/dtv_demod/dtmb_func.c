@@ -67,7 +67,7 @@ void dtmb_clk_set(unsigned int adc_clk)
 	unsigned int fe_modify = 0x4d6a;
 
 	if (adc_clk)
-		fe_modify = 3963617280 / (adc_clk << 3);
+		fe_modify = 3963617280UL / (adc_clk << 3);
 
 	dtmb_set_fe_config_modify(fe_modify);
 

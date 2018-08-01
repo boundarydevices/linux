@@ -83,6 +83,7 @@ struct source_input_s {
 	int rotate;
 };
 
+#ifdef CONFIG_COMPAT
 struct compat_source_input_s {
 	compat_uptr_t input;
 	int frame_width;
@@ -91,14 +92,16 @@ struct compat_source_input_s {
 	int rotate;
 };
 
+#define PICDEC_IOC_FRAME_RENDER32 _IOW(PICDEC_IOC_MAGIC, 0x00, \
+struct compat_source_input_s)
+
+#endif
+
 #define PICDEC_IOC_MAGIC  'P'
 #define PICDEC_IOC_FRAME_RENDER     _IOW(PICDEC_IOC_MAGIC, 0x00, \
 struct source_input_s)
 #define PICDEC_IOC_FRAME_POST     _IOW(PICDEC_IOC_MAGIC, 0X01, unsigned int)
 #define PICDEC_IOC_CONFIG_FRAME  _IOW(PICDEC_IOC_MAGIC, 0X02, unsigned int)
-
-#define PICDEC_IOC_FRAME_RENDER32 _IOW(PICDEC_IOC_MAGIC, 0x00, \
-struct compat_source_input_s)
 
 void stop_picdec_task(void);
 int picdec_buffer_init(void);

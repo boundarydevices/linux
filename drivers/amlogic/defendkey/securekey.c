@@ -22,7 +22,7 @@
 #include "securekey.h"
 #include <linux/arm-smccc.h>
 
-#ifdef CONFIG_ARM64
+#if (defined CONFIG_ARM64) || (defined CONFIG_ARM64_A32)
 
 int aml_is_secure_set(void)
 {

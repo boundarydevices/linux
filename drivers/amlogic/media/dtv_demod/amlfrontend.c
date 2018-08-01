@@ -3354,7 +3354,9 @@ static int delsys_confirm(struct dvb_frontend *fe)
 	case SYS_DAB:
 	case SYS_TURBO:
 	case SYS_UNDEFINED:
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	case SYS_ANALOG:
+#endif
 		mode = AM_FE_UNKNOWN_N;
 		PR_INFO("delsys not support!%d=\n", cdelsys);
 		return 0;
@@ -3486,7 +3488,9 @@ static int delsys_set(struct dvb_frontend *fe, unsigned int delsys)
 	case SYS_DAB:
 	case SYS_TURBO:
 	case SYS_UNDEFINED:
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	case SYS_ANALOG:
+#endif
 		mode = AM_FE_UNKNOWN_N;
 		if (get_dtvpll_init_flag()) {
 			PR_INFO("delsys not support!%d=\n", cdelsys);
@@ -4104,8 +4108,12 @@ static struct dvb_frontend_ops aml_dtvdm_txl_ops = {
 };
 
 static struct dvb_frontend_ops aml_dtvdm_txlx_ops = {
+#ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	.delsys = { SYS_ATSC, SYS_DVBC_ANNEX_B,  SYS_DVBC_ANNEX_A, SYS_DVBT,
 		SYS_ANALOG},
+#else
+	.delsys = { SYS_ATSC, SYS_DVBC_ANNEX_B,  SYS_DVBC_ANNEX_A, SYS_DVBT},
+#endif
 	.info = {
 		/*in aml_fe, it is 'amlogic dvb frontend' */
 		.name = "amlogic dtv demod txlx",

@@ -332,7 +332,7 @@ static void bl_gpio_set(int index, int value)
 
 static inline unsigned int bl_do_div(unsigned long num, unsigned int den)
 {
-	unsigned long ret = num;
+	unsigned long long ret = num;
 
 	do_div(ret, den);
 	return (unsigned int)ret;

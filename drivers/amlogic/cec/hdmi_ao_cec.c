@@ -14,8 +14,6 @@
  * See the GNU General Public License for more details.
  */
 
-#include <asm/irq.h>
-
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/irq.h>

@@ -453,8 +453,10 @@ unsigned long find_back_trace(void)
 	frame.fp = (unsigned long)__builtin_frame_address(0);
 	frame.sp = current_stack_pointer;
 	frame.pc = _RET_IP_;
+#ifdef CONFIG_ARM64
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
 	frame.graph = current->curr_ret_stack;
+#endif
 #endif
 	while (1) {
 	#ifdef CONFIG_ARM64

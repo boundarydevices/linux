@@ -15,7 +15,7 @@
  *
  */
 
-#ifdef CONFIG_ARM64
+#if (defined CONFIG_ARM64) || (defined CONFIG_ARM64_A32)
 #define AML_D_P_UPGRADE_CHECK   (0x80)
 #define AML_D_P_IMG_DECRYPT     (0x40)
 #define AML_DATA_PROCESS		(0x820000FF)

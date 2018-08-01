@@ -34,6 +34,7 @@
 #include <asm/suspend.h>
 #include <linux/of_address.h>
 #include <linux/input.h>
+#include <linux/cpuidle.h>
 #include <asm/cpuidle.h>
 #include <uapi/linux/psci.h>
 #include <linux/arm-smccc.h>
