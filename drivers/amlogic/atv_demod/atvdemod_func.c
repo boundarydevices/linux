@@ -1895,6 +1895,7 @@ int atvauddemod_init(void)
 	} else {
 		/* for non support adec */
 		aud_std = 0;
+		aud_mode = AUDIO_OUTMODE_MONO;
 	}
 
 	return 0;
