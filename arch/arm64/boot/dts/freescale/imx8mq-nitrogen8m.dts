@@ -191,7 +191,7 @@
 		fsl,pins = <
 #define GPIRQ_GT911 		<&gpio3 12 IRQ_TYPE_LEVEL_HIGH>
 #define GP_GT911_IRQ 		<&gpio3 12 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
+			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0xd6
 			/* driver writes levels, instead of active/inactive */
 #define GP_GT911_RESET		<&gpio3 13 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
@@ -886,11 +886,11 @@
 	pinctrl-0 = <&pinctrl_i2c4>;
 	status = "okay";
 
-	touchscreen@14 {
+	touchscreen@5d {
 		compatible = "goodix,gt9271";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c4_gt911>;
-		reg = <0x14>;
+		reg = <0x5d>;
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
