@@ -74,6 +74,7 @@ MODULE_PARM_DESC(brightness_bypass, "bl_brightness_bypass");
 static unsigned char bl_pwm_bypass; /* debug flag */
 static unsigned char bl_pwm_duty_free; /* debug flag */
 static unsigned char bl_on_request; /* for lcd power sequence */
+static unsigned char bl_step_on_flag;
 static unsigned int bl_on_level;
 
 static DEFINE_MUTEX(bl_power_mutex);
@@ -2071,10 +2072,10 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 		ret = aml_bl_config_load_from_dts(bconf, pdev);
 #endif
 	}
-	if (bl_level) {
+	if (bl_level)
 		bl_level_uboot = bl_level;
-		bconf->level_default = bl_level;
-	}
+	bl_on_level = (bl_level_uboot > 0) ? bl_level_uboot : BL_LEVEL_DEFAULT;
+
 	aml_bl_config_print(bconf);
 
 #ifdef CONFIG_AMLOGIC_LOCAL_DIMMING
@@ -2101,6 +2102,23 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 }
 
 /* lcd notify */
+static void aml_bl_step_on(int brightness)
+{
+	mutex_lock(&bl_level_mutex);
+	BLPR("bl_step_on level: %d\n", brightness);
+
+	if (brightness == 0) {
+		if (bl_drv->state & BL_STATE_BL_ON)
+			bl_power_off();
+	} else {
+		aml_bl_set_level(brightness);
+		if ((bl_drv->state & BL_STATE_BL_ON) == 0)
+			bl_power_on();
+	}
+	msleep(120);
+	mutex_unlock(&bl_level_mutex);
+}
+
 static void aml_bl_on_function(void)
 {
 	/* lcd power on backlight flag */
@@ -2110,8 +2128,14 @@ static void aml_bl_on_function(void)
 	if (brightness_bypass) {
 		if ((bl_drv->state & BL_STATE_BL_ON) == 0)
 			bl_power_on();
-	} else
+	} else {
+		if (bl_step_on_flag) {
+			aml_bl_step_on(bl_drv->bconf->level_default);
+			BLPR("bl_on level: %d\n",
+				bl_drv->bldev->props.brightness);
+		}
 		aml_bl_update_status(bl_drv->bldev);
+	}
 }
 
 static void aml_bl_delayd_on(struct work_struct *work)
@@ -2336,6 +2360,8 @@ static ssize_t bl_status_read(struct class *class,
 		"state:              0x%x\n"
 		"level:              %d\n"
 		"level_uboot:        %d\n"
+		"level_default:      %d\n"
+		"step_on_flag        %d\n"
 		"brightness_bypass:  %d\n\n"
 		"level_max:          %d\n"
 		"level_min:          %d\n"
@@ -2349,7 +2375,8 @@ static ssize_t bl_status_read(struct class *class,
 		"power_off_delay:    %d\n\n",
 		bl_key_valid, bl_config_load,
 		bl_drv->index, bconf->name, bl_drv->state,
-		bl_drv->level,  bl_level_uboot, brightness_bypass,
+		bl_drv->level,  bl_level_uboot, bconf->level_default,
+		bl_step_on_flag, brightness_bypass,
 		bconf->level_max, bconf->level_min,
 		bconf->level_mid, bconf->level_mid_mapping,
 		bl_method_type_to_str(bconf->method),
@@ -2844,6 +2871,30 @@ static ssize_t bl_debug_power_store(struct class *class,
 	return count;
 }
 
+static ssize_t bl_debug_step_on_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "backlight step_on: %d\n", bl_step_on_flag);
+}
+
+static ssize_t bl_debug_step_on_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int ret;
+	unsigned int temp = 0;
+
+	ret = kstrtouint(buf, 10, &temp);
+	if (ret != 0) {
+		BLERR("invalid data\n");
+		return -EINVAL;
+	}
+
+	bl_step_on_flag = (unsigned char)temp;
+	BLPR("step_on: %u\n", bl_step_on_flag);
+
+	return count;
+}
+
 static ssize_t bl_debug_delay_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -2916,6 +2967,7 @@ static struct class_attribute bl_debug_class_attrs[] = {
 	__ATTR(status, 0444, bl_status_read, NULL),
 	__ATTR(pwm, 0644, bl_debug_pwm_show, bl_debug_pwm_store),
 	__ATTR(power, 0644, bl_debug_power_show, bl_debug_power_store),
+	__ATTR(step_on, 0644, bl_debug_step_on_show, bl_debug_step_on_store),
 	__ATTR(delay, 0644, bl_debug_delay_show, bl_debug_delay_store),
 	__ATTR(key_valid,   0444, bl_debug_key_valid_show, NULL),
 	__ATTR(config_load, 0444, bl_debug_config_load_show, NULL),
@@ -3084,13 +3136,10 @@ static void aml_bl_init_status_update(void)
 			BL_STATE_BL_POWER_ON | BL_STATE_BL_ON);
 	bl_on_request = 1;
 
-	if (brightness_bypass) {
-		aml_bl_set_level(bl_level_uboot);
-		bl_on_level = bl_level_uboot;
-	} else {
+	if (brightness_bypass)
+		aml_bl_set_level(bl_on_level);
+	else
 		aml_bl_update_status(bl_drv->bldev);
-		bl_on_level = bl_drv->bconf->level_default;
-	}
 }
 
 static int aml_bl_probe(struct platform_device *pdev)
@@ -3113,6 +3162,7 @@ static int aml_bl_probe(struct platform_device *pdev)
 	brightness_bypass = 0;
 	bl_pwm_bypass = 0;
 	bl_pwm_duty_free = 0;
+	bl_step_on_flag = 0;
 
 	bl_drv = kzalloc(sizeof(struct aml_bl_drv_s), GFP_KERNEL);
 	if (!bl_drv) {
@@ -3141,8 +3191,7 @@ static int aml_bl_probe(struct platform_device *pdev)
 	props.power = FB_BLANK_UNBLANK; /* full on */
 	props.max_brightness = (bconf->level_max > 0 ?
 			bconf->level_max : BL_LEVEL_MAX);
-	props.brightness = (bconf->level_default > 0 ?
-			bconf->level_default : BL_LEVEL_DEFAULT);
+	props.brightness = bl_on_level;
 
 	bldev = backlight_device_register(AML_BL_NAME, &pdev->dev,
 					bl_drv, &aml_bl_ops, &props);
