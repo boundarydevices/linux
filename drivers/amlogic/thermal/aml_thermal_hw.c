@@ -27,6 +27,7 @@
 #include <linux/amlogic/cpucore_cooling.h>
 #include <linux/amlogic/gpucore_cooling.h>
 #include <linux/amlogic/gpu_cooling.h>
+#include <linux/amlogic/aml_thermal_hw.h>
 #include <linux/cpu.h>
 
 #define NOT_WRITE_EFUSE		0x0

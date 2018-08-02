@@ -27,7 +27,7 @@ config AMLOGIC_M8B_TEMP_SENSOR
 config AMLOGIC_GX_TEMP_SENSOR
 	bool "Amlgoic temperature sensor Support for GX chips"
 	depends on AMLOGIC_TEMP_SENSOR
-	depends on ARM64
+	depends on ARM64 || ARM64_A32
 	default y
 	help
 		this config enables thermal driver for GX/GXB/GXL/GXM chips.

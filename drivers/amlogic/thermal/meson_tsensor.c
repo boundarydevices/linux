@@ -107,20 +107,9 @@ enum soc_type {
 
 /**
  * struct meson_tsensor_platform_data
- * @gain: gain of amplifier in the positive-TC generator block
- *	0 < gain <= 15
- * @reference_voltage: reference voltage of amplifier
- *	in the positive-TC generator block
- *	0 < reference_voltage <= 31
- * @noise_cancel_mode: noise cancellation mode
- *	000, 100, 101, 110 and 111 can be different modes
- * @type: determines the type of SOC
- * @efuse_value: platform defined fuse value
- * @min_efuse_value: minimum valid trimming data
- * @max_efuse_value: maximum valid trimming data
- * @default_temp_offset: default temperature offset in case of no trimming
+ * @cal_a, b, c, d: cali data
  * @cal_type: calibration type for temperature
- *
+ * @reboot_temp: high temprature reboot soc
  * This structure is required for configuration of exynos_tmu driver.
  */
 struct meson_tsensor_platform_data {
@@ -136,27 +125,6 @@ struct meson_tsensor_platform_data {
 /**
  * struct meson_tsensor_data :
  * A structure to hold the private data of the tsensor driver.
- * @id: identifier of the one instance of the tsensor controller.
- * @pdata: pointer to the tmu platform/configuration data
- * @base: base address of the single instance of the tsensor controller.
- * @base_second: base address of the common registers of the tsensor controller.
- * @irq: irq number of the tsensor controller.
- * @soc: id of the SOC type.
- * @irq_work: pointer to the irq work structure.
- * @lock: lock to implement synchronization.
- * @clk: pointer to the clock structure.
- * @clk_sec: pointer to the clock structure for accessing the base_second.
- * @sclk: pointer to the clock structure for accessing the tmu special clk.
- * @temp_error1: fused value of the first point trim.
- * @temp_error2: fused value of the second point trim.
- * @regulator: pointer to the tsensor regulator structure.
- * @reg_conf: pointer to structure to register with core thermal.
- * @ntrip: number of supported trip points.
- * @tmu_initialize: SoC specific tsensor initialization method
- * @tmu_control: SoC specific tsensor control method
- * @tmu_read: SoC specific tsensor temperature read method
- * @tmu_set_emulation: SoC specific tsensor emulation setting method
- * @tmu_clear_irqs: SoC specific tsensor interrupts clearing method
  */
 struct meson_tsensor_data {
 	int id;
@@ -215,7 +183,7 @@ static void meson_report_trigger(struct meson_tsensor_data *p)
 static u32 temp_to_code(struct meson_tsensor_data *data, int temp, bool trend)
 {
 	struct meson_tsensor_platform_data *pdata = data->pdata;
-	long long int sensor_code;
+	int64_t div_tmp1, div_tmp2;
 	u32 uefuse, reg_code;
 	int cal_a, cal_b, cal_c, cal_d, cal_type;
 
@@ -233,20 +201,23 @@ static u32 temp_to_code(struct meson_tsensor_data *data, int temp, bool trend)
 	cal_d = pdata->cal_d;
 	switch (cal_type) {
 	case 0x1:
+		div_tmp2 = (1 << 16) * (temp * 10 + cal_c);
+		div_tmp2 = div_s64(div_tmp2, cal_d);
 		if (uefuse & 0x8000) {
-			sensor_code = (1 << 16) * (temp * 10 + cal_c) / cal_d
-				+ (1 << 16) * (uefuse & 0x7fff) / (1 << 16);
+			div_tmp2 = div_tmp2 + (uefuse & 0x7fff);
 		} else {
-			sensor_code = (1 << 16) * (temp * 10 + cal_c) / cal_d
-				- (1 << 16) * (uefuse & 0x7fff) / (1 << 16);
+			div_tmp2 = div_tmp2 - (uefuse & 0x7fff);
 		}
-		sensor_code = (sensor_code * 100 /
-				(cal_b - cal_a * sensor_code / (1 << 16)));
+		div_tmp1 = cal_a * div_tmp2;
+		div_tmp1 = div_s64(div_tmp1, 1 << 16);
+		div_tmp1 = cal_b - div_tmp1;
+		div_tmp2 = div_tmp2 * 100;
+		div_tmp2 = div_s64(div_tmp2, div_tmp1);
 		if (trend)
-			reg_code = ((sensor_code >> 0x4) & R1P1_TS_TEMP_MASK)
+			reg_code = ((div_tmp2 >> 0x4) & R1P1_TS_TEMP_MASK)
 				+ TEMP_CAL;
 		else
-			reg_code = ((sensor_code >> 0x4) & R1P1_TS_TEMP_MASK);
+			reg_code = ((div_tmp2 >> 0x4) & R1P1_TS_TEMP_MASK);
 		break;
 	default:
 		pr_info("Cal_type not supported\n");
@@ -263,14 +234,13 @@ static int code_to_temp(struct meson_tsensor_data *data, int temp_code)
 {
 	struct meson_tsensor_platform_data *pdata = data->pdata;
 	int temp, cal_type, cal_a, cal_b, cal_c, cal_d;
-	long long int sensor_temp;
+	int64_t div_tmp1, div_tmp2;
 	u32 uefuse;
 
 	uefuse = data->trim_info;
 	uefuse = uefuse & 0xffff;
-	sensor_temp = temp_code;
-	/* T = 727.8*(u_real+u_efuse/(1<<16)) - 274.7 */
-	/* u_readl = (5.05*YOUT)/((1<<16)+ 4.05*YOUT) */
+	temp = temp_code;
+
 	cal_type = pdata->cal_type;
 	cal_a = pdata->cal_a;
 	cal_b = pdata->cal_b;
@@ -278,16 +248,26 @@ static int code_to_temp(struct meson_tsensor_data *data, int temp_code)
 	cal_d = pdata->cal_d;
 	switch (cal_type) {
 	case 0x1:
-		sensor_temp = (sensor_temp * cal_b) / 100 * (1 << 16)
-			/ (1 * (1 << 16) + cal_a * sensor_temp / 100);
+		/* T = 727.8*(u_real+u_efuse/(1<<16)) - 274.7 */
+		/* u_readl = (5.05*YOUT)/((1<<16)+ 4.05*YOUT) */
+		/*u_readl = (T + 274.7) / 727.8 - u_efuse / (1 << 16)*/
+		/*Yout =  (u_readl / (5.05 - 4.05u_readl)) *(1 << 16)*/
+		div_tmp1 = cal_a * temp;
+		div_tmp1 = div_s64(div_tmp1, 100);
+		div_tmp2 = temp * cal_b;
+		div_tmp2 = div_s64(div_tmp2, 100);
+		div_tmp2 = div_tmp2 * (1 << 16);
+		div_tmp2 = div_s64(div_tmp2, (1<<16) + div_tmp1);
 		if (uefuse & 0x8000) {
-			sensor_temp = 1000 * ((sensor_temp - (uefuse
-				& (0x7fff))) * cal_d / (1 << 16) - cal_c) / 10;
+			div_tmp1 = (div_tmp2 - (uefuse & (0x7fff))) * cal_d;
+			div_tmp1 = div_s64(div_tmp1, 1 << 16);
+			temp = (div_tmp1 - cal_c) * 100;
+
 		} else {
-			sensor_temp = 1000 * ((sensor_temp + uefuse)
-				* cal_d / (1 << 16) - cal_c) / 10;
+			div_tmp1 = (div_tmp2 + uefuse) * cal_d;
+			div_tmp1 = div_s64(div_tmp1, 1 << 16);
+			temp = (div_tmp1 - cal_c) * 100;
 		}
-		temp = sensor_temp;
 		break;
 	default:
 		pr_info("Cal_type not supported\n");
@@ -456,7 +436,7 @@ static int r1p1_tsensor_read(struct meson_tsensor_data *data)
 	for (j = 0; j < R1P1_TS_VALUE_CONT; j++) {
 		tvalue = readl(data->base_c + R1P1_TS_STAT0);
 		tvalue = tvalue & 0xffff;
-		if ((tvalue >= 0x18a9) && (tvalue <= 0x32a6)) {
+		if ((tvalue >= 0x1500) && (tvalue <= 0x3500)) {
 			cnt++;
 			value_all += (tvalue & 0xffff);
 		}

@@ -26,6 +26,7 @@
 #include <linux/amlogic/cpucore_cooling.h>
 #include <linux/amlogic/gpucore_cooling.h>
 #include <linux/amlogic/gpu_cooling.h>
+#include <linux/amlogic/meson_cooldev.h>
 #include <linux/cpu.h>
 
 enum cluster_type {
