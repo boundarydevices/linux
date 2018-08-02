@@ -104,6 +104,7 @@ struct ao_cec_dev {
 	struct device_node *node;
 	unsigned int port_num;
 	unsigned int arc_port;
+	unsigned int output;
 	unsigned int hal_flag;
 	unsigned int phy_addr;
 	unsigned int port_seq;
@@ -2312,13 +2313,9 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 		} else
 			break;
 	}
-	if ((cec_dev->dev_type == DEV_TYPE_TUNER) ||
-		(cec_dev->dev_type == DEV_TYPE_PLAYBACK) ||
-		(cec_dev->dev_type == DEV_TYPE_AUDIO_SYSTEM))
-		b = cec_dev->port_num - 1;
-	else
-		b = cec_dev->port_num;
+	b = cec_dev->port_num;
 
+	CEC_ERR("%s phy_addr:%x, port num:%x\n", __func__, phy_addr, b);
 	/* init for port info */
 	for (a = 0; a < sizeof(cec_dev->port_seq) * 2; a++) {
 		/* set port physical address according port sequence */
@@ -2327,35 +2324,32 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 			if (c == 0xf) {	/* not used */
 				CEC_INFO("port %d is not used\n", a);
 				continue;
-			} else if (!c)
-				break;
+			}
 			port[e].physical_address = (c) * phy_app + phy_addr;
-		} else {
+		} else
 			/* asending order if port_seq is not set */
-			port[e].physical_address = (e + 1) * phy_app + phy_addr;
+			port[e].physical_address = (a + 1) * phy_app + phy_addr;
+		if ((e + cec_dev->output) == b) {
+			port[e].physical_address = phy_addr;
+			port[e].port_id = 0;
+			port[e].type = HDMI_OUTPUT;
+		} else {
+			port[e].type = HDMI_INPUT;
+			port[e].port_id = a + 1;
 		}
-		port[e].type = HDMI_INPUT;
-		port[e].port_id = a + 1;
 		port[e].cec_supported = 1;
 		/* set ARC feature according mask */
-		if (cec_dev->arc_port & (1 << a))
+		if (cec_dev->arc_port & (1 << e))
 			port[e].arc_supported = 1;
 		else
 			port[e].arc_supported = 0;
+		CEC_ERR("%s port:%d arc:%d phy:%x,type:%d\n", __func__,
+				port[e].port_id, port[e].arc_supported,
+				port[e].physical_address,
+				port[e].type);
 		e++;
 		if (e >= b)
 			break;
-	}
-
-	if ((cec_dev->dev_type == DEV_TYPE_TUNER) ||
-		(cec_dev->dev_type == DEV_TYPE_PLAYBACK) ||
-		(cec_dev->dev_type == DEV_TYPE_AUDIO_SYSTEM)) {
-		/* last port is for tx in mixed tx/rx */
-		port[e].type = HDMI_OUTPUT;
-		port[e].port_id = 0;		/* 0 for tx port id */
-		port[e].cec_supported = 1;
-		port[e].arc_supported = 0;
-		port[e].physical_address = phy_addr;
 	}
 }
 
@@ -2527,20 +2521,15 @@ static long hdmitx_cec_ioctl(struct file *f,
 				mutex_unlock(&cec_dev->cec_ioctl_mutex);
 				return -EINVAL;
 			}
-			if (!a && cec_dev->dev_type == DEV_TYPE_TUNER)
-				tmp = tx_hpd;
-			else {	/* mixed for rx */
+			/* mixed for rx & tx */
+			if (a != 0) {
 				tmp = hdmirx_get_connect_info();
-				if (a >= 1) {
-					if (tmp & (1 << (a - 1)))
-						tmp = 1;
-					else
-						tmp = 0;
-				} else {
+				if (tmp & (1 << (a - 1)))
+					tmp = 1;
+				else
 					tmp = 0;
-					CEC_INFO("err port number %d\n", a);
-				}
-			}
+			} else
+				tmp = tx_hpd;
 		}
 		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
 			mutex_unlock(&cec_dev->cec_ioctl_mutex);
@@ -2917,7 +2906,11 @@ static int aml_cec_probe(struct platform_device *pdev)
 		CEC_ERR("not find 'arc_port_mask'\n");
 		cec_dev->arc_port = 0;
 	}
-
+	r = of_property_read_u32(node, "output", &(cec_dev->output));
+	if (r) {
+		CEC_ERR("not find 'output'\n");
+		cec_dev->output = 0;
+	}
 	vend = &cec_dev->v_data;
 	r = of_property_read_string(node, "vendor_name",
 		(const char **)&(vend->vendor_name));
