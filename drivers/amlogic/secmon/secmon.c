@@ -37,7 +37,7 @@ static long phy_out_base;
 #ifdef CONFIG_ARM64
 #define IN_SIZE	0x1000
 #else
- #define IN_SIZE	0x8000
+ #define IN_SIZE	0x1000
 #endif
  #define OUT_SIZE 0x1000
 static DEFINE_MUTEX(sharemem_mutex);
@@ -87,12 +87,22 @@ static int secmon_probe(struct platform_device *pdev)
 	}
 	pr_info("get page:%p, %lx\n", page, page_to_pfn(page));
 
-	sharemem_in_base = ioremap_cache(phy_in_base, IN_SIZE);
+	if (pfn_valid(__phys_to_pfn(phy_in_base)))
+		sharemem_in_base = (void __iomem *)__phys_to_virt(phy_in_base);
+	else
+		sharemem_in_base = ioremap_cache(phy_in_base, IN_SIZE);
+
 	if (!sharemem_in_base) {
 		pr_info("secmon share mem in buffer remap fail!\n");
 		return -ENOMEM;
 	}
-	sharemem_out_base = ioremap_cache(phy_out_base, OUT_SIZE);
+
+	if (pfn_valid(__phys_to_pfn(phy_out_base)))
+		sharemem_out_base = (void __iomem *)
+				__phys_to_virt(phy_out_base);
+	else
+		sharemem_out_base = ioremap_cache(phy_out_base, OUT_SIZE);
+
 	if (!sharemem_out_base) {
 		pr_info("secmon share mem out buffer remap fail!\n");
 		return -ENOMEM;

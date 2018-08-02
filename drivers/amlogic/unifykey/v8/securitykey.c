@@ -370,12 +370,26 @@ static int storage_probe(struct platform_device *pdev)
 		storage_out_base = NULL;
 		storage_block_base = NULL;
 	}	else {
-		storage_in_base = ioremap_cache(phy_storage_in_base,
-						storage_block_size);
-		storage_out_base = ioremap_cache(phy_storage_out_base,
-						storage_block_size);
-		storage_block_base = ioremap_cache(phy_storage_block_base,
-						storage_block_size);
+		if (pfn_valid(__phys_to_pfn(phy_storage_in_base)))
+			storage_in_base = (void __iomem *)
+				__phys_to_virt(phy_storage_in_base);
+		else
+			storage_in_base = ioremap_cache(
+				phy_storage_in_base, storage_block_size);
+
+		if (pfn_valid(__phys_to_pfn(phy_storage_out_base)))
+			storage_out_base = (void __iomem *)
+				__phys_to_virt(phy_storage_out_base);
+		else
+			storage_out_base = ioremap_cache(
+				phy_storage_out_base, storage_block_size);
+
+		if (pfn_valid(__phys_to_pfn(phy_storage_block_base)))
+			storage_block_base = (void __iomem *)
+				__phys_to_virt(phy_storage_block_base);
+		else
+			storage_block_base = ioremap_cache(
+				phy_storage_block_base, storage_block_size);
 	}
 
 	pr_info("storage in base: 0x%lx\n", (long)storage_in_base);
