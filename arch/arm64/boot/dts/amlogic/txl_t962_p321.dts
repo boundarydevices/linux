@@ -542,6 +542,23 @@
 		};
 	};
 
+	spifc: spifc@c1108c80 {
+		status = "disabled";
+		compatible = "amlogic,aml-spi-nor";
+		reg = <0x0 0xc1108c80 0x0 0x80>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&spifc_all_pins>;
+		clocks = <&clkc CLKID_CLK81>;
+		clock-names = "core";
+		spi-nor@0 {
+			compatible = "jedec,spi-nor";
+			spifc-frequency = <40000000>;
+			read-capability = <2>;/* dual read 1_1_2 */
+			spifc-io-width = <2>;/* txl only support 2 io */
+			cs_gpios = <&gpio BOOT_11 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
 	unifykey {
 		compatible = "amlogic, unifykey";
 		status = "okay";

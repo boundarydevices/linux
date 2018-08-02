@@ -13677,6 +13677,13 @@ F:	drivers/amlogic/mtd/
 M:	Yonghui Yu <yonghui.yu@amlogic.com>
 F:	drivers/amlogic/mtd/boot.c
 
+AMLOGIC SPIFC DRIVER
+M:	Yi Zeng <yi.zeng@amlogic.com>
+F:	driver/amlogic/spi-nor/
+F:	driver/amlogic/spi-nor/aml-spifc.c
+F:	driver/amlogic/spi-nor/Kconfig
+F:	driver/amlogic/spi-nor/Makefile
+
 AMLOGIC GPU DEVICETREE
 M:	Jiyu Yang <jiyu.yang@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesongxtvbb-gpu-t83x.dtsi

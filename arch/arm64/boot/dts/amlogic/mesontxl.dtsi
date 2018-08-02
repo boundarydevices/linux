@@ -1320,6 +1320,43 @@
 		};
 	};
 
+	spifc_cs_pin:spifc_cs_pin {
+		mux {
+			groups = "nor_cs";
+			function = "nor";
+			bias-pull-up;
+		};
+	};
+
+	spifc_pulldown: spifc_pulldown {
+		mux {
+			groups = "nor_d",
+				"nor_q",
+				"nor_c";
+			function = "nor";
+			bias-pull-down;
+		};
+	};
+
+	spifc_pullup: spifc_pullup {
+		mux {
+			groups = "nor_cs";
+			function = "nor";
+			bias-pull-up;
+		};
+	};
+
+	spifc_all_pins: spifc_all_pins {
+		mux {
+			groups =  "nor_d",
+				"nor_q",
+				"nor_c";
+			function = "nor";
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
 	sd_clk_cmd_pins:sd_clk_cmd_pins{
 		mux {
 			groups = "sdcard_cmd",

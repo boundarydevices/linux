@@ -125,3 +125,5 @@ obj-$(CONFIG_AMLOGIC_ATV_DEMOD) += atv_demod/
 obj-$(CONFIG_AMLOGIC_DEBUG) += debug/
 
 obj-$(CONFIG_AMLOGIC_DEFENDKEY) += defendkey/
+
+obj-$(CONFIG_MTD_SPI_NOR) += spi-nor/

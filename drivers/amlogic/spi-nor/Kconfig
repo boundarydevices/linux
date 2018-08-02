@@ -1,0 +1,16 @@
+#
+# Amlogic SPI NOR Flash device configuration
+#
+
+menu "Meson SPI NOR Flash Support"
+
+config SPI_AML_SPIFC
+	bool "Meson SPI NOR Flash device"
+	default n
+	depends on MTD_SPI_NOR
+	help
+		Amlogic spi nor flash support config.
+		Support for spi nor flash on Amlogic Meson platforms
+		Need open in defconfig, set CONFIG_SPI_AML_SPIFC=y
+		need check
+endmenu

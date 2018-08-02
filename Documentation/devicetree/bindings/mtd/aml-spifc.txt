@@ -1,0 +1,27 @@
+Amlogic SPI Flash Controller
+
+Required properties:
+- compatible : Should be "amlogic,aml-spi-nor"
+- reg : Offset and range of the register set for the controller device, different value for different IC.
+- clocks : Handle to spi-nor flash controller clock, please refer to IC spec.
+- read-capability : read capability of this flash, please refer to flash spec. 0:normal,1:fast,2:dual read,3:quad read.
+- spifc-io-width : the io number of spifc on the board.
+- cs_gpios : we use cs pin as gpio.
+
+Example:
+spifc: spifc@c1108c80 {
+	status = "disabled";
+	compatible = "amlogic,aml-spi-nor";
+	reg = <0x0 0xc1108c80 0x0 0x80>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&spifc_all_pins>;
+	clocks = <&clkc CLKID_CLK81>;
+	clock-names = "core";
+	spi-nor@0 {
+		compatible = "jedec,spi-nor";
+		spifc-frequency = <40000000>;
+		read-capability = <2>;
+		spifc-io-width = <2>;
+		cs_gpios = <&gpio BOOT_11 GPIO_ACTIVE_HIGH>;
+	};
+};
