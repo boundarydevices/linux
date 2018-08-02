@@ -1175,20 +1175,15 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
 	struct class *aml_store_class = NULL;
 	struct gpt_header *gpt_h = NULL;
 	unsigned char *buffer = NULL;
-	unsigned int pgcnt;
-	struct page *page = NULL;
 
 	pr_info("Enter %s\n", __func__);
 
 	if (is_card_emmc(card) == 0) /* not emmc, nothing to do */
 		return 0;
 
-	pgcnt = PAGE_ALIGN(512) >> PAGE_SHIFT;
-	page = dma_alloc_from_contiguous(NULL, pgcnt, get_order(512));
-
-	if (!page)
+	buffer = kmalloc(512, GFP_KERNEL);
+	if (!buffer)
 		return -ENOMEM;
-	buffer = page_address(page);
 
 	mmc_claim_host(card->host);
 
@@ -1196,18 +1191,19 @@ int aml_emmc_partition_ops(struct mmc_card *card, struct gendisk *disk)
 	ret = mmc_read_internal(card, 1, 1, buffer);
 	if (ret) {
 		pr_err("%s: save dtb error", __func__);
+		kfree(buffer);
 		goto out;
 	}
 
 	gpt_h = (struct gpt_header *) buffer;
 
 	if (le64_to_cpu(gpt_h->signature) == GPT_HEADER_SIGNATURE) {
-		dma_release_from_contiguous(NULL, page, pgcnt);
+		kfree(buffer);
 		mmc_release_host(card->host);
 		return 0;
 	}
 
-	dma_release_from_contiguous(NULL, page, pgcnt);
+	kfree(buffer);
 
 	store_device = host->storage_flag;
 

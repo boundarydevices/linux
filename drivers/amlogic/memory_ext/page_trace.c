@@ -467,7 +467,7 @@ unsigned long find_back_trace(void)
 		ret = -1;
 	#endif
 		if (ret < 0) {
-			pr_err("%s, can't find back trace\n", __func__);
+			//pr_err("%s, can't find back trace\n", __func__);
 			return 0;
 		}
 		step++;
@@ -591,9 +591,9 @@ void set_page_trace(struct page *page, int order, gfp_t flag)
 #endif
 		ip = find_back_trace();
 		if (!ip) {
-			pr_err("can't find backtrace for page:%lx\n",
-				page_to_pfn(page));
-			dump_stack();
+			//pr_err("can't find backtrace for page:%lx\n",
+			//	page_to_pfn(page));
+			//dump_stack();
 			return;
 		}
 		val = pack_ip(ip, order, flag);

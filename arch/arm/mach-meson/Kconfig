@@ -4,7 +4,7 @@ menuconfig ARCH_MESON
 	select GPIOLIB
 	select GENERIC_IRQ_CHIP
 	select ARM_GIC
-	select CACHE_L2X0
+	select CACHE_L2X0 if !ARM64_A32
 	select PINCTRL
 	select COMMON_CLK
 
@@ -23,5 +23,11 @@ config MACH_MESON8
 config MACH_MESON8B
 	bool "Amlogic Meson8b SoCs support"
 	default ARCH_MESON
+
+config ARM64_A32
+	tristate "ARMV8 Run in A32"
+	default n
+	help
+	  amlogic armv8 chip support 32bit.
 
 endif
