@@ -278,6 +278,7 @@
 		key_code = <116>;
 		key-gpios = <&gpio_ao  GPIOAO_3  GPIO_ACTIVE_HIGH>;
 		detect_mode = <0>;/*0:polling mode, 1:irq mode*/
+	};
 
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
