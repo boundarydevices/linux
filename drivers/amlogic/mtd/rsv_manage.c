@@ -969,11 +969,12 @@ int aml_nand_scan_rsv_info(struct mtd_info *mtd,
 	struct oobinfo_t *oobinfo;
 	struct free_node_t *free_node, *tmp_node = NULL;
 	unsigned char oob_buf[sizeof(struct oobinfo_t)];
-	loff_t offset;
+	uint64_t offset;
 	unsigned char *data_buf, good_addr[256] = {0};
 	int start_blk, max_scan_blk, i, k, scan_status = 0, env_status = 0;
 	int phys_erase_shift, pages_per_blk, page_num;
 	int error = 0, ret = 0;
+	uint32_t  remainder;
 
 	data_buf = aml_chip->rsv_data_buf;
 	oobinfo = (struct oobinfo_t *)oob_buf;
@@ -1008,7 +1009,8 @@ RE_RSV_INFO:
 		pr_info("blk check good but read failed: %llx, %d\n",
 			(uint64_t)offset, error);
 		offset += nandrsv_info->size;
-		if ((scan_status++ > 6) || (!(offset % mtd->erasesize))) {
+		div_u64_rem(offset, mtd->erasesize, &remainder);
+		if ((scan_status++ > 6) || (!remainder)) {
 			pr_info("ECC error, scan ONE block exit\n");
 			scan_status = 0;
 			continue;

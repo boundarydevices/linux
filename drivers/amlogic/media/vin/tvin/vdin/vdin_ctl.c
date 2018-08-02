@@ -2212,6 +2212,7 @@ void vdin_set_vframe_prop_info(struct vframe_s *vf,
 		struct vdin_dev_s *devp)
 {
 	unsigned int offset = devp->addr_offset;
+	u64 divid;
 	struct vframe_bbar_s bbar = {0};
 #ifdef CONFIG_AML_LOCAL_DIMMING
 	/*int i;*/
@@ -2408,10 +2409,10 @@ void vdin_set_vframe_prop_info(struct vframe_s *vf,
 	vf->prop.meas.vs_cycle = devp->cycle;
 	if ((vdin_ctl_dbg & (1 << 8)) &&
 		(vdin_luma_max != vf->prop.hist.luma_max)) {
-		vf->ready_clock_hist[0] = sched_clock();
+		divid = vf->ready_clock_hist[0] = sched_clock();
+		do_div(divid, 1000);
 		pr_info("vdin write done %lld us. lum_max(0x%x-->0x%x)\n",
-			vf->ready_clock_hist[0]/1000,
-			vdin_luma_max, vf->prop.hist.luma_max);
+			divid, vdin_luma_max, vf->prop.hist.luma_max);
 		vdin_luma_max = vf->prop.hist.luma_max;
 	}
 #if 0

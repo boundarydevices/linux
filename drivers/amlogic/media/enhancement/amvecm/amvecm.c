@@ -685,6 +685,7 @@ static unsigned int vpp_luma_max;
 void vpp_get_vframe_hist_info(struct vframe_s *vf)
 {
 	unsigned int hist_height, hist_width;
+	u64 divid;
 
 	hist_height = READ_VPP_REG_BITS(VPP_IN_H_V_SIZE, 0, 13);
 	hist_width = READ_VPP_REG_BITS(VPP_IN_H_V_SIZE, 16, 13);
@@ -845,10 +846,10 @@ void vpp_get_vframe_hist_info(struct vframe_s *vf)
 			VI_HIST_ON_BIN_63_BIT, VI_HIST_ON_BIN_63_WID);
 	if (debug_game_mode_1 &&
 		(vpp_luma_max != vf->prop.hist.vpp_luma_max)) {
-		vf->ready_clock_hist[1] = sched_clock();
+		divid = vf->ready_clock_hist[1] = sched_clock();
+		do_div(divid, 1000);
 		pr_info("vpp output done %lld us. luma_max(0x%x-->0x%x)\n",
-			vf->ready_clock_hist[1]/1000,
-			vpp_luma_max, vf->prop.hist.vpp_luma_max);
+			divid, vpp_luma_max, vf->prop.hist.vpp_luma_max);
 		vpp_luma_max = vf->prop.hist.vpp_luma_max;
 	}
 }

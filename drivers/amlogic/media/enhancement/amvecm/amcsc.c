@@ -3709,21 +3709,28 @@ static void mtx_dot_mul(
 	int64_t (*out)[3], int32_t norm)
 {
 	int i, j;
+	int64_t tmp;
 
 	for (i = 0; i < 3; i++)
-		for (j = 0; j < 3; j++)
-			out[i][j] = (a[i][j] * b[i][j] + (norm >> 1)) / norm;
+		for (j = 0; j < 3; j++) {
+			tmp = a[i][j] * b[i][j] + (norm >> 1);
+			div_s64(tmp, norm);
+			out[i][j] = tmp;
+		}
 }
 
 static void mtx_mul(int64_t (*a)[3], int64_t *b, int64_t *out, int32_t norm)
 {
 	int j, k;
+	int64_t tmp;
 
 	for (j = 0; j < 3; j++) {
 		out[j] = 0;
 		for (k = 0; k < 3; k++)
 			out[j] += a[k][j] * b[k];
-		out[j] = (out[j] + (norm >> 1)) / norm;
+		tmp = out[j] + (norm >> 1);
+		div_s64(tmp, norm);
+		out[j] = tmp;
 	}
 }
 
@@ -3732,13 +3739,16 @@ static void mtx_mul_mtx(
 	int64_t (*out)[3], int32_t norm)
 {
 	int i, j, k;
+	int64_t tmp;
 
 	for (i = 0; i < 3; i++)
 		for (j = 0; j < 3; j++) {
 			out[i][j] = 0;
 			for (k = 0; k < 3; k++)
 				out[i][j] += a[k][j] * b[i][k];
-			out[i][j] = (out[i][j] + (norm >> 1)) / norm;
+			tmp = out[i][j] + (norm >> 1);
+			div_s64(tmp, norm);
+			out[i][j] = tmp;
 		}
 }
 
@@ -3748,6 +3758,7 @@ static void inverse_3x3(
 {
 	int i, j;
 	int64_t determinant = 0;
+	int64_t tmp;
 
 	for (i = 0; i < 3; i++)
 		determinant +=
@@ -3762,8 +3773,9 @@ static void inverse_3x3(
 			out[j][i] -= (in[(i + 1) % 3][(j + 2) % 3]
 				* in[(i + 2) % 3][(j + 1) % 3]);
 			out[j][i] = (out[j][i] * norm) << (obl - 1);
-			out[j][i] =
-				(out[j][i] + (determinant >> 1)) / determinant;
+			tmp = out[j][i] + (determinant >> 1);
+			div_s64(tmp, determinant);
+			out[j][i] = tmp;
 		}
 	}
 }
@@ -3779,6 +3791,7 @@ static void calc_T(
 	int64_t C[3];
 	int64_t D[3][3];
 	int64_t E[3][3];
+	int64_t tmp;
 
 	for (i = 0; i < 4; i++)
 		z[i] = norm - prmy[i][0] - prmy[i][1];
@@ -3788,9 +3801,13 @@ static void calc_T(
 			A[i][j] = prmy[i][j];
 		A[i][2] = z[i];
 	}
-	B[0] = (norm * prmy[3][0] * 2 / prmy[3][1] + 1) >> 1;
+	tmp = norm * prmy[3][0] * 2;
+	div_s64(tmp, prmy[3][1]);
+	B[0] = (tmp + 1) >> 1;
 	B[1] = norm;
-	B[2] = (norm * z[3] * 2 / prmy[3][1] + 1) >> 1;
+	tmp = norm * z[3] * 2;
+	div_s64(tmp, prmy[3][1]);
+	B[2] = (tmp + 1) >> 1;
 	inverse_3x3(A, D, norm, obl);
 	mtx_mul(D, B, C, norm);
 	for (i = 0; i < 3; i++)

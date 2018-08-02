@@ -1140,6 +1140,12 @@ static void vdin_backup_histgram(struct vframe_s *vf, struct vdin_dev_s *devp)
 		devp->parm.histgram[i] = vf->prop.hist.gamma[i];
 }
 
+static u64 func_div(u64 cur, u32 divid)
+{
+	do_div(cur, divid);
+	return cur;
+}
+
 /*
  *VDIN_FLAG_RDMA_ENABLE=1
  *	provider_vf_put(devp->last_wr_vfe, devp->vfp);
@@ -1163,6 +1169,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	unsigned int offset = 0, vf_drop_cnt = 0;
 	enum tvin_trans_fmt trans_fmt;
 	struct tvin_sig_property_s *prop, *pre_prop;
+	long long *clk_array;
 
 	/* debug interrupt interval time
 	 *
@@ -1241,9 +1248,10 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			if (time_en) {
 				devp->last_wr_vfe->vf.ready_clock[1] =
 					sched_clock();
-				pr_info("vdin put latency %lld us. first %lld us.\n",
-				devp->last_wr_vfe->vf.ready_clock[1]/1000,
-				devp->last_wr_vfe->vf.ready_clock[0]/1000);
+				clk_array = devp->last_wr_vfe->vf.ready_clock;
+				pr_info("vdin put latency %lld us, first %lld us.\n",
+					func_div(*(clk_array + 1), 1000),
+					func_div(*clk_array, 1000));
 			}
 		} else {
 			devp->vdin_irq_flag = 15;
@@ -1482,9 +1490,10 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			provider_vf_put(curr_wr_vfe, devp->vfp);
 			if (vdin_dbg_en) {
 				curr_wr_vfe->vf.ready_clock[1] = sched_clock();
-				pr_info("vdin put latency %lld us. first %lld us.\n",
-					curr_wr_vfe->vf.ready_clock[1]/1000,
-					curr_wr_vfe->vf.ready_clock[0]/1000);
+				clk_array = curr_wr_vfe->vf.ready_clock;
+				pr_info("vdin put latency %lld us, first %lld us.\n",
+					func_div(*(clk_array + 1), 1000),
+					func_div(*clk_array, 1000));
 			}
 		} else {
 			devp->vdin_irq_flag = 15;

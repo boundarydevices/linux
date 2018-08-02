@@ -579,6 +579,14 @@ int di_print_buf(char *buf, int len)
 	return pos;
 }
 
+static u64 cur_to_msecs(void)
+{
+	u64 cur = sched_clock();
+
+	do_div(cur, NSEC_PER_MSEC);
+	return cur;
+}
+
 /* static int log_seq = 0; */
 int di_print(const char *fmt, ...)
 {
@@ -589,7 +597,7 @@ int di_print(const char *fmt, ...)
 
 	if (di_printk_flag & 1) {
 		if (di_log_flag & DI_LOG_PRECISE_TIMESTAMP)
-			pr_dbg("%llums:", sched_clock()/NSEC_PER_MSEC);
+			pr_dbg("%llums:", cur_to_msecs());
 		va_start(args, fmt);
 		vprintk(fmt, args);
 		va_end(args);
@@ -3044,8 +3052,8 @@ static void pre_de_process(void)
 	if (mpeg2vdin_flag)
 		RDMA_WR_BITS(DI_PRE_CTRL, 1, 13, 1);
 	#endif
-	di_pre_stru.irq_time[0] = sched_clock()/NSEC_PER_MSEC;
-	di_pre_stru.irq_time[1] = sched_clock()/NSEC_PER_MSEC;
+	di_pre_stru.irq_time[0] = cur_to_msecs();
+	di_pre_stru.irq_time[1] = cur_to_msecs();
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (di_pre_rdma_enable & 0x2)
 		rdma_config(de_devp->rdma_handle, RDMA_TRIGGER_MANUAL);
@@ -4337,7 +4345,7 @@ static irqreturn_t de_irq(int irq, void *dev_instance)
 
 	if (flag) {
 		di_pre_stru.irq_time[0] =
-			(sched_clock()/NSEC_PER_MSEC - di_pre_stru.irq_time[0]);
+			(cur_to_msecs() - di_pre_stru.irq_time[0]);
 		trace_di_pre("PRE-IRQ-0",
 			di_pre_stru.field_count_for_cont,
 			di_pre_stru.irq_time[0]);
@@ -4380,7 +4388,7 @@ static irqreturn_t post_irq(int irq, void *dev_instance)
 		di_post_stru.de_post_process_done = 1;
 		di_post_stru.post_de_busy = 0;
 		di_post_stru.irq_time =
-			(sched_clock()/NSEC_PER_MSEC - di_post_stru.irq_time);
+			(cur_to_msecs() - di_post_stru.irq_time);
 		trace_di_post("POST-IRQ-1",
 				di_post_stru.post_wr_cnt,
 				di_post_stru.irq_time);
@@ -5248,7 +5256,7 @@ static void di_post_process(void)
 			di_buf, 0, vf_p->width-1,
 			0, vf_p->height-1, vf_p);
 		di_post_stru.post_de_busy = 1;
-		di_post_stru.irq_time = sched_clock()/NSEC_PER_MSEC;
+		di_post_stru.irq_time = cur_to_msecs();
 	} else {
 		di_post_stru.de_post_process_done = 1;
 	}
@@ -6376,7 +6384,7 @@ static void di_pre_trigger_work(struct di_pre_stru_s *pre_stru_p)
 	if (pre_stru_p->pre_de_busy && init_flag) {
 		pre_stru_p->pre_de_busy_timer_count++;
 		if (pre_stru_p->pre_de_busy_timer_count >= nr_done_check_cnt &&
-		((sched_clock()/NSEC_PER_MSEC - di_pre_stru.irq_time[1]) >
+		((cur_to_msecs() - di_pre_stru.irq_time[1]) >
 		(10*nr_done_check_cnt))) {
 			if (di_dbg_mask & 4) {
 				dump_mif_size_state(&di_pre_stru,
@@ -6395,8 +6403,7 @@ static void di_pre_trigger_work(struct di_pre_stru_s *pre_stru_p)
 				pr_info("DI*****wait %d timeout 0x%x(%d ms)*****\n",
 					pre_stru_p->field_count_for_cont,
 					Rd(DI_INTR_CTRL),
-					(unsigned int)(sched_clock()/
-					NSEC_PER_MSEC -
+					(unsigned int)(cur_to_msecs() -
 					di_pre_stru.irq_time[1]));
 			}
 		}

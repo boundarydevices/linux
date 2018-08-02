@@ -222,7 +222,8 @@ int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
 	struct _ext_info *p_ext_info = NULL;
 	struct nand_setup *p_nand_setup = NULL;
 	int each_boot_pages, boot_num;
-	loff_t ofs;
+	uint64_t ofs, tmp;
+	uint32_t remainder;
 
 	u8 type = aml_chip->new_nand_info.type;
 
@@ -333,7 +334,9 @@ int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
 	read_page++;
 READ_BAD_BLOCK:
 	ofs = (read_page << chip->page_shift);
-	if (!(ofs % mtd->erasesize)) {
+	tmp = ofs;
+	div_u64_rem(tmp, mtd->erasesize, &remainder);
+	if (!remainder) {
 		if (chip->block_bad(mtd, ofs)) {
 			read_page +=
 			1 << (chip->phys_erase_shift-chip->page_shift);
@@ -493,7 +496,8 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 	uint32_t priv_slc_page;
 	int en_slc = 0, each_boot_pages, boot_num;
 	u8 type = aml_chip->new_nand_info.type;
-	loff_t ofs;
+	uint64_t ofs, tmp;
+	uint32_t remainder;
 
 	new_nand_info = &aml_chip->new_nand_info;
 	slc_program_info = &new_nand_info->slc_program_info;
@@ -577,7 +581,9 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 
 WRITE_BAD_BLOCK:
 	ofs = (write_page << chip->page_shift);
-	if (!(ofs % mtd->erasesize)) {
+	tmp = ofs;
+	div_u64_rem(tmp, mtd->erasesize, &remainder);
+	if (!remainder) {
 		if (chip->block_bad(mtd, ofs)) {
 			write_page +=
 			1 << (chip->phys_erase_shift-chip->page_shift);

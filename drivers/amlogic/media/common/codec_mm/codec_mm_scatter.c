@@ -1866,8 +1866,12 @@ static int codec_mm_scatter_info_dump_in(
 			smgt->alloc_100ms_up_cnt
 			);
 	{
-		int average_timeus = smgt->alloc_cnt == 0 ?
-			0 : (int)(smgt->alloc_total_us/smgt->alloc_cnt);
+		int average_timeus;
+		u64 divider = smgt->alloc_total_us;
+
+		do_div(divider, smgt->alloc_cnt);
+		average_timeus = (smgt->alloc_cnt == 0 ?
+			0 : (int)divider);
 		BUFPRINT("\talloc time average us:%d\n",
 			average_timeus);
 	}

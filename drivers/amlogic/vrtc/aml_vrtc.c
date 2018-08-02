@@ -67,13 +67,14 @@ static int parse_init_date(const char *date)
 static u32 timere_read(void)
 {
 	u32 time = 0;
-	unsigned long te = 0, temp = 0;
+	unsigned long long te = 0, temp = 0;
 
 	/*timeE high+low, first read low, second read high*/
 	te = readl(timere_low_vaddr);
 	temp =  readl(timere_high_vaddr);
 	te += (temp << 32);
-	time = (u32)(te / 1000000);
+	do_div(te, 1000000);
+	time = (u32)te;
 	pr_debug("----------time_e: %us\n", time);
 	return time;
 }

@@ -509,6 +509,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	struct vivi_dev *dev = video_drvdata(file);
 	int ret = 0;
 	u64 pts_us64 = 0;
+	u64 pts_tmp;
 	struct vframe_s *next_vf;
 
 	if (vfq_level(&dev->q_ready) > AMLVIDEO_POOL_SIZE - 1)
@@ -532,9 +533,13 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		dev->first_frame = 1;
 		pts_us64 = 0;
 	} else {
+		pts_tmp = DUR2PTS(dev->vf->duration) * 100;
+		do_div(pts_tmp, 9);
 		pts_us64 = dev->last_pts_us64
-			+ (DUR2PTS(dev->vf->duration))*100/9;
-		dev->vf->pts = pts_us64*9/100;
+			+ pts_tmp;
+		pts_tmp = pts_us64*9;
+		do_div(pts_tmp, 100);
+		dev->vf->pts = pts_tmp;
 		/*AMLVIDEO_WARN("pts= %d, dev->vf->duration= %d\n",*/
 			/*dev->vf->pts, (DUR2PTS(dev->vf->duration)));*/
 	}

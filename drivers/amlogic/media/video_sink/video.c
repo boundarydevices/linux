@@ -2402,12 +2402,22 @@ bool has_enhanced_layer(struct vframe_s *vf)
 	return req.dv_enhance_exist;
 }
 u32 property_changed_true;
+
+static u64 func_div(u64 number, u32 divid)
+{
+	u64 tmp = number;
+
+	do_div(tmp, divid);
+	return tmp;
+}
+
 static void vsync_toggle_frame(struct vframe_s *vf)
 {
 	u32 first_picture = 0;
 	unsigned long flags = 0;
 	bool vf_with_el = false;
 	bool force_toggle = false;
+	long long *clk_array;
 
 	if (vf == NULL)
 		return;
@@ -2530,18 +2540,26 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 #endif
 			if (debug_flag & DEBUG_FLAG_LATENCY) {
 				vf->ready_clock[3] = sched_clock();
-				pr_info("video toggle latency %lld ms video get latency %lld ms vdin put latency %lld ms. first %lld ms.\n",
-					vf->ready_clock[3]/1000,
-					vf->ready_clock[2]/1000,
-					vf->ready_clock[1]/1000,
-					vf->ready_clock[0]/1000);
+				pr_info("video toggle latency %lld ms,"
+					"video get latency %lld ms,"
+					"vdin put latency %lld ms,"
+					"first %lld ms.\n",
+					func_div(vf->ready_clock[3], 1000),
+					func_div(vf->ready_clock[2], 1000),
+					func_div(vf->ready_clock[1], 1000),
+					func_div(vf->ready_clock[0], 1000));
 				cur_dispbuf->ready_clock[4] = sched_clock();
-				pr_info("video put latency %lld ms video toggle latency %lld ms video get latency %lld ms vdin put latency %lld ms. first %lld ms.\n",
-					cur_dispbuf->ready_clock[4]/1000,
-					cur_dispbuf->ready_clock[3]/1000,
-					cur_dispbuf->ready_clock[2]/1000,
-					cur_dispbuf->ready_clock[1]/1000,
-					cur_dispbuf->ready_clock[0]/1000);
+				clk_array = cur_dispbuf->ready_clock;
+				pr_info("video put latency %lld ms,"
+					"video toggle latency %lld ms,"
+					"video get latency %lld ms,"
+					"vdin put latency %lld ms,"
+					"first %lld ms.\n",
+					func_div(*(clk_array + 4), 1000),
+					func_div(*(clk_array + 3), 1000),
+					func_div(*(clk_array + 2), 1000),
+					func_div(*(clk_array + 1), 1000),
+					func_div(*clk_array, 1000));
 			}
 		}
 
@@ -5318,9 +5336,9 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			if (debug_flag & DEBUG_FLAG_LATENCY) {
 				vf->ready_clock[2] = sched_clock();
 				pr_info("video get latency %lld ms vdin put latency %lld ms. first %lld ms.\n",
-				vf->ready_clock[2]/1000,
-				vf->ready_clock[1]/1000,
-				vf->ready_clock[0]/1000);
+				func_div(vf->ready_clock[2], 1000),
+				func_div(vf->ready_clock[1], 1000),
+				func_div(vf->ready_clock[0], 1000));
 			}
 			if (video_vf_dirty_put(vf))
 				break;
