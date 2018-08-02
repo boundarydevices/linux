@@ -973,6 +973,12 @@
 		/*1920*1080*4*3 = 0x17BB000*/
 	};
 
+	audio_data: audio_data {
+		compatible = "amlogic, audio_data";
+		query_licence_cmd = <0x82000050>;
+		status = "disabled";
+	};
+
 	efuse: efuse {
 		compatible = "amlogic, efuse";
 		read_cmd = <0x82000030>;
