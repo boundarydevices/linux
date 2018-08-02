@@ -212,13 +212,13 @@ int meson_cooldev_min_update(struct platform_device *pdev, int index)
 	int ret;
 	int cpu, c_id;
 
-	cool = get_cool_dev_by_node(pdev, cdev->np);
-	if (!cool)
-		return -ENODEV;
 
 	if (!cdev)
 		return -ENODEV;
 
+	cool = get_cool_dev_by_node(pdev, cdev->np);
+	if (!cool)
+		return -ENODEV;
 	if (cool->min_state == 0)
 		return 0;
 
