@@ -62,21 +62,11 @@
 #include <linux/earlysuspend.h>
 static struct early_suspend aocec_suspend_handler;
 #endif
-
 #include "hdmi_ao_cec.h"
 
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
-
-#define DEV_TYPE_TV			0
-#define DEV_TYPE_RECORDER		1
-#define DEV_TYPE_RESERVED		2
-#define DEV_TYPE_TUNER			3
-#define DEV_TYPE_PLAYBACK		4
-#define DEV_TYPE_AUDIO_SYSTEM		5
-#define DEV_TYPE_PURE_CEC_SWITCH	6
-#define DEV_TYPE_VIDEO_PROCESSOR	7
 
 #define CEC_POWER_ON		(0 << 0)
 #define CEC_EARLY_SUSPEND	(1 << 0)
@@ -102,7 +92,7 @@ struct cec_wakeup_t {
 struct ao_cec_dev {
 	unsigned long dev_type;
 	struct device_node *node;
-	unsigned int port_num;
+	unsigned int port_num;	/*total input hdmi port number*/
 	unsigned int arc_port;
 	unsigned int output;
 	unsigned int hal_flag;
@@ -1049,7 +1039,7 @@ static int check_confilct(void)
 static bool check_physical_addr_valid(int timeout)
 {
 	while (timeout > 0) {
-		if (cec_dev->dev_type == DEV_TYPE_TV)
+		if (cec_dev->dev_type == CEC_TV_ADDR)
 			break;
 		if (phy_addr_test)
 			break;
@@ -1746,34 +1736,13 @@ static irqreturn_t ceca_isr_handler(int irq, void *dev_instance)
 	mod_delayed_work(cec_dev->cec_thread, dwork, 0);
 	return IRQ_HANDLED;
 }
-
+/*
 static void check_wake_up(void)
 {
 	if (wake_ok == 0)
 		cec_request_active_source();
 }
-
-static void cec_dump_info(void)
-{
-	CEC_ERR("dev_type:%d\n", (unsigned int)cec_dev->dev_type);
-	CEC_ERR("wk_logic_addr:0x%x\n", cec_dev->wakup_data.wk_logic_addr);
-	CEC_ERR("wk_phy_addr:0x%x\n", cec_dev->wakup_data.wk_phy_addr);
-	CEC_ERR("wk_port_id:0x%x\n", cec_dev->wakup_data.wk_port_id);
-	CEC_ERR("wakeup_reason:0x%x\n", cec_dev->wakeup_reason);
-	CEC_ERR("phy_addr:0x%x\n", cec_dev->phy_addr);
-	CEC_ERR("cec_version:0x%x\n", cec_dev->cec_info.cec_version);
-	CEC_ERR("hal_ctl:0x%x\n", cec_dev->cec_info.hal_ctl);
-	CEC_ERR("menu_lang:0x%x\n", cec_dev->cec_info.menu_lang);
-	CEC_ERR("menu_status:0x%x\n", cec_dev->cec_info.menu_status);
-	CEC_ERR("open_count:%d\n", cec_dev->cec_info.open_count.counter);
-	CEC_ERR("vendor_id:0x%x\n", cec_dev->v_data.vendor_id);
-	CEC_ERR("port_num:0x%x\n", cec_dev->port_num);
-	CEC_ERR("hal_flag:0x%x\n", cec_dev->hal_flag);
-	CEC_ERR("hpd_state:0x%x\n", cec_dev->tx_dev->hpd_state);
-	CEC_ERR("cec_config:0x%x\n", cec_config(0, 0));
-	dump_reg();
-}
-
+*/
 /******************** cec class interface *************************/
 static ssize_t device_type_show(struct class *cla,
 	struct class_attribute *attr, char *buf)
@@ -1932,7 +1901,7 @@ static ssize_t port_status_show(struct class *cla,
 	unsigned int tx_hpd;
 
 	tx_hpd = cec_dev->tx_dev->hpd_state;
-	if (cec_dev->dev_type == DEV_TYPE_PLAYBACK) {
+	if (cec_dev->dev_type != CEC_TV_ADDR) {
 		tmp = tx_hpd;
 		return sprintf(buf, "%x\n", tmp);
 	}
@@ -1951,7 +1920,7 @@ static ssize_t pin_status_show(struct class *cla,
 	char p;
 
 	tx_hpd = cec_dev->tx_dev->hpd_state;
-	if (cec_dev->dev_type == DEV_TYPE_PLAYBACK) {
+	if (cec_dev->dev_type != CEC_TV_ADDR) {
 		if (!tx_hpd) {
 			pin_status = 0;
 			return sprintf(buf, "%s\n", "disconnected");
@@ -2160,6 +2129,8 @@ static ssize_t dbg_store(struct class *cla, struct class_attribute *attr,
 		CEC_ERR("wb cecb reg:0x%x val:0x%x\n", addr, val);
 		hdmirx_cec_write(addr, val);
 	} else if (token && strncmp(token, "dump", 4) == 0) {
+		dump_reg();
+	} else if (token && strncmp(token, "status", 6) == 0) {
 		cec_dump_info();
 	} else if (token && strncmp(token, "rao", 3) == 0) {
 		token = strsep(&cur, delim);
@@ -2294,9 +2265,10 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 
 	/* physical address for TV or repeator */
 	tx_dev = cec_dev->tx_dev;
-	if (tx_dev == NULL || cec_dev->dev_type == DEV_TYPE_TV) {
+	if (tx_dev == NULL || cec_dev->dev_type == CEC_TV_ADDR) {
 		phy_addr = 0;
 	} else if (tx_dev->hdmi_info.vsdb_phy_addr.valid == 1) {
+		/* get phy address from tx module */
 		a = tx_dev->hdmi_info.vsdb_phy_addr.a;
 		b = tx_dev->hdmi_info.vsdb_phy_addr.b;
 		c = tx_dev->hdmi_info.vsdb_phy_addr.c;
@@ -2313,23 +2285,27 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 		} else
 			break;
 	}
-	b = cec_dev->port_num;
 
-	CEC_ERR("%s phy_addr:%x, port num:%x\n", __func__, phy_addr, b);
+	CEC_ERR("%s phy_addr:%x, port num:%x\n", __func__, phy_addr,
+				cec_dev->port_num);
+	CEC_ERR("port_seq=0x%x\n", cec_dev->port_seq);
 	/* init for port info */
 	for (a = 0; a < sizeof(cec_dev->port_seq) * 2; a++) {
 		/* set port physical address according port sequence */
 		if (cec_dev->port_seq) {
 			c = (cec_dev->port_seq >> (4 * a)) & 0xf;
-			if (c == 0xf) {	/* not used */
+			if (c == 0xf) { /* not used */
 				CEC_INFO("port %d is not used\n", a);
 				continue;
 			}
 			port[e].physical_address = (c) * phy_app + phy_addr;
-		} else
+		} else {
 			/* asending order if port_seq is not set */
 			port[e].physical_address = (a + 1) * phy_app + phy_addr;
-		if ((e + cec_dev->output) == b) {
+		}
+
+		/* select input / output port*/
+		if ((e + cec_dev->output) == cec_dev->port_num) {
 			port[e].physical_address = phy_addr;
 			port[e].port_id = 0;
 			port[e].type = HDMI_OUTPUT;
@@ -2343,13 +2319,44 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 			port[e].arc_supported = 1;
 		else
 			port[e].arc_supported = 0;
-		CEC_ERR("%s port:%d arc:%d phy:%x,type:%d\n", __func__,
+		CEC_ERR("portinfo id:%d arc:%d phy:%x,type:%d\n",
 				port[e].port_id, port[e].arc_supported,
 				port[e].physical_address,
 				port[e].type);
 		e++;
-		if (e >= b)
+		if (e >= cec_dev->port_num)
 			break;
+	}
+}
+
+
+void cec_dump_info(void)
+{
+	struct hdmi_port_info *port;
+
+	CEC_ERR("dev_type:%d\n", (unsigned int)cec_dev->dev_type);
+	CEC_ERR("wk_logic_addr:0x%x\n", cec_dev->wakup_data.wk_logic_addr);
+	CEC_ERR("wk_phy_addr:0x%x\n", cec_dev->wakup_data.wk_phy_addr);
+	CEC_ERR("wk_port_id:0x%x\n", cec_dev->wakup_data.wk_port_id);
+	CEC_ERR("wakeup_reason:0x%x\n", cec_dev->wakeup_reason);
+	CEC_ERR("phy_addr:0x%x\n", cec_dev->phy_addr);
+	CEC_ERR("cec_version:0x%x\n", cec_dev->cec_info.cec_version);
+	CEC_ERR("hal_ctl:0x%x\n", cec_dev->cec_info.hal_ctl);
+	CEC_ERR("menu_lang:0x%x\n", cec_dev->cec_info.menu_lang);
+	CEC_ERR("menu_status:0x%x\n", cec_dev->cec_info.menu_status);
+	CEC_ERR("open_count:%d\n", cec_dev->cec_info.open_count.counter);
+	CEC_ERR("vendor_id:0x%x\n", cec_dev->v_data.vendor_id);
+	CEC_ERR("port_num:0x%x\n", cec_dev->port_num);
+	CEC_ERR("output:0x%x\n", cec_dev->output);
+	CEC_ERR("arc_port:0x%x\n", cec_dev->arc_port);
+	CEC_ERR("hal_flag:0x%x\n", cec_dev->hal_flag);
+	CEC_ERR("hpd_state:0x%x\n", cec_dev->tx_dev->hpd_state);
+	CEC_ERR("cec_config:0x%x\n", cec_config(0, 0));
+
+	port = kcalloc(cec_dev->port_num, sizeof(*port), GFP_KERNEL);
+	if (port) {
+		init_cec_port_info(port, cec_dev);
+		kfree(port);
 	}
 }
 
@@ -2357,42 +2364,30 @@ static long hdmitx_cec_ioctl(struct file *f,
 			     unsigned int cmd, unsigned long arg)
 {
 	void __user *argp = (void __user *)arg;
-	unsigned long tmp;
+	unsigned int tmp;
 	struct hdmi_port_info *port;
 	unsigned int a, b, c, d;
 	struct hdmitx_dev *tx_dev;
-	unsigned int tx_hpd;
+	/*unsigned int tx_hpd;*/
 
 	mutex_lock(&cec_dev->cec_ioctl_mutex);
 	switch (cmd) {
 	case CEC_IOC_GET_PHYSICAL_ADDR:
 		check_physical_addr_valid(20);
-		if (cec_dev->dev_type ==  DEV_TYPE_PLAYBACK && !phy_addr_test) {
-			/* physical address for mbox */
-			if (cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.valid
-			 == 0) {
-				mutex_unlock(&cec_dev->cec_ioctl_mutex);
-				return -EINVAL;
-			}
-			a = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.a;
-			b = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.b;
-			c = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.c;
-			d = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.d;
-			tmp = ((a << 12) | (b << 8) | (c << 4) | (d << 0));
-		} else {
-			/* physical address for TV or repeator */
-			tx_dev = cec_dev->tx_dev;
-			if (!tx_dev || cec_dev->dev_type == DEV_TYPE_TV) {
-				tmp = 0;
-			} else if (tx_dev->hdmi_info.vsdb_phy_addr.valid == 1) {
-				a = tx_dev->hdmi_info.vsdb_phy_addr.a;
-				b = tx_dev->hdmi_info.vsdb_phy_addr.b;
-				c = tx_dev->hdmi_info.vsdb_phy_addr.c;
-				d = tx_dev->hdmi_info.vsdb_phy_addr.d;
-				tmp = ((a << 12) | (b << 8) | (c << 4) | (d));
-			} else
-				tmp = 0;
-		}
+		/* physical address for TV or repeator */
+		tx_dev = cec_dev->tx_dev;
+		if (!tx_dev || cec_dev->dev_type == CEC_TV_ADDR) {
+			tmp = 0;
+		} else if (tx_dev->hdmi_info.vsdb_phy_addr.valid == 1) {
+			/*hpd attach and wait read edid*/
+			a = tx_dev->hdmi_info.vsdb_phy_addr.a;
+			b = tx_dev->hdmi_info.vsdb_phy_addr.b;
+			c = tx_dev->hdmi_info.vsdb_phy_addr.c;
+			d = tx_dev->hdmi_info.vsdb_phy_addr.d;
+			tmp = ((a << 12) | (b << 8) | (c << 4) | (d));
+		} else
+			tmp = 0;
+
 		if (!phy_addr_test) {
 			cec_dev->phy_addr = tmp;
 			cec_phyaddr_config(tmp, 1);
@@ -2436,36 +2431,12 @@ static long hdmitx_cec_ioctl(struct file *f,
 			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
 		}
-		check_physical_addr_valid(20);
-		if (cec_dev->dev_type == DEV_TYPE_PLAYBACK) {
-			/* for tx only 1 port */
-			a = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.a;
-			b = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.b;
-			c = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.c;
-			d = cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.d;
-			tmp = ((a << 12) | (b << 8) | (c << 4) | (d << 0));
-			if (cec_dev->tx_dev->hdmi_info.vsdb_phy_addr.valid == 0)
-				tmp = 0xffff;
-			port->type = HDMI_OUTPUT;
-			port->port_id = 0;
-			port->cec_supported = 1;
-			/* not support arc for tx */
-			port->arc_supported = 0;
-			port->physical_address = tmp & 0xffff;
-			if (copy_to_user(argp, port, sizeof(*port))) {
-				kfree(port);
-				mutex_unlock(&cec_dev->cec_ioctl_mutex);
-				return -EINVAL;
-			}
-		} else {
-			b = cec_dev->port_num;
-			init_cec_port_info(port, cec_dev);
-			if (copy_to_user(argp, port, sizeof(*port) * b)) {
-				kfree(port);
-				mutex_unlock(&cec_dev->cec_ioctl_mutex);
-				return -EINVAL;
-			}
-		}
+		check_physical_addr_valid(20);	/*delay time:20 x 100ms*/
+		init_cec_port_info(port, cec_dev);
+		if (copy_to_user(argp, port, sizeof(*port) *
+				cec_dev->port_num))
+			CEC_ERR("err get port info\n");
+
 		kfree(port);
 		break;
 
@@ -2513,24 +2484,23 @@ static long hdmitx_cec_ioctl(struct file *f,
 		break;
 
 	case CEC_IOC_GET_CONNECT_STATUS:
-		tx_hpd = cec_dev->tx_dev->hpd_state;
-		if (cec_dev->dev_type == DEV_TYPE_PLAYBACK)
-			tmp = tx_hpd;
-		else {
-			if (copy_from_user(&a, argp, _IOC_SIZE(cmd))) {
-				mutex_unlock(&cec_dev->cec_ioctl_mutex);
-				return -EINVAL;
-			}
-			/* mixed for rx & tx */
-			if (a != 0) {
-				tmp = hdmirx_get_connect_info();
-				if (tmp & (1 << (a - 1)))
-					tmp = 1;
-				else
-					tmp = 0;
-			} else
-				tmp = tx_hpd;
+		if (copy_from_user(&a, argp, _IOC_SIZE(cmd))) {
+			mutex_unlock(&cec_dev->cec_ioctl_mutex);
+			return -EINVAL;
 		}
+
+		/* mixed for rx & tx */
+		/* a is current port idx, 0: tx device */
+		if (a != 0) {
+			tmp = hdmirx_get_connect_info();
+			if (tmp & (1 << (a - 1)))
+				tmp = 1;
+			else
+				tmp = 0;
+		} else {
+			tmp = cec_dev->tx_dev->hpd_state;
+		}
+		/*CEC_ERR("port id:%d, sts:%d\n", a, tmp);*/
 		if (copy_to_user(argp, &tmp, _IOC_SIZE(cmd))) {
 			mutex_unlock(&cec_dev->cec_ioctl_mutex);
 			return -EINVAL;
@@ -2547,11 +2517,6 @@ static long hdmitx_cec_ioctl(struct file *f,
 		cec_dev->cec_info.vendor_id = cec_dev->v_data.vendor_id;
 		strncpy(cec_dev->cec_info.osd_name,
 		       cec_dev->v_data.cec_osd_string, 14);
-
-		if (cec_dev->dev_type == DEV_TYPE_PLAYBACK)
-			cec_dev->cec_info.menu_status = DEVICE_MENU_ACTIVE;
-		else
-			check_wake_up();
 		break;
 
 	case CEC_IOC_CLR_LOGICAL_ADDR:
@@ -2559,10 +2524,6 @@ static long hdmitx_cec_ioctl(struct file *f,
 		break;
 
 	case CEC_IOC_SET_DEV_TYPE:
-		if (arg > DEV_TYPE_VIDEO_PROCESSOR) {
-			mutex_unlock(&cec_dev->cec_ioctl_mutex);
-			return -EINVAL;
-		}
 		cec_dev->dev_type = arg;
 		break;
 
@@ -2716,17 +2677,19 @@ static int aml_cec_probe(struct platform_device *pdev)
 	cec_dev = devm_kzalloc(&pdev->dev, sizeof(struct ao_cec_dev),
 			GFP_KERNEL);
 	if (IS_ERR(cec_dev)) {
-		CEC_ERR("device malloc err!\n");
+		dev_err(&pdev->dev, "device malloc err!\n");
 		ret = -ENOMEM;
 		goto tag_cec_devm_err;
 	}
-	CEC_ERR("cec driver date:%s\n", CEC_DRIVER_VERSION);
-	cec_dev->dev_type = DEV_TYPE_PLAYBACK;
+
+	/*will replace by CEC_IOC_SET_DEV_TYPE*/
+	cec_dev->dev_type = CEC_PLAYBACK_DEVICE_1_ADDR;
 	cec_dev->dbg_dev  = &pdev->dev;
 	cec_dev->tx_dev   = get_hdmitx_device();
 	cec_dev->cpu_type = get_cpu_type();
 	cec_dev->node = pdev->dev.of_node;
 	phy_addr_test = 0;
+	CEC_ERR("cec driver date:%s\n", CEC_DRIVER_VERSION);
 	cec_dbg_init();
 	/* cdev registe */
 	r = class_register(&aocec_class);
@@ -2884,7 +2847,7 @@ static int aml_cec_probe(struct platform_device *pdev)
 		}
 		cec_dev->hhi_reg = (void *)base;
 	} else
-		CEC_ERR("no hhi regs\n")
+		CEC_ERR("no hhi regs\n");
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "periphs");
 	if (res) {
 		base = devm_ioremap(&pdev->dev, res->start,
@@ -2997,20 +2960,20 @@ static int aml_cec_probe(struct platform_device *pdev)
 	return 0;
 
 tag_cec_msg_alloc_err:
-		free_irq(cec_dev->irq_cec, (void *)cec_dev);
+	free_irq(cec_dev->irq_cec, (void *)cec_dev);
 tag_cec_reg_map_err:
-		input_free_device(cec_dev->cec_info.remote_cec_dev);
+	input_free_device(cec_dev->cec_info.remote_cec_dev);
 tag_cec_alloc_input_err:
-		destroy_workqueue(cec_dev->cec_thread);
+	destroy_workqueue(cec_dev->cec_thread);
 tag_cec_threat_err:
-		device_destroy(&aocec_class,
-			MKDEV(cec_dev->cec_info.dev_no, 0));
+	device_destroy(&aocec_class,
+		MKDEV(cec_dev->cec_info.dev_no, 0));
 tag_cec_device_create_err:
-		unregister_chrdev(cec_dev->cec_info.dev_no, CEC_DEV_NAME);
+	unregister_chrdev(cec_dev->cec_info.dev_no, CEC_DEV_NAME);
 tag_cec_chr_reg_err:
-		class_unregister(&aocec_class);
+	class_unregister(&aocec_class);
 tag_cec_class_reg:
-		devm_kfree(&pdev->dev, cec_dev);
+	devm_kfree(&pdev->dev, cec_dev);
 tag_cec_devm_err:
 	return ret;
 }

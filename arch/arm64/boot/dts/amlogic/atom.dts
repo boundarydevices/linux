@@ -968,7 +968,7 @@
 		vendor_id = <0x000000>;
 		product_desc = "TXLX"; /* Max Chars: 16    */
 		cec_osd_string = "AML_TV"; /* Max Chars: 14    */
-		port_num = <4>;
+		port_num = <4>;	/*all port number*/
 		ee_cec;
 		output = <1>;
 		arc_port_mask = <0x8>;

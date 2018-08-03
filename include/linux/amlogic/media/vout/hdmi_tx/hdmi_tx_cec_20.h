@@ -300,10 +300,6 @@ enum cec_version_e {
 #define ONE_TOUCH_STANDBY_MASK               2
 #define AUTO_POWER_ON_MASK                   3
 
-
-struct cec_node_info_t {
-};
-
 /*
  * only for 1 tx device
  */
