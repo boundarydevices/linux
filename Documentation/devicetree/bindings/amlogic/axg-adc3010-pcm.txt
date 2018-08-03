@@ -1,0 +1,114 @@
+diff --git a/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
+	b/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
+index f184fce..5a43ba1 100644
+--- a/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
++++ b/arch/arm64/boot/dts/amlogic/axg_s420_v03.dts
+@@ -383,24 +383,24 @@
+ 		};
+ 		aml-audio-card,dai-link@1 {
+-			format = "i2s";
++	format = "dsp_a";
+ 			mclk-fs = <256>;
+ 			//continuous-clock;
+-			//bitclock-inversion;
++			bitclock-inversion;
+ 			//frame-inversion;
+ 			bitclock-master = <&aml_tdmb>;
+ 			frame-master = <&aml_tdmb>;
+ 			cpu {
+ 				sound-dai = <&aml_tdmb>;
+-	dai-tdm-slot-tx-mask = <1 1>;
+-	dai-tdm-slot-rx-mask = <1 1>;
+-	dai-tdm-slot-num = <2>;
++	dai-tdm-slot-tx-mask = <1 1 1 1 1 1 1 1>;
++	dai-tdm-slot-rx-mask = <1 1 1 1 1 1 1 1>;
++	dai-tdm-slot-num = <8>;
+ 	dai-tdm-slot-width = <32>;
+ 	system-clock-frequency = <12288000>;
+ 			};
+ 			codec {
+-				sound-dai = <&tlv320adc3101_32>;
+-					/*&tlv320adc3101_30>;*/
++	prefix-names = "3101_A", "3101_B",
++				"3101_C", "3101_D";
++	sound-dai = <&tlv320adc3101_30 &tlv320adc3101_32
++				&tlv320adc3101_34 &tlv320adc3101_36>;
+ 			};
+ 		};
+@@ -728,7 +728,7 @@
+ 	status = "okay";
+ 	pinctrl-names="default";
+ 	pinctrl-0=<&b_i2c_master>;
+-
++/*
+ 	tlv320adc3101_32: tlv320adc3101_32@30 {
+ 		compatible = "ti,tlv320adc3101";
+ 		#sound-dai-cells = <0>;
+@@ -736,7 +736,7 @@
+ 		differential_pair = <1>;
+ 		status = "okay";
+ 	};
+-
++*/
+ 	tas5707_36: tas5707_36@36 {
+ 		compatible = "ti,tas5707";
+ 		#sound-dai-cells = <0>;
+@@ -771,23 +771,34 @@
+ 		status = "okay";
+ 	};
++	tlv320adc3101_32: tlv320adc3101_32@32 {
++		compatible = "ti,tlv320adc3101";
++		#sound-dai-cells = <0>;
++		reg = <0x19>;
++		slot_number = <3>;
++		//differential_pair = <1>;
++		status = "okay";
++	};
+ 	tlv320adc3101_30: tlv320adc3101_30@30 {
+ 		compatible = "ti,tlv320adc3101";
+ 		#sound-dai-cells = <0>;
+ 		reg = <0x18>;
+-		status = "disable";
++		slot_number = <0>;
++		status = "okay";
+ 	};
+-	tlv320adc3101_34: tlv320adc3101_34@30 {
++	tlv320adc3101_34: tlv320adc3101_34@34 {
+ 		compatible = "ti,tlv320adc3101";
+ 		#sound-dai-cells = <0>;
+ 		reg = <0x1a>;
+-		status = "disable";
++		slot_number = <2>;
++		status = "okay";
+ 	};
+-	tlv320adc3101_36: tlv320adc3101_36@30 {
++	tlv320adc3101_36: tlv320adc3101_36@36 {
+ 		compatible = "ti,tlv320adc3101";
+ 		#sound-dai-cells = <0>;
+ 		reg = <0x1b>;
+-		status = "disable";
++		slot_number = <1>;
++		status = "okay";
+ 	};
+ 	es7243_10: es7243_10@10 {
+               compatible = "MicArray_0";
+@@ -928,8 +939,8 @@
+ 	aml_tdmb: tdmb {
+ 		compatible = "amlogic, axg-snd-tdmb";
+ 		#sound-dai-cells = <0>;
+-		dai-tdm-lane-slot-mask-out = <1 0>;
+-		dai-tdm-lane-slot-mask-in = <0 1>;
++		dai-tdm-lane-slot-mask-out = <1 1>;
++		dai-tdm-lane-slot-mask-in = <1 0>;
+ 		dai-tdm-clk-sel = <1>;
+ 		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
+ 				&clkc CLKID_MPLL1>;
+@@ -1089,8 +1100,7 @@
+ 	tdmin_b: tdmin_b {
+ 		mux {
+-			groups = "tdmb_din0",
+-				"tdmb_din1";
++			groups = "tdmb_din0";
+ 			function = "tdmb_in";
+ 		};
+ 	};

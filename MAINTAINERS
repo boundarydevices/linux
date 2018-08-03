@@ -14583,3 +14583,7 @@ F: sound/soc/codecs/amlogic/cs42528.h
 AMLOGIC SPIDEV
 M:    Ivan Nie <Ivan.nie@amlogic.com>
 F:    Documentation/devicetree/bindings/spi/spidev.txt
+
+AMLOGIC SOUND ADC3101
+M: Renjun Xu <renjun.xu@amlogic.com>
+F: Documentation/devicetree/bindings/amlogic/axg-sound-adc3010-d608mic-pcm.txt

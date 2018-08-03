@@ -65,6 +65,7 @@ struct adc3101_priv {
 	/* for more control */
 	int codec_cnt;
 	int codec_mask;
+	unsigned int slot_number;
 	struct i2c_client *client[4];
 	u8 page_no;
 	/* differential_pair
@@ -300,11 +301,16 @@ static int adc3101_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 static int adc3101_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
+	struct adc3101_priv *adc3101 = NULL;
 	u8 iface_reg_1;
 	u8 dsp_a_val;
 	u8 iface_reg_2;
 
-	pr_info("%s ...\n", __func__);
+	adc3101 = snd_soc_codec_get_drvdata(codec);
+	if (adc3101 == NULL)
+		return -EINVAL;
+
+	pr_info("[%s]:slot_number=%d\n", __func__, adc3101->slot_number);
 
 	iface_reg_1 = snd_soc_read(codec, ADC3101_IFACE1);
 	iface_reg_1 = iface_reg_1 & ~(3 << 6 | 3 << 2);
@@ -344,7 +350,18 @@ static int adc3101_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_DSP_A:
 		iface_reg_1 |= (ADC3101_DSP_MODE << ADC3101_PLLJ_SHIFT);
 		iface_reg_2 |= (1 << 3); /* invert bit clock */
-		dsp_a_val = 0x01; /* add offset 1 */
+
+		/* set bclk offset according to diffrent adc */
+		if (adc3101->slot_number == 0)
+			dsp_a_val = 0;
+		else if (adc3101->slot_number == 1)
+			dsp_a_val = 64;
+		else if (adc3101->slot_number == 2)
+			dsp_a_val = 128;
+		else if (adc3101->slot_number == 3)
+			dsp_a_val = 192;
+		else
+			dsp_a_val = 0x01; /* default add offset 1 */
 		break;
 	case SND_SOC_DAIFMT_DSP_B:
 		iface_reg_1 |= (ADC3101_DSP_MODE << ADC3101_PLLJ_SHIFT);
@@ -838,6 +855,14 @@ static int adc3101_i2c_probe(struct i2c_client *i2c,
 	if (ret) {
 		pr_err("failed to get differential_pair, set it default\n");
 		adc3101->differential_pair = 0;
+		ret = 0;
+	}
+
+	ret = of_property_read_u32(i2c->dev.of_node, "slot_number",
+		&adc3101->slot_number);
+	if (ret) {
+		pr_err("failed to get slot_number, set it default\n");
+		adc3101->slot_number = 0;
 		ret = 0;
 	}
 	pr_info("%s i2c:%p\n", __func__, i2c);
