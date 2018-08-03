@@ -2541,8 +2541,7 @@ static void hdmitx_print_info(struct hdmitx_dev *hdev, int pr_info_flag)
 	pr_info(HW "%s\n", HDMITX_VER);
 	pr_info(HW "%spowerdown when unplug\n",
 		hdev->unplug_powerdown?"":"do not ");
-	pr_info(HW "hdmi audio %s\n", hdev->hdmi_audio_off_flag?"off":"on");
-	pr_info(HW "------------------\n");
+	pr_info("------------------\n");
 }
 
 struct aud_cts_log {
@@ -2707,82 +2706,1038 @@ static void hdmitx_dump_drm_reg(void)
 {
 	unsigned int reg_val;
 	unsigned int reg_addr;
+	unsigned char *conf;
 
-	reg_addr = HDMITX_DWC_FC_AVICONF1;
-	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
-	reg_addr = HDMITX_DWC_FC_AVICONF2;
-	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	pr_info("hdmitx drm info reg config\n");
+
 	reg_addr = HDMITX_DWC_FC_DRM_HB01;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	pr_info("DRM.version: %d\n", reg_val);
 	reg_addr = HDMITX_DWC_FC_DRM_HB02;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	pr_info("DRM.size: %d\n", reg_val);
 
-	for (reg_addr = HDMITX_DWC_FC_DRM_PB00;
+	reg_addr = HDMITX_DWC_FC_DRM_PB00;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val) {
+	case 0:
+		conf = "sdr";
+		break;
+	case 1:
+		conf = "hdr";
+		break;
+	case 2:
+		conf = "ST 2084";
+		break;
+	case 3:
+		conf = "HLG";
+		break;
+	default:
+		conf = "sdr";
+	}
+	pr_info("DRM.eotf: %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_DRM_PB01;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val) {
+	case 0:
+		conf = "static metadata";
+		break;
+	default:
+		conf = "reserved";
+	}
+	pr_info("DRM.metadata_id: %s\n", conf);
+
+	for (reg_addr = HDMITX_DWC_FC_DRM_PB02;
 		reg_addr <= HDMITX_DWC_FC_DRM_PB26; reg_addr++) {
 		reg_val = hdmitx_rd_reg(reg_addr);
 		pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
 	}
 	reg_addr = HDMITX_DWC_FC_DATAUTO3;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0x40) >> 6) {
+	case 0:
+		conf = "RDRB";
+		break;
+	case 1:
+	default:
+		conf = "auto";
+	}
+	pr_info("DRM.mode : %s\n", conf);
+
 	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0x80) >> 7) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+	default:
+		conf = "enable";
+	}
+	pr_info("DRM.enable : %s\n", conf);
 }
 
 static void hdmitx_dump_vsif_reg(void)
 {
 	unsigned int reg_val;
 	unsigned int reg_addr;
+	unsigned char *conf;
 
-	for (reg_addr = HDMITX_DWC_FC_VSDIEEEID0;
+	pr_info("hdmitx vsif info reg config\n");
+
+	reg_addr = HDMITX_DWC_FC_VSDSIZE;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("VSIF.size: %d\n", reg_val);
+
+	reg_addr = HDMITX_DWC_FC_VSDIEEEID0;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("VSIF.IEEEID0: 0x%x\n", reg_val);
+
+	reg_addr = HDMITX_DWC_FC_VSDIEEEID1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("VSIF.IEEEID1: 0x%x\n", reg_val);
+
+	reg_addr = HDMITX_DWC_FC_VSDIEEEID2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("VSIF.IEEEID2: 0x%x\n", reg_val);
+
+	for (reg_addr = HDMITX_DWC_FC_VSDPAYLOAD0;
 		reg_addr <= HDMITX_DWC_FC_VSDPAYLOAD23; reg_addr++) {
 		reg_val = hdmitx_rd_reg(reg_addr);
 		pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
 	}
+
 	reg_addr = HDMITX_DWC_FC_DATAUTO0;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0x8) >> 3) {
+	case 0:
+		conf = "manual";
+		break;
+	case 1:
+	default:
+		conf = "RDRB";
+	}
+	pr_info("VSIF.mode : %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_DATAUTO1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("VSIF.rdrb_interpolation : %d\n", reg_val & 0xf);
+	reg_addr = HDMITX_DWC_FC_DATAUTO2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("VSIF.rdrb_perframe : %d\n", (reg_val & 0xf0) >> 4);
+	pr_info("VSIF.rdrb_linespace : %d\n", reg_val & 0xf);
+
 	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0x10) >> 4) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+	default:
+		conf = "enable";
+	}
+	pr_info("VSIF.enable : %s\n", conf);
+
 }
 
 static void hdmitx_dump_avi_reg(void)
 {
 	unsigned int reg_val;
 	unsigned int reg_addr;
+	unsigned char *conf;
 
 	pr_info("hdmitx avi info reg config\n");
 
 	reg_addr = HDMITX_DWC_FC_AVICONF0;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch (reg_val & 0x3) {
+	case 0:
+		conf = "RGB";
+		break;
+	case 1:
+		conf = "422";
+		break;
+	case 2:
+		conf = "444";
+		break;
+	case 3:
+		conf = "420";
+	}
+	pr_info("AVI.colorspace: %s\n", conf);
+
+	switch ((reg_val & 0x40) >> 6) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "enable";
+	}
+	pr_info("AVI.active_aspect: %s\n", conf);
+
+	switch ((reg_val & 0x0c) >> 2) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "vert bar";
+		break;
+	case 2:
+		conf = "horiz bar";
+		break;
+	case 3:
+		conf = "vert and horiz bar";
+	}
+	pr_info("AVI.bar: %s\n", conf);
+
+	switch ((reg_val & 0x30) >> 4) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "overscan";
+		break;
+	case 2:
+		conf = "underscan";
+		break;
+	default:
+		conf = "disable";
+	}
+	pr_info("AVI.scan: %s\n", conf);
+
 	reg_addr = HDMITX_DWC_FC_AVICONF1;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0xc0) >> 6) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "BT.601";
+		break;
+	case 2:
+		conf = "BT.709";
+		break;
+	case 3:
+		conf = "Extended";
+	}
+	pr_info("AVI.colorimetry: %s\n", conf);
+
+	switch ((reg_val & 0x30) >> 4) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "4:3";
+		break;
+	case 2:
+		conf = "16:9";
+		break;
+	default:
+		conf = "disable";
+	}
+	pr_info("AVI.picture_aspect: %s\n", conf);
+
+	switch (reg_val & 0xf) {
+	case 8:
+		conf = "Same as picture_aspect";
+		break;
+	case 9:
+		conf = "4:3";
+		break;
+	case 10:
+		conf = "16:9";
+		break;
+	case 11:
+		conf = "14:9";
+		break;
+	default:
+		conf = "Same as picture_aspect";
+	}
+	pr_info("AVI.active_aspect: %s\n", conf);
+
 	reg_addr = HDMITX_DWC_FC_AVICONF2;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0x80) >> 7) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "enable";
+	}
+	pr_info("AVI.itc: %s\n", conf);
+
+	switch ((reg_val & 0x70) >> 4) {
+	case 0:
+		conf = "xvYCC601";
+		break;
+	case 1:
+		conf = "xvYCC709";
+		break;
+	case 2:
+		conf = "sYCC601";
+		break;
+	case 3:
+		conf = "Adobe_YCC601";
+		break;
+	case 4:
+		conf = "Adobe_RGB";
+		break;
+	case 5:
+	case 6:
+		conf = "BT.2020";
+		break;
+	default:
+		conf = "xvYCC601";
+	}
+	pr_info("AVI.extended_colorimetriy: %s\n", conf);
+
+	switch ((reg_val & 0xc) >> 2) {
+	case 0:
+		conf = "default";
+		break;
+	case 1:
+		conf = "limited";
+		break;
+	case 2:
+		conf = "full";
+		break;
+	default:
+		conf = "default";
+	}
+	pr_info("AVI.quantization_range: %s\n", conf);
+
+	switch (reg_val & 0x3) {
+	case 0:
+		conf = "unknown";
+		break;
+	case 1:
+		conf = "horiz";
+		break;
+	case 2:
+		conf = "vert";
+		break;
+	case 3:
+		conf = "horiz and vert";
+	}
+	pr_info("AVI.nups: %s\n", conf);
+
 	reg_addr = HDMITX_DWC_FC_AVIVID;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+	pr_info("AVI.video_code: %d\n", reg_val);
+
 	reg_addr = HDMITX_DWC_FC_AVICONF3;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0xc) >> 2) {
+	case 0:
+	default:
+		conf = "limited";
+		break;
+	case 1:
+		conf = "full";
+	}
+	pr_info("AVI.ycc_quantization_range: %s\n", conf);
+
+	switch (reg_val & 0x3) {
+	case 0:
+		conf = "graphics";
+		break;
+	case 1:
+		conf = "photo";
+		break;
+	case 2:
+		conf = "cinema";
+		break;
+	case 3:
+		conf = "game";
+	}
+	pr_info("AVI.content_type: %s\n", conf);
+
 	reg_addr = HDMITX_DWC_FC_PRCONF;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0xf0) >> 4) {
+	case 0:
+	case 1:
+	default:
+		conf = "no";
+		break;
+	case 2:
+		conf = "2 times";
+	}
+	pr_info("AVI.pixel_repetition: %s\n", conf);
+
 	reg_addr = HDMITX_DWC_FC_DATAUTO3;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0x8) >> 3) {
+	case 0:
+		conf = "RDRB";
+		break;
+	case 1:
+		conf = "auto";
+	}
+	pr_info("AVI.mode : %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_RDRB6;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("AVI.rdrb_interpolation : %d\n", reg_val & 0xf);
+	reg_addr = HDMITX_DWC_FC_RDRB7;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("AVI.rdrb_perframe : %d\n", (reg_val & 0xf0) >> 4);
+	pr_info("AVI.rdrb_linespace : %d\n", reg_val & 0xf);
+
 	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
 	reg_val = hdmitx_rd_reg(reg_addr);
-	pr_info("[0x%x]: 0x%x\n", reg_addr, reg_val);
+
+	switch ((reg_val & 0x4) >> 2) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "enable";
+	}
+	pr_info("AVI.enable : %s\n", conf);
+}
+
+static void hdmitx_dump_gcp(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+	unsigned char *conf;
+
+	pr_info("hdmitx gcp reg config\n");
+
+	reg_addr = HDMITX_DWC_FC_GCP;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	pr_info("GCP.clear_avmute: %d\n", reg_val & 0x1);
+	pr_info("GCP.set_avmute: %d\n", (reg_val & 0x2) >> 1);
+	pr_info("GCP.default_phase: %d\n", (reg_val & 0x4) >> 2);
+
+	reg_addr = HDMITX_DWC_VP_STATUS;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	pr_info("GCP.packing_phase: %d\n", reg_val & 0xf);
+
+	reg_addr = HDMITX_DWC_VP_PR_CD;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch ((reg_val & 0xf0) >> 4) {
+	case 0:
+	case 4:
+		conf = "24bit";
+		break;
+	case 5:
+		conf = "30bit";
+		break;
+	case 6:
+		conf = "36bit";
+		break;
+	case 7:
+		conf = "48bit";
+		break;
+	default:
+		conf = "reserved";
+	}
+	pr_info("GCP.color_depth: %s\n", conf);
+
+	reg_addr = HDMITX_DWC_VP_REMAP;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	switch (reg_val & 0x3) {
+	case 0:
+		conf = "16bit";
+		break;
+	case 1:
+		conf = "20bit";
+		break;
+	case 2:
+		conf = "24bit";
+		break;
+	default:
+		conf = "reserved";
+	}
+	pr_info("YCC 422 size: %s\n", conf);
+
+	reg_addr = HDMITX_DWC_VP_CONF;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0x3) {
+	case 0:
+		conf = "pixel_packing";
+		break;
+	case 1:
+		conf = "YCC 422";
+		break;
+	case 2:
+	case 3:
+		conf = "8bit bypass";
+	}
+	pr_info("output selector: %s\n", conf);
+	pr_info("bypass select: %d\n", (reg_val & 0x4) >> 2);
+	pr_info("YCC 422 enable: %d\n", (reg_val & 0x8) >> 3);
+	pr_info("pixel repeater enable: %d\n", (reg_val & 0x10) >> 4);
+	pr_info("pixel packing enable: %d\n", (reg_val & 0x20) >> 5);
+	pr_info("bypass enable: %d\n", (reg_val & 0x40) >> 6);
+
+	reg_addr = HDMITX_DWC_FC_DATAUTO3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch ((reg_val & 0x4) >> 2) {
+	case 0:
+		conf = "RDRB";
+		break;
+	case 1:
+		conf = "auto";
+	}
+	pr_info("GCP.mode : %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch ((reg_val & 0x2) >> 1) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "enable";
+	}
+	pr_info("GCP.enable : %s\n", conf);
+}
+
+static void hdmitx_dump_audio_info(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+	unsigned char *conf;
+
+	pr_info("hdmitx audio info reg config\n");
+
+	reg_addr = HDMITX_DWC_FC_AUDICONF0;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0xf) {
+	case CT_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case CT_PCM:
+		conf = "L-PCM";
+		break;
+	case CT_AC_3:
+		conf = "AC-3";
+		break;
+	case CT_MPEG1:
+		conf = "MPEG1";
+		break;
+	case CT_MP3:
+		conf = "MP3";
+		break;
+	case CT_MPEG2:
+		conf = "MPEG2";
+		break;
+	case CT_AAC:
+		conf = "AAC";
+		break;
+	case CT_DTS:
+		conf = "DTS";
+		break;
+	case CT_ATRAC:
+		conf = "ATRAC";
+		break;
+	case CT_ONE_BIT_AUDIO:
+		conf = "One Bit Audio";
+		break;
+	case CT_DOLBY_D:
+		conf = "Dobly Digital+";
+		break;
+	case CT_DTS_HD:
+		conf = "DTS_HD";
+		break;
+	case CT_MAT:
+		conf = "MAT";
+		break;
+	case CT_DST:
+		conf = "DST";
+		break;
+	case CT_WMA:
+		conf = "WMA";
+		break;
+	default:
+		conf = "MAX";
+	}
+	pr_info("AUDI.coding_type: %s\n", conf);
+
+	switch ((reg_val & 0x70) >> 4) {
+	case CC_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case CC_2CH:
+		conf = "2 channels";
+		break;
+	case CC_3CH:
+		conf = "3 channels";
+		break;
+	case CC_4CH:
+		conf = "4 channels";
+		break;
+	case CC_5CH:
+		conf = "5 channels";
+		break;
+	case CC_6CH:
+		conf = "6 channels";
+		break;
+	case CC_7CH:
+		conf = "7 channels";
+		break;
+	case CC_8CH:
+		conf = "8 channels";
+		break;
+	default:
+		conf = "MAX";
+	}
+	pr_info("AUDI.channel_count: %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_AUDICONF1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0x7) {
+	case FS_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case FS_32K:
+		conf = "32kHz";
+		break;
+	case FS_44K1:
+		conf = "44.1kHz";
+		break;
+	case FS_48K:
+		conf = "48kHz";
+		break;
+	case FS_88K2:
+		conf = "88.2kHz";
+		break;
+	case FS_96K:
+		conf = "96kHz";
+		break;
+	case FS_176K4:
+		conf = "176.4kHz";
+		break;
+	case FS_192K:
+		conf = "192kHz";
+	}
+	pr_info("AUDI.sample_frequency: %s\n", conf);
+
+	switch ((reg_val & 0x30) >> 4) {
+	case SS_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case SS_16BITS:
+		conf = "16bit";
+		break;
+	case SS_20BITS:
+		conf = "20bit";
+		break;
+	case SS_24BITS:
+		conf = "24bit";
+		break;
+	default:
+		conf = "MAX";
+	}
+	pr_info("AUDI.sample_size: %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_AUDICONF2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("AUDI.channel_allocation: %d\n", reg_val);
+
+	reg_addr = HDMITX_DWC_FC_AUDICONF3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("AUDI.level_shift_value: %d\n", reg_val & 0xf);
+	pr_info("AUDI.down_mix_enable: %d\n", (reg_val & 0x10) >> 4);
+	pr_info("AUDI.LFE_playback_info: %d\n", (reg_val & 0x60) >> 5);
+
+	reg_addr = HDMITX_DWC_FC_DATAUTO3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch ((reg_val & 0x2) >> 1) {
+	case 0:
+		conf = "RDRB";
+		break;
+	case 1:
+		conf = "auto";
+	}
+	pr_info("AUDI.mode : %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch ((reg_val & 0x8) >> 3) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "enable";
+	}
+	pr_info("AUDI.enable : %s\n", conf);
+}
+
+static void hdmitx_dump_acr_info(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+	unsigned char *conf;
+
+	pr_info("hdmitx audio acr info reg config\n");
+
+	reg_addr = HDMITX_DWC_AUD_INPUTCLKFS;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0x7) {
+	case 0:
+		conf = "128XFs";
+		break;
+	case 1:
+		conf = "512XFs";
+		break;
+	case 4:
+		conf = "64XFs";
+		break;
+	default:
+		conf = "reserved";
+	}
+	pr_info("ACR.ifsfactor: %s\n", conf);
+
+	reg_addr = HDMITX_DWC_AUD_N1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("ACR.N[7:0]: 0x%x\n", reg_val);
+
+	reg_addr = HDMITX_DWC_AUD_N2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("ACR.N[15:8]: 0x%x\n", reg_val);
+
+	reg_addr = HDMITX_DWC_AUD_N3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("ACR.N[19:16]: 0x%x\n", reg_val & 0xf);
+	pr_info("ACR.ncts_atomic_write: %d\n", (reg_val & 0x80) >> 7);
+
+	reg_addr = HDMITX_DWC_AUD_CTS1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("ACR.CTS[7:0]: 0x%x\n", reg_val);
+
+	reg_addr = HDMITX_DWC_AUD_CTS2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("ACR.CTS[15:8]: 0x%x\n", reg_val);
+
+	reg_addr = HDMITX_DWC_AUD_CTS3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("ACR.CTS[19:16]: 0x%x\n", reg_val & 0xf);
+	pr_info("ACR.CTS_manual: %d\n", (reg_val & 0x10) >> 4);
+
+	switch ((reg_val & 0xe0) >> 5) {
+	case 0:
+		conf = "1";
+		break;
+	case 1:
+		conf = "16";
+		break;
+	case 2:
+		conf = "32";
+		break;
+	case 3:
+		conf = "64";
+		break;
+	case 4:
+		conf = "128";
+		break;
+	case 5:
+		conf = "256";
+		break;
+	default:
+		conf = "128";
+	}
+	pr_info("ACR.N_shift: %s\n", conf);
+	pr_info("actual N = audN[19:0]/N_shift\n");
+
+	reg_addr = HDMITX_DWC_FC_DATAUTO3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0x1) {
+	case 0:
+		conf = "RDRB";
+		break;
+	case 1:
+		conf = "auto";
+	}
+	pr_info("ACR.mode : %s\n", conf);
+
+	reg_addr = HDMITX_DWC_FC_PACKET_TX_EN;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0x1) {
+	case 0:
+		conf = "disable";
+		break;
+	case 1:
+		conf = "enable";
+	}
+	pr_info("ACR.enable : %s\n", conf);
+}
+
+static void hdmitx_dump_audio_sample(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+	unsigned char *conf;
+
+	pr_info("hdmitx audio sample reg config\n");
+
+	reg_addr = HDMITX_DWC_AUD_CONF0;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch ((reg_val & 0x20) >> 5) {
+	case 0:
+	default:
+		conf = "SPDIF/GPA";
+		break;
+	case 1:
+		conf = "I2S";
+	}
+	pr_info("i2s_select : %s\n", conf);
+
+	pr_info("I2S_in_en: %d\n", reg_val & 0xf);
+
+	reg_addr = HDMITX_DWC_AUD_CONF1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("I2S_width: %d bit\n", reg_val & 0x1f);
+
+	switch ((reg_val & 0xe0) >> 5) {
+	case 0:
+		conf = "standard";
+		break;
+	case 1:
+		conf = "Right-justified";
+		break;
+	case 2:
+		conf = "Left-justified";
+		break;
+	case 3:
+		conf = "Burst 1 mode";
+		break;
+	case 4:
+		conf = "Burst 2 mode";
+		break;
+	default:
+		conf = "standard";
+	}
+	pr_info("I2S_mode: %s\n", conf);
+
+	reg_addr = HDMITX_DWC_AUD_CONF2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("HBR mode enable: %d\n", reg_val & 0x1);
+	pr_info("NLPCM mode enable: %d\n", (reg_val & 0x2) >> 1);
+
+	reg_addr = HDMITX_DWC_AUD_SPDIF1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("SPDIF_width: %d bit\n", reg_val & 0x1f);
+	pr_info("SPDIF_HBR_MODE: %d\n", (reg_val & 0x40) >> 6);
+	pr_info("SPDIF_NLPCM_MODE: %d\n", (reg_val & 0x80) >> 7);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCONF;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("layout : %d\n", reg_val & 0x1);
+	pr_info("sample flat: %d\n", (reg_val & 0xf0) >> 4);
+
+	reg_addr = HDMITX_DWC_FC_AUDSSTAT;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("sample present : %d\n", reg_val & 0xf);
+
+	reg_addr = HDMITX_DWC_FC_AUDSV;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("audio sample validity flag\n");
+	pr_info("channel 0, Left : %d\n", reg_val & 0x1);
+	pr_info("channel 1, Left : %d\n", (reg_val & 0x2) >> 1);
+	pr_info("channel 2, Left : %d\n", (reg_val & 0x4) >> 2);
+	pr_info("channel 3, Left : %d\n", (reg_val & 0x8) >> 3);
+	pr_info("channel 0, Right : %d\n", (reg_val & 0x10) >> 4);
+	pr_info("channel 1, Right : %d\n", (reg_val & 0x20) >> 5);
+	pr_info("channel 2, Right : %d\n", (reg_val & 0x40) >> 6);
+	pr_info("channel 3, Right : %d\n", (reg_val & 0x80) >> 7);
+
+	reg_addr = HDMITX_DWC_FC_AUDSU;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("audio sample user flag\n");
+	pr_info("channel 0, Left : %d\n", reg_val & 0x1);
+	pr_info("channel 1, Left : %d\n", (reg_val & 0x2) >> 1);
+	pr_info("channel 2, Left : %d\n", (reg_val & 0x4) >> 2);
+	pr_info("channel 3, Left : %d\n", (reg_val & 0x8) >> 3);
+	pr_info("channel 0, Right : %d\n", (reg_val & 0x10) >> 4);
+	pr_info("channel 1, Right : %d\n", (reg_val & 0x20) >> 5);
+	pr_info("channel 2, Right : %d\n", (reg_val & 0x40) >> 6);
+	pr_info("channel 3, Right : %d\n", (reg_val & 0x80) >> 7);
+
+}
+
+static void hdmitx_dump_audio_channel_status(void)
+{
+	unsigned int reg_val;
+	unsigned int reg_addr;
+	unsigned char *conf;
+
+	pr_info("hdmitx audio channel status reg config\n");
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS0;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("iec_copyright: %d\n", reg_val & 0x1);
+	pr_info("iec_cgmsa: %d\n", (reg_val & 0x30) >> 4);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS1;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("iec_categorycode: %d\n", reg_val);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS2;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("iec_sourcenumber: %d\n", reg_val & 0xf);
+	pr_info("iec_pcmaudiomode: %d\n", (reg_val & 0x30) >> 4);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS3;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("iec_channelnumcr0: %d\n", reg_val & 0xf);
+	pr_info("iec_channelnumcr1: %d\n", (reg_val & 0xf0) >> 4);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS4;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("iec_channelnumcr2: %d\n", reg_val & 0xf);
+	pr_info("iec_channelnumcr3: %d\n", (reg_val & 0xf0) >> 4);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS5;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("iec_channelnumcl0: %d\n", reg_val & 0xf);
+	pr_info("iec_channelnumcl1: %d\n", (reg_val & 0xf0) >> 4);
+
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS6;
+	reg_val = hdmitx_rd_reg(reg_addr);
+	pr_info("iec_channelnumcl2: %d\n", reg_val & 0xf);
+	pr_info("iec_channelnumcl3: %d\n", (reg_val & 0xf0) >> 4);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS7;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0xf) {
+	case 0:
+		conf = "44.1kHz";
+		break;
+	case 1:
+		conf = "not indicated";
+		break;
+	case 2:
+		conf = "48kHz";
+		break;
+	case 3:
+		conf = "32kHz";
+		break;
+	case 8:
+		conf = "88.2kHz";
+		break;
+	case 9:
+		conf = "768kHz";
+		break;
+	case 10:
+		conf = "96kHz";
+		break;
+	case 12:
+		conf = "176.4kHz";
+		break;
+	case 14:
+		conf = "192kHz";
+		break;
+	default:
+		conf = "not indicated";
+	}
+	pr_info("iec_sampfreq: %s\n", conf);
+
+	pr_info("iec_clk: %d\n", (reg_val & 0x30) >> 4);
+	pr_info("iec_sampfreq_ext: %d\n", (reg_val & 0xc0) >> 6);
+
+	reg_addr = HDMITX_DWC_FC_AUDSCHNLS8;
+	reg_val = hdmitx_rd_reg(reg_addr);
+
+	switch (reg_val & 0xf) {
+	case 0:
+	case 1:
+		conf = "not indicated";
+		break;
+	case 2:
+		conf = "16bit";
+		break;
+	case 4:
+		conf = "18bit";
+		break;
+	case 8:
+		conf = "19bit";
+		break;
+	case 10:
+		conf = "20bit";
+		break;
+	case 12:
+		conf = "17bit";
+		break;
+	case 3:
+		conf = "20bit";
+		break;
+	case 5:
+		conf = "22bit";
+		break;
+	case 9:
+		conf = "23bit";
+		break;
+	case 11:
+		conf = "24bit";
+		break;
+	case 13:
+		conf = "21bit";
+		break;
+	default:
+		conf = "not indicated";
+	}
+	pr_info("iec_worldlength: %s\n", conf);
+
+	switch ((reg_val & 0xf0) >> 4) {
+	case 0:
+		conf = "not indicated";
+		break;
+	case 1:
+		conf = "192kHz";
+		break;
+	case 3:
+		conf = "176.4kHz";
+		break;
+	case 5:
+		conf = "96kHz";
+		break;
+	case 7:
+		conf = "88.2kHz";
+		break;
+	case 13:
+		conf = "48kHz";
+		break;
+	case 15:
+		conf = "44.1kHz";
+		break;
+	default:
+		conf = "not indicated";
+	}
+	pr_info("iec_origsamplefreq: %s\n", conf);
+
 }
 
 static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
@@ -3054,6 +4009,21 @@ static void hdmitx_debug(struct hdmitx_dev *hdev, const char *buf)
 		return;
 	} else if (strncmp(tmpbuf, "avi_info", 8) == 0) {
 		hdmitx_dump_avi_reg();
+		return;
+	} else if (strncmp(tmpbuf, "aud_info", 8) == 0) {
+		hdmitx_dump_audio_info();
+		return;
+	} else if (strncmp(tmpbuf, "acr_info", 8) == 0) {
+		hdmitx_dump_acr_info();
+		return;
+	} else if (strncmp(tmpbuf, "aud_sample", 10) == 0) {
+		hdmitx_dump_audio_sample();
+		return;
+	} else if (strncmp(tmpbuf, "aud_chls", 8) == 0) {
+		hdmitx_dump_audio_channel_status();
+		return;
+	} else if (strncmp(tmpbuf, "gcp_info", 8) == 0) {
+		hdmitx_dump_gcp();
 		return;
 	}
 }

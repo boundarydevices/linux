@@ -1561,6 +1561,162 @@ static ssize_t show_config(struct device *dev,
 	}
 	pos += snprintf(buf+pos, PAGE_SIZE, "audio config: %s\n", conf);
 
+	switch (hdev->hdmi_audio_off_flag) {
+	case 0:
+		conf = "on";
+		break;
+	case 1:
+		conf = "off";
+		break;
+	default:
+		conf = "none";
+	}
+	pos += snprintf(buf+pos, PAGE_SIZE, "audio on/off: %s\n", conf);
+
+	switch (hdev->tx_aud_src) {
+	case 0:
+		conf = "SPDIF";
+		break;
+	case 1:
+		conf = "I2S";
+		break;
+	default:
+		conf = "none";
+	}
+	pos += snprintf(buf+pos, PAGE_SIZE, "audio source: %s\n", conf);
+
+	switch (hdev->cur_audio_param.type) {
+	case CT_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case CT_PCM:
+		conf = "L-PCM";
+		break;
+	case CT_AC_3:
+		conf = "AC-3";
+		break;
+	case CT_MPEG1:
+		conf = "MPEG1";
+		break;
+	case CT_MP3:
+		conf = "MP3";
+		break;
+	case CT_MPEG2:
+		conf = "MPEG2";
+		break;
+	case CT_AAC:
+		conf = "AAC";
+		break;
+	case CT_DTS:
+		conf = "DTS";
+		break;
+	case CT_ATRAC:
+		conf = "ATRAC";
+		break;
+	case CT_ONE_BIT_AUDIO:
+		conf = "One Bit Audio";
+		break;
+	case CT_DOLBY_D:
+		conf = "Dobly Digital+";
+		break;
+	case CT_DTS_HD:
+		conf = "DTS_HD";
+		break;
+	case CT_MAT:
+		conf = "MAT";
+		break;
+	case CT_DST:
+		conf = "DST";
+		break;
+	case CT_WMA:
+		conf = "WMA";
+		break;
+	default:
+		conf = "MAX";
+	}
+	pos += snprintf(buf+pos, PAGE_SIZE, "audio type: %s\n", conf);
+
+	switch (hdev->cur_audio_param.channel_num) {
+	case CC_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case CC_2CH:
+		conf = "2 channels";
+		break;
+	case CC_3CH:
+		conf = "3 channels";
+		break;
+	case CC_4CH:
+		conf = "4 channels";
+		break;
+	case CC_5CH:
+		conf = "5 channels";
+		break;
+	case CC_6CH:
+		conf = "6 channels";
+		break;
+	case CC_7CH:
+		conf = "7 channels";
+		break;
+	case CC_8CH:
+		conf = "8 channels";
+		break;
+	default:
+		conf = "MAX";
+	}
+	pos += snprintf(buf+pos, PAGE_SIZE, "audio channel num: %s\n", conf);
+
+	switch (hdev->cur_audio_param.sample_rate) {
+	case FS_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case FS_32K:
+		conf = "32kHz";
+		break;
+	case FS_44K1:
+		conf = "44.1kHz";
+		break;
+	case FS_48K:
+		conf = "48kHz";
+		break;
+	case FS_88K2:
+		conf = "88.2kHz";
+		break;
+	case FS_96K:
+		conf = "96kHz";
+		break;
+	case FS_176K4:
+		conf = "176.4kHz";
+		break;
+	case FS_192K:
+		conf = "192kHz";
+		break;
+	case FS_768K:
+		conf = "768kHz";
+		break;
+	default:
+		conf = "MAX";
+	}
+	pos += snprintf(buf+pos, PAGE_SIZE, "audio sample rate: %s\n", conf);
+
+	switch (hdev->cur_audio_param.sample_size) {
+	case SS_REFER_TO_STREAM:
+		conf = "refer to stream header";
+		break;
+	case SS_16BITS:
+		conf = "16bit";
+		break;
+	case SS_20BITS:
+		conf = "20bit";
+		break;
+	case SS_24BITS:
+		conf = "24bit";
+		break;
+	default:
+		conf = "MAX";
+	}
+	pos += snprintf(buf+pos, PAGE_SIZE, "audio sample size: %s\n", conf);
+
 	if (hdev->flag_3dfp)
 		conf = "FramePacking";
 	else if (hdev->flag_3dss)
@@ -3374,11 +3530,14 @@ static void hdmitx_init_fmt_attr(struct hdmitx_dev *hdev)
 static BLOCKING_NOTIFIER_HEAD(hdmitx_event_notify_list);
 int hdmitx_event_notifier_regist(struct notifier_block *nb)
 {
-	int ret;
+	int ret = 0;
+
+	if (!nb)
+		return ret;
 
 	ret = blocking_notifier_chain_register(&hdmitx_event_notify_list, nb);
 	/* update status when register */
-	if (!ret && nb && nb->notifier_call) {
+	if (!ret && nb->notifier_call) {
 		hdmitx_notify_hpd(hdmitx_device.hpd_state);
 		if (hdmitx_device.physical_addr != 0xffff)
 			hdmitx_event_notify(HDMITX_PHY_ADDR_VALID,
@@ -3780,7 +3939,8 @@ static int amhdmitx_probe(struct platform_device *pdev)
 		DEVICE_NAME);
 	cdev_init(&(hdmitx_device.cdev), &amhdmitx_fops);
 	hdmitx_device.cdev.owner = THIS_MODULE;
-	cdev_add(&(hdmitx_device.cdev), hdmitx_device.hdmitx_id, HDMI_TX_COUNT);
+	r = cdev_add(&(hdmitx_device.cdev), hdmitx_device.hdmitx_id,
+		HDMI_TX_COUNT);
 
 	hdmitx_class = class_create(THIS_MODULE, DEVICE_NAME);
 	if (IS_ERR(hdmitx_class)) {
