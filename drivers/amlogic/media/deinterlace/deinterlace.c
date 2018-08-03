@@ -124,7 +124,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-07-31a";
+static const char version_s[] = "2018-08-03a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -4956,6 +4956,9 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 				mc_pre_flag = 1;
 			post_blend_mode = 1;
 		}
+		if (is_meson_txl_cpu() && overturn)
+			mc_pre_flag = 1;
+
 		if (mcpre_en) {
 			di_post_stru.di_mcvecrd_mif.canvas_num =
 				di_buf->di_buf_dup_p[2]->mcvec_canvas_idx;
