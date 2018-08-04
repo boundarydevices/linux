@@ -81,7 +81,8 @@
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x2000000>;
+			// if no direct render, ion size = fb0_size x 3 + fb1_size + 4 M
+			size = <0x0 0x2400000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -203,6 +204,25 @@
 		detect_interval_length = <100>;
 		set_detect_times = <5>;
 		set_fault_tolerance = <1>;
+	};
+
+	meson-fb {
+               compatible = "amlogic, meson-txl";
+		memory-region = <&logo_reserved>;
+		dev_name = "meson-fb";
+		status = "okay";
+		interrupts = <0 3 1
+			0 89 1>;
+		interrupt-names = "viu-vsync", "rdma";
+		mem_size = <0x00800000 0x01800000 0x00100000>;
+		/* uboot logo,fb0/fb1 memory size,if afbcd fb0=0x01851000*/
+		display_mode_default = "1080p60hz";
+		/* 0:VPU free scale 1:OSD free scale 2:OSD super scale */
+		scale_mode = <1>;
+		/* 1920*1080*4*3 = 0x17BB000 */
+		display_size_default = <1920 1080 1920 3240 32>;
+		pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
+		logo_addr = "0x3f800000";
 	};
 
 	picdec {
@@ -1064,15 +1084,6 @@
 
 &ethmac {
 	status = "okay";
-};
-
-&meson_fb {
-	status = "okay";
-	display_size_default = <1920 1080 1920 2160 32>;
-	mem_size = <0x00800000 0x1980000 0x100000 0x100000 0x800000>;
-	logo_addr = "0x3f800000";
-	mem_alloc = <0>;
-	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 };
 
 &spicc {
