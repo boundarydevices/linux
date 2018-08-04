@@ -669,14 +669,14 @@ static ssize_t iw7027_store(struct class *class,
 		bl->test_mode = val;
 	} else if (!strcmp(attr->attr.name, "brightness")) {
 		i = sscanf(buf, "%d %d", &val, &val2);
-		val &= 0xfff;
+		val2 &= 0xfff;
 		if (test_brightness == NULL) {
 			LDIMERR("test_brightness is null\n");
 			return count;
 		}
-		if ((i == 2) && (val2 < ldim_drv->ldev_conf->bl_regnum)) {
-			test_brightness[val2] = (unsigned short)val;
-			LDIMPR("brightness=%d, index=%d\n", val, val2);
+		if ((i == 2) && (val < ldim_drv->ldev_conf->bl_regnum)) {
+			test_brightness[val] = (unsigned short)val2;
+			LDIMPR("test brightness[%d] = %d\n", val, val2);
 		}
 	} else
 		LDIMERR("LDIM argment error!\n");

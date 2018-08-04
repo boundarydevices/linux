@@ -17,7 +17,6 @@
 
 #ifndef _INC_AML_LDIM_ALG_H_
 #define _INC_AML_LDIM_ALG_H_
-#include <linux/amlogic/media/vout/lcd/aml_ldim.h>
 
 /*========================================*/
 #define LD_STA_BIN_NUM 16
@@ -32,6 +31,8 @@
 #define LD_LUT_LEN 32
 #define LD_BLKHMAX 32
 #define LD_BLKVMAX 32
+
+#define LD_BLKREGNUM 384  /* maximum support 24*16*/
 
 struct LDReg_s {
 	int reg_LD_pic_RowMax;            /*u13*/
@@ -275,33 +276,32 @@ struct FW_DAT_s {
 };
 
 struct ldim_fw_para_s {
+	/* header */
+	unsigned int para_ver;
+	unsigned int para_size;
 	char ver_str[20];
 	unsigned char ver_num;
+
 	unsigned char hist_col;
 	unsigned char hist_row;
 
-	struct LDReg_s *nPRM;
-	struct FW_DAT_s *FDat;
-	unsigned long *bl_remap_curve; /* size: 16 */
-	unsigned long *fw_LD_Whist;    /* size: 16 */
+	unsigned int fw_LD_ThSF_l;
+	unsigned int fw_LD_ThTF_l;
+	unsigned int boost_gain; /*norm 256 to 1,T960 finally use*/
+	unsigned int TF_alpha; /*256;*/
+	unsigned int lpf_gain;  /* [0~128~256], norm 128 as 1*/
 
-	unsigned long fw_LD_ThSF_l;
-	unsigned long fw_LD_ThTF_l;
-	unsigned long boost_gain; /*norm 256 to 1,T960 finally use*/
-	unsigned long TF_alpha; /*256;*/
-	unsigned long lpf_gain;  /* [0~128~256], norm 128 as 1*/
-
-	unsigned long boost_gain_neg;
-	unsigned long alpha_delta;
+	unsigned int boost_gain_neg;
+	unsigned int alpha_delta;
 
 	/*LPF tap: 0-lpf_res 41,1-lpf_res 114,...*/
-	unsigned long lpf_res;    /* 1024/9*9 = 13,LPF_method=3 */
-	unsigned long rgb_base;
+	unsigned int lpf_res;    /* 1024/9*9 = 13,LPF_method=3 */
+	unsigned int rgb_base;
 
 	unsigned int ov_gain;
 	/*unsigned int incr_dif_gain; //16 */
 
-	unsigned long avg_gain;
+	unsigned int avg_gain;
 
 	unsigned int fw_rgb_diff_th;
 	unsigned int max_luma;
@@ -328,9 +328,17 @@ struct ldim_fw_para_s {
 	unsigned int fw_print_frequent;/*20180606,print every 8 frame*/
 	unsigned int Dbprint_lv;
 
+	struct LDReg_s *nPRM;
+	struct FW_DAT_s *FDat;
+	unsigned int *bl_remap_curve; /* size: 16 */
+	unsigned int *fw_LD_Whist;    /* size: 16 */
+
 	void (*fw_alg_frm)(struct ldim_fw_para_s *fw_para,
 		unsigned int *max_matrix, unsigned int *hist_matrix);
+	void (*fw_alg_para_print)(struct ldim_fw_para_s *fw_para);
 };
+/* if struct ldim_fw_para_s changed, FW_PARA_VER must be update */
+#define FW_PARA_VER    1
 
 extern struct ldim_fw_para_s *aml_ldim_get_fw_para(void);
 

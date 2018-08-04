@@ -158,7 +158,7 @@ static inline unsigned int LDIM_RD_32Bits(unsigned int addr)
 	return aml_read_vcbus(LDIM_BL_DATA_PORT);
 }
 
-static inline void LDIM_wr_reg_bits(unsigned int addr, unsigned int val,
+static inline void LDIM_WR_reg_bits(unsigned int addr, unsigned int val,
 				unsigned int start, unsigned int len)
 {
 	unsigned int data;

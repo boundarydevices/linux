@@ -687,9 +687,9 @@
 				1 0  /*on_value, off_value*/
 				200 200>; /*on_delay(ms), off_delay(ms)*/
 			bl_ldim_region_row_col = <1 10>;
-			bl_ldim_mode = <1>; /*1=single_side
-					     *   (top, bottom, left or right),
-					     *2=uniform(top/bottom, left/right)
+			bl_ldim_mode = <1>; /*0=left/right side
+					     *1=top/bottom side
+					     *2=direct
 					     */
 			ldim_dev_index = <2>;
 		};
@@ -704,9 +704,9 @@
 				1 0 /*on_value, off_value*/
 				200 200>; /* on_delay(ms), off_delay(ms)*/
 			bl_ldim_region_row_col = <1 1>;
-			bl_ldim_mode = <1>; /*1=single_side
-					     *   (top, bottom, left or right),
-					     *2=uniform(top/bottom, left/right)
+			bl_ldim_mode = <1>; /*0=left/right side
+					     *1=top/bottom side
+					     *2=direct
 					     */
 			ldim_dev_index = <1>;
 		};
@@ -733,6 +733,7 @@
 		pinctrl-1 = <&bl_pwm_vs_on_pins>;
 		pinctrl-2 = <&bl_pwm_off_pins>;
 		pinctrl_version = <1>; /* for uboot */
+		ldim_pwm_config = <&bl_pwm_conf>;
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
 		ldim_dev-gpios = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH

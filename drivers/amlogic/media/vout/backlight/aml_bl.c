@@ -3286,7 +3286,14 @@ static void aml_bl_init_status_update(void)
 	else
 		aml_bl_update_status(bl_drv->bldev);
 
-	bl_pwm_pinmux_set(bl_drv->bconf, 1);
+	switch (bl_drv->bconf->method) {
+	case BL_CTRL_PWM:
+	case BL_CTRL_PWM_COMBO:
+		bl_pwm_pinmux_set(bl_drv->bconf, 1);
+		break;
+	default:
+		break;
+	}
 }
 
 static int aml_bl_probe(struct platform_device *pdev)

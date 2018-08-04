@@ -22,7 +22,8 @@
 /*20180629: initial version */
 /*20180725: new pwm control flow support */
 /*20180730: algorithm clear up */
-#define LDIM_DRV_VER    "20180730"
+/*20180820: pq tooling support, espically optimize some alg parameters */
+#define LDIM_DRV_VER    "20180820"
 
 extern unsigned char ldim_debug_print;
 

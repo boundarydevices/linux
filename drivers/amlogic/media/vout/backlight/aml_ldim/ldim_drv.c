@@ -66,9 +66,9 @@ struct ldim_dev_s {
 	struct cdev *aml_ldim_cdevp;
 };
 static struct ldim_dev_s ldim_dev;
-static struct ldim_param_s ldim_db_para;
-struct LDReg_s nPRM;
-struct FW_DAT_s FDat;
+static struct ldim_param_s *ldim_db_para;
+static struct LDReg_s nPRM;
+static struct FW_DAT_s FDat;
 static struct ldim_fw_para_s ldim_fw_para;
 static struct aml_ldim_driver_s ldim_driver;
 
@@ -82,7 +82,7 @@ static unsigned long litgain = LD_DATA_MAX;
 
 static unsigned char ldim_on_flag;
 static unsigned char LDIM_DATA_FROM_DB, db_print_flag;
-static unsigned char ldim_func_en, ldim_remap_en;
+static unsigned char ldim_func_en, ldim_remap_en, ldim_demo_en;
 static unsigned char ldim_func_bypass; /* for lcd bist pattern */
 static unsigned char ldim_brightness_bypass;
 static unsigned char ldim_level_update;
@@ -99,11 +99,11 @@ static unsigned int ldim_irq_cnt;
 static unsigned int rdma_ldim_irq_cnt;
 
 /*BL_matrix remap curve*/
-static unsigned long bl_remap_curve[16] = {
+static unsigned int bl_remap_curve[16] = {
 	612, 654, 721, 851, 1001, 1181, 1339, 1516,
 	1738, 1948, 2152, 2388, 2621, 2889, 3159, 3502
 };
-static unsigned long fw_LD_Whist[16] = {
+static unsigned int fw_LD_Whist[16] = {
 	32, 64, 96, 128, 160, 192, 224, 256,
 	288, 320, 352, 384, 416, 448, 480, 512
 };
@@ -140,6 +140,8 @@ static struct ldim_config_s ldim_config = {
 	.row = 1,
 	.col = 1,
 	.bl_mode = 1,
+	.bl_en = 1,
+	.hvcnt_bypass = 0,
 };
 
 static void ldim_on_update_brightness(struct work_struct *work)
@@ -166,23 +168,24 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 		return;
 	}
 
-	LDIMPR("rgb_base = %ld\n"
-		"boost_gain = %ld\n"
-		"lpf_res = %ld\n"
-		"fw_LD_ThSF = %ld\n\n",
+	LDIMPR("%s:\n", __func__);
+	pr_info("rgb_base = %d\n"
+		"boost_gain = %d\n"
+		"lpf_res = %d\n"
+		"fw_LD_ThSF = %d\n\n",
 		ldim_fw_para.rgb_base,
 		ldim_fw_para.boost_gain,
 		ldim_fw_para.lpf_res,
 		ldim_fw_para.fw_LD_ThSF_l);
 
-	LDIMPR("ld_vgain = %d\n"
+	pr_info("ld_vgain = %d\n"
 		"ld_hgain = %d\n"
 		"ld_litgain = %d\n\n",
 		mLDReg->reg_LD_Vgain,
 		mLDReg->reg_LD_Hgain,
 		mLDReg->reg_LD_Litgain);
 
-	LDIMPR("ld_lut_vdg_lext = %d\n"
+	pr_info("ld_lut_vdg_lext = %d\n"
 		"ld_lut_hdg_lext = %d\n"
 		"ld_lut_vhk_lext = %d\n\n",
 		mLDReg->reg_LD_LUT_Vdg_LEXT,
@@ -190,7 +193,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 		mLDReg->reg_LD_LUT_VHk_LEXT);
 
 	len = 0;
-	LDIMPR("ld_lut_hdg:\n");
+	pr_info("ld_lut_hdg:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_Hdg[i]);
@@ -200,7 +203,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	pr_info("%s\n", buf);
 
 	len = 0;
-	LDIMPR("ld_lut_vdg:\n");
+	pr_info("ld_lut_vdg:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_Vdg[i]);
@@ -210,7 +213,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	pr_info("%s\n", buf);
 
 	len = 0;
-	LDIMPR("ld_lut_vhk:\n");
+	pr_info("ld_lut_vhk:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_VHk[i]);
@@ -220,7 +223,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	pr_info("%s\n", buf);
 
 	len = 0;
-	LDIMPR("ld_lut_vhk_pos:\n");
+	pr_info("ld_lut_vhk_pos:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_VHk_pos[i]);
@@ -230,7 +233,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	pr_info("%s\n", buf);
 
 	len = 0;
-	LDIMPR("ld_lut_vhk_neg:\n");
+	pr_info("ld_lut_vhk_neg:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_VHk_neg[i]);
@@ -240,7 +243,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	pr_info("%s\n", buf);
 
 	len = 0;
-	LDIMPR("ld_lut_hhk:\n");
+	pr_info("ld_lut_hhk:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_HHk[i]);
@@ -250,7 +253,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	pr_info("%s\n", buf);
 
 	len = 0;
-	LDIMPR("ld_lut_vho_pos:\n");
+	pr_info("ld_lut_vho_pos:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_VHo_pos[i]);
@@ -260,7 +263,7 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	pr_info("%s\n", buf);
 
 	len = 0;
-	LDIMPR("ld_lut_vho_neg:\n");
+	pr_info("ld_lut_vho_neg:\n");
 	for (i = 0; i < 32; i++) {
 		len += sprintf(buf+len, "\t%d",
 			mLDReg->reg_LD_LUT_VHo_neg[i]);
@@ -272,53 +275,48 @@ static void ldim_db_para_print(struct LDReg_s *mLDReg)
 	kfree(buf);
 }
 
-static void ldim_db_load_update(struct LDReg_s *mLDReg)
+static void ldim_db_load_update(struct LDReg_s *mLDReg,
+		struct ldim_param_s *db_pare)
 {
 	int i;
 
-	if (LDIM_DATA_FROM_DB == 1) {
-		LDIMPR("ldim_db_load_update\n");
-		/* beam model */
-		ldim_fw_para.rgb_base = (unsigned long)ldim_db_para.rgb_base;
-		ldim_fw_para.boost_gain =
-			(unsigned long)ldim_db_para.boost_gain;
-		ldim_fw_para.lpf_res = (unsigned long)ldim_db_para.lpf_res;
-		ldim_fw_para.fw_LD_ThSF_l =
-			(unsigned long)ldim_db_para.fw_ld_th_sf;
+	if (db_pare == NULL)
+		return;
 
-		/* beam curve */
-		mLDReg->reg_LD_Vgain = ldim_db_para.ld_vgain;
-		mLDReg->reg_LD_Hgain = ldim_db_para.ld_hgain;
-		mLDReg->reg_LD_Litgain = ldim_db_para.ld_litgain;
+	LDIMPR("ldim_db_load_update\n");
+	/* beam model */
+	ldim_fw_para.rgb_base = db_pare->rgb_base;
+	ldim_fw_para.boost_gain = db_pare->boost_gain;
+	ldim_fw_para.lpf_res = db_pare->lpf_res;
+	ldim_fw_para.fw_LD_ThSF_l = db_pare->fw_ld_th_sf;
 
-		mLDReg->reg_LD_LUT_Vdg_LEXT = ldim_db_para.ld_lut_vdg_lext;
-		mLDReg->reg_LD_LUT_Hdg_LEXT = ldim_db_para.ld_lut_hdg_lext;
-		mLDReg->reg_LD_LUT_VHk_LEXT = ldim_db_para.ld_lut_vhk_lext;
+	/* beam curve */
+	mLDReg->reg_LD_Vgain = db_pare->ld_vgain;
+	mLDReg->reg_LD_Hgain = db_pare->ld_hgain;
+	mLDReg->reg_LD_Litgain = db_pare->ld_litgain;
 
-		for (i = 0; i < 32; i++) {
-			mLDReg->reg_LD_LUT_Hdg[i] = ldim_db_para.ld_lut_hdg[i];
-			mLDReg->reg_LD_LUT_Vdg[i] = ldim_db_para.ld_lut_vdg[i];
-			mLDReg->reg_LD_LUT_VHk[i] = ldim_db_para.ld_lut_vhk[i];
-		}
+	mLDReg->reg_LD_LUT_Vdg_LEXT = db_pare->ld_lut_vdg_lext;
+	mLDReg->reg_LD_LUT_Hdg_LEXT = db_pare->ld_lut_hdg_lext;
+	mLDReg->reg_LD_LUT_VHk_LEXT = db_pare->ld_lut_vhk_lext;
 
-		/* beam shape minor adjustment */
-		for (i = 0; i < 32; i++) {
-			mLDReg->reg_LD_LUT_VHk_pos[i] =
-				ldim_db_para.ld_lut_vhk_pos[i];
-			mLDReg->reg_LD_LUT_VHk_neg[i] =
-				ldim_db_para.ld_lut_vhk_neg[i];
-			mLDReg->reg_LD_LUT_HHk[i] =
-				ldim_db_para.ld_lut_hhk[i];
-			mLDReg->reg_LD_LUT_VHo_pos[i] =
-				ldim_db_para.ld_lut_vho_pos[i];
-			mLDReg->reg_LD_LUT_VHo_neg[i] =
-				ldim_db_para.ld_lut_vho_neg[i];
-		}
-
-		/* remapping */
-		/*ldim_db_para.lit_idx_th;*/
-		/*ldim_db_para.comp_gain;*/
+	for (i = 0; i < 32; i++) {
+		mLDReg->reg_LD_LUT_Hdg[i] = db_pare->ld_lut_hdg[i];
+		mLDReg->reg_LD_LUT_Vdg[i] = db_pare->ld_lut_vdg[i];
+		mLDReg->reg_LD_LUT_VHk[i] = db_pare->ld_lut_vhk[i];
 	}
+
+	/* beam shape minor adjustment */
+	for (i = 0; i < 32; i++) {
+		mLDReg->reg_LD_LUT_VHk_pos[i] = db_pare->ld_lut_vhk_pos[i];
+		mLDReg->reg_LD_LUT_VHk_neg[i] = db_pare->ld_lut_vhk_neg[i];
+		mLDReg->reg_LD_LUT_HHk[i]     = db_pare->ld_lut_hhk[i];
+		mLDReg->reg_LD_LUT_VHo_pos[i] = db_pare->ld_lut_vho_pos[i];
+		mLDReg->reg_LD_LUT_VHo_neg[i] = db_pare->ld_lut_vho_neg[i];
+	}
+
+	/* remapping */
+	/*db_pare->lit_idx_th;*/
+	/*db_pare->comp_gain;*/
 
 	if (db_print_flag == 1)
 		ldim_db_para_print(mLDReg);
@@ -753,7 +751,8 @@ static void LDIM_Initial(unsigned int pic_h, unsigned int pic_v,
 	nPRM.reg_LD_BackLit_mode = BackLit_mode;
 	/*config params end */
 	ld_fw_cfg_once(&nPRM);
-	ldim_db_load_update(&nPRM);
+	if (LDIM_DATA_FROM_DB)
+		ldim_db_load_update(&nPRM, ldim_db_para);
 
 	switch (bl_drv->data->chip_type) {
 	case BL_CHIP_TXLX:
@@ -1038,11 +1037,8 @@ static void ldim_off_vs_brightness(void)
 
 	if (ldim_level_update) {
 		ldim_level_update = 0;
-		if (ldim_debug_print) {
-			if (brightness_vs_cnt == 0)
-				LDIMPR("%s: level update: 0x%lx\n", __func__,
-					litgain);
-		}
+		if (ldim_debug_print)
+			LDIMPR("%s: level update: 0x%lx\n", __func__, litgain);
 		for (i = 0; i < size; i++) {
 			ldim_driver.local_ldim_matrix[i] =
 				(unsigned short)nPRM.BL_matrix[i];
@@ -1053,12 +1049,9 @@ static void ldim_off_vs_brightness(void)
 		if (ldim_driver.device_bri_check) {
 			ret = ldim_driver.device_bri_check();
 			if (ret) {
-				if (ldim_debug_print) {
-					if (brightness_vs_cnt == 0) {
-						LDIMERR(
-						"%s: device_bri_check error\n",
+				if (brightness_vs_cnt == 0) {
+					LDIMERR("%s: device_bri_check error\n",
 						__func__);
-					}
 				}
 				ldim_level_update = 1;
 			}
@@ -1148,7 +1141,28 @@ static void ldim_bl_remap_curve_print(void)
 	pr_info("bl_remap_curve:\n");
 	len = 0;
 	for (i = 0; i < 16; i++)
-		len += sprintf(buf+len, "\t%ld", bl_remap_curve[i]);
+		len += sprintf(buf+len, "\t%d", bl_remap_curve[i]);
+	pr_info("%s\n", buf);
+
+	kfree(buf);
+}
+
+static void ldim_fw_LD_Whist_print(void)
+{
+	int i = 0, len;
+	char *buf;
+
+	len = 16 * 8 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		LDIMERR("print buf malloc error\n");
+		return;
+	}
+
+	pr_info("fw_LD_Whist:\n");
+	len = 0;
+	for (i = 0; i < 16; i++)
+		len += sprintf(buf+len, "\t%d", fw_LD_Whist[i]);
 	pr_info("%s\n", buf);
 
 	kfree(buf);
@@ -1473,13 +1487,13 @@ static void ldim_get_matrix_info(void)
 	char *buf;
 
 	ldim_matrix_t = kcalloc(ldim_hist_row*ldim_hist_col,
-		sizeof(unsigned int), GFP_KERNEL);
+		sizeof(unsigned short), GFP_KERNEL);
 	if (ldim_matrix_t == NULL) {
 		LDIMERR("ldim_matrix_t malloc error\n");
 		return;
 	}
 	ldim_matrix_spi_t = kcalloc(ldim_hist_row*ldim_hist_col,
-		sizeof(unsigned int), GFP_KERNEL);
+		sizeof(unsigned short), GFP_KERNEL);
 	if (ldim_matrix_spi_t == NULL) {
 		LDIMERR("ldim_matrix_spi_t malloc error\n");
 		kfree(ldim_matrix_t);
@@ -1556,6 +1570,258 @@ static void ldim_nPRM_bl_matrix_info(void)
 		pr_info("%s\n", buf);
 		msleep(20);
 	}
+
+	kfree(buf);
+}
+
+static void ldim_get_test_matrix_info(void)
+{
+	unsigned int i, n, len;
+	unsigned short *ldim_matrix_t = ldim_driver.ldim_test_matrix;
+	char *buf;
+
+	n = ldim_blk_col * ldim_blk_row;
+	len = n * 10 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		LDIMERR("print buf malloc error\n");
+		return;
+	}
+
+	pr_info("%s:\n", __func__);
+	pr_info("ldim test_mode: %d, test_matrix:\n", ldim_test_en);
+	len = 0;
+	for (i = 1; i < n; i++)
+		len += sprintf(buf+len, "\t%4d", ldim_matrix_t[i]);
+	pr_info("%s\n", buf);
+
+	kfree(buf);
+}
+
+static void ldim_sel_int_matrix_mute_print(unsigned int n,
+		unsigned int *matrix)
+{
+	unsigned int i, len;
+	unsigned int *ldim_matrix_t = NULL;
+	char *buf;
+
+	ldim_matrix_t = kcalloc(n, sizeof(unsigned int), GFP_KERNEL);
+	if (ldim_matrix_t == NULL)
+		return;
+
+	len = n * 10 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		kfree(ldim_matrix_t);
+		return;
+	}
+
+	memcpy(ldim_matrix_t, matrix, (n * sizeof(unsigned int)));
+
+	len = 0;
+	for (i = 0; i < n; i++)
+		len += sprintf(buf+len, " %d", ldim_matrix_t[i]);
+	pr_info("for_tool:%s\n", buf);
+
+	kfree(buf);
+	kfree(ldim_matrix_t);
+}
+
+static void ldim_matrix_bl_matrix_mute_print(void)
+{
+	unsigned int i, n, len;
+	unsigned short *ldim_matrix_t = NULL;
+	char *buf;
+
+	n = ldim_hist_row * ldim_hist_col;
+	ldim_matrix_t = kcalloc(n, sizeof(unsigned short), GFP_KERNEL);
+	if (ldim_matrix_t == NULL)
+		return;
+
+	len = n * 8 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		kfree(ldim_matrix_t);
+		return;
+	}
+
+	memcpy(ldim_matrix_t, ldim_driver.local_ldim_matrix,
+		(n * sizeof(unsigned short)));
+
+	len = 0;
+	for (i = 0; i < n; i++)
+		len += sprintf(buf+len, " %d", ldim_matrix_t[i]);
+	pr_info("for_tool: %d %d%s\n", ldim_hist_row, ldim_hist_col, buf);
+
+	kfree(buf);
+	kfree(ldim_matrix_t);
+}
+
+static void ldim_matrix_histgram_mute_print(void)
+{
+	unsigned int i, j, k, len;
+	unsigned int *p = NULL;
+	char *buf;
+
+	len = ldim_hist_row * ldim_hist_col * 16;
+	p = kcalloc(len, sizeof(unsigned int), GFP_KERNEL);
+	if (p == NULL)
+		return;
+
+	len = len * 10 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		kfree(p);
+		return;
+	}
+
+	memcpy(p, ldim_driver.hist_matrix,
+		ldim_hist_row*ldim_hist_col*16*sizeof(unsigned int));
+
+	len = 0;
+	for (i = 0; i < ldim_hist_row; i++) {
+		for (j = 0; j < ldim_hist_col; j++) {
+			for (k = 0; k < 16; k++) {
+				len += sprintf(buf+len, " 0x%x",
+					*(p+i*16*ldim_hist_col+j*16+k));
+			}
+		}
+	}
+	pr_info("for_tool: %d 16%s\n", (ldim_hist_row * ldim_hist_col), buf);
+
+	kfree(buf);
+	kfree(p);
+}
+
+static void ldim_matrix_max_rgb_mute_print(void)
+{
+	unsigned int i, j, len;
+	unsigned int *p = NULL;
+	char *buf;
+
+	len = ldim_blk_col * ldim_blk_row;
+	p = kcalloc(len, sizeof(unsigned int), GFP_KERNEL);
+	if (p == NULL)
+		return;
+
+	len = len * 30 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		kfree(p);
+		return;
+	}
+
+	memcpy(p, ldim_driver.max_rgb,
+		ldim_blk_col*ldim_blk_row*sizeof(unsigned int));
+
+	len = 0;
+	for (i = 0; i < ldim_blk_row; i++) {
+		for (j = 0; j < ldim_blk_col; j++) {
+			len += sprintf(buf+len, " %d %d %d",
+				(*(p + j + i*ldim_blk_col))&0x3ff,
+				(*(p + j + i*ldim_blk_col)>>10)&0x3ff,
+				(*(p + j + i*ldim_blk_col)>>20)&0x3ff);
+		}
+	}
+	pr_info("for_tool: %d 3%s\n", (ldim_hist_row * ldim_hist_col), buf);
+
+	kfree(buf);
+	kfree(p);
+}
+
+static void ldim_matrix_SF_matrix_mute_print(void)
+{
+	unsigned int i, n, len;
+	unsigned int *ldim_matrix_t = NULL;
+	char *buf;
+
+	n = ldim_hist_row * ldim_hist_col;
+	ldim_matrix_t = kcalloc(n, sizeof(unsigned int), GFP_KERNEL);
+	if (ldim_matrix_t == NULL)
+		return;
+
+	len = n * 10 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		kfree(ldim_matrix_t);
+		return;
+	}
+
+	memcpy(ldim_matrix_t, FDat.SF_BL_matrix, (n * sizeof(unsigned int)));
+
+	len = 0;
+	for (i = 0; i < n; i++)
+		len += sprintf(buf+len, " %d", ldim_matrix_t[i]);
+	pr_info("for_tool: %d %d%s\n", ldim_hist_row, ldim_hist_col, buf);
+
+	kfree(buf);
+	kfree(ldim_matrix_t);
+}
+
+static void ldim_matrix_LD_remap_LUT_mute_print(void)
+{
+	unsigned int i, j, n, len;
+	char *buf;
+
+	n = 16 * 32;
+	len = n * 8 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		LDIMERR("print buf malloc error\n");
+		return;
+	}
+
+	len = 0;
+	for (i = 0; i < 16; i++) {
+		for (j = 0; j < 32; j++)
+			len += sprintf(buf+len, " %d", LD_remap_lut[i][j]);
+	}
+
+	pr_info("for_tool: 16 32%s\n", buf);
+
+	kfree(buf);
+}
+
+static void ldim_matrix_LD_remap_LUT_mute_line_print(int index)
+{
+	unsigned int j, len;
+	char *buf;
+
+	if (index >= 16)
+		return;
+
+	len = 32 * 8 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		LDIMERR("print buf malloc error\n");
+		return;
+	}
+
+	len = 0;
+	for (j = 0; j < 32; j++)
+		len += sprintf(buf+len, " %d", LD_remap_lut[index][j]);
+
+	pr_info("for_tool: %d%s\n", index, buf);
+
+	kfree(buf);
+}
+
+static void ldim_test_matrix_mute_print(void)
+{
+	unsigned int i, n, len;
+	unsigned short *p = ldim_driver.ldim_test_matrix;
+	char *buf;
+
+	n = ldim_blk_col * ldim_blk_row;
+	len = n * 10 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL)
+		return;
+
+	len = 0;
+	for (i = 0; i < n; i++)
+		len += sprintf(buf+len, " %d", p[i]);
+	pr_info("for_tool: %d %d%s\n", ldim_blk_row, ldim_blk_col, buf);
 
 	kfree(buf);
 }
@@ -1755,20 +2021,34 @@ static int ldim_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static long ldim_ioctl(struct file *file, unsigned int cmd,
-			unsigned long arg)
+static long ldim_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
+	struct ldim_param_s *db_para;
 
 	switch (cmd) {
-	/*********local dimming ioctl************/
 	case LDIM_IOC_PARA:
 		if (!LDIM_DATA_FROM_DB)
 			return -EINVAL;
 
-		if (copy_from_user(&ldim_db_para, (void __user *)arg,
-			sizeof(struct ldim_param_s)))
-			ret = -EFAULT;
+		db_para = kzalloc(sizeof(struct ldim_param_s), GFP_KERNEL);
+		if (db_para == NULL) {
+			LDIMERR("db_para malloc error\n");
+			return -EINVAL;
+		}
+		ldim_db_para = db_para;
+		if (copy_from_user(ldim_db_para, (void __user *)arg,
+			sizeof(struct ldim_param_s))) {
+			ldim_db_para = NULL;
+			kfree(db_para);
+			return -EINVAL;
+		}
+
+		LDIM_Initial(ldim_config.hsize, ldim_config.vsize,
+			ldim_blk_row, ldim_blk_col,
+			ldim_config.bl_mode, 1, 0);
+		ldim_db_para = NULL;
+		kfree(db_para);
 		break;
 
 	default:
@@ -1813,29 +2093,26 @@ static ssize_t ldim_attr_show(struct class *cla,
 	len += sprintf(buf+len,
 	"echo matrix > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
-	"echo histgram_ldim > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
 	"echo ldim_matrix_get 7 > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
-	"echo ldim_matrix_info > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
 	"echo ldim_matrix_get 0/1/2/3 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo ldim_enable > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo ldim_disable > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
 	"echo info > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
 	"echo alg_info > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
-	"echo test_mode 0 > /sys/class/aml_ldim/attr\n");
+	"echo litgain 4096 > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
-	"echo test_set 0 0xfff > /sys/class/aml_ldim/attr\n");
+	"echo test_mode 1 > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
-	"echo test_set_all 0xfff > /sys/class/aml_ldim/attr\n");
+	"echo test_set 0 4095 > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
-	"echo test_get > /sys/class/aml_ldim/attr\n");
+	"echo test_set_all 4095 > /sys/class/aml_ldim/attr\n");
+
+	len += sprintf(buf+len,
+	"echo ldim_stts_init 8 2 > /sys/class/aml_ldim/attr\n");
+	len += sprintf(buf+len,
+	"echo ldim_init 8 2 0 1 0 > /sys/class/aml_ldim/attr\n");
 
 	len += sprintf(buf+len,
 	"echo fw_LD_ThSF_l 1600 > /sys/class/aml_ldim/attr\n");
@@ -1860,8 +2137,6 @@ static ssize_t ldim_attr_show(struct class *cla,
 	"echo ov_gain 16 > /sys/class/aml_ldim/attr\n");
 	len += sprintf(buf+len,
 	"echo avg_gain 2048 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo litgain 4096 > /sys/class/aml_ldim/attr\n");
 
 	len += sprintf(buf+len,
 	"echo LPF_method 3 > /sys/class/aml_ldim/attr\n");
@@ -1906,69 +2181,36 @@ static ssize_t ldim_attr_show(struct class *cla,
 	len += sprintf(buf+len,
 	"echo Dbprint_lv 1 > /sys/class/aml_ldim/attr\n");
 
-	len += sprintf(buf+len,
-	"echo ldim_init 1920 1080 8 2 0 1 0 > /sys/class/aml_ldim/attr\n");
-
-	len += sprintf(buf+len,
-	"echo curve_0 512 4 3712 29 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_1 512 4 3712 29 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_2 512 4 3712 29 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_3 512 4 3712 29 > /sys/class/aml_ldim/attr\n");
-
-	len += sprintf(buf+len,
-	"echo curve_4 546 4 3823 29 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_5 546 4 3823 29 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_6 585 4 3647 25 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_7 630 4 3455 22 > /sys/class/aml_ldim/attr\n");
-
-	len += sprintf(buf+len,
-	"echo curve_8 745 4 3135 17 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_9 819 4 3007 15 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_10 910 4 2879 13 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_11 1170 4 2623 28 > /sys/class/aml_ldim/attr\n");
-
-	len += sprintf(buf+len,
-	"echo curve_12 512 4 3750 28 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_13 512 4 3800 27 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_14 512 4 4000 26 > /sys/class/aml_ldim/attr\n");
-	len += sprintf(buf+len,
-	"echo curve_15 512 4 4055 25 > /sys/class/aml_ldim/attr\n");
-
 	return len;
 }
+
 static ssize_t ldim_attr_store(struct class *cla,
 	struct class_attribute *attr, const char *buf, size_t len)
 {
 	unsigned int n = 0;
 	char *buf_orig, *ps, *token;
-	char *parm[47] = {NULL};
+	/*char *parm[520] = {NULL};*/
+	char **parm = NULL;
 	char str[3] = {' ', '\n', '\0'};
 	unsigned int size;
 	int i, j;
 	char *pr_buf;
 	ssize_t pr_len = 0;
 
-	unsigned long pic_h = 0, pic_v = 0;
-	unsigned long blk_vnum = 0, blk_hnum = 0, hist_row = 0, hist_col = 0;
-	unsigned long backlit_mod = 0, ldim_bl_en = 0, ldim_hvcnt_bypass = 0;
-	unsigned long val1 = 0, val2 = 0;
+	unsigned int backlit_mod = 0, ldim_bl_en = 0, ldim_hvcnt_bypass = 0;
+	unsigned long val1 = 0;
 
 	if (!buf)
 		return len;
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	if (buf_orig == NULL) {
 		LDIMERR("buf malloc error\n");
+		return len;
+	}
+	parm = kcalloc(520, sizeof(char *), GFP_KERNEL);
+	if (parm == NULL) {
+		LDIMERR("parm malloc error\n");
+		kfree(buf_orig);
 		return len;
 	}
 	ps = buf_orig;
@@ -1981,77 +2223,151 @@ static ssize_t ldim_attr_store(struct class *cla,
 		parm[n++] = token;
 	}
 
-	if (!strcmp(parm[0], "histgram_ldim")) {
+	if (!strcmp(parm[0], "hist")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				ldim_matrix_histgram_mute_print();
+				goto ldim_attr_store_end;
+			}
+		}
 		ldim_dump_histgram();
 	} else if (!strcmp(parm[0], "maxrgb")) {
-		ldim_get_matrix_info_max_rgb();
-	} else if (!strcmp(parm[0], "hist")) {
-		ldim_dump_histgram();
-	} else if (!strcmp(parm[0], "matrix")) {
-		ldim_get_matrix_info();
-	} else if (!strcmp(parm[0], "db_en")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				ldim_matrix_max_rgb_mute_print();
 				goto ldim_attr_store_end;
-			LDIM_DATA_FROM_DB = (unsigned char)val1;
-			ldim_db_load_update(&nPRM);
+			}
 		}
-		pr_info("LDIM_DATA_FROM_DB = %d\n", LDIM_DATA_FROM_DB);
+		ldim_get_matrix_info_max_rgb();
+	} else if (!strcmp(parm[0], "matrix")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				ldim_matrix_bl_matrix_mute_print();
+				goto ldim_attr_store_end;
+			}
+		}
+		ldim_get_matrix_info();
+	} else if (!strcmp(parm[0], "SF_matrix")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				ldim_matrix_SF_matrix_mute_print();
+				goto ldim_attr_store_end;
+			}
+		}
+		ldim_get_matrix_info_SF();
+	} else if (!strcmp(parm[0], "db_load")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", LDIM_DATA_FROM_DB);
+				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
+			LDIM_DATA_FROM_DB = val1 ? 1 : 0;
+		}
+		pr_info("LDIM_DATA_FROM_DB: %d\n", LDIM_DATA_FROM_DB);
 	} else if (!strcmp(parm[0], "db_print")) {
-		db_print_flag = 1;
-	} else if (!strcmp(parm[0], "dump_db")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", db_print_flag);
+				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
+			db_print_flag = val1 ? 1 : 0;
+		}
+		pr_info("db_print_flag: %d\n", db_print_flag);
+	} else if (!strcmp(parm[0], "db_dump")) {
 		ldim_db_para_print(&nPRM);
 	} else if (!strcmp(parm[0], "ldim_init")) {
-		if (parm[7] != NULL) {
-			if (kstrtoul(parm[1], 10, &pic_h) < 0)
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d %d %d %d %d\n",
+					ldim_blk_row, ldim_blk_col,
+					ldim_config.bl_mode,
+					ldim_config.bl_en,
+					ldim_config.hvcnt_bypass);
 				goto ldim_attr_store_end;
-			if (kstrtoul(parm[2], 10, &pic_v) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[3], 10, &blk_vnum) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[4], 10, &blk_hnum) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[5], 10, &backlit_mod) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[6], 10, &ldim_bl_en) < 0)
-				return -EINVAL;
-			if (kstrtoul(parm[7], 10, &ldim_hvcnt_bypass) < 0)
-				goto ldim_attr_store_end;
+			}
+		}
+		if (parm[5] != NULL) {
+			if (kstrtouint(parm[1], 10, &ldim_blk_row) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[2], 10, &ldim_blk_col) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[3], 10, &backlit_mod) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[4], 10, &ldim_bl_en) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[5], 10, &ldim_hvcnt_bypass) < 0)
+				goto ldim_attr_store_err;
 
-			pr_info("ldim init param:%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
-				pic_h, pic_v, blk_vnum, blk_hnum,
-				backlit_mod, ldim_bl_en, ldim_hvcnt_bypass);
-			ldim_blk_row = blk_vnum;
-			ldim_blk_col = blk_hnum;
 			ldim_config.row = ldim_blk_row;
 			ldim_config.col = ldim_blk_col;
 			ldim_config.bl_mode = (unsigned char)backlit_mod;
-			LDIM_Initial(pic_h, pic_v, blk_vnum, blk_hnum,
+			ldim_config.bl_en = (unsigned char)ldim_bl_en;
+			ldim_config.hvcnt_bypass =
+				(unsigned char)ldim_hvcnt_bypass;
+			LDIM_Initial(ldim_config.hsize, ldim_config.vsize,
+				ldim_blk_row, ldim_blk_col,
 				backlit_mod, ldim_bl_en, ldim_hvcnt_bypass);
 			pr_info("**************ldim init ok*************\n");
 		}
+		pr_info("ldim_init param: %d %d %d %d %d\n",
+			ldim_blk_row, ldim_blk_col,
+			ldim_config.bl_mode, ldim_config.bl_en,
+			ldim_config.hvcnt_bypass);
 	} else if (!strcmp(parm[0], "ldim_stts_init")) {
-		if (parm[4] != NULL) {
-			if (kstrtoul(parm[1], 10, &pic_h) < 0)
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d %d\n",
+					ldim_hist_row, ldim_hist_col);
 				goto ldim_attr_store_end;
-			if (kstrtoul(parm[2], 10, &pic_v) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[3], 10, &hist_row) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[4], 10, &hist_col) < 0)
-				goto ldim_attr_store_end;
+			}
+		}
+		if (parm[2] != NULL) {
+			if (kstrtouint(parm[1], 10, &ldim_hist_row) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[2], 10, &ldim_hist_col) < 0)
+				goto ldim_attr_store_err;
 
-			pr_info("****ldim init param:%lu,%lu,%lu,%lu********\n",
-				pic_h, pic_v, hist_row, hist_col);
-			ldim_hist_row = hist_row;
-			ldim_hist_col = hist_col;
-			ldim_stts_initial(pic_h, pic_v, hist_row, hist_col);
+			ldim_stts_initial(ldim_config.hsize, ldim_config.vsize,
+				ldim_hist_row, ldim_hist_col);
 			pr_info("************ldim stts init ok*************\n");
 		}
+		pr_info("ldim_stts_init param: %d %d\n",
+			ldim_hist_row, ldim_hist_col);
+	} else if (!strcmp(parm[0], "frm_size")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d %d\n",
+					ldim_config.hsize,
+					ldim_config.vsize);
+				goto ldim_attr_store_end;
+			}
+		}
+		pr_info("frm_width: %d, frm_height: %d\n",
+			ldim_config.hsize, ldim_config.vsize);
+	} else if (!strcmp(parm[0], "func")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_func_en);
+				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
+			ldim_func_en = val1 ? 1 : 0;
+			ldim_func_ctrl(ldim_func_en);
+		}
+		pr_info("ldim_func_en: %d\n", ldim_func_en);
 	} else if (!strcmp(parm[0], "remap")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_remap_en);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
 			if (val1) {
 				if (ldim_func_en) {
 					ldim_remap_en = 1;
@@ -2066,19 +2382,43 @@ static ssize_t ldim_attr_store(struct class *cla,
 			}
 		}
 		pr_info("ldim_remap_en: %d\n", ldim_remap_en);
+	} else if (!strcmp(parm[0], "demo")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_demo_en);
+				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
+			if (val1) {
+				if (ldim_remap_en) {
+					ldim_demo_en = 1;
+					nPRM.reg_LD_RGBmapping_demo = 1;
+					LDIM_WR_reg_bits(REG_LD_RGB_MOD, 1,
+						19, 1);
+				} else {
+					pr_info(
+					"error: ldim_remap is disabled\n");
+				}
+			} else {
+				ldim_demo_en = 0;
+				nPRM.reg_LD_RGBmapping_demo = 0;
+				LDIM_WR_reg_bits(REG_LD_RGB_MOD, 0, 19, 1);
+			}
+		}
+		pr_info("ldim_demo_en: %d\n", ldim_demo_en);
 	} else if (!strcmp(parm[0], "ldim_matrix_get")) {
 		unsigned int data[32] = {0};
 		unsigned int k, g, reg_sel = 0;
 
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			reg_sel = (unsigned int)val1;
+			if (kstrtouint(parm[1], 10, &reg_sel) < 0)
+				goto ldim_attr_store_err;
 
 			pr_buf = kzalloc(sizeof(char) * 200, GFP_KERNEL);
 			if (!pr_buf) {
 				LDIMERR("buf malloc error\n");
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			}
 			ldim_get_matrix(&data[0], reg_sel);
 			if ((reg_sel == 0) || (reg_sel == 1)) {
@@ -2101,13 +2441,11 @@ static ssize_t ldim_attr_store(struct class *cla,
 		unsigned long temp_set[32] = {0};
 
 		if (parm[2] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[2], 10, &val2) < 0)
-				goto ldim_attr_store_end;
+			if (kstrtouint(parm[1], 10, &reg_sel_1) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[2], 10, &cnt1) < 0)
+				goto ldim_attr_store_err;
 
-			reg_sel_1 = val1;
-			cnt1 = val2;
 			for (k1 = 0; k1 < cnt1; k1++) {
 				if (parm[k1+2] != NULL) {
 					temp_set[k1] = kstrtoul(parm[k1+2],
@@ -2119,79 +2457,119 @@ static ssize_t ldim_attr_store(struct class *cla,
 			ldim_set_matrix(&data_set[0], reg_sel_1, cnt1);
 			pr_info("***********ldim matrix set over***********\n");
 		}
-	} else if (!strcmp(parm[0], "ldim_matrix_info")) {
-		ldim_get_matrix_info();
-		pr_info("**************ldim matrix info over*************\n");
-	} else if (!strcmp(parm[0], "ldim_nPRM_bl_matrix_info")) {
+	} else if (!strcmp(parm[0], "nPRM_bl_matrix")) {
 		ldim_nPRM_bl_matrix_info();
 		pr_info("**************ldim matrix(nPRM) info over*********\n");
-	} else if (!strcmp(parm[0], "ldim_enable")) {
-		ldim_func_en = 1;
-		ldim_func_ctrl(1);
-		pr_info("**************ldim enable ok*************\n");
-	} else if (!strcmp(parm[0], "ldim_disable")) {
-		ldim_func_en = 0;
-		ldim_func_ctrl(0);
-		pr_info("**************ldim disable ok*************\n");
 	} else if (!strcmp(parm[0], "data_min")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_data_min);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10, &ldim_data_min) < 0)
+				goto ldim_attr_store_err;
 
-			ldim_data_min = (unsigned int)val1;
 			ldim_set_level(ldim_brightness_level);
-			pr_info("*****ldim brightness data_min update******\n");
 		}
+		LDIMPR("brightness data_min: %d\n", ldim_data_min);
+	} else if (!strcmp(parm[0], "litgain")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%ld\n", litgain);
+				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &litgain) < 0)
+				goto ldim_attr_store_err;
+		}
+		pr_info("litgain = %ld\n", litgain);
+	} else if (!strcmp(parm[0], "brightness_bypass")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_brightness_bypass);
+				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
+			ldim_brightness_bypass = (unsigned char)val1;
+			if (ldim_brightness_bypass == 0)
+				ldim_set_level(ldim_brightness_level);
+		}
+		pr_info("brightness_bypass = %d\n", ldim_brightness_bypass);
 	} else if (!strcmp(parm[0], "test_mode")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_test_en);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
 			ldim_test_en = (unsigned char)val1;
 		}
 		LDIMPR("test_mode: %d\n", ldim_test_en);
 	} else if (!strcmp(parm[0], "test_set")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				ldim_test_matrix_mute_print();
+				goto ldim_attr_store_end;
+			}
+			if (!strcmp(parm[1], "w")) {
+				size = ldim_blk_row * ldim_blk_col;
+				if (parm[size+3] == NULL)
+					goto ldim_attr_store_err;
+				if (kstrtouint(parm[2], 10, &i) < 0)
+					goto ldim_attr_store_err;
+				if (kstrtouint(parm[3], 10, &j) < 0)
+					goto ldim_attr_store_err;
+				if ((i != 1) || (j != size))
+					goto ldim_attr_store_err;
+				for (i = 0; i < size; i++) {
+					if (kstrtouint(parm[i+4], 10, &j) < 0)
+						goto ldim_attr_store_err;
+					ldim_driver.ldim_test_matrix[i] =
+						(unsigned short)j;
+				}
+				goto ldim_attr_store_end;
+			}
+		}
 		if (parm[2] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[2], 16, &val2) < 0)
-				goto ldim_attr_store_end;
+			if (kstrtouint(parm[1], 10, &i) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[2], 10, &j) < 0)
+				goto ldim_attr_store_err;
 
 			size = ldim_blk_row * ldim_blk_col;
-			if (val1 < size) {
-				ldim_driver.ldim_test_matrix[val1] =
-					(unsigned short)val2;
-				LDIMPR("set test_matrix[%d] = 0x%03x\n",
-					(unsigned int)val1, (unsigned int)val2);
+			if (i < size) {
+				ldim_driver.ldim_test_matrix[i] =
+					(unsigned short)j;
+				LDIMPR("set test_matrix[%d] = %4d\n", i, j);
 			} else {
-				LDIMERR("invalid index for test_matrix: %d\n",
-					(unsigned int)val1);
+				LDIMERR("invalid index for test_matrix[%d]\n",
+					i);
 			}
+			goto ldim_attr_store_end;
 		}
+		ldim_get_test_matrix_info();
 	} else if (!strcmp(parm[0], "test_set_all")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 16, &val1) < 0)
-				goto ldim_attr_store_end;
+			if (kstrtouint(parm[1], 10, &j) < 0)
+				goto ldim_attr_store_err;
 
-			for (i = 0; i < ldim_blk_row * ldim_blk_col; i++) {
+			size = ldim_blk_row * ldim_blk_col;
+			for (i = 0; i < size; i++) {
 				ldim_driver.ldim_test_matrix[i] =
-					(unsigned short)val1;
+					(unsigned short)j;
 			}
-			LDIMPR("set all test_matrix to 0x%03x\n",
-				(unsigned int)val1);
+			LDIMPR("set all test_matrix to %4d\n", j);
+			goto ldim_attr_store_end;
 		}
-	} else if (!strcmp(parm[0], "test_get")) {
-		LDIMPR("get test_mode: %d, test_matrix:\n", ldim_test_en);
-		size = ldim_blk_row * ldim_blk_col;
-		for (i = 0; i < size; i++)
-			pr_info("0x%03x\t", ldim_driver.ldim_test_matrix[i]);
-		pr_info("\n");
+		ldim_get_test_matrix_info();
 	} else if (!strcmp(parm[0], "rs")) {
 		unsigned int reg_addr = 0, reg_val;
 
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 16, &val1) < 0)
-				goto ldim_attr_store_end;
-			reg_addr = (unsigned int)val1;
+			if (kstrtouint(parm[1], 16, &reg_addr) < 0)
+				goto ldim_attr_store_err;
 
 			reg_val = LDIM_RD_32Bits(reg_addr);
 			pr_info("reg_addr: 0x%x=0x%x\n", reg_addr, reg_val);
@@ -2200,12 +2578,10 @@ static ssize_t ldim_attr_store(struct class *cla,
 		unsigned int reg_addr = 0, reg_val = 0;
 
 		if (parm[2] != NULL) {
-			if (kstrtoul(parm[1], 16, &val1) < 0)
-				goto ldim_attr_store_end;
-			if (kstrtoul(parm[2], 16, &val2) < 0)
-				goto ldim_attr_store_end;
-			reg_addr = (unsigned int)val1;
-			reg_val = (unsigned int)val2;
+			if (kstrtouint(parm[1], 16, &reg_addr) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[2], 16, &reg_val) < 0)
+				goto ldim_attr_store_err;
 
 			LDIM_WR_32Bits(reg_addr, reg_val);
 			pr_info("reg_addr: 0x%x=0x%x, readback: 0x%x\n",
@@ -2215,73 +2591,116 @@ static ssize_t ldim_attr_store(struct class *cla,
 		unsigned int mode = 0;
 
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			mode  = (unsigned int)val1;
+			if (kstrtouint(parm[1], 10, &mode) < 0)
+				goto ldim_attr_store_err;
 
 			ldim_update_matrix(mode);
 			pr_info("mode: %d\n", mode);
 		}
 	} else if (!strcmp(parm[0], "bl_remap_curve")) {
-		ldim_bl_remap_curve_print();
-		if (parm[16] != NULL) {
-			for (i = 0; i < 16; i++) {
-				if (kstrtoul(parm[i+1], 10,
-					&bl_remap_curve[i]) < 0) {
-					goto ldim_attr_store_end;
-				}
-			}
-
-			ldim_bl_remap_curve_print();
-			pr_info("\n********bl_remap_curve ok*********\n");
-		}
-	} else if (!strcmp(parm[0], "fw_LD_Whist")) {
-		for (i = 0; i < 16; i++)
-			pr_info("(%d),", (unsigned int)fw_LD_Whist[i]);
-		if (parm[16] != NULL) {
-			for (i = 0; i < 16; i++) {
-				if (kstrtoul(parm[i+1], 10,
-					&fw_LD_Whist[i]) < 0) {
-					goto ldim_attr_store_end;
-				}
-			}
-
-			for (i = 0; i < 16; i++)
-				pr_info("(%d),", (unsigned int)fw_LD_Whist[i]);
-			pr_info("\n********fw_LD_Whist ok*********\n");
-		}
-	} else if (!strcmp(parm[0], "LD_remap_lut")) {
-		if (parm[33] != NULL) {
-			if (kstrtouint(parm[1], 10, &i) < 0)
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				ldim_sel_int_matrix_mute_print(
+					16, bl_remap_curve);
 				goto ldim_attr_store_end;
-			ldim_ld_remap_lut_print(i);
+			}
+		}
+		if (parm[16] != NULL) {
+			for (i = 0; i < 16; i++) {
+				if (kstrtouint(parm[i+1], 10,
+					&bl_remap_curve[i]) < 0) {
+					goto ldim_attr_store_err;
+				}
+			}
+		}
+		ldim_bl_remap_curve_print();
+	} else if (!strcmp(parm[0], "fw_LD_Whist")) {
+		if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				ldim_sel_int_matrix_mute_print(
+					16, fw_LD_Whist);
+				goto ldim_attr_store_end;
+			}
+		}
+		if (parm[16] != NULL) {
+			for (i = 0; i < 16; i++) {
+				if (kstrtouint(parm[i+1], 10,
+					&fw_LD_Whist[i]) < 0) {
+					goto ldim_attr_store_err;
+				}
+			}
+		}
+		ldim_fw_LD_Whist_print();
+	} else if (!strcmp(parm[0], "LD_remap_lut")) {
+		if (parm[1] == NULL) {
+			ldim_ld_remap_lut_print(0xff);
+			goto ldim_attr_store_end;
+		}
+		if (!strcmp(parm[1], "r")) {
+			ldim_matrix_LD_remap_LUT_mute_print();
+			goto ldim_attr_store_end;
+		}
+		if (!strcmp(parm[1], "lr")) { /* line read */
+			if (kstrtouint(parm[2], 10, &i) < 0)
+				goto ldim_attr_store_err;
+			ldim_matrix_LD_remap_LUT_mute_line_print(i);
+			goto ldim_attr_store_end;
+		}
+		if (!strcmp(parm[1], "w")) {
+			if (parm[515] == NULL)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[2], 10, &i) < 0)
+				goto ldim_attr_store_err;
+			if (kstrtouint(parm[3], 10, &j) < 0)
+				goto ldim_attr_store_err;
+			if ((i != 16) || (j != 32))
+				goto ldim_attr_store_err;
+			for (i = 0; i < 16; i++) {
+				for (j = 0; j < 32; j++) {
+					if (kstrtouint(parm[i*32+j+4], 10,
+						&LD_remap_lut[i][j]) < 0) {
+						goto ldim_attr_store_err;
+					}
+				}
+			}
+			goto ldim_attr_store_end;
+		}
+		if (!strcmp(parm[1], "lw")) { /* line write */
+			if (kstrtouint(parm[2], 10, &i) < 0)
+				goto ldim_attr_store_err;
+			if (parm[34] != NULL) {
+				for (j = 0; j < 32; j++) {
+					if (kstrtouint(parm[j+3], 10,
+						&LD_remap_lut[i][j]) < 0) {
+						goto ldim_attr_store_err;
+					}
+				}
+			}
+			goto ldim_attr_store_end;
+		}
+
+		if (kstrtouint(parm[1], 10, &i) < 0)
+			goto ldim_attr_store_err;
+		if (parm[33] != NULL) {
 			for (j = 0; j < 32; j++) {
 				if (kstrtouint(parm[j+2], 10,
 					&LD_remap_lut[i][j]) < 0) {
-					goto ldim_attr_store_end;
+					goto ldim_attr_store_err;
 				}
 			}
-
-			ldim_ld_remap_lut_print(i);
-			pr_info("\n********LD_remap_lut ok*********\n");
-		} else if (parm[1] != NULL) {
-			if (kstrtouint(parm[1], 10, &i) < 0)
-				goto ldim_attr_store_end;
-			ldim_ld_remap_lut_print(i);
-		} else {
-			ldim_ld_remap_lut_print(0xff);
 		}
+		ldim_ld_remap_lut_print(i);
 	} else if (!strcmp(parm[0], "Sf_bypass")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			ldim_fw_para.Sf_bypass = (unsigned char)val1;
 		}
 		pr_info("Sf_bypass = %d\n", ldim_fw_para.Sf_bypass);
 	} else if (!strcmp(parm[0], "Boost_light_bypass")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			ldim_fw_para.Boost_light_bypass = (unsigned char)val1;
 		}
 		pr_info("Boost_light_bypass = %d\n",
@@ -2289,192 +2708,264 @@ static ssize_t ldim_attr_store(struct class *cla,
 	} else if (!strcmp(parm[0], "Lpf_bypass")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			ldim_fw_para.Lpf_bypass = (unsigned char)val1;
 		}
 		pr_info("Lpf_bypass = %d\n", ldim_fw_para.Lpf_bypass);
 	} else if (!strcmp(parm[0], "Ld_remap_bypass")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.Ld_remap_bypass);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtoul(parm[1], 10, &val1) < 0)
+				goto ldim_attr_store_err;
 			ldim_fw_para.Ld_remap_bypass = (unsigned char)val1;
 		}
 		pr_info("Ld_remap_bypass = %d\n", ldim_fw_para.Ld_remap_bypass);
 	} else if (!strcmp(parm[0], "ov_gain")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			ldim_fw_para.ov_gain = (unsigned int)val1;
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.ov_gain) < 0)
+				goto ldim_attr_store_err;
 		}
 		pr_info("ov_gain = %d\n", ldim_fw_para.ov_gain);
-	} else if (!strcmp(parm[0], "litgain")) {
-		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &litgain) < 0)
-				goto ldim_attr_store_end;
-		}
-		pr_info("litgain = %ld\n", litgain);
-	} else if (!strcmp(parm[0], "brightness_bypass")) {
-		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			ldim_brightness_bypass = (unsigned char)val1;
-			if (ldim_brightness_bypass == 0)
-				ldim_set_level(ldim_brightness_level);
-		}
-		pr_info("brightness_bypass = %d\n", ldim_brightness_bypass);
 	} else if (!strcmp(parm[0], "fw_LD_ThSF_l")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10,
-				&ldim_fw_para.fw_LD_ThSF_l) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.fw_LD_ThSF_l);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.fw_LD_ThSF_l) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
-		pr_info("fw_LD_ThSF_l = %ld\n", ldim_fw_para.fw_LD_ThSF_l);
+		pr_info("fw_LD_ThSF_l = %d\n", ldim_fw_para.fw_LD_ThSF_l);
 	} else if (!strcmp(parm[0], "fw_LD_ThTF_l")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10,
-				&ldim_fw_para.fw_LD_ThTF_l) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.fw_LD_ThTF_l);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.fw_LD_ThTF_l) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
-		pr_info("fw_LD_ThTF_l = %ld\n", ldim_fw_para.fw_LD_ThTF_l);
+		pr_info("fw_LD_ThTF_l = %d\n", ldim_fw_para.fw_LD_ThTF_l);
 	} else if (!strcmp(parm[0], "boost_gain")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &ldim_fw_para.boost_gain) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.boost_gain);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.boost_gain) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
-		pr_info("boost_gain = %ld\n", ldim_fw_para.boost_gain);
+		pr_info("boost_gain = %d\n", ldim_fw_para.boost_gain);
 	} else if (!strcmp(parm[0], "boost_gain_neg")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10,
+			if (kstrtouint(parm[1], 10,
 				&ldim_fw_para.boost_gain_neg) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 		}
-		pr_info("boost_gain_neg = %ld\n", ldim_fw_para.boost_gain_neg);
+		pr_info("boost_gain_neg = %d\n", ldim_fw_para.boost_gain_neg);
 	} else if (!strcmp(parm[0], "alpha_delta")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10,
+			if (kstrtouint(parm[1], 10,
 				&ldim_fw_para.alpha_delta) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 		}
-		pr_info("alpha_delta = %ld\n", ldim_fw_para.alpha_delta);
+		pr_info("alpha_delta = %d\n", ldim_fw_para.alpha_delta);
 	} else if (!strcmp(parm[0], "TF_alpha")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &ldim_fw_para.TF_alpha) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.TF_alpha);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.TF_alpha) < 0)
+				goto ldim_attr_store_err;
 		}
-		pr_info("TF_alpha = %ld\n", ldim_fw_para.TF_alpha);
+		pr_info("TF_alpha = %d\n", ldim_fw_para.TF_alpha);
 	} else if (!strcmp(parm[0], "lpf_gain")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &ldim_fw_para.lpf_gain) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.lpf_gain);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.lpf_gain) < 0)
+				goto ldim_attr_store_err;
 		}
-		pr_info("lpf_gain = %ld\n", ldim_fw_para.lpf_gain);
+		pr_info("lpf_gain = %d\n", ldim_fw_para.lpf_gain);
 	} else if (!strcmp(parm[0], "lpf_res")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &ldim_fw_para.lpf_res) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_fw_para.lpf_res);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.lpf_res) < 0)
+				goto ldim_attr_store_err;
 		}
-		pr_info("lpf_res = %ld\n", ldim_fw_para.lpf_res);
+		pr_info("lpf_res = %d\n", ldim_fw_para.lpf_res);
 	} else if (!strcmp(parm[0], "rgb_base")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &ldim_fw_para.rgb_base) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_fw_para.rgb_base);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.rgb_base) < 0)
+				goto ldim_attr_store_err;
 		}
-		pr_info("rgb_base = %ld\n", ldim_fw_para.rgb_base);
+		pr_info("rgb_base = %d\n", ldim_fw_para.rgb_base);
 	} else if (!strcmp(parm[0], "avg_gain")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &ldim_fw_para.avg_gain) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.avg_gain);
 				goto ldim_attr_store_end;
+			}
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.avg_gain) < 0)
+				goto ldim_attr_store_err;
 		}
-		pr_info("avg_gain = %ld\n", ldim_fw_para.avg_gain);
+		pr_info("avg_gain = %d\n", ldim_fw_para.avg_gain);
 	} else if (!strcmp(parm[0], "fw_rgb_diff_th")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.fw_rgb_diff_th);
 				goto ldim_attr_store_end;
-			ldim_fw_para.fw_rgb_diff_th = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.fw_rgb_diff_th) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("fw_rgb_diff_th = %d\n", ldim_fw_para.fw_rgb_diff_th);
 	} else if (!strcmp(parm[0], "max_luma")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			ldim_fw_para.max_luma = (unsigned int)val1;
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.max_luma) < 0)
+				goto ldim_attr_store_err;
 		}
 		pr_info("max_luma = %d\n", ldim_fw_para.max_luma);
 	} else if (!strcmp(parm[0], "lmh_avg_TH")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			ldim_fw_para.lmh_avg_TH = (unsigned int)val1;
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.lmh_avg_TH) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("lmh_avg_TH = %d\n", ldim_fw_para.lmh_avg_TH);
 	} else if (!strcmp(parm[0], "fw_TF_sum_th")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			ldim_fw_para.fw_TF_sum_th = (unsigned int)val1;
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.fw_TF_sum_th) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("fw_TF_sum_th = %d\n", ldim_fw_para.fw_TF_sum_th);
 	} else if (!strcmp(parm[0], "LPF_method")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.LPF_method);
 				goto ldim_attr_store_end;
-			ldim_fw_para.LPF_method = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.LPF_method) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("LPF_method = %d\n", ldim_fw_para.LPF_method);
 	} else if (!strcmp(parm[0], "LD_TF_STEP_TH")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.LD_TF_STEP_TH);
 				goto ldim_attr_store_end;
-			ldim_fw_para.LD_TF_STEP_TH = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.LD_TF_STEP_TH) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("LD_TF_STEP_TH = %d\n", ldim_fw_para.LD_TF_STEP_TH);
 	} else if (!strcmp(parm[0], "TF_step_method")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
-			ldim_fw_para.TF_step_method = (unsigned int)val1;
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.TF_step_method) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("TF_step_method = %d\n", ldim_fw_para.TF_step_method);
 	} else if (!strcmp(parm[0], "TF_FRESH_BL")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.TF_FRESH_BL);
 				goto ldim_attr_store_end;
-			ldim_fw_para.TF_FRESH_BL = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.TF_FRESH_BL) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("TF_FRESH_BL = %d\n", ldim_fw_para.TF_FRESH_BL);
 	} else if (!strcmp(parm[0], "TF_BLK_FRESH_BL")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.TF_BLK_FRESH_BL);
 				goto ldim_attr_store_end;
-			ldim_fw_para.TF_BLK_FRESH_BL = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.TF_BLK_FRESH_BL) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("TF_BLK_FRESH_BL = %d\n", ldim_fw_para.TF_BLK_FRESH_BL);
 	} else if (!strcmp(parm[0], "bbd_detect_en")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			ldim_fw_para.bbd_detect_en = (unsigned char)val1;
 		}
 		pr_info("bbd_detect_en = %d\n", ldim_fw_para.bbd_detect_en);
 	} else if (!strcmp(parm[0], "side_blk_diff_th")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.side_blk_diff_th);
 				goto ldim_attr_store_end;
-			ldim_fw_para.side_blk_diff_th = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.side_blk_diff_th) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("side_blk_diff_th = %d\n",
 			ldim_fw_para.side_blk_diff_th);
 	} else if (!strcmp(parm[0], "bbd_th")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n", ldim_fw_para.bbd_th);
 				goto ldim_attr_store_end;
-			ldim_fw_para.bbd_th = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10, &ldim_fw_para.bbd_th) < 0)
+				goto ldim_attr_store_err;
 		}
 		pr_info("bbd_th = %d\n", ldim_fw_para.bbd_th);
 	} else if (!strcmp(parm[0], "diff_blk_luma_en")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			ldim_fw_para.diff_blk_luma_en = (unsigned char)val1;
 		}
 		pr_info("diff_blk_luma_en = %d\n",
@@ -2482,37 +2973,50 @@ static ssize_t ldim_attr_store(struct class *cla,
 	} else if (!strcmp(parm[0], "fw_hist_print")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			ldim_fw_para.fw_hist_print = (unsigned char)val1;
 		}
 		pr_info("fw_hist_print = %d\n", ldim_fw_para.fw_hist_print);
 	} else if (!strcmp(parm[0], "fw_print_frequent")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.fw_print_frequent);
 				goto ldim_attr_store_end;
-			ldim_fw_para.fw_print_frequent = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.fw_print_frequent) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("fw_print_frequent = %d\n",
 			ldim_fw_para.fw_print_frequent);
 	} else if (!strcmp(parm[0], "Dbprint_lv")) {
 		if (parm[1] != NULL) {
-			if (kstrtoul(parm[1], 10, &val1) < 0)
+			if (!strcmp(parm[1], "r")) {
+				pr_info("for_tool:%d\n",
+					ldim_fw_para.Dbprint_lv);
 				goto ldim_attr_store_end;
-			ldim_fw_para.Dbprint_lv = (unsigned int)val1;
+			}
+			if (kstrtouint(parm[1], 10,
+				&ldim_fw_para.Dbprint_lv) < 0) {
+				goto ldim_attr_store_err;
+			}
 		}
 		pr_info("Dbprint_lv = %d\n", ldim_fw_para.Dbprint_lv);
 	} else if (!strcmp(parm[0], "alg_info")) {
 		pr_info("ldim_alg_ver: %s\n", ldim_fw_para.ver_str);
 		pr_info("ldim_fw_alg_frm: 0x%p\n\n", ldim_fw_para.fw_alg_frm);
+		pr_info("litgain              = %ld\n\n", litgain);
 		switch (ldim_fw_para.ver_num) {
 		case 0:
-			pr_info("fw_LD_ThSF_l         = %ld\n"
-				"fw_LD_ThTF_l         = %ld\n"
-				"boost_gain           = %ld\n"
-				"TF_alpha             = %ld\n"
-				"lpf_gain             = %ld\n"
-				"lpf_res              = %ld\n"
-				"rgb_base             = %ld\n\n",
+			pr_info("fw_LD_ThSF_l         = %d\n"
+				"fw_LD_ThTF_l         = %d\n"
+				"boost_gain           = %d\n"
+				"TF_alpha             = %d\n"
+				"lpf_gain             = %d\n"
+				"lpf_res              = %d\n"
+				"rgb_base             = %d\n\n",
 				ldim_fw_para.fw_LD_ThSF_l,
 				ldim_fw_para.fw_LD_ThTF_l,
 				ldim_fw_para.boost_gain,
@@ -2522,11 +3026,11 @@ static ssize_t ldim_attr_store(struct class *cla,
 				ldim_fw_para.rgb_base);
 			break;
 		case 1:
-			pr_info("fw_LD_ThSF_l         = %ld\n"
-				"fw_LD_ThTF_l         = %ld\n"
-				"boost_gain           = %ld\n"
-				"boost_gain_neg       = %ld\n"
-				"alpha_delta          = %ld\n\n",
+			pr_info("fw_LD_ThSF_l         = %d\n"
+				"fw_LD_ThTF_l         = %d\n"
+				"boost_gain           = %d\n"
+				"boost_gain_neg       = %d\n"
+				"alpha_delta          = %d\n\n",
 				ldim_fw_para.fw_LD_ThSF_l,
 				ldim_fw_para.fw_LD_ThTF_l,
 				ldim_fw_para.boost_gain,
@@ -2563,11 +3067,9 @@ static ssize_t ldim_attr_store(struct class *cla,
 			ldim_fw_para.bbd_detect_en,
 			ldim_fw_para.diff_blk_luma_en);
 		pr_info("ov_gain              = %d\n"
-			"avg_gain             = %ld\n"
-			"litgain              = %ld\n\n",
+			"avg_gain             = %d\n\n",
 			ldim_fw_para.ov_gain,
-			ldim_fw_para.avg_gain,
-			litgain);
+			ldim_fw_para.avg_gain);
 		pr_info("Sf_bypass            = %d\n"
 			"Boost_light_bypass   = %d\n"
 			"Lpf_bypass           = %d\n"
@@ -2598,6 +3100,7 @@ static ssize_t ldim_attr_store(struct class *cla,
 		pr_info("ldim_on_flag          = %d\n"
 			"ldim_func_en          = %d\n"
 			"ldim_remap_en         = %d\n"
+			"ldim_demo_en          = %d\n"
 			"ldim_func_bypass      = %d\n"
 			"ldim_test_en          = %d\n"
 			"ldim_avg_update_en    = %d\n"
@@ -2608,7 +3111,8 @@ static ssize_t ldim_attr_store(struct class *cla,
 			"ldim_data_min         = %d\n"
 			"ldim_data_max         = %d\n"
 			"ldim_irq_cnt          = %d\n\n",
-			ldim_on_flag, ldim_func_en, ldim_remap_en,
+			ldim_on_flag, ldim_func_en,
+			ldim_remap_en, ldim_demo_en,
 			ldim_func_bypass, ldim_test_en,
 			ldim_avg_update_en, ldim_matrix_update_en,
 			ldim_alg_en, ldim_top_en, ldim_hist_en,
@@ -2620,21 +3124,30 @@ static ssize_t ldim_attr_store(struct class *cla,
 			"nPRM.reg_LD_pic_ColMax = %d\n",
 			nPRM.reg_LD_BLK_Hnum, nPRM.reg_LD_BLK_Vnum,
 			nPRM.reg_LD_pic_RowMax, nPRM.reg_LD_pic_ColMax);
+		pr_info("litgain                = %ld\n\n", litgain);
 	} else if (!strcmp(parm[0], "print")) {
 		if (parm[1] != NULL) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)
-				goto ldim_attr_store_end;
+				goto ldim_attr_store_err;
 			ldim_debug_print = (unsigned char)val1;
 		}
 		pr_info("ldim_debug_print = %d\n", ldim_debug_print);
+	} else if (!strcmp(parm[0], "alg")) {
+		if (ldim_fw_para.fw_alg_para_print)
+			ldim_fw_para.fw_alg_para_print(&ldim_fw_para);
+		else
+			pr_info("ldim_alg para_print is null\n");
 	} else
 		pr_info("no support cmd!!!\n");
 
-	kfree(buf_orig);
-	return len;
-
 ldim_attr_store_end:
 	kfree(buf_orig);
+	kfree(parm);
+	return len;
+
+ldim_attr_store_err:
+	kfree(buf_orig);
+	kfree(parm);
 	return -EINVAL;
 }
 
@@ -2756,13 +3269,14 @@ int aml_ldim_get_config_unifykey(unsigned char *buf)
 }
 
 static struct ldim_fw_para_s ldim_fw_para = {
+	/* header */
+	.para_ver = FW_PARA_VER,
+	.para_size = sizeof(struct ldim_fw_para_s),
 	.ver_str = "not installed",
 	.ver_num = 0,
 
-	.nPRM = &nPRM,
-	.FDat = &FDat,
-	.bl_remap_curve = bl_remap_curve,
-	.fw_LD_Whist = fw_LD_Whist,
+	.hist_col = 1,
+	.hist_row = 1,
 
 	.fw_LD_ThSF_l = 1600,
 	.fw_LD_ThTF_l = 256,
@@ -2776,6 +3290,8 @@ static struct ldim_fw_para_s ldim_fw_para = {
 	.rgb_base = 127,
 
 	.ov_gain = 16,
+
+	.avg_gain = LD_DATA_MAX,
 
 	.LPF_method = 3,
 	.LD_TF_STEP_TH = 100,
@@ -2793,8 +3309,6 @@ static struct ldim_fw_para_s ldim_fw_para = {
 	.lmh_avg_TH = 200,/*for woman flicker*/
 	.fw_TF_sum_th = 32760,/*20180530*/
 
-	.avg_gain = LD_DATA_MAX,
-
 	.Sf_bypass = 0,
 	.Boost_light_bypass = 0,
 	.Lpf_bypass = 0,
@@ -2806,7 +3320,13 @@ static struct ldim_fw_para_s ldim_fw_para = {
 	.fw_print_frequent = 8,
 	.Dbprint_lv = 0,
 
+	.nPRM = &nPRM,
+	.FDat = &FDat,
+	.bl_remap_curve = bl_remap_curve,
+	.fw_LD_Whist = fw_LD_Whist,
+
 	.fw_alg_frm = NULL,
+	.fw_alg_para_print = NULL,
 };
 
 struct ldim_fw_para_s *aml_ldim_get_fw_para(void)
@@ -2815,92 +3335,90 @@ struct ldim_fw_para_s *aml_ldim_get_fw_para(void)
 }
 EXPORT_SYMBOL(aml_ldim_get_fw_para);
 
-static int aml_ldim_kzalloc(unsigned int ldim_blk_row1,
-	unsigned int ldim_blk_col1)
+static int aml_ldim_malloc(unsigned int blk_row, unsigned int blk_col)
 {
-	ldim_driver.ldim_matrix_buf = kzalloc(
-		(sizeof(unsigned short) * (ldim_blk_row1 * ldim_blk_col1)),
-		GFP_KERNEL);
-	if (ldim_driver.ldim_matrix_buf == NULL) {
-		LDIMERR("ldim_driver ldim_matrix_buf malloc error\n");
-		goto err0;
-	}
-	ldim_driver.hist_matrix = kzalloc((sizeof(unsigned int) *
-		(ldim_blk_row1 * ldim_blk_col1 * 16)), GFP_KERNEL);
+	ldim_driver.hist_matrix = kcalloc((blk_row * blk_col * 16),
+		sizeof(unsigned int), GFP_KERNEL);
 	if (ldim_driver.hist_matrix == NULL) {
 		LDIMERR("ldim_driver hist_matrix malloc error\n");
-		goto err1;
+		goto ldim_malloc_err0;
 	}
-	ldim_driver.max_rgb = kzalloc((sizeof(unsigned int) *
-		(ldim_blk_row1 * ldim_blk_col1)), GFP_KERNEL);
+	ldim_driver.max_rgb = kcalloc((blk_row * blk_col),
+		sizeof(unsigned int), GFP_KERNEL);
 	if (ldim_driver.max_rgb == NULL) {
 		LDIMERR("ldim_driver max_rgb malloc error\n");
-		goto err2;
+		goto ldim_malloc_err1;
 	}
-	ldim_driver.ldim_test_matrix = kzalloc((sizeof(unsigned short) *
-		(ldim_blk_row1 * ldim_blk_col1)), GFP_KERNEL);
+	ldim_driver.ldim_test_matrix = kcalloc((blk_row * blk_col),
+		sizeof(unsigned short), GFP_KERNEL);
 	if (ldim_driver.ldim_test_matrix == NULL) {
 		LDIMERR("ldim_driver ldim_test_matrix malloc error\n");
-		goto err3;
+		goto ldim_malloc_err2;
 	}
-	ldim_driver.local_ldim_matrix = kzalloc((sizeof(unsigned short) *
-		(ldim_blk_row1 * ldim_blk_col1)), GFP_KERNEL);
+	ldim_driver.local_ldim_matrix = kcalloc((blk_row * blk_col),
+		sizeof(unsigned short), GFP_KERNEL);
 	if (ldim_driver.local_ldim_matrix == NULL) {
 		LDIMERR("ldim_driver local_ldim_matrix malloc error\n");
-		goto err4;
+		goto ldim_malloc_err3;
 	}
-	FDat.SF_BL_matrix = kzalloc((sizeof(unsigned int) *
-		(ldim_blk_row1 * ldim_blk_col1)), GFP_KERNEL);
+	ldim_driver.ldim_matrix_buf = kcalloc((blk_row * blk_col),
+		sizeof(unsigned short), GFP_KERNEL);
+	if (ldim_driver.ldim_matrix_buf == NULL) {
+		LDIMERR("ldim_driver ldim_matrix_buf malloc error\n");
+		goto ldim_malloc_err4;
+	}
+	FDat.SF_BL_matrix = kcalloc((blk_row * blk_col),
+		sizeof(unsigned int), GFP_KERNEL);
 	if (FDat.SF_BL_matrix == NULL) {
 		LDIMERR("ldim_driver FDat.SF_BL_matrix malloc error\n");
-		goto err5;
+		goto ldim_malloc_err5;
 	}
-	FDat.last_STA1_MaxRGB = kzalloc((sizeof(unsigned int) *
-		ldim_blk_row1 * ldim_blk_col1 * 3), GFP_KERNEL);
+	FDat.last_STA1_MaxRGB = kcalloc((blk_row * blk_col * 3),
+		sizeof(unsigned int), GFP_KERNEL);
 	if (FDat.last_STA1_MaxRGB == NULL) {
 		LDIMERR("ldim_driver FDat.last_STA1_MaxRGB malloc error\n");
-		goto err6;
+		goto ldim_malloc_err6;
 	}
-	FDat.TF_BL_matrix = kzalloc((sizeof(unsigned int) *
-		ldim_blk_row1 * ldim_blk_col1), GFP_KERNEL);
+	FDat.TF_BL_matrix = kcalloc((blk_row * blk_col),
+		sizeof(unsigned int), GFP_KERNEL);
 	if (FDat.TF_BL_matrix == NULL) {
 		LDIMERR("ldim_driver FDat.TF_BL_matrix malloc error\n");
-		goto err7;
+		goto ldim_malloc_err7;
 	}
-	FDat.TF_BL_matrix_2 = kzalloc((sizeof(unsigned int) *
-		ldim_blk_row1 * ldim_blk_col1), GFP_KERNEL);
+	FDat.TF_BL_matrix_2 = kcalloc((blk_row * blk_col),
+		sizeof(unsigned int), GFP_KERNEL);
 	if (FDat.TF_BL_matrix_2 == NULL) {
 		LDIMERR("ldim_driver FDat.TF_BL_matrix_2 malloc error\n");
-		goto err8;
+		goto ldim_malloc_err8;
 	}
-	FDat.TF_BL_alpha = kzalloc((sizeof(unsigned int) *
-		ldim_blk_row1 * ldim_blk_col1), GFP_KERNEL);
+	FDat.TF_BL_alpha = kcalloc((blk_row * blk_col),
+		sizeof(unsigned int), GFP_KERNEL);
 	if (FDat.TF_BL_alpha == NULL) {
 		LDIMERR("ldim_driver FDat.TF_BL_alpha malloc error\n");
-		goto err9;
+		goto ldim_malloc_err9;
 	}
 
 	return 0;
 
-err9:
+ldim_malloc_err9:
 	kfree(FDat.TF_BL_matrix_2);
-err8:
+ldim_malloc_err8:
 	kfree(FDat.TF_BL_matrix);
-err7:
+ldim_malloc_err7:
 	kfree(FDat.last_STA1_MaxRGB);
-err6:
+ldim_malloc_err6:
 	kfree(FDat.SF_BL_matrix);
-err5:
-	kfree(ldim_driver.local_ldim_matrix);
-err4:
-	kfree(ldim_driver.ldim_test_matrix);
-err3:
-	kfree(ldim_driver.max_rgb);
-err2:
-	kfree(ldim_driver.hist_matrix);
-err1:
+ldim_malloc_err5:
 	kfree(ldim_driver.ldim_matrix_buf);
-err0:
+ldim_malloc_err4:
+	kfree(ldim_driver.local_ldim_matrix);
+ldim_malloc_err3:
+	kfree(ldim_driver.ldim_test_matrix);
+ldim_malloc_err2:
+	kfree(ldim_driver.max_rgb);
+ldim_malloc_err1:
+	kfree(ldim_driver.hist_matrix);
+ldim_malloc_err0:
 	return -1;
 }
 
@@ -2920,6 +3438,7 @@ int aml_ldim_probe(struct platform_device *pdev)
 	ldim_on_flag = 0;
 	ldim_func_en = 0;
 	ldim_remap_en = 0;
+	ldim_demo_en = 0;
 	ldim_func_bypass = 0;
 	ldim_test_en = 0;
 
@@ -2933,7 +3452,11 @@ int aml_ldim_probe(struct platform_device *pdev)
 	ldim_top_en = 0;
 	ldim_hist_en = 0;
 
-	ret = aml_ldim_kzalloc(ldim_blk_row, ldim_blk_col);
+	/* db para */
+	LDIM_DATA_FROM_DB = 0;
+	ldim_db_para = NULL;
+
+	ret = aml_ldim_malloc(ldim_blk_row, ldim_blk_col);
 	if (ret) {
 		LDIMERR("%s failed\n", __func__);
 		goto err;

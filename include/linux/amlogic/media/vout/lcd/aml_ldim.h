@@ -23,31 +23,16 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/amlogic/media/vout/lcd/aml_bl.h>
 #include <linux/amlogic/media/vout/lcd/aml_lcd.h>
+#include <linux/amlogic/media/vout/lcd/ldim_alg.h>
 #include <linux/spi/spi.h>
 
 /*#define LDIM_DEBUG_INFO*/
 #define LDIMPR(fmt, args...)     pr_info("ldim: "fmt"", ## args)
 #define LDIMERR(fmt, args...)    pr_err("ldim: error: "fmt"", ## args)
 
-
-#define LD_STA_BIN_NUM 16
-#define LD_STA_LEN_V   17
-/*  support maximum 16x4 regions for statistics (16+1) */
-#define LD_STA_LEN_H   25
-/*  support maximum 16x4 regions for statistics (24+1)*/
-#define LD_BLK_LEN_V   25
-/*  support maximum 16 led of each side left/right(16+4+4+1)*/
-#define LD_BLK_LEN_H   33
-/*  support maximum 24 led of each side top/bot  (24+4+4+1)*/
-#define LD_LUT_LEN     32
-#define LD_BLKHMAX     32
-#define LD_BLKVMAX     32
-
-
 #define LD_DATA_DEPTH   12
 #define LD_DATA_MIN     10
 #define LD_DATA_MAX     0xfff
-
 
 extern int  dirspi_write(struct spi_device *spi, u8 *buf, int len);
 extern int  dirspi_read(struct spi_device *spi, u8 *buf, int len);
@@ -66,14 +51,14 @@ enum ldim_dev_type_e {
 	LDIM_DEV_TYPE_MAX,
 };
 
-#define LD_BLKREGNUM 384  /* maximum support 24*16*/
-
 struct ldim_config_s {
 	unsigned short hsize;
 	unsigned short vsize;
 	unsigned char row;
 	unsigned char col;
 	unsigned char bl_mode;
+	unsigned char bl_en;
+	unsigned char hvcnt_bypass;
 };
 
 #define LDIM_INIT_ON_MAX     300
@@ -116,11 +101,11 @@ struct aml_ldim_driver_s {
 
 	struct ldim_config_s *ldim_conf;
 	struct ldim_dev_config_s *ldev_conf;
-	unsigned short *ldim_matrix_buf;
 	unsigned int *hist_matrix;
 	unsigned int *max_rgb;
 	unsigned short *ldim_test_matrix;
 	unsigned short *local_ldim_matrix;
+	unsigned short *ldim_matrix_buf;
 	int (*init)(void);
 	int (*power_on)(void);
 	int (*power_off)(void);

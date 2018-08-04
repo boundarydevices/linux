@@ -733,6 +733,7 @@
 		pinctrl-1 = <&bl_pwm_vs_on_pins>;
 		pinctrl-2 = <&bl_pwm_off_pins>;
 		pinctrl_version = <1>; /* for uboot */
+		ldim_pwm_config = <&bl_pwm_conf>;
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
 		ldim_dev-gpios = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH

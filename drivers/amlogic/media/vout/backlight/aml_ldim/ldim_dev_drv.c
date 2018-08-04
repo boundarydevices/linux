@@ -624,14 +624,14 @@ static int ldim_dev_pwm_channel_register(struct bl_pwm_config_s *bl_pwm,
 	struct device_node *child;
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
-	ret = of_property_read_u32(blnode, "bl_pwm_config", &pwm_phandle);
+	ret = of_property_read_u32(blnode, "ldim_pwm_config", &pwm_phandle);
 	if (ret) {
-		LDIMERR("not match bl_pwm_config node\n");
+		LDIMERR("not match ldim_pwm_config node\n");
 		return -1;
 	}
 	pnode = of_find_node_by_phandle(pwm_phandle);
 	if (!pnode) {
-		LDIMERR("can't find bl_pwm_config node\n");
+		LDIMERR("can't find ldim_pwm_config node\n");
 		return -1;
 	}
 
