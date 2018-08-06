@@ -603,8 +603,12 @@
 		tuner_name = "mxl661_tuner";
 		tuner_i2c_adap = <&i2c1>;
 		tuner_i2c_addr = <0x60>;
-		/* tuner_xtal = <0>; */
-		/* tuner_xtal_cap = <0>; */
+		tuner_xtal = <0>; /* 0: 16MHz, 1: 24MHz */
+		tuner_xtal_mode = <0>;
+					/* NO_SHARE_XTAL(0)
+					 * SLAVE_XTAL_SHARE(1)
+					 */
+		tuner_xtal_cap = <30>; /* when tuner_xtal_mode = 1, set 25 */
 	};
 
 	atv-demod {

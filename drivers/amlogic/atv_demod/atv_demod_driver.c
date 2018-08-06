@@ -458,11 +458,17 @@ static void aml_atvdemod_dt_parse(struct aml_atvdemod_device *pdev)
 		else
 			pdev->tuner_xtal = val;
 
+		ret = of_property_read_u32(node_tuner, "tuner_xtal_mode", &val);
+		if (ret)
+			pr_err("can't find tuner_xtal_mode.\n");
+		else
+			pdev->tuner_xtal_mode = val;
+
 		ret = of_property_read_u32(node_tuner, "tuner_xtal_cap", &val);
 		if (ret)
 			pr_err("can't find tuner_xtal_cap.\n");
 		else
-			pdev->tuner_xtal = val;
+			pdev->tuner_xtal_cap = val;
 
 		of_node_put(node_tuner);
 	}
@@ -491,6 +497,7 @@ int aml_attach_demod_tuner(struct aml_atvdemod_device *dev)
 	cfg.id = dev->tuner_id;
 	cfg.i2c_addr = dev->i2c_addr;
 	cfg.xtal = dev->tuner_xtal;
+	cfg.xtal_mode = dev->tuner_xtal_mode;
 	cfg.xtal_cap = dev->tuner_xtal_cap;
 
 	if (!dev->tuner_attached) {

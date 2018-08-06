@@ -41,6 +41,7 @@ struct aml_atvdemod_device {
 
 	unsigned int tuner_id;
 	unsigned int tuner_xtal;
+	unsigned int tuner_xtal_mode;
 	unsigned int tuner_xtal_cap;
 	unsigned int i2c_addr;
 	unsigned int i2c_adapter_id;

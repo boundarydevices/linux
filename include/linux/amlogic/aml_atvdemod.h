@@ -144,8 +144,9 @@ enum tuner_type {
 struct tuner_config {
 	u8 id;
 	u8 i2c_addr;
-	u8 xtal;
+	u8 xtal; /* 0: 16MHz, 1: 24MHz, 3: 27MHz */
 	u8 xtal_cap;
+	u8 xtal_mode;
 };
 
 extern struct dvb_frontend *mxl661_attach(struct dvb_frontend *fe,

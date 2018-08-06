@@ -410,7 +410,8 @@
 		tuner_name = "si2151_tuner";
 		tuner_i2c_adap = <&i2c1>;
 		tuner_i2c_addr = <0x60>;
-		/* tuner_xtal = <0>; */
+		/* tuner_xtal = <0>; */ /* unuse for si2151 */
+		/* tuner_xtal_mode = <0>; */
 		/* tuner_xtal_cap = <0>; */
 	};
 

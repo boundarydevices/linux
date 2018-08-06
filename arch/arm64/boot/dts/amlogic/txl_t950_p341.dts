@@ -418,7 +418,8 @@
 		tuner_name = "r842_tuner";
 		tuner_i2c_adap = <&i2c1>;
 		tuner_i2c_addr = <0xf6>;
-		tuner_xtal = <3>;
+		tuner_xtal = <1>; /* 0: 16MHz, 1: 24MHz, 3: 27MHz */
+		tuner_xtal_mode = <3>;
 					/* NO_SHARE_XTAL(0)
 					 * MASTER_TO_SLAVE_XTAL_IN(1)
 					 * MASTER_TO_SLAVE_XTAL_OUT(2)
