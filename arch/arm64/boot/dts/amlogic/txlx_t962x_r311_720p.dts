@@ -497,6 +497,7 @@
 		clocks = <&clkc CLKID_FCLK_DIV5>,
 			<&clkc CLKID_VDIN_MEAS_COMP>;
 		clock-names = "fclk_div5", "cts_vdin_meas_clk";
+		vdin_id = <0>;
 		/* vdin write mem color depth support:
 		 * bit0:support 8bit
 		 * bit1:support 9bit
