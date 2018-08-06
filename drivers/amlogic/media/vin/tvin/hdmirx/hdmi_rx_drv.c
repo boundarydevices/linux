@@ -914,18 +914,18 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 	}
 	case HDMI_IOC_HDCP_ON:
 		hdcp_enable = 1;
-		rx_set_hpd(0);
+		rx_set_cur_hpd(0);
 		fsm_restart();
 		break;
 	case HDMI_IOC_HDCP_OFF:
 		hdcp_enable = 0;
-		rx_set_hpd(0);
+		rx_set_cur_hpd(0);
 		hdmirx_hw_config();
 		fsm_restart();
 		break;
 	case HDMI_IOC_EDID_UPDATE:
 		if (rx.open_fg) {
-			rx_set_hpd(0);
+			rx_set_cur_hpd(0);
 			edid_update_flag = 1;
 		}
 		#if 0
@@ -1332,7 +1332,7 @@ static ssize_t cec_set_state(struct device *dev,
 		hdmi_cec_en = 1;
 	else if (val == 2) {
 		hdmi_cec_en = 1;
-		rx_force_hpd_cfg(1);
+		rx_set_port_hpd(ALL_PORTS, 1);
 	}
 	rx_pr("cec sts = %d\n", val);
 	return count;
@@ -1916,7 +1916,7 @@ static int hdmirx_suspend(struct platform_device *pdev, pm_message_t state)
 	del_timer_sync(&hdevp->timer);
 	/* set HPD low when cec off. */
 	if (!hdmi_cec_en)
-		rx_force_hpd_cfg(0);
+		rx_set_port_hpd(ALL_PORTS, 0);
 
 	if (suspend_pddq_sel == 0)
 		rx_pr("don't set phy pddq down\n");
@@ -1977,7 +1977,7 @@ static void hdmirx_shutdown(struct platform_device *pdev)
 	del_timer_sync(&hdevp->timer);
 	/* set HPD low when cec off. */
 	if (!hdmi_cec_en)
-		rx_force_hpd_cfg(0);
+		rx_set_port_hpd(ALL_PORTS, 0);
 	/* phy powerdown */
 	hdmirx_phy_pddq(1);
 	if (hdcp22_on)

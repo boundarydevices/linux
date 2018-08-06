@@ -1172,12 +1172,13 @@ void rx_dwc_reset(void)
 }
 
 
-uint32_t rx_get_cur_hpd_sts(void)
+int rx_get_cur_hpd_sts(void)
 {
-	uint32_t ret = rx_get_hpd_sts() & (1 << rx.port);
+	int tmp;
 
-	ret = (ret == 0) ? 1 : 0;
-	return ret;
+	tmp = hdmirx_rd_top(TOP_HPD_PWR5V) & (1 << rx.port);
+	tmp >>= rx.port;
+	return tmp;
 }
 
 bool is_tmds_valid(void)
@@ -1374,7 +1375,7 @@ void dump_unnormal_info(void)
 
 void rx_send_hpd_pulse(void)
 {
-	rx_set_hpd(0);
+	rx_set_cur_hpd(0);
 	fsm_restart();
 }
 
@@ -1809,7 +1810,7 @@ void hdmirx_open_port(enum tvin_port_e port)
 		}
 		if (rx.state > FSM_HPD_LOW)
 			rx.state = FSM_HPD_LOW;
-		rx_set_hpd(0);
+		rx_set_cur_hpd(0);
 		/* need reset the whole module when switch port */
 		hdmirx_hw_config();
 	} else {
@@ -1971,7 +1972,7 @@ void rx_main_state_machine(void)
 		fsm_restart();
 		break;
 	case FSM_HPD_LOW:
-		rx_set_hpd(0);
+		rx_set_cur_hpd(0);
 		set_scdc_cfg(1, 0);
 		rx.state = FSM_INIT;
 		break;
@@ -1994,7 +1995,7 @@ void rx_main_state_machine(void)
 		clk_unstable_cnt = 0;
 		esd_phy_rst_cnt = 0;
 		pre_port = rx.port;
-		rx_set_hpd(1);
+		rx_set_cur_hpd(1);
 		set_scdc_cfg(0, 1);
 		/* rx.hdcp.hdcp_version = HDCP_VER_NONE; */
 		rx.state = FSM_WAIT_CLK_STABLE;
@@ -2064,7 +2065,7 @@ void rx_main_state_machine(void)
 				else
 					rx.err_rec_mode = ERR_REC_HPD_RST;
 			} else if (rx.err_rec_mode == ERR_REC_HPD_RST) {
-				rx_set_hpd(0);
+				rx_set_cur_hpd(0);
 				rx.state = FSM_HPD_HIGH;
 				rx.err_rec_mode = ERR_REC_END;
 			} else {
@@ -2146,7 +2147,7 @@ void rx_main_state_machine(void)
 				rx.err_rec_mode = ERR_REC_HPD_RST;
 				rx_set_eq_run_state(E_EQ_START);
 			} else if (rx.err_rec_mode == ERR_REC_HPD_RST) {
-				rx_set_hpd(0);
+				rx_set_cur_hpd(0);
 				rx.state = FSM_HPD_HIGH;
 				rx.err_rec_mode = ERR_REC_END;
 			} else
@@ -2273,7 +2274,7 @@ void rx_main_state_machine(void)
 	switch (rx.state) {
 	case FSM_HPD_LOW:
 		/* set_scdc_cfg(1, 1); */
-		rx_set_hpd(0);
+		rx_set_cur_hpd(0);
 		rx_irq_en(false);
 		rx.state = FSM_INIT;
 		set_scdc_cfg(1, 0);
@@ -2302,7 +2303,7 @@ void rx_main_state_machine(void)
 		}
 		hpd_wait_cnt = 0;
 		pre_port = rx.port;
-		rx_set_hpd(1);
+		rx_set_cur_hpd(1);
 		set_scdc_cfg(0, 1);
 		/* some box init hdcp authentication too early
 		 * and it may make the hdcp_version error
@@ -2463,7 +2464,7 @@ void rx_main_state_machine(void)
 					if (sig_unstable_reset_hpd_cnt >=
 						sig_unstable_reset_hpd_max) {
 						rx.state = FSM_HPD_HIGH;
-						rx_set_hpd(0);
+						rx_set_cur_hpd(0);
 						sig_unstable_reset_hpd_cnt = 0;
 						rx_pr(
 						"unstable->HDMI5V_HIGH\n");
@@ -2866,7 +2867,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("duk--dump duk\n");
 		rx_pr("*****************\n");
 	} else if (strncmp(tmpbuf, "hpd", 3) == 0)
-		rx_set_hpd(tmpbuf[3] == '0' ? 0 : 1);
+		rx_set_cur_hpd(tmpbuf[3] == '0' ? 0 : 1);
 	else if (strncmp(tmpbuf, "cable_status", 12) == 0) {
 		size = hdmirx_rd_top(TOP_HPD_PWR5V) >> 20;
 		rx_pr("cable_status = %x\n", size);

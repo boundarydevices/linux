@@ -72,6 +72,12 @@
 
 #define PHY_RESISTOR_CALIBRATION_1 (0x10UL)
 #define PHY_MAIN_FSM_OVERRIDE1	(0x07UL)
+#define PHY_TERM_OVERRIDE _BIT(8)
+#define PHY_TERM_OV_VALUE MSK(4, 4)
+#define PHY_TERM_OV_PORT0 _BIT(4)
+#define PHY_TERM_OV_PORT1 _BIT(5)
+#define PHY_TERM_OV_PORT2 _BIT(6)
+#define PHY_TERM_OV_PORT3 _BIT(7)
 #define PHY_MAIN_FSM_OVERRIDE2	(0x08UL)
 
 #define PHY_MAIN_BIST_CONTROL	(0x0BUL)
@@ -1069,6 +1075,10 @@ extern unsigned char rx_get_hdcp14_sts(void);
 extern unsigned int rx_hdcp22_rd_reg_bits(unsigned int addr, unsigned int mask);
 extern int rx_get_aud_pll_err_sts(void);
 extern void rx_force_hpd_cfg(uint8_t hpd_level);
+extern int rx_set_port_hpd(uint8_t port_id, bool val);
+extern void rx_set_cur_hpd(uint8_t val);
+extern unsigned int rx_get_hdmi5v_sts(void);
+extern unsigned int rx_get_hpd_sts(void);
 #endif
 
 

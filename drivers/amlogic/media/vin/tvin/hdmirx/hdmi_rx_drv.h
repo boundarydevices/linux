@@ -46,7 +46,7 @@
  *
  *
  */
-#define RX_VER2 "ver.2018/07/30a"
+#define RX_VER2 "ver.2018/08/07"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -134,6 +134,7 @@ struct hdmirx_dev_s {
 #define IOC_AUD_INFO  _BIT(1)
 #define IOC_MPEGS_INFO _BIT(2)
 #define IOC_AVI_INFO _BIT(3)
+#define ALL_PORTS ((1 << E_PORT_NUM) - 1)
 
 enum colorspace_e {
 	E_COLOR_RGB,
@@ -415,9 +416,6 @@ extern void skip_frame(unsigned int cnt);
 /* hotplug */
 extern unsigned int pwr_sts;
 extern int pre_port;
-extern void rx_set_hpd(bool en);
-extern unsigned int rx_get_hdmi5v_sts(void);
-extern unsigned int rx_get_hpd_sts(void);
 extern void hotplug_wait_query(void);
 extern void rx_send_hpd_pulse(void);
 

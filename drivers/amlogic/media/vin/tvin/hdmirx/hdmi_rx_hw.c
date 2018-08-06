@@ -1003,6 +1003,16 @@ static int TOP_init(void)
 	/* delay cycles before n/cts update pulse */
 	data32 |= 7 << 0;
 	hdmirx_wr_top(TOP_ACR_CNTL2, data32);
+
+	data32 = 0;
+	/* bit4: hpd override, bit5: hpd reverse */
+	data32 |= 1 << 4;
+	if (rx.chip_id == CHIP_ID_GXTVBB)
+		data32 |= 0 << 5;
+	else
+		data32 |= 1 << 5;
+	/* pull down all the hpd */
+	hdmirx_wr_top(TOP_HPD_PWR5V, data32);
 	return err;
 }
 
@@ -1160,19 +1170,64 @@ void rx_hdcp14_config(const struct hdmi_rx_hdcp *hdcp)
 	hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, ENCRIPTION_ENABLE, 1);
 }
 
-void rx_set_hpd(bool en)
+void rx_set_term_enable(bool enable)
 {
-	if (en) {
-		hdmirx_wr_top(TOP_HPD_PWR5V,
-			hdmirx_rd_top(TOP_HPD_PWR5V)&(~(1<<rx.port)));
-	} else {
-		hdmirx_wr_top(TOP_HPD_PWR5V,
-			hdmirx_rd_top(TOP_HPD_PWR5V)|(1<<rx.port));
-	}
+	hdmirx_wr_bits_phy(PHY_MAIN_FSM_OVERRIDE1, PHY_TERM_OVERRIDE, enable);
+}
+
+void rx_set_term_value(unsigned char port, bool value)
+{
+	if (port < E_PORT_NUM) {
+		if (value)
+			hdmirx_wr_bits_phy(PHY_MAIN_FSM_OVERRIDE1,
+				_BIT(port + 4), 1);
+		else
+			hdmirx_wr_bits_phy(PHY_MAIN_FSM_OVERRIDE1,
+				_BIT(port + 4), 0);
+	} else if (port == ALL_PORTS) {
+		if (value)
+			hdmirx_wr_bits_phy(PHY_MAIN_FSM_OVERRIDE1,
+				PHY_TERM_OV_VALUE, 0xF);
+		else
+			hdmirx_wr_bits_phy(PHY_MAIN_FSM_OVERRIDE1,
+				PHY_TERM_OV_VALUE, 0);
+	} else
+		rx_pr("%s port num overflow\n", __func__);
+
+}
+
+int rx_set_port_hpd(uint8_t port_id, bool val)
+{
+	if (port_id < E_PORT_NUM) {
+		if (val) {
+			hdmirx_wr_bits_top(TOP_HPD_PWR5V, _BIT(port_id), 1);
+			rx_set_term_value(port_id, 1);
+		} else {
+			hdmirx_wr_bits_top(TOP_HPD_PWR5V, _BIT(port_id), 0);
+			rx_set_term_value(port_id, 0);
+		}
+	} else if (port_id == ALL_PORTS) {
+		if (val) {
+			hdmirx_wr_bits_top(TOP_HPD_PWR5V, MSK(4, 0), 0xF);
+			rx_set_term_value(port_id, 1);
+		} else {
+			hdmirx_wr_bits_top(TOP_HPD_PWR5V, MSK(4, 0), 0x0);
+			rx_set_term_value(port_id, 0);
+		}
+	} else
+		return -1;
+
 	if (log_level & LOG_EN)
 		rx_pr("%s, port:%d, val:%d\n", __func__,
-						rx.port, en);
+						port_id, val);
+	return 0;
 }
+
+void rx_set_cur_hpd(uint8_t val)
+{
+	rx_set_port_hpd(rx.port, val);
+}
+
 
 /*
  * rx_force_hpd_config - force config hpd level on all ports
@@ -1181,9 +1236,9 @@ void rx_set_hpd(bool en)
 void rx_force_hpd_cfg(uint8_t hpd_level)
 {
 	if (hpd_level)
-		hdmirx_wr_top(TOP_HPD_PWR5V, 0x10);
+		hdmirx_wr_bits_top(TOP_HPD_PWR5V, MSK(4, 0), 0xf);
 	else
-		hdmirx_wr_top(TOP_HPD_PWR5V, 0x1f);
+		hdmirx_wr_bits_top(TOP_HPD_PWR5V, MSK(4, 0), 0x0);
 }
 
 /*
@@ -1297,7 +1352,7 @@ void hdcp22_suspend(void)
 	hdcp22_clk_en(0);
 	/* note: can't pull down hpd before enter suspend */
 	/* it will stop cec wake up func if EE domain still working */
-	/* rx_set_hpd(0); */
+	/* rx_set_cur_hpd(0); */
 	hpd_to_esm = 0;
 	hdmirx_wr_dwc(DWC_HDCP22_CONTROL,
 				0x0);
@@ -1327,7 +1382,7 @@ void hdcp22_resume(void)
 	/* dont need to delay 900ms to wait sysctl start hdcp_rx22,*/
 	/*sysctl is userspace it wakes up later than driver */
 	/* mdelay(900); */
-	/* rx_set_hpd(1); */
+	/* rx_set_cur_hpd(1); */
 	rx_pr("hdcp22 on\n");
 }
 
@@ -1589,6 +1644,8 @@ int hdmirx_audio_init(void)
 void hdmirx_phy_init(void)
 {
 	unsigned int data32;
+	unsigned int term_value =
+		hdmirx_rd_top(TOP_HPD_PWR5V);
 
 	data32 = 0;
 	data32 |= 1 << 6;
@@ -1664,11 +1721,11 @@ void hdmirx_phy_init(void)
 	hdmirx_wr_bits_phy(PHY_CDR_CTRL_CNT, CLK_RATE_BIT, 0);
 	last_clk_rate = 0;
 
-	#if 0
+	#if 1
 	/* enable all ports's termination*/
 	data32 = 0;
 	data32 |= 1 << 8;
-	data32 |= 0x0f << 4;
+	data32 |= ((term_value  & 0xF) << 4);
 	hdmirx_wr_phy(PHY_MAIN_FSM_OVERRIDE1, data32);
 	#endif
 
@@ -1783,12 +1840,10 @@ void hdmirx_hw_probe(void)
 	hdmirx_wr_top(TOP_INTR_MASKN, 0);
 	hdmirx_wr_top(TOP_SW_RESET, 0);
 	clk_init();
-	hdmirx_wr_top(TOP_HPD_PWR5V, 0x1f);
-	hdmi_rx_top_edid_update();
 	TOP_init();
 	control_reset();
 	DWC_init();
-
+	hdmi_rx_top_edid_update();
 	/*hdmirx_irq_enable(FALSE);*/
 	/*hdmirx_irq_hdcp22_enable(FALSE);*/
 	hdcp22_clk_en(1);
@@ -2189,7 +2244,7 @@ void rx_debug_load22key(void)
 	if (ret == 1) {
 		rx_pr("load 2.2 key\n");
 		sm_pause = 1;
-		rx_set_hpd(0);
+		rx_set_cur_hpd(0);
 		hdcp22_on = 1;
 		hdcp22_kill_esm = 1;
 		while (wait_kill_done_cnt++ < 10) {
@@ -2214,7 +2269,7 @@ void rx_debug_load22key(void)
 		hdmirx_hw_config();
 		hpd_to_esm = 1;
 		/* mdelay(900); */
-		rx_set_hpd(1);
+		rx_set_cur_hpd(1);
 		sm_pause = 0;
 	}
 }
