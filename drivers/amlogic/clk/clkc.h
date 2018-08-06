@@ -48,7 +48,7 @@ struct parm_fclk {
 };
 
 struct pll_rate_table {
-	u64		rate;
+	unsigned long	rate;
 	u16		m;
 	u16		n;
 	u16		od;
@@ -57,7 +57,7 @@ struct pll_rate_table {
 };
 
 struct fclk_rate_table {
-	u64 rate;
+	unsigned long rate;
 	u16 premux;
 	u16 postmux;
 	u16 mux_div;

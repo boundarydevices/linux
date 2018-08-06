@@ -25,7 +25,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
-#if (defined CONFIG_ARM64) || (defined CONFIG_ARM64_A32)
+#ifdef CONFIG_ARM64
 #include "clkc.h"
 #else
 #include "m8b/clkc.h"
