@@ -1338,7 +1338,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 
 	if (!dnlp_insmod_ok) {
 		pr_info("dnlp insmod fial\n");
-		return -EINVAL;
+		goto free_buf;
 	}
 
 	if (!strcmp(parm[0], "r")) {/*read param*/
@@ -1368,11 +1368,9 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		for (i = 0; dnlp_parse_cmd[i].value; i++) {
 			if (!strcmp(parm[1],
 					dnlp_parse_cmd[i].parse_string)) {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(buf_orig);
-					kfree(stemp);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				*(dnlp_parse_cmd[i].value) = val;
 				pr_amvecm_dbg(" %s: %d\n",
 					dnlp_parse_cmd[i].parse_string,
@@ -1385,20 +1383,16 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		if (!strcmp(parm[1], "scurv_low")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(buf_orig);
-				kfree(stemp);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_low_copy[i],
 						i, stemp, 4);
 					pr_info("%s\n", stemp);
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				if ((val > 64) || (val < 0))
 					pr_info("error cmd\n");
 				else
@@ -1408,20 +1402,16 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scurv_mid1")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(buf_orig);
-				kfree(stemp);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_mid1_copy[i],
 						i, stemp, 4);
 					pr_info("%s\n", stemp);
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				if ((val > 64) || (val < 0))
 					pr_info("error cmd\n");
 				else
@@ -1431,20 +1421,16 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scu v_mid2")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_mid2_copy[i],
 						i, stemp, 4);
 					pr_info("%s\n", stemp);
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				if ((val > 64) || (val < 0))
 					pr_info("error cmd\n");
 				else
@@ -1454,20 +1440,16 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scurv_hgh1")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_hgh1_copy[i],
 						i, stemp, 4);
 					pr_info("%s\n", stemp);
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				if ((val > 64) || (val < 0))
 					pr_info("error cmd\n");
 				else
@@ -1477,20 +1459,16 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scurv_hgh2")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_hgh2_copy[i],
 						i, stemp, 4);
 					pr_info("%s\n", stemp);
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				if ((val > 64) || (val < 0))
 					pr_info("error cmd\n");
 				else
@@ -1500,20 +1478,16 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "gain_var_lut49")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 49; i++)
 					d_convert_str(gain_var_lut49_copy[i],
 						i, stemp, 4);
 					pr_info("%s\n", stemp);
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				if ((val > 48) || (val < 0))
 					pr_info("error cmd\n");
 				else
@@ -1523,20 +1497,16 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "wext_gain")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 48; i++)
 					d_convert_str(wext_gain_copy[i],
 						i, stemp, 4);
 					pr_info("%s\n", stemp);
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				if ((val > 47) || (val < 0))
 					pr_info("error cmd\n");
 				else
@@ -1546,9 +1516,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			/*read only curve*/
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(ve_dnlp_tgt_copy[i],
@@ -1560,9 +1528,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			/*read only curve*/
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(GmScurve_copy[i],
@@ -1574,9 +1540,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			/*read only curve*/
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(clash_curve_copy[i],
@@ -1588,9 +1552,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			/*read only curve*/
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(clsh_scvbld_copy[i],
@@ -1602,9 +1564,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			/*read only curve*/
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(blkwht_ebld_copy[i],
@@ -1616,9 +1576,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			/*read only curve*/
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 64; i++)
 					d_convert_str(
@@ -1632,25 +1590,19 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		if (!strcmp(parm[1], "scurv_low")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				str_sapr_to_d(parm[3], curve_val, 5);
 				for (i = 0; i < 65; i++)
 					dnlp_scurv_low_copy[i] = curve_val[i];
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				num = val;
-				if (kstrtoul(parm[3], 10, &val) < 0) {
-					kfree(buf_orig);
-					kfree(stemp);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[3], 10, &val) < 0)
+					goto free_buf;
+
 				if (num > 64)
 					pr_info("error cmd\n");
 				else
@@ -1659,25 +1611,19 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scurv_mid1")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				str_sapr_to_d(parm[3], curve_val, 5);
 				for (i = 0; i < 65; i++)
 					dnlp_scurv_mid1_copy[i] = curve_val[i];
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				num = val;
-				if (kstrtoul(parm[3], 10, &val) < 0) {
-					kfree(buf_orig);
-					kfree(stemp);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[3], 10, &val) < 0)
+					goto free_buf;
+
 				if (num > 64)
 					pr_info("error cmd\n");
 				else
@@ -1686,25 +1632,19 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scurv_mid2")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				str_sapr_to_d(parm[3], curve_val, 5);
 				for (i = 0; i < 65; i++)
 					dnlp_scurv_mid2_copy[i] = curve_val[i];
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(buf_orig);
-					kfree(stemp);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				num = val;
-				if (kstrtoul(parm[3], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[3], 10, &val) < 0)
+					goto free_buf;
+
 				if (num > 64)
 					pr_info("error cmd\n");
 				else
@@ -1713,25 +1653,19 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scurv_hgh1")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				str_sapr_to_d(parm[3], curve_val, 5);
 				for (i = 0; i < 65; i++)
 					dnlp_scurv_hgh1_copy[i] = curve_val[i];
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				num = val;
-				if (kstrtoul(parm[3], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[3], 10, &val) < 0)
+					goto free_buf;
+
 				if (num > 64)
 					pr_info("error cmd\n");
 				else
@@ -1740,25 +1674,19 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "scurv_hgh2")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				str_sapr_to_d(parm[3], curve_val, 5);
 				for (i = 0; i < 65; i++)
 					dnlp_scurv_hgh2_copy[i] = curve_val[i];
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				num = val;
-				if (kstrtoul(parm[3], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[3], 10, &val) < 0)
+					goto free_buf;
+
 				if (num > 64)
 					pr_info("error cmd\n");
 				else
@@ -1767,25 +1695,19 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "gain_var_lut49")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				str_sapr_to_d(parm[3], curve_val, 5);
 				for (i = 0; i < 49; i++)
 					gain_var_lut49_copy[i] = curve_val[i];
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				num = val;
-				if (kstrtoul(parm[3], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[3], 10, &val) < 0)
+					goto free_buf;
+
 				if (num > 48)
 					pr_info("error cmd\n");
 				else
@@ -1794,25 +1716,19 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		} else if (!strcmp(parm[1], "wext_gain")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
-				kfree(stemp);
-				kfree(buf_orig);
-				return -EINVAL;
+				goto free_buf;
 			} else if (!strcmp(parm[2], "all")) {
 				str_sapr_to_d(parm[3], curve_val, 5);
 				for (i = 0; i < 48; i++)
 					wext_gain_copy[i] = curve_val[i];
 			} else {
-				if (kstrtoul(parm[2], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[2], 10, &val) < 0)
+					goto free_buf;
+
 				num = val;
-				if (kstrtoul(parm[3], 10, &val) < 0) {
-					kfree(stemp);
-					kfree(buf_orig);
-					return -EINVAL;
-				}
+				if (kstrtoul(parm[3], 10, &val) < 0)
+					goto free_buf;
+
 				if (num > 47)
 					pr_info("error cmd\n");
 				else
@@ -1835,16 +1751,21 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 		else
 			pr_info("error cmd\n");
 	} else if (!strcmp(parm[0], "dnlp_print")) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
+
 		*dnlp_printk_copy = val;
 		pr_info("dnlp_print = %x\n", *dnlp_printk_copy);
 	}
+
 	kfree(buf_orig);
 	kfree(stemp);
 	return count;
+
+free_buf:
+	kfree(buf_orig);
+	kfree(stemp);
+	return -EINVAL;
 }
 
 static ssize_t amvecm_brightness_show(struct class *cla,
@@ -3498,11 +3419,14 @@ static ssize_t amvecm_pq_user_store(struct class *cla,
 	return count;
 }
 
+static const char *dnlp_insmod_debug_usage_str = {
+	"usage: echo 1 > /sys/class/amvecm/dnlp_insmod\n"
+};
+
 static ssize_t amvecm_dnlp_insmod_show(struct class *cla,
 			struct class_attribute *attr, char *buf)
 {
-	pr_info("usage: echo 1 > /sys/class/amvecm/dnlp_insmod\n");
-	return 0;
+	return sprintf(buf, "%s\n", dnlp_insmod_debug_usage_str);
 }
 
 static ssize_t amvecm_dnlp_insmod_store(struct class *cla,

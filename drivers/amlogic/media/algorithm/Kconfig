@@ -16,6 +16,7 @@ config AMLOGIC_MEDIA_ALGORITHM
 
 if AMLOGIC_MEDIA_ALGORITHM
 #source "drivers/amlogic/media/algorithm/ldim/Kconfig"
+#source "drivers/amlogic/media/algorithm/dnlp/Kconfig"
 endif
 
 endmenu

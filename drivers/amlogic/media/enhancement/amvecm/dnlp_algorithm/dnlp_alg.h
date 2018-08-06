@@ -62,49 +62,6 @@ struct param_for_dnlp_s {
 	unsigned int dnlp_mtdrate_adp_en;
 };
 
-#if 0
-struct dnlp_alg_input_param_s {
-	unsigned int pre_1_gamma[65];
-	unsigned int pre_0_gamma[65];
-	unsigned int nTstCnt;
-	unsigned int ve_dnlp_luma_sum;
-	int RBASE;
-	unsigned int ve_dnlp_luma_sum;
-	bool menu_chg_en;
-};
-
-struct dnlp_alg_output_param_s {
-	unsigned char ve_dnlp_tgt[65];
-};
-
-struct dnlp_debug_ro_param_s {
-	int ro_luma_avg4;
-	int ro_var_d8;
-	int ro_scurv_gain;
-	int ro_blk_wht_ext0;
-	int ro_blk_wht_ext1;
-	int ro_dnlp_brightness;
-	int GmScurve[65];
-	int clash_curve[65];
-	int clsh_scvbld[65];
-	int blkwht_ebld[65];
-};
-
-struct dnlp_debug_rw_param_s {
-	int dnlp_scurv_low[65];
-	int dnlp_scurv_mid1[65];
-	int dnlp_scurv_mid2[65];
-	int dnlp_scurv_hgh1[65];
-	int dnlp_scurv_hgh2[65];
-	int gain_var_lut49[49];
-	int wext_gain[48];
-};
-
-struct dnlp_debug_param_s {
-	struct dnlp_debug_ro_param_s ro_param;
-	struct dnlp_debug_rw_param_s rw_param;
-};
-#endif
 struct dnlp_alg_input_param_s {
 	unsigned int *pre_1_gamma;
 	unsigned int *pre_0_gamma;

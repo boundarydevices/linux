@@ -138,20 +138,6 @@ struct dnlp_parse_cmd_s dnlp_parse_cmd[] = {
 	{"", NULL}
 };
 
-#if 0
-#define dnlp_attach(FUNCTION, ARGS...) ({ \
-	void *__r = NULL; \
-	typeof(&FUNCTION) __a = symbol_request(FUNCTION); \
-	if (__a) { \
-		__r = (void *) __a(ARGS); \
-		if (__r == NULL) \
-			symbol_put(FUNCTION); \
-	} else { \
-		pr_info("dnlp:Unable find symbol\n"); \
-	} \
-	__r; \
-})
-#endif
 void dnlp_alg_param_copy(void)
 {
 	dnlp_scurv_low_copy = dnlp_dbg_rw_param->dnlp_scurv_low;
@@ -253,17 +239,6 @@ void dnlp_alg_param_init(void)
 	dnlp_alg_param.dnlp_scurv_hgh2_th = 240;
 	dnlp_alg_param.dnlp_mtdrate_adp_en = 1;
 
-#if (0)
-	if (dnlp_alg_function == NULL) {
-		if (dnlp_attach(dnlp_alg_init, &dnlp_alg_function)
-			== NULL)
-			pr_info("%s: dnlp alg insmod fail\n", __func__);
-		else
-			dnlp_insmod_ok = 1;
-	} else
-		pr_info("%s: dnlp_alg_function is not NULL\n",
-			__func__);
-#endif
 	if (dnlp_alg_function != NULL) {
 		dnlp_alg_function->dnlp_para_set(&dnlp_alg_output,
 			&dnlp_alg_input, &dnlp_dbg_rw_param, &dnlp_dbg_ro_param,
