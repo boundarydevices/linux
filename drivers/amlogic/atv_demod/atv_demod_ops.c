@@ -82,6 +82,10 @@ static unsigned int afc_pre_lock_cnt;
 static unsigned int afc_pre_unlock_cnt;
 static unsigned int afc_lock_status = AFC_LOCK_STATUS_NULL;
 
+static int atv_demod_get_scan_mode(void);
+static void atv_demod_set_scan_mode(int val);
+
+
 static void aml_afc_do_work_pre(int lock)
 {
 	struct dvb_frontend *fe = &amlatvdemod_devp->v4l2_fe.fe;
@@ -400,7 +404,10 @@ void aml_fe_get_atvaudio_state(int *state)
 		retrieve_vpll_carrier_line_lock(&line_lock);
 		if ((vpll_lock == 0) && (line_lock == 0)) {
 			retrieve_vpll_carrier_audio_power(&power);
-			*state = 1;
+			if (!atv_demod_get_scan_mode())
+				*state = 1;
+			else
+				*state = 0; /* scan mode need mute */
 		} else {
 			*state = 0;
 			pr_audio("vpll_lock: 0x%x, line_lock: 0x%x\n",
