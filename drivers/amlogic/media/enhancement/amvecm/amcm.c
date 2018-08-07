@@ -69,6 +69,10 @@ struct cm_demo_s   cm_demo;
 static int cm_level_last = 0xff;/* 0:optimize;1:enhancement */
 unsigned int cm2_patch_flag;
 unsigned int cm_size;
+/* cm enable flag internal for cm size issue--0:disable;1:enable */
+static bool cm_en_flag;
+/* cm disable flag sync with pq-db--1:disable;0:enable */
+static bool cm_dis_flag;
 static struct am_regs_s amregs0;
 static struct am_regs_s amregs1;
 static struct am_regs_s amregs2;
@@ -161,6 +165,11 @@ void am_set_regmap(struct am_regs_s *p)
 						p->am_reg[i].val & 0xfffffffd;
 				pr_amcm_dbg("[amcm]:%s REG_TYPE_INDEX_VPPCHROMA addr:0x%x",
 					__func__, p->am_reg[i].addr);
+			} else if (p->am_reg[i].addr == 0x208) {
+				if (p->am_reg[i].val & 0x2)
+					cm_dis_flag = false;
+				else
+					cm_dis_flag = true;
 			}
 
 			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
@@ -259,6 +268,7 @@ void amcm_disable(void)
 		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
 		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, temp & 0xfffffffd);
 	}
+	cm_en_flag = false;
 }
 
 void amcm_enable(void)
@@ -273,6 +283,7 @@ void amcm_enable(void)
 		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
 		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, temp | 0x2);
 	}
+	cm_en_flag = true;
 }
 
 
@@ -316,11 +327,12 @@ void cm2_frame_size_patch(unsigned int width, unsigned int height)
 {
 	unsigned int vpp_size;
 
-	if (width < cm_width_limit)
-		amcm_disable();
 	if (!cm_en)
 		return;
-
+	else if (width < cm_width_limit)
+		amcm_disable();
+	else if ((cm_en_flag != true) && (cm_dis_flag == false))
+		amcm_enable();
 	vpp_size = width|(height << 16);
 	if (cm_size != vpp_size) {
 		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x205);
