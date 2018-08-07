@@ -285,6 +285,7 @@ static inline int set_4byte(struct spi_nor *nor, const struct flash_info *info,
 
 	switch (JEDEC_MFR(info)) {
 	case SNOR_MFR_MICRON:
+	case SNOR_MFR_MICRONO:
 		/* Some Micron need WREN command; all will accept it */
 		need_wren = true;
 	case SNOR_MFR_MACRONIX:
@@ -2537,6 +2538,7 @@ static int spi_nor_init_params(struct spi_nor *nor,
 			break;
 
 		case SNOR_MFR_MICRON:
+		case SNOR_MFR_MICRONO:
 			break;
 
 		default:
@@ -2920,6 +2922,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 
 	/* NOR protection support for STmicro/Micron chips and similar */
 	if (JEDEC_MFR(info) == SNOR_MFR_MICRON ||
+			JEDEC_MFR(info) == SNOR_MFR_MICRONO ||
 			info->flags & SPI_NOR_HAS_LOCK) {
 		nor->flash_lock = stm_lock;
 		nor->flash_unlock = stm_unlock;
