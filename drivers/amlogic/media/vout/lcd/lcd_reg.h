@@ -1119,6 +1119,7 @@
  * 0=ENCL, 1=ENCI, 2=ENCP, 3=ENCT.
  */
 #define VPU_VIU_VENC_MUX_CTRL                      0x271a
+#define ENCL_INFO_READ                             0x271f
 
 /* Bit  6 RW, gclk_mpeg_vpu_misc
  * Bit  5 RW, gclk_mpeg_venc_l_top

@@ -1054,7 +1054,7 @@ static void lcd_screen_restore(void)
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	unsigned int num;
 
-	num = lcd_drv->lcd_test_flag;
+	num = lcd_drv->lcd_test_state;
 	num = (num >= LCD_ENC_TST_NUM_MAX) ? 0 : num;
 
 	if (lcd_drv->workqueue)
@@ -2902,76 +2902,110 @@ static ssize_t lcd_mipi_cmd_debug_store(struct class *class,
 	return count;
 }
 
-/* [0]=reg_addr, [1]=read_cnt */
-static unsigned char lcd_mipi_read_buf[2] = {0xff, 0};
+#define MIPI_RD_RET_CODE_MAX    5
+static char *mipi_read_ret_code_table[] = {
+	"success",
+	"read null",
+	"read error",
+	"read back cnt is wrong",
+	"timeout",
+	"unknown error",
+};
+
+static struct dsi_read_s dread = {
+	.flag = 0,
+	.reg = 0xff,
+	.cnt = 0,
+	.value = NULL,
+	.ret_code = 4,
+
+	.line_start = 0x1fff,
+	.line_end = 0x1fff,
+};
+
 static ssize_t lcd_mipi_read_debug_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
-	int ret = 0, i, len;
-	unsigned char reg, cnt, *rd_data;
-	unsigned char payload[3] = {DT_GEN_RD_1, 1, 0x04};
+	unsigned int i = 0, len;
 
 	if ((lcd_drv->lcd_status & LCD_STATUS_IF_ON) == 0)
 		return sprintf(buf, "error: panel is disabled\n");
 
-	reg = lcd_mipi_read_buf[0];
-	cnt = lcd_mipi_read_buf[1];
-	if (reg == 0xff)
-		return sprintf(buf, "reg address is invalid\n");
-	if (cnt == 0)
-		return sprintf(buf, "read count is invalid\n");
+	if (dread.reg == 0xff)
+		return sprintf(buf, "error: reg address is invalid\n");
+	if (dread.cnt == 0)
+		return sprintf(buf, "error: read count is invalid\n");
 
-	rd_data = kcalloc(cnt, sizeof(unsigned char), GFP_KERNEL);
-	if (rd_data == NULL)
-		return sprintf(buf, "rd_data buf error\n");
+	if (dread.cnt > DSI_READ_CNT_MAX)
+		return sprintf(buf, "error: mipi read cnt is out of support\n");
+	if (dread.value == NULL)
+		return sprintf(buf, "error: mipi read return value is null\n");
 
-	payload[2] = reg;
+	dread.line_start = 0x1fff;
+	dread.line_end = 0x1fff;
+	dread.ret_code = 4;
+
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
-	ret = dsi_read_single(payload, rd_data, cnt);
-	if (ret < 0) {
-		kfree(rd_data);
-		return sprintf(buf, "mipi-dsi read error\n");
-	}
-	if (ret > cnt) {
-		kfree(rd_data);
-		return sprintf(buf, "mipi-dsi read 0x%02x back cnt is wrong\n",
-			reg);
+	if (lcd_drv->lcd_config->lcd_control.mipi_config->current_mode == 0) {
+		dread.flag = 1;
+		while (i++ < 5000) {
+			if (dread.flag == 0)
+				break;
+			udelay(20);
+		}
+	} else {
+		lcd_mipi_test_read(&dread);
 	}
 #endif
 
-	len = sprintf(buf, "read reg 0x%02x: ", reg);
-	for (i = 0; i < ret; i++) {
-		if (i == 0)
-			len += sprintf(buf+len, "0x%02x", rd_data[i]);
-		else
-			len += sprintf(buf+len, ",0x%02x", rd_data[i]);
+	if (dread.ret_code) {
+		dread.ret_code = (dread.ret_code >= MIPI_RD_RET_CODE_MAX) ?
+					MIPI_RD_RET_CODE_MAX : dread.ret_code;
+		return sprintf(buf, "read error: %s(%d)\n",
+			mipi_read_ret_code_table[dread.ret_code],
+			dread.ret_code);
 	}
-	len += sprintf(buf+len, "\n");
 
-	kfree(rd_data);
+	len = sprintf(buf, "read reg 0x%02x: ", dread.reg);
+	for (i = 0; i < dread.cnt; i++) {
+		if (i == 0)
+			len += sprintf(buf+len, "0x%02x", dread.value[i]);
+		else
+			len += sprintf(buf+len, ",0x%02x", dread.value[i]);
+	}
+
+	len += sprintf(buf+len, "\nread line start=%d, end=%d\n",
+		dread.line_start, dread.line_end);
+
 	return len;
 }
 
 static ssize_t lcd_mipi_read_debug_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
-	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	unsigned int para[2];
 	int ret = 0;
 
-	if ((lcd_drv->lcd_status & LCD_STATUS_IF_ON) == 0) {
-		LCDERR("panel is disabled\n");
-		return count;
-	}
-
 	ret = sscanf(buf, "%x %d", &para[0], &para[1]);
 	if (ret < 2) {
+		dread.reg = 0xff;
+		dread.cnt = 0;
 		pr_info("invalid data\n");
 		return count;
 	}
-	lcd_mipi_read_buf[0] = (unsigned char)para[0];
-	lcd_mipi_read_buf[1] = (unsigned char)para[1];
+	dread.reg = (unsigned char)para[0];
+	dread.cnt = (unsigned char)para[1];
+	if (dread.cnt > DSI_READ_CNT_MAX) {
+		LCDERR("mipi read cnt is out of support\n");
+		return count;
+	}
+	if (dread.value == NULL) {
+		LCDERR("mipi read return value is null\n");
+		return count;
+	}
+
+	pr_info("set mipi read reg: 0x%02x, cnt: %d\n", dread.reg, dread.cnt);
 
 	return count;
 }
@@ -3107,6 +3141,9 @@ int lcd_class_creat(void)
 		}
 		break;
 	case LCD_MIPI:
+		dread.value = kcalloc(DSI_READ_CNT_MAX, sizeof(unsigned char),
+				GFP_KERNEL);
+		lcd_drv->lcd_config->lcd_control.mipi_config->dread = &dread;
 		for (i = 0; i < ARRAY_SIZE
 			(lcd_mipi_debug_class_attrs); i++) {
 			if (class_create_file(lcd_drv->lcd_debug_class,

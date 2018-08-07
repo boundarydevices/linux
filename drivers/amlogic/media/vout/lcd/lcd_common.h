@@ -114,6 +114,7 @@ extern int lcd_tv_probe(struct device *dev);
 extern int lcd_tv_remove(struct device *dev);
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
+int lcd_mipi_test_read(struct dsi_read_s *dread);
 extern void lcd_tablet_vout_server_init(void);
 extern void lcd_tablet_vout_server_remove(void);
 extern void lcd_tablet_clk_config_change(struct lcd_config_s *pconf);

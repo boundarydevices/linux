@@ -373,9 +373,22 @@ static void lcd_resume_work(struct work_struct *p_work)
 static irqreturn_t lcd_vsync_isr(int irq, void *dev_id)
 {
 	int flag;
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+	struct lcd_config_s *pconf = lcd_driver->lcd_config;
+#endif
 
 	if ((lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) == 0)
 		return IRQ_HANDLED;
+
+#ifdef CONFIG_AMLOGIC_LCD_TABLET
+	if (pconf->lcd_control.mipi_config->dread) {
+		if (pconf->lcd_control.mipi_config->dread->flag) {
+			lcd_mipi_test_read(
+				pconf->lcd_control.mipi_config->dread);
+			pconf->lcd_control.mipi_config->dread->flag = 0;
+		}
+	}
+#endif
 
 	if (lcd_driver->lcd_mute_flag & LCD_MUTE_UPDATE) {
 		flag = lcd_driver->lcd_mute_flag & 0x1;

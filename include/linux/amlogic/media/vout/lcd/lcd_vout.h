@@ -267,6 +267,18 @@ struct vbyone_config_s {
 #define DSI_INIT_ON_MAX          100
 #define DSI_INIT_OFF_MAX         30
 
+#define DSI_READ_CNT_MAX         30
+struct dsi_read_s {
+	unsigned char flag;
+	unsigned char reg;
+	unsigned char cnt;
+	unsigned char *value;
+	unsigned char ret_code;
+
+	unsigned int line_start;
+	unsigned int line_end;
+};
+
 struct dsi_config_s {
 	unsigned char lane_num;
 	unsigned int bit_rate_max; /* MHz */
@@ -294,6 +306,8 @@ struct dsi_config_s {
 	unsigned char check_state;
 
 	unsigned char current_mode;
+
+	struct dsi_read_s *dread;
 };
 
 struct lcd_control_config_s {

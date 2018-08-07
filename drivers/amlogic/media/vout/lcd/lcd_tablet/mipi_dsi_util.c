@@ -2169,3 +2169,29 @@ void lcd_mipi_control_set(struct lcd_config_s *pconf, int status)
 		mipi_dsi_host_off();
 }
 
+int lcd_mipi_test_read(struct dsi_read_s *dread)
+{
+	int ret = 0;
+	unsigned char payload[3] = {DT_GEN_RD_1, 1, 0x04};
+
+	if (dread == NULL)
+		return 1;
+
+	dread->line_start = lcd_vcbus_getb(ENCL_INFO_READ, 16, 13);
+
+	payload[2] = dread->reg;
+	ret = dsi_read_single(payload, dread->value, dread->cnt);
+	if (ret < 0) {
+		dread->ret_code = 2;
+		return 2;
+	}
+	if (ret > dread->cnt) {
+		dread->ret_code = 3;
+		return 3;
+	}
+
+	dread->line_end = lcd_vcbus_getb(ENCL_INFO_READ, 16, 13);
+
+	dread->ret_code = 0;
+	return 0;
+}
