@@ -61,8 +61,8 @@ static bool clk_debug;
 
 static int hpd_wait_cnt;
 /* increase time of hpd low, to avoid some source like */
-/* MTK box i2c communicate error */
-static int hpd_wait_max = 20;
+/* MTK box/KaiboerH9 i2c communicate error */
+static int hpd_wait_max = 40;
 
 static int sig_unstable_cnt;
 static int sig_unstable_max = 80;
@@ -194,9 +194,6 @@ static bool hdcp22_stop_auth_enable;
 static bool hdcp22_esm_reset2_enable;
 int sm_pause;
 int pre_port = 0xff;
-/*uint32_t irq_flag;*/
-/*for some device pll unlock too long,send a hpd reset*/
-bool hdmi5v_lost_flag;
 static int hdcp_none_wait_max = 100;
 /* for no signal after esd test issue, phy
  * does't work, cable clock or PLL can't
@@ -1319,6 +1316,7 @@ void fsm_restart(void)
 		esm_set_stable(false);
 	}
 	hdmirx_hw_config();
+	hdmi_rx_top_edid_update();
 	set_scdc_cfg(1, 0);
 	vic_check_en = true;
 	dvi_check_en = true;
@@ -1786,6 +1784,16 @@ void skip_frame(unsigned int cnt)
 	rx_pr("rx.skip = %d", rx.skip);
 }
 
+void wait_ddc_idle(void)
+{
+	unsigned char i;
+	/* add delays to avoid the edid communication fail */
+	for (i = 0; i <= 10; i++) {
+		if (!is_ddc_idle(rx.port))
+			msleep(20);
+	}
+}
+
 /***********************
  * hdmirx_open_port
  ***********************/
@@ -1820,6 +1828,8 @@ void hdmirx_open_port(enum tvin_port_e port)
 		rx_set_cur_hpd(0);
 		/* need reset the whole module when switch port */
 		hdmirx_hw_config();
+		wait_ddc_idle();
+		hdmi_rx_top_edid_update();
 	} else {
 		if (rx.state >= FSM_SIG_STABLE)
 			rx.state = FSM_SIG_STABLE;
@@ -1993,13 +2003,8 @@ void rx_main_state_machine(void)
 	case FSM_HPD_HIGH:
 		hpd_wait_cnt++;
 		if (rx_get_cur_hpd_sts() == 0) {
-			if (edid_update_flag) {
-				if (hpd_wait_cnt <= hpd_wait_max*10)
-					break;
-			} else {
-				if (hpd_wait_cnt <= hpd_wait_max)
-					break;
-			}
+			if (hpd_wait_cnt <= hpd_wait_max)
+				break;
 		}
 		hpd_wait_cnt = 0;
 		clk_unstable_cnt = 0;
@@ -2113,6 +2118,7 @@ void rx_main_state_machine(void)
 				if (fmt_vic_abnormal() &&
 					(vic_check_en == true)) {
 					hdmirx_hw_config();
+					hdmi_rx_top_edid_update();
 					rx.state = FSM_HPD_LOW;
 					vic_check_en = false;
 					break;
@@ -2430,6 +2436,7 @@ void rx_main_state_machine(void)
 				if (fmt_vic_abnormal() &&
 					(vic_check_en == true)) {
 					hdmirx_hw_config();
+					hdmi_rx_top_edid_update();
 					rx.state = FSM_HPD_LOW;
 					vic_check_en = false;
 					break;
@@ -2888,6 +2895,7 @@ int hdmirx_debug(const char *buf, int size)
 		if (tmpbuf[5] == '0') {
 			rx_pr(" hdmirx hw config\n");
 			hdmirx_hw_config();
+			hdmi_rx_top_edid_update();
 		} else if (tmpbuf[5] == '1') {
 			rx_pr(" hdmirx phy init 8bit\n");
 			hdmirx_phy_init();

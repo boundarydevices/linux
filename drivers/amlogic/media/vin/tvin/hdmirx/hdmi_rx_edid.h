@@ -626,4 +626,5 @@ void rx_modify_edid(unsigned char *buffer,
 				int len, unsigned char *addition);
 void rx_edid_update_audio_info(unsigned char *p_edid,
 						unsigned int len);
+extern bool is_ddc_idle(unsigned char port_id);
 #endif

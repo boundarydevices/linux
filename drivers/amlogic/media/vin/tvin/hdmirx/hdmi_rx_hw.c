@@ -1891,7 +1891,7 @@ void hdmirx_hw_config(void)
 {
 	rx_pr("%s port:%d\n", __func__, rx.port);
 	control_reset();
-	hdmi_rx_top_edid_update();
+	/* hdmi_rx_top_edid_update(); */
 	rx_hdcp_init();
 	hdmirx_audio_init();
 	packet_init();
@@ -2342,6 +2342,7 @@ void rx_debug_load22key(void)
 			EXTCON_DISP_HDMI, 1);
 		mdelay(100);
 		hdmirx_hw_config();
+		hdmi_rx_top_edid_update();
 		hpd_to_esm = 1;
 		/* mdelay(900); */
 		rx_set_cur_hpd(1);
@@ -2353,6 +2354,7 @@ void rx_debug_loadkey(void)
 {
 	rx_pr("load hdcp key\n");
 	hdmirx_hw_config();
+	hdmi_rx_top_edid_update();
 	pre_port = 0xfe;
 }
 

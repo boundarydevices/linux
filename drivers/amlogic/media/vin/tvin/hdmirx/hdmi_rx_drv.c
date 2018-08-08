@@ -925,6 +925,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 		hdcp_enable = 0;
 		rx_set_cur_hpd(0);
 		hdmirx_hw_config();
+		hdmi_rx_top_edid_update();
 		fsm_restart();
 		break;
 	case HDMI_IOC_EDID_UPDATE:

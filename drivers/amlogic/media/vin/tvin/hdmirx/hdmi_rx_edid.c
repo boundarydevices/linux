@@ -881,6 +881,44 @@ unsigned int rx_edid_cal_phy_addr(
 	return flag;
 }
 
+bool is_ddc_idle(unsigned char port_id)
+{
+	unsigned int sts;
+	unsigned int ddc_sts;
+	unsigned int ddc_offset;
+
+	switch (port_id) {
+	case 0:
+		sts = hdmirx_rd_top(TOP_EDID_GEN_STAT);
+		break;
+	case 1:
+		sts = hdmirx_rd_top(TOP_EDID_GEN_STAT_B);
+		break;
+	case 2:
+		sts = hdmirx_rd_top(TOP_EDID_GEN_STAT_C);
+		break;
+	case 3:
+		sts = hdmirx_rd_top(TOP_EDID_GEN_STAT_D);
+		break;
+	default:
+		sts = 0;
+		break;
+	}
+
+	ddc_sts = (sts >> 20) & 0x1f;
+	ddc_offset = sts & 0xff;
+
+	if ((ddc_sts == 0) &&
+		((ddc_offset == 0xff) ||
+		(ddc_offset == 0)))
+		return true;
+
+	if (log_level & ERR_LOG)
+		rx_pr("ddc busy\n");
+
+	return false;
+}
+
 void rx_edid_fill_to_register(
 						u_char *pedid,
 						u_int brepeat,
