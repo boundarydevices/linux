@@ -57,6 +57,7 @@
 #include <linux/amlogic/pm.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/jtag.h>
+#include <linux/amlogic/scpi_protocol.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -2965,8 +2966,13 @@ static int aml_cec_probe(struct platform_device *pdev)
 	/* default enable all function*/
 	cec_config(CEC_FUNC_CFG_ALL, 1);
 	queue_delayed_work(cec_dev->cec_thread, &cec_dev->cec_work, 0);
-	CEC_ERR("boot:%#x;%#x\n", *((unsigned int *)&cec_dev->wakup_data),
-						cec_dev->wakeup_reason);
+	scpi_get_wakeup_reason(&cec_dev->wakeup_reason);
+	CEC_ERR("wakeup_reason:0x%x\n", cec_dev->wakeup_reason);
+	scpi_get_cec_val(SCPI_CMD_GET_CEC1,
+				(unsigned int *)&cec_dev->wakup_data);
+	scpi_get_cec_val(SCPI_CMD_GET_CEC2, &r);
+	CEC_ERR("cev val1: %#x;val2: %#x\n",
+			*((unsigned int *)&cec_dev->wakup_data), r);
 	CEC_ERR("%s success end\n", __func__);
 	return 0;
 
@@ -3041,8 +3047,22 @@ static int aml_cec_suspend_noirq(struct device *dev)
 static int aml_cec_resume_noirq(struct device *dev)
 {
 	int ret = 0;
+	unsigned int temp;
 
 	CEC_INFO("cec resume noirq!\n");
+
+	cec_dev->cec_info.power_status = TRANS_STANDBY_TO_ON;
+
+	scpi_get_wakeup_reason(&cec_dev->wakeup_reason);
+	CEC_ERR("wakeup_reason:0x%x\n", cec_dev->wakeup_reason);
+
+	scpi_get_cec_val(SCPI_CMD_GET_CEC1,
+				(unsigned int *)&cec_dev->wakup_data);
+	scpi_get_cec_val(SCPI_CMD_GET_CEC2, &temp);
+	CEC_ERR("cev val1: %#x;val2: %#x\n",
+					*((unsigned int *)&cec_dev->wakup_data),
+						temp);
+
 	cec_dev->cec_info.power_status = TRANS_STANDBY_TO_ON;
 	cec_dev->cec_suspend = CEC_POWER_RESUME;
 	if (!IS_ERR(cec_dev->dbg_dev->pins->default_state))
