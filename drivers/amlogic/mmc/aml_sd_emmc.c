@@ -716,8 +716,11 @@ int aml_sd_emmc_execute_tuning_(struct mmc_host *mmc, u32 opcode,
 	u32 clock, clk_div;
 	u32 adj_delay_find;
 	int best_win_start = -1, best_win_size = 0;
-	u32 rxdly[4] = {0, 0x55555555, 0xAAAAAAAA, 0xFFFFFFFF};
+	u32 old_dly, d1_dly, dly;
 
+	old_dly = readl(host->base + SD_EMMC_DELAY);
+	d1_dly = (old_dly >> 4) & 0xF;
+	pr_info("Data 1 aligned delay is %d\n", d1_dly);
 	writel(0, host->base + SD_EMMC_ADJUST);
 
 tunning:
@@ -748,17 +751,21 @@ tunning:
 		pr_err("%s: tuning failed, reduce freq and retuning\n",
 			mmc_hostname(host->mmc));
 		goto tunning;
+	/* fixme, debug code for sharping delay cell */
 	} else if (best_win_size == clk_div) {
-		if (++tuning_num > MAX_TUNING_RETRY) {
-			pr_err("%s: tuning failed\n",
-				mmc_hostname(host->mmc));
-			return -1;
-		}
-		pr_warn("wave is not sharp, again\n");
-		/* add basic data rx delay */
-		writel(rxdly[tuning_num-1], host->base + SD_EMMC_DELAY);
-		pr_warn("rxdly @ %d is %x\n", tuning_num, rxdly[tuning_num-1]);
-		goto tunning;
+		pr_debug("%s(), d1_dly %d, window start %d, size %d\n",
+			__func__, d1_dly, best_win_start, best_win_size);
+		dly = readl(host->base + SD_EMMC_DELAY);
+		d1_dly = (dly >> 4) & 0xF;
+		if (d1_dly < 16) {
+			d1_dly++;
+			dly &= ~(0xF << 4);
+			dly |= d1_dly << 4;
+			writel(dly, host->base + SD_EMMC_DELAY);
+			pr_info("%s(), window is not sharp\n", __func__);
+			goto tunning;
+		} else
+			pr_err("%s(), all adj used out!\n", __func__);
 	} else {
 		pr_info("%s: best_win_start =%d, best_win_size =%d\n",
 			mmc_hostname(host->mmc), best_win_start, best_win_size);
@@ -788,7 +795,8 @@ tunning:
 	gadjust->cali_enable = 0;
 	gadjust->cali_rise = 0;
 	writel(adjust, host->base + SD_EMMC_ADJUST);
-
+	/* restore aligned data */
+	writel(old_dly, host->base + SD_EMMC_DELAY);
 	/* fixme, yyh for retry flow. */
 	emmc_adj->adj_win_start = best_win_start;
 	emmc_adj->adj_win_len = best_win_size;

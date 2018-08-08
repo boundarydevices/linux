@@ -960,7 +960,6 @@ static int _aml_sd_emmc_execute_tuning(struct mmc_host *mmc, u32 opcode,
 					struct aml_tuning_data *tuning_data,
 					u32 adj_win_start)
 {
-#if 1 /* need finish later */
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
 	u32 vclk;
@@ -980,11 +979,15 @@ static int _aml_sd_emmc_execute_tuning(struct mmc_host *mmc, u32 opcode,
 	int wrap_win_start, wrap_win_size;
 	int best_win_start, best_win_size;
 	int curr_win_start, curr_win_size;
-	u32 rxdly[3] = {0xA28A28A, 0x15500514, 0x1FF8079E};
+	u32 old_dly, d1_dly, dly;
 
 	if ((host->mem->start == host->data->port_b_base)
 			&& host->data->tdma_f)
 		wait_for_completion(&host->drv_completion);
+
+	old_dly = readl(host->base + SD_EMMC_DELAY1_V3);
+	d1_dly = (old_dly >> 0x6) & 0x3F;
+	pr_info("Data 1 aligned delay is %d\n", d1_dly);
 	writel(0, host->base + SD_EMMC_ADJUST_V3);
 
 tunning:
@@ -1045,7 +1048,6 @@ tunning:
 				curr_win_size = 0;
 			}
 		}
-
 	}
 	/* last point is ok! */
 	if (curr_win_start >= 0) {
@@ -1084,7 +1086,11 @@ tunning:
 			mmc_hostname(host->mmc));
 		goto tunning;
 	} else if (best_win_size == clk_div) {
-		if (++tuning_num > MAX_TUNING_RETRY) {
+		dly = readl(host->base + SD_EMMC_DELAY1_V3);
+		d1_dly = (dly >> 0x6) & 0x3F;
+		pr_warn("%s() d1_dly %d, window start %d, size %d\n",
+			__func__, d1_dly, best_win_start, best_win_size);
+		if (++d1_dly > 0x3F) {
 			pr_err("%s: tuning failed\n",
 				mmc_hostname(host->mmc));
 			host->is_tunning = 0;
@@ -1093,11 +1099,10 @@ tunning:
 				complete(&host->drv_completion);
 			return -1;
 		}
-		pr_warn("wave is not sharp, again\n");
-		/* add basic data rx delay */
-		writel(rxdly[tuning_num-1], host->base + SD_EMMC_DELAY1_V3);
-		writel(rxdly[tuning_num-1], host->base + SD_EMMC_DELAY2_V3);
-		pr_warn("rxdly @ %x\n", rxdly[tuning_num-1]);
+		dly &= ~(0x3F << 6);
+		dly |= d1_dly << 6;
+		pdata->dly1 = dly;
+		writel(dly, host->base + SD_EMMC_DELAY1_V3);
 		goto tunning;
 	} else
 		pr_info("%s: best_win_start =%d, best_win_size =%d\n",
@@ -1114,6 +1119,8 @@ tunning:
 	gadjust->cali_rise = 0;
 	writel(adjust, host->base + SD_EMMC_ADJUST_V3);
 	pdata->adj = adjust;
+	pdata->dly1 = old_dly;
+	writel(old_dly, host->base + SD_EMMC_DELAY1_V3);
 
 	pr_info("%s: sd_emmc_regs->gclock=0x%x,sd_emmc_regs->gadjust=0x%x\n",
 			mmc_hostname(host->mmc),
@@ -1125,8 +1132,6 @@ tunning:
 		complete(&host->drv_completion);
 
 	return ret;
-#endif
-	return 0;
 }
 
 int aml_get_data_eyetest(struct mmc_host *mmc)
