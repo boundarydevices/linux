@@ -65,11 +65,34 @@ struct master_display_info_s {
 	u32 max_content;		/* Maximum Content Light Level */
 	u32 max_frame_average;	/* Maximum Frame-average Light Level */
 };
+/*
+ *hdr_dynamic_type
+ * 0x0001: type_1_hdr_metadata_version
+ * 0x0002: ts_103_433_spec_version
+ * 0x0003: itu_t_h265_spec_version
+ * 0x0004: type_4_hdr_metadata_version
+ */
+struct hdr_dynamic {
+	unsigned int type;
+	unsigned char support_flags;
+	unsigned int of_len;   /*optional_fields length*/
+	unsigned char optional_fields[28];
+};
 
 struct hdr_info {
-	u32 hdr_support; /* RX EDID hdr support types */
-	/*bit7:BT2020RGB    bit6:BT2020YCC bit5:BT2020cYCC bit4:adobeRGB*/
-	/*bit3:adobeYCC601 bit2:sYCC601     bit1:xvYCC709    bit0:xvYCC601*/
+/* RX EDID hdr support types */
+	u32 hdr_support;
+/*
+ *dynamic_info[0] expresses type1's parameters certainly
+ *dynamic_info[1] expresses type2's parameters certainly
+ *dynamic_info[2] expresses type3's parameters certainly
+ *dynamic_info[3] expresses type4's parameters certainly
+ *if some types don't exist, the corresponding dynamic_info
+ *is zero instead of inexistence
+ */
+	struct hdr_dynamic dynamic_info[4];
+/*bit7:BT2020RGB    bit6:BT2020YCC bit5:BT2020cYCC bit4:adobeRGB*/
+/*bit3:adobeYCC601 bit2:sYCC601     bit1:xvYCC709    bit0:xvYCC601*/
 	u8 colorimetry_support; /* RX EDID colorimetry support types */
 	u32 lumi_max; /* RX EDID Lumi Max value */
 	u32 lumi_avg; /* RX EDID Lumi Avg value */
@@ -177,7 +200,6 @@ struct vinfo_base_s {
 	u32 screen_real_height;
 	u32 video_clk;
 	enum color_fmt_e viu_color_fmt;
-	struct hdr_info hdr_info;
 };
 
 struct vinfo_s {

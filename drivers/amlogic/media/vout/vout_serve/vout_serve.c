@@ -434,6 +434,7 @@ static ssize_t vout_vinfo_show(struct class *class,
 {
 	const struct vinfo_s *info = NULL;
 	ssize_t len = 0;
+	unsigned int i, j;
 
 	info = get_current_vinfo();
 	if (info == NULL)
@@ -484,7 +485,7 @@ static ssize_t vout_vinfo_show(struct class *class,
 		info->master_display_info.white_point[1],
 		info->master_display_info.luminance[0],
 		info->master_display_info.luminance[1]);
-	len += sprintf(buf+len, "hdr_info:\n"
+	len += sprintf(buf+len, "hdr_static_info:\n"
 		"    hdr_support           %d\n"
 		"    lumi_max              %d\n"
 		"    lumi_avg              %d\n"
@@ -493,6 +494,22 @@ static ssize_t vout_vinfo_show(struct class *class,
 		info->hdr_info.lumi_max,
 		info->hdr_info.lumi_avg,
 		info->hdr_info.lumi_min);
+	len += sprintf(buf+len, "hdr_dynamic_info:");
+	for (i = 0; i < 4; i++) {
+		len += sprintf(buf+len,
+			"\n    metadata_version:  %x\n"
+			"    support_flags:     %x\n",
+			info->hdr_info.dynamic_info[i].type,
+			info->hdr_info.dynamic_info[i].support_flags);
+		len += sprintf(buf+len, "    optional_fields:  ");
+		for (j = 0; j <
+			info->hdr_info.dynamic_info[i].of_len; j++) {
+			len += sprintf(buf+len, " %x",
+				info->hdr_info.dynamic_info[i].
+				optional_fields[j]);
+		}
+	}
+	len += sprintf(buf+len, "\n");
 	return len;
 }
 
@@ -598,7 +615,6 @@ static long vout_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			baseinfo.screen_real_height = info->screen_real_height;
 			baseinfo.video_clk = info->video_clk;
 			baseinfo.viu_color_fmt = info->viu_color_fmt;
-			baseinfo.hdr_info = info->hdr_info;
 			if (copy_to_user(argp, &baseinfo,
 				sizeof(struct vinfo_base_s)))
 				ret = -EFAULT;

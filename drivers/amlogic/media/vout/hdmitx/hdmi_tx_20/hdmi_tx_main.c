@@ -389,9 +389,44 @@ static void hdmi_physcial_size_update(struct hdmitx_dev *hdev)
 
 }
 
+static void hdrinfo_to_vinfo(struct vinfo_s *info, struct hdmitx_dev *hdev)
+{
+	unsigned int i, j;
+
+	info->hdr_info.hdr_support = (hdev->RXCap.hdr_sup_eotf_sdr << 0)
+			| (hdev->RXCap.hdr_sup_eotf_hdr << 1)
+			| (hdev->RXCap.hdr_sup_eotf_smpte_st_2084 << 2)
+			| (hdev->RXCap.hdr_sup_eotf_hlg << 3);
+	for (i = 0; i < 4; i++) {
+		if (hdev->RXCap.hdr_dynamic_info[i].type == 0) {
+			memset(&info->hdr_info.dynamic_info[i],
+				0, sizeof(struct hdr_dynamic));
+			continue;
+		}
+		info->hdr_info.dynamic_info[i].type =
+			hdev->RXCap.hdr_dynamic_info[i].type;
+		info->hdr_info.dynamic_info[i].of_len =
+			hdev->RXCap.hdr_dynamic_info[i].hd_len - 3;
+		info->hdr_info.dynamic_info[i].support_flags =
+			hdev->RXCap.hdr_dynamic_info[i].support_flags;
+
+		for (j = 0; j < hdev->RXCap.hdr_dynamic_info[i].hd_len - 3; j++)
+			info->hdr_info.dynamic_info[i].optional_fields[j] =
+			hdev->RXCap.hdr_dynamic_info[i].optional_fields[j];
+	}
+	info->hdr_info.colorimetry_support =
+		hdev->RXCap.colorimetry_data;
+	info->hdr_info.lumi_max = hdev->RXCap.hdr_lum_max;
+	info->hdr_info.lumi_avg = hdev->RXCap.hdr_lum_avg;
+	info->hdr_info.lumi_min = hdev->RXCap.hdr_lum_min;
+	pr_info(SYS "update rx hdr info %x\n",
+		info->hdr_info.hdr_support);
+}
+
 static int set_disp_mode_auto(void)
 {
 	int ret =  -1;
+
 	struct vinfo_s *info = NULL;
 	struct hdmitx_dev *hdev = &hdmitx_device;
 	struct hdmi_format_para *para = NULL;
@@ -412,19 +447,9 @@ static int set_disp_mode_auto(void)
 
 	if (!((strncmp(info->name, "480cvbs", 7) == 0) ||
 		(strncmp(info->name, "576cvbs", 7) == 0) ||
-		(strncmp(info->name, "null", 4) == 0))) {
-		info->hdr_info.hdr_support = (hdev->RXCap.hdr_sup_eotf_sdr << 0)
-				| (hdev->RXCap.hdr_sup_eotf_hdr << 1)
-				| (hdev->RXCap.hdr_sup_eotf_smpte_st_2084 << 2)
-				| (hdev->RXCap.hdr_sup_eotf_hlg << 3);
-		info->hdr_info.colorimetry_support =
-			hdev->RXCap.colorimetry_data;
-		info->hdr_info.lumi_max = hdev->RXCap.hdr_lum_max;
-		info->hdr_info.lumi_avg = hdev->RXCap.hdr_lum_avg;
-		info->hdr_info.lumi_min = hdev->RXCap.hdr_lum_min;
-		pr_info(SYS "update rx hdr info %x\n",
-			info->hdr_info.hdr_support);
-	}
+		(strncmp(info->name, "null", 4) == 0)))
+		hdrinfo_to_vinfo(info, hdev);
+
 	hdmi_physcial_size_update(hdev);
 
 	/* If info->name equals to cvbs, then set mode to I mode to hdmi
@@ -2217,27 +2242,47 @@ static ssize_t show_hdr_cap(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	int pos = 0;
+	unsigned int i, j;
 	struct rx_cap *pRXCap = &(hdmitx_device.RXCap);
-
-	pos += snprintf(buf + pos, PAGE_SIZE, "Supported EOTF:\n");
-	pos += snprintf(buf + pos, PAGE_SIZE, "    Traditional SDR: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "HDR Static Metadata:\n");
+	pos += snprintf(buf + pos, PAGE_SIZE, "    Supported EOTF:\n");
+	pos += snprintf(buf + pos, PAGE_SIZE, "        Traditional SDR: %d\n",
 		pRXCap->hdr_sup_eotf_sdr);
-	pos += snprintf(buf + pos, PAGE_SIZE, "    Traditional HDR: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "        Traditional HDR: %d\n",
 		pRXCap->hdr_sup_eotf_hdr);
-	pos += snprintf(buf + pos, PAGE_SIZE, "    SMPTE ST 2084: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "        SMPTE ST 2084: %d\n",
 		pRXCap->hdr_sup_eotf_smpte_st_2084);
-	pos += snprintf(buf + pos, PAGE_SIZE, "    Hybrif Log-Gamma: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "        Hybrif Log-Gamma: %d\n",
 		pRXCap->hdr_sup_eotf_hlg);
-	pos += snprintf(buf + pos, PAGE_SIZE, "Supported SMD type1: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "    Supported SMD type1: %d\n",
 		pRXCap->hdr_sup_SMD_type1);
-	pos += snprintf(buf + pos, PAGE_SIZE, "Luminance Data\n");
-	pos += snprintf(buf + pos, PAGE_SIZE, "    Max: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "    Luminance Data\n");
+	pos += snprintf(buf + pos, PAGE_SIZE, "        Max: %d\n",
 		pRXCap->hdr_lum_max);
-	pos += snprintf(buf + pos, PAGE_SIZE, "    Avg: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "        Avg: %d\n",
 		pRXCap->hdr_lum_avg);
-	pos += snprintf(buf + pos, PAGE_SIZE, "    Min: %d\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "        Min: %d\n\n",
 		pRXCap->hdr_lum_min);
-	pos += snprintf(buf + pos, PAGE_SIZE, "    colorimetry_data: %x\n",
+	pos += snprintf(buf + pos, PAGE_SIZE, "HDR Dynamic Metadata:");
+
+	for (i = 0; i < 4; i++) {
+		if (pRXCap->hdr_dynamic_info[i].type == 0)
+			continue;
+		pos += snprintf(buf + pos, PAGE_SIZE,
+			"\n    metadata_version: %x\n",
+			pRXCap->hdr_dynamic_info[i].type);
+		pos += snprintf(buf + pos, PAGE_SIZE,
+			"        support_flags: %x\n",
+			pRXCap->hdr_dynamic_info[i].support_flags);
+		pos += snprintf(buf + pos, PAGE_SIZE,
+			"        optional_fields:");
+		for (j = 0; j <
+			(pRXCap->hdr_dynamic_info[i].hd_len - 3); j++)
+			pos += snprintf(buf + pos, PAGE_SIZE, " %x",
+				pRXCap->hdr_dynamic_info[i].optional_fields[j]);
+	}
+
+	pos += snprintf(buf + pos, PAGE_SIZE, "\n\ncolorimetry_data: %x\n",
 		pRXCap->colorimetry_data);
 
 	return pos;
@@ -3060,11 +3105,8 @@ static enum hdmi_audio_fs aud_samp_rate_map(unsigned int rate)
 	int i = 0;
 
 	for (i = 0; i < ARRAY_SIZE(map_fs); i++) {
-		if (map_fs[i].rate == rate) {
-			pr_info(AUD "aout notify rate %d\n",
-				rate);
+		if (map_fs[i].rate == rate)
 			return map_fs[i].fs;
-		}
 	}
 	pr_info(AUD "get FS_MAX\n");
 	return FS_MAX;
@@ -3102,11 +3144,8 @@ static enum hdmi_audio_sampsize aud_size_map(unsigned int bits)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(aud_size_map_ss); i++) {
-		if (bits == aud_size_map_ss[i].sample_bits) {
-			pr_info(AUD "aout notify size %d\n",
-				bits);
+		if (bits == aud_size_map_ss[i].sample_bits)
 			return aud_size_map_ss[i].ss;
-		}
 	}
 	pr_info(AUD "get SS_MAX\n");
 	return SS_MAX;
@@ -3173,7 +3212,7 @@ static int hdmitx_notify_callback_a(struct notifier_block *block,
 	}
 	}
 	if (hdmitx_device.audio_param_update_flag == 0)
-		pr_info(AUD "no update\n");
+		;
 	else
 		hdmitx_device.audio_notify_flag = 1;
 
@@ -3284,9 +3323,12 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 static void clear_hdr_info(struct hdmitx_dev *hdev)
 {
 	struct vinfo_s *info = hdmitx_get_current_vinfo();
-
+	unsigned int i;
 	if (info) {
 		info->hdr_info.hdr_support = 0;
+		for (i = 0; i < 4; i++)
+			memset(&(info->hdr_info.dynamic_info[i]),
+				0, sizeof(struct hdr_dynamic));
 		info->hdr_info.colorimetry_support = 0;
 		info->hdr_info.lumi_max = 0;
 		info->hdr_info.lumi_avg = 0;

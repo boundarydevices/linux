@@ -58,7 +58,12 @@
 #define EXTENSION_VENDOR_SPECIFIC 0x1
 #define EXTENSION_COLORMETRY_TAG 0x5
 /* DRM stands for "Dynamic Range and Mastering " */
-#define EXTENSION_DRM_TAG	0x6
+#define EXTENSION_DRM_STATIC_TAG    0x6
+#define EXTENSION_DRM_DYNAMIC_TAG   0x7
+   #define TYPE_1_HDR_METADATA_TYPE    0x0001
+   #define TS_103_433_SPEC_TYPE        0x0002
+   #define ITU_T_H265_SPEC_TYPE        0x0003
+   #define TYPE_4_HDR_METADATA_TYPE    0x0004
 /* Video Format Preference Data block */
 #define EXTENSION_VFPDB_TAG	0xd
 #define EXTENSION_Y420_VDB_TAG	0xe
@@ -943,7 +948,7 @@ INVALID_Y420VDB:
 	return -1;
 }
 
-static int Edid_ParsingDRMBlock(struct rx_cap *pRXCap,
+static int Edid_ParsingDRMStaticBlock(struct rx_cap *pRXCap,
 	unsigned char *buf)
 {
 	unsigned char tag = 0, ext_tag = 0, data_end = 0;
@@ -954,8 +959,8 @@ static int Edid_ParsingDRMBlock(struct rx_cap *pRXCap,
 	pos++;
 	ext_tag = buf[pos];
 	if ((tag != HDMI_EDID_BLOCK_TYPE_EXTENDED_TAG)
-		|| (ext_tag != EXTENSION_DRM_TAG))
-		goto INVALID_DRM;
+		|| (ext_tag != EXTENSION_DRM_STATIC_TAG))
+		goto INVALID_DRM_STATIC;
 	pos++;
 	pRXCap->hdr_sup_eotf_sdr = !!(buf[pos] & (0x1 << 0));
 	pRXCap->hdr_sup_eotf_hdr = !!(buf[pos] & (0x1 << 1));
@@ -982,8 +987,66 @@ static int Edid_ParsingDRMBlock(struct rx_cap *pRXCap,
 		return 0;
 	}
 	return 0;
-INVALID_DRM:
-	pr_info("[%s] it's not a valid DRM\n", __func__);
+INVALID_DRM_STATIC:
+	pr_info("[%s] it's not a valid DRM STATIC BLOCK\n", __func__);
+	return -1;
+}
+
+static int Edid_ParsingDRMDynamicBlock(struct rx_cap *pRXCap,
+	unsigned char *buf)
+{
+	unsigned char tag = 0, ext_tag = 0, data_end = 0;
+	unsigned int pos = 0;
+	unsigned int type;
+	unsigned int type_length;
+	unsigned int i;
+	unsigned int num;
+
+	tag = (buf[pos] >> 5) & 0x7;
+	data_end = (buf[pos] & 0x1f);
+	pos++;
+	ext_tag = buf[pos];
+	if ((tag != HDMI_EDID_BLOCK_TYPE_EXTENDED_TAG)
+		|| (ext_tag != EXTENSION_DRM_DYNAMIC_TAG))
+		goto INVALID_DRM_DYNAMIC;
+	pos++;
+	data_end--;/*extended tag code byte doesn't need*/
+
+	while (data_end) {
+		type_length = buf[pos];
+		pos++;
+		type = (buf[pos + 1] << 8) | buf[pos];
+		pos += 2;
+		switch (type) {
+		case TS_103_433_SPEC_TYPE:
+			num = 1;
+			break;
+		case ITU_T_H265_SPEC_TYPE:
+			num = 2;
+			break;
+		case TYPE_4_HDR_METADATA_TYPE:
+			num = 3;
+			break;
+		case TYPE_1_HDR_METADATA_TYPE:
+		default:
+			num = 0;
+			break;
+		}
+		pRXCap->hdr_dynamic_info[num].hd_len = type_length;
+		pRXCap->hdr_dynamic_info[num].type = type;
+		pRXCap->hdr_dynamic_info[num].support_flags = buf[pos];
+		pos++;
+		for (i = 0; i < type_length - 3; i++) {
+			pRXCap->hdr_dynamic_info[num].optional_fields[i]
+				= buf[pos];
+			pos++;
+		}
+		data_end = data_end - (type_length + 1);
+	}
+
+	return 0;
+INVALID_DRM_DYNAMIC:
+	pr_info("[%s] it's not a valid DRM DYNAMIC BLOCK\n", __func__);
 	return -1;
 }
 
@@ -1449,11 +1512,15 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 					pRXCap->colorimetry_data =
 						BlockBuf[offset + 2];
 					break;
-				case EXTENSION_DRM_TAG:
-					Edid_ParsingDRMBlock(pRXCap,
+				case EXTENSION_DRM_STATIC_TAG:
+					Edid_ParsingDRMStaticBlock(pRXCap,
 						&BlockBuf[offset]);
 					rx_set_hdr_lumi(&BlockBuf[offset],
 						(BlockBuf[offset] & 0x1f) + 1);
+					break;
+				case EXTENSION_DRM_DYNAMIC_TAG:
+					Edid_ParsingDRMDynamicBlock(pRXCap,
+						&BlockBuf[offset]);
 					break;
 				case EXTENSION_VFPDB_TAG:
 /* Just record VFPDB offset address, call Edid_ParsingVFPDB() after DTD
@@ -1819,6 +1886,41 @@ next:
 	} else
 		dump_dtd_info(t);
 }
+static void hdrinfo_to_vinfo(struct vinfo_s *info, struct rx_cap *pRXCap)
+{
+	unsigned int  k, l;
+
+	info->hdr_info.hdr_support =
+		(pRXCap->hdr_sup_eotf_sdr << 0) |
+		(pRXCap->hdr_sup_eotf_hdr << 1) |
+		(pRXCap->hdr_sup_eotf_smpte_st_2084 << 2) |
+		(pRXCap->hdr_sup_eotf_hlg << 3);
+	for (l = 0; l < 4; l++) {
+		if (pRXCap->hdr_dynamic_info[l].type == 0) {
+			memset(&info->hdr_info.dynamic_info[l],
+				0, sizeof(struct hdr_dynamic));
+			continue;
+		}
+		info->hdr_info.dynamic_info[l].type =
+			pRXCap->hdr_dynamic_info[l].type;
+		info->hdr_info.dynamic_info[l].of_len =
+			pRXCap->hdr_dynamic_info[l].hd_len - 3;
+		info->hdr_info.dynamic_info[l].support_flags =
+			pRXCap->hdr_dynamic_info[l].support_flags;
+		for (k = 0; k < (pRXCap->hdr_dynamic_info[l].hd_len - 3); k++) {
+			info->hdr_info.dynamic_info[l].optional_fields[k] =
+				pRXCap->hdr_dynamic_info[l].optional_fields[k];
+		}
+	}
+	info->hdr_info.colorimetry_support =
+		pRXCap->colorimetry_data;
+	info->hdr_info.lumi_max = pRXCap->hdr_lum_max;
+	info->hdr_info.lumi_avg = pRXCap->hdr_lum_avg;
+	info->hdr_info.lumi_min = pRXCap->hdr_lum_min;
+	pr_info(EDID "update rx hdr info %x at edid parsing\n",
+		info->hdr_info.hdr_support);
+}
+
 
 int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 {
@@ -2015,20 +2117,8 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 	if (info) {
 		if (!((strncmp(info->name, "480cvbs", 7) == 0) ||
 		(strncmp(info->name, "576cvbs", 7) == 0) ||
-		(strncmp(info->name, "null", 4) == 0))) {
-			info->hdr_info.hdr_support =
-				(pRXCap->hdr_sup_eotf_sdr << 0) |
-				(pRXCap->hdr_sup_eotf_hdr << 1) |
-				(pRXCap->hdr_sup_eotf_smpte_st_2084 << 2) |
-				(pRXCap->hdr_sup_eotf_hlg << 3);
-			info->hdr_info.colorimetry_support =
-				pRXCap->colorimetry_data;
-			info->hdr_info.lumi_max = pRXCap->hdr_lum_max;
-			info->hdr_info.lumi_avg = pRXCap->hdr_lum_avg;
-			info->hdr_info.lumi_min = pRXCap->hdr_lum_min;
-			pr_info(EDID "update rx hdr info %x at edid parsing\n",
-				info->hdr_info.hdr_support);
-		}
+		(strncmp(info->name, "null", 4) == 0)))
+			hdrinfo_to_vinfo(info, pRXCap);
 	}
 	return 0;
 

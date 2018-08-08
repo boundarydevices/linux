@@ -27,7 +27,7 @@
 #include <linux/pinctrl/consumer.h>
 
 /* HDMITX driver version */
-#define HDMITX_VER "20180702"
+#define HDMITX_VER "20180808"
 
 /* chip type */
 #define MESON_CPU_ID_M8B		0
@@ -69,6 +69,13 @@ enum hd_ctrl {
 	VID_EN, VID_DIS, AUD_EN, AUD_DIS, EDID_EN, EDID_DIS, HDCP_EN, HDCP_DIS,
 };
 
+struct hdr_dynamic_struct {
+	unsigned int type;
+	unsigned int hd_len;/*hdr_dynamic_length*/
+	unsigned char support_flags;
+	unsigned char optional_fields[20];
+};
+
 struct rx_cap {
 	unsigned int native_Mode;
 	/*video*/
@@ -104,6 +111,7 @@ struct rx_cap {
 	unsigned char hdr_lum_max;
 	unsigned char hdr_lum_avg;
 	unsigned char hdr_lum_min;
+	struct hdr_dynamic_struct hdr_dynamic_info[4];
 	unsigned char IDManufacturerName[4];
 	unsigned char IDProductCode[2];
 	unsigned char IDSerialNumber[4];
