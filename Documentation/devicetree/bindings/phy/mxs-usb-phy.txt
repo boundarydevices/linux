@@ -33,5 +33,5 @@ usbphy1: usbphy@20c9000 {
 	reg = <0x020c9000 0x1000>;
 	interrupts = <0 44 0x04>;
 	fsl,anatop = <&anatop>;
-	tx-d-cal = <0x5>;
+	fsl,tx-d-cal = <106>;
 };
