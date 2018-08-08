@@ -124,7 +124,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-08-06a";
+static const char version_s[] = "2018-08-09a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -3032,18 +3032,18 @@ static void pre_de_process(void)
 			vdin_ops->tvin_vdin_func(0, &vdin_arg);
 	}
 #endif
-	/* must make sure follow part issue without iterrupts,
+	/* must make sure follow part issue without interrupts,
 	 * otherwise may cause watch dog reboot
 	 */
 	di_lock_irqfiq_save(irq_flag2);
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 		pre_frame_reset_g12(di_pre_stru.madi_enable,
 			di_pre_stru.mcdi_enable);
-	} else {
+	else
 		pre_frame_reset();
-		/* enable mc pre mif*/
-		enable_di_pre_mif(true, mcpre_en);
-	}
+
+	/* enable mc pre mif*/
+	enable_di_pre_mif(true, mcpre_en);
 	di_unlock_irqfiq_restore(irq_flag2);
 	/*reinit pre busy flag*/
 	di_pre_stru.pre_de_busy_timer_count = 0;
