@@ -295,10 +295,12 @@ enum cec_version_e {
 #define INFO_MASK_PLAY_MODE                  (1<<10)
 
 /*CEC UI MASK*/
+/*
 #define CEC_FUNC_MSAK                        0
 #define ONE_TOUCH_PLAY_MASK                  1
 #define ONE_TOUCH_STANDBY_MASK               2
 #define AUTO_POWER_ON_MASK                   3
+*/
 
 /*
  * only for 1 tx device

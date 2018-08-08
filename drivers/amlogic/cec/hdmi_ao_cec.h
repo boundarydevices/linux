@@ -18,7 +18,7 @@
 #ifndef __AO_CEC_H__
 #define __AO_CEC_H__
 
-#define CEC_DRIVER_VERSION	"Ver 2018/08/08\n"
+#define CEC_DRIVER_VERSION	"Ver 2018/08/10\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
@@ -31,14 +31,18 @@
 #define L_1		1
 #define L_2		2
 #define L_3		3
-
+/*
 #define CEC_FUNC_MASK			0
 #define ONE_TOUCH_PLAY_MASK		1
-#define ONE_TOUCH_STANDBY_MASK		2
+#define ONE_TOUCH_STANDBY_MASK	2
 #define AUTO_POWER_ON_MASK		3
-
-#define CEC_FUNC_CFG_ALL		0x2f
-#define CEC_FUNC_CFG_NONE		0x0
+*/
+#define CEC_FUNC_CFG_CEC_ON			0x01
+#define CEC_FUNC_CFG_OTP_ON			0x02
+#define CEC_FUNC_CFG_AUTO_STANDBY	0x04
+#define CEC_FUNC_CFG_AUTO_POWER_ON	0x08
+#define CEC_FUNC_CFG_ALL			0x2f
+#define CEC_FUNC_CFG_NONE			0x0
 
 /*#define AO_BASE				0xc8100000*/
 
