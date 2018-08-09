@@ -1511,4 +1511,6 @@
 	status = "okay";
 };
 
-
+&crypto {
+	status = "disabled";
+};
