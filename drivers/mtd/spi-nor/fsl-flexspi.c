@@ -511,7 +511,7 @@ static void fsl_flexspi_init_lut(struct fsl_flexspi *flex)
 	dm = nor->read_dummy;
 
 	/* Normal Read */
-	if (op == SPINOR_OP_READ) {
+	if (op == SPINOR_OP_READ || op == 0) {
 		writel(LUT0(CMD, PAD1, op) |
 		       LUT1(ADDR, PAD1, addrlen),
 		       base + FLEXSPI_LUT(lut_base));
@@ -519,9 +519,9 @@ static void fsl_flexspi_init_lut(struct fsl_flexspi *flex)
 		writel(LUT0(FSL_READ, PAD1, 0),
 		       base + FLEXSPI_LUT(lut_base + 1));
 	/* Octal DDR Read */
-	} else if (op == SPINOR_OP_READ_1_1_8_D) {
+	} else if (op == SPINOR_OP_READ_1_8_8_DTR_4B) {
 		writel(LUT0(CMD, PAD1, op) |
-		       LUT1(ADDR_DDR, PAD8, addrlen),
+		       LUT1(ADDR_DDR, PAD1, addrlen),
 		       base + FLEXSPI_LUT(lut_base));
 
 		writel(LUT0(DUMMY_DDR, PAD8, dm * 2)
@@ -537,7 +537,7 @@ static void fsl_flexspi_init_lut(struct fsl_flexspi *flex)
 		       LUT1(FSL_READ, PAD4, rxfifo),
 		       base + FLEXSPI_LUT(lut_base + 1));
 	/* DDR Quad I/O Read 	 */
-	} else if (op == SPINOR_OP_READ_1_4_4_D || op == SPINOR_OP_READ_1_4_4_D_4B) {
+	} else if (op == SPINOR_OP_READ_1_4_4_DTR || op == SPINOR_OP_READ_1_4_4_DTR_4B) {
 		/* read mode : 1-4-4, such as Spansion s25fl128s. */
 		writel(LUT0(CMD_DDR, PAD1, op) |
 		       LUT1(ADDR_DDR, PAD4, addrlen),
@@ -551,7 +551,7 @@ static void fsl_flexspi_init_lut(struct fsl_flexspi *flex)
 		       LUT1(JMP_ON_CS, PAD1, 0),
 		       base + FLEXSPI_LUT(lut_base + 2));
 	/* DDR Quad Fast Read 	 */
-	} else if (op == SPINOR_OP_READ_1_1_4_D) {
+	} else if (op == SPINOR_OP_READ_1_1_4_DTR) {
 		/* read mode : 1-1-4, such as Micron N25Q256A. */
 		writel(LUT0(CMD_DDR, PAD1, op) |
 		       LUT1(ADDR_DDR, PAD1, addrlen),
@@ -634,10 +634,10 @@ static int fsl_flexspi_get_seqid(struct fsl_flexspi *flex, u8 cmd)
 {
 
 	switch (cmd) {
-	case SPINOR_OP_READ_1_1_4_D:
-	case SPINOR_OP_READ_1_1_8_D:
-	case SPINOR_OP_READ_1_4_4_D:
-	case SPINOR_OP_READ_1_4_4_D_4B:
+	case SPINOR_OP_READ_1_1_4_DTR:
+	case SPINOR_OP_READ_1_8_8_DTR_4B:
+	case SPINOR_OP_READ_1_4_4_DTR:
+	case SPINOR_OP_READ_1_4_4_DTR_4B:
 	case SPINOR_OP_READ_1_1_4_4B:
 	case SPINOR_OP_READ_1_1_4:
 	case SPINOR_OP_READ_4B:
@@ -1298,7 +1298,8 @@ static int fsl_flexspi_probe(struct platform_device *pdev)
 		ret = of_property_read_u32(np, "spi-nor,ddr-quad-read-dummy",
 					&dummy);
 		if (!ret && dummy > 0)
-			hwcaps.mask |= SNOR_HWCAPS_READ;
+			hwcaps.mask |= fsl_flexspi_quad_only(flex) ?
+				    SNOR_HWCAPS_READ : SNOR_HWCAPS_READ_1_8_8_DTR;
 		else
 			hwcaps.mask |= SNOR_HWCAPS_READ;
 
