@@ -25,11 +25,11 @@
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #include <linux/platform_device.h>
-#include <linux/mmc/card.h>
-#include <linux/mmc/host.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
+#include <linux/mmc/card.h>
+#include <linux/mmc/host.h>
 #include <linux/gpio.h>
 #include <linux/pm_runtime.h>
 #include <linux/printk.h>
@@ -404,9 +404,10 @@ static int wl1271_suspend(struct device *dev)
 	mmc_pm_flag_t sdio_flags;
 	int ret = 0;
 
-	/* In case the driver hasn't been probed or if unregistered */
-	if (!wl)
-		return ret;
+	if (!wl) {
+		dev_err(dev, "no wilink module was probed\n");
+		goto out;
+	}
 
 	dev_dbg(dev, "wl1271 suspend. wow_enabled: %d\n",
 		wl->wow_enabled);
