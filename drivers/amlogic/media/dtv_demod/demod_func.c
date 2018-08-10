@@ -709,10 +709,17 @@ void demod_set_mode_ts(unsigned char dvb_mode)
 		cfg0.b.adc_regout = 1;
 		cfg0.b.adc_regadj = 2;
 	} else if (dvb_mode == Gxtv_Dvbc) {
-		cfg0.b.ts_sel = 1<<3;
-		cfg0.b.mode = 1<<3;
-		cfg0.b.adc_format = 0;
-		cfg0.b.adc_regout = 0;
+		if (is_dvbc_ver(IC_DVBC_V2)) {
+			cfg0.b.ts_sel = 2;
+			cfg0.b.mode = 7;
+			cfg0.b.adc_format = 1;
+			cfg0.b.adc_regout = 0;
+		} else {
+			cfg0.b.ts_sel = 1<<3;
+			cfg0.b.mode = 1<<3;
+			cfg0.b.adc_format = 0;
+			cfg0.b.adc_regout = 0;
+		}
 	}
 
 	demod_write_reg(DEMOD_REG1, cfg0.d32);
