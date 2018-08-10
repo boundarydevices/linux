@@ -106,8 +106,8 @@ static int lcd_extern_driver_update(struct aml_lcd_extern_driver_s *ext_drv)
 	int ret = 0;
 
 	if (ext_drv) {
-		ext_drv->config.table_init_on  = &mipi_init_on_table[0];
-		ext_drv->config.table_init_off = &mipi_init_off_table[0];
+		ext_drv->config->table_init_on  = &mipi_init_on_table[0];
+		ext_drv->config->table_init_off = &mipi_init_off_table[0];
 	} else {
 		EXTERR("%s driver is null\n", LCD_EXTERN_NAME);
 		ret = -1;

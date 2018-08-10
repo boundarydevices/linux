@@ -36,7 +36,12 @@ static struct lcd_extern_config_s *ext_config;
 
 #define LCD_EXTERN_NAME		"lcd_spi_LD070WS2"
 
-#define SPI_DELAY		30 /* unit: us */
+#define SPI_DELAY                 30 /* unit: us */
+#define SPI_GPIO_CS               0 /* index */
+#define SPI_GPIO_CLK              1 /* index */
+#define SPI_GPIO_DATA             2 /* index */
+#define SPI_CLK_FREQ              10000 /* Hz */
+#define SPI_CLK_POL               1
 
 #define LCD_EXTERN_CMD_SIZE        4
 static unsigned char init_on_table[] = {
@@ -228,11 +233,11 @@ static int lcd_extern_driver_update(struct aml_lcd_extern_driver_s *ext_drv)
 		return -1;
 	}
 
-	if (ext_drv->config.table_init_loaded == 0) {
-		ext_drv->config.table_init_on  = init_on_table;
-		ext_drv->config.table_init_off = init_off_table;
+	if (ext_drv->config->table_init_loaded == 0) {
+		ext_drv->config->table_init_on  = init_on_table;
+		ext_drv->config->table_init_off = init_off_table;
 	}
-	ext_drv->config.spi_delay_us = SPI_DELAY;
+	ext_drv->config->spi_delay_us = SPI_DELAY;
 
 	ext_drv->power_on  = lcd_extern_power_on;
 	ext_drv->power_off = lcd_extern_power_off;
@@ -244,10 +249,17 @@ int aml_lcd_extern_spi_LD070WS2_probe(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret = 0;
 
-	ext_config = &ext_drv->config;
+	ext_config = ext_drv->config;
 	ret = lcd_extern_driver_update(ext_drv);
 
 	if (lcd_debug_print_flag)
 		EXTPR("%s: %d\n", __func__, ret);
 	return ret;
+}
+
+int aml_lcd_extern_spi_LD070WS2_remove(void)
+{
+	ext_config = NULL;
+
+	return 0;
 }

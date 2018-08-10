@@ -66,6 +66,7 @@
 #define LCD_EVENT_BACKLIGHT_UPDATE  (1 << 9)
 
 #define LCD_EVENT_GAMMA_UPDATE      (1 << 10)
+#define LCD_EVENT_EXTERN_SEL        (1 << 11)
 
 /* lcd frame rate change occurred */
 #define LCD_EVENT_FRAME_RATE_ADJUST (1 << 12)

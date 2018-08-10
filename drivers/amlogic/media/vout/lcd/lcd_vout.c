@@ -195,6 +195,9 @@ static struct lcd_config_s lcd_config_dft = {
 	.change_flag = 0,
 	.retry_enable_flag = 0,
 	.retry_enable_cnt = 0,
+
+	.backlight_index = 0xff,
+	.extern_index = 0xff,
 };
 
 static struct vinfo_s lcd_vinfo = {
@@ -259,12 +262,12 @@ static void lcd_power_ctrl(int status)
 			if (ext_drv) {
 				if (status) {
 					if (ext_drv->power_on)
-						ext_drv->power_on(ext_drv);
+						ext_drv->power_on();
 					else
 						LCDERR("no ext power on\n");
 				} else {
 					if (ext_drv->power_off)
-						ext_drv->power_off(ext_drv);
+						ext_drv->power_off();
 					else
 						LCDERR("no ext power off\n");
 				}
@@ -567,13 +570,33 @@ static struct notifier_block lcd_bl_select_nb = {
 	.notifier_call = lcd_bl_select_notifier,
 };
 
+static int lcd_extern_select_notifier(struct notifier_block *nb,
+		unsigned long event, void *data)
+{
+	unsigned int *index;
+	struct lcd_config_s *pconf = lcd_driver->lcd_config;
+
+	if ((event & LCD_EVENT_EXTERN_SEL) == 0)
+		return NOTIFY_DONE;
+	/* LCDPR("%s: 0x%lx\n", __func__, event); */
+
+	index = (unsigned int *)data;
+	*index = pconf->extern_index;
+	if (pconf->lcd_basic.lcd_type == LCD_MIPI) {
+		if (*index == LCD_EXTERN_INDEX_INVALID)
+			*index = pconf->lcd_control.mipi_config->extern_init;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block lcd_extern_select_nb = {
+	.notifier_call = lcd_extern_select_notifier,
+};
+
 static int lcd_notifier_register(void)
 {
 	int ret = 0;
-
-	ret = aml_lcd_notifier_register(&lcd_bl_select_nb);
-	if (ret)
-		LCDERR("register aml_bl_select_notifier failed\n");
 
 	ret = aml_lcd_notifier_register(&lcd_power_encl_on_nb);
 	if (ret)
@@ -594,6 +617,13 @@ static int lcd_notifier_register(void)
 	if (ret)
 		LCDERR("register lcd_power_screen_restore_nb failed\n");
 
+	ret = aml_lcd_notifier_register(&lcd_bl_select_nb);
+	if (ret)
+		LCDERR("register aml_bl_select_notifier failed\n");
+	ret = aml_lcd_notifier_register(&lcd_extern_select_nb);
+	if (ret)
+		LCDERR("register lcd_extern_select_nb failed\n");
+
 	return 0;
 }
 
@@ -607,6 +637,7 @@ static void lcd_notifier_unregister(void)
 	aml_lcd_notifier_unregister(&lcd_power_encl_on_nb);
 
 	aml_lcd_notifier_unregister(&lcd_bl_select_nb);
+	aml_lcd_notifier_unregister(&lcd_extern_select_nb);
 }
 /* **************************************** */
 

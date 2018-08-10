@@ -28,10 +28,15 @@
 #include <linux/amlogic/media/vout/lcd/lcd_extern.h>
 #include "lcd_extern.h"
 
-#define LCD_EXTERN_NAME			"i2c_tc101"
+#define LCD_EXTERN_NAME	          "i2c_tc101"
+
+#define LCD_EXTERN_I2C_ADDR       (0x7e) /* 7bit address */
+#define LCD_EXTERN_I2C_ADDR2      (0xff) /* 7bit address */
+#define LCD_EXTERN_I2C_BUS        LCD_EXTERN_I2C_BUS_2
 
 static struct lcd_extern_config_s *ext_config;
-static struct aml_lcd_extern_i2c_dev_s *i2c_device;
+static struct aml_lcd_extern_i2c_dev_s *i2c0_dev;
+static struct aml_lcd_extern_i2c_dev_s *i2c1_dev;
 
 static unsigned char init_on_table[][3] = {
 	/* {0xff, 0xff, 20},//delay mark(20ms) */
@@ -63,15 +68,15 @@ static int lcd_extern_i2c_write(struct i2c_client *i2client,
 	return ret;
 }
 
-static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
+static int lcd_extern_power_on(void)
 {
 	unsigned char tData[4];
 	int i = 0, ending_flag = 0;
 	int ret = 0;
 
-	lcd_extern_pinmux_set(ext_drv, 1);
+	lcd_extern_pinmux_set(1);
 
-	if (i2c_device == NULL) {
+	if (i2c0_dev == NULL) {
 		EXTERR("invalid i2c device\n");
 		return -1;
 	}
@@ -86,7 +91,7 @@ static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
 			tData[0] = init_on_table[i][0];
 			tData[1] = init_on_table[i][1];
 			tData[2] = init_on_table[i][2];
-			lcd_extern_i2c_write(i2c_device->client, tData, 3);
+			lcd_extern_i2c_write(i2c0_dev->client, tData, 3);
 		}
 		i++;
 	}
@@ -94,11 +99,11 @@ static int lcd_extern_power_on(struct aml_lcd_extern_driver_s *ext_drv)
 	return ret;
 }
 
-static int lcd_extern_power_off(struct aml_lcd_extern_driver_s *ext_drv)
+static int lcd_extern_power_off(void)
 {
 	int ret = 0;
 
-	lcd_extern_pinmux_set(ext_drv, 0);
+	lcd_extern_pinmux_set(0);
 	return ret;
 }
 
@@ -121,15 +126,24 @@ int aml_lcd_extern_i2c_tc101_probe(struct aml_lcd_extern_driver_s *ext_drv)
 {
 	int ret = 0;
 
-	ext_config = &ext_drv->config;
-	if (i2c_device == NULL) {
-		EXTERR("invalid i2c device\n");
+	ext_config = ext_drv->config;
+
+	i2c0_dev = lcd_extern_get_i2c_device(ext_config->i2c_addr);
+	if (i2c0_dev == NULL) {
+		EXTERR("invalid i2c0 device\n");
 		return -1;
 	}
-	if (ext_drv->config.i2c_addr != i2c_device->client->addr) {
-		EXTERR("invalid i2c addr\n");
+	EXTPR("get i2c0 device: %s, addr 0x%02x OK\n",
+		i2c0_dev->name, i2c0_dev->client->addr);
+
+	i2c1_dev = lcd_extern_get_i2c_device(ext_config->i2c_addr2);
+	if (i2c1_dev == NULL) {
+		EXTERR("invalid i2c1 device\n");
+		i2c0_dev = NULL;
 		return -1;
 	}
+	EXTPR("get i2c1 device: %s, addr 0x%02x OK\n",
+		i2c1_dev->name, i2c1_dev->client->addr);
 
 	ret = lcd_extern_driver_update(ext_drv);
 
@@ -138,83 +152,11 @@ int aml_lcd_extern_i2c_tc101_probe(struct aml_lcd_extern_driver_s *ext_drv)
 	return ret;
 }
 
-static int lcd_extern_i2c_config_from_dts(struct device *dev,
-	struct aml_lcd_extern_i2c_dev_s *i2c_device)
+int aml_lcd_extern_i2c_tc101_remove(void)
 {
-	int ret;
-	struct device_node *np = dev->of_node;
-	const char *str;
-
-	ret = of_property_read_string(np, "dev_name", &str);
-	if (ret) {
-		EXTERR("failed to get dev_i2c_name\n");
-		str = "lcd_extern_i2c_tc101";
-	}
-	strcpy(i2c_device->name, str);
+	i2c0_dev = NULL;
+	i2c1_dev = NULL;
+	ext_config = NULL;
 
 	return 0;
 }
-
-static int aml_lcd_extern_i2c_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
-{
-	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
-		EXTERR("I2C check functionality failed.");
-		return -ENODEV;
-	}
-
-	i2c_device = kzalloc(sizeof(struct aml_lcd_extern_i2c_dev_s),
-		GFP_KERNEL);
-	if (!i2c_device) {
-		EXTERR("driver malloc error\n");
-		return -ENOMEM;
-	}
-	i2c_device->client = client;
-	lcd_extern_i2c_config_from_dts(&client->dev, i2c_device);
-	EXTPR("I2C %s Address: 0x%02x", i2c_device->name,
-		i2c_device->client->addr);
-
-	return 0;
-}
-
-static int aml_lcd_extern_i2c_remove(struct i2c_client *client)
-{
-	kfree(i2c_device);
-	i2c_set_clientdata(client, NULL);
-
-	return 0;
-}
-
-static const struct i2c_device_id aml_lcd_extern_i2c_id[] = {
-	{"i2c_tc101", 0},
-	{}
-};
-
-#ifdef CONFIG_OF
-static const struct of_device_id aml_lcd_extern_i2c_dt_match[] = {
-	{
-		.compatible = "amlogic, lcd_i2c_tc101",
-	},
-	{},
-};
-#endif
-
-static struct i2c_driver aml_lcd_extern_i2c_driver = {
-	.probe  = aml_lcd_extern_i2c_probe,
-	.remove = aml_lcd_extern_i2c_remove,
-	.id_table   = aml_lcd_extern_i2c_id,
-	.driver = {
-		.name  = "i2c_tc101",
-		.owner = THIS_MODULE,
-#ifdef CONFIG_OF
-		.of_match_table = aml_lcd_extern_i2c_dt_match,
-#endif
-	},
-};
-
-module_i2c_driver(aml_lcd_extern_i2c_driver);
-
-MODULE_AUTHOR("AMLOGIC");
-MODULE_DESCRIPTION("lcd extern driver");
-MODULE_LICENSE("GPL");
-

@@ -471,12 +471,15 @@ int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 				"power_on_step", j, &val);
 			lcd_power->power_on_step[i].delay = val;
 
-			/* gpio probe */
+			/* gpio/extern probe */
+			index = lcd_power->power_on_step[i].index;
 			switch (lcd_power->power_on_step[i].type) {
 			case LCD_POWER_TYPE_CPU:
-				index = lcd_power->power_on_step[i].index;
 				if (index < LCD_CPU_GPIO_NUM_MAX)
 					lcd_cpu_gpio_probe(index);
+				break;
+			case LCD_POWER_TYPE_EXTERN:
+				pconf->extern_index = index;
 				break;
 			default:
 				break;
@@ -522,12 +525,16 @@ int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 				"power_off_step", j, &val);
 			lcd_power->power_off_step[i].delay = val;
 
-			/* gpio probe */
+			/* gpio/extern probe */
+			index = lcd_power->power_off_step[i].index;
 			switch (lcd_power->power_off_step[i].type) {
 			case LCD_POWER_TYPE_CPU:
-				index = lcd_power->power_off_step[i].index;
 				if (index < LCD_CPU_GPIO_NUM_MAX)
 					lcd_cpu_gpio_probe(index);
+				break;
+			case LCD_POWER_TYPE_EXTERN:
+				if (pconf->extern_index == 0xff)
+					pconf->extern_index = index;
 				break;
 			default:
 				break;
@@ -591,12 +598,15 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 			(*(p + LCD_UKEY_PWR_DELAY + 5*i) |
 			((*(p + LCD_UKEY_PWR_DELAY + 5*i + 1)) << 8));
 
-		/* gpio probe */
+		/* gpio/extern probe */
+		index = pconf->lcd_power->power_on_step[i].index;
 		switch (pconf->lcd_power->power_on_step[i].type) {
 		case LCD_POWER_TYPE_CPU:
-			index = pconf->lcd_power->power_on_step[i].index;
 			if (index < LCD_CPU_GPIO_NUM_MAX)
 				lcd_cpu_gpio_probe(index);
+			break;
+		case LCD_POWER_TYPE_EXTERN:
+			pconf->extern_index = index;
 			break;
 		default:
 			break;
@@ -639,12 +649,16 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 				(*(p + LCD_UKEY_PWR_DELAY + 5*j) |
 				((*(p + LCD_UKEY_PWR_DELAY + 5*j + 1)) << 8));
 
-		/* gpio probe */
+		/* gpio/extern probe */
+		index = pconf->lcd_power->power_off_step[j].index;
 		switch (pconf->lcd_power->power_off_step[j].type) {
 		case LCD_POWER_TYPE_CPU:
-			index = pconf->lcd_power->power_off_step[j].index;
 			if (index < LCD_CPU_GPIO_NUM_MAX)
 				lcd_cpu_gpio_probe(index);
+			break;
+		case LCD_POWER_TYPE_EXTERN:
+			if (pconf->extern_index == 0xff)
+				pconf->extern_index = index;
 			break;
 		default:
 			break;

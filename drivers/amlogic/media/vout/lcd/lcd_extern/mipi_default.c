@@ -57,13 +57,13 @@ static int lcd_extern_driver_update(struct aml_lcd_extern_driver_s *ext_drv)
 		return -1;
 	}
 
-	if (ext_drv->config.type == LCD_EXTERN_MAX) { //default for no dt
-		ext_drv->config.index = LCD_EXTERN_INDEX;
-		ext_drv->config.type = LCD_EXTERN_TYPE;
-		strcpy(ext_drv->config.name, LCD_EXTERN_NAME);
+	if (ext_drv->config->type == LCD_EXTERN_MAX) { //default for no dt
+		ext_drv->config->index = LCD_EXTERN_INDEX;
+		ext_drv->config->type = LCD_EXTERN_TYPE;
+		strcpy(ext_drv->config->name, LCD_EXTERN_NAME);
 
-		ext_drv->config.table_init_on = &mipi_init_on_table[0];
-		ext_drv->config.table_init_off = &mipi_init_off_table[0];
+		ext_drv->config->table_init_on = &mipi_init_on_table[0];
+		ext_drv->config->table_init_off = &mipi_init_off_table[0];
 	}
 
 

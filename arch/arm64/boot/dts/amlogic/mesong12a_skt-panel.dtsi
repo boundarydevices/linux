@@ -399,6 +399,7 @@
 		compatible = "amlogic, lcd_extern";
 		dev_name = "lcd_extern";
 		status = "okay";
+		i2c_bus = "i2c_bus_0";
 		key_valid = <0>;
 
 		extern_0{

@@ -34,15 +34,23 @@ extern struct device_node *aml_lcd_extern_get_dts_child(int index);
 extern void lcd_extern_gpio_probe(unsigned char index);
 extern void lcd_extern_gpio_set(unsigned char index, int value);
 extern unsigned int lcd_extern_gpio_get(unsigned char index);
-extern void lcd_extern_pinmux_set(
-	struct aml_lcd_extern_driver_s *ext_drv, int status);
+extern void lcd_extern_pinmux_set(int status);
 
-#define LCD_EXTERN_DEFAULT_ENABLE
+/* common API */
+extern struct aml_lcd_extern_i2c_dev_s *lcd_extern_get_i2c_device(
+		unsigned char addr);
+extern int lcd_extern_i2c_write(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len);
+extern int lcd_extern_i2c_read(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len);
 
-#ifdef LCD_EXTERN_DEFAULT_ENABLE
+
+/* specific API */
 extern int aml_lcd_extern_default_probe(
 	struct aml_lcd_extern_driver_s *ext_drv);
-#endif
+extern int aml_lcd_extern_mipi_default_probe(
+	struct aml_lcd_extern_driver_s *ext_drv);
+
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN_I2C_T5800Q
 extern int aml_lcd_extern_i2c_T5800Q_probe(
 	struct aml_lcd_extern_driver_s *ext_drv);
@@ -87,8 +95,6 @@ extern int aml_lcd_extern_mipi_p070acb_probe(
 extern int aml_lcd_extern_mipi_tl050fhv02ct_probe(
 	struct aml_lcd_extern_driver_s *ext_drv);
 #endif
-extern int aml_lcd_extern_mipi_default_probe(
-	struct aml_lcd_extern_driver_s *ext_drv);
 
 #endif
 

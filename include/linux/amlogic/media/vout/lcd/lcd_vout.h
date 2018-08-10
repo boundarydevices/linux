@@ -384,6 +384,7 @@ struct lcd_clk_gate_ctrl_s {
 struct lcd_config_s {
 	char *lcd_propname;
 	unsigned int backlight_index;
+	unsigned int extern_index;
 	struct lcd_basic_s lcd_basic;
 	struct lcd_timing_s lcd_timing;
 	struct lcd_hdr_info_s hdr_info;

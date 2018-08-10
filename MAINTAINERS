@@ -14596,6 +14596,10 @@ AMLOGIC SOUND ADC3101
 M: Renjun Xu <renjun.xu@amlogic.com>
 F: Documentation/devicetree/bindings/amlogic/axg-sound-adc3010-d608mic-pcm.txt
 
+AMLOGIC LCD EXTERN DRIVER
+M:      evoke zhang <evoke.zhang@amlogic.com>
+F:      drivers/amlogic/media/vout/lcd/lcd_extern/ext_i2c_dev.c
+
 AMLOGIC SYSTEM AS ROOT
 M:	Xindong Xu  <xindong.xu@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/firmware_avb_system.dtsi

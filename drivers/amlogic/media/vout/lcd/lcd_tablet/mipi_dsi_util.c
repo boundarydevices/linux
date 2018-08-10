@@ -1916,10 +1916,10 @@ static void mipi_dsi_link_on(struct lcd_config_s *pconf)
 		if (lcd_ext == NULL) {
 			LCDPR("no lcd_extern driver\n");
 		} else {
-			if (lcd_ext->config.table_init_on) {
-				dsi_write_cmd(lcd_ext->config.table_init_on);
+			if (lcd_ext->config->table_init_on) {
+				dsi_write_cmd(lcd_ext->config->table_init_on);
 				LCDPR("[extern]%s dsi init on\n",
-					lcd_ext->config.name);
+					lcd_ext->config->name);
 			}
 		}
 	}
@@ -1965,10 +1965,10 @@ void mipi_dsi_link_off(struct lcd_config_s *pconf)
 		if (lcd_ext == NULL) {
 			LCDPR("no lcd_extern driver\n");
 		} else {
-			if (lcd_ext->config.table_init_off) {
-				dsi_write_cmd(lcd_ext->config.table_init_off);
+			if (lcd_ext->config->table_init_off) {
+				dsi_write_cmd(lcd_ext->config->table_init_off);
 				LCDPR("[extern]%s dsi init off\n",
-					lcd_ext->config.name);
+					lcd_ext->config->name);
 			}
 		}
 	}
