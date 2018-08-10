@@ -118,7 +118,7 @@ sub check_msg_49
 
 	if( $lnum == 7 )
 	{
-		if( $line !~ /^(\s){4}PD\#(\d)+:(\s\w.*)*$/ )
+		if( $line !~ /^(\s){4}PD\#(\d)+/ )
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
