@@ -7181,8 +7181,9 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 {
 	u32 idx, data32;
 	int err_num = 0;
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	struct sched_param param = {.sched_priority = 2};
-
+#endif
 	osd_hw.fb_drvier_probe = osd_probe;
 
 	memcpy(&osd_hw.osd_meson_dev, osd_meson,
@@ -7493,6 +7494,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	if (osd_hw.hw_rdma_en)
 		osd_rdma_enable(1);
 
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	if (!timeline_created) {
 		/* timeline has not been created */
 		if (osd_timeline_create()) {
@@ -7512,6 +7514,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			timeline_created = 1;
 		}
 	}
+#endif
 
 }
 
