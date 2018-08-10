@@ -485,7 +485,7 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 		}
 	}
 
-	adc_set_pll_cntl(1, 0x1, NULL);
+	adc_set_pll_cntl(1, ADC_EN_ATV_DEMOD, NULL);
 	vdac_enable(1, 1);
 	usleep_range(2000, 2100);
 	atvdemod_clk_init();
@@ -529,7 +529,7 @@ int atv_demod_leave_mode(struct dvb_frontend *fe)
 	}
 
 	vdac_enable(0, 1);
-	adc_set_pll_cntl(0, 0x1, NULL);
+	adc_set_pll_cntl(0, ADC_EN_ATV_DEMOD, NULL);
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
 		aud_demod_clk_gate(0);
 
@@ -1420,6 +1420,10 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 		pr_dbg("[%s] freq[analog.std:0x%08x] is[%d] unlock\n",
 				__func__,
 				(uint32_t) p->std, p->frequency);
+
+		/* when manual search, just search current freq */
+		if (p->flag == ANALOG_FLAG_MANUL_SCAN)
+			break;
 
 		if (p->frequency >= 44200000 &&
 			p->frequency <= 44300000 &&

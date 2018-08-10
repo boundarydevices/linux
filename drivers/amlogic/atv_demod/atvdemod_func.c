@@ -2541,7 +2541,7 @@ int amlatvdemod_reg_read(unsigned int reg, unsigned int *val)
 			return 0;
 		}
 	} else if (0 == (ADC_EN_ATV_DEMOD & tvafe_adc_get_pll_flag())) {
-		pr_dbg("%s atv demod pll not init\n", __func__);
+		/* pr_dbg("%s atv demod pll not init\n", __func__); */
 		return 0;
 	}
 
@@ -2560,7 +2560,7 @@ int amlatvdemod_reg_write(unsigned int reg, unsigned int val)
 			return 0;
 		}
 	} else if (0 == (ADC_EN_ATV_DEMOD & tvafe_adc_get_pll_flag())) {
-		pr_dbg("%s atv demod pll not init\n", __func__);
+		/* pr_dbg("%s atv demod pll not init\n", __func__); */
 		return 0;
 	}
 
