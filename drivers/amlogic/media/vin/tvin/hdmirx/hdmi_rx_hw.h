@@ -1096,6 +1096,8 @@ extern int rx_set_port_hpd(uint8_t port_id, bool val);
 extern void rx_set_cur_hpd(uint8_t val);
 extern unsigned int rx_get_hdmi5v_sts(void);
 extern unsigned int rx_get_hpd_sts(void);
+
+extern void cec_hw_reset(void);
 #endif
 
 

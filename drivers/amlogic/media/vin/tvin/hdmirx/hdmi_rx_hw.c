@@ -1861,6 +1861,8 @@ void hdmirx_hw_config(void)
 	hdmirx_phy_init();
 	hdmirx_wr_top(TOP_INTR_MASKN, top_intr_maskn_value);
 	rx_pr("%s  %d Done!\n", __func__, rx.port);
+	if (rx.chip_id <= CHIP_ID_TXL)
+		cec_hw_reset();
 }
 
 /*

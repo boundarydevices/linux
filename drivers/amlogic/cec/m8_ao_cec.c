@@ -301,7 +301,7 @@ static void cec_arbit_bit_time_set(unsigned int bit_set,
 	}
 }
 
-static void cec_hw_reset(void)
+static void ceca_hw_reset(void)
 {
 	writel(0x1, cec_dev->cec_reg + AO_CEC_GEN_CNTL);
 	/* Enable gated clock (Normal mode). */
@@ -414,7 +414,7 @@ static int cec_ll_trigle_tx(const unsigned char *msg, int len)
 			aocec_wr_reg(CEC_TX_MSG_CMD, TX_ABORT);
 			cec_timeout_cnt++;
 			if (cec_timeout_cnt > 0x08)
-				cec_hw_reset();
+				ceca_hw_reset();
 			break;
 		}
 		msleep(20);
@@ -457,7 +457,7 @@ static void tx_irq_handle(void)
 		if (cec_dev->cec_msg_dbg_en  == 1)
 			CEC_ERR("TX ERROR!!!\n");
 		if (aocec_rd_reg(CEC_RX_MSG_STATUS) == RX_ERROR)
-			cec_hw_reset();
+			ceca_hw_reset();
 		else
 			aocec_wr_reg(CEC_TX_MSG_CMD, TX_NO_OP);
 		cec_dev->cec_tx_result = CEC_FAIL_NACK;
@@ -623,7 +623,7 @@ try_again:
 		/* timeout or interrupt */
 		if (ret == 0) {
 			CEC_ERR("tx timeout\n");
-			cec_hw_reset();
+			ceca_hw_reset();
 		}
 		ret = CEC_FAIL_OTHER;
 	} else {

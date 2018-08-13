@@ -158,8 +158,6 @@ static bool ee_cec;
 static bool pin_status;
 static unsigned int cec_msg_dbg_en;
 
-static void cec_hw_reset(void);
-
 #define CEC_ERR(format, args...)				\
 	{if (cec_dev->dbg_dev)					\
 		dev_err(cec_dev->dbg_dev, format, ##args);	\
@@ -730,6 +728,8 @@ void cec_logicaddr_set(int l_add)
 			hdmirx_cec_write(DWC_CEC_ADDR_L, 1 << l_add);
 		else
 			hdmirx_cec_write(DWC_CEC_ADDR_H, 1 << (l_add - 8)|0x80);
+
+		CEC_INFO("set cecb logical addr:0x%x\n", l_add);
 		return;
 	}
 	aocec_wr_reg(CEC_LOGICAL_ADDR0, 0);
@@ -738,11 +738,11 @@ void cec_logicaddr_set(int l_add)
 	udelay(100);
 	aocec_wr_reg(CEC_LOGICAL_ADDR0, (0x1 << 4) | (l_add & 0xf));
 	if (cec_msg_dbg_en)
-		CEC_INFO("set logical addr:0x%x\n",
+		CEC_INFO("set cec alogical addr:0x%x\n",
 			aocec_rd_reg(CEC_LOGICAL_ADDR0));
 }
 
-static void cec_hw_reset(void)
+void cec_hw_reset(void)
 {
 	if (ee_cec) {
 		cecrx_hw_init();
@@ -817,6 +817,8 @@ static bool need_nack_repeat_msg(const unsigned char *msg, int len, int t)
 
 static void cec_clear_logical_addr(void)
 {
+	CEC_INFO("clear logical addr\n");
+
 	if (ee_cec) {
 		hdmirx_cec_write(DWC_CEC_ADDR_L, 0);
 		hdmirx_cec_write(DWC_CEC_ADDR_H, 0x80);
@@ -2152,6 +2154,8 @@ static ssize_t dbg_store(struct class *cla, struct class_attribute *attr,
 
 		writel(val, cec_dev->cec_reg + addr);
 		CEC_ERR("wao addr:0x%x, val:0x%x", val, addr);
+	} else if (token && strncmp(token, "preinit", 7) == 0) {
+		cec_pre_init();
 	} else {
 		if (token)
 			CEC_ERR("no cmd:%s\n", token);
@@ -2351,7 +2355,7 @@ void cec_dump_info(void)
 	CEC_ERR("hal_flag:0x%x\n", cec_dev->hal_flag);
 	CEC_ERR("hpd_state:0x%x\n", cec_dev->tx_dev->hpd_state);
 	CEC_ERR("cec_config:0x%x\n", cec_config(0, 0));
-
+	CEC_ERR("log_addr:0x%x\n", cec_dev->cec_info.log_addr);
 	port = kcalloc(cec_dev->port_num, sizeof(*port), GFP_KERNEL);
 	if (port) {
 		init_cec_port_info(port, cec_dev);
