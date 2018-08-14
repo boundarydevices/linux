@@ -73,7 +73,9 @@ struct am_meson_crtc {
 
 	struct drm_pending_vblank_event *event;
 
-	unsigned int irq;
+	unsigned int vblank_irq;
+	spinlock_t vblank_irq_lock;
+	bool vblank_enable;
 
 	struct dentry *crtc_debugfs_dir;
 };
@@ -299,6 +301,7 @@ void am_osd_do_display(
 	int format = DRM_FORMAT_ARGB8888;
 	dma_addr_t phyaddr;
 	unsigned long flags;
+	struct am_meson_crtc *amcrtc = to_am_meson_crtc(drv->crtc);
 
 	//DRM_INFO("%s osd %d.\n", __func__, osd_plane->osd_idx);
 
@@ -348,7 +351,6 @@ void am_osd_do_display(
 		break;
 	};
 
-	spin_lock_irqsave(&drv->drm->event_lock, flags);
 
 #ifdef CONFIG_DRM_MESON_USE_ION
 	meson_fb = container_of(fb, struct am_meson_fb, base);
@@ -383,9 +385,10 @@ void am_osd_do_display(
 				fb->flags, fb->pixel_format, state->zpos);
 	DRM_INFO("plane index=%d, type=%d\n", plane->index, plane->type);
 	#endif
-	osd_drm_plane_page_flip(&plane_map);
 
-	spin_unlock_irqrestore(&drv->drm->event_lock, flags);
+	spin_lock_irqsave(&amcrtc->vblank_irq_lock, flags);
+	osd_drm_plane_page_flip(&plane_map);
+	spin_unlock_irqrestore(&amcrtc->vblank_irq_lock, flags);
 }
 
 int am_osd_check(struct drm_plane *plane, struct drm_plane_state *state)
@@ -540,10 +543,10 @@ static int am_meson_crtc_loader_protect(struct drm_crtc *crtc, bool on)
 	DRM_INFO("%s  %d\n", __func__, on);
 
 	if (on) {
-		enable_irq(amcrtc->irq);
+		enable_irq(amcrtc->vblank_irq);
 		drm_crtc_vblank_on(crtc);
 	} else {
-		disable_irq(amcrtc->irq);
+		disable_irq(amcrtc->vblank_irq);
 		drm_crtc_vblank_off(crtc);
 	}
 
@@ -552,11 +555,24 @@ static int am_meson_crtc_loader_protect(struct drm_crtc *crtc, bool on)
 
 static int am_meson_crtc_enable_vblank(struct drm_crtc *crtc)
 {
+	unsigned long flags;
+	struct am_meson_crtc *amcrtc = to_am_meson_crtc(crtc);
+
+	spin_lock_irqsave(&amcrtc->vblank_irq_lock, flags);
+	amcrtc->vblank_enable = true;
+	spin_unlock_irqrestore(&amcrtc->vblank_irq_lock, flags);
+
 	return 0;
 }
 
 static void am_meson_crtc_disable_vblank(struct drm_crtc *crtc)
 {
+	unsigned long flags;
+	struct am_meson_crtc *amcrtc = to_am_meson_crtc(crtc);
+
+	spin_lock_irqsave(&amcrtc->vblank_irq_lock, flags);
+	amcrtc->vblank_enable = false;
+	spin_unlock_irqrestore(&amcrtc->vblank_irq_lock, flags);
 }
 
 static const struct meson_crtc_funcs meson_private_crtc_funcs = {
@@ -576,6 +592,7 @@ static bool am_meson_crtc_mode_fixup(struct drm_crtc *crtc,
 
 void am_meson_crtc_enable(struct drm_crtc *crtc)
 {
+	unsigned long flags;
 	char *name;
 	enum vmode_e mode;
 	struct drm_display_mode *adjusted_mode = &crtc->state->adjusted_mode;
@@ -588,6 +605,7 @@ void am_meson_crtc_enable(struct drm_crtc *crtc)
 		return;
 	}
 	DRM_INFO("%s: %s\n", __func__, adjusted_mode->name);
+
 	name = am_meson_crtc_get_voutmode(adjusted_mode);
 	mode = validate_vmode(name);
 	if (mode == VMODE_MAX) {
@@ -597,24 +615,30 @@ void am_meson_crtc_enable(struct drm_crtc *crtc)
 
 	set_vout_init(mode);
 	update_vout_viu();
-
-	enable_irq(amcrtc->irq);
+	spin_lock_irqsave(&amcrtc->vblank_irq_lock, flags);
+	amcrtc->vblank_enable = true;
+	spin_unlock_irqrestore(&amcrtc->vblank_irq_lock, flags);
+	enable_irq(amcrtc->vblank_irq);
 }
 
 void am_meson_crtc_disable(struct drm_crtc *crtc)
 {
 	struct am_meson_crtc *amcrtc = to_am_meson_crtc(crtc);
+	unsigned long flags;
 
 	DRM_INFO("%s\n", __func__);
 	if (crtc->state->event && !crtc->state->active) {
 		spin_lock_irq(&crtc->dev->event_lock);
 		drm_crtc_send_vblank_event(crtc, crtc->state->event);
 		spin_unlock_irq(&crtc->dev->event_lock);
-
 		crtc->state->event = NULL;
 	}
 
-	disable_irq(amcrtc->irq);
+	spin_lock_irqsave(&amcrtc->vblank_irq_lock, flags);
+	amcrtc->vblank_enable = false;
+	spin_unlock_irqrestore(&amcrtc->vblank_irq_lock, flags);
+
+	disable_irq(amcrtc->vblank_irq);
 }
 
 void am_meson_crtc_commit(struct drm_crtc *crtc)
@@ -678,10 +702,15 @@ int am_meson_crtc_create(struct am_meson_crtc *amcrtc)
 
 void am_meson_crtc_irq(struct meson_drm *priv)
 {
+	unsigned long flags;
 	struct am_meson_crtc *amcrtc = to_am_meson_crtc(priv->crtc);
 
-	osd_drm_vsync_isr_handler();
-	am_meson_crtc_handle_vsync(amcrtc);
+	spin_lock_irqsave(&amcrtc->vblank_irq_lock, flags);
+	if (amcrtc->vblank_enable) {
+		osd_drm_vsync_isr_handler();
+		am_meson_crtc_handle_vsync(amcrtc);
+	}
+	spin_unlock_irqrestore(&amcrtc->vblank_irq_lock, flags);
 }
 
 static irqreturn_t am_meson_vpu_irq(int irq, void *arg)
@@ -776,14 +805,17 @@ static int am_meson_vpu_bind(struct device *dev,
 		dev_err(dev, "cannot find irq for vpu\n");
 		return irq;
 	}
-	amcrtc->irq = (unsigned int)irq;
+	amcrtc->vblank_irq = (unsigned int)irq;
 
-	ret = devm_request_irq(dev, amcrtc->irq, am_meson_vpu_irq,
+	spin_lock_init(&amcrtc->vblank_irq_lock);
+	amcrtc->vblank_enable = false;
+
+	ret = devm_request_irq(dev, amcrtc->vblank_irq, am_meson_vpu_irq,
 		IRQF_SHARED, dev_name(dev), drm_dev);
 	if (ret)
 		return ret;
-	/* IRQ is initially disabled; it gets enabled in crtc_enable */
-	disable_irq(amcrtc->irq);
+
+	disable_irq(amcrtc->vblank_irq);
 
 	INIT_DELAYED_WORK(&osd_dwork, mem_free_work);
 	schedule_delayed_work(&osd_dwork, msecs_to_jiffies(60 * 1000));

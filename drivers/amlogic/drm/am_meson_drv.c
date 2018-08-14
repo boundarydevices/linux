@@ -100,11 +100,22 @@ EXPORT_SYMBOL(am_meson_unregister_crtc_funcs);
 
 static int am_meson_enable_vblank(struct drm_device *dev, unsigned int crtc)
 {
-	return 0;
+	struct meson_drm *priv = dev->dev_private;
+
+	if (crtc > MESON_MAX_CRTC)
+		return -EBADFD;
+
+	return priv->crtc_funcs[crtc]->enable_vblank(priv->crtc);
 }
 
 static void am_meson_disable_vblank(struct drm_device *dev, unsigned int crtc)
 {
+	struct meson_drm *priv = dev->dev_private;
+
+	if (crtc > MESON_MAX_CRTC)
+		return;
+
+	return priv->crtc_funcs[crtc]->disable_vblank(priv->crtc);
 }
 
 static void am_meson_load(struct drm_device *dev)
@@ -256,8 +267,7 @@ static int am_meson_drm_bind(struct device *dev)
 	drm->mode_config.max_height = 8192;
 	drm->mode_config.funcs = &meson_mode_config_funcs;
 	/*
-	 * enable drm irq mode.
-	 * - with irq_enabled = true, we can use the vblank feature.
+	 * irq will init in each crtc, just mark the enable flag here.
 	 */
 	drm->irq_enabled = true;
 
