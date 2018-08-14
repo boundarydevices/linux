@@ -18,8 +18,16 @@
 #ifndef AMLVIDEO_H_
 #define AMLVIDEO_H_
 
+#include <linux/amlogic/media/vfm/vframe.h>
 
 #define AMLVIDEO_POOL_SIZE 16
+
+/* v4l2_amlogic_parm must < u8[200] */
+struct v4l2_amlogic_parm {
+		u32	signal_type;
+		struct vframe_master_display_colour_s
+		 master_display_colour;
+	};
 
 struct vivi_fmt {
 	char *name;
@@ -80,6 +88,7 @@ struct vivi_dev {
 	struct vframe_provider_s video_vf_prov;
 	struct vframe_receiver_s video_vf_recv;
 	u32 frame_num;
+	struct v4l2_amlogic_parm am_parm;
 };
 
 struct vivi_fh {

@@ -74,6 +74,13 @@ do {                                                    \
 
 #define PPMGR2_CANVAS_INDEX_SRC (PPMGR2_CANVAS_INDEX + 3)
 
+/* v4l2_amlogic_parm must < u8[200] */
+struct v4l2_amlogic_parm {
+		u32	signal_type;
+		struct vframe_master_display_colour_s
+		 master_display_colour;
+	};
+
 struct v4l2q_s {
 	int rp;
 	int wp;
@@ -303,6 +310,7 @@ struct ionvideo_dev {
 	struct mutex mutex_output;
 	struct v4l2_buffer ionvideo_input[IONVIDEO_POOL_SIZE + 1];
 	bool wait_ge2d_timeout;
+	struct v4l2_amlogic_parm am_parm;
 };
 
 unsigned int get_ionvideo_debug(void);

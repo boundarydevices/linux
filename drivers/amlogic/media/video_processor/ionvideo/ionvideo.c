@@ -128,6 +128,22 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 	return 0;
 }
 
+static int vidioc_g_parm(struct file *file, void *priv,
+				struct v4l2_streamparm *parms)
+{
+	struct ionvideo_dev *dev = video_drvdata(file);
+	struct v4l2_amlogic_parm *ap
+		= (struct v4l2_amlogic_parm *)&parms->parm.capture;
+
+	if (parms->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	memset(ap, 0, sizeof(struct v4l2_amlogic_parm));
+	*ap = dev->am_parm;
+
+	return 0;
+}
+
 static const struct ionvideo_fmt *__get_format(u32 pixelformat)
 {
 	const struct ionvideo_fmt *fmt;
@@ -318,6 +334,9 @@ static int ionvideo_fillbuff(struct ionvideo_dev *dev,
 		dev->wait_ge2d_timeout = false;
 		videoc_omx_compute_pts(dev, vf);
 		buf->timecode.frames = 0;
+		dev->am_parm.signal_type = vf->signal_type;
+		dev->am_parm.master_display_colour
+				= vf->prop.master_display_colour;
 		vf_put(vf, dev->vf_receiver_name);
 		buf->timestamp.tv_sec = dev->pts >> 32;
 		buf->timestamp.tv_usec = dev->pts & 0xFFFFFFFF;
@@ -876,6 +895,7 @@ static const struct v4l2_ioctl_ops ionvideo_ioctl_ops = {
 	.vidioc_streamon = vidioc_streamon,
 	.vidioc_streamoff = vidioc_streamoff,
 	.vidioc_s_ctrl = vidioc_s_ctrl,
+	.vidioc_g_parm = vidioc_g_parm,
 };
 
 static const struct video_device ionvideo_template = {
