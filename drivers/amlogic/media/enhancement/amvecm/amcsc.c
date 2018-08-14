@@ -264,7 +264,7 @@ struct hdr_osd_reg_s hdr_osd_reg = {
 	-1 /* shadow mode */
 };
 
-#define HDR_VERSION   "----gxl_20180830---g12a_20180614-----\n"
+#define HDR_VERSION   "----gxl_20180516---g12a_20180814-----\n"
 
 static struct vframe_s *dbg_vf;
 static struct master_display_info_s dbg_hdr_send;
