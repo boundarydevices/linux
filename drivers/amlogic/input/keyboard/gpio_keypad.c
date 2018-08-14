@@ -200,6 +200,13 @@ static int meson_gpio_kp_probe(struct platform_device *pdev)
 		return -EINVAL;
 	set_bit(EV_KEY,  input_dev->evbit);
 	set_bit(EV_REP,  input_dev->evbit);
+
+	for (i = 0; i < keypad->key_size; i++) {
+		set_bit(keypad->key[i].code,  input_dev->keybit);
+		dev_info(&pdev->dev, "%s key(%d) registed.\n",
+			keypad->key[i].name, keypad->key[i].code);
+	}
+
 	input_dev->name = "gpio_keypad";
 	input_dev->phys = "gpio_keypad/input0";
 	input_dev->dev.parent = &pdev->dev;
