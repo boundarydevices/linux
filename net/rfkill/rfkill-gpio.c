@@ -137,21 +137,22 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 
 	rfkill->clk = devm_clk_get(&pdev->dev, NULL);
 
-	gpio = devm_gpiod_get_optional(&pdev->dev, "reset", GPIOD_OUT_LOW);
+	gpio = devm_gpiod_get_optional(&pdev->dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(gpio))
 		return PTR_ERR(gpio);
 
 	rfkill->reset_gpio = gpio;
 
-	gpio = devm_gpiod_get_optional(&pdev->dev, "shutdown", GPIOD_OUT_LOW);
+	gpio = devm_gpiod_get_optional(&pdev->dev, "shutdown", GPIOD_OUT_HIGH);
 	if (IS_ERR(gpio))
 		return PTR_ERR(gpio);
 
 	rfkill->shutdown_gpio = gpio;
 
-	gpio = devm_gpiod_get(&pdev->dev, "pulse-on", GPIOD_OUT_LOW);
-	if (!IS_ERR(gpio))
-		rfkill->pulse_on_gpio = gpio;
+	gpio = devm_gpiod_get_optional(&pdev->dev, "pulse-on", GPIOD_OUT_LOW);
+	if (IS_ERR(gpio))
+		return PTR_ERR(gpio);
+	rfkill->pulse_on_gpio = gpio;
 
 	ret = of_property_read_u32(pdev->dev.of_node, "pulse-duration",
 			&rfkill->pulse_duration);
