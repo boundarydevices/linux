@@ -124,7 +124,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-08-09a";
+static const char version_s[] = "2018-08-15a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -4665,6 +4665,7 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 	unsigned char mc_pre_flag = 0;
 	bool invert_mv = false;
 	static int post_index = -1;
+	unsigned char tmp_idx = 0;
 
 	post_cnt++;
 	if (di_post_stru.vscale_skip_flag)
@@ -4954,6 +4955,13 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 		di_post_stru.di_mtnprd_mif.canvas_num =
 			di_buf->di_buf_dup_p[2]->mtn_canvas_idx;
 		//mc_pre_flag = is_meson_txl_cpu()?2:(overturn?0:1);
+		if (is_meson_txl_cpu() && overturn) {
+			/* swap if1&if2 mean negation of mv for normal di*/
+			tmp_idx = di_post_stru.di_buf1_mif.canvas0_addr0;
+			di_post_stru.di_buf1_mif.canvas0_addr0 =
+				di_post_stru.di_buf2_mif.canvas0_addr0;
+			di_post_stru.di_buf2_mif.canvas0_addr0 = tmp_idx;
+		}
 		mc_pre_flag = overturn?0:1;
 		if (di_buf->pd_config.global_mode == PULL_DOWN_NORMAL) {
 			post_blend_mode = 3;
