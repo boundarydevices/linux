@@ -20,6 +20,8 @@
  * Copyright (c) 2004-2006 Macq Electronique SA.
  *
  * Copyright (C) 2010-2014 Freescale Semiconductor, Inc.
+ *
+ * Copyright 2017-2018 NXP
  */
 
 #include <linux/module.h>
