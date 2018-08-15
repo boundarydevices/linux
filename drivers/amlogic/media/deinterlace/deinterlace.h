@@ -170,6 +170,18 @@ struct di_buf_s {
 #define DI_LOG_VFRAME		0x80
 
 
+#define QUEUE_LOCAL_FREE           0
+#define QUEUE_IN_FREE              1
+#define QUEUE_PRE_READY            2
+#define QUEUE_POST_FREE            3
+#define QUEUE_POST_READY           4
+#define QUEUE_RECYCLE              5
+#define QUEUE_DISPLAY              6
+#define QUEUE_TMP                  7
+#define QUEUE_POST_DOING           8
+#define QUEUE_NUM                  9
+
+#define VFM_NAME		"deinterlace"
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 extern void enable_rdma(int enable_flag);
@@ -389,6 +401,30 @@ struct di_buf_pool_s {
 	struct di_buf_s *di_buf_ptr;
 	unsigned int size;
 };
+
+unsigned char is_bypass(vframe_t *vf_in);
+
+/*---get di state parameter---*/
+struct di_dev_s *get_di_de_devp(void);
+struct di_pre_stru_s *get_di_pre_stru(void);
+struct di_post_stru_s *get_di_post_stru(void);
+const char *get_di_version_s(void);
+int get_di_dump_state_flag(void);
+uint get_di_init_flag(void);
+unsigned char get_di_recovery_flag(void);
+unsigned int get_di_recovery_log_reason(void);
+int get_di_di_blocking(void);
+unsigned int get_di_recovery_log_queue_idx(void);
+struct di_buf_s *get_di_recovery_log_di_buf(void);
+int get_di_video_peek_cnt(void);
+unsigned long get_di_reg_unreg_timeout_cnt(void);
+struct vframe_s **get_di_vframe_in(void);
+/*---------------------*/
+
+struct di_buf_s *get_di_buf(int queue_idx, int *start_pos);
+
+#define queue_for_each_entry(di_buf, ptm, queue_idx, list)      \
+	for (itmp = 0; ((di_buf = get_di_buf(queue_idx, &itmp)) != NULL); )
 
 #define di_dev_t struct di_dev_s
 
