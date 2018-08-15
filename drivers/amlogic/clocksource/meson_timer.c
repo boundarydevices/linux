@@ -276,7 +276,7 @@ int  meson_local_timer_stop(unsigned int cpuidx)
 	return 0;
 }
 
-int __init meson_timer_init(struct device_node *np)
+static int __init meson_timer_init(struct device_node *np)
 {
 	int i;
 	static struct delay_timer aml_delay_timer;

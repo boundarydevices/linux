@@ -270,7 +270,7 @@ int clockevent_init_and_register(struct device_node *np)
 }
 
 /*meson broadcast timer*/
-int __init meson_timer_init(struct device_node *np)
+static int __init meson_timer_init(struct device_node *np)
 {
 	timer_ctrl_base = of_iomap(np, 0);
 	if (clockevent_init_and_register(np) < 0)
