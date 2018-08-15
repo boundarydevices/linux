@@ -474,7 +474,7 @@ static int lcd_set_vframe_rate_hint(int duration)
 		LCDPR("vout_serve bypass\n");
 		return 0;
 	}
-	if (lcd_drv->lcd_status == 0) {
+	if ((lcd_drv->lcd_status & LCD_STATUS_ENCL_ON) == 0) {
 		LCDPR("%s: lcd is disabled, exit\n", __func__);
 		return 0;
 	}
@@ -537,7 +537,7 @@ static int lcd_set_vframe_rate_end_hint(void)
 		LCDPR("vout_serve bypass\n");
 		return 0;
 	}
-	if (lcd_drv->lcd_status == 0) {
+	if ((lcd_drv->lcd_status & LCD_STATUS_ENCL_ON) == 0) {
 		LCDPR("%s: lcd is disabled, exit\n", __func__);
 		return 0;
 	}
@@ -775,9 +775,10 @@ static int lcd_init_load_from_dts(struct lcd_config_s *pconf,
 	int ret = 0;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
+	/* lock pinmux if lcd in on */
 	switch (pconf->lcd_basic.lcd_type) {
 	case LCD_VBYONE:
-		if (lcd_drv->lcd_status) /* lock pinmux if lcd in on */
+		if (lcd_drv->lcd_status & LCD_STATUS_IF_ON)
 			lcd_vbyone_pinmux_set(1);
 		break;
 	default:

@@ -216,7 +216,7 @@ static int lcd_set_vframe_rate_hint(int duration)
 	struct lcd_vframe_match_s *vtable = lcd_vframe_match_table_1;
 	int fps, i, n;
 
-	if (lcd_drv->lcd_status == 0) {
+	if ((lcd_drv->lcd_status & LCD_STATUS_ENCL_ON) == 0) {
 		LCDPR("%s: lcd is disabled, exit\n", __func__);
 		return 0;
 	}
@@ -271,7 +271,7 @@ static int lcd_set_vframe_rate_end_hint(void)
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct vinfo_s *info;
 
-	if (lcd_drv->lcd_status == 0) {
+	if ((lcd_drv->lcd_status & LCD_STATUS_ENCL_ON) == 0) {
 		LCDPR("%s: lcd is disabled, exit\n", __func__);
 		return 0;
 	}
@@ -615,15 +615,16 @@ static int lcd_init_load_from_dts(struct lcd_config_s *pconf,
 	int ret = 0;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
+	/* lock pinmux if lcd in on */
 	switch (pconf->lcd_basic.lcd_type) {
 	case LCD_TTL:
-		if (lcd_drv->lcd_status) /* lock pinmux if lcd in on */
+		if (lcd_drv->lcd_status & LCD_STATUS_IF_ON)
 			lcd_ttl_pinmux_set(1);
 		else
 			lcd_ttl_pinmux_set(0);
 		break;
 	case LCD_VBYONE:
-		if (lcd_drv->lcd_status) /* lock pinmux if lcd in on */
+		if (lcd_drv->lcd_status & LCD_STATUS_IF_ON)
 			lcd_vbyone_pinmux_set(1);
 		break;
 	default:

@@ -1141,7 +1141,7 @@ static void lcd_auto_test_delayed(struct work_struct *work)
 
 static void lcd_auto_test(unsigned char flag)
 {
-	lcd_driver->lcd_test_flag = flag;
+	lcd_driver->lcd_test_state = flag;
 	if (lcd_driver->workqueue) {
 		queue_delayed_work(lcd_driver->workqueue,
 			&lcd_test_delayed_work,
@@ -1257,7 +1257,7 @@ static int lcd_resume(struct platform_device *pdev)
 static int lcd_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	mutex_lock(&lcd_driver->power_mutex);
-	if (lcd_driver->lcd_status) {
+	if (lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) {
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_OFF, NULL);
 		lcd_resume_flag = 0;
 		LCDPR("%s finished\n", __func__);
@@ -1271,7 +1271,7 @@ static void lcd_shutdown(struct platform_device *pdev)
 	if (lcd_debug_print_flag)
 		LCDPR("%s\n", __func__);
 
-	if (lcd_driver->lcd_status)
+	if (lcd_driver->lcd_status & LCD_STATUS_ENCL_ON)
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_OFF, NULL);
 }
 
