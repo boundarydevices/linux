@@ -549,13 +549,23 @@ void __init mount_root(void)
 void __init prepare_namespace(void)
 {
 	int is_floppy;
-
+#ifdef CONFIG_AMLOGIC_MODIFY
+	dev_t res = 0;
+	int wait = 80; /* 8s max wait*/
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	if (root_delay) {
 		printk(KERN_INFO "Waiting %d sec before mounting root device...\n",
 		       root_delay);
 		ssleep(root_delay);
 	}
-
+#ifdef CONFIG_AMLOGIC_MODIFY
+	/* A ugly patch for system as root wait emmc ready. */
+	while (!res && wait--) {
+		res = blk_lookup_devt("mmcblk0", 0);
+		msleep(100);
+	};
+	pr_info("%s() wait %d\n", __func__, wait);
+#endif /* CONFIG_AMLOGIC_MODIFY */
 	/*
 	 * wait for the known devices to complete their probing
 	 *
