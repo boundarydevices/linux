@@ -191,9 +191,9 @@
 	    key_num = <3>;
 	    key_name = "source", "bt_paring", "mute";
 	    key_code = <466 218 248>;
-	    key-gpios = <&gpio GPIODV_0 GPIO_ACTIVE_LOW
-			&gpio GPIODV_1 GPIO_ACTIVE_LOW
-			&gpio_ao GPIOAO_3 GPIO_ACTIVE_LOW>;
+	    key-gpios = <&gpio GPIODV_0 GPIO_ACTIVE_HIGH
+			&gpio GPIODV_1 GPIO_ACTIVE_HIGH
+			&gpio_ao GPIOAO_3 GPIO_ACTIVE_HIGH>;
 		detect_mode = <0>;/*0:polling mode, 1:irq mode*/
 	};
 
