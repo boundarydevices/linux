@@ -21,6 +21,8 @@
 #include <linux/platform_device.h>
 
 #include <linux/amlogic/tee.h>
+#include <linux/delay.h>
+#include <linux/amlogic/cpu_version.h>
 
 #define DRIVER_NAME "tee_info"
 #define DRIVER_DESC "Amlogic tee driver"
@@ -70,13 +72,25 @@ static int tee_msg_os_revision(uint32_t *major, uint32_t *minor)
 		struct arm_smccc_res smccc;
 		struct tee_smc_calls_revision_result result;
 	} res;
+	long cpu;
+
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B) {
+		set_cpus_allowed_ptr(current, cpumask_of(0));
+		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu &= 0xfff;
+		if (cpu != 0x0)
+			usleep_range(10, 20);
+	}
 
 	arm_smccc_smc(TEE_SMC_CALL_GET_OS_REVISION,
 			0, 0, 0, 0, 0, 0, 0, &res.smccc);
-
 	*major = res.result.major;
 	*minor = res.result.minor;
 
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B)
+		set_cpus_allowed_ptr(current, cpu_all_mask);
 	return 0;
 }
 
@@ -86,13 +100,25 @@ static int tee_msg_api_revision(uint32_t *major, uint32_t *minor)
 		struct arm_smccc_res smccc;
 		struct tee_smc_calls_revision_result result;
 	} res;
+	long cpu;
+
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B) {
+		set_cpus_allowed_ptr(current, cpumask_of(0));
+		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu &= 0xfff;
+		if (cpu != 0x0)
+			usleep_range(10, 20);
+	}
 
 	arm_smccc_smc(TEE_SMC_CALLS_REVISION,
 			0, 0, 0, 0, 0, 0, 0, &res.smccc);
-
 	*major = res.result.major;
 	*minor = res.result.minor;
 
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B)
+		set_cpus_allowed_ptr(current, cpu_all_mask);
 	return 0;
 }
 
@@ -138,10 +164,23 @@ static CLASS_ATTR(api_version, 0644, tee_api_version_show,
 int tee_load_video_fw(uint32_t index, uint32_t vdec)
 {
 	struct arm_smccc_res res;
+	long cpu;
+
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B) {
+		set_cpus_allowed_ptr(current, cpumask_of(0));
+		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu &= 0xfff;
+		if (cpu != 0x0)
+			usleep_range(10, 20);
+	}
 
 	arm_smccc_smc(TEE_SMC_LOAD_VIDEO_FW,
 			index, vdec, 0, 0, 0, 0, 0, &res);
 
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B)
+		set_cpus_allowed_ptr(current, cpu_all_mask);
 	return res.a0;
 }
 EXPORT_SYMBOL(tee_load_video_fw);
@@ -149,10 +188,25 @@ EXPORT_SYMBOL(tee_load_video_fw);
 bool tee_enabled(void)
 {
 	struct arm_smccc_res res;
+	long cpu;
 	if (disable_flag == 1)
 		return false;
 	/*return false;*/ /*disable tee load temporary*/
+
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B) {
+		set_cpus_allowed_ptr(current, cpumask_of(0));
+		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu &= 0xfff;
+		if (cpu != 0x0)
+			usleep_range(10, 20);
+	}
+
 	arm_smccc_smc(TEE_SMC_CALLS_UID, 0, 0, 0, 0, 0, 0, 0, &res);
+
+	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
+			== MESON_CPU_MAJOR_ID_G12B)
+		set_cpus_allowed_ptr(current, cpu_all_mask);
 
 	if (res.a0 == TEE_MSG_UID_0 && res.a1 == TEE_MSG_UID_1 &&
 	    res.a2 == TEE_MSG_UID_2 && res.a3 == TEE_MSG_UID_3)
