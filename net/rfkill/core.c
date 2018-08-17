@@ -106,7 +106,13 @@ static LIST_HEAD(rfkill_fds);	/* list of open fds of /dev/rfkill */
 static unsigned int rfkill_default_state = 1;
 module_param_named(default_state, rfkill_default_state, uint, 0444);
 MODULE_PARM_DESC(default_state,
-		 "Default initial state for all radio types, 0 = radio off");
+		 "Default initial state for most radio types, 0 = radio off");
+
+static unsigned int rfkill_bluetooth_default_state = 0;
+module_param_named(bluetooth_default_state, rfkill_bluetooth_default_state,
+		   uint, 0444);
+MODULE_PARM_DESC(bluetooth_default_state,
+		 "Default initial state for bluetooth radio types, 0 = radio off");
 
 static struct {
 	bool cur, sav;
@@ -1395,6 +1401,8 @@ static int __init rfkill_init(void)
 	int error;
 
 	rfkill_update_global_state(RFKILL_TYPE_ALL, !rfkill_default_state);
+	rfkill_update_global_state(RFKILL_TYPE_BLUETOOTH,
+			!rfkill_bluetooth_default_state);
 
 	error = class_register(&rfkill_class);
 	if (error)
