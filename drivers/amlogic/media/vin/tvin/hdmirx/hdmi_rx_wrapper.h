@@ -75,6 +75,7 @@ enum err_code_e {
 enum irq_flag_e {
 	IRQ_AUD_FLAG = 0x01,
 	IRQ_PACKET_FLAG = 0x02,
+	IRQ_PACKET_ERR = 0x04,
 };
 
 enum hdcp22_auth_state_e {

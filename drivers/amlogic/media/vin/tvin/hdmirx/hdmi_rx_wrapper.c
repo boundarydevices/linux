@@ -246,6 +246,10 @@ void rx_tasklet_handler(unsigned long arg)
 	if (irq_flag & IRQ_PACKET_FLAG)
 		rx_pkt_handler(PKT_BUFF_SET_FIFO);
 
+	/*pkt overflow or underflow*/
+	if (irq_flag & IRQ_PACKET_ERR)
+		hdmirx_packet_fifo_rst();
+
 	if (irq_flag & IRQ_AUD_FLAG)
 		hdmirx_audio_fifo_rst();
 
@@ -415,12 +419,14 @@ static int hdmi_rx_ctrl_irq_handler(void)
 		if (rx_get_bits(intr_pedc, PD_FIFO_OVERFL) != 0) {
 			if (log_level & 0x200)
 				rx_pr("[irq] PD_FIFO_OVERFL\n");
-			rx.irq_flag |= IRQ_PACKET_FLAG;
+			rx.irq_flag |= IRQ_PACKET_ERR;
+			/*hdmirx_packet_fifo_rst();*/
 		}
 		if (rx_get_bits(intr_pedc, PD_FIFO_UNDERFL) != 0) {
 			if (log_level & 0x200)
 				rx_pr("[irq] PD_FIFO_UNDFLOW\n");
-			rx.irq_flag |= IRQ_PACKET_FLAG;
+			rx.irq_flag |= IRQ_PACKET_ERR;
+			/*hdmirx_packet_fifo_rst();*/
 		}
 	}
 
