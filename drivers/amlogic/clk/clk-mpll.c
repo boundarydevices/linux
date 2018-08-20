@@ -121,7 +121,7 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	do_div(rate64, rate);
 	n2 = rate64;
 
-	rate64 = (parent_rate - n2 * rate) * SDM_MAX;
+	rate64 = (parent_rate - n2 * rate) * SDM_MAX + rate - 1;
 	do_div(rate64, rate);
 	sdm = rate64;
 	pr_debug("%s: sdm: %lu n2: %lu rate: %lu\n", __func__, sdm, n2, rate);
