@@ -197,7 +197,8 @@ static int cpucore_notify_state(struct thermal_cooling_device *cdev,
 				struct thermal_zone_device *tz,
 				enum thermal_trip_type type)
 {
-	unsigned long cur_state, ins_upper;
+	unsigned long  ins_upper;
+	long cur_state;
 	long upper = -1;
 	int i;
 
