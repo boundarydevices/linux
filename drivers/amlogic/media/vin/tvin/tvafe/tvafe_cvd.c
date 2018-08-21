@@ -2202,7 +2202,8 @@ inline void tvafe_cvd2_adj_hs(struct tvafe_cvd2_s *cvd2,
 			unsigned int hcnt64)
 {
 	unsigned int hcnt64_max, hcnt64_min, temp, delta;
-	unsigned int diff, hcnt64_ave, i, hcnt64_standard;
+	unsigned int diff, hcnt64_ave, i;
+	unsigned int hcnt64_standard = 0;
 
 	if (tvafe_cpu_type() >= CPU_TYPE_GXTVBB) {
 		if (cvd2->config_fmt == TVIN_SIG_FMT_CVBS_PAL_I)
