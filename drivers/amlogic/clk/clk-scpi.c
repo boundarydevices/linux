@@ -198,7 +198,7 @@ static int scpi_clk_setup(struct device *dev, struct device_node *np,
 				 struct scpi_clk *) = data;
 	struct clk_onecell_data *clk_data;
 	struct clk **clks;
-	size_t count;
+	int count;
 	int idx;
 
 	count = of_property_count_strings(np, "clock-output-names");

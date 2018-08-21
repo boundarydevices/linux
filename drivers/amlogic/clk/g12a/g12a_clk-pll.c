@@ -123,7 +123,7 @@ static unsigned long meson_g12a_pll_recalc_rate(struct clk_hw *hw,
 
 	p = &pll->frac;
 
-	if (p->width) {
+	if (p->width >= 2) {
 		reg = readl(pll->base + p->reg_off);
 		frac = PARM_GET(p->width - 1, p->shift, reg);
 

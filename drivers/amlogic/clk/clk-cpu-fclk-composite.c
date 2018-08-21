@@ -274,13 +274,14 @@ int meson_fclk_mux_divider_determine_rate(struct clk_hw *hw,
 
 	premux = rate_set->premux;
 	best_parent = clk_hw_get_parent_by_index(hw, premux);
+
+	if (!best_parent)
+		return -EINVAL;
+
 	best = clk_hw_get_rate(best_parent);
 
 	if (best != parent_req.rate)
 		meson_fclk_cpu_set_parent(hw, premux);
-
-	if (!best_parent)
-		return -EINVAL;
 
 	if (best_parent)
 		req->best_parent_hw = best_parent;
