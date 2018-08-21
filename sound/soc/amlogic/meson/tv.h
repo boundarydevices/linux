@@ -74,7 +74,9 @@ struct aml_audio_private_data {
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 	int atmos_edid_enable;
 #endif
-	int aml_audio_Hardware_resample;
+	int Hardware_resample_enable;
+	int spdif_sample_rate_index;
+	int hdmi_sample_rate_index;
 	int Speaker0_Channel_Mask;
 	int Speaker1_Channel_Mask;
 	int Speaker2_Channel_Mask;

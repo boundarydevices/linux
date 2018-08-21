@@ -90,8 +90,8 @@ struct hdmi_in_audio_status {
 	/* indicate if audio FIFO start threshold is crossed */
 	bool afifo_thres_pass;
 };
-
 #endif
+
 static u32 aml_EQ_table[AML_EQ_PARAM_LENGTH] = {
 	/*channel 1 param*/
 	0x800000, 0x00, 0x00, 0x00, 0x00, /*eq_ch1_coef0*/
@@ -129,18 +129,107 @@ static u32 aml_hw_resample_table[7][5] = {
 	/*coef of 32K, fc = 9000, Q:0.55, G= 14.00, */
 	{0x0137fd9a, 0x033fe4a2, 0x0029da1f, 0x001a66fb, 0x00075562},
 	/*coef of 44.1K, fc = 14700, Q:0.55, G= 14.00, */
-	{0x010dac28, 0x03b7f553, 0x0011380c, 0x00479dd8, 0x000f3baf},
+	{0x0106f9aa, 0x00b84366, 0x03cdcb2d, 0x00b84366, 0x0054c4d7},
 	/*coef of 48K, fc = 15000, Q:0.60, G= 11.00, */
-	{0x00ea14d7, 0x03c59759, 0x001851f0, 0x00375a09, 0x0010a417},
+	{0x00ea25ae, 0x00afe01d, 0x03e0efb0, 0x00afe01d, 0x004b155e},
 	/*coef of 88.2K, fc = 26000, Q:0.60, G= 4.00, */
 	{0x009dc098, 0x000972c7, 0x000e7582, 0x00277b49, 0x000e2d97},
 	/*coef of 96K, fc = 36000, Q:0.50, G= 4.00, */
-	{0x0094268c, 0x005d3192, 0x000ea7e2, 0x006a09e6, 0x0015f61a},
+	{0x0098178d, 0x008b0d0d, 0x00087862, 0x008b0d0d, 0x00208fef},
 	/*no support filter now*/
 	{0x00800000, 0x0, 0x0, 0x0, 0x0},
 	/*no support filter now*/
 	{0x00800000, 0x0, 0x0, 0x0, 0x0},
 };
+
+/*IEC60958-1: 24~27bit defined sample rate*/
+static int get_spdif_sample_rate_index(void)
+{
+	int index = 0;
+	unsigned char value = aml_audin_read(AUDIN_SPDIF_CHNL_STS_A) >> 24;
+
+	value = value & 0xf;
+
+	switch (value) {
+	case 0x4:/*22050*/
+		index = 1;
+		break;
+	case 0x6:/*24000*/
+		index = 2;
+		break;
+	case 0x3:/*32000*/
+		index = 3;
+		break;
+	case 0x0:/*44100*/
+		index = 4;
+		break;
+	case 0x2:/*48000*/
+		index = 5;
+		break;
+	case 0x8:/*88200*/
+		index = 6;
+		break;
+	case 0xa:/*96000*/
+		index = 7;
+		break;
+	case 0xc:/*176400*/
+		index = 8;
+		break;
+	case 0xe:/*192000*/
+		index = 9;
+		break;
+	case 0x9:/*768000*/
+		index = 10;
+		break;
+	default:
+		pr_err("not indicated samplerate: %x\n", index);
+		index = 0;
+		break;
+	}
+	return index;
+}
+
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+static int get_hdmi_sample_rate_index(void)
+{
+	struct hdmi_in_audio_status aud_sts;
+	struct rx_audio_stat_s *rx_aud_sts;
+	int val = 0;
+
+	rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
+	rx_get_audio_status(rx_aud_sts);
+	switch (aud_sts.aud_sr) {
+	case 0:
+		val = 0;
+		break;
+	case 32000:
+		val = 1;
+		break;
+	case 44100:
+		val = 2;
+		break;
+	case 48000:
+		val = 3;
+		break;
+	case 88200:
+		val = 4;
+		break;
+	case 96000:
+		val = 5;
+		break;
+	case 176400:
+		val = 6;
+		break;
+	case 192000:
+		val = 7;
+		break;
+	default:
+		pr_err("HDMIRX samplerate not support: %d\n", aud_sts.aud_sr);
+		break;
+	}
+	return val;
+}
+#endif
 
 static const char *const audio_in_source_texts[] = {
 	"LINEIN", "ATV", "HDMI", "SPDIFIN" };
@@ -181,11 +270,12 @@ static int aml_audio_set_in_source(struct snd_kcontrol *kcontrol,
 static const char *const i2s_audio_type_texts[] = {
 	"LPCM", "NONE-LPCM", "UN-KNOWN"
 };
+
 static const struct soc_enum i2s_audio_type_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(i2s_audio_type_texts),
 			i2s_audio_type_texts);
 
-static int aml_i2s_audio_type_get_enum(
+static int aml_get_i2s_audio_type(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -204,7 +294,7 @@ static int aml_i2s_audio_type_get_enum(
 }
 
 /* spdif in audio format detect: LPCM or NONE-LPCM */
-struct sppdif_audio_info {
+struct spdif_audio_info {
 	unsigned char aud_type;
 	/*IEC61937 package presamble Pc value*/
 	short pc;
@@ -219,7 +309,7 @@ static const char *const spdif_audio_type_texts[] = {
 	"TRUEHD",
 	"PAUSE"
 };
-static const struct sppdif_audio_info type_texts[] = {
+static const struct spdif_audio_info type_texts[] = {
 	{0, 0, "LPCM"},
 	{1, 0x1, "AC3"},
 	{2, 0x15, "EAC3"},
@@ -237,14 +327,19 @@ static const struct soc_enum spdif_audio_type_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdif_audio_type_texts),
 			spdif_audio_type_texts);
 
-static int aml_spdif_audio_type_get_enum(
+static int aml_get_spdif_audio_type(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct aml_audio_private_data *p_aml_audio =
+			snd_soc_card_get_drvdata(card);
+	struct aml_card_info *p_cardinfo;
 	int audio_type = 0;
 	int i;
-	int total_num = sizeof(type_texts)/sizeof(struct sppdif_audio_info);
+	int total_num = sizeof(type_texts)/sizeof(struct spdif_audio_info);
 	int pc = aml_audin_read(AUDIN_SPDIF_NPCM_PCPD)>>16;
+
 	pc = pc&0xfff;
 	for (i = 0; i < total_num; i++) {
 		if (pc == type_texts[i].pc) {
@@ -252,11 +347,16 @@ static int aml_spdif_audio_type_get_enum(
 			break;
 		}
 	}
+
+	if (p_aml_audio)
+		p_cardinfo = p_aml_audio->cardinfo;
+
 	/* HDMI in,also check the hdmirx  fifo status*/
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 	if (audio_in_source == 2) {
 		struct hdmi_in_audio_status aud_sts;
 		struct rx_audio_stat_s *rx_aud_sts;
+		int index = 0;
 
 		rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
 		rx_get_audio_status(rx_aud_sts);
@@ -266,17 +366,67 @@ static int aml_spdif_audio_type_get_enum(
 			hdmiin_fifo_disable_count++;
 		if (hdmiin_fifo_disable_count > 200)
 			audio_type = 6/*PAUSE*/;
+
+		index = get_hdmi_sample_rate_index();
+		if (p_aml_audio &&
+			p_aml_audio->hdmi_sample_rate_index != index) {
+			p_aml_audio->hdmi_sample_rate_index = index;
+			p_aml_audio->spdif_sample_rate_index = 0;
+			if (p_cardinfo && index > 0 && index <= 7 &&
+				p_aml_audio->Hardware_resample_enable == 1) {
+				p_cardinfo->set_resample_param(index - 1);
+				pr_info("hdmi: set hw resample parmater table: %d\n",
+					index - 1);
+			}
+		}
 	}
 #endif
+	/*spdif in source*/
+	if (audio_in_source == 3) {
+		int index = get_spdif_sample_rate_index();
+
+		if (p_aml_audio &&
+			p_aml_audio->spdif_sample_rate_index != index) {
+			p_aml_audio->spdif_sample_rate_index = index;
+			p_aml_audio->hdmi_sample_rate_index = 0;
+			if (p_cardinfo && index >= 3 && index <= 9 &&
+				p_aml_audio->Hardware_resample_enable == 1) {
+				p_cardinfo->set_resample_param(index - 3);
+				pr_info("spdif: set hw resample parmater table: %d\n",
+					index - 3);
+			}
+		}
+	}
 	ucontrol->value.enumerated.item[0] = audio_type;
 
 	return 0;
 }
 
-static int aml_spdif_audio_type_set_enum(
+static const char *const spdifin_in_samplerate[] = {
+	"N/A",
+	"22050",
+	"24000",
+	"32000",
+	"44100",
+	"48000",
+	"88200",
+	"96000",
+	"176400",
+	"192000",
+	"768000",
+};
+
+static const struct soc_enum spdif_audio_samplerate_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdifin_in_samplerate),
+			spdifin_in_samplerate);
+
+static int aml_get_spdif_audio_samplerate(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	int index = get_spdif_sample_rate_index();
+
+	ucontrol->value.integer.value[0] = index;
 	return 0;
 }
 
@@ -327,20 +477,14 @@ static int set_hw_resample_param(int index)
 
 static const char *const hardware_resample_texts[] = {
 	"Disable",
-	"Enable:32K",
-	"Enable:44K",
-	"Enable:48K",
-	"Enable:88K",
-	"Enable:96K",
-	"Enable:176K",
-	"Enable:192K",
+	"Enable",
 };
 
 static const struct soc_enum hardware_resample_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(hardware_resample_texts),
 			hardware_resample_texts);
 
-static int aml_hardware_resample_get_enum(
+static int aml_get_hardware_resample(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -348,46 +492,26 @@ static int aml_hardware_resample_get_enum(
 	struct aml_audio_private_data *p_aml_audio =
 			snd_soc_card_get_drvdata(card);
 	ucontrol->value.enumerated.item[0] =
-			p_aml_audio->aml_audio_Hardware_resample;
+			p_aml_audio->Hardware_resample_enable;
 	return 0;
 }
 
-static int aml_hardware_resample_set_enum(
+static int aml_set_hardware_resample(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
 	struct aml_audio_private_data *p_aml_audio =
 			snd_soc_card_get_drvdata(card);
-	struct aml_card_info *p_cardinfo = p_aml_audio->cardinfo;
 	int index = ucontrol->value.enumerated.item[0];
 
-	if (index == 0)
+	if (index == 0) {
 		hardware_resample_disable();
-	else if (index == 1)
-		hardware_resample_enable(32000);
-	else if (index == 2)
-		hardware_resample_enable(44100);
-	else if (index == 3)
+		p_aml_audio->Hardware_resample_enable = 0;
+	} else {
 		hardware_resample_enable(48000);
-	else if (index == 4)
-		hardware_resample_enable(88200);
-	else if (index == 5)
-		hardware_resample_enable(96000);
-	else if (index == 6)
-		hardware_resample_enable(176400);
-	else if (index == 7)
-		hardware_resample_enable(192000);
-	else
-		return 0;
-
-	p_aml_audio->aml_audio_Hardware_resample = index;
-
-	if (index > 0
-		&& p_aml_audio
-		&& p_cardinfo)
-		p_cardinfo->set_resample_param(index - 1);
-
+		p_aml_audio->Hardware_resample_enable = 1;
+	}
 	return 0;
 }
 
@@ -607,41 +731,7 @@ static int aml_get_hdmiin_audio_stable(struct snd_kcontrol *kcontrol,
 static int aml_get_hdmiin_audio_samplerate(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	struct hdmi_in_audio_status aud_sts;
-	struct rx_audio_stat_s *rx_aud_sts;
-	int val = 0;
-
-	rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
-	rx_get_audio_status(rx_aud_sts);
-	switch (aud_sts.aud_sr) {
-	case 0:
-		val = 0;
-		break;
-	case 32000:
-		val = 1;
-		break;
-	case 44100:
-		val = 2;
-		break;
-	case 48000:
-		val = 3;
-		break;
-	case 88200:
-		val = 4;
-		break;
-	case 96000:
-		val = 5;
-		break;
-	case 176400:
-		val = 6;
-		break;
-	case 192000:
-		val = 7;
-		break;
-	default:
-		pr_err("HDMIRX samplerate not support: %d\n", aud_sts.aud_sr);
-		break;
-	}
+	int val = get_hdmi_sample_rate_index();
 	ucontrol->value.integer.value[0] = val;
 	return 0;
 }
@@ -720,18 +810,23 @@ static const struct snd_kcontrol_new aml_tv_controls[] = {
 
 	SOC_ENUM_EXT("I2SIN Audio Type",
 		     i2s_audio_type_enum,
-		     aml_i2s_audio_type_get_enum,
+		     aml_get_i2s_audio_type,
 		     NULL),
 
 	SOC_ENUM_EXT("SPDIFIN Audio Type",
 		     spdif_audio_type_enum,
-		     aml_spdif_audio_type_get_enum,
-		     aml_spdif_audio_type_set_enum),
+		     aml_get_spdif_audio_type,
+		     NULL),
+
+	SOC_ENUM_EXT("SPDIFIN audio samplerate",
+		     spdif_audio_samplerate_enum,
+		     aml_get_spdif_audio_samplerate,
+		     NULL),
 
 	SOC_ENUM_EXT("Hardware resample enable",
 		     hardware_resample_enum,
-		     aml_hardware_resample_get_enum,
-		     aml_hardware_resample_set_enum),
+		     aml_get_hardware_resample,
+		     aml_set_hardware_resample),
 #ifdef CONFIG_AMLOGIC_AO_CEC
 	SOC_SINGLE_BOOL_EXT("HDMI ARC Switch", 0,
 				aml_get_arc_audio,
