@@ -466,6 +466,10 @@ void vdac_enable(bool on, unsigned int module_sel)
 		}
 		break;
 	case VDAC_MODULE_AUDIO_OUT: /* audio demod */
+		/*Bandgap optimization*/
+		if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
+			vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0xe, 3, 5);
+
 		if (is_meson_txl_cpu() || is_meson_txlx_cpu()) {
 			if (on)
 				ana_ref_cntl0_bit9(1, VDAC_MODULE_AUDIO_OUT);
