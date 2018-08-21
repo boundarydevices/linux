@@ -361,6 +361,8 @@ static void lcd_module_reset(void)
 	lcd_driver->lcd_status |= LCD_STATUS_ON;
 	lcd_driver->lcd_config->change_flag = 0;
 
+	lcd_driver->lcd_mute_flag = (unsigned char)(0 | LCD_MUTE_UPDATE);
+
 	mutex_unlock(&lcd_vout_mutex);
 }
 

@@ -391,7 +391,7 @@ static int lcd_vout_get_state(void)
 	return lcd_vout_state;
 }
 
-#ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
+#ifdef CONFIG_AMLOGIC_VOUT_SERVE
 struct lcd_vframe_match_s {
 	int fps;
 	int frame_rate; /* *100 */
@@ -461,7 +461,7 @@ static int lcd_framerate_automation_set_mode(void)
 
 static int lcd_set_vframe_rate_hint(int duration)
 {
-#ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
+#ifdef CONFIG_AMLOGIC_VOUT_SERVE
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct vinfo_s *info;
 	int fr_policy;
@@ -500,7 +500,7 @@ static int lcd_set_vframe_rate_hint(int duration)
 			__func__, fr_policy);
 		return 0;
 	}
-	fps = get_vsource_fps(duration);
+	fps = vout_get_vsource_fps(duration);
 	for (i = 0; i < n; i++) {
 		if (fps == vtable[i].fps) {
 			frame_rate = vtable[i].frame_rate;
@@ -529,7 +529,7 @@ static int lcd_set_vframe_rate_hint(int duration)
 
 static int lcd_set_vframe_rate_end_hint(void)
 {
-#ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
+#ifdef CONFIG_AMLOGIC_VOUT_SERVE
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct vinfo_s *info;
 
@@ -565,7 +565,7 @@ static int lcd_set_vframe_rate_end_hint(void)
 
 static int lcd_set_vframe_rate_policy(int policy)
 {
-#ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
+#ifdef CONFIG_AMLOGIC_VOUT_SERVE
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	if (lcd_vout_serve_bypass) {
@@ -580,7 +580,7 @@ static int lcd_set_vframe_rate_policy(int policy)
 
 static int lcd_get_vframe_rate_policy(void)
 {
-#ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
+#ifdef CONFIG_AMLOGIC_VOUT_SERVE
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
 	return lcd_drv->fr_auto_policy;
