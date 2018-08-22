@@ -1035,6 +1035,20 @@
 		status = "okay";
 	};
 
+	ddr_bandwidth {
+		compatible = "amlogic, ddr-bandwidth";
+		status = "okay";
+		reg = <0x0 0xc8838000 0x0 0x100
+		       0x0 0xc8837000 0x0 0x100>;
+		interrupts = <0 52 1>;
+		interrupt-names = "ddr_bandwidth";
+	};
+	dmc_monitor {
+		compatible = "amlogic, dmc_monitor";
+		status = "okay";
+		reg_base = <0xda838400>;
+		interrupts = <0 51 1>;
+	};
 }; /* end of / */
 
 &gpu{

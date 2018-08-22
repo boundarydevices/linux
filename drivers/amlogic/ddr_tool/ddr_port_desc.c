@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/ddr_tool/ddr_band_port_desc.c
+ * drivers/amlogic/ddr_tool/ddr_port_desc.c
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -31,6 +31,25 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 
+/*
+ * NOTE:
+ * Port "DEVICE" is total name for small bandwidth device.
+ * There are many small bandwidth devices such as nand/arb/parser
+ * connected to dmc under port "device", for better configure of
+ * these devices, re-number them with start ID of 32
+ *
+ * EXAMPLE:
+ *
+ *            DMC CONTROLLER
+ *                   |
+ *   ---------------------------------
+ *   |    |    | ..... |       | ... |
+ *  arm  mali vpu    device   vdec  hevc
+ *                     |
+ *         ------------------------
+ *         |    |     | ... |     |
+ *       emmc  ge2d  usb  audio  spicc
+ */
 static struct ddr_port_desc ddr_port_desc_m8b[] __initdata = {
 	{ .port_id =  0, .port_name = "ARM"           },
 	{ .port_id =  1, .port_name = "MALI0"         },
@@ -42,6 +61,7 @@ static struct ddr_port_desc ddr_port_desc_m8b[] __initdata = {
 	{ .port_id = 11, .port_name = "VDEC"          },
 	{ .port_id = 12, .port_name = "HCODEC"        },
 	{ .port_id = 14, .port_name = "AUDIO"         },
+	{ .port_id = 15, .port_name = "DEVICE"        },
 	/* start of each device */
 	{ .port_id = 33, .port_name = "NAND"          },
 	{ .port_id = 34, .port_name = "BLKMV"         },
@@ -64,6 +84,7 @@ static struct ddr_port_desc ddr_port_desc_gxbb[] __initdata = {
 	{ .port_id =  2, .port_name = "MALI1"         },
 	{ .port_id =  3, .port_name = "HDCP"          },
 	{ .port_id =  4, .port_name = "HEVC"          },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ1"     },
 	{ .port_id =  9, .port_name = "VPU READ2"     },
 	{ .port_id = 10, .port_name = "VPU READ3"     },
@@ -98,6 +119,7 @@ static struct ddr_port_desc ddr_port_desc_gxl[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC"          },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ1"     },
 	{ .port_id =  9, .port_name = "VPU READ2"     },
 	{ .port_id = 10, .port_name = "VPU READ3"     },
@@ -132,6 +154,7 @@ static struct ddr_port_desc ddr_port_desc_gxm[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC"          },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ1"     },
 	{ .port_id =  9, .port_name = "VPU READ2"     },
 	{ .port_id = 10, .port_name = "VPU READ3"     },
@@ -166,6 +189,7 @@ static struct ddr_port_desc ddr_port_desc_gxlx[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC"          },
 	{ .port_id =  5, .port_name = "H265ENC/TEST"  },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ1"     },
 	{ .port_id =  9, .port_name = "VPU READ2"     },
 	{ .port_id = 10, .port_name = "VPU READ3"     },
@@ -200,6 +224,7 @@ static struct ddr_port_desc ddr_port_desc_g12a[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC FRONT"    },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "HEVC BACK"     },
 	{ .port_id =  9, .port_name = "H265ENC"       },
 	{ .port_id = 16, .port_name = "VPU READ1"     },
@@ -235,6 +260,7 @@ static struct ddr_port_desc ddr_port_desc_g12b[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC FRONT"    },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "HEVC BACK"     },
 	{ .port_id =  9, .port_name = "H265ENC"       },
 	{ .port_id = 10, .port_name = "NNA"           },
@@ -275,6 +301,7 @@ static struct ddr_port_desc ddr_port_desc_axg[] __initdata = {
 	{ .port_id =  4, .port_name = "AUDIO"         },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ0"     },
 	/* start of each device */
 	{ .port_id = 34, .port_name = "DMA"           },
@@ -296,6 +323,7 @@ static struct ddr_port_desc ddr_port_desc_txl[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC"          },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ1"     },
 	{ .port_id =  9, .port_name = "VPU READ2"     },
 	{ .port_id = 10, .port_name = "VPU READ3"     },
@@ -331,6 +359,7 @@ static struct ddr_port_desc ddr_port_desc_txlx[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC"          },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ1"     },
 	{ .port_id =  9, .port_name = "VPU READ2"     },
 	{ .port_id = 10, .port_name = "VPU READ3"     },
@@ -365,6 +394,7 @@ static struct ddr_port_desc ddr_port_desc_txhd[] __initdata = {
 	{ .port_id =  4, .port_name = "HEVC"          },
 	{ .port_id =  5, .port_name = "TEST"          },
 	{ .port_id =  6, .port_name = "USB3.0"        },
+	{ .port_id =  7, .port_name = "DEVICE"        },
 	{ .port_id =  8, .port_name = "VPU READ1"     },
 	{ .port_id =  9, .port_name = "VPU READ2"     },
 	{ .port_id = 10, .port_name = "VPU READ3"     },
@@ -391,9 +421,17 @@ static struct ddr_port_desc ddr_port_desc_txhd[] __initdata = {
 	{ .port_id = 47, .port_name = "DEMOD"         }
 };
 
+static struct ddr_port_desc *chip_ddr_port;
+static unsigned char chip_ddr_port_num;
+
 int __init ddr_find_port_desc(int cpu_type, struct ddr_port_desc **desc)
 {
 	int desc_size = -EINVAL;
+
+	if (chip_ddr_port) {
+		*desc = chip_ddr_port;
+		return chip_ddr_port_num;
+	}
 
 	switch (cpu_type) {
 	case MESON_CPU_MAJOR_ID_M8B:
@@ -458,6 +496,14 @@ int __init ddr_find_port_desc(int cpu_type, struct ddr_port_desc **desc)
 	default:
 		break;
 	}
+
+	/* using once */
+	chip_ddr_port = kcalloc(desc_size, sizeof(*chip_ddr_port), GFP_KERNEL);
+	if (!chip_ddr_port)
+		return -ENOMEM;
+	memcpy(chip_ddr_port, *desc, sizeof(*chip_ddr_port) * desc_size);
+	chip_ddr_port_num = desc_size;
+	*desc = chip_ddr_port;
 
 	return desc_size;
 }

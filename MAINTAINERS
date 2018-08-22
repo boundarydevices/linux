@@ -13502,7 +13502,15 @@ F: drivers/amlogic/thermal/*
 
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: drivers/amlogic/ddr_tool/*
-F: drivers/amlogic/ddr_tool/ddr_band_port_desc.c
+F: drivers/amlogic/ddr_tool/ddr_port_desc.c
+
+AMLOGIC driver for dmc protection
+M: Tao Zeng <tao.zeng@amlogic.com>
+F: drivers/amlogic/ddr_tool/dmc_g12.c
+F: drivers/amlogic/ddr_tool/dmc_gx.c
+F: drivers/amlogic/ddr_tool/dmc_monitor.c
+F: include/linux/amlogic/dmc_monitor.h
+F: include/linux/amlogic/ddr_port.h
 
 AMLOGIC driver for cpufreq
 M: Tao Zeng <tao.zeng@amlogic.com>

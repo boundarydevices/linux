@@ -281,11 +281,7 @@ static int __ref ddr_bandwidth_probe(struct platform_device *pdev)
 	if (pcnt < 0)
 		pr_err("can't find port descriptor,cpu:%d\n", aml_db->cpu_type);
 	else {
-		aml_db->port_desc = kcalloc(pcnt, sizeof(*desc), GFP_KERNEL);
-		if (!aml_db->port_desc)
-			goto inval;
-		pr_info("port count:%d, desc:%p\n", pcnt, aml_db->port_desc);
-		memcpy(aml_db->port_desc, desc, sizeof(*desc) * pcnt);
+		aml_db->port_desc = desc;
 		aml_db->real_ports = pcnt;
 	}
 

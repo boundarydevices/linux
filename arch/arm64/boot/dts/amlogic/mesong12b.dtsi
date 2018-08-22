@@ -1826,6 +1826,12 @@
 		interrupts = <0 52 1>;
 		interrupt-names = "ddr_bandwidth";
 	};
+	dmc_monitor {
+		compatible = "amlogic, dmc_monitor";
+		status = "okay";
+		reg_base = <0xff639000>;
+		interrupts = <0 51 1>;
+	};
 
 	isp_sc: isp-sc@ff655400 {
 		compatible = "amlogic, isp-sc";

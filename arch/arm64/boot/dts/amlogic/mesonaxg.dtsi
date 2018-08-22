@@ -800,6 +800,12 @@
 		interrupts = <0 52 1>;
 		interrupt-names = "ddr_bandwidth";
 	};
+	dmc_monitor {
+		compatible = "amlogic, dmc_monitor";
+		status = "okay";
+		reg_base = <0xff638800>;
+		interrupts = <0 51 1>;
+	};
 
 	cpu_ver_name{
 		compatible = "amlogic, cpu-major-id-axg";

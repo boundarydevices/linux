@@ -26,3 +26,13 @@ config AMLOGIC_DDR_BANDWIDTH
 	  This config enables ddr bandwidth measure.
 	  If open it, this driver will export interface to get ddr total
 	  bandwidth, it can be used for ddr DVFS/devfreq system.
+
+config AMLOGIC_DMC_MONITOR
+       bool "Amlogic dmc monitor"
+       depends on AMLOGIC_DDR_TOOL
+       default y
+       help
+               DMC monitor for hardware connected to DMC master. Using it can
+               set up an address range and assign R/W permission for each
+               hardware. If hardware violated R/W permission, then interrupt
+               will generated and can help to debug memory pollution.
