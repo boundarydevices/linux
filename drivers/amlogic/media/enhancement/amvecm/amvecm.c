@@ -2774,7 +2774,7 @@ static ssize_t amvecm_post_matrix_pos_store(struct class *cla,
 	int val;
 
 	r = sscanf(buf, "0x%x", &val);
-	if ((r != 1)  || (val & 0xf000f000))
+	if ((r != 1)  || (val & 0xe000e000))
 		return -EINVAL;
 
 	WRITE_VPP_REG(VPP_MATRIX_PROBE_POS, val);
@@ -2790,8 +2790,10 @@ static ssize_t amvecm_post_matrix_data_show(struct class *cla,
 /* #if (MESON_CPU_TYPE >= MESON_CPU_TYPE_MESONG9TV) */
 	val2 = READ_VPP_REG(VPP_MATRIX_PROBE_COLOR1);
 /* #endif */
-	len += sprintf(buf+len, "VPP_MATRIX_PROBE_COLOR %x\n", val1);
-	len += sprintf(buf+len, "VPP_MATRIX_PROBE_COLOR %x\n", val2);
+	len += sprintf(buf+len,
+		"VPP_MATRIX_PROBE_COLOR %x, %x, %x\n",
+		((val2 & 0xf) << 8) | ((val1 >> 24) & 0xff),
+		(val1 >> 12) & 0xfff, val1 & 0xfff);
 	return len;
 }
 
@@ -4780,6 +4782,7 @@ static int aml_vecm_probe(struct platform_device *pdev)
 		/*post matrix 12bit yuv2rgb*/
 		/* mtx_sel_dbg |= 1 << VPP_MATRIX_2; */
 		/* amvecm_vpp_mtx_debug(mtx_sel_dbg, 1);*/
+		WRITE_VPP_REG(VPP_MATRIX_PROBE_POS, 0x1fff1fff);
 	} else if (is_meson_txhd_cpu())
 		vpp_set_10bit_datapath1();
 	else if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
