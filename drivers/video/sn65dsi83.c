@@ -5,6 +5,7 @@
  *  Copyright (C) 2019 Boundary Devices. All Rights Reserved.
  */
 
+#include <drm/drm_mode.h>
 #include <linux/module.h>
 #include <linux/clk.h>
 #include <linux/init.h>
@@ -83,7 +84,8 @@ struct sn65dsi83_priv
 	struct device_node	*disp_dsi;
 	struct gpio_desc	*gp_en;
 	struct clk		*mipi_clk;
-	struct notifier_block	nb;
+	struct notifier_block	fbnb;
+	struct notifier_block	drmnb;
 	u32			int_cnt;
 	u32			pixelclock;
 	u8			chip_enabled;
@@ -310,12 +312,12 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 	struct fb_event *evdata = data;
 	struct fb_info *info = evdata->info;
 	struct device_node *node = info->device->of_node;
-	struct sn65dsi83_priv *sn = container_of(nb, struct sn65dsi83_priv, nb);
+	struct sn65dsi83_priv *sn = container_of(nb, struct sn65dsi83_priv, fbnb);
 	struct device *dev;
 	int blank_type;
 
 	dev = &sn->client->dev;
-	if (0) dev_info(dev, "%s: event %lx)\n", __func__, event);
+	dev_dbg(dev, "%s: event %lx\n", __func__, event);
 	if (node != sn->disp_node)
 		return 0;
 
@@ -547,8 +549,8 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	disable_irq(client->irq);
 
 	i2c_set_clientdata(client, sn);
-	sn->nb.notifier_call = sn_fb_event;
-	ret = fb_register_client(&sn->nb);
+	sn->fbnb.notifier_call = sn_fb_event;
+	ret = fb_register_client(&sn->fbnb);
 	if (ret < 0) {
 		dev_err(&client->dev, "fb_register_client failed(%d)\n", ret);
 		return ret;
@@ -567,7 +569,7 @@ static int sn65dsi83_remove(struct i2c_client *client)
 	struct sn65dsi83_priv *sn = i2c_get_clientdata(client);
 
 	device_remove_file(&client->dev, &dev_attr_sn65dsi83_reg);
-	fb_unregister_client(&sn->nb);
+	fb_unregister_client(&sn->fbnb);
 	sn_disable(sn);
 	return 0;
 }
