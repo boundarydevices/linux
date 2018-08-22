@@ -28,6 +28,7 @@
 #include <drm/drm_atomic_state_helper.h>
 #include <drm/drm_bridge.h>
 #include <drm/drm_encoder.h>
+#include <drm/drm_notifier.h>
 #include <drm/drm_of.h>
 #include <drm/drm_print.h>
 
@@ -535,6 +536,7 @@ void drm_bridge_chain_pre_enable(struct drm_bridge *bridge)
 		if (iter == bridge)
 			break;
 	}
+	drm_notifier_call_chain(DRM_MODE_DPMS_STANDBY, bridge->dev);
 }
 EXPORT_SYMBOL(drm_bridge_chain_pre_enable);
 
@@ -560,6 +562,7 @@ void drm_bridge_chain_enable(struct drm_bridge *bridge)
 		if (bridge->funcs->enable)
 			bridge->funcs->enable(bridge);
 	}
+	drm_notifier_call_chain(DRM_MODE_DPMS_ON, bridge->dev);
 }
 EXPORT_SYMBOL(drm_bridge_chain_enable);
 
