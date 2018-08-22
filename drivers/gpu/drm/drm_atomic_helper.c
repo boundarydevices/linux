@@ -2941,6 +2941,8 @@ retry:
 	if (ret != 0)
 		goto fail;
 
+	drm_notifier_call_chain(mode, connector->dev);
+
 	/* Driver takes ownership of state on successful commit. */
 	return 0;
 fail:
