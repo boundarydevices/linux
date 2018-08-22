@@ -100,4 +100,8 @@ struct pci_controller;
  * Work is ongoing to remove drmP.h includes from existing files
  */
 
+extern int drm_register_client(struct notifier_block *nb);
+extern int drm_unregister_client(struct notifier_block *nb);
+extern int drm_notifier_call_chain(unsigned long val, void *v);
+
 #endif
