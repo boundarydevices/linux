@@ -906,6 +906,7 @@ int drm_helper_connector_dpms(struct drm_connector *connector, int mode)
 						     drm_helper_choose_crtc_dpms(crtc));
 		}
 	}
+	drm_notifier_call_chain(mode, connector->dev);
 
 	return 0;
 }

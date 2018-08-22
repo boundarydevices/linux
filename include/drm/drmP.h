@@ -348,4 +348,8 @@ static __inline__ bool drm_can_sleep(void)
 /* helper for handling conditionals in various for_each macros */
 #define for_each_if(condition) if (!(condition)) {} else
 
+extern int drm_register_client(struct notifier_block *nb);
+extern int drm_unregister_client(struct notifier_block *nb);
+extern int drm_notifier_call_chain(unsigned long val, void *v);
+
 #endif
