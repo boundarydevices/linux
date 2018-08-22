@@ -81,6 +81,14 @@ static unsigned int dolby_vision_mode = DOLBY_VISION_OUTPUT_MODE_BYPASS;
 module_param(dolby_vision_mode, uint, 0664);
 MODULE_PARM_DESC(dolby_vision_mode, "\n dolby_vision_mode\n");
 
+static unsigned int dolby_vision_profile = 0xff;
+module_param(dolby_vision_profile, uint, 0664);
+MODULE_PARM_DESC(dolby_vision_profile, "\n dolby_vision_profile\n");
+
+static unsigned int dolby_vision_level = 0xff;
+module_param(dolby_vision_level, uint, 0664);
+MODULE_PARM_DESC(dolby_vision_level, "\n dolby_vision_level\n");
+
 /* STB: if sink support DV, always output DV*/
 /*		else always output SDR/HDR */
 /* TV:  when source is DV, convert to SDR */
@@ -3571,7 +3579,8 @@ static int parse_sei_and_meta(
 	struct provider_aux_req_s *req,
 	int *total_comp_size,
 	int *total_md_size,
-	enum signal_format_e *src_format)
+	enum signal_format_e *src_format,
+	int *ret_flags)
 {
 	int i;
 	char *p;
@@ -3684,6 +3693,8 @@ static int parse_sei_and_meta(
 					*total_md_size += md_size;
 				else
 					parser_overflow = true;
+				if (rpu_ret == 1)
+					*ret_flags = 1;
 				ret = 0;
 			}
 			spin_unlock_irqrestore(&dovi_lock, flags);
@@ -4365,6 +4376,17 @@ static void calculate_panel_max_pq(
 	}
 }
 
+bool is_dv_standard_es(
+	int dvel, int mflag, int width)
+{
+	if ((dolby_vision_profile == 4) &&
+		(dvel == 1) && (mflag == 0) &&
+		(width >= 3840))
+		return false;
+	else
+		return true;
+}
+
 static u32 last_total_md_size;
 static u32 last_total_comp_size;
 /* toggle mode: 0: not toggle; 1: toggle frame; 2: use keep frame */
@@ -4398,6 +4420,7 @@ int dolby_vision_parse_metadata(
 	enum priority_mode_e pri_mode = VIDEO_PRIORITY;
 	u32 graphic_min = 50; /* 0.0001 */
 	u32 graphic_max = 100; /* 1 */
+	int ret_flags = 0;
 
 	if (!dolby_vision_enable)
 		return -1;
@@ -4516,7 +4539,22 @@ int dolby_vision_parse_metadata(
 				vf, &req,
 				&total_comp_size,
 				&total_md_size,
-				&src_format);
+				&src_format,
+				&ret_flags);
+			if (ret_flags && req.dv_enhance_exist
+				&& (frame_count == 0))
+				vf_notify_provider_by_name("dvbldec",
+					VFRAME_EVENT_RECEIVER_DOLBY_BYPASS_EL,
+					(void *)&req);
+			if (!is_dv_standard_es(req.dv_enhance_exist,
+				ret_flags, w)) {
+				src_format = FORMAT_SDR;
+				dovi_setting.src_format = src_format;
+				total_comp_size = 0;
+				total_md_size = 0;
+				src_bdp = 10;
+				bypass_release = true;
+			}
 		} else if (is_dolby_vision_stb_mode())
 			src_format = dovi_setting.src_format;
 		else if (is_meson_txlx_tvmode())
@@ -4579,7 +4617,8 @@ int dolby_vision_parse_metadata(
 							el_vf, &el_req,
 							&el_comp_size,
 							&el_md_size,
-							&src_format);
+							&src_format,
+							&ret_flags);
 					}
 					if (!meta_flag_el) {
 						total_comp_size =
