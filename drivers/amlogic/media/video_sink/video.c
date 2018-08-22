@@ -135,6 +135,7 @@ static int display_frame_count;
 static int omx_need_drop_frame_num;
 static bool omx_drop_done;
 static bool video_start_post;
+static bool videopeek;
 
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
@@ -4167,6 +4168,12 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 	if (next_vf == NULL)
 		return false;
 
+	if (videopeek) {
+		videopeek = false;
+		pr_info("video peek toogle the first frame\n");
+		return true;
+	}
+
 	if (debug_flag & DEBUG_FLAG_TOGGLE_FRAME_PER_VSYNC)
 		return true;
 	if (/*(cur_vf == NULL) || (cur_dispbuf == &vf_local) ||*/ debugflags &
@@ -6614,6 +6621,7 @@ static void video_vf_unreg_provider(void)
 	int keeped = 0;
 	new_frame_count = 0;
 	first_frame_toggled = 0;
+	videopeek = 0;
 
 	atomic_set(&video_unreg_flag, 1);
 	while (atomic_read(&video_inirq_flag) > 0)
@@ -7513,6 +7521,9 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		put_user(video_onoff_state, (u32 __user *)argp);
 		break;
 
+	case AMSTREAM_IOC_SET_VIDEOPEEK:
+		videopeek = true;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -7574,6 +7585,7 @@ static long amvideo_compat_ioctl(struct file *file, unsigned int cmd, ulong arg)
 	case AMSTREAM_IOC_SET_VSYNC_UPINT:
 	case AMSTREAM_IOC_SET_VSYNC_SLOW_FACTOR:
 	case AMSTREAM_IOC_GLOBAL_SET_VIDEO_OUTPUT:
+	case AMSTREAM_IOC_SET_VIDEOPEEK:
 		return amvideo_ioctl(file, cmd, arg);
 	default:
 		return -EINVAL;
