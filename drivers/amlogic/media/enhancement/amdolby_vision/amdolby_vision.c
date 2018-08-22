@@ -3770,36 +3770,6 @@ static int check_primaries(struct vframe_master_display_colour_s *p_mdc)
 	return 0;
 }
 
-void prepare_sdr2hdr10_param(void)
-{
-	uint32_t max_lum = 1000 * 10000;
-	uint32_t min_lum = 50;
-
-	hdr10_param.
-	min_display_mastering_luminance
-		= min_lum;
-	hdr10_param.
-	max_display_mastering_luminance
-		= max_lum;
-	hdr10_param.Rx
-		= bt2020_primaries[2][0];
-	hdr10_param.Ry
-		= bt2020_primaries[2][1];
-	hdr10_param.Gx
-		= bt2020_primaries[0][0];
-	hdr10_param.Gy
-		= bt2020_primaries[0][1];
-	hdr10_param.Bx
-		= bt2020_primaries[1][0];
-	hdr10_param.By
-		= bt2020_primaries[1][1];
-	hdr10_param.Wx
-		= bt2020_white_point[0];
-	hdr10_param.Wy
-		= bt2020_white_point[1];
-	hdr10_param.max_content_light_level = 0;
-	hdr10_param.max_pic_average_light_level = 0;
-}
 
 void prepare_hdr10_param(
 	struct vframe_master_display_colour_s *p_mdc,
@@ -4955,14 +4925,6 @@ int dolby_vision_parse_metadata(
 		dst_format = FORMAT_HDR10;
 	else
 		dst_format = FORMAT_SDR;
-	if ((src_format == FORMAT_SDR) &&
-		(dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_HDR10) &&
-		!(dolby_vision_flags & FLAG_CERTIFICAION)) {
-		src_format = FORMAT_HDR10;
-		prepare_sdr2hdr10_param();
-		/* for stb with v2.3 may use 12 bit */
-		src_bdp = 10;
-	}
 #ifdef V2_4
 	if ((src_format != dovi_setting.src_format)
 		|| (dst_format != dovi_setting.dst_format))
