@@ -180,6 +180,7 @@ void hdr_exit(void)
 }
 
 /*-----------------------------------------*/
+static void vpp_set_mtx_en_read(void);
 static void vpp_set_mtx_en_write(void);
 
 struct hdr_osd_reg_s hdr_osd_reg = {
@@ -1936,6 +1937,8 @@ static void print_vpp_matrix(int m_select, int *s, int on)
 
 static int *cur_osd_mtx = RGB709_to_YUV709l_coeff;
 static int *cur_post_mtx = bypass_coeff;
+static int *cur_vd1_mtx = bypass_coeff;
+static int cur_vd1_on = CSC_OFF;
 static int cur_post_on = CSC_OFF;
 void set_vpp_matrix(int m_select, int *s, int on)
 {
@@ -1957,6 +1960,8 @@ void set_vpp_matrix(int m_select, int *s, int on)
 	} else if (m_select == VPP_MATRIX_VD1) {
 		m = vd1_matrix_coeff;
 		size = MATRIX_5x3_COEF_SIZE;
+		cur_vd1_mtx = s;
+		cur_vd1_on = on;
 	} else if (m_select == VPP_MATRIX_VD2) {
 		m = vd2_matrix_coeff;
 		size = MATRIX_5x3_COEF_SIZE;
@@ -2461,6 +2466,8 @@ EXPORT_SYMBOL(enable_osd_path);
 static int32_t *post_mtx_backup;
 static int32_t post_on_backup;
 static bool restore_post_table;
+static int32_t *vd1_mtx_backup;
+static int32_t vd1_on_backup;
 int enable_rgb_to_yuv_matrix_for_dvll(
 	int32_t on, uint32_t *coeff_orig, uint32_t bits)
 {
@@ -2479,6 +2486,8 @@ int enable_rgb_to_yuv_matrix_for_dvll(
 			dvll_RGB_to_YUV709l_coeff) {
 			post_mtx_backup = cur_post_mtx;
 			post_on_backup = cur_post_on;
+			vd1_mtx_backup = cur_vd1_mtx;
+			vd1_on_backup = cur_vd1_on;
 		}
 		coeff01 = coeff_orig[0];
 		coeff23 = coeff_orig[1];
@@ -2527,11 +2536,23 @@ int enable_rgb_to_yuv_matrix_for_dvll(
 		coeff[18] -= (0x1000 - coeff[3] - coeff[4] - coeff[5]) >> 1;
 
 		coeff[22] = 2;
+		vpp_set_mtx_en_read();
+		VSYNC_WR_MPEG_REG(VPP_MATRIX_CTRL, 0);
+		set_vpp_matrix(VPP_MATRIX_OSD,
+			cur_osd_mtx, CSC_OFF);
+		set_vpp_matrix(VPP_MATRIX_VD1,
+			cur_vd1_mtx, CSC_OFF);
 		set_vpp_matrix(VPP_MATRIX_POST,
 			coeff, CSC_ON);
 		vpp_set_mtx_en_write();
 		restore_post_table = true;
 	} else if (restore_post_table) {
+		vpp_set_mtx_en_read();
+		VSYNC_WR_MPEG_REG(VPP_MATRIX_CTRL, 0);
+		set_vpp_matrix(VPP_MATRIX_OSD,
+			cur_osd_mtx, CSC_OFF);
+		set_vpp_matrix(VPP_MATRIX_VD1,
+			vd1_mtx_backup, cur_vd1_on);
 		set_vpp_matrix(VPP_MATRIX_POST,
 			post_mtx_backup, post_on_backup);
 		vpp_set_mtx_en_write();

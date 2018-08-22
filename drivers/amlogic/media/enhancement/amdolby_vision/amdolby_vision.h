@@ -516,6 +516,7 @@ struct dovi_setting_s {
 	struct ext_md_s ext_md;
 	uint32_t vsvdb_len;
 	uint32_t vsvdb_changed;
+	uint32_t mode_changed;
 #endif
 };
 

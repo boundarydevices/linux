@@ -16,7 +16,8 @@ extern void dolby_vision_set_toggle_flag(int flag);
 extern int dolby_vision_wait_metadata(struct vframe_s *vf);
 extern int dolby_vision_pop_metadata(void);
 extern int dolby_vision_update_metadata(struct vframe_s *vf);
-extern int dolby_vision_process(struct vframe_s *vf, u32 display_size);
+extern int dolby_vision_process(struct vframe_s *vf, u32 display_size,
+	u8 pps_state);
 extern void dolby_vision_init_receiver(void *pdev);
 extern void dolby_vision_vf_put(struct vframe_s *vf);
 extern struct vframe_s *dolby_vision_vf_peek_el(struct vframe_s *vf);

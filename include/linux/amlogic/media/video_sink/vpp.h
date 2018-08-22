@@ -246,7 +246,8 @@ void get_vpp_3d_mode(u32 process_3d_type, u32 trans_fmt, u32 *vpp_3d_mode);
 extern void
 vpp_set_filters(u32 process_3d_type, u32 wide_mode, struct vframe_s *vf,
 				struct vpp_frame_par_s *next_frame_par,
-				const struct vinfo_s *vinfo);
+				const struct vinfo_s *vinfo,
+				bool bypass_sr);
 
 extern void vpp_set_video_source_crop(u32 t, u32 l, u32 b, u32 r);
 
