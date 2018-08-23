@@ -139,7 +139,7 @@ static int mic_jack_status_check(void *data)
 	return ret;
 }
 
-int do_mute(struct gpio_desc *gd, int mute)
+static int do_mute(struct gpio_desc *gd, int mute)
 {
 	if (!gd)
 		return 0;
