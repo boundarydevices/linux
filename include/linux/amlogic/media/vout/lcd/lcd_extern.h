@@ -58,6 +58,7 @@ struct lcd_extern_config_s {
 	enum lcd_extern_type_e type;
 	unsigned char status;
 	unsigned char pinmux_valid;
+	unsigned char pinmux_gpio_off;
 	unsigned char key_valid;
 	unsigned char addr_sel; /* internal used */
 
@@ -65,9 +66,7 @@ struct lcd_extern_config_s {
 	unsigned char i2c_addr2;
 	unsigned char i2c_bus;
 	unsigned char i2c_sck_gpio;
-	unsigned char i2c_sck_gpio_off;
 	unsigned char i2c_sda_gpio;
-	unsigned char i2c_sda_gpio_off;
 
 	unsigned char spi_gpio_cs;
 	unsigned char spi_gpio_clk;

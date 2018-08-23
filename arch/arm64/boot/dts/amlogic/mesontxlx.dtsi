@@ -1239,14 +1239,21 @@
 			function = "vbyone";
 		};
 	};
+	lcd_vbyone_off_pins: lcd_vbyone_off_pin {
+		mux {
+			groups = "GPIOH_0","GPIOH_1";
+			function = "gpio_periphs";
+			input-enable;
+		};
+	};
 
-	lcd_ttl_rgb_6bit_pins_on:lcd_ttl_rgb_6bit_on{
+	lcd_ttl_rgb_6bit_on_pins:lcd_ttl_rgb_6bit_on{
 		mux {
 			groups = "lcd_r2_7","lcd_g2_7","lcd_b2_7";
 			function = "lcd";
 		};
 	};
-	lcd_ttl_rgb_6bit_pins_off:lcd_ttl_rgb_6bit_off{
+	lcd_ttl_rgb_6bit_off_pins:lcd_ttl_rgb_6bit_off{
 		mux {
 			groups = "GPIOY_2","GPIOY_3","GPIOY_4","GPIOY_5",
 				"GPIOY_6","GPIOY_7", /*r2~7*/
@@ -1258,7 +1265,7 @@
 			input-enable;
 		};
 	};
-	lcd_ttl_rgb_8bit_pins_on:lcd_ttl_rgb_8bit_on{
+	lcd_ttl_rgb_8bit_on_pins:lcd_ttl_rgb_8bit_on{
 		mux {
 			groups = "lcd_r0_1","lcd_r2_7",
 				"lcd_g0_1","lcd_g2_7",
@@ -1266,7 +1273,7 @@
 			function = "lcd";
 		};
 	};
-	lcd_ttl_rgb_8bit_pins_off:lcd_ttl_rgb_8bit_off{
+	lcd_ttl_rgb_8bit_off_pins:lcd_ttl_rgb_8bit_off{
 		mux {
 			groups = "GPIOY_0","GPIOY_1","GPIOY_2","GPIOY_3",
 				"GPIOY_4","GPIOY_5", "GPIOY_6","GPIOY_7",

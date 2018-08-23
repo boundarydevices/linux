@@ -18,7 +18,6 @@
 /dts-v1/;
 
 #include "mesong12a.dtsi"
-#include "mesong12a_skt-panel.dtsi"
 
 / {
 	model = "Amlogic";

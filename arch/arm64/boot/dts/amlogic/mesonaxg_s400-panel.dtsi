@@ -655,19 +655,20 @@
 		dev_name = "backlight";
 		status = "okay";
 		key_valid = <0>;
-		pinctrl-names = "pwm_on";
+		pinctrl-names = "pwm_on","pwm_off";
 		pinctrl-0 = <&bl_pwm_on_pins>;
+		pinctrl-1 = <&bl_pwm_off_pins>;
 		pinctrl_version = <1>; /* for uboot */
+		bl_pwm_config = <&bl_pwm_conf>;
+		bl-gpios = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH
+			&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
+		bl_gpio_names = "GPIOZ_4","GPIOZ_5";
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_VS*/
 		/* power index:(point gpios_index, 0xff=invalid)
 		 * power value:(0=output low, 1=output high, 2=input)
 		 * power delay:(unit in ms)
 		 */
-		bl-gpios = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH
-			&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
-		bl_gpio_names = "GPIOZ_4","GPIOZ_5";
-		bl_pwm_config = <&bl_pwm_conf>;
 
 		backlight_0{
 			index = <0>;
@@ -683,7 +684,7 @@
 			bl_pwm_attr = <0 /*pwm_method*/
 				180 /*pwm_freq(pwm:Hz, pwm_vs:multiple of vs)*/
 				100 25>; /*duty_max(%), duty_min(%)*/
-			bl_pwm_power = <0 0 /*pwm_gpio_index, pwm_gpio_off*/
+			bl_pwm_power = <0 1 /*pwm_gpio_index, pwm_gpio_off*/
 				10 10>; /*pwm_on_delay(ms), pwm_off_delay(ms)*/
 			bl_pwm_en_sequence_reverse = <0>; /* 1 for reverse */
 		};
@@ -712,26 +713,22 @@
 		compatible = "amlogic, bl_extern";
 		dev_name = "bl_extern";
 		status = "disabled";
+		i2c_bus = "i2c_bus_3";
 
 		extern_0{
 			index = <0>;
 			extern_name = "i2c_lp8556";
-
 			type = <0>; /*0=i2c, 1=spi, 2=mipi*/
 			i2c_address = <0x2c>; /*7bit i2c address*/
-			i2c_bus = "i2c_bus_c";
 			dim_max_min = <255 10>;
 		};
 
 		extern_1{
 			index = <1>;
 			extern_name = "mipi_lt070me05";
-
 			type = <2>; /*0=i2c, 1=spi, 2=mipi*/
 			dim_max_min = <255 10>;
 		};
 	};
-
-
 };/* end of panel */
 

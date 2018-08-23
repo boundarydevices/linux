@@ -58,6 +58,7 @@ static struct lcd_extern_config_s lcd_extern_config = {
 	.type = LCD_EXTERN_MAX,
 	.status = 0,
 	.pinmux_valid = 0,
+	.pinmux_gpio_off = 2,
 	.key_valid = 0,
 	.addr_sel = 0,
 
@@ -65,9 +66,7 @@ static struct lcd_extern_config_s lcd_extern_config = {
 	.i2c_addr2 = LCD_EXTERN_I2C_ADDR_INVALID,
 	.i2c_bus = LCD_EXTERN_I2C_BUS_INVALID,
 	.i2c_sck_gpio = LCD_EXTERN_GPIO_NUM_MAX,
-	.i2c_sck_gpio_off = 2,
 	.i2c_sda_gpio = LCD_EXTERN_GPIO_NUM_MAX,
-	.i2c_sda_gpio_off = 2,
 
 	.spi_gpio_cs = LCD_EXTERN_GPIO_NUM_MAX,
 	.spi_gpio_clk = LCD_EXTERN_GPIO_NUM_MAX,
@@ -289,45 +288,56 @@ unsigned int lcd_extern_gpio_get(unsigned char index)
 	return gpiod_get_value(ext_gpio->gpio);
 }
 
+#define LCD_EXTERN_PINMUX_MAX    3
+static char *lcd_extern_pinmux_str[LCD_EXTERN_PINMUX_MAX] = {
+	"extern_on",   /* 0 */
+	"extern_off",  /* 1 */
+	"none",
+};
+
 void lcd_extern_pinmux_set(int status)
 {
-	/* kernel4.9 can't release pins */
+	int index = 0xff;
+
 	if (lcd_ext_driver == NULL)
 		return;
 
 	if (lcd_ext_driver->config->pinmux_valid == 0) {
-		if (lcd_debug_print_flag) {
-			EXTPR("%s: pinmux_valid %d, bypass\n",
-				__func__, lcd_ext_driver->config->pinmux_valid);
-		}
+		if (lcd_debug_print_flag)
+			EXTPR("%s: pinmux invalid, bypass\n", __func__);
 		return;
 	}
 
 	if (lcd_debug_print_flag)
 		EXTPR("%s: %d\n", __func__, status);
 
-	if (status) {
-		/* release gpio */
-		if (lcd_ext_driver->pinmux_flag) {
-			EXTPR("drv_index %d pinmux is already selected\n",
-				lcd_ext_driver->config->index);
-			return;
-		}
+	index = (status) ? 0 : 1;
 
-		/* request pinmux */
-		lcd_ext_driver->pin = devm_pinctrl_get_select(lcd_extern_dev,
-			"extern_pins");
-		if (IS_ERR(lcd_ext_driver->pin)) {
-			EXTERR("set drv_index %d pinmux error\n",
-				lcd_ext_driver->config->index);
-		} else {
-			if (lcd_debug_print_flag) {
-				EXTPR("set drv_index %d pinmux ok\n",
-					lcd_ext_driver->config->index);
-			}
-		}
-		lcd_ext_driver->pinmux_flag = 1;
+	if (lcd_ext_driver->pinmux_flag == index) {
+		EXTPR("%s(%d) pinmux %s is already selected\n",
+			lcd_ext_driver->config->name,
+			lcd_ext_driver->config->index,
+			lcd_extern_pinmux_str[index]);
+		return;
 	}
+
+	/* request pinmux */
+	lcd_ext_driver->pin = devm_pinctrl_get_select(lcd_extern_dev,
+		lcd_extern_pinmux_str[index]);
+	if (IS_ERR(lcd_ext_driver->pin)) {
+		EXTERR("set %s(%d) pinmux %s error\n",
+			lcd_ext_driver->config->name,
+			lcd_ext_driver->config->index,
+			lcd_extern_pinmux_str[index]);
+	} else {
+		if (lcd_debug_print_flag) {
+			EXTPR("set %s(%d) pinmux %s ok\n",
+				lcd_ext_driver->config->name,
+				lcd_ext_driver->config->index,
+				lcd_extern_pinmux_str[index]);
+		}
+	}
+	lcd_ext_driver->pinmux_flag = index;
 }
 
 #ifdef CONFIG_OF
@@ -1358,19 +1368,13 @@ static int lcd_extern_get_config(void)
 		lcd_extern_config.i2c_bus = lcd_extern_get_i2c_bus_str(str);
 
 	ret = of_property_read_u32_array(lcd_extern_dev->of_node,
-			"i2c_gpio_off", &extern_para[0], 4);
+			"i2c_gpio", &extern_para[0], 2);
 	if (ret) {
 		lcd_extern_config.i2c_sck_gpio = LCD_EXTERN_GPIO_NUM_MAX;
-		lcd_extern_config.i2c_sck_gpio_off = 2;
 		lcd_extern_config.i2c_sda_gpio = LCD_EXTERN_GPIO_NUM_MAX;
-		lcd_extern_config.i2c_sda_gpio_off = 2;
 	} else {
 		lcd_extern_config.i2c_sck_gpio = (unsigned char)extern_para[0];
-		lcd_extern_config.i2c_sck_gpio_off =
-			(unsigned char) extern_para[1];
-		lcd_extern_config.i2c_sda_gpio = (unsigned char)extern_para[2];
-		lcd_extern_config.i2c_sda_gpio_off =
-			(unsigned char)extern_para[3];
+		lcd_extern_config.i2c_sda_gpio = (unsigned char)extern_para[1];
 	}
 
 	ret = of_property_read_string(lcd_extern_dev->of_node,
@@ -1379,6 +1383,15 @@ static int lcd_extern_get_config(void)
 		lcd_extern_config.pinmux_valid = 0;
 	else
 		lcd_extern_config.pinmux_valid = 1;
+
+	ret = of_property_read_u32(lcd_extern_dev->of_node,
+			"pinctrl_gpio_off", &extern_para[0]);
+	if (ret) {
+		lcd_extern_config.pinmux_gpio_off = 2;
+	} else {
+		lcd_extern_config.pinmux_gpio_off =
+			(unsigned char)extern_para[0];
+	}
 
 	ret = of_property_read_u32(lcd_extern_dev->of_node,
 			"key_valid", &extern_para[0]);
@@ -1539,7 +1552,7 @@ static int lcd_extern_add_driver(struct lcd_extern_config_s *extconf)
 	ext_drv = lcd_ext_driver;
 
 	ext_drv->config = extconf;
-	ext_drv->pinmux_flag = 0;
+	ext_drv->pinmux_flag = 0xff;
 
 	switch (ext_drv->config->type) {
 	case LCD_EXTERN_I2C:
@@ -1790,6 +1803,10 @@ static ssize_t lcd_extern_info_show(struct class *class,
 	default:
 		pr_info("not support extern_type\n");
 		break;
+	}
+	if (econf->pinmux_valid) {
+		pr_info("pinmux_flag:     %d\n", lcd_ext_driver->pinmux_flag);
+		pr_info("pinmux_pointer:  0x%p\n", lcd_ext_driver->pin);
 	}
 
 	return sprintf(buf, "\n");

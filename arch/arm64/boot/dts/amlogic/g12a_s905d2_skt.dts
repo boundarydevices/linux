@@ -1035,6 +1035,13 @@
 		};
 	};
 
+	bl_pwm_off_pins:bl_pwm_off_pin {
+		mux {
+			pins = "GPIOH_5";
+			function = "gpio_periphs";
+			output-high;
+		};
+	};
 
 }; /* end of pinctrl_periphs */
 &pinctrl_aobus {

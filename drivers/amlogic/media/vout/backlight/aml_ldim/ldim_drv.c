@@ -1629,7 +1629,6 @@ static void ldim_func_ctrl(unsigned char status)
 static int ldim_on_init(void)
 {
 	int ret = 0;
-	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
 	LDIMPR("%s\n", __func__);
 
@@ -1642,7 +1641,7 @@ static int ldim_on_init(void)
 	ldim_func_ctrl(0); /* default disable ldim function */
 
 	if (ldim_driver.pinmux_ctrl)
-		ldim_driver.pinmux_ctrl(ldim_drv->ldev_conf->pinmux_name);
+		ldim_driver.pinmux_ctrl(1);
 	ldim_on_flag = 1;
 	ldim_level_update = 1;
 
@@ -1714,7 +1713,7 @@ static struct aml_ldim_driver_s ldim_driver = {
 	.valid_flag = 0, /* default invalid, active when bl_ctrl_method=ldim */
 	.dev_index = 0xff,
 	.static_pic_flag = 0,
-	.pinmux_flag = 0,
+	.pinmux_flag = 0xff,
 	.ldim_conf = &ldim_config,
 	.ldev_conf = NULL,
 	.ldim_matrix_buf = NULL,

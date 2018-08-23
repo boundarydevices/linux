@@ -813,16 +813,10 @@
 	};
 
 	bl_extern_i2c {
-		compatible = "amlogic, bl_extern_i2c";
-		status = "disabled";
-		reg = <0x2c>; /*reg_address for lp8556*/
+		compatible = "bl_extern, i2c";
 		dev_name = "lp8556";
-	};
-	lcd_extern_i2c {
-		compatible = "amlogic, lcd_i2c_T5800Q";
+		reg = <0x2c>;
 		status = "disabled";
-		reg = <0x1c>; /*reg_address for i2c_T5800Q*/
-		dev_name = "i2c_T5800Q";
 	};
 };
 
@@ -1111,6 +1105,14 @@
 			/*"pdm_din3_a",*/
 			"pdm_dclk_a";
 			function = "pdm";
+		};
+	};
+
+	bl_pwm_off_pins:bl_pwm_off_pin {
+		mux {
+			pins = "GPIOH_5";
+			function = "gpio_periphs";
+			output-high;
 		};
 	};
 

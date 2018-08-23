@@ -343,6 +343,12 @@ static int lcd_info_print(char *buf, int offset)
 			((pconf->lcd_control.ttl_config->sync_valid >> 1) & 1),
 			((pconf->lcd_control.ttl_config->swap_ctrl >> 1) & 1),
 			((pconf->lcd_control.ttl_config->swap_ctrl >> 0) & 1));
+
+		len += snprintf((buf+len), n,
+			"pinmux_flag     %d\n"
+			"pinmux_pointer  0x%p\n\n",
+			pconf->pinmux_flag,
+			pconf->pin);
 		break;
 	case LCD_LVDS:
 		n = lcd_debug_info_len(len + offset);
@@ -414,6 +420,12 @@ static int lcd_info_print(char *buf, int offset)
 				((vx1_conf->ctrl_flag >> 2) & 0x1),
 				vx1_conf->cdr_training_hold);
 		}
+
+		len += snprintf((buf+len), n,
+			"pinmux_flag          %d\n"
+			"pinmux_pointer       0x%p\n\n",
+			pconf->pinmux_flag,
+			pconf->pin);
 		break;
 	case LCD_MIPI:
 #ifdef CONFIG_AMLOGIC_LCD_TABLET

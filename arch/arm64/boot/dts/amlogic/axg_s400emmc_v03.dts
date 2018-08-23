@@ -1205,6 +1205,13 @@
 			function = "pwm_b";
 		};
 	};
+	bl_pwm_off_pins:bl_pwm_off_pin {
+		mux {
+			pins = "GPIOZ_4";
+			function = "gpio_periphs";
+			output-high;
+		};
+	};
 }; /* end of pinctrl_periphs */
 /* Audio Related End */
 

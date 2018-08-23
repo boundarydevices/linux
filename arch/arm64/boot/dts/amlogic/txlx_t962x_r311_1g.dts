@@ -1468,11 +1468,11 @@
 		status = "okay";
 	};
 
-	lcd_extern_i2c {
-		compatible = "amlogic, lcd_i2c_T5800Q";
-		status = "disabled";
-		reg = <0x1c>; /*reg_address for i2c_T5800Q*/
+	lcd_extern_i2c0: lcd_extern_i2c@0 {
+		compatible = "lcd_ext, i2c";
 		dev_name = "i2c_T5800Q";
+		reg = <0x1c>;
+		status = "okay";
 	};
 };
 
@@ -1519,6 +1519,18 @@
 		};
 	};
 
+	/*lcd_extern*/
+	lcd_extern_off_pins:lcd_extern_off_pin {
+		mux {
+			pins = "GPIOH_2",
+				"GPIOH_3";
+			function = "gpio_periphs";
+			/*output-high;*/
+			output-low;
+			/*input-enable;*/
+		};
+	};
+
 	/*backlight*/
 	bl_pwm_on_pins:bl_pwm_on_pin {
 		mux {
@@ -1530,6 +1542,13 @@
 		mux {
 			pins = "pwm_vs_z6";
 			function = "pwm_vs";
+		};
+	};
+	bl_pwm_off_pins:bl_pwm_off_pin {
+		mux {
+			pins = "GPIOZ_6";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 	bl_pwm_combo_0_on_pins:bl_pwm_combo_0_on_pin {
@@ -1556,18 +1575,12 @@
 			function = "pwm_vs";
 		};
 	};
-
-	/*ldim*/
-	ldim_pwm_pins:ldim_pwm_pin {
+	bl_pwm_combo_off_pins:bl_pwm_combo_off_pin {
 		mux {
-			pins = "pwm_b";
-			function = "pwm_b";
-		};
-	};
-	ldim_pwm_vs_pins:ldim_pwm_vs_pin {
-		mux {
-			pins = "pwm_vs_z6";
-			function = "pwm_vs";
+			pins = "GPIOZ_6",
+				"GPIOZ_7";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 };

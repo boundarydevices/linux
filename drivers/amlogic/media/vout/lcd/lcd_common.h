@@ -30,7 +30,8 @@
 /* 20180620: fix coverity errors */
 /* 20180626: txl suuport */
 /* 20180718: mute: wait vsync for display shadow */
-#define LCD_DRV_VERSION    "20180718"
+/* 20180827: add pinmux off support */
+#define LCD_DRV_VERSION    "20180827"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 

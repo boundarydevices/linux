@@ -1044,6 +1044,35 @@
 		};
 	};
 	/* end AUDIO_RELATED */
+
+	/*lcd_extern*/
+	lcd_extern_off_pins:lcd_extern_off_pin {
+		mux {
+			pins = "GPIOH_2",
+				"GPIOH_3";
+			function = "gpio_periphs";
+			/*output-high;*/
+			output-low;
+			/*input-enable;*/
+		};
+	};
+
+	/*backlight*/
+	bl_pwm_off_pins:bl_pwm_off_pin {
+		mux {
+			pins = "GPIOZ_6";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+	bl_pwm_combo_off_pins:bl_pwm_combo_off_pin {
+		mux {
+			pins = "GPIOZ_6",
+				"GPIOZ_7";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
 };
 
 &i2c0 {
@@ -1071,6 +1100,19 @@
 	clock-frequency = <300000>;
 	pinctrl-names="default";
 	pinctrl-0=<&i2c1_dv_pins>;
+};
+
+&i2c2 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c2_h_pins>;
+
+	lcd_extern_i2c0: lcd_extern_i2c@0 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_T5800Q";
+		reg = <0x1c>;
+		status = "okay";
+	};
 };
 
 &dwc3 {

@@ -26,11 +26,11 @@ enum bl_extern_type_e {
 };
 
 enum bl_extern_i2c_bus_e {
-	BL_EXTERN_I2C_BUS_AO = 0,
-	BL_EXTERN_I2C_BUS_A,
-	BL_EXTERN_I2C_BUS_B,
-	BL_EXTERN_I2C_BUS_C,
-	BL_EXTERN_I2C_BUS_D,
+	BL_EXTERN_I2C_BUS_0 = 0,
+	BL_EXTERN_I2C_BUS_1,
+	BL_EXTERN_I2C_BUS_2,
+	BL_EXTERN_I2C_BUS_3,
+	BL_EXTERN_I2C_BUS_4,
 	BL_EXTERN_I2C_BUS_MAX,
 };
 #define BL_EXTERN_I2C_BUS_INVALID   0xff
@@ -59,8 +59,9 @@ struct bl_extern_config_s {
 };
 
 /* global API */
-#define BL_EXT_DRIVER_MAX    10
 struct aml_bl_extern_driver_s {
+	unsigned char status;
+	unsigned int brightness;
 	int (*power_on)(void);
 	int (*power_off)(void);
 	int (*set_level)(unsigned int level);
@@ -72,12 +73,6 @@ struct aml_bl_extern_driver_s {
 	struct device *dev;
 };
 
-struct aml_bl_extern_i2c_dev_s {
-	char name[20];
-	struct i2c_client *client;
-};
-
-extern struct aml_bl_extern_i2c_dev_s *aml_bl_extern_i2c_get_dev(void);
 extern struct aml_bl_extern_driver_s *aml_bl_extern_get_driver(void);
 extern int aml_bl_extern_device_load(int index);
 

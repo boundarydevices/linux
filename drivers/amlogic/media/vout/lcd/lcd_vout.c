@@ -191,7 +191,7 @@ static struct lcd_config_s lcd_config_dft = {
 		.mipi_config = &lcd_mipi_config,
 	},
 	.lcd_power = &lcd_power_config,
-	.pinmux_flag = 0,
+	.pinmux_flag = 0xff,
 	.change_flag = 0,
 	.retry_enable_flag = 0,
 	.retry_enable_cnt = 0,

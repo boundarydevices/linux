@@ -19,7 +19,6 @@
 #include <linux/module.h>
 #include <linux/i2c.h>
 #include <linux/slab.h>
-#include <linux/amlogic/i2c-amlogic.h>
 #include <linux/amlogic/media/vout/lcd/aml_bl_extern.h>
 #include "bl_extern.h"
 
@@ -30,8 +29,60 @@ struct aml_bl_extern_i2c_dev_s *aml_bl_extern_i2c_get_dev(void)
 	return i2c_device;
 }
 
+int bl_extern_i2c_write(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len)
+{
+	struct i2c_msg msg;
+	int ret = 0;
+
+	if (i2client == NULL) {
+		BLEXERR("i2client is null\n");
+		return -1;
+	}
+
+	msg.addr = i2client->addr;
+	msg.flags = 0;
+	msg.len = len;
+	msg.buf = buff;
+
+	ret = i2c_transfer(i2client->adapter, &msg, 1);
+	if (ret < 0)
+		BLEXERR("i2c write failed [addr 0x%02x]\n", i2client->addr);
+
+	return ret;
+}
+
+int bl_extern_i2c_read(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len)
+{
+	struct i2c_msg msgs[2];
+	int ret = 0;
+
+	if (i2client == NULL) {
+		BLEXERR("i2client is null\n");
+		return -1;
+	}
+
+	msgs[0].addr = i2client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 1;
+	msgs[0].buf = buff;
+	msgs[1].addr = i2client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = len;
+	msgs[1].buf = buff;
+
+	ret = i2c_transfer(i2client->adapter, msgs, 2);
+	if (ret < 0) {
+		BLEXERR("%s: i2c transfer failed [addr 0x%02x]\n",
+			__func__, i2client->addr);
+	}
+
+	return ret;
+}
+
 static int bl_extern_i2c_config_from_dts(struct device *dev,
-	struct aml_bl_extern_i2c_dev_s *i2c_device)
+		struct aml_bl_extern_i2c_dev_s *i2c_dev)
 {
 	int ret;
 	struct device_node *np = dev->of_node;
@@ -39,20 +90,20 @@ static int bl_extern_i2c_config_from_dts(struct device *dev,
 
 	ret = of_property_read_string(np, "dev_name", &str);
 	if (ret) {
-		BLEXERR("failed to get dev_i2c_name\n");
-		str = "bl_extern_i2c_name";
+		BLEXERR("failed to get dev_name\n");
+		strcpy(i2c_dev->name, "none");
+	} else {
+		strcpy(i2c_dev->name, str);
 	}
-	strcpy(i2c_device->name, str);
 
 	return 0;
 }
 
 static int aml_bl_extern_i2c_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
+		const struct i2c_device_id *id)
 {
-	BLEX("I2C Address: 0x%02x", client->addr);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
-		BLEXERR("I2C check functionality failed.");
+		BLEXERR("i2c check functionality failed.");
 		return -ENODEV;
 	}
 
@@ -63,6 +114,8 @@ static int aml_bl_extern_i2c_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 	i2c_device->client = client;
+	BLEX("i2c Address: 0x%02x", i2c_device->client->addr);
+
 	bl_extern_i2c_config_from_dts(&client->dev, i2c_device);
 
 	return 0;
@@ -84,7 +137,7 @@ static const struct i2c_device_id aml_bl_extern_i2c_id[] = {
 #ifdef CONFIG_OF
 static const struct of_device_id aml_bl_extern_i2c_dt_match[] = {
 	{
-		.compatible = "amlogic, bl_extern_i2c",
+		.compatible = "bl_extern, i2c",
 	},
 	{},
 };
@@ -107,7 +160,7 @@ static int __init aml_bl_extern_i2c_init(void)
 {
 	int ret;
 
-	if (lcd_debug_print_flag)
+	if (bl_debug_print_flag)
 		BLEX("%s\n", __func__);
 
 	ret = i2c_add_driver(&aml_bl_extern_i2c_driver);

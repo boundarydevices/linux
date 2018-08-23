@@ -48,7 +48,7 @@
 #include "aml_bl_reg.h"
 
 /* #define AML_BACKLIGHT_DEBUG */
-static unsigned int bl_debug_print_flag;
+unsigned int bl_debug_print_flag;
 
 static struct aml_bl_drv_s *bl_drv;
 
@@ -104,6 +104,8 @@ static struct bl_config_s bl_config = {
 		{.probe_flag = 0, .register_flag = 0,},
 		{.probe_flag = 0, .register_flag = 0,},
 	},
+
+	.pinmux_flag = 0xff,
 };
 
 const char *bl_chip_table[] = {
@@ -339,17 +341,19 @@ static inline unsigned int bl_do_div(unsigned long num, unsigned int den)
 }
 
 /* ****************************************************** */
-#define BL_PINMUX_MAX    6
+#define BL_PINMUX_MAX    8
 static char *bl_pinmux_str[BL_PINMUX_MAX] = {
 	"pwm_on",               /* 0 */
 	"pwm_vs_on",            /* 1 */
 	"pwm_combo_0_1_on",     /* 2 */
 	"pwm_combo_0_vs_1_on",  /* 3 */
 	"pwm_combo_0_1_vs_on",  /* 4 */
+	"pwm_off",              /* 5 */
+	"pwm_combo_off",        /* 6 */
 	"none",
 };
 
-static void bl_pwm_pinmux_set(struct bl_config_s *bconf)
+static void bl_pwm_pinmux_set(struct bl_config_s *bconf, int status)
 {
 	int index = 0xff;
 
@@ -358,19 +362,27 @@ static void bl_pwm_pinmux_set(struct bl_config_s *bconf)
 
 	switch (bconf->method) {
 	case BL_CTRL_PWM:
-		if (bconf->bl_pwm->pwm_port == BL_PWM_VS)
-			index = 1;
-		else
-			index = 0;
+		if (status) {
+			if (bconf->bl_pwm->pwm_port == BL_PWM_VS)
+				index = 1;
+			else
+				index = 0;
+		} else {
+			index = 5;
+		}
 		break;
 	case BL_CTRL_PWM_COMBO:
-		if (bconf->bl_pwm_combo0->pwm_port == BL_PWM_VS)
-			index = 3;
-		else {
-			if (bconf->bl_pwm_combo1->pwm_port == BL_PWM_VS)
-				index = 4;
-			else
-				index = 2;
+		if (status) {
+			if (bconf->bl_pwm_combo0->pwm_port == BL_PWM_VS) {
+				index = 3;
+			} else {
+				if (bconf->bl_pwm_combo1->pwm_port == BL_PWM_VS)
+					index = 4;
+				else
+					index = 2;
+			}
+		} else {
+			index = 6;
 		}
 		break;
 	default:
@@ -383,16 +395,23 @@ static void bl_pwm_pinmux_set(struct bl_config_s *bconf)
 		return;
 	}
 
+	if (bconf->pinmux_flag == index) {
+		BLPR("pinmux %s is already selected\n",
+			bl_pinmux_str[index]);
+		return;
+	}
+
 	/* request pwm pinmux */
 	bconf->pin = devm_pinctrl_get_select(bl_drv->dev, bl_pinmux_str[index]);
 	if (IS_ERR(bconf->pin)) {
-		BLERR("set %s pinmux error\n", bl_pinmux_str[index]);
+		BLERR("set pinmux %s error\n", bl_pinmux_str[index]);
 	} else {
 		if (bl_debug_print_flag) {
-			BLPR("request %s pinmux: %p\n",
+			BLPR("set pinmux %s: %p\n",
 				bl_pinmux_str[index], bconf->pin);
 		}
 	}
+	bconf->pinmux_flag = index;
 }
 
 /* ****************************************************** */
@@ -678,9 +697,11 @@ static void bl_power_on(void)
 				msleep(bconf->pwm_on_delay);
 			/* step 2: power on pwm */
 			bl_pwm_ctrl(bconf->bl_pwm, 1);
+			bl_pwm_pinmux_set(bconf, 1);
 		} else {
 			/* step 1: power on pwm */
 			bl_pwm_ctrl(bconf->bl_pwm, 1);
+			bl_pwm_pinmux_set(bconf, 1);
 			if (bconf->pwm_on_delay > 0)
 				msleep(bconf->pwm_on_delay);
 			/* step 2: power on enable */
@@ -696,10 +717,12 @@ static void bl_power_on(void)
 			/* step 2: power on pwm_combo */
 			bl_pwm_ctrl(bconf->bl_pwm_combo0, 1);
 			bl_pwm_ctrl(bconf->bl_pwm_combo1, 1);
+			bl_pwm_pinmux_set(bconf, 1);
 		} else {
 			/* step 1: power on pwm_combo */
 			bl_pwm_ctrl(bconf->bl_pwm_combo0, 1);
 			bl_pwm_ctrl(bconf->bl_pwm_combo1, 1);
+			bl_pwm_pinmux_set(bconf, 1);
 			if (bconf->pwm_on_delay > 0)
 				msleep(bconf->pwm_on_delay);
 			/* step 2: power on enable */
@@ -809,6 +832,7 @@ static void bl_power_off(void)
 	case BL_CTRL_PWM:
 		if (bconf->en_sequence_reverse) {
 			/* step 1: power off pwm */
+			bl_pwm_pinmux_set(bconf, 0);
 			bl_pwm_ctrl(bconf->bl_pwm, 0);
 			if (bconf->pwm_off_delay > 0)
 				msleep(bconf->pwm_off_delay);
@@ -820,12 +844,14 @@ static void bl_power_off(void)
 			/* step 2: power off pwm */
 			if (bconf->pwm_off_delay > 0)
 				msleep(bconf->pwm_off_delay);
+			bl_pwm_pinmux_set(bconf, 0);
 			bl_pwm_ctrl(bconf->bl_pwm, 0);
 		}
 		break;
 	case BL_CTRL_PWM_COMBO:
 		if (bconf->en_sequence_reverse) {
 			/* step 1: power off pwm_combo */
+			bl_pwm_pinmux_set(bconf, 0);
 			bl_pwm_ctrl(bconf->bl_pwm_combo0, 0);
 			bl_pwm_ctrl(bconf->bl_pwm_combo1, 0);
 			if (bconf->pwm_off_delay > 0)
@@ -838,6 +864,7 @@ static void bl_power_off(void)
 			/* step 2: power off pwm_combo */
 			if (bconf->pwm_off_delay > 0)
 				msleep(bconf->pwm_off_delay);
+			bl_pwm_pinmux_set(bconf, 0);
 			bl_pwm_ctrl(bconf->bl_pwm_combo0, 0);
 			bl_pwm_ctrl(bconf->bl_pwm_combo1, 0);
 		}
@@ -2136,7 +2163,6 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 	case BL_CTRL_PWM:
 	case BL_CTRL_PWM_COMBO:
 		ret = aml_bl_pwm_channel_register(bconf, pdev->dev.of_node);
-		bl_pwm_pinmux_set(bconf);
 		break;
 #ifdef CONFIG_AMLOGIC_BL_EXTERN
 	case BL_CTRL_EXTERN:
@@ -3259,6 +3285,8 @@ static void aml_bl_init_status_update(void)
 		aml_bl_set_level(bl_on_level);
 	else
 		aml_bl_update_status(bl_drv->bldev);
+
+	bl_pwm_pinmux_set(bl_drv->bconf, 1);
 }
 
 static int aml_bl_probe(struct platform_device *pdev)
@@ -3266,7 +3294,6 @@ static int aml_bl_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct backlight_properties props;
 	struct backlight_device *bldev;
-	struct bl_config_s *bconf;
 	int ret;
 
 #ifdef AML_BACKLIGHT_DEBUG
@@ -3298,18 +3325,17 @@ static int aml_bl_probe(struct platform_device *pdev)
 		bl_drv->data->chip_type,
 		bl_drv->data->chip_name);
 
-	bconf = &bl_config;
 	bl_drv->dev = &pdev->dev;
-	bl_drv->bconf = bconf;
-	ret = aml_bl_config_load(bconf, pdev);
+	bl_drv->bconf = &bl_config;
+	ret = aml_bl_config_load(bl_drv->bconf, pdev);
 	if (ret)
 		goto err;
 
 	memset(&props, 0, sizeof(struct backlight_properties));
 	props.type = BACKLIGHT_RAW;
 	props.power = FB_BLANK_UNBLANK; /* full on */
-	props.max_brightness = (bconf->level_max > 0 ?
-			bconf->level_max : BL_LEVEL_MAX);
+	props.max_brightness = (bl_drv->bconf->level_max > 0 ?
+			bl_drv->bconf->level_max : BL_LEVEL_MAX);
 	props.brightness = bl_on_level;
 
 	bldev = backlight_device_register(AML_BL_NAME, &pdev->dev,

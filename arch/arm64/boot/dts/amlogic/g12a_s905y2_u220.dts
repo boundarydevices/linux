@@ -19,7 +19,6 @@
 
 #include "mesong12a.dtsi"
 #include "partition_mbox_normal.dtsi"
-#include "mesong12a_skt-panel.dtsi"
 
 / {
 	model = "Amlogic";

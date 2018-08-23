@@ -236,9 +236,9 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *init_table,
 				if (init_table[i+cmd_size+1] > 0)
 					mdelay(init_table[i+cmd_size+1]);
 			} else {
-				EXTERR("%s(%d: %s): type %d invalid\n",
-					__func__, ext_config->index,
-					ext_config->name, ext_config->type);
+				EXTERR("%s: %s(%d): type %d invalid\n",
+					__func__, ext_config->name,
+					ext_config->index, ext_config->type);
 			}
 			i += (cmd_size + 2);
 			step++;
@@ -289,18 +289,18 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *init_table,
 				if (init_table[i+cmd_size+1] > 0)
 					mdelay(init_table[i+cmd_size+1]);
 			} else {
-				EXTERR("%s(%d: %s): type %d invalid\n",
-					__func__, ext_config->index,
-					ext_config->name, ext_config->type);
+				EXTERR("%s: %s(%d): type %d invalid\n",
+					__func__, ext_config->name,
+					ext_config->index, ext_config->type);
 			}
 			i += (cmd_size + 2);
 			step++;
 		}
 		break;
 	default:
-		EXTERR("%s(%d: %s): extern_type %d is not support\n",
-			__func__, ext_config->index,
-			ext_config->name, ext_config->type);
+		EXTERR("%s: %s(%d): extern_type %d is not support\n",
+			__func__, ext_config->name,
+			ext_config->index, ext_config->type);
 		break;
 	}
 
@@ -351,9 +351,9 @@ static int lcd_extern_power_cmd_fixed_size(unsigned char *init_table, int flag)
 				ret = lcd_extern_i2c_write(i2c1_dev->client,
 					&init_table[i+1], (cmd_size-2));
 			} else {
-				EXTERR("%s(%d: %s): type %d invalid\n",
-					__func__, ext_config->index,
-					ext_config->name, ext_config->type);
+				EXTERR("%s: %s(%d): type %d invalid\n",
+					__func__, ext_config->name,
+					ext_config->index, ext_config->type);
 			}
 			if (init_table[i+cmd_size-1] > 0)
 				mdelay(init_table[i+cmd_size-1]);
@@ -381,9 +381,9 @@ static int lcd_extern_power_cmd_fixed_size(unsigned char *init_table, int flag)
 				ret = lcd_extern_spi_write(&init_table[i+1],
 					(cmd_size-2));
 			} else {
-				EXTERR("%s(%d: %s): type %d invalid\n",
-					__func__, ext_config->index,
-					ext_config->name, ext_config->type);
+				EXTERR("%s: %s(%d): type %d invalid\n",
+					__func__, ext_config->name,
+					ext_config->index, ext_config->type);
 			}
 			if (init_table[i+cmd_size-1] > 0)
 				mdelay(init_table[i+cmd_size-1]);
@@ -392,20 +392,28 @@ static int lcd_extern_power_cmd_fixed_size(unsigned char *init_table, int flag)
 		}
 		break;
 	default:
-		EXTERR("%s(%d: %s): extern_type %d is not support\n",
-			__func__, ext_config->index,
-			ext_config->name, ext_config->type);
+		EXTERR("%s: %s(%d): extern_type %d is not support\n",
+			__func__, ext_config->name,
+			ext_config->index, ext_config->type);
 		break;
 	}
 
 	return ret;
 }
 
-static int lcd_extern_power_cmd(unsigned char *init_table, int flag)
+static int lcd_extern_power_ctrl(int flag)
 {
+	unsigned char *init_table;
 	unsigned char cmd_size;
 	int ret = 0;
 
+	if (ext_config->type == LCD_EXTERN_SPI)
+		spi_gpio_init();
+
+	if (flag)
+		init_table = ext_config->table_init_on;
+	else
+		init_table = ext_config->table_init_off;
 	cmd_size = ext_config->cmd_size;
 	if (cmd_size < 1) {
 		EXTERR("%s: cmd_size %d is invalid\n", __func__, cmd_size);
@@ -421,26 +429,11 @@ static int lcd_extern_power_cmd(unsigned char *init_table, int flag)
 	else
 		ret = lcd_extern_power_cmd_fixed_size(init_table, flag);
 
-	return ret;
-}
-
-static int lcd_extern_power_ctrl(int flag)
-{
-	int ret = 0;
-
-	if (ext_config->type == LCD_EXTERN_SPI)
-		spi_gpio_init();
-
-	if (flag)
-		ret = lcd_extern_power_cmd(ext_config->table_init_on, 1);
-	else
-		ret = lcd_extern_power_cmd(ext_config->table_init_off, 0);
-
 	if (ext_config->type == LCD_EXTERN_SPI)
 		spi_gpio_off();
 
-	EXTPR("%s(%d: %s): %d\n",
-		__func__, ext_config->index, ext_config->name, flag);
+	EXTPR("%s: %s(%d): %d\n",
+		__func__, ext_config->name, ext_config->index, flag);
 	return ret;
 }
 

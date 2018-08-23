@@ -306,51 +306,44 @@ void ldim_pwm_off(struct bl_pwm_config_s *bl_pwm)
 static char *ldim_pinmux_str[] = {
 	"ldim_pwm",               /* 0 */
 	"ldim_pwm_vs",            /* 1 */
+	"ldim_pwm_off",            /* 1 */
 	"none",
 };
 
-/* set ldim pwm_vs */
-static int ldim_pwm_pinmux_ctrl(char *pin_str)
+static int ldim_pwm_pinmux_ctrl(int status)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 	struct bl_pwm_config_s *bl_pwm;
-	int ret = 0;
+	int ret = 0, index = 0xff;
 
-	if (strcmp(pin_str, "invalid") == 0)
+	if (strcmp(ldim_drv->ldev_conf->pinmux_name, "invalid") == 0)
 		return 0;
 
 	bl_pwm = &ldim_drv->ldev_conf->pwm_config;
 	if (bl_pwm->pwm_port >= BL_PWM_MAX)
 		return 0;
 
-	ldim_set_duty_pwm(bl_pwm);
+	if (bl_pwm->pwm_port == BL_PWM_VS)
+		index = (status) ? 1 : 2;
+	else
+		index = (status) ? 0 : 2;
 
-	if (ldim_drv->pinmux_flag)
+	if (ldim_drv->pinmux_flag == index) {
+		LDIMPR("pinmux %s is already selected\n",
+			ldim_pinmux_str[index]);
 		return 0;
+	}
 
 	/* request pwm pinmux */
-	if (bl_pwm->pwm_port == BL_PWM_VS) {
-		ldim_drv->pin = devm_pinctrl_get_select(ldim_drv->dev,
-			ldim_pinmux_str[1]);
-		if (IS_ERR(ldim_drv->pin)) {
-			LDIMERR("set %s pinmux error\n",
-				ldim_pinmux_str[1]);
-		} else {
-			LDIMPR("request %s pinmux: %p\n",
-				ldim_pinmux_str[1], ldim_drv->pin);
-		}
+	ldim_drv->pin = devm_pinctrl_get_select(ldim_drv->dev,
+		ldim_pinmux_str[index]);
+	if (IS_ERR(ldim_drv->pin)) {
+		LDIMERR("set pinmux %s error\n", ldim_pinmux_str[index]);
 	} else {
-		ldim_drv->pin = devm_pinctrl_get_select(ldim_drv->dev,
-			ldim_pinmux_str[0]);
-		if (IS_ERR(ldim_drv->pin)) {
-			LDIMERR("set %s pinmux error\n",
-				ldim_pinmux_str[0]);
-		} else {
-			LDIMPR("request %s pinmux: %p\n",
-				ldim_pinmux_str[0], ldim_drv->pin);
-		}
+		LDIMPR("set pinmux %s: %p\n",
+			ldim_pinmux_str[index], ldim_drv->pin);
 	}
-	ldim_drv->pinmux_flag = 1;
+	ldim_drv->pinmux_flag = index;
 
 	return ret;
 }
@@ -498,6 +491,10 @@ static void ldim_config_print(void)
 				break;
 			}
 		}
+		pr_info("pinmux_flag:        %d\n"
+			"pinmux_pointer:     0x%p\n",
+			ldim_drv->pinmux_flag,
+			ldim_drv->pin);
 	} else {
 		pr_info("device config is null\n");
 	}
@@ -607,9 +604,10 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 	ret = of_property_read_string(child, "ldim_pwm_pinmux_sel", &str);
 	if (ret) {
 		LDIMERR("failed to get ldim_pwm_name\n");
-		str = "invalid";
+		strcpy(ldim_dev_config.pinmux_name, "invalid");
+	} else {
+		strcpy(ldim_dev_config.pinmux_name, str);
 	}
-	strcpy(ldim_dev_config.pinmux_name, str);
 
 	ret = of_property_read_string(child, "ldim_pwm_port", &str);
 	if (ret) {

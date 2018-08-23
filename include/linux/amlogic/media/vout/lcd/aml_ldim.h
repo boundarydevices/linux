@@ -120,7 +120,7 @@ struct aml_ldim_driver_s {
 	int (*power_on)(void);
 	int (*power_off)(void);
 	int (*set_level)(unsigned int level);
-	int (*pinmux_ctrl)(char *pin_str);
+	int (*pinmux_ctrl)(int status);
 	int (*pwm_vs_update)(void);
 	int (*device_power_on)(void);
 	int (*device_power_off)(void);

@@ -48,7 +48,8 @@ static int ob3350_hw_init_on(void)
 		ldim_drv->ldev_conf->en_gpio_on);
 	mdelay(2);
 
-	ldim_drv->pinmux_ctrl(ldim_drv->ldev_conf->pinmux_name);
+	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));
+	ldim_drv->pinmux_ctrl(1);
 	mdelay(20);
 
 	return 0;
@@ -60,6 +61,7 @@ static int ob3350_hw_init_off(void)
 
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
 		ldim_drv->ldev_conf->en_gpio_off);
+	ldim_drv->pinmux_ctrl(0);
 	ldim_pwm_off(&(ldim_drv->ldev_conf->pwm_config));
 
 	return 0;

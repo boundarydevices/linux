@@ -18,15 +18,29 @@
 #ifndef _BL_EXTERN_H_
 #define _BL_EXTERN_H_
 #include <linux/of.h>
+#include <linux/i2c.h>
 #include <linux/platform_device.h>
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/pinctrl/consumer.h>
-#include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 
+extern unsigned int bl_debug_print_flag;
 #define BLEX(fmt, args...)     pr_info("bl extern: "fmt"", ## args)
-#define BLEXERR(fmt, args...)    pr_err("bl extern: error: "fmt"", ## args)
+#define BLEXERR(fmt, args...)  pr_err("bl extern: error: "fmt"", ## args)
 
-#define BL_EXTERN_DRIVER		"bl_extern"
+#define BL_EXTERN_DRIVER	"bl_extern"
+
+struct aml_bl_extern_i2c_dev_s {
+	char name[20];
+	struct i2c_client *client;
+};
+
+extern struct aml_bl_extern_i2c_dev_s *aml_bl_extern_i2c_get_dev(void);
+
+extern int bl_extern_i2c_write(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len);
+extern int bl_extern_i2c_read(struct i2c_client *i2client,
+		unsigned char *buff, unsigned int len);
+
 
 #ifdef CONFIG_AMLOGIC_BL_EXTERN_I2C_LP8556
 extern int i2c_lp8556_probe(void);

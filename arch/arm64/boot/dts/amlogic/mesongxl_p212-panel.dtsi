@@ -31,6 +31,30 @@
 		interrupts = <0 3 1>;
 		interrupt-names = "vsync";
 		pinctrl_version = <1>; /* for uboot */
+		pinctrl-names = "ttl_6bit_hvsync_de_on",
+			"ttl_6bit_hvsync_on",
+			"ttl_6bit_de_on",
+			"ttl_6bit_hvsync_de_off",
+			"ttl_8bit_hvsync_de_on",
+			"ttl_8bit_hvsync_on",
+			"ttl_8bit_de_on",
+			"ttl_8bit_hvsync_de_off";
+		pinctrl-0 = <&lcd_ttl_rgb_6bit_on_pins
+			&lcd_ttl_de_hvsync_on_pins>;
+		pinctrl-1 = <&lcd_ttl_rgb_6bit_on_pins
+			&lcd_ttl_hvsync_on_pins>;
+		pinctrl-2 = <&lcd_ttl_rgb_6bit_on_pins
+			&lcd_ttl_de_on_pins>;
+		pinctrl-3 = <&lcd_ttl_rgb_6bit_off_pins
+			&lcd_ttl_de_hvsync_off_pins>;
+		pinctrl-4 = <&lcd_ttl_rgb_8bit_on_pins
+			&lcd_ttl_de_hvsync_on_pins>;
+		pinctrl-5 = <&lcd_ttl_rgb_8bit_on_pins
+			&lcd_ttl_hvsync_on_pins>;
+		pinctrl-6 = <&lcd_ttl_rgb_8bit_on_pins
+			&lcd_ttl_de_on_pins>;
+		pinctrl-7 = <&lcd_ttl_rgb_8bit_off_pins
+			&lcd_ttl_de_hvsync_off_pins>;
 
 		/* power type:
 		 *    (0=cpu_gpio, 1=pmu_gpio, 2=signal,3=extern, 0xff=ending)
@@ -39,7 +63,7 @@
 		 * power value:(0=output low, 1=output high, 2=input)
 		 * power delay:(unit in ms)
 		 */
-		/*lcd_cpu-gpios = <&gpio GPIOX_3 1>;*/
+		/*lcd_cpu-gpios = <&gpio GPIOX_3 GPIO_ACTIVE_HIGH>;*/
 		/*lcd_cpu_gpio_names = "GPIOX_3";*/
 
 		lcd_0{
@@ -67,6 +91,57 @@
 			power_off_step = <2 0 0 50
 				0xff 0 0 0>; /*ending*/
 			backlight_index = <0xff>;
+		};
+	};
+
+	lcd_extern{
+		compatible = "amlogic, lcd_extern";
+		dev_name = "lcd_extern";
+		status = "disabled";
+		i2c_bus = "i2c_bus_d";
+		key_valid = <0>;
+
+		extern_0{
+			index = <0>;
+			extern_name = "ext_default";
+			status = "disabled";
+			type = <0>; /* 0=i2c, 1=spi, 2=mipi */
+			i2c_address = <0x1c>; /* 7bit i2c address */
+			i2c_second_address = <0xff>; /* 0xff for none */
+			cmd_size = <0xff>; /*0xff for dynamic cmd_size*/
+
+			/* init on/off:
+			 *  fixed cmd_size: (type, value..., delay);
+			 *                  cmd_size include all data.
+			 *  dynamic cmd_size: (type, cmd_size, value..., delay);
+			 *                    cmd_size include value+delay.
+			 */
+			/* type: 0x00=cmd(bit[3:0]=1 for second_addr),
+			 *       0xf0=gpio, 0xff=ending
+			 */
+			/* value: i2c or spi cmd, or gpio index & level,
+			 * fill 0x0 for no use
+			 */
+			/* delay: unit ms */
+			init_on = <0x00 8 0x20 0x01 0x02 0x00 0x40 0xFF 0x00 0
+				0x00 8 0x80 0x02 0x00 0x40 0x62 0x51 0x73 0
+				0x00 8 0x61 0x06 0x00 0x00 0x00 0x00 0x00 0
+				0x00 8 0xC1 0x05 0x0F 0x00 0x08 0x70 0x00 0
+				0x00 8 0x13 0x01 0x00 0x00 0x00 0x00 0x00 0
+				0x00 8 0x3D 0x02 0x01 0x00 0x00 0x00 0x00 0
+				0x00 8 0xED 0x0D 0x01 0x00 0x00 0x00 0x00 0
+				0x00 8 0x23 0x02 0x00 0x00 0x00 0x00 0x00 10
+				0xff 0>; /*ending*/
+			init_off = <0xff 0>; /*ending*/
+		};
+
+		extern_1{
+			index = <1>;
+			extern_name = "i2c_DLPC3439";
+			status = "disabled";
+			type = <0>; /* 0=i2c, 1=spi, 2=mipi */
+			i2c_address = <0x1b>; /* 7bit i2c address */
+			cmd_size = <0xff>; /*0xff for dynamic cmd_size*/
 		};
 	};
 };/* end of panel */

@@ -259,7 +259,7 @@ unsigned int lcd_cpu_gpio_get(unsigned int index)
 	return gpiod_get_value(cpu_gpio->gpio);
 }
 
-const char *lcd_ttl_pinmux_str[] = {
+static char *lcd_ttl_pinmux_str[] = {
 	"ttl_6bit_hvsync_on",      /* 0 */
 	"ttl_6bit_de_on",          /* 1 */
 	"ttl_6bit_hvsync_de_on",   /* 2 */
@@ -274,93 +274,91 @@ void lcd_ttl_pinmux_set(int status)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct lcd_config_s *pconf;
-	unsigned int index, num;
+	unsigned int base, index;
 
 	if (lcd_debug_print_flag)
 		LCDPR("%s: %d\n", __func__, status);
 
 	pconf = lcd_drv->lcd_config;
 	if (pconf->lcd_basic.lcd_bits == 6)
-		index = 0;
+		base = 0;
 	else
-		index = 4;
+		base = 4;
 
 	if (status) {
-		if (pconf->pinmux_flag == 0) {
-			pconf->pinmux_flag = 1;
-			switch (pconf->lcd_control.ttl_config->sync_valid) {
-			case 1: /* hvsync */
-				num = index + 0;
-				break;
-			case 2: /* DE */
-				num = index + 1;
-				break;
-			default:
-			case 3: /* DE + hvsync */
-				num = index + 2;
-				break;
-			}
-		} else {
-			LCDPR("ttl pinmux is already selected\n");
-			return;
+		switch (pconf->lcd_control.ttl_config->sync_valid) {
+		case 1: /* hvsync */
+			index = base + 0;
+			break;
+		case 2: /* DE */
+			index = base + 1;
+			break;
+		default:
+		case 3: /* DE + hvsync */
+			index = base + 2;
+			break;
 		}
 	} else {
-		if (pconf->pinmux_flag) {
-			pconf->pinmux_flag = 0;
-			num = index + 3;
-		} else {
-			LCDPR("ttl pinmux is already released\n");
-			return;
-		}
+		index = base + 3;
+	}
+
+	if (pconf->pinmux_flag == index) {
+		LCDPR("pinmux %s is already selected\n",
+			lcd_ttl_pinmux_str[index]);
+		return;
 	}
 
 	/* request pinmux */
 	pconf->pin = devm_pinctrl_get_select(lcd_drv->dev,
-		lcd_ttl_pinmux_str[num]);
+		lcd_ttl_pinmux_str[index]);
 	if (IS_ERR(pconf->pin))
-		LCDERR("set ttl pinmux error\n");
+		LCDERR("set ttl pinmux %s error\n", lcd_ttl_pinmux_str[index]);
+	else {
+		if (lcd_debug_print_flag) {
+			LCDPR("set ttl pinmux %s: %p\n",
+				lcd_ttl_pinmux_str[index], pconf->pin);
+		}
+	}
+	pconf->pinmux_flag = index;
 }
+
+static char *lcd_vbyone_pinmux_str[] = {
+	"vbyone",
+	"vbyone_off",
+	"none",
+};
 
 /* set VX1_LOCKN && VX1_HTPDN */
 void lcd_vbyone_pinmux_set(int status)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct lcd_config_s *pconf;
+	unsigned int index;
 
 	if (lcd_debug_print_flag)
 		LCDPR("%s: %d\n", __func__, status);
 
-#if 1
 	pconf = lcd_drv->lcd_config;
-	if (status) {
-		if (pconf->pinmux_flag == 0) {
-			pconf->pinmux_flag = 1;
-			/* request pinmux */
-			pconf->pin = devm_pinctrl_get_select(lcd_drv->dev,
-				"vbyone");
-			if (IS_ERR(pconf->pin))
-				LCDERR("set vbyone pinmux error\n");
-		} else {
-			LCDPR("vbyone pinmux is already selected\n");
-		}
+	index = (status) ? 0 : 1;
+
+	if (pconf->pinmux_flag == index) {
+		LCDPR("pinmux %s is already selected\n",
+			lcd_vbyone_pinmux_str[index]);
+		return;
+	}
+
+	pconf->pin = devm_pinctrl_get_select(lcd_drv->dev,
+		lcd_vbyone_pinmux_str[index]);
+	if (IS_ERR(pconf->pin)) {
+		LCDERR("set vbyone pinmux %s error\n",
+			lcd_vbyone_pinmux_str[index]);
 	} else {
-		if (pconf->pinmux_flag) {
-			pconf->pinmux_flag = 0;
-			/* release pinmux */
-			devm_pinctrl_put(pconf->pin);
-		} else {
-			LCDPR("vbyone pinmux is already released\n");
+		if (lcd_debug_print_flag) {
+			LCDPR("set vbyone pinmux %s: %p\n",
+				lcd_vbyone_pinmux_str[index], pconf->pin);
 		}
 	}
-#else
-	if (status) {
-		lcd_pinmux_clr_mask(7,
-			((1 << 1) | (1 << 2) | (1 << 9) | (1 << 10)));
-		lcd_pinmux_set_mask(7, ((1 << 11) | (1 << 12)));
-	} else {
-		lcd_pinmux_clr_mask(7, ((1 << 11) | (1 << 12)));
-	}
-#endif
+	pconf->pinmux_flag = index;
 }
 
 unsigned int lcd_lvds_channel_on_value(struct lcd_config_s *pconf)

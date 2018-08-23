@@ -225,7 +225,8 @@ static int iw7027_hw_init_on(void)
 	iw7027_power_on_init(IW7027_POWER_ON);
 
 	/* step 5: supply stable vsync */
-	ldim_drv->pinmux_ctrl(ldim_drv->ldev_conf->pinmux_name);
+	ldim_set_duty_pwm(&(ldim_drv->ldev_conf->pwm_config));
+	ldim_drv->pinmux_ctrl(1);
 
 	/* step 6: delay for system clock and light bar PSU stable */
 	msleep(520);
@@ -265,6 +266,7 @@ static int iw7027_hw_init_off(void)
 
 	ldim_gpio_set(ldim_drv->ldev_conf->en_gpio,
 		ldim_drv->ldev_conf->en_gpio_off);
+	ldim_drv->pinmux_ctrl(0);
 	ldim_pwm_off(&(ldim_drv->ldev_conf->pwm_config));
 
 	return 0;
