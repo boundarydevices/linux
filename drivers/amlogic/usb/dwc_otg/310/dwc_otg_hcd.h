@@ -680,7 +680,11 @@ static inline void dwc_otg_hcd_qtd_remove_and_free(dwc_otg_hcd_t *hcd,
 	dwc_otg_hcd_urb_t *urb;
 	int pipe_type;
 
+	if (!qtd)
+		return;
 	urb = qtd->urb;
+	if (!urb)
+		return;
 	pipe_type = dwc_otg_hcd_get_pipe_type(&urb->pipe_info);
 	dwc_otg_hcd_qtd_remove(hcd, qtd, qh);
 	dwc_otg_hcd_qtd_free(qtd);

@@ -1094,12 +1094,14 @@ static int dwc_otg_driver_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "missing memory resource\n");
+		DWC_FREE(dwc_otg_device);
 		return -ENODEV;
 	}
 
 	ctrl_reg_addr = devm_ioremap_nocache(&pdev->dev, res->start, resource_size(res));
 	if (!ctrl_reg_addr) {
 		dev_err(&pdev->dev, "ioremap failed\n");
+		DWC_FREE(dwc_otg_device);
 		return -ENOMEM;
 	}
 
@@ -1139,6 +1141,7 @@ static int dwc_otg_driver_probe(struct platform_device *pdev)
 	if (clk_enable_usb(pdev, s_clock_name,
 		(unsigned long)phy_reg_addr, cpu_type, controller_type)) {
 		dev_err(&pdev->dev, "Set dwc_otg PHY clock failed!\n");
+		DWC_FREE(dwc_otg_device);
 		return -ENODEV;
 	}
 
@@ -1431,8 +1434,11 @@ static int dwc2_suspend(struct device *dev)
 	const char *cpu_type = NULL;
 
 	s_clock_name = of_get_property(pdev->dev.of_node, "clock-src", NULL);
+	if (!s_clock_name)
+		return 0;
 	cpu_type = of_get_property(pdev->dev.of_node, "cpu-type", NULL);
-
+	if (!cpu_type)
+		return 0;
 	clk_suspend_usb(pdev, s_clock_name,
 			(unsigned long)(g_dwc_otg_device[pdev->id]->
 				core_if->usb_peri_reg), cpu_type);
@@ -1447,8 +1453,11 @@ static int dwc2_resume(struct device *dev)
 	const char *cpu_type = NULL;
 
 	s_clock_name = of_get_property(pdev->dev.of_node, "clock-src", NULL);
+	if (!s_clock_name)
+		return 0;
 	cpu_type = of_get_property(pdev->dev.of_node, "cpu-type", NULL);
-
+	if (!cpu_type)
+		return 0;
 	clk_resume_usb(pdev, s_clock_name,
 			(unsigned long)(g_dwc_otg_device[pdev->id]->
 				core_if->usb_peri_reg), cpu_type);

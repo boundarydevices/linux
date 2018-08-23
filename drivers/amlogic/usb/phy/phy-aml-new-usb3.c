@@ -75,10 +75,10 @@ static void set_usb_vbus_power
 {
 	if (is_power_on)
 		/*set vbus on by gpio*/
-		gpiod_direction_output(usb_gd, is_power_on);
+		gpiod_direction_output(usb_gd, 1);
 	else
 		/*set vbus off by gpio first*/
-		gpiod_direction_output(usb_gd, is_power_on);
+		gpiod_direction_output(usb_gd, 0);
 }
 
 static void amlogic_new_set_vbus_power

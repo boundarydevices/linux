@@ -890,7 +890,7 @@ static int32_t dwc_otg_handle_pwrdn_session_change(dwc_otg_core_if_t *core_if)
 			return 1;
 		}
 
-		if ((otg_cap_param != DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE ||
+		if ((otg_cap_param != DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE &&
 			 otg_cap_param != DWC_OTG_CAP_PARAM_SRP_ONLY_CAPABLE) &&
 			gpwrdn.b.bsessvld == 0) {
 			/* Save gpwrdn register for further usage if stschng interrupt */
@@ -977,7 +977,7 @@ static int32_t dwc_otg_handle_pwrdn_session_change(dwc_otg_core_if_t *core_if)
  */
 static uint32_t dwc_otg_handle_pwrdn_stschng_intr(dwc_otg_device_t *otg_dev)
 {
-	int retval;
+	int retval = 0;
 	gpwrdn_data_t gpwrdn = {.d32 = 0 };
 	gpwrdn_data_t gpwrdn_temp = {.d32 = 0 };
 	dwc_otg_core_if_t *core_if = otg_dev->core_if;
@@ -1693,12 +1693,12 @@ int32_t dwc_otg_handle_common_intr(void *dev)
 					/* The core will be in ON STATE */
 					core_if->lx_state = DWC_OTG_L0;
 					core_if->xhib = 0;
-
-					DWC_SPINUNLOCK(core_if->lock);
+					if (core_if->lock)
+						DWC_SPINUNLOCK(core_if->lock);
 					if (core_if->pcd_cb && core_if->pcd_cb->resume_wakeup)
 						core_if->pcd_cb->resume_wakeup(core_if->pcd_cb_p);
-
-					DWC_SPINLOCK(core_if->lock);
+					if (core_if->lock)
+						DWC_SPINLOCK(core_if->lock);
 				}
 
 			gintsts.b.restoredone = 1;

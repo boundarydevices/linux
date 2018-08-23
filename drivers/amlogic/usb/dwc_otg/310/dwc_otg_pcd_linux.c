@@ -364,10 +364,11 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 	usb_req->actual = 0;
 
 	ep = ep_from_handle(pcd, usb_ep);
-	if (ep == NULL)
+	if (ep == NULL) {
 		is_isoc_ep = 0;
-	else
-		is_isoc_ep = (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) ? 1 : 0;
+		return -EINVAL;
+	}
+	is_isoc_ep = (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) ? 1 : 0;
 
 	if (GET_CORE_IF(pcd)->dma_enable) {
 		struct device *dev = &gadget_wrapper->pcd->otg_dev->os_dep.pldev->dev;

@@ -673,8 +673,11 @@ static ssize_t peri_sleepm_store(struct device *_dev,
 	uint32_t in = simple_strtoul(buf, NULL, 16);
 
 	s_clock_name = of_get_property(pdev->dev.of_node, "clock-src", NULL);
+	if (!s_clock_name)
+		return 0;
 	cpu_type = of_get_property(pdev->dev.of_node, "cpu-type", NULL);
-
+	if (!cpu_type)
+		return 0;
 	if (!in) {
 		clk_resume_usb(pdev, s_clock_name,
 			(unsigned long)(otg_dev->core_if->usb_peri_reg),

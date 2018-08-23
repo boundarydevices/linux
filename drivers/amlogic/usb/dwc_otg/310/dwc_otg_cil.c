@@ -1062,8 +1062,7 @@ int restore_essential_regs(dwc_otg_core_if_t *core_if, int rmode, int is_host)
 				hcfg.d32);
 
 		/* Load restore values for [31:14] bits */
-		pcgcctl.d32 = gr->pcgcctl_local & 0xffffc000;
-		pcgcctl.d32 = gr->pcgcctl_local | 0x00020000;
+		pcgcctl.d32 = ((gr->pcgcctl_local & 0xffffc000) | 0x00020000);
 
 		if (rmode)
 			pcgcctl.b.restoremode = 1;
@@ -1071,8 +1070,7 @@ int restore_essential_regs(dwc_otg_core_if_t *core_if, int rmode, int is_host)
 		dwc_udelay(10);
 
 		/* Load restore values for [31:14] bits and set EssRegRestored bit */
-		pcgcctl.d32 = gr->pcgcctl_local | 0xffffc000;
-		pcgcctl.d32 = gr->pcgcctl_local & 0xffffc000;
+		pcgcctl.d32 = ((gr->pcgcctl_local | 0xffffc000) & 0xffffc000);
 		pcgcctl.b.ess_reg_restored = 1;
 		if (rmode)
 			pcgcctl.b.restoremode = 1;
@@ -1083,8 +1081,7 @@ int restore_essential_regs(dwc_otg_core_if_t *core_if, int rmode, int is_host)
 		DWC_WRITE_REG32(&core_if->dev_if->dev_global_regs->dcfg, dcfg.d32);
 
 		/* Load restore values for [31:14] bits */
-		pcgcctl.d32 = gr->pcgcctl_local & 0xffffc000;
-		pcgcctl.d32 = gr->pcgcctl_local | 0x00020000;
+		pcgcctl.d32 = ((gr->pcgcctl_local & 0xffffc000) | 0x00020000);
 		if (!rmode)
 			pcgcctl.d32 |= 0x208;
 
@@ -1092,8 +1089,7 @@ int restore_essential_regs(dwc_otg_core_if_t *core_if, int rmode, int is_host)
 		dwc_udelay(10);
 
 		/* Load restore values for [31:14] bits */
-		pcgcctl.d32 = gr->pcgcctl_local & 0xffffc000;
-		pcgcctl.d32 = gr->pcgcctl_local | 0x00020000;
+		pcgcctl.d32 = ((gr->pcgcctl_local & 0xffffc000) | 0x00020000);
 		pcgcctl.b.ess_reg_restored = 1;
 		if (!rmode)
 			pcgcctl.d32 |= 0x208;
@@ -2700,6 +2696,8 @@ void hc_xfer_timeout(void *ptr)
 	if (ptr)
 		xfer_info = (hc_xfer_info_t *) ptr;
 
+	if (!xfer_info)
+		return;
 	if (!xfer_info->hc) {
 		DWC_ERROR("xfer_info->hc = %p\n", xfer_info->hc);
 		return;
@@ -2728,6 +2726,8 @@ void ep_xfer_timeout(void *ptr)
 	if (ptr)
 		xfer_info = (ep_xfer_info_t *) ptr;
 
+	if (!xfer_info)
+		return;
 	if (!xfer_info->ep) {
 		DWC_ERROR("xfer_info->ep = %p\n", xfer_info->ep);
 		return;
@@ -3364,10 +3364,7 @@ void dwc_otg_ep_activate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 		depctl.b.eptype = ep->type;
 		depctl.b.txfnum = ep->tx_fifo_num;
 
-		if (ep->type == DWC_OTG_EP_TYPE_ISOC)
-			depctl.b.setd0pid = 1;
-		else
-			depctl.b.setd0pid = 1;
+		depctl.b.setd0pid = 1;
 
 		depctl.b.usbactep = 1;
 
@@ -7129,7 +7126,7 @@ void dwc_otg_set_hirdthresh(dwc_otg_core_if_t *core_if, uint32_t val)
 {
 	glpmcfg_data_t lpmcfg;
 
-	if (DWC_OTG_PARAM_TEST(val, 0, 15)) {
+	if (val > 15) {
 		DWC_WARN("Wrong valaue for hird_thres\n");
 		DWC_WARN("hird_thres must be 0-f\n");
 		return ;

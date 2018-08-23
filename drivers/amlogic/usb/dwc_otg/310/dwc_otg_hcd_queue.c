@@ -88,7 +88,7 @@ void dwc_otg_hcd_qh_free(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 
 static uint32_t calc_bus_time(int speed, int is_in, int is_isoc, int bytecount)
 {
-	unsigned long retval;
+	long retval;
 
 	switch (speed) {
 	case USB_SPEED_HIGH:
@@ -138,6 +138,7 @@ static uint32_t calc_bus_time(int speed, int is_in, int is_isoc, int bytecount)
 	default:
 		DWC_WARN("Unknown device speed\n");
 		retval = -1;
+		return retval;
 	}
 
 	return DWC_NS_TO_US(retval);

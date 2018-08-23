@@ -200,7 +200,7 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	int portnum = 0;
 	const void *prop;
 	int i = 0;
-	u32 retval;
+	int retval;
 	u32 pll_setting[8];
 
 	prop = of_get_property(dev->of_node, "portnum", NULL);

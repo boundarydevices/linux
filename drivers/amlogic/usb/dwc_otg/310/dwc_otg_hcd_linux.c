@@ -344,7 +344,7 @@ int hcd_init(struct platform_device *pdev)
 
 	int retval = 0;
 	int irq = 0;
-
+	int tt = 0;
 	DWC_DEBUGPL(DBG_HCD, "DWC OTG HCD INIT\n");
 
 	/*
@@ -353,14 +353,17 @@ int hcd_init(struct platform_device *pdev)
 	 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 30)
 	hcd = usb_create_hcd(&dwc_otg_hc_driver, &pdev->dev, pdev->dev.bus_id);
+	tt = 0;
 #else
 	hcd = usb_create_hcd(&dwc_otg_hc_driver, &pdev->dev, dev_name(&pdev->dev));
-	hcd->has_tt = 1;
+	tt = 1;
 #endif
 	if (!hcd) {
 		retval = -ENOMEM;
 		goto error1;
 	}
+	hcd->has_tt = tt;
+
 	hcd->regs = otg_dev->os_dep.base;
 	set_bit(HCD_FLAG_DWC_OTG, &hcd->flags);
 
@@ -569,9 +572,6 @@ static void dump_urb_info(struct urb *urb, char *fn_name)
 		case PIPE_ISOCHRONOUS:
 			pipetype = "ISOCHRONOUS";
 			break;
-		default:
-			pipetype = "UNKNOWN";
-			break;
 		};
 		pipetype;
 	}));
@@ -676,8 +676,6 @@ static int urb_enqueue(struct usb_hcd *hcd,
 	case PIPE_INTERRUPT:
 		ep_type = USB_ENDPOINT_XFER_INT;
 		break;
-	default:
-		DWC_WARN("Wrong ep type\n");
 	}
 
 	dwc_otg_urb = dwc_otg_hcd_urb_alloc(dwc_otg_hcd,
