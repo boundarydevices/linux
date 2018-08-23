@@ -154,7 +154,7 @@ static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-int do_mute(struct gpio_desc *gd, int mute)
+static int do_mute(struct gpio_desc *gd, int mute)
 {
 	if (!gd)
 		return 0;
