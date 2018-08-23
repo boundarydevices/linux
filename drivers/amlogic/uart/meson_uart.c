@@ -1240,8 +1240,10 @@ static int __init meson_uart_init(void)
 		return ret;
 
 	ret = platform_driver_register(&meson_uart_platform_driver);
-	if (ret)
+	if (ret) {
 		uart_unregister_driver(&meson_uart_driver);
+		return ret;
+	}
 
 	ret = driver_create_file(&meson_uart_platform_driver.driver,
 		&driver_attr_printkmode);
