@@ -2241,23 +2241,23 @@ void rx_main_state_machine(void)
 			rx.aud_sr_unstable_cnt++;
 			if (rx.aud_sr_unstable_cnt > aud_sr_stb_max) {
 				unsigned int aud_sts = rx_get_aud_pll_err_sts();
-
 				if (aud_sts == E_REQUESTCLK_ERR) {
 					hdmirx_phy_init();
 					rx.state = FSM_WAIT_CLK_STABLE;
 					rx.pre_state = FSM_SIG_READY;
-					if (log_level & ERR_LOG)
-						rx_pr("reqclk err->wait_clk\n");
-				} else if (aud_sts == E_PLLRATE_CHG) {
+					rx_pr("reqclk err->wait_clk\n");
+				} else if (aud_sts == E_PLLRATE_CHG)
 					rx_aud_pll_ctl(1);
-					if (log_level & ERR_LOG)
-						rx_pr("pllrate err\n");
+				else if (aud_sts == E_AUDCLK_ERR) {
+					rx_audio_bandgap_rst();
+					rx.aud_sr_stable_cnt = 0;
 				} else {
 					rx_acr_info_sw_update();
 					rx_audio_pll_sw_update();
-					if (log_level & ERR_LOG)
+					if (log_level & AUDIO_LOG)
 						rx_pr("update audio-err\n");
 				}
+
 				rx.aud_sr_unstable_cnt = 0;
 			}
 		} else
@@ -2592,14 +2592,16 @@ void rx_main_state_machine(void)
 			rx.aud_sr_unstable_cnt++;
 			if (rx.aud_sr_unstable_cnt > aud_sr_stb_max) {
 				aud_pll_sts = rx_get_aud_pll_err_sts();
-				if (aud_pll_sts > E_AUDPLL_OK) {
-					if (aud_pll_sts == E_REQUESTCLK_ERR) {
-						hdmirx_phy_init();
-						rx.state = FSM_WAIT_CLK_STABLE;
-						rx.pre_state = FSM_SIG_READY;
-						rx_pr("reqclk err->wait_clk\n");
-					} else if (aud_pll_sts == E_PLLRATE_CHG)
-						rx_aud_pll_ctl(1);
+				if (aud_pll_sts == E_REQUESTCLK_ERR) {
+					hdmirx_phy_init();
+					rx.state = FSM_WAIT_CLK_STABLE;
+					rx.pre_state = FSM_SIG_READY;
+					rx_pr("reqclk err->wait_clk\n");
+				} else if (aud_pll_sts == E_PLLRATE_CHG)
+					rx_aud_pll_ctl(1);
+				else if (aud_pll_sts == E_AUDCLK_ERR) {
+					rx_audio_bandgap_rst();
+					rx.aud_sr_stable_cnt = 0;
 				} else {
 					rx_acr_info_sw_update();
 					rx_audio_pll_sw_update();

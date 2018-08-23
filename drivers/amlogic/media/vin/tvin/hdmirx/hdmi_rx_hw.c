@@ -1862,6 +1862,19 @@ void rx_hdcp_init(void)
 		hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, ENCRIPTION_ENABLE, 0);
 }
 
+/* need reset bandgap when
+ * aud_clk=0 & req_clk!=0
+ * according to analog team's request
+ */
+void rx_audio_bandgap_rst(void)
+{
+	vdac_enable(0, 0x10);
+	udelay(20);
+	vdac_enable(1, 0x10);
+	if (log_level & AUDIO_LOG)
+		rx_pr("%s\n", __func__);
+}
+
 void rx_sw_reset(int level)
 {
 	unsigned long data32 = 0;
@@ -2533,6 +2546,7 @@ int rx_get_aud_pll_err_sts(void)
 {
 	int ret = E_AUDPLL_OK;
 	int32_t req_clk = hdmirx_get_mpll_div_clk();
+	int32_t aud_clk = hdmirx_get_audio_clock();
 	uint32_t phy_pll_rate = (hdmirx_rd_phy(PHY_MAINFSM_STATUS1)>>9)&0x3;
 	uint32_t aud_pll_cntl = (rd_reg_hhi(HHI_AUD_PLL_CNTL6)>>28)&0x3;
 
@@ -2546,6 +2560,10 @@ int rx_get_aud_pll_err_sts(void)
 		if (log_level & AUDIO_LOG)
 			rx_pr("pll rate chg,phy=%d,pll=%d\n",
 				phy_pll_rate, aud_pll_cntl);
+	} else if (aud_clk == 0) {
+		ret = E_AUDCLK_ERR;
+		if (log_level & AUDIO_LOG)
+			rx_pr("aud_clk=0\n");
 	}
 
 	return ret;

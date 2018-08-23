@@ -100,6 +100,7 @@ enum aud_clk_err_e {
 	E_AUDPLL_OK,
 	E_REQUESTCLK_ERR,
 	E_PLLRATE_CHG,
+	E_AUDCLK_ERR,
 };
 
 /* signal */
