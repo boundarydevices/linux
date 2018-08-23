@@ -890,7 +890,7 @@ static ssize_t eth_cali_store(
 		pr_err("Sorry ,this cpu is not support cali!\n");
 		goto end;
 	}
-	for (argc = 0; argc < 6; argc++) {
+	for (argc = 0; argc < 5; argc++) {
 		para = strsep(&p, " ");
 		if (!para)
 			break;

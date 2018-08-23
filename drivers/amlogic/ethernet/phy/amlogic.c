@@ -178,7 +178,7 @@ static int internal_phy_read_status(struct phy_device *phydev)
 		/*read internal phy reg 0x1f*/
 		reg31 = phy_read(phydev, 0x1f);
 		/*bit 12 auto negotiation done*/
-		if (reg31 | 0x1000) {
+		if (reg31 & 0x1000) {
 			phydev->pause = 0;
 			phydev->asym_pause = 0;
 			phydev->speed = SPEED_10;
