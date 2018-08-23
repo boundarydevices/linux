@@ -31,17 +31,18 @@ int32_t amlnf_key_read(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 {
 	struct aml_nand_chip *aml_chip = aml_chip_key;
 	uint8_t *key_ptr = NULL;
-	u32 keysize = aml_chip->keysize - sizeof(u32);
+	u32 keysize = 0;
 	size_t offset = 0;
-	struct mtd_info *mtd = aml_chip->mtd;
+	/*struct mtd_info *mtd = aml_chip->mtd;*/
 
-	*actual_length = keysize;
-
-	if (aml_chip == NULL) {
+	if (aml_chip_key == NULL) {
 		pr_info("%s(): amlnf key not ready yet!",
-			__func__);
+		__func__);
 		return -EFAULT;
 	}
+
+	keysize = aml_chip->keysize - sizeof(u32);
+	*actual_length = keysize;
 
 	if (len > keysize) {
 		/*
@@ -57,7 +58,7 @@ int32_t amlnf_key_read(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 	if (key_ptr == NULL)
 		return -ENOMEM;
 
-	aml_nand_read_key(mtd, offset, key_ptr);
+	aml_nand_read_key(aml_chip->mtd, offset, key_ptr);
 	memcpy(buf, key_ptr, keysize);
 
 	kfree(key_ptr);
@@ -70,16 +71,19 @@ int32_t amlnf_key_read(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 int32_t amlnf_key_write(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 {
 	struct aml_nand_chip *aml_chip = aml_chip_key;
-	struct mtd_info *mtd = aml_chip->mtd;
+	/*struct mtd_info *mtd = aml_chip->mtd;*/
 	uint8_t *key_ptr = NULL;
-	u32 keysize = aml_chip->keysize - sizeof(u32);
+	u32 keysize = 0;
 	int error = 0;
 
-	*actual_length = keysize;
-	if (aml_chip == NULL) {
-		pr_info("%s(): amlnf key not ready yet!", __func__);
+	if (aml_chip_key == NULL) {
+		pr_info("%s(): amlnf key not ready yet!",
+		__func__);
 		return -EFAULT;
 	}
+
+	keysize = aml_chip->keysize - sizeof(u32);
+	*actual_length = keysize;
 
 	if (len > keysize) {
 		/*
@@ -96,7 +100,7 @@ int32_t amlnf_key_write(uint8_t *buf, uint32_t len, uint32_t *actual_length)
 
 	memset(key_ptr, 0, aml_chip->keysize);
 	memcpy(key_ptr, buf, keysize);
-	error = aml_nand_save_key(mtd, key_ptr);
+	error = aml_nand_save_key(aml_chip->mtd, key_ptr);
 
 	kfree(key_ptr);
 	return error;
@@ -127,19 +131,14 @@ int aml_key_init(struct aml_nand_chip *aml_chip)
 
 int aml_nand_update_key(struct aml_nand_chip *aml_chip, char *key_ptr)
 {
-	int malloc_flag = 0;
 	char *key_buf = NULL;
 
-	if (key_buf == NULL) {
-		key_buf = kzalloc(aml_chip->keysize, GFP_KERNEL);
-		malloc_flag = 1;
-		if (key_buf == NULL)
-			return -ENOMEM;
-		memset(key_buf, 0, aml_chip->keysize);
-	} else
-		key_buf = key_ptr;
+	key_buf = kzalloc(aml_chip->keysize, GFP_KERNEL);
+	if (key_buf == NULL)
+		return -ENOMEM;
+	memset(key_buf, 0, aml_chip->keysize);
 
-	if (malloc_flag && (key_buf)) {
+	if (key_buf) {
 		kfree(key_buf);
 		key_buf = NULL;
 	}

@@ -358,25 +358,20 @@ exit_err:
 int aml_nand_update_ubootenv(struct aml_nand_chip *aml_chip, char *env_ptr)
 {
 	int ret = 0;
-	char malloc_flag = 0;
 	char *env_buf = NULL;
 
-	if (env_buf == NULL) {
-		env_buf = kzalloc(CONFIG_ENV_SIZE, GFP_KERNEL);
-		malloc_flag = 1;
-		if (env_buf == NULL)
-			return -ENOMEM;
-		memset(env_buf, 0, CONFIG_ENV_SIZE);
-		ret = amlnand_read_info_by_name_mtd(aml_chip,
-			(u8 *)env_buf,
-			CONFIG_ENV_SIZE);
-		if (ret) {
-			pr_info("read ubootenv error,%s\n", __func__);
-			ret = -EFAULT;
-			goto exit;
-		}
-	} else
-		env_buf = env_ptr;
+	env_buf = kzalloc(CONFIG_ENV_SIZE, GFP_KERNEL);
+	if (env_buf == NULL)
+		return -ENOMEM;
+	memset(env_buf, 0, CONFIG_ENV_SIZE);
+	ret = amlnand_read_info_by_name_mtd(aml_chip,
+		(u8 *)env_buf,
+		CONFIG_ENV_SIZE);
+	if (ret) {
+		pr_info("read ubootenv error,%s\n", __func__);
+		ret = -EFAULT;
+		goto exit;
+	}
 
 	ret = amlnand_save_info_by_name_mtd(aml_chip,
 		(u8 *)env_buf,
@@ -384,7 +379,7 @@ int aml_nand_update_ubootenv(struct aml_nand_chip *aml_chip, char *env_ptr)
 	if (ret < 0)
 		pr_info("aml_nand_update_secure : update secure failed\n");
 exit:
-	if (malloc_flag && (env_buf)) {
+	if (env_buf) {
 		kfree(env_buf);
 		env_buf = NULL;
 	}

@@ -60,6 +60,10 @@ static inline struct aml_nand_device
 		const struct of_device_id *match;
 
 		match = of_match_node(amlogic_nand_dt_match, pdev->dev.of_node);
+		if (!match) {
+			pr_info("%s:%d,no match node\n", __func__, __LINE__);
+			return NULL;
+		}
 		return (struct aml_nand_device *)match->data;
 	}
 	return NULL;

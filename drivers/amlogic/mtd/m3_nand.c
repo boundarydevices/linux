@@ -978,7 +978,7 @@ static int m3_nand_probe(struct aml_nand_platform *plat, unsigned int dev_num)
 
 	err = aml_nand_init(aml_chip);
 	if (err)
-		goto exit_error;
+		goto exit_error1;
 	if (aml_chip->support_new_nand == 1) {
 		nand_type =
 	((aml_chip->new_nand_info.type < 10) && (aml_chip->new_nand_info.type));
@@ -1028,9 +1028,11 @@ static int m3_nand_probe(struct aml_nand_platform *plat, unsigned int dev_num)
 	nand_info[dev_num] = mtd;
 	return 0;
 
-exit_error:
+exit_error1:
 	kfree(aml_chip);
 	mtd->name = NULL;
+
+exit_error:
 	return err;
 }
 

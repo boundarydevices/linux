@@ -131,8 +131,6 @@ int8_t aml_nand_get_20nm_OTP_value(struct aml_nand_chip *aml_chip,
 					check_flag = 1;
 					break;
 				}
-				if (check_flag)
-					break;
 			}
 			if (check_flag)
 				break;
@@ -331,6 +329,7 @@ uint8_t aml_nand_get_reg_value_formOTP_hynix(struct aml_nand_chip *aml_chip,
 	}
 	aml_chip->aml_nand_wait_devready(aml_chip, chipnr);
 
+	kfree(one_copy_buf);
 	return check_flag;
 }
 
@@ -453,7 +452,7 @@ int aml_nand_slcprog_1ynm_hynix(struct mtd_info *mtd,
 		aml_oob_ops.ooboffs = 0;/*fixme! all layout offs is zero*/
 		aml_oob_ops.datbuf = data_buf;
 		aml_oob_ops.oobbuf = oob_buf;
-		op_add = next_msb_page*mtd->writesize;
+		op_add = (loff_t)(next_msb_page*mtd->writesize);
 		mtd->_write_oob(mtd, op_add, &aml_oob_ops);
 		pr_info("Eneter 1y nm SLC mode ,must fill 0xff data into %d\n",
 			next_msb_page);
@@ -465,7 +464,7 @@ int aml_nand_slcprog_1ynm_hynix(struct mtd_info *mtd,
 	aml_oob_ops.ooboffs = 0;/*fixme! all layout offs is zero*/
 	aml_oob_ops.datbuf = buf;
 	aml_oob_ops.oobbuf = oob_buf;
-	op_add = op_page_add*mtd->writesize;
+	op_add = (loff_t)(op_page_add*mtd->writesize);
 	error = mtd->_write_oob(mtd, op_add, &aml_oob_ops);
 	pr_info("Eneter 1y nm SLC mode ,write systerm data into %d\n",
 		op_page_add);
@@ -487,12 +486,12 @@ void aml_nand_read_retry_handle_hynix(struct mtd_info *mtd, int chipnr)
 	int retry_zone, retry_offset;
 	struct new_tech_nand_t *new_nand_info;
 	u8 **def_value, *reg_addr;
-	u8 ***offset_value;
+	char ***offset_value;
 	u8 reg_cnt, retry_cnt;
 
 	new_nand_info = &aml_chip->new_nand_info;
 	retry_cnt = new_nand_info->read_rety_info.retry_cnt;
-	offset_value = (u8 ***)new_nand_info->read_rety_info.reg_offset_value;
+	offset_value = (char ***)new_nand_info->read_rety_info.reg_offset_value;
 	def_value = (u8 **)new_nand_info->read_rety_info.reg_default_value;
 	reg_addr = new_nand_info->read_rety_info.reg_addr;
 	reg_cnt = new_nand_info->read_rety_info.reg_cnt;
@@ -589,13 +588,16 @@ void aml_nand_get_read_default_value_hynix(struct mtd_info *mtd)
 	unsigned char *data_buf;
 	char oob_buf[4];
 	unsigned char page_list[RETRY_NAND_COPY_NUM] = {0x07, 0x0B, 0x0F, 0x13};
-	int nand_type, total_blk, phys_erase_shift = fls(mtd->erasesize) - 1;
+	int nand_type, total_blk, phys_erase_shift = 0;
 	int error = 0, i, j;
 	u8 **def_value, *reg_addr;
 	u8 ***offset_value;
 	u8 reg_cnt, retry_cnt;
 	struct new_tech_nand_t *new_nand_info;
 
+	if (!mtd->erasesize)
+		return;
+	phys_erase_shift = fls(mtd->erasesize) - 1;
 	new_nand_info = &aml_chip->new_nand_info;
 	retry_cnt = new_nand_info->read_rety_info.retry_cnt;
 	offset_value = (u8 ***)new_nand_info->read_rety_info.reg_offset_value;
@@ -731,12 +733,15 @@ void aml_nand_save_read_default_value_hynix(struct mtd_info *mtd)
 	unsigned char *data_buf;
 	char oob_buf[4];
 	unsigned char page_list[RETRY_NAND_COPY_NUM] = {0x07, 0x0B, 0x0F, 0x13};
-	int i, j, total_blk, phys_erase_shift = fls(mtd->erasesize)-1;
+	int i, j, total_blk, phys_erase_shift = 0;
 	int error = 0;
 	struct erase_info erase_info_read;
 	u8 **def_value;
 	u8 reg_cnt;
 
+	if (!mtd->erasesize)
+		return;
+	phys_erase_shift = fls(mtd->erasesize)-1;
 	def_value =
 		(u8 **)aml_chip->new_nand_info.read_rety_info.reg_default_value;
 	reg_cnt = aml_chip->new_nand_info.read_rety_info.reg_cnt;
@@ -834,7 +839,7 @@ void aml_nand_save_read_default_value_hynix(struct mtd_info *mtd)
 			}
 		}
 		if (aml_chip->new_nand_info.type == HYNIX_1YNM_8GB)
-			error = aml_nand_slcprog_1ynm_hynix(mtd,
+			aml_nand_slcprog_1ynm_hynix(mtd,
 				data_buf,
 				(unsigned char *)oob_buf,
 				(addr/mtd->writesize) + i);

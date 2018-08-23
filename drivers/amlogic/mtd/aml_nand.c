@@ -344,6 +344,8 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 	loff_t offset;
 	int phys_erase_shift, error = 0;
 
+	if (!mtd->erasesize)
+		return -EINVAL;
 	phys_erase_shift = fls(mtd->erasesize) - 1;
 #endif
 
@@ -369,7 +371,8 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 		}
 		if (nand_boot_flag)
 			adjust_offset =
-				(1024 * mtd->writesize / aml_chip->plane_num);
+			(loff_t)(1024 * mtd->writesize /
+			aml_chip->plane_num);
 		bl_mode = aml_chip->bl_mode;
 		if (bl_mode == NAND_FIPMODE_DISCRETE) {
 			/* descrete bootloader mode */
@@ -625,7 +628,7 @@ void aml_nand_cmd_ctrl(struct mtd_info *mtd, int cmd,  unsigned int ctrl)
 int aml_nand_wait(struct mtd_info *mtd, struct nand_chip *chip)
 {
 	struct aml_nand_chip *aml_chip = mtd_to_nand_chip(mtd);
-	int status[MAX_CHIP_NUM], i = 0, time_cnt = 0;
+	int status[MAX_CHIP_NUM] = {0}, i = 0, time_cnt = 0;
 	struct aml_nand_platform *plat = aml_chip->platform;
 	int read_status = 0;
 	/* Apply this short delay always to ensure that we do wait tWB in
@@ -1628,7 +1631,7 @@ dma_retry_plane1:
 		if (new_nand_info->type == SANDISK_19NM) {
 			page_temp =
 			page_addr >> pages_per_blk_shift;
-		page_temp = pages_per_blk * page_addr;
+		page_temp = pages_per_blk * page_temp;
 		page_temp = page_addr - page_temp;
 		if (((page_temp % 2 == 0)
 		&& (page_temp != 0))
@@ -1880,6 +1883,9 @@ int aml_nand_block_bad(struct mtd_info *mtd, loff_t ofs)
 		NAND_BOOT_NAME, strlen((const char *)NAND_BOOT_NAME))))
 		return 0;
 
+	if (!mtd->erasesize)
+		return -EINVAL;
+
 	mtd_erase_shift = fls(mtd->erasesize) - 1;
 	blk_addr = (int)(ofs >> mtd_erase_shift);
 
@@ -1906,6 +1912,9 @@ int aml_nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	struct mtd_oob_ops aml_oob_ops;
 	int blk_addr, mtd_erase_shift;
 	int8_t *buf = NULL;
+
+	if (!mtd->erasesize)
+		return -EINVAL;
 
 	mtd_erase_shift = fls(mtd->erasesize) - 1;
 	blk_addr = (int)(ofs >> mtd_erase_shift);
