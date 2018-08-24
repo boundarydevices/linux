@@ -508,14 +508,6 @@
 		status = "okay";
 	};
 
-	clocks {
-		clk25m: clk25m {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <25000000>;
-		};
-	};
-
 	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
@@ -826,8 +818,12 @@
 		status = "okay";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_csi1>;
-		clocks = <&clk25m 0>;
+		clocks = <&clk IMX8MQ_CLK_CLKO2_DIV>;
 		clock-names = "csi_mclk";
+		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2_SRC>,
+				  <&clk IMX8MQ_CLK_CLKO2_DIV>;
+		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
+		assigned-clock-rates = <0>, <25000000>;
 		csi_id = <0>;
 		AVDD-supply = <&reg_vref_2v5>;
 		DVDD-supply = <&reg_vref_3v3>;
@@ -863,8 +859,12 @@
 		status = "okay";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_csi2>;
-		clocks = <&clk25m 0>;
+		clocks = <&clk IMX8MQ_CLK_CLKO2_DIV>;
 		clock-names = "csi_mclk";
+		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2_SRC>,
+				  <&clk IMX8MQ_CLK_CLKO2_DIV>;
+		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
+		assigned-clock-rates = <0>, <25000000>;
 		csi_id = <1>;
 		AVDD-supply = <&reg_vref_2v5>;
 		DVDD-supply = <&reg_vref_3v3>;
