@@ -154,7 +154,6 @@
 			"venci_0_gate",
 			"venci_1_gate",
 			"vdac_clk_gate";
-		clk_path = <0>;
 
 		/* performance: reg_address, reg_value */
 		/* g12a */
@@ -789,16 +788,16 @@
 		 * 3: spdifout;
 		 * 4: spdifout_b;
 		 */
-		samesource_sel = <3>;
+		samesource_sel = <4>;
 	};
 
 	aml_tdmc: tdmc {
 		compatible = "amlogic, g12a-snd-tdmc";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask-in = <0 1 0 0>;
+		dai-tdm-lane-slot-mask-in = <1 0 0 0>;
 		#dai-tdm-lane-slot-mask-out = <1 0 1 1>;
 		#dai-tdm-lane-oe-slot-mask-in = <0 0 0 0>;
-		dai-tdm-lane-oe-slot-mask-out = <1 0 0 0>;
+		#dai-tdm-lane-oe-slot-mask-out = <1 0 0 0>;
 		dai-tdm-clk-sel = <2>;
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
 				&clkc CLKID_MPLL2>;
@@ -838,7 +837,7 @@
 
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
-		/*pinctrl-0 = <&spdifout &spdifin>;*/
+		pinctrl-0 = <&spdifout &spdifin>;
 		status = "okay";
 	};
 	aml_spdif_b: spdif_b {
@@ -998,7 +997,7 @@
 	};
 
 	tdmout_c:tdmout_c {
-		mux { /* GPIOA_12, GPIOA_13, GPIOA_10, GPIOA_8, GPIOA_7*/
+		mux { /* GPIOA_12, GPIOA_13, GPIOA_8, GPIOA_7*/
 			groups = "tdmc_sclk_a",
 				"tdmc_fs_a",
 				"tdmc_dout0_a"
@@ -1010,8 +1009,8 @@
 	};
 
 	tdmin_c:tdmin_c {
-		mux { /* GPIOA_9 */
-			groups = "tdmc_din1_a";
+		mux { /* GPIOA_10 */
+			groups = "tdmc_din0_a";
 			function = "tdmc_in";
 		};
 	};
