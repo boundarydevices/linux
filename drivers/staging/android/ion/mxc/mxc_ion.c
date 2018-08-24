@@ -41,9 +41,9 @@ struct fsl_ion_dev {
 static struct ion_of_heap fsl_heaps[] = {
 	PLATFORM_HEAP("fsl,cma", 0, ION_HEAP_TYPE_DMA, "cma"),
 	PLATFORM_HEAP("fsl,sys-contig", 1,
-			ION_HEAP_TYPE_SYSTEM_CONTIG, "sys-contig"),
+			ION_HEAP_TYPE_DMA, "sys-contig"),
 	PLATFORM_HEAP("fsl,system", 2,
-			ION_HEAP_TYPE_SYSTEM, "system"),
+			ION_HEAP_TYPE_DMA, "system"),
     {}
 };
 
