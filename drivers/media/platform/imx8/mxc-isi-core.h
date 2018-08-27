@@ -248,6 +248,8 @@ struct mxc_isi_m2m_dev {
 	struct list_head		out_active;
 	struct mxc_isi_ctrls	ctrls;
 
+	unsigned int read_done;
+
 	u8 alpha;
 };
 
