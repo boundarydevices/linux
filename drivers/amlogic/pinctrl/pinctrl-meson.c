@@ -257,6 +257,7 @@ int meson_pinconf_common_set(struct meson_pinctrl *pc, unsigned int pin,
 				 BIT(bit), arg ? BIT(bit) : 0);
 		if (ret)
 			return ret;
+		break;
 	default:
 		return -ENOTSUPP;
 	}

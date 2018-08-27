@@ -311,18 +311,18 @@ static const unsigned int jtag_b_tdi_pins[] = {GPIOC_1};
 static const unsigned int jtag_b_clk_pins[] = {GPIOC_4};
 static const unsigned int jtag_b_tms_pins[] = {GPIOC_5};
 
-/* bt565 */
-static const unsigned int bt565_a_vs_pins[] = {GPIOZ_0};
-static const unsigned int bt565_a_hs_pins[] = {GPIOZ_1};
-static const unsigned int bt565_a_clk_pins[] = {GPIOZ_3};
-static const unsigned int bt565_a_din0_pins[] = {GPIOZ_4};
-static const unsigned int bt565_a_din1_pins[] = {GPIOZ_5};
-static const unsigned int bt565_a_din2_pins[] = {GPIOZ_6};
-static const unsigned int bt565_a_din3_pins[] = {GPIOZ_7};
-static const unsigned int bt565_a_din4_pins[] = {GPIOZ_8};
-static const unsigned int bt565_a_din5_pins[] = {GPIOZ_9};
-static const unsigned int bt565_a_din6_pins[] = {GPIOZ_10};
-static const unsigned int bt565_a_din7_pins[] = {GPIOZ_11};
+/* bt656 */
+static const unsigned int bt656_a_vs_pins[] = {GPIOZ_0};
+static const unsigned int bt656_a_hs_pins[] = {GPIOZ_1};
+static const unsigned int bt656_a_clk_pins[] = {GPIOZ_3};
+static const unsigned int bt656_a_din0_pins[] = {GPIOZ_4};
+static const unsigned int bt656_a_din1_pins[] = {GPIOZ_5};
+static const unsigned int bt656_a_din2_pins[] = {GPIOZ_6};
+static const unsigned int bt656_a_din3_pins[] = {GPIOZ_7};
+static const unsigned int bt656_a_din4_pins[] = {GPIOZ_8};
+static const unsigned int bt656_a_din5_pins[] = {GPIOZ_9};
+static const unsigned int bt656_a_din6_pins[] = {GPIOZ_10};
+static const unsigned int bt656_a_din7_pins[] = {GPIOZ_11};
 
 /* tsin_a */
 static const unsigned int tsin_a_valid_pins[] = {GPIOX_2};
@@ -630,17 +630,17 @@ static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GROUP(eth_txd3_rgmii,	1),
 	GROUP(eth_link_led,	1),
 	GROUP(eth_act_led,	1),
-	GROUP(bt565_a_vs,	2),
-	GROUP(bt565_a_hs,	2),
-	GROUP(bt565_a_clk,	2),
-	GROUP(bt565_a_din0,	2),
-	GROUP(bt565_a_din1,	2),
-	GROUP(bt565_a_din2,	2),
-	GROUP(bt565_a_din3,	2),
-	GROUP(bt565_a_din4,	2),
-	GROUP(bt565_a_din5,	2),
-	GROUP(bt565_a_din6,	2),
-	GROUP(bt565_a_din7,	2),
+	GROUP(bt656_a_vs,	2),
+	GROUP(bt656_a_hs,	2),
+	GROUP(bt656_a_clk,	2),
+	GROUP(bt656_a_din0,	2),
+	GROUP(bt656_a_din1,	2),
+	GROUP(bt656_a_din2,	2),
+	GROUP(bt656_a_din3,	2),
+	GROUP(bt656_a_din4,	2),
+	GROUP(bt656_a_din5,	2),
+	GROUP(bt656_a_din6,	2),
+	GROUP(bt656_a_din7,	2),
 	GROUP(tsin_b_valid_z,	3),
 	GROUP(tsin_b_sop_z,	3),
 	GROUP(tsin_b_din0_z,	3),
@@ -1166,11 +1166,11 @@ static const char * const jtag_b_groups[] = {
 	"jtag_b_tdi", "jtag_b_tdo", "jtag_b_clk", "jtag_b_tms",
 };
 
-static const char * const bt565_groups[] = {
-	"bt565_a_vs", "bt565_a_hs", "bt565_a_clk",
-	"bt565_a_din0", "bt565_a_din1", "bt565_a_din2",
-	"bt565_a_din3", "bt565_a_din4", "bt565_a_din5",
-	"bt565_a_din6", "bt565_a_din7",
+static const char * const bt656_groups[] = {
+	"bt656_a_vs", "bt656_a_hs", "bt656_a_clk",
+	"bt656_a_din0", "bt656_a_din1", "bt656_a_din2",
+	"bt656_a_din3", "bt656_a_din4", "bt656_a_din5",
+	"bt656_a_din6", "bt656_a_din7",
 };
 
 static const char * const tsin_a_groups[] = {
@@ -1378,7 +1378,7 @@ static struct meson_pmx_func meson_g12a_periphs_functions[] = {
 	FUNCTION(pwm_f),
 	FUNCTION(cec_ao_ee),
 	FUNCTION(jtag_b),
-	FUNCTION(bt565),
+	FUNCTION(bt656),
 	FUNCTION(tsin_a),
 	FUNCTION(tsin_b),
 	FUNCTION(hdmitx),
