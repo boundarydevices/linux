@@ -589,7 +589,9 @@ static void tsync_process_discontinue(void)
 			last_checkout_minpts = last_checkout_minpts;
 			tsync_pcr_tsdemuxpcr_discontinue = 0;
 			tsync_pcr_reset_flag = 1;
-			pr_info(" now audio &video discontinue,need replay now\n");
+			if (tsync_pcr_debug&0x02) {
+				pr_info(" now audio &video discontinue,need replay now\n");
+			}
 		}
 	} else if (tsdemux_pcraudio_valid_cb && tsdemux_pcraudio_valid_cb()) {
 		if ((tsync_pcr_tsdemuxpcr_discontinue &

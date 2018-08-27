@@ -4229,7 +4229,10 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 		 * if paused ignore discontinue
 		 */
 		if (!timestamp_pcrscr_enable_state()) {
-			pr_info("video pts discontinue, but pcrscr is disabled, return false\n");
+			/*pr_info("video pts discontinue,
+			 * but pcrscr is disabled,
+			 * return false\n");
+			 */
 			return false;
 		}
 		pts =
