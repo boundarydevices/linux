@@ -259,7 +259,7 @@ void ramdump_sync_data(void)
 }
 #endif
 
-static int ramdump_probe(struct platform_device *pdev)
+static int __init ramdump_probe(struct platform_device *pdev)
 {
 	void __iomem *p;
 
@@ -333,7 +333,6 @@ static struct platform_driver ramdump_driver = {
 		.of_match_table = ramdump_dt_match,
 	#endif
 	},
-	.probe  = ramdump_probe,
 	.remove = ramdump_remove,
 };
 
@@ -341,7 +340,7 @@ static int __init ramdump_init(void)
 {
 	int ret;
 
-	ret = platform_driver_register(&ramdump_driver);
+	ret = platform_driver_probe(&ramdump_driver, ramdump_probe);
 
 	return ret;
 }
