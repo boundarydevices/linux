@@ -86,7 +86,8 @@ static struct tx_event *event_get(void)
 {
 	struct tx_event *ev = NULL;
 
-	ev = kzalloc(sizeof(struct tx_event), GFP_KERNEL);
+	ev = devm_kzalloc(tx_dev->dev,
+			sizeof(struct tx_event), GFP_KERNEL);
 	irblaster_dbg("event_get ev=0x%p\n", ev);
 	return ev;
 }
@@ -94,7 +95,8 @@ static struct tx_event *event_get(void)
 static void event_put(struct tx_event *ev)
 {
 	irblaster_dbg("event_put ev=0x%p\n", ev);
-	kfree(ev);
+	devm_kfree(tx_dev->dev, ev);
+
 }
 
 static int send_bit(unsigned int hightime, unsigned int lowtime,
@@ -351,6 +353,7 @@ int send(const char *buf, int len)
 
 		if (j >= PS_SIZE) {
 			pr_err("send timing value is out of range\n");
+			event_put(ev);
 			return -ENOMEM;
 		}
 	}
@@ -521,6 +524,7 @@ static ssize_t store_send(struct device *dev,
 		j++;
 		if (j >= PS_SIZE) {
 			pr_err("send timing value is out of range\n");
+			event_put(ev);
 			return -ENOMEM;
 		}
 	}
@@ -549,18 +553,20 @@ static const struct file_operations aml_irblaster_fops = {
 
 static int  aml_irblaster_probe(struct platform_device *pdev)
 {
-	int r;
+	int r = 0;
 	struct irtx_dev *dev;
 	struct pinctrl *p;
 
 	pr_info("irblaster probe\n");
-	dev = kzalloc(sizeof(struct irtx_dev), GFP_KERNEL);
+	dev = devm_kzalloc(&pdev->dev,
+			sizeof(struct irtx_dev), GFP_KERNEL);
 	if (!dev) {
-		pr_info("");
+		pr_info("kzalloc failed\n");
 		return -ENOMEM;
 	}
 
-	irblaster = kzalloc(sizeof(struct blaster_window), GFP_KERNEL);
+	irblaster = devm_kzalloc(&pdev->dev,
+			sizeof(struct blaster_window), GFP_KERNEL);
 	if (irblaster == NULL)
 		return -1;
 
@@ -585,7 +591,11 @@ static int  aml_irblaster_probe(struct platform_device *pdev)
 	}
 	cdev_init(&amirblaster_device, &aml_irblaster_fops);
 	amirblaster_device.owner = THIS_MODULE;
-	cdev_add(&(amirblaster_device), amirblaster_id, DEIVE_COUNT);
+	r = cdev_add(&(amirblaster_device), amirblaster_id, DEIVE_COUNT);
+	if (r) {
+		pr_err("failed to add cdev\n");
+		return r;
+	}
 	irblaster_class = class_create(THIS_MODULE, DEVICE_NAME);
 	if (IS_ERR(irblaster_class)) {
 		unregister_chrdev_region(amirblaster_id, DEIVE_COUNT);
