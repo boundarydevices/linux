@@ -948,11 +948,10 @@ static int meson_cd_op(void *data)
 	struct amlsd_host *host = pdata->host;
 	int ret = 0;
 
-#ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& host->data->tdma_f)
 		wait_for_completion(&host->drv_completion);
-#endif
+
 	mutex_lock(&pdata->in_out_lock);
 	if (card_dealed == 1) {
 		card_dealed = 0;
@@ -975,11 +974,11 @@ static int meson_cd_op(void *data)
 		mmc_detect_change(mmc, msecs_to_jiffies(0));
 
 	card_dealed = 0;
-#ifdef AML_MMC_TDMA
+
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& host->data->tdma_f)
 		complete(&host->drv_completion);
-#endif
+
 	return 0;
 }
 

@@ -310,21 +310,18 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 				struct mmc_ios *ios)
 {
 	struct amlsd_platform *pdata = mmc_priv(mmc);
-#ifdef AML_MMC_TDMA
 	struct amlsd_host *host = pdata->host;
 
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A)
+			&& host->data->tdma_f
 			&& (host->init_volt == 0))
 		wait_for_completion(&host->drv_completion);
-#endif
+
 	if (!pdata->is_in) {
-#ifdef AML_MMC_TDMA
 		if ((host->mem->start == host->data->port_b_base)
-				&& (host->data->chip_type == MMC_CHIP_G12A)
+				&& host->data->tdma_f
 				&& (host->init_volt == 0))
 			complete(&host->drv_completion);
-#endif
 		return;
 	}
 
@@ -344,12 +341,10 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 		aml_cs_high(mmc);
 	else if (ios->chip_select == MMC_CS_DONTCARE)
 		aml_cs_dont_care(mmc);
-#ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A)
+			&& host->data->tdma_f
 			&& (host->init_volt == 0))
 		complete(&host->drv_completion);
-#endif
 }
 
 
@@ -990,11 +985,9 @@ static int _aml_sd_emmc_execute_tuning(struct mmc_host *mmc, u32 opcode,
 	int curr_win_start, curr_win_size;
 	u32 rxdly[3] = {0xA28A28A, 0x15500514, 0x1FF8079E};
 
-#ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& host->data->tdma_f)
 		wait_for_completion(&host->drv_completion);
-#endif
 	writel(0, host->base + SD_EMMC_ADJUST_V3);
 
 tunning:
@@ -1082,11 +1075,9 @@ tunning:
 			pr_info("%s: final result of tuning failed\n",
 				 mmc_hostname(host->mmc));
 			host->is_tunning = 0;
-#ifdef AML_MMC_TDMA
-	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
-		complete(&host->drv_completion);
-#endif
+			if ((host->mem->start == host->data->port_b_base)
+				&& host->data->tdma_f)
+				complete(&host->drv_completion);
 			return -1;
 		}
 		clkc->div += 1;
@@ -1100,11 +1091,9 @@ tunning:
 			pr_err("%s: tuning failed\n",
 				mmc_hostname(host->mmc));
 			host->is_tunning = 0;
-#ifdef AML_MMC_TDMA
-	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
-		complete(&host->drv_completion);
-#endif
+			if ((host->mem->start == host->data->port_b_base)
+				&& host->data->tdma_f)
+				complete(&host->drv_completion);
 			return -1;
 		}
 		pr_warn("wave is not sharp, again\n");
@@ -1134,11 +1123,9 @@ tunning:
 			readl(host->base + SD_EMMC_CLOCK_V3),
 			readl(host->base + SD_EMMC_ADJUST_V3));
 	host->is_tunning = 0;
-#ifdef AML_MMC_TDMA
 	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
+			&& host->data->tdma_f)
 		complete(&host->drv_completion);
-#endif
 
 	return ret;
 #endif

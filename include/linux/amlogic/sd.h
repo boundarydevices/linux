@@ -219,6 +219,7 @@ struct meson_mmc_data {
 	unsigned int ds_pin_poll_en;
 	unsigned int ds_pin_poll_bit;
 	unsigned int latest_dat;
+	unsigned int tdma_f;
 	struct para_e sdmmc;
 };
 

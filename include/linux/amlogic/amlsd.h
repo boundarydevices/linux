@@ -42,7 +42,6 @@ extern const u8 tuning_blk_pattern_8bit[128];
 #define DEBUG_SD_OF		0
 #define MODULE_NAME		"amlsd"
 /* #define CARD_DETECT_IRQ    1 */
-#define AML_MMC_TDMA 1
 #define SD_EMMC_DEBUG_BOARD 1
 
 #if 0
