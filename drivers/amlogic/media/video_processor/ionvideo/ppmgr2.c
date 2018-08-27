@@ -481,6 +481,11 @@ int ppmgr2_process(struct vframe_s *vf, struct ppmgr2_device *ppd, int index)
 	int angle = (ppd->angle + src_vf->orientation) % 4;
 	int dst_canvas_id = 0;
 
+	if (ppd->phy_addr[index] == NULL) {
+		ppmgr2_printk(1, "NULL physical address!\n");
+		return -1;
+	}
+
 	if (src_vf->type & VIDTYPE_INTERLACE) {
 		if ((ppd->bottom_first && src_vf->type & 0x2)
 			|| (ppd->bottom_first == 0

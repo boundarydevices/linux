@@ -382,6 +382,9 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 	if (dev->active_state == ION_INACTIVE)
 		return;
 
+	if (dev->receiver_register == 0)
+		return;
+
 	dev->wait_ge2d_timeout = false;
 	vf = vf_peek(dev->vf_receiver_name);
 	if (!vf) {
@@ -961,15 +964,14 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		}
 
 		/*tsync_avevent(VIDEO_STOP, 0);*/
-		IONVID_DBG("unreg:ionvideo\n");
+		pr_info("unreg:ionvideo\n");
 	} else if (type == VFRAME_EVENT_PROVIDER_REG) {
-		dev->receiver_register = 1;
 		dev->is_omx_video_started = 1;
 		dev->ppmgr2_dev.interlaced_num = 0;
 		dev->active_state = ION_ACTIVE;
 		init_completion(&dev->inactive_done);
-
-		IONVID_DBG("reg:ionvideo\n");
+		dev->receiver_register = 1;
+		pr_info("reg:ionvideo\n");
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
 		if (dev->vf_wait_cnt > 1)
 			return RECEIVER_INACTIVE;
