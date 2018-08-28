@@ -301,8 +301,14 @@ extern struct ve_pq_overscan_s overscan_table[TIMING_MAX];
 struct am_pq_parm_s {
 	unsigned int table_name;
 	unsigned int table_len;
+	union {
 	void *table_ptr;
+	long long l_table;
+	};
+	union {
 	void *reserved;
+	long long l_reserved;
+	};
 };
 
 #define AMDI_IOC_SET_PQ_PARM  _IOW(_DI_, 0x51, struct am_pq_parm_s)
