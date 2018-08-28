@@ -1385,8 +1385,11 @@ void retrieve_vpll_carrier_audio_power(int *power)
 		data = atv_dmd_rd_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x03);
 		*power = data & 0xffff;
 
-		data = atv_dmd_rd_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x02);
-		atv_dmd_wr_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x02, data & (~0x80));
+		/* keep open for carrier audio power update */
+		/*
+		 * data = atv_dmd_rd_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x02);
+		 * atv_dmd_wr_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x02,data&(~0x80));
+		 */
 	} else {
 		data = atv_dmd_rd_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x03);
 		*power = data & 0xffff;

@@ -399,15 +399,13 @@ void aml_fe_get_atvaudio_state(int *state)
 	int line_lock = 0;
 	int atv_state = atv_demod_get_state();
 
-	if (atv_state == ATVDEMOD_STATE_WORK) {
+	/* scan mode need mute */
+	if (atv_state == ATVDEMOD_STATE_WORK && !atv_demod_get_scan_mode()) {
 		retrieve_vpll_carrier_lock(&vpll_lock);
 		retrieve_vpll_carrier_line_lock(&line_lock);
 		if ((vpll_lock == 0) && (line_lock == 0)) {
 			retrieve_vpll_carrier_audio_power(&power);
-			if (!atv_demod_get_scan_mode())
-				*state = 1;
-			else
-				*state = 0; /* scan mode need mute */
+			*state = 1;
 		} else {
 			*state = 0;
 			pr_audio("vpll_lock: 0x%x, line_lock: 0x%x\n",
@@ -1016,7 +1014,7 @@ static int atvdemod_fe_afc_closer(struct v4l2_frontend *v4l2_fe, int minafcfreq,
 				tuner_id == AM_TUNER_SI2159 ||
 				tuner_id == AM_TUNER_R840 ||
 				tuner_id == AM_TUNER_R842)
-				usleep_range(20 * 1000, 20 * 1000 + 100);
+				usleep_range(10 * 1000, 10 * 1000 + 100);
 			else if (tuner_id == AM_TUNER_MXL661)
 				usleep_range(30 * 1000, 30 * 1000 + 100);
 
@@ -1191,7 +1189,7 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 	int double_check_cnt = 1;
 	int auto_search_std = 0;
 	int search_count = 0;
-	bool try_secam = false;
+	/* bool try_secam = false; */
 	int ret = -1;
 	unsigned int tuner_id = v4l2_fe->tuner_id;
 	int priv_cfg = 0;
@@ -1290,7 +1288,7 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 				usleep_range(30 * 1000, 30 * 1000 + 100);
 			} else if (tuner_id == AM_TUNER_R840 ||
 					tuner_id == AM_TUNER_R842) {
-				usleep_range(20 * 1000, 20 * 1000 + 100);
+				usleep_range(10 * 1000, 10 * 1000 + 100);
 				fe->ops.tuner_ops.get_status(fe,
 						&tuner_state);
 			} else {
@@ -1313,6 +1311,7 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 			}
 
 			if (tuner_status_cnt_local == 0) {
+#if 0 /* when need to support secam-l, will enable it */
 				if (auto_search_std &&
 					try_secam == false &&
 					!(p->std & V4L2_COLOR_STD_SECAM) &&
@@ -1353,7 +1352,7 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 
 					try_secam = false;
 				}
-
+#endif
 				break;
 			}
 		} while (1);
