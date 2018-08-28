@@ -687,7 +687,7 @@ void lcd_optical_vinfo_update(void)
 
 	pconf = lcd_drv->lcd_config;
 	disp_vinfo = &lcd_drv->lcd_info->master_display_info;
-	disp_vinfo->present_flag = 1; /* valid parameters */
+	disp_vinfo->present_flag = pconf->optical_info.hdr_support;
 	disp_vinfo->features = pconf->optical_info.features;
 	disp_vinfo->primaries[0][0] = pconf->optical_info.primaries_g_x;
 	disp_vinfo->primaries[0][1] = pconf->optical_info.primaries_g_y;
