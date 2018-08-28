@@ -18,6 +18,7 @@
 /dts-v1/;
 
 #include "mesongxl.dtsi"
+#include "partition_mbox_normal.dtsi"
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxl_p212_1g";
@@ -49,15 +50,6 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
-		ramoops@0x07400000 {
-			compatible = "ramoops";
-			reg = <0x0 0x07400000 0x0 0x00100000>;
-			record-size = <0x8000>;
-			console-size = <0x8000>;
-			ftrace-size = <0x0>;
-			pmsg-size = <0x8000>;
-		};
-
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -97,7 +89,7 @@
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x7C00000>;
+			size = <0x0 0x4C00000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -128,7 +120,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x0 0x13400000>;
+			size = <0x0 0xd000000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
@@ -148,12 +140,29 @@
 		};
 	};
 
+	dummy-battery {
+		compatible = "amlogic, dummy-battery";
+		status = "okay";
+	};
+
+	dummy-charger {
+		compatible = "amlogic, dummy-charger";
+		status = "okay";
+	};
+
+	bt-dev{
+		compatible = "amlogic, bt-dev";
+		dev_name = "bt-dev";
+		status = "okay";
+		gpio_reset = <&gpio       GPIOX_17       GPIO_ACTIVE_HIGH>;
+	};
 	wifi{
 		compatible = "amlogic, aml_wifi";
 		dev_name = "aml_wifi";
 		status = "okay";
 		interrupt_pin = <&gpio       GPIOX_7       GPIO_ACTIVE_HIGH>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
+		dhd_static_buf;    //dhd_static_buf support
 		power_on_pin = <&gpio       GPIOX_6       GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&wifi_32k_pins>;
@@ -613,6 +622,10 @@
 		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
 		interrupts = <0 57 1>;
 		interrupt-names = "hdmitx_hpd";
+		/* 0:M8B 1:GXBB 2:GXTVBB 3:GXL 4:GXM
+		 * 5:TXL 6:TXLX 7:AXG 8:GXLX 9:TXHD
+		 */
+		ic_type = <3>;
 		vend_data: vend_data{ /* Should modified by Customer */
 			vendor_name = "Amlogic"; /* Max Chars: 8 */
 			/* standards.ieee.org/develop/regauth/oui/oui.txt */
@@ -627,7 +640,7 @@
 		status = "okay";
 		vendor_id = <0x000000>;
 		cec_osd_string = "MBox"; /* Max Chars: 14    */
-		cec_version = <6>; /* 5: 1.4, 6: 2.0 */
+		cec_version = <5>; /* 5: 1.4, 6: 2.0 */
 		port_num = <1>;
 		arc_port_mask = <0x0>;
 		interrupts = <0 199 1>;
@@ -636,12 +649,13 @@
 		pinctrl-0=<&hdmitx_aocec>;
 		reg = <0x0 0xc810023c 0x0 0x4
 		       0x0 0xc8100000 0x0 0x200>;
+		reg-names = "ao_exit","ao";
 	};
 
 	sysled {
 		compatible = "amlogic, sysled";
 		dev_name = "sysled";
-		status = "okay";
+		status = "disabled";
 		led_gpio = <&gpio GPIODV_24 GPIO_ACTIVE_HIGH>;
 		led_active_low = <1>;
 	};
@@ -692,12 +706,14 @@
 		clocks = <&clkc CLKID_DOS_PARSER
 			&clkc CLKID_DEMUX
 			&clkc CLKID_DOS
+			&clkc CLKID_CLK81
 			&clkc CLKID_VDEC_MUX
 			&clkc CLKID_HCODEC_MUX
 			&clkc CLKID_HEVC_MUX>;
 		clock-names = "parser_top",
 			"demux",
 			"vdec",
+			"clk_81",
 			"clk_vdec_mux",
 			"clk_hcodec_mux",
 			"clk_hevc_mux";
@@ -785,6 +801,7 @@
 			"top_level",
 			"aoclk",
 			"aud_in";
+		i2s_pos_sync = <0>;
 		/*DMIC;*/  /* I2s Mic or Dmic, default for I2S mic */
 	};
 	dmic:snd_dmic {
@@ -936,81 +953,6 @@
 		};
 	};
 
-	partitions: partitions{
-		parts = <11>;
-		part-0 = <&logo>;
-		part-1 = <&recovery>;
-		part-2 = <&rsv>;
-		part-3 = <&tee>;
-		part-4 = <&crypt>;
-		part-5 = <&misc>;
-		part-6 = <&instaboot>;
-		part-7 = <&boot>;
-		part-8 = <&system>;
-		part-9 = <&cache>;
-		part-10 = <&data>;
-
-		logo:logo{
-			pname = "logo";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		recovery:recovery{
-			pname = "recovery";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		rsv:rsv{
-			pname = "rsv";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		tee:tee{
-			pname = "tee";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		crypt:crypt{
-			pname = "crypt";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		misc:misc{
-			pname = "misc";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		instaboot:instaboot{
-			pname = "instaboot";
-			size = <0x0 0x400000>;
-			mask = <1>;
-		};
-		boot:boot
-		{
-			pname = "boot";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		system:system
-		{
-			pname = "system";
-			size = <0x0 0x80000000>;
-			mask = <1>;
-		};
-		cache:cache
-		{
-			pname = "cache";
-			size = <0x0 0x20000000>;
-			mask = <2>;
-		};
-		data:data
-		{
-			pname = "data";
-			size = <0xffffffff 0xffffffff>;
-			mask = <4>;
-		};
-	};
-
 	picdec {
 		compatible = "amlogic, picdec";
 		memory-region = <&picdec_cma_reserved>;
@@ -1127,11 +1069,24 @@
 		tv_bit_mode = <1>;
 	};
 
+	amlvecm {
+		compatible = "amlogic, vecm";
+		dev_name = "aml_vecm";
+		status = "okay";
+		gamma_en = <0>;/*1:enabel ;0:disable*/
+		wb_en = <0>;/*1:enabel ;0:disable*/
+		cm_en = <0>;/*1:enabel ;0:disable*/
+		/*1:enabel osd lut 100 table;0:disable*/
+		cfg_en_osd_100 = <1>;
+		/*0: 709/601  1: bt2020*/
+		tx_op_color_primary = <0>;
+	};
+
 	unifykey{
 		compatible = "amlogic, unifykey";
 		status = "ok";
 
-		unifykey-num = <15>;
+		unifykey-num = <16>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
@@ -1147,6 +1102,7 @@
 		unifykey-index-12= <&keysn_12>;
 		unifykey-index-13= <&keysn_13>;
 		unifykey-index-14= <&keysn_14>;
+		unifykey-index-15= <&keysn_15>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -1226,6 +1182,11 @@
 			key-device = "secure";
 			key-permit = "read","write","del";
 		};
+		keysn_15:key_15{
+			key-name = "region_code";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
 	};//End unifykey
 
 };
@@ -1237,6 +1198,9 @@
 	status = "okay";
 };
 
+&audio_data{
+	status = "okay";
+};
 &spicc{
 	status = "disabled";
 	pinctrl-names = "spicc_pulldown","spicc_pullup";
