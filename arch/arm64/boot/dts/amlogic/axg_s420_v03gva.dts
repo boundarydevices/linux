@@ -709,6 +709,11 @@
 			key-permit = "read","write","del";
 		};
 	};//End unifykey
+	audio_data: audio_data {
+		compatible = "amlogic, audio_data";
+		query_licence_cmd = <0x82000050>;
+		status = "okay";
+	};
 }; /* end of / */
 
 &efuse {
@@ -969,7 +974,7 @@
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
 		pinctrl-0 = <&spdifout &spdifin>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	aml_pdm: pdm {

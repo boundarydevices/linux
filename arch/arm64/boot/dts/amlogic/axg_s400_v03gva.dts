@@ -888,7 +888,11 @@
 			key-permit = "read","write","del";
 		};
 	};//End unifykey
-
+	audio_data: audio_data {
+		compatible = "amlogic, audio_data";
+		query_licence_cmd = <0x82000050>;
+		status = "okay";
+	};
 }; /* end of / */
 &efuse {
 	status = "ok";
