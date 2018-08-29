@@ -106,7 +106,7 @@ static ssize_t gt1x_debug_read_proc(struct file *file, char __user * page, size_
 {
 	char *ptr = page;
 	char temp_data[GTP_CONFIG_MAX_LENGTH] = { 0 };
-	int i;
+	int i, ret = -1;
 
 	if (*ppos) {
 		return 0;
@@ -136,7 +136,9 @@ static ssize_t gt1x_debug_read_proc(struct file *file, char __user * page, size_
 	/* Touch PID & VID */
 	ptr += sprintf(ptr, "==== GT1X Version Info ====\n");
 
-	gt1x_i2c_read(GTP_REG_VERSION, temp_data, 12);
+	ret = gt1x_i2c_read(GTP_REG_VERSION, temp_data, 12);
+	if (ret < 0)
+		return ret;
 	ptr += sprintf(ptr, "ProductID: GT%c%c%c%c\n", temp_data[0], temp_data[1], temp_data[2], temp_data[3]);
 	ptr += sprintf(ptr, "PatchID: %02X%02X\n", temp_data[4], temp_data[5]);
 	ptr += sprintf(ptr, "MaskID: %02X%02X\n", temp_data[7], temp_data[8]);
