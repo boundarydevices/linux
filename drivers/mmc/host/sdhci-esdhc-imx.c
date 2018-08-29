@@ -251,6 +251,7 @@ struct pltfm_imx_data {
 	u32 is_ddr;
 	u32 disable_caps;
 	u32 enable_caps;
+	u32 disable_caps1;
 	struct pm_qos_request pm_qos_req;
 	unsigned max_clock;
 };
@@ -371,6 +372,7 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 			    IS_ERR_OR_NULL(imx_data->pins_200mhz))
 				val &= ~(SDHCI_SUPPORT_SDR50 | SDHCI_SUPPORT_DDR50
 					 | SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_HS400);
+			val &= ~imx_data->disable_caps1;
 		}
 	}
 
@@ -1195,6 +1197,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 
 	if (of_find_property(np, "enable-sdma", NULL))
 		imx_data->enable_caps |= SDHCI_CAN_DO_SDMA;
+
+	if (of_find_property(np, "no-mmc-hs400", NULL))
+		imx_data->disable_caps1 |= SDHCI_SUPPORT_HS400;
 
 	if (imx_data->disable_caps | imx_data->enable_caps) {
 		dev_info(mmc_dev(host->mmc), "disable_caps=%x enable_caps=%x\n",
