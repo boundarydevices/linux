@@ -417,7 +417,7 @@ static int get_custom_tables(struct device_node *node,
 			dev_err(chip->dev, "please config mapname item\n");
 			goto err;
 		}
-		strncpy(ptable->tab.custom_name, uname, CUSTOM_NAME_LEN);
+		snprintf(ptable->tab.custom_name, CUSTOM_NAME_LEN, "%s", uname);
 
 		dev_info(chip->dev, "ptable->custom_name = %s\n",
 						ptable->tab.custom_name);
