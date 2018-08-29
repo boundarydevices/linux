@@ -130,16 +130,18 @@ static void esd_process(u8 *writebuf, int buflen, bool flag)
 static ssize_t fts_debug_write(struct file *filp, const char __user *buff, size_t count, loff_t *ppos)
 {
     unsigned char writebuf[WRITE_BUF_SIZE];
-    int buflen = count;
+    int buflen = 0;
     int writelen = 0;
     int ret = 0;
     char tmp[25];
 
+    buflen = count < WRITE_BUF_SIZE ? count : WRITE_BUF_SIZE - 1;
     if (copy_from_user(&writebuf, buff, buflen))
     {
         FTS_DEBUG("[APK]: copy from user error!!");
         return -EFAULT;
     }
+    writebuf[buflen] = '\0';
 #if FTS_ESDCHECK_EN
     esd_process(writebuf, buflen, 1);
 #endif
@@ -151,6 +153,7 @@ static ssize_t fts_debug_write(struct file *filp, const char __user *buff, size_
             char upgrade_file_path[FILE_NAME_LENGTH];
             memset(upgrade_file_path, 0, sizeof(upgrade_file_path));
             sprintf(upgrade_file_path, "%s", writebuf + 1);
+            buflen = count < FILE_NAME_LENGTH ? count : FILE_NAME_LENGTH - 1;
             upgrade_file_path[buflen-1] = '\0';
             FTS_DEBUG("%s\n", upgrade_file_path);
             fts_irq_disable();
@@ -214,6 +217,7 @@ static ssize_t fts_debug_write(struct file *filp, const char __user *buff, size_
         case PROC_HW_RESET:
 
             sprintf(tmp, "%s", writebuf + 1);
+            buflen = count < 25 ? count : 25 - 1;
             tmp[buflen - 1] = '\0';
             if (strncmp(tmp,"focal_driver",12)==0)
             {
