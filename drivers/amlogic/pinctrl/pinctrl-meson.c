@@ -329,7 +329,7 @@ static int meson_pinconf_get_pio(struct meson_pinctrl *pc, unsigned int pin,
 		return ret;
 	meson_calc_reg_and_bit(bank, pin, REG_DIR, &reg, &bit);
 
-	reg = regmap_read(pc->reg_gpio, reg, &val);
+	ret = regmap_read(pc->reg_gpio, reg, &val);
 	if (ret)
 		return ret;
 	if (val & BIT(bit)) {
@@ -520,7 +520,9 @@ static int meson_gpio_get(struct gpio_chip *chip, unsigned int gpio)
 		return ret;
 
 	meson_calc_reg_and_bit(bank, gpio, REG_IN, &reg, &bit);
-	regmap_read(pc->reg_gpio, reg, &val);
+	ret = regmap_read(pc->reg_gpio, reg, &val);
+	if (ret)
+		return ret;
 
 	return !!(val & BIT(bit));
 }
