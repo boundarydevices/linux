@@ -525,7 +525,7 @@ static ssize_t meson_i2c_speed_store(struct device *child,
 		return ret;
 	i2c->frequency = val;
 
-	return ret ? : size;
+	return size;
 }
 
 static DEVICE_ATTR(speed, 0644, meson_i2c_speed_show,
