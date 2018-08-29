@@ -1581,12 +1581,18 @@ static int __maybe_unused meson_sar_adc_resume(struct device *dev)
 	return 0;
 }
 
+static void meson_sar_adc_shutdown(struct platform_device *pdev)
+{
+	meson_sar_adc_suspend(&pdev->dev);
+}
+
 static SIMPLE_DEV_PM_OPS(meson_sar_adc_pm_ops,
 			 meson_sar_adc_suspend, meson_sar_adc_resume);
 
 static struct platform_driver meson_sar_adc_driver = {
 	.probe		= meson_sar_adc_probe,
 	.remove		= meson_sar_adc_remove,
+	.shutdown	= meson_sar_adc_shutdown,
 	.driver		= {
 		.name	= "meson-saradc",
 		.of_match_table = meson_sar_adc_of_match,

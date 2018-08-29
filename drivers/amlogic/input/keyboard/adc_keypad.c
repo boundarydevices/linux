@@ -631,6 +631,13 @@ static int meson_adc_kp_resume(struct platform_device *pdev)
 	return 0;
 }
 
+static void meson_adc_kp_shutdown(struct platform_device *pdev)
+{
+	struct meson_adc_kp *kp = platform_get_drvdata(pdev);
+
+	cancel_delayed_work(&kp->poll_dev->work);
+}
+
 static const struct of_device_id key_dt_match[] = {
 	{.compatible = "amlogic, adc_keypad",},
 	{},
@@ -641,6 +648,7 @@ static struct platform_driver kp_driver = {
 	.remove     = meson_adc_kp_remove,
 	.suspend    = meson_adc_kp_suspend,
 	.resume     = meson_adc_kp_resume,
+	.shutdown   = meson_adc_kp_shutdown,
 	.driver     = {
 		.name   = DRIVE_NAME,
 		.of_match_table = key_dt_match,
