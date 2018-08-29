@@ -1,0 +1,53 @@
+is31fl3236a: is31f3236a@0x78 {
+			compatible = "issi,is31fl3236,gva";
+			reg = <0x3c>;
+			status = "okay";
+			led1_b {
+				label="LED1_B";
+				reg_offset = <1>;
+			};
+			led1_g {
+				label="LED1_G";
+				reg_offset = <2>;
+			};
+			led1_r {
+				label="LED1_R";
+				reg_offset = <3>;
+			};
+			led2_b {
+				label="LED2_B";
+				reg_offset = <4>;
+			};
+			led2_g {
+				label="LED2_G";
+				reg_offset = <5>;
+			};
+			led2_r {
+				label="LED2_R";
+				reg_offset = <6>;
+			};
+			led3_b {
+				label="LED3_B";
+				reg_offset = <7>;
+			};
+			led3_g {
+				label="LED3_G";
+				reg_offset = <8>;
+			};
+			led3_r {
+				label="LED3_R";
+				reg_offset = <9>;
+			};
+			led4_b {
+				label="LED4_B";
+				reg_offset = <10>;
+			};
+			led4_g {
+				label="LED4_G";
+				reg_offset = <11>;
+			};
+			led4_r {
+				label="LED4_R";
+				reg_offset = <12>;
+			};
+	 };
