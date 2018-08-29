@@ -129,7 +129,7 @@ int pwm_set_times(struct meson_pwm *meson,
 {
 	unsigned int clear_val, val;
 
-	if ((value < 0) && (value > 255)) {
+	if ((value < 0) || (value > 255)) {
 		dev_err(meson->chip.dev,
 				"index or value is not within the scope!\n");
 		return -EINVAL;
@@ -297,7 +297,7 @@ int pwm_set_blink_times(struct meson_pwm *meson,
 {
 	unsigned int clear_val, val;
 
-	if ((value < 0) && (value > 15)) {
+	if ((value < 0) || (value > 15)) {
 		dev_err(meson->chip.dev,
 		"value or index is not within the scope!\n");
 		return -EINVAL;
