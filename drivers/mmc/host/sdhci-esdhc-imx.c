@@ -342,6 +342,7 @@ struct pltfm_imx_data {
 		WAIT_FOR_INT,        /* sent CMD12, waiting for response INT */
 	} multiblock_status;
 	u32 is_ddr;
+	u32 disable_caps1;
 	struct pm_qos_request pm_qos_req;
 };
 
@@ -529,6 +530,7 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 				val &= ~(SDHCI_SUPPORT_SDR50 | SDHCI_SUPPORT_DDR50);
 			if (IS_ERR_OR_NULL(imx_data->pins_200mhz))
 				val &= ~(SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_HS400);
+			val &= ~imx_data->disable_caps1;
 		}
 	}
 
@@ -1577,6 +1579,8 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "fsl,tuning-step", &boarddata->tuning_step);
 	of_property_read_u32(np, "fsl,tuning-start-tap",
 			     &boarddata->tuning_start_tap);
+	if (of_find_property(np, "no-mmc-hs400", NULL))
+		imx_data->disable_caps1 |= SDHCI_SUPPORT_HS400;
 
 	of_property_read_u32(np, "fsl,strobe-dll-delay-target",
 				&boarddata->strobe_dll_delay_target);
