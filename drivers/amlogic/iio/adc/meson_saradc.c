@@ -861,7 +861,9 @@ static int meson_sar_adc_init(struct iio_dev *indio_dev)
 			MESON_SAR_ADC_REG0_ADC_TEMP_SEN_SEL);
 
 	/* disable all channels by default */
-	regmap_write(priv->regmap, MESON_SAR_ADC_CHAN_LIST, 0x0);
+	ret = regmap_write(priv->regmap, MESON_SAR_ADC_CHAN_LIST, 0x0);
+	if (ret)
+		return ret;
 
 	regmap_update_bits(priv->regmap, MESON_SAR_ADC_REG3,
 			   MESON_SAR_ADC_REG3_CTRL_SAMPLING_CLOCK_PHASE, 0);
@@ -1186,6 +1188,8 @@ static int meson_sar_adc_buffer_postenable(struct iio_dev *indio_dev)
 		idx++;
 	}
 
+	if (!idx)
+		return -EINVAL;
 	priv->active_channel_cnt = idx;
 
 	/*
@@ -1414,8 +1418,10 @@ static int meson_sar_adc_probe(struct platform_device *pdev)
 
 	priv = iio_priv(indio_dev);
 	match = of_match_device(meson_sar_adc_of_match, &pdev->dev);
-	priv->data = match->data;
+	if (!match)
+		return -EINVAL;
 
+	priv->data = match->data;
 	indio_dev->name = priv->data->name;
 	indio_dev->dev.parent = &pdev->dev;
 	indio_dev->dev.of_node = pdev->dev.of_node;
