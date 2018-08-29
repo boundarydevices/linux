@@ -487,7 +487,7 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
     {
         show_len = 0;
         total_len = 0;
-        memset(cmd_head.data, 0, cmd_head.data_len + 1);
+        memset(cmd_head.data, 0, (int)(cmd_head.data_len + 1));
         memcpy(cmd_head.data, &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 
         if (FAIL == gup_update_proc((void*)cmd_head.data))

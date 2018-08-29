@@ -754,6 +754,11 @@ static void goodix_ts_work_func(struct work_struct *work)
         u8 buf[8 * GTP_MAX_TOUCH] = {(GTP_READ_COOR_ADDR + 10) >> 8, (GTP_READ_COOR_ADDR + 10) & 0xff};
 
         ret = gtp_i2c_read(ts->client, buf, 2 + 8 * (touch_num - 1));
+	if (ret < 0)
+	{
+		GTP_ERROR("GTP read data from i2c slave device failed");
+		return;
+	}
         memcpy(&point_data[12], &buf[2], 8 * (touch_num - 1));
     }
 
@@ -2633,8 +2638,11 @@ static int goodix_ts_remove(struct i2c_client *client)
 
     GTP_INFO("GTP driver removing...");
     i2c_set_clientdata(client, NULL);
-    input_unregister_device(ts->input_dev);
-    kfree(ts);
+    if (ts)
+    {
+        input_unregister_device(ts->input_dev);
+        kfree(ts);
+    }
 
     if (goodix_wq)
        destroy_workqueue(goodix_wq);
