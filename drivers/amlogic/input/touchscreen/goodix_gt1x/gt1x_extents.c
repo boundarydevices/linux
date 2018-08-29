@@ -665,7 +665,7 @@ static long gt1x_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	u32 value = 0;
 	s32 ret = 0;		//the initial value must be 0
 	u8 *data = NULL;
-    int cnt = 30;
+        int cnt = 30;
 
     /* Blocking when firmwaer updating */
     while (cnt-- && update_info.status) {
@@ -696,6 +696,8 @@ static long gt1x_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	} else {
 		value = (u32) arg;
 	}
+	if (!data)
+		return -1;
 
 	switch (cmd & NEGLECT_SIZE_MASK) {
 	case IO_GET_VERISON:
