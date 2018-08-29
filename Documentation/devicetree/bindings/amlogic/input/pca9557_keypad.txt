@@ -1,0 +1,10 @@
+pca9557: pca9557@0x1f {
+		compatible = "amlogic,pca9557_keypad";
+		reg = <0x1f>;
+		key_num = <4>;
+		key_name = "fdr", "hotword", "pause", "mute";
+		key_value = <106 105 139 116>;
+		key_index_mask = <0x4 0x8 0x10 0x20>;
+		key_input_mask = <0x3C>;
+		status = "okay";
+	};

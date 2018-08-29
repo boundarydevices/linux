@@ -756,14 +756,13 @@
 	pinctrl-0=<&ao_i2c_master_pin2>;
 
 	aml_pca9557: aml_pca9557@0x1f {
-		compatible = "aml, ledring";
+		compatible = "amlogic,pca9557_keypad";
 		reg = <0x1f>;
-		mode = <0>; /*0: 6-led 1: 4key+2led */
 		key_num = <4>;
-		led_dev_name = "aml_ledring";
-		key_dev_name = "aml_pca_key";
-		key_name = "mute", "pause", "vol+", "vol-";
-		key_value = <200 201 202 203>;
+		key_name = "fdr", "hotword", "pause", "mute";
+		key_value = <106 105 139 116>;
+		key_index_mask = <0x4 0x8 0x10 0x20>;
+		key_input_mask = <0x3C>;
 		status = "okay";
 	};
 

@@ -26,4 +26,10 @@ config AMLOGIC_GPIO_KEY
         help
           Say Y here if you want to use the amlogic hold key.
 
+config AMLOGIC_PCA9557_KEYPAD
+        tristate "Amlogic pca9557 keypad device surport"
+        default n
+        help
+          Say Y here if you want to use the amlogic hold key.
+
 endif # AMLOGIC_INPUT_KEYBOARD

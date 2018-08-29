@@ -14620,3 +14620,5 @@ F:      arch/arm64/boot/dts/amlogic/axg_s400_v03gva.dts
 F:      arch/arm64/boot/dts/amlogic/axg_s420_v03gva.dts
 F:	Documentation/devicetree/bindings/input/cy8c4014_i2c.txt
 F:	drivers/amlogic/input/sensor/cy8c4014.c
+F:	Documentation/devicetree/bindings/amlogic/input/pca9557_keypad.txt
+F:      drivers/amlogic/input/keyboard/pca9557_keypad.c
