@@ -1013,6 +1013,8 @@ static u8 gup_burn_proc(struct i2c_client *client, u8 *burn_buf, u16 start_addr,
     u8  retry = 0;
 
     GTP_DEBUG("Begin burn %dk data to addr 0x%x", (total_length/1024), start_addr);
+    if (!burn_buf)
+	return FAIL;
     while(burn_length < total_length)
     {
         GTP_DEBUG("B/T:%04d/%04d", burn_length, total_length);
