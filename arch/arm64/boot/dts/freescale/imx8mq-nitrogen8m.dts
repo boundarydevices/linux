@@ -1210,11 +1210,8 @@
 
 &usdhc1 {
 	bus-width = <8>;
-#if 1
-	pinctrl-names = "default";
-#else
+	no-mmc-hs400;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-#endif
 	pinctrl-0 = <&pinctrl_usdhc1>;
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
