@@ -176,7 +176,7 @@ int dmc_set_monitor_by_name(unsigned long start, unsigned long end,
 	if (id < 0 || id >= BITS_PER_LONG)
 		return -EINVAL;
 
-	return dmc_set_monitor(start, end, 1 << id, en);
+	return dmc_set_monitor(start, end, 1UL << id, en);
 }
 EXPORT_SYMBOL(dmc_set_monitor_by_name);
 
@@ -273,7 +273,7 @@ static int dmc_monitor_probe(struct platform_device *pdev)
 	int r = 0, irq, ports;
 	unsigned int io;
 	struct device_node *node = pdev->dev.of_node;
-	struct ddr_port_desc *desc;
+	struct ddr_port_desc *desc = NULL;
 
 	pr_info("%s\n", __func__);
 	r = get_cpu_type();

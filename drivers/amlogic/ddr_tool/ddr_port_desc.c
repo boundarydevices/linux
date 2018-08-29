@@ -444,10 +444,6 @@ int __init ddr_find_port_desc(int cpu_type, struct ddr_port_desc **desc)
 		desc_size = ARRAY_SIZE(ddr_port_desc_gxbb);
 		break;
 
-	case MESON_CPU_MAJOR_ID_GXTVBB:
-		/* Not used or need implement? */
-		break;
-
 	case MESON_CPU_MAJOR_ID_GXL:
 		*desc = ddr_port_desc_gxl;
 		desc_size = ARRAY_SIZE(ddr_port_desc_gxl);
@@ -494,14 +490,14 @@ int __init ddr_find_port_desc(int cpu_type, struct ddr_port_desc **desc)
 		break;
 
 	default:
-		break;
+		return -EINVAL;
 	}
 
 	/* using once */
 	chip_ddr_port = kcalloc(desc_size, sizeof(*chip_ddr_port), GFP_KERNEL);
 	if (!chip_ddr_port)
 		return -ENOMEM;
-	memcpy(chip_ddr_port, *desc, sizeof(*chip_ddr_port) * desc_size);
+	memcpy(chip_ddr_port, *desc, sizeof(struct ddr_port_desc) * desc_size);
 	chip_ddr_port_num = desc_size;
 	*desc = chip_ddr_port;
 
