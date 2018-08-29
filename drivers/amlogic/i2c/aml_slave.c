@@ -182,7 +182,8 @@ static int i2c_slave_probe(struct platform_device *pdev)
 	if (!strcmp(i2c_auto_test_mode, "open"))
 		i2c_auto_test_flag = 1;
 
-	slave =	kzalloc(sizeof(struct aml_i2c_slave), GFP_KERNEL);
+	slave =	devm_kzalloc(&pdev->dev, sizeof(struct aml_i2c_slave),
+		GFP_KERNEL);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
@@ -246,7 +247,6 @@ static int i2c_slave_remove(struct platform_device *pdev)
 	class_destroy(&slave->cls);
 	mutex_destroy(slave->lock);
 	free_irq(slave->irq, slave);
-	kzfree(slave);
 	return 0;
 }
 static int i2c_slave_suspend(struct device *dev)
