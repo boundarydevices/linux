@@ -1,0 +1,21 @@
+menuconfig AMLOGIC_SENSOR
+	bool "Sensor devices"
+	---help---
+	  Say Y here to get to see options for sensor device drivers from
+	  all categories. This option alone does not add any kernel code.
+
+	  If you say N,all options in this submenu will be skipped and disabled.
+
+if AMLOGIC_SENSOR
+
+config AMLOGIC_SENSOR_CY8C4014
+	tristate "cy8c4014 sensor driver"
+	depends on I2C
+	default n
+	help
+	  Say yes here to support Cypress cy8c4014 sensor and proximity
+	  sensor
+	  Say yes here to support Cypress cy8c4014 sensor and proximity
+	  sensor
+
+endif # SENSOR_DEVICES

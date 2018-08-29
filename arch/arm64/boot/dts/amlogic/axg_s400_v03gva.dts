@@ -983,6 +983,12 @@
 	      reg = <0x13>;
 	      status = "disable";
 	};
+	cy8c4014_08: cy8c4014_08@08 {
+	     compatible = "cy8c4014";
+	     #sound-dai-cells = <0>;
+	     reg = <0x8>;
+	     status = "okay";
+	};
        is31fl3236a: is31f3236a@0x78 {
 		compatible = "issi,is31fl3236";
 		reg = <0x3c>;

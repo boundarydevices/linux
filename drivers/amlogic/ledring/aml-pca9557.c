@@ -74,7 +74,7 @@ static struct _key_led {
 	int mode;
 } *key_led_des;
 
-struct _key_des {
+static struct _key_des {
 	char name[MAX_NAME_LEN];
 	unsigned int key_val;
 	int pin;
