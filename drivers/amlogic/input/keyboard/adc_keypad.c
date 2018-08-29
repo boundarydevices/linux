@@ -253,7 +253,7 @@ static int meson_adc_kp_get_devtree_pdata(struct platform_device *pdev,
 			state = -EINVAL;
 			goto err;
 		}
-		strncpy(key->name, uname, MAX_NAME_LEN);
+		snprintf(key->name, MAX_NAME_LEN, "%s", uname);
 
 		ret = of_property_read_u32_index(pdev->dev.of_node,
 			"key_code", cnt, &key->code);
@@ -399,7 +399,7 @@ static ssize_t table_store(struct class *cls, struct class_attribute *attr,
 	/*save the key data in order*/
 	pval = strsep(&pbuf, ":"); /*name*/
 	if (pval)
-		strncpy(dkey->name, pval, MAX_NAME_LEN);
+		snprintf(dkey->name, MAX_NAME_LEN, "%s", pval);
 
 	pval = strsep(&pbuf, ":"); /*code*/
 	if (pval)
