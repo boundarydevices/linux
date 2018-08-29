@@ -2436,6 +2436,93 @@ void osd_set_window_axis_hw(u32 index, s32 x0, s32 y0, s32 x1, s32 y1)
 	mutex_unlock(&osd_mutex);
 }
 
+
+s32 osd_get_position_from_reg(
+	u32 index,
+	s32 *src_x_start, s32 *src_x_end,
+	s32 *src_y_start, s32 *src_y_end,
+	s32 *dst_x_start, s32 *dst_x_end,
+	s32 *dst_y_start, s32 *dst_y_end)
+{
+	struct hw_osd_reg_s *osd_reg = &hw_osd_reg_array[index];
+	u32 data32 = 0x0;
+
+	if (index >= OSD4)
+		return -1;
+
+	if (!src_x_start || !src_x_end || !src_y_start || !src_y_end
+		|| !dst_y_start || !dst_x_end || !dst_y_start || !dst_y_end)
+		return -1;
+
+	data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w1);
+	*src_x_start = data32 & 0x1fff;
+	*src_x_end = (data32 >> 16) & 0x1fff;
+
+	data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w2);
+	*src_y_start = data32 & 0x1fff;
+	*src_y_end = (data32 >> 16) & 0x1fff;
+
+	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+		data32 = osd_reg_read(osd_reg->osd_sc_ctrl0);
+		if ((data32 & 0xc) == 0xc) {
+			data32 = osd_reg_read(osd_reg->osd_sco_h_start_end);
+			*dst_x_end = data32 & 0x1fff;
+			*dst_x_start = (data32 >> 16) & 0x1fff;
+
+			data32 = osd_reg_read(osd_reg->osd_sco_v_start_end);
+			*dst_y_end = data32 & 0x1fff;
+			*dst_y_start = (data32 >> 16) & 0x1fff;
+		} else {
+			data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w3);
+			*dst_x_start = data32 & 0x1fff;
+			*dst_x_end = (data32 >> 16) & 0x1fff;
+
+			data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w4);
+			*dst_y_start = data32 & 0x1fff;
+			*dst_y_end = (data32 >> 16) & 0x1fff;
+		}
+	} else if (osd_hw.osd_meson_dev.osd_ver == OSD_NORMAL) {
+		s32 scaler_index = -1;
+
+		osd_reg = &hw_osd_reg_array[0];
+		data32 = osd_reg_read(osd_reg->osd_sc_ctrl0);
+
+		if ((data32 & 3) == 0)
+			scaler_index = 0;
+		else if ((data32 & 3) == 1)
+			scaler_index = 1;
+
+		if (((data32 & 0xc) == 0xc) && ((u32)scaler_index == index)) {
+			data32 = osd_reg_read(osd_reg->osd_sco_h_start_end);
+			*dst_x_end = data32 & 0x1fff;
+			*dst_x_start = (data32 >> 16) & 0x1fff;
+
+			data32 = osd_reg_read(osd_reg->osd_sco_v_start_end);
+			*dst_y_end = data32 & 0x1fff;
+			*dst_y_start = (data32 >> 16) & 0x1fff;
+		} else {
+			osd_reg = &hw_osd_reg_array[index];
+			data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w3);
+			*dst_x_start = data32 & 0x1fff;
+			*dst_x_end = (data32 >> 16) & 0x1fff;
+
+			data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w4);
+			*dst_y_start = data32 & 0x1fff;
+			*dst_y_end = (data32 >> 16) & 0x1fff;
+		}
+	} else if (osd_hw.osd_meson_dev.osd_ver == OSD_SIMPLE) {
+		osd_reg = &hw_osd_reg_array[0];
+		data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w3);
+		*dst_x_start = data32 & 0x1fff;
+		*dst_x_end = (data32 >> 16) & 0x1fff;
+
+		data32 = osd_reg_read(osd_reg->osd_blk0_cfg_w4);
+		*dst_y_start = data32 & 0x1fff;
+		*dst_y_end = (data32 >> 16) & 0x1fff;
+	}
+	return 0;
+}
+
 void osd_get_block_windows_hw(u32 index, u32 *windows)
 {
 	/*

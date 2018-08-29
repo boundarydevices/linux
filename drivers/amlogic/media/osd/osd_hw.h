@@ -88,6 +88,12 @@ extern void osd_get_window_axis_hw(u32 index, s32 *x0, s32 *y0, s32 *x1,
 				   s32 *y1);
 extern void osd_set_window_axis_hw(u32 index, s32 x0, s32 y0, s32 x1, s32 y1);
 extern void osd_set_scale_axis_hw(u32 index, s32 x0, s32 y0, s32 x1, s32 y1);
+extern s32 osd_get_position_from_reg(
+	u32 index,
+	s32 *src_x_start, s32 *src_x_end,
+	s32 *src_y_start, s32 *src_y_end,
+	s32 *dst_x_start, s32 *dst_x_end,
+	s32 *dst_y_start, s32 *dst_y_end);
 extern void osd_get_block_windows_hw(u32 index, u32 *windows);
 extern void osd_set_block_windows_hw(u32 index, u32 *windows);
 extern void osd_get_block_mode_hw(u32 index, u32 *mode);

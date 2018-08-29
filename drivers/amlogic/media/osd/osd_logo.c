@@ -184,32 +184,67 @@ int set_osd_logo_freescaler(void)
 {
 	const struct vinfo_s *vinfo;
 	u32 index = logo_info.index;
+	s32 src_x_start = 0, src_x_end = 0;
+	s32 src_y_start = 0, src_y_end = 0;
+	s32 dst_x_start = 0, dst_x_end = 0;
+	s32 dst_y_start = 0, dst_y_end = 0;
+	s32 target_x_end = 0, target_y_end = 0;
 
 	if (logo_info.loaded == 0)
 		return 0;
+
 	if (osd_get_logo_index() != logo_info.index) {
 		pr_info("logo changed, return!\n");
 		return -1;
 	}
+
 	if ((osd_hw.osd_meson_dev.osd_ver == OSD_SIMPLE) && (index >= 1))
 		return -1;
 
+	if (osd_get_position_from_reg(
+		index,
+		&src_x_start, &src_x_end,
+		&src_y_start, &src_y_end,
+		&dst_x_start, &dst_x_end,
+		&dst_y_start, &dst_y_end))
+		return -1;
+
+	vinfo = get_current_vinfo();
+	if (vinfo) {
+		target_x_end = vinfo->width - 1;
+		target_y_end = vinfo->height - 1;
+	} else {
+		target_x_end = 1919;
+		target_y_end = 1079;
+	}
+	if ((src_x_start == 0)
+		&& (src_x_end == (logo_info.fb_width - 1))
+		&& (src_y_start == 0)
+		&& (src_y_end == (logo_info.fb_height - 1))
+		&& (dst_x_start == 0)
+		&& (dst_x_end == target_x_end)
+		&& (dst_y_start == 0)
+		&& (dst_y_end == target_y_end))
+		return 0;
+
+	if (vinfo)
+		pr_info("outputmode changed to %s, reset osd%d, (%d, %d, %d, %d) -> (%d, %d, %d, %d)\n",
+			vinfo->name, index,
+			dst_x_start, dst_y_start, dst_x_end, dst_y_end,
+			0, 0, target_x_end, target_y_end);
+	else
+		pr_info("outputmode changed to NULL, reset osd%d, (%d, %d, %d, %d) -> (%d, %d, %d, %d)\n",
+			index,
+			dst_x_start, dst_y_start, dst_x_end, dst_y_end,
+			0, 0, target_x_end, target_y_end);
+
 	osd_set_free_scale_mode_hw(index, 1);
 	osd_set_free_scale_enable_hw(index, 0);
-
 	osd_set_free_scale_axis_hw(index, 0, 0,
 		logo_info.fb_width - 1, logo_info.fb_height - 1);
 	osd_update_disp_axis_hw(index, 0, logo_info.fb_width - 1,
 		0, logo_info.fb_height - 1, 0, 0, 0);
-	vinfo = get_current_vinfo();
-	if (vinfo) {
-		pr_info("outputmode changed to %s, reset osd%d scaler\n",
-			vinfo->name, index);
-		osd_set_window_axis_hw(index, 0, 0,
-			(vinfo->width - 1), (vinfo->height - 1));
-	} else {
-		osd_set_window_axis_hw(index, 0, 0, 1919, 1079);
-	}
+	osd_set_window_axis_hw(index, 0, 0, target_x_end, target_y_end);
 	osd_set_free_scale_enable_hw(index, 0x10001);
 	osd_enable_hw(index, 1);
 	return 0;
