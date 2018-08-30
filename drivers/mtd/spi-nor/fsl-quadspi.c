@@ -740,7 +740,7 @@ static int fsl_qspi_init_ahb_read(struct fsl_qspi *q)
 	 * read performance.
 	 */
 	qspi_writel(q, QUADSPI_BUF3CR_ALLMST_MASK |
-			((q->devtype_data->ahb_buf_size / 8)
+			((q->devtype_data->ahb_buf_size / 8 / 8)
 			<< QUADSPI_BUF3CR_ADATSZ_SHIFT),
 			base + QUADSPI_BUF3CR);
 
