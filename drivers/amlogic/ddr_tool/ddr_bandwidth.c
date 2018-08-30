@@ -366,7 +366,8 @@ static int ddr_bandwidth_remove(struct platform_device *pdev)
 static const struct of_device_id aml_ddr_bandwidth_dt_match[] = {
 	{
 		.compatible = "amlogic, ddr-bandwidth",
-	}
+	},
+	{}
 };
 #endif
 

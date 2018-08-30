@@ -2668,6 +2668,7 @@ static const struct of_device_id aml_cec_dt_match[] = {
 		.compatible = "amlogic, aocec-txl",
 		.data = &cec_txl_data,
 	},
+	{}
 };
 #endif
 

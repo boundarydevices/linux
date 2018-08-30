@@ -1019,7 +1019,7 @@ static const struct of_device_id meson_txl_pinctrl_dt_match[] = {
 		.compatible = "amlogic,meson-txl-aobus-pinctrl",
 		.data = &meson_txl_aobus_pinctrl_data,
 	},
-
+	{}	/* Make KASAN shut up */
 };
 
 static struct platform_driver meson_txl_pinctrl_driver = {

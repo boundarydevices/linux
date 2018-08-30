@@ -1334,6 +1334,7 @@ static const struct of_device_id ionvideo_dt_match[] = {
 	{
 		.compatible = "amlogic, ionvideo",
 	},
+	{}
 };
 
 /* general interface for a linux driver .*/

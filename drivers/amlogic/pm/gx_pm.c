@@ -264,7 +264,8 @@ static int __exit meson_pm_remove(struct platform_device *pdev)
 
 static const struct of_device_id amlogic_pm_dt_match[] = {
 	{.compatible = "amlogic, pm",
-	 },
+	},
+	{}
 };
 
 static struct platform_driver meson_pm_driver = {

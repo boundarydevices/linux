@@ -585,8 +585,11 @@ static int __init check_pfn_overflow(unsigned long pfn)
 	size = sizeof(struct page);
 	pfn_up = ALIGN(max_pfn * size, PMD_SIZE);
 	pfn_up = (pfn_up + size - 1) / size;	/* round up */
-	if (pfn >= pfn_up)
+	if (pfn >= pfn_up) {
+		pr_debug("%s, wrong pfn:%lx, max:%lx, up:%lx\n",
+			__func__, pfn, max_pfn, pfn_up);
 		return -ERANGE;
+	}
 	return 0;
 }
 #endif /* CONFIG_AMLOGIC_MODIFY */
@@ -600,15 +603,19 @@ int __meminit vmemmap_populate(unsigned long start, unsigned long end, int node)
 	pmd_t *pmd;
 #ifdef CONFIG_AMLOGIC_MODIFY
 	struct page *page;
+	bool in_vmap = false;
 
 	page = (struct page *)start;
+	/* avoid check for KASAN */
+	if (start >= VMEMMAP_START)
+		in_vmap = true;
 #endif /* CONFIG_AMLOGIC_MODIFY */
 	do {
 		next = pmd_addr_end(addr, end);
 
 	#ifdef CONFIG_AMLOGIC_MODIFY
 		/* page address may not just same as next */
-		while (((unsigned long)page) < next)
+		while (in_vmap && ((unsigned long)page) < next)
 			page++;
 	#endif /* CONFIG_AMLOGIC_MODIFY */
 
@@ -633,7 +640,7 @@ int __meminit vmemmap_populate(unsigned long start, unsigned long end, int node)
 			vmemmap_verify((pte_t *)pmd, node, addr, next);
 
 	#ifdef CONFIG_AMLOGIC_MODIFY
-		if (check_pfn_overflow(page_to_pfn(page)))
+		if (in_vmap && check_pfn_overflow(page_to_pfn(page)))
 			break;
 	#endif /* CONFIG_AMLOGIC_MODIFY */
 	} while (addr = next, addr != end);

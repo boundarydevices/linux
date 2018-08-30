@@ -978,7 +978,8 @@ static const struct of_device_id meson8b_pinctrl_dt_match[] = {
 	{
 		.compatible = "amlogic,meson8b-aobus-pinctrl",
 		.data = &meson8b_aobus_pinctrl_data,
-	}
+	},
+	{}
 };
 
 static struct platform_driver meson8b_pinctrl_driver = {

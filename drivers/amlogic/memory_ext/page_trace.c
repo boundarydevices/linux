@@ -1095,6 +1095,9 @@ void __init page_trace_mem_init(void)
 #endif
 
 	find_static_common_symbol();
+#ifdef CONFIG_KASAN	/* open multi_shot for kasan */
+	kasan_save_enable_multi_shot();
+#endif
 #ifdef CONFIG_64BIT
 	/*
 	 * if this compiler error occurs, that means there are over 32 page
