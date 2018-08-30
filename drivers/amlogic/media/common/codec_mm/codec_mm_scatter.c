@@ -926,12 +926,18 @@ static int codec_mm_page_alloc_from_slot(
 				/*
 				   *ERR_LOG("can't alloc slot from system\n");
 				 */
-				pr_info("alloc default cma size fail, try %d pages\n",
-						alloc_pages);
+				if (codec_mm_get_sc_debug_mode() &
+						0x01) {
+					pr_info("alloc default cma size fail, try %d pages\n",
+							alloc_pages);
+				}
 				slot = codec_mm_slot_alloc(smgt,
 					 alloc_pages * PAGE_SIZE, 0);
 				if (!slot) {
-					pr_info("slot alloc 4M fail!\n");
+					if (codec_mm_get_sc_debug_mode() &
+						0x01) {
+						pr_info("slot alloc 4M fail!\n");
+					}
 					break;
 				}
 			}
