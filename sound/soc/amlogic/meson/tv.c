@@ -266,6 +266,20 @@ static int aml_audio_set_in_source(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int aml_audio_get_spdifin_pao(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = bSpdifIN_PAO;
+	return 0;
+}
+
+
+static int aml_audio_set_spdifin_pao(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	bSpdifIN_PAO = ucontrol->value.integer.value[0];
+	return 0;
+}
 /* i2s audio format detect: LPCM or NONE-LPCM */
 static const char *const i2s_audio_type_texts[] = {
 	"LPCM", "NONE-LPCM", "UN-KNOWN"
@@ -803,6 +817,10 @@ static const struct snd_kcontrol_new av_controls[] = {
 };
 
 static const struct snd_kcontrol_new aml_tv_controls[] = {
+	SOC_SINGLE_BOOL_EXT("SPDIFIN PAO",
+		     0,
+		     aml_audio_get_spdifin_pao,
+		     aml_audio_set_spdifin_pao),
 	SOC_ENUM_EXT("Audio In Source",
 		     audio_in_source_enum,
 		     aml_audio_get_in_source,
@@ -1590,7 +1608,11 @@ static void parse_dac_channel_mask(struct snd_soc_card *card)
 	}
 
 	/*Acodec DAC0 selects i2s source*/
-	of_property_read_string(np, "DAC0_Channel_Mask", &str);
+	ret = of_property_read_string(np, "DAC0_Channel_Mask", &str);
+	if (ret) {
+		pr_err("error:read DAC0_Channel_Mask\n");
+		return;
+	}
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
 		p_aml_audio->DAC0_Channel_Mask = ret;
@@ -1598,7 +1620,11 @@ static void parse_dac_channel_mask(struct snd_soc_card *card)
 				p_aml_audio->DAC0_Channel_Mask);
 	}
 	/*Acodec DAC1 selects i2s source*/
-	of_property_read_string(np, "DAC1_Channel_Mask", &str);
+	ret = of_property_read_string(np, "DAC1_Channel_Mask", &str);
+	if (ret) {
+		pr_err("error:read DAC1_Channel_Mask\n");
+		return;
+	}
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
 		p_aml_audio->DAC1_Channel_Mask = ret;
@@ -1627,7 +1653,11 @@ static void parse_eqdrc_channel_mask(struct snd_soc_card *card)
 	}
 
 	/*Hardware EQ and DRC can be muxed to i2s 2 channels*/
-	of_property_read_string(np, "EQ_DRC_Channel_Mask", &str);
+	ret = of_property_read_string(np, "EQ_DRC_Channel_Mask", &str);
+	if (ret) {
+		pr_err("error:read EQ_DRC_Channel_Mask\n");
+		return;
+	}
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
 		p_aml_audio->EQ_DRC_Channel_Mask = ret;
@@ -1643,8 +1673,12 @@ static void parse_eqdrc_channel_mask(struct snd_soc_card *card)
 	/* If spdif is same source to i2s,
 	 * it can be muxed to i2s 2 channels
 	 */
-	of_property_read_string(np,
+	ret = of_property_read_string(np,
 			"Spdif_samesource_Channel_Mask", &str);
+	if (ret) {
+		pr_err("error:read Spdif_samesource_Channel_Mask\n");
+		return;
+	}
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
 		p_aml_audio->Spdif_samesource_Channel_Mask = ret;
@@ -1677,8 +1711,12 @@ static void parse_samesource_channel_mask(struct snd_soc_card *card)
 	/* If spdif is same source to i2s,
 	 * it can be muxed to i2s 2 channels
 	 */
-	of_property_read_string(np,
+	ret = of_property_read_string(np,
 			"Spdif_samesource_Channel_Mask", &str);
+	if (ret) {
+		pr_err("error:read Spdif_samesource_Channel_Mask\n");
+		return;
+	}
 	ret = check_channel_mask(str);
 	if (ret >= 0) {
 		p_aml_audio->Spdif_samesource_Channel_Mask = ret;

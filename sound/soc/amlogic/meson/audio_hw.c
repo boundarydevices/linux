@@ -36,6 +36,7 @@
 unsigned int IEC958_MODE = AIU_958_MODE_PCM16;
 unsigned int I2S_MODE = AIU_I2S_MODE_PCM16;
 unsigned int audio_in_source;
+unsigned int bSpdifIN_PAO;
 
 unsigned int IEC958_bpf = 0x7dd;
 EXPORT_SYMBOL(IEC958_bpf);
@@ -521,8 +522,16 @@ static void spdifin_fifo1_set_buf(u32 addr, u32 size, u32 src)
 	 */
 	spdifin_reg_set();
 
+	/* only HDMI case use PAO mode */
+	if (audio_in_source == 2) {
+		if (bSpdifIN_PAO == 1)
+			src = PAO_IN;
+	}
 	/*3 byte mode, (23:0)*/
 	if (src == PAO_IN) {
+		aml_audin_update_bits(AUDIN_FIFO1_CTRL,
+				(0x7 << AUDIN_FIFO_DIN_SEL),
+				(PAO_IN << AUDIN_FIFO_DIN_SEL));
 		aml_audin_write(AUDIN_FIFO1_CTRL1, 0x08);
 		if (is_spdif_pao_support())
 			chipset_set_spdif_pao();

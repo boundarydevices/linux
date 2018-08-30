@@ -138,6 +138,7 @@ enum {
 extern unsigned int IEC958_MODE;
 extern unsigned int I2S_MODE;
 extern unsigned int audio_in_source;
+extern unsigned int bSpdifIN_PAO;
 
 void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel,
 	snd_pcm_format_t format);
