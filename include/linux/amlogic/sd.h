@@ -200,6 +200,7 @@ struct mmc_phase {
 
 struct para_e {
 	struct mmc_phase init;
+	struct mmc_phase emmc_init;
 	struct mmc_phase hs;
 	struct mmc_phase ddr;
 	struct mmc_phase hs2;
@@ -225,6 +226,21 @@ struct meson_mmc_data {
 
 struct amlsd_host;
 struct sd_emmc_desc_info;
+
+struct clock_lay_t {
+	/* source clk, 24Mhz, 1Ghz */
+	unsigned int source;
+	/* core clk, Hz */
+	unsigned int core;
+	/* old core clk, Hz */
+	unsigned int old_core;
+	/* bus clk */
+	unsigned int sdclk;
+};
+
+/* todly in ns*/
+#define TODLY_MIN_NS	(2)
+#define TODLY_MAX_NS	(14)
 
 struct amlsd_platform {
 	struct amlsd_host *host;
@@ -263,6 +279,7 @@ struct amlsd_platform {
 	unsigned int clock;
 	/* signalling voltage (1.8V or 3.3V) */
 	unsigned char signal_voltage;
+	struct clock_lay_t clk_lay;
 	int	bus_width;
 	int	bl_len;
 	int	stop_clk;

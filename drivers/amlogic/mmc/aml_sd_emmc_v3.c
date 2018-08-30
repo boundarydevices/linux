@@ -42,6 +42,71 @@
 #include <linux/amlogic/amlsd.h>
 #include <linux/amlogic/aml_sd_emmc_internal.h>
 
+int aml_fixdiv_calc(unsigned int *fixdiv, struct clock_lay_t *clk)
+{
+	int ret = 0;
+	unsigned int full_div, source_cycle;	/* in ns*/
+	unsigned int sdclk_idx, todly_idx_max, todly_idx_min;
+	unsigned int inv_idx_min, inv_idx_max;
+	unsigned int val_idx_min, val_idx_max, val_idx_win, val_idx_sta;
+
+	if (!fixdiv || !clk)
+		return -EPERM;
+
+	if (clk->core == clk->old_core)
+		return 1;
+	clk->old_core = clk->core;
+
+	pr_debug(">>>%s source clk %d, core clk %d\n",
+			__func__, clk->source, clk->core);
+	full_div = clk->source / clk->core;
+	sdclk_idx = full_div / 2;
+	sdclk_idx -= full_div % 2 ? 0 : 1;
+
+	pr_debug("full_div %d, sdclk_idx %d\n", full_div, sdclk_idx);
+	/* ns */
+	source_cycle = 1000000000 / clk->source;
+	pr_debug("cycle of source clock is %d\n", source_cycle);
+	if (source_cycle < TODLY_MAX_NS) {
+		todly_idx_max
+			= (TODLY_MAX_NS + source_cycle - 1) / source_cycle;
+		todly_idx_min = TODLY_MIN_NS / source_cycle;
+		pr_debug("todly_idx_min %d, todly_idx_max %d\n",
+				todly_idx_min, todly_idx_max);
+		inv_idx_min = todly_idx_min + sdclk_idx;
+		inv_idx_max = todly_idx_max + sdclk_idx;
+		pr_debug("inv_idx_min %d, inv_idx_max %d\n",
+				inv_idx_min, inv_idx_max);
+		inv_idx_min = inv_idx_min % full_div;
+		inv_idx_max = inv_idx_max % full_div;
+		pr_debug("ROUND: inv_idx_min %d, inv_idx_max %d\n",
+				inv_idx_min, inv_idx_max);
+
+		if (inv_idx_min > inv_idx_max) {
+			val_idx_min = inv_idx_max + 1;
+			val_idx_max = inv_idx_min - 1;
+			val_idx_sta = val_idx_min;
+			val_idx_win = val_idx_max - val_idx_min;
+		} else if (inv_idx_min <= inv_idx_max) {
+			val_idx_max = inv_idx_max + 1;
+			val_idx_min = inv_idx_min - 1;
+			val_idx_sta = val_idx_max;
+			val_idx_win = (full_div + val_idx_min) -  val_idx_max;
+		}
+	} else {
+		val_idx_max = sdclk_idx + 1;
+		val_idx_min = sdclk_idx - 1;
+		val_idx_sta = val_idx_max;
+		val_idx_win = full_div / 2;
+	}
+
+	pr_debug("val_idx_sta %d, val_idx_win %d\n", val_idx_sta, val_idx_win);
+	*fixdiv = val_idx_sta + (val_idx_win >> 1);
+
+	pr_debug("fixdiv = %d\n", *fixdiv);
+	return ret;
+}
+
 int meson_mmc_clk_init_v3(struct amlsd_host *host)
 {
 	int ret = 0;
@@ -50,6 +115,7 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	struct mmc_phase *init = &(host->data->sdmmc.init);
+	struct mmc_phase *emmc_init = &(host->data->sdmmc.emmc_init);
 
 	writel(0, host->base + SD_EMMC_CLOCK_V3);
 #ifndef SD_EMMC_CLK_CTRL
@@ -62,11 +128,13 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	pclkc->div = 60;	 /* 400KHz */
 	pclkc->src = 0;	  /* 0: Crystal 24MHz */
 	pclkc->core_phase = init->core_phase;	  /* 2: 180 phase */
-	if ((host->mem->start == host->data->port_b_base)
-			&& (host->data->chip_type == MMC_CHIP_G12A))
-		pclkc->core_phase = 2;
 	pclkc->rx_phase = init->rx_phase;
 	pclkc->tx_phase = init->tx_phase;
+	if ((host->mem->start == host->data->port_c_base)
+			&& (host->data->chip_type >= MMC_CHIP_G12A)) {
+		pclkc->core_phase = emmc_init->core_phase;
+		pclkc->tx_phase = emmc_init->tx_phase;
+	}
 	pclkc->always_on = 1;	  /* Keep clock always on */
 	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
 
@@ -102,6 +170,8 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 	struct clk *src0_clk = NULL;
 	u32 vcfg = 0;
 	struct sd_emmc_config *conf = (struct sd_emmc_config *)&vcfg;
+	u32 vclkc = 0;
+	struct sd_emmc_clock_v3 *clkc = (struct sd_emmc_clock_v3 *)&vclkc;
 #endif
 
 #ifdef SD_EMMC_CLK_CTRL
@@ -190,6 +260,11 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 	} else
 		mmc->actual_clock = clk_ios;
 
+	vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
+	pdata->clk_lay.source = clk_get_rate(host->cfg_div_clk) * clkc->div;
+	pdata->clk_lay.core = clk_get_rate(host->cfg_div_clk);
+
+
 	/* (re)start clock, if non-zero */
 	if (clk_ios) {
 		vcfg = readl(host->base + SD_EMMC_CFG);
@@ -221,6 +296,7 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 	struct sd_emmc_adjust_v3 *gadjust = (struct sd_emmc_adjust_v3 *)&adjust;
 	u8 clk_div = 0;
 	struct para_e *para = &(host->data->sdmmc);
+	unsigned int fixdiv = 0, ret = 0;
 
 	vctrl = readl(host->base + SD_EMMC_CFG);
 	if ((timing == MMC_TIMING_MMC_HS400) ||
@@ -248,17 +324,21 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 		if (clk_div & 0x01)
 			clk_div++;
 		clkc->div = clk_div / 2;
-		if (aml_card_type_mmc(pdata))
+		if (aml_card_type_mmc(pdata)) {
 			clkc->core_phase  = para->ddr.core_phase;
+			clkc->tx_phase  = para->ddr.tx_phase;
+		}
 		pr_info("%s: try set sd/emmc to DDR mode\n",
 			mmc_hostname(host->mmc));
 	} else if (timing == MMC_TIMING_MMC_HS) {
 		clkc->core_phase = para->hs.core_phase;
+		clkc->tx_phase = para->hs.tx_phase;
 		/* overide co-phase by dts */
 		if (pdata->co_phase)
 			clkc->core_phase = pdata->co_phase;
 	} else if (timing == MMC_TIMING_MMC_HS200) {
 		clkc->core_phase = para->hs2.core_phase;
+		clkc->tx_phase = para->hs2.tx_phase;
 	} else if ((timing == MMC_TIMING_SD_HS)
 				&& aml_card_type_non_sdio(pdata)) {
 		clkc->core_phase = para->sd_hs.core_phase;
@@ -267,6 +347,26 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 
 	} else
 		ctrl->ddr = 0;
+
+	if (aml_card_type_mmc(pdata)
+			&& (host->data->chip_type >= MMC_CHIP_G12A)) {
+		if (timing <= MMC_TIMING_MMC_HS) {
+			ret = aml_fixdiv_calc(&fixdiv, &pdata->clk_lay);
+			if (!ret) {
+				adjust = readl(host->base + SD_EMMC_ADJUST_V3);
+				gadjust->adj_delay = fixdiv;
+				gadjust->adj_enable = 1;
+				writel(adjust, host->base + SD_EMMC_ADJUST_V3);
+				pr_info("fixdiv calc done: adj = %x\n", adjust);
+			}
+		} else if (timing == MMC_TIMING_MMC_DDR52) {
+			adjust = readl(host->base + SD_EMMC_ADJUST_V3);
+			gadjust->adj_delay = 0;
+			gadjust->adj_enable = 0;
+			writel(adjust, host->base + SD_EMMC_ADJUST_V3);
+			pr_debug("ddr52 close calc: adj = %x\n", adjust);
+		}
+	}
 
 	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
 	pdata->clkc = vclkc;
@@ -1399,6 +1499,8 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 	int err = -EINVAL;
 	u32 adj_win_start = 100;
 	u32 intf3;
+
+	writel(0, (host->base + SD_EMMC_ADJUST_V3));
 
 	if (opcode == MMC_SEND_TUNING_BLOCK_HS200) {
 		if (mmc->ios.bus_width == MMC_BUS_WIDTH_8) {
