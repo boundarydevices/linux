@@ -1987,14 +1987,25 @@ static ssize_t dbg_en_store(struct class *cla, struct class_attribute *attr,
 static ssize_t cmd_store(struct class *cla, struct class_attribute *attr,
 	const char *bu, size_t count)
 {
-	char buf[6] = {};
+	char buf[20] = {};
+	int tmpbuf[20] = {};
+	int i;
 	int cnt;
 
-	cnt = sscanf(bu, "%x %x %x %x %x %x",
-		    (int *)&buf[0], (int *)&buf[1], (int *)&buf[2],
-		    (int *)&buf[3], (int *)&buf[4], (int *)&buf[5]);
+	cnt = sscanf(bu, "%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x",
+		    &tmpbuf[0], &tmpbuf[1], &tmpbuf[2], &tmpbuf[3],
+		    &tmpbuf[4], &tmpbuf[5], &tmpbuf[6], &tmpbuf[7],
+		    &tmpbuf[8], &tmpbuf[9], &tmpbuf[10], &tmpbuf[11],
+		    &tmpbuf[12], &tmpbuf[13], &tmpbuf[14], &tmpbuf[15]);
 	if (cnt < 0)
 		return -EINVAL;
+	if (cnt > 16)
+		cnt = 16;
+
+	for (i = 0; i < cnt; i++)
+		buf[i] = (char)tmpbuf[i];
+
+	/*CEC_ERR("cnt=%d\n", cnt);*/
 	cec_ll_tx(buf, cnt);
 	return count;
 }
