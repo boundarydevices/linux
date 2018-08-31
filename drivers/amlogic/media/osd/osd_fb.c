@@ -1716,6 +1716,11 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 		for (i = 0; i < osd_meson_dev.osd_count; i++) {
 			if (!disp_rect)
 				break;
+
+			/* vout serve send only two layer axis */
+			if (i >= 2)
+				break;
+
 			fb_dev = gp_fbdev_list[i];
 			/*
 			 * if osd layer preblend,
@@ -1823,7 +1828,6 @@ int osd_notify_callback_viu2(struct notifier_block *block, unsigned long cmd,
 			fb_dev->osd_ctl.disp_end_y =
 				fb_dev->osd_ctl.disp_start_y +
 				disp_rect->h - 1;
-		disp_rect++;
 		osd_log_dbg("new disp axis: x0:%d y0:%d x1:%d y1:%d\n",
 			fb_dev->osd_ctl.disp_start_x,
 			fb_dev->osd_ctl.disp_start_y,
