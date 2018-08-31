@@ -2231,7 +2231,7 @@ static ssize_t store_valid_mode(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	memset(cvalid_mode, 0, sizeof(cvalid_mode));
-	memcpy(cvalid_mode, buf, sizeof(cvalid_mode));
+	strncpy(cvalid_mode, buf, sizeof(cvalid_mode));
 	cvalid_mode[31] = '\0';
 	return count;
 }
