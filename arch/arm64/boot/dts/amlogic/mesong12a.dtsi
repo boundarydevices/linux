@@ -477,7 +477,7 @@
 		cal_b = <424>;
 		cal_c = <3159>;
 		cal_d = <9411>;
-		rtemp = <130000>;
+		rtemp = <115000>;
 		interrupts = <0 35 0>;
 		clocks = <&clkc CLKID_TS_COMP>; /* CLKID_TS_COMP>;*/
 		clock-names = "ts_comp";
@@ -495,7 +495,7 @@
 		cal_b = <424>;
 		cal_c = <3159>;
 		cal_d = <9411>;
-		rtemp = <130000>;
+		rtemp = <115000>;
 		interrupts = <0 36 0>;
 		clocks = <&clkc CLKID_TS_COMP>; /* CLKID_TS_COMP>;*/
 		clock-names = "ts_comp";
@@ -1646,7 +1646,7 @@
 					type = "hot";
 				};
 				pcritical: trip-point@3 {
-					temperature = <150000>;
+					temperature = <110000>;
 					hysteresis = <1000>;
 					type = "critical";
 				};
@@ -1697,7 +1697,7 @@
 					type = "hot";
 				};
 				dcritical: trip-point@3 {
-					temperature = <150000>;
+					temperature = <110000>;
 					hysteresis = <1000>;
 					type = "critical";
 				};
