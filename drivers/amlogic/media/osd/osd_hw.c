@@ -844,6 +844,7 @@ int osd_sync_request(u32 index, u32 yres, struct fb_sync_request_s *request)
 {
 	int out_fence_fd = -1;
 	int buf_num = 0;
+	int in_fence_fd = -1;
 	struct osd_fence_map_s *fence_map =
 		kzalloc(sizeof(struct osd_fence_map_s), GFP_KERNEL);
 
@@ -863,6 +864,7 @@ int osd_sync_request(u32 index, u32 yres, struct fb_sync_request_s *request)
 		fence_map->yres = yres;
 		fence_map->format = request->sync_req.format;
 		fence_map->in_fd = request->sync_req.in_fen_fd;
+		in_fence_fd = request->sync_req.in_fen_fd;
 		osd_tprintk("request fence fd:%d\n", fence_map->in_fd);
 		fence_map->in_fence = osd_get_fenceobj(
 			request->sync_req.in_fen_fd);
@@ -882,6 +884,7 @@ int osd_sync_request(u32 index, u32 yres, struct fb_sync_request_s *request)
 		fence_map->xoffset = request->sync_req_old.xoffset;
 		fence_map->yres = yres;
 		fence_map->in_fd = request->sync_req_old.in_fen_fd;
+		in_fence_fd = request->sync_req_old.in_fen_fd;
 		osd_tprintk("request fence fd:%d\n", fence_map->in_fd);
 		fence_map->in_fence = osd_get_fenceobj(
 				request->sync_req_old.in_fen_fd);
@@ -891,7 +894,8 @@ int osd_sync_request(u32 index, u32 yres, struct fb_sync_request_s *request)
 	list_add_tail(&fence_map->list, &post_fence_list);
 	mutex_unlock(&post_fence_list_lock);
 	kthread_queue_work(&buffer_toggle_worker, &buffer_toggle_work);
-	__close_fd(current->files, fence_map->in_fd);
+	if (in_fence_fd >= 0)
+		__close_fd(current->files, in_fence_fd);
 	return  out_fence_fd;
 }
 
@@ -948,7 +952,7 @@ static int sync_render_single_fence(u32 index, u32 yres,
 	mutex_unlock(&post_fence_list_lock);
 	kthread_queue_work(&buffer_toggle_worker, &buffer_toggle_work);
 	request->out_fen_fd = out_fence_fd;
-	__close_fd(current->files, fence_map->in_fd);
+	__close_fd(current->files, request->in_fen_fd);
 	return out_fence_fd;
 }
 
