@@ -1723,7 +1723,11 @@ static void tvafe_cvd2_search_video_mode(struct tvafe_cvd2_s *cvd2,
 				tvafe_pr_info("%s dismatch pal m line625 %d, fsc358 %d,pal %d",
 				__func__, cvd2->hw.line625,
 				cvd2->hw.fsc_358, cvd2->hw.pal);
-			if (cvd2->hw.line625)
+			if (cvd2->hw.line625 && cvd2->hw.fsc_358 &&
+			cvd2->hw.pal)
+				tvafe_cvd2_try_format(cvd2, mem,
+				TVIN_SIG_FMT_CVBS_PAL_CN);
+			else if (cvd2->hw.line625)
 				tvafe_cvd2_try_format(cvd2, mem,
 				TVIN_SIG_FMT_CVBS_PAL_I);
 			else if (!cvd2->hw.line625 && cvd2->hw.fsc_443 &&
