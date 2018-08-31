@@ -1477,7 +1477,6 @@ static u32 osd_get_hw_reset_flag(void)
 			hw_reset_flag |= HW_RESET_AFBCD_REGS;
 		break;
 	case __MESON_CPU_MAJOR_ID_GXM:
-	case __MESON_CPU_MAJOR_ID_TXLX:
 		/* same bit, but gxm only reset hardware, not top reg*/
 		if (osd_hw.osd_afbcd[OSD1].enable)
 			hw_reset_flag |= HW_RESET_AFBCD_HARDWARE;
@@ -7282,7 +7281,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	else if (osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_GXM)
 		backup_regs_init(HW_RESET_OSD1_REGS);
 	else if ((osd_meson->cpu_id >= __MESON_CPU_MAJOR_ID_GXL)
-		&& (osd_meson->cpu_id < __MESON_CPU_MAJOR_ID_TXL))
+		&& (osd_meson->cpu_id <= __MESON_CPU_MAJOR_ID_TXL))
 		backup_regs_init(HW_RESET_OSD1_REGS);
 	else if ((osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_G12A)
 		|| (osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_G12B))
