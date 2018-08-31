@@ -23,6 +23,7 @@
 #include <linux/amlogic/tee.h>
 #include <linux/delay.h>
 #include <linux/amlogic/cpu_version.h>
+#include <asm/cputype.h>
 
 #define DRIVER_NAME "tee_info"
 #define DRIVER_DESC "Amlogic tee driver"
@@ -77,7 +78,7 @@ static int tee_msg_os_revision(uint32_t *major, uint32_t *minor)
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
 			== MESON_CPU_MAJOR_ID_G12B) {
 		set_cpus_allowed_ptr(current, cpumask_of(0));
-		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu = read_cpuid_mpidr();
 		cpu &= 0xfff;
 		if (cpu != 0x0)
 			usleep_range(10, 20);
@@ -105,7 +106,7 @@ static int tee_msg_api_revision(uint32_t *major, uint32_t *minor)
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
 			== MESON_CPU_MAJOR_ID_G12B) {
 		set_cpus_allowed_ptr(current, cpumask_of(0));
-		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu = read_cpuid_mpidr();
 		cpu &= 0xfff;
 		if (cpu != 0x0)
 			usleep_range(10, 20);
@@ -169,7 +170,7 @@ int tee_load_video_fw(uint32_t index, uint32_t vdec)
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
 			== MESON_CPU_MAJOR_ID_G12B) {
 		set_cpus_allowed_ptr(current, cpumask_of(0));
-		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu = read_cpuid_mpidr();
 		cpu &= 0xfff;
 		if (cpu != 0x0)
 			usleep_range(10, 20);
@@ -196,7 +197,7 @@ bool tee_enabled(void)
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
 			== MESON_CPU_MAJOR_ID_G12B) {
 		set_cpus_allowed_ptr(current, cpumask_of(0));
-		__asm__ volatile("mrs %0, mpidr_el1":"=r"(cpu));
+		cpu = read_cpuid_mpidr();
 		cpu &= 0xfff;
 		if (cpu != 0x0)
 			usleep_range(10, 20);
