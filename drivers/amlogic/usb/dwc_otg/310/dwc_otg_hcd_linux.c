@@ -558,7 +558,7 @@ static void dump_urb_info(struct urb *urb, char *fn_name)
 		   (usb_pipein(urb->pipe) ? "IN" : "OUT"));
 	DWC_PRINTF("  Endpoint type: %s\n", (
 	{
-		char *pipetype;
+		char *pipetype = "";
 		switch (usb_pipetype(urb->pipe)) {
 		case PIPE_CONTROL:
 			pipetype = "CONTROL";
