@@ -55,6 +55,7 @@
 #include "amcsc.h"
 #include "keystone_correction.h"
 #include "bitdepth.h"
+#include "cm2_adj.h"
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 #include "dnlp_cal.h"
 #include "vlock.h"
@@ -72,7 +73,7 @@
 #define AMVECM_MODULE_NAME        "amvecm"
 #define AMVECM_DEVICE_NAME        "amvecm"
 #define AMVECM_CLASS_NAME         "amvecm"
-#define AMVECM_VER				"Ref.2018/08/29"
+#define AMVECM_VER				"Ref.2018/09/03"
 
 
 struct amvecm_dev_s {
@@ -4058,6 +4059,215 @@ static void vpp_clip_config(unsigned int mode_sel, unsigned int color,
 	WRITE_VPP_REG(addr_clipbot, value_clipbot);
 }
 
+#define color_mode_idx 7
+
+static int cm2_hue_array[color_mode_idx][2];
+static int cm2_luma_array[color_mode_idx][2];
+static int cm2_sat_array[color_mode_idx][2];
+static int cm2_hue_by_hs_array[color_mode_idx][2];
+
+static ssize_t amvecm_cm2_hue_show(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	int i;
+	int pos = 0;
+
+	for (i = 0; i < color_mode_idx; i++)
+		pos += sprintf(buf + pos, "%d %d %d\n", i,
+			cm2_hue_array[i][0], cm2_hue_array[i][1]);
+	return pos;
+}
+static ssize_t amvecm_cm2_hue_store(struct class *cla,
+		struct class_attribute *attr,
+		const char *buf, size_t count)
+{
+	char *buf_orig, *parm[8] = {NULL};
+	long val = 0;
+	unsigned int color_mode;
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig)
+		return -ENOMEM;
+	parse_param_amvecm(buf_orig, (char **)&parm);
+	if (!strncmp(parm[0], "cm2_hue", 7)) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto kfree_buf;
+
+		color_mode = val;
+		if (kstrtol(parm[2], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_hue_array[color_mode][0] = val;
+		if (kstrtoul(parm[3], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_hue_array[color_mode][1] = val;
+		cm2_hue(color_mode, cm2_hue_array[color_mode][0],
+		    cm2_hue_array[color_mode][1]);
+		pr_info("cm2_hue ok\n");
+	}
+	kfree(buf_orig);
+	return count;
+
+kfree_buf:
+	kfree(buf_orig);
+	return -EINVAL;
+}
+
+static ssize_t amvecm_cm2_luma_show(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	int i;
+	int pos = 0;
+
+	for (i = 0; i < color_mode_idx; i++)
+		pos += sprintf(buf + pos, "%d %d %d\n", i,
+			cm2_luma_array[i][0], cm2_luma_array[i][1]);
+	return pos;
+}
+static ssize_t amvecm_cm2_luma_store(struct class *cla,
+		struct class_attribute *attr,
+		const char *buf, size_t count)
+{
+	char *buf_orig, *parm[8] = {NULL};
+	long val = 0;
+	unsigned int color_mode;
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig)
+		return -ENOMEM;
+	parse_param_amvecm(buf_orig, (char **)&parm);
+	if (!strncmp(parm[0], "cm2_luma", 7)) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto kfree_buf;
+
+		color_mode = val;
+		if (kstrtol(parm[2], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_luma_array[color_mode][0] = val;
+		if (kstrtoul(parm[3], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_luma_array[color_mode][1] = val;
+		cm2_hue(color_mode, cm2_luma_array[color_mode][0],
+		    cm2_luma_array[color_mode][1]);
+		pr_info("cm2_luma ok\n");
+	}
+	kfree(buf_orig);
+	return count;
+
+kfree_buf:
+	kfree(buf_orig);
+	return -EINVAL;
+}
+
+static ssize_t amvecm_cm2_sat_show(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	int i;
+	int pos = 0;
+
+	for (i = 0; i < color_mode_idx; i++)
+		pos += sprintf(buf + pos, "%d %d %d\n", i,
+			cm2_sat_array[i][0], cm2_sat_array[i][1]);
+	return pos;
+}
+static ssize_t amvecm_cm2_sat_store(struct class *cla,
+		struct class_attribute *attr,
+		const char *buf, size_t count)
+{
+	char *buf_orig, *parm[8] = {NULL};
+	long val = 0;
+	unsigned int color_mode;
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig)
+		return -ENOMEM;
+	parse_param_amvecm(buf_orig, (char **)&parm);
+	if (!strncmp(parm[0], "cm2_sat", 7)) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto kfree_buf;
+
+		color_mode = val;
+		if (kstrtol(parm[2], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_sat_array[color_mode][0] = val;
+		if (kstrtoul(parm[3], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_sat_array[color_mode][1] = val;
+		cm2_hue(color_mode, cm2_sat_array[color_mode][0],
+		    cm2_sat_array[color_mode][1]);
+		pr_info("cm2_sat ok\n");
+	}
+	kfree(buf_orig);
+	return count;
+
+kfree_buf:
+	kfree(buf_orig);
+	return -EINVAL;
+
+}
+
+static ssize_t amvecm_cm2_hue_by_hs_show(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	int i;
+	int pos = 0;
+
+	for (i = 0; i < color_mode_idx; i++)
+		pos += sprintf(buf + pos, "%d %d %d\n", i,
+			cm2_hue_by_hs_array[i][0], cm2_hue_by_hs_array[i][1]);
+	return pos;
+
+}
+static ssize_t amvecm_cm2_hue_by_hs_store(struct class *cla,
+		struct class_attribute *attr,
+		const char *buf, size_t count)
+{
+	char *buf_orig, *parm[8] = {NULL};
+	long val = 0;
+	unsigned int color_mode;
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig)
+		return -ENOMEM;
+	parse_param_amvecm(buf_orig, (char **)&parm);
+	if (!strncmp(parm[0], "cm2_hue_by_hs", 7)) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto kfree_buf;
+
+		color_mode = val;
+		if (kstrtol(parm[2], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_hue_by_hs_array[color_mode][0] = val;
+		if (kstrtoul(parm[3], 10, &val) < 0)
+			goto kfree_buf;
+
+		cm2_hue_by_hs_array[color_mode][1] = val;
+		cm2_hue(color_mode, cm2_hue_by_hs_array[color_mode][0],
+		    cm2_hue_by_hs_array[color_mode][1]);
+		pr_info("cm2_hue_by_hs ok\n");
+	}
+	kfree(buf_orig);
+	return count;
+
+kfree_buf:
+	kfree(buf_orig);
+	return -EINVAL;
+}
+
 static const char *amvecm_debug_usage_str = {
 	"Usage:\n"
 	"echo vpp_size > /sys/class/amvecm/debug; get vpp size config\n"
@@ -4673,6 +4883,18 @@ static struct class_attribute amvecm_class_attrs[] = {
 	__ATTR(dnlp_debug, 0644,
 		amvecm_dnlp_debug_show,
 		amvecm_dnlp_debug_store),
+	__ATTR(cm2_hue, 0644,
+		amvecm_cm2_hue_show,
+		amvecm_cm2_hue_store),
+	__ATTR(cm2_luma, 0644,
+		amvecm_cm2_luma_show,
+		amvecm_cm2_luma_store),
+	__ATTR(cm2_sat, 0644,
+		amvecm_cm2_sat_show,
+		amvecm_cm2_sat_store),
+	__ATTR(cm2_hue_by_hs, 0644,
+		amvecm_cm2_hue_by_hs_show,
+		amvecm_cm2_hue_by_hs_store),
 	__ATTR(brightness, 0644,
 		amvecm_brightness_show, amvecm_brightness_store),
 	__ATTR(contrast, 0644,
