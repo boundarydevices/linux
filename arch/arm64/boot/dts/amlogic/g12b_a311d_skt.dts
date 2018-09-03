@@ -157,7 +157,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			status = "okay";
-			size = <0x0 0x10000000>;
+			size = <0x0 0x1f000000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -166,6 +166,13 @@
 			reusable;
 			status = "okay";
 			size = <0x0 0x03000000>;
+			alignment = <0x0 0x400000>;
+		};
+		gdc_cma_reserved:linux,gdc_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
+			size = <0x0 0x04000000>;
 			alignment = <0x0 0x400000>;
 		};
 	};
@@ -756,6 +763,11 @@
 &adapter {
 	status = "okay";
 	memory-region = <&adapt_cma_reserved>;
+};
+
+&gdc {
+	status = "okay";
+	memory-region = <&gdc_cma_reserved>;
 };
 
 &meson_fb {
