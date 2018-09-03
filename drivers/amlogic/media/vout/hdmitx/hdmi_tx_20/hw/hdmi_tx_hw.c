@@ -4772,7 +4772,7 @@ static void hdmi_phy_suspend(void)
 {
 	hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x0);
 	hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x0);
-	hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0);
+	hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x800);
 }
 
 static void hdmi_phy_wakeup(struct hdmitx_dev *hdev)
