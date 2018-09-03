@@ -29,6 +29,12 @@
  * debug print define
  * **********************************
  */
+#define LCD_DEBUG_LEVEL_NORMAL    (1 << 0)
+#define LCD_DEBUG_LEVEL_CLK       (1 << 1)
+#define LCD_DEBUG_LEVEL_VSYNC     (1 << 3)
+
+#define LCD_DEBUG_VSYNC_INTERVAL  60
+
 /* #define LCD_DEBUG_INFO */
 extern unsigned char lcd_debug_print_flag;
 #define LCDPR(fmt, args...)     pr_info("lcd: "fmt"", ## args)
@@ -410,6 +416,8 @@ struct lcd_duration_s {
 
 #define LCD_MUTE_UPDATE       (1 << 4)
 #define LCD_TEST_UPDATE       (1 << 4)
+
+#define LCD_VIU_SEL_NONE      0
 struct aml_lcd_drv_s {
 	char version[20];
 	struct lcd_data_s *data;
@@ -424,6 +432,8 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_test_flag;
 	unsigned char lcd_mute_state;
 	unsigned char lcd_mute_flag;
+	unsigned char viu_sel;
+	unsigned char vsync_none_timer_flag;
 
 	unsigned char clk_gate_state;
 	struct clk *encl_top_gate;
@@ -459,6 +469,7 @@ struct aml_lcd_drv_s {
 	struct delayed_work lcd_probe_delayed_work;
 	struct work_struct  lcd_resume_work;
 	struct resource *res_vsync_irq;
+	struct resource *res_vsync2_irq;
 	struct resource *res_vx1_irq;
 
 	struct mutex power_mutex;

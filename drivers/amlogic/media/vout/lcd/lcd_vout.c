@@ -68,6 +68,12 @@ struct lcd_cdev_s {
 
 static struct lcd_cdev_s *lcd_cdev;
 
+static int lcd_vsync_cnt;
+static int lcd_vsync_cnt_previous;
+
+#define LCD_VSYNC_NONE_INTERVAL     msecs_to_jiffies(500)
+static struct timer_list lcd_vsync_none_timer;
+
 /* *********************************************************
  * lcd config define
  * *********************************************************
@@ -293,6 +299,22 @@ static void lcd_power_encl_on(void)
 	lcd_driver->driver_init_pre();
 	lcd_driver->lcd_status |= LCD_STATUS_ENCL_ON;
 
+	/* vsync_none_timer conditional enabled to save cpu loading */
+	if (lcd_driver->viu_sel == LCD_VIU_SEL_NONE) {
+		if (lcd_driver->vsync_none_timer_flag == 0) {
+			lcd_vsync_none_timer.expires =
+				jiffies + LCD_VSYNC_NONE_INTERVAL;
+			add_timer(&lcd_vsync_none_timer);
+			lcd_driver->vsync_none_timer_flag = 1;
+			LCDPR("add lcd_vsync_none_timer handler\n");
+		}
+	} else {
+		if (lcd_driver->vsync_none_timer_flag) {
+			del_timer_sync(&lcd_vsync_none_timer);
+			lcd_driver->vsync_none_timer_flag = 0;
+		}
+	}
+
 	mutex_unlock(&lcd_vout_mutex);
 }
 
@@ -302,6 +324,11 @@ static void lcd_power_encl_off(void)
 
 	lcd_driver->lcd_status &= ~LCD_STATUS_ENCL_ON;
 	lcd_driver->driver_disable_post();
+
+	if (lcd_driver->vsync_none_timer_flag) {
+		del_timer_sync(&lcd_vsync_none_timer);
+		lcd_driver->vsync_none_timer_flag = 0;
+	}
 
 	mutex_unlock(&lcd_vout_mutex);
 }
@@ -362,6 +389,7 @@ static void lcd_module_reset(void)
 	lcd_driver->lcd_config->change_flag = 0;
 
 	lcd_driver->lcd_mute_flag = (unsigned char)(0 | LCD_MUTE_UPDATE);
+	LCDPR("clear mute\n");
 
 	mutex_unlock(&lcd_vout_mutex);
 }
@@ -375,15 +403,13 @@ static void lcd_resume_work(struct work_struct *p_work)
 	mutex_unlock(&lcd_driver->power_mutex);
 }
 
-static irqreturn_t lcd_vsync_isr(int irq, void *dev_id)
+static int lcd_vsync_print_cnt;
+static inline void lcd_vsync_handler(void)
 {
 	int flag;
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
 	struct lcd_config_s *pconf = lcd_driver->lcd_config;
 #endif
-
-	if ((lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) == 0)
-		return IRQ_HANDLED;
 
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
 	if (pconf->lcd_control.mipi_config->dread) {
@@ -420,7 +446,79 @@ static irqreturn_t lcd_vsync_isr(int irq, void *dev_id)
 		lcd_driver->lcd_test_flag &= ~(LCD_TEST_UPDATE);
 	}
 
+	if (lcd_vsync_print_cnt++ >= LCD_DEBUG_VSYNC_INTERVAL) {
+		lcd_vsync_print_cnt = 0;
+		if (lcd_debug_print_flag & LCD_DEBUG_LEVEL_VSYNC) {
+			LCDPR("%s: viu_sel: %d\n",
+				__func__, lcd_driver->viu_sel);
+		}
+	}
+}
+
+static irqreturn_t lcd_vsync_isr(int irq, void *dev_id)
+{
+	if ((lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) == 0)
+		return IRQ_HANDLED;
+
+	if (lcd_driver->viu_sel == 1) {
+		lcd_vsync_handler();
+		if (lcd_vsync_cnt++ >= 65536)
+			lcd_vsync_cnt = 0;
+	}
 	return IRQ_HANDLED;
+}
+
+static irqreturn_t lcd_vsync2_isr(int irq, void *dev_id)
+{
+	if ((lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) == 0)
+		return IRQ_HANDLED;
+
+	if (lcd_driver->viu_sel == 2) {
+		lcd_vsync_handler();
+		if (lcd_vsync_cnt++ >= 65536)
+			lcd_vsync_cnt = 0;
+	}
+	return IRQ_HANDLED;
+}
+
+#define LCD_WAIT_VSYNC_TIMEOUT    50000
+static void lcd_wait_vsync(void)
+{
+	int line_cnt, line_cnt_previous;
+	int i = 0;
+
+	line_cnt = 0x1fff;
+	line_cnt_previous = lcd_vcbus_getb(ENCL_INFO_READ, 16, 13);
+	while (i++ < LCD_WAIT_VSYNC_TIMEOUT) {
+		line_cnt = lcd_vcbus_getb(ENCL_INFO_READ, 16, 13);
+		if (line_cnt < line_cnt_previous)
+			break;
+		line_cnt_previous = line_cnt;
+		udelay(2);
+	}
+	/*LCDPR("line_cnt=%d, line_cnt_previous=%d, i=%d\n",
+	 *	line_cnt, line_cnt_previous, i);
+	 */
+}
+
+static void lcd_vsync_none_timer_handler(unsigned long arg)
+{
+	if ((lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) == 0)
+		goto lcd_vsync_none_timer_handler_end;
+
+	if (lcd_vsync_cnt == lcd_vsync_cnt_previous) {
+		lcd_wait_vsync();
+		lcd_vsync_handler();
+	}
+
+	lcd_vsync_cnt_previous = lcd_vsync_cnt;
+
+lcd_vsync_none_timer_handler_end:
+	if (lcd_driver->vsync_none_timer_flag) {
+		lcd_vsync_none_timer.expires =
+			jiffies + LCD_VSYNC_NONE_INTERVAL;
+		add_timer(&lcd_vsync_none_timer);
+	}
 }
 
 /* ****************************************
@@ -934,6 +1032,10 @@ static int lcd_config_probe(struct platform_device *pdev)
 		return -1;
 	}
 
+	lcd_driver->res_vsync_irq = NULL;
+	lcd_driver->res_vsync2_irq = NULL;
+	lcd_driver->res_vx1_irq = NULL;
+
 	/* lcd driver assign */
 	ret = of_property_read_string(lcd_driver->dev->of_node, "mode", &str);
 	if (ret) {
@@ -982,6 +1084,24 @@ static int lcd_config_probe(struct platform_device *pdev)
 		LCDPR("detect lcd_auto_test: %d\n", lcd_driver->lcd_auto_test);
 	}
 
+	ret = of_property_read_string_index(lcd_driver->dev->of_node,
+		"interrupt-names", 0, &str);
+	if (ret == 0) {
+		lcd_driver->res_vsync_irq = platform_get_resource(pdev,
+			IORESOURCE_IRQ, 0);
+	}
+	ret = of_property_read_string_index(lcd_driver->dev->of_node,
+		"interrupt-names", 1, &str);
+	if (ret == 0) {
+		if (strcmp(str, "vbyone") == 0) {
+			lcd_driver->res_vx1_irq =
+				platform_get_resource(pdev, IORESOURCE_IRQ, 1);
+		} else if (strcmp(str, "vsync2") == 0) {
+			lcd_driver->res_vsync2_irq =
+				platform_get_resource(pdev, IORESOURCE_IRQ, 1);
+		}
+	}
+
 	lcd_driver->lcd_info = &lcd_vinfo;
 	lcd_driver->lcd_config = &lcd_config_dft;
 	lcd_driver->lcd_test_state = 0;
@@ -989,12 +1109,10 @@ static int lcd_config_probe(struct platform_device *pdev)
 	lcd_driver->lcd_mute_state = 0;
 	lcd_driver->lcd_mute_flag = 0;
 	lcd_driver->lcd_resume_type = 1; /* default workqueue */
+	lcd_driver->viu_sel = LCD_VIU_SEL_NONE;
+	lcd_driver->vsync_none_timer_flag = 0;
 	lcd_driver->power_ctrl = lcd_power_ctrl;
 	lcd_driver->module_reset = lcd_module_reset;
-	lcd_driver->res_vsync_irq = platform_get_resource(pdev,
-		IORESOURCE_IRQ, 0);
-	lcd_driver->res_vx1_irq = platform_get_resource(pdev,
-		IORESOURCE_IRQ, 1);
 	lcd_clk_config_probe();
 	lcd_config_default();
 	lcd_init_vout();
@@ -1023,16 +1141,33 @@ static int lcd_config_probe(struct platform_device *pdev)
 
 static int lcd_vsync_irq_init(void)
 {
-	if (!lcd_driver->res_vsync_irq) {
-		LCDERR("res_vsync_irq is null\n");
-		return -1;
+	if (lcd_driver->res_vsync_irq) {
+		if (request_irq(lcd_driver->res_vsync_irq->start,
+			lcd_vsync_isr, IRQF_SHARED,
+			"lcd_vsync", (void *)"lcd_vsync")) {
+			LCDERR("can't request lcd_vsync_irq\n");
+		} else {
+			LCDPR("request lcd_vsync_irq successful\n");
+		}
 	}
 
-	if (request_irq(lcd_driver->res_vsync_irq->start, lcd_vsync_isr,
-		IRQF_SHARED, "lcd_vsync", (void *)"lcd_vsync"))
-		LCDERR("can't request lcd_vsync_irq\n");
-	else
-		LCDPR("request lcd_vsync_irq successful\n");
+	if (lcd_driver->res_vsync2_irq) {
+		if (request_irq(lcd_driver->res_vsync2_irq->start,
+			lcd_vsync2_isr, IRQF_SHARED,
+			"lcd_vsync2", (void *)"lcd_vsync2")) {
+			LCDERR("can't request lcd_vsync2_irq\n");
+		} else {
+			LCDPR("request lcd_vsync2_irq successful\n");
+		}
+	}
+
+	/* add timer to monitor hpll frequency */
+	init_timer(&lcd_vsync_none_timer);
+	/* lcd_vsync_none_timer.data = NULL; */
+	lcd_vsync_none_timer.function = lcd_vsync_none_timer_handler;
+	lcd_vsync_none_timer.expires = jiffies + LCD_VSYNC_NONE_INTERVAL;
+	/*add_timer(&lcd_vsync_none_timer);*/
+	/*LCDPR("add lcd_vsync_none_timer handler\n"); */
 
 	return 0;
 }
@@ -1041,6 +1176,16 @@ static void lcd_vsync_irq_remove(void)
 {
 	if (lcd_driver->res_vsync_irq)
 		free_irq(lcd_driver->res_vsync_irq->start, (void *)"lcd_vsync");
+
+	if (lcd_driver->res_vsync2_irq) {
+		free_irq(lcd_driver->res_vsync2_irq->start,
+			(void *)"lcd_vsync");
+	}
+
+	if (lcd_driver->vsync_none_timer_flag) {
+		del_timer_sync(&lcd_vsync_none_timer);
+		lcd_driver->vsync_none_timer_flag = 0;
+	}
 }
 
 #ifdef CONFIG_OF

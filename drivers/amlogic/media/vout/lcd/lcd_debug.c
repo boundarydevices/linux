@@ -1904,6 +1904,10 @@ static ssize_t lcd_debug_mute_store(struct class *class,
 	}
 	temp = temp ? 1 : 0;
 	lcd_drv->lcd_mute_flag = (unsigned char)(temp | LCD_MUTE_UPDATE);
+	if (temp)
+		LCDPR("set mute\n");
+	else
+		LCDPR("clear mute\n");
 	while (i++ < 5000) {
 		if (lcd_drv->lcd_mute_state == temp)
 			break;
