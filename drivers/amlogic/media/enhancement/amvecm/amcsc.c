@@ -4202,13 +4202,12 @@ static void hdr_process_pq_enable(int enable)
 	/*cm_en = enable;*/
 }
 
-static void vpp_lut_curve_set(enum vpp_lut_sel_e lut_sel)
+static void vpp_lut_curve_set(enum vpp_lut_sel_e lut_sel,
+	struct vinfo_s *vinfo)
 {
 	if (lut_sel == VPP_LUT_EOTF) {
 		/* eotf lut 2048 */
-		if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXL) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXLX)) {
+		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444) {
 			if (video_lut_swtich == 1)
 				/*350nit alpha_low = 0.12; */
 				set_vpp_lut(VPP_LUT_EOTF,
@@ -4253,9 +4252,7 @@ static void vpp_lut_curve_set(enum vpp_lut_sel_e lut_sel)
 				CSC_ON);
 	} else if (lut_sel == VPP_LUT_OETF) {
 		/* oetf lut bypass */
-		if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXL) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXLX)) {
+		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444) {
 			if (video_lut_swtich == 1)
 				set_vpp_lut(VPP_LUT_OETF,
 					oetf_289_gamma22_mapping_level1_box,
@@ -4461,7 +4458,7 @@ static int hdr_process(
 			CSC_ON);
 
 		/* eotf lut 2048 */
-		vpp_lut_curve_set(VPP_LUT_EOTF);
+		vpp_lut_curve_set(VPP_LUT_EOTF, vinfo);
 
 		need_adjust_contrast_saturation = 0;
 		saturation_offset =	0;
@@ -4495,7 +4492,7 @@ static int hdr_process(
 			mtx,
 			CSC_ON);
 
-		vpp_lut_curve_set(VPP_LUT_OETF);
+		vpp_lut_curve_set(VPP_LUT_OETF, vinfo);
 
 		/* xvyccc matrix3: bypass */
 		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
