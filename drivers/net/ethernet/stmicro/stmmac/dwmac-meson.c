@@ -487,11 +487,14 @@ void meson6_dwmac_shutdown(struct platform_device *pdev)
 		dwmac_meson_disable_analog(&pdev->dev);
 	}
 	//stmmac_release(ndev);
+	//stmmac_pltfr_suspend(&pdev->dev);
+	if (priv->phydev) {
+		if (priv->phydev->drv->remove)
+			priv->phydev->drv->remove(ndev->phydev);
+		else
+			genphy_suspend(ndev->phydev);
+	}
 	stmmac_pltfr_suspend(&pdev->dev);
-	if (priv->phydev)
-		genphy_suspend(ndev->phydev);
-	if (priv->plat->exit)
-		priv->plat->exit(pdev, priv->plat->bsp_priv);
 }
 
 #endif

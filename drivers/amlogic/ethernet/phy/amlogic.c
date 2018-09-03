@@ -271,6 +271,19 @@ static int internal_phy_resume(struct phy_device *phydev)
 	return rc;
 }
 
+void internal_phy_remove(struct phy_device *phydev)
+{
+	int value;
+
+	pr_info("internal phy shutdown\n");
+	/*disable link interrupt*/
+	value = phy_read(phydev, 0x1E);
+	phy_write(phydev, 0x1E, value & ~0x50);
+
+	value = 0;
+	value = phy_read(phydev, 0x18);
+	phy_write(phydev, 0x18, value | 0x1);
+}
 static struct phy_driver amlogic_internal_driver[] = { {
 	.phy_id	= 0x01814400,
 	.name		= "amlogic internal phy",
@@ -283,6 +296,7 @@ static struct phy_driver amlogic_internal_driver[] = { {
 	.read_status	= internal_phy_read_status,
 	.suspend	= internal_phy_suspend,
 	.resume		= internal_phy_resume,
+	.remove		= internal_phy_remove,
 } };
 
 module_phy_driver(amlogic_internal_driver);
