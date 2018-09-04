@@ -184,7 +184,7 @@ static irqreturn_t dcss_dtg_irq_handler(int irq, void *data)
 
 	dcss_ctxld_kick(dtg->dcss);
 
-	dcss_writel(status & LINE1_IRQ, dtg->base_reg + DCSS_DTG_INT_CONTROL);
+	dcss_writel(status & LINE0_IRQ, dtg->base_reg + DCSS_DTG_INT_CONTROL);
 
 	return IRQ_HANDLED;
 }
@@ -214,7 +214,7 @@ static int dcss_dtg_irq_config(struct dcss_dtg_priv *dtg)
 
 	dtg->ctxld_kick_irq_en = false;
 
-	dcss_update(LINE1_IRQ, LINE1_IRQ, dtg->base_reg + DCSS_DTG_INT_MASK);
+	dcss_update(LINE0_IRQ, LINE0_IRQ, dtg->base_reg + DCSS_DTG_INT_MASK);
 
 	return 0;
 }
@@ -312,7 +312,7 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 	dcss_dtg_write(dtg, sb_ctxld_trig | db_ctxld_trig, DCSS_DTG_TC_CTXLD);
 
 	/* vblank trigger */
-	dcss_dtg_write(dtg, 0, DCSS_DTG_LINE0_INT);
+	dcss_dtg_write(dtg, 0, DCSS_DTG_LINE1_INT);
 
 	/* CTXLD trigger */
 	dcss_dtg_write(dtg, ((95 * dis_lrc_y) / 100) << 16, DCSS_DTG_LINE0_INT);
@@ -480,7 +480,7 @@ void dcss_dtg_vblank_irq_enable(struct dcss_soc *dcss, bool en)
 	struct dcss_dtg_priv *dtg = dcss->dtg_priv;
 	u32 status;
 
-	dcss_update(LINE0_IRQ, LINE0_IRQ, dtg->base_reg + DCSS_DTG_INT_MASK);
+	dcss_update(LINE1_IRQ, LINE1_IRQ, dtg->base_reg + DCSS_DTG_INT_MASK);
 
 	dcss_dpr_irq_enable(dcss, en);
 
@@ -500,7 +500,7 @@ void dcss_dtg_vblank_irq_enable(struct dcss_soc *dcss, bool en)
 			return;
 		}
 
-		dcss_writel(status & LINE0_IRQ,
+		dcss_writel(status & LINE1_IRQ,
 			    dtg->base_reg + DCSS_DTG_INT_CONTROL);
 
 		return;
@@ -517,5 +517,5 @@ void dcss_dtg_vblank_irq_clear(struct dcss_soc *dcss)
 
 	reg = dtg->base_reg + DCSS_DTG_INT_CONTROL;
 
-	dcss_update(LINE0_IRQ, LINE0_IRQ, reg);
+	dcss_update(LINE1_IRQ, LINE1_IRQ, reg);
 }
