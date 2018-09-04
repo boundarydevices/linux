@@ -28,6 +28,10 @@
 #include <linux/uaccess.h>
 #include <meson_ion.h>
 #include <linux/delay.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-contiguous.h>
+#include <linux/of_reserved_mem.h>
+
 
 #include <linux/of_address.h>
 #include <api/gdc_api.h>
@@ -52,12 +56,11 @@ MODULE_DEVICE_TABLE(of, gdc_dt_match);
 static int meson_gdc_open(struct inode *inode, struct file *file)
 {
 	struct meson_gdc_dev_t *gdc_dev = g_gdc_dev;
-	struct platform_device *pdev = gdc_dev->pdev;
 	struct mgdc_fh_s *fh = NULL;
 	char ion_client_name[32];
 	int rc = 0;
 
-	fh = devm_kzalloc(&pdev->dev, sizeof(*fh), GFP_KERNEL);
+	fh = kzalloc(sizeof(*fh), GFP_KERNEL);
 	if (fh == NULL) {
 		LOG(LOG_DEBUG, "devm alloc failed\n");
 		return -ENOMEM;
@@ -74,12 +77,8 @@ static int meson_gdc_open(struct inode *inode, struct file *file)
 		fh->ion_client = meson_ion_client_create(-1, ion_client_name);
 
 	fh->gdev = gdc_dev;
-	init_waitqueue_head(&fh->irq_queue);
 
-	rc = devm_request_irq(&pdev->dev, gdc_dev->irq, interrupt_handler_next,
-			IRQF_SHARED, "gdc", &fh->gs);
-	if (rc)
-		LOG(LOG_DEBUG, "cannot create irq func gdc\n");
+	LOG(LOG_CRIT, "Success open\n");
 
 	return rc;
 }
@@ -87,32 +86,128 @@ static int meson_gdc_open(struct inode *inode, struct file *file)
 static int meson_gdc_release(struct inode *inode, struct file *file)
 {
 	struct mgdc_fh_s *fh = file->private_data;
-	struct meson_gdc_dev_t *gdc_dev = fh->gdev;
-	struct platform_device *pdev = gdc_dev->pdev;
+	struct page *cma_pages = NULL;
+	bool rc = false;
+	int ret = 0;
 
-	LOG(LOG_DEBUG, "%s, %d\n", __func__, __LINE__);
 	if (fh->ion_client) {
 		ion_client_destroy(fh->ion_client);
 		fh->ion_client = NULL;
 	}
 
-	devm_free_irq(&pdev->dev,  gdc_dev->irq, &fh->gs);
+	if (fh->i_kaddr != 0 && fh->i_len != 0) {
+		cma_pages = virt_to_page(fh->i_kaddr);
+		rc = dma_release_from_contiguous(&fh->gdev->pdev->dev,
+						cma_pages,
+						fh->i_len >> PAGE_SHIFT);
+		if (rc == false) {
+			ret = ret - 1;
+			LOG(LOG_ERR, "Failed to release input buff\n");
+		}
 
-	return 0;
+		fh->i_kaddr = NULL;
+		fh->i_paddr = 0;
+		fh->i_len = 0;
+	}
+
+	if (fh->o_kaddr != 0 && fh->o_len != 0) {
+		cma_pages = virt_to_page(fh->o_kaddr);
+		rc = dma_release_from_contiguous(&fh->gdev->pdev->dev,
+						cma_pages,
+						fh->o_len >> PAGE_SHIFT);
+		if (rc == false) {
+			ret = ret - 1;
+			LOG(LOG_ERR, "Failed to release output buff\n");
+		}
+
+		fh->o_kaddr = NULL;
+		fh->o_paddr = 0;
+		fh->o_len = 0;
+	}
+
+	if (fh->c_kaddr != 0 && fh->c_len != 0) {
+		cma_pages = virt_to_page(fh->c_kaddr);
+		rc = dma_release_from_contiguous(&fh->gdev->pdev->dev,
+						cma_pages,
+						fh->c_len >> PAGE_SHIFT);
+		if (rc == false) {
+			ret = ret - 1;
+			LOG(LOG_ERR, "Failed to release config buff\n");
+		}
+
+		fh->c_kaddr = NULL;
+		fh->c_paddr = 0;
+		fh->c_len = 0;
+	}
+
+	kfree(fh);
+	fh = NULL;
+
+	if (ret == 0)
+		LOG(LOG_CRIT, "Success release\n");
+	else
+		LOG(LOG_ERR, "Error release\n");
+
+	return ret;
+}
+
+static long meson_gdc_set_buff(void *f_fh,
+					struct page *cma_pages,
+					unsigned long len)
+{
+	int ret = 0;
+	struct mgdc_fh_s *fh = NULL;
+
+	if (f_fh == NULL || cma_pages == NULL || len == 0) {
+		LOG(LOG_ERR, "Error input param\n");
+		return -EINVAL;
+	}
+
+	fh = f_fh;
+
+	switch (fh->mmap_type) {
+	case INPUT_BUFF_TYPE:
+		if (fh->i_paddr != 0 && fh->i_kaddr != NULL)
+			return -EAGAIN;
+		fh->i_paddr = page_to_phys(cma_pages);
+		fh->i_kaddr = phys_to_virt(fh->i_paddr);
+		fh->i_len = len;
+	break;
+	case OUTPUT_BUFF_TYPE:
+		if (fh->o_paddr != 0 && fh->o_kaddr != NULL)
+			return -EAGAIN;
+		fh->o_paddr = page_to_phys(cma_pages);
+		fh->o_kaddr = phys_to_virt(fh->o_paddr);
+		fh->o_len = len;
+	break;
+	case CONFIG_BUFF_TYPE:
+		if (fh->c_paddr != 0 && fh->c_kaddr != NULL)
+			return -EAGAIN;
+		fh->c_paddr = page_to_phys(cma_pages);
+		fh->c_kaddr = phys_to_virt(fh->c_paddr);
+		fh->c_len = len;
+	break;
+	default:
+		LOG(LOG_ERR, "Error mmap type:0x%x\n", fh->mmap_type);
+		ret = -EINVAL;
+	break;
+	}
+
+	return ret;
 }
 
 static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		unsigned long arg)
 {
+	long ret = 0;
 	size_t len;
 	struct mgdc_fh_s *fh = file->private_data;
 	struct gdc_settings  *gs = &fh->gs;
 	struct gdc_config *gc = &gs->gdc_config;
-	long ret = 0;
+	struct gdc_buf_cfg buf_cfg;
+	struct page *cma_pages = NULL;
 	ion_phys_addr_t addr;
 	void __user *argp = (void __user *)arg;
-
-	gs->fh = fh;
 
 	switch (cmd) {
 	case GDC_PROCESS:
@@ -159,18 +254,132 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 			LOG(LOG_DEBUG, "import in fd %d failed\n", gs->in_fd);
 
 		gs->fh = fh;
+
+		mutex_lock(&fh->gdev->d_mutext);
 		ret = gdc_run(gs);
 		if (ret < 0)
-			LOG(LOG_DEBUG, "gdc process ret = %ld\n", ret);
+			LOG(LOG_ERR, "gdc process ret = %ld\n", ret);
 
-		ret = wait_event_interruptible_timeout(fh->irq_queue,
-				(gdc_busy_read() == 0),
-				msecs_to_jiffies(30));
-		break;
+		ret = wait_for_completion_timeout(&fh->gdev->d_com,
+						msecs_to_jiffies(40));
+		if (ret == 0)
+			LOG(LOG_ERR, "gdc timeout\n");
 
+		gdc_stop(gs);
+		mutex_unlock(&fh->gdev->d_mutext);
+	break;
+	case GDC_RUN:
+		ret = copy_from_user(gs, argp, sizeof(*gs));
+		if (ret < 0)
+			LOG(LOG_ERR, "copy from user failed\n");
+
+		gs->buffer_addr = fh->o_paddr;
+		gs->buffer_size = fh->o_len;
+
+		gs->base_gdc = 0;
+		gs->current_addr = gs->buffer_addr;
+
+		gc->config_addr = fh->c_paddr;
+
+		if (gc->format == NV12) {
+			gs->y_base_addr = fh->i_paddr;
+			gs->uv_base_addr = fh->i_paddr +
+				gc->input_y_stride * gc->input_height;
+		} else if (gc->format == YV12) {
+			gs->y_base_addr = fh->i_paddr;
+			gs->u_base_addr = fh->i_paddr +
+				gc->input_y_stride * gc->input_height;
+
+			gs->v_base_addr = gs->u_base_addr +
+				gc->input_c_stride * gc->input_height / 2;
+		}
+
+		gs->fh = fh;
+
+		mutex_lock(&fh->gdev->d_mutext);
+		ret = gdc_run(gs);
+		if (ret < 0)
+			LOG(LOG_ERR, "gdc process ret = %ld\n", ret);
+
+		ret = wait_for_completion_timeout(&fh->gdev->d_com,
+						msecs_to_jiffies(40));
+		if (ret == 0)
+			LOG(LOG_ERR, "gdc timeout\n");
+
+		gdc_stop(gs);
+		mutex_unlock(&fh->gdev->d_mutext);
+	break;
+	case GDC_REQUEST_BUFF:
+		ret = copy_from_user(&buf_cfg, argp, sizeof(buf_cfg));
+		if (ret < 0 || buf_cfg.type >= GDC_BUFF_TYPE_MAX) {
+			LOG(LOG_ERR, "Error user param\n");
+			return ret;
+		}
+
+		buf_cfg.len = PAGE_ALIGN(buf_cfg.len);
+
+		cma_pages = dma_alloc_from_contiguous(&fh->gdev->pdev->dev,
+						buf_cfg.len >> PAGE_SHIFT, 0);
+		if (cma_pages != NULL) {
+			fh->mmap_type = buf_cfg.type;
+			ret = meson_gdc_set_buff(fh, cma_pages, buf_cfg.len);
+			if (ret != 0) {
+				dma_release_from_contiguous(
+						&fh->gdev->pdev->dev,
+						cma_pages,
+						buf_cfg.len >> PAGE_SHIFT);
+				LOG(LOG_ERR, "Failed to set buff\n");
+				return ret;
+			}
+		} else {
+			LOG(LOG_ERR, "Failed to alloc dma buff\n");
+			return -ENOMEM;
+		}
+
+	break;
 	default:
-		pr_info("unsupported cmd 0x%x\n", cmd);
-		break;
+		LOG(LOG_ERR, "unsupported cmd 0x%x\n", cmd);
+	break;
+	}
+
+	return ret;
+}
+
+static int meson_gdc_mmap(struct file *file_p,
+				struct vm_area_struct *vma)
+{
+	int ret = -1;
+	unsigned long buf_len = 0;
+	struct mgdc_fh_s *fh = file_p->private_data;
+
+	buf_len = vma->vm_end - vma->vm_start;
+
+	switch (fh->mmap_type) {
+	case INPUT_BUFF_TYPE:
+		ret = remap_pfn_range(vma, vma->vm_start,
+					fh->i_paddr >> PAGE_SHIFT,
+					buf_len, vma->vm_page_prot);
+			if (ret != 0)
+				LOG(LOG_ERR, "Failed to mmap input buffer\n");
+	break;
+	case OUTPUT_BUFF_TYPE:
+			ret = remap_pfn_range(vma, vma->vm_start,
+					fh->o_paddr >> PAGE_SHIFT,
+					buf_len, vma->vm_page_prot);
+			if (ret != 0)
+				LOG(LOG_ERR, "Failed to mmap input buffer\n");
+
+	break;
+	case CONFIG_BUFF_TYPE:
+			ret = remap_pfn_range(vma, vma->vm_start,
+					fh->c_paddr >> PAGE_SHIFT,
+					buf_len, vma->vm_page_prot);
+			if (ret != 0)
+				LOG(LOG_ERR, "Failed to mmap input buffer\n");
+	break;
+	default:
+		LOG(LOG_ERR, "Error mmap type:0x%x\n", fh->mmap_type);
+	break;
 	}
 
 	return ret;
@@ -182,6 +391,7 @@ static const struct file_operations meson_gdc_fops = {
 	.release = meson_gdc_release,
 	.unlocked_ioctl = meson_gdc_ioctl,
 	.compat_ioctl = meson_gdc_ioctl,
+	.mmap = meson_gdc_mmap,
 };
 
 static struct miscdevice meson_gdc_dev = {
@@ -229,9 +439,18 @@ static ssize_t firmware1_store(struct device *dev,
 }
 static DEVICE_ATTR(firmware1, 0664, firmware1_show, firmware1_store);
 
+irqreturn_t gdc_interrupt_handler(int irq, void *param)
+{
+	struct meson_gdc_dev_t *gdc_dev = param;
+
+	complete(&gdc_dev->d_com);
+
+	return IRQ_HANDLED;
+}
 
 static int gdc_platform_probe(struct platform_device *pdev)
 {
+	int rc = -1;
 	struct resource *gdc_res;
 	struct meson_gdc_dev_t *gdc_dev = NULL;
 	void *clk_cntl = NULL;
@@ -250,6 +469,8 @@ static int gdc_platform_probe(struct platform_device *pdev)
 		LOG(LOG_ERR, "Error on mapping gdc memory!\n");
 		return -ENOMEM;
 	}
+
+	of_reserved_mem_device_init(&(pdev->dev));
 
 	device_create_file(&pdev->dev, &dev_attr_gdc_reg);
 	device_create_file(&pdev->dev, &dev_attr_firmware1);
@@ -287,6 +508,15 @@ static int gdc_platform_probe(struct platform_device *pdev)
 	LOG(LOG_DEBUG, "pd_cntl=%x\n", reg_value);
 	iowrite32(reg_value, pd_cntl);
 #endif
+
+	mutex_init(&gdc_dev->d_mutext);
+	init_completion(&gdc_dev->d_com);
+
+	rc = devm_request_irq(&pdev->dev, gdc_dev->irq,
+						gdc_interrupt_handler,
+						IRQF_SHARED, "gdc", gdc_dev);
+	if (rc != 0)
+		LOG(LOG_ERR, "cannot create irq func gdc\n");
 
 	g_gdc_dev = gdc_dev;
 

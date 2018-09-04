@@ -32,6 +32,8 @@ struct meson_gdc_dev_t {
 	struct clk	*clk_core;
 	struct clk	*clk_axi;
 	spinlock_t	slock;
+	struct mutex d_mutext;
+	struct completion d_com;
 	int	 irq;
 };
 
@@ -42,6 +44,16 @@ struct mgdc_fh_s {
 	char task_comm[32];
 	struct ion_client   *ion_client;
 	struct gdc_settings gs;
+	uint32_t mmap_type;
+	dma_addr_t i_paddr;
+	dma_addr_t o_paddr;
+	dma_addr_t c_paddr;
+	void *i_kaddr;
+	void *o_kaddr;
+	void *c_kaddr;
+	unsigned long i_len;
+	unsigned long o_len;
+	unsigned long c_len;
 };
 
 irqreturn_t interrupt_handler_next(int irq, void *param);

@@ -20,7 +20,7 @@
 
 //changeable logs
 #include <linux/kernel.h>
-#define FW_LOG_LEVEL LOG_MAX
+#define FW_LOG_LEVEL LOG_ERR
 
 enum log_level_e {
 	LOG_NOTHING,
@@ -44,7 +44,7 @@ extern const char *const gdc_log_level[LOG_MAX];
 #define LOG(level, fmt, arg...)			 \
 	do {			\
 		if ((level) <= FW_LOG_LEVEL)		\
-		trace_printk("%s: %s(%d) %s: " fmt "\n",\
+		pr_info("%s: %s(%d) %s: " fmt "\n",\
 				FILE, __func__, __LINE__,	  \
 				gdc_log_level[level], ## arg);	\
 	} while (0)

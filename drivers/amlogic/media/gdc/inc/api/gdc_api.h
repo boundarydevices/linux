@@ -23,6 +23,11 @@
 #define NV12 1
 #define YV12 2
 
+struct gdc_buf_cfg {
+	uint32_t type;
+	unsigned long len;
+};
+
 // each configuration addresses and size
 struct gdc_config {
 	uint32_t format;
@@ -82,6 +87,16 @@ struct gdc_settings {
 #define GDC_IOC_MAGIC  'G'
 #define GDC_PROCESS	 _IOW(GDC_IOC_MAGIC, 0x00, struct gdc_settings)
 #define GDC_PROCESS_NO_BLOCK	_IOW(GDC_IOC_MAGIC, 0x01, struct gdc_settings)
+#define GDC_RUN	_IOW(GDC_IOC_MAGIC, 0x02, struct gdc_settings)
+#define GDC_REQUEST_BUFF _IOW(GDC_IOC_MAGIC, 0x03, struct gdc_settings)
+
+enum {
+	INPUT_BUFF_TYPE = 0x1000,
+	OUTPUT_BUFF_TYPE,
+	CONFIG_BUFF_TYPE,
+	GDC_BUFF_TYPE_MAX
+};
+
 /**
  *   Configure the output gdc configuration
  *
