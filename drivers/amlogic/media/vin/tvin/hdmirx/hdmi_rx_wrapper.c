@@ -1264,8 +1264,8 @@ bool is_unnormal_format(uint8_t wait_cnt)
 		if (sig_stable_max == wait_cnt)
 			rx_pr("hdcp14 unfinished\n");
 		if (unnormal_wait_max == wait_cnt) {
-			if ((hdmirx_rd_dwc(DWC_HDCP_KEY1) == 0) &&
-				(hdmirx_rd_dwc(DWC_HDCP_KEY0) == 0))
+			if ((hdmirx_rd_dwc(DWC_HDCP_BKSV1) == 0) &&
+				(hdmirx_rd_dwc(DWC_HDCP_BKSV0) == 0))
 				rx.err_code = ERR_NO_HDCP14_KEY;
 			ret = false;
 		}
