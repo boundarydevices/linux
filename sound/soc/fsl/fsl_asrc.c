@@ -1306,6 +1306,8 @@ static int fsl_asrc_resume(struct device *dev)
 
 	ret = pm_runtime_force_resume(dev);
 
+	fsl_asrc_m2m_resume(asrc);
+
 	return ret;
 }
 #endif /* CONFIG_PM_SLEEP */
