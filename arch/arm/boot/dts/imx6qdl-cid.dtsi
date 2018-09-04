@@ -802,7 +802,7 @@
 		type = <5>;     /* WWAN */
 		reset-gpios = GP_MODEM_RESET;
 		pulse-on-gpios = GP_MODEM_PULSE_ON;
-		pulse-duration = <30>;
+		pulse-duration = <40>;
 		status = "okay";
 	};
 };
