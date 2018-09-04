@@ -6104,8 +6104,8 @@ SET_FILTER:
 		if (!legacy_vpp) {
 			VSYNC_WR_MPEG_REG(
 				VPP_PREBLEND_H_SIZE + cur_dev->vpp_off,
-				(cur_frame_par->VPP_pic_in_height_ << 16)
-				| cur_frame_par->VPP_line_in_length_);
+				(cur_frame_par->video_input_h << 16)
+				| cur_frame_par->video_input_w);
 			VSYNC_WR_MPEG_REG(
 				VPP_POSTBLEND_H_SIZE + cur_dev->vpp_off,
 				((cur_frame_par->VPP_post_blend_vd_v_end_ + 1)
