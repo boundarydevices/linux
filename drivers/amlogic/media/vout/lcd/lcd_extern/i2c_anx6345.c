@@ -302,17 +302,15 @@ static int lcd_extern_power_off(void)
 
 static int lcd_extern_driver_update(struct aml_lcd_extern_driver_s *ext_drv)
 {
-	int ret = 0;
-
-	if (ext_drv) {
-		ext_drv->power_on  = lcd_extern_power_on;
-		ext_drv->power_off = lcd_extern_power_off;
-	} else {
-		EXTERR("%s driver is null\n", LCD_EXTERN_NAME);
-		ret = -1;
+	if (ext_drv == NULL) {
+		EXTERR("%s: driver is null\n", LCD_EXTERN_NAME);
+		return -1;
 	}
 
-	return ret;
+	ext_drv->power_on  = lcd_extern_power_on;
+	ext_drv->power_off = lcd_extern_power_off;
+
+	return 0;
 }
 
 int aml_lcd_extern_i2c_anx6345_probe(struct aml_lcd_extern_driver_s *ext_drv)

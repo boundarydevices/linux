@@ -18,7 +18,6 @@
 / {
 	lcd{
 		compatible = "amlogic, lcd-g12b";
-		dev_name = "lcd";
 		mode = "tablet";
 		status = "okay";
 		key_valid = <0>;
@@ -79,15 +78,15 @@
 
 			/* dsi_init: data_type, num, data... */
 			dsi_init_on = <0x05 1 0x11
-					0xff 20     /*delay(ms)*/
+					0xfd 1 20   /*delay(ms)*/
 					0x05 1 0x29
-					0xff 20     /*delay(ms)*/
-					0xff 0xff>; /*ending*/
+					0xfd 1 20   /*delay(ms)*/
+					0xff 0>;    /*ending*/
 			dsi_init_off = <0x05 1 0x28
-					0xff 10     /*delay(ms)*/
+					0xfd 1 10   /*delay(ms)*/
 					0x05 1 0x10
-					0xff 10     /*delay(ms)*/
-					0xff 0xff>; /*ending*/
+					0xfd 1 10   /*delay(ms)*/
+					0xff 0>;    /*ending*/
 			extern_init = <0xff>; /*0xff for invalid*/
 
 			/* power step: type, index, value, delay(ms) */
@@ -132,15 +131,15 @@
 
 			/* dsi_init: data_type, num, data... */
 			dsi_init_on = <0x05 1 0x11
-					0xff 200    /*delay(ms)*/
+					0xfd 1 200  /*delay(ms)*/
 					0x05 1 0x29
-					0xff 20     /*delay(ms)*/
-					0xff 0xff>; /*ending*/
+					0xfd 1 20   /*delay(ms)*/
+					0xff 0>;    /*ending*/
 			dsi_init_off = <0x05 1 0x28
-					0xff 10     /*delay(ms)*/
+					0xfd 1 10   /*delay(ms)*/
 					0x05 1 0x10
-					0xff 10     /*delay(ms)*/
-					0xff 0xff>; /*ending*/
+					0xfd 1 10   /*delay(ms)*/
+					0xff 0>;    /*ending*/
 			extern_init = <0xff>; /*0xff for invalid*/
 
 			/* power step: type, index, value, delay(ms) */
@@ -184,8 +183,8 @@
 				0>; /*phy_switch(0=auto,1=standard,2=slow)*/
 
 			/* dsi_init: data_type, num, data... */
-			dsi_init_on = <0xff 0xff>; /*ending*/
-			dsi_init_off = <0xff 0xff>; /*ending*/
+			dsi_init_on = <0xff 0>; /*ending*/
+			dsi_init_off = <0xff 0>; /*ending*/
 			extern_init = <1>; /*0xff for invalid*/
 
 			/* power step: type, index, value, delay(ms) */
@@ -234,8 +233,8 @@
 				0xf0 3 0 0 10 /* reset low, delay 10ms */
 				0xf0 3 0 1 30 /* reset high, delay 30ms */
 				0xfc 2 0x04 3 /* check_reg, check_cnt */
-				0xff 0xff>; /* ending flag */
-			dsi_init_off = <0xff 0xff>; /* ending flag */
+				0xff 0>; /* ending flag */
+			dsi_init_off = <0xff 0>; /* ending flag */
 				/* extern_init: 0xff for invalid */
 			extern_init = <2>;
 				/* power step: type,index,value,delay(ms) */
@@ -254,7 +253,6 @@
 
 	lcd_extern{
 		compatible = "amlogic, lcd_extern";
-		dev_name = "lcd_extern";
 		status = "okay";
 		i2c_bus = "i2c_bus_0";
 		key_valid = <0>;
@@ -266,17 +264,17 @@
 			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
 			cmd_size = <0xff>;
 			init_on = <
-				0xff 10
+				0xfd 1 10
 				0x05 1 0x11
-				0xff 120  /* delay 120ms */
+				0xfd 1 120  /* delay 120ms */
 				0x05 1 0x29
-				0xff 0xff>; /*ending*/
+				0xff 0>;    /*ending*/
 			init_off = <
 				0x05 1 0x28 /* display off */
-				0xff 10     /* delay 10ms */
+				0xfd 1 10   /* delay 10ms */
 				0x05 1 0x10 /* sleep in */
-				0xff 150      /* delay 150ms */
-				0xff 0xff>; /*ending*/
+				0xfd 1 150  /* delay 150ms */
+				0xff 0>;    /*ending*/
 		};
 
 		extern_1{
@@ -487,22 +485,22 @@
 				0x39 4 0xFF 0x98 0x81 0x00
 
 				0x15 2 0x3A 0x77
-				0xff 2
+				0xfd 1 2
 
 				0x15 2 0x36 0x08
 
 				0x05 1 0x11  /* display on */
-				0xff 200
+				0xfd 1 200
 
 				0x05 1 0x29 /* display on */
-				0xff 200
-				0xFF 0xFF>; /*ending*/
+				0xfd 1 200
+				0xFF 0>; /*ending*/
 			init_off = <
 				0x05 1 0x28 /* display off */
-				0xff 10     /* delay 10ms */
+				0xfd 1 10   /* delay 10ms */
 				0x05 1 0x10 /* sleep in */
-				0xff 150      /* delay 150ms */
-				0xff 0xff>; /*ending*/
+				0xfd 1 150  /* delay 150ms */
+				0xff 0>;    /*ending*/
 		};
 
 		extern_2{
@@ -730,23 +728,22 @@
 				0x23 2 0xE6 0x02 /* Watch dog */
 				0x23 2 0xE7 0x0C
 				0x05 1 0x11  /* sleep out */
-				0xff 120
+				0xfd 1 120
 				0x05 1 0x29 /* display on */
 				0x05 1 0x35
-				0xFF 20    /* delay(ms) */
-				0xFF 0xFF>; /*ending*/
+				0xfd 1 20   /* delay(ms) */
+				0xFF 0>;    /*ending*/
 			init_off = <
 				0x05 1 0x28 /* display off */
-				0xff 10     /* delay 10ms */
+				0xfd 1 10   /* delay 10ms */
 				0x05 1 0x10 /* sleep in */
-				0xff 150      /* delay 150ms */
-				0xff 0xff>; /*ending*/
+				0xfd 1 150  /* delay 150ms */
+				0xff 0>;    /*ending*/
 		};
 	};
 
 	backlight{
 		compatible = "amlogic, backlight-g12b";
-		dev_name = "backlight";
 		status = "okay";
 		key_valid = <0>;
 		pinctrl-names = "pwm_on","pwm_off";
@@ -804,7 +801,6 @@
 
 	bl_extern{
 		compatible = "amlogic, bl_extern";
-		dev_name = "bl_extern";
 		status = "disabled";
 		i2c_bus = "i2c_bus_3";
 

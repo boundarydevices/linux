@@ -576,6 +576,7 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 		LCDPR("power_on step:\n");
 	i = 0;
 	while (i < LCD_PWR_STEP_MAX) {
+		pconf->lcd_power->power_on_step_max = i;
 		len += 5;
 		ret = lcd_unifykey_len_check(key_len, len);
 		if (ret < 0) {
@@ -627,6 +628,7 @@ int lcd_power_load_from_unifykey(struct lcd_config_s *pconf,
 	p += (5*(i + 1));
 	j = 0;
 	while (j < LCD_PWR_STEP_MAX) {
+		pconf->lcd_power->power_off_step_max = j;
 		len += 5;
 		ret = lcd_unifykey_len_check(key_len, len);
 		if (ret < 0) {

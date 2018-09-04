@@ -25,19 +25,15 @@
 #include <linux/spinlock.h>
 #include <linux/irq.h>
 #include <linux/notifier.h>
-#include <linux/reboot.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
-#include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/amlogic/media/vout/lcd/aml_ldim.h>
 #include <linux/amlogic/media/vout/lcd/aml_bl.h>
 #include "ldim_drv.h"
 #include "ldim_dev_drv.h"
-
-#define INT_VIU_VSYNC   35
 
 #define NORMAL_MSG      (0<<7)
 #define BROADCAST_MSG   (1<<7)
@@ -64,6 +60,7 @@ struct iw7027_s {
 	int cs_clk_delay;
 	unsigned char cmd_size;
 	unsigned char *init_data;
+	unsigned int init_data_cnt;
 	struct class cls;
 };
 struct iw7027_s *bl_iw7027;
@@ -151,9 +148,114 @@ static int iw7027_wregs(struct spi_device *spi, u8 addr, u8 *val, int len)
 	return ret;
 }
 
+static int ldim_power_cmd_dynamic_size(void)
+{
+	unsigned char *table;
+	int i = 0, j, step = 0, max_len = 0;
+	unsigned char type, cmd_size;
+	int delay_ms, ret = 0;
+
+	table = bl_iw7027->init_data;
+	max_len = bl_iw7027->init_data_cnt;
+
+	while ((i + 1) < max_len) {
+		type = table[i];
+		if (type == LCD_EXT_CMD_TYPE_END)
+			break;
+		if (ldim_debug_print) {
+			LDIMPR("%s: step %d: type=0x%02x, cmd_size=%d\n",
+				__func__, step, type, table[i+1]);
+		}
+		cmd_size = table[i+1];
+		if (cmd_size == 0)
+			goto power_cmd_dynamic_next;
+		if ((i + 2 + cmd_size) > max_len)
+			break;
+
+		if (type == LCD_EXT_CMD_TYPE_NONE) {
+			/* do nothing */
+		} else if (type == LCD_EXT_CMD_TYPE_DELAY) {
+			delay_ms = 0;
+			for (j = 0; j < cmd_size; j++)
+				delay_ms += table[i+2+j];
+			if (delay_ms > 0)
+				mdelay(delay_ms);
+		} else if (type == LCD_EXT_CMD_TYPE_CMD) {
+			ret = iw7027_wreg(bl_iw7027->spi,
+				table[i+2], table[i+3]);
+			udelay(1);
+		} else if (type == LCD_EXT_CMD_TYPE_CMD_DELAY) {
+			ret = iw7027_wreg(bl_iw7027->spi,
+				table[i+2], table[i+3]);
+			udelay(1);
+			if (table[i+4] > 0)
+				mdelay(table[i+4]);
+		} else {
+			LDIMERR("%s: type 0x%02x invalid\n", __func__, type);
+		}
+power_cmd_dynamic_next:
+		i += (cmd_size + 2);
+		step++;
+	}
+
+	return ret;
+}
+
+static int ldim_power_cmd_fixed_size(void)
+{
+	unsigned char *table;
+	int i = 0, j, step = 0, max_len = 0;
+	unsigned char type, cmd_size;
+	int delay_ms, ret = 0;
+
+	cmd_size = bl_iw7027->cmd_size;
+	if (cmd_size < 2) {
+		LDIMERR("%s: invalid cmd_size %d\n", __func__, cmd_size);
+		return -1;
+	}
+
+	table = bl_iw7027->init_data;
+	max_len = bl_iw7027->init_data_cnt;
+
+	while ((i + cmd_size) <= max_len) {
+		type = table[i];
+		if (type == LCD_EXT_CMD_TYPE_END)
+			break;
+		if (ldim_debug_print) {
+			LDIMPR("%s: step %d: type=0x%02x, cmd_size=%d\n",
+				__func__, step, type, cmd_size);
+		}
+		if (type == LCD_EXT_CMD_TYPE_NONE) {
+			/* do nothing */
+		} else if (type == LCD_EXT_CMD_TYPE_DELAY) {
+			delay_ms = 0;
+			for (j = 0; j < (cmd_size - 1); j++)
+				delay_ms += table[i+1+j];
+			if (delay_ms > 0)
+				mdelay(delay_ms);
+		} else if (type == LCD_EXT_CMD_TYPE_CMD) {
+			ret = iw7027_wreg(bl_iw7027->spi,
+				table[i+1], table[i+2]);
+			udelay(1);
+		} else if (type == LCD_EXT_CMD_TYPE_CMD_DELAY) {
+			ret = iw7027_wreg(bl_iw7027->spi,
+				table[i+1], table[i+2]);
+			udelay(1);
+			if (table[i+3] > 0)
+				mdelay(table[i+3]);
+		} else {
+			LDIMERR("%s: type 0x%02x invalid\n", __func__, type);
+		}
+		i += cmd_size;
+		step++;
+	}
+
+	return ret;
+}
+
 static int iw7027_power_on_init(int flag)
 {
-	unsigned char addr, val;
+	unsigned char cmd_size;
 	int i, ret = 0;
 
 	LDIMPR("%s: spi_op_flag=%d\n", __func__, iw7027_spi_op_flag);
@@ -173,20 +275,15 @@ static int iw7027_power_on_init(int flag)
 	iw7027_spi_op_flag = 1;
 
 iw7027_power_reset_p:
-	for (i = 0; i < LDIM_SPI_INIT_ON_SIZE; i += bl_iw7027->cmd_size) {
-		if (bl_iw7027->init_data[i] == 0xff) {
-			if (bl_iw7027->init_data[i+3] > 0)
-				mdelay(bl_iw7027->init_data[i+3]);
-			break;
-		} else if (bl_iw7027->init_data[i] == 0x0) {
-			addr = bl_iw7027->init_data[i+1];
-			val = bl_iw7027->init_data[i+2];
-			ret = iw7027_wreg(bl_iw7027->spi, addr, val);
-			udelay(1);
-		}
-		if (bl_iw7027->init_data[i+3] > 0)
-			mdelay(bl_iw7027->init_data[i+3]);
+	cmd_size = bl_iw7027->cmd_size;
+	if (cmd_size < 1) {
+		LDIMERR("%s: cmd_size %d is invalid\n", __func__, cmd_size);
+		return -1;
 	}
+	if (cmd_size == LCD_EXT_CMD_SIZE_DYNAMIC)
+		ret = ldim_power_cmd_dynamic_size();
+	else
+		ret = ldim_power_cmd_fixed_size();
 
 	if (flag == IW7027_POWER_RESET)
 		return ret;
@@ -672,6 +769,7 @@ int ldim_dev_iw7027_probe(void)
 	bl_iw7027->cs_clk_delay = ldim_drv->ldev_conf->cs_clk_delay;
 	bl_iw7027->cmd_size = ldim_drv->ldev_conf->cmd_size;
 	bl_iw7027->init_data = ldim_drv->ldev_conf->init_on;
+	bl_iw7027->init_data_cnt = ldim_drv->ldev_conf->init_on_cnt;
 
 	val_brightness = kcalloc(ldim_drv->ldev_conf->bl_regnum * 2,
 		sizeof(unsigned char), GFP_KERNEL);

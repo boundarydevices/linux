@@ -55,24 +55,27 @@ static struct spi_board_info ldim_spi_dev = {
 	.controller_data = NULL,
 };
 
-static unsigned char ldim_ini_data_on[LDIM_SPI_INIT_ON_SIZE];
-static unsigned char ldim_ini_data_off[LDIM_SPI_INIT_OFF_SIZE];
+static unsigned char *table_init_on_dft;
+static unsigned char *table_init_off_dft;
 
 struct ldim_dev_config_s ldim_dev_config = {
 	.type = LDIM_DEV_TYPE_NORMAL,
 	.cs_hold_delay = 0,
 	.cs_clk_delay = 0,
-	.en_gpio = 0xff,
+	.en_gpio = LCD_EXT_GPIO_INVALID,
 	.en_gpio_on = 1,
 	.en_gpio_off = 0,
-	.lamp_err_gpio = 0xff,
+	.lamp_err_gpio = LCD_EXT_GPIO_INVALID,
 	.fault_check = 0,
 	.write_check = 0,
 	.dim_min = 0x7f, /* min 3% duty */
 	.dim_max = 0xfff,
+	.init_loaded = 0,
 	.cmd_size = 4,
-	.init_on = ldim_ini_data_on,
-	.init_off = ldim_ini_data_off,
+	.init_on = NULL,
+	.init_off = NULL,
+	.init_on_cnt = 0,
+	.init_off_cnt = 0,
 	.pwm_config = {
 		.pwm_method = BL_PWM_POSITIVE,
 		.pwm_port = BL_PWM_MAX,
@@ -82,39 +85,6 @@ struct ldim_dev_config_s ldim_dev_config = {
 
 	.bl_regnum = 0,
 };
-
-#if 0
-static void ldim_gpio_release(int index)
-{
-	struct bl_gpio_s *ld_gpio;
-	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-
-	if (index >= BL_GPIO_NUM_MAX) {
-		LDIMERR("gpio index %d, exit\n", index);
-		return;
-	}
-	ld_gpio = &ldim_gpio[index];
-	if (ld_gpio->flag == 0) {
-		if (ldim_debug_print) {
-			LDIMPR("gpio %s[%d] is not registered\n",
-				ld_gpio->name, index);
-		}
-		return;
-	}
-	if (IS_ERR(ld_gpio->gpio)) {
-		LDIMERR("gpio %s[%d]: %p, err: %ld\n",
-			ld_gpio->name, index, ld_gpio->gpio,
-			PTR_ERR(ld_gpio->gpio));
-		return;
-	}
-
-	/* release gpio */
-	devm_gpiod_put(ldim_drv->dev, ld_gpio->gpio);
-	ld_gpio->flag = 0;
-	if (ldim_debug_print)
-		LDIMPR("release gpio %s[%d]\n", ld_gpio->name, index);
-}
-#endif
 
 static void ldim_gpio_probe(int index)
 {
@@ -360,7 +330,129 @@ static int ldim_pwm_vs_update(void)
 	return ret;
 }
 
-static void ldim_config_print(void)
+#define EXT_LEN_MAX   500
+static void ldim_dev_init_table_dynamic_size_print(
+		struct ldim_dev_config_s *econf, int flag)
+{
+	int i, j, k, max_len;
+	unsigned char cmd_size;
+	char *str;
+	unsigned char *table;
+
+	str = kcalloc(EXT_LEN_MAX, sizeof(char), GFP_KERNEL);
+	if (str == NULL) {
+		LDIMERR("%s: str malloc error\n", __func__);
+		return;
+	}
+	if (flag) {
+		pr_info("power on:\n");
+		table = econf->init_on;
+		max_len = econf->init_off_cnt;
+	} else {
+		pr_info("power off:\n");
+		table = econf->init_off;
+		max_len = econf->init_off_cnt;
+	}
+	if (table == NULL) {
+		LDIMERR("init_table %d is NULL\n", flag);
+		kfree(str);
+		return;
+	}
+
+	i = 0;
+	while ((i + 1) < max_len) {
+		if (table[i] == LCD_EXT_CMD_TYPE_END) {
+			pr_info("  0x%02x,%d,\n", table[i], table[i+1]);
+			break;
+		}
+		cmd_size = table[i+1];
+
+		k = snprintf(str, EXT_LEN_MAX, "  0x%02x,%d,",
+			table[i], cmd_size);
+		if (cmd_size == 0)
+			goto init_table_dynamic_print_next;
+		if (i + 2 + cmd_size > max_len) {
+			pr_info("cmd_size out of support\n");
+			break;
+		}
+
+		if (table[i] == LCD_EXT_CMD_TYPE_DELAY) {
+			for (j = 0; j < cmd_size; j++) {
+				k += snprintf(str+k, EXT_LEN_MAX,
+					"%d,", table[i+2+j]);
+			}
+		} else if (table[i] == LCD_EXT_CMD_TYPE_CMD) {
+			for (j = 0; j < cmd_size; j++) {
+				k += snprintf(str+k, EXT_LEN_MAX,
+					"0x%02x,", table[i+2+j]);
+			}
+		} else if (table[i] == LCD_EXT_CMD_TYPE_CMD_DELAY) {
+			for (j = 0; j < (cmd_size - 1); j++) {
+				k += snprintf(str+k, EXT_LEN_MAX,
+					"0x%02x,", table[i+2+j]);
+			}
+			snprintf(str+k, EXT_LEN_MAX,
+				"%d,", table[i+cmd_size+1]);
+		} else {
+			for (j = 0; j < cmd_size; j++) {
+				k += snprintf(str+k, EXT_LEN_MAX,
+					"0x%02x,", table[i+2+j]);
+			}
+		}
+init_table_dynamic_print_next:
+		pr_info("%s\n", str);
+		i += (cmd_size + 2);
+	}
+
+	kfree(str);
+}
+
+static void ldim_dev_init_table_fixed_size_print(
+		struct ldim_dev_config_s *econf, int flag)
+{
+	int i, j, k, max_len;
+	unsigned char cmd_size;
+	char *str;
+	unsigned char *table;
+
+	str = kcalloc(EXT_LEN_MAX, sizeof(char), GFP_KERNEL);
+	if (str == NULL) {
+		LDIMERR("%s: str malloc error\n", __func__);
+		return;
+	}
+	cmd_size = econf->cmd_size;
+	if (flag) {
+		pr_info("power on:\n");
+		table = econf->init_on;
+		max_len = econf->init_on_cnt;
+	} else {
+		pr_info("power off:\n");
+		table = econf->init_off;
+		max_len = econf->init_off_cnt;
+	}
+	if (table == NULL) {
+		LDIMERR("init_table %d is NULL\n", flag);
+		kfree(str);
+		return;
+	}
+
+	i = 0;
+	while ((i + cmd_size) <= max_len) {
+		k = snprintf(str, EXT_LEN_MAX, " ");
+		for (j = 0; j < cmd_size; j++) {
+			k += snprintf(str+k, EXT_LEN_MAX, " 0x%02x",
+				table[i+j]);
+		}
+		pr_info("%s\n", str);
+
+		if (table[i] == LCD_EXT_CMD_TYPE_END)
+			break;
+		i += cmd_size;
+	}
+	kfree(str);
+}
+
+static void ldim_dev_config_print(void)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
@@ -420,8 +512,7 @@ static void ldim_config_print(void)
 				"cs_clk_delay          = %d\n"
 				"lamp_err_gpio         = %d\n"
 				"fault_check           = %d\n"
-				"write_check           = %d\n"
-				"cmd_size              = %d\n\n",
+				"write_check           = %d\n\n",
 				ldim_drv->spi_dev->modalias,
 				ldim_drv->spi_dev->mode,
 				ldim_drv->spi_dev->max_speed_hz,
@@ -431,8 +522,7 @@ static void ldim_config_print(void)
 				ldim_drv->ldev_conf->cs_clk_delay,
 				ldim_drv->ldev_conf->lamp_err_gpio,
 				ldim_drv->ldev_conf->fault_check,
-				ldim_drv->ldev_conf->write_check,
-				ldim_drv->ldev_conf->cmd_size);
+				ldim_drv->ldev_conf->write_check);
 			break;
 		case LDIM_DEV_TYPE_I2C:
 			break;
@@ -492,9 +582,32 @@ static void ldim_config_print(void)
 			}
 		}
 		pr_info("pinmux_flag:        %d\n"
-			"pinmux_pointer:     0x%p\n",
+			"pinmux_pointer:     0x%p\n\n",
 			ldim_drv->pinmux_flag,
 			ldim_drv->pin);
+
+		if (ldim_drv->ldev_conf->cmd_size > 0) {
+			pr_info("table_loaded:       %d\n"
+				"cmd_size:           %d\n"
+				"init_on_cnt:        %d\n"
+				"init_off_cnt:       %d\n",
+				ldim_drv->ldev_conf->init_loaded,
+				ldim_drv->ldev_conf->cmd_size,
+				ldim_drv->ldev_conf->init_on_cnt,
+				ldim_drv->ldev_conf->init_off_cnt);
+			if (ldim_drv->ldev_conf->cmd_size ==
+				LCD_EXT_CMD_SIZE_DYNAMIC) {
+				ldim_dev_init_table_dynamic_size_print(
+					ldim_drv->ldev_conf, 1);
+				ldim_dev_init_table_dynamic_size_print(
+					ldim_drv->ldev_conf, 0);
+			} else {
+				ldim_dev_init_table_fixed_size_print(
+					ldim_drv->ldev_conf, 1);
+				ldim_dev_init_table_fixed_size_print(
+					ldim_drv->ldev_conf, 0);
+			}
+		}
 	} else {
 		pr_info("device config is null\n");
 	}
@@ -564,13 +677,206 @@ static int ldim_dev_pwm_channel_register(struct bl_pwm_config_s *bl_pwm,
 
 }
 
+static int ldim_dev_init_table_dynamic_size_load_dts(
+		struct device_node *of_node,
+		struct ldim_dev_config_s *ldconf, int flag)
+{
+	unsigned char cmd_size, type;
+	int i = 0, j, val, max_len, step = 0, ret = 0;
+	unsigned char *table;
+	char propname[20];
+
+	if (flag) {
+		table = table_init_on_dft;
+		max_len = LDIM_INIT_ON_MAX;
+		sprintf(propname, "init_on");
+	} else {
+		table = table_init_off_dft;
+		max_len = LDIM_INIT_OFF_MAX;
+		sprintf(propname, "init_off");
+	}
+	if (table == NULL) {
+		LDIMERR("%s: init_table is null\n", __func__);
+		return -1;
+	}
+
+	while ((i + 1) < max_len) {
+		/* type */
+		ret = of_property_read_u32_index(of_node, propname, i, &val);
+		if (ret) {
+			LDIMERR("%s: get %s type failed, step %d\n",
+				ldconf->name, propname, step);
+			table[i] = LCD_EXT_CMD_TYPE_END;
+			table[i+1] = 0;
+			return -1;
+		}
+		table[i] = (unsigned char)val;
+		type = table[i];
+		/* cmd_size */
+		ret = of_property_read_u32_index(of_node, propname,
+			(i+1), &val);
+		if (ret) {
+			LDIMERR("%s: get %s cmd_size failed, step %d\n",
+				ldconf->name, propname, step);
+			table[i] = LCD_EXT_CMD_TYPE_END;
+			table[i+1] = 0;
+			return -1;
+		}
+		table[i+1] = (unsigned char)val;
+		cmd_size = table[i+1];
+
+		if (type == LCD_EXT_CMD_TYPE_END)
+			break;
+		if (cmd_size == 0)
+			goto init_table_dynamic_dts_next;
+		if ((i + 2 + cmd_size) > max_len) {
+			LDIMERR("%s: %s cmd_size out of support, step %d\n",
+				ldconf->name, propname, step);
+			table[i] = LCD_EXT_CMD_TYPE_END;
+			table[i+1] = 0;
+			return -1;
+		}
+
+		/* data */
+		for (j = 0; j < cmd_size; j++) {
+			ret = of_property_read_u32_index(
+				of_node, propname, (i+2+j), &val);
+			if (ret) {
+				LDIMERR("%s: get %s data failed, step %d\n",
+					ldconf->name, propname, step);
+				table[i] = LCD_EXT_CMD_TYPE_END;
+				table[i+1] = 0;
+				return -1;
+			}
+			table[i+2+j] = (unsigned char)val;
+		}
+
+init_table_dynamic_dts_next:
+		i += (cmd_size + 2);
+		step++;
+	}
+	if (flag)
+		ldconf->init_on_cnt = i + 2;
+	else
+		ldconf->init_off_cnt = i + 2;
+
+	return 0;
+}
+
+static int ldim_dev_init_table_fixed_size_load_dts(
+		struct device_node *of_node,
+		struct ldim_dev_config_s *ldconf, int flag)
+{
+	unsigned char cmd_size;
+	int i = 0, j, val, max_len, step = 0, ret = 0;
+	unsigned char *table;
+	char propname[20];
+
+	cmd_size = ldconf->cmd_size;
+	if (flag) {
+		table = table_init_on_dft;
+		max_len = LDIM_INIT_ON_MAX;
+		sprintf(propname, "init_on");
+	} else {
+		table = table_init_off_dft;
+		max_len = LDIM_INIT_OFF_MAX;
+		sprintf(propname, "init_off");
+	}
+	if (table == NULL) {
+		LDIMERR("%s: init_table is null\n", __func__);
+		return -1;
+	}
+
+	while (i < max_len) { /* group detect */
+		if ((i + cmd_size) > max_len) {
+			LDIMERR("%s: %s cmd_size out of support, step %d\n",
+				ldconf->name, propname, step);
+			table[i] = LCD_EXT_CMD_TYPE_END;
+			return -1;
+		}
+		for (j = 0; j < cmd_size; j++) {
+			ret = of_property_read_u32_index(
+				of_node, propname, (i+j), &val);
+			if (ret) {
+				LDIMERR("%s: get %s failed, step %d\n",
+					ldconf->name, propname, step);
+				table[i] = LCD_EXT_CMD_TYPE_END;
+				return -1;
+			}
+			table[i+j] = (unsigned char)val;
+		}
+		if (table[i] == LCD_EXT_CMD_TYPE_END)
+			break;
+
+		i += cmd_size;
+		step++;
+	}
+
+	if (flag)
+		ldconf->init_on_cnt = i + cmd_size;
+	else
+		ldconf->init_off_cnt = i + cmd_size;
+
+	return 0;
+}
+
+static int ldim_dev_tablet_init_dft_malloc(void)
+{
+	table_init_on_dft = kcalloc(LDIM_INIT_ON_MAX,
+		sizeof(unsigned char), GFP_KERNEL);
+	if (table_init_on_dft == NULL) {
+		LDIMERR("failed to alloc init_on table\n");
+		return -1;
+	}
+	table_init_off_dft = kcalloc(LDIM_INIT_OFF_MAX,
+		sizeof(unsigned char), GFP_KERNEL);
+	if (table_init_off_dft == NULL) {
+		LDIMERR("failed to alloc init_off table\n");
+		kfree(table_init_on_dft);
+		return -1;
+	}
+	table_init_on_dft[0] = LCD_EXT_CMD_TYPE_END;
+	table_init_on_dft[1] = 0;
+	table_init_off_dft[0] = LCD_EXT_CMD_TYPE_END;
+	table_init_off_dft[1] = 0;
+
+	return 0;
+}
+
+static int ldim_dev_table_init_save(struct ldim_dev_config_s *ldconf)
+{
+	if (ldconf->init_on_cnt > 0) {
+		ldconf->init_on = kcalloc(ldconf->init_on_cnt,
+			sizeof(unsigned char), GFP_KERNEL);
+		if (ldconf->init_on == NULL) {
+			LDIMERR("failed to alloc init_on table\n");
+			return -1;
+		}
+		memcpy(ldconf->init_on, table_init_on_dft,
+			ldconf->init_on_cnt*sizeof(unsigned char));
+	}
+	if (ldconf->init_off_cnt > 0) {
+		ldconf->init_off = kcalloc(ldconf->init_off_cnt,
+			sizeof(unsigned char), GFP_KERNEL);
+		if (ldconf->init_off == NULL) {
+			LDIMERR("failed to alloc init_off table\n");
+			kfree(ldconf->init_on);
+			return -1;
+		}
+		memcpy(ldconf->init_off, table_init_off_dft,
+			ldconf->init_on_cnt*sizeof(unsigned char));
+	}
+
+	return 0;
+}
+
 static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 {
 	char ld_propname[20];
 	struct device_node *child;
 	const char *str;
 	unsigned int *temp, val;
-	int i, j;
+	int i;
 	int ret = 0;
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
@@ -579,11 +885,6 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 		LDIMERR("%s: buf malloc error\n", __func__);
 		return -1;
 	}
-
-	memset(ldim_dev_config.init_on, 0, LDIM_SPI_INIT_ON_SIZE);
-	memset(ldim_dev_config.init_off, 0, LDIM_SPI_INIT_OFF_SIZE);
-	ldim_dev_config.init_on[0] = 0xff;
-	ldim_dev_config.init_off[0] = 0xff;
 
 	/* get device config */
 	sprintf(ld_propname, "ldim_dev_%d", index);
@@ -701,6 +1002,9 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 		goto ldim_get_config_err;
 	}
 
+	ret = ldim_dev_tablet_init_dft_malloc();
+	if (ret)
+		goto ldim_get_config_err;
 	switch (ldim_dev_config.type) {
 	case LDIM_DEV_TYPE_SPI:
 		/* get spi config */
@@ -760,11 +1064,12 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 
 		ret = of_property_read_u32(child, "lamp_err_gpio", &val);
 		if (ret) {
-			ldim_dev_config.lamp_err_gpio = BL_GPIO_NUM_MAX;
+			ldim_dev_config.lamp_err_gpio = LCD_EXT_GPIO_INVALID;
 			ldim_dev_config.fault_check = 0;
 		} else {
 			if (val >= BL_GPIO_NUM_MAX) {
-				ldim_dev_config.lamp_err_gpio = BL_GPIO_NUM_MAX;
+				ldim_dev_config.lamp_err_gpio =
+					LCD_EXT_GPIO_INVALID;
 				ldim_dev_config.fault_check = 0;
 			} else {
 				ldim_dev_config.lamp_err_gpio = val;
@@ -786,70 +1091,35 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 		ret = of_property_read_u32(child, "cmd_size", &val);
 		if (ret) {
 			LDIMPR("no cmd_size\n");
-			ldim_dev_config.cmd_size = 1;
+			ldim_dev_config.cmd_size = 0;
 		} else {
-			if (val > 1)
-				ldim_dev_config.cmd_size = (unsigned char)val;
-			else
-				ldim_dev_config.cmd_size = 1;
-			}
-
-		ret = of_property_read_u32_index(child, "init_on", 0, &val);
-		if (ret) {
-			LDIMPR("no init_on\n");
-			ldim_dev_config.init_on[0] = 0xff;
-			goto ldim_get_init_off;
+			ldim_dev_config.cmd_size = (unsigned char)val;
 		}
-		if (ldim_dev_config.cmd_size > 1) {
-			i = 0;
-			while (i < LDIM_SPI_INIT_ON_SIZE) {
-				for (j = 0; j < ldim_dev_config.cmd_size; j++) {
-					ret = of_property_read_u32_index(child,
-						"init_on", (i + j), &val);
-					if (ret) {
-						LDIMERR("failed init_on\n");
-						ldim_dev_config.init_on[i]
-							= 0xff;
-						goto ldim_get_init_off;
-					}
-					ldim_dev_config.init_on[i + j] =
-						(unsigned char)val;
-				}
-				if (ldim_dev_config.init_on[i] == 0xff)
-					break;
-
-				i += ldim_dev_config.cmd_size;
-				}
-			}
-ldim_get_init_off:
-		ret = of_property_read_u32_index(child, "init_off", 0, &val);
-		if (ret) {
-			LDIMPR("no init_off\n");
-			ldim_dev_config.init_off[0] = 0xff;
-			goto ldim_get_config_end;
+		if (ldim_debug_print) {
+			LDIMPR("%s: cmd_size = %d\n",
+				ldim_dev_config.name,
+				ldim_dev_config.cmd_size);
 		}
-		if (ldim_dev_config.cmd_size > 1) {
-			i = 0;
-			while (i < LDIM_SPI_INIT_OFF_SIZE) {
-				for (j = 0; j < ldim_dev_config.cmd_size; j++) {
-					ret = of_property_read_u32_index(child,
-						"init_off", (i + j), &val);
-					if (ret) {
-						LDIMERR("failed init_on\n");
-						ldim_dev_config.init_off[i]
-							= 0xff;
-						goto ldim_get_config_end;
-					}
-					ldim_dev_config.init_off[i + j] =
-						(unsigned char)val;
-				}
-				if (ldim_dev_config.init_off[i] == 0xff)
-					break;
+		if (ldim_dev_config.cmd_size == 0)
+			break;
 
-				i += ldim_dev_config.cmd_size;
-			}
+		if (ldim_dev_config.cmd_size == LCD_EXT_CMD_SIZE_DYNAMIC) {
+			ret = ldim_dev_init_table_dynamic_size_load_dts(
+				child, &ldim_dev_config, 1);
+			if (ret)
+				break;
+			ret = ldim_dev_init_table_dynamic_size_load_dts(
+				child, &ldim_dev_config, 0);
+		} else {
+			ret = ldim_dev_init_table_fixed_size_load_dts(
+				child, &ldim_dev_config, 1);
+			if (ret)
+				break;
+			ret = ldim_dev_init_table_fixed_size_load_dts(
+				child, &ldim_dev_config, 0);
 		}
-ldim_get_config_end:
+		if (ret == 0)
+			ldim_dev_config.init_loaded = 1;
 		break;
 	case LDIM_DEV_TYPE_I2C:
 		break;
@@ -858,9 +1128,20 @@ ldim_get_config_end:
 		break;
 	}
 
+	if (ldim_dev_config.init_loaded > 0) {
+		ret = ldim_dev_table_init_save(&ldim_dev_config);
+		if (ret)
+			goto ldim_get_config_init_table_err;
+	}
+
+	kfree(table_init_on_dft);
+	kfree(table_init_off_dft);
 	kfree(temp);
 	return 0;
 
+ldim_get_config_init_table_err:
+	kfree(table_init_on_dft);
+	kfree(table_init_off_dft);
 ldim_get_config_err:
 	kfree(temp);
 	return -1;
@@ -936,7 +1217,7 @@ static int ldim_dev_probe(struct platform_device *pdev)
 		ldim_drv->ldev_conf = &ldim_dev_config;
 		ldim_drv->pinmux_ctrl = ldim_pwm_pinmux_ctrl;
 		ldim_drv->pwm_vs_update = ldim_pwm_vs_update;
-		ldim_drv->config_print = ldim_config_print,
+		ldim_drv->config_print = ldim_dev_config_print,
 		ldim_dev_get_config_from_dts(pdev->dev.of_node,
 			ldim_drv->dev_index);
 

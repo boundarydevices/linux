@@ -41,9 +41,16 @@ static int mipi_lt070me05_power_off(void)
 	return 0;
 }
 
-/******************** mipi command ********************
- *format:  data_type, num, data....
- *special: data_type=0xff, num<0xff means delay ms, num=0xff means ending.
+/******************** mipi command ********************/
+/* format:  data_type, cmd_size, data.... */
+/*	data_type=0xff,
+ *		0 < cmd_size < 0xff means delay ms,
+ *		cmd_size=0 or 0xff means ending.
+ *	data_type=0xf0, for gpio control
+ *		data0=gpio_index, data1=gpio_value.
+ *		data0=gpio_index, data1=gpio_value, data2=delay.
+ *	data_type=0xfd, for delay ms
+ *		data0=delay, data_1=delay, ..., data_n=delay.
  */
 static int mipi_lt070me05_set_level(unsigned int level)
 {

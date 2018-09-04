@@ -19,13 +19,13 @@ bl_extern{
 	compatible = "amlogic, bl_extern";
 	dev_name = "bl_extern";
 	status = "okay";
+	i2c_bus = "i2c_bus_d";
 
 	extern_0{
 		index = <0>;
 		extern_name = "i2c_lp8556";
 		type = <1>; /** bl_extern_driver type: 1=i2c, 2=spi, 3=mipi */
 		i2c_address = <0x2c>; /** 7bit i2c address */
-		i2c_bus = "i2c_bus_d";
 		dim_max_min = <255 10>;
 	};
 

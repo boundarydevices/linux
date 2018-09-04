@@ -22,6 +22,7 @@
 #include <linux/amlogic/aml_gpio_consumer.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/amlogic/media/vout/lcd/aml_bl.h>
+#include <linux/amlogic/media/vout/lcd/aml_lcd.h>
 #include <linux/spi/spi.h>
 
 /*#define LDIM_DEBUG_INFO*/
@@ -75,8 +76,8 @@ struct ldim_config_s {
 	unsigned char bl_mode;
 };
 
-#define LDIM_SPI_INIT_ON_SIZE     300
-#define LDIM_SPI_INIT_OFF_SIZE    20
+#define LDIM_INIT_ON_MAX     300
+#define LDIM_INIT_OFF_MAX    20
 struct ldim_dev_config_s {
 	char name[20];
 	char pinmux_name[20];
@@ -92,9 +93,13 @@ struct ldim_dev_config_s {
 
 	unsigned int dim_min;
 	unsigned int dim_max;
+
+	unsigned char init_loaded;
 	unsigned char cmd_size;
 	unsigned char *init_on;
 	unsigned char *init_off;
+	unsigned int init_on_cnt;
+	unsigned int init_off_cnt;
 
 	struct bl_pwm_config_s pwm_config;
 

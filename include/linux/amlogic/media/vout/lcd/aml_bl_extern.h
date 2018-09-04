@@ -17,6 +17,7 @@
 
 #ifndef _INC_AML_BL_EXTERN_H_
 #define _INC_AML_BL_EXTERN_H_
+#include <linux/amlogic/media/vout/lcd/aml_lcd.h>
 
 enum bl_extern_type_e {
 	BL_EXTERN_I2C = 0,
@@ -25,29 +26,12 @@ enum bl_extern_type_e {
 	BL_EXTERN_MAX,
 };
 
-enum bl_extern_i2c_bus_e {
-	BL_EXTERN_I2C_BUS_0 = 0,
-	BL_EXTERN_I2C_BUS_1,
-	BL_EXTERN_I2C_BUS_2,
-	BL_EXTERN_I2C_BUS_3,
-	BL_EXTERN_I2C_BUS_4,
-	BL_EXTERN_I2C_BUS_MAX,
-};
-#define BL_EXTERN_I2C_BUS_INVALID   0xff
+#define BL_EXTERN_INIT_ON_MAX    300
+#define BL_EXTERN_INIT_OFF_MAX   50
 
-#define BL_EXTERN_SPI_CLK_FREQ_DFT  10000 /* default 10k */
-
-#define BL_EXTERN_INIT_TABLE_MAX    500
-
-#define BL_EXTERN_INIT_CMD          0x00
-#define BL_EXTERN_INIT_NONE         0xf0
-#define BL_EXTERN_INIT_END          0xff
-
-#define BL_EXTERN_DYNAMIC_LEN		0xff
-
-#define BL_EXTERN_GPIO_NUM_MAX      6
-#define BL_EXTERN_INDEX_INVALID     0xff
-#define BL_EXTERN_NAME_LEN_MAX      30
+#define BL_EXTERN_GPIO_NUM_MAX   6
+#define BL_EXTERN_INDEX_INVALID  0xff
+#define BL_EXTERN_NAME_LEN_MAX   30
 struct bl_extern_config_s {
 	unsigned char index;
 	char name[BL_EXTERN_NAME_LEN_MAX];
@@ -56,6 +40,13 @@ struct bl_extern_config_s {
 	unsigned char i2c_bus;
 	unsigned int dim_min;
 	unsigned int dim_max;
+
+	unsigned char init_loaded;
+	unsigned char cmd_size;
+	unsigned char *init_on;
+	unsigned char *init_off;
+	unsigned int init_on_cnt;
+	unsigned int init_off_cnt;
 };
 
 /* global API */

@@ -748,6 +748,20 @@
 		reg-data-type = <1>;
 		link-device = <&phycsi>;
 	};
+
+	lcd_extern_i2c0: lcd_extern_i2c@0 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_LT8912_0";
+		reg = <0x48>;
+		status = "disabled";
+	};
+
+	lcd_extern_i2c1: lcd_extern_i2c@1 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_LT8912_1";
+		reg = <0x49>;
+		status = "disabled";
+	};
 };
 
 &isp {

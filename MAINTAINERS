@@ -14627,8 +14627,12 @@ F:	Documentation/devicetree/bindings/amlogic/input/pca9557_keypad.txt
 F:	drivers/amlogic/input/keyboard/pca9557_keypad.c
 F:	Documentation/devicetree/bindings/is31fl3236a.txt
 
+AMLOGIC LCD EXTERN DRIVER
+F:      drivers/amlogic/media/vout/backlight/bl_extern/bl_ext_default.c
+F:      drivers/amlogic/media/vout/lcd/lcd_extern/i2c_ANX6862_7911.c
+F:      include/linux/amlogic/media/vout/lcd/aml_lcd.h
+
 AMLOGIC TL1 CLOCK DRIVERS
 M:	Jian Hu <jian.hu@amlogic.com>
 F:	include/dt-bindings/clock/amlogic,tl1-clkc.h
 F:	drivers/amlogic/clk/tl1/*
-

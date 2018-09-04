@@ -34,57 +34,126 @@
 static struct bl_extern_config_s *ext_config;
 static struct aml_bl_extern_i2c_dev_s *i2c_dev;
 
-#define BL_EXTERN_CMD_SIZE	4
+#define BL_EXTERN_CMD_SIZE	LCD_EXT_CMD_SIZE_DYNAMIC
 static unsigned char init_on_table[] = {
-	0x00, 0xa2, 0x20, 0x00,
-	0x00, 0xa5, 0x54, 0x00,
-	0x00, 0x00, 0xff, 0x00,
-	0x00, 0x01, 0x05, 0x00,
-	0x00, 0xa2, 0x20, 0x00,
-	0x00, 0xa5, 0x54, 0x00,
-	0x00, 0xa1, 0xb7, 0x00,
-	0x00, 0xa0, 0xff, 0x00,
-	0x00, 0x00, 0x80, 0x00,
-	0xff, 0x00, 0x00, 0x00, /*ending*/
+	0xc0, 2, 0xa2, 0x20,
+	0xc0, 2, 0xa5, 0x54,
+	0xc0, 2, 0x00, 0xff,
+	0xc0, 2, 0x01, 0x05,
+	0xc0, 2, 0xa2, 0x20,
+	0xc0, 2, 0xa5, 0x54,
+	0xc0, 2, 0xa1, 0xb7,
+	0xc0, 2, 0xa0, 0xff,
+	0xc0, 2, 0x00, 0x80,
+	0xff, 0, /*ending*/
 };
 
 static unsigned char init_off_table[] = {
-	0xff, 0x00, 0x00, 0x00, /*ending*/
+	0xff, 0, /*ending*/
 };
 
-static int i2c_lp8556_power_cmd(unsigned char *init_table)
+static int bl_extern_power_cmd_dynamic_size(unsigned char *table, int flag)
 {
-	int i = 0, len;
-	int ret = 0;
+	int i = 0, j, step = 0, max_len = 0;
+	unsigned char type, cmd_size;
+	int delay_ms, ret = 0;
 
+	if (flag)
+		max_len = ext_config->init_on_cnt;
+	else
+		max_len = ext_config->init_off_cnt;
 
-	BLEX("%s\n", __func__);
-	if (ext_config == NULL) {
-		BLEXERR("invalid ext_config\n");
-		return -1;
-	}
-	if (i2c_dev == NULL) {
-		BLEXERR("invalid i2c device\n");
-		return -1;
-	}
-
-	len = BL_EXTERN_CMD_SIZE;
-	while (i <= BL_EXTERN_INIT_TABLE_MAX) {
-		if (init_table[i] == BL_EXTERN_INIT_END) {
+	while ((i + 1) < max_len) {
+		type = table[i];
+		if (type == LCD_EXT_CMD_TYPE_END)
 			break;
-		} else if (init_table[i] == BL_EXTERN_INIT_NONE) {
-			/* do nothing, only for delay */
-		} else if (init_table[i] == BL_EXTERN_INIT_CMD) {
-			ret = bl_extern_i2c_write(i2c_dev->client,
-				&init_table[i+1], (len-2));
-		} else {
-			BLEXERR("%s: %s(%d): power_type %d is invalid\n",
-				__func__, ext_config->name,
-				ext_config->index, ext_config->type);
+		if (bl_debug_print_flag) {
+			BLEX("%s: step %d: type=0x%02x, cmd_size=%d\n",
+				__func__, step, type, table[i+1]);
 		}
-		if (init_table[i+len-1] > 0)
-			mdelay(init_table[i+len-1]);
-		i += len;
+		cmd_size = table[i+1];
+		if (cmd_size == 0)
+			goto power_cmd_dynamic_next;
+		if ((i + 2 + cmd_size) > max_len)
+			break;
+
+		if (type == LCD_EXT_CMD_TYPE_NONE) {
+			/* do nothing */
+		} else if (type == LCD_EXT_CMD_TYPE_DELAY) {
+			delay_ms = 0;
+			for (j = 0; j < cmd_size; j++)
+				delay_ms += table[i+2+j];
+			if (delay_ms > 0)
+				mdelay(delay_ms);
+		} else if (type == LCD_EXT_CMD_TYPE_CMD) {
+			ret = bl_extern_i2c_write(i2c_dev->client,
+				&table[i+2], cmd_size);
+		} else if (type == LCD_EXT_CMD_TYPE_CMD_DELAY) {
+			ret = bl_extern_i2c_write(i2c_dev->client,
+				&table[i+2], (cmd_size-1));
+			if (table[i+cmd_size+1] > 0)
+				mdelay(table[i+cmd_size+1]);
+		} else {
+			BLEXERR("%s: %s(%d): type 0x%02x invalid\n",
+				__func__, ext_config->name,
+				ext_config->index, type);
+		}
+power_cmd_dynamic_next:
+		i += (cmd_size + 2);
+		step++;
+	}
+
+	return ret;
+}
+
+static int bl_extern_power_cmd_fixed_size(unsigned char *table, int flag)
+{
+	int i = 0, j, step = 0, max_len = 0;
+	unsigned char type, cmd_size;
+	int delay_ms, ret = 0;
+
+	cmd_size = ext_config->cmd_size;
+	if (cmd_size < 2) {
+		BLEXERR("%s: invalid cmd_size %d\n", __func__, cmd_size);
+		return -1;
+	}
+
+	if (flag)
+		max_len = ext_config->init_on_cnt;
+	else
+		max_len = ext_config->init_off_cnt;
+
+	while ((i + cmd_size) <= max_len) {
+		type = table[i];
+		if (type == LCD_EXT_CMD_TYPE_END)
+			break;
+		if (bl_debug_print_flag) {
+			BLEX("%s: step %d: type=0x%02x, cmd_size=%d\n",
+				__func__, step, type, cmd_size);
+		}
+		if (type == LCD_EXT_CMD_TYPE_NONE) {
+			/* do nothing */
+		} else if (type == LCD_EXT_CMD_TYPE_DELAY) {
+			delay_ms = 0;
+			for (j = 0; j < (cmd_size - 1); j++)
+				delay_ms += table[i+1+j];
+			if (delay_ms > 0)
+				mdelay(delay_ms);
+		} else if (type == LCD_EXT_CMD_TYPE_CMD) {
+			ret = bl_extern_i2c_write(i2c_dev->client,
+				&table[i+1], (cmd_size-1));
+		} else if (type == LCD_EXT_CMD_TYPE_CMD_DELAY) {
+			ret = bl_extern_i2c_write(i2c_dev->client,
+				&table[i+1], (cmd_size-2));
+			if (table[i+cmd_size-1] > 0)
+				mdelay(table[i+cmd_size-1]);
+		} else {
+			BLEXERR("%s: %s(%d): type 0x%02x invalid\n",
+				__func__, ext_config->name,
+				ext_config->index, type);
+		}
+		i += cmd_size;
+		step++;
 	}
 
 	return ret;
@@ -92,19 +161,33 @@ static int i2c_lp8556_power_cmd(unsigned char *init_table)
 
 static int i2c_lp8556_power_ctrl(int flag)
 {
+	unsigned char *table;
+	unsigned char cmd_size;
 	int ret = 0;
-
-	BLEX("%s\n", __func__);
 
 	if (ext_config == NULL) {
 		BLEXERR("invalid ext_config\n");
 		return -1;
 	}
 
+	cmd_size = ext_config->cmd_size;
 	if (flag)
-		ret = i2c_lp8556_power_cmd(init_on_table);
+		table = ext_config->init_on;
 	else
-		ret = i2c_lp8556_power_cmd(init_off_table);
+		table = ext_config->init_off;
+	if (cmd_size < 1) {
+		BLEXERR("%s: cmd_size %d is invalid\n", __func__, cmd_size);
+		return -1;
+	}
+	if (i2c_dev == NULL) {
+		BLEXERR("invalid i2c device\n");
+		return -1;
+	}
+
+	if (cmd_size == LCD_EXT_CMD_SIZE_DYNAMIC)
+		ret = bl_extern_power_cmd_dynamic_size(table, flag);
+	else
+		ret = bl_extern_power_cmd_fixed_size(table, flag);
 
 	BLEX("%s: %s(%d): %d\n",
 		__func__, ext_config->name, ext_config->index, flag);
@@ -162,6 +245,12 @@ static int i2c_lp8556_update(void)
 	bl_extern->device_power_off = i2c_lp8556_power_off;
 	bl_extern->device_bri_update = i2c_lp8556_set_level;
 
+	bl_extern->config.cmd_size = BL_EXTERN_CMD_SIZE;
+	bl_extern->config.init_on = init_on_table;
+	bl_extern->config.init_on_cnt = sizeof(init_on_table);
+	bl_extern->config.init_off = init_off_table;
+	bl_extern->config.init_off_cnt = sizeof(init_off_table);
+
 	return 0;
 }
 
@@ -177,6 +266,9 @@ int i2c_lp8556_probe(void)
 
 int i2c_lp8556_remove(void)
 {
+	i2c_dev = NULL;
+	ext_config = NULL;
+
 	return 0;
 }
 

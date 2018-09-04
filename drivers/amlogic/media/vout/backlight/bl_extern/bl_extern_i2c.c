@@ -24,6 +24,7 @@
 
 
 static struct aml_bl_extern_i2c_dev_s *i2c_device;
+
 struct aml_bl_extern_i2c_dev_s *aml_bl_extern_i2c_get_dev(void)
 {
 	return i2c_device;

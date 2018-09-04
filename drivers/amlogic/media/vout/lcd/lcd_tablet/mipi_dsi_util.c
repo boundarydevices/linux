@@ -112,18 +112,24 @@ static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
 	}
 	i = 0;
 	n = 0;
-	while ((i + 1) < n_max) {
-		if (dsi_table[i] == 0xff) { /* ctrl flag */
-			n = 0;
-			if (dsi_table[i+1] == 0xff) {
+	while ((i + DSI_CMD_SIZE_INDEX) < n_max) {
+		n = dsi_table[i+DSI_CMD_SIZE_INDEX];
+		if (dsi_table[i] == LCD_EXT_CMD_TYPE_END) {
+			if (n == 0xff) {
 				pr_info("  0x%02x,0x%02x,\n",
 					dsi_table[i], dsi_table[i+1]);
 				break;
 			}
+			if (n == 0) {
+				pr_info("  0x%02x,%d,\n",
+					dsi_table[i], dsi_table[i+1]);
+				break;
+			}
+			n = 0;
 			pr_info("  0x%02x,%d,\n",
 				dsi_table[i], dsi_table[i+1]);
-		} else if (dsi_table[i] == 0xf0) { /* gpio */
-			n = dsi_table[i+DSI_CMD_SIZE_INDEX];
+		} else if ((dsi_table[i] == LCD_EXT_CMD_TYPE_GPIO) ||
+			(dsi_table[i] == LCD_EXT_CMD_TYPE_DELAY)) {
 			len = sprintf(str, "  0x%02x,%d,", dsi_table[i], n);
 			for (j = 0; j < n; j++) {
 				len += sprintf(str+len, "%d,",
@@ -135,7 +141,6 @@ static void mipi_dsi_init_table_print(struct dsi_config_s *dconf, int on_off)
 				on_off ? "on" : "off", dsi_table[i]);
 			break;
 		} else {
-			n = dsi_table[i+DSI_CMD_SIZE_INDEX];
 			len = sprintf(str, "  0x%02x,%d,", dsi_table[i], n);
 			for (j = 0; j < n; j++) {
 				len += sprintf(str+len, "0x%02x,",
@@ -272,9 +277,9 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 	int ret = 0;
 	unsigned char *dsi_table;
 	unsigned char propname[15];
-	int i, j;
-	int n_max;
+	int i, j, n_max;
 	unsigned int *para; /* num 100 array */
+	unsigned char type, cmd_size;
 	unsigned int val;
 
 	if (on_off) {
@@ -302,63 +307,44 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 		goto lcd_mipi_dsi_init_table_detect_err;
 	}
 	i = 0;
-	while ((i + 1) < n_max) {
+	while ((i + DSI_CMD_SIZE_INDEX) < n_max) {
 		ret = of_property_read_u32_index(m_node, propname, i, &val);
 		if (ret) {
 			LCDERR("failed to get %s\n", propname);
 			goto lcd_mipi_dsi_init_table_detect_err;
 		}
-		if (val == 0xff) {
-			ret = of_property_read_u32_index(m_node,
-				propname, (i+1), &val);
-			if (ret) {
-				LCDERR("failed to get %s\n", propname);
-				goto lcd_mipi_dsi_init_table_detect_err;
-			}
-			i += 2;
-			if (val == 0xff)
+		type = (unsigned char)val;
+		ret = of_property_read_u32_index(m_node, propname,
+			(i + DSI_CMD_SIZE_INDEX), &val);
+		if (ret) {
+			LCDERR("failed to get %s\n", propname);
+			goto lcd_mipi_dsi_init_table_detect_err;
+		}
+		cmd_size = (unsigned char)val;
+		if (type == LCD_EXT_CMD_TYPE_END) {
+			if ((val == 0xff) || (val == 0))
 				break;
-		} else if (val == 0xf0) { /* cpu_gpio */
-			/*  probe gpio */
+			cmd_size = 0;
+		}
+		if (cmd_size == 0) {
+			i += 2;
+			continue;
+		}
+		if ((i + 2 + cmd_size) > n_max) {
+			LCDERR("%s cmd_size out of support\n", propname);
+			goto lcd_mipi_dsi_init_table_detect_err;
+		}
+
+		if (type == LCD_EXT_CMD_TYPE_GPIO) {
+			/* probe gpio */
 			ret = of_property_read_u32_index(m_node,
-				propname, (i + DSI_GPIO_INDEX), &val);
+				propname, (i + 2), &val);
 			if (ret) {
 				LCDERR("failed to get %s\n", propname);
 				goto lcd_mipi_dsi_init_table_detect_err;
 			}
 			lcd_cpu_gpio_probe(val);
-
-			/* cmd size */
-			ret = of_property_read_u32_index(m_node,
-				propname, (i + DSI_CMD_SIZE_INDEX), &val);
-			if (ret) {
-				LCDERR("failed to get %s\n", propname);
-				goto lcd_mipi_dsi_init_table_detect_err;
-			}
-			if (val < 3) {
-				LCDERR("get %s wrong cmd_size %d for gpio\n",
-					propname, val);
-				break;
-			}
-			if ((i + 2 + val) >= n_max) {
-				LCDERR("get %s cmd_size out of max for gpio\n",
-					propname);
-				break;
-			}
-			i = i + (DSI_CMD_SIZE_INDEX + 1) + (val & 0xff);
-		} else if (val == 0xfc) { /* check state */
-			ret = of_property_read_u32_index(m_node,
-				propname, (i + DSI_CMD_SIZE_INDEX), &val);
-			if (ret) {
-				LCDERR("failed to get %s\n", propname);
-				goto lcd_mipi_dsi_init_table_detect_err;
-			}
-			if ((i + 2 + val) >= n_max) {
-				LCDERR("get %s cmd_size out of max for check\n",
-					propname);
-				break;
-			}
-
+		} else if (type == LCD_EXT_CMD_TYPE_CHECK) {
 			ret = of_property_read_u32_index(m_node, propname,
 				(i + DSI_CMD_SIZE_INDEX + 1), &para[0]);
 			if (ret) {
@@ -375,35 +361,17 @@ int lcd_mipi_dsi_init_table_detect(struct device_node *m_node,
 			dconf->check_cnt = para[1];
 			if (dconf->check_cnt > 0)
 				dconf->check_en = 1;
-			i = i + (DSI_CMD_SIZE_INDEX + 1) + (val & 0xff);
-		} else if ((val & 0xf) == 0x0) {
-			LCDERR("get %s wrong data_type: 0x%02x\n",
-				propname, val);
-			break;
-		} else {
-			ret = of_property_read_u32_index(m_node,
-				propname, (i + DSI_CMD_SIZE_INDEX), &val);
-			if (ret) {
-				LCDERR("failed to get %s\n", propname);
-				goto lcd_mipi_dsi_init_table_detect_err;
-			}
-			if ((i + 2 + val) >= n_max) {
-				LCDERR("get %s cmd_size out of max\n",
-					propname);
-				break;
-			}
-			i = i + (DSI_CMD_SIZE_INDEX + 1) + (val & 0xff);
 		}
+		i += (cmd_size + 2);
 	}
-	i = (i > n_max) ? n_max : i;
+	i += 2;
 	ret = of_property_read_u32_array(m_node, propname, &para[0], i);
 	if (ret) {
 		LCDERR("failed to get %s\n", propname);
 		goto lcd_mipi_dsi_init_table_detect_err;
-	} else {
-		for (j = 0; j < i; j++)
-			dsi_table[j] = (unsigned char)(para[j] & 0xff);
 	}
+	for (j = 0; j < i; j++)
+		dsi_table[j] = (unsigned char)(para[j] & 0xff);
 
 	if (lcd_debug_print_flag)
 		mipi_dsi_init_table_print(dconf, on_off);
@@ -1408,7 +1376,8 @@ mipi_dsi_check_state_err:
  */
 int dsi_write_cmd(unsigned char *payload)
 {
-	int i = 0, j = 0, num = 0;
+	int i = 0, j = 0, step = 0;
+	unsigned char cmd_size;
 #ifdef DSI_CMD_READ_VALID
 	int k = 0, n = 0;
 	unsigned char rd_data[100];
@@ -1418,59 +1387,72 @@ int dsi_write_cmd(unsigned char *payload)
 	struct dsi_cmd_request_s dsi_cmd_req;
 	unsigned char vc_id = MIPI_DSI_VIRTUAL_CHAN_ID;
 	unsigned int req_ack = MIPI_DSI_DCS_ACK_TYPE;
-	int ret = 0;
+	int delay_ms, ret = 0;
 
 	/* mipi command(payload) */
 	/* format:  data_type, cmd_size, data.... */
-	/* special: data_type=0xff,
+	/*	data_type=0xff,
 	 *		cmd_size<0xff means delay ms,
-	 *		cmd_size=0xff means ending.
-	 *	    data_type=0xf0,
+	 *		cmd_size=0xff or 0 means ending.
+	 *	data_type=0xf0, for gpio control
+	 *		data0=gpio_index, data1=gpio_value.
 	 *		data0=gpio_index, data1=gpio_value, data2=delay.
+	 *	data_type=0xfd, for delay ms
+	 *		data0=delay, data_1=delay, ..., data_n=delay.
 	 */
-	while (i < DSI_CMD_SIZE_MAX) {
+	while ((i + DSI_CMD_SIZE_INDEX) < DSI_CMD_SIZE_MAX) {
 		if (ret) {
 			LCDERR("%s: error, exit\n", __func__);
 			break;
 		}
-		if (payload[i] == 0xff) {
-			j = 2;
-			if (payload[i+1] == 0xff)
+		cmd_size = payload[i+DSI_CMD_SIZE_INDEX];
+		if (payload[i] == LCD_EXT_CMD_TYPE_END) {
+			if ((cmd_size == 0xff) || (cmd_size == 0))
 				break;
-			else
-				mdelay(payload[i+1]);
-		} else if (payload[i] == 0xf0) { /* gpio */
-			j = (DSI_CMD_SIZE_INDEX + 1) +
-				payload[i+DSI_CMD_SIZE_INDEX];
-			if (payload[i+DSI_CMD_SIZE_INDEX] < 3) {
-				LCDERR("wrong cmd_size %d for gpio\n",
-					payload[i+DSI_CMD_SIZE_INDEX]);
+			cmd_size = 0;
+			mdelay(payload[i+1]);
+		}
+
+		if (cmd_size == 0) {
+			i += (cmd_size + 2);
+			continue;
+		}
+		if (i + 2 + cmd_size > DSI_CMD_SIZE_MAX) {
+			LCDERR("step %d: cmd_size out of support\n", step);
+			break;
+		}
+
+		if (payload[i] == LCD_EXT_CMD_TYPE_DELAY) {
+			delay_ms = 0;
+			for (j = 0; j < cmd_size; j++)
+				delay_ms += payload[i+2+j];
+			if (delay_ms > 0)
+				mdelay(delay_ms);
+		} else if (payload[i] == LCD_EXT_CMD_TYPE_GPIO) {
+			if (cmd_size < 2) {
+				LCDERR(
+				"step %d: invalid cmd_size %d for gpio\n",
+					step, cmd_size);
 				break;
 			}
-			lcd_cpu_gpio_set(payload[i+DSI_GPIO_INDEX],
-				payload[i+DSI_GPIO_INDEX+1]);
-			if (payload[i+DSI_GPIO_INDEX+2])
-			mdelay(payload[i+DSI_GPIO_INDEX+2]);
-		} else if (payload[i] == 0xfc) { /* check state */
-			j = (DSI_CMD_SIZE_INDEX + 1) +
-				payload[i+DSI_CMD_SIZE_INDEX];
-			if (payload[i+DSI_CMD_SIZE_INDEX] < 2) {
-				LCDERR("wrong cmd_size %d for check state\n",
-					payload[i+DSI_CMD_SIZE_INDEX]);
+			lcd_cpu_gpio_set(payload[i+2], payload[i+3]);
+			if (cmd_size > 2) {
+				if (payload[i+4])
+					mdelay(payload[i+4]);
+			}
+		} else if (payload[i] == LCD_EXT_CMD_TYPE_CHECK) {
+			if (cmd_size < 2) {
+				LCDERR(
+			"step %d: invalid cmd_size %d for check state\n",
+					step, cmd_size);
 				break;
 			}
-			if (payload[i+DSI_GPIO_INDEX+2] > 0) {
-				ret = mipi_dsi_check_state(
-					payload[i+DSI_GPIO_INDEX],
-					payload[i+DSI_GPIO_INDEX+1]);
+			if (payload[i+3] > 0) {
+				ret = mipi_dsi_check_state(payload[i+2],
+					payload[i+3]);
 			}
-		} else if ((payload[i] & 0xf) == 0x0) {
-				LCDERR("data_type: 0x%02x\n", payload[i]);
-				break;
 		} else {
 			/* payload[i+DSI_CMD_SIZE_INDEX] is data count */
-			j = (DSI_CMD_SIZE_INDEX + 1) +
-				payload[i+DSI_CMD_SIZE_INDEX];
 			dsi_cmd_req.data_type = payload[i];
 			dsi_cmd_req.vc_id = (vc_id & 0x3);
 			dsi_cmd_req.payload = &payload[i];
@@ -1544,17 +1526,18 @@ int dsi_write_cmd(unsigned char *payload)
 				break;
 #endif
 			default:
-				LCDPR("[warning]un-support data_type: 0x%02x\n",
-					dsi_cmd_req.data_type);
+				LCDPR(
+			"[warning]: step %d: un-support data_type: 0x%02x\n",
+					step, dsi_cmd_req.data_type);
 
 				break;
 			}
 		}
-		i += j;
-		num++;
+		i += (cmd_size + 2);
+		step++;
 	}
 
-	return num;
+	return step;
 }
 
 static void mipi_dsi_phy_config(struct dsi_phy_s *dphy, unsigned int dsi_ui)

@@ -171,17 +171,18 @@ static unsigned char mipi_init_off_table[] = {
 
 static int lcd_extern_driver_update(struct aml_lcd_extern_driver_s *ext_drv)
 {
-	int ret = 0;
-
-	if (ext_drv) {
-		ext_drv->config->table_init_on  = &mipi_init_on_table[0];
-		ext_drv->config->table_init_off = &mipi_init_off_table[0];
-	} else {
+	if (ext_drv == NULL) {
 		EXTERR("%s driver is null\n", LCD_EXTERN_NAME);
-		ret = -1;
+		return -1;
 	}
 
-	return ret;
+	ext_drv->config->cmd_size = LCD_EXT_CMD_SIZE_DYNAMIC;
+	ext_drv->config->table_init_on  = &mipi_init_on_table[0];
+	ext_drv->config->table_init_on_cnt  = sizeof(mipi_init_on_table);
+	ext_drv->config->table_init_off = &mipi_init_off_table[0];
+	ext_drv->config->table_init_off_cnt  = sizeof(mipi_init_off_table);
+
+	return 0;
 }
 
 int aml_lcd_extern_mipi_TV070WSM_probe(struct aml_lcd_extern_driver_s *ext_drv)

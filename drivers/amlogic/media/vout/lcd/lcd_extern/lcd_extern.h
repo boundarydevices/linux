@@ -55,6 +55,10 @@ extern int aml_lcd_extern_mipi_default_probe(
 extern int aml_lcd_extern_i2c_T5800Q_probe(
 	struct aml_lcd_extern_driver_s *ext_drv);
 #endif
+#ifdef CONFIG_AMLOGIC_LCD_EXTERN_I2C_ANX6862_7911
+extern int aml_lcd_extern_i2c_ANX6862_7911_probe(
+	struct aml_lcd_extern_driver_s *ext_drv);
+#endif
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN_I2C_DLPC3439
 extern int aml_lcd_extern_i2c_DLPC3439_probe(
 	struct aml_lcd_extern_driver_s *ext_drv);

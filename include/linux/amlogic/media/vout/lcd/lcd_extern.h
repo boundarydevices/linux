@@ -17,6 +17,7 @@
 
 #ifndef _INC_AML_LCD_EXTERN_H_
 #define _INC_AML_LCD_EXTERN_H_
+#include <linux/amlogic/media/vout/lcd/aml_lcd.h>
 
 enum lcd_extern_type_e {
 	LCD_EXTERN_I2C = 0,
@@ -25,29 +26,9 @@ enum lcd_extern_type_e {
 	LCD_EXTERN_MAX,
 };
 
-#define LCD_EXTERN_I2C_BUS_0          0
-#define LCD_EXTERN_I2C_BUS_1          1
-#define LCD_EXTERN_I2C_BUS_2          2
-#define LCD_EXTERN_I2C_BUS_3          3
-#define LCD_EXTERN_I2C_BUS_4          4
-#define LCD_EXTERN_I2C_BUS_MAX        0xff
-
-#define LCD_EXTERN_I2C_BUS_INVALID    0xff
-#define LCD_EXTERN_I2C_ADDR_INVALID   0xff
-
-#define LCD_EXTERN_SPI_CLK_FREQ_DFT   10000 /* default 10k */
-
 #define LCD_EXTERN_INIT_ON_MAX        3000
 #define LCD_EXTERN_INIT_OFF_MAX       100
 
-#define LCD_EXTERN_INIT_CMD           0x00
-#define LCD_EXTERN_INIT_CMD2          0x01  /* only for special i2c device */
-#define LCD_EXTERN_INIT_NONE          0x10
-#define LCD_EXTERN_INIT_GPIO          0xf0
-#define LCD_EXTERN_INIT_END           0xff
-
-#define LCD_EXTERN_CMD_SIZE_DYNAMIC   0xff
-#define LCD_EXTERN_DYNAMIC_SIZE_INDEX 1
 
 #define LCD_EXTERN_GPIO_NUM_MAX       6
 #define LCD_EXTERN_INDEX_INVALID      0xff
@@ -71,15 +52,16 @@ struct lcd_extern_config_s {
 	unsigned char spi_gpio_cs;
 	unsigned char spi_gpio_clk;
 	unsigned char spi_gpio_data;
-	unsigned int spi_clk_freq;
-	unsigned int spi_delay_us;
 	unsigned char spi_clk_pol;
+	unsigned short spi_clk_freq; /*KHz */
+	unsigned short spi_delay_us;
 
 	unsigned char cmd_size;
+	unsigned char table_init_loaded; /* internal use */
+	unsigned int table_init_on_cnt;
+	unsigned int table_init_off_cnt;
 	unsigned char *table_init_on;
 	unsigned char *table_init_off;
-	unsigned char table_init_loaded; /* internal use */
-	unsigned int table_init_on_cnt; /* internal use */
 };
 
 /* global API */
