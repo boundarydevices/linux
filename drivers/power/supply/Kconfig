@@ -718,4 +718,10 @@ config CHARGER_WILCO
 	  information can be found in
 	  Documentation/ABI/testing/sysfs-class-power-wilco
 
+config BATTERY_DUMMY
+	tristate "Dummy battery driver"
+	depends on ANDROID
+	help
+	  Say Y to enable support for dummy battery and USB power.
+
 endif # POWER_SUPPLY
