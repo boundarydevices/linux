@@ -44,9 +44,9 @@
 #include "hdmi_tx_reg.h"
 #include "tvenc_conf.h"
 #include "common.h"
-#include "hdcpVerify.h"
 #include "hw_clk.h"
 #include <linux/arm-smccc.h>
+#include "checksha.h"
 
 static void mode420_half_horizontal_para(void);
 static void hdmi_phy_suspend(void);
@@ -4192,42 +4192,45 @@ static void hdcp_ksv_sha1_calc(struct hdmitx_dev *hdev)
 	size_t list = 0;
 	size_t size = 0;
 	size_t i = 0;
-	int valid = HDCP_IDLE;
+	int valid = HDCP_NULL;
 	unsigned char ksvs[635] = {0}; /* Max 127 * 5 */
 	int j = 0;
 
 	/* 0x165e: Page 95 */
 	hdcp_mKsvListBuf = kmalloc(0x1660, GFP_ATOMIC);
 	if (hdcp_mKsvListBuf) {
-		/* KSV_LEN; */
-		list = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_0) & KSV_MSK;
+		/* KSV_SIZE; */
+		list = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_0) & KSV_MASK;
 		if (list <= HDCP_NMOOFDEVICES) {
-			size = (list * KSV_LEN) + HEADER + SHAMAX;
+			size = (list * KSV_SIZE) + HDCP_HEAD + SHA_MAX_SIZE;
 			for (i = 0; i < size; i++) {
-				if (i < HEADER) { /* BSTATUS & M0 */
-					hdcp_mKsvListBuf[(list * KSV_LEN) + i]
+				if (i < HDCP_HEAD) { /* BSTATUS & M0 */
+					hdcp_mKsvListBuf[(list * KSV_SIZE) + i]
 						= hdmitx_rd_reg(
 						HDMITX_DWC_HDCP_BSTATUS_0 + i);
-				} else if (i < (HEADER + (list * KSV_LEN))) {
+				} else if (i < (HDCP_HEAD +
+					(list * KSV_SIZE))) {
 					/* KSV list */
-					hdcp_mKsvListBuf[i - HEADER] =
+					hdcp_mKsvListBuf[i - HDCP_HEAD] =
 						hdmitx_rd_reg(
 						HDMITX_DWC_HDCP_BSTATUS_0 + i);
-					ksvs[j] = hdcp_mKsvListBuf[i - HEADER];
+					ksvs[j] =
+						hdcp_mKsvListBuf[i - HDCP_HEAD];
 					j++;
 				} else { /* SHA */
 					hdcp_mKsvListBuf[i] = hdmitx_rd_reg(
 						HDMITX_DWC_HDCP_BSTATUS_0 + i);
 				}
 			}
-			valid = hdcpVerify_KSV(hdcp_mKsvListBuf, size)
-				== TRUE	? HDCP_KSV_LIST_READY :
-				HDCP_ERR_KSV_LIST_NOT_VALID;
+			if (calc_hdcp_ksv_valid(hdcp_mKsvListBuf, size) == TRUE)
+				valid = HDCP_KSVLIST_VALID;
+			else
+				valid = HDCP_KSVLIST_INVALID;
 		}
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 0, 0, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL,
-			(valid == HDCP_KSV_LIST_READY) ? 0 : 1, 3, 1);
-		if (valid == HDCP_KSV_LIST_READY)
+			(valid == HDCP_KSVLIST_VALID) ? 0 : 1, 3, 1);
+		if (valid == HDCP_KSVLIST_VALID)
 			hdcp_ksv_store(ksvs, j);
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 1, 2, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 0, 2, 1);
