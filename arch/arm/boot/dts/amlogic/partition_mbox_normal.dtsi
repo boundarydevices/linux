@@ -12,7 +12,7 @@
 		part-0 = <&logo>;
 		part-1 = <&recovery>;
 		part-2 = <&misc>;
-		part-3 = <&dto>;
+		part-3 = <&dtbo>;
 		part-4 = <&cri_data>;
 		part-5 = <&param>;
 		part-6 = <&boot>;
@@ -39,8 +39,8 @@
 			size = <0x0 0x800000>;
 			mask = <1>;
 		};
-		dto:dto{
-			pname = "dto";
+		dtbo:dtbo{
+			pname = "dtbo";
 			size = <0x0 0x800000>;
 			mask = <1>;
 		};

@@ -14616,7 +14616,6 @@ M:	Xindong Xu  <xindong.xu@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/firmware_avb_system.dtsi
 F:      arch/arm64/boot/dts/amlogic/firmware_system.dtsi
 
-
 AMLOGIC SYSTEM AS ROOT
 M:	Renjun Xu  <renjun.xu@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/axg_s400_v03gva.dts
@@ -14636,3 +14635,8 @@ AMLOGIC TL1 CLOCK DRIVERS
 M:	Jian Hu <jian.hu@amlogic.com>
 F:	include/dt-bindings/clock/amlogic,tl1-clkc.h
 F:	drivers/amlogic/clk/tl1/*
+
+AMLOGIC DTBO PARTITION
+M:      Xindong Xu  <xindong.xu@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/common_overlay_dt.dts
+F:      arch/arm/boot/dts/amlogic/common_overlay_dt.dts
