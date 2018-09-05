@@ -926,4 +926,9 @@ config BATTERY_UG3105
 	  device is off or suspended, the functionality of this driver is
 	  limited to reporting capacity only.
 
+config BATTERY_DUMMY
+	tristate "Dummy battery driver"
+	help
+	  Say Y to enable support for dummy battery and USB power.
+
 endif # POWER_SUPPLY
