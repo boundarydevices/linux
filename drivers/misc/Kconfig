@@ -507,6 +507,9 @@ config FTP628
 	  The easy loading FTP-608 MCL Series is ultra compact high speed,
 	  battery driven thermal printer, printing on 2-inch wide paper (58mm)
 
+config WIEGAND
+	tristate "wiegand scan output"
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
