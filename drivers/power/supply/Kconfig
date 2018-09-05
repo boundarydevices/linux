@@ -960,4 +960,9 @@ config CHARGER_QCOM_SMB2
 	  adds support for the SMB2 switch mode battery charger found
 	  in PMI8998 and related PMICs.
 
+config BATTERY_DUMMY
+	tristate "Dummy battery driver"
+	help
+	  Say Y to enable support for dummy battery and USB power.
+
 endif # POWER_SUPPLY
