@@ -533,7 +533,7 @@ static void fsl_asrc_start_pair(struct fsl_asrc_pair *pair)
 {
 	struct fsl_asrc *asrc = pair->asrc;
 	enum asrc_pair_index index = pair->index;
-	int reg, retry = 10, i;
+	int reg, retry = 50, i;
 
 	/* Enable the current pair */
 	regmap_update_bits(asrc->regmap, REG_ASRCTR,
@@ -545,6 +545,9 @@ static void fsl_asrc_start_pair(struct fsl_asrc_pair *pair)
 		regmap_read(asrc->regmap, REG_ASRCFG, &reg);
 		reg &= ASRCFG_INIRQi_MASK(index);
 	} while (!reg && --retry);
+
+	if (retry == 0)
+		dev_warn(&asrc->pdev->dev, "initialization is not finished\n");
 
 	/* Make the input fifo to ASRC STALL level */
 	regmap_read(asrc->regmap, REG_ASRCNCR, &reg);
@@ -1238,6 +1241,8 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 	struct fsl_asrc_priv *asrc_priv = asrc->private;
 	int i, ret;
 	u32 asrctr;
+	u32 reg;
+	int retry = 50;
 
 	ret = clk_prepare_enable(asrc->mem_clk);
 	if (ret)
@@ -1273,6 +1278,16 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 	/* Restart enabled pairs */
 	regmap_update_bits(asrc->regmap, REG_ASRCTR,
 			   ASRCTR_ASRCEi_ALL_MASK, asrctr);
+
+	/* Wait for status of initialization */
+	do {
+		udelay(5);
+		regmap_read(asrc->regmap, REG_ASRCFG, &reg);
+		reg = (reg >> ASRCFG_INIRQi_SHIFT(0)) & 0x7;
+	} while (!(reg == ((asrctr & 0xE) >> 1)) && --retry);
+
+	if (retry == 0)
+		dev_warn(dev, "initialization is not finished\n");
 
 	return 0;
 
