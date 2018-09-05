@@ -29,6 +29,14 @@ config FRAME_POINTER
 	  when a problem occurs with the kernel, the information that is
 	  reported is severely limited.
 
+config AMLOGIC_USER_FAULT
+	bool "Amlogic user fault helper"
+	help
+	  show more information when catch user fault. Including:
+	  memory around all registers
+	  maps with pc/lr
+	  pfn for all virtual address of regirsters
+
 config ARM_UNWIND
 	bool "Enable stack unwinding support (EXPERIMENTAL)"
 	depends on AEABI
