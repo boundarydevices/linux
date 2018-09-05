@@ -1715,7 +1715,7 @@ static int atsc_j83b_detect_first(struct dvb_frontend *fe, enum fe_status *s)
 	check_ok = 0;
 
 	/*first check signal max time*/
-	#define CNT_FIRST  (5)
+	#define CNT_FIRST  (10)
 
 	for (cnt = 0; cnt < CNT_FIRST; cnt++) {
 		gxtv_demod_atsc_read_status(fe, &cs);
