@@ -659,4 +659,10 @@ config CHARGER_CROS_USBPD
 	  what is connected to USB PD ports from the EC and converts
 	  that into power_supply properties.
 
+config BATTERY_DUMMY
+	tristate "Dummy battery driver"
+	depends on ANDROID
+	help
+	  Say Y to enable support for dummy battery and USB power.
+
 endif # POWER_SUPPLY
