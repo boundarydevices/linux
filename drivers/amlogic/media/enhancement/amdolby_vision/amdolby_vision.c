@@ -852,6 +852,7 @@ static bool vsvdb_config_set_flag;
 #define FLAG_CHANGE_ALL		0xffffffff
 /* update all core */
 static u32 stb_core_setting_update_flag = FLAG_CHANGE_ALL;
+static bool stb_core2_const_flag;
 
 /* 256+(256*4+256*2)*4/8 64bit */
 #define STB_DMA_TBL_SIZE (256+(256*4+256*2)*4/8)
@@ -1767,6 +1768,10 @@ static int dolby_core2_set(
 				p_core2_dm_regs[i]);
 			set_lut = true;
 		}
+
+	if (stb_core_setting_update_flag & FLAG_CONST_TC2)
+		set_lut = false;
+
 	/* core2 metadata program done */
 	VSYNC_WR_MPEG_REG(DOLBY_CORE2A_REG_START + 3, 1);
 
@@ -2014,7 +2019,7 @@ static void apply_stb_core_settings(
 	u32 graphics_h = 1080;
 
 	if (is_dolby_vision_stb_mode()
-		&& dolby_vision_flags & FLAG_CERTIFICAION) {
+		&& (dolby_vision_flags & FLAG_CERTIFICAION)) {
 		graphics_w = dv_cert_graphic_width;
 		graphics_h = dv_cert_graphic_height;
 	}
@@ -2074,6 +2079,23 @@ static void apply_stb_core_settings(
 				1,
 				reset);
 	}
+
+	if (stb_core_setting_update_flag != FLAG_CHANGE_ALL) {
+		/* when FLAG_CONST_TC2 is set, */
+		/* set the stb_core_setting_update_flag */
+		/* until only meeting the FLAG_CHANGE_TC2 */
+		if (stb_core_setting_update_flag & FLAG_CONST_TC2)
+			stb_core2_const_flag = true;
+		else if (stb_core_setting_update_flag & FLAG_CHANGE_TC2)
+			stb_core2_const_flag = false;
+	}
+
+	/* revert the core2 lut as last corret one when const case */
+	if (stb_core2_const_flag)
+		memcpy(&new_dovi_setting.dm_lut2,
+			&dovi_setting.dm_lut2,
+			sizeof(struct dm_lut_ipcore_s));
+
 	if (mask & 2)
 		dolby_core2_set(
 			24, 256 * 5,
@@ -2515,7 +2537,6 @@ void enable_dolby_vision(int enable)
 				last_dolby_vision_ll_policy =
 					dolby_vision_ll_policy;
 #endif
-				stb_core_setting_update_flag = FLAG_CHANGE_ALL;
 				pr_dolby_dbg("Dolby Vision STB cores turn on\n");
 			} else if (is_meson_g12a()) {
 				if (dolby_vision_mask & 4)
@@ -2617,7 +2638,6 @@ void enable_dolby_vision(int enable)
 				last_dolby_vision_ll_policy =
 					dolby_vision_ll_policy;
 #endif
-				stb_core_setting_update_flag = FLAG_CHANGE_ALL;
 				pr_dolby_dbg("Dolby Vision G12a turn on\n");
 			} else {
 				VSYNC_WR_MPEG_REG(VPP_DOLBY_CTRL,
@@ -2694,7 +2714,6 @@ void enable_dolby_vision(int enable)
 				last_dolby_vision_ll_policy =
 					dolby_vision_ll_policy;
 #endif
-				stb_core_setting_update_flag = FLAG_CHANGE_ALL;
 				pr_dolby_dbg("Dolby Vision turn on\n");
 			}
 		} else {
@@ -2771,6 +2790,7 @@ void enable_dolby_vision(int enable)
 					DOLBY_VISION_LL_DISABLE;
 #endif
 				stb_core_setting_update_flag = FLAG_CHANGE_ALL;
+				stb_core2_const_flag = false;
 				memset(&dovi_setting, 0, sizeof(dovi_setting));
 				pr_dolby_dbg("Dolby Vision STB cores turn off\n");
 			} else if (is_meson_g12a()) {
@@ -2799,6 +2819,7 @@ void enable_dolby_vision(int enable)
 					DOLBY_VISION_LL_DISABLE;
 #endif
 				stb_core_setting_update_flag = FLAG_CHANGE_ALL;
+				stb_core2_const_flag = false;
 				memset(&dovi_setting, 0, sizeof(dovi_setting));
 				pr_dolby_dbg("Dolby Vision G12a turn off\n");
 			} else {
@@ -2828,6 +2849,7 @@ void enable_dolby_vision(int enable)
 					DOLBY_VISION_LL_DISABLE;
 #endif
 				stb_core_setting_update_flag = FLAG_CHANGE_ALL;
+				stb_core2_const_flag = false;
 				memset(&dovi_setting, 0, sizeof(dovi_setting));
 				pr_dolby_dbg("Dolby Vision turn off\n");
 			}
@@ -5201,7 +5223,7 @@ int dolby_vision_parse_metadata(
 		dovi_setting_video_flag = video_frame;
 		if (debug_dolby & 1) {
 			if (el_flag)
-				pr_dolby_dbg("setting %d->%d(T:%d-%d): flag=%02x,md=%d,comp=%d, frame:%d\n",
+				pr_dolby_dbg("setting %d->%d(T:%d-%d): flag=%x,md=%d,comp=%d, frame:%d\n",
 				src_format, dst_format,
 				dolby_vision_target_min,
 				dolby_vision_target_max[src_format][dst_format],
@@ -5209,7 +5231,7 @@ int dolby_vision_parse_metadata(
 				total_md_size, total_comp_size,
 				frame_count);
 			else
-				pr_dolby_dbg("setting %d->%d(T:%d-%d): flag=%02x,md=%d, frame:%d\n",
+				pr_dolby_dbg("setting %d->%d(T:%d-%d): flag=%x,md=%d, frame:%d\n",
 				src_format, dst_format,
 				dolby_vision_target_min,
 				dolby_vision_target_max[src_format][dst_format],
