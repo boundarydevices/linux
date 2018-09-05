@@ -782,4 +782,10 @@ config RN5T618_POWER
 	  This driver can also be built as a module. If so, the module will be
 	  called rn5t618_power.
 
+config BATTERY_DUMMY
+	tristate "Dummy battery driver"
+	depends on ANDROID
+	help
+	  Say Y to enable support for dummy battery and USB power.
+
 endif # POWER_SUPPLY
