@@ -699,7 +699,8 @@ static long fsl_asrc_ioctl_convert(struct fsl_asrc_pair *pair,
 
 	ret = fsl_asrc_process_buffer(pair, &buf);
 	if (ret) {
-		pair_err("failed to process buffer: %ld\n", ret);
+		if (ret != -ERESTARTSYS)
+			pair_err("failed to process buffer: %ld\n", ret);
 		return ret;
 	}
 
