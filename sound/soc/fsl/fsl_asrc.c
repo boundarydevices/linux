@@ -1214,6 +1214,8 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 	struct fsl_asrc_priv *asrc_priv = asrc->private;
 	int i, ret;
 	u32 asrctr;
+	u32 reg;
+	int retry = 10;
 
 	ret = clk_prepare_enable(asrc->mem_clk);
 	if (ret)
@@ -1249,6 +1251,13 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 	/* Restart enabled pairs */
 	regmap_update_bits(asrc->regmap, REG_ASRCTR,
 			   ASRCTR_ASRCEi_ALL_MASK, asrctr);
+
+	/* Wait for status of initialization */
+	do {
+		udelay(5);
+		regmap_read(asrc->regmap, REG_ASRCFG, &reg);
+		reg = (reg >> ASRCFG_INIRQi_SHIFT(0)) & 0x7;
+	} while (!(reg == ((asrctr & 0xE) >> 1)) && --retry);
 
 	return 0;
 
