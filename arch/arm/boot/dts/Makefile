@@ -356,7 +356,6 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-mtp.dtb \
 	imx6dl-neol.dtb \
 	imx6dl-nit6xlite.dtb \
-	imx6dl-nit6xlite-access.dtb \
 	imx6dl-nitrogen6_max.dtb \
 	imx6dl-nitrogen6_som2.dtb \
 	imx6dl-nitrogen6_vm.dtb \
