@@ -471,7 +471,6 @@ struct sdma_engine {
 	dma_addr_t			bd0_phys;
 	bool				bd0_iram;
 	struct sdma_buffer_descriptor	*bd0;
-	bool				suspend_off;
 	bool				fw_loaded;
 	int				idx;
 	/* clock ration for AHB:SDMA core. 1:1 is 1, 2:1 is 0*/
@@ -1445,21 +1444,10 @@ static int sdma_channel_pause(struct dma_chan *chan)
 static int sdma_channel_resume(struct dma_chan *chan)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
-	struct sdma_engine *sdma = sdmac->sdma;
 	unsigned long flags;
 
 	if (!(sdmac->flags & IMX_DMA_SG_LOOP))
 		return -EINVAL;
-
-	/*
-	 * restore back context since context may loss if mega/fast OFF
-	 */
-	if (sdma->suspend_off) {
-		if (sdma_load_context(sdmac)) {
-			dev_err(sdmac->sdma->dev, "context load failed.\n");
-			return -EINVAL;
-		}
-	}
 
 	sdma_enable_channel(sdmac->sdma, sdmac->channel);
 	spin_lock_irqsave(&sdmac->vc.lock, flags);
@@ -2550,8 +2538,6 @@ static int sdma_suspend(struct device *dev)
 	struct sdma_engine *sdma = platform_get_drvdata(pdev);
 	int i, ret = 0;
 
-	sdma->suspend_off = false;
-
 	/* Do nothing if not i.MX6SX or i.MX7D*/
 	if (sdma->drvdata != &sdma_imx6sx && sdma->drvdata != &sdma_imx7d
 	    && sdma->drvdata != &sdma_imx6ul)
@@ -2608,7 +2594,6 @@ static int sdma_resume(struct device *dev)
 
 	/* Firmware was lost, mark as "not ready" */
 	sdma->fw_loaded = false;
-	sdma->suspend_off = true;
 
 	/* restore regs and load firmware */
 	for (i = 0; i < MXC_SDMA_SAVED_REG_NUM; i++) {
