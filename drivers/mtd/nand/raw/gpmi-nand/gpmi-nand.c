@@ -2337,7 +2337,7 @@ static int gpmi_nand_remove(struct platform_device *pdev)
 	struct gpmi_nand_data *this = platform_get_drvdata(pdev);
 
 	release_bus_freq(BUS_FREQ_HIGH);
-	nand_release(nand_to_mtd(&this->nand));
+	nand_release(&this->nand);
 	gpmi_free_dma_buffer(this);
 	pm_runtime_disable(this->dev);
 	release_resources(this);
