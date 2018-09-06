@@ -1163,6 +1163,8 @@ unsigned int hdmi_rx_top_edid_update(void)
 	u_int phy_addr[E_PORT_NUM] = {0, 0, 0, 0};
 	u_char checksum[E_PORT_NUM] = {0, 0, 0, 0};
 
+	if (edid_index >= EDID_LIST_NUM)
+		return 0;
 	/* get edid from buffer, return buffer addr */
 	pedid_data = rx_get_edid(edid_index);
 
@@ -1195,7 +1197,7 @@ unsigned int hdmi_rx_top_edid_update(void)
 		/* update physical and checksum */
 	rx_edid_update_overlay(phy_addr_offset, phy_addr, checksum);
 	}
-	return true;
+	return 1;
 }
 
 void rx_edid_print_vic_fmt(unsigned char i,
