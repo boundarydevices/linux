@@ -2225,7 +2225,7 @@ static int gpmi_nand_init(struct gpmi_nand_data *this)
 		goto err_out;
 
 	chip->dummy_controller.ops = &gpmi_nand_controller_ops;
-	ret = nand_scan(mtd, (GPMI_IS_MX6(this) || GPMI_IS_MX8(this)) ? 2 : 1);
+	ret = nand_scan(chip, (GPMI_IS_MX6(this) || GPMI_IS_MX8(this)) ? 2 : 1);
 	if (ret)
 		goto err_out;
 
