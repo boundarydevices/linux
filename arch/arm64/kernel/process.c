@@ -92,6 +92,18 @@ void arch_cpu_idle_dead(void)
 }
 #endif
 
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+void arch_cpu_idle_enter(void)
+{
+	__arch_cpu_idle_enter();
+}
+
+void arch_cpu_idle_exit(void)
+{
+	__arch_cpu_idle_exit();
+}
+#endif
+
 /*
  * Called by kexec, immediately prior to machine_kexec().
  *

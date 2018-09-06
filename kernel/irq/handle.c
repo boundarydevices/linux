@@ -142,7 +142,7 @@ irqreturn_t __handle_irq_event_percpu(struct irq_desc *desc, unsigned int *flags
 		irqreturn_t res;
 
 #ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
-		unsigned long tin;
+		unsigned long long tin;
 		unsigned int cpu = smp_processor_id();
 
 		isr_in_hook(cpu, &tin, irq, action->handler);

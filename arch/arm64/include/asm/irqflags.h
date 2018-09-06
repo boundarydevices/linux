@@ -21,7 +21,7 @@
 #include <asm/ptrace.h>
 
 #ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
-#include <../drivers/amlogic/debug/irqflags_debug.h>
+#include <../drivers/amlogic/debug/irqflags_debug_arm64.h>
 #else
 /*
  * CPU interrupt mask handling.

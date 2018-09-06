@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/debug/irqflags_debug.h
+ * drivers/amlogic/debug/irqflags_debug_arm64.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,8 +15,8 @@
  *
  */
 
-#ifndef __ASM_IRQFLAGS_DEBUG_H
-#define __ASM_IRQFLAGS_DEBUG_H
+#ifndef __ASM_IRQFLAGS_DEBUG_ARM64_H
+#define __ASM_IRQFLAGS_DEBUG_ARM64_H
 
 #ifdef __KERNEL__
 

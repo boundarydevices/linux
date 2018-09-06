@@ -766,7 +766,7 @@ void handle_percpu_devid_irq(struct irq_desc *desc)
 	if (likely(action)) {
 
 #ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
-		unsigned long tin;
+		unsigned long long tin;
 		unsigned int cpu = smp_processor_id();
 
 		isr_in_hook(cpu, &tin, irq, action->handler);

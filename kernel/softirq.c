@@ -255,7 +255,7 @@ asmlinkage __visible void __softirq_entry __do_softirq(void)
 	int softirq_bit;
 #ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
 	int cpu;
-	unsigned long tin;
+	unsigned long long tin;
 #endif
 
 	/*

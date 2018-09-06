@@ -35,25 +35,25 @@
 #define IRQ_CNT			256
 #define CCCNT_WARN		1000
 #define CPU			8
-static unsigned long t_base[IRQ_CNT];
-static unsigned long t_isr[IRQ_CNT];
-static unsigned long t_total[IRQ_CNT];
+static unsigned long long t_base[IRQ_CNT];
+static unsigned long long t_isr[IRQ_CNT];
+static unsigned long long t_total[IRQ_CNT];
 static unsigned int cnt_total[IRQ_CNT];
 static void *cpu_action[CPU];
 static int cpu_irq[CPU] = {0};
 static void *cpu_sirq[CPU] = {NULL};
 
 /*irq disable trace*/
-#define LONG_IRQDIS		(1000 * 1000000)	/*500 ms*/
+#define LONG_IRQDIS		(1000 * 1000000)/*1000 ms*/
 #define OUT_WIN			(500 * 1000000)	/*500 ms*/
 #define LONG_IDLE		(5000000000)	/*5 sec*/
 #define ENTRY			10
-static unsigned long		t_i_d[CPU];
+static unsigned long long	t_i_d[CPU];
 static int			irq_flg;
 static struct stack_trace	irq_trace[CPU];
 static unsigned long		t_entrys[CPU][ENTRY];
-static unsigned long		t_idle[CPU] = { 0 };
-static unsigned long		t_d_out;
+static unsigned long long	t_idle[CPU] = { 0 };
+static unsigned long long	t_d_out;
 
 static unsigned long isr_thr = LONG_ISR;
 core_param(isr_thr, isr_thr, ulong, 0644);
@@ -68,7 +68,7 @@ core_param(isr_check_en, isr_check_en, int, 0644);
 static unsigned long out_thr = OUT_WIN;
 core_param(out_thr, out_thr, ulong, 0644);
 
-void notrace isr_in_hook(unsigned int cpu, unsigned long *tin,
+void notrace isr_in_hook(unsigned int cpu, unsigned long long *tin,
 	unsigned int irq, void *act)
 {
 	if (irq >= IRQ_CNT || !isr_check_en || oops_in_progress)
@@ -84,10 +84,14 @@ void notrace isr_in_hook(unsigned int cpu, unsigned long *tin,
 	}
 }
 
-void notrace isr_out_hook(unsigned int cpu, unsigned long tin, unsigned int irq)
+void notrace isr_out_hook(unsigned int cpu, unsigned long long tin,
+	unsigned int irq)
 {
-	unsigned long tout;
-	unsigned int ratio = 0;
+	unsigned long long tout;
+	unsigned long long ratio = 0;
+	unsigned long long t_diff;
+	unsigned long long t_isr_tmp;
+	unsigned long long t_total_tmp;
 
 	if (!isr_check_en || oops_in_progress)
 		return;
@@ -99,20 +103,26 @@ void notrace isr_out_hook(unsigned int cpu, unsigned long tin, unsigned int irq)
 	t_total[irq] = (tout-t_base[irq]);
 	cnt_total[irq]++;
 
-	if (tout > isr_thr + tin)
-		pr_err("ISR_Long___ERR. irq:%d  tout-tin:%ld ms\n",
-			irq, (tout - tin) / ns2ms);
+	if (tout > isr_thr + tin) {
+		t_diff = tout - tin;
+		do_div(t_diff, ns2ms);
+		pr_err("ISR_Long___ERR. irq:%d  tout-tin:%llu ms\n",
+			irq, t_diff);
+	}
 
 	if (t_total[irq] < CHK_WINDOW)
 		return;
 
-	ratio = t_isr[irq] * 100 / t_total[irq];
-	if (ratio >= 35) {
-		pr_err("IRQRatio___ERR.irq:%d ratio:%d\n", irq, (int)ratio);
-		pr_err("t_isr:%d  t_total:%d, cnt:%d\n",
-			(int)(t_isr[irq] / ns2ms),
-			(int)(t_total[irq] / ns2ms),
-			cnt_total[irq]);
+	if (t_isr[irq] * 100 >= 35 * t_total[irq]) {
+		t_isr_tmp = t_isr[irq];
+		do_div(t_isr_tmp, ns2ms);
+		t_total_tmp = t_total[irq];
+		do_div(t_total_tmp, ns2ms);
+		ratio = t_isr_tmp * 100;
+		do_div(ratio, t_total_tmp);
+		pr_err("IRQRatio___ERR.irq:%d ratio:%llu\n", irq, ratio);
+		pr_err("t_isr:%llu  t_total:%llu, cnt:%d\n",
+			t_isr_tmp, t_total_tmp, cnt_total[irq]);
 	}
 	t_base[irq] = sched_clock();
 	t_isr[irq] = 0;
@@ -121,19 +131,22 @@ void notrace isr_out_hook(unsigned int cpu, unsigned long tin, unsigned int irq)
 	cpu_action[cpu] = NULL;
 }
 
-void notrace sirq_in_hook(unsigned int cpu, unsigned long *tin, void *p)
+void notrace sirq_in_hook(unsigned int cpu, unsigned long long *tin, void *p)
 {
 	cpu_sirq[cpu] = p;
 	*tin = sched_clock();
 }
-void notrace sirq_out_hook(unsigned int cpu, unsigned long tin, void *p)
+void notrace sirq_out_hook(unsigned int cpu, unsigned long long tin, void *p)
 {
-	unsigned long tout = sched_clock();
+	unsigned long long tout = sched_clock();
+	unsigned long long t_diff;
 
 	if (cpu_sirq[cpu] && tin && (tout > tin + sirq_thr) &&
 		!oops_in_progress) {
-		pr_err("SIRQLong___ERR. sirq:%p  tout-tin:%ld ms\n",
-			p, (tout - tin) / ns2ms);
+		t_diff = tout - tin;
+		do_div(t_diff, ns2ms);
+		pr_err("SIRQLong___ERR. sirq:%p  tout-tin:%llu ms\n",
+			p, t_diff);
 	}
 	cpu_sirq[cpu] = NULL;
 }
@@ -145,6 +158,7 @@ void notrace irq_trace_start(unsigned long flags)
 
 	if (!irq_flg  || !irq_check_en || oops_in_progress)
 		return;
+
 	if (arch_irqs_disabled_flags(flags))
 		return;
 
@@ -162,13 +176,14 @@ void notrace irq_trace_start(unsigned long flags)
 	irq_trace[cpu].skip = 2;
 	irq_trace[cpu].nr_entries = 0;
 	t_i_d[cpu] = sched_clock();
+
 	save_stack_trace(&irq_trace[cpu]);
 }
 EXPORT_SYMBOL(irq_trace_start);
 
 void notrace irq_trace_stop(unsigned long flag)
 {
-	unsigned long t_i_e, t;
+	unsigned long long t_i_e, t;
 	unsigned int cpu;
 	int softirq = 0;
 	static int out_cnt;
@@ -201,9 +216,11 @@ void notrace irq_trace_stop(unsigned long flag)
 		out_cnt++;
 		if (t_i_e >= t_d_out + out_thr) {
 			t_d_out = t_i_e;
-			pr_err("\n\nDisIRQ___ERR:%ld ms <%ld %ld> %d:\n",
-				t / ns2ms, t_i_e / ns2ms, t_i_d[cpu] / ns2ms,
-				out_cnt);
+			do_div(t, ns2ms);
+			do_div(t_i_e, ns2ms);
+			do_div(t_i_d[cpu], ns2ms);
+			pr_err("\n\nDisIRQ___ERR:%llu ms <%llu %llu> %d:\n",
+				t, t_i_e, t_i_d[cpu], out_cnt);
 			print_stack_trace(&irq_trace[cpu], 0);
 			dump_stack();
 		}
@@ -216,7 +233,7 @@ void __attribute__((weak)) lockup_hook(int cpu)
 {
 }
 
-void  notrace arch_cpu_idle_enter(void)
+void  notrace __arch_cpu_idle_enter(void)
 {
 	int cpu;
 
@@ -226,7 +243,7 @@ void  notrace arch_cpu_idle_enter(void)
 	put_cpu();
 	t_idle[cpu] = local_clock();
 }
-void  notrace arch_cpu_idle_exit(void)
+void  notrace __arch_cpu_idle_exit(void)
 {
 	int cpu;
 
@@ -242,6 +259,10 @@ void pr_lockup_info(int c)
 	int cpu;
 	int virq = irq_check_en;
 	int visr = isr_check_en;
+	unsigned long long t_idle_diff;
+	unsigned long long t_idle_tmp;
+	unsigned long long t_i_diff;
+	unsigned long long t_i_tmp;
 
 	irq_flg = 0;
 	irq_check_en = 0;
@@ -250,7 +271,7 @@ void pr_lockup_info(int c)
 	pr_err("\n\n\nHARDLOCKUP____ERR.CPU[%d] <irqen:%d isren%d>START\n",
 		c, virq, visr);
 	for_each_online_cpu(cpu) {
-		unsigned long t_cur = sched_clock();
+		unsigned long long t_cur = sched_clock();
 		struct task_struct *p = (cpu_rq(cpu)->curr);
 		int preempt = task_thread_info(p)->preempt_count;
 
@@ -264,15 +285,22 @@ void pr_lockup_info(int c)
 			(unsigned int)(preempt & SOFTIRQ_MASK));
 
 		if (t_i_d[cpu]) {
-			pr_err("IRQ____ERR[%d]. <%ld %ld>.\n",
-				cpu,  t_i_d[cpu] / ns2ms,
-				(t_cur-t_i_d[cpu]) / ns2ms);
+			t_i_diff = t_cur-t_i_d[cpu];
+			do_div(t_i_diff, ns2ms);
+			t_i_tmp = t_i_d[cpu];
+			do_div(t_i_tmp, ns2ms);
+			pr_err("IRQ____ERR[%d]. <%llu %llu>.\n",
+				cpu, t_i_tmp, t_i_diff);
 			print_stack_trace(&irq_trace[cpu], 0);
 		}
 		if (t_idle[cpu] && (t_idle[cpu] > LONG_IDLE + t_cur)) {
-			pr_err("CPU[%d] IdleLong____ERR:%ld ms <%ld %ld>\n",
-				cpu, (t_cur - t_idle[cpu]) / ns2ms,
-				t_cur / ns2ms, t_idle[cpu] / ns2ms);
+			t_idle_diff = t_cur - t_idle[cpu];
+			do_div(t_idle_diff, ns2ms);
+			do_div(t_cur, ns2ms);
+			t_idle_tmp = t_idle[cpu];
+			do_div(t_idle_tmp, ns2ms);
+			pr_err("CPU[%d] IdleLong____ERR:%llu ms <%llu %llu>\n",
+				cpu, t_idle_diff, t_cur, t_idle_tmp);
 		}
 		dump_cpu_task(cpu);
 		lockup_hook(cpu);

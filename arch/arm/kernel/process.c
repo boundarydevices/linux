@@ -37,6 +37,10 @@
 #include <asm/tls.h>
 #include <asm/vdso.h>
 
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+#include <linux/amlogic/debug_lockup.h>
+#endif
+
 #ifdef CONFIG_CC_STACKPROTECTOR
 #include <linux/stackprotector.h>
 unsigned long __stack_chk_guard __read_mostly;
@@ -80,6 +84,9 @@ void arch_cpu_idle_prepare(void)
 
 void arch_cpu_idle_enter(void)
 {
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+	__arch_cpu_idle_enter();
+#endif
 	idle_notifier_call_chain(IDLE_START);
 	ledtrig_cpu(CPU_LED_IDLE_START);
 #ifdef CONFIG_PL310_ERRATA_769419
@@ -91,6 +98,9 @@ void arch_cpu_idle_exit(void)
 {
 	ledtrig_cpu(CPU_LED_IDLE_END);
 	idle_notifier_call_chain(IDLE_END);
+#ifdef CONFIG_AMLOGIC_DEBUG_LOCKUP
+	__arch_cpu_idle_exit();
+#endif
 }
 
 /*
