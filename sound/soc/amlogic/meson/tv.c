@@ -1529,36 +1529,44 @@ static void parse_speaker_channel_mask(struct snd_soc_card *card)
 	}
 
 	/* ext Speaker mask*/
-	of_property_read_string(np, "Speaker0_Channel_Mask", &str);
-	ret = check_channel_mask(str);
-	if (ret >= 0) {
-		p_aml_audio->Speaker0_Channel_Mask = ret;
-		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
+	ret = of_property_read_string(np, "Speaker0_Channel_Mask", &str);
+	if (!ret) {
+		ret = check_channel_mask(str);
+		if (ret >= 0) {
+			p_aml_audio->Speaker0_Channel_Mask = ret;
+			aml_aiu_update_bits(AIU_I2S_OUT_CFG,
 				0x3, p_aml_audio->Speaker0_Channel_Mask);
+		}
 	}
-	of_property_read_string(np, "Speaker1_Channel_Mask", &str);
-	ret = check_channel_mask(str);
-	if (ret >= 0) {
-		p_aml_audio->Speaker1_Channel_Mask = ret;
-		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
+	ret = of_property_read_string(np, "Speaker1_Channel_Mask", &str);
+	if (!ret) {
+		ret = check_channel_mask(str);
+		if (ret >= 0) {
+			p_aml_audio->Speaker1_Channel_Mask = ret;
+			aml_aiu_update_bits(AIU_I2S_OUT_CFG,
 				0x3 << 2,
 				p_aml_audio->Speaker1_Channel_Mask << 2);
+		}
 	}
-	of_property_read_string(np, "Speaker2_Channel_Mask", &str);
-	ret = check_channel_mask(str);
-	if (ret >= 0) {
-		p_aml_audio->Speaker2_Channel_Mask = ret;
-		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
+	ret = of_property_read_string(np, "Speaker2_Channel_Mask", &str);
+	if (!ret) {
+		ret = check_channel_mask(str);
+		if (ret >= 0) {
+			p_aml_audio->Speaker2_Channel_Mask = ret;
+			aml_aiu_update_bits(AIU_I2S_OUT_CFG,
 				0x3 << 4,
 				p_aml_audio->Speaker2_Channel_Mask << 4);
+		}
 	}
-	of_property_read_string(np, "Speaker3_Channel_Mask", &str);
-	ret = check_channel_mask(str);
-	if (ret >= 0) {
-		p_aml_audio->Speaker3_Channel_Mask = ret;
-		aml_aiu_update_bits(AIU_I2S_OUT_CFG,
+	ret = of_property_read_string(np, "Speaker3_Channel_Mask", &str);
+	if (!ret) {
+		ret = check_channel_mask(str);
+		if (ret >= 0) {
+			p_aml_audio->Speaker3_Channel_Mask = ret;
+			aml_aiu_update_bits(AIU_I2S_OUT_CFG,
 				0x3 << 6,
 				p_aml_audio->Speaker3_Channel_Mask << 6);
+		}
 	}
 }
 
