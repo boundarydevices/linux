@@ -20,6 +20,8 @@
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include <linux/amlogic/media/vpu/vpu.h>
 #include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-contiguous.h>
 #include <linux/amlogic/media/video_sink/video.h>
@@ -3481,7 +3483,7 @@ void vdin_dolby_addr_alloc(struct vdin_dev_s *devp, unsigned int size)
 	unsigned int index, alloc_size;
 
 	alloc_size = dolby_size_byte*size;
-	devp->dv.dv_dma_vaddr = dma_alloc_coherent(devp->dev,
+	devp->dv.dv_dma_vaddr = dma_alloc_coherent(&devp->this_pdev->dev,
 			alloc_size, &devp->dv.dv_dma_paddr, GFP_KERNEL);
 	if (!devp->dv.dv_dma_vaddr) {
 		pr_info("%s:dmaalloc_coherent fail!!\n", __func__);
@@ -3517,7 +3519,7 @@ void vdin_dolby_addr_release(struct vdin_dev_s *devp, unsigned int size)
 
 	alloc_size = dolby_size_byte*size;
 	if (devp->dv.dv_dma_vaddr)
-		dma_free_coherent(devp->dev, alloc_size,
+		dma_free_coherent(&devp->this_pdev->dev, alloc_size,
 			devp->dv.dv_dma_vaddr, devp->dv.dv_dma_paddr);
 	devp->dv.dv_dma_vaddr = NULL;
 }
