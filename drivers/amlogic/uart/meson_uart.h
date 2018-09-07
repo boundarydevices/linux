@@ -36,7 +36,7 @@
 #define UART_RXRST      (0x01<<23)
 #define UART_RXINT_EN   (0x01<<27)
 #define UART_TXINT_EN   (0x01<<28)
-
+#define UART_CTS_EN     (0x01<<31)
 #define UART_WFIFO      0
 #define UART_RFIFO      1
 #define UART_CONTROL    2

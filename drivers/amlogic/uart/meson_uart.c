@@ -162,7 +162,7 @@ __setup("printk_no_block", new_printk_enable);
 
 
 module_param_named(new_printk, new_printk_enabled,
-		bool, S_IRUGO | S_IWUSR);
+		bool, 0644);
 
 MODULE_PARM_DESC(new_printk, "printk use no block mode");
 
@@ -181,7 +181,7 @@ static ssize_t printk_mode_store(struct device_driver *drv, const char *buf,
 	return count;
 }
 
-static DRIVER_ATTR(printkmode, S_IRUGO | S_IWUSR, printk_mode_show,
+static DRIVER_ATTR(printkmode, 0644, printk_mode_show,
 		   printk_mode_store);
 
 
@@ -203,7 +203,7 @@ static ssize_t support_sysrq_store(struct device_driver *drv, const char *buf,
 	return count;
 }
 
-static DRIVER_ATTR(sysrqsupport, S_IRUGO | S_IWUSR, support_sysrq_show,
+static DRIVER_ATTR(sysrqsupport, 0644, support_sysrq_show,
 		   support_sysrq_store);
 
 
@@ -346,6 +346,7 @@ static void meson_uart_shutdown(struct uart_port *port)
 	val = readl(port->membase + AML_UART_CONTROL);
 	val &= ~(AML_UART_RX_EN | AML_UART_TX_EN);
 	val &= ~(AML_UART_RX_INT_EN | AML_UART_TX_INT_EN);
+	val |= UART_CTS_EN;
 	writel(val, port->membase + AML_UART_CONTROL);
 
 	spin_unlock_irqrestore(&port->lock, flags);
@@ -526,6 +527,7 @@ static int meson_uart_startup(struct uart_port *port)
 	writel(val, port->membase + AML_UART_CONTROL);
 
 	val |= (AML_UART_RX_INT_EN | AML_UART_TX_INT_EN);
+	val &= ~UART_CTS_EN;
 	writel(val, port->membase + AML_UART_CONTROL);
 
 	return ret;
@@ -707,6 +709,9 @@ static int meson_uart_request_port(struct uart_port *port)
 						port->line, port->membase);
 	val = (AML_UART_RECV_IRQ(1) | AML_UART_XMIT_IRQ(port->fifosize / 2));
 	writel(val, port->membase + AML_UART_MISC);
+
+	writel(readl(port->membase + AML_UART_CONTROL) | UART_CTS_EN,
+			port->membase + AML_UART_CONTROL);
 
 	ret = request_irq(port->irq, meson_uart_interrupt, 0,
 			  meson_uart_type(port), port);
