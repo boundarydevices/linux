@@ -1046,6 +1046,17 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 		}
 		rx_pr("hdcp1.4 key mode-%d\n", hdcp14_key_mode);
 		break;
+	case HDMI_IOC_HDCP22_NOT_SUPPORT:
+		/* if sysctl can not find the aic tools,
+		 * it will inform driver that 2.2 not support via ioctl
+		 */
+		hdcp22_on = 0;
+		if (rx.open_fg)
+			rx_send_hpd_pulse();
+		else
+			hdmirx_wr_dwc(DWC_HDCP22_CONTROL, 2);
+		rx_pr("hdcp2.2 not support\n");
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 		break;

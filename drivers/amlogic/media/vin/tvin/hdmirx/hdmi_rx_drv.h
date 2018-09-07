@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2018-09-07"
+#define RX_VER0 "ver.2018-09-11"
 /*
  *
  *
@@ -131,6 +131,7 @@ struct hdmirx_dev_s {
 	struct pd_infoframe_s)
 #define HDMI_IOC_HDCP14_KEY_MODE _IOR(HDMI_IOC_MAGIC, 0x0d,\
 	enum hdcp14_key_mode_e)
+#define HDMI_IOC_HDCP22_NOT_SUPPORT _IO(HDMI_IOC_MAGIC, 0x0e)
 
 #define IOC_SPD_INFO  _BIT(0)
 #define IOC_AUD_INFO  _BIT(1)
