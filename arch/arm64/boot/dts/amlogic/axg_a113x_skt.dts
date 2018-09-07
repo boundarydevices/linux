@@ -316,14 +316,6 @@
 		pinctrl-0 = <&b_uart_pins>;
 	};
 
-	meson-irblaster {
-		compatible = "amlogic, am_irblaster";
-		dev_name = "meson-irblaster";
-		status = "disable";
-		pinctrl-names = "default";
-		pinctrl-0 = <&irblaster_pins>;
-	};
-
 	/* Sound iomap */
 	aml_snd_iomap {
 		compatible = "amlogic, snd-iomap";

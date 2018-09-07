@@ -421,14 +421,6 @@
 		pinctrl-0 = <&b_uart_pins>;
 	};
 
-	meson-irblaster {
-		compatible = "amlogic, am_irblaster";
-		dev_name = "meson-irblaster";
-		status = "disable";
-		pinctrl-names = "default";
-		pinctrl-0 = <&irblaster_pins>;
-	};
-
 	vpu {
 		compatible = "amlogic, vpu-axg";
 		dev_name = "vpu";

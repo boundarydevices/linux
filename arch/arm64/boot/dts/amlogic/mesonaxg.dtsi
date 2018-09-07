@@ -738,6 +738,16 @@
 		};
 	};
 
+	irblaster: meson-irblaster {
+		compatible = "amlogic, meson_irblaster";
+		reg = <0x0 0xff8000c0 0x0 0x10>,
+			<0x0 0xff800040 0x0 0x4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&irblaster_pins>;
+		interrupts = <0 198 1>;
+		status = "disabled";
+	};
+
 	saradc:saradc {
 		compatible = "amlogic,meson-axg-saradc";
 		status = "okay";
