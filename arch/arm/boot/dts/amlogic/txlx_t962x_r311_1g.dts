@@ -925,7 +925,7 @@
 	cvbsout {
 		compatible = "amlogic, cvbsout-txlx";
 		dev_name = "cvbsout";
-		status = "okay";
+		status = "disabled";
 		clocks = <&clkc CLKID_VCLK2_ENCI
 			&clkc CLKID_VCLK2_VENCI0
 			&clkc CLKID_VCLK2_VENCI1

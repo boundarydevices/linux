@@ -326,6 +326,8 @@ void vdac_out_cntl1_bit3(bool on, unsigned int module_sel)
 
 	if (is_meson_txl_cpu() || is_meson_txlx_cpu())
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, enable, 3, 1);
+	else if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, ~enable, 3, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, ~enable, 3, 1);
 }
@@ -382,7 +384,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			if (!is_meson_g12a_cpu() && !is_meson_g12b_cpu())
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			/* enable dac output */
-			vdac_out_cntl1_bit3(0, 0x4);
+			vdac_out_cntl1_bit3(0, VDAC_MODULE_ATV_DEMOD);
 		}
 		break;
 	case VDAC_MODULE_DTV_DEMOD: /* dtv demod */
@@ -582,7 +584,6 @@ static int __exit aml_vdac_remove(struct platform_device *pdev)
 static int amvdac_drv_suspend(struct platform_device *pdev,
 		pm_message_t state)
 {
-
 	pr_info("%s: suspend module\n", __func__);
 	return 0;
 }
@@ -593,6 +594,19 @@ static int amvdac_drv_resume(struct platform_device *pdev)
 	return 0;
 }
 #endif
+
+static void amvdac_drv_shutdown(struct platform_device *pdev)
+{
+	unsigned int cntl0, cntl1;
+
+	pr_info("%s: shutdown module\n", __func__);
+	cntl0 = 0x0;
+	if (is_meson_txl_cpu() || is_meson_txlx_cpu())
+		cntl1 = 0x0;
+	else
+		cntl1 = 0x8;
+	vdac_set_ctrl0_ctrl1(cntl0, cntl1);
+}
 
 
 static const struct of_device_id aml_vdac_dt_match[] = {
@@ -614,6 +628,7 @@ static struct platform_driver aml_vdac_driver = {
 	.suspend    = amvdac_drv_suspend,
 	.resume     = amvdac_drv_resume,
 #endif
+	.shutdown	= amvdac_drv_shutdown,
 };
 
 static int __init aml_vdac_init(void)

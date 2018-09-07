@@ -304,15 +304,6 @@ static void cvbs_out_disable_clk(void)
 	disable_vmode_clk();
 }
 
-static void cvbs_out_disable_venc(void)
-{
-	info->dwork_flag = 0;
-	cvbs_cntl_output(0);
-	cvbs_out_reg_write(ENCI_VIDEO_EN, 0);
-
-	return;
-}
-
 static void cvbs_out_vpu_power_ctrl(int status)
 {
 	if (info->vinfo == NULL)
@@ -1497,7 +1488,8 @@ static int cvbsout_remove(struct platform_device *pdev)
 
 static void cvbsout_shutdown(struct platform_device *pdev)
 {
-	cvbs_out_disable_venc();
+	info->dwork_flag = 0;
+	cvbs_out_reg_write(ENCI_VIDEO_EN, 0);
 	cvbs_out_disable_clk();
 
 	cvbs_out_vpu_power_ctrl(0);
