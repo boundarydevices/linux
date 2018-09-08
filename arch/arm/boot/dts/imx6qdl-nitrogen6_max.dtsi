@@ -45,12 +45,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_imx6q_nitrogen6_max: iomuxc-imx6q-nitrogen6-maxgrp {
-		status = "okay";
-	};
-};
-
-&iomuxc_imx6q_nitrogen6_max {
 	pinctrl_audmux: audmuxgrp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT7__AUD3_RXD		0x130b0
@@ -277,10 +271,6 @@
 #define GP_GT911_RESET		<&gpio2 7 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x030b0
 		>;
-	};
-
-	pinctrl_i2c3_ov5640: i2c3-ov5640grp {
-		/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
 	};
 
 	pinctrl_i2c3_ov5640_gpios: i2c3-ov5640-gpiosgrp {
@@ -996,7 +986,7 @@
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	ov5642: ov5642@3c {
+	ov5642@3c {
 		compatible = "ovti,ov5642";
 		reg = <0x3c>;
 		pinctrl-names = "default";
