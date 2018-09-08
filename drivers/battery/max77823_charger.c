@@ -532,10 +532,12 @@ static void max77823_set_desired_chgin_ilim(struct max77823_charger_data *charge
 	int ret;
 
 	charger->desired_chgin_ilim = ilim;
+	charger->initial_chgin_ilim = ilim;
 	if (psy) {
 		ret = psy_get_prop(charger, PS_USB_CHARGER, POWER_SUPPLY_PROP_CURRENT_MAX, &value);
 		if (!ret) {
 			ilim2 = convert_to_ilim(value.intval);
+			charger->usb_limit_chgin_ilim = ilim2;
 			pr_info("%s: ilim = 0x%x 0x%x\n", __func__, ilim, ilim2);
 			if (ilim > ilim2)
 				ilim = ilim2;
@@ -582,8 +584,17 @@ static void max77823_chg_cable_work(struct work_struct *work)
 				charger->current_checked = 0;
 			update_cable_type(charger);
 			ilim2 = convert_to_ilim(value.intval);
-			if (ilim > ilim2)
+			if (ilim > ilim2) {
 				ilim = ilim2;
+			} else {
+				if (ilim2 > charger->usb_limit_chgin_ilim) {
+					/* Type of cable has changed */
+					pr_debug("%s: cable has changed\n", __func__);
+					charger->desired_chgin_ilim = charger->initial_chgin_ilim;
+					charger->current_checked = 0;
+				}
+			}
+			charger->usb_limit_chgin_ilim = ilim2;
 		}
 	}
 	if (ilim != charger->chgin_ilim) {
@@ -1012,7 +1023,7 @@ static int max77823_chg_set_property(struct power_supply *psy,
 				current_now = usb_charging_current;
 
 			set_charging_current_max =
-				cvt_ilim_to_ma(charger->desired_chgin_ilim);
+				cvt_ilim_to_ma(charger->initial_chgin_ilim);
 			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS || \
 				charger->cable_type == POWER_SUPPLY_TYPE_HV_MAINS) {
 				limit_ma = SIOP_INPUT_LIMIT_CURRENT;
@@ -1400,7 +1411,7 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 					__func__, chgin_dtls, chg_dtls);
 			pr_info("%s: undervoltage->normal\n", __func__);
 			max77823_set_input_current(charger,
-					cvt_ilim_to_ma(charger->desired_chgin_ilim));
+					cvt_ilim_to_ma(charger->initial_chgin_ilim));
 		}
 	}
 	/* Have the battery reevaluate charging */

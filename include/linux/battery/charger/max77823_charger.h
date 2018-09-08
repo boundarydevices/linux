@@ -177,6 +177,8 @@ struct max77823_charger_data {
 	unsigned int	cable_type;
 	unsigned int	chgin_ilim;
 	unsigned int	desired_chgin_ilim;
+	unsigned int	initial_chgin_ilim;
+	unsigned int	usb_limit_chgin_ilim;
 	unsigned int	charging_current;
 	unsigned int	current_checked;
 	unsigned int	last_cable_type;
