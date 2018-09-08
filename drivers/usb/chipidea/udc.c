@@ -1974,6 +1974,14 @@ void ci_hdrc_gadget_destroy(struct ci_hdrc *ci)
 	dma_pool_destroy(ci->qh_pool);
 }
 
+void ci_pullup(void *ci_priv, int enable)
+{
+	struct ci_hdrc *ci = ci_priv;
+	if (enable)
+		hw_device_reset(ci);
+	hw_write(ci, OP_USBCMD, USBCMD_RS, enable ? USBCMD_RS : 0);
+}
+
 int ci_usb_charger_connect(struct ci_hdrc *ci, int is_active)
 {
 	int ret = 0;
@@ -1982,20 +1990,12 @@ int ci_usb_charger_connect(struct ci_hdrc *ci, int is_active)
 		pm_runtime_get_sync(ci->dev);
 
 	if (ci->platdata->notify_event) {
+		ci->pullup_rtn = ci_pullup;
 		if (is_active)
 			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 
 		ret = ci->platdata->notify_event(ci,
 				CI_HDRC_CONTROLLER_VBUS_EVENT);
-		if (ret == CI_HDRC_NOTIFY_RET_DEFER_EVENT) {
-			hw_device_reset(ci);
-			/* Pull up dp */
-			hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
-			ci->platdata->notify_event(ci,
-				CI_HDRC_CONTROLLER_CHARGER_POST_EVENT);
-			/* Pull down dp */
-			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
-		}
 	}
 
 	if (!is_active)

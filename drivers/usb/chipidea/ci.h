@@ -271,6 +271,7 @@ struct ci_hdrc {
 	u32				pm_usbmode;
 	struct work_struct		power_lost_work;
 	struct extcon_dev		extcon;
+	void (*pullup_rtn)(void *ci_priv, int enable);
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)

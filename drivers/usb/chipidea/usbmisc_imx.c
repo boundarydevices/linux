@@ -657,7 +657,6 @@ int imx6_charger_secondary_detection(struct imx_usbmisc_data *data)
 
 	msleep(80);
 
-	mutex_lock(&charger->lock);
 	regmap_read(regmap, ANADIG_USB1_CHRG_DET_STAT, &val);
 	if (val & ANADIG_USB1_CHRG_DET_STAT_DM_STATE) {
 		dev_dbg(charger->dev, "It is a dedicate charging port\n");
@@ -670,7 +669,6 @@ int imx6_charger_secondary_detection(struct imx_usbmisc_data *data)
 	}
 
 	usb_charger_is_present(charger, true);
-	mutex_unlock(&charger->lock);
 
 	return 0;
 }
@@ -912,7 +910,6 @@ int imx7d_charger_secondary_detection(struct imx_usbmisc_data *data)
 
 	msleep(80);
 
-	mutex_lock(&charger->lock);
 	val = readl(usbmisc->base + MX7D_USB_OTG_PHY_STATUS);
 	if (val & MX7D_USB_OTG_PHY_STATUS_LINE_STATE1) {
 		dev_dbg(charger->dev, "It is a dedicate charging port\n");
@@ -925,7 +922,6 @@ int imx7d_charger_secondary_detection(struct imx_usbmisc_data *data)
 	}
 
 	usb_charger_is_present(charger, true);
-	mutex_unlock(&charger->lock);
 
 	return 0;
 }
@@ -1076,6 +1072,16 @@ int imx_usbmisc_charger_detection(struct imx_usbmisc_data *data, bool connect)
 		} else {
 			if (charger->psy_desc.type == POWER_SUPPLY_TYPE_USB)
 				usb_charger_is_present(charger, true);
+
+			if ((data->charger->psy_desc.type != POWER_SUPPLY_TYPE_USB) &&
+					usbmisc->ops->charger_secondary_detection &&
+					data->pullup_rtn) {
+				/* Pull up dp */
+				data->pullup_rtn(data->ci_priv, true);
+				usbmisc->ops->charger_secondary_detection(data);
+				/* Pull down dp */
+				data->pullup_rtn(data->ci_priv, false);
+			}
 		}
 	} else {
 		charger->online = 0;
@@ -1089,23 +1095,11 @@ int imx_usbmisc_charger_detection(struct imx_usbmisc_data *data, bool connect)
 }
 EXPORT_SYMBOL_GPL(imx_usbmisc_charger_detection);
 
-int imx_usbmisc_charger_secondary_detection(struct imx_usbmisc_data *data)
-{
-	struct imx_usbmisc *usbmisc;
-
-	if (!data)
-		return 0;
-
-	usbmisc = dev_get_drvdata(data->dev);
-	if (!usbmisc->ops->charger_secondary_detection)
-		return 0;
-	return usbmisc->ops->charger_secondary_detection(data);
-}
-EXPORT_SYMBOL_GPL(imx_usbmisc_charger_secondary_detection);
-
 int imx_usbmisc_check_vbus(struct imx_usbmisc_data *data)
 {
+	struct usb_charger *charger;
 	struct imx_usbmisc *usbmisc;
+	int ret, ret2;
 
 	if (!data)
 		return 0;
@@ -1113,7 +1107,16 @@ int imx_usbmisc_check_vbus(struct imx_usbmisc_data *data)
 	usbmisc = dev_get_drvdata(data->dev);
 	if (!usbmisc->ops->check_vbus)
 		return 0;
-	return usbmisc->ops->check_vbus(data);
+	ret = usbmisc->ops->check_vbus(data);
+	charger = data->charger;
+	if (ret && !charger->max_current) {
+		dev_dbg(charger->dev, "VBUS changed type=%d\n",
+			charger->psy_desc.type);
+		ret2 = imx_usbmisc_charger_detection(data, true);
+		dev_dbg(charger->dev, "VBUS ret=%d type=%d\n", ret2,
+			charger->psy_desc.type);
+	}
+	return ret;
 }
 EXPORT_SYMBOL_GPL(imx_usbmisc_check_vbus);
 

@@ -332,24 +332,12 @@ static int ci_hdrc_imx_notify_event(struct ci_hdrc *ci, unsigned event)
 
 	switch (event) {
 	case CI_HDRC_CONTROLLER_VBUS_EVENT:
-		if (data->usbmisc_data && ci->vbus_active) {
-			if (data->imx_usb_charger_detection) {
-				ret = imx_usbmisc_charger_detection(
-					data->usbmisc_data, true);
-				if (!ret && data->charger.psy_desc.type !=
-							POWER_SUPPLY_TYPE_USB)
-					ret = CI_HDRC_NOTIFY_RET_DEFER_EVENT;
-			}
-		} else if (data->usbmisc_data && !ci->vbus_active) {
-			if (data->imx_usb_charger_detection)
-				ret = imx_usbmisc_charger_detection(
-					data->usbmisc_data, false);
+		if (data->usbmisc_data && data->imx_usb_charger_detection) {
+			data->usbmisc_data->ci_priv = ci;
+			data->usbmisc_data->pullup_rtn = ci->pullup_rtn;
+			ret = imx_usbmisc_charger_detection(
+				data->usbmisc_data, ci->vbus_active);
 		}
-		break;
-	case CI_HDRC_CONTROLLER_CHARGER_POST_EVENT:
-		if (!data->imx_usb_charger_detection)
-			return ret;
-		imx_usbmisc_charger_secondary_detection(data->usbmisc_data);
 		break;
 	case CI_HDRC_IMX_HSIC_ACTIVE_EVENT:
 		if (!IS_ERR(data->pinctrl) &&
