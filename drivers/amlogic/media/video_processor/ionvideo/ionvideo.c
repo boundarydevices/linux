@@ -133,7 +133,7 @@ static int vidioc_g_parm(struct file *file, void *priv,
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
 	struct v4l2_amlogic_parm *ap
-		= (struct v4l2_amlogic_parm *)&parms->parm.capture;
+		= (struct v4l2_amlogic_parm *)parms->parm.raw_data;
 
 	if (parms->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;

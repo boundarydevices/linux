@@ -58,7 +58,7 @@ struct canvas_device_info {
 };
 static struct canvas_device_info canvas_info;
 
-#define CANVAS_VALID(n) ((n) >= 0 && (n) < canvas_pool_canvas_num())
+#define CANVAS_VALID(n) ((n) < canvas_pool_canvas_num())
 
 static void
 canvas_lut_data_build(ulong addr, u32 width, u32 height, u32 wrap, u32 blkmode,

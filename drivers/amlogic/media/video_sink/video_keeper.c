@@ -877,6 +877,7 @@ static unsigned int vf_keep_current_locked(
 	if ((cur_dispbuf->type & VIDTYPE_VIU_422) == VIDTYPE_VIU_422) {
 		return -1;
 		/* no VIDTYPE_VIU_422 type frame need keep,avoid memcpy crash*/
+/*
 		if ((Y_BUFFER_SIZE < (cd.width * cd.height))) {
 			pr_info("[%s::%d]data > buf size: %x,%x,%x, %x,%x\n",
 				__func__, __LINE__, Y_BUFFER_SIZE,
@@ -899,7 +900,9 @@ static unsigned int vf_keep_current_locked(
 #endif
 			if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT)
 				pr_info("%s: VIDTYPE_VIU_422\n", __func__);
+
 		}
+*/
 	} else if ((cur_dispbuf->type & VIDTYPE_VIU_444) == VIDTYPE_VIU_444) {
 		if ((Y_BUFFER_SIZE < (cd.width * cd.height))) {
 			pr_info

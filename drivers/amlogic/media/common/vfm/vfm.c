@@ -249,8 +249,10 @@ retry:
 			} else{
 				pr_err("%s: Error, map full\n", __func__);
 				ret = -1;
+				kfree(p);
 			}
-		}
+		} else
+			kfree(p);
 		spin_unlock_irqrestore(&lock, flags);
 	}
 	if (add_ok)
@@ -323,8 +325,6 @@ static char *vf_get_receiver_name_inmap(int i, const char *provider_name)
 			}
 		}
 
-		if (found)
-			break;
 	}
 	return receiver_name;
 }
@@ -500,7 +500,7 @@ static void vfm_dump_provider(const char *name)
 		return;
 
 	buf = kzalloc(0x400, GFP_KERNEL);
-	if (IS_ERR_OR_NULL(buf))
+	if (buf == NULL)
 		return;
 
 	pbuf = buf;
@@ -802,6 +802,7 @@ static long vfm_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		copy_from_user(argp.val, user_argp->val, sizeof(argp.val));
 		if (ret)
 			ret = -EINVAL;
+		argp.val[sizeof(argp.val) - 1] = '\0';
 		vfm_dump_provider(argp.val);
 		}
 		break;

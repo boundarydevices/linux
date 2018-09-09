@@ -97,7 +97,7 @@ void vftrace_info_in(void *vhandle, struct vframe_s *vf)
 	info->vf = vf;
 	info->pts = vf->pts;
 	info->in_time_us = div64_u64(timeval_to_ns(&tv), 1000);
-	info->duration = info->duration;
+	/*info->duration = info->duration;*/
 	vftrace->w_index++;
 	vftrace->num++;
 	if (vftrace->w_index >= vftrace->max)

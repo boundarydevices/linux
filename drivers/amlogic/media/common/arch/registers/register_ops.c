@@ -57,6 +57,8 @@ int codec_reg_read(u32 bus_type, unsigned int reg)
 {
 	struct chip_register_ops *ops = amports_ops[bus_type];
 
+	if (!ops)
+		return 0;
 	ops->r_cnt++;
 	CODEC_OPS_START(bus_type, reg, ops->r_cnt);
 
@@ -78,6 +80,8 @@ void codec_reg_write(u32 bus_type, unsigned int reg, unsigned int val)
 {
 	struct chip_register_ops *ops = amports_ops[bus_type];
 
+	if (!ops)
+		return;
 	ops->w_cnt++;
 	CODEC_OPS_START(bus_type, reg, ops->w_cnt);
 

@@ -1236,7 +1236,7 @@ int ext_get_cur_video_frame(struct vframe_s **vf, int *canvas_index)
 }
 static void dump_vframe_status(const char *name)
 {
-	int ret = 0;
+	int ret = -1;
 	struct vframe_states states;
 	struct vframe_provider_s *vfp;
 
@@ -1999,7 +1999,7 @@ static void zoom_display_vert(void)
 
 	u32 ls, le, rs, re;
 
-	if (platform_type == 1) {
+	/*if (platform_type == 1) {*/
 		if (process_3d_type & MODE_3D_ENABLE) {
 			zoom_get_vert_pos(cur_dispbuf,
 			cur_frame_par->vpp_3d_mode, &ls,
@@ -2008,7 +2008,7 @@ static void zoom_display_vert(void)
 			ls = rs = zoom_start_y_lines;
 			le = re = zoom_end_y_lines;
 		}
-	} else {
+	/*} else {
 		if (process_3d_type & MODE_3D_ENABLE) {
 			zoom_get_vert_pos(cur_dispbuf,
 			cur_frame_par->vpp_3d_mode, &ls,
@@ -2018,6 +2018,7 @@ static void zoom_display_vert(void)
 			le = re = zoom_end_y_lines;
 		}
 	}
+*/
 
 	if ((cur_dispbuf) && (cur_dispbuf->type & VIDTYPE_MVC)) {
 		if (is_need_framepacking_output()) {
@@ -3069,6 +3070,7 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				0x80 << v);
 			/* chroma formatter */
 			/* TODO: afbc setting only cover 420 for now */
+/*
 #ifdef TV_REVERSE
 			if (reverse) {
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
@@ -3096,6 +3098,7 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 						VFORMATTER_EN);
 			} else
 #endif
+*/
 			{
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 				if (is_meson_txlx_package_962X()
@@ -5661,10 +5664,12 @@ SET_FILTER:
 				(!(READ_VCBUS_REG(AFBC_ENABLE) & 0x100));
 			/*video on && afbc is off && is compress frame.*/
 			if (frame_par_ready_to_set || afbc_need_reset) {
-				viu_set_dcu(cur_frame_par, cur_dispbuf);
-				if (cur_dispbuf2)
-					vd2_set_dcu(cur_frame_par,
-						cur_dispbuf2);
+				if (cur_frame_par) {
+					viu_set_dcu(cur_frame_par, cur_dispbuf);
+					if (cur_dispbuf2)
+						vd2_set_dcu(cur_frame_par,
+							cur_dispbuf2);
+				}
 			} else if (cur_dispbuf2) {
 				u32 new_el_w =
 					(cur_dispbuf2->type
@@ -5701,7 +5706,7 @@ SET_FILTER:
 #endif
 
 		if (platform_type == 1) {
-			if (cur_frame_par->hscale_skip_count) {
+			if (cur_frame_par && cur_frame_par->hscale_skip_count) {
 				VSYNC_WR_MPEG_REG_BITS(VIU_VD1_FMT_CTRL +
 					cur_dev->viu_off, 1, 20, 1);
 				/* HFORMATTER_EN */
@@ -5756,8 +5761,9 @@ SET_FILTER:
 			}
 			if ((process_3d_type & MODE_3D_OUT_TB)
 				|| (process_3d_type & MODE_3D_OUT_LR)) {
-				if (cur_frame_par->vpp_2pic_mode &
-				VPP_PIC1_FIRST) {
+				if (cur_frame_par &&
+					(cur_frame_par->vpp_2pic_mode &
+				VPP_PIC1_FIRST)) {
 					VSYNC_WR_MPEG_REG(VD1_IF0_LUMA_PSEL +
 					cur_dev->viu_off, 0x4000000);
 					VSYNC_WR_MPEG_REG(VD1_IF0_CHROMA_PSEL +
@@ -5833,17 +5839,20 @@ SET_FILTER:
 			}
 			if (platform_type == 1) {
 				if (force_3d_scaler == 3 &&
+					cur_frame_par &&
 					cur_frame_par->vpp_3d_scale) {
 					VSYNC_WR_MPEG_REG_BITS(
 					VPP_VSC_PHASE_CTRL, 3,
 					VPP_PHASECTL_DOUBLELINE_BIT, 2);
 				} else if (force_3d_scaler == 1 &&
+					cur_frame_par &&
 					cur_frame_par->vpp_3d_scale) {
 					VSYNC_WR_MPEG_REG_BITS(
 					VPP_VSC_PHASE_CTRL, 1,
 					VPP_PHASECTL_DOUBLELINE_BIT,
 					VPP_PHASECTL_DOUBLELINE_WID);
 				} else if (force_3d_scaler == 2 &&
+					cur_frame_par &&
 					cur_frame_par->vpp_3d_scale) {
 					VSYNC_WR_MPEG_REG_BITS(
 					VPP_VSC_PHASE_CTRL, 2,
@@ -6924,7 +6933,7 @@ EXPORT_SYMBOL(pause_video);
  *********************************************************/
 int _video_set_disable(u32 val)
 {
-	if ((val < VIDEO_DISABLE_NONE) || (val > VIDEO_DISABLE_FORNEXT))
+	if (val > VIDEO_DISABLE_FORNEXT)
 		return -EINVAL;
 
 	disable_video = val;
@@ -7299,6 +7308,7 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 			ret = _video_set_disable(val);
 		else
 			ret = -EFAULT;
+		break;
 	}
 
 	case AMSTREAM_IOC_GET_VIDEO_DISCONTINUE_REPORT:
@@ -7659,23 +7669,27 @@ static int parse_para(const char *para, int para_num, int *result)
 	params = kstrdup(para, GFP_KERNEL);
 	params_base = params;
 	token = params;
-	len = strlen(token);
-	do {
-		token = strsep(&params, " ");
-		while (token && (isspace(*token)
-				|| !isgraph(*token)) && len) {
-			token++;
-			len--;
-		}
-		if (len == 0)
-			break;
-		ret = kstrtoint(token, 0, &res);
-		if (ret < 0)
-			break;
+	if (token) {
 		len = strlen(token);
-		*out++ = res;
-		count++;
-	} while ((token) && (count < para_num) && (len > 0));
+		do {
+			token = strsep(&params, " ");
+			if (!token)
+				break;
+			while (token && (isspace(*token)
+					|| !isgraph(*token)) && len) {
+				token++;
+				len--;
+			}
+			if (len == 0)
+				break;
+			ret = kstrtoint(token, 0, &res);
+			if (ret < 0)
+				break;
+			len = strlen(token);
+			*out++ = res;
+			count++;
+		} while ((count < para_num) && (len > 0));
+	}
 
 	kfree(params_base);
 	return count;
@@ -7719,7 +7733,7 @@ static ssize_t video_3d_scale_store(struct class *cla,
 {
 #ifdef TV_3D_FUNCTION_OPEN
 	u32 enable;
-	size_t r;
+	int r;
 
 	r = kstrtouint(buf, 0, &enable);
 	if (r < 0)
@@ -8040,7 +8054,7 @@ static ssize_t video_blackout_policy_store(struct class *cla,
 					   struct class_attribute *attr,
 					   const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &blackout);
 	if (r < 0)
@@ -8063,7 +8077,7 @@ static ssize_t video_seek_flag_store(struct class *cla,
 					   struct class_attribute *attr,
 					   const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &video_seek_flag);
 	if (r < 0)
@@ -8114,7 +8128,7 @@ static ssize_t video_brightness_store(struct class *cla,
 				      struct class_attribute *attr,
 				      const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	r = kstrtoint(buf, 0, &val);
@@ -8145,7 +8159,7 @@ static ssize_t video_contrast_store(struct class *cla,
 				    struct class_attribute *attr,
 				    const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	r = kstrtoint(buf, 0, &val);
@@ -8175,7 +8189,7 @@ static ssize_t vpp_brightness_store(struct class *cla,
 				    struct class_attribute *attr,
 				    const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	r = kstrtoint(buf, 0, &val);
@@ -8206,7 +8220,7 @@ static ssize_t vpp_contrast_store(struct class *cla,
 			struct class_attribute *attr, const char *buf,
 			size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	r = kstrtoint(buf, 0, &val);
@@ -8232,7 +8246,7 @@ static ssize_t video_saturation_store(struct class *cla,
 				      struct class_attribute *attr,
 				      const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	r = kstrtoint(buf, 0, &val);
@@ -8255,7 +8269,7 @@ static ssize_t vpp_saturation_hue_store(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	s32 mab = 0;
 	s16 mc = 0, md = 0;
 
@@ -8471,7 +8485,7 @@ static ssize_t video_test_screen_store(struct class *cla,
 				       struct class_attribute *attr,
 				       const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	unsigned int data = 0x0;
 
 	r = kstrtoint(buf, 0, &test_screen);
@@ -8536,7 +8550,7 @@ static ssize_t video_rgb_screen_store(struct class *cla,
 				       struct class_attribute *attr,
 				       const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	u32 yuv_eight;
 
 	/* unsigned data = 0x0; */
@@ -8599,7 +8613,7 @@ static ssize_t video_nonlinear_factor_store(struct class *cla,
 					    struct class_attribute *attr,
 					    const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	u32 factor;
 
 	r = kstrtoint(buf, 0, &factor);
@@ -8622,7 +8636,7 @@ static ssize_t video_disable_store(struct class *cla,
 				   struct class_attribute *attr,
 				   const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	if (debug_flag & DEBUG_FLAG_BLACKOUT)
@@ -8648,7 +8662,7 @@ static ssize_t video_global_output_store(struct class *cla,
 				struct class_attribute *attr,
 				const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &video_global_output);
 	if (r < 0)
@@ -8669,7 +8683,7 @@ static ssize_t video_freerun_mode_store(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &freerun_mode);
 	if (r < 0)
@@ -8708,7 +8722,7 @@ static ssize_t threedim_mode_store(struct class *cla,
 #ifdef TV_3D_FUNCTION_OPEN
 
 	u32 type;
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &type);
 	if (r < 0)
@@ -9051,8 +9065,8 @@ static ssize_t video_debugflags_store(struct class *cla,
 				      struct class_attribute *attr,
 				      const char *buf, size_t count)
 {
-	size_t r;
-	int value = -1, seted = 1;
+	int r;
+	int value = -1;
 
 /*
  *	r = sscanf(buf, "%d", &value);
@@ -9073,14 +9087,11 @@ static ssize_t video_debugflags_store(struct class *cla,
 		return -EINVAL;
 
 	debugflags = value;
-	seted = 1;
 
-	if (seted) {
-		pr_info("debugflags changed to %d(%x)\n", debugflags,
-		       debugflags);
-		return count;
-	} else
-		return -EINVAL;
+	pr_info("debugflags changed to %d(%x)\n", debugflags,
+	       debugflags);
+	return count;
+
 }
 
 static ssize_t trickmode_duration_show(struct class *cla,
@@ -9094,7 +9105,7 @@ static ssize_t trickmode_duration_store(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	u32 s_value;
 
 	r = kstrtoint(buf, 0, &s_value);
@@ -9124,7 +9135,7 @@ static ssize_t video_vsync_pts_inc_upint_store(struct class *cla,
 					       struct class_attribute *attr,
 					       const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &vsync_pts_inc_upint);
 	if (r < 0)
@@ -9148,7 +9159,7 @@ static ssize_t slowsync_repeat_enable_store(struct class *cla,
 					    struct class_attribute *attr,
 					    const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &slowsync_repeat_enable);
 	if (r < 0)
@@ -9171,7 +9182,7 @@ static ssize_t video_vsync_slow_factor_store(struct class *cla,
 					     struct class_attribute *attr,
 					     const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 
 	r = kstrtoint(buf, 0, &vsync_slow_factor);
 	if (r < 0)
@@ -9217,7 +9228,7 @@ static ssize_t video_layer1_state_show(struct class *cla,
 
 void set_video_angle(u32 s_value)
 {
-	if ((s_value >= 0 && s_value <= 3) && (video_angle != s_value)) {
+	if ((s_value <= 3) && (video_angle != s_value)) {
 		video_angle = s_value;
 		video_prot.angle_changed = 1;
 		video_prot.video_started = 1;
@@ -9236,7 +9247,7 @@ static ssize_t video_angle_store(struct class *cla,
 				 struct class_attribute *attr, const char *buf,
 				 size_t count)
 {
-	size_t r;
+	int r;
 	u32 s_value;
 
 	r = kstrtoint(buf, 0, &s_value);
@@ -9258,7 +9269,7 @@ static ssize_t show_first_frame_nosync_store(struct class *cla,
 					     struct class_attribute *attr,
 					     const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int value;
 
 	r = kstrtoint(buf, 0, &value);
@@ -9277,7 +9288,7 @@ static ssize_t show_first_picture_store(struct class *cla,
 				   struct class_attribute *attr,
 				   const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int value;
 
 	r = kstrtoint(buf, 0, &value);
@@ -9296,7 +9307,7 @@ static ssize_t video_free_keep_buffer_store(struct class *cla,
 				   struct class_attribute *attr,
 				   const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	if (debug_flag & DEBUG_FLAG_BLACKOUT)
@@ -9314,7 +9325,7 @@ static ssize_t free_cma_buffer_store(struct class *cla,
 				   struct class_attribute *attr,
 				   const char *buf, size_t count)
 {
-	size_t r;
+	int r;
 	int val;
 
 	r = kstrtoint(buf, 0, &val);
