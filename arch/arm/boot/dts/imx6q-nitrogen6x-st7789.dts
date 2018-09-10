@@ -1,7 +1,5 @@
 /*
  * Copyright 2013-2016 Boundary Devices, Inc.
- * Copyright 2012 Freescale Semiconductor, Inc.
- * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -13,36 +11,33 @@
 
 /dts-v1/;
 
-#include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6q.dtsi"
 #include "imx6qdl-nitrogen6x.dtsi"
+
+/ {
+	model = "Freescale i.MX6 Quad Nitrogen6x-st7789 Board";
+	compatible = "fsl,imx6q-nitrogen6x", "fsl,imx6q";
+};
 
 &iomuxc_imx6q_nitrogen6x {
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
-			MX6QDL_PAD_CSI0_DAT8__ECSPI2_SCLK	0x000b1
-			MX6QDL_PAD_CSI0_DAT10__ECSPI2_MISO	0x100b1
-#define GP_ECSPI2_DISPLAY_CS   <&gpio5 29 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x0b0b1
-		>;
-	};
-
-	pinctrl_ecspi2_st7789: ecspi2_st7789grp {
-		fsl,pins = <
-#define GPIRQ_ST7789_TEARING_EFFECT   <&gpio5 30 IRQ_TYPE_EDGE_RISING>
-			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x0b0b1
+			MX6QDL_PAD_DISP0_DAT19__ECSPI2_SCLK	0x000b1
+			MX6QDL_PAD_DISP0_DAT17__ECSPI2_MISO	0x100b1
+#define GP_ECSPI2_DISPLAY_CS   <&gpio5 12 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x0b0b1
 		>;
 	};
 
 	pinctrl_ecspi2_read: ecspi2_readgrp {
 		fsl,pins = <
-			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x108b1		/* ODE, so that display can drive low */
+			MX6QDL_PAD_DISP0_DAT16__ECSPI2_MOSI	0x108b1		/* ODE, so that display can drive low */
 		>;
 	};
 
 	pinctrl_ecspi2_write: ecspi2_writegrp {
 		fsl,pins = <
-			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1		/* Can write faster without ODE */
+			MX6QDL_PAD_DISP0_DAT16__ECSPI2_MOSI	0x100b1		/* Can write faster without ODE */
 		>;
 	};
 
@@ -63,11 +58,13 @@
 			MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05	0x1b0b0
 		>;
 	};
-};
 
-/ {
-	model = "Freescale i.MX6 Quad Nitrogen6x-st7789 Board";
-	compatible = "fsl,imx6q-nitrogen6x", "fsl,imx6q";
+	pinctrl_st7789: st7789grp {
+		fsl,pins = <
+#define GPIRQ_ST7789_TEARING_EFFECT   <&gpio5 14 IRQ_TYPE_EDGE_RISING>
+			MX6QDL_PAD_DISP0_DAT20__GPIO5_IO14	0x0b0b1
+		>;
+	};
 };
 
 &adv7180 {
@@ -97,7 +94,7 @@
 		interrupts-extended = GPIRQ_ST7789_TEARING_EFFECT;
 #endif
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ecspi2_st7789>;
+		pinctrl-0 = <&pinctrl_st7789>;
 		reg = <0>;
 		regwidth = <8>;
 		rotate = <0>;
@@ -123,6 +120,10 @@
 
 &i2c2 {
 	/delete-node/ ov5642@3d;
+};
+
+&lcd {
+	status = "disabled";
 };
 
 &ov5640 {
