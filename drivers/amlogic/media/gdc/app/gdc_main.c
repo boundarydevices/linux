@@ -49,9 +49,8 @@ int gdc_run(struct gdc_settings *g)
 
 	//start gdc process with input address for y and uv planes
 	if (g->gdc_config.format == NV12) {
-		gdc_process(g,
-				(uint32_t)g->y_base_addr,
-				(uint32_t)g->uv_base_addr);
+		gdc_process(g, (uint32_t)g->y_base_addr,
+			(uint32_t)g->uv_base_addr);
 	} else {
 		gdc_process_yuv420p(g, (uint32_t)g->y_base_addr,
 				(uint32_t)g->u_base_addr,

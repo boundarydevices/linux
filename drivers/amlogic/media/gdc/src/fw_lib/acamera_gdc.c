@@ -115,10 +115,13 @@ int gdc_process(struct gdc_settings *gdc_settings,
 		uint32_t y_base_addr, uint32_t uv_base_addr)
 {
 	uint32_t gdc_out_base_addr = gdc_settings->current_addr;
-	uint32_t active_width = gdc_settings->gdc_config.output_width;
-	uint32_t active_height = gdc_settings->gdc_config.output_height;
-	uint32_t y_line_offset = active_width; //420 format
-	uint32_t uv_line_offset = active_width; //420 format
+	uint32_t input_width = gdc_settings->gdc_config.input_width;
+	uint32_t input_height = gdc_settings->gdc_config.input_height;
+	uint32_t output_height = gdc_settings->gdc_config.output_height;
+	uint32_t i_y_line_offset = gdc_settings->gdc_config.input_y_stride;
+	uint32_t i_uv_line_offset = gdc_settings->gdc_config.input_c_stride;
+	uint32_t o_y_line_offset = gdc_settings->gdc_config.output_y_stride;
+	uint32_t o_uv_line_offset = gdc_settings->gdc_config.output_c_stride;
 
 	if (gdc_settings->is_waiting_gdc) {
 		gdc_start_flag_write(0);
@@ -130,24 +133,24 @@ int gdc_process(struct gdc_settings *gdc_settings,
 
 	LOG(LOG_DEBUG, "starting GDC process.\n");
 
-	gdc_datain_width_write(active_width);
-	gdc_datain_height_write(active_height);
+	gdc_datain_width_write(input_width);
+	gdc_datain_height_write(input_height);
 	//input y plane
 	gdc_data1in_addr_write(y_base_addr);
-	gdc_data1in_line_offset_write(y_line_offset);
+	gdc_data1in_line_offset_write(i_y_line_offset);
 
 	//input uv plane
 	gdc_data2in_addr_write(uv_base_addr);
-	gdc_data2in_line_offset_write(uv_line_offset);
+	gdc_data2in_line_offset_write(i_uv_line_offset);
 
 	//gdc y output
 	gdc_data1out_addr_write(gdc_out_base_addr);
-	gdc_data1out_line_offset_write(y_line_offset);
+	gdc_data1out_line_offset_write(o_y_line_offset);
 
 	//gdc uv output
-	gdc_out_base_addr += active_height * y_line_offset;
+	gdc_out_base_addr += output_height * o_y_line_offset;
 	gdc_data2out_addr_write(gdc_out_base_addr);
-	gdc_data2out_line_offset_write(uv_line_offset);
+	gdc_data2out_line_offset_write(o_uv_line_offset);
 
 	gdc_start(gdc_settings);
 
