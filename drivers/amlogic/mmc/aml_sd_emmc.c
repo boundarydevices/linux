@@ -1318,6 +1318,8 @@ int aml_emmc_clktree_init(struct amlsd_host *host)
 			host->mux_parent_rate[i], mux_parent_names[i]);
 		mux_parent_count++;
 		ret = clk_prepare_enable(host->mux_parent[i]);
+		if (ret)
+			return ret;
 	}
 
 	/* create the mux */
@@ -2647,7 +2649,7 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 		if (host->is_tunning == 0) {
 			aml_host_bus_fsm_show(host, ista->bus_fsm);
 			if (aml_card_type_mmc(pdata))
-				mmc_cmd_LBA_show(mmc, mrq);
+				mmc_cmd_LBA_show(host->mmc, mrq);
 		}
 	}
 
