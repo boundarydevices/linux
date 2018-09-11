@@ -258,6 +258,12 @@ extern const struct clk_ops meson_g12a_pcie_pll_ops;
 extern const struct clk_ops meson_g12a_mpll_ro_ops;
 extern const struct clk_ops meson_g12a_mpll_ops;
 
+extern const struct clk_ops meson_tl1_pll_ro_ops;
+extern const struct clk_ops meson_tl1_pll_ops;
+extern const struct clk_ops meson_tl1_mpll_ro_ops;
+extern const struct clk_ops meson_tl1_mpll_ops;
+
+
 extern void meson_clk_register_composite(struct clk **soc_clks,
 			struct meson_composite *composite,
 			unsigned int length);
@@ -290,6 +296,12 @@ void meson_g12a_sdemmc_init(void);
 void meson_g12a_media_init(void);
 void meson_g12a_gpu_init(void);
 void meson_g12a_misc_init(void);
+
+/*tl1*/
+void meson_tl1_sdemmc_init(void);
+void meson_tl1_media_init(void);
+void meson_tl1_gpu_init(void);
+void meson_tl1_misc_init(void);
 
 extern int clk_numbers;
 #endif /* __CLKC_H */

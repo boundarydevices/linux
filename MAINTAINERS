@@ -14626,3 +14626,9 @@ F:	drivers/amlogic/input/sensor/cy8c4014.c
 F:	Documentation/devicetree/bindings/amlogic/input/pca9557_keypad.txt
 F:	drivers/amlogic/input/keyboard/pca9557_keypad.c
 F:	Documentation/devicetree/bindings/is31fl3236a.txt
+
+AMLOGIC TL1 CLOCK DRIVERS
+M:	Jian Hu <jian.hu@amlogic.com>
+F:	include/dt-bindings/clock/amlogic,tl1-clkc.h
+F:	drivers/amlogic/clk/tl1/*
+
