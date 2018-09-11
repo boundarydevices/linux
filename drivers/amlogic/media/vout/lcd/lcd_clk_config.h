@@ -310,10 +310,10 @@ enum div_sel_e {
 #define PLL_FREF_MIN_AXG            (5 * 1000)
 #define PLL_FREF_MAX_AXG            (25 * 1000)
 #define PLL_VCO_MIN_AXG             (960 * 1000)
-#define PLL_VCO_MAX_AXG             (1632 * 1000)
+#define PLL_VCO_MAX_AXG             (1920 * 1000)
 
 /* video */
-#define CRT_VID_CLK_IN_MAX_AXG      (1632 * 1000)
+#define CRT_VID_CLK_IN_MAX_AXG      (1920 * 1000)
 #define ENCL_CLK_IN_MAX_AXG         (200 * 1000)
 
 /* G12A */

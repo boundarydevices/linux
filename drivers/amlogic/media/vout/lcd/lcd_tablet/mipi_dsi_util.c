@@ -1703,10 +1703,12 @@ static void mipi_dsi_video_config(struct lcd_config_s *pconf)
 static void mipi_dsi_non_burst_packet_config(struct lcd_config_s *pconf)
 {
 	struct dsi_config_s *dconf = pconf->lcd_control.mipi_config;
-	int lane_num, clk_factor, hactive, multi_pkt_en, bit_rate_required;
-	int pixel_per_chunk = 0, vid_num_chunks = 0;
-	int byte_per_chunk = 0, vid_pkt_byte_per_chunk = 0;
-	int total_bytes_per_chunk = 0, chunk_overhead = 0, vid_null_size = 0;
+	unsigned int lane_num, clk_factor, hactive, multi_pkt_en;
+	unsigned int bit_rate_required;
+	unsigned int pixel_per_chunk = 0, vid_num_chunks = 0;
+	unsigned int byte_per_chunk = 0, vid_pkt_byte_per_chunk = 0;
+	unsigned int total_bytes_per_chunk = 0;
+	unsigned int chunk_overhead = 0, vid_null_size = 0;
 	int i = 1, done = 0;
 
 	lane_num = (int)(dconf->lane_num);

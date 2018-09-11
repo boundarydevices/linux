@@ -914,7 +914,10 @@ static void lcd_set_pll_axg(struct lcd_clk_config_s *cConf)
 	lcd_hiu_write(HHI_GP0_PLL_CNTL2_AXG, pll_ctrl2);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL3_AXG, 0x0a59a288);
 	lcd_hiu_write(HHI_GP0_PLL_CNTL4_AXG, 0xc000004d);
-	lcd_hiu_write(HHI_GP0_PLL_CNTL5_AXG, 0x00078000);
+	if (cConf->pll_fvco >= 1632000)
+		lcd_hiu_write(HHI_GP0_PLL_CNTL5_AXG, 0x00058000);
+	else
+		lcd_hiu_write(HHI_GP0_PLL_CNTL5_AXG, 0x00078000);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL_AXG, 1, LCD_PLL_RST_AXG, 1);
 	lcd_hiu_setb(HHI_GP0_PLL_CNTL_AXG, 0, LCD_PLL_RST_AXG, 1);
 
@@ -1987,7 +1990,7 @@ static int check_pll_axg(struct lcd_clk_config_s *cConf,
 		pll_fvco = pll_fvco / od_fb_table[od_fb];
 		m = pll_fvco / cConf->fin;
 		pll_frac = (pll_fvco % cConf->fin) *
-						cConf->pll_frac_range / cConf->fin;
+				cConf->pll_frac_range / cConf->fin;
 		cConf->pll_m = m;
 		cConf->pll_n = n;
 		cConf->pll_frac = pll_frac;

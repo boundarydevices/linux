@@ -1457,9 +1457,13 @@ static ssize_t lcd_debug_change_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
 	int ret = 0;
-	unsigned int temp, val[6];
+	unsigned int temp, val[10];
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	struct lcd_config_s *pconf;
+	struct ttl_config_s *ttl_conf;
+	struct lvds_config_s *lvds_conf;
+	struct vbyone_config_s *vx1_conf;
+	struct dsi_config_s *dsi_conf;
 
 	pconf = lcd_drv->lcd_config;
 	switch (buf[0]) {
@@ -1558,6 +1562,118 @@ static ssize_t lcd_debug_change_store(struct class *class,
 				LCDERR("invalid data\n");
 				return -EINVAL;
 			}
+		}
+		break;
+	case 't':
+		ttl_conf = pconf->lcd_control.ttl_config;
+		ret = sscanf(buf, "ttl %d %d %d %d %d",
+			&val[0], &val[1], &val[2], &val[3], &val[4]);
+		if (ret == 5) {
+			ttl_conf->clk_pol = val[0];
+			ttl_conf->sync_valid = ((val[1] << 1) | val[2]);
+			ttl_conf->swap_ctrl = ((val[3] << 1) | val[4]);
+			pr_info("set ttl config:\n"
+	"clk_pol=%d, de_valid=%d, de_valid=%d, rb_swap=%d, bit_swap=%d\n",
+				val[0], val[1], val[2], val[3], val[4]);
+			lcd_debug_change_clk_change(pconf->lcd_timing.lcd_clk);
+			pconf->change_flag = 1;
+		} else {
+			LCDERR("invalid data\n");
+			return -EINVAL;
+		}
+		break;
+	case 'l':
+		lvds_conf = pconf->lcd_control.lvds_config;
+		ret = sscanf(buf, "lvds %d %d %d %d %d",
+			&val[0], &val[1], &val[2], &val[3], &val[4]);
+		if (ret == 5) {
+			lvds_conf->lvds_repack = val[0];
+			lvds_conf->dual_port = val[1];
+			lvds_conf->pn_swap = val[2];
+			lvds_conf->port_swap = val[3];
+			lvds_conf->lane_reverse = val[4];
+			pr_info("set lvds config:\n"
+	"repack=%d, dual_port=%d, pn_swap=%d, port_swap=%d, lane_reverse=%d\n",
+				lvds_conf->lvds_repack, lvds_conf->dual_port,
+				lvds_conf->pn_swap, lvds_conf->port_swap,
+				lvds_conf->lane_reverse);
+			lcd_debug_change_clk_change(pconf->lcd_timing.lcd_clk);
+			pconf->change_flag = 1;
+		} else if (ret == 4) {
+			lvds_conf->lvds_repack = val[0];
+			lvds_conf->dual_port = val[1];
+			lvds_conf->pn_swap = val[2];
+			lvds_conf->port_swap = val[3];
+			pr_info("set lvds config:\n"
+			"repack=%d, dual_port=%d, pn_swap=%d, port_swap=%d\n",
+				lvds_conf->lvds_repack, lvds_conf->dual_port,
+				lvds_conf->pn_swap, lvds_conf->port_swap);
+			lcd_debug_change_clk_change(pconf->lcd_timing.lcd_clk);
+			pconf->change_flag = 1;
+		} else {
+			LCDERR("invalid data\n");
+			return -EINVAL;
+		}
+		break;
+	case 'v':
+		vx1_conf = pconf->lcd_control.vbyone_config;
+		ret = sscanf(buf, "vbyone %d %d %d %d",
+			&val[0], &val[1], &val[2], &val[3]);
+		if (ret == 4 || ret == 3) {
+			vx1_conf->lane_count = val[0];
+			vx1_conf->region_num = val[1];
+			vx1_conf->byte_mode = val[2];
+			pr_info("set vbyone config:\n"
+				"lane_count=%d, region_num=%d, byte_mode=%d\n",
+				vx1_conf->lane_count, vx1_conf->region_num,
+				vx1_conf->byte_mode);
+			lcd_debug_change_clk_change(pconf->lcd_timing.lcd_clk);
+			pconf->change_flag = 1;
+		} else {
+			LCDERR("invalid data\n");
+			return -EINVAL;
+		}
+		break;
+	case 'm':
+		dsi_conf = pconf->lcd_control.mipi_config;
+		ret = sscanf(buf, "mipi %d %d %d %d %d %d %d %d",
+			&val[0], &val[1], &val[2], &val[3],
+			&val[4], &val[5], &val[6], &val[7]);
+		if (ret == 8) {
+			dsi_conf->lane_num = (unsigned char)val[0];
+			dsi_conf->bit_rate_max = val[1];
+			dsi_conf->factor_numerator = val[2];
+			dsi_conf->operation_mode_init = (unsigned char)val[3];
+			dsi_conf->operation_mode_display =
+				(unsigned char)val[4];
+			dsi_conf->video_mode_type = (unsigned char)val[5];
+			dsi_conf->clk_always_hs = (unsigned char)val[6];
+			dsi_conf->phy_switch = (unsigned char)val[7];
+			pr_info("change mipi_dsi config:\n"
+			"lane_num=%d, bit_rate_max=%dMhz, factor_numerator=%d\n"
+			"operation_mode_init=%d, operation_mode_display=%d\n"
+			"video_mode_type=%d, clk_always_hs=%d, phy_switch=%d\n",
+				dsi_conf->lane_num,
+				dsi_conf->bit_rate_max,
+				dsi_conf->factor_numerator,
+				dsi_conf->operation_mode_init,
+				dsi_conf->operation_mode_display,
+				dsi_conf->video_mode_type,
+				dsi_conf->clk_always_hs,
+				dsi_conf->phy_switch);
+			lcd_debug_change_clk_change(pconf->lcd_timing.lcd_clk);
+			pconf->change_flag = 1;
+		} else {
+			LCDERR("invalid data\n");
+			return -EINVAL;
+		}
+		break;
+	case 'u': /* update */
+		if (pconf->change_flag) {
+			LCDPR("apply config changing\n");
+			lcd_debug_config_update();
+		} else {
+			LCDPR("config is no changing\n");
 		}
 		break;
 	default:
@@ -2122,10 +2238,10 @@ static ssize_t lcd_debug_reg_store(struct class *class,
 			bus = 3;
 		} else if (buf[1] == 'm') {
 			if (buf[2] == 'h') { /* mipi host */
-				ret = sscanf(buf, "dmh %x %x", &reg32, &data32);
+				ret = sscanf(buf, "dmh %x %d", &reg32, &data32);
 				bus = 4;
 			} else if (buf[2] == 'p') { /* mipi phy */
-				ret = sscanf(buf, "dmp %x %x", &reg32, &data32);
+				ret = sscanf(buf, "dmp %x %d", &reg32, &data32);
 				bus = 5;
 			}
 		}
