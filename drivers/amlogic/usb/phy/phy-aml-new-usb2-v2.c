@@ -134,20 +134,23 @@ static int amlogic_new_usb2_init(struct usb_phy *x)
 		}
 
 		writel(reg0.d32, u2p_aml_regs.u2p_r_v2[0]);
+	}
 
-		udelay(10);
-		amlogic_new_usbphy_reset_phycfg_v2(phy, i);
-		udelay(50);
-#if 0
+	udelay(10);
+	amlogic_new_usbphy_reset_phycfg_v2(phy, phy->portnum);
+	udelay(50);
+
+	for (i = 0; i < phy->portnum; i++) {
+		for (j = 0; j < 2; j++) {
+			u2p_aml_regs.u2p_r_v2[j] = (void __iomem	*)
+				((unsigned long)phy->regs + i*PHY_REGISTER_SIZE
+				+ 4 * j);
+		}
 		/* ID DETECT: usb2_otg_aca_en set to 0 */
 		/* usb2_otg_iddet_en set to 1 */
 		writel(readl(phy->phy_cfg[i] + 0x54) & (~(1 << 2)),
 			(phy->phy_cfg[i] + 0x54));
-		if (i == 1) {
-			writel((readl(phy->phy_cfg[i] + 0x50) | (1 << 0)),
-				(phy->phy_cfg[i] + 0x50));
-		}
-#endif
+
 		reg1.d32 = readl(u2p_aml_regs.u2p_r_v2[1]);
 		cnt = 0;
 		while (reg1.b.phy_rdy != 1) {
