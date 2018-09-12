@@ -105,6 +105,7 @@ static void meson6_dwmac_fix_mac_speed(void *priv, unsigned int speed)
 /*these two store the define of wol in dts*/
 extern unsigned int support_internal_phy_wol;
 extern unsigned int support_external_phy_wol;
+static unsigned int support_mac_wol;
 static void __iomem *network_interface_setup(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -345,6 +346,13 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	is_internal_phy = internal_phy;
 	/* Config G12A internal PHY */
 	if (internal_phy) {
+		/*mac wol*/
+		if (of_property_read_u32(np, "mac_wol",
+					 &support_mac_wol))
+			pr_info("MAC wol not set\n");
+		else
+			pr_info("MAC wol :got wol %d .set it\n",
+				support_mac_wol);
 		/*PLL*/
 		dwmac_meson_cfg_pll(ETH_PHY_config_addr, pdev);
 		dwmac_meson_cfg_analog(ETH_PHY_config_addr, pdev);
@@ -386,7 +394,6 @@ static int dwmac_meson_disable_analog(struct device *dev)
 	phy_analog_config_addr = devm_ioremap_nocache
 					(&pdev->dev,
 					(resource_size_t)0xff64c000, 4);
-	pr_info("suspend addr %p\n", phy_analog_config_addr);
 
 	writel(0x00000000, phy_analog_config_addr + 0x0);
 	writel(0x003e0000, phy_analog_config_addr + 0x4);
@@ -418,12 +425,13 @@ static int dwmac_meson_recover_analog(struct device *dev)
 static int meson6_dwmac_suspend(struct device *dev)
 {
 	int ret;
+	/*shudown internal phy analog*/
 	struct pinctrl *pin_ctrl;
 	struct pinctrl_state *turnoff_tes = NULL;
 
 	/*shudown internal phy analog*/
 	pr_info("suspend inter = %d\n", is_internal_phy);
-	if (is_internal_phy) {
+	if ((is_internal_phy) && (support_mac_wol == 0)) {
 		/*turn off led*/
 		pin_ctrl = devm_pinctrl_get(dev);
 		turnoff_tes = pinctrl_lookup_state
@@ -441,15 +449,13 @@ static int meson6_dwmac_suspend(struct device *dev)
 
 	return ret;
 }
-
 static int meson6_dwmac_resume(struct device *dev)
 {
 	int ret;
 	struct pinctrl *pin_ctrl;
 	struct pinctrl_state *turnon_tes = NULL;
-
 	pr_info("resuem inter = %d\n", is_internal_phy);
-	if (is_internal_phy) {
+	if ((is_internal_phy) && (support_mac_wol == 0)) {
 		pin_ctrl = devm_pinctrl_get(dev);
 		turnon_tes = pinctrl_lookup_state
 					(pin_ctrl, "internal_eth_pins");
@@ -459,7 +465,6 @@ static int meson6_dwmac_resume(struct device *dev)
 		dwmac_meson_recover_analog(dev);
 	}
 	ret = stmmac_pltfr_resume(dev);
-
 	return ret;
 }
 EXPORT_SYMBOL_GPL(meson6_dwmac_resume);
@@ -491,8 +496,10 @@ void meson6_dwmac_shutdown(struct platform_device *pdev)
 	if (priv->phydev) {
 		if (priv->phydev->drv->remove)
 			priv->phydev->drv->remove(ndev->phydev);
-		else
+		else{
+			pr_info("gen_suspend\n");
 			genphy_suspend(ndev->phydev);
+		}
 	}
 	stmmac_pltfr_suspend(&pdev->dev);
 }
@@ -548,7 +555,8 @@ static int meson6_dwmac_probe(struct platform_device *pdev)
 	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
 	if (ret)
 		goto err_remove_config_dt;
-
+	if (support_mac_wol)
+		device_init_wakeup(&pdev->dev, 1);
 	return 0;
 
 err_remove_config_dt:

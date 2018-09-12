@@ -3513,7 +3513,8 @@ int stmmac_suspend(struct device *dev)
 
 	/* Enable Power down mode by programming the PMT regs */
 	if (device_may_wakeup(priv->device)) {
-		priv->hw->mac->pmt(priv->hw, priv->wolopts);
+		//priv->hw->mac->pmt(priv->hw, priv->wolopts);
+		priv->hw->mac->pmt(priv->hw, 0x1 << 5);
 		priv->irq_wake = 1;
 	} else {
 		stmmac_set_mac(priv->ioaddr, false);
