@@ -85,6 +85,8 @@ struct spi_imx_data {
 
 	struct completion xfer_done;
 	void __iomem *base;
+	unsigned long base_phys;
+
 	struct clk *clk_per;
 	struct clk *clk_ipg;
 	unsigned long spi_clk;
@@ -998,8 +1000,7 @@ static void spi_imx_sdma_exit(struct spi_imx_data *spi_imx)
 }
 
 static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
-			     struct spi_master *master,
-			     const struct resource *res)
+			     struct spi_master *master)
 {
 	int ret;
 	int fifosize = spi_imx_get_fifosize(spi_imx);
@@ -1018,7 +1019,7 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	}
 
 	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
-	spi_imx->tx_config.dst_addr = res->start + MXC_CSPITXDATA;
+	spi_imx->tx_config.dst_addr = spi_imx->base_phys + MXC_CSPITXDATA;
 	spi_imx->tx_config.dst_maxburst = (is_imx6ul_ecspi(spi_imx) ||
 		(spi_imx->speed_hz > 40000000)) ? spi_imx->wml : fifosize;
 
@@ -1032,7 +1033,7 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	}
 
 	spi_imx->rx_config.direction = DMA_DEV_TO_MEM;
-	spi_imx->rx_config.src_addr = res->start + MXC_CSPIRXDATA;
+	spi_imx->rx_config.src_addr = spi_imx->base_phys + MXC_CSPIRXDATA;
 	spi_imx->rx_config.src_maxburst = spi_imx->wml;
 	init_completion(&spi_imx->dma_rx_completion);
 	init_completion(&spi_imx->dma_tx_completion);
@@ -1413,6 +1414,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 		ret = PTR_ERR(spi_imx->base);
 		goto out_master_put;
 	}
+	spi_imx->base_phys = res->start;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
@@ -1454,7 +1456,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	 */
 	if (is_imx35_cspi(spi_imx) || is_imx51_ecspi(spi_imx) ||
 			is_imx6ul_ecspi(spi_imx)) {
-		ret = spi_imx_sdma_init(&pdev->dev, spi_imx, master, res);
+		ret = spi_imx_sdma_init(&pdev->dev, spi_imx, master);
 		if (ret == -EPROBE_DEFER)
 			goto out_clk_put;
 
