@@ -7452,10 +7452,12 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 {
 	u32 idx, data32;
 	int err_num = 0;
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	int i = 0;
 
 	for (i = 0 ; i < HW_OSD_COUNT; i++)
 		displayed_bufs[i] = NULL;
+#endif
 
 	osd_hw.fb_drvier_probe = osd_probe;
 
