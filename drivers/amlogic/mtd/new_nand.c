@@ -452,7 +452,7 @@ int aml_nand_slcprog_1ynm_hynix(struct mtd_info *mtd,
 		aml_oob_ops.ooboffs = 0;/*fixme! all layout offs is zero*/
 		aml_oob_ops.datbuf = data_buf;
 		aml_oob_ops.oobbuf = oob_buf;
-		op_add = (loff_t)(next_msb_page*mtd->writesize);
+		op_add = ((loff_t)next_msb_page*mtd->writesize);
 		mtd->_write_oob(mtd, op_add, &aml_oob_ops);
 		pr_info("Eneter 1y nm SLC mode ,must fill 0xff data into %d\n",
 			next_msb_page);
@@ -464,7 +464,7 @@ int aml_nand_slcprog_1ynm_hynix(struct mtd_info *mtd,
 	aml_oob_ops.ooboffs = 0;/*fixme! all layout offs is zero*/
 	aml_oob_ops.datbuf = buf;
 	aml_oob_ops.oobbuf = oob_buf;
-	op_add = (loff_t)(op_page_add*mtd->writesize);
+	op_add = ((loff_t)op_page_add*mtd->writesize);
 	error = mtd->_write_oob(mtd, op_add, &aml_oob_ops);
 	pr_info("Eneter 1y nm SLC mode ,write systerm data into %d\n",
 		op_page_add);

@@ -144,11 +144,12 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 	struct aml_nand_platform *plat = aml_chip->platform;
 	unsigned char *data_buf;
 	int32_t read_cnt, page, pages_per_blk;
-	loff_t addr, offset;
+	loff_t addr;
 	int  start_blk = 0, total_blk = 0, bad_blk_cnt = 0, phys_erase_shift;
 	int realpage, col0_data = 0, col0_oob = 0, valid_page_num = 1;
 	int col_data_sandisk[6] = {0}, bad_sandisk_flag = 0;
 	int i, j;
+	uint32_t offset;
 
 	if (!mtd->erasesize)
 		return -EINVAL;
@@ -166,8 +167,8 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 		memset(&aml_chip->nand_bbt_info->nand_bbt[0],
 			0, MAX_BAD_BLK_NUM);
 		if (nand_boot_flag)
-			offset =
-			(loff_t)(1024 * mtd->writesize / aml_chip->plane_num);
+			offset = (1024 * mtd->writesize /
+			aml_chip->plane_num);
 		else
 			offset = 0;
 
@@ -185,9 +186,9 @@ int aml_nand_scan_shipped_bbt(struct mtd_info *mtd)
 		/* if (aml_chip->valid_chip[i]) { */
 		for (read_cnt = 0; read_cnt < 2; read_cnt++) {
 			if (aml_chip->mfr_type  == NAND_MFR_SANDISK) {
-				addr = offset + read_cnt*mtd->writesize;
+				addr = (loff_t)offset + read_cnt*mtd->writesize;
 			} else
-				addr = offset +
+				addr = (loff_t)offset +
 			(pages_per_blk - 1) * read_cnt * mtd->writesize;
 
 			realpage = (int)(addr >> chip->page_shift);

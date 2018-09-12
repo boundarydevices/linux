@@ -343,10 +343,15 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 	uint64_t start_blk = 0, part_blk = 0;
 	loff_t offset;
 	int phys_erase_shift, error = 0;
+	int plane_num_shift = 0;
 
 	if (!mtd->erasesize)
 		return -EINVAL;
 	phys_erase_shift = fls(mtd->erasesize) - 1;
+
+	if (!aml_chip->plane_num)
+		return -EINVAL;
+	plane_num_shift = fls(aml_chip->plane_num) - 1;
 #endif
 
 	parts = plat->platform_nand_data.chip.partitions;
@@ -370,9 +375,8 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 			return -ENOMEM;
 		}
 		if (nand_boot_flag)
-			adjust_offset =
-			(loff_t)(1024 * mtd->writesize /
-			aml_chip->plane_num);
+			adjust_offset = (1024 * ((loff_t)mtd->writesize) >>
+			plane_num_shift);
 		bl_mode = aml_chip->bl_mode;
 		if (bl_mode == NAND_FIPMODE_DISCRETE) {
 			/* descrete bootloader mode */

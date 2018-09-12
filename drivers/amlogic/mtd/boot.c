@@ -183,7 +183,7 @@ int m3_nand_boot_erase_cmd(struct mtd_info *mtd, int page)
 	struct nand_chip *chip = mtd->priv;
 	loff_t ofs;
 
-	ofs = (loff_t)(page << chip->page_shift);
+	ofs = ((loff_t)page << chip->page_shift);
 
 	if (chip->block_bad(mtd, ofs))
 		return -1;
@@ -337,7 +337,7 @@ int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd,
 	read_page = page;
 	read_page++;
 READ_BAD_BLOCK:
-	ofs = (uint64_t)(read_page << chip->page_shift);
+	ofs = ((uint64_t)read_page << chip->page_shift);
 	tmp = ofs;
 	div_u64_rem(tmp, mtd->erasesize, &remainder);
 	if (!remainder) {
@@ -592,7 +592,7 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 		write_page++;
 
 WRITE_BAD_BLOCK:
-	ofs = (uint64_t)(write_page << chip->page_shift);
+	ofs = ((uint64_t)write_page << chip->page_shift);
 	tmp = ofs;
 	div_u64_rem(tmp, mtd->erasesize, &remainder);
 	if (!remainder) {
