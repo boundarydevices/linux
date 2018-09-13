@@ -512,15 +512,9 @@ static void mx51_ecspi_trigger(struct spi_imx_data *spi_imx)
 {
 	u32 reg;
 
-	if (spi_imx->usedma) {
-		reg = readl(spi_imx->base + MX51_ECSPI_DMA);
-		reg |= MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN;
-		writel(reg, spi_imx->base + MX51_ECSPI_DMA);
-	} else {
-		reg = readl(spi_imx->base + MX51_ECSPI_CTRL);
-		reg |= MX51_ECSPI_CTRL_XCH;
-		writel(reg, spi_imx->base + MX51_ECSPI_CTRL);
-	}
+	reg = readl(spi_imx->base + MX51_ECSPI_CTRL);
+	reg |= MX51_ECSPI_CTRL_XCH;
+	writel(reg, spi_imx->base + MX51_ECSPI_CTRL);
 }
 
 static void mx51_disable_dma(struct spi_imx_data *spi_imx)
@@ -615,6 +609,13 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 
 	/* set chip select to use */
 	ctrl |= MX51_ECSPI_CTRL_CS(spi->chip_select);
+
+	/*
+	 * To workaround ERR009165, SDMA script needs to use XCH instead of SMC
+	 * just like PIO mode and it is fixed on i.mx6ul
+	 */
+	if (spi_imx->usedma && spi_imx->devtype_data->tx_glitch_fixed)
+		ctrl |= MX51_ECSPI_CTRL_SMC;
 
 	/*
 	 * The ctrl register must be written first, with the EN bit set other
@@ -1481,6 +1482,7 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	int burst;
 	int width;
 	int ret;
+	u32 reg;
 
 	if (max && transfer->len > max && spi_imx->slave_mode) {
 		dev_err(spi_imx->dev, "Transaction too big, max size is %d bytes\n",
@@ -1578,9 +1580,11 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	dma_async_issue_pending(controller->dma_tx);
 
 	if (!spi_imx->slave_mode) {
-		spi_imx->devtype_data->trigger(spi_imx);
-
 		transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
+
+		reg = readl(spi_imx->base + MX51_ECSPI_DMA);
+		reg |= MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN;
+		writel(reg, spi_imx->base + MX51_ECSPI_DMA);
 
 		/* Wait SDMA to finish the data transfer.*/
 		timeout = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
