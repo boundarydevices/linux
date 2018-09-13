@@ -1235,6 +1235,22 @@ spi_imx_unprepare_message(struct spi_master *master, struct spi_message *msg)
 	return 0;
 }
 
+static int get_default_speed(struct device_node *np)
+{
+	struct device_node *nc;
+	int speed_hz;
+
+	if (np) {
+		for_each_available_child_of_node(np, nc) {
+			int ret = of_property_read_u32(nc, "spi-max-frequency", &speed_hz);
+
+			if (ret >= 0)
+				return speed_hz;
+		}
+	}
+	return 20000000;
+}
+
 static int spi_imx_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -1246,6 +1262,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	struct spi_imx_data *spi_imx;
 	struct resource *res;
 	int i, ret, num_cs, irq, idle_state, spi_drctl;
+	u32 speed_hz;
 
 	if (!np && !mxc_platform_info) {
 		dev_err(&pdev->dev, "can't get the platform data\n");
@@ -1261,6 +1278,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 		/* '11' is reserved */
 		spi_drctl = 0;
 	}
+	speed_hz = get_default_speed(np);
 
 	platform_set_drvdata(pdev, master);
 
@@ -1271,6 +1289,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
 	num_cs = of_gpio_named_count(np, "cs-gpios");
+	spi_imx->speed_hz = speed_hz;
 
 	ret = of_property_read_u32(np, "idle-state", &idle_state);
 	if (ret >= 0) {
