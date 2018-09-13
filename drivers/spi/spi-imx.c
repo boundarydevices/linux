@@ -1647,6 +1647,22 @@ static int spi_imx_slave_abort(struct spi_master *master)
 	return 0;
 }
 
+static int get_default_speed(struct device_node *np)
+{
+	struct device_node *nc;
+	int speed_hz;
+
+	if (np) {
+		for_each_available_child_of_node(np, nc) {
+			int ret = of_property_read_u32(nc, "spi-max-frequency", &speed_hz);
+
+			if (ret >= 0)
+				return speed_hz;
+		}
+	}
+	return 20000000;
+}
+
 static int spi_imx_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -1658,6 +1674,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	struct spi_imx_data *spi_imx;
 	struct resource *res;
 	int i, ret, irq, spi_drctl, num_cs, idle_state, spi_drctl;
+	u32 speed_hz;
 	const struct spi_imx_devtype_data *devtype_data = of_id ? of_id->data :
 		(struct spi_imx_devtype_data *)pdev->id_entry->driver_data;
 	bool slave_mode;
@@ -1689,6 +1706,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 		/* '11' is reserved */
 		spi_drctl = 0;
 	}
+	speed_hz = get_default_speed(np);
 
 	platform_set_drvdata(pdev, master);
 
@@ -1709,6 +1727,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
 	spi_imx->slave_mode = slave_mode;
+	spi_imx->speed_hz = speed_hz;
 
 	ret = of_property_read_u32(np, "idle-state", &idle_state);
 	if (ret >= 0) {
