@@ -236,7 +236,7 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 	if (transfer->len < spi_imx->wml * bytes_per_word)
 		return false;
 
-	if (transfer->len % (spi_imx->wml * bytes_per_word))
+	if (transfer->len % (spi_imx_get_fifosize(spi_imx) * bytes_per_word))
 		return false;
 
 	return true;
@@ -347,7 +347,7 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	u32 clk = spi_imx->speed_hz, delay, reg;
 	u32 cfg = readl(spi_imx->base + MX51_ECSPI_CONFIG);
 	u32 bits = spi_imx->bits_per_word;
-	int tx_wml = 0;
+	int tx_wml;
 
 	/*
 	 * The hardware seems to have a race condition when changing modes. The
@@ -449,14 +449,19 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	 * Configure the DMA register: setup the watermark
 	 * and enable DMA request.
 	 */
-	if (!cspi_quirk(spi_imx, QUIRK_ERR009165))
-		tx_wml = spi_imx->wml / 2;
+	/*
+	 * work around for
+	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
+	 * FIFO transfer to be sent twice
+	 */
+	tx_wml = !cspi_quirk(spi_imx, QUIRK_ERR009165) ?
+		spi_imx_get_fifosize(spi_imx) - spi_imx->tx_config.dst_maxburst :
+		0;
 
-	writel(MX51_ECSPI_DMA_RX_WML(spi_imx->wml) |
+	writel(MX51_ECSPI_DMA_RX_WML(spi_imx->wml - 1) |
 		MX51_ECSPI_DMA_TX_WML(tx_wml) |
-		MX51_ECSPI_DMA_RXT_WML(spi_imx->wml) |
-		MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN |
-		MX51_ECSPI_DMA_RXTDEN, spi_imx->base + MX51_ECSPI_DMA);
+		MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN,
+		spi_imx->base + MX51_ECSPI_DMA);
 
 	return 0;
 }
@@ -962,7 +967,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
 	 * FIFO transfer to be sent twice
 	 */
-	burst = (spi_imx->speed_hz > 40000000) ?
+	burst = (!cspi_quirk(spi_imx, QUIRK_ERR009165) || (spi_imx->speed_hz > 40000000)) ?
 			spi_imx->wml : spi_imx_get_fifosize(spi_imx);
 	spi_imx->rx_config.src_addr_width = width;
 	spi_imx->tx_config.dst_addr_width = width;
@@ -1009,8 +1014,9 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 			     struct spi_master *master)
 {
 	int ret;
+	int fifosize = spi_imx_get_fifosize(spi_imx);
 
-	spi_imx->wml = spi_imx_get_fifosize(spi_imx) / 2;
+	spi_imx->wml = fifosize / 2;
 
 	/* Prepare for TX DMA: */
 	master->dma_tx = dma_request_slave_channel_reason(dev, "tx");
@@ -1023,7 +1029,8 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 
 	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
 	spi_imx->tx_config.dst_addr = spi_imx->base_phys + MXC_CSPITXDATA;
-	spi_imx->tx_config.dst_maxburst = spi_imx->wml / 2;
+	spi_imx->tx_config.dst_maxburst = (!cspi_quirk(spi_imx, QUIRK_ERR009165) ||
+		(spi_imx->speed_hz > 40000000)) ? spi_imx->wml : fifosize;
 
 	/* Prepare for RX : */
 	master->dma_rx = dma_request_slave_channel_reason(dev, "rx");
