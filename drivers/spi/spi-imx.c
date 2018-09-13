@@ -1063,7 +1063,7 @@ static const struct of_device_id spi_imx_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, spi_imx_dt_ids);
 
 static void spi_imx_chip_select(struct spi_imx_data *spi_imx, int is_active,
-		int *cs, int chip_select, int mode, int set_direction)
+		int chip_select, int mode, int set_direction)
 {
 	int gpio;
 	int active = is_active != BITBANG_CS_INACTIVE;
@@ -1081,7 +1081,7 @@ static void spi_imx_chip_select(struct spi_imx_data *spi_imx, int is_active,
 		while (change) {
 			i = active ? __ffs(change) : __fls(change);
 			change &= ~(1 << i);
-			gpio = cs[i];
+			gpio = spi_imx->bitbang.master->cs_gpios[i];
 			val = (chip_select >> i) & 1;
 			if (set_direction)
 				gpio_direction_output(gpio, val);
@@ -1089,7 +1089,7 @@ static void spi_imx_chip_select(struct spi_imx_data *spi_imx, int is_active,
 				gpio_set_value(gpio, val);
 		}
 	} else {
-		gpio = cs[chip_select];
+		gpio = spi_imx->bitbang.master->cs_gpios[chip_select];
 		if (!gpio_is_valid(gpio))
 			return;
 
@@ -1103,7 +1103,7 @@ static void spi_imx_chip_select(struct spi_imx_data *spi_imx, int is_active,
 
 static void spi_imx_chipselect(struct spi_device *spi, int is_active)
 {
-	spi_imx_chip_select(spi_master_get_devdata(spi->master), is_active, spi->master->cs_gpios, spi->chip_select, spi->mode, 0);
+	spi_imx_chip_select(spi_master_get_devdata(spi->master), is_active, spi->chip_select, spi->mode, 0);
 }
 
 static void spi_imx_push(struct spi_imx_data *spi_imx)
@@ -1555,7 +1555,7 @@ static int spi_imx_setup(struct spi_device *spi)
 		return 0;
 
 	spi_imx_chip_select(spi_master_get_devdata(spi->master),
-			BITBANG_CS_INACTIVE, spi->master->cs_gpios, spi->chip_select, spi->mode, 1);
+			BITBANG_CS_INACTIVE, spi->chip_select, spi->mode, 1);
 
 	return 0;
 }
@@ -1789,8 +1789,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	if (spi_imx->idle_state_provided) {
 		spi_imx->current_state = ~spi_imx->idle_state &
 			((1 << num_cs) - 1);
-		spi_imx_chip_select(spi_imx, BITBANG_CS_INACTIVE,
-			master->cs_gpios, 0, 0, 1);
+		spi_imx_chip_select(spi_imx, BITBANG_CS_INACTIVE, 0, 0, 1);
 	}
 
 	dev_info(&pdev->dev, "probed\n");
