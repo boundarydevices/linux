@@ -15,7 +15,7 @@
 
 #include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6dl.dtsi"
-#include "imx6qdl-nit6xlite-access.dtsi"
+#include "imx6qdl-nit6xlite.dtsi"
 
 / {
 	model = "Freescale i.MX6 Solo Nit6x-Lite access control Board";
