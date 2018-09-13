@@ -76,6 +76,12 @@ struct spi_imx_devtype_data {
 	int (*rx_available)(struct spi_imx_data *);
 	void (*reset)(struct spi_imx_data *);
 	enum spi_imx_devtype devtype;
+#define QUIRK_HAS_LOOP		1
+#define QUIRK_HAS_READY		2
+#define QUIRK_HAS_DMA		4
+#define QUIRK_ERR009165		8
+	int quirks;
+	int fifo_size;
 };
 
 struct spi_imx_data {
@@ -118,6 +124,11 @@ struct spi_imx_data {
 	int current_state;
 };
 
+static inline int cspi_quirk(struct spi_imx_data *d, int quirk_mask)
+{
+	return d->devtype_data->quirks & quirk_mask;
+}
+
 static inline int is_imx27_cspi(struct spi_imx_data *d)
 {
 	return d->devtype_data->devtype == IMX27_CSPI;
@@ -128,15 +139,9 @@ static inline int is_imx35_cspi(struct spi_imx_data *d)
 	return d->devtype_data->devtype == IMX35_CSPI;
 }
 
-static inline int is_imx51_ecspi(struct spi_imx_data *d)
-{
-	return d->devtype_data->devtype == IMX51_ECSPI ||
-	       d->devtype_data->devtype == IMX6UL_ECSPI;
-}
-
 static inline unsigned spi_imx_get_fifosize(struct spi_imx_data *d)
 {
-	return is_imx51_ecspi(d) ? 64 : 8;
+	return d->devtype_data->fifo_size;
 }
 
 #define MXC_SPI_BUF_RX(type)						\
@@ -408,7 +413,7 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	 * To workaround ERR009165, SDMA script needs to use XCH instead of SMC
 	 * just like PIO mode and it is fixed on i.mx6ul
 	 */
-	if (spi_imx->usedma && (spi_imx->devtype_data->devtype == IMX6UL_ECSPI))
+	if (spi_imx->usedma && !cspi_quirk(spi_imx, QUIRK_ERR009165))
 		ctrl |= MX51_ECSPI_CTRL_SMC;
 
 	/* CTRL register always go first to bring out controller from reset */
@@ -444,7 +449,7 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	 * Configure the DMA register: setup the watermark
 	 * and enable DMA request.
 	 */
-	if (spi_imx->devtype_data->devtype == IMX6UL_ECSPI)
+	if (!cspi_quirk(spi_imx, QUIRK_ERR009165))
 		tx_wml = spi_imx->wml / 2;
 
 	writel(MX51_ECSPI_DMA_RX_WML(spi_imx->wml) |
@@ -724,6 +729,7 @@ static struct spi_imx_devtype_data imx1_cspi_devtype_data = {
 	.rx_available = mx1_rx_available,
 	.reset = mx1_reset,
 	.devtype = IMX1_CSPI,
+	.fifo_size = 8,
 };
 
 static struct spi_imx_devtype_data imx21_cspi_devtype_data = {
@@ -733,6 +739,7 @@ static struct spi_imx_devtype_data imx21_cspi_devtype_data = {
 	.rx_available = mx21_rx_available,
 	.reset = mx21_reset,
 	.devtype = IMX21_CSPI,
+	.fifo_size = 8,
 };
 
 static struct spi_imx_devtype_data imx27_cspi_devtype_data = {
@@ -743,6 +750,7 @@ static struct spi_imx_devtype_data imx27_cspi_devtype_data = {
 	.rx_available = mx21_rx_available,
 	.reset = mx21_reset,
 	.devtype = IMX27_CSPI,
+	.fifo_size = 8,
 };
 
 static struct spi_imx_devtype_data imx31_cspi_devtype_data = {
@@ -752,6 +760,7 @@ static struct spi_imx_devtype_data imx31_cspi_devtype_data = {
 	.rx_available = mx31_rx_available,
 	.reset = mx31_reset,
 	.devtype = IMX31_CSPI,
+	.fifo_size = 8,
 };
 
 static struct spi_imx_devtype_data imx35_cspi_devtype_data = {
@@ -762,6 +771,8 @@ static struct spi_imx_devtype_data imx35_cspi_devtype_data = {
 	.rx_available = mx31_rx_available,
 	.reset = mx31_reset,
 	.devtype = IMX35_CSPI,
+	.quirks = QUIRK_HAS_LOOP | QUIRK_HAS_READY | QUIRK_HAS_DMA | QUIRK_ERR009165,
+	.fifo_size = 8,
 };
 
 static struct spi_imx_devtype_data imx51_ecspi_devtype_data = {
@@ -771,6 +782,8 @@ static struct spi_imx_devtype_data imx51_ecspi_devtype_data = {
 	.rx_available = mx51_ecspi_rx_available,
 	.reset = mx51_ecspi_reset,
 	.devtype = IMX51_ECSPI,
+	.quirks = QUIRK_HAS_LOOP | QUIRK_HAS_READY | QUIRK_HAS_DMA | QUIRK_ERR009165,
+	.fifo_size = 64,
 };
 
 static struct spi_imx_devtype_data imx6ul_ecspi_devtype_data = {
@@ -780,6 +793,8 @@ static struct spi_imx_devtype_data imx6ul_ecspi_devtype_data = {
 	.rx_available = mx51_ecspi_rx_available,
 	.reset = mx51_ecspi_reset,
 	.devtype = IMX6UL_ECSPI,
+	.quirks = QUIRK_HAS_LOOP | QUIRK_HAS_READY | QUIRK_HAS_DMA,
+	.fifo_size = 64,
 };
 
 static const struct platform_device_id spi_imx_devtype[] = {
@@ -1321,8 +1336,10 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master->prepare_message = spi_imx_prepare_message;
 	spi_imx->bitbang.master->unprepare_message = spi_imx_unprepare_message;
 	spi_imx->bitbang.master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
-	if (is_imx35_cspi(spi_imx) || is_imx51_ecspi(spi_imx))
-		spi_imx->bitbang.master->mode_bits |= SPI_LOOP | SPI_READY;
+	if (cspi_quirk(spi_imx, QUIRK_HAS_LOOP))
+		spi_imx->bitbang.master->mode_bits |= SPI_LOOP;
+	if (cspi_quirk(spi_imx, QUIRK_HAS_READY))
+		spi_imx->bitbang.master->mode_bits |= SPI_READY;
 
 	spi_imx->spi_drctl = spi_drctl;
 
@@ -1374,7 +1391,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	 * Only validated on i.mx35 and i.mx6 now, can remove the constraint
 	 * if validated on other chips.
 	 */
-	if (is_imx35_cspi(spi_imx) || is_imx51_ecspi(spi_imx)) {
+	if (cspi_quirk(spi_imx, QUIRK_HAS_DMA)) {
 		ret = spi_imx_sdma_init(&pdev->dev, spi_imx, master);
 		if (ret == -EPROBE_DEFER)
 			goto out_clk_put;
