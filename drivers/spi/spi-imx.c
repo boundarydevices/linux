@@ -1358,7 +1358,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, master);
 
 	master->bits_per_word_mask = SPI_BPW_RANGE_MASK(1, 32);
-	master->bus_num = pdev->id;
+	master->bus_num = np ? -1 : pdev->id;
 
 	spi_imx = spi_master_get_devdata(master);
 	spi_imx->bitbang.master = master;
