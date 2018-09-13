@@ -470,9 +470,11 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	dev_info(cpu_dev, "%s: CPU %d initialized\n", __func__, policy->cpu);
 	return ret;
 free_opp_table:
-	if (policy->freq_table != NULL)
+	if (policy->freq_table != NULL) {
 		dev_pm_opp_free_cpufreq_table(cpu_dev,
 			&freq_table[cur_cluster]);
+		dev_pm_opp_of_cpumask_remove_table(policy->related_cpus);
+	}
 free_reg:
 	if (!IS_ERR(cpu_reg))
 		devm_regulator_put(cpu_reg);
@@ -513,7 +515,11 @@ static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 		return -ENODEV;
 	}
 
-	dev_pm_opp_free_cpufreq_table(cpu_dev, &freq_table[cur_cluster]);
+	if (policy->freq_table != NULL) {
+		dev_pm_opp_free_cpufreq_table(cpu_dev,
+			&freq_table[cur_cluster]);
+		dev_pm_opp_of_cpumask_remove_table(policy->related_cpus);
+	}
 	dev_dbg(cpu_dev, "%s: Exited, cpu: %d\n", __func__, policy->cpu);
 	kfree(cpufreq_data);
 
@@ -523,7 +529,7 @@ static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 static int meson_cpufreq_suspend(struct cpufreq_policy *policy)
 {
 
-		return cpufreq_generic_suspend(policy);
+	return cpufreq_generic_suspend(policy);
 }
 
 static int meson_cpufreq_resume(struct cpufreq_policy *policy)
@@ -549,7 +555,6 @@ static struct cpufreq_driver meson_cpufreq_driver = {
 
 static int meson_cpufreq_register_notifier(void) { return 0; }
 static int meson_cpufreq_unregister_notifier(void) { return 0; }
-
 static int meson_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device *cpu_dev;
