@@ -168,19 +168,19 @@ usage_example()
 	echo -e "\033[32;1m  $PRGNAME\033[0m\n"
 
 	echo -e "  # build kernel using defconfig <meson64_defconfig>\c"
-	echo -e " specified by the option -k"
-	echo -e "\033[32;1m  $PRGNAME -k meson64_defconfig\033[0m\n"
+	echo -e " specified by the option -c"
+	echo -e "\033[32;1m  $PRGNAME -c meson64_defconfig\033[0m\n"
 
-	echo -e "  # build all dtb for the board with prefix or suffix\c"
-	echo -e " <p320> specified by the option -d"
-	echo -e "\033[32;1m  $PRGNAME -d p320\033[0m\n"
+	echo -e "  # build all dtb for the board with prefix or suffix <p320>\c"
+	echo -e " specified by the option -b"
+	echo -e "\033[32;1m  $PRGNAME -b p320\033[0m\n"
 
-	echo -e "  # build all dtb for the chip with prefix <txl> specified\c"
-	echo -e " by the option -p"
+	echo -e "  # build all dtb for the chip with prefix <txl>\c"
+	echo -e " specified by the option -p"
 	echo -e "\033[32;1m  $PRGNAME -p txl\033[0m\n"
 
 	echo -e "  # make distclean and build kernel and dtb"
-	echo -e "\033[32;1m  $PRGNAME -k meson64_defconfig -d p320 -c\033[0m\n"
+	echo -e "\033[32;1m  $PRGNAME -c meson64_defconfig -b p320 -d\033[0m\n"
 }
 
 
@@ -189,19 +189,19 @@ usage_example()
 #
 usage()
 {
-	echo -e "Usage: $PRGNAME [-k def] [-d dts | -p chip] [-c] [-h]\n"
-	echo -e "  -k	specify defconfig with full name"
+	echo -e "Usage: $PRGNAME [-c defconfig] {-f rootfs} [-b dts | -p chip] [-d] [-h]\n"
+	echo -e "  -c	specify defconfig with full name"
 	echo -e "  -f	specify rootfs"
-	echo -e "  -d	specify dts or the prefix or suffix"
-	echo -e "  -p	specify the prefix of dts for the chip"
-	echo -e "  -c	make distclean"
+	echo -e "  -b	specify prefix or suffix of dts for the board"
+	echo -e "  -p	specify prefix of dts for the chip"
+	echo -e "  -d	make distclean"
 	echo -e "  -h	print help summary and examples"
 }
 
 
-while getopts :k:f:d:p:ch opt; do
+while getopts :c:f:b:p:dh opt; do
 	case $opt in
-		k)
+		c)
 			BUILDKERNEL=true
 			find_defconfig ${OPTARG}
 			;;
@@ -210,7 +210,7 @@ while getopts :k:f:d:p:ch opt; do
 			BUILDROOTFS=true
 			find_rootfs ${OPTARG}
 			;;
-		d)
+		b)
 			BUILDDTB=true
 			find_devicetree _${OPTARG}
 			;;
@@ -218,7 +218,7 @@ while getopts :k:f:d:p:ch opt; do
 			BUILDDTB=true
 			find_devicetree ${OPTARG}_
 			;;
-		c)
+		d)
 			DISTCLEAN=true
 			;;
 		h)
@@ -234,13 +234,18 @@ while getopts :k:f:d:p:ch opt; do
 			;;
 		:)
 			case $OPTARG in
-				k)
-					echo "missing argument to -k"
+				c)
+					echo "missing argument to -c"
 					usage
 					exit 1
 					;;
-				d)
-					echo "missing argument to -d"
+				f)
+					echo "missing argument to -f"
+					usage
+					exit 1
+					;;
+				b)
+					echo "missing argument to -b"
 					usage
 					exit 1
 					;;
