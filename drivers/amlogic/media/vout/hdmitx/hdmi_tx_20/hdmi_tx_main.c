@@ -467,7 +467,7 @@ static int set_disp_mode_auto(void)
 		hdev->para = hdmi_get_fmt_name("invalid", hdev->fmt_attr);
 		return -1;
 	}
-	memcpy(mode, info->name, sizeof(mode));
+	strncpy(mode, info->name, sizeof(mode));
 	if (strstr(mode, "fp")) {
 		int i = 0;
 
