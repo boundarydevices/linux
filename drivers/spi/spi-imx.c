@@ -91,6 +91,7 @@ struct spi_imx_data {
 	unsigned long spi_clk;
 	unsigned int spi_bus_clk;
 
+	unsigned int speed_hz;
 	unsigned int bits_per_word;
 	unsigned int len;
 	unsigned int prev_width;
@@ -142,6 +143,11 @@ static inline int is_imx51_ecspi(struct spi_imx_data *d)
 static inline int is_imx53_ecspi(struct spi_imx_data *d)
 {
 	return d->devtype_data->devtype == IMX53_ECSPI;
+}
+
+static inline unsigned spi_imx_get_fifosize(struct spi_imx_data *d)
+{
+	return d->devtype_data->fifo_size;
 }
 
 #define MXC_SPI_BUF_RX(type)						\
@@ -1245,49 +1251,11 @@ static irqreturn_t spi_imx_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int spi_imx_dma_configure(struct spi_master *master)
-{
-	int ret;
-	enum dma_slave_buswidth buswidth;
-	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
-
-	switch (spi_imx_bytes_per_word(spi_imx->bits_per_word)) {
-	case 4:
-		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
-		break;
-	case 2:
-		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
-		break;
-	case 1:
-		buswidth = DMA_SLAVE_BUSWIDTH_1_BYTE;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	spi_imx->tx_config.dst_addr_width = buswidth;
-	ret = dmaengine_slave_config(master->dma_tx, &spi_imx->tx_config);
-	if (ret) {
-		dev_err(spi_imx->dev, "TX dma configuration failed with %d\n", ret);
-		return ret;
-	}
-
-	spi_imx->rx_config.src_addr_width = buswidth;
-	ret = dmaengine_slave_config(master->dma_rx, &spi_imx->rx_config);
-	if (ret) {
-		dev_err(spi_imx->dev, "RX dma configuration failed with %d\n", ret);
-		return ret;
-	}
-
-	return 0;
-}
-
 static int spi_imx_setupxfer(struct spi_device *spi,
 				 struct spi_transfer *t)
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	int bits_per_word;
-	int width;
 
 	if (!t)
 		return 0;
@@ -1299,6 +1267,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 
 	bits_per_word = t->bits_per_word;
 	spi_imx->bits_per_word = bits_per_word;
+	spi_imx->speed_hz  = t->speed_hz;
 	spi_imx->len  = t->len;
 
 	/*
@@ -1319,19 +1288,14 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 		if (bits_per_word <= 8) {
 			spi_imx->rx = spi_imx_buf_rx_u8;
 			spi_imx->tx = spi_imx_buf_tx_u8;
-			width = DMA_SLAVE_BUSWIDTH_1_BYTE;
 		} else if (bits_per_word <= 16) {
 			spi_imx->rx = spi_imx_buf_rx_u16;
 			spi_imx->tx = spi_imx_buf_tx_u16;
-			width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		} else {
 			spi_imx->rx = spi_imx_buf_rx_u32;
 			spi_imx->tx = spi_imx_buf_tx_u32;
-			width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		}
 		spi_imx->dynamic_burst = 0;
-		spi_imx->rx_config.src_addr_width = width;
-		spi_imx->tx_config.dst_addr_width = width;
 	}
 
 	if (is_imx53_ecspi(spi_imx) && spi_imx->slave_mode) {
@@ -1458,6 +1422,9 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	struct sg_table *tx = &transfer->tx_sg, *rx = &transfer->rx_sg;
 	struct scatterlist *last_sg = sg_last(rx->sgl, rx->nents);
 	unsigned int bytes_per_word, i;
+	int bits_per_word = transfer->bits_per_word;
+	int burst;
+	int width;
 	int ret;
 
 	/* Get the right burst length from the last sg to ensure no tail data */
@@ -1472,9 +1439,42 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 
 	spi_imx->wml =  i;
 
-	ret = spi_imx_dma_configure(master);
-	if (ret)
-		return ret;
+	if (bits_per_word <= 8) {
+		width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	} else if (bits_per_word <= 16) {
+		width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	} else {
+		width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	}
+	/*
+	 * Try to improve performance for workaround
+	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
+	 * FIFO transfer to be sent twice
+	 */
+	burst = (spi_imx->speed_hz > 40000000) ?
+			spi_imx->wml : spi_imx_get_fifosize(spi_imx);
+	spi_imx->rx_config.src_addr_width = width;
+	spi_imx->tx_config.dst_addr_width = width;
+
+	if (spi_imx->usedma && (spi_imx->prev_width != width ||
+			spi_imx->tx_config.dst_maxburst != burst)) {
+		spi_imx->prev_width = width;
+		spi_imx->tx_config.dst_maxburst = burst;
+
+		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_rx,
+						&spi_imx->rx_config);
+		if (ret) {
+			dev_err(spi_imx->dev, "error in RX dma configuration.\n");
+			return ret;
+		}
+
+		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_tx,
+						&spi_imx->tx_config);
+		if (ret) {
+			dev_err(spi_imx->dev, "error in TX dma configuration.\n");
+			return ret;
+		}
+	}
 
 	if (!spi_imx->devtype_data->setup_wml) {
 		dev_err(spi_imx->dev, "No setup_wml()?\n");
@@ -1700,6 +1700,22 @@ static int spi_imx_slave_abort(struct spi_master *master)
 	return 0;
 }
 
+static int get_default_speed(struct device_node *np)
+{
+	struct device_node *nc;
+	int speed_hz;
+
+	if (np) {
+		for_each_available_child_of_node(np, nc) {
+			int ret = of_property_read_u32(nc, "spi-max-frequency", &speed_hz);
+
+			if (ret >= 0)
+				return speed_hz;
+		}
+	}
+	return 20000000;
+}
+
 static int spi_imx_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -1712,6 +1728,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	struct resource *res;
 	int i, ret, irq, spi_drctl, num_cs;
 	int idle_state;
+	u32 speed_hz;
 	const struct spi_imx_devtype_data *devtype_data = of_id ? of_id->data :
 		(struct spi_imx_devtype_data *)pdev->id_entry->driver_data;
 	bool slave_mode;
@@ -1737,6 +1754,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 		/* '11' is reserved */
 		spi_drctl = 0;
 	}
+	speed_hz = get_default_speed(np);
 
 	platform_set_drvdata(pdev, master);
 
@@ -1747,6 +1765,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
 	spi_imx->slave_mode = slave_mode;
+	spi_imx->speed_hz = speed_hz;
 
 	num_cs = of_gpio_named_count(np, "cs-gpios");
 	if (num_cs < 0)
