@@ -97,8 +97,6 @@ struct spi_imx_data {
 	unsigned int prev_width;
 	unsigned int spi_drctl;
 
-	unsigned int bytes_per_word;
-
 	unsigned int count;
 	void (*tx)(struct spi_imx_data *);
 	void (*rx)(struct spi_imx_data *);
@@ -911,50 +909,6 @@ static irqreturn_t spi_imx_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int spi_imx_dma_configure(struct spi_master *master,
-				 int bytes_per_word)
-{
-	int ret;
-	enum dma_slave_buswidth buswidth;
-	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
-
-	if (bytes_per_word == spi_imx->bytes_per_word)
-		/* Same as last time */
-		return 0;
-
-	switch (bytes_per_word) {
-	case 4:
-		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
-		break;
-	case 2:
-		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
-		break;
-	case 1:
-		buswidth = DMA_SLAVE_BUSWIDTH_1_BYTE;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	spi_imx->tx_config.dst_addr_width = buswidth;
-	ret = dmaengine_slave_config(master->dma_tx, &spi_imx->tx_config);
-	if (ret) {
-		dev_err(spi_imx->dev, "TX dma configuration failed with %d\n", ret);
-		return ret;
-	}
-
-	spi_imx->rx_config.src_addr_width = buswidth;
-	ret = dmaengine_slave_config(master->dma_rx, &spi_imx->rx_config);
-	if (ret) {
-		dev_err(spi_imx->dev, "RX dma configuration failed with %d\n", ret);
-		return ret;
-	}
-
-	spi_imx->bytes_per_word = bytes_per_word;
-
-	return 0;
-}
-
 static int spi_imx_setupxfer(struct spi_device *spi,
 				 struct spi_transfer *t)
 {
@@ -962,6 +916,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	int bits_per_word;
 	int width;
 	int ret;
+	int burst;
 
 	if (!t)
 		return 0;
@@ -990,15 +945,34 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 		spi_imx->tx = spi_imx_buf_tx_u32;
 		width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	}
-
+	/*
+	 * Try to improve performance for workaround
+	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
+	 * FIFO transfer to be sent twice
+	 */
+	burst = (spi_imx->speed_hz > 40000000) ?
+			spi_imx->wml : spi_imx_get_fifosize(spi_imx);
 	spi_imx->rx_config.src_addr_width = width;
 	spi_imx->tx_config.dst_addr_width = width;
 
-	if (spi_imx->usedma) {
-		ret = spi_imx_dma_configure(spi->master,
-			    spi_imx_bytes_per_word(spi_imx->bits_per_word));
-		if (ret)
+	if (spi_imx->usedma && (spi_imx->prev_width != width ||
+			spi_imx->tx_config.dst_maxburst != burst)) {
+		spi_imx->prev_width = width;
+		spi_imx->tx_config.dst_maxburst = burst;
+
+		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_rx,
+						&spi_imx->rx_config);
+		if (ret) {
+			dev_err(spi_imx->dev, "error in RX dma configuration.\n");
 			return ret;
+		}
+
+		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_tx,
+						&spi_imx->tx_config);
+		if (ret) {
+			dev_err(spi_imx->dev, "error in TX dma configuration.\n");
+			return ret;
+		}
 	}
 	spi_imx->devtype_data->config(spi);
 	return 0;
@@ -1051,8 +1025,6 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	spi_imx->rx_config.direction = DMA_DEV_TO_MEM;
 	spi_imx->rx_config.src_addr = spi_imx->base_phys + MXC_CSPIRXDATA;
 	spi_imx->rx_config.src_maxburst = spi_imx->wml;
-
-	spi_imx_dma_configure(master, 1);
 
 	init_completion(&spi_imx->dma_rx_completion);
 	init_completion(&spi_imx->dma_tx_completion);
