@@ -67,7 +67,7 @@ find_defconfig()
 	def=$(find ${DEFDIR} -name ${1} -type f -print)
 
 	if [ ${cnt} -eq 1 ]; then
-		DEFCOFNIG=$(basename $def)
+		DEFCONFIG=$(basename $def)
 		echo "find defconfig $DEFCONFIG"
 	elif [ ${cnt} -eq 0 ]; then
 		echo "find no defconfig"
