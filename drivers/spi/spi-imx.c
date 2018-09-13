@@ -492,17 +492,10 @@ static void mx51_ecspi_intctrl(struct spi_imx_data *spi_imx, int enable)
 
 static void mx51_ecspi_trigger(struct spi_imx_data *spi_imx)
 {
-	u32 reg = readl(spi_imx->base + MX51_ECSPI_CTRL);
-	/*
-	 * To workaround ERR008517, SDMA script need use XCH instead of SMC
-	 * just like PIO mode and it fix on i.mx6ul
-	 */
-	if (!spi_imx->usedma)
-		reg |= MX51_ECSPI_CTRL_XCH;
-	else if (spi_imx->devtype_data->devtype == IMX6UL_ECSPI)
-		reg |= MX51_ECSPI_CTRL_SMC;
-	else
-		reg &= ~MX51_ECSPI_CTRL_SMC;
+	u32 reg;
+
+	reg = readl(spi_imx->base + MX51_ECSPI_CTRL);
+	reg |= MX51_ECSPI_CTRL_XCH;
 	writel(reg, spi_imx->base + MX51_ECSPI_CTRL);
 }
 
@@ -537,6 +530,13 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 
 	/* set chip select to use */
 	ctrl |= MX51_ECSPI_CTRL_CS(spi->chip_select);
+
+	/*
+	 * To workaround ERR009165, SDMA script needs to use XCH instead of SMC
+	 * just like PIO mode and it is fixed on i.mx6ul
+	 */
+	if (spi_imx->usedma && (spi_imx->devtype_data->devtype == IMX6UL_ECSPI))
+		ctrl |= MX51_ECSPI_CTRL_SMC;
 
 	/*
 	 * The ctrl register must be written first, with the EN bit set other
@@ -1513,8 +1513,6 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	dma_async_issue_pending(master->dma_tx);
 
 	transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
-
-	spi_imx->devtype_data->trigger(spi_imx);
 
 	/* Wait SDMA to finish the data transfer.*/
 	timeout = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
