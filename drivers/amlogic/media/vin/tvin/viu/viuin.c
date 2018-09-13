@@ -309,7 +309,6 @@ static void viuin_close(struct tvin_frontend_s *fe)
 	if (open_cnt == 0) {
 		if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 			wr_viu(VPU_VIU_VDIN_IF_MUX_CTRL, 0);
-			wr_viu(VPU_VIU_VENC_MUX_CTRL, 0);
 			wr_viu(VPP_WRBAK_CTRL, 0);
 
 		} else {
