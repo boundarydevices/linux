@@ -239,6 +239,7 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 			 struct spi_transfer *transfer)
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
+	int bytes_per_word;
 
 	if (!use_dma || master->fallback)
 		return false;
@@ -252,7 +253,10 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 	if (transfer->len < spi_imx->devtype_data->fifo_size)
 		return false;
 
+	bytes_per_word = spi_imx_bytes_per_word(transfer->bits_per_word);
 	spi_imx->dynamic_burst = 0;
+	if (transfer->len % (spi_imx_get_fifosize(spi_imx) * bytes_per_word))
+		return false;
 
 	return true;
 }
@@ -688,18 +692,24 @@ static int mx51_ecspi_prepare_transfer(struct spi_imx_data *spi_imx,
 
 static void mx51_setup_wml(struct spi_imx_data *spi_imx)
 {
-	u32 tx_wml = 0;
+	u32 tx_wml;
 
-	if (!cspi_quirk(spi_imx, QUIRK_ERR009165))
-		tx_wml = spi_imx->wml;
+	/*
+	 * work around for
+	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
+	 * FIFO transfer to be sent twice
+	 */
+	tx_wml = !cspi_quirk(spi_imx, QUIRK_ERR009165) ?
+		spi_imx_get_fifosize(spi_imx) - spi_imx->tx_config.dst_maxburst :
+		0;
+
 	/*
 	 * Configure the DMA register: setup the watermark
 	 * and enable DMA request.
 	 */
 	writel(MX51_ECSPI_DMA_RX_WML(spi_imx->wml - 1) |
-		MX51_ECSPI_DMA_TX_WML(tx_wml) |
-		MX51_ECSPI_DMA_RXT_WML(spi_imx->wml) |
-		MX51_ECSPI_DMA_RXTDEN, spi_imx->base + MX51_ECSPI_DMA);
+		MX51_ECSPI_DMA_TX_WML(tx_wml),
+		spi_imx->base + MX51_ECSPI_DMA);
 }
 
 static int mx51_ecspi_rx_available(struct spi_imx_data *spi_imx)
@@ -1324,8 +1334,9 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 			     struct spi_master *master)
 {
 	int ret;
+	int fifosize = spi_imx_get_fifosize(spi_imx);
 
-	spi_imx->wml = spi_imx->devtype_data->fifo_size / 2;
+	spi_imx->wml = fifosize / 2;
 
 	/* Prepare for TX DMA: */
 	master->dma_tx = dma_request_chan(dev, "tx");
@@ -1338,7 +1349,8 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 
 	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
 	spi_imx->tx_config.dst_addr = spi_imx->base_phys + MXC_CSPITXDATA;
-	spi_imx->tx_config.dst_maxburst = spi_imx->wml;
+	spi_imx->tx_config.dst_maxburst = (!cspi_quirk(spi_imx, QUIRK_ERR009165) ||
+		(spi_imx->speed_hz > 40000000)) ? spi_imx->wml : fifosize;
 
 	/* Prepare for RX : */
 	master->dma_rx = dma_request_chan(dev, "rx");
@@ -1448,7 +1460,7 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	 * ERR009165 eCSPI: TXFIFO empty flag glitch can cause the current
 	 * FIFO transfer to be sent twice
 	 */
-	burst = (spi_imx->speed_hz > 40000000) ?
+	burst = (!cspi_quirk(spi_imx, QUIRK_ERR009165) || (spi_imx->speed_hz > 40000000)) ?
 			spi_imx->wml : spi_imx_get_fifosize(spi_imx);
 	spi_imx->rx_config.src_addr_width = width;
 	spi_imx->tx_config.dst_addr_width = width;
