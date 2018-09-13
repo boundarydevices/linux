@@ -123,7 +123,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-08-15a";
+static const char version_s[] = "2018-09-13a";
 
 static int bypass_state = 1;
 static int bypass_all;

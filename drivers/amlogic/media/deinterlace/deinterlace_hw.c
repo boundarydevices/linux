@@ -2916,7 +2916,7 @@ static void mc_pre_mif_ctrl_g12(bool enable)
 
 	mif_ctrl = enable ? 1 : 0;
 	/* enable mcinfo rd mif */
-	RDMA_WR_BITS(DI_PRE_CTRL, 0, 10, 1);
+	RDMA_WR_BITS(DI_PRE_CTRL, mif_ctrl, 10, 1);
 	/* enable mv wr mif */
 	RDMA_WR_BITS(MCVECWR_CTRL, mif_ctrl, 12, 1);
 	/* enable mcinfo wr mif */
