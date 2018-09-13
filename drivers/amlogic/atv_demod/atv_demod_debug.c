@@ -42,11 +42,10 @@
 	DEBUGFS_CREATE_NODE(btsc_sap_mode, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(afc_limit, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(afc_timer_en, 0640, dentry, bool)\
-	DEBUGFS_CREATE_NODE(timer_delay, 0640, dentry, u32)\
-	DEBUGFS_CREATE_NODE(timer_delay2, 0640, dentry, u32)\
-	DEBUGFS_CREATE_NODE(timer_delay3, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(afc_timer_delay, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(afc_timer_delay2, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(afc_timer_delay3, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(afc_wave_cnt, 0640, dentry, u32)\
-	DEBUGFS_CREATE_NODE(atvdemod_scan_mode, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(tuner_status_cnt, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(slow_mode, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(broad_std, 0640, dentry, u32)\
@@ -55,14 +54,15 @@
 	DEBUGFS_CREATE_NODE(aud_auto, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(over_threshold, 0640, dentry, u64)\
 	DEBUGFS_CREATE_NODE(input_amplitude, 0640, dentry, u64)\
+	DEBUGFS_CREATE_NODE(atvaudio_det_outputmode_en, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(audio_det_en, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(non_std_en, 0640, dentry, u32)\
-	DEBUGFS_CREATE_NODE(atvdemod_non_std_en, 0640, dentry, bool)\
+	DEBUGFS_CREATE_NODE(atvdemod_det_nonstd_en, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(non_std_times, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(non_check_delay_times, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(atv_video_gain, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(carrier_amplif_val, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(extra_input_fil_val, 0640, dentry, u32)\
-	DEBUGFS_CREATE_NODE(audio_det_mode, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(aud_dmd_jilinTV, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(if_freq, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(if_inv, 0640, dentry, u32)\
@@ -80,17 +80,20 @@
 	DEBUGFS_CREATE_NODE(atvdemod_afc_range, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(atvdemod_afc_offset, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(atvdemod_timer_en, 0640, dentry, bool)\
-	DEBUGFS_CREATE_NODE(atvdemod_tune_en, 0640, dentry, bool)\
-	DEBUGFS_CREATE_NODE(atvdemod_monitor_en, 0640, dentry, bool)\
+	DEBUGFS_CREATE_NODE(atvdemod_timer_delay, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(atvdemod_timer_delay2, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(atvdemod_mixer_tune_en, 0640, dentry, bool)\
+	DEBUGFS_CREATE_NODE(atvdemod_overmodulated_en, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(audio_thd_en, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(pwm_kp, 0640, dentry, u32)\
-	DEBUGFS_CREATE_NODE(reg_dbg_en, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_gain_val, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_a2_threshold, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_a2_delay, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_nicam_delay, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_a2_auto, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(audio_a2_power_threshold, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(audio_gain_shift, 0640, dentry, u32)\
+	DEBUGFS_CREATE_NODE(audio_gain_lpr, 0640, dentry, u32)\
 }
 
 
@@ -98,7 +101,6 @@
 /* int type add here for debugfs */
 #define DEBUG_FS_CREATE_FILES(dentry, fops)\
 {\
-	DEBUGFS_CREATE_FILE(afc_offset, 0640, dentry, fops, int)\
 	DEBUGFS_CREATE_FILE(non_std_thld_4c_h, 0640, dentry, fops, int)\
 	DEBUGFS_CREATE_FILE(non_std_thld_4c_l, 0640, dentry, fops, int)\
 	DEBUGFS_CREATE_FILE(non_std_thld_54_h, 0640, dentry, fops, int)\
@@ -114,7 +116,6 @@
 #if defined(AML_ATVDEMOD_DEBUGFS)
 static struct dentry *debugfs_root;
 
-DEBUGFS_DENTRY_DEFINE(afc_offset);
 DEBUGFS_DENTRY_DEFINE(non_std_thld_4c_h);
 DEBUGFS_DENTRY_DEFINE(non_std_thld_4c_l);
 DEBUGFS_DENTRY_DEFINE(non_std_thld_54_h);
@@ -126,7 +127,6 @@ DEBUGFS_DENTRY_DEFINE(sum2_thd_l);
 DEBUGFS_DENTRY_DEFINE(afc_default);
 
 struct dentry_value *debugfs_dentry[] = {
-	DEBUGFS_DENTRY_VALUE(afc_offset),
 	DEBUGFS_DENTRY_VALUE(non_std_thld_4c_h),
 	DEBUGFS_DENTRY_VALUE(non_std_thld_4c_l),
 	DEBUGFS_DENTRY_VALUE(non_std_thld_54_h),

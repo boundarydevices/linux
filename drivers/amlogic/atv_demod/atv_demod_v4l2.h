@@ -1,14 +1,18 @@
 /*
- * amlogic atv demod driver
+ * drivers/amlogic/atv_demod/atv_demod_v4l2.h
  *
- * Author: nengwen.chen <nengwen.chen@amlogic.com>
- *
- *
- * Copyright (C) 2018 Amlogic Inc.
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
  */
 
 #ifndef __ATV_DEMOD_V4L2_H__
@@ -50,6 +54,7 @@
 #define V4L2_FE_NO_EXIT 0
 #define V4L2_FE_NORMAL_EXIT 1
 #define V4L2_FE_DEVICE_REMOVED 2
+#define V4L2_FE_DEVICE_RESUME 3
 
 #define V4L2FE_STATE_IDLE 1
 #define V4L2FE_STATE_RETUNE 2
@@ -221,6 +226,7 @@ int v4l2_resister_frontend(struct v4l2_frontend *v4l2_fe);
 int v4l2_unresister_frontend(struct v4l2_frontend *v4l2_fe);
 
 void v4l2_frontend_detach(struct v4l2_frontend *v4l2_fe);
+int v4l2_frontend_shutdown(struct v4l2_frontend *v4l2_fe);
 int v4l2_frontend_suspend(struct v4l2_frontend *v4l2_fe);
 int v4l2_frontend_resume(struct v4l2_frontend *v4l2_fe);
 

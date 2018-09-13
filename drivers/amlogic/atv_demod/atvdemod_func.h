@@ -1,29 +1,24 @@
 /*
- * ATVDEMOD Device Driver
+ * drivers/amlogic/atv_demod/atvdemod_func.h
  *
- * Author: dezhi kong <dezhi.kong@amlogic.com>
- *
- *
- * Copyright (C) 2014 Amlogic Inc.
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
  */
 
-#ifndef __ATVDEMOD_FUN_H
-#define __ATVDEMOD_FUN_H
-
-/*#include "../aml_fe.h"*/
-/*#include <linux/amlogic/tvin/tvin.h>*/
-/*#include "../aml_fe.h"*/
-#include <linux/amlogic/iomap.h>
+#ifndef __ATV_DEMOD_FUNC_H__
+#define __ATV_DEMOD_FUNC_H__
 
 struct dvb_frontend;
-
-/*#define TVFE_APB_BASE_ADDR 0xd0046000*/
-#define ATV_DMD_APB_BASE_ADDR 0xc8008000
-#define ATV_DMD_APB_BASE_ADDR_GXTVBB 0xc8840000
 
 #define HHI_ATV_DMD_SYS_CLK_CNTL		0x10f3
 
@@ -32,81 +27,6 @@ extern int broad_std_except_pal_m;
 extern unsigned int aud_std;
 extern unsigned int aud_mode;
 extern bool audio_thd_en;
-
-extern int amlatvdemod_reg_read(unsigned int reg, unsigned int *val);
-extern int amlatvdemod_reg_write(unsigned int reg, unsigned int val);
-extern int amlatvdemod_hiu_reg_read(unsigned int reg, unsigned int *val);
-extern int amlatvdemod_hiu_reg_write(unsigned int reg, unsigned int val);
-
-static inline uint32_t R_ATVDEMOD_REG(uint32_t reg)
-{
-	unsigned int val;
-
-	amlatvdemod_reg_read(reg, &val);
-	return val;
-}
-
-static inline void W_ATVDEMOD_REG(uint32_t reg,
-				 const uint32_t val)
-{
-	amlatvdemod_reg_write(reg, val);
-}
-
-static inline void W_ATVDEMOD_BIT(uint32_t reg,
-				    const uint32_t value,
-				    const uint32_t start,
-				    const uint32_t len)
-{
-	W_ATVDEMOD_REG(reg, ((R_ATVDEMOD_REG(reg) &
-			     ~(((1L << (len)) - 1) << (start))) |
-			    (((value) & ((1L << (len)) - 1)) << (start))));
-}
-
-static inline uint32_t R_ATVDEMOD_BIT(uint32_t reg,
-				    const uint32_t start,
-				    const uint32_t len)
-{
-	uint32_t val;
-
-	val = ((R_ATVDEMOD_REG(reg) >> (start)) & ((1L << (len)) - 1));
-
-	return val;
-}
-
-static inline uint32_t R_HIU_REG(uint32_t reg)
-{
-	unsigned int val;
-
-	amlatvdemod_hiu_reg_read(reg, &val);
-	return val;
-}
-
-static inline void W_HIU_REG(uint32_t reg,
-				 const uint32_t val)
-{
-	amlatvdemod_hiu_reg_write(reg, val);
-}
-
-static inline void W_HIU_BIT(uint32_t reg,
-				    const uint32_t value,
-				    const uint32_t start,
-				    const uint32_t len)
-{
-	W_HIU_REG(reg, ((R_HIU_REG(reg) &
-			     ~(((1L << (len)) - 1) << (start))) |
-			    (((value) & ((1L << (len)) - 1)) << (start))));
-}
-
-static inline uint32_t R_HIU_BIT(uint32_t reg,
-				    const uint32_t start,
-				    const uint32_t len)
-{
-	uint32_t val;
-
-	val = ((R_HIU_REG(reg) >> (start)) & ((1L << (len)) - 1));
-
-	return val;
-}
 
 enum broadcast_standard_e {
 	ATVDEMOD_STD_NTSC = 0,
@@ -135,24 +55,7 @@ enum sound_format_e {
 	ATVDEMOD_SOUND_STD_NICAM,
 	ATVDEMOD_SOUND_STD_MAX,
 };
-extern void atv_dmd_wr_reg(unsigned char block, unsigned char reg,
-	unsigned long data);
-extern unsigned long atv_dmd_rd_reg(unsigned char block, unsigned char reg);
-extern unsigned long atv_dmd_rd_byte(unsigned long block_address,
-				     unsigned long reg_addr);
-extern unsigned long atv_dmd_rd_word(unsigned long block_address,
-				     unsigned long reg_addr);
-extern unsigned long atv_dmd_rd_long(unsigned long block_address,
-				     unsigned long reg_addr);
-extern void atv_dmd_wr_long(unsigned long block_address,
-				unsigned long reg_addr,
-				unsigned long data);
-extern void atv_dmd_wr_word(unsigned long block_address,
-				unsigned long reg_addr,
-				unsigned long data);
-extern void atv_dmd_wr_byte(unsigned long block_address,
-				unsigned long reg_addr,
-				unsigned long data);
+
 extern void set_audio_gain_val(int val);
 extern void set_video_gain_val(int val);
 extern void atv_dmd_soft_reset(void);
@@ -177,11 +80,10 @@ extern void retrieve_video_lock(int *lock);
 extern int retrieve_vpll_carrier_afc(void);
 
 extern void atv_dmd_non_std_set(bool enable);
-extern void atvdemod_monitor_serice(void);
+extern void atvdemod_video_overmodulated(void);
 extern void atvdemod_det_snr_serice(void);
-extern int get_atvdemod_snr_val(void);
-extern int aml_atvdemod_get_snr(struct dvb_frontend *fe);
-extern void atvdemod_afc_tune(void);
+extern int atvdemod_get_snr_val(void);
+extern void atvdemod_mixer_tune(void);
 
 /*atv demod block address*/
 /*address interval is 4, because it's 32bit interface,*/
@@ -283,7 +185,7 @@ extern void atvdemod_afc_tune(void);
 
 #define CARR_AFC_DEFAULT_VAL 0xffff
 
-enum amlatvdemod_snr_level_e {
+enum atvdemod_snr_level_e {
 	very_low = 1,
 	low,
 	ok_minus,
@@ -291,37 +193,19 @@ enum amlatvdemod_snr_level_e {
 	high,
 };
 
-enum audio_detect_mode {
-	AUDIO_AUTO_DETECT = 0,
-	AUDIO_MANUAL_DETECT,
-};
-
-#if 0
-struct amlatvdemod_device_s {
-	struct class *clsp;
-	struct device *dev;
-	struct analog_parameters parm;
-	int fre_offset;
-	struct pinctrl *pin;
-	const char *pin_name;
-};
-#endif
-
-extern int amlatvdemod_hiu_reg_read(unsigned int reg, unsigned int *val);
 extern void aml_audio_overmodulation(int enable);
 extern void amlatvdemod_set_std(int val);
 extern void aml_fix_PWM_adjust(int enable);
 extern void aml_audio_valume_gain_set(unsigned int audio_gain);
 extern unsigned int aml_audio_valume_gain_get(void);
-extern void aml_atvdemod_overmodule_det(void);
 extern int aml_audiomode_autodet(struct dvb_frontend *fe);
 extern void retrieve_frequency_offset(int *freq_offset);
 extern void retrieve_field_lock(int *lock);
-extern int aml_atvdemod_get_snr_ex(void);
 extern void set_atvdemod_scan_mode(int val);
 extern int atvauddemod_init(void);
 extern void atvauddemod_set_outputmode(void);
 
 /*from amldemod/amlfrontend.c*/
 extern int vdac_enable_check_dtv(void);
-#endif /* __ATVDEMOD_FUN_H */
+
+#endif /* __ATV_DEMOD_FUNC_H__ */

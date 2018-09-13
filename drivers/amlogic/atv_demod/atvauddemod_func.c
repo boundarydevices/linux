@@ -1,3 +1,20 @@
+/*
+ * drivers/amlogic/atv_demod/atvauddemod_func.c
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
 #ifndef __ATVAUDDEMOD_FUN_H
 #define __ATVAUDDEMOD_FUN_H
 
@@ -14,6 +31,7 @@
 #include "aud_demod_settings.c"
 #include "atvdemod_func.h"
 #include "atv_demod_driver.h"
+#include "atv_demod_access.h"
 
 /* #define AUDIO_MOD_DET_INTERNAL */
 
@@ -100,51 +118,6 @@ int pfilter1[7] =  {10, 6, 0, -1023, 0, 29, 29};
 static int thd_flag;
 static uint32_t thd_tmp_v;
 static uint8_t thd_cnt;
-
-static inline uint32_t R_AUDDEMOD_REG(uint32_t reg)
-{
-	unsigned int val;
-
-	atvaudiodem_reg_read(reg<<2, &val);
-	return val;
-}
-
-static inline void W_AUDDEMOD_REG(uint32_t reg,
-				 const uint32_t val)
-{
-	atvaudiodem_reg_write(reg<<2, val);
-}
-
-static inline void W_AUDDEMOD_BIT(uint32_t reg,
-				    const uint32_t value,
-				    const uint32_t start,
-				    const uint32_t len)
-{
-	W_AUDDEMOD_REG(reg, ((R_AUDDEMOD_REG(reg) &
-			     ~(((1L << (len)) - 1) << (start))) |
-			    (((value) & ((1L << (len)) - 1)) << (start))));
-}
-
-static inline uint32_t R_AUDDEMOD_BIT(uint32_t reg,
-				    const uint32_t start,
-				    const uint32_t len)
-{
-	uint32_t val;
-
-	val = ((R_AUDDEMOD_REG(reg) >> (start)) & ((1L << (len)) - 1));
-
-	return val;
-}
-
-void adec_wr_reg(uint32_t reg, uint32_t val)
-{
-	atvaudiodem_reg_write(reg<<2, val);
-}
-
-uint32_t adec_rd_reg(uint32_t addr)
-{
-	return R_AUDDEMOD_REG(addr);
-}
 
 
 void set_filter(int *filter, int start_addr, int taps)
@@ -1375,79 +1348,6 @@ void audio_thd_det(void)
 			thd_cnt = 0;
 			thd_tmp_v = 0;
 		}
-	}
-}
-
-void audio_mode_det(int mode)
-{
-	if (is_atvdemod_work() &&
-			(is_meson_txlx_cpu() || is_meson_txhd_cpu())) {
-		uint32_t reg_value;
-		uint32_t tmp_value, tmp_value1;
-		int stereo_flag, sap_flag;
-		static int last_stereo_flag = -1, last_sap_flag = -1;
-
-		reg_value = adec_rd_reg(AUDIO_MODE_REPORT);
-		stereo_flag = reg_value&0x1;
-		sap_flag = (reg_value>>1)&0x1;
-		reg_value = adec_rd_reg(ADDR_ADEC_CTRL);
-
-		if (sap_flag != last_sap_flag
-			|| stereo_flag != last_stereo_flag) {
-			switch (mode) {
-			case AUDIO_OUTMODE_BTSC_MONO:
-				tmp_value = (reg_value & 0xf)|(0 << 4);
-				adec_wr_reg(ADDR_ADEC_CTRL, tmp_value);
-				break;
-
-			case AUDIO_OUTMODE_BTSC_STEREO:
-				if (stereo_flag) {
-					tmp_value = (reg_value & 0xf)|(1 << 4);
-					adec_wr_reg(ADDR_ADEC_CTRL, tmp_value);
-
-					reg_value =
-						adec_rd_reg(ADDR_LPR_COMP_CTRL);
-					tmp_value1 = (reg_value & 0xffff);
-					adec_wr_reg(ADDR_LPR_COMP_CTRL,
-						tmp_value1);
-				} else {
-					tmp_value = (reg_value & 0xf)|(0 << 4);
-					adec_wr_reg(ADDR_ADEC_CTRL, tmp_value);
-				}
-				break;
-
-			case AUDIO_OUTMODE_BTSC_SAP:
-				if (sap_flag) {
-					tmp_value = (reg_value & 0xf)|(6 << 4);
-					adec_wr_reg(ADDR_ADEC_CTRL, tmp_value);
-
-					reg_value =
-						adec_rd_reg(ADDR_LPR_COMP_CTRL);
-					tmp_value1 =
-						(reg_value & 0xffff)|(1 << 16);
-					adec_wr_reg(ADDR_LPR_COMP_CTRL,
-						tmp_value1);
-				} else if (stereo_flag) {
-					tmp_value = (reg_value & 0xf)|(1 << 4);
-					adec_wr_reg(ADDR_ADEC_CTRL, tmp_value);
-
-					reg_value =
-						adec_rd_reg(ADDR_LPR_COMP_CTRL);
-					tmp_value1 = (reg_value & 0xffff);
-					adec_wr_reg(ADDR_LPR_COMP_CTRL,
-						tmp_value1);
-				} else {
-					tmp_value = (reg_value & 0xf)|(0 << 4);
-					adec_wr_reg(ADDR_ADEC_CTRL, tmp_value);
-				}
-				break;
-			}
-		}
-
-		last_stereo_flag = stereo_flag;
-		last_sap_flag = sap_flag;
-
-		pr_info("atvdemod_monitor_audio done ....\n");
 	}
 }
 

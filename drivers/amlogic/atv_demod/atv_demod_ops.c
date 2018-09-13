@@ -1,14 +1,18 @@
 /*
- * amlogic atv demod driver
+ * drivers/amlogic/atv_demod/atv_demod_ops.c
  *
- * Author: nengwen.chen <nengwen.chen@amlogic.com>
- *
- *
- * Copyright (C) 2018 Amlogic Inc.
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
  */
 
 #include <linux/types.h>
@@ -27,363 +31,17 @@
 #include "atv_demod_driver.h"
 #include "atv_demod_ops.h"
 #include "atv_demod_v4l2.h"
+#include "atv_demod_afc.h"
+#include "atv_demod_monitor.h"
 
 #define DEVICE_NAME "aml_atvdemod"
 
-#define ATVDEMOD_STATE_IDEL  0
-#define ATVDEMOD_STATE_WORK  1
-#define ATVDEMOD_STATE_SLEEP 2
-static int atvdemod_state = ATVDEMOD_STATE_IDEL;
 
 static DEFINE_MUTEX(atv_demod_list_mutex);
 static LIST_HEAD(hybrid_tuner_instance_list);
 
 unsigned int reg_23cf = 0x88188832; /*IIR filter*/
 unsigned int btsc_sap_mode = 1;	/*0: off 1:monitor 2:auto */
-
-unsigned int atvdemod_scan_mode;
-
-bool atvdemod_tune_en;
-bool atvdemod_monitor_en;
-bool audio_det_en;
-bool atvdemod_det_snr_en = true;
-bool audio_thd_en = true;
-bool atvdemod_non_std_en;
-
-int afc_offset;
-unsigned int afc_limit = 2100;/*+-2.1Mhz*/
-static int no_sig_cnt;
-static unsigned int afc_timer_init_state;
-static unsigned int aft_thread_delaycnt;
-bool afc_timer_en = true;
-unsigned int timer_delay = 1;
-unsigned int timer_delay2 = 10;
-unsigned int timer_delay3 = 10;/*100ms*/
-unsigned int afc_wave_cnt = 4;
-
-static unsigned int demod_timer_init_state;
-bool atvdemod_timer_en = true;
-
-#define AFC_LOCK_STATUS_NULL 0
-#define AFC_LOCK_STATUS_PRE_UNLOCK 1
-#define AFC_LOCK_STATUS_PRE_LOCK 2
-#define AFC_LOCK_STATUS_PRE_OVER_RANGE 3
-#define AFC_LOCK_STATUS_POST_PROCESS 4
-#define AFC_LOCK_STATUS_POST_LOCK 5
-#define AFC_LOCK_STATUS_POST_UNLOCK 6
-#define AFC_LOCK_STATUS_POST_OVER_RANGE 7
-#define AFC_LOCK_STATUS_NUM 8
-
-#define AFC_PRE_STEP_NUM 9
-static int afc_range[11] = {0, -500, 500, -1000, 1000,
-		-1500, 1500, -2000, 2000, -2500, 2500};
-static unsigned int afc_pre_step;
-static unsigned int afc_pre_lock_cnt;
-static unsigned int afc_pre_unlock_cnt;
-static unsigned int afc_lock_status = AFC_LOCK_STATUS_NULL;
-
-static int atv_demod_get_scan_mode(void);
-static void atv_demod_set_scan_mode(int val);
-
-
-static void aml_afc_do_work_pre(int lock)
-{
-	struct dvb_frontend *fe = &amlatvdemod_devp->v4l2_fe.fe;
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-	struct analog_parameters *param = &priv->atvdemod_param.param;
-
-	afc_pre_unlock_cnt++;
-	if (!lock) {
-		afc_pre_lock_cnt = 0;
-		if (afc_lock_status != AFC_LOCK_STATUS_PRE_UNLOCK &&
-			afc_offset) {
-			param->frequency -= afc_offset * 1000;
-			afc_offset = 0;
-			afc_pre_step = 0;
-			afc_lock_status = AFC_LOCK_STATUS_PRE_UNLOCK;
-		}
-
-		if (afc_pre_unlock_cnt <= afc_wave_cnt) {/*40ms*/
-			afc_lock_status = AFC_LOCK_STATUS_PRE_UNLOCK;
-			return;
-		}
-
-		if (afc_offset == afc_range[afc_pre_step]) {
-			param->frequency -= afc_range[afc_pre_step] * 1000;
-			afc_offset -= afc_range[afc_pre_step];
-		}
-
-		afc_pre_step++;
-		if (afc_pre_step < AFC_PRE_STEP_NUM) {
-			param->frequency += afc_range[afc_pre_step] * 1000;
-			afc_offset += afc_range[afc_pre_step];
-			afc_lock_status = AFC_LOCK_STATUS_PRE_UNLOCK;
-		} else {
-			param->frequency -= afc_offset * 1000;
-			afc_offset = 0;
-			afc_pre_step = 0;
-			afc_lock_status = AFC_LOCK_STATUS_PRE_OVER_RANGE;
-		}
-
-		if (fe->ops.tuner_ops.set_analog_params)
-			fe->ops.tuner_ops.set_analog_params(fe, param);
-
-		afc_pre_unlock_cnt = 0;
-		pr_afc("%s,unlock afc_offset:%d KHz, set freq:%d\n",
-				__func__, afc_offset, param->frequency);
-	} else {
-		afc_pre_lock_cnt++;
-		pr_afc("%s,afc_pre_lock_cnt:%d\n",
-				__func__, afc_pre_lock_cnt);
-		if (afc_pre_lock_cnt >= afc_wave_cnt * 2) {/*100ms*/
-			afc_pre_lock_cnt = 0;
-			afc_pre_unlock_cnt = 0;
-			afc_lock_status = AFC_LOCK_STATUS_PRE_LOCK;
-		}
-	}
-}
-
-static void aml_afc_do_work(struct work_struct *work)
-{
-	struct dvb_frontend *fe = &amlatvdemod_devp->v4l2_fe.fe;
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-	struct analog_parameters *param = &priv->atvdemod_param.param;
-	int afc = 100;
-	int lock = 0;
-	int tmp = 0;
-	int field_lock = 0;
-	static int audio_overmodul;
-	static int wave_cnt;
-
-	if (afc_timer_init_state == 0)
-		return;
-
-	retrieve_vpll_carrier_lock(&tmp);/* 0 means lock, 1 means unlock */
-	lock = !tmp;
-
-	/*pre afc:speed up afc*/
-	if ((afc_lock_status != AFC_LOCK_STATUS_POST_PROCESS) &&
-		(afc_lock_status != AFC_LOCK_STATUS_POST_LOCK) &&
-		(afc_lock_status != AFC_LOCK_STATUS_PRE_LOCK)) {
-		aml_afc_do_work_pre(lock);
-		return;
-	}
-
-	afc_pre_step = 0;
-
-	if (lock) {
-		if (0 == ((audio_overmodul++) % 10))
-			aml_audio_overmodulation(1);
-	}
-
-	retrieve_frequency_offset(&afc);
-
-	if (++wave_cnt <= afc_wave_cnt) {/*40ms*/
-		afc_lock_status = AFC_LOCK_STATUS_POST_PROCESS;
-		pr_afc("%s,wave_cnt:%d is wave,lock:%d,afc:%d ignore\n",
-				__func__, wave_cnt, lock, afc);
-		return;
-	}
-
-	/*retrieve_frequency_offset(&afc);*/
-	retrieve_field_lock(&tmp);
-	field_lock = tmp;
-
-	pr_afc("%s,afc:%d lock:%d field_lock:%d freq:%d\n",
-			__func__, afc, lock, field_lock, param->frequency);
-
-	if (lock && (abs(afc) < AFC_BEST_LOCK &&
-		abs(afc_offset) <= afc_limit) && field_lock) {
-		afc_lock_status = AFC_LOCK_STATUS_POST_LOCK;
-		wave_cnt = 0;
-		pr_afc("%s,afc lock, set wave_cnt 0\n", __func__);
-		return;
-	}
-
-	if (!lock || (lock && !field_lock)) {
-		afc_lock_status = AFC_LOCK_STATUS_POST_UNLOCK;
-		afc_pre_lock_cnt = 0;
-		param->frequency -= afc_offset * 1000;
-		if (fe->ops.tuner_ops.set_analog_params)
-			fe->ops.tuner_ops.set_analog_params(fe, param);
-		pr_afc("%s,afc:%d , set freq:%d\n",
-				__func__, afc, param->frequency);
-		wave_cnt = 0;
-		afc_offset = 0;
-		pr_afc("%s, [post lock --> unlock]\n", __func__);
-		return;
-	}
-
-	if (abs(afc_offset) > afc_limit) {
-		no_sig_cnt++;
-		if (no_sig_cnt == 20) {
-			param->frequency -= afc_offset * 1000;
-			pr_afc("%s,afc no_sig trig, set freq:%d\n",
-						__func__, param->frequency);
-			if (fe->ops.tuner_ops.set_analog_params)
-				fe->ops.tuner_ops.set_analog_params(fe, param);
-			wave_cnt = 0;
-			afc_offset = 0;
-			afc_lock_status = AFC_LOCK_STATUS_POST_OVER_RANGE;
-		}
-		return;
-	}
-
-	no_sig_cnt = 0;
-	if (abs(afc) >= AFC_BEST_LOCK) {
-		param->frequency += afc * 1000;
-		afc_offset += afc;
-		if (fe->ops.tuner_ops.set_analog_params)
-			fe->ops.tuner_ops.set_analog_params(fe, param);
-
-		pr_afc("%s,afc:%d , set freq:%d\n",
-				__func__, afc, param->frequency);
-	}
-
-	wave_cnt = 0;
-	afc_lock_status = AFC_LOCK_STATUS_POST_PROCESS;
-}
-
-void aml_afc_timer_handler(unsigned long arg)
-{
-	struct dvb_frontend *fe = (struct dvb_frontend *)arg;
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-	unsigned int delay_ms = 0;
-
-	if (afc_timer_init_state == 0)
-		return;
-
-	if (afc_lock_status == AFC_LOCK_STATUS_POST_OVER_RANGE ||
-		afc_lock_status == AFC_LOCK_STATUS_PRE_OVER_RANGE ||
-		afc_lock_status == AFC_LOCK_STATUS_POST_LOCK)
-		delay_ms = timer_delay2;/*100ms*/
-	else
-		delay_ms = timer_delay;/*10ms*/
-
-	priv->afc_timer.function = aml_afc_timer_handler;
-	priv->afc_timer.data = arg;
-	priv->afc_timer.expires = jiffies + ATVDEMOD_INTERVAL * delay_ms;
-	add_timer(&priv->afc_timer);
-
-	if (aft_thread_delaycnt > 0) {
-		aft_thread_delaycnt--;
-		return;
-	}
-
-	if ((afc_timer_en == false) || (fe->ops.info.type != FE_ANALOG))
-		return;
-
-	schedule_work(&priv->afc_wq);
-}
-
-static void aml_afc_timer_disable(struct dvb_frontend *fe)
-{
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-
-	if (afc_timer_en && (afc_timer_init_state == 1)) {
-		del_timer_sync(&priv->afc_timer);
-		cancel_work_sync(&priv->demod_wq);
-		afc_timer_init_state = 0;
-	}
-}
-
-static void aml_afc_timer_enable(struct dvb_frontend *fe)
-{
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-
-	if (afc_timer_en && (afc_timer_init_state == 0)) {
-		init_timer(&priv->afc_timer);
-		priv->afc_timer.function = aml_afc_timer_handler;
-		priv->afc_timer.data = (ulong) fe;
-		/* after 5s enable demod auto detect */
-		priv->afc_timer.expires = jiffies +
-				ATVDEMOD_INTERVAL * timer_delay3;
-		afc_offset = 0;
-		no_sig_cnt = 0;
-		afc_pre_step = 0;
-		afc_lock_status = AFC_LOCK_STATUS_NULL;
-		add_timer(&priv->afc_timer);
-		afc_timer_init_state = 1;
-	}
-}
-
-static void aml_atvdemod_do_work(struct work_struct *work)
-{
-	if (demod_timer_init_state == 0)
-		return;
-
-	if (atvdemod_tune_en)
-		atvdemod_afc_tune();
-
-	if (atvdemod_monitor_en)
-		atvdemod_monitor_serice();
-
-	if (audio_det_en)
-		aml_atvdemod_overmodule_det();
-
-	if (atvdemod_det_snr_en)
-		atvdemod_det_snr_serice();
-
-	if (audio_thd_en)
-		audio_thd_det();
-
-#if 0
-	if (aml_atvdemod_get_btsc_sap_mode() == 1 &&
-			aud_std == AUDIO_STANDARD_BTSC)
-		audio_mode_det(aud_mode);
-#endif
-
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
-		set_outputmode(aud_std, aud_mode);
-
-	if (atvdemod_non_std_en)
-		atv_dmd_non_std_set(true);
-}
-
-static void aml_atvdemod_timer_handler(unsigned long arg)
-{
-	struct dvb_frontend *fe = (struct dvb_frontend *)arg;
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-
-	/* 100ms timer */
-	priv->demod_timer.data = arg;
-	priv->demod_timer.expires = jiffies + ATVDEMOD_INTERVAL * 10;
-	add_timer(&priv->demod_timer);
-
-	if (atvdemod_timer_en == 0)
-		return;
-
-	if (vdac_enable_check_dtv())
-		return;
-
-	schedule_work(&priv->demod_wq);
-}
-
-static void aml_demod_timer_enable(struct dvb_frontend *fe)
-{
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-
-	if (atvdemod_timer_en && (demod_timer_init_state == 0)) {
-		init_timer(&priv->demod_timer);
-		priv->demod_timer.data = (ulong) fe;
-		priv->demod_timer.function = aml_atvdemod_timer_handler;
-		/* after 1s enable demod auto detect */
-		priv->demod_timer.expires = jiffies + ATVDEMOD_INTERVAL * 100;
-		add_timer(&priv->demod_timer);
-		demod_timer_init_state = 1;
-	}
-}
-
-static void aml_demod_timer_disable(struct dvb_frontend *fe)
-{
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-
-	if (atvdemod_timer_en && (demod_timer_init_state == 1)) {
-		del_timer_sync(&priv->demod_timer);
-		cancel_work_sync(&priv->demod_wq);
-		demod_timer_init_state = 0;
-	}
-}
 
 
 /*
@@ -397,10 +55,17 @@ void aml_fe_get_atvaudio_state(int *state)
 	int power = 0;
 	int vpll_lock = 0;
 	int line_lock = 0;
-	int atv_state = atv_demod_get_state();
+	struct atv_demod_priv *priv = amlatvdemod_devp != NULL
+			? amlatvdemod_devp->v4l2_fe.fe.analog_demod_priv : NULL;
+
+	if (priv == NULL) {
+		pr_err("priv == NULL\n");
+		*state = 0;
+		return;
+	}
 
 	/* scan mode need mute */
-	if (atv_state == ATVDEMOD_STATE_WORK && !atv_demod_get_scan_mode()) {
+	if (priv->state == ATVDEMOD_STATE_WORK && !priv->scanning) {
 		retrieve_vpll_carrier_lock(&vpll_lock);
 		retrieve_vpll_carrier_line_lock(&line_lock);
 		if ((vpll_lock == 0) && (line_lock == 0)) {
@@ -414,7 +79,7 @@ void aml_fe_get_atvaudio_state(int *state)
 	} else {
 		*state = 0;
 		pr_audio("%s, atv is not work, atv_state: %d.\n",
-				__func__, atv_state);
+				__func__, priv->state);
 	}
 
 	/* If the atv signal is locked, it means there is audio data,
@@ -435,44 +100,10 @@ int aml_atvdemod_get_btsc_sap_mode(void)
 	return btsc_sap_mode;
 }
 
-int is_atvdemod_work(void)
-{
-	int ret = 0;
-
-	if (atv_demod_get_state() == ATVDEMOD_STATE_WORK)
-		ret = 1;
-
-	return ret;
-}
-
-static int atv_demod_get_scan_mode(void)
-{
-	return atvdemod_scan_mode;
-}
-
-static void atv_demod_set_scan_mode(int val)
-{
-	atvdemod_scan_mode = val;
-}
-
-int atv_demod_get_state(void)
-{
-	return atvdemod_state;
-}
-
-static void atv_demod_set_state(int state)
-{
-	atvdemod_state = state;
-}
-
 int atv_demod_enter_mode(struct dvb_frontend *fe)
 {
 	int err_code = 0;
 
-#if 0
-	if (atv_demod_get_state() == ATVDEMOD_STATE_WORK)
-		return 0;
-#endif
 	if (amlatvdemod_devp->pin_name != NULL) {
 		amlatvdemod_devp->agc_pin =
 			devm_pinctrl_get_select(amlatvdemod_devp->dev,
@@ -505,8 +136,6 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 	amlatvdemod_devp->audmode = 0;
 	amlatvdemod_devp->soundsys = 0xFF;
 
-	atv_demod_set_state(ATVDEMOD_STATE_WORK);
-
 	pr_info("%s: OK.\n", __func__);
 
 	return 0;
@@ -514,11 +143,13 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 
 int atv_demod_leave_mode(struct dvb_frontend *fe)
 {
-	if (atv_demod_get_state() == ATVDEMOD_STATE_IDEL)
-		return 0;
+	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
-	aml_demod_timer_disable(fe);
-	aml_afc_timer_disable(fe);
+	if (priv->afc.disable)
+		priv->afc.disable(&priv->afc);
+
+	if (priv->monitor.disable)
+		priv->monitor.disable(&priv->monitor);
 
 	atvdemod_uninit();
 	if (!IS_ERR_OR_NULL(amlatvdemod_devp->agc_pin)) {
@@ -534,7 +165,8 @@ int atv_demod_leave_mode(struct dvb_frontend *fe)
 	amlatvdemod_devp->std = 0;
 	amlatvdemod_devp->audmode = 0;
 	amlatvdemod_devp->soundsys = 0xFF;
-	atv_demod_set_state(ATVDEMOD_STATE_IDEL);
+
+	priv->state = ATVDEMOD_STATE_IDEL;
 
 	pr_info("%s: OK.\n", __func__);
 
@@ -557,8 +189,11 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	p->param.std = params->std;
 
 	/* afc tune disable,must cancel wq before set tuner freq*/
-	aml_afc_timer_disable(fe);
-	aml_demod_timer_disable(fe);
+	if (priv->afc.disable)
+		priv->afc.disable(&priv->afc);
+
+	if (priv->monitor.disable)
+		priv->monitor.disable(&priv->monitor);
 
 	if (fe->ops.tuner_ops.set_analog_params)
 		ret = fe->ops.tuner_ops.set_analog_params(fe, params);
@@ -589,16 +224,19 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	} else
 		atv_dmd_soft_reset();
 
-	if (!atv_demod_get_scan_mode())
+	if (!priv->scanning)
 		atvauddemod_init();
 
 	/* afc tune enable */
 	/* analog_search_flag == 0 or afc_range != 0 means searching */
 	if ((fe->ops.info.type == FE_ANALOG)
-			&& (atv_demod_get_scan_mode() == 0)
+			&& (priv->scanning == false)
 			&& (p->param.mode == 0)) {
-		aml_afc_timer_enable(fe);
-		aml_demod_timer_enable(fe);
+		if (priv->afc.enable)
+			priv->afc.enable(&priv->afc);
+
+		if (priv->monitor.enable)
+			priv->monitor.enable(&priv->monitor);
 	}
 }
 
@@ -627,9 +265,11 @@ static int atv_demod_has_signal(struct dvb_frontend *fe, u16 *signal)
 
 static void atv_demod_standby(struct dvb_frontend *fe)
 {
-	if (atv_demod_get_state() != ATVDEMOD_STATE_IDEL) {
+	struct atv_demod_priv *priv = fe->analog_demod_priv;
+
+	if (priv->state != ATVDEMOD_STATE_IDEL) {
 		atv_demod_leave_mode(fe);
-		atv_demod_set_state(ATVDEMOD_STATE_SLEEP);
+		priv->state = ATVDEMOD_STATE_SLEEP;
 	}
 
 	pr_info("%s: OK.\n", __func__);
@@ -652,9 +292,9 @@ static void atv_demod_release(struct dvb_frontend *fe)
 	int instance = 0;
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
-	atv_demod_leave_mode(fe);
-
 	mutex_lock(&atv_demod_list_mutex);
+
+	atv_demod_leave_mode(fe);
 
 	if (priv)
 		instance = hybrid_tuner_release_state(priv);
@@ -670,6 +310,7 @@ static void atv_demod_release(struct dvb_frontend *fe)
 static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 {
 	int *state = (int *) priv_cfg;
+	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
 	if (!state) {
 		pr_err("%s: state == NULL.\n", __func__);
@@ -680,15 +321,16 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 
 	switch (*state) {
 	case AML_ATVDEMOD_INIT:
-		if (atv_demod_get_state() != ATVDEMOD_STATE_WORK) {
+		if (priv->state != ATVDEMOD_STATE_WORK) {
 			if (fe->ops.tuner_ops.set_config)
 				fe->ops.tuner_ops.set_config(fe, NULL);
 			atv_demod_enter_mode(fe);
+			priv->state = ATVDEMOD_STATE_WORK;
 		}
 		break;
 
 	case AML_ATVDEMOD_UNINIT:
-		if (atv_demod_get_state() != ATVDEMOD_STATE_IDEL) {
+		if (priv->state != ATVDEMOD_STATE_IDEL) {
 			atv_demod_leave_mode(fe);
 			if (fe->ops.tuner_ops.release)
 				fe->ops.tuner_ops.release(fe);
@@ -696,23 +338,28 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 		break;
 
 	case AML_ATVDEMOD_RESUME:
-		if (atv_demod_get_state() == ATVDEMOD_STATE_SLEEP) {
+		if (priv->state == ATVDEMOD_STATE_SLEEP) {
 			atv_demod_enter_mode(fe);
-			if (fe->ops.tuner_ops.resume)
-				fe->ops.tuner_ops.resume(fe);
+			priv->state = ATVDEMOD_STATE_WORK;
 		}
 		break;
 
 	case AML_ATVDEMOD_SCAN_MODE:
-		atv_demod_set_scan_mode(1);
-		aml_afc_timer_disable(fe);
-		aml_demod_timer_disable(fe);
+		priv->scanning = true;
+		if (priv->afc.disable)
+			priv->afc.disable(&priv->afc);
+
+		if (priv->monitor.disable)
+			priv->monitor.disable(&priv->monitor);
 		break;
 
 	case AML_ATVDEMOD_UNSCAN_MODE:
-		atv_demod_set_scan_mode(0);
-		aml_afc_timer_enable(fe);
-		aml_demod_timer_enable(fe);
+		priv->scanning = false;
+		if (priv->afc.enable)
+			priv->afc.enable(&priv->afc);
+
+		if (priv->monitor.enable)
+			priv->monitor.enable(&priv->monitor);
 		break;
 	}
 
@@ -1125,12 +772,6 @@ static int atvdemod_fe_set_property(struct v4l2_frontend *v4l2_fe,
 		if (amlatvdemod_devp->soundsys != 0xFF)
 			aud_mode = amlatvdemod_devp->soundsys;
 		priv->sound_sys.output_mode = tvp->data & 0xFF;
-#if 0
-		if (atv_demod_get_state() == ATVDEMOD_STATE_WORK) {
-			if (is_meson_txlx_cpu() || is_meson_txhd_cpu())
-				atvauddemod_set_outputmode();
-		}
-#endif
 		break;
 
 	case V4L2_SLOW_SEARCH_MODE:
@@ -1175,6 +816,7 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 {
 	struct analog_parameters params;
 	struct dvb_frontend *fe = &v4l2_fe->fe;
+	struct atv_demod_priv *priv = NULL;
 	struct v4l2_analog_parameters *p = &v4l2_fe->params;
 	enum v4l2_status tuner_state = V4L2_TIMEDOUT;
 	enum v4l2_status ade_state = V4L2_TIMEDOUT;
@@ -1200,6 +842,12 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 			!fe->ops.analog_ops.set_params ||
 			!fe->ops.analog_ops.set_config)) {
 		pr_err("[%s] error: NULL function or pointer.\n", __func__);
+		return V4L2_SEARCH_INVALID;
+	}
+
+	priv = fe->analog_demod_priv;
+	if (priv->state != ATVDEMOD_STATE_WORK) {
+		pr_err("[%s] ATV state is not work.\n", __func__);
 		return V4L2_SEARCH_INVALID;
 	}
 
@@ -1472,11 +1120,17 @@ struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,
 		mutex_unlock(&atv_demod_list_mutex);
 		return NULL;
 	case 1:
-		INIT_WORK(&priv->afc_wq, aml_afc_do_work);
-		INIT_WORK(&priv->demod_wq, aml_atvdemod_do_work);
 		fe->analog_demod_priv = priv;
+
+		priv->afc.fe = fe;
+		atv_demod_afc_init(&priv->afc);
+
+		priv->monitor.fe = fe;
+		atv_demod_monitor_init(&priv->monitor);
+
 		priv->standby = true;
-		pr_info("aml_atvdemod found\n");
+
+		pr_info("%s: aml_atvdemod found.\n", __func__);
 		break;
 	default:
 		fe->analog_demod_priv = priv;

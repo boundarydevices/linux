@@ -1,14 +1,18 @@
 /*
- * amlogic atv demod driver
+ * drivers/amlogic/atv_demod/atv_demod_v4l2.c
  *
- * Author: nengwen.chen <nengwen.chen@amlogic.com>
- *
- *
- * Copyright (C) 2018 Amlogic Inc.
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
  */
 
 #include <linux/fs.h>
@@ -966,6 +970,12 @@ void v4l2_frontend_detach(struct v4l2_frontend *v4l2_fe)
 		v4l2_fe->fe.ops.release(&v4l2_fe->fe);
 }
 
+int v4l2_frontend_shutdown(struct v4l2_frontend *v4l2_fe)
+{
+	pr_info("%s: OK.\n", __func__);
+	return 0;
+}
+
 int v4l2_frontend_suspend(struct v4l2_frontend *v4l2_fe)
 {
 	int ret = 0;
@@ -993,12 +1003,14 @@ int v4l2_frontend_resume(struct v4l2_frontend *v4l2_fe)
 	struct analog_demod_ops analog_ops = fe->ops.analog_ops;
 	int priv_cfg = AML_ATVDEMOD_RESUME;
 
+	fepriv->exit = V4L2_FE_DEVICE_RESUME;
 	if (analog_ops.set_config)
 		analog_ops.set_config(fe, &priv_cfg);
 
 	if (tuner_ops.resume)
 		tuner_ops.resume(fe);
 
+	fepriv->exit = V4L2_FE_NO_EXIT;
 	fepriv->state = V4L2FE_STATE_RETUNE;
 	v4l2_frontend_wakeup(v4l2_fe);
 

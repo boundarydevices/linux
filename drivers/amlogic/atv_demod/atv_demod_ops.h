@@ -1,14 +1,18 @@
 /*
- * amlogic atv demod driver
+ * drivers/amlogic/atv_demod/atv_demod_ops.h
  *
- * Author: nengwen.chen <nengwen.chen@amlogic.com>
- *
- *
- * Copyright (C) 2018 Amlogic Inc.
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
  */
 
 #ifndef __ATV_DEMOD_OPS_H__
@@ -18,6 +22,8 @@
 #include "drivers/media/tuners/tuner-i2c.h"
 
 #include "atv_demod_driver.h"
+#include "atv_demod_afc.h"
+#include "atv_demod_monitor.h"
 
 
 #define AML_ATVDEMOD_UNINIT         0x0
@@ -25,6 +31,10 @@
 #define AML_ATVDEMOD_RESUME         0x2
 #define AML_ATVDEMOD_SCAN_MODE      0x3
 #define AML_ATVDEMOD_UNSCAN_MODE    0x4
+
+#define ATVDEMOD_STATE_IDEL  0
+#define ATVDEMOD_STATE_WORK  1
+#define ATVDEMOD_STATE_SLEEP 2
 
 #define AFC_BEST_LOCK    50
 #define ATV_AFC_500KHZ   500000
@@ -50,11 +60,12 @@ struct atv_demod_priv {
 	struct aml_atvdemod_parameters atvdemod_param;
 	struct atv_demod_sound_system sound_sys;
 
-	struct work_struct afc_wq;
-	struct timer_list afc_timer;
+	struct atv_demod_afc afc;
 
-	struct work_struct demod_wq;
-	struct timer_list demod_timer;
+	struct atv_demod_monitor monitor;
+
+	int state;
+	bool scanning;
 };
 
 

@@ -1,5 +1,22 @@
-#ifndef _Aud_Demod_Settings_h_
-#define _Aud_Demod_Settings_h_
+/*
+ * drivers/amlogic/atv_demod/aud_demod_settings.h
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#ifndef __AUD_DEMOD_SETTINGS_H__
+#define __AUD_DEMOD_SETTINGS_H__
 
 extern int M_DTO;
 extern int A2K_DTO;
@@ -165,4 +182,5 @@ extern int filter_sap_12k_4[];
 
 extern int filter_sap_15k_2[];
 extern int filter_sap_15k_4[];
-#endif  /* _Settings_h_ */
+
+#endif /* __AUD_DEMOD_SETTINGS_H__ */
