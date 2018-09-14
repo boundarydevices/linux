@@ -35,6 +35,10 @@
 
 #define USB_VENDOR_GENESYS_LOGIC		0x05e3
 #define HUB_QUIRK_CHECK_PORT_AUTOSUSPEND	0x01
+#ifdef CONFIG_AMLOGIC_USB
+static char *device_enum_fail[2]    = {
+"USB_DEVICE_STATE=Device no response", NULL };
+#endif
 
 /* Protect struct usb_device->state and ->children members
  * Note: Both are also protected by ->dev.sem, except that ->state can
@@ -4531,6 +4535,11 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 				if (r != -ENODEV)
 					dev_err(&udev->dev, "device descriptor read/64, error %d\n",
 							r);
+#ifdef CONFIG_AMLOGIC_USB
+				if (-ETIMEDOUT == r)
+					dev_err(&udev->dev, "Device no response\n");
+#endif
+
 				retval = -EMSGSIZE;
 				continue;
 			}
@@ -4929,6 +4938,22 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 loop_disable:
 		hub_port_disable(hub, port1, 1);
 loop:
+#ifdef CONFIG_AMLOGIC_USB
+	if (SET_CONFIG_TRIES == (i + 1)) {
+		struct kobject *kobj;
+
+		kobj = &udev->parent->dev.kobj;
+		if (kobj) {
+			udev->dev.kobj.parent = kobj;
+			dev_info(&udev->dev,
+				"the parent's name is %s\n", kobj->name);
+		}
+		kobject_uevent_env(&udev->dev.kobj,
+			KOBJ_CHANGE, device_enum_fail);
+		dev_err(&port_dev->dev,
+			"Device no response\n");
+	}
+#endif
 		usb_ep0_reinit(udev);
 		release_devnum(udev);
 		hub_free_dev(udev);

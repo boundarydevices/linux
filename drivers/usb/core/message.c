@@ -26,6 +26,20 @@ struct api_context {
 	int			status;
 };
 
+#ifdef CONFIG_AMLOGIC_USB
+#define USB_EHTEST_DELAY_TEST
+
+static int usb_test_port;
+static u8 poll_status_flag;
+static int usb_host_test_vid;
+static int usb_host_test_pid;
+module_param(usb_host_test_vid, int, 0644);
+MODULE_PARM_DESC(usb_host_test_vid, "test udisk vid");
+
+module_param(usb_host_test_pid, int, 0644);
+MODULE_PARM_DESC(usb_host_test_vid, "test mode pid");
+#endif
+
 static void usb_api_blocking_completion(struct urb *urb)
 {
 	struct api_context *ctx = urb->context;
@@ -1680,7 +1694,249 @@ static void __usb_queue_reset_device(struct work_struct *ws)
 	}
 	usb_put_intf(iface);	/* Undo _get_ in usb_queue_reset_device() */
 }
+#ifdef CONFIG_AMLOGIC_USB
+static void usb_EHtest_poll_status(struct work_struct *ws)
+{
+	u16 portstatus = 0;
+	int ret = -1;
+	struct usb_device *dev = container_of(ws,
+		struct usb_device, portstatus_work.work);
 
+	ret = usb_get_status(dev, USB_RT_PORT, usb_test_port, &portstatus);
+	if ((portstatus & 0x01) && (poll_status_flag != 1)) {
+		dev_info(&dev->dev,
+			"PORT IS CONNECT portstatus=0x%04x\n", portstatus);
+		poll_status_flag = 1;
+		queue_delayed_work(system_wq,
+					&dev->portstatus_work,
+					msecs_to_jiffies(1000));
+	} else if ((poll_status_flag == 1) && !(portstatus & 0x01)) {
+		dev_info(&dev->dev,
+			"PORT IS disCONNECT portstatus=0x%04x\n", portstatus);
+
+	} else {
+		queue_delayed_work(system_wq,
+					&dev->portstatus_work,
+					msecs_to_jiffies(1000));
+		dev_info(&dev->dev,
+			"status polled: portstatus=0x%04x\n", portstatus);
+	}
+
+}
+
+static int usb_EHtest_forceenab_mode(struct usb_device *dev)
+{
+	INIT_DELAYED_WORK(&dev->portstatus_work, usb_EHtest_poll_status);
+			queue_delayed_work(system_wq,
+					&dev->portstatus_work,
+					msecs_to_jiffies(1000));
+
+	return 0;
+}
+
+static int usb_send_host_elect_testcmd(struct usb_device *dev)
+{
+	/* Here we implement the HS Electrical Test support. The
+	 * tester uses a vendor ID of 0x1A0A to indicate we should
+	 * run a special test sequence. The product ID tells us
+	 * which sequence to run. We invoke the test sequence by
+	 * sending a non-standard SetFeature command to our root
+	 * hub port. Our xhci_hub_control routine will
+	 * recognize the command and perform the desired test
+	 * sequence.
+	 */
+
+	if (usb_host_test_vid == dev->descriptor.idVendor) {
+					/* HSOTG Electrical Test */
+		dev_warn(&dev->dev,
+			"VID from HSOTG Electrical Test Fixture, vid=0x%04x,pid=0x%04x\n",
+		usb_host_test_vid, usb_host_test_pid);
+
+		if (dev->bus && dev->parent) {
+			struct usb_device *hdev = dev->parent;
+			__u16 index = dev->portnum;
+			int timeout, ret = -1;
+			char *msg;
+			struct usb_device_descriptor *des;
+			unsigned int pipe = usb_sndctrlpipe(hdev, 0);
+
+			dev_warn(&dev->dev,
+				"hdev:portnum=%u,dev:portnum=%u,Got PID 0x%x\n",
+					hdev->portnum, dev->portnum,
+						dev->descriptor.idProduct);
+
+			if (hdev != dev->bus->root_hub) {
+				index = dev->portnum + 1;
+				dev_warn(&dev->dev,
+					"Test in HUB port: %d\n", index);
+			} else {
+				dev_warn(&dev->dev,
+					"Test in RootHub %s\n", hdev->devpath);
+			}
+			switch (usb_host_test_pid) {
+			case 0x0101:	/* TEST_SE0_NAK */
+				msg = "TEST_SE0_NAK";
+				index = dev->portnum;
+				index |= 0x300;
+				timeout = HZ;
+				break;
+
+			case 0x0102:	/* TEST_J */
+				msg = "TEST_J";
+				index = dev->portnum;
+				index |= 0x100;
+				timeout = HZ;
+				break;
+
+			case 0x0103:	/* TEST_K */
+					msg = "TEST_K";
+					index = dev->portnum;
+					index |= 0x200;
+					timeout = HZ;
+					break;
+
+			case 0x0104:	/* TEST_PACKET */
+				msg = "TEST_PACKET";
+				index = dev->portnum;
+				index |= 0x400;
+				timeout = HZ;
+				break;
+
+			case 0x0105:	/* TEST_FORCE_ENABLE */
+				msg = "TEST_FORCE_ENABLE";
+				index = dev->portnum;
+				index |= 0x500;
+				timeout = HZ;
+
+				ret = usb_control_msg(hdev, pipe,
+					USB_REQ_SET_FEATURE, USB_RT_PORT,
+						USB_PORT_FEAT_TEST, index,
+							NULL, 0, timeout);
+				if (ret < 0)
+					dev_warn(&dev->dev,
+						"%s is failed\n", msg);
+				usb_test_port = dev->portnum;
+				usb_EHtest_forceenab_mode(hdev);
+				break;
+
+			case 0x0106:	/* HS_HOST_PORT_SUSPEND_RESUME */
+				msg = "HS_HOST_PORT_SUSPEND_RESUME";
+				index |= 0x600;
+				timeout = 40 * HZ;
+				usb_control_msg(hdev, usb_sndctrlpipe(hdev, 0),
+					USB_REQ_SET_FEATURE, USB_RT_PORT,
+						USB_PORT_FEAT_TEST,
+							index|0x600, NULL,
+							0, 40 * HZ);
+				break;
+
+	/* SINGLE_STEP_GET_DEVICE_DESCRIPTOR setup */
+			case 0x0107:
+				des = kmalloc(sizeof(*des), GFP_NOIO);
+				if (!des)
+					return -1;
+
+				msg = "SINGLE_STEP_GET_DEVICE_DESCRIPTOR setup";
+				index = 0;
+				index |= 0x700;
+				timeout = 40 * HZ;
+
+				usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
+					USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
+						0x100, index, des, 18, timeout);
+				kfree(des);
+				break;
+			/* SINGLE_STEP_GET_DEVICE_DESCRIPTOR execute */
+			case 0x0108:
+				index = 0;
+				des = kmalloc(sizeof(*des), GFP_NOIO);
+				if (!des)
+					return -1;
+				msg = "SIG_STEP_GET_DEVICE_DESCRIPTOR execute";
+				index |= 0x800;
+				timeout = 40 * HZ;
+
+				usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
+					USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
+						0x0100, index,
+						des, 18, timeout);
+				kfree(des);
+				break;
+			case 0x0200:	/* exit test mode */
+				msg = "exit test mode";
+				index = dev->portnum;
+				timeout = HZ;
+
+				ret = usb_control_msg(hdev, pipe,
+					USB_REQ_CLEAR_FEATURE, USB_RT_PORT,
+						USB_PORT_FEAT_TEST,
+						index, NULL, 0, timeout);
+				if (ret < 0)
+					dev_warn(&dev->dev,
+						"exit test mode failed,ret =%d\n",
+						ret);
+				break;
+
+			default:
+				dev_warn(&dev->dev,
+					"error PID %X, ret =%d\n",
+					dev->descriptor.idProduct, ret);
+				return -1;
+			}
+
+			dev_warn(&dev->dev, "%s\n", msg);
+			if ((usb_host_test_pid == 0x0101)
+				|| (usb_host_test_pid == 0x0102)
+				|| (usb_host_test_pid == 0x0103)
+					|| (usb_host_test_pid == 0x0104)) {
+			usb_control_msg(hdev, pipe,
+				USB_REQ_SET_FEATURE, USB_RT_PORT,
+					USB_PORT_FEAT_TEST,
+					index, NULL, 0, timeout);
+			}
+			return 0;
+		}
+		dev_info(&dev->dev,
+			"the vid(0x%04x),but pid(0x%04x) is out range\n",
+			usb_host_test_vid, usb_host_test_pid);
+		return -1;
+	}
+
+	return -1;
+}
+
+static void send_testcmd_timer_func(struct work_struct *ws)
+{
+	struct usb_device *dev = container_of(ws,
+		struct usb_device, portstatus_work.work);
+
+	usb_send_host_elect_testcmd(dev);
+	return;
+
+}
+
+
+static int usb_delaysend_hsel_testcmd(struct usb_device *dev)
+{
+	if ((dev->descriptor.idVendor != usb_host_test_vid)
+		|| (usb_host_test_pid > 0x200) || (usb_host_test_pid < 0x101)) {
+		dev_warn(&dev->dev,
+			"<%s><%u><idVendor is not test mode,>dev_vid=0x%04x,test_vid=0x%04x\n",
+		    __func__, __LINE__,
+		    dev->descriptor.idVendor, usb_host_test_vid);
+		return -1;
+	}
+
+	dev_warn(&dev->dev, "<%s><%u>\n", __func__, __LINE__);
+	INIT_DELAYED_WORK(&dev->portstatus_work, send_testcmd_timer_func);
+			queue_delayed_work(system_wq,
+					&dev->portstatus_work,
+					msecs_to_jiffies(5000));
+
+	return 0;
+}
+
+#endif
 
 /*
  * usb_set_configuration - Makes a particular device setting be current
@@ -1918,6 +2174,28 @@ free_interfaces:
 	/* Enable LTM if it was turned off by usb_disable_device. */
 	usb_enable_ltm(dev);
 
+#ifdef CONFIG_AMLOGIC_USB
+	if (usb_host_test_vid > 0) {
+		if (dev->descriptor.idVendor == USB_HSET_TEST_VID) {
+			usb_host_test_vid = dev->descriptor.idVendor;
+			usb_host_test_pid = dev->descriptor.idProduct;
+			dev_info(&dev->dev,
+			"the dev port is %d, and this is test udisk vid = 0x%04x\n",
+			dev->portnum, usb_host_test_vid);
+		}
+#ifdef USB_EHTEST_DELAY_TEST
+		ret = usb_delaysend_hsel_testcmd(dev);
+#else
+		ret = usb_send_host_elect_testcmd(dev);
+#endif
+		if (!ret) {
+			dev_err(&dev->dev, "entr test mode\n");
+			return 0;
+		}
+	}
+
+#endif
+
 	/* Now that all the interfaces are set up, register them
 	 * to trigger binding of drivers to interfaces.  probe()
 	 * routines may install different altsettings and may
@@ -1933,6 +2211,10 @@ free_interfaces:
 			intf->cur_altsetting->desc.bInterfaceNumber);
 		device_enable_async_suspend(&intf->dev);
 		ret = device_add(&intf->dev);
+#ifdef CONFIG_AMLOGIC_USB
+		if (((&intf->dev)->driver) == NULL)
+			dev_err(&dev->dev, "Unsupported device\n");
+#endif
 		if (ret != 0) {
 			dev_err(&dev->dev, "device_add(%s) --> %d\n",
 				dev_name(&intf->dev), ret);
