@@ -342,9 +342,11 @@ static irqreturn_t frame_sync_interrupt(int irq, void *id)
 		return IRQ_HANDLED;
 	}
 	if (par->fb_idle_cnt++ > FB_IDLE_DISABLE_CNT) {
+		spin_lock(&par->irq_lock);
 		par->fb_idle_cnt = 0;
-		par->irq_enabled = 0;
-		disable_irq_nosync(irq);
+		if (test_and_clear_bit(0, &par->irq_enabled))
+			disable_irq_nosync(par->irq);
+		spin_unlock(&par->irq_lock);
 	}
 	return IRQ_HANDLED;
 }
@@ -409,8 +411,10 @@ static void fbtft_deferred_io(struct fb_info *info, struct list_head *pagereflis
 			par->dls = dirty_lines_start;
 		if (par->dle < dirty_lines_end)
 			par->dle = dirty_lines_end;
+		spin_lock(&par->irq_lock);
 		if (!test_and_set_bit(0, &par->irq_enabled))
 			enable_irq(par->irq);
+		spin_unlock(&par->irq_lock);
 	} else {
 		par->fbtftops.update_display(info->par,
 					dirty_lines_start, dirty_lines_end);
@@ -776,6 +780,7 @@ struct fb_info *fbtft_framebuffer_alloc(struct fbtft_display *display,
 	par->pdata = pdata;
 	par->debug = display->debug;
 	par->buf = buf;
+	spin_lock_init(&par->irq_lock);
 	spin_lock_init(&par->dirty_lock);
 	par->bgr = pdata->bgr;
 	par->display_fps = pdata->display_fps;
