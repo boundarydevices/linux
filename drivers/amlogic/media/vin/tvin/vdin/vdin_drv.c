@@ -2691,6 +2691,20 @@ static void vdin_drv_shutdown(struct platform_device *pdev)
 	struct vdin_dev_s *vdevp;
 
 	vdevp = platform_get_drvdata(pdev);
+
+	mutex_lock(&vdevp->fe_lock);
+	if (vdevp->flags & VDIN_FLAG_DEC_STARTED) {
+		vdevp->flags |= VDIN_FLAG_DEC_STOP_ISR;
+		vdin_stop_dec(vdevp);
+		vdevp->flags &= (~VDIN_FLAG_DEC_STARTED);
+		pr_info("VDIN(%d) decode stop ok at vdin_drv_shutdown.\n",
+			vdevp->index);
+	} else {
+		pr_info("VDIN(%d) decode has stopped.\n",
+			vdevp->index);
+	}
+	mutex_unlock(&vdevp->fe_lock);
+
 	vdevp->flags |= VDIN_FLAG_SM_DISABLE;
 	vdin_enable_module(vdevp->addr_offset, false);
 	pr_info("%s ok.\n", __func__);
