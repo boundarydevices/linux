@@ -1020,7 +1020,7 @@
 		product_desc = "TXLX"; /* Max Chars: 16    */
 		cec_osd_string = "AML_TV"; /* Max Chars: 14    */
 		port_num = <4>;	/*all port number*/
-		ee_cec;
+		/*ee_cec;*/
 		output = <1>;	/*output port number*/
 		/*arc support port:bit 0-3, according to portmap*/
 		arc_port_mask = <0x8>;

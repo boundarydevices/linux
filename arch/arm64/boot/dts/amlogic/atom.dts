@@ -973,7 +973,7 @@
 		product_desc = "TXLX"; /* Max Chars: 16    */
 		cec_osd_string = "AML_TV"; /* Max Chars: 14    */
 		port_num = <4>;	/*all port number*/
-		ee_cec;
+		/*ee_cec;*/
 		output = <1>;
 		arc_port_mask = <0x8>;
 		interrupts = <0 205 1
