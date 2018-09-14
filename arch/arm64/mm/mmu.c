@@ -181,6 +181,10 @@ static void alloc_init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
 static inline bool use_1G_block(unsigned long addr, unsigned long next,
 			unsigned long phys)
 {
+#ifdef CONFIG_AMLOGIC_CMA
+	/* we need create full 2nd page table */
+	return false;
+#else
 	if (PAGE_SHIFT != 12)
 		return false;
 
@@ -188,6 +192,7 @@ static inline bool use_1G_block(unsigned long addr, unsigned long next,
 		return false;
 
 	return true;
+#endif
 }
 
 static void alloc_init_pud(pgd_t *pgd, unsigned long addr, unsigned long end,

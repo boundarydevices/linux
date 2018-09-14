@@ -11,6 +11,11 @@ struct cma {
 	struct hlist_head mem_head;
 	spinlock_t mem_head_lock;
 #endif
+
+#ifdef CONFIG_AMLOGIC_CMA	/* clear kernel space mapping after driver it */
+	bool	clear_map;
+#endif
+
 };
 
 extern struct cma cma_areas[MAX_CMA_AREAS];

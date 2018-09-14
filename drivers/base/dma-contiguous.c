@@ -268,6 +268,10 @@ static int __init rmem_cma_setup(struct reserved_mem *rmem)
 	}
 	/* Architecture specific contiguous memory fixup. */
 	dma_contiguous_early_fixup(rmem->base, rmem->size);
+#ifdef CONFIG_AMLOGIC_CMA
+	if (of_get_flat_dt_prop(node, "clear-map", NULL))
+		cma_init_clear(cma, 1);
+#endif
 
 	if (of_get_flat_dt_prop(node, "linux,cma-default", NULL))
 		dma_contiguous_set_default(cma);

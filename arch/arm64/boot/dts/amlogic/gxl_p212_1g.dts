@@ -683,6 +683,7 @@
 		compatible = "amlogic, codec, mm";
 		memory-region = <&codec_mm_cma &codec_mm_reserved>;
 		dev_name = "codec_mm";
+		/*no-cmatvp;*/
 		status = "okay";
 	};
 

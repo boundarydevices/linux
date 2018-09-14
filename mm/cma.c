@@ -37,6 +37,7 @@
 #include <linux/io.h>
 #include <trace/events/cma.h>
 #ifdef CONFIG_AMLOGIC_CMA
+#include <asm/pgtable.h>
 #include <linux/amlogic/aml_cma.h>
 #endif /* CONFIG_AMLOGIC_CMA */
 
@@ -45,6 +46,103 @@
 struct cma cma_areas[MAX_CMA_AREAS];
 unsigned cma_area_count;
 static DEFINE_MUTEX(cma_mutex);
+
+#ifdef CONFIG_AMLOGIC_CMA
+void cma_init_clear(struct cma *cma, bool clear)
+{
+	cma->clear_map = clear;
+}
+
+static int clear_cma_pagemap2(struct cma *cma)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	unsigned long addr, end;
+	struct mm_struct *mm;
+
+	addr = (unsigned long)pfn_to_kaddr(cma->base_pfn);
+	end  = addr + cma->count * PAGE_SIZE;
+	mm = &init_mm;
+	pgd = pgd_offset(mm, addr);
+	for (; addr < end; addr += PMD_SIZE) {
+		if (pgd_none(*pgd) || pgd_bad(*pgd))
+			break;
+
+		pud = pud_offset(pgd, addr);
+		if (pud_none(*pud) || pud_bad(*pud))
+			break;
+
+		pmd = pmd_offset(pud, addr);
+		if (pmd_none(*pmd))
+			break;
+
+		pmd_clear(pmd);
+	}
+
+	return 0;
+}
+
+int setup_cma_full_pagemap(struct cma *cma)
+{
+	struct vm_area_struct vma = {};
+	unsigned long addr, size;
+	int ret;
+
+	clear_cma_pagemap2(cma);
+	addr = (unsigned long)pfn_to_kaddr(cma->base_pfn);
+	size = cma->count * PAGE_SIZE;
+	vma.vm_mm    = &init_mm;
+	vma.vm_start = addr;
+	vma.vm_end   = addr + size;
+	vma.vm_page_prot = PAGE_KERNEL;
+	ret = remap_pfn_range(&vma, addr, cma->base_pfn,
+			      size, vma.vm_page_prot);
+	if (ret < 0)
+		pr_info("%s, remap pte failed:%d, cma:%lx\n",
+			__func__, ret, cma->base_pfn);
+	return 0;
+}
+
+int cma_mmu_op(struct page *page, int count, bool set)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	unsigned long addr, end;
+	struct mm_struct *mm;
+
+	if (!page)
+		return -EINVAL;
+
+	addr = (unsigned long)page_address(page);
+	end  = addr + count * PAGE_SIZE;
+	mm = &init_mm;
+	pgd = pgd_offset(mm, addr);
+	for (; addr < end; addr += PAGE_SIZE) {
+		if (pgd_none(*pgd) || pgd_bad(*pgd))
+			break;
+
+		pud = pud_offset(pgd, addr);
+		if (pud_none(*pud) || pud_bad(*pud))
+			break;
+
+		pmd = pmd_offset(pud, addr);
+		if (pmd_none(*pmd))
+			break;
+
+		pte = pte_offset_map(pmd, addr);
+		if (set)
+			set_pte_at(mm, addr, pte, mk_pte(page, PAGE_KERNEL));
+		else
+			pte_clear(mm, addr, pte);
+		pte_unmap(pte);
+		page++;
+	}
+	return 0;
+}
+#endif
 
 phys_addr_t cma_get_base(const struct cma *cma)
 {
@@ -128,6 +226,11 @@ static int __init cma_activate_area(struct cma *cma)
 	} while (--i);
 
 	mutex_init(&cma->lock);
+
+#ifdef CONFIG_AMLOGIC_CMA
+	if (cma->clear_map)
+		setup_cma_full_pagemap(cma);
+#endif
 
 #ifdef CONFIG_CMA_DEBUGFS
 	INIT_HLIST_HEAD(&cma->mem_head);
