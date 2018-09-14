@@ -47,14 +47,31 @@ int gdc_run(struct gdc_settings *g)
 
 	LOG(LOG_INFO, "Done gdc config..\n");
 
-	//start gdc process with input address for y and uv planes
-	if (g->gdc_config.format == NV12) {
-		gdc_process(g, (uint32_t)g->y_base_addr,
-			(uint32_t)g->uv_base_addr);
-	} else {
-		gdc_process_yuv420p(g, (uint32_t)g->y_base_addr,
-				(uint32_t)g->u_base_addr,
-				(uint32_t)g->v_base_addr);
+	switch (g->gdc_config.format) {
+	case NV12:
+		gdc_process(g, g->y_base_addr, g->uv_base_addr);
+	break;
+	case YV12:
+		gdc_process_yuv420p(g, g->y_base_addr,
+				g->u_base_addr,
+				g->v_base_addr);
+	break;
+	case Y_GREY:
+		gdc_process_y_grey(g, g->y_base_addr);
+	break;
+	case YUV444_P:
+		gdc_process_yuv444p(g, g->y_base_addr,
+				g->u_base_addr,
+				g->v_base_addr);
+	break;
+	case RGB444_P:
+		gdc_process_rgb444p(g, g->y_base_addr,
+				g->u_base_addr,
+				g->v_base_addr);
+	break;
+	default:
+		LOG(LOG_ERR, "Error config format\n");
+	break;
 	}
 	LOG(LOG_DEBUG, "call gdc process\n");
 

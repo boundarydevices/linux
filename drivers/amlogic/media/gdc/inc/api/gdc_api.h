@@ -20,9 +20,6 @@
 
 #include <linux/of_address.h>
 
-#define NV12 1
-#define YV12 2
-
 struct gdc_buf_cfg {
 	uint32_t type;
 	unsigned long len;
@@ -97,6 +94,15 @@ enum {
 	GDC_BUFF_TYPE_MAX
 };
 
+enum {
+	NV12 = 1,
+	YV12,
+	Y_GREY,
+	YUV444_P,
+	RGB444_P,
+	FMT_MAX
+};
+
 /**
  *   Configure the output gdc configuration
  *
@@ -154,6 +160,17 @@ int gdc_process_yuv420p(struct gdc_settings *gdc_settings,
 		uint32_t y_base_addr,
 		uint32_t u_base_addr,
 		uint32_t v_base_addr);
+int gdc_process_y_grey(struct gdc_settings *gdc_settings,
+		uint32_t y_base_addr);
+int gdc_process_yuv444p(struct gdc_settings *gdc_settings,
+		uint32_t y_base_addr,
+		uint32_t u_base_addr,
+		uint32_t v_base_addr);
+int gdc_process_rgb444p(struct gdc_settings *gdc_settings,
+		uint32_t y_base_addr,
+		uint32_t u_base_addr,
+		uint32_t v_base_addr);
+
 /**
  *   This function gets the GDC output frame addresses
  *

@@ -196,13 +196,66 @@ static long meson_gdc_set_buff(void *f_fh,
 	return ret;
 }
 
+static long meson_gdc_set_input_addr(uint32_t start_addr,
+					struct gdc_settings *gs)
+{
+	struct gdc_config *gc = NULL;
+
+	if (gs == NULL || start_addr == 0) {
+		LOG(LOG_ERR, "Error input param\n");
+		return -EINVAL;
+	}
+
+	gc = &gs->gdc_config;
+
+	switch (gc->format) {
+	case NV12:
+		gs->y_base_addr = start_addr;
+		gs->uv_base_addr = start_addr +
+			gc->input_y_stride * gc->input_height;
+	break;
+	case YV12:
+		gs->y_base_addr = start_addr;
+		gs->u_base_addr = start_addr +
+			gc->input_y_stride * gc->input_height;
+		gs->v_base_addr = gs->u_base_addr +
+			gc->input_c_stride * gc->input_height / 2;
+	break;
+	case Y_GREY:
+		gs->y_base_addr = start_addr;
+		gs->u_base_addr = 0;
+		gs->v_base_addr = 0;
+	break;
+	case YUV444_P:
+		gs->y_base_addr = start_addr;
+		gs->u_base_addr = start_addr +
+			gc->input_y_stride * gc->input_height;
+		gs->v_base_addr = gs->u_base_addr +
+			gc->input_c_stride * gc->input_height;
+	break;
+	case RGB444_P:
+		gs->y_base_addr = start_addr;
+		gs->u_base_addr = start_addr +
+			gc->input_y_stride * gc->input_height;
+		gs->v_base_addr = gs->u_base_addr +
+			gc->input_c_stride * gc->input_height;
+	break;
+	default:
+		LOG(LOG_ERR, "Error config format\n");
+		return -EINVAL;
+	break;
+	}
+
+	return 0;
+}
+
 static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		unsigned long arg)
 {
 	long ret = 0;
 	size_t len;
 	struct mgdc_fh_s *fh = file->private_data;
-	struct gdc_settings  *gs = &fh->gs;
+	struct gdc_settings *gs = &fh->gs;
 	struct gdc_config *gc = &gs->gdc_config;
 	struct gdc_buf_cfg buf_cfg;
 	struct page *cma_pages = NULL;
@@ -212,8 +265,10 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 	switch (cmd) {
 	case GDC_PROCESS:
 		ret = copy_from_user(gs, argp, sizeof(*gs));
-		if (ret < 0)
-			LOG(LOG_DEBUG, "copy from user failed\n");
+		if (ret < 0) {
+			LOG(LOG_ERR, "copy from user failed\n");
+			return -EINVAL;
+		}
 
 		LOG(LOG_DEBUG, "sizeof(gs)=%zu, magic=%d\n",
 				sizeof(*gs), gs->magic);
@@ -221,37 +276,38 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		//configure gdc config, buffer address and resolution
 		ret = meson_ion_share_fd_to_phys(fh->ion_client,
 				gs->out_fd, &addr, &len);
+		if (ret < 0) {
+			LOG(LOG_ERR, "import out fd %d failed\n", gs->out_fd);
+			return -EINVAL;
+		}
 
 		gs->buffer_addr = addr;
 		gs->buffer_size = len;
 
-		if (ret < 0)
-			LOG(LOG_DEBUG, "import out fd %d failed\n", gs->out_fd);
 		gs->base_gdc = 0;
 		gs->current_addr = gs->buffer_addr;
 
 		ret = meson_ion_share_fd_to_phys(fh->ion_client,
 				gc->config_addr, &addr, &len);
+		if (ret < 0) {
+			LOG(LOG_ERR, "import config fd failed\n");
+			return -EINVAL;
+		}
 
 		gc->config_addr = addr;
 
 		ret = meson_ion_share_fd_to_phys(fh->ion_client,
 				gs->in_fd, &addr, &len);
-		if (gc->format == NV12) {
-			gs->y_base_addr = addr;
-			gs->uv_base_addr = addr +
-				gc->input_y_stride * gc->input_height;
-		} else if (gc->format == YV12) {
-			gs->y_base_addr = addr;
-			gs->u_base_addr = addr
-				+ gc->input_y_stride * gc->input_height;
-
-			gs->v_base_addr = gs->u_base_addr +
-				gc->input_c_stride * gc->input_height / 2;
+		if (ret < 0) {
+			LOG(LOG_ERR, "import in fd %d failed\n", gs->in_fd);
+			return -EINVAL;
 		}
 
-		if (ret < 0)
-			LOG(LOG_DEBUG, "import in fd %d failed\n", gs->in_fd);
+		ret = meson_gdc_set_input_addr(addr, gs);
+		if (ret != 0) {
+			LOG(LOG_ERR, "set input addr failed\n");
+			return -EINVAL;
+		}
 
 		gs->fh = fh;
 
@@ -281,17 +337,10 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 
 		gc->config_addr = fh->c_paddr;
 
-		if (gc->format == NV12) {
-			gs->y_base_addr = fh->i_paddr;
-			gs->uv_base_addr = fh->i_paddr +
-				gc->input_y_stride * gc->input_height;
-		} else if (gc->format == YV12) {
-			gs->y_base_addr = fh->i_paddr;
-			gs->u_base_addr = fh->i_paddr +
-				gc->input_y_stride * gc->input_height;
-
-			gs->v_base_addr = gs->u_base_addr +
-				gc->input_c_stride * gc->input_height / 2;
+		ret = meson_gdc_set_input_addr(fh->i_paddr, gs);
+		if (ret != 0) {
+			LOG(LOG_ERR, "set input addr failed\n");
+			return -EINVAL;
 		}
 
 		gs->fh = fh;
@@ -299,7 +348,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		mutex_lock(&fh->gdev->d_mutext);
 		ret = gdc_run(gs);
 		if (ret < 0)
-			LOG(LOG_ERR, "gdc process ret = %ld\n", ret);
+			LOG(LOG_ERR, "gdc process failed ret = %ld\n", ret);
 
 		ret = wait_for_completion_timeout(&fh->gdev->d_com,
 						msecs_to_jiffies(40));

@@ -236,6 +236,210 @@ int gdc_process_yuv420p(struct gdc_settings *gdc_settings,
 	return 0;
 }
 
+
+/**
+ *   This function points gdc to its input resolution
+ *
+ *   and yuv address and offsets
+ *
+ *   Shown inputs to GDC are Y plane address and offsets
+ *
+ *   @param  gdc_settings - overall gdc settings and state
+ *   @param  active_width -  input width resolution
+ *   @param  active_height - input height resolution
+ *   @param  y_base_addr -  input Y base address
+ *   @param  y_line_offset - input Y line buffer offset
+ *
+ *   @return 0 - success
+ *	 -1 - no interrupt from GDC.
+ */
+int gdc_process_y_grey(struct gdc_settings *gdc_settings,
+				uint32_t y_base_addr)
+{
+	struct gdc_config  *gc = &gdc_settings->gdc_config;
+	uint32_t gdc_out_base_addr = gdc_settings->current_addr;
+	uint32_t input_width = gc->input_width;
+	uint32_t input_height = gc->input_height;
+	uint32_t input_stride = gc->input_y_stride;
+	uint32_t output_stride = gc->output_y_stride;
+
+	LOG(LOG_DEBUG, "is_waiting_gdc=%d\n", gdc_settings->is_waiting_gdc);
+	if (gdc_settings->is_waiting_gdc) {
+		gdc_start_flag_write(0);
+		LOG(LOG_CRIT, "No interrupt Still waiting...\n");
+		gdc_start_flag_write(1);
+		return -1;
+	}
+
+	LOG(LOG_DEBUG, "starting GDC process.\n");
+
+	gdc_datain_width_write(input_width);
+	gdc_datain_height_write(input_height);
+	//input y plane
+	gdc_data1in_addr_write(y_base_addr);
+	gdc_data1in_line_offset_write(input_stride);
+
+	//gdc y output
+	gdc_data1out_addr_write(gdc_out_base_addr);
+	gdc_data1out_line_offset_write(output_stride);
+
+	gdc_start(gdc_settings);
+
+	return 0;
+}
+
+/**
+ *   This function points gdc to its input resolution
+ *
+ *   and yuv address and offsets
+ *
+ *   Shown inputs to GDC are Y and UV plane address and offsets
+ *
+ *   @param  gdc_settings - overall gdc settings and state
+ *   @param  active_width -  input width resolution
+ *   @param  active_height - input height resolution
+ *   @param  y_base_addr -  input Y base address
+ *   @param  uv_base_addr - input UV base address
+ *   @param  y_line_offset - input Y line buffer offset
+ *   @param  uv_line_offset-  input UV line buffer offer
+ *
+ *   @return 0 - success
+ *	 -1 - no interrupt from GDC.
+ */
+int gdc_process_yuv444p(struct gdc_settings *gdc_settings,
+	uint32_t y_base_addr, uint32_t u_base_addr, uint32_t v_base_addr)
+{
+	struct gdc_config  *gc = &gdc_settings->gdc_config;
+	uint32_t gdc_out_base_addr = gdc_settings->current_addr;
+	uint32_t input_width = gc->input_width;
+	uint32_t input_height = gc->input_height;
+	uint32_t input_stride = gc->input_y_stride;
+	uint32_t input_u_stride = gc->input_c_stride;
+	uint32_t input_v_stride = gc->input_c_stride;
+	uint32_t output_height = gc->output_height;
+	uint32_t output_stride = gc->output_y_stride;
+	uint32_t output_u_stride = gc->output_c_stride;
+	uint32_t output_v_stride = gc->output_c_stride;
+
+	LOG(LOG_DEBUG, "is_waiting_gdc=%d\n", gdc_settings->is_waiting_gdc);
+	if (gdc_settings->is_waiting_gdc) {
+		gdc_start_flag_write(0);
+		LOG(LOG_CRIT, "No interrupt Still waiting...\n");
+		gdc_start_flag_write(1);
+		return -1;
+	}
+
+	LOG(LOG_DEBUG, "starting GDC process.\n");
+
+	gdc_datain_width_write(input_width);
+	gdc_datain_height_write(input_height);
+	//input y plane
+	gdc_data1in_addr_write(y_base_addr);
+	gdc_data1in_line_offset_write(input_stride);
+
+	//input u plane
+	gdc_data2in_addr_write(u_base_addr);
+	gdc_data2in_line_offset_write(input_u_stride);
+
+	//input v plane
+	gdc_data3in_addr_write(v_base_addr);
+	gdc_data3in_line_offset_write(input_v_stride);
+
+	//gdc y output
+	gdc_data1out_addr_write(gdc_out_base_addr);
+	gdc_data1out_line_offset_write(output_stride);
+
+	//gdc u output
+	gdc_out_base_addr += output_height * output_stride;
+	gdc_data2out_addr_write(gdc_out_base_addr);
+	gdc_data2out_line_offset_write(output_u_stride);
+
+	//gdc v output
+	gdc_out_base_addr += output_height * output_u_stride;
+	gdc_data3out_addr_write(gdc_out_base_addr);
+	gdc_data3out_line_offset_write(output_v_stride);
+	gdc_start(gdc_settings);
+
+	return 0;
+}
+
+/**
+ *   This function points gdc to its input resolution
+ *
+ *   and rgb address and offsets
+ *
+ *   Shown inputs to GDC are R\G\B plane address and offsets
+ *
+ *   @param  gdc_settings - overall gdc settings and state
+ *   @param  active_width -  input width resolution
+ *   @param  active_height - input height resolution
+ *   @param  y_base_addr -  input R base address
+ *   @param  u_base_addr - input G base address
+ *   @param  v_base_addr - input B base address
+ *   @param  y_line_offset - input R line buffer offset
+ *   @param  u_line_offset-  input G line buffer offer
+ *   @param  v_line_offset-  input B line buffer offer
+ *
+ *   @return 0 - success
+ *	 -1 - no interrupt from GDC.
+ */
+int gdc_process_rgb444p(struct gdc_settings *gdc_settings,
+	uint32_t y_base_addr, uint32_t u_base_addr, uint32_t v_base_addr)
+{
+	struct gdc_config  *gc = &gdc_settings->gdc_config;
+	uint32_t gdc_out_base_addr = gdc_settings->current_addr;
+	uint32_t input_width = gc->input_width;
+	uint32_t input_height = gc->input_height;
+	uint32_t input_stride = gc->input_y_stride;
+	uint32_t input_u_stride = gc->input_c_stride;
+	uint32_t input_v_stride = gc->input_c_stride;
+	uint32_t output_height = gc->output_height;
+	uint32_t output_stride = gc->output_y_stride;
+	uint32_t output_u_stride = gc->output_c_stride;
+	uint32_t output_v_stride = gc->output_c_stride;
+
+	LOG(LOG_DEBUG, "is_waiting_gdc=%d\n", gdc_settings->is_waiting_gdc);
+	if (gdc_settings->is_waiting_gdc) {
+		gdc_start_flag_write(0);
+		LOG(LOG_CRIT, "No interrupt Still waiting...\n");
+		gdc_start_flag_write(1);
+		return -1;
+	}
+
+	LOG(LOG_DEBUG, "starting GDC process.\n");
+
+	gdc_datain_width_write(input_width);
+	gdc_datain_height_write(input_height);
+	//input y plane
+	gdc_data1in_addr_write(y_base_addr);
+	gdc_data1in_line_offset_write(input_stride);
+
+	//input u plane
+	gdc_data2in_addr_write(u_base_addr);
+	gdc_data2in_line_offset_write(input_u_stride);
+
+	//input v plane
+	gdc_data3in_addr_write(v_base_addr);
+	gdc_data3in_line_offset_write(input_v_stride);
+
+	//gdc y output
+	gdc_data1out_addr_write(gdc_out_base_addr);
+	gdc_data1out_line_offset_write(output_stride);
+
+	//gdc u output
+	gdc_out_base_addr += output_height * output_stride;
+	gdc_data2out_addr_write(gdc_out_base_addr);
+	gdc_data2out_line_offset_write(output_u_stride);
+
+	//gdc v output
+	gdc_out_base_addr += output_height * output_u_stride;
+	gdc_data3out_addr_write(gdc_out_base_addr);
+	gdc_data3out_line_offset_write(output_v_stride);
+	gdc_start(gdc_settings);
+
+	return 0;
+}
+
 /**
  *   This function gets the GDC output frame addresses
  *
