@@ -31,11 +31,26 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		#cooling-cells = <2>;/* min followed by max */
+		cpu-map {
+			cluster0:cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+				core1 {
+					cpu = <&CPU1>;
+				};
+				core2 {
+					cpu = <&CPU2>;
+				};
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+		};
 		CPU0:cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
 			reg = <0x0>;
-			//timer=<&timer_a>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
@@ -46,7 +61,6 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
 			reg = <0x1>;
-			//timer=<&timer_b>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
@@ -56,7 +70,6 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
 			reg = <0x2>;
-			//timer=<&timer_c>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
@@ -67,11 +80,34 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
 			reg = <0x0 0x3>;
-			//timer=<&timer_d>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+		};
+
+		idle-states {
+			entry-method = "arm,psci";
+/*
+			CPU_SLEEP_0: cpu-sleep-0 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <3000>;
+				exit-latency-us = <3000>;
+				min-residency-us = <8000>;
+			};
+*/
+/*
+ *			SYSTEM_SLEEP_0: system-sleep-0 {
+ *				compatible = "arm,idle-state";
+ *				arm,psci-suspend-param = <0x0010000>;
+ *				local-timer-stop;
+ *				entry-latency-us = <0x3fffffff>;
+ *				exit-latency-us = <0x40000000>;
+ *				min-residency-us = <0xffffffff>;
+ *			};
+ */
 		};
 	};
 
@@ -892,6 +928,12 @@
 		interrupts = <0 52 1>;
 		interrupt-names = "ddr_bandwidth";
 	};
+	dmc_monitor {
+		compatible = "amlogic, dmc_monitor";
+		status = "okay";
+		reg_base = <0xff638800>;
+		interrupts = <0 51 1>;
+	};
 
 	cpu_ver_name {
 		compatible = "amlogic, cpu-major-id-txlx";
@@ -1197,14 +1239,21 @@
 			function = "vbyone";
 		};
 	};
+	lcd_vbyone_off_pins: lcd_vbyone_off_pin {
+		mux {
+			groups = "GPIOH_0","GPIOH_1";
+			function = "gpio_periphs";
+			input-enable;
+		};
+	};
 
-	lcd_ttl_rgb_6bit_pins_on:lcd_ttl_rgb_6bit_on{
+	lcd_ttl_rgb_6bit_on_pins:lcd_ttl_rgb_6bit_on{
 		mux {
 			groups = "lcd_r2_7","lcd_g2_7","lcd_b2_7";
 			function = "lcd";
 		};
 	};
-	lcd_ttl_rgb_6bit_pins_off:lcd_ttl_rgb_6bit_off{
+	lcd_ttl_rgb_6bit_off_pins:lcd_ttl_rgb_6bit_off{
 		mux {
 			groups = "GPIOY_2","GPIOY_3","GPIOY_4","GPIOY_5",
 				"GPIOY_6","GPIOY_7", /*r2~7*/
@@ -1216,7 +1265,7 @@
 			input-enable;
 		};
 	};
-	lcd_ttl_rgb_8bit_pins_on:lcd_ttl_rgb_8bit_on{
+	lcd_ttl_rgb_8bit_on_pins:lcd_ttl_rgb_8bit_on{
 		mux {
 			groups = "lcd_r0_1","lcd_r2_7",
 				"lcd_g0_1","lcd_g2_7",
@@ -1224,7 +1273,7 @@
 			function = "lcd";
 		};
 	};
-	lcd_ttl_rgb_8bit_pins_off:lcd_ttl_rgb_8bit_off{
+	lcd_ttl_rgb_8bit_off_pins:lcd_ttl_rgb_8bit_off{
 		mux {
 			groups = "GPIOY_0","GPIOY_1","GPIOY_2","GPIOY_3",
 				"GPIOY_4","GPIOY_5", "GPIOY_6","GPIOY_7",

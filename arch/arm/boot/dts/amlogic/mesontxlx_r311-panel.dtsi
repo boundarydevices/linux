@@ -31,8 +31,9 @@
 		interrupts = <0 3 1
 			0 78 1>;
 		interrupt-names = "vsync","vbyone";
-		pinctrl-names = "vbyone";
+		pinctrl-names = "vbyone","vbyone_off";
 		pinctrl-0 = <&lcd_vbyone_pins>;
+		pinctrl-1 = <&lcd_vbyone_off_pins>;
 		pinctrl_version = <2>; /* for uboot */
 
 		/* power type:(0=cpu_gpio, 2=signal, 3=extern, 0xff=ending) */
@@ -457,16 +458,15 @@
 		status = "okay";
 		key_valid = <1>;
 		i2c_bus = "i2c_bus_c";
-		/*pinctrl-names="extern_pins";*/
-		/*pinctrl_names_uboot = "i2c_c";*/ /* i2c_a, i2c_b, i2c_c */
-		/*pinctrl-0=<&i2c_c_master>;*/
-		/*extern-gpios = <&gpio GPIOH_2 1*/
-				/*&gpio GPIOH_3 1>;*/
+		/*pinctrl-names="extern_on",    */
+		/*	"extern_off";           */
+		/*pinctrl-0=<&i2c2_h_pins       */
+		/*	&lcd_extern_off_pins>;  */
+		/*pinctrl_gpio_off = <0>;       */
+		/*extern-gpios = <&gpio GPIOH_2 GPIO_ACTIVE_HIGH*/
+		/*	&gpio GPIOH_3 GPIO_ACTIVE_HIGH>;*/
 		/*extern_gpio_names = "GPIOH_2","GPIOH_3";*/
-		/*i2c_gpio_off = <0 0 1 0>; */
-		/* I2C_SCK_gpio_index, I2C_SCK_gpio_off,
-		 * I2C_SDA_gpio_index, I2C_SCK_gpio_off
-		 */
+		/*i2c_gpio = <0 1>;  //i2c_sck, i2c_sda gpio_index */
 
 		extern_0{
 			index = <0>;
@@ -475,7 +475,6 @@
 			type = <0>; /*0=i2c, 1=spi, 2=mipi*/
 			i2c_address = <0x1c>; /*7bit i2c_addr*/
 			i2c_second_address = <0xff>;
-			i2c_bus = "i2c_bus_c";
 			cmd_size = <0xff>; /*dynamic cmd_size*/
 
 			/* init on/off:
@@ -509,7 +508,6 @@
 			status = "disabled";
 			type = <0>; /* 0=i2c, 1=spi, 2=mipi */
 			i2c_address = <0x1c>; /* 7bit i2c address */
-			i2c_bus = "i2c_bus_c";
 			cmd_size = <9>;
 		};
 	};
@@ -522,7 +520,9 @@
 		pinctrl-names = "pwm_on","pwm_vs_on",
 				"pwm_combo_0_1_on",
 				"pwm_combo_0_vs_1_on",
-				"pwm_combo_0_1_vs_on";
+				"pwm_combo_0_1_vs_on",
+				"pwm_off",
+				"pwm_combo_off";
 		pinctrl-0 = <&bl_pwm_on_pins>;
 		pinctrl-1 = <&bl_pwm_vs_on_pins>;
 		pinctrl-2 = <&bl_pwm_combo_0_on_pins
@@ -531,6 +531,8 @@
 			&bl_pwm_combo_1_on_pins>;
 		pinctrl-4 = <&bl_pwm_combo_0_on_pins
 			&bl_pwm_combo_1_vs_on_pins>;
+		pinctrl-5 = <&bl_pwm_off_pins>;
+		pinctrl-6 = <&bl_pwm_combo_off_pins>;
 		pinctrl_version = <2>; /* for uboot */
 		interrupts = <0 3 1>;
 		interrupt-names = "ldim_vsync";
@@ -678,9 +680,12 @@
 		compatible = "amlogic, ldim_dev";
 		dev_name = "ldim_dev";
 		status = "okay";
-		pinctrl-names = "ldim_pwm","ldim_pwm_vs";
-		pinctrl-0 = <&ldim_pwm_pins>;
-		pinctrl-1 = <&ldim_pwm_vs_pins>;
+		pinctrl-names = "ldim_pwm",
+			"ldim_pwm_vs",
+			"ldim_pwm_off";
+		pinctrl-0 = <&bl_pwm_on_pins>;
+		pinctrl-1 = <&bl_pwm_vs_on_pins>;
+		pinctrl-2 = <&bl_pwm_off_pins>;
 		pinctrl_version = <1>; /* for uboot */
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
