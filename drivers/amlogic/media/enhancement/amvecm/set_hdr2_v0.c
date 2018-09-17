@@ -219,21 +219,21 @@ int oo_y_lut_hlg_hdr[149] = {
 	392, 395, 398, 401, 404, 407, 409
 };
 
+static int num_sdr_hdr_lut = 149;
 int oo_y_lut_sdr_hdr[149] = {
-	127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-	127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-	127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-	127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-	127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-	127, 127, 127, 127, 127, 127, 127, 127, 127, 128, 128, 128,
-	128, 128, 128, 128, 128, 129, 129, 129, 129, 129, 130, 130,
-	130, 131, 131, 131, 132, 132, 133, 133, 134, 135, 136, 136,
-	137, 138, 139, 140, 141, 143, 145, 147, 148, 150, 152, 154,
-	157, 161, 164, 168, 172, 175, 179, 183, 190, 197, 205, 213,
-	220, 228, 235, 243, 258, 273, 288, 303, 318, 332, 346, 360,
-	374, 387, 400, 412, 423, 434, 444, 452, 461, 468, 475, 481,
-	488, 495, 502, 510
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38
 };
+module_param_array(oo_y_lut_sdr_hdr, int, &num_sdr_hdr_lut, 0664);
+MODULE_PARM_DESC(oo_y_lut_sdr_hdr, "\n num_sdr_hdr_lut\n");
 
 int oo_y_lut_hlg_sdr[149] = {
 	245, 269, 275, 282, 288, 295, 302, 309, 316, 318, 320, 322, 323,
@@ -1129,8 +1129,8 @@ void set_hdr_matrix(
 				adpscl_alpha[i] =
 					(1 << adp_scal_shift);
 			else if (hdr_mtx_param->p_sel & SDR_HDR)
-				adpscl_alpha[i] = in_luma *
-					(1 << adp_scal_shift) / out_luma;
+				adpscl_alpha[i] =
+					(1 << adp_scal_shift);
 			else if (hdr_mtx_param->p_sel & HDR_BYPASS)
 				adpscl_alpha[i] = out_luma *
 					(1 << adp_scal_shift) / in_luma;
@@ -1444,10 +1444,10 @@ void set_c_gain(
 
 	/*cgain mode: 0->y domin*/
 	/*cgain mode: 1->rgb domin, use r/g/b max*/
-	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_lut_param->lut_on, 12, 1);
-	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_lut_param->lut_on, 0, 1);
+	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_lut_param->cgain_en, 12, 1);
+	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_lut_param->cgain_en, 0, 1);
 
-	if (!hdr_lut_param->lut_on)
+	if (!hdr_lut_param->cgain_en)
 		return;
 
 	VSYNC_WR_MPEG_REG(cgain_lut_addr_port, 0x0);
@@ -1520,6 +1520,7 @@ void hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_lut_param.lut_on = LUT_OFF;
 		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_OFF;
 	} else if (hdr_process_select & HDR_SDR) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 			hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
@@ -1531,6 +1532,7 @@ void hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_lut_param.lut_on = LUT_ON;
 		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_ON;
 	} else if (hdr_process_select & SDR_HDR) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 			hdr_lut_param.oetf_lut[i]  = oe_y_lut_hdr[i];
@@ -1542,6 +1544,7 @@ void hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_lut_param.lut_on = LUT_ON;
 		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_OFF;
 	} else if (hdr_process_select & HLG_BYPASS) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 			hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
@@ -1553,6 +1556,7 @@ void hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_lut_param.lut_on = LUT_OFF;
 		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_OFF;
 	} else if (hdr_process_select & HLG_SDR) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 			hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
@@ -1564,6 +1568,7 @@ void hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_lut_param.lut_on = LUT_ON;
 		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_ON;
 	} else if (hdr_process_select & HLG_HDR) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 			hdr_lut_param.oetf_lut[i]  = oe_y_lut_hdr[i];
@@ -1575,6 +1580,7 @@ void hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_lut_param.lut_on = LUT_ON;
 		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_ON;
 	} else if (hdr_process_select & SDR_HLG) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 			hdr_lut_param.oetf_lut[i]  = oe_y_lut_hlg[i];
@@ -1586,6 +1592,7 @@ void hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_lut_param.lut_on = LUT_ON;
 		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_OFF;
 	} else
 		return;
 #endif
