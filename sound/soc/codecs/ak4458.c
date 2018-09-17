@@ -293,10 +293,52 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
 	int pcm_width = max(params_physical_width(params), ak4458->slot_width);
 	int nfs1;
-	u8 format;
+	u8 format, dsdsel0, dsdsel1;
+	int ret, dsd_bclk;
+	bool is_dsd = false;
+
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_DSD_U8:
+	case SNDRV_PCM_FORMAT_DSD_U16_LE:
+	case SNDRV_PCM_FORMAT_DSD_U16_BE:
+	case SNDRV_PCM_FORMAT_DSD_U32_LE:
+	case SNDRV_PCM_FORMAT_DSD_U32_BE:
+		is_dsd = true;
+		dsd_bclk = params_rate(params) * params_physical_width(params);
+		break;
+	}
 
 	nfs1 = params_rate(params);
 	ak4458->fs = nfs1;
+
+	dsdsel0 = snd_soc_read(codec, AK4458_06_DSD1);
+	dsdsel0 &= ~AK4458_DSDSEL_MASK;
+
+	dsdsel1 = snd_soc_read(codec, AK4458_09_DSD2);
+	dsdsel1 &= ~AK4458_DSDSEL_MASK;
+
+	if (is_dsd) {
+		switch (dsd_bclk) {
+		case 2822400:
+			dsdsel0 |= 0;
+			dsdsel1 |= 0;
+			break;
+		case 5644800:
+			dsdsel0 |= 1;
+			dsdsel1 |= 0;
+			break;
+		case 11289600:
+			dsdsel0 |= 0;
+			dsdsel1 |= 1;
+			break;
+		default:
+			dev_err(dai->dev, "DSD512 not supported.\n");
+			return -EINVAL;
+		}
+
+		snd_soc_write(codec, AK4458_06_DSD1, dsdsel0);
+		snd_soc_write(codec, AK4458_09_DSD2, dsdsel1);
+	}
 
 	/* Master Clock Frequency Auto Setting Mode Enable */
 	snd_soc_component_update_bits(component, AK4458_00_CONTROL1, 0x80, 0x80);
@@ -322,6 +364,9 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 		case SND_SOC_DAIFMT_DSP_B:
 			format = AK4458_DIF_32BIT_MSB;
 			break;
+		case SND_SOC_DAIFMT_PDM;
+			format = AK4458_DIF_32BIT_MSB;
+			break;
 		default:
 			return -EINVAL;
 		}
@@ -343,6 +388,8 @@ static int ak4458_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 	struct snd_soc_component *component = dai->component;
 	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
+	u8 format, dp = 0;
+	int ret;
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS: /* Slave Mode */
@@ -365,11 +412,18 @@ static int ak4458_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_DSP_B:
 		ak4458->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
 		break;
+	case SND_SOC_DAIFMT_PDM:
+		ak4458->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
+		dp = AK4458_DP_MASK; /* DSD mode */;
+		break;
 	default:
 		dev_err(component->dev, "Audio format 0x%02X unsupported\n",
 			fmt & SND_SOC_DAIFMT_FORMAT_MASK);
 		return -EINVAL;
 	}
+
+	snd_soc_component_update_bits(component, AK4458_02_CONTROL3,
+				      AK4458_DP_MASK, dp);
 
 	ak4458_rstn_control(component, 0);
 	ak4458_rstn_control(component, 1);
@@ -442,7 +496,10 @@ static int ak4458_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 
 #define AK4458_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE |\
 			 SNDRV_PCM_FMTBIT_S24_LE |\
-			 SNDRV_PCM_FMTBIT_S32_LE)
+			 SNDRV_PCM_FMTBIT_S32_LE |\
+			 SNDRV_PCM_FMTBIT_DSD_U8 |\
+			 SNDRV_PCM_FMTBIT_DSD_U16_LE |\
+			 SNDRV_PCM_FMTBIT_DSD_U32_LE)
 
 static const unsigned int ak4458_rates[] = {
 	8000, 11025,  16000, 22050,
