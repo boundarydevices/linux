@@ -778,7 +778,7 @@ void enable_di_pre_aml(
  * wr mif of pre such as mtn&cont&mv&mcinfo wr
  */
 
-
+#if 0
 void enable_afbc_input(struct vframe_s *vf)
 {
 	unsigned int r, u, v;
@@ -854,6 +854,370 @@ void enable_afbc_input(struct vframe_s *vf)
 			}
 		}
 	}
+}
+#endif
+
+enum eAFBC_REG {
+	eAFBC_ENABLE,
+	eAFBC_MODE,
+	eAFBC_SIZE_IN,
+	eAFBC_DEC_DEF_COLOR,
+	eAFBC_CONV_CTRL,
+	eAFBC_LBUF_DEPTH,
+	eAFBC_HEAD_BADDR,
+	eAFBC_BODY_BADDR,
+	eAFBC_SIZE_OUT,
+	eAFBC_OUT_YSCOPE,
+	eAFBC_STAT,
+	eAFBC_VD_CFMT_CTRL,
+	eAFBC_VD_CFMT_W,
+	eAFBC_MIF_HOR_SCOPE,
+	eAFBC_MIF_VER_SCOPE,
+	eAFBC_PIXEL_HOR_SCOPE,
+	eAFBC_PIXEL_VER_SCOPE,
+	eAFBC_VD_CFMT_H,
+};
+enum eAFBC_DEC {
+	eAFBC_DEC0,
+	eAFBC_DEC1,
+};
+#define AFBC_REG_INDEX_NUB	(18)
+#define AFBC_DEC_NUB		(2)
+
+const unsigned int reg_AFBC[AFBC_DEC_NUB][AFBC_REG_INDEX_NUB] = {
+	{
+		AFBC_ENABLE,
+		AFBC_MODE,
+		AFBC_SIZE_IN,
+		AFBC_DEC_DEF_COLOR,
+		AFBC_CONV_CTRL,
+		AFBC_LBUF_DEPTH,
+		AFBC_HEAD_BADDR,
+		AFBC_BODY_BADDR,
+		AFBC_SIZE_OUT,
+		AFBC_OUT_YSCOPE,
+		AFBC_STAT,
+		AFBC_VD_CFMT_CTRL,
+		AFBC_VD_CFMT_W,
+		AFBC_MIF_HOR_SCOPE,
+		AFBC_MIF_VER_SCOPE,
+		AFBC_PIXEL_HOR_SCOPE,
+		AFBC_PIXEL_VER_SCOPE,
+		AFBC_VD_CFMT_H,
+	},
+	{
+		VD2_AFBC_ENABLE,
+		VD2_AFBC_MODE,
+		VD2_AFBC_SIZE_IN,
+		VD2_AFBC_DEC_DEF_COLOR,
+		VD2_AFBC_CONV_CTRL,
+		VD2_AFBC_LBUF_DEPTH,
+		VD2_AFBC_HEAD_BADDR,
+		VD2_AFBC_BODY_BADDR,
+		VD2_AFBC_OUT_XSCOPE,
+		VD2_AFBC_OUT_YSCOPE,
+		VD2_AFBC_STAT,
+		VD2_AFBC_VD_CFMT_CTRL,
+		VD2_AFBC_VD_CFMT_W,
+		VD2_AFBC_MIF_HOR_SCOPE,
+		VD2_AFBC_MIF_VER_SCOPE,
+		VD2_AFBC_PIXEL_HOR_SCOPE,
+		VD2_AFBC_PIXEL_VER_SCOPE,
+		VD2_AFBC_VD_CFMT_H,
+
+	},
+
+};
+#define AFBC_DEC_SEL	(eAFBC_DEC1)
+
+
+static enum eAFBC_DEC afbc_get_decnub(void)
+{
+	enum eAFBC_DEC sel_dec = eAFBC_DEC0;
+
+	if (is_meson_gxl_cpu())
+		sel_dec = eAFBC_DEC0;
+	else if (is_meson_txlx_cpu())
+		sel_dec = eAFBC_DEC1;
+	else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+		sel_dec = AFBC_DEC_SEL;
+
+
+	return sel_dec;
+}
+
+static const unsigned int *afbc_get_regbase(void)
+{
+	return &reg_AFBC[afbc_get_decnub()][0];
+}
+
+static bool afbc_is_supported(void)
+{
+	bool ret = false;
+
+	if (is_meson_gxl_cpu()
+		|| is_meson_txlx_cpu()
+		|| cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+		ret = true;
+
+	return ret;
+
+}
+
+void enable_afbc_input(struct vframe_s *vf)
+{
+	unsigned int r, u, v, w_aligned, h_aligned;
+	unsigned int out_height = 0;
+	unsigned int vfmt_rpt_first = 1, vt_ini_phase = 0;
+	const unsigned int *reg = afbc_get_regbase();
+
+	if (!afbc_is_supported())
+		return;
+
+	if ((vf->type & VIDTYPE_COMPRESS)) {
+		// only reg for the first time
+		afbc_reg_sw(true);
+		afbc_sw_trig(true);
+	} else {
+		afbc_sw_trig(false);
+		return;
+	}
+	w_aligned = round_up((vf->width-1), 32);
+	h_aligned = round_up((vf->height-1), 4);
+	r = (3 << 24) |
+	    (10 << 16) |
+	    (1 << 14) | /*burst1 1*/
+	    (vf->bitdepth & BITDEPTH_MASK);
+	if (vf->bitdepth & BITDEPTH_SAVING_MODE)
+		r |= (1<<28); /* mem_saving_mode */
+	if (vf->type & VIDTYPE_SCATTER)
+		r |= (1<<29);
+	out_height = h_aligned;
+	if ((vf->type & VIDTYPE_TYPEMASK) == VIDTYPE_INTERLACE_TOP) {
+		r |= 0x40;
+		vt_ini_phase = 0xc;
+		out_height = h_aligned>>1;
+	} else if ((vf->type & VIDTYPE_TYPEMASK) ==
+			VIDTYPE_INTERLACE_BOTTOM) {
+		r |= 0x80;
+		vt_ini_phase = 0x4;
+		vfmt_rpt_first = 0;
+		out_height = h_aligned>>1;
+	}
+	RDMA_WR(reg[eAFBC_MODE], r);
+	RDMA_WR(reg[eAFBC_CONV_CTRL], 0x100);
+	u = (vf->bitdepth >> (BITDEPTH_U_SHIFT)) & 0x3;
+	v = (vf->bitdepth >> (BITDEPTH_V_SHIFT)) & 0x3;
+	RDMA_WR(reg[eAFBC_DEC_DEF_COLOR],
+		0x3FF00000 | /*Y,bit20+*/
+		0x80 << (u + 10) |
+		0x80 << v);
+	/* chroma formatter */
+	RDMA_WR(reg[eAFBC_VD_CFMT_CTRL],
+		(1 << 21) |/* HFORMATTER_YC_RATIO_2_1 */
+		(1 << 20) |/* HFORMATTER_EN */
+		(vfmt_rpt_first << 16) |/* VFORMATTER_RPTLINE0_EN */
+		(vt_ini_phase << 8) |
+		(16 << 1)|/* VFORMATTER_PHASE_BIT */
+		0);/* different with inp */
+
+	RDMA_WR(reg[eAFBC_VD_CFMT_W],
+		(w_aligned << 16) | (w_aligned/2));
+	RDMA_WR(reg[eAFBC_MIF_HOR_SCOPE],
+		(0 << 16) | ((w_aligned>>5) - 1));
+	RDMA_WR(reg[eAFBC_MIF_VER_SCOPE],
+	    (0 << 16) | ((h_aligned>>2) - 1));
+
+	RDMA_WR(reg[eAFBC_PIXEL_HOR_SCOPE],
+		(0 << 16) | (vf->width - 1));
+	RDMA_WR(reg[eAFBC_VD_CFMT_H], out_height);
+
+	RDMA_WR(reg[eAFBC_PIXEL_VER_SCOPE],
+		0 << 16 | (vf->height-1));
+	RDMA_WR(reg[eAFBC_SIZE_IN], h_aligned | w_aligned << 16);
+	RDMA_WR(reg[eAFBC_SIZE_OUT], out_height | w_aligned << 16);
+	RDMA_WR(reg[eAFBC_HEAD_BADDR], vf->compHeadAddr>>4);
+	RDMA_WR(reg[eAFBC_BODY_BADDR], vf->compBodyAddr>>4);
+}
+static void afbcx_power_sw(enum eAFBC_DEC decsel, bool on)	/*g12a*/
+{
+	unsigned int reg_ctrl;
+
+	if (decsel == eAFBC_DEC0)
+		reg_ctrl = VD1_AFBCD0_MISC_CTRL;
+	else
+		reg_ctrl = VD2_AFBCD1_MISC_CTRL;
+	if (on)
+		RDMA_WR_BITS(reg_ctrl, 0, 0, 8);
+	else
+		RDMA_WR_BITS(reg_ctrl, 0x55, 0, 8);
+
+}
+static void afbcx_sw(bool on)	/*g12a*/
+{
+	unsigned int tmp;
+	unsigned int mask;
+	unsigned int reg_ctrl, reg_en;
+	enum eAFBC_DEC dec_sel;
+
+	dec_sel = afbc_get_decnub();
+
+	if (dec_sel == eAFBC_DEC0) {
+		reg_ctrl = VD1_AFBCD0_MISC_CTRL;
+		reg_en = AFBC_ENABLE;
+	} else {
+		reg_ctrl = VD2_AFBCD1_MISC_CTRL;
+		reg_en = VD2_AFBC_ENABLE;
+	}
+
+	mask = (3<<20)  | (1<<12) | (1<<9);
+	/*clear*/
+	tmp = RDMA_RD(reg_ctrl)&(~mask);
+
+	if (on) {
+		tmp = tmp
+			| (2<<20)
+			| (1<<12)
+			| (1<<9);
+		RDMA_WR(reg_ctrl, tmp);
+		RDMA_WR_BITS(VD2_AFBCD1_MISC_CTRL,
+			(reg_ctrl == VD1_AFBCD0_MISC_CTRL)?0:1, 8, 1);
+		RDMA_WR(reg_en, 0x1600);
+		RDMA_WR_BITS(VIUB_MISC_CTRL0, 1, 16, 1);
+	} else {
+		RDMA_WR(reg_ctrl, tmp);
+		RDMA_WR(reg_en, 0x1600);
+		RDMA_WR_BITS(VIUB_MISC_CTRL0, 0, 16, 1);
+	}
+//	printk("%s,on[%d],CTRL[0x%x],en[0x%x]\n", __func__, on,
+//			RDMA_RD(VD1_AFBCD0_MISC_CTRL),
+//			RDMA_RD(VD1_AFBCD0_MISC_CTRL));
+
+
+}
+static void afbc_sw_old(bool on)/*txlx*/
+{
+	enum eAFBC_DEC dec_sel;
+	unsigned int reg_en;
+
+	dec_sel = afbc_get_decnub();
+
+	if (dec_sel == eAFBC_DEC0) {
+		//reg_ctrl = VD1_AFBCD0_MISC_CTRL;
+		reg_en = AFBC_ENABLE;
+	} else {
+		//reg_ctrl = VD2_AFBCD1_MISC_CTRL;
+		reg_en = VD2_AFBC_ENABLE;
+	}
+
+
+	if (on) {
+		/* DI inp(current data) switch to AFBC */
+		if (RDMA_RD_BITS(VIU_MISC_CTRL0, 29, 1) != 1)
+			RDMA_WR_BITS(VIU_MISC_CTRL0, 1, 29, 1);
+		if (RDMA_RD_BITS(VIUB_MISC_CTRL0, 16, 1) != 1)
+			RDMA_WR_BITS(VIUB_MISC_CTRL0, 1, 16, 1);
+		if (RDMA_RD_BITS(VIU_MISC_CTRL1, 0, 1) != 1)
+			RDMA_WR_BITS(VIU_MISC_CTRL1, 1, 0, 1);
+		if (dec_sel == eAFBC_DEC0) {
+			/*gxl only?*/
+			if (RDMA_RD_BITS(VIU_MISC_CTRL0, 19, 1) != 1)
+				RDMA_WR_BITS(VIU_MISC_CTRL0, 1, 19, 1);
+		}
+		if (RDMA_RD(reg_en) != 0x1600)
+			RDMA_WR(reg_en, 0x1600);
+
+	} else {
+		RDMA_WR(reg_en, 0);
+		/* afbc to vpp(replace vd1) enable */
+
+		if (RDMA_RD_BITS(VIU_MISC_CTRL1, 0, 1) != 0 ||
+			RDMA_RD_BITS(VIUB_MISC_CTRL0, 16, 1) != 0) {
+			RDMA_WR_BITS(VIU_MISC_CTRL1, 0, 0, 1);
+			RDMA_WR_BITS(VIUB_MISC_CTRL0, 0, 16, 1);
+		}
+
+
+	}
+}
+static bool afbc_is_used(void)
+{
+	bool ret = false;
+
+
+	if (RDMA_RD_BITS(VIUB_MISC_CTRL0, 16, 1) == 1)
+		ret = true;
+
+	//di_print("%s:%d\n",__func__,ret);
+
+	return ret;
+}
+static void afbc_power_sw(bool on)
+{
+	/*afbc*/
+	enum eAFBC_DEC dec_sel;
+	unsigned int vpu_sel;
+
+	dec_sel = afbc_get_decnub();
+	if (dec_sel == eAFBC_DEC0)
+		vpu_sel = VPU_AFBC_DEC;
+	else
+		vpu_sel = VPU_AFBC_DEC1;
+
+	switch_vpu_mem_pd_vmod(vpu_sel,
+		on?VPU_MEM_POWER_ON:VPU_MEM_POWER_DOWN);
+
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+		afbcx_power_sw(dec_sel, on);
+
+}
+static int afbc_reg_unreg_flag;
+void afbc_reg_sw(bool on)
+{
+
+	if (!afbc_is_supported())
+		return;
+
+	if (on && (!afbc_reg_unreg_flag)) {
+		afbc_power_sw(true);
+		afbc_reg_unreg_flag = 1;
+	}
+	if ((!on) && afbc_reg_unreg_flag) {
+		afbc_sw_trig(false);
+		afbc_power_sw(false);
+		afbc_reg_unreg_flag = 0;
+	}
+
+}
+static void afbc_sw(bool on)
+{
+	if (is_meson_gxl_cpu() || is_meson_txlx_cpu())
+		afbc_sw_old(on);
+	else
+		afbcx_sw(on);
+
+}
+void afbc_sw_trig(bool  on)
+{
+		afbc_sw(on);
+}
+static void afbc_input_sw(bool on)
+{
+	const unsigned int *reg = afbc_get_regbase();
+	unsigned int reg_AFBC_ENABLE;
+
+	if (!afbc_is_supported())
+		return;
+
+	reg_AFBC_ENABLE = reg[eAFBC_ENABLE];
+
+	//di_print("%s:0x%x\n", __func__,reg_AFBC_ENABLE);
+	if (on)
+		RDMA_WR_BITS(reg_AFBC_ENABLE, 1, 8, 1);
+	else
+		RDMA_WR_BITS(reg_AFBC_ENABLE, 0, 8, 1);
+
 }
 
 void enable_mc_di_pre_g12(struct DI_MC_MIF_s *mcinford_mif,
@@ -2108,9 +2472,8 @@ void initial_di_post_2(int hsize_post, int vsize_post,
 				0, 8, 9);
 		} else {
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
-				1, 20, 1);
-			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
-				1, 8, 9);
+				1, 8, 1);
+			DI_VSYNC_WR_MPEG_REG_BITS(VIUB_MISC_CTRL0, 0, 4, 1);
 		}
 
 	} else {
@@ -2990,6 +3353,7 @@ static void di_pre_data_mif_ctrl(bool enable)
 		/* enable input mif*/
 		DI_Wr(DI_CHAN2_GEN_REG, Rd(DI_CHAN2_GEN_REG) | 0x1);
 		DI_Wr(DI_MEM_GEN_REG, Rd(DI_MEM_GEN_REG) | 0x1);
+		#if 0
 		if (Rd_reg_bits(VIU_MISC_CTRL1, 0, 1) == 1) {
 			DI_Wr(DI_INP_GEN_REG, Rd(DI_INP_GEN_REG) & ~0x1);
 			RDMA_WR_BITS(VD2_AFBC_ENABLE, 1, 8, 1);
@@ -2997,6 +3361,15 @@ static void di_pre_data_mif_ctrl(bool enable)
 			DI_Wr(DI_INP_GEN_REG, Rd(DI_INP_GEN_REG) | 0x1);
 			RDMA_WR_BITS(VD2_AFBC_ENABLE, 0, 8, 1);
 		}
+		#else
+		if (afbc_is_used()) {
+			DI_Wr(DI_INP_GEN_REG, Rd(DI_INP_GEN_REG) & ~0x1);
+			afbc_input_sw(true);
+		} else {
+			DI_Wr(DI_INP_GEN_REG, Rd(DI_INP_GEN_REG) | 0x1);
+			afbc_input_sw(false);
+		}
+		#endif
 		/* nrwr no clk gate en=0 */
 		RDMA_WR_BITS(DI_NRWR_CTRL, 0, 24, 1);
 	} else {
@@ -3008,9 +3381,16 @@ static void di_pre_data_mif_ctrl(bool enable)
 		DI_Wr(DI_CHAN2_GEN_REG, Rd(DI_CHAN2_GEN_REG) & ~0x1);
 		DI_Wr(DI_MEM_GEN_REG, Rd(DI_MEM_GEN_REG) & ~0x1);
 		DI_Wr(DI_INP_GEN_REG, Rd(DI_INP_GEN_REG) & ~0x1);
+		#if 0
 		/* disable AFBC input */
 		if (Rd_reg_bits(VIU_MISC_CTRL1, 0, 1) == 1)
 			RDMA_WR_BITS(VD2_AFBC_ENABLE, 0, 8, 1);
+		#else
+		/* disable AFBC input */
+		if (afbc_is_used())
+			afbc_input_sw(false);
+
+		#endif
 	}
 }
 

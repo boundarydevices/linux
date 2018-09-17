@@ -123,7 +123,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-09-13a";
+static const char version_s[] = "2018-09-28a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -1473,6 +1473,7 @@ unsigned char is_bypass(vframe_t *vf_in)
 {
 	unsigned int vtype = 0;
 	int ret = 0;
+	static vframe_t vf_tmp;
 
 	if (di_debug_flag & 0x10000) /* for debugging */
 		return (di_debug_flag >> 17) & 0x1;
@@ -1517,11 +1518,21 @@ unsigned char is_bypass(vframe_t *vf_in)
 		return 1;
 	if (vf_in && (vf_in->type & VIDTYPE_PIC))
 		return 1;
-
+#if 0
 	if (vf_in && (vf_in->type & VIDTYPE_COMPRESS))
 		return 1;
+#endif
 	if ((di_vscale_skip_enable & 0x4) &&
 		vf_in && !post_wr_en) {
+		//--------------------------------------
+		if (vf_in->type & VIDTYPE_COMPRESS) {
+			vf_tmp.width = vf_in->compWidth;
+			vf_tmp.height = vf_in->compHeight;
+			if (vf_tmp.width > 1920 || vf_tmp.height > 1088)
+				return 1;
+
+		}
+		//--------------------------------------
 		/*backup vtype,set type as progressive*/
 		vtype = vf_in->type;
 		vf_in->type &= (~VIDTYPE_TYPEMASK);
@@ -2558,6 +2569,8 @@ static void config_di_mif(struct DI_MIF_s *di_mif, struct di_buf_s *di_buf)
 	di_mif->canvas0_addr2 =
 		(di_buf->vframe->canvas0Addr >> 16) & 0xff;
 
+	di_mif->nocompress = (di_buf->vframe->type & VIDTYPE_COMPRESS)?0:1;
+
 	if (di_buf->vframe->bitdepth & BITDEPTH_Y10) {
 		if (di_buf->vframe->type & VIDTYPE_VIU_444)
 			di_mif->bit_mode =
@@ -3338,6 +3351,11 @@ static unsigned char pre_de_buf_config(void)
 
 		if (vframe == NULL)
 			return 0;
+
+		if (vframe->type & VIDTYPE_COMPRESS) {
+			vframe->width = vframe->compWidth;
+			vframe->height = vframe->compHeight;
+		}
 		di_print("DI: get %dth vf[0x%p] from frontend %u ms.\n",
 			di_pre_stru.in_seq, vframe,
 jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
@@ -3472,8 +3490,15 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 				di_buf->vframe->width,
 				di_buf->vframe->height,
 				di_buf->vframe->source_type);
-			di_pre_stru.cur_width = di_buf->vframe->width;
-			di_pre_stru.cur_height = di_buf->vframe->height;
+			if (di_buf->type & VIDTYPE_COMPRESS) {
+				di_pre_stru.cur_width =
+					di_buf->vframe->compWidth;
+				di_pre_stru.cur_height =
+					di_buf->vframe->compHeight;
+			} else {
+				di_pre_stru.cur_width = di_buf->vframe->width;
+				di_pre_stru.cur_height = di_buf->vframe->height;
+			}
 			di_pre_stru.cur_prog_flag =
 				is_progressive(di_buf->vframe);
 			if (di_pre_stru.cur_prog_flag) {
@@ -3753,6 +3778,12 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 			vframe_type_name[di_buf->di_wr_linked_buf->type],
 			di_buf->di_wr_linked_buf->index);
 #endif
+	if (di_pre_stru.cur_inp_type & VIDTYPE_COMPRESS) {
+		di_pre_stru.di_inp_buf->vframe->width =
+			di_pre_stru.di_inp_buf->vframe->compWidth;
+		di_pre_stru.di_inp_buf->vframe->height =
+			di_pre_stru.di_inp_buf->vframe->compHeight;
+	}
 
 	memcpy(di_buf->vframe,
 		di_pre_stru.di_inp_buf->vframe, sizeof(vframe_t));
@@ -5763,6 +5794,7 @@ static void di_unreg_process_irq(void)
 #endif
 	adpative_combing_exit();
 	enable_di_pre_mif(false, mcpre_en);
+	afbc_reg_sw(false);
 	di_hw_uninit();
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()
 		|| is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
@@ -5941,10 +5973,10 @@ static bool need_bypass(struct vframe_s *vf)
 
 	if (vf->type & VIDTYPE_PIC)
 		return true;
-
+#if 0
 	if (vf->type & VIDTYPE_COMPRESS)
 		return true;
-
+#endif
 	if ((vf->width > default_width) ||
 			(vf->height > (default_height + 8)))
 		return true;

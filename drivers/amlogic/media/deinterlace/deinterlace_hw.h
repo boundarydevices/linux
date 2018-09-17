@@ -36,6 +36,7 @@ struct DI_MIF_s {
 	unsigned short	chroma_x_end0;
 	unsigned short	chroma_y_start0;
 	unsigned short	chroma_y_end0;
+	unsigned int	nocompress;
 	unsigned		set_separate_en:2;
 	unsigned		src_field_mode:1;
 	unsigned		src_prog:1;
@@ -175,4 +176,10 @@ void di_interrupt_ctrl(unsigned char ma_en,
 	unsigned char det3d_en, unsigned char nrds_en,
 	unsigned char post_wr, unsigned char mc_en);
 void di_txl_patch_prog(int prog_flg, unsigned int cnt, bool mc_en);
+//extern void afbc_power_sw(bool on);
+extern void afbc_reg_sw(bool on);
+extern void afbc_sw_trig(bool  on);
+extern void dump_vd2_afbc(void);
+
+
 #endif

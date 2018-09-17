@@ -1178,6 +1178,33 @@ seq_printf(seq, "recovery_log_queue_idx=%d, recovery_log_di_buf=0x%p\n",
 	return 0;
 }
 
+static int seq_file_afbc_show(struct seq_file *seq, void *v)
+{
+	seq_puts(seq, "******dump VD2 AFBC********\n");
+	seq_printf(seq, "VD2_AFBC_ENABLE 0x%x.\n", RDMA_RD(VD2_AFBC_ENABLE));
+	seq_printf(seq, "VD2_AFBC_STAT 0x%x.\n", RDMA_RD(VD2_AFBC_STAT));
+	seq_printf(seq, "VD2_AFBCD1_MISC_CTRL 0x%x.\n",
+				RDMA_RD(VD2_AFBCD1_MISC_CTRL));
+
+	seq_puts(seq, "******dump VD1 AFBC********\n");
+	seq_printf(seq, "AFBC_ENABLE 0x%x.\n", RDMA_RD(AFBC_ENABLE));
+	seq_printf(seq, "AFBC_STAT 0x%x.\n", RDMA_RD(AFBC_STAT));
+	seq_printf(seq, "VD1_AFBCD0_MISC_CTRL 0x%x.\n",
+				RDMA_RD(VD1_AFBCD0_MISC_CTRL));
+	seq_puts(seq, "***************************\n");
+
+
+	seq_printf(seq, "VIU_MISC_CTRL0 0x%x.\n", RDMA_RD(VIU_MISC_CTRL0));
+	seq_printf(seq, "VIU_MISC_CTRL1 0x%x.\n", RDMA_RD(VIU_MISC_CTRL1));
+	seq_printf(seq, "VIUB_MISC_CTRL0 0x%x.\n", RDMA_RD(VIUB_MISC_CTRL0));
+
+	seq_printf(seq, "DI_PRE_CTRL bit8=%d,bit 28 =%d.\n",
+				RDMA_RD_BITS(DI_PRE_CTRL, 8, 1),
+				RDMA_RD_BITS(DI_PRE_CTRL, 28, 1));
+
+	return 0;
+}
+
 /*2018-08-17 add debugfs*/
 #define DEFINE_SHOW_DI(__name) \
 static int __name ## _open(struct inode *inode, struct file *file)	\
@@ -1196,6 +1223,7 @@ static const struct file_operations __name ## _fops = {			\
 DEFINE_SHOW_DI(seq_file_di_state);
 DEFINE_SHOW_DI(seq_file_dump_di_reg);
 DEFINE_SHOW_DI(seq_file_dump_mif_size_state);
+DEFINE_SHOW_DI(seq_file_afbc);
 
 struct di_debugfs_files_t {
 	const char *name;
@@ -1207,7 +1235,7 @@ static struct di_debugfs_files_t di_debugfs_files[] = {
 	{"state", S_IFREG | 0644, &seq_file_di_state_fops},
 	{"dumpreg", S_IFREG | 0644, &seq_file_dump_di_reg_fops},
 	{"dumpmif", S_IFREG | 0644, &seq_file_dump_mif_size_state_fops},
-
+	{"dumpafbc", S_IFREG | 0644, &seq_file_afbc_fops},
 };
 
 void di_debugfs_init(void)
