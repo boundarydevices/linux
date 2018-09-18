@@ -136,6 +136,10 @@ static void Edid_ParsingIDManufacturerName(struct rx_cap *pRxCap,
 	brand[1] = ((data[0] & 0x3) << 3) + (data[1] >> 5);
 	brand[2] = data[1] & 0x1f;
 
+	if (((brand[0] > 26) || (brand[0] == 0))
+		|| ((brand[1] > 26) || (brand[1] == 0))
+		|| ((brand[2] > 26) || (brand[2] == 0)))
+		return;
 	for (i = 0; i < 3; i++)
 		pRxCap->IDManufacturerName[i] = uppercase[brand[i] - 1];
 }

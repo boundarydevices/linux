@@ -596,7 +596,8 @@ static ssize_t show_attr(struct device *dev,
 ssize_t store_attr(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	memcpy(hdmitx_device.fmt_attr, buf, sizeof(hdmitx_device.fmt_attr));
+	strncpy(hdmitx_device.fmt_attr, buf, sizeof(hdmitx_device.fmt_attr));
+	hdmitx_device.fmt_attr[15] = '\0';
 	return count;
 }
 /*aud_mode attr*/
@@ -2244,6 +2245,7 @@ static ssize_t show_hdr_cap(struct device *dev,
 	int pos = 0;
 	unsigned int i, j;
 	struct rx_cap *pRXCap = &(hdmitx_device.RXCap);
+
 	pos += snprintf(buf + pos, PAGE_SIZE, "HDR Static Metadata:\n");
 	pos += snprintf(buf + pos, PAGE_SIZE, "    Supported EOTF:\n");
 	pos += snprintf(buf + pos, PAGE_SIZE, "        Traditional SDR: %d\n",
@@ -3324,6 +3326,7 @@ static void clear_hdr_info(struct hdmitx_dev *hdev)
 {
 	struct vinfo_s *info = hdmitx_get_current_vinfo();
 	unsigned int i;
+
 	if (info) {
 		info->hdr_info.hdr_support = 0;
 		for (i = 0; i < 4; i++)
