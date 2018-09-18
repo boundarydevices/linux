@@ -23,6 +23,7 @@
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/clock/amlogic,tl1-clkc.h>
+#include "mesong12a-bifrost.dtsi"
 
 / {
 	interrupt-parent = <&gic>;
