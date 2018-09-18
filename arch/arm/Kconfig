@@ -281,7 +281,7 @@ config PHYS_OFFSET
 	default 0x10000000 if ARCH_OMAP1 || ARCH_RPC
 	default 0x20000000 if ARCH_S5PV210
 	default 0xc0000000 if ARCH_SA1100
-	default 0x00200000 if ARCH_MESON
+	default 0x00000000 if ARCH_MESON
 	help
 	  Please provide the physical address corresponding to the
 	  location of main memory in your system.
