@@ -1680,6 +1680,8 @@ static int ov5640_probe(struct i2c_client *client,
 	if (!sensor)
 		return -ENOMEM;
 
+	sensor->AE_Target = 52;
+
 	/* ov5640 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
 	if (IS_ERR(pinctrl))
