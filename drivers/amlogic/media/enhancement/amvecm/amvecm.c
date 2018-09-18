@@ -4169,7 +4169,7 @@ static ssize_t amvecm_cm2_luma_store(struct class *cla,
 			goto kfree_buf;
 
 		cm2_luma_array[color_mode][1] = val;
-		cm2_hue(color_mode, cm2_luma_array[color_mode][0],
+		cm2_luma(color_mode, cm2_luma_array[color_mode][0],
 		    cm2_luma_array[color_mode][1]);
 		pr_info("cm2_luma ok\n");
 	}
@@ -4219,7 +4219,7 @@ static ssize_t amvecm_cm2_sat_store(struct class *cla,
 			goto kfree_buf;
 
 		cm2_sat_array[color_mode][1] = val;
-		cm2_hue(color_mode, cm2_sat_array[color_mode][0],
+		cm2_sat(color_mode, cm2_sat_array[color_mode][0],
 		    cm2_sat_array[color_mode][1]);
 		pr_info("cm2_sat ok\n");
 	}
@@ -4271,7 +4271,7 @@ static ssize_t amvecm_cm2_hue_by_hs_store(struct class *cla,
 			goto kfree_buf;
 
 		cm2_hue_by_hs_array[color_mode][1] = val;
-		cm2_hue(color_mode, cm2_hue_by_hs_array[color_mode][0],
+		cm2_hue_by_hs(color_mode, cm2_hue_by_hs_array[color_mode][0],
 		    cm2_hue_by_hs_array[color_mode][1]);
 		pr_info("cm2_hue_by_hs ok\n");
 	}
