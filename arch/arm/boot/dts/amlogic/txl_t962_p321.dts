@@ -85,7 +85,7 @@
 			size = <0x2400000>;
 			alignment = <0x400000>;
 			/* alloc by self */
-			alloc-ranges = <0x32000000 0xc800000>;
+			alloc-ranges = <0x0 0x2ee00000>;
 		};
 
 		codec_mm_cma:linux,codec_mm_cma {

@@ -97,6 +97,7 @@
 			reusable;
 			size = <0x7C00000>;
 			alignment = <0x400000>;
+			alloc-ranges = <0x0 0x2ee00000>;
 		};
 
 		/*di CMA pool */
