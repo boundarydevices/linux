@@ -3286,10 +3286,10 @@ int osd_get_capbility(u32 index)
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 		if (index == OSD1)
 			capbility |= OSD_LAYER_ENABLE | OSD_FREESCALE
-				| OSD_UBOOT_LOGO | OSD_ZORDER | OSD_VIU1;
+				| OSD_UBOOT_LOGO | OSD_ZORDER | OSD_VIU1
+				| OSD_PRIMARY;
 		else if ((index == OSD2) || (index == OSD3))
-			capbility |= OSD_LAYER_ENABLE |
-				OSD_VIDEO_CONFLICT | OSD_FREESCALE |
+			capbility |= OSD_LAYER_ENABLE | OSD_FREESCALE |
 				OSD_ZORDER | OSD_VIU1;
 		else if (index == OSD4)
 			capbility |= OSD_LAYER_ENABLE | OSD_VIU2;
