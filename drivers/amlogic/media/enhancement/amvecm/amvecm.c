@@ -1146,6 +1146,7 @@ static int amvecm_set_saturation_hue_post(int val1,
 	int val2)
 {
 	int i, ma, mb, mab, mc, md;
+	int hue_cos_len, hue_sin_len;
 	int hue_cos[] = {
 		/*0~12*/
 		256, 256, 256, 255, 255, 254, 253, 252, 251, 250,
@@ -1162,9 +1163,16 @@ static int amvecm_set_saturation_hue_post(int val1,
 		109,  115,  121,  126,  132, 137, 142, 147 /*13~25*/
 	};
 
+	hue_cos_len = sizeof(hue_cos)/sizeof(int);
+	hue_sin_len = sizeof(hue_sin)/sizeof(int);
+	i = (val2 > 0) ? val2 : -val2;
+	if ((val1 < -128) || (val1 > 128) ||
+		(val2 < -25) || (val2 > 25) ||
+		(i >= hue_cos_len) ||
+		(val2 >= hue_sin_len - 25))
+		return -EINVAL;
 	saturation_post = val1;
 	hue_post = val2;
-	i = (hue_post > 0) ? hue_post : -hue_post;
 	ma = (hue_cos[i]*(saturation_post + 128)) >> 7;
 	mb = (hue_sin[25+hue_post]*(saturation_post + 128)) >> 7;
 	if (ma > 511)
@@ -1483,13 +1491,10 @@ static long amvecm_ioctl(struct file *file,
 				ret = -EINVAL;
 				break;
 			}
-			if ((parsed[0] < -128) || (parsed[0] > 128) ||
-				(parsed[1] < -25) || (parsed[1] > 25)) {
-				ret = -EINVAL;
-				break;
-			}
 			ret = amvecm_set_saturation_hue_post(parsed[0],
 				 parsed[1]);
+			if (ret < 0)
+				break;
 		}
 		if (vdj_mode_flg & 0x10) { /*contrast*/
 			if ((vdj_mode_s.contrast < -1024)
@@ -2184,18 +2189,14 @@ static ssize_t amvecm_saturation_hue_post_show(struct class *cla,
 static ssize_t amvecm_saturation_hue_post_store(struct class *cla,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
-	int parsed[2];
+	int parsed[2], ret;
 
 	if (likely(parse_para_pq(buf, 2, parsed) != 2))
 		return -EINVAL;
-	if ((parsed[0] < -128) ||
-		(parsed[0] > 128) ||
-		(parsed[1] < -25) ||
-		(parsed[1] > 25))
-		return -EINVAL;
-	amvecm_set_saturation_hue_post(parsed[0],
+	ret = amvecm_set_saturation_hue_post(parsed[0],
 		parsed[1]);
-
+	if (ret < 0)
+		return ret;
 	return count;
 }
 
