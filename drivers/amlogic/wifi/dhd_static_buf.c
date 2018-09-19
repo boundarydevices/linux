@@ -27,6 +27,8 @@
 #include <linux/wlan_plat.h>
 #include <linux/amlogic/dhd_buf.h>
 
+#define	DHD_STATIC_VERSION_STR		"1.579.77.41.9"
+
 #define BCMDHD_SDIO
 #define BCMDHD_PCIE
 
@@ -121,8 +123,8 @@ void *wlan_static_dhd_info_buf;
 void *wlan_static_dhd_wlfc_info_buf;
 void *wlan_static_if_flow_lkup;
 void *wlan_static_dhd_memdump_ram_buf;
-void *wlan_static_wl_escan_info_buf;
 void *wlan_static_dhd_wlfc_hanger_buf;
+void *wlan_static_wl_escan_info_buf;
 void *wlan_static_fw_verbose_ring_buf;
 void *wlan_static_fw_event_ring_buf;
 void *wlan_static_dhd_event_ring_buf;
@@ -267,6 +269,8 @@ int bcmdhd_init_wlan_mem(void)
 	int i;
 	int j;
 
+	pr_info("bcmdhd_init_wlan_mem %s\n", DHD_STATIC_VERSION_STR);
+
 	for (i = 0; i < DHD_SKB_1PAGE_BUF_NUM; i++) {
 		wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_1PAGE_BUFSIZE);
 		if (!wlan_static_skb[i])
@@ -398,7 +402,6 @@ err_skb_alloc:
 	pr_err("Failed to skb_alloc for WLAN\n");
 	for (j = 0; j < i; j++)
 		dev_kfree_skb(wlan_static_skb[j]);
-
 
 	return -ENOMEM;
 }
