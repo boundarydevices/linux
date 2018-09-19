@@ -18,6 +18,11 @@ Required properties:
 					amlogic,g12b-ee-pwm
 				ao
 					amlogic,g12b-ao-pwm
+			-for tl1
+				ee
+					amlogic,tl1-ee-pwm
+				ao
+					amlogic,tl1-ao-pwm
 			-for axg
 				ee
 					amlogic,axg-ee-pwm

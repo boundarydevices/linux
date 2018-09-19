@@ -439,6 +439,14 @@ static const char * const pwm_g12a_ao_parent_names[] = {
 	"xtal", "clk81", "fclk_div4", "fclk_div5"
 };
 
+static const char * const pwm_tl1_ee_parent_names[] = {
+	"xtal", "vid_pll", "fclk_div4", "fclk_div3"
+};
+
+static const char * const pwm_tl1_ao_parent_names[] = {
+	"xtal", "clk81", "fclk_div4", "fclk_div5"
+};
+
 static const char * const pwm_txlx_ee_parent_names[] = {
 	"xtal", "vid_pll", "fclk_div4", "fclk_div3"
 };
@@ -479,6 +487,16 @@ static const struct meson_pwm_data pwm_g12a_ee_data = {
 static const struct meson_pwm_data pwm_g12a_ao_data = {
 	.double_channel = true,
 	.parent_names = pwm_g12a_ao_parent_names,
+};
+
+static const struct meson_pwm_data pwm_tl1_ee_data = {
+	.double_channel = true,
+	.parent_names = pwm_tl1_ee_parent_names,
+};
+
+static const struct meson_pwm_data pwm_tl1_ao_data = {
+	.double_channel = true,
+	.parent_names = pwm_tl1_ao_parent_names,
 };
 
 static const struct meson_pwm_data pwm_txlx_ee_data = {
@@ -526,6 +544,8 @@ static const struct of_device_id meson_pwm_matches[] = {
 	{ .compatible = "amlogic,g12a-ao-pwm", .data = &pwm_g12a_ao_data },
 	{ .compatible = "amlogic,g12b-ee-pwm", .data = &pwm_g12a_ee_data },
 	{ .compatible = "amlogic,g12b-ao-pwm", .data = &pwm_g12a_ao_data },
+	{ .compatible = "amlogic,tl1-ee-pwm", .data = &pwm_tl1_ee_data },
+	{ .compatible = "amlogic,tl1-ao-pwm", .data = &pwm_tl1_ao_data },
 	{ .compatible = "amlogic,txlx-ee-pwm", .data = &pwm_txlx_ee_data },
 	{ .compatible = "amlogic,txlx-ao-pwm", .data = &pwm_txlx_ao_data },
 	{ .compatible = "amlogic,txl-ee-pwm", .data = &pwm_txlx_ee_data },
