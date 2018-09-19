@@ -1150,8 +1150,8 @@
 		 * 4: pdmin;
 		 */
 		datain_src = <4>;
-		datain_chnum = <8>;
-		datain_chmask = <0x7f>;
+		datain_chnum = <4>;
+		datain_chmask = <0x3>;
 
 		/* tdmin_lb src
 		 * 0: tdmoutA
@@ -1167,7 +1167,7 @@
 		datalb_chnum = <2>;
 		/*config which data pin as loopback*/
 		/*datalb-lane-mask-in = <0 0 0 1>;*/
-		datalb_chmask = <0x1>;
+		datalb_chmask = <0x3>;
 
 		status = "okay";
 	};

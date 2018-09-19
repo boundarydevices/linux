@@ -831,7 +831,7 @@ static const struct dev_pm_ops is31fl32xx_pm = {
 
 static struct i2c_driver is31fl32xx_driver = {
 	.driver = {
-		.name	= "is31fl32xx",
+		.name	= "is31fl32xx,aml",
 		.owner = THIS_MODULE,
 		.of_match_table = of_is31fl32xx_match,
 		.pm = &is31fl32xx_pm,
