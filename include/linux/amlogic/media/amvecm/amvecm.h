@@ -164,8 +164,14 @@ enum pq_table_name_e {
 struct ve_pq_load_s {
 	enum pq_table_name_e param_id;
 	unsigned int length;
+	union {
 	void *param_ptr;
+	long long param_ptr_len;
+	};
+	union {
 	void *reserved;
+	long long reserved_len;
+	};
 };
 
 struct ve_pq_table_s {

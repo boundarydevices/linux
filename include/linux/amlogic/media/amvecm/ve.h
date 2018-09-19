@@ -61,7 +61,7 @@ struct ve_dnlp_s {
 	unsigned int white; /* 0 ~  16, weak ~ strong */
 };
 struct ve_hist_s {
-	ulong sum;
+	unsigned int sum;
 	int width;
 	int height;
 	int ave;
