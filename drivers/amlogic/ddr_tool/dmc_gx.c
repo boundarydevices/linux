@@ -74,7 +74,7 @@ static size_t gx_dmc_dump_reg(char *buf)
 	sz += sprintf(buf + sz, "DMC_SEC_STATUS:%lx\n", val);
 	for (i = 0; i < 8; i++) {
 		val = dmc_rw(DMC_VIO_ADDR0 + (i << 2), 0, DMC_READ);
-		sz += sprintf(buf + sz, "DMC_VIO_ADDR%ld:%lx\n", i, val);
+		sz += sprintf(buf + sz, "DMC_VIO_ADDR%zu:%lx\n", i, val);
 	}
 
 	return sz;

@@ -168,7 +168,7 @@ static ssize_t bandwidth_show(struct class *cla,
 			aml_db->total_bandwidth, percent, rem);
 
 	for (i = 0; i < aml_db->channels; i++) {
-		s += sprintf(buf + s, "Channel %ld, bandwidth:%8d KB/s\n",
+		s += sprintf(buf + s, "Channel %zu, bandwidth:%8d KB/s\n",
 				i, aml_db->bandwidth[i]);
 	}
 	return s;
