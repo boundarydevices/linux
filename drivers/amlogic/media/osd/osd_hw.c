@@ -29,6 +29,7 @@
 #include <linux/list.h>
 #include <linux/kthread.h>
 #include <linux/ktime.h>
+#include <linux/delay.h>
 
 /* Android Headers */
 
@@ -433,6 +434,10 @@ MODULE_PARM_DESC(osd_vpp_misc, "osd_vpp_misc");
 static unsigned int rdarb_reqen_slv = 0xff7f;
 module_param(rdarb_reqen_slv, uint, 0664);
 MODULE_PARM_DESC(rdarb_reqen_slv, "rdarb_reqen_slv");
+
+static unsigned int supsend_delay;
+module_param(supsend_delay, uint, 0664);
+MODULE_PARM_DESC(supsend_delay, "supsend_delay");
 
 static int vsync_enter_line_max;
 static int vsync_exit_line_max;
@@ -3994,13 +3999,14 @@ static void osd_pan_display_single_fence(struct osd_fence_map_s *fence_map)
 			spin_unlock_irqrestore(&osd_lock, lock_flags);
 			osd_wait_vsync_hw();
 		} else if ((osd_enable != osd_hw.enable[index])
-			&& (skip == false)
-			&& (suspend_flag == false)) {
+			&& (skip == false)) {
 			spin_lock_irqsave(&osd_lock, lock_flags);
-			osd_hw.enable[index] = osd_enable;
-			if (!osd_hw.osd_display_debug)
-				osd_hw.reg[OSD_ENABLE]
-				.update_func(index);
+			if (suspend_flag == false) {
+				osd_hw.enable[index] = osd_enable;
+				if (!osd_hw.osd_display_debug)
+					osd_hw.reg[OSD_ENABLE]
+					.update_func(index);
+			}
 			if (osd_hw.hw_rdma_en)
 				osd_mali_afbc_start();
 			spin_unlock_irqrestore(&osd_lock, lock_flags);
@@ -8012,6 +8018,8 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	} else if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 		osd_hw.hw_cursor_en = 0;
 		osd_hw.hw_rdma_en = 1;
+		/* g12a and g12b need delay */
+		supsend_delay = 50;
 	}
 	/* here we will init default value ,these value only set once . */
 	if (!logo_loaded) {
@@ -8555,8 +8563,12 @@ void  osd_suspend_hw(void)
 		osd_reg_clr_mask(OSD2_BLEND_SRC_CTRL, 0xf0f);
 		osd_reg_clr_mask(VPP_RDARB_REQEN_SLV,
 			rdarb_reqen_slv);
-		osd_reg_clr_mask(VPU_MAFBC_SURFACE_CFG, 0xffffffff);
+		osd_reg_write(VPU_MAFBC_SURFACE_CFG, 0);
+		osd_reg_write(VPU_MAFBC_COMMAND, 1);
 		spin_unlock_irqrestore(&osd_lock, lock_flags);
+
+		if (supsend_delay)
+			mdelay(supsend_delay);
 	}
 	osd_log_info("osd_suspended\n");
 }
@@ -8599,15 +8611,15 @@ void osd_resume_hw(void)
 					.update_func(i);
 			}
 		}
-		osd_reg_set_mask(VIU_OSD_BLEND_CTRL,
+		osd_reg_write(VIU_OSD_BLEND_CTRL,
 			osd_hw.reg_status_save);
-		osd_reg_set_mask(OSD1_BLEND_SRC_CTRL,
+		osd_reg_write(OSD1_BLEND_SRC_CTRL,
 			osd_hw.reg_status_save1);
-		osd_reg_set_mask(OSD2_BLEND_SRC_CTRL,
+		osd_reg_write(OSD2_BLEND_SRC_CTRL,
 			osd_hw.reg_status_save2);
-		osd_reg_set_mask(VPP_RDARB_REQEN_SLV,
+		osd_reg_write(VPP_RDARB_REQEN_SLV,
 			osd_hw.reg_status_save3);
-		osd_reg_set_mask(VPU_MAFBC_SURFACE_CFG,
+		osd_reg_write(VPU_MAFBC_SURFACE_CFG,
 			osd_hw.reg_status_save4);
 		spin_unlock_irqrestore(&osd_lock, lock_flags);
 	}
