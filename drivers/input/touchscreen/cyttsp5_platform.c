@@ -170,69 +170,26 @@ struct cyttsp5_loader_platform_data _cyttsp5_loader_platform_data = {
 int cyttsp5_xres(struct cyttsp5_core_platform_data *pdata,
 		struct device *dev)
 {
-	int rst_gpio = pdata->rst_gpio;
 	int rc = 0;
 
-	gpio_set_value(rst_gpio, 1);
-	msleep(20);
-	gpio_set_value(rst_gpio, 0);
-	msleep(40);
-	gpio_set_value(rst_gpio, 1);
-	msleep(20);
-	dev_info(dev,
-		"%s: RESET CYTTSP gpio=%d r=%d\n", __func__,
-		pdata->rst_gpio, rc);
+	if (pdata->gpiod_rst) {
+		gpiod_set_value(pdata->gpiod_rst, 0);
+		msleep(20);
+		gpiod_set_value(pdata->gpiod_rst, 1);
+		msleep(40);
+		gpiod_set_value(pdata->gpiod_rst, 0);
+		msleep(20);
+		dev_info(dev, "%s: RESET CYTTSP r=%d\n", __func__, rc);
+	}
 	return rc;
 }
 
 int cyttsp5_init(struct cyttsp5_core_platform_data *pdata,
 		int on, struct device *dev)
 {
-	int rst_gpio = pdata->rst_gpio;
-	int irq_gpio = pdata->irq_gpio;
-	int rc = 0;
-
-	if (on) {
-		rc = gpio_request(rst_gpio, NULL);
-		if (rc < 0) {
-			gpio_free(rst_gpio);
-			rc = gpio_request(rst_gpio, NULL);
-		}
-		if (rc < 0) {
-			dev_err(dev,
-				"%s: Fail request gpio=%d\n", __func__,
-				rst_gpio);
-		} else {
-			rc = gpio_direction_output(rst_gpio, 1);
-			if (rc < 0) {
-				pr_err("%s: Fail set output gpio=%d\n",
-					__func__, rst_gpio);
-				gpio_free(rst_gpio);
-			} else {
-				rc = gpio_request(irq_gpio, NULL);
-				if (rc < 0) {
-					gpio_free(irq_gpio);
-					rc = gpio_request(irq_gpio,
-						NULL);
-				}
-				if (rc < 0) {
-					dev_err(dev,
-						"%s: Fail request gpio=%d\n",
-						__func__, irq_gpio);
-					gpio_free(rst_gpio);
-				} else {
-					gpio_direction_input(irq_gpio);
-				}
-			}
-		}
-	} else {
-		gpio_free(rst_gpio);
-		gpio_free(irq_gpio);
-	}
-
-	dev_info(dev, "%s: INIT CYTTSP RST gpio=%d and IRQ gpio=%d r=%d\n",
-		__func__, rst_gpio, irq_gpio, rc);
-	return rc;
+	if (pdata->gpiod_rst)
+		gpiod_set_value(pdata->gpiod_rst, 0);
+	return 0;
 }
 
 static int cyttsp5_wakeup(struct cyttsp5_core_platform_data *pdata,
@@ -259,7 +216,7 @@ int cyttsp5_power(struct cyttsp5_core_platform_data *pdata,
 int cyttsp5_irq_stat(struct cyttsp5_core_platform_data *pdata,
 		struct device *dev)
 {
-	return gpio_get_value(pdata->irq_gpio);
+	return gpiod_get_value(pdata->gpiod_int);
 }
 
 #ifdef CYTTSP5_DETECT_HW
