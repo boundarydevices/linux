@@ -727,11 +727,18 @@
 	sensor: sensor {
 		compatible = "soc, sensor";
 		status = "okay";
+		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
 		pinctrl-names="default";
 		pinctrl-0=<&clk12_24_z_pins>;
 		clocks = <&clkc CLKID_24M>;
 		clock-names = "g12a_24m";
 		reset = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
+	};
+
+	iq: iq {
+		compatible = "soc, iq";
+		status = "okay";
+		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
 	};
 }; /* end of / */
 &i2c2 {
