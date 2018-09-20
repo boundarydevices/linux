@@ -5384,11 +5384,7 @@ static ssize_t cyttsp5_platform_data_show(struct device *dev,
 		"%s: %d\n"
 		"%s: %d\n"
 		"%s: %d\n"
-		"%s: %d\n"
-		"%s: %d\n"
 		"%s: %d\n",
-		"Interrupt GPIO", pdata->core_pdata->irq_gpio,
-		"Reset GPIO", pdata->core_pdata->rst_gpio,
 		"Level trigger delay (us)", pdata->core_pdata->level_irq_udelay,
 		"HID descriptor register", pdata->core_pdata->hid_desc_register,
 		"Vendor ID", pdata->core_pdata->vendor_id,
@@ -5891,7 +5887,6 @@ static int cyttsp5_setup_irq_gpio(struct cyttsp5_core_data *cd)
 	int rc;
 
 	/* Initialize IRQ */
-	cd->irq = gpio_to_irq(cd->cpdata->irq_gpio);
 	if (cd->irq < 0)
 		return -EINVAL;
 
@@ -5955,6 +5950,7 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 	cd->dev = dev;
 	cd->pdata = pdata;
 	cd->cpdata = pdata->core_pdata;
+	cd->irq = irq;
 	cd->bus_ops = ops;
 	cd->debug_level = CY_INITIAL_DEBUG_LEVEL;
 	cd->watchdog_interval = CY_WATCHDOG_TIMEOUT;
