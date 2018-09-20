@@ -43,6 +43,7 @@ static void cyttsp5_mt_lift_all(struct cyttsp5_mt_data *md)
 	if (md->num_prv_rec != 0) {
 		if (md->mt_function.report_slot_liftoff)
 			md->mt_function.report_slot_liftoff(md, max);
+		input_report_abs(md->input, ABS_PRESSURE, 0);
 		input_sync(md->input);
 		md->num_prv_rec = 0;
 	}
@@ -268,6 +269,14 @@ static void cyttsp5_get_mt_touches(struct cyttsp5_mt_data *md,
 				continue;
 			cyttsp5_report_event(md, CY_ABS_X_OST + j,
 					tch->abs[CY_TCH_X + j]);
+		}
+		if (i == 0) {
+			input_report_abs(md->input, ABS_X,
+					tch->abs[CY_TCH_X]);
+			input_report_abs(md->input, ABS_Y,
+					tch->abs[CY_TCH_Y]);
+			input_report_abs(md->input, ABS_PRESSURE,
+					tch->abs[CY_TCH_P]);
 		}
 
 		/* Get the extended touch fields */
@@ -602,6 +611,16 @@ static int cyttsp5_setup_input_device(struct device *dev)
 
 			input_set_abs_params(md->input, signal, min, max,
 				MT_PARAM_FUZZ(md, i), MT_PARAM_FLAT(md, i));
+			if (i == CY_ABS_X_OST)
+				input_set_abs_params(md->input, ABS_X, min, max,
+					MT_PARAM_FUZZ(md, i), MT_PARAM_FLAT(md, i));
+			else if (i == CY_ABS_Y_OST)
+				input_set_abs_params(md->input, ABS_Y, min, max,
+					MT_PARAM_FUZZ(md, i), MT_PARAM_FLAT(md, i));
+			else if (i == CY_ABS_P_OST)
+				input_set_abs_params(md->input, ABS_PRESSURE, min, max,
+					MT_PARAM_FUZZ(md, i), MT_PARAM_FLAT(md, i));
+
 			parade_debug(dev, DEBUG_LEVEL_1,
 				"%s: register signal=%02X min=%d max=%d\n",
 				__func__, signal, min, max);
