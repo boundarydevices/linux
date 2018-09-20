@@ -485,6 +485,24 @@ static inline void *v4l2_m2m_dst_buf_remove(struct v4l2_m2m_ctx *m2m_ctx)
 	return v4l2_m2m_buf_remove(&m2m_ctx->cap_q_ctx);
 }
 
+/*
+ * v4l2_m2m_job_pause() - paused the schedule of data which from the job queue.
+ *
+ * @m2m_dev: opaque pointer to the internal data to handle M2M context
+ * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
+ */
+void v4l2_m2m_job_pause(struct v4l2_m2m_dev *m2m_dev,
+			 struct v4l2_m2m_ctx *m2m_ctx);
+
+ /*
+  * v4l2_m2m_job_resume() - resumed the schedule of data which from the job que.
+  *
+  * @m2m_dev: opaque pointer to the internal data to handle M2M context
+  * @m2m_ctx: m2m context assigned to the instance given by struct &v4l2_m2m_ctx
+  */
+void v4l2_m2m_job_resume(struct v4l2_m2m_dev *m2m_dev,
+			 struct v4l2_m2m_ctx *m2m_ctx);
+
 /* v4l2 ioctl helpers */
 
 int v4l2_m2m_ioctl_reqbufs(struct file *file, void *priv,

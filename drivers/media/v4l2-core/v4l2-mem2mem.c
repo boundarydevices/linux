@@ -304,6 +304,42 @@ void v4l2_m2m_job_finish(struct v4l2_m2m_dev *m2m_dev,
 }
 EXPORT_SYMBOL(v4l2_m2m_job_finish);
 
+void v4l2_m2m_job_pause(struct v4l2_m2m_dev *m2m_dev,
+			 struct v4l2_m2m_ctx *m2m_ctx)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&m2m_dev->job_spinlock, flags);
+	if (!m2m_dev->curr_ctx || m2m_dev->curr_ctx != m2m_ctx) {
+		spin_unlock_irqrestore(&m2m_dev->job_spinlock, flags);
+		dprintk("Called by an instance not currently running\n");
+		return;
+	}
+
+	list_del(&m2m_dev->curr_ctx->queue);
+	m2m_dev->curr_ctx->job_flags &= ~(TRANS_QUEUED | TRANS_RUNNING);
+	m2m_dev->curr_ctx->job_flags |= TRANS_ABORT;
+	wake_up(&m2m_dev->curr_ctx->finished);
+	m2m_dev->curr_ctx = NULL;
+
+	spin_unlock_irqrestore(&m2m_dev->job_spinlock, flags);
+}
+EXPORT_SYMBOL(v4l2_m2m_job_pause);
+
+void v4l2_m2m_job_resume(struct v4l2_m2m_dev *m2m_dev,
+			 struct v4l2_m2m_ctx *m2m_ctx)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&m2m_dev->job_spinlock, flags);
+	m2m_ctx->job_flags &= ~TRANS_ABORT;
+	spin_unlock_irqrestore(&m2m_dev->job_spinlock, flags);
+
+	v4l2_m2m_try_schedule(m2m_ctx);
+	v4l2_m2m_try_run(m2m_dev);
+}
+EXPORT_SYMBOL(v4l2_m2m_job_resume);
+
 int v4l2_m2m_reqbufs(struct file *file, struct v4l2_m2m_ctx *m2m_ctx,
 		     struct v4l2_requestbuffers *reqbufs)
 {

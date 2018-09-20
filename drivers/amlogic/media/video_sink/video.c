@@ -3508,6 +3508,39 @@ bool has_enhanced_layer(struct vframe_s *vf)
 }
 u32 property_changed_true;
 
+static bool has_receive_dummy_vframe(void)
+{
+	int i;
+	struct vframe_s *vf;
+
+	vf = video_vf_peek();
+
+	if (vf && vf->flag & VFRAME_FLAG_EMPTY_FRAME_V4L) {
+		/* get dummy vf. */
+		vf = video_vf_get();
+
+#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA /* recycle vframe. */
+		for (i = 0; i < dispbuf_to_put_num; i++) {
+			if (dispbuf_to_put[i]) {
+				video_vf_put(dispbuf_to_put[i]);
+				dispbuf_to_put[i] = NULL;
+			}
+			dispbuf_to_put_num = 0;
+		}
+#endif
+		/* recycle the last vframe. */
+		if (cur_dispbuf)
+			video_vf_put(cur_dispbuf);
+
+		/*pr_info("put dummy vframe.\n");*/
+		video_vf_put(vf);
+
+		return true;
+	}
+
+	return false;
+}
+
 static u64 func_div(u64 number, u32 divid)
 {
 	u64 tmp = number;
@@ -6632,6 +6665,11 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			}
 			vsync_toggle_frame(vf, __LINE__);
 			toggle_frame = vf;
+
+			/* The v4l2 capture needs a empty vframe to flush */
+			if (has_receive_dummy_vframe())
+				break;
+
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 			if (is_dolby_vision_enable()) {
 				toggle_vf = dolby_vision_toggle_frame(vf);
