@@ -540,12 +540,13 @@ static char *touch_setting_names[CY_IC_GRPNUM_NUM] = {
 };
 
 static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
-		struct device_node *core_node)
+		struct device *dev, struct device_node *core_node)
 {
 	struct cyttsp5_core_platform_data *pdata;
 	u32 value;
 	int rc;
 	int i;
+	struct gpio_desc *gpiod;
 
 	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
 	if (!pdata) {
@@ -554,10 +555,14 @@ static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
 	}
 
 	/* Required fields */
-	rc = of_property_read_u32(core_node, "cy,irq_gpio", &value);
-	if (rc)
+	gpiod = devm_gpiod_get_index(dev, "wakeup", 0, GPIOD_IN);
+	if (IS_ERR(gpiod)) {
+		rc = PTR_ERR(gpiod);
+		if (rc != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get wakeup(%d)\n", rc);
 		goto fail_free;
-	pdata->irq_gpio = value;
+	}
+	pdata->gpiod_int = gpiod;
 
 	rc = of_property_read_u32(core_node, "cy,hid_desc_register", &value);
 	if (rc)
@@ -568,9 +573,14 @@ static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
 	/* rst_gpio is optional since a platform may use
 	 * power cycling instead of using the XRES pin
 	 */
-	rc = of_property_read_u32(core_node, "cy,rst_gpio", &value);
-	if (!rc)
-		pdata->rst_gpio = value;
+	gpiod = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);	/* High means active */
+	if (IS_ERR(gpiod)) {
+		rc = PTR_ERR(gpiod);
+		if (rc != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get reset(%d)\n", rc);
+		goto fail_free;
+	}
+	pdata->gpiod_rst = gpiod;
 
 	rc = of_property_read_u32(core_node, "cy,level_irq_udelay", &value);
 	if (!rc)
@@ -606,10 +616,8 @@ static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
 				touch_setting_names[i]);
 	}
 
-	pr_debug("%s: irq_gpio:%d rst_gpio:%d\n"
-		"hid_desc_register:%d level_irq_udelay:%d vendor_id:%d product_id:%d\n"
-		"flags:%d easy_wakeup_gesture:%d\n", __func__,
-		pdata->irq_gpio, pdata->rst_gpio,
+	pr_debug("%s:hid_desc_register:%d level_irq_udelay:%d vendor_id:%d "
+		"product_id:%d\nflags:%d easy_wakeup_gesture:%d\n", __func__,
 		pdata->hid_desc_register,
 		pdata->level_irq_udelay, pdata->vendor_id, pdata->product_id,
 		pdata->flags, pdata->easy_wakeup_gesture);
@@ -667,7 +675,7 @@ int cyttsp5_devtree_create_and_get_pdata(struct device *adap_dev)
 		if (!rc)
 			pr_debug("%s: name:%s\n", __func__, name);
 
-		pdata->core_pdata = create_and_get_core_pdata(core_node);
+		pdata->core_pdata = create_and_get_core_pdata(adap_dev, core_node);
 		if (IS_ERR(pdata->core_pdata)) {
 			rc = PTR_ERR(pdata->core_pdata);
 			break;
