@@ -671,6 +671,13 @@ static const struct meson_i2c_data i2c_g12a_data = {
 	.div_factor = 3,
 	.delay_ajust = 15,
 };
+
+/* for the stable i2c controller, div_factor=3*/
+static const struct meson_i2c_data i2c_meson_data = {
+	.div_factor = 3,
+	.delay_ajust = 15,
+};
+
 static const struct of_device_id meson_i2c_match[] = {
 	{ .compatible = "amlogic,meson6-i2c", .data = &i2c_meson6_data },
 	{ .compatible = "amlogic,meson8b-i2c", .data = &i2c_meson8b_data },
@@ -680,6 +687,7 @@ static const struct of_device_id meson_i2c_match[] = {
 	{ .compatible = "amlogic,meson-txlx-i2c", .data = &i2c_txlx_data },
 	{ .compatible = "amlogic,meson-g12a-i2c", .data = &i2c_g12a_data },
 	{ .compatible = "amlogic,meson-g12b-i2c", .data = &i2c_g12a_data },
+	{ .compatible = "amlogic,meson-i2c", .data = &i2c_meson_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, meson_i2c_match);
