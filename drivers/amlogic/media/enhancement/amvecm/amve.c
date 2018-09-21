@@ -27,6 +27,7 @@
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/amvecm/amvecm.h>
+#include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include "arch/vpp_regs.h"
@@ -1404,6 +1405,8 @@ void amvecm_fresh_overscan(struct vframe_s *vf)
 	unsigned int cur_overscan_timing = 0;
 
 	if (overscan_disable)
+		return;
+	if (is_dolby_vision_on())
 		return;
 	if (overscan_table[0].load_flag) {
 		height = (vf->type & VIDTYPE_COMPRESS) ?
