@@ -80,7 +80,7 @@ static struct reg_map reg_maps_def[] = {
 static struct reg_map reg_maps_txlx[] = {
 	[CBUS_REG_IDX] = { /* CBUS */
 		.phy_addr = 0xffd00000,
-		.size = 0xa00000,
+		.size = 0x100000,
 	},
 	[PERIPHS_REG_IDX] = { /* PERIPHS */
 		.phy_addr = 0xff634400,
@@ -120,7 +120,7 @@ static struct reg_map reg_maps_txlx[] = {
 static struct reg_map reg_maps_g12a[] = {
 	[CBUS_REG_IDX] = { /* CBUS */
 		.phy_addr = 0xffd00000,
-		.size = 0xa00000,
+		.size = 0x100000,
 	},
 	[PERIPHS_REG_IDX] = { /* PERIPHS */
 		.phy_addr = 0xff634400,
