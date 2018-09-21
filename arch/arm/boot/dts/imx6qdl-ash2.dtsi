@@ -232,7 +232,7 @@
 
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
-			MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x0b018
+			MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x03018
 		>;
 	};
 
