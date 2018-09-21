@@ -249,8 +249,10 @@ static int egalax_ts_probe(struct i2c_client *client,
 
 	ts->wakeup_gpio = devm_gpiod_get_index(&client->dev, "wakeup", 0,
 					       GPIOD_OUT_LOW);
-	if (IS_ERR(ts->wakeup_gpio))
-		return -ENODEV;
+	if (IS_ERR(ts->wakeup_gpio)) {
+		error = -ENODEV;
+		goto exit1;
+	}
 
 	/* controller may be in sleep, wake it up. */
 	error = egalax_wake_up_device(client, ts);
@@ -305,6 +307,8 @@ static int egalax_ts_probe(struct i2c_client *client,
 	return 0;
 
 exit1:
+	if (client->irq)
+		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
 	return error;
 }
 
