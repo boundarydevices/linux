@@ -153,8 +153,9 @@ static void ve_hist_gamma_tgt(struct vframe_s *vf)
 	video_ve_hist.ave =
 		video_ve_hist.sum/(video_ve_hist.height*
 				video_ve_hist.width);
-	if ((vf->source_type == VFRAME_SOURCE_TYPE_OTHERS) &&
-		(is_meson_gxtvbb_cpu())) {
+	if (((vf->source_type == VFRAME_SOURCE_TYPE_OTHERS) &&
+		(is_meson_gxtvbb_cpu())) ||
+		cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
 		ave_luma = video_ve_hist.ave;
 		ave_luma = (ave_luma - 16) < 0 ? 0 : (ave_luma - 16);
 		video_ve_hist.ave = ave_luma*255/(235-16);
