@@ -6322,7 +6322,7 @@ static int di_task_handle(void *data)
 				di_pre_stru.reg_req_flag_irq = 0;
 			}
 			#ifdef CONFIG_CMA
-			mutex_lock(&de_devp->cma_mutex);
+			/* mutex_lock(&de_devp->cma_mutex);*/
 			if (di_pre_stru.cma_release_req) {
 				atomic_set(&devp->mem_flag, 0);
 				di_cma_release(devp);
@@ -6337,7 +6337,7 @@ static int di_task_handle(void *data)
 				di_pre_stru.cma_alloc_req = 0;
 				di_pre_stru.cma_alloc_done = 1;
 			}
-			mutex_unlock(&de_devp->cma_mutex);
+			/* mutex_unlock(&de_devp->cma_mutex); */
 			#endif
 		}
 		if (de_devp->flags & DI_VPU_CLKB_SET) {
@@ -7451,7 +7451,7 @@ static int di_probe(struct platform_device *pdev)
 	} else {
 			atomic_set(&di_devp->mem_flag, 1);
 	}
-	mutex_init(&di_devp->cma_mutex);
+	/* mutex_init(&di_devp->cma_mutex); */
 	INIT_LIST_HEAD(&di_devp->pq_table_list);
 
 	atomic_set(&di_devp->pq_flag, 0);
