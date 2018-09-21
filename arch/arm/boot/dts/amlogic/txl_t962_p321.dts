@@ -75,7 +75,7 @@
 			reusable;
 			size = <0x800000>;
 			alignment = <0x400000>;
-			alloc-ranges = <0x32000000 0xc800000>;
+			alloc-ranges = <0x3f800000 0x800000>;
 		};
 
 		ion_reserved:linux,ion-dev {

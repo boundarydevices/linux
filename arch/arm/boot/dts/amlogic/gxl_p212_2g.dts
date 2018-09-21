@@ -77,7 +77,7 @@
 			reusable;
 			size = <0x800000>;
 			alignment = <0x400000>;
-			//alloc-ranges = <0x3f800000 0x800000>;
+			alloc-ranges = <0x7f800000 0x800000>;
 		};
 		//don't put other dts in front of logo_reserved
 
