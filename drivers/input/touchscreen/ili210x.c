@@ -213,7 +213,7 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	if (error) {
 		dev_err(dev, "Failed to get firmware version, err: %d\n",
 			error);
-		return error;
+		goto exit1;
 	}
 
 	/* get panel info */
@@ -221,7 +221,7 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	if (error) {
 		dev_err(dev, "Failed to get panel information, err: %d\n",
 			error);
-		return error;
+		goto exit1;
 	}
 
 	xmax = panel.finger_max.x_low | (panel.finger_max.x_high << 8);
@@ -300,6 +300,9 @@ err_free_irq:
 err_free_mem:
 	input_free_device(input);
 	kfree(priv);
+exit1:
+	if (client->irq)
+		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
 	return error;
 }
 
