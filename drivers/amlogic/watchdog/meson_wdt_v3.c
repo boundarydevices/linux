@@ -185,6 +185,7 @@ static const struct of_device_id meson_wdt_dt_ids[] = {
 	 { .compatible = "amlogic,meson-txl-wdt", },
 	 { .compatible = "amlogic,meson-txlx-wdt", },
 	 { .compatible = "amlogic,meson-g12a-wdt", },
+	 { .compatible = "amlogic,meson-tl1-wdt", },
 	 { /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, meson_wdt_dt_ids);
