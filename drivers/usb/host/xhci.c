@@ -3681,6 +3681,9 @@ int xhci_disable_slot(struct xhci_hcd *xhci, struct xhci_command *command,
 		return -ENOMEM;
 
 	spin_lock_irqsave(&xhci->lock, flags);
+
+	virt_dev->udev = NULL;
+
 	/* Don't disable the slot if the host controller is dead. */
 	state = readl(&xhci->op_regs->status);
 	if (state == 0xffffffff || (xhci->xhc_state & XHCI_STATE_DYING) ||
