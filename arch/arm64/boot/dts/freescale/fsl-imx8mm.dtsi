@@ -1057,7 +1057,7 @@
 		only-dma-mask32 = <1>;
 	};
 
-	imx_ion {
+	imx_ion: imx_ion {
 		compatible = "fsl,mxc-ion";
 		fsl,heap-id = <0>;
 	};
