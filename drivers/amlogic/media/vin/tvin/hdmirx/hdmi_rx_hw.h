@@ -19,6 +19,8 @@
 #define __HDMI_RX_HW_H__
 
 
+/*#define K_BRINGUP_PTM*/
+
 /**
  * Bit field mask
  * @param m	width
@@ -31,10 +33,12 @@
  */
 #define _BIT(n)			MSK(1, (n))
 
+#define diff(a, b)	((a > b) ? (a - b) : (b - a))
 
 #define HHI_GCLK_MPEG0			(0x50 << 2) /* (0xC883C000 + 0x140) */
 #define HHI_HDMIRX_CLK_CNTL		0x200 /* (0xC883C000 + 0x200)  */
 #define HHI_HDMIRX_AUD_CLK_CNTL	0x204 /* 0x1081 */
+#define HHI_VDAC_CNTL1			(0xbc * 4)
 #define HHI_AUD_PLL_CNTL		(0xf8 * 4)
 #define HHI_AUD_PLL_CNTL2		(0xf9 * 4)
 #define HHI_AUD_PLL_CNTL3		(0xfa * 4)
@@ -196,6 +200,13 @@
 #define TOP_EDID_GEN_STAT_B              0x025
 #define TOP_EDID_GEN_STAT_C              0x026
 #define TOP_EDID_GEN_STAT_D              0x027
+/* tl1 */
+#define TOP_CHAN_SWITCH_0				0x028
+#define TOP_TMDS_ALIGN_CNTL0			0x029
+#define TOP_TMDS_ALIGN_CNTL1			0x02a
+#define TOP_TMDS_ALIGN_STAT				0x02b
+
+/* GXTVBB/TXL/TXLX */
 #define	TOP_ACR_CNTL2					 0x02a
 /* Gxtvbb */
 #define	TOP_INFILTER_GXTVBB				 0x02b
@@ -206,28 +217,79 @@
 #define	TOP_INFILTER_I2C1				 0x02E
 #define	TOP_INFILTER_I2C2				 0x02F
 #define	TOP_INFILTER_I2C3				 0x030
+/* tl1 */
+#define	TOP_PRBS_GEN					0x033
+#define	TOP_PRBS_ANA_0					0x034
+#define TOP_PRBS_ANA_1					0x035
+#define	TOP_PRBS_ANA_STAT				0x036
+#define	TOP_PRBS_ANA_BER_CH0			0x037
+#define	TOP_PRBS_ANA_BER_CH1			0x038
+#define	TOP_PRBS_ANA_BER_CH2			0x039
+#define	TOP_METER_CABLE_CNTL			0x03a
+#define	TOP_METER_CABLE_STAT			0x03b
+#define	TOP_CHAN_SWITCH_1				0x03c
+/* tl1 */
+#define	TOP_AUDPLL_LOCK_FILTER			0x040
 
-#define	TOP_SKP_CNTL_STAT				 0x061
-#define	TOP_NONCE_0						 0x062
-#define	TOP_NONCE_1						 0x063
-#define	TOP_NONCE_2						 0x064
-#define	TOP_NONCE_3						 0x065
-#define	TOP_PKF_0						 0x066
-#define	TOP_PKF_1						 0x067
-#define	TOP_PKF_2						 0x068
-#define	TOP_PKF_3						 0x069
-#define	TOP_DUK_0						 0x06a
-#define	TOP_DUK_1						 0x06b
-#define	TOP_DUK_2						 0x06c
-#define	TOP_DUK_3						 0x06d
-#define TOP_NSEC_SCRATCH				 0x06e
-#define	TOP_SEC_SCRATCH					 0x06f
+/* tl1 */
+#define	TOP_CHAN01_ERRCNT				0x041
+#define	TOP_CHAN2_ERRCNT				0x042
+#define	TOP_TL1_ACR_CNTL2				0x043
+#define	TOP_ACR_N_STAT					0x044
+#define	TOP_ACR_CTS_STAT				0x045
+#define	TOP_AUDMEAS_CTRL				0x046
+#define	TOP_AUDMEAS_CYCLES_M1			0x047
+#define	TOP_AUDMEAS_INTR_MASKN			0x048
+#define	TOP_AUDMEAS_INTR_STAT			0x049
+#define	TOP_AUDMEAS_REF_CYCLES_STAT0	0x04a
+#define	TOP_AUDMEAS_REF_CYCLES_STAT1	0x04b
+#define	TOP_HDCP22_BSOD					0x060
+
+
+#define	TOP_SKP_CNTL_STAT				0x061
+#define	TOP_NONCE_0						0x062
+#define	TOP_NONCE_1						0x063
+#define	TOP_NONCE_2						0x064
+#define	TOP_NONCE_3						0x065
+#define	TOP_PKF_0						0x066
+#define	TOP_PKF_1						0x067
+#define	TOP_PKF_2						0x068
+#define	TOP_PKF_3						0x069
+#define	TOP_DUK_0						0x06a
+#define	TOP_DUK_1						0x06b
+#define	TOP_DUK_2						0x06c
+#define	TOP_DUK_3						0x06d
+#define TOP_NSEC_SCRATCH				0x06e
+#define	TOP_SEC_SCRATCH					0x06f
+/* TL1 */
+#define	TOP_EMP_DDR_START_A				0x070
+#define	TOP_EMP_DDR_START_B				0x071
+#define	TOP_EMP_DDR_FILTER				0x072
+#define	TOP_EMP_CNTL_0					0x073
+#define	TOP_EMP_CNTL_1					0x074
+#define	TOP_EMP_CNTMAX					0x075
+#define	TOP_EMP_ERR_STAT				0x076
+#define	TOP_EMP_RCV_CNT_CUR				0x077
+#define	TOP_EMP_RCV_CNT_BUF				0x078
+#define	TOP_EMP_DDR_ADDR_CUR			0x079
+#define	TOP_EMP_DDR_PTR_S_BUF			0x07a
+#define	TOP_EMP_STAT_0					0x07b
+#define	TOP_EMP_STAT_1					0x07c
+#define TOP_AXI_CNTL_0					0x080
+#define	TOP_AXI_ASYNC_HOLD_ESM			0x081
+#define	TOP_AXI_ASYNC_HOLD_EMP			0x082
+#define	TOP_AXI_STAT_0					0x083
+#define	TOP_MISC_STAT0					0x084
+#define TOP_EDID_ADDR_S					0x1000
+#define TOP_EDID_ADDR_E					0x11ff
+#define TOP_DWC_BASE_OFFSET				0x8000
+
+
 #define TOP_DONT_TOUCH0                  0x0fe
 #define TOP_DONT_TOUCH1                  0x0ff
 
-
 /* hdmi2.0 new end */
-#define TOP_EDID_OFFSET                  0x200
+#define TOP_EDID_OFFSET					0x200
 
 /*
  * HDMI registers
@@ -564,6 +626,8 @@
 #define PFIFO_ACP_EN		_BIT(18)/*type:0x04*/
 #define PFIFO_GCP_EN		_BIT(17)/*type:0x03*/
 #define PFIFO_ACR_EN		_BIT(16)/*type:0x01*/
+/*tl1*/
+#define PFIFO_EMP_EN		_BIT(9)/*type:0x7f*/
 
 #define		GCP_GLOBAVMUTE			_BIT(15)
 /** Packet FIFO clear min/max information */
@@ -977,6 +1041,29 @@
 #define EXCEPTION_CODE					MSK(8, 1)
 #define AUD_PLL_THRESHOLD	1000000
 
+/* tl1 HIU apll register */
+#define HHI_HDMIRX_APLL_CNTL0			(0xd2<<2)/* 0x4C */
+#define HHI_HDMIRX_APLL_CNTL1			(0xd3<<2)/* 0x4D */
+#define HHI_HDMIRX_APLL_CNTL2			(0xd4<<2)/* 0x4E */
+#define HHI_HDMIRX_APLL_CNTL3			(0xd5<<2)/* 0x4F */
+#define HHI_HDMIRX_APLL_CNTL4			(0xd6<<2)/* 0x50 */
+
+/* tl1 HIU PHY register */
+#define HHI_HDMIRX_PHY_MISC_CNTL0		(0xd7<<2)/*0x040*/
+#define HHI_HDMIRX_PHY_MISC_CNTL1		(0xd8<<2)/*0x041*/
+#define HHI_HDMIRX_PHY_MISC_CNTL2		(0xe0<<2)/*0x042*/
+#define HHI_HDMIRX_PHY_MISC_CNTL3		(0xe1<<2)/*0x043*/
+#define HHI_HDMIRX_PHY_MISC_STAT		(0xee<<2)/*0x044*/
+#define HHI_HDMIRX_PHY_DCHA_CNTL0		(0xe2<<2)/*0x045*/
+#define HHI_HDMIRX_PHY_DCHA_CNTL1		(0xe3<<2)/*0x046*/
+#define HHI_HDMIRX_PHY_DCHA_CNTL2		(0xe4<<2)/*0x047*/
+#define HHI_HDMIRX_PHY_DCHD_CNTL0		(0xe5<<2)/*0x048*/
+#define HHI_HDMIRX_PHY_DCHD_CNTL1		(0xe6<<2)/*0x049*/
+#define HHI_HDMIRX_PHY_DCHD_CNTL2		(0xe7<<2)/*0x04A*/
+#define HHI_HDMIRX_PHY_DCHD_STAT		(0xef<<2)/*0x04B*/
+
+
+
 #define TMDS_CLK_MIN			(24000UL)
 #define TMDS_CLK_MAX			(340000UL)
 
@@ -1010,6 +1097,8 @@ extern int md_ists_en;
 extern int eq_ref_voltage;
 extern int aud_ch_map;
 extern int hdcp14_key_mode;
+extern int ignore_sscp_charerr;
+extern int ignore_sscp_tmds;
 
 extern void wr_reg_hhi(unsigned int offset, unsigned int val);
 extern unsigned int rd_reg_hhi(unsigned int offset);
@@ -1018,6 +1107,10 @@ extern unsigned int rd_reg(enum map_addr_module_e module,
 extern void wr_reg(enum map_addr_module_e module,
 		unsigned int reg_addr,
 		unsigned int val);
+extern unsigned char rd_reg_b(enum map_addr_module_e module,
+	unsigned char reg_addr);
+extern void wr_reg_b(enum map_addr_module_e module,
+		unsigned int reg_addr, unsigned char val);
 extern void hdmirx_wr_top(unsigned int addr, unsigned int data);
 extern unsigned int hdmirx_rd_top(unsigned int addr);
 extern void hdmirx_wr_dwc(unsigned int addr, unsigned int data);
@@ -1035,12 +1128,13 @@ extern unsigned int rx_get_bits(unsigned int data,
 	unsigned int mask);
 extern unsigned int rx_set_bits(unsigned int data,
 	unsigned int mask, unsigned int value);
-extern unsigned int hdmirx_get_tmds_clock(void);
-extern unsigned int hdmirx_get_pixel_clock(void);
-extern unsigned int hdmirx_get_audio_clock(void);
-extern unsigned int hdmirx_get_esm_clock(void);
-extern unsigned int hdmirx_get_mpll_div_clk(void);
-extern unsigned int hdmirx_get_clock(int index);
+/*extern unsigned int hdmirx_get_tmds_clock(void);*/
+/*extern unsigned int hdmirx_get_pixel_clock(void);*/
+/*extern unsigned int hdmirx_get_audio_clock(void);*/
+/*extern unsigned int hdmirx_get_esm_clock(void);*/
+/*extern unsigned int hdmirx_get_cable_clock(void);*/
+/*extern unsigned int hdmirx_get_mpll_div_clk(void);*/
+/*extern unsigned int hdmirx_get_clock(int index);*/
 extern unsigned int meson_clk_measure(unsigned int clk_mux);
 
 /* hdcp22 */
@@ -1102,6 +1196,60 @@ extern void rx_force_hpd_cfg(uint8_t hpd_level);
 extern void rx_force_rxsense_cfg(uint8_t level);
 extern void rx_force_hpd_rxsense_cfg(uint8_t level);
 extern void rx_audio_bandgap_rst(void);
+extern void rx_audio_bandgap_rst(void);
+extern void rx_phy_rxsense_pulse(unsigned int t1, unsigned int t2);
+extern void rx_phy_power_on(unsigned int onoff);
+
+
+#define K_MEASURE_SRC_HDMI_TMDSCLK	0
+#define K_MEASURE_SRC_HDMI_CABLECLK	1
+
+enum measure_clk_src {
+	MEASURE_CLK_CABLE,
+	MEASURE_CLK_TMDS,
+	MEASURE_CLK_PIXEL,
+	MEASURE_CLK_MPLL,
+	MEASURE_CLK_AUD_PLL,
+	MEASURE_CLK_AUD_DIV,
+	MEASURE_CLK_ESM,
+};
+
+enum apllbw {
+	apll_bw_24_40 = 0,
+	apll_bw_40_80,
+	apll_bw_80_150,
+	apll_bw_150_300,
+	apll_bw_300_600,
+	apll_bw_null = 0xf,
+};
+
+
+struct apll_param {
+	unsigned int bw;
+	unsigned int M;
+	unsigned int N;
+	unsigned int od;
+	unsigned int od_div;
+	unsigned int od2;
+	unsigned int od2_div;
+};
+
+extern unsigned int rx_get_clock(unsigned int clk_src);
+extern unsigned int clk_util_clk_msr(unsigned int clk_mux);
+extern unsigned int rx_measure_clock(enum measure_clk_src clksrc);
+extern void aml_phy_init(unsigned int bw);
+extern void aml_phy_pw_onoff(unsigned int onoff);
+extern unsigned int  aml_check_clk_bandwidth(unsigned int cableclk,
+	unsigned int clkrate);
+extern void aml_sw_apll(unsigned int bandwidth, unsigned int cableclk);
+extern void aml_phy_bw_switch(unsigned int cableclk, unsigned int clkrate);
+extern unsigned int aml_phy_pll_lock(void);
+extern unsigned int aml_phy_tmds_valid(void);
+extern void rx_emp_to_ddr_init(void);
+extern void rx_emp_field_done_irq(void);
+extern void rx_emp_status(void);
+extern void rx_emp_lastpkt_done_irq(void);
+
 #endif
 
 

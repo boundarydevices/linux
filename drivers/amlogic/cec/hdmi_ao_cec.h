@@ -18,7 +18,7 @@
 #ifndef __AO_CEC_H__
 #define __AO_CEC_H__
 
-#define CEC_DRIVER_VERSION	"Ver 2018/09/2\n"
+#define CEC_DRIVER_VERSION	"Ver 2018/10/23\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
@@ -27,6 +27,15 @@
 #define CEC_DEEP_SUSPEND	(1 << 1)
 
 #define HR_DELAY(n)		(ktime_set(0, n * 1000 * 1000))
+
+enum cec_chip_ver {
+	CEC_CHIP_ID_GXTVBB = 0,
+	CEC_CHIP_ID_TXL,
+	CEC_CHIP_ID_TXLX,
+	CEC_CHIP_ID_G12A,
+	CEC_CHIP_ID_TXHD,
+	CEC_CHIP_ID_TL1,
+};
 
 #define L_1		1
 #define L_2		2
@@ -81,7 +90,7 @@
 #define AO_CEC_STICKY_DATA7			((0xd1 << 2))
 
 /*
- * AOCEC_B
+ * AOCEC_B register
  */
 #define AO_CECB_CLK_CNTL_REG0		((0xa0 << 2))
 #define AO_CECB_CLK_CNTL_REG1		((0xa1 << 2))
@@ -91,7 +100,10 @@
 #define AO_CECB_INTR_CLR		((0xa5 << 2))
 #define AO_CECB_INTR_STAT		((0xa6 << 2))
 
-/* read/write */
+/*
+ * AOCEC_A internal register
+ * read/write tx register list
+ */
 #define CEC_TX_MSG_0_HEADER        0x00
 #define CEC_TX_MSG_1_OPCODE        0x01
 #define CEC_TX_MSG_2_OP1           0x02
@@ -108,8 +120,6 @@
 #define CEC_TX_MSG_D_OP12          0x0D
 #define CEC_TX_MSG_E_OP13          0x0E
 #define CEC_TX_MSG_F_OP14          0x0F
-
-/* read/write */
 #define CEC_TX_MSG_LENGTH          0x10
 #define CEC_TX_MSG_CMD             0x11
 #define CEC_TX_WRITE_BUF           0x12
@@ -124,7 +134,9 @@
 #define CEC_CLOCK_DIV_H            0x1B
 #define CEC_CLOCK_DIV_L            0x1C
 
-/* The following registers are for fine tuning CEC bit timing parameters.
+/*
+ * AOCEC_A internal register
+ * The following registers are for fine tuning CEC bit timing parameters.
  * They are only valid in AO CEC, NOT valid in HDMITX CEC.
  * The AO CEC's timing parameters are already set default to work with
  * 32768Hz clock, so hopefully SW never need to program these registers.
@@ -186,11 +198,13 @@
 #define AO_CEC_NOMSMPACKPOINT_0MS45             0x58
 #define AO_CEC_ACK0NOML2H_1MS5_BIT7_0           0x5A
 #define AO_CEC_ACK0NOML2H_1MS5_BIT8             0x5B
-
 #define AO_CEC_BUGFIX_DISABLE_0                 0x60
 #define AO_CEC_BUGFIX_DISABLE_1                 0x61
 
-/* read only */
+/*
+ * AOCEC_A internal register
+ * read only register list
+ */
 #define CEC_RX_MSG_0_HEADER        0x80
 #define CEC_RX_MSG_1_OPCODE        0x81
 #define CEC_RX_MSG_2_OP1           0x82
@@ -207,13 +221,22 @@
 #define CEC_RX_MSG_D_OP12          0x8D
 #define CEC_RX_MSG_E_OP13          0x8E
 #define CEC_RX_MSG_F_OP14          0x8F
-
-/* read only */
 #define CEC_RX_MSG_LENGTH          0x90
 #define CEC_RX_MSG_STATUS          0x91
 #define CEC_RX_NUM_MSG             0x92
 #define CEC_TX_MSG_STATUS          0x93
 #define CEC_TX_NUM_MSG             0x94
+/*
+ * AOCEC_A internal register
+ * read only (tl1 later)
+ */
+#define CEC_STAT_0_0				0xA0
+#define CEC_STAT_0_1				0xA1
+#define CEC_STAT_0_2				0xA2
+#define CEC_STAT_0_3				0xA3
+#define CEC_STAT_1_0				0xA4
+#define CEC_STAT_1_1				0xA5
+#define CEC_STAT_1_2				0xA6
 
 /* tx_msg_cmd definition */
 #define TX_NO_OP                0  /* No transaction */
@@ -263,9 +286,12 @@
 /** Register address: DMI disable interface */
 #define DWC_DMI_DISABLE_IF		(0xFF4UL)
 
-/*---- registers for EE CEC ----*/
+/*
+ * AOCEC_B internal register
+ * for EE CEC
+ */
 #define DWC_CEC_CTRL                     0x1F00
-#define DWC_CEC_STAT                     0x1F04
+#define DWC_CEC_CTRL2                    0x1F04/*tl1 later*/
 #define DWC_CEC_MASK                     0x1F08
 #define DWC_CEC_POLARITY                 0x1F0C
 #define DWC_CEC_INT                      0x1F10
@@ -273,6 +299,7 @@
 #define DWC_CEC_ADDR_H                   0x1F18
 #define DWC_CEC_TX_CNT                   0x1F1C
 #define DWC_CEC_RX_CNT                   0x1F20
+#define DWC_CEC_STAT0                    0x1F24/*tl1 later*/
 #define DWC_CEC_TX_DATA0                 0x1F40
 #define DWC_CEC_TX_DATA1                 0x1F44
 #define DWC_CEC_TX_DATA2                 0x1F48
@@ -308,13 +335,19 @@
 #define DWC_CEC_LOCK                     0x1FC0
 #define DWC_CEC_WKUPCTRL                 0x1FC4
 
-/* FOR AO_CECB */
+/*
+ * AOCEC_B internal register
+ * for EE CEC
+ */
+/*
 #define AO_CECB_CTRL_ADDR                0x00
+#define AO_CECB_CTRL2_ADDR               0x01
 #define AO_CECB_INTR_MASK_ADDR           0x02
 #define AO_CECB_LADD_LOW_ADDR            0x05
 #define AO_CECB_LADD_HIGH_ADDR           0x06
 #define AO_CECB_TX_CNT_ADDR              0x07
 #define AO_CECB_RX_CNT_ADDR              0x08
+#define AO_CECB_STAT0_ADDR               0x09
 #define AO_CECB_TX_DATA00_ADDR           0x10
 #define AO_CECB_TX_DATA01_ADDR           0x11
 #define AO_CECB_TX_DATA02_ADDR           0x12
@@ -349,6 +382,34 @@
 #define AO_CECB_RX_DATA15_ADDR           0x2F
 #define AO_CECB_LOCK_BUF_ADDR            0x30
 #define AO_CECB_WAKEUPCTRL_ADDR          0x31
+*/
+
+
+/*
+ * AOCEC B CEC_STAT0
+ */
+enum {
+	CECB_STAT0_S2P_IDLE = 0,
+	CECB_STAT0_S2P_SBITLOWER = 1,
+	CECB_STAT0_S2P_SBH = 2,
+	CECB_STAT0_S2P_L1LOWER = 5,
+	CECB_STAT0_S2P_SMP1 = 6,
+	CECB_STAT0_S2P_SMP0 = 7,
+	CECB_STAT0_S2P_L0H = 8,
+	CECB_STAT0_S2P_ERRLMIN = 9,
+	CECB_STAT0_S2P_ERRLMAX = 0xe,
+};
+
+enum {
+	CECB_STAT0_P2S_TIDLE = 0,
+	CECB_STAT0_P2S_SEND_SBIT = 1,
+	CECB_STAT0_P2S_SEND_DBIT = 2,
+	CECB_STAT0_P2S_SEND_EOM = 3,
+	CECB_STAT0_P2S_SEND_ACK = 4,
+	CECB_STAT0_P2S_FBACK_ACK = 5,
+	CECB_STAT0_P2S_FBACK_RX_ERR = 6,
+};
+
 
 /* cec ip irq flags bit discription */
 #define EECEC_IRQ_TX_DONE		(1 << 16)
@@ -397,6 +458,8 @@
 #define EDID_AUTO_CEC_EN		0
 
 #define HHI_32K_CLK_CNTL		(0x89 << 2)
+#define HHI_HDMIRX_ARC_CNTL		(0xe8  << 2)
+
 
 struct dbgflg {
 	unsigned int hal_cmd_bypass:1;
@@ -408,6 +471,9 @@ extern unsigned long hdmirx_rd_top(unsigned long addr);
 extern void hdmirx_wr_top(unsigned long addr, unsigned long data);
 extern uint32_t hdmirx_rd_dwc(uint16_t addr);
 extern void hdmirx_wr_dwc(uint16_t addr, uint32_t data);
+extern unsigned int rd_reg_hhi(unsigned int offset);
+extern void wr_reg_hhi(unsigned int offset, unsigned int val);
+
 #else
 static inline unsigned long hdmirx_rd_top(unsigned long addr)
 {
@@ -425,6 +491,16 @@ static inline uint32_t hdmirx_rd_dwc(uint16_t addr)
 static inline void hdmirx_wr_dwc(uint16_t addr, uint32_t data)
 {
 }
+
+unsigned int rd_reg_hhi(unsigned int offset)
+{
+	return 0;
+}
+
+void wr_reg_hhi(unsigned int offset, unsigned int val)
+{
+}
+
 #endif
 
 extern int hdmirx_get_connect_info(void);

@@ -63,6 +63,8 @@ static struct pkt_typeregmap_st pktmaping[] = {
 	{PKT_TYPE_ISRC2,			PFIFO_ISRC2_EN},
 	{PKT_TYPE_GAMUT_META,		PFIFO_GMT_EN},
 	{PKT_TYPE_AUD_META,			PFIFO_AMP_EN},
+	{PKT_TYPE_EMP,				PFIFO_EMP_EN},
+
 	/*end of the table*/
 	{K_FLAG_TAB_END,			K_FLAG_TAB_END},
 };
@@ -99,6 +101,7 @@ void rx_pkt_status(void)
 	rx_pr("pkt_cnt_isrc2=%d\n", rxpktsts.pkt_cnt_isrc2);
 	rx_pr("pkt_cnt_gameta=%d\n", rxpktsts.pkt_cnt_gameta);
 	rx_pr("pkt_cnt_amp=%d\n", rxpktsts.pkt_cnt_amp);
+	rx_pr("pkt_cnt_emp=%d\n", rxpktsts.pkt_cnt_emp);
 
 	rx_pr("pkt_cnt_vsi_ex=%d\n", rxpktsts.pkt_cnt_vsi_ex);
 	rx_pr("pkt_cnt_drm_ex=%d\n", rxpktsts.pkt_cnt_drm_ex);
@@ -109,6 +112,7 @@ void rx_pkt_status(void)
 	rx_pr("pkt_cnt_gcp_ex=%d\n", rxpktsts.pkt_cnt_gcp_ex);
 	rx_pr("pkt_cnt_amp_ex=%d\n", rxpktsts.pkt_cnt_amp_ex);
 	rx_pr("pkt_cnt_nvbi_ex=%d\n", rxpktsts.pkt_cnt_nvbi_ex);
+	rx_pr("pkt_cnt_nvbi_ex=%d\n", rxpktsts.pkt_cnt_emp_ex);
 
 	rx_pr("pkt_chk_flg=%d\n", rxpktsts.pkt_chk_flg);
 
@@ -133,8 +137,8 @@ void rx_pkt_debug(void)
 	rx_pr("vbi_infoframe_st size=%d\n", sizeof(struct vbi_infoframe_st));
 	rx_pr("drm_infoframe_st size=%d\n", sizeof(struct drm_infoframe_st));
 
-	rx_pr("acr_ptk_st size=%d\n",
-				sizeof(struct acr_ptk_st));
+	rx_pr("acr_pkt_st size=%d\n",
+				sizeof(struct acr_pkt_st));
 	rx_pr("aud_sample_pkt_st size=%d\n",
 				sizeof(struct aud_sample_pkt_st));
 	rx_pr("gcp_pkt_st size=%d\n", sizeof(struct gcp_pkt_st));
@@ -158,7 +162,8 @@ void rx_pkt_debug(void)
 				sizeof(struct msaudsmp_pkt_st));
 	rx_pr("onebmtstr_smaud_pkt_st size=%d\n",
 				sizeof(struct obmaudsmp_pkt_st));
-
+	rx_pr("emp size=%d\n",
+				sizeof(struct emp_pkt_st));
 	memset(&rxpktsts, 0, sizeof(struct rxpkt_st));
 
 	data32 = hdmirx_rd_dwc(DWC_PDEC_CTRL);
@@ -179,6 +184,9 @@ void rx_pkt_debug(void)
 	data32 |= (rx_pkt_type_mapping(PKT_TYPE_ISRC1));
 	data32 |= (rx_pkt_type_mapping(PKT_TYPE_ISRC2));
 	data32 |= (rx_pkt_type_mapping(PKT_TYPE_GAMUT_META));
+	if (rx.chip_id == CHIP_ID_TL1)
+		data32 |= (rx_pkt_type_mapping(PKT_TYPE_EMP));
+
 	hdmirx_wr_dwc(DWC_PDEC_CTRL, data32);
 	rx_pr("enable fifo\n");
 
@@ -342,6 +350,8 @@ void rx_debug_pktinfo(char input[][20])
 			enable |= _BIT(30);/* DRC_RCV*/
 		else
 			enable |= _BIT(9);/* DRC_RCV*/
+		if (rx.chip_id == CHIP_ID_TL1)
+			enable |= _BIT(9);/* EMP_RCV*/
 		enable |= _BIT(20);/* GMD_RCV */
 		enable |= _BIT(19);/* AIF_RCV */
 		enable |= _BIT(18);/* AVI_RCV */
@@ -382,7 +392,12 @@ void rx_debug_pktinfo(char input[][20])
 			sts = VSI_RCV;
 		else if (strncmp(input[2], "amp", 3) == 0)
 			sts = _BIT(14);
-
+		else if (strncmp(input[2], "emp", 3) == 0) {
+			if (rx.chip_id == CHIP_ID_TL1)
+				sts = _BIT(9);
+			else
+				rx_pr("no emp function\n");
+		}
 		pdec_ists_en &= ~sts;
 		rx_pr("pdec_ists_en=0x%x\n", pdec_ists_en);
 		/*disable irq*/
@@ -411,6 +426,12 @@ void rx_debug_pktinfo(char input[][20])
 			enable |= VSI_RCV;
 		else if (strncmp(input[2], "amp", 3) == 0)
 			enable |= _BIT(14);
+		else if (strncmp(input[2], "emp", 3) == 0) {
+			if (rx.chip_id == CHIP_ID_TL1)
+				enable |= _BIT(9);
+			else
+				rx_pr("no emp function\n");
+		}
 		pdec_ists_en = enable|sts;
 		rx_pr("pdec_ists_en=0x%x\n", pdec_ists_en);
 		/*open irq*/
@@ -675,7 +696,7 @@ static void rx_pktdump_drm(void *pdata)
 
 static void rx_pktdump_acr(void *pdata)
 {
-	struct acr_ptk_st *pktdata = pdata;
+	struct acr_pkt_st *pktdata = pdata;
 	uint32_t CTS;
 	uint32_t N;
 
@@ -727,6 +748,25 @@ static void rx_pktdump_acr(void *pdata)
 	rx_pr("sbpkt4 N : %d\n", N);
 	#endif
 	rx_pr(">------------------>end\n");
+}
+
+static void rx_pktdump_emp(void *pdata)
+{
+	struct emp_pkt_st *pktdata = pdata;
+
+	rx_pr("pkttype=0x%x\n", pktdata->pkttype);
+	rx_pr("first=0x%x\n", pktdata->first);
+	rx_pr("last=0x%x\n", pktdata->last);
+	rx_pr("sequence_idx=0x%x\n", pktdata->sequence_idx);
+	rx_pr("cnt.new=0x%x\n", pktdata->cnt.new);
+	rx_pr("cnt.end=0x%x\n", pktdata->cnt.end);
+	rx_pr("cnt.ds_type=0x%x\n", pktdata->cnt.ds_type);
+	rx_pr("cnt.afr=0x%x\n", pktdata->cnt.afr);
+	rx_pr("cnt.vfr=0x%x\n", pktdata->cnt.vfr);
+	rx_pr("cnt.sync=0x%x\n", pktdata->cnt.sync);
+	rx_pr("cnt.or_id=0x%x\n", pktdata->cnt.organization_id);
+	rx_pr("cnt.tag=0x%x\n", pktdata->cnt.data_set_tag);
+	rx_pr("cnt.length=0x%x\n", pktdata->cnt.data_set_length);
 }
 
 void rx_pkt_dump(enum pkt_type_e typeID)
@@ -818,7 +858,10 @@ void rx_pkt_dump(enum pkt_type_e typeID)
 		rx_pkt_get_amp_ex(&pktdata);
 		rx_pktdump_raw(&pktdata);
 		break;
-
+	case PKT_TYPE_EMP:
+		rx_pktdump_emp(&prx->emp_info);
+		rx_pktdump_raw(&prx->emp_info);
+		break;
 	default:
 		rx_pr("warning: not support\n");
 		rx_pr("vsi->0x81:Vendor-Specific infoframe\n");
@@ -835,7 +878,7 @@ void rx_pkt_dump(enum pkt_type_e typeID)
 		rx_pr("isrc2->0x06\n");
 		rx_pr("gmd->0x0a\n");
 		rx_pr("amp->0x0d\n");
-		/*rx_pktdump_raw(&prx->dbg_info);*/
+		rx_pr("emp->0x7f:EMP\n");
 		break;
 	}
 
@@ -895,6 +938,7 @@ void rx_pkt_initial(void)
 	memset(&rx_pkt.mpegs_info, 0, sizeof(struct pd_infoframe_s));
 	memset(&rx_pkt.ntscvbi_info, 0, sizeof(struct pd_infoframe_s));
 	memset(&rx_pkt.drm_info, 0, sizeof(struct pd_infoframe_s));
+	memset(&rx_pkt.emp_info, 0, sizeof(struct pd_infoframe_s));
 
 	memset(&rx_pkt.acr_info, 0, sizeof(struct pd_infoframe_s));
 	memset(&rx_pkt.gcp_info, 0, sizeof(struct pd_infoframe_s));
@@ -950,7 +994,7 @@ void rx_pkt_get_audif_ex(void *pktinfo)
 
 void rx_pkt_get_acr_ex(void *pktinfo)
 {
-	struct acr_ptk_st *pkt = pktinfo;
+	struct acr_pkt_st *pkt = pktinfo;
 	uint32_t N, CTS;
 
 	if (pktinfo == NULL) {
@@ -958,7 +1002,7 @@ void rx_pkt_get_acr_ex(void *pktinfo)
 		return;
 	}
 
-	/*memset(pkt, 0, sizeof(struct acr_ptk_st));*/
+	/*memset(pkt, 0, sizeof(struct acr_pkt_st));*/
 
 	pkt->pkttype = PKT_TYPE_ACR;
 	pkt->zero0 = 0x0;
@@ -1426,6 +1470,8 @@ void rx_pkt_buffclear(enum pkt_type_e pkt_type)
 		pktinfo = &prx->ntscvbi_info;
 	else if (pkt_type == PKT_TYPE_INFOFRAME_DRM)
 		pktinfo = &prx->drm_info;
+	else if (pkt_type == PKT_TYPE_EMP)
+		pktinfo = &prx->emp_info;
 	else if (pkt_type == PKT_TYPE_ACR)
 		pktinfo = &prx->acr_info;
 	else if (pkt_type == PKT_TYPE_GCP)
@@ -1909,6 +1955,14 @@ int rx_pkt_fifodecode(struct packet_info_s *prx,
 			pktdata, sizeof(struct pd_infoframe_s));
 		pktsts->pkt_op_flag &= ~PKT_OP_AMP;
 		break;
+	case PKT_TYPE_EMP:
+		pktsts->pkt_cnt_emp++;
+		pktsts->pkt_op_flag |= PKT_OP_EMP;
+		memcpy(&prx->emp_info,
+			pktdata, sizeof(struct pd_infoframe_s));
+		pktsts->pkt_op_flag &= ~PKT_OP_EMP;
+		break;
+
 	default:
 		break;
 	}
@@ -2018,6 +2072,9 @@ readpkt:
 		rx_pkt_get_ntscvbi_ex(&prx->ntscvbi_info);
 		rxpktsts.pkt_op_flag &= ~PKT_OP_NVBI;
 		rxpktsts.pkt_cnt_nvbi_ex++;
+	} else if (pkt_int_src == PKT_BUFF_SET_EMP) {
+		rxpktsts.pkt_op_flag &= ~PKT_OP_EMP;
+		rxpktsts.pkt_cnt_emp_ex++;
 	}
 
 	/*t2 = sched_clock();*/

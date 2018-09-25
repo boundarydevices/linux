@@ -100,6 +100,17 @@
 			size = <0x1400000>;
 			alignment = <0x400000>;
 		};
+
+		/* for hdmi rx emp use */
+		hdmirx_emp_cma_reserved:linux,emp_cma {
+			compatible = "shared-dma-pool";
+			/*linux,phandle = <5>;*/
+			reusable;
+			/* 2M-30M for emp or tmds to ddr */
+			size = <0x01e00000>;
+			alignment = <0x10000>;
+			alloc-ranges = <0x00200000 0x01e00000>;
+		};
 	}; /* end of reserved-memory */
 
 	codec_mm {
@@ -343,6 +354,89 @@
 		 */
 		tv_bit_mode = <0x15>;
 	};
+
+	hdmirx {
+		compatible = "amlogic, hdmirx_tl1";
+		#address-cells=<1>;
+		#size-cells=<1>;
+		memory-region = <&hdmirx_emp_cma_reserved>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&hdmirx_a_mux &hdmirx_b_mux
+			&hdmirx_c_mux>;
+		repeat = <0>;
+		interrupts = <0 56 1>;
+		clocks = <&clkc CLKID_HDMIRX_MODET_COMP>,
+			   <&clkc CLKID_HDMIRX_CFG_COMP>,
+			   <&clkc CLKID_HDMIRX_ACR_COMP>,
+			   <&clkc CLKID_HDMIRX_AUDMEAS_COMP>,
+			   <&xtal>,
+			   <&clkc CLKID_FCLK_DIV5>,
+			   <&clkc CLKID_FCLK_DIV7>,
+			   <&clkc CLKID_HDCP22_SKP_COMP>,
+			   <&clkc CLKID_HDCP22_ESM_COMP>;
+		//	   <&clkc CLK_AUD_PLL2FS>,
+		//	   <&clkc CLK_AUD_PLL4FS>,
+		//	   <&clkc CLK_AUD_OUT>;
+		clock-names = "hdmirx_modet_clk",
+			"hdmirx_cfg_clk",
+				"hdmirx_acr_ref_clk",
+				"hdmirx_audmeas_clk",
+				"xtal",
+				"fclk_div5",
+				"fclk_div7",
+				"hdcp_rx22_skp",
+				"hdcp_rx22_esm";
+		//		"hdmirx_aud_pll2fs",
+		//		"hdmirx_aud_pll4f",
+		//		"clk_aud_out";
+		hdmirx_id = <0>;
+		en_4k_2_2k = <0>;
+		hpd_low_cec_off = <1>;
+		/* bit4: enable feature, bit3~0: port number */
+		disable_port = <0x0>;
+		/* MAP_ADDR_MODULE_CBUS */
+		/* MAP_ADDR_MODULE_HIU */
+		/* MAP_ADDR_MODULE_HDMIRX_CAPB3 */
+		/* MAP_ADDR_MODULE_SEC_AHB */
+		/* MAP_ADDR_MODULE_SEC_AHB2 */
+		/* MAP_ADDR_MODULE_APB4 */
+		/* MAP_ADDR_MODULE_TOP */
+		reg = < 0x0 0x0
+			0xff63C000 0x2000
+			0xffe0d000 0x2000
+			0x0 0x0
+			0x0 0x0
+			0x0 0x0
+			0xff610000 0xa000>;
+	};
+
+	aocec: aocec {
+		compatible = "amlogic, aocec-tl1";
+		/*device_name = "aocec";*/
+		status = "okay";
+		vendor_name = "Amlogic"; /* Max Chars: 8	 */
+		/* Refer to the following URL at:
+		 * http://standards.ieee.org/develop/regauth/oui/oui.txt
+		 */
+		vendor_id = <0x000000>;
+		product_desc = "TL1"; /* Max Chars: 16	  */
+		cec_osd_string = "AML_TV"; /* Max Chars: 14    */
+		port_num = <3>;
+		ee_cec;
+		arc_port_mask = <0x2>;
+		interrupts = <0 205 1
+					0 199 1>;
+		interrupt-names = "hdmi_aocecb","hdmi_aocec";
+		pinctrl-names = "default","hdmitx_aocecb","cec_pin_sleep";
+		pinctrl-0=<&aoceca_mux>;
+		pinctrl-1=<&aocecb_mux>;
+		pinctrl-2=<&aoceca_mux>;
+		reg = <0xFF80023c 0x4
+			   0xFF800000 0x400>;
+		reg-names = "ao_exit","ao";
+	};
+
 }; /* end of / */
 
 &audiobus {

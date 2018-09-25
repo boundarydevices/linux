@@ -242,6 +242,20 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
+
+		aoceca_mux:aoceca_mux {
+			mux {
+				groups = "cec_ao_a";
+				function = "cec_ao";
+			};
+		};
+
+		aocecb_mux:aocecb_mux {
+			mux {
+				groups = "cec_ao_b";
+				function = "cec_ao";
+			};
+		};
 	};
 
 	pinctrl_periphs: pinctrl@ff6346c0 {
@@ -264,6 +278,32 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
+
+
+		hdmirx_a_mux:hdmirx_a_mux {
+			mux {
+				groups = "hdmirx_a_hpd", "hdmirx_a_det",
+					"hdmirx_a_sda", "hdmirx_a_sck";
+				function = "hdmirx_a";
+			};
+		};
+
+		hdmirx_b_mux:hdmirx_b_mux {
+			mux {
+				groups = "hdmirx_b_hpd", "hdmirx_b_det",
+					"hdmirx_b_sda", "hdmirx_b_sck";
+				function = "hdmirx_b";
+			};
+		};
+
+		hdmirx_c_mux:hdmirx_c_mux {
+			mux {
+				groups = "hdmirx_c_hpd", "hdmirx_c_det",
+					"hdmirx_c_sda", "hdmirx_c_sck";
+				function = "hdmirx_c";
+			};
+		};
+
 	};
 
 	wdt: watchdog@0xffd0f0d0 {

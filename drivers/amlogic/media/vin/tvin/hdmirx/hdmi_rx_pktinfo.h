@@ -46,6 +46,7 @@ enum pkt_decode_type {
 	PKT_BUFF_SET_AMP = 0x80,
 	PKT_BUFF_SET_DRM   = 0x100,
 	PKT_BUFF_SET_NVBI = 0x200,
+	PKT_BUFF_SET_EMP = 0x400,
 
 	PKT_BUFF_SET_UNKNOWN = 0xffff,
 };
@@ -76,6 +77,7 @@ enum pkt_type_e {
 	PKT_TYPE_INFOFRAME_MPEGSRC = 0x85,
 	PKT_TYPE_INFOFRAME_NVBI = 0x86,
 	PKT_TYPE_INFOFRAME_DRM = 0x87,
+	PKT_TYPE_EMP = 0x7f,
 
 	PKT_TYPE_UNKNOWN,
 };
@@ -90,6 +92,7 @@ enum pkt_op_flag {
 	PKT_OP_MPEGS = 0x10,
 	PKT_OP_NVBI = 0x20,
 	PKT_OP_DRM = 0x40,
+	PKT_OP_EMP = 0x80,
 
 	PKT_OP_ACR = 0x100,
 	PKT_OP_GCP = 0x200,
@@ -107,7 +110,7 @@ struct pkt_typeregmap_st {
 };
 
 /* audio clock regeneration pkt - 0x1 */
-struct acr_ptk_st {
+struct acr_pkt_st {
 	/*packet header*/
 	uint8_t pkttype;
 	uint8_t zero0;
@@ -512,6 +515,37 @@ struct obmaudsmp_pkt_st {
 	} __packed sbpkt;
 } __packed;
 
+
+/* EMP pkt - 0x7f */
+struct emp_pkt_st {
+	/*packet header*/
+	uint8_t pkttype;
+	/*hb1*/
+	uint8_t first:1;
+	uint8_t last:1;
+	uint8_t hb1_rsvd:6;
+	/*hb2*/
+	uint8_t sequence_idx;
+
+	uint8_t rsvd;
+	/*content*/
+	struct content_st {
+		uint8_t new:1;
+		uint8_t end:1;
+		uint8_t ds_type:2;
+		uint8_t afr:1;
+		uint8_t vfr:1;
+		uint8_t sync:1;
+		uint8_t rev_0:1;
+		uint8_t rev_1;
+		uint8_t organization_id;
+		uint16_t data_set_tag;
+		uint16_t data_set_length;
+		uint8_t md[21];
+	} __packed cnt;
+} __packed;
+
+
 /* fifo raw data type - 0x8x */
 struct fifo_rawdata_st {
 	/*packet header*/
@@ -773,7 +807,7 @@ struct drm_infoframe_st {
 
 union pktinfo {
 	/*normal packet 0x0-0xf*/
-	struct acr_ptk_st audclkgen_ptk;
+	struct acr_pkt_st audclkgen_ptk;
 	struct aud_sample_pkt_st audsmp_pkt;
 	struct gcp_pkt_st gcp_pkt;
 	struct acp_pkt_st acp_pkt;
@@ -787,6 +821,7 @@ union pktinfo {
 	struct audmtdata_pkt_st audmeta_pkt;
 	struct msaudsmp_pkt_st mulstraudsamp_pkt;
 	struct obmaudsmp_pkt_st obmasmpaud_pkt;
+	struct emp_pkt_st emp_pkt;
 };
 
 union infoframe_u {
@@ -825,6 +860,7 @@ struct rxpkt_st {
 	uint32_t pkt_cnt_isrc2;
 	uint32_t pkt_cnt_gameta;
 	uint32_t pkt_cnt_amp;
+	uint32_t pkt_cnt_emp;
 
 	uint32_t pkt_cnt_vsi_ex;
 	uint32_t pkt_cnt_drm_ex;
@@ -835,6 +871,7 @@ struct rxpkt_st {
 	uint32_t pkt_cnt_gcp_ex;
 	uint32_t pkt_cnt_amp_ex;
 	uint32_t pkt_cnt_nvbi_ex;
+	uint32_t pkt_cnt_emp_ex;
 
 	uint32_t pkt_op_flag;
 
@@ -888,6 +925,9 @@ struct packet_info_s {
 	struct pd_infoframe_s gameta_info;
 	/* packet type 0x0d audio metadata data */
 	struct pd_infoframe_s amp_info;
+
+	/* packet type 0x7f emp */
+	struct pd_infoframe_s emp_info;
 };
 
 struct st_pkt_test_buff {
@@ -920,6 +960,9 @@ struct st_pkt_test_buff {
 	struct pd_infoframe_s gameta_info;
 	/* packet type 0x0d audio metadata data */
 	struct pd_infoframe_s amp_info;
+
+	/* packet type 0x7f EMP */
+	struct pd_infoframe_s emp_info;
 
 	/*externl set*/
 	struct pd_infoframe_s ex_vsi;

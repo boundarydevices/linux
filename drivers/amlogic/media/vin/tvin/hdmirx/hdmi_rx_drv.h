@@ -41,7 +41,7 @@
  *
  *
  */
-#define RX_VER1 "ver.2018/08/22"
+#define RX_VER1 "ver.2018/10/22"
 /*
  *
  *
@@ -85,10 +85,18 @@ enum chip_id_e {
 	CHIP_ID_TXL,
 	CHIP_ID_TXLX,
 	CHIP_ID_TXHD,
+	CHIP_ID_TL1,
+};
+
+enum phy_ver_e {
+	PHY_VER_ORG,
+	PHY_VER_TL1,
 };
 
 struct meson_hdmirx_data {
 	enum chip_id_e chip_id;
+	enum phy_ver_e phy_ver;
+	struct ctrl *phyctrl;
 };
 
 struct hdmirx_dev_s {
@@ -250,6 +258,15 @@ struct rx_video_info {
 /** Encrypted keys size - 40 bits x 40 keys */
 #define HDCP_KEYS_SIZE	(2 * 40)
 
+/*emp buffer config*/
+#define DUMP_MODE_EMP	0
+#define DUMP_MODE_TMDS	1
+#define TMDS_BUFFER_SIZE	0x1e00000 /*30M*/
+#define EMP_BUFFER_SIZE		0x200000	/*2M*/
+#define EMP_BUFF_MAC_PKT_CNT ((EMP_BUFFER_SIZE/2)/32 - 200)
+#define TMDS_DATA_BUFFER_SIZE	0x200000
+
+
 /**
  * @short HDMI RX controller HDCP configuration
  */
@@ -335,8 +352,32 @@ struct aud_info_s {
 	int real_sr;
 };
 
+struct phy_sts {
+	uint32_t cable_clk;
+	uint32_t tmds_clk;
+	uint32_t aud_div;
+	uint32_t pll_rate;
+	uint32_t clk_rate;
+	uint32_t phy_bw;
+};
+
+struct emp_buff {
+	unsigned int dump_mode;
+	struct page *pg_addr;
+	phys_addr_t p_addr_a;
+	phys_addr_t p_addr_b;
+	/*void __iomem *v_addr_a;*/
+	/*void __iomem *v_addr_b;*/
+	void __iomem *storeA;
+	void __iomem *storeB;
+	void __iomem *ready;
+	unsigned int emppktcnt;
+	unsigned long irqcnt;
+};
+
 struct rx_s {
 	enum chip_id_e chip_id;
+	struct hdmirx_dev_s *hdmirxdev;
 	/** HDMI RX received signal changed */
 	uint8_t skip;
 	/*avmute*/
@@ -384,6 +425,8 @@ struct rx_s {
 	unsigned int pwr_sts;
 	/* for debug */
 	/*struct pd_infoframe_s dbg_info;*/
+	struct phy_sts physts;
+	struct emp_buff empbuff;
 };
 
 struct _hdcp_ksv {

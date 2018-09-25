@@ -948,7 +948,7 @@ void rx_edid_fill_to_register(
 		/* fill first edid buffer */
 		hdmirx_wr_top(TOP_EDID_OFFSET + i, pedid[i]);
 		/* fill second edid buffer */
-		hdmirx_wr_top(0x100+TOP_EDID_OFFSET + i, pedid[i]);
+		hdmirx_wr_top(TOP_EDID_OFFSET + 0x100  + i, pedid[i]);
 	}
 	/* caculate 4 port check sum */
 	if (brepeat) {
@@ -1056,7 +1056,7 @@ unsigned char rx_parse_arc_aud_type(const unsigned char *buff)
 			break;
 	}
 	if ((i < aud_length) &&
-		((aud_data & 0xff) == 1)) {
+		((aud_data & 0x1) == 0x1)) {
 		if (!need_support_atmos_bit) {
 			need_support_atmos_bit = true;
 			hdmi_rx_top_edid_update();

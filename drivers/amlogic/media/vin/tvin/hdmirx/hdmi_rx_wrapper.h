@@ -123,8 +123,8 @@ extern void rx_acr_info_sw_update(void);
 extern void rx_sw_reset(int level);
 extern void rx_aud_pll_ctl(bool en);
 extern void hdmirx_timer_handler(unsigned long arg);
-
-
+extern void rx_tmds_resource_allocate(struct device *dev);
+extern void rx_emp_resource_allocate(struct device *dev);
 
 #endif
 

@@ -41,7 +41,7 @@
 
 /*---- registers for EE CEC ----*/
 #define DWC_CEC_CTRL                     0x1F00
-#define DWC_CEC_STAT                     0x1F04
+#define DWC_CEC_CTRL2                    0x1F04/*tl1 later*/
 #define DWC_CEC_MASK                     0x1F08
 #define DWC_CEC_POLARITY                 0x1F0C
 #define DWC_CEC_INT                      0x1F10

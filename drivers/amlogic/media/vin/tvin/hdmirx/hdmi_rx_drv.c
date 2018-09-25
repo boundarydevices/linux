@@ -39,6 +39,8 @@
 /* #include <linux/earlysuspend.h> */
 #include <linux/delay.h>
 #include <linux/of_device.h>
+#include <linux/dma-contiguous.h>
+
 
 /* Amlogic headers */
 /*#include <linux/amlogic/amports/vframe_provider.h>*/
@@ -58,6 +60,7 @@
 #include "hdmi_rx_edid.h"
 #include "hdmi_rx_eq.h"
 #include "hdmi_rx_repeater.h"
+
 /*------------------------extern function------------------------------*/
 static int aml_hdcp22_pm_notify(struct notifier_block *nb,
 	unsigned long event, void *dummy);
@@ -110,10 +113,6 @@ int hdmi_yuv444_enable;
 module_param(hdmi_yuv444_enable, int, 0664);
 MODULE_PARM_DESC(hdmi_yuv444_enable, "hdmi_yuv444_enable");
 
-static int force_color_range;
-MODULE_PARM_DESC(force_color_range, "\n force_color_range\n");
-module_param(force_color_range, int, 0664);
-
 int pc_mode_en;
 MODULE_PARM_DESC(pc_mode_en, "\n pc_mode_en\n");
 module_param(pc_mode_en, int, 0664);
@@ -146,27 +145,41 @@ static bool early_suspend_flag;
 
 struct reg_map reg_maps[MAP_ADDR_MODULE_NUM];
 
+
 static struct notifier_block aml_hdcp22_pm_notifier = {
 	.notifier_call = aml_hdcp22_pm_notify,
 };
 
+static struct meson_hdmirx_data rx_tl1_data = {
+	.chip_id = CHIP_ID_TL1,
+	.phy_ver = PHY_VER_TL1,
+};
+
 static struct meson_hdmirx_data rx_txhd_data = {
 	.chip_id = CHIP_ID_TXHD,
+	.phy_ver = PHY_VER_ORG,
 };
 
 static struct meson_hdmirx_data rx_txlx_data = {
 	.chip_id = CHIP_ID_TXLX,
+	.phy_ver = PHY_VER_ORG,
 };
 
 static struct meson_hdmirx_data rx_txl_data = {
 	.chip_id = CHIP_ID_TXL,
+	.phy_ver = PHY_VER_ORG,
 };
 
 static struct meson_hdmirx_data rx_gxtvbb_data = {
 	.chip_id = CHIP_ID_GXTVBB,
+	.phy_ver = PHY_VER_ORG,
 };
 
 static const struct of_device_id hdmirx_dt_match[] = {
+	{
+		.compatible     = "amlogic, hdmirx_tl1",
+		.data           = &rx_tl1_data
+	},
 	{
 		.compatible     = "amlogic, hdmirx_txhd",
 		.data           = &rx_txhd_data
@@ -210,8 +223,9 @@ int rx_init_reg_map(struct platform_device *pdev)
 		reg_maps[i].phy_addr = res->start;
 		reg_maps[i].p = devm_ioremap_nocache(&pdev->dev,
 			res->start, size);
-		/* rx_pr("phy_addr = 0x%x, size = 0x%x, maped:%p\n", */
-			/* reg_maps[i].phy_addr, size, reg_maps[i].p); */
+		reg_maps[i].size = size;
+		rx_pr("phy_addr = 0x%x, size = 0x%x, maped:%p\n",
+			reg_maps[i].phy_addr, size, reg_maps[i].p);
 	}
 	return ret;
 }
@@ -333,7 +347,8 @@ void hdmirx_dec_close(struct tvin_frontend_s *fe)
 	 * txlx:dont disable the adc ref signal for audio pll(not
 	 *	reset the vdac) to avoid noise issue
 	 */
-	if (rx.chip_id == CHIP_ID_TXL)
+	/*if (rx.chip_id == CHIP_ID_TXL)*/
+	if (rx.hdmirxdev->data->chip_id == CHIP_ID_TXL)
 		vdac_enable(0, 0x10);
 
 	/* open_flage = 0; */
@@ -1550,14 +1565,11 @@ static void rx_phy_suspend(void)
 		if (hdmi_cec_en != 0) {
 			if (suspend_pddq_sel == 2) {
 				/* set rxsense pulse */
-				hdmirx_phy_pddq(1);
-				mdelay(10);
-				hdmirx_phy_pddq(0);
-				mdelay(10);
+				rx_phy_rxsense_pulse(10, 10);
 			}
 		}
 		/* phy powerdown */
-		hdmirx_phy_pddq(1);
+		rx_phy_power_on(0);
 	}
 }
 
@@ -1569,15 +1581,74 @@ static void rx_phy_resume(void)
 			 * rxsense pulse and phy_int shottern than
 			 * 50ms, SDA may be pulled low 800ms on MTK box
 			 */
-			hdmirx_phy_pddq(0);
-			msleep(20);
-			hdmirx_phy_pddq(1);
-			msleep(50);
+			rx_phy_rxsense_pulse(20, 50);
 		}
 	}
 	hdmirx_phy_init();
 	pre_port = 0xff;
 	rx.boot_flag = true;
+}
+
+void rx_emp_resource_allocate(struct device *dev)
+{
+	if (rx.hdmirxdev->data->chip_id == CHIP_ID_TL1) {
+		/* allocate buffer */
+		rx.empbuff.storeA = kmalloc(EMP_BUFFER_SIZE, GFP_KERNEL);
+		if (rx.empbuff.storeA)
+			rx.empbuff.storeB =
+				rx.empbuff.storeA + (EMP_BUFFER_SIZE >> 1);
+		else
+			rx_pr("emp buff err-0\n");
+		rx_pr("pktbuffa=0x%p\n", rx.empbuff.storeA);
+		rx_pr("pktbuffb=0x%p\n", rx.empbuff.storeB);
+		rx.empbuff.dump_mode = DUMP_MODE_EMP;
+		/* allocate buffer for hw access*/
+		rx.empbuff.pg_addr =
+				dma_alloc_from_contiguous(dev,
+					EMP_BUFFER_SIZE >> PAGE_SHIFT, 0);
+		if (rx.empbuff.pg_addr) {
+			/* hw access */
+			/* page to real address*/
+			rx.empbuff.p_addr_a =
+				page_to_phys(rx.empbuff.pg_addr);
+			rx.empbuff.p_addr_b =
+				rx.empbuff.p_addr_a + (EMP_BUFFER_SIZE >> 1);
+			rx_pr("buffa paddr=0x%x\n", rx.empbuff.p_addr_a);
+			rx_pr("buffb paddr=0x%x\n", rx.empbuff.p_addr_b);
+		} else {
+			rx_pr("emp buff err-1\n");
+		}
+		rx.empbuff.emppktcnt = 0;
+	}
+}
+
+void rx_tmds_resource_allocate(struct device *dev)
+{
+	if (rx.hdmirxdev->data->chip_id == CHIP_ID_TL1) {
+		if (rx.empbuff.dump_mode == DUMP_MODE_EMP) {
+			if (rx.empbuff.pg_addr) {
+				dma_release_from_contiguous(dev,
+						rx.empbuff.pg_addr,
+						EMP_BUFFER_SIZE >> PAGE_SHIFT);
+				rx.empbuff.pg_addr = 0;
+			}
+		} else {
+			dma_release_from_contiguous(dev, rx.empbuff.pg_addr,
+					TMDS_BUFFER_SIZE >> PAGE_SHIFT);
+			rx.empbuff.pg_addr = 0;
+		}
+
+		/* allocate buffer for tmds to ddr */
+		rx.empbuff.pg_addr =
+				dma_alloc_from_contiguous(dev,
+					TMDS_BUFFER_SIZE >> PAGE_SHIFT, 0);
+		if (rx.empbuff.pg_addr)
+			rx.empbuff.p_addr_a =
+				page_to_phys(rx.empbuff.pg_addr);
+
+		rx.empbuff.dump_mode = DUMP_MODE_TMDS;
+		rx_pr("buffa paddr=0x%x\n", rx.empbuff.p_addr_a);
+	}
 }
 
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
@@ -1640,11 +1711,17 @@ static int hdmirx_probe(struct platform_device *pdev)
 	}
 	memset(hdevp, 0, sizeof(struct hdmirx_dev_s));
 	hdevp->data = of_id->data;
-	if (hdevp->data)
+	rx.hdmirxdev = hdevp;
+
+	if (hdevp->data) {
 		rx.chip_id = hdevp->data->chip_id;
-	else
+		rx_pr("chip id:%d\n", rx.hdmirxdev->data->chip_id);
+		rx_pr("phy ver:%d\n", rx.hdmirxdev->data->phy_ver);
+	} else {
 		/*txlx chip for default*/
 		rx.chip_id = CHIP_ID_TXLX;
+		rx_pr("err: hdevp->data null\n");
+	}
 
 	ret = rx_init_reg_map(pdev);
 	if (ret < 0) {
@@ -1816,8 +1893,8 @@ static int hdmirx_probe(struct platform_device *pdev)
 			clk_rate = clk_get_rate(hdevp->skp_clk);
 		}
 	}
-	if ((rx.chip_id == CHIP_ID_TXLX) ||
-		(rx.chip_id == CHIP_ID_TXHD)) {
+	if ((rx.hdmirxdev->data->chip_id == CHIP_ID_TXLX) ||
+		(rx.hdmirxdev->data->chip_id == CHIP_ID_TXHD)) {
 		tmds_clk_fs = clk_get(&pdev->dev, "hdmirx_aud_pll2fs");
 		if (IS_ERR(tmds_clk_fs))
 			rx_pr("get tmds_clk_fs err\n");
@@ -1898,6 +1975,8 @@ static int hdmirx_probe(struct platform_device *pdev)
 		disable_port_en = (disable_port >> 4) & 0x1;
 		disable_port_num = disable_port & 0xF;
 	}
+
+	rx_emp_resource_allocate(&(pdev->dev));
 	hdmirx_hw_probe();
 	hdmirx_switch_pinmux(&(pdev->dev));
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
@@ -2055,7 +2134,7 @@ static void hdmirx_shutdown(struct platform_device *pdev)
 	if (!hdmi_cec_en)
 		rx_set_port_hpd(ALL_PORTS, 0);
 	/* phy powerdown */
-	hdmirx_phy_pddq(1);
+	rx_phy_power_on(0);
 	if (hdcp22_on)
 		hdcp22_clk_en(0);
 	rx_pr("[hdmirx]: shutdown success\n");
