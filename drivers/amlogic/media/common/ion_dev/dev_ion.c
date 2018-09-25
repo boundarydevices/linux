@@ -32,13 +32,13 @@ MODULE_DESCRIPTION("AMLOGIC ION driver");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Amlogic SH");
 
-static unsigned int debug = 1;
+static unsigned int debug = 2;
 module_param(debug, uint, 0644);
 MODULE_PARM_DESC(debug, "activates debug info");
 
 #define dprintk(level, fmt, arg...)             \
 	do {                                        \
-		if (debug >= level)                     \
+		if (debug > level)                     \
 			pr_debug("ion-dev: " fmt, ## arg);  \
 	} while (0)
 
