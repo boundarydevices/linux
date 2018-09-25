@@ -35,8 +35,12 @@ enum vpu_chip_e {
 	VPU_CHIP_AXG,
 	VPU_CHIP_G12A,
 	VPU_CHIP_G12B,
+	VPU_CHIP_TL1,
 	VPU_CHIP_MAX,
 };
+
+#define VPU_REG_END            0xffff
+#define VPU_RESET_CNT_MAX      10
 
 struct fclk_div_s {
 	unsigned int fclk_id;
@@ -53,8 +57,14 @@ struct vpu_clk_s {
 struct vpu_ctrl_s {
 	unsigned int vmod;
 	unsigned int reg;
+	unsigned int val;
 	unsigned int bit;
 	unsigned int len;
+};
+
+struct vpu_reset_s {
+	unsigned int reg;
+	unsigned int mask;
 };
 
 struct vpu_data_s {
@@ -67,14 +77,17 @@ struct vpu_data_s {
 	unsigned char gp_pll_valid;
 	unsigned char mem_pd_reg1_valid;
 	unsigned char mem_pd_reg2_valid;
+	unsigned char mem_pd_reg3_valid;
+	unsigned char mem_pd_reg4_valid;
 
 	unsigned int mem_pd_table_cnt;
 	unsigned int clk_gate_table_cnt;
 	struct vpu_ctrl_s *mem_pd_table;
 	struct vpu_ctrl_s *clk_gate_table;
 
-	void (*power_on)(void);
-	void (*power_off)(void);
+	unsigned int module_init_table_cnt;
+	struct vpu_ctrl_s *module_init_table;
+	struct vpu_reset_s *reset_table;
 };
 
 struct vpu_conf_s {
@@ -102,11 +115,8 @@ extern int vpu_chip_valid_check(void);
 extern void vpu_ctrl_probe(void);
 
 extern void vpu_mem_pd_init_off(void);
-extern void vpu_clk_gate_init_off(void);
 extern void vpu_module_init_config(void);
-extern void vpu_power_on_gx(void);
-extern void vpu_power_off_gx(void);
-extern void vpu_power_on_txlx(void);
-extern void vpu_power_off_txlx(void);
+extern void vpu_power_on(void);
+extern void vpu_power_off(void);
 
 #endif

@@ -59,6 +59,7 @@ static char *vpu_mod_table[] = {
 	"vencp",
 	"vencl",
 	"venci",
+	"ls_stts",
 	"ldim_stts",
 	"tv_decoder_cvd2",
 	"xvycc_lut",
@@ -73,9 +74,15 @@ static char *vpu_mod_table[] = {
 	"osd_bld34",
 	"prime_dolby_ram",
 	"vd2_ofifo",
+	"ds",
 	"lut3d",
 	"viu2_osd_rotation",
+	"vi_dipre",
 	"rdma",
+
+	"axi_wr1",
+	"axi_wr0",
+	"afbce",
 
 	"vpu_mod_max",
 

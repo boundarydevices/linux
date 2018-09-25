@@ -40,6 +40,8 @@
 #define HHI_VPU_MEM_PD_REG0          0x41
 #define HHI_VPU_MEM_PD_REG1          0x42
 #define HHI_VPU_MEM_PD_REG2          0x4d
+#define HHI_VPU_MEM_PD_REG3          0x4e
+#define HHI_VPU_MEM_PD_REG4          0x4c
 
 #define HHI_VPU_CLKC_CNTL            0x6d
 #define HHI_VPU_CLK_CNTL             0x6f
