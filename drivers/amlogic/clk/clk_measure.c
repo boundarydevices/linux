@@ -36,6 +36,7 @@
 #include <linux/amlogic/clk_measure.h>
 #include <linux/amlogic/scpi_protocol.h>
 #include <linux/spinlock.h>
+#include <linux/of_device.h>
 
 #undef pr_fmt
 #define pr_fmt(fmt) "clkmsr: " fmt
@@ -53,6 +54,16 @@ unsigned int clk_msr_index = 0xff;
 #define HHI_GEN_CLK_CNTL	0x8a
 #define AO_RTI_PIN_MUX_REG1	0x18
 unsigned int audio_index;
+
+struct meson_clkmsr_data {
+	const char * const *clk_table;
+	unsigned int table_size;
+	unsigned int (*clk_msr_function)(unsigned int clk_mux);
+
+/* sentinel maybe new diference between deferent SoCs */
+};
+
+static struct meson_clkmsr_data *clk_data;
 
 static unsigned int m8b_clk_util_clk_msr(unsigned int clk_mux)
 {
@@ -1194,25 +1205,29 @@ int meson_clk_measure(unsigned int clk_mux)
 	unsigned long flags;
 
 	spin_lock_irqsave(&clk_measure_lock, flags);
-	switch (get_cpu_type()) {
-	case MESON_CPU_MAJOR_ID_M8B:
-		clk_val = m8b_clk_util_clk_msr(clk_mux);
-		break;
-	case MESON_CPU_MAJOR_ID_GXL:
-	case MESON_CPU_MAJOR_ID_GXM:
-	case MESON_CPU_MAJOR_ID_TXL:
-	case MESON_CPU_MAJOR_ID_TXLX:
-	case MESON_CPU_MAJOR_ID_G12A:
-	case MESON_CPU_MAJOR_ID_G12B:
-		clk_val = gxbb_clk_util_clk_msr(clk_mux);
-		break;
-	case MESON_CPU_MAJOR_ID_AXG:
-		clk_val = axg_clk_util_clk_msr(clk_mux);
-		break;
-	default:
-		pr_info("Unsupported chip clk measure\n");
-		clk_val = 0;
-		break;
+	if (clk_data) {
+		clk_val = clk_data->clk_msr_function(clk_mux);
+	} else {
+		switch (get_cpu_type()) {
+		case MESON_CPU_MAJOR_ID_M8B:
+			clk_val = m8b_clk_util_clk_msr(clk_mux);
+			break;
+		case MESON_CPU_MAJOR_ID_GXL:
+		case MESON_CPU_MAJOR_ID_GXM:
+		case MESON_CPU_MAJOR_ID_TXL:
+		case MESON_CPU_MAJOR_ID_TXLX:
+		case MESON_CPU_MAJOR_ID_G12A:
+		case MESON_CPU_MAJOR_ID_G12B:
+			clk_val = gxbb_clk_util_clk_msr(clk_mux);
+			break;
+		case MESON_CPU_MAJOR_ID_AXG:
+			clk_val = axg_clk_util_clk_msr(clk_mux);
+			break;
+		default:
+			pr_info("Unsupported chip clk measure\n");
+			clk_val = 0;
+			break;
+		}
 	}
 	spin_unlock_irqrestore(&clk_measure_lock, flags);
 
@@ -1223,22 +1238,33 @@ EXPORT_SYMBOL(meson_clk_measure);
 
 static int dump_clk(struct seq_file *s, void *what)
 {
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_M8B)
-		m8b_clk_measure(s, what, clk_msr_index);
-	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXL)
-		gxl_clk_measure(s, what, clk_msr_index);
-	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
-		gxm_clk_measure(s, what, clk_msr_index);
-	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
-		axg_clk_measure(s, what, clk_msr_index);
-	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)
-		txl_clk_measure(s, what, clk_msr_index);
-	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX)
-		txlx_clk_measure(s, what, clk_msr_index);
-	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
-		g12a_clk_measure(s, what, clk_msr_index);
-	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12B)
-		g12b_clk_measure(s, what, clk_msr_index);
+	if (clk_data) {
+		int i;
+		const char * const *clk_table = clk_data->clk_table;
+		int len = clk_data->table_size;
+
+		for (i = 0; i < len; i++)
+			seq_printf(s, "[%2d][%10d]%s\n", i,
+			clk_data->clk_msr_function(i), clk_table[i]);
+	} else {
+		if (get_cpu_type() == MESON_CPU_MAJOR_ID_M8B)
+			m8b_clk_measure(s, what, clk_msr_index);
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXL)
+			gxl_clk_measure(s, what, clk_msr_index);
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXM)
+			gxm_clk_measure(s, what, clk_msr_index);
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
+			axg_clk_measure(s, what, clk_msr_index);
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)
+			txl_clk_measure(s, what, clk_msr_index);
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX)
+			txlx_clk_measure(s, what, clk_msr_index);
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
+			g12a_clk_measure(s, what, clk_msr_index);
+		else if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12B)
+			g12b_clk_measure(s, what, clk_msr_index);
+	}
+
 	return 0;
 }
 
@@ -1342,12 +1368,171 @@ static int aml_clkmsr_probe(struct platform_device *pdev)
 		pr_info("msr_ring_reg0=%p\n", msr_ring_reg0);
 	}
 
+	clk_data = (struct meson_clkmsr_data *)
+	of_device_get_match_data(&pdev->dev);
+
 	return 0;
 }
+
+static const char * const tl1_table[] = {
+	[144] = "ts_pll_clk",
+	[143] = "mainclk",
+	[142] = "demode_ts_clk",
+	[141] = "ts_ddr_clk",
+	[140] = "audio_toacodec_bclk",
+	[139] = "aud_adc_clk_g128x",
+	[138] = "dsu_pll_clk_cpu",
+	[137] = "atv_dmd_i2c_sclk",
+	[136] = "sys_pll_clk",
+	[135] = "tvfe_sample_clk",
+	[134] = "adc_extclk_in",
+	[133] = "atv_dmd_mono_clk_32",
+	[132] = "audio_toacode_mclk",
+	[131] = "ts_sar_clk",
+	[130] = "au_dac2_clk_gf128x",
+	[129] = "lvds_fifo_clk",
+	[128] = "cts_tcon_pll_clk",
+	[127] = "hdmirx_vid_clk",
+	[126] = "sar_ring_osc_clk",
+	[125] = "cts_hdmi_axi_clk",
+	[124] =	"cts_demod_core_clk",
+	[123] =	"mod_audio_pdm_dclk_o",
+	[122] =	"audio_spdifin_mst_clk",
+	[121] = "audio_spdifout_mst_clk",
+	[120] = "audio_spdifout_b_mst_clk",
+	[119] = "audio_pdm_sysclk",
+	[118] = "audio_resamplea_clk",
+	[117] = "audio_resampleb_clk",
+	[116] = "audio_tdmin_a_sclk",
+	[115] = "audio_tdmin_b_sclk",
+	[114] = "audio_tdmin_c_sclk",
+	[113] = "audio_tdmin_lb_sclk",
+	[112] = "audio_tdmout_a_sclk",
+	[111] = "audio_tdmout_b_sclk",
+	[110] = "audio_tdmout_c_sclk",
+	[109] = "o_vad_clk",
+	[108] = "acodec_i2sout_bclk",
+	[107] = "au_dac_clk_g128x",
+	[106] = "ephy_test_clk",
+	[105] = "am_ring_osc_clk_out_ee[9]",
+	[104] = "am_ring_osc_clk_out_ee[8]",
+	[103] = "am_ring_osc_clk_out_ee[7]",
+	[102] = "am_ring_osc_clk_out_ee[6]",
+	[101] = "am_ring_osc_clk_out_ee[5]",
+	[100] = "am_ring_osc_clk_out_ee[4]",
+	[99] = "am_ring_osc_clk_out_ee[3]",
+	[98] = "cts_ts_clk",
+	[97] = "cts_vpu_clkb_tmp",
+	[96] = "cts_vpu_clkb",
+	[95] = "eth_phy_plltxclk",
+	[94] = "eth_phy_exclk",
+	[93] = "sys_cpu_ring_osc_clk[3]",
+	[92] = "sys_cpu_ring_osc_clk[2]",
+	[91] = "hdmirx_audmeas_clk",
+	[90] = "am_ring_osc_clk_out_ee[11]",
+	[89] = "am_ring_osc_clk_out_ee[10]",
+	[88] = "cts_hdmirx_meter_clk",
+	[87] = "1'b0",
+	[86] = "cts_hdmirx_modet_clk",
+	[85] = "cts_hdmirx_acr_ref_clk",
+	[84] = "co_tx_cl",
+	[83] = "co_rx_clk",
+	[82] = "cts_ge2d_clk",
+	[81] = "cts_vapbclk",
+	[80] = "rng_ring_osc_clk[3]",
+	[79] = "rng_ring_osc_clk[2]",
+	[78] = "rng_ring_osc_clk[1]",
+	[77] = "rng_ring_osc_clk[0]",
+	[76] = "hdmix_aud_clk",
+	[75] = "cts_hevcf_clk",
+	[74] = "hdmirx_aud_pll_clk",
+	[73] = "cts_pwm_C_clk",
+	[72] = "cts_pwm_D_clk",
+	[71] = "cts_pwm_E_clk",
+	[70] = "cts_pwm_F_clk",
+	[69] = "cts_hdcp22_skpclk",
+	[68] = "cts_hdcp22_esmclk",
+	[67] = "hdmirx_apll_clk_audio",
+	[66] = "cts_vid_lock_clk",
+	[65] = "cts_spicc_0_clk",
+	[64] = "cts_spicc_1_clk",
+	[63] = "hdmirx_tmds_clk",
+	[62] = "cts_hevcb_clk",
+	[61] = "gpio_clk_msr",
+	[60] = "cts_hdmirx_aud_pll_clk",
+	[59] = "cts_hcodec_clk",
+	[58] = "cts_vafe_datack",
+	[57] = "cts_atv_dmd_vdac_clk",
+	[56] = "cts_atv_dmd_sys_clk",
+	[55] = "vid_pll_div_clk_out",
+	[54] = "cts_vpu_clkc",
+	[53] = "ddr_2xclk",
+	[52] = "cts_sd_emmc_clk_B",
+	[51] = "cts_sd_emmc_clk_C",
+	[50] = "mp3_clk_out",
+	[49] = "mp2_clk_out",
+	[48] = "mp1_clk_out",
+	[47] = "ddr_dpll_pt_clk",
+	[46] = "cts_vpu_clk",
+	[45] = "cts_pwm_A_clk",
+	[44] = "cts_pwm_B_clk",
+	[43] = "fclk_div5",
+	[42] = "mp0_clk_out",
+	[41] = "mac_eth_rx_clk_rmii",
+	[40] = "cts_hdmirx_cfg_clk",
+	[39] = "cts_bt656_clk0",
+	[38] = "cts_vdin_meas_clk",
+	[37] = "cts_cdac_clk_c",
+	[36] = "cts_hdmi_tx_pixel_clk",
+	[35] = "cts_mali_clk",
+	[34] = "eth_mppll_50m_ckout",
+	[33] = "sys_cpu_ring_osc_clk[1]",
+	[32] = "cts_vdec_clk",
+	[31] = "mpll_clk_test_out",
+	[30] = "hdmirx_cable_clk",
+	[29] = "hdmirx_apll_clk_out_div",
+	[28] = "cts_sar_adc_clk",
+	[27] = "co_clkin_to_mac",
+	[26] = "sc_clk_int",
+	[25] = "cts_eth_clk_rmii",
+	[24] = "cts_eth_clk125Mhz",
+	[23] = "mpll_clk_50m",
+	[22] = "mac_eth_phy_ref_clk",
+	[21] = "lcd_an_clk_ph3",
+	[20] = "rtc_osc_clk_out",
+	[19] = "lcd_an_clk_ph2",
+	[18] = "sys_cpu_clk_div16",
+	[17] = "sys_pll_div16",
+	[16] = "cts_FEC_CLK_2",
+	[15] = "cts_FEC_CLK_1",
+	[14] = "cts_FEC_CLK_0",
+	[13] = "mod_tcon_clko",
+	[12] = "hifi_pll_clk",
+	[11] = "mac_eth_tx_clk",
+	[10] = "cts_vdac_clk",
+	[9] = "cts_encl_clk",
+	[8] = "cts_encp_clk",
+	[7] = "clk81",
+	[6] = "cts_enci_clk",
+	[5] = "gp1_pll_clk",
+	[4] = "gp0_pll_clk",
+	[3] = "sys_cpu_ring_osc_clk[0]",
+	[2] = "am_ring_osc_clk_out_ee[2]",
+	[1] = "am_ring_osc_clk_out_ee[1]",
+	[0] = "am_ring_osc_clk_out_ee[0]",
+};
+
+static const struct meson_clkmsr_data tl1_data = {
+	.clk_table = tl1_table,
+	.table_size = ARRAY_SIZE(tl1_table),
+	.clk_msr_function = gxbb_clk_util_clk_msr,
+};
 
 static const struct of_device_id meson_clkmsr_dt_match[] = {
 	{	.compatible = "amlogic, gxl_measure",},
 	{	.compatible = "amlogic, m8b_measure",},
+	{	.compatible = "amlogic,tl1-measure", .data = &tl1_data },
+
 	{},
 };
 
