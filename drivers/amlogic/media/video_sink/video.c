@@ -7121,6 +7121,7 @@ static void set_omx_pts(u32 *p)
 
 	} else if (set_from_hwc == 0 && !omx_run) {
 		struct vframe_s *vf = NULL;
+		u32 donot_drop = 0;
 
 		while (try_cnt--) {
 			vf = vf_peek(RECEIVER_NAME);
@@ -7129,6 +7130,7 @@ static void set_omx_pts(u32 *p)
 				&& vf && is_dovi_frame(vf)) {
 				pr_info("set_omx_pts ignore the omx %d frames drop for dv frame\n",
 					frame_num);
+				donot_drop = 1;
 				break;
 			}
 #endif
@@ -7143,6 +7145,10 @@ static void set_omx_pts(u32 *p)
 					break;
 			} else
 				break;
+		}
+		if (donot_drop && omx_pts_set_from_hwc_count > 0) {
+			pr_info("reset omx_run to true.\n");
+			omx_run = true;
 		}
 	}
 	mutex_unlock(&omx_mutex);
