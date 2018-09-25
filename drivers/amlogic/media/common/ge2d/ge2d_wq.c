@@ -605,9 +605,9 @@ static void build_ge2d_config(struct config_para_s *cfg,
 		if (cfg->dst_planes[0].addr) {
 			if (ge2d_meson_dev.canvas_status == 1) {
 				dst->canvas_index = 0;
-				dst->phy_addr = cfg->src_planes[0].addr;
-				dst->stride = cfg->src_planes[0].w *
-					src->bpp / 8;
+				dst->phy_addr = cfg->dst_planes[0].addr;
+				dst->stride = cfg->dst_planes[0].w *
+					dst->bpp / 8;
 			}
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
 			else {
@@ -769,6 +769,8 @@ int ge2d_context_config(struct ge2d_context_s *context,
 	int type = ge2d_config->src_dst_type;
 
 	ge2d_log_dbg(" ge2d init\n");
+	memset(&src, 0, sizeof(struct src_dst_para_s));
+	memset(&dst, 0, sizeof(struct src_dst_para_s));
 	/* setup src and dst */
 	switch (type) {
 	case OSD0_OSD0:
@@ -1756,7 +1758,6 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 #ifdef CONFIG_GE2D_SRC2
 	dp_gen_cfg->src2_gb_alpha = ge2d_config->src2_gb_alpha & 0xff;
 	dp_gen_cfg->src2_gb_alpha_en = ge2d_config->src2_gb_alpha_en & 1;
-	ge2d_cmd_cfg->src2_cmult_ad = ge2d_config->src2_cmult_ad;
 #endif
 	dp_gen_cfg->src2_key_en = ge2d_config->src2_key.key_enable;
 	dp_gen_cfg->src2_key_mode = ge2d_config->src2_key.key_mode;
@@ -1775,6 +1776,9 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 	ge2d_cmd_cfg->src2_y_rev = ge2d_config->src2_para.y_rev;
 	ge2d_cmd_cfg->src2_fill_color_en =
 		ge2d_config->src2_para.fill_color_en;
+#ifdef CONFIG_GE2D_SRC2
+	ge2d_cmd_cfg->src2_cmult_ad = ge2d_config->src2_cmult_ad;
+#endif
 
 	ge2d_cmd_cfg->vsc_phase_slope = ge2d_config->vsc_phase_slope;
 	ge2d_cmd_cfg->vsc_ini_phase = ge2d_config->vf_init_phase;
