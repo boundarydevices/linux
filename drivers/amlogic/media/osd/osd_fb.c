@@ -2868,6 +2868,62 @@ static ssize_t show_afbc_err_cnt(
 	return snprintf(buf, PAGE_SIZE, "%d\n", err_cnt);
 }
 
+static ssize_t show_osd_dimm(
+	struct device *device, struct device_attribute *attr,
+	char *buf)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	u32 osd_dimm[2];
+
+	osd_get_dimm_info(fb_info->node, &osd_dimm[0], &osd_dimm[1]);
+
+	return snprintf(buf, PAGE_SIZE, "%d, 0x%x\n", osd_dimm[0], osd_dimm[1]);
+}
+
+static ssize_t store_osd_dimm(
+	struct device *device, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	int parsed[2];
+
+	if (likely(parse_para(buf, 2, parsed) == 2))
+		osd_set_dimm_info(fb_info->node, parsed[0], parsed[1]);
+	else
+		osd_log_err("set store_osd_dimm size error\n");
+	return count;
+}
+
+static ssize_t show_osd_plane_alpha(
+	struct device *device, struct device_attribute *attr,
+	char *buf)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	u32 plane_alpha;
+
+	plane_alpha = osd_get_gbl_alpha_hw(fb_info->node);
+
+	return snprintf(buf, PAGE_SIZE, "0x%x\n", plane_alpha);
+}
+
+static ssize_t store_osd_plane_alpha(
+	struct device *device, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	int plane_alpha;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &plane_alpha);
+	if (ret < 0)
+		return -EINVAL;
+
+	osd_set_gbl_alpha_hw(fb_info->node, plane_alpha);
+
+	return count;
+}
+
+
 static inline  int str2lower(char *str)
 {
 	while (*str != '\0') {
@@ -3070,6 +3126,11 @@ static struct device_attribute osd_attrs[] = {
 			NULL, store_osd_single_step),
 	__ATTR(afbc_err_cnt, 0444,
 			show_afbc_err_cnt, NULL),
+	__ATTR(osd_dimm, 0644,
+			show_osd_dimm, store_osd_dimm),
+	__ATTR(osd_plane_alpha, 0644,
+			show_osd_plane_alpha, store_osd_plane_alpha),
+
 };
 
 static struct device_attribute osd_attrs_viu2[] = {

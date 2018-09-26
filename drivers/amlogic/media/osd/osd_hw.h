@@ -205,4 +205,6 @@ void output_save_info(void);
 void osd_get_rotate(u32 index, u32 *osd_rotate);
 void osd_set_rotate(u32 index, u32 osd_rotate);
 void osd_get_afbc_err_cnt(u32 *err_cnt);
+void osd_get_dimm_info(u32 index, u32 *osd_dimm_layer, u32 *osd_dimm_color);
+void osd_set_dimm_info(u32 index, u32 osd_dimm_layer, u32 osd_dimm_color);
 #endif

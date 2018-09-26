@@ -1296,9 +1296,9 @@ static irqreturn_t osd_rdma_isr(int irq, void *dev_id)
 		reset_rdma_table();
 		osd_update_scan_mode();
 		osd_update_3d_mode();
+		osd_mali_afbc_start();
 		osd_update_vsync_hit();
 		osd_hw_reset();
-		osd_mali_afbc_restart();
 		rdma_irq_count++;
 		{
 			/*This is a memory barrier*/

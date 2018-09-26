@@ -85,7 +85,9 @@ struct sync_req_render_s {
 	int  afbc_inter_format;
 	unsigned int  zorder;
 	unsigned int  blend_mode;
-	int  plane_alpha;
+	unsigned char  plane_alpha;
+	unsigned char  dim_layer;
+	unsigned int  dim_color;
 	int  reserve;
 };
 

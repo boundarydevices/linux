@@ -157,7 +157,7 @@ enum color_index_e {
 #define OSD_LAYER_ENABLE        (1 << 31)
 
 #define BYPASS_DIN        (1 << 7)
-#define OSD_BACKUP_COUNT 8
+#define OSD_BACKUP_COUNT 24
 
 enum osd_index_e {
 	OSD1 = 0,
@@ -455,6 +455,8 @@ struct layer_fence_map_s {
 	u32 zorder;
 	u32 blend_mode;
 	u32 plane_alpha;
+	u32 dim_layer;
+	u32 dim_color;
 	struct file *buf_file;
 	struct fence *in_fence;
 };
@@ -637,6 +639,9 @@ struct layer_info_s {
 	unsigned int    dst_h;
 	unsigned int  zorder;
 	unsigned int  blend_mode;
+	unsigned char  plane_alpha;
+	unsigned char  dim_layer;
+	unsigned int  dim_color;
 };
 
 struct osd_debug_backup_s {
@@ -701,6 +706,8 @@ struct hw_para_s {
 	u32 free_scale_mode_backup[HW_OSD_COUNT];
 	u32 osd_reverse[HW_OSD_COUNT];
 	u32 osd_rotate[HW_OSD_COUNT];
+	u32 dim_layer[HW_OSD_COUNT];
+	u32 dim_color[HW_OSD_COUNT];
 	/* struct osd_rotate_s rotate[HW_OSD_COUNT]; */
 	int use_h_filter_mode[HW_OSD_COUNT];
 	int use_v_filter_mode[HW_OSD_COUNT];
