@@ -952,6 +952,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 #ifdef CONFIG_AMLOGIC_USB
 	struct ffs_ep *ep = epfile->ep;
 	struct ffs_data_buffer *buffer = NULL;
+	int data_flag = -1;
 #else
 	struct ffs_ep *ep;
 #endif
@@ -1036,6 +1037,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		if (io_data->aio) {
 			spin_unlock_irq(&epfile->ffs->eps_lock);
 			data = kmalloc(data_len, GFP_KERNEL);
+			data_flag = 1;
 			if (unlikely(!data)) {
 				ret = -ENOMEM;
 				goto error_mutex;
@@ -1060,6 +1062,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		 * been released in kill_sb.
 		 */
 			buffer = assign_ffs_buffer(epfile->ffs);
+			data_flag = -1;
 			if (unlikely(!buffer)) {
 				ret = -ENOMEM;
 				spin_unlock_irq(&epfile->ffs->eps_lock);
@@ -1174,7 +1177,7 @@ error_mutex:
 	mutex_unlock(&epfile->mutex);
 error:
 #ifdef CONFIG_AMLOGIC_USB
-	if (io_data->aio) {
+	if (data_flag > 0) {
 		kfree(data);
 		data = NULL;
 	} else {
