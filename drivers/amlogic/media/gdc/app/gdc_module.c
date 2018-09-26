@@ -249,6 +249,30 @@ static long meson_gdc_set_input_addr(uint32_t start_addr,
 	return 0;
 }
 
+static void meson_gdc_dma_flush(struct device *dev,
+					dma_addr_t addr,
+					size_t size)
+{
+	if (dev == NULL) {
+		LOG(LOG_ERR, "Error input param");
+		return;
+	}
+
+	dma_sync_single_for_device(dev, addr, size, DMA_TO_DEVICE);
+}
+
+static void meson_gdc_cache_flush(struct device *dev,
+					dma_addr_t addr,
+					size_t size)
+{
+	if (dev == NULL) {
+		LOG(LOG_ERR, "Error input param");
+		return;
+	}
+
+	dma_sync_single_for_cpu(dev, addr, size, DMA_FROM_DEVICE);
+}
+
 static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		unsigned long arg)
 {
@@ -346,6 +370,10 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		gs->fh = fh;
 
 		mutex_lock(&fh->gdev->d_mutext);
+		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
+					fh->i_paddr, fh->i_len);
+		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
+					fh->c_paddr, fh->c_len);
 		ret = gdc_run(gs);
 		if (ret < 0)
 			LOG(LOG_ERR, "gdc process failed ret = %ld\n", ret);
@@ -356,6 +384,8 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 			LOG(LOG_ERR, "gdc timeout\n");
 
 		gdc_stop(gs);
+		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
+					fh->o_paddr, fh->o_len);
 		mutex_unlock(&fh->gdev->d_mutext);
 	break;
 	case GDC_REQUEST_BUFF:
