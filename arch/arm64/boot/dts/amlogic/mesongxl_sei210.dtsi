@@ -539,6 +539,11 @@
 			ranges = <0x0 0x0 0x0 0xd0000000 0x0 0x200000>;
 		};
 	}; /* end of soc */
+
+	vdac {
+		compatible = "amlogic, vdac-gxl";
+		status = "okay";
+	};
 }; /* end of root */
 
 &pinctrl_aobus {

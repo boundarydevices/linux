@@ -1201,9 +1201,8 @@
 	};
 
 	vdac {
-		compatible = "amlogic, vdac";
-		dev_name = "vdac";
-		status = "disabled";
+		compatible = "amlogic, vdac-g12b";
+		status = "okay";
 	};
 
 	canvas: canvas{

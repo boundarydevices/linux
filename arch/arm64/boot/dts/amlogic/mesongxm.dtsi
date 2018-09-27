@@ -637,6 +637,11 @@
 	cpu_ver_name {
 		compatible = "amlogic, cpu-major-id-gxm";
 	};
+
+	vdac {
+		compatible = "amlogic, vdac-gxm";
+		status = "okay";
+	};
 }; /* end of root */
 
 &pinctrl_aobus {

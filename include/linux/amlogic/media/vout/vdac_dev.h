@@ -18,6 +18,22 @@
 #ifndef _VDAC_DEV_H_
 #define _VDAC_DEV_H_
 
+enum vdac_cpu_type {
+	CPU_TYPE_GXTVBB = 0,
+	CPU_TYPE_GX_L_M = 1,
+	CPU_TYPE_TXL  = 2,
+	CPU_TYPE_TXLX  = 3,
+	CPU_TYPE_GXLX  = 4,
+	CPU_TYPE_TXHD = 5,
+	CPU_TYPE_G12AB = 6,
+	CPU_TYPE_TL1 = 7,
+};
+
+struct meson_vdac_data {
+	enum vdac_cpu_type cpu_id;
+	const char *name;
+};
+
 extern void vdac_set_ctrl0_ctrl1(unsigned int ctrl0, unsigned int ctrl1);
 
 #endif

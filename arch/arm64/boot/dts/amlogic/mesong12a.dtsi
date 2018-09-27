@@ -1163,8 +1163,7 @@
 	};
 
 	vdac {
-		compatible = "amlogic, vdac";
-		dev_name = "vdac";
+		compatible = "amlogic, vdac-g12a";
 		status = "okay";
 	};
 

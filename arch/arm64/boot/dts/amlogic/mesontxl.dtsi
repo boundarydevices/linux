@@ -1049,6 +1049,11 @@
 		reg_base = <0xda838400>;
 		interrupts = <0 51 1>;
 	};
+
+	vdac {
+		compatible = "amlogic, vdac-txl";
+		status = "okay";
+	};
 }; /* end of / */
 
 &gpu{

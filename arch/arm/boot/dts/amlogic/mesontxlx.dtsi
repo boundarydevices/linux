@@ -938,6 +938,11 @@
 	cpu_ver_name {
 		compatible = "amlogic, cpu-major-id-txlx";
 	};
+
+	vdac {
+		compatible = "amlogic, vdac-txlx";
+		status = "okay";
+	};
 }; /* end of / */
 
 &pinctrl_aobus {

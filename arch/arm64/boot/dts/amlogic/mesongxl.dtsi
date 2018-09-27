@@ -549,6 +549,11 @@
 	cpu_ver_name {
 		compatible = "amlogic, cpu-major-id-gxl";
 	};
+
+	vdac {
+		compatible = "amlogic, vdac-gxl";
+		status = "okay";
+	};
 }; /* end of root */
 
 &pinctrl_aobus {

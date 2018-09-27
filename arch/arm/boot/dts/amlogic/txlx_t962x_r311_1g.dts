@@ -932,12 +932,6 @@
 		};
 	}; /* End unifykey */
 
-	vdac {
-		compatible = "amlogic, vdac";
-		dev_name = "vdac";
-		status = "okay";
-	};
-
 	cvbsout {
 		compatible = "amlogic, cvbsout-txlx";
 		dev_name = "cvbsout";
