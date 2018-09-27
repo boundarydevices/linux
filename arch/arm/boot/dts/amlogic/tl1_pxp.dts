@@ -50,6 +50,12 @@
 			alloc-ranges = <0x05000000 0x400000>;
 		};
 	};
+
+	vout {
+		compatible = "amlogic, vout";
+		status = "okay";
+		fr_auto_policy = <0>;
+	};
 };
 &sd_emmc_b {
 	status = "okay";

@@ -81,14 +81,14 @@ enum lcd_mode_e {
 
 
 enum lcd_chip_e {
-	LCD_CHIP_GXTVBB = 0,
-	LCD_CHIP_GXL,   /* 1 */
-	LCD_CHIP_GXM,   /* 2 */
-	LCD_CHIP_TXL,	/* 3 */
-	LCD_CHIP_TXLX,  /* 4 */
-	LCD_CHIP_AXG,   /* 5 */
-	LCD_CHIP_G12A,  /* 6 */
-	LCD_CHIP_G12B,  /* 7 */
+	LCD_CHIP_GXL = 0,
+	LCD_CHIP_GXM,   /* 1 */
+	LCD_CHIP_TXL,   /* 2 */
+	LCD_CHIP_TXLX,  /* 3 */
+	LCD_CHIP_AXG,   /* 4 */
+	LCD_CHIP_G12A,  /* 5 */
+	LCD_CHIP_G12B,  /* 6 */
+	LCD_CHIP_TL1,   /* 7 */
 	LCD_CHIP_MAX,
 };
 
@@ -103,6 +103,8 @@ enum lcd_type_e {
 	LCD_LVDS,
 	LCD_VBYONE,
 	LCD_MIPI,
+	LCD_MLVDS,
+	LCD_P2P,
 	LCD_TYPE_MAX,
 };
 
@@ -316,11 +318,47 @@ struct dsi_config_s {
 	struct dsi_read_s *dread;
 };
 
+struct mlvds_config_s {
+	unsigned int channel_num;
+	unsigned int channel_sel0;
+	unsigned int channel_sel1;
+	unsigned int clk_phase; /* [13:12]=clk01_pi_sel,
+				 * [11:8]=pi2, [7:4]=pi1, [3:0]=pi0
+				 */
+	unsigned int pn_swap;
+	unsigned int bit_swap; /* MSB/LSB reverse */
+	unsigned int phy_vswing;
+	unsigned int phy_preem;
+
+	/* internal used */
+	unsigned int pi_clk_sel; /* bit[9:0] */
+	unsigned int bit_rate; /* Hz */
+};
+
+struct p2p_config_s {
+	unsigned int channel_num;
+	unsigned int channel_sel0;
+	unsigned int channel_sel1;
+	unsigned int clk_phase; /* [13:12]=clk01_pi_sel,
+				 * [11:8]=pi2, [7:4]=pi1, [3:0]=pi0
+				 */
+	unsigned int pn_swap;
+	unsigned int bit_swap; /* MSB/LSB reverse */
+	unsigned int phy_vswing;
+	unsigned int phy_preem;
+
+	/* internal used */
+	unsigned int pi_clk_sel; /* bit[9:0] */
+	unsigned int bit_rate; /* Hz */
+};
+
 struct lcd_control_config_s {
 	struct ttl_config_s *ttl_config;
 	struct lvds_config_s *lvds_config;
 	struct vbyone_config_s *vbyone_config;
 	struct dsi_config_s *mipi_config;
+	struct mlvds_config_s *mlvds_config;
+	struct p2p_config_s *p2p_config;
 	unsigned int *vlock_param;
 };
 
@@ -382,11 +420,6 @@ struct lcd_power_ctrl_s {
 	int power_off_step_max; /* internal use for debug */
 };
 
-struct lcd_clk_gate_ctrl_s {
-	struct reset_control *encl;
-	struct reset_control *vencl;
-};
-
 #define LCD_ENABLE_RETRY_MAX    3
 struct lcd_config_s {
 	char *lcd_propname;
@@ -402,7 +435,6 @@ struct lcd_config_s {
 	unsigned char change_flag;
 	unsigned char retry_enable_flag;
 	unsigned char retry_enable_cnt;
-	struct lcd_clk_gate_ctrl_s rstc;
 };
 
 struct lcd_duration_s {
@@ -436,17 +468,6 @@ struct aml_lcd_drv_s {
 	unsigned char viu_sel;
 	unsigned char vsync_none_timer_flag;
 
-	unsigned char clk_gate_state;
-	struct clk *encl_top_gate;
-	struct clk *encl_int_gate;
-
-	struct clk *dsi_host_gate;
-	struct clk *dsi_phy_gate;
-	struct clk *dsi_meas;
-	struct clk *mipi_enable_gate;
-	struct clk *mipi_bandgap_gate;
-	struct clk *gp0_pll;
-
 	struct device *dev;
 	struct lcd_config_s *lcd_config;
 	struct vinfo_s *lcd_info;
@@ -472,6 +493,7 @@ struct aml_lcd_drv_s {
 	struct resource *res_vsync_irq;
 	struct resource *res_vsync2_irq;
 	struct resource *res_vx1_irq;
+	struct resource *res_tcon_irq;
 
 	struct mutex power_mutex;
 };

@@ -30,7 +30,8 @@
 #define LCD_MAP_PERIPHS   0
 #define LCD_MAP_DSI_HOST  1
 #define LCD_MAP_DSI_PHY   2
-#define LCD_MAP_MAX       3
+#define LCD_MAP_TCON      3
+#define LCD_MAP_MAX       4
 
 int lcd_reg_gxb[] = {
 	LCD_MAP_PERIPHS,
@@ -40,6 +41,12 @@ int lcd_reg_gxb[] = {
 int lcd_reg_axg[] = {
 	LCD_MAP_DSI_HOST,
 	LCD_MAP_DSI_PHY,
+	LCD_MAP_MAX,
+};
+
+int lcd_reg_tl1[] = {
+	LCD_MAP_TCON,
+	LCD_MAP_PERIPHS,
 	LCD_MAP_MAX,
 };
 
@@ -55,7 +62,6 @@ static struct lcd_reg_map_s *lcd_reg_map;
 int lcd_ioremap(struct platform_device *pdev)
 {
 	int i = 0;
-	int ret = 0;
 	int *table;
 	struct resource *res;
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
@@ -63,7 +69,7 @@ int lcd_ioremap(struct platform_device *pdev)
 	lcd_reg_map = kcalloc(LCD_MAP_MAX,
 		sizeof(struct lcd_reg_map_s), GFP_KERNEL);
 	if (lcd_reg_map == NULL) {
-		LCDPR("lcd_reg_map buf malloc error\n");
+		LCDERR("%s: lcd_reg_map buf malloc error\n", __func__);
 		return -1;
 	}
 	table = lcd_drv->data->reg_map_table;
@@ -72,19 +78,29 @@ int lcd_ioremap(struct platform_device *pdev)
 			break;
 
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
+		if (res == NULL) {
+			LCDERR("%s: lcd_reg resource get error\n", __func__);
+			kfree(lcd_reg_map);
+			lcd_reg_map = NULL;
+			return -1;
+		}
 		lcd_reg_map[table[i]].base_addr = res->start;
 		lcd_reg_map[table[i]].size = resource_size(res);
 		lcd_reg_map[table[i]].p = devm_ioremap_nocache(&pdev->dev,
 			res->start, lcd_reg_map[table[i]].size);
 		if (lcd_reg_map[table[i]].p == NULL) {
 			lcd_reg_map[table[i]].flag = 0;
-			LCDERR("reg map failed: 0x%x\n",
+			LCDERR("%s: reg map failed: 0x%x\n",
+				__func__,
 				lcd_reg_map[table[i]].base_addr);
-			ret = -1;
+			kfree(lcd_reg_map);
+			lcd_reg_map = NULL;
+			return -1;
 		} else {
 			lcd_reg_map[table[i]].flag = 1;
 			if (lcd_debug_print_flag) {
-				LCDPR("reg mapped: 0x%x -> %p\n",
+				LCDPR("%s: reg mapped: 0x%x -> %p\n",
+					__func__,
 					lcd_reg_map[table[i]].base_addr,
 					lcd_reg_map[table[i]].p);
 			}
@@ -93,7 +109,7 @@ int lcd_ioremap(struct platform_device *pdev)
 		i++;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int check_lcd_ioremap(int n)
@@ -159,6 +175,44 @@ static inline void __iomem *check_lcd_dsi_phy_reg(unsigned int _reg)
 		return NULL;
 
 	reg_offset = LCD_REG_OFFSET(_reg);
+	if (reg_offset >= lcd_reg_map[reg_bus].size) {
+		LCDERR("invalid dsi_phy reg offset: 0x%04x\n", _reg);
+		return NULL;
+	}
+	p = lcd_reg_map[reg_bus].p + reg_offset;
+	return p;
+}
+
+static inline void __iomem *check_lcd_tcon_reg(unsigned int _reg)
+{
+	void __iomem *p;
+	int reg_bus;
+	unsigned int reg_offset;
+
+	reg_bus = LCD_MAP_TCON;
+	if (check_lcd_ioremap(reg_bus))
+		return NULL;
+
+	reg_offset = LCD_REG_OFFSET(_reg);
+	if (reg_offset >= lcd_reg_map[reg_bus].size) {
+		LCDERR("invalid dsi_phy reg offset: 0x%04x\n", _reg);
+		return NULL;
+	}
+	p = lcd_reg_map[reg_bus].p + reg_offset;
+	return p;
+}
+
+static inline void __iomem *check_lcd_tcon_reg_byte(unsigned int _reg)
+{
+	void __iomem *p;
+	int reg_bus;
+	unsigned int reg_offset;
+
+	reg_bus = LCD_MAP_TCON;
+	if (check_lcd_ioremap(reg_bus))
+		return NULL;
+
+	reg_offset = LCD_REG_OFFSET_BYTE(_reg);
 	if (reg_offset >= lcd_reg_map[reg_bus].size) {
 		LCDERR("invalid dsi_phy reg offset: 0x%04x\n", _reg);
 		return NULL;
@@ -357,3 +411,75 @@ void dsi_phy_clr_mask(unsigned int reg, unsigned int _mask)
 	dsi_phy_write(reg, (dsi_phy_read(reg) & (~(_mask))));
 }
 
+unsigned int lcd_tcon_read(unsigned int _reg)
+{
+	void __iomem *p;
+
+	p = check_lcd_tcon_reg(_reg);
+	if (p)
+		return readl(p);
+	else
+		return -1;
+};
+void lcd_tcon_write(unsigned int _reg, unsigned int _value)
+{
+	void __iomem *p;
+
+	p = check_lcd_tcon_reg(_reg);
+	if (p)
+		writel(_value, p);
+};
+
+void lcd_tcon_setb(unsigned int reg, unsigned int value,
+		unsigned int _start, unsigned int _len)
+{
+	lcd_tcon_write(reg, ((lcd_tcon_read(reg) &
+		(~(((1L << _len)-1) << _start))) |
+		((value & ((1L << _len)-1)) << _start)));
+}
+unsigned int lcd_tcon_getb(unsigned int reg,
+		unsigned int _start, unsigned int _len)
+{
+	return (lcd_tcon_read(reg) >> _start) & ((1L << _len)-1);
+}
+
+void lcd_tcon_set_mask(unsigned int reg, unsigned int _mask)
+{
+	lcd_tcon_write(reg, (lcd_tcon_read(reg) | (_mask)));
+}
+void lcd_tcon_clr_mask(unsigned int reg, unsigned int _mask)
+{
+	lcd_tcon_write(reg, (lcd_tcon_read(reg) & (~(_mask))));
+}
+
+unsigned char lcd_tcon_read_byte(unsigned int _reg)
+{
+	void __iomem *p;
+
+	p = check_lcd_tcon_reg_byte(_reg);
+	if (p)
+		return readb(p);
+	else
+		return -1;
+};
+void lcd_tcon_write_byte(unsigned int _reg, unsigned char _value)
+{
+	void __iomem *p;
+
+	p = check_lcd_tcon_reg_byte(_reg);
+	if (p)
+		writeb(_value, p);
+};
+
+void lcd_tcon_setb_byte(unsigned int reg, unsigned char value,
+		unsigned int _start, unsigned int _len)
+{
+	lcd_tcon_write_byte(reg, ((lcd_tcon_read_byte(reg) &
+		(~(((1L << _len)-1) << _start))) |
+		((value & ((1L << _len)-1)) << _start)));
+}
+unsigned char lcd_tcon_getb_byte(unsigned int reg,
+		unsigned int _start, unsigned int _len)
+{
+	return (lcd_tcon_read_byte(reg) >> _start) & ((1L << _len)-1);
+}

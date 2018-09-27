@@ -14653,3 +14653,10 @@ AMLOGIC DTS
 M:	Luan Yuan <luan.yuan@amlogic.com>
 F:	arch/arm/boot/dts/amlogic/partition_mbox_p241_P.dtsi
 
+AMLOGIC LCD DRIVERS
+M:	Evoke Zhang <evoke.zhang@amlogic.com>
+F:	arch\arm\boot\dts\amlogic\mesontl1_pxp-panel.dtsi
+F:	drivers\amlogic\media\vout\lcd\lcd_clk_ctrl.h
+F:	drivers\amlogic\media\vout\lcd\lcd_debug.h
+F:	drivers\amlogic\media\vout\lcd\lcd_tcon.c
+F:	drivers\amlogic\media\vout\lcd\lcd_tcon.h

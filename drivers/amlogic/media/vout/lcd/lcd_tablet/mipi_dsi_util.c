@@ -1921,14 +1921,15 @@ void mipi_dsi_link_off(struct lcd_config_s *pconf)
 void lcd_mipi_dsi_config_set(struct lcd_config_s *pconf)
 {
 	unsigned int pclk, bit_rate, lcd_bits;
-	unsigned int bit_rate_max, bit_rate_min, pll_out_fmin;
+	unsigned int bit_rate_max, bit_rate_min, pll_out_fmin = 0;
 	struct dsi_config_s *dconf = pconf->lcd_control.mipi_config;
 	struct lcd_clk_config_s *cConf = get_lcd_clk_config();
 	int n;
 	unsigned int temp;
 
 	/* unit in kHz for calculation */
-	pll_out_fmin = cConf->pll_out_fmin;
+	if (cConf->data)
+		pll_out_fmin = cConf->data->pll_out_fmin;
 	pclk = pconf->lcd_timing.lcd_clk / 1000;
 
 	/* data format */

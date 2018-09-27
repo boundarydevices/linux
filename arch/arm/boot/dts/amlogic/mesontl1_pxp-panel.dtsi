@@ -1,0 +1,92 @@
+/*
+ * arch/arm64/boot/dts/amlogic/mesontl1_pxp-panel.dtsi
+ *
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/ {
+	lcd {
+		compatible = "amlogic, lcd-tl1";
+		status = "okay";
+		mode = "tv";
+		fr_auto_policy = <0>; /* 0=disable, 1=60/50hz, 2=60/50/48hz */
+		key_valid = <0>;
+		clocks = <&clkc CLKID_VCLK2_ENCL
+			&clkc CLKID_VCLK2_VENCL
+			&clkc CLKID_TCON
+			&clkc CLKID_FCLK_DIV5
+			&clkc CLKID_TCON_PLL_COMP>;
+		clock-names = "encl_top_gate",
+			"encl_int_gate",
+			"tcon_gate",
+			"fclk_div5",
+			"clk_tcon";
+		reg = <0xff660000 0x8100
+			0xff634400 0x100>;
+		interrupts = <0 3 1
+			0 78 1
+			0 88 1>;
+		interrupt-names = "vsync","vbyone","tcon";
+		pinctrl_version = <2>; /* for uboot */
+
+		/* power type:(0=cpu_gpio, 2=signal, 3=extern, 0xff=ending) */
+		/* power index:(gpios_index, or extern_index, 0xff=invalid) */
+		/* power value:(0=output low, 1=output high, 2=input) */
+		/* power delay:(unit in ms) */
+
+		lvds_0{
+			model_name = "1080p-vfreq";
+			interface = "lvds"; /*lcd_interface(lvds, vbyone)*/
+			basic_setting = <
+				1920 1080 /*h_active, v_active*/
+				2200 1125 /*h_period, v_period*/
+				8      /*lcd_bits */
+				16 9>; /*screen_widht, screen_height*/
+			range_setting = <
+				2060 2650  /*h_period_min,max*/
+				1100 1480  /*v_period_min,max*/
+				120000000 160000000>; /*pclk_min,max*/
+			lcd_timing = <
+				44 148 0  /*hs_width, hs_bp, hs_pol*/
+				5  30 0>; /*vs_width, vs_bp, vs_pol*/
+			clk_attr = <
+				2 /*fr_adj_type
+				   *(0=clk, 1=htotal, 2=vtotal, 3=auto_range,
+				   * 4=hdmi_mode)
+				   */
+				0 /*clk_ss_level*/
+				1 /*clk_auto_generate*/
+				0>; /*pixel_clk(unit in Hz)*/
+			lvds_attr = <
+				1  /*lvds_repack*/
+				1  /*dual_port*/
+				0  /*pn_swap*/
+				0  /*port_swap*/
+				0>; /*lane_reverse*/
+			phy_attr=<
+				3 0   /*vswing_level, preem_level*/
+				0 0>; /*clk vswing_level, preem_level*/
+
+			/* power step: type, index, value, delay(ms) */
+			power_on_step = <
+				2 0 0 0   /*signal enable*/
+				0xff 0 0 0>; /*ending*/
+			power_off_step = <
+				2 0 0 10  /*signal disable*/
+				0xff 0 0 0>; /*ending*/
+			backlight_index = <0xff>;
+		};
+	}; /* end of lcd */
+
+}; /* end of / */

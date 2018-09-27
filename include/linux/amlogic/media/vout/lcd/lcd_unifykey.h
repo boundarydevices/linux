@@ -253,6 +253,9 @@ extern int lcd_unifykey_header_check(unsigned char *buf,
 		struct aml_lcd_unifykey_header_s *header);
 extern int lcd_unifykey_get(char *key_name,
 		unsigned char *buf, int *len);
+extern int lcd_unifykey_check_no_header(char *key_name);
+extern int lcd_unifykey_get_no_header(char *key_name,
+		unsigned char *buf, int *len);
 extern void lcd_unifykey_print(void);
 
 #endif

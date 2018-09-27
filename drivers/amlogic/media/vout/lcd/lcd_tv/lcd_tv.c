@@ -1290,7 +1290,13 @@ static void lcd_config_init(struct lcd_config_s *pconf)
 	lcd_tv_config_update(pconf);
 	lcd_clk_generate_parameter(pconf);
 	ss_level = pconf->lcd_timing.ss_level;
-	cconf->ss_level = (ss_level >= cconf->ss_level_max) ? 0 : ss_level;
+	if (cconf->data) {
+		cconf->ss_level = (ss_level >= cconf->data->ss_level_max) ?
+					0 : ss_level;
+	} else {
+		LCDERR("%s: clk config data is null\n", __func__);
+		cconf->ss_level = 0;
+	}
 }
 
 static int lcd_get_config(struct lcd_config_s *pconf, struct device *dev)

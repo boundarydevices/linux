@@ -45,11 +45,13 @@ struct lcd_type_match_s {
 };
 
 static struct lcd_type_match_s lcd_type_match_table[] = {
-	{"ttl",     LCD_TTL},
-	{"lvds",    LCD_LVDS},
-	{"vbyone",  LCD_VBYONE},
-	{"mipi",    LCD_MIPI},
-	{"invalid", LCD_TYPE_MAX},
+	{"ttl",      LCD_TTL},
+	{"lvds",     LCD_LVDS},
+	{"vbyone",   LCD_VBYONE},
+	{"mipi",     LCD_MIPI},
+	{"minilvds", LCD_MLVDS},
+	{"p2p",      LCD_P2P},
+	{"invalid",  LCD_TYPE_MAX},
 };
 
 int lcd_type_str_to_type(const char *str)
@@ -359,6 +361,37 @@ void lcd_vbyone_pinmux_set(int status)
 		}
 	}
 	pconf->pinmux_flag = index;
+}
+
+void lcd_tcon_pinmux_set(int status)
+{
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	struct lcd_config_s *pconf;
+
+	if (lcd_debug_print_flag)
+		LCDPR("%s: %d\n", __func__, status);
+
+	pconf = lcd_drv->lcd_config;
+	if (status) {
+		if (pconf->pinmux_flag == 0) {
+			pconf->pinmux_flag = 1;
+			/* request pinmux */
+			pconf->pin = devm_pinctrl_get_select(lcd_drv->dev,
+				"tcon");
+			if (IS_ERR(pconf->pin))
+				LCDERR("set tcon pinmux error\n");
+		} else {
+			LCDPR("tcon pinmux is already selected\n");
+		}
+	} else {
+		if (pconf->pinmux_flag) {
+			pconf->pinmux_flag = 0;
+			/* release pinmux */
+			devm_pinctrl_put(pconf->pin);
+		} else {
+			LCDPR("tcon pinmux is already released\n");
+		}
+	}
 }
 
 unsigned int lcd_lvds_channel_on_value(struct lcd_config_s *pconf)

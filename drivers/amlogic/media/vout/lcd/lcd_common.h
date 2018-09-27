@@ -31,7 +31,9 @@
 /* 20180626: txl suuport */
 /* 20180718: mute: wait vsync for display shadow */
 /* 20180827: add pinmux off support */
-#define LCD_DRV_VERSION    "20180827"
+/* 20180928: tl1 support, optimize clk config */
+/* 20181012: tl1 support tcon */
+#define LCD_DRV_VERSION    "20181012"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 
@@ -41,6 +43,10 @@
 #define LVDS_PHY_CNTL1_G9TV    0x606cca80
 #define LVDS_PHY_CNTL2_G9TV    0x0000006c
 #define LVDS_PHY_CNTL3_G9TV    0x00000800
+
+#define LVDS_PHY_CNTL1_TL1     0x6c60ca80
+#define LVDS_PHY_CNTL2_TL1     0x00000070
+#define LVDS_PHY_CNTL3_TL1     0x03ff0c00
 /* -------------------------- */
 
 /* -------------------------- */
@@ -51,6 +57,13 @@
 #define VX1_PHY_CNTL2_G9TV            0x0000007c
 #define VX1_PHY_CNTL3_G9TV            0x00ff0800
 /* -------------------------- */
+
+/* -------------------------- */
+/* minilvds phy parameters define */
+/* -------------------------- */
+#define MLVDS_PHY_CNTL1_TL1    0x6c60ca80
+#define MLVDS_PHY_CNTL2_TL1    0x00000070
+#define MLVDS_PHY_CNTL3_TL1    0x03ff0c00
 
 
 /* ******** mipi_dsi_phy ******** */
@@ -86,6 +99,7 @@ extern void lcd_cpu_gpio_set(unsigned int index, int value);
 extern unsigned int lcd_cpu_gpio_get(unsigned int index);
 extern void lcd_ttl_pinmux_set(int status);
 extern void lcd_vbyone_pinmux_set(int status);
+extern void lcd_tcon_pinmux_set(int status);
 extern unsigned int lcd_lvds_channel_on_value(struct lcd_config_s *pconf);
 extern int lcd_power_load_from_dts(struct lcd_config_s *pconf,
 		struct device_node *child);
@@ -102,11 +116,27 @@ extern int lcd_vmode_change(struct lcd_config_s *pconf);
 extern void lcd_venc_change(struct lcd_config_s *pconf);
 extern void lcd_if_enable_retry(struct lcd_config_s *pconf);
 
+/* lcd tcon */
+extern void lcd_tcon_reg_table_print(void);
+extern void lcd_tcon_reg_readback_print(void);
+extern int lcd_tcon_info_print(char *buf, int offset);
+extern int lcd_tcon_od_set(int flag);
+extern int lcd_tcon_od_get(void);
+extern int lcd_tcon_reg_table_size_get(void);
+extern unsigned char *lcd_tcon_reg_table_get(void);
+
+extern int lcd_tcon_core_reg_get(unsigned char *buf, unsigned int size);
+extern void lcd_tcon_core_reg_update(void);
+extern int lcd_tcon_enable(struct lcd_config_s *pconf);
+extern void lcd_tcon_disable(void);
+extern int lcd_tcon_probe(struct aml_lcd_drv_s *lcd_drv);
+
 /* lcd debug */
+extern int lcd_debug_info_len(int num);
 extern void lcd_debug_test(unsigned int num);
 extern void lcd_mute_setting(unsigned char flag);
-extern int lcd_class_creat(void);
-extern int lcd_class_remove(void);
+extern int lcd_debug_probe(void);
+extern int lcd_debug_remove(void);
 
 /* lcd driver */
 #ifdef CONFIG_AMLOGIC_LCD_TV
@@ -119,7 +149,7 @@ extern int lcd_tv_probe(struct device *dev);
 extern int lcd_tv_remove(struct device *dev);
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_TABLET
-int lcd_mipi_test_read(struct dsi_read_s *dread);
+extern int lcd_mipi_test_read(struct dsi_read_s *dread);
 extern void lcd_tablet_vout_server_init(void);
 extern void lcd_tablet_vout_server_remove(void);
 extern void lcd_tablet_clk_config_change(struct lcd_config_s *pconf);

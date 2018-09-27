@@ -22,8 +22,9 @@
 /* register offset address define */
 /* base & offset */
 
-#define LCD_REG_OFFSET(reg)         ((reg << 2))
+#define LCD_REG_OFFSET(reg)                   ((reg << 2))
 #define LCD_REG_OFFSET_MIPI_HOST(reg)         (((reg & 0xff) << 2))
+#define LCD_REG_OFFSET_BYTE(reg)              ((reg))
 
 
 /* PERIPHS: 0xc8834400 */
@@ -120,13 +121,6 @@
 #define HHI_EDP_APB_CLK_CNTL_M8M2                  0x82
 #define HHI_EDP_TX_PHY_CNTL0                       0x9c
 #define HHI_EDP_TX_PHY_CNTL1                       0x9d
-/* m8b */
-#define HHI_VID_PLL_CNTL                           0xc8
-#define HHI_VID_PLL_CNTL2                          0xc9
-#define HHI_VID_PLL_CNTL3                          0xca
-#define HHI_VID_PLL_CNTL4                          0xcb
-#define HHI_VID_PLL_CNTL5                          0xcc
-#define HHI_VID_PLL_CNTL6                          0xcd
 /* g9tv */
 #define HHI_HDMI_PLL_CNTL                          0xc8
 #define HHI_HDMI_PLL_CNTL2                         0xc9
@@ -134,8 +128,14 @@
 #define HHI_HDMI_PLL_CNTL4                         0xcb
 #define HHI_HDMI_PLL_CNTL5                         0xcc
 #define HHI_HDMI_PLL_CNTL6                         0xcd
-/*G12A*/
+/* G12A */
 #define HHI_HDMI_PLL_CNTL7                         0xce
+/* TL1 */
+#define HHI_TCON_PLL_CNTL0                         0x020
+#define HHI_TCON_PLL_CNTL1                         0x021
+#define HHI_TCON_PLL_CNTL2                         0x022
+#define HHI_TCON_PLL_CNTL3                         0x023
+#define HHI_TCON_PLL_CNTL4                         0x0df
 
 #define HHI_DSI_LVDS_EDP_CNTL0                     0xd1
 #define HHI_DSI_LVDS_EDP_CNTL1                     0xd2
@@ -178,6 +178,11 @@
 #define	HHI_MIPI_CNTL0                             0x00
 #define	HHI_MIPI_CNTL1                             0x01
 #define	HHI_MIPI_CNTL2                             0x02
+
+#define HHI_DIF_TCON_CNTL0                         0x3c
+#define HHI_DIF_TCON_CNTL1                         0x3d
+#define HHI_DIF_TCON_CNTL2                         0x3e
+#define HHI_TCON_CLK_CNTL                          0xf0
 
 /*  Global control:  RESET_CBUS_BASE = 0x11 */
 #define VERSION_CTRL                               0x1100
@@ -904,85 +909,40 @@
 #define ENCL_DACSEL_0                              0x1cc9
 #define ENCL_DACSEL_1                              0x1cca
 
-/* ********************************
- * ENCT:  VCBUS_BASE = 0x1c
- */
-/* ENCT */
-/* bit 15:8 -- vfifo2vd_vd_sel
- * bit 7 -- vfifo2vd_drop
- * bit 6:1 -- vfifo2vd_delay
- * bit 0 -- vfifo2vd_en
- */
-#define ENCT_VFIFO2VD_CTL                          0x1c20
-/* bit 12:0 -- vfifo2vd_pixel_start */
-#define ENCT_VFIFO2VD_PIXEL_START                  0x1c21
-/* bit 12:00 -- vfifo2vd_pixel_end */
-#define ENCT_VFIFO2VD_PIXEL_END                    0x1c22
-/* bit 10:0 -- vfifo2vd_line_top_start */
-#define ENCT_VFIFO2VD_LINE_TOP_START               0x1c23
-/* bit 10:00 -- vfifo2vd_line_top_end */
-#define ENCT_VFIFO2VD_LINE_TOP_END                 0x1c24
-/* bit 10:00 -- vfifo2vd_line_bot_start */
-#define ENCT_VFIFO2VD_LINE_BOT_START               0x1c25
-/* bit 10:00 -- vfifo2vd_line_bot_end */
-#define ENCT_VFIFO2VD_LINE_BOT_END                 0x1c26
-#define ENCT_VFIFO2VD_CTL2                         0x1c27
-#define ENCT_TST_EN                                0x1c28
-#define ENCT_TST_MDSEL                             0x1c29
-#define ENCT_TST_Y                                 0x1c2a
-#define ENCT_TST_CB                                0x1c2b
-#define ENCT_TST_CR                                0x1c2c
-#define ENCT_TST_CLRBAR_STRT                       0x1c2d
-#define ENCT_TST_CLRBAR_WIDTH                      0x1c2e
-#define ENCT_TST_VDCNT_STSET                       0x1c2f
+#define ENCL_INBUF_CNTL0                           0x1cd3
+#define ENCL_INBUF_CNTL1                           0x1cd4
 
-/* ENCT registers */
-#define ENCT_VIDEO_EN                              0x1c60
-#define ENCT_VIDEO_Y_SCL                           0x1c61
-#define ENCT_VIDEO_PB_SCL                          0x1c62
-#define ENCT_VIDEO_PR_SCL                          0x1c63
-#define ENCT_VIDEO_Y_OFFST                         0x1c64
-#define ENCT_VIDEO_PB_OFFST                        0x1c65
-#define ENCT_VIDEO_PR_OFFST                        0x1c66
-/* ----- Video mode */
-#define ENCT_VIDEO_MODE                            0x1c67
-#define ENCT_VIDEO_MODE_ADV                        0x1c68
-/* --------------- Debug pins */
-#define ENCT_DBG_PX_RST                            0x1c69
-#define ENCT_DBG_LN_RST                            0x1c6a
-#define ENCT_DBG_PX_INT                            0x1c6b
-#define ENCT_DBG_LN_INT                            0x1c6c
-/* ----------- Video Advanced setting */
-#define ENCT_VIDEO_YFP1_HTIME                      0x1c6d
-#define ENCT_VIDEO_YFP2_HTIME                      0x1c6e
-#define ENCT_VIDEO_YC_DLY                          0x1c6f
-#define ENCT_VIDEO_MAX_PXCNT                       0x1c70
-#define ENCT_VIDEO_HAVON_END                       0x1c71
-#define ENCT_VIDEO_HAVON_BEGIN                     0x1c72
-#define ENCT_VIDEO_VAVON_ELINE                     0x1c73
-#define ENCT_VIDEO_VAVON_BLINE                     0x1c74
-#define ENCT_VIDEO_HSO_BEGIN                       0x1c75
-#define ENCT_VIDEO_HSO_END                         0x1c76
-#define ENCT_VIDEO_VSO_BEGIN                       0x1c77
-#define ENCT_VIDEO_VSO_END                         0x1c78
-#define ENCT_VIDEO_VSO_BLINE                       0x1c79
-#define ENCT_VIDEO_VSO_ELINE                       0x1c7a
-#define ENCT_VIDEO_MAX_LNCNT                       0x1c7b
-#define ENCT_VIDEO_BLANKY_VAL                      0x1c7c
-#define ENCT_VIDEO_BLANKPB_VAL                     0x1c7d
-#define ENCT_VIDEO_BLANKPR_VAL                     0x1c7e
-#define ENCT_VIDEO_HOFFST                          0x1c7f
-#define ENCT_VIDEO_VOFFST                          0x1c80
-#define ENCT_VIDEO_RGB_CTRL                        0x1c81
-#define ENCT_VIDEO_FILT_CTRL                       0x1c82
-#define ENCT_VIDEO_OFLD_VPEQ_OFST                  0x1c83
-#define ENCT_VIDEO_OFLD_VOAV_OFST                  0x1c84
-#define ENCT_VIDEO_MATRIX_CB                       0x1c85
-#define ENCT_VIDEO_MATRIX_CR                       0x1c86
-#define ENCT_VIDEO_RGBIN_CTRL                      0x1c87
-#define ENCT_MAX_LINE_SWITCH_POINT                 0x1c88
-#define ENCT_DACSEL_0                              0x1c89
-#define ENCT_DACSEL_1                              0x1c8a
+/* ********************************
+ * TCON TOP:  TCON_TOP_BASE = 0x2000
+ * ********************************
+ */
+#define TCON_CORE_REG_START                        0x0000
+
+#define TCON_CTRL_TIMING_BASE                      0x01b0
+
+#define TCON_TOP_CTRL                              0x2000
+#define TCON_RGB_IN_MUX                            0x2001
+#define TCON_OUT_CH_SEL0                           0x2002
+#define TCON_OUT_CH_SEL1                           0x2003
+#define TCON_I2C_DEGLITCH_CNTL                     0x2004
+#define TCON_STATUS0                               0x2008 /* read only */
+#define TCON_PLLLOCK_CNTL                          0x2009
+#define TCON_PLLLCK_RST_CNT                        0x200a
+#define TCON_RST_CTRL                              0x200b
+#define TCON_AXI_OFST0                             0x200c
+#define TCON_DDRIF_CTRL0                           0x200d
+#define TCON_CLK_CTRL                              0x200e
+#define TCON_DDRIF_CTRL1                           0x200f
+#define TCON_STATUS1                               0x2010 /* read only */
+#define TCON_DDRIF_CTRL2                           0x2011
+#define TCON_STATUS2                               0x2012 /* read only */
+#define TCON_AXI_OFST1                             0x2013
+#define TCON_AXI_OFST2                             0x2014
+#define TCON_GPO_CTRL0                             0x2015
+#define TCON_GPO_CTRL1                             0x2016
+#define TCON_GPO_CTRL2                             0x2017
+#define TCON_INTR_MASKN                            0x2022
+#define TCON_INTR                                  0x2023 /* read only */
 
 /* ********************************
  * Video post-processing:  VPP_VCBUS_BASE = 0x1d
@@ -1497,6 +1457,9 @@
 /* ***********************************************
  * register access api
  */
+extern int lcd_reg_gxb[];
+extern int lcd_reg_axg[];
+extern int lcd_reg_tl1[];
 
 extern int lcd_ioremap(struct platform_device *pdev);
 extern unsigned int lcd_vcbus_read(unsigned int _reg);
@@ -1530,22 +1493,34 @@ extern void lcd_pinmux_clr_mask(unsigned int _reg, unsigned int _mask);
 extern unsigned int dsi_host_read(unsigned int _reg);
 extern void dsi_host_write(unsigned int _reg, unsigned int _value);
 extern void dsi_host_setb(unsigned int reg, unsigned int value,
-        unsigned int _start, unsigned int _len);
+		unsigned int _start, unsigned int _len);
 extern unsigned int dsi_host_getb(unsigned int reg,
-        unsigned int _start, unsigned int _len);
+		unsigned int _start, unsigned int _len);
 extern void dsi_host_set_mask(unsigned int reg, unsigned int _mask);
 extern void dsi_host_clr_mask(unsigned int reg, unsigned int _mask);
 extern unsigned int dsi_phy_read(unsigned int _reg);
 extern void dsi_phy_write(unsigned int _reg, unsigned int _value);
 extern void dsi_phy_setb(unsigned int reg, unsigned int value,
-        unsigned int _start, unsigned int _len);
+		unsigned int _start, unsigned int _len);
 extern unsigned int dsi_phy_getb(unsigned int reg,
-        unsigned int _start, unsigned int _len);
+		unsigned int _start, unsigned int _len);
 extern void dsi_phy_set_mask(unsigned int reg, unsigned int _mask);
 extern void dsi_phy_clr_mask(unsigned int reg, unsigned int _mask);
-extern int lcd_reg_gxb[];
-extern int lcd_reg_axg[];
+
+extern unsigned int lcd_tcon_read(unsigned int _reg);
+extern void lcd_tcon_write(unsigned int _reg, unsigned int _value);
+extern void lcd_tcon_setb(unsigned int reg, unsigned int value,
+		unsigned int _start, unsigned int _len);
+extern unsigned int lcd_tcon_getb(unsigned int reg,
+		unsigned int _start, unsigned int _len);
+extern void lcd_tcon_set_mask(unsigned int reg, unsigned int _mask);
+extern void lcd_tcon_clr_mask(unsigned int reg, unsigned int _mask);
+extern unsigned char lcd_tcon_read_byte(unsigned int _reg);
+extern void lcd_tcon_write_byte(unsigned int _reg, unsigned char _value);
+extern void lcd_tcon_setb_byte(unsigned int reg, unsigned char value,
+		unsigned int _start, unsigned int _len);
+extern unsigned char lcd_tcon_getb_byte(unsigned int reg,
+		unsigned int _start, unsigned int _len);
 
 #endif
-
 

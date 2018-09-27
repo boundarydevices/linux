@@ -36,7 +36,6 @@
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #endif
-#include <linux/reset.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -966,7 +965,7 @@ static int lcd_mode_probe(struct device *dev)
 		break;
 	}
 
-	lcd_class_creat();
+	lcd_debug_probe();
 	lcd_fops_create();
 
 	lcd_notifier_register();
@@ -1063,6 +1062,7 @@ static int lcd_config_probe(struct platform_device *pdev)
 	lcd_driver->res_vsync_irq = NULL;
 	lcd_driver->res_vsync2_irq = NULL;
 	lcd_driver->res_vx1_irq = NULL;
+	lcd_driver->res_tcon_irq = NULL;
 
 	/* lcd driver assign */
 	ret = of_property_read_string(lcd_driver->dev->of_node, "mode", &str);
@@ -1128,6 +1128,12 @@ static int lcd_config_probe(struct platform_device *pdev)
 			lcd_driver->res_vsync2_irq =
 				platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 		}
+	}
+	ret = of_property_read_string_index(lcd_driver->dev->of_node,
+		"interrupt-names", 2, &str);
+	if (ret == 0) {
+		lcd_driver->res_tcon_irq = platform_get_resource(pdev,
+			IORESOURCE_IRQ, 2);
 	}
 
 	lcd_driver->lcd_info = &lcd_vinfo;
@@ -1218,12 +1224,6 @@ static void lcd_vsync_irq_remove(void)
 
 #ifdef CONFIG_OF
 
-static struct lcd_data_s lcd_data_gxtvbb = {
-	.chip_type = LCD_CHIP_GXTVBB,
-	.chip_name = "gxtvbb",
-	.reg_map_table = &lcd_reg_gxb[0],
-};
-
 static struct lcd_data_s lcd_data_gxl = {
 	.chip_type = LCD_CHIP_GXL,
 	.chip_name = "gxl",
@@ -1266,11 +1266,13 @@ static struct lcd_data_s lcd_data_g12b = {
 	.reg_map_table = &lcd_reg_axg[0],
 };
 
+static struct lcd_data_s lcd_data_tl1 = {
+	.chip_type = LCD_CHIP_TL1,
+	.chip_name = "tl1",
+	.reg_map_table = &lcd_reg_tl1[0],
+};
+
 static const struct of_device_id lcd_dt_match_table[] = {
-	{
-		.compatible = "amlogic, lcd-gxtvbb",
-		.data = &lcd_data_gxtvbb,
-	},
 	{
 		.compatible = "amlogic, lcd-gxl",
 		.data = &lcd_data_gxl,
@@ -1298,6 +1300,10 @@ static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-g12b",
 		.data = &lcd_data_g12b,
+	},
+	{
+		.compatible = "amlogic, lcd-tl1",
+		.data = &lcd_data_tl1,
 	},
 	{},
 };
@@ -1390,7 +1396,7 @@ static int lcd_remove(struct platform_device *pdev)
 	if (lcd_driver) {
 		lcd_vsync_irq_remove();
 		lcd_fops_remove();
-		lcd_class_remove();
+		lcd_debug_remove();
 		lcd_config_remove(lcd_driver->dev);
 
 		kfree(lcd_driver);
