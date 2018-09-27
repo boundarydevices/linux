@@ -1728,7 +1728,12 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 	 * after the response of cmd11, but wait 1 ms to be sure
 	 */
 	mmc_delay(1);
+#ifdef CONFIG_AMLOGIC_MMC
+	if (host->ops->card_busy && !host->ops->card_busy(host)
+			&& strcmp(mmc_hostname(host), "sdio")) {
+#else
 	if (host->ops->card_busy && !host->ops->card_busy(host)) {
+#endif
 		err = -EAGAIN;
 		goto power_cycle;
 	}
@@ -1761,7 +1766,12 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 	 * Failure to switch is indicated by the card holding
 	 * dat[0:3] low
 	 */
+#ifdef CONFIG_AMLOGIC_MMC
+	if (host->ops->card_busy && host->ops->card_busy(host)
+			&& strcmp(mmc_hostname(host), "sdio"))
+#else
 	if (host->ops->card_busy && host->ops->card_busy(host))
+#endif
 		err = -EAGAIN;
 
 power_cycle:

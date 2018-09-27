@@ -1229,6 +1229,12 @@ int sdio_reset_comm(struct mmc_card *card)
 
 	mmc_retune_disable(host);
 
+	/* for realtek sdio wifi && mtk7668
+	 * need send IO reset command firstly
+	 */
+	if ((card->cis.vendor == 588) || (card->cis.vendor == 890))
+		sdio_reset(host);
+
 	mmc_go_idle(host);
 
 	mmc_set_clock(host, host->f_min);

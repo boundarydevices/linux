@@ -200,8 +200,8 @@ struct mmc_phase {
 
 struct para_e {
 	struct mmc_phase init;
-	struct mmc_phase emmc_init;
 	struct mmc_phase hs;
+	struct mmc_phase calc;
 	struct mmc_phase ddr;
 	struct mmc_phase hs2;
 	struct mmc_phase hs4;

@@ -1263,10 +1263,11 @@ static int meson_mmc_clk_set_rate(struct mmc_host *mmc,
 	dev_dbg(host->dev, "change clock rate %u -> %lu\n",
 		mmc->actual_clock, clk_ios);
 	ret = clk_set_rate(host->cfg_div_clk, clk_ios);
-	if (clk_ios && clk_ios != clk_get_rate(host->cfg_div_clk))
+	if (clk_ios && clk_ios != clk_get_rate(host->cfg_div_clk)) {
 		dev_warn(host->dev, "divider requested rate %lu != actual rate %lu: ret=%d\n",
 			 clk_ios, clk_get_rate(host->cfg_div_clk), ret);
-	else
+		mmc->actual_clock = clk_get_rate(host->cfg_div_clk);
+	} else
 		mmc->actual_clock = clk_ios;
 
 	/* (re)start clock, if non-zero */
@@ -2965,6 +2966,10 @@ static int aml_sd_emmc_card_busy(struct mmc_host *mmc)
 			&& host->data->tdma_f
 			&& (host->init_volt == 0))
 		wait_for_completion(&host->drv_completion);
+
+	if (pdata->xfer_pre)
+		pdata->xfer_pre(pdata);
+
 	vstat = readl(host->base + SD_EMMC_STATUS);
 	status = ista->dat_i & 0xf;
 
@@ -2978,10 +2983,11 @@ static int aml_sd_emmc_card_busy(struct mmc_host *mmc)
 				&& host->data->tdma_f)
 			host->init_volt = 0;
 	}
-		if ((host->mem->start == host->data->port_b_base)
-				&& host->data->tdma_f
-				&& (host->init_volt == 0))
-			complete(&host->drv_completion);
+	if ((host->mem->start == host->data->port_b_base)
+			&& host->data->tdma_f
+			&& (host->init_volt == 0))
+		complete(&host->drv_completion);
+
 	return !status;
 }
 
@@ -3513,13 +3519,12 @@ static struct meson_mmc_data mmc_data_g12a = {
 	.ds_pin_poll_en = 0x48,
 	.ds_pin_poll_bit = 13,
 	.tdma_f = 1,
-	.sdmmc.init.core_phase = 2,
+	.sdmmc.init.core_phase = 3,
 	.sdmmc.init.tx_phase = 0,
 	.sdmmc.init.rx_phase = 0,
-	.sdmmc.emmc_init.core_phase = 0,
-	.sdmmc.emmc_init.tx_phase = 2,
-	.sdmmc.hs.core_phase = 0,
-	.sdmmc.hs.tx_phase = 2,
+	.sdmmc.calc.core_phase = 0,
+	.sdmmc.calc.tx_phase = 2,
+	.sdmmc.hs.core_phase = 3,
 	.sdmmc.ddr.core_phase = 2,
 	.sdmmc.ddr.tx_phase = 0,
 	.sdmmc.hs2.core_phase = 3,
@@ -3527,6 +3532,7 @@ static struct meson_mmc_data mmc_data_g12a = {
 	.sdmmc.hs4.tx_delay = 0,
 	.sdmmc.sd_hs.core_phase = 2,
 	.sdmmc.sdr104.core_phase = 2,
+	.sdmmc.sdr104.tx_phase = 0,
 };
 
 static struct meson_mmc_data mmc_data_g12b = {
@@ -3539,13 +3545,12 @@ static struct meson_mmc_data mmc_data_g12b = {
 	.ds_pin_poll = 0x3a,
 	.ds_pin_poll_en = 0x48,
 	.ds_pin_poll_bit = 13,
-	.sdmmc.init.core_phase = 2,
+	.sdmmc.init.core_phase = 3,
 	.sdmmc.init.tx_phase = 0,
 	.sdmmc.init.rx_phase = 0,
-	.sdmmc.emmc_init.core_phase = 0,
-	.sdmmc.emmc_init.tx_phase = 2,
-	.sdmmc.hs.core_phase = 0,
-	.sdmmc.hs.tx_phase = 2,
+	.sdmmc.calc.core_phase = 0,
+	.sdmmc.calc.tx_phase = 2,
+	.sdmmc.hs.core_phase = 1,
 	.sdmmc.ddr.core_phase = 2,
 	.sdmmc.ddr.tx_phase = 0,
 	.sdmmc.hs2.core_phase = 3,
@@ -3553,6 +3558,7 @@ static struct meson_mmc_data mmc_data_g12b = {
 	.sdmmc.hs4.tx_delay = 0,
 	.sdmmc.sd_hs.core_phase = 2,
 	.sdmmc.sdr104.core_phase = 2,
+	.sdmmc.sdr104.tx_phase = 0,
 };
 
 static const struct of_device_id meson_mmc_of_match[] = {

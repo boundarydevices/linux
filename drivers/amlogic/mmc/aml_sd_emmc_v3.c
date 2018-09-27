@@ -115,7 +115,7 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	struct mmc_phase *init = &(host->data->sdmmc.init);
-	struct mmc_phase *emmc_init = &(host->data->sdmmc.emmc_init);
+	struct mmc_phase *calc = &(host->data->sdmmc.calc);
 
 	writel(0, host->base + SD_EMMC_CLOCK_V3);
 #ifndef SD_EMMC_CLK_CTRL
@@ -130,10 +130,9 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	pclkc->core_phase = init->core_phase;	  /* 2: 180 phase */
 	pclkc->rx_phase = init->rx_phase;
 	pclkc->tx_phase = init->tx_phase;
-	if ((host->mem->start == host->data->port_c_base)
-			&& (host->data->chip_type >= MMC_CHIP_G12A)) {
-		pclkc->core_phase = emmc_init->core_phase;
-		pclkc->tx_phase = emmc_init->tx_phase;
+	if (host->data->chip_type >= MMC_CHIP_G12A) {
+		pclkc->core_phase = calc->core_phase;
+		pclkc->tx_phase = calc->tx_phase;
 	}
 	pclkc->always_on = 1;	  /* Keep clock always on */
 	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
@@ -332,39 +331,50 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 			mmc_hostname(host->mmc));
 	} else if (timing == MMC_TIMING_MMC_HS) {
 		clkc->core_phase = para->hs.core_phase;
-		clkc->tx_phase = para->hs.tx_phase;
 		/* overide co-phase by dts */
 		if (pdata->co_phase)
 			clkc->core_phase = pdata->co_phase;
+		if (host->data->chip_type >= MMC_CHIP_G12A) {
+			clkc->core_phase = para->calc.core_phase;
+			clkc->tx_phase = para->calc.tx_phase;
+		}
 	} else if (timing == MMC_TIMING_MMC_HS200) {
 		clkc->core_phase = para->hs2.core_phase;
 		clkc->tx_phase = para->hs2.tx_phase;
-	} else if ((timing == MMC_TIMING_SD_HS)
-				&& aml_card_type_non_sdio(pdata)) {
-		clkc->core_phase = para->sd_hs.core_phase;
+	} else if (timing == MMC_TIMING_SD_HS) {
+		if (aml_card_type_non_sdio(pdata))
+			clkc->core_phase = para->sd_hs.core_phase;
+		if (host->data->chip_type >= MMC_CHIP_G12A) {
+			clkc->core_phase = para->calc.core_phase;
+			clkc->tx_phase = para->calc.tx_phase;
+		}
 	} else if (timing == MMC_TIMING_UHS_SDR104) {
 		clkc->core_phase = para->sdr104.core_phase;
-
+		clkc->tx_phase = para->sdr104.tx_phase;
 	} else
 		ctrl->ddr = 0;
 
-	if (aml_card_type_mmc(pdata)
-			&& (host->data->chip_type >= MMC_CHIP_G12A)) {
-		if (timing <= MMC_TIMING_MMC_HS) {
+	if (host->data->chip_type >= MMC_CHIP_G12A) {
+		if (timing <= MMC_TIMING_SD_HS) {
 			ret = aml_fixdiv_calc(&fixdiv, &pdata->clk_lay);
 			if (!ret) {
 				adjust = readl(host->base + SD_EMMC_ADJUST_V3);
 				gadjust->adj_delay = fixdiv;
 				gadjust->adj_enable = 1;
 				writel(adjust, host->base + SD_EMMC_ADJUST_V3);
-				pr_info("fixdiv calc done: adj = %x\n", adjust);
+				pdata->adj = adjust;
+				pr_info("%s: fixdiv calc done: adj = %x\n",
+						pdata->pinname, adjust);
 			}
-		} else if (timing == MMC_TIMING_MMC_DDR52) {
+		} else if ((timing == MMC_TIMING_MMC_DDR52)
+				|| (timing == MMC_TIMING_UHS_DDR50)) {
 			adjust = readl(host->base + SD_EMMC_ADJUST_V3);
 			gadjust->adj_delay = 0;
 			gadjust->adj_enable = 0;
 			writel(adjust, host->base + SD_EMMC_ADJUST_V3);
-			pr_debug("ddr52 close calc: adj = %x\n", adjust);
+			pdata->adj = adjust;
+			pr_debug("%s: ddr52 close calc: adj = %x\n",
+					pdata->pinname, adjust);
 		}
 	}
 
@@ -1008,6 +1018,8 @@ static unsigned int aml_sd_emmc_clktest(struct mmc_host *mmc)
 	int i = 0;
 	unsigned int cycle = 0;
 
+	writel(0, (host->base + SD_EMMC_ADJUST_V3));
+
 	/* one cycle = xxx(ps) */
 	cycle = (1000000000 / mmc->actual_clock) * 1000;
 	vcfg &= ~(1 << 23);
@@ -1499,8 +1511,6 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 	int err = -EINVAL;
 	u32 adj_win_start = 100;
 	u32 intf3;
-
-	writel(0, (host->base + SD_EMMC_ADJUST_V3));
 
 	if (opcode == MMC_SEND_TUNING_BLOCK_HS200) {
 		if (mmc->ios.bus_width == MMC_BUS_WIDTH_8) {
