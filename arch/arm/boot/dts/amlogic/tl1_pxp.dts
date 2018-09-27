@@ -1,0 +1,60 @@
+/*
+ * arch/arm/boot/dts/amlogic/tl1_pxp.dts
+ *
+ * Copyright (C) 2018 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/dts-v1/;
+#include "mesontl1.dtsi"
+
+/ {
+	model = "Amlogic TL1 PXP";
+	amlogic-dt-id = "tl1_pxp";
+	compatible = "amlogic, tl1_pxp";
+
+	aliases {
+		serial0 = &uart_AO;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c_AO;
+	};
+
+	memory@00000000 {
+		device_type = "memory";
+		linux,usable-memory = <0x100000 0x7ff00000>;
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		/* global autoconfigured region for contiguous allocations */
+		secmon_reserved: linux,secmon {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x400000>;
+			alignment = <0x400000>;
+			alloc-ranges = <0x05000000 0x400000>;
+		};
+	};
+}; /* end of / */
+
+&spicc0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc0_pins_h>;
+	cs-gpios = <&gpio GPIOH_20 0>;
+};
