@@ -1560,12 +1560,15 @@ static void str_sapr_to_d(char *s, int *d, int n)
 }
 
 static void d_convert_str(int num,
-	int num_num, char cur_s[], int char_bit)
+	int num_num, char cur_s[], int char_bit, int bit_chose)
 {
 	char buf[9] = {0};
 	int i, count;
 
-	snprintf(buf, sizeof(buf), "%d", num);
+	if (bit_chose == 10)
+		snprintf(buf, sizeof(buf), "%d", num);
+	if (bit_chose == 16)
+		snprintf(buf, sizeof(buf), "%x", num);
 	count = strlen(buf);
 	for (i = 0; i < count; i++)
 		buf[i + char_bit] = buf[i];
@@ -1653,7 +1656,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_low_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else {
 				if (kstrtoul(parm[2], 10, &val) < 0)
@@ -1672,7 +1675,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_mid1_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else {
 				if (kstrtoul(parm[2], 10, &val) < 0)
@@ -1691,7 +1694,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_mid2_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else {
 				if (kstrtoul(parm[2], 10, &val) < 0)
@@ -1710,7 +1713,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_hgh1_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else {
 				if (kstrtoul(parm[2], 10, &val) < 0)
@@ -1729,7 +1732,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(dnlp_scurv_hgh2_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else {
 				if (kstrtoul(parm[2], 10, &val) < 0)
@@ -1748,7 +1751,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 49; i++)
 					d_convert_str(gain_var_lut49_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else {
 				if (kstrtoul(parm[2], 10, &val) < 0)
@@ -1767,7 +1770,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 48; i++)
 					d_convert_str(wext_gain_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else {
 				if (kstrtoul(parm[2], 10, &val) < 0)
@@ -1786,7 +1789,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(ve_dnlp_tgt_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else
 				pr_info("error cmd\n");
@@ -1798,7 +1801,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(GmScurve_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else
 				pr_info("error cmd\n");
@@ -1810,7 +1813,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(clash_curve_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else
 				pr_info("error cmd\n");
@@ -1822,7 +1825,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(clsh_scvbld_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else
 				pr_info("error cmd\n");
@@ -1834,7 +1837,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 			} else if (!strcmp(parm[2], "all")) {
 				for (i = 0; i < 65; i++)
 					d_convert_str(blkwht_ebld_copy[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else
 				pr_info("error cmd\n");
@@ -1847,7 +1850,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 				for (i = 0; i < 64; i++)
 					d_convert_str(
 					vpp_hist_param.vpp_histgram[i],
-						i, stemp, 4);
+						i, stemp, 4, 10);
 					pr_info("%s\n", stemp);
 			} else
 				pr_info("error cmd\n");
@@ -2456,11 +2459,17 @@ static ssize_t amvecm_gamma_show(struct class *cls,
 {
 	pr_info("Usage:");
 	pr_info("	echo sgr|sgg|sgb xxx...xx > /sys/class/amvecm/gamma\n");
-	pr_info("Notes:");
+	pr_info("Notes:\n");
 	pr_info("	if the string xxx......xx is less than 256*3,");
 	pr_info("	then the remaining will be set value 0\n");
 	pr_info("	if the string xxx......xx is more than 256*3, ");
 	pr_info("	then the remaining will be ignored\n");
+	pr_info("Usage:");
+	pr_info("	echo ggr|ggg|ggb xxx > /sys/class/amvecm/gamma\n");
+	pr_info("Notes:\n");
+	pr_info("	read all as point......xxx is 'all'.\n");
+	pr_info("	read all as strings......xxx is 'all_str'.\n");
+	pr_info("	read one point......xxx is a value '0~255'.\n ");
 	return 0;
 }
 
@@ -2479,6 +2488,12 @@ static ssize_t amvecm_gamma_store(struct class *cls,
 	long val;
 	char delim1[3] = " ";
 	char delim2[2] = "\n";
+	char *stemp = NULL;
+
+	stemp = kmalloc(600, GFP_KERNEL);
+	gammaR = kmalloc(256 * sizeof(unsigned short), GFP_KERNEL);
+	gammaG = kmalloc(256 * sizeof(unsigned short), GFP_KERNEL);
+	gammaB = kmalloc(256 * sizeof(unsigned short), GFP_KERNEL);
 
 	buf_orig = kstrdup(buffer, GFP_KERNEL);
 	ps = buf_orig;
@@ -2491,26 +2506,9 @@ static ssize_t amvecm_gamma_store(struct class *cls,
 			continue;
 		parm[n++] = token;
 	}
-	if (n == 0) {
-		kfree(buf_orig);
-		pr_info("fail to get parm[] initialized!!!\n");
-		return count;
-	}
-
-	/* to avoid the bellow warning message while compiling:
-	 * warning: the frame size of 1576 bytes is larger than 1024 bytes
-	 */
-	gammaR = kmalloc(256 * sizeof(unsigned short), GFP_KERNEL);
-	gammaG = kmalloc(256 * sizeof(unsigned short), GFP_KERNEL);
-	gammaB = kmalloc(256 * sizeof(unsigned short), GFP_KERNEL);
-	if (!gammaR || !gammaG || !gammaB) {
-		kfree(buf_orig);
-		kfree(gammaR);
-		kfree(gammaG);
-		kfree(gammaB);
-		pr_info("malloc gammaR/G/B fail!!!\n");
-		return -EINVAL;
-	}
+	if (!gammaR || !gammaG || !gammaB || !stemp
+		|| (n == 0))
+		goto free_buf;
 
 	if ((parm[0][0] == 's') && (parm[0][1] == 'g')) {
 		memset(gammaR, 0, 256 * sizeof(unsigned short));
@@ -2523,13 +2521,8 @@ static ssize_t amvecm_gamma_store(struct class *cls,
 			gamma[1] = parm[1][3 * i + 1];
 			gamma[2] = parm[1][3 * i + 2];
 			gamma[3] = '\0';
-			if (kstrtol(gamma, 16, &val) < 0) {
-				kfree(buf_orig);
-				kfree(gammaR);
-				kfree(gammaG);
-				kfree(gammaB);
-				return -EINVAL;
-			}
+			if (kstrtol(gamma, 16, &val) < 0)
+				goto free_buf;
 			gammaR[i] = val;
 		}
 
@@ -2548,16 +2541,86 @@ static ssize_t amvecm_gamma_store(struct class *cls,
 		default:
 			break;
 		}
+	} else if (!strcmp(parm[0], "ggr")) {
+		vpp_get_lcd_gamma_table(H_SEL_R);
+		if (!strcmp(parm[1], "all")) {
+			for (i = 0; i < 256; i++)
+				pr_info("gamma_r[%d] = %x\n",
+				i, gamma_data_r[i]);
+		} else if (!strcmp(parm[1], "all_str")) {
+			for (i = 0; i < 256; i++)
+				d_convert_str(gamma_data_r[i], i, stemp, 3, 16);
+			pr_info("gamma_r str: %s\n", stemp);
+		} else {
+			if (kstrtoul(parm[1], 10, &val) < 0) {
+				pr_info("invalid command\n");
+				goto free_buf;
+			}
+			i = val;
+			if (i >= 0 && i <= 255)
+				pr_info("gamma_r[%d] = %x\n",
+				i, gamma_data_r[i]);
+			}
+	} else if (!strcmp(parm[0], "ggg")) {
+		vpp_get_lcd_gamma_table(H_SEL_G);
+		if (!strcmp(parm[1], "all")) {
+			for (i = 0; i < 256; i++)
+				pr_info("gamma_g[%d] = %x\n",
+				i, gamma_data_g[i]);
+		} else if (!strcmp(parm[1], "all_str")) {
+			for (i = 0; i < 256; i++)
+				d_convert_str(gamma_data_g[i], i, stemp, 3, 16);
+			pr_info("gamma_g str: %s\n", stemp);
+		} else {
+			if (kstrtoul(parm[1], 10, &val) < 0) {
+				pr_info("invalid command\n");
+				goto free_buf;
+			}
+			i = val;
+			if (i >= 0 && i <= 255)
+				pr_info("gamma_g[%d] = %x\n",
+				i, gamma_data_g[i]);
+		}
+
+	} else if (!strcmp(parm[0], "ggb")) {
+		vpp_get_lcd_gamma_table(H_SEL_B);
+		if (!strcmp(parm[1], "all")) {
+			for (i = 0; i < 256; i++)
+				pr_info("gamma_b[%d] = %x\n",
+				i, gamma_data_b[i]);
+		} else if (!strcmp(parm[1], "all_str")) {
+			for (i = 0; i < 256; i++)
+				d_convert_str(gamma_data_b[i], i, stemp, 3, 16);
+			pr_info("gamma_b str: %s\n", stemp);
+		} else {
+			if (kstrtoul(parm[1], 10, &val) < 0) {
+				pr_info("invalid command\n");
+				goto free_buf;
+			}
+			i = val;
+			if (i >= 0 && i <= 255)
+				pr_info("gamma_b[%d] = %x\n",
+				i, gamma_data_b[i]);
+		}
 	} else {
 		pr_info("invalid command\n");
 		pr_info("please: cat /sys/class/amvecm/gamma");
 
 	}
 	kfree(buf_orig);
+	kfree(stemp);
 	kfree(gammaR);
 	kfree(gammaG);
 	kfree(gammaB);
 	return count;
+free_buf:
+	kfree(buf_orig);
+	kfree(stemp);
+	kfree(gammaR);
+	kfree(gammaG);
+	kfree(gammaB);
+	return -EINVAL;
+
 }
 
 static ssize_t set_gamma_pattern_show(struct class *cla,

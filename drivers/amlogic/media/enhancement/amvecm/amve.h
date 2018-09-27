@@ -69,8 +69,12 @@ extern struct tcon_gamma_table_s video_gamma_table_g_adj;
 extern struct tcon_gamma_table_s video_gamma_table_b_adj;
 extern struct tcon_rgb_ogo_s     video_rgb_ogo;
 
-
 extern spinlock_t vpp_lcd_gamma_lock;
+
+extern u16 gamma_data_r[256];
+extern u16 gamma_data_g[256];
+extern u16 gamma_data_b[256];
+extern void vpp_get_lcd_gamma_table(u32 rgb_mask);
 
 void ve_on_vs(struct vframe_s *vf);
 

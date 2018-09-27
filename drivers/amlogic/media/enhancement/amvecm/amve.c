@@ -391,6 +391,47 @@ void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask)
 	spin_unlock_irqrestore(&vpp_lcd_gamma_lock, flags);
 }
 
+u16 gamma_data_r[256] = {0};
+u16 gamma_data_g[256] = {0};
+u16 gamma_data_b[256] = {0};
+void vpp_get_lcd_gamma_table(u32 rgb_mask)
+{
+	int i;
+	int cnt = 0;
+
+	if (!(READ_VPP_REG(ENCL_VIDEO_EN) & 0x1))
+		return;
+	pr_info("read gamma begin\n");
+	while (!(READ_VPP_REG(L_GAMMA_CNTL_PORT) & (0x1 << ADR_RDY))) {
+		udelay(10);
+		if (cnt++ > GAMMA_RETRY)
+			break;
+	}
+	cnt = 0;
+	for (i = 0; i < 256; i++) {
+		cnt = 0;
+		WRITE_VPP_REG(L_GAMMA_ADDR_PORT, (0x1 << H_RD) |
+						(0x0 << H_AUTO_INC) |
+						(0x1 << rgb_mask)	|
+						(i << HADR));
+
+		while (!(READ_VPP_REG(L_GAMMA_CNTL_PORT) & (0x1 << RD_RDY))) {
+			udelay(10);
+			if (cnt++ > GAMMA_RETRY)
+				break;
+		}
+		if (rgb_mask == H_SEL_R)
+			gamma_data_r[i] = READ_VPP_REG(L_GAMMA_DATA_PORT);
+		else if (rgb_mask == H_SEL_G)
+			gamma_data_g[i] = READ_VPP_REG(L_GAMMA_DATA_PORT);
+		else if (rgb_mask == H_SEL_B)
+			gamma_data_b[i] = READ_VPP_REG(L_GAMMA_DATA_PORT);
+	}
+	WRITE_VPP_REG(L_GAMMA_ADDR_PORT, (0x1 << H_AUTO_INC) |
+				    (0x1 << rgb_mask)   |
+				    (0x23 << HADR));
+	pr_info("read gamma over\n");
+}
 void amve_write_gamma_table(u16 *data, u32 rgb_mask)
 {
 	int i;
