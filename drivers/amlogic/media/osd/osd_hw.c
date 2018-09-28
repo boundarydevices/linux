@@ -1554,7 +1554,7 @@ void osd_update_scan_mode(void)
 	} else {
 		int i;
 
-		for (i = 0; i < osd_hw.osd_meson_dev.osd_count; i++) {
+		for (i = 0; i < osd_hw.osd_meson_dev.viu1_osd_count; i++) {
 			if (osd_hw.free_scale_enable[i])
 				osd_hw.scan_mode[i] = SCAN_MODE_PROGRESSIVE;
 			if (osd_hw.osd_afbcd[i].enable)
@@ -1631,9 +1631,10 @@ static u32 osd_get_hw_reset_flag(void)
 		}
 #endif
 		break;
-#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 	case __MESON_CPU_MAJOR_ID_GXL:
 	case __MESON_CPU_MAJOR_ID_TXL:
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+
 		if (((hdr_osd_reg.viu_osd1_matrix_ctrl & 0x00000001)
 			!= 0x0) ||
 			((hdr_osd_reg.viu_osd1_eotf_ctl & 0x80000000)
@@ -1646,10 +1647,11 @@ static u32 osd_get_hw_reset_flag(void)
 			hw_reset_flag |= HW_RESET_OSD1_REGS;
 			osd_hdr_on = false;
 		}
-		break;
 #endif
+		break;
 	case __MESON_CPU_MAJOR_ID_G12A:
 	case __MESON_CPU_MAJOR_ID_G12B:
+	case __MESON_CPU_MAJOR_ID_TL1:
 		{
 		int i, afbc_enable = 0;
 
@@ -5226,13 +5228,12 @@ static int get_available_layers(void)
 	int i;
 	int available_layer = 0;
 
-	for (i = 0 ; i < osd_hw.osd_meson_dev.osd_count - 1; i++) {
+	for (i = 0 ; i < osd_hw.osd_meson_dev.viu1_osd_count; i++) {
 		if (osd_hw.enable[i])
 			available_layer++;
 	}
 	return available_layer;
 }
-
 
 static u32 blend_din_to_osd(
 	u32 blend_din_index, struct hw_osd_blending_s *blending)
@@ -5360,9 +5361,9 @@ static void exchange_vpp_order(struct hw_osd_blending_s *blending)
 static void generate_blend_din_table(struct hw_osd_blending_s *blending)
 {
 	int i = 0;
-	int osd_count = osd_hw.osd_meson_dev.osd_count - 1;
 	int temp1 = 0, temp2 = 0;
 	u32 max_order = 0, min_order = 0;
+	int osd_count = osd_hw.osd_meson_dev.viu1_osd_count;
 
 	/* reorder[i] = osd[i]'s display layer */
 	for (i = 0; i < OSD_BLEND_LAYERS; i++)
@@ -5814,7 +5815,7 @@ static void set_blend_order(struct hw_osd_blending_s *blending)
 {
 	u32 org_order[HW_OSD_COUNT];
 	int i = 0, j = 0;
-	u32 osd_count = osd_hw.osd_meson_dev.osd_count - 1;
+	u32 osd_count = osd_hw.osd_meson_dev.viu1_osd_count;
 
 	if (!blending)
 		return;
@@ -7214,11 +7215,8 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 {
 	int i;
 	u32 reg_offset = 2;
-#ifdef OSD_BLEND_SHIFT_WORKAROUND
-	u32 osd_count = osd_hw.osd_meson_dev.osd_count;
-#else
-	u32 osd_count = osd_hw.osd_meson_dev.osd_count - 1;
-#endif
+	u32 osd_count = osd_hw.osd_meson_dev.viu1_osd_count;
+
 	if (!blend_reg)
 		return;
 	/* osd blend ctrl */
@@ -7286,7 +7284,7 @@ static int osd_setting_order(void)
 	int i;
 	struct layer_blend_reg_s *blend_reg;
 	struct hw_osd_blending_s *blending;
-	u32 osd_count = osd_hw.osd_meson_dev.osd_count - 1;
+	u32 osd_count = osd_hw.osd_meson_dev.viu1_osd_count;
 	bool update = false;
 	int line1;
 	int line2;
@@ -8171,8 +8169,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	else if ((osd_meson->cpu_id >= __MESON_CPU_MAJOR_ID_GXL)
 		&& (osd_meson->cpu_id <= __MESON_CPU_MAJOR_ID_TXL))
 		backup_regs_init(HW_RESET_OSD1_REGS);
-	else if ((osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_G12A)
-		|| (osd_meson->cpu_id == __MESON_CPU_MAJOR_ID_G12B))
+	else if (osd_meson->cpu_id >= __MESON_CPU_MAJOR_ID_G12A)
 		backup_regs_init(HW_RESET_MALI_AFBCD_REGS);
 	else
 		backup_regs_init(HW_RESET_NONE);
@@ -8237,7 +8234,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		/* fifo_depth_val: 32 or 64 *8 = 256 or 512 */
 		data32 |= (osd_hw.osd_meson_dev.osd_fifo_len
 			& 0xfffffff) << 12;
-		for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count - 1; idx++)
+		for (idx = 0; idx < osd_hw.osd_meson_dev.viu1_osd_count; idx++)
 			osd_reg_write(
 			hw_osd_reg_array[idx].osd_fifo_ctrl_stat, data32);
 		/* osd_reg_write(VIU_OSD2_FIFO_CTRL_STAT, data32_); */
@@ -8256,7 +8253,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		/* just disable osd to avoid booting hang up */
 		data32 = 0x1 << 0;
 		data32 |= OSD_GLOBAL_ALPHA_DEF << 12;
-		for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count - 1; idx++)
+		for (idx = 0; idx < osd_hw.osd_meson_dev.viu1_osd_count; idx++)
 			osd_reg_write(
 				hw_osd_reg_array[idx].osd_ctrl_stat, data32);
 	}
@@ -8314,7 +8311,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 					data32 | 0x800000);
 			}
 
-			if (idx < osd_hw.osd_meson_dev.osd_count - 1) {
+			if (idx < osd_hw.osd_meson_dev.viu1_osd_count) {
 				/* TODO: temp set at here,
 				 * need move it to uboot
 				 */
@@ -8519,7 +8516,7 @@ void osd_init_viu2(void)
 	/* fifo_depth_val: 32 or 64 *8 = 256 or 512 */
 	data32 |= (osd_hw.osd_meson_dev.osd_fifo_len
 		& 0xfffffff) << 12;
-	idx = osd_hw.osd_meson_dev.osd_count - 1;
+	idx = osd_hw.osd_meson_dev.viu2_index;
 	osd_reg_write(
 		hw_osd_reg_array[idx].osd_fifo_ctrl_stat, data32);
 	/* osd_reg_write(VIU_OSD2_FIFO_CTRL_STAT, data32_); */

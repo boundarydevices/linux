@@ -745,7 +745,7 @@ void osd_drm_vsync_isr_handler(void)
 		osd_update_vsync_hit();
 		osd_hw_reset();
 	} else {
-		if (get_cpu_type() != __MESON_CPU_MAJOR_ID_AXG)
+		if (osd_hw.osd_meson_dev.cpu_id != __MESON_CPU_MAJOR_ID_AXG)
 			osd_rdma_interrupt_done_clear();
 		else {
 			osd_update_scan_mode();

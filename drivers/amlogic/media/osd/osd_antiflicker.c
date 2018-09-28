@@ -81,7 +81,7 @@ static int osd_antiflicker_process(void)
 
 	mutex_lock(&osd_antiflicker_mutex);
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+	if (osd_hw.osd_meson_dev.cpu_id != MESON_CPU_MAJOR_ID_AXG) {
 		canvas_read(OSD1_CANVAS_INDEX, &cs);
 		canvas_read(OSD1_CANVAS_INDEX, &cd);
 		cs_addr = cs.addr;

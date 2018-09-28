@@ -1407,8 +1407,7 @@ static int malloc_osd_memory(struct fb_info *info)
 	/* clear osd buffer if not logo layer */
 	if (((logo_index < 0) || (logo_index != fb_index)) ||
 		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_AXG) ||
-		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12A) ||
-		((osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12B))) {
+		(osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_G12A)) {
 		osd_log_info("---------------clear fb%d memory %p\n",
 			fb_index, fbdev->fb_mem_vaddr);
 		set_logo_loaded();
@@ -1680,7 +1679,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
 		set_osd_logo_freescaler();
-		for (i = 0; i < osd_meson_dev.osd_count; i++) {
+		for (i = 0; i < osd_meson_dev.viu1_osd_count; i++) {
 			fb_dev = gp_fbdev_list[i];
 			if (fb_dev == NULL)
 				continue;
@@ -1702,7 +1701,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 		break;
 	case VOUT_EVENT_OSD_BLANK:
 		blank = *(int *)para;
-		for (i = 0; i < osd_meson_dev.osd_count; i++) {
+		for (i = 0; i < osd_meson_dev.viu1_osd_count; i++) {
 			fb_dev = gp_fbdev_list[i];
 			if (fb_dev == NULL)
 				continue;
@@ -1713,7 +1712,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 		break;
 	case VOUT_EVENT_OSD_DISP_AXIS:
 		disp_rect = (struct disp_rect_s *)para;
-		for (i = 0; i < osd_meson_dev.osd_count; i++) {
+		for (i = 0; i < osd_meson_dev.viu1_osd_count; i++) {
 			if (!disp_rect)
 				break;
 
@@ -1780,7 +1779,7 @@ int osd_notify_callback_viu2(struct notifier_block *block, unsigned long cmd,
 		vinfo->name, cmd);
 	if (!strcmp(vinfo->name, "invalid"))
 		return -1;
-	i = osd_meson_dev.osd_count - 1;
+	i = osd_meson_dev.viu2_index;
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
 		fb_dev = gp_fbdev_list[i];
@@ -3295,11 +3294,19 @@ static void mem_free_work(struct work_struct *work)
 			osd_page[0],
 			fb_memsize[0] >> PAGE_SHIFT);
 #else
+#ifdef CONFIG_ARM64
 		long r = -EINVAL;
+#elif defined(CONFIG_ARM) && defined(CONFIG_HIGHMEM)
+		unsigned long r;
+#endif
 		unsigned long start_addr;
 		unsigned long end_addr;
 
+#ifdef CONFIG_ARM64
 		if (fb_rmem.base && fb_map_flag) {
+#elif defined(CONFIG_ARM) && defined(CONFIG_HIGHMEM)
+		if (fb_rmem.base) {
+#endif
 			if (fb_rmem.size >= (fb_memsize[0] + fb_memsize[1]
 				+ fb_memsize[2])) {
 				/* logo memory before fb0/fb1 memory, free it*/
@@ -3312,8 +3319,16 @@ static void mem_free_work(struct work_struct *work)
 			}
 			osd_log_info("%s, free memory: addr:%lx\n",
 				__func__, start_addr);
+#ifdef CONFIG_ARM64
 			r = free_reserved_area(__va(start_addr),
 				__va(end_addr), 0, "fb-memory");
+#elif defined(CONFIG_ARM) && defined(CONFIG_HIGHMEM)
+			for (r = start_addr; r < end_addr; ) {
+				free_highmem_page(phys_to_page(r));
+				r += PAGE_SIZE;
+			}
+#endif
+
 		}
 #endif
 	}
@@ -3455,6 +3470,21 @@ static struct osd_device_data_s osd_g12b = {
 	.has_viu2 = 1,
 };
 
+static struct osd_device_data_s osd_tl1 = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_TL1,
+	.osd_ver = OSD_HIGH_ONE,
+	.afbc_type = MALI_AFBC,
+	.osd_count = 3,
+	.has_deband = 1,
+	.has_lut = 1,
+	.has_rdma = 1,
+	.has_dolby_vision = 0,
+	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
+	.vpp_fifo_len = 0xfff,/* 2048 */
+	.dummy_data = 0x00808000,
+	.has_viu2 = 1,
+};
+
 static const struct of_device_id meson_fb_dt_match[] = {
 	{
 		.compatible = "amlogic, meson-gxbb",
@@ -3496,6 +3526,10 @@ static const struct of_device_id meson_fb_dt_match[] = {
 	{
 		.compatible = "amlogic, meson-g12b",
 		.data = &osd_g12b,
+	},
+	{
+		.compatible = "amlogic, meson-tl1",
+		.data = &osd_tl1,
 	},
 	{},
 };
@@ -3570,6 +3604,12 @@ static int osd_probe(struct platform_device *pdev)
 			ret = -ENOENT;
 			goto failed1;
 		}
+	}
+	osd_meson_dev.viu1_osd_count = osd_meson_dev.osd_count;
+	if (osd_meson_dev.has_viu2) {
+		/* set viu1 osd count */
+		osd_meson_dev.viu1_osd_count--;
+		osd_meson_dev.viu2_index = osd_meson_dev.viu1_osd_count;
 	}
 
 	ret = osd_io_remap(osd_meson_dev.osd_ver == OSD_SIMPLE);
@@ -3739,12 +3779,12 @@ static int osd_probe(struct platform_device *pdev)
 		/* register frame buffer */
 		register_framebuffer(fbi);
 		/* create device attribute files */
-		if (index <= DEV_OSD2) {
+		if (index <= (osd_meson_dev.viu1_osd_count - 1)) {
 			for (i = 0; i < ARRAY_SIZE(osd_attrs); i++)
 				ret = device_create_file(
 				fbi->dev, &osd_attrs[i]);
-		} else if ((osd_meson_dev.osd_ver == OSD_HIGH_ONE) &&
-			(index == DEV_OSD3)) {
+		} else if ((osd_meson_dev.has_viu2) &&
+			(index == osd_meson_dev.viu2_index)) {
 			for (i = 0; i < ARRAY_SIZE(osd_attrs_viu2); i++)
 			ret = device_create_file(fbi->dev, &osd_attrs_viu2[i]);
 		}
@@ -3758,12 +3798,12 @@ static int osd_probe(struct platform_device *pdev)
 
 	/* init osd reverse */
 	if (osd_info.index == DEV_ALL) {
-		for (i = 0; i < osd_meson_dev.osd_count - 1; i++)
+		for (i = 0; i < osd_meson_dev.viu1_osd_count; i++)
 			osd_set_reverse_hw(i, osd_info.osd_reverse, 1);
 		osd_set_reverse_hw(i, osd_info.osd_reverse, 0);
-	} else if (osd_info.index <= DEV_OSD2)
+	} else if (osd_info.index <= osd_meson_dev.viu1_osd_count - 1)
 		osd_set_reverse_hw(osd_info.index, osd_info.osd_reverse, 1);
-	else if (osd_info.index == DEV_OSD3)
+	else if (osd_info.index == osd_meson_dev.viu2_index)
 		osd_set_reverse_hw(osd_info.index, osd_info.osd_reverse, 0);
 	/* register vout client */
 	vout_register_client(&osd_notifier_nb);
@@ -3808,12 +3848,12 @@ static int osd_remove(struct platform_device *pdev)
 			struct osd_fb_dev_s *fbdev = gp_fbdev_list[i];
 
 			fbi = fbdev->fb_info;
-			if (i <= DEV_OSD2) {
+			if (i <= osd_meson_dev.viu1_osd_count - 1) {
 				for (j = 0; j < ARRAY_SIZE(osd_attrs); j++)
 					device_remove_file(
 					fbi->dev, &osd_attrs[j]);
-			} else if ((osd_meson_dev.osd_ver == OSD_HIGH_ONE) &&
-				(i == DEV_OSD3)) {
+			} else if ((osd_meson_dev.has_viu2) &&
+				(i == osd_meson_dev.viu2_index)) {
 				for (j = 0; j < ARRAY_SIZE(osd_attrs_viu2); j++)
 					device_remove_file(
 					fbi->dev, &osd_attrs_viu2[j]);

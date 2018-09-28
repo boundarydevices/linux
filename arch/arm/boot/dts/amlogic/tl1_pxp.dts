@@ -67,6 +67,23 @@
 			alignment = <0x100000>;
 			//no-map;
 		};
+
+		logo_reserved:linux,meson-fb {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x800000>;
+			alignment = <0x400000>;
+			alloc-ranges = <0x7f800000 0x800000>;
+		};
+
+		ion_cma_reserved:linux,ion-dev {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x8000000>;
+			alignment = <0x400000>;
+		};
+
+
 	};
 
 	codec_mm {
@@ -80,7 +97,8 @@
 		status = "okay";
 		fr_auto_policy = <0>;
 	};
-};
+}; /* end of / */
+
 &sd_emmc_b {
 	status = "okay";
 	sd {
@@ -91,14 +109,14 @@
 		f_min = <400000>;
 		f_max = <200000000>;
 	};
-}; /* end of / */
+};
 
 &spifc {
 	status = "disabled";
 	spi-nor@0 {
 		cs_gpios = <&gpio BOOT_13 GPIO_ACTIVE_HIGH>;
-		};
 	};
+};
 
 &slc_nand {
 	status = "disabled";
@@ -172,4 +190,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spicc0_pins_h>;
 	cs-gpios = <&gpio GPIOH_20 0>;
+};
+
+&meson_fb {
+	status = "okay";
+	display_size_default = <1920 1080 1920 2160 32>;
+	mem_size = <0x00800000 0x1980000 0x100000 0x800000>;
+	logo_addr = "0x7f800000";
+	mem_alloc = <1>;
+	pxp_mode = <1>; /** 0:normal mode 1:pxp mode */
 };

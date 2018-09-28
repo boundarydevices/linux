@@ -73,7 +73,7 @@ static void osd_clone_process(void)
 	struct config_para_ex_s *ge2d_config = &s_osd_clone.ge2d_config;
 	struct ge2d_context_s *context = s_osd_clone.ge2d_context;
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-	if (get_cpu_type() != MESON_CPU_MAJOR_ID_AXG) {
+	if (osd_hw.osd_meson_dev.cpu_id != MESON_CPU_MAJOR_ID_AXG) {
 		canvas_read(OSD1_CANVAS_INDEX, &cs);
 		canvas_read(OSD2_CANVAS_INDEX, &cd);
 		cs_addr = cs.addr;
