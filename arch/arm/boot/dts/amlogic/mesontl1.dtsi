@@ -701,9 +701,135 @@
 				REMOTE_KEY(0xcd,KEY_KPCOMMA)>;
 		};
 	};
+
+	sd_emmc_c: emmc@ffe07000 {
+		status = "okay";
+		compatible = "amlogic, meson-mmc-tl1";
+		reg = <0xffe07000 0x800>;
+		interrupts = <0 191 1>;
+		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
+		pinctrl-0 = <&emmc_clk_cmd_pins>;
+		pinctrl-1 = <&emmc_conf_pull_up &emmc_conf_pull_done>;
+		clocks = <&clkc CLKID_SD_EMMC_C>,
+			   <&clkc CLKID_SD_EMMC_C_P0_COMP>,
+			   <&clkc CLKID_FCLK_DIV2>,
+			   <&clkc CLKID_FCLK_DIV5>,
+			   <&xtal>;
+		clock-names = "core", "clkin0", "clkin1", "clkin2", "xtal";
+
+		bus-width = <8>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		/* mmc-ddr-1_8v; */
+		/* mmc-hs200-1_8v; */
+
+		max-frequency = <200000000>;
+		non-removable;
+		disable-wp;
+		emmc {
+			pinname = "emmc";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			/*caps defined in dts*/
+			tx_delay = <0>;
+			max_req_size = <0x20000>; /**128KB*/
+			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
+			hw_reset = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
+			card_type = <1>;
+			/* 1:mmc card(include eMMC),
+			 * 2:sd card(include tSD)
+			 */
+		};
+	};
+
+	sd_emmc_b: sd@ffe05000 {
+		status = "okay";
+		compatible = "amlogic, meson-mmc-tl1";
+		reg = <0xffe05000 0x800>;
+		interrupts = <0 190 1>;
+
+		pinctrl-names = "sd_all_pins",
+			"sd_clk_cmd_pins",
+			"sd_1bit_pins",
+			"sd_clk_cmd_uart_pins",
+			"sd_1bit_uart_pins",
+			"sd_to_ao_uart_pins",
+			"ao_to_sd_uart_pins",
+			"sd_to_ao_jtag_pins",
+			"ao_to_sd_jtag_pins";
+		pinctrl-0 = <&sd_all_pins>;
+		pinctrl-1 = <&sd_clk_cmd_pins>;
+		pinctrl-2 = <&sd_1bit_pins>;
+		pinctrl-3 = <&sd_to_ao_uart_clr_pins
+			&sd_clk_cmd_pins &ao_to_sd_uart_pins>;
+		pinctrl-4 = <&sd_to_ao_uart_clr_pins
+			&sd_1bit_pins &ao_to_sd_uart_pins>;
+		pinctrl-5 = <&sd_all_pins &sd_to_ao_uart_pins>;
+		pinctrl-6 = <&sd_to_ao_uart_clr_pins &ao_to_sd_uart_pins>;
+		pinctrl-7 = <&sd_all_pins &sd_to_ao_uart_pins>;
+		pinctrl-8 = <&sd_to_ao_uart_clr_pins &ao_to_sd_uart_pins>;
+
+		clocks = <&clkc CLKID_SD_EMMC_B>,
+			<&clkc CLKID_SD_EMMC_B_P0_COMP>,
+			<&clkc CLKID_FCLK_DIV2>,
+			<&clkc CLKID_FCLK_DIV5>,
+			<&xtal>;
+		clock-names = "core", "clkin0", "clkin1", "clkin2", "xtal";
+
+		bus-width = <4>;
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		max-frequency = <100000000>;
+		disable-wp;
+		sd {
+			pinname = "sd";
+			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
+			max_req_size = <0x20000>; /**128KB*/
+			gpio_dat3 = <&gpio GPIOC_3 GPIO_ACTIVE_HIGH>;
+			jtag_pin = <&gpio GPIOC_0 GPIO_ACTIVE_HIGH>;
+			gpio_cd = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
+			card_type = <5>;
+			/* 3:sdio device(ie:sdio-wifi),
+			 * 4:SD combo (IO+mem) card
+			 */
+		};
+	};
 }; /* end of / */
 
 &pinctrl_aobus {
+	sd_to_ao_uart_clr_pins: sd_to_ao_uart_clr_pins {
+		mux {
+			groups = "GPIOAO_0",
+				   "GPIOAO_1",
+				   "GPIOAO_2",
+				   "GPIOAO_3",
+				   "GPIOAO_4",
+				   "GPIOAO_5",
+				   "GPIOAO_6",
+				   "GPIOAO_7",
+				   "GPIOAO_8",
+				   "GPIOAO_9",
+				   "GPIOAO_10",
+				   "GPIOAO_11",
+				   "GPIOE_0",
+				   "GPIOE_1",
+				   "GPIOE_2",
+				   "GPIO_TEST_N";
+			function = "gpio_aobus";
+		};
+	};
+
+	sd_to_ao_uart_pins: sd_to_ao_uart_pins {
+		mux {
+			groups = "uart_ao_a_tx",
+				   "uart_ao_a_rx",
+				   "uart_ao_a_cts",
+				   "uart_ao_a_rts";
+			function = "uart_ao_a";
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
 	remote_pins:remote_pin {
 		mux {
 			groups = "remote_input_ao";
@@ -780,6 +906,7 @@
 			function = "pwm_ao_d";
 		};
 	};
+
 	pwm_a_e2: pwm_a_e2 {
 		mux {
 			groups = "pwm_a_e2";
@@ -813,6 +940,129 @@
 };
 
 &pinctrl_periphs {
+	/* sdemmc portC */
+	emmc_clk_cmd_pins: emmc_clk_cmd_pins {
+		mux {
+			groups = "emmc_clk",
+				 "emmc_cmd";
+			function = "emmc";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+	};
+
+	emmc_conf_pull_up: emmc_conf_pull_up {
+		mux {
+			groups = "emmc_nand_d7",
+				 "emmc_nand_d6",
+				 "emmc_nand_d5",
+				 "emmc_nand_d4",
+				 "emmc_nand_d3",
+				 "emmc_nand_d2",
+				 "emmc_nand_d1",
+				 "emmc_nand_d0",
+				 "emmc_clk",
+				 "emmc_cmd";
+			function = "emmc";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+	};
+
+	emmc_conf_pull_done: emmc_conf_pull_done {
+		mux {
+			groups = "emmc_nand_ds";
+			function = "emmc";
+			input-enable;
+			bias-pull-down;
+			drive-strength = <3>;
+		};
+	};
+
+	/* sdemmc portB */
+	sd_clk_cmd_pins: sd_clk_cmd_pins {
+		mux {
+			groups = "sdcard_cmd",
+				   "sdcard_clk";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+	};
+
+	sd_all_pins: sd_all_pins {
+		mux {
+			groups = "sdcard_d0",
+				   "sdcard_d1",
+				   "sdcard_d2",
+				   "sdcard_d3",
+				   "sdcard_cmd",
+				   "sdcard_clk";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+	};
+
+	sd_1bit_pins: sd_1bit_pins {
+		mux {
+			groups = "sdcard_d0",
+					"sdcard_cmd",
+					"sdcard_clk";
+			function = "sdcard";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+	};
+
+	ao_to_sd_uart_pins: ao_to_sd_uart_pins {
+		mux {
+			groups = "uart_ao_a_rx_c",
+					"uart_ao_a_tx_c",
+					"uart_ao_a_rx_w3",
+					"uart_ao_a_tx_w2",
+					"uart_ao_a_rx_w7",
+					"uart_ao_a_tx_w6",
+					"uart_ao_a_rx_w11",
+					"uart_ao_a_tx_w10";
+			function = "uart_ao_a_ee";
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	/* sdemmc portA */
+	sdio_clk_cmd_pins: sdio_clk_cmd_pins {
+		mux {
+			groups = "sdio_clk",
+				"sdio_cmd";
+			function = "sdio";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+	};
+
+	sdio_all_pins: sdio_all_pins {
+		mux {
+			groups = "sdio_d0",
+				"sdio_d1",
+				"sdio_d2",
+				"sdio_d3",
+				"sdio_clk",
+				"sdio_cmd";
+			function = "sdio";
+			input-enable;
+			bias-pull-up;
+			drive-strength = <3>;
+		};
+	};
+
 	pwm_a_pins: pwm_a {
 		mux {
 			groups = "pwm_a";
