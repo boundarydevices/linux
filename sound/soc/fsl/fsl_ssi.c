@@ -269,6 +269,7 @@ struct fsl_ssi {
 	bool synchronous;
 	bool use_dma;
 	bool use_dual_fifo;
+	bool use_dyna_fifo;
 	bool has_ipg_clk_name;
 	unsigned int fifo_depth;
 	unsigned int slot_width;
@@ -648,7 +649,7 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	 * task from fifo0, fifo1 would be neglected at the end of each
 	 * period. But SSI would still access fifo1 with an invalid data.
 	 */
-	if (ssi->use_dual_fifo)
+	if (ssi->use_dual_fifo || ssi->use_dyna_fifo)
 		snd_pcm_hw_constraint_step(substream->runtime, 0,
 					   SNDRV_PCM_HW_PARAM_PERIOD_SIZE, 2);
 
@@ -813,6 +814,7 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	u32 scr_val;
 	int enabled;
 	u8 i2smode = ssi->i2s_net;
+	struct fsl_ssi_rxtx_reg_val *reg = &ssi->rxtx_reg_val;
 
 	if (fsl_ssi_is_i2s_master(ssi)) {
 		ret = fsl_ssi_set_bclk(substream, dai, hw_params);
@@ -869,6 +871,24 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	/* In synchronous mode, the SSI uses STCCR for capture */
 	tx2 = tx || ssi->synchronous;
 	regmap_update_bits(regs, REG_SSI_SxCCR(tx2), SSI_SxCCR_WL_MASK, wl);
+
+	if (ssi->use_dyna_fifo) {
+		if (channels == 1) {
+			ssi->dma_params_tx.fifo_num  = 1;
+			ssi->dma_params_rx.fifo_num  = 1;
+			reg->rx.srcr &= ~SSI_SRCR_RFEN1;
+			reg->tx.stcr &= ~SSI_STCR_TFEN1;
+			reg->rx.scr  &= ~SSI_SCR_TCH_EN;
+			reg->tx.scr  &= ~SSI_SCR_TCH_EN;
+		} else {
+			ssi->dma_params_tx.fifo_num  = 2;
+			ssi->dma_params_rx.fifo_num  = 2;
+			reg->rx.srcr |= SSI_SRCR_RFEN1;
+			reg->tx.stcr |= SSI_STCR_TFEN1;
+			reg->rx.scr  |= SSI_SCR_TCH_EN;
+			reg->tx.scr  |= SSI_SCR_TCH_EN;
+		}
+	}
 
 	return 0;
 }
@@ -1320,6 +1340,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = pdev->dev.of_node;
+	u32 dmas[4];
 	int ret;
 	u32 buffer_size;
 
@@ -1343,22 +1364,33 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		}
 	}
 
-	/* Do not error out for slave cases that live without a baud clock */
+	/* For those SLAVE implementations, we ignore non-baudclk cases
+	 * and, instead, abandon MASTER mode that needs baud clock.
+	 */
 	ssi->baudclk = devm_clk_get(dev, "baud");
 	if (IS_ERR(ssi->baudclk))
-		dev_dbg(dev, "failed to get baud clock: %ld\n",
+		dev_dbg(dev, "could not get baud clock: %ld\n",
 			 PTR_ERR(ssi->baudclk));
 
+	ssi->dma_params_rx.chan_name = "rx";
+	ssi->dma_params_tx.chan_name = "tx";
 	ssi->dma_params_tx.maxburst = ssi->dma_maxburst;
 	ssi->dma_params_rx.maxburst = ssi->dma_maxburst;
 	ssi->dma_params_tx.addr = ssi->ssi_phys + REG_SSI_STX0;
 	ssi->dma_params_rx.addr = ssi->ssi_phys + REG_SSI_SRX0;
 
-	/* Use even numbers to avoid channel swap due to SDMA script design */
-	if (ssi->use_dual_fifo) {
+	ret = of_property_read_u32_array(np, "dmas", dmas, 4);
+	if (ssi->use_dma && !ret && dmas[2] == IMX_DMATYPE_SSI_DUAL) {
+		ssi->use_dual_fifo = true;
+		/* When using dual fifo mode, we need to keep watermark
+		 * as even numbers due to dma script limitation.
+		 */
 		ssi->dma_params_tx.maxburst &= ~0x1;
 		ssi->dma_params_rx.maxburst &= ~0x1;
 	}
+
+	if (ssi->use_dma && !ret && dmas[2] == IMX_DMATYPE_MULTI_SAI)
+		ssi->use_dyna_fifo = true;
 
 	if (of_property_read_u32(np, "fsl,dma-buffer-size", &buffer_size))
 		buffer_size = IMX_SSI_DMABUF_SIZE;
@@ -1378,7 +1410,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		if (ret)
 			goto error_pcm;
 	} else {
-		ret = imx_pcm_dma_init(pdev, buffer_size);
+		ret = imx_pcm_component_register(dev);
 		if (ret)
 			goto error_pcm;
 	}
