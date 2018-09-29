@@ -7524,7 +7524,8 @@ static void osd_basic_update_disp_geometry(u32 index)
 
 			/* set frame addr in linear: out_addr_id */
 			headr_addr = osd_hw.osd_afbcd[index].phy_addr;
-			out_addr = osd_hw.osd_afbcd[index].out_addr_id << 24;
+			out_addr = ((u64)osd_hw.osd_afbcd[index].out_addr_id)
+					<< 24;
 			/*  0:canvas_araddr
 			 *  1:linear_araddr
 			 */
