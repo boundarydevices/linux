@@ -29,6 +29,16 @@ struct rdma_op_s {
 #define RDMA_TRIGGER_DEBUG2 0x102
 #define RDMA_AUTO_START_MASK 0x80000
 
+enum rdma_ver_e {
+	RDMA_VER_1,
+	RDMA_VER_2,
+};
+
+struct rdma_device_data_s {
+	enum rdma_ver_e rdma_ver;
+	u32 trigger_mask_len;
+};
+
 /*
  *	rdma_read_reg(), rdma_write_reg(), rdma_clear() can only be called
  *	after rdma_register() is called and

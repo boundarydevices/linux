@@ -36,6 +36,8 @@
 #include <linux/clk.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
 
 #include <linux/amlogic/media/utils/vdec_reg.h>
 #include <linux/amlogic/media/rdma/rdma_mgr.h>
@@ -107,6 +109,7 @@ struct rdma_device_info {
 	struct rdma_instance_s rdma_ins[RDMA_NUM];
 };
 
+static struct rdma_device_data_s rdma_meson_dev;
 static DEFINE_SPINLOCK(rdma_lock);
 
 static struct rdma_device_info rdma_info;
@@ -164,6 +167,65 @@ static struct rdma_regadr_s rdma_regadr[RDMA_NUM] = {
 	{RDMA_AHB_START_ADDR_7,
 		RDMA_AHB_END_ADDR_7,
 		RDMA_ACCESS_AUTO3, 24,
+		RDMA_ACCESS_AUTO2, 3,
+		RDMA_ACCESS_AUTO2, 7,
+		31, 31
+	}
+};
+
+static struct rdma_regadr_s rdma_regadr_tl1[RDMA_NUM] = {
+	{RDMA_AHB_START_ADDR_MAN,
+		RDMA_AHB_END_ADDR_MAN,
+		0, 0,
+		RDMA_ACCESS_MAN, 1,
+		RDMA_ACCESS_MAN, 2,
+		24, 24
+	},
+	{RDMA_AHB_START_ADDR_1,
+		RDMA_AHB_END_ADDR_1,
+		RDMA_AUTO_SRC1_SEL,  0,
+		RDMA_ACCESS_AUTO,  1,
+		RDMA_ACCESS_AUTO,  5,
+		25, 25
+	},
+	{RDMA_AHB_START_ADDR_2,
+			RDMA_AHB_END_ADDR_2,
+			RDMA_AUTO_SRC2_SEL,  0,
+			RDMA_ACCESS_AUTO,  2,
+			RDMA_ACCESS_AUTO,  6,
+			26, 26
+	},
+	{RDMA_AHB_START_ADDR_3,
+		RDMA_AHB_END_ADDR_3,
+		RDMA_AUTO_SRC3_SEL,  0,
+		RDMA_ACCESS_AUTO,  3,
+		RDMA_ACCESS_AUTO,  7,
+		27, 27
+	},
+	{RDMA_AHB_START_ADDR_4,
+			RDMA_AHB_END_ADDR_4,
+			RDMA_AUTO_SRC4_SEL, 0,
+			RDMA_ACCESS_AUTO2, 0,
+			RDMA_ACCESS_AUTO2, 4,
+			28, 28
+	},
+	{RDMA_AHB_START_ADDR_5,
+		RDMA_AHB_END_ADDR_5,
+		RDMA_AUTO_SRC5_SEL, 0,
+		RDMA_ACCESS_AUTO2, 1,
+		RDMA_ACCESS_AUTO2, 5,
+		29, 29
+	},
+	{RDMA_AHB_START_ADDR_6,
+		RDMA_AHB_END_ADDR_6,
+		RDMA_AUTO_SRC6_SEL, 0,
+		RDMA_ACCESS_AUTO2, 2,
+		RDMA_ACCESS_AUTO2, 6,
+		30, 30
+	},
+	{RDMA_AHB_START_ADDR_7,
+		RDMA_AHB_END_ADDR_7,
+		RDMA_AUTO_SRC7_SEL, 0,
 		RDMA_ACCESS_AUTO2, 3,
 		RDMA_ACCESS_AUTO2, 7,
 		31, 31
@@ -381,7 +443,7 @@ int rdma_config(int handle, int trigger_type)
 			ins->rdma_regadr->trigger_mask_reg,
 			0,
 			ins->rdma_regadr->trigger_mask_reg_bitpos,
-			8);
+			rdma_meson_dev.trigger_mask_len);
 
 		WRITE_VCBUS_REG_BITS(
 			ins->rdma_regadr->addr_inc_reg,
@@ -397,7 +459,7 @@ int rdma_config(int handle, int trigger_type)
 			ins->rdma_regadr->trigger_mask_reg,
 			trigger_type,
 			ins->rdma_regadr->trigger_mask_reg_bitpos,
-			8);
+			rdma_meson_dev.trigger_mask_len);
 		ret = 1;
 		ins->rdma_write_count = 0;
 	} else if (ins->rdma_item_count <= 0 || trigger_type == 0) {
@@ -410,7 +472,8 @@ int rdma_config(int handle, int trigger_type)
 			}
 		WRITE_VCBUS_REG_BITS(
 			ins->rdma_regadr->trigger_mask_reg,
-			0, ins->rdma_regadr->trigger_mask_reg_bitpos, 8);
+			0, ins->rdma_regadr->trigger_mask_reg_bitpos,
+			rdma_meson_dev.trigger_mask_len);
 		ins->rdma_write_count = 0;
 		ret = 0;
 	} else {
@@ -460,7 +523,7 @@ int rdma_config(int handle, int trigger_type)
 				ins->rdma_regadr->trigger_mask_reg,
 				0,
 				ins->rdma_regadr->trigger_mask_reg_bitpos,
-				8);
+				rdma_meson_dev.trigger_mask_len);
 
 				WRITE_VCBUS_REG(
 					ins->rdma_regadr->rdma_ahb_start_addr,
@@ -484,7 +547,7 @@ int rdma_config(int handle, int trigger_type)
 				ins->rdma_regadr->trigger_mask_reg,
 				trigger_type,
 				ins->rdma_regadr->trigger_mask_reg_bitpos,
-				8);
+				rdma_meson_dev.trigger_mask_len);
 			}
 		} else if (trigger_type == 0x101) {	/* debug mode */
 			int i;
@@ -541,7 +604,8 @@ int rdma_clear(int handle)
 	}
 	WRITE_VCBUS_REG_BITS(
 		ins->rdma_regadr->trigger_mask_reg,
-		0, ins->rdma_regadr->trigger_mask_reg_bitpos, 8);
+		0, ins->rdma_regadr->trigger_mask_reg_bitpos,
+		rdma_meson_dev.trigger_mask_len);
 	ins->rdma_write_count = 0;
 	spin_unlock_irqrestore(&rdma_lock, flags);
 	return ret;
@@ -760,6 +824,28 @@ module_param(ctrl_ahb_wr_burst_size, uint, 0664);
 MODULE_PARM_DESC(trace_reg, "\n trace_addr\n");
 module_param(trace_reg, ushort, 0664);
 
+static struct rdma_device_data_s rdma_meson = {
+	.rdma_ver = RDMA_VER_1,
+	.trigger_mask_len = 8,
+};
+
+static struct rdma_device_data_s rdma_tl1 = {
+	.rdma_ver = RDMA_VER_2,
+	.trigger_mask_len = 16,
+};
+
+static const struct of_device_id rdma_dt_match[] = {
+	{
+		.compatible = "amlogic, meson, rdma",
+		.data = &rdma_meson,
+	},
+	{
+		.compatible = "amlogic, meson-tl1, rdma",
+		.data = &rdma_tl1,
+	},
+	{},
+};
+
 /* static int __devinit rdma_probe(struct platform_device *pdev) */
 static int rdma_probe(struct platform_device *pdev)
 {
@@ -771,7 +857,31 @@ static int rdma_probe(struct platform_device *pdev)
 
 	int_rdma = platform_get_irq_byname(pdev, "rdma");
 
-	pr_info("%s\n", __func__);
+	if (pdev->dev.of_node) {
+		const struct of_device_id *match;
+		struct rdma_device_data_s *rdma_meson;
+		struct device_node	*of_node = pdev->dev.of_node;
+
+		match = of_match_node(rdma_dt_match, of_node);
+		if (match) {
+			rdma_meson = (struct rdma_device_data_s *)match->data;
+			if (rdma_meson)
+				memcpy(&rdma_meson_dev, rdma_meson,
+					sizeof(struct rdma_device_data_s));
+			else {
+				pr_err("%s data NOT match\n", __func__);
+				return -ENODEV;
+			}
+		} else {
+			pr_err("%s NOT match\n", __func__);
+			return -ENODEV;
+		}
+	} else {
+		pr_err("dev %s NOT found\n", __func__);
+		return -ENODEV;
+	}
+	pr_info("%s,ver:%d, len:%d\n", __func__,
+		rdma_meson_dev.rdma_ver, rdma_meson_dev.trigger_mask_len);
 
 	switch_vpu_mem_pd_vmod(VPU_RDMA, VPU_MEM_POWER_ON);
 
@@ -783,7 +893,12 @@ static int rdma_probe(struct platform_device *pdev)
 
 	for (i = 0; i < RDMA_NUM; i++) {
 		info->rdma_ins[i].rdma_table_size = 0;
-		info->rdma_ins[i].rdma_regadr = &rdma_regadr[i];
+		if (rdma_meson_dev.rdma_ver == RDMA_VER_1)
+			info->rdma_ins[i].rdma_regadr = &rdma_regadr[i];
+		else if (rdma_meson_dev.rdma_ver == RDMA_VER_2)
+			info->rdma_ins[i].rdma_regadr = &rdma_regadr_tl1[i];
+		else
+			info->rdma_ins[i].rdma_regadr = &rdma_regadr[i];
 		info->rdma_ins[i].keep_buf = 1;
 		/*do not change it in normal case */
 		info->rdma_ins[i].used = 0;
@@ -832,13 +947,6 @@ static int rdma_remove(struct platform_device *pdev)
 	switch_vpu_mem_pd_vmod(VPU_RDMA, VPU_MEM_POWER_DOWN);
 	return 0;
 }
-
-static const struct of_device_id rdma_dt_match[] = {
-	{
-		.compatible = "amlogic, meson, rdma",
-	},
-	{},
-};
 
 static struct platform_driver rdma_driver = {
 	.probe = rdma_probe,

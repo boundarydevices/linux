@@ -884,7 +884,7 @@
 			"mailbox_2";
 	};
 
-	canvas: canvas{
+	canvas: canvas {
 		compatible = "amlogic, meson, canvas";
 		status = "okay";
 		reg = <0xff638000 0x2000>;
@@ -917,6 +917,13 @@
 		io_efuse_base{
 			reg = <0xff630000 0x2000>;
 		};
+	};
+
+	rdma {
+		compatible = "amlogic, meson-tl1, rdma";
+		status = "okay";
+		interrupts = <0 89 1>;
+		interrupt-names = "rdma";
 	};
 }; /* end of / */
 
