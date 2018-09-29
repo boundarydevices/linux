@@ -523,6 +523,8 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	vdin_hw_enable(devp->addr_offset);
 	vdin_set_all_regs(devp);
+	if (is_meson_tl1_cpu() && (devp->index == 0))
+		vdin_write_mif_or_afbce(devp, VDIN_OUTPUT_TO_MIF);
 	if (!(devp->parm.flag & TVIN_PARM_FLAG_CAP) &&
 		(devp->frontend) &&
 		devp->frontend->dec_ops &&
@@ -2487,12 +2489,13 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	/* @todo vdin_addr_offset */
 	if (is_meson_gxbb_cpu() && vdevp->index)
 		vdin_addr_offset[vdevp->index] = 0x70;
-	else if ((is_meson_g12a_cpu() || is_meson_g12b_cpu()) && vdevp->index)
+	else if ((is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
+		is_meson_tl1_cpu()) && vdevp->index)
 		vdin_addr_offset[vdevp->index] = 0x100;
 	vdevp->addr_offset = vdin_addr_offset[vdevp->index];
 	vdevp->flags = 0;
 	/*canvas align number*/
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu() || is_meson_tl1_cpu())
 		vdevp->canvas_align = 64;
 	else
 		vdevp->canvas_align = 32;

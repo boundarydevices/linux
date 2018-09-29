@@ -45,7 +45,7 @@
 #include "vdin_vf.h"
 #include "vdin_regs.h"
 
-#define VDIN_VER "Ref.2018/04/28"
+#define VDIN_VER "Ref.2018/09/29"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2

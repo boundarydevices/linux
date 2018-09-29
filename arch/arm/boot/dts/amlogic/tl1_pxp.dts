@@ -83,8 +83,24 @@
 			alignment = <0x400000>;
 		};
 
+		/*  vdin0 CMA pool */
+		//vdin0_cma_reserved:linux,vdin0_cma {
+		//	compatible = "shared-dma-pool";
+		//	reusable;
+			/* 3840x2160x4x4 ~=128 M */
+		//	size = <0x8000000>;
+		//	alignment = <0x400000>;
+		//};
 
-	};
+		/*  vdin1 CMA pool */
+		vdin1_cma_reserved:linux,vdin1_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/* 1920x1080x2x4  =16 M */
+			size = <0x1400000>;
+			alignment = <0x400000>;
+		};
+	}; /* end of reserved-memory */
 
 	codec_mm {
 		compatible = "amlogic, codec, mm";
@@ -263,6 +279,63 @@
 		device_mask = <1>;/*bit0:ch1;bit1:ch2*/
 		interrupts = <0 12 1>,
 				<0 13 1>;
+	};
+
+	vdin@0 {
+		compatible = "amlogic, vdin";
+		/*memory-region = <&vdin0_cma_reserved>;*/
+		status = "okay";
+		/*bit0:(1:share with codec_mm;0:cma alone)
+		 *bit8:(1:alloc in discontinus way;0:alone in continuous way)
+		 */
+		flag_cma = <0x101>;
+		/*MByte, if 10bit disable: 64M(YUV422),
+		 *if 10bit enable: 64*1.5 = 96M(YUV422)
+		 *if support 4K2K-YUV444-10bit-WR:3840*2160*4*4 ~= 128M
+		 *if support 4K2K-YUV422-10bit-wr:3840*2160*3*4 ~= 96M
+		 *if support 4K2K-YUV422-8BIT-WR:3840*2160*2*4 ~= 64M
+		 *if support 1080p-YUV422-8BIT-WR:1920*1080*2*4 ~= 16M
+		 */
+		cma_size = <190>;
+		interrupts = <0 83 1>;
+		rdma-irq = <2>;
+		clocks = <&clkc CLKID_FCLK_DIV5>,
+			<&clkc CLKID_VDIN_MEAS_COMP>;
+		clock-names = "fclk_div5", "cts_vdin_meas_clk";
+		vdin_id = <0>;
+		/*vdin write mem color depth support:
+		 * bit0:support 8bit
+		 * bit1:support 9bit
+		 * bit2:support 10bit
+		 * bit3:support 12bit
+		 * bit4:support yuv422 10bit full pack mode (from txl new add)
+		 * bit8:use 8bit  at 4k_50/60hz_10bit
+		 * bit9:use 10bit at 4k_50/60hz_10bit
+		 */
+		tv_bit_mode = <0x215>;
+	};
+
+	vdin@1 {
+		compatible = "amlogic, vdin";
+		memory-region = <&vdin1_cma_reserved>;
+		status = "okay";
+		/*bit0:(1:share with codec_mm;0:cma alone)
+		 *bit8:(1:alloc in discontinus way;0:alone in continuous way)
+		 */
+		flag_cma = <0>;
+		interrupts = <0 85 1>;
+		rdma-irq = <4>;
+		clocks = <&clkc CLKID_FCLK_DIV5>,
+			<&clkc CLKID_VDIN_MEAS_COMP>;
+		clock-names = "fclk_div5", "cts_vdin_meas_clk";
+		vdin_id = <1>;
+		/*vdin write mem color depth support:
+		 *bit0:support 8bit
+		 *bit1:support 9bit
+		 *bit2:support 10bit
+		 *bit3:support 12bit
+		 */
+		tv_bit_mode = <0x15>;
 	};
 }; /* end of / */
 
