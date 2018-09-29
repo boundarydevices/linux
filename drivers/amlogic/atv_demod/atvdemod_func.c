@@ -1230,7 +1230,7 @@ void retrieve_adc_power(int *adc_level)
 
 void retrieve_vpll_carrier_lock(int *lock)
 {
-	unsigned int data;
+	unsigned int data = 0;
 
 	data = atv_dmd_rd_byte(APB_BLOCK_ADDR_CARR_RCVY, 0x43);
 	*lock = (data & 0x1);
@@ -1849,19 +1849,12 @@ void atv_dmd_set_std(void)
 		gde_curve = 4;
 	}
 
-	if (amlatvdemod_devp->tuner_id == AM_TUNER_R840) {
-		if_freq = amlatvdemod_devp->if_freq;
-		if_inv = amlatvdemod_devp->if_inv;
-	} else if (amlatvdemod_devp->tuner_id == AM_TUNER_R842) {
-		if_freq = amlatvdemod_devp->if_freq;
-		if_inv = amlatvdemod_devp->if_inv;
-	} else if (amlatvdemod_devp->tuner_id == AM_TUNER_MXL661) {
-		if_freq = amlatvdemod_devp->if_freq;
-		if_inv = amlatvdemod_devp->if_inv;
-	} else if (amlatvdemod_devp->tuner_id == AM_TUNER_SI2151) {
-		if_freq = amlatvdemod_devp->if_freq;
-		if_inv = amlatvdemod_devp->if_inv;
-	} else if (amlatvdemod_devp->tuner_id == AM_TUNER_SI2159) {
+	/* Tuner returns the if and signal inverted states */
+	if ((amlatvdemod_devp->tuner_id == AM_TUNER_R840) ||
+		(amlatvdemod_devp->tuner_id == AM_TUNER_R842) ||
+		(amlatvdemod_devp->tuner_id == AM_TUNER_SI2151) ||
+		(amlatvdemod_devp->tuner_id == AM_TUNER_SI2159) ||
+		(amlatvdemod_devp->tuner_id == AM_TUNER_MXL661)) {
 		if_freq = amlatvdemod_devp->if_freq;
 		if_inv = amlatvdemod_devp->if_inv;
 	}

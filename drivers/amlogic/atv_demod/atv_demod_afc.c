@@ -55,7 +55,7 @@ static void atv_demod_afc_do_work_pre(struct atv_demod_afc *afc)
 			afc->status = AFC_LOCK_STATUS_PRE_UNLOCK;
 		}
 
-		if (afc->pre_unlock_cnt <= afc->wave_cnt) {/*40ms*/
+		if (afc->pre_unlock_cnt <= afc_wave_cnt) {/*40ms*/
 			afc->status = AFC_LOCK_STATUS_PRE_UNLOCK;
 			return;
 		}
@@ -87,7 +87,7 @@ static void atv_demod_afc_do_work_pre(struct atv_demod_afc *afc)
 		afc->pre_lock_cnt++;
 		pr_afc("%s,afc_pre_lock_cnt:%d\n",
 				__func__, afc->pre_lock_cnt);
-		if (afc->pre_lock_cnt >= afc->wave_cnt * 2) {/*100ms*/
+		if (afc->pre_lock_cnt >= afc_wave_cnt * 2) {/*100ms*/
 			afc->pre_lock_cnt = 0;
 			afc->pre_unlock_cnt = 0;
 			afc->status = AFC_LOCK_STATUS_PRE_LOCK;
@@ -126,8 +126,10 @@ void atv_demod_afc_do_work(struct work_struct *work)
 	afc->pre_step = 0;
 
 	if (afc->lock) {
-		if (0 == ((audio_overmodul++) % 10))
+		if (0 == ((audio_overmodul++) % 10)) {
 			aml_audio_overmodulation(1);
+			audio_overmodul = 0;
+		}
 	}
 
 	retrieve_frequency_offset(&freq_offset);
@@ -166,7 +168,7 @@ void atv_demod_afc_do_work(struct work_struct *work)
 				__func__, freq_offset, param->frequency);
 		afc->wave_cnt = 0;
 		afc->offset = 0;
-		pr_afc("%s, [post lock --> unlock]\n", __func__);
+		pr_afc("%s, [post lock --> unlock] set offset 0.\n", __func__);
 		return;
 	}
 

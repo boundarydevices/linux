@@ -180,13 +180,9 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	u32 if_info[2] = { 0 };
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 	struct aml_atvdemod_parameters *p = &priv->atvdemod_param;
+	bool reconfig = false;
 
 	priv->standby = false;
-
-	p->param.frequency = params->frequency;
-	p->param.mode = params->mode;
-	p->param.audmode = params->audmode;
-	p->param.std = params->std;
 
 	/* afc tune disable,must cancel wq before set tuner freq*/
 	if (priv->afc.disable)
@@ -201,6 +197,11 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	if (fe->ops.tuner_ops.get_if_frequency)
 		ret = fe->ops.tuner_ops.get_if_frequency(fe, if_info);
 
+	p->param.frequency = params->frequency;
+	p->param.mode = params->mode;
+	p->param.audmode = params->audmode;
+	p->param.std = params->std;
+
 	p->if_inv = if_info[0];
 	p->if_freq = if_info[1];
 
@@ -208,11 +209,25 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	last_frq = p->param.frequency;
 	last_std = p->param.std;
 #endif
-	if (amlatvdemod_devp->std != p->param.std ||
+
+	if ((p->tuner_id == AM_TUNER_R840) ||
+		(p->tuner_id == AM_TUNER_R842) ||
+		(p->tuner_id == AM_TUNER_SI2151) ||
+		(p->tuner_id == AM_TUNER_SI2159) ||
+		(p->tuner_id == AM_TUNER_MXL661))
+		reconfig = true;
+
+	/* In general, demod does not need to be reconfigured
+	 * if parameters such as STD remain unchanged,
+	 * but when the input signal frequency offset -0.25MHz,
+	 * demod will be unlocked. That's very strange.
+	 */
+	if (reconfig || amlatvdemod_devp->std != p->param.std ||
 		amlatvdemod_devp->audmode != p->param.audmode ||
 		amlatvdemod_devp->if_freq != p->if_freq ||
 		amlatvdemod_devp->if_inv != p->if_inv ||
 		amlatvdemod_devp->tuner_id != p->tuner_id) {
+
 		amlatvdemod_devp->std = p->param.std;
 		amlatvdemod_devp->audmode = p->param.audmode;
 		amlatvdemod_devp->if_freq = p->if_freq;
@@ -938,7 +953,7 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe)
 					tuner_id == AM_TUNER_R842) {
 				usleep_range(10 * 1000, 10 * 1000 + 100);
 				fe->ops.tuner_ops.get_status(fe,
-						&tuner_state);
+						(u32 *)&tuner_state);
 			} else {
 				/* AM_TUNER_SI2151 and AM_TUNER_SI2159 */
 				usleep_range(10 * 1000, 10 * 1000 + 100);
