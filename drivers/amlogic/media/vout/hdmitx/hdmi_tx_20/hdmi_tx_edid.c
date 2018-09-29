@@ -305,14 +305,16 @@ int Edid_Parse_check_HDMI_VSDB(struct hdmitx_dev *hdev,
 	}
 
 	set_vsdb_phy_addr(hdev, &info->vsdb_phy_addr, &buff[BlockAddr]);
-	if ((check_fbc_special(&hdev->EDID_buf[0])) ||
-	    (check_fbc_special(&hdev->EDID_buf1[0])))
-		rx_edid_physical_addr(0, 0, 0, 0);
-	else
-		rx_edid_physical_addr(info->vsdb_phy_addr.a,
-			info->vsdb_phy_addr.b,
-			info->vsdb_phy_addr.c,
-			info->vsdb_phy_addr.d);
+	if (hdev->repeater_tx) {
+		if ((check_fbc_special(&hdev->EDID_buf[0])) ||
+		    (check_fbc_special(&hdev->EDID_buf1[0])))
+			rx_edid_physical_addr(0, 0, 0, 0);
+		else
+			rx_edid_physical_addr(info->vsdb_phy_addr.a,
+				info->vsdb_phy_addr.b,
+				info->vsdb_phy_addr.c,
+				info->vsdb_phy_addr.d);
+	}
 
 	if (temp_addr >= VSpecificBoundary)
 		ret = -1;
@@ -1203,18 +1205,15 @@ static void Edid_Y420CMDB_Reset(struct hdmitx_info *info)
 	memset(info->y420cmdb_bitmap, 0x00, Y420CMDB_MAX);
 }
 
-static char *rptx_edid_aud;
-static char rptx_edid_buf[512];
-MODULE_PARM_DESC(rptx_edid_aud, "\n receive_edid\n");
-module_param(rptx_edid_aud, charp, 0444);
-
 /* ----------------------------------------------------------- */
 int Edid_ParsingCEADataBlockCollection(struct hdmitx_dev *hdmitx_device,
 	unsigned char *buff)
 {
 	unsigned char AddrTag, D, Addr, Data;
-	int temp_addr, i, len, pos;
+	int temp_addr;
+	int len;
 	struct hdmitx_info *info = &(hdmitx_device->hdmi_info);
+	struct rx_cap *pRXCap = &hdmitx_device->RXCap;
 
 	/* Byte number offset d where Detailed Timing data begins */
 	D = buff[2];
@@ -1225,22 +1224,29 @@ int Edid_ParsingCEADataBlockCollection(struct hdmitx_dev *hdmitx_device,
 		Data = buff[AddrTag];
 		switch (Data&0xE0) {
 		case VIDEO_TAG:
-			if ((Addr + (Data&0x1f)) < D)
+			if ((Addr + (Data&0x1f)) < D) {
 				Edid_ParsingVideoDATABlock(info, buff,
 					Addr + 1, (Data & 0x1F));
+				len = (Data & 0x1f) + 1;
+				if ((pRXCap->vsd.len + len) > MAX_RAW_LEN)
+					break;
+				memcpy(&pRXCap->vsd.raw[pRXCap->vsd.len],
+					&buff[AddrTag], len);
+				pRXCap->vsd.len += len;
+			}
 			break;
 
 		case AUDIO_TAG:
-			len = (Data & 0x1f) + 1;
-			if (hdmitx_device->repeater_tx)
-				rx_set_receiver_edid(&buff[AddrTag], len);
-			for (pos = 0, i = 0; i < len; i++)
-				pos += sprintf(rptx_edid_buf+pos, "%02x",
-					buff[AddrTag + i]);
-			rptx_edid_buf[pos + 1] = 0;
+			/* rx_set_receiver_edid(&buff[AddrTag], len); */
 			if ((Addr + (Data&0x1f)) < D)
 				Edid_ParsingAudioDATABlock(info, buff,
 					Addr + 1, (Data & 0x1F));
+			len = (Data & 0x1f) + 1;
+			if ((pRXCap->asd.len + len) > MAX_RAW_LEN)
+				break;
+			memcpy(&pRXCap->asd.raw[pRXCap->asd.len],
+				&buff[AddrTag], len);
+			pRXCap->asd.len += len;
 			break;
 
 		case SPEAKER_TAG:
@@ -1965,10 +1971,12 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 			EDID_MAX_BLOCK * 128);
 	} else
 		EDID_buf = hdmitx_device->EDID_buf1;
+
+	if (check_dvi_hdmi_edid_valid(hdmitx_device->EDID_buf1))
+		hdmitx_device->edid_parsing = 1;
+
 	hdmitx_device->edid_ptr = EDID_buf;
 	pr_info(EDID "EDID Parser:\n");
-	memset(rptx_edid_buf, 0, sizeof(rptx_edid_buf));
-	rptx_edid_aud = &rptx_edid_buf[0];
 	/* Calculate the EDID hash for special use */
 	memset(hdmitx_device->EDID_hash, 0,
 		ARRAY_SIZE(hdmitx_device->EDID_hash));

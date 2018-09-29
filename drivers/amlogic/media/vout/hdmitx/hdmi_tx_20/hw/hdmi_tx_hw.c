@@ -59,6 +59,14 @@ static void hdmitx_csc_config(unsigned char input_color_format,
 static int hdmitx_hdmi_dvi_config(struct hdmitx_dev *hdev,
 	unsigned int dvi_mode);
 static void hdmitx_set_avi_colorimetry(struct hdmi_format_para *para);
+
+struct ksv_lists_ {
+	unsigned char valid;
+	unsigned int no;
+	unsigned char lists[MAX_KSV_LISTS * 5];
+};
+static struct ksv_lists_ tmp_ksv_lists;
+
 static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB);
 static void hdmitx_setaudioinfoframe(unsigned char *AUD_DB,
 	unsigned char *CHAN_STAT_BUF);
@@ -91,16 +99,6 @@ static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 #define TX_INPUT_COLOR_RANGE	0
 /* Pixel bit width: 4=24-bit; 5=30-bit; 6=36-bit; 7=48-bit. */
 #define TX_COLOR_DEPTH		 COLORDEPTH_24B
-
-/* store downstream ksv lists */
-static char *rptx_ksvs;
-static char rptx_ksv_prbuf[1271]; /* 127 * 5 * 2 + 1 */
-MODULE_PARM_DESC(rptx_ksvs, "\n downstream ksvs\n");
-module_param(rptx_ksvs, charp, 0444);
-static int rptx_ksv_no;
-static int rptx_ksvlist_retry;
-static char rptx_ksv_buf[635];
-
 int hdmitx_hpd_hw_op(enum hpd_op cmd)
 {
 	struct hdmitx_dev *hdev = get_hdmitx_device();
@@ -242,6 +240,31 @@ static void config_avmute(unsigned int val)
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_GCP, 0, 0, 1);
 		break;
 	}
+}
+
+static int read_avmute(void)
+{
+	int val;
+	int ret = 0;
+
+	val = hdmitx_rd_reg(HDMITX_DWC_FC_GCP) & 0x3;
+
+	switch (val) {
+	case 2:
+		ret = 1;
+		break;
+	case 1:
+		ret = -1;
+		break;
+	case 0:
+		ret = 0;
+		break;
+	default:
+		ret = 3;
+		break;
+	}
+
+	return ret;
 }
 
 static void config_video_mapping(enum hdmi_color_space cs,
@@ -438,6 +461,8 @@ static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 	/* assign phy_clk_en = control[1]; */
 	/* Bring HDMITX MEM output of power down */
 	hd_set_reg_bits(P_HHI_MEM_PD_REG0, 0, 8, 8);
+	/* enable CLK_TO_DIG */
+	hd_set_reg_bits(P_HHI_HDMI_PHY_CNTL3, 0x3, 0, 2);
 	if (hdmitx_uboot_already_display()) {
 		hdev->ready = 1;
 		/* Get uboot output color space from AVI */
@@ -555,6 +580,10 @@ static void hdmi_hwi_init(struct hdmitx_dev *hdev)
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_HCNT_0, 0xcf);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_LCNT_1, 0);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_LCNT_0, 0xff);
+	if (hdev->repeater_tx == 1) {
+		hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_HCNT_0, 0x67);
+		hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_LCNT_0, 0x78);
+	}
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_FS_SCL_HCNT_1, 0);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_FS_SCL_HCNT_0, 0x0f);
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_FS_SCL_LCNT_1, 0);
@@ -587,60 +616,63 @@ void HDMITX_Meson_Init(struct hdmitx_dev *hdev)
 	hdmi_hwp_init(hdev);
 	hdmi_hwi_init(hdev);
 	hdev->HWOp.CntlMisc(hdev, MISC_AVMUTE_OP, CLR_AVMUTE);
-	rptx_ksvs = &rptx_ksv_prbuf[0];
 }
 
 static irqreturn_t intr_handler(int irq, void *dev)
 {
-	unsigned int data32 = 0;
+	/* get interrupt status */
+	unsigned int dat_top = hdmitx_rd_reg(HDMITX_TOP_INTR_STAT);
+	unsigned int dat_dwc = hdmitx_rd_reg(HDMITX_DWC_HDCP22REG_STAT);
 	struct hdmitx_dev *hdev = (struct hdmitx_dev *)dev;
 
-	/* get interrupt status */
-	data32 = hdmitx_rd_reg(HDMITX_TOP_INTR_STAT);
-	pr_info(HW "irq %x\n", data32);
+	/* ack INTERNAL_INTR or else we stuck with no interrupts at all */
+	hdmitx_wr_reg(HDMITX_TOP_INTR_STAT_CLR, ~0);
+	hdmitx_wr_reg(HDMITX_DWC_HDCP22REG_STAT, 0xff);
+
+	pr_info(SYS "irq %x\n", dat_top);
+	if (dat_dwc)
+		pr_info(SYS "irq %x\n", dat_dwc);
 	if (hdev->hpd_lock == 1) {
-		hdmitx_wr_reg(HDMITX_TOP_INTR_STAT_CLR, 0xf);
 		pr_info(HW "HDMI hpd locked\n");
 		goto next;
 	}
 	/* check HPD status */
-	if ((data32 & (1 << 1)) && (data32 & (1 << 2))) {
+	if ((dat_top & (1 << 1)) && (dat_top & (1 << 2))) {
 		if (hdmitx_hpd_hw_op(HPD_READ_HPD_GPIO))
-			data32 &= ~(1 << 2);
+			dat_top &= ~(1 << 2);
 		else
-			data32 &= ~(1 << 1);
+			dat_top &= ~(1 << 1);
 	}
 	/* HPD rising */
-	if (data32 & (1 << 1)) {
+	if (dat_top & (1 << 1)) {
 		hdev->hdmitx_event |= HDMI_TX_HPD_PLUGIN;
 		hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGOUT;
+		hdev->rhpd_state = 1;
 		queue_delayed_work(hdev->hdmi_wq,
 			&hdev->work_hpd_plugin, HZ / 2);
 	}
 	/* HPD falling */
-	if (data32 & (1 << 2)) {
+	if (dat_top & (1 << 2)) {
 		queue_delayed_work(hdev->hdmi_wq,
 			&hdev->work_aud_hpd_plug, 2 * HZ);
 		hdev->hdmitx_event |= HDMI_TX_HPD_PLUGOUT;
 		hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGIN;
+		hdev->rhpd_state = 0;
 		queue_delayed_work(hdev->hdmi_wq,
 			&hdev->work_hpd_plugout, HZ / 20);
 	}
-next:
 	/* internal interrupt */
-	if (data32 & (1 << 0)) {
+	if (dat_top & (1 << 0)) {
 		hdev->hdmitx_event |= HDMI_TX_INTERNAL_INTR;
 		queue_work(hdev->hdmi_wq, &hdev->work_internal_intr);
 	}
-	if (data32 & (1 << 3)) {
+	if (dat_top & (1 << 3)) {
 		unsigned int rd_nonce_mode =
 			hdmitx_rd_reg(HDMITX_TOP_SKP_CNTL_STAT) & 0x1;
 		pr_info(HW "hdcp22: Nonce %s  Vld: %d\n",
 			rd_nonce_mode ? "HW" : "SW",
 			((hdmitx_rd_reg(HDMITX_TOP_SKP_CNTL_STAT) >> 31) & 1));
-		if (rd_nonce_mode)
-			hdmitx_wr_reg(HDMITX_TOP_INTR_STAT_CLR, (1 << 3));
-		else {
+		if (!rd_nonce_mode) {
 			hdmitx_wr_reg(HDMITX_TOP_NONCE_0,  0x32107654);
 			hdmitx_wr_reg(HDMITX_TOP_NONCE_1,  0xba98fedc);
 			hdmitx_wr_reg(HDMITX_TOP_NONCE_2,  0xcdef89ab);
@@ -651,13 +683,10 @@ next:
 			hdmitx_wr_reg(HDMITX_TOP_NONCE_3,  0x01234567);
 		}
 	}
-	if (data32 & (1 << 30)) {
-		pr_info(HW "hdcp22: reg stat: 0x%x\n",
-			hdmitx_rd_reg(HDMITX_DWC_HDCP22REG_STAT));
-		hdmitx_wr_reg(HDMITX_DWC_HDCP22REG_STAT, 0xff);
-	}
-	/* ack INTERNAL_INTR or else we stuck with no interrupts at all */
-	hdmitx_wr_reg(HDMITX_TOP_INTR_STAT_CLR, data32 | 0x7);
+	if (dat_top & (1 << 30))
+		pr_info("hdcp22: reg stat: 0x%x\n", dat_dwc);
+
+next:
 	return IRQ_HANDLED;
 }
 
@@ -2318,8 +2347,14 @@ static void set_aud_samp_pkt(struct hdmitx_dev *hdev,
 	}
 }
 
+static int amute_flag = -1;
 static void audio_mute_op(bool flag)
 {
+	if (amute_flag != flag)
+		amute_flag = flag;
+	else
+		return;
+
 	if (flag == 0) {
 		hdmitx_set_reg_bits(HDMITX_TOP_CLK_CNTL, 0, 2, 2);
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 0, 0, 1);
@@ -4093,8 +4128,6 @@ static void hdmitx_read_edid(unsigned char *rx_edid)
 	}
 } /* hdmi20_tx_read_edid */
 
-#define HDCP_NMOOFDEVICES 127
-
 static int get_hdcp_depth(void)
 {
 	int ret;
@@ -4143,68 +4176,54 @@ static int get_hdcp_device_count(void)
 	return ret;
 }
 
-static void get_hdcp_bstatus(void)
+static void get_hdcp_bstatus(int *ret1, int *ret2)
 {
-	int ret1 = 0;
-	int ret2 = 0;
-
 	hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 1, 0, 1);
 	hdmitx_poll_reg(HDMITX_DWC_A_KSVMEMCTRL, (1<<1), 2 * HZ);
-	ret1 = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_0);
-	ret2 = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_1);
+	*ret1 = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_0);
+	*ret2 = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_1);
 	hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 0, 0, 1);
-	pr_info("BSTATUS0 = 0x%x   BSTATUS1 = 0x%x\n", ret1, ret2);
 }
 
-static void hdcp_ksv_store(unsigned char *dat, int no)
+static void hdcp_ksv_store(struct hdcprp_topo *topo,
+	unsigned char *dat, int no)
 {
 	int i;
+	int pos;
 
-	for (i = 0; i < no; i++) {
-		rptx_ksv_buf[rptx_ksv_no] = dat[i];
-		rptx_ksv_no++;
-	}
-}
-
-static void hdcp_ksv_print(void)
-{
-	unsigned int i, pos;
-	unsigned char *tmp_buf = NULL;
-
-	tmp_buf = kmalloc(2000, GFP_ATOMIC);
-	if (!tmp_buf)
+	if (!topo)
+		return;
+	if (topo->hdcp_ver != 1)
+		return;
+	/* must check ksv num to prevent leak */
+	if (topo->topo.topo14.device_count >= MAX_KSV_LISTS)
 		return;
 
-	pos = 0;
-	memset(tmp_buf, 0, sizeof(2000));
-	pos += sprintf(tmp_buf + pos, "Dump ksv test START\n");
-	for (i = 0; (i < rptx_ksv_no) && (i < 635); i++) {
-		pos += sprintf(tmp_buf + pos, "%02x", rptx_ksv_buf[i]);
-		if (((i+1) % 40) == 0)    /* print 40bytes a line */
-			pos += sprintf(tmp_buf + pos, "\n");
-	}
-	pos += sprintf(tmp_buf + pos, "\n");
-	pos += sprintf(tmp_buf + pos, "Dump ksv test END\n");
-	pr_info("%s\n", tmp_buf);
-	kfree(tmp_buf);
+	pos = topo->topo.topo14.device_count * 5;
+	for (i = 0; (i < no) && (i < MAX_KSV_LISTS * 5); i++)
+		topo->topo.topo14.ksv_list[pos++] = dat[i];
+	topo->topo.topo14.device_count += no / 5;
 }
 
 static uint8_t *hdcp_mKsvListBuf;
+static int ksv_sha_matched;
 static void hdcp_ksv_sha1_calc(struct hdmitx_dev *hdev)
 {
 	size_t list = 0;
 	size_t size = 0;
 	size_t i = 0;
 	int valid = HDCP_NULL;
-	unsigned char ksvs[635] = {0}; /* Max 127 * 5 */
+	char temp[MAX_KSV_LISTS * 5];
 	int j = 0;
 
 	/* 0x165e: Page 95 */
+	memset(&tmp_ksv_lists, 0, sizeof(tmp_ksv_lists));
+	memset(&temp[0], 0, sizeof(temp));
 	hdcp_mKsvListBuf = kmalloc(0x1660, GFP_ATOMIC);
 	if (hdcp_mKsvListBuf) {
 		/* KSV_SIZE; */
 		list = hdmitx_rd_reg(HDMITX_DWC_HDCP_BSTATUS_0) & KSV_MASK;
-		if (list <= HDCP_NMOOFDEVICES) {
+		if (list <= MAX_KSV_LISTS) {
 			size = (list * KSV_SIZE) + HDCP_HEAD + SHA_MAX_SIZE;
 			for (i = 0; i < size; i++) {
 				if (i < HDCP_HEAD) { /* BSTATUS & M0 */
@@ -4217,9 +4236,11 @@ static void hdcp_ksv_sha1_calc(struct hdmitx_dev *hdev)
 					hdcp_mKsvListBuf[i - HDCP_HEAD] =
 						hdmitx_rd_reg(
 						HDMITX_DWC_HDCP_BSTATUS_0 + i);
-					ksvs[j] =
+					tmp_ksv_lists.lists[tmp_ksv_lists.no++]
+						= hdcp_mKsvListBuf[i -
+							HDCP_HEAD];
+					temp[j++] =
 						hdcp_mKsvListBuf[i - HDCP_HEAD];
-					j++;
 				} else { /* SHA */
 					hdcp_mKsvListBuf[i] = hdmitx_rd_reg(
 						HDMITX_DWC_HDCP_BSTATUS_0 + i);
@@ -4229,12 +4250,18 @@ static void hdcp_ksv_sha1_calc(struct hdmitx_dev *hdev)
 				valid = HDCP_KSVLIST_VALID;
 			else
 				valid = HDCP_KSVLIST_INVALID;
+			ksv_sha_matched = valid;
 		}
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 0, 0, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL,
 			(valid == HDCP_KSVLIST_VALID) ? 0 : 1, 3, 1);
-		if (valid == HDCP_KSVLIST_VALID)
-			hdcp_ksv_store(ksvs, j);
+		if (valid == HDCP_KSVLIST_VALID) {
+			tmp_ksv_lists.valid = 1;
+			for (i = 0; (i < j) &&
+				(tmp_ksv_lists.no < MAX_KSV_LISTS * 5); i++)
+				tmp_ksv_lists.lists[tmp_ksv_lists.no++]
+					= temp[i];
+		}
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 1, 2, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_A_KSVMEMCTRL, 0, 2, 1);
 		kfree(hdcp_mKsvListBuf);
@@ -4242,15 +4269,50 @@ static void hdcp_ksv_sha1_calc(struct hdmitx_dev *hdev)
 		pr_info("hdcptx14: KSV List memory not valid\n");
 }
 
+static int max_exceed = 200;
+MODULE_PARM_DESC(max_exceed, "\nmax_exceed\n");
+module_param(max_exceed, int, 0664);
+
 static void hdcptx_events_handle(unsigned long arg)
 {
 	struct hdmitx_dev *hdev = (struct hdmitx_dev *)arg;
 	unsigned char ksv[5] = {0};
-	int pos, i;
+	int i;
 	unsigned int bcaps_6_rp;
+	static unsigned int bcaps_5_ksvfifoready;
 	static unsigned int st_flag = -1;
+	static unsigned int hdcpobs3_1;
+	unsigned int hdcpobs3_2;
+	struct hdcprp14_topo *topo14 = &hdev->topo_info->topo.topo14;
+	int bstatus0 = 0;
+	int bstatus1 = 0;
 
-	bcaps_6_rp = !!(hdmitx_rd_reg(HDMITX_DWC_A_HDCPOBS3) & (1 << 6));
+	if (hdev->hdcp_max_exceed_cnt == 0) {
+		hdcpobs3_1 = 0;
+		bcaps_5_ksvfifoready = 0;
+	}
+
+	hdcpobs3_2 = hdmitx_rd_reg(HDMITX_DWC_A_HDCPOBS3);
+	if (hdcpobs3_1 != hdcpobs3_2)
+		hdcpobs3_1 = hdcpobs3_2;
+
+	bcaps_6_rp = !!(hdcpobs3_1 & (1 << 6));
+	bcaps_5_ksvfifoready = !!(hdcpobs3_1 & (1 << 5));
+
+	if (bcaps_6_rp && bcaps_5_ksvfifoready
+		&& (hdev->hdcp_max_exceed_cnt == 0))
+		hdev->hdcp_max_exceed_cnt++;
+	if (hdev->hdcp_max_exceed_cnt)
+		hdev->hdcp_max_exceed_cnt++;
+	if (bcaps_6_rp && bcaps_5_ksvfifoready) {
+		if ((hdev->hdcp_max_exceed_cnt > max_exceed)
+			&& !ksv_sha_matched) {
+			topo14->max_devs_exceeded = 1;
+			topo14->max_cascade_exceeded = 1;
+			hdev->hdcp_max_exceed_state = 1;
+		}
+	}
+
 	if (st_flag != hdmitx_rd_reg(HDMITX_DWC_A_APIINTSTAT)) {
 		st_flag = hdmitx_rd_reg(HDMITX_DWC_A_APIINTSTAT);
 		pr_info("hdcp14: instat: 0x%x\n", st_flag);
@@ -4258,27 +4320,43 @@ static void hdcptx_events_handle(unsigned long arg)
 	if (st_flag & (1 << 7)) {
 		hdmitx_wr_reg(HDMITX_DWC_A_APIINTCLR, 1 << 7);
 		hdmitx_hdcp_opr(3);
+		if (bcaps_6_rp)
+			get_hdcp_bstatus(&bstatus0, &bstatus1);
 		for (i = 0; i < 5; i++)
 			ksv[i] = (unsigned char)
 				hdmitx_rd_reg(HDMITX_DWC_HDCPREG_BKSV0 + i);
-		hdcp_ksv_store(ksv, 5);
-		get_hdcp_bstatus();
-		if (hdev->repeater_tx) {
-			rx_set_receive_hdcp(rptx_ksv_buf, (rptx_ksv_no + 1) / 5,
-				(bcaps_6_rp ? get_hdcp_depth() : 0) + 1,
-				bcaps_6_rp ? get_hdcp_max_cascade() : 0,
-				bcaps_6_rp ? get_hdcp_max_devs() : 0);
-			pr_info("%s[%d]  ksvs Num = %d  device_count = %d\n",
-				__func__, __LINE__,
-				(rptx_ksv_no + 1) / 5,
-				bcaps_6_rp ? get_hdcp_device_count() : 0);
-			memset(rptx_ksv_prbuf, 0, sizeof(rptx_ksv_prbuf));
-				for (pos = 0, i = 0; i < rptx_ksv_no; i++)
-					pos += sprintf(rptx_ksv_prbuf + pos,
-						"%02x", rptx_ksv_buf[i]);
-				rptx_ksv_prbuf[pos + 1] = '\0';
-			if (1)
-				hdcp_ksv_print();
+		/* if downstream is only RX */
+		if ((hdev->repeater_tx == 1) && hdev->topo_info) {
+			hdcp_ksv_store(hdev->topo_info, ksv, 5);
+			if (tmp_ksv_lists.valid) {
+				int cnt = get_hdcp_device_count();
+				int devs = get_hdcp_max_devs();
+				int cascade = get_hdcp_max_cascade();
+				int depth = get_hdcp_depth();
+
+				hdcp_ksv_store(hdev->topo_info,
+					tmp_ksv_lists.lists, tmp_ksv_lists.no);
+				if (cnt >= 127) {
+					topo14->device_count = 127;
+					topo14->max_devs_exceeded = 1;
+				} else {
+					topo14->device_count = cnt + 1;
+					topo14->max_devs_exceeded = devs;
+				}
+
+				if (depth >= 7) {
+					topo14->depth = 7;
+					topo14->max_cascade_exceeded = 1;
+				} else {
+					topo14->depth = depth + 1;
+					topo14->max_cascade_exceeded = cascade;
+				}
+			} else {
+				topo14->device_count = 1;
+				topo14->max_devs_exceeded = 0;
+				topo14->max_cascade_exceeded = 0;
+				topo14->depth = 1;
+			}
 		}
 	}
 	if (st_flag & (1 << 1)) {
@@ -4292,30 +4370,8 @@ static void hdcptx_events_handle(unsigned long arg)
 			return;
 		}
 		hdmitx_wr_reg(HDMITX_DWC_A_KSVMEMCTRL, 0x4);
-		if (hdev->repeater_tx) {
-			rptx_ksvlist_retry++;
-			if (rptx_ksvlist_retry % 4 == 0) {
-				for (i = 0; i < 5; i++)
-					ksv[i] = (unsigned char) hdmitx_rd_reg(
-						HDMITX_DWC_HDCPREG_BKSV0 + i);
-				hdcp_ksv_store(ksv, 5);
-				rx_set_receive_hdcp(&ksv[0], 1, 127, 1, 1);
-			}
-		}
 	}
-	if (hdev->repeater_tx && bcaps_6_rp && (get_hdcp_max_devs() ||
-		get_hdcp_max_cascade())) {
-		for (i = 0; i < 5; i++)
-			ksv[i] = (unsigned char)
-				hdmitx_rd_reg(HDMITX_DWC_HDCPREG_BKSV0 + i);
-		hdcp_ksv_store(ksv, 5);
-		rx_set_receive_hdcp(&ksv[0], 1, 127, 1, 1);
-	}
-	if (hdev->hdcp_try_times)
-		mod_timer(&hdev->hdcp_timer, jiffies + HZ / 100);
-	else
-		return;
-	hdev->hdcp_try_times--;
+	mod_timer(&hdev->hdcp_timer, jiffies + HZ / 100);
 }
 
 static void hdcp_start_timer(struct hdmitx_dev *hdev)
@@ -4329,10 +4385,8 @@ static void hdcp_start_timer(struct hdmitx_dev *hdev)
 		hdev->hdcp_timer.function = hdcptx_events_handle;
 		hdev->hdcp_timer.expires = jiffies + HZ / 100;
 		add_timer(&hdev->hdcp_timer);
-		hdev->hdcp_try_times = 500;
 		return;
 	}
-	hdev->hdcp_try_times = 500;
 	hdev->hdcp_timer.expires = jiffies + HZ / 100;
 	mod_timer(&hdev->hdcp_timer, jiffies + HZ / 100);
 }
@@ -4360,6 +4414,20 @@ static void set_pkf_duk_nonce(void)
 		hdmitx_wr_reg(HDMITX_TOP_NONCE_3,  0x01234567);
 	}
 	udelay(10);
+}
+
+static void check_read_ksv_list_st(void)
+{
+	int cnt = 0;
+
+	for (cnt = 0; cnt < 5; cnt++) {
+		if (((hdmitx_rd_reg(HDMITX_DWC_A_HDCPOBS1) & 0x7) == 5) ||
+		    ((hdmitx_rd_reg(HDMITX_DWC_A_HDCPOBS1) & 0x7) == 6))
+			msleep(20);
+		else
+			return;
+	}
+	pr_info("hdcp14: FSM: A9 read ksv list\n");
 }
 
 static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
@@ -4421,28 +4489,42 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 		}
 		if (argv == 1)
 			hdmitx_hdcp_opr(6);
+		if (argv == 3)
+			hdmitx_set_reg_bits(HDMITX_DWC_HDCP22REG_CTRL, 1, 2, 1);
 		break;
 	case DDC_HDCP_OP:
+		hdev->hdcp_max_exceed_state = 0;
+		hdev->hdcp_max_exceed_cnt = 0;
+		ksv_sha_matched = 0;
+		del_timer(&hdev->hdcp_timer);
+		if (hdev->topo_info)
+			memset(hdev->topo_info, 0, sizeof(*hdev->topo_info));
+
 		if (argv == HDCP14_ON) {
-			rptx_ksvlist_retry = 0;
-			rptx_ksv_no = 0;
-			memset(rptx_ksv_buf, 0, sizeof(rptx_ksv_buf));
+			check_read_ksv_list_st();
+			if (hdev->topo_info)
+				hdev->topo_info->hdcp_ver = HDCPVER_14;
 			hdmitx_ddc_hw_op(DDC_MUX_DDC);
+			hdmitx_set_reg_bits(HDMITX_TOP_SKP_CNTL_STAT, 0, 3, 1);
+			hdmitx_set_reg_bits(HDMITX_TOP_CLK_CNTL, 1, 31, 1);
 			hdmitx_hdcp_opr(6);
 			hdmitx_hdcp_opr(1);
 			hdcp_start_timer(hdev);
 		}
-		if (argv == HDCP14_OFF) {
-			rptx_ksvlist_retry = 0;
+		if (argv == HDCP14_OFF)
 			hdmitx_hdcp_opr(4);
-		}
 		if (argv == HDCP22_ON) {
+			if (hdev->topo_info)
+				hdev->topo_info->hdcp_ver = 2;
 			hdmitx_ddc_hw_op(DDC_MUX_DDC);
 			hdmitx_hdcp_opr(5);
 			/* wait for start hdcp22app */
 		}
 		if (argv == HDCP22_OFF)
 			hdmitx_hdcp_opr(6);
+		break;
+	case DDC_IS_HDCP_ON:
+/* argv = !!((hdmitx_rd_reg(TX_HDCP_MODE)) & (1 << 7)); */
 		break;
 	case DDC_HDCP_GET_BKSV:
 		tmp_char = (unsigned char *) argv;
@@ -4652,6 +4734,8 @@ static int hdmitx_tmds_rxsense(void)
 static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 	unsigned int argv)
 {
+	static int st;
+
 	if ((cmd & CMD_MISC_OFFSET) != CMD_MISC_OFFSET) {
 		pr_err(HW "misc: w: invalid cmd 0x%x\n", cmd);
 		return -1;
@@ -4692,16 +4776,24 @@ static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 	case MISC_AVMUTE_OP:
 		config_avmute(argv);
 		break;
+	case MISC_READ_AVMUTE_OP:
+		return read_avmute();
 	case MISC_HDCP_CLKDIS:
+		if (st != !!argv) {
+			st = !!argv;
+			pr_info("set hdcp clkdis: %d\n", !!argv);
+		}
 		hdmitx_set_reg_bits(HDMITX_DWC_MC_CLKDIS, !!argv, 6, 1);
 		break;
 	case MISC_I2C_REACTIVE:
+		hdmitx_hdcp_opr(4);
 		hdmitx_set_reg_bits(HDMITX_DWC_A_HDCPCFG1, 0, 0, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_HDCP22REG_CTRL, 0, 2, 1);
 		hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_HCNT_1, 0xff);
 		hdmitx_wr_reg(HDMITX_DWC_I2CM_SS_SCL_HCNT_0, 0xf6);
 		edid_read_head_8bytes();
 		hdmi_hwi_init(hdev);
+		mdelay(5);
 		break;
 	default:
 		break;
@@ -4777,7 +4869,10 @@ static int hdmitx_get_state(struct hdmitx_dev *hdev, unsigned int cmd,
 static void hdmi_phy_suspend(void)
 {
 	hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x0);
-	hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x0);
+	/* keep PHY_CNTL3 bit[1:0] as 0b11,
+	 * otherwise may cause HDCP22 boot failed
+	 */
+	hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x3);
 	hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x800);
 }
 
@@ -5194,7 +5289,8 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 	data32 |= (default_phase << 2);
 	data32 |= (0 << 1);
 	data32 |= (0 << 0);
-	hdmitx_wr_reg(HDMITX_DWC_FC_GCP, data32);
+	if (!hdev->repeater_tx)
+		hdmitx_wr_reg(HDMITX_DWC_FC_GCP, data32);
 
 	/* write AVI Infoframe packet configuration */
 	data32  = 0;

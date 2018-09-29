@@ -125,6 +125,7 @@ static void hdmitx_early_suspend(struct early_suspend *h)
 		|| strncmp(info->name, "null", 4) == 0))
 		return;
 
+	phdmi->ready = 0;
 	phdmi->hpd_lock = 1;
 	msleep(20);
 	phdmi->HWOp.CntlMisc(phdmi, MISC_AVMUTE_OP, SET_AVMUTE);
@@ -184,7 +185,7 @@ static void hdmitx_late_resume(struct early_suspend *h)
 
 		/* update status for hpd and switch/state */
 		hdmitx_device.hpd_state =
-		!!(hdmitx_device.HWOp.CntlMisc(&hdmitx_device,
+			!!(hdmitx_device.HWOp.CntlMisc(&hdmitx_device,
 		MISC_HPD_GPI_ST, 0));
 
 		pr_info("hdmitx hpd state: %d\n", hdmitx_device.hpd_state);
@@ -218,6 +219,7 @@ static int hdmitx_reboot_notifier(struct notifier_block *nb,
 {
 	struct hdmitx_dev *hdev = container_of(nb, struct hdmitx_dev, nb);
 
+	hdev->ready = 0;
 	hdev->HWOp.CntlMisc(hdev, MISC_AVMUTE_OP, SET_AVMUTE);
 	mdelay(100);
 	hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
@@ -447,6 +449,7 @@ static int set_disp_mode_auto(void)
 		hdev, STAT_VIDEO_VIC, 0);
 
 	memset(mode, 0, sizeof(mode));
+	hdev->ready = 0;
 
 	/* get current vinfo */
 	info = hdmitx_get_current_vinfo();
@@ -620,6 +623,83 @@ void setup_attr(const char *buf)
 	memcpy(hdmitx_device.fmt_attr, attr, sizeof(hdmitx_device.fmt_attr));
 }
 EXPORT_SYMBOL(setup_attr);
+
+
+/* for android application data exchange / swap */
+static char *tmp_swap;
+static DEFINE_MUTEX(mutex_swap);
+
+static ssize_t store_swap(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	pr_info("store_swap: %s\n", buf);
+	mutex_lock(&mutex_swap);
+
+	kfree(tmp_swap);
+	tmp_swap = kzalloc(count + 1, GFP_KERNEL);
+	if (!tmp_swap) {
+		mutex_unlock(&mutex_swap);
+		return count;
+	}
+	memcpy(tmp_swap, buf, count);
+	tmp_swap[count] = '\0'; /* padding end string */
+	mutex_unlock(&mutex_swap);
+	return count;
+}
+
+static ssize_t show_swap(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int i = 0;
+	int n = 0;
+	struct hdmitx_dev *hdev = &hdmitx_device;
+	struct rx_cap *pRXCap = &hdev->RXCap;
+	struct hdcprp14_topo *topo14 = &hdev->topo_info->topo.topo14;
+
+	mutex_lock(&mutex_swap);
+
+	if (!tmp_swap ||
+		(!hdev->edid_parsing && !strstr(tmp_swap, "hdcp.topo"))) {
+		mutex_unlock(&mutex_swap);
+		return n;
+	}
+
+	/* VSD: Video Short Descriptor */
+	if (strstr(tmp_swap, "edid.vsd"))
+		for (i = 0; i < pRXCap->vsd.len; i++)
+			n += snprintf(buf + n, PAGE_SIZE - n, "%02x",
+				pRXCap->vsd.raw[i]);
+	/* ASD: Audio Short Descriptor */
+	if (strstr(tmp_swap, "edid.asd"))
+		for (i = 0; i < pRXCap->asd.len; i++)
+			n += snprintf(buf + n, PAGE_SIZE - n, "%02x",
+				pRXCap->asd.raw[i]);
+	/* CEC: Physical Address */
+	if (strstr(tmp_swap, "edid.cec"))
+		n += snprintf(buf + n, PAGE_SIZE - n, "%x%x%x%x",
+			hdev->hdmi_info.vsdb_phy_addr.a,
+			hdev->hdmi_info.vsdb_phy_addr.b,
+			hdev->hdmi_info.vsdb_phy_addr.c,
+			hdev->hdmi_info.vsdb_phy_addr.d);
+	/* HDCP TOPO */
+	if (strstr(tmp_swap, "hdcp.topo")) {
+		char *tmp = (char *)topo14;
+
+		pr_info("max_cascade_exceeded %d\n",
+			topo14->max_cascade_exceeded);
+		pr_info("depth %d\n", topo14->depth);
+		pr_info("max_devs_exceeded %d\n", topo14->max_devs_exceeded);
+		pr_info("device_count %d\n", topo14->device_count);
+		for (i = 0; i < sizeof(struct hdcprp14_topo); i++)
+			n += snprintf(buf + n, PAGE_SIZE - n, "%02x", tmp[i]);
+	}
+
+	kfree(tmp_swap);
+	tmp_swap = NULL;
+
+	mutex_unlock(&mutex_swap);
+	return n;
+}
 
 static ssize_t show_aud_mode(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -2584,24 +2664,53 @@ static ssize_t store_avmute(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	int cmd = OFF_AVMUTE;
+	static int mask0;
+	static int mask1;
+	static DEFINE_MUTEX(avmute_mutex);
 
-	if (strncmp(buf, "-1", 2) == 0)
+	pr_info("store_avmute %s\n", buf);
+	mutex_lock(&avmute_mutex);
+	if (strncmp(buf, "-1", 2) == 0) {
 		cmd = CLR_AVMUTE;
-	else if (strncmp(buf, "0", 1) == 0)
+		mask0 = -1;
+	} else if (strncmp(buf, "0", 1) == 0) {
 		cmd = OFF_AVMUTE;
-	else if (strncmp(buf, "1", 1) == 0)
+		mask0 = 0;
+	} else if (strncmp(buf, "1", 1) == 0) {
 		cmd = SET_AVMUTE;
-	else
-		pr_info(SYS "set avmute wrong: %s\n", buf);
-
+		mask0 = 1;
+	}
+	if (strncmp(buf, "r-1", 3) == 0) {
+		cmd = CLR_AVMUTE;
+		mask1 = -1;
+	} else if (strncmp(buf, "r0", 2) == 0) {
+		cmd = OFF_AVMUTE;
+		mask1 = 0;
+	} else if (strncmp(buf, "r1", 2) == 0) {
+		cmd = SET_AVMUTE;
+		mask1 = 1;
+	}
+	if ((mask0 == 1) || (mask1 == 1))
+		cmd = SET_AVMUTE;
+	else if ((mask0 == -1) && (mask1 == -1))
+		cmd = CLR_AVMUTE;
 	hdmitx_device.HWOp.CntlMisc(&hdmitx_device, MISC_AVMUTE_OP, cmd);
+	mutex_unlock(&avmute_mutex);
+
 	return count;
 }
 
 static ssize_t show_avmute(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	return 0;
+	struct hdmitx_dev *hdev = &hdmitx_device;
+	int ret = 0;
+	int pos = 0;
+
+	ret = hdev->HWOp.CntlMisc(hdev, MISC_READ_AVMUTE_OP, 0);
+	pos += snprintf(buf + pos, PAGE_SIZE, "%d", ret);
+
+	return pos;
 }
 
 /*
@@ -2807,6 +2916,13 @@ static ssize_t show_hdcp_lstore(struct device *dev,
 {
 	int pos = 0;
 
+	/* if current TX is RP-TX, then return lstore as 00 */
+	/* hdcp_lstore is used under only TX */
+	if (hdmitx_device.repeater_tx == 1) {
+		pos += snprintf(buf + pos, PAGE_SIZE, "00\n");
+		return pos;
+	}
+
 	if (hdmitx_device.lstore < 0x10) {
 		hdmitx_device.lstore = 0;
 		if (hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
@@ -2837,6 +2953,53 @@ static ssize_t store_hdcp_lstore(struct device *dev,
 		hdmitx_device.lstore = 0x12;
 	if (strncmp(buf, "13", 2) == 0)
 		hdmitx_device.lstore = 0x13;
+
+	return count;
+}
+
+static int rptxlstore;
+static ssize_t show_hdcp_rptxlstore(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+
+	/* if current TX is not RP-TX, then return rptxlstore as 00 */
+	/* hdcp_rptxlstore is used under only RP-TX */
+	if (hdmitx_device.repeater_tx == 0) {
+		pos += snprintf(buf + pos, PAGE_SIZE, "00\n");
+		return pos;
+	}
+
+	if (rptxlstore < 0x10) {
+		rptxlstore = 0;
+		if (hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
+			DDC_HDCP_14_LSTORE, 0))
+			rptxlstore += 1;
+		if (hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
+			DDC_HDCP_22_LSTORE, 0))
+			rptxlstore += 2;
+	}
+	if (rptxlstore & 0x1)
+		pos += snprintf(buf + pos, PAGE_SIZE, "14\n");
+	if (rptxlstore & 0x2)
+		pos += snprintf(buf + pos, PAGE_SIZE, "22\n");
+	if ((rptxlstore & 0xf) == 0)
+		pos += snprintf(buf + pos, PAGE_SIZE, "00\n");
+	return pos;
+}
+
+static ssize_t store_hdcp_rptxlstore(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	pr_info("hdcp: set lstore as %s\n", buf);
+	if (strncmp(buf, "0", 1) == 0)
+		rptxlstore = 0x10;
+	if (strncmp(buf, "11", 2) == 0)
+		rptxlstore = 0x11;
+	if (strncmp(buf, "12", 2) == 0)
+		rptxlstore = 0x12;
+	if (strncmp(buf, "13", 2) == 0)
+		rptxlstore = 0x13;
 
 	return count;
 }
@@ -2919,39 +3082,119 @@ static ssize_t store_hdcp_mode(struct device *dev,
 	return count;
 }
 
-void direct_hdcptx14_start(void)
+static bool hdcp_sticky_mode;
+static ssize_t show_hdcp_stickmode(struct device *dev,
+	struct device_attribute *attr, char *buf)
 {
-	pr_info("%s[%d]", __func__, __LINE__);
-	hdmitx_device.hdcp_mode = 1;
-	hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
-			DDC_HDCP_OP, HDCP14_ON);
-}
-EXPORT_SYMBOL(direct_hdcptx14_start);
+	int pos = 0;
 
-void direct_hdcptx14_stop(void)
-{
-	pr_info("%s[%d]", __func__, __LINE__);
-	hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
-		DDC_HDCP_OP, HDCP14_OFF);
+	pos += snprintf(buf+pos, PAGE_SIZE, "%d\n", hdcp_sticky_mode);
+
+	return pos;
 }
-EXPORT_SYMBOL(direct_hdcptx14_stop);
+
+static ssize_t store_hdcp_stickmode(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	if (buf[0] == '0')
+		hdcp_sticky_mode = 0;
+	if (buf[0] == '1')
+		hdcp_sticky_mode = 1;
+
+	return count;
+}
+
+static unsigned char hdcp_sticky_step;
+static ssize_t show_hdcp_stickstep(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+
+	pos += snprintf(buf+pos, PAGE_SIZE, "%x\n", hdcp_sticky_step);
+	if (hdcp_sticky_step)
+		hdcp_sticky_step = 0;
+
+	return pos;
+}
+
+static ssize_t store_hdcp_stickstep(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	if (isdigit(buf[0]))
+		hdcp_sticky_step = buf[0] - '0';
+
+	return count;
+}
+
+/* Indicate whether a rptx under repeater */
+static ssize_t show_repeater_tx(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+
+	pos += snprintf(buf+pos, PAGE_SIZE, "%d\n",
+		!!hdmitx_device.repeater_tx);
+
+	return pos;
+}
+
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_rptx.h>
+
+void direct_hdcptx14_opr(enum rptx_hdcp14_cmd cmd, void *args)
+{
+	int rst;
+	struct hdmitx_dev *hdev = &hdmitx_device;
+
+	pr_info("%s[%d] cmd: %d\n", __func__, __LINE__, cmd);
+	switch (cmd) {
+	case RPTX_HDCP14_OFF:
+		hdev->hdcp_mode = 0;
+		hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP, HDCP14_OFF);
+		break;
+	case RPTX_HDCP14_ON:
+		hdev->hdcp_mode = 1;
+		hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP, HDCP14_ON);
+		break;
+	case RPTX_HDCP14_GET_AUTHST:
+		rst = hdev->HWOp.CntlDDC(hdev, DDC_HDCP_GET_AUTH, 0);
+		*(int *)args = rst;
+		break;
+	}
+}
+EXPORT_SYMBOL(direct_hdcptx14_opr);
 
 static ssize_t store_hdcp_ctrl(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	if (hdmitx_device.HWOp.CntlDDC(&hdmitx_device, DDC_HDCP_14_LSTORE,
-		0) == 0)
+	struct hdmitx_dev *hdev = &hdmitx_device;
+
+	if (hdev->HWOp.CntlDDC(hdev, DDC_HDCP_14_LSTORE, 0) == 0)
 		return count;
-	dev_warn(dev, "hdmitx20: %s\n", buf);
+
+	/* for repeater */
+	if (hdev->repeater_tx) {
+		dev_warn(dev, "hdmitx20: %s\n", buf);
+		if (strncmp(buf, "rstop", 5) == 0) {
+			if (strncmp(buf+5, "14", 2) == 0)
+				hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP,
+					HDCP14_OFF);
+			if (strncmp(buf+5, "22", 2) == 0)
+				hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP,
+					HDCP22_OFF);
+			hdev->hdcp_mode = 0;
+			hdmitx_hdcp_do_work(hdev);
+		}
+		return count;
+	}
+	/* for non repeater */
 	if (strncmp(buf, "stop", 4) == 0) {
+		dev_warn(dev, "hdmitx20: %s\n", buf);
 		if (strncmp(buf+4, "14", 2) == 0)
-			hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
-				DDC_HDCP_OP, HDCP14_OFF);
+			hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP, HDCP14_OFF);
 		if (strncmp(buf+4, "22", 2) == 0)
-			hdmitx_device.HWOp.CntlDDC(&hdmitx_device,
-				DDC_HDCP_OP, HDCP22_OFF);
-		hdmitx_device.hdcp_mode = 0;
-		hdmitx_hdcp_do_work(&hdmitx_device);
+			hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP, HDCP22_OFF);
+		hdev->hdcp_mode = 0;
+		hdmitx_hdcp_do_work(hdev);
 	}
 
 	return count;
@@ -3035,6 +3278,26 @@ static ssize_t show_hpd_state(struct device *dev,
 	return pos;
 }
 
+
+static ssize_t show_rhpd_state(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct hdmitx_dev *hdev = &hdmitx_device;
+	int st;
+
+	st = hdev->HWOp.CntlMisc(hdev, MISC_HPD_GPI_ST, 0);
+
+	return snprintf(buf, PAGE_SIZE, "%d", hdev->rhpd_state);
+}
+
+static ssize_t show_max_exceed_state(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct hdmitx_dev *hdev = &hdmitx_device;
+
+	return snprintf(buf, PAGE_SIZE, "%d", hdev->hdcp_max_exceed_state);
+}
+
 static ssize_t show_hdmi_init(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -3093,6 +3356,7 @@ static DEVICE_ATTR(dc_cap, 0444, show_dc_cap, NULL);
 static DEVICE_ATTR(valid_mode, 0664, show_valid_mode, store_valid_mode);
 static DEVICE_ATTR(aud_ch, 0664, show_aud_ch, store_aud_ch);
 static DEVICE_ATTR(avmute, 0664, show_avmute, store_avmute);
+static DEVICE_ATTR(swap, 0644, show_swap, store_swap);
 static DEVICE_ATTR(vic, 0664, show_vic, store_vic);
 static DEVICE_ATTR(phy, 0664, show_phy, store_phy);
 static DEVICE_ATTR(sspll, 0664, show_sspll, store_sspll);
@@ -3104,11 +3368,18 @@ static DEVICE_ATTR(hdcp_pwr, 0664, show_hdcp_pwr, store_hdcp_pwr);
 static DEVICE_ATTR(hdcp_byp, 0200, NULL, store_hdcp_byp);
 static DEVICE_ATTR(hdcp_mode, 0664, show_hdcp_mode, store_hdcp_mode);
 static DEVICE_ATTR(hdcp_lstore, 0664, show_hdcp_lstore, store_hdcp_lstore);
+static DEVICE_ATTR(hdcp_rptxlstore, 0664, show_hdcp_rptxlstore,
+	store_hdcp_rptxlstore);
 static DEVICE_ATTR(hdcp_repeater, 0644, show_hdcp_repeater,
 	store_hdcp_repeater);
 static DEVICE_ATTR(hdcp_topo_info, 0644, show_hdcp_topo_info,
 	store_hdcp_topo_info);
 static DEVICE_ATTR(hdcp22_type, 0644, show_hdcp22_type, store_hdcp22_type);
+static DEVICE_ATTR(hdcp_stickmode, 0664, show_hdcp_stickmode,
+	store_hdcp_stickmode);
+static DEVICE_ATTR(hdcp_stickstep, 0664, show_hdcp_stickstep,
+	store_hdcp_stickstep);
+static DEVICE_ATTR(hdmi_repeater_tx, 0444, show_repeater_tx, NULL);
 static DEVICE_ATTR(hdcp22_base, 0444, show_hdcp22_base, NULL);
 static DEVICE_ATTR(div40, 0664, show_div40, store_div40);
 static DEVICE_ATTR(hdcp_ctrl, 0664, show_hdcp_ctrl, store_hdcp_ctrl);
@@ -3116,6 +3387,8 @@ static DEVICE_ATTR(disp_cap_3d, 0444, show_disp_cap_3d, NULL);
 static DEVICE_ATTR(hdcp_ksv_info, 0444, show_hdcp_ksv_info, NULL);
 static DEVICE_ATTR(hdcp_ver, 0444, show_hdcp_ver, NULL);
 static DEVICE_ATTR(hpd_state, 0444, show_hpd_state, NULL);
+static DEVICE_ATTR(rhpd_state, 0444, show_rhpd_state, NULL);
+static DEVICE_ATTR(max_exceed, 0444, show_max_exceed_state, NULL);
 static DEVICE_ATTR(hdmi_init, 0444, show_hdmi_init, NULL);
 static DEVICE_ATTR(ready, 0664, show_ready, store_ready);
 static DEVICE_ATTR(support_3d, 0444, show_support_3d, NULL);
@@ -3439,9 +3712,11 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	}
 	mutex_lock(&setclk_mutex);
 	pr_info(SYS "plugin\n");
+	hdev->HWOp.CntlMisc(hdev, MISC_I2C_REACTIVE, 0);
 	hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGIN;
 	/* start reading E-EDID */
-	rx_repeat_hpd_state(1);
+	if (hdev->repeater_tx)
+		rx_repeat_hpd_state(1);
 	hdmitx_get_edid(hdev);
 	hdmi_physcial_size_update(hdev);
 	if (hdev->RXCap.IEEEOUI != 0x000c03)
@@ -3451,7 +3726,6 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 		hdev->HWOp.CntlConfig(hdev,
 			CONF_HDMI_DVI_MODE, HDMI_MODE);
 	mutex_lock(&getedid_mutex);
-	hdev->HWOp.CntlMisc(hdev, MISC_I2C_REACTIVE, 0);
 	mutex_unlock(&getedid_mutex);
 	if (hdev->repeater_tx) {
 		if (check_fbc_special(&hdev->EDID_buf[0])
@@ -3459,7 +3733,6 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 			rx_set_repeater_support(0);
 		else
 			rx_set_repeater_support(1);
-		rx_repeat_hdcp_ver(hdcp_get_downstream_ver());
 		hdev->HWOp.CntlDDC(hdev, DDC_HDCP_GET_BKSV,
 			(unsigned long int)bksv_buf);
 		rx_set_receive_hdcp(bksv_buf, 1, 1, 0, 0);
@@ -3512,7 +3785,8 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 		return;
 	hdev->hdcp_mode = 0;
 	hdev->hdcp_bcaps_repeater = 0;
-
+	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_MUX_INIT, 1);
+	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP, HDCP14_OFF);
 	mutex_lock(&setclk_mutex);
 	pr_info(SYS "plugout\n");
 	if (!!(hdev->HWOp.CntlMisc(hdev, MISC_HPD_GPI_ST, 0))) {
@@ -3984,6 +4258,14 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 			pr_info(SYS "hdmitx_device.chip_type : %d\n",
 				hdmitx_device.chip_type);
 
+		ret = of_property_read_u32(pdev->dev.of_node,
+			"repeater_tx", &val);
+		if (!ret)
+			hdmitx_device.repeater_tx = val;
+		if (hdmitx_device.repeater_tx == 1)
+			hdmitx_device.topo_info = kzalloc(
+				sizeof(*hdmitx_device.topo_info), GFP_KERNEL);
+
 		/* Get vendor information */
 		ret = of_property_read_u32(pdev->dev.of_node,
 				"vend-data", &val);
@@ -4175,6 +4457,7 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_dv_cap);
 	ret = device_create_file(dev, &dev_attr_aud_ch);
 	ret = device_create_file(dev, &dev_attr_avmute);
+	ret = device_create_file(dev, &dev_attr_swap);
 	ret = device_create_file(dev, &dev_attr_vic);
 	ret = device_create_file(dev, &dev_attr_phy);
 	ret = device_create_file(dev, &dev_attr_frac_rate_policy);
@@ -4189,11 +4472,17 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_hdcp_repeater);
 	ret = device_create_file(dev, &dev_attr_hdcp_topo_info);
 	ret = device_create_file(dev, &dev_attr_hdcp22_type);
+	ret = device_create_file(dev, &dev_attr_hdcp_stickmode);
+	ret = device_create_file(dev, &dev_attr_hdcp_stickstep);
+	ret = device_create_file(dev, &dev_attr_hdmi_repeater_tx);
 	ret = device_create_file(dev, &dev_attr_hdcp22_base);
 	ret = device_create_file(dev, &dev_attr_hdcp_lstore);
+	ret = device_create_file(dev, &dev_attr_hdcp_rptxlstore);
 	ret = device_create_file(dev, &dev_attr_div40);
 	ret = device_create_file(dev, &dev_attr_hdcp_ctrl);
 	ret = device_create_file(dev, &dev_attr_hpd_state);
+	ret = device_create_file(dev, &dev_attr_rhpd_state);
+	ret = device_create_file(dev, &dev_attr_max_exceed);
 	ret = device_create_file(dev, &dev_attr_hdmi_init);
 	ret = device_create_file(dev, &dev_attr_ready);
 	ret = device_create_file(dev, &dev_attr_support_3d);
@@ -4269,6 +4558,8 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_dc_cap);
 	device_remove_file(dev, &dev_attr_valid_mode);
 	device_remove_file(dev, &dev_attr_hpd_state);
+	device_remove_file(dev, &dev_attr_rhpd_state);
+	device_remove_file(dev, &dev_attr_max_exceed);
 	device_remove_file(dev, &dev_attr_hdmi_init);
 	device_remove_file(dev, &dev_attr_ready);
 	device_remove_file(dev, &dev_attr_support_3d);
@@ -4282,7 +4573,11 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_hdcp_repeater);
 	device_remove_file(dev, &dev_attr_hdcp_topo_info);
 	device_remove_file(dev, &dev_attr_hdcp22_type);
+	device_remove_file(dev, &dev_attr_hdcp_stickmode);
+	device_remove_file(dev, &dev_attr_hdcp_stickstep);
+	device_remove_file(dev, &dev_attr_hdmi_repeater_tx);
 	device_remove_file(dev, &dev_attr_hdcp22_base);
+	device_remove_file(dev, &dev_attr_swap);
 
 	cdev_del(&hdmitx_device.cdev);
 

@@ -65,6 +65,12 @@ struct rx_audiocap {
 	unsigned char cc3;
 };
 
+#define MAX_RAW_LEN 64
+struct raw_block {
+	int len;
+	char raw[MAX_RAW_LEN];
+};
+
 enum hd_ctrl {
 	VID_EN, VID_DIS, AUD_EN, AUD_DIS, EDID_EN, EDID_DIS, HDCP_EN, HDCP_DIS,
 };
@@ -145,6 +151,8 @@ struct rx_cap {
 	unsigned char dtd_idx;
 	unsigned char flag_vfpdb;
 	unsigned char number_of_dtd;
+	struct raw_block asd;
+	struct raw_block vsd;
 	/*blk0 check sum*/
 	unsigned char blk0_chksum;
 };
@@ -232,6 +240,48 @@ struct hdmitx_clk_tree_s {
 	struct clk *venci_1_gate;
 };
 
+/* 2kB should be enough to record */
+#define HDCP_LOG_SIZE (1024 * 2)
+struct hdcplog_buf {
+	int idx;
+	unsigned char buf[HDCP_LOG_SIZE + 64]; /* padding 8 bytes */
+};
+
+enum hdcp_ver_e {
+	HDCPVER_NONE = 0,
+	HDCPVER_14,
+	HDCPVER_22,
+};
+
+#define MAX_KSV_LISTS 127
+struct hdcprp14_topo {
+	unsigned char max_cascade_exceeded:1;
+	unsigned char depth:3;
+	unsigned char max_devs_exceeded:1;
+	unsigned char device_count:7; /* 1 ~ 127 */
+	unsigned char ksv_list[MAX_KSV_LISTS * 5];
+};
+
+struct hdcprp22_topo {
+	unsigned int depth;
+	unsigned int device_count;
+	unsigned int v1_X_device_down;
+	unsigned int v2_0_repeater_down;
+	unsigned int max_devs_exceeded;
+	unsigned int max_cascade_exceeded;
+	unsigned char id_num;
+	unsigned char id_lists[MAX_KSV_LISTS * 5];
+};
+
+struct hdcprp_topo {
+	/* hdcp_ver currently used */
+	enum hdcp_ver_e hdcp_ver;
+	union {
+		struct hdcprp14_topo topo14;
+		struct hdcprp22_topo topo22;
+	} topo;
+};
+
 #define EDID_MAX_BLOCK              4
 #define HDMI_TMP_BUF_SIZE           1024
 struct hdmitx_dev {
@@ -259,7 +309,6 @@ struct hdmitx_dev {
 	struct delayed_work cec_work;
 #endif
 	struct timer_list hdcp_timer;
-	int hdcp_try_times;
 	int chip_type;
 	int hdmi_init;
 	int hpdmode;
@@ -269,7 +318,6 @@ struct hdmitx_dev {
 	int ready;	/* 1, hdmi stable output, others are 0 */
 	int hdcp_hpd_stick;	/* 1 not init & reset at plugout */
 	int hdcp_tst_sig;
-	bool hdcp22_type;
 	unsigned int div40;
 	unsigned int lstore;
 	struct {
@@ -335,6 +383,9 @@ struct hdmitx_dev {
 	/**/
 	unsigned char hpd_event; /* 1, plugin; 2, plugout */
 	unsigned char hpd_state; /* 1, connect; 0, disconnect */
+	unsigned char rhpd_state; /* For repeater use only, no delay */
+	unsigned char hdcp_max_exceed_state;
+	unsigned int hdcp_max_exceed_cnt;
 	unsigned char force_audio_flag;
 	unsigned char mux_hpd_if_pin_high_flag;
 	int auth_process_timer;
@@ -352,6 +403,7 @@ struct hdmitx_dev {
 	unsigned int output_blank_flag;
 	unsigned int audio_notify_flag;
 	unsigned int audio_step;
+	bool hdcp22_type;
 	unsigned int repeater_tx;
 	struct hdcprp_topo *topo_info;
 	/* 0.1% clock shift, 1080p60hz->59.94hz */
@@ -401,6 +453,7 @@ struct hdmitx_dev {
 	#define HDCP14_OFF	0x2
 	#define HDCP22_ON	0x3
 	#define HDCP22_OFF	0x4
+#define DDC_IS_HDCP_ON          (CMD_DDC_OFFSET + 0x04)
 #define DDC_HDCP_GET_AKSV       (CMD_DDC_OFFSET + 0x05)
 #define DDC_HDCP_GET_BKSV       (CMD_DDC_OFFSET + 0x06)
 #define DDC_HDCP_GET_AUTH       (CMD_DDC_OFFSET + 0x07)
@@ -408,6 +461,7 @@ struct hdmitx_dev {
 #define PIN_MUX             0x1
 #define PIN_UNMUX           0x2
 #define DDC_EDID_READ_DATA      (CMD_DDC_OFFSET + 0x0a)
+#define DDC_IS_EDID_DATA_READY  (CMD_DDC_OFFSET + 0x0b)
 #define DDC_EDID_GET_DATA       (CMD_DDC_OFFSET + 0x0c)
 #define DDC_EDID_CLEAR_RAM      (CMD_DDC_OFFSET + 0x0d)
 #define DDC_HDCP_MUX_INIT	(CMD_DDC_OFFSET + 0x0e)
@@ -417,6 +471,7 @@ struct hdmitx_dev {
 #define DDC_HDCP14_GET_BCAPS_RP	(CMD_DDC_OFFSET + 0x30)
 #define DDC_HDCP14_GET_TOPO_INFO (CMD_DDC_OFFSET + 0x31)
 #define DDC_HDCP_SET_TOPO_INFO (CMD_DDC_OFFSET + 0x32)
+#define DDC_HDCP14_SAVE_OBS	(CMD_DDC_OFFSET + 0x40)
 
 /***********************************************************************
  *             CONFIG CONTROL //CntlConfig
@@ -487,6 +542,7 @@ struct hdmitx_dev {
 #define MISC_HDCP_CLKDIS	(CMD_MISC_OFFSET + 0x0e)
 #define MISC_TMDS_RXSENSE	(CMD_MISC_OFFSET + 0x0f)
 #define MISC_I2C_REACTIVE       (CMD_MISC_OFFSET + 0x10)
+#define MISC_READ_AVMUTE_OP     (CMD_MISC_OFFSET + 0x11)
 
 /***********************************************************************
  *                          Get State //GetState
@@ -571,16 +627,6 @@ void __attribute__((weak))rx_set_repeater_support(bool enable)
 
 extern void rx_set_receiver_edid(unsigned char *data, int len);
 void __attribute__((weak))rx_set_receiver_edid(unsigned char *data, int len)
-{
-}
-
-/*
- * ver = 22 means downstream supports HDCP22
- * ver = 14 means support HDCP14
- * ver = 0 means support NO HDCP
- */
-extern void rx_repeat_hdcp_ver(unsigned int ver);
-void __attribute__((weak))rx_repeat_hdcp_ver(unsigned int ver)
 {
 }
 

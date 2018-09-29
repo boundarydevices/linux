@@ -13539,8 +13539,8 @@ F: arch/arm/mach-meson/Makefile.boot
 
 HDMITX OUTPUT DRIVER
 M:	Yi Zhou <yi.zhou@amlogic.com>
-M:	Kaifu Hu <kaifu.hu@amlogic.com>
 M:      Zongdong Jiao <zongdong.jiao@amlogic.com>
+M:	Kaifu Hu <kaifu.hu@amlogic.com>
 S:	Maintained
 F:	drivers/amlogic/media/vout/hdmitx/*
 F:	drivers/amlogic/media/vout/hdmitx/hdcp/*

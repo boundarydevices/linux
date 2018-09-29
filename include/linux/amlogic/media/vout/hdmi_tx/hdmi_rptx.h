@@ -1,5 +1,5 @@
 /*
- * drivers/amlogic/media/vout/hdmitx/hdmi_tx_20/hdmi_tx_hdcp.h
+ * include/linux/amlogic/media/vout/hdmi_tx/hdmi_rptx.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,18 +15,15 @@
  *
  */
 
-#ifndef __HDMI_TX_HDCP_H
-#define __HDMI_TX_HDCP_H
-/*
- * hdmi_tx_hdcp.c
- * version 1.0
- */
+#ifndef _HDMI_RPTX_H_
+#define _HDMI_RPTX_H_
 
-/* Notic: the HDCP key setting has been moved to uboot
- * On MBX project, it is too late for HDCP get from
- * other devices
- */
-extern int hdcp_ksv_valid(unsigned char *dat);
+enum rptx_hdcp14_cmd {
+	RPTX_HDCP14_OFF,
+	RPTX_HDCP14_ON,
+	RPTX_HDCP14_GET_AUTHST,
+};
+
+extern void direct_hdcptx14_opr(enum rptx_hdcp14_cmd cmd, void *args);
 
 #endif
-
