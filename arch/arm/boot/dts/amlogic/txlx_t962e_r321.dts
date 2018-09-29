@@ -967,7 +967,7 @@
 		 */
 		ic_type = <6>;
 		//gpio_i2c_en = <0>;
-		//repeater_tx = <0x1>;
+		repeater_tx = <0x1>;
 		//#address-cells = <2>;
 		//#size-cells = <2>;
 		//ranges;

@@ -4496,6 +4496,7 @@ static int hdmitx_cntl_ddc(struct hdmitx_dev *hdev, unsigned int cmd,
 		hdev->hdcp_max_exceed_state = 0;
 		hdev->hdcp_max_exceed_cnt = 0;
 		ksv_sha_matched = 0;
+		memset(&tmp_ksv_lists, 0, sizeof(tmp_ksv_lists));
 		del_timer(&hdev->hdcp_timer);
 		if (hdev->topo_info)
 			memset(hdev->topo_info, 0, sizeof(*hdev->topo_info));
