@@ -205,6 +205,7 @@ static int meson_fclk_divider_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32  val, final_dyn_mask;
 	u8 final_dyn_shift;
 	unsigned long old_rate;
+	unsigned int tmp;
 	unsigned long flags = 0;
 
 	if (parent_rate == 0 || rate == 0)
@@ -235,11 +236,12 @@ static int meson_fclk_divider_set_rate(struct clk_hw *hw, unsigned long rate,
 		__acquire(mux_divider->lock);
 	writel((val | MESON_DYN_ENABLE), mux_divider->reg);
 	/*set mux_divider clk divider*/
-	val = PARM_SET(p_div->width, p_div->shift, val, rate_set->mux_div);
+	tmp = rate_set->mux_div;
+	val = PARM_SET(p_div->width, p_div->shift, val, tmp);
 	writel(val, mux_divider->reg);
 	/*set mux_divider postmux*/
-	val = PARM_SET(p_postmux->width, p_postmux->shift, val,
-			rate_set->postmux);
+	tmp = rate_set->postmux;
+	val = PARM_SET(p_postmux->width, p_postmux->shift, val, tmp);
 	writel(val, mux_divider->reg);
 	/*set mux_divider final dyn*/
 	val = readl(mux_divider->reg);

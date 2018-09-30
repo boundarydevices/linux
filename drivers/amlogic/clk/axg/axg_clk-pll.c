@@ -175,6 +175,7 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct parm *p;
 	const struct pll_rate_table *rate_set;
 	unsigned long old_rate;
+	unsigned int tmp;
 	int ret = 0;
 	u32 reg;
 	unsigned long flags = 0;
@@ -256,30 +257,35 @@ static int meson_axg_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	reg = readl(pll->base + p->reg_off);
 
-	reg = PARM_SET(p->width, p->shift, reg, rate_set->n);
+	tmp = rate_set->n;
+	reg = PARM_SET(p->width, p->shift, reg, tmp);
 	writel(reg, pll->base + p->reg_off);
 
 	p = &pll->m;
 	reg = readl(pll->base + p->reg_off);
-	reg = PARM_SET(p->width, p->shift, reg, rate_set->m);
+	tmp = rate_set->m;
+	reg = PARM_SET(p->width, p->shift, reg, tmp);
 	writel(reg, pll->base + p->reg_off);
 
 	p = &pll->od;
 	reg = readl(pll->base + p->reg_off);
-	reg = PARM_SET(p->width, p->shift, reg, rate_set->od);
+	tmp = rate_set->od;
+	reg = PARM_SET(p->width, p->shift, reg, tmp);
 	writel(reg, pll->base + p->reg_off);
 
 	p = &pll->od2;
 	if (p->width) {
 		reg = readl(pll->base + p->reg_off);
-		reg = PARM_SET(p->width, p->shift, reg, rate_set->od2);
+		tmp = rate_set->od2;
+		reg = PARM_SET(p->width, p->shift, reg, tmp);
 		writel(reg, pll->base + p->reg_off);
 	}
 
 	p = &pll->frac;
 	if (p->width) {
 		reg = readl(pll->base + p->reg_off);
-		reg = PARM_SET(p->width, p->shift, reg, rate_set->frac);
+		tmp = rate_set->frac;
+		reg = PARM_SET(p->width, p->shift, reg, tmp);
 		writel(reg, pll->base + p->reg_off);
 	}
 
