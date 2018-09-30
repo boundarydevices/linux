@@ -182,7 +182,12 @@ static int resample_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct audioresample *p_resample =  snd_kcontrol_chip(kcontrol);
+	struct audioresample *p_resample = snd_kcontrol_chip(kcontrol);
+
+	if (!p_resample) {
+		pr_info("audio resample is not init\n");
+		return -EINVAL;
+	}
 
 	ucontrol->value.enumerated.item[0] = p_resample->asr_idx;
 
@@ -192,6 +197,11 @@ static int resample_get_enum(
 int resample_set(int index)
 {
 	int resample_rate = resample_idx2rate(index);
+
+	if (!s_resample) {
+		pr_info("audio resample is not init\n");
+		return -EINVAL;
+	}
 
 	if (index == s_resample->asr_idx)
 		return 0;
@@ -295,7 +305,7 @@ static int resample_module_get_enum(
 	struct audioresample *p_resample =  snd_kcontrol_chip(kcontrol);
 
 	if (!p_resample) {
-		pr_err("audio resample is not init\n");
+		pr_info("audio resample is not init\n");
 		return -EINVAL;
 	}
 
@@ -311,7 +321,7 @@ static int resample_module_set_enum(
 	struct audioresample *p_resample =  snd_kcontrol_chip(kcontrol);
 
 	if (!p_resample) {
-		pr_err("audio resample is not init\n");
+		pr_info("audio resample is not init\n");
 		return -EINVAL;
 	}
 
