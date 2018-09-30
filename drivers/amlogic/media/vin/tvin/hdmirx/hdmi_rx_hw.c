@@ -38,6 +38,7 @@
 #include <linux/arm-smccc.h>
 
 /* Local include */
+#include "hdmi_rx_repeater.h"
 #include "hdmi_rx_drv.h"
 #include "hdmi_rx_hw.h"
 #include "hdmi_rx_edid.h"
@@ -628,11 +629,14 @@ unsigned int rx_sec_reg_read(unsigned int *addr)
 /*
  * rx_sec_set_duk
  */
-unsigned int rx_sec_set_duk(void)
+unsigned int rx_sec_set_duk(bool repeater)
 {
 	struct arm_smccc_res res;
 
-	arm_smccc_smc(HDCP22_RX_SET_DUK_KEY, 0, 0, 0, 0, 0, 0, 0, &res);
+	if (repeater)
+		arm_smccc_smc(HDCP22_RP_SET_DUK_KEY, 0, 0, 0, 0, 0, 0, 0, &res);
+	else
+		arm_smccc_smc(HDCP22_RX_SET_DUK_KEY, 0, 0, 0, 0, 0, 0, 0, &res);
 
 	return (unsigned int)((res.a0)&0xffffffff);
 }
@@ -1561,7 +1565,7 @@ int rx_is_hdcp22_support(void)
 {
 	int ret = 0;
 
-	if (rx_sec_set_duk() == 1) {
+	if (rx_sec_set_duk(hdmirx_repeat_support()) == 1) {
 		rx_hdcp22_wr_top(TOP_SKP_CNTL_STAT, 7);
 		ret = 1;
 	} else
@@ -2078,6 +2082,47 @@ void rx_hdcp_init(void)
 		rx_hdcp14_config(&rx.hdcp);
 	else
 		hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, ENCRIPTION_ENABLE, 0);
+}
+
+/*type 1 pull down hpd,reset hdcp2.2
+ *type 2 only pull down hpd
+ */
+void hdmirx_load_firm_reset(int type)
+{
+	int ret = 0;
+
+	rx_pr("%s\n", __func__);
+	rx_pr("3firm_change:%d,repeat_plug:%d,repeat:%d\n",
+				rx.firm_change, repeat_plug, rx.hdcp.repeat);
+	/*wait the fsm end*/
+	rx.firm_change = 1;
+	msleep(20);
+	/*External_Mute(1);rx_aud_pll_ctl(0);*/
+	rx_set_cur_hpd(0);
+	/*type 2 only pull down hpd*/
+	if (type == 2) {
+		downstream_hpd_flag = 0;
+		fsm_restart();
+		return;
+	}
+	if (!repeat_plug)
+		downstream_hpd_flag = 1;
+	else
+		downstream_hpd_flag = 0;
+	ret = rx_sec_set_duk(hdmirx_repeat_support());
+	rx_pr("ret = %d\n", ret);
+	if (ret == 1) {
+		hdmirx_wr_dwc(DWC_HDCP22_CONTROL, 0x0);
+		hdmirx_hdcp22_esm_rst();
+		mdelay(100);
+		hdmirx_wr_dwc(DWC_HDCP22_CONTROL,
+					0x1000);
+		rx_hdcp22_wr_top(TOP_SKP_CNTL_STAT, 0x1);
+		fsm_restart();
+		rx_is_hdcp22_support();
+	}
+	rx_pr("4firm_change:%d,repeat_plug:%d,repeat:%d\n",
+			rx.firm_change, repeat_plug, rx.hdcp.repeat);
 }
 
 /* need reset bandgap when
@@ -2670,7 +2715,7 @@ void rx_debug_load22key(void)
 	int ret = 0;
 	int wait_kill_done_cnt = 0;
 
-	ret = rx_sec_set_duk();
+	ret = rx_sec_set_duk(hdmirx_repeat_support());
 	rx_pr("22 = %d\n", ret);
 	if (ret == 1) {
 		rx_pr("load 2.2 key\n");

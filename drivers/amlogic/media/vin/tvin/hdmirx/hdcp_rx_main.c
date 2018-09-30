@@ -32,6 +32,7 @@
 #include <linux/debugfs.h>
 #include <linux/version.h>
 #include "hdcp_rx_main.h"
+#include "hdmi_rx_repeater.h"
 #include "hdmi_rx_drv.h"
 #include "hdmi_rx_hw.h"
 

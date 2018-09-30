@@ -63,6 +63,8 @@ struct esm_device {
 	dma_addr_t data_base;
 	uint32_t data_size;
 	uint8_t *data;
+
+	struct dentry *esm_blob;
 	struct debugfs_blob_wrapper blob;
 	struct resource *hpi_resource;
 	uint8_t __iomem *hpi;
@@ -106,7 +108,7 @@ static long load_code(struct esm_device *esm, struct esm_ioc_code __user *arg)
 	if (copy_from_user(esm->code, &arg->data, head.len) != 0)
 		return -EFAULT;
 
-	esm->code_loaded = 1;
+	/* esm->code_loaded = 1; */
 		return 0;
 }
 
@@ -233,7 +235,7 @@ static struct esm_device *alloc_esm_slot(const struct esm_ioc_meminfo *info)
 }
 
 static struct dentry *esm_debugfs;
-static struct dentry *esm_blob;
+/*static struct dentry *esm_blob;*/
 
 static void free_dma_areas(struct esm_device *esm)
 {
@@ -255,6 +257,8 @@ static void free_dma_areas(struct esm_device *esm)
 static int alloc_dma_areas(struct esm_device *esm,
 	const struct esm_ioc_meminfo *info)
 {
+	char blobname[32];
+
 	esm->code_size = info->code_size;
 	esm->code_is_phys_mem = (info->code_base != 0);
 
@@ -289,19 +293,23 @@ static int alloc_dma_areas(struct esm_device *esm,
 			return -ENOMEM;
 		}
 	}
-	/* add blob note to show esm feature and debug*/
-	esm_debugfs = debugfs_create_dir("esm", NULL);
-	if (!esm_debugfs)
-		return -ENOENT;
-
-	esm->blob.data = (void *)esm->code;
-	esm->blob.size = esm->code_size;
-	esm_blob = debugfs_create_blob("blob", 0644, esm_debugfs, &esm->blob);
 
 	if (randomize_mem) {
 		prandom_bytes(esm->code, esm->code_size);
 		prandom_bytes(esm->data, esm->data_size);
 	}
+
+	if (!esm_debugfs) {
+		esm_debugfs = debugfs_create_dir("esm", NULL);
+		if (!esm_debugfs)
+			return -ENOENT;
+	}
+	memset(blobname, 0, sizeof(blobname));
+	sprintf(blobname, "blob.%x", info->hpi_base);
+	esm->blob.data = (void *)esm->data;
+	esm->blob.size = esm->data_size;
+	esm->esm_blob = debugfs_create_blob(blobname, 0644, esm_debugfs,
+		&esm->blob);
 
 	return 0;
 }
@@ -312,6 +320,7 @@ static long init(struct file *f, void __user *arg)
 	struct resource *hpi_mem;
 	struct esm_ioc_meminfo info;
 	struct esm_device *esm;
+	char region_name[20];
 	int rc;
 
 	if (copy_from_user(&info, arg, sizeof(info)) != 0)
@@ -325,8 +334,15 @@ static long init(struct file *f, void __user *arg)
 		rc = alloc_dma_areas(esm, &info);
 		if (rc < 0)
 			goto err_free;
-		pr_info("info.hpi_base = 0x%x\n", info.hpi_base);
-		hpi_mem = request_mem_region(info.hpi_base, 128, "esm-hpi");
+		/* pr_info("info.hpi_base = 0x%x\n", info.hpi_base); */
+		/* hpi_mem =
+		 *	request_mem_region(info.hpi_base, 128, "esm-hpi");
+		 */
+		sprintf(region_name, "ESM-%X", info.hpi_base);
+		pr_info("info.hpi_base = 0x%x region_name:%s\n",
+			info.hpi_base, region_name);
+		hpi_mem = request_mem_region(info.hpi_base, 0x100, region_name);
+
 		if (!hpi_mem) {
 			rc = -EADDRNOTAVAIL;
 			goto err_free;
@@ -341,6 +357,12 @@ static long init(struct file *f, void __user *arg)
 		esm->hpi_resource = hpi_mem;
 		esm->initialized = 1;
 	}
+
+	/*every time clear the data buff*/
+	if (esm->data)
+		memset(esm->data, 0, esm->data_size);
+	pr_info("esm data = %p size:%d\n",
+			esm->data, esm->data_size);
 
 	f->private_data = esm;
 		return 0;

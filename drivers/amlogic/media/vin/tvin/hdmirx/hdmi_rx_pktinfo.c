@@ -30,6 +30,7 @@
 #include <linux/cdev.h>
 
 /* Local include */
+#include "hdmi_rx_repeater.h"
 #include "hdmi_rx_pktinfo.h"
 #include "hdmi_rx_drv.h"
 #include "hdmi_rx_hw.h"

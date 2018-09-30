@@ -36,6 +36,7 @@
 #include <linux/delay.h>
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 /* Local include */
+#include "hdmi_rx_repeater.h"
 #include "hdmi_rx_eq.h"
 #include "hdmi_rx_drv.h"
 #include "hdmi_rx_hw.h"

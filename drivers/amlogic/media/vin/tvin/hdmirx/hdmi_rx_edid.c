@@ -30,9 +30,9 @@
 #include <linux/cdev.h>
 
 /* Local include */
+#include "hdmi_rx_repeater.h"
 #include "hdmi_rx_drv.h"
 #include "hdmi_rx_edid.h"
-#include "hdmi_rx_repeater.h"
 #include "hdmi_rx_hw.h"
 
 static unsigned char edid_temp[EDID_SIZE];
@@ -810,7 +810,7 @@ void rx_edid_update_audio_info(unsigned char *p_edid,
 {
 	if (p_edid == NULL)
 		return;
-	rx_modify_edid(p_edid, len, rx_get_receiver_edid());
+	rx_modify_edid(p_edid, len, rx_get_dw_edid_addr());
 }
 
 unsigned int rx_edid_cal_phy_addr(

@@ -1076,6 +1076,7 @@
 #define HDCP22_RX_ESM_READ	0x8200001f
 #define HDCP22_RX_ESM_WRITE	0x8200002f
 #define HDCP22_RX_SET_DUK_KEY	0x8200002e
+#define HDCP22_RP_SET_DUK_KEY	0x8200002c
 #define HDCP14_RX_SETKEY	0x8200002d
 
 enum hdcp14_key_mode_e {
@@ -1154,11 +1155,12 @@ extern unsigned int sec_top_read(unsigned int *addr);
 extern void sec_top_write(unsigned int *addr, unsigned int value);
 extern void rx_esm_tmdsclk_en(bool en);
 extern int hdcp22_on;
+extern int hdcp14_on;
 extern bool hdcp22_kill_esm;
 extern bool hpd_to_esm;
 extern void hdcp22_clk_en(bool en);
 extern void hdmirx_hdcp22_esm_rst(void);
-extern unsigned int rx_sec_set_duk(void);
+extern unsigned int rx_sec_set_duk(bool repeater);
 extern void hdmirx_hdcp22_init(void);
 extern void hdcp22_suspend(void);
 extern void hdcp22_resume(void);
@@ -1166,8 +1168,8 @@ extern void hdmirx_hdcp22_hpd(bool value);
 extern void esm_set_reset(bool reset);
 extern void esm_set_stable(bool stable);
 extern void rx_hpd_to_esm_handle(struct work_struct *work);
-
-
+extern void rx_hdcp14_resume(void);
+extern void hdmirx_load_firm_reset(int type);
 extern unsigned int hdmirx_packet_fifo_rst(void);
 extern unsigned int hdmirx_audio_fifo_rst(void);
 extern void hdmirx_phy_init(void);

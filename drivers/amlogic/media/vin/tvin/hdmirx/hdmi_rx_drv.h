@@ -46,7 +46,7 @@
  *
  *
  */
-#define RX_VER2 "ver.2018/09/06"
+#define RX_VER2 "ver.2018/10/30"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -271,6 +271,8 @@ struct rx_video_info {
  * @short HDMI RX controller HDCP configuration
  */
 struct hdmi_rx_hdcp {
+	/*hdcp auth state*/
+	enum repeater_state_e state;
 	/** Repeater mode else receiver only */
 	bool repeat;
 	bool cascade_exceed;
@@ -394,6 +396,7 @@ struct rx_s {
 	bool boot_flag;
 	bool open_fg;
 	uint8_t irq_flag;
+	bool firm_change;/*hdcp2.2 rp/rx switch time*/
 	/** HDMI RX controller HDCP configuration */
 	struct hdmi_rx_hdcp hdcp;
 	/*report hpd status to app*/
@@ -452,6 +455,7 @@ extern struct tasklet_struct rx_tasklet;
 extern struct device *hdmirx_dev;
 extern struct rx_s rx;
 extern struct reg_map reg_maps[MAP_ADDR_MODULE_NUM];
+extern bool downstream_repeat_support;
 extern void rx_tasklet_handler(unsigned long arg);
 extern void skip_frame(unsigned int cnt);
 
@@ -509,6 +513,7 @@ bool hdmirx_repeat_support(void);
 
 /* edid-hdcp14 */
 extern unsigned int edid_update_flag;
+extern unsigned int downstream_hpd_flag;
 
 extern void hdmirx_fill_edid_buf(const char *buf, int size);
 extern unsigned int hdmirx_read_edid_buf(char *buf, int max_size);
