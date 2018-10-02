@@ -7,7 +7,6 @@
 
 #include "fsl-imx8mq.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
-#include "panel-osd050t3236.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -473,7 +472,9 @@
 		fb_hdmi = &hdmi;
 		gpio1 = &gpio1;
 		lcdif = &lcdif;
+		mipi = &fb_mipi;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
+		mipi_cmds_m101nwwb = &mipi_cmds_ltk080a60a004t;		/* Same commands work for both */
 		mipi_dsi = &mipi_dsi;
 		mipi_dsi_bridge = &mipi_dsi_bridge;
 		mipi_dsi_phy = &mipi_dsi_phy;
