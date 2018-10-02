@@ -10,6 +10,8 @@
  */
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include "panel-osd050t3236.dtsi"
+#include "panel-osd050t3872.dtsi"
 
 &iomuxc_imx6q_cid {
 	pinctrl_audmux3: audmuxgrp {
@@ -511,20 +513,30 @@
 
 / {
 	aliases {
-		backlight_mipi_dsi = &backlight_mipi_dsi;
-		fb_mipi_dsi = &fb_mipi_dsi;
+		backlight_mipi = &backlight_mipi;
+		fb_mipi = &fb_mipi;
+		mipi = &mipi_dsi;
+		mipi_cmds_osd050t3236 = &mipi_cmds_osd050t3236;
+		mipi_cmds_osd050t3872 = &mipi_cmds_osd050t3872;
+		mipi_dsi = &mipi_dsi;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
-		mxcfb0 = &fb_mipi_dsi;
-		pwm_mipi_dsi = &pwm1;
+		mxcfb0 = &fb_mipi;
+		pwm_mipi = &pwm1;
+		t_mipi = &t_mipi;
 	};
 
-	backlight_mipi_dsi: backlight_mipi_dsi {
+	alias_create_phandles {
+		p1 = <&mipi_cmds_osd050t3236>;
+		p2 = <&mipi_cmds_osd050t3872>;
+	};
+
+	backlight_mipi: backlight-mipi {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
-		display = <&fb_mipi_dsi>;
+		display = <&fb_mipi>;
 		enable-gpios = GP_BACKLIGHT_MIPI_EN;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_mipi>;
@@ -549,11 +561,10 @@
 		};
 	};
 
-	fb_mipi_dsi: fb@0 {
+	fb_mipi: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "mipi_dsi";
 		interface_pix_fmt = "RGB24";
-		mode_str ="OSD050T2844";
 		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
@@ -1213,12 +1224,34 @@
 	dev_id = <0>;
 	disp_id = <0>;
 	disp-power-on-supply = <&reg_2p8v>;
+#if 0
 	lcd_panel = "OSD050T2844";
+#endif
+	mipi-cmds-1 = <&mipi_cmds_osd050t3236>;
+	mipi-cmds-2 = <&mipi_cmds_osd050t3872>;
 	pinctrl-0 = <&pinctrl_mipi_dsi_reset>;
 	pinctrl-names = "default";
 	reset-delay-us = <50>;
 	reset-gpios = GP_MIPI_DSI_RESET;
 	status = "okay";
+
+	display-timings {
+		t_mipi: t-dsi-default {
+			/* OSD050T3236 / OSD050T3872 timings */
+			clock-frequency = <52077000>;
+			hactive = <720>;
+			vactive = <1280>;
+			hback-porch = <31>;
+			hfront-porch = <16>;
+			vback-porch = <15>;
+			vfront-porch = <8>;
+			hsync-len = <1>;
+			vsync-len = <1>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <0>;
+		};
+	};
 };
 
 &pwm1 {
