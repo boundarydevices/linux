@@ -91,6 +91,11 @@ struct mipi_dsi_bus_mux {
 	int (*get_mux) (int dev_id, int disp_id);
 };
 
+struct mipi_cmd {
+	const u8* mipi_cmds;
+	unsigned length;
+};
+
 /* driver private data */
 struct mipi_dsi_info {
 	struct platform_device		*pdev;
@@ -129,7 +134,7 @@ struct mipi_dsi_info {
 	/* board related power control */
 	struct backlight_device		*bl;
 	/* callback for lcd panel operation */
-	struct mipi_dsi_lcd_callback	*lcd_callback;
+	int  (*mipi_lcd_setup)(struct mipi_dsi_info *);
 
 	int (*mipi_dsi_pkt_read)(struct mipi_dsi_info *mipi,
 			u8 data_type, u32 *buf, int len);
@@ -137,6 +142,11 @@ struct mipi_dsi_info {
 			u8 data_type, const u32 *buf, int len);
 	int (*mipi_dsi_dcs_cmd)(struct mipi_dsi_info *mipi,
 			u8 cmd, const u32 *param, int num);
+	struct mipi_cmd mipi_cmds_init;
+	struct mipi_cmd mipi_cmds_enable;
+	struct mipi_cmd mipi_cmds_disable;
+	struct mipi_cmd mipi_cmds_detect;
+	struct fb_videomode fb_vm;
 };
 
 #ifdef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
