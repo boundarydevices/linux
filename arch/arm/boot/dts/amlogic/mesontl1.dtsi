@@ -841,6 +841,49 @@
 		/*partions defined in dts*/
 	};
 
+	mesonstream {
+		compatible = "amlogic, codec, streambuf";
+		status = "okay";
+		clocks = <&clkc CLKID_U_PARSER
+			&clkc CLKID_DEMUX
+			&clkc CLKID_AHB_ARB0
+			&clkc CLKID_DOS
+			&clkc CLKID_VDEC_MUX
+			&clkc CLKID_HCODEC_MUX
+			&clkc CLKID_HEVC_MUX
+			&clkc CLKID_HEVCF_MUX>;
+		clock-names = "parser_top",
+			"demux",
+			"ahbarb0",
+			"vdec",
+			"clk_vdec_mux",
+			"clk_hcodec_mux",
+			"clk_hevc_mux",
+			"clk_hevcb_mux";
+	};
+
+	vcodec-dec {
+		compatible = "amlogic, vcodec-dec";
+		status = "okay";
+	};
+
+	vdec {
+		compatible = "amlogic, vdec";
+		status = "okay";
+		interrupts = <0 3 1
+			0 23 1
+			0 32 1
+			0 43 1
+			0 44 1
+			0 45 1>;
+		interrupt-names = "vsync",
+			"demux",
+			"parser",
+			"mailbox_0",
+			"mailbox_1",
+			"mailbox_2";
+	};
+
 }; /* end of / */
 
 &pinctrl_aobus {
