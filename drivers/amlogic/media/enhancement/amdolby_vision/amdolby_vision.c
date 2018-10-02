@@ -4881,18 +4881,22 @@ int dolby_vision_parse_metadata(
 				TUNINGMODE_EXTLEVEL4_DISABLE;
 
 		if (src_format !=  ((struct tv_dovi_setting_s *)
-			tv_dovi_setting)->src_format)
-			p_funcs->tv_control_path(
-				FORMAT_INVALID, 0,
-				NULL, 0,
-				NULL, 0,
-				0, 0,
-				SIG_RANGE_SMPTE,
-				NULL, NULL,
-				0,
-				NULL,
-				NULL);
+			tv_dovi_setting)->src_format) {
+			if (p_funcs->tv_control_path)
+				p_funcs->tv_control_path(
+					FORMAT_INVALID, 0,
+					NULL, 0,
+					NULL, 0,
+					0, 0,
+					SIG_RANGE_SMPTE,
+					NULL, NULL,
+					0,
+					NULL,
+					NULL);
+		}
 #endif
+		if (!p_funcs->tv_control_path)
+			return -1;
 		flag = p_funcs->tv_control_path(
 			src_format, input_mode,
 			comp_buf[currentId], total_comp_size,
@@ -4975,8 +4979,7 @@ int dolby_vision_parse_metadata(
 				frame_count, debug_dolby);
 			el_mode = el_flag;
 			return 0; /* setting updated */
-		}
-		if (flag < 0) {
+		} else {
 			((struct tv_dovi_setting_s *)
 				tv_dovi_setting)->video_width = 0;
 			((struct tv_dovi_setting_s *)
@@ -5907,7 +5910,6 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 	if (!p_funcs && func) {
 		pr_info("*** register_dv_functions. version %s ***\n",
 			func->version_info);
-		p_funcs = func;
 		ret = 0;
 		/* get efuse flag*/
 		reg_clk = READ_VPP_REG(DOLBY_TV_CLKGATE_CTRL);
@@ -5933,9 +5935,17 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 		if (is_meson_gxm() ||
 			is_meson_g12())
 			dolby_vision_run_mode_delay = 3;
-		pq_config =  vmalloc(sizeof(pq_config));
+		pq_config =  vmalloc(sizeof(struct pq_config_s));
+		if (pq_config == NULL) {
+			pr_info("[amdolby_vision] vmalloc failed for pq_config_s error!\n");
+			return -1;
+		}
 		pq_config_fake = (struct pq_config_s *)pq_config;
-		dovi_setting = vmalloc(sizeof(dovi_setting));
+		dovi_setting = vmalloc(sizeof(struct tv_dovi_setting_s));
+		if (dovi_setting == NULL) {
+			pr_info("[amdolby_vision] vmalloc failed for tv_dovi_setting_s error!\n");
+			return -1;
+		}
 		tv_dovi_setting = (struct tv_dovi_setting_s *)dovi_setting;
 		/* adjust core2 setting to work around fixing with 1080p24hz */
 		if (is_meson_txlx())
@@ -5952,6 +5962,7 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 				g_vpotch = 0x8;
 		} else
 			g_vpotch = 0x8;
+		p_funcs = func;
 	}
 	return ret;
 }
