@@ -137,9 +137,11 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 	struct mipi_dsi_device *dsi;
 	const u8 *cmd = mc->mipi_cmds;
 	unsigned length = mc->length;
+	u8 data[4];
 	unsigned len;
 	int ret;
 	int generic;
+	int match = 0;
 
 	pr_debug("%s:\n", __func__);
 	if (!cmd || !length)
@@ -153,30 +155,42 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 		generic = len & 0x80;
 		len &= 0x7f;
 
+		ret = 0;
 		if (len < S_DELAY) {
 			if (generic)
 				ret = mipi_dsi_generic_write(dsi, cmd, len);
 			else
 				ret = mipi_dsi_dcs_write_buffer(dsi, cmd, len);
-			if (ret < 0) {
-				dev_err(&dsi->dev,
-					"Failed to send MCS (%d), (%d)%02x %02x\n",
-					ret, len, cmd[0], cmd[1]);
-				return ret;
-			} else {
-				pr_debug("Sent MCS (%d), (%d)%02x %02x\n",
-					ret, len, cmd[0], cmd[1]);
-			}
+		} else if (len == S_MRPS) {
+				ret = mipi_dsi_set_maximum_return_packet_size(
+					dsi, cmd[0]);
+				len = 1;
+		} else if (len == S_DCS_READ) {
+			ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, 1);
+			pr_debug("Read MCS(%d): (%x) %x cmp %x\n",
+				ret, cmd[0], data[0], cmd[1]);
+			len = 2;
+			if (data[0] != cmd[1])
+				match = -EINVAL;
 		} else {
 			msleep(cmd[0]);
 			len = 1;
+		}
+		if (ret < 0) {
+			dev_err(&dsi->dev,
+				"Failed to send MCS (%d), (%d)%02x %02x\n",
+				ret, len, cmd[0], cmd[1]);
+			return ret;
+		} else {
+			pr_debug("Sent MCS (%d), (%d)%02x %02x\n",
+				ret, len, cmd[0], cmd[1]);
 		}
 		if (length <= len)
 			break;
 		cmd += len;
 		length -= len;
 	}
-	return 0;
+	return match;
 };
 
 static unsigned int panel_simple_get_timings_modes(struct panel_simple *panel)
