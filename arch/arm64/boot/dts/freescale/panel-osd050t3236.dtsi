@@ -55,7 +55,7 @@
 #define P0_SETVGP2	0x55
 
 / {
-	osd050t3236_mipi_cmds: osd050t3236-mipi-cmds {
+	mipi_cmds_osd050t3236: mipi-cmds-osd050t3236 {
 		mipi-cmds-init = /bits/ 8 <
 			GEN_S1P(0xFE, 0x01)		/* CMD Mode Switch, manufacturer command set page 0 */
 
