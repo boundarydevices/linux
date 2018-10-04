@@ -5973,9 +5973,15 @@ static bool need_bypass(struct vframe_s *vf)
 
 	if (vf->type & VIDTYPE_PIC)
 		return true;
-#if 0
+#if 1
 	if (vf->type & VIDTYPE_COMPRESS)
 		return true;
+#else
+	if (vf->type & VIDTYPE_COMPRESS) {
+		if ((vf->compHeight > (default_height + 8))
+			|| (vf->compWidth > default_width))
+			return true;
+	}
 #endif
 	if ((vf->width > default_width) ||
 			(vf->height > (default_height + 8)))
