@@ -188,11 +188,29 @@ static inline bool has_dcss(struct device *dev)
 static int imx_drm_bind(struct device *dev)
 {
 	struct drm_device *drm;
+	struct imx_drm_device *imxdrm;
 	int ret;
 
 	drm = drm_dev_alloc(&imx_drm_driver, dev);
 	if (IS_ERR(drm))
 		return PTR_ERR(drm);
+
+	imxdrm = devm_kzalloc(dev, sizeof(*imxdrm), GFP_KERNEL);
+	if (!imxdrm) {
+		ret = -ENOMEM;
+		goto err_unref;
+	}
+
+	imxdrm->drm = drm;
+	drm->dev_private = imxdrm;
+
+	imxdrm->wq = alloc_ordered_workqueue("imxdrm", 0);
+	if (!imxdrm->wq) {
+		ret = -ENOMEM;
+		goto err_unref;
+	}
+
+	init_waitqueue_head(&imxdrm->commit.wait);
 
 	/*
 	 * enable drm irq mode.
@@ -272,6 +290,10 @@ err_unbind:
 	component_unbind_all(drm->dev, drm);
 err_kms:
 	drm_mode_config_cleanup(drm);
+
+	destroy_workqueue(imxdrm->wq);
+
+err_unref:
 	drm_dev_put(drm);
 
 	return ret;
@@ -280,6 +302,9 @@ err_kms:
 static void imx_drm_unbind(struct device *dev)
 {
 	struct drm_device *drm = dev_get_drvdata(dev);
+	struct imx_drm_device *imxdrm = drm->dev_private;
+
+	flush_workqueue(imxdrm->wq);
 
 	drm_dev_unregister(drm);
 
@@ -291,6 +316,8 @@ static void imx_drm_unbind(struct device *dev)
 
 	component_unbind_all(drm->dev, drm);
 	dev_set_drvdata(dev, NULL);
+
+	destroy_workqueue(imxdrm->wq);
 
 	drm_dev_put(drm);
 }
