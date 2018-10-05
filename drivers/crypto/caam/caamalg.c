@@ -56,6 +56,10 @@
 #include "key_gen.h"
 #include "caamalg_desc.h"
 
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+#include "tag_object.h"
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
+
 /*
  * crypto alg
  */
@@ -88,6 +92,10 @@ struct caam_alg_entry {
 	int class2_alg_type;
 	bool rfc3686;
 	bool geniv;
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+	bool is_tagged_key;
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 };
 
 struct caam_aead_alg {
@@ -113,6 +121,10 @@ struct caam_ctx {
 	struct alginfo adata;
 	struct alginfo cdata;
 	unsigned int authsize;
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+	bool is_tagged_key;
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 };
 
 static int aead_null_set_sh_desc(struct crypto_aead *aead)
@@ -651,6 +663,7 @@ static int rfc4543_setkey(struct crypto_aead *aead,
 static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 			     const u8 *key, unsigned int keylen)
 {
+	int ret = 0;
 	struct caam_ctx *ctx = crypto_ablkcipher_ctx(ablkcipher);
 	struct crypto_tfm *tfm = crypto_ablkcipher_tfm(ablkcipher);
 	const char *alg_name = crypto_tfm_alg_name(tfm);
@@ -667,6 +680,63 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 	print_hex_dump(KERN_ERR, "key in @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, key, keylen, 1);
 #endif
+
+	/* Check the key can be copied in context */
+	if (keylen > sizeof(ctx->key)) {
+		dev_err(jrdev, "Key cannot be copied\n");
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	/* Copy the key in context */
+	memcpy(ctx->key, key, keylen);
+
+	/* The key to load is in the context */
+	ctx->cdata.key_virt = ctx->key;
+	ctx->cdata.keylen = keylen;
+	ctx->cdata.key_real_len = keylen;
+	ctx->cdata.key_cmd_opt = 0;
+
+	ctx->cdata.key_inline = true;
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+	/*
+	 * Check if the key is not in plaintext format
+	 */
+	if (ctx->is_tagged_key) {
+		struct tag_object_conf *tagged_key_conf;
+
+		/* Get the configuration */
+		ret = get_tag_object_conf(ctx->cdata.key_virt,
+					  ctx->cdata.keylen, &tagged_key_conf);
+		if (ret) {
+			dev_err(jrdev,
+				"caam algorithms can't process tagged key\n");
+			goto exit;
+		}
+
+		/* Only support black key */
+		if (!is_bk_conf(tagged_key_conf)) {
+			ret = -EINVAL;
+			dev_err(jrdev,
+				"The tagged key provided is not a black key\n");
+			goto exit;
+		}
+
+		get_blackey_conf(&tagged_key_conf->conf.bk_conf,
+				 &ctx->cdata.key_real_len,
+				 &ctx->cdata.key_cmd_opt);
+
+		ret = get_tagged_data(ctx->cdata.key_virt, ctx->cdata.keylen,
+				      &ctx->cdata.key_virt, &ctx->cdata.keylen);
+		if (ret) {
+			dev_err(jrdev,
+				"caam algorithms wrong data from tagged key\n");
+			goto exit;
+		}
+	}
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
+
 	/*
 	 * AES-CTR needs to load IV in CONTEXT1 reg
 	 * at an offset of 128bits (16bytes)
@@ -682,17 +752,19 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 	 */
 	if (is_rfc3686) {
 		ctx1_iv_off = 16 + CTR_RFC3686_NONCE_SIZE;
-		keylen -= CTR_RFC3686_NONCE_SIZE;
+		ctx->cdata.keylen -= CTR_RFC3686_NONCE_SIZE;
+		ctx->cdata.key_real_len = ctx->cdata.keylen;
 	}
 
-	ctx->cdata.keylen = keylen;
-	ctx->cdata.key_virt = ctx->key;
-	ctx->cdata.key_inline = true;
+	if (!ctx->cdata.key_inline)
+		dma_sync_single_for_device(jrdev, ctx->key_dma,
+					   ctx->cdata.keylen, DMA_TO_DEVICE);
 
 	/* ablkcipher_encrypt shared descriptor */
 	desc = ctx->sh_desc_enc;
 	cnstr_shdsc_ablkcipher_encap(desc, &ctx->cdata, ivsize, is_rfc3686,
 				     ctx1_iv_off);
+
 	dma_sync_single_for_device(jrdev, ctx->sh_desc_enc_dma,
 				   desc_bytes(desc), ctx->dir);
 
@@ -700,6 +772,7 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 	desc = ctx->sh_desc_dec;
 	cnstr_shdsc_ablkcipher_decap(desc, &ctx->cdata, ivsize, is_rfc3686,
 				     ctx1_iv_off);
+
 	dma_sync_single_for_device(jrdev, ctx->sh_desc_dec_dma,
 				   desc_bytes(desc), ctx->dir);
 
@@ -707,10 +780,12 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 	desc = ctx->sh_desc_givenc;
 	cnstr_shdsc_ablkcipher_givencap(desc, &ctx->cdata, ivsize, is_rfc3686,
 					ctx1_iv_off);
+
 	dma_sync_single_for_device(jrdev, ctx->sh_desc_givenc_dma,
 				   desc_bytes(desc), ctx->dir);
 
-	return 0;
+exit:
+	return ret;
 }
 
 
@@ -1897,6 +1972,7 @@ struct caam_alg_template {
 	} template_u;
 	u32 class1_alg_type;
 	u32 class2_alg_type;
+	bool support_tagged_key;
 };
 
 static struct caam_alg_template driver_algs[] = {
@@ -1917,6 +1993,7 @@ static struct caam_alg_template driver_algs[] = {
 			.ivsize = AES_BLOCK_SIZE,
 			},
 		.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_CBC,
+		.support_tagged_key = true,
 	},
 	{
 		.name = "ecb(aes)",
@@ -1933,6 +2010,7 @@ static struct caam_alg_template driver_algs[] = {
 			.ivsize = 0,
 			},
 		.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_ECB,
+		.support_tagged_key = true,
 	},
 	{
 		.name = "cbc(des3_ede)",
@@ -3396,6 +3474,11 @@ static int caam_init_common(struct caam_ctx *ctx, struct caam_alg_entry *caam,
 	ctx->cdata.algtype = OP_TYPE_CLASS1_ALG | caam->class1_alg_type;
 	ctx->adata.algtype = OP_TYPE_CLASS2_ALG | caam->class2_alg_type;
 
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+	/* Pass the information if the input key is a tagged key */
+	ctx->is_tagged_key = caam->is_tagged_key;
+#endif
+
 	return 0;
 }
 
@@ -3487,7 +3570,7 @@ skip_ecb_ziv:
 }
 
 static struct caam_crypto_alg *caam_alg_alloc(struct caam_alg_template
-					      *template)
+					      *template, bool sup_tag_key)
 {
 	struct caam_crypto_alg *t_alg;
 	struct crypto_alg *alg;
@@ -3529,6 +3612,39 @@ static struct caam_crypto_alg *caam_alg_alloc(struct caam_alg_template
 
 	t_alg->caam.class1_alg_type = template->class1_alg_type;
 	t_alg->caam.class2_alg_type = template->class2_alg_type;
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+	/* Modifications of algo to support tagged keys */
+	if (sup_tag_key) {
+		/* Indicate it only supports tagged keys */
+		t_alg->caam.is_tagged_key = true;
+
+		/* Adapt name and driver name */
+		snprintf(alg->cra_name, CRYPTO_MAX_ALG_NAME, "tk(%s)",
+			 template->name);
+		snprintf(alg->cra_driver_name, CRYPTO_MAX_ALG_NAME, "tk-%s",
+			 template->driver_name);
+
+		/* Minimal priority because it is a special case */
+		alg->cra_priority = 1;
+
+		/*
+		 * The tagged key can have the size varying from only the size
+		 * of the tag (no key) or CAAM_MAX_KEY_SIZE as it will be copied
+		 * in the context
+		 */
+		switch (template->type) {
+		case CRYPTO_ALG_TYPE_GIVCIPHER:
+			alg->cra_ablkcipher.min_keysize = TAG_MIN_SIZE;
+			alg->cra_ablkcipher.max_keysize = CAAM_MAX_KEY_SIZE;
+			break;
+		case CRYPTO_ALG_TYPE_ABLKCIPHER:
+			alg->cra_ablkcipher.min_keysize = TAG_MIN_SIZE;
+			alg->cra_ablkcipher.max_keysize = CAAM_MAX_KEY_SIZE;
+			break;
+		}
+	}
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 
 	return t_alg;
 }
@@ -3638,7 +3754,7 @@ static int __init caam_algapi_init(void)
 			     OP_ALG_AAI_XTS)
 				continue;
 
-		t_alg = caam_alg_alloc(alg);
+		t_alg = caam_alg_alloc(alg, false);
 		if (IS_ERR(t_alg)) {
 			err = PTR_ERR(t_alg);
 			pr_warn("%s alg allocation failed\n", alg->driver_name);
@@ -3655,6 +3771,29 @@ static int __init caam_algapi_init(void)
 
 		list_add_tail(&t_alg->entry, &alg_list);
 		registered = true;
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+		if (alg->support_tagged_key) {
+			/* Register algo for tagged key */
+			t_alg = caam_alg_alloc(alg, true);
+			if (IS_ERR(t_alg)) {
+				err = PTR_ERR(t_alg);
+				pr_warn("%s alg allocation failed\n",
+					alg->driver_name);
+				continue;
+			}
+
+			err = crypto_register_alg(&t_alg->crypto_alg);
+			if (err) {
+				pr_warn("%s alg registration failed\n",
+					t_alg->crypto_alg.cra_driver_name);
+				kfree(t_alg);
+				continue;
+			}
+
+			list_add_tail(&t_alg->entry, &alg_list);
+		}
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 	}
 
 	for (i = 0; i < ARRAY_SIZE(driver_aeads); i++) {
