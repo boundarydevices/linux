@@ -27,7 +27,8 @@
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			/* J17 */
-			MX8MQ_IOMUXC_ECSPI2_SS0_ECSPI2_SS0		0x19	/* Pin 1 */
+#define GP_ECSPI2_CS0	<&gpio5 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_ECSPI2_SS0_GPIO5_IO13		0x19	/* Pin 1 */
 			MX8MQ_IOMUXC_ECSPI2_MISO_ECSPI2_MISO		0x19	/* Pin 3 */
 			MX8MQ_IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK		0x19	/* Pin 5 */
 			MX8MQ_IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI		0x19	/* Pin 7 */
@@ -663,7 +664,17 @@
 &ecspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI2_CS0;
 	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <0>;
+	};
 };
 
 &fec1 {
