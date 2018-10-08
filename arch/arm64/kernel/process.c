@@ -260,12 +260,12 @@ static void show_user_data(unsigned long addr, int nbytes, const char *name)
 
 			bad = __get_user(data, p);
 			if (bad)
-				pr_info(" ********");
+				pr_cont(" ********");
 			else
-				pr_info(" %08x", data);
+				pr_cont(" %08x", data);
 			++p;
 		}
-		pr_info("\n");
+		pr_cont("\n");
 	}
 }
 #endif /* CONFIG_AMLOGIC_USER_FAULT */

@@ -250,17 +250,19 @@ void show_all_pfn(struct task_struct *task, struct pt_regs *regs)
 	else
 		top = 31;
 	pr_info("reg              value       pfn  ");
-	pr_info("reg              value       pfn\n");
+	pr_cont("reg              value       pfn\n");
 	for (i = 0; i < top; i++) {
 		pfn1 = get_user_pfn(task->mm, regs->regs[i]);
 		if (pfn1 >= 0)
 			sprintf(s1, "%8lx", pfn1);
 		else
 			sprintf(s1, "--------");
-		pr_info("r%-2d:  %016llx  %s  ", i, regs->regs[i], s1);
 		if (i % 2 == 1)
-			pr_info("\n");
+			pr_cont("r%-2d:  %016llx  %s\n", i, regs->regs[i], s1);
+		else
+			pr_info("r%-2d:  %016llx  %s  ", i, regs->regs[i], s1);
 	}
+	pr_cont("\n");
 	pfn1 = get_user_pfn(task->mm, regs->pc);
 	if (pfn1 >= 0)
 		sprintf(s1, "%8lx", pfn1);
