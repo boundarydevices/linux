@@ -1404,7 +1404,7 @@ static int sdma_terminate_all(struct dma_chan *chan)
 		sdmac->desc = NULL;
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 	vchan_dma_desc_free_list(&sdmac->vc, &head);
-	sdma_disable_channel(chan);
+	sdma_disable_channel_with_delay(chan);
 	sdmac->context_loaded = false;
 
 	return 0;
