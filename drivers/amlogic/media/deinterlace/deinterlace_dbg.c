@@ -519,9 +519,9 @@ static int dump_di_pre_stru_seq(struct seq_file *seq, void *v)
 
 	seq_puts(seq, "di_pre_stru:\n");
 	seq_printf(seq, "%-25s = 0x%p\n", "di_mem_buf_dup_p",
-		&di_pre_stru_p->di_mem_buf_dup_p);
+		di_pre_stru_p->di_mem_buf_dup_p);
 	seq_printf(seq, "%-25s = 0x%p\n", "di_chan2_buf_dup_p",
-		&di_pre_stru_p->di_chan2_buf_dup_p);
+		di_pre_stru_p->di_chan2_buf_dup_p);
 	seq_printf(seq, "%-25s = %d\n", "in_seq",
 		di_pre_stru_p->in_seq);
 	seq_printf(seq, "%-25s = %d\n", "recycle_seq",
@@ -559,7 +559,7 @@ static int dump_di_pre_stru_seq(struct seq_file *seq, void *v)
 	seq_printf(seq, "%-25s = %d\n", "source_change_flag",
 		di_pre_stru_p->source_change_flag);
 	seq_printf(seq, "%-25s = %s\n", "bypass_flag",
-		&di_pre_stru_p->bypass_flag?"true":"false");
+		di_pre_stru_p->bypass_flag?"true":"false");
 	seq_printf(seq, "%-25s = %d\n", "prog_proc_type",
 		di_pre_stru_p->prog_proc_type);
 	seq_printf(seq, "%-25s = %d\n", "madi_enable",
@@ -568,18 +568,18 @@ static int dump_di_pre_stru_seq(struct seq_file *seq, void *v)
 		di_pre_stru_p->mcdi_enable);
 #ifdef DET3D
 	seq_printf(seq, "%-25s = %d\n", "vframe_interleave_flag",
-		&di_pre_stru_p->vframe_interleave_flag);
+		di_pre_stru_p->vframe_interleave_flag);
 #endif
 	seq_printf(seq, "%-25s = %d\n", "left_right",
 		di_pre_stru_p->left_right);
 	seq_printf(seq, "%-25s = %s\n", "force_interlace",
-		&di_pre_stru_p->force_interlace ? "true" : "false");
+		di_pre_stru_p->force_interlace ? "true" : "false");
 	seq_printf(seq, "%-25s = %d\n", "vdin2nr",
 		di_pre_stru_p->vdin2nr);
 	seq_printf(seq, "%-25s = %s\n", "bypass_pre",
-		&di_pre_stru_p->bypass_pre ? "true" : "false");
+		di_pre_stru_p->bypass_pre ? "true" : "false");
 	seq_printf(seq, "%-25s = %s\n", "invert_flag",
-		&di_pre_stru_p->invert_flag ? "true" : "false");
+		di_pre_stru_p->invert_flag ? "true" : "false");
 
 	return 0;
 }
@@ -617,7 +617,7 @@ static int dump_di_post_stru_seq(struct seq_file *seq, void *v)
 	seq_printf(seq, "de_post_process_done	= %d\n",
 		di_post_stru_p->de_post_process_done);
 	seq_printf(seq, "cur_post_buf			= 0x%p\n",
-		&di_post_stru_p->cur_post_buf);
+		di_post_stru_p->cur_post_buf);
 	seq_printf(seq, "post_peek_underflow	= %u\n",
 		di_post_stru_p->post_peek_underflow);
 
@@ -918,15 +918,13 @@ static void print_di_buf_seq(struct di_buf_s *di_buf, int format,
 		return;
 	if (format == 1) {
 		seq_printf(seq,
-		"\t+index %d, 0x%p, type %d, vframetype 0x%x\n",
+		"\t+index %d, 0x%p, type %d, vframetype 0x%x, trans_fmt %u,bitdepath %d\n",
 			di_buf->index,
 			di_buf,
 			di_buf->type,
-			di_buf->vframe->type);
-		seq_printf(seq, "\t+trans_fmt %u,bitdepath %d pages %p\n",
+			di_buf->vframe->type,
 			di_buf->vframe->trans_fmt,
-			di_buf->vframe->bitdepth,
-			di_buf->pages);
+			di_buf->vframe->bitdepth);
 		if (di_buf->di_wr_linked_buf) {
 			seq_printf(seq, "\tlinked  +index %d, 0x%p, type %d\n",
 				di_buf->di_wr_linked_buf->index,
@@ -934,9 +932,9 @@ static void print_di_buf_seq(struct di_buf_s *di_buf, int format,
 				di_buf->di_wr_linked_buf->type);
 		}
 	} else if (format == 2) {
-		seq_printf(seq, "index %d, 0x%p(vframe 0x%p), type %d pages %p\n",
+		seq_printf(seq, "index %d, 0x%p(vframe 0x%p), type %d\n",
 			di_buf->index, di_buf,
-			di_buf->vframe, di_buf->type, di_buf->pages);
+			di_buf->vframe, di_buf->type);
 		seq_printf(seq, "vframetype 0x%x, trans_fmt %u,duration %d pts %d,bitdepth %d\n",
 			di_buf->vframe->type,
 			di_buf->vframe->trans_fmt,
