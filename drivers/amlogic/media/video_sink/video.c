@@ -587,6 +587,7 @@ static int pts_pattern_enter_cnt[3] = {0, 0, 0};
 static int pts_pattern_exit_cnt[3] = {0, 0, 0};
 static int pts_log_enable[3] = {0, 0, 0};
 static int pre_pts_trace;
+static int pts_escape_vsync = -1;
 
 #define PTS_41_PATTERN_SINK_MAX 4
 static int pts_41_pattern_sink[PTS_41_PATTERN_SINK_MAX];
@@ -2483,6 +2484,10 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 #endif
 
 #ifdef PTS_LOGGING
+	if (pts_escape_vsync == 1) {
+		pts_trace++;
+		pts_escape_vsync = 0;
+	}
 	vsync_video_pattern();
 	pre_pts_trace = pts_trace;
 #endif
@@ -3003,8 +3008,9 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 #endif
 		if ((abs(timestamp_pcrscr_get() - vf->pts) <= (vsync_pts_inc))
 			  && ((int)(timestamp_pcrscr_get() - vf->pts) >= 0)) {
-			vsync_pts_align =  vsync_pts_inc / 4 -
-				(timestamp_pcrscr_get() - vf->pts);
+			/*vsync_pts_align =  vsync_pts_inc / 4 - */
+			/*	(timestamp_pcrscr_get() - vf->pts);*/
+			vsync_pts_align = 0;
 			vsync_pts_aligned = true;
 #ifdef PTS_TRACE_DEBUG
 			pts_trace_his_rd = 0;
@@ -4234,35 +4240,54 @@ static inline void vpts_perform_pulldown(struct vframe_s *next_vf,
 
 	if (*expired) {
 		if (pts_trace < expected_curr_interval) {
-			/* 232323...223 -> 232323...232 */
+			/* 2323232323..2233..2323, prev=2, curr=3,*/
+			/* check if next frame will toggle after 3 vsyncs */
+			/* 22222...22222 -> 222..2213(2)22...22 */
 			/* check if next frame will toggle after 3 vsyncs */
 			int nextPts = timestamp_pcrscr_get() + vsync_pts_align;
 
-			if (((int)(nextPts + expected_prev_interval *
-				vsync_pts_inc - next_vf->next_vf_pts) < 0) &&
-				((int)(nextPts + expected_curr_interval *
+			if (/*((int)(nextPts + expected_prev_interval * */
+			/*vsync_pts_inc - next_vf->next_vf_pts) < 0) && */
+				((int)(nextPts + (expected_prev_interval + 1) *
 				vsync_pts_inc - next_vf->next_vf_pts) >= 0)) {
 				*expired = false;
-				if (pts_log_enable[PTS_32_PATTERN])
+				if (pts_log_enable[PTS_32_PATTERN]
+					|| pts_log_enable[PTS_22_PATTERN])
 					pr_info("hold frame for pattern: %d",
+						pts_pattern_detected);
+			}
+
+			/* here need to escape a vsync */
+			if (timestamp_pcrscr_get() >
+				(next_vf->pts + vsync_pts_inc)) {
+				*expired = true;
+				pts_escape_vsync = 1;
+				if (pts_log_enable[PTS_32_PATTERN]
+					|| pts_log_enable[PTS_22_PATTERN])
+					pr_info("escape a vsync pattern: %d",
 						pts_pattern_detected);
 			}
 		}
 	} else {
 		if (pts_trace == expected_curr_interval) {
-			/* 232323...332 -> 232323...323 */
+			/* 23232323..233223...2323 curr=2, prev=3 */
+			/* check if this frame will expire next vsyncs and */
+			/* next frame will expire after 3 vsyncs */
+			/* 22222...22222 -> 222..223122...22 */
 			/* check if this frame will expire next vsyncs and */
 			/* next frame will expire after 2 vsyncs */
 			int nextPts = timestamp_pcrscr_get() + vsync_pts_align;
 
 			if (((int)(nextPts + vsync_pts_inc - next_vf->pts)
 				>= 0) &&
-			    ((int)(nextPts + vsync_pts_inc -
-				next_vf->next_vf_pts) < 0) &&
-			    ((int)(nextPts + expected_curr_interval *
+			    ((int)(nextPts +
+			    vsync_pts_inc * (expected_prev_interval - 1)
+			    - next_vf->next_vf_pts) < 0) &&
+			    ((int)(nextPts + expected_prev_interval *
 				vsync_pts_inc - next_vf->next_vf_pts) >= 0)) {
 				*expired = true;
-				if (pts_log_enable[PTS_32_PATTERN])
+				if (pts_log_enable[PTS_32_PATTERN]
+					|| pts_log_enable[PTS_22_PATTERN])
 					pr_info("pull frame for pattern: %d",
 						pts_pattern_detected);
 			}
@@ -5446,12 +5471,14 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	}
 	while (vf) {
 		if (vpts_expire(cur_dispbuf, vf, toggle_cnt) || show_nosync) {
-			amlog_mask(LOG_MASK_TIMESTAMP,
-			"vpts = 0x%x, c.dur=0x%x, n.pts=0x%x, scr = 0x%x\n",
-				   timestamp_vpts_get(),
-				   (cur_dispbuf) ? cur_dispbuf->duration : 0,
-				   vf->pts, timestamp_pcrscr_get());
-
+			if (debug_flag & DEBUG_FLAG_PTS_TRACE)
+				pr_info("vpts = 0x%x, c.dur=0x%x, n.pts=0x%x, scr = 0x%x, pcr-pts-diff=%d, ptstrace=%d\n",
+					timestamp_vpts_get(),
+					(cur_dispbuf) ?
+					cur_dispbuf->duration : 0,
+					vf->pts, timestamp_pcrscr_get(),
+					timestamp_pcrscr_get() - vf->pts,
+					pts_trace);
 			amlog_mask_if(toggle_cnt > 0, LOG_MASK_FRAMESKIP,
 				      "skipped\n");
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
@@ -6878,6 +6905,7 @@ static void video_vf_unreg_provider(void)
 		memset(&pts_41_pattern_sink[0], 0, PTS_41_PATTERN_SINK_MAX);
 		pts_pattern_detected = -1;
 		pre_pts_trace = 0;
+		pts_escape_vsync = 0;
 	}
 #endif
 }
@@ -7270,6 +7298,9 @@ static void set_omx_pts(u32 *p)
 			return;
 		}
 	}
+	if (debug_flag & DEBUG_FLAG_PTS_TRACE)
+		pr_info("[set_omx_pts]tmp_pts:%d, set_from_hwc:%d,frame_num=%d, not_reset=%d\n",
+			tmp_pts, set_from_hwc, frame_num, not_reset);
 
 	if (not_reset == 0)
 		omx_pts = tmp_pts;
