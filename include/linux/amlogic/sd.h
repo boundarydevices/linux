@@ -35,7 +35,7 @@
 #define AML_SD_EMMC_MAGIC	"amlsd_emmc"
 #define SD_EMMC_MANUAL_CMD23
 #define MAX_TUNING_RETRY 4
-#define TUNING_NUM_PER_POINT 10
+#define TUNING_NUM_PER_POINT 40
 #define CALI_PATTERN_OFFSET ((SZ_1M * (36 + 3)) / 512)
 /* #define AML_RESP_WR_EXT */
 /* pio to transfer data */
