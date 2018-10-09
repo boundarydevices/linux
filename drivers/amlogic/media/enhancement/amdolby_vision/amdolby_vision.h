@@ -19,6 +19,8 @@
 
 #define V1_5
 #define V2_4
+/*  driver version */
+#define DRIVER_VER "20181009"
 
 #include <linux/types.h>
 
@@ -523,7 +525,7 @@ struct dovi_setting_s {
 enum cpuID_e {
 	_CPU_MAJOR_ID_GXM,
 	_CPU_MAJOR_ID_TXLX,
-	_CPU_MAJOR_ID_G12A,
+	_CPU_MAJOR_ID_G12,
 	_CPU_MAJOR_ID_UNKNOWN,
 };
 
