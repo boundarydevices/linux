@@ -3,6 +3,7 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						audio_clks.o \
 						axg,clocks.o \
 						g12a,clocks.o \
+						tl1,clocks.o \
 						card.o \
 						card_utils.o \
 						tdm.o \
@@ -24,4 +25,6 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						effects_hw.o \
 						pwrdet.o \
 						pwrdet_hw.o \
-						sharebuffer.o
+						sharebuffer.o \
+						extn.o \
+						frhdmirx_hw.o

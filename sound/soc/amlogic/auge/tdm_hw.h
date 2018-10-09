@@ -21,6 +21,21 @@
 #include "audio_io.h"
 #include "regs.h"
 
+//	TODO: fix me, now based by tl1
+enum tdmin_src {
+	PAD_TDMINA_DIN = 0,
+	PAD_TDMINB_DIN = 1,
+	PAD_TDMINC_DIN = 2,
+	PAD_TDMINA_D = 4,
+	PAD_TDMINB_D = 5,
+	PAD_TDMINC_D = 6,
+	HDMIRX_I2S = 7,
+	ACODEC_ADC = 8,
+	TDMOUTA = 13,
+	TDMOUTB = 14,
+	TDMOUTC = 15,
+};
+
 struct pcm_setting {
 	unsigned int pcm_mode;
 	unsigned int sysclk;
@@ -79,6 +94,10 @@ extern void aml_tdm_set_slot_out(
 extern void aml_tdm_set_slot_in(
 	struct aml_audio_controller *actrl,
 	int index, int in_src, int slot_width);
+
+extern void tdm_update_slot_in(
+	struct aml_audio_controller *actrl,
+	int index, int in_src);
 
 extern void aml_tdm_set_channel_mask(
 	struct aml_audio_controller *actrl,

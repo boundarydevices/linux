@@ -937,6 +937,12 @@ int snd_card_add_kcontrols(struct snd_soc_card *card)
 		return ret;
 	}
 
+	ret = card_add_ddr_kcontrols(card);
+	if (ret < 0) {
+		pr_err("Failed to add ddr controls\n");
+		return ret;
+	}
+
 	return snd_soc_add_card_controls(card,
 		snd_auge_controls, ARRAY_SIZE(snd_auge_controls));
 
@@ -1123,8 +1129,8 @@ int loopback_hw_params(struct snd_pcm_substream *substream,
 		clk_set_rate(lb_cfg->tdmin_mpll, mpll_freq);
 		pr_info("mpll freq:%d, %lu\n", mpll_freq,
 			clk_get_rate(lb_cfg->tdmin_mpll));
-		offset = EE_AUDIO_MCLK_B_CTRL - EE_AUDIO_MCLK_A_CTRL;
-		reg = EE_AUDIO_MCLK_A_CTRL + offset * clk_id;
+		offset = EE_AUDIO_MCLK_B_CTRL(0) - EE_AUDIO_MCLK_A_CTRL(0);
+		reg = EE_AUDIO_MCLK_A_CTRL(0) + offset * clk_id;
 		audiobus_write(reg,
 				1 << 31 | /*clk enable*/
 				clk_id << 24 | /*clk src*/
@@ -1471,4 +1477,31 @@ void auge_toacodec_ctrl(int tdmout_id)
 		| tdmout_id << 4 /* bclk */
 		| tdmout_id << 0 /* mclk */
 		);
+}
+
+void fratv_enable(bool enable)
+{
+	/* Need reset firstlry ? */
+	if (enable) {
+		audiobus_update_bits(EE_AUDIO_FRATV_CTRL0,
+			0x1 << 29,
+			0x1 << 29);
+		audiobus_update_bits(EE_AUDIO_FRATV_CTRL0,
+			0x1 << 28,
+			0x1 << 28);
+	} else
+		audiobus_update_bits(EE_AUDIO_FRATV_CTRL0,
+			0x3 << 28,
+			0x0 << 28);
+
+	audiobus_update_bits(EE_AUDIO_FRATV_CTRL0, 0x1 << 31, enable << 31);
+}
+
+/* source select
+ * 0: select from ATV;
+ * 1: select from ADEC;
+ */
+void fratv_src_select(int src)
+{
+	audiobus_update_bits(EE_AUDIO_FRATV_CTRL0, 0x1 << 20, (bool)src << 20);
 }

@@ -24,7 +24,7 @@
 #include <linux/amlogic/media/sound/aout_notify.h>
 
 /*#define G12A_PTM*/
-/*#define G12A_PTM_LB_INTERNAL*/
+/*#define __PTM_SPDIF_INTERNAL_LB__*/
 
 unsigned int aml_spdif_ctrl_read(struct aml_audio_controller *actrl,
 	int stream, int index)
@@ -85,7 +85,7 @@ void aml_spdif_enable(
 	} else {
 		aml_audiobus_update_bits(actrl,
 			EE_AUDIO_SPDIFIN_CTRL0, 1<<31, is_enable<<31);
-#ifdef G12A_PTM_LB_INTERNAL
+#ifdef __PTM_SPDIF_INTERNAL_LB__
 		if (index == 0)
 		aml_audiobus_update_bits(actrl,
 			EE_AUDIO_SPDIFIN_CTRL0, 0x3<<4, 0x1<<4);

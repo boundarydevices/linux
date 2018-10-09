@@ -23,6 +23,7 @@
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/clock/amlogic,tl1-clkc.h>
+#include <dt-bindings/clock/amlogic,tl1-audio-clk.h>
 #include "mesong12a-bifrost.dtsi"
 
 / {
@@ -306,6 +307,66 @@
 				reg = <0x0 0x3fc>;
 			};
 		};/* end of hiubus*/
+
+		audiobus: audiobus@0xff600000 {
+			compatible = "amlogic, audio-controller", "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0xff600000 0x10000>;
+			ranges = <0x0 0xff600000 0x10000>;
+
+			clkaudio:audio_clocks {
+				compatible = "amlogic, tl1-audio-clocks";
+				#clock-cells = <1>;
+				reg = <0x0 0xb0>;
+			};
+
+			ddr_manager {
+				compatible = "amlogic, tl1-audio-ddr-manager";
+				interrupts = <
+					GIC_SPI 148 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 149 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 150 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 48 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 152 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 153 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 154 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 49 IRQ_TYPE_EDGE_RISING
+				>;
+				interrupt-names =
+					"toddr_a", "toddr_b", "toddr_c",
+					"toddr_d",
+					"frddr_a", "frddr_b", "frddr_c",
+					"frddr_d";
+			};
+		};/* end of audiobus*/
+
+		/* Sound iomap */
+		aml_snd_iomap {
+			compatible = "amlogic, snd-iomap";
+			status = "okay";
+			#address-cells=<1>;
+			#size-cells=<1>;
+			ranges;
+			pdm_bus {
+				reg = <0xFF601000 0x400>;
+			};
+			audiobus_base {
+				reg = <0xFF600000 0x1000>;
+			};
+			audiolocker_base {
+				reg = <0xFF601400 0x400>;
+			};
+			eqdrc_base {
+				reg = <0xFF602000 0x2000>;
+			};
+			reset_base {
+				reg = <0xFFD01000 0x1000>;
+			};
+			vad_base {
+				reg = <0xFF601800 0x800>;
+			};
+		};
 
 		cbus: cbus@ffd00000 {
 			compatible = "simple-bus";

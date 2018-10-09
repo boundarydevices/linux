@@ -1,7 +1,7 @@
 /*
- * sound/soc/amlogic/auge/audio_clocks.c
+ * sound/soc/amlogic/auge/tl1,clocks.c
  *
- * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ * Copyright (C) 2018 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,9 @@
  *
  */
 #undef pr_fmt
-#define pr_fmt(fmt) "g12a_clocks: " fmt
+#define pr_fmt(fmt) "tl1_clocks: " fmt
 
-#include <dt-bindings/clock/amlogic,g12a-audio-clk.h>
+#include <dt-bindings/clock/amlogic,tl1-audio-clk.h>
 
 #include "audio_clks.h"
 #include "regs.h"
@@ -48,16 +48,26 @@ CLOCK_GATE(audio_frddrc, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 11);
 CLOCK_GATE(audio_toddra, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 12);
 CLOCK_GATE(audio_toddrb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 13);
 CLOCK_GATE(audio_toddrc, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 14);
-CLOCK_GATE(audio_loopback, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 15);
+CLOCK_GATE(audio_loopbacka, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 15);
 CLOCK_GATE(audio_spdifin, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 16);
 CLOCK_GATE(audio_spdifout, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 17);
-CLOCK_GATE(audio_resample, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 18);
-CLOCK_GATE(audio_power_detect, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 19);
-CLOCK_GATE(audio_toram, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 20);
+CLOCK_GATE(audio_resamplea, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 18);
+CLOCK_GATE(audio_reserved0, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 19);
+CLOCK_GATE(audio_reserved1, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 20);
 CLOCK_GATE(audio_spdifoutb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 21);
 CLOCK_GATE(audio_eqdrc, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 22);
+CLOCK_GATE(audio_resampleb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 26);
+CLOCK_GATE(audio_tovad, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 27);
+CLOCK_GATE(audio_audiolocker, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 28);
+CLOCK_GATE(audio_spdifin_lb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 29);
+CLOCK_GATE(audio_fratv, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 30);
+CLOCK_GATE(audio_frhdmirx, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 31);
 
-static struct clk_gate *g12a_audio_clk_gates[] = {
+CLOCK_GATE(audio_frddrd, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 0);
+CLOCK_GATE(audio_toddrd, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 1);
+CLOCK_GATE(audio_loopbackb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 2);
+
+static struct clk_gate *tl1_audio_clk_gates[] = {
 	&audio_ddr_arb,
 	&audio_pdm,
 	&audio_tdmina,
@@ -73,55 +83,74 @@ static struct clk_gate *g12a_audio_clk_gates[] = {
 	&audio_toddra,
 	&audio_toddrb,
 	&audio_toddrc,
-	&audio_loopback,
+	&audio_loopbacka,
 	&audio_spdifin,
 	&audio_spdifout,
-	&audio_resample,
-	&audio_power_detect,
-	&audio_toram,
+	&audio_resamplea,
+	&audio_reserved0,
+	&audio_reserved1,
 	&audio_spdifoutb,
 	&audio_eqdrc,
+	&audio_resampleb,
+	&audio_tovad,
+	&audio_audiolocker,
+	&audio_spdifin_lb,
+	&audio_fratv,
+	&audio_frhdmirx,
+
+	&audio_frddrd,
+	&audio_toddrd,
+	&audio_loopbackb,
 };
 
 /* Array of all clocks provided by this provider */
-static struct clk_hw *g12a_audio_clk_hws[] = {
-	[CLKID_AUDIO_DDR_ARB] = &audio_ddr_arb.hw,
-	[CLKID_AUDIO_PDM] = &audio_pdm.hw,
-	[CLKID_AUDIO_TDMINA] = &audio_tdmina.hw,
-	[CLKID_AUDIO_TDMINB] = &audio_tdminb.hw,
-	[CLKID_AUDIO_TDMINC] = &audio_tdminc.hw,
-	[CLKID_AUDIO_TDMINLB] = &audio_tdminlb.hw,
-	[CLKID_AUDIO_TDMOUTA] = &audio_tdmouta.hw,
-	[CLKID_AUDIO_TDMOUTB] = &audio_tdmoutb.hw,
-	[CLKID_AUDIO_TDMOUTC] = &audio_tdmoutc.hw,
-	[CLKID_AUDIO_FRDDRA] = &audio_frddra.hw,
-	[CLKID_AUDIO_FRDDRB] = &audio_frddrb.hw,
-	[CLKID_AUDIO_FRDDRC] = &audio_frddrc.hw,
-	[CLKID_AUDIO_TODDRA] = &audio_toddra.hw,
-	[CLKID_AUDIO_TODDRB] = &audio_toddrb.hw,
-	[CLKID_AUDIO_TODDRC] = &audio_toddrc.hw,
-	[CLKID_AUDIO_LOOPBACK] = &audio_loopback.hw,
-	[CLKID_AUDIO_SPDIFIN] = &audio_spdifin.hw,
-	[CLKID_AUDIO_SPDIFOUT] = &audio_spdifout.hw,
-	[CLKID_AUDIO_RESAMPLE] = &audio_resample.hw,
-	[CLKID_AUDIO_POWER_DETECT] = &audio_power_detect.hw,
-	[CLKID_AUDIO_TORAM] = &audio_toram.hw,
-	[CLKID_AUDIO_SPDIFOUTB] = &audio_spdifoutb.hw,
-	[CLKID_AUDIO_EQDRC] = &audio_eqdrc.hw,
+static struct clk_hw *tl1_audio_clk_hws[] = {
+	[CLKID_AUDIO_DDR_ARB]    = &audio_ddr_arb.hw,
+	[CLKID_AUDIO_PDM]        = &audio_pdm.hw,
+	[CLKID_AUDIO_TDMINA]     = &audio_tdmina.hw,
+	[CLKID_AUDIO_TDMINB]     = &audio_tdminb.hw,
+	[CLKID_AUDIO_TDMINC]     = &audio_tdminc.hw,
+	[CLKID_AUDIO_TDMINLB]    = &audio_tdminlb.hw,
+	[CLKID_AUDIO_TDMOUTA]    = &audio_tdmouta.hw,
+	[CLKID_AUDIO_TDMOUTB]    = &audio_tdmoutb.hw,
+	[CLKID_AUDIO_TDMOUTC]    = &audio_tdmoutc.hw,
+	[CLKID_AUDIO_FRDDRA]     = &audio_frddra.hw,
+	[CLKID_AUDIO_FRDDRB]     = &audio_frddrb.hw,
+	[CLKID_AUDIO_FRDDRC]     = &audio_frddrc.hw,
+	[CLKID_AUDIO_TODDRA]     = &audio_toddra.hw,
+	[CLKID_AUDIO_TODDRB]     = &audio_toddrb.hw,
+	[CLKID_AUDIO_TODDRC]     = &audio_toddrc.hw,
+	[CLKID_AUDIO_LOOPBACKA]  = &audio_loopbacka.hw,
+	[CLKID_AUDIO_SPDIFIN]    = &audio_spdifin.hw,
+	[CLKID_AUDIO_SPDIFOUT]   = &audio_spdifout.hw,
+	[CLKID_AUDIO_RESAMPLEA]  = &audio_resamplea.hw,
+	[CLKID_AUDIO_RESERVED0]  = &audio_reserved0.hw,
+	[CLKID_AUDIO_RESERVED1]  = &audio_reserved1.hw,
+	[CLKID_AUDIO_SPDIFOUTB]  = &audio_spdifoutb.hw,
+	[CLKID_AUDIO_EQDRC]      = &audio_eqdrc.hw,
+	[CLKID_AUDIO_RESAMPLEB]  = &audio_resampleb.hw,
+	[CLKID_AUDIO_TOVAD]      = &audio_tovad.hw,
+	[CLKID_AUDIO_AUDIOLOCKER] = &audio_audiolocker.hw,
+	[CLKID_AUDIO_SPDIFIN_LB] = &audio_spdifin_lb.hw,
+	[CLKID_AUDIO_FRATV]      = &audio_fratv.hw,
+	[CLKID_AUDIO_FRHDMIRX]   = &audio_frhdmirx.hw,
+	[CLKID_AUDIO_FRDDRD]     = &audio_frddrd.hw,
+	[CLKID_AUDIO_TODDRD]     = &audio_toddrd.hw,
+	[CLKID_AUDIO_LOOPBACKB]  = &audio_loopbackb.hw,
 };
 
-static int g12a_clk_gates_init(struct clk **clks, void __iomem *iobase)
+static int tl1_clk_gates_init(struct clk **clks, void __iomem *iobase)
 {
 	int clkid;
 
-	if (ARRAY_SIZE(g12a_audio_clk_gates) != MCLK_BASE) {
+	if (ARRAY_SIZE(tl1_audio_clk_gates) != MCLK_BASE) {
 		pr_err("check clk gates number\n");
 		return -EINVAL;
 	}
 
 	for (clkid = 0; clkid < MCLK_BASE; clkid++) {
-		g12a_audio_clk_gates[clkid]->reg = iobase;
-		clks[clkid] = clk_register(NULL, g12a_audio_clk_hws[clkid]);
+		tl1_audio_clk_gates[clkid]->reg = iobase;
+		clks[clkid] = clk_register(NULL, tl1_audio_clk_hws[clkid]);
 		WARN_ON(IS_ERR_OR_NULL(clks[clkid]));
 	}
 
@@ -129,29 +158,29 @@ static int g12a_clk_gates_init(struct clk **clks, void __iomem *iobase)
 }
 
 /* mclk_a */
-CLOCK_COM_MUX(mclk_a, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_A_CTRL(0)), 0x7, 24);
-CLOCK_COM_DIV(mclk_a, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_A_CTRL(0)), 0, 16);
-CLOCK_COM_GATE(mclk_a, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_A_CTRL(0)), 31);
+CLOCK_COM_MUX(mclk_a, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_A_CTRL(1)), 0x7, 24);
+CLOCK_COM_DIV(mclk_a, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_A_CTRL(1)), 0, 16);
+CLOCK_COM_GATE(mclk_a, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_A_CTRL(1)), 31);
 /* mclk_b */
-CLOCK_COM_MUX(mclk_b, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_B_CTRL(0)), 0x7, 24);
-CLOCK_COM_DIV(mclk_b, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_B_CTRL(0)), 0, 16);
-CLOCK_COM_GATE(mclk_b, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_B_CTRL(0)), 31);
+CLOCK_COM_MUX(mclk_b, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_B_CTRL(1)), 0x7, 24);
+CLOCK_COM_DIV(mclk_b, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_B_CTRL(1)), 0, 16);
+CLOCK_COM_GATE(mclk_b, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_B_CTRL(1)), 31);
 /* mclk_c */
-CLOCK_COM_MUX(mclk_c, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_C_CTRL(0)), 0x7, 24);
-CLOCK_COM_DIV(mclk_c, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_C_CTRL(0)), 0, 16);
-CLOCK_COM_GATE(mclk_c, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_C_CTRL(0)), 31);
+CLOCK_COM_MUX(mclk_c, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_C_CTRL(1)), 0x7, 24);
+CLOCK_COM_DIV(mclk_c, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_C_CTRL(1)), 0, 16);
+CLOCK_COM_GATE(mclk_c, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_C_CTRL(1)), 31);
 /* mclk_d */
-CLOCK_COM_MUX(mclk_d, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_D_CTRL(0)), 0x7, 24);
-CLOCK_COM_DIV(mclk_d, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_D_CTRL(0)), 0, 16);
-CLOCK_COM_GATE(mclk_d, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_D_CTRL(0)), 31);
+CLOCK_COM_MUX(mclk_d, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_D_CTRL(1)), 0x7, 24);
+CLOCK_COM_DIV(mclk_d, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_D_CTRL(1)), 0, 16);
+CLOCK_COM_GATE(mclk_d, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_D_CTRL(1)), 31);
 /* mclk_e */
-CLOCK_COM_MUX(mclk_e, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_E_CTRL(0)), 0x7, 24);
-CLOCK_COM_DIV(mclk_e, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_E_CTRL(0)), 0, 16);
-CLOCK_COM_GATE(mclk_e, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_E_CTRL(0)), 31);
+CLOCK_COM_MUX(mclk_e, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_E_CTRL(1)), 0x7, 24);
+CLOCK_COM_DIV(mclk_e, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_E_CTRL(1)), 0, 16);
+CLOCK_COM_GATE(mclk_e, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_E_CTRL(1)), 31);
 /* mclk_f */
-CLOCK_COM_MUX(mclk_f, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_F_CTRL(0)), 0x7, 24);
-CLOCK_COM_DIV(mclk_f, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_F_CTRL(0)), 0, 16);
-CLOCK_COM_GATE(mclk_f, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_F_CTRL(0)), 31);
+CLOCK_COM_MUX(mclk_f, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_F_CTRL(1)), 0x7, 24);
+CLOCK_COM_DIV(mclk_f, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_F_CTRL(1)), 0, 16);
+CLOCK_COM_GATE(mclk_f, AUD_ADDR_OFFSET(EE_AUDIO_MCLK_F_CTRL(1)), 31);
 /* spdifin */
 CLOCK_COM_MUX(spdifin, AUD_ADDR_OFFSET(EE_AUDIO_CLK_SPDIFIN_CTRL), 0x7, 24);
 CLOCK_COM_DIV(spdifin, AUD_ADDR_OFFSET(EE_AUDIO_CLK_SPDIFIN_CTRL), 0, 8);
@@ -186,7 +215,7 @@ CLOCK_COM_MUX(resample, AUD_ADDR_OFFSET(EE_AUDIO_CLK_RESAMPLEA_CTRL), 0xf, 24);
 CLOCK_COM_DIV(resample, AUD_ADDR_OFFSET(EE_AUDIO_CLK_RESAMPLEA_CTRL), 0, 8);
 CLOCK_COM_GATE(resample, AUD_ADDR_OFFSET(EE_AUDIO_CLK_RESAMPLEA_CTRL), 31);
 
-static int g12a_clks_init(struct clk **clks, void __iomem *iobase)
+static int tl1_clks_init(struct clk **clks, void __iomem *iobase)
 {
 	IOMAP_COM_CLK(mclk_a, iobase);
 	clks[CLKID_AUDIO_MCLK_A] = REGISTER_CLK_COM(mclk_a);
@@ -247,8 +276,8 @@ static int g12a_clks_init(struct clk **clks, void __iomem *iobase)
 	return 0;
 }
 
-struct audio_clk_init g12a_audio_clks_init = {
+struct audio_clk_init tl1_audio_clks_init = {
 	.clk_num   = NUM_AUDIO_CLKS,
-	.clk_gates = g12a_clk_gates_init,
-	.clks      = g12a_clks_init,
+	.clk_gates = tl1_clk_gates_init,
+	.clks      = tl1_clks_init,
 };

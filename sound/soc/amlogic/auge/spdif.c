@@ -46,7 +46,7 @@
 #define SPDIF_B	1
 
 /* Debug by PTM when bringup */
-/* #define G12A_PTM */
+/*#define __PTM_SPDIF_CLK__*/
 
 /* for debug */
 /*#define __SPDIFIN_INSERT_CHNUM__*/
@@ -1135,8 +1135,8 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 		}
 		mpll_freq = p_spdif->sysclk_freq * mul;
 
-#ifdef G12A_PTM
-		mpll_freq = p_spdif->sysclk_freq * 57;
+#ifdef __PTM_SPDIF_CLK__
+		mpll_freq = p_spdif->sysclk_freq * 58;
 #endif
 		pr_info("\t finally sys freq:%d, mpll freq:%d\n",
 			p_spdif->sysclk_freq,
@@ -1168,7 +1168,7 @@ static int aml_dai_set_spdif_sysclk(struct snd_soc_dai *cpu_dai,
 		freq,
 		dir);
 
-	if (dir == SND_SOC_CLOCK_OUT) {
+	if (clk_id == 0) {
 		struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
 
 		p_spdif->sysclk_freq = freq;
@@ -1349,18 +1349,40 @@ struct spdif_chipinfo g12a_spdif_b_chipinfo = {
 	.eq_drc_en    = true,
 };
 
+struct spdif_chipinfo tl1_spdif_a_chipinfo = {
+	.id           = SPDIF_A,
+	.chnum_en     = true,
+	.hold_start   = true,
+	.eq_drc_en    = true,
+};
+
+struct spdif_chipinfo tl1_spdif_b_chipinfo = {
+	.id           = SPDIF_B,
+	.chnum_en     = true,
+	.hold_start   = true,
+	.eq_drc_en    = true,
+};
+
 static const struct of_device_id aml_spdif_device_id[] = {
 	{
 		.compatible = "amlogic, axg-snd-spdif",
-		.data = &axg_spdif_chipinfo,
+		.data       = &axg_spdif_chipinfo,
 	},
 	{
 		.compatible = "amlogic, g12a-snd-spdif-a",
-		.data = &g12a_spdif_a_chipinfo,
+		.data       = &g12a_spdif_a_chipinfo,
 	},
 	{
 		.compatible = "amlogic, g12a-snd-spdif-b",
-		.data = &g12a_spdif_b_chipinfo,
+		.data       = &g12a_spdif_b_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-snd-spdif-a",
+		.data       = &tl1_spdif_a_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-snd-spdif-b",
+		.data       = &tl1_spdif_b_chipinfo,
 	},
 	{},
 };

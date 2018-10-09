@@ -35,7 +35,7 @@
 #include "regs.h"
 #include "ddr_mngr.h"
 
-/*#define G12A_PTM*/
+/*#define __PTM_PDM_CLK__*/
 
 static struct snd_pcm_hardware aml_pdm_hardware = {
 	.info			=
@@ -727,8 +727,10 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 	sysclk_srcpll_freq = clk_get_rate(p_pdm->sysclk_srcpll);
 	dclk_srcpll_freq = clk_get_rate(p_pdm->dclk_srcpll);
 
-#ifdef G12A_PTM
-	clk_set_rate(p_pdm->dclk_srcpll, 24576000);
+#ifdef __PTM_PDM_CLK__
+	clk_set_rate(p_pdm->clk_pdm_sysclk, 133333351);
+	clk_set_rate(p_pdm->dclk_srcpll, 24576000 * 15); /* 350m */
+	clk_set_rate(p_pdm->clk_pdm_dclk, 3072000);
 #else
 	clk_set_rate(p_pdm->clk_pdm_sysclk, 133333351);
 
@@ -866,7 +868,13 @@ static const struct snd_soc_component_driver aml_pdm_component = {
 };
 
 static struct pdm_chipinfo g12a_pdm_chipinfo = {
-	.mute_fn = true,
+	.mute_fn         = true,
+	.truncate_data   = false,
+};
+
+static struct pdm_chipinfo tl1_pdm_chipinfo = {
+	.mute_fn         = true,
+	.truncate_data   = true,
 };
 
 static const struct of_device_id aml_pdm_device_id[] = {
@@ -875,7 +883,11 @@ static const struct of_device_id aml_pdm_device_id[] = {
 	},
 	{
 		.compatible = "amlogic, g12a-snd-pdm",
-		.data = &g12a_pdm_chipinfo,
+		.data       = &g12a_pdm_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-snd-pdm",
+		.data       = &tl1_pdm_chipinfo,
 	},
 	{}
 };

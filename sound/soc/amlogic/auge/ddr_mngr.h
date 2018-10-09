@@ -20,12 +20,14 @@
 
 #include <linux/device.h>
 #include <linux/interrupt.h>
+#include <sound/soc.h>
 #include "audio_io.h"
 
 enum ddr_num {
 	DDR_A,
 	DDR_B,
 	DDR_C,
+	DDR_D,
 };
 
 enum ddr_types {
@@ -36,15 +38,22 @@ enum ddr_types {
 	RJ_32BITS,
 };
 
+/*
+ * from tl1, add new source FRATV, FRHDMIRX, LOOPBACK_B, SPDIFIN_LB, VAD
+ */
 enum toddr_src {
 	TDMIN_A,
 	TDMIN_B,
 	TDMIN_C,
 	SPDIFIN,
 	PDMIN,
-	NONE,
+	FRATV, /* NONE for axg, g12a, g12b */
 	TDMIN_LB,
 	LOOPBACK,
+	FRHDMIRX, /* from tl1 chipset*/
+	LOOPBACK_B,
+	SPDIFIN_LB,
+	VAD,
 };
 
 enum frddr_dest {
@@ -116,5 +125,13 @@ void aml_aed_enable(bool enable, int aed_module);
 
 void frddr_init_without_mngr(unsigned int frddr_index, unsigned int src0_sel);
 void frddr_deinit_without_mngr(unsigned int frddr_index);
+
+int toddr_src_get(void);
+const char *toddr_src_get_str(int idx);
+int frddr_src_get(void);
+const char *frddr_src_get_str(int idx);
+
+int card_add_ddr_kcontrols(struct snd_soc_card *card);
+
 #endif
 

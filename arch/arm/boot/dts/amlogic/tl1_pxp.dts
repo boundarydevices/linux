@@ -97,15 +97,378 @@
 		status = "okay";
 		fr_auto_policy = <0>;
 	};
+
+	/* Audio Related start */
+	pdm_codec:dummy {
+		#sound-dai-cells = <0>;
+		compatible = "amlogic, pdm_dummy_codec";
+		status = "okay";
+	};
+
+	dummy_codec:dummy {
+		#sound-dai-cells = <0>;
+		compatible = "amlogic, aml_dummy_codec";
+		status = "okay";
+	};
+
+	auge_sound {
+		compatible = "amlogic, tl1-sound-card";
+		aml-audio-card,name = "AML-AUGESOUND";
+
+		aml-audio-card,dai-link@0 {
+			format = "dsp_a";
+			mclk-fs = <512>;
+			//continuous-clock;
+			//bitclock-inversion;
+			//frame-inversion;
+			/* master mode */
+			bitclock-master = <&tdma>;
+			frame-master = <&tdma>;
+			/* slave mode */
+			/*
+			 * bitclock-master = <&tdmacodec>;
+			 * frame-master = <&tdmacodec>;
+			 */
+			/* suffix-name, sync with android audio hal used for */
+			suffix-name = "alsaPORT-pcm";
+			tdmacpu: cpu {
+				sound-dai = <&tdma>;
+				dai-tdm-slot-tx-mask =
+							<1 1 1 1 1 1 1 1>;
+				dai-tdm-slot-rx-mask =
+							<1 1 1 1 1 1 1 1>;
+				dai-tdm-slot-num = <8>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <24576000>;
+			};
+			tdmacodec: codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@1 {
+			format = "i2s";
+			mclk-fs = <256>;
+			//continuous-clock;
+			//bitclock-inversion;
+			//frame-inversion;
+			/* master mode */
+			bitclock-master = <&tdmb>;
+			frame-master = <&tdmb>;
+			/* slave mode */
+			//bitclock-master = <&tdmbcodec>;
+			//frame-master = <&tdmbcodec>;
+			/* suffix-name, sync with android audio hal used for */
+			suffix-name = "alsaPORT-i2s";
+			cpu {
+				sound-dai = <&tdmb>;
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				/*
+				 * dai-tdm-slot-tx-mask =
+				 *	<1 1 1 1 1 1 1 1>;
+				 * dai-tdm-slot-rx-mask =
+				 *	<1 1 1 1 1 1 1 1>;
+				 * dai-tdm-slot-num = <8>;
+				 */
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			tdmbcodec: codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@2 {
+			format = "i2s";
+			mclk-fs = <256>;
+			//continuous-clock;
+			//bitclock-inversion;
+			//frame-inversion;
+			/* master mode */
+			bitclock-master = <&tdmc>;
+			frame-master = <&tdmc>;
+			/* slave mode */
+			//bitclock-master = <&tdmccodec>;
+			//frame-master = <&tdmccodec>;
+			/* suffix-name, sync with android audio hal used for */
+			//suffix-name = "alsaPORT-tdm";
+			cpu {
+				sound-dai = <&tdmc>;
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			tdmccodec: codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@3 {
+			mclk-fs = <64>;
+			/* suffix-name, sync with android audio hal used for */
+			suffix-name = "alsaPORT-pdm";
+			cpu {
+				sound-dai = <&pdm>;
+			};
+			codec {
+				sound-dai = <&pdm_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@4 {
+			mclk-fs = <128>;
+			/* suffix-name, sync with android audio hal used for */
+			suffix-name = "alsaPORT-spdif";
+			cpu {
+				sound-dai = <&spdif_a>;
+				system-clock-frequency = <6144000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@5 {
+			mclk-fs = <128>;
+			cpu {
+				sound-dai = <&spdif_b>;
+				system-clock-frequency = <6144000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@6 {
+			mclk-fs = <256>;
+			cpu {
+				sound-dai = <&extn>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+	};
+	/* Audio Related end */
+
 }; /* end of / */
+
+&audiobus {
+	tdma:tdm {
+		compatible = "amlogic, tl1-snd-tdma";
+		#sound-dai-cells = <0>;
+
+		dai-tdm-lane-slot-mask-in = <1 0>;
+		dai-tdm-lane-slot-mask-out = <1 0>;
+		dai-tdm-clk-sel = <0>;
+
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
+				&clkc CLKID_MPLL0>;
+		clock-names = "mclk", "clk_srcpll";
+
+		pinctrl-names = "tdm_pins";
+		pinctrl-0 = <&tdma_mclk &tdmout_a &tdmin_a>;
+
+		status = "okay";
+	};
+
+	tdmb:tdm {
+		compatible = "amlogic, tl1-snd-tdmb";
+		#sound-dai-cells = <0>;
+
+		dai-tdm-lane-slot-mask-in = <1 0 0 0>;
+		dai-tdm-lane-slot-mask-out = <1 0 0 0>;
+		dai-tdm-clk-sel = <1>;
+
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
+				&clkc CLKID_MPLL1>;
+		clock-names = "mclk", "clk_srcpll";
+
+		status = "okay";
+	};
+
+	tdmc:tdm {
+		compatible = "amlogic, tl1-snd-tdmc";
+		#sound-dai-cells = <0>;
+
+		dai-tdm-lane-slot-mask-in = <1 0 0 0>;
+		dai-tdm-lane-slot-mask-out = <1 0 0 0>;
+		dai-tdm-clk-sel = <2>;
+
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
+				&clkc CLKID_MPLL2>;
+		clock-names = "mclk", "clk_srcpll";
+
+		pinctrl-names = "tdm_pins";
+		pinctrl-0 = <&tdmout_c &tdmin_c>;
+
+		status = "okay";
+	};
+
+	spdif_a:spdif {
+		compatible = "amlogic, tl1-snd-spdif-a";
+		#sound-dai-cells = <0>;
+
+		clocks = <&clkc CLKID_MPLL0
+				&clkc CLKID_FCLK_DIV4
+				&clkaudio CLKID_AUDIO_SPDIFIN
+				&clkaudio CLKID_AUDIO_SPDIFOUT
+				&clkaudio CLKID_AUDIO_SPDIFIN_CTRL
+				&clkaudio CLKID_AUDIO_SPDIFOUT_CTRL>;
+		clock-names = "sysclk", "fixed_clk", "gate_spdifin",
+				"gate_spdifout", "clk_spdifin", "clk_spdifout";
+
+		interrupts =
+				<GIC_SPI 151 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "irq_spdifin";
+
+		pinctrl-names = "spdif_pins";
+		pinctrl-0 = <&spdifout_a &spdifin_a>;
+
+		status = "okay";
+	};
+
+	spdif_b:spdif {
+		compatible = "amlogic, tl1-snd-spdif-b";
+		#sound-dai-cells = <0>;
+
+		clocks = <&clkc CLKID_MPLL0 /*CLKID_HIFI_PLL*/
+				&clkaudio CLKID_AUDIO_SPDIFOUTB
+				&clkaudio CLKID_AUDIO_SPDIFOUTB_CTRL>;
+		clock-names = "sysclk",
+				"gate_spdifout", "clk_spdifout";
+
+		status = "okay";
+	};
+
+	pdm:pdm {
+		compatible = "amlogic, tl1-snd-pdm";
+		#sound-dai-cells = <0>;
+
+		clocks = <&clkaudio CLKID_AUDIO_PDM
+			&clkc CLKID_FCLK_DIV3
+			&clkc CLKID_MPLL3
+			&clkaudio CLKID_AUDIO_PDMIN0
+			&clkaudio CLKID_AUDIO_PDMIN1>;
+		clock-names = "gate",
+			"sysclk_srcpll",
+			"dclk_srcpll",
+			"pdm_dclk",
+			"pdm_sysclk";
+
+		pinctrl-names = "pdm_pins";
+		pinctrl-0 = <&pdmin>;
+
+		/* mode 0~4, defalut:1 */
+		filter_mode = <1>;
+
+		status = "okay";
+	};
+
+	extn:extn {
+		compatible = "amlogic, snd-extn";
+		#sound-dai-cells = <0>;
+
+		interrupts =
+				<GIC_SPI 158 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "irq_frhdmirx";
+
+		status = "okay";
+	};
+
+}; /* end of audiobus */
+
+&pinctrl_periphs {
+	/* audio pin mux */
+
+	tdma_mclk: tdma_mclk {
+		mux { /* GPIOZ_0 */
+			groups = "mclk0_z";
+			function = "mclk0";
+		};
+	};
+
+	tdmout_a: tdmout_a {
+		mux { /* GPIOZ_1, GPIOZ_2, GPIOZ_3, GPIOZ_5, GPIOZ_6 */
+			groups = "tdma_sclk_z",
+				"tdma_fs_z",
+				"tdma_dout0_z",
+				"tdma_dout2_z",
+				"tdma_dout3_z";
+			function = "tdma_out";
+		};
+	};
+
+	tdmin_a: tdmin_a {
+		mux { /* GPIOZ_9 */
+			groups = "tdma_din2_z";
+			function = "tdma_in";
+		};
+	};
+
+	tdmout_c: tdmout_c {
+		mux { /* GPIODV_7, GPIODV_8, GPIODV_9 */
+			groups = "tdmc_sclk",
+				"tdmc_fs",
+				"tdmc_dout0";
+			function = "tdmc_out";
+		};
+	};
+
+	tdmin_c: tdmin_c {
+		mux { /* GPIODV_10 */
+			groups = "tdmc_din1";
+			function = "tdmc_in";
+		};
+	};
+
+	spdifin_a: spdifin_a {
+		mux { /* GPIODV_5 */
+			groups = "spdif_in";
+			function = "spdif_in";
+		};
+	};
+
+	spdifout_a: spdifout_a {
+		mux { /* GPIODV_4 */
+			groups = "spdif_out_dv4";
+			function = "spdif_out";
+		};
+	};
+
+	pdmin: pdmin {
+		mux { /* GPIOZ_7, GPIOZ_8*/
+			groups = "pdm_dclk_z",
+				"pdm_din0_z";
+			function = "pdm";
+		};
+	};
+
+
+}; /* end of pinctrl_periphs */
+
+&pinctrl_aobus {
+	spdifout: spdifout {
+		mux { /* gpiao_10 */
+			groups = "spdif_out_ao";
+			function = "spdif_out_ao";
+		};
+	};
+};  /* end of pinctrl_aobus */
 
 &sd_emmc_b {
 	status = "okay";
 	sd {
 		caps = "MMC_CAP_4_BIT_DATA",
-			 "MMC_CAP_MMC_HIGHSPEED",
-			 "MMC_CAP_SD_HIGHSPEED",
-			 "MMC_CAP_NONREMOVABLE"; /**ptm debug */
+			"MMC_CAP_MMC_HIGHSPEED",
+			"MMC_CAP_SD_HIGHSPEED",
+			"MMC_CAP_NONREMOVABLE"; /**ptm debug */
 		f_min = <400000>;
 		f_max = <200000000>;
 	};

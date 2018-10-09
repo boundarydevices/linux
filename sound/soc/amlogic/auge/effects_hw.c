@@ -23,11 +23,11 @@
 int DRC0_enable(int enable, int thd0, int k0)
 {
 	if (enable == 1) {
-		eqdrc_write(AED_DRC_THD0, thd0/*aml_drc_tko_table[2]*/);
-		eqdrc_write(AED_DRC_K0, k0/*aml_drc_tko_table[4]*/);
+		eqdrc_write(AED_DRC_THD0_G12X, thd0/*aml_drc_tko_table[2]*/);
+		eqdrc_write(AED_DRC_K0_G12X, k0/*aml_drc_tko_table[4]*/);
 	} else {
-		eqdrc_write(AED_DRC_THD0, 0xbf000000);
-		eqdrc_write(AED_DRC_K0, 0x40000);
+		eqdrc_write(AED_DRC_THD0_G12X, 0xbf000000);
+		eqdrc_write(AED_DRC_K0_G12X, 0x40000);
 	}
 
 	return 0;
@@ -49,13 +49,13 @@ int set_internal_EQ_volume(
 	unsigned int channel_1_volume,
 	unsigned int channel_2_volume)
 {
-	eqdrc_write(AED_EQ_VOLUME, (0 << 30) /* volume step: 0.125dB*/
+	eqdrc_write(AED_EQ_VOLUME_G12X, (0 << 30) /* volume step: 0.125dB*/
 			| (master_volume << 16) /* master volume: 0dB*/
 			| (channel_1_volume << 8) /* channel 1 volume: 0dB*/
 			| (channel_2_volume << 0) /* channel 2 volume: 0dB*/
 			);
-	eqdrc_write(AED_EQ_VOLUME_SLEW_CNT, 0x40);
-	eqdrc_write(AED_MUTE, 0);
+	eqdrc_write(AED_EQ_VOLUME_SLEW_CNT_G12X, 0x40);
+	eqdrc_write(AED_MUTE_G12X, 0);
 
 	return 0;
 }
@@ -122,7 +122,7 @@ void aed_set_eq(int enable, int params_len, unsigned int *params)
 		}
 	}
 
-	eqdrc_update_bits(AED_EQ_EN, 1, enable);
+	eqdrc_update_bits(AED_EQ_EN_G12X, 1, enable);
 }
 
 void aed_set_drc(int enable, int drc_len, unsigned int *drc_params,

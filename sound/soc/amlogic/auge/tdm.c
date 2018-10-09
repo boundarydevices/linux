@@ -39,7 +39,7 @@
 #include "ddr_mngr.h"
 #include "tdm_hw.h"
 
-/*#define G12A_PTM*/
+/*#define __PTM_TDM_CLK__*/
 
 #include "sharebuffer.h"
 
@@ -485,6 +485,16 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 			return -EINVAL;
 		}
 
+		if (toddr_src_get() == FRHDMIRX) {
+			src = FRHDMIRX;
+
+			tdm_update_slot_in(p_tdm->actrl, p_tdm->id, HDMIRX_I2S);
+		}
+
+		pr_info("%s Expected toddr src:%s\n",
+			__func__,
+			toddr_src_get_str(src));
+
 		fmt.type      = toddr_type;
 		fmt.msb       = 31;
 		fmt.lsb       = lsb;
@@ -803,11 +813,11 @@ static int aml_dai_set_tdm_sysclk(struct snd_soc_dai *cpu_dai,
 
 	p_tdm->setting.sysclk = freq;
 
-#ifdef G12A_PTM
+#ifdef __PTM_TDM_CLK__
 	if (p_tdm->id == 0)
 		ratio = 14;
 	else if (p_tdm->id == 1)
-		ratio = 18;
+		ratio = 18 * 2;
 	else if (p_tdm->id == 2)
 		ratio = 20;
 #endif
@@ -1056,23 +1066,23 @@ static struct snd_soc_dai_driver aml_tdm_dai[] = {
 };
 
 static const struct snd_soc_component_driver aml_tdm_component = {
-	.name		= DRV_NAME,
+	.name        = DRV_NAME,
 };
 
 struct tdm_chipinfo axg_tdma_chipinfo = {
-	.id = TDM_A,
+	.id          = TDM_A,
 };
 
 struct tdm_chipinfo axg_tdmb_chipinfo = {
-	.id = TDM_B,
+	.id          = TDM_B,
 };
 
 struct tdm_chipinfo axg_tdmc_chipinfo = {
-	.id = TDM_C,
+	.id          = TDM_C,
 };
 
 struct tdm_chipinfo g12a_tdma_chipinfo = {
-	.id = TDM_A,
+	.id          = TDM_A,
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
@@ -1080,7 +1090,7 @@ struct tdm_chipinfo g12a_tdma_chipinfo = {
 };
 
 struct tdm_chipinfo g12a_tdmb_chipinfo = {
-	.id = TDM_B,
+	.id          = TDM_B,
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
@@ -1088,7 +1098,31 @@ struct tdm_chipinfo g12a_tdmb_chipinfo = {
 };
 
 struct tdm_chipinfo g12a_tdmc_chipinfo = {
-	.id = TDM_C,
+	.id          = TDM_C,
+	.sclk_ws_inv = true,
+	.oe_fn       = true,
+	.clk_pad_ctl = true,
+	.same_src_fn = true,
+};
+
+struct tdm_chipinfo tl1_tdma_chipinfo = {
+	.id          = TDM_A,
+	.sclk_ws_inv = true,
+	.oe_fn       = true,
+	.clk_pad_ctl = true,
+	.same_src_fn = true,
+};
+
+struct tdm_chipinfo tl1_tdmb_chipinfo = {
+	.id          = TDM_B,
+	.sclk_ws_inv = true,
+	.oe_fn       = true,
+	.clk_pad_ctl = true,
+	.same_src_fn = true,
+};
+
+struct tdm_chipinfo tl1_tdmc_chipinfo = {
+	.id          = TDM_C,
 	.sclk_ws_inv = true,
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
@@ -1098,27 +1132,39 @@ struct tdm_chipinfo g12a_tdmc_chipinfo = {
 static const struct of_device_id aml_tdm_device_id[] = {
 	{
 		.compatible = "amlogic, axg-snd-tdma",
-		.data = &axg_tdma_chipinfo,
+		.data       = &axg_tdma_chipinfo,
 	},
 	{
 		.compatible = "amlogic, axg-snd-tdmb",
-		.data = &axg_tdmb_chipinfo,
+		.data       = &axg_tdmb_chipinfo,
 	},
 	{
 		.compatible = "amlogic, axg-snd-tdmc",
-		.data = &axg_tdmc_chipinfo,
+		.data       = &axg_tdmc_chipinfo,
 	},
 	{
 		.compatible = "amlogic, g12a-snd-tdma",
-		.data = &g12a_tdma_chipinfo,
+		.data       = &g12a_tdma_chipinfo,
 	},
 	{
 		.compatible = "amlogic, g12a-snd-tdmb",
-		.data = &g12a_tdmb_chipinfo,
+		.data       = &g12a_tdmb_chipinfo,
 	},
 	{
 		.compatible = "amlogic, g12a-snd-tdmc",
-		.data = &g12a_tdmc_chipinfo,
+		.data       = &g12a_tdmc_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-snd-tdma",
+		.data       = &tl1_tdma_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-snd-tdmb",
+		.data       = &tl1_tdmb_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-snd-tdmc",
+		.data       = &tl1_tdmc_chipinfo,
 	},
 	{},
 };

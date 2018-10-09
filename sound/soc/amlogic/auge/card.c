@@ -433,12 +433,7 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 		aml_priv_to_props(priv, rtd->num);
 	unsigned int mclk = 0, mclk_fs = 0;
 	int i = 0, ret = 0;
-	int clk_dir = 0;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		clk_dir = SND_SOC_CLOCK_OUT;
-	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-		clk_dir = SND_SOC_CLOCK_IN;
+	int clk_idx = substream->stream;
 
 	if (priv->mclk_fs)
 		mclk_fs = priv->mclk_fs;
@@ -451,14 +446,14 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 		for (i = 0; i < rtd->num_codecs; i++) {
 			codec_dai = rtd->codec_dais[i];
 			ret = snd_soc_dai_set_sysclk(codec_dai, 0, mclk,
-				clk_dir);
+				SND_SOC_CLOCK_IN);
 
 			if (ret && ret != -ENOTSUPP)
 				goto err;
 		}
 
-		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, mclk,
-					     clk_dir);
+		ret = snd_soc_dai_set_sysclk(cpu_dai, clk_idx, mclk,
+					     SND_SOC_CLOCK_OUT);
 		if (ret && ret != -ENOTSUPP)
 			goto err;
 
@@ -860,6 +855,10 @@ static struct aml_chipset_info g12a_chipset_info = {
 	.eqdrc_fn       = true,
 };
 
+static struct aml_chipset_info tl1_chipset_info = {
+	.spdif_b        = true,
+};
+
 static const struct of_device_id auge_of_match[] = {
 	{
 		.compatible = "amlogic, axg-sound-card",
@@ -867,6 +866,10 @@ static const struct of_device_id auge_of_match[] = {
 	{
 		.compatible = "amlogic, g12a-sound-card",
 		.data       = &g12a_chipset_info,
+	},
+	{
+		.compatible = "amlogic, tl1-sound-card",
+		.data       = &tl1_chipset_info,
 	},
 	{},
 };
@@ -988,6 +991,7 @@ static int aml_card_probe(struct platform_device *pdev)
 	if (ret >= 0)
 		return ret;
 err:
+	pr_err("%s error ret:%d\n", __func__, ret);
 	aml_card_clean_reference(&priv->snd_card);
 
 	return ret;

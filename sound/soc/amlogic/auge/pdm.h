@@ -50,6 +50,8 @@ enum {
 struct pdm_chipinfo {
 	/* pdm supports mute function */
 	bool mute_fn;
+	/* truncate invalid data when filter init */
+	bool truncate_data;
 };
 
 struct aml_pdm {

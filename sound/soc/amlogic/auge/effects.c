@@ -174,27 +174,27 @@ static const struct snd_kcontrol_new snd_eqdrc_controls[] = {
 	 * 1:multiply gain after ng
 	 */
 	SOC_SINGLE_EXT_TLV("EQ Volume Pos",
-			 AED_EQ_VOLUME, 28, 0x1, 0,
+			 AED_EQ_VOLUME_G12X, 28, 0x1, 0,
 			 mixer_eqdrc_read, mixer_eqdrc_write,
 			 NULL),
 
 	SOC_SINGLE_EXT_TLV("EQ master volume",
-			 AED_EQ_VOLUME, 16, 0x3FF, 1,
+			 AED_EQ_VOLUME_G12X, 16, 0x3FF, 1,
 			 mixer_eqdrc_read, mixer_eqdrc_write,
 			 mvol_tlv),
 
 	SOC_SINGLE_EXT_TLV("EQ ch1 volume",
-			 AED_EQ_VOLUME, 8, 0xFF, 1,
+			 AED_EQ_VOLUME_G12X, 8, 0xFF, 1,
 			 mixer_eqdrc_read, mixer_eqdrc_write,
 			 chvol_tlv),
 
 	SOC_SINGLE_EXT_TLV("EQ ch2 volume",
-			 AED_EQ_VOLUME, 0, 0xFF, 1,
+			 AED_EQ_VOLUME_G12X, 0, 0xFF, 1,
 			 mixer_eqdrc_read, mixer_eqdrc_write,
 			 chvol_tlv),
 
 	SOC_SINGLE_EXT("EQ master volume mute",
-			 AED_MUTE, 31, 0x1, 0,
+			 AED_MUTE_G12X, 31, 0x1, 0,
 			 mixer_eqdrc_read, mixer_eqdrc_write),
 
 	SOC_SINGLE_EXT("EQ/DRC Channel Mask",
@@ -210,7 +210,7 @@ static const struct snd_kcontrol_new snd_eqdrc_controls[] = {
 			 mixer_eqdrc_read, mixer_set_AED_req_ctrl),
 
 	SOC_SINGLE_EXT("EQ enable",
-			 AED_EQ_EN, 0, 0x1, 0,
+			 AED_EQ_EN_G12X, 0, 0x1, 0,
 			 mixer_eqdrc_read, mixer_set_EQ),
 
 	SOC_SINGLE_EXT("DRC enable",

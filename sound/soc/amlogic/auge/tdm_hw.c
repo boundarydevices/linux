@@ -26,8 +26,8 @@
 #define MST_CLK_INVERT_PH2_TDMOUT_BCLK    (1 << 4)
 #define MST_CLK_INVERT_PH2_TDMOUT_FCLK    (1 << 5)
 
-/*#define G12A_PTM*/
 /*#define G12A_PTM_LB_INTERNAL*/
+/*#define TL1_PTM_LB_INTERNAL*/
 
 /* without audio handler, it should be improved */
 void aml_tdm_enable(
@@ -335,9 +335,7 @@ void aml_tdm_set_format(
 	pr_debug("sclk_ph0 (pad) clk ctl set:%x\n", clkctl);
 	/* clk ctrl: delay line and invert clk */
 	/*clkctl |= 0x88880000;*/
-#ifdef G12A_PTM
-	clkctl |= 0x77777700;
-#endif
+
 	if (master_mode) {
 		off_set = EE_AUDIO_MST_B_SCLK_CTRL1 - EE_AUDIO_MST_A_SCLK_CTRL1;
 		reg_out = EE_AUDIO_MST_A_SCLK_CTRL1 + off_set * id;
@@ -431,7 +429,7 @@ void aml_tdm_set_slot_in(
 	offset = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
 	reg = EE_AUDIO_TDMIN_A_CTRL + offset * index;
 
-#ifdef G12A_PTM_LB_INTERNAL
+#if defined(G12A_PTM_LB_INTERNAL)
 	if (index == 0) /*TODO: ptm, tdma dsp_a lb*/
 		aml_audiobus_update_bits(actrl, reg,
 			0xf<<20|0x1f, 6<<20|(slot_width-1));
@@ -439,9 +437,30 @@ void aml_tdm_set_slot_in(
 		aml_audiobus_update_bits(actrl, reg,
 			0xf<<20|0x1f, 7<<20|(slot_width-1));
 	else
+#elif defined(TL1_PTM_LB_INTERNAL)
+if (index == 0) /*TODO: ptm, tdma dsp_a lb*/
+	aml_audiobus_update_bits(actrl, reg,
+		0xf<<20|0x1f, 13<<20|(slot_width-1));
+else if (index == 1) /*TODO: ptm, tdmb i2s lb*/
+	aml_audiobus_update_bits(actrl, reg,
+		0xf<<20|0x1f, 14<<20|(slot_width-1));
+else
 #endif
 	aml_audiobus_update_bits(actrl, reg,
 		0xf << 20 | 0x1f, in_src << 20 | (slot_width-1));
+}
+
+void tdm_update_slot_in(
+	struct aml_audio_controller *actrl,
+	int index, int in_src)
+{
+	unsigned int reg, offset;
+
+	offset = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
+	reg = EE_AUDIO_TDMIN_A_CTRL + offset * index;
+
+	aml_audiobus_update_bits(actrl, reg,
+		0xf << 20, in_src << 20);
 }
 
 void aml_tdm_set_channel_mask(
@@ -561,11 +580,11 @@ void aml_tdm_clk_pad_select(
 		pr_err("unknown tdm mpad:%d\n", mpad);
 		return;
 	}
-	reg = EE_AUDIO_MST_PAD_CTRL0;
+	reg = EE_AUDIO_MST_PAD_CTRL0(0);
 	aml_audiobus_update_bits(actrl, reg,
 		mask_offset, val_offset);
 
-	reg = EE_AUDIO_MST_PAD_CTRL1;
+	reg = EE_AUDIO_MST_PAD_CTRL1(0);
 	switch (tdm_index) {
 	case 0:
 		mask_offset = 0x7 << 16 | 0x7 << 0;

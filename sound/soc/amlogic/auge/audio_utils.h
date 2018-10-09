@@ -159,4 +159,7 @@ extern int loopback_trigger(
 extern void audio_locker_set(int enable);
 
 extern int audio_locker_get(void);
+
+extern void fratv_enable(bool enable);
+extern void fratv_src_select(int src);
 #endif
