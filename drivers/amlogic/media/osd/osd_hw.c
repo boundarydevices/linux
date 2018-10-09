@@ -67,7 +67,7 @@
 #include "osd_hw_def.h"
 #include "osd_fb.h"
 
-//#define OSD_BLEND_SHIFT_WORKAROUND
+#define OSD_BLEND_SHIFT_WORKAROUND
 #ifdef CONFIG_AMLOGIC_VSYNC_FIQ_ENABLE
 #define FIQ_VSYNC
 #endif
@@ -5248,11 +5248,121 @@ static u32 blend_din_to_osd(
 }
 
 #ifdef OSD_BLEND_SHIFT_WORKAROUND
+static u32 get_max_order(u32 order1, u32 order2)
+{
+	u32 max_order = 0;
+
+	if (order1 > order2)
+		max_order = order1;
+	else
+		max_order = order2;
+	return max_order;
+}
+
+static u32 get_min_order(u32 order1, u32 order2)
+{
+	u32 min_order = 0;
+
+	if (order1 > order2)
+		min_order = order2;
+	else
+		min_order = order1;
+	return min_order;
+}
+
+static u32 get_max_order_to_osd(struct hw_osd_blending_s *blending)
+{
+	u32 index = 0, max_order = 0;
+
+	max_order = get_max_order(blending->reorder[OSD1],
+		blending->reorder[OSD2]);
+	max_order = get_max_order(max_order,
+		blending->reorder[OSD3]);
+
+	if (max_order == blending->reorder[OSD1])
+		index = OSD1;
+	else if (max_order == blending->reorder[OSD2])
+		index = OSD2;
+	else if (max_order == blending->reorder[OSD3])
+		index = OSD3;
+	return index;
+}
+
+static u32 get_min_order_to_osd(struct hw_osd_blending_s *blending)
+{
+	u32 index = 0, min_order = 0;
+
+	min_order = get_min_order(blending->reorder[OSD1],
+		blending->reorder[OSD2]);
+	min_order = get_min_order(min_order,
+		blending->reorder[OSD3]);
+
+	if (min_order == blending->reorder[OSD1])
+		index = OSD1;
+	else if (min_order == blending->reorder[OSD2])
+		index = OSD2;
+	else if (min_order == blending->reorder[OSD3])
+		index = OSD3;
+	return index;
+}
+
+static u32 get_middle_order_to_osd(struct hw_osd_blending_s *blending)
+{
+	u32 index = 0;
+
+	if (blending->reorder[OSD1] == LAYER_2)
+		index = OSD1;
+	else if (blending->reorder[OSD2] == LAYER_2)
+		index = OSD2;
+	else if (blending->reorder[OSD3] == LAYER_2)
+		index = OSD3;
+	return index;
+}
+
+static void exchange_din0_din2(struct hw_osd_blending_s *blending)
+{
+	int temp1 = 0, temp2 = 0;
+
+	osd_log_dbg("need exchange osd din0 and din2 order\n");
+	temp1 = blending->din_reoder_sel & 0x000f;
+	temp2 = blending->din_reoder_sel & 0x0f00;
+	blending->din_reoder_sel &= ~0x0f0f;
+	blending->din_reoder_sel |= temp1 << 8;
+	blending->din_reoder_sel |= temp2 >> 8;
+	blending->osd_to_bdin_table[2] = OSD1;
+	blending->osd_to_bdin_table[0] = OSD2;
+	osd_log_dbg("din_reoder_sel%x\n",
+		blending->din_reoder_sel);
+}
+
+static void exchange_din2_din3(struct hw_osd_blending_s *blending)
+{
+	int temp1 = 0, temp2 = 0;
+
+	osd_log_dbg("need exchange osd din2 and din3 order\n");
+	temp1 = blending->din_reoder_sel & 0x0f00;
+	temp2 = blending->din_reoder_sel & 0xf000;
+	blending->din_reoder_sel &= ~0xff00;
+	blending->din_reoder_sel |= temp1 << 4;
+	blending->din_reoder_sel |= temp2 >> 4;
+	blending->osd_to_bdin_table[3] = OSD2;
+	blending->osd_to_bdin_table[2] = OSD3;
+	osd_log_dbg("din_reoder_sel%x\n",
+		blending->din_reoder_sel);
+}
+
+static void exchange_vpp_order(struct hw_osd_blending_s *blending)
+{
+	blending->b_exchange_blend_in = true;
+	osd_log_dbg("need exchange vpp order\n");
+}
+
 static void generate_blend_din_table(struct hw_osd_blending_s *blending)
 {
 	int i = 0;
 	int osd_count = osd_hw.osd_meson_dev.osd_count - 1;
 	int temp1 = 0, temp2 = 0;
+	u32 max_order = 0, min_order = 0;
 
 	/* reorder[i] = osd[i]'s display layer */
 	for (i = 0; i < OSD_BLEND_LAYERS; i++)
@@ -5336,13 +5446,18 @@ static void generate_blend_din_table(struct hw_osd_blending_s *blending)
 	}
 	case 3:
 		/* blend_din1 is bottom, blend_din4 is top layer */
-		/* mode A_BC */
-		/* osd0 always used blend_din1 */
-		/* blend_din1 */
-		blending->din_reoder_sel |= 1 << 0;
-		/* blend_din1 -- osd1 */
-		blending->osd_to_bdin_table[0] = OSD1;
+		osd_log_dbg("reorder:%d,%d,%d\n",
+			blending->reorder[OSD1],
+			blending->reorder[OSD2],
+			blending->reorder[OSD3]);
 		if (blending->osd_blend_mode == OSD_BLEND_AB_C) {
+			/* suppose osd0 used blend_din1,
+			 * osd1 used din2, osd3 used din4
+			 */
+			/* blend_din1 */
+			blending->din_reoder_sel |= 1 << 0;
+			/* blend_din1 -- osd1 */
+			blending->osd_to_bdin_table[0] = OSD1;
 			/* blend_din4 */
 			blending->din_reoder_sel |= (OSD3 + 1) << 12;
 			/* blend_din4 -- osd3 */
@@ -5351,73 +5466,62 @@ static void generate_blend_din_table(struct hw_osd_blending_s *blending)
 			blending->din_reoder_sel |= (OSD2 + 1) << 8;
 			/* blend_din3 -- osd2 */
 			blending->osd_to_bdin_table[2] = OSD2;
-			osd_log_dbg("reorder:%d,%d,%d\n",
-				blending->reorder[OSD1],
-				blending->reorder[OSD2],
+			max_order = get_max_order(blending->reorder[OSD2],
 				blending->reorder[OSD3]);
-			if (blending->reorder[OSD2] > blending->reorder[OSD1]) {
-				/* osd1 is top */
-				blending->b_exchange_din = true;
-				osd_log_dbg("need exchange osd din order\n");
-				temp1 = blending->din_reoder_sel & 0x000f;
-				temp2 = blending->din_reoder_sel & 0x0f00;
-				osd_log_dbg("temp1:%x,temp2=%x\n",
-					temp1, temp2);
-				//blending->din_reoder_sel = (1 << 12);
-				blending->din_reoder_sel &= ~0x0f0f;
-				blending->din_reoder_sel |= temp1 << 8;
-				blending->din_reoder_sel |= temp2 >> 8;
-				osd_log_dbg("din_reoder_sel%x\n",
-					blending->din_reoder_sel);
-				if (blending->reorder[OSD2] <
-					blending->reorder[OSD3]) {
-					blending->b_exchange_blend_in = true;
-					osd_log_dbg("111,need exchange vpp order\n");
+			min_order = get_min_order(blending->reorder[OSD2],
+				blending->reorder[OSD3]);
+			if (min_order > blending->reorder[OSD1]) {
+				/*  osd1 is top layer */
+				osd_log_dbg("osd1 is top.\n");
+				if (blending->reorder[OSD3] >
+					blending->reorder[OSD2]) {
+					/* din3 is bottom,  need exchange
+					 * din0 and din2 and exchange vpp
+					 */
+					osd_log_dbg("osd3 is bottom\n");
+					exchange_din0_din2(blending);
+					exchange_vpp_order(blending);
+				} else {
+					osd_log_dbg("osd3 is middle\n");
+					exchange_din2_din3(blending);
+					exchange_din0_din2(blending);
+					exchange_vpp_order(blending);
 				}
-			} else {
-				if (blending->reorder[OSD1] >
-					blending->reorder[OSD3]) {
-					blending->b_exchange_blend_in = true;
-					osd_log_dbg("222, need exchange vpp order\n");
-				}
+			} else if ((min_order < blending->reorder[OSD1]) &&
+				(max_order < blending->reorder[OSD1])) {
+				/* osd1 is bottom , min is din3, max is din2 */
+				if (min_order == blending->reorder[OSD2]) {
+					osd_log_dbg("osd2 is top\n");
+					/* need exchange din2 and din3*/
+					exchange_din2_din3(blending);
+				} else if (min_order == blending->reorder[OSD3])
+					osd_log_dbg("osd3 is top, do not need exchange\n");
+			} else if ((min_order < blending->reorder[OSD1]) &&
+				(max_order > blending->reorder[OSD1])) {
+				/* osd1 is middle  */
+				osd_log_dbg("osd1 is middle\n");
+				if (min_order == blending->reorder[OSD2])
+					exchange_vpp_order(blending);
+				else if (min_order == blending->reorder[OSD3])
+					exchange_din0_din2(blending);
 			}
-		} else {
-			if (blending->reorder[OSD2] > blending->reorder[OSD3]) {
-				/* blend_din4 */
-				blending->din_reoder_sel |= (OSD3 + 1) << 12;
-				/* blend_din4 -- osd3 */
-				blending->osd_to_bdin_table[3] = OSD3;
-				/* blend_din3 */
-				blending->din_reoder_sel |= (OSD2 + 1) << 8;
-				/* blend_din3 -- osd2 */
-				blending->osd_to_bdin_table[2] = OSD2;
-			} else {
-				/* blend_din3 */
-				blending->din_reoder_sel |= (OSD2 + 1) << 12;
-				/* blend_din3 -- osd2 */
-				blending->osd_to_bdin_table[3] = OSD2;
-				/* blend_din3 */
-				blending->din_reoder_sel |= (OSD3 + 1) << 8;
-				/* blend_din3 -- osd2 */
-				blending->osd_to_bdin_table[2] = OSD3;
-			}
-			if (blending->reorder[OSD1] < blending->reorder[OSD3]) {
-				u32 temp1, temp2;
+		} else if (blending->osd_blend_mode == OSD_BLEND_ABC) {
+			u32 osd_index = 0;
 
-				blending->b_exchange_din = true;
-				osd_log_dbg("need exchange osd din order\n");
-				temp1 = blending->osd_to_bdin_table[2];
-				temp2 = blending->osd_to_bdin_table[3];
-				blending->osd_to_bdin_table[3] =
-					blending->osd_to_bdin_table[0];
-				blending->osd_to_bdin_table[2] = temp2;
-				blending->osd_to_bdin_table[0] = temp1;
-				temp1 = blending->din_reoder_sel & 0xf000;
-				temp2 = blending->din_reoder_sel & 0x0f00;
-				blending->din_reoder_sel = (1 << 12);
-				blending->din_reoder_sel |= temp1 >> 4;
-				blending->din_reoder_sel |= temp2 >> 8;
-			}
+			osd_index = get_max_order_to_osd(blending);
+			/* blend_din1 is max_order*/
+			blending->din_reoder_sel |= (osd_index + 1) << 0;
+			blending->osd_to_bdin_table[0] = osd_index;
+
+			osd_index = get_min_order_to_osd(blending);
+			/* blend_din4 is min_order*/
+			blending->din_reoder_sel |= (osd_index + 1) << 12;
+			blending->osd_to_bdin_table[3] = osd_index;
+
+			osd_index = get_middle_order_to_osd(blending);
+			/* blend_din3 is middle_order*/
+			blending->din_reoder_sel |= (osd_index + 1) << 8;
+			blending->osd_to_bdin_table[2] = osd_index;
 		}
 		break;
 	}
@@ -6821,8 +6925,6 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 		if (index >= OSD_MAX)
 			return;
 		osd_setting_blend0_input(index, blending);
-		if (index != OSD1)
-			osd_log_err("not support case!!!\n");
 		osd_setting_blend0(blending);
 		memcpy(&output1_data, &(layer_blend->output_data),
 			sizeof(struct dispdata_s));
