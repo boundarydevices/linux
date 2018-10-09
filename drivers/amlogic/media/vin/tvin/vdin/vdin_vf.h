@@ -106,6 +106,7 @@ struct vf_entry {
 	enum vf_status_e status;
 	struct list_head list;
 	unsigned int flag;
+	unsigned char af_num;/*afbce num*/
 };
 
 struct vf_pool {

@@ -4327,33 +4327,4 @@ void vdin_clk_onoff(struct vdin_dev_s *devp, bool onoff)
 	}
 }
 
-void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
-	enum vdin_output_mif_e sel)
-{
-	unsigned int offset = devp->addr_offset;
 
-	if (offset == 0) {
-		if (sel == VDIN_OUTPUT_TO_MIF) {
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_MIF_ENABLE_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_OUT_MIF_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 0, VDIN0_OUT_AFBCE_BIT, 1);
-		} else if (sel == VDIN_OUTPUT_TO_AFBCE) {
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_MIF_ENABLE_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 0, VDIN0_OUT_MIF_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_OUT_AFBCE_BIT, 1);
-		}
-	} else {
-		if (sel == VDIN_OUTPUT_TO_MIF) {
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN1_MIF_ENABLE_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN1_OUT_MIF_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 0, VDIN1_OUT_AFBCE_BIT, 1);
-		} else if (sel == VDIN_OUTPUT_TO_AFBCE) {
-			/*sel vdin1 afbce: not support in sw now,
-			 *just reserved interface
-			 */
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN1_MIF_ENABLE_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 0, VDIN1_OUT_MIF_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN1_OUT_AFBCE_BIT, 1);
-		}
-	}
-}

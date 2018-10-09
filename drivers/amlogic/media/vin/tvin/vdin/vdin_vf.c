@@ -387,6 +387,7 @@ int vf_pool_init(struct vf_pool *p, int size)
 			log_state = false;
 			break;
 		}
+		master->af_num = i;
 		master->status = VF_STATUS_WL;
 		master->flag |= VF_FLAG_NORMAL_FRAME;
 		master->flag &= (~VF_FLAG_FREEZED_FRAME);

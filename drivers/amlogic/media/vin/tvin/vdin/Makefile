@@ -9,3 +9,5 @@ tvin_vdin-objs += vdin_drv.o
 tvin_vdin-objs += vdin_ctl.o
 tvin_vdin-objs += vdin_sm.o
 tvin_vdin-objs += vdin_canvas.o
+tvin_vdin-objs += vdin_afbce.o
+

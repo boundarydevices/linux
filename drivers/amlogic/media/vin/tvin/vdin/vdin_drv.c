@@ -63,6 +63,7 @@
 #include "vdin_sm.h"
 #include "vdin_vf.h"
 #include "vdin_canvas.h"
+#include "vdin_afbce.h"
 
 #define VDIN_DRV_NAME		"vdin"
 #define VDIN_DEV_NAME		"vdin"
@@ -466,17 +467,30 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 				devp->parm.v_reverse);
 #ifdef CONFIG_CMA
 	vdin_cma_malloc_mode(devp);
-	if (vdin_cma_alloc(devp)) {
-		pr_err("\nvdin%d %s fail for cma alloc fail!!!\n",
-			devp->index, __func__);
-		return;
+	if (devp->afbce_mode == 1) {
+		if (vdin_afbce_cma_alloc(devp)) {
+			pr_err("\nvdin%d-afbce %s fail for cma alloc fail!!!\n",
+				devp->index, __func__);
+			return;
+		}
+	} else if (devp->afbce_mode == 0) {
+		if (vdin_cma_alloc(devp)) {
+			pr_err("\nvdin%d %s fail for cma alloc fail!!!\n",
+				devp->index, __func__);
+			return;
+		}
 	}
 #endif
 	/* h_active/v_active will be used by bellow calling */
-	if (canvas_config_mode == 1)
-		vdin_canvas_start_config(devp);
-	else if (canvas_config_mode == 2)
-		vdin_canvas_auto_config(devp);
+	if (devp->afbce_mode == 0) {
+		if (canvas_config_mode == 1)
+			vdin_canvas_start_config(devp);
+		else if (canvas_config_mode == 2)
+			vdin_canvas_auto_config(devp);
+	} else if (devp->afbce_mode == 1) {
+		vdin_afbce_maptable_init(devp);
+		vdin_afbce_config(devp);
+	}
 #if 0
 	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
 		(devp->prop.dest_cfmt == TVIN_NV21))
@@ -523,8 +537,14 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	vdin_hw_enable(devp->addr_offset);
 	vdin_set_all_regs(devp);
-	if (is_meson_tl1_cpu() && (devp->index == 0))
-		vdin_write_mif_or_afbce(devp, VDIN_OUTPUT_TO_MIF);
+
+	if (is_meson_tl1_cpu()) {
+		if (devp->afbce_mode == 0)
+			vdin_write_mif_or_afbce(devp, VDIN_OUTPUT_TO_MIF);
+		else if (devp->afbce_mode == 1)
+			vdin_write_mif_or_afbce(devp, VDIN_OUTPUT_TO_AFBCE);
+	}
+
 	if (!(devp->parm.flag & TVIN_PARM_FLAG_CAP) &&
 		(devp->frontend) &&
 		devp->frontend->dec_ops &&
@@ -630,7 +650,10 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 		vf_unreg_provider(&devp->vprov);
 	devp->dv.dv_config = 0;
 #ifdef CONFIG_CMA
-	vdin_cma_release(devp);
+	if (devp->afbce_mode == 1)
+		vdin_afbce_cma_release(devp);
+	else if (devp->afbce_mode == 0)
+		vdin_cma_release(devp);
 #endif
 	vdin_dolby_addr_release(devp, devp->vfp->size);
 
@@ -1508,8 +1531,13 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	}
 	/* prepare for next input data */
 	next_wr_vfe = provider_vf_get(devp->vfp);
-	vdin_set_canvas_id(devp, (devp->flags&VDIN_FLAG_RDMA_ENABLE),
-		(next_wr_vfe->vf.canvas0Addr&0xff));
+	if (devp->afbce_mode == 0)
+		vdin_set_canvas_id(devp, (devp->flags&VDIN_FLAG_RDMA_ENABLE),
+			(next_wr_vfe->vf.canvas0Addr&0xff));
+	else if (devp->afbce_mode == 1)
+		vdin_afbce_set_next_frame(devp,
+			(devp->flags&VDIN_FLAG_RDMA_ENABLE), next_wr_vfe);
+
 	/* prepare for chroma canvas*/
 	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
 		(devp->prop.dest_cfmt == TVIN_NV21))
@@ -1700,8 +1728,13 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 
 	/* prepare for next input data */
 	next_wr_vfe = provider_vf_get(devp->vfp);
-	vdin_set_canvas_id(devp, (devp->flags&VDIN_FLAG_RDMA_ENABLE),
-				(next_wr_vfe->vf.canvas0Addr&0xff));
+	if (devp->afbce_mode == 0)
+		vdin_set_canvas_id(devp, (devp->flags&VDIN_FLAG_RDMA_ENABLE),
+			(next_wr_vfe->vf.canvas0Addr&0xff));
+	else if (devp->afbce_mode == 1)
+		vdin_afbce_set_next_frame(devp,
+			(devp->flags&VDIN_FLAG_RDMA_ENABLE), next_wr_vfe);
+
 	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
 			(devp->prop.dest_cfmt == TVIN_NV21))
 		vdin_set_chma_canvas_id(devp,
@@ -2471,6 +2504,25 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	else
 		vdevp->color_depth_mode = 0;
 
+	/*set afbce mode*/
+	ret = of_property_read_u32(pdev->dev.of_node,
+		"afbce_bit_mode", &vdevp->afbce_mode);
+	if (ret) {
+		vdevp->afbce_mode = 0;
+		pr_info("no afbce mode found, use normal mode\n");
+	} else {
+		if ((is_meson_tl1_cpu()) && (vdevp->index == 0)) {
+			/* just use afbce at vdin0 */
+			pr_info("afbce mode = %d\n", vdevp->afbce_mode);
+			vdevp->afbce_info = devm_kzalloc(vdevp->dev,
+				sizeof(struct vdin_afbce_s), GFP_KERNEL);
+			if (!vdevp->afbce_info)
+				goto fail_kzalloc_vdev;
+		} else {
+			vdevp->afbce_mode = 0;
+			pr_info("get afbce from dts, but chip cannot support\n");
+		}
+	}
 	/*vdin urgent en*/
 	ret = of_property_read_u32(pdev->dev.of_node,
 			"urgent_en", &urgent_en);

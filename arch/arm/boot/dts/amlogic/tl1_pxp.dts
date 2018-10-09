@@ -88,7 +88,7 @@
 		//	compatible = "shared-dma-pool";
 		//	reusable;
 			/* 3840x2160x4x4 ~=128 M */
-		//	size = <0x8000000>;
+		//	size = <0xc400000>;
 		//	alignment = <0x400000>;
 		//};
 
@@ -313,6 +313,12 @@
 		 * bit9:use 10bit at 4k_50/60hz_10bit
 		 */
 		tv_bit_mode = <0x215>;
+		/* afbce_bit_mode: (amlogic frame buff compression encoder)
+		 * 0: normal mode, not use afbce
+		 * 1: use afbce non-mmu mode
+		 * 2: use afbce mmu mode
+		 */
+		afbce_bit_mode = <0>;
 	};
 
 	vdin@1 {

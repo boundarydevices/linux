@@ -207,8 +207,7 @@ extern enum tvin_force_color_range_e color_range_force;
 
 extern void vdin_vlock_input_sel(unsigned int type,
 	enum vframe_source_type_e source_type);
-extern void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
-	enum vdin_output_mif_e sel);
+
 
 #endif
 

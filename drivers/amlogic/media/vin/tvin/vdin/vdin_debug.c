@@ -263,6 +263,8 @@ static ssize_t vdin_attr_show(struct device *dev,
 		"echo rdma_irq_cnt >/sys/class/vdin/vdinx/attr.\n");
 	len += sprintf(buf+len,
 		"echo skip_vf_num 0/1/2 /sys/class/vdin/vdinx/attr.\n");
+	len += sprintf(buf+len,
+		"echo dump_afbce storage/xxx.bin >/sys/class/vdin/vdinx/attr\n");
 	return len;
 }
 static void vdin_dump_one_buf_mem(char *path, struct vdin_dev_s *devp,
@@ -365,6 +367,217 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 	}
 	vfs_fsync(filp, 0);
 	filp_close(filp, NULL);
+	set_fs(old_fs);
+}
+
+static void vdin_dump_one_afbce_mem(char *path, struct vdin_dev_s *devp,
+	unsigned int buf_num)
+{
+	struct file *filp = NULL;
+	loff_t pos = 0;
+	void *buf_head = NULL;
+	void *buf_table = NULL;
+	void *buf_body = NULL;
+	unsigned char buff[100];
+	mm_segment_t old_fs = get_fs();
+
+	if (buf_num >= devp->canvas_max_num) {
+		pr_info("%s: param error", __func__);
+		return;
+	}
+
+	if ((devp->cma_config_flag & 0x1) &&
+		(devp->cma_mem_alloc == 0)) {
+		pr_info("%s:no cma alloc mem!!!\n", __func__);
+		return;
+	}
+
+	if (devp->cma_config_flag == 0x101) {
+		buf_head = codec_mm_phys_to_virt(
+			devp->afbce_info->fm_head_paddr[buf_num]);
+		buf_table = codec_mm_phys_to_virt(
+			devp->afbce_info->fm_table_paddr[buf_num]);
+		buf_body = codec_mm_phys_to_virt(
+			devp->afbce_info->fm_body_paddr[buf_num]);
+
+		pr_info(".head_paddr=0x%lx,table_paddr=0x%lx,body_paddr=0x%lx\n",
+			devp->afbce_info->fm_head_paddr[buf_num],
+			(devp->afbce_info->fm_table_paddr[buf_num]),
+			devp->afbce_info->fm_body_paddr[buf_num]);
+	} else if (devp->cma_config_flag == 0) {
+		buf_head = phys_to_virt(
+			devp->afbce_info->fm_head_paddr[buf_num]);
+		buf_table = phys_to_virt(
+			devp->afbce_info->fm_table_paddr[buf_num]);
+		buf_body = phys_to_virt(
+			devp->afbce_info->fm_body_paddr[buf_num]);
+
+		pr_info("head_paddr=0x%lx,table_paddr=0x%lx,body_paddr=0x%lx\n",
+			devp->afbce_info->fm_head_paddr[buf_num],
+			(devp->afbce_info->fm_table_paddr[buf_num]),
+			devp->afbce_info->fm_body_paddr[buf_num]);
+	}
+
+	set_fs(KERNEL_DS);
+
+	/*write header bin*/
+	strcpy(buff, path);
+	strcat(buff, "_1header.bin");
+	filp = filp_open(buff, O_RDWR|O_CREAT, 0666);
+	if (IS_ERR(filp)) {
+		pr_info("create %s header error.\n", buff);
+		return;
+	}
+
+	vfs_write(filp, buf_head, devp->afbce_info->frame_head_size, &pos);
+	pr_info("write buffer %2d of %2u head to %s.\n",
+			buf_num, devp->canvas_max_num, buff);
+	vfs_fsync(filp, 0);
+	filp_close(filp, NULL);
+
+	/*write table bin*/
+	pos = 0;
+	strcpy(buff, path);
+	strcat(buff, "_1table.bin");
+	filp = filp_open(buff, O_RDWR|O_CREAT, 0666);
+	if (IS_ERR(filp)) {
+		pr_info("create %s table error.\n", buff);
+		return;
+	}
+	vfs_write(filp, buf_table, devp->afbce_info->frame_table_size, &pos);
+	pr_info("write buffer %2d of %2u table to %s.\n",
+		buf_num, devp->canvas_max_num, buff);
+	vfs_fsync(filp, 0);
+	filp_close(filp, NULL);
+
+	/*write body bin*/
+	pos = 0;
+	strcpy(buff, path);
+	strcat(buff, "_1body.bin");
+	filp = filp_open(buff, O_RDWR|O_CREAT, 0666);
+	if (IS_ERR(filp)) {
+		pr_info("create %s body error.\n", buff);
+		return;
+	}
+	vfs_write(filp, buf_body, devp->afbce_info->frame_body_size, &pos);
+	pr_info("write buffer %2d of %2u body to %s.\n",
+		buf_num, devp->canvas_max_num, buff);
+	vfs_fsync(filp, 0);
+	filp_close(filp, NULL);
+
+	set_fs(old_fs);
+}
+
+static void vdin_dump_afbce_mem(char *path, struct vdin_dev_s *devp)
+{
+	struct file *filp = NULL;
+	loff_t pos = 0;
+	void *buf_head = NULL;
+	void *buf_table = NULL;
+	void *buf_body = NULL;
+	unsigned char buff[100];
+	unsigned int i;
+	mm_segment_t old_fs = get_fs();
+
+	if ((devp->cma_config_flag & 0x1) &&
+		(devp->cma_mem_alloc == 0)) {
+		pr_info("%s:no cma alloc mem!!!\n", __func__);
+		return;
+	}
+
+	if (devp->cma_config_flag == 0x101) {
+		buf_head = codec_mm_phys_to_virt(
+			devp->afbce_info->head_paddr);
+		buf_table = codec_mm_phys_to_virt(
+			devp->afbce_info->table_paddr);
+		buf_body = codec_mm_phys_to_virt(
+			devp->afbce_info->fm_body_paddr[0]);
+
+		pr_info(".head_paddr=0x%lx,table_paddr=0x%lx,body_paddr=0x%lx\n",
+			devp->afbce_info->head_paddr,
+			(devp->afbce_info->table_paddr),
+			devp->afbce_info->fm_body_paddr[0]);
+	} else if (devp->cma_config_flag == 0) {
+		buf_head = phys_to_virt(
+			devp->afbce_info->head_paddr);
+		buf_table = phys_to_virt(
+			devp->afbce_info->table_paddr);
+		buf_body = phys_to_virt(
+			devp->afbce_info->fm_body_paddr[0]);
+
+		pr_info("head_paddr=0x%lx,table_paddr=0x%lx,body_paddr=0x%lx\n",
+			devp->afbce_info->head_paddr,
+			(devp->afbce_info->table_paddr),
+			devp->afbce_info->fm_body_paddr[0]);
+	}
+
+	set_fs(KERNEL_DS);
+
+	/* write header bin start */
+	strcpy(buff, path);
+	strcat(buff, "_header.bin");
+	filp = filp_open(buff, O_RDWR|O_CREAT, 0666);
+	if (IS_ERR(filp)) {
+		pr_info("create %s header error.\n", buff);
+		return;
+	}
+
+	for (i = 0; i < devp->vfmem_max_cnt; i++) {
+		vfs_write(filp, buf_head,
+			devp->afbce_info->frame_head_size, &pos);
+		buf_head += devp->afbce_info->frame_head_size;
+		pr_info("write buffer %2d(0x%x bytes) of %2u head to %s.\n",
+			i, devp->afbce_info->frame_head_size,
+			devp->canvas_max_num, buff);
+	}
+	vfs_fsync(filp, 0);
+	filp_close(filp, NULL);
+	/* write header bin end */
+
+	/* write table bin start */
+	pos = 0;
+	strcpy(buff, path);
+	strcat(buff, "_table.bin");
+	filp = filp_open(buff, O_RDWR|O_CREAT, 0666);
+	if (IS_ERR(filp)) {
+		pr_info("create %s table error.\n", buff);
+		return;
+	}
+
+	for (i = 0; i < devp->vfmem_max_cnt; i++) {
+		vfs_write(filp, buf_table,
+			devp->afbce_info->frame_table_size, &pos);
+		buf_table += devp->afbce_info->frame_table_size;
+		pr_info("write buffer %2d(0x%x bytes) of %2u table to %s.\n",
+			i, devp->afbce_info->frame_table_size,
+			devp->canvas_max_num, buff);
+	}
+	vfs_fsync(filp, 0);
+	filp_close(filp, NULL);
+	/* write table bin end */
+
+	/* write body bin start */
+	pos = 0;
+	strcpy(buff, path);
+	strcat(buff, "_body.bin");
+	filp = filp_open(buff, O_RDWR|O_CREAT, 0666);
+	if (IS_ERR(filp)) {
+		pr_info("create %s body error.\n", buff);
+		return;
+	}
+
+	for (i = 0; i < devp->vfmem_max_cnt; i++) {
+		vfs_write(filp, buf_body,
+			devp->afbce_info->frame_body_size, &pos);
+		buf_body += devp->afbce_info->frame_body_size;
+		pr_info("write buffer %2d(0x%x bytes) of %2u body to %s.\n",
+			i, devp->afbce_info->frame_body_size,
+			devp->canvas_max_num, buff);
+	}
+	vfs_fsync(filp, 0);
+	filp_close(filp, NULL);
+	/* write body bin end */
+
 	set_fs(old_fs);
 }
 
@@ -552,6 +765,31 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("dv_flag:%d;dv_config:%d,dolby_vision:%d\n",
 		devp->dv.dv_flag, devp->dv.dv_config, devp->prop.dolby_vision);
 	pr_info("size of struct vdin_dev_s: %d\n", devp->vdin_dev_ssize);
+
+	if (devp->afbce_mode == 1) {
+		for (i = 0; i < devp->vfmem_max_cnt; i++) {
+			pr_info("head(%d) addr:0x%lx, size:0x%x\n",
+				i, devp->afbce_info->fm_head_paddr[i],
+				devp->afbce_info->frame_head_size);
+		}
+		pr_info("all head size: 0x%x\n",
+			devp->afbce_info->head_size);
+
+		for (i = 0; i < devp->vfmem_max_cnt; i++) {
+			pr_info("table(%d) addr:0x%lx, size:0x%x\n",
+				i, devp->afbce_info->fm_table_paddr[i],
+				devp->afbce_info->frame_table_size);
+		}
+		pr_info("all table size: 0x%x\n",
+			devp->afbce_info->table_size);
+
+		for (i = 0; i < devp->vfmem_max_cnt; i++) {
+			pr_info("body(%d) addr:0x%lx, size:0x%x\n",
+				i, devp->afbce_info->fm_body_paddr[i],
+				devp->afbce_info->frame_body_size);
+		}
+	}
+
 	pr_info("Vdin driver version :  %s\n", VDIN_VER);
 }
 
@@ -1628,6 +1866,16 @@ start_chk:
 					VFRAME_DISP_MAX_NUM));
 			pr_info("vframe_skip(%d):%d\n\n", devp->index,
 				devp->vfp->skip_vf_num);
+		}
+	} else if (!strcmp(parm[0], "dump_afbce")) {
+		if (parm[2] != NULL) {
+			unsigned int buf_num = 0;
+
+			if (kstrtol(parm[2], 10, &val) == 0)
+				buf_num = val;
+			vdin_dump_one_afbce_mem(parm[1], devp, buf_num);
+		} else if (parm[1] != NULL) {
+			vdin_dump_afbce_mem(parm[1], devp);
 		}
 	} else {
 		pr_info("unknown command\n");

@@ -717,6 +717,7 @@
 
 /*g12a new add end*/
 
+#define VDIN_WRARB_REQEN_SLV       0x12c1
 
 /* #define VDIN_SCALE_COEF_IDX                        0x1200 */
 /* #define VDIN_SCALE_COEF                            0x1201 */

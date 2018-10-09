@@ -161,6 +161,25 @@ struct vdin_dv_s {
 	bool dv_config;
 	bool dv_crc_check;/*0:fail;1:ok*/
 };
+
+struct vdin_afbce_s {
+	unsigned int  head_size;/*all head size*/
+	unsigned int  table_size;/*all table size*/
+	unsigned int  frame_head_size;/*1 frame head size*/
+	unsigned int  frame_table_size;/*1 frame table size*/
+	unsigned int  frame_body_size;/*1 frame body size*/
+	unsigned long head_paddr;
+	unsigned long table_paddr;
+	/*every frame head addr*/
+	unsigned long fm_head_paddr[VDIN_CANVAS_MAX_CNT];
+	/*every frame tab addr*/
+	unsigned long fm_table_paddr[VDIN_CANVAS_MAX_CNT];
+	/*every body head addr*/
+	unsigned long fm_body_paddr[VDIN_CANVAS_MAX_CNT];
+	//unsigned int cur_af;/*current afbce number*/
+	//unsigned int last_af;/*last afbce number*/
+};
+
 struct vdin_dev_s {
 	struct cdev cdev;
 	struct device *dev;
@@ -172,6 +191,8 @@ struct vdin_dev_s {
 	struct tvin_sig_property_s prop;
 	struct vframe_provider_s vprov;
 	struct vdin_dv_s dv;
+
+	struct vdin_afbce_s *afbce_info;
 
 	 /* 0:from gpio A,1:from csi2 , 2:gpio B*/
 	enum bt_path_e bt_path;
@@ -294,6 +315,12 @@ struct vdin_dev_s {
 	 */
 	unsigned int game_mode;
 	unsigned int rdma_enable;
+	/* afbce_mode: (amlogic frame buff compression encoder)
+	 * 0: normal mode, not use afbce
+	 * 1: use afbce non-mmu mode: head/body addr set by code
+	 * 2: use afbce mmu mode: head set by code, body addr assigning by hw
+	 */
+	unsigned int afbce_mode;
 	unsigned int canvas_config_mode;
 	bool	prehsc_en;
 	bool	vshrk_en;
