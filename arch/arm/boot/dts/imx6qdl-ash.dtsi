@@ -880,6 +880,18 @@
 			};
 		};
 	};
+
+	touchscreen@2a {
+		compatible = "eeti,exc3000";
+		reg = <0x2a>;
+		interrupts-extended = GPIRQ_I2C3_J6;
+#if 0
+		touchscreen-size-x = <4096>;
+		touchscreen-size-y = <4096>;
+		touchscreen-inverted-x;
+		touchscreen-swapped-x-y;
+#endif
+	};
 };
 
 &ldb {
