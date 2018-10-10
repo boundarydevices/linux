@@ -118,11 +118,12 @@ sub check_msg_49
 
 	if( $lnum == 7 )
 	{
-		if( $line !~ /^(\s){4}PD\#(\d)+/ )
+		if( $line !~ /^(\s){4}PD\#(\d)+/ &&
+			$line !~ /^(\s){4}PD\#SWPL-(\d)+/ )
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "    $err_cnt: <PD#xxxx: detailed description>, but <$line>\n";
+			$err_msg .= "    $err_cnt: <PD#xxxx/PD#SWPL-XXXX: detailed description>, but <$line>\n";
 		}
 	}
 }
@@ -134,11 +135,12 @@ sub check_msg_314
 
 	if( $lnum == 5 )
 	{
-		if ($line !~ /^(\s){4}PD\#(\d)+:\s([\w]+:\s){1,2}[\w]+.*[\S]+$/)
+		if ($line !~ /^(\s){4}PD\#(\d)+:\s([\w]+:\s){1,2}[\w]+.*[\S]+$/
+	&& $line !~ /^(\s){4}PD\#SWPL-(\d)+:\s([\w]+:\s){1,2}[\w]+.*[\S]+$/)
 		{
 			$err_cnt += 1;
 			$line =~ s/^(\s){4}//;
-			$err_msg .= "    $err_cnt: <PD#XXXX: module_id: commit message>, but <$line>\n";
+			$err_msg .= "    $err_cnt: <PD#XXXX/PD#SWPL-XXXX: module_id: commit message>, but <$line>\n";
 		}
 		elsif ( $line =~ /(kernel)/i)
 		{
