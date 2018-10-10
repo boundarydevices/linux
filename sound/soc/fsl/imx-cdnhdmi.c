@@ -23,6 +23,7 @@
 #include <sound/soc-dapm.h>
 #include <sound/hdmi-codec.h>
 #include "../../../drivers/gpu/drm/imx/hdp/imx-hdp.h"
+#include "fsl_sai.h"
 
 #define SUPPORT_RATE_NUM 10
 #define SUPPORT_CHANNEL_NUM 10
@@ -41,6 +42,44 @@ struct imx_cdnhdmi_data {
 	u32 edid_channels_count;
 	uint8_t eld[MAX_ELD_BYTES];
 };
+
+static const struct imx_cdnhdmi_fs_mul {
+	unsigned int min;
+	unsigned int max;
+	unsigned int mul;
+} fs_mul[] = {
+	/*
+	 * Made up table considering that:
+	 * - bclk is rate * channels (up to 8) * 32 (width)
+	 *   - calculation made for 2 channels
+	 * - mclk must be bclk * ratio
+	 *   - ratio can only be 1 for SAI v3.01
+	 *   - i.MX8MQ has SAI v3.00 so ratio 2 minimum
+	 * - seems that the audio pll are set as:
+	 *   - pll1: 786432000
+	 *   - pll2: 722534400
+	 */
+	{ .min = 32000,  .max = 48000,  .mul = 512  },
+	{ .min = 88200,  .max = 96000,  .mul = 256  },
+	{ .min = 176400, .max = 192000, .mul = 128  },
+};
+
+static unsigned long imx_cdnhdmi_get_freq(struct snd_pcm_substream *substream,
+					  struct snd_pcm_hw_params *params)
+{
+	unsigned int chan_factor = params_channels(params) / 2;
+	unsigned int rate = params_rate(params);
+	int i;
+
+	/* Find the appropriate MCLK freq */
+	for (i = 0; i < ARRAY_SIZE(fs_mul); i++) {
+		if (rate >= fs_mul[i].min && rate <= fs_mul[i].max)
+			return rate * fs_mul[i].mul * chan_factor;
+	}
+
+	/* Let DAI manage MCLK frequency */
+	return 0;
+}
 
 static int imx_cdnhdmi_startup(struct snd_pcm_substream *substream)
 {
@@ -78,6 +117,7 @@ static int imx_cdnhdmi_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_card *card = rtd->card;
 	struct device *dev = card->dev;
+	unsigned long freq = imx_cdnhdmi_get_freq(substream, params);
 	int ret;
 
 	/* set cpu DAI configuration */
@@ -90,7 +130,8 @@ static int imx_cdnhdmi_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0, SND_SOC_CLOCK_OUT);
+	ret = snd_soc_dai_set_sysclk(cpu_dai, FSL_SAI_CLK_MAST1, freq,
+				     SND_SOC_CLOCK_OUT);
 	if (ret) {
 		dev_err(dev, "failed to set cpu sysclk: %d\n", ret);
 		return ret;
