@@ -81,42 +81,11 @@
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* if no direct render, ion size = fb0_size x 3 + fb1_size + 4 M */
-			size = <0x2400000>;
+			size = <0x7400000>;
 			alignment = <0x400000>;
 			/* alloc by self */
 			alloc-ranges = <0x0 0x2ee00000>;
 		};
-
-		codec_mm_cma:linux,codec_mm_cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x13400000>;
-			alignment = <0x400000>;
-			linux,contiguous-region;
-			/** alloc by self **/
-			alloc-ranges = <0x0 0x2ee00000>;
-		};
-
-		/* codec shared reserved */
-		codec_mm_reserved:linux,codec_mm_reserved {
-			compatible = "amlogic, codec-mm-reserved";
-			size = <0x0>;
-			alignment = <0x100000>;
-			//no-map;
-		};
-
-		//di_reserved:linux,di {
-			//compatible = "amlogic, di-mem";
-			/* buffer_size = 3621952(yuv422 8bit) */
-			/* 4179008(yuv422 10bit full pack mode) */
-			/** 10x3621952=34.6M(0x23) support 8bit **/
-			/** 10x4736064=45.2M(0x2e) support 12bit **/
-			/** 10x4179008=40M(0x28) support 10bit **/
-			//size = <0x2800000>;
-			//no-map;
-		//};
 
 		/*di CMA pool */
 		di_cma_reserved:linux,di_cma {
@@ -141,6 +110,17 @@
 			alloc-ranges = <0x32000000 0xc800000>;
 		};
 
+		codec_mm_cma:linux,codec_mm_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/* ion_codec_mm max can alloc size 80M*/
+			size = <0xc000000>;
+			alignment = <0x400000>;
+			linux,contiguous-region;
+			/** alloc by self **/
+			alloc-ranges = <0x0 0x2ee00000>;
+		};
+
 		picdec_cma_reserved:linux,picdec {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -148,6 +128,14 @@
 			alignment = <0x0>;
 			linux,contiguous-region;
 			alloc-ranges = <0x32000000 0xc800000>;
+		};
+
+		/* codec shared reserved */
+		codec_mm_reserved:linux,codec_mm_reserved {
+			compatible = "amlogic, codec-mm-reserved";
+			size = <0x0>;
+			alignment = <0x100000>;
+			//no-map;
 		};
 
 		demod_cma_reserved:linux,demod_cma {
@@ -164,7 +152,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* 1920x1080x2x4  =16 M */
-			size = <0x04000000>;
+			size = <0x01000000>;
 			alignment = <0x400000>;
 			/** alloc by self **/
 			alloc-ranges = <0x32000000 0xc800000>;

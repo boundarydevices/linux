@@ -95,7 +95,7 @@
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x2000000>;
+			size = <0x0 0x6400000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -124,7 +124,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x0 0x11000000>;
+			size = <0x0 0xc000000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
@@ -561,7 +561,7 @@
 		compatible = "amlogic, vbi";
 		memory-region = <&vbi_reserved>;
 		dev_name = "vbi";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 83 1>;
 		reserve-iomap = "true";
 	};
