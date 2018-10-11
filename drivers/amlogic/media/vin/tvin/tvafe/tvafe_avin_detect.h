@@ -49,6 +49,31 @@
 #define AFE_CH1_EN_DETECT_BIT		0
 #define AFE_CH1_EN_DETECT_WIDTH		1
 
+#define AFE_DETECT_RSV_BIT	28
+#define AFE_DETECT_RSV_WIDTH	4
+#define AFE_CH2_DC_LEVEL_ADJ_BIT	22
+#define AFE_CH2_DC_LEVEL_ADJ_WIDTH	3
+#define AFE_CH2_COMP_LEVEL_ADJ_BIT	19
+#define AFE_CH2_COMP_LEVEL_ADJ_WIDTH	3
+#define AFE_CH2_EN_DC_BIAS_BIT		18
+#define AFE_CH2_EN_DC_BIAS_WIDTH	1
+#define AFE_CH2_DETECT_MODE_SELECT_BIT	17
+#define AFE_CH2_DETECT_MODE_SELECT_WIDTH	1
+#define AFE_CH2_COMP_HYS_ADJ_BIT	16
+#define AFE_CH2_COMP_HYS_ADJ_WIDTH	1
+#define AFE_TL_CH2_EN_DETECT_BIT	15
+#define AFE_TL_CH2_EN_DETECT_WIDTH	1
+#define AFE_CH1_DC_LEVEL_ADJ_BIT	7
+#define AFE_CH1_DC_LEVEL_ADJ_WIDTH	3
+#define AFE_CH1_COMP_LEVEL_ADJ_BIT	4
+#define AFE_CH1_COMP_LEVEL_ADJ_WIDTH	3
+#define AFE_CH1_EN_DC_BIAS_BIT			3
+#define AFE_CH1_EN_DC_BIAS_WIDTH		1
+#define AFE_CH1_DETECT_MODE_SELECT_BIT	2
+#define AFE_CH1_DETECT_MODE_SELECT_WIDTH	1
+#define AFE_CH1_COMP_HYS_ADJ_BIT		1
+#define AFE_CH1_COMP_HYS_ADJ_WIDTH		1
+
 #define CVBS_IRQ0_CNTL			0x3c24
 #define CVBS_IRQ_MODE_BIT		6
 #define CVBS_IRQ_MODE_WIDTH		3
@@ -104,6 +129,19 @@ struct tvafe_avin_det_s {
 	struct work_struct work_struct_update;
 	unsigned int irq_counter[2];
 	unsigned int device_num;
+};
+
+enum avin_cpu_type {
+	AVIN_CPU_TYPE_TXL = 0,
+	AVIN_CPU_TYPE_TXLX   = 1,
+	AVIN_CPU_TYPE_TXHD   = 2,
+	AVIN_CPU_TYPE_TL1   = 3,
+	AVIN_CPU_TYPE_MAX,
+};
+
+struct meson_avin_data {
+	enum avin_cpu_type cpu_id;
+	const char *name;
 };
 
 void tvafe_cha1_SYNCTIP_close_config(void);

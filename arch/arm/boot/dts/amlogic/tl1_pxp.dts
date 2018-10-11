@@ -257,6 +257,13 @@
 	};
 	/* Audio Related end */
 
+	tvafe_avin_detect {
+		compatible = "amlogic, tl1_tvafe_avin_detect";
+		status = "okay";
+		device_mask = <1>;/*bit0:ch1;bit1:ch2*/
+		interrupts = <0 12 1>,
+				<0 13 1>;
+	};
 }; /* end of / */
 
 &audiobus {
