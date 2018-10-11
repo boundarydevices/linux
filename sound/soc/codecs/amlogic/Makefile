@@ -9,6 +9,7 @@ snd-soc-aml_t9015-objs := aml_codec_t9015.o
 snd-soc-aml_t9015s-objs := aml_codec_t9015S.o
 snd-soc-pmu3-objs := aml_pmu3.o
 snd-soc-aml_codec_txlx_acodec-objs := aml_codec_txlx_acodec.o
+snd-soc-aml_codec_tl1_acodec-objs  := aml_codec_tl1_acodec.o
 
 #Third part codecs
 snd-soc-tas5707-objs := tas5707.o
@@ -26,6 +27,7 @@ obj-$(CONFIG_AMLOGIC_SND_CODEC_AMLT9015) += snd-soc-aml_t9015.o
 obj-$(CONFIG_AMLOGIC_SND_CODEC_AMLT9015S) += snd-soc-aml_t9015s.o
 obj-$(CONFIG_AMLOGIC_SND_CODEC_PMU3) += snd-soc-pmu3.o
 obj-$(CONFIG_AMLOGIC_SND_CODEC_TXLX_ACODEC) += snd-soc-aml_codec_txlx_acodec.o
+obj-$(CONFIG_AMLOGIC_SND_CODEC_TL1_ACODEC)  += snd-soc-aml_codec_tl1_acodec.o
 
 #Third part codecs
 obj-$(CONFIG_AMLOGIC_SND_SOC_TAS5707) += snd-soc-tas5707.o

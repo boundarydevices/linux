@@ -78,6 +78,16 @@ config AMLOGIC_SND_CODEC_TXLX_ACODEC
 		AML txlx acodec,
 		this codec is internal
 
+config AMLOGIC_SND_CODEC_TL1_ACODEC
+	bool "Amlogic Audio tl1 acodec"
+	depends on AMLOGIC_SND_SOC_CODECS
+	default n
+	help
+		Amlogic Audio codec,
+		AML tl1 acodec,
+		AML tl1 acodec,
+		this codec is internal
+
 #Third part codecs
 # Amlogic add codecs
 config AMLOGIC_SND_SOC_TAS5707

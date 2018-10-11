@@ -138,6 +138,14 @@
 		status = "okay";
 	};
 
+	tl1_codec:codec {
+		#sound-dai-cells = <0>;
+		compatible = "amlogic, tl1_acodec";
+		status = "disabled";
+		reg = <0xff632000 0x1c>;
+		tdmout_index = <1>;
+	};
+
 	auge_sound {
 		compatible = "amlogic, tl1-sound-card";
 		aml-audio-card,name = "AML-AUGESOUND";
