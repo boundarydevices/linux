@@ -1464,15 +1464,19 @@ void amvecm_fresh_overscan(struct vframe_s *vf)
 		else
 			cur_overscan_timing = TIMING_UHD;
 
-
 		overscan_timing = cur_overscan_timing;
 		overscan_screen_mode =
 			overscan_table[overscan_timing].screen_mode;
 
 		vf->pic_mode.AFD_enable =
 			overscan_table[overscan_timing].afd_enable;
-		vf->pic_mode.screen_mode =
-			overscan_table[overscan_timing].screen_mode;
+		/*local play screen mode set by decoder*/
+		if (overscan_table[0].source == SOURCE_MPEG)
+			vf->pic_mode.screen_mode = 0xff;
+		else
+			vf->pic_mode.screen_mode =
+				overscan_table[overscan_timing].screen_mode;
+
 		vf->pic_mode.hs = overscan_table[overscan_timing].hs;
 		vf->pic_mode.he = overscan_table[overscan_timing].he;
 		vf->pic_mode.vs = overscan_table[overscan_timing].vs;
