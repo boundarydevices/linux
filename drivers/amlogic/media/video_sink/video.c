@@ -140,8 +140,11 @@ static bool videopeek;
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
 
+#define ENABLE_UPDATE_HDR_FROM_USER 0
+#if ENABLE_UPDATE_HDR_FROM_USER
 static struct vframe_master_display_colour_s vf_hdr;
 static bool has_hdr_info;
+#endif
 static DEFINE_MUTEX(omx_mutex);
 
 #define DURATION_GCD 750
@@ -579,8 +582,9 @@ static bool pts_enforce_pulldown = true;
 static DEFINE_MUTEX(video_module_mutex);
 static DEFINE_MUTEX(video_inuse_mutex);
 static DEFINE_SPINLOCK(lock);
+#if ENABLE_UPDATE_HDR_FROM_USER
 static DEFINE_SPINLOCK(omx_hdr_lock);
-
+#endif
 static u32 frame_par_ready_to_set, frame_par_force_to_set;
 static u32 vpts_remainder;
 static int video_property_changed;
@@ -4916,7 +4920,7 @@ void correct_vd2_mif_size_for_DV(
 		/* TODO: if el len is 0, need disable bl */
 	}
 }
-
+#if ENABLE_UPDATE_HDR_FROM_USER
 void set_hdr_to_frame(struct vframe_s *vf)
 {
 	unsigned long flags;
@@ -4940,6 +4944,7 @@ void set_hdr_to_frame(struct vframe_s *vf)
 	}
 	spin_unlock_irqrestore(&omx_hdr_lock, flags);
 }
+#endif
 
 #ifdef FIQ_VSYNC
 void vsync_fisr_in(void)
@@ -5332,7 +5337,9 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 				&& dolby_vision_need_wait())
 				break;
 #endif
+#if ENABLE_UPDATE_HDR_FROM_USER
 			set_hdr_to_frame(vf);
+#endif
 
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 			refresh_on_vs(vf);
@@ -6793,7 +6800,7 @@ static int  get_display_info(void *data)
 
 	return 0;
 }
-
+#if ENABLE_UPDATE_HDR_FROM_USER
 void init_hdr_info(void)
 {
 	unsigned long flags;
@@ -6805,6 +6812,7 @@ void init_hdr_info(void)
 
 	spin_unlock_irqrestore(&omx_hdr_lock, flags);
 }
+#endif
 static int video_receiver_event_fun(int type, void *data, void *private_data)
 {
 #ifdef CONFIG_AM_VIDEO2
@@ -7037,6 +7045,7 @@ static void _set_video_window(int *p)
 		video_property_changed = true;
 	}
 }
+#if ENABLE_UPDATE_HDR_FROM_USER
 static void config_hdr_info(const struct vframe_master_display_colour_s p)
 {
 	struct vframe_master_display_colour_s tmp = {0};
@@ -7072,6 +7081,7 @@ static void config_hdr_info(const struct vframe_master_display_colour_s p)
 
 	pr_debug("has_hdr_info %d\n", has_hdr_info);
 }
+#endif
 static void set_omx_pts(u32 *p)
 {
 	u32 tmp_pts = p[0];
@@ -7194,10 +7204,11 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 
 	switch (cmd) {
 	case AMSTREAM_IOC_SET_HDR_INFO:{
+#if ENABLE_UPDATE_HDR_FROM_USER
 			struct vframe_master_display_colour_s tmp;
-
 			if (copy_from_user(&tmp, argp, sizeof(tmp)) == 0)
 				config_hdr_info(tmp);
+#endif
 		}
 		break;
 	case AMSTREAM_IOC_SET_OMX_VPTS:{
