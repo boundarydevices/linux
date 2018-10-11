@@ -1603,6 +1603,7 @@ int amlfmt_aud_standard(int broad_std)
 	uint32_t reg_value = 0;
 
 	switch (broad_std) {
+	case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M:
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC:
 		std = AUDIO_STANDARD_A2_K;
 		configure_adec(std);
