@@ -154,8 +154,8 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 			vdac_cntl0_bit9 &= ~VDAC_MODULE_CVBS_OUT;
 		break;
 	case VDAC_MODULE_AUDIO_OUT: /* audio out ctrl*/
-		if (s_vdac_data->cpu_id == CPU_TYPE_TXL ||
-			s_vdac_data->cpu_id == CPU_TYPE_TXLX) {
+		if (s_vdac_data->cpu_id == VDAC_CPU_TXL ||
+			s_vdac_data->cpu_id == VDAC_CPU_TXLX) {
 			if (on)
 				vdac_cntl0_bit9 |= VDAC_MODULE_AUDIO_OUT;
 			else
@@ -173,10 +173,10 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 	else
 		enable = 1;
 
-	if (s_vdac_data->cpu_id == CPU_TYPE_TXL ||
-			s_vdac_data->cpu_id == CPU_TYPE_TXLX)
+	if (s_vdac_data->cpu_id == VDAC_CPU_TXL ||
+			s_vdac_data->cpu_id == VDAC_CPU_TXLX)
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 9, 1);
-	else if (s_vdac_data->cpu_id >= CPU_TYPE_G12AB)
+	else if (s_vdac_data->cpu_id >= VDAC_CPU_G12AB)
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0_G12A, ~enable, 9, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, ~enable, 9, 1);
@@ -191,7 +191,7 @@ void vdac_out_cntl0_bit10(bool on, unsigned int module_sel)
 	bool enable = 0;
 
 	/*bit10 is for bandgap startup setting in g12a*/
-	if (s_vdac_data->cpu_id >= CPU_TYPE_G12AB)
+	if (s_vdac_data->cpu_id >= VDAC_CPU_G12AB)
 		return;
 
 	switch (module_sel & 0xf) {
@@ -277,7 +277,7 @@ void vdac_out_cntl0_bit0(bool on, unsigned int module_sel)
 	else
 		enable = 1;
 
-	if (s_vdac_data->cpu_id >= CPU_TYPE_G12AB)
+	if (s_vdac_data->cpu_id >= VDAC_CPU_G12AB)
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0_G12A, enable, 0, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL0, enable, 0, 1);
@@ -327,10 +327,10 @@ void vdac_out_cntl1_bit3(bool on, unsigned int module_sel)
 	else
 		enable = 1;
 
-	if (s_vdac_data->cpu_id == CPU_TYPE_TXL ||
-			s_vdac_data->cpu_id == CPU_TYPE_TXLX)
+	if (s_vdac_data->cpu_id == VDAC_CPU_TXL ||
+			s_vdac_data->cpu_id == VDAC_CPU_TXLX)
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, enable, 3, 1);
-	else if (s_vdac_data->cpu_id >= CPU_TYPE_G12AB)
+	else if (s_vdac_data->cpu_id >= VDAC_CPU_G12AB)
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, ~enable, 3, 1);
 	else
 		vdac_hiu_reg_setb(HHI_VDAC_CNTL1, ~enable, 3, 1);
@@ -339,7 +339,7 @@ EXPORT_SYMBOL(vdac_out_cntl1_bit3);
 
 void vdac_set_ctrl0_ctrl1(unsigned int ctrl0, unsigned int ctrl1)
 {
-	if (s_vdac_data->cpu_id >= CPU_TYPE_G12AB) {
+	if (s_vdac_data->cpu_id >= VDAC_CPU_G12AB) {
 		vdac_hiu_reg_write(HHI_VDAC_CNTL0_G12A, ctrl0);
 		vdac_hiu_reg_write(HHI_VDAC_CNTL1_G12A, ctrl1);
 	} else {
@@ -363,7 +363,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_ATV_DEMOD);
 			/*after txlx need reset bandgap after bit9 enabled*/
 			/*bit10 reset bandgap in g12a*/
-			if (s_vdac_data->cpu_id == CPU_TYPE_TXLX) {
+			if (s_vdac_data->cpu_id == VDAC_CPU_TXLX) {
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
 				udelay(5);
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
@@ -375,7 +375,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			/*Cdac pwd*/
 			vdac_out_cntl1_bit3(1, VDAC_MODULE_ATV_DEMOD);
 			/* enable AFE output buffer */
-			if (s_vdac_data->cpu_id < CPU_TYPE_G12AB)
+			if (s_vdac_data->cpu_id < VDAC_CPU_G12AB)
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			vdac_out_cntl0_bit0(1, VDAC_MODULE_ATV_DEMOD);
 		} else {
@@ -385,7 +385,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 				break;
 			vdac_out_cntl0_bit0(0, VDAC_MODULE_ATV_DEMOD);
 			/* Disable AFE output buffer */
-			if (s_vdac_data->cpu_id < CPU_TYPE_G12AB)
+			if (s_vdac_data->cpu_id < VDAC_CPU_G12AB)
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 10, 1);
 			/* enable dac output */
 			vdac_out_cntl1_bit3(0, VDAC_MODULE_ATV_DEMOD);
@@ -393,10 +393,10 @@ void vdac_enable(bool on, unsigned int module_sel)
 		break;
 	case VDAC_MODULE_DTV_DEMOD: /* dtv demod */
 		if (on) {
-			if (s_vdac_data->cpu_id == CPU_TYPE_GXLX)
+			if (s_vdac_data->cpu_id == VDAC_CPU_GXLX)
 				vdac_out_cntl1_bit3(1, VDAC_MODULE_DTV_DEMOD);
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_DTV_DEMOD);
-			if (s_vdac_data->cpu_id == CPU_TYPE_TXLX) {
+			if (s_vdac_data->cpu_id == VDAC_CPU_TXLX) {
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
 				udelay(5);
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
@@ -404,7 +404,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			pri_flag |= VDAC_MODULE_DTV_DEMOD;
 		} else {
 			ana_ref_cntl0_bit9(0, VDAC_MODULE_DTV_DEMOD);
-			if (s_vdac_data->cpu_id == CPU_TYPE_GXLX)
+			if (s_vdac_data->cpu_id == VDAC_CPU_GXLX)
 				vdac_out_cntl1_bit3(0, VDAC_MODULE_DTV_DEMOD);
 			pri_flag &= ~VDAC_MODULE_DTV_DEMOD;
 		}
@@ -413,7 +413,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 		if (on) {
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_TVAFE);
 			/*after txlx need reset bandgap after bit9 enabled*/
-			if (s_vdac_data->cpu_id == CPU_TYPE_TXLX) {
+			if (s_vdac_data->cpu_id == VDAC_CPU_TXLX) {
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
 				udelay(5);
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
@@ -440,7 +440,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			vdac_out_cntl1_bit3(1, VDAC_MODULE_CVBS_OUT);
 			vdac_out_cntl0_bit0(1, VDAC_MODULE_CVBS_OUT);
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_CVBS_OUT);
-			if (s_vdac_data->cpu_id == CPU_TYPE_TXLX) {
+			if (s_vdac_data->cpu_id == VDAC_CPU_TXLX) {
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 1, 13, 1);
 				udelay(5);
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0, 13, 1);
@@ -455,7 +455,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 			pri_flag &= ~VDAC_MODULE_CVBS_OUT;
 			if (pri_flag & VDAC_MODULE_ATV_DEMOD) {
 				vdac_out_cntl1_bit3(1, VDAC_MODULE_ATV_DEMOD);
-				if (s_vdac_data->cpu_id < CPU_TYPE_G12AB)
+				if (s_vdac_data->cpu_id < VDAC_CPU_G12AB)
 					vdac_hiu_reg_setb(HHI_VDAC_CNTL0,
 						0, 10, 1);
 				vdac_out_cntl0_bit0(1, VDAC_MODULE_ATV_DEMOD);
@@ -463,7 +463,7 @@ void vdac_enable(bool on, unsigned int module_sel)
 				vdac_out_cntl1_bit3(0, VDAC_MODULE_TVAFE);
 				vdac_out_cntl0_bit10(1, VDAC_MODULE_TVAFE);
 			} else if (pri_flag & VDAC_MODULE_DTV_DEMOD) {
-				if (s_vdac_data->cpu_id == CPU_TYPE_GXLX)
+				if (s_vdac_data->cpu_id == VDAC_CPU_GXLX)
 					vdac_out_cntl1_bit3(1,
 							VDAC_MODULE_DTV_DEMOD);
 				ana_ref_cntl0_bit9(1, VDAC_MODULE_DTV_DEMOD);
@@ -472,12 +472,12 @@ void vdac_enable(bool on, unsigned int module_sel)
 		break;
 	case VDAC_MODULE_AUDIO_OUT: /* audio demod */
 		/*Bandgap optimization*/
-		if (s_vdac_data->cpu_id == CPU_TYPE_TXHD ||
-			s_vdac_data->cpu_id == CPU_TYPE_TXLX)
+		if (s_vdac_data->cpu_id == VDAC_CPU_TXHD ||
+			s_vdac_data->cpu_id == VDAC_CPU_TXLX)
 			vdac_hiu_reg_setb(HHI_VDAC_CNTL0, 0xe, 3, 5);
 
-		if (s_vdac_data->cpu_id == CPU_TYPE_TXL ||
-			s_vdac_data->cpu_id == CPU_TYPE_TXLX) {
+		if (s_vdac_data->cpu_id == VDAC_CPU_TXL ||
+			s_vdac_data->cpu_id == VDAC_CPU_TXLX) {
 			if (on)
 				ana_ref_cntl0_bit9(1, VDAC_MODULE_AUDIO_OUT);
 			else
@@ -521,37 +521,37 @@ static const struct file_operations amvdac_fops = {
 };
 
 struct meson_vdac_data meson_gxtvbb_vdac_data = {
-	.cpu_id = CPU_TYPE_GXTVBB,
+	.cpu_id = VDAC_CPU_GXTVBB,
 	.name = "meson-gxtvbb-vdac",
 };
 
 struct meson_vdac_data meson_gx_l_m_vdac_data = {
-	.cpu_id = CPU_TYPE_GX_L_M,
+	.cpu_id = VDAC_CPU_GX_L_M,
 	.name = "meson-gx_l_m-vdac",
 };
 
 struct meson_vdac_data meson_txl_vdac_data = {
-	.cpu_id = CPU_TYPE_TXL,
+	.cpu_id = VDAC_CPU_TXL,
 	.name = "meson-txl-vdac",
 };
 
 struct meson_vdac_data meson_txlx_vdac_data = {
-	.cpu_id = CPU_TYPE_TXLX,
+	.cpu_id = VDAC_CPU_TXLX,
 	.name = "meson-txlx-vdac",
 };
 
 struct meson_vdac_data meson_gxlx_vdac_data = {
-	.cpu_id = CPU_TYPE_GXLX,
+	.cpu_id = VDAC_CPU_GXLX,
 	.name = "meson-gxlx-vdac",
 };
 
 struct meson_vdac_data meson_txhd_vdac_data = {
-	.cpu_id = CPU_TYPE_TXHD,
+	.cpu_id = VDAC_CPU_TXHD,
 	.name = "meson-txhd-vdac",
 };
 
 struct meson_vdac_data meson_g12ab_vdac_data = {
-	.cpu_id = CPU_TYPE_G12AB,
+	.cpu_id = VDAC_CPU_G12AB,
 	.name = "meson-g12ab-vdac",
 };
 

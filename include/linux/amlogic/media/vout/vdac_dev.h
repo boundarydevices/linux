@@ -19,14 +19,15 @@
 #define _VDAC_DEV_H_
 
 enum vdac_cpu_type {
-	CPU_TYPE_GXTVBB = 0,
-	CPU_TYPE_GX_L_M = 1,
-	CPU_TYPE_TXL  = 2,
-	CPU_TYPE_TXLX  = 3,
-	CPU_TYPE_GXLX  = 4,
-	CPU_TYPE_TXHD = 5,
-	CPU_TYPE_G12AB = 6,
-	CPU_TYPE_TL1 = 7,
+	VDAC_CPU_GXTVBB = 0,
+	VDAC_CPU_GX_L_M = 1,
+	VDAC_CPU_TXL  = 2,
+	VDAC_CPU_TXLX  = 3,
+	VDAC_CPU_GXLX  = 4,
+	VDAC_CPU_TXHD = 5,
+	VDAC_CPU_G12AB = 6,
+	VDAC_CPU_TL1 = 7,
+	VDAC_CPU_MAX,
 };
 
 struct meson_vdac_data {
