@@ -261,7 +261,7 @@ static int fsl_sai_set_mclk_rate(struct snd_soc_dai *dai, int clk_id,
 	}
 
 	if (pll) {
-		npll = ((ratio % 8000) ? sai->pll11k_clk : sai->pll8k_clk);
+		npll = (do_div(ratio, 8000) ? sai->pll11k_clk : sai->pll8k_clk);
 		if (!clk_is_match(pll, npll)) {
 			if (sai->mclk_streams == 0) {
 				ret = clk_set_parent(p, npll);
