@@ -79,7 +79,8 @@
 			/* Regulators */
 #define GP_3P7_BYPASS_EN	<&gpio2 18 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_A20__GPIO2_IO18		0x1b0b0
-#define GP_3P7_EN		<&gpio5 11 GPIO_ACTIVE_HIGH>
+/* Active low because used as reset */
+#define GP_3P7_EN		<&gpio5 11 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x1b0b0
 			/* TODO Wireless control pins */
 			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x1b0b0
