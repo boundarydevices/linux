@@ -396,13 +396,13 @@ void vpp_set_12bit_datapath_g12a(void)
 		vpp_set_vd1_preblend_mux(0);
 		vpp_set_vd1_postblend_mux(0);
 		vpp_set_vd1_postblend_en(1);
-		vpp_set_vd1_gate(0x55);
+		vpp_set_vd1_gate(0x0);
 		vpp_set_vd2_preblend_mux(0);
 		vpp_set_vd2_postblend_mux(0);
 		vpp_set_vd2_postblend_en(0);
 		vpp_set_vd2_ext_mod(0);
 		vpp_set_vd2_bypass_dolby(1);
-		vpp_set_vd2_gate(0x55);
+		vpp_set_vd2_gate(0x0);
 	}
 }
 
