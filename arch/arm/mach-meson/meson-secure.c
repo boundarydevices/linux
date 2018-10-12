@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -45,7 +47,7 @@
 #define TZDBG(fmt, ...)
 #endif
 
-#define MESON_SECURE_FLAG_REG                 0xC11081F0
+#define MESON_SECURE_FLAG_REG_OFFS            0x81F0
 #define MESON_SECURE_FLAG_VALUE_DISABLED      0x0
 #define MESON_SECURE_FLAG_VALUE_ENABLED       0x1
 #define MESON_SECURE_FLAG_VALUE_INVALID       0xFFFFFFFF
@@ -62,14 +64,23 @@ static void __iomem *secure_flag_base;
 bool meson_secure_enabled(void)
 {
 	bool ret = false;
+	struct device_node *np;
 
 	if (secure_flag == MESON_SECURE_FLAG_VALUE_INVALID) {
-		secure_flag_base = ioremap(MESON_SECURE_FLAG_REG, 4);
-		if (!secure_flag_base) {
-			TZDBG("iomap(0x%x) error.", MESON_SECURE_FLAG_REG);
+		np = of_find_compatible_node(NULL, NULL, "amlogic, iomap");
+		if (!np) {
+			TZDBG("find iomap node fail.");
 			return false;
 		}
-		secure_flag = readl_relaxed(secure_flag_base);
+
+		secure_flag_base = of_iomap(np, 0);
+		if (!secure_flag_base) {
+			TZDBG("of_iomap error.");
+			return false;
+		}
+
+		secure_flag = readl_relaxed(secure_flag_base +
+				MESON_SECURE_FLAG_REG_OFFS);
 	}
 
 	TZDBG("secure_flag: 0x%x\n", secure_flag);
