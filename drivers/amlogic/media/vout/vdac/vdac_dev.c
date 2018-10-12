@@ -128,6 +128,10 @@ void ana_ref_cntl0_bit9(bool on, unsigned int module_sel)
 {
 	bool enable = 0;
 
+	/*tl1:bandgap en, bc[7] default:0 opened*/
+	if (s_vdac_data->cpu_id == VDAC_CPU_TL1)
+		return;
+
 	switch (module_sel & 0x1f) {
 	case VDAC_MODULE_ATV_DEMOD: /* dtv demod */
 		if (on)
@@ -564,6 +568,11 @@ struct meson_vdac_data meson_g12ab_vdac_data = {
 	.name = "meson-g12ab-vdac",
 };
 
+struct meson_vdac_data meson_tl1_vdac_data = {
+	.cpu_id = VDAC_CPU_TL1,
+	.name = "meson-tl1-vdac",
+};
+
 static const struct of_device_id meson_vdac_dt_match[] = {
 	{
 		.compatible = "amlogic, vdac-gxtvbb",
@@ -592,6 +601,9 @@ static const struct of_device_id meson_vdac_dt_match[] = {
 	}, {
 		.compatible = "amlogic, vdac-g12b",
 		.data		= &meson_g12ab_vdac_data,
+	}, {
+		.compatible = "amlogic, vdac-tl1",
+		.data		= &meson_tl1_vdac_data,
 	},
 	{},
 };

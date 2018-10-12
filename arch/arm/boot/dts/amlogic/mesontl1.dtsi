@@ -1031,6 +1031,11 @@
 		interrupts = <0 3 1>;
 		interrupt-names = "vsync";
 	};
+
+	vdac {
+		compatible = "amlogic, vdac-tl1";
+		status = "okay";
+	};
 }; /* end of / */
 
 &pinctrl_aobus {
