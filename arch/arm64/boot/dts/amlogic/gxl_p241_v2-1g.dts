@@ -153,6 +153,16 @@
 		};
 	};
 
+	dummy-battery {
+		compatible = "amlogic, dummy-battery";
+		status = "okay";
+	};
+
+	dummy-charger {
+		compatible = "amlogic, dummy-charger";
+		status = "okay";
+	};
+
 	vpu {
 		clk_level = <2>;
 		/* 0: 100.0M    1: 166.7M    2: 200.0M    3: 250.0M */

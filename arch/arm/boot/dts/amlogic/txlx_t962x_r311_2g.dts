@@ -173,6 +173,16 @@
 		};
 	};
 
+	dummy-battery {
+		compatible = "amlogic, dummy-battery";
+		status = "okay";
+	};
+
+	dummy-charger {
+		compatible = "amlogic, dummy-charger";
+		status = "okay";
+	};
+
 	/* for external keypad */
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";

@@ -159,6 +159,16 @@
 		};
 	}; /* end of reserved-memory */
 
+	dummy-battery {
+		compatible = "amlogic, dummy-battery";
+		status = "okay";
+	};
+
+	dummy-charger {
+		compatible = "amlogic, dummy-charger";
+		status = "okay";
+	};
+
 	secmon {
 		compatible = "amlogic, secmon";
 		memory-region = <&secmon_reserved>;

@@ -151,6 +151,16 @@
 		};
 	};
 
+	dummy-battery {
+		compatible = "amlogic, dummy-battery";
+		status = "okay";
+	};
+
+	dummy-charger {
+		compatible = "amlogic, dummy-charger";
+		status = "okay";
+	};
+
 	gpioleds {
 		compatible = "gpio-leds";
 		status = "okay";
