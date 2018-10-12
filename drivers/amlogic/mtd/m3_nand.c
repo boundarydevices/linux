@@ -309,14 +309,16 @@ void get_sys_clk_rate_mtd(struct hw_controller *controller, int *rate)
 #else
 	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
 		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
-		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_G12B))
+		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_G12B)
+		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1))
 		always_on = 0x1 << 28;
 #endif
 	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_GXBB)
 		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_GXL)
 		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_AXG)
 		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)
-		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_G12B)) {
+		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_G12B)
+		|| (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1)) {
 		switch (clk_freq) {
 		case 24:
 			clk = 0x80000201;

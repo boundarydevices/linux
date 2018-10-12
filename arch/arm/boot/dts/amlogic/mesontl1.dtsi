@@ -811,6 +811,36 @@
 			spifc-io-width = <4>;
 		};
 	};
+
+	slc_nand: nand-controller@0xFFE07800 {
+		compatible = "amlogic, aml_mtd_nand";
+		status = "okay";
+		reg = <0x0 0xFFE07800 0x0 0x200>;
+		interrupts = <0 34 1>;
+
+		pinctrl-names = "nand_rb_mod", "nand_norb_mod", "nand_cs_only";
+		pinctrl-0 = <&all_nand_pins>;
+		pinctrl-1 = <&all_nand_pins>;
+		pinctrl-2 = <&nand_cs_pins>;
+		clocks = <&clkc CLKID_SD_EMMC_C>,
+				<&clkc CLKID_SD_EMMC_C_P0_COMP>;
+		clock-names = "core", "clkin";
+
+		device_id = <0>;
+		/*fip/tpl configurations, must be same
+		 *with uboot if bl_mode was set as 1
+		 *bl_mode: 0 compact mode;1 descrete mode
+		 *if bl_mode was set as 1,fip configuration will work
+		 */
+		bl_mode = <1>;
+		/*copy count of fip*/
+		fip_copies = <4>;
+		/*size of each fip copy*/
+		fip_size = <0x200000>;
+		nand_clk_ctrl = <0xFFE07000>;
+		/*partions defined in dts*/
+	};
+
 }; /* end of / */
 
 &pinctrl_aobus {
@@ -1051,6 +1081,35 @@
 			function = "uart_ao_a_ee";
 			bias-pull-up;
 			input-enable;
+		};
+	};
+
+	all_nand_pins: all_nand_pins {
+		mux {
+			groups = "emmc_nand_d0",
+				"emmc_nand_d1",
+				"emmc_nand_d2",
+				"emmc_nand_d3",
+				"emmc_nand_d4",
+				"emmc_nand_d5",
+				"emmc_nand_d6",
+				"emmc_nand_d7",
+				"nand_ce0",
+				"nand_ale",
+				"nand_cle",
+				"nand_wen_clk",
+				"nand_ren_wr";
+			function = "nand";
+			input-enable;
+			drive-strength = <3>;
+		};
+	};
+
+	nand_cs_pins:nand_cs {
+		mux {
+			groups = "nand_ce0";
+			function = "nand";
+			drive-strength = <3>;
 		};
 	};
 
