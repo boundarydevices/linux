@@ -339,6 +339,10 @@ EXPORT_SYMBOL(vdac_out_cntl1_bit3);
 
 void vdac_set_ctrl0_ctrl1(unsigned int ctrl0, unsigned int ctrl1)
 {
+	if (!s_vdac_data) {
+		pr_err("\n%s: s_vdac_data NULL\n", __func__);
+		return;
+	}
 	if (s_vdac_data->cpu_id >= VDAC_CPU_G12AB) {
 		vdac_hiu_reg_write(HHI_VDAC_CNTL0_G12A, ctrl0);
 		vdac_hiu_reg_write(HHI_VDAC_CNTL1_G12A, ctrl1);
@@ -354,6 +358,11 @@ EXPORT_SYMBOL(vdac_set_ctrl0_ctrl1);
  */
 void vdac_enable(bool on, unsigned int module_sel)
 {
+	if (!s_vdac_data) {
+		pr_err("\n%s: s_vdac_data NULL\n", __func__);
+		return;
+	}
+
 	pr_info("\n%s: on:%d,module_sel:%x\n", __func__, on, module_sel);
 
 	mutex_lock(&vdac_mutex);
@@ -708,6 +717,7 @@ static int __init aml_vdac_init(void)
 	pr_info("%s: module init\n", __func__);
 
 	vdac_init_succ_flag = 0;
+	s_vdac_data = NULL;
 
 	mutex_init(&vdac_mutex);
 

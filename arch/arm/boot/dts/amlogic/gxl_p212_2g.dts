@@ -681,12 +681,6 @@
 		fr_auto_policy = <0>;
 	};
 
-	vdac {
-		compatible = "amlogic, vdac";
-		dev_name = "vdac";
-		status = "okay";
-	};
-
 	cvbsout {
 		compatible = "amlogic, cvbsout-gxl";
 		dev_name = "cvbsout";

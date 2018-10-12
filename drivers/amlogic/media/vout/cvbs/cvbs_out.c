@@ -1440,7 +1440,7 @@ static int cvbsout_probe(struct platform_device *pdev)
 		return -1;
 	}
 	info->cvbs_data = (struct meson_cvbsout_data *)match->data;
-	cvbs_log_info("%s£¬cpu_id:%d,name:%s\n", __func__,
+	cvbs_log_info("%s, cpu_id:%d,name:%s\n", __func__,
 		info->cvbs_data->cpu_id, info->cvbs_data->name);
 
 	cvbsout_get_config(&pdev->dev);
