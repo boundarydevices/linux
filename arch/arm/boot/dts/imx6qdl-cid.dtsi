@@ -1279,7 +1279,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbh1>;
 	disable-over-current;
-	reset-gpios = GP_USBH1_HUB_RESET;
+	reset-gpios = GP_3P7_EN, GP_USBH1_HUB_RESET;
 	status = "okay";
 	id = <1>;
 	vbus-supply = <&reg_usbh1>;
