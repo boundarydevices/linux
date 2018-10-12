@@ -1312,11 +1312,38 @@ void vdin_vlock_input_sel(unsigned int type,
 }
 EXPORT_SYMBOL(vdin_vlock_input_sel);
 
+#ifdef CONFIG_AMLOGIC_LCD
+#define VLOCK_LCD_RETRY_MAX    100
+void vlock_lcd_param_work(struct work_struct *p_work)
+{
+	unsigned int param[LCD_VLOCK_PARAM_NUM] = {0};
+	int i = 0;
+
+	while (i++ < VLOCK_LCD_RETRY_MAX) {
+		aml_lcd_notifier_call_chain(LCD_EVENT_VLOCK_PARAM, &param);
+		if (param[0] & LCD_VLOCK_PARAM_BIT_UPDATE) {
+			if (param[0] & LCD_VLOCK_PARAM_BIT_VALID) {
+				vlock_en = param[1];
+				vlock_mode = param[2];
+				vlock_pll_m_limit = param[3];
+				vlock_line_limit = param[4];
+
+				if (vlock_mode &
+					VLOCK_MODE_MANUAL_MIX_PLL_ENC) {
+					vlock_mode &=
+						~VLOCK_MODE_MANUAL_MIX_PLL_ENC;
+					vlock_mode |= VLOCK_MODE_MANUAL_PLL;
+				}
+			}
+			break;
+		}
+		msleep(20);
+	}
+}
+#endif
+
 void vlock_param_config(struct device_node *node)
 {
-#ifdef CONFIG_AMLOGIC_LCD
-	unsigned int param[LCD_VLOCK_PARAM_NUM] = {0};
-#endif
 	unsigned int val;
 	int ret;
 
@@ -1342,13 +1369,7 @@ void vlock_param_config(struct device_node *node)
 		vlock_line_limit = val;
 
 #ifdef CONFIG_AMLOGIC_LCD
-	aml_lcd_notifier_call_chain(LCD_EVENT_VLOCK_PARAM, &param);
-	if (param[0]) { /* lcd vlock param is valid */
-		vlock_en = param[1];
-		vlock_mode = param[2];
-		vlock_pll_m_limit = param[3];
-		vlock_line_limit = param[4];
-	}
+	schedule_work(&aml_lcd_vlock_param_work);
 #endif
 
 	if (vlock_mode & VLOCK_MODE_MANUAL_MIX_PLL_ENC) {

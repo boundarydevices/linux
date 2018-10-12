@@ -111,5 +111,9 @@ extern int amvecm_hiu_reg_write(unsigned int reg, unsigned int val);
 extern void vdin_vlock_input_sel(unsigned int type,
 	enum vframe_source_type_e source_type);
 extern void vlock_param_config(struct device_node *node);
+#ifdef CONFIG_AMLOGIC_LCD
+extern struct work_struct aml_lcd_vlock_param_work;
+extern void vlock_lcd_param_work(struct work_struct *p_work);
+#endif
 #endif
 

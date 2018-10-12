@@ -685,12 +685,12 @@ int lcd_vlock_param_load_from_dts(struct lcd_config_s *pconf,
 	unsigned int para[4];
 	int ret;
 
+	pconf->lcd_control.vlock_param[0] = LCD_VLOCK_PARAM_BIT_UPDATE;
+
 	ret = of_property_read_u32_array(child, "vlock_attr", &para[0], 4);
-	if (ret) {
-		pconf->lcd_control.vlock_param[0] = 0;
-	} else {
+	if (ret == 0) {
 		LCDPR("find vlock_attr\n");
-		pconf->lcd_control.vlock_param[0] = 1; /* vlock_param valid */
+		pconf->lcd_control.vlock_param[0] |= LCD_VLOCK_PARAM_BIT_VALID;
 		pconf->lcd_control.vlock_param[1] = para[0];
 		pconf->lcd_control.vlock_param[2] = para[1];
 		pconf->lcd_control.vlock_param[3] = para[2];
@@ -707,7 +707,7 @@ int lcd_vlock_param_load_from_unifykey(struct lcd_config_s *pconf,
 
 	p = buf;
 
-	pconf->lcd_control.vlock_param[0] = 0;
+	pconf->lcd_control.vlock_param[0] = LCD_VLOCK_PARAM_BIT_UPDATE;
 	pconf->lcd_control.vlock_param[1] = *(p + LCD_UKEY_VLOCK_VAL_0);
 	pconf->lcd_control.vlock_param[2] = *(p + LCD_UKEY_VLOCK_VAL_1);
 	pconf->lcd_control.vlock_param[3] = *(p + LCD_UKEY_VLOCK_VAL_2);
@@ -717,7 +717,7 @@ int lcd_vlock_param_load_from_unifykey(struct lcd_config_s *pconf,
 		pconf->lcd_control.vlock_param[3] ||
 		pconf->lcd_control.vlock_param[4]) {
 		LCDPR("find vlock_attr\n");
-		pconf->lcd_control.vlock_param[0] = 1;
+		pconf->lcd_control.vlock_param[0] |= LCD_VLOCK_PARAM_BIT_VALID;
 	}
 
 	return 0;

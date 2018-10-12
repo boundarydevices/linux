@@ -76,6 +76,8 @@
 #define LCD_EVENT_TEST_PATTERN      (1 << 14)
 
 #define LCD_VLOCK_PARAM_NUM         5
+#define LCD_VLOCK_PARAM_BIT_UPDATE  (1 << 4)
+#define LCD_VLOCK_PARAM_BIT_VALID   (1 << 0)
 #define LCD_EVENT_VLOCK_PARAM       (1 << 16)
 
 

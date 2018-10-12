@@ -88,6 +88,10 @@ struct amvecm_dev_s {
 
 };
 
+#ifdef CONFIG_AMLOGIC_LCD
+struct work_struct aml_lcd_vlock_param_work;
+#endif
+
 static struct amvecm_dev_s amvecm_dev;
 
 spinlock_t vpp_lcd_gamma_lock;
@@ -5211,6 +5215,8 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	ret = aml_lcd_notifier_register(&aml_lcd_gamma_nb);
 	if (ret)
 		pr_info("register aml_lcd_gamma_notifier failed\n");
+
+	INIT_WORK(&aml_lcd_vlock_param_work, vlock_lcd_param_work);
 #endif
 	/* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
 	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu()
@@ -5290,6 +5296,7 @@ static int __exit aml_vecm_remove(struct platform_device *pdev)
 	unregister_chrdev_region(devp->devno, 1);
 #ifdef CONFIG_AMLOGIC_LCD
 	aml_lcd_notifier_unregister(&aml_lcd_gamma_nb);
+	cancel_work_sync(&aml_lcd_vlock_param_work);
 #endif
 	probe_ok = 0;
 	pr_info("[amvecm.] : amvecm_exit.\n");
