@@ -14688,3 +14688,7 @@ AMLOGIC MESON DTS
 M:	Huan Biao <huan.biao@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/g12a_s905d2_u200_buildroot_vccktest.dts
 F:	arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot_vccktest.dts
+
+AMLOGIC DDR TOOL
+M:	wenbiao zhang <wenbiao.zhang@amlogic.com>
+F:	include/linux/amlogic/aml_dmc.h

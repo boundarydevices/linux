@@ -18,8 +18,13 @@
 #ifndef __AML_DDR_BANDWIDTH_H__
 #define __AML_DDR_BANDWIDTH_H__
 
+#define MODE_DISABLE			0
+#define MODE_ENABLE			1
+#define MODE_AUTODETECT			2
 
-#define DEFAULT_CLK_CNT			12000000
+#define DEFAULT_THRESHOLD		5000
+
+#define DEFAULT_CLK_CNT			48000000
 #define DEFAULT_XTAL_FREQ		24000000UL
 
 #define DMC_QOS_IRQ			(1 << 30)
@@ -43,6 +48,23 @@
 #define DMC_MON_CTRL5			(0x19 << 2)
 #define DMC_MON_CTRL6			(0x1a << 2)
 
+#define DMC_AM0_CHAN_CTRL		(0x60 << 2)
+#define DMC_AM1_CHAN_CTRL		(0x6a << 2)
+#define DMC_AM2_CHAN_CTRL		(0x74 << 2)
+#define DMC_AM3_CHAN_CTRL		(0x7e << 2)
+#define DMC_AM4_CHAN_CTRL		(0x88 << 2)
+#define DMC_AM5_CHAN_CTRL		(0x92 << 2)
+#define DMC_AM6_CHAN_CTRL		(0x9c << 2)
+#define DMC_AM7_CHAN_CTRL		(0xa6 << 2)
+#define DMC_AXI0_CHAN_CTRL		(0xb0 << 2)
+#define DMC_AXI1_CHAN_CTRL		(0xba << 2)
+#define DMC_AXI2_CHAN_CTRL		(0xc4 << 2)
+#define DMC_AXI3_CHAN_CTRL		(0xce << 2)
+#define DMC_AXI4_CHAN_CTRL		(0xd8 << 2)
+#define DMC_AXI5_CHAN_CTRL		(0xe2 << 2)
+#define DMC_AXI6_CHAN_CTRL		(0xec << 2)
+#define DMC_AXI7_CHAN_CTRL		(0xf6 << 2)
+
 /*
  * register offset for g12a
  */
@@ -63,6 +85,28 @@
 #define DMC_MON_G12_THD_GRANT_CNT	(0x2d  << 2)
 #define DMC_MON_G12_FOR_GRANT_CNT	(0x2e  << 2)
 #define DMC_MON_G12_TIMER		(0x2f  << 2)
+
+#define DMC_AM0_G12_CHAN_CTRL		(0x60 << 2)
+#define DMC_AM1_G12_CHAN_CTRL		(0x64 << 2)
+#define DMC_AM2_G12_CHAN_CTRL		(0x68 << 2)
+#define DMC_AM3_G12_CHAN_CTRL		(0x6c << 2)
+#define DMC_AM4_G12_CHAN_CTRL		(0x70 << 2)
+#define DMC_AM5_G12_CHAN_CTRL		(0x74 << 2)
+#define DMC_AM6_G12_CHAN_CTRL		(0x78 << 2)
+#define DMC_AM7_G12_CHAN_CTRL		(0x7c << 2)
+#define DMC_AXI0_G12_CHAN_CTRL		(0x80 << 2)
+#define DMC_AXI1_G12_CHAN_CTRL		(0x84 << 2)
+#define DMC_AXI2_G12_CHAN_CTRL		(0x88 << 2)
+#define DMC_AXI3_G12_CHAN_CTRL		(0x8c << 2)
+#define DMC_AXI4_G12_CHAN_CTRL		(0x90 << 2)
+#define DMC_AXI5_G12_CHAN_CTRL		(0x94 << 2)
+#define DMC_AXI6_G12_CHAN_CTRL		(0x98 << 2)
+#define DMC_AXI7_G12_CHAN_CTRL		(0x9c << 2)
+#define DMC_AXI8_G12_CHAN_CTRL		(0xa0 << 2)
+#define DMC_AXI9_G12_CHAN_CTRL		(0xa4 << 2)
+#define DMC_AXI10_G12_CHAN_CTRL		(0xa8 << 2)
+#define DMC_AXI11_G12_CHAN_CTRL		(0xac << 2)
+#define DMC_AXI12_G12_CHAN_CTRL		(0xb0 << 2)
 
 /* data structure */
 #define DDR_BANDWIDTH_DEBUG		1
@@ -91,6 +135,11 @@ struct ddr_bandwidth {
 	struct class *class;
 	unsigned short cpu_type;
 	unsigned short real_ports;
+	char busy;
+	char mode;
+	int mali_port[2];
+	unsigned int threshold;
+	struct work_struct work_bandwidth;
 	unsigned int irq_num;
 	unsigned int clock_count;
 	unsigned int channels;
