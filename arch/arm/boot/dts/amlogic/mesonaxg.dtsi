@@ -120,7 +120,7 @@
 		bit_resolution=<0>;
 	};
 	arm_pmu {
-		compatible = "arm,armv8-pmuv3";
+		compatible = "arm,cortex-a15-pmu";
 		interrupts = <0 137 4>;
 		reg = <0xff634400 0x1000>;
 
