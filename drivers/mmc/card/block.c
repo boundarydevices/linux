@@ -86,6 +86,9 @@ static int perdev_minors = CONFIG_MMC_BLOCK_MINORS;
  * limited by the MAX_DEVICES below.
  */
 static int max_devices;
+#ifdef CONFIG_AMLOGIC_MMC
+static int ffu_mode;
+#endif
 
 #define MAX_DEVICES 256
 
@@ -584,6 +587,9 @@ static struct mmc_blk_ioc_data *mmc_blk_ioctl_copy_from_user(
 {
 	struct mmc_blk_ioc_data *idata;
 	int err;
+#ifdef CONFIG_AMLOGIC_MMC
+	unsigned long mmc_io_max;
+#endif
 
 	idata = kmalloc(sizeof(*idata), GFP_KERNEL);
 	if (!idata) {
@@ -596,8 +602,25 @@ static struct mmc_blk_ioc_data *mmc_blk_ioctl_copy_from_user(
 		goto idata_err;
 	}
 
+#ifdef CONFIG_AMLOGIC_MMC
+	if ((idata->ic.opcode == MMC_SWITCH)
+			&& (((idata->ic.arg >> 8) & 0xff) == 1))
+		ffu_mode = 1;
+	else if ((idata->ic.opcode == MMC_SWITCH)
+			&& (((idata->ic.arg >> 8) & 0xff) == 0))
+		ffu_mode = 0;
+	if (ffu_mode)
+		mmc_io_max = (512L * 1024);
+	else
+		mmc_io_max = MMC_IOC_MAX_BYTES;
+#endif
+
 	idata->buf_bytes = (u64) idata->ic.blksz * idata->ic.blocks;
+#ifdef CONFIG_AMLOGIC_MMC
+	if (idata->buf_bytes > mmc_io_max) {
+#else
 	if (idata->buf_bytes > MMC_IOC_MAX_BYTES) {
+#endif
 		err = -EOVERFLOW;
 		goto idata_err;
 	}
@@ -718,6 +741,55 @@ static void aml_mmc_set_blockcount(struct mmc_request *p_mrq,
 	p_sbc->flags = MMC_RSP_SPI_R1 | MMC_RSP_R1 | MMC_CMD_AC;
 	p_mrq->sbc = p_sbc;
 }
+
+/*
+ * Map memory into a scatterlist so that no pages are contiguous.  Allow the
+ * same memory to be mapped more than once.
+ */
+static int mmc_ffu_map_sg_max_scatter(void *mem,
+				       unsigned long sz,
+				       struct scatterlist *sglist,
+				       unsigned int max_segs,
+				       unsigned int max_seg_sz,
+					   struct mmc_blk_ioc_data *idata,
+				       unsigned int *sg_len)
+{
+	struct scatterlist *sg = NULL;
+	unsigned long len;
+	void *addr = NULL;
+	unsigned int segs = 0;
+
+	segs = sz / max_seg_sz;
+	if (sz % max_seg_sz)
+		segs++;
+	if (segs > max_segs)
+		segs = max_segs;
+
+	sg_init_table(sglist, segs);
+
+	*sg_len = 0;
+	addr = mem;
+	while (sz) {
+		len = max_seg_sz;
+		if (len > sz)
+			len = sz;
+		if (sg)
+			sg = sg_next(sg);
+		else
+			sg = sglist;
+		if (!sg)
+			return -EINVAL;
+		sg_set_buf(sg, addr, len);
+		sz -= len;
+		addr += len;
+		*sg_len += 1;
+	}
+
+	if (sg)
+		sg_mark_end(sg);
+
+	return 0;
+}
 #endif
 
 static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
@@ -730,6 +802,7 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 #endif
 	struct mmc_request mrq = {NULL};
 	struct scatterlist sg;
+	struct scatterlist *ffu_sg = NULL;
 	int err;
 	int is_rpmb = false;
 	u32 status = 0;
@@ -745,12 +818,38 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 	cmd.flags = idata->ic.flags;
 
 	if (idata->buf_bytes) {
-		data.sg = &sg;
-		data.sg_len = 1;
-		data.blksz = idata->ic.blksz;
-		data.blocks = idata->ic.blocks;
+#ifdef CONFIG_AMLOGIC_MMC
+		if (ffu_mode && (cmd.opcode == 25)) {
+			sbc.opcode = MMC_SET_BLOCK_COUNT;
+			sbc.arg = idata->ic.blocks;
+			sbc.flags = MMC_RSP_R1 | MMC_CMD_AC;
+			mrq.sbc = &sbc;
 
-		sg_init_one(data.sg, idata->buf, idata->buf_bytes);
+			ffu_sg = kmalloc(sizeof(struct scatterlist) * 512,
+					GFP_KERNEL);
+			if (!ffu_sg)
+				return -ENOMEM;
+
+			data.sg = ffu_sg;
+			mmc_ffu_map_sg_max_scatter(idata->buf, idata->buf_bytes,
+					data.sg, 511, (512 * 256),
+					idata, &data.sg_len);
+
+			if (data.sg_len > 1)
+				data.blocks = 256;
+			else
+				data.blocks = idata->ic.blocks;
+			data.blksz = idata->ic.blksz;
+		} else {
+#endif
+			data.sg = &sg;
+			data.sg_len = 1;
+			data.blksz = idata->ic.blksz;
+			data.blocks = idata->ic.blocks;
+			sg_init_one(data.sg, idata->buf, idata->buf_bytes);
+#ifdef CONFIG_AMLOGIC_MMC
+		}
+#endif
 
 		if (idata->ic.write_flag)
 			data.flags = MMC_DATA_WRITE;
@@ -956,7 +1055,19 @@ static int mmc_blk_ioctl_multi_cmd(struct block_device *bdev,
 	mmc_get_card(card);
 
 	for (i = 0; i < num_of_cmds && !ioc_err; i++)
+#ifdef CONFIG_AMLOGIC_MMC
+	{
+		if ((idata[i]->ic.opcode == MMC_SWITCH)
+				&& (((idata[i]->ic.arg >> 8) & 0xff) == 1))
+			ffu_mode = 1;
+		else if ((idata[i]->ic.opcode == MMC_SWITCH)
+				&& (((idata[i]->ic.arg >> 8) & 0xff) == 0))
+			ffu_mode = 0;
+#endif
 		ioc_err = __mmc_blk_ioctl_cmd(card, md, idata[i]);
+#ifdef CONFIG_AMLOGIC_MMC
+	}
+#endif
 
 	/* Always switch back to main area after RPMB access */
 	if (md->area_type & MMC_BLK_DATA_AREA_RPMB)
