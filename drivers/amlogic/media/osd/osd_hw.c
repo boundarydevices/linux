@@ -8156,6 +8156,9 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 					osd_reg_set_bits(
 					hw_osd_reg_array[idx].osd_ctrl_stat,
 					0, 0, 1);
+				osd_reg_set_bits(
+				hw_osd_reg_array[idx].osd_ctrl_stat,
+				0, 31, 1);
 				osd_hw.powered[idx] = 1;
 			} else
 				osd_hw.powered[idx] = 0;
