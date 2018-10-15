@@ -100,6 +100,7 @@ static struct clk_divider amclk_div = {
 	.shift = 0,
 	.width = 8,
 	.lock = &clk_lock,
+	.flags = CLK_DIVIDER_ROUND_CLOSEST,
 	.hw.init = &(struct clk_init_data){
 		.name = "amclk_div",
 		.ops = &clk_divider_ops,

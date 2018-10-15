@@ -28,7 +28,7 @@
 #include "clkc.h"
 /* #undef pr_debug */
 /* #define pr_debug pr_info */
-#define SDM_MAX 16384
+#define SDM_MAX 16384ULL
 #define MAX_RATE	500000000
 #define MIN_RATE	5000000
 
