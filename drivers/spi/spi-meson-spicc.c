@@ -207,6 +207,7 @@ struct meson_spicc_device {
 	u8				*tx_buf;
 	u8				*rx_buf;
 	unsigned int			bytes_per_word;
+	unsigned int			speed_hz;
 	unsigned long			tx_remain;
 	unsigned long			txb_remain;
 	unsigned long			rx_remain;
@@ -294,7 +295,9 @@ static void meson_spicc_auto_io_delay(struct meson_spicc_device *spicc)
 	cap_delay = SPICC_CAP_AHEAD_2_CYCLE;
 	hz = clk_get_rate(spicc->clk);
 
-	if (hz >= 100000000)
+	if (spicc->message->spi->mode & SPI_LOOP)
+		cap_delay = SPICC_CAP_AHEAD_1_CYCLE;
+	else if (hz >= 100000000)
 		cap_delay = SPICC_CAP_DELAY_1_CYCLE;
 	else if (hz >= 80000000)
 		cap_delay = SPICC_CAP_NO_DELAY;
@@ -545,7 +548,10 @@ static void meson_spicc_setup_xfer(struct meson_spicc_device *spicc,
 	if (conf != conf_orig)
 		writel_relaxed(conf, spicc->base + SPICC_CONREG);
 
-	clk_set_rate(spicc->clk, xfer->speed_hz);
+	if (spicc->speed_hz != xfer->speed_hz) {
+		spicc->speed_hz = xfer->speed_hz;
+		clk_set_rate(spicc->clk, xfer->speed_hz);
+	}
 	meson_spicc_auto_io_delay(spicc);
 
 	spicc->using_dma = 0;

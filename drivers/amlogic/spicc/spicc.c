@@ -401,9 +401,11 @@ static void dma_one_burst(struct spicc *spicc)
 			setb(mem_base, DMA_NUM_WR_BURST, threshold - 1);
 			setb(mem_base, DMA_RX_FIFO_TH, threshold - 1);
 		}
-		setb(mem_base, CON_XCH, 1);
 		spicc->remain -= bl;
 		spicc->burst_len = bl;
+		if (spicc->irq)
+			enable_irq(spicc->irq);
+		setb(mem_base, CON_XCH, 1);
 	}
 }
 
@@ -470,8 +472,10 @@ static void pio_one_burst_send(struct spicc *spicc)
 			spicc_set_txfifo(spicc, dat);
 		}
 		setb(mem_base, CON_BURST_LEN, spicc->burst_len - 1);
-		setb(mem_base, CON_XCH, 1);
 		spicc->remain -= spicc->burst_len;
+		if (spicc->irq)
+			enable_irq(spicc->irq);
+		setb(mem_base, CON_XCH, 1);
 	}
 }
 
@@ -501,6 +505,7 @@ static irqreturn_t spicc_xfer_complete_isr(int irq, void *dev_id)
 	unsigned long flags;
 
 	spin_lock_irqsave(&spicc->lock, flags);
+	disable_irq_nosync(spicc->irq);
 	spicc_wait_complete(spicc, 100);
 	spicc_log(spicc, &spicc->remain, 1, XFER_COMP_ISR);
 	if (!spicc_get_flag(spicc, FLAG_DMA_EN))
@@ -583,11 +588,9 @@ static int spicc_dma_xfer(struct spicc *spicc, struct spi_transfer *t)
 	spicc_log(spicc, &spicc->remain, 1, DMA_BEGIN);
 	if (spicc->irq) {
 		setb(mem_base, INT_XFER_COM_EN, 1);
-		enable_irq(spicc->irq);
 		dma_one_burst(spicc);
 		ret = wait_for_completion_interruptible_timeout(
 			&spicc->completion, msecs_to_jiffies(2000));
-		disable_irq_nosync(spicc->irq);
 		setb(mem_base, INT_XFER_COM_EN, 0);
 	} else {
 		while (spicc->remain) {
@@ -624,11 +627,9 @@ static int spicc_hw_xfer(struct spicc *spicc, u8 *txp, u8 *rxp, int len)
 	spicc_log(spicc, &spicc->remain, 1, PIO_BEGIN);
 	if (spicc->irq) {
 		setb(mem_base, INT_XFER_COM_EN, 1);
-		enable_irq(spicc->irq);
 		pio_one_burst_send(spicc);
 		ret = wait_for_completion_interruptible_timeout(
 			&spicc->completion, msecs_to_jiffies(2000));
-		disable_irq_nosync(spicc->irq);
 		setb(mem_base, INT_XFER_COM_EN, 0);
 	} else {
 		while (spicc->remain) {
