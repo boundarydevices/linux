@@ -97,6 +97,21 @@ static void dump_mem(const char *lvl, const char *str, unsigned long bottom,
 	set_fs(fs);
 }
 
+#ifdef CONFIG_AMLOGIC_VMAP
+static void dump_backtrace_entry(unsigned long ip, unsigned long fp)
+{
+	unsigned long fp_size = 0;
+
+	if (fp >= VMALLOC_START) {
+		fp_size = *((unsigned long *)fp) - fp;
+		/* fp cross IRQ or vmap stack */
+		if (fp_size >= THREAD_SIZE)
+			fp_size = 0;
+	}
+	printk("[%016lx+%4ld][<%p>] %pS\n",
+		fp, fp_size, (void *) ip, (void *) ip);
+}
+#else
 static void dump_backtrace_entry(unsigned long where)
 {
 	/*
@@ -104,6 +119,7 @@ static void dump_backtrace_entry(unsigned long where)
 	 */
 	print_ip_sym(where);
 }
+#endif
 
 static void __dump_instr(const char *lvl, struct pt_regs *regs)
 {
@@ -186,7 +202,11 @@ static void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 
 		/* skip until specified stack frame */
 		if (!skip) {
+		#ifdef CONFIG_AMLOGIC_VMAP
+			dump_backtrace_entry(where, frame.fp);
+		#else
 			dump_backtrace_entry(where);
+		#endif
 		} else if (frame.fp == regs->regs[29]) {
 			skip = 0;
 			/*
@@ -196,7 +216,11 @@ static void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 			 * at which an exception has taken place, use regs->pc
 			 * instead.
 			 */
+		#ifdef CONFIG_AMLOGIC_VMAP
+			dump_backtrace_entry(regs->pc, frame.fp);
+		#else
 			dump_backtrace_entry(regs->pc);
+		#endif
 		}
 		ret = unwind_frame(tsk, &frame);
 		if (ret < 0)

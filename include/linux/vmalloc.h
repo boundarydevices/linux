@@ -192,4 +192,10 @@ pcpu_free_vm_areas(struct vm_struct **vms, int nr_vms)
 int register_vmap_purge_notifier(struct notifier_block *nb);
 int unregister_vmap_purge_notifier(struct notifier_block *nb);
 
+#ifdef CONFIG_AMLOGIC_VMAP
+extern struct vm_struct *__get_vm_area_node(unsigned long size,
+		unsigned long align, unsigned long flags, unsigned long start,
+		unsigned long end, int node,
+		gfp_t gfp_mask, const void *caller);
+#endif
 #endif /* _LINUX_VMALLOC_H */

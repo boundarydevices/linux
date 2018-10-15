@@ -42,6 +42,9 @@
 #include <linux/kobject.h>
 #include <../kernel/power/power.h>
 #include <linux/amlogic/scpi_protocol.h>
+#ifdef CONFIG_AMLOGIC_VMAP
+#include <linux/amlogic/vmap_stack.h>
+#endif
 
 typedef unsigned long (psci_fn)(unsigned long, unsigned long,
 				unsigned long, unsigned long);
@@ -82,6 +85,9 @@ static void meson_gx_suspend(void)
 /*	cpu_suspend(0, meson_system_suspend);
  */
 	pr_info("... wake up\n");
+#ifdef CONFIG_AMLOGIC_VMAP
+	__setup_vmap_stack(my_cpu_offset);
+#endif
 }
 
 static int meson_pm_prepare(void)

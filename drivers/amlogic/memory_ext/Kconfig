@@ -39,6 +39,17 @@ config AMLOGIC_CMA
 		Amlogic CMA optimization for cma alloc/free problems
 		Including policy change of CMA usage
 
+config AMLOGIC_VMAP
+	bool "Amlogic kernel stack"
+	depends on AMLOGIC_MEMORY_EXTEND
+	depends on 64BIT
+	default y
+	help
+		This config is used to enable amlogic kernel stack
+		usage optimization with vmalloc. It depends on
+		AMLOGIC_MEMORY_EXTEND. This config only opened
+		on 64 bit platform.
+
 config AMLOGIC_SLUB_DEBUG
 	bool "Amlogic debug for trace all slub objects"
 	depends on AMLOGIC_PAGE_TRACE

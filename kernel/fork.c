@@ -86,6 +86,10 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
+#ifdef CONFIG_AMLOGIC_VMAP
+#include <linux/amlogic/vmap_stack.h>
+#endif
+
 #include <trace/events/sched.h>
 
 #define CREATE_TRACE_POINTS
@@ -206,15 +210,22 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
 		tsk->stack_vm_area = find_vm_area(stack);
 	return stack;
 #else
+#ifdef CONFIG_AMLOGIC_VMAP
+	return aml_stack_alloc(node, tsk);
+#else /* CONFIG_AMLOGIC_VMAP */
 	struct page *page = alloc_pages_node(node, THREADINFO_GFP,
 					     THREAD_SIZE_ORDER);
 
 	return page ? page_address(page) : NULL;
+#endif /* CONFIG_AMLOGIC_VMAP */
 #endif
 }
 
 static inline void free_thread_stack(struct task_struct *tsk)
 {
+#ifdef CONFIG_AMLOGIC_VMAP
+	aml_stack_free(tsk);
+#else /* CONFIG_AMLOGIC_VMAP */
 	kaiser_unmap_thread_stack(tsk->stack);
 #ifdef CONFIG_VMAP_STACK
 	if (task_stack_vm_area(tsk)) {
@@ -238,6 +249,7 @@ static inline void free_thread_stack(struct task_struct *tsk)
 #endif
 
 	__free_pages(virt_to_page(tsk->stack), THREAD_SIZE_ORDER);
+#endif /* CONFIG_AMLOGIC_VMAP */
 }
 # else
 static struct kmem_cache *thread_stack_cache;
@@ -282,6 +294,9 @@ static struct kmem_cache *mm_cachep;
 
 static void account_kernel_stack(struct task_struct *tsk, int account)
 {
+#ifdef CONFIG_AMLOGIC_VMAP
+	aml_account_task_stack(tsk, account);
+#else
 	void *stack = task_stack_page(tsk);
 	struct vm_struct *vm = task_stack_vm_area(tsk);
 
@@ -314,6 +329,7 @@ static void account_kernel_stack(struct task_struct *tsk, int account)
 		memcg_kmem_update_page_stat(first_page, MEMCG_KERNEL_STACK_KB,
 					    account * (THREAD_SIZE / 1024));
 	}
+#endif /* CONFIG_AMLOGIC_VMAP*/
 }
 
 static void release_task_stack(struct task_struct *tsk)
@@ -465,12 +481,23 @@ int __weak arch_dup_task_struct(struct task_struct *dst,
 	return 0;
 }
 
+#ifdef CONFIG_AMLOGIC_VMAP
+static bool first_magic __read_mostly;
+#endif
+
 void set_task_stack_end_magic(struct task_struct *tsk)
 {
 	unsigned long *stackend;
 
 	stackend = end_of_stack(tsk);
+#ifdef CONFIG_AMLOGIC_VMAP
+	if (unlikely(!first_magic)) {
+		*stackend = STACK_END_MAGIC;	/* for overflow detection */
+		first_magic = 1;
+	}
+#else
 	*stackend = STACK_END_MAGIC;	/* for overflow detection */
+#endif
 }
 
 static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
