@@ -5175,6 +5175,11 @@ static struct notifier_block aml_lcd_gamma_nb = {
 	.notifier_call = aml_lcd_gamma_notifier,
 };
 #endif
+
+static struct notifier_block vlock_notifier_nb = {
+	.notifier_call	= vlock_notify_callback,
+};
+
 static int aml_vecm_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -5218,6 +5223,9 @@ static int aml_vecm_probe(struct platform_device *pdev)
 
 	INIT_WORK(&aml_lcd_vlock_param_work, vlock_lcd_param_work);
 #endif
+	/* register vout client */
+	vout_register_client(&vlock_notifier_nb);
+
 	/* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
 	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu()
 		|| is_meson_txlx_cpu() || is_meson_txhd_cpu())

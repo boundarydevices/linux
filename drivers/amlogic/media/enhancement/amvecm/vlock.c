@@ -71,7 +71,6 @@ static unsigned int vlock_dynamic_adjust = 1;
 
 static unsigned int vlock_sync_limit_flag;
 static unsigned int vlock_state = VLOCK_STATE_NULL;/*1/2/3:vlock step*/
-static enum vmode_e pre_vmode = VMODE_INIT_NULL;
 static enum vframe_source_type_e pre_source_type =
 		VFRAME_SOURCE_TYPE_OTHERS;
 static enum vframe_source_mode_e pre_source_mode =
@@ -79,8 +78,8 @@ static enum vframe_source_mode_e pre_source_mode =
 static unsigned int pre_input_freq;
 static unsigned int pre_output_freq;
 static unsigned int vlock_dis_cnt;
-static char pre_vout_mode[64];
 static bool vlock_vmode_changed;
+static unsigned int vlock_vmode_change_status;
 static unsigned int pre_hiu_reg_m;
 static unsigned int pre_hiu_reg_frac;
 static signed int pre_enc_max_line;
@@ -90,8 +89,6 @@ static unsigned int enc_max_pixel_addr;
 static unsigned int enc_video_mode_addr;
 static unsigned int enc_video_mode_adv_addr;
 static unsigned int enc_max_line_switch_addr;
-static unsigned int pre_video_clk;
-
 static unsigned int vlock_dis_cnt_no_vf;
 static unsigned int vlock_dis_cnt_no_vf_limit = 5;
 
@@ -410,8 +407,7 @@ static void vlock_setting(struct vframe_s *vf,
 void vlock_vmode_check(void)
 {
 	const struct vinfo_s *vinfo;
-	unsigned int t0, t1, hiu_reg_addr, cur_video_clk;
-	char cur_vout_mode[64];
+	unsigned int t0, t1, hiu_reg_addr;
 
 	if (vlock_en == 0)
 		return;
@@ -421,35 +417,13 @@ void vlock_vmode_check(void)
 		hiu_reg_addr = HHI_HDMI_PLL_CNTL2;
 	vinfo = get_current_vinfo();
 	vlock_vmode_changed = 0;
-	cur_video_clk = vinfo->video_clk;
-	memset(cur_vout_mode, 0, sizeof(cur_vout_mode));
-	if ((vinfo->name == NULL) ||
-		(strlen(vinfo->name) > sizeof(cur_vout_mode)))
-		return;
-	strcpy(cur_vout_mode, vinfo->name);
-	if (strcmp(cur_vout_mode, pre_vout_mode) != 0) {
+	if (vlock_vmode_change_status == VOUT_EVENT_MODE_CHANGE) {
 		if (vlock_mode & (VLOCK_MODE_MANUAL_PLL |
 			VLOCK_MODE_AUTO_PLL)) {
 			amvecm_hiu_reg_read(hiu_reg_addr, &t0);
 			amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL, &t1);
-			if (cur_video_clk != pre_video_clk) {
-				pre_hiu_reg_frac = t0 & 0xfff;
-				pre_hiu_reg_m = t1 & 0x1ff;
-				pre_video_clk = cur_video_clk;
-			} else {
-				if ((t0 & 0xfff) != pre_hiu_reg_frac) {
-					t0 = (t0 & 0xfffff000) |
-						(pre_hiu_reg_frac & 0xfff);
-					amvecm_hiu_reg_write(hiu_reg_addr, t0);
-				}
-				if (((t1 & 0x1ff) != pre_hiu_reg_m) &&
-					(pre_hiu_reg_m != 0)) {
-					t1 = (t1 & 0xfffffe00) |
-						(pre_hiu_reg_m & 0x1ff);
-					amvecm_hiu_reg_write(HHI_HDMI_PLL_CNTL,
-						t1);
-				}
-			}
+			pre_hiu_reg_frac = t0 & 0xfff;
+			pre_hiu_reg_m = t1 & 0x1ff;
 		}
 		if ((vlock_mode & (VLOCK_MODE_MANUAL_ENC |
 			VLOCK_MODE_AUTO_ENC |
@@ -495,11 +469,7 @@ void vlock_vmode_check(void)
 				vinfo->vtotal + 1;
 			vlock_capture_limit <<= 12;
 		}
-		if (vlock_debug & VLOCK_DEBUG_INFO)
-			pr_info("[%s]:vout mode changed:%s==>%s\n",
-				__func__, pre_vout_mode, cur_vout_mode);
-		memset(pre_vout_mode, 0, sizeof(pre_vout_mode));
-		strcpy(pre_vout_mode, cur_vout_mode);
+		vlock_vmode_change_status = 0;
 		vlock_vmode_changed = 1;
 	}
 }
@@ -553,8 +523,6 @@ static void vlock_disable_step1(void)
 				0x1fff, 0, 13);
 	}
 	vlock_dis_cnt = vlock_dis_cnt_limit;
-	memset(pre_vout_mode, 0, sizeof(pre_vout_mode));
-	pre_vmode = VMODE_INIT_NULL;
 	pre_source_type = VFRAME_SOURCE_TYPE_OTHERS;
 	pre_source_mode = VFRAME_SOURCE_MODE_OTHERS;
 	pre_input_freq = 0;
@@ -601,13 +569,12 @@ static void vlock_enable_step1(struct vframe_s *vf, struct vinfo_s *vinfo,
 	if (vlock_debug & VLOCK_DEBUG_INFO) {
 		pr_info("%s:vmode/source_type/source_mode/input_freq/output_freq:\n",
 			__func__);
-		pr_info("\t%d/%d/%d/%d/%d=>%d/%d/%d/%d/%d\n",
-			pre_vmode, pre_source_type, pre_source_mode,
+		pr_info("\t%d/%d/%d/%d=>%d/%d/%d/%d\n",
+			pre_source_type, pre_source_mode,
 			pre_input_freq, pre_output_freq,
-			vinfo->mode, vf->source_type, vf->source_mode,
+			vf->source_type, vf->source_mode,
 			input_hz, output_hz);
 	}
-	pre_vmode = vinfo->mode;
 	pre_source_type = vf->source_type;
 	pre_source_mode = vf->source_mode;
 	pre_input_freq = input_hz;
@@ -1051,9 +1018,15 @@ void amve_vlock_process(struct vframe_s *vf)
 					__func__);
 			return;
 		}
+		if (vlock_vmode_change_status == VOUT_EVENT_MODE_CHANGE_PRE) {
+			vlock_enable(0);
+			if (vlock_debug & VLOCK_DEBUG_INFO)
+				pr_info("[%s]auto disable vlock module for vmode change pre case!!!\n",
+					__func__);
+			return;
+		}
 		vlock_vmode_check();
-		if ((vinfo->mode != pre_vmode) ||
-			(vf->source_type != pre_source_type) ||
+		if ((vf->source_type != pre_source_type) ||
 			(vf->source_mode != pre_source_mode) ||
 			(input_hz != pre_input_freq) ||
 			(output_hz != pre_output_freq) ||
@@ -1116,8 +1089,6 @@ void amve_vlock_process(struct vframe_s *vf)
 				VLOCK_MODE_MANUAL_MIX_PLL_ENC) &&
 				(vlock_pll_stable_cnt >
 				vlock_pll_stable_limit)) {
-				/*reinit pre_vout_mode for trace mode check*/
-				memset(pre_vout_mode, 0, sizeof(pre_vout_mode));
 				vlock_mode &= ~VLOCK_MODE_MANUAL_MIX_PLL_ENC;
 				vlock_mode |= VLOCK_MODE_MANUAL_SOFT_ENC;
 				vlock_state = VLOCK_STATE_ENABLE_FORCE_RESET;
@@ -1250,13 +1221,11 @@ void vlock_status(void)
 	pr_info("vlock_dynamic_adjust:%d\n", vlock_dynamic_adjust);
 	pr_info("vlock_state:%d\n", vlock_state);
 	pr_info("vlock_sync_limit_flag:%d\n", vlock_sync_limit_flag);
-	pr_info("pre_vmode:%d\n", pre_vmode);
 	pr_info("pre_hiu_reg_m:0x%x\n", pre_hiu_reg_m);
 	pr_info("pre_hiu_reg_frac:0x%x\n", pre_hiu_reg_frac);
 	pr_info("pre_enc_max_line:0x%x\n", pre_enc_max_line);
 	pr_info("pre_enc_max_pixel:0x%x\n", pre_enc_max_pixel);
 	pr_info("vlock_dis_cnt:%d\n", vlock_dis_cnt);
-	pr_info("pre_vout_mode:%s\n", pre_vout_mode);
 	pr_info("vlock_dis_cnt_no_vf:%d\n", vlock_dis_cnt_no_vf);
 	pr_info("vlock_dis_cnt_no_vf_limit:%d\n", vlock_dis_cnt_no_vf_limit);
 	pr_info("enc_max_line_addr:0x%x\n", enc_max_line_addr);
@@ -1377,5 +1346,30 @@ void vlock_param_config(struct device_node *node)
 		vlock_mode |= VLOCK_MODE_MANUAL_PLL;
 	}
 }
+
+int vlock_notify_callback(struct notifier_block *block, unsigned long cmd,
+	void *para)
+{
+	const struct vinfo_s *vinfo;
+
+	vinfo = get_current_vinfo();
+	if (!vinfo) {
+		pr_info("current vinfo NULL\n");
+		return -1;
+	}
+	if (vlock_debug & VLOCK_DEBUG_INFO)
+		pr_info("current vmode=%s, vinfo w=%d,h=%d, cmd: 0x%lx\n",
+			vinfo->name, vinfo->width, vinfo->height, cmd);
+	switch (cmd) {
+	case VOUT_EVENT_MODE_CHANGE_PRE:
+	case VOUT_EVENT_MODE_CHANGE:
+		vlock_vmode_change_status = cmd;
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
 /*video lock end*/
 
