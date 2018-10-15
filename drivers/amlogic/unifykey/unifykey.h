@@ -57,10 +57,10 @@ enum key_manager_flag_e {
 	KEY_M_FLAG_EXSIT = (1<<0),
 };
 
-#ifdef CONFIG_MACH_MESON8B
-#define KEY_UNIFY_NAME_LEN	16
-#else
+#if defined(CONFIG_ARM64) || defined(CONFIG_ARM64_A32)
 #define KEY_UNIFY_NAME_LEN	48
+#else
+#define KEY_UNIFY_NAME_LEN	16
 #endif
 
 /* for ioctrl transfer parameters. */
