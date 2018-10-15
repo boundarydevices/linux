@@ -471,7 +471,7 @@ static void cpufreq_interactive_update(struct interactive_cpu *icpu)
 	eval_target_freq(icpu);
 	slack_timer_resched(icpu, smp_processor_id(), true);
 }
-
+#ifndef CONFIG_AMLOGIC_MODIFY
 static void cpufreq_interactive_idle_end(void)
 {
 	struct interactive_cpu *icpu = &per_cpu(interactive_cpu,
@@ -491,7 +491,7 @@ static void cpufreq_interactive_idle_end(void)
 
 	up_read(&icpu->enable_sem);
 }
-
+#endif
 static void cpufreq_interactive_get_policy_info(struct cpufreq_policy *policy,
 						unsigned int *pmax_freq,
 						u64 *phvt, u64 *pfvt)
@@ -1011,7 +1011,7 @@ static struct kobj_type interactive_tunables_ktype = {
 	.default_attrs = interactive_attributes,
 	.sysfs_ops = &governor_sysfs_ops,
 };
-
+#ifndef CONFIG_AMLOGIC_MODIFY
 static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
 					     unsigned long val, void *data)
 {
@@ -1024,7 +1024,7 @@ static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
 static struct notifier_block cpufreq_interactive_idle_nb = {
 	.notifier_call = cpufreq_interactive_idle_notifier,
 };
-
+#endif
 /* Interactive Governor callbacks */
 struct interactive_governor {
 	struct cpufreq_governor gov;
@@ -1242,7 +1242,9 @@ int cpufreq_interactive_init(struct cpufreq_policy *policy)
 
 	/* One time initialization for governor */
 	if (!interactive_gov.usage_count++) {
+#ifndef CONFIG_AMLOGIC_MODIFY
 		idle_notifier_register(&cpufreq_interactive_idle_nb);
+#endif
 		cpufreq_register_notifier(&cpufreq_notifier_block,
 					  CPUFREQ_TRANSITION_NOTIFIER);
 	}
@@ -1276,7 +1278,9 @@ void cpufreq_interactive_exit(struct cpufreq_policy *policy)
 	if (!--interactive_gov.usage_count) {
 		cpufreq_unregister_notifier(&cpufreq_notifier_block,
 					    CPUFREQ_TRANSITION_NOTIFIER);
+#ifndef CONFIG_AMLOGIC_MODIFY
 		idle_notifier_unregister(&cpufreq_interactive_idle_nb);
+#endif
 	}
 
 	count = gov_attr_set_put(&tunables->attr_set, &ipolicy->tunables_hook);
