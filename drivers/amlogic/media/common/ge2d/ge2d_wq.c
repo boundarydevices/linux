@@ -893,11 +893,25 @@ static int build_ge2d_addr_config_ion(
 {
 	int ret = -1;
 	int bpp_value = bpp(format);
+	unsigned long addr_temp = 0;
 
 	bpp_value /= 8;
 	ge2d_log_dbg("build_ge2d_addr_config_ion bpp_value=%d\n",
 		bpp_value);
 	if (plane) {
+		if (plane[0].shared_fd) {
+#ifdef CONFIG_AMLOGIC_ION
+			size_t len = 0;
+
+			ret = meson_ion_share_fd_to_phys(ge2d_ion_client,
+				plane[0].shared_fd, &addr_temp, &len);
+			if (ret != 0)
+				return ret;
+#else
+			return ret;
+#endif
+		}
+		plane[0].addr += addr_temp;
 		if (plane[0].addr) {
 			*addr = plane[0].addr;
 			*stride = plane[0].w * bpp_value;
