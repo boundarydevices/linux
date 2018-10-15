@@ -35,6 +35,9 @@
 		serial1 = &uart2;
 		serial2 = &uart3;
 		serial3 = &uart4;
+		spi0 = &ecspi1;
+		spi1 = &ecspi2;
+		spi2 = &ecspi3;
 		mmc0 = &usdhc1;
 		mmc1 = &usdhc2;
 		gpio0 = &gpio1;
