@@ -168,11 +168,13 @@ void lb_mode(int mode)
 {
 // TODO:
 	return;
+#if 0
 	audiobus_update_bits(
 		EE_AUDIO_LB_CTRL0,
 		0x1 << 30,
 		mode << 30
 		);
+#endif
 }
 
 static void tdmin_lb_clk_enalbe(int tdm_src, int is_enable)

@@ -36,7 +36,7 @@ struct aml_pwrdet {
 	struct device *dev;
 
 	unsigned int det_src;
-	unsigned int irq;
+	int irq;
 	unsigned int hi_th;
 	unsigned int lo_th;
 

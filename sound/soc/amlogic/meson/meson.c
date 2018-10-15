@@ -108,7 +108,7 @@ static void aml_audio_stop_timer(struct aml_audio_private_data *p_aml_audio)
 
 static int hp_det_adc_value(struct aml_audio_private_data *p_aml_audio)
 {
-	int ret, hp_value;
+	int ret, hp_value = 0;
 	int hp_val_sum = 0;
 	int loop_num = 0;
 	unsigned int mic_ret = 0;

@@ -37,12 +37,12 @@ static struct audio_iomap v_aml_snd_iomap = {
 	.use_iomap = false,
 };
 
-static int aml_snd_read(u32 base_type, unsigned int reg, unsigned int *val)
+static int aml_snd_read(u32 base_type, unsigned int reg, int *val)
 {
 	int ret;
 
 	if (v_aml_snd_iomap.use_iomap) {
-		if ((base_type >= IO_AUDIN_BASE) && (base_type < IO_BASE_MAX)) {
+		if (base_type < IO_BASE_MAX) {
 			*val = readl(
 				(v_aml_snd_iomap.reg_map[base_type]
 				+ (reg << 2)));
@@ -65,7 +65,7 @@ static int aml_snd_read(u32 base_type, unsigned int reg, unsigned int *val)
 static void aml_snd_write(u32 base_type, unsigned int reg, unsigned int val)
 {
 	if (v_aml_snd_iomap.use_iomap) {
-		if ((base_type >= IO_AUDIN_BASE) && (base_type < IO_BASE_MAX)) {
+		if (base_type < IO_BASE_MAX) {
 			writel(val,
 				(v_aml_snd_iomap.reg_map[base_type]
 				+ (reg << 2)));
@@ -83,15 +83,16 @@ static void aml_snd_update_bits(u32 base_type,
 			unsigned int val)
 {
 	if (v_aml_snd_iomap.use_iomap) {
-		if ((base_type >= IO_AUDIN_BASE) && (base_type < IO_BASE_MAX)) {
+		if (base_type < IO_BASE_MAX) {
 			unsigned int tmp, orig;
 
-			aml_snd_read(base_type, reg, &orig);
+			if (aml_snd_read(base_type, reg, &orig) == 0) {
 			tmp = orig & ~mask;
 			tmp |= val & mask;
 			aml_snd_write(base_type, reg, tmp);
 
 			return;
+				}
 		}
 		pr_err("write snd reg %x error\n", reg);
 	} else

@@ -1281,7 +1281,7 @@ static void aml_i2s_free_dma_buffers(struct snd_pcm *pcm)
 		buf->area = NULL;
 
 		tmp_buf = buf->private_data;
-		if (tmp_buf->buffer_start != NULL && tmp_buf != NULL)
+		if (tmp_buf != NULL && tmp_buf->buffer_start != NULL)
 			kfree(tmp_buf->buffer_start);
 		if (tmp_buf != NULL)
 			kfree(tmp_buf);

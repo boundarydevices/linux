@@ -438,9 +438,6 @@ int pdm_get_mute_channel(void)
 {
 	int val = aml_pdm_read(PDM_CTRL);
 
-	if (!((val & 20000) >> 17))
-		pr_warn_once("pdm mute is not enable\n");
-
 	return (val & (0xff << 20));
 }
 

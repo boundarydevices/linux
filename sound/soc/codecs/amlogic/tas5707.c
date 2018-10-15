@@ -777,7 +777,7 @@ static int tas5707_parse_dt(
 	reset_pin = of_get_named_gpio(np, "reset_pin", 0);
 	if (reset_pin < 0) {
 		pr_err("%s fail to get reset pin from dts!\n", __func__);
-		ret = -1;
+		//ret = -1;
 	} else {
 		pr_info("%s pdata->reset_pin = %d!\n", __func__,
 				tas5707->pdata->reset_pin);
@@ -836,7 +836,7 @@ static int tas5707_i2c_probe(struct i2c_client *i2c,
 			"codec_name",
 				&codec_name)) {
 		pr_info("no codec name\n");
-		ret = -1;
+		//ret = -1;
 	}
 	pr_info("aux name = %s\n", codec_name);
 	if (codec_name)

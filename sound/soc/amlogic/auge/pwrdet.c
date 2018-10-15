@@ -166,7 +166,6 @@ static int aml_pwrdet_platform_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto fail;
 	}
-
 	ret = of_property_read_u32(node, "pwrdet_src",
 		&p_pwrdet->det_src);
 	if (ret) {

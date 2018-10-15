@@ -254,9 +254,13 @@ static int aml_audio_set_in_source(struct snd_kcontrol *kcontrol,
 	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
 	struct aml_audio_private_data *p_aml_audio =
 			snd_soc_card_get_drvdata(card);
-	struct aml_card_info *p_cardinfo = p_aml_audio->cardinfo;
+	struct aml_card_info *p_cardinfo = NULL;
 
-	if (p_aml_audio && p_cardinfo)
+	if (!p_aml_audio)
+		return -EINVAL;
+	p_cardinfo = p_aml_audio->cardinfo;
+
+	if (p_cardinfo)
 		p_cardinfo->set_audin_source(
 			ucontrol->value.enumerated.item[0]);
 	else
@@ -1872,19 +1876,19 @@ static int aml_card_dais_parse_of(struct snd_soc_card *card)
 		init = NULL;
 		/* CPU sub-node */
 		cpu_node = of_parse_phandle(np, "cpu_list", i);
-		if (cpu_node < 0) {
+		if (cpu_node == NULL) {
 			dev_err(dev, "parse aml sound card cpu list error\n");
 			return -EINVAL;
 		}
 		/* CODEC sub-node */
 		codec_node = of_parse_phandle(np, "codec_list", i);
-		if (codec_node < 0) {
+		if (codec_node == NULL) {
 			dev_err(dev, "parse aml sound card codec list error\n");
 			return ret;
 		}
 		/* Platform sub-node */
 		plat_node = of_parse_phandle(np, "plat_list", i);
-		if (plat_node < 0) {
+		if (plat_node == NULL) {
 			dev_err(dev,
 				"parse aml sound card platform list error\n");
 			return ret;

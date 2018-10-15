@@ -1162,7 +1162,6 @@ static void i2s_copy(struct amaudio_t *amaudio)
 
 	WARN_ON((hw->wr + int_block > hw->size) ||
 				(sw->rd + int_block > sw->size));
-	WARN_ON((hw->wr < 0) || (sw->rd < 0));
 
 	if (external_mute_enable == 1 && external_mute_flag == 1) {
 		memset((hw->addr + hw->wr), 0, int_block);
@@ -1377,26 +1376,26 @@ static long amaudio_ioctl(struct file *file, unsigned int cmd,
 		 * audio_out_mode = 2,
 		 * TV in direct mix with android audio;
 		 */
-		if (arg < 0 || arg > 2)
+		if (arg > 2)
 			return -EINVAL;
 
 		audio_out_mode = arg;
 		break;
 	case AMAUDIO_IOC_MIC_LEFT_GAIN:
 		/* in karaOK mode, mic volume can be set from 0-256 */
-		if (arg < 0 || arg > 256)
+		if (arg > 256)
 			return -EINVAL;
 		direct_left_gain = arg;
 		break;
 	case AMAUDIO_IOC_MIC_RIGHT_GAIN:
-		if (arg < 0 || arg > 256)
+		if (arg > 256)
 			return -EINVAL;
 
 		direct_right_gain = arg;
 		break;
 	case AMAUDIO_IOC_MUSIC_GAIN:
 		/* music volume can be set from 0-256 */
-		if (arg < 0 || arg > 256)
+		if (arg > 256)
 			return -EINVAL;
 
 		music_gain = arg;

@@ -130,12 +130,16 @@ static int WL2_amplifier_power_get(struct snd_kcontrol *kcontrol,
 	int ret;
 	int i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "WL2")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no wl2 error");
+		return ret;
 	}
 	ret = regmap_read(ssm3515->regmap, SSM3515_REG_POWER_CTRL, &value);
 	if (ret)
@@ -149,12 +153,16 @@ static int WL2_amplifier_power_put(struct snd_kcontrol *kcontrol,
 {
 	int value, ret, i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "WL2")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no wl2 error");
+		return ret;
 	}
 	value = ucontrol->value.integer.value[0];
 	ret = regmap_write(ssm3515->regmap, SSM3515_REG_POWER_CTRL, value);
@@ -169,12 +177,16 @@ static int WR2_amplifier_power_get(struct snd_kcontrol *kcontrol,
 	int value = 0;
 	int ret, i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "WR2")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no wr2 error");
+		return ret;
 	}
 	ret = regmap_read(ssm3515->regmap, SSM3515_REG_POWER_CTRL, &value);
 	if (ret)
@@ -188,12 +200,16 @@ static int WR2_amplifier_power_put(struct snd_kcontrol *kcontrol,
 {
 	int value, ret, i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "WR2")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no wr2 error");
+		return ret;
 	}
 	value = ucontrol->value.integer.value[0];
 	ret = regmap_write(ssm3515->regmap, SSM3515_REG_POWER_CTRL, value);
@@ -208,12 +224,16 @@ static int TL1_amplifier_power_get(struct snd_kcontrol *kcontrol,
 	int value = 0;
 	int ret, i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "TL1")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no tl1 error");
+		return ret;
 	}
 	ret = regmap_read(ssm3515->regmap, SSM3515_REG_POWER_CTRL, &value);
 	if (ret)
@@ -227,12 +247,16 @@ static int TL1_amplifier_power_put(struct snd_kcontrol *kcontrol,
 {
 	int value, ret, i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "TL1")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no tl1 error");
+		return ret;
 	}
 	value = ucontrol->value.integer.value[0];
 	ret = regmap_write(ssm3515->regmap, SSM3515_REG_POWER_CTRL, value);
@@ -247,12 +271,16 @@ static int TR1_amplifier_power_get(struct snd_kcontrol *kcontrol,
 	int value = 0;
 	int ret, i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "TR1")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no tr1 error");
+		return ret;
 	}
 	ret = regmap_read(ssm3515->regmap, SSM3515_REG_POWER_CTRL, &value);
 	if (ret)
@@ -266,12 +294,16 @@ static int TR1_amplifier_power_put(struct snd_kcontrol *kcontrol,
 {
 	int value, ret, i;
 	struct ssm3515 *ssm3515 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3515[i].amp_cfg, "TR1")) {
 			ssm3515 = g_ssm3515+i;
 			break;
 		}
+	}
+	if (!ssm3515) {
+		pr_info("no tl1 error");
+		return ret;
 	}
 	value = ucontrol->value.integer.value[0];
 	ret = regmap_write(ssm3515->regmap, SSM3515_REG_POWER_CTRL, value);
@@ -282,13 +314,13 @@ static int TR1_amplifier_power_put(struct snd_kcontrol *kcontrol,
 
 static struct snd_kcontrol_new ssm3515_snd_controls[] = {
 	SOC_SINGLE_EXT("WR2 Amp Power Control", SND_SOC_NOPM, 0, 0xff, 0,
-	       WR2_amplifier_power_get, WR2_amplifier_power_put),
+		   WR2_amplifier_power_get, WR2_amplifier_power_put),
 	SOC_SINGLE_EXT("WL2 Amp Power Control", SND_SOC_NOPM, 0, 0xff, 0,
-	       WL2_amplifier_power_get, WL2_amplifier_power_put),
+		   WL2_amplifier_power_get, WL2_amplifier_power_put),
 	SOC_SINGLE_EXT("TL1 Amp Power Control", SND_SOC_NOPM, 0, 0xff, 0,
-	       TL1_amplifier_power_get, TL1_amplifier_power_put),
+		   TL1_amplifier_power_get, TL1_amplifier_power_put),
 	SOC_SINGLE_EXT("TR1 Amp Power Control", SND_SOC_NOPM, 0, 0xff, 0,
-	       TR1_amplifier_power_get, TR1_amplifier_power_put),
+		   TR1_amplifier_power_get, TR1_amplifier_power_put),
 };
 
 static int ssm3515_hw_params(struct snd_pcm_substream *substream,

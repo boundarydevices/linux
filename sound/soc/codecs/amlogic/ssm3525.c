@@ -163,12 +163,16 @@ static int WL1_amplifier_power_get(struct snd_kcontrol *kcontrol,
 	int ret;
 	int i;
 	struct ssm3525 *ssm3525 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3525[i].amp_cfg, "WL1")) {
 			ssm3525 = g_ssm3525+i;
 			break;
 		}
+	}
+	if (!ssm3525) {
+		pr_info("no wl1 error");
+		return ret;
 	}
 	ret = regmap_read(ssm3525->regmap, SSM3525_REG_POWER_CTRL, &value);
 	if (ret)
@@ -182,12 +186,16 @@ static int WL1_amplifier_power_put(struct snd_kcontrol *kcontrol,
 {
 	int value, ret, i;
 	struct ssm3525 *ssm3525 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3525[i].amp_cfg, "WL1")) {
 			ssm3525 = g_ssm3525+i;
 			break;
 		}
+	}
+	if (!ssm3525) {
+		pr_info("no wl1 error");
+		return ret;
 	}
 	value = ucontrol->value.integer.value[0];
 	ret = regmap_write(ssm3525->regmap, SSM3525_REG_POWER_CTRL, value);
@@ -202,12 +210,16 @@ static int WR1_amplifier_power_get(struct snd_kcontrol *kcontrol,
 	int value = 0;
 	int ret, i;
 	struct ssm3525 *ssm3525 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3525[i].amp_cfg, "WR1")) {
 			ssm3525 = g_ssm3525+i;
 			break;
 		}
+	}
+	if (!ssm3525) {
+		pr_info("no wr1 error");
+		return ret;
 	}
 	ret = regmap_read(ssm3525->regmap, SSM3525_REG_POWER_CTRL, &value);
 	if (ret)
@@ -221,12 +233,16 @@ static int WR1_amplifier_power_put(struct snd_kcontrol *kcontrol,
 {
 	int value, ret, i;
 	struct ssm3525 *ssm3525 = NULL;
-
+	ret = -1;
 	for (i = 0; i < device_num; i++) {
 		if (!strcmp(g_ssm3525[i].amp_cfg, "WR1")) {
 			ssm3525 = g_ssm3525+i;
 			break;
 		}
+	}
+	if (!ssm3525) {
+		pr_info("no wr1 error");
+		return ret;
 	}
 	value = ucontrol->value.integer.value[0];
 	ret = regmap_write(ssm3525->regmap, SSM3525_REG_POWER_CTRL, value);

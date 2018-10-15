@@ -458,38 +458,47 @@ static int txlx_acodec_dai_mute_stream(struct snd_soc_dai *dai, int mute,
 	struct txlx_acodec_priv *aml_acodec =
 		snd_soc_codec_get_drvdata(dai->codec);
 	u32 reg;
+	int ret = 0;
 
 	pr_debug("%s, mute:%d\n", __func__, mute);
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		/* DAC 1 */
-		regmap_read(aml_acodec->regmap,
+		ret = regmap_read(aml_acodec->regmap,
 					DAC_VOL_CTR_DAC_SOFT_MUTE,
 					&reg);
+		if (ret < 0)
+			pr_err("Failed to read dac1\n");
 		if (mute)
 			reg |= DAC_SOFT_MUTE;
 		else
 			reg &= ~DAC_SOFT_MUTE;
 
-		regmap_write(aml_acodec->regmap,
+		ret = regmap_write(aml_acodec->regmap,
 					DAC_VOL_CTR_DAC_SOFT_MUTE,
 					reg);
-
+		if (ret < 0)
+			pr_err("Failed to write dac1\n");
 
 		/* DAC 2 */
-		regmap_read(aml_acodec->regmap,
+		ret = regmap_read(aml_acodec->regmap,
 					ACODEC_DAC2_CONFIG2,
 					&reg);
+		if (ret < 0)
+			pr_err("Failed to read dac2\n");
+
 		if (mute)
 			reg |= DAC2_SOFT_MUTE;
 		else
 			reg &= ~DAC2_SOFT_MUTE;
 
-		regmap_write(aml_acodec->regmap,
+		ret = regmap_write(aml_acodec->regmap,
 					ACODEC_DAC2_CONFIG2,
 					reg);
-	}
+		if (ret < 0)
+			pr_err("Failed to write dac2\n");
 
+	}
 	return 0;
 }
 

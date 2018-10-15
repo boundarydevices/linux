@@ -1142,9 +1142,10 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	/* match data */
 	p_chipinfo = (struct tdm_chipinfo *)
 		of_device_get_match_data(dev);
-	if (!p_chipinfo)
+	if (!p_chipinfo) {
 		dev_warn_once(dev, "check whether to update tdm chipinfo\n");
-
+		return -ENOMEM;
+	}
 	p_tdm->chipinfo = p_chipinfo;
 	p_tdm->id = p_chipinfo->id;
 	pr_info("%s, tdm ID = %u\n", __func__, p_tdm->id);
@@ -1238,7 +1239,11 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 		return PTR_ERR(p_tdm->mclk);
 	}
 
-	clk_set_parent(p_tdm->mclk, p_tdm->clk);
+	ret = clk_set_parent(p_tdm->mclk, p_tdm->clk);
+	if (ret) {
+		dev_err(dev, "can't set tdm parent clock\n");
+		return ret;
+	}
 
 	/* complete mclk for tdm */
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xa)

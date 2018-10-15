@@ -72,13 +72,14 @@ static int aml_DAC_Gain_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+#if 0
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 	u32 add, val, val1, val2;
-
+#endif
 	/*TODO: return 0 for tmp, this wolud modified later */
 	return 0;
-
+#if 0
 	if (codec == NULL)
 		return -1;
 
@@ -90,6 +91,7 @@ static int aml_DAC_Gain_get_enum(
 	val = val1 | val2;
 	ucontrol->value.enumerated.item[0] = val;
 	return 0;
+ #endif
 }
 
 static int aml_DAC_Gain_set_enum(
@@ -381,7 +383,10 @@ static int aml_T9015_audio_probe(struct snd_soc_codec *codec)
 {
 	struct aml_T9015_audio_priv *T9015_audio =
 		snd_soc_codec_get_drvdata(codec);
-
+	if (!T9015_audio) {
+		pr_info("T9015_audio is null!\n");
+		return -ENODEV;
+	}
 	/*reset audio codec register*/
 	aml_T9015_audio_reset(codec);
 	aml_T9015_audio_start_up(codec);

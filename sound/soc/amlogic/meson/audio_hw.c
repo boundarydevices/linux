@@ -246,29 +246,24 @@ void audio_set_958outbuf(u32 addr, u32 size, int flag)
 	aml_aiu_write(AIU_MEM_IEC958_START_PTR, addr & 0xffffffc0);
 	aml_aiu_write(AIU_MEM_IEC958_RD_PTR, addr & 0xffffffc0);
 #endif
-	if (flag == 0) {
-		/* this is for 16bit 2 channel */
+
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
-		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
-			       (addr & 0xffffffff) +
-			       (size & 0xffffffff) - 1);
-#else
-		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
-			       (addr & 0xffffffc0) +
-			       (size & 0xffffffc0) - 64);
-#endif
-	} else {
-		/* this is for RAW mode */
-#ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
-		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
+	aml_aiu_write(AIU_MEM_IEC958_END_PTR,
 					(addr & 0xffffffff) +
 					(size & 0xffffffff) - 1);
 #else
-		aml_aiu_write(AIU_MEM_IEC958_END_PTR,
-			       (addr & 0xffffffc0) +
-			       (size & 0xffffffc0) - 1);
-#endif
+	if (flag == 0) {
+	/* this is for 16bit 2 channel */
+	aml_aiu_write(AIU_MEM_IEC958_END_PTR,
+				   (addr & 0xffffffc0) +
+				   (size & 0xffffffc0) - 64);
+	} else {
+		/* this is for RAW mode */
+	aml_aiu_write(AIU_MEM_IEC958_END_PTR,
+				   (addr & 0xffffffc0) +
+				   (size & 0xffffffc0) - 1);
 	}
+ #endif
 #ifdef CONFIG_AMLOGIC_SND_SPLIT_MODE
 	aml_aiu_update_bits(AIU_MEM_IEC958_MASKS, 0xffff, 0xffff);
 #else
@@ -884,7 +879,7 @@ void audio_set_spdif_clk_div(uint div)
 {
 	uint val = 0;
 
-	if (div < 1 && div > 4)
+	if (div < 1 || div > 4)
 		return;
 
 	val = div - 1;

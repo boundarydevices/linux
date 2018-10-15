@@ -65,7 +65,7 @@ struct audioresample *s_resample;
 
 static int resample_clk_set(struct audioresample *p_resample)
 {
-	int ret;
+	int ret = 0;
 
 	/* enable clock */
 	if (p_resample->enable) {
