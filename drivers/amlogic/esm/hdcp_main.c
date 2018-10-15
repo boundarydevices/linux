@@ -405,7 +405,10 @@ static long hld_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 }
 
 static const struct file_operations hld_file_operations = {
+	.unlocked_ioctl = hld_ioctl,
+#ifdef CONFIG_COMPAT
 	.compat_ioctl = hld_ioctl,
+#endif
 	.owner = THIS_MODULE,
 };
 
