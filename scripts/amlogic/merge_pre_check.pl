@@ -256,11 +256,6 @@ get_kernel_version();
 #Check meson_defconfig
 check_defconfig();
 
-if ($k_v >= 4)
-{
-	system "./scripts/amlogic/git_msg_check.sh";
-}
-
 #Check commit message
 
 check_commit_msg();
