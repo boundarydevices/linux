@@ -1195,11 +1195,12 @@ MODULE_PARM_DESC(rptx_edid_aud, "\n receive_edid\n");
 module_param(rptx_edid_aud, charp, 0444);
 
 /* ----------------------------------------------------------- */
-int Edid_ParsingCEADataBlockCollection(struct hdmitx_info *info,
+int Edid_ParsingCEADataBlockCollection(struct hdmitx_dev *hdmitx_device,
 	unsigned char *buff)
 {
 	unsigned char AddrTag, D, Addr, Data;
 	int temp_addr, i, len, pos;
+	struct hdmitx_info *info = &(hdmitx_device->hdmi_info);
 
 	/* Byte number offset d where Detailed Timing data begins */
 	D = buff[2];
@@ -1217,7 +1218,8 @@ int Edid_ParsingCEADataBlockCollection(struct hdmitx_info *info,
 
 		case AUDIO_TAG:
 			len = (Data & 0x1f) + 1;
-			rx_set_receiver_edid(&buff[AddrTag], len);
+			if (hdmitx_device->repeater_tx)
+				rx_set_receiver_edid(&buff[AddrTag], len);
 			for (pos = 0, i = 0; i < len; i++)
 				pos += sprintf(rptx_edid_buf+pos, "%02x",
 					buff[AddrTag + i]);
@@ -2052,8 +2054,7 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 					&hdmitx_device->hdmi_info,
 					EDID_buf[i * 128 + 3]);
 				ret_val = Edid_ParsingCEADataBlockCollection(
-					&hdmitx_device->hdmi_info,
-					&EDID_buf[i * 128]);
+					hdmitx_device, &EDID_buf[i * 128]);
 				Edid_ParseCEADetailedTimingDescriptors(
 					&hdmitx_device->hdmi_info, 5,
 					EDID_buf[i * 128 + 2],
