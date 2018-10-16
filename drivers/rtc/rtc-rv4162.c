@@ -368,6 +368,8 @@ static int rv4162_probe(struct i2c_client *client,
 	struct rtc_device *rtc;
 	unsigned char addr = RV4162_REG_FLAGS;
 	unsigned char flags;
+	unsigned char month_alarm, day, new_val;
+	int ret;
 	struct i2c_msg msgs[] = {
 		{client->addr, 0, 1, &addr},
 		{client->addr, I2C_M_RD, 1, &flags},
@@ -421,6 +423,20 @@ static int rv4162_probe(struct i2c_client *client,
 		pr_info("%s:clkout=%d index=%d\n", __func__, clkout, i);
 		clkout = i << 4;
 	}
+
+	ret = rv4162_i2c_read_regs(client, 0x04, &day, 1);
+	new_val = (day & 0x7) | clkout;
+	/* check frequency */
+	if ((ret >= 0) && (new_val != day))
+		rv4162_i2c_set_regs(client, 0x04, &new_val, 1);
+
+	ret = rv4162_i2c_read_regs(client, 0x0a, &month_alarm, 1);
+	new_val = month_alarm & ~0x40;
+	if (clkout)
+		new_val |= 0x40;
+	if ((ret >= 0) && (new_val != month_alarm))
+		rv4162_i2c_set_regs(client, 0x0a, &new_val, 1);
+
 
 	rtc = rtc_device_register(rv4162_driver.driver.name, &client->dev,
 				  &rv4162_rtc_ops, THIS_MODULE);
