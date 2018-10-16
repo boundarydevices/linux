@@ -614,16 +614,6 @@
 		reg = <0x10000000 0xeffffc00>;
 	};
 
-	mipi_dsi_reset: mipi-dsi-reset {
-		compatible = "gpio-reset";
-		initially-in-reset;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_mipi_dsi_reset>;
-		reset-gpios = GP_MIPI_DSI_RESET;
-		reset-delay-us = <50>;
-		#reset-cells = <0>;
-	};
-
 	fp_mclk: fp_mclk {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
@@ -1222,9 +1212,12 @@
 &mipi_dsi {
 	dev_id = <0>;
 	disp_id = <0>;
-	lcd_panel = "OSD050T2844";
 	disp-power-on-supply = <&reg_2p8v>;
-	resets = <&mipi_dsi_reset>;
+	lcd_panel = "OSD050T2844";
+	pinctrl-0 = <&pinctrl_mipi_dsi_reset>;
+	pinctrl-names = "default";
+	reset-delay-us = <50>;
+	reset-gpios = GP_MIPI_DSI_RESET;
 	status = "okay";
 };
 
