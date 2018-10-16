@@ -134,8 +134,4 @@ void mipid_hx8363_get_lcd_videomode(struct fb_videomode **mode, int *size,
 int mipid_hx8363_lcd_setup(struct mipi_dsi_info *);
 #endif
 
-#ifndef CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL
-#error "Please configure MIPI LCD panel, we cannot find one!"
-#endif
-
 #endif
