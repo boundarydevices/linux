@@ -81,7 +81,7 @@
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x7400000>;
+			size = <0x4C00000>;
 			alignment = <0x400000>;
 			/* alloc by self */
 			alloc-ranges = <0x0 0x2ee00000>;
@@ -114,7 +114,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0xc000000>;
+			size = <0xd000000>;
 			alignment = <0x400000>;
 			linux,contiguous-region;
 			/** alloc by self **/
