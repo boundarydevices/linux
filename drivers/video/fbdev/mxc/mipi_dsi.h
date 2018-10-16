@@ -127,8 +127,4 @@ void mipid_rm68200_get_lcd_videomode(struct fb_videomode **mode, int *size,
 int mipid_rm68200_lcd_setup(struct mipi_dsi_info *mipi_dsi);
 #endif
 
-#if !defined(CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL) && !defined(CONFIG_FB_MXC_MIPI_RM68200)
-#error "Please configure MIPI LCD panel, we cannot find one!"
-#endif
-
 #endif
