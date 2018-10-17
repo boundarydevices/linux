@@ -18,7 +18,7 @@
 #ifndef __ATV_DEMOD_FUNC_H__
 #define __ATV_DEMOD_FUNC_H__
 
-struct dvb_frontend;
+struct v4l2_frontend;
 
 #define HHI_ATV_DMD_SYS_CLK_CNTL		0x10f3
 
@@ -198,7 +198,7 @@ extern void amlatvdemod_set_std(int val);
 extern void aml_fix_PWM_adjust(int enable);
 extern void aml_audio_valume_gain_set(unsigned int audio_gain);
 extern unsigned int aml_audio_valume_gain_get(void);
-extern int aml_audiomode_autodet(struct dvb_frontend *fe);
+extern int aml_audiomode_autodet(struct v4l2_frontend *v4l2_fe);
 extern void retrieve_frequency_offset(int *freq_offset);
 extern void retrieve_field_lock(int *lock);
 extern void set_atvdemod_scan_mode(int val);

@@ -166,7 +166,7 @@ static ssize_t aml_atvdemod_store(struct class *class,
 		pr_dbg("aml_atvdemod_ver %s.\n",
 				AMLATVDEMOD_VER);
 	} else if (!strncmp(parm[0], "audio_autodet", 13)) {
-		aml_audiomode_autodet(&dev->v4l2_fe.fe);
+		aml_audiomode_autodet(&dev->v4l2_fe);
 	} else if (!strncmp(parm[0], "audio_gain_set", 14)) {
 		if (kstrtoul(buf + strlen("audio_gain_set") + 1, 16, &tmp) == 0)
 			val = tmp;

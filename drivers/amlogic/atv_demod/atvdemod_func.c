@@ -1877,16 +1877,17 @@ void atv_dmd_set_std(void)
 		pr_info("[%s]: atv restart error.\n", __func__);
 }
 
-int aml_audiomode_autodet(struct dvb_frontend *fe)
+int aml_audiomode_autodet(struct v4l2_frontend *v4l2_fe)
 {
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-	struct aml_atvdemod_parameters *param = &priv->atvdemod_param;
+	struct dvb_frontend *fe = &v4l2_fe->fe;
+	struct v4l2_analog_parameters *p = &v4l2_fe->params;
+	struct analog_parameters params;
 
 	unsigned long carrier_power = 0;
 	unsigned long carrier_power_max = 0;
 	unsigned long carrier_power_average_max = 0;
 	unsigned long carrier_power_average[4] = {0};
-	unsigned long reg_addr = 0x03, temp_data;
+	unsigned long temp_data = 0;
 	int carrier_lock_count = 0;
 	int lock = 0;
 	int broad_std_final = 0;
@@ -1925,8 +1926,8 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_SECAM_L:
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_SECAM_DK2:
 	case AML_ATV_DEMOD_VIDEO_MODE_PROP_SECAM_DK3:
-		if (!(param->param.std & V4L2_COLOR_STD_SECAM) ||
-				!(param->param.std & V4L2_STD_SECAM_L)) {
+		if (!(p->std & V4L2_COLOR_STD_SECAM) ||
+				!(p->std & V4L2_STD_SECAM_L)) {
 			secam_signal = true;
 			broad_std = AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M;
 		} else {
@@ -1971,6 +1972,7 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 					final_id = i;
 				}
 			}
+
 			switch (final_id) {
 			case ID_PAL_I:
 				broad_std_final =
@@ -1989,10 +1991,12 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 					AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK;
 				break;
 			}
+
 			carrier_power_average_max = carrier_power_max;
 			broad_std = broad_std_final;
 			pr_err("%s:broad_std:%d,carrier_power_average_max:%lu\n",
 				__func__, broad_std, carrier_power_average_max);
+
 			if (carrier_power_average_max < 150) {
 				pr_err("%s,carrier too low error\n", __func__);
 				if (secam_signal) {
@@ -2002,6 +2006,7 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 							__func__);
 				}
 			}
+
 			if (broad_std == AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M) {
 				/*the max except palm*/
 				carrier_power_average[final_id] = 0;
@@ -2015,93 +2020,96 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 						final_id = i;
 					}
 				}
-			switch (final_id) {
-			case ID_PAL_I:
-				broad_std_except_pal_m =
+
+				switch (final_id) {
+				case ID_PAL_I:
+					broad_std_except_pal_m =
 					AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I;
-				break;
-			case ID_PAL_BG:
-				broad_std_except_pal_m =
+					break;
+				case ID_PAL_BG:
+					broad_std_except_pal_m =
 					AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_BG;
-				break;
-			case ID_PAL_DK:
-				broad_std_except_pal_m =
+					break;
+				case ID_PAL_DK:
+					broad_std_except_pal_m =
 					AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK;
-				break;
-			}
-			}
-			if (priv != NULL) {
-				param->param.std = V4L2_COLOR_STD_PAL;
-				switch (broad_std) {
-				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK:
-					param->param.std |= V4L2_STD_PAL_DK;
-					param->param.audmode = V4L2_STD_PAL_DK;
-				break;
-				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I:
-					param->param.std |= V4L2_STD_PAL_I;
-					param->param.audmode = V4L2_STD_PAL_I;
-				break;
-				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_BG:
-					param->param.std |= V4L2_STD_PAL_BG;
-					param->param.audmode = V4L2_STD_PAL_BG;
-				break;
-				case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M:
-					param->param.std |= V4L2_STD_PAL_M;
-					param->param.audmode = V4L2_STD_PAL_M;
-				break;
-				default:
-					param->param.std |= V4L2_STD_PAL_DK;
-					param->param.audmode = V4L2_STD_PAL_DK;
+					break;
 				}
-				param->param.frequency += 1;
-				fe->ops.analog_ops.set_params(fe,
-						&param->param);
 			}
+
+			p->std = V4L2_COLOR_STD_PAL;
+			switch (broad_std) {
+			case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK:
+				p->std |= V4L2_STD_PAL_DK;
+				p->audmode = V4L2_STD_PAL_DK;
+				break;
+			case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I:
+				p->std |= V4L2_STD_PAL_I;
+				p->audmode = V4L2_STD_PAL_I;
+				break;
+			case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_BG:
+				p->std |= V4L2_STD_PAL_BG;
+				p->audmode = V4L2_STD_PAL_BG;
+				break;
+			case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M:
+				p->std |= V4L2_STD_PAL_M;
+				p->audmode = V4L2_STD_PAL_M;
+				break;
+			default:
+				p->std |= V4L2_STD_PAL_DK;
+				p->audmode = V4L2_STD_PAL_DK;
+			}
+
+			p->frequency += 1;
+			params.frequency = p->frequency;
+			params.mode = p->afc_range;
+			params.audmode = p->audmode;
+			params.std = p->std;
+
+			fe->ops.analog_ops.set_params(fe, &params);
+
 			return broad_std;
 		}
+
 		switch (broad_std) {
 		case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK:
 			broad_std = AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I;
 			cur_std = ID_PAL_I;
-			if (priv != NULL) {
-				param->param.std = V4L2_COLOR_STD_PAL
-						| V4L2_STD_PAL_I;
-				param->param.frequency += 1;
-				param->param.audmode = V4L2_STD_PAL_I;
-			}
+
+			p->std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_I;
+			p->frequency += 1;
+			p->audmode = V4L2_STD_PAL_I;
+
 			delay_ms = delay_ms_default;
 			break;
 		case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I:
 			broad_std = AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_BG;
 			cur_std = ID_PAL_BG;
-			if (priv != NULL) {
-				param->param.std = V4L2_COLOR_STD_PAL
-						| V4L2_STD_PAL_BG;
-				param->param.frequency += 1;
-				param->param.audmode = V4L2_STD_PAL_BG;
-			}
+
+			p->std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_BG;
+			p->frequency += 1;
+			p->audmode = V4L2_STD_PAL_BG;
+
 			delay_ms = delay_ms_default;
 			break;
 		case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_BG:
 			broad_std = AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M;
 			cur_std = ID_PAL_M;
-			if (priv != NULL) {
-				param->param.std = V4L2_COLOR_STD_PAL
-						| V4L2_STD_PAL_M;
-				param->param.frequency += 1;
-				param->param.audmode = V4L2_STD_PAL_M;
-			}
+
+			p->std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_M;
+			p->frequency += 1;
+			p->audmode = V4L2_STD_PAL_M;
+
 			delay_ms = delay_ms_default;
 			break;
 		case AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M:
 			broad_std = AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK;
 			cur_std = ID_PAL_DK;
-			if (priv != NULL) {
-				param->param.std = V4L2_COLOR_STD_PAL
-						| V4L2_STD_PAL_DK;
-				param->param.frequency += 1;
-				param->param.audmode = V4L2_STD_PAL_DK;
-			}
+
+			p->std = V4L2_COLOR_STD_PAL | V4L2_STD_PAL_DK;
+			p->frequency += 1;
+			p->audmode = V4L2_STD_PAL_DK;
+
 			delay_ms = delay_ms_default;
 			break;
 
@@ -2109,16 +2117,19 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 			pr_err("unsupport broadcast_standard!!!\n");
 			break;
 		}
-		if (priv != NULL)
-			fe->ops.analog_ops.set_params(fe, &param->param);
-		/* atvdemod_init(); //set_frontend has already been called it */
+
+		params.frequency = p->frequency;
+		params.mode = p->afc_range;
+		params.audmode = p->audmode;
+		params.std = p->std;
+		fe->ops.analog_ops.set_params(fe, &params);
 
 		/* enable audio detect function */
 		temp_data = atv_dmd_rd_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x02);
 		temp_data = temp_data | 0x80;/* 0x40 */
 		atv_dmd_wr_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x02, temp_data);
 
-		usleep_range(delay_ms*1000, delay_ms*1000+100);
+		usleep_range(delay_ms * 1000, delay_ms * 1000 + 100);
 
 		carrier_lock_count = 0;
 		i = 4;
@@ -2137,8 +2148,7 @@ int aml_audiomode_autodet(struct dvb_frontend *fe)
 		/* ----------------read carrier_power--------------------- */
 		for (i = 0; i < 100; i++) {
 			carrier_power =
-				atv_dmd_rd_reg(APB_BLOCK_ADDR_SIF_STG_2,
-					reg_addr);
+				atv_dmd_rd_reg(APB_BLOCK_ADDR_SIF_STG_2, 0x03);
 			carrier_power_max += carrier_power;
 		}
 		carrier_power = carrier_power_max/i;

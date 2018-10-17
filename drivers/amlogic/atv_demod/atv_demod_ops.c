@@ -504,6 +504,7 @@ static void atvdemod_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 	int try_vfmt_cnt = 300;
 	int varify_cnt = 0;
 	v4l2_std_id std_bk = 0;
+	unsigned int broad_std = 0;
 	unsigned int audio = 0;
 
 	if (auto_search_std & 0x01) {
@@ -594,10 +595,8 @@ static void atvdemod_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 	if (std_bk & V4L2_COLOR_STD_NTSC) {
 #if 1 /* For TV Signal Generator(TG39) test, NTSC need support other audio.*/
 		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK);
-		audio = aml_audiomode_autodet(fe);
-		pr_info("autodet audmode 0x%x\n", audio);
-		audio = atvdemod_fmt_2_v4l2_std(audio);
-		pr_info("v4l2_std audmode 0x%x\n", audio);
+		broad_std = aml_audiomode_autodet(v4l2_fe);
+		audio = atvdemod_fmt_2_v4l2_std(broad_std);
 #if 0 /* I don't know what's going on here */
 		if (audio == V4L2_STD_PAL_M)
 			audio = V4L2_STD_NTSC_M;
@@ -606,25 +605,20 @@ static void atvdemod_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 #endif
 #else /* Now, force to NTSC_M, Ours demod only support M for NTSC.*/
 		audio = V4L2_STD_NTSC_M;
-		*video_fmt |= V4L2_STD_NTSC_M;
 #endif
 	} else if (std_bk & V4L2_COLOR_STD_SECAM) {
 #if 1 /* For support SECAM-DK/BG/I/L */
 		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_SECAM_L);
-		audio = aml_audiomode_autodet(fe);
-		pr_info("autodet audmode 0x%x\n", audio);
-		audio = atvdemod_fmt_2_v4l2_std(audio);
-		pr_info("v4l2_std audmode 0x%x\n", audio);
-#else
+		broad_std = aml_audiomode_autodet(v4l2_fe);
+		audio = atvdemod_fmt_2_v4l2_std(broad_std);
+#else /* For force L */
 		audio = V4L2_STD_SECAM_L;
 #endif
 	} else {
-		/*V4L2_COLOR_STD_PAL*/
+		/* V4L2_COLOR_STD_PAL */
 		amlatvdemod_set_std(AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_DK);
-		audio = aml_audiomode_autodet(fe);
-		pr_info("autodet audmode 0x%x\n", audio);
-		audio = atvdemod_fmt_2_v4l2_std(audio);
-		pr_info("v4l2_std audmode 0x%x\n", audio);
+		broad_std = aml_audiomode_autodet(v4l2_fe);
+		audio = atvdemod_fmt_2_v4l2_std(broad_std);
 #if 0 /* Why do this to me? We need support PAL_M.*/
 		if (audio == V4L2_STD_PAL_M) {
 			audio = atvdemod_fmt_2_v4l2_std(broad_std_except_pal_m);
@@ -632,6 +626,9 @@ static void atvdemod_fe_try_analog_format(struct v4l2_frontend *v4l2_fe,
 		}
 #endif
 	}
+
+	pr_info("autodet audio mode %d, [%s][0x%x]\n",
+			broad_std, v4l2_std_to_str(audio), audio);
 
 	*audio_fmt = audio;
 }
