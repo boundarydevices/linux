@@ -435,6 +435,11 @@ static ssize_t vout2_vinfo_show(struct class *class,
 		}
 	}
 	len += sprintf(buf+len, "\n");
+	len += sprintf(buf+len, "hdr10+:\n");
+	len += sprintf(buf+len, "    ieeeoui: %x\n",
+		info->hdr_info.hdr10plus_info.ieeeoui);
+	len += sprintf(buf+len, "    application_version: %x\n",
+		info->hdr_info.hdr10plus_info.application_version);
 	return len;
 }
 

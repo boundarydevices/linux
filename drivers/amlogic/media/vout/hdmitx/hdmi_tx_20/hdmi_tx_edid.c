@@ -763,12 +763,17 @@ static void Edid_ParsingVendSpec(struct rx_cap *pRXCap,
 	unsigned char *buf)
 {
 	struct dv_info *dv = &pRXCap->dv_info;
+	struct hdr10_plus_info *hdr10_plus = &pRXCap->hdr10plus_info;
 	unsigned char *dat = buf;
 	unsigned char pos = 0;
+	unsigned int ieeeoui = 0;
 
 	memset(dv, 0, sizeof(struct dv_info));
+	memset(hdr10_plus, 0, sizeof(struct hdr10_plus_info));
+
 	dv->block_flag = CORRECT;
 	dv->length = dat[pos] & 0x1f;
+	hdr10_plus->length = dat[pos] & 0x1f;
 	memcpy(dv->rawdata, dat, dv->length + 1);
 	pos++;
 
@@ -779,14 +784,23 @@ static void Edid_ParsingVendSpec(struct rx_cap *pRXCap,
 	}
 
 	pos++;
-	dv->ieeeoui = dat[pos++];
-	dv->ieeeoui += dat[pos++] << 8;
-	dv->ieeeoui += dat[pos++] << 16;
-	if (dv->ieeeoui != DV_IEEE_OUI) {
-		dv->block_flag = ERROR_LENGTH;
+	ieeeoui = dat[pos++];
+	ieeeoui += dat[pos++] << 8;
+	ieeeoui += dat[pos++] << 16;
+
+/*HDR10+ use vsvdb*/
+	if (ieeeoui == HDR10_PLUS_IEEE_OUI) {
+		hdr10_plus->ieeeoui = ieeeoui;
+		hdr10_plus->application_version = dat[pos] & 0x3;
+		pos++;
 		return;
 	}
 
+	if (ieeeoui != DV_IEEE_OUI) {
+		dv->block_flag = ERROR_LENGTH;
+		return;
+	}
+	dv->ieeeoui = ieeeoui;
 	dv->ver = (dat[pos] >> 5) & 0x7;
 	/* Refer to DV 2.9 Page 27 */
 	if (dv->ver == 0) {
@@ -1895,12 +1909,13 @@ next:
 static void hdrinfo_to_vinfo(struct vinfo_s *info, struct rx_cap *pRXCap)
 {
 	unsigned int  k, l;
-
+	/*static hdr*/
 	info->hdr_info.hdr_support =
 		(pRXCap->hdr_sup_eotf_sdr << 0) |
 		(pRXCap->hdr_sup_eotf_hdr << 1) |
 		(pRXCap->hdr_sup_eotf_smpte_st_2084 << 2) |
 		(pRXCap->hdr_sup_eotf_hlg << 3);
+	/*dynamic hdr*/
 	for (l = 0; l < 4; l++) {
 		if (pRXCap->hdr_dynamic_info[l].type == 0) {
 			memset(&info->hdr_info.dynamic_info[l],
@@ -1918,6 +1933,10 @@ static void hdrinfo_to_vinfo(struct vinfo_s *info, struct rx_cap *pRXCap)
 				pRXCap->hdr_dynamic_info[l].optional_fields[k];
 		}
 	}
+	/*hdr 10+*/
+	memcpy(&(info->hdr_info.hdr10plus_info),
+		&(pRXCap->hdr10plus_info), sizeof(struct hdr10_plus_info));
+
 	info->hdr_info.colorimetry_support =
 		pRXCap->colorimetry_data;
 	info->hdr_info.lumi_max = pRXCap->hdr_lum_max;

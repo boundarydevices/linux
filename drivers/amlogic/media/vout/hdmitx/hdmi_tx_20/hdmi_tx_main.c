@@ -73,7 +73,10 @@ static void hdmitx_get_edid(struct hdmitx_dev *hdev);
 static void hdmitx_set_drm_pkt(struct master_display_info_s *data);
 static void hdmitx_set_vsif_pkt(enum eotf_type type, enum mode_type
 	tunnel_mode, struct dv_vsif_para *data);
-static void hdmitx_set_emp_pkt(void);
+static void hdmitx_set_hdr10plus_pkt(unsigned int flag,
+	struct hdr10plus_para *data);
+static void hdmitx_set_emp_pkt(unsigned char *data,
+	unsigned int type, unsigned int size);
 static int check_fbc_special(unsigned char *edid_dat);
 static struct vinfo_s *hdmitx_get_current_vinfo(void);
 
@@ -86,6 +89,8 @@ struct vout_device_s hdmitx_vdev = {
 	.dv_info = &(hdmitx_device.RXCap.dv_info),
 	.fresh_tx_hdr_pkt = hdmitx_set_drm_pkt,
 	.fresh_tx_vsif_pkt = hdmitx_set_vsif_pkt,
+	.fresh_tx_hdr10plus_pkt = hdmitx_set_hdr10plus_pkt,
+	.fresh_tx_emp_pkt = hdmitx_set_emp_pkt,
 };
 
 struct hdmi_config_platform_data *hdmi_pdata;
@@ -392,11 +397,12 @@ static void hdmi_physcial_size_update(struct hdmitx_dev *hdev)
 static void hdrinfo_to_vinfo(struct vinfo_s *info, struct hdmitx_dev *hdev)
 {
 	unsigned int i, j;
-
+	/*static hdr*/
 	info->hdr_info.hdr_support = (hdev->RXCap.hdr_sup_eotf_sdr << 0)
 			| (hdev->RXCap.hdr_sup_eotf_hdr << 1)
 			| (hdev->RXCap.hdr_sup_eotf_smpte_st_2084 << 2)
 			| (hdev->RXCap.hdr_sup_eotf_hlg << 3);
+	/*dynamic hdr*/
 	for (i = 0; i < 4; i++) {
 		if (hdev->RXCap.hdr_dynamic_info[i].type == 0) {
 			memset(&info->hdr_info.dynamic_info[i],
@@ -414,6 +420,10 @@ static void hdrinfo_to_vinfo(struct vinfo_s *info, struct hdmitx_dev *hdev)
 			info->hdr_info.dynamic_info[i].optional_fields[j] =
 			hdev->RXCap.hdr_dynamic_info[i].optional_fields[j];
 	}
+	/*hdr 10+*/
+	memcpy(&(info->hdr_info.hdr10plus_info),
+		&(hdev->RXCap.hdr10plus_info), sizeof(struct hdr10_plus_info));
+
 	info->hdr_info.colorimetry_support =
 		hdev->RXCap.colorimetry_data;
 	info->hdr_info.lumi_max = hdev->RXCap.hdr_lum_max;
@@ -1516,34 +1526,173 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		}
 	}
 }
+static void hdmitx_set_hdr10plus_pkt(unsigned int flag,
+	struct hdr10plus_para *data)
+{
+	struct hdmitx_dev *hdev = &hdmitx_device;
+	unsigned char VEN_HB[3] = {0x81, 0x01, 0x1b};
+	unsigned char VEN_DB[27] = {0x00};
 
-static void hdmitx_set_emp_pkt(void)
+	if ((!data) || (!flag)) {
+		hdev->HWOp.SetPacket(HDMI_PACKET_VEND, NULL, NULL);
+		hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+			CLR_AVI_BT2020);
+		return;
+	}
+
+	VEN_DB[0] = 0x8b;
+	VEN_DB[1] = 0x84;
+	VEN_DB[2] = 0x90;
+
+	VEN_DB[3] = ((data->application_version & 0x3) << 6) |
+		 ((data->targeted_max_lum & 0x1f) << 1);
+	VEN_DB[4] = data->average_maxrgb;
+	VEN_DB[5] = data->distribution_values[0];
+	VEN_DB[6] = data->distribution_values[1];
+	VEN_DB[7] = data->distribution_values[2];
+	VEN_DB[8] = data->distribution_values[3];
+	VEN_DB[9] = data->distribution_values[4];
+	VEN_DB[10] = data->distribution_values[5];
+	VEN_DB[11] = data->distribution_values[6];
+	VEN_DB[12] = data->distribution_values[7];
+	VEN_DB[13] = data->distribution_values[8];
+	VEN_DB[14] = ((data->num_bezier_curve_anchors & 0xf) << 4) |
+		((data->knee_point_x >> 6) & 0xf);
+	VEN_DB[15] = ((data->knee_point_x & 0x3f) << 2) |
+		((data->knee_point_y >> 8) & 0x3);
+	VEN_DB[16] = data->knee_point_y  & 0xff;
+	VEN_DB[17] = data->bezier_curve_anchors[0];
+	VEN_DB[18] = data->bezier_curve_anchors[1];
+	VEN_DB[19] = data->bezier_curve_anchors[2];
+	VEN_DB[20] = data->bezier_curve_anchors[3];
+	VEN_DB[21] = data->bezier_curve_anchors[4];
+	VEN_DB[22] = data->bezier_curve_anchors[5];
+	VEN_DB[23] = data->bezier_curve_anchors[6];
+	VEN_DB[24] = data->bezier_curve_anchors[7];
+	VEN_DB[25] = data->bezier_curve_anchors[8];
+	VEN_DB[26] = ((data->graphics_overlay_flag & 0x1) << 7)|
+		((data->no_delay_flag & 0x1) << 6);
+
+	hdev->HWOp.SetPacket(HDMI_PACKET_VEND, VEN_DB, VEN_HB);
+	hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020,
+			SET_AVI_BT2020);
+
+}
+
+#define  EMP_FIRST 0x80
+#define  EMP_LAST 0x40
+static void hdmitx_set_emp_pkt(unsigned char *data, unsigned int type,
+	unsigned int size)
 {
 	unsigned int number;
+	unsigned int remainder;
 	unsigned char *virt_ptr;
 	unsigned char *virt_ptr_align32bit;
 	unsigned long phys_ptr;
 	unsigned int i;
 	struct hdmitx_dev *hdev = &hdmitx_device;
-/*******this data is used to test*********/
-	unsigned char EMP[64] = {0x81, 0x01, 0x18, 0x57,
-		0x03, 0x0c, 0x30, 0x0, 0x0, 0x0};
-	number = 2;
+	unsigned int DS_Type = 0;
+	unsigned char AFR = 0;
+	unsigned char VFR = 0;
+	unsigned char Sync = 0;
+	unsigned char  New = 0;
+	unsigned char  End = 0;
+	unsigned int Organzation_ID = 0;
+	unsigned int Data_Set_Tag = 0;
+	unsigned int Data_Set_Lemgth = 0;
 
-/************************************/
 	if (hdmitx_device.chip_type < MESON_CPU_ID_G12A) {
 		pr_info("this chip doesn't support emp function\n");
 		return;
 	}
+
+	if (!data) {
+		pr_info("the data is null\n");
+		return;
+	}
+	if (size <= 21) {
+		number = 1;
+		remainder = size;
+	} else {
+		number = ((size-21)/28) + 2;
+		remainder = (size - 21) % 28;
+	}
+
 	virt_ptr = kzalloc(sizeof(unsigned char)*(number + 0x1f),
 		GFP_KERNEL);
+	if (virt_ptr == NULL)
+		return;
 	pr_info("emp_pkt virt_ptr: %p\n", virt_ptr);
 	virt_ptr_align32bit = (unsigned char *)
 		((((unsigned long)virt_ptr) + 0x1f) & (~0x1f));
 	pr_info("emp_pkt virt_ptr_align32bit: %p\n", virt_ptr_align32bit);
 
-	for (i = 0; i < number * 32; i++)
-		virt_ptr_align32bit[i]  = EMP[i];
+	memset(virt_ptr_align32bit, 0, sizeof(unsigned char)*(number + 0x1f));
+
+	switch (type) {
+	case VENDOR_SPECIFIC_EM_DATA:
+		break;
+	case COMPRESS_VIDEO_TRAMSPORT:
+		break;
+	case HDR_DYNAMIC_METADATA:
+			DS_Type = 1;
+			Sync = 1;
+			VFR = 1;
+			AFR = 0;
+			New = 0x1; /*todo*/
+			End = 0x1; /*todo*/
+			Organzation_ID = 2;
+		break;
+	case VIDEO_TIMING_EXTENDED:
+		break;
+	default:
+		break;
+	}
+
+	for (i = 0; i < number; i++) {
+		/*HB[0]-[2]*/
+		virt_ptr_align32bit[i * 32 + 0] = 0x7F;
+		if (i == 0)
+			virt_ptr_align32bit[i * 32 + 1] |=  EMP_FIRST;
+		if (i == number)
+			virt_ptr_align32bit[i * 32 + 1] |= EMP_LAST;
+		virt_ptr_align32bit[i * 32 + 2] = number;
+		/*PB[0]-[6]*/
+		if (i == 0) {
+			virt_ptr_align32bit[3] = (New << 7) | (End << 6) |
+				(DS_Type << 4) | (AFR << 3) |
+				(VFR << 2) | (Sync << 1);
+			virt_ptr_align32bit[4] = 0;/*Rsvd*/
+			virt_ptr_align32bit[5] = Organzation_ID;
+			virt_ptr_align32bit[6] = (Data_Set_Tag >> 8) & 0xFF;
+			virt_ptr_align32bit[7] = Data_Set_Tag & 0xFF;
+			virt_ptr_align32bit[8] = (Data_Set_Lemgth >> 8)
+				& 0xFF;
+			virt_ptr_align32bit[9] = Data_Set_Lemgth & 0xFF;
+		}
+		if (number == 1) {
+			memcpy(&virt_ptr_align32bit[10], &data[0],
+				sizeof(unsigned char) * remainder);
+		} else {
+			if ((i == 0)) {
+			/*MD: first package need PB[7]-[27]*/
+				memcpy(&virt_ptr_align32bit[10], &data[0],
+					sizeof(unsigned char) * 21);
+			} else if (i != number) {
+			/*MD: following package need PB[0]-[27]*/
+				memcpy(&virt_ptr_align32bit[i * 32 + 10],
+					&data[(i - 1) * 28 + 21],
+					sizeof(unsigned char) * 28);
+			} else {
+			/*MD: the last package need PB[0] to end */
+				memcpy(&virt_ptr_align32bit[0],
+					&data[(i - 1) * 28 + 21],
+					sizeof(unsigned char) * remainder);
+			}
+		}
+			/*PB[28]*/
+		virt_ptr_align32bit[i * 32 + 31] = 0;
+	}
 
 	phys_ptr = virt_to_phys(virt_ptr_align32bit);
 	pr_info("emp_pkt phys_ptr: %lx\n", phys_ptr);
@@ -1760,6 +1909,7 @@ static ssize_t store_config(struct device *dev,
 {
 	int ret = 0;
 	struct master_display_info_s data = {0};
+	struct hdr10plus_para hdr_data = {0x1, 0x2, 0x3};
 
 	pr_info("hdmitx: config: %s\n", buf);
 
@@ -1812,7 +1962,9 @@ static ssize_t store_config(struct device *dev,
 		hdmitx_set_vsif_pkt(buf[4] - '0', buf[5] == '1', NULL);
 	else if (strncmp(buf, "emp", 3) == 0) {
 		if (hdmitx_device.chip_type >= MESON_CPU_ID_G12A)
-			hdmitx_set_emp_pkt();
+			hdmitx_set_emp_pkt(NULL, 1, 1);
+	} else if (strncmp(buf, "hdr10+", 6) == 0) {
+		hdmitx_set_hdr10plus_pkt(1, &hdr_data);
 	}
 	return count;
 }
@@ -3371,6 +3523,7 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	}
 	/*after plugout, DV mode can't be supported*/
 	hdmitx_set_vsif_pkt(0, 0, NULL);
+	hdmitx_set_hdr10plus_pkt(0, NULL);
 	hdev->ready = 0;
 	if (hdev->repeater_tx)
 		rx_repeat_hpd_state(0);

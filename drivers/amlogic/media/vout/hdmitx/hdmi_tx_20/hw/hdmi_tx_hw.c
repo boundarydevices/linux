@@ -2007,6 +2007,13 @@ static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB)
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD4, DB[7]);
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD5, DB[8]);
 		}
+		/*set hdr 10+ vsif data information*/
+		if ((DB[0] == 0x8b) && (DB[1] == 0x84) && (DB[2] == 0x90)) {
+			for (i = 0; i < 23; i++)
+				hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD1 + i,
+					DB[4 + i]);
+		}
+
 		/* Enable VSI packet */
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 1, 3, 1);
 		hdmitx_wr_reg(HDMITX_DWC_FC_DATAUTO1, 0);

@@ -53,6 +53,12 @@ enum vout_fr_adj_type_e {
 	VOUT_FR_ADJ_MAX,
 };
 
+/*emp : extended metadata type*/
+#define VENDOR_SPECIFIC_EM_DATA 0x0
+#define COMPRESS_VIDEO_TRAMSPORT 0x1
+#define HDR_DYNAMIC_METADATA 0x2
+#define VIDEO_TIMING_EXTENDED 0x3
+
 #define SUPPORT_2020	0x01
 
 /* master_display_info for display device */
@@ -79,6 +85,12 @@ struct hdr_dynamic {
 	unsigned char optional_fields[28];
 };
 
+struct hdr10_plus_info {
+	uint32_t ieeeoui;
+	uint8_t length;
+	uint8_t application_version;
+};
+
 struct hdr_info {
 /* RX EDID hdr support types */
 	u32 hdr_support;
@@ -91,12 +103,25 @@ struct hdr_info {
  *is zero instead of inexistence
  */
 	struct hdr_dynamic dynamic_info[4];
+	struct hdr10_plus_info hdr10plus_info;
 /*bit7:BT2020RGB    bit6:BT2020YCC bit5:BT2020cYCC bit4:adobeRGB*/
 /*bit3:adobeYCC601 bit2:sYCC601     bit1:xvYCC709    bit0:xvYCC601*/
 	u8 colorimetry_support; /* RX EDID colorimetry support types */
 	u32 lumi_max; /* RX EDID Lumi Max value */
 	u32 lumi_avg; /* RX EDID Lumi Avg value */
 	u32 lumi_min; /* RX EDID Lumi Min value */
+};
+struct hdr10plus_para {
+	uint8_t application_version;
+	uint8_t targeted_max_lum;
+	uint8_t average_maxrgb;
+	uint8_t distribution_values[9];
+	uint8_t num_bezier_curve_anchors;
+	uint32_t knee_point_x;
+	uint32_t knee_point_y;
+	uint8_t bezier_curve_anchors[9];
+	uint8_t graphics_overlay_flag;
+	uint8_t no_delay_flag;
 };
 
 enum eotf_type {
@@ -116,6 +141,7 @@ enum mode_type {
 };
 
 #define DV_IEEE_OUI	0x00D046
+#define HDR10_PLUS_IEEE_OUI	0x90848B
 
 /* Dolby Version VSIF  parameter*/
 struct dv_vsif_para {
@@ -184,7 +210,11 @@ struct vout_device_s {
 	const struct dv_info *dv_info;
 	void (*fresh_tx_hdr_pkt)(struct master_display_info_s *data);
 	void (*fresh_tx_vsif_pkt)(enum eotf_type type,
-	enum mode_type tunnel_mode, struct dv_vsif_para *data);
+		enum mode_type tunnel_mode, struct dv_vsif_para *data);
+	void (*fresh_tx_hdr10plus_pkt)(unsigned int flag,
+		struct hdr10plus_para *data);
+	void  (*fresh_tx_emp_pkt)(unsigned char *data, unsigned int type,
+	unsigned int size);
 };
 
 struct vinfo_base_s {

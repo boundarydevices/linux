@@ -27,7 +27,7 @@
 #include <linux/pinctrl/consumer.h>
 
 /* HDMITX driver version */
-#define HDMITX_VER "20180808"
+#define HDMITX_VER "20181019"
 
 /* chip type */
 #define MESON_CPU_ID_M8B		0
@@ -112,6 +112,7 @@ struct rx_cap {
 	unsigned char hdr_lum_avg;
 	unsigned char hdr_lum_min;
 	struct hdr_dynamic_struct hdr_dynamic_info[4];
+	struct hdr10_plus_info hdr10plus_info;
 	unsigned char IDManufacturerName[4];
 	unsigned char IDProductCode[2];
 	unsigned char IDSerialNumber[4];
