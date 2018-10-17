@@ -63,6 +63,13 @@
 	};
 }; /* end of / */
 
+&spifc {
+	status = "disabled";
+	spi-nor@0 {
+		cs_gpios = <&gpio BOOT_13 GPIO_ACTIVE_HIGH>;
+	};
+};
+
 &spicc0 {
 	status = "okay";
 	pinctrl-names = "default";

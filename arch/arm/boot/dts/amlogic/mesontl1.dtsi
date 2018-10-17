@@ -793,6 +793,24 @@
 			 */
 		};
 	};
+
+	spifc: spifc@ffd14000 {
+		compatible = "amlogic,aml-spi-nor";
+		status = "disabled";
+
+		reg = <0x0 0xffd14000 0x0 0x80>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&spifc_all_pins>;
+		clock-names = "core";
+		clocks = <&clkc CLKID_CLK81>;
+
+		spi-nor@0 {
+			compatible = "jedec,spi-nor";
+			spifc-frequency = <40000000>;
+			read-capability = <4>;/* dual read 1_1_2 */
+			spifc-io-width = <4>;
+		};
+	};
 }; /* end of / */
 
 &pinctrl_aobus {
@@ -1060,6 +1078,45 @@
 			input-enable;
 			bias-pull-up;
 			drive-strength = <3>;
+		};
+	};
+
+	spifc_cs_pin:spifc_cs_pin {
+		mux {
+			groups = "nor_cs";
+			function = "nor";
+			bias-pull-up;
+		};
+	};
+
+	spifc_pulldown: spifc_pulldown {
+		mux {
+			groups = "nor_d",
+				"nor_q",
+				"nor_c";
+			function = "nor";
+			bias-pull-down;
+		};
+	};
+
+	spifc_pullup: spifc_pullup {
+		mux {
+			groups = "nor_cs";
+			function = "nor";
+			bias-pull-up;
+		};
+	};
+
+	spifc_all_pins: spifc_all_pins {
+		mux {
+			groups =  "nor_d",
+				"nor_q",
+				"nor_c",
+				"nor_hold",
+				"nor_wp";
+			function = "nor";
+			input-enable;
+			bias-pull-down;
 		};
 	};
 
