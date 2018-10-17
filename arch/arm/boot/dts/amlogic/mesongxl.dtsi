@@ -103,7 +103,7 @@
 */
 			SYSTEM_SLEEP_0: system-sleep-0 {
 				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x0010000>;
+				arm,psci-suspend-param = <0x0020000>;
 				local-timer-stop;
 				entry-latency-us = <0x3fffffff>;
 				exit-latency-us = <0x40000000>;
