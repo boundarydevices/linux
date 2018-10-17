@@ -394,6 +394,9 @@ END(vectors)
 	mov	x0, sp
 	mov	x1, #\reason
 	mrs	x2, esr_el1
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+	mrs	x3, far_el1
+#endif
 	b	bad_mode
 	.endm
 
@@ -516,6 +519,9 @@ el1_inv:
 	mov	x0, sp
 	mov	x2, x1
 	mov	x1, #BAD_SYNC
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+	mrs	x3, far_el1
+#endif
 	b	bad_mode
 ENDPROC(el1_sync)
 

@@ -275,6 +275,13 @@ void show_all_pfn(struct task_struct *task, struct pt_regs *regs)
 	else
 		sprintf(s1, "--------");
 	pr_info("sp :  %016llx  %s\n", regs->sp, s1);
+
+	pfn1 = get_user_pfn(task->mm, regs->unused);
+	if (pfn1 >= 0)
+		sprintf(s1, "%8lx", pfn1);
+	else
+		sprintf(s1, "--------");
+	pr_info("unused :  %016llx  %s\n", regs->unused, s1);
 }
 #endif /* CONFIG_AMLOGIC_USER_FAULT */
 

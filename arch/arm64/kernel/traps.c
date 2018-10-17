@@ -639,7 +639,12 @@ const char *esr_get_class_string(u32 esr)
  * bad_mode handles the impossible case in the exception vector. This is always
  * fatal.
  */
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+asmlinkage void bad_mode(struct pt_regs *regs, int reason, unsigned int esr,
+			 unsigned long far)
+#else
 asmlinkage void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
+#endif
 {
 	console_verbose();
 
@@ -647,6 +652,11 @@ asmlinkage void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
 		handler[reason], smp_processor_id(), esr,
 		esr_get_class_string(esr));
 
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+	regs->unused = far;
+	pr_crit("FAR:%lx\n", far);
+	show_all_pfn(current, regs);
+#endif /* CONFIG_AMLOGIC_USER_FAULT */
 	die("Oops - bad mode", regs, 0);
 	local_irq_disable();
 	panic("bad mode");
