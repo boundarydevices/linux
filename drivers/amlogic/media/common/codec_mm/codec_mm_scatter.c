@@ -2232,7 +2232,7 @@ int codec_mm_scatter_mgt_delay_free_swith(
 		smgt->delay_free_timeout_jiffies64 =
 			get_jiffies_64() + 10000 * HZ/1000;
 		codec_mm_schedule_delay_work(smgt, 0, 1);/*start cache*/
-		while (smgt->cached_pages < smgt->force_cache_page_cnt) {
+		while (smgt->total_page_num < smgt->force_cache_page_cnt) {
 			if (smgt->cache_sc &&
 				(smgt->cached_pages >=
 					smgt->cache_sc->page_max_cnt - 100)) {
@@ -2282,7 +2282,7 @@ static void codec_mm_scatter_cache_manage(
 				complete(&smgt->complete);
 		} else if ((smgt->cached_pages < smgt->keep_size_PAGE) ||
 			(smgt->force_cache_on &&/*on star cache*/
-			(smgt->cached_pages < smgt->force_cache_page_cnt))
+			(smgt->total_page_num < smgt->force_cache_page_cnt))
 		) {/*first 500ms ,alloc double.*/
 			mms = smgt->cache_sc;
 			if (mms) {
@@ -2566,7 +2566,7 @@ static int codec_mm_scatter_mgt_alloc_in(struct codec_mm_scatter_mgt **psmgt)
 	smgt->try_alloc_in_sys_page_cnt_max = MAX_SYS_BLOCK_PAGE;
 	smgt->try_alloc_in_sys_page_cnt = MAX_SYS_BLOCK_PAGE;
 	smgt->try_alloc_in_sys_page_cnt_min = MIN_SYS_BLOCK_PAGE;
-	smgt->reserved_block_mm_M = 64;
+	smgt->reserved_block_mm_M = 128;
 	smgt->keep_size_PAGE = 20 * SZ_1M >> PAGE_SHIFT;
 	smgt->alloc_from_cma_first = 1;
 	smgt->enable_slot_from_sys = 0;
