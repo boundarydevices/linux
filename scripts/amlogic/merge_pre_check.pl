@@ -5,6 +5,7 @@ my $top = ".";
 my $err_cnt = 0;
 my $k_v = 3;
 my $exit = 0;
+my $git_format_link="http://wiki-china.amlogic.com/Platform/Bootloader/Bootloader_commit_message_format";
 
 # Get Kernel Version
 
@@ -127,6 +128,94 @@ sub check_msg_49
 	}
 }
 
+sub check_msg_49_2
+{
+	my $msg = `git cat-file commit HEAD~0 | sed '1,/\^\$/d'`;
+
+	if( $msg !~ /^([\w]+:\s){1,2}.+(\s)\[[\d]\/[\d]\][\n][\n]/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: <module: message>\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	elsif( $msg =~ /(kernel)/i )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: Should be no 'kernel' in kernel commit message\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	else
+	{
+		$msg =~ s/^([\w]+:\s){1,2}.+(\S)[\n][\n]//;
+	}
+
+	if( $msg !~ /^PD\#.+(\S)[\n][\n]/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: <PD#XXXX>\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	else
+	{
+		$msg =~ s/^PD\#.+(\S)[\n][\n]//;
+	}
+
+	if( $msg !~ /^Problem:[\n](.+(\S)[\n])+[\n]/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: Problem:\n	detailed description\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	else
+	{
+		$msg =~ s/^Problem:[\n](.+(\S)[\n])+[\n]//;
+	}
+
+	if( $msg !~ /^Solution:[\n](.+(\S)[\n])+[\n]/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: Solution:\n	detailed description\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	else
+	{
+		$msg =~ s/^Solution:[\n](.+(\S)[\n])+[\n]//;
+	}
+
+	if( $msg !~ /^Verify:[\n](.+(\S)[\n])+[\n]/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: Verify:\n	detailed description\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	else
+	{
+		$msg =~ s/^Verify:[\n](.+(\S)[\n])+[\n]//;
+	}
+
+	if( $msg !~ /^Change-Id:\s[\w]+(\S)[\n]/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: <Change-Id: xxxxx>\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	else
+	{
+		$msg =~ s/^Change-Id:\s[\w]+(\S)[\n]//;
+	}
+
+	if( $msg !~ /^Signed-off-by:\s.+(\S)$/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: <Signed-off-by: xxxxx>\n";
+		$msg =~ s/.+(\S)[\n]+//;
+	}
+	else
+	{
+		$msg =~ s/^Signed-off-by:\s.+(\S)$//;
+	}
+}
+
 sub check_msg_314
 {
 	my $line = pop(@_);
@@ -206,16 +295,16 @@ sub check_commit_msg
 		}
 
 		check_msg_common($lnum, $line);
-		if ( $k_v >= 4)
-		{
-			check_msg_49($lnum, $line);
-		}
-		else
+		if ( $k_v < 4)
 		{
 			check_msg_314($lnum, $line);
 		}
 	}
 	close $FILE;
+	if ($k_v >= 4)
+	{
+		check_msg_49_2;
+	}
 }
 
 sub out_review
@@ -236,6 +325,7 @@ END
 		#close O;
 		$exit = 1;
 		print $out_msg;
+		print "Please refer to:\n	$git_format_link\n";
 	}
 	else
 	{
