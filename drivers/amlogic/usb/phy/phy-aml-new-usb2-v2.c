@@ -30,6 +30,7 @@
 #include "phy-aml-new-usb-v2.h"
 
 struct amlogic_usb_v2	*g_phy2_v2;
+#define TUNING_DISCONNECT_THRESHOLD 0x34
 
 void set_usb_phy_host_tuning(int port, int default_val)
 {
@@ -97,6 +98,8 @@ void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 	/* Recovery analog status */
 	writel(0, reg + 0x38);
 	writel(phy->pll_setting[5], reg + 0x34);
+
+	writel(TUNING_DISCONNECT_THRESHOLD, reg + 0xC);
 }
 
 static int amlogic_new_usb2_init(struct usb_phy *x)
