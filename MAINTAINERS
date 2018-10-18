@@ -14281,6 +14281,7 @@ F:      sound/soc/amlogic/meson/dmic.h
 AMLOGIC GPIO IRQ
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
 F:	drivers/amlogic/irqchip/*
+F:	drivers/amlogic/irqchip/irq-meson-gpio-double-edge.c
 F:	Documentation/devicetree/bindings/interrupt-controller/amlogic,meson-gpio-intc.txt
 
 AMLOGIC PINCTRL DRIVER
