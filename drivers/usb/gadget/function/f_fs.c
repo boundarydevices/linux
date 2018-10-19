@@ -848,9 +848,7 @@ static void ffs_user_copy_worker(struct work_struct *work)
 
 	if (io_data->read)
 		kfree(io_data->to_free);
-#ifndef CONFIG_AMLOGIC_USB
 	kfree(io_data->buf);
-#endif
 	kfree(io_data);
 }
 
@@ -954,6 +952,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 #ifdef CONFIG_AMLOGIC_USB
 	struct ffs_ep *ep = epfile->ep;
 	struct ffs_data_buffer *buffer = NULL;
+	int data_flag = -1;
 #else
 	struct ffs_ep *ep;
 #endif
@@ -1035,6 +1034,15 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 			goto error_mutex;
 		}
 #else
+		if (io_data->aio) {
+			spin_unlock_irq(&epfile->ffs->eps_lock);
+			data = kmalloc(data_len, GFP_KERNEL);
+			data_flag = 1;
+			if (unlikely(!data)) {
+				ret = -ENOMEM;
+				goto error_mutex;
+			}
+		} else {
 		/* Fire the request */
 		/*
 		 * Avoid kernel panic caused by race condition. For example,
@@ -1052,9 +1060,9 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		 * To avoid this, during FunctionFS mount, we allocated the
 		 * data buffer for requests. And the memory resources has
 		 * been released in kill_sb.
-		 *reboot adb disconnect,so buffer aways used assign_ffs_buffer.
 		 */
 			buffer = assign_ffs_buffer(epfile->ffs);
+			data_flag = -1;
 			if (unlikely(!buffer)) {
 				ret = -ENOMEM;
 				spin_unlock_irq(&epfile->ffs->eps_lock);
@@ -1063,6 +1071,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 
 			data = buffer->data_ep;
 			spin_unlock_irq(&epfile->ffs->eps_lock);
+		}
 #endif
 
 		if (!io_data->read &&
@@ -1168,8 +1177,13 @@ error_mutex:
 	mutex_unlock(&epfile->mutex);
 error:
 #ifdef CONFIG_AMLOGIC_USB
-	if (buffer)
-		release_ffs_buffer(epfile->ffs, buffer);
+	if (data_flag > 0) {
+		kfree(data);
+		data = NULL;
+	} else {
+		if (buffer)
+			release_ffs_buffer(epfile->ffs, buffer);
+	}
 #else
 	kfree(data);
 #endif
