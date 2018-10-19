@@ -388,6 +388,38 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 					fh->o_paddr, fh->o_len);
 		mutex_unlock(&fh->gdev->d_mutext);
 	break;
+	case GDC_HANDLE:
+		ret = copy_from_user(gs, argp, sizeof(*gs));
+		if (ret < 0)
+			LOG(LOG_ERR, "copy from user failed\n");
+
+		gs->buffer_addr = fh->o_paddr;
+		gs->buffer_size = fh->o_len;
+
+		gs->base_gdc = 0;
+		gs->current_addr = gs->buffer_addr;
+
+		gc->config_addr = fh->c_paddr;
+
+		gs->fh = fh;
+
+		mutex_lock(&fh->gdev->d_mutext);
+		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
+					fh->c_paddr, fh->c_len);
+		ret = gdc_run(gs);
+		if (ret < 0)
+			LOG(LOG_ERR, "gdc process failed ret = %ld\n", ret);
+
+		ret = wait_for_completion_timeout(&fh->gdev->d_com,
+						msecs_to_jiffies(40));
+		if (ret == 0)
+			LOG(LOG_ERR, "gdc timeout\n");
+
+		gdc_stop(gs);
+		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
+					fh->o_paddr, fh->o_len);
+		mutex_unlock(&fh->gdev->d_mutext);
+	break;
 	case GDC_REQUEST_BUFF:
 		ret = copy_from_user(&buf_cfg, argp, sizeof(buf_cfg));
 		if (ret < 0 || buf_cfg.type >= GDC_BUFF_TYPE_MAX) {

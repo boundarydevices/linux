@@ -86,6 +86,7 @@ struct gdc_settings {
 #define GDC_PROCESS_NO_BLOCK	_IOW(GDC_IOC_MAGIC, 0x01, struct gdc_settings)
 #define GDC_RUN	_IOW(GDC_IOC_MAGIC, 0x02, struct gdc_settings)
 #define GDC_REQUEST_BUFF _IOW(GDC_IOC_MAGIC, 0x03, struct gdc_settings)
+#define GDC_HANDLE _IOW(GDC_IOC_MAGIC, 0x04, struct gdc_settings)
 
 enum {
 	INPUT_BUFF_TYPE = 0x1000,
