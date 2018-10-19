@@ -174,7 +174,7 @@ static long get_user_pfn(struct mm_struct *mm, unsigned long addr)
 	long pfn = -1;
 	pgd_t *pgd;
 
-	if (!mm)
+	if (!mm || addr >= VMALLOC_START)
 		mm = &init_mm;
 
 	pgd = pgd_offset(mm, addr);
