@@ -353,6 +353,10 @@ static u32 hdmiin_frame_check_cnt;
 		CLEAR_VCBUS_REG_MASK(VPP_MISC + cur_dev->vpp_off, \
 		VPP_VD1_PREBLEND | VPP_VD2_PREBLEND|\
 		VPP_VD2_POSTBLEND | VPP_VD1_POSTBLEND); \
+		if (!legacy_vpp) { \
+			WRITE_VCBUS_REG( \
+			VD1_BLEND_SRC_CTRL + cur_dev->vpp_off, 0); \
+		} \
 		WRITE_VCBUS_REG(AFBC_ENABLE, 0);\
 		VIDEO_LAYER_OFF(); \
 		VD1_MEM_POWER_OFF(); \
@@ -368,6 +372,10 @@ static u32 hdmiin_frame_check_cnt;
 		CLEAR_VCBUS_REG_MASK(VPP_MISC + cur_dev->vpp_off, \
 		VPP_VD1_PREBLEND | VPP_VD2_PREBLEND|\
 		VPP_VD2_POSTBLEND | VPP_VD1_POSTBLEND); \
+		if (!legacy_vpp) { \
+			WRITE_VCBUS_REG( \
+			VD1_BLEND_SRC_CTRL + cur_dev->vpp_off, 0); \
+		} \
 		WRITE_VCBUS_REG(AFBC_ENABLE, 0);\
 		if (debug_flag & DEBUG_FLAG_BLACKOUT) {  \
 			pr_info("DisableVideoLayer_NoDelay()\n"); \
