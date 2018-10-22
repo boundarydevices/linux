@@ -52,7 +52,7 @@ static int aml_snd_read(u32 base_type, unsigned int reg, int *val)
 		ret = -1;
 	} else {
 		*val = aml_read_cbus(reg);
-		if (*val < 0) {
+		if (*val == -1) {
 			pr_err("read cbus reg %x error\n", reg);
 			return -1;
 		}
