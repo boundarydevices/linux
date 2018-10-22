@@ -683,19 +683,19 @@ static int aml_card_dais_parse_of(struct snd_soc_card *card)
 		init = NULL;
 		/* CPU sub-node */
 		cpu_node = of_parse_phandle(np, "cpu_list", i);
-		if (cpu_node < 0) {
+		if (!cpu_node) {
 			dev_err(dev, "parse aml sound card cpu list error\n");
 			return -EINVAL;
 		}
 		/* CODEC sub-node */
 		codec_node = of_parse_phandle(np, "codec_list", i);
-		if (codec_node < 0) {
+		if (!codec_node) {
 			dev_err(dev, "parse aml sound card codec list error\n");
 			return ret;
 		}
 		/* Platform sub-node */
 		plat_node = of_parse_phandle(np, "plat_list", i);
-		if (plat_node < 0) {
+		if (!plat_node) {
 			dev_err(dev,
 				"parse aml sound card platform list error\n");
 			return ret;

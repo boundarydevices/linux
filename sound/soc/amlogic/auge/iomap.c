@@ -29,7 +29,7 @@ static void __iomem *aml_snd_reg_map[IO_MAX];
 
 static int aml_snd_read(u32 base_type, unsigned int reg, unsigned int *val)
 {
-	if ((base_type >= IO_PDM_BUS) && (base_type < IO_MAX)) {
+	if (base_type < IO_MAX) {
 		*val = readl((aml_snd_reg_map[base_type] + (reg << 2)));
 
 		return 0;
@@ -41,7 +41,7 @@ static int aml_snd_read(u32 base_type, unsigned int reg, unsigned int *val)
 static void aml_snd_write(u32 base_type, unsigned int reg, unsigned int val)
 {
 
-	if ((base_type >= IO_PDM_BUS) && (base_type < IO_MAX)) {
+	if (base_type < IO_MAX) {
 		writel(val, (aml_snd_reg_map[base_type] + (reg << 2)));
 
 		return;
@@ -54,15 +54,16 @@ static void aml_snd_update_bits(u32 base_type,
 			unsigned int reg, unsigned int mask,
 			unsigned int val)
 {
-	if ((base_type >= IO_PDM_BUS) && (base_type < IO_MAX)) {
+	if (base_type < IO_MAX) {
 		unsigned int tmp, orig;
 
-		aml_snd_read(base_type, reg, &orig);
-		tmp = orig & ~mask;
-		tmp |= val & mask;
-		aml_snd_write(base_type, reg, tmp);
+		if (aml_snd_read(base_type, reg, &orig) == 0) {
+			tmp = orig & ~mask;
+			tmp |= val & mask;
+			aml_snd_write(base_type, reg, tmp);
 
-		return;
+			return;
+		}
 	}
 	pr_err("write snd reg %x error\n", reg);
 
