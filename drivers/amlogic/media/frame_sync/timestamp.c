@@ -116,6 +116,9 @@ EXPORT_SYMBOL(timestamp_apts_started);
 
 u32 timestamp_pcrscr_get(void)
 {
+	if (tsync_get_mode() == TSYNC_MODE_AMASTER)
+		return system_time;
+
 	if (tsdemux_pcrscr_valid_cb && tsdemux_pcrscr_valid_cb()) {
 		if (tsync_pcr_demux_pcr_used() == 0) {
 			return system_time;
