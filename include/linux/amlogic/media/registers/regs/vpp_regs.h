@@ -190,6 +190,9 @@
 #define VPP_OSD_SCALE_COEF 0x1dcd
 #define VPP_INT_LINE_NUM 0x1dce
 
+#define VPP_CLIP_MISC0 0x1dd9
+#define VPP_CLIP_MISC1 0x1dda
+
 #define VPP2_MISC 0x1e26
 #define VPP2_OFIFO_SIZE 0x1e27
 #define VPP2_INT_LINE_NUM 0x1e20
@@ -205,6 +208,8 @@
 #define SRSHARP1_SHARP_PK_NR_ENABLE 0x32a7
 #define SRSHARP1_SHARP_DNLP_EN 0x32c5
 #define SRSHARP1_SHARP_SR2_CTRL 0x32d7
+
+#define VPP_POST_MATRIX_SAT 0x32c1
 
 /* g12a vd2 pps */
 #define VD2_SCALE_COEF_IDX 0x3943

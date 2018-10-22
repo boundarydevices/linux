@@ -97,5 +97,6 @@ struct cvbsregs_set_t {
 	const struct reg_s *enc_reg_setting;
 };
 
+extern void amvecm_clip_range_limit(bool limit_en);
 
 #endif

@@ -4133,6 +4133,21 @@ void amvecm_sharpness_enable(int sel)
 	}
 }
 
+void amvecm_clip_range_limit(bool limit_en)
+{
+	/*fix mbox av out flicker black dot*/
+	if (limit_en) {
+		/*cvbs output 16-235 16-240 16-240*/
+		WRITE_VPP_REG(VPP_CLIP_MISC0, 0x3acf03c0);
+		WRITE_VPP_REG(VPP_CLIP_MISC1, 0x4010040);
+	} else {
+		/*retore for other mode*/
+		WRITE_VPP_REG(VPP_CLIP_MISC0, 0x3fffffff);
+		WRITE_VPP_REG(VPP_CLIP_MISC1, 0x0);
+	}
+}
+EXPORT_SYMBOL(amvecm_clip_range_limit);
+
 static void amvecm_pq_enable(int enable)
 {
 	if (enable) {

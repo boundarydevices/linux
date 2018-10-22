@@ -10094,10 +10094,6 @@ static int __init video_early_init(void)
 			VD2_IF0_LUMA_FIFO_SIZE + cur_dev->viu_off, 0x180);
 	}
 
-	 /*fix S905 av out flicker black dot*/
-	if (is_meson_gxbb_cpu())
-		SET_VCBUS_REG_MASK(VPP_MISC, VPP_OUT_SATURATE);
-
 #if 0	/* if (0 >= VMODE_MAX) //DEBUG_TMP */
 		CLEAR_VCBUS_REG_MASK(VPP_VSC_PHASE_CTRL,
 				     VPP_PHASECTL_TYPE_INTERLACE);
