@@ -243,9 +243,16 @@ enum vpp_matrix_csc_e {
 	VPP_MATRIX_BT2020YUV_BT2020RGB = 0x40,
 	VPP_MATRIX_BT2020RGB_709RGB,
 	VPP_MATRIX_BT2020RGB_CUSRGB,
+	VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC = 0x50,
 	VPP_MATRIX_DEFAULT_CSCTYPE = 0xffff,
 };
 
+enum vpp_transfer_characteristic_e {
+	VPP_ST_NULL = 0,
+	VPP_ST709 = 0x1,
+	VPP_ST2084 = 0x2,
+	VPP_ST2094_40 = 0x4,
+};
 
 enum ve_source_input_e {
 	SOURCE_INVALID = -1,

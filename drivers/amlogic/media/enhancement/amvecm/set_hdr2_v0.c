@@ -1153,8 +1153,7 @@ void set_hdr_matrix(
 			} else
 				adpscl_shift[i] = adp_scal_shift;
 
-			if (hdr_mtx_param->mtx_ogain)
-				adpscl_ys_coef[i] =
+			adpscl_ys_coef[i] =
 					1 << adp_scal_shift;
 			adpscl_beta_s[i] = 0;
 			adpscl_beta[i] = 0;

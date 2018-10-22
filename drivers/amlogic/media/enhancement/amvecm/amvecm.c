@@ -59,6 +59,7 @@
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 #include "dnlp_cal.h"
 #include "vlock.h"
+#include "hdr/am_hdr10_plus.h"
 
 #define pr_amvecm_dbg(fmt, args...)\
 	do {\
@@ -3239,7 +3240,26 @@ static ssize_t amvecm_hdr_dbg_store(struct class *cla,
 			struct class_attribute *attr,
 			const char *buf, size_t count)
 {
-	return 0;
+	long val = 0;
+	char *buf_orig, *parm[5] = {NULL};
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	parse_param_amvecm(buf_orig, (char **)&parm);
+
+	if (!strncmp(parm[0], "hdr_dbg", 10)) {
+		if (kstrtoul(parm[1], 16, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		debug_hdr = val;
+		pr_info("debug_hdr=0x%x\n", debug_hdr);
+	} else
+		pr_info("error cmd\n");
+
+	kfree(buf_orig);
+	return count;
 }
 
 static ssize_t amvecm_hdr_reg_show(struct class *cla,

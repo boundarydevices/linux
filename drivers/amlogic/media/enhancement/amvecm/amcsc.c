@@ -39,6 +39,7 @@
 #include "amcsc.h"
 #include "set_hdr2_v0.h"
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
+#include "hdr/am_hdr10_plus.h"
 
 #define pr_csc(fmt, args...)\
 	do {\
@@ -322,6 +323,12 @@ static uint hdr_process_mode = 1; /* 0: hdr->hdr, 1:hdr->sdr */
 static uint cur_hdr_process_mode = 2; /* 0: hdr->hdr, 1:hdr->sdr */
 module_param(hdr_process_mode, uint, 0444);
 MODULE_PARM_DESC(hdr_process_mode, "\n current hdr_process_mode\n");
+
+static uint hdr10_plus_process_mode; /* 0: bypass, 1:hdr10p->sdr */
+static uint cur_hdr10_plus_process_mode = 2; /* 0: bypass, 1:hdr10p->sdr */
+
+/* 0: tx don't support hdr10+, 1: tx support hdr10+*/
+static uint tx_hdr10_plus_support;
 
 /* 0: hlg->hlg, 1:hlg->hdr*/
 static uint hlg_process_mode = 1;
@@ -3361,6 +3368,7 @@ static struct vframe_master_display_colour_s cur_master_display_colour = {
 #define SIG_HLG_SUPPORT	0x100
 #define SIG_OP_CHG	0x200
 #define SIG_SRC_OUTPUT_CHG	0x400/*for box*/
+#define SIG_HDR10_PLUS_MODE	0x800
 
 unsigned int pre_vd1_mtx_sel = VPP_MATRIX_NULL;
 module_param(pre_vd1_mtx_sel, uint, 0664);
@@ -3606,6 +3614,12 @@ int signal_type_changed(struct vframe_s *vf, struct vinfo_s *vinfo)
 		cur_hlg_support = vinfo->hdr_info.hdr_support & 0x8;
 	}
 
+	if (cur_hdr10_plus_process_mode != hdr10_plus_process_mode) {
+		pr_csc("HDR10 plus mode changed.\n");
+		change_flag |= SIG_HDR10_PLUS_MODE;
+		cur_hdr10_plus_process_mode = hdr10_plus_process_mode;
+	}
+
 	if ((cur_eye_protect_mode != wb_val[0]) ||
 		(cur_eye_protect_mode == 1)) {
 		pr_csc(" eye protect mode changed.\n");
@@ -3638,7 +3652,7 @@ enum vpp_matrix_csc_e get_csc_type(void)
 		else
 			csc_type = VPP_MATRIX_YUV601F_RGB;
 	} else if ((signal_color_primaries == 9) ||
-			(signal_transfer_characteristic == 16)) {
+			(signal_transfer_characteristic >= 14)) {
 		if (signal_transfer_characteristic == 16) {
 			/* smpte st-2084 */
 			if (signal_color_primaries != 9)
@@ -3659,6 +3673,9 @@ enum vpp_matrix_csc_e get_csc_type(void)
 			/* bt2020-12 */
 			pr_csc("\tWARNING: HLG!!!\n");
 			csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
+		} else if (signal_transfer_characteristic == 0x30) {
+			pr_csc("\tWARNING: HDR10 PLUS!!!\n");
+			csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC;
 		} else {
 			/* unknown transfer characteristic */
 			pr_csc("\tWARNING: unknown HDR!!!\n");
@@ -5831,24 +5848,16 @@ static int vpp_eye_protection_process(
 	return 0;
 }
 
-static int vpp_matrix_update(
-	struct vframe_s *vf, struct vinfo_s *vinfo, int flags)
+static void hdr_support_process(struct vinfo_s *vinfo)
 {
-	enum vpp_matrix_csc_e csc_type = VPP_MATRIX_NULL;
-	int signal_change_flag = 0;
-	struct vframe_master_display_colour_s *p = &cur_master_display_colour;
-	struct master_display_info_s send_info;
-	int need_adjust_contrast_saturation = 0;
-	int hdmi_scs_type_changed = 0;
-	struct vout_device_s *vdev = NULL;
-
-	if (vinfo == NULL)
-		return 0;
-	if (vinfo->vout_device)
-		vdev = vinfo->vout_device;
-	/* Tx hdr information */
-	memcpy(&receiver_hdr_info, &vinfo->hdr_info,
-			sizeof(struct hdr_info));
+	/*check if hdmitx support hdr10+*/
+	if ((vinfo->hdr_info.hdr10plus_info.ieeeoui
+			== HDR_PLUS_IEEE_OUI) &&
+		(vinfo->hdr_info.hdr10plus_info.application_version
+			== 1))
+		tx_hdr10_plus_support = 1;
+	else
+		tx_hdr10_plus_support = 0;
 
 	/* check hdr support info from Tx or Panel */
 	if (hdr_mode == 2) { /* auto */
@@ -5873,9 +5882,15 @@ static int vpp_matrix_update(
 			hdr_process_mode = 1;
 			hlg_process_mode = 1;
 		}
+
+		if (tx_hdr10_plus_support)
+			hdr10_plus_process_mode = 0;
+		else
+			hdr10_plus_process_mode = 1;
 	} else if (hdr_mode == 1) {
 		hdr_process_mode = 1;
 		hlg_process_mode = 1;
+		hdr10_plus_process_mode = 1;
 	} else {
 		hdr_process_mode = 0;
 		if (vinfo->hdr_info.hdr_support & HDR_SUPPORT) {
@@ -5886,6 +5901,8 @@ static int vpp_matrix_update(
 				hlg_process_mode = 1;
 		} else
 			hlg_process_mode = 0;
+
+		hdr10_plus_process_mode = 0;
 	}
 
 	if (sdr_mode == 2) { /* auto */
@@ -5904,18 +5921,44 @@ static int vpp_matrix_update(
 	} else
 		sdr_process_mode = sdr_mode; /* force sdr->hdr */
 
-	if (vf && vinfo)
-		signal_change_flag = signal_type_changed(vf, vinfo);
+}
 
-	if (force_csc_type != 0xff)
-		csc_type = force_csc_type;
-	else
-		csc_type = get_csc_type();
+static void hdr10_plus_metadata_update(struct vframe_s *vf,
+	enum vpp_matrix_csc_e csc_type,
+	struct hdr10plus_para *hdmitx_hdr10plus_param)
+{
+	if (!vf)
+		return;
+	if (csc_type != VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC)
+		return;
+
+	hdr10_plus_parser_metadata(vf);
+
+	if (tx_hdr10_plus_support)
+		hdr10_plus_hdmitx_vsif_parser(hdmitx_hdr10plus_param);
+}
+
+static void hdr_tx_pkt_cb(
+	struct vinfo_s *vinfo,
+	int signal_change_flag,
+	enum vpp_matrix_csc_e csc_type,
+	struct vframe_master_display_colour_s *p,
+	int *hdmi_scs_type_changed,
+	struct hdr10plus_para *hdmitx_hdr10plus_param)
+{
+	struct vout_device_s *vdev = NULL;
+	struct master_display_info_s send_info;
+
+	if (vinfo->vout_device)
+		vdev = vinfo->vout_device;
 
 	if ((vinfo->viu_color_fmt != COLOR_FMT_RGB444) &&
 		((vinfo->hdr_info.hdr_support & 0xc) ||
 		(signal_change_flag & SIG_HDR_SUPPORT) ||
-		(signal_change_flag & SIG_HLG_SUPPORT))) {
+		(signal_change_flag & SIG_HLG_SUPPORT) ||
+		/*hdr10 plus*/
+		(tx_hdr10_plus_support) ||
+		(signal_change_flag & SIG_HDR10_PLUS_MODE))) {
 		if (sdr_process_mode &&
 			(csc_type < VPP_MATRIX_BT2020YUV_BT2020RGB)) {
 			/* sdr source convert to hdr */
@@ -5937,11 +5980,11 @@ static int vpp_matrix_update(
 			}
 			if (hdmi_csc_type != VPP_MATRIX_BT2020YUV_BT2020RGB) {
 				hdmi_csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-				hdmi_scs_type_changed = 1;
+				*hdmi_scs_type_changed = 1;
 			}
 		} else if ((hdr_process_mode == 0) &&
 			(hlg_process_mode == 0) &&
-			(csc_type >= VPP_MATRIX_BT2020YUV_BT2020RGB)) {
+			(csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB)) {
 			/* source is hdr, send hdr info */
 			/* use the features to discribe source info */
 			send_info.features =
@@ -5962,11 +6005,11 @@ static int vpp_matrix_update(
 			}
 			if (hdmi_csc_type != VPP_MATRIX_BT2020YUV_BT2020RGB) {
 				hdmi_csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-				hdmi_scs_type_changed = 1;
+				*hdmi_scs_type_changed = 1;
 			}
 		} else if ((hdr_process_mode == 0) &&
 			(hlg_process_mode == 1) &&
-			(csc_type >= VPP_MATRIX_BT2020YUV_BT2020RGB)) {
+			(csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB)) {
 			/* source is hdr, send hdr info */
 			/* use the features to discribe source info */
 			if (get_hdr_type() & HLG_FLAG)
@@ -6000,11 +6043,11 @@ static int vpp_matrix_update(
 			}
 			if (hdmi_csc_type != VPP_MATRIX_BT2020YUV_BT2020RGB) {
 				hdmi_csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-				hdmi_scs_type_changed = 1;
+				*hdmi_scs_type_changed = 1;
 			}
 		} else if ((hdr_process_mode == 1) &&
 			(hlg_process_mode == 0) &&
-			(csc_type >= VPP_MATRIX_BT2020YUV_BT2020RGB)) {
+			(csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB)) {
 			/* source is hdr, send hdr info */
 			/* use the features to discribe source info */
 			if (get_hdr_type() & HLG_FLAG)
@@ -6037,7 +6080,15 @@ static int vpp_matrix_update(
 			}
 			if (hdmi_csc_type != VPP_MATRIX_BT2020YUV_BT2020RGB) {
 				hdmi_csc_type = VPP_MATRIX_BT2020YUV_BT2020RGB;
-				hdmi_scs_type_changed = 1;
+				*hdmi_scs_type_changed = 1;
+			}
+		} else if ((hdr10_plus_process_mode == 0) &&
+			(csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC)) {
+			/*source is hdr10 plus, send hdr10 plus info*/
+			if (vdev) {
+				if (vdev->fresh_tx_hdr10plus_pkt)
+					vdev->fresh_tx_hdr10plus_pkt(1,
+						hdmitx_hdr10plus_param);
 			}
 		} else {
 			/* sdr source send normal info*/
@@ -6068,16 +6119,255 @@ static int vpp_matrix_update(
 					| (1 << 8)	/* bt709 */
 					| (1 << 0);	/* bt709 */
 			amvecm_cp_hdr_info(&send_info, p);
-			if (vdev) {
-				if (vdev->fresh_tx_hdr_pkt)
-					vdev->fresh_tx_hdr_pkt(&send_info);
+			if (cur_csc_type <= VPP_MATRIX_BT2020YUV_BT2020RGB) {
+				if (vdev) {
+					if (vdev->fresh_tx_hdr_pkt)
+						vdev->fresh_tx_hdr_pkt(
+							&send_info);
+				}
+			} else if (cur_csc_type ==
+				VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC)
+				if (vdev) {
+					if (vdev->fresh_tx_hdr10plus_pkt)
+						vdev->fresh_tx_hdr10plus_pkt(0,
+							hdmitx_hdr10plus_param);
 			}
+
 			if (hdmi_csc_type != VPP_MATRIX_YUV709_RGB) {
 				hdmi_csc_type = VPP_MATRIX_YUV709_RGB;
-				hdmi_scs_type_changed = 1;
+				*hdmi_scs_type_changed = 1;
 			}
 		}
 	}
+}
+
+static void video_process(
+	struct vframe_s *vf,
+	enum vpp_matrix_csc_e csc_type,
+	int signal_change_flag,
+	struct vinfo_s *vinfo,
+	struct vframe_master_display_colour_s *p)
+{
+	int need_adjust_contrast_saturation = 0;
+
+	/* decided by edid or panel info or user setting */
+	if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+		(hdr_process_mode == 1) &&
+		(hlg_process_mode == 1)) {
+		/* hdr->sdr hlg->sdr */
+		if ((signal_change_flag &
+				(SIG_CS_CHG |
+				SIG_PRI_INFO |
+				SIG_KNEE_FACTOR |
+				SIG_HDR_MODE |
+				SIG_HDR_SUPPORT |
+				SIG_HLG_MODE)
+			) ||
+			(cur_csc_type <
+				VPP_MATRIX_BT2020YUV_BT2020RGB)) {
+			if (get_hdr_type() & HLG_FLAG)
+				need_adjust_contrast_saturation =
+					hlg_process(csc_type, vinfo, p);
+			else
+				need_adjust_contrast_saturation
+				= hdr_process(csc_type, vinfo, p);
+			pr_csc("hdr_process_mode = 0x%x\n"
+				"hlg_process_mode = 0x%x.\n",
+			hdr_process_mode, hlg_process_mode);
+		}
+	} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+		(hdr_process_mode == 0) &&
+		(hlg_process_mode == 1)) {
+		/* hdr->hdr hlg->hlg*/
+		if ((signal_change_flag &
+				(SIG_CS_CHG |
+				SIG_PRI_INFO |
+				SIG_KNEE_FACTOR |
+				SIG_HDR_MODE |
+				SIG_HDR_SUPPORT |
+				SIG_HLG_MODE)
+			) ||
+			(cur_csc_type <
+				VPP_MATRIX_BT2020YUV_BT2020RGB)) {
+			if (get_hdr_type() & HLG_FLAG)
+				hlg_hdr_process(csc_type, vinfo, p);
+			else
+				bypass_hdr_process(csc_type, vinfo, p);
+			pr_csc("hdr_process_mode = 0x%x\n"
+				"hlg_process_mode = 0x%x.\n",
+				hdr_process_mode, hlg_process_mode);
+		}
+	} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+		(hdr_process_mode == 1) && (hlg_process_mode == 0)) {
+		/* hdr->sdr hlg->hlg*/
+		if ((signal_change_flag &
+				(SIG_CS_CHG |
+				SIG_PRI_INFO |
+				SIG_KNEE_FACTOR |
+				SIG_HDR_MODE |
+				SIG_HDR_SUPPORT |
+				SIG_HLG_MODE)
+			) ||
+			(cur_csc_type <
+				VPP_MATRIX_BT2020YUV_BT2020RGB)) {
+			if (get_hdr_type() & HLG_FLAG)
+				bypass_hdr_process(csc_type, vinfo, p);
+			else
+				need_adjust_contrast_saturation =
+					hdr_process(csc_type, vinfo, p);
+			pr_csc("hdr_process_mode = 0x%x\n"
+				"hlg_process_mode = 0x%x.\n",
+				hdr_process_mode, hlg_process_mode);
+		}
+	} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+		(hdr_process_mode == 0) && (hlg_process_mode == 0)) {
+		/* hdr->hdr hlg->hlg*/
+		if ((signal_change_flag &
+			(SIG_CS_CHG |
+			SIG_PRI_INFO |
+			SIG_KNEE_FACTOR |
+			SIG_HDR_MODE |
+			SIG_HDR_SUPPORT |
+			SIG_HLG_MODE)) ||
+			(cur_csc_type <
+				VPP_MATRIX_BT2020YUV_BT2020RGB)) {
+			bypass_hdr_process(csc_type, vinfo, p);
+			pr_csc("bypass_hdr_process: 0x%x, 0x%x.\n",
+				hdr_process_mode, hlg_process_mode);
+		}
+	} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC) &&
+		(hdr10_plus_process_mode == 1)) {
+		if ((signal_change_flag & SIG_HDR10_PLUS_MODE) ||
+			(cur_csc_type !=
+			VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC))
+			hdr10_plus_process(vf);
+		pr_csc("hdr10_plus_process.\n");
+	} else {
+		if ((csc_type < VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+			sdr_process_mode)
+			/* for gxl and gxm SDR to HDR process */
+			sdr_hdr_process(csc_type, vinfo, p);
+		else {
+			/* for gxtvbb and gxl HDR bypass process */
+			if (((vinfo->hdr_info.hdr_support &
+				HDR_SUPPORT) ||
+				(vinfo->hdr_info.hdr_support &
+				HLG_SUPPORT)) &&
+				(csc_type <
+				VPP_MATRIX_BT2020YUV_BT2020RGB)
+				&& tx_op_color_primary)
+				set_bt2020csc_process(csc_type,
+				vinfo, p);
+			else
+				bypass_hdr_process(csc_type,
+				vinfo, p);
+			pr_csc("csc_type = 0x%x\n"
+				"sdr_process_mode = 0x%x.\n",
+				csc_type, sdr_process_mode);
+		}
+	}
+
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
+		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
+			mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);
+		else
+			mtx_setting(POST2_MTX,
+				MATRIX_YUV709_RGB, MTX_ON);
+	}
+
+	if (cur_hdr_process_mode != hdr_process_mode) {
+		cur_hdr_process_mode = hdr_process_mode;
+		pr_csc("hdr_process_mode changed to %d",
+			hdr_process_mode);
+	}
+	if (cur_sdr_process_mode != sdr_process_mode) {
+		cur_sdr_process_mode = sdr_process_mode;
+		pr_csc("sdr_process_mode changed to %d",
+			sdr_process_mode);
+	}
+	if (cur_hlg_process_mode != hlg_process_mode) {
+		cur_hlg_process_mode = hlg_process_mode;
+		pr_csc("hlg_process_mode changed to %d",
+			hlg_process_mode);
+	}
+	if (need_adjust_contrast_saturation & 1) {
+		if (lut_289_en &&
+			(get_cpu_type() <= MESON_CPU_MAJOR_ID_GXTVBB))
+			vd1_contrast_offset = 0;
+		else
+			vd1_contrast_offset =
+			calculate_contrast_adj(p->luminance[0] / 10000);
+		vecm_latch_flag |= FLAG_VADJ1_CON;
+	} else {
+		vd1_contrast_offset = 0;
+		vecm_latch_flag |= FLAG_VADJ1_CON;
+	}
+	if (need_adjust_contrast_saturation & 2) {
+		vecm_latch_flag |= FLAG_VADJ1_COLOR;
+	} else {
+		if (((get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB) ||
+			(get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)) &&
+			(sdr_process_mode == 1))
+			saturation_offset = sdr_saturation_offset;
+		else
+			saturation_offset = 0;
+		vecm_latch_flag |= FLAG_VADJ1_COLOR;
+	}
+	if (cur_csc_type != csc_type) {
+		pr_csc("CSC from 0x%x to 0x%x.\n",
+			cur_csc_type, csc_type);
+		pr_csc("contrast offset = %d.\n",
+			vd1_contrast_offset);
+		pr_csc("saturation offset = %d.\n",
+			saturation_offset);
+		cur_csc_type = csc_type;
+
+		if (vf) {
+			if ((cur_csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+				(cur_csc_type != 0xffff) &&
+				(vf->source_type == VFRAME_SOURCE_TYPE_HDMI)) {
+				amvecm_wakeup_queue();
+				pr_csc("wake up hdr status queue.\n");
+			}
+		}
+	}
+}
+
+static int vpp_matrix_update(
+	struct vframe_s *vf, struct vinfo_s *vinfo, int flags)
+{
+	enum vpp_matrix_csc_e csc_type = VPP_MATRIX_NULL;
+	int signal_change_flag = 0;
+	struct vframe_master_display_colour_s *p = &cur_master_display_colour;
+	int hdmi_scs_type_changed = 0;
+	struct hdr10plus_para hdmitx_hdr10plus_param;
+
+	if (vinfo == NULL)
+		return 0;
+
+	/* Tx hdr information */
+	memcpy(&receiver_hdr_info, &vinfo->hdr_info,
+			sizeof(struct hdr_info));
+
+	hdr_support_process(vinfo);
+
+	if (vf && vinfo)
+		signal_change_flag = signal_type_changed(vf, vinfo);
+
+	if (force_csc_type != 0xff)
+		csc_type = force_csc_type;
+	else
+		csc_type = get_csc_type();
+
+	hdr10_plus_metadata_update(vf, csc_type,
+		&hdmitx_hdr10plus_param);
+
+	hdr_tx_pkt_cb(vinfo,
+		signal_change_flag,
+		csc_type,
+		p,
+		&hdmi_scs_type_changed,
+		&hdmitx_hdr10plus_param);
 
 	if (hdmi_scs_type_changed &&
 		(flags & CSC_FLAG_CHECK_OUTPUT) &&
@@ -6088,192 +6378,17 @@ static int vpp_matrix_update(
 		&& ((flags & CSC_FLAG_TOGGLE_FRAME) == 0))
 		return 0;
 
-	vecm_latch_flag |= FLAG_MATRIX_UPDATE;
-
 	if ((cur_csc_type != csc_type)
 	|| (signal_change_flag
 	& (SIG_CS_CHG | SIG_PRI_INFO | SIG_KNEE_FACTOR | SIG_HDR_MODE |
 		SIG_HDR_SUPPORT | SIG_HLG_MODE | SIG_OP_CHG |
-		SIG_SRC_OUTPUT_CHG))) {
-		/* decided by edid or panel info or user setting */
-		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-			(hdr_process_mode == 1) &&
-			(hlg_process_mode == 1)) {
-			/* hdr->sdr hlg->sdr */
-			if ((signal_change_flag &
-					(SIG_CS_CHG |
-					SIG_PRI_INFO |
-					SIG_KNEE_FACTOR |
-					SIG_HDR_MODE |
-					SIG_HDR_SUPPORT |
-					SIG_HLG_MODE)
-				) ||
-				(cur_csc_type <
-					VPP_MATRIX_BT2020YUV_BT2020RGB)) {
-				if (get_hdr_type() & HLG_FLAG)
-					need_adjust_contrast_saturation =
-						hlg_process(csc_type, vinfo, p);
-				else
-					need_adjust_contrast_saturation
-					= hdr_process(csc_type, vinfo, p);
-				pr_csc("hdr_process_mode = 0x%x\n"
-					"hlg_process_mode = 0x%x.\n",
-				hdr_process_mode, hlg_process_mode);
-			}
-		} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-			(hdr_process_mode == 0) &&
-			(hlg_process_mode == 1)) {
-			/* hdr->hdr hlg->hlg*/
-			if ((signal_change_flag &
-					(SIG_CS_CHG |
-					SIG_PRI_INFO |
-					SIG_KNEE_FACTOR |
-					SIG_HDR_MODE |
-					SIG_HDR_SUPPORT |
-					SIG_HLG_MODE)
-				) ||
-				(cur_csc_type <
-					VPP_MATRIX_BT2020YUV_BT2020RGB)) {
-				if (get_hdr_type() & HLG_FLAG)
-					hlg_hdr_process(csc_type, vinfo, p);
-				else
-					bypass_hdr_process(csc_type, vinfo, p);
-				pr_csc("hdr_process_mode = 0x%x\n"
-					"hlg_process_mode = 0x%x.\n",
-					hdr_process_mode, hlg_process_mode);
-			}
-		} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-			(hdr_process_mode == 1) && (hlg_process_mode == 0)) {
-			/* hdr->sdr hlg->hlg*/
-			if ((signal_change_flag &
-					(SIG_CS_CHG |
-					SIG_PRI_INFO |
-					SIG_KNEE_FACTOR |
-					SIG_HDR_MODE |
-					SIG_HDR_SUPPORT |
-					SIG_HLG_MODE)
-				) ||
-				(cur_csc_type <
-					VPP_MATRIX_BT2020YUV_BT2020RGB)) {
-				if (get_hdr_type() & HLG_FLAG)
-					bypass_hdr_process(csc_type, vinfo, p);
-				else
-					need_adjust_contrast_saturation =
-						hdr_process(csc_type, vinfo, p);
-				pr_csc("hdr_process_mode = 0x%x\n"
-					"hlg_process_mode = 0x%x.\n",
-					hdr_process_mode, hlg_process_mode);
-			}
-		} else if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-			(hdr_process_mode == 0) && (hlg_process_mode == 0)) {
-			/* hdr->hdr hlg->hlg*/
-			if ((signal_change_flag &
-				(SIG_CS_CHG |
-				SIG_PRI_INFO |
-				SIG_KNEE_FACTOR |
-				SIG_HDR_MODE |
-				SIG_HDR_SUPPORT |
-				SIG_HLG_MODE)) ||
-				(cur_csc_type <
-					VPP_MATRIX_BT2020YUV_BT2020RGB)) {
-				bypass_hdr_process(csc_type, vinfo, p);
-				pr_csc("bypass_hdr_process: 0x%x, 0x%x.\n",
-					hdr_process_mode, hlg_process_mode);
-			}
-		} else {
-			if ((csc_type < VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-				sdr_process_mode)
-				/* for gxl and gxm SDR to HDR process */
-					sdr_hdr_process(csc_type, vinfo, p);
-			else {
-				/* for gxtvbb and gxl HDR bypass process */
-				if (((vinfo->hdr_info.hdr_support &
-					HDR_SUPPORT) ||
-					(vinfo->hdr_info.hdr_support &
-					HLG_SUPPORT)) &&
-					(csc_type <
-					VPP_MATRIX_BT2020YUV_BT2020RGB)
-					&& tx_op_color_primary)
-					set_bt2020csc_process(csc_type,
-					vinfo, p);
-				else
-					bypass_hdr_process(csc_type,
-					vinfo, p);
-				pr_csc("csc_type = 0x%x\n"
-					"sdr_process_mode = 0x%x.\n",
-					csc_type, sdr_process_mode);
-			}
-		}
-
-		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-			if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
-				mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);
-			else
-				mtx_setting(POST2_MTX,
-					MATRIX_YUV709_RGB, MTX_ON);
-		}
-
-		if (cur_hdr_process_mode != hdr_process_mode) {
-			cur_hdr_process_mode = hdr_process_mode;
-			pr_csc("hdr_process_mode changed to %d",
-				hdr_process_mode);
-		}
-		if (cur_sdr_process_mode != sdr_process_mode) {
-			cur_sdr_process_mode = sdr_process_mode;
-			pr_csc("sdr_process_mode changed to %d",
-				sdr_process_mode);
-		}
-		if (cur_hlg_process_mode != hlg_process_mode) {
-			cur_hlg_process_mode = hlg_process_mode;
-			pr_csc("hlg_process_mode changed to %d",
-				hlg_process_mode);
-		}
-		if (need_adjust_contrast_saturation & 1) {
-			if (lut_289_en &&
-				(get_cpu_type() <= MESON_CPU_MAJOR_ID_GXTVBB))
-				vd1_contrast_offset = 0;
-			else
-				vd1_contrast_offset =
-				calculate_contrast_adj(p->luminance[0] / 10000);
-			vecm_latch_flag |= FLAG_VADJ1_CON;
-		} else {
-			vd1_contrast_offset = 0;
-			vecm_latch_flag |= FLAG_VADJ1_CON;
-		}
-		if (need_adjust_contrast_saturation & 2) {
-			vecm_latch_flag |= FLAG_VADJ1_COLOR;
-		} else {
-			if (((get_cpu_type() == MESON_CPU_MAJOR_ID_GXTVBB) ||
-				(get_cpu_type() == MESON_CPU_MAJOR_ID_TXL)) &&
-				(sdr_process_mode == 1))
-				saturation_offset = sdr_saturation_offset;
-			else
-				saturation_offset =	0;
-			vecm_latch_flag |= FLAG_VADJ1_COLOR;
-		}
-		if (cur_csc_type != csc_type) {
-			pr_csc("CSC from 0x%x to 0x%x.\n",
-				cur_csc_type, csc_type);
-			pr_csc("contrast offset = %d.\n",
-				vd1_contrast_offset);
-			pr_csc("saturation offset = %d.\n",
-				saturation_offset);
-			cur_csc_type = csc_type;
-
-			if ((cur_csc_type >= VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-				(cur_csc_type != 0xffff) &&
-				(vf->source_type == VFRAME_SOURCE_TYPE_HDMI)) {
-				amvecm_wakeup_queue();
-				pr_csc("wake up hdr status queue.\n");
-			}
-		}
-	}
+		SIG_SRC_OUTPUT_CHG | SIG_HDR10_PLUS_MODE)))
+		video_process(vf, csc_type, signal_change_flag, vinfo, p);
 
 	/* eye protection mode */
 	if (signal_change_flag & SIG_WB_CHG)
 		vpp_eye_protection_process(csc_type, vinfo);
 
-	vecm_latch_flag &= ~FLAG_MATRIX_UPDATE;
 	return 0;
 }
 
@@ -6533,6 +6648,13 @@ hdr_dump:
 
 	pr_err("knee_lut_on:0x%x,knee_interpolation_mode:0x%x,cur_knee_factor:0x%x\n",
 		knee_lut_on, knee_interpolation_mode, cur_knee_factor);
+
+	pr_err("tx_hdr10_plus_support = 0x%x\n", tx_hdr10_plus_support);
+	pr_err("hdr10_plus_process_mode = 0x%x\n", hdr10_plus_process_mode);
+
+	//if (signal_transfer_characteristic == 0x30)
+	if (cur_csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC)
+		hdr10_plus_debug();
 
 	if ((receiver_hdr_info.hdr_support & 0xc) == 0)
 		goto dbg_end;

@@ -159,6 +159,55 @@ struct vframe_master_display_colour_s {
 		content_light_level;
 }; /* master_display_colour_info_volume from SEI */
 
+struct vframe_hdr_plus_sei_s {
+	u16 present_flag;
+	u16 itu_t_t35_country_code;
+	u16 itu_t_t35_terminal_provider_code;
+	u16 itu_t_t35_terminal_provider_oriented_code;
+	u16 application_identifier;
+	u16 application_version;
+	/*num_windows max is 3*/
+	u16 num_windows;
+	/*windows xy*/
+	u16 window_upper_left_corner_x[3];
+	u16 window_upper_left_corner_y[3];
+	u16 window_lower_right_corner_x[3];
+	u16 window_lower_right_corner_y[3];
+	u16 center_of_ellipse_x[3];
+	u16 center_of_ellipse_y[3];
+	u16 rotation_angle[3];
+	u16 semimajor_axis_internal_ellipse[3];
+	u16 semimajor_axis_external_ellipse[3];
+	u16 semiminor_axis_external_ellipse[3];
+	u16 overlap_process_option[3];
+	/*target luminance*/
+	u32 tgt_sys_disp_max_lumi;
+	u16 tgt_sys_disp_act_pk_lumi_flag;
+	u16 num_rows_tgt_sys_disp_act_pk_lumi;
+	u16 num_cols_tgt_sys_disp_act_pk_lumi;
+	u16 tgt_sys_disp_act_pk_lumi[25][25];
+
+	/*num_windows max is 3, e.g maxscl[num_windows][i];*/
+	u32 maxscl[3][3];
+	u32 average_maxrgb[3];
+	u16 num_distribution_maxrgb_percentiles[3];
+	u16 distribution_maxrgb_percentages[3][15];
+	u32 distribution_maxrgb_percentiles[3][15];
+	u16 fraction_bright_pixels[3];
+
+	u16 mast_disp_act_pk_lumi_flag;
+	u16 num_rows_mast_disp_act_pk_lumi;
+	u16 num_cols_mast_disp_act_pk_lumi;
+	u16 mast_disp_act_pk_lumi[25][25];
+	/*num_windows max is 3, e.g knee_point_x[num_windows]*/
+	u16 tone_mapping_flag[3];
+	u16 knee_point_x[3];
+	u16 knee_point_y[3];
+	u16 num_bezier_curve_anchors[3];
+	u16 bezier_curve_anchors[3][15];
+	u16 color_saturation_mapping_flag[3];
+	u16 color_saturation_weight[3];
+};
 /* vframe properties */
 struct vframe_prop_s {
 	struct vframe_hist_s hist;
