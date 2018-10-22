@@ -262,11 +262,22 @@ static int ffs_ready(struct ffs_data *ffs);
 static void ffs_closed(struct ffs_data *ffs);
 
 #ifdef CONFIG_AMLOGIC_USB
-static int ffs_malloc_buffer(struct ffs_data *ffs)
+static int ffs_malloc_buffer_init(struct ffs_data *ffs, int cout)
 {
 	int i;
 
+	pr_info("assign_ffs_buffer FFS_BUFFER_MAX=%d!!!\n", FFS_BUFFER_MAX);
 	for (i = 0; i < FFS_BUFFER_MAX; i++) {
+		ffs->buffer[i].data_ep = NULL;
+		ffs->buffer[i].data_state = -1;
+	}
+
+	for (i = 0; i < cout; i++) {
+		if (i >= FFS_BUFFER_MAX) {
+			pr_err("<%s>wait alloc (%d) > define (%d)!!!\n",
+				__func__, cout, FFS_BUFFER_MAX);
+			break;
+		}
 		ffs->buffer[i].data_ep = kzalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
 		if (!ffs->buffer[i].data_ep)
 			return -ENOMEM;
@@ -276,14 +287,38 @@ static int ffs_malloc_buffer(struct ffs_data *ffs)
 	return 0;
 }
 
+struct ffs_data_buffer *ffs_retry_malloc_buffer(struct ffs_data *ffs)
+{
+	int i;
+
+	pr_info("ffs_retry_malloc_buffer\n");
+	for (i = 0; i < FFS_BUFFER_MAX; i++) {
+		if (ffs->buffer[i].data_state == -1) {
+			spin_unlock_irq(&ffs->eps_lock);
+			ffs->buffer[i].data_ep
+				= kzalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
+			spin_lock_irq(&ffs->eps_lock);
+			if (!ffs->buffer[i].data_ep)
+				return NULL;
+			ffs->buffer[i].data_state = 1;
+			return &(ffs->buffer[i]);
+		}
+	}
+	pr_info("assign_ffs_buffer failed, FFS_BUFFER_MAX(%d) is too small!!!\n",
+		FFS_BUFFER_MAX);
+	return NULL;
+}
+
 static void ffs_free_buffer(struct ffs_data *ffs)
 {
 	int i;
 
 	for (i = 0; i < FFS_BUFFER_MAX; i++) {
-		kfree(ffs->buffer[i].data_ep);
-		ffs->buffer[i].data_ep = NULL;
-		ffs->buffer[i].data_state = 0;
+		if (ffs->buffer[i].data_state != -1) {
+			kfree(ffs->buffer[i].data_ep);
+			ffs->buffer[i].data_ep = NULL;
+			ffs->buffer[i].data_state = 0;
+		}
 	}
 }
 
@@ -298,8 +333,7 @@ static struct ffs_data_buffer *assign_ffs_buffer(struct ffs_data *ffs)
 		}
 	}
 
-	pr_info("assign_ffs_buffer failed!!!\n");
-	return NULL;
+	return ffs_retry_malloc_buffer(ffs);
 }
 
 static void release_ffs_buffer(struct ffs_data *ffs,
@@ -829,6 +863,17 @@ static void ffs_user_copy_worker(struct work_struct *work)
 					 io_data->req->actual;
 	bool kiocb_has_eventfd = io_data->kiocb->ki_flags & IOCB_EVENTFD;
 
+#ifdef CONFIG_AMLOGIC_USB
+	int i = 0;
+	struct ffs_data_buffer *buffer = NULL;
+
+	for (i = 0; i < FFS_BUFFER_MAX; i++) {
+		buffer = &(io_data->ffs->buffer[i]);
+		if (io_data->buf == buffer->data_ep) {
+			break;
+		}
+	}
+#endif
 	if (io_data->read && ret > 0) {
 		mm_segment_t oldfs = get_fs();
 
@@ -848,7 +893,15 @@ static void ffs_user_copy_worker(struct work_struct *work)
 
 	if (io_data->read)
 		kfree(io_data->to_free);
+
+#ifdef CONFIG_AMLOGIC_USB
+	if (io_data->aio) {
+		if (buffer)
+			release_ffs_buffer(io_data->ffs, buffer);
+	}
+#else
 	kfree(io_data->buf);
+#endif
 	kfree(io_data);
 }
 
@@ -952,7 +1005,7 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 #ifdef CONFIG_AMLOGIC_USB
 	struct ffs_ep *ep = epfile->ep;
 	struct ffs_data_buffer *buffer = NULL;
-	int data_flag = -1;
+	int data_aio_flag = -1;
 #else
 	struct ffs_ep *ep;
 #endif
@@ -1034,15 +1087,6 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 			goto error_mutex;
 		}
 #else
-		if (io_data->aio) {
-			spin_unlock_irq(&epfile->ffs->eps_lock);
-			data = kmalloc(data_len, GFP_KERNEL);
-			data_flag = 1;
-			if (unlikely(!data)) {
-				ret = -ENOMEM;
-				goto error_mutex;
-			}
-		} else {
 		/* Fire the request */
 		/*
 		 * Avoid kernel panic caused by race condition. For example,
@@ -1060,9 +1104,10 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		 * To avoid this, during FunctionFS mount, we allocated the
 		 * data buffer for requests. And the memory resources has
 		 * been released in kill_sb.
+		 *reboot adb disconnect,so buffer aways used assign_ffs_buffer.
 		 */
 			buffer = assign_ffs_buffer(epfile->ffs);
-			data_flag = -1;
+			data_aio_flag = 1;
 			if (unlikely(!buffer)) {
 				ret = -ENOMEM;
 				spin_unlock_irq(&epfile->ffs->eps_lock);
@@ -1071,7 +1116,6 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 
 			data = buffer->data_ep;
 			spin_unlock_irq(&epfile->ffs->eps_lock);
-		}
 #endif
 
 		if (!io_data->read &&
@@ -1110,6 +1154,9 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 		DECLARE_COMPLETION_ONSTACK(done);
 #endif
 		bool interrupted = false;
+#ifdef CONFIG_AMLOGIC_USB
+		data_aio_flag = 1;
+#endif
 		req = ep->req;
 		req->buf      = data;
 		req->length   = data_len;
@@ -1146,6 +1193,9 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 	} else if (!(req = usb_ep_alloc_request(ep->ep, GFP_ATOMIC))) {
 		ret = -ENOMEM;
 	} else {
+#ifdef CONFIG_AMLOGIC_USB
+		data_aio_flag = -1;
+#endif
 		req->buf      = data;
 		req->length   = data_len;
 
@@ -1177,10 +1227,7 @@ error_mutex:
 	mutex_unlock(&epfile->mutex);
 error:
 #ifdef CONFIG_AMLOGIC_USB
-	if (data_flag > 0) {
-		kfree(data);
-		data = NULL;
-	} else {
+	if (data_aio_flag > 0) {
 		if (buffer)
 			release_ffs_buffer(epfile->ffs, buffer);
 	}
@@ -1640,7 +1687,7 @@ ffs_fs_mount(struct file_system_type *t, int flags,
 	if (unlikely(!ffs->data_ep0))
 		return ERR_PTR(-ENOMEM);
 
-	ret = ffs_malloc_buffer(ffs);
+	ret = ffs_malloc_buffer_init(ffs, 10);
 	if (ret < 0)
 		return ERR_PTR(ret);
 

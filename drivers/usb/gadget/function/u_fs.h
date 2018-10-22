@@ -147,10 +147,10 @@ enum ffs_setup_state {
 	FFS_SETUP_CANCELLED
 };
 
-#define FFS_BUFFER_MAX	10
+#define FFS_BUFFER_MAX	100
 struct ffs_data_buffer {
 	char *data_ep;
-	bool data_state;
+	int data_state;
 };
 
 struct ffs_data {
