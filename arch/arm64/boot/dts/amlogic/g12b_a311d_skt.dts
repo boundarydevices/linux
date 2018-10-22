@@ -745,6 +745,8 @@
 		clocks = <&clkc CLKID_24M>;
 		clock-names = "g12a_24m";
 		reset = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
+		ir_cut_gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_HIGH
+				&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
 	};
 
 	iq: iq {
