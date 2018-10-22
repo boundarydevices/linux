@@ -2968,6 +2968,13 @@ static inline void vd1_path_select(bool afbc)
 			/* afbc0 gclk ctrl */
 			(0 << 0),
 			0, 22);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			VSYNC_WR_MPEG_REG_BITS(
+				VD1_AFBCD0_MISC_CTRL,
+				/* Vd1_afbc0_mem_sel */
+				(afbc ? 1 : 0),
+				22, 1);
+
 #ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		if (!cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 			return;
@@ -3025,6 +3032,12 @@ static inline void vd2_path_select(bool afbc)
 			/* afbc1 gclk ctrl */
 			(0 << 0),
 			0, 22);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			VSYNC_WR_MPEG_REG_BITS(
+				VD2_AFBCD1_MISC_CTRL,
+				/* Vd2_afbc0_mem_sel */
+				(afbc ? 1 : 0),
+				22, 1);
 	} else {
 		VSYNC_WR_MPEG_REG_BITS(
 			VIU_MISC_CTRL1 + misc_off,
@@ -3073,7 +3086,14 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				r |= (1<<29);
 			VSYNC_WR_MPEG_REG(AFBC_MODE, r);
 			VSYNC_WR_MPEG_REG(AFBC_ENABLE, 0x1700);
-			VSYNC_WR_MPEG_REG(AFBC_CONV_CTRL, 0x100);
+
+			r = 0x100;
+			/* need check the vf->type 444/422/420 */
+			/* current use 420 as default for tl1 */
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+				r |= (2 << 12);
+			VSYNC_WR_MPEG_REG(AFBC_CONV_CTRL, r);
+
 			u = (vf->bitdepth >> (BITDEPTH_U_SHIFT)) & 0x3;
 			v = (vf->bitdepth >> (BITDEPTH_V_SHIFT)) & 0x3;
 			VSYNC_WR_MPEG_REG(AFBC_DEC_DEF_COLOR,
@@ -3633,7 +3653,14 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				r |= (1<<29);
 			VSYNC_WR_MPEG_REG(VD2_AFBC_MODE, r);
 			VSYNC_WR_MPEG_REG(VD2_AFBC_ENABLE, 0x1700);
-			VSYNC_WR_MPEG_REG(VD2_AFBC_CONV_CTRL, 0x100);
+
+			r = 0x100;
+			/* need check the vf->type 444/422/420 */
+			/* current use 420 as default for tl1 */
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+				r |= (2 << 12);
+			VSYNC_WR_MPEG_REG(VD2_AFBC_CONV_CTRL, r);
+
 			u = (vf->bitdepth >> (BITDEPTH_U_SHIFT)) & 0x3;
 			v = (vf->bitdepth >> (BITDEPTH_V_SHIFT)) & 0x3;
 			VSYNC_WR_MPEG_REG(VD2_AFBC_DEC_DEF_COLOR,
@@ -10090,6 +10117,11 @@ static int __init video_early_init(void)
 		WRITE_DMCREG(
 			DMC_AM0_CHAN_CTRL,
 			0x8ff403cf);
+
+	/* force bypass dolby for TL1. There is no dolby function */
+	if (is_meson_tl1_cpu())
+		WRITE_VCBUS_REG_BITS(
+			DOLBY_PATH_CTRL, 0xf, 0, 6);
 	return 0;
 }
 
@@ -10221,7 +10253,8 @@ static int __init video_init(void)
 	}
 #endif
 
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()
+		|| is_meson_tl1_cpu()) {
 		cur_dev->viu_off = 0x3200 - 0x1a50;
 		legacy_vpp = false;
 	}
