@@ -6,29 +6,23 @@
  * This file is licensed under a dual GPLv2 or BSD license.
  *
  */
-
-#include "firmware_normal.dtsi"
-
 / {
     partitions: partitions{
-		parts = <17>;
+		parts = <14>;
 		part-0 = <&logo>;
 		part-1 = <&recovery>;
 		part-2 = <&misc>;
-		part-3 = <&dtbo>;
+		part-3 = <&dto>;
 		part-4 = <&cri_data>;
 		part-5 = <&param>;
 		part-6 = <&boot>;
 		part-7 = <&rsv>;
-		part-8 = <&metadata>;
-		part-9 = <&vbmeta>;
-		part-10 = <&tee>;
-		part-11 = <&vendor>;
-		part-12 = <&odm>;
-		part-13 = <&system>;
-		part-14 = <&product>;
-		part-15 = <&cache>;
-		part-16 = <&data>;
+		part-8 = <&tee>;
+		part-9 = <&vendor>;
+		part-10 = <&odm>;
+		part-11 = <&system>;
+		part-12 = <&cache>;
+		part-13 = <&data>;
 
 		logo:logo{
 			pname = "logo";
@@ -45,8 +39,8 @@
 			size = <0x0 0x800000>;
 			mask = <1>;
 		};
-		dtbo:dtbo{
-			pname = "dtbo";
+		dto:dto{
+			pname = "dto";
 			size = <0x0 0x800000>;
 			mask = <1>;
 		};
@@ -59,16 +53,6 @@
 		rsv:rsv{
 			pname = "rsv";
 			size = <0x0 0x1000000>;
-			mask = <1>;
-		};
-		metadata:metadata{
-			pname = "metadata";
-			size = <0x0 0x1000000>;
-			mask = <1>;
-		};
-		vbmeta:vbmeta{
-			pname = "vbmeta";
-			size = <0x0 0x200000>;
 			mask = <1>;
 		};
 		param:param{
@@ -96,18 +80,13 @@
 		odm:odm
 		{
 			pname = "odm";
-			size = <0x0 0x8000000>;
+			size = <0x0 0x10000000>;
 			mask = <1>;
 		};
 		system:system
 		{
 			pname = "system";
-			size = <0x0 0x50000000>;
-			mask = <1>;
-		};
-		product:product{
-			pname = "product";
-			size = <0x0 0x8000000>;
+			size = <0x0 0x46000000>;
 			mask = <1>;
 		};
 		cache:cache
@@ -121,6 +100,45 @@
 			pname = "data";
 			size = <0xffffffff 0xffffffff>;
 			mask = <4>;
+		};
+	};
+
+	firmware {
+		android {
+			compatible = "android, firmware";
+			vbmeta {
+				compatible = "android, vbmeta";
+				parts = "boot, system, vendor";
+				by_name_prefix="/dev/block";
+			};
+		fstab {
+			compatible = "android, fstab";
+			system {
+				compatible = "android, system";
+				dev = "/dev/block/system";
+				type = "ext4";
+				mnt_flags =
+					"ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+
+			vendor {
+				compatible = "android, vendor";
+				dev = "/dev/block/vendor";
+				type = "ext4";
+				mnt_flags =
+					"ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+			odm {
+				compatible = "android, odm";
+				dev = "/dev/block/odm";
+				type = "ext4";
+				mnt_flags =
+					"ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+			};
 		};
 	};
 };/* end of / */
