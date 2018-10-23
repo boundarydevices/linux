@@ -54,7 +54,7 @@ static struct proc_dir_entry *dentry;
 struct page_trace *trace_buffer;
 static unsigned long ptrace_size;
 static unsigned int trace_step = 1;
-static bool page_trace_disable __initdata = 1;
+static bool page_trace_disable __initdata;
 #endif
 
 struct alloc_caller {
@@ -450,13 +450,18 @@ unsigned long find_back_trace(void)
 	struct stackframe frame;
 	int ret, step = 0;
 
+#ifdef CONFIG_ARM64
 	frame.fp = (unsigned long)__builtin_frame_address(0);
 	frame.sp = current_stack_pointer;
 	frame.pc = _RET_IP_;
-#ifdef CONFIG_ARM64
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
 	frame.graph = current->curr_ret_stack;
 #endif
+#else
+	frame.fp = (unsigned long)__builtin_frame_address(0);
+	frame.sp = current_stack_pointer;
+	frame.lr = (unsigned long)__builtin_return_address(0);
+	frame.pc = (unsigned long)find_back_trace;
 #endif
 	while (1) {
 	#ifdef CONFIG_ARM64
@@ -466,10 +471,8 @@ unsigned long find_back_trace(void)
 	#else	/* not supported */
 		ret = -1;
 	#endif
-		if (ret < 0) {
-			//pr_err("%s, can't find back trace\n", __func__);
+		if (ret < 0)
 			return 0;
-		}
 		step++;
 		if (!is_common_caller(common_caller, frame.pc) && step > 1)
 			return frame.pc;
@@ -591,9 +594,8 @@ void set_page_trace(struct page *page, int order, gfp_t flag)
 #endif
 		ip = find_back_trace();
 		if (!ip) {
-			//pr_err("can't find backtrace for page:%lx\n",
-			//	page_to_pfn(page));
-			//dump_stack();
+			pr_debug("can't find backtrace for page:%lx\n",
+				page_to_pfn(page));
 			return;
 		}
 		val = pack_ip(ip, order, flag);
@@ -784,15 +786,15 @@ static int trace_cmp(const void *x1, const void *x2)
 	return s2->cnt - s1->cnt;
 }
 
-static void show_page_trace(struct seq_file *m,
+static void show_page_trace(struct seq_file *m, struct zone *zone,
 			    struct page_summary *sum, int *mt_cnt)
 {
 	int i, j;
 	struct page_summary *p;
-	unsigned long total;
+	unsigned long total_mt, total_used = 0;
 
-	seq_printf(m, "%s %s            %s\n",
-		   "count(KB)", "kaddr", "function");
+	seq_printf(m, "%s             %s %s\n",
+		  "count(KB)", "kaddr", "function");
 	seq_puts(m, "------------------------------\n");
 	for (j = 0; j < MIGRATE_TYPES; j++) {
 
@@ -802,7 +804,7 @@ static void show_page_trace(struct seq_file *m,
 		p = sum + mt_offset[j];
 		sort(p, mt_cnt[j], sizeof(*p), trace_cmp, NULL);
 
-		total = 0;
+		total_mt = 0;
 		for (i = 0; i < mt_cnt[j]; i++) {
 			if (!p[i].cnt)	/* may be empty after merge */
 				continue;
@@ -812,13 +814,20 @@ static void show_page_trace(struct seq_file *m,
 					   K(p[i].cnt), p[i].ip,
 					   (void *)p[i].ip);
 			}
-			total += p[i].cnt;
+			total_mt += p[i].cnt;
 		}
+		if (!total_mt)
+			continue;
 		seq_puts(m, "------------------------------\n");
-		seq_printf(m, "total pages:%ld, %ld kB, type:%s\n",
-			   total, K(total), migratetype_names[j]);
+		seq_printf(m, "total pages:%6ld, %9ld kB, type:%s\n",
+			   total_mt, K(total_mt), migratetype_names[j]);
 		seq_puts(m, "------------------------------\n");
+		total_used += total_mt;
 	}
+	seq_printf(m, "Zone %8s, managed:%6ld KB, free:%6ld kB, used:%6ld KB\n",
+		   zone->name, K(zone->managed_pages),
+		   K(zone_page_state(zone, NR_FREE_PAGES)), K(total_used));
+	seq_puts(m, "------------------------------\n");
 }
 
 static void merge_same_function(struct page_summary *sum, int *mt_cnt)
@@ -863,6 +872,7 @@ static int update_page_trace(struct seq_file *m, struct zone *zone,
 	for (pfn = start_pfn; pfn < end_pfn; pfn++) {
 		struct page *page;
 
+		order = 0;
 		if (!pfn_valid(pfn))
 			continue;
 
@@ -901,7 +911,6 @@ static int update_page_trace(struct seq_file *m, struct zone *zone,
 
 static int pagetrace_show(struct seq_file *m, void *arg)
 {
-	pg_data_t *p = (pg_data_t *)arg;
 	struct zone *zone;
 	int ret, size = sizeof(struct page_summary) * SHOW_CNT;
 	struct pagetrace_summary *sum;
@@ -912,100 +921,46 @@ static int pagetrace_show(struct seq_file *m, void *arg)
 		return 0;
 	}
 #endif
+	sum = kzalloc(sizeof(*sum), GFP_KERNEL);
+	if (!sum)
+		return -ENOMEM;
 
-	/* check memoryless node */
-	if (!node_state(p->node_id, N_MEMORY))
-		return 0;
-
-	if (!m->private) {
-		sum = kzalloc(sizeof(*sum), GFP_KERNEL);
-		if (!sum)
-			return -ENOMEM;
-
-		m->private = sum;
-		sum->sum = vzalloc(size);
-		if (!sum->sum) {
-			kfree(sum);
-			m->private = NULL;
-			return -ENOMEM;
-		}
-
-		/* update only once */
-		sum->ticks = sched_clock();
-		for_each_populated_zone(zone) {
-			memset(sum->sum, 0, size);
-			ret = update_page_trace(m, zone, sum->sum, sum->mt_cnt);
-			if (ret) {
-				seq_printf(m, "Error %d in Node %d, zone %8s\n",
-					   ret, p->node_id, zone->name);
-				continue;
-			}
-		}
-		sum->ticks = sched_clock() - sum->ticks;
+	m->private = sum;
+	sum->sum = vzalloc(size);
+	if (!sum->sum) {
+		kfree(sum);
+		m->private = NULL;
+		return -ENOMEM;
 	}
 
-	sum = (struct pagetrace_summary *)m->private;
+	/* update only once */
+	seq_puts(m, "==============================\n");
+	sum->ticks = sched_clock();
 	for_each_populated_zone(zone) {
-		seq_printf(m, "Node %d, zone %8s\n", p->node_id, zone->name);
-		show_page_trace(m, sum->sum, sum->mt_cnt);
+		memset(sum->sum, 0, size);
+		ret = update_page_trace(m, zone, sum->sum, sum->mt_cnt);
+		if (ret) {
+			seq_printf(m, "Error %d in zone %8s\n",
+				   ret, zone->name);
+			continue;
+		}
+		show_page_trace(m, zone, sum->sum, sum->mt_cnt);
 	}
+	sum->ticks = sched_clock() - sum->ticks;
+
 	seq_printf(m, "SHOW_CNT:%d, buffer size:%d, tick:%ld ns\n",
 		   SHOW_CNT, size, sum->ticks);
+	seq_puts(m, "==============================\n");
+
+	vfree(sum->sum);
+	kfree(sum);
 
 	return 0;
 }
 
-static void *frag_start(struct seq_file *m, loff_t *pos)
-{
-	pg_data_t *pgdat;
-	loff_t node = *pos;
-
-	for (pgdat = first_online_pgdat();
-	     pgdat && node;
-	     pgdat = next_online_pgdat(pgdat))
-		--node;
-
-	return pgdat;
-}
-
-static void *frag_next(struct seq_file *m, void *arg, loff_t *pos)
-{
-	pg_data_t *pgdat = (pg_data_t *)arg;
-
-	(*pos)++;
-	pgdat = next_online_pgdat(pgdat);
-
-	return pgdat;
-}
-
-static void frag_stop(struct seq_file *m, void *arg)
-{
-}
-static const struct seq_operations pagetrace_op = {
-	.start	= frag_start,
-	.next	= frag_next,
-	.stop	= frag_stop,
-	.show	= pagetrace_show,
-};
-
 static int pagetrace_open(struct inode *inode, struct file *file)
 {
-	return seq_open(file, &pagetrace_op);
-}
-
-static int pagetrace_release(struct inode *inode, struct file *file)
-{
-	struct pagetrace_summary *sum;
-	struct seq_file *m = file->private_data;
-
-	if (m->private) {
-		sum = (struct pagetrace_summary *)m->private;
-		if (sum->sum)
-			vfree(sum->sum);
-		kfree(sum);
-	}
-
-	return seq_release(inode, file);
+	return single_open(file, pagetrace_show, NULL);
 }
 
 static ssize_t pagetrace_write(struct file *file, const char __user *buffer,
@@ -1059,7 +1014,7 @@ static const struct file_operations pagetrace_file_ops = {
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.write		= pagetrace_write,
-	.release	= pagetrace_release,
+	.release	= single_release,
 };
 
 static int __init page_trace_module_init(void)
