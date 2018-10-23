@@ -2531,11 +2531,11 @@ void osd_get_window_axis_hw(u32 index, s32 *x0, s32 *y0, s32 *x1, s32 *y1)
 		*x0 = osd_hw.free_dst_data_backup[index].x_start;
 		*x1 = osd_hw.free_dst_data_backup[index].x_end;
 	} else {
-		*y0 = osd_hw.dst_data[index].x;
-		*y1 = osd_hw.dst_data[index].y;
-		*x0 = osd_hw.dst_data[index].x +
+		*x0 = osd_hw.dst_data[index].x;
+		*y0 = osd_hw.dst_data[index].y;
+		*x1 = osd_hw.dst_data[index].x +
 			osd_hw.dst_data[index].w - 1;
-		*x1 = osd_hw.dst_data[index].y +
+		*y1 = osd_hw.dst_data[index].y +
 			osd_hw.dst_data[index].h - 1;
 	}
 }
