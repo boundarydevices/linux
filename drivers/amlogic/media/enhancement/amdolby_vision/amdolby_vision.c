@@ -1118,10 +1118,13 @@ static int stb_dolby_core1_set(
 	WRITE_VPP_REG(
 		DOLBY_TV_CLKGATE_CTRL, 0x2800);
 	if (reset) {
-		VSYNC_WR_MPEG_REG(VIU_SW_RESET, 1 << 9);
-		VSYNC_WR_MPEG_REG(VIU_SW_RESET, 0);
-		VSYNC_WR_MPEG_REG(
-			DOLBY_TV_CLKGATE_CTRL, 0x2800);
+		if (!dolby_vision_core1_on) {
+			VSYNC_WR_MPEG_REG(VIU_SW_RESET, 1 << 9);
+			VSYNC_WR_MPEG_REG(VIU_SW_RESET, 0);
+			VSYNC_WR_MPEG_REG(
+				DOLBY_TV_CLKGATE_CTRL, 0x2800);
+		} else
+			reset = 0;
 	}
 
 	if (!bl_enable)
@@ -4459,7 +4462,7 @@ static void calculate_panel_max_pq(
 		} else {
 			max_lin = max_lin - 500 + 50;
 			max_lin = (max_lin / 100) * 100 + 500;
-			max_pq = L2PQ_100_500[(max_lin - 500) / 100];
+			max_pq = L2PQ_500_4000[(max_lin - 500) / 100];
 		}
 		pr_info("panel max lumin changed from %d(%d) to %d(%d)\n",
 			tv_max_lin, tv_max_pq, max_lin, max_pq);
