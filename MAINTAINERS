@@ -14640,3 +14640,9 @@ AMLOGIC DTBO PARTITION
 M:      Xindong Xu  <xindong.xu@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/common_overlay_dt.dts
 F:      arch/arm/boot/dts/amlogic/common_overlay_dt.dts
+
+AMLOGIC DTS
+M:	Luan Yuan <luan.yuan@amlogic.com>
+F:	arch/arm/boot/dts/amlogic/gxl_p241_1g.dts
+F:	arch/arm/boot/dts/amlogic/gxl_p241_v2-1g.dts
+F:	arch/arm/boot/dts/amlogic/partition_mbox_p241_P.dtsi
