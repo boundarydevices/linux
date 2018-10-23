@@ -238,8 +238,12 @@ __do_user_fault(struct task_struct *tsk, unsigned long addr,
 	struct siginfo si;
 
 #ifdef CONFIG_DEBUG_USER
-	if (((user_debug & UDBG_SEGV) && (sig == SIGSEGV)) ||
-	    ((user_debug & UDBG_BUS)  && (sig == SIGBUS))) {
+	if (
+	#ifdef CONFIG_AMLOGIC_USER_FAULT
+	    unhandled_signal(tsk, sig) &&
+	#endif
+	    (((user_debug & UDBG_SEGV) && (sig == SIGSEGV)) ||
+	    ((user_debug & UDBG_BUS)  && (sig == SIGBUS)))) {
 #ifdef CONFIG_AMLOGIC_USER_FAULT
 		pr_info("%s: unhandled page fault (%d) at 0x%08lx, code 0x%03x\n",
 		       tsk->comm, sig, addr, fsr);
