@@ -131,88 +131,42 @@ sub check_msg_49
 sub check_msg_49_2
 {
 	my $msg = `git cat-file commit HEAD~0 | sed '1,/\^\$/d'`;
+	my @str = split /[\n][\n]/, $msg;
 
-	if( $msg !~ /^([\w]+:\s){1,2}.+(\s)\[[\d]\/[\d]\][\n][\n]/ )
+	if( $str[0] !~ /^([\w]+:\s){1,2}.+(\s)\[[\d]\/[\d]\]$/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: <module: message>\n";
-		$msg =~ s/.+(\S)[\n]+//;
 	}
-	elsif( $msg =~ /(kernel)/i )
+	elsif( $str[0] =~ /(kernel)/i )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Should be no 'kernel' in kernel commit message\n";
-		$msg =~ s/.+(\S)[\n]+//;
-	}
-	else
-	{
-		$msg =~ s/^([\w]+:\s){1,2}.+(\S)[\n][\n]//;
 	}
 
-	if( $msg !~ /^PD\#.+(\S)[\n][\n]/ )
+	if( $str[1] !~ /^PD\#.+(\S)$/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: <PD#XXXX>\n";
-		$msg =~ s/.+(\S)[\n]+//;
-	}
-	else
-	{
-		$msg =~ s/^PD\#.+(\S)[\n][\n]//;
+
 	}
 
-	if( $msg !~ /^Problem:[\n](.+(\S)[\n])+[\n]/ )
+	if( $str[2] !~ /^Problem:[\n].+/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Problem:\n	detailed description\n";
-		$msg =~ s/.+(\S)[\n]+//;
-	}
-	else
-	{
-		$msg =~ s/^Problem:[\n](.+(\S)[\n])+[\n]//;
 	}
 
-	if( $msg !~ /^Solution:[\n](.+(\S)[\n])+[\n]/ )
+	if( $str[3] !~ /^Solution:[\n].+/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Solution:\n	detailed description\n";
-		$msg =~ s/.+(\S)[\n]+//;
-	}
-	else
-	{
-		$msg =~ s/^Solution:[\n](.+(\S)[\n])+[\n]//;
 	}
 
-	if( $msg !~ /^Verify:[\n](.+(\S)[\n])+[\n]/ )
+	if( $str[4] !~ /^Verify:[\n].+/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Verify:\n	detailed description\n";
-		$msg =~ s/.+(\S)[\n]+//;
-	}
-	else
-	{
-		$msg =~ s/^Verify:[\n](.+(\S)[\n])+[\n]//;
-	}
-
-	if( $msg !~ /^Change-Id:\s[\w]+(\S)[\n]/ )
-	{
-		$err_cnt += 1;
-		$err_msg .= "	$err_cnt: <Change-Id: xxxxx>\n";
-		$msg =~ s/.+(\S)[\n]+//;
-	}
-	else
-	{
-		$msg =~ s/^Change-Id:\s[\w]+(\S)[\n]//;
-	}
-
-	if( $msg !~ /^Signed-off-by:\s.+(\S)$/ )
-	{
-		$err_cnt += 1;
-		$err_msg .= "	$err_cnt: <Signed-off-by: xxxxx>\n";
-		$msg =~ s/.+(\S)[\n]+//;
-	}
-	else
-	{
-		$msg =~ s/^Signed-off-by:\s.+(\S)$//;
 	}
 }
 
