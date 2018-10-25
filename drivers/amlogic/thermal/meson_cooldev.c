@@ -397,7 +397,7 @@ static int meson_cooldev_probe(struct platform_device *pdev)
 	}
 
 	for_each_possible_cpu(cpu) {
-		if (mc_capable())
+		if (topology_physical_package_id(0) != -1)
 			c_id = topology_physical_package_id(cpu);
 		else
 			c_id = CLUSTER_BIG;	/* Always cluster 0 if no mc */
