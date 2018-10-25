@@ -282,6 +282,13 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 	} else if (type == VFRAME_EVENT_PROVIDER_FR_END_HINT) {
 		vf_notify_receiver(dev->vf_provider_name,
 		VFRAME_EVENT_PROVIDER_FR_END_HINT, data);
+	} else if (type == VFRAME_EVENT_PROVIDER_RESET) {
+		dev->first_frame = 0;
+		vfq_init(&dev->q_ready, AMLVIDEO_POOL_SIZE + 1,
+			&dev->amlvideo_pool_ready[0]);
+
+		vf_notify_receiver(dev->vf_provider_name,
+			VFRAME_EVENT_PROVIDER_RESET, data);
 	}
 	return 0;
 }
@@ -541,6 +548,12 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		mutex_unlock(&dev->vfpMutex);
 		return -EAGAIN;
 	}
+
+	if (dev->vf->index == 0xFFFFFFFF) {
+		pr_info("vidioc_dqbuf: Invalid vf\n");
+		return -EAGAIN;
+	}
+
 	dev->vf->omx_index = dev->frame_num;
 	dev->am_parm.signal_type = dev->vf->signal_type;
 	dev->am_parm.master_display_colour

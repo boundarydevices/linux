@@ -6780,9 +6780,16 @@ static void video_vf_unreg_provider(void)
 #endif
 }
 
-static void video_vf_light_unreg_provider(void)
+static void video_vf_light_unreg_provider(int need_keep_frame)
 {
 	ulong flags;
+
+	if (need_keep_frame) {
+		/* wait for the end of the last toggled frame*/
+		atomic_set(&video_unreg_flag, 1);
+		while (atomic_read(&video_inirq_flag) > 0)
+			schedule();
+	}
 
 	spin_lock_irqsave(&lock, flags);
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
@@ -6799,6 +6806,19 @@ static void video_vf_light_unreg_provider(void)
 		cur_dispbuf = &vf_local;
 	}
 	spin_unlock_irqrestore(&lock, flags);
+
+	if (need_keep_frame) {
+		/* keep the last toggled frame*/
+		if (cur_dispbuf) {
+			unsigned int result;
+
+			result = vf_keep_current(cur_dispbuf, NULL);
+			if (result == 0)
+				pr_info("%s: keep cur_disbuf failed\n",
+					__func__);
+		}
+		atomic_set(&video_unreg_flag, 0);
+	}
 }
 
 static int  get_display_info(void *data)
@@ -6864,9 +6884,9 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		//init_hdr_info();
 
 	} else if (type == VFRAME_EVENT_PROVIDER_RESET) {
-		video_vf_light_unreg_provider();
+		video_vf_light_unreg_provider(1);
 	} else if (type == VFRAME_EVENT_PROVIDER_LIGHT_UNREG)
-		video_vf_light_unreg_provider();
+		video_vf_light_unreg_provider(0);
 	else if (type == VFRAME_EVENT_PROVIDER_REG) {
 		enable_video_discontinue_report = 1;
 		drop_frame_count = 0;
@@ -6900,7 +6920,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 				(void *)1);
 		}
 
-		video_vf_light_unreg_provider();
+		video_vf_light_unreg_provider(0);
 	} else if (type == VFRAME_EVENT_PROVIDER_FORCE_BLACKOUT) {
 		force_blackout = 1;
 		if (debug_flag & DEBUG_FLAG_BLACKOUT) {

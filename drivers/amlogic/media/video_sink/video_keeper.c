@@ -835,6 +835,7 @@ static unsigned int vf_keep_current_locked(
 		cur_dispbuf_el);
 	if (ret) {
 		/*keeped ok with codec keeper!*/
+		keep_video_on = 1;
 		return 1;
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC

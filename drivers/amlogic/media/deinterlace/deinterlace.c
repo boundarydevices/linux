@@ -6451,6 +6451,13 @@ static int di_receiver_event_fun(int type, void *data, void *arg)
 		di_blocking = 1;
 
 		pr_dbg("%s: VFRAME_EVENT_PROVIDER_RESET\n", __func__);
+		if (is_bypass(NULL)
+			|| bypass_state
+			|| di_pre_stru.bypass_flag) {
+			vf_notify_receiver(VFM_NAME,
+				VFRAME_EVENT_PROVIDER_RESET,
+				NULL);
+		}
 
 		goto light_unreg;
 	} else if (type == VFRAME_EVENT_PROVIDER_LIGHT_UNREG) {

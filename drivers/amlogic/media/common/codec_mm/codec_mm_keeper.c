@@ -56,6 +56,11 @@ static struct codec_mm_keeper_mgr *get_codec_mm_keeper_mgr(void)
 	return &codec_keeper_mgr_private;
 }
 
+int is_codec_mm_keeped(void *mem_handle)
+{
+	return codec_mm_has_owner(mem_handle, KEEP_NAME);
+}
+EXPORT_SYMBOL(is_codec_mm_keeped);
 /*
 *not call in interrupt;
 */

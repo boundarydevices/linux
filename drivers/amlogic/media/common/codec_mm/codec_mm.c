@@ -729,6 +729,38 @@ void codec_mm_dma_flush(void *vaddr,
 }
 EXPORT_SYMBOL(codec_mm_dma_flush);
 
+int codec_mm_has_owner(struct codec_mm_s *mem, const char *owner)
+{
+	int index;
+	int i;
+	unsigned long flags;
+	int is_owner = 0;
+
+	struct codec_mm_mgt_s *mgt = get_mem_mgt();
+
+	if (mem) {
+		spin_lock_irqsave(&mgt->lock, flags);
+		if (!codec_mm_valid_mm_locked(mem)) {
+			spin_unlock_irqrestore(&mgt->lock, flags);
+			pr_err("codec mm %p not valied!\n", mem);
+			return 0;
+		}
+
+		index = atomic_read(&mem->use_cnt);
+
+		for (i = 0; i < index; i++) {
+			if (mem->owner[i] &&
+				strcmp(owner, mem->owner[i]) == 0) {
+				is_owner = 1;
+				break;
+			}
+		}
+		spin_unlock_irqrestore(&mgt->lock, flags);
+	}
+
+	return is_owner;
+}
+
 int codec_mm_request_shared_mem(struct codec_mm_s *mem, const char *owner)
 {
 	struct codec_mm_mgt_s *mgt = get_mem_mgt();

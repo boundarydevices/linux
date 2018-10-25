@@ -121,6 +121,7 @@ unsigned long codec_mm_alloc_for_dma_ex(
 		int buffer_id);
 
 void codec_mm_release(struct codec_mm_s *mem, const char *owner);
+int codec_mm_has_owner(struct codec_mm_s *mem, const char *owner);
 int codec_mm_request_shared_mem(struct codec_mm_s *mem, const char *owner);
 /*call if not make sure valid data.*/
 void codec_mm_release_with_check(struct codec_mm_s *mem, const char *owner);
