@@ -5353,7 +5353,7 @@ int amlvideo2_cma_buf_init(struct amlvideo2_device *vid_dev,  int node_id)
 				return -1;
 			}
 		} else {
-			flags = CODEC_MM_FLAGS_DMA_CPU|
+			flags = CODEC_MM_FLAGS_DMA |
 				CODEC_MM_FLAGS_CMA_CLEAR;
 			if (node_id == 0) {
 				if (vid_dev->node[node_id]->

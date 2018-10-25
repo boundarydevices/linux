@@ -61,6 +61,9 @@
 /*used scatter manager*/
 #define CODEC_MM_FLAGS_FOR_SCATTER  0x10000000
 
+/*used for cnt phys vmaped*/
+#define CODEC_MM_FLAGS_FOR_PHYS_VMAPED  0x20000000
+
 #define CODEC_MM_FLAGS_FROM_MASK \
 	(CODEC_MM_FLAGS_DMA |\
 	CODEC_MM_FLAGS_CPU |\
@@ -136,6 +139,8 @@ int codec_mm_free_for_dma(const char *owner, unsigned long phy_addr);
 
 void *codec_mm_phys_to_virt(unsigned long phy_addr);
 unsigned long codec_mm_virt_to_phys(void *vaddr);
+u8 *codec_mm_vmap(ulong addr, u32 size);
+void codec_mm_unmap_phyaddr(u8 *vaddr);
 
 void codec_mm_dma_flush(void *vaddr,
 	int size,

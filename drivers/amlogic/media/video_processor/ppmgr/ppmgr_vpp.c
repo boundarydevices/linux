@@ -3297,7 +3297,7 @@ int ppmgr_buffer_init(int vout_mode)
 	int buf_size;
 	struct vinfo_s vinfo = {.width = 1280, .height = 720, };
 	/* int flags = CODEC_MM_FLAGS_DMA; */
-	int flags = CODEC_MM_FLAGS_DMA_CPU|CODEC_MM_FLAGS_CMA_CLEAR;
+	int flags = CODEC_MM_FLAGS_DMA | CODEC_MM_FLAGS_CMA_CLEAR;
 #ifdef INTERLACE_DROP_MODE
 	mycount = 0;
 #endif

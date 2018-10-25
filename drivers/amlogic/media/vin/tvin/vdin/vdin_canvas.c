@@ -397,7 +397,7 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 {
 	unsigned int mem_size, h_size, v_size;
 	int flags = CODEC_MM_FLAGS_CMA_FIRST|CODEC_MM_FLAGS_CMA_CLEAR|
-		CODEC_MM_FLAGS_CPU;
+		CODEC_MM_FLAGS_DMA;
 	unsigned int max_buffer_num = min_buf_num;
 	unsigned int i;
 

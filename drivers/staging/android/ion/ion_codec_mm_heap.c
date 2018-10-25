@@ -54,7 +54,7 @@ ion_phys_addr_t ion_codec_mm_allocate(struct ion_heap *heap,
 		CODEC_MM_ION,
 		size / PAGE_SIZE,
 		0,
-		CODEC_MM_FLAGS_DMA_CPU);
+		CODEC_MM_FLAGS_DMA);
 
 	if (!offset) {
 		pr_err("ion_codec_mm_allocate failed out size %d\n", (int)size);

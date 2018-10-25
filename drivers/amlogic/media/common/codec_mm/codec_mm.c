@@ -44,13 +44,15 @@
 #include "codec_mm_priv.h"
 #include "codec_mm_scatter_priv.h"
 #include "codec_mm_keeper_priv.h"
+#include <linux/highmem.h>
+#include <linux/page-flags.h>
+#include <linux/vmalloc.h>
 
 #define TVP_POOL_NAME "TVP_POOL"
 #define CMA_RES_POOL_NAME "CMA_RES"
 
 #define CONFIG_PATH "media.codec_mm"
 #define CONFIG_PREFIX "media"
-
 
 #define MM_ALIGN_DOWN(addr, size)  ((addr) & (~((size) - 1)))
 #define MM_ALIGN_UP2N(addr, alg2n) ((addr+(1<<alg2n)-1)&(~((1<<alg2n)-1)))
@@ -138,6 +140,7 @@ struct codec_mm_mgt_s {
 	int alloced_for_sc_size;
 	int alloced_for_sc_cnt;
 	int alloced_from_coherent;
+	int phys_vmaped_page_cnt;
 
 	int alloc_from_sys_pages_max;
 	int enable_kmalloc_on_nomem;
@@ -265,6 +268,106 @@ static int codec_mm_alloc_pre_check_in(
 	}
 
 	return have_space;
+}
+
+static void *codec_mm_search_vaddr(unsigned long phy_addr)
+{
+	struct codec_mm_mgt_s *mgt = get_mem_mgt();
+	struct codec_mm_s *mem = NULL;
+	void *vaddr = NULL;
+	unsigned long flags;
+
+	if (!PageHighMem(phys_to_page(phy_addr)))
+		return phys_to_virt(phy_addr);
+
+	spin_lock_irqsave(&mgt->lock, flags);
+
+	list_for_each_entry(mem, &mgt->mem_list, list) {
+		if (phy_addr >= mem->phy_addr &&
+			phy_addr < mem->phy_addr + mem->buffer_size) {
+
+			if (mem->vbuffer)
+				vaddr = mem->vbuffer +
+					(phy_addr - mem->phy_addr);
+			break;
+		}
+	}
+
+	spin_unlock_irqrestore(&mgt->lock, flags);
+
+	return vaddr;
+}
+
+u8 *codec_mm_vmap(ulong addr, u32 size)
+{
+	u8 *vaddr = NULL;
+	ulong phys = addr;
+	u32 offset = phys & ~PAGE_MASK;
+	u32 npages = PAGE_ALIGN(size) / PAGE_SIZE;
+	struct page **pages = NULL;
+	pgprot_t pgprot;
+	int i;
+
+	if (!PageHighMem(phys_to_page(phys)))
+		return phys_to_virt(phys);
+
+	if (offset)
+		npages++;
+
+	pages = vmalloc(sizeof(struct page *) * npages);
+	if (!pages)
+		return NULL;
+
+	for (i = 0; i < npages; i++) {
+		pages[i] = phys_to_page(phys);
+		phys += PAGE_SIZE;
+	}
+
+	/*nocache*/
+	pgprot = pgprot_writecombine(PAGE_KERNEL);
+
+	vaddr = vmap(pages, npages, VM_MAP, pgprot);
+	if (!vaddr) {
+		pr_err("the phy(%lx) vmaped fail, size: %d\n",
+			addr - offset, npages << PAGE_SHIFT);
+		vfree(pages);
+		return NULL;
+	}
+
+	vfree(pages);
+
+	if (debug_mode & 0x20) {
+		pr_info("[HIGH-MEM-MAP] %s, pa(%lx) to va(%p), size: %d\n",
+			__func__, addr, vaddr + offset, npages << PAGE_SHIFT);
+	}
+
+	return vaddr + offset;
+}
+EXPORT_SYMBOL(codec_mm_vmap);
+
+void codec_mm_unmap_phyaddr(u8 *vaddr)
+{
+	void *addr = (void *)(PAGE_MASK & (ulong)vaddr);
+
+	vunmap(addr);
+}
+EXPORT_SYMBOL(codec_mm_unmap_phyaddr);
+
+static void *codec_mm_map_phyaddr(struct codec_mm_s *mem)
+{
+	void *vaddr = NULL;
+	unsigned int phys = mem->phy_addr;
+	unsigned int size = mem->buffer_size;
+
+	if (!PageHighMem(phys_to_page(phys)))
+		return phys_to_virt(phys);
+
+	vaddr = codec_mm_vmap(phys, size);
+	/*vaddr = ioremap_nocache(phy_addr, size);*/
+
+	mem->flags |= CODEC_MM_FLAGS_FOR_PHYS_VMAPED;
+
+	return vaddr;
 }
 
 static int codec_mm_alloc_in(
@@ -417,9 +520,13 @@ static int codec_mm_alloc_in(
 					align_2n - PAGE_SHIFT);
 			mem->from_flags = AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA;
 			if (mem->mem_handle) {
-				mem->vbuffer = mem->mem_handle;
 				mem->phy_addr =
-				 page_to_phys((struct page *)mem->mem_handle);
+					page_to_phys((struct page *)
+						mem->mem_handle);
+
+				if (mem->flags & CODEC_MM_FLAGS_CPU)
+					mem->vbuffer =
+						codec_mm_map_phyaddr(mem);
 #ifdef CONFIG_ARM64
 				if (mem->flags & CODEC_MM_FLAGS_CMA_CLEAR) {
 					/*dma_clear_buffer((struct page *)*/
@@ -495,6 +602,9 @@ static void codec_mm_free_in(struct codec_mm_mgt_s *mgt,
 {
 	unsigned long flags;
 	if (mem->from_flags == AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA) {
+		if (mem->flags & CODEC_MM_FLAGS_FOR_PHYS_VMAPED)
+			codec_mm_unmap_phyaddr(mem->vbuffer);
+
 		dma_release_from_contiguous(mgt->dev,
 			mem->mem_handle, mem->page_count);
 	} else if (mem->from_flags ==
@@ -522,6 +632,10 @@ static void codec_mm_free_in(struct codec_mm_mgt_s *mgt,
 		mgt->alloced_for_sc_size -= mem->buffer_size;
 		mgt->alloced_for_sc_cnt--;
 	}
+
+	if (mem->flags & CODEC_MM_FLAGS_FOR_PHYS_VMAPED)
+		mgt->phys_vmaped_page_cnt -= mem->page_count;
+
 	if (mem->from_flags == AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA) {
 		mgt->alloced_cma_size -= mem->buffer_size;
 	} else if (mem->from_flags ==
@@ -534,6 +648,7 @@ static void codec_mm_free_in(struct codec_mm_mgt_s *mgt,
 	} else if (mem->from_flags == AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA_RES) {
 		mgt->cma_res_pool.alloced_size -= mem->buffer_size;
 	}
+
 	spin_unlock_irqrestore(&mgt->lock, flags);
 
 	return;
@@ -634,6 +749,10 @@ struct codec_mm_s *codec_mm_alloc(const char *owner, int size,
 		mgt->alloced_for_sc_size += mem->buffer_size;
 		mgt->alloced_for_sc_cnt++;
 	}
+
+	if (mem->flags & CODEC_MM_FLAGS_FOR_PHYS_VMAPED)
+		mgt->phys_vmaped_page_cnt += mem->page_count;
+
 	spin_unlock_irqrestore(&mgt->lock, flags);
 	mem->alloced_jiffies = get_jiffies_64();
 	if (debug_mode & 0x20)
@@ -1100,11 +1219,11 @@ void *codec_mm_phys_to_virt(unsigned long phy_addr)
 	if (phy_addr >= mgt->rmem.base &&
 		phy_addr < mgt->rmem.base + mgt->rmem.size) {
 		if (mgt->res_mem_flags & RES_MEM_FLAGS_HAVE_MAPED)
-			return phys_to_virt(phy_addr);
+			return codec_mm_search_vaddr(phy_addr);
 		return NULL;	/* no virt for reserved memory; */
 	}
 
-	return phys_to_virt(phy_addr);
+	return codec_mm_search_vaddr(phy_addr);
 }
 EXPORT_SYMBOL(codec_mm_phys_to_virt);
 
@@ -1189,11 +1308,12 @@ static int dump_mem_infos(void *buf, int size)
 	pbuf += s;
 
 	s = snprintf(pbuf, size - tsize,
-		"\tCMA:%d,RES:%d,TVP:%d,SYS:%d MB\n",
+		"\tCMA:%d,RES:%d,TVP:%d,SYS:%d,VMAPED:%d MB\n",
 		mgt->alloced_cma_size / SZ_1M,
 		mgt->alloced_res_size / SZ_1M,
 		mgt->tvp_pool.alloced_size / SZ_1M,
-		mgt->alloced_sys_size / SZ_1M);
+		mgt->alloced_sys_size / SZ_1M,
+		(mgt->phys_vmaped_page_cnt << PAGE_SHIFT) / SZ_1M);
 	tsize += s;
 	pbuf += s;
 
