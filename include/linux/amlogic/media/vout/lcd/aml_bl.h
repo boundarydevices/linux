@@ -24,7 +24,7 @@
 #include <linux/amlogic/pwm_meson.h>
 
 #define BLPR(fmt, args...)      pr_info("bl: "fmt"", ## args)
-#define BLERR(fmt, args...)      pr_err("bl error: "fmt"", ## args)
+#define BLERR(fmt, args...)     pr_err("bl error: "fmt"", ## args)
 #define AML_BL_NAME		"aml-bl"
 
 #define BL_LEVEL_MAX		255
@@ -42,7 +42,6 @@
 #define BL_FREQ_VS_DEFAULT	2    /* multiple 2 of vfreq */
 
 enum bl_chip_type_e {
-	BL_CHIP_GXTVBB,
 	BL_CHIP_GXL,
 	BL_CHIP_GXM,
 	BL_CHIP_TXL,
@@ -50,6 +49,7 @@ enum bl_chip_type_e {
 	BL_CHIP_AXG,
 	BL_CHIP_G12A,
 	BL_CHIP_G12B,
+	BL_CHIP_TL1,
 	BL_CHIP_MAX,
 };
 
@@ -183,7 +183,7 @@ struct aml_bl_drv_s {
 	struct workqueue_struct   *workqueue;
 	struct delayed_work       bl_delayed_work;
 	struct resource *res_ldim_vsync_irq;
-	struct resource *res_ldim_rdma_irq;
+	/*struct resource *res_ldim_rdma_irq;*/
 };
 
 extern struct aml_bl_drv_s *aml_bl_get_driver(void);

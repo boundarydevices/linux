@@ -3183,12 +3183,6 @@ static int aml_bl_resume(struct platform_device *pdev)
 #endif
 
 #ifdef CONFIG_OF
-static struct bl_data_s bl_data_gxtvbb = {
-	.chip_type = BL_CHIP_GXTVBB,
-	.chip_name = "gxtvbb",
-	.pwm_reg = pwm_reg_txl,
-};
-
 static struct bl_data_s bl_data_gxl = {
 	.chip_type = BL_CHIP_GXL,
 	.chip_name = "gxl",
@@ -3231,11 +3225,13 @@ static struct bl_data_s bl_data_g12b = {
 	.pwm_reg = pwm_reg_txlx,
 };
 
+static struct bl_data_s bl_data_tl1 = {
+	.chip_type = BL_CHIP_TL1,
+	.chip_name = "tl1",
+	.pwm_reg = pwm_reg_txlx,
+};
+
 static const struct of_device_id bl_dt_match_table[] = {
-	{
-		.compatible = "amlogic, backlight-gxtvbb",
-		.data = &bl_data_gxtvbb,
-	},
 	{
 		.compatible = "amlogic, backlight-gxl",
 		.data = &bl_data_gxl,
@@ -3263,6 +3259,10 @@ static const struct of_device_id bl_dt_match_table[] = {
 	{
 		.compatible = "amlogic, backlight-g12b",
 		.data = &bl_data_g12b,
+	},
+	{
+		.compatible = "amlogic, backlight-tl1",
+		.data = &bl_data_tl1,
 	},
 	{},
 };

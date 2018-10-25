@@ -36,6 +36,13 @@ extern int LD_remap_lut[16][32];
 
 /*========================================*/
 
+struct aml_ldim_func_s {
+	void (*update_setting)(void);
+	void (*stts_init)(unsigned int resolution);
+	void (*ldim_init)(unsigned int bl_en, unsigned int hvcnt_bypass);
+};
+
+/*========================================*/
 
 extern int  ldim_round(int ix, int ib);
 extern void ldim_stts_en(unsigned int resolution, unsigned int pix_drop_mode,
