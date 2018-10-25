@@ -434,15 +434,20 @@ static int meson6_dwmac_suspend(struct device *dev)
 	if ((is_internal_phy) && (support_mac_wol == 0)) {
 		/*turn off led*/
 		pin_ctrl = devm_pinctrl_get(dev);
-		turnoff_tes = pinctrl_lookup_state
+		if (IS_ERR_OR_NULL(pin_ctrl)) {
+		/*led will not work*/
+			pr_info("pinctrl is null\n");
+		} else {
+			turnoff_tes = pinctrl_lookup_state
 					(pin_ctrl, "internal_gpio_pins");
-		if (IS_ERR_OR_NULL(turnoff_tes))
-			pr_info("Not support gpio low\n");
-		else
-			pinctrl_select_state(pin_ctrl, turnoff_tes);
+			if (IS_ERR_OR_NULL(turnoff_tes))
+				pr_info("Not support gpio low\n");
+			else
+				pinctrl_select_state(pin_ctrl, turnoff_tes);
 
-		devm_pinctrl_put(pin_ctrl);
-		pin_ctrl = NULL;
+			devm_pinctrl_put(pin_ctrl);
+			pin_ctrl = NULL;
+		}
 		dwmac_meson_disable_analog(dev);
 	}
 	ret = stmmac_pltfr_suspend(dev);
@@ -457,11 +462,15 @@ static int meson6_dwmac_resume(struct device *dev)
 	pr_info("resuem inter = %d\n", is_internal_phy);
 	if ((is_internal_phy) && (support_mac_wol == 0)) {
 		pin_ctrl = devm_pinctrl_get(dev);
-		turnon_tes = pinctrl_lookup_state
+		if (IS_ERR_OR_NULL(pin_ctrl)) {
+			pr_info("pinctrl is null\n");
+		} else {
+			turnon_tes = pinctrl_lookup_state
 					(pin_ctrl, "internal_eth_pins");
-		pinctrl_select_state(pin_ctrl, turnon_tes);
-		devm_pinctrl_put(pin_ctrl);
-		pin_ctrl = NULL;
+			pinctrl_select_state(pin_ctrl, turnon_tes);
+			devm_pinctrl_put(pin_ctrl);
+			pin_ctrl = NULL;
+		}
 		dwmac_meson_recover_analog(dev);
 	}
 	ret = stmmac_pltfr_resume(dev);
@@ -479,16 +488,20 @@ void meson6_dwmac_shutdown(struct platform_device *pdev)
 	/*shudown internal phy analog*/
 	if (is_internal_phy) {
 		pin_ctrl = devm_pinctrl_get(&pdev->dev);
-		turnoff_tes = pinctrl_lookup_state
+		if (IS_ERR_OR_NULL(pin_ctrl)) {
+			pr_info("pinctrl is null\n");
+		} else {
+			turnoff_tes = pinctrl_lookup_state
 					(pin_ctrl, "internal_gpio_pins");
-		if (IS_ERR_OR_NULL(turnoff_tes))
-			pr_info("Not support gpio low\n");
-		else
-			pinctrl_select_state(pin_ctrl, turnoff_tes);
+			if (IS_ERR_OR_NULL(turnoff_tes))
+				pr_info("Not support gpio low\n");
+			else
+				pinctrl_select_state(pin_ctrl, turnoff_tes);
 
-		//pinctrl_select_state(pin_ctrl, turnoff_tes);
-		devm_pinctrl_put(pin_ctrl);
-		pin_ctrl = NULL;
+			//pinctrl_select_state(pin_ctrl, turnoff_tes);
+			devm_pinctrl_put(pin_ctrl);
+			pin_ctrl = NULL;
+		}
 		dwmac_meson_disable_analog(&pdev->dev);
 	}
 	//stmmac_release(ndev);
