@@ -64,6 +64,7 @@ extern struct ve_dnlp_s am_ve_dnlp;
 extern struct tcon_gamma_table_s video_gamma_table_r;
 extern struct tcon_gamma_table_s video_gamma_table_g;
 extern struct tcon_gamma_table_s video_gamma_table_b;
+extern struct tcon_gamma_table_s video_gamma_table_ioctl_set;
 extern struct tcon_gamma_table_s video_gamma_table_r_adj;
 extern struct tcon_gamma_table_s video_gamma_table_g_adj;
 extern struct tcon_gamma_table_s video_gamma_table_b_adj;

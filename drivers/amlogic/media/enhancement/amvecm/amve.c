@@ -76,6 +76,8 @@ struct tcon_gamma_table_s video_gamma_table_b;
 struct tcon_gamma_table_s video_gamma_table_r_adj;
 struct tcon_gamma_table_s video_gamma_table_g_adj;
 struct tcon_gamma_table_s video_gamma_table_b_adj;
+struct tcon_gamma_table_s video_gamma_table_ioctl_set;
+
 struct tcon_rgb_ogo_s video_rgb_ogo = {
 	0, /* wb enable */
 	0, /* -1024~1023, r_pre_offset */

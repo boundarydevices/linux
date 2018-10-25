@@ -1205,6 +1205,20 @@ static int amvecm_set_saturation_hue_post(int val1,
 	return 0;
 }
 
+static int gamma_table_compare(struct tcon_gamma_table_s *table1,
+	struct tcon_gamma_table_s *table2)
+{
+	int i = 0, flag = 0;
+
+	for (i = 0; i < 256; i++)
+		if (table1->data[i] != table2->data[i]) {
+			flag = 1;
+			break;
+		}
+
+	return flag;
+}
+
 static long amvecm_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
@@ -1300,34 +1314,52 @@ static long amvecm_ioctl(struct file *file,
 		if (!gamma_en)
 			return -EINVAL;
 
-		if (copy_from_user(&video_gamma_table_r,
+		if (copy_from_user(&video_gamma_table_ioctl_set,
 				(void __user *)arg,
 				sizeof(struct tcon_gamma_table_s)))
 			ret = -EFAULT;
-		else
+		else if (gamma_table_compare(&video_gamma_table_ioctl_set,
+			&video_gamma_table_r)) {
+			memcpy(&video_gamma_table_r,
+				&video_gamma_table_ioctl_set,
+				sizeof(struct tcon_gamma_table_s));
 			vecm_latch_flag |= FLAG_GAMMA_TABLE_R;
+		} else
+			pr_amvecm_dbg("load same gamma_r table,no need to change\n");
 		break;
 	case AMVECM_IOC_GAMMA_TABLE_G:
 		if (!gamma_en)
 			return -EINVAL;
 
-		if (copy_from_user(&video_gamma_table_g,
+		if (copy_from_user(&video_gamma_table_ioctl_set,
 				(void __user *)arg,
 				sizeof(struct tcon_gamma_table_s)))
 			ret = -EFAULT;
-		else
+		else if (gamma_table_compare(&video_gamma_table_ioctl_set,
+			&video_gamma_table_g)) {
+			memcpy(&video_gamma_table_g,
+				&video_gamma_table_ioctl_set,
+				sizeof(struct tcon_gamma_table_s));
 			vecm_latch_flag |= FLAG_GAMMA_TABLE_G;
+		} else
+			pr_amvecm_dbg("load same gamma_g table,no need to change\n");
 		break;
 	case AMVECM_IOC_GAMMA_TABLE_B:
 		if (!gamma_en)
 			return -EINVAL;
 
-		if (copy_from_user(&video_gamma_table_b,
+		if (copy_from_user(&video_gamma_table_ioctl_set,
 				(void __user *)arg,
 				sizeof(struct tcon_gamma_table_s)))
 			ret = -EFAULT;
-		else
+		else if (gamma_table_compare(&video_gamma_table_ioctl_set,
+			&video_gamma_table_b)) {
+			memcpy(&video_gamma_table_b,
+				&video_gamma_table_ioctl_set,
+				sizeof(struct tcon_gamma_table_s));
 			vecm_latch_flag |= FLAG_GAMMA_TABLE_B;
+		} else
+			pr_amvecm_dbg("load same gamma_b table,no need to change\n");
 		break;
 	case AMVECM_IOC_S_RGB_OGO:
 		if (!wb_en)
