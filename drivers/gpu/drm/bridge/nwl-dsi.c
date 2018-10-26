@@ -300,7 +300,7 @@ static unsigned long nwl_dsi_get_bit_clock(struct nwl_mipi_dsi *dsi,
 		unsigned long pixclock)
 {
 	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
-	int bpp;
+	int bpp, n;
 	u32 bus_fmt;
 	struct drm_crtc *crtc = 0;
 
@@ -319,7 +319,15 @@ static unsigned long nwl_dsi_get_bit_clock(struct nwl_mipi_dsi *dsi,
 	}
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsi_device->format);
+	if (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
+		n = (bpp + (dsi->lanes * 8) - 1) / (dsi->lanes * 8);
+		pr_debug("%s: pixclock=%ld n=%d lanes=%d bpp=%d\n", __func__,
+				pixclock, n, dsi->lanes, bpp);
+		return pixclock * n * 8;
+	}
 
+	pr_debug("%s: pixclock=%ld lanes=%d bpp=%d\n", __func__,
+			pixclock, dsi->lanes, bpp);
 	return (pixclock * bpp) / dsi_device->lanes;
 }
 
