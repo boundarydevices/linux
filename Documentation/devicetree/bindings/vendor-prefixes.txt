@@ -24,6 +24,13 @@ ampire	Ampire Co., Ltd.
 ams	AMS AG
 amstaos	AMS-Taos Inc.
 analogix	Analogix Semiconductor, Inc.
+android
+android,odm
+android,product
+android,fstab
+android,vbmeta
+android,vendor
+android,firmware
 apm	Applied Micro Circuits Corporation (APM)
 aptina	Aptina Imaging
 arasan	Arasan Chip Systems

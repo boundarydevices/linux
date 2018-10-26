@@ -14697,3 +14697,12 @@ F:	arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot_vccktest.dts
 AMLOGIC DDR TOOL
 M:	wenbiao zhang <wenbiao.zhang@amlogic.com>
 F:	include/linux/amlogic/aml_dmc.h
+
+AMLOGIC AB UPDATE DTS
+M:	Xindong Xu <xindong.xu@amlogic.com>
+F:	arch/arm/boot/dts/amlogic/firmware_ab.dtsi
+F:	arch/arm/boot/dts/amlogic/firmware_avb_ab.dtsi
+F:	arch/arm64/boot/dts/amlogic/firmware_ab.dtsi
+F:	arch/arm/boot/dts/amlogic/partition_mbox_ab_P_32.dtsi
+F:	arch/arm64/boot/dts/amlogic/firmware_avb_ab.dtsi
+F:	arch/arm64/boot/dts/amlogic/partition_mbox_ab_P_32.dtsi

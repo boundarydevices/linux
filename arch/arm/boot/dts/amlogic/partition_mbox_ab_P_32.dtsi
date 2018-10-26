@@ -1,0 +1,173 @@
+/*
+ * arch/arm/boot/dts/amlogic/partition_mbox_ab_P_32.dtsi
+ *
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#include "firmware_ab.dtsi"
+
+/ {
+    partitions: partitions{
+		parts = <23>;
+		part-0 = <&logo>;
+		part-1 = <&boot_a>;
+		part-2 = <&misc>;
+		part-3 = <&dtbo_a>;
+		part-4 = <&dtbo_b>;
+		part-5 = <&cri_data>;
+		part-6 = <&param>;
+		part-7 = <&boot_b>;
+		part-8 = <&rsv>;
+		part-9 = <&metadata_a>;
+		part-10 = <&metadata_b>;
+		part-11 = <&vbmeta_a>;
+		part-12 = <&vbmeta_b>;
+		part-13 = <&tee>;
+		part-14 = <&vendor_a>;
+		part-15 = <&vendor_b>;
+		part-16 = <&odm_a>;
+		part-17 = <&odm_b>;
+		part-18 = <&system_a>;
+		part-19 = <&system_b>;
+		part-20 = <&product_a>;
+		part-21 = <&product_b>;
+		part-22 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		boot_a:boot_a
+		{
+			pname = "boot_a";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		dtbo_a:dtbo_a{
+			pname = "dtbo_a";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		dtbo_b:dtbo_b{
+			pname = "dtbo_b";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		cri_data:cri_data
+		{
+			pname = "cri_data";
+			size = <0x0 0x800000>;
+			mask = <2>;
+		};
+		rsv:rsv{
+			pname = "rsv";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		metadata_a:metadata_a{
+			pname = "metadata_a";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		metadata_b:metadata_b{
+			pname = "metadata_b";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		vbmeta_a:vbmeta_a{
+			pname = "vbmeta_a";
+			size = <0x0 0x200000>;
+			mask = <1>;
+		};
+		vbmeta_b:vbmeta_b{
+			pname = "vbmeta_b";
+			size = <0x0 0x200000>;
+			mask = <1>;
+		};
+		param:param{
+			pname = "param";
+			size = <0x0 0x1000000>;
+			mask = <2>;
+		};
+		boot_b:boot_b
+		{
+			pname = "boot_b";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		vendor_a:vendor_a
+		{
+			pname = "vendor_a";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		vendor_b:vendor_b
+		{
+			pname = "vendor_b";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		odm_a:odm_a
+		{
+			pname = "odm_a";
+			size = <0x0 0x8000000>;
+			mask = <1>;
+		};
+		odm_b:odm_b
+		{
+			pname = "odm_b";
+			size = <0x0 0x8000000>;
+			mask = <1>;
+		};
+		system_a:system_a
+		{
+			pname = "system_a";
+			size = <0x0 0x50000000>;
+			mask = <1>;
+		};
+		system_b:system_b
+		{
+			pname = "system_b";
+			size = <0x0 0x50000000>;
+			mask = <1>;
+		};
+		product_a:product_a{
+			pname = "product_a";
+			size = <0x0 0x8000000>;
+			mask = <1>;
+		};
+		product_b:product_b{
+			pname = "product_b";
+			size = <0x0 0x8000000>;
+			mask = <1>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
+		};
+	};
+};/* end of / */
