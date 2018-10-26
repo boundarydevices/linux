@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2018 Boundary Devices
+ */
+#include "imx8mm-nitrogen8mm_rev2.dts"
+
+&iomuxc {
+	pinctrl_wdog_gpio: wdog-gpiogrp {
+		fsl,pins = <
+#define GP_WDOG_RESET	<&gpio1 2 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO02_GPIO1_IO2, 0x140)
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM";
+	compatible = "boundary,imx8mm-nitrogen8mm", "fsl,imx8mm";
+};
+
+&A53_0 {
+	cpu-supply = <&reg_buck4>;
+};
+
+&reg_buck4 {
+	dual-phase;
+};
+
+&wdog1 {
+	pinctrl-names = "default", "gpio";
+	pinctrl-1 = <&pinctrl_wdog_gpio>;
+	reset-gpios = GP_WDOG_RESET;
+};
