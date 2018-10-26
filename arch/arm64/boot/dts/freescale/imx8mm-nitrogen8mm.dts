@@ -1,0 +1,197 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2018 Boundary Devices
+ */
+
+/dts-v1/;
+#define MX8MMN(a, b)	MX8MM_##a b
+#define IMX8MMN(a)	IMX8MM_##a
+#include "imx8mm.dtsi"
+#include "imx8mmn-nitrogen8mm.dtsi"
+
+&iomuxc {
+	/* mcp2515t: can controller */
+	pinctrl_ecspi2_mcp2515t: ecspi2-mcp2515tgrp {
+		fsl,pins = <
+#define GPIRQ_MCP2515T	<&gpio4 14 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD2_GPIO4_IO14, 0x1c0)
+#define GP_MCP2515T_RESET <&gpio4 1 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_RXC_GPIO4_IO1, 0x100)
+#define GP_CAN_ERR	<&gpio4 15 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD3_GPIO4_IO15, 0x1c0)
+#define GP_CAN_EN	<&gpio3 19 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_RXFS_GPIO3_IO19, 0x100)
+                >;
+        };
+
+	pinctrl_pcie0: pcie0grp {
+		fsl,pins = <
+#define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_TXFS_GPIO4_IO31, 0x100)
+#define GP_PCIE0_DISABLE	<&gpio1 4 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO04_GPIO1_IO4, 0x100)
+		>;
+	};
+
+	pinctrl_sai1: sai1grp {
+		fsl,pins = <
+			/* wm8960 */
+			MX8MMN(IOMUXC_SAI1_MCLK_SAI1_MCLK, 0xd6)
+			MX8MMN(IOMUXC_SAI1_TXFS_SAI1_TX_SYNC, 0xd6)
+			MX8MMN(IOMUXC_SAI1_TXC_SAI1_TX_BCLK, 0xd6)
+			MX8MMN(IOMUXC_SAI1_TXD0_SAI1_TX_DATA0, 0xd6)
+			MX8MMN(IOMUXC_SAI1_RXD0_SAI1_RX_DATA0, 0xd6)
+		>;
+	};
+
+	pinctrl_usbotg2: usbotg2grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO15_USB2_OTG_OC, 0x156)
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM";
+	compatible = "boundary,imx8mm-nitrogen8mm", "fsl,imx8mm";
+
+	clocks {
+		clk16m: clk16m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <16000000>;
+		};
+
+		pcie0_refclk: pcie0-refclk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <100000000>;
+		};
+	};
+
+	sound-wm8960 {
+		audio-codec = <&wm8960>;
+		audio-routing =
+			"Headphone Jack", "HP_L",
+			"Headphone Jack", "HP_R",
+			"Ext Spk", "SPK_LP",
+			"Ext Spk", "SPK_LN",
+			"Ext Spk", "SPK_RP",
+			"Ext Spk", "SPK_RN",
+			"LINPUT1", "Main MIC",
+			"Main MIC", "MICB",
+			"RINPUT1", "Mic Jack",
+			"Mic Jack", "MICB";
+		codec-master;
+		compatible = "fsl,imx-audio-wm8960";
+		cpu-dai = <&sai1>;
+		/* JD2: hp detect high for headphone*/
+		hp-det = <2 0>;
+		hp-det-gpios = GP_WM8960_HP_DET;
+		/* Jack is not stuffed */
+		mic-det-gpios = GP_WM8960_MIC_DET;
+		model = "wm8960-audio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sound_wm8960>;
+	};
+};
+
+&csi1_bridge {
+	fsl,mipi-mode;
+	status = "okay";
+
+	port {
+		csi1_ep: endpoint {
+			remote-endpoint = <&csi1_mipi_ep>;
+		};
+	};
+};
+
+&ecspi2 {
+	assigned-clocks = <&clk IMX8MMN(CLK_ECSPI2)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
+	assigned-clock-rates = <40000000>;
+	can0: can@0 {
+		clocks = <&clk16m>;
+		compatible = "microchip,mcp2515";
+		interrupts-extended = GPIRQ_MCP2515T;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_mcp2515t>;
+		reg = <0>;
+		reset-gpios = GP_MCP2515T_RESET;
+		spi-max-frequency = <10000000>;
+		xceiver-gpios = GP_CAN_EN;
+	};
+};
+
+&i2c4 {
+	wm8960: codec@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		clocks = <&clk IMX8MMN(CLK_SAI1_ROOT)>;
+		clock-names = "mclk";
+		wlf,shared-lrclk;
+	};
+};
+
+&pcie0 {
+	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
+			  <&clk IMX8MM_CLK_PCIE1_PHY>,
+			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
+	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
+				 <&clk IMX8MM_SYS_PLL2_100M>,
+				 <&clk IMX8MM_SYS_PLL2_250M>;
+	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
+		 <&clk IMX8MM_CLK_PCIE1_AUX>,
+		 <&clk IMX8MM_CLK_PCIE1_PHY>,
+		 <&pcie0_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	disable-gpio = GP_PCIE0_DISABLE;
+	ext_osc = <0>;
+	l1ss-disabled;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie0>;
+	reset-gpio = GP_PCIE0_RESET;
+	status = "okay";
+};
+
+&pgc_vpumix {
+	dvfs-supply = <&reg_buck5>;
+	idle-microvolt = <850000 805000 900000>;
+};
+
+&sai1 {
+	assigned-clocks = <&clk IMX8MMN(AUDIO_PLL1)>, <&clk IMX8MMN(AUDIO_PLL2)>, <&clk IMX8MMN(CLK_SAI1)>;
+	assigned-clock-parents = <0>, <0>, <&clk IMX8MMN(AUDIO_PLL1_OUT)>;
+	assigned-clock-rates = <786432000>, <722534400>, <12288000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai1>;
+	status = "okay";
+};
+
+&usbotg2 {
+	dr_mode = "host";
+	over-current-active-low;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg2>;
+	power-active-high;
+	status = "okay";
+};
+
+&vpu_g1 {
+	status = "okay";
+};
+
+&vpu_g2 {
+	status = "okay";
+};
+
+&vpu_h1 {
+	status = "okay";
+};
+
+&vpu_v4l2 {
+	status = "okay";
+};
