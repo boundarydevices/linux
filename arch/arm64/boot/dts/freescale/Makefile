@@ -154,6 +154,11 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MM) += fsl-imx8mm-evk.dtb \
 				 imx8mm-dwe.dtb \
 				 imx8mm-hl8mm.dtb \
 				 imx8mm-moo.dtb \
+				 imx8mm-nitrogen8mm.dtb \
+				 imx8mm-nitrogen8mm-m4.dtb \
+				 imx8mm-nitrogen8mm_som.dtb \
+				 imx8mm-nitrogen8mm_som-m4.dtb \
+				 imx8mm-nitrogen8mm_som-mcp25625.dtb \
 
 dtb-$(CONFIG_ARCH_FSL_IMX8MN) += fsl-imx8mn-ddr4-evk.dtb \
 				 fsl-imx8mn-ddr4-evk-rpmsg.dtb \
