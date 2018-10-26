@@ -142,6 +142,7 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 	int ret;
 	int generic;
 	int match = 0;
+	int readval, matchval;
 
 	pr_debug("%s:\n", __func__);
 	if (!cmd || !length)
@@ -166,24 +167,53 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 					dsi, cmd[0]);
 				len = 1;
 		} else if (len == S_DCS_READ) {
+			data[0] = 0;
 			ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, 1);
-			pr_debug("Read MCS(%d): (%x) %x cmp %x\n",
+			pr_debug("Read DCS(%d): (%x) %x cmp %x\n",
 				ret, cmd[0], data[0], cmd[1]);
 			len = 2;
 			if (data[0] != cmd[1])
 				match = -EINVAL;
-		} else {
+		} else if (len == S_DCS_READ4) {
+			data[0] = data[1] = data[2] = data[3] = 0;
+			if (generic) {
+				ret =  mipi_dsi_generic_read(dsi, cmd, 2, data, 4);
+				readval = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+				matchval = cmd[2] | (cmd[3] << 8) | (cmd[4] << 16) | (cmd[5] << 24);
+				pr_debug("Read GEN(%d): (%02x %02x) %08x cmp %08x\n",
+					ret, cmd[0], cmd[1], readval, matchval);
+				len = 6;
+			} else {
+				ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, 4);
+				readval = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+				matchval = cmd[1] | (cmd[2] << 8) | (cmd[3] << 16) | (cmd[4] << 24);
+				pr_debug("Read DCS(%d): (%x) %x cmp %x\n",
+					ret, cmd[0], readval, matchval);
+				len = 5;
+			}
+			if (readval != matchval)
+				match = -EINVAL;
+		} else if (len == S_DELAY) {
 			msleep(cmd[0]);
 			len = 1;
+		} else {
+			dev_err(&dsi->dev, "Unknown DCS command 0x%x0x\n", cmd[-1]);
+			match = -EINVAL;
+			break;
 		}
 		if (ret < 0) {
 			dev_err(&dsi->dev,
-				"Failed to send MCS (%d), (%d)%02x %02x\n",
+				"Failed to send DCS (%d), (%d)%02x %02x\n",
 				ret, len, cmd[0], cmd[1]);
 			return ret;
 		} else {
-			pr_debug("Sent MCS (%d), (%d)%02x %02x\n",
-				ret, len, cmd[0], cmd[1]);
+			if (len == 6) {
+				pr_debug("Sent DCS (%d), (%d)%02x %02x: %02x %02x %02x %02x\n",
+					ret, len, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
+			} else {
+				pr_debug("Sent DCS (%d), (%d)%02x %02x\n",
+					ret, len, cmd[0], cmd[1]);
+			}
 		}
 		if (length <= len)
 			break;
