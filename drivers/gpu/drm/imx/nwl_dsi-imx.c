@@ -553,7 +553,7 @@ static bool do_imx_nwl_dsi_bridge_mode_fixup(struct imx_mipi_dsi *dsi,
 	struct device *dev = dsi->dev;
 	unsigned long pixclock;
 	unsigned long bit_clk;
-	unsigned long phyref_rate;
+	unsigned long phyref_rate, pll_rate;
 	int ret = 0;
 	struct clk *clk;
 
@@ -569,9 +569,17 @@ static bool do_imx_nwl_dsi_bridge_mode_fixup(struct imx_mipi_dsi *dsi,
 	 * about bits-per-pixel and number of lanes from DSI device
 	 */
 	bit_clk = nwl_dsi_get_bit_clock(dsi->next_bridge, pixclock);
+	pll_rate = bit_clk;
+	/* Video pll must be from 380MHz to 2000 MHz */
+	if (pll_rate < 380000000) {
+		int n = (380000000 + pll_rate - 1) / pll_rate;
+
+		pll_rate *= n;
+		pr_info("%s: %d = %d * %d\n", __func__, pll_rate, bit_clk, n);
+	}
 	clk = dsi->clk_config[NCLK_PIXEL_PLL].clk;
 	if (dsi->clk_config[NCLK_PIXEL_PLL].present)
-		clk_set_rate(clk, bit_clk);
+		clk_set_rate(clk, pll_rate);
 
 //	bit_clk = (bit_clk / 3) * 4;
 
@@ -579,7 +587,7 @@ static bool do_imx_nwl_dsi_bridge_mode_fixup(struct imx_mipi_dsi *dsi,
 	if (bit_clk == dsi->bit_clk)
 		return 0;
 
-	phyref_rate = bit_clk;
+	phyref_rate = pll_rate;
 	while (phyref_rate >= 48000000)
 		phyref_rate >>= 1;
 
