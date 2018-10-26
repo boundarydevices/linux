@@ -787,7 +787,8 @@ static int nwl_dsi_get_dphy_params(struct nwl_dsi *dsi,
 	 */
 	ret = phy_mipi_dphy_get_default_config(mode->clock * 1000,
 		mipi_dsi_pixel_format_to_bpp(dsi->format), dsi->lanes,
-		&phy_opts->mipi_dphy);
+		&phy_opts->mipi_dphy, 0,
+		0);
 	if (ret < 0)
 		return ret;
 
