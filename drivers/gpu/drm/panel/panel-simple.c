@@ -3987,6 +3987,8 @@ static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_BURST;
 		if (of_property_read_bool(np, "mode-video-hse"))
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HSE;
+		if (of_property_read_bool(np, "mode-video-mbc"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_MBC;
 	}
 	err = panel_simple_probe(&dsi->dev, pd);
 	if (err < 0)
