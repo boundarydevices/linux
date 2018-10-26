@@ -264,12 +264,16 @@ static struct clk *mixel_dsi_clk_register_clk(struct mixel_dphy_priv *priv, stru
  * Find a ratio close to the desired one using continued fraction
  * approximation ending either at exact match or maximum allowed
  * nominator, denominator.
+ * continued fraction
+ *      2  1  2  1  2
+ * 0 1  2  3  8 11 30
+ * 1 0  1  1  3  4 11
  */
-static void get_best_ratio(u32 *pnum, u32 *pdenom, u32 max_n, u32 max_d)
+static void get_best_ratio(unsigned long *pnum, unsigned long *pdenom, u32 max_n, u32 max_d)
 {
-	u32 a = *pnum;
-	u32 b = *pdenom;
-	u32 c;
+	unsigned long a = *pnum;
+	unsigned long b = *pdenom;
+	unsigned long c;
 	u32 n[] = {0, 1};
 	u32 d[] = {1, 0};
 	u32 whole;
@@ -280,6 +284,7 @@ static void get_best_ratio(u32 *pnum, u32 *pdenom, u32 max_n, u32 max_d)
 		whole = a / b;
 		n[i] += (n[i ^ 1] * whole);
 		d[i] += (d[i ^ 1] * whole);
+//		printf("cf=%i n=%i d=%i\n", whole, n[i], d[i]);
 		if ((n[i] > max_n) || (d[i] > max_d)) {
 			i ^= 1;
 			break;
@@ -298,22 +303,34 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 {
 	struct mixel_dphy_priv *priv = dev_get_drvdata(phy->dev.parent);
 	unsigned long ref_clk = clk_get_rate(priv->phy_ref_clk);
-	u32 lp_t, numerator, denominator;
+	u32 lp_t;
+	unsigned long numerator, denominator;
+	unsigned max_d = 256;
+	unsigned long bit_clk;
 	unsigned long long tmp;
 	u32 n;
-	int i;
+	int i = 0;
 
-	if (dphy_opts->hs_clk_rate > DATA_RATE_MAX_SPEED ||
-	    dphy_opts->hs_clk_rate < DATA_RATE_MIN_SPEED)
+	bit_clk = dphy_opts->hs_clk_rate;
+	if (bit_clk > DATA_RATE_MAX_SPEED ||
+	    bit_clk < DATA_RATE_MIN_SPEED)
 		return -EINVAL;
 
-	numerator = dphy_opts->hs_clk_rate;
-	denominator = ref_clk;
-	get_best_ratio(&numerator, &denominator, 255, 256);
+	/* CM ranges between 16 and 255 */
+	/* CN ranges between 1 and 32 */
+	/* CO is power of 2: 1, 2, 4, 8 */
+	do {
+		numerator = bit_clk << i;
+		denominator = ref_clk;
+		get_best_ratio(&numerator, &denominator, 255, max_d >> i);
+		denominator <<= i;
+		i++;
+	} while ((denominator >> __ffs(denominator)) > 32);
+
 	if (!numerator || !denominator) {
-		dev_err(&phy->dev, "Invalid %d/%d for %ld/%ld\n",
+		dev_err(&phy->dev, "Invalid %ld/%ld for %ld/%ld\n",
 			numerator, denominator,
-			dphy_opts->hs_clk_rate, ref_clk);
+			bit_clk, ref_clk);
 		return -EINVAL;
 	}
 
@@ -338,15 +355,16 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 	    cfg->co < 1 || cfg->co > 8) {
 		dev_err(&phy->dev, "Invalid CM/CN/CO values: %u/%u/%u\n",
 			cfg->cm, cfg->cn, cfg->co);
-		dev_err(&phy->dev, "for hs_clk/ref_clk=%ld/%ld ~ %d/%d\n",
-			dphy_opts->hs_clk_rate, ref_clk,
+		dev_err(&phy->dev, "for hs_clk/ref_clk=%ld/%ld ~ %ld/%ld\n",
+			bit_clk, ref_clk,
 			numerator, denominator);
 		return -EINVAL;
 	}
 
 	dphy_opts->hs_clk_rate = ref_clk * cfg->cm / (cfg->co * cfg->cn);
-	dev_dbg(&phy->dev, "hs_clk/ref_clk=%ld/%ld ~ %d/%d\n",
-		dphy_opts->hs_clk_rate, ref_clk, numerator, denominator);
+	dev_dbg(&phy->dev, "hs_clk(%ld)/ref_clk=%ld/%ld ~ %ld/%ld\n",
+			dphy_opts->hs_clk_rate, bit_clk, ref_clk,
+			numerator, denominator);
 
 	/* LP clock period */
 	tmp = 1000000000000LL;
@@ -386,15 +404,15 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 	cfg->mc_prg_hs_prepare = dphy_opts->clk_prepare > lp_t ? 1 : 0;
 
 	/* hs_zero: formula from NXP BSP */
-	n = (144 * (dphy_opts->hs_clk_rate / 1000000) - 47500) / 10000;
+	n = (144 * (bit_clk / 1000000) - 47500) / 10000;
 	cfg->m_prg_hs_zero = n < 1 ? 1 : n;
 
 	/* clk_zero: formula from NXP BSP */
-	n = (34 * (dphy_opts->hs_clk_rate / 1000000) - 2500) / 1000;
+	n = (34 * (bit_clk / 1000000) - 2500) / 1000;
 	cfg->mc_prg_hs_zero = n < 1 ? 1 : n;
 
 	/* clk_trail, hs_trail: formula from NXP BSP */
-	n = (103 * (dphy_opts->hs_clk_rate / 1000000) + 10000) / 10000;
+	n = (103 * (bit_clk / 1000000) + 10000) / 10000;
 	if (n > 15)
 		n = 15;
 	if (n < 1)
@@ -404,26 +422,26 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 
 	/* rxhs_settle: formula from NXP BSP */
 	if (priv->devdata->reg_rxhs_settle != REG_NA) {
-		if (dphy_opts->hs_clk_rate < MBPS(80))
+		if (bit_clk < MBPS(80))
 			cfg->rxhs_settle = 0x0d;
-		else if (dphy_opts->hs_clk_rate < MBPS(90))
+		else if (bit_clk < MBPS(90))
 			cfg->rxhs_settle = 0x0c;
-		else if (dphy_opts->hs_clk_rate < MBPS(125))
+		else if (bit_clk < MBPS(125))
 			cfg->rxhs_settle = 0x0b;
-		else if (dphy_opts->hs_clk_rate < MBPS(150))
+		else if (bit_clk < MBPS(150))
 			cfg->rxhs_settle = 0x0a;
-		else if (dphy_opts->hs_clk_rate < MBPS(225))
+		else if (bit_clk < MBPS(225))
 			cfg->rxhs_settle = 0x09;
-		else if (dphy_opts->hs_clk_rate < MBPS(500))
+		else if (bit_clk < MBPS(500))
 			cfg->rxhs_settle = 0x08;
 		else
 			cfg->rxhs_settle = 0x07;
 	} else if (priv->devdata->reg_m_prg_rxhs_settle != REG_NA) {
-		if (dphy_opts->hs_clk_rate < MBPS(80))
+		if (bit_clk < MBPS(80))
 			cfg->rxhs_settle = 0x01;
-		else if (dphy_opts->hs_clk_rate < MBPS(250))
+		else if (bit_clk < MBPS(250))
 			cfg->rxhs_settle = 0x06;
-		else if (dphy_opts->hs_clk_rate < MBPS(500))
+		else if (bit_clk < MBPS(500))
 			cfg->rxhs_settle = 0x08;
 		else
 			cfg->rxhs_settle = 0x0a;
