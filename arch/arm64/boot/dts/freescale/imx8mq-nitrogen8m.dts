@@ -7,6 +7,7 @@
 
 #include "fsl-imx8mq.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
+#include "panel-lcm-jm430.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -213,7 +214,14 @@
 #define GPIRQ_I2C4_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
 			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
 #define GP_I2C4_SN65DSI83_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x26
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x06
+		>;
+	};
+
+	pinctrl_lcm_jm430: lcm-jm430grp {
+		fsl,pins = <
+#define GP_TC358762_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
 		>;
 	};
 
@@ -472,14 +480,17 @@
 		fb_mipi = &fb_mipi;
 		fb_hdmi = &hdmi;
 		gpio1 = &gpio1;
+		gpio3 = &gpio3;
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
+		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
 		mipi_cmds_m101nwwb = &mipi_cmds_ltk080a60a004t;		/* Same commands work for both */
 		mipi_dsi = &mipi_dsi;
 		mipi_dsi_bridge = &mipi_dsi_bridge;
 		mipi_dsi_phy = &mipi_dsi_phy;
 		mipi_to_lvds = &mipi_to_lvds;
+		pinctrl_lcm_jm430 = &pinctrl_lcm_jm430;
 		pinctrl_ltk080a60a004t = &pinctrl_ltk080a60a004t;
 		pwm_mipi = &pwm1;
 		sound_hdmi = &sound_hdmi;
@@ -487,8 +498,11 @@
 	};
 
 	alias_create_phandles {
-		p1 = <&mipi_cmds_ltk080a60a004t>;
-		p2 = <&pinctrl_ltk080a60a004t>;
+		p1 = <&mipi_cmds_lcm_jm430>;
+		p2 = <&mipi_cmds_ltk080a60a004t>;
+		p3 = <&mipi_to_lvds>;
+		p4 = <&pinctrl_lcm_jm430>;
+		p5 = <&pinctrl_ltk080a60a004t>;
 	};
 
 	backlight_mipi: backlight-mipi {
