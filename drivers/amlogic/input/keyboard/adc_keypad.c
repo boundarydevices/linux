@@ -100,25 +100,6 @@ static void meson_adc_kp_poll(struct input_polled_dev *dev)
 
 }
 
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-static void meson_adc_kp_early_suspend(struct early_suspend *h)
-{
-	struct meson_adc_kp *kp = container_of(h,
-			struct meson_adc_kp, early_suspend);
-
-	cancel_delayed_work_sync(&kp->poll_dev->work);
-}
-
-static void meson_adc_kp_late_resume(struct early_suspend *h)
-{
-	struct meson_adc_kp *kp = container_of(h,
-			struct meson_adc_kp, early_suspend);
-
-	queue_delayed_work(system_freezable_wq, &kp->poll_dev->work,
-		msecs_to_jiffies(kp->poll_dev->poll_interval));
-}
-#endif
-
 static void send_data_to_bl301(void)
 {
 	u32 val;
@@ -553,13 +534,6 @@ static int meson_adc_kp_probe(struct platform_device *pdev)
 	input->keycodesize = sizeof(unsigned short);
 	input->keycodemax = 0x1ff;
 
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-	kp->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-	kp->early_suspend.suspend = meson_adc_kp_early_suspend;
-	kp->early_suspend.resume = meson_adc_kp_late_resume;
-	register_early_suspend(&kp->early_suspend);
-#endif
-
 	/*init class*/
 	kp->kp_class.name = DRIVE_NAME;
 	kp->kp_class.owner = THIS_MODULE;
@@ -593,9 +567,7 @@ static int meson_adc_kp_remove(struct platform_device *pdev)
 	struct meson_adc_kp *kp = platform_get_drvdata(pdev);
 
 	class_unregister(&kp->kp_class);
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-	unregister_early_suspend(&kp->early_suspend);
-#endif
+	cancel_delayed_work(&kp->poll_dev->work);
 	meson_adc_kp_list_free(kp);
 	kfree(kp);
 	return 0;
