@@ -155,13 +155,6 @@
 
 static const char IRQ_NAME[] = "nwl-dsi";
 
-/* Possible valid PHY reference clock rates*/
-static u32 phyref_rates[] = {
-	27000000,
-	25000000,
-	24000000,
-};
-
 enum {
 	CLK_PHY_REF	= BIT(1),
 	CLK_RX_ESC	= BIT(2),
@@ -216,6 +209,7 @@ struct nwl_mipi_dsi {
 	struct clk_config		phy_ref;
 	struct clk_config		rx_esc;
 	struct clk_config		tx_esc;
+	struct clk_config		video_pll;
 
 	void __iomem			*base;
 	int				irq;
@@ -498,31 +492,27 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 	unsigned long pixclock = mode->clock * 1000;
 	unsigned long bit_clk = 0;
 	u32 phyref_rate = 0, lanes = dsi->lanes;
-	size_t i = 0, num_rates = ARRAY_SIZE(phyref_rates);
 	int ret = 0;
 
 	list_for_each_entry(config, &dsi->valid_modes, list)
 		if (config->pixclock == pixclock)
 			return config;
 
-	while (i < num_rates) {
-		bit_clk = nwl_dsi_get_bit_clock(dsi, pixclock);
-		phyref_rate = phyref_rates[i];
-		ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
+	bit_clk = nwl_dsi_get_bit_clock(dsi, pixclock);
+	phyref_rate = bit_clk;
+	/* Video pll must be from 380MHz to 2000 MHz */
+	if (phyref_rate < 380000000) {
+		int n = (380000000 + phyref_rate - 1) / phyref_rate;
+
+		phyref_rate *= n;
+		pr_info("%s: %d = %ld * %d\n", __func__, phyref_rate, bit_clk, n);
+	}
+	clk_set_rate(dsi->video_pll.clk, phyref_rate);
+
+	ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			bit_clk,
 			phyref_rate,
 			false);
-
-		/* Pick the first non-failing rate */
-		if (!ret)
-			break;
-
-		/* Reached the end of phyref_rates, try another lane config */
-		if ((i++ == num_rates - 1) && (--lanes > 1)) {
-			i = 0;
-			continue;
-		}
-	}
 
 	if (ret < 0) {
 		DRM_DEV_DEBUG_DRIVER(dev,
@@ -1345,6 +1335,16 @@ static int nwl_dsi_probe(struct platform_device *pdev)
 	dsi->phy_ref.clk = clk;
 	dsi->phy_ref.rate = clk_get_rate(clk);
 	dsi->phy_ref.enabled = false;
+
+	clk = devm_clk_get(dev, "video_pll");
+	if (IS_ERR(clk)) {
+		ret = PTR_ERR(clk);
+		dev_err(dev, "Failed to get video_pll clock: %d\n", ret);
+		return ret;
+	}
+	dsi->video_pll.clk = clk;
+	dsi->video_pll.rate = clk_get_rate(clk);
+	dsi->video_pll.enabled = false;
 
 	clk = devm_clk_get(dev, "rx_esc");
 	if (IS_ERR(clk)) {
