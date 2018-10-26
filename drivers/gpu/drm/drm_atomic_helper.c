@@ -3504,6 +3504,7 @@ void __drm_atomic_helper_crtc_duplicate_state(struct drm_crtc *crtc,
 	state->zpos_changed = false;
 	state->commit = NULL;
 	state->event = NULL;
+	state->fence = NULL;
 	state->pageflip_flags = 0;
 }
 EXPORT_SYMBOL(__drm_atomic_helper_crtc_duplicate_state);
