@@ -312,8 +312,10 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 		return -EINVAL;
 	}
 
-	dev_dbg(&phy->dev, "hs_clk/ref_clk=%ld/%ld ~ %ld/%ld\n",
-		bit_clk, ref_clk, numerator, denominator);
+	dphy_opts->hs_clk_rate = ref_clk * cfg->cm / (cfg->co * cfg->cn);
+	dev_dbg(&phy->dev, "hs_clk(%ld)/ref_clk=%ld/%ld ~ %ld/%ld\n",
+			dphy_opts->hs_clk_rate, bit_clk, ref_clk,
+			numerator, denominator);
 
 	/* LP clock period */
 	tmp = 1000000000000LL;
@@ -442,11 +444,11 @@ static int mixel_dphy_configure(struct phy *phy, union phy_configure_opts *opts)
 
 	ref_clk = clk_get_rate(priv->phy_ref_clk);
 	/* Divided by 2 because mipi output clock is DDR */
-	priv->frequency = ref_clk * cfg.cm / (cfg.co * cfg.cn * 2);
+	priv->frequency = opts->mipi_dphy.hs_clk_rate >> 1;
 	if (priv->dsi_clk.clk)
 		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
-	dev_info(&phy->dev, "%s:%ld,%ld ref_clk=%ld, cm=%d, co=%d cn=%d\n",
-		__func__, priv->frequency, opts->mipi_dphy.hs_clk_rate, ref_clk, cfg.cm, cfg.co, cfg.cn);
+	dev_info(&phy->dev, "%s:%ld ref_clk=%ld, cm=%d, co=%d cn=%d\n",
+		__func__, priv->frequency, ref_clk, cfg.cm, cfg.co, cfg.cn);
 
 	phy_write(phy, 0x00, DPHY_LOCK_BYP);
 	phy_write(phy, 0x01, priv->devdata->reg_tx_rcal);
