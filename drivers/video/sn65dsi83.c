@@ -170,7 +170,8 @@ static int sn_get_dsi_clk_divider(struct sn65dsi83_priv *sn)
 	mipi_clk_rate = clk_get_rate(sn->mipi_clk);
 	if (!mipi_clk_rate) {
 		pr_err("mipi clock is off\n");
-		mipi_clk_rate = pixelclock * 3;
+		/* Divided by 2 because mipi output clock is DDR */
+		mipi_clk_rate = pixelclock * sn->dsi_bpp / (sn->dsi_lanes * 2);
 	}
 	if (mipi_clk_rate > 500000000) {
 		pr_err("mipi clock(%d) is too high\n", mipi_clk_rate);
