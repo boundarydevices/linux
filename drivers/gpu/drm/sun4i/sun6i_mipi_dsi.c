@@ -763,7 +763,7 @@ static void sun6i_dsi_encoder_enable(struct drm_encoder *encoder)
 
 	phy_mipi_dphy_get_default_config(mode->clock * 1000,
 					 mipi_dsi_pixel_format_to_bpp(device->format),
-					 device->lanes, cfg);
+					 device->lanes, cfg, 0, 0);
 
 	phy_set_mode(dsi->dphy, PHY_MODE_MIPI_DPHY);
 	phy_configure(dsi->dphy, &opts);
