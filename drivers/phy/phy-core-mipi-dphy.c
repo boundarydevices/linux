@@ -4,6 +4,7 @@
  * Copyright (C) 2018 Cadence Design Systems Inc.
  */
 
+#include <drm/drm_mipi_dsi.h>
 #include <linux/errno.h>
 #include <linux/export.h>
 #include <linux/kernel.h>
@@ -14,6 +15,30 @@
 
 #define PSEC_PER_SEC	1000000000000LL
 
+unsigned long long phy_mipi_dphy_get_hs_clk(unsigned long pixel_clock,
+	unsigned int bpp, unsigned int lanes, unsigned long dsi_mode_flags,
+	unsigned int min_hs_clock_multiple)
+{
+	unsigned long long hs_clk_rate = pixel_clock;
+
+	if (dsi_mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
+		unsigned n = (bpp + (lanes * 8) - 1) / (lanes * 8);
+
+		hs_clk_rate *= n * 8;
+	} else {
+		hs_clk_rate *= bpp;
+		do_div(hs_clk_rate, lanes);
+	}
+	if (min_hs_clock_multiple) {
+		unsigned long long bit_clkm = pixel_clock;
+
+		bit_clkm *= min_hs_clock_multiple;
+		if (hs_clk_rate < bit_clkm)
+			hs_clk_rate = bit_clkm;
+	}
+	return hs_clk_rate;
+}
+
 /*
  * Minimum D-PHY timings based on MIPI D-PHY specification. Derived
  * from the valid ranges specified in Section 6.9, Table 14, Page 41
@@ -22,7 +47,9 @@
 int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 				     unsigned int bpp,
 				     unsigned int lanes,
-				     struct phy_configure_opts_mipi_dphy *cfg)
+				     struct phy_configure_opts_mipi_dphy *cfg,
+				     unsigned long dsi_mode_flags,
+				     unsigned int min_hs_clock_multiple)
 {
 	unsigned long long hs_clk_rate;
 	unsigned long long ui;
@@ -30,8 +57,8 @@ int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 	if (!cfg)
 		return -EINVAL;
 
-	hs_clk_rate = pixel_clock * bpp;
-	do_div(hs_clk_rate, lanes);
+	hs_clk_rate = phy_mipi_dphy_get_hs_clk(pixel_clock, bpp, lanes,
+			dsi_mode_flags, min_hs_clock_multiple);
 
 	ui = ALIGN(PSEC_PER_SEC, hs_clk_rate);
 	do_div(ui, hs_clk_rate);
