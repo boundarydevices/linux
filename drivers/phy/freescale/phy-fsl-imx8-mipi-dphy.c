@@ -268,6 +268,7 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 		return -EINVAL;
 	}
 
+	dphy_opts->hs_clk_rate = ref_clk * cfg->cm / (cfg->co * cfg->cn);
 	dev_dbg(&phy->dev, "hs_clk/ref_clk=%ld/%ld ~ %d/%d\n",
 		dphy_opts->hs_clk_rate, ref_clk, numerator, denominator);
 
