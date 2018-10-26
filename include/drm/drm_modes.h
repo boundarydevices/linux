@@ -392,6 +392,7 @@ struct drm_display_mode {
 	 */
 	enum hdmi_picture_aspect picture_aspect_ratio;
 
+	unsigned int min_hs_clock_multiple;
 };
 
 /**
