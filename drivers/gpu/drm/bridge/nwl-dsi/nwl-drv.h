@@ -90,6 +90,9 @@ struct nwl_dsi {
 	struct nwl_dsi_transfer *xfer;
 
 	const struct nwl_dsi_platform_data *pdata;
+	u32 hsmult;
+	u32 bitclk;
+	u32 pixclock;
 
 	bool use_dcss;
 };
