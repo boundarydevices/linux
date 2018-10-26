@@ -173,6 +173,40 @@ static struct clk *mixel_dsi_clk_register_clk(struct mixel_mipi_phy_priv *priv)
 	return clk;
 }
 #endif
+
+/*
+ * continued fraction
+ *      2  1  2  1  2
+ * 0 1  2  3  8 11 30
+ * 1 0  1  1  3  4 11
+ */
+static void get_best_ratio(unsigned long *pnum, unsigned long *pdenom, unsigned max_n, unsigned max_d)
+{
+	unsigned long a = *pnum;
+	unsigned long b = *pdenom;
+	unsigned long c;
+	unsigned n[] = {0, 1};
+	unsigned d[] = {1, 0};
+	unsigned whole;
+	unsigned i = 1;
+	while (b) {
+		i ^= 1;
+		whole = a / b;
+		n[i] += (n[i ^ 1] * whole);
+		d[i] += (d[i ^ 1] * whole);
+//		printf("cf=%i n=%i d=%i\n", whole, n[i], d[i]);
+		if ((n[i] > max_n) || (d[i] > max_d)) {
+			i ^= 1;
+			break;
+		}
+		c = a - (b * whole);
+		a = b;
+		b = c;
+	}
+	*pnum = n[i];
+	*pdenom = d[i];
+}
+
 /*
  * mixel_phy_mipi_set_phy_speed:
  * Input params:
@@ -189,63 +223,50 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 				 bool best_match)
 {
 	struct mixel_mipi_phy_priv *priv = dev_get_drvdata(phy->dev.parent);
-	u32 div_rate;
-	u32 numerator = 0;
-	u32 denominator = 1;
+	int i;
+	unsigned long numerator;
+	unsigned long denominator;
+	unsigned max_d = 256;
 
 	if (bit_clk > DATA_RATE_MAX_SPEED || bit_clk < DATA_RATE_MIN_SPEED)
 		return -EINVAL;
 
-	/* simulated fixed point with 3 decimals */
-	div_rate = (bit_clk * 1000) / ref_clk;
-	if (div_rate % 1000 >= 995)
-		div_rate = (bit_clk * 1000) / (ref_clk - 1);
-
-	while (denominator <= 256) {
-		if (div_rate % 1000 <= 2)
-			numerator = div_rate / 1000;
-		if (numerator > 15)
-			break;
-		denominator = denominator << 1;
-		div_rate = div_rate << 1;
-	}
-
 	/* CM ranges between 16 and 255 */
 	/* CN ranges between 1 and 32 */
 	/* CO is power of 2: 1, 2, 4, 8 */
-	if (best_match && numerator < 16)
-		numerator = div_rate / 1000;
+	do {
+		numerator = bit_clk;
+		denominator = ref_clk;
+		get_best_ratio(&numerator, &denominator, 255, max_d);
+		max_d >>= 1;
+	} while ((denominator >> __ffs(denominator)) > 32);
 
-	if (best_match && numerator > 255) {
-		while (numerator > 255 && denominator > 1) {
-			numerator = DIV_ROUND_UP(numerator, 2);
-			denominator = denominator >> 1;
-		}
+	while ((numerator < 16) && (denominator <= 128)) {
+		numerator = numerator << 1;
+		denominator = denominator << 1;
 	}
+	pr_debug("%s: %ld/%ld = %ld/%ld\n", __func__, numerator, denominator, bit_clk, ref_clk);
 
-	if (numerator < 16 || numerator > 255) {
-		pr_info("%s: bit_clk=%ld ref_clk=%ld, numerator=%d, denominator=%d\n",
+	if (numerator < 16 || numerator > 255 || !denominator) {
+		pr_info("%s: bit_clk=%ld ref_clk=%ld, numerator=%ld, denominator=%ld\n",
 			__func__, bit_clk, ref_clk, numerator, denominator);
 		return -EINVAL;
 	}
 
-	if (best_match)
-		numerator = DIV_ROUND_UP(numerator, denominator) * denominator;
-
-	priv->divider.cn = 1;
-	if (denominator > 8) {
-		priv->divider.cn = denominator >> 3;
-		denominator = 8;
-	}
-	priv->divider.co = denominator;
+	i = __ffs(denominator);
+	if (i > 3)
+		i = 3;
+	priv->divider.cn = denominator >> i;
+	priv->divider.co = 1 << i;
 	priv->divider.cm = numerator;
 
 	priv->data_rate = bit_clk;
+	/* Divided by 2 because mipi output clock is DDR */
 	priv->frequency = ref_clk * numerator / (2 * denominator);
 	if (priv->dsi_clk.clk)
 		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
-	pr_info("%s:%ld, ref_clk=%ld, numerator=%d, denominator=%d\n",
-		__func__, priv->frequency, ref_clk, numerator, denominator);
+	pr_info("%s:%ld,%ld, ref_clk=%ld numerator=%ld, denominator=%ld\n",
+		__func__, priv->frequency, bit_clk, ref_clk, numerator, denominator);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mixel_phy_mipi_set_phy_speed);
