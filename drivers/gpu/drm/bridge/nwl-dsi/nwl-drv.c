@@ -109,12 +109,21 @@ static inline struct nwl_dsi *bridge_to_dsi(struct drm_bridge *bridge)
 static unsigned long nwl_dsi_get_bit_clock(struct nwl_dsi *dsi,
 		unsigned long pixclock, u32 lanes)
 {
-	int bpp;
+	int bpp, n;
 
 	if (lanes < 1 || lanes > 4)
 		return 0;
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
+	if (dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
+		n = (bpp + (lanes * 8) - 1) / (lanes * 8);
+		pr_debug("%s: pixclock=%ld n=%d lanes=%d bpp=%d\n", __func__,
+				pixclock, n, dsi->lanes, bpp);
+		return pixclock * n * 8;
+	}
+
+	pr_debug("%s: pixclock=%ld lanes=%d bpp=%d\n", __func__,
+			pixclock, dsi->lanes, bpp);
 
 	return (pixclock * bpp) / lanes;
 }
