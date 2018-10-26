@@ -327,7 +327,7 @@ unsigned long nwl_dsi_get_bit_clock(struct drm_bridge *bridge,
 	unsigned long pixclock)
 {
 	struct nwl_mipi_dsi *dsi;
-	int bpp;
+	int bpp, n;
 	u32 bus_format;
 	struct drm_crtc *crtc = 0;
 
@@ -353,7 +353,15 @@ unsigned long nwl_dsi_get_bit_clock(struct drm_bridge *bridge,
 	}
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
+	if (dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
+		n = (bpp + (dsi->lanes * 8) - 1) / (dsi->lanes * 8);
+		pr_debug("%s: pixclock=%ld n=%d lanes=%d bpp=%d\n", __func__,
+				pixclock, n, dsi->lanes, bpp);
+		return pixclock * n * 8;
+	}
 
+	pr_debug("%s: pixclock=%ld lanes=%d bpp=%d\n", __func__,
+			pixclock, dsi->lanes, bpp);
 	return (pixclock / dsi->lanes) * bpp;
 }
 EXPORT_SYMBOL_GPL(nwl_dsi_get_bit_clock);
