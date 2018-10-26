@@ -130,6 +130,45 @@ static u32 nwl_dsi_get_dpi_pixel_format(enum mipi_dsi_pixel_format format)
 	}
 }
 
+static int nwl_dsi_cvt_pixels_to_hs_byte_clocks(struct nwl_dsi *dsi, int pixels, int base, int min,
+		unsigned *pix_cnt, unsigned *hs_clk_cnt)
+{
+	int n;
+	unsigned long a;
+
+	*pix_cnt += pixels;
+	a = *pix_cnt;
+	a *= dsi->bitclk;
+	a += (dsi->pixclock * 4);
+	a /= (dsi->pixclock * 8);
+	n = a;
+	pr_debug("%s:pix_cnt = %d, bitclk = %d, pixel = %d, n=%d\n", __func__, *pix_cnt, dsi->bitclk, dsi->pixclock, n);
+
+	n *= dsi->lanes;
+	n -= *hs_clk_cnt;
+
+	if (n >= base + min)
+		n -= base;
+	else
+		n = min;
+	*hs_clk_cnt += n + base;
+
+	return n;
+}
+
+static int nwl_dsi_cvt_pixels_to_hs_byte_clocks_burst(struct nwl_dsi *dsi, int pixels, int bpp,
+		unsigned *pix_cnt, unsigned *hs_clk_cnt)
+{
+	int n;
+
+	*pix_cnt += pixels;
+	n = ((pixels * bpp) + (dsi->lanes * 8) - 1) / (dsi->lanes * 8);
+	n *= dsi->lanes;
+	*hs_clk_cnt += n;
+
+	return n;
+}
+
 #define PSEC_PER_SEC 1000000000000LL
 /*
  * ps2bc - Picoseconds to byte clock cycles
@@ -208,10 +247,14 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 {
 	u32 color_format, mode;
 	bool burst_mode;
-	int hfront_porch, hback_porch, vfront_porch, vback_porch;
+	int hfront_porch, hback_porch, hactive, vfront_porch, vback_porch;
 	int hsync_len, vsync_len;
+	int bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
+	unsigned pix_cnt = 0;
+	unsigned hs_clk_cnt = 0;
 
-	hfront_porch = dsi->mode.hsync_start - dsi->mode.hdisplay;
+	hactive = dsi->mode.hdisplay;
+	hfront_porch = dsi->mode.hsync_start - hactive;
 	hsync_len = dsi->mode.hsync_end - dsi->mode.hsync_start;
 	hback_porch = dsi->mode.htotal - dsi->mode.hsync_end;
 
@@ -256,6 +299,15 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 		     !(dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
 
 	if (burst_mode) {
+		if (hback_porch <= 8) {
+			hback_porch = 1;
+			hfront_porch = 7;
+			hsync_len = 4;
+		} else {
+			hback_porch = 2;
+			hfront_porch = 7;
+			hsync_len = 6;
+		}
 		nwl_dsi_write(dsi, NWL_DSI_VIDEO_MODE, NWL_DSI_VM_BURST_MODE);
 		/*
 		 *
@@ -273,12 +325,22 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 		 */
 		nwl_dsi_write(dsi, NWL_DSI_PIXEL_FIFO_SEND_LEVEL, 0 ? 480 : 256);
 	} else {
+		hback_porch = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, hback_porch,
+				(dsi->lanes > 1) ? 14 : 10, 4, &pix_cnt,
+				&hs_clk_cnt);
+		nwl_dsi_cvt_pixels_to_hs_byte_clocks_burst(dsi, hactive,
+				bpp, &pix_cnt, &hs_clk_cnt);
+		hfront_porch = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, hfront_porch,
+				(dsi->lanes > 1) ? 7 : 11, 4, &pix_cnt,
+				&hs_clk_cnt);
+		hsync_len = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, hsync_len,
+				10, 2, &pix_cnt, &hs_clk_cnt);
+
 		mode = ((dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) ?
 				NWL_DSI_VM_BURST_MODE_WITH_SYNC_PULSES :
 				NWL_DSI_VM_NON_BURST_MODE_WITH_SYNC_EVENTS);
 		nwl_dsi_write(dsi, NWL_DSI_VIDEO_MODE, mode);
-		nwl_dsi_write(dsi, NWL_DSI_PIXEL_FIFO_SEND_LEVEL,
-			      dsi->mode.hdisplay);
+		nwl_dsi_write(dsi, NWL_DSI_PIXEL_FIFO_SEND_LEVEL, hactive);
 	}
 
 	nwl_dsi_write(dsi, NWL_DSI_HFP, hfront_porch);
