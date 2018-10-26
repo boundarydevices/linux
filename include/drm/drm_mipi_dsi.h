@@ -144,6 +144,8 @@ struct mipi_dsi_host *of_find_mipi_dsi_host_by_node(struct device_node *node);
 #define MIPI_DSI_MODE_VIDEO_BLLP	BIT(12)
 /* disable EOF BLLP area */
 #define MIPI_DSI_MODE_VIDEO_EOF_BLLP	BIT(13)
+/* Make mipi byte clock a multiple of the pixel clock */
+#define MIPI_DSI_MODE_VIDEO_MBC		BIT(14)
 
 enum mipi_dsi_pixel_format {
 	MIPI_DSI_FMT_RGB888,
