@@ -50,13 +50,6 @@
 #define PXL_VLD(x)	IMX_SC_C_PXL_LINK_MST ## x ## _VLD
 #define PXL_ADDR(x)	IMX_SC_C_PXL_LINK_MST ## x ## _ADDR
 
-/* Possible valid PHY reference clock rates*/
-static u32 phyref_rates[] = {
-	27000000,
-	25000000,
-	24000000,
-};
-
 /*
  * TODO: find a better way to access imx_crtc_state
  */
@@ -107,25 +100,25 @@ static inline struct nwl_dsi *bridge_to_dsi(struct drm_bridge *bridge)
 }
 
 static unsigned long nwl_dsi_get_bit_clock(struct nwl_dsi *dsi,
-		unsigned long pixclock, u32 lanes)
+		unsigned long pixclock, u32 lanes, unsigned int min_hs_clock_multiple)
 {
-	int bpp, n;
+	int bpp;
+	unsigned long bit_clk = 0;
 
 	if (lanes < 1 || lanes > 4)
 		return 0;
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
-	if (dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
-		n = (bpp + (lanes * 8) - 1) / (lanes * 8);
-		pr_debug("%s: pixclock=%ld n=%d lanes=%d bpp=%d\n", __func__,
-				pixclock, n, dsi->lanes, bpp);
-		return pixclock * n * 8;
+	bit_clk = (unsigned long)phy_mipi_dphy_get_hs_clk(pixclock, bpp, lanes,
+			dsi->dsi_mode_flags, min_hs_clock_multiple);
+
+	if (pixclock * min_hs_clock_multiple == bit_clk) {
+		dsi->hsmult = min_hs_clock_multiple;
+		pr_info("%s: %ld = %ld * %d\n", __func__, bit_clk, pixclock, dsi->hsmult);
+	} else {
+		dsi->hsmult = 0;
 	}
-
-	pr_debug("%s: pixclock=%ld lanes=%d bpp=%d\n", __func__,
-			pixclock, dsi->lanes, bpp);
-
-	return (pixclock * bpp) / lanes;
+	return bit_clk;
 }
 
 /*
@@ -234,83 +227,57 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_dsi *dsi,
 	unsigned long clock = mode->clock * 1000;
 	unsigned long bit_clk = 0;
 	unsigned long phy_rates[3] = {0};
-	int match_rates = 0;
+	unsigned long phyref_rate = 0;
+	unsigned long pll_rate = 0;
 	u32 lanes = dsi->lanes;
-	size_t i = 0, num_rates = ARRAY_SIZE(phyref_rates);
+	int ret;
 
 	list_for_each_entry(config, &dsi->valid_modes, list)
 		if (config->clock == clock)
 			return config;
 
+	dsi->pixclock = clock;
 	phy_mipi_dphy_get_default_config(clock,
-			mipi_dsi_pixel_format_to_bpp(dsi->format),
-			lanes, &phy_opts.mipi_dphy);
+		mipi_dsi_pixel_format_to_bpp(dsi->format),
+		lanes, &phy_opts.mipi_dphy, dsi->dsi_mode_flags,
+		mode->min_hs_clock_multiple);
+	bit_clk = phy_opts.mipi_dphy.hs_clk_rate;
+	if (clock * mode->min_hs_clock_multiple == bit_clk)
+		dsi->hsmult = mode->min_hs_clock_multiple;
+
 	phy_opts.mipi_dphy.lp_clk_rate = clk_get_rate(dsi->tx_esc_clk);
 
-	while (i < num_rates) {
-		int ret;
 
-		bit_clk = nwl_dsi_get_bit_clock(dsi, clock, lanes);
+	phyref_rate = bit_clk;
+	pll_rate = bit_clk;
+	/* Video pll must be from 500MHz to 2000 MHz */
+	if (pll_rate < 500000000) {
+		int n = (500000000 + pll_rate - 1) / pll_rate;
 
-		clk_set_rate(dsi->pll_clk, phyref_rates[i] * 32);
-		clk_set_rate(dsi->phy_ref_clk, phyref_rates[i]);
-		ret = phy_validate(dsi->phy, PHY_MODE_MIPI_DPHY, 0, &phy_opts);
-
-		/* Pick the non-failing rate, and search for more */
-		if (!ret) {
-			phy_rates[match_rates++] = phyref_rates[i++];
-			continue;
-		}
-
-		if (match_rates)
-			break;
-
-		/* Reached the end of phyref_rates, try another lane config */
-		if ((i++ == num_rates - 1) && (--lanes > 2)) {
-			i = 0;
-			continue;
-		}
+		pll_rate *= n;
+		pr_info("%s: %ld = %ld * %d\n", __func__, pll_rate, bit_clk, n);
 	}
-
-	/*
-	 * Try swinging between min and max pll rates and see what rate (in terms
-	 * of kHz) we can custom use to get the required bit-clock.
-	 */
-	if (!match_rates) {
-		int min_div, max_div;
-		int bit_clk_khz;
-
-		lanes = dsi->lanes;
-		bit_clk = nwl_dsi_get_bit_clock(dsi, clock, lanes);
-
-		min_div = DIV_ROUND_UP(bit_clk, MAX_PHY_RATE);
-		max_div = DIV_ROUND_DOWN_ULL(bit_clk, MIN_PHY_RATE);
-		bit_clk_khz = bit_clk / 1000;
-
-		for (i = max_div; i > min_div; i--) {
-			if (!(bit_clk_khz % i)) {
-				phy_rates[0] = bit_clk / i;
-				match_rates = 1;
-				break;
-			}
-		}
+	ret = clk_set_rate(dsi->pll_clk, pll_rate);
+	if (ret < 0) {
+		DRM_DEV_ERROR(dev, "clk_set_rate %ld failed(%d)\n", pll_rate, ret);
+		pll_rate = clk_get_rate(dsi->pll_clk);
+		DRM_DEV_INFO(dev, "rate is %ld\n", pll_rate);
 	}
+	clk_set_rate(dsi->phy_ref_clk, phyref_rate);
 
-	if (!match_rates) {
-		DRM_DEV_DEBUG_DRIVER(dev,
-			"Cannot setup PHY for mode: %ux%u @%d kHz\n",
-			mode->hdisplay,
-			mode->vdisplay,
-			mode->clock);
-
+	ret = phy_validate(dsi->phy, PHY_MODE_MIPI_DPHY, 0, &phy_opts);
+	if (ret) {
+		DRM_DEV_ERROR(dsi->dev, "Failed phy_validate %d\n", ret);
 		return NULL;
 	}
 
+	dsi->bitclk = bit_clk = phy_opts.mipi_dphy.hs_clk_rate;
 	config = devm_kzalloc(dsi->dev, sizeof(struct mode_config), GFP_KERNEL);
 	if (config) {
 		config->clock = clock;
 		config->lanes = lanes;
 		config->bitclock = bit_clk;
+		phy_rates[0] = phyref_rate;
 		memcpy(&config->phy_rates, &phy_rates, sizeof(phy_rates));
 		list_add(&config->list, &dsi->valid_modes);
 	}
@@ -444,7 +411,8 @@ static int nwl_dsi_get_dphy_params(struct nwl_dsi *dsi,
 	ret = phy_mipi_dphy_get_default_config(
 		mode->clock * 1000,
 		mipi_dsi_pixel_format_to_bpp(dsi->format), dsi->lanes,
-		&phy_opts->mipi_dphy);
+		&phy_opts->mipi_dphy, dsi->dsi_mode_flags,
+		mode->min_hs_clock_multiple);
 	if (ret < 0)
 		return ret;
 
@@ -521,7 +489,8 @@ nwl_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 	unsigned long pll_rate;
 	int bit_rate;
 
-	bit_rate = nwl_dsi_get_bit_clock(dsi, mode->clock * 1000, dsi->lanes);
+	bit_rate = nwl_dsi_get_bit_clock(dsi, mode->clock * 1000, dsi->lanes,
+			mode->min_hs_clock_multiple);
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Validating mode:");
 	drm_mode_debug_printmodeline(mode);
