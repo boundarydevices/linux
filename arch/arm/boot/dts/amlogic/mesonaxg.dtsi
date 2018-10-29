@@ -50,7 +50,7 @@
 		};
 		CPU0:cpu@0 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a9";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
@@ -60,7 +60,7 @@
 
 		CPU1:cpu@1 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a9";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
@@ -69,7 +69,7 @@
 		};
 		CPU2:cpu@2 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a9";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
@@ -79,7 +79,7 @@
 
 		CPU3:cpu@3 {
 			device_type = "cpu";
-			compatible = "arm,cortex-a9";
+			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
 			clocks = <&scpi_dvfs 0>;
