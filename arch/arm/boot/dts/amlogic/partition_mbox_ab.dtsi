@@ -1,0 +1,169 @@
+/*
+ * Amlogic partition set for normal
+ *
+ * Copyright (c) 2017-2017 Amlogic Ltd
+ *
+ * This file is licensed under a dual GPLv2 or BSD license.
+ *
+ */
+/ {
+    partitions: partitions{
+		parts = <18>;
+		part-0 = <&logo>;
+		part-1 = <&boot_a>;
+		part-2 = <&misc>;
+		part-3 = <&dto>;
+		part-4 = <&cri_data>;
+		part-5 = <&param>;
+		part-6 = <&boot_b>;
+		part-7 = <&vbmeta_a>;
+		part-8 = <&vbmeta_b>;
+		part-9 = <&rsv>;
+		part-10 = <&tee>;
+		part-11 = <&vendor_a>;
+		part-12 = <&vendor_b>;
+		part-13 = <&odm_a>;
+		part-14 = <&odm_b>;
+		part-15 = <&system_a>;
+		part-16 = <&system_b>;
+		part-17 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		boot_a:boot_a{
+			pname = "boot_a";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		dto:dto{
+			pname = "dto";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		cri_data:cri_data
+		{
+			pname = "cri_data";
+			size = <0x0 0x800000>;
+			mask = <2>;
+		};
+		vbmeta_a:vbmeta_a{
+			pname = "vbmeta_a";
+			size = <0x0 0x100000>;
+			mask = <1>;
+		};
+		vbmeta_b:vbmeta_b{
+			pname = "vbmeta_b";
+			size = <0x0 0x100000>;
+			mask = <1>;
+		};
+		rsv:rsv{
+			pname = "rsv";
+			size = <0x0 0xE00000>;
+			mask = <1>;
+		};
+		param:param{
+			pname = "param";
+			size = <0x0 0x1000000>;
+			mask = <2>;
+		};
+		boot_b:boot_b
+		{
+			pname = "boot_b";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		vendor_a:vendor_a
+		{
+			pname = "vendor_a";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		vendor_b:vendor_b
+		{
+			pname = "vendor_b";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		odm_a:odm_a
+		{
+			pname = "odm_a";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		odm_b:odm_b
+		{
+			pname = "odm_b";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		system_a:system_a
+		{
+			pname = "system_a";
+			size = <0x0 0x74000000>;
+			mask = <1>;
+		};
+		system_b:system_b
+		{
+			pname = "system_b";
+			size = <0x0 0x74000000>;
+			mask = <1>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
+		};
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "boot,system,vendor";
+				by_name_prefix="/dev/block";
+			};
+		fstab {
+			compatible = "android,fstab";
+			system {
+				compatible = "android,system";
+				dev = "/dev/block/system";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait,slotselect";
+				};
+
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/vendor";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait,slotselect";
+				};
+
+			odm {
+				compatible = "android,odm";
+				dev = "/dev/block/odm";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait,slotselect";
+				};
+			};
+		};
+	};
+
+};/* end of / */
