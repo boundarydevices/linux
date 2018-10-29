@@ -648,6 +648,25 @@ static bool too_many_isolated(struct zone *zone)
 
 	return isolated > (inactive + active) / 2;
 }
+#ifdef CONFIG_AMLOGIC_CMA
+static void check_page_to_cma(struct compact_control *cc, struct page *page)
+{
+	struct address_space *mapping;
+
+	if (cc->forbid_to_cma)	/* no need check once it is true */
+		return;
+
+	mapping = page_mapping(page);
+	if ((unsigned long)mapping & PAGE_MAPPING_ANON)
+		mapping = NULL;
+
+	if (PageKsm(page) && !PageSlab(page))
+		cc->forbid_to_cma = true;
+
+	if (mapping && cma_forbidden_mask(mapping_gfp_mask(mapping)))
+		cc->forbid_to_cma = true;
+}
+#endif
 
 /**
  * isolate_migratepages_block() - isolate all migrate-able pages within
@@ -746,6 +765,9 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 
 		page = pfn_to_page(low_pfn);
 
+	#ifdef CONFIG_AMLOGIC_CMA
+		check_page_to_cma(cc, page);
+	#endif
 		if (!valid_page)
 			valid_page = page;
 
@@ -1098,7 +1120,7 @@ static void isolate_freepages(struct compact_control *cc)
 		migrate_type = get_pageblock_migratetype(page);
 		if (is_migrate_isolate(migrate_type))
 			continue;
-		if (is_migrate_cma(migrate_type) && cma_alloc_ref())
+		if (is_migrate_cma(migrate_type) && cc->forbid_to_cma)
 			continue;
 	#endif /* CONFIG_AMLOGIC_CMA */
 		/* Found a block suitable for isolating free pages from. */
@@ -1151,16 +1173,6 @@ static struct page *compaction_alloc(struct page *migratepage,
 {
 	struct compact_control *cc = (struct compact_control *)data;
 	struct page *freepage;
-#ifdef CONFIG_AMLOGIC_CMA
-	struct address_space *mapping;
-
-	mapping = page_mapping(migratepage);
-	if ((unsigned long)mapping & PAGE_MAPPING_ANON)
-		mapping = NULL;
-
-	if (mapping && !can_use_cma(mapping_gfp_mask(mapping)))
-		return alloc_page(mapping_gfp_mask(mapping) | __GFP_BDEV);
-#endif
 
 	/*
 	 * Isolate free pages if necessary, and if we are not aborting due to
@@ -1558,6 +1570,9 @@ static enum compact_result compact_zone(struct zone *zone, struct compact_contro
 
 	migrate_prep_local();
 
+#ifdef CONFIG_AMLOGIC_CMA
+	cc->forbid_to_cma = false;
+#endif
 	while ((ret = compact_finished(zone, cc, migratetype)) ==
 						COMPACT_CONTINUE) {
 		int err;

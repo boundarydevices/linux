@@ -50,6 +50,7 @@ struct compact_control {
 	const int classzone_idx;	/* zone index of a direct compactor */
 	struct zone *zone;
 	bool contended;			/* Signal lock or sched contention */
+	bool forbid_to_cma;		/* Forbit to migrate to cma */
 };
 
 static inline bool cma_forbidden_mask(gfp_t gfp_flags)
