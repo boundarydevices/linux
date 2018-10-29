@@ -99,6 +99,12 @@
 #define HDR10_SOURCE  (1 << 1)
 #define HLG_SOURCE    (1 << 2)
 
+enum cm_hist_e {
+	CM_HUE_HIST = 0,
+	CM_SAT_HIST,
+	CM_MAX_HIST
+};
+
 enum pq_table_name_e {
 	TABLE_NAME_SHARPNESS0 = 0x1,/*in vpp*/
 	TABLE_NAME_SHARPNESS1 = 0x2,/*in vpp*/

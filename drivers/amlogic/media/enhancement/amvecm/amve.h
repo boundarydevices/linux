@@ -158,7 +158,7 @@ extern void amvecm_fresh_overscan(struct vframe_s *vf);
 extern void amvecm_reset_overscan(void);
 extern int vpp_set_lut3d(int enable, int bLut3DLoad,
 	int *pLut3D, int bLut3DCheck);
-extern void vpp_lut3d_table_init(int *pLut3D);
+extern void vpp_lut3d_table_init(int *pLut3D, int bitdepth);
 extern void dump_plut3d_table(void);
 extern void dump_plut3d_reg_table(void);
 #endif

@@ -552,7 +552,7 @@ void vpp_set_rgb_ogo(struct tcon_rgb_ogo_s *p)
 				m[i] = -1024;
 		}
 
-		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
+		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
 			WRITE_VPP_REG_BITS(VPP_POST_MATRIX_EN_CTRL,
 				p->en, 0, 1);
 			WRITE_VPP_REG(VPP_POST_MATRIX_PRE_OFFSET0_1,
@@ -658,6 +658,7 @@ void vpp_set_rgb_ogo(struct tcon_rgb_ogo_s *p)
 			WRITE_VPP_REG(VPP_GAINOFF_CTRL4,
 				((p->b_pre_offset  <<  0) & 0x00001fff));
 		} else {
+		/*txl and before txl, and tl1 10bit path offset is 11bit*/
 			WRITE_VPP_REG(VPP_GAINOFF_CTRL0,
 				((p->en << 31) & 0x80000000) |
 				((p->r_gain << 16) & 0x07ff0000) |
@@ -1595,15 +1596,15 @@ static void ycbcr2rgbpc_nb(int *R, int *G, int *B,
 }
 
 /*table: use for yuv->rgb*/
-void vpp_lut3d_table_init(int *pLut3D)
+void vpp_lut3d_table_init(int *pLut3D, int bitdepth)
 {
 	int d0, d1, d2, ncmp;
 	unsigned int i;
 	int step[3]; /*steps of each input components lut-nodes*/
-	int max_val = (1<<12) - 1;
+	int max_val = (1 << bitdepth) - 1;
 	/*step*/
 	for (ncmp = 0; ncmp < 3; ncmp++)
-		step[ncmp] = (1<<(12-4));
+		step[ncmp] = (1 << (bitdepth - 4));
 
 	/*initialize the lut3d ad same input and output;*/
 	for (d0 = 0; d0 < 17; d0++) {
@@ -1625,7 +1626,7 @@ void vpp_lut3d_table_init(int *pLut3D)
 					pLut3D[d0*17*17*3+d1*17*3+d2*3+0],
 					pLut3D[d0*17*17*3+d1*17*3+d2*3+1],
 					pLut3D[d0*17*17*3+d1*17*3+d2*3+2],
-					12);
+					bitdepth);
 			}
 		}
 	}
