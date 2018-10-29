@@ -465,6 +465,7 @@ struct layer_fence_map_s {
 struct osd_layers_fence_map_s {
 	struct list_head list;
 	int out_fd;
+	unsigned char  hdr_mode;
 	struct display_flip_info_s disp_info;
 	struct layer_fence_map_s layer_map[HW_OSD_COUNT];
 };

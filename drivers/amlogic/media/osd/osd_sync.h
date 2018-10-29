@@ -111,6 +111,7 @@ struct display_flip_info_s {
 };
 struct do_hwc_cmd_s {
 	int out_fen_fd;
+	unsigned char hdr_mode;
 	struct display_flip_info_s disp_info;
 };
 #endif

@@ -1159,6 +1159,7 @@ int osd_sync_do_hwc(struct do_hwc_cmd_s *hwc_cmd)
 		hwc_cmd->disp_info.position_w;
 	fence_map->disp_info.position_h =
 		hwc_cmd->disp_info.position_h;
+	fence_map->hdr_mode = hwc_cmd->hdr_mode;
 	/* other info set via add_sync and blank ioctl */
 	list_add_tail(&fence_map->list, &post_fence_list);
 	/* after do_hwc, clear osd_hw.out_fence_fd */
@@ -4264,6 +4265,7 @@ static void osd_pan_display_layers_fence(
 	if (osd_hw.osd_fps_start)
 		osd_hw.osd_fps++;
 	clear_backup_info();
+	osd_hw.hdr_used = fence_map->hdr_mode;
 	for (i = 0; i < osd_count; i++) {
 		layer_map = &fence_map->layer_map[i];
 		index = layer_map->fb_index;
