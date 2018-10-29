@@ -40,17 +40,23 @@ static void cal_ddr_usage(struct ddr_bandwidth *db, struct ddr_grant *dg)
 
 	if (db->ops && db->ops->get_freq)
 		freq = db->ops->get_freq(db);
-	mul  = (dg->all_grant * 10000ULL) / 16;	/* scale up to keep precision*/
+	mul  = dg->all_grant;
+	mul *= 10000ULL;
+	mul /= 16;
 	cnt  = db->clock_count;
 	do_div(mul, cnt);
 	db->total_usage = mul;
 	if (freq) {
 		/* calculate in KB */
-		mul = (dg->all_grant * freq) / 1024;
+		mul  = dg->all_grant;
+		mul *= freq;
+		mul /= 1024;
 		do_div(mul, cnt);
 		db->total_bandwidth = mul;
 		for (i = 0; i < db->channels; i++) {
-			mul = (dg->channel_grant[i] * freq) / 1024;
+			mul  = dg->channel_grant[i];
+			mul *= freq;
+			mul /= 1024;
 			do_div(mul, cnt);
 			db->bandwidth[i] = mul;
 		}
