@@ -29,6 +29,7 @@
 
 int amlatvdemod_reg_read(unsigned int reg, unsigned int *val)
 {
+#if 0 /* Don't need to check the CLK and PLL states, it's done in init */
 	int ret = 0;
 
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
@@ -41,13 +42,16 @@ int amlatvdemod_reg_read(unsigned int reg, unsigned int *val)
 		/* pr_dbg("%s atv demod pll not init\n", __func__); */
 		return 0;
 	}
+#endif
 
 	*val = readl(amlatvdemod_devp->demod_reg_base + reg);
+
 	return 0;
 }
 
 int amlatvdemod_reg_write(unsigned int reg, unsigned int val)
 {
+#if 0 /* Don't need to check the CLK and PLL states, it's done in init */
 	int ret = 0;
 
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()) {
@@ -60,8 +64,10 @@ int amlatvdemod_reg_write(unsigned int reg, unsigned int val)
 		/* pr_dbg("%s atv demod pll not init\n", __func__); */
 		return 0;
 	}
+#endif
 
 	writel(val, (amlatvdemod_devp->demod_reg_base + reg));
+
 	return 0;
 }
 

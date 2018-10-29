@@ -114,7 +114,7 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 		}
 	}
 
-	adc_set_pll_cntl(1, ADC_EN_ATV_DEMOD, NULL);
+	err_code = adc_set_pll_cntl(1, ADC_EN_ATV_DEMOD, NULL);
 	vdac_enable(1, 1);
 	usleep_range(2000, 2100);
 	atvdemod_clk_init();
@@ -124,9 +124,10 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 		aud_demod_clk_gate(1);
 		/* atvauddemod_init(); */
 	}
+
 	if (err_code) {
-		pr_dbg("[amlatvdemod..]%s init atvdemod error.\n", __func__);
-		return err_code;
+		pr_dbg("%s: init atvdemod error %d.\n", __func__, err_code);
+		return -1;
 	}
 
 	/* aml_afc_timer_enable(fe); */
@@ -339,8 +340,8 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 		if (priv->state != ATVDEMOD_STATE_WORK) {
 			if (fe->ops.tuner_ops.set_config)
 				fe->ops.tuner_ops.set_config(fe, NULL);
-			atv_demod_enter_mode(fe);
-			priv->state = ATVDEMOD_STATE_WORK;
+			if (!atv_demod_enter_mode(fe))
+				priv->state = ATVDEMOD_STATE_WORK;
 		}
 		break;
 
@@ -354,8 +355,8 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 
 	case AML_ATVDEMOD_RESUME:
 		if (priv->state == ATVDEMOD_STATE_SLEEP) {
-			atv_demod_enter_mode(fe);
-			priv->state = ATVDEMOD_STATE_WORK;
+			if (!atv_demod_enter_mode(fe))
+				priv->state = ATVDEMOD_STATE_WORK;
 		}
 		break;
 

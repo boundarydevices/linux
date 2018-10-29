@@ -810,8 +810,10 @@ int tvafe_adc_get_pll_flag(void)
 {
 	unsigned int ret = 0;
 
-	if (!mutex_trylock(&pll_mutex))
+	if (!mutex_trylock(&pll_mutex)) {
+		tvafe_pr_info("%s trylock pll_mutex fail.\n", __func__);
 		return 0;
+	}
 	ret = adc_pll_chg;
 	mutex_unlock(&pll_mutex);
 	return ret;
