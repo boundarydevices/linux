@@ -114,7 +114,7 @@ unsigned long audio_info_get(char *buf, unsigned long count,
 							unsigned long pos)
 {
 	struct efuse_hal_api_arg arg;
-	unsigned int retcnt;
+	unsigned long retcnt;
 	int ret;
 
 	arg.cmd =  efuse_query_licence_cmd;
