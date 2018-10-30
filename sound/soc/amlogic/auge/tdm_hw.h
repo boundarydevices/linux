@@ -72,6 +72,8 @@ extern void aml_tdm_fifo_reset(
 	struct aml_audio_controller *actrl,
 	int stream, int index);
 
+extern int tdmout_get_frddr_type(int bitwidth);
+
 extern void aml_tdm_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth, int stream,

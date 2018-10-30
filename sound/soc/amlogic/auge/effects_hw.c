@@ -82,13 +82,13 @@ void aed_req_sel(bool enable, int sel, int req_module)
 		return;
 	}
 
-	eqdrc_update_bits(AED_TOP_REQ_CTL, mask_offset, val_offset);
+	eqdrc_update_bits(AED_TOP_REQ_CTL_G12X, mask_offset, val_offset);
 }
 
 /* get eq/drc module */
 int aed_get_req_sel(int sel)
 {
-	int val = eqdrc_read(AED_TOP_REQ_CTL);
+	int val = eqdrc_read(AED_TOP_REQ_CTL_G12X);
 	int mask_off;
 
 	switch (sel) {
@@ -170,7 +170,7 @@ int aml_aed_format_set(int frddr_dst)
 		return -EINVAL;
 	}
 
-	eqdrc_update_bits(AED_TOP_CTL, 0x7 << 11 | 0x1f << 6,
+	eqdrc_update_bits(AED_TOP_CTL_G12X, 0x7 << 11 | 0x1f << 6,
 		frddr_type << 11 | width << 6);
 
 	return 0;
@@ -192,17 +192,17 @@ void aed_src_select(bool enable, int frddr_dst, int fifo_id)
 	aed_req_sel(enable, 0, frddr_dst);
 
 	/* AED module, sel & enable */
-	eqdrc_update_bits(AED_TOP_CTL,
+	eqdrc_update_bits(AED_TOP_CTL_G12X,
 		0x3 << 4 | 0x1 << 0,
 		fifo_id << 4 | enable << 0);
 }
 
 void aed_set_lane(int lane_mask)
 {
-	eqdrc_update_bits(AED_TOP_CTL, 0xf << 14, lane_mask << 14);
+	eqdrc_update_bits(AED_TOP_CTL_G12X, 0xf << 14, lane_mask << 14);
 }
 
 void aed_set_channel(int channel_mask)
 {
-	eqdrc_update_bits(AED_TOP_CTL, 0xff << 18, channel_mask << 18);
+	eqdrc_update_bits(AED_TOP_CTL_G12X, 0xff << 18, channel_mask << 18);
 }

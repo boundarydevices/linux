@@ -50,9 +50,8 @@
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #endif
-#ifdef CONFIG_AMLOGIC_ATV_DEMOD
-#include <linux/amlogic/aml_atvdemod.h>
-#endif
+
+#include <linux/amlogic/media/sound/misc.h>
 
 #include "i2s.h"
 #include "audio_hw.h"
@@ -63,34 +62,6 @@
 #define AML_EQ_PARAM_LENGTH 100
 #define AML_DRC_PARAM_LENGTH 12
 #define AML_REG_BYTES 4
-#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
-static int hdmiin_fifo_disable_count;
-
-/* copy from drivers/amlogic/tvin/hdmirx/hdmirx_drv.h */
-struct hdmi_in_audio_status {
-	/*audio packets received*/
-	bool aud_rcv_flag;
-	/*audio stable status*/
-	bool aud_stb_flag;
-	/*audio sample rate*/
-	int aud_sr;
-	/*audio channel count*/
-	/*0: refer to stream header,*/
-	/*1: 2ch, 2: 3ch, 3: 4ch, 4: 5ch,*/
-	/*5: 6ch, 6: 7ch, 7: 8ch*/
-	int aud_channel_cnt;
-	/*audio coding type*/
-	/*0: refer to stream header, 1: IEC60958 PCM,*/
-	/*2: AC-3, 3: MPEG1 (Layers 1 and 2),*/
-	/*4: MP3 (MPEG1 Layer 3), 5: MPEG2 (multichannel),*/
-	/*6: AAC, 7: DTS, 8: ATRAC, 9: One Bit Audio,*/
-	/*10: Dolby Digital Plus, 11: DTS-HD,*/
-	/*12: MAT (MLP), 13: DST, 14: WMA Pro*/
-	int aud_type;
-	/* indicate if audio FIFO start threshold is crossed */
-	bool afifo_thres_pass;
-};
-#endif
 
 static u32 aml_EQ_table[AML_EQ_PARAM_LENGTH] = {
 	/*channel 1 param*/
@@ -188,48 +159,6 @@ static int get_spdif_sample_rate_index(void)
 	}
 	return index;
 }
-
-#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
-static int get_hdmi_sample_rate_index(void)
-{
-	struct hdmi_in_audio_status aud_sts;
-	struct rx_audio_stat_s *rx_aud_sts;
-	int val = 0;
-
-	rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
-	rx_get_audio_status(rx_aud_sts);
-	switch (aud_sts.aud_sr) {
-	case 0:
-		val = 0;
-		break;
-	case 32000:
-		val = 1;
-		break;
-	case 44100:
-		val = 2;
-		break;
-	case 48000:
-		val = 3;
-		break;
-	case 88200:
-		val = 4;
-		break;
-	case 96000:
-		val = 5;
-		break;
-	case 176400:
-		val = 6;
-		break;
-	case 192000:
-		val = 7;
-		break;
-	default:
-		pr_err("HDMIRX samplerate not support: %d\n", aud_sts.aud_sr);
-		break;
-	}
-	return val;
-}
-#endif
 
 static const char *const audio_in_source_texts[] = {
 	"LINEIN", "ATV", "HDMI", "SPDIFIN" };
@@ -372,18 +301,9 @@ static int aml_get_spdif_audio_type(
 	/* HDMI in,also check the hdmirx  fifo status*/
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 	if (audio_in_source == 2) {
-		struct hdmi_in_audio_status aud_sts;
-		struct rx_audio_stat_s *rx_aud_sts;
 		int index = 0;
 
-		rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
-		rx_get_audio_status(rx_aud_sts);
-		if (aud_sts.afifo_thres_pass == true)
-			hdmiin_fifo_disable_count = 0;
-		else
-			hdmiin_fifo_disable_count++;
-		if (hdmiin_fifo_disable_count > 200)
-			audio_type = 6/*PAUSE*/;
+		update_spdifin_audio_type(audio_type);
 
 		index = get_hdmi_sample_rate_index();
 		if (p_aml_audio &&
@@ -642,161 +562,6 @@ static int aml_set_arc_audio(struct snd_kcontrol *kcontrol,
 }
 #endif
 
-#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
-/* call HDMI CEC API to enable arc audio */
-static int aml_set_atmos_audio_edid(struct snd_kcontrol *kcontrol,
-			  struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct aml_audio_private_data *p_aml_audio;
-	bool enable = ucontrol->value.integer.value[0];
-
-	p_aml_audio = snd_soc_card_get_drvdata(card);
-	rx_set_atmos_flag(enable);
-	p_aml_audio->atmos_edid_enable = enable;
-	return 0;
-}
-static int aml_get_atmos_audio_edid(struct snd_kcontrol *kcontrol,
-			  struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct aml_audio_private_data *p_aml_audio;
-
-	p_aml_audio = snd_soc_card_get_drvdata(card);
-	ucontrol->value.integer.value[0] = p_aml_audio->atmos_edid_enable;
-	return 0;
-}
-;
-static const char *const hdmi_in_is_stable[] = {
-	"false",
-	"true"
-};
-static const char *const hdmi_in_samplerate[] = {
-	"N/A",
-	"32000",
-	"44100",
-	"48000",
-	"88200",
-	"96000",
-	"176400",
-	"192000"
-};
-static const char *const hdmi_in_channels[] = {
-	"NONE",
-	"2",
-	"3",
-	"4",
-	"5",
-	"6",
-	"7",
-	"8"
-};
-enum HDMIIN_format {
-	REFER_TO_HEADER = 0,
-	LPCM = 1,
-	AC3,
-	MPEG1,
-	MP3,
-	MPEG2,
-	AAC,
-	DTS,
-	ATRAC,
-	ONE_BIT_AUDIO,
-	DDP,
-	DTS_HD,
-	MAT,
-	DST,
-	WMA_PRO
-};
-static const char * const hdmi_in_format[] = {
-	"REFER_TO_HEADER",
-	"LPCM",
-	"AC3",
-	"MPEG1",
-	"MP3",
-	"MPEG2",
-	"AAC",
-	"DTS",
-	"ATRAC",
-	"ONE_BIT_AUDIO",
-	"DDP",
-	"DTS_HD",
-	"MAT",
-	"DST",
-	"WMA_PRO"
-};
-static const struct soc_enum hdmi_in_status_enum[] = {
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(hdmi_in_is_stable),
-			hdmi_in_is_stable),
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(hdmi_in_samplerate),
-			hdmi_in_samplerate),
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(hdmi_in_channels),
-			hdmi_in_channels),
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(hdmi_in_format),
-			hdmi_in_format)
-};
-static int aml_get_hdmiin_audio_stable(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
-{
-	struct hdmi_in_audio_status aud_sts;
-	struct rx_audio_stat_s *rx_aud_sts;
-
-	rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
-	rx_get_audio_status(rx_aud_sts);
-	ucontrol->value.integer.value[0] = aud_sts.aud_rcv_flag;
-	return 0;
-}
-static int aml_get_hdmiin_audio_samplerate(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
-{
-	int val = get_hdmi_sample_rate_index();
-	ucontrol->value.integer.value[0] = val;
-	return 0;
-}
-static int aml_get_hdmiin_audio_channels(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
-{
-	struct rx_audio_stat_s *rx_aud_sts;
-	struct hdmi_in_audio_status aud_sts;
-
-	rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
-	rx_get_audio_status(rx_aud_sts);
-	if (aud_sts.aud_channel_cnt <= 7)
-		ucontrol->value.integer.value[0] = aud_sts.aud_channel_cnt;
-	return 0;
-}
-static int aml_get_hdmiin_audio_format(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
-{
-	struct rx_audio_stat_s *rx_aud_sts;
-	struct hdmi_in_audio_status aud_sts;
-
-	rx_aud_sts = (struct rx_audio_stat_s *)&aud_sts;
-	rx_get_audio_status(rx_aud_sts);
-	if (aud_sts.aud_type <= 14)
-		ucontrol->value.integer.value[0] = aud_sts.aud_type;
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_AMLOGIC_ATV_DEMOD
-static const char *const atv_audio_is_stable[] = {
-	"false",
-	"true"
-};
-static const struct soc_enum atv_audio_status_enum =
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(atv_audio_is_stable),
-			atv_audio_is_stable);
-static int aml_get_atv_audio_stable(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
-{
-	int state = 0;
-
-	aml_fe_get_atvaudio_state(&state);
-	ucontrol->value.integer.value[0] = state;
-	return 0;
-}
-#endif /* CONFIG_AMLOGIC_ATV_DEMOD */
 #ifdef CONFIG_TVIN_VDIN
 static const char *const av_audio_is_stable[] = {
 	"false",

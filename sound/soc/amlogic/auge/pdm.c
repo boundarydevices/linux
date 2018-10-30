@@ -676,6 +676,9 @@ static int aml_pdm_dai_prepare(
 		}
 		p_pdm->filter_mode = s_pdm_filter_mode;
 		aml_pdm_filter_ctrl(osr, p_pdm->filter_mode);
+
+		if (p_pdm->chipinfo && p_pdm->chipinfo->truncate_data)
+			pdm_init_truncate_data(runtime->rate);
 	}
 
 	return 0;
@@ -874,7 +877,7 @@ static struct pdm_chipinfo g12a_pdm_chipinfo = {
 
 static struct pdm_chipinfo tl1_pdm_chipinfo = {
 	.mute_fn         = true,
-	.truncate_data   = true,
+	.truncate_data   = false,
 };
 
 static const struct of_device_id aml_pdm_device_id[] = {

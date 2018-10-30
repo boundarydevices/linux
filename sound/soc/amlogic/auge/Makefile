@@ -23,6 +23,8 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						resample_hw.o \
 						effects.o \
 						effects_hw.o \
+						effects_v2.o \
+						effects_hw_v2.o \
 						pwrdet.o \
 						pwrdet_hw.o \
 						sharebuffer.o \

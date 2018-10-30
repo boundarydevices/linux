@@ -1,1 +1,3 @@
-obj-y += notify.o spdif_info.o
+obj-y += notify.o \
+	spdif_info.o \
+	misc.o

@@ -270,16 +270,27 @@ enum clk_sel {
 #define EE_AUDIO_SPDIFIN_STAT2             0x109
 #define EE_AUDIO_SPDIFIN_MUTE_VAL          0x10a
 
-#define EE_AUDIO_RESAMPLE_CTRL0            0x110
-#define EE_AUDIO_RESAMPLE_CTRL1            0x111
-#define EE_AUDIO_RESAMPLE_CTRL2            0x112
-#define EE_AUDIO_RESAMPLE_CTRL3            0x113
-#define EE_AUDIO_RESAMPLE_COEF0            0x114
-#define EE_AUDIO_RESAMPLE_COEF1            0x115
-#define EE_AUDIO_RESAMPLE_COEF2            0x116
-#define EE_AUDIO_RESAMPLE_COEF3            0x117
-#define EE_AUDIO_RESAMPLE_COEF4            0x118
-#define EE_AUDIO_RESAMPLE_STATUS1          0x119
+#define EE_AUDIO_RESAMPLEA_CTRL0           0x110
+#define EE_AUDIO_RESAMPLEA_CTRL1           0x111
+#define EE_AUDIO_RESAMPLEA_CTRL2           0x112
+#define EE_AUDIO_RESAMPLEA_CTRL3           0x113
+#define EE_AUDIO_RESAMPLEA_COEF0           0x114
+#define EE_AUDIO_RESAMPLEA_COEF1           0x115
+#define EE_AUDIO_RESAMPLEA_COEF2           0x116
+#define EE_AUDIO_RESAMPLEA_COEF3           0x117
+#define EE_AUDIO_RESAMPLEA_COEF4           0x118
+#define EE_AUDIO_RESAMPLEA_STATUS1         0x119
+
+#define EE_AUDIO_RESAMPLEB_CTRL0           0x1e0
+#define EE_AUDIO_RESAMPLEB_CTRL1           0x1e1
+#define EE_AUDIO_RESAMPLEB_CTRL2           0x1e2
+#define EE_AUDIO_RESAMPLEB_CTRL3           0x1e3
+#define EE_AUDIO_RESAMPLEB_COEF0           0x1e4
+#define EE_AUDIO_RESAMPLEB_COEF1           0x1e5
+#define EE_AUDIO_RESAMPLEB_COEF2           0x1e6
+#define EE_AUDIO_RESAMPLEB_COEF3           0x1e7
+#define EE_AUDIO_RESAMPLEB_COEF4           0x1e8
+#define EE_AUDIO_RESAMPLEB_STATUS1         0x1e9
 
 #define EE_AUDIO_SPDIFOUT_STAT             0x120
 #define EE_AUDIO_SPDIFOUT_GAIN0            0x121
@@ -404,23 +415,17 @@ enum clk_sel {
 #define EE_RESET1                          0x002
 
 /*
+ *	HIU, ARC
+ */
+#define HHI_HDMIRX_ARC_CNTL                0xe8
+
+/*
  *	AUDIO MUX CONTROLS
  */
 #define EE_AUDIO_TOACODEC_CTRL0            0x1d0
 #define EE_AUDIO_TOHDMITX_CTRL0            0x1d1
 #define EE_AUDIO_TOVAD_CTRL0               0x1d2
 #define EE_AUDIO_FRATV_CTRL0               0x1d3
-
-#define EE_AUDIO_RESAMPLEB_CTRL0           0x1e0
-#define EE_AUDIO_RESAMPLEB_CTRL1           0x1e1
-#define EE_AUDIO_RESAMPLEB_CTRL2           0x1e2
-#define EE_AUDIO_RESAMPLEB_CTRL3           0x1e3
-#define EE_AUDIO_RESAMPLEB_COEF0           0x1e4
-#define EE_AUDIO_RESAMPLEB_COEF1           0x1e5
-#define EE_AUDIO_RESAMPLEB_COEF2           0x1e6
-#define EE_AUDIO_RESAMPLEB_COEF3           0x1e7
-#define EE_AUDIO_RESAMPLEB_COEF4           0x1e8
-#define EE_AUDIO_RESAMPLEB_STATUS1         0x1e9
 
 #define EE_AUDIO_SPDIFIN_LB_CTRL0          0x1f0
 #define EE_AUDIO_SPDIFIN_LB_CTRL1          0x1f1
@@ -507,7 +512,7 @@ enum clk_sel {
 #define RO_AUD_LOCK_INT_STATUS             0x01b
 
 /*
- * EQ DRC, g12a, g12b
+ * EQ DRC, G12X means g12a, g12b
  */
 #define AED_EQ_CH1_COEF00                  0x00
 #define AED_EQ_CH1_COEF01                  0x01
@@ -645,6 +650,10 @@ enum clk_sel {
 #define AED_DRC_AD_1M_H                    0x85
 #define AED_NG_CNT                         0x86
 #define AED_NG_STEP                        0x87
+
+#define AED_TOP_CTL_G12X                   0x88
+#define AED_TOP_REQ_CTL_G12X               0x89
+
 /*
  * EQ DRC, New ARCH, from tl1
  */
@@ -780,8 +789,9 @@ enum clk_sel {
 #define AED_MASTER_VOLUME_STATE            0x81
 #define AED_MASTER_VOLUME_GAIN             0x82
 
-#define AED_TOP_CTL                        0x88
-#define AED_TOP_REQ_CTL                    0x89
+#define AED_TOP_CTL                        0x83
+#define AED_TOP_REQ_CTL                    0x84
+
 
 /*
  * VAD, Voice activity detection

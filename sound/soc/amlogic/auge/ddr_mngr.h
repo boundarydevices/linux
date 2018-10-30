@@ -49,18 +49,27 @@ enum toddr_src {
 	PDMIN,
 	FRATV, /* NONE for axg, g12a, g12b */
 	TDMIN_LB,
-	LOOPBACK,
+	LOOPBACK_A,
 	FRHDMIRX, /* from tl1 chipset*/
 	LOOPBACK_B,
 	SPDIFIN_LB,
 	VAD,
 };
 
+enum resample_src {
+	ASRC_TODDR_A,
+	ASRC_TODDR_B,
+	ASRC_TODDR_C,
+	ASRC_TODDR_D,      /* from tl1 chipset */
+	ASRC_LOOPBACK_A,
+	ASRC_LOOPBACK_B,
+};
+
 enum frddr_dest {
 	TDMOUT_A,
 	TDMOUT_B,
 	TDMOUT_C,
-	SPDIFOUT,
+	SPDIFOUT_A,
 	SPDIFOUT_B,
 };
 
@@ -94,7 +103,7 @@ unsigned int aml_toddr_read(struct toddr *to);
 void aml_toddr_write(struct toddr *to, unsigned int val);
 
 /* resample */
-void aml_resample_enable(bool enable, int resample_module);
+void aml_set_resample(int id, bool enable, int resample_module);
 /* power detect */
 void aml_pwrdet_enable(bool enable, int pwrdet_module);
 
@@ -120,8 +129,10 @@ int aml_check_sharebuffer_valid(struct frddr *fr, int ss_sel);
 void aml_frddr_set_fifos(struct frddr *fr,
 		unsigned int depth, unsigned int thresh);
 unsigned int aml_frddr_get_fifo_id(struct frddr *fr);
+void aml_frddr_set_format(struct frddr *fr,
+	unsigned int msb, unsigned int frddr_type);
 /* audio eq drc */
-void aml_aed_enable(bool enable, int aed_module);
+void aml_set_aed(bool enable, int aed_module);
 
 void frddr_init_without_mngr(unsigned int frddr_index, unsigned int src0_sel);
 void frddr_deinit_without_mngr(unsigned int frddr_index);

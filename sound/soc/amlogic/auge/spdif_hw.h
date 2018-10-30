@@ -51,6 +51,8 @@ extern void aml_spdif_fifo_reset(
 	struct aml_audio_controller *actrl,
 	int stream, int index);
 
+extern int spdifout_get_frddr_type(int bitwidth);
+
 extern void aml_spdif_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth,

@@ -40,35 +40,43 @@ static u32 resample_coef_parameters_table[7][5] = {
 	{0x00800000, 0x0, 0x0, 0x0, 0x0},
 };
 
-void resample_enable(bool enable)
+void resample_enable(int id, bool enable)
 {
-	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+	int offset = EE_AUDIO_RESAMPLEB_CTRL0 - EE_AUDIO_RESAMPLEA_CTRL0;
+	int reg = EE_AUDIO_RESAMPLEA_CTRL0 + offset * id;
+
+	audiobus_update_bits(reg,
 		0x1 << 31,
 		1 << 31);
 
-	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+	audiobus_update_bits(reg,
 		0x1 << 31,
 		0 << 31);
 
-	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+	audiobus_update_bits(reg,
 		0x1 << 28,
 		enable << 28);
 }
 
-int resample_init(int input_sr)
+int resample_init(int id, int input_sr)
 {
 	u16 Avg_cnt_init = 0;
 	unsigned int clk_rate = 167000000;//clk81;
+	int offset = EE_AUDIO_RESAMPLEB_CTRL0 - EE_AUDIO_RESAMPLEA_CTRL0;
+	int reg = EE_AUDIO_RESAMPLEA_CTRL0 + offset * id;
 
 	if (input_sr)
 		Avg_cnt_init = (u16)(clk_rate * 4 / input_sr);
 	else
 		pr_err("unsupport input sample rate:%d\n", input_sr);
 
-	pr_info("clk_rate = %u, input_sr = %d, Avg_cnt_init = %u\n",
-		clk_rate, input_sr, Avg_cnt_init);
+	pr_info("resample id:%d, clk_rate = %u, input_sr = %d, Avg_cnt_init = %u\n",
+		id,
+		clk_rate,
+		input_sr,
+		Avg_cnt_init);
 
-	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+	audiobus_update_bits(reg,
 		0x3 << 26 | 0x3ff << 16 | 0xffff << 0,
 		0x0 << 26 | /* method0 */
 		RESAMPLE_CNT_CONTROL << 16 |
@@ -77,23 +85,30 @@ int resample_init(int input_sr)
 	return 0;
 }
 
-int resample_disable(void)
+int resample_disable(int id)
 {
-	audiobus_write(EE_AUDIO_RESAMPLE_CTRL0, 0);
+	int offset = EE_AUDIO_RESAMPLEB_CTRL0 - EE_AUDIO_RESAMPLEA_CTRL0;
+	int reg = EE_AUDIO_RESAMPLEA_CTRL0 + offset * id;
+
+	audiobus_write(reg, 0);
 
 	return 0;
 }
 
-int resample_set_hw_param(int index)
+int resample_set_hw_param(int id, int index)
 {
-	int i;
+	int i, reg, offset;
 
+	offset = EE_AUDIO_RESAMPLEB_COEF0 - EE_AUDIO_RESAMPLEA_COEF0;
+	reg = EE_AUDIO_RESAMPLEA_COEF0 + offset * id;
 	for (i = 0; i < 5; i++) {
-		audiobus_write((EE_AUDIO_RESAMPLE_COEF0 + i),
+		audiobus_write((reg + i),
 			resample_coef_parameters_table[index][i]);
 	}
 
-	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL2,
+	offset = EE_AUDIO_RESAMPLEB_CTRL2 - EE_AUDIO_RESAMPLEA_CTRL2;
+	reg = EE_AUDIO_RESAMPLEA_CTRL2 + offset * id;
+	audiobus_update_bits(reg,
 			1 << 25, 1 << 25);
 
 	return 0;
@@ -101,23 +116,42 @@ int resample_set_hw_param(int index)
 
 void resample_src_select(int src)
 {
-	audiobus_update_bits(EE_AUDIO_RESAMPLE_CTRL0,
+	audiobus_update_bits(EE_AUDIO_RESAMPLEA_CTRL0,
 		0x3 << 29,
 		src << 29);
 }
 
-void resample_format_set(int ch_num, int bits)
+void resample_src_select_ab(int id, int src)
 {
-	audiobus_write(EE_AUDIO_RESAMPLE_CTRL3,
+	int offset = EE_AUDIO_RESAMPLEB_CTRL3 - EE_AUDIO_RESAMPLEA_CTRL3;
+	int reg = EE_AUDIO_RESAMPLEA_CTRL3 + offset * id;
+
+	audiobus_update_bits(reg,
+		0x7 << 16,
+		src << 16);
+}
+
+void resample_format_set(int id, int ch_num, int bits)
+{
+	int offset = EE_AUDIO_RESAMPLEB_CTRL3 - EE_AUDIO_RESAMPLEA_CTRL3;
+	int reg = EE_AUDIO_RESAMPLEA_CTRL3 + offset * id;
+
+	audiobus_write(reg,
 		ch_num << 8 | (bits - 1) << 0);
 }
 
-int resample_ctrl_read(int idx)
+int resample_ctrl_read(int id)
 {
-	return audiobus_read(EE_AUDIO_RESAMPLE_CTRL0);
+	int offset = EE_AUDIO_RESAMPLEB_CTRL0 - EE_AUDIO_RESAMPLEA_CTRL0;
+	int reg = EE_AUDIO_RESAMPLEA_CTRL0 + offset * id;
+
+	return audiobus_read(reg);
 }
 
-void resample_ctrl_write(int idx, int value)
+void resample_ctrl_write(int id, int value)
 {
-	audiobus_write(EE_AUDIO_RESAMPLE_CTRL0, value);
+	int offset = EE_AUDIO_RESAMPLEB_CTRL0 - EE_AUDIO_RESAMPLEA_CTRL0;
+	int reg = EE_AUDIO_RESAMPLEA_CTRL0 + offset * id;
+
+	audiobus_write(reg, value);
 }

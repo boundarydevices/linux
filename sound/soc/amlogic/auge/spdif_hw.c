@@ -179,6 +179,32 @@ void aml_spdif_fifo_reset(
 	}
 }
 
+int spdifout_get_frddr_type(int bitwidth)
+{
+	unsigned int frddr_type = 0;
+
+	switch (bitwidth) {
+	case 8:
+		frddr_type = 0;
+		break;
+	case 16:
+		frddr_type = 1;
+		break;
+	case 24:
+		frddr_type = 4;
+		break;
+	case 32:
+		frddr_type = 3;
+		break;
+	default:
+		pr_err("runtime format invalid bitwidth: %d\n",
+			bitwidth);
+		break;
+	}
+
+	return frddr_type;
+}
+
 void aml_spdif_fifo_ctrl(
 	struct aml_audio_controller *actrl,
 	int bitwidth,
@@ -186,23 +212,20 @@ void aml_spdif_fifo_ctrl(
 	int index,
 	unsigned int fifo_id)
 {
-	unsigned int frddr_type, toddr_type;
+	unsigned int toddr_type;
+	unsigned int frddr_type = spdifout_get_frddr_type(bitwidth);
 
 	switch (bitwidth) {
 	case 8:
-		frddr_type = 0;
 		toddr_type = 0;
 		break;
 	case 16:
-		frddr_type = 1;
 		toddr_type = 1;
 		break;
 	case 24:
-		frddr_type = 4;
 		toddr_type = 4;
 		break;
 	case 32:
-		frddr_type = 3;
 		toddr_type = 3;
 		break;
 	default:
@@ -336,7 +359,7 @@ void aml_spdifout_select_aed(bool enable, int spdifout_id)
 	/* select eq_drc output */
 	offset = EE_AUDIO_SPDIFOUT_B_CTRL1 - EE_AUDIO_SPDIFOUT_CTRL1;
 	reg = EE_AUDIO_SPDIFOUT_CTRL1 + offset * spdifout_id;
-	audiobus_update_bits(reg, 0x1 << 31, enable << 31);
+	audiobus_update_bits(reg, 0x1 << 21, enable << 21);
 }
 
 void aml_spdifout_get_aed_info(int spdifout_id,
@@ -382,27 +405,8 @@ void spdifout_clk_ctrl(int spdif_id, bool is_enable)
 
 void spdifout_fifo_ctrl(int spdif_id, int fifo_id, int bitwidth)
 {
-	unsigned int frddr_type;
+	unsigned int frddr_type = spdifout_get_frddr_type(bitwidth);
 	unsigned int offset, reg;
-
-	switch (bitwidth) {
-	case 8:
-		frddr_type = 0;
-		break;
-	case 16:
-		frddr_type = 1;
-		break;
-	case 24:
-		frddr_type = 4;
-		break;
-	case 32:
-		frddr_type = 3;
-		break;
-	default:
-		pr_err("runtime format invalid bitwidth: %d\n",
-			bitwidth);
-		return;
-	}
 
 	pr_info("spdif_%s fifo ctrl, frddr:%d type:%d, %d bits\n",
 		(spdif_id == 0) ? "a":"b",

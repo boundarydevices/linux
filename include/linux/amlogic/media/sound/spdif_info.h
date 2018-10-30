@@ -18,7 +18,9 @@
 #ifndef __SPDIF_INFO_H__
 #define __SPDIF_INFO_H__
 
+#include <sound/soc.h>
 #include <sound/pcm.h>
+#include <sound/control.h>
 
 struct iec958_chsts {
 	unsigned short chstat0_l;
@@ -34,4 +36,13 @@ extern void spdif_get_channel_status_info(struct iec958_chsts *chsts,
 
 extern void spdif_notify_to_hdmitx(struct snd_pcm_substream *substream);
 
+extern const struct soc_enum spdif_format_enum;
+
+extern int spdif_format_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+extern int spdif_format_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
 #endif

@@ -204,6 +204,33 @@ void audioreset_update_bits(unsigned int reg,
 }
 EXPORT_SYMBOL(audioreset_update_bits);
 
+int vad_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_VAD, reg, &val);
+
+	if (ret) {
+		pr_err("read audio reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(vad_read);
+
+void vad_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_VAD, reg, val);
+}
+EXPORT_SYMBOL(vad_write);
+
+void vad_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_VAD, reg, mask, val);
+}
+EXPORT_SYMBOL(vad_update_bits);
+
 static int snd_iomap_probe(struct platform_device *pdev)
 {
 	struct resource res;

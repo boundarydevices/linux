@@ -24,7 +24,9 @@
 #include "tdm_hw.h"
 #include "ddr_mngr.h"
 #include "resample.h"
+#include "effects_v2.h"
 
+#include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/sound/auge_utils.h>
 
 #include <linux/of_platform.h>
@@ -943,6 +945,12 @@ int snd_card_add_kcontrols(struct snd_soc_card *card)
 		return ret;
 	}
 
+	ret = card_add_effect_v2_kcontrols(card);
+	if (ret < 0) {
+		pr_err("Failed to add AED v2 controls\n");
+		return ret;
+	}
+
 	return snd_soc_add_card_controls(card,
 		snd_auge_controls, ARRAY_SIZE(snd_auge_controls));
 
@@ -1504,4 +1512,11 @@ void fratv_enable(bool enable)
 void fratv_src_select(int src)
 {
 	audiobus_update_bits(EE_AUDIO_FRATV_CTRL0, 0x1 << 20, (bool)src << 20);
+}
+
+void cec_arc_enable(int src, bool enable)
+{
+	aml_hiubus_update_bits(HHI_HDMIRX_ARC_CNTL,
+		0x1f << 0,
+		src << 2 | enable << 1 | 0x0 << 0);
 }

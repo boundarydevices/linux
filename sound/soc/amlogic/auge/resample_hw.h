@@ -17,14 +17,15 @@
 #ifndef __AML_AUDIO_RESAMPLE_HW_H__
 #define __AML_AUDIO_RESAMPLE_HW_H__
 
-extern void resample_enable(bool enable);
-extern int resample_init(int input_sr);
-extern int resample_disable(void);
-extern int resample_set_hw_param(int index);
+extern void resample_enable(int id, bool enable);
+extern int resample_init(int id, int input_sr);
+extern int resample_disable(int id);
+extern int resample_set_hw_param(int id, int index);
 extern void resample_src_select(int src);
-extern void resample_format_set(int ch_num, int bits);
+extern void resample_src_select_ab(int id, int src);
+extern void resample_format_set(int id, int ch_num, int bits);
 
-extern int resample_ctrl_read(int idx);
-extern void resample_ctrl_write(int idx, int value);
+extern int resample_ctrl_read(int id);
+extern void resample_ctrl_write(int id, int value);
 
 #endif

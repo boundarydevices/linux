@@ -24,6 +24,7 @@ enum{
 	IO_AUDIO_LOCKER,
 	IO_EQDRC_BUS,
 	IO_RESET,
+	IO_VAD,
 
 	IO_MAX,
 };
@@ -52,4 +53,9 @@ extern int audioreset_read(unsigned int reg);
 extern void audioreset_write(unsigned int reg, unsigned int val);
 extern void audioreset_update_bits(unsigned int reg,
 	unsigned int mask, unsigned int val);
+
+extern int vad_read(unsigned int reg);
+extern void vad_write(unsigned int reg, unsigned int val);
+extern void vad_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val);
 #endif

@@ -38,6 +38,8 @@ extern void pdm_set_mute_value(int val);
 extern int pdm_get_mute_channel(void);
 extern void pdm_set_mute_channel(int mute_chmask);
 
+extern void pdm_init_truncate_data(int freq);
+
 extern int pdm_hcic_shift_gain;
 extern int pdm_dclk;
 

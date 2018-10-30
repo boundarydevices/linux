@@ -349,7 +349,7 @@ static struct snd_pcm_ops aml_tdm_ops = {
 	.mmap = aml_tdm_mmap,
 };
 
-#define PREALLOC_BUFFER		(32 * 1024)
+#define PREALLOC_BUFFER		(128 * 1024)
 #define PREALLOC_BUFFER_MAX	(256 * 1024)
 static int aml_tdm_new(struct snd_soc_pcm_runtime *rtd)
 {
@@ -444,6 +444,8 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 					p_tdm->id);
 			return -EINVAL;
 		}
+		aml_frddr_set_format(fr, bit_depth - 1,
+			tdmout_get_frddr_type(bit_depth));
 		aml_frddr_select_dst(fr, dst);
 		aml_frddr_set_fifos(fr, 0x40, 0x20);
 	} else {
@@ -808,9 +810,6 @@ static int aml_dai_set_tdm_sysclk(struct snd_soc_dai *cpu_dai,
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 	unsigned int ratio = aml_mpll_mclk_ratio(freq);
 
-	pr_info("aml_dai_set_tdm_sysclk freq(%d), mpll/mclk(%d)\n",
-		freq, ratio);
-
 	p_tdm->setting.sysclk = freq;
 
 #ifdef __PTM_TDM_CLK__
@@ -824,6 +823,12 @@ static int aml_dai_set_tdm_sysclk(struct snd_soc_dai *cpu_dai,
 
 	clk_set_rate(p_tdm->clk, freq * ratio);
 	clk_set_rate(p_tdm->mclk, freq);
+
+	pr_info("set mclk:%d, mpll:%d, get mclk:%lu, mpll:%lu\n",
+		freq,
+		freq * ratio,
+		clk_get_rate(p_tdm->mclk),
+		clk_get_rate(p_tdm->clk));
 
 	return 0;
 }
@@ -1066,7 +1071,7 @@ static struct snd_soc_dai_driver aml_tdm_dai[] = {
 };
 
 static const struct snd_soc_component_driver aml_tdm_component = {
-	.name        = DRV_NAME,
+	.name              = DRV_NAME,
 };
 
 struct tdm_chipinfo axg_tdma_chipinfo = {

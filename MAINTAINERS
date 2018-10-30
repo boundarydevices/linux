@@ -14663,15 +14663,13 @@ M:	Luan Yuan <luan.yuan@amlogic.com>
 F:	arch/arm/boot/dts/amlogic/partition_mbox_p241_P.dtsi
 
 AMLOGIC TL1 SOUND CARD
-M:      Xing Wang <xing.wang@amlogic.com
-F:	include/dt-bindings/clock/amlogic,tl1-audio-clk.h
-F:	sound/soc/amlogic/auge/*
-
 AMLOGIC TL1 AUDIO EXTERANL INPUT/OUTPUT DRIVERS
+AMLOGIC TL1 NEW EQDRC
+AMLOGIC TL1 MIXER CONTROLS
 M:	Xing Wang <xing.wang@amlogic.com
-F:	sound/soc/amlogic/auge/extn.c
-F:	sound/soc/amlogic/auge/frhdmirx_hw.c
-F:	sound/soc/amlogic/auge/frhdmirx_hw.h
+F:	arch/arm/boot/dts/amlogic/tl1_pxp.dts
+F:	include/dt-bindings/clock/amlogic,tl1-audio-clk.h
+F:	include/linux/amlogic/media/sound/misc.h
 F:	sound/soc/amlogic/auge/*
 
 AMLOGIC LCD DRIVERS

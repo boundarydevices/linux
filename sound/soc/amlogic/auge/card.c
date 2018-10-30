@@ -976,12 +976,11 @@ static int aml_card_probe(struct platform_device *pdev)
 	}
 
 	if (priv->chipinfo && priv->chipinfo->eqdrc_fn) {
-		pr_info("eq/drc function enable\n");
+		pr_info("eq/drc v1 function enable\n");
 		ret = card_add_effects_init(&priv->snd_card);
 		if (ret < 0)
-			pr_warn_once("Failed to add audio effects controls\n");
-	} else
-		pr_info("not support eq/drc function\n");
+			pr_warn_once("Failed to add audio effects v1 controls\n");
+	}
 
 	if (priv->hp_det_enable == 1 || priv->mic_det_enable == 1) {
 		audio_jack_detect(priv);

@@ -158,3 +158,35 @@ void spdif_notify_to_hdmitx(struct snd_pcm_substream *substream)
 				substream);
 	}
 }
+
+static const char *const spdif_format_texts[10] = {
+	"2 CH PCM", "DTS RAW Mode", "Dolby Digital", "DTS",
+	"DD+", "DTS-HD", "Multi-channel LPCM", "TrueHD", "DTS-HD MA",
+	"HIGH SR Stereo LPCM"
+};
+
+const struct soc_enum spdif_format_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdif_format_texts),
+			spdif_format_texts);
+
+int spdif_format_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = IEC958_mode_codec;
+	return 0;
+}
+
+int spdif_format_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int index = ucontrol->value.enumerated.item[0];
+
+	if (index >= 10) {
+		pr_err("bad parameter for spdif format set\n");
+		return -1;
+	}
+	IEC958_mode_codec = index;
+	return 0;
+}

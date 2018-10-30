@@ -71,9 +71,6 @@ struct aml_audio_private_data {
 #ifdef CONFIG_AMLOGIC_AO_CEC
 	int arc_enable;
 #endif
-#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
-	int atmos_edid_enable;
-#endif
 	int Hardware_resample_enable;
 	int spdif_sample_rate_index;
 	int hdmi_sample_rate_index;
@@ -100,6 +97,4 @@ extern int External_Mute(int mute_flag);
 #else
 int External_Mute(int mute_flag) { return 0; }
 #endif
-extern void rx_set_atmos_flag(bool en);
-extern void rx_get_atmos_flag(void);
 #endif

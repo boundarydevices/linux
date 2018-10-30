@@ -141,13 +141,9 @@ void tdm_fifo_enable(int tdm_index, int is_enable)
 	}
 }
 
-void aml_tdm_fifo_ctrl(
-	struct aml_audio_controller *actrl,
-	int bitwidth, int stream,
-	int index, unsigned int fifo_id)
+int tdmout_get_frddr_type(int bitwidth)
 {
-	unsigned int frddr_type;
-	unsigned int reg, offset;
+	unsigned int frddr_type = 0;
 
 	switch (bitwidth) {
 	case 8:
@@ -163,8 +159,19 @@ void aml_tdm_fifo_ctrl(
 	default:
 		pr_err("invalid bit_depth: %d\n",
 			bitwidth);
-		return;
+		break;
 	}
+
+	return frddr_type;
+}
+
+void aml_tdm_fifo_ctrl(
+	struct aml_audio_controller *actrl,
+	int bitwidth, int stream,
+	int index, unsigned int fifo_id)
+{
+	unsigned int frddr_type = tdmout_get_frddr_type(bitwidth);
+	unsigned int reg, offset;
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		pr_debug("tdm prepare----playback\n");

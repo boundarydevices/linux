@@ -65,7 +65,7 @@ static const char *const aed_req_module_texts[] = {
 	"TDMOUT_A",
 	"TDMOUT_B",
 	"TDMOUT_C",
-	"SPDIFOUT",
+	"SPDIFOUT_A",
 	"SPDIFOUT_B",
 };
 
@@ -145,7 +145,7 @@ static int mixer_set_EQ(struct snd_kcontrol *kcontrol,
 	aed_set_eq(value, aml_EQ_param_length, &aml_EQ_param[0]);
 
 	eqdrc_module = aed_get_req_sel(0);
-	aml_aed_enable(value, eqdrc_module);
+	aml_set_aed(value, eqdrc_module);
 
 	return 0;
 }
@@ -160,7 +160,7 @@ static int mixer_set_DRC_params(struct snd_kcontrol *kcontrol,
 		aml_DRC_param_length, &aml_drc_tko_table[0]);
 
 	eqdrc_module = aed_get_req_sel(0);
-	aml_aed_enable(value, eqdrc_module);
+	aml_set_aed(value, eqdrc_module);
 
 	return 0;
 }
@@ -198,15 +198,15 @@ static const struct snd_kcontrol_new snd_eqdrc_controls[] = {
 			 mixer_eqdrc_read, mixer_eqdrc_write),
 
 	SOC_SINGLE_EXT("EQ/DRC Channel Mask",
-			 AED_TOP_CTL, 18, 0xff, 0,
+			 AED_TOP_CTL_G12X, 18, 0xff, 0,
 			 mixer_eqdrc_read, mixer_eqdrc_write),
 
 	SOC_SINGLE_EXT("EQ/DRC Lane Mask",
-			 AED_TOP_CTL, 14, 0xf, 0,
+			 AED_TOP_CTL_G12X, 14, 0xf, 0,
 			 mixer_eqdrc_read, mixer_eqdrc_write),
 
 	SOC_SINGLE_EXT("EQ/DRC Req Module",
-			 AED_TOP_REQ_CTL, 0, 0x7, 0,
+			 AED_TOP_REQ_CTL_G12X, 0, 0x7, 0,
 			 mixer_eqdrc_read, mixer_set_AED_req_ctrl),
 
 	SOC_SINGLE_EXT("EQ enable",
@@ -243,8 +243,7 @@ int card_add_effects_init(struct snd_soc_card *card)
 	audio_effect_np = of_parse_phandle(card->dev->of_node,
 		"aml-audio-card,effect", 0);
 	if (audio_effect_np == NULL) {
-		pr_err("error: failed to find node %s for eq/drc info!\n",
-				"audio_effect");
+		pr_warn("no node %s for eq/drc info!\n", "audio_effect");
 		return -EINVAL;
 	}
 

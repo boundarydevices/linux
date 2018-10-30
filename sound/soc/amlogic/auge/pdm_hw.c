@@ -452,3 +452,13 @@ void pdm_set_mute_channel(int mute_chmask)
 		(0xff << 20 | 0x1 << 17),
 		(mute_chmask << 20 | mute_en << 17));
 }
+
+void pdm_init_truncate_data(int freq)
+{
+	int mask_val;
+
+	/* assume mask 1.05ms */
+	mask_val = ((freq / 1000) * 1050) / 1000 - 1;
+
+	aml_pdm_write(PDM_MASK_NUM, mask_val);
+}

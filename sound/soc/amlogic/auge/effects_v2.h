@@ -1,7 +1,7 @@
 /*
- * sound/soc/amlogic/auge/resample.h
+ * sound/soc/amlogic/auge/effects_v2.h
  *
- * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
+ * Copyright (C) 2018 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,13 +14,10 @@
  * more details.
  *
  */
-#ifndef __AML_AUDIO_RESAMPLE_H__
-#define __AML_AUDIO_RESAMPLE_H__
+#ifndef __EFFECTS_V2_H__
+#define __EFFECTS_V2_H__
 
-extern int card_add_resample_kcontrols(struct snd_soc_card *card);
-
-extern int resample_set(int id, int index);
-
-extern int get_resample_module_num(void);
+extern bool check_aed_v2(void);
+extern int card_add_effect_v2_kcontrols(struct snd_soc_card *card);
 
 #endif

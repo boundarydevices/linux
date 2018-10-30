@@ -38,20 +38,40 @@
 #include "audio_utils.h"
 #include "frhdmirx_hw.h"
 
+#include <linux/amlogic/media/sound/misc.h>
+
 #define DRV_NAME "EXTN"
 
 struct extn {
 	struct aml_audio_controller *actrl;
 	struct device *dev;
-	unsigned int sysclk_freq;
-
-	int irq_frhdmirx;
 
 	struct toddr *tddr;
 	struct frddr *fddr;
+
+	int sysclk_freq;
+
+	int irq_frhdmirx;
+
+	/*
+	 * 0: select spdif lane;
+	 * 1: select PAO mode;
+	 */
+	int hdmirx_mode;
+
+	/*
+	 * arc source sel:
+	 * 0: hi_hdmirx_arc_cntl[5]
+	 * 1: audio_spdif_a
+	 * 2: audio_spdif_b
+	 * 4: hdmir_aud_spdif
+	 */
+	int arc_src;
+	int arc_en;
+
 };
 
-#define PREALLOC_BUFFER		(32 * 1024)
+#define PREALLOC_BUFFER		(128 * 1024)
 #define PREALLOC_BUFFER_MAX	(256 * 1024)
 
 #define EXTN_RATES      (SNDRV_PCM_RATE_8000_192000)
@@ -320,36 +340,57 @@ static int extn_dai_prepare(
 		aml_frddr_set_fifos(fr, 0x40, 0x20);
 	} else {
 		struct toddr *to = p_extn->tddr;
-		unsigned int msb = 32 - 1;
-		unsigned int lsb = 32 - bit_depth;
-		unsigned int toddr_type;
+		unsigned int msb = 0, lsb = 0, toddr_type = 0;
 		unsigned int src = toddr_src_get();
 		struct toddr_fmt fmt;
 
-		switch (bit_depth) {
-		case 8:
-		case 16:
-		case 32:
-			toddr_type = 0;
-			break;
-		case 24:
+		if (bit_depth == 24)
 			toddr_type = 4;
-			break;
-		default:
-			pr_err("invalid bit_depth: %d\n", bit_depth);
-			return -EINVAL;
-		}
+		else
+			toddr_type = 0;
 
 		pr_info("%s Expected toddr src:%s\n",
 			__func__,
 			toddr_src_get_str(src));
 
-		if (src == FRATV)
-			fratv_src_select(0);
-		else if (src == FRHDMIRX) {
-			frhdmirx_ctrl(runtime->channels, 0);
-			frhdmirx_src_select(0);
+		if (src == FRATV) {
+			/* Now tv supports 48k, 16bits */
+			if ((bit_depth != 16) || (runtime->rate != 48000)) {
+				pr_err("not support sample rate:%d, bits:%d\n",
+					runtime->rate, bit_depth);
+				return -EINVAL;
+			}
+
+			msb = 15;
+			lsb = 0;
+
+			fratv_src_select(1);
+		} else if (src == FRHDMIRX) {
+			if (p_extn->hdmirx_mode) { /* PAO */
+
+				if (bit_depth == 32)
+					toddr_type = 3;
+				else if (bit_depth == 24)
+					toddr_type = 4;
+				else
+					toddr_type = 0;
+
+				msb = 28 - 1 - 4;
+				if (bit_depth == 16)
+					lsb = 24 - bit_depth;
+				else
+					lsb = 4;
+			}
+
+			frhdmirx_ctrl(runtime->channels, p_extn->hdmirx_mode);
+			frhdmirx_src_select(p_extn->hdmirx_mode);
+		} else {
+			pr_info("Not support toddr src:%s\n",
+				toddr_src_get_str(src));
+			return -EINVAL;
 		}
+
+		pr_info("%s m:%d, n:%d\n", __func__, msb, lsb);
 
 		fmt.type      = toddr_type;
 		fmt.msb       = msb;
@@ -486,7 +527,150 @@ static struct snd_soc_dai_driver extn_dai[] = {
 	},
 };
 
+static const char *const arc_src_txt[] = {
+	"HI_HDMIRX_ARC_CNTL[5]",
+	"AUDIO_SPDIF_A",
+	"AUDIO_SPDIF_B",
+	"HDMIR_AUD_SPDIF",
+};
+
+const struct soc_enum arc_src_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(arc_src_txt),
+			arc_src_txt);
+
+static int arc_get_src(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct extn *p_extn = dev_get_drvdata(component->dev);
+
+	ucontrol->value.integer.value[0] = p_extn->arc_src;
+
+	return 0;
+}
+
+static int arc_set_src(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct extn *p_extn = dev_get_drvdata(component->dev);
+
+	p_extn->arc_src = ucontrol->value.integer.value[0];
+
+	cec_arc_enable(p_extn->arc_src, p_extn->arc_en);
+
+	return 0;
+}
+
+static int arc_get_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct extn *p_extn = dev_get_drvdata(component->dev);
+
+	ucontrol->value.integer.value[0] = p_extn->arc_en;
+
+	return 0;
+}
+
+static int arc_set_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct extn *p_extn = dev_get_drvdata(component->dev);
+
+	p_extn->arc_en = ucontrol->value.integer.value[0];
+
+	cec_arc_enable(p_extn->arc_src, p_extn->arc_en);
+
+	return 0;
+}
+
+static int frhdmirx_get_mode(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct extn *p_extn = dev_get_drvdata(component->dev);
+
+	ucontrol->value.integer.value[0] = p_extn->hdmirx_mode;
+
+	return 0;
+}
+
+static int frhdmirx_set_mode(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct extn *p_extn = dev_get_drvdata(component->dev);
+
+	p_extn->hdmirx_mode = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
+static const struct snd_kcontrol_new extn_controls[] = {
+	/* Out */
+	SOC_ENUM_EXT("HDMI ARC Source",
+		arc_src_enum,
+		arc_get_src,
+		arc_set_src),
+
+	SOC_SINGLE_BOOL_EXT("HDMI ARC Switch",
+		0,
+		arc_get_enable,
+		arc_set_enable),
+
+	/* In */
+	SOC_SINGLE_BOOL_EXT("SPDIFIN PAO",
+		0,
+		frhdmirx_get_mode,
+		frhdmirx_set_mode),
+
+#ifdef CONFIG_AMLOGIC_ATV_DEMOD
+	SOC_ENUM_EXT("ATV audio stable",
+		atv_audio_status_enum,
+		aml_get_atv_audio_stable,
+		NULL),
+#endif
+
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+	SOC_ENUM_EXT("HDMIIN audio stable",
+		hdmi_in_status_enum[0],
+		aml_get_hdmiin_audio_stable,
+		NULL),
+
+	SOC_ENUM_EXT("HDMIIN audio samplerate",
+		hdmi_in_status_enum[1],
+		aml_get_hdmiin_audio_samplerate,
+			NULL),
+
+	SOC_ENUM_EXT("HDMIIN audio channels",
+		hdmi_in_status_enum[2],
+		aml_get_hdmiin_audio_channels,
+		NULL),
+
+	SOC_ENUM_EXT("HDMIIN audio format",
+		hdmi_in_status_enum[3],
+		aml_get_hdmiin_audio_format,
+		NULL),
+
+	SOC_SINGLE_BOOL_EXT("HDMI ATMOS EDID Switch",
+		0,
+		aml_get_atmos_audio_edid,
+		aml_set_atmos_audio_edid),
+#endif
+
+};
+
 static const struct snd_soc_component_driver extn_component = {
+	.controls       = extn_controls,
+	.num_controls   = ARRAY_SIZE(extn_controls),
 	.name		= DRV_NAME,
 };
 
@@ -506,16 +690,16 @@ static int extn_platform_probe(struct platform_device *pdev)
 	struct platform_device *pdev_parent;
 	struct device *dev = &pdev->dev;
 	struct aml_audio_controller *actrl = NULL;
-	struct extn *extn = NULL;
+	struct extn *p_extn = NULL;
 	int ret = 0;
 
 
-	extn = devm_kzalloc(dev, sizeof(struct extn), GFP_KERNEL);
-	if (!extn)
+	p_extn = devm_kzalloc(dev, sizeof(struct extn), GFP_KERNEL);
+	if (!p_extn)
 		return -ENOMEM;
 
-	extn->dev = dev;
-	dev_set_drvdata(dev, extn);
+	p_extn->dev = dev;
+	dev_set_drvdata(dev, p_extn);
 
 	/* get audio controller */
 	node_prt = of_get_parent(node);
@@ -526,15 +710,21 @@ static int extn_platform_probe(struct platform_device *pdev)
 	of_node_put(node_prt);
 	actrl = (struct aml_audio_controller *)
 				platform_get_drvdata(pdev_parent);
-	extn->actrl = actrl;
+	p_extn->actrl = actrl;
 
 	/* irqs */
-	extn->irq_frhdmirx = platform_get_irq_byname(pdev, "irq_frhdmirx");
-	if (extn->irq_frhdmirx < 0) {
+	p_extn->irq_frhdmirx = platform_get_irq_byname(pdev, "irq_frhdmirx");
+	if (p_extn->irq_frhdmirx < 0) {
 		dev_err(dev, "Failed to get irq_frhdmirx:%d\n",
-			extn->irq_frhdmirx);
+			p_extn->irq_frhdmirx);
 		return -ENXIO;
 	}
+
+	/* Default ARC SRC */
+	p_extn->arc_src = 1;
+
+	/* Default: PAO mode */
+	p_extn->hdmirx_mode = 1;
 
 	ret = snd_soc_register_component(&pdev->dev,
 				&extn_component,

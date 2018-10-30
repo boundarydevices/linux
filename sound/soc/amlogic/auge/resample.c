@@ -34,7 +34,15 @@
 
 #define CLK_RATIO     256
 
+/*#define __PTM_RESAMPLE_CLK__*/
+
+#define RESAMPLE_A    0
+#define RESAMPLE_B    1
+
 struct resample_chipinfo {
+	int num;    /* support resample a/b */
+	int id;
+
 	bool dividor_fn;
 };
 
@@ -50,18 +58,46 @@ struct audioresample {
 
 	struct resample_chipinfo *chipinfo;
 
+	int id;
+
 	/*which module should be resampled */
 	int resample_module;
 	/*  resample to the rate */
 	int out_rate;
 
 	/* sync with auge_resample_texts */
-	int asr_idx;
+	int asrc_rate_idx;
 
 	bool enable;
 };
 
-struct audioresample *s_resample;
+struct audioresample *s_resample_a;
+
+struct audioresample *s_resample_b;
+
+static struct audioresample *get_audioresample(int id)
+{
+	struct audioresample *p_resample;
+
+	p_resample = ((id == 0) ? s_resample_a : s_resample_b);
+
+	if (!p_resample) {
+		pr_info("Not init audio resample\n");
+		return NULL;
+	}
+
+	return p_resample;
+}
+
+int get_resample_module_num(void)
+{
+	struct audioresample *p_resample = get_audioresample(0);
+
+	if (p_resample && p_resample->chipinfo)
+		return p_resample->chipinfo->num;
+
+	return 1;
+}
 
 static int resample_clk_set(struct audioresample *p_resample)
 {
@@ -84,8 +120,13 @@ static int resample_clk_set(struct audioresample *p_resample)
 		}
 
 		if (p_resample->out_rate) {
+#ifdef __PTM_RESAMPLE_CLK__
+			clk_set_rate(p_resample->pll,
+				p_resample->out_rate * CLK_RATIO * 2 * 14);
+#else
 			clk_set_rate(p_resample->pll,
 				p_resample->out_rate * CLK_RATIO * 2);
+#endif
 			clk_set_rate(p_resample->sclk,
 				p_resample->out_rate * CLK_RATIO);
 			clk_set_rate(p_resample->clk,
@@ -121,20 +162,20 @@ static void audio_resample_init(struct audioresample *p_resample)
 {
 	resample_clk_set(p_resample);
 
-	aml_resample_enable(p_resample->enable,
+	aml_set_resample(p_resample->id, p_resample->enable,
 		p_resample->resample_module);
 }
 
-static int audio_resample_set(int enable, int rate)
+static int audio_resample_set(
+	struct audioresample *p_resample,
+	bool enable, int rate)
 {
-	if (!s_resample) {
-		pr_err("audio resample is not init\n");
-		return -EINVAL;
-	}
+	if (!p_resample)
+		return 0;
 
-	s_resample->enable = (bool)enable;
-	s_resample->out_rate = rate;
-	audio_resample_init(s_resample);
+	p_resample->enable = enable;
+	p_resample->out_rate = rate;
+	audio_resample_init(p_resample);
 
 	return 0;
 }
@@ -186,41 +227,40 @@ static int resample_get_enum(
 
 	if (!p_resample) {
 		pr_info("audio resample is not init\n");
-		return -EINVAL;
+		return 0;
 	}
 
-	ucontrol->value.enumerated.item[0] = p_resample->asr_idx;
+	ucontrol->value.enumerated.item[0] = p_resample->asrc_rate_idx;
 
 	return 0;
 }
 
-int resample_set(int index)
+int resample_set(int id, int index)
 {
 	int resample_rate = resample_idx2rate(index);
+	struct audioresample *p_resample = get_audioresample(id);
 
-	if (!s_resample) {
-		pr_info("audio resample is not init\n");
-		return -EINVAL;
-	}
-
-	if (index == s_resample->asr_idx)
+	if (!p_resample)
 		return 0;
 
-	s_resample->asr_idx = index;
+	if (index == p_resample->asrc_rate_idx)
+		return 0;
+
+	p_resample->asrc_rate_idx = index;
 
 	pr_info("%s %s\n",
 		__func__,
 		auge_resample_texts[index]);
 
-	if (audio_resample_set(index, resample_rate))
+	if (audio_resample_set(p_resample, (bool)index, resample_rate))
 		return 0;
 
 	if ((index == 0) || (resample_rate == 0))
-		resample_disable();
+		resample_disable(p_resample->id);
 	else {
-		resample_init(resample_rate);
+		resample_init(p_resample->id, resample_rate);
 
-		resample_set_hw_param(index - 1);
+		resample_set_hw_param(p_resample->id, index - 1);
 	}
 
 	return 0;
@@ -230,9 +270,15 @@ static int resample_set_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct audioresample *p_resample = snd_kcontrol_chip(kcontrol);
 	int index = ucontrol->value.enumerated.item[0];
 
-	resample_set(index);
+	if (!p_resample) {
+		pr_info("audio resample is not init\n");
+		return 0;
+	}
+
+	resample_set(p_resample->id, index);
 
 	return 0;
 }
@@ -289,9 +335,13 @@ static const char *const auge_resample_module_texts[] = {
 	"TDMIN_C",
 	"SPDIFIN",
 	"PDMIN",
-	"NONE",
+	"FRATV", /* NONE for axg, g12a, g12b */
 	"TDMIN_LB",
-	"LOOPBACK",
+	"LOOPBACK_A",
+	"FRHDMIRX", /* from tl1 chipset*/
+	"LOOPBACK_B",
+	"SPDIFIN_LB",
+	"VAD",
 };
 
 static const struct soc_enum auge_resample_module_enum =
@@ -306,7 +356,7 @@ static int resample_module_get_enum(
 
 	if (!p_resample) {
 		pr_info("audio resample is not init\n");
-		return -EINVAL;
+		return 0;
 	}
 
 	ucontrol->value.enumerated.item[0] = p_resample->resample_module;
@@ -322,32 +372,52 @@ static int resample_module_set_enum(
 
 	if (!p_resample) {
 		pr_info("audio resample is not init\n");
-		return -EINVAL;
+		return 0;
 	}
 
 	p_resample->resample_module = ucontrol->value.enumerated.item[0];
 
 	/* update info to ddr */
-	aml_resample_enable(p_resample->enable,
+	aml_set_resample(p_resample->id,
+		p_resample->enable,
 		p_resample->resample_module);
 
 	return 0;
 }
 
-static const struct snd_kcontrol_new snd_resample_controls[] = {
+static const struct snd_kcontrol_new asrc_a_controls[] = {
 	SOC_ENUM_EXT("Hardware resample enable",
 		     auge_resample_enum,
 		     resample_get_enum,
 		     resample_set_enum),
 	SOC_SINGLE_EXT_TLV("Hw resample pause enable",
-			 EE_AUDIO_RESAMPLE_CTRL2, 24, 0x1, 0,
+			 EE_AUDIO_RESAMPLEA_CTRL2, 24, 0x1, 0,
 			 mixer_audiobus_read, mixer_audiobus_write,
 			 NULL),
 	SOC_SINGLE_EXT_TLV("Hw resample pause thd",
-			 EE_AUDIO_RESAMPLE_CTRL2, 0, 0xffffff, 0,
+			 EE_AUDIO_RESAMPLEA_CTRL2, 0, 0xffffff, 0,
 			 mixer_audiobus_read, mixer_audiobus_write,
 			 NULL),
-	SOC_ENUM_EXT("Hardware resample module",
+	SOC_ENUM_EXT("Hw resample module",
+		     auge_resample_module_enum,
+		     resample_module_get_enum,
+		     resample_module_set_enum),
+};
+
+static const struct snd_kcontrol_new asrc_b_controls[] = {
+	SOC_ENUM_EXT("Hardware resample b enable",
+		     auge_resample_enum,
+		     resample_get_enum,
+		     resample_set_enum),
+	SOC_SINGLE_EXT_TLV("Hw resample b pause enable",
+			 EE_AUDIO_RESAMPLEB_CTRL2, 24, 0x1, 0,
+			 mixer_audiobus_read, mixer_audiobus_write,
+			 NULL),
+	SOC_SINGLE_EXT_TLV("Hw resample b pause thd",
+			 EE_AUDIO_RESAMPLEB_CTRL2, 0, 0xffffff, 0,
+			 mixer_audiobus_read, mixer_audiobus_write,
+			 NULL),
+	SOC_ENUM_EXT("Hw resample b module",
 		     auge_resample_module_enum,
 		     resample_module_get_enum,
 		     resample_module_set_enum),
@@ -358,18 +428,42 @@ int card_add_resample_kcontrols(struct snd_soc_card *card)
 	unsigned int idx;
 	int err;
 
-	for (idx = 0; idx < ARRAY_SIZE(snd_resample_controls); idx++) {
-		err = snd_ctl_add(card->snd_card,
-				snd_ctl_new1(&snd_resample_controls[idx],
-					s_resample));
-		if (err < 0)
-			return err;
+	if (s_resample_a) {
+		for (idx = 0; idx < ARRAY_SIZE(asrc_a_controls); idx++) {
+			err = snd_ctl_add(card->snd_card,
+					snd_ctl_new1(&asrc_a_controls[idx],
+						s_resample_a));
+			if (err < 0)
+				return err;
+		}
+	}
+
+	if (s_resample_b) {
+		for (idx = 0; idx < ARRAY_SIZE(asrc_b_controls); idx++) {
+			err = snd_ctl_add(card->snd_card,
+					snd_ctl_new1(&asrc_b_controls[idx],
+						s_resample_b));
+			if (err < 0)
+				return err;
+		}
 	}
 
 	return 0;
 }
 
 static struct resample_chipinfo g12a_resample_chipinfo = {
+	.dividor_fn = true,
+};
+
+static struct resample_chipinfo tl1_resample_a_chipinfo = {
+	.num        = 2,
+	.id         = RESAMPLE_A,
+	.dividor_fn = true,
+};
+
+static struct resample_chipinfo tl1_resample_b_chipinfo = {
+	.num        = 2,
+	.id         = RESAMPLE_B,
 	.dividor_fn = true,
 };
 
@@ -380,6 +474,14 @@ static const struct of_device_id resample_device_id[] = {
 	{
 		.compatible = "amlogic, g12a-resample",
 		.data = &g12a_resample_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-resample-a",
+		.data = &tl1_resample_a_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-resample-b",
+		.data = &tl1_resample_b_chipinfo,
 	},
 	{}
 };
@@ -408,6 +510,9 @@ static int resample_platform_probe(struct platform_device *pdev)
 		of_device_get_match_data(dev);
 	if (!p_chipinfo)
 		dev_warn_once(dev, "check whether to update resample chipinfo\n");
+	else
+		p_resample->id = p_chipinfo->id;
+
 	p_resample->chipinfo = p_chipinfo;
 
 	ret = of_property_read_u32(pdev->dev.of_node, "resample_module",
@@ -458,8 +563,11 @@ static int resample_platform_probe(struct platform_device *pdev)
 	}
 
 	p_resample->dev = dev;
-	s_resample = p_resample;
-	dev_set_drvdata(&pdev->dev, p_resample);
+
+	if (p_chipinfo && p_chipinfo->id == 1)
+		s_resample_b = p_resample;
+	else
+		s_resample_a = p_resample;
 
 	return 0;
 }
