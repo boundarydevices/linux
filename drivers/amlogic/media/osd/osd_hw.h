@@ -173,6 +173,7 @@ int logo_work_init(void);
 int get_logo_loaded(void);
 void set_logo_loaded(void);
 int set_osd_logo_freescaler(void);
+int is_interlaced(struct vinfo_s *vinfo);
 void osd_get_display_debug(u32 *osd_display_debug_enable);
 void osd_set_display_debug(u32 osd_display_debug_enable);
 void osd_get_background_size(struct display_flip_info_s *disp_info);

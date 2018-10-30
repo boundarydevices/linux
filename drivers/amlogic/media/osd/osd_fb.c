@@ -1675,6 +1675,116 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 		return -1;
 	osd_hw.vinfo_width = vinfo->width;
 	osd_hw.vinfo_height = vinfo->field_height;
+	osd_hw.field_out_en = is_interlaced(vinfo);
+	switch (cmd) {
+	case  VOUT_EVENT_MODE_CHANGE:
+		set_osd_logo_freescaler();
+		if ((osd_meson_dev.osd_ver == OSD_NORMAL)
+			|| (osd_meson_dev.osd_ver == OSD_SIMPLE)
+			|| (osd_hw.hwc_enable == 0)) {
+		for (i = 0; i < osd_meson_dev.viu1_osd_count; i++) {
+			fb_dev = gp_fbdev_list[i];
+			if (fb_dev == NULL)
+				continue;
+			set_default_display_axis(&fb_dev->fb_info->var,
+					&fb_dev->osd_ctl, vinfo);
+			console_lock();
+			osddev_update_disp_axis(fb_dev, 1);
+
+			osd_set_antiflicker_hw(DEV_OSD1, vinfo,
+				gp_fbdev_list[DEV_OSD1]->fb_info->var.yres);
+			osd_reg_write(VPP_POSTBLEND_H_SIZE, vinfo->width);
+			console_unlock();
+		}
+		}
+		break;
+	case VOUT_EVENT_OSD_BLANK:
+		blank = *(int *)para;
+		for (i = 0; i < osd_meson_dev.viu1_osd_count; i++) {
+			fb_dev = gp_fbdev_list[i];
+			if (fb_dev == NULL)
+				continue;
+			console_lock();
+			osd_blank(blank, fb_dev->fb_info);
+			console_unlock();
+		}
+		break;
+	case VOUT_EVENT_OSD_DISP_AXIS:
+		if ((osd_meson_dev.osd_ver == OSD_NORMAL)
+			|| (osd_meson_dev.osd_ver == OSD_SIMPLE)
+			|| (osd_hw.hwc_enable == 0)) {
+
+		disp_rect = (struct disp_rect_s *)para;
+		for (i = 0; i < osd_meson_dev.viu1_osd_count; i++) {
+			if (!disp_rect)
+				break;
+
+			/* vout serve send only two layer axis */
+			if (i >= 2)
+				break;
+
+			fb_dev = gp_fbdev_list[i];
+			/*
+			 * if osd layer preblend,
+			 * it's position is controlled by vpp.
+			if (fb_dev->preblend_enable)
+				break;
+			*/
+			fb_dev->osd_ctl.disp_start_x = disp_rect->x;
+			fb_dev->osd_ctl.disp_start_y = disp_rect->y;
+			osd_log_dbg("set disp axis: x:%d y:%d w:%d h:%d\n",
+				    disp_rect->x, disp_rect->y,
+				    disp_rect->w, disp_rect->h);
+			if (disp_rect->x + disp_rect->w > vinfo->width)
+				fb_dev->osd_ctl.disp_end_x = vinfo->width - 1;
+			else
+				fb_dev->osd_ctl.disp_end_x =
+					fb_dev->osd_ctl.disp_start_x +
+					disp_rect->w - 1;
+			if (disp_rect->y + disp_rect->h > vinfo->height)
+				fb_dev->osd_ctl.disp_end_y = vinfo->height - 1;
+			else
+				fb_dev->osd_ctl.disp_end_y =
+					fb_dev->osd_ctl.disp_start_y +
+					disp_rect->h - 1;
+			disp_rect++;
+			osd_log_dbg("new disp axis: x0:%d y0:%d x1:%d y1:%d\n",
+				    fb_dev->osd_ctl.disp_start_x,
+				    fb_dev->osd_ctl.disp_start_y,
+				    fb_dev->osd_ctl.disp_end_x,
+				    fb_dev->osd_ctl.disp_end_y);
+			console_lock();
+			osddev_update_disp_axis(fb_dev, 0);
+			console_unlock();
+		}
+		}
+		break;
+	}
+	return 0;
+}
+
+#if 0
+int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
+			void *para)
+{
+	struct vinfo_s *vinfo;
+	struct osd_fb_dev_s *fb_dev;
+	int  i, blank;
+	struct disp_rect_s *disp_rect;
+
+	vinfo = get_current_vinfo();
+	if (!vinfo) {
+		osd_log_err("current vinfo NULL\n");
+		return -1;
+	}
+	osd_log_info("current vmode=%s, cmd: 0x%lx\n",
+		vinfo->name, cmd);
+	if ((!strcmp(vinfo->name, "invalid")) ||
+		(!strcmp(vinfo->name, "null")))
+		return -1;
+	osd_hw.vinfo_width = vinfo->width;
+	osd_hw.vinfo_height = vinfo->field_height;
+	osd_hw.field_out_en = is_interlaced(vinfo);
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
 		set_osd_logo_freescaler();
@@ -1757,7 +1867,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 	}
 	return 0;
 }
-
+#endif
 int osd_notify_callback_viu2(struct notifier_block *block, unsigned long cmd,
 			void *para)
 {

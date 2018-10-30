@@ -74,9 +74,6 @@ static void osd_debug_dump_value(void)
 		osd_get_blending_para(&blend_para);
 		if (blend_para != NULL) {
 			osd_log_info("OSD LAYER: %d\n", blend_para->layer_cnt);
-			osd_log_info("OSD background size: %d, %d\n",
-				blend_para->background_w,
-				blend_para->background_h);
 			osd_log_info("|index\t|order\t|src axis\t|dst axis\n");
 			for (index = 0; index < HW_OSD_COUNT; index++) {
 				osd_log_info("%2d\t%2d\t(%4d,%4d,%4d,%4d)\t(%4d,%4d,%4d,%4d)\n",
