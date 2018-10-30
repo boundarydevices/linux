@@ -948,10 +948,6 @@ static int meson_cd_op(void *data)
 	struct amlsd_host *host = pdata->host;
 	int ret = 0;
 
-	if ((host->mem->start == host->data->port_b_base)
-			&& host->data->tdma_f)
-		wait_for_completion(&host->drv_completion);
-
 	mutex_lock(&pdata->in_out_lock);
 	if (card_dealed == 1) {
 		card_dealed = 0;
@@ -975,10 +971,6 @@ static int meson_cd_op(void *data)
 
 	card_dealed = 0;
 
-	if ((host->mem->start == host->data->port_b_base)
-			&& host->data->tdma_f)
-		complete(&host->drv_completion);
-
 	return 0;
 }
 
@@ -986,7 +978,12 @@ void meson_mmc_cd_detect(struct work_struct *work)
 {
 	struct amlsd_platform *pdata = container_of(
 			work, struct amlsd_platform, cd_detect.work);
+	struct amlsd_host *host = pdata->host;
 	int i = 0, ret = 0;
+
+	if ((host->mem->start == host->data->port_b_base)
+			&& host->data->tdma_f)
+		wait_for_completion(&host->drv_completion);
 
 	for (i = 0; i < 5; i++) {
 		ret = gpio_get_value(pdata->gpio_cd);
@@ -996,6 +993,10 @@ void meson_mmc_cd_detect(struct work_struct *work)
 		mdelay(1);
 	}
 	schedule_delayed_work(&pdata->cd_detect, 50);
+
+	if ((host->mem->start == host->data->port_b_base)
+			&& host->data->tdma_f)
+		complete(&host->drv_completion);
 }
 #endif
 

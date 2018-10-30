@@ -1148,6 +1148,7 @@ void aml_sd_emmc_save_host_val(struct mmc_host *mmc)
 {
 	u32 adj, dly1, dly2, intf3;
 	u32 vconf = 0, vclkc = 0;
+	struct sd_emmc_clock_v3 *clkc = (struct sd_emmc_clock_v3 *)&(vclkc);
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
@@ -1166,6 +1167,7 @@ void aml_sd_emmc_save_host_val(struct mmc_host *mmc)
 			&& (pconf->stop_clk == pdata->stop_clk)
 			&& (mmc->actual_clock == clk_ios)
 			&& (vclkc == pdata->clkc)
+			&& (clkc->irq_sdio_sleep == pdata->irq_sdio_sleep)
 			&& (adj == pdata->adj)
 			&& (dly1 == pdata->dly1)
 			&& (dly2 == pdata->dly2)
@@ -1179,6 +1181,7 @@ void aml_sd_emmc_save_host_val(struct mmc_host *mmc)
 	pconf->bl_len = pdata->bl_len;
 	pconf->stop_clk = pdata->stop_clk;
 	vclkc = pdata->clkc;
+	clkc->irq_sdio_sleep = pdata->irq_sdio_sleep;
 	adj = pdata->adj;
 	dly1 = pdata->dly1;
 	dly2 = pdata->dly2;
@@ -1915,7 +1918,7 @@ static void aml_sd_emmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		pclock->irq_sdio_sleep_ds = 0;
 		writel(vclkc, host->base + SD_EMMC_CLOCK);
 	}
-	pdata->clkc = vclkc;
+	pdata->irq_sdio_sleep = 1;
 
 	if (enable)
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
@@ -1952,6 +1955,7 @@ int meson_mmc_request_done(struct mmc_host *mmc, struct mmc_request *mrq)
 		if (sdio_host) {
 			if (pdata->xfer_pre)
 				pdata->xfer_pre(mmc_priv(sdio_host));
+			aml_sd_emmc_save_host_val(sdio_host);
 			virqc = readl(host->base + SD_EMMC_IRQ_EN);
 			if (irqc->irq_sdio != host->sdio_irqen)
 				aml_sd_emmc_enable_sdio_irq(sdio_host,
@@ -2611,9 +2615,9 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 			pr_err("%s: warning... data crc, vstat:0x%x, virqc:%x",
 					mmc_hostname(host->mmc),
 					vstat, virqc);
-			pr_err("@ cmd %d with %p; stop %d, status %d\n",
-					mrq->cmd->opcode, mrq->data,
-					host->cmd_is_stop,
+			pr_err("@ cmd %d arg %x with %p; stop %d, status %d\n",
+					mrq->cmd->opcode, mrq->cmd->arg,
+					mrq->data, host->cmd_is_stop,
 					host->status);
 		}
 	} else if (ista->desc_err) {
@@ -2961,6 +2965,8 @@ static int aml_sd_emmc_card_busy(struct mmc_host *mmc)
 	struct sd_emmc_status *ista = (struct sd_emmc_status *)&vstat;
 	u32 vconf;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
+	u32 virqc = 0;
+	struct sd_emmc_irq_en *irqc = (struct sd_emmc_irq_en *)&virqc;
 
 	if ((host->mem->start == host->data->port_b_base)
 			&& host->data->tdma_f
@@ -2983,6 +2989,21 @@ static int aml_sd_emmc_card_busy(struct mmc_host *mmc)
 				&& host->data->tdma_f)
 			host->init_volt = 0;
 	}
+
+	if ((host->mem->start == host->data->port_b_base)
+			&& host->data->tdma_f
+			&& strcmp(host->pinctrl_name, "sdio_")) {
+		if (sdio_host) {
+			if (pdata->xfer_pre)
+				pdata->xfer_pre(mmc_priv(sdio_host));
+			aml_sd_emmc_save_host_val(sdio_host);
+			virqc = readl(host->base + SD_EMMC_IRQ_EN);
+			if (irqc->irq_sdio != host->sdio_irqen)
+				aml_sd_emmc_enable_sdio_irq(sdio_host,
+						host->sdio_irqen);
+		}
+	}
+
 	if ((host->mem->start == host->data->port_b_base)
 			&& host->data->tdma_f
 			&& (host->init_volt == 0))

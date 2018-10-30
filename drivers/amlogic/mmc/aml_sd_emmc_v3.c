@@ -45,10 +45,11 @@
 int aml_fixdiv_calc(unsigned int *fixdiv, struct clock_lay_t *clk)
 {
 	int ret = 0;
-	unsigned int full_div, source_cycle;	/* in ns*/
-	unsigned int sdclk_idx, todly_idx_max, todly_idx_min;
-	unsigned int inv_idx_min, inv_idx_max;
-	unsigned int val_idx_min, val_idx_max, val_idx_win, val_idx_sta;
+	unsigned int full_div = 0, source_cycle = 0;	/* in ns*/
+	unsigned int sdclk_idx = 0, todly_idx_max = 0, todly_idx_min = 0;
+	unsigned int inv_idx_min = 0, inv_idx_max = 0;
+	unsigned int val_idx_min = 0, val_idx_max = 0;
+	unsigned int val_idx_win = 0, val_idx_sta = 0;
 
 	if (!fixdiv || !clk)
 		return -EPERM;
@@ -115,7 +116,6 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	struct mmc_phase *init = &(host->data->sdmmc.init);
-	struct mmc_phase *calc = &(host->data->sdmmc.calc);
 
 	writel(0, host->base + SD_EMMC_CLOCK_V3);
 #ifndef SD_EMMC_CLK_CTRL
@@ -130,10 +130,6 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	pclkc->core_phase = init->core_phase;	  /* 2: 180 phase */
 	pclkc->rx_phase = init->rx_phase;
 	pclkc->tx_phase = init->tx_phase;
-	if (host->data->chip_type >= MMC_CHIP_G12A) {
-		pclkc->core_phase = calc->core_phase;
-		pclkc->tx_phase = calc->tx_phase;
-	}
 	pclkc->always_on = 1;	  /* Keep clock always on */
 	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
 
@@ -216,7 +212,7 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 #else
 	if (clk_ios == mmc->actual_clock) {
 		pr_debug("[%s] clk_ios: %lu,  return .............. clock: 0x%x\n",
-			__func__, clk_ios,
+			pdata->pinname, clk_ios,
 			readl(host->base + SD_EMMC_CLOCK_V3));
 		return 0;
 	}
@@ -259,13 +255,13 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 	} else
 		mmc->actual_clock = clk_ios;
 
-	vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
-	pdata->clk_lay.source = clk_get_rate(host->cfg_div_clk) * clkc->div;
-	pdata->clk_lay.core = clk_get_rate(host->cfg_div_clk);
-
-
 	/* (re)start clock, if non-zero */
 	if (clk_ios) {
+		vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
+		pdata->clk_lay.source
+			= clk_get_rate(host->cfg_div_clk) * clkc->div;
+		pdata->clk_lay.core = clk_get_rate(host->cfg_div_clk);
+
 		vcfg = readl(host->base + SD_EMMC_CFG);
 		conf->stop_clk = 0;
 		writel(vcfg, host->base + SD_EMMC_CFG);
@@ -291,7 +287,7 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 	struct sd_emmc_config *ctrl = (struct sd_emmc_config *)&vctrl;
 	u32 vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
 	struct sd_emmc_clock_v3 *clkc = (struct sd_emmc_clock_v3 *)&vclkc;
-	u32 adjust;
+	u32 adjust = 0;
 	struct sd_emmc_adjust_v3 *gadjust = (struct sd_emmc_adjust_v3 *)&adjust;
 	u8 clk_div = 0;
 	struct para_e *para = &(host->data->sdmmc);
@@ -334,7 +330,7 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 		/* overide co-phase by dts */
 		if (pdata->co_phase)
 			clkc->core_phase = pdata->co_phase;
-		if (host->data->chip_type >= MMC_CHIP_G12A) {
+		if (pdata->calc_f) {
 			clkc->core_phase = para->calc.core_phase;
 			clkc->tx_phase = para->calc.tx_phase;
 		}
@@ -344,17 +340,23 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 	} else if (timing == MMC_TIMING_SD_HS) {
 		if (aml_card_type_non_sdio(pdata))
 			clkc->core_phase = para->sd_hs.core_phase;
-		if (host->data->chip_type >= MMC_CHIP_G12A) {
+		if (pdata->calc_f) {
 			clkc->core_phase = para->calc.core_phase;
 			clkc->tx_phase = para->calc.tx_phase;
 		}
 	} else if (timing == MMC_TIMING_UHS_SDR104) {
 		clkc->core_phase = para->sdr104.core_phase;
 		clkc->tx_phase = para->sdr104.tx_phase;
-	} else
+	} else {
 		ctrl->ddr = 0;
+		/* timing == MMC_TIMING_LEGACY */
+		if (pdata->calc_f) {
+			clkc->core_phase = para->calc.core_phase;
+			clkc->tx_phase = para->calc.tx_phase;
+		}
+	}
 
-	if (host->data->chip_type >= MMC_CHIP_G12A) {
+	if (pdata->calc_f) {
 		if (timing <= MMC_TIMING_SD_HS) {
 			ret = aml_fixdiv_calc(&fixdiv, &pdata->clk_lay);
 			if (!ret) {
