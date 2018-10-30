@@ -58,6 +58,7 @@
 #define AML_AES_QUEUE_LENGTH	50
 #define AML_AES_DMA_THRESHOLD		16
 
+#define SUPPORT_FAST_DMA 0
 struct aml_aes_dev;
 
 struct aml_aes_ctx {
@@ -223,7 +224,7 @@ static size_t aml_aes_sg_copy(struct scatterlist **sg, size_t *offset,
 
 	return off;
 }
-
+#if SUPPORT_FAST_DMA
 static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 		uint32_t *nents, size_t total)
 {
@@ -243,23 +244,36 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 		process = min_t(unsigned int, total, in_sg->length);
 		count += process;
 		*nents += 1;
+		if (process != in_sg->length)
+			dd->out_offset = dd->in_offset = in_sg->length;
 		total -= process;
 		in_sg = sg_next(in_sg);
 		out_sg = sg_next(out_sg);
 	}
-	err = dma_map_sg(dd->dev, dd->in_sg, *nents, DMA_TO_DEVICE);
-	if (!err) {
-		dev_err(dd->dev, "dma_map_sg() error\n");
-		return 0;
-	}
+	if (dd->in_sg != dd->out_sg) {
+		err = dma_map_sg(dd->dev, dd->in_sg, *nents, DMA_TO_DEVICE);
+		if (!err) {
+			dev_err(dd->dev, "dma_map_sg() error\n");
+			return 0;
+		}
 
-	err = dma_map_sg(dd->dev, dd->out_sg, *nents,
-			DMA_FROM_DEVICE);
-	if (!err) {
-		dev_err(dd->dev, "dma_map_sg() error\n");
-		dma_unmap_sg(dd->dev, dd->in_sg, *nents,
-				DMA_TO_DEVICE);
-		return 0;
+		err = dma_map_sg(dd->dev, dd->out_sg, *nents,
+				DMA_FROM_DEVICE);
+		if (!err) {
+			dev_err(dd->dev, "dma_map_sg() error\n");
+			dma_unmap_sg(dd->dev, dd->in_sg, *nents,
+					DMA_TO_DEVICE);
+			return 0;
+		}
+	} else {
+		err = dma_map_sg(dd->dev, dd->in_sg, *nents,
+				DMA_BIDIRECTIONAL);
+		if (!err) {
+			dev_err(dd->dev, "dma_map_sg() error\n");
+			return 0;
+		}
+		dma_sync_sg_for_device(dd->dev, dd->in_sg,
+				*nents, DMA_TO_DEVICE);
 	}
 
 	in_sg = dd->in_sg;
@@ -280,7 +294,7 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, struct dma_dsc *dsc,
 	}
 	return count;
 }
-
+#endif
 static struct aml_aes_dev *aml_aes_find_dev(struct aml_aes_ctx *ctx)
 {
 	struct aml_aes_dev *aes_dd = NULL;
@@ -385,7 +399,8 @@ static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
 		dd->fast_nents = 0;
 	}
 
-	//fast = 0;
+#if SUPPORT_FAST_DMA
+	// fast = 0;
 	if (fast)  {
 		count = aml_aes_sg_dma(dd, dsc, &dd->fast_nents, dd->total);
 		dd->flags |= AES_FLAGS_FAST;
@@ -393,7 +408,9 @@ static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
 		dd->fast_total = count;
 		dbgp(1, "use fast dma: n:%u, t:%zd\n",
 				dd->fast_nents, dd->fast_total);
-	} else {
+	} else
+#endif
+	{
 		/* slow dma */
 		/* use cache buffers */
 		count = aml_aes_sg_copy(&dd->in_sg, &dd->in_offset,
@@ -523,10 +540,17 @@ static int aml_aes_crypt_dma_stop(struct aml_aes_dev *dd)
 		dma_sync_single_for_cpu(dd->dev, dd->dma_descript_tab,
 				PAGE_SIZE, DMA_FROM_DEVICE);
 		if  (dd->flags & AES_FLAGS_FAST) {
-			dma_unmap_sg(dd->dev, dd->out_sg,
+			if (dd->in_sg != dd->out_sg) {
+				dma_unmap_sg(dd->dev, dd->out_sg,
 					dd->fast_nents, DMA_FROM_DEVICE);
-			dma_unmap_sg(dd->dev, dd->in_sg,
+				dma_unmap_sg(dd->dev, dd->in_sg,
 					dd->fast_nents, DMA_TO_DEVICE);
+			} else {
+				dma_sync_sg_for_cpu(dd->dev, dd->in_sg,
+				dd->fast_nents, DMA_FROM_DEVICE);
+				dma_unmap_sg(dd->dev, dd->in_sg,
+					dd->fast_nents, DMA_BIDIRECTIONAL);
+			}
 			if (dd->flags & AES_FLAGS_CBC)
 				scatterwalk_map_and_copy(dd->req->info,
 						dd->out_sg, dd->fast_total - 16,
@@ -980,7 +1004,7 @@ static void aml_aes_done_task(unsigned long data)
 	aml_dma_debug(dd->descriptor, dd->fast_nents ?
 			dd->fast_nents : 1, __func__, dd->thread, dd->status);
 
-	err = dd->err ? : err;
+	err = dd->err ? dd->err : err;
 
 	if (dd->total && !err) {
 		if (dd->flags & AES_FLAGS_FAST) {
