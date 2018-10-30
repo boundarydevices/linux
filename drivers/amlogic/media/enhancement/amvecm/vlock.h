@@ -23,7 +23,7 @@
 #include <linux/amlogic/media/vfm/vframe.h>
 #include "linux/amlogic/media/amvecm/ve.h"
 
-#define VLOCK_VER "Ref.2018/10/16a"
+#define VLOCK_VER "Ref.2018/11/07a"
 
 #define VLOCK_REG_NUM	33
 
@@ -55,6 +55,7 @@ enum vlock_param_e {
 	VLOCK_SYNC_LIMIT_FLAG,
 	VLOCK_DIS_CNT_NO_VF_LIMIT,
 	VLOCK_LINE_LIMIT,
+	VLOCK_SUPPORT,
 	VLOCK_PARAM_MAX,
 };
 
@@ -85,7 +86,11 @@ extern void vlock_log_print(void);
 
 #define XTAL_VLOCK_CLOCK   24000000/*vlock use xtal clock*/
 
-#define VLOCK_PLL_STABLE_CNT	180/*vlock pll stabel cnt limit*/
+#define VLOCK_SUPPORT_HDMI (1 << 0)
+#define VLOCK_SUPPORT_CVBS (1 << 1)
+
+/*10s for 60hz input,vlock pll stabel cnt limit*/
+#define VLOCK_PLL_STABLE_LIMIT	600
 #define VLOCK_ENC_STABLE_CNT	180/*vlock enc stabel cnt limit*/
 #define VLOCK_PLL_ADJ_LIMIT 9/*vlock pll adj limit(0x300a default)*/
 

@@ -570,6 +570,8 @@ static ssize_t amvecm_vlock_show(struct class *cla,
 	len += sprintf(buf+len,
 		"echo vlock_line_limit val(D) > /sys/class/amvecm/vlock\n");
 	len += sprintf(buf+len,
+		"echo vlock_support val(D) > /sys/class/amvecm/vlock\n");
+	len += sprintf(buf+len,
 		"echo enable > /sys/class/amvecm/vlock\n");
 	len += sprintf(buf+len,
 		"echo disable > /sys/class/amvecm/vlock\n");
@@ -666,6 +668,11 @@ static ssize_t amvecm_vlock_store(struct class *cla,
 			return -EINVAL;
 		temp_val = val;
 		sel = VLOCK_LINE_LIMIT;
+	} else if (!strncmp(parm[0], "vlock_support", 13)) {
+		if (kstrtol(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		temp_val = val;
+		sel = VLOCK_SUPPORT;
 	} else if (!strncmp(parm[0], "enable", 6)) {
 		vecm_latch_flag |= FLAG_VLOCK_EN;
 	} else if (!strncmp(parm[0], "disable", 7)) {

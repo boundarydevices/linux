@@ -52,10 +52,10 @@ static unsigned int vlock_delta_limit = 2;
 static unsigned int vlock_pll_m_limit = 1;
 /*for 24MHZ clock, 50hz input, delta value (10) of(0x3011-0x3012) == 0.001HZ */
 static unsigned int vlock_delta_cnt_limit = 10;
-static unsigned int vlock_pll_stable_flag;
+/*hdmi support enable default,cvbs support not good,need debug with vlsi*/
+static unsigned int vlock_support = (VLOCK_SUPPORT_HDMI | VLOCK_SUPPORT_CVBS);
 static unsigned int vlock_enc_stable_flag;
 static unsigned int vlock_pll_stable_cnt;
-static unsigned int vlock_pll_stable_limit = 600;/*10s for 60hz input*/
 static unsigned int vlock_pll_adj_limit;
 static unsigned int vlock_pll_val_last;
 static unsigned int vlock_intput_type;
@@ -171,10 +171,12 @@ static unsigned int vlock_check_input_hz(struct vframe_s *vf)
 	if ((vf->source_type != VFRAME_SOURCE_TYPE_CVBS) &&
 		(vf->source_type != VFRAME_SOURCE_TYPE_HDMI))
 		ret_hz = 0;
-	else if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI) {
+	else if ((vf->source_type == VFRAME_SOURCE_TYPE_HDMI) &&
+		(vlock_support & VLOCK_SUPPORT_HDMI)) {
 		if (duration != 0)
 			ret_hz = (96000 + duration/2)/duration;
-	} else if (vf->source_type == VFRAME_SOURCE_TYPE_CVBS) {
+	} else if ((vf->source_type == VFRAME_SOURCE_TYPE_CVBS) &&
+		(vlock_support & VLOCK_SUPPORT_CVBS)) {
 		if (vf->source_mode == VFRAME_SOURCE_MODE_NTSC)
 			ret_hz = 60;
 		else if ((vf->source_mode == VFRAME_SOURCE_MODE_PAL) ||
@@ -417,7 +419,8 @@ void vlock_vmode_check(void)
 		hiu_reg_addr = HHI_HDMI_PLL_CNTL2;
 	vinfo = get_current_vinfo();
 	vlock_vmode_changed = 0;
-	if (vlock_vmode_change_status == VOUT_EVENT_MODE_CHANGE) {
+	if ((vlock_vmode_change_status == VOUT_EVENT_MODE_CHANGE) ||
+		(pre_hiu_reg_m == 0)) {
 		if (vlock_mode & (VLOCK_MODE_MANUAL_PLL |
 			VLOCK_MODE_AUTO_PLL)) {
 			amvecm_hiu_reg_read(hiu_reg_addr, &t0);
@@ -533,7 +536,6 @@ static void vlock_disable_step1(void)
 		vlock_mode |= VLOCK_MODE_MANUAL_PLL;
 	}
 	vlock_pll_stable_cnt = 0;
-	vlock_pll_stable_flag = 0;
 	vlock_enc_stable_flag = 0;
 }
 
@@ -585,7 +587,6 @@ static void vlock_enable_step1(struct vframe_s *vf, struct vinfo_s *vinfo,
 	vlock_state = VLOCK_STATE_ENABLE_STEP1_DONE;
 	vlock_pll_stable_cnt = 0;
 	vlock_log_cnt = 0;
-	vlock_pll_stable_flag = 0;
 	vlock_enc_stable_flag = 0;
 }
 
@@ -929,6 +930,11 @@ static void vlock_enable_step3_pll(void)
 		ia = READ_VPP_REG(VPU_VLOCK_RO_VS_I_DIST);
 	oa = READ_VPP_REG(VPU_VLOCK_RO_VS_O_DIST);
 	abs_cnt = abs(ia - oa);
+	if (abs_cnt > (oa / 3)) {
+		if (vlock_debug & VLOCK_DEBUG_INFO)
+			pr_info("%s:vlock input cnt abnormal!!\n", __func__);
+		return;
+	}
 	/*frac*/
 	amvecm_hiu_reg_read(hiu_reg_addr, &tmp_value);
 	abs_val = abs(((m_reg_value & 0xfff) >> 2) - (tmp_value & 0xfff));
@@ -950,8 +956,6 @@ static void vlock_enable_step3_pll(void)
 		vlock_pll_stable_cnt++;
 	else
 		vlock_pll_stable_cnt = 0;
-	if (vlock_pll_stable_flag++ > VLOCK_PLL_STABLE_CNT)
-		vlock_pll_stable_flag = VLOCK_PLL_STABLE_CNT;
 	/*m*/
 	amvecm_hiu_reg_read(HHI_HDMI_PLL_CNTL, &tmp_value);
 	abs_val = abs(((m_reg_value >> 16) & 0x1ff) - (pre_hiu_reg_m & 0x1ff));
@@ -973,7 +977,7 @@ static void vlock_enable_step3_pll(void)
 		vlock_pll_stable_cnt = 0;
 }
 /* won't change this function internal seqence,
- * if really need change,please be carefull
+ * if really need change,please be carefull and check with vlsi
  */
 void amve_vlock_process(struct vframe_s *vf)
 {
@@ -1088,7 +1092,7 @@ void amve_vlock_process(struct vframe_s *vf)
 				(vlock_mode &
 				VLOCK_MODE_MANUAL_MIX_PLL_ENC) &&
 				(vlock_pll_stable_cnt >
-				vlock_pll_stable_limit)) {
+				VLOCK_PLL_STABLE_LIMIT)) {
 				vlock_mode &= ~VLOCK_MODE_MANUAL_MIX_PLL_ENC;
 				vlock_mode |= VLOCK_MODE_MANUAL_SOFT_ENC;
 				vlock_state = VLOCK_STATE_ENABLE_FORCE_RESET;
@@ -1201,6 +1205,9 @@ void vlock_param_set(unsigned int val, enum vlock_param_e sel)
 	case VLOCK_LINE_LIMIT:
 		vlock_line_limit = val;
 		break;
+	case VLOCK_SUPPORT:
+		vlock_support = val;
+		break;
 	default:
 		pr_info("%s:unknown vlock param:%d\n", __func__, sel);
 		break;
@@ -1235,9 +1242,8 @@ void vlock_status(void)
 	pr_info("vlock_capture_limit:0x%x\n", vlock_capture_limit);
 	pr_info("vlock_line_limit:%d\n", vlock_line_limit);
 	pr_info("vlock_pll_stable_cnt:%d\n", vlock_pll_stable_cnt);
-	pr_info("vlock_pll_stable_limit:%d\n", vlock_pll_stable_limit);
 	pr_info("vlock_enc_adj_limit:%d\n", vlock_enc_adj_limit);
-	pr_info("vlock_pll_stable_flag:%d\n", vlock_pll_stable_flag);
+	pr_info("vlock_support:%d\n", vlock_support);
 	pr_info("vlock_enc_stable_flag:%d\n", vlock_enc_stable_flag);
 	pr_info("vlock_intput_type:%d\n", vlock_intput_type);
 	pr_info("vlock_pll_adj_limit:%d\n", vlock_pll_adj_limit);

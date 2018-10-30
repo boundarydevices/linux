@@ -1195,6 +1195,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	enum tvin_trans_fmt trans_fmt;
 	struct tvin_sig_property_s *prop, *pre_prop;
 	long long *clk_array;
+	long long vlock_delay_jiffies, vlock_t1;
 
 	/* debug interrupt interval time
 	 *
@@ -1313,8 +1314,14 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	last_field_type = devp->curr_field_type;
 	devp->curr_field_type = vdin_get_curr_field_type(devp);
-	vdin_vlock_input_sel(devp->curr_field_type,
-		devp->curr_wr_vfe->vf.source_type);
+
+	if (devp->duration) {
+		vlock_delay_jiffies = func_div(96000, devp->duration);
+		vlock_t1 = func_div(HZ, vlock_delay_jiffies);
+		vlock_delay_jiffies = func_div(vlock_t1, 4);
+	} else
+		vlock_delay_jiffies = msecs_to_jiffies(5);
+	schedule_delayed_work(&devp->vlock_dwork, vlock_delay_jiffies);
 
 	/* ignore the unstable signal */
 	state = tvin_get_sm_status(devp->index);
@@ -1775,6 +1782,23 @@ static void vdin_dv_dwork(struct work_struct *work)
 	}
 
 	cancel_delayed_work(&devp->dv.dv_dwork);
+}
+
+/*ensure vlock mux swith avoid vlock vsync region*/
+static void vdin_vlock_dwork(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct vdin_dev_s *devp =
+		container_of(dwork, struct vdin_dev_s, vlock_dwork);
+
+	if (!devp || !devp->frontend || !devp->curr_wr_vfe) {
+		pr_info("%s, dwork error !!!\n", __func__);
+		return;
+	}
+	vdin_vlock_input_sel(devp->curr_field_type,
+		devp->curr_wr_vfe->vf.source_type);
+
+	cancel_delayed_work(&devp->vlock_dwork);
 }
 
 /*function:open device
@@ -2649,6 +2673,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	vdevp->vdin_dev_ssize = sizeof(struct vdin_dev_s);
 	vdevp->canvas_config_mode = canvas_config_mode;
 	INIT_DELAYED_WORK(&vdevp->dv.dv_dwork, vdin_dv_dwork);
+	INIT_DELAYED_WORK(&vdevp->vlock_dwork, vdin_vlock_dwork);
 
 	vdin_debugfs_init(vdevp);/*2018-07-18 add debugfs*/
 	pr_info("%s: driver initialized ok\n", __func__);
@@ -2674,9 +2699,12 @@ fail_kzalloc_vdev:
  */
 static int vdin_drv_remove(struct platform_device *pdev)
 {
+	int ret;
+
 	struct vdin_dev_s *vdevp;
 	vdevp = platform_get_drvdata(pdev);
 
+	ret = cancel_delayed_work(&vdevp->vlock_dwork);
 #ifdef CONFIG_AML_RDMA
 	rdma_unregister(vdevp->rdma_handle);
 #endif
