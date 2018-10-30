@@ -1944,9 +1944,14 @@ static int dolby_core3_set(
 			}
 			if (new_dovi_setting.dovi_ll_enable &&
 				new_dovi_setting.diagnostic_enable == 0) {
-				/*   bypass gainoff to vks */
+				/*bypass gainoff to vks */
+				/*enable wn tp vks*/
 				VSYNC_WR_MPEG_REG_BITS(
 					VPP_DOLBY_CTRL, 0, 2, 1);
+				VSYNC_WR_MPEG_REG_BITS(
+					VPP_DOLBY_CTRL, 1, 1, 1);
+				VSYNC_WR_MPEG_REG(
+					VPP_DAT_CONV_PARA1, 0x8000800);
 				VSYNC_WR_MPEG_REG_BITS(
 					VPP_MATRIX_CTRL,
 					1, 0, 1); /* post matrix */
@@ -1954,6 +1959,10 @@ static int dolby_core3_set(
 				/* bypass wm tp vks*/
 				VSYNC_WR_MPEG_REG_BITS(
 					VPP_DOLBY_CTRL, 1, 2, 1);
+				VSYNC_WR_MPEG_REG_BITS(
+					VPP_DOLBY_CTRL, 0, 1, 1);
+				VSYNC_WR_MPEG_REG(
+					VPP_DAT_CONV_PARA1, 0x20002000);
 				if (is_meson_txlx_tvmode())
 					enable_rgb_to_yuv_matrix_for_dvll(
 						0, NULL, 12);
