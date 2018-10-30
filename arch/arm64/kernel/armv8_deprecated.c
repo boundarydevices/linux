@@ -454,7 +454,11 @@ static struct undef_hook swp_hooks[] = {
 
 static struct insn_emulation_ops swp_ops = {
 	.name = "swp",
+#ifdef CONFIG_AMLOGIC_MODIFY
+	.status = INSN_DEPRECATED,
+#else
 	.status = INSN_OBSOLETE,
+#endif
 	.hooks = swp_hooks,
 	.set_hw_mode = NULL,
 };
