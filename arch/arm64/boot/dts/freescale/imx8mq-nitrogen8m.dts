@@ -479,8 +479,6 @@
 		dcss = &dcss;
 		fb_mipi = &fb_mipi;
 		fb_hdmi = &hdmi;
-		gpio1 = &gpio1;
-		gpio3 = &gpio3;
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
 		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
