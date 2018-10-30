@@ -5935,9 +5935,15 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			("efuse_mode=%d reg_value = 0x%x\n",
 			efuse_mode,
 			reg_value);
-		if (is_meson_gxm() ||
-			is_meson_g12())
+		/* r321 stb core doesn't need run mode*/
+		/*TV core need run mode and the value is 2*/
+		if (is_meson_gxm() || is_meson_g12())
 			dolby_vision_run_mode_delay = 3;
+		else if (force_stb_mode || is_meson_txlx_stbmode())
+			dolby_vision_run_mode_delay = 0;
+		else
+			dolby_vision_run_mode_delay = RUN_MODE_DELAY;
+
 		pq_config =  vmalloc(sizeof(struct pq_config_s));
 		if (pq_config == NULL) {
 			pr_info("[amdolby_vision] vmalloc failed for pq_config_s error!\n");
