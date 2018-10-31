@@ -7215,7 +7215,11 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 {
 	int i;
 	u32 reg_offset = 2;
+#ifdef OSD_BLEND_SHIFT_WORKAROUND
+	u32 osd_count = OSD_BLEND_LAYERS;
+#else
 	u32 osd_count = osd_hw.osd_meson_dev.viu1_osd_count;
+#endif
 
 	if (!blend_reg)
 		return;
