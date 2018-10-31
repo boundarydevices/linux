@@ -918,7 +918,7 @@ static unsigned int get_emmc_cmd_win(struct mmc_host *mmc)
 		cur_size = -1;
 	}
 	delay2 &= ~(0x3f << 24);
-	delay2 |= ((best_start + best_size / 2) << 24);
+	delay2 |= ((best_start + best_size / 4) << 24);
 	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
 	emmc_eyetest_log(mmc, 9);
 	return max;
