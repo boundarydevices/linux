@@ -119,12 +119,7 @@ static inline void hdmitx_notify_hpd(int hpd)
 #include <linux/amlogic/pm.h>
 static void hdmitx_early_suspend(struct early_suspend *h)
 {
-	const struct vinfo_s *info = hdmitx_get_current_vinfo();
 	struct hdmitx_dev *phdmi = (struct hdmitx_dev *)h->param;
-
-	if (info && (strncmp(info->name, "panel", 5) == 0
-		|| strncmp(info->name, "null", 4) == 0))
-		return;
 
 	phdmi->ready = 0;
 	phdmi->hpd_lock = 1;
@@ -170,48 +165,36 @@ static void hdmitx_late_resume(struct early_suspend *h)
 	if (phdmi->hdmitx_clk_tree.hdmi_clk_vpu != NULL)
 		clk_prepare_enable(phdmi->hdmitx_clk_tree.hdmi_clk_vpu);
 
-	if ((info == NULL) || (info->name == NULL)) {
-		pr_info(SYS "vinfo is NULL\n");
-		return;
-	}
+	if (hdmitx_is_hdmi_vmode(info->name) == 1)
+		phdmi->HWOp.CntlMisc(&hdmitx_device, MISC_HPLL_FAKE, 0);
 
-	if (strncmp(info->name, "panel", 5) == 0 ||
-		strncmp(info->name, "null", 4) == 0) {
-		;
-	} else {
-		if (hdmitx_is_hdmi_vmode(info->name) == 1)
-			phdmi->HWOp.CntlMisc(&hdmitx_device, MISC_HPLL_FAKE, 0);
+	phdmi->hpd_lock = 0;
 
-		phdmi->hpd_lock = 0;
-
-		/* update status for hpd and switch/state */
-		hdmitx_device.hpd_state =
-			!!(hdmitx_device.HWOp.CntlMisc(&hdmitx_device,
+	/* update status for hpd and switch/state */
+	hdmitx_device.hpd_state = !!(hdmitx_device.HWOp.CntlMisc(&hdmitx_device,
 		MISC_HPD_GPI_ST, 0));
 
-		pr_info("hdmitx hpd state: %d\n", hdmitx_device.hpd_state);
-		hdmitx_notify_hpd(hdmitx_device.hpd_state);
+	pr_info("hdmitx hpd state: %d\n", hdmitx_device.hpd_state);
+	hdmitx_notify_hpd(hdmitx_device.hpd_state);
 
-		/*force to get EDID after resume for Amplifer Power case*/
-		if (hdmitx_device.hpd_state)
-			hdmitx_get_edid(phdmi);
+	/*force to get EDID after resume for Amplifer Power case*/
+	if (hdmitx_device.hpd_state)
+		hdmitx_get_edid(phdmi);
 
-		hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
-			CONF_AUDIO_MUTE_OP, AUDIO_MUTE);
-		set_disp_mode_auto();
+	hdmitx_device.HWOp.CntlConfig(&hdmitx_device,
+		CONF_AUDIO_MUTE_OP, AUDIO_MUTE);
+	set_disp_mode_auto();
 
-		extcon_set_state_sync(hdmitx_extcon_hdmi, EXTCON_DISP_HDMI,
-			hdmitx_device.hpd_state);
-		extcon_set_state_sync(hdmitx_extcon_power, EXTCON_DISP_HDMI,
-			hdmitx_device.hpd_state);
-		extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI,
-			hdmitx_device.hpd_state);
+	extcon_set_state_sync(hdmitx_extcon_hdmi, EXTCON_DISP_HDMI,
+		hdmitx_device.hpd_state);
+	extcon_set_state_sync(hdmitx_extcon_power, EXTCON_DISP_HDMI, 1);
+	extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI,
+		hdmitx_device.hpd_state);
 
-		pr_info("amhdmitx: late resume module %d\n", __LINE__);
-		phdmi->HWOp.Cntl((struct hdmitx_dev *)h->param,
-			HDMITX_EARLY_SUSPEND_RESUME_CNTL, HDMITX_LATE_RESUME);
-		pr_info(SYS "late resume\n");
-	}
+	pr_info("amhdmitx: late resume module %d\n", __LINE__);
+	phdmi->HWOp.Cntl((struct hdmitx_dev *)h->param,
+		HDMITX_EARLY_SUSPEND_RESUME_CNTL, HDMITX_LATE_RESUME);
+	pr_info(SYS "late resume\n");
 }
 
 /* Set avmute_set signal to HDMIRX */
