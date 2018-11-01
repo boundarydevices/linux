@@ -46,6 +46,7 @@ struct vout_op_s {
 	int (*set_vframe_rate_end_hint)(void);
 	int (*set_vframe_rate_policy)(int);
 	int (*get_vframe_rate_policy)(void);
+	void (*set_bist)(unsigned int);
 	int (*vout_suspend)(void);
 	int (*vout_resume)(void);
 	int (*vout_shutdown)(void);
@@ -74,6 +75,7 @@ extern int set_vframe_rate_hint(int duration);
 extern int set_vframe_rate_end_hint(void);
 extern int set_vframe_rate_policy(int pol);
 extern int get_vframe_rate_policy(void);
+extern void set_vout_bist(unsigned int bist);
 
 #ifdef CONFIG_AMLOGIC_VOUT2_SERVE
 extern int vout2_register_client(struct notifier_block *p);
@@ -88,6 +90,7 @@ extern int set_vframe2_rate_hint(int duration);
 extern int set_vframe2_rate_end_hint(void);
 extern int set_vframe2_rate_policy(int pol);
 extern int get_vframe2_rate_policy(void);
+extern void set_vout2_bist(unsigned int bist);
 
 #endif
 

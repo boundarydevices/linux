@@ -64,6 +64,7 @@ extern int vout_func_set_vframe_rate_hint(int index, int duration);
 extern int vout_func_set_vframe_rate_end_hint(int index);
 extern int vout_func_set_vframe_rate_policy(int index, int policy);
 extern int vout_func_get_vframe_rate_policy(int index);
+extern void vout_func_set_test_bist(int index, unsigned int bist);
 extern int vout_func_vout_suspend(int index);
 extern int vout_func_vout_resume(int index);
 extern int vout_func_vout_shutdown(int index);

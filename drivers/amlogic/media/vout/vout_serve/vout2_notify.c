@@ -174,6 +174,15 @@ int get_vframe2_rate_policy(void)
 }
 EXPORT_SYMBOL(get_vframe2_rate_policy);
 
+/*
+ * interface export to client who want to set test bist.
+ */
+void set_vout2_bist(unsigned int bist)
+{
+	vout_func_set_test_bist(2, bist);
+}
+EXPORT_SYMBOL(set_vout2_bist);
+
 int vout2_suspend(void)
 {
 	return vout_func_vout_suspend(2);

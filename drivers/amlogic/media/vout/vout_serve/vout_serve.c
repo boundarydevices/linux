@@ -63,6 +63,7 @@ static char vout_mode[VMODE_NAME_LEN_MAX] __nosavedata;
 static char local_name[VMODE_NAME_LEN_MAX] = {0};
 static u32 vout_init_vmode = VMODE_INIT_NULL;
 static int uboot_display;
+static unsigned int bist_mode;
 
 static char vout_axis[64] __nosavedata;
 
@@ -204,6 +205,7 @@ static struct vout_server_s nulldisp_vout_server = {
 		.set_state          = nulldisp_vout_set_state,
 		.clr_state          = nulldisp_vout_clr_state,
 		.get_state          = nulldisp_vout_get_state,
+		.set_bist           = NULL,
 	},
 };
 
@@ -429,6 +431,36 @@ static ssize_t vout_fr_policy_store(struct class *class,
 	return count;
 }
 
+static ssize_t vout_bist_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	int ret = 0;
+
+	ret = sprintf(buf, "%d\n", bist_mode);
+
+	return ret;
+}
+
+static ssize_t vout_bist_store(struct class *class,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+
+	mutex_lock(&vout_serve_mutex);
+
+	ret = kstrtouint(buf, 10, &bist_mode);
+	if (ret) {
+		pr_info("%s: invalid data\n", __func__);
+		mutex_unlock(&vout_serve_mutex);
+		return -EINVAL;
+	}
+	set_vout_bist(bist_mode);
+
+	mutex_unlock(&vout_serve_mutex);
+
+	return count;
+}
+
 static ssize_t vout_vinfo_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -523,6 +555,7 @@ static struct class_attribute vout_class_attrs[] = {
 	__ATTR(axis,      0644, vout_axis_show, vout_axis_store),
 	__ATTR(fr_policy, 0644,
 		vout_fr_policy_show, vout_fr_policy_store),
+	__ATTR(bist,      0644, vout_bist_show, vout_bist_store),
 	__ATTR(vinfo,     0444, vout_vinfo_show, NULL),
 };
 

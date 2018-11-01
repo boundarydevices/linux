@@ -3512,6 +3512,7 @@ static struct vout_server_s hdmitx_vout_server = {
 		.set_state = hdmitx_vout_set_state,
 		.clr_state = hdmitx_vout_clr_state,
 		.get_state = hdmitx_vout_get_state,
+		.set_bist = NULL,
 #ifdef CONFIG_PM
 		.vout_suspend = NULL,
 		.vout_resume = NULL,
@@ -3531,6 +3532,7 @@ static struct vout_server_s hdmitx_vout2_server = {
 		.set_state = hdmitx_vout_set_state,
 		.clr_state = hdmitx_vout_clr_state,
 		.get_state = hdmitx_vout_get_state,
+		.set_bist = NULL,
 #ifdef CONFIG_PM
 		.vout_suspend = NULL,
 		.vout_resume = NULL,

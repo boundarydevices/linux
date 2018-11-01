@@ -382,6 +382,7 @@ static struct vout_server_s lcd_vout_server = {
 		.set_vframe_rate_end_hint = lcd_set_vframe_rate_end_hint,
 		.set_vframe_rate_policy = lcd_set_vframe_rate_policy,
 		.get_vframe_rate_policy = lcd_get_vframe_rate_policy,
+		.set_bist = lcd_debug_test,
 #ifdef CONFIG_PM
 		.vout_suspend = lcd_suspend,
 		.vout_resume = lcd_resume,
@@ -405,6 +406,7 @@ static struct vout_server_s lcd_vout2_server = {
 		.set_vframe_rate_end_hint = lcd_set_vframe_rate_end_hint,
 		.set_vframe_rate_policy = lcd_set_vframe_rate_policy,
 		.get_vframe_rate_policy = lcd_get_vframe_rate_policy,
+		.set_bist = lcd_debug_test,
 #ifdef CONFIG_PM
 		.vout_suspend = lcd_suspend,
 		.vout_resume = lcd_resume,

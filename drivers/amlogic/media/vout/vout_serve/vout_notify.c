@@ -192,6 +192,15 @@ int get_vframe_rate_policy(void)
 }
 EXPORT_SYMBOL(get_vframe_rate_policy);
 
+/*
+ * interface export to client who want to set test bist.
+ */
+void set_vout_bist(unsigned int bist)
+{
+	vout_func_set_test_bist(1, bist);
+}
+EXPORT_SYMBOL(set_vout_bist);
+
 #ifdef CONFIG_SCREEN_ON_EARLY
 static int wake_up_flag;
 void wakeup_early_suspend_proc(void)

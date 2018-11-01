@@ -148,8 +148,6 @@ static int cvbs_vdac_power_level;
 static void vdac_power_level_store(char *para);
 SET_CVBS_CLASS_ATTR(vdac_power_level, vdac_power_level_store);
 
-static void bist_test_store(char *para);
-
 static void cvbs_debug_store(char *para);
 SET_CVBS_CLASS_ATTR(debug, cvbs_debug_store);
 
@@ -650,6 +648,102 @@ static int cvbs_vout_get_state(void)
 	return cvbs_vout_state;
 }
 
+static char *cvbs_out_bist_str[] = {
+	"OFF",   /* 0 */
+	"Color Bar",   /* 1 */
+	"Thin Line",   /* 2 */
+	"Dot Grid",    /* 3 */
+	"White",
+	"Red",
+	"Green",
+	"Blue",
+	"Black",
+};
+
+static void cvbs_bist_test(unsigned int bist)
+{
+	switch (bist) {
+	case 1:
+	case 2:
+	case 3:
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
+		cvbs_out_reg_write(ENCI_TST_MDSEL, bist);
+		cvbs_out_reg_write(ENCI_TST_Y, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CB, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CR, 0x200);
+		cvbs_out_reg_write(ENCI_TST_EN, 1);
+		pr_info("show bist pattern %d: %s\n",
+			bist, cvbs_out_bist_str[bist]);
+		break;
+	case 4:
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
+		cvbs_out_reg_write(ENCI_TST_MDSEL, 0);
+		cvbs_out_reg_write(ENCI_TST_Y, 0x3ff);
+		cvbs_out_reg_write(ENCI_TST_CB, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CR, 0x200);
+		cvbs_out_reg_write(ENCI_TST_EN, 1);
+		pr_info("show bist pattern %d: %s\n",
+			bist, cvbs_out_bist_str[bist]);
+		break;
+	case 5:
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
+		cvbs_out_reg_write(ENCI_TST_MDSEL, 0);
+		cvbs_out_reg_write(ENCI_TST_Y, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CB, 0x0);
+		cvbs_out_reg_write(ENCI_TST_CR, 0x3ff);
+		cvbs_out_reg_write(ENCI_TST_EN, 1);
+		pr_info("show bist pattern %d: %s\n",
+			bist, cvbs_out_bist_str[bist]);
+		break;
+	case 6:
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
+		cvbs_out_reg_write(ENCI_TST_MDSEL, 0);
+		cvbs_out_reg_write(ENCI_TST_Y, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CB, 0x0);
+		cvbs_out_reg_write(ENCI_TST_CR, 0x0);
+		cvbs_out_reg_write(ENCI_TST_EN, 1);
+		pr_info("show bist pattern %d: %s\n",
+			bist, cvbs_out_bist_str[bist]);
+		break;
+	case 7:
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
+		cvbs_out_reg_write(ENCI_TST_MDSEL, 0);
+		cvbs_out_reg_write(ENCI_TST_Y, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CB, 0x3ff);
+		cvbs_out_reg_write(ENCI_TST_CR, 0x0);
+		cvbs_out_reg_write(ENCI_TST_EN, 1);
+		pr_info("show bist pattern %d: %s\n",
+			bist, cvbs_out_bist_str[bist]);
+		break;
+	case 8:
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
+		cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
+		cvbs_out_reg_write(ENCI_TST_MDSEL, 0);
+		cvbs_out_reg_write(ENCI_TST_Y, 0x0);
+		cvbs_out_reg_write(ENCI_TST_CB, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CR, 0x200);
+		cvbs_out_reg_write(ENCI_TST_EN, 1);
+		pr_info("show bist pattern %d: %s\n",
+			bist, cvbs_out_bist_str[bist]);
+		break;
+	case 0:
+	default:
+		cvbs_out_reg_write(ENCI_TST_MDSEL, 1);
+		cvbs_out_reg_write(ENCI_TST_Y, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CB, 0x200);
+		cvbs_out_reg_write(ENCI_TST_CR, 0x200);
+		cvbs_out_reg_write(ENCI_TST_EN, 0);
+		pr_info("show bist pattern %d: %s\n",
+			bist, cvbs_out_bist_str[0]);
+		break;
+	}
+}
+
 #ifdef CONFIG_PM
 static int cvbs_suspend(void)
 {
@@ -684,6 +778,7 @@ static struct vout_server_s cvbs_vout_server = {
 		.set_vframe_rate_end_hint = NULL,
 		.set_vframe_rate_policy = NULL,
 		.get_vframe_rate_policy = NULL,
+		.set_bist = cvbs_bist_test,
 #ifdef CONFIG_PM
 		.vout_suspend = cvbs_suspend,
 		.vout_resume = cvbs_resume,
@@ -707,6 +802,7 @@ static struct vout_server_s cvbs_vout2_server = {
 		.set_vframe_rate_end_hint = NULL,
 		.set_vframe_rate_policy = NULL,
 		.get_vframe_rate_policy = NULL,
+		.set_bist = cvbs_bist_test,
 #ifdef CONFIG_PM
 		.vout_suspend = cvbs_suspend,
 		.vout_resume = cvbs_resume,
@@ -730,67 +826,6 @@ static void cvbs_init_vout(void)
 	else
 		cvbs_log_info("register cvbs module vout2 server ok\n");
 #endif
-}
-
-/* **************************************************** */
-static char *cvbs_out_bist_str[] = {
-	"Fix Value",   /* 0 */
-	"Color Bar",   /* 1 */
-	"Thin Line",   /* 2 */
-	"Dot Grid",    /* 3 */
-};
-
-static void bist_test_store(char *para)
-{
-	unsigned long num;
-	enum vmode_e mode;
-	unsigned int start, width;
-	int ret;
-
-	mode = info->vinfo->mode;
-	if (mode != VMODE_CVBS) {
-		pr_info("NOT VMODE_CVBS,RETURN\n");
-		return;
-	}
-	ret = kstrtoul(para, 10, (unsigned long *)&num);
-	if (num > 3) {
-		switch (local_cvbs_mode) {
-		case MODE_480CVBS:
-		case MODE_576CVBS:
-		case MODE_PAL_M:
-		case MODE_PAL_N:
-			cvbs_out_reg_write(ENCI_TST_EN, 0);
-			break;
-		default:
-			cvbs_out_reg_setb(ENCP_VIDEO_MODE_ADV, 1, 3, 1);
-			cvbs_out_reg_write(VENC_VIDEO_TST_EN, 0);
-			break;
-		}
-		pr_info("disable bist pattern\n");
-	} else {
-		switch (local_cvbs_mode) {
-		case MODE_480CVBS:
-		case MODE_576CVBS:
-		case MODE_PAL_M:
-		case MODE_PAL_N:
-			cvbs_out_reg_write(ENCI_TST_CLRBAR_STRT, 0x112);
-			cvbs_out_reg_write(ENCI_TST_CLRBAR_WIDTH, 0xb4);
-			cvbs_out_reg_write(ENCI_TST_MDSEL, (unsigned int)num);
-			cvbs_out_reg_write(ENCI_TST_EN, 1);
-			break;
-		default:
-			start = cvbs_out_reg_read(ENCP_VIDEO_HAVON_BEGIN);
-			width = info->vinfo->width / 9;
-			cvbs_out_reg_write(VENC_VIDEO_TST_CLRBAR_STRT, start);
-			cvbs_out_reg_write(VENC_VIDEO_TST_CLRBAR_WIDTH, width);
-			cvbs_out_reg_write(VENC_VIDEO_TST_MDSEL, 1);
-			cvbs_out_reg_setb(ENCP_VIDEO_MODE_ADV, 0, 3, 1);
-			cvbs_out_reg_write(VENC_VIDEO_TST_EN, 1);
-			break;
-		}
-		pr_info("show bist pattern %ld: %s\n",
-			num, cvbs_out_bist_str[num]);
-	}
 }
 
 static void vdac_power_level_store(char *para)
@@ -956,7 +991,7 @@ static void cvbs_debug_store(char *buf)
 {
 	unsigned int ret = 0;
 	unsigned long addr, start, end, value, length, old;
-	unsigned int argc;
+	unsigned int argc, bist;
 	char *p = NULL, *para = NULL,
 		*argv[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
 	char *str_type = NULL;
@@ -1129,11 +1164,16 @@ static void cvbs_debug_store(char *buf)
 	case CMD_BIST:
 		if (argc != 2) {
 			print_info("[%s] cmd_bist format:\n"
-			"\tbist 0/1/2/3/off\n", __func__);
+			"\tbist 1/2/3/4/5/6/7/8/0\n", __func__);
 			goto DEBUG_END;
 		}
+		ret = kstrtouint(argv[1], 10, &bist);
+		if (ret) {
+			print_info("cvbs: invalid bist\n");
+			goto DEBUG_END;
+		}
+		cvbs_bist_test(bist);
 
-		bist_test_store(argv[1]);
 		break;
 
 	case CMD_VP_SET:

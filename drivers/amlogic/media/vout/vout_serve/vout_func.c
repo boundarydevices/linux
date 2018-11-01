@@ -440,6 +440,31 @@ int vout_func_get_vframe_rate_policy(int index)
 }
 EXPORT_SYMBOL(vout_func_get_vframe_rate_policy);
 
+/*
+ * interface export to client who want to set test bist.
+ */
+void vout_func_set_test_bist(int index, unsigned int bist)
+{
+	struct vout_server_s *p_server = NULL;
+
+	mutex_lock(&vout_mutex);
+
+	if (index == 1)
+		p_server = vout_module.curr_vout_server;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	else if (index == 2)
+		p_server = vout2_module.curr_vout_server;
+#endif
+
+	if (!IS_ERR_OR_NULL(p_server)) {
+		if (p_server->op.set_bist)
+			p_server->op.set_bist(bist);
+	}
+
+	mutex_unlock(&vout_mutex);
+}
+EXPORT_SYMBOL(vout_func_set_test_bist);
+
 int vout_func_vout_suspend(int index)
 {
 	int ret = 0;
