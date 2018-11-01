@@ -356,10 +356,9 @@ void hdmirx_dec_close(struct tvin_frontend_s *fe)
 	 * txlx:dont disable the adc ref signal for audio pll(not
 	 *	reset the vdac) to avoid noise issue
 	 */
-	/*if (rx.chip_id == CHIP_ID_TXL)*/
-	if (rx.hdmirxdev->data->chip_id == CHIP_ID_TXL)
-		vdac_enable(0, 0x10);
-
+	/* For txl,also need to keep bandgap always on:SWPL-1224 */
+	/* if (rx.hdmirxdev->data->chip_id == CHIP_ID_TXL) */
+		/* vdac_enable(0, 0x10); */
 	/* open_flage = 0; */
 	rx.open_fg = 0;
 	devp = container_of(fe, struct hdmirx_dev_s, frontend);
