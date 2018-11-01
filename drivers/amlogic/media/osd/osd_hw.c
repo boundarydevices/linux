@@ -4404,6 +4404,7 @@ static void osd_update_disp_freescale_enable(u32 index)
 	int vf_bank_len = 4;
 	struct hw_osd_reg_s *osd_reg = &hw_osd_reg_array[index];
 	u32 data32 = 0x0;
+	u32 shift_workaround = 0;
 
 	if (osd_hw.osd_meson_dev.osd_ver != OSD_HIGH_ONE)
 		osd_reg = &hw_osd_reg_array[0];
@@ -4412,6 +4413,13 @@ static void osd_update_disp_freescale_enable(u32 index)
 		vf_bank_len = 2;
 	else
 		vf_bank_len = 4;
+
+	if (osd_hw.hwc_enable && (index == OSD1)
+		&& ((osd_hw.osd_meson_dev.cpu_id ==
+		__MESON_CPU_MAJOR_ID_G12A) ||
+		(osd_hw.osd_meson_dev.cpu_id ==
+		__MESON_CPU_MAJOR_ID_G12B)))
+		shift_workaround = 1;
 
 #ifndef NEW_PPS_PHASE
 	if (osd_hw.bot_type == 1) {
@@ -4462,7 +4470,10 @@ static void osd_update_disp_freescale_enable(u32 index)
 
 	hf_phase_step = (src_w << 18) / dst_w;
 	hf_phase_step = (hf_phase_step << 6);
-	vf_phase_step = (src_h << 20) / dst_h;
+	if (shift_workaround)
+		vf_phase_step = ((src_h - 1) << 20) / dst_h;
+	else
+		vf_phase_step = (src_h << 20) / dst_h;
 
 #ifdef NEW_PPS_PHASE
 	if (osd_hw.field_out_en) {
@@ -4506,6 +4517,13 @@ static void osd_update_disp_freescale_enable(u32 index)
 	vf_phase_step = (vf_phase_step << 4);
 	/* config osd scaler in/out hv size */
 	data32 = 0x0;
+	if (shift_workaround) {
+		vsc_ini_rcv_num++;
+		if (osd_hw.field_out_en)
+			vsc_bot_rcv_num++;
+	}
+
+
 	if (osd_hw.free_scale_enable[index]) {
 		data32 = (((src_h - 1) & 0x1fff)
 				| ((src_w - 1) & 0x1fff) << 16);
@@ -6041,8 +6059,13 @@ static void osd_setting_blend1(struct hw_osd_blending_s *blending)
 		return;
 	if (osd_hw.hdr_used)
 		workaround_line = osd_hw.workaround_hdr;
-	else
-		workaround_line = osd_hw.workaround_not_hdr;
+	else {
+		if (blending->layer_cnt == 2)
+			workaround_line = 0;
+		else
+			workaround_line = osd_hw.workaround_not_hdr;
+	}
+
 	layer_blend = &(blending->layer_blend);
 	blend_reg = &(blending->blend_reg);
 #ifdef OSD_BLEND_SHIFT_WORKAROUND
@@ -6567,8 +6590,7 @@ static void osd_setting_blend0_input(u32 index,
 			layer_blend->input1_data.w =
 				osd_hw.src_data[index].w;
 			layer_blend->input1_data.h =
-				osd_hw.src_data[index].h
-				- workaround_line;
+				osd_hw.src_data[index].h;
 		} else {
 #ifdef OSD_BLEND_SHIFT_WORKAROUND
 			layer_blend->input1_data.x = 0;
@@ -6579,14 +6601,12 @@ static void osd_setting_blend0_input(u32 index,
 				+ workaround_line;
 #endif
 			layer_blend->input1_data.w = osd_hw.src_data[index].w;
-			layer_blend->input1_data.h = osd_hw.src_data[index].h
-				- workaround_line;
+			layer_blend->input1_data.h = osd_hw.src_data[index].h;
 		}
 		background_w = (osd_hw.disp_info.position_w *
 			blending->pic_w_ratio) >> OSD_CALC;
 		background_h = (osd_hw.disp_info.position_h *
-			blending->pic_h_ratio >> OSD_CALC) -
-			workaround_line;
+			blending->pic_h_ratio >> OSD_CALC);
 	} else {
 		layer_blend->input1_data.x =
 			osd_hw.free_dst_data[index].x_start;
@@ -6598,11 +6618,11 @@ static void osd_setting_blend0_input(u32 index,
 			osd_hw.free_dst_data[index].x_start + 1;
 		layer_blend->input1_data.h =
 			osd_hw.free_dst_data[index].y_end -
-			osd_hw.free_dst_data[index].y_start +
-			1 - workaround_line;
+			osd_hw.free_dst_data[index].y_start + 1;
 		background_w = layer_blend->input1_data.w;
 		background_h = layer_blend->input1_data.h;
 	}
+
 	layer_blend->background_w = background_w;
 	layer_blend->background_h = background_h;
 	osd_log_dbg2("index=%d,src_data: x=%d,y=%d,w=%d,h=%d\n",
@@ -6624,9 +6644,6 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 	struct dispdata_s output1_data;
 	u32 index = 0;
 	u8 input1 = 0, input2 = 0;
-#ifdef OSD_BLEND_SHIFT_WORKAROUND
-	u32 workaround_line = 1;
-#endif
 
 	if (!blending)
 		return;
@@ -7190,8 +7207,6 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			layer_blend->input2 = BLEND1_DIN;
 			memcpy(&layer_blend->input1_data, &output1_data,
 				sizeof(struct dispdata_s));
-			layer_blend->input2_data.y += workaround_line;
-			layer_blend->input2_data.h -= workaround_line;
 		} else {
 			layer_blend->input1 = BLEND1_DIN;
 			layer_blend->input2 = BLEND2_DIN;
@@ -7201,8 +7216,6 @@ static void set_blend_path(struct hw_osd_blending_s *blending)
 			memcpy(&layer_blend->input2_data,
 				&output1_data,
 				sizeof(struct dispdata_s));
-			layer_blend->input1_data.y += workaround_line;
-			layer_blend->input1_data.h -= workaround_line;
 		}
 		vpp_setting_blend(blending);
 
@@ -7463,9 +7476,9 @@ static void osd_setting_default_hwc(void)
 	/* Do later: different format select different dummy_data */
 	/* used default dummy data */
 	VSYNCOSD_WR_MPEG_REG(VIU_OSD_BLEND_DUMMY_DATA0,
-		0x0 << 16 |
-		0x0 << 8 |
-		0x0);
+		0x80 << 16 |
+		0x80 << 8 |
+		0x80);
 	/* used default dummy alpha data */
 	VSYNCOSD_WR_MPEG_REG(VIU_OSD_BLEND_DUMMY_ALPHA,
 		0x0  << 20 |
