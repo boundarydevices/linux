@@ -2996,13 +2996,10 @@ bool __zone_watermark_ok(struct zone *z, unsigned int order, unsigned long mark,
 
 #ifdef CONFIG_CMA
 	/* If allocation can't use CMA areas don't use free CMA pages */
+#ifndef CONFIG_AMLOGIC_CMA /* always sub cma pages to avoid wm all CMA */
 	if (!(alloc_flags & ALLOC_CMA))
-		free_pages -= zone_page_state(z, NR_FREE_CMA_PAGES);
-#ifdef CONFIG_AMLOGIC_CMA
-	/* avoid free pages in water mark are all CMA */
-	else
-		free_pages -= zone_page_state(z, NR_FREE_CMA_PAGES) / 2;
 #endif
+		free_pages -= zone_page_state(z, NR_FREE_CMA_PAGES);
 #endif
 
 	/*
