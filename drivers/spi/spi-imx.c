@@ -549,7 +549,7 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 	 * is not functional for imx53 Soc, config SPI burst completed when
 	 * BURST_LENGTH + 1 bits are received
 	 */
-	if (spi_imx->slave_mode && is_imx53_ecspi(spi_imx))
+	if (spi_imx->slave_mode)
 		cfg &= ~MX51_ECSPI_CONFIG_SBBCTRL(spi->chip_select);
 	else
 		cfg |= MX51_ECSPI_CONFIG_SBBCTRL(spi->chip_select);
@@ -614,7 +614,7 @@ static int mx51_ecspi_prepare_transfer(struct spi_imx_data *spi_imx,
 
 	/* Clear BL field and set the right value */
 	ctrl &= ~MX51_ECSPI_CTRL_BL_MASK;
-	if (spi_imx->slave_mode && is_imx53_ecspi(spi_imx))
+	if (spi_imx->slave_mode)
 		ctrl |= (spi_imx->slave_burst * 8 - 1)
 			<< MX51_ECSPI_CTRL_BL_OFFSET;
 	else
@@ -1251,7 +1251,7 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 	else
 		spi_imx->usedma = false;
 
-	if (is_imx53_ecspi(spi_imx) && spi_imx->slave_mode) {
+	if (spi_imx->slave_mode) {
 		spi_imx->rx = mx53_ecspi_rx_slave;
 		spi_imx->tx = mx53_ecspi_tx_slave;
 		spi_imx->slave_burst = t->len;
@@ -1477,7 +1477,7 @@ static int spi_imx_pio_transfer_slave(struct spi_device *spi,
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	int ret = transfer->len;
 
-	if (is_imx53_ecspi(spi_imx) &&
+	if ((is_imx51_ecspi(spi_imx) || is_imx53_ecspi(spi_imx)) &&
 	    transfer->len > MX53_MAX_TRANSFER_BYTES) {
 		dev_err(&spi->dev, "Transaction too big, max size is %d bytes\n",
 			MX53_MAX_TRANSFER_BYTES);
