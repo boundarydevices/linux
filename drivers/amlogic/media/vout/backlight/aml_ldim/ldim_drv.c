@@ -59,7 +59,7 @@ const char ldim_dev_id[] = "ldim-dev";
 unsigned char ldim_debug_print;
 
 struct ldim_dev_s {
-	struct aml_ldim_func_s *ldim_func;
+	struct ldim_operate_func_s *ldim_op_func;
 	struct ldim_param_s *ldim_db_para;
 
 	struct cdev   cdev;
@@ -98,6 +98,7 @@ static struct work_struct ldim_on_vs_work;
 static struct work_struct ldim_off_vs_work;
 
 static unsigned int ldim_irq_cnt;
+static unsigned int brightness_vs_cnt;
 
 /*BL_matrix remap curve*/
 static unsigned int bl_remap_curve[16] = {
@@ -331,12 +332,12 @@ static void ldim_stts_initial(unsigned int pic_h, unsigned int pic_v,
 	resolution = (((pic_h - 1) & 0xffff) << 16) | ((pic_v - 1) & 0xffff);
 	/*Wr_reg(VDIN0_HIST_CTRL, 0x10d);*/
 
-	if (ldim_dev.ldim_func == NULL) {
-		LDIMERR("%s: invalid ldim_func\n", __func__);
+	if (ldim_dev.ldim_op_func == NULL) {
+		LDIMERR("%s: invalid ldim_op_func\n", __func__);
 		return;
 	}
-	if (ldim_dev.ldim_func->stts_init)
-		ldim_dev.ldim_func->stts_init(resolution);
+	if (ldim_dev.ldim_op_func->stts_init)
+		ldim_dev.ldim_op_func->stts_init(resolution);
 
 	resolution_region = 0;
 
@@ -586,12 +587,12 @@ static void LDIM_Initial(unsigned int pic_h, unsigned int pic_v,
 	if (LDIM_DATA_FROM_DB)
 		ldim_db_load_update(&nPRM, ldim_dev.ldim_db_para);
 
-	if (ldim_dev.ldim_func == NULL) {
-		LDIMERR("%s: invalid ldim_func\n", __func__);
+	if (ldim_dev.ldim_op_func == NULL) {
+		LDIMERR("%s: invalid ldim_op_func\n", __func__);
 		return;
 	}
-	if (ldim_dev.ldim_func->ldim_init)
-		ldim_dev.ldim_func->ldim_init(ldim_bl_en, ldim_hvcnt_bypass);
+	if (ldim_dev.ldim_op_func->ldim_init)
+		ldim_dev.ldim_op_func->ldim_init(ldim_bl_en, ldim_hvcnt_bypass);
 }
 
 static void ldim_update_matrix(unsigned int mode)
@@ -682,13 +683,13 @@ static void ldim_update_txlx(void)
 
 static void ldim_update_setting(void)
 {
-	if (ldim_dev.ldim_func == NULL) {
-		if (ldim_debug_print)
-			LDIMERR("%s: invalid ldim_func\n", __func__);
+	if (ldim_dev.ldim_op_func == NULL) {
+		if (brightness_vs_cnt == 0)
+			LDIMERR("%s: invalid ldim_op_func\n", __func__);
 		return;
 	}
-	if (ldim_dev.ldim_func->update_setting)
-		ldim_dev.ldim_func->update_setting();
+	if (ldim_dev.ldim_op_func->update_setting)
+		ldim_dev.ldim_op_func->update_setting();
 }
 
 static irqreturn_t ldim_vsync_isr(int irq, void *dev_id)
@@ -699,6 +700,9 @@ static irqreturn_t ldim_vsync_isr(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	spin_lock_irqsave(&ldim_isr_lock, flags);
+
+	if (brightness_vs_cnt++ >= 30) /* for debug print */
+		brightness_vs_cnt = 0;
 
 	if (ldim_func_en) {
 		if (ldim_avg_update_en)
@@ -722,7 +726,6 @@ static irqreturn_t ldim_vsync_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int brightness_vs_cnt;
 static void ldim_on_vs_brightness(void)
 {
 	unsigned int size;
@@ -730,9 +733,6 @@ static void ldim_on_vs_brightness(void)
 
 	if (ldim_on_flag == 0)
 		return;
-
-	if (brightness_vs_cnt++ >= 30)
-		brightness_vs_cnt = 0;
 
 	if (ldim_func_bypass)
 		return;
@@ -786,9 +786,6 @@ static void ldim_off_vs_brightness(void)
 
 	if (ldim_on_flag == 0)
 		return;
-
-	if (brightness_vs_cnt++ >= 30)
-		brightness_vs_cnt = 0;
 
 	size = ldim_blk_row * ldim_blk_col;
 
@@ -1768,6 +1765,8 @@ static struct aml_ldim_driver_s ldim_driver = {
 	.device_power_off = NULL,
 	.device_bri_update = NULL,
 	.device_bri_check = NULL,
+	.spi_dev = NULL,
+	.spi_info = NULL,
 };
 
 struct aml_ldim_driver_s *aml_ldim_get_driver(void)
@@ -3191,13 +3190,13 @@ ldim_malloc_err0:
 	return -1;
 }
 
-static struct aml_ldim_func_s ldim_func_txlx = {
+static struct ldim_operate_func_s ldim_op_func_txlx = {
 	.update_setting = ldim_update_txlx,
 	.stts_init = ldim_stts_initial_txlx,
 	.ldim_init = ldim_initial_txlx,
 };
 
-static struct aml_ldim_func_s ldim_func_tl1 = {
+static struct ldim_operate_func_s ldim_op_func_tl1 = {
 	.update_setting = NULL,
 	.stts_init = NULL,
 	.ldim_init = NULL,
@@ -3210,6 +3209,8 @@ int aml_ldim_probe(struct platform_device *pdev)
 	unsigned int ldim_vsync_irq = 0;
 	struct ldim_dev_s *devp = &ldim_dev;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
+
+	memset(devp, 0, (sizeof(struct ldim_dev_s)));
 
 #ifdef LDIM_DEBUG_INFO
 	ldim_debug_print = 1;
@@ -3236,16 +3237,16 @@ int aml_ldim_probe(struct platform_device *pdev)
 	/* db para */
 	LDIM_DATA_FROM_DB = 0;
 	devp->ldim_db_para = NULL;
-	/* ldim_func */
+	/* ldim_op_func */
 	switch (bl_drv->data->chip_type) {
 	case BL_CHIP_TL1:
-		devp->ldim_func = &ldim_func_tl1;
+		devp->ldim_op_func = &ldim_op_func_tl1;
 		break;
 	case BL_CHIP_TXLX:
-		devp->ldim_func = &ldim_func_txlx;
+		devp->ldim_op_func = &ldim_op_func_txlx;
 		break;
 	default:
-		devp->ldim_func = NULL;
+		devp->ldim_op_func = NULL;
 		break;
 	}
 
@@ -3254,8 +3255,6 @@ int aml_ldim_probe(struct platform_device *pdev)
 		LDIMERR("%s failed\n", __func__);
 		goto err;
 	}
-
-	memset(devp, 0, (sizeof(struct ldim_dev_s)));
 
 	ret = alloc_chrdev_region(&devp->aml_ldim_devno, 0, 1,
 		AML_LDIM_DEVICE_NAME);

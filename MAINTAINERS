@@ -14706,3 +14706,7 @@ F:	arch/arm64/boot/dts/amlogic/firmware_ab.dtsi
 F:	arch/arm/boot/dts/amlogic/partition_mbox_ab_P_32.dtsi
 F:	arch/arm64/boot/dts/amlogic/firmware_avb_ab.dtsi
 F:	arch/arm64/boot/dts/amlogic/partition_mbox_ab_P_32.dtsi
+
+AMLOGIC BACKLIGHT LDIM DRIVER
+M:      Evoke Zhang <evoke.zhang@amlogic.com>
+F:      drivers/amlogic/media/vout/backlight/aml_ldim/ldim_spi.c

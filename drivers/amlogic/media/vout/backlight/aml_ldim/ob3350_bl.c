@@ -149,10 +149,8 @@ static struct class_attribute ob3350_class_attrs[] = {
 	__ATTR_NULL
 };
 
-static int ob3350_ldim_driver_update(void)
+static int ob3350_ldim_driver_update(struct aml_ldim_driver_s *ldim_drv)
 {
-	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-
 	ldim_drv->device_power_on = ob3350_power_on;
 	ldim_drv->device_power_off = ob3350_power_off;
 	ldim_drv->device_bri_update = ob3350_smr;
@@ -160,7 +158,7 @@ static int ob3350_ldim_driver_update(void)
 	return 0;
 }
 
-int ldim_dev_ob3350_probe(void)
+int ldim_dev_ob3350_probe(struct aml_ldim_driver_s *ldim_drv)
 {
 	int ret;
 
@@ -171,7 +169,7 @@ int ldim_dev_ob3350_probe(void)
 		return -1;
 	}
 
-	ob3350_ldim_driver_update();
+	ob3350_ldim_driver_update(ldim_drv);
 
 	bl_ob3350->cls.name = kzalloc(10, GFP_KERNEL);
 	sprintf((char *)bl_ob3350->cls.name, "ob3350");
@@ -186,7 +184,7 @@ int ldim_dev_ob3350_probe(void)
 	return ret;
 }
 
-int ldim_dev_ob3350_remove(void)
+int ldim_dev_ob3350_remove(struct aml_ldim_driver_s *ldim_drv)
 {
 	kfree(bl_ob3350);
 	bl_ob3350 = NULL;

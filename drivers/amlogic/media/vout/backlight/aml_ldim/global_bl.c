@@ -148,10 +148,8 @@ static struct class_attribute global_class_attrs[] = {
 	__ATTR_NULL
 };
 
-static int global_ldim_driver_update(void)
+static int global_ldim_driver_update(struct aml_ldim_driver_s *ldim_drv)
 {
-	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-
 	ldim_drv->device_power_on = global_power_on;
 	ldim_drv->device_power_off = global_power_off;
 	ldim_drv->device_bri_update = global_smr;
@@ -159,7 +157,7 @@ static int global_ldim_driver_update(void)
 	return 0;
 }
 
-int ldim_dev_global_probe(void)
+int ldim_dev_global_probe(struct aml_ldim_driver_s *ldim_drv)
 {
 	int ret;
 
@@ -170,7 +168,7 @@ int ldim_dev_global_probe(void)
 		return -1;
 	}
 
-	global_ldim_driver_update();
+	global_ldim_driver_update(ldim_drv);
 
 	bl_global->cls.name = kzalloc(10, GFP_KERNEL);
 	if (bl_global->cls.name == NULL) {
@@ -189,7 +187,7 @@ int ldim_dev_global_probe(void)
 	return ret;
 }
 
-int ldim_dev_global_remove(void)
+int ldim_dev_global_remove(struct aml_ldim_driver_s *ldim_drv)
 {
 	kfree(bl_global);
 	bl_global = NULL;

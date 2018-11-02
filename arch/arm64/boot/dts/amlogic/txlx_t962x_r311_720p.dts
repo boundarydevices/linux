@@ -37,6 +37,8 @@
 		serial2 = &uart_B;
 		serial3 = &uart_C;
 		serial4 = &uart_AO_B;
+		spi0 = &spicc0;
+		spi1 = &spicc1;
 	};
 
 	ion_dev {

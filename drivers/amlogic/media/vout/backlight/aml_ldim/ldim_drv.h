@@ -23,7 +23,8 @@
 /*20180725: new pwm control flow support */
 /*20180730: algorithm clear up */
 /*20180820: pq tooling support, espically optimize some alg parameters */
-#define LDIM_DRV_VER    "20180820"
+/*20181101: fix ldim_op_func null mistake, add new spi api support */
+#define LDIM_DRV_VER    "20181101"
 
 extern unsigned char ldim_debug_print;
 
@@ -36,7 +37,7 @@ extern int LD_remap_lut[16][32];
 
 /*========================================*/
 
-struct aml_ldim_func_s {
+struct ldim_operate_func_s {
 	void (*update_setting)(void);
 	void (*stts_init)(unsigned int resolution);
 	void (*ldim_init)(unsigned int bl_en, unsigned int hvcnt_bypass);

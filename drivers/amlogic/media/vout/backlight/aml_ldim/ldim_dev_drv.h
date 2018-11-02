@@ -17,6 +17,16 @@
 
 #ifndef __LDIM_DEV_DRV_H
 #define __LDIM_DEV_DRV_H
+#include <linux/spi/spi.h>
+#include <linux/amlogic/media/vout/lcd/aml_ldim.h>
+
+/* ldim spi api*/
+extern int ldim_spi_write(struct spi_device *spi, unsigned char *tbuf,
+		int wlen);
+extern int ldim_spi_read(struct spi_device *spi, unsigned char *tbuf, int wlen,
+		unsigned char *rbuf, int rlen);
+extern int ldim_spi_driver_add(struct aml_ldim_driver_s *ldim_drv);
+extern int ldim_spi_driver_remove(struct aml_ldim_driver_s *ldim_drv);
 
 /* ldim global api */
 extern void ldim_gpio_set(int index, int value);
@@ -25,14 +35,14 @@ extern void ldim_set_duty_pwm(struct bl_pwm_config_s *ld_pwm);
 extern void ldim_pwm_off(struct bl_pwm_config_s *ld_pwm);
 
 /* ldim dev api */
-extern int ldim_dev_iw7027_probe(void);
-extern int ldim_dev_iw7027_remove(void);
+extern int ldim_dev_iw7027_probe(struct aml_ldim_driver_s *ldim_drv);
+extern int ldim_dev_iw7027_remove(struct aml_ldim_driver_s *ldim_drv);
 
-extern int ldim_dev_ob3350_probe(void);
-extern int ldim_dev_ob3350_remove(void);
+extern int ldim_dev_ob3350_probe(struct aml_ldim_driver_s *ldim_drv);
+extern int ldim_dev_ob3350_remove(struct aml_ldim_driver_s *ldim_drv);
 
-extern int ldim_dev_global_probe(void);
-extern int ldim_dev_global_remove(void);
+extern int ldim_dev_global_probe(struct aml_ldim_driver_s *ldim_drv);
+extern int ldim_dev_global_remove(struct aml_ldim_driver_s *ldim_drv);
 
 
 #endif /* __LDIM_DEV_DRV_H */

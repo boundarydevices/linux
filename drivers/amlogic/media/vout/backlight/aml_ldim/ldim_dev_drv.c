@@ -46,7 +46,7 @@ struct bl_gpio_s ldim_gpio[BL_GPIO_NUM_MAX] = {
 	{.probe_flag = 0, .register_flag = 0,},
 };
 
-static struct spi_board_info ldim_spi_dev = {
+static struct spi_board_info ldim_spi_info = {
 	.modalias = "ldim_dev",
 	.mode = SPI_MODE_0,
 	.max_speed_hz = 1000000, /* 1MHz */
@@ -57,6 +57,7 @@ static struct spi_board_info ldim_spi_dev = {
 
 static unsigned char *table_init_on_dft;
 static unsigned char *table_init_off_dft;
+static int ldim_dev_probe_flag;
 
 struct ldim_dev_config_s ldim_dev_config = {
 	.type = LDIM_DEV_TYPE_NORMAL,
@@ -254,7 +255,7 @@ void ldim_set_duty_pwm(struct bl_pwm_config_s *bl_pwm)
 	temp = (((temp * bl_pwm->pwm_duty) + 50) / 100);
 	bl_pwm->pwm_level = (unsigned int)temp;
 
-	if (ldim_debug_print) {
+	if (ldim_debug_print == 2) {
 		LDIMPR(
 	"pwm port %d: duty=%d%%, pwm_max=%d, pwm_min=%d, pwm_level=%d\n",
 			bl_pwm->pwm_port, bl_pwm->pwm_duty,
@@ -310,7 +311,7 @@ static int ldim_pwm_pinmux_ctrl(int status)
 	if (IS_ERR(ldim_drv->pin)) {
 		LDIMERR("set pinmux %s error\n", ldim_pinmux_str[index]);
 	} else {
-		LDIMPR("set pinmux %s: %p\n",
+		LDIMPR("set pinmux %s: 0x%p\n",
 			ldim_pinmux_str[index], ldim_drv->pin);
 	}
 	ldim_drv->pinmux_flag = index;
@@ -347,7 +348,7 @@ static void ldim_dev_init_table_dynamic_size_print(
 	if (flag) {
 		pr_info("power on:\n");
 		table = econf->init_on;
-		max_len = econf->init_off_cnt;
+		max_len = econf->init_on_cnt;
 	} else {
 		pr_info("power off:\n");
 		table = econf->init_off;
@@ -468,148 +469,148 @@ static void ldim_dev_config_print(void)
 		"dev_index             = %d\n",
 		ldim_drv->valid_flag,
 		ldim_drv->dev_index);
-	if (ldim_drv->ldev_conf) {
-		bl_pwm = &ldim_drv->ldev_conf->pwm_config;
-		pr_info("dev_name              = %s\n"
-			"type                  = %d\n"
-			"en_gpio               = %d\n"
-			"en_gpio_on            = %d\n"
-			"en_gpio_off           = %d\n"
-			"dim_min               = 0x%03x\n"
-			"dim_max               = 0x%03x\n",
-			ldim_drv->ldev_conf->name,
-			ldim_drv->ldev_conf->type,
-			ldim_drv->ldev_conf->en_gpio,
-			ldim_drv->ldev_conf->en_gpio_on,
-			ldim_drv->ldev_conf->en_gpio_off,
-			ldim_drv->ldev_conf->dim_min,
-			ldim_drv->ldev_conf->dim_max);
-		pr_info("region_num            = %d\n",
-			ldim_drv->ldev_conf->bl_regnum);
-		n = ldim_drv->ldev_conf->bl_regnum;
-		len = (n * 4) + 50;
-		str = kcalloc(len, sizeof(char), GFP_KERNEL);
-		if (str == NULL) {
-			pr_info("%s: buf malloc error\n", __func__);
-		} else {
-			len = sprintf(str, "region_mapping:\n  ");
-			for (i = 0; i < n; i++) {
-				len += sprintf(str+len, "%d,",
-					ldim_drv->ldev_conf->bl_mapping[i]);
-			}
-			pr_info("%s\n\n", str);
-			kfree(str);
-		}
+	if (ldim_drv->ldev_conf == NULL) {
+		LDIMERR("%s: device config is null\n", __func__);
+		return;
+	}
 
-		switch (ldim_drv->ldev_conf->type) {
-		case LDIM_DEV_TYPE_SPI:
-			pr_info("spi_modalias          = %s\n"
-				"spi_mode              = %d\n"
-				"spi_max_speed_hz      = %d\n"
-				"spi_bus_num           = %d\n"
-				"spi_chip_select       = %d\n"
-				"cs_hold_delay         = %d\n"
-				"cs_clk_delay          = %d\n"
-				"lamp_err_gpio         = %d\n"
-				"fault_check           = %d\n"
-				"write_check           = %d\n\n",
-				ldim_drv->spi_dev->modalias,
-				ldim_drv->spi_dev->mode,
-				ldim_drv->spi_dev->max_speed_hz,
-				ldim_drv->spi_dev->bus_num,
-				ldim_drv->spi_dev->chip_select,
-				ldim_drv->ldev_conf->cs_hold_delay,
-				ldim_drv->ldev_conf->cs_clk_delay,
-				ldim_drv->ldev_conf->lamp_err_gpio,
-				ldim_drv->ldev_conf->fault_check,
-				ldim_drv->ldev_conf->write_check);
+	bl_pwm = &ldim_drv->ldev_conf->pwm_config;
+	pr_info("dev_name              = %s\n"
+		"type                  = %d\n"
+		"en_gpio               = %d\n"
+		"en_gpio_on            = %d\n"
+		"en_gpio_off           = %d\n"
+		"dim_min               = 0x%03x\n"
+		"dim_max               = 0x%03x\n"
+		"region_num            = %d\n",
+		ldim_drv->ldev_conf->name,
+		ldim_drv->ldev_conf->type,
+		ldim_drv->ldev_conf->en_gpio,
+		ldim_drv->ldev_conf->en_gpio_on,
+		ldim_drv->ldev_conf->en_gpio_off,
+		ldim_drv->ldev_conf->dim_min,
+		ldim_drv->ldev_conf->dim_max,
+		ldim_drv->ldev_conf->bl_regnum);
+	n = ldim_drv->ldev_conf->bl_regnum;
+	len = (n * 4) + 50;
+	str = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (str == NULL) {
+		pr_info("%s: buf malloc error\n", __func__);
+	} else {
+		len = sprintf(str, "region_mapping:\n  ");
+		for (i = 0; i < n; i++) {
+			len += sprintf(str+len, "%d,",
+				ldim_drv->ldev_conf->bl_mapping[i]);
+		}
+		pr_info("%s\n\n", str);
+		kfree(str);
+	}
+
+	switch (ldim_drv->ldev_conf->type) {
+	case LDIM_DEV_TYPE_SPI:
+		pr_info("spi_pointer           = 0x%p\n"
+			"spi_modalias          = %s\n"
+			"spi_mode              = %d\n"
+			"spi_max_speed_hz      = %d\n"
+			"spi_bus_num           = %d\n"
+			"spi_chip_select       = %d\n"
+			"cs_hold_delay         = %d\n"
+			"cs_clk_delay          = %d\n"
+			"lamp_err_gpio         = %d\n"
+			"fault_check           = %d\n"
+			"write_check           = %d\n\n",
+			ldim_drv->spi_dev,
+			ldim_drv->spi_info->modalias,
+			ldim_drv->spi_info->mode,
+			ldim_drv->spi_info->max_speed_hz,
+			ldim_drv->spi_info->bus_num,
+			ldim_drv->spi_info->chip_select,
+			ldim_drv->ldev_conf->cs_hold_delay,
+			ldim_drv->ldev_conf->cs_clk_delay,
+			ldim_drv->ldev_conf->lamp_err_gpio,
+			ldim_drv->ldev_conf->fault_check,
+			ldim_drv->ldev_conf->write_check);
+		break;
+	case LDIM_DEV_TYPE_I2C:
+		break;
+	case LDIM_DEV_TYPE_NORMAL:
+	default:
+		break;
+	}
+	if (bl_pwm->pwm_port < BL_PWM_MAX) {
+		pr_info("pwm_port:           %d\n"
+			"pwm_pol:            %d\n"
+			"pwm_freq:           %d\n"
+			"pwm_cnt:            %d\n"
+			"pwm_level:          %d\n"
+			"pwm_duty:           %d%%\n",
+			bl_pwm->pwm_port, bl_pwm->pwm_method,
+			bl_pwm->pwm_freq, bl_pwm->pwm_cnt,
+			bl_pwm->pwm_level, bl_pwm->pwm_duty);
+		switch (bl_pwm->pwm_port) {
+		case BL_PWM_A:
+		case BL_PWM_B:
+		case BL_PWM_C:
+		case BL_PWM_D:
+		case BL_PWM_E:
+		case BL_PWM_F:
+			if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
+				pr_info("pwm invalid\n");
+				break;
+			}
+			pr_info("pwm_pointer:        %p\n",
+				bl_pwm->pwm_data.pwm);
+			pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
+			pr_info("pwm state:\n"
+				"  period:           %d\n"
+				"  duty_cycle:       %d\n"
+				"  polarity:         %d\n"
+				"  enabled:          %d\n",
+				pstate.period, pstate.duty_cycle,
+				pstate.polarity, pstate.enabled);
+			value = bl_cbus_read(
+				bl_drv->data->pwm_reg[bl_pwm->pwm_port]);
+			pr_info("pwm_reg:            0x%08x\n", value);
 			break;
-		case LDIM_DEV_TYPE_I2C:
-			break;
-		case LDIM_DEV_TYPE_NORMAL:
+		case BL_PWM_VS:
+			pr_info("pwm_reg0:           0x%08x\n"
+				"pwm_reg1:           0x%08x\n"
+				"pwm_reg2:           0x%08x\n"
+				"pwm_reg3:           0x%08x\n",
+				bl_vcbus_read(VPU_VPU_PWM_V0),
+				bl_vcbus_read(VPU_VPU_PWM_V1),
+				bl_vcbus_read(VPU_VPU_PWM_V2),
+				bl_vcbus_read(VPU_VPU_PWM_V3));
 			break;
 		default:
 			break;
 		}
-		if (bl_pwm->pwm_port < BL_PWM_MAX) {
-			pr_info("pwm_port:           %d\n"
-				"pwm_pol:            %d\n"
-				"pwm_freq:           %d\n"
-				"pwm_cnt:            %d\n"
-				"pwm_level:          %d\n"
-				"pwm_duty:           %d%%\n",
-				bl_pwm->pwm_port, bl_pwm->pwm_method,
-				bl_pwm->pwm_freq, bl_pwm->pwm_cnt,
-				bl_pwm->pwm_level, bl_pwm->pwm_duty);
-			switch (bl_pwm->pwm_port) {
-			case BL_PWM_A:
-			case BL_PWM_B:
-			case BL_PWM_C:
-			case BL_PWM_D:
-			case BL_PWM_E:
-			case BL_PWM_F:
-				if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
-					pr_info("pwm invalid\n");
-					break;
-				}
-				pr_info("pwm_pointer:        %p\n",
-					bl_pwm->pwm_data.pwm);
-				pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
-				pr_info("pwm state:\n"
-					"  period:           %d\n"
-					"  duty_cycle:       %d\n"
-					"  polarity:         %d\n"
-					"  enabled:          %d\n",
-					pstate.period, pstate.duty_cycle,
-					pstate.polarity, pstate.enabled);
-				value = bl_cbus_read(bl_drv->data->pwm_reg[
-					bl_pwm->pwm_port]);
-				pr_info("pwm_reg:            0x%08x\n",
-					value);
-				break;
-			case BL_PWM_VS:
-				pr_info("pwm_reg0:           0x%08x\n"
-					"pwm_reg1:           0x%08x\n"
-					"pwm_reg2:           0x%08x\n"
-					"pwm_reg3:           0x%08x\n",
-					bl_vcbus_read(VPU_VPU_PWM_V0),
-					bl_vcbus_read(VPU_VPU_PWM_V1),
-					bl_vcbus_read(VPU_VPU_PWM_V2),
-					bl_vcbus_read(VPU_VPU_PWM_V3));
-				break;
-			default:
-				break;
-			}
-		}
-		pr_info("pinmux_flag:        %d\n"
-			"pinmux_pointer:     0x%p\n\n",
-			ldim_drv->pinmux_flag,
-			ldim_drv->pin);
+	}
+	pr_info("pinmux_flag:        %d\n"
+		"pinmux_pointer:     0x%p\n\n",
+		ldim_drv->pinmux_flag,
+		ldim_drv->pin);
 
-		if (ldim_drv->ldev_conf->cmd_size > 0) {
-			pr_info("table_loaded:       %d\n"
-				"cmd_size:           %d\n"
-				"init_on_cnt:        %d\n"
-				"init_off_cnt:       %d\n",
-				ldim_drv->ldev_conf->init_loaded,
-				ldim_drv->ldev_conf->cmd_size,
-				ldim_drv->ldev_conf->init_on_cnt,
-				ldim_drv->ldev_conf->init_off_cnt);
-			if (ldim_drv->ldev_conf->cmd_size ==
-				LCD_EXT_CMD_SIZE_DYNAMIC) {
-				ldim_dev_init_table_dynamic_size_print(
-					ldim_drv->ldev_conf, 1);
-				ldim_dev_init_table_dynamic_size_print(
-					ldim_drv->ldev_conf, 0);
-			} else {
-				ldim_dev_init_table_fixed_size_print(
-					ldim_drv->ldev_conf, 1);
-				ldim_dev_init_table_fixed_size_print(
-					ldim_drv->ldev_conf, 0);
-			}
+	if (ldim_drv->ldev_conf->cmd_size > 0) {
+		pr_info("table_loaded:       %d\n"
+			"cmd_size:           %d\n"
+			"init_on_cnt:        %d\n"
+			"init_off_cnt:       %d\n",
+			ldim_drv->ldev_conf->init_loaded,
+			ldim_drv->ldev_conf->cmd_size,
+			ldim_drv->ldev_conf->init_on_cnt,
+			ldim_drv->ldev_conf->init_off_cnt);
+		if (ldim_drv->ldev_conf->cmd_size == LCD_EXT_CMD_SIZE_DYNAMIC) {
+			ldim_dev_init_table_dynamic_size_print(
+				ldim_drv->ldev_conf, 1);
+			ldim_dev_init_table_dynamic_size_print(
+				ldim_drv->ldev_conf, 0);
+		} else {
+			ldim_dev_init_table_fixed_size_print(
+				ldim_drv->ldev_conf, 1);
+			ldim_dev_init_table_fixed_size_print(
+				ldim_drv->ldev_conf, 0);
 		}
-	} else {
-		pr_info("device config is null\n");
 	}
 }
 
@@ -1008,16 +1009,16 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 	switch (ldim_dev_config.type) {
 	case LDIM_DEV_TYPE_SPI:
 		/* get spi config */
-		ldim_drv->spi_dev = &ldim_spi_dev;
+		ldim_drv->spi_info = &ldim_spi_info;
 
 		ret = of_property_read_u32(child, "spi_bus_num", &val);
 		if (ret) {
 			LDIMERR("failed to get spi_bus_num\n");
 		} else {
-			ldim_spi_dev.bus_num = val;
+			ldim_spi_info.bus_num = val;
 			if (ldim_debug_print) {
 				LDIMPR("spi bus_num: %d\n",
-					ldim_spi_dev.bus_num);
+					ldim_spi_info.bus_num);
 			}
 		}
 
@@ -1025,10 +1026,10 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 		if (ret) {
 			LDIMERR("failed to get spi_chip_select\n");
 		} else {
-			ldim_spi_dev.chip_select = val;
+			ldim_spi_info.chip_select = val;
 			if (ldim_debug_print) {
 				LDIMPR("spi chip_select: %d\n",
-					ldim_spi_dev.chip_select);
+					ldim_spi_info.chip_select);
 			}
 		}
 
@@ -1036,10 +1037,10 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 		if (ret) {
 			LDIMERR("failed to get spi_chip_select\n");
 		} else {
-			ldim_spi_dev.max_speed_hz = val;
+			ldim_spi_info.max_speed_hz = val;
 			if (ldim_debug_print) {
 				LDIMPR("spi max_speed_hz: %d\n",
-					ldim_spi_dev.max_speed_hz);
+					ldim_spi_info.max_speed_hz);
 			}
 		}
 
@@ -1047,9 +1048,9 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 		if (ret) {
 			LDIMERR("failed to get spi_mode\n");
 		} else {
-			ldim_spi_dev.mode = val;
+			ldim_spi_info.mode = val;
 			if (ldim_debug_print)
-				LDIMPR("spi mode: %d\n", ldim_spi_dev.mode);
+				LDIMPR("spi mode: %d\n", ldim_spi_info.mode);
 		}
 
 		ret = of_property_read_u32_array(child, "spi_cs_delay",
@@ -1108,14 +1109,14 @@ static int ldim_dev_get_config_from_dts(struct device_node *np, int index)
 				child, &ldim_dev_config, 1);
 			if (ret)
 				break;
-			ret = ldim_dev_init_table_dynamic_size_load_dts(
+			ldim_dev_init_table_dynamic_size_load_dts(
 				child, &ldim_dev_config, 0);
 		} else {
 			ret = ldim_dev_init_table_fixed_size_load_dts(
 				child, &ldim_dev_config, 1);
 			if (ret)
 				break;
-			ret = ldim_dev_init_table_fixed_size_load_dts(
+			ldim_dev_init_table_fixed_size_load_dts(
 				child, &ldim_dev_config, 0);
 		}
 		if (ret == 0)
@@ -1147,60 +1148,81 @@ ldim_get_config_err:
 	return -1;
 }
 
-static int ldim_dev_add_driver(struct ldim_dev_config_s *ldev_conf, int index)
+static int ldim_dev_add_driver(struct aml_ldim_driver_s *ldim_drv)
 {
-	int ret = 0;
+	struct ldim_dev_config_s *ldev_conf = ldim_drv->ldev_conf;
+	int index = ldim_drv->dev_index;
+	int ret = -1;
 
-	if (strcmp(ldev_conf->name, "iw7027") == 0) {
-		ret = ldim_dev_iw7027_probe();
-		goto ldim_dev_add_driver_next;
-	} else if (strcmp(ldev_conf->name, "ob3350") == 0) {
-		ret = ldim_dev_ob3350_probe();
-		goto ldim_dev_add_driver_next;
-	} else if (strcmp(ldev_conf->name, "global") == 0) {
-		ret = ldim_dev_global_probe();
-		goto ldim_dev_add_driver_next;
-	} else {
-		LDIMERR("invalid device name: %s\n", ldev_conf->name);
-		ret = -1;
+	switch (ldim_dev_config.type) {
+	case LDIM_DEV_TYPE_SPI:
+		ret = ldim_spi_driver_add(ldim_drv);
+		break;
+	case LDIM_DEV_TYPE_I2C:
+		break;
+	case LDIM_DEV_TYPE_NORMAL:
+	default:
+		break;
 	}
+	if (ret)
+		return ret;
 
-ldim_dev_add_driver_next:
+	ret = -1;
+	if (strcmp(ldev_conf->name, "iw7027") == 0)
+		ret = ldim_dev_iw7027_probe(ldim_drv);
+	else if (strcmp(ldev_conf->name, "ob3350") == 0)
+		ret = ldim_dev_ob3350_probe(ldim_drv);
+	else if (strcmp(ldev_conf->name, "global") == 0)
+		ret = ldim_dev_global_probe(ldim_drv);
+	else
+		LDIMERR("invalid device name: %s\n", ldev_conf->name);
+
 	if (ret) {
-		LDIMERR("add device driver failed %s(%d)\n",
+		LDIMERR("add device driver failed: %s(%d)\n",
 			ldev_conf->name, index);
 	} else {
-		LDIMPR("add device driver %s(%d)\n", ldev_conf->name, index);
+		ldim_dev_probe_flag = 1;
+		LDIMPR("add device driver: %s(%d)\n", ldev_conf->name, index);
 	}
 
 	return ret;
 }
 
-static int ldim_dev_remove_driver(struct ldim_dev_config_s *ldev_conf,
-		int index)
+static int ldim_dev_remove_driver(struct aml_ldim_driver_s *ldim_drv)
 {
-	int ret = 0;
+	struct ldim_dev_config_s *ldev_conf = ldim_drv->ldev_conf;
+	int index = ldim_drv->dev_index;
+	int ret = -1;
 
-	if (strcmp(ldev_conf->name, "iw7027") == 0) {
-		ret = ldim_dev_iw7027_remove();
-		goto ldim_dev_remove_driver_next;
-	} else if (strcmp(ldev_conf->name, "ob3350") == 0) {
-		ret = ldim_dev_ob3350_remove();
-		goto ldim_dev_remove_driver_next;
-	} else if (strcmp(ldev_conf->name, "global") == 0) {
-		ret = ldim_dev_global_remove();
-		goto ldim_dev_remove_driver_next;
-	} else {
-		LDIMERR("invalid device name: %s\n", ldev_conf->name);
-		ret = -1;
+	if (ldim_dev_probe_flag) {
+		if (strcmp(ldev_conf->name, "iw7027") == 0)
+			ret = ldim_dev_iw7027_remove(ldim_drv);
+		else if (strcmp(ldev_conf->name, "ob3350") == 0)
+			ret = ldim_dev_ob3350_remove(ldim_drv);
+		else if (strcmp(ldev_conf->name, "global") == 0)
+			ret = ldim_dev_global_remove(ldim_drv);
+		else
+			LDIMERR("invalid device name: %s\n", ldev_conf->name);
+
+		if (ret) {
+			LDIMERR("remove device driver failed: %s(%d)\n",
+				ldev_conf->name, index);
+		} else {
+			ldim_dev_probe_flag = 0;
+			LDIMPR("remove device driver: %s(%d)\n",
+				ldev_conf->name, index);
+		}
 	}
 
-ldim_dev_remove_driver_next:
-	if (ret) {
-		LDIMERR("remove device driver failed %s(%d)\n",
-			ldev_conf->name, index);
-	} else {
-		LDIMPR("remove device driver %s(%d)\n", ldev_conf->name, index);
+	switch (ldim_dev_config.type) {
+	case LDIM_DEV_TYPE_SPI:
+		ldim_spi_driver_remove(ldim_drv);
+		break;
+	case LDIM_DEV_TYPE_I2C:
+		break;
+	case LDIM_DEV_TYPE_NORMAL:
+	default:
+		break;
 	}
 
 	return ret;
@@ -1209,8 +1231,8 @@ ldim_dev_remove_driver_next:
 static int ldim_dev_probe(struct platform_device *pdev)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
-	int ret = 0;
 
+	ldim_dev_probe_flag = 0;
 	if (ldim_drv->dev_index != 0xff) {
 		/* get configs */
 		ldim_drv->dev = &pdev->dev;
@@ -1221,27 +1243,25 @@ static int ldim_dev_probe(struct platform_device *pdev)
 		ldim_dev_get_config_from_dts(pdev->dev.of_node,
 			ldim_drv->dev_index);
 
-		ldim_dev_add_driver(ldim_drv->ldev_conf, ldim_drv->dev_index);
+		ldim_dev_add_driver(ldim_drv);
 	}
 	/* init ldim function */
 	if (ldim_drv->valid_flag)
 		ldim_drv->init();
 	LDIMPR("%s OK\n", __func__);
 
-	return ret;
+	return 0;
 }
 
 static int __exit ldim_dev_remove(struct platform_device *pdev)
 {
-	int ret = 0;
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
-	if (ldim_drv->dev_index != 0xff) {
-		ldim_dev_remove_driver(ldim_drv->ldev_conf,
-			ldim_drv->dev_index);
-	}
+	if (ldim_drv->dev_index != 0xff)
+		ldim_dev_remove_driver(ldim_drv);
+
 	LDIMPR("%s OK\n", __func__);
-	return ret;
+	return 0;
 }
 
 #ifdef CONFIG_OF

@@ -34,11 +34,6 @@
 #define LD_DATA_MIN     10
 #define LD_DATA_MAX     0xfff
 
-extern int  dirspi_write(struct spi_device *spi, u8 *buf, int len);
-extern int  dirspi_read(struct spi_device *spi, u8 *buf, int len);
-extern void dirspi_start(struct spi_device *spi);
-extern void dirspi_stop(struct spi_device *spi);
-
 #define _VE_LDIM  'C'
 
 /* VPP.ldim IOCTL command list */
@@ -120,8 +115,8 @@ struct aml_ldim_driver_s {
 	void (*test_ctrl)(int flag);
 	struct pinctrl *pin;
 	struct device *dev;
-	struct spi_device *spi;
-	struct spi_board_info *spi_dev;
+	struct spi_device *spi_dev;
+	struct spi_board_info *spi_info;
 };
 
 struct ldim_param_s {
