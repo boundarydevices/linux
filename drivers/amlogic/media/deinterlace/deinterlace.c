@@ -123,7 +123,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-09-28a";
+static const char version_s[] = "2018-11-06a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -5973,11 +5973,14 @@ static bool need_bypass(struct vframe_s *vf)
 
 	if (vf->type & VIDTYPE_PIC)
 		return true;
-#if 1
+#if 0
 	if (vf->type & VIDTYPE_COMPRESS)
 		return true;
 #else
+	/*support G12A and TXLX platform*/
 	if (vf->type & VIDTYPE_COMPRESS) {
+		if (!afbc_is_supported())
+			return true;
 		if ((vf->compHeight > (default_height + 8))
 			|| (vf->compWidth > default_width))
 			return true;

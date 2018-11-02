@@ -951,12 +951,12 @@ static const unsigned int *afbc_get_regbase(void)
 	return &reg_AFBC[afbc_get_decnub()][0];
 }
 
-static bool afbc_is_supported(void)
+bool afbc_is_supported(void)
 {
 	bool ret = false;
 
-	if (is_meson_gxl_cpu()
-		|| is_meson_txlx_cpu()
+	/*currently support txlx and g12a*/
+	if (is_meson_txlx_cpu()
 		|| cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 		ret = true;
 
@@ -2466,10 +2466,11 @@ void initial_di_post_2(int hsize_post, int vsize_post,
 		if (post_write_en) {
 			DI_VSYNC_WR_MPEG_REG(DI_POST_GL_CTRL,
 				0x80000000|line_num_post_frst);
+			/*di if0 mif to di post*/
+			DI_VSYNC_WR_MPEG_REG_BITS(VIUB_MISC_CTRL0, 0, 4, 1);
+			/*di_mif0_en:select mif to di*/
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
-				0, 20, 1);
-			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
-				0, 8, 9);
+				1, 8, 1);
 		} else {
 			DI_VSYNC_WR_MPEG_REG_BITS(VD1_AFBCD0_MISC_CTRL,
 				1, 8, 1);
