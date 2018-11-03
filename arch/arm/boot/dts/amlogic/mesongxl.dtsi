@@ -232,7 +232,8 @@
 		status = "okay";
 	};
 
-	watchdog {
+
+	wdt: watchdog@0xffd0f0d0 {
 		compatible = "amlogic, meson-wdt";
 		status = "okay";
 		default_timeout=<10>;
