@@ -1166,7 +1166,15 @@ int osd_sync_do_hwc(struct do_hwc_cmd_s *hwc_cmd)
 		osd_hw.out_fence_fd = -1;
 	mutex_unlock(&post_fence_list_lock);
 	kthread_queue_work(&buffer_toggle_worker, &buffer_toggle_work);
+	if (get_logo_loaded()) {
+		int logo_index;
 
+		logo_index = osd_get_logo_index();
+		if (logo_index < 0) {
+			osd_log_info("set logo loaded\n");
+			set_logo_loaded();
+		}
+	}
 	osd_log_dbg("osd_sync_do_hwc :out_fence_fd=%d\n",
 		out_fence_fd);
 	return out_fence_fd;

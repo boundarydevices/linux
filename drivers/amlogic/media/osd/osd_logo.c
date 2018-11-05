@@ -250,6 +250,10 @@ int set_osd_logo_freescaler(void)
 	return 0;
 }
 
+int get_logo_loaded(void)
+{
+	return logo_info.loaded;
+}
 
 void set_logo_loaded(void)
 {

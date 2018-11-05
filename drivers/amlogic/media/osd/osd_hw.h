@@ -170,6 +170,7 @@ void osd_update_vsync_hit(void);
 void osd_hw_reset(void);
 void osd_mali_afbc_start(void);
 int logo_work_init(void);
+int get_logo_loaded(void);
 void set_logo_loaded(void);
 int set_osd_logo_freescaler(void);
 void osd_get_display_debug(u32 *osd_display_debug_enable);

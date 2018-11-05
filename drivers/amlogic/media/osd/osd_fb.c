@@ -1410,7 +1410,6 @@ static int malloc_osd_memory(struct fb_info *info)
 		(osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_G12A)) {
 		osd_log_info("---------------clear fb%d memory %p\n",
 			fb_index, fbdev->fb_mem_vaddr);
-		set_logo_loaded();
 		if (fbdev->fb_mem_vaddr)
 			memset(fbdev->fb_mem_vaddr, 0x0, fbdev->fb_len);
 		if (osd_meson_dev.afbc_type && osd_get_afbc(fb_index)) {
@@ -1442,7 +1441,6 @@ static int malloc_osd_memory(struct fb_info *info)
 static int osd_open(struct fb_info *info, int arg)
 {
 	u32 fb_index;
-	int logo_index;
 	struct osd_fb_dev_s *fbdev;
 	struct fb_fix_screeninfo *fix = NULL;
 	int ret = 0;
@@ -1490,13 +1488,14 @@ static int osd_open(struct fb_info *info, int arg)
 		if (!fb_ion_client)
 			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
 	}
-	logo_index = osd_get_logo_index();
-	/* clear osd buffer if not logo layer */
-	if (((logo_index < 0) || (logo_index != fb_index)) ||
-		(osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_AXG) ||
-		(osd_meson_dev.cpu_id >= __MESON_CPU_MAJOR_ID_G12A)) {
-		osd_log_info("set logo loaded\n");
-		set_logo_loaded();
+	if (get_logo_loaded()) {
+		u32 logo_index;
+
+		logo_index = osd_get_logo_index();
+		if (logo_index < 0) {
+			osd_log_info("set logo loaded\n");
+			set_logo_loaded();
+		}
 	}
 	return 0;
 }
