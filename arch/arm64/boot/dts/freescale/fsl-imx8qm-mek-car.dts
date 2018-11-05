@@ -201,3 +201,11 @@
 &i2c0_mipi_dsi0 {
 	status = "disabled";
 };
+
+&jpegdec {
+	status = "disabled";
+};
+
+&jpegenc {
+	status = "disabled";
+};
