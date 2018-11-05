@@ -1277,8 +1277,8 @@
 		Channel_Mask {
 			/*i2s has 4 pins, 8channel, mux output*/
 			Speaker0_Channel_Mask = "i2s_2/3";
-			DAC0_Channel_Mask = "i2s_2/3";
-			DAC1_Channel_Mask = "i2s_2/3";
+			DAC0_Channel_Mask = "i2s_4/5";
+			DAC1_Channel_Mask = "i2s_4/5";
 			EQ_DRC_Channel_Mask = "i2s_2/3";
 			Spdif_samesource_Channel_Mask = "i2s_0/1";
 		};
