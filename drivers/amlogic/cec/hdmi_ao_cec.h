@@ -40,10 +40,6 @@ enum cec_chip_ver {
 #define L_1		1
 #define L_2		2
 #define L_3		3
-
-#define CEC_A	0
-#define CEC_B	1
-
 /*
 #define CEC_FUNC_MASK			0
 #define ONE_TOUCH_PLAY_MASK		1
@@ -516,7 +512,7 @@ int __attribute__((weak))hdmirx_get_connect_info(void)
 #ifdef CONFIG_AMLOGIC_AO_CEC
 unsigned int aocec_rd_reg(unsigned long addr);
 void aocec_wr_reg(unsigned long addr, unsigned long data);
-void cecb_irq_handle(void);
+void cecrx_irq_handle(void);
 void cec_logicaddr_set(int l_add);
 void cec_arbit_bit_time_set(unsigned int bit_set,
 				unsigned int time_set, unsigned int flag);
@@ -525,9 +521,6 @@ void aocec_irq_enable(bool enable);
 extern void dump_reg(void);
 #endif
 extern void cec_dump_info(void);
-extern void cec_hw_reset(unsigned int cec_sel);
-extern void cec_restore_logical_addr(unsigned int cec_sel,
-	unsigned int addr_en);
-extern void cec_logicaddr_add(unsigned int cec_sel, unsigned int l_add);
-extern void cec_clear_all_logical_addr(unsigned int cec_sel);
+extern void cec_hw_reset(void);
+
 #endif	/* __AO_CEC_H__ */

@@ -992,16 +992,15 @@
 		cec_osd_string = "AML_TV"; /* Max Chars: 14    */
 		port_num = <4>;	/*all port number*/
 		/*ee_cec;*/
-		cec_sel = <2>;
 		output = <1>;
 		arc_port_mask = <0x8>;
 		interrupts = <0 205 1
 					0 199 1>;
 		interrupt-names = "hdmi_aocecb","hdmi_aocec";
 		pinctrl-names = "default","hdmitx_aocecb","cec_pin_sleep";
-		pinctrl-0=<&hdmitx_aocec &hdmitx_aocecb1>;
-		pinctrl-1=<&hdmitx_aocec &hdmitx_aocecb1>;
-		pinctrl-2=<&hdmitx_aocec &hdmitx_aocecb1>;
+		pinctrl-0=<&hdmitx_aocec>;
+		pinctrl-1=<&hdmitx_aocecb>;
+		pinctrl-2=<&hdmitx_aocecb>;
 		reg = <0x0 0xFF80023c 0x0 0x4
 		       0x0 0xFF800000 0x0 0x400>;
 		reg-names = "ao_exit","ao";

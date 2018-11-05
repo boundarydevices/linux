@@ -314,7 +314,6 @@ struct cec_global_info_t {
 	unsigned int cec_version;
 	unsigned char power_status;
 	unsigned char log_addr;
-	unsigned int addr_enable;
 	unsigned char menu_status;
 	unsigned char osd_name[16];
 	struct input_dev *remote_cec_dev;	/* cec input device */

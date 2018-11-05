@@ -472,7 +472,7 @@ extern void rx_send_hpd_pulse(void);
 /* irq */
 extern void rx_irq_en(bool enable);
 extern irqreturn_t irq_handler(int irq, void *params);
-extern void cecb_irq_handle(void);
+extern void cecrx_irq_handle(void);
 
 /* user interface */
 extern int pc_mode_en;
