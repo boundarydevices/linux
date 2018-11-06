@@ -86,4 +86,8 @@ extern void canvas_update_addr(u32 index, u32 addr);
 
 extern unsigned int canvas_get_addr(u32 index);
 
+extern unsigned int canvas_get_width(u32 index);
+
+extern unsigned int canvas_get_height(u32 index);
+
 #endif /* CANVAS_H */
