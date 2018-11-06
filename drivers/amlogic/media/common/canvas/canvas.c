@@ -334,6 +334,27 @@ unsigned int canvas_get_addr(u32 index)
 }
 EXPORT_SYMBOL(canvas_get_addr);
 
+unsigned int canvas_get_width(u32 index)
+{
+	struct canvas_device_info *info = &canvas_info;
+
+	if (!CANVAS_VALID(index))
+		return 0;
+
+	return info->canvasPool[index].width;
+}
+EXPORT_SYMBOL(canvas_get_width);
+
+unsigned int canvas_get_height(u32 index)
+{
+	struct canvas_device_info *info = &canvas_info;
+
+	if (!CANVAS_VALID(index))
+		return 0;
+
+	return info->canvasPool[index].height;
+}
+EXPORT_SYMBOL(canvas_get_height);
 /*********************************************************/
 #define to_canvas(kobj) container_of(kobj, struct canvas_s, kobj)
 static ssize_t addr_show(struct canvas_s *canvas, char *buf)
