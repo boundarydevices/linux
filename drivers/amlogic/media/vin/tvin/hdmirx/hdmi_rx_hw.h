@@ -1193,7 +1193,7 @@ extern void rx_set_cur_hpd(uint8_t val);
 extern unsigned int rx_get_hdmi5v_sts(void);
 extern unsigned int rx_get_hpd_sts(void);
 
-extern void cec_hw_reset(void);
+extern void cec_hw_reset(unsigned int cec_sel);
 extern void rx_force_hpd_cfg(uint8_t hpd_level);
 extern void rx_force_rxsense_cfg(uint8_t level);
 extern void rx_force_hpd_rxsense_cfg(uint8_t level);

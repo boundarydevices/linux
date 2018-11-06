@@ -311,7 +311,7 @@ static int hdmi_rx_ctrl_irq_handler(void)
 				hdmirx_rd_dwc(DWC_AUD_CEC_ISTS) &
 				hdmirx_rd_dwc(DWC_AUD_CEC_IEN);
 		if (intr_aud_cec != 0) {
-			cecrx_irq_handle();
+			cecb_irq_handle();
 			hdmirx_wr_dwc(DWC_AUD_CEC_ICLR, intr_aud_cec);
 		}
 	}
