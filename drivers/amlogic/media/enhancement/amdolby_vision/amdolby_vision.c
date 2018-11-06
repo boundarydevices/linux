@@ -1556,8 +1556,7 @@ static int dolby_core1_set(
 				/* vd2 to core1 */
 				0, 17, 1);
 	} else {
-		if (get_cpu_type() ==
-			MESON_CPU_MAJOR_ID_G12A)
+		if (is_meson_g12())
 			VSYNC_WR_MPEG_REG_BITS(
 				DOLBY_PATH_CTRL,
 				/* vd2 to core1 */
