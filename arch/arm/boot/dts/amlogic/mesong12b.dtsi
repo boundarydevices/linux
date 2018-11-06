@@ -249,6 +249,7 @@
 		in_base_func = <0x82000020>;
 		out_base_func = <0x82000021>;
 		reserve_mem_size = <0x00300000>;
+		clear_range = <0x05100000 0x200000>;
 	};
 
 	securitykey {

@@ -53,6 +53,7 @@ void cma_init_clear(struct cma *cma, bool clear)
 	cma->clear_map = clear;
 }
 
+#ifdef CONFIG_ARM64
 static int clear_cma_pagemap2(struct cma *cma)
 {
 	pgd_t *pgd;
@@ -64,8 +65,8 @@ static int clear_cma_pagemap2(struct cma *cma)
 	addr = (unsigned long)pfn_to_kaddr(cma->base_pfn);
 	end  = addr + cma->count * PAGE_SIZE;
 	mm = &init_mm;
-	pgd = pgd_offset(mm, addr);
-	for (; addr < end; addr += PMD_SIZE) {
+	for (; addr < end; addr += SECTION_SIZE) {
+		pgd = pgd_offset(mm, addr);
 		if (pgd_none(*pgd) || pgd_bad(*pgd))
 			break;
 
@@ -77,14 +78,25 @@ static int clear_cma_pagemap2(struct cma *cma)
 		if (pmd_none(*pmd))
 			break;
 
+		pr_debug("%s, addr:%lx, pgd:%p %llx, pmd:%p %llx\n",
+			__func__, addr, pgd, pgd_val(*pgd), pmd, pmd_val(*pmd));
 		pmd_clear(pmd);
 	}
 
 	return 0;
 }
+#endif
 
 int setup_cma_full_pagemap(struct cma *cma)
 {
+#ifdef CONFIG_ARM
+	/*
+	 * arm already create level 3 mmu mapping for lowmem cma.
+	 * And if high mem cma, there is no mapping. So nothing to
+	 * do for arch arm.
+	 */
+	return 0;
+#elif defined(CONFIG_ARM64)
 	struct vm_area_struct vma = {};
 	unsigned long addr, size;
 	int ret;
@@ -102,6 +114,9 @@ int setup_cma_full_pagemap(struct cma *cma)
 		pr_info("%s, remap pte failed:%d, cma:%lx\n",
 			__func__, ret, cma->base_pfn);
 	return 0;
+#else
+	#error "NOT supported ARCH"
+#endif
 }
 
 int cma_mmu_op(struct page *page, int count, bool set)
@@ -113,14 +128,14 @@ int cma_mmu_op(struct page *page, int count, bool set)
 	unsigned long addr, end;
 	struct mm_struct *mm;
 
-	if (!page)
+	if (!page || PageHighMem(page))
 		return -EINVAL;
 
 	addr = (unsigned long)page_address(page);
 	end  = addr + count * PAGE_SIZE;
 	mm = &init_mm;
-	pgd = pgd_offset(mm, addr);
 	for (; addr < end; addr += PAGE_SIZE) {
+		pgd = pgd_offset(mm, addr);
 		if (pgd_none(*pgd) || pgd_bad(*pgd))
 			break;
 
@@ -138,6 +153,15 @@ int cma_mmu_op(struct page *page, int count, bool set)
 		else
 			pte_clear(mm, addr, pte);
 		pte_unmap(pte);
+	#ifdef CONFIG_ARM
+		pr_debug("%s, add:%lx, pgd:%p %x, pmd:%p %x, pte:%p %x\n",
+			__func__, addr, pgd, (int)pgd_val(*pgd),
+			pmd, (int)pmd_val(*pmd), pte, (int)pte_val(*pte));
+	#elif defined(CONFIG_ARM64)
+		pr_debug("%s, add:%lx, pgd:%p %llx, pmd:%p %llx, pte:%p %llx\n",
+			__func__, addr, pgd, pgd_val(*pgd),
+			pmd, pmd_val(*pmd), pte, pte_val(*pte));
+	#endif
 		page++;
 	}
 	return 0;
