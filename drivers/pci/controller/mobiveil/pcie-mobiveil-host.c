@@ -611,10 +611,8 @@ int mobiveil_pcie_host_probe(struct mobiveil_pcie *pcie)
 	bridge->ops = &mobiveil_pcie_ops;
 
 	ret = mobiveil_bringup_link(pcie);
-	if (ret) {
+	if (ret)
 		dev_info(dev, "link bring-up failed\n");
-		return ret;
-	}
 
 	return pci_host_probe(bridge);
 }
