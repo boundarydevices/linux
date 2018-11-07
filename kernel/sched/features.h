@@ -85,3 +85,47 @@ SCHED_FEAT(ATTACH_AGE_LOAD, true)
 SCHED_FEAT(WA_IDLE, true)
 SCHED_FEAT(WA_WEIGHT, true)
 SCHED_FEAT(WA_BIAS, true)
+
+/*
+ * UtilEstimation. Use estimated CPU utilization.
+ */
+SCHED_FEAT(UTIL_EST, true)
+
+/*
+ * Energy aware scheduling. Use platform energy model to guide scheduling
+ * decisions optimizing for energy efficiency.
+ */
+#ifdef CONFIG_DEFAULT_USE_ENERGY_AWARE
+SCHED_FEAT(ENERGY_AWARE, true)
+#else
+SCHED_FEAT(ENERGY_AWARE, false)
+#endif
+
+/*
+ * Energy aware scheduling algorithm choices:
+ * EAS_PREFER_IDLE
+ *   Direct tasks in a schedtune.prefer_idle=1 group through
+ *   the EAS path for wakeup task placement. Otherwise, put
+ *   those tasks through the mainline slow path.
+ * FIND_BEST_TARGET
+ *   Limit the number of placement options for which we calculate
+ *   energy by using heuristics to select 'best idle' and
+ *   'best active' cpu options.
+ * FBT_STRICT_ORDER
+ *   ON: If the target CPU saves any energy, use that.
+ *   OFF: Use whichever of target or backup saves most.
+ */
+SCHED_FEAT(EAS_PREFER_IDLE, true)
+SCHED_FEAT(FIND_BEST_TARGET, true)
+SCHED_FEAT(FBT_STRICT_ORDER, true)
+
+/*
+ * Apply schedtune boost hold to tasks of all sched classes.
+ * If enabled, schedtune will hold the boost applied to a CPU
+ * for 50ms regardless of task activation - if the task is
+ * still running 50ms later, the boost hold expires and schedtune
+ * boost will expire immediately the task stops.
+ * If disabled, this behaviour will only apply to tasks of the
+ * RT class.
+ */
+SCHED_FEAT(SCHEDTUNE_BOOST_HOLD_ALL, false)
