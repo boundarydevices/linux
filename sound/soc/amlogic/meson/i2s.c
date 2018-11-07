@@ -412,13 +412,12 @@ static enum hrtimer_restart aml_i2s_hrtimer_callback(struct hrtimer *timer)
 	struct audio_stream *s = &prtd->s;
 	unsigned int last_ptr, size;
 	unsigned long flags = 0;
-
+	spin_lock_irqsave(&prtd->timer_lock, flags);
 	if (prtd->active == 0) {
 		hrtimer_forward_now(timer, prtd->wakeups_per_second);
+		spin_unlock_irqrestore(&prtd->timer_lock, flags);
 		return HRTIMER_RESTART;
 	}
-
-	spin_lock_irqsave(&prtd->timer_lock, flags);
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		last_ptr = read_i2s_rd_ptr();
 		if (last_ptr < s->last_ptr)
