@@ -91,6 +91,20 @@ static char *event2str[] = {
 	ITEM_NAME(VID_API_ENC_EVENT_RESERVED)
 };
 
+static char *get_event_str(u32 event)
+{
+	if (event >= VID_API_ENC_EVENT_RESERVED)
+		return "UNKNOWN EVENT";
+	return event2str[event];
+}
+
+static char *get_cmd_str(u32 cmdid)
+{
+	if (cmdid >= GTB_ENC_CMD_RESERVED)
+		return "UNKNOWN CMD";
+	return cmd2str[cmdid];
+}
+
 static void vpu_log_event(u_int32 uEvent, u_int32 ctxid)
 {
 	if (uEvent >= VID_API_ENC_EVENT_RESERVED)
@@ -120,6 +134,9 @@ static void count_event(struct vpu_statistic *statistic, u32 event)
 		statistic->event[event]++;
 	else
 		statistic->event[VID_API_ENC_EVENT_RESERVED]++;
+
+	statistic->current_event = event;
+	getrawmonotonic(&statistic->ts_event);
 }
 
 static void count_cmd(struct vpu_statistic *statistic, u32 cmdid)
@@ -131,6 +148,8 @@ static void count_cmd(struct vpu_statistic *statistic, u32 cmdid)
 		statistic->cmd[cmdid]++;
 	else
 		statistic->cmd[GTB_ENC_CMD_RESERVED]++;
+	statistic->current_cmd = cmdid;
+	getrawmonotonic(&statistic->ts_cmd);
 }
 
 static void write_enc_reg(struct vpu_dev *dev, u32 val, off_t reg)
@@ -968,6 +987,7 @@ static int v4l2_ioctl_streamon(struct file *file,
 	ret = vb2_streamon(&q_data->vb2_q,
 			i);
 	ctx->forceStop = false;
+	ctx->firmware_stopped = false;
 	return ret;
 }
 
@@ -1246,6 +1266,10 @@ static bool update_yuv_addr(struct vpu_ctx *ctx, u_int32 uStrIdx)
 
     /* keeps increasing, so just a frame input count rather than a Frame buffer ID */
 		pParamYuvBuffDesc->uFrameID = p_data_req->id;
+		if (test_and_clear_bit(VPU_ENC_STATUS_KEY_FRAME, &ctx->status))
+			pParamYuvBuffDesc->uKeyFrame = 1;
+		else
+			pParamYuvBuffDesc->uKeyFrame = 0;
 		list_del(&p_data_req->list);
 	}
 	up(&This->drv_q_lock);
@@ -1299,9 +1323,6 @@ static void report_stream_done(struct vpu_ctx *ctx,  MEDIAIP_ENC_PIC_INFO *pEncP
 		else
 			break;
 	}
-
-	if (ctx->forceStop)
-		return;
 
 	if (!list_empty(&This->drv_q)) {
 		down(&This->drv_q_lock);
@@ -1797,7 +1818,8 @@ static struct vb2_ops v4l2_qops = {
 
 static void init_vb2_queue(struct queue_data *This, unsigned int type,
 				struct vpu_ctx *ctx,
-				const struct vb2_mem_ops *mem_ops)
+				const struct vb2_mem_ops *mem_ops,
+				gfp_t gfp_flags)
 {
 	struct vb2_queue  *vb2_q = &This->vb2_q;
 	int ret;
@@ -1809,7 +1831,7 @@ static void init_vb2_queue(struct queue_data *This, unsigned int type,
 	// initialize vb2 queue
 	vb2_q->type = type;
 	vb2_q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_DMABUF;
-	vb2_q->gfp_flags = GFP_DMA32;
+	vb2_q->gfp_flags = gfp_flags;
 	vb2_q->ops = &v4l2_qops;
 	vb2_q->drv_priv = This;
 	if (mem_ops)
@@ -1833,13 +1855,14 @@ static void init_queue_data(struct vpu_ctx *ctx)
 	init_vb2_queue(&ctx->q_data[V4L2_SRC],
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
 			ctx,
-			&vb2_dma_contig_memops);
+			&vb2_dma_contig_memops,
+			GFP_DMA32);
 	ctx->q_data[V4L2_SRC].type = V4L2_SRC;
 	sema_init(&ctx->q_data[V4L2_SRC].drv_q_lock, 1);
 	init_vb2_queue(&ctx->q_data[V4L2_DST],
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
 			ctx,
-			&vb2_vmalloc_memops);
+			&vb2_vmalloc_memops, 0);
 	ctx->q_data[V4L2_DST].type = V4L2_DST;
 	sema_init(&ctx->q_data[V4L2_DST].drv_q_lock, 1);
 
@@ -2239,19 +2262,29 @@ static ssize_t show_instance_info(struct device *dev,
 			"\t%40s:%10d;%10d\n", "QP",
 			ctx->actual_param.uInitSliceQP, param->uInitSliceQP);
 
+	num += snprintf(buf + num, PAGE_SIZE - num, "current status:\n");
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			"%10s:%40s;%10ld.%06ld\n", "commond",
+			get_cmd_str(statistic->current_cmd),
+			statistic->ts_cmd.tv_sec,
+			statistic->ts_cmd.tv_nsec / 1000);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			"%10s:%40s;%10ld.%06ld\n", "event",
+			get_event_str(statistic->current_event),
+			statistic->ts_event.tv_sec,
+			statistic->ts_event.tv_nsec / 1000);
+
 	return num;
 }
 
 static int create_instance_file(struct vpu_ctx *ctx)
 {
-	static char name[64];
-
 	if (!ctx || !ctx->dev || !ctx->dev->generic_dev || !ctx->core_dev)
 		return -EINVAL;
 
-	snprintf(name, sizeof(name) - 1, "instance.%d.%d",
+	snprintf(ctx->name, sizeof(ctx->name) - 1, "instance.%d.%d",
 			ctx->core_dev->id, ctx->str_index);
-	ctx->dev_attr_instance.attr.name = name;
+	ctx->dev_attr_instance.attr.name = ctx->name;
 	ctx->dev_attr_instance.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
 	ctx->dev_attr_instance.show = show_instance_info;
 

@@ -133,7 +133,22 @@
 				SC_R_CAAM_JR2_OUT
 				SC_R_CAAM_JR3
 				SC_R_CAAM_JR3_OUT
-				>;
+				/* Camera */
+				SC_R_ISI_CH0
+				SC_R_ISI_CH1
+				SC_R_ISI_CH2
+				SC_R_ISI_CH3
+				SC_R_MIPI_0
+				SC_R_MIPI_0_PWM_0
+				SC_R_MIPI_0_I2C_0
+				SC_R_MIPI_0_I2C_1
+				SC_R_CSI_0
+				SC_R_CSI_0_PWM_0
+				SC_R_CSI_0_I2C_0
+				/* usbotg3 */
+				SC_R_USB_2
+				SC_R_USB_2_PHY
+			>;
 			pads = <
 				/* i2c1_lvds1 */
 				SC_P_LVDS1_I2C1_SCL
@@ -165,8 +180,23 @@
 				SC_P_PCIE_CTRL0_PERST_B
 				SC_P_LVDS1_I2C0_SDA
 				SC_P_USDHC2_RESET_B
+				/*usbotgs typec */
+				SC_P_QSPI1A_SS0_B
+				SC_P_USB_SS3_TC3
+				SC_P_QSPI1A_DATA0
+				/* isl29023 */
+				SC_P_USDHC2_WP
+
 				>;
-			gpios = <&gpio1 13 GPIO_ACTIVE_LOW>, <&gpio4 9 GPIO_ACTIVE_LOW>, <&gpio4 29 GPIO_ACTIVE_LOW>, <&gpio4 27 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio1 13 GPIO_ACTIVE_LOW>,
+				<&gpio1 27 GPIO_ACTIVE_LOW>,
+				<&gpio4 6 GPIO_ACTIVE_LOW>,
+				<&gpio4 9 GPIO_ACTIVE_LOW>,
+				<&gpio4 11 GPIO_ACTIVE_HIGH>,
+				<&gpio4 19 GPIO_ACTIVE_HIGH>,
+				<&gpio4 26 GPIO_ACTIVE_HIGH>,
+				<&gpio4 27 GPIO_ACTIVE_LOW>,
+				<&gpio4 29 GPIO_ACTIVE_LOW>;
 		};
 	};
 
@@ -246,6 +276,12 @@
 		xen,passthrough;
 		reg = <0 0x94400000 0 0x1800000>;
 	};
+
+	gpio4_dummy: gpio4_dummy@0{
+		/* Passthrough gpio4 interrupt to DomU */
+		interrupts = <GIC_SPI 140 IRQ_TYPE_LEVEL_HIGH>;
+		xen,passthrough;
+	};
 };
 
 &mu_rpmsg1 {
@@ -323,7 +359,8 @@
 	mmu-masters = <&dpu2 0x13>, <&gpu_3d1 0x15>,
 		      <&usdhc1 0x12>, <&usbotg1 0x11>,
 		      <&edma01 0x10>, <&cm41 0x09>, <&pciea 0x08>,
-		      <&vpu_decoder 0x7>, <&crypto 0x6>;
+		      <&vpu_decoder 0x7>, <&crypto 0x6>, <&isi_0 0x5>,
+		      <&usbotg3 0x4>;
 };
 
 &lvds_region2 {
@@ -490,6 +527,7 @@
        #stream-id-cells = <1>;
        iommus = <&smmu>;
        xen,passthrough;
+       fsl,sc_rsrc_id = <SC_R_PCIE_A>;
 };
 
 &pcieb {
@@ -500,7 +538,18 @@
 	xen,shared;
 };
 
+&gpt0 {
+	/delete-property/ interrupts;
+	status = "disabled";
+};
+
 &gpio4 {
+	/*
+	 * Use GPT0 interrupt for hack
+	 * This could be removed when interrupt sharing be supported.
+	 */
+	interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
+	xen,domu-irq;
 	xen,shared;
 };
 
@@ -543,6 +592,10 @@
 			<SC_R_VPU_MU_3>;
 };
 
+&vpu_decoder_csr {
+	xen,passthrough;
+};
+
 &vpu_encoder {
        iommus = <&smmu>;
        #stream-id-cells = <1>;
@@ -568,4 +621,123 @@
 
 &caam_sm {
 	xen,passthrough;
+};
+
+&i2c0 {
+	isl29023@44 {
+		xen,passthrough;
+	};
+
+	fxos8700@1e {
+		xen,passthrough;
+	};
+
+	fxas2100x@20 {
+		xen,passthrough;
+	};
+
+	mpl3115@60 {
+		xen,passthrough;
+	};
+
+	typec_ptn5110: typec@50 {
+		xen,passthrough;
+	};
+};
+
+/* Camera */
+&img_pdma_0_lpcg {
+	xen,passthrough;
+};
+
+&img_pdma_1_lpcg {
+	xen,passthrough;
+};
+
+&img_pdma_2_lpcg {
+	xen,passthrough;
+};
+
+&img_pdma_3_lpcg {
+	xen,passthrough;
+};
+
+&mipi_csi_0_lpcg {
+	xen,passthrough;
+};
+
+&img_pxl_link_csi0_lpcg {
+	xen,passthrough;
+};
+
+&gpio0_mipi_csi0 {
+	xen,passthrough;
+};
+
+&irqsteer_csi0 {
+	xen,passthrough;
+};
+
+&isi_0 {
+	xen,passthrough;
+	#stream-id-cells = <1>;
+	iommus = <&smmu>;
+	fsl,sc_rsrc_id = <SC_R_ISI_CH0>,
+			 <SC_R_ISI_CH1>,
+			 <SC_R_ISI_CH2>,
+			 <SC_R_ISI_CH3>;
+};
+
+&isi_1 {
+	xen,passthrough;
+};
+
+&isi_2 {
+	xen,passthrough;
+};
+
+&isi_3 {
+	xen,passthrough;
+};
+
+&mipi_csi_0 {
+	xen,passthrough;
+};
+
+&i2c0_mipi_csi0 {
+	xen,passthrough;
+};
+
+&isi_4 {
+	status = "okay";
+};
+
+&isi_5 {
+	status = "okay";
+};
+
+&isi_6 {
+	status = "okay";
+};
+
+&isi_7 {
+	status = "okay";
+};
+
+&mipi_csi_1 {
+	status = "okay";
+};
+
+&i2c0_mipi_csi1 {
+	status = "okay";
+};
+
+&usbotg3_lpcg {
+	xen,passthrough;
+};
+
+&usbotg3 {
+	xen,passthrough;
+	#stream-id-cells = <1>;
+	iommus = <&smmu>;
 };

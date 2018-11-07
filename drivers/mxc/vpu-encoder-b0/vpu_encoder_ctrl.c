@@ -192,6 +192,15 @@ static int set_display_re_ordering(struct v4l2_ctrl *ctrl)
 	return 0;
 }
 
+static int set_force_key_frame(struct v4l2_ctrl *ctrl)
+{
+	struct vpu_ctx *ctx = v4l2_ctrl_to_ctx(ctrl);
+
+	set_bit(VPU_ENC_STATUS_KEY_FRAME, &ctx->status);
+
+	return 0;
+}
+
 static int add_ctrl_h264_profile(struct vpu_ctx *ctx)
 {
 	static const struct v4l2_ctrl_ops ctrl_h264_profile_ops = {
@@ -204,7 +213,7 @@ static int add_ctrl_h264_profile(struct vpu_ctx *ctx)
 				      V4L2_CID_MPEG_VIDEO_H264_PROFILE,
 				      V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
 				      0xa,
-				      V4L2_MPEG_VIDEO_H264_PROFILE_MAIN);
+				      V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE);
 	if (!ctrl) {
 		vpu_dbg(LVL_ERR, "add ctrl h264 profile fail\n");
 		return -EINVAL;
@@ -246,7 +255,7 @@ static int add_ctrl_bitrate_mode(struct vpu_ctx *ctx)
 				      V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
 				      V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,
 				      0x0,
-				      V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
+				      V4L2_MPEG_VIDEO_BITRATE_MODE_VBR);
 	if (!ctrl) {
 		vpu_dbg(LVL_ERR, "add ctrl bitrate mode fail\n");
 		return -EINVAL;
@@ -453,6 +462,25 @@ static int add_ctrl_display_re_ordering(struct vpu_ctx *ctx)
 	return 0;
 }
 
+static int add_ctrl_force_key_frame(struct vpu_ctx *ctx)
+{
+	static const struct v4l2_ctrl_ops force_key_frame_ops = {
+		.s_ctrl = set_force_key_frame,
+	};
+	struct v4l2_ctrl *ctrl;
+
+	ctrl = v4l2_ctrl_new_std(&ctx->ctrl_handler,
+			&force_key_frame_ops,
+			V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME,
+			0, 0, 0, 0);
+	if (!ctrl) {
+		vpu_dbg(LVL_ERR, "add ctrl force key frame fail\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int vpu_enc_register_ctrls(struct vpu_ctx *ctx)
 {
 	add_ctrl_h264_profile(ctx);
@@ -467,6 +495,7 @@ static int vpu_enc_register_ctrls(struct vpu_ctx *ctx)
 	add_ctrl_b_frame_qp(ctx);
 	add_ctrl_min_buffers_for_output(ctx);
 	add_ctrl_display_re_ordering(ctx);
+	add_ctrl_force_key_frame(ctx);
 
 	return 0;
 }

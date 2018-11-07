@@ -18,6 +18,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-lpddr4-arm2.dtb \
 				 fsl-imx8qm-lpddr4-arm2-dom0.dtb \
 				 fsl-imx8qm-lpddr4-arm2-domu.dtb \
 				 fsl-imx8qm-ddr4-arm2.dtb \
+				 fsl-imx8qm-ddr4-arm2-hdmi.dtb \
 				 fsl-imx8qm-lpddr4-arm2_ca53.dtb \
 				 fsl-imx8qm-lpddr4-arm2_ca72.dtb \
 				 fsl-imx8qm-mek.dtb \
@@ -33,7 +34,10 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-lpddr4-arm2.dtb \
 				 fsl-imx8qm-mek-enet2-tja1100.dtb \
 				 fsl-imx8qm-mek-jdi-wuxga-lvds1-panel.dtb \
 				 fsl-imx8qm-mek-dom0.dtb \
+				 fsl-imx8qm-mek-dom0-dpu2.dtb \
 				 fsl-imx8qm-mek-domu.dtb \
+				 fsl-imx8qm-mek-domu-dpu1.dtb \
+				 fsl-imx8qm-mek-domu-dpu1-hdmi.dtb \
 				 fsl-imx8qm-mek-root.dtb \
 				 fsl-imx8qm-mek-inmate.dtb \
 				 fsl-imx8qm-mek-m4.dtb \
@@ -56,6 +60,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-lpddr4-arm2.dtb \
 dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8qxp-mek.dtb \
 				  fsl-imx8qxp-mek-car.dtb \
+				  fsl-imx8qxp-mek-dsp.dtb \
 				  fsl-imx8qxp-mek-dom0.dtb \
 				  fsl-imx8qxp-mek-csi.dtb \
 				  fsl-imx8qxp-mek-mipi-ov5640.dtb \
@@ -64,6 +69,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8qxp-mek-enet2-tja1100.dtb \
 				  fsl-imx8qxp-mek-dsi-rm67191.dtb \
 				  fsl-imx8qxp-mek-a0.dtb \
+				  fsl-imx8qxp-mek-lcdif.dtb \
 				  fsl-imx8qxp-mek-it6263-lvds0-dual-channel.dtb \
 				  fsl-imx8qxp-mek-it6263-lvds1-dual-channel.dtb \
 				  fsl-imx8qxp-mek-jdi-wuxga-lvds0-panel.dtb \
@@ -79,6 +85,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8qxp-lpddr4-arm2-mlb.dtb \
 				  fsl-imx8qxp-lpddr4-arm2-mqs.dtb \
 				  fsl-imx8qxp-lpddr4-arm2-wm8962.dtb \
+				  fsl-imx8qxp-lpddr4-arm2-dsp.dtb \
 				  fsl-imx8qxp-lpddr4-arm2-dsi-rm67191.dtb \
 				  fsl-imx8qxp-lpddr4-arm2-a0.dtb \
 				  fsl-imx8qxp-ddr3l-val.dtb \

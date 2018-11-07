@@ -239,12 +239,17 @@ struct buffer_addr {
 
 enum {
 	VPU_ENC_STATUS_CONFIGURED = 29,
-	VPU_ENC_STATUS_HANG = 30
+	VPU_ENC_STATUS_HANG = 30,
+	VPU_ENC_STATUS_KEY_FRAME = 31
 };
 
 struct vpu_statistic {
 	unsigned long cmd[GTB_ENC_CMD_RESERVED + 1];
 	unsigned long event[VID_API_ENC_EVENT_RESERVED + 1];
+	unsigned long current_cmd;
+	unsigned long current_event;
+	struct timespec ts_cmd;
+	struct timespec ts_event;
 };
 
 struct vpu_ctx {
@@ -277,6 +282,7 @@ struct vpu_ctx {
 
 	struct vpu_statistic statistic;
 	struct device_attribute dev_attr_instance;
+	char name[64];
 
 	pMEDIAIP_ENC_YUV_BUFFER_DESC yuv_buffer_desc;
 	pBUFFER_DESCRIPTOR_TYPE stream_buffer_desc;
