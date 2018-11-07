@@ -2619,7 +2619,9 @@ gckVIDMEM_NODE_Allocate(
 
     node->metadata.magic = VIV_VIDMEM_METADATA_MAGIC;
     node->metadata.ts_fd = -1;
+#ifdef ANDROID
     node->metadata.ts_address = 0;
+#endif
 
     node->node = VideoNode;
     node->kernel = Kernel;
@@ -3284,6 +3286,9 @@ gckVIDMEM_NODE_WrapUserMemory(
         {
             /* Import dma buf handle. */
             dmabuf = dma_buf_get(fd);
+
+            if (IS_ERR(dmabuf))
+                return PTR_ERR(dmabuf);
 
             Desc->handle = -1;
             Desc->dmabuf = gcmPTR_TO_UINT64(dmabuf);

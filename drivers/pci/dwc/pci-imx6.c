@@ -1649,25 +1649,27 @@ static int imx_pcie_host_init(struct pcie_port *pp)
 		ret = imx_pcie_establish_link(imx_pcie);
 		if (ret < 0)
 			return ret;
-		/*
-		 * Disable the over ride after link up.
-		 * Let the the CLK_REQ# controlled by HW L1SS
-		 * automatically.
-		 */
-		switch (imx_pcie->variant) {
-		case IMX8MQ:
-		case IMX8MM:
-			if (imx_pcie->ctrl_id == 0)
-				val = IOMUXC_GPR14;
-			else
-				val = IOMUXC_GPR16;
+		if (!IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS)) {
+			/*
+			 * Disable the over ride after link up.
+			 * Let the the CLK_REQ# controlled by HW L1SS
+			 * automatically.
+			 */
+			switch (imx_pcie->variant) {
+			case IMX8MQ:
+			case IMX8MM:
+				if (imx_pcie->ctrl_id == 0)
+					val = IOMUXC_GPR14;
+				else
+					val = IOMUXC_GPR16;
 
-			regmap_update_bits(imx_pcie->iomuxc_gpr, val,
+				regmap_update_bits(imx_pcie->iomuxc_gpr, val,
 					IMX8MQ_GPR_PCIE_CLK_REQ_OVERRIDE_EN,
 					0);
-			break;
-		default:
-			break;
+				break;
+			default:
+				break;
+			}
 		}
 
 		if (IS_ENABLED(CONFIG_PCI_MSI))
@@ -2595,6 +2597,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		unsigned long timeout = jiffies + msecs_to_jiffies(300000);
 
 		/* add attributes for device */
+		imx_pcie_attrgroup.attrs = imx_pcie_ep_attrs;
 		ret = sysfs_create_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
 		if (ret)
 			return -EINVAL;
