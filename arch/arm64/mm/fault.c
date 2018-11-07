@@ -662,6 +662,20 @@ static const struct fault_info fault_info[] = {
 	{ do_bad,		SIGBUS,  0,		"unknown 63"			},
 };
 
+#ifdef CONFIG_AMLOGIC_VMAP
+asmlinkage static void die_wrap(const struct fault_info *inf,
+				struct pt_regs *regs, unsigned int esr,
+				unsigned long addr)
+{
+	struct siginfo info;
+
+	info.si_signo = inf->sig;
+	info.si_errno = 0;
+	info.si_code  = inf->code;
+	info.si_addr  = (void __user *)addr;
+	arm64_notify_die("", regs, &info, esr);
+}
+#endif
 /*
  * Dispatch a data abort to the relevant handler.
  */
@@ -669,7 +683,9 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 					 struct pt_regs *regs)
 {
 	const struct fault_info *inf = esr_to_fault_info(esr);
+#ifndef CONFIG_AMLOGIC_VMAP
 	struct siginfo info;
+#endif
 
 	if (!inf->fn(addr, esr, regs))
 		return;
@@ -677,11 +693,15 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 	pr_alert("Unhandled fault: %s (0x%08x) at 0x%016lx\n",
 		 inf->name, esr, addr);
 
+#ifndef CONFIG_AMLOGIC_VMAP
 	info.si_signo = inf->sig;
 	info.si_errno = 0;
 	info.si_code  = inf->code;
 	info.si_addr  = (void __user *)addr;
 	arm64_notify_die("", regs, &info, esr);
+#else
+	die_wrap(inf, regs, esr, addr);
+#endif
 }
 
 asmlinkage void __exception do_el0_irq_bp_hardening(void)

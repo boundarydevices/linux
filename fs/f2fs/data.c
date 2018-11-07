@@ -2243,6 +2243,9 @@ static int f2fs_write_begin(struct file *file, struct address_space *mapping,
 	block_t blkaddr = NULL_ADDR;
 	int err = 0;
 
+#ifdef CONFIG_AMLOGIC_VMAP
+	trace_android_fs_datawrite_wrap(inode, pos, len);
+#else
 	if (trace_android_fs_datawrite_start_enabled()) {
 		char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
 
@@ -2253,6 +2256,7 @@ static int f2fs_write_begin(struct file *file, struct address_space *mapping,
 						 current->pid, path,
 						 current->comm);
 	}
+#endif
 	trace_f2fs_write_begin(inode, pos, len, flags);
 
 	if (f2fs_is_atomic_file(inode) &&
@@ -2413,6 +2417,12 @@ static ssize_t f2fs_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 
 	trace_f2fs_direct_IO_enter(inode, offset, count, rw);
 
+#ifdef CONFIG_AMLOGIC_VMAP
+	if (rw == READ)
+		trace_android_fs_dataread_wrap(inode, offset, count);
+	if (rw == WRITE)
+		trace_android_fs_datawrite_wrap(inode, offset, count);
+#else
 	if (trace_android_fs_dataread_start_enabled() &&
 	    (rw == READ)) {
 		char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
@@ -2435,6 +2445,7 @@ static ssize_t f2fs_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 						 current->pid, path,
 						 current->comm);
 	}
+#endif
 	if (rw == WRITE && whint_mode == WHINT_MODE_OFF)
 		iocb->ki_hint = WRITE_LIFE_NOT_SET;
 

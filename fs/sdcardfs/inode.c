@@ -694,6 +694,153 @@ static int sdcardfs_setattr_wrn(struct dentry *dentry, struct iattr *ia)
 	return -EINVAL;
 }
 
+#ifdef CONFIG_AMLOGIC_VMAP
+/* a save stack version */
+static int sdcardfs_setattr(struct vfsmount *mnt, struct dentry *dentry,
+			    struct iattr *ia)
+{
+	int err;
+	struct dentry *lower_dentry;
+	struct vfsmount *lower_mnt;
+	struct inode *inode;
+	struct inode *lower_inode;
+	struct path lower_path;
+	struct iattr lower_ia;
+	struct dentry *parent;
+	struct inode *tmp;
+	struct dentry *tmp_d;
+	struct sdcardfs_inode_data *top;
+
+	const struct cred *saved_cred = NULL;
+
+	inode = d_inode(dentry);
+	top = top_data_get(SDCARDFS_I(inode));
+
+	if (!top)
+		return -EINVAL;
+
+	tmp   = kzalloc(sizeof(*tmp), GFP_KERNEL);
+	if (!tmp)
+		return -ENOMEM;
+
+	tmp_d = kzalloc(sizeof(*tmp_d), GFP_KERNEL);
+	if (!tmp_d) {
+		kfree(tmp);
+		return -ENOMEM;
+	}
+	/*
+	 * Permission check on sdcardfs inode.
+	 * Calling process should have AID_SDCARD_RW permission
+	 * Since generic_permission only needs i_mode, i_uid,
+	 * i_gid, and i_sb, we can create a fake inode to pass
+	 * this information down in.
+	 *
+	 * The underlying code may attempt to take locks in some
+	 * cases for features we're not using, but if that changes,
+	 * locks must be dealt with to avoid undefined behavior.
+	 *
+	 */
+	copy_attrs(tmp, inode);
+	tmp->i_uid = make_kuid(&init_user_ns, top->d_uid);
+	tmp->i_gid = make_kgid(&init_user_ns, get_gid(mnt, dentry->d_sb, top));
+	tmp->i_mode = (inode->i_mode & S_IFMT)
+		       | get_mode(mnt, SDCARDFS_I(inode), top);
+	tmp->i_size = i_size_read(inode);
+	data_put(top);
+	tmp->i_sb = inode->i_sb;
+	tmp_d->d_inode = tmp;
+
+	/*
+	 * Check if user has permission to change dentry.  We don't check if
+	 * this user can change the lower inode: that should happen when
+	 * calling notify_change on the lower inode.
+	 */
+	/* prepare our own lower struct iattr (with the lower file) */
+	memcpy(&lower_ia, ia, sizeof(lower_ia));
+	/* Allow touch updating timestamps. A previous permission check ensures
+	 * we have write access. Changes to mode, owner, and group are ignored
+	 */
+	ia->ia_valid |= ATTR_FORCE;
+	err = setattr_prepare(tmp_d, ia);
+
+	if (!err) {
+		/* check the Android group ID */
+		parent = dget_parent(dentry);
+		if (!check_caller_access_to_name(d_inode(parent),
+						 &dentry->d_name))
+			err = -EACCES;
+		dput(parent);
+	}
+
+	if (err)
+		goto out_err;
+
+	/* save current_cred and override it */
+	OVERRIDE_CRED(SDCARDFS_SB(dentry->d_sb), saved_cred, SDCARDFS_I(inode));
+
+	sdcardfs_get_lower_path(dentry, &lower_path);
+	lower_dentry = lower_path.dentry;
+	lower_mnt = lower_path.mnt;
+	lower_inode = sdcardfs_lower_inode(inode);
+
+	if (ia->ia_valid & ATTR_FILE)
+		lower_ia.ia_file = sdcardfs_lower_file(ia->ia_file);
+
+	lower_ia.ia_valid &= ~(ATTR_UID | ATTR_GID | ATTR_MODE);
+
+	/*
+	 * If shrinking, first truncate upper level to cancel writing dirty
+	 * pages beyond the new eof; and also if its' maxbytes is more
+	 * limiting (fail with -EFBIG before making any change to the lower
+	 * level).  There is no need to vmtruncate the upper level
+	 * afterwards in the other cases: we fsstack_copy_inode_size from
+	 * the lower level.
+	 */
+	if (ia->ia_valid & ATTR_SIZE) {
+		err = inode_newsize_ok(tmp, ia->ia_size);
+		if (err)
+			goto out;
+		truncate_setsize(inode, ia->ia_size);
+	}
+
+	/*
+	 * mode change is for clearing setuid/setgid bits. Allow lower fs
+	 * to interpret this in its own way.
+	 */
+	if (lower_ia.ia_valid & (ATTR_KILL_SUID | ATTR_KILL_SGID))
+		lower_ia.ia_valid &= ~ATTR_MODE;
+
+	/* notify the (possibly copied-up) lower inode */
+	/*
+	 * Note: we use d_inode(lower_dentry), because lower_inode may be
+	 * unlinked (no inode->i_sb and i_ino==0.  This happens if someone
+	 * tries to open(), unlink(), then ftruncate() a file.
+	 */
+	inode_lock(d_inode(lower_dentry));
+	err = notify_change2(lower_mnt, lower_dentry, &lower_ia,
+			NULL);
+	inode_unlock(d_inode(lower_dentry));
+	if (err)
+		goto out;
+
+	/* get attributes from the lower inode and update derived permissions */
+	sdcardfs_copy_and_fix_attrs(inode, lower_inode);
+
+	/*
+	 * Not running fsstack_copy_inode_size(inode, lower_inode), because
+	 * VFS should update our inode size, and notify_change on
+	 * lower_inode should update its size.
+	 */
+
+out:
+	sdcardfs_put_lower_path(dentry, &lower_path);
+	REVERT_CRED(saved_cred);
+out_err:
+	kfree(tmp);
+	kfree(tmp_d);
+	return err;
+}
+#else
 static int sdcardfs_setattr(struct vfsmount *mnt, struct dentry *dentry, struct iattr *ia)
 {
 	int err;
@@ -826,6 +973,7 @@ out:
 out_err:
 	return err;
 }
+#endif
 
 static int sdcardfs_fillattr(struct vfsmount *mnt, struct inode *inode,
 				struct kstat *lower_stat, struct kstat *stat)

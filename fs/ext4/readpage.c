@@ -117,6 +117,12 @@ ext4_submit_bio_read(struct bio *bio)
 		struct page *first_page = bio->bi_io_vec[0].bv_page;
 
 		if (first_page != NULL) {
+		#ifdef CONFIG_AMLOGIC_VMAP
+			trace_android_fs_dataread_wrap(
+						   first_page->mapping->host,
+						   page_offset(first_page),
+						   bio->bi_iter.bi_size);
+		#else
 			char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
 
 			path = android_fstrace_get_pathname(pathbuf,
@@ -129,6 +135,7 @@ ext4_submit_bio_read(struct bio *bio)
 				current->pid,
 				path,
 				current->comm);
+		#endif
 		}
 	}
 	submit_bio(bio);

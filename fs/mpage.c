@@ -80,6 +80,12 @@ static struct bio *mpage_bio_submit(int op, int op_flags, struct bio *bio)
 		struct page *first_page = bio->bi_io_vec[0].bv_page;
 
 		if (first_page != NULL) {
+		#ifdef CONFIG_AMLOGIC_VMAP
+			trace_android_fs_dataread_wrap(
+						first_page->mapping->host,
+						page_offset(first_page),
+						bio->bi_iter.bi_size);
+		#else
 			char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
 
 			path = android_fstrace_get_pathname(pathbuf,
@@ -92,6 +98,7 @@ static struct bio *mpage_bio_submit(int op, int op_flags, struct bio *bio)
 				current->pid,
 				path,
 				current->comm);
+		#endif
 		}
 	}
 	bio->bi_end_io = mpage_end_io;

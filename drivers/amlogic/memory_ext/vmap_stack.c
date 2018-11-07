@@ -352,11 +352,17 @@ void aml_account_task_stack(struct task_struct *tsk, int account)
 	memcg_kmem_update_page_stat(first_page, MEMCG_KERNEL_STACK_KB,
 				    account * (THREAD_SIZE / 1024));
 	if (time_after(jiffies, vmap_debug_jiff + HZ * 5)) {
+		int ratio, rem;
+
 		vmap_debug_jiff = jiffies;
-		D("KERNEL_STACK:%ld KB, vmap stack:%d KB, cached:%d KB\n",
+		ratio = ((get_vmap_stack_size() << (PAGE_SHIFT - 10)) * 10000) /
+			global_page_state(NR_KERNEL_STACK_KB);
+		rem   = ratio % 100;
+		D("STACK:%ld KB, vmap:%d KB, cached:%d KB, rate:%2d.%02d%%\n",
 			global_page_state(NR_KERNEL_STACK_KB),
 			get_vmap_stack_size() << (PAGE_SHIFT - 10),
-			avmap->cached_pages << (PAGE_SHIFT - 10));
+			avmap->cached_pages << (PAGE_SHIFT - 10),
+			ratio / 100, rem);
 	}
 }
 
