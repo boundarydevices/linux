@@ -111,8 +111,6 @@
 			no-map;
 			reg = <0 0x94400000 0 0x1800000>;
 		};
-
-
 	};
 
 	gic: interrupt-controller@51a00000 {
