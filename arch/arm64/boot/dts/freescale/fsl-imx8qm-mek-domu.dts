@@ -88,9 +88,35 @@
 		 *
 		 */
 
-		rpmsg_reserved: rpmsg@0x90100000 {
+		decoder_boot: decoder_boot@0x84000000 {
 			no-map;
-			reg = <0 0x90100000 0 0x10000>;
+			reg = <0 0x84000000 0 0x2000000>;
+		};
+		encoder_boot: encoder_boot@0x86000000 {
+			no-map;
+			reg = <0 0x86000000 0 0x2000000>;
+		};
+		/*
+		 * CM40 rpmsg memory is still for Dom0, the domu.cfg
+		 * not map 0x90000000 - 0x90100000 to DomU.
+		 */
+		rpmsg_reserved: rpmsg@0x90000000 {
+			no-map;
+			reg = <0 0x90000000 0 0x400000>;
+		};
+
+		decoder_rpc: decoder_rpc@0x90400000 {
+			no-map;
+			reg = <0 0x90400000 0 0x1000000>;
+		};
+		encoder_rpc: encoder_rpc@0x91400000 {
+			no-map;
+			reg = <0 0x91400000 0 0x1000000>;
+		};
+
+		decoder_str: str@0x94400000 {
+			no-map;
+			reg = <0 0x94400000 0 0x1800000>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -114,6 +140,8 @@
 		      <0x0 0x3020000 0 0x1000000>; /* GICR */
 		interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(6) | IRQ_TYPE_LEVEL_HIGH)>;
 		interrupt-parent = <&gic>;
+		linux,phandle = <0xfde8>;
+		phandle = <0xfde8>;
 	};
 
 	timer {
@@ -162,6 +190,51 @@
 			};
 		};
 
+		mu_m0: mu_m0@2d000000 {
+			compatible = "fsl,imx8-mu0-vpu-m0";
+			reg = <0x0 0x2d000000 0x0 0x10000>;
+			interrupts = <GIC_SPI 472 IRQ_TYPE_LEVEL_HIGH>;
+			fsl,vpu_ap_mu_id = <16>;
+			status = "okay";
+		};
+
+		mu1_m0: mu1_m0@2d020000 {
+			compatible = "fsl,imx8-mu1-vpu-m0";
+			reg = <0x0 0x2d020000 0x0 0x10000>;
+			interrupts = <GIC_SPI 473 IRQ_TYPE_LEVEL_HIGH>;
+			fsl,vpu_ap_mu_id = <17>;
+			status = "okay";
+		};
+		mu2_m0: mu2_m0@2d040000 {
+			compatible = "fsl,imx8-mu2-vpu-m0";
+			reg = <0x0 0x2d040000 0x0 0x10000>;
+			interrupts = <GIC_SPI 474 IRQ_TYPE_LEVEL_HIGH>;
+			fsl,vpu_ap_mu_id = <18>;
+			status = "okay";
+		};
+
+		vpu_decoder: vpu_decoder@2c000000 {
+			compatible = "nxp,imx8qm-b0-vpudec", "nxp,imx8qxp-b0-vpudec";
+			boot-region = <&decoder_boot>;
+			rpc-region = <&decoder_rpc>;
+			str-region = <&decoder_str>;
+			reg = <0x0 0x2c000000 0x0 0x1000000>;
+			reg-names = "vpu_regs";
+			power-domains = <&pd_vpu_dec>;
+			status = "disabled";
+		};
+
+		vpu_encoder: vpu_encoder@2d000000 {
+			compatible = "nxp,imx8qm-b0-vpuenc", "nxp,imx8qxp-b0-vpuenc";
+			boot-region = <&encoder_boot>;
+			rpc-region = <&encoder_rpc>;
+			reg = <0x0 0x2d000000 0x0 0x1000000>;
+			reg-names = "vpu_regs";
+			power-domains = <&pd_vpu_enc>;
+			reg-fw-addr = <0x90000 0xa0000>;
+			status = "disabled";
+		};
+
 		clk: clk {
 			compatible = "fsl,imx8qm-clk";
 			#clock-cells = <1>;
@@ -170,6 +243,21 @@
 
 		iomuxc: iomuxc {
 			compatible = "fsl,imx8qm-iomuxc";
+		};
+
+		regulators {
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			epdev_on: fixedregulator@100 {
+				compatible = "regulator-fixed";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-name = "epdev_on";
+				gpio = <&gpio4 9 0>;
+				enable-active-high;
+			};
 		};
 
 		#include "fsl-imx8qm-device.dtsi"
@@ -433,14 +521,39 @@
 /delete-node/ &edma0;
 /delete-node/ &edma2;
 /delete-node/ &edma3;
-/delete-node/ &gpio0;
-/delete-node/ &gpio1;
-/delete-node/ &gpio2;
-/delete-node/ &gpio3;
-/delete-node/ &gpio4;
-/delete-node/ &gpio5;
-/delete-node/ &gpio6;
-/delete-node/ &gpio7;
+&gpio0 {
+	/delete-property/ power-domains;
+	status = "disabled";
+};
+&gpio1 {
+	/delete-property/ power-domains;
+	status = "okay";
+};
+&gpio2 {
+	/delete-property/ power-domains;
+	status = "disabled";
+};
+&gpio3 {
+	/delete-property/ power-domains;
+	status = "disabled";
+};
+&gpio4 {
+	/delete-property/ power-domains;
+	status = "okay";
+};
+&gpio5 {
+	/delete-property/ power-domains;
+	status = "disabled";
+};
+&gpio6 {
+	/delete-property/ power-domains;
+	status = "disabled";
+};
+&gpio7 {
+	/delete-property/ power-domains;
+	status = "disabled";
+};
+
 /delete-node/ &gpio0_mipi_csi0;
 /delete-node/ &gpio0_mipi_csi1;
 /delete-node/ &gpt0;
@@ -529,9 +642,17 @@
 	only-dma-mask32 = <1>;
 };
 
-/delete-node/ &hsio;
 /delete-node/ &ocotp;
-/delete-node/ &pciea;
+&pciea {
+	ext_osc = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pciea>;
+	disable-gpio = <&gpio1 13 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio4 29 GPIO_ACTIVE_LOW>;
+	clkreq-gpio = <&gpio4 27 GPIO_ACTIVE_LOW>;
+	epdev_on-supply = <&epdev_on>;
+	status = "okay";
+};
 /delete-node/ &pcieb;
 /delete-node/ &sata;
 
@@ -542,8 +663,8 @@
 	/*
 	 * 64K for one rpmsg instance:
 	 */
-	vdev-nums = <1>;
-	reg = <0x0 0x90100000 0x0 0x10000>;
+	vdev-nums = <2>;
+	reg = <0x0 0x90100000 0x0 0x20000>;
 	status = "okay";
 };
 
@@ -551,8 +672,8 @@
 	reg = <0x0 0x5d210000 0x0 0x10000>;
 };
 
-/delete-node/ &crypto;
-/delete-node/ &caam_sm;
+/*/delete-node/ &crypto;*/
+/*/delete-node/ &caam_sm;*/
 /*/delete-node/ &sc_pwrkey;*/
 /delete-node/ &wdog;
 /delete-node/ &wu;
@@ -632,6 +753,16 @@
 				SC_P_QSPI1A_DQS_LSIO_GPIO4_IO22		0x00000021
 			>;
 		};
+
+		pinctrl_pciea: pcieagrp{
+			fsl,pins = <
+				SC_P_PCIE_CTRL0_CLKREQ_B_LSIO_GPIO4_IO27	0x04000021
+				SC_P_PCIE_CTRL0_WAKE_B_LSIO_GPIO4_IO28		0x04000021
+				SC_P_PCIE_CTRL0_PERST_B_LSIO_GPIO4_IO29		0x04000021
+				SC_P_LVDS1_I2C0_SDA_LSIO_GPIO1_IO13		0x06000000
+				SC_P_USDHC2_RESET_B_LSIO_GPIO4_IO09		0x04000021
+			>;
+		};
 	};
 };
 
@@ -677,4 +808,14 @@
 			};
 		};
 	};
+};
+
+&vpu_decoder {
+	core_type = <2>;
+	status = "okay";
+};
+
+&vpu_encoder {
+	core_type = <2>;
+	status = "okay";
 };
