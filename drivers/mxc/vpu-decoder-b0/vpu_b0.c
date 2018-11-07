@@ -61,7 +61,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 static void v4l2_vpu_send_cmd(struct vpu_ctx *ctx, uint32_t idx, uint32_t cmdid, uint32_t cmdnum, uint32_t *local_cmddata);
 static bool add_scode(struct vpu_ctx *ctx, u_int32 uStrBufIdx, VPU_PADDING_SCODE_TYPE eScodeType);
 static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx);
-static int reset_vpu_firmware(struct vpu_dev *dev);
+static int swreset_vpu_firmware(struct vpu_dev *dev);
 
 static char *cmd2str[] = {
 	"VID_API_CMD_NULL",   /*0x0*/
@@ -148,6 +148,20 @@ static char *bufstat[] = {
 	"FRAME_RELEASE",
 };
 
+static char *get_event_str(u32 event)
+{
+	if (event >= ARRAY_SIZE(event2str))
+		return "UNKNOWN EVENT";
+	return event2str[event];
+}
+
+static char *get_cmd_str(u32 cmdid)
+{
+	if (cmdid >= ARRAY_SIZE(cmd2str))
+		return "UNKNOWN CMD";
+	return cmd2str[cmdid];
+}
+
 static void vpu_log_event(u_int32 uEvent, u_int32 ctxid)
 {
 	if (uEvent > ARRAY_SIZE(event2str)-1)
@@ -176,6 +190,32 @@ static void vpu_log_buffer_state(struct vpu_ctx *ctx)
 	}
 }
 
+static void count_event(struct vpu_statistic *statistic, u32 event)
+{
+	if (!statistic)
+		return;
+
+	if (event < ARRAY_SIZE(event2str))
+		statistic->event[event]++;
+	else
+		statistic->event[VID_API_EVENT_DEC_CFG_INFO + 1]++;
+
+	statistic->current_event = event;
+	getrawmonotonic(&statistic->ts_event);
+}
+
+static void count_cmd(struct vpu_statistic *statistic, u32 cmdid)
+{
+	if (!statistic)
+		return;
+
+	if (cmdid < ARRAY_SIZE(cmd2str))
+		statistic->cmd[cmdid]++;
+	else
+		statistic->cmd[VID_API_CMD_YUV_READY + 1]++;
+	statistic->current_cmd = cmdid;
+	getrawmonotonic(&statistic->ts_cmd);
+}
 static int find_buffer_id(struct vpu_ctx *ctx, u_int32 addr)
 {
 	struct vb2_data_req *p_data_req;
@@ -1232,6 +1272,7 @@ TB_API_DEC_FMT vpu_format_remap(uint32_t vdec_std)
 static void v4l2_vpu_send_cmd(struct vpu_ctx *ctx, uint32_t idx, uint32_t cmdid, uint32_t cmdnum, uint32_t *local_cmddata)
 {
 	vpu_log_cmd(cmdid, idx);
+	count_cmd(&ctx->statistic, cmdid);
 	mutex_lock(&ctx->dev->cmd_mutex);
 	rpc_send_cmd_buf(&ctx->dev->shared_mem, idx, cmdid, cmdnum, local_cmddata);
 	mutex_unlock(&ctx->dev->cmd_mutex);
@@ -1565,6 +1606,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 	pDEC_RPC_HOST_IFACE pSharedInterface;
 
 	vpu_log_event(uEvent, uStrIdx);
+	count_event(&ctx->statistic, uEvent);
 
 	if (ctx == NULL) {
 		vpu_dbg(LVL_ERR, "receive event: 0x%X after instance released, ignore it\n", uEvent);
@@ -1844,8 +1886,11 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		if (fsrel->eType == MEDIAIP_FRAME_REQ) {
 			p_data_req = &This->vb2_reqs[fsrel->uFSIdx];
 
-			if (ctx->wait_rst_done != true && p_data_req->status != FRAME_READY)
-				vpu_dbg(LVL_ERR, "error: normal release need to set status to FRAME_RELEASE but previous status %s is not FRAME_READY\n", bufstat[p_data_req->status]);
+			if (ctx->wait_rst_done != true && p_data_req->status != FRAME_READY) {
+				vpu_dbg(LVL_WARN, "warning: normal release and previous status %s, frame not for display, queue the buffer to list again\n",
+						bufstat[p_data_req->status]);
+				list_add_tail(&p_data_req->list, &This->drv_q);
+			}
 			p_data_req->status = FRAME_RELEASE;
 		}
 		vpu_dbg(LVL_INFO, "VID_API_EVENT_REL_FRAME_BUFF uFSIdx=%d, eType=%d, size=%ld\n", fsrel->uFSIdx, fsrel->eType, sizeof(MEDIA_PLAYER_FSREL));
@@ -1986,6 +2031,9 @@ static irqreturn_t fsl_vpu_mu_isr(int irq, void *This)
 
 	MU_ReceiveMsg(dev->mu_base_virtaddr, 0, &msg);
 	if (msg == 0xaa) {
+		rpc_init_shared_memory(&dev->shared_mem, dev->m0_rpc_phy - dev->m0_p_fw_space_phy, dev->m0_rpc_virt, SHARED_SIZE);
+		rpc_set_system_cfg_value(dev->shared_mem.pSharedInterface, VPU_REG_BASE);
+
 		MU_sendMesgToFW(dev->mu_base_virtaddr, PRINT_BUF_OFFSET, dev->m0_rpc_phy - dev->m0_p_fw_space_phy + M0_PRINT_OFFSET);
 		MU_sendMesgToFW(dev->mu_base_virtaddr, RPC_BUF_OFFSET, dev->m0_rpc_phy - dev->m0_p_fw_space_phy); //CM0 use relative address
 		MU_sendMesgToFW(dev->mu_base_virtaddr, BOOT_ADDRESS, dev->m0_p_fw_space_phy);
@@ -2049,6 +2097,22 @@ static int vpu_mu_init(struct vpu_dev *dev)
 	return ret;
 }
 
+static int release_hang_instance(struct vpu_dev *dev)
+{
+	u_int32 i;
+
+	if (!dev)
+		return -EINVAL;
+
+	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++)
+		if (!dev->ctx[i]) {
+			kfree(dev->ctx[i]);
+			dev->ctx[i] = NULL;
+		}
+
+	return 0;
+}
+
 /*
  * Add judge to find if it has available path to decode, if all
  * path hang, reset vpu and then get one index
@@ -2067,7 +2131,8 @@ static int vpu_next_free_instance(struct vpu_dev *dev)
 	if (count == VPU_MAX_NUM_STREAMS) {
 		dev->hang_mask = 0;
 		dev->instance_mask = 0;
-		reset_vpu_firmware(dev);
+		swreset_vpu_firmware(dev);
+		release_hang_instance(dev);
 	}
 
 	idx = ffz(dev->instance_mask);
@@ -2373,6 +2438,162 @@ static int vpu_firmware_download(struct vpu_dev *This)
 	return ret;
 }
 
+static ssize_t show_instance_command_info(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct vpu_ctx *ctx;
+	struct vpu_statistic *statistic;
+	int i, size, num = 0;
+
+	ctx = container_of(attr, struct vpu_ctx, dev_attr_instance_command);
+	statistic = &ctx->statistic;
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "command number:\n");
+	for (i = VID_API_CMD_NULL; i < VID_API_CMD_YUV_READY + 1; i++) {
+		size = snprintf(buf + num, PAGE_SIZE - num,
+				"\t%40s(%2d):%16ld\n",
+				cmd2str[i], i, statistic->cmd[i]);
+		num += size;
+	}
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "\t%40s    :%16ld\n",
+			"UNKNOWN COMMAND", statistic->cmd[VID_API_CMD_YUV_READY + 1]);
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "current command:\n");
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			"%10s:%40s;%10ld.%06ld\n", "command",
+			get_cmd_str(statistic->current_cmd),
+			statistic->ts_cmd.tv_sec,
+			statistic->ts_cmd.tv_nsec / 1000);
+
+	return num;
+}
+
+static ssize_t show_instance_event_info(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct vpu_ctx *ctx;
+	struct vpu_statistic *statistic;
+	int i, size, num = 0;
+
+	ctx = container_of(attr, struct vpu_ctx, dev_attr_instance_event);
+	statistic = &ctx->statistic;
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "event number:\n");
+	for (i = VID_API_EVENT_NULL; i < VID_API_EVENT_DEC_CFG_INFO + 1; i++) {
+		size = snprintf(buf + num, PAGE_SIZE - num,
+				"\t%40s(%2d):%16ld\n",
+				event2str[i], i, statistic->event[i]);
+		num += size;
+	}
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "\t%40s    :%16ld\n",
+			"UNKNOWN EVENT",
+			statistic->event[VID_API_EVENT_DEC_CFG_INFO + 1]);
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "current event:\n");
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			"%10s:%40s;%10ld.%06ld\n", "event",
+			get_event_str(statistic->current_event),
+			statistic->ts_event.tv_sec,
+			statistic->ts_event.tv_nsec / 1000);
+
+	return num;
+}
+
+
+static ssize_t show_instance_buffer_info(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct vpu_ctx *ctx;
+	struct vpu_statistic *statistic;
+	struct vb2_data_req *p_data_req;
+	int i, size, num = 0;
+
+	ctx = container_of(attr, struct vpu_ctx, dev_attr_instance_buffer);
+	statistic = &ctx->statistic;
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "buffer status:\n");
+
+	for (i = 0; i < VPU_MAX_BUFFER; i++) {
+		p_data_req = &ctx->q_data[V4L2_DST].vb2_reqs[i];
+		if (p_data_req->vb2_buf != NULL) {
+			size = snprintf(buf + num, PAGE_SIZE - num,
+					"\t%40s(%2d):%16s\n",
+					"buffer", i, bufstat[p_data_req->status]);
+			num += size;
+		}
+	}
+
+	return num;
+}
+
+static int create_instance_command_file(struct vpu_ctx *ctx)
+{
+	snprintf(ctx->command_name, sizeof(ctx->command_name) - 1,
+			"instance%d_command",
+			ctx->str_index);
+	ctx->dev_attr_instance_command.attr.name = ctx->command_name;
+	ctx->dev_attr_instance_command.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
+	ctx->dev_attr_instance_command.show = show_instance_command_info;
+
+	device_create_file(ctx->dev->generic_dev, &ctx->dev_attr_instance_command);
+
+	return 0;
+}
+
+static int create_instance_event_file(struct vpu_ctx *ctx)
+{
+	snprintf(ctx->event_name, sizeof(ctx->event_name) - 1,
+			"instance%d_event",
+			ctx->str_index);
+	ctx->dev_attr_instance_event.attr.name = ctx->event_name;
+	ctx->dev_attr_instance_event.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
+	ctx->dev_attr_instance_event.show = show_instance_event_info;
+
+	device_create_file(ctx->dev->generic_dev, &ctx->dev_attr_instance_event);
+
+	return 0;
+}
+
+static int create_instance_buffer_file(struct vpu_ctx *ctx)
+{
+	snprintf(ctx->buffer_name, sizeof(ctx->buffer_name) - 1,
+			"instance%d_buffer",
+			ctx->str_index);
+	ctx->dev_attr_instance_buffer.attr.name = ctx->buffer_name;
+	ctx->dev_attr_instance_buffer.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
+	ctx->dev_attr_instance_buffer.show = show_instance_buffer_info;
+
+	device_create_file(ctx->dev->generic_dev, &ctx->dev_attr_instance_buffer);
+
+	return 0;
+}
+
+static int create_instance_file(struct vpu_ctx *ctx)
+{
+	if (!ctx || !ctx->dev || !ctx->dev->generic_dev)
+		return -EINVAL;
+
+	create_instance_command_file(ctx);
+	create_instance_event_file(ctx);
+	create_instance_buffer_file(ctx);
+
+	return 0;
+}
+
+static int remove_instance_file(struct vpu_ctx *ctx)
+{
+	if (!ctx || !ctx->dev || !ctx->dev->generic_dev)
+		return -EINVAL;
+
+	device_remove_file(ctx->dev->generic_dev, &ctx->dev_attr_instance_command);
+	device_remove_file(ctx->dev->generic_dev, &ctx->dev_attr_instance_event);
+	device_remove_file(ctx->dev->generic_dev, &ctx->dev_attr_instance_buffer);
+
+	return 0;
+}
+
 static int v4l2_open(struct file *filp)
 {
 	struct video_device *vdev = video_devdata(filp);
@@ -2458,7 +2679,7 @@ static int v4l2_open(struct file *filp)
 		dev->fw_is_ready = true;
 	}
 	mutex_unlock(&dev->dev_mutex);
-
+	create_instance_file(ctx);
 	rpc_set_stream_cfg_value(dev->shared_mem.pSharedInterface, ctx->str_index);
 
 	for (i = 0; i < MAX_DCP_NUM; i++) {
@@ -2569,7 +2790,7 @@ static int v4l2_release(struct file *filp)
 	ctrls_delete_decoder(ctx);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
-
+	remove_instance_file(ctx);
 	for (i = 0; i < MAX_DCP_NUM; i++)
 		if (ctx->dcp_dma_virt[i] != NULL)
 		dma_free_coherent(&ctx->dev->plat_dev->dev,
@@ -2610,13 +2831,15 @@ static int v4l2_release(struct file *filp)
 	mutex_unlock(&ctx->instance_mutex);
 	ctx->stream_buffer_virt = NULL;
 	mutex_lock(&dev->dev_mutex);
-	if (!(dev->hang_mask & (1 << ctx->str_index))) // judge the path is hang or not, if hang, don't clear
-		clear_bit(ctx->str_index, &dev->instance_mask);
-	dev->ctx[ctx->str_index] = NULL;
 	mutex_unlock(&dev->dev_mutex);
 
 	pm_runtime_put_sync(ctx->dev->generic_dev);
-	kfree(ctx);
+
+	if (!(dev->hang_mask & (1 << ctx->str_index))) { // judge the path is hang or not, if hang, don't clear
+		clear_bit(ctx->str_index, &dev->instance_mask);
+		dev->ctx[ctx->str_index] = NULL;
+		kfree(ctx);
+	}
 	return 0;
 }
 
@@ -2700,78 +2923,6 @@ static struct video_device v4l2_videodevice_decoder = {
 	.ioctl_ops = &v4l2_decoder_ioctl_ops,
 	.vfl_dir = VFL_DIR_M2M,
 };
-#if 1
-static int set_vpu_pwr(sc_ipc_t ipcHndl,
-		sc_pm_power_mode_t pm
-		)
-{
-	int rv = -1;
-	sc_err_t sciErr;
-
-	vpu_dbg(LVL_INFO, "%s()\n", __func__);
-	if (!ipcHndl) {
-		vpu_dbg(LVL_ERR, "error: --- set_vpu_pwr no IPC handle\n");
-		goto set_vpu_pwrexit;
-	}
-
-	// Power on or off DEC, ENC MU
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-#ifdef TEST_BUILD
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_DEC, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_DEC,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_ENC, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_ENC,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-#else
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_DEC_0, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_DEC_0,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_ENC_0, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_ENC_0,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-#endif
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_MU_0, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_MU_0,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-
-	rv = 0;
-
-set_vpu_pwrexit:
-	return rv;
-}
-
-static void vpu_set_power(struct vpu_dev *dev, bool on)
-{
-	int ret;
-
-	if (on) {
-		ret = set_vpu_pwr(dev->mu_ipcHandle, SC_PM_PW_MODE_ON);
-		if (ret)
-			vpu_dbg(LVL_ERR, "error: failed to power on\n");
-		pm_runtime_get_sync(dev->generic_dev);
-	} else {
-		pm_runtime_put_sync_suspend(dev->generic_dev);
-		ret = set_vpu_pwr(dev->mu_ipcHandle, SC_PM_PW_MODE_OFF);
-		if (ret)
-			vpu_dbg(LVL_ERR, "error: failed to power off\n");
-	}
-}
-#endif
 
 static void vpu_setup(struct vpu_dev *This)
 {
@@ -2812,23 +2963,17 @@ static void vpu_disable_hw(struct vpu_dev *This)
 	vpu_reset(This);
 }
 
-static int reset_vpu_firmware(struct vpu_dev *dev)
+static int swreset_vpu_firmware(struct vpu_dev *dev)
 {
 	int ret = 0;
 
-	vpu_dbg(LVL_WARN, "RESET: reset_vpu_firmware\n");
-	vpu_set_power(dev, false);
-	usleep_range(1000, 1100);
-	vpu_set_power(dev, true);
-	dev->fw_is_ready = false;
+	vpu_dbg(LVL_WARN, "SWRESET: swreset_vpu_firmware\n");
 	dev->firmware_started = false;
-	vpu_enable_hw(dev);
 
-	rpc_init_shared_memory(&dev->shared_mem, dev->m0_rpc_phy - dev->m0_p_fw_space_phy, dev->m0_rpc_virt, SHARED_SIZE);
-	rpc_set_system_cfg_value(dev->shared_mem.pSharedInterface, VPU_REG_BASE);
+	v4l2_vpu_send_cmd(dev->ctx[0], 0, VID_API_CMD_FIRM_RESET, 0, NULL);
 
-	MU_Init(dev->mu_base_virtaddr);
-	MU_EnableRxFullInt(dev->mu_base_virtaddr, 0);
+	wait_for_completion(&dev->start_cmp);
+	dev->firmware_started = true;
 
 	return ret;
 }
@@ -3143,11 +3288,15 @@ static int vpu_runtime_resume(struct device *dev)
 
 #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
 
-static void v4l2_vpu_send_snapshot(struct vpu_dev *dev)
+static int find_first_available_instance(struct vpu_dev *dev)
 {
-	int i = 0;
-	int strIdx = (~dev->hang_mask) & (dev->instance_mask);
-	/*figure out the first available instance*/
+	int strIdx, i;
+
+	if (!dev)
+		return -EINVAL;
+
+	strIdx = (~dev->hang_mask) & (dev->instance_mask);
+
 	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
 		if (CHECK_BIT(strIdx, i)) {
 			strIdx = i;
@@ -3155,7 +3304,18 @@ static void v4l2_vpu_send_snapshot(struct vpu_dev *dev)
 		}
 	}
 
-	v4l2_vpu_send_cmd(dev->ctx[strIdx], strIdx, VID_API_CMD_SNAPSHOT, 0, NULL);
+	return strIdx;
+}
+
+static void v4l2_vpu_send_snapshot(struct vpu_dev *dev)
+{
+	int strIdx;
+
+	strIdx = find_first_available_instance(dev);
+	if (strIdx >= 0 && strIdx < VPU_MAX_NUM_STREAMS)
+		v4l2_vpu_send_cmd(dev->ctx[strIdx], strIdx, VID_API_CMD_SNAPSHOT, 0, NULL);
+	else
+		vpu_dbg(LVL_WARN, "warning: all path hang, need to reset\n");
 }
 
 static int vpu_suspend(struct device *dev)
@@ -3179,6 +3339,9 @@ static int vpu_suspend(struct device *dev)
 static int vpu_resume(struct device *dev)
 {
 	struct vpu_dev *vpudev = (struct vpu_dev *)dev_get_drvdata(dev);
+	int ret = 0;
+
+	pm_runtime_get_sync(vpudev->generic_dev);
 
 	vpu_enable_hw(vpudev);
 
@@ -3198,10 +3361,13 @@ static int vpu_resume(struct device *dev)
 		/*wait for firmware resotre done*/
 		if (!wait_for_completion_timeout(&vpudev->start_cmp, msecs_to_jiffies(1000))) {
 			vpu_dbg(LVL_ERR, "error: wait for vpu decoder resume done timeout!\n");
-			return -1;
+			ret = -1;
 		}
 	}
-	return 0;
+
+	pm_runtime_put_sync(vpudev->generic_dev);
+
+	return ret;
 }
 
 static const struct dev_pm_ops vpu_pm_ops = {

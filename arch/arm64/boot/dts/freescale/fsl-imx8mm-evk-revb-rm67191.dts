@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 NXP
+ * Copyright 2018 NXP
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -12,15 +12,25 @@
  * GNU General Public License for more details.
  */
 
-#include "fsl-imx8mq-evk.dts"
+#include "fsl-imx8mm-evk-revb.dts"
 
-&hdmi {
-	compatible = "fsl,imx8mq-dp";
-
-	dp-lane-mapping = <0xc6>;
-	dp-link-rate = <0x14>;
-	dp-num-lanes = <0x4>;
-
-	status = "okay";
+&adv_bridge {
+	status = "disabled";
 };
 
+&mipi_dsi {
+	panel@0 {
+		compatible = "raydium,rm67191";
+		reg = <0>;
+		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
+		reset-gpio = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+		dsi-lanes = <4>;
+		video-mode = <2>;	/* 0: burst mode
+					 * 1: non-burst mode with sync event
+					 * 2: non-burst mode with sync pulse
+					 */
+		panel-width-mm = <68>;
+		panel-height-mm = <121>;
+		status = "okay";
+	};
+};
