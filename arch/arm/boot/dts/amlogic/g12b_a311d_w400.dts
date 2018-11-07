@@ -435,7 +435,7 @@
 	amlogic_codec:t9015{
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml_codec_T9015";
-		reg = <0x0 0xFF632000 0x0 0x2000>;
+		reg = <0xFF632000 0x2000>;
 		is_auge_used = <1>; /* meson or auge chipset used */
 		tdmout_index = <1>;
 		status = "okay";
