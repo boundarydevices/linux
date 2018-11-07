@@ -102,7 +102,8 @@ struct event_msg {
 void rpc_init_shared_memory_encoder(struct shared_addr *This,
 		unsigned long long base_phy_addr,
 		void *base_virt_addr,
-		u_int32 total_size);
+		u_int32 total_size,
+		u32 *actual_size);
 void rpc_set_system_cfg_value_encoder(void *Interface, u_int32 regs_base, u_int32 core_id);
 void rpc_send_cmd_buf_encoder(struct shared_addr *This,
 		u_int32 idx,
@@ -124,5 +125,7 @@ pMEDIAIP_ENC_MEM_POOL rpc_get_mem_pool(
 pENC_ENCODING_STATUS rpc_get_encoding_status(
 		struct shared_addr *shared_mem, int index);
 pENC_DSA_STATUS_t rpc_get_dsa_status(struct shared_addr *shared_mem, int index);
+void rpc_set_print_buffer(struct shared_addr *shared_mem,
+				unsigned long print_phy_addr, u32 size);
 
 #endif

@@ -45,8 +45,8 @@ struct mxc_isi_fmt mxc_isi_out_formats[] = {
 	}, {
 		.name		= "RGB24",
 		.fourcc		= V4L2_PIX_FMT_RGB24,
-		.depth		= { 32 },
-		.color		= MXC_ISI_OUT_FMT_XRGB32,
+		.depth		= { 24 },
+		.color		= MXC_ISI_OUT_FMT_RGB32P,
 		.memplanes	= 1,
 		.colplanes	= 1,
 		.mbus_code  = MEDIA_BUS_FMT_RGB888_1X24,
@@ -61,8 +61,8 @@ struct mxc_isi_fmt mxc_isi_out_formats[] = {
 	}, {
 		.name		= "BGR24",
 		.fourcc		= V4L2_PIX_FMT_BGR24,
-		.depth		= { 32 },
-		.color		= MXC_ISI_OUT_FMT_XBGR32,
+		.depth		= { 24 },
+		.color		= MXC_ISI_OUT_FMT_BGR32P,
 		.memplanes	= 1,
 		.colplanes	= 1,
 		.mbus_code  = MEDIA_BUS_FMT_BGR888_1X24,
@@ -98,6 +98,14 @@ struct mxc_isi_fmt mxc_isi_out_formats[] = {
 		.memplanes	= 2,
 		.colplanes	= 2,
 		.mbus_code	= MEDIA_BUS_FMT_YUYV8_1X16,
+	}, {
+		.name		= "YUV444M (Y-U-V)",
+		.fourcc		= V4L2_PIX_FMT_YUV444M,
+		.depth		= { 8, 8, 8 },
+		.color		= MXC_ISI_OUT_FMT_YUV444_3P8P,
+		.memplanes	= 3,
+		.colplanes	= 3,
+		.mbus_code	= MEDIA_BUS_FMT_YUV8_1X24,
 	}
 };
 
@@ -633,6 +641,11 @@ static int mxc_isi_capture_open(struct file *file)
 
 	dev_dbg(&mxc_isi->pdev->dev, "%s, ISI%d\n", __func__, mxc_isi->id);
 
+	if (mxc_isi->is_m2m) {
+		v4l2_err(mxc_isi->v4l2_dev, "%s: ISI channel[%d] is busy\n",
+					__func__, mxc_isi->id);
+		return -EBUSY;
+	}
 	atomic_inc(&mxc_isi->open_count);
 	mxc_isi->is_m2m = 0;
 
@@ -827,6 +840,7 @@ static int mxc_isi_cap_try_fmt_mplane(struct file *file, void *fh,
 static int mxc_isi_source_fmt_init(struct mxc_isi_dev *mxc_isi)
 {
 	struct mxc_isi_frame *src_f = &mxc_isi->isi_cap.src_f;
+	struct mxc_isi_frame *dst_f = &mxc_isi->isi_cap.dst_f;
 	struct v4l2_subdev_format src_fmt;
 	struct media_pad *source_pad;
 	struct v4l2_subdev *src_sd;
@@ -848,9 +862,20 @@ static int mxc_isi_source_fmt_init(struct mxc_isi_dev *mxc_isi)
 
 	src_fmt.pad = source_pad->index;
 	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+	src_fmt.format.width = dst_f->width;
+	src_fmt.format.height = dst_f->height;
+	ret = v4l2_subdev_call(src_sd, pad, set_fmt, NULL, &src_fmt);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		v4l2_err(mxc_isi->v4l2_dev, "%s, set remote fmt fail!\n", __func__);
+		return -EINVAL;
+	}
+
+	memset(&src_fmt, 0, sizeof(src_fmt));
+	src_fmt.pad = source_pad->index;
+	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 	ret = v4l2_subdev_call(src_sd, pad, get_fmt, NULL, &src_fmt);
 	if (ret < 0 && ret != -ENOIOCTLCMD) {
-		v4l2_err(mxc_isi->v4l2_dev, "%s, get remote fmt faile!\n", __func__);
+		v4l2_err(mxc_isi->v4l2_dev, "%s, get remote fmt fail!\n", __func__);
 		return -EINVAL;
 	}
 
@@ -858,6 +883,14 @@ static int mxc_isi_source_fmt_init(struct mxc_isi_dev *mxc_isi)
 	src_f->fmt = mxc_isi_get_src_fmt(&src_fmt);
 
 	set_frame_bounds(src_f, src_fmt.format.width, src_fmt.format.height);
+
+	if (dst_f->width > src_f->width || dst_f->height > src_f->height) {
+		dev_err(&mxc_isi->pdev->dev,
+				"%s: src:(%d,%d), dst:(%d,%d) Not support upscale\n", __func__,
+				src_f->width, src_f->height,
+				dst_f->width, dst_f->height);
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -940,10 +973,18 @@ static int mxc_isi_cap_s_fmt_mplane(struct file *file, void *priv,
 
 	set_frame_bounds(dst_f, pix->width, pix->height);
 
-	mxc_isi_source_fmt_init(mxc_isi);
+	return 0;
+}
+
+static int mxc_isi_config_parm(struct mxc_isi_dev *mxc_isi)
+{
+	int ret;
+
+	ret = mxc_isi_source_fmt_init(mxc_isi);
+	if (ret < 0)
+		return -EINVAL;
 
 	mxc_isi_channel_init(mxc_isi);
-	/* configure mxc isi channel */
 	mxc_isi_channel_config(mxc_isi);
 
 	return 0;
@@ -956,6 +997,10 @@ static int mxc_isi_cap_streamon(struct file *file, void *priv,
 	int ret;
 
 	dev_dbg(&mxc_isi->pdev->dev, "%s\n", __func__);
+
+	ret = mxc_isi_config_parm(mxc_isi);
+	if (ret < 0)
+		return -EINVAL;
 
 	ret = vb2_ioctl_streamon(file, priv, type);
 	mxc_isi_channel_enable(mxc_isi);

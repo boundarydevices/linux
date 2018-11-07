@@ -547,7 +547,7 @@ static void fsl_flexspi_init_lut(struct fsl_flexspi *flex)
 		writel(LUT0(CMD, PAD1, op) | LUT1(ADDR, PAD1, addrlen),
 		       base + FLEXSPI_LUT(lut_base));
 
-		writel(LUT0(DUMMY, PAD1, dm) |
+		writel(LUT0(DUMMY, PAD4, dm) |
 		       LUT1(FSL_READ, PAD4, 0),
 		       base + FLEXSPI_LUT(lut_base + 1));
 	/* DDR Quad I/O Read 	 */
@@ -558,7 +558,7 @@ static void fsl_flexspi_init_lut(struct fsl_flexspi *flex)
 		       base + FLEXSPI_LUT(lut_base));
 
 		writel(LUT0(MODE_DDR, PAD4, 0xff) |
-		       LUT1(DUMMY, PAD1, dm),
+		       LUT1(DUMMY, PAD4, dm),
 		       base + FLEXSPI_LUT(lut_base + 1));
 
 		writel(LUT0(READ_DDR, PAD4, 0) |
@@ -944,7 +944,6 @@ static int fsl_flexspi_init_rpm(struct fsl_flexspi *flex)
 static int fsl_flexspi_nor_setup(struct fsl_flexspi *flex)
 {
 	void __iomem *base = flex->iobase;
-	u32 reg;
 
 	/* Reset the module */
 	writel(FLEXSPI_MCR0_SWRST_MASK, base + FLEXSPI_MCR0);
@@ -959,8 +958,11 @@ static int fsl_flexspi_nor_setup(struct fsl_flexspi *flex)
 	writel(FLEXSPI_MCR0_AHB_TIMEOUT_MASK | FLEXSPI_MCR0_IP_TIMEOUT_MASK |
 	       FLEXSPI_MCR0_OCTCOMB_EN_MASK, base + FLEXSPI_MCR0);
 
-	/* Read the register value */
-	reg = readl(base + FLEXSPI_MCR0);
+	/* Reset the FLASHxCR2 */
+	writel(0, base + FLEXSPI_FLSHA1CR2);
+	writel(0, base + FLEXSPI_FLSHA2CR2);
+	writel(0, base + FLEXSPI_FLSHB1CR2);
+	writel(0, base + FLEXSPI_FLSHB2CR2);
 
 	/* Init the LUT table. */
 	fsl_flexspi_init_lut(flex);

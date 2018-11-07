@@ -58,7 +58,8 @@
 void rpc_init_shared_memory_encoder(struct shared_addr *This,
 		unsigned long long base_phy_addr,
 		void *base_virt_addr,
-		u_int32 total_size)
+		u_int32 total_size,
+		u32 *actual_size)
 {
 	pENC_RPC_HOST_IFACE pSharedInterface;
 	unsigned int phy_addr;
@@ -101,12 +102,12 @@ void rpc_init_shared_memory_encoder(struct shared_addr *This,
 
 	phy_addr += MSG_SIZE;
 
-	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
+	for (i = 0; i < VID_API_NUM_STREAMS; i++) {
 		pSharedInterface->pEncCtrlInterface[i] = phy_addr;
 		phy_addr += sizeof(MEDIA_ENC_API_CONTROL_INTERFACE);
 	}
 
-	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
+	for (i = 0; i < VID_API_NUM_STREAMS; i++) {
 		temp_addr = pSharedInterface->pEncCtrlInterface[i];
 		pEncCtrlInterface = (pMEDIA_ENC_API_CONTROL_INTERFACE)(temp_addr + This->base_offset);
 		pEncCtrlInterface->pEncYUVBufferDesc = phy_addr;
@@ -124,6 +125,8 @@ void rpc_init_shared_memory_encoder(struct shared_addr *This,
 		pEncCtrlInterface->pEncDSAStatus = phy_addr;
 		phy_addr += sizeof(ENC_DSA_STATUS_t);
 	}
+	if (actual_size)
+		*actual_size = phy_addr - base_phy_addr;
 }
 
 void rpc_set_system_cfg_value_encoder(void *Interface, u_int32 regs_base, u_int32 core_id)
@@ -391,4 +394,19 @@ pENC_DSA_STATUS_t rpc_get_dsa_status(struct shared_addr *shared_mem, int index)
 	GET_CTRL_INTERFACE_MEMBER(shared_mem, index, dsa_status, pEncDSAStatus);
 
 	return dsa_status;
+}
+
+void rpc_set_print_buffer(struct shared_addr *shared_mem,
+				unsigned long print_phy_addr, u32 size)
+{
+	pENC_RPC_HOST_IFACE pSharedInterface;
+	pBUFFER_DESCRIPTOR_TYPE debugBufDesc;
+
+
+	pSharedInterface = shared_mem->pSharedInterface;
+	debugBufDesc = &pSharedInterface->DebugBufferDesc;
+
+	debugBufDesc->start = print_phy_addr;
+	debugBufDesc->end = debugBufDesc->start + size;
+	debugBufDesc->wptr = debugBufDesc->rptr = debugBufDesc->start;
 }

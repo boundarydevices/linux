@@ -62,7 +62,7 @@ typedef unsigned int BOOL;
 typedef int int32;
 #define FALSE 0
 #define TRUE 1
-#define VPU_MAX_NUM_STREAMS 3
+#define VPU_MAX_NUM_STREAMS 4
 #define VID_API_NUM_STREAMS 4
 #define VID_API_MAX_BUF_PER_STR 3
 #define VID_API_MAX_NUM_MVC_VIEWS 4
@@ -103,6 +103,7 @@ typedef enum {
 	GTB_ENC_CMD_UNLOCK_SCHEDULER,
 	GTB_ENC_CMD_CONFIGURE_CODEC,
 	GTB_ENC_CMD_DEAD_MARK,
+	GTB_ENC_CMD_FIRM_RESET,
 	GTB_ENC_CMD_RESERVED
 } GTB_ENC_CMD;
 
@@ -117,6 +118,7 @@ typedef enum {
 	VID_API_ENC_EVENT_FRAME_RELEASE,
 	VID_API_ENC_EVENT_PARA_UPD_DONE,
 	VID_API_ENC_EVENT_MEM_REQUEST,
+	VID_API_ENC_EVENT_FIRMWARE_XCPT,
 	VID_API_ENC_EVENT_RESERVED
 } ENC_TB_API_ENC_EVENT;
 
@@ -662,17 +664,18 @@ typedef struct {
 } MEDIA_ENC_API_CONTROL_INTERFACE, *pMEDIA_ENC_API_CONTROL_INTERFACE;
 
 typedef struct {
-	u_int32                                FwExecBaseAddr;
-	u_int32                                FwExecAreaSize;
-	BUFFER_DESCRIPTOR_TYPE                 StreamCmdBufferDesc;
-	BUFFER_DESCRIPTOR_TYPE                 StreamMsgBufferDesc;
-	u_int32                                StreamCmdIntEnable[VID_API_NUM_STREAMS];
-	u_int32                                FWVersion;
-	u_int32                                uMVDFWOffset;
-	u_int32                                uMaxEncoderStreams;
-	u_int32                                pEncCtrlInterface[VID_API_NUM_STREAMS];
-	MEDIAIP_FW_SYSTEM_CONFIG               sSystemCfg;
-	u_int32                                uApiVersion;
+	u_int32					FwExecBaseAddr;
+	u_int32					FwExecAreaSize;
+	BUFFER_DESCRIPTOR_TYPE			StreamCmdBufferDesc;
+	BUFFER_DESCRIPTOR_TYPE			StreamMsgBufferDesc;
+	u_int32					StreamCmdIntEnable[VID_API_NUM_STREAMS];
+	u_int32					FWVersion;
+	u_int32					uMVDFWOffset;
+	u_int32					uMaxEncoderStreams;
+	u_int32					pEncCtrlInterface[VID_API_NUM_STREAMS];
+	MEDIAIP_FW_SYSTEM_CONFIG		sSystemCfg;
+	u_int32					uApiVersion;
+	BUFFER_DESCRIPTOR_TYPE			DebugBufferDesc;
 } ENC_RPC_HOST_IFACE, *pENC_RPC_HOST_IFACE;
 
 #define SCB_XREG_SLV_BASE                               0x00000000

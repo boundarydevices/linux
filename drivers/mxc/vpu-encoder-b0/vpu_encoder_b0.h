@@ -49,14 +49,18 @@ extern unsigned int vpu_dbg_level_encoder;
 #define M0FW_FILENAME "vpu/vpu_fw_imx8_enc.bin"
 #define MMAP_BUF_TYPE_SHIFT 28
 #define MMAP_BUF_TYPE_MASK 0xF0000000
-#define M0_BOOT_SIZE 0x1000000
-#define M0_PRINT_OFFSET 0x500000
-#define SHARED_SIZE 0x00400000
+#define M0_BOOT_SIZE_DEFAULT	0x1000000
+#define M0_BOOT_SIZE_MIN	0x100000
+#define RPC_SIZE_DEFAULT	0x100000
+#define RPC_SIZE_MIN		0x100000
+#define PRINT_SIZE_DEFAULT	0x200000
+#define PRINT_SIZE_MIN		0x200000
 #define MEM_SIZE  0x2800000
 #define YUV_SIZE  0x4000000
 #define STREAM_SIZE 0x300000
 #define VPU_REG_BASE 0x40000000
 #define ENC_REG_BASE 0x2c000000
+#define MU_B0_REG_CONTROL		(0x10000 + 0x24)
 
 #define MIN_BUFFER_COUNT		3
 #define BITRATE_LOW_THRESHOLD		64
@@ -223,15 +227,21 @@ struct vpu_attr {
 	struct vpu_statistic statistic;
 	MEDIAIP_ENC_PARAM param;
 
+	unsigned long ts_start[2];
+
 	bool created;
 };
 
 struct core_device {
-	struct firmware *m0_pfw;
 	void *m0_p_fw_space_vir;
 	u_int32 m0_p_fw_space_phy;
+	u32 fw_buf_size;
+	u32 fw_actual_size;
 	void *m0_rpc_virt;
 	u_int32 m0_rpc_phy;
+	u32 rpc_buf_size;
+	u32 print_buf_size;
+	u32 rpc_actual_size;
 	struct mutex core_mutex;
 	struct mutex cmd_mutex;
 	bool fw_is_ready;
@@ -244,8 +254,9 @@ struct core_device {
 	unsigned int vpu_mu_id;
 	int vpu_mu_init;
 
-	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
-	struct vpu_attr attr[VPU_MAX_NUM_STREAMS];
+	u32 supported_instance_count;
+	struct vpu_ctx *ctx[VID_API_NUM_STREAMS];
+	struct vpu_attr attr[VID_API_NUM_STREAMS];
 	struct shared_addr shared_mem;
 	u32 id;
 	off_t reg_fw_base;
@@ -254,6 +265,8 @@ struct core_device {
 	bool snapshot;
 	bool suspend;
 	bool hang;
+	struct device_attribute core_attr;
+	char name[64];
 };
 
 struct vpu_dev {
@@ -262,14 +275,13 @@ struct vpu_dev {
 	struct video_device *pvpu_encoder_dev;
 	struct platform_device *plat_dev;
 	struct clk *clk_m0;
-	struct firmware *m0_pfw;
 	void __iomem *regs_base;
 	void __iomem *regs_enc;
 	struct mutex dev_mutex;
 	struct core_device core_dev[2];
 	u_int32 plat_type;
 	u_int32 core_num;
-//	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
+	bool hw_enable;
 };
 
 struct buffer_addr {
