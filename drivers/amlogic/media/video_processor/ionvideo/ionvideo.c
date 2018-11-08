@@ -575,6 +575,11 @@ static int vidioc_close(struct file *file)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
 
+	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
+
+	if (dma_q->kthread)
+		vidioc_streamoff(file, NULL, 0);
+
 	IONVID_DBG("vidioc_close!!!!\n");
 	ppmgr2_release(&(dev->ppmgr2_dev));
 	//dprintk(dev, 2, "vidioc_close\n");
