@@ -199,6 +199,8 @@ struct v4l2_frontend {
 	unsigned int tuner_id;
 	struct i2c_client i2c;
 
+	enum v4l2_tuner_type mode;
+
 	void *frontend_priv;
 	void *tuner_priv;
 	void *analog_demod_priv;

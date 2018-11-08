@@ -331,6 +331,14 @@ static int v4l2_frontend_start(struct v4l2_frontend *v4l2_fe)
 }
 
 
+static int v4l2_frontend_check_mode(struct v4l2_frontend *v4l2_fe)
+{
+	if (v4l2_fe->mode != V4L2_TUNER_ANALOG_TV)
+		return -EINVAL;
+
+	return 0;
+}
+
 static int v4l2_set_frontend(struct v4l2_frontend *v4l2_fe,
 		struct v4l2_analog_parameters *params)
 {
@@ -342,6 +350,9 @@ static int v4l2_set_frontend(struct v4l2_frontend *v4l2_fe,
 	struct v4l2_property tvp = { 0 };
 
 	pr_dbg("%s.\n", __func__);
+
+	if (v4l2_frontend_check_mode(v4l2_fe) < 0)
+		return -EINVAL;
 
 	freq_min = fe->ops.tuner_ops.info.frequency_min;
 	freq_max = fe->ops.tuner_ops.info.frequency_max;
@@ -419,10 +430,13 @@ static int v4l2_frontend_set_mode(struct v4l2_frontend *v4l2_fe,
 
 	analog_ops = &v4l2_fe->fe.ops.analog_ops;
 
-	if (params)
+	if (params) {
 		priv_cfg = AML_ATVDEMOD_INIT;
-	else
+		v4l2_fe->mode = V4L2_TUNER_ANALOG_TV;
+	} else {
 		priv_cfg = AML_ATVDEMOD_UNINIT;
+		v4l2_fe->mode = V4L2_TUNER_RF;
+	}
 
 	if (analog_ops && analog_ops->set_config)
 		ret = analog_ops->set_config(&v4l2_fe->fe, &priv_cfg);
