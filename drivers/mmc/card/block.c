@@ -2999,6 +2999,13 @@ static const struct mmc_fixup blk_fixups[] =
 		  MMC_QUIRK_SEC_ERASE_TRIM_BROKEN),
 
 	/*
+	 * On these Toshiba eMMC, performing secure erase or
+	 * secure trim will cost more than 5 minutes.
+	 */
+	MMC_FIXUP("004GA0", CID_MANFID_TOSHIBA, CID_OEMID_ANY, add_quirk_mmc,
+		  MMC_QUIRK_SEC_ERASE_TRIM_BROKEN),
+
+	/*
 	 *  On Some Kingston eMMCs, performing trim can result in
 	 *  unrecoverable data conrruption occasionally due to a firmware bug.
 	 */
