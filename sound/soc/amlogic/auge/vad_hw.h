@@ -1,7 +1,7 @@
 /*
- * sound/soc/amlogic/auge/frhdmirx_hw.h
+ * sound/soc/amlogic/auge/vad_hw.h
  *
- * Copyright (C) 2018 Amlogic, Inc. All rights reserved.
+ * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,11 +14,25 @@
  * more details.
  *
  */
-#ifndef __FRHDMIRX_HW_H__
-#define __FRHDMIRX_HW_H__
+#ifndef __VAD_HW_H__
+#define __VAD_HW_H__
+#include <linux/types.h>
 
-extern void frhdmirx_enable(bool enable);
-extern void frhdmirx_src_select(int src);
-extern void frhdmirx_ctrl(int channels, int src);
-extern unsigned int frhdmirx_get_chan_status_pc(void);
+#include "regs.h"
+#include "iomap.h"
+
+extern void vad_set_ram_coeff(int len, int *params);
+
+
+extern void vad_set_de_params(int len, int *params);
+
+extern void vad_set_pwd(void);
+
+extern void vad_set_cep(void);
+
+extern void vad_set_src(int src);
+
+extern void vad_set_in(void);
+
+extern void vad_set_enable(bool enable);
 #endif

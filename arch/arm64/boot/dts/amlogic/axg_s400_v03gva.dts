@@ -854,6 +854,7 @@
 		unifykey-index-3 = <&keysn_3>;
 		unifykey-index-4 = <&keysn_4>;
 		unifykey-index-5 = <&keysn_5>;
+		unifykey-index-6 = <&keysn_6>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -884,6 +885,11 @@
 		};
 		keysn_5:key_5{
 			key-name = "deviceid";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_6:key_6{
+			key-name = "gva_certs";
 			key-device = "normal";
 			key-permit = "read","write","del";
 		};
@@ -1111,7 +1117,7 @@
 		#sound-dai-cells = <0>;
 		clocks = <&clkaudio CLKID_AUDIO_PDM
 			&clkc CLKID_FCLK_DIV3
-			&clkc CLKID_MPLL3
+			&clkc CLKID_MPLL2
 			&clkaudio CLKID_AUDIO_PDMIN0
 			&clkaudio CLKID_AUDIO_PDMIN1>;
 		clock-names = "gate",

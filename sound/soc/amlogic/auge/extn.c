@@ -613,6 +613,72 @@ static int frhdmirx_set_mode(
 
 	return 0;
 }
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+/* spdif in audio format detect: LPCM or NONE-LPCM */
+struct sppdif_audio_info {
+	unsigned char aud_type;
+	/*IEC61937 package presamble Pc value*/
+	short pc;
+	char *aud_type_str;
+};
+
+static const char *const spdif_audio_type_texts[] = {
+	"LPCM",
+	"AC3",
+	"EAC3",
+	"DTS",
+	"DTS-HD",
+	"TRUEHD",
+	"PAUSE"
+};
+
+static const struct sppdif_audio_info type_texts[] = {
+	{0, 0, "LPCM"},
+	{1, 0x1, "AC3"},
+	{2, 0x15, "EAC3"},
+	{3, 0xb, "DTS-I"},
+	{3, 0x0c, "DTS-II"},
+	{3, 0x0d, "DTS-III"},
+	{3, 0x11, "DTS-IV"},
+	{4, 0, "DTS-HD"},
+	{5, 0x16, "TRUEHD"},
+	{6, 0x103, "PAUSE"},
+	{6, 0x003, "PAUSE"},
+	{6, 0x100, "PAUSE"},
+};
+
+static const struct soc_enum hdmirx_audio_type_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdif_audio_type_texts),
+			spdif_audio_type_texts);
+
+static int hdmiin_check_audio_type(void)
+{
+	int total_num = sizeof(type_texts)/sizeof(struct sppdif_audio_info);
+	int pc = frhdmirx_get_chan_status_pc();
+	int audio_type = 0;
+	int i;
+
+	for (i = 0; i < total_num; i++) {
+		if (pc == type_texts[i].pc) {
+			audio_type = type_texts[i].aud_type;
+			break;
+		}
+	}
+
+	pr_debug("%s audio type:%d\n", __func__, audio_type);
+
+	return audio_type;
+}
+
+static int hdmirx_audio_type_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] =
+		hdmiin_check_audio_type();
+	return 0;
+}
+#endif
 
 static const struct snd_kcontrol_new extn_controls[] = {
 	/* Out */
@@ -664,6 +730,10 @@ static const struct snd_kcontrol_new extn_controls[] = {
 		0,
 		aml_get_atmos_audio_edid,
 		aml_set_atmos_audio_edid),
+	SOC_ENUM_EXT("HDMIIN Audio Type",
+			 hdmirx_audio_type_enum,
+			 hdmirx_audio_type_get_enum,
+			 NULL),
 #endif
 
 };
@@ -723,8 +793,8 @@ static int extn_platform_probe(struct platform_device *pdev)
 	/* Default ARC SRC */
 	p_extn->arc_src = 1;
 
-	/* Default: PAO mode */
-	p_extn->hdmirx_mode = 1;
+	/* Default: SPDIF in mode */
+	p_extn->hdmirx_mode = 0;
 
 	ret = snd_soc_register_component(&pdev->dev,
 				&extn_component,

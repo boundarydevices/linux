@@ -107,6 +107,10 @@ extern void aml_update_tdmin_src(
 	struct aml_audio_controller *actrl,
 	int index, int in_src);
 
+extern void tdmin_set_chnum_en(
+	struct aml_audio_controller *actrl,
+	int index, bool enable);
+
 extern void aml_tdm_set_channel_mask(
 	struct aml_audio_controller *actrl,
 	int stream, int index, int lanes, int mask);
@@ -138,4 +142,12 @@ extern void aml_tdm_clk_pad_select(
 	int tdm_index, int clk_sel);
 
 extern void i2s_to_hdmitx_ctrl(int tdm_index);
+void aml_tdm_mute_playback(
+		struct aml_audio_controller *actrl,
+		int index,
+		bool mute);
+void aml_tdm_mute_capture(
+		struct aml_audio_controller *actrl,
+		int tdm_index,
+		bool mute);
 #endif

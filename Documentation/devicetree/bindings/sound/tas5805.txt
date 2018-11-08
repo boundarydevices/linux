@@ -1,0 +1,18 @@
+Texas Instruments TAS5805 Audio amplifier
+
+The TAS5805 serial control bus communicates through the I2C protocol only. The
+serial bus is also used for periodic codec fault checking/reporting during
+audio playback. For more product information please see the links below:
+
+Required properties:
+
+- compatible : "ti, tas5805"
+- reg : I2C slave address
+
+Example:
+
+tas5805: tas5805@7c {
+        status = "okay";
+        compatible = "ti,tas5805";
+        reg = <0x2d>;
+};

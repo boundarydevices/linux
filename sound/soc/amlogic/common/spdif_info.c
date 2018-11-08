@@ -14,6 +14,7 @@
  * more details.
  *
  */
+#define DEBUG
 #undef pr_fmt
 #define pr_fmt(fmt) "spdif_info: " fmt
 
@@ -111,7 +112,7 @@ void spdif_get_channel_status_info(
 			chsts->chstat1_r = 0xe00;
 		}
 	}
-	pr_info("rate: %d, channel status ch0_l:0x%x, ch0_r:0x%x, ch1_l:0x%x, ch1_r:0x%x\n",
+	pr_debug("rate: %d, channel status ch0_l:0x%x, ch0_r:0x%x, ch1_l:0x%x, ch1_r:0x%x\n",
 		rate,
 		chsts->chstat0_l,
 		chsts->chstat0_r,

@@ -36,12 +36,15 @@ static const DECLARE_TLV_DB_SCALE(mvol_tlv, -10300, 50, 1);
 static const DECLARE_TLV_DB_SCALE(chvol_tlv, -10300, 50, 1);
 
 static const struct snd_kcontrol_new ad82584f_snd_controls[] = {
-	SOC_SINGLE_TLV("Master Volume", MVOL, 0,
+	SOC_SINGLE_TLV("AMP Master Volume", MVOL, 0,
 				0xff, 1, mvol_tlv),
-	SOC_SINGLE_TLV("Ch1 Volume", C1VOL, 0,
+	SOC_SINGLE_TLV("AMP Ch1 Volume", C1VOL, 0,
 				0xff, 1, chvol_tlv),
-	SOC_SINGLE_TLV("Ch2 Volume", C2VOL, 0,
+	SOC_SINGLE_TLV("AMP Ch2 Volume", C2VOL, 0,
 			0xff, 1, chvol_tlv),
+
+	SOC_SINGLE("AMP Ch1 Switch", MUTE, 5, 1, 1),
+	SOC_SINGLE("AMP Ch2 Switch", MUTE, 4, 1, 1),
 };
 
 static int ad82584f_reg_init(struct snd_soc_codec *codec);
@@ -52,7 +55,7 @@ static const
 struct reg_default ad82584f_reg_defaults[AD82584F_REGISTER_COUNT] = {
 	{0x00, 0x00},//##State_Control_1
 	{0x01, 0x04},//##State_Control_2
-	{0x02, 0x00},//##State_Control_3
+	{0x02, 0x30},//##State_Control_3
 	{0x03, 0x4e},//##Master_volume_control
 	{0x04, 0x00},//##Channel_1_volume_control
 	{0x05, 0x00},//##Channel_2_volume_control
@@ -190,7 +193,7 @@ struct reg_default ad82584f_reg_defaults[AD82584F_REGISTER_COUNT] = {
 static const int m_reg_tab[AD82584F_REGISTER_COUNT][2] = {
 	{0x00, 0x00},//##State_Control_1
 	{0x01, 0x04},//##State_Control_2
-	{0x02, 0x00},//##State_Control_3
+	{0x02, 0x30},//##State_Control_3
 	{0x03, 0x4e},//##Master_volume_control
 	{0x04, 0x00},//##Channel_1_volume_control
 	{0x05, 0x00},//##Channel_2_volume_control
@@ -591,6 +594,12 @@ struct ad82584f_priv {
 	struct regmap *regmap;
 	struct snd_soc_codec *codec;
 	struct ad82584f_platform_data *pdata;
+
+	unsigned char Ch1_vol;
+	unsigned char Ch2_vol;
+	unsigned char master_vol;
+	unsigned char mute_val;
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
@@ -809,7 +818,7 @@ static int ad82584f_init(struct snd_soc_codec *codec)
 	ad82584f_set_eq_drc(codec);
 
 	/*unmute,default power-on is mute.*/
-	snd_soc_write(codec, 0x02, 0x00);
+	/*snd_soc_write(codec, 0x02, 0x00);*/
 
 	return 0;
 }
@@ -844,7 +853,15 @@ static int ad82584f_remove(struct snd_soc_codec *codec)
 #ifdef CONFIG_PM
 static int ad82584f_suspend(struct snd_soc_codec *codec)
 {
+	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
+
 	dev_info(codec->dev, "ad82584f_suspend!\n");
+
+	/* save volume */
+	ad82584f->Ch1_vol = snd_soc_read(codec, C1VOL);
+	ad82584f->Ch2_vol = snd_soc_read(codec, C2VOL);
+	ad82584f->master_vol = snd_soc_read(codec, MVOL);
+	ad82584f->mute_val = snd_soc_read(codec, MUTE);
 
 	ad82584f_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
@@ -853,9 +870,17 @@ static int ad82584f_suspend(struct snd_soc_codec *codec)
 
 static int ad82584f_resume(struct snd_soc_codec *codec)
 {
+	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
+
 	dev_info(codec->dev, "ad82584f_resume!\n");
 
 	ad82584f_init(codec);
+
+	snd_soc_write(codec, C1VOL, ad82584f->Ch1_vol);
+	snd_soc_write(codec, C2VOL, ad82584f->Ch2_vol);
+	snd_soc_write(codec, MVOL, ad82584f->master_vol);
+	snd_soc_write(codec, MUTE, ad82584f->mute_val);
+
 	ad82584f_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return 0;

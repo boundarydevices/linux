@@ -13976,6 +13976,14 @@ F: sound/soc/codecs/amlogic/Makefile
 F: sound/soc/codecs/amlogic/tas5707.c
 F: sound/soc/codecs/amlogic/tas5707.h
 
+AMLOGIC Audio codec driver
+M: Yonghao Jiao <yonghao.jiao@amogic.com>
+F: arch/arm/configs/meson32_deconfig
+F: sound/soc/codecs/amlogic/Kconfig
+F: sound/soc/codecs/amlogic/Makefile
+F: sound/soc/codecs/amlogic/tas5805.c
+F: sound/soc/codecs/amlogic/tas5805.h
+
 AMLOGIC AXG ADD DTS FOR A113D SOCKET AND DEVELOPMENT BOARDS
 M:	Yun Cai <yun.cai@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/axg_a113d_skt.dts
@@ -14666,10 +14674,12 @@ AMLOGIC TL1 SOUND CARD
 AMLOGIC TL1 AUDIO EXTERANL INPUT/OUTPUT DRIVERS
 AMLOGIC TL1 NEW EQDRC
 AMLOGIC TL1 MIXER CONTROLS
+AMLOGIC TL1 VAD DRIVER
 M:	Xing Wang <xing.wang@amlogic.com
 F:	arch/arm/boot/dts/amlogic/tl1_pxp.dts
 F:	include/dt-bindings/clock/amlogic,tl1-audio-clk.h
 F:	include/linux/amlogic/media/sound/misc.h
+F:	include/linux/amlogic/major.h
 F:	sound/soc/amlogic/auge/*
 
 AMLOGIC LCD DRIVERS

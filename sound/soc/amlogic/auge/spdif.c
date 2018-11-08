@@ -14,7 +14,7 @@
  * more details.
  *
  */
-
+#define  DEBUG
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/platform_device.h>
@@ -50,6 +50,8 @@
 
 /* for debug */
 /*#define __SPDIFIN_INSERT_CHNUM__*/
+
+/*#define __SPDIFIN_AUDIO_TYPE_HW__*/
 
 struct spdif_chipinfo {
 	unsigned int id;
@@ -236,7 +238,7 @@ static int spdifin_check_audio_type(void)
 		}
 	}
 
-	pr_debug("%s audio type:%d\n", __func__, audio_type);
+	/*pr_debug("%s audio type:%d\n", __func__, audio_type);*/
 
 	return audio_type;
 }
@@ -253,6 +255,7 @@ static int spdifin_audio_type_get_enum(
 
 /* For fake */
 static bool is_mute;
+static int  spdifin_src;
 static int aml_audio_set_spdif_mute(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
@@ -266,6 +269,36 @@ static int aml_audio_get_spdif_mute(struct snd_kcontrol *kcontrol,
 {
 	ucontrol->value.integer.value[0] = is_mute;
 
+	return 0;
+}
+static const char *const spdifin_src_texts[] = {
+	"spdifin pad", "spdifout", "N/A", "HDMIRX"
+};
+
+const struct soc_enum spdifin_src_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdifin_src_texts),
+	spdifin_src_texts);
+
+int spdifin_source_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = spdifin_src;
+	return 0;
+}
+
+int spdifin_source_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int src = ucontrol->value.enumerated.item[0];
+
+	if (src > 3) {
+		pr_err("bad parameter for spdifin src set\n");
+		return -1;
+	}
+	spdifin_set_src(src);
+	spdifin_src = src;
 	return 0;
 }
 
@@ -288,6 +321,10 @@ static const struct snd_kcontrol_new snd_spdif_controls[] = {
 	SOC_SINGLE_BOOL_EXT("Audio spdif mute",
 				0, aml_audio_get_spdif_mute,
 				aml_audio_set_spdif_mute),
+	SOC_ENUM_EXT("Audio spdifin source",
+				spdifin_src_enum,
+				spdifin_source_get_enum,
+				spdifin_source_set_enum),
 
 };
 
@@ -525,11 +562,12 @@ static void spdifin_status_event(struct aml_spdif *p_spdif)
 				pr_info("Event: EXTCON_SPDIFIN_SAMPLERATE, new sample rate:%s\n",
 					spdifin_samplerate[mode + 1]);
 
+#ifdef __SPDIFIN_AUDIO_TYPE_HW__
 				/* resample enable, by hw */
 				if (!spdifin_check_audiotype_by_sw(p_spdif))
 					resample_set(p_spdif->asrc_id,
 						p_spdif->auto_asrc);
-
+#endif
 				extcon_set_state(p_spdif->edev,
 					EXTCON_SPDIFIN_SAMPLERATE, 1);
 			}
@@ -547,16 +585,18 @@ static void spdifin_status_event(struct aml_spdif *p_spdif)
 				EXTCON_SPDIFIN_AUDIOTYPE, 1);
 
 #ifdef __PTM_SPDIF_CLK__
+#ifdef __SPDIFIN_AUDIO_TYPE_HW__
 			/* resample disable, by hw */
 			if (!spdifin_check_audiotype_by_sw(p_spdif))
 				resample_set(p_spdif->asrc_id, 0);
+#endif
 #endif
 		}
 		if (intrpt_status & 0x10)
 			pr_info("Pd changed\n");
 	} else {
 		if (intrpt_status & 0x8)
-			pr_info("CH status changed\n");
+			pr_debug("CH status changed\n");
 
 		if (intrpt_status & 0x10) {
 			int val = spdifin_get_ch_status0to31();
@@ -579,9 +619,11 @@ static void spdifin_status_event(struct aml_spdif *p_spdif)
 		extcon_set_state(p_spdif->edev,
 			EXTCON_SPDIFIN_AUDIOTYPE, 0);
 
+#ifdef __SPDIFIN_AUDIO_TYPE_HW__
 		/* resample to 48k, by hw */
 		if (!spdifin_check_audiotype_by_sw(p_spdif))
 			resample_set(p_spdif->asrc_id, p_spdif->auto_asrc);
+#endif
 	}
 	if (intrpt_status & 0x40)
 		pr_info("valid changed\n");
@@ -818,7 +860,7 @@ static struct snd_pcm_ops aml_spdif_ops = {
 	.mmap      = aml_spdif_mmap,
 };
 
-#define PREALLOC_BUFFER		(32 * 1024)
+#define PREALLOC_BUFFER		(128 * 1024)
 #define PREALLOC_BUFFER_MAX	(256 * 1024)
 static int aml_spdif_new(struct snd_soc_pcm_runtime *rtd)
 {
@@ -827,7 +869,7 @@ static int aml_spdif_new(struct snd_soc_pcm_runtime *rtd)
 
 	p_spdif = (struct aml_spdif *)dev_get_drvdata(dev);
 
-	pr_info("%s spdif_%s, clk continuous:%d\n",
+	pr_debug("%s spdif_%s, clk continuous:%d\n",
 		__func__,
 		(p_spdif->id == 0) ? "a":"b",
 		p_spdif->clk_cont);
@@ -934,9 +976,12 @@ static int aml_dai_spdif_startup(
 			pr_err("Can't enable pcm clk_spdifin clock: %d\n", ret);
 			goto err;
 		}
+
+#ifdef __SPDIFIN_AUDIO_TYPE_HW__
 		/* resample to 48k in default, by hw */
 		if (!spdifin_check_audiotype_by_sw(p_spdif))
 			resample_set(p_spdif->asrc_id, p_spdif->auto_asrc);
+#endif
 	}
 
 	return 0;
@@ -963,10 +1008,11 @@ static void aml_dai_spdif_shutdown(
 		clk_disable_unprepare(p_spdif->sysclk);
 		clk_disable_unprepare(p_spdif->gate_spdifout);
 	} else {
+#ifdef __SPDIFIN_AUDIO_TYPE_HW__
 		/* resample disabled, by hw */
 		if (!spdifin_check_audiotype_by_sw(p_spdif))
 			resample_set(p_spdif->asrc_id, 0);
-
+#endif
 		clk_disable_unprepare(p_spdif->clk_spdifin);
 		clk_disable_unprepare(p_spdif->fixed_clk);
 		clk_disable_unprepare(p_spdif->gate_spdifin);
@@ -1003,7 +1049,9 @@ static int aml_dai_spdif_prepare(
 		}
 
 		fifo_id = aml_frddr_get_fifo_id(fr);
-		aml_frddr_set_format(fr, bit_depth - 1,
+		aml_frddr_set_format(fr,
+			runtime->channels,
+			bit_depth - 1,
 			spdifout_get_frddr_type(bit_depth));
 		aml_frddr_select_dst(fr, dst);
 		aml_frddr_set_fifos(fr, 0x40, 0x20);
@@ -1171,7 +1219,7 @@ static int aml_dai_spdif_hw_params(struct snd_pcm_substream *substream,
 
 static int aml_dai_set_spdif_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 {
-	pr_info("%s , fmt %#x\n", __func__, fmt);
+	pr_debug("%s , fmt %#x\n", __func__, fmt);
 
 	return 0;
 }
@@ -1185,10 +1233,10 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 		int ret;
 
 		if (spdif_is_4x_clk()) {
-			pr_info("set 4x audio clk for 958\n");
+			pr_debug("set 4x audio clk for 958\n");
 			p_spdif->sysclk_freq *= 4;
 		} else {
-			pr_info("set normal 512 fs /4 fs\n");
+			pr_debug("set normal 512 fs /4 fs\n");
 		}
 		mpll_freq = p_spdif->sysclk_freq * mul;
 
@@ -1210,10 +1258,10 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 			pr_err("Can't enable clk_spdifout clock: %d\n", ret);
 			return;
 		}
-		pr_info("\t set spdifout clk:%d, mpll:%d\n",
+		pr_debug("\t set spdifout clk:%d, mpll:%d\n",
 			p_spdif->sysclk_freq,
 			mpll_freq);
-		pr_info("\t get spdifout clk:%lu, mpll:%lu\n",
+		pr_debug("\t get spdifout clk:%lu, mpll:%lu\n",
 			clk_get_rate(p_spdif->clk_spdifout),
 			clk_get_rate(p_spdif->sysclk));
 	}
@@ -1361,7 +1409,7 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 		if (ret < 0)
 			p_spdif->auto_asrc = 0;
 
-		pr_info("SPDIF id %d asrc_id:%d auto_asrc:%d\n",
+		pr_debug("SPDIF id %d asrc_id:%d auto_asrc:%d\n",
 			p_spdif->id,
 			p_spdif->asrc_id,
 			p_spdif->auto_asrc);
@@ -1486,7 +1534,7 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 		dev_warn_once(dev,
 			"check whether to update spdif chipinfo\n");
 
-	pr_info("%s, spdif ID = %u\n", __func__, aml_spdif->id);
+	pr_debug("%s, spdif ID = %u\n", __func__, aml_spdif->id);
 
 	/* get audio controller */
 	node_prt = of_get_parent(node);

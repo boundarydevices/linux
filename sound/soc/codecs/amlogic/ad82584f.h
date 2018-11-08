@@ -1,6 +1,7 @@
 #ifndef _AD82584F_H
 #define _AD82584F_H
 
+#define MUTE                             0x02
 #define MVOL                             0x03
 #define C1VOL                            0x04
 #define C2VOL                            0x05

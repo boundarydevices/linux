@@ -68,6 +68,17 @@ config AMLOGIC_SND_CODEC_PMU3
                 AML PMU3 codec,
                 this codec is internal
 
+config AMLOGIC_SND_SOC_TAS5805
+	bool "Texas Instruments TAS5805 amplifier"
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+		Enable support for Texas Instruments TAS5805 CODEC.
+		Select this if your TAS5805 is connected via an I2C bus.
+                Enable support for Texas Instruments TAS5805 CODEC.
+                Select this if your TAS5805 is connected via an I2C bus.
+
 config AMLOGIC_SND_CODEC_TXLX_ACODEC
 	bool "Amlogic Audio txlx acodec"
 	depends on AMLOGIC_SND_SOC_CODECS

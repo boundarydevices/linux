@@ -29,4 +29,7 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						pwrdet_hw.o \
 						sharebuffer.o \
 						extn.o \
-						frhdmirx_hw.o
+						frhdmirx_hw.o \
+						vad.o \
+						vad_hw.o \
+						vad_dev.o

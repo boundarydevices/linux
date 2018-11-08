@@ -188,6 +188,72 @@ void aml_tdm_fifo_ctrl(
 
 }
 
+static void aml_clk_set_tdmout_by_id(
+		struct aml_audio_controller *actrl,
+		unsigned int tdm_index,
+		unsigned int sclk_sel,
+		unsigned int lrclk_sel,
+		bool sclk_ws_inv,
+		bool is_master,
+		bool binv)
+{
+	unsigned int val_sclk_ws_inv = 0;
+	unsigned int reg = EE_AUDIO_CLK_TDMOUT_A_CTRL + tdm_index;
+
+	/* This is just a copy from previous setting. WHY??? */
+	val_sclk_ws_inv = sclk_ws_inv && is_master;
+	if (val_sclk_ws_inv)
+		aml_audiobus_update_bits(actrl, reg,
+			0x3<<30|1<<28|0xf<<24|0xf<<20,
+			0x3<<30|val_sclk_ws_inv<<28|
+			sclk_sel<<24|lrclk_sel<<20);
+	else
+		aml_audiobus_update_bits(actrl, reg,
+			0x3<<30|1<<29|0xf<<24|0xf<<20,
+			0x3<<30|binv<<29|
+			sclk_sel<<24|lrclk_sel<<20);
+}
+
+static void aml_clk_set_tdmin_by_id(
+		struct aml_audio_controller *actrl,
+		unsigned int tdm_index,
+		unsigned int sclk_sel,
+		unsigned int lrclk_sel)
+{
+	unsigned int reg =
+		EE_AUDIO_CLK_TDMIN_A_CTRL + tdm_index;
+	aml_audiobus_update_bits(actrl,
+		reg,
+		0xff<<20,
+		sclk_sel<<24|lrclk_sel<<20);
+}
+
+static void aml_tdmout_invert_lrclk(
+		struct aml_audio_controller *actrl,
+		unsigned int tdm_index,
+		bool finv)
+{
+	unsigned int off_set =
+		EE_AUDIO_TDMOUT_B_CTRL1 - EE_AUDIO_TDMOUT_A_CTRL1;
+	unsigned int reg_out =
+		EE_AUDIO_TDMOUT_A_CTRL1 + off_set * tdm_index;
+	aml_audiobus_update_bits(actrl,
+		reg_out, 0x1<<28, finv<<28);
+}
+
+static void aml_tdmout_bclk_skew(
+		struct aml_audio_controller *actrl,
+		unsigned int tdm_index,
+		unsigned int bclkout_skew)
+{
+	unsigned int off_set =
+		EE_AUDIO_TDMOUT_B_CTRL0 - EE_AUDIO_TDMOUT_A_CTRL0;
+	unsigned int reg_out =
+		EE_AUDIO_TDMOUT_A_CTRL0 + off_set * tdm_index;
+	aml_audiobus_update_bits(actrl,
+		reg_out, 0x1f<<15, bclkout_skew<<15);
+}
+
 void aml_tdm_set_format(
 	struct aml_audio_controller *actrl,
 	struct pcm_setting *p_config,
@@ -223,24 +289,7 @@ void aml_tdm_set_format(
 	default:
 		return;
 	}
-
-	//TODO: clk tree
-	reg_out = EE_AUDIO_CLK_TDMOUT_A_CTRL + id;
-	reg_in = EE_AUDIO_CLK_TDMIN_A_CTRL + id;
-	aml_audiobus_update_bits(actrl,
-		reg_out,
-		0xff<<20,
-		valb<<24|valf<<20);
-	aml_audiobus_update_bits(actrl,
-		reg_in,
-		0xff<<20,
-		valb<<24|valf<<20);
-
-	if (p_config->sclk_ws_inv)
-		aml_audiobus_update_bits(actrl,
-			reg_out,
-			1 << 28,
-			0 << 28);
+	aml_clk_set_tdmin_by_id(actrl, id, valb, valf);
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
@@ -355,27 +404,11 @@ void aml_tdm_set_format(
 
 	/* TDM out */
 	if (playback_active) {
-
-		reg_out = EE_AUDIO_CLK_TDMOUT_A_CTRL + id;
-		aml_audiobus_update_bits(actrl, reg_out,
-			0x3<<30, 0x3<<30);
-
-		if (p_config->sclk_ws_inv && master_mode)
-			aml_audiobus_update_bits(actrl, reg_out,
-				0x1 << 28,
-				0x1 << 28);
-		else
-			aml_audiobus_update_bits(actrl, reg_out,
-				0x1<<29, binv<<29);
-
-		off_set = EE_AUDIO_TDMOUT_B_CTRL1 - EE_AUDIO_TDMOUT_A_CTRL1;
-		reg_out = EE_AUDIO_TDMOUT_A_CTRL1 + off_set * id;
-		aml_audiobus_update_bits(actrl, reg_out, 0x1<<28, finv<<28);
-
-		off_set = EE_AUDIO_TDMOUT_B_CTRL0 - EE_AUDIO_TDMOUT_A_CTRL0;
-		reg_out = EE_AUDIO_TDMOUT_A_CTRL0 + off_set * id;
-		aml_audiobus_update_bits(actrl, reg_out,
-			0x1f<<15, bclkout_skew<<15);
+		aml_clk_set_tdmout_by_id(actrl,
+			id, valb, valf,
+			p_config->sclk_ws_inv, master_mode, binv);
+		aml_tdmout_invert_lrclk(actrl, id, finv);
+		aml_tdmout_bclk_skew(actrl, id, bclkout_skew);
 	}
 
 	/* TDM in */
@@ -490,6 +523,19 @@ void aml_update_tdmin_src(
 
 	aml_audiobus_update_bits(actrl, reg,
 		0xf << 20, in_src << 20);
+}
+
+void tdmin_set_chnum_en(
+	struct aml_audio_controller *actrl,
+	int index, bool enable)
+{
+	unsigned int reg, offset;
+
+	offset = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
+	reg = EE_AUDIO_TDMIN_A_CTRL + offset * index;
+
+	aml_audiobus_update_bits(actrl, reg,
+		0x1 << 6, enable << 6);
 }
 
 void aml_tdm_set_channel_mask(
@@ -647,3 +693,44 @@ void i2s_to_hdmitx_ctrl(int tdm_index)
 		| tdm_index << 4 /* Bclk_sel */
 	);
 }
+
+void aml_tdm_mute_playback(
+		struct aml_audio_controller *actrl,
+		int tdm_index,
+		bool mute)
+{
+	unsigned int offset, reg;
+	unsigned int mute_mask = 0xffffffff;
+	unsigned int mute_val = 0;
+	int i = 0, lanes = 4;
+
+	if (mute)
+		mute_val = 0xffffffff;
+
+	offset = EE_AUDIO_TDMOUT_B_MUTE0
+			- EE_AUDIO_TDMOUT_A_MUTE0;
+	reg = EE_AUDIO_TDMOUT_A_MUTE0 + offset * tdm_index;
+	for (i = 0; i < lanes; i++)
+		aml_audiobus_update_bits(actrl, reg + i, mute_mask, mute_val);
+}
+
+void aml_tdm_mute_capture(
+		struct aml_audio_controller *actrl,
+		int tdm_index,
+		bool mute)
+{
+	unsigned int offset, reg;
+	unsigned int mute_mask = 0xffffffff;
+	unsigned int mute_val = 0;
+	int i = 0, lanes = 4;
+
+	if (mute)
+		mute_val = 0xffffffff;
+
+	offset = EE_AUDIO_TDMIN_B_MUTE0
+			- EE_AUDIO_TDMIN_A_MUTE0;
+	reg = EE_AUDIO_TDMIN_A_MUTE0 + offset * tdm_index;
+	for (i = 0; i < lanes; i++)
+		aml_audiobus_update_bits(actrl, reg + i, mute_mask, mute_val);
+}
+

@@ -14,6 +14,8 @@
  * more details.
  *
  */
+#define DEBUG
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -82,7 +84,7 @@ static struct audioresample *get_audioresample(int id)
 	p_resample = ((id == 0) ? s_resample_a : s_resample_b);
 
 	if (!p_resample) {
-		pr_info("Not init audio resample\n");
+		pr_debug("Not init audio resample\n");
 		return NULL;
 	}
 
@@ -105,19 +107,6 @@ static int resample_clk_set(struct audioresample *p_resample)
 
 	/* enable clock */
 	if (p_resample->enable) {
-		ret = clk_prepare_enable(p_resample->clk);
-		if (ret) {
-			pr_err("Can't enable resample_clk clock: %d\n",
-				ret);
-			return -EINVAL;
-		}
-
-		ret = clk_prepare_enable(p_resample->sclk);
-		if (ret) {
-			pr_err("Can't enable resample_src clock: %d\n",
-				ret);
-			return -EINVAL;
-		}
 
 		if (p_resample->out_rate) {
 #ifdef __PTM_RESAMPLE_CLK__
@@ -141,6 +130,20 @@ static int resample_clk_set(struct audioresample *p_resample)
 		ret = clk_prepare_enable(p_resample->pll);
 		if (ret) {
 			pr_err("Can't enable pll clock: %d\n", ret);
+			return -EINVAL;
+		}
+
+		ret = clk_prepare_enable(p_resample->sclk);
+		if (ret) {
+			pr_err("Can't enable resample_src clock: %d\n",
+				ret);
+			return -EINVAL;
+		}
+
+		ret = clk_prepare_enable(p_resample->clk);
+		if (ret) {
+			pr_err("Can't enable resample_clk clock: %d\n",
+				ret);
 			return -EINVAL;
 		}
 
@@ -226,7 +229,7 @@ static int resample_get_enum(
 	struct audioresample *p_resample = snd_kcontrol_chip(kcontrol);
 
 	if (!p_resample) {
-		pr_info("audio resample is not init\n");
+		pr_debug("audio resample is not init\n");
 		return 0;
 	}
 
@@ -248,8 +251,9 @@ int resample_set(int id, int index)
 
 	p_resample->asrc_rate_idx = index;
 
-	pr_info("%s %s\n",
+	pr_info("%s resample_%c %s\n",
 		__func__,
+		(id == 0) ? 'a' : 'b',
 		auge_resample_texts[index]);
 
 	if (audio_resample_set(p_resample, (bool)index, resample_rate))
@@ -274,7 +278,7 @@ static int resample_set_enum(
 	int index = ucontrol->value.enumerated.item[0];
 
 	if (!p_resample) {
-		pr_info("audio resample is not init\n");
+		pr_debug("audio resample is not init\n");
 		return 0;
 	}
 
@@ -355,7 +359,7 @@ static int resample_module_get_enum(
 	struct audioresample *p_resample =  snd_kcontrol_chip(kcontrol);
 
 	if (!p_resample) {
-		pr_info("audio resample is not init\n");
+		pr_debug("audio resample is not init\n");
 		return 0;
 	}
 
@@ -371,7 +375,7 @@ static int resample_module_set_enum(
 	struct audioresample *p_resample =  snd_kcontrol_chip(kcontrol);
 
 	if (!p_resample) {
-		pr_info("audio resample is not init\n");
+		pr_debug("audio resample is not init\n");
 		return 0;
 	}
 
@@ -582,4 +586,3 @@ static struct platform_driver resample_platform_driver = {
 	.probe  = resample_platform_probe,
 };
 module_platform_driver(resample_platform_driver);
-

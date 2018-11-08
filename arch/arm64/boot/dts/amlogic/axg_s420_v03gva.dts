@@ -668,13 +668,14 @@
 		compatible = "amlogic, unifykey";
 		status = "ok";
 
-		unifykey-num = <6>;
+		unifykey-num = <7>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
 		unifykey-index-3 = <&keysn_3>;
 		unifykey-index-4 = <&keysn_4>;
 		unifykey-index-5 = <&keysn_5>;
+		unifykey-index-6 = <&keysn_6>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -705,6 +706,11 @@
 		};
 		keysn_5:key_5{
 			key-name = "deviceid";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_6:key_6{
+			key-name = "gva_certs";
 			key-device = "normal";
 			key-permit = "read","write","del";
 		};
@@ -934,7 +940,7 @@
 		#sound-dai-cells = <0>;
 		clocks = <&clkaudio CLKID_AUDIO_PDM
 			&clkc CLKID_FCLK_DIV3
-			&clkc CLKID_MPLL3
+			&clkc CLKID_MPLL2
 			&clkaudio CLKID_AUDIO_PDMIN0
 			&clkaudio CLKID_AUDIO_PDMIN1>;
 		clock-names = "gate",
@@ -990,6 +996,26 @@
 		/*datalb-lane-mask-in = <0 1>;*/
 		datalb_chmask = <0x3>;
 
+		status = "okay";
+	};
+
+	audioresample: resample {
+		compatible = "amlogic, axg-resample";
+		clocks = <&clkc CLKID_MPLL3
+				&clkaudio CLKID_AUDIO_MCLK_F
+				&clkaudio CLKID_AUDIO_RESAMPLE_CTRL>;
+		clock-names = "resample_pll", "resample_src", "resample_clk";
+		/*same with toddr_src
+		 *	TDMIN_A,
+		 *	TDMIN_B,
+		 *	TDMIN_C,
+		 *	SPDIFIN,
+		 *	PDMIN,
+		 *	NONE,
+		 *	TDMIN_LB,
+		 *	LOOPBACK,
+		 */
+		resample_module = <3>;
 		status = "okay";
 	};
 }; /* end of audiobus */

@@ -14,6 +14,8 @@
  * more details.
  *
  */
+#define DEBUG
+
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -192,7 +194,7 @@ void audio_locker_set(int enable)
 int audio_locker_get(void)
 {
 	if (!s_locker) {
-		pr_err("audio locker is not init\n");
+		pr_debug("audio locker is not init\n");
 		return -1;
 	}
 

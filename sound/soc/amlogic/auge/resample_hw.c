@@ -70,8 +70,8 @@ int resample_init(int id, int input_sr)
 	else
 		pr_err("unsupport input sample rate:%d\n", input_sr);
 
-	pr_info("resample id:%d, clk_rate = %u, input_sr = %d, Avg_cnt_init = %u\n",
-		id,
+	pr_info("resample id:%c, clk_rate = %u, input_sr = %d, Avg_cnt_init = %u\n",
+		(id == 0) ? 'a' : 'b',
 		clk_rate,
 		input_sr,
 		Avg_cnt_init);

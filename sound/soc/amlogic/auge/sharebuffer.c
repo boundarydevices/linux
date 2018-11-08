@@ -34,7 +34,9 @@ static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 
 	spdifout_samesource_set(spdif_id,
 		aml_frddr_get_fifo_id(fr),
-		bit_depth, true);
+		bit_depth,
+		runtime->channels,
+		true);
 
 	/* spdif to hdmitx */
 	spdifout_to_hdmitx_ctrl(spdif_id);
@@ -59,7 +61,9 @@ static int sharebuffer_spdifout_free(struct snd_pcm_substream *substream,
 	if (spdif_id != 1)
 		spdifout_samesource_set(spdif_id,
 			aml_frddr_get_fifo_id(fr),
-			bit_depth, false);
+			bit_depth,
+			runtime->channels,
+			false);
 
 	return 0;
 }
@@ -90,7 +94,8 @@ int sharebuffer_prepare(struct snd_pcm_substream *substream,
 		// TODO: same with tdm
 	} else if (samesource_sel < 5) {
 		/* same source with spdif a/b */
-		sharebuffer_spdifout_prepare(substream, fr, samesource_sel - 3);
+		sharebuffer_spdifout_prepare(substream,
+			fr, samesource_sel - 3);
 	}
 
 	/* frddr, share buffer, src_sel1 */

@@ -74,7 +74,7 @@ extern void aml_spdifout_get_aed_info(int spdifout_id,
 extern void spdifout_to_hdmitx_ctrl(int spdif_index);
 
 extern void spdifout_samesource_set(int spdif_index, int fifo_id,
-	int bitwidth, bool is_enable);
+	int bitwidth, int channels, bool is_enable);
 extern void spdifout_enable(int spdif_id, bool is_enable);
 
 extern int spdifin_get_sample_rate(void);
@@ -88,4 +88,5 @@ extern void spdif_set_channel_status_info(
 
 extern void spdifout_play_with_zerodata(unsigned int spdif_id);
 extern void spdifout_play_with_zerodata_free(unsigned int spdif_id);
+extern void spdifin_set_src(int src);
 #endif

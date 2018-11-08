@@ -84,7 +84,11 @@ void frhdmirx_ctrl(int channels, int src)
 	/* PAO mode */
 	if (src) {
 		audiobus_write(EE_AUDIO_FRHDMIRX_CTRL0,
-			0x1 << 23 | 0x1 << 22 | 0x1 << 7);
+			0x1 << 23 | /* slect pao mode */
+			0x1 << 22 | /* capture input by fall edge*/
+			0x1 << 7  | /* start sending ch num info out */
+			0x1 << 8  | /* start detect PAPB */
+			0x1 << 6    /* chan status sel: pao pc/pd value */);
 		return;
 	}
 
@@ -101,7 +105,7 @@ void frhdmirx_ctrl(int channels, int src)
 		0x1 << 30 | /* chnum_sel */
 		lane_mask << 24 | /* chnum_sel */
 		0x1 << 22 | /* clk_inv */
-		0x0 << 11 /* req_sel, Sync 4 spdifin by which */
+		0x0 << 11  /* req_sel, Sync 4 spdifin by which */
 		);
 
 	/* nonpcm2pcm_th */
@@ -110,3 +114,14 @@ void frhdmirx_ctrl(int channels, int src)
 	/* enable irq bits */
 	frhdmirx_enable_irq_bits(channels, src);
 }
+
+unsigned int frhdmirx_get_chan_status_pc(void)
+{
+	unsigned int val;
+
+	val = audiobus_read(EE_AUDIO_FRHDMIRX_STAT1);
+	return (val >> 16) & 0xff;
+}
+
+
+

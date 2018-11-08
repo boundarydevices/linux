@@ -167,6 +167,7 @@
 		reg = <0xff632000 0x1c>;
 		tdmout_index = <0>;
 		tdmin_index = <0>;
+		dat1_ch_sel = <1>;
 	};
 
 	auge_sound {
@@ -178,7 +179,7 @@
 		aml-audio-card,dai-link@0 {
 			format = "i2s";
 			mclk-fs = <256>;
-			//continuous-clock;
+			continuous-clock;
 			//bitclock-inversion;
 			//frame-inversion;
 			/* master mode */
@@ -937,7 +938,7 @@
 
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
 				&clkc CLKID_MPLL0
-				&clkc CLKID_MPLL1>;
+				&clkc CLKID_MPLL0>;
 		clock-names = "mclk", "clk_srcpll", "samesource_sysclk";
 
 		pinctrl-names = "tdm_pins";
@@ -1024,7 +1025,7 @@
 		 * 7: "Enable:192K",
 		 */
 		asrc_id = <0>;
-		auto_asrc = <0>;
+		auto_asrc = <3>;
 
 		status = "okay";
 	};
@@ -1107,8 +1108,8 @@
 
 	asrca: resample@0 {
 		compatible = "amlogic, tl1-resample-a";
-		clocks = <&clkc CLKID_MPLL3
-				&clkaudio CLKID_AUDIO_MCLK_F
+		clocks = <&clkc CLKID_MPLL0
+				&clkaudio CLKID_AUDIO_MCLK_A
 				&clkaudio CLKID_AUDIO_RESAMPLE_A>;
 		clock-names = "resample_pll", "resample_src", "resample_clk";
 		/*same with toddr_src
@@ -1123,7 +1124,7 @@
 		 */
 		resample_module = <3>;
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	asrcb: resample@1 {
@@ -1149,6 +1150,41 @@
 		status = "disabled";
 	};
 
+	vad:vad {
+		compatible = "amlogic, snd-vad";
+		#sound-dai-cells = <0>;
+
+		clocks = <&clkaudio CLKID_AUDIO_GATE_TOVAD
+			&clkc CLKID_FCLK_DIV5
+			&clkaudio CLKID_AUDIO_VAD>;
+		clock-names = "gate", "pll", "clk";
+
+		interrupts = <GIC_SPI 155 IRQ_TYPE_EDGE_RISING
+				GIC_SPI 47 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "irq_wakeup", "irq_frame_sync";
+
+		/*
+		 * Data src sel:
+		 * 0: tdmin_a;
+		 * 1: tdmin_b;
+		 * 2: tdmin_c;
+		 * 3: spdifin;
+		 * 4: pdmin;
+		 * 5: loopback_b;
+		 * 6: tdmin_lb;
+		 * 7: loopback_a;
+		 */
+		src = <4>;
+
+		/*
+		 * deal with hot word in user space or kernel space
+		 * 0: in user space
+		 * 1: in kernel space
+		 */
+		level = <0>;
+
+		status = "disabled";
+	};
 }; /* end of audiobus */
 
 &pinctrl_periphs {
@@ -1228,6 +1264,14 @@
 	pinctrl-names="default";
 	pinctrl-0=<&i2c2_z_pins>;
 	clock-frequency = <400000>;
+
+	tas5805: tas5805@36 {
+		compatible = "ti,tas5805";
+		#sound-dai-cells = <0>;
+		codec_name = "tas5805";
+		reg = <0x2d>;
+		status = "disable";
+	};
 
 	ad82584f: ad82584f@62 {
 		compatible = "ESMT, ad82584f";
