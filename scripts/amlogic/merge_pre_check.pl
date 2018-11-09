@@ -132,38 +132,69 @@ sub check_msg_49_2
 {
 	my $msg = `git cat-file commit HEAD~0 | sed '1,/\^\$/d'`;
 	my @str = split /[\n][\n]/, $msg;
+	my $i = 0;
+	my $len = @str;
 
-	if( $str[0] !~ /^([\w]+:\s){1,2}.+(\s)\[[\d]\/[\d]\]$/ )
+	if( $len < 4 )
+	{
+		$err_cnt += 5;
+		$err_msg .= "	module: message [n/m]\n\n";
+		$err_msg .= "	PD#XXXX\n\n";
+		$err_msg .= "	Problem:\n	detailed description\n\n";
+		$err_msg .= "	Solution:\n	detailed description\n\n";
+		$err_msg .= "	Verify:\n	detailed description\n\n";
+		return -1;
+	}
+
+	if( $str[$i] !~ /^([\w]+:\s){1,2}.+(\s)\[[\d]\/[\d]\]$/ )
 	{
 		$err_cnt += 1;
-		$err_msg .= "	$err_cnt: <module: message>\n";
+		$err_msg .= "	$err_cnt: module: message\n";
 	}
-	elsif( $str[0] =~ /(kernel)/i )
+	elsif( $str[$i] =~ /(kernel)/i )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Should be no 'kernel' in kernel commit message\n";
 	}
 
-	if( $str[1] !~ /^PD\#.+(\S)$/ )
+	if( $str[++ $i] !~ /^PD\#.+(\d)$/ )
 	{
 		$err_cnt += 1;
-		$err_msg .= "	$err_cnt: <PD#XXXX>\n";
+		$err_msg .= "	$err_cnt: PD#XXXX\n";
 
 	}
 
-	if( $str[2] !~ /^Problem:[\n].+/ )
+	if( $str[++ $i] !~ /^Problem:[\n].+/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Problem:\n	detailed description\n";
 	}
 
-	if( $str[3] !~ /^Solution:[\n].+/ )
+	$i += 1;
+	while( $str[$i] !~ /^Solution:[\n].+/ && $str[$i] !~ /^Change-Id:/ && $str[$i] !~ /^Verify:[\n].+/ )
+	{
+		$i = $i + 1;
+	}
+
+	if( $str[$i] !~ /^Solution:[\n].+/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Solution:\n	detailed description\n";
 	}
 
-	if( $str[4] !~ /^Verify:[\n].+/ )
+	if( $str[$i] =~ /^Change-Id:/ )
+	{
+		$err_cnt += 1;
+		$err_msg .= "	$err_cnt: Verify:\n	detailed description\n";
+		return -1;
+	}
+
+	while( $str[$i] !~ /^Verify:[\n].+/ && $str[$i] !~ /^Change-Id:/ )
+	{
+		$i += 1;
+	}
+
+	if( $str[$i] !~ /^Verify:[\n].+/ )
 	{
 		$err_cnt += 1;
 		$err_msg .= "	$err_cnt: Verify:\n	detailed description\n";
