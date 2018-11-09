@@ -45,7 +45,7 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x100000 0x3ff00000>;
+		linux,usable-memory = <0x000000 0x40000000>;
 	};
 
 	reserved-memory {
@@ -82,6 +82,16 @@
 			alignment = <0x400000>;
 			alloc-ranges = <0x3f800000 0x800000>;
 		};
+
+		codec_mm_cma:linux,codec_mm_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			/* ion_codec_mm max can alloc size 80M*/
+			size = <0xC400000>;
+			alignment = <0x400000>;
+			linux,contiguous-region;
+			alloc-ranges = <0x30000000 0x10000000>;
+		};
 		ion_cma_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -112,6 +122,7 @@
 			 */
 			size = <0x02800000>;
 			alignment = <0x400000>;
+			alloc-ranges = <0x30000000 0x10000000>;
 		};
 		/*  POST PROCESS MANAGER */
 		ppmgr_reserved:linux,ppmgr {
@@ -119,15 +130,6 @@
 			size = <0x0>;
 		};
 
-		codec_mm_cma:linux,codec_mm_cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			/* ion_codec_mm max can alloc size 80M*/
-			size = <0xC400000>;
-			alignment = <0x400000>;
-			linux,contiguous-region;
-			alloc-ranges = <0x0 0x30000000>;
-		};
 		/* codec shared reserved */
 		codec_mm_reserved:linux,codec_mm_reserved {
 			compatible = "amlogic, codec-mm-reserved";
@@ -142,6 +144,7 @@
 		/* 1920x1080x2x4  =16+4 M */
 			size = <0x04000000>;
 			alignment = <0x400000>;
+			alloc-ranges = <0x0 0x30000000>;
 		};
 		/*  vdin1 CMA pool */
 		vdin1_cma_reserved:linux,vdin1_cma {
@@ -150,6 +153,7 @@
 			/* 1920x1080x2x4  =16 M */
 			size = <0x04000000>;
 			alignment = <0x400000>;
+			alloc-ranges = <0x0 0x30000000>;
 		};
 	};
 

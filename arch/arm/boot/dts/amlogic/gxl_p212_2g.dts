@@ -99,7 +99,7 @@
 			reusable;
 			size = <0x7C00000>;
 			alignment = <0x400000>;
-			alloc-ranges = <0x0 0x2ee00000>;
+			alloc-ranges = <0x30000000 0x50000000>;
 		};
 
 		/*  vdin0 CMA pool */
@@ -132,7 +132,7 @@
 			size = <0x13400000>;
 			alignment = <0x400000>;
 			linux,contiguous-region;
-			alloc-ranges = <0x12000000 0x13400000>;
+			alloc-ranges = <0x30000000 0x50000000>;
 		};
 		picdec_cma_reserved:linux,picdec {
 			compatible = "shared-dma-pool";

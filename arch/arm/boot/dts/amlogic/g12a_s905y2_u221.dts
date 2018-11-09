@@ -44,7 +44,7 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x100000 0x7ff00000>;
+		linux,usable-memory = <0x000000 0x80000000>;
 	};
 
 	reserved-memory {
@@ -77,7 +77,7 @@
 			reusable;
 			size = <0x8000000>;
 			alignment = <0x400000>;
-			alloc-ranges = <0x0 0x30000000>;
+			alloc-ranges = <0x30000000 0x50000000>;
 		};
 		//di_reserved:linux,di {
 			//compatible = "amlogic, di-mem";
@@ -116,7 +116,7 @@
 			size = <0x13400000>;
 			alignment = <0x400000>;
 			linux,contiguous-region;
-			alloc-ranges = <0x0 0x30000000>;
+			alloc-ranges = <0x30000000 0x50000000>;
 		};
 		/* codec shared reserved */
 		codec_mm_reserved:linux,codec_mm_reserved {
