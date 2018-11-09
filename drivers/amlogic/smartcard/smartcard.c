@@ -339,7 +339,7 @@ struct smc_dev {
 #define SMC_ENABLE_5V3V_PIN_NAME "smc:5V3V"
 	int	  enable_5v3v_level;
 	int (*reset)(void*, int);
-	u32		irq_num;
+	int		irq_num;
 	int		reset_level;
 
 	u32	 pin_clk_pinmux_reg;
@@ -1847,8 +1847,12 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 	if (IS_ERR(smc->pinctrl))
 		return -1;
 
-	of_property_read_string(smc->pdev->dev.of_node,
+	ret = of_property_read_string(smc->pdev->dev.of_node,
 		"smc_need_enable_pin", &dts_str);
+	if (ret < 0) {
+		pr_error("failed to get smartcard node.\n");
+		return -EINVAL;
+	}
 	if (strcmp(dts_str, "yes") == 0)
 		smc->use_enable_pin = 1;
 	else
