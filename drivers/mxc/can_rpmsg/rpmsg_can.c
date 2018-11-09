@@ -52,7 +52,7 @@ struct can_rpmsg_data {
 	struct imx_rpmsg_head header;
 	u8 index;
 	union {
-		u8 reserved1;
+		u8 partition_id;
 		u8 retcode;
 	};
 	union {
@@ -225,6 +225,10 @@ static int can_rpmsg_cb(struct rpmsg_device *rpdev,
 static void can_init_handler(struct work_struct *work)
 {
 	struct can_rpmsg_data msg;
+	sc_ipc_t ipc_handle;
+	sc_rm_pt_t os_part;
+	sc_err_t err;
+	uint32_t mu_id;
 
 	msg.header.cate = IMX_RPMSG_CAN;
 	msg.header.major = IMX_RMPSG_MAJOR;
@@ -232,9 +236,28 @@ static void can_init_handler(struct work_struct *work)
 	msg.header.type = 0;
 	msg.header.cmd = CAN_RPMSG_REGISTER;
 	msg.index = 0;
-	msg.reserved1 = 0;
 	msg.reserved2 = 0;
 	msg.user = 0;
+
+	err = sc_ipc_getMuID(&mu_id);
+	if (err != SC_ERR_NONE) {
+		pr_err("Cannot obtain MU ID\n");
+		return;
+	}
+
+	err = sc_ipc_open(&ipc_handle, mu_id);
+	if (err != SC_ERR_NONE) {
+		pr_err("sc_ipc_open failed!\n");
+		return;
+	}
+	err = sc_rm_get_partition(ipc_handle, &os_part);
+	if (err != SC_ERR_NONE) {
+		pr_err("sc_rm_get_partition failed!\n");
+		msg.partition_id = 0xff;
+	} else {
+		msg.partition_id = os_part;
+	}
+
 	while (can_send_message(&msg, can_rpmsg, true)) {
 		msleep(REGISTER_PERIOD);
 	}
