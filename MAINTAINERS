@@ -14683,3 +14683,8 @@ M:	Yuegui He <yuegui.he@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/axg_s400_v03.dts
 F:	arch/arm64/boot/dts/amlogic/axg_s400emmc.dts
 F:	arch/arm64/boot/dts/amlogic/axg_s400emmc_v03.dts
+
+AMLOGIC MESON DTS
+M:	Huan Biao <huan.biao@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/g12a_s905d2_u200_buildroot_vccktest.dts
+F:	arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot_vccktest.dts
