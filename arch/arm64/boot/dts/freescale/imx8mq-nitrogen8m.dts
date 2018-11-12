@@ -6,6 +6,7 @@
 /dts-v1/;
 
 #include "fsl-imx8mq.dtsi"
+#include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
 #include "panel-lcm-jm430.dtsi"
 
@@ -221,6 +222,13 @@
 	pinctrl_lcm_jm430: lcm-jm430grp {
 		fsl,pins = <
 #define GP_TC358762_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
+		>;
+	};
+
+	pinctrl_ltk0680ytmdb: ltk0680ytmdbgrp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio1 1 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
 		>;
 	};
@@ -482,6 +490,7 @@
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
 		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
+		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
 		mipi_cmds_m101nwwb = &mipi_cmds_ltk080a60a004t;		/* Same commands work for both */
 		mipi_dsi = &mipi_dsi;
@@ -489,6 +498,7 @@
 		mipi_dsi_phy = &mipi_dsi_phy;
 		mipi_to_lvds = &mipi_to_lvds;
 		pinctrl_lcm_jm430 = &pinctrl_lcm_jm430;
+		pinctrl_ltk0680ytmdb = &pinctrl_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_ltk080a60a004t;
 		pwm_mipi = &pwm1;
 		sound_hdmi = &sound_hdmi;
@@ -497,10 +507,12 @@
 
 	alias_create_phandles {
 		p1 = <&mipi_cmds_lcm_jm430>;
-		p2 = <&mipi_cmds_ltk080a60a004t>;
-		p3 = <&mipi_to_lvds>;
-		p4 = <&pinctrl_lcm_jm430>;
-		p5 = <&pinctrl_ltk080a60a004t>;
+		p2 = <&mipi_cmds_ltk0680ytmdb>;
+		p3 = <&mipi_cmds_ltk080a60a004t>;
+		p4 = <&mipi_to_lvds>;
+		p5 = <&pinctrl_lcm_jm430>;
+		p6 = <&pinctrl_ltk0680ytmdb>;
+		p7 = <&pinctrl_ltk080a60a004t>;
 	};
 
 	backlight_mipi: backlight-mipi {
