@@ -223,7 +223,7 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 				 bool best_match)
 {
 	struct mixel_mipi_phy_priv *priv = dev_get_drvdata(phy->dev.parent);
-	int i;
+	int i = 0;
 	unsigned long numerator;
 	unsigned long denominator;
 	unsigned max_d = 256;
@@ -235,12 +235,18 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 	/* CN ranges between 1 and 32 */
 	/* CO is power of 2: 1, 2, 4, 8 */
 	do {
-		numerator = bit_clk;
+		numerator = bit_clk << i;
 		denominator = ref_clk;
-		get_best_ratio(&numerator, &denominator, 255, max_d);
-		max_d >>= 1;
+		get_best_ratio(&numerator, &denominator, 255, max_d >> i);
+		denominator <<= i;
+		i++;
 	} while ((denominator >> __ffs(denominator)) > 32);
 
+	while ((numerator >= 32) && !((numerator | denominator) & 1)) {
+		/* both even */
+		numerator >>= 1;
+		denominator >>= 1;
+	}
 	while ((numerator < 16) && (denominator <= 128)) {
 		numerator = numerator << 1;
 		denominator = denominator << 1;
