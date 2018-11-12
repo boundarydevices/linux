@@ -18,7 +18,8 @@
 #ifndef __AO_CEC_H__
 #define __AO_CEC_H__
 
-#define CEC_DRIVER_VERSION	"Ver 2018/10/23\n"
+
+#define CEC_DRIVER_VERSION	"Ver 2018/10/31\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
@@ -28,14 +29,21 @@
 
 #define HR_DELAY(n)		(ktime_set(0, n * 1000 * 1000))
 
-enum cec_chip_ver {
-	CEC_CHIP_ID_GXTVBB = 0,
-	CEC_CHIP_ID_TXL,
-	CEC_CHIP_ID_TXLX,
-	CEC_CHIP_ID_G12A,
-	CEC_CHIP_ID_TXHD,
-	CEC_CHIP_ID_TL1,
+enum cecbver {
+	/*first version*/
+	CECB_VER_0 = 0,
+	/*ee to ao */
+	CECB_VER_1 = 1,
+	/*
+	 * 1.fix bug: cts 7-1
+	 * 2.fix bug: Do not signal initiator error, when it's
+	 *   myself who pulled down the line when functioning as a follower
+	 * 3.fix bug: Receive messages are ignored and not acknowledge
+	 * 4.add status reg
+	 */
+	CECB_VER_2 = 2,
 };
+
 
 #define L_1		1
 #define L_2		2

@@ -76,11 +76,14 @@ static struct early_suspend aocec_suspend_handler;
 #define MAX_INT    0x7ffffff
 
 struct cec_platform_data_s {
-	unsigned int chip_id;
+	/*unsigned int chip_id;*/
 	unsigned char line_reg;/*cec gpio_i reg:0  ao;1 periph*/
 	unsigned int line_bit;/*cec gpio position in reg*/
 	bool ee_to_ao;/*ee cec hw module mv to ao;ao cec delete*/
+	bool ceca_sts_reg;/*add new internal status register*/
+	enum cecbver cecb_ver;/* detail discription ref enum cecbver */
 };
+
 
 struct cec_wakeup_t {
 	unsigned int wk_logic_addr:8;
@@ -583,7 +586,7 @@ static void ao_cecb_init(void)
 		/* Release SW reset */
 		cec_set_reg_bits(AO_CECB_GEN_CNTL, 0, 0, 1);
 
-		if (cec_dev->plat_data->chip_id >= CEC_CHIP_ID_TL1) {
+		if (cec_dev->plat_data->cecb_ver >= CECB_VER_2) {
 			reg = 0;
 			reg |= (0 << 6);/*curb_err_init*/
 			reg |= (0 << 5);/*en_chk_sbitlow*/
@@ -696,7 +699,7 @@ static int dump_cecrx_reg(char *b)
 
 	s += sprintf(b + s, "CEC MODULE REGS:\n");
 	s += sprintf(b + s, "CEC_CTRL     = 0x%02x\n", hdmirx_cec_read(0x1f00));
-	if (cec_dev->plat_data->chip_id >= CEC_CHIP_ID_TL1)
+	if (cec_dev->plat_data->cecb_ver >= CECB_VER_2)
 		s += sprintf(b + s, "CEC_CTRL2	  = 0x%02x\n",
 			hdmirx_cec_read(0x1f04));
 	s += sprintf(b + s, "CEC_MASK     = 0x%02x\n", hdmirx_cec_read(0x1f08));
@@ -704,7 +707,7 @@ static int dump_cecrx_reg(char *b)
 	s += sprintf(b + s, "CEC_ADDR_H   = 0x%02x\n", hdmirx_cec_read(0x1f18));
 	s += sprintf(b + s, "CEC_TX_CNT   = 0x%02x\n", hdmirx_cec_read(0x1f1c));
 	s += sprintf(b + s, "CEC_RX_CNT   = 0x%02x\n", hdmirx_cec_read(0x1f20));
-	if (cec_dev->plat_data->chip_id >= CEC_CHIP_ID_TL1)
+	if (cec_dev->plat_data->cecb_ver >= CECB_VER_2)
 		s += sprintf(b + s, "CEC_STAT0   = 0x%02x\n",
 			hdmirx_cec_read(0x1f24));
 	s += sprintf(b + s, "CEC_LOCK     = 0x%02x\n", hdmirx_cec_read(0x1fc0));
@@ -985,7 +988,7 @@ void cec_enable_arc_pin(bool enable)
 {
 	unsigned int data;
 
-	if (cec_dev->plat_data->chip_id >= CEC_CHIP_ID_TL1) {
+	if (cec_dev->plat_data->cecb_ver >= CECB_VER_2) {
 		data = rd_reg_hhi(HHI_HDMIRX_ARC_CNTL);
 		/* enable bit 1:1 bit 0: 0*/
 		if (enable)
@@ -2077,7 +2080,7 @@ static ssize_t dump_reg_show(struct class *cla,
 			     cec_reg_name2[i], aocec_rd_reg(i + 0x90));
 	}
 
-	if (cec_dev->plat_data->chip_id >= CEC_CHIP_ID_TL1) {
+	if (cec_dev->plat_data->ceca_sts_reg) {
 		for (i = 0; i < ARRAY_SIZE(ceca_reg_name3); i++) {
 			s += sprintf(b + s, "%s:%2x\n",
 			 ceca_reg_name3[i], aocec_rd_reg(i + 0xA0));
@@ -2947,38 +2950,43 @@ static void aocec_late_resume(struct early_suspend *h)
 
 #ifdef CONFIG_OF
 static const struct cec_platform_data_s cec_gxl_data = {
-	.chip_id = CEC_CHIP_ID_GXTVBB,
 	.line_reg = 0,
 	.line_bit = 8,
 	.ee_to_ao = 0,
+	.ceca_sts_reg = 0,
+	.cecb_ver = CECB_VER_0,
 };
 
 static const struct cec_platform_data_s cec_txlx_data = {
-	.chip_id = CEC_CHIP_ID_TXLX,
 	.line_reg = 0,
 	.line_bit = 7,
 	.ee_to_ao = 1,
+	.ceca_sts_reg = 0,
+	.cecb_ver = CECB_VER_1,
 };
 
 static const struct cec_platform_data_s cec_g12a_data = {
-	.chip_id = CEC_CHIP_ID_G12A,
 	.line_reg = 1,
 	.line_bit = 3,
 	.ee_to_ao = 1,
+	.ceca_sts_reg = 0,
+	.cecb_ver = CECB_VER_1,
 };
 
 static const struct cec_platform_data_s cec_txl_data = {
-	.chip_id = CEC_CHIP_ID_TXL,
 	.line_reg = 0,
 	.line_bit = 7,
 	.ee_to_ao = 0,
+	.ceca_sts_reg = 0,
+	.cecb_ver = CECB_VER_0,
 };
 
 static const struct cec_platform_data_s cec_tl1_data = {
-	.chip_id = CEC_CHIP_ID_TL1,
 	.line_reg = 0,
 	.line_bit = 7,
 	.ee_to_ao = 1,
+	.ceca_sts_reg = 1,
+	.cecb_ver = CECB_VER_2,
 };
 
 
