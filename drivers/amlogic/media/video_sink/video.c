@@ -1358,9 +1358,13 @@ static void vpp_settings_h(struct vpp_frame_par_s *framePtr)
 	r3 = framePtr->VPP_hsc_endp - framePtr->VPP_hsc_startp;
 
 	if ((framePtr->supscl_path == CORE0_PPS_CORE1) ||
-		(framePtr->supscl_path == CORE1_AFTER_PPS))
+		(framePtr->supscl_path == CORE1_AFTER_PPS) ||
+		(framePtr->supscl_path == PPS_CORE0_CORE1) ||
+		(framePtr->supscl_path == PPS_CORE0_POSTBLEND_CORE1))
 		r3 >>= framePtr->supsc1_hori_ratio;
-	if (framePtr->supscl_path == CORE0_AFTER_PPS)
+	if ((framePtr->supscl_path == CORE0_AFTER_PPS) ||
+		(framePtr->supscl_path == PPS_CORE0_CORE1) ||
+		(framePtr->supscl_path == PPS_CORE0_POSTBLEND_CORE1))
 		r3 >>= framePtr->supsc0_hori_ratio;
 
 	if (platform_type == 1) {
@@ -1636,9 +1640,12 @@ static void vpp_settings_v(struct vpp_frame_par_s *framePtr)
 			  ((r & VPP_REGION_MASK) << VPP_REGION4_BIT));
 
 	if ((framePtr->supscl_path == CORE0_PPS_CORE1) ||
-		(framePtr->supscl_path == CORE1_AFTER_PPS))
+		(framePtr->supscl_path == CORE1_AFTER_PPS) ||
+		(framePtr->supscl_path == PPS_CORE0_POSTBLEND_CORE1))
 		r >>= framePtr->supsc1_vert_ratio;
-	if (framePtr->supscl_path == CORE0_AFTER_PPS)
+	if ((framePtr->supscl_path == CORE0_AFTER_PPS) ||
+		(framePtr->supscl_path == PPS_CORE0_CORE1) ||
+		(framePtr->supscl_path == PPS_CORE0_POSTBLEND_CORE1))
 		r >>= framePtr->supsc0_vert_ratio;
 
 	VSYNC_WR_MPEG_REG(VPP_VSC_REGION4_ENDP + cur_dev->vpp_off, r);
@@ -6625,7 +6632,7 @@ SET_FILTER:
 				VPP_VD1_PREBLEND |
 				VPP_VD2_POSTBLEND |
 				VPP_VD1_POSTBLEND |
-				7);
+				0xf);
 			if ((vpp_misc_set & VPP_VD2_PREBLEND)
 				&& (vpp_misc_set & VPP_VD1_PREBLEND))
 				set_value |= VPP_PREBLEND_EN;

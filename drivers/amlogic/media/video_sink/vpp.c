@@ -408,6 +408,7 @@ module_param(force_filter_mode, int, 0664);
 bool super_scaler = true;
 static unsigned int sr_support;
 static u32 sr_reg_offt;
+static u32 sr_reg_offt2;	/*for tl1*/
 static unsigned int super_debug;
 module_param(super_debug, uint, 0664);
 MODULE_PARM_DESC(super_debug, "super_debug");
@@ -1726,7 +1727,7 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 		tmp_data = sharpness1_sr2_ctrl_32d7;
 	else
 		tmp_data = VSYNC_RD_MPEG_REG(
-			SRSHARP1_SHARP_SR2_CTRL + sr_reg_offt);
+			SRSHARP1_SHARP_SR2_CTRL + sr_reg_offt2);/*0xc80*/
 	if (is_meson_gxtvbb_cpu() ||
 		(((tmp_data >> 5)&0x1) != (reg_srscl1_vert_ratio&0x1)) ||
 		(((tmp_data >> 4)&0x1) != (reg_srscl1_hori_ratio&0x1)) ||
@@ -1742,7 +1743,7 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 		tmp_data |= (((~(reg_srscl1_hori_ratio&0x1))&0x1) << 0);
 		if (sr0_sr1_refresh) {
 			VSYNC_WR_MPEG_REG(
-				SRSHARP1_SHARP_SR2_CTRL + sr_reg_offt,
+				SRSHARP1_SHARP_SR2_CTRL + sr_reg_offt2,/*0xc80*/
 				tmp_data);
 			sharpness1_sr2_ctrl_32d7 = tmp_data;
 		}
@@ -1764,17 +1765,20 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 	if (sr_support & SUPER_CORE1_SUPPORT) {
 		if (get_cpu_type() != MESON_CPU_MAJOR_ID_GXTVBB)
 			tmp_data2 = VSYNC_RD_MPEG_REG(
-				SRSHARP1_SHARP_HVSIZE);
+				SRSHARP1_SHARP_HVSIZE + sr_reg_offt2);
 		if (is_meson_gxtvbb_cpu() || (tmp_data != tmp_data2)) {
 			VSYNC_WR_MPEG_REG(
-				SRSHARP1_SHARP_HVSIZE, tmp_data);
+				SRSHARP1_SHARP_HVSIZE + sr_reg_offt2, tmp_data);
 			if (is_meson_gxtvbb_cpu())
 				sharpness1_sr2_ctrl_3280 = tmp_data;
 		}
 	}
 
 	/*ve input size setting*/
-	if (is_meson_txhd_cpu() || is_meson_g12a_cpu() || is_meson_g12b_cpu())
+	if (is_meson_txhd_cpu() || is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
+		(is_meson_tl1_cpu() &&
+		((scaler_path_sel == PPS_CORE0_CORE1) ||
+		(scaler_path_sel == PPS_CORE0_POSTBLEND_CORE1))))
 		tmp_data = ((reg_srscl0_hsize & 0x1fff) << 16) |
 			(reg_srscl0_vsize & 0x1fff);
 	else
@@ -1785,7 +1789,7 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 		VSYNC_WR_MPEG_REG(VPP_VE_H_V_SIZE, tmp_data);
 	/*chroma blue stretch size setting*/
 	if (is_meson_txlx_cpu() || is_meson_txhd_cpu() || is_meson_g12a_cpu() ||
-		is_meson_g12b_cpu()) {
+		is_meson_g12b_cpu() || is_meson_tl1_cpu()) {
 		tmp_data = (((vpp_postblend_out_width & 0x1fff) << 16) |
 			(vpp_postblend_out_height & 0x1fff));
 		VSYNC_WR_MPEG_REG(VPP_OUT_H_V_SIZE, tmp_data);
@@ -1814,7 +1818,23 @@ int vpp_set_super_scaler_regs(int scaler_path_sel,
 		data_path_chose = 6;
 	else
 		data_path_chose = 5;
-	if ((scaler_path_sel == CORE0_PPS_CORE1) ||
+	if (is_meson_tl1_cpu()) {
+		if (scaler_path_sel == CORE0_PPS_CORE1) {
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 3, 1);
+		} else if (scaler_path_sel == CORE0_CORE1_PPS) {
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 3, 1);
+
+		} else if (scaler_path_sel == PPS_CORE0_CORE1) {
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 3, 1);
+
+		} else if (scaler_path_sel == PPS_CORE0_POSTBLEND_CORE1) {
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
+			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 3, 1);
+		}
+	} else if ((scaler_path_sel == CORE0_PPS_CORE1) ||
 		(scaler_path_sel == CORE1_BEFORE_PPS) ||
 		(scaler_path_sel == CORE0_BEFORE_PPS)) {
 		if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
@@ -1970,12 +1990,16 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 
 	/*patch for width align 2*/
 	if (super_scaler && (width_out%2) &&
-		(((next_frame_par->supscl_path == CORE0_AFTER_PPS) &&
+		((((next_frame_par->supscl_path == CORE0_AFTER_PPS) ||
+		(next_frame_par->supscl_path == PPS_CORE0_CORE1) ||
+		(next_frame_par->supscl_path == PPS_CORE0_POSTBLEND_CORE1)) &&
 		next_frame_par->supsc0_hori_ratio) ||
 		(((next_frame_par->supscl_path == CORE0_PPS_CORE1) ||
 		(next_frame_par->supscl_path == CORE0_CORE1_PPS) ||
 		(next_frame_par->supscl_path == CORE1_AFTER_PPS) ||
-		(next_frame_par->supscl_path == CORE0_BEFORE_PPS)) &&
+		(next_frame_par->supscl_path == CORE0_BEFORE_PPS) ||
+		(next_frame_par->supscl_path == PPS_CORE0_CORE1) ||
+		(next_frame_par->supscl_path == PPS_CORE0_POSTBLEND_CORE1)) &&
 		next_frame_par->supsc1_hori_ratio))) {
 		temp = next_frame_par->VPP_hsc_endp;
 		if (++temp >= vinfo->width) {
@@ -1983,15 +2007,35 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 				(next_frame_par->VPP_hsc_startp <
 				next_frame_par->VPP_hsc_endp))
 				next_frame_par->VPP_hsc_startp--;
-			else if (next_frame_par->supscl_path ==
-				CORE0_AFTER_PPS) {
+			else if (((next_frame_par->supscl_path ==
+				PPS_CORE0_CORE1) ||
+				(next_frame_par->supscl_path ==
+				PPS_CORE0_POSTBLEND_CORE1)) &&
+				next_frame_par->supsc0_hori_ratio &&
+				next_frame_par->supsc1_hori_ratio) {
+				next_frame_par->supsc1_enable = 0;
+				next_frame_par->supsc1_hori_ratio = 0;
+				next_frame_par->supsc1_vert_ratio = 0;
+				next_frame_par->VPP_hsc_endp++;
+			} else if ((next_frame_par->supscl_path ==
+				CORE0_AFTER_PPS) ||
+				(((next_frame_par->supscl_path ==
+				PPS_CORE0_CORE1) ||
+				(next_frame_par->supscl_path ==
+				PPS_CORE0_POSTBLEND_CORE1)) &&
+				next_frame_par->supsc0_hori_ratio)) {
 				next_frame_par->supsc0_enable = 0;
 				next_frame_par->supsc0_hori_ratio = 0;
 				next_frame_par->supsc0_vert_ratio = 0;
 			} else if ((next_frame_par->supscl_path ==
 				CORE1_AFTER_PPS) ||
 				(next_frame_par->supscl_path ==
-				CORE0_PPS_CORE1)) {
+				CORE0_PPS_CORE1) ||
+				(((next_frame_par->supscl_path ==
+				PPS_CORE0_CORE1) ||
+				(next_frame_par->supscl_path ==
+				PPS_CORE0_POSTBLEND_CORE1)) &&
+				next_frame_par->supsc1_hori_ratio)) {
 				next_frame_par->supsc1_enable = 0;
 				next_frame_par->supsc1_hori_ratio = 0;
 				next_frame_par->supsc1_vert_ratio = 0;
@@ -2003,12 +2047,16 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 
 	/*patch for height align 2*/
 	if (super_scaler && (height_out%2) &&
-		(((next_frame_par->supscl_path == CORE0_AFTER_PPS) &&
+		((((next_frame_par->supscl_path == CORE0_AFTER_PPS) ||
+		(next_frame_par->supscl_path == PPS_CORE0_CORE1) ||
+		(next_frame_par->supscl_path == PPS_CORE0_POSTBLEND_CORE1)) &&
 		next_frame_par->supsc0_vert_ratio) ||
 		(((next_frame_par->supscl_path == CORE0_PPS_CORE1) ||
 		(next_frame_par->supscl_path == CORE0_CORE1_PPS) ||
 		(next_frame_par->supscl_path == CORE1_AFTER_PPS) ||
-		(next_frame_par->supscl_path == CORE0_BEFORE_PPS)) &&
+		(next_frame_par->supscl_path == CORE0_BEFORE_PPS) ||
+		(next_frame_par->supscl_path == PPS_CORE0_CORE1) ||
+		(next_frame_par->supscl_path == PPS_CORE0_POSTBLEND_CORE1)) &&
 		next_frame_par->supsc1_vert_ratio))) {
 		temp = next_frame_par->VPP_vsc_endp;
 		if (++temp >= vinfo->height) {
@@ -2016,15 +2064,35 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 				(next_frame_par->VPP_vsc_startp <
 				next_frame_par->VPP_vsc_endp))
 				next_frame_par->VPP_vsc_startp--;
-			else if (next_frame_par->supscl_path ==
-				CORE0_AFTER_PPS) {
+			else if (((next_frame_par->supscl_path ==
+				PPS_CORE0_CORE1) ||
+				(next_frame_par->supscl_path ==
+				PPS_CORE0_POSTBLEND_CORE1)) &&
+				next_frame_par->supsc0_vert_ratio &&
+				next_frame_par->supsc1_vert_ratio) {
+				next_frame_par->supsc0_enable = 0;
+				next_frame_par->supsc0_hori_ratio = 0;
+				next_frame_par->supsc0_vert_ratio = 0;
+				next_frame_par->VPP_vsc_endp++;
+			} else if ((next_frame_par->supscl_path ==
+				CORE0_AFTER_PPS) ||
+				(((next_frame_par->supscl_path ==
+				PPS_CORE0_CORE1) ||
+				(next_frame_par->supscl_path ==
+				PPS_CORE0_POSTBLEND_CORE1)) &&
+				next_frame_par->supsc0_vert_ratio)) {
 				next_frame_par->supsc0_enable = 0;
 				next_frame_par->supsc0_hori_ratio = 0;
 				next_frame_par->supsc0_vert_ratio = 0;
 			} else if ((next_frame_par->supscl_path ==
 				CORE1_AFTER_PPS) ||
 				(next_frame_par->supscl_path ==
-				CORE0_PPS_CORE1)) {
+				CORE0_PPS_CORE1) ||
+				(((next_frame_par->supscl_path ==
+				PPS_CORE0_CORE1) ||
+				(next_frame_par->supscl_path ==
+				PPS_CORE0_POSTBLEND_CORE1)) &&
+				next_frame_par->supsc1_vert_ratio)) {
 				next_frame_par->supsc1_enable = 0;
 				next_frame_par->supsc1_hori_ratio = 0;
 				next_frame_par->supsc1_vert_ratio = 0;
@@ -2047,6 +2115,15 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 			height_out >> next_frame_par->supsc0_vert_ratio;
 		next_frame_par->spsc0_w_in =
 			width_out >> next_frame_par->supsc0_hori_ratio;
+	} else if ((next_frame_par->supscl_path == PPS_CORE0_CORE1)
+			|| (next_frame_par->supscl_path ==
+			PPS_CORE0_POSTBLEND_CORE1)){/*tl1*/
+		next_frame_par->spsc0_h_in =
+			(height_out >> next_frame_par->supsc0_vert_ratio) >>
+				next_frame_par->supsc1_vert_ratio;
+		next_frame_par->spsc0_w_in =
+			(width_out >> next_frame_par->supsc0_hori_ratio) >>
+			next_frame_par->supsc1_hori_ratio;
 	} else {
 		next_frame_par->spsc0_h_in = src_height;
 		next_frame_par->spsc0_w_in = src_width;
@@ -2054,7 +2131,9 @@ static void vpp_set_super_scaler(const struct vinfo_s *vinfo,
 	if ((next_frame_par->supscl_path == CORE0_PPS_CORE1) ||
 		(next_frame_par->supscl_path == CORE0_CORE1_PPS) ||
 		(next_frame_par->supscl_path == CORE1_AFTER_PPS) ||
-		(next_frame_par->supscl_path == CORE0_BEFORE_PPS)) {
+		(next_frame_par->supscl_path == CORE0_BEFORE_PPS) ||
+		(next_frame_par->supscl_path == PPS_CORE0_CORE1) ||
+		(next_frame_par->supscl_path == PPS_CORE0_POSTBLEND_CORE1)) {
 		next_frame_par->spsc1_h_in =
 			(height_out >> next_frame_par->supsc1_vert_ratio);
 		next_frame_par->spsc1_w_in =
@@ -2662,7 +2741,7 @@ void vpp_super_scaler_support(void)
 		sr_support |= SUPER_CORE0_SUPPORT;
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	} else if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu() ||
-		is_meson_txlx_cpu()) {
+		is_meson_txlx_cpu() || is_meson_tl1_cpu()) {
 		sr_support |= SUPER_CORE0_SUPPORT;
 		sr_support |= SUPER_CORE1_SUPPORT;
 	} else {
@@ -2673,12 +2752,16 @@ void vpp_super_scaler_support(void)
 		sr_support &= ~SUPER_CORE0_SUPPORT;
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
-	scaler_path_sel = SCALER_PATH_MAX;
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()
-		|| is_meson_tl1_cpu())
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
 		sr_reg_offt = 0xc00;
-	else
+		sr_reg_offt2 = 0x00;
+	} else if (is_meson_tl1_cpu()) {
+		sr_reg_offt = 0xc00;
+		sr_reg_offt2 = 0xc80;
+	} else {
 		sr_reg_offt = 0;
+		sr_reg_offt2 = 0x00;
+	}
 }
 /*for gxlx only have core1 which will affact pip line*/
 void vpp_bypass_ratio_config(void)
