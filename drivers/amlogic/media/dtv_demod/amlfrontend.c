@@ -3561,12 +3561,15 @@ static int delsys_set(struct dvb_frontend *fe, unsigned int delsys)
 	PR_INFO("info type:%d", fe->ops.info.type);
 	if (mode == AM_FE_ATSC_N)
 		fe->ops.info.type = FE_ATSC;
-	else if (mode == AM_FE_OFDM_N || mode == AM_FE_ISDBT_N)
+	else if (mode == AM_FE_OFDM_N)
 		fe->ops.info.type = FE_OFDM;
 	else if (mode == AM_FE_DTMB_N)
 		fe->ops.info.type = FE_DTMB;
 	else if (mode == AM_FE_QAM_N)
 		fe->ops.info.type = FE_QAM;
+	else if (mode == AM_FE_ISDBT_N)
+		fe->ops.info.type = FE_ISDBT;
+
 	fe->ops.tuner_ops.set_config(fe, NULL);
 
 #endif
@@ -4150,7 +4153,7 @@ static struct dvb_frontend_ops aml_dtvdm_txl_ops = {
 static struct dvb_frontend_ops aml_dtvdm_txlx_ops = {
 #ifdef CONFIG_AMLOGIC_DVB_COMPAT
 	.delsys = { SYS_ATSC, SYS_DVBC_ANNEX_B,  SYS_DVBC_ANNEX_A, SYS_DVBT,
-		SYS_ANALOG},
+		SYS_ANALOG, SYS_ISDBT},
 #else
 	.delsys = { SYS_ATSC, SYS_DVBC_ANNEX_B,  SYS_DVBC_ANNEX_A, SYS_DVBT},
 #endif
