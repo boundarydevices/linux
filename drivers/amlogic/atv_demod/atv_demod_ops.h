@@ -70,6 +70,7 @@ struct atv_demod_priv {
 
 
 extern int atv_demod_enter_mode(struct dvb_frontend *fe);
+extern int tvin_get_av_status(void);
 
 struct dvb_frontend *aml_atvdemod_attach(struct dvb_frontend *fe,
 		struct v4l2_frontend *v4l2_fe,

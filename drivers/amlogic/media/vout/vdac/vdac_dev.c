@@ -372,6 +372,12 @@ void vdac_enable(bool on, unsigned int module_sel)
 	mutex_lock(&vdac_mutex);
 	switch (module_sel) {
 	case VDAC_MODULE_ATV_DEMOD: /* atv demod */
+		if ((on && (pri_flag & VDAC_MODULE_ATV_DEMOD))
+			|| (!on && !(pri_flag & VDAC_MODULE_ATV_DEMOD))) {
+			pr_info("%s: ATV DEMOD had done!:%d.\n", __func__, on);
+			break;
+		}
+
 		if (on) {
 			ana_ref_cntl0_bit9(1, VDAC_MODULE_ATV_DEMOD);
 			/*after txlx need reset bandgap after bit9 enabled*/

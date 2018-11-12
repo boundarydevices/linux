@@ -1766,6 +1766,10 @@ int atvdemod_init(void)
 
 void atvdemod_uninit(void)
 {
+	/* mute atv audio output */
+	if (is_meson_txl_cpu())
+		atv_dmd_wr_long(APB_BLOCK_ADDR_MONO_PROC, 0x50, 0);
+
 	atv_dmd_non_std_set(false);
 }
 
