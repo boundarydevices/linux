@@ -1503,6 +1503,17 @@ config TOUCHSCREEN_SIS_I2C
 	  To compile this driver as a module, choose M here: the
 	  module will be called sis_i2c.
 
+config TOUCHSCREEN_SITRONIX_I2C_TOUCH
+	tristate "Sitronix I2C I/F Multi-Touch Controller"
+	depends on I2C
+	help
+	Say Y here if you have a Sitronix multitouch panel.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called sitronix_i2c_touch.
+
 config TOUCHSCREEN_ST1232
 	tristate "Sitronix ST1232 or ST1633 touchscreen controllers"
 	depends on I2C
