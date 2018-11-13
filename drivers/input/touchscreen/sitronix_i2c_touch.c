@@ -177,6 +177,8 @@ struct sitronix_ts_data {
 	uint8_t Num_X;
 	uint8_t Num_Y;
 	uint8_t sensing_mode;
+	atomic_t irq_on;
+	atomic_t in_int;
 	int suspend_state;
 	spinlock_t irq_lock;
 	u8 irq_is_disable;
@@ -229,8 +231,6 @@ static int fb_notifier_callback(struct notifier_block *self,
 				 unsigned long event, void *data);
 
 //static struct rst_pin_ctrl *rst_pin;
-static atomic_t sitronix_ts_irq_on = ATOMIC_INIT(0);
-static atomic_t sitronix_ts_in_int = ATOMIC_INIT(0);
 #ifdef SITRONIX_SYSFS
 static bool sitronix_ts_sysfs_created = false;
 static bool sitronix_ts_sysfs_using = false;
@@ -388,9 +388,8 @@ long	 sitronix_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case IOCTL_SMT_ENABLE_IRQ:
 			UpgradeMsg("IOCTL_SMT_ENABLE_IRQ\n");
 			//sitronix_ts_disable_int(ts, 0);
-			if(!atomic_read(&sitronix_ts_in_int)){
-				if(!atomic_read(&sitronix_ts_irq_on)){
-					atomic_set(&sitronix_ts_irq_on, 1);
+			if(!atomic_read(&ts->in_int)){
+				if (!atomic_cmpxchg(&ts->irq_on, 0, 1)) {
 					enable_irq(ts->client->irq);
 #ifdef SITRONIX_MONITOR_THREAD
 					if(ts->enable_monitor_thread == 1){
@@ -415,8 +414,7 @@ long	 sitronix_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #else
 			cancel_delayed_work_sync(&ts->work);
 #endif
-			if(atomic_read(&sitronix_ts_irq_on)){
-				atomic_set(&sitronix_ts_irq_on, 0);
+			if (atomic_cmpxchg(&ts->irq_on, 1, 0)) {
 				disable_irq_nosync(ts->client->irq);
 #ifdef SITRONIX_MONITOR_THREAD
 				if(ts->enable_monitor_thread == 1){
@@ -1215,7 +1213,7 @@ static void sitronix_ts_work_func(struct work_struct *work)
 	uint8_t touch_cnt = 0;
 
 	DbgMsg("%s\n",  __FUNCTION__);
-	atomic_set(&sitronix_ts_in_int, 1);
+	atomic_set(&ts->in_int, 1);
 
 #ifdef SITRONIX_KEYEVENT
 #ifdef SITRONIX_GESTURE
@@ -1326,15 +1324,15 @@ exit_invalid_data:
 		pr_err("%s: Please not set HARDIRQS_SW_RESEND to prevent kernel from sending SW IRQ\n", __func__);
 #endif // CONFIG_HARDIRQS_SW_RESEND
 		if (ts->use_irq){
-			atomic_set(&sitronix_ts_irq_on, 1);
-			enable_irq(ts->client->irq);
+			if (!atomic_cmpxchg(&ts->irq_on, 0, 1))
+				enable_irq(ts->client->irq);
 		}
 	}
 #endif // SITRONIX_INT_POLLING_MODE
 #if defined(SITRONIX_LEVEL_TRIGGERED)
 	if (ts->use_irq){
-		atomic_set(&sitronix_ts_irq_on, 1);
-		enable_irq(ts->client->irq);
+		if (!atomic_cmpxchg(&ts->irq_on, 0, 1))
+			enable_irq(ts->client->irq);
 	}
 #endif // defined(SITRONIX_LEVEL_TRIGGERED)
 	if ((2 <= i2cErrorCount)){
@@ -1349,7 +1347,7 @@ exit_invalid_data:
 		}
 #endif // SITRONIX_MONITOR_THREAD
 	}
-	atomic_set(&sitronix_ts_in_int, 0);
+	atomic_set(&ts->in_int, 0);
 
 }
 
@@ -1358,10 +1356,10 @@ static irqreturn_t sitronix_ts_irq_handler(int irq, void *dev_id)
 	struct sitronix_ts_data *ts = dev_id;
 
 	DbgMsg("%s\n", __FUNCTION__);
-	atomic_set(&sitronix_ts_in_int, 1);
+	atomic_set(&ts->in_int, 1);
 #if defined(SITRONIX_LEVEL_TRIGGERED) || defined(SITRONIX_INT_POLLING_MODE)
-	atomic_set(&sitronix_ts_irq_on, 0);
-	disable_irq_nosync(ts->client->irq);
+	if (atomic_cmpxchg(&ts->irq_on, 1, 0))
+		disable_irq_nosync(ts->client->irq);
 #endif // defined(SITRONIX_LEVEL_TRIGGERED) || defined(SITRONIX_INT_POLLING_MODE)
 #ifdef SITRONIX_MONITOR_THREAD
 	if(ts->enable_monitor_thread == 1){
@@ -1887,7 +1885,7 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 
 #endif // SITRONIX_LEVEL_TRIGGERED
 		if (ret == 0){
-			atomic_set(&sitronix_ts_irq_on, 1);
+			atomic_set(&ts->irq_on, 1);
 			ts->use_irq = 1;
 		}else{
 			dev_err(&client->dev, "request_irq failed\n");
@@ -2047,9 +2045,9 @@ static int sitronix_ts_suspend(struct i2c_client *client)
 		sitronix_ts_delay_monitor_thread_start = DELAY_MONITOR_THREAD_START_RESUME;
 	}
 #endif // SITRONIX_MONITOR_THREAD
-	if(ts->use_irq){
-		atomic_set(&sitronix_ts_irq_on, 0);
-		disable_irq_nosync(ts->client->irq);
+	if (ts->use_irq){
+		if (atomic_cmpxchg(&ts->irq_on, 1, 0))
+			disable_irq_nosync(ts->client->irq);
 	}
 	ts->suspend_state = 1;
 
@@ -2070,8 +2068,8 @@ static int sitronix_ts_resume(struct i2c_client *client)
 
 	ts->suspend_state = 0;
 	if(ts->use_irq){
-		atomic_set(&sitronix_ts_irq_on, 1);
-		enable_irq(ts->client->irq);
+		if (!atomic_cmpxchg(&ts->irq_on, 0, 1))
+			enable_irq(ts->client->irq);
 	}
 #ifdef SITRONIX_MONITOR_THREAD
 	if(ts->enable_monitor_thread == 1){
@@ -2564,8 +2562,8 @@ static int st_isp_on(void)
 static int st_irq_off(void)
 {
 	//if (ts->use_irq){
-	//	atomic_set(&sitronix_ts_irq_on, 0);
-	//	disable_irq_nosync(ts->client->irq);
+	//	if (atomic_cmpxchg(&ts->irq_on, 1, 0))
+	//		disable_irq_nosync(ts->client->irq);
 	//}
 	return 0;
 }
@@ -2573,8 +2571,8 @@ static int st_irq_on(void)
 {
 	//if (ts->use_irq)
 	//{
-	//	atomic_set(&sitronix_ts_irq_on, 1);
-	//	enable_irq(ts->client->irq);
+	//	if (!atomic_cmpxchg(&ts->irq_on, 0, 1))
+	//		enable_irq(ts->client->irq);
 	//}
 	return 0;
 }
