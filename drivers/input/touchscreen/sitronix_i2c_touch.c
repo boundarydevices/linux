@@ -148,7 +148,9 @@ struct rst_pin_ctrl{
 struct sitronix_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
+#ifdef SITRONIX_KEYEVENT
 	struct input_dev *keyevent_input;
+#endif
 	int use_irq;
 #ifndef SITRONIX_INT_POLLING_MODE
 	struct work_struct  work;
@@ -264,7 +266,7 @@ static int sitronix_ts_permission_thread(void *data)
 		msleep(sitronix_ts_delay_permission_thread_start);
 		ret = sys_fchmodat(AT_FDCWD, "/dev/"SITRONIX_I2C_TOUCH_DEV_NAME , 0666);
 		if(ret < 0)
-			printk("fail to execute sys_fchmodat, ret = %d\n", ret);
+			pr_err("%s:fail to execute sys_fchmodat, ret = %d\n", __func__, ret);
 		if(retry++ > 10)
 			break;
 	}while(ret == -ENOENT);
@@ -459,11 +461,9 @@ EXPORT_SYMBOL(sitronix_ioctl);
 
 static void sitronix_ts_reset_ic(void)
 {
-		printk("%s\n", __FUNCTION__);
 #if 0
 	struct sitronix_i2c_touch_platform_data *pdata;
 	uint8_t rc;
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	gpiod_set_value(pdata->reset_gpio, 1);
 	msleep(3);
@@ -471,7 +471,6 @@ static void sitronix_ts_reset_ic(void)
 	msleep(150);
 #endif
 #if 0
-	printk("%s\n", __FUNCTION__);
 	__gpio_set_value(config_info.wakeup_gpio.gpio, 0);
 	msleep(3);
 	__gpio_set_value(config_info.wakeup_gpio.gpio, 1);
@@ -483,7 +482,6 @@ static int sitronix_i2c_read_bytes(struct i2c_client *client, u8 addr, u8 *rxbuf
 {
 	int ret = 0;
 	u8 txbuf = addr;
-	//printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 #if defined(SITRONIX_I2C_COMBINED_MESSAGE)
 	struct i2c_msg msg[2] = {
 		{
@@ -508,7 +506,7 @@ static int sitronix_i2c_read_bytes(struct i2c_client *client, u8 addr, u8 *rxbuf
 #elif defined(SITRONIX_I2C_SINGLE_MESSAGE)
 	ret = i2c_master_send(client, &txbuf, 1);
 	if (ret < 0){
-		printk("write 0x%x error (%d)\n", addr, ret);
+		pr_err("%s: write 0x%x error (%d)\n", __func__, addr, ret);
 		return ret;
 	}
 	ret = i2c_master_recv(client, rxbuf, len);
@@ -523,7 +521,6 @@ static int sitronix_i2c_read_bytes(struct i2c_client *client, u8 addr, u8 *rxbuf
 static int sitronix_i2c_write_bytes(struct i2c_client *client, u8 *txbuf, int len)
 {
 	int ret = 0;
-	//printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 #if defined(SITRONIX_I2C_COMBINED_MESSAGE)
 	struct i2c_msg msg[1] = {
 		{
@@ -543,7 +540,7 @@ static int sitronix_i2c_write_bytes(struct i2c_client *client, u8 *txbuf, int le
 	ret = i2c_master_send(client, txbuf, len);
 #endif // defined(SITRONIX_I2C_COMBINED_MESSAGE)
 	if (ret < 0){
-		printk("write 0x%x error (%d)\n", *txbuf, ret);
+		pr_err("%s: write 0x%x error (%d)\n", __func__, *txbuf, ret);
 		return ret;
 	}
 	return 0;
@@ -553,15 +550,14 @@ static int sitronix_get_fw_revision(struct sitronix_ts_data *ts)
 {
 	int ret = 0;
 	uint8_t buffer[4];
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	ret = sitronix_i2c_read_bytes(ts->client, FIRMWARE_REVISION_3, buffer, 4);
 	if (ret < 0){
-		printk("read fw revision error (%d)\n", ret);
+		pr_err("%s: read fw revision error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		memcpy(ts->fw_revision, buffer, 4);
-		printk("fw revision (hex) = %x %x %x %x\n", buffer[0], buffer[1], buffer[2], buffer[3]);
+		pr_info("%s: fw revision (hex) = %x %x %x %x\n", __func__, buffer[0], buffer[1], buffer[2], buffer[3]);
 	}
 	return 0;
 }
@@ -569,17 +565,16 @@ static int sitronix_get_max_touches(struct sitronix_ts_data *ts)
 {
 	int ret = 0;
 	uint8_t buffer[1];
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	ret = sitronix_i2c_read_bytes(ts->client, MAX_NUM_TOUCHES, buffer, 1);
 	if (ret < 0){
-		printk("read max touches error (%d)\n", ret);
+		pr_err("%s: read max touches error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		ts->max_touches = buffer[0];
 		if (ts->max_touches > SITRONIX_MAX_SUPPORTED_POINT)
 			ts->max_touches = SITRONIX_MAX_SUPPORTED_POINT;
-		printk("max touches = %d \n",ts->max_touches);
+		pr_info("%s: max touches = %d \n", __func__, ts->max_touches);
 	}
 	return 0;
 }
@@ -588,68 +583,42 @@ static int sitronix_get_protocol_type(struct sitronix_ts_data *ts)
 {
 	int ret = 0;
 	uint8_t buffer[1];
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	if(ts->chip_id <= 3){
 		ret = sitronix_i2c_read_bytes(ts->client, I2C_PROTOCOL, buffer, 1);
 		if (ret < 0){
-			printk("read i2c protocol error (%d)\n", ret);
+			pr_err("%s: read i2c protocol error (%d)\n", __func__, ret);
 			return ret;
 		}else{
 			ts->touch_protocol_type = buffer[0] & I2C_PROTOCOL_BMSK;
-			printk("i2c protocol = %d \n", ts->touch_protocol_type);
 			ts->sensing_mode = (buffer[0] & (ONE_D_SENSING_CONTROL_BMSK << ONE_D_SENSING_CONTROL_SHFT)) >> ONE_D_SENSING_CONTROL_SHFT;
-			printk("sensing mode = %d \n", ts->sensing_mode);
 		}
 	}else{
 		ts->touch_protocol_type = SITRONIX_A_TYPE;
-		printk("i2c protocol = %d \n", ts->touch_protocol_type);
 		ret = sitronix_i2c_read_bytes(ts->client, 0xf0, buffer, 1);
 		if (ret < 0){
-			printk("read sensing mode error (%d)\n", ret);
+			pr_err("%s: read sensing mode error (%d)\n", __func__, ret);
 			return ret;
 		}else{
 			ts->sensing_mode = (buffer[0] & ONE_D_SENSING_CONTROL_BMSK);
-			printk("sensing mode = %d \n", ts->sensing_mode);
 		}
 	}
+	pr_info("%s:i2c protocol = %d, sensing mode = %d\n", __func__, ts->touch_protocol_type, ts->sensing_mode);
 	return 0;
 }
 
 static int sitronix_get_resolution(struct sitronix_ts_data *ts)
 {
-	/*
 	int ret = 0;
 	uint8_t buffer[4];
-	int newResX = 800;
-	int newResY = 480;
-
-	buffer[0] = XY_RESOLUTION_HIGH;
-	buffer[1] = (newResX>>8)<<4 | (newResY>>8);
-	buffer[2] = (newResX&0xFF);
-	buffer[3] = (newResY&0xFF);
-
-	ret = sitronix_i2c_write_bytes(ts->client, buffer, 4);
-	if (ret < 0){
-		printk("set resolution error (%d)\n", ret);
-		return ret;
-	}else{
-		ts->resolution_x = newResX;
-		ts->resolution_y = newResY;
-		printk("resolution = %d x %d\n", ts->resolution_x, ts->resolution_y);
-	}
-	*/
-	int ret = 0;
-	uint8_t buffer[4];
-		printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 	ret = sitronix_i2c_read_bytes(ts->client, XY_RESOLUTION_HIGH, buffer, 3);
 	if (ret < 0){
-		printk("read resolution error (%d)\n", ret);
+		pr_err("%s: read resolution error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		ts->resolution_x = ((buffer[0] & (X_RES_H_BMSK << X_RES_H_SHFT)) << 4) | buffer[1];
 		ts->resolution_y = ((buffer[0] & Y_RES_H_BMSK) << 8) | buffer[2];
-		printk("resolution = %d x %d\n", ts->resolution_x, ts->resolution_y);
+		pr_info("%s: resolution = %d x %d\n", __func__, ts->resolution_x, ts->resolution_y);
 	}
 	return 0;
 
@@ -659,13 +628,12 @@ static int sitronix_ts_get_CHIP_ID(struct sitronix_ts_data *ts)
 {
 	int ret = 0;
 	uint8_t buffer[3];
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	DbgMsg("%s\n", __FUNCTION__);
 
 	ret = sitronix_i2c_read_bytes(ts->client, CHIP_ID, buffer, 3);
 	if (ret < 0){
-		printk("read Chip ID error (%d)\n", ret);
+		pr_err("%s: read Chip ID error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		if(buffer[0] == 0){
@@ -677,9 +645,7 @@ static int sitronix_ts_get_CHIP_ID(struct sitronix_ts_data *ts)
 			ts->chip_id = buffer[0];
 		ts->Num_X = buffer[1];
 		ts->Num_Y = buffer[2];
-		printk("Chip ID = %d\n", ts->chip_id);
-		printk("Num_X = %d\n", ts->Num_X);
-		printk("Num_Y = %d\n", ts->Num_Y);
+		pr_info("%s: Chip ID=%d, Num_X=%d, Num_Y=%d\n", __func__, ts->chip_id, ts->Num_X, ts->Num_Y);
 	}
 
 	return 0;
@@ -689,12 +655,11 @@ static int sitronix_ts_set_powerdown_bit(struct sitronix_ts_data *ts, int value)
 {
 	int ret = 0;
 	uint8_t buffer[2];
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	DbgMsg("%s, value = %d\n", __FUNCTION__, value);
 	ret = sitronix_i2c_read_bytes(ts->client, DEVICE_CONTROL_REG, buffer, 1);
 	if (ret < 0){
-		printk("read device control status error (%d)\n", ret);
+		pr_err("%s: read device control status error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		DbgMsg("dev status = %d \n", buffer[0]);
@@ -708,7 +673,7 @@ static int sitronix_ts_set_powerdown_bit(struct sitronix_ts_data *ts, int value)
 	buffer[0] = DEVICE_CONTROL_REG;
 	ret = sitronix_i2c_write_bytes(ts->client, buffer, 2);
 	if (ret < 0){
-		printk("write power down error (%d)\n", ret);
+		pr_err("%s: write power down error (%d)\n", __func__, ret);
 		return ret;
 	}
 
@@ -721,14 +686,13 @@ static int sitronix_ts_disable_int(struct sitronix_ts_data *ts, uint8_t value)
 	int ret = 0;
 	uint8_t buffer[2];
 	sitronix_i2c_protocol_map *i2c_ptcl;
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	DbgMsg("%s, value = %d\n", __FUNCTION__, value);
 	i2c_ptcl = (ts->chip_id > 3)? &sitronix_i2c_ptcl_v2 : &sitronix_i2c_ptcl_v1;
 
 	ret = sitronix_i2c_read_bytes(ts->client, i2c_ptcl->dis_coord_flag.offset, buffer, 1);
 	if (ret < 0){
-		printk("read disable coord. flag error (%d)\n", ret);
+		pr_err("%s: read disable coord. flag error (%d)\n", __func__, ret);
 		return ret;
 	}
 
@@ -738,7 +702,7 @@ static int sitronix_ts_disable_int(struct sitronix_ts_data *ts, uint8_t value)
 	buffer[0] = i2c_ptcl->dis_coord_flag.offset;
 	ret = sitronix_i2c_write_bytes(ts->client, buffer, 2);
 	if (ret < 0){
-		printk("write disable coord. flag error (%d)\n", ret);
+		pr_err("%s: write disable coord. flag error (%d)\n", __func__, ret);
 		return ret;
 	}
 	return 0;
@@ -747,7 +711,7 @@ static int sitronix_ts_disable_int(struct sitronix_ts_data *ts, uint8_t value)
 static int sitronix_ts_get_touch_info(struct sitronix_ts_data *ts)
 {
 	int ret = 0;
-		printk("%s,line=%d\n", __FUNCTION__,__LINE__);
+
 	ret = sitronix_get_resolution(ts);
 	if(ret < 0)
 		return ret;
@@ -767,7 +731,7 @@ static int sitronix_ts_get_touch_info(struct sitronix_ts_data *ts)
 	if((ts->fw_revision[0] == 0) && (ts->fw_revision[1] == 0)){
 		if(ts->touch_protocol_type == SITRONIX_RESERVED_TYPE_0){
 			ts->touch_protocol_type = SITRONIX_B_TYPE;
-			printk("i2c protocol (revised) = %d \n", ts->touch_protocol_type);
+			pr_err("%s: i2c protocol (revised) = %d \n", __func__, ts->touch_protocol_type);
 		}
 	}
 	if(ts->touch_protocol_type == SITRONIX_A_TYPE)
@@ -775,7 +739,7 @@ static int sitronix_ts_get_touch_info(struct sitronix_ts_data *ts)
 	else if(ts->touch_protocol_type == SITRONIX_B_TYPE){
 		ts->per_touch_length = sizeof(struct touch_data_b);
 		ts->max_touches = 2;
-		printk("max touches (revised) = %d \n", ts->max_touches);
+		pr_info("%s: max touches(revised)=%d \n", __func__, ts->max_touches);
 	}
 
 #ifdef SITRONIX_MONITOR_THREAD
@@ -799,14 +763,14 @@ static int sitronix_ts_get_device_status(struct i2c_client *client, uint8_t *err
 {
 	int ret = 0;
 	uint8_t buffer[8];
-	printk("%s,line=%d\n",__FUNCTION__,__LINE__);
+
 	DbgMsg("%s\n", __FUNCTION__);
 	ret = sitronix_i2c_read_bytes(client, STATUS_REG, buffer, 8);
 	if (ret < 0){
-		printk("read status reg error (%d)\n", ret);
+		pr_err("%s: read status reg error (%d)\n", __func__, ret);
 		return ret;
 	}else{
-		printk("status reg = %d \n", buffer[0]);
+		pr_info("%s:status reg = %d \n", __func__, buffer[0]);
 	}
 
 	*err_code = (buffer[0] & 0xf0) >> 4;
@@ -824,7 +788,7 @@ static int sitronix_ts_Enhance_Function_control(struct sitronix_ts_data *ts, uin
 	DbgMsg("%s\n", __FUNCTION__);
 	ret = sitronix_i2c_read_bytes(ts->client, 0xF0, buffer, 1);
 	if (ret < 0){
-		printk("read Enhance Functions status error (%d)\n", ret);
+		pr_err("%s: read Enhance Functions status error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		DbgMsg("Enhance Functions status = %d \n", buffer[0]);
@@ -843,7 +807,7 @@ static int sitronix_ts_FW_Bank_Select(struct sitronix_ts_data *ts, uint8_t value
 	DbgMsg("%s\n", __FUNCTION__);
 	ret = sitronix_i2c_read_bytes(ts->client, 0xF1, buffer, 1);
 	if (ret < 0){
-		printk("read FW Bank Select status error (%d)\n", ret);
+		pr_err("%s: read FW Bank Select status error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		DbgMsg("FW Bank Select status = %d \n", buffer[0]);
@@ -853,7 +817,7 @@ static int sitronix_ts_FW_Bank_Select(struct sitronix_ts_data *ts, uint8_t value
 	buffer[0] = 0xF1;
 	ret = sitronix_i2c_write_bytes(ts->client, buffer, 2);
 	if (ret < 0){
-		printk("send FW Bank Select command error (%d)\n", ret);
+		pr_err("%s: send FW Bank Select command error (%d)\n", __func__, ret);
 		return ret;
 	}
 
@@ -867,7 +831,7 @@ static int sitronix_get_id_info(struct sitronix_ts_data *ts, uint8_t *id_info)
 
 	ret = sitronix_i2c_read_bytes(ts->client, 0x0C, buffer, 4);
 	if (ret < 0){
-		printk("read id info error (%d)\n", ret);
+		pr_err("%s: read id info error (%d)\n", __func__, ret);
 		return ret;
 	}else{
 		memcpy(id_info, buffer, 4);
@@ -891,15 +855,15 @@ static int sitronix_ts_identify(struct sitronix_ts_data *ts)
 		ret = sitronix_get_id_info(ts, &id[0]);
 		if(ret < 0)
 			return ret;
-		printk("id (hex) = %x %x %x %x\n", id[0], id[1], id[2], id[3]);
+		pr_info("%s: id (hex) = %x %x %x %x\n", __func__, id[0], id[1], id[2], id[3]);
 		if((id[0] == 1)&&(id[1] == 2)&&(id[2] == 0xb)&&(id[3] == 1)){
 			return 0;
 		}else{
-			printk("Error: It is not Sitronix IC\n");
+			pr_err("%s: Error: It is not Sitronix IC\n", __func__);
 			return -1;
 		}
 	}else{
-		printk("Error: Can not get ID of Sitronix IC\n");
+		pr_err("%s: Error: Can not get ID of Sitronix IC\n", __func__);
 		return -1;
 	}
 }
@@ -943,7 +907,7 @@ static int sitronix_ts_monitor_thread(void *data)
 
 	DbgMsg("%s:\n", __FUNCTION__);
 
-	printk("delay %d ms\n", sitronix_ts_delay_monitor_thread_start);
+	pr_debug("%s: delay %d ms\n", __func__, sitronix_ts_delay_monitor_thread_start);
 	msleep(sitronix_ts_delay_monitor_thread_start);
 	while(!kthread_should_stop()){
 		DbgMsg("%s:\n", "Sitronix_ts_monitoring 2222");
@@ -980,7 +944,6 @@ static int sitronix_ts_monitor_thread(void *data)
 				goto exit_i2c_invalid;
 			}else{
 				DbgMsg("%dD data h%x-%x = 0x%02x, 0x%02x, 0x%02x, 0x%02x\n", (ts->sensing_mode == SENSING_BOTH_NOT ? 2:1), raw_data_ofs, raw_data_ofs + 3, buffer[0], buffer[1], buffer[2], buffer[3]);
-				//printk("%dD data h%x-%x = 0x%02x, 0x%02x, 0x%02x, 0x%02x\n", (ts->sensing_mode == SENSING_BOTH_NOT ? 2:1), raw_data_ofs, raw_data_ofs + 3, buffer[0], buffer[1], buffer[2], buffer[3]);
 				result = 1;
 				if ((PreCheckData[0] == buffer[0]) && (PreCheckData[1] == buffer[1]) &&
 				(PreCheckData[2] == buffer[2]) && (PreCheckData[3] == buffer[3]))
@@ -998,7 +961,7 @@ static int sitronix_ts_monitor_thread(void *data)
 				}
 			}
 			if (-1 == result){
-				printk("Chip abnormal, reset it!\n");
+				pr_err("%s: Chip abnormal, reset it!\n", __func__);
 				sitronix_ts_reset_ic();
 				i2cErrorCount = 0;
 				StatusCheckCount = 0;
@@ -1012,7 +975,7 @@ exit_i2c_invalid:
 			if(0 == result){
 				i2cErrorCount ++;
 				if ((2 <= i2cErrorCount)){
-					printk("I2C abnormal, reset it!\n");
+					pr_err("%s: I2C abnormal, reset it!\n", __func__);
 					sitronix_ts_reset_ic();
 					if(ts->RawCRC_enabled == 0)
 						sitronix_set_raw_data_type(ts);
@@ -1036,7 +999,7 @@ static int sitronix_ts_monitor_thread_v2(void *data)
 
 	DbgMsg("%s:\n", __FUNCTION__);
 
-	printk("delay %d ms\n", sitronix_ts_delay_monitor_thread_start);
+	pr_debug("%s: delay %d ms\n", __func__, sitronix_ts_delay_monitor_thread_start);
 	msleep(sitronix_ts_delay_monitor_thread_start);
 	while(!kthread_should_stop()){
 		DbgMsg("%s:\n", "Sitronix_ts_monitoring");
@@ -1050,7 +1013,7 @@ static int sitronix_ts_monitor_thread_v2(void *data)
 				goto exit_i2c_invalid;
 			}else{
 				DbgMsg("Raw CRC = 0x%02x\n", buffer[0]);
-				//printk("Raw CRC = 0x%02x\n", buffer[0]);
+				pr_debug("%s: Raw CRC = 0x%02x\n", __func__, buffer[0]);
 				result = 1;
 				if (PreCheckData[0] == buffer[0])
 					StatusCheckCount ++;
@@ -1064,7 +1027,7 @@ static int sitronix_ts_monitor_thread_v2(void *data)
 				}
 			}
 			if (-1 == result){
-				printk("Chip abnormal, reset it!\n");
+				pr_err("%s: Chip abnormal, reset it!\n", __func__);
 				sitronix_ts_reset_ic();
 				i2cErrorCount = 0;
 				StatusCheckCount = 0;
@@ -1073,7 +1036,7 @@ exit_i2c_invalid:
 			if(0 == result){
 				i2cErrorCount ++;
 				if ((2 <= i2cErrorCount)){
-					printk("I2C abnormal, reset it!\n");
+					pr_err("%s: I2C abnormal, reset it!\n", __func__);
 					sitronix_ts_reset_ic();
 					i2cErrorCount = 0;
 					StatusCheckCount = 0;
@@ -1088,6 +1051,7 @@ exit_i2c_invalid:
 }
 #endif // SITRONIX_MONITOR_THREAD
 
+#ifdef SITRONIX_KEYEVENT
 static inline void sitronix_ts_handle_sensor_key(struct input_dev *input_dev, struct sitronix_sensor_key_t *key_array, char *pre_key_status, char cur_key_status, int key_count)
 {
 
@@ -1095,14 +1059,13 @@ static inline void sitronix_ts_handle_sensor_key(struct input_dev *input_dev, st
 	for(i = 0; i < key_count; i++){
 		if(cur_key_status & (1 << i)){
 			DbgMsg("lpz sensor key[%d] down\n", i);
-			printk("kkk down now key %d \n",cur_key_status);
+			pr_debug("kkk down now key %d \n",cur_key_status);
 			input_report_key(input_dev, key_array[i].code, 1);
 
 			input_sync(input_dev);
 		}else{
 			if(*pre_key_status & (1 << i)){
-				//printk("kkk up now key %d \n",cur_key_status);
-				DbgMsg("lpz sensor key[%d] up\n", i);
+				DbgMsg("%s: lpz sensor key[%d] up\n", __func__, i);
 				input_report_key(input_dev, key_array[i].code, 0);
 				input_sync(input_dev);
 			}
@@ -1132,6 +1095,7 @@ static inline void sitronix_ts_handle_aa_key(struct input_dev *input_dev, struct
 	*pre_key_status = cur_key_status;
 }
 #endif // SITRONIX_AA_KEY
+#endif
 
 #ifdef SITRONIX_GESTURE
 
@@ -1139,7 +1103,7 @@ static void sitronix_gesture_func(struct input_dev *input_dev,int id)
 {
 	if(id == G_PALM)
 	{
-		printk("Gesture for Palm to suspend \n");
+		pr_info("%s: Gesture for Palm to suspend\n", __func__);
 		input_report_key(input_dev,KEY_POWER,1);// KEY_LEFT, 1);
 		input_sync(input_dev);
 		input_report_key(input_dev, KEY_POWER, 0);
@@ -1177,7 +1141,7 @@ static void sitronix_swk_func(struct input_dev *input_dev, int id)
 		if(swk_flag == 1)
 		{
 			//do wake up here
-			printk("Smark Wake Up by Double click! \n");
+			pr_debug("%s: Smark Wake Up by Double click!\n", __func__);
 			input_report_key(input_dev, KEY_POWER, 1);
 			input_sync(input_dev);
 			input_report_key(input_dev, KEY_POWER, 0);
@@ -1187,22 +1151,22 @@ static void sitronix_swk_func(struct input_dev *input_dev, int id)
 	}
 	else if(id == TOP_TO_DOWN_SLIDE)
 	{
-		printk("Smark Wake Up by TOP_TO_DOWN_SLIDE \n");
+		pr_debug("%s: Smark Wake Up by TOP_TO_DOWN_SLIDE \n", __func__);
 		//do wake up here
 	}
 	else if(id == DOWN_TO_UP_SLIDE)
 	{
-		printk("Smark Wake Up by DOWN_TO_UP_SLIDE \n");
+		pr_debug("%s: Smark Wake Up by DOWN_TO_UP_SLIDE \n", __func__);
 		//do wake up here
 			}
 	else if(id == LEFT_TO_RIGHT_SLIDE)
 	{
-		printk("Smark Wake Up by LEFT_TO_RIGHT_SLIDE \n");
+		pr_debug("%s: Smark Wake Up by LEFT_TO_RIGHT_SLIDE \n", __func__);
 		//do wake up here
 	}
 	else if(id == RIGHT_TO_LEFT_SLIDE)
 	{
-		printk("Smark Wake Up by RIGHT_TO_LEFT_SLIDE \n");
+		pr_debug("%s: Smark Wake Up by RIGHT_TO_LEFT_SLIDE \n", __func__);
 		//do wake up here
 	}
 }
@@ -1251,14 +1215,14 @@ static void sitronix_ts_work_func(struct work_struct *work)
 	uint8_t touch_cnt = 0;
 
 	DbgMsg("%s\n",  __FUNCTION__);
-	//printk("%s,line=%d\n,use_irq=%d,irq_num=%d,",__FUNCTION__,__LINE__,ts->use_irq,ts->client->irq);
 	atomic_set(&sitronix_ts_in_int, 1);
 
+#ifdef SITRONIX_KEYEVENT
 #ifdef SITRONIX_GESTURE
 	if(!ts->suspend_state)
 	{
 		ret = sitronix_i2c_read_bytes(ts->client, FINGERS, buffer, 1);
-		printk("SITRONIX_GESTURE ret:%d ,value:0x%X\n",ret,buffer[0]);
+		pr_debug("%s: SITRONIX_GESTURE ret:%d ,value:0x%X\n", __func__, ret, buffer[0]);
 		buffer[0] &= 0xF;
 		if((ret == 0 && buffer[0] == G_PALM))
 		{
@@ -1279,10 +1243,11 @@ static void sitronix_ts_work_func(struct work_struct *work)
 		}
 	}
 #endif	//SITRONIX_SMART_WAKE_UP
+#endif
 
 	ret = sitronix_i2c_read_bytes(ts->client, KEYS_REG, buffer, 1 + ts->max_touches * ts->per_touch_length);
 	if (ret < 0) {
-		printk("read finger error (%d)\n", ret);
+		pr_err("%s: read finger error (%d)\n", __func__, ret);
 		i2cErrorCount++;
 		goto exit_invalid_data;
 	}
@@ -1340,11 +1305,12 @@ static void sitronix_ts_work_func(struct work_struct *work)
 	release_slots(ts, tmp);
 
 	input_sync(ts->input_dev);
-
+#ifdef SITRONIX_KEYEVENT
 	sitronix_ts_handle_sensor_key(ts->keyevent_input, sitronix_sensor_key_array, &sitronix_sensor_key_status, buffer[0], (sizeof(sitronix_sensor_key_array)/sizeof(struct sitronix_sensor_key_t)));
 #ifdef SITRONIX_AA_KEY
 	sitronix_ts_handle_aa_key(ts->keyevent_input, sitronix_aa_key_array, &sitronix_aa_key_status, aa_key_status, (sizeof(sitronix_aa_key_array)/sizeof(struct sitronix_AA_key)));
 #endif // SITRONIX_AA_KEY
+#endif
 
 exit_invalid_data:
 #ifdef SITRONIX_INT_POLLING_MODE
@@ -1357,7 +1323,7 @@ exit_invalid_data:
 		schedule_delayed_work(&ts->work, msecs_to_jiffies(INT_POLLING_MODE_INTERVAL));
 	}else{
 #ifdef CONFIG_HARDIRQS_SW_RESEND
-		printk("Please not set HARDIRQS_SW_RESEND to prevent kernel from sending SW IRQ\n");
+		pr_err("%s: Please not set HARDIRQS_SW_RESEND to prevent kernel from sending SW IRQ\n", __func__);
 #endif // CONFIG_HARDIRQS_SW_RESEND
 		if (ts->use_irq){
 			atomic_set(&sitronix_ts_irq_on, 1);
@@ -1372,7 +1338,7 @@ exit_invalid_data:
 	}
 #endif // defined(SITRONIX_LEVEL_TRIGGERED)
 	if ((2 <= i2cErrorCount)){
-		printk("I2C abnormal in work_func(), reset it!\n");
+		pr_err("%s: I2C abnormal in work_func(), reset it!\n", __func__);
 		sitronix_ts_reset_ic();
 		i2cErrorCount = 0;
 #ifdef SITRONIX_MONITOR_THREAD
@@ -1390,7 +1356,7 @@ exit_invalid_data:
 static irqreturn_t sitronix_ts_irq_handler(int irq, void *dev_id)
 {
 	struct sitronix_ts_data *ts = dev_id;
-	//printk("%s,line=%d\n",__FUNCTION__,__LINE__);
+
 	DbgMsg("%s\n", __FUNCTION__);
 	atomic_set(&sitronix_ts_in_int, 1);
 #if defined(SITRONIX_LEVEL_TRIGGERED) || defined(SITRONIX_INT_POLLING_MODE)
@@ -1413,7 +1379,7 @@ static irqreturn_t sitronix_ts_irq_handler(int irq, void *dev_id)
 #ifdef SITRONIX_SYSFS
 static ssize_t sitronix_ts_reprobe_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-	printk("sitronix_ts_reprobe_store!!!!!\n");
+	pr_debug("sitronix_ts_reprobe_store!!!!!\n");
 	sitronix_ts_sysfs_using = true;
 	sitronix_ts_reprobe();
 	sitronix_ts_sysfs_using = false;
@@ -1438,7 +1404,7 @@ static int sitronix_ts_create_sysfs_entry(struct i2c_client *client)
 
 	err = sysfs_create_group(&(client->dev.kobj), &sitronix_ts_attr_group_v0);
 	if (err) {
-		dev_warn(&client->dev, "%s(%u): sysfs_create_group() failed!\n", __FUNCTION__, __LINE__);
+		dev_warn(&client->dev, "%s: sysfs_create_group() failed!\n", __FUNCTION__);
 	}
 	return err;
 }
@@ -1510,7 +1476,7 @@ int sitronix_touch_reinit(void)
 {
 	if(gSitronixPtr == NULL)
 		return -1;
-	 printk("%s\n",__func__);
+	 pr_debug("%s\n",__func__);
 	 sitronix_irq_enable(gSitronixPtr);
 	 return 0;
 }
@@ -1519,7 +1485,7 @@ int sitronix_touch_uninit(void)
 {
 	if(gSitronixPtr == NULL)
 		return -1;
-	 printk("%s\n",__func__);
+	 pr_debug("%s\n",__func__);
 	 sitronix_irq_disable(gSitronixPtr);
 	 while(cancel_work_sync(&gSitronixPtr->work));
         //flush_workqueue(sitronix_wq);
@@ -1568,9 +1534,9 @@ static void sitronix_io_sync_work_func(struct work_struct *work)
 {
 	int pin_val = 0xff;
 	unsigned long irqflags;
-	printk("%s:line=%d,",__FUNCTION__,__LINE__);
+
 	// pin_val = ap_sp_sync_gpio(sitronix_sync_io,CTP_SYNC_IO_IN,0);
-	 //printk("P:%d\n",pin_val);
+	 //pr_debug("P:%d\n",pin_val);
 	 if(0 == pin_val)
 	 {
 		spin_lock_irqsave(&ctp_sync_lock,irqflags);
@@ -1586,15 +1552,15 @@ static void sitronix_io_sync_work_func(struct work_struct *work)
 	{
 		if(!ctp_sync_io_last_status)
 		{
-			printk("C:%d\n",ctp_sync_pulse_count);
+			pr_debug("%s: C:%d\n", __func__, ctp_sync_pulse_count);
 			if((ctp_sync_pulse_count > 1) && (ctp_sync_pulse_count < 4)) //tp switch to sp siginal
 			{
-				printk("U\n");
+				pr_debug("%s: U\n", __func__);
 				sitronix_touch_uninit();//\B4?\AF\CA\FD\BB\E1\D7\E8\C8\FB\D0\E8?\D4?\AA?\B8\F6\B9\A4\D7\F7\B6\D3\C1\D0?
 			}
 			else if((ctp_sync_pulse_count > 3) && (ctp_sync_pulse_count < 6)) //tp switch to ap siginal
 			{
-				printk("R\n");
+				pr_debug("%s: R\n", __func__);
 				sitronix_touch_reinit();
 			}
 		}
@@ -1609,8 +1575,6 @@ static void sitronix_io_sync_work_func(struct work_struct *work)
 
 void ctp_sync_timer_func(unsigned long data)
 {
-	printk("%s:line=%d,",__FUNCTION__,__LINE__);
-
 	queue_work(sitronix_io_sync_workqueue, &gSitronixPtr->sitronix_io_sync_work);
 
 	mod_timer(&ctp_sync_timer,jiffies+HZ/50);
@@ -1622,49 +1586,6 @@ void ctp_sync_timer_func(unsigned long data)
 #define PROP_NAME_SIZE		24
 
 
-static int sitronix_ts_get_dt_coords(struct device *dev, char *name,
-				   struct sitronix_i2c_touch_platform_data *pdata)
-{
-	struct property *prop;
-	struct device_node *np = dev->of_node;
-	int rc;
-	u32 coords[SITRONIX_COORDS_ARR_SIZE];
-	printk("%s,%d\n",__FUNCTION__,__LINE__);
-
-	prop = of_find_property(np, name, NULL);
-	if (!prop)
-		return -EINVAL;
-	if (!prop->value)
-		return -ENODATA;
-
-	rc = of_property_read_u32_array(np, name, coords,
-					SITRONIX_COORDS_ARR_SIZE);
-	if (rc && (rc != -EINVAL)) {
-		dev_err(dev, "Unable to read %s\n", name);
-		return rc;
-	}
-
-	if (!strcmp(name, "sitronix,panel-coords")) {
-		pdata->panel_minx = coords[0];
-		pdata->panel_miny = coords[1];
-		pdata->panel_maxx = coords[2];
-		pdata->panel_maxy = coords[3];
-		printk("%s:panel-coords,minx=%d,miny=%d,maxx=%d,maxy=%d\n",__FUNCTION__,\
-				pdata->panel_minx,pdata->panel_miny,pdata->panel_maxx,pdata->panel_maxy);
-	} else if (!strcmp(name, "sitronix,display-coords")) {
-		pdata->x_min = coords[0];
-		pdata->y_min = coords[1];
-		pdata->x_max = coords[2];
-		pdata->y_max = coords[3];
-		printk("%s:display-coords,minx=%d,miny=%d,maxx=%d,maxy=%d\n",__FUNCTION__,\
-				pdata->x_min,pdata->y_min,pdata->x_max,pdata->y_max);
-	} else {
-		dev_err(dev, "unsupported property %s\n", name);
-		return -EINVAL;
-	}
-
-	return 0;
-}
 #if 1
 
 static int sitronix_parse_dt(struct device *dev,
@@ -1681,26 +1602,8 @@ static int sitronix_parse_dt(struct device *dev,
 	//char prop_name[PROP_NAME_SIZE];
 	//int i, read_cfg_num;
 
-	printk("%s,%d\n",__FUNCTION__,__LINE__);
-
 	pdata->name = "sitronix";
-	rc = sitronix_ts_get_dt_coords(dev, "sitronix,panel-coords", pdata);
-	if (rc && (rc != -EINVAL))
-		return rc;
 
-	rc = sitronix_ts_get_dt_coords(dev, "sitronix,display-coords", pdata);
-	if (rc)
-		return rc;
-
-	pdata->i2c_pull_up = of_property_read_bool(np, "sitronix,i2c-pull-up");
-
-	pdata->no_force_update = of_property_read_bool(np,
-						       "sitronix,no-force-update");
-
-	pdata->enable_power_off = of_property_read_bool(np,
-							"sitronix,enable-power-off");
-	pdata->fw_vkey_support = of_property_read_bool(np,
-						       "sitronix,fw-vkey-support");
 	/* reset, irq gpio info */
 	wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0, GPIOD_IN);
 	if (IS_ERR(wakeup_gpio))
@@ -1711,13 +1614,6 @@ static int sitronix_parse_dt(struct device *dev,
 		return PTR_ERR(reset_gpio);
 	ts->wakeup_gpio = wakeup_gpio;
 	ts->reset_gpio = reset_gpio;
-
-	rc = of_property_read_string(np, "sitronix,product-id",
-				     &pdata->product_id);
-	if (rc && (rc != -EINVAL)) {
-		dev_err(dev, "Failed to parse product_id.");
-		return -EINVAL;
-	}
 
 	rc = of_property_read_u32(np, "sitronix,num_max_touches",
 				  &pdata->num_max_touches);
@@ -1762,9 +1658,11 @@ static void destroy_class(struct sitronix_ts_data *ts);
 
 static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-	int i;
 	int ret = 0;
 	uint16_t max_x = 0, max_y = 0;
+#ifdef SITRONIX_KEYEVENT
+	int i;
+#endif
 #ifdef SITRONIX_SWAP_XY
 	uint16_t tmp;
 #endif
@@ -1772,8 +1670,6 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 	uint8_t dev_status = 0;
 	struct sitronix_i2c_touch_platform_data *pdata;
 	struct sitronix_ts_data *ts;
-
-	printk("%s,%d\n",__FUNCTION__,__LINE__);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 	{
@@ -1807,15 +1703,6 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 	msleep(3);
 	gpiod_set_value(ts->reset_gpio, 0);	/* inactive */
 	msleep(150);
-	#if 0//for reset pin test
-	for(i = 0;i<10;i++)
-	{
-		gpiod_set_value(ts->reset_gpio, 1);
-		usleep(3);
-		gpiod_set_value(ts->reset_gpio, 0);
-		usleep(3);
-	}
-	#endif
 #endif
 
 	ts->client = client;
@@ -1843,7 +1730,7 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 		goto err_device_info_error;
 
 
-	printk("gpio num:%d, irq num:%d\n",CTP_IRQ_NUMBER,ts->client->irq);
+	pr_debug("%s: irq num:%d\n", __func__, ts->client->irq);
 
 //client->irq = gpio_to_irq(CTP_IRQ_NUMBER);
 //DbgMsg("gpio num:%d, irq num:%d\n",CTP_IRQ_NUMBER,client->irq);
@@ -1885,7 +1772,7 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 
 	ts->input_dev = input_allocate_device();
 	if (ts->input_dev == NULL){
-		printk("Can not allocate memory for input device.");
+		pr_err("%s: Can not allocate memory for input device.\n", __func__);
 		ret = -ENOMEM;
 		goto err_input_dev_alloc_failed;
 	}
@@ -1899,9 +1786,10 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 	set_bit(EV_ABS, ts->input_dev->evbit);
 	set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
 
+#ifdef SITRONIX_KEYEVENT
 	ts->keyevent_input = input_allocate_device();
 	if (ts->keyevent_input == NULL){
-		printk("Can not allocate memory for key input device.");
+		pr_err("%s: Can not allocate memory for key input device.\n", __func__);
 		ret = -ENOMEM;
 		goto err_input_dev_alloc_failed;
 	}
@@ -1916,11 +1804,11 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 #ifdef SITRONIX_SMART_WAKE_UP
 	set_bit(KEY_POWER, ts->keyevent_input->keybit);
 #endif	//SITRONIX_SMART_WAKE_UP
+#endif
 
-#ifndef SITRONIX_AA_KEY
 	max_x = ts->resolution_x;
 	max_y = ts->resolution_y;
-#else
+#if defined(SITRONIX_KEYEVENT) && defined(SITRONIX_AA_KEY)
 #ifdef SITRONIX_KEY_BOUNDARY_MANUAL_SPECIFY
 	for(i = 0; i < (sizeof(sitronix_aa_key_array)/sizeof(struct sitronix_AA_key)); i++){
 		set_bit(sitronix_aa_key_array[i].code, ts->keyevent_input->keybit);
@@ -1939,15 +1827,7 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 	max_x = ts->resolution_x;
 	max_y = ts->resolution_y - ts->resolution_y / SCALE_KEY_HIGH_Y;
 #endif // SITRONIX_KEY_BOUNDARY_MANUAL_SPECIFY
-#endif // SITRONIX_AA_KEY
-
-
-	ret = input_register_device(ts->keyevent_input);
-	if(ret < 0){
-		printk("Can not register key input device.\n");
-		goto err_input_register_device_failed;
-	}
-
+#endif
 
 #ifdef SITRONIX_SUPPORT_MT_SLOT
 	input_mt_init_slots(ts->input_dev, ts->max_touches, 0);
@@ -1976,9 +1856,17 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 
 	ret = input_register_device(ts->input_dev);
 	if(ret < 0){
-		printk("Can not register input device.\n");
+		pr_err("%s: Can not register input device.\n", __func__);
 		goto err_input_register_device_failed;
 	}
+
+#ifdef SITRONIX_KEYEVENT
+	ret = input_register_device(ts->keyevent_input);
+	if(ret < 0){
+		pr_err("%s: Can not register key input device.\n", __func__);
+		goto err_input_register_device_failed;
+	}
+#endif
 
 	if (ts->client->irq) {
 		dev_info(&client->dev, "irq = %d\n", ts->client->irq);
@@ -2016,7 +1904,6 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 		sitronix_ts_sysfs_created = true;
 	}
 #endif // SITRONIX_SYSFS
-printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 #if defined(CONFIG_FB)
 	ts->fb_notif.notifier_call = fb_notifier_callback;
@@ -2058,7 +1945,6 @@ printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 	#if(CTP_AP_SP_SYNC_WAY & CTP_AP_SP_SYNC_APP)
 	// touch_panel_driver_add(&gSitronixPtr->sitronix_driver_ops);
 	#endif
-	printk("%s,line=%d\n", __FUNCTION__,__LINE__);
 
 	#if(CTP_AP_SP_SYNC_WAY & CTP_AP_SP_SYNC_GPIO)
 	//spin_lock_init(&ctp_sync_lock);
@@ -2073,7 +1959,9 @@ err_create_sysfs_failed:
 err_request_irq_failed:
 #ifdef SITRONIX_SYSFS
 	input_unregister_device(ts->input_dev);
+#ifdef SITRONIX_KEYEVENT
 	input_unregister_device(ts->keyevent_input);
+#endif
 #endif // SITRONIX_SYSFS
 err_input_register_device_failed:
 err_input_dev_alloc_failed:
@@ -2083,8 +1971,10 @@ err_input_dev_alloc_failed:
 
 	if(ts->input_dev)
 		input_free_device(ts->input_dev);
+#ifdef SITRONIX_KEYEVENT
 	if(ts->keyevent_input)
 		input_free_device(ts->keyevent_input);
+#endif
 #ifdef SITRONIX_MONITOR_THREAD
 	if(ts->enable_monitor_thread == 1){
 		if(SitronixMonitorThread){
@@ -2129,8 +2019,10 @@ static void sitronix_ts_remove(struct i2c_client *client)
 		free_irq(client->irq, ts);
 	if(ts->input_dev)
 		input_unregister_device(ts->input_dev);
+#ifdef SITRONIX_KEYEVENT
 	if(ts->keyevent_input)
 		input_unregister_device(ts->keyevent_input);
+#endif
 	destroy_class(ts);
 }
 
@@ -2253,13 +2145,13 @@ static int sitronix_ts_detect(struct i2c_client *client, struct i2c_board_info *
 {
 	uint8_t buffer[8];
 	sitronix_ts_reset_ic();
-	printk("%s: bus = %d\n", __FUNCTION__, client->adapter->nr);
+	pr_debug("%s: bus = %d\n", __func__, client->adapter->nr);
 	if((client->adapter->nr == twi_id) && (!sitronix_i2c_read_bytes(client, STATUS_REG, buffer, 8))){
-		printk("detect successed\n");
+		pr_debug("%s: detect successed\n", __func__);
 		strlcpy(info->type, SITRONIX_I2C_TOUCH_DRV_NAME, strlen(SITRONIX_I2C_TOUCH_DRV_NAME)+1);
 		return 0;
 	}else{
-		printk("detect failed\n");
+		pr_err("%s: detect failed\n", __func__);
 		return -ENODEV;
 	}
 }
@@ -2336,7 +2228,7 @@ static int init_class(struct sitronix_ts_data *ts)
 	dev_t devno = MKDEV(ts->major, 0);
 	int result  = alloc_chrdev_region(&devno, 0, 1, SITRONIX_I2C_TOUCH_DEV_NAME);
 	if (result < 0){
-		printk("fail to allocate chrdev (%d) \n", result);
+		pr_err("%s: fail to allocate chrdev (%d) \n", __func__, result);
 		return 0;
 	}
 	ts->major = MAJOR(devno);
@@ -2345,7 +2237,7 @@ static int init_class(struct sitronix_ts_data *ts)
 	ts->cdev.ops = &nc_fops;
         err =  cdev_add(&ts->cdev, devno, 1);
 	if (err){
-		printk("fail to add cdev (%d) \n", err);
+		pr_err("%s: fail to add cdev (%d) \n", __func__, err);
 		return 0;
 	}
 
@@ -2353,10 +2245,9 @@ static int init_class(struct sitronix_ts_data *ts)
 	if (IS_ERR(ts->class)) {
 		result = PTR_ERR(ts->class);
 		unregister_chrdev(ts->major, SITRONIX_I2C_TOUCH_DEV_NAME);
-		printk("fail to create class (%d) \n", result);
+		pr_err("%s: fail to create class (%d)\n", __func__, result);
 		return result;
 	}
-	printk("%s,%d\n",__FUNCTION__,__LINE__);
 	device_create(ts->class, NULL, MKDEV(ts->major, 0), NULL, SITRONIX_I2C_TOUCH_DEV_NAME);
 	return 0;
 }
@@ -2374,11 +2265,11 @@ static void destroy_class(struct sitronix_ts_data *ts)
 void sitronix_ts_reprobe(void)
 {
 	int retval = 0;
-	printk("sitronix call reprobe!\n");
+	pr_debug("%s: call reprobe!\n", __func__);
 	i2c_del_driver(&sitronix_ts_driver);
 	retval = i2c_add_driver(&sitronix_ts_driver);
 	if(retval < 0)
-		printk("fail to reprobe driver!\n");
+		pr_err("%s: fail to reprobe driver!\n", __func__);
 }
 
 #ifdef CONFIG_ARCH_SUNXI
@@ -2425,25 +2316,7 @@ static int __init sitronix_ts_init(void)
 	s32 ret = -1;
 #endif
 	s32 ret_iic = -2;
-	#if(CTP_AP_SP_SYNC_WAY & CTP_AP_SP_SYNC_GPIO)
-	//script_item_u   val;
-	//script_item_value_type_e  type;
-	//int pin_val = 0;
-	#endif
 
-	#if(CTP_AP_SP_SYNC_WAY & CTP_AP_SP_SYNC_GPIO)
-	//type = script_get_item("ctp_para", "ctp_sync_io", &val);
-	//if(SCIRPT_ITEM_VALUE_TYPE_PIO != type) {
-	//	ErrorMsg("%s: ctp_sync_io script_get_item err. \n",__func__ );
-	//}
-	//else
-	{
-		printk("ctp_sync_io get ok\n");
-		//sitronix_sync_io = val.gpio;
-	}
-
-	//ap_sp_sync_gpio(sitronix_sync_io, CTP_SYNC_IO_IN, pin_val);
-	#endif
 #ifdef CONFIG_ARCH_SUNXI
 	DbgMsg("****************************************************************\n");
 	if (0)//(input_fetch_sysconfig_para(&(config_info.input_type)))
@@ -2480,8 +2353,7 @@ static int __init sitronix_ts_init(void)
 	//sitronix_i2c_driver.detect = ctp_detect;
 #endif
 
-	printk("Sitronix touch driver %d.%d.%d\n", DRIVER_MAJOR, DRIVER_MINOR, DRIVER_PATCHLEVEL);
-	printk("Release date: %s\n", DRIVER_DATE);
+	pr_info("Sitronix touch driver %d.%d.%d Release date: %s\n", DRIVER_MAJOR, DRIVER_MINOR, DRIVER_PATCHLEVEL, DRIVER_DATE);
 #ifdef SITRONIX_FW_UPGRADE_FEATURE
 #ifdef SITRONIX_PERMISSION_THREAD
 	SitronixPermissionThread = kthread_run(sitronix_ts_permission_thread,"Sitronix","Permissionthread");
@@ -2491,7 +2363,7 @@ static int __init sitronix_ts_init(void)
 #endif // SITRONIX_FW_UPGRADE_FEATURE
 
 	ret_iic= i2c_add_driver(&sitronix_ts_driver);
-	printk("IIC ADD DRIVER %s,ret_iic=%d\n",__FUNCTION__,ret_iic);
+	pr_debug("IIC ADD DRIVER %s, ret_iic=%d\n", __func__, ret_iic);
 
 	return  ret_iic;
 	//return i2c_add_driver(&sitronix_ts_driver);
