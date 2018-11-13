@@ -77,9 +77,9 @@
 #endif // CONFIG_MACH_DEVKIT8000
 
 // MT SLOT feature is implmented in linux kernel 2.6.38 and later. Make sure that version of your linux kernel before using this feature.
-//#define SITRONIX_SUPPORT_MT_SLOT
+#define SITRONIX_SUPPORT_MT_SLOT
 //#define SITRONIX_SWAP_XY
-//#define SITRONIX_I2C_COMBINED_MESSAGE
+#define SITRONIX_I2C_COMBINED_MESSAGE
 #ifndef SITRONIX_I2C_COMBINED_MESSAGE
 #define SITRONIX_I2C_SINGLE_MESSAGE
 #endif // SITRONIX_I2C_COMBINED_MESSAGE
@@ -100,8 +100,8 @@
 //#define SITRONIX_IDENTIFY_ID
 //#define SITRONIX_MULTI_SLAVE_ADDR
 
-#define EnableDbgMsg 1
-#define EnableUpgradeMsg 1
+//#define EnableDbgMsg 1
+//#define EnableUpgradeMsg 1
 
 #ifdef EnableDbgMsg
 #define DbgMsg(arg...) printk(arg)
@@ -191,13 +191,18 @@ typedef enum{
 
 #define SITRONIX_TS_CHANGE_MODE_DELAY 150
 
-typedef enum{
-	XY_COORD_H,
-	X_COORD_L,
-	Y_COORD_L,
-	PIXEL_DATA_LENGTH_B,
-	PIXEL_DATA_LENGTH_A,
-}PIXEL_DATA_FORMAT;
+struct touch_data_a {
+	u8 xy_coord_h;
+	u8 x_coord_l;
+	u8 y_coord_l;
+};
+
+struct touch_data_b {
+	u8 xy_coord_h;
+	u8 x_coord_l;
+	u8 y_coord_l;
+	u8 spare;
+};
 
 #define X_RES_H_SHFT 4
 #define X_RES_H_BMSK 0xf
@@ -333,10 +338,6 @@ struct sitronix_i2c_touch_platform_data {
 				/* (major << 8 | minor) version or above. */
 				/* If non-zero another array entry follows */
 	void (*reset_ic)(void);
-	int irq_gpio;
-	u32 irq_gpio_flags;
-	int reset_gpio;
-	u32 reset_gpio_flags;
 	u32 num_max_touches;
 	u32 soft_rst_dly;
 	const char *product_id;
