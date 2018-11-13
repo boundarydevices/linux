@@ -855,7 +855,7 @@ static int pts_lookup_offset_inline_locked(u8 type, u32 offset, u32 *val,
 				&& (VAL_DIFF(p->val, p2->val) >= 0)) {
 				/* do interpolation between [p2, p] */
 				*val =
-					div_u64(((p->val - p2->val) *
+					div_u64((((u64)p->val - p2->val) *
 						(offset - p2->offset)),
 						(p->offset - p2->offset)) +
 					p2->val;

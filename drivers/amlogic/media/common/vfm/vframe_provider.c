@@ -162,7 +162,7 @@ static inline int use_provider(struct vframe_provider_s *prov)
 	if (prov) {
 		ret = atomic_inc_return(&prov->use_cnt);
 		if (ret <= 0) {
-			atomic_dec_return(&prov->use_cnt);
+			atomic_dec(&prov->use_cnt);
 			pr_err("%s: Error, provider error-%d\n",
 				prov->name, atomic_read(&prov->use_cnt));
 		}
@@ -172,7 +172,7 @@ static inline int use_provider(struct vframe_provider_s *prov)
 static inline void unuse_provider(struct vframe_provider_s *prov)
 {
 	if (prov)
-		atomic_dec_return(&prov->use_cnt);
+		atomic_dec(&prov->use_cnt);
 }
 #define CLOSED_CNT -100000
 static int vf_provider_close(struct vframe_provider_s *prov)

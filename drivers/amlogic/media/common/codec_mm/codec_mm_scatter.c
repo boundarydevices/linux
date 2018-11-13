@@ -1156,8 +1156,10 @@ static int codec_mm_scatter_free_page_id_locked(
 		ulong phy_addr = PAGE_ADDR_OF_MMS(mms, id);
 
 		free_page((unsigned long)phys_to_virt(phy_addr));
+		codec_mm_list_lock(smgt);
 		smgt->one_page_cnt--;
 		smgt->total_page_num--;
+		codec_mm_list_unlock(smgt);
 		if (id == mms->page_tail)
 			mms->page_tail--;
 		mms->page_cnt--;
@@ -1263,7 +1265,9 @@ static int codec_mm_scatter_free_tail_pages_in(
 		return -1;
 	}
 	smgt = (struct codec_mm_scatter_mgt *)mms->manager;
+	codec_mm_list_lock(smgt);
 	mms->page_used = start_free_id;
+	codec_mm_list_unlock(smgt);
 
 	if (fast_mode == 1) {
 		codec_mm_scatter_unlock(mms);
@@ -1710,7 +1714,9 @@ static int codec_mm_scatter_alloc_want_pages_in(
 	if (want_pages > mms->page_max_cnt)
 		return CODEC_MM_S_ERR(100);
 	codec_mm_scatter_lock(mms);
+	codec_mm_list_lock(smgt);
 	mms->page_used = want_pages;
+	codec_mm_list_unlock(smgt);
 	if (want_pages > mms->page_cnt) {
 		ret = codec_mm_page_alloc_all_locked(
 				smgt,
@@ -2207,6 +2213,7 @@ int codec_mm_scatter_mgt_delay_free_swith(
 	int is_tvp)
 {
 	struct codec_mm_scatter_mgt *smgt;
+	unsigned long ret = 0;
 
 	smgt = codec_mm_get_scatter_mgt(is_tvp);
 	codec_mm_list_lock(smgt);
@@ -2243,9 +2250,12 @@ int codec_mm_scatter_mgt_delay_free_swith(
 					start_time + HZ)) {
 				break;
 			}
-			wait_for_completion_timeout(
+			ret = wait_for_completion_timeout(
 				&smgt->complete,
 				HZ/10);
+
+			if (ret == 0)
+				pr_debug("codec_mm_scatter_mgt_delay_free_swith time out\n");
 		}
 		pr_info("end: cached pages: %d, speed %d ms\n",
 			smgt->cached_pages,
