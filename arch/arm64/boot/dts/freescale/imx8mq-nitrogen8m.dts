@@ -210,6 +210,16 @@
 		>;
 	};
 
+	pinctrl_i2c4_st1633: i2c4-st1633grp {
+		fsl,pins = <
+#define GPIRQ_ST1633 		<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
+#define GP_ST1633_IRQ 		<&gpio3 12 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0xd6
+#define GP_ST1633_RESET		<&gpio3 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
+		>;
+	};
+
 	pinctrl_i2c4_sn65dsi83: i2c4-sn65dsi83grp {
 		fsl,pins = <
 #define GPIRQ_I2C4_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
@@ -968,6 +978,24 @@
 		reset-gpios = GP_I2C4_FT5X06_RESET;
 	};
 
+	touchscreen@55 {
+		compatible = "sitronix,st1633i";
+		reg = <0x55>;
+		interrupts-extended = GPIRQ_ST1633;
+		/* pins used by touchscreen */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_st1633>;
+		reset-gpios = GP_ST1633_RESET;
+
+		wakeup-gpios = GP_ST1633_IRQ;
+		sitronix,panel-coords = <0 0 540 980>;
+		sitronix,display-coords = <0 0 480 272>;
+		sitronix,product-id = "1633";
+		sitronix,enable-power-off;
+		sitronix,cfg-data0 = [];
+		sitronix,have-touch-key;
+		sitronix,driver-send-cfg;
+	};
 };
 
 &lcdif {
