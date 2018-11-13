@@ -988,13 +988,6 @@
 		reset-gpios = GP_ST1633_RESET;
 
 		wakeup-gpios = GP_ST1633_IRQ;
-		sitronix,panel-coords = <0 0 540 980>;
-		sitronix,display-coords = <0 0 480 272>;
-		sitronix,product-id = "1633";
-		sitronix,enable-power-off;
-		sitronix,cfg-data0 = [];
-		sitronix,have-touch-key;
-		sitronix,driver-send-cfg;
 	};
 };
 
