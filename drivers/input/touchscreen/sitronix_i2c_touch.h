@@ -78,6 +78,7 @@
 
 // MT SLOT feature is implmented in linux kernel 2.6.38 and later. Make sure that version of your linux kernel before using this feature.
 #define SITRONIX_SUPPORT_MT_SLOT
+//#define SITRONIX_KEYEVENT
 //#define SITRONIX_SWAP_XY
 #define SITRONIX_I2C_COMBINED_MESSAGE
 #ifndef SITRONIX_I2C_COMBINED_MESSAGE
@@ -340,21 +341,8 @@ struct sitronix_i2c_touch_platform_data {
 	void (*reset_ic)(void);
 	u32 num_max_touches;
 	u32 soft_rst_dly;
-	const char *product_id;
 	const char *fw_name;
 	char *name;
-	u32 x_max;
-	u32 y_max;
-	u32 x_min;
-	u32 y_min;
-	u32 panel_minx;
-	u32 panel_miny;
-	u32 panel_maxx;
-	u32 panel_maxy;
-	bool no_force_update;
-	bool i2c_pull_up;
-	bool enable_power_off;
-	bool fw_vkey_support;
 	u32 button_map[4];
 	u8 num_button;
 	//size_t config_data_len[GOODIX_MAX_CFG_GROUP];
