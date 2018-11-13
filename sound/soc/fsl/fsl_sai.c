@@ -1220,7 +1220,7 @@ static int fsl_sai_probe(struct platform_device *pdev)
 	char tmp[8];
 	int irq, ret, i;
 	int index;
-	int firstbitidx, nextbitidx;
+	int firstbitidx, nextbitidx, offset;
 
 	sai = devm_kzalloc(&pdev->dev, sizeof(*sai), GFP_KERNEL);
 	if (!sai)
@@ -1302,10 +1302,8 @@ static int fsl_sai_probe(struct platform_device *pdev)
 	for (i = 0; i < 2; i++) {
 		firstbitidx = find_first_bit((const unsigned long *)&sai->dataline[i], 8);
 		nextbitidx = find_next_bit((const unsigned long *)&sai->dataline[i], 8, firstbitidx+1);
-		sai->dataline_off[i] = nextbitidx - firstbitidx - 1;
-
-		if (sai->dataline_off[i] < 0 || sai->dataline_off[i] >= 7)
-			sai->dataline_off[i] = 0;
+		offset = nextbitidx - firstbitidx - 1;
+		sai->dataline_off[i] = (offset < 0 || offset >= 7 ? 0 : offset);
 	}
 
 	ret = of_property_read_u32_index(np, "fsl,dataline,dsd", 0, &sai->dataline_dsd[0]);
@@ -1324,10 +1322,8 @@ static int fsl_sai_probe(struct platform_device *pdev)
 	for (i = 0; i < 2; i++) {
 		firstbitidx = find_first_bit((const unsigned long *)&sai->dataline_dsd[i], 8);
 		nextbitidx = find_next_bit((const unsigned long *)&sai->dataline_dsd[i], 8, firstbitidx+1);
-		sai->dataline_off_dsd[i] = nextbitidx - firstbitidx - 1;
-
-		if (sai->dataline_off_dsd[i] < 0 || sai->dataline_off_dsd[i] >= 7)
-			sai->dataline_off_dsd[i] = 0;
+		offset = nextbitidx - firstbitidx - 1;
+		sai->dataline_off_dsd[i] = (offset < 0 || offset >= 7 ? 0 : offset);
 	}
 
 	if ((of_find_property(np, "fsl,i2s-xtor", NULL) != NULL) ||
