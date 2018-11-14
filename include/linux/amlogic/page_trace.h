@@ -66,7 +66,8 @@ struct page_trace {
 extern unsigned int cma_alloc_trace;
 extern unsigned long unpack_ip(struct page_trace *trace);
 extern unsigned int pack_ip(unsigned long ip, int order, gfp_t flag);
-extern void set_page_trace(struct page *page, int order, gfp_t gfp_flags);
+extern void set_page_trace(struct page *page, int order,
+			   gfp_t gfp_flags, void *func);
 extern void reset_page_trace(struct page *page, int order);
 extern void page_trace_mem_init(void);
 extern struct page_trace *find_page_base(struct page *page);

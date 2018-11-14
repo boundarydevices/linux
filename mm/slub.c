@@ -3721,6 +3721,25 @@ static int __init setup_slub_min_objects(char *str)
 
 __setup("slub_min_objects=", setup_slub_min_objects);
 
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+static void aml_slub_free_large(struct page *page, const void *obj)
+{
+	unsigned int nr_pages, i;
+
+	if (page) {
+		__ClearPageHead(page);
+		ClearPageOwnerPriv1(page);
+		nr_pages = page->index;
+		pr_debug("%s, page:%p, pages:%d, obj:%p\n",
+			__func__, page_address(page), nr_pages, obj);
+		for (i = 0; i < nr_pages; i++)  {
+			__free_pages(page, 0);
+			page++;
+		}
+	}
+}
+#endif
+
 void *__kmalloc(size_t size, gfp_t flags)
 {
 	struct kmem_cache *s;
@@ -3841,7 +3860,17 @@ static size_t __ksize(const void *object)
 
 	if (unlikely(!PageSlab(page))) {
 		WARN_ON(!PageCompound(page));
+	#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+		if (unlikely(PageOwnerPriv1(page))) {
+			pr_debug("%s, obj:%p, page:%p, index:%ld, size:%ld\n",
+				__func__, object, page_address(page),
+				page->index, PAGE_SIZE * page->index);
+			return PAGE_SIZE * page->index;
+		} else
+			return PAGE_SIZE << compound_order(page);
+	#else
 		return PAGE_SIZE << compound_order(page);
+	#endif
 	}
 
 	return slab_ksize(page->slab_cache);
@@ -3872,8 +3901,16 @@ void kfree(const void *x)
 	if (unlikely(!PageSlab(page))) {
 		BUG_ON(!PageCompound(page));
 		kfree_hook(x);
+	#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+		if (unlikely(PageOwnerPriv1(page)))
+			aml_slub_free_large(page, x);
+		else
+			__free_pages(page, compound_order(page));
+		return;
+	#else
 		__free_pages(page, compound_order(page));
 		return;
+	#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */
 	}
 	slab_free(page->slab_cache, page, object, NULL, 1, _RET_IP_);
 }

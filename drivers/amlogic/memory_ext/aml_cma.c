@@ -152,15 +152,17 @@ EXPORT_SYMBOL(cma_page);
 static void update_cma_page_trace(struct page *page, unsigned long cnt)
 {
 	long i;
+	unsigned long fun;
 
 	if (page == NULL)
 		return;
 
+	fun = find_back_trace();
 	if (cma_alloc_trace)
 		pr_info("%s alloc page:%lx, count:%ld, func:%pf\n", __func__,
-			page_to_pfn(page), cnt, (void *)find_back_trace());
+			page_to_pfn(page), cnt, (void *)fun);
 	for (i = 0; i < cnt; i++) {
-		set_page_trace(page, 0, __GFP_BDEV);
+		set_page_trace(page, 0, __GFP_BDEV, (void *)fun);
 		page++;
 	}
 }

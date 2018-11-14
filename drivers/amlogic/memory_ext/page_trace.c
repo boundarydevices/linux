@@ -38,7 +38,7 @@
 #define DEBUG_PAGE_TRACE	0
 #endif
 
-#define COMMON_CALLER_SIZE	24
+#define COMMON_CALLER_SIZE	32
 
 /*
  * this is a driver which will hook during page alloc/free and
@@ -83,8 +83,11 @@ static struct fun_symbol common_func[] __initdata = {
 	{"dma_alloc_from_contiguous",	1},
 	{"aml_cma_alloc_post_hook",	1},
 	{"__dma_alloc",			1},
+	{"arm_dma_alloc",		1},
 	{"__kmalloc_track_caller",	1},
 	{"kmem_cache_alloc_trace",	1},
+	{"__alloc_from_contiguous",	1},
+	{"cma_allocator_alloc",		1},
 	{"alloc_pages_exact",		1},
 	{"get_zeroed_page",		1},
 	{"__vmalloc_node_range",	1},
@@ -581,7 +584,7 @@ unsigned int pack_ip(unsigned long ip, int order, gfp_t flag)
 }
 EXPORT_SYMBOL(pack_ip);
 
-void set_page_trace(struct page *page, int order, gfp_t flag)
+void set_page_trace(struct page *page, int order, gfp_t flag, void *func)
 {
 	unsigned long ip;
 	struct page_trace *base;
@@ -592,7 +595,10 @@ void set_page_trace(struct page *page, int order, gfp_t flag)
 #else
 	if (page && trace_buffer) {
 #endif
-		ip = find_back_trace();
+		if (!func)
+			ip = find_back_trace();
+		else
+			ip = (unsigned long)func;
 		if (!ip) {
 			pr_debug("can't find backtrace for page:%lx\n",
 				page_to_pfn(page));

@@ -4095,7 +4095,7 @@ out:
 
 	trace_mm_page_alloc(page, order, alloc_mask, ac.migratetype);
 #ifdef CONFIG_AMLOGIC_PAGE_TRACE
-	set_page_trace(page, order, gfp_mask);
+	set_page_trace(page, order, gfp_mask, NULL);
 #endif /* CONFIG_AMLOGIC_PAGE_TRACE */
 
 	return page;
