@@ -1441,7 +1441,7 @@ static ssize_t store_vpts(struct class *class,
 	ssize_t r;
 
 	/*r = sscanf(buf, "0x%x", &pts);*/
-	r = kstrtoint(buf, 0, &pts);
+	r = kstrtouint(buf, 0, &pts);
 
 	if (r != 0)
 		return -EINVAL;
@@ -1462,9 +1462,7 @@ static ssize_t store_apts(struct class *class,
 {
 	unsigned int pts;
 	ssize_t r;
-
-	/*r = sscanf(buf, "0x%x", &pts);*/
-	r = kstrtoint(buf, 0, &pts);
+	r = kstrtouint(buf, 0, &pts);
 
 	if (r != 0)
 		return -EINVAL;
