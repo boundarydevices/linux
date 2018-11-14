@@ -361,6 +361,7 @@
 		 * bit9:use 10bit at 4k_50/60hz_10bit
 		 */
 		tv_bit_mode = <0x215>;
+		urgent_en = <1>;
 	};
 
 	vdin@1 {
