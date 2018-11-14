@@ -1,0 +1,104 @@
+/*
+ * arch/arm/boot/dts/amlogic/meson_drm.dtsi
+ *
+ * Copyright (C) 2015 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/ {
+	drm_amhdmitx: drm-amhdmitx {
+		status = "disabled";
+		hdcp = "disabled";
+		compatible = "amlogic,drm-amhdmitx";
+		dev_name = "meson-amhdmitx";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				hdmi_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_hdmi>;
+				};
+			};
+		};
+	};
+
+	drm_lcd: drm-lcd {
+		status = "disabled";
+		compatible = "amlogic,drm-lcd";
+		dev_name = "meson-lcd";
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				lcd_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_lcd>;
+				};
+			};
+		};
+	};
+
+	drm_vpu: drm-vpu@0xff900000  {
+		status = "disabled";
+		compatible = "amlogic,meson-gxbb-vpu";
+		reg = <0xd0100000 0x100000>,
+			  <0xc883c000 0x1000>,
+			  <0xc8838000 0x1000>;
+		reg-names = "base", "hhi", "dmc";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
+		dma-coherent;
+		vpu_out: port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			vpu_out_hdmi: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&hdmi_in_vpu>;
+			};
+			vpu_out_lcd: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&lcd_in_vpu>;
+			};
+		};
+	};
+
+	drm_subsystem: drm-subsystem {
+		status = "okay";
+		compatible = "amlogic,drm-subsystem";
+		ports = <&vpu_out>;
+	};
+};
+
+&gpu{
+	/*gpu max freq is 750M*/
+	def_clk = <1>;
+	tbl = <&clk285_cfg &clk666_cfg &clk750_cfg &clk750_cfg>;
+
+	clk285_cfg:clk285_cfg {
+		 keep_count = <2>;
+		 threshold = <100 200>;
+	};
+
+	clk666_cfg:clk666_cfg {
+		 keep_count = <1>;
+		 threshold = <85 200>;
+	};
+
+	clk750_cfg:clk750_cfg {
+		 keep_count = <1>;
+		 threshold = <179 255>;
+	};
+
+};

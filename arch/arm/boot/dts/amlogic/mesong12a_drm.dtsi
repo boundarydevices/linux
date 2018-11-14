@@ -1,0 +1,109 @@
+/*
+ * arch/arm/boot/dts/amlogic/meson_drm.dtsi
+ *
+ * Copyright (C) 2015 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/ {
+	venc-cvbs {
+		status = "okay";
+		compatible = "amlogic,meson-gxbb-cvbs";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			enc_cvbs_in: port@0 {
+				 #address-cells = <1>;
+				 #size-cells = <0>;
+				 reg = <0>;
+
+				 //venc_cvbs_in_vpu: endpoint@0 {
+				//	 reg = <0>;
+				//	 remote-endpoint = <&vpu_out_venc_cvbs>;
+				//};
+			};
+		};
+	};
+
+	drm_amhdmitx: drm-amhdmitx {
+		status = "disabled";
+		hdcp = "disabled";
+		compatible = "amlogic,drm-amhdmitx";
+		dev_name = "meson-amhdmitx";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				hdmi_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_hdmi>;
+				};
+			};
+		};
+	};
+
+	drm_lcd: drm-lcd {
+		status = "disabled";
+		compatible = "amlogic,drm-lcd";
+		dev_name = "meson-lcd";
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				lcd_in_vpu: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vpu_out_lcd>;
+				};
+			};
+		};
+	};
+
+	drm_vpu: drm-vpu@0xff900000  {
+		status = "disabled";
+		compatible = "amlogic,meson-g12a-vpu";
+		memory-region = <&logo_reserved>;
+		reg = <0xff900000 0x40000>,
+			  <0xff63c000 0x2000>,
+			  <0xff638000 0x2000>;
+		reg-names = "base", "hhi", "dmc";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>,
+			<GIC_SPI 56 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "viu-vsync", "viu2-vsync";
+		clocks = <&clkc CLKID_VPU_CLKC_MUX>;
+		clock-names = "vpu_clkc";
+		dma-coherent;
+		vpu_out: port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			vpu_out_hdmi: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&hdmi_in_vpu>;
+			};
+			vpu_out_lcd: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&lcd_in_vpu>;
+			};
+		};
+	};
+
+	drm_subsystem: drm-subsystem {
+		status = "okay";
+		compatible = "amlogic,drm-subsystem";
+		ports = <&vpu_out>;
+	};
+};
+

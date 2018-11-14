@@ -1,0 +1,148 @@
+/*
+ * arch/arm/boot/dts/amlogic/mesongxl_p212-panel.dtsi
+ *
+ * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/ {
+	lcd{
+		compatible = "amlogic, lcd-gxl";
+		mode = "tablet";
+		status = "okay";
+		key_valid = <0>;
+		/* clocks = <&clkc CLKID_VCLK2_ENCL
+		 *	&clkc CLKID_VCLK2_VENCL>;
+		 * clock-names = "vencl_top_gate",
+		 * "vencl_int_gate";
+		 */
+		reg = <0xc8834400 0x100>;
+		interrupts = <0 3 1>;
+		interrupt-names = "vsync";
+		pinctrl_version = <1>; /* for uboot */
+		pinctrl-names = "ttl_6bit_hvsync_de_on",
+			"ttl_6bit_hvsync_on",
+			"ttl_6bit_de_on",
+			"ttl_6bit_hvsync_de_off",
+			"ttl_8bit_hvsync_de_on",
+			"ttl_8bit_hvsync_on",
+			"ttl_8bit_de_on",
+			"ttl_8bit_hvsync_de_off";
+		pinctrl-0 = <&lcd_ttl_rgb_6bit_on_pins
+			&lcd_ttl_de_hvsync_on_pins>;
+		pinctrl-1 = <&lcd_ttl_rgb_6bit_on_pins
+			&lcd_ttl_hvsync_on_pins>;
+		pinctrl-2 = <&lcd_ttl_rgb_6bit_on_pins
+			&lcd_ttl_de_on_pins>;
+		pinctrl-3 = <&lcd_ttl_rgb_6bit_off_pins
+			&lcd_ttl_de_hvsync_off_pins>;
+		pinctrl-4 = <&lcd_ttl_rgb_8bit_on_pins
+			&lcd_ttl_de_hvsync_on_pins>;
+		pinctrl-5 = <&lcd_ttl_rgb_8bit_on_pins
+			&lcd_ttl_hvsync_on_pins>;
+		pinctrl-6 = <&lcd_ttl_rgb_8bit_on_pins
+			&lcd_ttl_de_on_pins>;
+		pinctrl-7 = <&lcd_ttl_rgb_8bit_off_pins
+			&lcd_ttl_de_hvsync_off_pins>;
+
+		/* power type:
+		 *    (0=cpu_gpio, 1=pmu_gpio, 2=signal,3=extern, 0xff=ending)
+		 * power index:
+		 *    (point gpios_index, or extern_index,0xff=invalid)
+		 * power value:(0=output low, 1=output high, 2=input)
+		 * power delay:(unit in ms)
+		 */
+		/*lcd_cpu-gpios = <&gpio GPIOX_3 GPIO_ACTIVE_HIGH>;*/
+		/*lcd_cpu_gpio_names = "GPIOX_3";*/
+
+		lcd_0{
+			model_name = "LCD720P";
+			interface = "ttl";
+			basic_setting = <1280 720 /*h_active, v_active*/
+				1650 750 /*h_period, v_period*/
+				8      /*lcd_bits */
+				16 9>; /*screen_widht, screen_height*/
+			lcd_timing = <40 220 1 /*hs_width, hs_bp, hs_pol*/
+				5 20 1>; /*vs_width, vs_bp, vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clk, 1=htotal, 2=vtotal)*/
+				0 /*clk_ss_level*/
+				1 /*clk_auto_generate*/
+				74250000>; /*pixel_clk(unit in Hz)*/
+			ttl_attr = <0 /*clk_pol*/
+				1 /*de_valid*/
+				1 /*hvsync_valid*/
+				0 /*rb_swap*/
+				0>; /*bit_swap*/
+
+			/* power step: type, index, value, delay(ms) */
+			power_on_step = <2 0 0 0
+				0xff 0 0 0>; /*ending*/
+			power_off_step = <2 0 0 50
+				0xff 0 0 0>; /*ending*/
+			backlight_index = <0xff>;
+		};
+	};
+
+	lcd_extern{
+		compatible = "amlogic, lcd_extern";
+		status = "disabled";
+		i2c_bus = "i2c_bus_d";
+		key_valid = <0>;
+
+		extern_0{
+			index = <0>;
+			extern_name = "ext_default";
+			status = "disabled";
+			type = <0>; /* 0=i2c, 1=spi, 2=mipi */
+			i2c_address = <0x1c>; /* 7bit i2c address */
+			i2c_address2 = <0xff>; /* 0xff for none */
+			cmd_size = <0xff>; /*0xff for dynamic cmd_size*/
+
+			/* init on/off:
+			 *  fixed cmd_size: (type, value...);
+			 *                  cmd_size include all data.
+			 *  dynamic cmd_size: (type, cmd_size, value...);
+			 *                    cmd_size include value.
+			 */
+			/* type: 0x00=cmd with delay(bit[3:0]=1 for address2),
+			 *       0xc0=cmd(bit[3:0]=1 for address2),
+			 *       0xf0=gpio,
+			 *       0xfd=delay,
+			 *       0xff=ending
+			 */
+			/* value: i2c or spi cmd, or gpio index & level */
+			/* delay: unit ms */
+			init_on = <
+				0xc0 7 0x20 0x01 0x02 0x00 0x40 0xFF 0x00
+				0xc0 7 0x80 0x02 0x00 0x40 0x62 0x51 0x73
+				0xc0 7 0x61 0x06 0x00 0x00 0x00 0x00 0x00
+				0xc0 7 0xC1 0x05 0x0F 0x00 0x08 0x70 0x00
+				0xc0 7 0x13 0x01 0x00 0x00 0x00 0x00 0x00
+				0xc0 7 0x3D 0x02 0x01 0x00 0x00 0x00 0x00
+				0xc0 7 0xED 0x0D 0x01 0x00 0x00 0x00 0x00
+				0xc0 7 0x23 0x02 0x00 0x00 0x00 0x00 0x00
+				0xfd 1 10 /* delay 10ms */
+				0xff 0>; /*ending*/
+			init_off = <0xff 0>; /*ending*/
+		};
+
+		extern_1{
+			index = <1>;
+			extern_name = "i2c_DLPC3439";
+			status = "disabled";
+			type = <0>; /* 0=i2c, 1=spi, 2=mipi */
+			i2c_address = <0x1b>; /* 7bit i2c address */
+		};
+	};
+};/* end of panel */
+
