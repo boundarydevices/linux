@@ -2983,7 +2983,7 @@ static const struct cec_platform_data_s cec_txl_data = {
 
 static const struct cec_platform_data_s cec_tl1_data = {
 	.line_reg = 0,
-	.line_bit = 7,
+	.line_bit = 10,
 	.ee_to_ao = 1,
 	.ceca_sts_reg = 1,
 	.cecb_ver = CECB_VER_2,
