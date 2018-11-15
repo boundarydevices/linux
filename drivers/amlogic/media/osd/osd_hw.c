@@ -3018,8 +3018,6 @@ void osd_switch_free_scale(
 	int i = 0;
 	int count = (pxp_mode == 1)?3:WAIT_AFBC_READY_COUNT;
 
-	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE)
-		return;
 	osd_log_info("osd[%d] enable: %d scale:0x%x (%s)\n",
 		pre_index, pre_enable, pre_scale, current->comm);
 	osd_log_info("osd[%d] enable: %d scale:0x%x (%s)\n",
@@ -3036,16 +3034,17 @@ void osd_switch_free_scale(
 		if (i > 0)
 			osd_log_info("osd[%d]: wait %d vsync first buffer ready.\n",
 				next_index, i);
-		h_enable = (pre_scale & 0xffff0000 ? 1 : 0);
-		v_enable = (pre_scale & 0xffff ? 1 : 0);
-		osd_hw.free_scale[pre_index].h_enable = h_enable;
-		osd_hw.free_scale[pre_index].v_enable = v_enable;
-		osd_hw.free_scale_enable[pre_index] = pre_scale;
-		osd_hw.free_scale_backup[pre_index].h_enable = h_enable;
-		osd_hw.free_scale_backup[pre_index].v_enable = v_enable;
-		osd_hw.free_scale_enable_backup[pre_index] = pre_scale;
-		osd_hw.enable[pre_index] = pre_enable;
-
+		if (pre_index != next_index) {
+			h_enable = (pre_scale & 0xffff0000 ? 1 : 0);
+			v_enable = (pre_scale & 0xffff ? 1 : 0);
+			osd_hw.free_scale[pre_index].h_enable = h_enable;
+			osd_hw.free_scale[pre_index].v_enable = v_enable;
+			osd_hw.free_scale_enable[pre_index] = pre_scale;
+			osd_hw.free_scale_backup[pre_index].h_enable = h_enable;
+			osd_hw.free_scale_backup[pre_index].v_enable = v_enable;
+			osd_hw.free_scale_enable_backup[pre_index] = pre_scale;
+			osd_hw.enable[pre_index] = pre_enable;
+		}
 		h_enable = (next_scale & 0xffff0000 ? 1 : 0);
 		v_enable = (next_scale & 0xffff ? 1 : 0);
 		osd_hw.free_scale[next_index].h_enable = h_enable;
@@ -3066,14 +3065,16 @@ void osd_switch_free_scale(
 			osd_afbc_dec_enable = 0;
 			osd_hw.reg[OSD_GBL_ALPHA].update_func(next_index);
 		}
-
-		osd_hw.reg[OSD_COLOR_MODE].update_func(pre_index);
-		if (pre_scale)
-			osd_hw.reg[OSD_FREESCALE_COEF].update_func(pre_index);
-		osd_hw.reg[DISP_GEOMETRY].update_func(pre_index);
-		osd_hw.reg[DISP_FREESCALE_ENABLE].update_func(pre_index);
-		osd_hw.reg[OSD_ENABLE].update_func(pre_index);
-
+		if (pre_index != next_index) {
+			osd_hw.reg[OSD_COLOR_MODE].update_func(pre_index);
+			if (pre_scale)
+				osd_hw.reg[OSD_FREESCALE_COEF].
+						update_func(pre_index);
+			osd_hw.reg[DISP_GEOMETRY].update_func(pre_index);
+			osd_hw.reg[DISP_FREESCALE_ENABLE].
+						update_func(pre_index);
+			osd_hw.reg[OSD_ENABLE].update_func(pre_index);
+		}
 		osd_hw.reg[OSD_COLOR_MODE].update_func(next_index);
 		if (next_scale)
 			osd_hw.reg
@@ -3085,7 +3086,8 @@ void osd_switch_free_scale(
 		spin_unlock_irqrestore(&osd_lock, lock_flags);
 		osd_wait_vsync_hw();
 	} else {
-		osd_enable_hw(pre_index, pre_enable);
+		if (pre_index != next_index)
+			osd_enable_hw(pre_index, pre_enable);
 		osd_enable_hw(next_index, next_enable);
 	}
 }
