@@ -989,7 +989,6 @@ static ssize_t fsl_qspi_read(struct spi_nor *nor, loff_t from,
 {
 	struct fsl_qspi *q = nor->priv;
 	u8 cmd = nor->read_opcode;
-	int i, j;
 
 	fsl_qspi_prepare_lut(nor, FSL_QSPI_OPS_READ, nor->read_opcode);
 
@@ -1006,7 +1005,7 @@ static ssize_t fsl_qspi_read(struct spi_nor *nor, loff_t from,
 		q->memmap_offs = q->chip_base_addr + from;
 		q->memmap_len = len > QUADSPI_MIN_IOMAP ? len : QUADSPI_MIN_IOMAP;
 
-		q->ahb_addr = ioremap_nocache(
+		q->ahb_addr = ioremap_wc(
 				q->memmap_phy + q->memmap_offs,
 				q->memmap_len);
 		if (!q->ahb_addr) {
@@ -1021,7 +1020,7 @@ static ssize_t fsl_qspi_read(struct spi_nor *nor, loff_t from,
 
 		q->memmap_offs = q->chip_base_addr + from;
 		q->memmap_len = len > QUADSPI_MIN_IOMAP ? len : QUADSPI_MIN_IOMAP;
-		q->ahb_addr = ioremap_nocache(
+		q->ahb_addr = ioremap_wc(
 				q->memmap_phy + q->memmap_offs,
 				q->memmap_len);
 		if (!q->ahb_addr) {
@@ -1034,20 +1033,8 @@ static ssize_t fsl_qspi_read(struct spi_nor *nor, loff_t from,
 		cmd, q->ahb_addr + q->chip_base_addr + from - q->memmap_offs,
 		len);
 
-	/* For non-8-byte alignment cases */
-	if (from % 8) {
-		j = 8 - (from & 0x7);
-		for (i = 0; i < j; ++i) {
-			memcpy(buf + i, q->ahb_addr + q->chip_base_addr + from
-			       - q->memmap_offs + i, 1);
-		}
-		memcpy(buf + j, q->ahb_addr + q->chip_base_addr + from
-		       - q->memmap_offs + j, len - j);
-	} else {
-		/* Read out the data directly from the AHB buffer.*/
-		memcpy(buf, q->ahb_addr + q->chip_base_addr + from
-		       - q->memmap_offs, len);
-	}
+	memcpy(buf, q->ahb_addr + q->chip_base_addr + from
+	       - q->memmap_offs, len);
 
 	return len;
 }
