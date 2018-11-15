@@ -73,6 +73,12 @@
 #include <linux/debugfs.h>
 /*2018-07-18 -----------*/
 
+#undef TRACE_INCLUDE_PATH
+#undef TRACE_INCLUDE_FILE
+#define TRACE_INCLUDE_PATH .
+#define TRACE_INCLUDE_FILE deinterlace_trace
+#include <trace/define_trace.h>
+
 #ifdef DET3D
 #include "detect3d.h"
 #endif

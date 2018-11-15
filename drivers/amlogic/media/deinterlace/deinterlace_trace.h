@@ -50,8 +50,10 @@ DEFINE_DI_EVENT(di_pre);
 DEFINE_DI_EVENT(di_post);
 #endif /* _VDEC_TRACE_H */
 
+#if 0
 #undef TRACE_INCLUDE_PATH
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_PATH .
 #define TRACE_INCLUDE_FILE deinterlace_trace
 #include <trace/define_trace.h>
+#endif
