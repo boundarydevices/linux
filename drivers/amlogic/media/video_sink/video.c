@@ -1837,7 +1837,7 @@ static void zoom_get_vert_pos(struct vframe_s *vf, u32 vpp_3d_mode, u32 *ls,
 }
 
 #endif
-static void zoom_display_horz(int hscale)
+static void zoom_display_horz(struct vframe_s *vf, int hscale)
 {
 	u32 ls = 0, le = 0, rs = 0, re = 0;
 #ifdef TV_REVERSE
@@ -1845,7 +1845,7 @@ static void zoom_display_horz(int hscale)
 #endif
 #ifdef TV_3D_FUNCTION_OPEN
 	if (process_3d_type & MODE_3D_ENABLE) {
-		zoom_get_horz_pos(cur_dispbuf, cur_frame_par->vpp_3d_mode, &ls,
+		zoom_get_horz_pos(vf, cur_frame_par->vpp_3d_mode, &ls,
 				  &le, &rs, &re);
 	} else {
 		ls = rs = zoom_start_x_lines;
@@ -1881,6 +1881,13 @@ static void zoom_display_horz(int hscale)
 		int l_aligned;
 		int r_aligned;
 		int h_skip = cur_frame_par->hscale_skip_count + 1;
+		int c_skip = 2;
+
+		/* After TL1, afbc supports 420/422/444*/
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			if (vf && (vf->type & VIDTYPE_VIU_444))
+				c_skip = 1;
+
 		if ((zoom_start_x_lines > 0) ||
 		(zoom_end_x_lines < ori_end_x_lines)) {
 			l_aligned = round_down(ori_start_x_lines, 32);
@@ -1891,7 +1898,7 @@ static void zoom_display_horz(int hscale)
 		}
 		VSYNC_WR_MPEG_REG(AFBC_VD_CFMT_W,
 			  (((r_aligned - l_aligned) / h_skip) << 16) |
-			  ((r_aligned / 2 - l_aligned / 2) / h_skip));
+			  ((r_aligned / c_skip - l_aligned / c_skip) / h_skip));
 
 		VSYNC_WR_MPEG_REG(AFBC_MIF_HOR_SCOPE,
 			  ((l_aligned / 32) << 16) |
@@ -1951,7 +1958,7 @@ static void zoom_display_horz(int hscale)
 		1) >> hscale) << VD1_FMT_CHROMA_WIDTH_BIT));
 }
 
-static void vd2_zoom_display_horz(int hscale)
+static void vd2_zoom_display_horz(struct vframe_s *vf, int hscale)
 {
 	u32 ls, le, rs, re;
 #ifdef TV_REVERSE
@@ -1964,6 +1971,12 @@ static void vd2_zoom_display_horz(int hscale)
 		int l_aligned;
 		int r_aligned;
 		int h_skip = cur_frame_par->hscale_skip_count + 1;
+		int c_skip = 2;
+
+		/* After TL1, afbc supports 420/422/444*/
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			if (vf && (vf->type & VIDTYPE_VIU_444))
+				c_skip = 1;
 
 		if ((zoom2_start_x_lines > 0) ||
 		(zoom2_end_x_lines < ori2_end_x_lines)) {
@@ -1975,7 +1988,7 @@ static void vd2_zoom_display_horz(int hscale)
 		}
 		VSYNC_WR_MPEG_REG(VD2_AFBC_VD_CFMT_W,
 			  (((r_aligned - l_aligned) / h_skip) << 16) |
-			  ((r_aligned / 2 - l_aligned / 2) / h_skip));
+			  ((r_aligned / c_skip - l_aligned / c_skip) / h_skip));
 
 		VSYNC_WR_MPEG_REG(VD2_AFBC_MIF_HOR_SCOPE,
 			  ((l_aligned / 32) << 16) |
@@ -2034,14 +2047,14 @@ static void vd2_zoom_display_horz(int hscale)
 		<< VD1_FMT_CHROMA_WIDTH_BIT));
 }
 
-static void zoom_display_vert(void)
+static void zoom_display_vert(struct vframe_s *vf)
 {
 
 	u32 ls, le, rs, re;
 
 	/*if (platform_type == 1) {*/
 		if (process_3d_type & MODE_3D_ENABLE) {
-			zoom_get_vert_pos(cur_dispbuf,
+			zoom_get_vert_pos(vf,
 			cur_frame_par->vpp_3d_mode, &ls,
 					  &le, &rs, &re);
 		} else {
@@ -2060,7 +2073,7 @@ static void zoom_display_vert(void)
 	}
 */
 
-	if ((cur_dispbuf) && (cur_dispbuf->type & VIDTYPE_MVC)) {
+	if ((vf) && (vf->type & VIDTYPE_MVC)) {
 		if (is_need_framepacking_output()) {
 			VSYNC_WR_MPEG_REG(
 				VD1_IF0_LUMA_Y0 + cur_dev->viu_off,
@@ -2152,13 +2165,21 @@ static void zoom_display_vert(void)
 		int ori_t_aligned;
 		int ori_b_aligned;
 		int v_skip = cur_frame_par->vscale_skip_count + 1;
+		int c_skip = 2;
+
+		/* After TL1, afbc supports 420/422/444*/
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			if (vf && ((vf->type & VIDTYPE_VIU_444)
+				|| (vf->type & VIDTYPE_VIU_422)))
+				c_skip = 1;
+
 		t_aligned = round_down(zoom_start_y_lines, 4);
 		b_aligned = round_up(zoom_end_y_lines + 1, 4);
 
 		ori_t_aligned = round_down(ori_start_y_lines, 4);
 		ori_b_aligned = round_up(ori_end_y_lines + 1, 4);
 		VSYNC_WR_MPEG_REG(AFBC_VD_CFMT_H,
-		    (b_aligned - t_aligned) / 2 / v_skip);
+		    (b_aligned - t_aligned) / c_skip / v_skip);
 
 		VSYNC_WR_MPEG_REG(AFBC_MIF_VER_SCOPE,
 		    ((t_aligned / 4) << 16) |
@@ -2186,7 +2207,7 @@ static void zoom_display_vert(void)
 	}
 }
 
-static void vd2_zoom_display_vert(void)
+static void vd2_zoom_display_vert(struct vframe_s *vf)
 {
 
 	u32 ls, le, rs, re;
@@ -2221,6 +2242,14 @@ static void vd2_zoom_display_vert(void)
 		int ori_t_aligned;
 		int ori_b_aligned;
 		int v_skip = cur_frame_par->vscale_skip_count + 1;
+		int c_skip = 2;
+
+		/* After TL1, afbc supports 420/422/444*/
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			if (vf && ((vf->type & VIDTYPE_VIU_444)
+				|| (vf->type & VIDTYPE_VIU_422)))
+				c_skip = 1;
+
 		t_aligned = round_down(zoom2_start_y_lines, 4);
 		b_aligned = round_up(zoom2_end_y_lines + 1, 4);
 
@@ -2229,7 +2258,7 @@ static void vd2_zoom_display_vert(void)
 
 		/* TODO: afbc setting only support 420 for now */
 		VSYNC_WR_MPEG_REG(VD2_AFBC_VD_CFMT_H,
-		   (b_aligned - t_aligned) / 2 / v_skip);
+		   (b_aligned - t_aligned) / c_skip / v_skip);
 
 		VSYNC_WR_MPEG_REG(VD2_AFBC_MIF_VER_SCOPE,
 		    ((t_aligned / 4) << 16) |
@@ -3157,20 +3186,31 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				r |= 0xcc;
 #ifdef TV_REVERSE
 			if (reverse)
-				r |= (1<<26)|(1<<27);
+				r |= (1<<26) | (1<<27);
 #endif
 			if (vf->bitdepth & BITDEPTH_SAVING_MODE)
 				r |= (1<<28); /* mem_saving_mode */
 			if (type & VIDTYPE_SCATTER)
 				r |= (1<<29);
 			VSYNC_WR_MPEG_REG(AFBC_MODE, r);
-			VSYNC_WR_MPEG_REG(AFBC_ENABLE, 0x1700);
+
+			r = 0x1700;
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				if (vf && (vf->source_type
+					!= VFRAME_SOURCE_TYPE_HDMI))
+					r |= (1 << 19); /* dos_uncomp */
+			}
+			VSYNC_WR_MPEG_REG(AFBC_ENABLE, r);
 
 			r = 0x100;
-			/* need check the vf->type 444/422/420 */
-			/* current use 420 as default for tl1 */
-			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
-				r |= (2 << 12);
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				if (type & VIDTYPE_VIU_444)
+					r |= 0;
+				else if (type & VIDTYPE_VIU_422)
+					r |= (1 << 12);
+				else
+					r |= (2 << 12);
+			}
 			VSYNC_WR_MPEG_REG(AFBC_CONV_CTRL, r);
 
 			u = (vf->bitdepth >> (BITDEPTH_U_SHIFT)) & 0x3;
@@ -3180,61 +3220,60 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				0x80 << (u + 10) |
 				0x80 << v);
 			/* chroma formatter */
-			/* TODO: afbc setting only cover 420 for now */
-/*
-#ifdef TV_REVERSE
-			if (reverse) {
+
+			r = 0;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-				if (is_meson_txlx_package_962X()
+			if (is_meson_txlx_package_962X()
 				&& !is_dolby_vision_stb_mode()
-				&& is_dolby_vision_on())
-					VSYNC_WR_MPEG_REG(
-						AFBC_VD_CFMT_CTRL,
-						HFORMATTER_REPEAT |
-						HFORMATTER_YC_RATIO_2_1 |
-						HFORMATTER_EN |
-						VFORMATTER_ALWAYS_RPT |
-						(0 << VFORMATTER_INIPHASE_BIT) |
-						(0x8 << VFORMATTER_PHASE_BIT) |
-						VFORMATTER_EN);
-				else
-#endif
-					VSYNC_WR_MPEG_REG(AFBC_VD_CFMT_CTRL,
-						HFORMATTER_REPEAT |
-					(0xc << VFORMATTER_INIPHASE_BIT) |
-						HFORMATTER_YC_RATIO_2_1 |
-						HFORMATTER_EN |
-						VFORMATTER_RPTLINE0_EN |
-						(0x8 << VFORMATTER_PHASE_BIT) |
-						VFORMATTER_EN);
+				&& is_dolby_vision_on()) {
+				r = HFORMATTER_REPEAT |
+					HFORMATTER_YC_RATIO_2_1 |
+					HFORMATTER_EN |
+					VFORMATTER_ALWAYS_RPT |
+					(0 << VFORMATTER_INIPHASE_BIT) |
+					(0x8 << VFORMATTER_PHASE_BIT) |
+					VFORMATTER_EN;
 			} else
 #endif
-*/
-			{
-#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-				if (is_meson_txlx_package_962X()
-				&& !is_dolby_vision_stb_mode()
-				&& is_dolby_vision_on())
-					VSYNC_WR_MPEG_REG(
-						AFBC_VD_CFMT_CTRL,
-						HFORMATTER_REPEAT |
-						HFORMATTER_YC_RATIO_2_1 |
-						HFORMATTER_EN |
-						VFORMATTER_ALWAYS_RPT |
-						(0 << VFORMATTER_INIPHASE_BIT) |
-						(0x8 << VFORMATTER_PHASE_BIT) |
-						VFORMATTER_EN);
-				else
-#endif
-					VSYNC_WR_MPEG_REG(AFBC_VD_CFMT_CTRL,
-						HFORMATTER_REPEAT |
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				r = HFORMATTER_REPEAT |
+					HFORMATTER_YC_RATIO_2_1 |
+					HFORMATTER_EN |
+					VFORMATTER_RPTLINE0_EN |
 					(0xc << VFORMATTER_INIPHASE_BIT) |
-						HFORMATTER_YC_RATIO_2_1 |
-						HFORMATTER_EN |
-						VFORMATTER_RPTLINE0_EN |
-						(0x8 << VFORMATTER_PHASE_BIT) |
-						VFORMATTER_EN);
+					(0x8 << VFORMATTER_PHASE_BIT) |
+					VFORMATTER_EN;
+				if (type & VIDTYPE_VIU_444) {
+					r &= ~HFORMATTER_EN;
+					r &= ~VFORMATTER_EN;
+					r &= ~HFORMATTER_YC_RATIO_2_1;
+				} else if (type & VIDTYPE_VIU_422) {
+					r &= ~VFORMATTER_EN;
+				}
+			} else {
+				r = HFORMATTER_REPEAT |
+					HFORMATTER_YC_RATIO_2_1 |
+					HFORMATTER_EN |
+					VFORMATTER_RPTLINE0_EN |
+					(0xc << VFORMATTER_INIPHASE_BIT) |
+					(0x8 << VFORMATTER_PHASE_BIT) |
+					VFORMATTER_EN;
 			}
+			VSYNC_WR_MPEG_REG(AFBC_VD_CFMT_CTRL, r);
+
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				if (type & VIDTYPE_COMPRESS_LOSS)
+					VSYNC_WR_MPEG_REG(
+					AFBCDEC_IQUANT_ENABLE,
+					((1 << 11) |
+					(1 << 10) |
+					(1 << 4) |
+					(1 << 0)));
+				else
+					VSYNC_WR_MPEG_REG(
+					AFBCDEC_IQUANT_ENABLE, 0);
+			}
+
 			vd1_path_select(true);
 
 			VSYNC_WR_MPEG_REG(
@@ -3703,8 +3742,14 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	static const u32 vpat[MAX_VSKIP_COUNT + 1] = {
 		0, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
 	u32 u, v;
-	u32 type = vf->type, bit_mode = 0;
+	u32 type, bit_mode = 0;
 
+	if (!vf) {
+		pr_err("vd2_set_dcu vf is NULL\n");
+		return;
+	}
+
+	type = vf->type;
 	pr_debug("set dcu for vd2 %p, type:0x%x\n", vf, type);
 	last_el_w = (vf->type
 		& VIDTYPE_COMPRESS) ?
@@ -3724,20 +3769,31 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 
 #ifdef TV_REVERSE
 			if (reverse)
-				r |= (1<<26)|(1<<27);
+				r |= (1<<26) | (1<<27);
 #endif
 			if (vf->bitdepth & BITDEPTH_SAVING_MODE)
 				r |= (1<<28); /* mem_saving_mode */
 			if (type & VIDTYPE_SCATTER)
 				r |= (1<<29);
 			VSYNC_WR_MPEG_REG(VD2_AFBC_MODE, r);
-			VSYNC_WR_MPEG_REG(VD2_AFBC_ENABLE, 0x1700);
+
+			r = 0x1700;
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				if (vf && (vf->source_type
+					!= VFRAME_SOURCE_TYPE_HDMI))
+					r |= (1 << 19); /* dos_uncomp */
+			}
+			VSYNC_WR_MPEG_REG(VD2_AFBC_ENABLE, r);
 
 			r = 0x100;
-			/* need check the vf->type 444/422/420 */
-			/* current use 420 as default for tl1 */
-			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
-				r |= (2 << 12);
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				if (type & VIDTYPE_VIU_444)
+					r |= 0;
+				else if (type & VIDTYPE_VIU_422)
+					r |= (1 << 12);
+				else
+					r |= (2 << 12);
+			}
 			VSYNC_WR_MPEG_REG(VD2_AFBC_CONV_CTRL, r);
 
 			u = (vf->bitdepth >> (BITDEPTH_U_SHIFT)) & 0x3;
@@ -3746,67 +3802,73 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				0x3FF00000 | /*Y,bit20+*/
 				0x80 << (u + 10) |
 				0x80 << v);
+
 			/* chroma formatter */
-			/* TODO: afbc setting only cover 420 for now */
-#ifdef TV_REVERSE
-			if (reverse) {
+			r = HFORMATTER_EN |
+				(0x8 << VFORMATTER_PHASE_BIT) |
+				VFORMATTER_EN;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-				if (is_meson_txlx_package_962X()
+			if (is_meson_txlx_package_962X()
 				&& !is_dolby_vision_stb_mode()
 				&& is_dolby_vision_on()) {
-					VSYNC_WR_MPEG_REG(
-						VD2_AFBC_VD_CFMT_CTRL,
-						HFORMATTER_REPEAT |
-						HFORMATTER_YC_RATIO_2_1 |
-						HFORMATTER_EN |
-						VFORMATTER_ALWAYS_RPT |
-						(0 << VFORMATTER_INIPHASE_BIT) |
-						(0x8 << VFORMATTER_PHASE_BIT) |
-						VFORMATTER_EN);
-				} else
-#endif
-					VSYNC_WR_MPEG_REG(VD2_AFBC_VD_CFMT_CTRL,
-					(is_dolby_vision_on() ?
-						HFORMATTER_REPEAT :
-						HFORMATTER_RRT_PIXEL0) |
-						HFORMATTER_YC_RATIO_2_1 |
-						HFORMATTER_EN |
-						VFORMATTER_RPTLINE0_EN |
-					(is_dolby_vision_on() ?
-					(0xc << VFORMATTER_INIPHASE_BIT) : 0) |
-						(0x8 << VFORMATTER_PHASE_BIT) |
-						VFORMATTER_EN);
-			} else {
-#endif
-#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-				if (is_meson_txlx_package_962X()
-				&& !is_dolby_vision_stb_mode()
-				&& is_dolby_vision_on()) {
-					VSYNC_WR_MPEG_REG(
-						VD2_AFBC_VD_CFMT_CTRL,
-						HFORMATTER_REPEAT |
-						HFORMATTER_YC_RATIO_2_1 |
-						HFORMATTER_EN |
-						VFORMATTER_ALWAYS_RPT |
-						(0 << VFORMATTER_INIPHASE_BIT) |
-						(0x8 << VFORMATTER_PHASE_BIT) |
-						VFORMATTER_EN);
-				} else
-#endif
-					VSYNC_WR_MPEG_REG(VD2_AFBC_VD_CFMT_CTRL,
-					(is_dolby_vision_on() ?
-					HFORMATTER_REPEAT :
-					HFORMATTER_RRT_PIXEL0) |
+				r |= HFORMATTER_REPEAT |
 					HFORMATTER_YC_RATIO_2_1 |
 					HFORMATTER_EN |
-					VFORMATTER_RPTLINE0_EN |
-					(is_dolby_vision_on() ?
-					(0xc << VFORMATTER_INIPHASE_BIT) : 0) |
+					VFORMATTER_ALWAYS_RPT |
+					(0 << VFORMATTER_INIPHASE_BIT) |
 					(0x8 << VFORMATTER_PHASE_BIT) |
-					VFORMATTER_EN);
-#ifdef TV_REVERSE
-			}
+					VFORMATTER_EN;
+			} else
 #endif
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				r = HFORMATTER_YC_RATIO_2_1 |
+					HFORMATTER_EN |
+					VFORMATTER_RPTLINE0_EN |
+					(0x8 << VFORMATTER_PHASE_BIT) |
+					VFORMATTER_EN;
+
+				if (is_dolby_vision_on())
+					r |= HFORMATTER_REPEAT |
+					(0xc << VFORMATTER_INIPHASE_BIT);
+				else
+					r |= HFORMATTER_RRT_PIXEL0 |
+					(0 << VFORMATTER_INIPHASE_BIT);
+
+				if (type & VIDTYPE_VIU_444) {
+					r &= ~HFORMATTER_EN;
+					r &= ~VFORMATTER_EN;
+					r &= ~HFORMATTER_YC_RATIO_2_1;
+				} else if (type & VIDTYPE_VIU_422) {
+					r &= ~VFORMATTER_EN;
+				}
+			} else {
+				r = HFORMATTER_YC_RATIO_2_1 |
+					HFORMATTER_EN |
+					VFORMATTER_RPTLINE0_EN |
+					(0x8 << VFORMATTER_PHASE_BIT) |
+					VFORMATTER_EN;
+				if (is_dolby_vision_on())
+					r |= HFORMATTER_REPEAT |
+					(0xc << VFORMATTER_INIPHASE_BIT);
+				else
+					r |= HFORMATTER_RRT_PIXEL0 |
+					(0 << VFORMATTER_INIPHASE_BIT);
+			}
+			VSYNC_WR_MPEG_REG(VD2_AFBC_VD_CFMT_CTRL, r);
+
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+				if (type & VIDTYPE_COMPRESS_LOSS)
+					VSYNC_WR_MPEG_REG(
+					VD2_AFBCDEC_IQUANT_ENABLE,
+					((1 << 11) |
+					(1 << 10) |
+					(1 << 4) |
+					(1 << 0)));
+				else
+					VSYNC_WR_MPEG_REG(
+					VD2_AFBCDEC_IQUANT_ENABLE, 0);
+			}
+
 			vd2_path_select(true);
 			VSYNC_WR_MPEG_REG(VD2_IF0_GEN_REG +
 					 cur_dev->viu_off, 0);
@@ -6072,11 +6134,12 @@ SET_FILTER:
 			zoom_start_x_lines =
 					cur_frame_par->VPP_hd_start_lines_;
 			zoom_end_x_lines = cur_frame_par->VPP_hd_end_lines_;
-			zoom_display_horz(cur_frame_par->hscale_skip_count);
+			zoom_display_horz(cur_dispbuf,
+				cur_frame_par->hscale_skip_count);
 
 			zoom_start_y_lines = zoom_start_y;
 			zoom_end_y_lines = zoom_end_y;
-			zoom_display_vert();
+			zoom_display_vert(cur_dispbuf);
 			if (is_dolby_vision_enable() && cur_dispbuf2) {
 				zoom2_start_x_lines = ori2_start_x_lines;
 				zoom2_end_x_lines = ori2_end_x_lines;
@@ -6084,8 +6147,8 @@ SET_FILTER:
 				zoom2_end_y_lines = ori2_end_y_lines;
 				correct_vd2_mif_size_for_DV(
 					cur_frame_par, cur_dispbuf);
-				vd2_zoom_display_horz(0);
-				vd2_zoom_display_vert();
+				vd2_zoom_display_horz(cur_dispbuf2, 0);
+				vd2_zoom_display_vert(cur_dispbuf2);
 			}
 		}
 		/*vpp input size setting*/
