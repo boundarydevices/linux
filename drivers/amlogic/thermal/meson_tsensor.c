@@ -160,6 +160,12 @@ static void meson_report_trigger(struct meson_tsensor_data *p)
 		pr_err("No thermal zone device defined\n");
 		return;
 	}
+	/*
+	 *if passive delay and polling delay all is zero
+	 *mean thermal mode disabled, disable update envent
+	 */
+	if (0 == (tz->passive_delay || tz->polling_delay))
+		return;
 
 	thermal_zone_device_update(tz, THERMAL_EVENT_UNSPECIFIED);
 
