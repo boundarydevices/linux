@@ -1105,7 +1105,6 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		size_t len, u_char *buf)
 {
 	struct fsl_flexspi *flex = nor->priv;
-	int i, j;
 
 	/* for read sfdp only */
 	if (nor->read_opcode == SPINOR_OP_RDSFDP)
@@ -1117,7 +1116,7 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		flex->memmap_len = len > FLEXSPI_MIN_IOMAP ?
 			len : FLEXSPI_MIN_IOMAP;
 
-		flex->ahb_addr = ioremap_nocache(
+		flex->ahb_addr = ioremap_wc(
 				flex->memmap_phy + flex->memmap_offs,
 				flex->memmap_len);
 		if (!flex->ahb_addr) {
@@ -1133,7 +1132,7 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		flex->memmap_offs = flex->chip_base_addr + from;
 		flex->memmap_len = len > FLEXSPI_MIN_IOMAP ?
 			len : FLEXSPI_MIN_IOMAP;
-		flex->ahb_addr = ioremap_nocache(
+		flex->ahb_addr = ioremap_wc(
 				flex->memmap_phy + flex->memmap_offs,
 				flex->memmap_len);
 		if (!flex->ahb_addr) {
@@ -1142,20 +1141,8 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		}
 	}
 
-	/* For non-8-byte alignment cases */
-	if (from % 8) {
-		j = 8 - (from & 0x7);
-		for (i = 0; i < j; ++i) {
-			memcpy(buf + i, flex->ahb_addr + flex->chip_base_addr
-			       + from - flex->memmap_offs + i, 1);
-		}
-		memcpy(buf + j, flex->ahb_addr + flex->chip_base_addr + from
-		       - flex->memmap_offs + j, len - j);
-	} else {
-		/* Read out the data directly from the AHB buffer.*/
-		memcpy(buf, flex->ahb_addr + flex->chip_base_addr + from
-		       - flex->memmap_offs, len);
-	}
+	memcpy(buf, flex->ahb_addr + flex->chip_base_addr + from
+	       - flex->memmap_offs, len);
 
 	return len;
 }
