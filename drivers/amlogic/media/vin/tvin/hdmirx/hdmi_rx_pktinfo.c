@@ -1391,6 +1391,10 @@ void rx_get_vsi_info(void)
 			((pkt->sbpkt.payload.data[0] & 0xff) == 0)) {
 			rx.vs_info_details.dolby_vision = false;
 		}
+	} else if (pkt->ieee == 0xd85dc4) {
+		/*TODO:hdmi2.1 spec vsi packet*/
+		tmp = pkt->sbpkt.payload.data[0] & _BIT(9);
+		rx.vs_info_details.allm_mode = tmp ? true : false;
 	} else {
 		/*3d VSI*/
 		if (pkt->sbpkt.vsi_3Dext.vdfmt == VSI_FORMAT_3D_FORMAT) {

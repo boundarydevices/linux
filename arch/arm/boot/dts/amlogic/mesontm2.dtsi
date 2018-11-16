@@ -1354,7 +1354,7 @@
 	};
 
 	vdac {
-		compatible = "amlogic, vdac-tl1";
+		compatible = "amlogic, vdac-tm2";
 		status = "okay";
 	};
 

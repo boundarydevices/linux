@@ -5054,6 +5054,7 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	}
 	para.dest_hactive = dst_w;
 	para.dest_vactive = dst_h;
+	para.reserved |= PARAM_STATE_SCREENCAP;
 	if (para.scan_mode == TVIN_SCAN_MODE_INTERLACED)
 		para.dest_vactive = para.dest_vactive / 2;
 	if (para.port == TVIN_PORT_VIU1_VIDEO) {

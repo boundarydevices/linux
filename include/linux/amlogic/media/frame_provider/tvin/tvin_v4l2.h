@@ -742,6 +742,10 @@ enum cam_interface_e {
 	CAM_MIPI,
 };
 
+#define PARAM_STATE_NULL			0x00000000
+#define PARAM_STATE_HISTGRAM		0x00000001
+#define PARAM_STATE_SCREENCAP		0x00000002
+
 /* *********************************************************************** */
 
 /* *** IOCTL command definitions ***************************************** */
@@ -813,6 +817,7 @@ struct vdin_parm_s {
 	unsigned short skip_count;	/* for skip frame */
 
 	struct csi_parm_s csi_hw_info;
+
 	/*for reserved */
 	uintptr_t reserved;
 };

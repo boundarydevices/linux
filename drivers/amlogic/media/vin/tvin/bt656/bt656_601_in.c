@@ -1129,7 +1129,8 @@ static int amvdec_656in_probe(struct platform_device *pdev)
 
 	if (is_meson_gxtvbb_cpu() || is_meson_gxl_cpu() ||
 		is_meson_gxm_cpu() || is_meson_g12a_cpu() ||
-		is_meson_g12b_cpu() || is_meson_tl1_cpu()) {
+		is_meson_g12b_cpu() || is_meson_tl1_cpu() ||
+		is_meson_tm2_cpu()) {
 		hw_cnt = 1;
 	} else if (is_meson_gxbb_cpu()) {
 		hw_cnt = 2;

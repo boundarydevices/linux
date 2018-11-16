@@ -617,7 +617,18 @@ struct vsi_infoframe_st {
 			/*pb6*/
 			uint8_t data[22];/* val=0 */
 		} __packed vsi_DobV;
-
+		/*TODO:hdmi2.1 spec vsi packet*/
+		struct vsi_st_21 {
+			/*pb4*/
+			uint8_t ver:8;
+			/*pb5*/
+			uint8_t threeD_valid:1;
+			uint8_t allm_mode:1;
+			uint8_t rsvd1:2;
+			uint8_t ccbpc:4;
+			/*pb6*/
+			/*todo*/
+		} __packed vsi_st_21;
 	} __packed sbpkt;
 } __packed;
 

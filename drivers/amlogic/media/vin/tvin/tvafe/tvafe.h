@@ -32,7 +32,7 @@
 /* ************************************************* */
 /* *** macro definitions ********************************************* */
 /* *********************************************************** */
-#define TVAFE_VER "Ref.2018/06/27"
+#define TVAFE_VER "Ref.2019/03/18"
 
 /* used to set the flag of tvafe_dev_s */
 #define TVAFE_FLAG_DEV_OPENED 0x00000010
@@ -93,6 +93,9 @@ struct tvafe_dev_s {
 	unsigned int frame_skip_enable;
 	unsigned int sizeof_tvafe_dev_s;
 };
+
+bool tvafe_get_snow_cfg(void);
+void tvafe_set_snow_cfg(bool cfg);
 
 typedef int (*hook_func_t)(void);
 extern void aml_fe_hook_cvd(hook_func_t atv_mode,

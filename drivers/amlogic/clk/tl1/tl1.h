@@ -123,11 +123,13 @@
 #define HHI_SYS_PLL_CNTL5		0x308 /* 0xc2 offset in datasheet */
 #define HHI_SYS_PLL_CNTL6		0x30c /* 0xc3 offset in datasheet */
 
+#if 0/*tl1 no*/
 #define HHI_HDMI_PLL_CNTL		0x320 /* 0xc8 offset in datasheet */
 #define HHI_HDMI_PLL_CNTL2		0x324 /* 0xc9 offset in datasheet */
 #define HHI_HDMI_PLL_CNTL3		0x328 /* 0xca offset in datasheet */
 #define HHI_HDMI_PLL_CNTL4		0x32C /* 0xcb offset in datasheet */
 #define HHI_HDMI_PLL_CNTL5		0x330 /* 0xcc offset in datasheet */
+#endif
 #define HHI_VID_LOCK_CLK_CNTL		0x3c8 /* 0xf2 offset in datasheet1 */
 #define HHI_BT656_CLK_CNTL		0x3d4 /* 0xf5 offset in datasheet1 */
 #define HHI_SPICC_CLK_CNTL		0x3dc /* 0xf7 offset in datasheet1 */

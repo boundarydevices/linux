@@ -23,7 +23,7 @@
 #include <linux/amlogic/media/vfm/vframe.h>
 #include "linux/amlogic/media/amvecm/ve.h"
 
-#define VLOCK_VER "Ref.2018/11/07a"
+#define VLOCK_VER "Ref.2019/1/24"
 
 #define VLOCK_REG_NUM	33
 
@@ -59,6 +59,21 @@ enum vlock_param_e {
 	VLOCK_PARAM_MAX,
 };
 
+struct stvlock_sig_sts {
+	u32 fsm_sts;
+	u32 fsm_prests;
+	u32 vf_sts;
+	u32 vmd_chg;
+	u32 frame_cnt_in;
+	u32 frame_cnt_no;
+	u32 input_hz;
+	u32 output_hz;
+	bool md_support;
+	u32 phlock_percent;
+	struct vecm_match_data_s *dtdata;
+	u32 val_frac;
+	u32 val_m;
+};
 extern void amve_vlock_process(struct vframe_s *vf);
 extern void amve_vlock_resume(void);
 extern void vlock_param_set(unsigned int val, enum vlock_param_e sel);
@@ -67,7 +82,7 @@ extern void vlock_reg_dump(void);
 extern void vlock_log_start(void);
 extern void vlock_log_stop(void);
 extern void vlock_log_print(void);
-
+extern int phase_lock_check(void);
 
 #define VLOCK_STATE_NULL 0
 #define VLOCK_STATE_ENABLE_STEP1_DONE 1
@@ -77,12 +92,45 @@ extern void vlock_log_print(void);
 #define VLOCK_STATE_ENABLE_FORCE_RESET 5
 
 /* video lock */
-#define VLOCK_MODE_AUTO_ENC (1 << 0)
-#define VLOCK_MODE_AUTO_PLL (1 << 1)
-#define VLOCK_MODE_MANUAL_PLL (1 << 2)
-#define VLOCK_MODE_MANUAL_ENC (1 << 3)
-#define VLOCK_MODE_MANUAL_SOFT_ENC (1 << 4)
-#define VLOCK_MODE_MANUAL_MIX_PLL_ENC (1 << 5)
+enum VLOCK_MD {
+	VLOCK_MODE_AUTO_ENC = 0x01,
+	VLOCK_MODE_AUTO_PLL = 0x02,
+	VLOCK_MODE_MANUAL_PLL = 0x04,
+	VLOCK_MODE_MANUAL_ENC = 0x08,
+	VLOCK_MODE_MANUAL_SOFT_ENC = 0x10,
+	VLOCK_MODE_MANUAL_MIX_PLL_ENC = 0x20,
+};
+
+#define IS_MANUAL_MODE(md)	(md & \
+				(VLOCK_MODE_MANUAL_PLL | \
+				VLOCK_MODE_MANUAL_ENC |	\
+				VLOCK_MODE_MANUAL_SOFT_ENC))
+
+#define IS_AUTO_MODE(md)	(md & \
+				(VLOCK_MODE_AUTO_PLL | \
+				VLOCK_MODE_AUTO_ENC))
+
+#define IS_PLL_MODE(md)	(md & \
+				(VLOCK_MODE_MANUAL_PLL | \
+				VLOCK_MODE_AUTO_PLL))
+
+#define IS_ENC_MODE(md)	(md & \
+				(VLOCK_MODE_MANUAL_ENC | \
+				VLOCK_MODE_MANUAL_SOFT_ENC | \
+				VLOCK_MODE_AUTO_ENC))
+
+#define IS_AUTO_PLL_MODE(md) (md & \
+					VLOCK_MODE_AUTO_PLL)
+
+#define IS_MANUAL_ENC_MODE(md) (md & \
+				VLOCK_MODE_MANUAL_ENC)
+
+#define IS_MANUAL_PLL_MODE(md) (md & \
+				VLOCK_MODE_MANUAL_PLL)
+
+#define IS_MANUAL_SOFTENC_MODE(md) (md & \
+				VLOCK_MODE_MANUAL_SOFT_ENC)
+
 
 #define XTAL_VLOCK_CLOCK   24000000/*vlock use xtal clock*/
 
@@ -95,18 +143,19 @@ extern void vlock_log_print(void);
 #define VLOCK_PLL_ADJ_LIMIT 9/*vlock pll adj limit(0x300a default)*/
 
 /*vlock_debug mask*/
-#define VLOCK_DEBUG_INFO (1 << 0)
-#define VLOCK_DEBUG_FLUSH_REG_DIS (1 << 1)
-#define VLOCK_DEBUG_ENC_LINE_ADJ_DIS (1 << 2)
-#define VLOCK_DEBUG_ENC_PIXEL_ADJ_DIS (1 << 3)
-#define VLOCK_DEBUG_AUTO_MODE_LOG_EN (1 << 4)
-#define VLOCK_DEBUG_PLL2ENC_DIS (1 << 5)
+#define VLOCK_DEBUG_INFO (0x1)
+#define VLOCK_DEBUG_FLUSH_REG_DIS (0x2)
+#define VLOCK_DEBUG_ENC_LINE_ADJ_DIS (0x4)
+#define VLOCK_DEBUG_ENC_PIXEL_ADJ_DIS (0x8)
+#define VLOCK_DEBUG_AUTO_MODE_LOG_EN (0x10)
+#define VLOCK_DEBUG_PLL2ENC_DIS (0x20)
+#define VLOCK_DEBUG_FSM_DIS (0x40)
 
 /* 0:enc;1:pll;2:manual pll */
 extern unsigned int vlock_mode;
 extern unsigned int vlock_en;
 extern unsigned int vecm_latch_flag;
-extern void __iomem *amvecm_hiu_reg_base;
+/*extern void __iomem *amvecm_hiu_reg_base;*/
 extern unsigned int probe_ok;
 
 extern void lcd_ss_enable(bool flag);
@@ -123,4 +172,9 @@ extern void vlock_lcd_param_work(struct work_struct *p_work);
 extern int vlock_notify_callback(struct notifier_block *block,
 	unsigned long cmd, void *para);
 #endif
+extern void vlock_status_init(void);
+extern void vlock_dt_match_init(struct vecm_match_data_s *pdata);
+extern void vlock_set_en(bool en);
+extern void vlock_set_phase(u32 percent);
+extern void vlock_set_phase_en(u32 en);
 

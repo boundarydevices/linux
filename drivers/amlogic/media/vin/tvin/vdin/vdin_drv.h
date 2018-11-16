@@ -36,8 +36,8 @@
 #include <linux/amlogic/media/vfm/vframe_receiver.h>
 #include <linux/amlogic/media/vfm/vframe_provider.h>
 #include <linux/amlogic/media/frame_provider/tvin/tvin_v4l2.h>
-#ifdef CONFIG_AML_RDMA
-#include <linux/amlogic/rdma/rdma_mgr.h>
+#ifdef CONFIG_AMLOGIC_MEDIA_RDMA
+#include <linux/amlogic/media/rdma/rdma_mgr.h>
 #endif
 
 /* Local Headers */
@@ -45,7 +45,10 @@
 #include "vdin_vf.h"
 #include "vdin_regs.h"
 
-#define VDIN_VER "Ref.2018/11/07a"
+/* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
+ *                 vpp also should support this function
+ */
+#define VDIN_VER "Ref.2019/04/25"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -85,6 +88,12 @@
 #define VDIN_BYPASS_VGA_CHECK           0x00000008
 #define VDIN_CANVAS_MAX_CNT				9
 
+/*values of vdin game mode process flag */
+#define VDIN_GAME_MODE_0                (1 << 0)
+#define VDIN_GAME_MODE_1                (1 << 1)
+#define VDIN_GAME_MODE_2                (1 << 2)
+#define VDIN_GAME_MODE_SWITCH_EN        (1 << 3)
+
 /*flag for flush vdin buff*/
 #define VDIN_FLAG_BLACK_SCREEN_ON	1
 #define VDIN_FLAG_BLACK_SCREEN_OFF	0
@@ -100,6 +109,13 @@
 /*TXL new add*/
 #define VDIN_WR_COLOR_DEPTH_10BIT_FULL_PCAK_MODE	(1 << 4)
 
+/* vdin afbce flag */
+#define VDIN_AFBCE_EN                   (1 << 0)
+#define VDIN_AFBCE_EN_LOOSY             (1 << 1)
+#define VDIN_AFBCE_EN_4K                (1 << 4)
+#define VDIN_AFBCE_EN_1080P             (1 << 5)
+#define VDIN_AFBCE_EN_720P              (1 << 6)
+#define VDIN_AFBCE_EN_SMALL             (1 << 7)
 
 static inline const char *vdin_fmt_convert_str(
 		enum vdin_format_convert_e fmt_cvt)
@@ -141,6 +157,21 @@ static inline const char *vdin_fmt_convert_str(
 	}
 }
 
+struct vdin_set_canvas_s {
+	int fd;
+	int index;
+};
+
+struct vdin_set_canvas_addr_s {
+	long paddr;
+	int  size;
+
+	struct dma_buf *dmabuff;
+	struct dma_buf_attachment *dmabufattach;
+	struct sg_table *sgtable;
+};
+extern struct vdin_set_canvas_addr_s vdin_set_canvas_addr[VDIN_CANVAS_MAX_CNT];
+
 /*******for debug **********/
 struct vdin_debug_s {
 	struct tvin_cutwin_s cutwin;
@@ -160,6 +191,7 @@ struct vdin_dv_s {
 	bool dv_flag;
 	bool dv_config;
 	bool dv_crc_check;/*0:fail;1:ok*/
+	unsigned int dv_mem_alloced;
 };
 
 struct vdin_afbce_s {
@@ -199,6 +231,7 @@ struct vdin_dev_s {
 
 	struct timer_list timer;
 	spinlock_t isr_lock;
+	spinlock_t hist_lock;
 	struct mutex fe_lock;
 	struct clk *msr_clk;
 	unsigned int msr_clk_val;
@@ -312,6 +345,8 @@ struct vdin_dev_s {
 	 *game_mode:
 	 *bit0:enable/disable
 	 *bit1:for true bypas and put vframe in advance one vsync
+	 *bit2:for true bypas and put vframe in advance two vsync,
+	 *vdin & vpp read/write same buffer may happen
 	 */
 	unsigned int game_mode;
 	unsigned int rdma_enable;
@@ -320,24 +355,61 @@ struct vdin_dev_s {
 	 * 1: use afbce non-mmu mode: head/body addr set by code
 	 * 2: use afbce mmu mode: head set by code, body addr assigning by hw
 	 */
+	/*afbce_flag:
+	 *bit[0]: enable afbce
+	 *bit[1]: enable afbce_loosy
+	 *bit[4]: afbce enable for 4k
+	 *bit[5]: afbce enable for 1080p
+	 *bit[6]: afbce enable for 720p
+	 *bit[7]: afbce enable for other small resolution
+	 */
+	unsigned int afbce_flag;
+	unsigned int afbce_mode_pre;
 	unsigned int afbce_mode;
+	unsigned int afbce_valid;
+
+	/*fot 'T correction' on projector*/
+	unsigned int set_canvas_manual;
+	unsigned int keystone_vframe_ready;
+	struct vf_entry *keystone_entry[VDIN_CANVAS_MAX_CNT];
 	unsigned int canvas_config_mode;
 	bool	prehsc_en;
 	bool	vshrk_en;
 	bool	urgent_en;
 	bool black_bar_enable;
 	bool hist_bar_enable;
+	unsigned int ignore_frames;
+	unsigned int recycle_frames;
 	/*use frame rate to cal duraton*/
 	unsigned int use_frame_rate;
 	unsigned int irq_cnt;
+	unsigned int frame_cnt;
 	unsigned int rdma_irq_cnt;
 	unsigned int vdin_irq_flag;
 	unsigned int vdin_reset_flag;
 	unsigned int vdin_dev_ssize;
 	wait_queue_head_t queue;
-
 	struct dentry *dbg_root;	/*dbg_fs*/
 };
+
+struct vdin_hist_s {
+	ulong sum;
+	int width;
+	int height;
+	int ave;
+};
+
+struct vdin_v4l2_param_s {
+	int width;
+	int height;
+	int fps;
+};
+
+extern unsigned int max_recycle_frame_cnt;
+extern unsigned int max_ignore_frame_cnt;
+extern unsigned int skip_frame_debug;
+
+extern unsigned int vdin0_afbce_debug_force;
 
 extern struct vframe_provider_s *vf_get_provider_by_name(
 		const char *provider_name);
@@ -367,8 +439,6 @@ extern void ldim_get_matrix(int *data, int reg_sel);
 extern void ldim_set_matrix(int *data, int reg_sel);
 extern void tvafe_snow_config(unsigned int onoff);
 extern void tvafe_snow_config_clamp(unsigned int onoff);
-extern void tvafe_snow_config_acd(void);
-extern void tvafe_snow_config_acd_resume(void);
 extern void vdin_vf_reg(struct vdin_dev_s *devp);
 extern void vdin_vf_unreg(struct vdin_dev_s *devp);
 extern void vdin_pause_dec(struct vdin_dev_s *devp);
@@ -377,6 +447,11 @@ extern bool is_dolby_vision_enable(void);
 
 extern void vdin_debugfs_init(struct vdin_dev_s *vdevp);
 extern void vdin_debugfs_exit(struct vdin_dev_s *vdevp);
+
+extern bool vlock_get_phlock_flag(void);
+
+extern struct vdin_dev_s *vdin_get_dev(unsigned int index);
+extern void vdin_mif_config_init(struct vdin_dev_s *devp);
 
 #endif /* __TVIN_VDIN_DRV_H */
 

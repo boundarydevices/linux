@@ -443,14 +443,16 @@ void vdac_enable(bool on, unsigned int module_sel)
 				break;
 			vdac_out_cntl1_bit3(0, VDAC_MODULE_TVAFE);
 			vdac_out_cntl0_bit10(1, VDAC_MODULE_TVAFE);
-			if (s_vdac_data->cpu_id == VDAC_CPU_TL1) {
+			if (s_vdac_data->cpu_id == VDAC_CPU_TL1 ||
+				s_vdac_data->cpu_id == VDAC_CPU_TM2) {
 				/*[6][8]bypass buffer enable*/
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 1, 6, 1);
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 1, 8, 1);
 			}
 		} else {
 			ana_ref_cntl0_bit9(0, VDAC_MODULE_TVAFE);
-			if (s_vdac_data->cpu_id == VDAC_CPU_TL1) {
+			if (s_vdac_data->cpu_id == VDAC_CPU_TL1 ||
+				s_vdac_data->cpu_id == VDAC_CPU_TM2) {
 				/*[6][8]bypass buffer disable*/
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 0, 6, 1);
 				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 0, 8, 1);
@@ -594,6 +596,11 @@ struct meson_vdac_data meson_sm1_vdac_data = {
 	.name = "meson-sm1-vdac",
 };
 
+struct meson_vdac_data meson_tm2_vdac_data = {
+	.cpu_id = VDAC_CPU_TM2,
+	.name = "meson-tm2-vdac",
+};
+
 static const struct of_device_id meson_vdac_dt_match[] = {
 	{
 		.compatible = "amlogic, vdac-gxtvbb",
@@ -628,6 +635,9 @@ static const struct of_device_id meson_vdac_dt_match[] = {
 	}, {
 		.compatible = "amlogic, vdac-sm1",
 		.data		= &meson_sm1_vdac_data,
+	}, {
+		.compatible = "amlogic, vdac-tm2",
+		.data		= &meson_tm2_vdac_data,
 	},
 	{},
 };
@@ -712,12 +722,19 @@ static int amvdac_drv_suspend(struct platform_device *pdev,
 	if (s_vdac_data->cpu_id == VDAC_CPU_TXL ||
 		s_vdac_data->cpu_id == VDAC_CPU_TXLX)
 		vdac_hiu_reg_write(HHI_VDAC_CNTL0, 0);
+	else if (s_vdac_data->cpu_id == VDAC_CPU_TL1 ||
+		s_vdac_data->cpu_id == VDAC_CPU_TM2)
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 1, 7, 1);
 	pr_info("%s: suspend module\n", __func__);
 	return 0;
 }
 
 static int amvdac_drv_resume(struct platform_device *pdev)
 {
+	/*0xbc[7] for bandgap enable: 0:enable,1:disable*/
+	if (s_vdac_data->cpu_id == VDAC_CPU_TL1 ||
+		s_vdac_data->cpu_id == VDAC_CPU_TM2)
+		vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 0, 7, 1);
 	pr_info("%s: resume module\n", __func__);
 	return 0;
 }

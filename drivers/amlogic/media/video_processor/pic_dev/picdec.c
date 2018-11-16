@@ -787,6 +787,7 @@ static int picdec_memset_phyaddr(ulong phys, u32 size, u32 val)
 		if (!p)
 			return -1;
 		memset(p, val, span);
+		codec_mm_dma_flush(p, span, DMA_TO_DEVICE);
 		codec_mm_unmap_phyaddr(p);
 	}
 	return 0;
@@ -896,6 +897,7 @@ static int copy_phybuf_to_file(ulong phys, u32 size,
 		p = codec_mm_vmap(addr, span);
 		if (!p)
 			return -1;
+		codec_mm_dma_flush(p, span, DMA_FROM_DEVICE);
 		vfs_write(fp, (char *)p,
 			span, &pos);
 		pos += span;

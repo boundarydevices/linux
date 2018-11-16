@@ -64,11 +64,13 @@ enum tvin_port_e {
 	TVIN_PORT_VIU1_WB0_VD2,
 	TVIN_PORT_VIU1_WB0_OSD1,
 	TVIN_PORT_VIU1_WB0_OSD2,
+	TVIN_PORT_VIU1_WB0_VPP,
 	TVIN_PORT_VIU1_WB0_POST_BLEND,
 	TVIN_PORT_VIU1_WB1_VD1,
 	TVIN_PORT_VIU1_WB1_VD2,
 	TVIN_PORT_VIU1_WB1_OSD1,
 	TVIN_PORT_VIU1_WB1_OSD2,
+	TVIN_PORT_VIU1_WB1_VPP,
 	TVIN_PORT_VIU1_WB1_POST_BLEND,
 	TVIN_PORT_VIU2 = 0x0000C000,
 	TVIN_PORT_VIU2_VIDEO,
@@ -76,11 +78,13 @@ enum tvin_port_e {
 	TVIN_PORT_VIU2_WB0_VD2,
 	TVIN_PORT_VIU2_WB0_OSD1,
 	TVIN_PORT_VIU2_WB0_OSD2,
+	TVIN_PORT_VIU2_WB0_VPP,
 	TVIN_PORT_VIU2_WB0_POST_BLEND,
 	TVIN_PORT_VIU2_WB1_VD1,
 	TVIN_PORT_VIU2_WB1_VD2,
 	TVIN_PORT_VIU2_WB1_OSD1,
 	TVIN_PORT_VIU2_WB1_OSD2,
+	TVIN_PORT_VIU2_WB1_VPP,
 	TVIN_PORT_VIU2_WB1_POST_BLEND,
 	TVIN_PORT_MIPI = 0x00010000,
 	TVIN_PORT_ISP = 0x00020000,
@@ -312,6 +316,15 @@ struct tvin_info_s {
 	unsigned int is_dvi;
 };
 
+struct tvin_frontend_info_s {
+	enum tvin_scan_mode_e scan_mode;
+	enum tvin_color_fmt_e cfmt;
+	unsigned int fps;
+	unsigned int width;
+	unsigned int height;
+	unsigned int colordepth;
+};
+
 struct tvin_buf_info_s {
 	unsigned int vf_size;
 	unsigned int buf_count;
@@ -432,7 +445,13 @@ struct tvafe_pin_mux_s {
 	enum tvin_force_color_range_e)
 #define TVIN_IOC_GAME_MODE          _IOW(_TM_T, 0x4b, unsigned int)
 #define TVIN_IOC_SET_AUTO_RATIO_EN  _IOW(_TM_T, 0x4c, unsigned int)
-
+#define TVIN_IOC_GET_LATENCY_MODE		_IOR(_TM_T, 0x4d,\
+	struct tvin_latency_s)
+#define TVIN_IOC_G_FRONTEND_INFO    _IOR(_TM_T, 0x4e,\
+	struct tvin_frontend_info_s)
+#define TVIN_IOC_S_CANVAS_ADDR  _IOW(_TM_T, 0x4f,\
+	struct vdin_set_canvas_s)
+#define TVIN_IOC_S_CANVAS_RECOVERY  _IO(_TM_T, 0x0a)
 /* TVAFE */
 #define TVIN_IOC_S_AFE_VGA_PARM     _IOW(_TM_T, 0x16, struct tvafe_vga_parm_s)
 #define TVIN_IOC_G_AFE_VGA_PARM     _IOR(_TM_T, 0x17, struct tvafe_vga_parm_s)
@@ -444,6 +463,10 @@ struct tvafe_pin_mux_s {
 #define TVIN_IOC_LOAD_REG          _IOW(_TM_T, 0x20, struct am_regs_s)
 #define TVIN_IOC_S_AFE_SONWON     _IO(_TM_T, 0x22)
 #define TVIN_IOC_S_AFE_SONWOFF     _IO(_TM_T, 0x23)
+#define TVIN_IOC_G_VDIN_HIST       _IOW(_TM_T, 0x24, struct vdin_hist_s)
+#define TVIN_IOC_S_VDIN_V4L2START  _IOW(_TM_T, 0x25, struct vdin_v4l2_param_s)
+#define TVIN_IOC_S_VDIN_V4L2STOP   _IO(_TM_T, 0x26)
+#define TVIN_IOC_S_AFE_SONWCFG     _IOW(_TM_T, 0x27, unsigned int)
 
 /*
  *function defined applied for other driver

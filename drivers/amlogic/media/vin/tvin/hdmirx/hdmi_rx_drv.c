@@ -765,6 +765,16 @@ void hdmirx_get_repetition_info(struct tvin_sig_property_s *prop)
 }
 
 /*
+ * hdmirx_get_allm_mode - get allm mode
+ */
+void hdmirx_get_latency_info(struct tvin_sig_property_s *prop)
+{
+	prop->latency.allm_mode = rx.vs_info_details.allm_mode;
+	prop->latency.it_content = it_content;
+	prop->latency.cn_type = rx.cur.cn_type;
+}
+
+/*
  * hdmirx_get_hdr_info - get hdr info
  */
 void hdmirx_get_hdr_info(struct tvin_sig_property_s *prop)
@@ -858,6 +868,7 @@ void hdmirx_get_sig_property(struct tvin_frontend_s *fe,
 	hdmirx_set_timing_info(prop);
 	hdmirx_get_hdr_info(prop);
 	hdmirx_get_vsi_info(prop);
+	hdmirx_get_latency_info(prop);
 	prop->skip_vf_num = vdin_drop_frame_cnt;
 }
 

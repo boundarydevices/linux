@@ -1,6 +1,11 @@
 #
 # Makefile for Vdin.
 #
+ifeq ($(TARGET_BUILD_VARIANT),userdebug)
+ccflags-y := -DDEBUG_SUPPORT
+else
+ccflags-y := -DDEBUG
+endif
 obj-$(CONFIG_AMLOGIC_MEDIA_VDIN) = tvin_vdin.o
 tvin_vdin-objs += vdin_v4l2.o
 tvin_vdin-objs += vdin_vf.o

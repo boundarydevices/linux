@@ -49,6 +49,9 @@ struct tvin_sm_s {
 	int atv_stable_out_cnt;
 	int hdmi_unstable_out_cnt;
 };
+
+extern bool manual_flag;
+
 void tvin_smr(struct vdin_dev_s *pdev);
 void tvin_smr_init(int index);
 void reset_tvin_smr(unsigned int index);

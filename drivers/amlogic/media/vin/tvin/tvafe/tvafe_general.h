@@ -159,6 +159,7 @@ enum tvafe_cpu_type {
 	CPU_TYPE_TXHD = 3,
 	CPU_TYPE_GXLX = 4,
 	CPU_TYPE_TL1 = 5,
+	CPU_TYPE_TM2 = 6,
 };
 
 struct meson_tvafe_data {

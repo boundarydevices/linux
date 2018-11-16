@@ -2363,6 +2363,8 @@ void rx_get_video_info(void)
 	/* AVI parameters */
 	rx.cur.hw_vic =
 		hdmirx_rd_bits_dwc(DWC_PDEC_AVI_PB, VID_IDENT_CODE);
+	rx.cur.cn_type =
+		hdmirx_rd_bits_dwc(DWC_PDEC_AVI_HB, CONETNT_TYPE);
 	rx.cur.repeat =
 		hdmirx_rd_bits_dwc(DWC_PDEC_AVI_HB, PIX_REP_FACTOR);
 	rx.cur.colorspace =

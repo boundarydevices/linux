@@ -126,6 +126,13 @@
 /*G12A*/
 #define HHI_HDMI_PLL_CNTL7                         0xce
 
+/* TL1 */
+#define HHI_TCON_PLL_CNTL0                         0x020
+#define HHI_TCON_PLL_CNTL1                         0x021
+#define HHI_TCON_PLL_CNTL2                         0x022
+#define HHI_TCON_PLL_CNTL3                         0x023
+#define HHI_TCON_PLL_CNTL4                         0x0df
+
 #define HHI_GP0_PLL_CNTL0						   0x10
 #define HHI_GP0_PLL_CNTL1						   0x11
 #define HHI_GP0_PLL_CNTL2						   0x12

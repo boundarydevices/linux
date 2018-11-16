@@ -695,6 +695,8 @@
 #define		N_DECODED				MSK(20, 0)
 /** Register address: auxiliary video information info frame */
 #define DWC_PDEC_AVI_HB		(0x3A0UL)
+/** AVI content type*/
+#define CONETNT_TYPE		MSK(2, 28)
 /** PR3-0, pixel repetition factor */
 #define		PIX_REP_FACTOR			MSK(4, 24)
 /** Q1-0, YUV quantization range */

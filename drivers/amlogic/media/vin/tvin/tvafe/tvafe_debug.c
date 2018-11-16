@@ -256,6 +256,18 @@ static ssize_t tvafe_store(struct device *dev,
 		}
 	} else if (!strncmp(buff, "afe_ver", strlen("afe_ver"))) {
 		tvafe_pr_info("tvafe version :  %s\n", TVAFE_VER);
+	} else if (!strncmp(buff, "snowcfg", strlen("snowcfg"))) {
+		if (kstrtoul(parm[1], 10, &val) < 0) {
+			kfree(buf_orig);
+			return -EINVAL;
+		}
+		if (val) {
+			tvafe_set_snow_cfg(true);
+			tvafe_pr_info("[tvafe..]hadware snow cfg en\n");
+		} else {
+			tvafe_set_snow_cfg(false);
+			tvafe_pr_info("[tvafe..]hadware snow cfg dis\n");
+		}
 	} else if (!strncmp(buff, "snowon", strlen("snowon"))) {
 		if (kstrtoul(parm[1], 10, &val) < 0) {
 			kfree(buf_orig);

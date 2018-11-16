@@ -4091,6 +4091,9 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 				if (vf && (vf->source_type
 					!= VFRAME_SOURCE_TYPE_HDMI))
 					r |= (1 << 19); /* dos_uncomp */
+
+				if (type & VIDTYPE_COMB_MODE)
+					r |= (1 << 20);
 			}
 			VSYNC_WR_MPEG_REG(AFBC_ENABLE, r);
 

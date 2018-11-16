@@ -101,6 +101,8 @@ static int cutwindow_val_h_level2 = 18;
 static int cutwindow_val_h_level3 = 20;
 static int cutwindow_val_h_level4 = 62;/*48-->62 for ntsc-m*/
 
+/*tvconfig snow config*/
+static bool snow_cfg;
 /*1: snow function on;*/
 /*0: off snow function*/
 bool tvafe_snow_function_flag;
@@ -259,7 +261,8 @@ int tvafe_dec_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
 	/*only txlx chip enabled*/
 	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
-		tvafe_cpu_type() == CPU_TYPE_TL1) {
+		tvafe_cpu_type() == CPU_TYPE_TL1 ||
+		tvafe_cpu_type() == CPU_TYPE_TM2) {
 		/*synctip set to 0 when tvafe working&&av connected*/
 		/*enable clamp if av connected*/
 		if (port == TVIN_PORT_CVBS1) {
@@ -323,6 +326,7 @@ void tvafe_dec_start(struct tvin_frontend_s *fe, enum tvin_sig_fmt_e fmt)
 	enum tvin_port_e port = devp->tvafe.parm.port;
 
 	mutex_lock(&devp->afe_mutex);
+	manual_flag = 0;
 	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED)) {
 
 		tvafe_pr_err("tvafe_dec_start(%d) decode havn't opened\n",
@@ -352,7 +356,9 @@ void tvafe_dec_start(struct tvin_frontend_s *fe, enum tvin_sig_fmt_e fmt)
 		W_APB_REG(CVD2_H_LOOP_MAXSTATE, 0x9);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
-	if (tvafe_cpu_type() == CPU_TYPE_TXLX) {
+	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
+		tvafe_cpu_type() == CPU_TYPE_TL1 ||
+		tvafe_cpu_type() == CPU_TYPE_TM2) {
 		if (port == TVIN_PORT_CVBS1)
 			tvafe_avin_detect_ch1_anlog_enable(0);
 		else if (port == TVIN_PORT_CVBS2)
@@ -418,7 +424,9 @@ void tvafe_dec_stop(struct tvin_frontend_s *fe, enum tvin_port_e port)
 		tvafe_cvd2_set_default_de(&tvafe->cvd2);
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
-	if (tvafe_cpu_type() == CPU_TYPE_TXLX) {
+	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
+		tvafe_cpu_type() == CPU_TYPE_TL1 ||
+		tvafe_cpu_type() == CPU_TYPE_TM2) {
 		if (port == TVIN_PORT_CVBS1)
 			tvafe_avin_detect_ch1_anlog_enable(1);
 		else if (port == TVIN_PORT_CVBS2)
@@ -487,7 +495,8 @@ void tvafe_dec_close(struct tvin_frontend_s *fe)
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
 	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
-		tvafe_cpu_type() == CPU_TYPE_TL1) {
+		tvafe_cpu_type() == CPU_TYPE_TL1 ||
+		tvafe_cpu_type() == CPU_TYPE_TM2) {
 		/*avsync tip set 1 to resume av detect*/
 		if (tvafe->parm.port == TVIN_PORT_CVBS1) {
 			avport_opened = 0;
@@ -644,6 +653,17 @@ bool tvafe_is_nosig(struct tvin_frontend_s *fe)
 		return ret;
 	if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3)) {
 		ret = tvafe_cvd2_no_sig(&tvafe->cvd2, &devp->mem);
+
+		/*fix black side when config atv snow*/
+		if (ret && (port == TVIN_PORT_CVBS3) &&
+			(devp->flags & TVAFE_FLAG_DEV_SNOW_FLAG) &&
+			(tvafe->cvd2.config_fmt == TVIN_SIG_FMT_CVBS_PAL_I) &&
+			(tvafe->cvd2.info.state != TVAFE_CVD2_STATE_FIND))
+			tvafe_snow_config_acd();
+		else if ((tvafe->cvd2.config_fmt == TVIN_SIG_FMT_CVBS_PAL_I) &&
+			(tvafe->cvd2.info.state == TVAFE_CVD2_STATE_FIND) &&
+			(port == TVIN_PORT_CVBS3))
+			tvafe_snow_config_acd_resume();
 
 		/* normal sigal & adc reg error, reload source mux */
 		if (tvafe->cvd2.info.adc_reload_en && !ret)
@@ -808,6 +828,18 @@ static bool tvafe_cvbs_get_secam_phase(struct tvin_frontend_s *fe)
 
 }
 
+bool tvafe_get_snow_cfg(void)
+{
+	return snow_cfg;
+}
+EXPORT_SYMBOL(tvafe_get_snow_cfg);
+
+void tvafe_set_snow_cfg(bool cfg)
+{
+	snow_cfg = cfg;
+}
+EXPORT_SYMBOL(tvafe_set_snow_cfg);
+
 /**check frame skip,only for av input*/
 static bool tvafe_cvbs_check_frame_skip(struct tvin_frontend_s *fe)
 {
@@ -878,6 +910,7 @@ static long tvafe_ioctl(struct file *file,
 				unsigned int cmd, unsigned long arg)
 {
 	long ret = 0;
+	unsigned int snowcfg = 0;
 	void __user *argp = (void __user *)arg;
 	struct tvafe_dev_s *devp = file->private_data;
 	struct tvafe_info_s *tvafe = &devp->tvafe;
@@ -893,8 +926,8 @@ static long tvafe_ioctl(struct file *file,
 		return -EPERM;
 
 	mutex_lock(&devp->afe_mutex);
-	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED)) {
-
+	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED) &&
+		cmd != TVIN_IOC_S_AFE_SONWCFG) {
 		tvafe_pr_info("%s, tvafe device is disable, ignore the command %d\n",
 				__func__, cmd);
 		mutex_unlock(&devp->afe_mutex);
@@ -922,6 +955,20 @@ static long tvafe_ioctl(struct file *file,
 
 		break;
 		}
+	case TVIN_IOC_S_AFE_SONWCFG:
+		/*tl1/txhd tvconfig snow en/disable*/
+		if (copy_from_user(&snowcfg, argp,
+			sizeof(unsigned int))) {
+			tvafe_pr_info("snowcfg: get param err\n");
+			ret = -EINVAL;
+			break;
+		}
+		if (snowcfg == 1)
+			tvafe_set_snow_cfg(true);
+		else
+			tvafe_set_snow_cfg(false);
+		tvafe_pr_info("tvconfig snow:%d\n", snow_cfg);
+		break;
 	case TVIN_IOC_S_AFE_SONWON:
 		devp->flags |= TVAFE_FLAG_DEV_SNOW_FLAG;
 		tvafe_snow_function_flag = true;
@@ -963,6 +1010,8 @@ static long tvafe_ioctl(struct file *file,
 			tvafe->cvd2.manual_fmt = fmt;
 			tvafe_pr_info("%s: ioctl set cvd2 manual fmt:%s.\n",
 				__func__, tvin_sig_fmt_str(fmt));
+			if (fmt != TVIN_SIG_FMT_NULL)
+				manual_flag = 1;
 			break;
 		}
 	default:
@@ -1145,6 +1194,11 @@ struct meson_tvafe_data meson_tl1_tvafe_data = {
 	.name = "meson-tl1-tvafe",
 };
 
+struct meson_tvafe_data meson_tm2_tvafe_data = {
+	.cpu_id = CPU_TYPE_TM2,
+	.name = "meson-tm2-tvafe",
+};
+
 static const struct of_device_id meson_tvafe_dt_match[] = {
 	{
 		.compatible = "amlogic, tvafe-gxtvbb",
@@ -1161,6 +1215,9 @@ static const struct of_device_id meson_tvafe_dt_match[] = {
 	}, {
 		.compatible = "amlogic, tvafe-tl1",
 		.data		= &meson_tl1_tvafe_data,
+	}, {
+		.compatible = "amlogic, tvafe-tm2",
+		.data		= &meson_tm2_tvafe_data,
 	},
 	{},
 };

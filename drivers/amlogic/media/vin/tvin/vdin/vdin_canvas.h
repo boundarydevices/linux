@@ -31,8 +31,8 @@
 #define VDIN_MIN_SOURCE_BITDEPTH		8
 
 
-#define VDIN_YUV444_MAX_CMA_WIDTH       1920
-#define VDIN_YUV444_MAX_CMA_HEIGH       1080
+#define VDIN_YUV444_MAX_CMA_WIDTH       4096
+#define VDIN_YUV444_MAX_CMA_HEIGH       2160
 
 extern const unsigned int vdin_canvas_ids[2][VDIN_CANVAS_MAX_CNT];
 extern void vdin_canvas_init(struct vdin_dev_s *devp);

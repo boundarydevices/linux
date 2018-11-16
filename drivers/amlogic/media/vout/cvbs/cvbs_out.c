@@ -1479,6 +1479,12 @@ struct meson_cvbsout_data meson_sm1_cvbsout_data = {
 	.name = "meson-sm1-cvbsout",
 };
 
+struct meson_cvbsout_data meson_tm2_cvbsout_data = {
+	.cntl0_val = 0x906001,
+	.cpu_id = CVBS_CPU_TYPE_TM2,
+	.name = "meson-tm2-cvbsout",
+};
+
 static const struct of_device_id meson_cvbsout_dt_match[] = {
 	{
 		.compatible = "amlogic, cvbsout-gxl",
@@ -1501,6 +1507,9 @@ static const struct of_device_id meson_cvbsout_dt_match[] = {
 	}, {
 		.compatible = "amlogic, cvbsout-sm1",
 		.data		= &meson_sm1_cvbsout_data,
+	}, {
+		.compatible = "amlogic, cvbsout-tm2",
+		.data		= &meson_tm2_cvbsout_data,
 	},
 	{},
 };

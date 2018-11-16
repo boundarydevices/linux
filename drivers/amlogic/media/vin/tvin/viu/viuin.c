@@ -165,6 +165,9 @@ void viuin_check_venc_line(struct viuin_s *devp_local)
 		pr_info("**************%s,vencv_line_cur:%d,cnt:%d***********\n",
 				__func__, vencv_line_cur, cnt);
 }
+
+/*g12a/g12b and before: use viu_loop encl/encp*/
+/*tl1: use viu_loop vpp */
 static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 {
 	struct viuin_s *devp = container_of(fe, struct viuin_s, frontend);
@@ -178,8 +181,9 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 	/*open the venc to vdin path*/
 	switch (rd_bits_viu(VPU_VIU_VENC_MUX_CTRL, 0, 2)) {
 	case 0:
-		if (is_meson_g12a_cpu() || is_meson_g12b_cpu()
-			|| is_meson_tl1_cpu())
+		if (is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
+			is_meson_tl1_cpu() || is_meson_sm1_cpu() ||
+			is_meson_tm2_cpu())
 			viu_mux = 0x4;
 		else
 			viu_mux = 0x8;
@@ -213,7 +217,7 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 			wr_viu(VPU_VIU2VDIN_HDN_CTRL, 0x40f00);
 	} else
 		wr_bits_viu(VPU_VIU2VDIN_HDN_CTRL, devp->parm.h_active, 0, 14);
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu() || is_meson_tl1_cpu()) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		if (((port >= TVIN_PORT_VIU1_WB0_VD1) &&
 			(port <= TVIN_PORT_VIU1_WB0_POST_BLEND)) ||
 			((port >= TVIN_PORT_VIU2_WB0_VD1) &&
@@ -256,8 +260,14 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 		else if ((port == TVIN_PORT_VIU1_WB0_POST_BLEND) ||
 			(port == TVIN_PORT_VIU2_WB0_POST_BLEND))
 			wr_bits_viu(VPP_WRBAK_CTRL, 5, 0, 3);
-		else
+		else if ((port == TVIN_PORT_VIU1_WB0_VPP) ||
+			(port == TVIN_PORT_VIU2_WB0_VPP)) {
+			wr_bits_viu(VPP_WRBAK_CTRL, 6, 0, 3);
+			/*increase h banking in case vdin afifo overflow*/
+			wr_bits_viu(VPP_WRBAK_CTRL, 0xff, 16, 8);
+		} else
 			wr_bits_viu(VPP_WRBAK_CTRL, 0, 4, 3);
+
 		if ((port == TVIN_PORT_VIU1_WB1_VD1) ||
 			(port == TVIN_PORT_VIU2_WB1_VD1))
 			wr_bits_viu(VPP_WRBAK_CTRL, 1, 4, 3);
@@ -273,8 +283,12 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 		else if ((port == TVIN_PORT_VIU1_WB1_POST_BLEND) ||
 			(port == TVIN_PORT_VIU2_WB1_POST_BLEND))
 			wr_bits_viu(VPP_WRBAK_CTRL, 5, 4, 3);
+		else if ((port == TVIN_PORT_VIU1_WB1_VPP) ||
+			(port == TVIN_PORT_VIU2_WB1_VPP))
+			wr_bits_viu(VPP_WRBAK_CTRL, 6, 4, 3);
 		else
 			wr_bits_viu(VPP_WRBAK_CTRL, 0, 4, 3);
+
 		/*wrback hsync en*/
 		if (((port >= TVIN_PORT_VIU1_WB0_VD1) &&
 			(port <= TVIN_PORT_VIU1_WB0_POST_BLEND)) ||
@@ -308,8 +322,9 @@ static void viuin_close(struct tvin_frontend_s *fe)
 	if (open_cnt)
 		open_cnt--;
 	if (open_cnt == 0) {
-		if (is_meson_g12a_cpu() || is_meson_g12b_cpu()
-			|| is_meson_tl1_cpu()) {
+		if (is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
+			is_meson_tl1_cpu() || is_meson_sm1_cpu() ||
+			is_meson_tm2_cpu()) {
 			wr_viu(VPU_VIU_VDIN_IF_MUX_CTRL, 0);
 			wr_viu(VPP_WRBAK_CTRL, 0);
 
@@ -384,14 +399,27 @@ static void viuin_sig_property(struct tvin_frontend_s *fe,
 	static const struct vinfo_s *vinfo;
 	struct viuin_s *devp = container_of(fe, struct viuin_s, frontend);
 
-	if (devp->parm.port == TVIN_PORT_VIU1_VIDEO)
+	switch (devp->parm.port) {
+	case TVIN_PORT_VIU1_VIDEO:
+	case TVIN_PORT_VIU1_WB0_POST_BLEND:
 		prop->color_format = TVIN_YUV444;
-	else if ((devp->parm.port == TVIN_PORT_VIU1) ||
-		(devp->parm.port == TVIN_PORT_VIU2)) {
+		break;
+
+	case TVIN_PORT_VIU1:
+	case TVIN_PORT_VIU2:
+	case TVIN_PORT_VIU1_WB0_VPP:
+	case TVIN_PORT_VIU1_WB1_VPP:
+	case TVIN_PORT_VIU2_WB0_VPP:
+	case TVIN_PORT_VIU2_WB1_VPP:
 		vinfo = get_current_vinfo();
 		prop->color_format = vinfo->viu_color_fmt;
-	} else
+		break;
+
+	default:
 		prop->color_format = devp->parm.cfmt;
+		break;
+	}
+
 	prop->dest_cfmt = devp->parm.dfmt;
 
 	prop->scaling4w = devp->parm.dest_hactive;

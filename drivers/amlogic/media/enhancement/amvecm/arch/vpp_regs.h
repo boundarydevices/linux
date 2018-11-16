@@ -342,6 +342,7 @@
 #define VPU_VLOCK_GCLK_EN				0x301e
 #define VPU_VLOCK_LOOP1_ACCUM_LMT		0x301f
 #define VPU_VLOCK_RO_M_INT_FRAC			0x3020
+#define VPU_VLOCK_RO_LCK_FRM			0x3024
 
 #define XVYCC_VD1_RGB_CTRST			0x3170
 
@@ -529,11 +530,19 @@
 /*ve dither*/
 #define VPP_VE_DITHER_CTRL		0x3120
 
+/* TL1 */
+/*offset 0x1000*/
+#define HHI_TCON_PLL_CNTL0                         0x20
+#define HHI_TCON_PLL_CNTL1                         0x21
+#define HHI_HDMI_PLL_VLOCK_CNTL                         0xd1
+
 /* for pll bug */
-#define HHI_HDMI_PLL_CNTL			    0x10c8
-#define HHI_HDMI_PLL_CNTL2			    0x10c9
-#define HHI_VID_LOCK_CLK_CNTL			0x10f2
-#define HHI_HDMI_PLL_CNTL6			    0x10cd
+
+#define HHI_HDMI_PLL_CNTL			    0xc8
+#define HHI_HDMI_PLL_CNTL2			    0xc9
+#define HHI_VID_LOCK_CLK_CNTL			0xf2
+#define HHI_HDMI_PLL_CNTL6			    0xcd
+
 /* for vlock enc mode adjust begin */
 #define ENCL_VIDEO_MAX_LNCNT            0x1cbb
 #define ENCL_VIDEO_MAX_PXCNT 0x1cb0
@@ -552,13 +561,12 @@
 #define ENCT_MAX_LINE_SWITCH_POINT 0x1c88
 /* for vlock enc mode adjust end */
 
-#define HHI_VID_LOCK_CLK_CNTL			0x10f2
-
 #define VDIN_MEAS_VS_COUNT_LO 0x125c
+/*for vlock*/
 /*after GXL new add CNTL1,same with CNTL2 on G9TV/GXTVBB*/
-#define HHI_HDMI_PLL_CNTL1			    0x10c9
+#define HHI_HDMI_PLL_CNTL1			    0xc9
 /*after GXL CNTL5[bit3] is same with CNTL6[bit20] on G9TV/GXTVBB*/
-#define HHI_HDMI_PLL_CNTL5			    0x10cd
+#define HHI_HDMI_PLL_CNTL5			    0xcd
 
 
 /* #define VI_HIST_CTRL                             0x2e00 */

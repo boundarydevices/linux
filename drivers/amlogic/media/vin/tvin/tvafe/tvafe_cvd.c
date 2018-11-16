@@ -27,6 +27,7 @@
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include "../tvin_global.h"
 #include "../tvin_format_table.h"
+#include "tvafe.h"
 #include "tvafe_regs.h"
 #include "tvafe_cvd.h"
 #include "tvafe_debug.h"
@@ -418,8 +419,10 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 	}
 
 	/*setting for txhd snow*/
-	if (tvafe_cpu_type() == CPU_TYPE_TXHD ||
-		tvafe_cpu_type() == CPU_TYPE_TL1) {
+	if (tvafe_get_snow_cfg() &&
+		(tvafe_cpu_type() == CPU_TYPE_TXHD ||
+		tvafe_cpu_type() == CPU_TYPE_TL1 ||
+		tvafe_cpu_type() == CPU_TYPE_TM2)) {
 		W_APB_BIT(CVD2_OUTPUT_CONTROL, 3, 5, 2);
 		W_APB_REG(ACD_REG_6C, 0x80500000);
 	}
@@ -1872,15 +1875,15 @@ static void tvafe_cvd2_auto_de(struct tvafe_cvd2_s *cvd2)
 				W_APB_REG(ACD_REG_2E, tmp);
 				scene_colorful_old = 0;
 				if (cvd_dbg_en)
-					tvafe_pr_info("%s: vlines:%d, de_offset:%d tmp:%x\n",
+					tvafe_pr_info("%s: lrg vlines:%d, de_offset:%d tmp:%x\n",
 				__func__, l_ave, lines->de_offset, tmp);
 			}
 		} else {
 			if (lines->de_offset > 0) {
 				tmp = ((TVAFE_CVD2_PAL_DE_START -
-					lines->de_offset) << 16) |
+					lines->de_offset + 1) << 16) |
 					(288 + TVAFE_CVD2_PAL_DE_START -
-					lines->de_offset);
+					lines->de_offset + 1);
 				W_APB_REG(ACD_REG_2E, tmp);
 				scene_colorful_old = 0;
 				if (cvd_dbg_en)
@@ -1994,6 +1997,12 @@ static void tvafe_cvd2_reinit(struct tvafe_cvd2_s *cvd2)
 #ifdef TVAFE_SET_CVBS_PGA_EN
 	tvafe_cvd2_reset_pga();
 #endif
+	/*pali to nosignal,restore default vstart-end after auto de*/
+	if (cvd2->config_fmt == TVIN_SIG_FMT_CVBS_PAL_I) {
+		W_APB_REG(ACD_REG_2E, 0x170137);
+		if (cvd_dbg_en)
+			pr_info("[tvafe..] %s: reset auto de.\n", __func__);
+	}
 	/* init variable */
 	memset(&cvd2->info, 0, sizeof(struct tvafe_cvd2_info_s));
 	cvd2->cvd2_init_en = true;
@@ -2320,6 +2329,15 @@ inline void tvafe_cvd2_adj_hs(struct tvafe_cvd2_s *cvd2,
 			cvd2->info.hs_adj_level = 0;
 			acd_h = acd_h_back;
 		}
+	} else {
+		/*signal unstable,set default value*/
+		W_APB_REG(ACD_REG_2D, acd_h_back);
+		W_APB_BIT(CVD2_ACTIVE_VIDEO_HSTART, cvd_2e,
+					HACTIVE_START_BIT, HACTIVE_START_WID);
+		W_APB_BIT(ACD_REG_28, acd_128, 16, 5);
+		cvd2->info.hs_adj_en = 0;
+		cvd2->info.hs_adj_level = 0;
+		acd_h = acd_h_back;
 	}
 }
 
@@ -2606,7 +2624,8 @@ void tvafe_snow_config(unsigned int onoff)
 {
 	if (tvafe_snow_function_flag == 0 ||
 		tvafe_cpu_type() == CPU_TYPE_TXHD ||
-		tvafe_cpu_type() == CPU_TYPE_TL1)
+		tvafe_cpu_type() == CPU_TYPE_TL1 ||
+		tvafe_cpu_type() == CPU_TYPE_TM2)
 		return;
 	if (onoff)
 		W_APB_BIT(CVD2_OUTPUT_CONTROL, 3, BLUE_MODE_BIT, BLUE_MODE_WID);
@@ -2617,7 +2636,8 @@ void tvafe_snow_config(unsigned int onoff)
 void tvafe_snow_config_clamp(unsigned int onoff)
 {
 	if (tvafe_cpu_type() == CPU_TYPE_TXHD ||
-		tvafe_cpu_type() == CPU_TYPE_TL1) {
+		tvafe_cpu_type() == CPU_TYPE_TL1 ||
+		tvafe_cpu_type() == CPU_TYPE_TM2) {
 		if (onoff)
 			vdin_adjust_tvafesnow_brightness();
 		return;
@@ -2637,7 +2657,6 @@ void tvafe_snow_config_acd(void)
 	/*0x8e035e is debug test result*/
 	if (acd_h_config)
 		W_APB_REG(ACD_REG_2D, acd_h_config);
-	acd_h = acd_h_back;
 }
 /*only for pal-i*/
 void tvafe_snow_config_acd_resume(void)

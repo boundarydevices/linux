@@ -933,11 +933,19 @@ struct meson_avin_data tl1_data = {
 	.name = "meson-tl1-avin-detect",
 };
 
+struct meson_avin_data tm2_data = {
+	.cpu_id = AVIN_CPU_TYPE_TM2,
+	.name = "meson-tm2-avin-detect",
+};
+
 static const struct of_device_id tvafe_avin_dt_match[] = {
 	{	.compatible = "amlogic, tvafe_avin_detect",
 	},
 	{	.compatible = "amlogic, tl1_tvafe_avin_detect",
 		.data = &tl1_data,
+	},
+	{	.compatible = "amlogic, tm2_tvafe_avin_detect",
+		.data = &tm2_data,
 	},
 	{},
 };

@@ -116,6 +116,15 @@ static inline uint32_t R_APB_BIT(uint32_t reg,
 	return val;
 }
 
+static inline void W_VCBUS(uint32_t reg, const uint32_t value)
+{
+	aml_write_vcbus(reg, value);
+}
+
+static inline uint32_t R_VCBUS(uint32_t reg)
+{
+	return aml_read_vcbus(reg);
+}
 
 static inline void W_VCBUS_BIT(uint32_t reg,
 				    const uint32_t value,
@@ -438,6 +447,19 @@ struct tvin_hdr_info_s {
 	unsigned int hdr_check_cnt;
 };
 
+enum tvin_cn_type_e {
+	GRAPHICS,
+	PHOTO,
+	CINEMA,
+	GAME,
+};
+
+struct tvin_latency_s {
+	bool allm_mode;
+	bool it_content;
+	enum tvin_cn_type_e cn_type;
+};
+
 struct tvin_sig_property_s {
 	enum tvin_trans_fmt	trans_fmt;
 	enum tvin_color_fmt_e	color_format;
@@ -464,6 +486,7 @@ struct tvin_sig_property_s {
 	bool low_latency;/*is low latency dolby mode*/
 	uint8_t fps;
 	unsigned int skip_vf_num;/*skip pre vframe num*/
+	struct tvin_latency_s latency;
 };
 
 #define TVAFE_VF_POOL_SIZE			6 /* 8 */

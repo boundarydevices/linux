@@ -96,8 +96,10 @@
 		vdin1_cma_reserved:linux,vdin1_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 1920x1080x2x4  =16 M */
-			size = <0x1400000>;
+			/*keystone need 4 buffers,each has 1920*1080*3
+			 *for keystone, change to 0x1800000(24M)
+			 */
+			size = <0x1400000>;/*20M*/
 			alignment = <0x400000>;
 		};
 

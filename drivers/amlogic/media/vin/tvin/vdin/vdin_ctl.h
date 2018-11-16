@@ -17,7 +17,11 @@
 
 #ifndef __TVIN_VDIN_CTL_H
 #define __TVIN_VDIN_CTL_H
-
+#include <linux/highmem.h>
+#include <linux/page-flags.h>
+#include <linux/vmalloc.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-contiguous.h>
 #include "vdin_drv.h"
 
 #define DV_SWAP_EN	(1 << 0)
@@ -111,10 +115,16 @@ struct ldim_max_s {
 #endif
 
 extern unsigned int game_mode;
+extern bool vdin_dbg_en;
 
 /* ************************************************************************ */
 /* ******** GLOBAL FUNCTION CLAIM ******** */
 /* ************************************************************************ */
+extern u8 *vdin_vmap(ulong addr, u32 size);
+extern void vdin_unmap_phyaddr(u8 *vaddr);
+extern void vdin_dma_flush(struct vdin_dev_s *devp, void *vaddr,
+		int size, enum dma_data_direction dir);
+
 extern void vdin_set_vframe_prop_info(struct vframe_s *vf,
 		struct vdin_dev_s *devp);
 extern void LDIM_Initial_2(int pic_h, int pic_v, int BLK_Vnum,
@@ -135,6 +145,8 @@ extern void vdin_hw_enable(unsigned int offset);
 extern void vdin_hw_disable(unsigned int offset);
 extern unsigned int vdin_get_field_type(unsigned int offset);
 extern int vdin_vsync_reset_mif(int index);
+extern bool vdin_check_vdi6_afifo_overflow(unsigned int offset);
+extern void vdin_clear_vdi6_afifo_overflow_flg(unsigned int offset);
 extern void vdin_set_cutwin(struct vdin_dev_s *devp);
 extern void vdin_set_decimation(struct vdin_dev_s *devp);
 extern void vdin_fix_nonstd_vsync(struct vdin_dev_s *devp);
@@ -177,7 +189,7 @@ extern void vdin_dolby_addr_alloc(struct vdin_dev_s *devp, unsigned int size);
 extern void vdin_dolby_addr_release(struct vdin_dev_s *devp, unsigned int size);
 extern int vdin_event_cb(int type, void *data, void *op_arg);
 extern void vdin_hdmiin_patch(struct vdin_dev_s *devp);
-extern void vdin_set_top(unsigned int offset,
+extern void vdin_set_top(struct vdin_dev_s *devp, unsigned int offset,
 		enum tvin_port_e port,
 		enum tvin_color_fmt_e input_cfmt, unsigned int h,
 		enum bt_path_e bt_path);
