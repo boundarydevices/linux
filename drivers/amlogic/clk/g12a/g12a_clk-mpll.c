@@ -28,7 +28,7 @@
 #include "../clkc.h"
 /* #undef pr_debug */
 /* #define pr_debug pr_info */
-#define SDM_MAX 16384
+#define SDM_MAX 16384ULL
 #define MAX_RATE	500000000
 #define MIN_RATE	3920000
 
@@ -87,6 +87,7 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct parm *p;
 	unsigned long reg, sdm, n2;
 	unsigned long flags = 0;
+	uint64_t rate64 = parent_rate;
 
 	if ((rate > MAX_RATE) || (rate < MIN_RATE)) {
 		pr_err("Err: can not set rate to %lu!\n", rate);
@@ -98,8 +99,12 @@ static int mpll_set_rate(struct clk_hw *hw, unsigned long rate,
 		spin_lock_irqsave(mpll->lock, flags);
 
 	/* calculate new n2 and sdm */
-	n2 = parent_rate / rate;
-	sdm = DIV_ROUND_UP((parent_rate - n2 * rate) * SDM_MAX, rate);
+	do_div(rate64, rate);
+	n2 = rate64;
+
+	rate64 = (parent_rate - n2 * rate) * SDM_MAX + rate - 1;
+	do_div(rate64, rate);
+	sdm = rate64;
 	if (sdm >= SDM_MAX)
 		sdm = SDM_MAX - 1;
 
