@@ -438,11 +438,6 @@ xtlib_load_split_pi_library_common(struct xtlib_packaged_library *library,
 				  xtlib_globals->byteswap),
 		  lib_info);
 
-	if (err != XTLIB_NO_ERR) {
-		xtlib_globals->err = err;
-		return 0;
-	}
-
 	return (xt_ptr)xtlib_host_word((Elf32_Word)info->start_sym,
 				       xtlib_globals->byteswap);
 }
@@ -489,7 +484,9 @@ load_dpu_with_library(struct xf_client *client, struct xf_proxy *proxy,
 		return -ENOMEM;
 
 	vfs_llseek(file, 0, SEEK_SET);
-	kernel_read(file, srambuf, filesize, &pos);
+	ret_val = kernel_read(file, srambuf, filesize, &pos);
+	if (ret_val < 0)
+		return ret_val;
 	filp_close(file, NULL);
 
 	ret_val = xtlib_split_pi_library_size(

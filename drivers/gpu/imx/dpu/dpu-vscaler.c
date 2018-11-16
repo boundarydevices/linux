@@ -108,7 +108,7 @@ int vscaler_pixengcfg_dynamic_src_sel(struct dpu_vscaler *vs, vs_src_sel_t src)
 		if (vs_id_array[i] == vs->id)
 			break;
 
-	if (WARN_ON(i == (ARRAY_SIZE(vs_id_array) + 1)))
+	if (WARN_ON(i == ARRAY_SIZE(vs_id_array)))
 		return -EINVAL;
 
 	mutex_lock(&vs->mutex);
@@ -422,6 +422,9 @@ int dpu_vs_init(struct dpu_soc *dpu, unsigned int id,
 	for (i = 0; i < ARRAY_SIZE(vs_ids); i++)
 		if (vs_ids[i] == id)
 			break;
+
+	if (i == ARRAY_SIZE(vs_ids))
+		return -EINVAL;
 
 	dpu->vs_priv[i] = vs;
 

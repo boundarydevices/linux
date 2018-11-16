@@ -113,7 +113,7 @@
 		};
 		encoder_boot: encoder_boot@0x86000000 {
 			no-map;
-			reg = <0 0x86000000 0 0x2000000>;
+			reg = <0 0x86000000 0 0x200000>;
 		};
 		rpmsg_reserved: rpmsg@0x90000000 {
 			no-map;
@@ -121,19 +121,15 @@
 		};
 		decoder_rpc: decoder_rpc@0x90400000 {
 			no-map;
-			reg = <0 0x90400000 0 0x1000000>;
+			reg = <0 0x90400000 0 0x200000>;
 		};
-		encoder_rpc: encoder_rpc@0x91400000 {
+		encoder_rpc: encoder_rpc@0x90600000 {
 			no-map;
-			reg = <0 0x91400000 0 0x1000000>;
+			reg = <0 0x90600000 0 0x100000>;
 		};
 		dsp_reserved: dsp@0x92400000 {
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
-		};
-		decoder_str: str@0x94400000 {
-			no-map;
-			reg = <0 0x94400000 0 0x1800000>;
 		};
 	};
 
@@ -868,7 +864,6 @@
 					power-domains = <&pd_dma_elcdif_pll>;
 				};
 			};
-
 			pd_dma_flexcan0: PD_DMA_CAN_0 {
 				reg = <SC_R_CAN_0>;
 				#power-domain-cells = <0>;
@@ -1784,11 +1779,16 @@
 	adma_lcdif: lcdif@5a180000 {
 		compatible = "fsl,imx8qxp-lcdif", "fsl,imx28-lcdif";
 		reg = <0x0 0x5a180000 0x0 0x10000>;
-		clocks = <&clk IMX8QXP_LCD_CLK>, <&clk IMX8QXP_LCD_IPG_CLK>;
-		clock-names = "pix", "disp_axi";
-		assigned-clocks = <&clk IMX8QXP_LCD_SEL>, <&clk IMX8QXP_ELCDIF_PLL>;
-		assigned-clock-rates = <804000000>, <804000000>;
-		assigned-clock-parents = <&clk IMX8QXP_ELCDIF_PLL>;
+		clocks = <&clk IMX8QXP_LCD_CLK>,
+			 <&clk IMX8QXP_LCD_PXL_CLK>,
+			 <&clk IMX8QXP_LCD_IPG_CLK>;
+		clock-names = "pix", "disp_axi", "axi";
+		assigned-clocks = <&clk IMX8QXP_LCD_SEL>,
+				  <&clk IMX8QXP_LCD_PXL_SEL>,
+				  <&clk IMX8QXP_ELCDIF_PLL_DIV>;
+		assigned-clock-parents = <&clk IMX8QXP_ELCDIF_PLL>,
+					 <&clk IMX8QXP_LCD_PXL_BYPASS_DIV>;
+		assigned-clock-rates = <0>, <24000000>, <804000000>;
 		interrupts = <GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
 		power-domains = <&pd_dma_lcd0>;
 		status = "disabled";
@@ -2656,7 +2656,7 @@
 	imx8_gpu_ss: imx8_gpu_ss {
 		compatible = "fsl,imx8qxp-gpu", "fsl,imx8-gpu-ss";
 		cores = <&gpu_3d0>;
-		reg = <0x0 0x80000000 0x0 0x80000000>, <0x0 0x0 0x0 0x8000000>;
+		reg = <0x0 0x80000000 0x0 0x80000000>, <0x0 0x0 0x0 0x10000000>;
 		reg-names = "phys_baseaddr", "contiguous_mem";
 		depth-compression = <0>;
 		status = "disabled";
@@ -3341,7 +3341,6 @@
 		compatible = "nxp,imx8qm-b0-vpudec", "nxp,imx8qxp-b0-vpudec";
 		boot-region = <&decoder_boot>;
 		rpc-region = <&decoder_rpc>;
-		str-region = <&decoder_str>;
 		reg = <0x0 0x2c000000 0x0 0x1000000>;
 		reg-names = "vpu_regs";
 		power-domains = <&pd_vpu_dec>;
@@ -3353,9 +3352,9 @@
 		compatible = "nxp,imx8qm-b0-vpuenc", "nxp,imx8qxp-b0-vpuenc";
 		boot-region = <&encoder_boot>;
 		rpc-region = <&encoder_rpc>;
-		fw-buf-size = <0x1000000>;
-		rpc-buf-size = <0x500000>;
-		print-buf-size = <0x300000>;
+		fw-buf-size = <0x200000>;
+		rpc-buf-size = <0x80000>;
+		print-buf-size = <0x80000>;
 		reg = <0x0 0x2d000000 0x0 0x1000000>;
 		reg-names = "vpu_regs";
 		power-domains = <&pd_vpu_enc>;

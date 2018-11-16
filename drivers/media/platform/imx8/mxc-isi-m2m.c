@@ -44,17 +44,10 @@ extern struct mxc_isi_fmt mxc_isi_out_formats[9];
 struct mxc_isi_fmt mxc_isi_input_formats[] = {
 	/* Pixel link input format */
 	{
-		.name		= "RGB32",
-		.fourcc		= V4L2_PIX_FMT_XRGB32,
+		.name		= "XBGR32",
+		.fourcc		= V4L2_PIX_FMT_XBGR32,
 		.depth		= { 32 },
 		.color =	MXC_ISI_M2M_IN_FMT_XRGB8,
-		.memplanes	= 1,
-		.colplanes	= 1,
-	}, {
-		.name		= "BGR32",
-		.fourcc		= V4L2_PIX_FMT_BGR32,
-		.depth		= { 32 },
-		.color =	MXC_ISI_M2M_IN_FMT_XBGR8,
 		.memplanes	= 1,
 		.colplanes	= 1,
 	}, {
@@ -862,6 +855,93 @@ static const struct v4l2_ioctl_ops mxc_isi_m2m_ioctl_ops = {
 	.vidioc_streamoff		= mxc_isi_m2m_streamoff,
 };
 
+/*
+ * V4L2 controls handling
+ */
+#define ctrl_to_mxc_isi_m2m(__ctrl) \
+	container_of((__ctrl)->handler, struct mxc_isi_dev, m2m.ctrls.handler)
+
+static int mxc_isi_m2m_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mxc_isi_dev *mxc_isi = ctrl_to_mxc_isi_m2m(ctrl);
+	unsigned long flags;
+
+	dev_dbg(&mxc_isi->pdev->dev, "%s\n", __func__);
+
+	if (ctrl->flags & V4L2_CTRL_FLAG_INACTIVE)
+		return 0;
+
+	spin_lock_irqsave(&mxc_isi->slock, flags);
+
+	switch (ctrl->id) {
+	case V4L2_CID_HFLIP:
+		if (ctrl->val < 0)
+			return -EINVAL;
+		mxc_isi->m2m.hflip = (ctrl->val > 0) ? 1 : 0;
+		break;
+
+	case V4L2_CID_VFLIP:
+		if (ctrl->val < 0)
+			return -EINVAL;
+		mxc_isi->m2m.vflip = (ctrl->val > 0) ? 1 : 0;
+		break;
+
+	case V4L2_CID_ALPHA_COMPONENT:
+		if (ctrl->val < 0 || ctrl->val > 255)
+			return -EINVAL;
+		mxc_isi->m2m.alpha = ctrl->val;
+		mxc_isi->m2m.alphaen = 1;
+		break;
+
+	default:
+		dev_err(&mxc_isi->pdev->dev, "%s: Not support %d CID\n", __func__, ctrl->id);
+		return -EINVAL;
+	}
+
+	spin_unlock_irqrestore(&mxc_isi->slock, flags);
+
+	return 0;
+}
+
+static const struct v4l2_ctrl_ops mxc_isi_m2m_ctrl_ops = {
+	.s_ctrl = mxc_isi_m2m_s_ctrl,
+};
+
+static int mxc_isi_m2m_ctrls_create(struct mxc_isi_dev *mxc_isi)
+{
+	struct mxc_isi_ctrls *ctrls = &mxc_isi->m2m.ctrls;
+	struct v4l2_ctrl_handler *handler = &ctrls->handler;
+
+	if (mxc_isi->m2m.ctrls.ready)
+		return 0;
+
+	v4l2_ctrl_handler_init(handler, 4);
+
+	ctrls->hflip = v4l2_ctrl_new_std(handler, &mxc_isi_m2m_ctrl_ops,
+					V4L2_CID_HFLIP, 0, 1, 1, 0);
+	ctrls->vflip = v4l2_ctrl_new_std(handler, &mxc_isi_m2m_ctrl_ops,
+					V4L2_CID_VFLIP, 0, 1, 1, 0);
+	ctrls->alpha = v4l2_ctrl_new_std(handler, &mxc_isi_m2m_ctrl_ops,
+					V4L2_CID_ALPHA_COMPONENT, 0, 0xff, 1, 0);
+
+	if (!handler->error)
+		ctrls->ready = true;
+
+	return handler->error;
+
+}
+
+void mxc_isi_m2m_ctrls_delete(struct mxc_isi_dev *mxc_isi)
+{
+	struct mxc_isi_ctrls *ctrls = &mxc_isi->m2m.ctrls;
+
+	if (ctrls->ready) {
+		v4l2_ctrl_handler_free(&ctrls->handler);
+		ctrls->ready = false;
+		ctrls->alpha = NULL;
+	}
+}
+
 int mxc_isi_register_m2m_device(struct mxc_isi_dev *mxc_isi,
 				 struct v4l2_device *v4l2_dev)
 {
@@ -897,15 +977,23 @@ int mxc_isi_register_m2m_device(struct mxc_isi_dev *mxc_isi,
 	vdev->vfl_dir = VFL_DIR_M2M;
 	vdev->device_caps = V4L2_CAP_STREAMING | V4L2_CAP_VIDEO_M2M;
 
+	ret = mxc_isi_m2m_ctrls_create(mxc_isi);
+	if (ret)
+		goto free_m2m;
+
 	ret = video_register_device(vdev, VFL_TYPE_GRABBER, -1);
 	if (ret < 0) {
 		dev_err(dev, "%s fail to register video device\n", __func__);
-		goto free_m2m;
+		goto ctrl_free;
 	}
+
+	vdev->ctrl_handler = &mxc_isi->m2m.ctrls.handler;
 	video_set_drvdata(vdev, mxc_isi);
 
 	return 0;
 
+ctrl_free:
+	mxc_isi_m2m_ctrls_delete(mxc_isi);
 free_m2m:
 	v4l2_m2m_release(isi_m2m->m2m_dev);
 	return ret;

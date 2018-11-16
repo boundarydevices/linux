@@ -232,6 +232,7 @@ static int fsl_dsp_ipc_msg_from_dsp(struct xf_client *client,
 
 	m = xf_cmd_recv(&dsp_priv->proxy, &client->wait, &client->queue, 0);
 	if (IS_ERR(m)) {
+		xf_unlock(&dsp_priv->proxy.lock);
 		dev_err(dev, "receiving failed: %d", (int)PTR_ERR(m));
 		return PTR_ERR(m);
 	}
@@ -502,7 +503,7 @@ static void dsp_mmap_close(struct vm_area_struct *vma)
 	pr_debug("xf_mmap_close: vma = %p, b = %p", vma, client);
 
 	/* ...decrement number of mapping */
-	atomic_dec_return(&client->vm_use);
+	atomic_dec(&client->vm_use);
 }
 
 /* ...memory map operations */
@@ -657,8 +658,7 @@ static void dsp_load_firmware(const struct firmware *fw, void *context)
 	shdr = (Elf32_Shdr *)(addr + ehdr->e_shoff +
 			(ehdr->e_shstrndx * sizeof(Elf32_Shdr)));
 
-	if (shdr->sh_type == SHT_STRTAB)
-		strtab = (unsigned char *)(addr + shdr->sh_offset);
+	strtab = (unsigned char *)(addr + shdr->sh_offset);
 
 	/* Load each appropriate section */
 	for (i = 0; i < ehdr->e_shnum; ++i) {
@@ -669,13 +669,10 @@ static void dsp_load_firmware(const struct firmware *fw, void *context)
 			shdr->sh_addr == 0 || shdr->sh_size == 0)
 			continue;
 
-		if (strtab) {
-			dev_dbg(dev, "%sing %s @ 0x%08lx (%ld bytes)\n",
-			  (shdr->sh_type == SHT_NOBITS) ? "Clear" : "Load",
-				&strtab[shdr->sh_name],
-				(unsigned long)shdr->sh_addr,
-				(long)shdr->sh_size);
-		}
+		dev_dbg(dev, "%sing %s @ 0x%08lx (%ld bytes)\n",
+			(shdr->sh_type == SHT_NOBITS) ? "Clear" : "Load",
+			&strtab[shdr->sh_name], (unsigned long)shdr->sh_addr,
+			(long)shdr->sh_size);
 
 		sh_addr = shdr->sh_addr;
 

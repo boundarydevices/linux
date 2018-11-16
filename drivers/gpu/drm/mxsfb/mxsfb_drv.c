@@ -103,18 +103,6 @@ drm_pipe_to_mxsfb_drm_private(struct drm_simple_display_pipe *pipe)
 	return container_of(pipe, struct mxsfb_drm_private, pipe);
 }
 
-void mxsfb_enable_axi_clk(struct mxsfb_drm_private *mxsfb)
-{
-	if (mxsfb->clk_axi)
-		clk_prepare_enable(mxsfb->clk_axi);
-}
-
-void mxsfb_disable_axi_clk(struct mxsfb_drm_private *mxsfb)
-{
-	if (mxsfb->clk_axi)
-		clk_disable_unprepare(mxsfb->clk_axi);
-}
-
 /**
  * mxsfb_atomic_helper_check - validate state object
  * @dev: DRM device
@@ -167,6 +155,10 @@ static const struct drm_mode_config_funcs mxsfb_mode_config_funcs = {
 	.atomic_commit		= drm_atomic_helper_commit,
 };
 
+static const struct drm_mode_config_helper_funcs mxsfb_mode_config_helpers = {
+	.atomic_commit_tail = drm_atomic_helper_commit_tail_rpm,
+};
+
 static void mxsfb_pipe_enable(struct drm_simple_display_pipe *pipe,
 			      struct drm_crtc_state *crtc_state)
 {
@@ -191,28 +183,31 @@ static void mxsfb_pipe_enable(struct drm_simple_display_pipe *pipe,
 
 	drm_crtc_vblank_on(&mxsfb->pipe.crtc);
 
+	pm_runtime_get_sync(drm->dev);
 	drm_panel_prepare(mxsfb->panel);
 	mxsfb_crtc_enable(mxsfb);
 	drm_panel_enable(mxsfb->panel);
-	pm_runtime_get_sync(mxsfb->dev);
 }
 
 static void mxsfb_pipe_disable(struct drm_simple_display_pipe *pipe)
 {
 	struct mxsfb_drm_private *mxsfb = drm_pipe_to_mxsfb_drm_private(pipe);
+	struct drm_device *drm = pipe->plane.dev;
 	struct drm_crtc *crtc = &pipe->crtc;
-
-	spin_lock_irq(&crtc->dev->event_lock);
-	if (crtc->state->event) {
-		drm_crtc_send_vblank_event(crtc, crtc->state->event);
-		crtc->state->event = NULL;
-	}
-	spin_unlock_irq(&crtc->dev->event_lock);
+	struct drm_pending_vblank_event *event;
 
 	drm_panel_disable(mxsfb->panel);
 	mxsfb_crtc_disable(mxsfb);
 	drm_panel_unprepare(mxsfb->panel);
-	pm_runtime_put_sync(mxsfb->dev);
+	pm_runtime_put_sync(drm->dev);
+
+	spin_lock_irq(&drm->event_lock);
+	event = crtc->state->event;
+	if (event) {
+		crtc->state->event = NULL;
+		drm_crtc_send_vblank_event(crtc, event);
+	}
+	spin_unlock_irq(&drm->event_lock);
 
 	if (mxsfb->connector != &mxsfb->panel_connector)
 		mxsfb->connector = NULL;
@@ -342,6 +337,7 @@ static int mxsfb_load(struct drm_device *drm, unsigned long flags)
 	drm->mode_config.max_width	= max_res[0];
 	drm->mode_config.max_height	= max_res[1];
 	drm->mode_config.funcs		= &mxsfb_mode_config_funcs;
+	drm->mode_config.helper_private	= &mxsfb_mode_config_helpers;
 
 	drm_mode_config_reset(drm);
 
@@ -407,25 +403,31 @@ static void mxsfb_lastclose(struct drm_device *drm)
 static int mxsfb_enable_vblank(struct drm_device *drm, unsigned int crtc)
 {
 	struct mxsfb_drm_private *mxsfb = drm->dev_private;
+	int ret = 0;
+
+	ret = clk_prepare_enable(mxsfb->clk_axi);
+	if (ret)
+		return ret;
 
 	/* Clear and enable VBLANK IRQ */
-	mxsfb_enable_axi_clk(mxsfb);
 	writel(CTRL1_CUR_FRAME_DONE_IRQ, mxsfb->base + LCDC_CTRL1 + REG_CLR);
 	writel(CTRL1_CUR_FRAME_DONE_IRQ_EN, mxsfb->base + LCDC_CTRL1 + REG_SET);
-	mxsfb_disable_axi_clk(mxsfb);
+	clk_disable_unprepare(mxsfb->clk_axi);
 
-	return 0;
+	return ret;
 }
 
 static void mxsfb_disable_vblank(struct drm_device *drm, unsigned int crtc)
 {
 	struct mxsfb_drm_private *mxsfb = drm->dev_private;
 
+	if (clk_prepare_enable(mxsfb->clk_axi))
+		return;
+
 	/* Disable and clear VBLANK IRQ */
-	mxsfb_enable_axi_clk(mxsfb);
 	writel(CTRL1_CUR_FRAME_DONE_IRQ_EN, mxsfb->base + LCDC_CTRL1 + REG_CLR);
 	writel(CTRL1_CUR_FRAME_DONE_IRQ, mxsfb->base + LCDC_CTRL1 + REG_CLR);
-	mxsfb_disable_axi_clk(mxsfb);
+	clk_disable_unprepare(mxsfb->clk_axi);
 }
 
 static void mxsfb_irq_preinstall(struct drm_device *drm)
@@ -439,7 +441,7 @@ static irqreturn_t mxsfb_irq_handler(int irq, void *data)
 	struct mxsfb_drm_private *mxsfb = drm->dev_private;
 	u32 reg;
 
-	mxsfb_enable_axi_clk(mxsfb);
+	clk_prepare_enable(mxsfb->clk_axi);
 
 	reg = readl(mxsfb->base + LCDC_CTRL1);
 
@@ -448,7 +450,7 @@ static irqreturn_t mxsfb_irq_handler(int irq, void *data)
 
 	writel(CTRL1_CUR_FRAME_DONE_IRQ, mxsfb->base + LCDC_CTRL1 + REG_CLR);
 
-	mxsfb_disable_axi_clk(mxsfb);
+	clk_disable_unprepare(mxsfb->clk_axi);
 
 	return IRQ_HANDLED;
 }
@@ -547,67 +549,23 @@ static int mxsfb_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int mxsfb_runtime_suspend(struct device *dev)
-{
-	struct drm_device *drm = dev_get_drvdata(dev);
-	struct mxsfb_drm_private *mxsfb = drm->dev_private;
-
-	if (!drm->registered)
-		return 0;
-
-	if (mxsfb->enabled) {
-		mxsfb_crtc_disable(mxsfb);
-		mxsfb->suspended = true;
-	}
-
-	return 0;
-}
-
-static int mxsfb_runtime_resume(struct device *dev)
-{
-	struct drm_device *drm = dev_get_drvdata(dev);
-	struct mxsfb_drm_private *mxsfb = drm->dev_private;
-
-	if (!drm->registered || !mxsfb->suspended)
-		return 0;
-
-	mxsfb_crtc_enable(mxsfb);
-	mxsfb->suspended = false;
-
-	return 0;
-}
-
+#ifdef CONFIG_PM_SLEEP
 static int mxsfb_suspend(struct device *dev)
 {
 	struct drm_device *drm = dev_get_drvdata(dev);
-	struct mxsfb_drm_private *mxsfb = drm->dev_private;
 
-	if (mxsfb->enabled) {
-		mxsfb_crtc_disable(mxsfb);
-		mxsfb->suspended = true;
-	}
-
-	return 0;
+	return drm_mode_config_helper_suspend(drm);
 }
 
 static int mxsfb_resume(struct device *dev)
 {
 	struct drm_device *drm = dev_get_drvdata(dev);
-	struct mxsfb_drm_private *mxsfb = drm->dev_private;
 
-	if (!mxsfb->suspended)
-		return 0;
-
-	mxsfb_crtc_enable(mxsfb);
-	mxsfb->suspended = false;
-
-	return 0;
+	return drm_mode_config_helper_resume(drm);
 }
 #endif
 
 static const struct dev_pm_ops mxsfb_pm_ops = {
-	SET_RUNTIME_PM_OPS(mxsfb_runtime_suspend, mxsfb_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(mxsfb_suspend, mxsfb_resume)
 };
 
@@ -618,7 +576,7 @@ static struct platform_driver mxsfb_platform_driver = {
 	.driver	= {
 		.name		= "mxsfb_drm",
 		.of_match_table	= mxsfb_dt_ids,
-		.pm = &mxsfb_pm_ops,
+		.pm		= &mxsfb_pm_ops,
 	},
 };
 

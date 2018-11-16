@@ -48,7 +48,7 @@
 #define CURPIXELCNT			0x1C
 static u16 get_xval(u32 pixel_cnt)
 {
-	return pixel_cnt && 0xFF;
+	return pixel_cnt & 0xFFFF;
 }
 
 static u16 get_yval(u32 pixel_cnt)
@@ -518,6 +518,9 @@ int dpu_ed_init(struct dpu_soc *dpu, unsigned int id,
 	for (i = 0; i < ARRAY_SIZE(ed_ids); i++)
 		if (ed_ids[i] == id)
 			break;
+
+	if (i == ARRAY_SIZE(ed_ids))
+		return -EINVAL;
 
 	dpu->ed_priv[i] = ed;
 
