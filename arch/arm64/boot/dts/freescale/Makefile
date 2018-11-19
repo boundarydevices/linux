@@ -121,6 +121,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 fsl-imx8mq-evk-inmate.dtb \
 				 fsl-imx8mq-evk-dp.dtb \
 				 fsl-imx8mq-evk-edp.dtb \
+				 fsl-imx8mq-phanbell.dtb \
 				 imx8mq-bio.dtb \
 				 imx8mq-nitrogen8m.dtb \
 				 imx8mq-nitrogen8m-edp.dtb \
