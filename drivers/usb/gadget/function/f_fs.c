@@ -294,10 +294,8 @@ struct ffs_data_buffer *ffs_retry_malloc_buffer(struct ffs_data *ffs)
 	pr_info("ffs_retry_malloc_buffer\n");
 	for (i = 0; i < FFS_BUFFER_MAX; i++) {
 		if (ffs->buffer[i].data_state == -1) {
-			spin_unlock_irq(&ffs->eps_lock);
 			ffs->buffer[i].data_ep
-				= kzalloc(MAX_PAYLOAD_EPS, GFP_KERNEL);
-			spin_lock_irq(&ffs->eps_lock);
+				= kzalloc(MAX_PAYLOAD_EPS, GFP_ATOMIC);
 			if (!ffs->buffer[i].data_ep)
 				return NULL;
 			ffs->buffer[i].data_state = 1;
@@ -317,7 +315,7 @@ static void ffs_free_buffer(struct ffs_data *ffs)
 		if (ffs->buffer[i].data_state != -1) {
 			kfree(ffs->buffer[i].data_ep);
 			ffs->buffer[i].data_ep = NULL;
-			ffs->buffer[i].data_state = 0;
+			ffs->buffer[i].data_state = -1;
 		}
 	}
 }
@@ -342,6 +340,11 @@ static void release_ffs_buffer(struct ffs_data *ffs,
 	struct ffs_data_buffer *buffer_temp = buffer;
 
 	spin_lock_irq(&ffs->eps_lock);
+	if (buffer_temp->data_ep == NULL) {
+		buffer_temp->data_state = -1;
+		spin_unlock_irq(&ffs->eps_lock);
+		return;
+	}
 	memset(buffer_temp->data_ep, 0, MAX_PAYLOAD_EPS);
 	buffer_temp->data_state = 0;
 	spin_unlock_irq(&ffs->eps_lock);
@@ -871,6 +874,10 @@ static void ffs_user_copy_worker(struct work_struct *work)
 		buffer = &(io_data->ffs->buffer[i]);
 		if (io_data->buf == buffer->data_ep) {
 			break;
+		}
+		if (i == FFS_BUFFER_MAX - 1) {
+			pr_info("io_data->buf is missing, i=%d-\n", i);
+			buffer = NULL;
 		}
 	}
 #endif
