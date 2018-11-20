@@ -39,6 +39,13 @@
 			clock-latency-ns = <150000>;
 			opp-suspend;
 		};
+
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <1225000>;
+			clock-latency-ns = <150000>;
+		};
+
 	};
 
 	usbphynop2: usbphynop2 {
