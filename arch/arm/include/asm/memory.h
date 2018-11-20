@@ -238,14 +238,27 @@ static inline unsigned long __phys_to_virt(phys_addr_t x)
 #define PHYS_OFFSET	PLAT_PHYS_OFFSET
 #define PHYS_PFN_OFFSET	((unsigned long)(PHYS_OFFSET >> PAGE_SHIFT))
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+extern unsigned long phys_check(phys_addr_t x);
+extern unsigned long virt_check(unsigned long x);
+extern int scheduler_running;
+#endif
 static inline phys_addr_t __virt_to_phys(unsigned long x)
 {
+#ifdef CONFIG_AMLOGIC_MODIFY
+	return virt_check(x);
+#else
 	return (phys_addr_t)x - PAGE_OFFSET + PHYS_OFFSET;
+#endif
 }
 
 static inline unsigned long __phys_to_virt(phys_addr_t x)
 {
+#ifdef CONFIG_AMLOGIC_MODIFY
+	return phys_check(x);
+#else
 	return x - PHYS_OFFSET + PAGE_OFFSET;
+#endif
 }
 
 #endif

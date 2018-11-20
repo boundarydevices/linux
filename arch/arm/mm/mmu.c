@@ -1640,3 +1640,39 @@ void __init paging_init(const struct machine_desc *mdesc)
 	empty_zero_page = virt_to_page(zero_page);
 	__flush_dcache_page(NULL, empty_zero_page);
 }
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+unsigned long notrace phys_check(phys_addr_t x)
+{
+	unsigned long addr;
+	struct page *page;
+
+	addr = x - PHYS_OFFSET + PAGE_OFFSET;
+	if (scheduler_running) {
+		page = phys_to_page(x);
+
+		/*
+		 * if physical address is not in linear mapping range,
+		 * then this will cause BUG
+		 */
+		if (is_vmalloc_or_module_addr((const void *)addr) ||
+		    PageHighMem(page)) {
+			pr_err("BAD USING of phys_to_virt, addr:%x, page:%lx\n",
+				x, page_to_pfn(page));
+			dump_stack();
+		}
+	}
+	return addr;
+}
+EXPORT_SYMBOL(phys_check);
+
+unsigned long notrace virt_check(unsigned long x)
+{
+	if (scheduler_running && (x >= VMALLOC_START || x <= PAGE_OFFSET)) {
+		pr_err("bad input of virt:%lx\n", x);
+		dump_stack();
+	}
+	return (phys_addr_t)x - PAGE_OFFSET + PHYS_OFFSET;
+}
+EXPORT_SYMBOL(virt_check);
+#endif
