@@ -1381,6 +1381,8 @@ static int meson_mmc_clk_init(struct amlsd_host *host)
 	u32 vconf = 0;
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 
+	writel(0, host->base + SD_EMMC_ADJUST);
+	writel(0, host->base + SD_EMMC_DELAY);
 	writel(0, host->base + SD_EMMC_CLOCK);
 	ret = aml_emmc_clktree_init(host);
 	if (ret)

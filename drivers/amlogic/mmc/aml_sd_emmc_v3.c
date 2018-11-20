@@ -117,6 +117,9 @@ int meson_mmc_clk_init_v3(struct amlsd_host *host)
 	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	struct mmc_phase *init = &(host->data->sdmmc.init);
 
+	writel(0, host->base + SD_EMMC_ADJUST_V3);
+	writel(0, host->base + SD_EMMC_DELAY1_V3);
+	writel(0, host->base + SD_EMMC_DELAY2_V3);
 	writel(0, host->base + SD_EMMC_CLOCK_V3);
 #ifndef SD_EMMC_CLK_CTRL
 	ret = aml_emmc_clktree_init(host);
