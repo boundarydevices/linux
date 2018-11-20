@@ -233,6 +233,15 @@ struct vinfo_base_s {
 	enum color_fmt_e viu_color_fmt;
 };
 
+#define LATENCY_INVALID_UNKNOWN	0
+#define LATENCY_NOT_SUPPORT		0xffff
+struct rx_av_latency {
+	unsigned int vLatency;
+	unsigned int aLatency;
+	unsigned int i_vLatency;
+	unsigned int i_aLatency;
+};
+
 struct vinfo_s {
 	char *name;
 	enum vmode_e mode;
@@ -254,6 +263,7 @@ struct vinfo_s {
 	enum viu_mux_e viu_mux;
 	struct master_display_info_s master_display_info;
 	struct hdr_info hdr_info;
+	struct rx_av_latency rx_latency;
 	struct vout_device_s *vout_device;
 };
 

@@ -130,10 +130,10 @@ struct rx_cap {
 	unsigned char edid_version;
 	unsigned char edid_revision;
 	unsigned char ColorDeepSupport;
-	unsigned int Video_Latency;
-	unsigned int Audio_Latency;
-	unsigned int Interlaced_Video_Latency;
-	unsigned int Interlaced_Audio_Latency;
+	unsigned int vLatency;
+	unsigned int aLatency;
+	unsigned int i_vLatency;
+	unsigned int i_aLatency;
 	unsigned int threeD_present;
 	unsigned int threeD_Multi_present;
 	unsigned int hdmi_vic_LEN;
