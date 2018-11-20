@@ -118,7 +118,7 @@ static void send_all_data(struct aml_irblaster_dev *dev)
 	}
 	if (dev->count >= dev->buffer_size) {
 		irblaster_dbg("The all datas finished!\n");
-		complete(&dev->blaster_completion);
+		//complete(&dev->blaster_completion);
 	}
 }
 
@@ -127,6 +127,7 @@ static irqreturn_t meson_blaster_interrupt(int irq, void *dev_id)
 	struct aml_irblaster_dev *dev = dev_id;
 
 	irblaster_dbg("meson_blaster_interrupt !!\n");
+	complete(&dev->blaster_completion);
 	/*clear pending bit*/
 	writel(readl(dev->reg_base + AO_IR_BLASTER_ADDR3) &
 			(~BLASTER_FIFO_THD_PENDING),
@@ -400,6 +401,7 @@ static ssize_t store_send(struct device *dev,
 		irblaster_dbg("%d\n", irblaster_dev->buffer[i]);
 	irblaster_dbg("sum_time = %d\n", sum_time);
 	irblaster_dev->count = 0;
+	init_completion(&irblaster_dev->blaster_completion);
 	send_all_data(irblaster_dev);
 	ret = wait_for_completion_interruptible_timeout(
 			&irblaster_dev->blaster_completion,
