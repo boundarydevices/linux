@@ -563,11 +563,13 @@ static ssize_t osd_hwc_enable_read_file(struct file *file,
 				char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
+	struct seq_file *s = file->private_data;
+	int osd_id = *(int *)s;
 	char buf[128];
 	ssize_t len;
 	unsigned int hwc_enable = 0;
 
-	osd_get_hwc_enable(&hwc_enable);
+	osd_get_hwc_enable(osd_id, &hwc_enable);
 	len = snprintf(buf, 128, "%d\n", hwc_enable);
 	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
 }
@@ -576,6 +578,8 @@ static ssize_t osd_hwc_enable_write_file(struct file *file,
 				const char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
+	struct seq_file *s = file->private_data;
+	int osd_id = *(int *)s;
 	char buf[128];
 	unsigned int hwc_enable = 0;
 	int ret = 0;
@@ -586,7 +590,7 @@ static ssize_t osd_hwc_enable_write_file(struct file *file,
 	buf[count] = 0;
 	ret = kstrtoint(buf, 0, &hwc_enable);
 	osd_log_info("hwc enable: %d\n", hwc_enable);
-	osd_set_hwc_enable(hwc_enable);
+	osd_set_hwc_enable(osd_id, hwc_enable);
 	return count;
 }
 
@@ -594,6 +598,8 @@ static ssize_t osd_do_hwc_write_file(struct file *file,
 				const char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
+	struct seq_file *s = file->private_data;
+	int osd_id = *(int *)s;
 	char buf[128];
 	unsigned int do_hwc = 0;
 	int ret = 0;
@@ -605,7 +611,7 @@ static ssize_t osd_do_hwc_write_file(struct file *file,
 	ret = kstrtoint(buf, 0, &do_hwc);
 	osd_log_info("do_hwc: %d\n", do_hwc);
 	if (do_hwc)
-		osd_do_hwc();
+		osd_do_hwc(osd_id);
 	return count;
 }
 

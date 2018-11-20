@@ -106,7 +106,6 @@ enum color_index_e {
 #define FBIOPUT_OSD_CURSOR	\
 	_IOWR(FB_IOC_MAGIC, 0x0,  struct fb_cursor_user)
 
-
 /* OSD color definition */
 #define KEYCOLOR_FLAG_TARGET  1
 #define KEYCOLOR_FLAG_ONHOLD  2
@@ -114,6 +113,8 @@ enum color_index_e {
 
 #define HW_OSD_COUNT 4
 #define OSD_BLEND_LAYERS 4
+#define VIU_COUNT     2
+
 /* OSD block definition */
 #define HW_OSD_BLOCK_COUNT 4
 #define HW_OSD_BLOCK_REG_COUNT (HW_OSD_BLOCK_COUNT*2)
@@ -509,6 +510,7 @@ struct osd_device_data_s {
 	u32 vpp_fifo_len;
 	u32 dummy_data;
 	u32 has_viu2;
+	u32 osd0_sc_independ;
 	u32 viu1_osd_count;
 	u32 viu2_index;
 	struct clk *vpu_clkc;
@@ -611,8 +613,10 @@ struct hw_osd_blending_s {
 	bool osd1_freescale_disable;
 	u32 vinfo_width;
 	u32 vinfo_height;
-	u32 screen_ratio_w;
-	u32 screen_ratio_h;
+	u32 screen_ratio_w_num;
+	u32 screen_ratio_w_den;
+	u32 screen_ratio_h_num;
+	u32 screen_ratio_h_den;
 	struct dispdata_s dst_data;
 	struct layer_blend_reg_s blend_reg;
 	struct layer_blend_s layer_blend;
@@ -707,7 +711,7 @@ struct hw_para_s {
 	u32 scan_mode[HW_OSD_COUNT];
 	u32 order[HW_OSD_COUNT];
 	u32 premult_en[HW_OSD_COUNT];
-	struct display_flip_info_s disp_info;
+	struct display_flip_info_s disp_info[VIU_COUNT];
 	struct osd_3d_mode_s mode_3d[HW_OSD_COUNT];
 	u32 updated[HW_OSD_COUNT];
 	/* u32 block_windows[HW_OSD_COUNT][HW_OSD_BLOCK_REG_COUNT]; */
@@ -722,7 +726,7 @@ struct hw_para_s {
 	int use_h_filter_mode[HW_OSD_COUNT];
 	int use_v_filter_mode[HW_OSD_COUNT];
 	struct hw_list_s reg[HW_REG_INDEX_MAX];
-	u32 field_out_en;
+	u32 field_out_en[VIU_COUNT];
 	u32 scale_workaround;
 	u32 fb_for_4k2k;
 	u32 antiflicker_mode;
@@ -734,21 +738,21 @@ struct hw_para_s {
 	struct osd_device_data_s osd_meson_dev;
 	u32 urgent[HW_OSD_COUNT];
 	u32 osd_deband_enable;
-	u32 osd_fps;
-	u32 osd_fps_start;
+	u32 osd_fps[VIU_COUNT];
+	u32 osd_fps_start[VIU_COUNT];
 	u32 osd_display_debug;
 	ulong screen_base[HW_OSD_COUNT];
 	ulong screen_size[HW_OSD_COUNT];
 	ulong screen_base_backup[HW_OSD_COUNT];
 	ulong screen_size_backup[HW_OSD_COUNT];
-	u32 vinfo_width;
-	u32 vinfo_height;
+	u32 vinfo_width[VIU_COUNT];
+	u32 vinfo_height[VIU_COUNT];
 	u32 fb_drvier_probe;
 	u32 afbc_force_reset;
 	u32 afbc_regs_backup;
 	u32 afbc_status_err_reset;
 	u32 afbc_use_latch;
-	u32 hwc_enable;
+	u32 hwc_enable[VIU_COUNT];
 	u32 osd_use_latch[HW_OSD_COUNT];
 	u32 hw_cursor_en;
 	u32 hw_rdma_en;
@@ -761,8 +765,8 @@ struct hw_para_s {
 	u32 viu_type;
 	u32 line_n_rdma;
 	struct hw_debug_s osd_debug;
-	int out_fence_fd;
+	int out_fence_fd[VIU_COUNT];
 	int in_fd[HW_OSD_COUNT];
-	struct osd_fence_fun_s osd_fence[2];
+	struct osd_fence_fun_s osd_fence[VIU_COUNT][2];
 };
 #endif /* _OSD_H_ */
