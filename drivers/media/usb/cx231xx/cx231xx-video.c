@@ -870,6 +870,8 @@ static struct videobuf_queue_ops cx231xx_video_qops = {
 
 void video_mux(struct cx231xx *dev, int index)
 {
+	if (is_model_avermedia_h837_series(dev->model))
+		return;
 	dev->video_input = index;
 	dev->ctl_ainput = INPUT(index)->amux;
 

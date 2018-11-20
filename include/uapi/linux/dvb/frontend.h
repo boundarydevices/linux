@@ -541,6 +541,7 @@ struct dtv_property {
 			__u32 reserved1[3];
 			void *reserved2;
 		} buffer;
+#if 0
 #ifdef CONFIG_AMLOGIC_DVB_COMPAT
 		struct {
 			__u8 data[32];
@@ -548,6 +549,7 @@ struct dtv_property {
 			__u32 reserved1[3];
 			__u64 reserved;
 		} reserved;
+#endif
 #endif
 	} u;
 	int result;
@@ -558,7 +560,7 @@ struct dtv_property {
 
 struct dtv_properties {
 	__u32 num;
-#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+#if 0 && defined(CONFIG_AMLOGIC_DVB_COMPAT)
 	union {
 		struct dtv_property *props;
 		__u64                reserved;
@@ -661,7 +663,7 @@ struct dvb_frontend_parameters {
 		struct dvb_qam_parameters  qam;		/* DVB-C */
 		struct dvb_ofdm_parameters ofdm;	/* DVB-T */
 		struct dvb_vsb_parameters vsb;		/* ATSC */
-#ifdef CONFIG_AMLOGIC_DVB_COMPAT
+#if 0 && defined(CONFIG_AMLOGIC_DVB_COMPAT)
 		struct dvb_analog_parameters analog;
 #endif
 	} u;
@@ -683,10 +685,12 @@ struct dvb_frontend_parameters_ex {
 	} u;
 };
 
+/*
 static char dvb_check_frontend_parameters_size[
 	(sizeof(struct dvb_frontend_parameters_ex)
 	== sizeof(struct dvb_frontend_parameters)) ? 1 : -1]
 	__attribute__((__unused__));
+*/
 
 #endif /*CONFIG_AMLOGIC_DVB_COMPAT*/
 

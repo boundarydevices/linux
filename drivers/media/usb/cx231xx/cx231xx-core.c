@@ -331,6 +331,76 @@ int cx231xx_read_ctrl_reg(struct cx231xx *dev, u8 req, u16 reg,
 	return ret;
 }
 
+int cx231xx_send_h837_vendor_cmd(struct cx231xx *dev,
+				struct VENDOR_REQUEST_IN *ven_req)
+{
+	int ret;
+	int pipe = 0;
+	int unsend_size = 0;
+	u8 *pdata;
+
+	if (dev->state & DEV_DISCONNECTED)
+		return -ENODEV;
+
+	if ((ven_req->wLength > URB_MAX_CTRL_SIZE))
+		return -EINVAL;
+
+	if (ven_req->direction)
+		pipe = usb_rcvctrlpipe(dev->udev, 0);
+	else
+		pipe = usb_sndctrlpipe(dev->udev, 0);
+
+	/*
+	 * If the cx23102 read more than 4 bytes with i2c bus,
+	 * need chop to 4 byte per request
+	 */
+	if ((ven_req->wLength > 4) && (ven_req->bRequest <= VRT_GET_I2C2)) {
+		unsend_size = 0;
+		pdata = ven_req->pBuff;
+
+
+		unsend_size = ven_req->wLength;
+
+		/* the first package */
+		ven_req->wValue = ven_req->wValue & 0xFFFB;
+		ven_req->wValue = (ven_req->wValue & 0xFFBD) | 0x2;
+		ret = __usb_control_msg(dev, pipe, ven_req->bRequest,
+			ven_req->direction | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+			ven_req->wValue, ven_req->wIndex, pdata,
+			0x0004, HZ);
+		unsend_size = unsend_size - 4;
+
+		/* the middle package */
+		ven_req->wValue = (ven_req->wValue & 0xFFBD) | 0x42;
+		while (unsend_size - 4 > 0) {
+			pdata = pdata + 4;
+			ret = __usb_control_msg(dev, pipe,
+				ven_req->bRequest,
+				ven_req->direction | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+				ven_req->wValue, ven_req->wIndex, pdata,
+				0x0004, HZ);
+			unsend_size = unsend_size - 4;
+		}
+
+		/* the last package */
+		ven_req->wValue = (ven_req->wValue & 0xFFBD) | 0x40;
+		pdata = pdata + 4;
+		ret = __usb_control_msg(dev, pipe, ven_req->bRequest,
+			ven_req->direction | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+			ven_req->wValue, ven_req->wIndex, pdata,
+			unsend_size, HZ);
+	} else {
+		if (ven_req->bRequest <= VRT_GET_I2C2)
+			ven_req->wValue &= ~0x42;
+		ret = __usb_control_msg(dev, pipe, ven_req->bRequest,
+				ven_req->direction | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+				ven_req->wValue, ven_req->wIndex,
+				ven_req->pBuff, ven_req->wLength, HZ);
+	}
+
+	return ret;
+}
+
 int cx231xx_send_vendor_cmd(struct cx231xx *dev,
 				struct VENDOR_REQUEST_IN *ven_req)
 {
@@ -338,6 +408,9 @@ int cx231xx_send_vendor_cmd(struct cx231xx *dev,
 	int pipe = 0;
 	int unsend_size = 0;
 	u8 *pdata;
+
+	if (is_model_avermedia_h837_series(dev->model))
+		return cx231xx_send_h837_vendor_cmd(dev, ven_req);
 
 	if (dev->state & DEV_DISCONNECTED)
 		return -ENODEV;
@@ -715,6 +788,18 @@ int cx231xx_set_mode(struct cx231xx *dev, enum cx231xx_mode set_mode)
 		case CX231XX_BOARD_CNXT_RDU_250:
 		errCode = cx231xx_set_agc_analog_digital_mux_select(dev, 0);
 			break;
+		case CX231XX_BOARD_AVERMEDIA_H837M:
+		case CX231XX_BOARD_AVERMEDIA_H837B:
+		case CX231XX_BOARD_AVERMEDIA_H837A: {
+			cx231xx_set_power_mode(dev, POLARIS_AVMODE_DEFAULT);
+			msleep(20);
+			cx231xx_set_agc_analog_digital_mux_select(dev, 0);
+			cx231xx_set_power_mode(dev, POLARIS_AVMODE_DIGITAL);
+			msleep(50);
+			cx231xx_set_gpio_value(dev, AVERMEDIA_H837_LED_PIN, 0);
+			return 0;
+			}
+			break;
 		case CX231XX_BOARD_CNXT_RDE_253S:
 		case CX231XX_BOARD_CNXT_RDU_253S:
 		case CX231XX_BOARD_PV_PLAYTV_USB_HYBRID:
@@ -731,6 +816,13 @@ int cx231xx_set_mode(struct cx231xx *dev, enum cx231xx_mode set_mode)
 	} else/* Set Analog Power mode */ {
 	/* set AGC mode to Analog */
 		switch (dev->model) {
+		case CX231XX_BOARD_AVERMEDIA_H837A:
+		case CX231XX_BOARD_AVERMEDIA_H837B:
+		case CX231XX_BOARD_AVERMEDIA_H837M:
+			cx231xx_set_agc_analog_digital_mux_select(dev, 1);
+			cx231xx_set_power_mode(dev, POLARIS_AVMODE_DEFAULT);
+			cx231xx_set_gpio_value(dev, AVERMEDIA_H837_LED_PIN, 1);
+			return 0;
 		case CX231XX_BOARD_CNXT_CARRAERA:
 		case CX231XX_BOARD_CNXT_RDE_250:
 		case CX231XX_BOARD_CNXT_SHELBY:
@@ -1301,6 +1393,47 @@ void cx231xx_start_TS1(struct cx231xx *dev)
 /*****************************************************************
 *             Device Init/UnInit functions                       *
 ******************************************************************/
+static void cx231xx_check_model(struct cx231xx *dev)
+{
+	if (is_model_avermedia_h837_series(dev->model)) {
+		struct i2c_msg msg[2];
+		unsigned char offset = 255, value = 0;
+
+		dev->i2c_bus[0].i2c_period =
+		dev->i2c_bus[1].i2c_period =
+		dev->i2c_bus[2].i2c_period = I2C_SPEED_400K;
+		/* first a write message to write EE offset*/
+		msg[0].addr = 0x50;
+		msg[0].flags = 0;
+		msg[0].len = 1;
+		msg[0].buf = &offset;
+
+		/* then a read message to read EE content, maximum read length is 4 bytes*/
+		msg[1].addr = 0x50;
+		msg[1].flags = I2C_M_RD;
+		msg[1].len = 1;
+		msg[1].buf = &value;
+
+		if (i2c_transfer(&dev->i2c_bus[1].i2c_adap, msg, 2) < 0) {
+			dev_err(dev->dev, "Failed to check EEPROM");
+			return;
+		}
+
+		if (0x01 == value) {
+			if (CX231XX_BOARD_AVERMEDIA_H837B == dev->model)
+				return;
+			dev->model = CX231XX_BOARD_AVERMEDIA_H837B;
+		} else {
+			if (CX231XX_BOARD_AVERMEDIA_H837A == dev->model ||
+				CX231XX_BOARD_AVERMEDIA_H837M == dev->model)
+				return;
+			dev->model = CX231XX_BOARD_AVERMEDIA_H837A;
+		}
+		dev->board = cx231xx_boards[dev->model];
+		dev_info(dev->dev, "Correct device model as %s\n", dev->board.name);
+	}
+}
+
 int cx231xx_dev_init(struct cx231xx *dev)
 {
 	int errCode = 0;
@@ -1358,6 +1491,9 @@ int cx231xx_dev_init(struct cx231xx *dev)
 	cx231xx_do_i2c_scan(dev, I2C_1_MUX_1);
 	cx231xx_do_i2c_scan(dev, I2C_2);
 	cx231xx_do_i2c_scan(dev, I2C_1_MUX_3);
+
+	/* model check */
+	cx231xx_check_model(dev);
 
 	/* init hardware */
 	/* Note : with out calling set power mode function,

@@ -49,6 +49,13 @@ config MEDIA_TUNER_TDA18271
 	help
 	  A silicon tuner module. Say Y when you want to support this tuner.
 
+config MEDIA_TUNER_TDA18272
+	tristate "NXP TDA18272 silicon tuner"
+	depends on MEDIA_SUPPORT && I2C
+	default m if !MEDIA_SUBDRV_AUTOSELECT
+	help
+	  A silicon tuner module. Say Y when you want to support this tuner.
+
 config MEDIA_TUNER_TDA9887
 	tristate "TDA 9885/6/7 analog IF demodulator"
 	depends on MEDIA_SUPPORT && I2C

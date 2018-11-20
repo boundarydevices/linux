@@ -67,6 +67,13 @@ struct cx231xx_dvb {
 	struct dvb_net net;
 	struct i2c_client *i2c_client_demod;
 	struct i2c_client *i2c_client_tuner;
+	int    power_on;
+};
+
+#include "tda18272.h"
+static struct tda18272_config h837_tda18272_config = {
+	  0x60                  /*  dev->board.tuner_addr*/
+	, TDA18272_SINGLE
 };
 
 static struct s5h1432_config dvico_s5h1432_config = {
@@ -125,6 +132,17 @@ static struct lgdt3305_config hcw_lgdt3305_config = {
 	.deny_i2c_rptr      = 1,
 	.spectral_inversion = 1,
 	.qam_if_khz         = 4000,
+	.vsb_if_khz         = 3250,
+};
+
+static struct lgdt3305_config h837_lgdt3305_config = {
+	.i2c_addr           = 0xB2 >> 1,
+	.mpeg_mode          = LGDT3305_MPEG_SERIAL,
+	.tpclk_edge         = LGDT3305_TPCLK_FALLING_EDGE,
+	.tpvalid_polarity   = LGDT3305_TP_VALID_HIGH,
+	.deny_i2c_rptr      = 1,
+	.spectral_inversion = 1,
+	.qam_if_khz         = 3600,
 	.vsb_if_khz         = 3250,
 };
 
@@ -265,7 +283,14 @@ static int start_streaming(struct cx231xx_dvb *dvb)
 
 	if (dev->USE_ISO) {
 		dev_dbg(dev->dev, "DVB transfer mode is ISO.\n");
-		cx231xx_set_alt_setting(dev, INDEX_TS1, 4);
+		mutex_lock(&dev->i2c_lock);
+		if (is_model_avermedia_h837_series(dev->model)) {
+			cx231xx_set_alt_setting(dev, INDEX_TS1, 4);
+			++dvb->power_on;
+		} else {
+			cx231xx_set_alt_setting(dev, INDEX_TS1, 4);
+		}
+		mutex_unlock(&dev->i2c_lock);
 		rc = cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);
 		if (rc < 0)
 			return rc;
@@ -280,6 +305,9 @@ static int start_streaming(struct cx231xx_dvb *dvb)
 		rc = cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);
 		if (rc < 0)
 			return rc;
+		if (is_model_avermedia_h837_series(dev->model)) {
+			++dvb->power_on;
+		}
 		dev->mode_tv = 1;
 		return cx231xx_init_bulk(dev, CX231XX_DVB_MAX_PACKETS,
 					CX231XX_DVB_NUM_BUFS,
@@ -298,6 +326,11 @@ static int stop_streaming(struct cx231xx_dvb *dvb)
 	else
 		cx231xx_uninit_bulk(dev);
 
+	if (-1 != dvb->power_on) {
+		--dvb->power_on;
+		if (dvb->power_on)
+			return 0;
+	}
 	cx231xx_set_mode(dev, CX231XX_SUSPEND);
 
 	return 0;
@@ -346,11 +379,20 @@ static int stop_feed(struct dvb_demux_feed *feed)
 static int cx231xx_dvb_bus_ctrl(struct dvb_frontend *fe, int acquire)
 {
 	struct cx231xx *dev = fe->dvb->priv;
+	struct cx231xx_dvb *dvb = dev->dvb;
 
-	if (acquire)
+	if (acquire) {
+		if (dvb != NULL && -1 != dvb->power_on)
+			++dvb->power_on;
 		return cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);
-	else
+	} else {
+		if (dvb != NULL && -1 != dvb->power_on) {
+			--dvb->power_on;
+			if (dvb->power_on)
+				return 0;
+		}
 		return cx231xx_set_mode(dev, CX231XX_SUSPEND);
+}
 }
 
 /* ------------------------------------------------------------------ */
@@ -612,14 +654,21 @@ static int dvb_init(struct cx231xx *dev)
 		return -ENOMEM;
 	}
 	dev->dvb = dvb;
+	dvb->power_on = -1;
 	dev->cx231xx_set_analog_freq = cx231xx_set_analog_freq;
 	dev->cx231xx_reset_analog_tuner = cx231xx_reset_analog_tuner;
 
 	tuner_i2c = cx231xx_get_i2c_adap(dev, dev->board.tuner_i2c_master);
 	demod_i2c = cx231xx_get_i2c_adap(dev, dev->board.demod_i2c_master);
 	mutex_lock(&dev->lock);
+	if (is_model_avermedia_h837_series(dev->model)) {
+		cx231xx_set_mode(dev, CX231XX_SUSPEND);
+		cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);
+		dvb->power_on = 0;
+	} else {
 	cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);
 	cx231xx_demod_reset(dev);
+	}
 	/* init frontend */
 	switch (dev->model) {
 	case CX231XX_BOARD_CNXT_CARRAERA:
@@ -864,6 +913,7 @@ static int dvb_init(struct cx231xx *dev)
 		dev->dvb->i2c_client_tuner = client;
 		break;
 	}
+
 	case CX231XX_BOARD_HAUPPAUGE_955Q:
 	{
 		struct i2c_client *client;
@@ -947,6 +997,28 @@ static int dvb_init(struct cx231xx *dev)
 		dvb_attach(tda18271_attach, dev->dvb->frontend,
 			   0x60, tuner_i2c,
 			   &pv_tda18271_config);
+		break;
+	case CX231XX_BOARD_AVERMEDIA_H837A:
+	case CX231XX_BOARD_AVERMEDIA_H837B:
+	case CX231XX_BOARD_AVERMEDIA_H837M:
+		dev->dvb->frontend = dvb_attach(lgdt3305_attach,
+						&h837_lgdt3305_config,
+						&dev->i2c_bus[dev->board.demod_i2c_master].i2c_adap);
+
+		if (dev->dvb->frontend == NULL) {
+			printk(DRIVER_NAME
+			       ": Failed to attach LG3305 front end\n");
+			result = -EINVAL;
+			goto out_free;
+		}
+
+		/* define general-purpose callback pointer */
+		dvb->frontend->callback = cx231xx_tuner_callback;
+		{
+			dvb_attach(tda18272_attach, dev->dvb->frontend,
+				&dev->i2c_bus[dev->board.tuner_i2c_master].i2c_adap,
+				&h837_tda18272_config);
+		}
 		break;
 
 	default:

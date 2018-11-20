@@ -841,6 +841,109 @@ struct cx231xx_board cx231xx_boards[] = {
 			.gpio = NULL,
 		} },
 	},
+	[CX231XX_BOARD_AVERMEDIA_H837A] = {
+		.name = "AVerMedia H837-A USB Hybrid ATSC/QAM",
+		.tuner_type = TUNER_ABSENT,
+		.tuner_addr = 0x60,
+		.tuner_sif_gpio = 0x05,
+		.demod_xfer_mode = 0,
+		.ctl_pin_status_mask = 0xFFFFFFC4,
+		.agc_analog_digital_select_gpio = 0x1c,
+		.gpio_pin_status_mask = 0x4001000,
+		.tuner_i2c_master = 2,
+		.demod_i2c_master = 1,
+		.has_dvb = 1,
+		.norm = V4L2_STD_NTSC,
+
+		.input = {{
+			.type = CX231XX_VMUX_TELEVISION,
+			.vmux = CX231XX_VIN_3_1,
+			.amux = CX231XX_AMUX_VIDEO,
+			.gpio = 0,
+		}, {
+			.type = CX231XX_VMUX_COMPOSITE1,
+			.vmux = CX231XX_VIN_2_1,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = 0,
+		}, {
+			.type = CX231XX_VMUX_SVIDEO,
+			.vmux = CX231XX_VIN_1_1 |
+				(CX231XX_VIN_1_2 << 8) |
+				CX25840_SVIDEO_ON,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = 0,
+		}
+		},
+	},
+	[CX231XX_BOARD_AVERMEDIA_H837B] = {
+		.name = "AVerMedia H837-B USB Hybrid ATSC/QAM",
+		.tuner_type = TUNER_ABSENT,
+		.tuner_addr = 0x60,
+		.tuner_sif_gpio = 0x05,
+		.demod_xfer_mode = 0,
+		.ctl_pin_status_mask = 0xFFFFFFC4,
+		.agc_analog_digital_select_gpio = 0x1c,
+		.gpio_pin_status_mask = 0x4001000,
+		.tuner_i2c_master = 2,
+		.demod_i2c_master = 1,
+		.has_dvb = 1,
+		.norm = V4L2_STD_NTSC,
+
+		.input = {{
+			.type = CX231XX_VMUX_TELEVISION,
+			.vmux = CX231XX_VIN_3_1,
+			.amux = CX231XX_AMUX_VIDEO,
+			.gpio = 0,
+		}, {
+			.type = CX231XX_VMUX_COMPOSITE1,
+			.vmux = CX231XX_VIN_2_1,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = 0,
+		}, {
+			.type = CX231XX_VMUX_SVIDEO,
+			.vmux = CX231XX_VIN_1_1 |
+				(CX231XX_VIN_1_2 << 8) |
+				CX25840_SVIDEO_ON,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = 0,
+		}
+		},
+	},
+	[CX231XX_BOARD_AVERMEDIA_H837M] = {
+		.name = "AVerMedia H837-M USB Hybrid ATSC/QAM",
+		.tuner_type = TUNER_ABSENT,
+		.tuner_addr = 0x60,
+		.tuner_sif_gpio = 0x05,
+		.demod_xfer_mode = 0,
+		.ctl_pin_status_mask = 0xFFFFFFC4,
+		.agc_analog_digital_select_gpio = 0x1c,
+		.gpio_pin_status_mask = 0x4001000,
+		.tuner_i2c_master = 2,
+		.demod_i2c_master = 1,
+		.has_dvb = 1,
+		.norm = V4L2_STD_NTSC,
+
+		.input = {{
+			.type = CX231XX_VMUX_TELEVISION,
+			.vmux = CX231XX_VIN_3_1,
+			.amux = CX231XX_AMUX_VIDEO,
+			.gpio = 0,
+		}, {
+			.type = CX231XX_VMUX_COMPOSITE1,
+			.vmux = CX231XX_VIN_2_1,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = 0,
+		}, {
+			.type = CX231XX_VMUX_SVIDEO,
+			.vmux = CX231XX_VIN_1_1 |
+				(CX231XX_VIN_1_2 << 8) |
+				CX25840_SVIDEO_ON,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = 0,
+		}
+		},
+	},
+
 };
 const unsigned int cx231xx_bcount = ARRAY_SIZE(cx231xx_boards);
 
@@ -911,6 +1014,12 @@ struct usb_device_id cx231xx_id_table[] = {
 	 .driver_info = CX231XX_BOARD_OTG102},
 	{USB_DEVICE(USB_VID_TERRATEC, 0x00a6),
 	 .driver_info = CX231XX_BOARD_TERRATEC_GRABBY},
+	{USB_DEVICE(0x07ca, 0x0837),
+	 .driver_info = CX231XX_BOARD_AVERMEDIA_H837A},
+	{USB_DEVICE(0x07ca, 0x0837),
+	 .driver_info = CX231XX_BOARD_AVERMEDIA_H837B},
+	{USB_DEVICE(0x07ca, 0x1837),
+	 .driver_info = CX231XX_BOARD_AVERMEDIA_H837M},
 	{},
 };
 
@@ -1577,7 +1686,9 @@ static int cx231xx_usb_probe(struct usb_interface *interface,
 	dev->gpio_dir = 0;
 	dev->gpio_val = 0;
 	dev->xc_fw_load_done = 0;
+	if (!is_model_avermedia_h837_series(dev->model)) {
 	dev->has_alsa_audio = 1;
+	}
 	dev->power_mode = -1;
 	atomic_set(&dev->devlist_count, 0);
 
