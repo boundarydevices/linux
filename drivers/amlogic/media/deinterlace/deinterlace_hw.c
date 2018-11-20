@@ -314,17 +314,29 @@ static struct mcinfo_lmv_s lines_mv[540];
 static short offset_lmv = 100;
 module_param_named(offset_lmv, offset_lmv, short, 0644);
 
-void calc_lmv_base_mcinfo(unsigned int vf_height, unsigned long mcinfo_adr)
+void calc_lmv_base_mcinfo(unsigned int vf_height, unsigned long mcinfo_adr,
+					unsigned int mcinfo_size)
 {
 	unsigned short i, top_str, bot_str, top_end, bot_end, j = 0;
 	unsigned short *mcinfo_vadr = NULL, lck_num;
 	unsigned short flg_m1 = 0, flg_i = 0, nLmvLckSt = 0;
 	unsigned short lmv_lckstext[3] = {0, 0, 0}, nLmvLckEd;
 	unsigned short lmv_lckedext[3] = {0, 0, 0}, nLmvLckNum;
+	bool bflg_vmap = false;
+	u8 *tmp;
 
-	mcinfo_vadr = (unsigned short *)phys_to_virt(mcinfo_adr);
+	//mcinfo_vadr = (unsigned short *)phys_to_virt(mcinfo_adr);
+
 	if (!lmv_lock_win_en)
 		return;
+
+	tmp = di_vmap(mcinfo_adr, mcinfo_size, &bflg_vmap);
+	if (tmp == NULL) {
+		di_print("err:di_vmap failed\n");
+		return;
+	}
+	mcinfo_vadr = (unsigned short *)tmp;
+
 	for (i = 0; i < (vf_height>>1); i++) {
 		lmvs_init(&lines_mv[i], *(mcinfo_vadr+i));
 		j = i + (vf_height>>1);
@@ -337,6 +349,9 @@ void calc_lmv_base_mcinfo(unsigned int vf_height, unsigned long mcinfo_adr)
 				pr_info("\n");
 		}
 	}
+	if (bflg_vmap)
+		di_unmap_phyaddr(tmp);
+
 	pr_mcinfo_cnt ? pr_mcinfo_cnt-- : (pr_mcinfo_cnt = 0);
 	top_str = 0;
 	top_end = offset_lmv;

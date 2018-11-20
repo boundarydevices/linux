@@ -1243,7 +1243,61 @@ static bool is_in_queue(struct di_buf_s *di_buf, int queue_idx)
 	}
 	return ret;
 }
+//---------------------------
+u8 *di_vmap(ulong addr, u32 size, bool *bflg)
+{
+	u8 *vaddr = NULL;
+	ulong phys = addr;
+	u32 offset = phys & ~PAGE_MASK;
+	u32 npages = PAGE_ALIGN(size) / PAGE_SIZE;
+	struct page **pages = NULL;
+	pgprot_t pgprot;
+	int i;
 
+	if (!PageHighMem(phys_to_page(phys)))
+		return phys_to_virt(phys);
+
+	if (offset)
+		npages++;
+
+	pages = vmalloc(sizeof(struct page *) * npages);
+	if (!pages)
+		return NULL;
+
+	for (i = 0; i < npages; i++) {
+		pages[i] = phys_to_page(phys);
+		phys += PAGE_SIZE;
+	}
+
+	/*nocache*/
+	pgprot = pgprot_writecombine(PAGE_KERNEL);
+
+	vaddr = vmap(pages, npages, VM_MAP, pgprot);
+	if (!vaddr) {
+		pr_err("the phy(%lx) vmaped fail, size: %d\n",
+			addr - offset, npages << PAGE_SHIFT);
+		vfree(pages);
+		return NULL;
+	}
+
+	vfree(pages);
+
+//	if (debug_mode & 0x20) {
+//		di_print("[HIGH-MEM-MAP] %s, pa(%lx) to va(%p), size: %d\n",
+//			__func__, addr, vaddr + offset, npages << PAGE_SHIFT);
+//	}
+	*bflg = true;
+
+	return vaddr + offset;
+}
+
+void di_unmap_phyaddr(u8 *vaddr)
+{
+	void *addr = (void *)(PAGE_MASK & (ulong)vaddr);
+
+	vunmap(addr);
+}
+//-------------------------
 static ssize_t
 store_dump_mem(struct device *dev, struct device_attribute *attr,
 	       const char *buf, size_t len)
@@ -1260,6 +1314,7 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
 	loff_t pos = 0;
 	void *buff = NULL;
 	mm_segment_t old_fs;
+	bool bflg_vmap = false;
 
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	ps = buf_orig;
@@ -1306,10 +1361,18 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
 			return len;
 		}
 		dump_state_flag = 1;
-		if (de_devp->flags & DI_MAP_FLAG)
-			buff = (void *)phys_to_virt(dump_adr);
-		else
+		if (de_devp->flags & DI_MAP_FLAG) {
+			//buff = (void *)phys_to_virt(dump_adr);
+			buff = di_vmap(dump_adr, nr_size, &bflg_vmap);
+			if (buff == NULL) {
+				pr_info("di_vap err\n");
+				filp_close(filp, NULL);
+				return len;
+
+			}
+		} else {
 			buff = ioremap(dump_adr, nr_size);
+		}
 		if (IS_ERR_OR_NULL(buff))
 			pr_err("%s: ioremap error.\n", __func__);
 		vfs_write(filp, buff, nr_size, &pos);
@@ -1333,6 +1396,10 @@ store_dump_mem(struct device *dev, struct device_attribute *attr,
  */
 		vfs_fsync(filp, 0);
 		pr_info("write buffer 0x%lx  to %s.\n", dump_adr, parm[1]);
+		if (bflg_vmap)
+			di_unmap_phyaddr(buff);
+
+
 		if (!(de_devp->flags & DI_MAP_FLAG))
 			iounmap(buff);
 		dump_state_flag = 0;
@@ -4200,7 +4267,8 @@ static irqreturn_t de_irq(int irq, void *dev_instance)
 				is_meson_txhd_cpu())
 				mc_pre_mv_irq();
 			calc_lmv_base_mcinfo((di_pre_stru.cur_height>>1),
-				di_pre_stru.di_wr_buf->mcinfo_adr);
+				di_pre_stru.di_wr_buf->mcinfo_adr,
+				di_pre_stru.mcinfo_size);
 		}
 		nr_process_in_irq();
 		if ((data32&0x200) && de_devp->nrds_enable)

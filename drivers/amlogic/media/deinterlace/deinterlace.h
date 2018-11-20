@@ -419,6 +419,8 @@ struct di_buf_s *get_di_recovery_log_di_buf(void);
 int get_di_video_peek_cnt(void);
 unsigned long get_di_reg_unreg_timeout_cnt(void);
 struct vframe_s **get_di_vframe_in(void);
+
+
 /*---------------------*/
 
 struct di_buf_s *get_di_buf(int queue_idx, int *start_pos);
