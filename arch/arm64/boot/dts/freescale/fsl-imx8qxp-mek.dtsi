@@ -910,7 +910,6 @@
 	status = "okay";
 };
 
-/* Only enable it and ptn5110 after rework U182 */
 &usbotg3 {
 	dr_mode = "otg";
 	extcon = <&typec_ptn5110>;
