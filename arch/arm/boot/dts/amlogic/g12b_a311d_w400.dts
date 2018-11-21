@@ -45,7 +45,7 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x000000 0x80000000>;
+		linux,usable-memory = <0x100000 0x7ff00000>;
 	};
 
 	reserved-memory {
