@@ -66,7 +66,7 @@ static int dev_name_to_id(const char *dev_name)
 	}
 	if (i >= dmc_mon->port_num)
 		return -1;
-	return i;
+	return dmc_mon->port[i].port_id;
 }
 
 char *to_ports(int id)

@@ -83,10 +83,17 @@ static void check_violation(struct dmc_monitor *mon)
 	struct page *page;
 	unsigned long *p;
 	char id_str[4];
+	char off1 = 21, off2 = 10;
+
+	if (mon->chip == MESON_CPU_MAJOR_ID_G12B) {
+		/* bit fix for G12B */
+		off1 = 24;
+		off2 = 13;
+	}
 
 	for (i = 1; i < 4; i += 2) {
 		status = dmc_rw(DMC_VIO_ADDR0 + (i << 2), 0, DMC_READ);
-		if (!(status & DMC_VIO_PROT_RANGE0))
+		if (!(status & (1 << off1)))
 			continue;
 		addr = dmc_rw(DMC_VIO_ADDR0 + ((i - 1) << 2), 0,
 			      DMC_READ);
@@ -100,7 +107,7 @@ static void check_violation(struct dmc_monitor *mon)
 			continue;
 		}
 
-		port = (status >> 13) & 0x1f;
+		port = (status >> off2) & 0x1f;
 		subport = (status >> 6) & 0xf;
 		pr_info(DMC_TAG", addr:%08lx, s:%08lx, ID:%s, sub:%s, c:%ld\n",
 			addr, status, to_ports(port),
