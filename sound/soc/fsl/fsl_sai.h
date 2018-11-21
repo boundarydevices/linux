@@ -259,6 +259,12 @@ struct fsl_sai_param {
 	u32 dataline;
 };
 
+struct fsl_sai_dl_cfg {
+	unsigned int pins;
+	unsigned int mask[2];
+	unsigned int offset[2];
+};
+
 struct fsl_sai {
 	struct platform_device *pdev;
 	struct regmap *regmap;
@@ -273,10 +279,12 @@ struct fsl_sai {
 	bool is_multi_lane;
 	bool synchronous[2];
 	bool is_dsd;
-	unsigned int dataline[2];
-	unsigned int dataline_dsd[2];
-	unsigned int dataline_off[2];
-	unsigned int dataline_off_dsd[2];
+
+	int pcm_dl_cfg_cnt;
+	int dsd_dl_cfg_cnt;
+	struct fsl_sai_dl_cfg *pcm_dl_cfg;
+	struct fsl_sai_dl_cfg *dsd_dl_cfg;
+
 	unsigned int masterflag[2];
 
 	unsigned int mclk_id[2];
