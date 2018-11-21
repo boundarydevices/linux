@@ -221,7 +221,8 @@ struct amldtvdemod_device_s {
 
 	struct ddemod_reg_off ireg;
 	struct meson_ddemod_data *data;
-
+	bool flg_cma_allc;
+	bool act_dtmb;
 
 	struct poll_machie_s poll_machie;
 

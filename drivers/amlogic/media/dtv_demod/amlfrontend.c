@@ -2468,24 +2468,30 @@ static int gxtv_demod_dtmb_tune(struct dvb_frontend *fe, bool re_tune,
 
 #ifdef CONFIG_CMA
 /*void dtmb_cma_alloc(struct aml_fe_dev *devp)*/
-void dtmb_cma_alloc(struct amldtvdemod_device_s *devp)
+bool dtmb_cma_alloc(struct amldtvdemod_device_s *devp)
 {
+	bool ret;
+
 	unsigned int mem_size = devp->cma_mem_size;
 	/*	dma_alloc_from_contiguous*/
 	devp->venc_pages =
 		dma_alloc_from_contiguous(&(devp->this_pdev->dev),
 			mem_size >> PAGE_SHIFT, 0);
-		PR_DBG("[cma]mem_size is %d,%d\n",
-			mem_size, mem_size >> PAGE_SHIFT);
-		if (devp->venc_pages) {
-			devp->mem_start = page_to_phys(devp->venc_pages);
-			devp->mem_size  = mem_size;
-			PR_DBG("demod mem_start = 0x%x, mem_size = 0x%x\n",
-				devp->mem_start, devp->mem_size);
-			PR_DBG("demod cma alloc ok!\n");
-		} else {
-			PR_DBG("demod cma mem undefined2.\n");
-		}
+	PR_DBG("[cma]mem_size is %d,%d\n",
+		mem_size, mem_size >> PAGE_SHIFT);
+	if (devp->venc_pages) {
+		devp->mem_start = page_to_phys(devp->venc_pages);
+		devp->mem_size  = mem_size;
+		devp->flg_cma_allc = true;
+		PR_DBG("demod mem_start = 0x%x, mem_size = 0x%x\n",
+			devp->mem_start, devp->mem_size);
+		PR_DBG("demod cma alloc ok!\n");
+		ret = true;
+	} else {
+		PR_DBG("demod cma mem undefined2.\n");
+		ret = false;
+	}
+	return ret;
 }
 
 /*void dtmb_cma_release(struct aml_fe_dev *devp)*/
@@ -2501,11 +2507,12 @@ void dtmb_cma_release(struct amldtvdemod_device_s *devp)
 }
 #endif
 
-static int enter_mode(int mode)
+static bool enter_mode(int mode)
 {
 	/*struct aml_fe_dev *dev = fe->dtv_demod;*/
 	struct amldtvdemod_device_s *devn = dtvdd_devp;
 	int memstart_dtmb;
+	bool ret = true;
 
 	PR_INFO("%s:%d\n", __func__, mode);
 
@@ -2529,12 +2536,18 @@ static int enter_mode(int mode)
 	if (devn->cma_flag == 1) {
 		PR_DBG("CMA MODE, cma flag is %d,mem size is %d",
 			devn->cma_flag, devn->cma_mem_size);
-		dtmb_cma_alloc(devn);
-		memstart_dtmb = devn->mem_start;
+		if (dtmb_cma_alloc(devn)) {
+			memstart_dtmb = devn->mem_start;
+		} else {
+			ret = false;
+			return ret;
+
+		}
+
 	} else {
 		memstart_dtmb = devn->mem_start;/*??*/
 	}
-
+		devn->act_dtmb = true;
 		dtmb_set_mem_st(memstart_dtmb);
 
 		demod_write_reg(DEMOD_REG4, 0x8);
@@ -2557,8 +2570,13 @@ static int enter_mode(int mode)
 			PR_DBG("CMA MODE, cma flag is %d,mem size is %d",
 				devn->cma_flag,
 				devn->cma_mem_size);
-			dtmb_cma_alloc(devn);
-			memstart_dtmb = devn->mem_start;
+			if (dtmb_cma_alloc(devn)) {
+				memstart_dtmb = devn->mem_start;
+			} else {
+				ret = false;
+				return ret;
+
+			}
 		} else {
 			memstart_dtmb = devn->mem_start;/*??*/
 		}
@@ -2566,7 +2584,7 @@ static int enter_mode(int mode)
 		dvbt_write_reg((0x10 << 2), memstart_dtmb);
 	}
 
-	return 0;
+	return ret;
 
 }
 
@@ -2583,6 +2601,7 @@ static int leave_mode(int mode)
 	/*dvbc_timer_exit();*/
 	if (cci_thread)
 		dvbc_kill_cci_task();
+	#if 0
 	if (mode == AM_FE_DTMB_N) {
 		dtmb_poll_stop();	/*polling mode*/
 		/* close arbit */
@@ -2591,7 +2610,18 @@ static int leave_mode(int mode)
 		if (devn->cma_flag == 1)
 			dtmb_cma_release(devn);
 	}
-
+	#else
+	if (dtvdd_devp->act_dtmb) {
+		dtmb_poll_stop();	/*polling mode*/
+		/* close arbit */
+		demod_write_reg(DEMOD_REG4, 0x0);
+		dtvdd_devp->act_dtmb = false;
+	}
+	if ((devn->cma_flag == 1) && dtvdd_devp->flg_cma_allc) {
+		dtmb_cma_release(devn);
+		dtvdd_devp->flg_cma_allc = false;
+	}
+	#endif
 
 	adc_set_pll_cntl(0, 0x04, NULL);
 	demod_mode_para = UNKNOWN;
@@ -3169,7 +3199,8 @@ static int aml_dtvdemod_probe(struct platform_device *pdev)
 
 	dtvdd_devp->state = DTVDEMOD_ST_IDLE;
 	dtvdemod_version(dtvdd_devp);
-
+	dtvdd_devp->flg_cma_allc = false;
+	dtvdd_devp->act_dtmb = false;
 	//ary temp:
 	aml_demod_init();
 
@@ -3503,8 +3534,17 @@ static int delsys_set(struct dvb_frontend *fe, unsigned int delsys)
 		return 0;
 	}
 
-	if (mode != AM_FE_UNKNOWN_N)
-		enter_mode(mode);
+	if (mode != AM_FE_UNKNOWN_N) {
+		if (!enter_mode(mode)) {
+			PR_INFO("enter_mode failed,leave!\n");
+			leave_mode(mode);
+			if (fe->ops.tuner_ops.release)
+			fe->ops.tuner_ops.release(fe);
+			dtvdd_devp->last_delsys = SYS_UNDEFINED;
+			dtvdd_devp->n_mode = AM_FE_UNKNOWN_N;
+			return 0;
+		}
+	}
 
 	if (!get_dtvpll_init_flag()) {
 		PR_INFO("pll is not set!\n");
