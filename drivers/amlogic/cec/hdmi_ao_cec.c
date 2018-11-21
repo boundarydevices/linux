@@ -420,9 +420,6 @@ static int cecb_pick_msg(unsigned char *msg, unsigned char *out_len)
 {
 	int i, size;
 	int len;
-	struct delayed_work *dwork;
-
-	dwork = &cec_dev->cec_work;
 
 	len = hdmirx_cec_read(DWC_CEC_RX_CNT);
 	size = sprintf(msg_log_buf, "CEC RX len %d:", len);
@@ -434,7 +431,6 @@ static int cecb_pick_msg(unsigned char *msg, unsigned char *out_len)
 	msg_log_buf[size] = '\0';
 	/* clr CEC lock bit */
 	hdmirx_cec_write(DWC_CEC_LOCK, 0);
-	mod_delayed_work(cec_dev->cec_thread, dwork, 0);
 	CEC_INFO("%s", msg_log_buf);
 	if (((msg[0] & 0xf0) >> 4) == cec_dev->cec_info.log_addr) {
 		*out_len = 0;
@@ -450,6 +446,7 @@ void cecb_irq_handle(void)
 	uint32_t intr_cec;
 	uint32_t lock;
 	int shift = 0;
+	struct delayed_work *dwork;
 
 	intr_cec = cec_has_irq();
 
@@ -469,6 +466,9 @@ void cecb_irq_handle(void)
 	if ((intr_cec & CEC_IRQ_RX_EOM) || lock) {
 		cecb_pick_msg(rx_msg, &rx_len);
 		complete(&cec_dev->rx_ok);
+		new_msg = 1;
+		dwork = &cec_dev->cec_work;
+		mod_delayed_work(cec_dev->cec_thread, dwork, 0);
 	}
 
 	/* TX error irq flags */
@@ -542,7 +542,7 @@ static void ao_cecb_init(void)
 		hdmirx_set_bits_top(TOP_EDID_GEN_CNTL, EDID_AUTO_CEC_EN, 11, 1);
 
 		/* enable all cec irq */
-		cec_irq_enable(true);
+		/*cec_irq_enable(true);*/
 		/* clear all wake up source */
 		hdmirx_cec_write(DWC_CEC_WKUPCTRL, 0);
 		/* cec enable */
@@ -595,7 +595,7 @@ static void ao_cecb_init(void)
 		}
 
 		/* Enable all AO_CECB interrupt sources */
-		cec_irq_enable(true);
+		/*cec_irq_enable(true);*/
 		hdmirx_cec_write(DWC_CEC_WKUPCTRL, WAKEUP_EN_MASK);
 	}
 }
@@ -900,7 +900,7 @@ void ceca_hw_reset(void)
 	cec_set_reg_bits(AO_CEC_GEN_CNTL, 0, 0, 1);
 
 	/* Enable all AO_CEC interrupt sources */
-	cec_irq_enable(true);
+	/*cec_irq_enable(true);*/
 
 	/* cec_logicaddr_set(cec_dev->cec_info.log_addr); */
 
@@ -1353,7 +1353,6 @@ static void ao_ceca_init(void)
 	unsigned int chiptype;
 
 	chiptype = get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR);
-
 	/*CEC_INFO("chiptype=0x%x\n", chiptype);*/
 	if (chiptype >= MESON_CPU_MAJOR_ID_GXBB) {
 		if (cec_dev->plat_data->ee_to_ao) {
@@ -1439,7 +1438,7 @@ static void ao_ceca_init(void)
 	cec_set_reg_bits(AO_CEC_GEN_CNTL, 0, 0, 1);
 
 	/* Enable all AO_CEC interrupt sources */
-	cec_irq_enable(true);
+	/*cec_irq_enable(true);*/
 
 	cec_arbit_bit_time_set(3, 0x118, 0);
 	cec_arbit_bit_time_set(5, 0x000, 0);
@@ -3095,13 +3094,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 	mutex_init(&cec_dev->cec_mutex);
 	mutex_init(&cec_dev->cec_ioctl_mutex);
 	spin_lock_init(&cec_dev->cec_reg_lock);
-	cec_dev->cec_thread = create_workqueue("cec_work");
-	if (cec_dev->cec_thread == NULL) {
-		CEC_INFO("create work queue failed\n");
-		ret = -EFAULT;
-		goto tag_cec_threat_err;
-	}
-	INIT_DELAYED_WORK(&cec_dev->cec_work, cec_task);
 	cec_dev->cec_info.remote_cec_dev = input_allocate_device();
 	if (!cec_dev->cec_info.remote_cec_dev) {
 		CEC_INFO("No enough memory\n");
@@ -3126,7 +3118,6 @@ static int aml_cec_probe(struct platform_device *pdev)
 		input_free_device(cec_dev->cec_info.remote_cec_dev);
 	}
 
-#ifdef CONFIG_OF
 	/* config: read from dts */
 	r = of_property_read_u32(node, "cec_sel", &(cec_dev->cec_num));
 	if (r) {
@@ -3283,6 +3274,18 @@ static int aml_cec_probe(struct platform_device *pdev)
 
 	/* irq set */
 	cec_irq_enable(false);
+	/* default enable all function*/
+	cec_config(CEC_FUNC_CFG_ALL, 1);
+	/* for init */
+	cec_pre_init();
+	/* cec hw module reset */
+	if (cec_dev->cec_num > 1) {
+		cec_hw_reset(CEC_A);
+		cec_hw_reset(CEC_B);
+	} else {
+		cec_hw_reset(ee_cec);
+	}
+
 	if (of_irq_count(node) > 1) {
 		/* need enable two irq */
 		cec_dev->irq_cecb = of_irq_get(node, 0);/*cecb int*/
@@ -3323,17 +3326,13 @@ static int aml_cec_probe(struct platform_device *pdev)
 			}
 		}
 	}
-#endif
 
-	/* if (ee_cec == CEC_A) */
-	{
-		last_cec_msg = devm_kzalloc(&pdev->dev,
-			sizeof(*last_cec_msg), GFP_KERNEL);
-		if (!last_cec_msg) {
-			CEC_ERR("allocate last_cec_msg failed\n");
-			ret = -ENOMEM;
-			goto tag_cec_msg_alloc_err;
-		}
+	last_cec_msg = devm_kzalloc(&pdev->dev,
+		sizeof(*last_cec_msg), GFP_KERNEL);
+	if (!last_cec_msg) {
+		CEC_ERR("allocate last_cec_msg failed\n");
+		ret = -ENOMEM;
+		goto tag_cec_msg_alloc_err;
 	}
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -3345,11 +3344,15 @@ static int aml_cec_probe(struct platform_device *pdev)
 #endif
 	hrtimer_init(&start_bit_check, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	start_bit_check.function = cec_line_check;
-	/* for init */
-	cec_pre_init();
-	/* default enable all function*/
-	cec_config(CEC_FUNC_CFG_ALL, 1);
+	cec_dev->cec_thread = create_workqueue("cec_work");
+	if (cec_dev->cec_thread == NULL) {
+		CEC_INFO("create work queue failed\n");
+		ret = -EFAULT;
+		goto tag_cec_threat_err;
+	}
+	INIT_DELAYED_WORK(&cec_dev->cec_work, cec_task);
 	queue_delayed_work(cec_dev->cec_thread, &cec_dev->cec_work, 0);
+
 	scpi_get_wakeup_reason(&cec_dev->wakeup_reason);
 	CEC_ERR("wakeup_reason:0x%x\n", cec_dev->wakeup_reason);
 	scpi_get_cec_val(SCPI_CMD_GET_CEC1,
@@ -3357,6 +3360,8 @@ static int aml_cec_probe(struct platform_device *pdev)
 	scpi_get_cec_val(SCPI_CMD_GET_CEC2, &r);
 	CEC_ERR("cev val1: %#x;val2: %#x\n",
 			*((unsigned int *)&cec_dev->wakup_data), r);
+
+	cec_irq_enable(true);
 	CEC_ERR("%s success end\n", __func__);
 	return 0;
 
