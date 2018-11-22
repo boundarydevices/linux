@@ -188,8 +188,12 @@ static int aml_vrtc_probe(struct platform_device *pdev)
 	if (!ret) {
 		pr_debug("init_date: %s\n", str);
 		if (!scpi_get_vrtc(&vrtc_val)) {
-			vrtc_init_date = vrtc_val;
-			pr_debug("get vrtc: %us\n", vrtc_init_date);
+			if (!vrtc_val)
+				parse_init_date(str);
+			else {
+				vrtc_init_date = vrtc_val;
+				pr_debug("get vrtc: %us\n", vrtc_init_date);
+			}
 		} else
 			parse_init_date(str);
 	}
