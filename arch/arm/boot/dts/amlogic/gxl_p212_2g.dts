@@ -148,6 +148,11 @@
 			alignment = <0x100000>;
 			//no-map;
 		};
+
+		defendkey_reserved:linux,defendkey {
+			compatible = "amlogic, defendkey";
+			reg = <0x08300000 0x100000>;
+		};
 	};
 
 	dummy-battery {
@@ -1216,3 +1221,9 @@
 &audio_data{
 	status = "okay";
 };
+
+&defendkey {
+	memory-region = <&defendkey_reserved>;
+	status = "okay";
+};
+

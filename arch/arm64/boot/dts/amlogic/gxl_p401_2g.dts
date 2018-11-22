@@ -76,6 +76,10 @@
 			alloc-ranges = <0x0 0x7dc00000 0x0 0x2400000>;
 		};
 
+		defendkey_reserved:linux,defendkey {
+			compatible = "amlogic, defendkey";
+			reg = <0x0 0x08300000 0x0 0x100000>;
+		};
 
 	};
 
@@ -960,3 +964,9 @@
 		status = "okay";
 	};
 };
+
+&defendkey {
+	memory-region = <&defendkey_reserved>;
+	status = "okay";
+};
+
