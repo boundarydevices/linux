@@ -31,6 +31,7 @@
 #include <linux/amlogic/ramdump.h>
 #include <linux/amlogic/reboot.h>
 #include <linux/arm-smccc.h>
+#include <linux/highmem.h>
 #include <asm/cacheflush.h>
 
 static unsigned long ramdump_base	__initdata;
@@ -38,7 +39,7 @@ static unsigned long ramdump_size	__initdata;
 static bool ramdump_disable		__initdata;
 
 struct ramdump {
-	void __iomem		*mem_base;
+	unsigned long		mem_base;
 	unsigned long		mem_size;
 	struct mutex		lock;
 	struct kobject		*kobj;
@@ -95,14 +96,28 @@ static ssize_t ramdump_bin_read(struct file *filp, struct kobject *kobj,
 				char *buf, loff_t off, size_t count)
 {
 	void *p = NULL;
+#ifndef CONFIG_64BIT
+	struct page *page, *pages[1];
+#endif
 
 	if (!ram->mem_base || off >= ram->mem_size)
 		return 0;
 
+#ifndef CONFIG_64BIT
+	page = phys_to_page(ram->mem_base + off);
+	pages[0] = page;
+	p = vmap(pages, 1, VM_MAP, PAGE_KERNEL);
+	if (!p) {
+		pr_info("%s, map %lx, %d failed, page:%p, pfn:%lx\n",
+			__func__, (unsigned long)(ram->mem_base + off),
+			count, page, page_to_pfn(page));
+		return -EINVAL;
+	}
+#else
+	p = (void *)(ram->mem_base + off);
+#endif
 	if (off + count > ram->mem_size)
 		count = ram->mem_size - off;
-
-	p = ram->mem_base + off;
 	mutex_lock(&ram->lock);
 	memcpy(buf, p, count);
 	mutex_unlock(&ram->lock);
@@ -111,7 +126,9 @@ static ssize_t ramdump_bin_read(struct file *filp, struct kobject *kobj,
 	if (off + count >= ram->mem_size)
 		pr_info("%s, p=%p %p, off:%lli, c:%zi\n",
 			__func__, buf, p, off, count);
-
+#ifndef CONFIG_64BIT
+	vunmap(p);
+#endif
 	return count;
 }
 
@@ -128,6 +145,9 @@ static ssize_t ramdump_bin_write(struct file *filp,
 				 struct bin_attribute *bin_attr,
 				 char *buf, loff_t off, size_t count)
 {
+	if (!ram->mem_size)
+		return -EINVAL;
+
 	if (ram->mem_base && !strncmp("reboot", buf, 6))
 		kernel_restart("RAM-DUMP finished\n");
 
@@ -261,7 +281,8 @@ void ramdump_sync_data(void)
 
 static int __init ramdump_probe(struct platform_device *pdev)
 {
-	void __iomem *p;
+	void __iomem *p = NULL;
+	int mapped = 0;
 
 	ram = kzalloc(sizeof(struct ramdump), GFP_KERNEL);
 	if (!ram)
@@ -274,9 +295,15 @@ static int __init ramdump_probe(struct platform_device *pdev)
 		pr_info("NO valid ramdump args:%lx %lx\n",
 			ramdump_base, ramdump_size);
 	} else {
+	#ifdef CONFIG_64BIT
 		p = ioremap_cache(ramdump_base, ramdump_size);
-		ram->mem_base = p;
+		ram->mem_base = (unsigned long)p;
 		ram->mem_size = ramdump_size;
+		mapped = 1;
+	#else
+		ram->mem_base = ramdump_base;
+		ram->mem_size = ramdump_size;
+	#endif
 		pr_info("%s, mem_base:%p, %lx, size:%lx\n",
 			__func__, p, ramdump_base, ramdump_size);
 	}
@@ -300,8 +327,8 @@ static int __init ramdump_probe(struct platform_device *pdev)
 err1:
 	kobject_put(ram->kobj);
 err:
-	if (ram->mem_base)
-		iounmap(ram->mem_base);
+	if (mapped)
+		iounmap((void *)ram->mem_base);
 	kfree(ram);
 
 	return -EINVAL;
@@ -310,7 +337,9 @@ err:
 static int ramdump_remove(struct platform_device *pdev)
 {
 	sysfs_remove_bin_file(ram->kobj, &ramdump_attr);
+#ifdef CONFIG_64BIT
 	iounmap(ram->mem_base);
+#endif
 	kobject_put(ram->kobj);
 	kfree(ram);
 	return 0;
