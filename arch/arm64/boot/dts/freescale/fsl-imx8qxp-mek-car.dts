@@ -53,7 +53,7 @@
 	clock-frequency = <1000000>;
 };
 
-&can_rpmsg {
+&vehicle_rpmsg {
 	#address-cells = <2>;
 	#size-cells = <2>;
 	status = "okay";

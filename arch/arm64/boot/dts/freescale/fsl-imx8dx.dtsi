@@ -193,8 +193,8 @@
 		compatible = "fsl,imx8qxp-iomuxc";
 	};
 
-	can_rpmsg: can_rpmsg {
-		compatible = "nxp,imx-can-rpmsg";
+	vehicle_rpmsg: vehicle_rpmsg {
+		compatible = "nxp,imx-vehicle";
 		power-domains = <&pd_dc0>;
 		/*
 		 * fsl,resources is used to open the power of these resources.
