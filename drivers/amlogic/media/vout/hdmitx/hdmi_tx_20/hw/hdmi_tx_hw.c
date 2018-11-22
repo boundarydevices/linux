@@ -4317,6 +4317,10 @@ static void hdcptx_events_handle(unsigned long arg)
 		st_flag = hdmitx_rd_reg(HDMITX_DWC_A_APIINTSTAT);
 		pr_info("hdcp14: instat: 0x%x\n", st_flag);
 	}
+
+	if (st_flag & (1 << 6)) {
+		hdmitx_set_reg_bits(HDMITX_DWC_A_HDCPCFG1, 1, 1, 1);
+	}
 	if (st_flag & (1 << 7)) {
 		hdmitx_wr_reg(HDMITX_DWC_A_APIINTCLR, 1 << 7);
 		hdmitx_hdcp_opr(3);
