@@ -418,10 +418,18 @@ static irqreturn_t mxc_jpeg_dec_irq(int irq, void *priv)
 
 	spin_lock(&jpeg->hw_lock);
 
+	dec_ret = readl(reg + MXC_SLOT_OFFSET(slot, SLOT_STATUS));
+	writel(dec_ret, reg + MXC_SLOT_OFFSET(slot, SLOT_STATUS)); /* w1c */
+
 	ctx = v4l2_m2m_get_curr_priv(jpeg->m2m_dev);
 	if (!ctx) {
 		dev_err(dev,
-			 "Instance released before the end of transaction.\n");
+			"Instance released before the end of transaction 0x%x.",
+			dec_ret);
+		/* soft reset only resets internal state, not registers */
+		mxc_jpeg_sw_reset(reg);
+		/* clear all interrupts */
+		writel(0xFFFFFFFF, reg + MXC_SLOT_OFFSET(slot, SLOT_STATUS));
 		goto job_unlock;
 	}
 
@@ -434,9 +442,6 @@ static irqreturn_t mxc_jpeg_dec_irq(int irq, void *priv)
 		buf_state = VB2_BUF_STATE_ERROR;
 		goto buffers_done;
 	}
-
-	dec_ret = readl(reg + MXC_SLOT_OFFSET(slot, SLOT_STATUS));
-	writel(dec_ret, reg + MXC_SLOT_OFFSET(slot, SLOT_STATUS)); /* w1c */
 
 	if (dec_ret & SLOTa_STATUS_ENC_CONFIG_ERR) {
 		u32 ret = readl(reg + CAST_STATUS12);
