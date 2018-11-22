@@ -146,6 +146,10 @@ zinstall install:
 
 %.dtb: scripts
 	$(Q)$(MAKE) $(build)=$(boot)/dts/amlogic $(boot)/dts/amlogic/$@
+ifeq ($(CONFIG_AMLOGIC_MODIFY),y)
+%.dtbo: scripts
+	$(Q)$(MAKE) $(build)=$(boot)/dts/amlogic $(boot)/dts/amlogic/$@
+endif
 
 PHONY += dtbs dtbs_install
 

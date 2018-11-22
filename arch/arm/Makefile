@@ -337,6 +337,10 @@ $(INSTALL_TARGETS):
 
 %.dtb: | scripts
 	$(Q)$(MAKE) $(build)=$(boot)/dts/amlogic MACHINE=$(MACHINE) $(boot)/dts/amlogic/$@
+ifeq ($(CONFIG_AMLOGIC_MODIFY),y)
+%.dtbo: | scripts
+	$(Q)$(MAKE) $(build)=$(boot)/dts/amlogic MACHINE=$(MACHINE) $(boot)/dts/amlogic/$@
+endif
 
 PHONY += dtbs dtbs_install
 

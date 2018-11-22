@@ -322,6 +322,11 @@ cmd_dtc = mkdir -p $(dir ${dtc-tmp}) ; \
 $(obj)/%.dtb: $(src)/%.dts FORCE
 	$(call if_changed_dep,dtc)
 
+ifeq ($(CONFIG_AMLOGIC_MODIFY),y)
+$(obj)/%.dtbo: $(src)/%.dts FORCE
+	$(call if_changed_dep,dtc)
+endif
+
 dtc-tmp = $(subst $(comma),_,$(dot-target).dts.tmp)
 
 # cat
