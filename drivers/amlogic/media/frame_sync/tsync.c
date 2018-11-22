@@ -745,17 +745,18 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 	switch (event) {
 	case VIDEO_START:
 		tsync_video_started = 1;
-		/*
-		 *set tsync mode to vmaster to avoid video block caused
-		 *by avpts-diff too much
-		 *threshold 120s is an arbitrary value
-		 */
+
+	//set tsync mode to vmaster to avoid video block caused
+	// by avpts-diff too much
+	//threshold 120s is an arbitrary value
+
 		if (tsync_enable && !get_vsync_pts_inc_mode())
 			tsync_mode = TSYNC_MODE_AMASTER;
-		else {
+		else{
 			tsync_mode = TSYNC_MODE_VMASTER;
 			if (get_vsync_pts_inc_mode())
 				tsync_stat = TSYNC_STAT_PCRSCR_SETUP_NONE;
+
 		}
 
 		if (tsync_dec_reset_flag)
@@ -786,6 +787,8 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			if (abs(param - t) > tsync_av_threshold_max) {
 				/* if this happens, then play */
 				tsync_stat = TSYNC_STAT_PCRSCR_SETUP_VIDEO;
+				tsync_mode = TSYNC_MODE_VMASTER;
+				tsync_enable = 0;
 				timestamp_pcrscr_set(param);
 				set_pts_realign();
 			}
@@ -822,7 +825,6 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 	case VIDEO_TSTAMP_DISCONTINUITY: {
 		unsigned int oldpts = timestamp_vpts_get();
 		int oldmod = tsync_mode;
-
 		if (tsync_mode == TSYNC_MODE_VMASTER)
 			t = timestamp_apts_get();
 		else
@@ -838,6 +840,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			tsync_mode_switch('V', abs(param - t),
 							  param - oldpts);
 		}
+
 		timestamp_vpts_set(param);
 		if (tsync_mode == TSYNC_MODE_VMASTER) {
 			timestamp_pcrscr_set(param);
@@ -866,7 +869,6 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			t = timestamp_vpts_get();
 		else
 			t = timestamp_pcrscr_get();
-
 		amlog_level(LOG_LEVEL_ATTENTION,
 				"AUDIO_TSTAMP_DISCONTINUITY, 0x%x, 0x%x\n",
 				t, param);
