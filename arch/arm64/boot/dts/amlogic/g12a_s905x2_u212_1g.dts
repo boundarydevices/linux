@@ -152,14 +152,14 @@
 		};
 	};
 
-	dummy-battery {
+	amlogic_battery:dummy-battery {
 		compatible = "amlogic, dummy-battery";
-		status = "okay";
+		status = "disabled";
 	};
 
-	dummy-charger {
+	amlogic_charger:dummy-charger {
 		compatible = "amlogic, dummy-charger";
-		status = "okay";
+		status = "disabled";
 	};
 
 	gpioleds {
