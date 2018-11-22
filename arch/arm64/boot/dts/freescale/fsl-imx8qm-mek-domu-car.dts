@@ -55,7 +55,7 @@
 /delete-node/ &i2c1_lvds1;
 /delete-node/ &i2c0_mipi_csi0;
 
-&can_rpmsg {
+&vehicle_rpmsg {
 	#address-cells = <2>;
 	#size-cells = <2>;
 	status = "okay";

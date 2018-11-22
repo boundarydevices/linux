@@ -84,7 +84,7 @@
 	status = "disabled";
 };
 
-&can_rpmsg {
+&vehicle_rpmsg {
 	#address-cells = <2>;
 	#size-cells = <2>;
 	status = "okay";

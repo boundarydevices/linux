@@ -1,0 +1,14 @@
+#
+# vehicle rpmsg configuration
+#
+
+menu "MXC vehicle rpmsg setting"
+
+config VEHICLE_RPMSG
+       tristate "NXP RPMSG VEHICLE support"
+       select EXTCON
+       help
+          If you say yes here you get support for the NXP RPMSG
+          vehicle module.
+
+endmenu

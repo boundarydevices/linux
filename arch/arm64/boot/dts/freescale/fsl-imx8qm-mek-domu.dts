@@ -197,8 +197,8 @@
 		#size-cells = <2>;
 
 		/* Android Auto Kernel will use this */
-		can_rpmsg: can_rpmsg {
-			compatible = "nxp,imx-can-rpmsg";
+		vehicle_rpmsg: vehicle_rpmsg {
+			compatible = "nxp,imx-vehicle";
 			power-domains = <&pd_dc1>;
 			/*
 			 * fsl,resources is used to open the power of these resources.
