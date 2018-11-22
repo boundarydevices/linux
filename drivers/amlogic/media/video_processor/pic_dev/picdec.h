@@ -97,6 +97,12 @@ struct compat_source_input_s)
 
 #endif
 
+struct picdec_private_s {
+	struct ge2d_context_s *context;
+	unsigned long phyaddr;
+	unsigned int buf_len;
+};
+
 #define PICDEC_IOC_MAGIC  'P'
 #define PICDEC_IOC_FRAME_RENDER     _IOW(PICDEC_IOC_MAGIC, 0x00, \
 struct source_input_s)

@@ -60,6 +60,7 @@ static int dump_file_flag;
 static int p2p_mode = 2;
 static int output_format_mode = 1;
 static int txlx_output_format_mode = 1;
+static int cma_layout_flag = 1;
 
 #define NO_TASK_MODE
 
@@ -548,7 +549,8 @@ static int picdec_start(void)
 			map_start, picdec_device.mapping, map_size);
 	} else{
 		picdec_device.mapping = NULL;
-		picdec_device.vir_addr = phys_to_virt(map_start);
+		if (!cma_layout_flag)
+			picdec_device.vir_addr = phys_to_virt(map_start);
 	}
 	vf_provider_init(&picdec_vf_prov, PROVIDER_NAME, &picdec_vf_provider,
 					 NULL);
@@ -761,6 +763,24 @@ int fill_black_color_by_ge2d(struct vframe_s *vf,
 		return 0;
 }
 
+static int picdec_memset_phyaddr(ulong phys, u32 size, u32 val)
+{
+	u32 i, span = SZ_1M;
+	u32 count = size / PAGE_ALIGN(span);
+	ulong addr = phys;
+	u8 *p;
+
+	for (i = 0; i < count; i++) {
+		addr = phys + i * span;
+		p = codec_mm_vmap(addr, span);
+		if (!p)
+			return -1;
+		memset(p, val, span);
+		codec_mm_unmap_phyaddr(p);
+	}
+	return 0;
+}
+
 int fill_color(struct vframe_s *vf, struct ge2d_context_s *context,
 			   struct config_para_ex_s *ge2d_config)
 {
@@ -795,10 +815,17 @@ int fill_color(struct vframe_s *vf, struct ge2d_context_s *context,
 			if (ret < 0)
 				pr_err("fill black color by ge2d failed\n");
 		} else {
-			p = phys_to_virt(cs0.addr);
-			memset(p, 0, cs0.width * cs0.height);
-			p = phys_to_virt(cs1.addr);
-			memset(p, 0x80, cs1.width * cs1.height);
+			if (!cma_layout_flag) {
+				p = phys_to_virt(cs0.addr);
+				memset(p, 0, cs0.width * cs0.height);
+				p = phys_to_virt(cs1.addr);
+				memset(p, 0x80, cs1.width * cs1.height);
+			} else {
+				picdec_memset_phyaddr(cs0.addr,
+					(cs0.width * cs0.height), 0);
+				picdec_memset_phyaddr(cs1.addr,
+					(cs1.width * cs1.height), 0x80);
+			}
 		}
 	}
 	do_gettimeofday(&end);
@@ -845,6 +872,27 @@ static void rotate_adjust(int w_in, int h_in, int *w_out, int *h_out, int angle)
 	*h_out = h;
 }
 
+static int copy_phybuf_to_file(ulong phys, u32 size,
+					   struct file *fp, loff_t pos)
+{
+	u32 i, span = SZ_1M;
+	u32 count = size / PAGE_ALIGN(span);
+	ulong addr = phys;
+	u8 *p;
+
+	for (i = 0; i < count; i++) {
+		addr = phys + i * span;
+		p = codec_mm_vmap(addr, span);
+		if (!p)
+			return -1;
+		vfs_write(fp, (char *)p,
+			span, &pos);
+		pos += span;
+		codec_mm_unmap_phyaddr(p);
+	}
+	return 0;
+}
+
 int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 					   struct config_para_ex_s *ge2d_config)
 {
@@ -857,6 +905,7 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 	int dst_top, dst_left, dst_width, dst_height;
 	struct file *filp = NULL;
 	loff_t pos = 0;
+	int ret = 0;
 	void __iomem *p;
 	mm_segment_t old_fs = get_fs();
 
@@ -865,9 +914,14 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 				  (ulong)(picdec_device.assit_buf_start),
 				  canvas_width * 3, canvas_height,
 				  CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
-	aml_pr_info(1, "picdec_pre_process start\n");
-	picdec_pre_process();
-	aml_pr_info(1, "picdec_pre_process finish\n");
+	if (!cma_layout_flag) {
+		aml_pr_info(1, "picdec_pre_process start\n");
+		picdec_pre_process();
+		aml_pr_info(1, "picdec_pre_process finish\n");
+	} else {
+		dma_flush(picdec_device.assit_buf_start,
+		(canvas_width * picdec_device.origin_height * 3));
+	}
 	ge2d_config->alu_const_color = 0;	/* 0x000000ff; */
 	ge2d_config->bitmask_en = 0;
 	ge2d_config->src1_gb_alpha = 0;	/* 0xff; */
@@ -998,9 +1052,17 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 			if (IS_ERR(filp)) {
 				aml_pr_info(0, "open file failed\n");
 			} else {
-				p = phys_to_virt(cs0.addr);
-				vfs_write(filp, (char *)p,
-					cs0.width * cs0.height, &pos);
+				if (!cma_layout_flag) {
+					p = phys_to_virt(cs0.addr);
+					vfs_write(filp, (char *)p,
+						cs0.width * cs0.height, &pos);
+				} else {
+					ret = copy_phybuf_to_file(cs0.addr,
+						cs0.width * cs0.height,
+						filp, 0);
+					if (ret < 0)
+						pr_err("write yuv444 file failed.\n");
+				}
 				vfs_fsync(filp, 0);
 				filp_close(filp, NULL);
 				set_fs(old_fs);
@@ -1012,13 +1074,29 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 			if (IS_ERR(filp)) {
 				aml_pr_info(0, "open file failed\n");
 			} else {
-				p = phys_to_virt(cs0.addr);
-				vfs_write(filp, (char *)p,
-					cs0.width * cs0.height, &pos);
+				if (!cma_layout_flag) {
+					p = phys_to_virt(cs0.addr);
+					vfs_write(filp, (char *)p,
+						cs0.width * cs0.height, &pos);
+				} else {
+					ret = copy_phybuf_to_file(cs0.addr,
+						cs0.width * cs0.height,
+						filp, 0);
+					if (ret < 0)
+						pr_err("write NV21 Y to file failed\n");
+				}
 				pos = cs0.width * cs0.height;
-				p = phys_to_virt(cs1.addr);
-				vfs_write(filp, (char *)p,
-					cs1.width * cs1.height, &pos);
+				if (!cma_layout_flag) {
+					p = phys_to_virt(cs1.addr);
+					vfs_write(filp, (char *)p,
+						cs1.width * cs1.height, &pos);
+				} else {
+					ret = copy_phybuf_to_file(cs1.addr,
+						cs1.width * cs1.height,
+						filp, pos);
+					if (ret < 0)
+						pr_err("write NV21 UV to file failed\n");
+				}
 				vfs_fsync(filp, 0);
 				filp_close(filp, NULL);
 				set_fs(old_fs);
@@ -1109,7 +1187,7 @@ int picdec_cma_buf_init(void)
 				picdec_device.cma_pages);
 				picdec_device.buffer_size = (72*SZ_1M);
 			} else{
-				flags = CODEC_MM_FLAGS_DMA_CPU |
+				flags = CODEC_MM_FLAGS_DMA |
 					CODEC_MM_FLAGS_CMA_CLEAR;
 				picdec_device.buffer_start =
 					codec_mm_alloc_for_dma("picdec",
@@ -1126,7 +1204,7 @@ int picdec_cma_buf_init(void)
 				picdec_device.cma_pages);
 				picdec_device.buffer_size = (48*SZ_1M);
 			} else{
-				flags = CODEC_MM_FLAGS_DMA_CPU |
+				flags = CODEC_MM_FLAGS_DMA |
 					CODEC_MM_FLAGS_CMA_CLEAR;
 				picdec_device.buffer_start =
 					codec_mm_alloc_for_dma("picdec",
@@ -1267,6 +1345,7 @@ int picdec_buffer_init(void)
 			vfbuf_use[i] = 0;
 		}
 	}
+
 	if (picdec_device.output_format_mode)
 		picdec_device.assit_buf_start =
 			buf_start + canvas_width * canvas_height * 6;
@@ -1364,24 +1443,82 @@ void get_picdec_buf_info(resource_size_t *start, unsigned int *size,
 
 static int picdec_open(struct inode *inode, struct file *file)
 {
-	struct ge2d_context_s *context = NULL;
 	int ret = 0;
+	if (!cma_layout_flag) {
+		struct ge2d_context_s *context = NULL;
 
-	aml_pr_info(1, "open one picdec device\n");
-	file->private_data = context;
-	picdec_device.open_count++;
-	ret = picdec_start();
+		aml_pr_info(1, "open one picdec device\n");
+		file->private_data = context;
+		picdec_device.open_count++;
+		ret = picdec_start();
+	} else {
+		struct picdec_private_s *priv;
+
+		aml_pr_info(1, "open one picdec device\n");
+		priv = kmalloc(sizeof(struct picdec_private_s), GFP_KERNEL);
+		if (!priv) {
+			pr_err("alloc memory failed for amvideo cap\n");
+			return -ENOMEM;
+		}
+		memset(priv, 0, sizeof(struct picdec_private_s));
+		picdec_device.open_count++;
+		ret = picdec_start();
+		priv->context = NULL;
+		priv->phyaddr = (unsigned long)picdec_device.assit_buf_start;
+		priv->buf_len = (picdec_device.buffer_size/3);
+		file->private_data = priv;
+	}
 	return ret;
+}
+
+static int picdec_mmap(struct file *file,
+	struct vm_area_struct *vma)
+{
+	struct picdec_private_s *priv = file->private_data;
+	unsigned long off = vma->vm_pgoff << PAGE_SHIFT;
+	unsigned int vm_size = vma->vm_end - vma->vm_start;
+
+	if (!priv->phyaddr)
+		return -EIO;
+
+	aml_pr_info(1, "priv->phyaddr = %lx , vm_size = %d\n",
+		priv->phyaddr, vm_size);
+
+	if (vm_size == 0)
+		return -EAGAIN;
+
+	off += priv->phyaddr;
+
+	if ((off + vm_size) > (priv->phyaddr + priv->buf_len))
+		return -ENOMEM;
+
+	/*vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);*/
+	vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP | VM_IO;
+
+	if (remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
+				vma->vm_end - vma->vm_start,
+				vma->vm_page_prot)) {
+		pr_err("set_cached: failed remap_pfn_range\n");
+		return -EAGAIN;
+	}
+	aml_pr_info(1, "picdec_mmap ok\n");
+	return 0;
 }
 
 static long picdec_ioctl(struct file *filp, unsigned int cmd,
 						 unsigned long args)
 {
 	int ret = 0;
-	struct ge2d_context_s *context;
 	void __user *argp;
+	struct ge2d_context_s *context;
+	struct picdec_private_s *priv;
 
-	context = (struct ge2d_context_s *) filp->private_data;
+	if (!cma_layout_flag) {
+		context = (struct ge2d_context_s *) filp->private_data;
+	} else {
+		priv = filp->private_data;
+		context = (struct ge2d_context_s *) priv->context;
+	}
 	argp = (void __user *)args;
 	switch (cmd) {
 #ifdef CONFIG_COMPAT
@@ -1445,14 +1582,23 @@ static long picdec_compat_ioctl(struct file *filp,
 
 static int picdec_release(struct inode *inode, struct file *file)
 {
-	struct ge2d_context_s *context =
-		(struct ge2d_context_s *) file->private_data;
+	struct ge2d_context_s *context;
+	struct picdec_private_s *priv = file->private_data;
+
+	if (!cma_layout_flag)
+		context = (struct ge2d_context_s *) file->private_data;
+	else
+		context = (struct ge2d_context_s *) priv->context;
 
 	aml_pr_info(1, "picdec stop start");
 	picdec_stop();
 	if (context && (destroy_ge2d_work_queue(context) == 0)) {
 		picdec_device.open_count--;
 		return 0;
+	}
+	if (cma_layout_flag) {
+		kfree(priv);
+		priv = NULL;
 	}
 	aml_pr_info(0, "release one picdec device\n");
 	return -1;
@@ -1472,6 +1618,7 @@ static long picdec_compat_ioctl(struct file *filp, unsigned int cmd,
 static const struct file_operations picdec_fops = {
 	.owner = THIS_MODULE,
 	.open = picdec_open,
+	.mmap = picdec_mmap,
 	.unlocked_ioctl = picdec_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = picdec_compat_ioctl,
@@ -1822,6 +1969,9 @@ MODULE_PARM_DESC(output_format_mode, "\n picdec output fomat mode\n");
 
 module_param(txlx_output_format_mode, uint, 0664);
 MODULE_PARM_DESC(txlx_output_format_mode, "\n txlx picdec output fomat mode\n");
+
+module_param(cma_layout_flag, uint, 0664);
+MODULE_PARM_DESC(cma_layout_flag, "\n cma layout change flag\n");
 
 MODULE_DESCRIPTION("Amlogic picture decoder driver");
 MODULE_LICENSE("GPL");
