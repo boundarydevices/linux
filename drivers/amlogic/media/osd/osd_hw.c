@@ -7238,6 +7238,7 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 {
 	int i;
 	u32 reg_offset = 2;
+	u32 osd1_alpha_div = 0, osd2_alpha_div = 0;
 #ifdef OSD_BLEND_SHIFT_WORKAROUND
 	u32 osd_count = OSD_BLEND_LAYERS;
 #else
@@ -7256,19 +7257,29 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 		blend_reg->blend_din_en	  << 20|
 		blend_reg->din_premult_en	  << 16|
 		blend_reg->din_reoder_sel);
+	if (blend_reg->postbld_osd1_premult)
+		osd1_alpha_div = 1;
+	if (blend_reg->postbld_osd2_premult)
+		osd2_alpha_div = 1;
+	/* VIU_OSD_BLEND_CTRL1 */
+	VSYNCOSD_WR_MPEG_REG(VIU_OSD_BLEND_CTRL1,
+		 (osd1_alpha_div & 0x1) |
+		(3 << 4) |
+		((osd2_alpha_div & 0x1) << 12) |
+		(3 << 16));
 	/* vpp osd1 blend ctrl */
 	VSYNCOSD_WR_MPEG_REG(OSD1_BLEND_SRC_CTRL,
 		(0 & 0xf) << 0 |
 		(0 & 0x1) << 4 |
 		(blend_reg->postbld_src3_sel & 0xf) << 8 |
-		(blend_reg->postbld_osd1_premult & 0x1) << 16|
+		(0 << 16) |
 		(1 & 0x1) << 20);
 	/* vpp osd2 blend ctrl */
 	VSYNCOSD_WR_MPEG_REG(OSD2_BLEND_SRC_CTRL,
 		(0 & 0xf) << 0 |
 		(0 & 0x1) << 4 |
 		(blend_reg->postbld_src4_sel & 0xf) << 8 |
-		(blend_reg->postbld_osd2_premult & 0x1) << 16 |
+		(0 << 16) |
 		(1 & 0x1) << 20);
 
 	VSYNCOSD_WR_MPEG_REG(VIU_OSD_BLEND_BLEND0_SIZE,
