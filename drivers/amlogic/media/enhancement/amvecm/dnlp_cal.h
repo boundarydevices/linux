@@ -75,6 +75,7 @@ extern unsigned int ve_dnlp_rt;
 extern unsigned int ve_dnlp_luma_sum;
 extern ulong ve_dnlp_lpf[64];
 extern ulong ve_dnlp_reg[16];
+extern ulong ve_dnlp_reg_v2[32];
 extern ulong ve_dnlp_reg_def[16];
 extern struct dnlp_parse_cmd_s dnlp_parse_cmd[];
 

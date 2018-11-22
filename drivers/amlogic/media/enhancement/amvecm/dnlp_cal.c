@@ -11,10 +11,12 @@
 #include "arch/vpp_regs.h"
 #include <linux/amlogic/media/amvecm/ve.h>
 #include "dnlp_algorithm/dnlp_alg.h"
+#include <linux/amlogic/media/amvecm/amvecm.h>
 
 bool ve_en;
 unsigned int ve_dnlp_rt;
 ulong ve_dnlp_lpf[64], ve_dnlp_reg[16];
+ulong ve_dnlp_reg_v2[32];
 ulong ve_dnlp_reg_def[16] = {
 	0x0b070400,	0x1915120e,	0x2723201c,	0x35312e2a,
 	0x47423d38,	0x5b56514c,	0x6f6a6560,	0x837e7974,
@@ -448,14 +450,28 @@ void ve_dnlp_calculate_reg(void)
 {
 	ulong i = 0, j = 0, cur = 0, data = 0,
 			offset = ve_dnlp_rt ? (1 << (ve_dnlp_rt - 1)) : 0;
-	for (i = 0; i < 16; i++) {
-		ve_dnlp_reg[i] = 0;
-		cur = i << 2;
-		for (j = 0; j < 4; j++) {
-			data = (ve_dnlp_lpf[cur + j] + offset) >> ve_dnlp_rt;
-			if (data > 255)
-				data = 255;
-			ve_dnlp_reg[i] |= data << (j << 3);
+	if (is_meson_tl1_cpu()) {
+		for (i = 0; i < 32; i++) {
+			ve_dnlp_reg_v2[i] = 0;
+			cur = i << 1;
+			for (j = 0; j < 2; j++) {
+				data = ve_dnlp_lpf[cur + j] << 2;
+				if (data > 1023)
+					data = 1023;
+				ve_dnlp_reg_v2[i] |= data << (j << 4);
+			}
+		}
+	} else {
+		for (i = 0; i < 16; i++) {
+			ve_dnlp_reg[i] = 0;
+			cur = i << 2;
+			for (j = 0; j < 4; j++) {
+				data = (ve_dnlp_lpf[cur + j] + offset) >>
+					ve_dnlp_rt;
+				if (data > 255)
+					data = 255;
+				ve_dnlp_reg[i] |= data << (j << 3);
+			}
 		}
 	}
 }

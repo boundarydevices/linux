@@ -160,9 +160,15 @@ void am_set_regmap(struct am_regs_s *p)
 			}
 
 			if (!cm_en) {
-				if (p->am_reg[i].addr == 0x208)
-					p->am_reg[i].val =
+				if (p->am_reg[i].addr == 0x208) {
+					if (get_cpu_type() ==
+						MESON_CPU_MAJOR_ID_TL1)
+						p->am_reg[i].val =
+						p->am_reg[i].val & 0xfffffffe;
+					else
+						p->am_reg[i].val =
 						p->am_reg[i].val & 0xfffffffd;
+				}
 				pr_amcm_dbg("[amcm]:%s REG_TYPE_INDEX_VPPCHROMA addr:0x%x",
 					__func__, p->am_reg[i].addr);
 			} else if (p->am_reg[i].addr == 0x208) {
@@ -264,9 +270,20 @@ void amcm_disable(void)
 
 	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
 	temp = READ_VPP_REG(VPP_CHROMA_DATA_PORT);
-	if (temp & 0x2) {
-		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
-		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, temp & 0xfffffffd);
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+		if (temp & 0x1) {
+			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
+				0x208);
+			WRITE_VPP_REG(VPP_CHROMA_DATA_PORT,
+				temp & 0xfffffffe);
+		}
+	} else {
+		if (temp & 0x2) {
+			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
+				0x208);
+			WRITE_VPP_REG(VPP_CHROMA_DATA_PORT,
+				temp & 0xfffffffd);
+		}
 	}
 	cm_en_flag = false;
 }
@@ -279,9 +296,20 @@ void amcm_enable(void)
 		WRITE_VPP_REG_BITS(VPP_MISC, 1, 28, 1);
 	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
 	temp = READ_VPP_REG(VPP_CHROMA_DATA_PORT);
-	if (!(temp & 0x2)) {
-		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
-		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, temp | 0x2);
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+		if (!(temp & 0x1)) {
+			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
+				0x208);
+			WRITE_VPP_REG(VPP_CHROMA_DATA_PORT,
+				temp | 0x1);
+		}
+	} else {
+		if (!(temp & 0x2)) {
+			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
+				0x208);
+			WRITE_VPP_REG(VPP_CHROMA_DATA_PORT,
+				temp | 0x2);
+		}
 	}
 	cm_en_flag = true;
 }

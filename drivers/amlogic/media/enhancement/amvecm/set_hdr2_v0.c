@@ -1475,6 +1475,9 @@ void hdr_func(enum hdr_module_sel module_sel,
 	else
 		return;
 
+	if (is_meson_tl1_cpu())
+		bit_depth = 10;
+
 #ifdef HDR2_MODULE
 	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf,
 		sld_eotf, sld_oetf, hlg_eotf, hlg_oetf, ootf_gain,
