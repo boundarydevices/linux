@@ -158,7 +158,7 @@ void pre_data_rate_change(state_struct *state)
 	msleep(20);
 }
 
-u8 pma_cmn_ready(state_struct *state)
+int pma_cmn_ready(state_struct *state)
 {
 	u32 i;
 
@@ -172,7 +172,7 @@ u8 pma_cmn_ready(state_struct *state)
 	return 0;
 }
 
-u8 pma_rx_clk_signal_detect(state_struct *state)
+int pma_rx_clk_signal_detect(state_struct *state)
 {
 	u32 i;
 
@@ -186,7 +186,7 @@ u8 pma_rx_clk_signal_detect(state_struct *state)
 	return 0;
 }
 
-u32 pma_rx_clk_freq_detect(state_struct *state)
+int pma_rx_clk_freq_detect(state_struct *state)
 {
 	u16 reg_val;
 	u32 rx_clk_freq;
@@ -219,7 +219,7 @@ u32 pma_rx_clk_freq_detect(state_struct *state)
 	return rx_clk_freq;
 }
 
-u8 pma_pll_config(state_struct *state,
+int pma_pll_config(state_struct *state,
 		    u32 rx_clk_freq,
 		    clk_ratio_t clk_ratio,
 		    tmds_bit_clock_ratio_t tmds_bit_clk_ratio,
