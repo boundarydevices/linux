@@ -691,6 +691,8 @@ static int __exit aml_vdac_remove(struct platform_device *pdev)
 static int amvdac_drv_suspend(struct platform_device *pdev,
 		pm_message_t state)
 {
+	if (s_vdac_data->cpu_id == VDAC_CPU_TXL)
+		vdac_hiu_reg_write(HHI_VDAC_CNTL0, 0);
 	pr_info("%s: suspend module\n", __func__);
 	return 0;
 }
