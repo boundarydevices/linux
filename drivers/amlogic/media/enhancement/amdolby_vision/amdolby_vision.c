@@ -2602,6 +2602,10 @@ void enable_dolby_vision(int enable)
 						0, 3, 1);   /* bypass core3  */
 				VSYNC_WR_MPEG_REG(VPP_WRAP_OSD1_MATRIX_EN_CTRL,
 					0x0);
+				VSYNC_WR_MPEG_REG(VPP_WRAP_OSD2_MATRIX_EN_CTRL,
+					0x0);
+				VSYNC_WR_MPEG_REG(VPP_WRAP_OSD3_MATRIX_EN_CTRL,
+					0x0);
 				if (dolby_vision_mask & 2)
 					VSYNC_WR_MPEG_REG_BITS(
 						DOLBY_PATH_CTRL,
@@ -2850,6 +2854,10 @@ void enable_dolby_vision(int enable)
 				pr_dolby_dbg("Dolby Vision STB cores turn off\n");
 			} else if (is_meson_g12()) {
 				VSYNC_WR_MPEG_REG(VPP_WRAP_OSD1_MATRIX_EN_CTRL,
+					0x1);
+				VSYNC_WR_MPEG_REG(VPP_WRAP_OSD2_MATRIX_EN_CTRL,
+					0x1);
+				VSYNC_WR_MPEG_REG(VPP_WRAP_OSD3_MATRIX_EN_CTRL,
 					0x1);
 				VSYNC_WR_MPEG_REG_BITS(
 					DOLBY_PATH_CTRL,
