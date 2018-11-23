@@ -1593,7 +1593,7 @@ static unsigned int osd_oetf_41_2084_mapping_100[OSD_OETF_LUT_SIZE] = {
 	 523
 };
 
-static const uint osd_eotf_33_709_mapping_290[EOTF_LUT_SIZE] = {
+static unsigned int osd_eotf_33_709_mapping_290[EOTF_LUT_SIZE] = {
 	    0,     8,    37,    90,   169,   276,   412,   579,
 	  776,  1006,  1268,  1564,  1894,  2258,  2658,  3094,
 	 3566,  4075,  4621,  5204,  5826,  6486,  7185,  7923,
@@ -1602,7 +1602,7 @@ static const uint osd_eotf_33_709_mapping_290[EOTF_LUT_SIZE] = {
 };
 
 /* osd oetf lut: 2084 from baozheng */
-static const uint osd_oetf_41_2084_mapping_290[OSD_OETF_LUT_SIZE] = {
+static unsigned int osd_oetf_41_2084_mapping_290[OSD_OETF_LUT_SIZE] = {
 	   0,  141,  178,  203,  221,  236,  249,  260,
 	 270,  325,  360,  386,  406,  423,  438,  451,
 	 462,  473,  482,  491,  499,  507,  514,  520,
