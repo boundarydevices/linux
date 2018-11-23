@@ -1801,7 +1801,7 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 					pr_info("%d\n",
 						dnlp_scurv_mid1_copy[val]);
 			}
-		} else if (!strcmp(parm[1], "scu v_mid2")) {
+		} else if (!strcmp(parm[1], "scurv_mid2")) {
 			if (parm[2] == NULL) {
 				pr_info("error cmd\n");
 				goto free_buf;
