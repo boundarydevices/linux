@@ -176,16 +176,16 @@ int caam_sm_example_init(struct platform_device *pdev)
 	 * so pad them out.
 	 */
 	if (sm_keystore_slot_alloc(ksdev, unit, AES_BLOCK_PAD(8), &keyslot8))
-		goto dealloc;
+		goto freemem;
 
 	if (sm_keystore_slot_alloc(ksdev, unit, AES_BLOCK_PAD(16), &keyslot16))
-		goto dealloc;
+		goto dealloc_slot8;
 
 	if (sm_keystore_slot_alloc(ksdev, unit, AES_BLOCK_PAD(24), &keyslot24))
-		goto dealloc;
+		goto dealloc_slot16;
 
 	if (sm_keystore_slot_alloc(ksdev, unit, AES_BLOCK_PAD(32), &keyslot32))
-		goto dealloc;
+		goto dealloc_slot24;
 
 
 	/* Now load clear key data into the newly allocated slots */
@@ -441,11 +441,13 @@ int caam_sm_example_init(struct platform_device *pdev)
 
 	/* Remove keys from keystore */
 dealloc:
-	sm_keystore_slot_dealloc(ksdev, unit, keyslot8);
-	sm_keystore_slot_dealloc(ksdev, unit, keyslot16);
-	sm_keystore_slot_dealloc(ksdev, unit, keyslot24);
 	sm_keystore_slot_dealloc(ksdev, unit, keyslot32);
-
+dealloc_slot24:
+	sm_keystore_slot_dealloc(ksdev, unit, keyslot24);
+dealloc_slot16:
+	sm_keystore_slot_dealloc(ksdev, unit, keyslot16);
+dealloc_slot8:
+	sm_keystore_slot_dealloc(ksdev, unit, keyslot8);
 
 	/* Free resources */
 freemem:
