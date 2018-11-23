@@ -41,6 +41,7 @@
 #include <linux/amlogic/pm.h>
 #include <linux/kobject.h>
 #include <../kernel/power/power.h>
+#include <linux/amlogic/scpi_protocol.h>
 
 typedef unsigned long (psci_fn)(unsigned long, unsigned long,
 				unsigned long, unsigned long);
@@ -157,6 +158,8 @@ ssize_t suspend_reason_show(struct device *dev, struct device_attribute *attr,
 {
 	unsigned int len;
 
+	if (scpi_get_wakeup_reason(&suspend_reason))
+		return -EPERM;
 	len = sprintf(buf, "%d\n", suspend_reason);
 
 	return len;
