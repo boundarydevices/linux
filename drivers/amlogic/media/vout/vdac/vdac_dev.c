@@ -443,8 +443,18 @@ void vdac_enable(bool on, unsigned int module_sel)
 				break;
 			vdac_out_cntl1_bit3(0, VDAC_MODULE_TVAFE);
 			vdac_out_cntl0_bit10(1, VDAC_MODULE_TVAFE);
+			if (s_vdac_data->cpu_id == VDAC_CPU_TL1) {
+				/*[6][8]bypass buffer enable*/
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 1, 6, 1);
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 1, 8, 1);
+			}
 		} else {
 			ana_ref_cntl0_bit9(0, VDAC_MODULE_TVAFE);
+			if (s_vdac_data->cpu_id == VDAC_CPU_TL1) {
+				/*[6][8]bypass buffer disable*/
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 0, 6, 1);
+				vdac_hiu_reg_setb(HHI_VDAC_CNTL1_G12A, 0, 8, 1);
+			}
 			pri_flag &= ~VDAC_MODULE_TVAFE;
 			if (pri_flag & VDAC_MODULE_CVBS_OUT)
 				break;

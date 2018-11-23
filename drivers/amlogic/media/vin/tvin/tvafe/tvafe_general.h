@@ -124,6 +124,14 @@
 #define P_HHI_ADC_PLL_CNTL1			CBUS_REG_ADDR(HHI_ADC_PLL_CNTL1)
 #define HHI_GCLK_OTHER              0x54
 
+#define HHI_ADC_PLL_CNTL0_TL1		0xb0
+#define HHI_ADC_PLL_CNTL1_TL1		0xb1
+#define HHI_ADC_PLL_CNTL2_TL1		0xb2
+#define HHI_ADC_PLL_CNTL3_TL1		0xb3
+#define HHI_ADC_PLL_CNTL4_TL1		0xb4
+#define HHI_ADC_PLL_CNTL5_TL1		0xb5
+#define HHI_ADC_PLL_CNTL6_TL1		0xb6
+
 /* adc pll ctl, atv demod & tvafe use the same adc module*/
 /* module index: atv demod:0x01; tvafe:0x2*/
 #define ADC_EN_ATV_DEMOD	0x1
@@ -150,6 +158,7 @@ enum tvafe_cpu_type {
 	CPU_TYPE_TXLX  = 2,
 	CPU_TYPE_TXHD = 3,
 	CPU_TYPE_GXLX = 4,
+	CPU_TYPE_TL1 = 5,
 };
 
 struct meson_tvafe_data {
