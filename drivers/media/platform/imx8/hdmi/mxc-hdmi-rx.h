@@ -124,6 +124,7 @@ struct mxc_hdmi_rx_dev {
 	bool cable_plugin;
 
 	u8 is_cec;
+	bool cec_running;
 	struct imx_cec_dev cec;
 	u32 sample_rate;
 	u32 sample_width;
