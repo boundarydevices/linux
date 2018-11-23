@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_qos.h>
 #include <linux/pm_domain.h>
+#include <linux/reboot.h>
 #include <linux/rpmsg.h>
 #include <linux/delay.h>
 #include <linux/extcon.h>
@@ -404,6 +405,14 @@ static void vehicle_deinit_handler(struct work_struct *work)
 	}
 }
 
+static struct notifier_block vehicle_reboot_nb = {
+	.notifier_call = vehicle_deinit_handler,
+};
+
+static struct notifier_block vehicle_panic_nb = {
+	.notifier_call = vehicle_deinit_handler,
+};
+
 static int vehicle_rpmsg_probe(struct rpmsg_device *rpdev)
 {
 #ifdef CONFIG_EXTCON
@@ -573,12 +582,18 @@ static int vehicle_init(void)
 		pr_err("Failed to register rpmsg vehicle driver\n");
 		return err;
 	}
+	atomic_notifier_chain_register(&panic_notifier_list,
+					&vehicle_panic_nb);
+	register_reboot_notifier(&vehicle_reboot_nb);
 	return 0;
 }
 
 static void __exit vehicle_exit(void)
 {
 	platform_driver_unregister(&vehicle_device_driver);
+	atomic_notifier_chain_unregister(&panic_notifier_list,
+				&vehicle_panic_nb);
+	unregister_reboot_notifier(&vehicle_reboot_nb);
 }
 
 core_initcall(vehicle_init);
