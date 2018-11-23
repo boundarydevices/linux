@@ -282,7 +282,6 @@ void ramdump_sync_data(void)
 static int __init ramdump_probe(struct platform_device *pdev)
 {
 	void __iomem *p = NULL;
-	int mapped = 0;
 
 	ram = kzalloc(sizeof(struct ramdump), GFP_KERNEL);
 	if (!ram)
@@ -299,7 +298,6 @@ static int __init ramdump_probe(struct platform_device *pdev)
 		p = ioremap_cache(ramdump_base, ramdump_size);
 		ram->mem_base = (unsigned long)p;
 		ram->mem_size = ramdump_size;
-		mapped = 1;
 	#else
 		ram->mem_base = ramdump_base;
 		ram->mem_size = ramdump_size;
@@ -327,8 +325,9 @@ static int __init ramdump_probe(struct platform_device *pdev)
 err1:
 	kobject_put(ram->kobj);
 err:
-	if (mapped)
-		iounmap((void *)ram->mem_base);
+#ifdef CONFIG_64BIT
+	iounmap((void *)ram->mem_base);
+#endif
 	kfree(ram);
 
 	return -EINVAL;
@@ -338,7 +337,7 @@ static int ramdump_remove(struct platform_device *pdev)
 {
 	sysfs_remove_bin_file(ram->kobj, &ramdump_attr);
 #ifdef CONFIG_64BIT
-	iounmap(ram->mem_base);
+	iounmap((void *)ram->mem_base);
 #endif
 	kobject_put(ram->kobj);
 	kfree(ram);
