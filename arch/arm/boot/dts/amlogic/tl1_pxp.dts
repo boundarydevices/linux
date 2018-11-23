@@ -146,6 +146,31 @@
 		tdmout_index = <1>;
 	};
 
+	aml_dtv_demod {
+		compatible = "amlogic, ddemod-tl1";
+		dev_name = "aml_dtv_demod";
+		status = "okay";
+
+		//pinctrl-names="dtvdemod_agc";
+		//pinctrl-0=<&dtvdemod_agc>;
+
+		clocks = <&clkc CLKID_DAC_CLK>;
+		clock-names = "vdac_clk_gate";
+
+		reg = <0xff650000 0x4000	/*dtv demod base*/
+			   0xff63c000 0x2000	/*hiu reg base*/
+			   0xff800000 0x1000	/*io_aobus_base*/
+			   0xffd01000 0x1000	/*reset*/
+			>;
+
+		/*move from dvbfe*/
+		dtv_demod0_mem = <0>;	// need move to aml_dtv_demod ?
+		spectrum = <1>;
+		cma_flag = <1>;
+		cma_mem_size = <8>;
+		//memory-region = <&demod_cma_reserved>;//<&demod_reserved>;
+	};
+
 	auge_sound {
 		compatible = "amlogic, tl1-sound-card";
 		aml-audio-card,name = "AML-AUGESOUND";

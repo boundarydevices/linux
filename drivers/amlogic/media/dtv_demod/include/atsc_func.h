@@ -53,6 +53,8 @@ int check_atsc_fsm_status(void);
 void atsc_write_reg(unsigned int reg_addr, unsigned int reg_data);
 
 unsigned int atsc_read_reg(unsigned int reg_addr);
+extern void atsc_write_reg_v4(unsigned int addr, unsigned int data);
+extern unsigned int atsc_read_reg_v4(unsigned int addr);
 
 unsigned int atsc_read_iqr_reg(void);
 

@@ -60,6 +60,7 @@ enum Gxtv_Demod_Dvb_Mode {
 #define Demod_Clk_180M    180000	/*  */
 #define Demod_Clk_200M    200000	/*  */
 #define Demod_Clk_225M    225000
+#define Demod_Clk_250M    250000
 
 #define Adc_Clk_27M                     27777	/* atsc */
 #define Demod_Clk_83M     83333	/*  */
@@ -93,7 +94,8 @@ struct ss_reg_vt {
 
 /* rigister offset page */
 #define IC_OFFS_V2	(0x02)	/*MG9TV, GXTVBB, TXL*/
-#define IC_OFFS_V3	(0x03)	/*TXLX, GXLX...*/
+#define IC_OFFS_V3	(0x03)	/*TXLX, GXLX, TXHD*/
+#define IC_OFFS_V4	(0x04)	/*TL1*/
 
 
 
@@ -108,17 +110,15 @@ struct ss_reg_vt {
 #define IC_DVBT_V2	(0x02)	/*TXLX*/
 #define IC_ATSC_V2	(0x02)	/*TXLX*/
 
-#define IC_OFFS_V2	(0x02) /*MG9TV, GXTVBB, TXL*/
-#define IC_OFFS_V3	(0x03) /*TXLX, GXLX, TXHD*/
-
 /*-----------------------*/
 #define IC_VER_GTVBB	(0x00)
 #define IC_VER_TXL	(0x01)
 #define IC_VER_TXLX	(0x02)
 #define IC_VER_GXLX	(0x03)
 #define IC_VER_TXHD	(0x04)
+#define IC_VER_TL1	(0x05)
 
-#define IC_VER_NUB	(0x05)
+#define IC_VER_NUB	(0x06)
 
 
 /*-----------------------*/
@@ -154,11 +154,13 @@ struct ic_ver {
 };
 struct ddemod_reg_off {
 	/* register address offset for demod*/
-	unsigned int off_demod;
+	unsigned int off_demod_top;
 	unsigned int off_dvbc;
 	unsigned int off_dtmb;
 	unsigned int off_dvbt;
 	unsigned int off_atsc;
+	unsigned int off_front;
+	unsigned int off_isdbt;
 
 #if 0
 	/*vertual address for dtv demod*/
@@ -263,7 +265,7 @@ struct amldtvdemod_device_s {
 	struct dvb_frontend frontend;	/**/
 #endif
 	const struct amlfe_exp_config *afe_cfg;
-
+	struct dentry *demod_root;
 };
 extern struct amldtvdemod_device_s *dtvdd_devp;	/**/
 
@@ -393,7 +395,19 @@ static inline void __iomem *gbase_atsc(void)
 static inline void __iomem *gbase_demod(void)
 {
 	return dtvdd_devp->reg_v[ES_MAP_ADDR_DEMOD].v
-		+ dtvdd_devp->ireg.off_demod;
+		+ dtvdd_devp->ireg.off_demod_top;
+}
+
+static inline void __iomem *gbase_isdbt(void)
+{
+	return dtvdd_devp->reg_v[ES_MAP_ADDR_DEMOD].v
+		+ dtvdd_devp->ireg.off_isdbt;
+}
+
+static inline void __iomem *gbase_front(void)
+{
+	return dtvdd_devp->reg_v[ES_MAP_ADDR_DEMOD].v
+		+ dtvdd_devp->ireg.off_front;
 }
 
 static inline void __iomem *gbase_aobus(void)
@@ -417,7 +431,7 @@ static inline unsigned int gphybase_demod(void)
 static inline unsigned int gphybase_demodcfg(void)
 {
 	return dtvdd_devp->reg_p[ES_MAP_ADDR_DEMOD].phy_addr
-			+ dtvdd_devp->ireg.off_demod;
+			+ dtvdd_devp->ireg.off_demod_top;
 }
 
 static inline unsigned int gphybase_hiu(void)

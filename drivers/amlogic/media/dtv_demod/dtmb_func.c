@@ -192,9 +192,24 @@ void dtmb_initial(struct aml_demod_sta *demod_sta)
 /* dtmb_write_reg(0x049, memstart);		//only for init */
 	/*dtmb_spectrum = 1; no use */
 	dtmb_spectrum = demod_sta->spectrum;
-	dtmb_register_reset();
-	dtmb_all_reset();
 
+	if (is_ic_ver(IC_VER_TL1)) {
+		front_write_reg_v4(0x39,
+			(front_read_reg_v4(0x39) | (1 << 30)));
+
+		if (demod_sta->adc_freq == Adc_Clk_24M) {
+			dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x6aaaaa);
+			dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x13196596);
+			dtmb_write_reg(0x5b << 2, 0x50a30a25);
+		} else if (demod_sta->adc_freq == Adc_Clk_25M) {
+			dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x62c1a5);
+			dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x131a747d);
+			dtmb_write_reg(0x5b << 2, 0x4d6a0a25);
+		}
+	} else {
+		dtmb_register_reset();
+		dtmb_all_reset();
+	}
 }
 
 int check_dtmb_fec_lock(void)

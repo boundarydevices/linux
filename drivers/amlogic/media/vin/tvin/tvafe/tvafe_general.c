@@ -550,6 +550,17 @@ void tvafe_set_ddemod_default(void)
 		W_APB_REG(TVFE_VAFE_CTRL0, 0x000d0710);
 		W_APB_REG(TVFE_VAFE_CTRL1, 0x0);
 		W_APB_REG(TVFE_VAFE_CTRL2, 0x1010eeb0);
+	} else if (tvafe_cpu_type() == CPU_TYPE_TL1) {
+		W_APB_REG(TVFE_VAFE_CTRL0, 0x000d0710);
+		W_APB_REG(TVFE_VAFE_CTRL1, 0x3000);
+		W_APB_REG(TVFE_VAFE_CTRL2, 0x1fe09e31);
+
+		W_HIU_REG(HHI_DADC_CNTL, 0x0030303c);
+		W_HIU_REG(HHI_DADC_CNTL2, 0x00003480);
+		W_HIU_REG(HHI_DADC_CNTL3, 0x08300b83);
+
+		//HHI_VDAC_CNTL1
+		W_HIU_REG(0xbc, 0x0);
 	}
 
 }
@@ -775,7 +786,7 @@ int adc_set_pll_cntl(bool on, unsigned int module_sel, void *pDtvPara)
 				W_HIU_REG(HHI_ADC_PLL_CNTL0_TL1, 0x012004e0);
 				W_HIU_REG(HHI_ADC_PLL_CNTL0_TL1, 0x312004e0);
 				W_HIU_REG(HHI_ADC_PLL_CNTL1_TL1, 0x05400000);
-				W_HIU_REG(HHI_ADC_PLL_CNTL2_TL1, 0xe1800000);
+				W_HIU_REG(HHI_ADC_PLL_CNTL2_TL1, 0xe0800000);
 				W_HIU_REG(HHI_ADC_PLL_CNTL3_TL1, 0x48681c00);
 				W_HIU_REG(HHI_ADC_PLL_CNTL4_TL1, 0x88770290);
 				W_HIU_REG(HHI_ADC_PLL_CNTL5_TL1, 0x39272000);
@@ -786,6 +797,11 @@ int adc_set_pll_cntl(bool on, unsigned int module_sel, void *pDtvPara)
 				adc_pll_lock_cnt++;
 			} while (!R_HIU_BIT(HHI_ADC_PLL_CNTL0_TL1, 31, 1) &&
 				(adc_pll_lock_cnt < 10));
+
+			W_HIU_REG(0xf3, 0x00800000);
+			//HHI_AUDPLL_CLK_OUT_CNTL
+			W_HIU_REG(0x74, 0x501);
+
 		} else if (tvafe_cpu_type() == CPU_TYPE_TXL ||
 			tvafe_cpu_type() == CPU_TYPE_TXLX ||
 			tvafe_cpu_type() == CPU_TYPE_TXHD) {

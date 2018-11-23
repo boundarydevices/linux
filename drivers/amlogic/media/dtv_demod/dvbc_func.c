@@ -350,7 +350,7 @@ int dvbc_set_ch(struct aml_demod_sta *demod_sta,
 	if (demod_sta->ch_if == 0)
 		demod_sta->ch_if = 5000;
 	demod_sta->symb_rate = symb_rate;
-	if (is_dvbc_ver(IC_DVBC_V3))
+	if ((!is_ic_ver(IC_VER_TL1)) && is_dvbc_ver(IC_DVBC_V3))
 		demod_sta->adc_freq = demod_dvbc->dat0;
 
 #if 0

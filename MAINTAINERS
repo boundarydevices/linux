@@ -14479,14 +14479,18 @@ F:	drivers/amlogic/media/vout/backlight/aml_ldim/iw7027_bl.c
 F:	drivers/amlogic/media/vout/backlight/aml_ldim/iw7027_bl.h
 
 AMLOGIC DTV DEMOD DRIVER
-M:      Jihong Sui <jihong.sui@amlogic.com>
-F:      include/uapi/linux/dvb/aml_demod.h
-F:      drivers/amlogic/media/amldemod/*
+M:	Jihong Sui <jihong.sui@amlogic.com>
+F:	include/uapi/linux/dvb/aml_demod.h
+F:	drivers/amlogic/media/amldemod/*
 
 AMLOGIC DTV DEMOD DRIVER
 M:      Jihong Sui <jihong.sui@amlogic.com>
 F:      drivers/amlogic/media/amldemod/*
 F:      drivers/amlogic/media/dtv_demod/*
+
+AMLOGIC DTV DEMOD DRIVER
+M:      Zhiwei Yuan <zhiwei.yuan@amlogic.com>
+F:      drivers/amlogic/media/dtv_demod/include/addr_atsc*.h
 
 AMLOGIC DEFENDKEY DRIVER
 M:	Zhongfu Luo <zhongfu.luo@amlogic.com>

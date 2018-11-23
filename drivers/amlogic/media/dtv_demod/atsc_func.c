@@ -1196,8 +1196,6 @@ void atsc_thread(void)
 
 }
 
-
-
 #if 0
 static dtmb_cfg_t list_dtmb_v1[99] = {
 	{0x00000000, 0x01, 0},

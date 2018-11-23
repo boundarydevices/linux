@@ -21,9 +21,10 @@
 #include <linux/dvb/aml_demod.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
+#include <linux/unistd.h>
+#include <linux/delay.h>
 /*#include "acf_filter_coefficient.h"*/
 #include <linux/mutex.h>
-
 
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 
@@ -37,20 +38,9 @@ MODULE_PARM_DESC(debug_demod, "\n\t\t Enable frontend debug information");
 static int debug_demod;
 module_param(debug_demod, int, 0644);
 
-
-
-
-
-
-
-
-
 MODULE_PARM_DESC(demod_mobile_power, "\n\t\t demod_mobile_power debug information");
 static int demod_mobile_power = 100;
 module_param(demod_mobile_power, int, 0644);
-
-
-
 
 static struct mutex mp;
 static struct mutex dtvpll_init_lock;
@@ -141,6 +131,11 @@ void adc_dpll_setup(int clk_a, int clk_b, int clk_sys, int dvb_mode)
 
 	struct dfe_adcpll_para ddemod_pll;
 	int sts_pll;
+
+	if (is_ic_ver(IC_VER_TL1)) {
+		dtvpll_init_flag(1);
+		return;
+	}
 
 	adc_pll_cntl.d32 = 0;
 	adc_pll_cntl2.d32 = 0;
@@ -406,12 +401,12 @@ void adc_dpll_setup(int clk_a, int clk_b, int clk_sys, int dvb_mode)
 				demod_read_demod_reg(ADC_REGD));
 		PR_DBG("[adc][%x]%x\n", ADC_REGE,
 				demod_read_demod_reg(ADC_REGE));
-		PR_DBG("[demod][%x]%x\n", DEMOD_REG1,
-				demod_read_demod_reg(DEMOD_REG1));
-		PR_DBG("[demod][%x]%x\n", DEMOD_REG2,
-				demod_read_demod_reg(DEMOD_REG2));
-		PR_DBG("[demod][%x]%x\n", DEMOD_REG3,
-				demod_read_demod_reg(DEMOD_REG3));
+		PR_DBG("[demod][%x]%x\n", DEMOD_TOP_REG0,
+				demod_read_demod_reg(DEMOD_TOP_REG0));
+		PR_DBG("[demod][%x]%x\n", DEMOD_TOP_REG4,
+				demod_read_demod_reg(DEMOD_TOP_REG4));
+		PR_DBG("[demod][%x]%x\n", DEMOD_TOP_REG8,
+				demod_read_demod_reg(DEMOD_TOP_REG8));
 	} else if (is_meson_gxlx_cpu()) {
 		/*demod_set_demod_reg(TXLX_ADC_RESET_VALUE, ADC_REG3);*/
 		/*demod_set_demod_reg(adc_pll_cntl.d32, ADC_REG1);*/
@@ -467,12 +462,12 @@ void adc_dpll_setup(int clk_a, int clk_b, int clk_sys, int dvb_mode)
 				demod_read_demod_reg(ADC_REG4));
 		PR_DBG("[adc][%x]%x\n", ADC_REG6,
 				demod_read_demod_reg(ADC_REG6));
-		PR_DBG("[demod][%x]%x\n", DEMOD_REG1,
-				demod_read_demod_reg(DEMOD_REG1));
-		PR_DBG("[demod][%x]%x\n", DEMOD_REG2,
-				demod_read_demod_reg(DEMOD_REG2));
-		PR_DBG("[demod][%x]%x\n", DEMOD_REG3,
-				demod_read_demod_reg(DEMOD_REG3));
+		PR_DBG("[demod][%x]%x\n", DEMOD_TOP_REG0,
+				demod_read_demod_reg(DEMOD_TOP_REG0));
+		PR_DBG("[demod][%x]%x\n", DEMOD_TOP_REG4,
+				demod_read_demod_reg(DEMOD_TOP_REG4));
+		PR_DBG("[demod][%x]%x\n", DEMOD_TOP_REG8,
+				demod_read_demod_reg(DEMOD_TOP_REG8));
 	}
 #endif
 	ddemod_pll.adcpllctl = adc_pll_cntl.d32;
@@ -548,6 +543,17 @@ void demod_set_demod_reg(unsigned int data, unsigned int addr)
 	void __iomem *vaddr;
 
 	mutex_lock(&mp);
+	vaddr = ioremap((addr), 0x4);
+	writel(data, vaddr);
+	iounmap(vaddr);
+	mutex_unlock(&mp);
+}
+
+void demod_set_tvfe_reg(unsigned int data, unsigned int addr)
+{
+	void __iomem *vaddr;
+
+	mutex_lock(&mp);
 	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
 	vaddr = ioremap((addr), 0x4);
 	writel(data, vaddr);
@@ -565,18 +571,27 @@ unsigned int demod_read_demod_reg(unsigned int addr)
 	tmp = readl(vaddr);
 	iounmap(vaddr);
 	mutex_unlock(&mp);
-/* printk("[demod][read]%x,data is %x\n",(addr),tmp); */
+
 	return tmp;
 }
 
 void power_sw_hiu_reg(int on)
 {
 	if (on == PWR_ON) {
-		dd_tvafe_hiu_reg_write(HHI_DEMOD_MEM_PD_REG,
-		(dd_tvafe_hiu_reg_read(HHI_DEMOD_MEM_PD_REG) & (~0x2fff)));
+		if (is_ic_ver(IC_VER_TL1))
+			dd_tvafe_hiu_reg_write(HHI_DEMOD_MEM_PD_REG, 0);
+		else
+			dd_tvafe_hiu_reg_write(HHI_DEMOD_MEM_PD_REG,
+			(dd_tvafe_hiu_reg_read(HHI_DEMOD_MEM_PD_REG)
+			& (~0x2fff)));
 	} else {
-		dd_tvafe_hiu_reg_write(HHI_DEMOD_MEM_PD_REG,
-		(dd_tvafe_hiu_reg_read(HHI_DEMOD_MEM_PD_REG) | 0x2fff));
+		if (is_ic_ver(IC_VER_TL1))
+			dd_tvafe_hiu_reg_write(HHI_DEMOD_MEM_PD_REG,
+				0xffffffff);
+		else
+			dd_tvafe_hiu_reg_write(HHI_DEMOD_MEM_PD_REG,
+			(dd_tvafe_hiu_reg_read
+			(HHI_DEMOD_MEM_PD_REG) | 0x2fff));
 
 	}
 }
@@ -643,6 +658,50 @@ if (is_ic_ver(IC_VER_TXLX) || is_ic_ver(IC_VER_TXHD)) {
 	PR_DBG("[PWR]: GXLX not support power switch,power mem\n");
 
 		power_sw_hiu_reg(PWR_ON);
+} else if  (is_ic_ver(IC_VER_TL1))  {
+
+	if (pwr_cntl == PWR_ON) {
+		PR_DBG("[PWR]: Power on demod_comp %x,%x\n",
+		       AO_RTI_GEN_PWR_SLEEP0, AO_RTI_GEN_PWR_ISO0);
+		/* Powerup demod_comb */
+		reg_data = demod_read_ao_reg(AO_RTI_GEN_PWR_SLEEP0);
+		demod_set_ao_reg((reg_data & (~(0x1 << 10))),
+				 AO_RTI_GEN_PWR_SLEEP0);
+		/* [10] power on */
+		/*PR_DBG("[PWR]: Power on demod_comp %x,%x\n",*/
+		/*      TXLX_HHI_DEMOD_MEM_PD_REG, TXLX_RESET0_LEVEL);*/
+
+		/* Power up memory */
+		power_sw_hiu_reg(PWR_ON);
+		/* reset */
+		power_sw_reset_reg(1); /*reset*/
+	/*	msleep(20);*/
+
+		/* remove isolation */
+		demod_set_ao_reg(
+			(demod_read_ao_reg(AO_RTI_GEN_PWR_ISO0) &
+			  (~(0x3 << 14))), AO_RTI_GEN_PWR_ISO0);
+
+		/* pull up reset */
+		power_sw_reset_reg(0); /*reset*/
+/* *P_RESET0_LEVEL |= (0x1<<8); */
+	} else {
+		PR_DBG("[PWR]: Power off demod_comp\n");
+
+		/* add isolation */
+		demod_set_ao_reg(
+			(demod_read_ao_reg(AO_RTI_GEN_PWR_ISO0) |
+			  (0x3 << 14)), AO_RTI_GEN_PWR_ISO0);
+
+		/* power down memory */
+		power_sw_hiu_reg(PWR_OFF);
+		/* power down demod_comb */
+		reg_data = demod_read_ao_reg(AO_RTI_GEN_PWR_SLEEP0);
+		demod_set_ao_reg((reg_data | (0x1 << 10)),
+				 AO_RTI_GEN_PWR_SLEEP0);
+		/* [10] power on */
+	}
+	/*} else if (is_meson_gxlx_cpu()) {*/
 } else {
 	if (pwr_cntl == PWR_ON) {
 		PR_DBG("[PWR]: Power on demod_comp %x,%x\n",
@@ -697,6 +756,10 @@ void demod_set_mode_ts(unsigned char dvb_mode)
 	if (dvb_mode == Gxtv_Dtmb) {
 		cfg0.b.ts_sel = 1;
 		cfg0.b.mode = 1;
+		if (is_ic_ver(IC_VER_TL1)) {
+			cfg0.b.adc_format = 0;
+			cfg0.b.adc_regout = 0;
+		}
 	} else if (dvb_mode == Gxtv_Dvbt_Isdbt) {
 		cfg0.b.ts_sel = 1<<1;
 		cfg0.b.mode = 1<<1;
@@ -706,8 +769,10 @@ void demod_set_mode_ts(unsigned char dvb_mode)
 		cfg0.b.ts_sel = 1<<2;
 		cfg0.b.mode = 1<<2;
 		cfg0.b.adc_format = 0;
-		cfg0.b.adc_regout = 1;
-		cfg0.b.adc_regadj = 2;
+		if (!is_ic_ver(IC_VER_TL1)) {
+			cfg0.b.adc_regout = 1;
+			cfg0.b.adc_regadj = 2;
+		}
 	} else if (dvb_mode == Gxtv_Dvbc) {
 		if (is_dvbc_ver(IC_DVBC_V2)) {
 			cfg0.b.ts_sel = 2;
@@ -722,8 +787,7 @@ void demod_set_mode_ts(unsigned char dvb_mode)
 		}
 	}
 
-	demod_write_reg(DEMOD_REG1, cfg0.d32);
-
+	demod_write_reg(DEMOD_TOP_REG0, cfg0.d32);
 }
 
 void clocks_set_sys_defaults(unsigned char dvb_mode)
@@ -735,19 +799,19 @@ void clocks_set_sys_defaults(unsigned char dvb_mode)
 
 	tvafe_set_ddemod_default();
 	demod_set_demod_default();
-
 	sts_pll = adc_set_pll_cntl(1, 0x04, NULL);
+
 	if (sts_pll < 0) {
 		/*set pll fail*/
 		PR_ERR("%s:set pll default fail! please check!\n", __func__);
 	}
+
 	demod_set_mode_ts(dvb_mode);
 	cfg2.b.biasgen_en = 1;
 	cfg2.b.en_adc = 1;
-
-	demod_write_reg(DEMOD_REG3, cfg2.d32);
+	demod_write_reg(DEMOD_TOP_REG8, cfg2.d32);
 	PR_DBG("dvb_mode is %d\n", dvb_mode);
-	debug_check_reg_val(REG_M_DEMOD, DEMOD_REG1);
+	debug_check_reg_val(REG_M_DEMOD, DEMOD_TOP_REG0);
 
 }
 #if 0
@@ -774,6 +838,7 @@ void dtmb_write_reg(int reg_addr, int reg_data)
 {
 	if (!get_dtvpll_init_flag())
 		return;
+
 	mutex_lock(&mp);
 	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
 
@@ -791,7 +856,9 @@ unsigned int dtmb_read_reg(unsigned int reg_addr)
 		return 0;
 
 	mutex_lock(&mp);
+
 	tmp = readl(gbase_dtmb() + reg_addr);
+
 	mutex_unlock(&mp);
 
 	return tmp;
@@ -801,6 +868,9 @@ unsigned int dtmb_read_reg(unsigned int reg_addr)
 /* */
 void dvbt_write_reg(unsigned int addr, unsigned int data)
 {
+
+	if (!get_dtvpll_init_flag())
+		return;
 
 	mutex_lock(&mp);
 	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
@@ -813,6 +883,9 @@ void dvbt_write_reg(unsigned int addr, unsigned int data)
 unsigned int dvbt_read_reg(unsigned int addr)
 {
 	unsigned int tmp;
+
+	if (!get_dtvpll_init_flag())
+		return 0;
 
 	mutex_lock(&mp);
 
@@ -855,6 +928,36 @@ unsigned int atsc_read_reg(unsigned int reg_addr)
 	return tmp & 0xff;
 }
 
+/*TL1*/
+void atsc_write_reg_v4(unsigned int addr, unsigned int data)
+{
+	if (!get_dtvpll_init_flag())
+		return;
+
+	mutex_lock(&mp);
+	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
+
+	writel(data, gbase_atsc() + (addr << 2));
+
+	mutex_unlock(&mp);
+}
+
+unsigned int atsc_read_reg_v4(unsigned int addr)
+{
+	unsigned int tmp;
+
+	if (!get_dtvpll_init_flag())
+		return 0;
+
+	mutex_lock(&mp);
+
+	tmp = readl(gbase_atsc() + (addr << 2));
+
+	mutex_unlock(&mp);
+
+	return tmp;
+}
+
 unsigned int atsc_read_iqr_reg(void)
 {
 	unsigned int tmp;
@@ -872,8 +975,12 @@ unsigned int atsc_read_iqr_reg(void)
 	return tmp & 0xffffffff;
 }
 
-
-
+#if 0
+void demod_init_mutex(void)
+{
+	mutex_init(&mp);
+}
+#endif
 
 int demod_set_sys(struct aml_demod_sta *demod_sta,
 		  struct aml_demod_sys *demod_sys)
@@ -882,12 +989,14 @@ int demod_set_sys(struct aml_demod_sta *demod_sta,
 /* demod_sta->tmp=Adc_mode; */
 	unsigned char dvb_mode;
 	int clk_adc, clk_dem;
+	int nco_rate;
 	/* int gpioDV_2;*/
 	/*int gpiW_2;*/
 
 	dvb_mode = demod_sta->dvb_mode;
 	clk_adc = demod_sys->adc_clk;
 	clk_dem = demod_sys->demod_clk;
+	nco_rate = ((clk_adc / 1000) * 256) / 224 + 2;
 	PR_DBG
 	    ("demod_set_sys,clk_adc is %d,clk_demod is %d\n",
 	     clk_adc, clk_dem);
@@ -933,13 +1042,23 @@ int demod_set_sys(struct aml_demod_sta *demod_sta,
 			demod_set_reg_rlt(TXLX_DEMOD_REG4, 0x8);
 		} else if (!is_meson_txlx_cpu()) {
 			/* open arbit */
-			/* demod_set_demod_reg(0x8, DEMOD_REG4);*/
+			/* demod_set_demod_reg(0x8, DEMOD_TOP_REGC);*/
 			demod_set_reg_rlt(GXBB_DEMOD_REG4, 0x8);
 			PR_DBG("[open arbit]dtmb\n");
 		}
 		#else
-		demod_write_reg(DEMOD_REG4, 0x8);
-		PR_DBG("[open arbit]dtmb\n");
+		if (is_ic_ver(IC_VER_TL1)) {
+			demod_write_reg(DEMOD_TOP_REGC, 0x11);
+			front_write_reg_v4(0x20,
+				((front_read_reg_v4(0x20) & ~0xff)
+				| (nco_rate & 0xff)));
+
+			front_write_reg_v4(0x20,
+				(front_read_reg_v4(0x20) | (1 << 8)));
+		} else {
+			demod_write_reg(DEMOD_TOP_REGC, 0x8);
+			PR_DBG("[open arbit]dtmb\n");
+		}
 		#endif
 /*	} else if ((dvb_mode == Gxtv_Dvbt_Isdbt) && is_meson_txlx_cpu()) {*/
 	} else if ((dvb_mode == Gxtv_Dvbt_Isdbt) && is_ic_ver(IC_VER_TXLX)) {
@@ -948,14 +1067,557 @@ int demod_set_sys(struct aml_demod_sta *demod_sta,
 		/*demod_set_demod_reg(0x8, TXLX_DEMOD_REG4);*/
 		demod_set_reg_rlt(TXLX_DEMOD_REG4, 0x8);
 		#else
-		demod_write_reg(DEMOD_REG4, 0x8);
+		demod_write_reg(DEMOD_TOP_REGC, 0x8);
 		#endif
 		PR_DBG("[open arbit]dvbt,txlx\n");
+	} else if (is_ic_ver(IC_VER_TL1) && (dvb_mode == Gxtv_Atsc)) {
+		demod_write_reg(DEMOD_TOP_REGC, 0x11);
+		front_write_reg_v4(0x20, ((front_read_reg_v4(0x20) & ~0xff)
+				| (nco_rate & 0xff)));
+		front_write_reg_v4(0x20, (front_read_reg_v4(0x20) | (1 << 8)));
+	} else if (is_ic_ver(IC_VER_TL1) && (dvb_mode == Gxtv_Dvbc)) {
+		nco_rate = ((clk_adc / 1000) * 256) / 250 + 2;
+		demod_write_reg(DEMOD_TOP_REGC, 0x11);
+		front_write_reg_v4(0x20, ((front_read_reg_v4(0x20) & ~0xff)
+				| (nco_rate & 0xff)));
+		front_write_reg_v4(0x20, (front_read_reg_v4(0x20) | (1 << 8)));
 	}
+
 	demod_sta->adc_freq = clk_adc;
 	demod_sta->clk_freq = clk_dem;
 	return 0;
 }
+
+//#ifdef HIGH_MEM
+#if 0
+int memorystart = 0x29c00000;//0x35100000;//0x1ef00000;0x9300000 7ca00000
+#endif
+
+/*TL1*/
+void demod_set_sys_dtmb_v4(void)
+{
+	#if 0//move to clocks_set_sys_defaults
+	int nco_rate;
+
+	nco_rate = (24*256)/224+2;
+	//app_apb_write_reg(0xf00*4,0x11 );
+	demod_write_reg(DEMOD_TOP_REG0, 0x11);
+	//app_apb_write_reg(0xf08*4,0x201);
+	demod_write_reg(DEMOD_TOP_REG8, 0x201);
+	//app_apb_write_reg(0xf0c*4,0x11);
+	demod_write_reg(DEMOD_TOP_REGC, 0x11);
+	//app_apb_write_reg(0xe20*4,
+			//((app_apb_read_reg(0xe20*4) &~ 0xff)
+			//| (nco_rate & 0xff)));
+
+	front_write_reg_v4(0x20, ((front_read_reg_v4(0x20) & ~0xff)
+			| (nco_rate & 0xff)));
+
+	//app_apb_write_reg(0xe20*4,  (app_apb_read_reg(0xe20*4) | (1 << 8)));
+	front_write_reg_v4(0x20, (front_read_reg_v4(0x20) | (1 << 8)));
+	#endif
+
+	//app_apb_write_reg(0x49,memorystart);
+	//move to enter_mode()
+	//dtmb_write_reg(DTMB_FRONT_MEM_ADDR, memorystart);
+
+	#if 0//move to dtmb_all_reset()
+	//app_apb_write_reg(0xe39,	(app_apb_read_reg(0xe39) | (1 << 30)));
+	front_write_reg_v4(0x39,	(front_read_reg_v4(0x39) | (1 << 30)));
+
+
+	//24M
+	//app_apb_write_reg(0x25, 0x6aaaaa);
+	//app_apb_write_reg(0x3e, 0x13196596);
+	//app_apb_write_reg(0x5b, 0x50a30a25);
+	dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x6aaaaa);
+	dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x13196596);
+	dtmb_write_reg(0x5b << 2, 0x50a30a25);
+	#endif
+
+	//25m
+	//app_apb_write_reg(0x25, 0x62c1a5);
+	//app_apb_write_reg(0x3e, 0x131a747d);
+	//app_apb_write_reg(0x5b, 0x4d6a0a25);
+	//dtmb_write_reg(0x25, 0x62c1a5);
+	//dtmb_write_reg(0x3e, 0x131a747d);
+	//dtmb_write_reg(0x5b, 0x4d6a0a25);
+}
+
+void demod_set_sys_atsc_v4(void)
+{
+	//int nco_rate;
+	#if 0//move to gxtv_demod_atsc_set_frontend()
+	union ATSC_DEMOD_REG_0X6A_BITS Val_0x6a;
+	union ATSC_EQ_REG_0XA5_BITS Val_0xa5;
+	union ATSC_CNTR_REG_0X20_BITS Val_0x20;
+	union ATSC_DEMOD_REG_0X54_BITS  Val_0x54;
+	union ATSC_DEMOD_REG_0X55_BITS	Val_0x55;
+	union ATSC_DEMOD_REG_0X6E_BITS  Val_0x6e;
+	#endif
+
+	//PR_INFO("%s\n", __func__);
+	//nco_rate = (24*256)/224+2;// 24 | 25
+	//hardware_reset();
+	//app_apb_write_reg(0xf0c, 0x10);
+	//demod_write_reg(DEMOD_TOP_REGC, 0x10);//apb write enable
+
+	#if 0//move to clocks_set_sys_defaults()
+	//demod_front_init_cmd();
+	//app_apb_write_reg(0xf00*4,0x44 );
+	demod_write_reg(DEMOD_TOP_REG0, 0x44);
+	//app_apb_write_reg(0xf08*4,0x201);
+	demod_write_reg(DEMOD_TOP_REG8, 0x201);
+	#endif
+
+	#if 0//move to demod_set_sys()
+	//app_apb_write_reg(0xf0c*4,0x11);
+	demod_write_reg(DEMOD_TOP_REGC, 0x11);
+	//app_apb_write_reg(0xe20*4,((app_apb_read_reg(0xe20*4) &~ 0xff)
+			//| (nco_rate & 0xff)));
+	front_write_reg_v4(0x20, ((front_read_reg_v4(0x20) & ~0xff)
+			| (nco_rate & 0xff)));
+	//app_apb_write_reg(0xe20*4,  (app_apb_read_reg(0xe20*4) | (1 << 8)));
+	front_write_reg_v4(0x20, (front_read_reg_v4(0x20) | (1 << 8)));
+	#endif
+
+	#if 0//move to gxtv_demod_atsc_set_frontend()
+	//set_cr_ck_rate();
+	//Read Reg
+	Val_0x6a.bits = atsc_read_reg_v4(ATSC_DEMOD_REG_0X6A);
+	Val_0xa5.bits = atsc_read_reg_v4(ATSC_EQ_REG_0XA5);
+
+	//24M begin
+	Val_0x54.bits = atsc_read_reg_v4(ATSC_DEMOD_REG_0X54);
+	Val_0x55.bits = atsc_read_reg_v4(ATSC_DEMOD_REG_0X55);
+	Val_0x6e.bits = atsc_read_reg_v4(ATSC_DEMOD_REG_0X6E);
+	//24M end
+
+	//Set Reg
+	Val_0x6a.b.peak_thd = 0x6;//Let CCFO Quality over 6
+	Val_0xa5.bits = 0x8c;//increase state 2 to state 3
+
+	//24M begin
+	Val_0x54.bits = 0x1aaaaa;//24m 5m if
+	Val_0x55.bits = 0x3ae28d;//24m
+	Val_0x6e.bits = 0x16e3600;
+	//24M end
+
+	//Write Reg
+	atsc_write_reg_v4(ATSC_DEMOD_REG_0X6A, Val_0x6a.bits);
+	atsc_write_reg_v4(ATSC_EQ_REG_0XA5, Val_0xa5.bits);
+
+	//24M begin
+	atsc_write_reg_v4(ATSC_DEMOD_REG_0X54, Val_0x54.bits);
+	atsc_write_reg_v4(ATSC_DEMOD_REG_0X55, Val_0x55.bits);
+	atsc_write_reg_v4(ATSC_DEMOD_REG_0X6E, Val_0x6e.bits);
+	//24M end
+
+	//atsc_reset();
+	Val_0x20.bits = atsc_read_reg_v4(ATSC_CNTR_REG_0X20);
+	Val_0x20.b.cpu_rst = 1;
+	atsc_write_reg_v4(ATSC_CNTR_REG_0X20, Val_0x20.bits);
+	Val_0x20.b.cpu_rst = 0;
+	atsc_write_reg_v4(ATSC_CNTR_REG_0X20, Val_0x20.bits);
+	usleep_range(5000, 5001);
+	#endif
+}
+
+/*TL1*/
+void set_j83b_filter_reg_v4(void)
+{
+	//j83_1
+	qam_write_reg(0x40, 0x36333c0d);
+	qam_write_reg(0x41, 0xa110d01);
+	qam_write_reg(0x42, 0xf0e4ea7a);
+	qam_write_reg(0x43, 0x3c0010);
+	qam_write_reg(0x44, 0x7e0065);
+
+
+	//j83_2
+	qam_write_reg(0x45, 0xb3a1905);
+	qam_write_reg(0x46, 0x1c396e07);
+	qam_write_reg(0x47, 0x3801cc08);
+	qam_write_reg(0x48, 0x10800a2);
+
+
+	qam_write_reg(0x49, 0x53b1f03);
+	qam_write_reg(0x4a, 0x18377407);
+	qam_write_reg(0x4b, 0x3401cf0b);
+	qam_write_reg(0x4c, 0x10d00a1);
+}
+
+#if 0
+/*TL1*/
+void dvbc_reg_initial_tmp_v4(struct aml_demod_dvbc *demod_dvbc)
+{
+	int clk_freq;
+	int adc_freq;
+	int ch_mode;
+	int agc_mode;
+	int ch_freq;
+	int ch_if;
+	int ch_bw;
+	int symb_rate;
+	int phs_cfg;
+	int afifo_ctr;
+	int max_frq_off, tmp;
+
+	agc_mode  = 1;
+	ch_if     = 5000;
+	ch_bw     = 8000; // kHz
+	//==important: Chip or FPGA Combo need to change=======
+	clk_freq  = 250000;
+	adc_freq  = 24000;
+	ch_mode   = demod_dvbc->mode;
+	symb_rate = demod_dvbc->symb_rate;
+	ch_freq   = demod_dvbc->ch_freq;
+
+	//printf("in dvbc_func, clk_freq is %d, adc_freq is %d\n",
+		//clk_freq, adc_freq);
+	PR_DBG("in dvbc_func, clk_freq is %d, adc_freq is %d\n",
+		clk_freq, adc_freq);
+
+	// disable irq
+	//app_apb_write_reg(0xd0, 0);
+	qam_write_reg(0x34, 0);
+
+	// reset
+	//dvbc_reset();
+	//app_apb_write_reg(reg_reset,
+		//app_apb_read_reg(reg_reset) & ~(1 << 4)); // disable fsm_en
+	qam_write_reg(0x7,
+		qam_read_reg(0x7) & ~(1 << 4)); // disable fsm_en
+	//app_apb_write_reg(reg_reset,
+		//app_apb_read_reg(reg_reset) & ~(1 << 0)); // Sw disable demod
+	qam_write_reg(0x7,
+		qam_read_reg(0x7) & ~(1 << 0)); // Sw disable demod
+	//app_apb_write_reg(reg_reset,
+		//app_apb_read_reg(reg_reset) | (1 << 0)); // Sw enable demod
+	qam_write_reg(0x7,
+		qam_read_reg(0x7) | (1 << 0)); // Sw enable demod
+
+
+	//app_apb_write_reg(0x000, 0x00000000);  // QAM_STATUS
+	qam_write_reg(0x000, 0x00000000);  // QAM_STATUS
+	//app_apb_write_reg(reg_reset, 0x00000f00);  // QAM_GCTL0
+	qam_write_reg(0x7, 0x00000f00);  // QAM_GCTL0
+	//tmp = app_apb_read_reg(0x008);
+	tmp = qam_read_reg(0x2);
+	tmp = (tmp & 0xfffffff8) | ch_mode;
+	//app_apb_write_reg(0x008, tmp);  // qam mode
+	qam_write_reg(0x2, tmp);  // qam mode
+
+	switch (ch_mode) {
+	case 0: // 16 QAM
+		#if 0
+		app_apb_write_reg(0x1c4, 0xa2200);
+		app_apb_write_reg(0x1c8, 0xc2b0c49);
+		app_apb_write_reg(0x1cc, 0x2020000);
+		app_apb_write_reg(0x1d4, 0xe9178);
+		app_apb_write_reg(0x1d8, 0x1c100);
+		app_apb_write_reg(0x1e8, 0x2ab7ff);
+		app_apb_write_reg(0x24c, 0x641a180c);
+		app_apb_write_reg(0x250, 0xc141400);
+		#else
+		qam_write_reg(0x71, 0xa2200);
+		qam_write_reg(0x72, 0xc2b0c49);
+		qam_write_reg(0x73, 0x2020000);
+		qam_write_reg(0x75, 0xe9178);
+		qam_write_reg(0x76, 0x1c100);
+		qam_write_reg(0x7a, 0x2ab7ff);
+		qam_write_reg(0x93, 0x641a180c);
+		qam_write_reg(0x94, 0xc141400);
+		#endif
+		break;
+
+	case 1: // 32 QAM
+		#if 0
+		app_apb_write_reg(0x1c4, 0x61200);
+		app_apb_write_reg(0x1c8, 0x99301ae);
+		app_apb_write_reg(0x1cc, 0x8080000);
+		app_apb_write_reg(0x1d4, 0xbf10c);
+		app_apb_write_reg(0x1d8, 0xa05c);
+		app_apb_write_reg(0x1dc, 0x1000d6);
+		app_apb_write_reg(0x1e8, 0x19a7ff);
+		app_apb_write_reg(0x1f0, 0x111222);
+		app_apb_write_reg(0x1f4, 0x2020305);
+		app_apb_write_reg(0x1f8, 0x3000d0d);
+		app_apb_write_reg(0x24c, 0x641f1d0c);
+		app_apb_write_reg(0x250, 0xc1a1a00);
+		#else
+		qam_write_reg(0x71, 0x61200);
+		qam_write_reg(0x72, 0x99301ae);
+		qam_write_reg(0x73, 0x8080000);
+		qam_write_reg(0x75, 0xbf10c);
+		qam_write_reg(0x76, 0xa05c);
+		qam_write_reg(0x77, 0x1000d6);
+		qam_write_reg(0x7a, 0x19a7ff);
+		qam_write_reg(0x7c, 0x111222);
+		qam_write_reg(0x7d, 0x2020305);
+		qam_write_reg(0x7e, 0x3000d0d);
+		qam_write_reg(0x93, 0x641f1d0c);
+		qam_write_reg(0x94, 0xc1a1a00);
+		#endif
+		break;
+
+	case 2: // 64 QAM
+		//app_apb_write_reg(0x150, 0x606050d);
+		//		app_apb_write_reg(0x148, 0x346dc);
+		break;
+
+	case 3: // 128 QAM
+		#if 0
+		app_apb_write_reg(0x1c4, 0x2c200);
+		app_apb_write_reg(0x1c8, 0xa6e0059);
+		app_apb_write_reg(0x1cc,  0x8080000);
+		app_apb_write_reg(0x1d4, 0xa70e9);
+		app_apb_write_reg(0x1d8, 0x2013);
+		app_apb_write_reg(0x1dc, 0x35068);
+		app_apb_write_reg(0x1e0, 0xab100);
+		app_apb_write_reg(0x1e8, 0xba7ff);
+		app_apb_write_reg(0x1f0, 0x111222);
+		app_apb_write_reg(0x1f4, 0x2020305);
+		app_apb_write_reg(0x1f8, 0x3000d0d);
+		app_apb_write_reg(0x24c, 0x642a240c);
+		app_apb_write_reg(0x250, 0xc262600);
+		#else
+		qam_write_reg(0x71, 0x2c200);
+		qam_write_reg(0x72, 0xa6e0059);
+		qam_write_reg(0x73,  0x8080000);
+		qam_write_reg(0x75, 0xa70e9);
+		qam_write_reg(0x76, 0x2013);
+		qam_write_reg(0x77, 0x35068);
+		qam_write_reg(0x78, 0xab100);
+		qam_write_reg(0x7a, 0xba7ff);
+		qam_write_reg(0x7c, 0x111222);
+		qam_write_reg(0x7d, 0x2020305);
+		qam_write_reg(0x7e, 0x3000d0d);
+		qam_write_reg(0x93, 0x642a240c);
+		qam_write_reg(0x94, 0xc262600);
+		#endif
+		break;
+
+	case 4: // 256 QAM
+		#if 0
+		app_apb_write_reg(0x270, 0x2a232100);
+		app_apb_write_reg(0x15c, 0x606040d);
+		#else
+		qam_write_reg(0x9c, 0x2a232100);
+		qam_write_reg(0x57, 0x606040d);
+		#endif
+		break;
+	}
+
+	//app_apb_write_reg(0x00c, 0xffff8ffe);  // adc_cnt, symb_cnt
+	qam_write_reg(0x3, 0xffff8ffe);
+
+	#if 0//impossible condition
+	if (clk_freq == 0)
+		afifo_ctr = 0;
+	else
+	#endif
+		afifo_ctr = (adc_freq * 256 / clk_freq) + 2;
+
+	#if 0//impossible condition
+	if (afifo_ctr > 255)
+		afifo_ctr = 255;
+	#endif
+
+	#if 0
+	app_apb_write_reg(0x010, (afifo_ctr<<16) | 8000); // afifo, rs_cnt_cfg
+
+	app_apb_write_reg(0xe20*4, afifo_ctr | 0x100);//front_end afifo nco rate
+	app_apb_write_reg(0xe2f*4, 0x0);    //front_end sfifo out len
+	app_apb_write_reg(0x188, 0x2000); //ffe/fbe taps 88/72
+
+	app_apb_write_reg(0x020, 0x61b53e54);//modified by qiancheng by raymond
+	#else
+	qam_write_reg(0x4, (afifo_ctr<<16) | 8000); // afifo, rs_cnt_cfg
+
+	//front_end afifo nco rate
+	//front_write_reg_v4(0x20, afifo_ctr | 0x100);
+	//front_write_reg_v4(0x2f, 0x0);    //front_end sfifo out len
+	//dvbc_write_reg(0x188, 0x2000); //ffe/fbe taps 88/72
+
+	qam_write_reg(0x8, 0x61b53e54); //modified by qiancheng by raymond
+	#endif
+
+	#if 0//impossible condition
+	if (adc_freq == 0) {
+		phs_cfg = 0;
+	} else {
+	#endif
+		//  8*fo/fs*2^20 fo=36.125, fs = 28.57114, = 21d775
+		phs_cfg = (1<<31) / adc_freq * ch_if / (1<<8);
+	//}
+
+	// printk("phs_cfg = %x\n", phs_cfg);
+	//app_apb_write_reg(0x024,
+		//0x4c000000 | (phs_cfg&0x7fffff));  // PHS_OFFSET, IF offset,
+	qam_write_reg(0x9,
+		0x4c000000 | (phs_cfg&0x7fffff));  // PHS_OFFSET, IF offset,
+
+	#if 0//impossible condition
+	if (adc_freq == 0) {
+		max_frq_off = 0;
+	} else {
+	#endif
+		// max_frq_off = (400KHz * 2^29) / (AD=25 * symbol_rate=68750)
+		max_frq_off = (1<<29) / symb_rate;
+		tmp = 40000000 / adc_freq;
+		max_frq_off = tmp * max_frq_off;
+	//}
+
+	#if 0
+	app_apb_write_reg(0x030, 0x245cf450); //MODIFIED BY QIANCHENG
+	app_apb_write_reg(0x034,
+		((adc_freq & 0xffff) << 16) | (symb_rate&0xffff));
+	#else
+	qam_write_reg(0xc, 0x245cf450); //MODIFIED BY QIANCHENG
+	qam_write_reg(0xd,
+		((adc_freq & 0xffff) << 16) | (symb_rate&0xffff));
+	#endif
+
+	//app_apb_write_reg(0x038, 0x00200000);  // TIM_SWEEP_RANGE 16000
+
+	/************* hw state machine config **********/
+	//apb_write_reg(0, 0x040, 0x003c); // configure symbol rate step step 0
+
+	// modified 0x44 0x48
+	#if 0
+	// blind search, configure max symbol_rate      for 7218  fb=3.6M
+	app_apb_write_reg(0x044, (symb_rate&0xffff)*256);
+	// configure min symbol_rate fb = 6.95M
+	app_apb_write_reg(0x048,
+		((app_apb_read_reg(0x048)&~(0xff<<8))|3400*256));
+	app_apb_write_reg(0x144, (app_apb_read_reg(0x144)&~(0x1<<28)));
+	#else
+	// blind search, configure max symbol_rate      for 7218  fb=3.6M
+	qam_write_reg(0x011, (symb_rate&0xffff)*256);
+	// configure min symbol_rate fb = 6.95M
+	qam_write_reg(0x12,
+		((qam_read_reg(0x12)&~(0xff<<8))|3400*256));
+	qam_write_reg(0x51, (qam_read_reg(0x51)&~(0x1<<28)));
+	#endif
+
+	#if 0//impossible condition
+	if ((agc_mode & 1) == 0)
+		// freeze if agc
+		//app_apb_write_reg(0x094,
+			//app_apb_read_reg(0x94) | (0x1 << 10));
+		// freeze if agc
+		dvbc_write_reg(0x094, dvbc_read_reg(0x94) | (0x1 << 10));
+	#endif
+
+	if ((agc_mode & 2) == 0) // IF control
+		qam_write_reg(0x25, qam_read_reg(0x25) | (0x1 << 13));
+	//app_apb_write_reg(0x098, 0x9fcc8190);//AGC_IFGAIN_CTRL
+	/*
+	 * AGC_RFGAIN_CTRL 0x0e020800 by raymond,
+	 * if Adjcent channel test, maybe it need change.
+	 */
+	//app_apb_write_reg(0x0a0, 0x0e03cd11);
+	// IMQ, QAM Enable
+	//app_apb_write_reg(reg_reset, app_apb_read_reg(reg_reset)|0x33);
+	// IMQ, QAM Enable
+	qam_write_reg(0x7, qam_read_reg(0x7)|0x33);
+
+	// start hardware machine
+	//dvbc_sw_reset(0x004, 4);
+	#if 0
+	app_apb_write_reg(reg_reset, app_apb_read_reg(reg_reset) | (1 << 4));
+	app_apb_write_reg(0x0e8, (app_apb_read_reg(0x0e8)|(1<<2)));
+
+	// clear irq status
+	app_apb_read_reg(0xd4);
+
+	// enable irq
+	app_apb_write_reg(0xd0, 0x7fff<<3);
+	#else
+	qam_write_reg(0x7, qam_read_reg(0x7) | (1 << 4));
+	qam_write_reg(0x3a, (qam_read_reg(0x3a)|(1<<2)));
+
+	// clear irq status
+	qam_read_reg(0x35);
+
+	// enable irq
+	qam_write_reg(0x34, 0x7fff<<3);
+	#endif
+}
+
+/*TL1*/
+void set_dvbc_reg_1_v4(void)
+{
+	//dvbc_1
+	#if 0
+	app_apb_write_reg(0x100, 0x3d3d0002);
+	app_apb_write_reg(0x104, 0x747f0603);
+	app_apb_write_reg(0x108, 0xf4130f7a);
+	app_apb_write_reg(0x10c, 0x1f801d5);
+	app_apb_write_reg(0x110, 0xc60063);
+	#else
+	dvbc_write_reg(0x100, 0x3d3d0002);
+	dvbc_write_reg(0x104, 0x747f0603);
+	dvbc_write_reg(0x108, 0xf4130f7a);
+	dvbc_write_reg(0x10c, 0x1f801d5);
+	dvbc_write_reg(0x110, 0xc60063);
+	#endif
+}
+
+/*TL1*/
+void set_dvbc_reg_2_v4(void)
+{
+	//dvbc_2
+	#if 0
+	app_apb_write_reg(0x114, 0xc381b06);
+	app_apb_write_reg(0x118, 0x25346b0a);
+	app_apb_write_reg(0x11c, 0x3101b90e);
+	app_apb_write_reg(0x120, 0x17900e5);
+	#else
+	dvbc_write_reg(0x114, 0xc381b06);
+	dvbc_write_reg(0x118, 0x25346b0a);
+	dvbc_write_reg(0x11c, 0x3101b90e);
+	dvbc_write_reg(0x120, 0x17900e5);
+	#endif
+}
+
+/*TL1*/
+void set_j83b_reg_1_v4(void)
+{
+	//j83_1
+	#if 0
+	app_apb_write_reg(0x100, 0x3e010201);
+	app_apb_write_reg(0x104, 0x0b033c3a);
+	app_apb_write_reg(0x108, 0xe2ecff0c);
+	app_apb_write_reg(0x10c, 0x002a01f6);
+	app_apb_write_reg(0x110, 0x0097006a);
+	#else
+	dvbc_write_reg(0x100, 0x3e010201);
+	dvbc_write_reg(0x104, 0x0b033c3a);
+	dvbc_write_reg(0x108, 0xe2ecff0c);
+	dvbc_write_reg(0x10c, 0x002a01f6);
+	dvbc_write_reg(0x110, 0x0097006a);
+	#endif
+}
+
+/*TL1*/
+void set_j83b_reg_2_v4(void)
+{
+	//j83_2
+	#if 0
+	app_apb_write_reg(0x114, 0xb3a1905);
+	app_apb_write_reg(0x118, 0x1c396e07);
+	app_apb_write_reg(0x11c, 0x3801cc08);
+	app_apb_write_reg(0x120, 0x10800a2);
+	#else
+	dvbc_write_reg(0x114, 0xb3a1905);
+	dvbc_write_reg(0x118, 0x1c396e07);
+	dvbc_write_reg(0x11c, 0x3801cc08);
+	dvbc_write_reg(0x120, 0x10800a2);
+	#endif
+}
+#endif
 
 void demod_set_reg(struct aml_demod_reg *demod_reg)
 {
@@ -1240,7 +1902,6 @@ unsigned int dvbc_read_reg(unsigned int addr)
 #else
 void dvbc_write_reg(unsigned int addr, unsigned int data)
 {
-
 	mutex_lock(&mp);
 	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
 
@@ -1261,6 +1922,29 @@ unsigned int dvbc_read_reg(unsigned int addr)
 	return tmp;
 }
 
+void dvbc_write_reg_v4(unsigned int addr, unsigned int data)
+{
+
+	mutex_lock(&mp);
+	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
+
+	writel(data, gbase_dvbc() + (addr << 2));
+
+	mutex_unlock(&mp);
+}
+unsigned int dvbc_read_reg_v4(unsigned int addr)
+{
+	unsigned int tmp;
+
+	mutex_lock(&mp);
+
+	tmp = readl(gbase_dvbc() + (addr << 2));
+
+	mutex_unlock(&mp);
+
+	return tmp;
+}
+
 #endif
 void demod_write_reg(unsigned int addr, unsigned int data)
 {
@@ -1268,7 +1952,10 @@ void demod_write_reg(unsigned int addr, unsigned int data)
 	mutex_lock(&mp);
 	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
 
-	writel(data, gbase_demod() + addr);
+	if (is_ic_ver(IC_VER_TL1))
+		writel(data, gbase_demod() + (addr << 2));
+	else
+		writel(data, gbase_demod() + addr);
 
 	mutex_unlock(&mp);
 }
@@ -1278,11 +1965,69 @@ unsigned int demod_read_reg(unsigned int addr)
 
 	mutex_lock(&mp);
 
-	tmp = readl(gbase_demod() + addr);
+	if (is_ic_ver(IC_VER_TL1))
+		tmp = readl(gbase_demod() + (addr << 2));
+	else
+		tmp = readl(gbase_demod() + addr);
 
 	mutex_unlock(&mp);
 
 	return tmp;
+}
+
+/*TL1*/
+void front_write_reg_v4(unsigned int addr, unsigned int data)
+{
+	if (!get_dtvpll_init_flag())
+		return;
+
+	mutex_lock(&mp);
+	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
+
+	writel(data, gbase_front() + (addr << 2));
+
+	mutex_unlock(&mp);
+}
+
+unsigned int front_read_reg_v4(unsigned int addr)
+{
+	unsigned int tmp;
+
+	if (!get_dtvpll_init_flag())
+		return 0;
+
+	mutex_lock(&mp);
+
+	tmp = readl(gbase_front() + (addr << 2));
+
+	mutex_unlock(&mp);
+
+	return tmp;
+
+}
+
+void  isdbt_write_reg_v4(unsigned int addr, unsigned int data)
+{
+	mutex_lock(&mp);
+	/* printk("[demod][write]%x,data is %x\n",(addr),data);*/
+
+	writel(data, gbase_isdbt() + addr);
+
+	mutex_unlock(&mp);
+}
+
+unsigned int isdbt_read_reg_v4(unsigned int addr)
+{
+	unsigned int tmp;
+
+	mutex_lock(&mp);
+
+	tmp = readl(gbase_isdbt() + addr);
+
+	mutex_unlock(&mp);
+
+	return tmp;
+
 }
 
 /*dvbc v3:*/
@@ -1392,24 +2137,26 @@ unsigned int dd_tvafe_reg_read(unsigned int addr)
 
 void demod_set_demod_default(void)
 {
+	if (is_ic_ver(IC_VER_TL1))
+		return;
+
 	#if 0
 	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu()) {
-		demod_set_reg_rlt(GXBB_DEMOD_REG1, DEMOD_REG1_VALUE);
-		demod_set_reg_rlt(GXBB_DEMOD_REG2, DEMOD_REG2_VALUE);
-		demod_set_reg_rlt(GXBB_DEMOD_REG3, DEMOD_REG3_VALUE);
+		demod_set_reg_rlt(GXBB_DEMOD_REG1, DEMOD_REG0_VALUE);
+		demod_set_reg_rlt(GXBB_DEMOD_REG2, DEMOD_REG4_VALUE);
+		demod_set_reg_rlt(GXBB_DEMOD_REG3, DEMOD_REG8_VALUE);
 
 	} else if (is_meson_txlx_cpu() || is_meson_gxlx_cpu()
 		|| is_meson_txhd_cpu()) {
-		demod_set_reg_rlt(TXLX_DEMOD_REG1, DEMOD_REG1_VALUE);
-		demod_set_reg_rlt(TXLX_DEMOD_REG2, DEMOD_REG2_VALUE);
-		demod_set_reg_rlt(TXLX_DEMOD_REG3, DEMOD_REG3_VALUE);
+		demod_set_reg_rlt(TXLX_DEMOD_REG1, DEMOD_REG0_VALUE);
+		demod_set_reg_rlt(TXLX_DEMOD_REG2, DEMOD_REG4_VALUE);
+		demod_set_reg_rlt(TXLX_DEMOD_REG3, DEMOD_REG8_VALUE);
 
 	}
 	#else
-	demod_write_reg(DEMOD_REG1, DEMOD_REG1_VALUE);
-	demod_write_reg(DEMOD_REG2, DEMOD_REG2_VALUE);
-	demod_write_reg(DEMOD_REG3, DEMOD_REG3_VALUE);
-
+	demod_write_reg(DEMOD_TOP_REG0, DEMOD_REG0_VALUE);
+	demod_write_reg(DEMOD_TOP_REG4, DEMOD_REG4_VALUE);
+	demod_write_reg(DEMOD_TOP_REG8, DEMOD_REG8_VALUE);
 	#endif
 
 }
@@ -1477,28 +2224,28 @@ const unsigned int adc_check_tab_gxtvbb[] = {
 	REG_M_HIU, D_HHI_ADC_PLL_CNTL4,
 /*	REG_M_HIU, D_HHI_HDMI_CLK_CNTL, */
 
-	REG_M_DEMOD, DEMOD_REG1,
-	REG_M_DEMOD, DEMOD_REG2,
-	REG_M_DEMOD, DEMOD_REG3,
-	REG_M_DEMOD, DEMOD_REG4,
+	REG_M_DEMOD, DEMOD_TOP_REG0,
+	REG_M_DEMOD, DEMOD_TOP_REG4,
+	REG_M_DEMOD, DEMOD_TOP_REG8,
+	REG_M_DEMOD, DEMOD_TOP_REGC,
 	/* end */
 	TABLE_FLG_END, TABLE_FLG_END,
 
 };
 
 const unsigned int adc_check_tab_demod_txlx[] = {
-	REG_M_DEMOD, DEMOD_REG1,
-	REG_M_DEMOD, DEMOD_REG2,
-	REG_M_DEMOD, DEMOD_REG3,
-	REG_M_DEMOD, DEMOD_REG4,
+	REG_M_DEMOD, DEMOD_TOP_REG0,
+	REG_M_DEMOD, DEMOD_TOP_REG4,
+	REG_M_DEMOD, DEMOD_TOP_REG8,
+	REG_M_DEMOD, DEMOD_TOP_REGC,
 	/* end */
 	TABLE_FLG_END, TABLE_FLG_END,
 };
 const unsigned int adc_check_tab_demod_gxbb[] = {
-	REG_M_DEMOD, DEMOD_REG1,
-	REG_M_DEMOD, DEMOD_REG2,
-	REG_M_DEMOD, DEMOD_REG3,
-	REG_M_DEMOD, DEMOD_REG4,
+	REG_M_DEMOD, DEMOD_TOP_REG0,
+	REG_M_DEMOD, DEMOD_TOP_REG4,
+	REG_M_DEMOD, DEMOD_TOP_REG8,
+	REG_M_DEMOD, DEMOD_TOP_REGC,
 	/* end */
 	TABLE_FLG_END, TABLE_FLG_END,
 };

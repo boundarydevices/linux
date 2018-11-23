@@ -39,6 +39,7 @@
 /* #include <mach/am_regs.h> */
 #include <linux/device.h>
 #include <linux/cdev.h>
+#include <linux/debugfs.h>
 
 /* #include <asm/fiq.h> */
 #include <linux/uaccess.h>
@@ -269,6 +270,9 @@ static long aml_demod_ioctl(struct file *file,
 	int strength = 0;
 	struct dvb_frontend *dvbfe;
 	struct aml_tuner_sys *tuner;
+	//struct aml_tuner_sys  tuner_para = {0};
+	struct aml_demod_reg  arg_t;
+	//static unsigned int tuner_attach_flg;
 
 	switch (cmd) {
 	case AML_DEMOD_GET_RSSI:
@@ -290,12 +294,37 @@ static long aml_demod_ioctl(struct file *file,
 	case AML_DEMOD_SET_TUNER:
 		pr_dbg("Ioctl Demod Set Tuner.\n");
 		dvbfe = aml_get_fe();/*get_si2177_tuner();*/
+		#if 0
+		if (copy_from_user(&tuner_para, (void __user *)arg,
+			sizeof(struct aml_tuner_sys))) {
+			pr_dbg("copy error AML_DEMOD_SET_REG\n");
+		} else {
+			//pr_dbg("dvbfe = %p\n",dvbfe);
+			pr_dbg("tuner mode = %d\n", tuner_para.mode);
+			if (tuner_attach_flg == 0) {
+				attach_tuner_demod();
+				tuner_attach_flg = 1;
+			}
+
+			tuner_set_freq(tuner_para.ch_freq);
+
+			if (tuner_para.mode == FE_ATSC) {
+				tuner_config_atsc();
+				tuner_set_atsc_para();
+			} else if (tuner_para.mode == FE_DTMB) {
+				tuner_config_dtmb();
+				tuner_set_dtmb_para();
+			} else if (tuner_para.mode == FE_QAM) {
+				tuner_config_qam();
+				tuner_set_qam_para();
+			}
+		}
+		#endif
 	#if 0 /*ary temp for my_tool:*/
-		if (dvbfe != NULL)
-			dvbfe->ops.tuner_ops.set_tuner(dvbfe, &demod_sta,
-						       &demod_i2c,
-						       (struct aml_tuner_sys *)
-						       arg);
+		if (dvbfe != NULL) {
+			pr_dbg("calling tuner ops\n");
+			dvbfe->ops.tuner_ops.set_params(dvbfe);
+		}
 	#endif
 		break;
 
@@ -385,12 +414,27 @@ static long aml_demod_ioctl(struct file *file,
 
 	case AML_DEMOD_SET_REG:
 		/*      pr_dbg("Ioctl Set Register\n"); */
-		demod_set_reg((struct aml_demod_reg *)arg);
+		if (copy_from_user(&arg_t, (void __user *)arg,
+			sizeof(struct aml_demod_reg))) {
+			pr_dbg("copy error AML_DEMOD_SET_REG\n");
+		} else
+			demod_set_reg(&arg_t);
+
+		//demod_set_reg((struct aml_demod_reg *)arg);
 		break;
 
 	case AML_DEMOD_GET_REG:
 		/*      pr_dbg("Ioctl Get Register\n"); */
-		demod_get_reg((struct aml_demod_reg *)arg);
+		if (copy_from_user(&arg_t, (void __user *)arg,
+			sizeof(struct aml_demod_reg)))
+			pr_dbg("copy error AML_DEMOD_GET_REG\n");
+		else
+			demod_get_reg(&arg_t);
+
+		if (copy_to_user((void __user *)arg, &arg_t,
+			sizeof(struct aml_demod_reg))) {
+			pr_dbg("copy_to_user copy error AML_DEMOD_GET_REG\n");
+		}
 		break;
 
 /* case AML_DEMOD_SET_REGS: */
@@ -448,6 +492,289 @@ static const struct file_operations aml_demod_fops = {
 	.compat_ioctl	= aml_demod_compat_ioctl,
 #endif
 };
+
+#if 0
+static int aml_demod_dbg_open(struct inode *inode, struct file *file)
+{
+	pr_dbg("Amlogic Demod debug Open\n");
+	return 0;
+}
+
+static int aml_demod_dbg_release(struct inode *inode, struct file *file)
+{
+	pr_dbg("Amlogic Demod debug Release\n");
+	return 0;
+}
+
+static unsigned int addr_for_read;
+static unsigned int register_val;
+static unsigned int symb_rate;
+static unsigned int ch_freq;
+static unsigned int modulation;
+static char *dbg_name[] = {
+	"demod top r/w",
+	"dvbc r/w",
+	"atsc r/w",
+	"dtmb r/w",
+	"front r/w",
+	"isdbt r/w",
+	"dvbc init",
+	"atsc init",
+	"dtmb init",
+};
+
+unsigned int get_symbol_rate(void)
+{// / 1000
+	return symb_rate;
+}
+
+unsigned int get_ch_freq(void)
+{// / 1000
+	return ch_freq;
+}
+
+unsigned int get_modu(void)
+{
+	return modulation;
+}
+
+/*
+ *TVFE_VAFE_CTRL0	0x000d0710
+ *TVFE_VAFE_CTRL1	0x00003000
+ *TVFE_VAFE_CTRL2	0x1fe09e31
+ *HHI_DADC_CNTL		0x0030303c
+ *HHI_DADC_CNTL2		0x00003480
+ *HHI_DADC_CNTL3		0x08700b83
+ *HHI_VDAC_CNTL1		0x0000000
+
+ *ADC_PLL_CNTL0		0X012004e0
+ *ADC_PLL_CNTL0		0X312004e0
+ *ADC_PLL_CNTL1		0X05400000
+ *ADC_PLL_CNTL2		0xe1800000
+ *ADC_PLL_CNTL3		0x48681c00
+ *ADC_PLL_CNTL4		0x88770290
+ *ADC_PLL_CNTL5		0x39272000
+ *ADC_PLL_CNTL6		0x56540000
+ *ADC_PLL_CNTL0		0X111104e0
+ */
+static void aml_demod_adc_init(void)
+{
+	PR_INFO("%s\n", __func__);
+	demod_init_mutex();
+	demod_power_switch(PWR_ON);
+	//TVFE_VAFE_CTRL0
+	demod_set_tvfe_reg(0x000d0710, 0xff654ec0);
+	//TVFE_VAFE_CTRL1
+	demod_set_tvfe_reg(0x00003000, 0xff654ec4);
+	//TVFE_VAFE_CTRL2
+	demod_set_tvfe_reg(0x1fe09e31, 0xff654ec8);
+	//HHI_DADC_CNTL
+	dd_tvafe_hiu_reg_write(0x9c, 0x0030303c);
+	//HHI_DADC_CNTL2
+	dd_tvafe_hiu_reg_write(0xa0, 0x00003480);
+	//HHI_DADC_CNTL3
+	//dd_tvafe_hiu_reg_write(0xa8, 0x08700b83);
+	dd_tvafe_hiu_reg_write(0xa8, 0x08300b83);
+	//HHI_VDAC_CNTL1
+	dd_tvafe_hiu_reg_write(0x2f0, 0x0000000);
+	//ADC_PLL_CNTL0
+	dd_tvafe_hiu_reg_write(0x2c0, 0X012004e0);
+	dd_tvafe_hiu_reg_write(0x2c0, 0X312004e0);
+	//ADC_PLL_CNTL1
+	dd_tvafe_hiu_reg_write(0x2c4, 0X05400000);
+	//ADC_PLL_CNTL2
+	//dd_tvafe_hiu_reg_write(0x2c8, 0xe1800000);
+	dd_tvafe_hiu_reg_write(0x2c8, 0xE0800000);//shijie modify, crystal 24M
+	//dd_tvafe_hiu_reg_write(0x2c8, 0xe9800000);
+	//ADC_PLL_CNTL3
+	dd_tvafe_hiu_reg_write(0x2cc, 0x48681c00);
+	//ADC_PLL_CNTL4
+	dd_tvafe_hiu_reg_write(0x2d0, 0x88770290);
+	//ADC_PLL_CNTL5
+	dd_tvafe_hiu_reg_write(0x2d4, 0x39272000);
+	//ADC_PLL_CNTL6
+	dd_tvafe_hiu_reg_write(0x2d8, 0x56540000);
+	//ADC_PLL_CNTL0
+	dd_tvafe_hiu_reg_write(0x2c0, 0X111104e0);
+	//zou weihua
+	dd_tvafe_hiu_reg_write(0x3cc, 0x00800000);
+	//shijie
+	dd_tvafe_hiu_reg_write(0x1d0, 0x501);//0x705
+	//shixi, switch to demod mode, enable pclk
+	//demod_write_reg(DEMOD_TOP_REG0, 0x11);
+	dtvpll_init_flag(1);
+}
+
+static ssize_t aml_demod_dbg_show(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
+{
+	char buf[80];
+	ssize_t len = 0;
+
+	#if 1
+	len = snprintf(buf, sizeof(buf), "%s :0x%x = %i\n",
+		dbg_name[addr_for_read >> 28], addr_for_read & 0xff,
+		register_val);
+	#else
+	len = snprintf(buf, sizeof(buf), "%s\n", __func__);
+	#endif
+	//demod_read_reg(DEMOD_TOP_REGC);
+	//dtmb_read_reg(0);
+	//dd_tvafe_hiu_reg_write(0x9c, 0x0030303c);
+	PR_INFO("%s\n", __func__);
+	//PR_INFO("0xec0 = 0x%x\n", dd_tvafe_hiu_reg_read(0x9c));
+	//dvbt_read_reg(0x38);
+
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+/*echo dbg_md [0xaddr] [val] > /sys/kernel/debug/demod/xxxx*/
+static ssize_t aml_demod_dbg_store(struct file *file,
+		const char __user *userbuf, size_t count, loff_t *ppos)
+{
+	char buf[80];
+	unsigned int reg, val, dbg_md;
+	int ret;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+
+	buf[count] = 0;
+
+	ret = sscanf(buf, "%d %x %i", &dbg_md, &reg, &val);
+	aml_demod_adc_init();
+
+	switch (ret) {
+	case 1://cmd
+		switch (dbg_md) {
+		case AML_DBG_DVBC_INIT:
+			Gxtv_Demod_Dvbc_v4_Init();
+			break;
+		case AML_DBG_ATSC_INIT:
+			demod_set_sys_atsc_v4();
+			break;
+		case AML_DBG_DTMB_INIT:
+			demod_set_sys_dtmb_v4();
+			break;
+		default:
+			break;
+		}
+
+		PR_INFO("%s\n", dbg_name[dbg_md]);
+		break;
+	case 2://read register, set param
+		switch (dbg_md) {
+		case AML_DBG_DEMOD_TOP_RW:
+			addr_for_read = (AML_DBG_DEMOD_TOP_RW << 28) | reg;
+			register_val = demod_read_reg(reg);
+			break;
+		case AML_DBG_DVBC_RW:
+			addr_for_read = (AML_DBG_DVBC_RW << 28) | reg;
+			register_val = dvbc_read_reg(reg);
+			break;
+		case AML_DBG_ATSC_RW:
+			addr_for_read = (AML_DBG_ATSC_RW << 28) | reg;
+			register_val = atsc_read_reg_v4(reg);
+			break;
+		case AML_DBG_DTMB_RW:
+			addr_for_read = (AML_DBG_DTMB_RW << 28) | reg;
+			register_val = dtmb_read_reg(reg);
+			break;
+		case AML_DBG_FRONT_RW:
+			addr_for_read = (AML_DBG_FRONT_RW << 28) | reg;
+			register_val = front_read_reg_v4(reg);
+			break;
+		case AML_DBG_ISDBT_RW:
+			addr_for_read = (AML_DBG_ISDBT_RW << 28) | reg;
+			register_val = isdbt_read_reg_v4(reg);
+			break;
+		case AML_DBG_DEMOD_SYMB_RATE:
+			symb_rate = reg;
+			break;
+		case AML_DBG_DEMOD_CH_FREQ:
+			ch_freq = reg;
+			break;
+		case AML_DBG_DEMOD_MODUL:
+			modulation = reg;
+			break;
+		default:
+			break;
+		}
+
+		PR_INFO("%s reg:0x%x\n", dbg_name[dbg_md], reg);
+		break;
+	case 3://write register
+		switch (dbg_md) {
+		case AML_DBG_DEMOD_TOP_RW:
+			demod_write_reg(reg, val);
+			break;
+		case AML_DBG_DVBC_RW:
+			dvbc_write_reg(reg, val);
+			break;
+		case AML_DBG_ATSC_RW:
+			atsc_write_reg_v4(reg, val);
+			break;
+		case AML_DBG_DTMB_RW:
+			dtmb_write_reg(reg, val);
+			break;
+		case AML_DBG_FRONT_RW:
+			front_write_reg_v4(reg, val);
+			break;
+		case AML_DBG_ISDBT_RW:
+			isdbt_write_reg_v4(reg, val);
+			break;
+		default:
+			break;
+		}
+
+		PR_INFO("%s reg:0x%x,val=%d\n", dbg_name[dbg_md], reg, val);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return count;
+}
+
+static const struct file_operations aml_demod_dvbc_dbg_fops = {
+	.owner		= THIS_MODULE,
+	.open		= aml_demod_dbg_open,
+	.release	= aml_demod_dbg_release,
+	//.unlocked_ioctl = aml_demod_ioctl,
+	.read = aml_demod_dbg_show,
+	.write = aml_demod_dbg_store,
+};
+
+static void aml_demod_dbg_init(void)
+{
+	struct dentry *root_entry = dtvdd_devp->demod_root;
+	struct dentry *entry;
+
+	PR_INFO("%s\n", __func__);
+
+	root_entry = debugfs_create_dir("frontend", NULL);
+	if (!root_entry) {
+		PR_INFO("Can't create debugfs dir frontend.\n");
+		return;
+	}
+
+	entry = debugfs_create_file("demod", S_IFREG | 0644, root_entry, NULL,
+				       &aml_demod_dvbc_dbg_fops);
+	if (!entry) {
+		PR_INFO("Can't create debugfs file demod.\n");
+		return;
+	}
+}
+
+static void aml_demod_dbg_exit(void)
+{
+	struct dentry *root_entry = dtvdd_devp->demod_root;
+
+	if (dtvdd_devp && root_entry)
+		debugfs_remove_recursive(root_entry);
+}
+#endif
 
 static int aml_demod_ui_open(struct inode *inode, struct file *file)
 {
@@ -662,6 +989,7 @@ static int __init aml_demod_init(void)
 	sdio_init();
 #endif
 	aml_demod_ui_init();
+	//aml_demod_dbg_init();
 
 	return 0;
 
@@ -701,6 +1029,7 @@ static void __exit aml_demod_exit(void)
 	class_unregister(&aml_demod_class);
 
 	aml_demod_exit_ui();
+	//aml_demod_dbg_exit();
 }
 
 #ifndef CONFIG_AM_DEMOD_DVBAPI

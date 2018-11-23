@@ -26,6 +26,10 @@
 #include "dvb_frontend.h" /**/
 #include "amlfrontend.h"
 #include "addr_dtmb_top.h"
+#include "addr_atsc_demod.h"
+#include "addr_atsc_eq.h"
+#include "addr_atsc_cntr.h"
+
 /*#include "c_stb_define.h"*/
 /*#include "c_stb_regs_define.h"*/
 #include <linux/io.h>
@@ -117,10 +121,13 @@
 
 
 /* demod register */
-#define DEMOD_REG1		(0x00)
-#define DEMOD_REG2		(0x04)
-#define DEMOD_REG3		(0x08)
-#define DEMOD_REG4		(0x0C)
+#define DEMOD_TOP_REG0		(0x00)
+#define DEMOD_TOP_REG4		(0x04)
+#define DEMOD_TOP_REG8		(0x08)
+#define DEMOD_TOP_REGC		(0x0C)
+
+/*reset register*/
+#define reg_reset			(0x1c)
 
 #if 0
 /* demod register: */
@@ -254,9 +261,9 @@
 #define ADC_REG6         0x1074
 #endif
 
-#define DEMOD_REG1_VALUE                 0x0000d007
-#define DEMOD_REG2_VALUE                 0x2e805400
-#define DEMOD_REG3_VALUE                 0x201
+#define DEMOD_REG0_VALUE                 0x0000d007
+#define DEMOD_REG4_VALUE                 0x2e805400
+#define DEMOD_REG8_VALUE                 0x201
 
 /* for table end */
 #define TABLE_FLG_END		0xffffffff
@@ -548,6 +555,7 @@ int app_apb_read_reg(int addr);
 void demod_set_cbus_reg(unsigned int data, unsigned int addr);
 unsigned int demod_read_cbus_reg(unsigned int addr);
 void demod_set_demod_reg(unsigned int data, unsigned int addr);
+extern void demod_set_tvfe_reg(unsigned int data, unsigned int addr);
 unsigned int demod_read_demod_reg(unsigned int addr);
 
 /* extern int clk_measure(char index); */
@@ -571,6 +579,9 @@ void demod_get_reg(struct aml_demod_reg *demod_reg);
 int demod_set_sys(struct aml_demod_sta *demod_sta,
 		  /*struct aml_demod_i2c *demod_i2c,*/
 		  struct aml_demod_sys *demod_sys);
+extern void demod_set_sys_dtmb_v4(void);
+extern void demod_set_sys_atsc_v4(void);
+extern void set_j83b_filter_reg_v4(void);
 
 
 /* for g9tv */
@@ -799,9 +810,15 @@ extern unsigned int demod_read_reg_rlt(unsigned int addr);
 #endif
 extern void dvbc_write_reg(unsigned int addr, unsigned int data);
 extern unsigned int dvbc_read_reg(unsigned int addr);
+extern void dvbc_write_reg_v4(unsigned int addr, unsigned int data);
+extern unsigned int dvbc_read_reg_v4(unsigned int addr);
 extern void demod_write_reg(unsigned int addr, unsigned int data);
 extern unsigned int demod_read_reg(unsigned int addr);
-
+//extern void demod_init_mutex(void);
+extern void front_write_reg_v4(unsigned int addr, unsigned int data);
+extern unsigned int front_read_reg_v4(unsigned int addr);
+extern unsigned int isdbt_read_reg_v4(unsigned int addr);
+extern void  isdbt_write_reg_v4(unsigned int addr, unsigned int data);
 extern int dd_tvafe_hiu_reg_write(unsigned int reg, unsigned int val);
 extern unsigned int dd_tvafe_hiu_reg_read(unsigned int addr);
 

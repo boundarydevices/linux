@@ -176,6 +176,20 @@ struct aml_demod_para {
 	u32_t dtmb_coderate;
 };
 
+//cmd
+#define AML_DBG_DEMOD_TOP_RW		0
+#define AML_DBG_DVBC_RW		1
+#define AML_DBG_ATSC_RW		2
+#define AML_DBG_DTMB_RW		3
+#define AML_DBG_FRONT_RW		4
+#define AML_DBG_ISDBT_RW		5
+#define AML_DBG_DVBC_INIT		6
+#define AML_DBG_ATSC_INIT		7
+#define AML_DBG_DTMB_INIT		8
+#define AML_DBG_DEMOD_SYMB_RATE	9
+#define AML_DBG_DEMOD_CH_FREQ		10
+#define AML_DBG_DEMOD_MODUL		11
+
 
 #define AML_DEMOD_SET_SYS        _IOW('D',  0, struct aml_demod_sys)
 #define AML_DEMOD_GET_SYS        _IOR('D',  1, struct aml_demod_sys)
@@ -219,5 +233,17 @@ int read_memory_to_file(struct aml_cap_data *cap);
 int read_reg(int addr);
 void wait_capture(int cap_cur_addr, int depth_MB, int start);
 int cap_adc_data(struct aml_cap_data *cap);
+extern unsigned int get_symbol_rate(void);
+extern unsigned int get_ch_freq(void);
+extern unsigned int get_modu(void);
+extern void demod_set_sys_dtmb_v4(void);
+extern void tuner_set_atsc_para(void);
+extern void tuner_set_dtmb_para(void);
+extern void tuner_set_qam_para(void);
+extern void tuner_config_atsc(void);
+extern void attach_tuner_demod(void);
+extern void tuner_set_freq(unsigned int freq);
+extern void tuner_config_dtmb(void);
+extern void tuner_config_qam(void);
 
 #endif				/* AML_DEMOD_H */
