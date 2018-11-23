@@ -300,8 +300,10 @@ int hdmirx_init(state_struct *state)
 
 	/* Check if the firmware is running */
 	ret = CDN_API_CheckAlive_blocking(state);
-	if (ret < 0)
-		return ret;
+	if (ret != 0) {
+		DRM_ERROR("NO HDMI RX FW running\n");
+		return -ENXIO;
+	}
 
 	/* Set driver and firmware active */
 	CDN_API_MainControl_blocking(state, 1, &sts);
