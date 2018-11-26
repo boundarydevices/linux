@@ -62,6 +62,7 @@ struct vpu_frame_info {
 };
 
 unsigned int vpu_dbg_level_encoder = LVL_WARN;
+static unsigned int reset_on_hang;
 
 static char *mu_cmp[] = {
 	"fsl,imx8-mu1-vpu-m0",
@@ -103,6 +104,11 @@ static char *event2str[] = {
 	ITEM_NAME(VID_API_ENC_EVENT_FIRMWARE_XCPT),
 	ITEM_NAME(VID_API_ENC_EVENT_RESERVED)
 };
+
+static int wait_for_start_done(struct core_device *core, int resume);
+static void wait_for_stop_done(struct vpu_ctx *ctx);
+static int sw_reset_firmware(struct core_device *core, int resume);
+static void reset_fw_statistic(struct vpu_attr *attr);
 
 static char *get_event_str(u32 event)
 {
@@ -1155,18 +1161,6 @@ static int request_eos(struct vpu_ctx *ctx)
 	return 0;
 }
 
-static void clear_ctx_hang_status(struct vpu_ctx *ctx)
-{
-	if (test_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status))
-		clear_bit(VPU_ENC_STATUS_HANG, &ctx->status);
-}
-
-static bool is_ctx_hang(struct vpu_ctx *ctx)
-{
-	clear_ctx_hang_status(ctx);
-	return test_bit(VPU_ENC_STATUS_HANG, &ctx->status);
-}
-
 static int set_core_force_release(struct core_device *core)
 {
 	int i;
@@ -1183,10 +1177,46 @@ static int set_core_force_release(struct core_device *core)
 	return 0;
 }
 
+static void clear_start_status(struct vpu_ctx *ctx)
+{
+	if (!ctx)
+		return;
+
+	clear_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status);
+	clear_bit(VPU_ENC_STATUS_START_SEND, &ctx->status);
+	clear_bit(VPU_ENC_STATUS_START_DONE, &ctx->status);
+}
+
+static void clear_stop_status(struct vpu_ctx *ctx)
+{
+	if (!ctx)
+		return;
+
+	clear_bit(VPU_ENC_STATUS_STOP_REQ, &ctx->status);
+	clear_bit(VPU_ENC_STATUS_STOP_SEND, &ctx->status);
+	clear_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status);
+	clear_bit(VPU_ENC_STATUS_EOS_SEND, &ctx->status);
+}
+
+static void reset_core_on_hang(struct core_device *core)
+{
+	int ret;
+	int i;
+
+	for (i = 0; i < core->supported_instance_count; i++)
+		clear_start_status(core->ctx[i]);
+
+	ret = sw_reset_firmware(core, 1);
+	if (ret)
+		vpu_err("reset core[%d] on hang fail\n", core->id);
+}
+
 static int set_core_hang(struct core_device *core)
 {
-	set_core_force_release(core);
 	core->hang = true;
+
+	if (reset_on_hang)
+		reset_core_on_hang(core);
 
 	return 0;
 }
@@ -1203,16 +1233,12 @@ static void wait_for_stop_done(struct vpu_ctx *ctx)
 {
 	WARN_ON(!ctx);
 
-	if (is_ctx_hang(ctx))
-		return;
 	if (!test_bit(VPU_ENC_STATUS_START_SEND, &ctx->status))
 		return;
 	if (test_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status))
 		return;
 
 	wait_for_completion_timeout(&ctx->stop_cmp, msecs_to_jiffies(500));
-	if (!test_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status))
-		set_bit(VPU_ENC_STATUS_HANG, &ctx->status);
 }
 
 static int v4l2_ioctl_encoder_cmd(struct file *file,
@@ -1265,11 +1291,9 @@ static int v4l2_ioctl_streamon(struct file *file,
 	}
 
 	ret = vb2_streamon(&q_data->vb2_q, i);
-	if (!ret && i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		clear_bit(VPU_ENC_STATUS_STOP_SEND, &ctx->status);
-		clear_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status);
-		clear_bit(VPU_ENC_STATUS_EOS_SEND, &ctx->status);
-	}
+	if (!ret && i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+		clear_stop_status(ctx);
+
 	return ret;
 }
 
@@ -1349,18 +1373,22 @@ static void vpu_ctx_send_cmd(struct vpu_ctx *ctx, uint32_t cmdid,
 				cmdid, cmdnum, local_cmddata);
 }
 
+static void set_core_fw_status(struct core_device *core, bool status)
+{
+	core->fw_is_ready = status;
+}
+
 static int reset_vpu_core_dev(struct core_device *core_dev)
 {
 	if (!core_dev)
 		return -EINVAL;
 
-	core_dev->fw_is_ready = false;
+	set_core_fw_status(core_dev, false);
 	core_dev->firmware_started = false;
 
 	return 0;
 }
 
-static int wait_for_start_done(struct core_device *core, int resume);
 static int sw_reset_firmware(struct core_device *core, int resume)
 {
 	int ret = 0;
@@ -1376,6 +1404,7 @@ static int sw_reset_firmware(struct core_device *core, int resume)
 		set_core_hang(core);
 		return -EINVAL;
 	}
+	core->reset_times++;
 
 	return 0;
 }
@@ -1383,9 +1412,19 @@ static int sw_reset_firmware(struct core_device *core, int resume)
 static int process_core_hang(struct core_device *core)
 {
 	int ret;
+	int i;
+	int instance_count = 0;
 
 	if (!core->hang)
 		return 0;
+
+	for (i = 0; i < core->supported_instance_count; i++) {
+		if (core->ctx[i])
+			instance_count++;
+	}
+
+	if (instance_count)
+		return -EBUSY;
 
 	ret = sw_reset_firmware(core, 0);
 	if (ret)
@@ -1461,7 +1500,8 @@ static void show_firmware_version(struct core_device *core_dev,
 
 	pSharedInterface = core_dev->shared_mem.pSharedInterface;
 
-	vpu_dbg(level, "vpu encoder firmware version is %d.%d.%d\n",
+	vpu_dbg(level, "vpu encoder core[%d] firmware version is %d.%d.%d\n",
+			core_dev->id,
 			(pSharedInterface->FWVersion & 0x00ff0000) >> 16,
 			(pSharedInterface->FWVersion & 0x0000ff00) >> 8,
 			pSharedInterface->FWVersion & 0x000000ff);
@@ -1624,6 +1664,7 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	pEncExpertModeParam->Calib.cb_size = ctx->encoder_stream.size;
 
 	show_firmware_version(ctx->core_dev, LVL_INFO);
+	reset_fw_statistic(attr);
 	memcpy(enc_param, &attr->param, sizeof(attr->param));
 	vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_CONFIGURE_CODEC, 0, NULL);
 	vpu_dbg(LVL_INFO, "send command GTB_ENC_CMD_CONFIGURE_CODEC\n");
@@ -2102,6 +2143,8 @@ static int submit_input_and_encode(struct vpu_ctx *ctx)
 
 	if (test_bit(VPU_ENC_STATUS_STOP_SEND, &ctx->status))
 		goto exit;
+	if (!test_bit(VPU_ENC_STATUS_START_DONE, &ctx->status))
+		goto exit;
 
 	if (update_yuv_addr(ctx)) {
 		vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_FRAME_ENCODE, 0, NULL);
@@ -2424,11 +2467,8 @@ static int handle_event_stop_done(struct vpu_ctx *ctx)
 
 	process_stream_output(ctx);
 
+	clear_start_status(ctx);
 	complete(&ctx->stop_cmp);
-
-	clear_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status);
-	clear_bit(VPU_ENC_STATUS_START_SEND, &ctx->status);
-	clear_bit(VPU_ENC_STATUS_START_DONE, &ctx->status);
 
 	return 0;
 }
@@ -2574,6 +2614,8 @@ static void vpu_core_start_done(struct core_device *core)
 	get_core_supported_instance_count(core);
 	core->firmware_started = true;
 	complete(&core->start_cmp);
+
+	show_firmware_version(core, LVL_ALL);
 }
 
 //This code is added for MU
@@ -3132,9 +3174,8 @@ static int download_vpu_firmware(struct vpu_dev *dev,
 		goto exit;
 	}
 
-	core_dev->fw_is_ready = true;
+	set_core_fw_status(core_dev, true);
 	clear_core_hang(core_dev);
-	show_firmware_version(core_dev, LVL_ALL);
 exit:
 	return ret;
 }
@@ -3185,7 +3226,9 @@ static struct core_device *find_proper_core(struct vpu_dev *dev)
 	for (i = 0; i < dev->core_num; i++) {
 		struct core_device *core_dev = &dev->core_dev[i];
 
-		process_core_hang(core_dev);
+		ret = process_core_hang(core_dev);
+		if (ret)
+			continue;
 
 		ret = download_vpu_firmware(dev, core_dev);
 		if (ret)
@@ -3307,18 +3350,23 @@ static void uninit_vpu_ctx_fh(struct vpu_ctx *ctx)
 	mutex_unlock(&ctx->instance_mutex);
 }
 
+static void cancel_vpu_ctx(struct vpu_ctx *ctx)
+{
+	cancel_work_sync(&ctx->instance_work);
+	cleanup_ctx_msg_queue(ctx);
+}
+
 static void uninit_vpu_ctx(struct vpu_ctx *ctx)
 {
 	if (!ctx)
 		return;
 
 	clear_bit(VPU_ENC_STATUS_INITIALIZED, &ctx->status);
+	cancel_vpu_ctx(ctx);
 	if (ctx->instance_wq) {
-		cancel_work_sync(&ctx->instance_work);
 		destroy_workqueue(ctx->instance_wq);
 		ctx->instance_wq = NULL;
 	}
-	cleanup_ctx_msg_queue(ctx);
 	mutex_lock(&ctx->instance_mutex);
 	free_encoder_stream(ctx);
 
@@ -3347,16 +3395,54 @@ static int init_vpu_ctx(struct vpu_ctx *ctx)
 	return 0;
 }
 
+static int show_queue_buffer_info(struct queue_data *queue, char *buf, u32 size)
+{
+	int i;
+	int num = 0;
+
+	for (i = 0; i < queue->vb2_q.num_buffers; i++) {
+		struct vb2_buffer *vb = queue->vb2_q.bufs[i];
+
+		num += snprintf(buf + num, size - num, " %d", vb->state);
+	}
+
+	return num;
+}
+
+static int show_cmd_event(struct vpu_statistic *statistic, int i,
+				char *buf, u32 size)
+{
+	int num = 0;
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "\t(%2d) ", i);
+
+	if (i <= GTB_ENC_CMD_RESERVED)
+		num += snprintf(buf + num, PAGE_SIZE - num, "%-28s:%12ld;",
+				get_cmd_str(i), statistic->cmd[i]);
+	else
+		num += snprintf(buf + num, PAGE_SIZE - num, "%-28s:%12s;",
+				"", "");
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "    ");
+	if (i <= VID_API_ENC_EVENT_RESERVED)
+		num += snprintf(buf + num, PAGE_SIZE - num, "%-34s:%12ld;",
+				get_event_str(i), statistic->event[i]);
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "\n");
+
+	return num;
+}
+
 static ssize_t show_instance_info(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
 	struct vpu_attr *vpu_attr;
 	struct vpu_dev *vpudev;
 	struct vpu_statistic *statistic;
+	struct vpu_ctx *ctx;
 	pMEDIAIP_ENC_PARAM param;
 	int i;
 	int num = 0;
-	int size;
 
 	vpu_attr = container_of(attr, struct vpu_attr,  dev_attr);
 	vpudev = vpu_attr->core->vdev;
@@ -3366,139 +3452,160 @@ static ssize_t show_instance_info(struct device *dev,
 
 	num += snprintf(buf + num, PAGE_SIZE,
 			"pid: %d; tgid: %d\n", vpu_attr->pid, vpu_attr->tgid);
-	num += snprintf(buf + num, PAGE_SIZE, "cmd:\n");
-
-	for (i = GTB_ENC_CMD_NOOP; i < GTB_ENC_CMD_RESERVED; i++) {
-		size = snprintf(buf + num, PAGE_SIZE - num,
-				"\t%40s(%2d):%16ld\n",
-				cmd2str[i], i, statistic->cmd[i]);
-		num += size;
-	}
-	num += snprintf(buf + num, PAGE_SIZE - num, "\t%40s    :%16ld\n",
-			"UNKNOWN CMD", statistic->cmd[GTB_ENC_CMD_RESERVED]);
-
-	num += snprintf(buf + num, PAGE_SIZE - num, "event:\n");
-	for (i = VID_API_EVENT_UNDEFINED; i < VID_API_ENC_EVENT_RESERVED; i++) {
-		size = snprintf(buf + num, PAGE_SIZE - num,
-				"\t%40s(%2d):%16ld\n",
-				event2str[i], i, statistic->event[i]);
-		num += size;
-	}
-	num += snprintf(buf + num, PAGE_SIZE - num, "\t%40s    :%16ld\n",
-			"UNKNOWN EVENT",
-			statistic->event[VID_API_ENC_EVENT_RESERVED]);
 
 	num += snprintf(buf + num, PAGE_SIZE - num,
 			"encoder param:[setting/take effect]\n");
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Codec Mode",
+			"\t%-18s:%10d;%10d\n", "Codec Mode",
 			vpu_attr->param.eCodecMode, param->eCodecMode);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Profile",
+			"\t%-18s:%10d;%10d\n", "Profile",
 			vpu_attr->param.eProfile, param->eProfile);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Level",
+			"\t%-18s:%10d;%10d\n", "Level",
 			vpu_attr->param.uLevel, param->uLevel);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Frame Rate",
+			"\t%-18s:%10d;%10d\n", "Frame Rate",
 			vpu_attr->param.uFrameRate, param->uFrameRate);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Source Stride",
+			"\t%-18s:%10d;%10d\n", "Source Stride",
 			vpu_attr->param.uSrcStride, param->uSrcStride);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Source Width",
+			"\t%-18s:%10d;%10d\n", "Source Width",
 			vpu_attr->param.uSrcWidth, param->uSrcWidth);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Source Height",
+			"\t%-18s:%10d;%10d\n", "Source Height",
 			vpu_attr->param.uSrcHeight, param->uSrcHeight);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Source Offset x",
+			"\t%-18s:%10d;%10d\n", "Source Offset x",
 			vpu_attr->param.uSrcOffset_x, param->uSrcOffset_x);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Source Offset y",
+			"\t%-18s:%10d;%10d\n", "Source Offset y",
 			vpu_attr->param.uSrcOffset_y, param->uSrcOffset_y);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Source Crop Width",
+			"\t%-18s:%10d;%10d\n", "Source Crop Width",
 			vpu_attr->param.uSrcCropWidth, param->uSrcCropWidth);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Source Crop Height",
+			"\t%-18s:%10d;%10d\n", "Source Crop Height",
 			vpu_attr->param.uSrcCropHeight,
 			param->uSrcCropHeight);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Out Width",
+			"\t%-18s:%10d;%10d\n", "Out Width",
 			vpu_attr->param.uOutWidth, param->uOutWidth);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Out Height",
+			"\t%-18s:%10d;%10d\n", "Out Height",
 			vpu_attr->param.uOutHeight, param->uOutHeight);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "I Frame Interval",
+			"\t%-18s:%10d;%10d\n", "I Frame Interval",
 			vpu_attr->param.uIFrameInterval,
 			param->uIFrameInterval);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "GOP Length",
+			"\t%-18s:%10d;%10d\n", "GOP Length",
 			vpu_attr->param.uGopBLength, param->uGopBLength);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Low Latency Mode",
+			"\t%-18s:%10d;%10d\n", "Low Latency Mode",
 			vpu_attr->param.uLowLatencyMode,
 			param->uLowLatencyMode);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Bitrate Mode",
+			"\t%-18s:%10d;%10d\n", "Bitrate Mode",
 			vpu_attr->param.eBitRateMode, param->eBitRateMode);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Target Bitrate",
+			"\t%-18s:%10d;%10d\n", "Target Bitrate",
 			vpu_attr->param.uTargetBitrate,
 			param->uTargetBitrate);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Min Bitrate",
+			"\t%-18s:%10d;%10d\n", "Min Bitrate",
 			vpu_attr->param.uMinBitRate, param->uMinBitRate);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "Max Bitrate",
+			"\t%-18s:%10d;%10d\n", "Max Bitrate",
 			vpu_attr->param.uMaxBitRate, param->uMaxBitRate);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%10d;%10d\n", "QP",
+			"\t%-18s:%10d;%10d\n", "QP",
 			vpu_attr->param.uInitSliceQP,
 			param->uInitSliceQP);
 
+	num += snprintf(buf + num, PAGE_SIZE - num, "command/event:\n");
+	i = 0;
+	while (i <= max(GTB_ENC_CMD_RESERVED, VID_API_ENC_EVENT_RESERVED)) {
+		num += show_cmd_event(statistic, i, buf + num, PAGE_SIZE - num);
+		i++;
+	}
+
 	num += snprintf(buf + num, PAGE_SIZE - num, "current status:\n");
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"%10s:%40s;%10ld.%06ld\n", "commond",
+			"\t%-10s:%36s;%10ld.%06ld\n", "commond",
 			get_cmd_str(statistic->current_cmd),
 			statistic->ts_cmd.tv_sec,
 			statistic->ts_cmd.tv_nsec / 1000);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"%10s:%40s;%10ld.%06ld\n", "event",
+			"\t%-10s:%36s;%10ld.%06ld\n", "event",
 			get_event_str(statistic->current_event),
 			statistic->ts_event.tv_sec,
 			statistic->ts_event.tv_nsec / 1000);
 
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"dbuf input yuv count:    %ld\n", statistic->yuv_count);
+			"frame count:\n");
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"encode frame count:      %ld\n",
+			"\tdbuf input yuv count    :%ld\n",
+			statistic->yuv_count);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			"\tencode frame count      :%ld\n",
 			statistic->encoded_count);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"dqbuf output h264 count: %ld\n",
+			"\tdqbuf output h264 count :%ld\n",
 			statistic->h264_count);
+
+	mutex_lock(&vpudev->dev_mutex);
+	ctx = get_vpu_attr_ctx(vpu_attr);
+	if (ctx) {
+		num += snprintf(buf + num, PAGE_SIZE - num,
+				"V4L2 Buffer Status:\n");
+		num += snprintf(buf + num, PAGE_SIZE - num, "\tOUTPUT:");
+		num += show_queue_buffer_info(&ctx->q_data[V4L2_SRC],
+						buf + num, PAGE_SIZE - num);
+		num += snprintf(buf + num, PAGE_SIZE - num, "    CAPTURE:");
+		num += show_queue_buffer_info(&ctx->q_data[V4L2_DST],
+						buf + num, PAGE_SIZE - num);
+		num += snprintf(buf + num, PAGE_SIZE - num, "\n");
+		num += snprintf(buf + num, PAGE_SIZE - num,
+				"instance status:\n");
+		num += snprintf(buf + num, PAGE_SIZE - num,
+				"\tstatus       :0x%lx\n", ctx->status);
+		num += snprintf(buf + num, PAGE_SIZE - num,
+				"\tfrozen count :%d\n", ctx->frozen_count);
+	}
+	mutex_unlock(&vpudev->dev_mutex);
+
+	num += snprintf(buf + num, PAGE_SIZE - num, "others:\n");
 	if (vpu_attr->ts_start[V4L2_SRC] && vpu_attr->ts_start[V4L2_DST]) {
 		unsigned long latency;
 
 		latency = vpu_attr->ts_start[V4L2_DST] -
 				vpu_attr->ts_start[V4L2_SRC];
 		num += snprintf(buf + num, PAGE_SIZE - num,
-				"latency(ms):%ld\n", latency);
+				"\tlatency(ms)               :%ld\n", latency);
 	}
 
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"total dma size:%ld\n",
+			"\ttotal dma size            :%ld\n",
 			atomic64_read(&vpu_attr->total_dma_size));
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"total event msg obj count:%ld\n", vpu_attr->msg_count);
+			"\ttotal event msg obj count :%ld\n",
+			vpu_attr->msg_count);
 	num += snprintf(buf + num, PAGE_SIZE - num,
-			"total msg ext data count:%lld\n",
+			"\ttotal msg ext data count  :%lld\n",
 			get_total_ext_data_number());
-	if (!vpu_attr->core->ctx[vpu_attr->index])
+
+	mutex_lock(&vpudev->dev_mutex);
+	ctx = get_vpu_attr_ctx(vpu_attr);
+	if (ctx) {
+		if (test_bit(VPU_ENC_STATUS_HANG, &ctx->status))
+			num += snprintf(buf + num, PAGE_SIZE - num, "<hang>\n");
+	} else {
 		num += snprintf(buf + num, PAGE_SIZE - num,
 			"<instance has been released>\n");
+	}
+	mutex_unlock(&vpudev->dev_mutex);
 
 	return num;
 }
@@ -3545,6 +3652,10 @@ static ssize_t show_core_info(struct device *dev,
 			"firmware_started:%d\n", core->firmware_started);
 	num += snprintf(buf + num, PAGE_SIZE - num,
 			"hang            :%d\n", core->hang);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			"reset times     :%ld\n", core->reset_times);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			"heartbeat       :%02x\n", core->vdev->heartbeat);
 	if (core->fw_is_ready) {
 		pENC_RPC_HOST_IFACE iface = core->shared_mem.pSharedInterface;
 
@@ -3593,12 +3704,100 @@ static ssize_t show_memory_info(struct device *dev,
 }
 DEVICE_ATTR(meminfo, 0444, show_memory_info, NULL);
 
+static ssize_t show_buffer_info(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct vpu_dev *vdev = dev_get_drvdata(dev);
+	int num = 0;
+	int i;
+	int j;
+
+	mutex_lock(&vdev->dev_mutex);
+	num += snprintf(buf + num, PAGE_SIZE - num, "vpu encoder buffers:\t");
+	num += snprintf(buf + num, PAGE_SIZE - num, "(");
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:dequeued,", VB2_BUF_STATE_DEQUEUED);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:preparing,", VB2_BUF_STATE_PREPARING);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:prepared,", VB2_BUF_STATE_PREPARED);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:queued,", VB2_BUF_STATE_QUEUED);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:requeueing,", VB2_BUF_STATE_REQUEUEING);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:active,", VB2_BUF_STATE_ACTIVE);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:done,", VB2_BUF_STATE_DONE);
+	num += snprintf(buf + num, PAGE_SIZE - num,
+			" %d:error", VB2_BUF_STATE_ERROR);
+	num += snprintf(buf + num, PAGE_SIZE - num, ")\n");
+
+	for (i = 0; i < vdev->core_num; i++) {
+		struct core_device *core = &vdev->core_dev[i];
+
+		if (!core->supported_instance_count)
+			continue;
+
+		num += snprintf(buf + num, PAGE_SIZE - num, "core[%d]\n", i);
+		for (j = 0; j < core->supported_instance_count; j++) {
+			struct vpu_ctx *ctx = core->ctx[j];
+
+			if (!ctx)
+				continue;
+			num += snprintf(buf + num, PAGE_SIZE - num,
+					"\t[%d]: ", j);
+			num += snprintf(buf + num,
+					PAGE_SIZE - num, "OUTPUT:");
+			num += show_queue_buffer_info(&ctx->q_data[V4L2_SRC],
+							buf + num,
+							PAGE_SIZE - num);
+			num += snprintf(buf + num,
+					PAGE_SIZE - num, "    CAPTURE:");
+			num += show_queue_buffer_info(&ctx->q_data[V4L2_DST],
+							buf + num,
+							PAGE_SIZE - num);
+			num += snprintf(buf + num, PAGE_SIZE - num, "\n");
+		}
+	}
+	mutex_unlock(&vdev->dev_mutex);
+
+	return num;
+}
+DEVICE_ATTR(buffer, 0444, show_buffer_info, NULL);
+
+static void reset_fw_statistic(struct vpu_attr *attr)
+{
+	int i;
+
+	if (!attr)
+		return;
+
+	for (i = 0; i <= GTB_ENC_CMD_RESERVED; i++) {
+		if (i == GTB_ENC_CMD_FIRM_RESET)
+			continue;
+		attr->statistic.cmd[i] = 0;
+	}
+	for (i = 0; i <= VID_API_ENC_EVENT_RESERVED; i++)
+		attr->statistic.event[i] = 0;
+	attr->statistic.current_cmd = GTB_ENC_CMD_NOOP;
+	attr->statistic.current_event = VID_API_EVENT_UNDEFINED;
+}
+
+static void reset_statistic(struct vpu_attr *attr)
+{
+	if (!attr)
+		return;
+
+	memset(&attr->statistic, 0, sizeof(attr->statistic));
+}
+
 static int init_vpu_attr(struct vpu_attr *attr)
 {
 	if (!attr || !attr->core)
 		return -EINVAL;
 
-	memset(&attr->statistic, 0, sizeof(attr->statistic));
+	reset_statistic(attr);
 	memset(&attr->param, 0, sizeof(attr->param));
 	attr->pid = current->pid;
 	attr->tgid = current->tgid;
@@ -3617,13 +3816,11 @@ static int release_instance(struct vpu_ctx *ctx)
 	if (!ctx || !ctx->dev)
 		return -EINVAL;
 
+	if (!test_bit(VPU_ENC_STATUS_CLOSED, &ctx->status))
+		return 0;
 	if (!test_bit(VPU_ENC_STATUS_FORCE_RELEASE, &ctx->status)) {
-		if (!test_bit(VPU_ENC_STATUS_CLOSED, &ctx->status))
-			return 0;
 		if (test_bit(VPU_ENC_STATUS_START_SEND, &ctx->status) &&
 			!test_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status))
-			return -EINVAL;
-		if (is_ctx_hang(ctx))
 			return -EINVAL;
 	}
 
@@ -3652,6 +3849,8 @@ static int try_to_release_idle_instance(struct vpu_dev *dev)
 		return -EINVAL;
 
 	for (i = 0; i < dev->core_num; i++) {
+		if (dev->core_dev[i].hang)
+			set_core_force_release(&dev->core_dev[i]);
 		for (j = 0; j < dev->core_dev[i].supported_instance_count; j++)
 			release_instance(dev->core_dev[i].ctx[j]);
 	}
@@ -3667,6 +3866,16 @@ struct vpu_attr *get_vpu_ctx_attr(struct vpu_ctx *ctx)
 		return NULL;
 
 	return &ctx->core_dev->attr[ctx->str_index];
+}
+
+struct vpu_ctx *get_vpu_attr_ctx(struct vpu_attr *attr)
+{
+	WARN_ON(!attr || !attr->core);
+
+	if (attr->index >= attr->core->supported_instance_count)
+		return NULL;
+
+	return attr->core->ctx[attr->index];
 }
 
 static int vpu_enc_v4l2_open(struct file *filp)
@@ -4078,6 +4287,118 @@ static int release_vpu_attrs(struct core_device *core)
 	return 0;
 }
 
+static int is_ctx_frozen(struct vpu_ctx *ctx)
+{
+	int is_frozen = 1;
+	int i;
+	struct vpu_attr *attr = get_vpu_ctx_attr(ctx);
+
+	for (i = 0; i < GTB_ENC_CMD_RESERVED; i++) {
+		if (attr->statistic.cmd[i] != ctx->sts.cmd[i])
+			is_frozen = 0;
+		ctx->sts.cmd[i] = attr->statistic.cmd[i];
+	}
+
+	for (i = 0; i < VID_API_ENC_EVENT_RESERVED; i++) {
+		if (attr->statistic.event[i] != ctx->sts.event[i])
+			is_frozen = 0;
+		ctx->sts.event[i] = attr->statistic.event[i];
+	}
+
+	if (ctx->sts.cmd[GTB_ENC_CMD_FRAME_ENCODE] ==
+			ctx->sts.event[VID_API_ENC_EVENT_FRAME_DONE])
+		is_frozen = 0;
+
+	if (ctx->sts.cmd[GTB_ENC_CMD_CONFIGURE_CODEC] >
+			ctx->sts.event[VID_API_ENC_EVENT_MEM_REQUEST])
+		is_frozen = 1;
+	if (ctx->sts.cmd[GTB_ENC_CMD_STREAM_START] >
+			ctx->sts.event[VID_API_ENC_EVENT_START_DONE])
+		is_frozen = 1;
+	if (ctx->sts.cmd[GTB_ENC_CMD_STREAM_STOP] >
+			ctx->sts.event[VID_API_ENC_EVENT_STOP_DONE])
+		is_frozen = 1;
+
+	return is_frozen;
+}
+
+static bool check_vpu_ctx_is_hang(struct vpu_ctx *ctx)
+{
+	if (is_ctx_frozen(ctx))
+		ctx->frozen_count++;
+	else
+		ctx->frozen_count = 0;
+
+	if (ctx->frozen_count > VPU_ENC_HANG_THD) {
+		set_bit(VPU_ENC_STATUS_HANG, &ctx->status);
+		ctx->frozen_count = VPU_ENC_HANG_THD;
+	} else if (ctx->frozen_count == 0) {
+		clear_bit(VPU_ENC_STATUS_HANG, &ctx->status);
+	}
+
+	if (test_bit(VPU_ENC_STATUS_HANG, &ctx->status))
+		return true;
+
+	return false;
+}
+
+static void check_vpu_core_is_hang(struct core_device *core)
+{
+	int i;
+	unsigned int instance_count = 0;
+	unsigned int hang_count = 0;
+
+	for (i = 0; i < core->supported_instance_count; i++) {
+		if (!core->ctx[i])
+			continue;
+
+		if (check_vpu_ctx_is_hang(core->ctx[i]))
+			hang_count++;
+		instance_count++;
+	}
+
+	if (!instance_count)
+		return;
+	if (hang_count == instance_count)
+		set_core_hang(core);
+	else
+		clear_core_hang(core);
+}
+
+static void handle_vpu_core_watchdog(struct core_device *core)
+{
+	if (!core->fw_is_ready)
+		return;
+	if (core->suspend)
+		return;
+	if (core->snapshot)
+		return;
+
+	check_vpu_core_is_hang(core);
+}
+
+static void vpu_watchdog_handler(struct work_struct *work)
+{
+	struct delayed_work *dwork;
+	struct vpu_dev *vdev;
+	int i;
+
+	if (!work)
+		return;
+
+	dwork = to_delayed_work(work);
+	vdev = container_of(dwork, struct vpu_dev, watchdog);
+
+	mutex_lock(&vdev->dev_mutex);
+	for (i = 0; i < vdev->core_num; i++)
+		handle_vpu_core_watchdog(&vdev->core_dev[i]);
+	vdev->heartbeat++;
+	mutex_unlock(&vdev->dev_mutex);
+
+	schedule_delayed_work(&vdev->watchdog,
+			msecs_to_jiffies(VPU_WATCHDOG_INTERVAL_MS));
+}
+
 static int init_vpu_core_dev(struct core_device *core_dev)
 {
 	int ret;
@@ -4177,6 +4498,16 @@ static int uninit_vpu_core_dev(struct core_device *core_dev)
 	return 0;
 }
 
+static void init_vpu_watchdog(struct vpu_dev *vdev)
+{
+	if (!vdev)
+		return;
+
+	INIT_DELAYED_WORK(&vdev->watchdog, vpu_watchdog_handler);
+	schedule_delayed_work(&vdev->watchdog,
+			msecs_to_jiffies(VPU_WATCHDOG_INTERVAL_MS));
+}
+
 static int vpu_probe(struct platform_device *pdev)
 {
 	struct vpu_dev *dev;
@@ -4242,7 +4573,6 @@ static int vpu_probe(struct platform_device *pdev)
 	vpu_enable_hw(dev);
 
 	mutex_init(&dev->dev_mutex);
-	mutex_lock(&dev->dev_mutex);
 	for (i = 0; i < dev->core_num; i++) {
 		dev->core_dev[i].id = i;
 		dev->core_dev[i].generic_dev = get_device(dev->generic_dev);
@@ -4251,19 +4581,18 @@ static int vpu_probe(struct platform_device *pdev)
 		if (ret)
 			goto error_init_core;
 	}
-	mutex_unlock(&dev->dev_mutex);
 	pm_runtime_put_sync(&pdev->dev);
 
 	device_create_file(&pdev->dev, &dev_attr_meminfo);
+	device_create_file(&pdev->dev, &dev_attr_buffer);
+	init_vpu_watchdog(dev);
 	vpu_dbg(LVL_ALL, "VPU Encoder registered\n");
 
 	return 0;
 
 error_init_core:
-	mutex_lock(&dev->dev_mutex);
 	for (i = 0; i < dev->core_num; i++)
 		uninit_vpu_core_dev(&dev->core_dev[i]);
-	mutex_unlock(&dev->dev_mutex);
 
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
@@ -4291,11 +4620,11 @@ static int vpu_remove(struct platform_device *pdev)
 	struct vpu_dev *dev = platform_get_drvdata(pdev);
 	u_int32 i;
 
+	cancel_delayed_work_sync(&dev->watchdog);
+	device_remove_file(&pdev->dev, &dev_attr_buffer);
 	device_remove_file(&pdev->dev, &dev_attr_meminfo);
-	mutex_lock(&dev->dev_mutex);
 	for (i = 0; i < dev->core_num; i++)
 		uninit_vpu_core_dev(&dev->core_dev[i]);
-	mutex_unlock(&dev->dev_mutex);
 
 	vpu_disable_hw(dev);
 	pm_runtime_disable(&pdev->dev);
@@ -4308,6 +4637,8 @@ static int vpu_remove(struct platform_device *pdev)
 		put_device(dev->generic_dev);
 		dev->generic_dev = NULL;
 	}
+
+	vpu_dbg(LVL_ALL, "VPU Encoder removed\n");
 
 	return 0;
 }
@@ -4334,8 +4665,6 @@ static int is_core_activated(struct core_device *core)
 
 static int is_need_shapshot(struct vpu_ctx *ctx)
 {
-	if (is_ctx_hang(ctx))
-		return 0;
 	if (!test_bit(VPU_ENC_STATUS_INITIALIZED, &ctx->status))
 		return 0;
 	if (!test_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status))
@@ -4361,12 +4690,10 @@ static int vpu_snapshot(struct vpu_ctx *ctx)
 	vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_SNAPSHOT, 0, NULL);
 	ret = wait_for_completion_timeout(&ctx->core_dev->snap_done_cmp,
 						msecs_to_jiffies(1000));
-	if (!ret) {
+	if (!ret)
 		vpu_err("error:wait for snapdone event timeout!\n");
-		return -EINVAL;
-	}
-
-	ctx->core_dev->snapshot = true;
+	else
+		ctx->core_dev->snapshot = true;
 
 	return 0;
 }
@@ -4579,5 +4906,8 @@ MODULE_DESCRIPTION("Linux VPU driver for Freescale i.MX/MXC");
 MODULE_LICENSE("GPL");
 
 module_param(vpu_dbg_level_encoder, int, 0644);
-MODULE_PARM_DESC(vpu_dbg_level_encoder, "Debug level (0-2)");
+MODULE_PARM_DESC(vpu_dbg_level_encoder, "Debug level (0-4)");
+
+module_param(reset_on_hang, int, 0644);
+MODULE_PARM_DESC(reset_on_hang, "reset on hang (0-1)");
 

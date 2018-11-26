@@ -1,13 +1,5 @@
-/*
- * Copyright 2018 NXP
- *
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
- *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
- */
+// SPDX-License-Identifier: GPL-2.0
+// Copyright 2018 NXP
 
 #include <linux/atomic.h>
 #include <linux/clk.h>
@@ -148,28 +140,34 @@ static const char * const micfil_clk_src_texts[] = {
 	"Auto", "AudioPLL1", "AudioPLL2", "ExtClk3",
 };
 
-static const struct soc_enum fsl_micfil_enum[] = {
+static const struct soc_enum fsl_micfil_quality_enum =
 	SOC_ENUM_SINGLE(REG_MICFIL_CTRL2,
 			MICFIL_CTRL2_QSEL_SHIFT,
 			ARRAY_SIZE(micfil_quality_select_texts),
-			micfil_quality_select_texts),
+			micfil_quality_select_texts);
+static const struct soc_enum fsl_micfil_hwvad_init_mode_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_hwvad_init_mode),
-			    micfil_hwvad_init_mode),
+			    micfil_hwvad_init_mode);
+static const struct soc_enum fsl_micfil_hwvad_hpf_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_hwvad_hpf_texts),
-			    micfil_hwvad_hpf_texts),
+			    micfil_hwvad_hpf_texts);
+static const struct soc_enum fsl_micfil_hwvad_zcd_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_hwvad_zcd_enable),
-			    micfil_hwvad_zcd_enable),
+			    micfil_hwvad_zcd_enable);
+static const struct soc_enum fsl_micfil_hwvad_zcdauto_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_hwvad_zcdauto_enable),
-			    micfil_hwvad_zcd_enable),
+			    micfil_hwvad_zcd_enable);
+static const struct soc_enum fsl_micfil_hwvad_ndec_enum =
 	SOC_ENUM_SINGLE(REG_MICFIL_VAD0_NCONFIG,
 			MICFIL_VAD0_NCONFIG_NOREN_SHIFT,
 			ARRAY_SIZE(micfil_hwvad_noise_decimation),
-			micfil_hwvad_noise_decimation),
+			micfil_hwvad_noise_decimation);
+static const struct soc_enum fsl_micfil_hwvad_rate_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_hwvad_rate),
-			    micfil_hwvad_rate),
+			    micfil_hwvad_rate);
+static const struct soc_enum fsl_micfil_clk_src_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_clk_src_texts),
-			    micfil_clk_src_texts),
-};
+			    micfil_clk_src_texts);
 
 static int micfil_put_clk_src(struct snd_kcontrol *kcontrol,
 			      struct snd_ctl_elem_value *ucontrol)
@@ -655,28 +653,28 @@ static const struct snd_kcontrol_new fsl_micfil_snd_controls[] = {
 				 get_channel_gain, put_channel_gain, gain_tlv),
 
 	SOC_ENUM_EXT("MICFIL Quality Select",
-		     fsl_micfil_enum[0],
+		     fsl_micfil_quality_enum,
 		     snd_soc_get_enum_double, snd_soc_put_enum_double),
 	SOC_ENUM_EXT("HWVAD Initialization Mode",
-		     fsl_micfil_enum[1],
+		     fsl_micfil_hwvad_init_mode_enum,
 		     hwvad_get_init_mode, hwvad_put_init_mode),
 	SOC_ENUM_EXT("HWVAD High-Pass Filter",
-		     fsl_micfil_enum[2],
+		     fsl_micfil_hwvad_hpf_enum,
 		     hwvad_get_hpf, hwvad_put_hpf),
 	SOC_ENUM_EXT("HWVAD Zero-Crossing Detector Enable",
-		     fsl_micfil_enum[3],
+		     fsl_micfil_hwvad_zcd_enum,
 		     hwvad_get_zcd_en, hwvad_put_zcd_en),
 	SOC_ENUM_EXT("HWVAD Zero-Crossing Detector Auto Threshold",
-		     fsl_micfil_enum[4],
+		     fsl_micfil_hwvad_zcdauto_enum,
 		     hwvad_get_zcd_auto, hwvad_put_zcd_auto),
 	SOC_ENUM_EXT("HWVAD Noise OR Enable",
-		     fsl_micfil_enum[5],
+		     fsl_micfil_hwvad_ndec_enum,
 		     snd_soc_get_enum_double, snd_soc_put_enum_double),
 	SOC_ENUM_EXT("HWVAD Sampling Rate",
-		     fsl_micfil_enum[6],
+		     fsl_micfil_hwvad_rate_enum,
 		     hwvad_get_rate, hwvad_put_rate),
 	SOC_ENUM_EXT("Clock Source",
-		     fsl_micfil_enum[7],
+		     fsl_micfil_clk_src_enum,
 		     micfil_get_clk_src, micfil_put_clk_src),
 	{
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -2395,7 +2393,7 @@ static int __maybe_unused fsl_micfil_runtime_resume(struct device *dev)
 #endif /* CONFIG_PM*/
 
 #ifdef CONFIG_PM_SLEEP
-static int fsl_micfil_suspend(struct device *dev)
+static int __maybe_unused fsl_micfil_suspend(struct device *dev)
 {
 	struct fsl_micfil *micfil = dev_get_drvdata(dev);
 	int ret;
@@ -2415,7 +2413,7 @@ static int fsl_micfil_suspend(struct device *dev)
 	return 0;
 }
 
-static int fsl_micfil_resume(struct device *dev)
+static int __maybe_unused fsl_micfil_resume(struct device *dev)
 {
 	struct fsl_micfil *micfil = dev_get_drvdata(dev);
 	int ret;
