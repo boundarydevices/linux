@@ -168,6 +168,7 @@ enum block_type {
 	ERROR_NULL = 0,
 	ERROR_LENGTH,
 	ERROR_OUI,
+	ERROR_VER,
 	CORRECT,
 };
 
