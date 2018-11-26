@@ -13,6 +13,8 @@ Required properties:
 - clock-names:	A list of clock names. For MXSFB it should contain:
     - "pix" for the LCDIF block clock
     - (MX6SX-only) "axi", "disp_axi" for the bus interface clock
+    - (MX8-only) "video_pll, "osc_25", "osc_27" for the VIDEO_PLL,
+      OSC_25M and OSC_27M clocks
 
 Required sub-nodes:
   - port: The connection to an encoder chip.
