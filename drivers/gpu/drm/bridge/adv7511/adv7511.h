@@ -195,6 +195,10 @@
 #define ADV7511_PACKET_GM(x)	    ADV7511_PACKET(5, x)
 #define ADV7511_PACKET_SPARE(x)	    ADV7511_PACKET(6, x)
 
+#define FORMAT_RATIO(x, y) (((x) * 100) / (y))
+#define RATIO_16_9 FORMAT_RATIO(16, 9)
+#define RATIO_4_3  FORMAT_RATIO(4, 3)
+
 enum adv7511_input_clock {
 	ADV7511_INPUT_CLOCK_1X,
 	ADV7511_INPUT_CLOCK_2X,
@@ -354,8 +358,6 @@ struct adv7511 {
 #ifdef CONFIG_DRM_I2C_ADV7533
 void adv7533_dsi_power_on(struct adv7511 *adv);
 void adv7533_dsi_power_off(struct adv7511 *adv);
-void adv7533_mode_set(struct adv7511 *adv, struct drm_display_mode *mode);
-bool adv7533_mode_fixup(struct adv7511 *adv, struct drm_display_mode *mode);
 int adv7533_patch_registers(struct adv7511 *adv);
 void adv7533_uninit_cec(struct adv7511 *adv);
 int adv7533_init_cec(struct adv7511 *adv);

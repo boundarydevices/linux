@@ -331,6 +331,7 @@ static void __adv7511_power_on(struct adv7511 *adv7511)
 {
 	adv7511->current_edid_segment = -1;
 
+	/* 01-02 Power */
 	regmap_update_bits(adv7511->regmap, ADV7511_REG_POWER,
 			   ADV7511_POWER_POWER_DOWN, 0);
 	if (adv7511->i2c_main->irq) {
@@ -346,6 +347,7 @@ static void __adv7511_power_on(struct adv7511 *adv7511)
 	}
 
 	/*
+	 * 01-01 HPD Manual Override
 	 * Per spec it is allowed to pulse the HPD signal to indicate that the
 	 * EDID information has changed. Some monitors do this when they wakeup
 	 * from standby or are enabled. When the HPD goes low the adv7511 is
@@ -765,9 +767,6 @@ static void adv7511_mode_set(struct adv7511 *adv7511,
 	regmap_update_bits(adv7511->regmap, 0x17,
 		0x60, (vsync_polarity << 6) | (hsync_polarity << 5));
 
-	if (adv7511->type == ADV7533 || adv7511->type == ADV7535)
-		adv7533_mode_set(adv7511, adj_mode);
-
 	drm_mode_copy(&adv7511->curr_mode, adj_mode);
 
 	/*
@@ -851,18 +850,6 @@ static void adv7511_bridge_mode_set(struct drm_bridge *bridge,
 	adv7511_mode_set(adv, mode, adj_mode);
 }
 
-static bool adv7511_bridge_mode_fixup(struct drm_bridge *bridge,
-				      const struct drm_display_mode *mode,
-				      struct drm_display_mode *adjusted_mode)
-{
-	struct adv7511 *adv = bridge_to_adv7511(bridge);
-
-	if (adv->type == ADV7533 || adv->type == ADV7535)
-		return adv7533_mode_fixup(adv, adjusted_mode);
-
-	return true;
-}
-
 static int adv7511_bridge_attach(struct drm_bridge *bridge)
 {
 	struct adv7511 *adv = bridge_to_adv7511(bridge);
@@ -900,7 +887,6 @@ static const struct drm_bridge_funcs adv7511_bridge_funcs = {
 	.enable = adv7511_bridge_enable,
 	.disable = adv7511_bridge_disable,
 	.mode_set = adv7511_bridge_mode_set,
-	.mode_fixup = adv7511_bridge_mode_fixup,
 	.attach = adv7511_bridge_attach,
 };
 
