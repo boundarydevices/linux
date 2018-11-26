@@ -123,7 +123,8 @@ extern int osd_sync_request(u32 index, u32 yres,
 	struct fb_sync_request_s *request);
 extern int osd_sync_request_render(u32 index, u32 yres,
 	struct sync_req_render_s *request,
-	u32 phys_addr);
+	u32 phys_addr,
+	size_t len);
 extern int osd_sync_do_hwc(struct do_hwc_cmd_s *hwc_cmd);
 extern s64  osd_wait_vsync_event(void);
 extern void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart,

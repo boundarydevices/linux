@@ -1009,7 +1009,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 			sync_request_render->out_fen_fd =
 				osd_sync_request_render(info->node,
 				info->var.yres,
-				sync_request_render, phys_addr);
+				sync_request_render, phys_addr, len);
 			osd_restore_screen_info(info->node,
 				&info->screen_base, &info->screen_size);
 			ret = copy_to_user(argp,

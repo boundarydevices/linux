@@ -983,7 +983,8 @@ int osd_sync_request(u32 index, u32 yres, struct fb_sync_request_s *request)
 
 static int sync_render_single_fence(u32 index, u32 yres,
 	struct sync_req_render_s *request,
-	u32 phys_addr)
+	u32 phys_addr,
+	size_t len)
 {
 	int out_fence_fd = -1;
 	int buf_num = 0;
@@ -1019,6 +1020,7 @@ static int sync_render_single_fence(u32 index, u32 yres,
 		fence_map->byte_stride = request->byte_stride;
 		fence_map->pxiel_stride = request->pxiel_stride;
 		fence_map->afbc_inter_format = request->afbc_inter_format;
+		fence_map->afbc_len = len;
 	}
 	fence_map->format = request->format;
 	fence_map->compose_type = request->type;
@@ -1039,7 +1041,8 @@ static int sync_render_single_fence(u32 index, u32 yres,
 
 static int sync_render_layers_fence(u32 index, u32 yres,
 	struct sync_req_render_s *request,
-	u32 phys_addr)
+	u32 phys_addr,
+	size_t len)
 {
 	int out_fence_fd = -1;
 	s32 in_fence_fd;
@@ -1083,6 +1086,7 @@ static int sync_render_layers_fence(u32 index, u32 yres,
 		request->plane_alpha;
 	fence_map->layer_map[index].dim_layer = request->dim_layer;
 	fence_map->layer_map[index].dim_color = request->dim_color;
+	fence_map->layer_map[index].afbc_len = len;
 	/* just return out_fd,but not signal */
 	/* no longer put list, will put them via do_hwc */
 	fence_map->layer_map[index].in_fence = osd_get_fenceobj(in_fence_fd);
@@ -1101,7 +1105,8 @@ static int sync_render_layers_fence(u32 index, u32 yres,
 
 int osd_sync_request_render(u32 index, u32 yres,
 	struct sync_req_render_s *request,
-	u32 phys_addr)
+	u32 phys_addr,
+	size_t len)
 {
 	int line;
 
@@ -1119,7 +1124,7 @@ int osd_sync_request_render(u32 index, u32 yres,
 	else
 		osd_hw.viu_type = VIU1;
 	osd_hw.osd_fence[osd_hw.hwc_enable].sync_fence_handler(
-		index, yres, request, phys_addr);
+		index, yres, request, phys_addr, len);
 	return request->out_fen_fd;
 }
 
@@ -1236,7 +1241,8 @@ int osd_sync_request(u32 index, u32 yres, struct fb_sync_request_s *request)
 
 int osd_sync_request_render(u32 index, u32 yres,
 	struct sync_req_render_s *request,
-	u32 phys_addr)
+	u32 phys_addr,
+	size_t len)
 {
 	osd_log_err("osd_sync_request_render not supported\n");
 	return -5566;
@@ -3626,6 +3632,9 @@ static bool osd_direct_compose_pan_display(struct osd_fence_map_s *fence_map)
 			fence_map->byte_stride,
 			fence_map->height,
 			CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		osd_hw.screen_base[index] = vaddr;
+		osd_hw.screen_size[index] =
+			fence_map->byte_stride * fence_map->height;
 	} else {
 		osd_hw.osd_afbcd[index].phy_addr = ext_addr;
 		osd_hw.osd_afbcd[index].frame_width =
@@ -3646,6 +3655,8 @@ static bool osd_direct_compose_pan_display(struct osd_fence_map_s *fence_map)
 			else
 				osd_hw.osd_afbcd[index].conv_lbuf_len = 1024;
 		}
+		osd_hw.screen_base[index] = vaddr;
+		osd_hw.screen_size[index] = fence_map->afbc_len;
 	}
 	width_dst = osd_hw.free_dst_data_backup[index].x_end -
 		osd_hw.free_dst_data_backup[index].x_start + 1;
@@ -3656,8 +3667,7 @@ static bool osd_direct_compose_pan_display(struct osd_fence_map_s *fence_map)
 		osd_hw.free_dst_data_backup[index].y_start + 1;
 	height_src = osd_hw.free_src_data_backup[index].y_end -
 		osd_hw.free_src_data_backup[index].y_start + 1;
-	osd_hw.screen_base[index] = vaddr;
-	osd_hw.screen_size[index] = fence_map->byte_stride * fence_map->height;
+
 	if (osd_hw.free_scale_enable[index] ||
 		(width_src != width_dst) ||
 		(height_src != height_dst) ||
@@ -4150,6 +4160,9 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 				layer_map->src_h + layer_map->src_y,
 				CANVAS_ADDR_NOWRAP,
 				CANVAS_BLKMODE_LINEAR);
+			osd_hw.screen_base[index] = vaddr;
+			osd_hw.screen_size[index] =
+				layer_map->byte_stride * layer_map->src_h;
 		} else {
 			osd_hw.osd_afbcd[index].phy_addr = ext_addr;
 			if (osd_hw.osd_meson_dev.afbc_type ==
@@ -4176,6 +4189,10 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 				else
 					osd_hw.osd_afbcd[index]
 						.conv_lbuf_len = 1024;
+				osd_hw.screen_base[index] = vaddr;
+				osd_hw.screen_size[index] =
+					layer_map->afbc_len;
+
 			} else if (osd_hw.osd_meson_dev
 				.afbc_type == MALI_AFBC) {
 				osd_hw.osd_afbcd[index].frame_width =
@@ -4183,11 +4200,12 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 					//BYTE_32_ALIGNED(layer_map->src_w);
 				osd_hw.osd_afbcd[index].frame_height =
 					BYTE_8_ALIGNED(layer_map->src_h);
+				osd_hw.screen_base[index] = vaddr;
+				osd_hw.screen_size[index] =
+					layer_map->afbc_len;
 			}
 		}
-		osd_hw.screen_base[index] = vaddr;
-		osd_hw.screen_size[index] =
-			layer_map->byte_stride * layer_map->src_h;
+
 		/* just get para, need update via do_hwc */
 		osd_hw.order[index] = layer_map->zorder;
 		switch (layer_map->blend_mode) {
