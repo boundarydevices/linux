@@ -38,15 +38,6 @@
 	status = "okay";
 	max-res = <1080>, <1920>;
 
-	assigned-clocks = <&clk IMX8MQ_CLK_LCDIF_PIXEL>,
-			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>,
-			  <&clk IMX8MQ_VIDEO_PLL1>;
-	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
-				 <&clk IMX8MQ_CLK_25M>;
-	assigned-clock-rate = <120000000>,
-			      <0>,
-			      <599999999>;
-
 	port@0 {
 		lcdif_mipi_dsi: mipi-dsi-endpoint {
 			remote-endpoint = <&mipi_dsi_in>;
@@ -62,17 +53,6 @@
 	status = "okay";
 	as_bridge;
 	sync-pol = <1>;
-	assigned-clocks = <&clk IMX8MQ_CLK_DSI_PHY_REF>,
-			  <&clk IMX8MQ_CLK_DSI_CORE>,
-			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>,
-			  <&clk IMX8MQ_VIDEO_PLL1>;
-	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
-				 <&clk IMX8MQ_SYS1_PLL_266M>,
-				 <&clk IMX8MQ_CLK_25M>;
-	assigned-clock-rates = <24000000>,
-			       <266000000>,
-			       <0>,
-			       <599999999>;
 
 	port@1 {
 		mipi_dsi_in: endpoint {
