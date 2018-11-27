@@ -292,6 +292,10 @@ MODULE_PARM_DESC(dolby_vision_graphic_min, "\n dolby_vision_graphic_min\n");
 module_param(dolby_vision_graphic_max, uint, 0664);
 MODULE_PARM_DESC(dolby_vision_graphic_max, "\n dolby_vision_graphic_max\n");
 
+/*these two parameters form OSD*/
+static unsigned int osd_graphic_width = 1920;
+static unsigned int osd_graphic_height = 1080;
+
 static unsigned int dv_cert_graphic_width = 1920;
 static unsigned int dv_cert_graphic_height = 1080;
 module_param(dv_cert_graphic_width, uint, 0664);
@@ -1763,8 +1767,7 @@ static int dolby_core2_set(
 
 	VSYNC_WR_MPEG_REG(DOLBY_CORE2A_CLKGATE_CTRL, 0);
 	VSYNC_WR_MPEG_REG(DOLBY_CORE2A_SWAP_CTRL0, 0);
-	if (is_meson_gxm() ||
-		is_meson_g12() || reset) {
+	if (is_meson_gxm() || is_meson_g12() || reset) {
 		VSYNC_WR_MPEG_REG(DOLBY_CORE2A_SWAP_CTRL1,
 			((hsize + g_htotal_add) << 16)
 			| (vsize + g_vtotal_add + g_vsize_add));
@@ -2058,6 +2061,13 @@ static int dolby_core3_set(
 	return 0;
 }
 
+void update_graphic_width_height(unsigned int width,
+	unsigned int height)
+{
+	osd_graphic_width = width;
+	osd_graphic_height = height;
+}
+
 static void apply_stb_core_settings(
 	int enable, unsigned int mask,
 	bool reset, u32 frame_size, u8 pps_state)
@@ -2070,15 +2080,15 @@ static void apply_stb_core_settings(
 #else
 	u32 core1_dm_count = 24;
 #endif
-	u32 graphics_w = 1920;
-	u32 graphics_h = 1080;
+	u32 graphics_w = osd_graphic_width;
+	u32 graphics_h = osd_graphic_height;
 
 	if (is_dolby_vision_stb_mode()
 		&& (dolby_vision_flags & FLAG_CERTIFICAION)) {
 		graphics_w = dv_cert_graphic_width;
 		graphics_h = dv_cert_graphic_height;
 	}
-	if (is_meson_txlx_package_962E()
+	if (is_meson_txlx_stbmode()
 		|| force_stb_mode) {
 		if ((vinfo->width >= 1920) &&
 			(vinfo->height >= 1080) &&
@@ -2096,7 +2106,7 @@ static void apply_stb_core_settings(
 			g_vpotch = 0x20;
 	}
 	if (mask & 1) {
-		if (is_meson_txlx_package_962E()
+		if (is_meson_txlx_stbmode()
 			|| force_stb_mode) {
 			stb_dolby_core1_set(
 				27, 173, 256 * 5,

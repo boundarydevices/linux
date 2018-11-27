@@ -51,5 +51,7 @@ extern int enable_rgb_to_yuv_matrix_for_dvll(
 	int32_t on, uint32_t *coeff_orig, uint32_t bits);
 
 extern bool is_dovi_frame(struct vframe_s *vf);
+extern void update_graphic_width_height(unsigned int width,
+	unsigned int height);
 
 #endif

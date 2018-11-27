@@ -53,6 +53,10 @@
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 #include <linux/amlogic/media/video_sink/video.h>
 #endif
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+#include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
+#endif
+
 /* Local Headers */
 #include "osd_canvas.h"
 #include "osd_prot.h"
@@ -7862,6 +7866,10 @@ static void osd_basic_update_disp_geometry(u32 index)
 		VSYNCOSD_WR_MPEG_REG(
 			DOLBY_CORE2A_SWAP_CTRL2,
 			(buffer_w << 16) | (buffer_h + 0));
+
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		update_graphic_width_height(buffer_w, buffer_h);
+#endif
 	}
 	data32 = VSYNCOSD_RD_MPEG_REG(osd_reg->osd_ctrl_stat);
 	data32 &= ~0x1ff008;//0x1ff00e;
@@ -7986,6 +7994,9 @@ static void osd1_basic_update_disp_geometry(void)
 		VSYNCOSD_WR_MPEG_REG(
 			DOLBY_CORE2A_SWAP_CTRL2,
 			(buffer_w << 16) | (buffer_h + 0));
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		update_graphic_width_height(buffer_w, buffer_h);
+#endif
 	}
 	if (osd_hw.osd_afbcd[OSD1].enable &&
 		!osd_afbc_dec_enable &&
