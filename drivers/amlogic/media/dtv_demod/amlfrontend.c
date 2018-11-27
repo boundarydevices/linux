@@ -2761,6 +2761,15 @@ static int gxtv_demod_dtmb_tune(struct dvb_frontend *fe, bool re_tune,
 #if 1	/**/
 	*delay = HZ / 4;
 	gxtv_demod_dtmb_read_status_old(fe, status);
+
+	if (is_ic_ver(IC_VER_TL1)) {
+		if (*status == (FE_HAS_LOCK | FE_HAS_SIGNAL | FE_HAS_CARRIER |
+			FE_HAS_VITERBI | FE_HAS_SYNC))
+			dtmb_poll_start_tune(DTMBM_HV_SIGNEL_CHECK);
+		else
+			dtmb_poll_start_tune(DTMBM_NO_SIGNEL_CHECK);
+	}
+
 #else	/*try polling*/
 
 	/*pr_dbg("+");*/
