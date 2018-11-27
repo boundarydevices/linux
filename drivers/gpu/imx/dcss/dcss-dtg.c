@@ -297,9 +297,9 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 		    vm->vactive - 1;
 
 	if (dtg->hdmi_output) {
-		dcss_pll_disable(dcss);
-		dcss_pll_set_rate(dcss, vm->pixelclock, 2, &actual_clk);
-		dcss_pll_enable(dcss);
+		clk_disable_unprepare(dcss->pout_clk);
+		clk_set_rate(dcss->pout_clk, vm->pixelclock);
+		clk_prepare_enable(dcss->pout_clk);
 	} else {
 		clk_disable_unprepare(dcss->pout_clk);
 		clk_disable_unprepare(dcss->pdiv_clk);
@@ -307,13 +307,6 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 		actual_clk = clk_get_rate(dcss->pdiv_clk);
 		clk_prepare_enable(dcss->pdiv_clk);
 		clk_prepare_enable(dcss->pout_clk);
-	}
-
-	if (vm->pixelclock != actual_clk) {
-		dev_info(dcss->dev,
-			 "pixel clock set to %u Hz instead of %lu Hz, error is %d Hz\n",
-			 actual_clk, vm->pixelclock,
-			 (int)actual_clk - (int)vm->pixelclock);
 	}
 
 	msleep(50);
