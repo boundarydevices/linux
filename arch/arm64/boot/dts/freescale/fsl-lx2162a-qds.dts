@@ -307,6 +307,10 @@
 	};
 };
 
+&optee {
+	status = "okay";
+};
+
 &sata0 {
 	status = "okay";
 };
