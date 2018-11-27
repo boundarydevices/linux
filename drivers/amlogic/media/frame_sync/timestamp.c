@@ -136,7 +136,7 @@ EXPORT_SYMBOL(timestamp_pcrscr_get);
 
 void timestamp_pcrscr_set(u32 pts)
 {
-	pr_info("timestamp_pcrscr_set system time  = %x\n", pts);
+	//pr_info("timestamp_pcrscr_set system time  = %x\n", pts);
 	system_time = pts;
 }
 EXPORT_SYMBOL(timestamp_pcrscr_set);
