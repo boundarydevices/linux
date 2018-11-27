@@ -179,6 +179,7 @@ struct amlogic_usb_v2 {
 
 	int portnum;
 	int suspend_flag;
+	int phy_version;
 	struct clk		*clk;
 };
 

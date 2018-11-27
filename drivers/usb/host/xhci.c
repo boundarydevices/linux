@@ -1414,14 +1414,18 @@ int xhci_urb_enqueue(struct usb_hcd *hcd, struct urb *urb, gfp_t mem_flags)
 			&& (setup->wIndex != 0x0)) {
 			if ((((setup->wIndex)>>8) & 0xff) == 7) {
 				setup->wIndex = 0;
+				spin_unlock_irqrestore(&xhci->lock, flags);
 				ret = xhci_test_single_step(xhci,
 					GFP_ATOMIC, urb,
 					slot_id, ep_index, 1);
+				spin_lock_irqsave(&xhci->lock, flags);
 			} else if ((((setup->wIndex)>>8)&0xff) == 8) {
 				setup->wIndex = 0;
+				spin_unlock_irqrestore(&xhci->lock, flags);
 				ret = xhci_test_single_step(xhci,
 					GFP_ATOMIC, urb,
 					slot_id, ep_index, 2);
+				spin_lock_irqsave(&xhci->lock, flags);
 			}
 		} else
 #endif

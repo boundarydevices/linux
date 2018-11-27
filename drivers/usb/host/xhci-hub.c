@@ -944,7 +944,7 @@ int xhci_disable_slot(struct xhci_hcd *xhci, struct xhci_command *command,
 	if (!virt_dev)
 		return -EINVAL;
 	if (!command)
-		command = xhci_alloc_command(xhci, false, false, GFP_KERNEL);
+		command = xhci_alloc_command(xhci, false, false, GFP_ATOMIC);
 	if (!command)
 		return -ENOMEM;
 
@@ -980,7 +980,6 @@ static void xhci_set_port_power(struct xhci_hcd *xhci,
 {
 	__le32 __iomem **port_array;
 	u32 temp;
-	unsigned long flags = 0;
 
 	port_array = xhci->usb2_ports;
 	temp = readl(port_array[index]);
@@ -994,14 +993,6 @@ static void xhci_set_port_power(struct xhci_hcd *xhci,
 		/* Power off */
 		writel(temp & ~PORT_POWER, port_array[index]);
 	}
-
-	spin_unlock_irqrestore(&xhci->lock, flags);
-	temp = usb_acpi_power_manageable(hcd->self.root_hub,
-					index);
-	if (temp)
-		usb_acpi_set_power_state(hcd->self.root_hub,
-			index, on);
-	spin_lock_irqsave(&xhci->lock, flags);
 }
 
 
@@ -1070,7 +1061,6 @@ static int xhci_test_suspend_resume(struct usb_hcd *hcd,
 	__le32 __iomem **port_array = xhci->usb2_ports;
 
 	/* 15 second delay per the test spec */
-	spin_unlock_irqrestore(&xhci->lock, flags);
 	xhci_err(xhci, "into suspend\n");
 	spin_lock_irqsave(&xhci->lock, flags);
 
@@ -1091,6 +1081,7 @@ static int xhci_test_suspend_resume(struct usb_hcd *hcd,
 	temp = readl(port_array[wIndex]);
 	if ((temp & PORT_PE) == 0 || (temp & PORT_RESET)
 		|| (temp & PORT_PLS_MASK) >= XDEV_U3) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
 		xhci_warn(xhci, "USB core suspending device not in U0/U1/U2.\n");
 		return -1;
 	}
@@ -1098,6 +1089,7 @@ static int xhci_test_suspend_resume(struct usb_hcd *hcd,
 	slot_id = xhci_find_slot_id_by_port(hcd, xhci,
 			wIndex + 1);
 	if (!slot_id) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
 		xhci_warn(xhci, "slot_id is zero\n");
 		return -1;
 	}
@@ -1122,11 +1114,15 @@ static int xhci_test_suspend_resume(struct usb_hcd *hcd,
 	temp = readl(port_array[wIndex]);
 	xhci_dbg(xhci, "clear USB_PORT_FEAT_SUSPEND\n");
 	xhci_dbg(xhci, "PORTSC %04x\n", temp);
-	if (temp & PORT_RESET)
+	if (temp & PORT_RESET) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
 		return -1;
+	}
 	if ((temp & PORT_PLS_MASK) == XDEV_U3) {
-		if ((temp & PORT_PE) == 0)
+		if ((temp & PORT_PE) == 0) {
+			spin_unlock_irqrestore(&xhci->lock, flags);
 			return -1;
+		}
 
 		xhci_set_link_state(xhci, port_array, wIndex,
 			XDEV_RESUME);
@@ -1138,6 +1134,7 @@ static int xhci_test_suspend_resume(struct usb_hcd *hcd,
 	}
 
 	xhci_ring_device(xhci, slot_id);
+	spin_unlock_irqrestore(&xhci->lock, flags);
 	return 0;
 }
 #endif
@@ -1426,8 +1423,11 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			else if (test_mode == 5)
 				xhci_port_set_test_mode(xhci,
 					test_mode, wIndex);
-			else
+			else {
+				spin_unlock_irqrestore(&xhci->lock, flags);
 				retval = xhci_test_suspend_resume(hcd, wIndex);
+				spin_lock_irqsave(&xhci->lock, flags);
+			}
 			break;
 #endif
 		default:

@@ -6249,8 +6249,11 @@ int dwc_otg_set_param_dev_perio_tx_fifo_size(dwc_otg_core_if_t *core_if,
 		return -DWC_E_INVALID;
 	}
 	if (val >
-	    (DWC_READ_REG32(&core_if->core_global_regs->dtxfsiz[fifo_num]) >> 16)) {
-		DWC_WARN("Value is larger then power-on FIFO size\n");
+		(DWC_READ_REG32
+		(&core_if->core_global_regs->dtxfsiz[fifo_num]) >> 16)) {
+		if (DWC_READ_REG32
+			(&core_if->core_global_regs->dtxfsiz[fifo_num]) >> 16)
+			DWC_WARN("Value is larger then power-on FIFO size\n");
 		if (dwc_otg_param_initialized
 		    (core_if->core_params->dev_perio_tx_fifo_size[fifo_num]))
 			DWC_ERROR
@@ -6313,7 +6316,8 @@ int dwc_otg_set_param_dev_tx_fifo_size(dwc_otg_core_if_t *core_if, int32_t val,
 		return -DWC_E_INVALID;
 	}
 	if (val > txfifosize.b.depth) {
-		DWC_WARN("Value is larger then power-on FIFO size\n");
+		if (txfifosize.b.depth)
+			DWC_WARN("Value is larger then power-on FIFO size\n");
 		if (dwc_otg_param_initialized
 		    (core_if->core_params->dev_tx_fifo_size[fifo_num]))
 			DWC_ERROR

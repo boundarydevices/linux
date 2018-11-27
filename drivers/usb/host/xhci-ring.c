@@ -3386,16 +3386,22 @@ int xhci_test_single_step(struct xhci_hcd *xhci, gfp_t mem_flags,
 	struct xhci_td *td;
 	unsigned long flags = 0;
 
+	spin_lock_irqsave(&xhci->lock, flags);
+
 	ep_ring = xhci_urb_to_transfer_ring(xhci, urb);
-	if (!ep_ring)
+	if (!ep_ring) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
 		return -EINVAL;
+	}
 
 	/*
 	 * Need to copy setup packet into setup TRB, so we can't use the setup
 	 * DMA address.
 	 */
-	if (!urb->setup_packet)
+	if (!urb->setup_packet) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
 		return -EINVAL;
+	}
 
 	/* 1 TRB for setup, 1 for status */
 	num_trbs = 2;
@@ -3409,8 +3415,10 @@ int xhci_test_single_step(struct xhci_hcd *xhci, gfp_t mem_flags,
 	ret = prepare_transfer(xhci, xhci->devs[slot_id],
 			ep_index, urb->stream_id,
 			num_trbs, urb, 0, mem_flags);
-	if (ret < 0)
+	if (ret < 0) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
 		return ret;
+	}
 
 	urb_priv = urb->hcpriv;
 	td = urb_priv->td[0];
@@ -3515,14 +3523,12 @@ int xhci_test_single_step(struct xhci_hcd *xhci, gfp_t mem_flags,
 	giveback_first_trb(xhci, slot_id, ep_index, 0,
 			start_cycle, start_trb);
 
-		/* 15 second delay per the test spec */
-		spin_unlock_irqrestore(&xhci->lock, flags);
-		xhci_err(xhci, "step 3\n");
-		msleep(15000);
-		spin_lock_irqsave(&xhci->lock, flags);
+	/* 15 second delay per the test spec */
+	spin_unlock_irqrestore(&xhci->lock, flags);
+	xhci_err(xhci, "step 3\n");
+	msleep(15000);
 
 	return 0;
-
 }
 #endif
 

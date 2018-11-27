@@ -38,6 +38,10 @@ void set_usb_phy_host_tuning(int port, int default_val)
 
 	if (!g_phy2_v2)
 		return;
+
+	if (g_phy2_v2->phy_version == 1)
+		return;
+
 	if (port > g_phy2_v2->portnum)
 		return;
 	if (default_val == g_phy2_v2->phy_cfg_state[port])
@@ -63,6 +67,10 @@ void set_usb_phy_device_tuning(int port, int default_val)
 
 	if (!g_phy2_v2)
 		return;
+
+	if (g_phy2_v2->phy_version == 1)
+		return;
+
 	if (port > g_phy2_v2->portnum)
 		return;
 	if (default_val == g_phy2_v2->phy_cfg_state[port])
@@ -111,10 +119,15 @@ static int amlogic_new_usb2_init(struct usb_phy *x)
 	union u2p_r0_v2 reg0;
 	union u2p_r1_v2 reg1;
 	u32 val;
+	u32 temp = 0;
+	u32 portnum = phy->portnum;
+
+	while (portnum--)
+		temp = temp | (1 << (16 + portnum));
 
 	val = readl((void __iomem *)
 		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
-	writel((val | (0x3 << 16)), (void __iomem *)
+	writel((val | temp), (void __iomem *)
 		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
 
 	amlogic_new_usbphy_reset_v2(phy);
@@ -183,11 +196,16 @@ static void amlogic_new_usb2phy_shutdown(struct usb_phy *x)
 {
 	struct amlogic_usb_v2 *phy = phy_to_amlusb(x);
 	u32 val;
+	u32 temp = 0;
+	u32 cnt = phy->portnum;
+
+	while (cnt--)
+		temp = temp | (1 << (16 + cnt));
 
 	/* set usb phy to low power mode */
 	val = readl((void __iomem		*)
 		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
-	writel((val & (~(0x3 << 16))), (void __iomem	*)
+	writel((val & (~temp)), (void __iomem	*)
 		((unsigned long)phy->reset_regs + (0x21 * 4 - 0x8)));
 
 	phy->suspend_flag = 1;
@@ -204,6 +222,7 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	void __iomem	*reset_base = NULL;
 	void __iomem	*phy_cfg_base[4];
 	int portnum = 0;
+	int phy_version = 0;
 	const void *prop;
 	int i = 0;
 	int retval;
@@ -217,6 +236,12 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "This phy has no usb port\n");
 		return -ENOMEM;
 	}
+
+	prop = of_get_property(dev->of_node, "version", NULL);
+	if (prop)
+		phy_version = of_read_ulong(prop, 1);
+	else
+		phy_version = 0;
 
 	phy_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	phy_base = devm_ioremap_resource(dev, phy_mem);
@@ -308,6 +333,7 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	phy->pll_setting[6] = pll_setting[6];
 	phy->pll_setting[7] = pll_setting[7];
 	phy->suspend_flag = 0;
+	phy->phy_version = phy_version;
 	for (i = 0; i < portnum; i++) {
 		phy->phy_cfg[i] = phy_cfg_base[i];
 		/* set port default tuning state */

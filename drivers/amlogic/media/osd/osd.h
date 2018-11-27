@@ -750,6 +750,7 @@ struct hw_para_s {
 	u32 hw_rdma_en;
 	u32 blend_bypass;
 	u32 hdr_used;
+	u32 workaround_line;
 	u32 basic_urgent;
 	u32 two_ports;
 	u32 afbc_err_cnt;

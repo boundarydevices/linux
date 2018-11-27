@@ -1064,7 +1064,7 @@ int32_t dwc_otg_pcd_handle_enum_done_intr(dwc_otg_pcd_t *pcd)
 	DWC_DEBUGPL(DBG_PCD, "SPEED ENUM\n");
 
 #ifdef CONFIG_AMLOGIC_USB3PHY
-	if (GET_CORE_IF(pcd)->phy_interface == 0) {
+	if (GET_CORE_IF(pcd)->phy_interface != 1) {
 		speed = get_device_speed(GET_CORE_IF(pcd));
 		if (speed != USB_SPEED_HIGH) {
 			gintsts.d32 = 0;

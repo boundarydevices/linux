@@ -6102,12 +6102,12 @@ static void osd_setting_blend1(struct hw_osd_blending_s *blending)
 	if (!blending)
 		return;
 	if (osd_hw.hdr_used)
-		workaround_line = 1;
+		workaround_line = osd_hw.workaround_line;
 	else {
 		if (blending->layer_cnt == 2)
 			workaround_line = 0;
 		else
-			workaround_line = 1;
+			workaround_line = osd_hw.workaround_line;
 	}
 	layer_blend = &(blending->layer_blend);
 	blend_reg = &(blending->blend_reg);
@@ -6537,9 +6537,10 @@ static void osd_setting_blend0_input(u32 index,
 	struct hw_osd_blending_s *blending)
 {
 	struct layer_blend_s *layer_blend;
-	u32 workaround_line = 1;
+	u32 workaround_line = 0;
 	/* for g12a blend shift issue */
 
+	workaround_line = osd_hw.workaround_line;
 	layer_blend = &(blending->layer_blend);
 	if (index == OSD1) {
 
@@ -8464,9 +8465,16 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		osd_hw.disp_info.position_x = 0;
 		osd_hw.disp_info.position_y = 0;
 		osd_hw.disp_info.position_w = 1920;
-		osd_hw.disp_info.background_h = 1080;
+		osd_hw.disp_info.position_h = 1080;
 		osd_hw.vinfo_width = 1920;
 		osd_hw.vinfo_height = 1080;
+		if ((osd_hw.osd_meson_dev.cpu_id ==
+			__MESON_CPU_MAJOR_ID_G12A) ||
+			(osd_hw.osd_meson_dev.cpu_id ==
+			__MESON_CPU_MAJOR_ID_G12B))
+			osd_hw.workaround_line = 1;
+		else
+			osd_hw.workaround_line = 0;
 		for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count; idx++) {
 			osd_hw.premult_en[idx] = 0;
 			osd_hw.osd_afbcd[idx].format = COLOR_INDEX_32_ABGR;
