@@ -310,6 +310,12 @@ static int mxs_dcp_aes_block_crypt(struct crypto_async_request *arq)
 
 	actx->fill = 0;
 
+	/*
+	 * We are not supporting the case where there is no message to encrypt
+	 */
+	if (nents == 0)
+		return -EINVAL;
+
 	/* Copy the key from the temporary location. */
 	memcpy(key, actx->key, actx->key_len);
 
