@@ -1055,6 +1055,9 @@ static int epdc_choose_next_lut(struct mxc_epdc_fb_data *fb_data, int *next_lut)
 		pxp_clear_wb_work_func(fb_data);
 		used_luts &= ~luts_complete;
 		fb_data->luts_complete &= ~luts_complete;
+		mutex_unlock(&fb_data->queue_mutex);
+		msleep(10);
+		mutex_lock(&fb_data->queue_mutex);
 	}
 
 	used_luts |= 0x1;
