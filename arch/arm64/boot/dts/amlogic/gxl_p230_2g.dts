@@ -51,6 +51,12 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
+
+		defendkey_reserved:linux,defendkey {
+			compatible = "amlogic, defendkey";
+			reg = <0x0 0x08300000 0x0 0x100000>;
+		};
+
 		ramoops@0x07400000 {
 			compatible = "ramoops";
 			reg = <0x0 0x07400000 0x0 0x00100000>;
@@ -145,11 +151,6 @@
 			size = <0x0 0x0>;
 			alignment = <0x0 0x100000>;
 			//no-map;
-		};
-
-		defendkey_reserved:linux,defendkey {
-			compatible = "amlogic, defendkey";
-			reg = <0x0 0x08300000 0x0 0x100000>;
 		};
 	};
 	bt-dev{

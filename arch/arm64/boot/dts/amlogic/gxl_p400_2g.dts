@@ -46,6 +46,12 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
+
+		defendkey_reserved:linux,defendkey {
+			compatible = "amlogic, defendkey";
+			reg = <0x0 0x08300000 0x0 0x100000>;
+		};
+
 		ramoops@0x07400000 {
 			compatible = "ramoops";
 			reg = <0x0 0x07400000 0x0 0x00100000>;
@@ -74,11 +80,6 @@
 			size = <0x0 0x2400000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x7dc00000 0x0 0x2400000>;
-		};
-
-		defendkey_reserved:linux,defendkey {
-			compatible = "amlogic, defendkey";
-			reg = <0x0 0x08300000 0x0 0x100000>;
 		};
 	};
 

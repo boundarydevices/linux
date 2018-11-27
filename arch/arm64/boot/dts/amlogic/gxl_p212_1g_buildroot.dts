@@ -48,6 +48,12 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
+
+		defendkey_reserved:linux,defendkey {
+			compatible = "amlogic, defendkey";
+			reg = <0x0 0x08300000 0x0 0x100000>;
+		};
+
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -126,11 +132,6 @@
 			size = <0x0 0x0>;
 			alignment = <0x0 0x100000>;
 			//no-map;
-		};
-
-		defendkey_reserved:linux,defendkey {
-			compatible = "amlogic, defendkey";
-			reg = <0x0 0x08300000 0x0 0x100000>;
 		};
 	};
 
