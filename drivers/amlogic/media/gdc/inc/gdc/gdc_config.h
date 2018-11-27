@@ -54,6 +54,8 @@ struct mgdc_fh_s {
 	unsigned long i_len;
 	unsigned long o_len;
 	unsigned long c_len;
+	struct gdc_dma_cfg y_dma_cfg;
+	struct gdc_dma_cfg uv_dma_cfg;
 };
 
 irqreturn_t interrupt_handler_next(int irq, void *param);

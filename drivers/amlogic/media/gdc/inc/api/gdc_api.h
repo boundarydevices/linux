@@ -19,6 +19,7 @@
 #define __GDC_API_H__
 
 #include <linux/of_address.h>
+#include <linux/dma-direction.h>
 
 struct gdc_buf_cfg {
 	uint32_t type;
@@ -79,6 +80,12 @@ struct gdc_settings {
 			uint32_t y_line_offset,
 			uint32_t uv_line_offset);
 	void *fh;
+	int32_t y_base_fd;
+	union {
+		int32_t uv_base_fd;
+		int32_t u_base_fd;
+	};
+	int32_t v_base_fd;
 };
 
 #define GDC_IOC_MAGIC  'G'
@@ -102,6 +109,16 @@ enum {
 	YUV444_P,
 	RGB444_P,
 	FMT_MAX
+};
+
+struct gdc_dma_cfg {
+	int fd;
+	void *dev;
+	void *vaddr;
+	struct dma_buf *dbuf;
+	struct dma_buf_attachment *attach;
+	struct sg_table *sg;
+	enum dma_data_direction dir;
 };
 
 /**

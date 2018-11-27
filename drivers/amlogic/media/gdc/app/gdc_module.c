@@ -31,7 +31,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dma-contiguous.h>
 #include <linux/of_reserved_mem.h>
-
+#include <linux/dma-buf.h>
 
 #include <linux/of_address.h>
 #include <api/gdc_api.h>
@@ -273,6 +273,216 @@ static void meson_gdc_cache_flush(struct device *dev,
 	dma_sync_single_for_cpu(dev, addr, size, DMA_FROM_DEVICE);
 }
 
+static long meson_gdc_dma_map(struct gdc_dma_cfg *cfg)
+{
+	long ret = -1;
+	int fd = -1;
+	struct dma_buf *dbuf = NULL;
+	struct dma_buf_attachment *d_att = NULL;
+	struct sg_table *sg = NULL;
+	void *vaddr = NULL;
+	struct device *dev = NULL;
+	enum dma_data_direction dir;
+
+	if (cfg == NULL || (cfg->fd < 0) || cfg->dev == NULL) {
+		LOG(LOG_ERR, "Error input param");
+		return -EINVAL;
+	}
+
+	fd = cfg->fd;
+	dev = cfg->dev;
+	dir = cfg->dir;
+
+	dbuf = dma_buf_get(fd);
+	if (dbuf == NULL) {
+		LOG(LOG_ERR, "Failed to get dma buffer");
+		return -EINVAL;
+	}
+
+	d_att = dma_buf_attach(dbuf, dev);
+	if (d_att == NULL) {
+		LOG(LOG_ERR, "Failed to set dma attach");
+		goto attach_err;
+	}
+
+	sg = dma_buf_map_attachment(d_att, dir);
+	if (sg == NULL) {
+		LOG(LOG_ERR, "Failed to get dma sg");
+		goto map_attach_err;
+	}
+
+	ret = dma_buf_begin_cpu_access(dbuf, dir);
+	if (ret != 0) {
+		LOG(LOG_ERR, "Failed to access dma buff");
+		goto access_err;
+	}
+
+	vaddr = dma_buf_vmap(dbuf);
+	if (vaddr == NULL) {
+		LOG(LOG_ERR, "Failed to vmap dma buf");
+		goto vmap_err;
+	}
+
+	cfg->dbuf = dbuf;
+	cfg->attach = d_att;
+	cfg->vaddr = vaddr;
+	cfg->sg = sg;
+
+	return ret;
+
+vmap_err:
+	dma_buf_end_cpu_access(dbuf, dir);
+
+access_err:
+	dma_buf_unmap_attachment(d_att, sg, dir);
+
+map_attach_err:
+	dma_buf_detach(dbuf, d_att);
+
+attach_err:
+	dma_buf_put(dbuf);
+
+	return ret;
+}
+
+
+static void meson_gdc_dma_unmap(struct gdc_dma_cfg *cfg)
+{
+	int fd = -1;
+	struct dma_buf *dbuf = NULL;
+	struct dma_buf_attachment *d_att = NULL;
+	struct sg_table *sg = NULL;
+	void *vaddr = NULL;
+	struct device *dev = NULL;
+	enum dma_data_direction dir;
+
+	if (cfg == NULL || (cfg->fd < 0) || cfg->dev == NULL
+			|| cfg->dbuf == NULL || cfg->vaddr == NULL
+			|| cfg->attach == NULL || cfg->sg == NULL) {
+		LOG(LOG_ERR, "Error input param");
+		return;
+	}
+
+	fd = cfg->fd;
+	dev = cfg->dev;
+	dir = cfg->dir;
+	dbuf = cfg->dbuf;
+	vaddr = cfg->vaddr;
+	d_att = cfg->attach;
+	sg = cfg->sg;
+
+	dma_buf_vunmap(dbuf, vaddr);
+
+	dma_buf_end_cpu_access(dbuf, dir);
+
+	dma_buf_unmap_attachment(d_att, sg, dir);
+
+	dma_buf_detach(dbuf, d_att);
+
+	dma_buf_put(dbuf);
+}
+
+static long meson_gdc_init_dma_addr(struct gdc_settings *gs)
+{
+	long ret = -1;
+	struct gdc_dma_cfg *dma_cfg = NULL;
+	struct gdc_config *gc = NULL;
+	struct mgdc_fh_s *fh = NULL;
+
+	if (gs == NULL || gs->fh == NULL) {
+		LOG(LOG_ERR, "Error input param\n");
+		return -EINVAL;
+	}
+
+	gc = &gs->gdc_config;
+	fh = gs->fh;
+
+	switch (gc->format) {
+	case NV12:
+		dma_cfg = &fh->y_dma_cfg;
+		memset(dma_cfg, 0, sizeof(*dma_cfg));
+		dma_cfg->dir = DMA_TO_DEVICE;
+		dma_cfg->dev = &fh->gdev->pdev->dev;
+		dma_cfg->fd = gs->y_base_fd;
+
+		ret = meson_gdc_dma_map(dma_cfg);
+		if (ret != 0) {
+			LOG(LOG_ERR, "Failed to get map dma buff");
+			return ret;
+		}
+
+		gs->y_base_addr = virt_to_phys(dma_cfg->vaddr);
+
+		dma_cfg = &fh->uv_dma_cfg;
+		memset(dma_cfg, 0, sizeof(*dma_cfg));
+		dma_cfg->dir = DMA_TO_DEVICE;
+		dma_cfg->dev = &fh->gdev->pdev->dev;
+		dma_cfg->fd = gs->uv_base_fd;
+
+		ret = meson_gdc_dma_map(dma_cfg);
+		if (ret != 0) {
+			LOG(LOG_ERR, "Failed to get map dma buff");
+			return ret;
+		}
+
+		gs->uv_base_addr = virt_to_phys(dma_cfg->vaddr);
+	break;
+	case Y_GREY:
+		dma_cfg = &fh->y_dma_cfg;
+		memset(dma_cfg, 0, sizeof(*dma_cfg));
+		dma_cfg->dir = DMA_TO_DEVICE;
+		dma_cfg->dev = &fh->gdev->pdev->dev;
+		dma_cfg->fd = gs->y_base_fd;
+
+		ret = meson_gdc_dma_map(dma_cfg);
+		if (ret != 0) {
+			LOG(LOG_ERR, "Failed to get map dma buff");
+			return ret;
+		}
+
+		gs->y_base_addr = virt_to_phys(dma_cfg->vaddr);
+		gs->uv_base_addr = 0;
+	break;
+	default:
+		LOG(LOG_ERR, "Error image format");
+	break;
+	}
+
+	return ret;
+}
+
+static void meson_gdc_deinit_dma_addr(struct gdc_settings *gs)
+{
+	struct gdc_dma_cfg *dma_cfg = NULL;
+	struct gdc_config *gc = NULL;
+	struct mgdc_fh_s *fh = NULL;
+
+	if (gs == NULL || gs->fh == NULL) {
+		LOG(LOG_ERR, "Error input param\n");
+		return;
+	}
+
+	gc = &gs->gdc_config;
+	fh = gs->fh;
+
+	switch (gc->format) {
+	case NV12:
+		dma_cfg = &fh->y_dma_cfg;
+		meson_gdc_dma_unmap(dma_cfg);
+
+		dma_cfg = &fh->uv_dma_cfg;
+		meson_gdc_dma_unmap(dma_cfg);
+	break;
+	case Y_GREY:
+		dma_cfg = &fh->y_dma_cfg;
+		meson_gdc_dma_unmap(dma_cfg);
+	break;
+	default:
+		LOG(LOG_ERR, "Error image format");
+	break;
+	}
+}
+
 static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		unsigned long arg)
 {
@@ -404,6 +614,12 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		gs->fh = fh;
 
 		mutex_lock(&fh->gdev->d_mutext);
+		ret = meson_gdc_init_dma_addr(gs);
+		if (ret != 0) {
+			mutex_unlock(&fh->gdev->d_mutext);
+			LOG(LOG_ERR, "Failed to init dma addr");
+			return ret;
+		}
 		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
 					fh->c_paddr, fh->c_len);
 		ret = gdc_run(gs);
@@ -418,6 +634,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		gdc_stop(gs);
 		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
 					fh->o_paddr, fh->o_len);
+		meson_gdc_deinit_dma_addr(gs);
 		mutex_unlock(&fh->gdev->d_mutext);
 	break;
 	case GDC_REQUEST_BUFF:
