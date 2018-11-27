@@ -192,12 +192,4 @@ void dcss_hdr10_dump_regs(struct seq_file *s, void *data);
 void dcss_wrscl_dump_regs(struct seq_file *s, void *data);
 void dcss_rdsrc_dump_regs(struct seq_file *s, void *data);
 
-/* DCSS PLL */
-int dcss_pll_init(struct dcss_soc *dcss, unsigned long pll_base);
-void dcss_pll_exit(struct dcss_soc *dcss);
-int dcss_pll_set_rate(struct dcss_soc *dcss, u32 freq, u32 ref_clk,
-		      u32 *actual_freq);
-int dcss_pll_enable(struct dcss_soc *dcss);
-int dcss_pll_disable(struct dcss_soc *dcss);
-
 #endif /* __DCSS_PRV_H__ */

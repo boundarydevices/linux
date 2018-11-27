@@ -312,13 +312,11 @@ static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 		clk_prepare_enable(dcss->dtrc_clk);
 		clk_prepare_enable(dcss->pdiv_clk);
 		clk_prepare_enable(dcss->pout_clk);
-		dcss_pll_enable(dcss);
 	}
 
 	if (!en && dcss->clks_on) {
 		clk_disable_unprepare(dcss->pout_clk);
 		clk_disable_unprepare(dcss->pdiv_clk);
-		dcss_pll_disable(dcss);
 		clk_disable_unprepare(dcss->dtrc_clk);
 		clk_disable_unprepare(dcss->rtrm_clk);
 		clk_disable_unprepare(dcss->apb_clk);
@@ -587,12 +585,6 @@ static int dcss_probe(struct platform_device *pdev)
 	dcss->devtype = devtype;
 
 	platform_set_drvdata(pdev, dcss);
-
-	ret = dcss_pll_init(dcss, dcss->devtype->pll_base);
-	if (ret) {
-		dev_err(&pdev->dev, "DCSS PLL initialization failed\n");
-		return ret;
-	}
 
 	ret = dcss_clks_init(dcss);
 	if (ret) {
