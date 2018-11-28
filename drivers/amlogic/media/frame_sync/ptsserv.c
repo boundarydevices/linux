@@ -455,6 +455,7 @@ static int pts_checkin_offset_inline(u8 type, u32 offset, u32 val, u64 uS64)
 		}
 		if (type == PTS_TYPE_AUDIO && pTable->first_checkin_pts == -1) {
 			pTable->first_checkin_pts = val;
+			timestamp_checkin_firstapts_set(val);
 			/*
 			 *if (tsync_get_debug_pts_checkin() &&
 			 * tsync_get_debug_apts()) {

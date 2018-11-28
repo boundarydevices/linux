@@ -36,6 +36,7 @@ static u32 audio_pts_up;
 static u32 audio_pts_started;
 static u32 first_vpts;
 static u32 first_checkin_vpts;
+static u32 first_checkin_apts;
 static u32 first_apts;
 static u32 pcrscr_lantcy = 200*90;
 static u32 video_pts;
@@ -134,9 +135,18 @@ u32 timestamp_pcrscr_get(void)
 }
 EXPORT_SYMBOL(timestamp_pcrscr_get);
 
+u32 timestamp_tsdemux_pcr_get(void)
+{
+	if (tsdemux_pcrscr_get_cb)
+		return tsdemux_pcrscr_get_cb();
+
+	return (u32)-1;
+}
+EXPORT_SYMBOL(timestamp_tsdemux_pcr_get);
+
 void timestamp_pcrscr_set(u32 pts)
 {
-	//pr_info("timestamp_pcrscr_set system time  = %x\n", pts);
+	/*pr_info("timestamp_pcrscr_set system time  = %x\n", pts);*/
 	system_time = pts;
 }
 EXPORT_SYMBOL(timestamp_pcrscr_set);
@@ -161,11 +171,24 @@ void timestamp_checkin_firstvpts_set(u32 pts)
 }
 EXPORT_SYMBOL(timestamp_checkin_firstvpts_set);
 
+void timestamp_checkin_firstapts_set(u32 pts)
+{
+	first_checkin_apts = pts;
+	pr_info("audio first checkin pts =%x\n", first_checkin_apts);
+}
+EXPORT_SYMBOL(timestamp_checkin_firstapts_set);
+
 u32 timestamp_checkin_firstvpts_get(void)
 {
 	return first_checkin_vpts;
 }
 EXPORT_SYMBOL(timestamp_checkin_firstvpts_get);
+
+u32 timestamp_checkin_firstapts_get(void)
+{
+	return first_checkin_apts;
+}
+EXPORT_SYMBOL(timestamp_checkin_firstapts_get);
 
 void timestamp_firstapts_set(u32 pts)
 {

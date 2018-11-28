@@ -64,8 +64,14 @@ extern void timestamp_checkin_firstvpts_set(u32 pts);
 
 extern u32 timestamp_checkin_firstvpts_get(void);
 
+extern void timestamp_checkin_firstapts_set(u32 pts);
+
+extern u32 timestamp_checkin_firstapts_get(void);
+
 extern void timestamp_firstapts_set(u32 pts);
 
 extern u32 timestamp_firstapts_get(void);
+
+extern u32 timestamp_tsdemux_pcr_get(void);
 
 #endif /* TIMESTAMP_H */

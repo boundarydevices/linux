@@ -1452,6 +1452,12 @@ static ssize_t store_vpts(struct class *class,
 	return size;
 }
 
+static ssize_t show_demux_pcr(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "0x%x\n", timestamp_tsdemux_pcr_get());
+}
+
 static ssize_t show_apts(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -1868,6 +1874,12 @@ static ssize_t show_checkin_firstvpts(struct class *class,
 	return sprintf(buf, "0x%x\n", timestamp_checkin_firstvpts_get());
 }
 
+static ssize_t show_checkin_firstapts(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "0x%x\n", timestamp_checkin_firstapts_get());
+}
+
 static ssize_t show_vpause_flag(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -2002,7 +2014,11 @@ static struct class_attribute tsync_class_attrs[] = {
 	__ATTR(checkin_firstvpts, 0644, show_checkin_firstvpts,
 	NULL),
 	__ATTR(apts_lookup, 0644, show_apts_lookup,
-		store_apts_lookup),
+	store_apts_lookup),
+	__ATTR(demux_pcr, 0644, show_demux_pcr,
+	NULL),
+	__ATTR(checkin_firstapts, 0644, show_checkin_firstapts,
+	NULL),
 	__ATTR_NULL
 };
 
