@@ -923,12 +923,6 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = devm_snd_soc_register_platform(&pdev->dev, &fsl_asrc_platform);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to register ASoC platform\n");
-		return ret;
-	}
-
 	ret = fsl_asrc_m2m_init(asrc_priv);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to init m2m device %d\n", ret);
