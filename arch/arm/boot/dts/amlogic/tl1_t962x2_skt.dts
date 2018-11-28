@@ -163,9 +163,10 @@
 	tl1_codec:codec {
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, tl1_acodec";
-		status = "disabled";
+		status = "okay";
 		reg = <0xff632000 0x1c>;
-		tdmout_index = <1>;
+		tdmout_index = <0>;
+		tdmin_index = <0>;
 	};
 
 	auge_sound {
@@ -176,7 +177,7 @@
 			format = "i2s";
 			mclk-fs = <256>;
 			//continuous-clock;
-			//bitclock-inversion;
+			bitclock-inversion;
 			//frame-inversion;
 			/* master mode */
 			bitclock-master = <&tdma>;
@@ -199,7 +200,8 @@
 				system-clock-frequency = <12288000>;
 			};
 			tdmacodec: codec {
-				sound-dai = <&dummy_codec>;
+				//sound-dai = <&dummy_codec>;
+				sound-dai = <&tl1_codec>;
 			};
 		};
 

@@ -144,6 +144,7 @@
 		status = "disabled";
 		reg = <0xff632000 0x1c>;
 		tdmout_index = <1>;
+		tdmin_index = <1>;
 	};
 
 	aml_dtv_demod {

@@ -403,6 +403,17 @@ void aml_tdm_set_format(
 	}
 }
 
+void aml_update_tdmin_skew(struct aml_audio_controller *actrl,
+	 int idx, int skew)
+{
+	unsigned int reg_in, off_set;
+
+	off_set = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
+	reg_in = EE_AUDIO_TDMIN_A_CTRL + off_set * idx;
+	aml_audiobus_update_bits(actrl, reg_in,
+		0x7 << 16, skew << 16);
+}
+
 void aml_tdm_set_slot_out(
 	struct aml_audio_controller *actrl,
 	int index, int slots, int slot_width,
@@ -457,7 +468,7 @@ else
 		0xf << 20 | 0x1f, in_src << 20 | (slot_width-1));
 }
 
-void tdm_update_slot_in(
+void aml_update_tdmin_src(
 	struct aml_audio_controller *actrl,
 	int index, int in_src)
 {

@@ -26,6 +26,7 @@
 #include <linux/mutex.h>
 #include <linux/io.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -37,27 +38,61 @@
 
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/sound/auge_utils.h>
-#include <linux/amlogic/media/sound/aiu_regs.h>
 
+#include "../../../soc/amlogic/auge/iomap.h"
+#include "../../../soc/amlogic/auge/regs.h"
 #include "aml_codec_tl1_acodec.h"
+
+struct tl1_acodec_chipinfo {
+	int id;
+	bool is_bclk_cap_inv;	//default true
+	bool is_bclk_o_inv;		//default false
+	bool is_lrclk_inv;		//default false
+	bool is_dac_phase_differ_exist;
+	bool is_adc_phase_differ_exist;
+	int mclk_sel;
+};
 
 struct tl1_acodec_priv {
 	struct snd_soc_codec *codec;
 	struct snd_pcm_hw_params *params;
 	struct regmap *regmap;
-
+	struct tl1_acodec_chipinfo *chipinfo;
 	int tdmout_index;
+	int dat0_ch_sel;
+	int dat1_ch_sel;
+
+	int tdmin_index;
+	int adc_output_sel;
+	//int input_data_sel;	//tdmouta,tdmoutb,
+	//tdmouta,tdmoutb,tdmoutc,tdmina,tdminb,tdminc
+	//int clk_sel;
+	//tdmouta,tdmoutb,tdmoutc,none,tdmina,tdminb,tdminc
+	int dac1_input_sel;
+	int dac2_input_sel;
 };
 
 static const struct reg_default tl1_acodec_init_list[] = {
 	{ACODEC_0, 0x3403BFCF},
-	{ACODEC_1, 0x50502929},
+	{ACODEC_1, 0x50503030},
 	{ACODEC_2, 0xFBFB0000},
 	{ACODEC_3, 0x00002222},
 	{ACODEC_4, 0x00010000},
 	{ACODEC_5, 0xFBFB0033},
 	{ACODEC_6, 0x0},
 	{ACODEC_7, 0x0}
+};
+static struct tl1_acodec_chipinfo tl1_acodec_cinfo = {
+	.id = 0,
+	.is_bclk_cap_inv = true,	//default  true
+	.is_bclk_o_inv = false,		//default  false
+	.is_lrclk_inv = false,
+
+	.is_dac_phase_differ_exist = false,
+	.is_adc_phase_differ_exist = true,
+	//if is_adc_phase_differ=true,modified tdmin_in_rev_ws,revert ws(lrclk);
+	//0 :disable; 1: enable;
+	//.mclk_sel = 1,
 };
 
 static int tl1_acodec_reg_init(struct snd_soc_codec *codec)
@@ -115,7 +150,7 @@ static int aml_DAC_Gain_set_enum(
 		pr_info("It has risk of distortion!\n");
 	}
 
-	snd_soc_write(codec, val, reg_addr);
+	snd_soc_write(codec, reg_addr, val);
 	return 0;
 }
 
@@ -163,7 +198,7 @@ static int aml_DAC2_Gain_set_enum(
 		pr_info("It has risk of distortion!\n");
 	}
 
-	snd_soc_write(codec, val, reg_addr);
+	snd_soc_write(codec, reg_addr, val);
 	return 0;
 }
 
@@ -519,34 +554,34 @@ static int tl1_acodec_dai_mute_stream(struct snd_soc_dai *dai, int mute,
 	struct tl1_acodec_priv *aml_acodec =
 		snd_soc_codec_get_drvdata(dai->codec);
 	u32 reg_val;
+	int ret;
 
 	pr_debug("%s, mute:%d\n", __func__, mute);
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		/* DAC 1 */
-		regmap_read(aml_acodec->regmap,
+		ret = regmap_read(aml_acodec->regmap,
 					ACODEC_2,
 					&reg_val);
 		if (mute)
-			reg_val |= DAC_SOFT_MUTE;
+			reg_val |= (0x1<<DAC_SOFT_MUTE);
 		else
-			reg_val &= ~DAC_SOFT_MUTE;
+			reg_val &= ~(0x1<<DAC_SOFT_MUTE);
 
-		regmap_write(aml_acodec->regmap,
+		ret = regmap_write(aml_acodec->regmap,
 					ACODEC_2,
 					reg_val);
 
-
 		/* DAC 2 */
-		regmap_read(aml_acodec->regmap,
+		ret = regmap_read(aml_acodec->regmap,
 					ACODEC_6,
 					&reg_val);
 		if (mute)
-			reg_val |= DAC2_SOFT_MUTE;
+			reg_val |= (0x1<<DAC2_SOFT_MUTE);
 		else
-			reg_val &= ~DAC2_SOFT_MUTE;
+			reg_val &= ~(0x1<<DAC2_SOFT_MUTE);
 
-		regmap_write(aml_acodec->regmap,
+		ret = regmap_write(aml_acodec->regmap,
 					ACODEC_6,
 					reg_val);
 	}
@@ -577,12 +612,9 @@ static int tl1_acodec_probe(struct snd_soc_codec *codec)
 	tl1_acodec_start_up(codec);
 	tl1_acodec_reg_init(codec);
 
-	if (aml_acodec)
-		auge_toacodec_ctrl(aml_acodec->tdmout_index);
-
 	aml_acodec->codec = codec;
 	tl1_acodec_dai_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
+	pr_info("%s\n", __func__);
 	return 0;
 }
 
@@ -667,10 +699,50 @@ struct snd_soc_dai_driver aml_tl1_acodec_dai = {
 	     },
 	.ops = &tl1_acodec_dai_ops,
 };
+static int tl1_acodec_set_toacodec(struct tl1_acodec_priv *aml_acodec)
+{
+	int dat0_sel, dat1_sel, lrclk_sel, bclk_sel, mclk_sel;
+	unsigned int update_bits_msk = 0x0, update_bits = 0x0;
+
+	update_bits_msk = 0x80FF7777;
+	if (aml_acodec->chipinfo->is_bclk_cap_inv == true)
+		update_bits |= (0x1<<9);
+	if (aml_acodec->chipinfo->is_bclk_o_inv == true)
+		update_bits |= (0x1<<8);
+	if (aml_acodec->chipinfo->is_lrclk_inv == true)
+		update_bits |= (0x1<<10);
+
+	dat0_sel = (aml_acodec->tdmout_index<<2)+aml_acodec->dat0_ch_sel;
+	dat0_sel = dat0_sel<<16;
+	dat1_sel = (aml_acodec->tdmout_index<<2)+aml_acodec->dat1_ch_sel;
+	dat1_sel = dat1_sel<<20;
+	lrclk_sel = (aml_acodec->tdmout_index)<<12;
+	bclk_sel = (aml_acodec->tdmout_index)<<4;
+
+	//mclk_sel = aml_acodec->chipinfo->mclk_sel;
+	mclk_sel = aml_acodec->tdmin_index;
+
+	update_bits |= dat0_sel|dat1_sel|lrclk_sel|bclk_sel|mclk_sel;
+	update_bits |= 0x1<<31;
+
+	audiobus_update_bits(EE_AUDIO_TOACODEC_CTRL0, update_bits_msk,
+						update_bits);
+	pr_info("%s, is_bclk_cap_inv %s\n", __func__,
+		aml_acodec->chipinfo->is_bclk_cap_inv?"true":"false");
+	pr_info("%s, is_bclk_o_inv %s\n", __func__,
+		aml_acodec->chipinfo->is_bclk_o_inv?"true":"false");
+	pr_info("%s, is_lrclk_inv %s\n", __func__,
+		aml_acodec->chipinfo->is_lrclk_inv?"true":"false");
+	pr_info("%s read EE_AUDIO_TOACODEC_CTRL0=0x%08x\n", __func__,
+		audiobus_read(EE_AUDIO_TOACODEC_CTRL0));
+
+	return 0;
+}
 
 static int aml_tl1_acodec_probe(struct platform_device *pdev)
 {
 	struct tl1_acodec_priv *aml_acodec;
+	struct tl1_acodec_chipinfo *p_chipinfo;
 	struct resource *res_mem;
 	struct device_node *np;
 	void __iomem *regs;
@@ -684,6 +756,13 @@ static int aml_tl1_acodec_probe(struct platform_device *pdev)
 				    GFP_KERNEL);
 	if (!aml_acodec)
 		return -ENOMEM;
+	/* match data */
+	p_chipinfo = (struct tl1_acodec_chipinfo *)
+		of_device_get_match_data(&pdev->dev);
+	if (!p_chipinfo)
+		dev_warn_once(&pdev->dev, "check whether to update tl1_acodec_chipinfo\n");
+
+	aml_acodec->chipinfo = p_chipinfo;
 
 	res_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res_mem)
@@ -695,24 +774,36 @@ static int aml_tl1_acodec_probe(struct platform_device *pdev)
 
 	aml_acodec->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
 					    &tl1_acodec_regmap_config);
+	if (IS_ERR(aml_acodec->regmap))
+		return PTR_ERR(aml_acodec->regmap);
 
 	of_property_read_u32(
 			pdev->dev.of_node,
 			"tdmout_index",
 			&aml_acodec->tdmout_index);
-
-	pr_info("aml_tl1_acodec is used by tdmout:%d\n",
+	pr_info("aml_tl1_acodec tdmout_index=%d\n",
 		aml_acodec->tdmout_index);
 
-	if (IS_ERR(aml_acodec->regmap))
-		return PTR_ERR(aml_acodec->regmap);
+	of_property_read_u32(
+			pdev->dev.of_node,
+			"tdmin_index",
+			&aml_acodec->tdmin_index);
+	pr_info("aml_tl1_acodec tdmin_index=%d\n",
+		aml_acodec->tdmin_index);
+
+	tl1_acodec_set_toacodec(aml_acodec);
 
 	platform_set_drvdata(pdev, aml_acodec);
 
 	ret = snd_soc_register_codec(&pdev->dev,
 				     &soc_codec_dev_tl1_acodec,
 				     &aml_tl1_acodec_dai, 1);
-
+	if (ret)
+		pr_info("%s call snd_soc_register_codec error\n", __func__);
+	else
+		pr_info("%s over\n", __func__);
+	pr_info("%s read EE_AUDIO_TOACODEC_CTRL0=0x%08x\n", __func__,
+		audiobus_read(EE_AUDIO_TOACODEC_CTRL0));
 	return ret;
 }
 
@@ -735,13 +826,16 @@ static void aml_tl1_acodec_shutdown(struct platform_device *pdev)
 }
 
 static const struct of_device_id aml_tl1_acodec_dt_match[] = {
-	{.compatible = "amlogic, tl1_codec",},
+	{
+		.compatible = "amlogic, tl1_acodec",
+		.data = &tl1_acodec_cinfo,
+	},
 	{},
 };
 
 static struct platform_driver aml_tl1_acodec_platform_driver = {
 	.driver = {
-		   .name = "tl1_codec",
+		   .name = "tl1_acodec",
 		   .owner = THIS_MODULE,
 		   .of_match_table = aml_tl1_acodec_dt_match,
 		   },

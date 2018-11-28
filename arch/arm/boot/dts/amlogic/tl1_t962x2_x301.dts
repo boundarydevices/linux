@@ -163,14 +163,17 @@
 	tl1_codec:codec {
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, tl1_acodec";
-		status = "disabled";
+		status = "okay";
 		reg = <0xff632000 0x1c>;
-		tdmout_index = <1>;
+		tdmout_index = <0>;
+		tdmin_index = <0>;
 	};
 
 	auge_sound {
 		compatible = "amlogic, tl1-sound-card";
 		aml-audio-card,name = "AML-AUGESOUND";
+
+		avout_mute-gpios = <&gpio GPIODV_3 GPIO_ACTIVE_HIGH>;
 
 		aml-audio-card,dai-link@0 {
 			format = "i2s";
@@ -199,7 +202,8 @@
 				system-clock-frequency = <12288000>;
 			};
 			tdmacodec: codec {
-				sound-dai = <&ad82584f>;
+				//sound-dai = <&dummy_codec>;
+				sound-dai = <&ad82584f &tl1_codec>;
 			};
 		};
 
@@ -927,7 +931,7 @@
 		compatible = "amlogic, tl1-snd-tdma";
 		#sound-dai-cells = <0>;
 
-		#dai-tdm-lane-slot-mask-in = <1 0>;
+		dai-tdm-lane-slot-mask-in = <1 0>;
 		dai-tdm-lane-slot-mask-out = <1 1 1 1>;
 		dai-tdm-clk-sel = <0>;
 
@@ -947,6 +951,9 @@
 		 * 4: spdifout_b;
 		 */
 		samesource_sel = <3>;
+
+		/* In for ACODEC_ADC */
+		acodec_adc = <1>;
 
 		status = "okay";
 	};

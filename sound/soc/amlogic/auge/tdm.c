@@ -88,6 +88,9 @@ struct tdm_chipinfo {
 
 	/* same source */
 	bool same_src_fn;
+
+	/* ACODEC_ADC function */
+	bool adc_fn;
 };
 
 struct aml_tdm {
@@ -111,6 +114,7 @@ struct aml_tdm {
 	int samesource_sel;
 	/* virtual link for i2s to hdmitx */
 	int i2s2hdmitx;
+	int acodec_adc;
 };
 
 static const struct snd_pcm_hardware aml_tdm_hardware = {
@@ -490,8 +494,15 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 		if (toddr_src_get() == FRHDMIRX) {
 			src = FRHDMIRX;
 
-			tdm_update_slot_in(p_tdm->actrl, p_tdm->id, HDMIRX_I2S);
-		}
+			aml_update_tdmin_src(p_tdm->actrl,
+				p_tdm->id,
+				HDMIRX_I2S);
+		}  else if (p_tdm->chipinfo
+			&& p_tdm->chipinfo->adc_fn
+			&& p_tdm->acodec_adc)
+			aml_update_tdmin_src(p_tdm->actrl,
+				p_tdm->id,
+				ACODEC_ADC);
 
 		pr_info("%s Expected toddr src:%s\n",
 			__func__,
@@ -783,6 +794,13 @@ static int aml_dai_set_tdm_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 		cpu_dai->capture_active,
 		cpu_dai->playback_active);
 
+	/* update skew for ACODEC_ADC */
+	if (cpu_dai->capture_active
+		&& p_tdm->chipinfo
+		&& p_tdm->chipinfo->adc_fn
+		&& p_tdm->acodec_adc)
+		aml_update_tdmin_skew(p_tdm->actrl, p_tdm->id, 4);
+
 	return 0;
 }
 
@@ -958,9 +976,17 @@ static int aml_dai_set_tdm_slot(struct snd_soc_dai *cpu_dai,
 
 	out_lanes = lanes_out_cnt + lanes_oe_out_cnt;
 	in_lanes = lanes_in_cnt + lanes_oe_in_cnt + lanes_lb_cnt;
+
+	if (p_tdm->chipinfo
+		&& p_tdm->chipinfo->adc_fn
+		&& p_tdm->acodec_adc) {
+		in_src = ACODEC_ADC;
+	}
+
 	if (in_lanes >= 0 && in_lanes <= 4)
 		aml_tdm_set_slot_in(p_tdm->actrl,
 			p_tdm->id, in_src, slot_width);
+
 	if (out_lanes >= 0 && out_lanes <= 4)
 		aml_tdm_set_slot_out(p_tdm->actrl,
 			p_tdm->id, slots, slot_width,
@@ -1116,6 +1142,7 @@ struct tdm_chipinfo tl1_tdma_chipinfo = {
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
 	.same_src_fn = true,
+	.adc_fn      = true,
 };
 
 struct tdm_chipinfo tl1_tdmb_chipinfo = {
@@ -1124,6 +1151,7 @@ struct tdm_chipinfo tl1_tdmb_chipinfo = {
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
 	.same_src_fn = true,
+	.adc_fn      = true,
 };
 
 struct tdm_chipinfo tl1_tdmc_chipinfo = {
@@ -1132,6 +1160,7 @@ struct tdm_chipinfo tl1_tdmc_chipinfo = {
 	.oe_fn       = true,
 	.clk_pad_ctl = true,
 	.same_src_fn = true,
+	.adc_fn      = true,
 };
 
 static const struct of_device_id aml_tdm_device_id[] = {
@@ -1236,10 +1265,21 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 					"Can't retrieve samesrc_sysclk clock\n");
 				return PTR_ERR(p_tdm->samesrc_sysclk);
 			}
+			pr_info("TDM id %d samesource_sel:%d\n",
+				p_tdm->id,
+				p_tdm->samesource_sel);
 		}
-		pr_info("TDM id %d samesource_sel:%d\n",
-			p_tdm->id,
-			p_tdm->samesource_sel);
+	}
+	/* default no acodec_adc */
+	if (p_tdm->chipinfo &&
+		p_tdm->chipinfo->adc_fn) {
+
+		ret = of_property_read_u32(node, "acodec_adc",
+				&p_tdm->acodec_adc);
+		if (ret < 0)
+			p_tdm->acodec_adc = 0;
+		else
+			pr_info("TDM id %d supports ACODEC_ADC\n", p_tdm->id);
 	}
 
 	ret = of_property_read_u32(node, "i2s2hdmi",
