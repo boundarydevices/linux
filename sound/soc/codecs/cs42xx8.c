@@ -279,7 +279,7 @@ static int cs42xx8_hw_params(struct snd_pcm_substream *substream,
 		else if (rate_tx > 100000 && rate_tx < 200000)
 			fm_tx = CS42XX8_FM_QUAD;
 		else {
-			dev_err(codec->dev, "unsupported sample rate or rate combine\n");
+			dev_err(component->dev, "unsupported sample rate or rate combine\n");
 			return -EINVAL;
 		}
 
@@ -290,7 +290,7 @@ static int cs42xx8_hw_params(struct snd_pcm_substream *substream,
 		else if (rate_rx > 100000 && rate_rx < 200000)
 			fm_rx = CS42XX8_FM_QUAD;
 		else {
-			dev_err(codec->dev, "unsupported sample rate or rate combine\n");
+			dev_err(component->dev, "unsupported sample rate or rate combine\n");
 			return -EINVAL;
 		}
 	}
@@ -340,8 +340,8 @@ static int cs42xx8_hw_free(struct snd_pcm_substream *substream,
 			     struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_codec *codec = rtd->codec;
-	struct cs42xx8_priv *cs42xx8 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = rtd->codec_dai->component;
+	struct cs42xx8_priv *cs42xx8 = snd_soc_component_get_drvdata(component);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 
 	cs42xx8->rate[substream->stream] = 0;
