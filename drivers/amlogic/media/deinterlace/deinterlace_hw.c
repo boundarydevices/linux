@@ -2453,6 +2453,52 @@ mif->chroma_x_end0 - mif->chroma_x_start0 + 1, /* c length */
 	}
 }
 
+static unsigned int di_mc_update;
+void di_patch_post_update_mc(void)
+{
+	if (di_mc_update == DI_MC_SW_ON_MASK) {
+//	if (di_mc_update) {
+		DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MCVECRD_CTRL, 1, 9, 1);
+	}
+}
+
+
+void di_patch_post_update_mc_sw(unsigned int cmd, bool on)
+{
+	unsigned int l_flg = di_mc_update;
+
+	switch (cmd) {
+	case DI_MC_SW_IC:
+		if (is_meson_gxtvbb_cpu()   ||
+			is_meson_txl_cpu()  ||
+			is_meson_txlx_cpu() ||
+			is_meson_txhd_cpu()) {
+			di_mc_update |= DI_MC_SW_IC;
+		}
+		break;
+	case DI_MC_SW_REG:
+		if (on) {
+			di_mc_update |= cmd;
+			di_mc_update &= ~DI_MC_SW_OTHER;
+		} else {
+			di_mc_update &= ~(cmd|DI_MC_SW_OTHER);
+		}
+		break;
+	case DI_MC_SW_OTHER:
+
+//	case DI_MC_SW_POST:
+		if (on)
+			di_mc_update |= cmd;
+		else
+			di_mc_update &= ~cmd;
+
+		break;
+	}
+
+	if (l_flg !=  di_mc_update)
+		pr_debug("%s:0x%x->0x%x\n", __func__, l_flg, di_mc_update);
+
+}
 void initial_di_post_2(int hsize_post, int vsize_post,
 	int hold_line, bool post_write_en)
 {

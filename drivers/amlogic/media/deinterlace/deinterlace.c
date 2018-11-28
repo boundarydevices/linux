@@ -129,7 +129,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-11-28b";
+static const char version_s[] = "2018-12-04a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -3383,6 +3383,8 @@ static unsigned char pre_de_buf_config(void)
 #endif
 		    )
 			return 0;
+
+		di_patch_post_update_mc_sw(DI_MC_SW_OTHER, false);
 	} else if (di_pre_stru.prog_proc_type == 2) {
 		di_linked_buf_idx = peek_free_linked_buf();
 		if (di_linked_buf_idx == -1 &&
@@ -3923,14 +3925,17 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 		di_pre_stru.madi_enable = 0;
 		di_pre_stru.mcdi_enable = 0;
 		di_buf->post_proc_flag = 0;
+		di_patch_post_update_mc_sw(DI_MC_SW_OTHER, false);
 	} else if (bypass_post_state) {
 		di_pre_stru.madi_enable = 0;
 		di_pre_stru.mcdi_enable = 0;
 		di_buf->post_proc_flag = 0;
+		di_patch_post_update_mc_sw(DI_MC_SW_OTHER, false);
 	} else {
 		di_pre_stru.madi_enable = (pre_enable_mask&1);
 		di_pre_stru.mcdi_enable = ((pre_enable_mask>>1)&1);
 		di_buf->post_proc_flag = 1;
+		di_patch_post_update_mc_sw(DI_MC_SW_OTHER, mcpre_en);//en
 	}
 	if ((di_pre_stru.di_mem_buf_dup_p == di_pre_stru.di_wr_buf) ||
 	    (di_pre_stru.di_chan2_buf_dup_p == di_pre_stru.di_wr_buf)) {
@@ -5903,7 +5908,7 @@ static void di_unreg_process_irq(void)
 #if (defined ENABLE_SPIN_LOCK_ALWAYS)
 	spin_unlock_irqrestore(&plist_lock, flags);
 #endif
-
+	di_patch_post_update_mc_sw(DI_MC_SW_REG, false);
 	di_pre_stru.force_unreg_req_flag = 0;
 	di_pre_stru.disable_req_flag = 0;
 	recovery_flag = 0;
@@ -6100,6 +6105,7 @@ static void di_reg_process_irq(void)
 				vframe->width, vframe->height, vframe->type);
 			}
 			di_pre_stru.bypass_flag = true;
+			di_patch_post_update_mc_sw(DI_MC_SW_OTHER, false);
 			return;
 		} else {
 			di_pre_stru.bypass_flag = false;
@@ -6198,6 +6204,8 @@ static void di_reg_process_irq(void)
 					(vframe->source_type),
 					is_progressive(vframe),
 					vframe->sig_fmt);
+
+		di_patch_post_update_mc_sw(DI_MC_SW_REG, true);
 		if (de_devp->flags & DI_LOAD_REG_FLAG)
 			up(&di_sema);
 		init_flag = 1;
@@ -6474,6 +6482,7 @@ static enum hrtimer_restart di_pre_hrtimer_func(struct hrtimer *timer)
 	if (!di_pre_stru.bypass_flag)
 		di_pre_trigger_work(&di_pre_stru);
 	hrtimer_forward_now(&di_pre_hrtimer, ms_to_ktime(10));
+	di_patch_post_update_mc();
 	return HRTIMER_RESTART;
 }
 /*
@@ -7630,6 +7639,7 @@ static int di_probe(struct platform_device *pdev)
 	if (IS_ERR(di_devp->task))
 		pr_err("%s create kthread error.\n", __func__);
 	di_debugfs_init();	/*2018-07-18 add debugfs*/
+	di_patch_post_update_mc_sw(DI_MC_SW_IC, true);
 fail_kmalloc_dev:
 	return ret;
 }

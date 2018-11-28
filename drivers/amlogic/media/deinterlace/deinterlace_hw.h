@@ -187,4 +187,14 @@ extern u8 *di_vmap(ulong addr, u32 size, bool *bflg);
 extern void di_unmap_phyaddr(u8 *vaddr);
 extern int di_print(const char *fmt, ...);
 
+#define DI_MC_SW_OTHER	(1<<0)
+#define DI_MC_SW_REG	(1<<1)
+//#define DI_MC_SW_POST	(1<<2)
+#define DI_MC_SW_IC	(1<<2)
+
+#define DI_MC_SW_ON_MASK	(DI_MC_SW_REG | DI_MC_SW_OTHER | DI_MC_SW_IC)
+
+extern void di_patch_post_update_mc(void);
+extern void di_patch_post_update_mc_sw(unsigned int cmd, bool on);
+
 #endif
