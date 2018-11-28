@@ -19,6 +19,7 @@
 #include <linux/completion.h>
 #include <linux/delay.h>
 #include <linux/err.h>
+#include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irq.h>
@@ -26,7 +27,9 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
+#include <linux/platform_data/spi-imx.h>
 #include <linux/slab.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_bitbang.h>
@@ -36,6 +39,10 @@
 #define DRIVER_NAME "fsl_lpspi"
 
 #define FSL_LPSPI_RPM_TIMEOUT 50 /* 50ms */
+
+#define LPSPI_CS_ACTIVE		1
+#define LPSPI_CS_INACTIVE	0
+#define LPSPI_CS_DELAY		100
 
 /* i.MX7ULP LPSPI registers */
 #define IMX7ULP_VERID	0x0
@@ -113,6 +120,8 @@ struct fsl_lpspi_data {
 	struct completion xfer_done;
 
 	bool slave_aborted;
+
+	int chipselect[0];
 };
 
 static const struct of_device_id fsl_lpspi_dt_ids[] = {
@@ -181,6 +190,47 @@ static int lpspi_unprepare_xfer_hardware(struct spi_controller *controller)
 
 	pm_runtime_mark_last_busy(fsl_lpspi->dev);
 	pm_runtime_put_autosuspend(fsl_lpspi->dev);
+
+	return 0;
+}
+
+static void fsl_lpspi_chipselect(struct spi_device *spi, bool enable)
+{
+	struct fsl_lpspi_data *fsl_lpspi =
+				spi_controller_get_devdata(spi->controller);
+	int gpio = fsl_lpspi->chipselect[spi->chip_select];
+
+	enable = (!!(spi->mode & SPI_CS_HIGH) == enable);
+
+	if (!gpio_is_valid(gpio))
+		return;
+
+	gpio_set_value_cansleep(gpio, enable);
+}
+
+static int
+fsl_lpspi_prepare_message(struct spi_controller *controller, struct spi_message *msg)
+{
+	struct fsl_lpspi_data *fsl_lpspi = spi_controller_get_devdata(controller);
+	struct spi_device *spi = msg->spi;
+	int gpio = fsl_lpspi->chipselect[spi->chip_select];
+
+	if (gpio_is_valid(gpio)) {
+		gpio_direction_output(gpio,
+				      fsl_lpspi->config.mode & SPI_CS_HIGH ? 0 : 1);
+	}
+
+	fsl_lpspi_chipselect(spi, LPSPI_CS_ACTIVE);
+
+	return 0;
+}
+
+static int
+fsl_lpspi_unprepare_message(struct spi_controller *controller, struct spi_message *msg)
+{
+	struct spi_device *spi = msg->spi;
+
+	fsl_lpspi_chipselect(spi, LPSPI_CS_INACTIVE);
 
 	return 0;
 }
@@ -386,6 +436,9 @@ static int fsl_lpspi_reset(struct fsl_lpspi_data *fsl_lpspi)
 {
 	u32 temp;
 
+	/* Disable all interrupt */
+	fsl_lpspi_intctrl(fsl_lpspi, 0);
+
 	/* W1C for all flags in SR */
 	temp = 0x3F << 8;
 	writel(temp, fsl_lpspi->base + IMX7ULP_SR);
@@ -522,10 +575,13 @@ static int fsl_lpspi_init_rpm(struct fsl_lpspi_data *fsl_lpspi)
 
 static int fsl_lpspi_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct fsl_lpspi_data *fsl_lpspi;
 	struct spi_controller *controller;
+	struct spi_imx_master *lpspi_platform_info =
+		dev_get_platdata(&pdev->dev);
 	struct resource *res;
-	int ret, irq;
+	int i, ret, irq;
 	u32 temp;
 
 	if (of_property_read_bool((&pdev->dev)->of_node, "spi-slave"))
@@ -548,6 +604,29 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, fsl_lpspi);
 	fsl_lpspi->is_slave = of_property_read_bool((&pdev->dev)->of_node,
 						    "spi-slave");
+
+	if (!fsl_lpspi->is_slave) {
+		for (i = 0; i < controller->num_chipselect; i++) {
+			int cs_gpio = of_get_named_gpio(np, "cs-gpios", i);
+
+			if (!gpio_is_valid(cs_gpio) && lpspi_platform_info)
+				cs_gpio = lpspi_platform_info->chipselect[i];
+
+			fsl_lpspi->chipselect[i] = cs_gpio;
+			if (!gpio_is_valid(cs_gpio))
+				continue;
+
+			ret = devm_gpio_request(&pdev->dev, fsl_lpspi->chipselect[i],
+						DRIVER_NAME);
+			if (ret) {
+				dev_err(&pdev->dev, "can't get cs gpios\n");
+				goto out_controller_put;
+			}
+		}
+
+		controller->prepare_message = fsl_lpspi_prepare_message;
+		controller->unprepare_message = fsl_lpspi_unprepare_message;
+	}
 
 	controller->transfer_one_message = fsl_lpspi_transfer_one_msg;
 	controller->prepare_transfer_hardware = lpspi_prepare_xfer_hardware;
