@@ -1296,6 +1296,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 			     struct fsl_ssi *ssi, void __iomem *iomem)
 {
 	struct device *dev = &pdev->dev;
+	struct device_node *np = pdev->dev.of_node;
 	int ret;
 	u32 buffer_size;
 
@@ -1339,7 +1340,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 	if (of_property_read_u32(np, "fsl,dma-buffer-size", &buffer_size))
 		buffer_size = IMX_SSI_DMABUF_SIZE;
 
-	if (!ssi_private->use_dma) {
+	if (!ssi->use_dma) {
 
 		/*
 		 * Some boards use an incompatible codec. Use imx-fiq-pcm-audio
