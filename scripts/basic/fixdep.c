@@ -295,6 +295,7 @@ static void do_config_file(const char *filename)
 	}
 	if (read(fd, map, st.st_size) != st.st_size) {
 		perror("fixdep: read");
+		free(map);
 		close(fd);
 		return;
 	}
