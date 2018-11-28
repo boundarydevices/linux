@@ -2976,6 +2976,20 @@
 		status = "disabled";
 	};
 
+	lpspi3: lpspi@5a030000 {
+		compatible = "fsl,imx7ulp-spi";
+		reg = <0x0 0x5a030000 0x0 0x10000>;
+		interrupts = <GIC_SPI 219 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-parent = <&gic>;
+		clocks = <&clk IMX8QM_SPI3_CLK>,
+			 <&clk IMX8QM_SPI3_IPG_CLK>;
+		clock-names = "per", "ipg";
+		assigned-clocks = <&clk IMX8QM_SPI3_CLK>;
+		assigned-clock-rates = <60000000>;
+		power-domains = <&pd_dma_lpspi3>;
+		status = "disabled";
+	};
+
 	lpuart0: serial@5a060000 {
 		compatible = "fsl,imx8qm-lpuart";
 		reg = <0x0 0x5a060000 0x0 0x1000>;
