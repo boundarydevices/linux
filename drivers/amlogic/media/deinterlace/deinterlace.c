@@ -129,7 +129,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2018-11-06a";
+static const char version_s[] = "2018-11-28b";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -7646,8 +7646,9 @@ static int di_remove(struct platform_device *pdev)
 	di_devp->di_event = 0xff;
 	kthread_stop(di_devp->task);
 	hrtimer_cancel(&di_pre_hrtimer);
+	tasklet_kill(&di_pre_tasklet);	//ary.sui
 	tasklet_disable(&di_pre_tasklet);
-	tasklet_kill(&di_pre_tasklet);
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 /* rdma handle */
 	if (di_devp->rdma_handle > 0)
@@ -7703,8 +7704,9 @@ static void di_shutdown(struct platform_device *pdev)
 	di_devp = platform_get_drvdata(pdev);
 	ret = hrtimer_cancel(&di_pre_hrtimer);
 	pr_info("di pre hrtimer canel %d.\n", ret);
-	tasklet_disable(&di_pre_tasklet);
 	tasklet_kill(&di_pre_tasklet);
+	tasklet_disable(&di_pre_tasklet);
+
 	init_flag = 0;
 	if (is_meson_txlx_cpu())
 		di_top_gate_control(true, true);
