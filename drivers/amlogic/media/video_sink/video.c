@@ -6380,6 +6380,14 @@ SET_FILTER:
 		video_enabled = video_status_saved;
 	}
 
+	if (!video_enabled &&
+		(vpp_misc_set & VPP_VD1_POSTBLEND))
+		vpp_misc_set &= ~(VPP_VD1_PREBLEND |
+			VPP_VD2_PREBLEND |
+			VPP_VD2_POSTBLEND |
+			VPP_VD1_POSTBLEND |
+			VPP_PREBLEND_EN);
+
 	if (!legacy_vpp) {
 		u32 set_value = 0;
 
