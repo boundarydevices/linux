@@ -32,6 +32,15 @@
 			>;
 		};
 
+		pinctrl_lpspi3: lpspi3grp {
+			fsl,pins = <
+				SC_P_SPI3_SCK_DMA_SPI3_SCK		0x0600004c
+				SC_P_SPI3_SDO_DMA_SPI3_SDO		0x0600004c
+				SC_P_SPI3_SDI_DMA_SPI3_SDI		0x0600004c
+				SC_P_SPI3_CS0_DMA_SPI3_CS0		0x0600004c
+			>;
+		};
+
 	};
 };
 
@@ -48,7 +57,23 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "atmel,at45", "atmel,dataflash";
-		spi-max-frequency = <500000>;
+		spi-max-frequency = <5000000>;
 		reg = <0>;
         };
+};
+
+&lpspi3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	fsl,spi-num-chipselects = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lpspi3>;
+	status = "okay";
+
+	spidev0: spi@0 {
+		reg = <0>;
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <30000000>;
+	};
+
 };
