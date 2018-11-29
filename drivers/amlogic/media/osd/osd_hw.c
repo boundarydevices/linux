@@ -6455,9 +6455,7 @@ static void osd_set_freescale(u32 index,
 		osd_hw.free_src_data[index].x_start + 1;
 	if ((osd_hw.osd_meson_dev.cpu_id ==
 		__MESON_CPU_MAJOR_ID_G12A) &&
-		(height != src_height) &&
-		(osd_hw.disp_info.position_h ==
-		osd_hw.disp_info.fullscreen_h)) {
+		(height != src_height)) {
 		osd_hw.osd_meson_dev.dummy_data = 0x000000;
 		osd_set_dummy_data(index, 0);
 	} else {
@@ -7492,7 +7490,7 @@ static void osd_setting_default_hwc(void)
 
 static bool set_old_hwc_freescale(u32 index)
 {
-	u32 x_start, x_end, y_start, y_end;
+	u32 x_start, x_end, y_start, y_end, height_dst, height_src;
 
 	if (osd_hw.osd_reverse[index] == REVERSE_TRUE) {
 		x_start = osd_hw.vinfo_width
@@ -7527,6 +7525,17 @@ static bool set_old_hwc_freescale(u32 index)
 		osd_hw.free_dst_data[index].x_end,
 		osd_hw.free_dst_data[index].y_start,
 		osd_hw.free_dst_data[index].y_end);
+
+	/* set dummy_data alpha */
+	height_dst = osd_hw.free_dst_data[index].y_end -
+			osd_hw.free_dst_data[index].y_start + 1;
+	height_src = osd_hw.free_src_data[index].y_end -
+			osd_hw.free_src_data[index].y_start + 1;
+	if (height_dst != height_src)
+		osd_set_dummy_data(index, 0);
+	else
+		osd_set_dummy_data(index, 0xff);
+
 	if ((memcmp(&(osd_hw.free_src_data[index]),
 		&osd_hw.free_src_data_backup[index],
 		sizeof(struct pandata_s)) != 0) ||
