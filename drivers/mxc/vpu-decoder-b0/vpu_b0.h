@@ -42,17 +42,16 @@ extern unsigned int vpu_dbg_level_decoder;
 #define v4l2_ctrl_to_ctx(__ctrl) \
 	container_of((__ctrl)->handler, struct vpu_ctx, ctrl_handler)
 
-#define MIN_SPACE (4096+64)
+#define MIN_SPACE (SCODE_SIZE + 64)
+#define SCODE_SIZE (4096)
 
 #define VPU_MAX_BUFFER 32
 #define M0FW_FILENAME "vpu/vpu_fw_imx8_dec.bin"
 #define MMAP_BUF_TYPE_SHIFT 28
 #define MMAP_BUF_TYPE_MASK 0xF0000000
-#define M0_BOOT_SIZE 0x1000000
 #define DCP_SIZE 0x3000000
 #define MAX_BUFFER_SIZE 0xc00000
 #define UDATA_BUFFER_SIZE 0x1000
-#define SHARED_SIZE 0x00400000
 #define MAX_DCP_NUM 2
 #define MAX_MBI_NUM 18 // same with MEDIA_PLAYER_MAX_MBI_UNIT defined in firmware
 #define MAX_TIMEOUT_COUNT 10
@@ -62,6 +61,7 @@ extern unsigned int vpu_dbg_level_decoder;
 #define V4L2_PIX_FMT_NV12_10BIT    v4l2_fourcc('N', 'T', '1', '2') /*  Y/CbCr 4:2:0 for 10bit  */
 #define INVALID_FRAME_DEPTH -1
 #define DECODER_NODE_NUMBER 12 // use /dev/video12 as vpu decoder
+#define DEFAULT_LOG_DEPTH 20
 
 struct vpu_v4l2_control {
 	uint32_t id;
@@ -192,8 +192,10 @@ struct vpu_dev {
 	struct firmware *m0_pfw;
 	void *m0_p_fw_space_vir;
 	u_int32 m0_p_fw_space_phy;
+	u_int32 m0_boot_size;
 	void *m0_rpc_virt;
 	u_int32 m0_rpc_phy;
+	u_int32 m0_rpc_size;
 	struct mutex dev_mutex;
 	struct mutex cmd_mutex;
 	bool fw_is_ready;
@@ -218,6 +220,7 @@ struct vpu_dev {
 
 	struct shared_addr shared_mem;
 	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
+	struct dentry *debugfs_root;
 };
 
 struct vpu_statistic {
@@ -227,6 +230,14 @@ struct vpu_statistic {
 	unsigned long current_event;
 	struct timespec ts_cmd;
 	struct timespec ts_event;
+	atomic64_t total_dma_size;
+	atomic64_t total_alloc_size;
+};
+
+struct dma_buffer {
+	dma_addr_t dma_phy;
+	void *dma_virt;
+	u_int32 dma_size;
 };
 
 struct vpu_ctx {
@@ -234,15 +245,21 @@ struct vpu_ctx {
 	struct v4l2_fh fh;
 
 	struct vpu_statistic statistic;
+	atomic64_t total_alloc_size;
 	struct device_attribute dev_attr_instance_command;
 	char command_name[64];
 	struct device_attribute dev_attr_instance_event;
 	char event_name[64];
 	struct device_attribute dev_attr_instance_buffer;
 	char buffer_name[64];
+	struct device_attribute dev_attr_instance_flow;
+	char flow_name[64];
+	struct dentry *dbglog_dir;
+	char dbglog_name[64];
 	struct v4l2_ctrl *ctrls[V4L2_MAX_CTRLS];
 	struct v4l2_ctrl_handler ctrl_handler;
 	bool ctrl_inited;
+	struct list_head log_q;
 
 	int str_index;
 	struct queue_data q_data[2];
@@ -268,24 +285,15 @@ struct vpu_ctx {
 	bool start_code_bypass;
 	bool hang_status;
 	wait_queue_head_t buffer_wq;
-	void *dpb_dma_virt;
-	u_int32 uSize;
-	dma_addr_t dpb_dma_phy;
-	void *dcp_dma_virt[MAX_DCP_NUM];
-	u_int32 uDCPSize;
-	dma_addr_t dcp_dma_phy[MAX_DCP_NUM];
-	u_int32 dcp_count;
-	void *mbi_dma_virt[MAX_MBI_NUM];
-	u_int32 mbi_size;
-	dma_addr_t mbi_dma_phy[MAX_MBI_NUM];
 	u_int32 mbi_count;
 	u_int32 mbi_num;
-	void *stream_buffer_virt;
-	u_int32 stream_buffer_size;
-	dma_addr_t stream_buffer_phy;
-	void *udata_buffer_virt;
-	u_int32 udata_buffer_size;
-	dma_addr_t udata_buffer_phy;
+	u_int32 dcp_count;
+	struct dma_buffer dpb_buffer;
+	struct dma_buffer dcp_buffer[MAX_DCP_NUM];
+	struct dma_buffer mbi_buffer[MAX_MBI_NUM];
+	struct dma_buffer stream_buffer;
+	struct dma_buffer udata_buffer;
+
 	int frm_dis_delay;
 	int frm_dec_delay;
 	int frm_total_num;
@@ -299,7 +307,7 @@ struct vpu_ctx {
 #define vpu_dbg(level, fmt, arg...) \
 	do { \
 		if (vpu_dbg_level_decoder >= (level)) \
-			printk("[DEBUG]\t " fmt, ## arg); \
+			printk("[VPU Decoder]\t " fmt, ## arg); \
 	} while (0)
 
 #endif

@@ -486,9 +486,8 @@
 
 		pinctrl_i2c0_mipi_lvds0: mipi_lvds0_i2c0_grp {
 			fsl,pins = <
-				SC_P_MIPI_DSI0_I2C0_SCL_MIPI_DSI0_I2C0_SCL	0xc6000020
-				SC_P_MIPI_DSI0_I2C0_SDA_MIPI_DSI0_I2C0_SDA	0xc6000020
-				SC_P_MIPI_DSI0_GPIO0_01_MIPI_DSI0_GPIO0_IO01	0x00000020
+				SC_P_MIPI_DSI0_I2C0_SCL_MIPI_DSI0_I2C0_SCL 0xc6000020
+				SC_P_MIPI_DSI0_I2C0_SDA_MIPI_DSI0_I2C0_SDA 0xc6000020
 			>;
 		};
 
@@ -500,9 +499,8 @@
 
 		pinctrl_i2c0_mipi_lvds1: mipi_lvds1_i2c0_grp {
 			fsl,pins = <
-				SC_P_MIPI_DSI1_I2C0_SCL_MIPI_DSI1_I2C0_SCL	0xc6000020
-				SC_P_MIPI_DSI1_I2C0_SDA_MIPI_DSI1_I2C0_SDA	0xc6000020
-				SC_P_MIPI_DSI1_GPIO0_01_MIPI_DSI1_GPIO0_IO01	0x00000020
+				SC_P_MIPI_DSI1_I2C0_SCL_MIPI_DSI1_I2C0_SCL 0xc6000020
+				SC_P_MIPI_DSI1_I2C0_SDA_MIPI_DSI1_I2C0_SDA 0xc6000020
 			>;
 		};
 
@@ -639,7 +637,7 @@
 
 		pinctrl_pcieb: pcieagrp{
 			fsl,pins = <
-				SC_P_PCIE_CTRL0_PERST_B_LSIO_GPIO4_IO00		0x04000021
+				SC_P_PCIE_CTRL0_PERST_B_LSIO_GPIO4_IO00		0x06000021
 				SC_P_PCIE_CTRL0_CLKREQ_B_LSIO_GPIO4_IO01	0x04000021
 				SC_P_PCIE_CTRL0_WAKE_B_LSIO_GPIO4_IO02		0x04000021
 			>;
@@ -993,7 +991,7 @@
 &pcieb{
 	ext_osc = <1>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcieb &pinctrl_wifi>;
+	pinctrl-0 = <&pinctrl_pcieb>;
 	clkreq-gpio = <&gpio4 1 GPIO_ACTIVE_LOW>;
 	disable-gpio = <&pca9557_a 2 GPIO_ACTIVE_LOW>;
 	reset-gpio = <&gpio4 0 GPIO_ACTIVE_LOW>;
@@ -1198,8 +1196,6 @@
 		reg = <0x3d>;
 		adi,dsi-lanes = <4>;
 		adi,dsi-channel = <1>;
-		interrupt-parent = <&gpio0>;
-		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
 		status = "okay";
 
 		port {
@@ -1286,8 +1282,6 @@
 		reg = <0x3d>;
 		adi,dsi-lanes = <4>;
 		adi,dsi-channel = <1>;
-		interrupt-parent = <&gpio0>;
-		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
 		status = "okay";
 
 		port {

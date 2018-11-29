@@ -52,6 +52,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <linux/uaccess.h>
+#include <linux/fs.h>
 #include "vpu_rpc.h"
 
 void rpc_init_shared_memory(struct shared_addr *This,
@@ -138,7 +140,14 @@ void rpc_init_shared_memory(struct shared_addr *This,
 	pDebugBufferDesc->uStart = pDebugBufferDesc->uWrPtr;
 	pDebugBufferDesc->uEnd = pDebugBufferDesc->uStart + DEBUG_SIZE;
 
-	phy_addr += sizeof(MediaIPFW_Video_BufDesc);
+	This->dbglog_mem_phy = phy_addr;
+	This->dbglog_mem_vir = This->qmeter_mem_vir + QMETER_SIZE;
+
+	pSharedInterface->DbgLogDesc.uDecStatusLogBase = This->dbglog_mem_phy;
+	pSharedInterface->DbgLogDesc.uDecStatusLogSize = DBGLOG_SIZE;
+	phy_addr += DBGLOG_SIZE;
+
+//	phy_addr += sizeof(MediaIPFW_Video_BufDesc);
 	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
 		pEngAccessBufferDesc = &pSharedInterface->EngAccessBufferDesc[i];
 		pEngAccessBufferDesc->uWrPtr = phy_addr;
@@ -257,6 +266,7 @@ static void rpc_update_cmd_buffer_ptr(MediaIPFW_Video_BufDesc *pCmdDesc)
 {
 	u_int32 uWritePtr;
 
+	mb();
 	uWritePtr = pCmdDesc->uWrPtr + 4;
 	if (uWritePtr >= pCmdDesc->uEnd)
 		uWritePtr = pCmdDesc->uStart;
@@ -328,6 +338,7 @@ static void rpc_update_msg_buffer_ptr(MediaIPFW_Video_BufDesc *pMsgDesc)
 {
 	u_int32 uReadPtr;
 
+	mb();
 	uReadPtr = pMsgDesc->uRdPtr + 4;
 	if (uReadPtr >= pMsgDesc->uEnd)
 		uReadPtr = pMsgDesc->uStart;
