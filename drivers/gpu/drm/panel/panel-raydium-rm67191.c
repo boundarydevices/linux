@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * i.MX drm driver - Raydium MIPI-DSI panel driver
  *
@@ -25,14 +26,20 @@
 #include <video/of_videomode.h>
 #include <video/videomode.h>
 
-#define CMD_TABLE_LEN 2
-typedef u8 cmd_set_table[CMD_TABLE_LEN];
-
 /* Write Manufacture Command Set Control */
 #define WRMAUCCTR 0xFE
 
 /* Manufacturer Command Set pages (CMD2) */
-static const cmd_set_table manufacturer_cmd_set[] = {
+struct cmd_set_entry {
+	u8 cmd;
+	u8 param;
+};
+
+/*
+ * There is no description in the Reference Manual about these commands.
+ * We received them from vendor, so just use them as is.
+ */
+static const struct cmd_set_entry manufacturer_cmd_set[] = {
 	{0xFE, 0x0B},
 	{0x28, 0x40},
 	{0x29, 0x4F},
@@ -207,13 +214,14 @@ static inline struct rad_panel *to_rad_panel(struct drm_panel *panel)
 static int rad_panel_push_cmd_list(struct mipi_dsi_device *dsi)
 {
 	size_t i;
-	const u8 *cmd;
-	size_t count = sizeof(manufacturer_cmd_set) / CMD_TABLE_LEN;
+	size_t count = ARRAY_SIZE(manufacturer_cmd_set);
 	int ret = 0;
 
-	for (i = 0; i < count ; i++) {
-		cmd = manufacturer_cmd_set[i];
-		ret = mipi_dsi_generic_write(dsi, cmd, CMD_TABLE_LEN);
+	for (i = 0; i < count; i++) {
+		const struct cmd_set_entry *entry = &manufacturer_cmd_set[i];
+		u8 buffer[2] = { entry->cmd, entry->param };
+
+		ret = mipi_dsi_generic_write(dsi, &buffer, sizeof(buffer));
 		if (ret < 0)
 			return ret;
 	}
@@ -316,7 +324,7 @@ static int rad_panel_enable(struct drm_panel *panel)
 		goto fail;
 	}
 
-	usleep_range(10000, 15000);
+	usleep_range(15000, 17000);
 
 	/* Set DSI mode */
 	ret = mipi_dsi_generic_write(dsi, (u8[]){ 0xC2, 0x0B }, 2);
@@ -367,8 +375,7 @@ static int rad_panel_enable(struct drm_panel *panel)
 		goto fail;
 	}
 
-	rad->backlight->props.power = FB_BLANK_UNBLANK;
-	backlight_update_status(rad->backlight);
+	backlight_enable(rad->backlight);
 
 	rad->enabled = true;
 
@@ -393,6 +400,10 @@ static int rad_panel_disable(struct drm_panel *panel)
 
 	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
+	backlight_disable(rad->backlight);
+
+	usleep_range(10000, 15000);
+
 	ret = mipi_dsi_dcs_set_display_off(dsi);
 	if (ret < 0) {
 		DRM_DEV_ERROR(dev, "Failed to set display OFF (%d)\n", ret);
@@ -406,11 +417,6 @@ static int rad_panel_disable(struct drm_panel *panel)
 		DRM_DEV_ERROR(dev, "Failed to enter sleep mode (%d)\n", ret);
 		return ret;
 	}
-
-	usleep_range(10000, 15000);
-
-	rad->backlight->props.power = FB_BLANK_POWERDOWN;
-	backlight_update_status(rad->backlight);
 
 	rad->enabled = false;
 
@@ -653,10 +659,7 @@ static int rad_panel_remove(struct mipi_dsi_device *dsi)
 		DRM_DEV_ERROR(dev, "Failed to detach from host (%d)\n",
 			ret);
 
-	drm_panel_detach(&rad->base);
-
-	if (rad->base.dev)
-		drm_panel_remove(&rad->base);
+	drm_panel_remove(&rad->base);
 
 	return 0;
 }
@@ -686,6 +689,6 @@ static struct mipi_dsi_driver rad_panel_driver = {
 };
 module_mipi_dsi_driver(rad_panel_driver);
 
-MODULE_AUTHOR("NXP Semiconductor");
-MODULE_DESCRIPTION("Raydium RM67191");
+MODULE_AUTHOR("Robert Chiras <robert.chiras@nxp.com>");
+MODULE_DESCRIPTION("DRM Driver for Raydium RM67191 MIPI DSI panel");
 MODULE_LICENSE("GPL v2");
