@@ -886,6 +886,7 @@ static int fsl_ssi_hw_free(struct snd_pcm_substream *substream,
 
 static int _fsl_ssi_set_dai_fmt(struct fsl_ssi *ssi, unsigned int fmt)
 {
+	struct regmap *regs = ssi->regs;
 	u32 strcr = 0, scr = 0, stcr, srcr, mask;
 
 	ssi->dai_fmt = fmt;
@@ -893,9 +894,9 @@ static int _fsl_ssi_set_dai_fmt(struct fsl_ssi *ssi, unsigned int fmt)
 	/* Synchronize frame sync clock for TE to avoid data slipping */
 	scr |= SSI_SCR_SYNC_TX_FS;
 
-	regmap_read(regs, CCSR_SSI_SCR, &scr);
-	scr &= ~CCSR_SSI_SCR_SYN;
-	scr |= CCSR_SSI_SCR_SYNC_TX_FS;
+	regmap_read(regs, REG_SSI_SCR, &scr);
+	scr &= ~SSI_SCR_SYN;
+	scr |= SSI_SCR_SYNC_TX_FS;
 
 	/* Use Network mode as default */
 	ssi->i2s_net = SSI_SCR_NET;
