@@ -916,7 +916,7 @@ static int wm8960_set_bias_level_out3(struct snd_soc_component *component,
 				}
 			}
 
-			ret = wm8960_configure_clocking(codec);
+			ret = wm8960_configure_clocking(component);
 			if (ret)
 				return ret;
 
