@@ -1543,3 +1543,16 @@
 	core_type = <2>;
 	status = "okay";
 };
+
+/ {
+    reserved-memory {
+	    #address-cells = <2>;
+	    #size-cells = <2>;
+	    ranges;
+
+	    carveout_region: imx_ion@0 {
+		    compatible = "imx-ion-pool";
+		    reg = <0x0 0xf8000000 0 0x8000000>;
+	    };
+    };
+};
