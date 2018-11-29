@@ -3975,7 +3975,10 @@ static int get_dt_vend_init_data(struct device_node *np,
 
 static void hdmitx_init_fmt_attr(struct hdmitx_dev *hdev)
 {
-	memset(hdev->fmt_attr, 0, sizeof(hdev->fmt_attr));
+	if (hdev->fmt_attr[0]) {
+		pr_info(SYS "fmt_attr %s\n", hdev->fmt_attr);
+		return;
+	}
 	if ((hdev->para->cd == COLORDEPTH_RESERVED) &&
 	    (hdev->para->cs == COLORSPACE_RESERVED)) {
 		strcpy(hdev->fmt_attr, "default");
@@ -4736,22 +4739,60 @@ static char *next_token_ex(char *separator, char *buf, unsigned int size,
 	return pToken;
 }
 
+/* check the colorattribute from uboot */
+static void check_hdmiuboot_attr(char *token)
+{
+	char attr[16];
+	const char * const cs[] = {
+		"444", "422", "rgb", "420", NULL};
+	const char * const cd[] = {
+		"8bit", "10bit", "12bit", "16bit", NULL};
+	int i;
+
+	if (hdmitx_device.fmt_attr[0] != 0)
+		return;
+	if (!token)
+		return;
+
+	for (i = 0; cs[i] != NULL; i++) {
+		if (strstr(token, cs[i])) {
+			strncpy(attr, cs[i], strlen(attr));
+			strcat(attr, ",");
+			break;
+		}
+	}
+	for (i = 0; cd[i] != NULL; i++) {
+		if (strstr(token, cd[i])) {
+			strncat(attr, cd[i], strlen(attr) - strlen(cd[i]));
+			strncpy(hdmitx_device.fmt_attr, attr,
+				sizeof(hdmitx_device.fmt_attr));
+			hdmitx_device.fmt_attr[15] = '\0';
+			break;
+		}
+	}
+}
+
 static  int __init hdmitx_boot_para_setup(char *s)
 {
 	char separator[] = {' ', ',', ';', 0x0};
 	char *token;
-	unsigned int token_len, token_offset, offset = 0;
+	unsigned int token_len = 0;
+	unsigned int token_offset = 0;
+	unsigned int offset = 0;
 	int size = strlen(s);
+
+	memset(hdmitx_device.fmt_attr, 0, sizeof(hdmitx_device.fmt_attr));
 
 	do {
 		token = next_token_ex(separator, s, size, offset,
 				&token_len, &token_offset);
-	if (token) {
-		if ((token_len == 3)
-			&& (strncmp(token, "off", token_len) == 0)) {
-			init_flag |= INIT_FLAG_NOT_LOAD;
+		if (token) {
+			if ((token_len == 3)
+				&& (strncmp(token, "off", token_len) == 0)) {
+				init_flag |= INIT_FLAG_NOT_LOAD;
+			}
+			check_hdmiuboot_attr(token);
 		}
-	}
 		offset = token_offset;
 	} while (token);
 	return 0;
