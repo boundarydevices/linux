@@ -361,6 +361,12 @@ enum viu_type {
 	VIU2,
 };
 
+enum render_cmd_type {
+	LAYER_SYNC,
+	BLANK_CMD,
+	PAGE_FLIP,
+};
+
 struct pandata_s {
 	s32 x_start;
 	s32 x_end;
@@ -465,7 +471,8 @@ struct layer_fence_map_s {
 struct osd_layers_fence_map_s {
 	struct list_head list;
 	int out_fd;
-	unsigned char  hdr_mode;
+	unsigned char hdr_mode;
+	unsigned char cmd;
 	struct display_flip_info_s disp_info;
 	struct layer_fence_map_s layer_map[HW_OSD_COUNT];
 };

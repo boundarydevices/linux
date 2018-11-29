@@ -1051,6 +1051,7 @@ static int sync_render_layers_fence(u32 index, u32 yres,
 	in_fence_fd = request->in_fen_fd;
 	mutex_lock(&post_fence_list_lock);
 	fence_map = &map_layers;
+	fence_map->cmd = LAYER_SYNC;
 	fence_map->layer_map[index].fb_index = index;
 	/* layer_map[index].enable will update if have blank ioctl */
 	fence_map->layer_map[index].enable = 1;
@@ -1257,19 +1258,15 @@ void osd_set_enable_hw(u32 index, u32 enable)
 	if (osd_hw.hwc_enable) {
 		if (index > OSD_MAX)
 			return;
-		if (osd_hw.osd_meson_dev.osd_ver < OSD_HIGH_ONE)
-			osd_enable_hw(index, enable);
-		else {
-		/* Todo: */
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 		mutex_lock(&post_fence_list_lock);
 		map_layers.layer_map[index].fb_index = index;
 		map_layers.layer_map[index].enable = enable;
+		map_layers.cmd = BLANK_CMD;
 		mutex_unlock(&post_fence_list_lock);
 		osd_log_dbg("osd_set_enable_hw: osd%d,enable=%d\n",
 			index, enable);
 #endif
-		}
 	} else
 		osd_enable_hw(index, enable);
 }
@@ -4240,6 +4237,8 @@ static void osd_pan_display_layers_fence(
 	struct layer_fence_map_s *layer_map = NULL;
 	struct vinfo_s *vinfo;
 
+	if (osd_hw.osd_meson_dev.osd_ver <= OSD_NORMAL)
+		osd_count = 1;
 	vinfo = get_current_vinfo();
 	if (vinfo && (strcmp(vinfo->name, "invalid") &&
 			strcmp(vinfo->name, "null"))) {
@@ -4262,7 +4261,8 @@ static void osd_pan_display_layers_fence(
 			continue;
 		}
 		/* wait in fence */
-		if (timeline_created && layer_map->enable) {
+		if (timeline_created && layer_map->enable
+			&& (fence_map->cmd == LAYER_SYNC)) {
 			ret = osd_wait_buf_ready_combine(layer_map);
 			if (ret < 0)
 				osd_log_dbg("fence wait ret %d\n", ret);
@@ -7652,6 +7652,7 @@ static void osd_setting_old_hwc(void)
 {
 	int index = OSD1;
 	bool freescale_update = false;
+	static u32 osd_enable;
 
 	spin_lock_irqsave(&osd_lock, lock_flags);
 	osd_hw.reg[OSD_COLOR_MODE].update_func(index);
@@ -7670,10 +7671,13 @@ static void osd_setting_old_hwc(void)
 		}
 		osd_update_window_axis = false;
 	}
-	if (!osd_hw.osd_display_debug
-		&& (suspend_flag == false))
+	if (osd_enable != osd_hw.enable[index]
+		&& (!osd_hw.osd_display_debug)
+		&& (suspend_flag == false)) {
 		osd_hw.reg[OSD_ENABLE]
 		.update_func(index);
+		osd_enable = osd_hw.enable[index];
+	}
 	spin_unlock_irqrestore(&osd_lock, lock_flags);
 	osd_wait_vsync_hw();
 }
