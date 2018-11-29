@@ -18,7 +18,7 @@
 #ifndef __DDR_PORT_DESC_H__
 #define __DDR_PORT_DESC_H__
 
-#define MAX_PORTS			256
+#define MAX_PORTS			63
 #define MAX_NAME			15
 #define PORT_MAJOR			32
 

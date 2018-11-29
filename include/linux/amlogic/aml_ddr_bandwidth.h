@@ -130,25 +130,25 @@ struct ddr_bandwidth_ops {
 };
 
 struct ddr_bandwidth {
-	void __iomem *ddr_reg;
-	void __iomem *pll_reg;
-	struct class *class;
 	unsigned short cpu_type;
 	unsigned short real_ports;
 	char busy;
 	char mode;
 	int mali_port[2];
 	unsigned int threshold;
-	struct work_struct work_bandwidth;
 	unsigned int irq_num;
 	unsigned int clock_count;
 	unsigned int channels;
-	unsigned int port[MAX_CHANNEL];
 	unsigned int bandwidth[MAX_CHANNEL];
 	unsigned int total_usage;
 	unsigned int total_bandwidth;
+	u64	     port[MAX_CHANNEL];
+	void __iomem *ddr_reg;
+	void __iomem *pll_reg;
+	struct class *class;
 	struct ddr_port_desc *port_desc;
 	struct ddr_bandwidth_ops *ops;
+	struct work_struct work_bandwidth;
 };
 
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH

@@ -37,6 +37,12 @@ static void gx_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 	unsigned int val;
 	int subport = -1;
 
+	/* set to a unused port to clear bandwidth */
+	if (port < 0) {
+		writel(0x8016ffff, db->ddr_reg + DMC_MON_CTRL2);
+		return;
+	}
+
 	if (port >= PORT_MAJOR)
 		subport = port - PORT_MAJOR;
 
@@ -89,7 +95,7 @@ static void gx_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	writel(db->clock_count, db->ddr_reg + DMC_MON_CTRL3);
 	gx_dmc_bandwidth_enable(db);
 
-	gx_dmc_port_config(db, 0, db->port[0]);
+	gx_dmc_port_config(db, 0, -1);
 }
 
 static int gx_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)

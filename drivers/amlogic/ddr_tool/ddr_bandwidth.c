@@ -133,15 +133,34 @@ static char *find_port_name(int id)
 	return NULL;
 }
 
+static int format_port(char *buf, u64 port_mask)
+{
+	u64 t;
+	int i, size = 0;
+	char *name;
+
+	for (i = 0; i < sizeof(u64) * 8; i++) {
+		t = 1ULL << i;
+		if (port_mask & t) {
+			name = find_port_name(i);
+			if (!name)
+				continue;
+			size += sprintf(buf + size, "      %s\n", name);
+		}
+	}
+	return size;
+}
+
 static ssize_t ddr_channel_show(struct class *cla,
 	struct class_attribute *attr, char *buf)
 {
 	int size = 0, i;
 
-	for (i = 0; i < aml_db->channels; i++)
-		size += sprintf(buf + size, "ch %d:%3d, %s\n",
-				i, aml_db->port[i],
-				find_port_name(aml_db->port[i]));
+	for (i = 0; i < aml_db->channels; i++) {
+		size += sprintf(buf + size, "ch %d:%16llx: ports:\n",
+				i, aml_db->port[i]);
+		size += format_port(buf + size, aml_db->port[i]);
+	}
 
 	return size;
 }
@@ -156,8 +175,8 @@ static ssize_t ddr_channel_store(struct class *cla,
 		return count;
 	}
 
-	if (ch >= MAX_CHANNEL ||
-	    (ch && aml_db->cpu_type < MESON_CPU_MAJOR_ID_GXTVBB) ||
+	if (ch >= MAX_CHANNEL || ch < 0 ||
+	    aml_db->cpu_type < MESON_CPU_MAJOR_ID_GXTVBB ||
 	    port > MAX_PORTS) {
 		pr_info("invalid channel %d or port %d\n", ch, port);
 		return count;
@@ -165,7 +184,10 @@ static ssize_t ddr_channel_store(struct class *cla,
 
 	if (aml_db->ops && aml_db->ops->config_port) {
 		aml_db->ops->config_port(aml_db, ch, port);
-		aml_db->port[ch] = port;
+		if (port < 0) /* clear port set */
+			aml_db->port[ch] = 0;
+		else
+			aml_db->port[ch] |= 1ULL << port;
 	}
 
 	return count;
@@ -226,11 +248,11 @@ static ssize_t mode_store(struct class *cla,
 
 	if (val == MODE_AUTODETECT && aml_db->ops && aml_db->ops->config_port) {
 		if (aml_db->mali_port[0] >= 0) {
-			aml_db->port[0] = aml_db->mali_port[0];
+			aml_db->port[0] = (1ULL << aml_db->mali_port[0]);
 			aml_db->ops->config_port(aml_db, 0, aml_db->port[0]);
 		}
 		if (aml_db->mali_port[1] >= 0) {
-			aml_db->port[1] = aml_db->mali_port[1];
+			aml_db->port[1] = (1ULL << aml_db->mali_port[1]);
 			aml_db->ops->config_port(aml_db, 1, aml_db->port[1]);
 		}
 	}
@@ -282,8 +304,8 @@ static ssize_t clock_count_store(struct class *cla,
 static ssize_t bandwidth_show(struct class *cla,
 	struct class_attribute *attr, char *buf)
 {
-	size_t s = 0, i;
-	int percent, rem;
+	size_t s = 0;
+	int percent, rem, i;
 #define BANDWIDTH_PREFIX "Total bandwidth: %8d KB/s, usage: %2d.%02d%%\n"
 
 	if (aml_db->mode != MODE_ENABLE)
@@ -295,8 +317,8 @@ static ssize_t bandwidth_show(struct class *cla,
 			aml_db->total_bandwidth, percent, rem);
 
 	for (i = 0; i < aml_db->channels; i++) {
-		s += sprintf(buf + s, "port%d: %8d KB/s\n",
-				aml_db->port[i], aml_db->bandwidth[i]);
+		s += sprintf(buf + s, "ch:%d port bit:%16llx: %8d KB/s\n",
+			     i, aml_db->port[i], aml_db->bandwidth[i]);
 	}
 	return s;
 }
@@ -591,6 +613,9 @@ static int __ref ddr_bandwidth_probe(struct platform_device *pdev)
 			__func__, aml_db->cpu_type);
 		goto inval;
 	}
+
+	if (!aml_db->ops->config_port)
+		goto inval;
 
 	r = class_register(&aml_ddr_class);
 	if (r)

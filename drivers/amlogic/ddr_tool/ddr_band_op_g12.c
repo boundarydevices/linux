@@ -40,12 +40,18 @@ static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 					DMC_MON_G12_CTRL6, DMC_MON_G12_CTRL8};
 	int subport = -1;
 
+	/* clear all port mask */
+	if (port < 0) {
+		writel(0, db->ddr_reg + rp[channel]);
+		writel(0, db->ddr_reg + rs[channel]);
+		return;
+	}
+
 	if (port >= PORT_MAJOR)
 		subport = port - PORT_MAJOR;
 
 	if (subport < 0) {
 		val = readl(db->ddr_reg + rp[channel]);
-		val &= ~(0xffffff << 0);
 		val |=  (1 << port);
 		writel(val, db->ddr_reg + rp[channel]);
 		val = 0xffff;
@@ -54,7 +60,6 @@ static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 		val = (0x1 << 23);	/* select device */
 		writel(val, db->ddr_reg + rp[channel]);
 		val = readl(db->ddr_reg + rs[channel]);
-		val &= ~(0xffff);
 		val |= (1 << subport);
 		writel(val, db->ddr_reg + rs[channel]);
 	}
@@ -124,7 +129,7 @@ static void g12_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	g12_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++)
-		g12_dmc_port_config(db, i, db->port[i]);
+		g12_dmc_port_config(db, i, -1);
 }
 
 static int g12_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)

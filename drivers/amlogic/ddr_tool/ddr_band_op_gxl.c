@@ -44,9 +44,14 @@ static void gxl_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 	if (port >= PORT_MAJOR)
 		subport = port - PORT_MAJOR;
 
+	/* clear all port mask */
+	if (port < 0) {
+		writel(0, db->ddr_reg + port_reg[channel]);
+		return;
+	}
+
 	val = readl(db->ddr_reg + port_reg[channel]);
 	if (port < 16) {
-		val &= ~(0xffff << 16);
 		val |= ((1 << (16 + port)) | 0xffff);
 	} else if (subport > 0) {
 		val &= ~(0xffffffff);
@@ -94,7 +99,7 @@ static void gxl_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	gxl_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++)
-		gxl_dmc_port_config(db, i, db->port[i]);
+		gxl_dmc_port_config(db, i, -1);
 }
 
 
