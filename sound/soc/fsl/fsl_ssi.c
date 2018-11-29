@@ -691,17 +691,15 @@ static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
 	bool baudclk_is_used;
 	int ret;
 
-	/* Prefer the explicitly set bitclock frequency */
-	if (ssi->bitclk_freq)
-		freq = ssi->bitclk_freq;
-	else {
-		if (params_channels(hw_params) == 1)
-			freq = 2 * params_width(hw_params) *
-					params_rate(hw_params);
-		else
-			freq = params_channels(hw_params) * 32 *
-					params_rate(hw_params);
-	}
+	/* Override slots and slot_width if being specifically set... */
+	if (ssi->slots)
+		slots = ssi->slots;
+	/* ...but keep 32 bits if slots is 2 -- I2S Master mode */
+	if (ssi->slot_width && slots != 2)
+		slot_width = ssi->slot_width;
+
+	/* Generate bit clock based on the slot number and slot width */
+	freq = slots * slot_width * params_rate(hw_params);
 
 	/* Don't apply it to any non-baudclk circumstance */
 	if (IS_ERR(ssi->baudclk))
