@@ -686,13 +686,13 @@
 
 	wifi_pwm_conf: wifi_pwm_conf {
 		pwm_channel1_conf {
-			pwms = <&pwm_cd MESON_PWM_1 30040 0>;
-			duty-cycle = <15020>;
+			pwms = <&pwm_cd MESON_PWM_1 30541 0>;
+			duty-cycle = <15270>;
 			times = <10>;
 		};
 		pwm_channel2_conf {
-			pwms = <&pwm_cd MESON_PWM_3 30030 0>;
-			duty-cycle = <15015>;
+			pwms = <&pwm_cd MESON_PWM_3 30500 0>;
+			duty-cycle = <15250>;
 			times = <12>;
 		};
 	};
