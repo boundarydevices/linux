@@ -196,7 +196,10 @@ void dvbc_reg_initial(struct aml_demod_sta *demod_sta)
 
 	clk_freq = demod_sta->clk_freq;	/* kHz */
 	/*no use adc_freq = demod_sta->adc_freq;*/	/* kHz */
-	adc_freq  = get_adc_freq();/*24000*/;
+	if (is_ic_ver(IC_VER_TL1))
+		adc_freq  = demod_sta->adc_freq;
+	else
+		adc_freq  = get_adc_freq();/*24000*/;
 	adc_format = 1;
 	/*ary no use tuner = demod_sta->tuner;*/
 	ch_mode = demod_sta->ch_mode;

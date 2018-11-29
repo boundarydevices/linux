@@ -133,8 +133,12 @@ void adc_dpll_setup(int clk_a, int clk_b, int clk_sys, int dvb_mode)
 	int sts_pll;
 
 	if (is_ic_ver(IC_VER_TL1)) {
-		dtvpll_init_flag(1);
-		return;
+		if (clk_b == Adc_Clk_24M) {
+			dtvpll_init_flag(1);
+			return;
+		} else if (clk_b == Adc_Clk_25M) {
+			//going on to set 25M clk
+		}
 	}
 
 	adc_pll_cntl.d32 = 0;
@@ -996,7 +1000,7 @@ int demod_set_sys(struct aml_demod_sta *demod_sta,
 	dvb_mode = demod_sta->dvb_mode;
 	clk_adc = demod_sys->adc_clk;
 	clk_dem = demod_sys->demod_clk;
-	nco_rate = ((clk_adc / 1000) * 256) / 224 + 2;
+	nco_rate = (clk_adc * 256) / clk_dem + 2;
 	PR_DBG
 	    ("demod_set_sys,clk_adc is %d,clk_demod is %d\n",
 	     clk_adc, clk_dem);
@@ -1076,11 +1080,13 @@ int demod_set_sys(struct aml_demod_sta *demod_sta,
 				| (nco_rate & 0xff)));
 		front_write_reg_v4(0x20, (front_read_reg_v4(0x20) | (1 << 8)));
 	} else if (is_ic_ver(IC_VER_TL1) && (dvb_mode == Gxtv_Dvbc)) {
-		nco_rate = ((clk_adc / 1000) * 256) / 250 + 2;
+		nco_rate = (clk_adc * 256) / clk_dem + 2;
 		demod_write_reg(DEMOD_TOP_REGC, 0x11);
 		front_write_reg_v4(0x20, ((front_read_reg_v4(0x20) & ~0xff)
 				| (nco_rate & 0xff)));
 		front_write_reg_v4(0x20, (front_read_reg_v4(0x20) | (1 << 8)));
+		front_write_reg_v4(0x2f, 0x5);//for timsshift mosaic
+		dd_tvafe_hiu_reg_write(0x1d0, 0x502);//sys_clk=167M
 	}
 
 	demod_sta->adc_freq = clk_adc;

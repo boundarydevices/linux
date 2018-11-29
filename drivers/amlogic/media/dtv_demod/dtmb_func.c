@@ -206,6 +206,9 @@ void dtmb_initial(struct aml_demod_sta *demod_sta)
 			dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x131a747d);
 			dtmb_write_reg(0x5b << 2, 0x4d6a0a25);
 		}
+
+		//for timeshift issue(chuangcheng test)
+		dtmb_write_reg(0x4e << 2, 0x256cf604);
 	} else {
 		dtmb_register_reset();
 		dtmb_all_reset();

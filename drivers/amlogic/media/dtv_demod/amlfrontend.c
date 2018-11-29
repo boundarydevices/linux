@@ -77,7 +77,7 @@ module_param(std_lock_timeout, int, 0644);
 static char *demod_version = "V0.03";
 
 
-int aml_demod_debug = DBG_INFO|DBG_ATSC;
+int aml_demod_debug = DBG_INFO;
 
 
 #if 0
@@ -1119,7 +1119,7 @@ static int Gxtv_Demod_Dvbc_Init(/*struct aml_fe_dev *dev, */int mode)
 
 	if (is_ic_ver(IC_VER_TL1)) {
 		sys.adc_clk = Adc_Clk_24M;
-		sys.demod_clk = Demod_Clk_250M;
+		sys.demod_clk = Demod_Clk_167M;
 		demod_status.tmp = Cry_mode;
 	}
 
@@ -1766,11 +1766,15 @@ static int gxtv_demod_atsc_set_frontend(struct dvb_frontend *fe)
 			param_j83b.symb_rate = 5361;
 
 		if (is_ic_ver(IC_VER_TL1)) {
-			nco_rate = ((demod_status.adc_freq / 1000) * 256)
-				/ 250 + 2;
+			//for timeshift mosaic
+			demod_status.clk_freq = Demod_Clk_167M;
+			nco_rate = (demod_status.adc_freq * 256)
+				/ demod_status.clk_freq + 2;
 			front_write_reg_v4(0x20,
 				((front_read_reg_v4(0x20) & ~0xff)
 				| (nco_rate & 0xff)));
+			front_write_reg_v4(0x2f, 0x5);//for timeshift mosaic
+			dd_tvafe_hiu_reg_write(0x1d0, 0x502);//sys_clk=167M
 		}
 
 		dvbc_set_ch(&demod_status, /*&demod_i2c, */&param_j83b);
@@ -1780,6 +1784,8 @@ static int gxtv_demod_atsc_set_frontend(struct dvb_frontend *fe)
 			set_j83b_filter_reg_v4();
 			qam_write_reg(0x12, 0x50e1000);
 			qam_write_reg(0x30, 0x41f2f69);
+			//for timeshift mosaic issue
+			//qam_write_reg(0x84, 0x2190000);
 		}
 
 	} else if (c->modulation > QAM_AUTO) {
@@ -1801,6 +1807,7 @@ static int gxtv_demod_atsc_set_frontend(struct dvb_frontend *fe)
 					0x16e3600);
 			}
 
+			atsc_write_reg_v4(0x12, 0x18);//for timeshift mosaic
 			Val_0x20.bits = atsc_read_reg_v4(ATSC_CNTR_REG_0X20);
 			Val_0x20.b.cpu_rst = 1;
 			atsc_write_reg_v4(ATSC_CNTR_REG_0X20, Val_0x20.bits);
@@ -2218,7 +2225,10 @@ int Gxtv_Demod_Atsc_Init(void/*struct aml_fe_dev *dev*/)
 	/* 0 -DVBC, 1-DVBT, ISDBT, 2-ATSC*/
 	demod_status.dvb_mode = Gxtv_Atsc;
 	sys.adc_clk = Adc_Clk_24M;    /*Adc_Clk_26M;*/
-	sys.demod_clk = Demod_Clk_225M;  /*Demod_Clk_71M;//Demod_Clk_78M;*/
+	if (is_ic_ver(IC_VER_TL1))
+		sys.demod_clk = Demod_Clk_250M;
+	else
+		sys.demod_clk = Demod_Clk_225M;
 	demod_status.ch_if = 5000;
 	demod_status.tmp = Adc_mode;
 	/*demod_set_sys(&demod_status, &i2c, &sys);*/

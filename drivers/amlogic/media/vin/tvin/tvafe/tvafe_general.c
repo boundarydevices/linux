@@ -888,6 +888,23 @@ int adc_set_pll_cntl(bool on, unsigned int module_sel, void *pDtvPara)
 			W_HIU_REG(HHI_DEMOD_CLK_CNTL, 0x1000502);
 
 			adc_pll_lock_cnt = 1;
+		} else if (tvafe_cpu_type() == CPU_TYPE_TL1) {
+			do {//25M
+				W_HIU_REG(HHI_ADC_PLL_CNTL0_TL1, 0x001104c8);
+				W_HIU_REG(HHI_ADC_PLL_CNTL0_TL1, 0x301104c8);
+				W_HIU_REG(HHI_ADC_PLL_CNTL1_TL1, 0x03000000);
+				W_HIU_REG(HHI_ADC_PLL_CNTL2_TL1, 0xe1800000);
+				W_HIU_REG(HHI_ADC_PLL_CNTL3_TL1, 0x48681c00);
+				W_HIU_REG(HHI_ADC_PLL_CNTL4_TL1, 0x88770290);
+				W_HIU_REG(HHI_ADC_PLL_CNTL5_TL1, 0x39272000);
+				W_HIU_REG(HHI_ADC_PLL_CNTL6_TL1, 0x56540000);
+				W_HIU_REG(HHI_ADC_PLL_CNTL0_TL1, 0x101104c8);
+
+				udelay(100);
+				adc_pll_lock_cnt++;
+			} while (!R_HIU_BIT(HHI_ADC_PLL_CNTL0_TL1, 31, 1) &&
+				(adc_pll_lock_cnt < 10));
+
 		} else {
 			/*is_meson_gxtvbb_cpu()*/
 			W_HIU_REG(HHI_ADC_PLL_CNTL3, 0x8a2a2110);/*reset*/
