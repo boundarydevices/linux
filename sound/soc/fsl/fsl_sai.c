@@ -1084,7 +1084,7 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		buffer_size = IMX_SAI_DMABUF_SIZE;
 
 	if (sai->soc->imx)
-		return imx_pcm_platform_register(&pdev->dev);
+		return imx_pcm_component_register(&pdev->dev);
 	else
 		return devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
 }

@@ -215,16 +215,18 @@ out:
 	return ret;
 }
 
-static struct snd_soc_platform_driver imx_soc_platform = {
+static struct snd_soc_component_driver imx_soc_component = {
+	.name		= "imx-pcm-dma-v2",
 	.ops		= &imx_pcm_ops,
 	.pcm_new	= imx_pcm_new,
 	.pcm_free	= imx_pcm_free_dma_buffers,
 };
 
-int imx_pcm_platform_register(struct device *dev)
+int imx_pcm_component_register(struct device *dev)
 {
-	return devm_snd_soc_register_platform(dev, &imx_soc_platform);
+	return devm_snd_soc_register_component(dev, &imx_soc_component,
+					       NULL, 0);
 }
-EXPORT_SYMBOL_GPL(imx_pcm_platform_register);
+EXPORT_SYMBOL_GPL(imx_pcm_component_register);
 
 MODULE_LICENSE("GPL");
