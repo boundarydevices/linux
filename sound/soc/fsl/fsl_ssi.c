@@ -805,10 +805,10 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	int ret;
 	u32 scr_val;
 	int enabled;
-	u8 i2smode = ssi_private->i2s_mode;
+	u8 i2smode = ssi->i2s_net;
 
-	regmap_read(regs, CCSR_SSI_SCR, &scr_val);
-	enabled = scr_val & CCSR_SSI_SCR_SSIEN;
+	regmap_read(regs, REG_SSI_SCR, &scr_val);
+	enabled = scr_val & SSI_SCR_SSIEN;
 
 	/*
 	 * SSI is properly configured if it is enabled and running in
@@ -841,14 +841,14 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		 * ssi->i2s_net will lose the settings for regular use cases.
 		 */
 		if (fsl_ssi_is_i2s_cbm_cfs(ssi) && sample_size == 16)
-			i2smode = CCSR_SSI_SCR_I2S_MODE_NORMAL |
-				CCSR_SSI_SCR_NET;
+			i2smode = SSI_SCR_I2S_MODE_NORMAL |
+				SSI_SCR_NET;
 		if (channels == 1)
 			i2smode = 0;
 	}
 
-	regmap_update_bits(regs, CCSR_SSI_SCR,
-			   CCSR_SSI_SCR_NET | CCSR_SSI_SCR_I2S_MODE_MASK,
+	regmap_update_bits(regs, REG_SSI_SCR,
+			   SSI_SCR_NET | SSI_SCR_I2S_MODE_MASK,
 			   i2smode);
 
 	/*
