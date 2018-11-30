@@ -344,6 +344,7 @@ struct fsl_asrc_pair {
  * @pair_streams:indicate which substream is running
  * @asrc_rate: default sample rate for ASoC Back-Ends
  * @asrc_width: default sample width for ASoC Back-Ends
+ * @name: driver name
  * @regcache_cfg: store register value of REG_ASRCFG
  */
 struct fsl_asrc {
@@ -367,6 +368,8 @@ struct fsl_asrc {
 
 	int asrc_rate;
 	int asrc_width;
+
+	char name[32];
 
 	u32 regcache_cfg;
 };
