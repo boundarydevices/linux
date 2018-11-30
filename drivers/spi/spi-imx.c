@@ -512,16 +512,10 @@ static void mx51_ecspi_disable(struct spi_imx_data *spi_imx)
 static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 				      struct spi_message *msg)
 {
-	return 0;
-}
-
-static int mx51_ecspi_config(struct spi_device *spi)
-{
-	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
+	struct spi_device *spi = msg->spi;
 	u32 ctrl = MX51_ECSPI_CTRL_ENABLE;
-	u32 clk = spi_imx->speed_hz, delay, reg;
+	u32 testreg;
 	u32 cfg = readl(spi_imx->base + MX51_ECSPI_CONFIG);
-	u32 bits = spi_imx->bits_per_word;
 
 	/* set Master or Slave mode */
 	if (spi_imx->slave_mode)
@@ -535,35 +529,28 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	if (spi->mode & SPI_READY)
 		ctrl |= MX51_ECSPI_CTRL_DRCTL(spi_imx->spi_drctl);
 
-	/* set clock speed */
-	ctrl |= mx51_ecspi_clkdiv(spi_imx, spi_imx->speed_hz, &clk);
-	spi_imx->spi_bus_clk = clk;
-
 	/* set chip select to use */
 	ctrl |= MX51_ECSPI_CTRL_CS(spi->chip_select);
 
-	if (spi_imx->slave_mode) {
-		bits = spi_imx->slave_burst * 8;
-	}  else {
-		if (bits == 32) {
-			unsigned len = spi_imx->len / 4;
+	/*
+	 * To workaround ERR009165, SDMA script needs to use XCH instead of SMC
+	 * just like PIO mode and it is fixed on i.mx6ul
+	 */
+	if (spi_imx->usedma && (spi_imx->devtype_data->devtype == IMX6UL_ECSPI))
+		ctrl |= MX51_ECSPI_CTRL_SMC;
 
-			while (len > 128) {
-				if (len & 1)
-					break;
-				len >>= 1;
-			}
-			while (len > 128) {
-				if (len % 3)
-					break;
-				len /= 3;
-			}
-			if ((len > 128) || !len)
-				len = 1;
-			bits = len << 5;
-		}
-	}
-	ctrl |= (bits - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
+	/*
+	 * The ctrl register must be written first, with the EN bit set other
+	 * registers must not be written to.
+	 */
+	writel(ctrl, spi_imx->base + MX51_ECSPI_CTRL);
+
+	testreg = readl(spi_imx->base + MX51_ECSPI_TESTREG);
+	if (spi->mode & SPI_LOOP)
+		testreg |= MX51_ECSPI_TESTREG_LBC;
+	else
+		testreg &= ~MX51_ECSPI_TESTREG_LBC;
+	writel(testreg, spi_imx->base + MX51_ECSPI_TESTREG);
 
 	/*
 	 * eCSPI burst completion by Chip Select signal in Slave mode
@@ -587,29 +574,66 @@ static int mx51_ecspi_config(struct spi_device *spi)
 		cfg &= ~MX51_ECSPI_CONFIG_SCLKPOL(spi->chip_select);
 		cfg &= ~MX51_ECSPI_CONFIG_SCLKCTL(spi->chip_select);
 	}
+
 	if (spi->mode & SPI_CS_HIGH)
 		cfg |= MX51_ECSPI_CONFIG_SSBPOL(spi->chip_select);
 	else
 		cfg &= ~MX51_ECSPI_CONFIG_SSBPOL(spi->chip_select);
 
+	writel(cfg, spi_imx->base + MX51_ECSPI_CONFIG);
+
+	return 0;
+}
+
+static int mx51_ecspi_config(struct spi_device *spi)
+{
+	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
+	u32 ctrl = readl(spi_imx->base + MX51_ECSPI_CTRL);
+	u32 clk = spi_imx->speed_hz, delay;
+	u32 bits = spi_imx->bits_per_word;
+
+	/* Clear BL field and set the right value */
+	ctrl &= ~MX51_ECSPI_CTRL_BL_MASK;
+
+	if (spi_imx->slave_mode) {
+		bits = spi_imx->slave_burst * 8;
+	} else {
+		if (bits == 32) {
+			unsigned len = spi_imx->len / 4;
+
+			while (len > 128) {
+				if (len & 1)
+					break;
+				len >>= 1;
+			}
+			while (len > 128) {
+				if (len % 3)
+					break;
+				len /= 3;
+			}
+			if ((len > 128) || !len)
+				len = 1;
+			bits = len << 5;
+		}
+	}
+	ctrl |= (bits - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
+
+	/* set clock speed */
+	ctrl &= ~(0xf << MX51_ECSPI_CTRL_POSTDIV_OFFSET |
+		  0xf << MX51_ECSPI_CTRL_PREDIV_OFFSET);
+	ctrl |= mx51_ecspi_clkdiv(spi_imx, spi_imx->speed_hz, &clk);
+	spi_imx->spi_bus_clk = clk;
+
 	/*
-	 * To workaround ERR009165, SDMA script needs to use XCH instead of SMC
-	 * just like PIO mode and it is fixed on i.mx6ul
+	 * ERR009165: work in XHC mode instead of SMC as PIO on the chips
+	 * before i.mx6ul.
 	 */
 	if (spi_imx->usedma && !cspi_quirk(spi_imx, QUIRK_ERR009165))
 		ctrl |= MX51_ECSPI_CTRL_SMC;
-
-	/* CTRL register always go first to bring out controller from reset */
-	writel(ctrl, spi_imx->base + MX51_ECSPI_CTRL);
-
-	reg = readl(spi_imx->base + MX51_ECSPI_TESTREG);
-	if (spi->mode & SPI_LOOP)
-		reg |= MX51_ECSPI_TESTREG_LBC;
 	else
-		reg &= ~MX51_ECSPI_TESTREG_LBC;
-	writel(reg, spi_imx->base + MX51_ECSPI_TESTREG);
+		ctrl &= ~MX51_ECSPI_CTRL_SMC;
 
-	writel(cfg, spi_imx->base + MX51_ECSPI_CONFIG);
+	writel(ctrl, spi_imx->base + MX51_ECSPI_CTRL);
 
 	/*
 	 * Wait until the changes in the configuration register CONFIGREG
@@ -633,12 +657,7 @@ static int mx51_ecspi_config(struct spi_device *spi)
 
 static void mx51_setup_wml(struct spi_imx_data *spi_imx)
 {
-	int tx_wml;
-
-	/*
-	 * Configure the DMA register: setup the watermark
-	 * and enable DMA request.
-	 */
+	u32 tx_wml;
 
 	/*
 	 * work around for
@@ -649,11 +668,14 @@ static void mx51_setup_wml(struct spi_imx_data *spi_imx)
 		spi_imx_get_fifosize(spi_imx) - spi_imx->tx_config.dst_maxburst :
 		0;
 
-	if (spi_imx->usedma)
-		writel(MX51_ECSPI_DMA_RX_WML(spi_imx->wml - 1) |
-			MX51_ECSPI_DMA_TX_WML(tx_wml) |
-			MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN,
-			spi_imx->base + MX51_ECSPI_DMA);
+	/*
+	 * Configure the DMA register: setup the watermark
+	 * and enable DMA request.
+	 */
+	writel(MX51_ECSPI_DMA_RX_WML(spi_imx->wml - 1) |
+		MX51_ECSPI_DMA_TX_WML(tx_wml) |
+		MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN,
+		spi_imx->base + MX51_ECSPI_DMA);
 }
 
 static int mx51_ecspi_rx_available(struct spi_imx_data *spi_imx)
