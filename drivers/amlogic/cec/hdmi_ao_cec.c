@@ -2540,7 +2540,7 @@ static ssize_t hdmitx_cec_write(struct file *f, const char __user *buf,
 static void init_cec_port_info(struct hdmi_port_info *port,
 			       struct ao_cec_dev *cec_dev)
 {
-	unsigned int a, b, c, d, e = 0;
+	unsigned int a, b, c = 0, d, e = 0;
 	unsigned int phy_head = 0xf000, phy_app = 0x1000, phy_addr;
 	struct hdmitx_dev *tx_dev;
 
@@ -2592,7 +2592,7 @@ static void init_cec_port_info(struct hdmi_port_info *port,
 			port[e].type = HDMI_OUTPUT;
 		} else {
 			port[e].type = HDMI_INPUT;
-			port[e].port_id = a + 1;
+			port[e].port_id = c;/*a + 1; phy port - ui id*/
 		}
 		port[e].cec_supported = 1;
 		/* set ARC feature according mask */

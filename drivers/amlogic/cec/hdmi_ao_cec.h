@@ -19,7 +19,7 @@
 #define __AO_CEC_H__
 
 
-#define CEC_DRIVER_VERSION	"Ver 2018/11/21\n"
+#define CEC_DRIVER_VERSION	"Ver 2018/12/06\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
