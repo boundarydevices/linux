@@ -1068,7 +1068,7 @@ static int fsl_esai_probe(struct platform_device *pdev)
 	if (of_property_read_u32(np, "fsl,dma-buffer-size", &buffer_size))
 		buffer_size = IMX_ESAI_DMABUF_SIZE;
 
-	ret = imx_pcm_platform_register(&pdev->dev);
+	ret = imx_pcm_component_register(&pdev->dev);
 	if (ret)
 		dev_err(&pdev->dev, "failed to init imx pcm dma: %d\n", ret);
 
