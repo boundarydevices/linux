@@ -1175,7 +1175,7 @@ static int fsl_esai_probe(struct platform_device *pdev)
 						      "nxp,imx8qm-acm",
 						      FSL_DMA_WORKAROUND_ESAI);
 
-	ret = imx_pcm_platform_register(&pdev->dev);
+	ret = imx_pcm_component_register(&pdev->dev);
 	if (ret)
 		dev_err(&pdev->dev, "failed to init imx pcm dma: %d\n", ret);
 
