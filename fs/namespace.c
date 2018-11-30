@@ -2698,6 +2698,17 @@ static long exact_copy_from_user(void *to, const void __user * from,
 	if (!access_ok(VERIFY_READ, from, n))
 		return n;
 
+#ifdef CONFIG_AMLOGIC_VMAP
+	/* addr from kernel space and in vmalloc range, avoid overflow */
+	if (is_vmalloc_or_module_addr((void *)from)) {
+		unsigned long old = n;
+
+		n = strlen(from) + 1;
+		pr_info("addr:%p is in kernel, size fix %ld->%ld, data:%s\n",
+			from, old, n, (char *)from);
+	}
+#endif
+
 	while (n) {
 		if (__get_user(c, f)) {
 			memset(t, 0, n);

@@ -18,7 +18,15 @@
 
 #define THREAD_SIZE_ORDER	1
 #define THREAD_SIZE		(PAGE_SIZE << THREAD_SIZE_ORDER)
+#ifdef CONFIG_AMLOGIC_VMAP
+#define THREAD_INFO_SIZE	(sizeof(struct thread_info))
+#define THREAD_INFO_OFFSET	(THREAD_SIZE - THREAD_INFO_SIZE)
+#define THREAD_START_SP		(THREAD_SIZE - 8 - THREAD_INFO_SIZE)
+#define VMAP_RESERVE_SIZE	(8 + 4 * 4)
+#define VMAP_BACK_SP		12
+#else
 #define THREAD_START_SP		(THREAD_SIZE - 8)
+#endif
 
 #ifndef __ASSEMBLY__
 
@@ -88,11 +96,20 @@ register unsigned long current_stack_pointer asm ("sp");
  */
 static inline struct thread_info *current_thread_info(void) __attribute_const__;
 
+#ifdef CONFIG_AMLOGIC_VMAP
+static inline struct thread_info *current_thread_info(void)
+{
+	return (struct thread_info *)
+		(((current_stack_pointer & ~(THREAD_SIZE - 1)) +
+		 THREAD_INFO_OFFSET));
+}
+#else
 static inline struct thread_info *current_thread_info(void)
 {
 	return (struct thread_info *)
 		(current_stack_pointer & ~(THREAD_SIZE - 1));
 }
+#endif
 
 #define thread_saved_pc(tsk)	\
 	((unsigned long)(task_thread_info(tsk)->cpu_context.pc))

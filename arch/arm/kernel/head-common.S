@@ -119,7 +119,11 @@ __mmap_switched_data:
 #else
 	.long	0				@ r7
 #endif
+#ifdef CONFIG_AMLOGIC_VMAP
+	.long	init_thread_union + TI_THREAD_START_SP @ sp
+#else
 	.long	init_thread_union + THREAD_START_SP @ sp
+#endif
 	.size	__mmap_switched_data, . - __mmap_switched_data
 
 /*

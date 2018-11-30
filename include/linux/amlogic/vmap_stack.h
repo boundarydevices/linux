@@ -20,7 +20,18 @@
 
 #define STACK_SHRINK_THRESHOLD		(PAGE_SIZE + 1024)
 #define STACK_SHRINK_SLEEP		(HZ)
+#ifdef CONFIG_64BIT
 #define VM_STACK_AREA_SIZE		SZ_512M
+#define VMAP_ADDR_START			VMALLOC_START
+#define VMAP_ADDR_END			VMALLOC_END
+#define VMAP_ALIGN			VM_STACK_AREA_SIZE
+#else
+/* currently support max 6144 tasks on 32bit */
+#define VM_STACK_AREA_SIZE		(SZ_64M - SZ_16M)
+#define VMAP_ADDR_START			MODULES_VADDR
+#define VMAP_ADDR_END			MODULES_END
+#define VMAP_ALIGN			SZ_64M
+#endif
 
 #define STACK_TOP_PAGE_OFF		(THREAD_SIZE - PAGE_SIZE)
 
@@ -34,33 +45,28 @@
 #define CACHE_MAINTAIN_DELAY		(HZ)
 
 struct aml_vmap {
+	spinlock_t vmap_lock;
 	unsigned int start_bit;
 	int cached_pages;
 	struct vm_struct *root_vm;
 	unsigned long *bitmap;
 	struct list_head list;
-	spinlock_t vmap_lock;
-	spinlock_t page_lock;
 	struct delayed_work mwork;
+	spinlock_t page_lock;
 };
 
 extern int handle_vmap_fault(unsigned long addr,
 			     unsigned int esr, struct pt_regs *regs);
 
-extern DEFINE_PER_CPU(unsigned long [THREAD_SIZE/sizeof(long)], vmap_stack);
-static inline bool on_vmap_stack(unsigned long sp, int cpu)
-{
-	/* variable names the same as kernel/stacktrace.c */
-	unsigned long low = (unsigned long)per_cpu(vmap_stack, cpu);
-	unsigned long high = low + THREAD_START_SP;
-
-	return (low <= sp && sp <= high);
-}
-
+extern bool on_vmap_stack(unsigned long sp, int cpu);
 extern void  __setup_vmap_stack(unsigned long off);
 extern void  update_vmap_stack(int diff);
 extern int   get_vmap_stack_size(void);
+extern int   is_vmap_addr(unsigned long addr);
 extern void  aml_stack_free(struct task_struct *tsk);
 extern void *aml_stack_alloc(int node, struct task_struct *tsk);
 extern void  aml_account_task_stack(struct task_struct *tsk, int account);
+#ifdef CONFIG_ARM
+extern int   on_irq_stack(unsigned long sp, int cpu);
+#endif
 #endif /* __VMAP_STACK_H__ */

@@ -44,6 +44,9 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/list.h>
+#ifdef CONFIG_AMLOGIC_VMAP
+#include <linux/amlogic/vmap_stack.h>
+#endif
 
 #include <asm/stacktrace.h>
 #include <asm/traps.h>
@@ -468,6 +471,20 @@ int unwind_frame(struct stackframe *frame)
 	return URC_OK;
 }
 
+#ifdef CONFIG_AMLOGIC_VMAP
+static void dump_backtrace_entry_fp(unsigned long where, unsigned long fp,
+				    unsigned long sp)
+{
+	signed long fp_size = 0;
+
+	fp_size = fp - sp + 4;
+	if (fp_size < 0 || !fp)
+		fp_size = 0;
+	pr_info("[%08lx+%4ld][<%08lx>] %pS\n",
+		fp, fp_size, where, (void *)where);
+}
+#endif
+
 void unwind_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 {
 	struct stackframe frame;
@@ -504,9 +521,33 @@ void unwind_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 		unsigned long where = frame.pc;
 
 		urc = unwind_frame(&frame);
+	#ifdef CONFIG_AMLOGIC_VMAP
+		if (urc < 0) {
+			int keep = 0;
+
+			/* continue search for irq stack */
+			if (on_irq_stack(frame.sp, raw_smp_processor_id())) {
+				unsigned long *prev_fp;
+
+				prev_fp  = (unsigned long *)(frame.fp - 12);
+				if (frame.fp >= TASK_SIZE) {
+					keep     = 1;
+					frame.fp = prev_fp[0];
+					frame.sp = prev_fp[1];
+					frame.lr = prev_fp[2];
+					frame.pc = prev_fp[3];
+				}
+			}
+			if (!keep)
+				break;
+		}
+		where = frame.lr;
+		dump_backtrace_entry_fp(where, frame.fp, frame.sp);
+	#else
 		if (urc < 0)
 			break;
 		dump_backtrace_entry(where, frame.pc, frame.sp - 4);
+	#endif
 	}
 }
 

@@ -39,6 +39,12 @@
  * Interrupt handling.
  */
 	.macro	irq_handler
+#ifdef CONFIG_AMLOGIC_VMAP
+	mov	r8, sp			/* back up sp */
+	mov	r0, sp
+	bl	irq_stack_entry		/* switch IRQ stack */
+	mov	sp, r0
+#endif
 #ifdef CONFIG_MULTI_IRQ_HANDLER
 	ldr	r1, =handle_arch_irq
 	mov	r0, sp
@@ -48,6 +54,9 @@
 	arch_irq_handler_default
 #endif
 9997:
+#ifdef CONFIG_AMLOGIC_VMAP
+	mov	sp, r8			/* switch stack back to task stack */
+#endif
 	.endm
 
 	.macro	pabt_helper
@@ -149,10 +158,24 @@ ENDPROC(__und_invalid)
 #define SPFIX(code...)
 #endif
 
+#ifdef CONFIG_AMLOGIC_VMAP
+	.macro	svc_entry, stack_hole=0, trace=1, uaccess=1, vmap=0
+#else
 	.macro	svc_entry, stack_hole=0, trace=1, uaccess=1
+#endif
  UNWIND(.fnstart		)
  UNWIND(.save {r0 - pc}		)
+#ifdef CONFIG_AMLOGIC_VMAP
+	.if \vmap
+	/* keep using stack of abt mode */
+	str	sp, [r0, #TI_VMAP_BACK_SP]
+	sub	sp, r0, #(SVC_REGS_SIZE + \stack_hole - 4)
+	.else
 	sub	sp, sp, #(SVC_REGS_SIZE + \stack_hole - 4)
+	.endif
+#else /* !CONFIG_AMLOGIC_VMAP */
+	sub	sp, sp, #(SVC_REGS_SIZE + \stack_hole - 4)
+#endif /* CONFIG_AMLOGIC_VMAP */
 #ifdef CONFIG_THUMB2_KERNEL
  SPFIX(	str	r0, [sp]	)	@ temporarily saved
  SPFIX(	mov	r0, sp		)
@@ -167,7 +190,15 @@ ENDPROC(__und_invalid)
 	ldmia	r0, {r3 - r5}
 	add	r7, sp, #S_SP - 4	@ here for interlock avoidance
 	mov	r6, #-1			@  ""  ""      ""       ""
+#ifdef CONFIG_AMLOGIC_VMAP
+	.if \vmap
+	ldr	r2, [sp, #(TI_VMAP_BACK_SP + SVC_REGS_SIZE - 4)]
+	.else
 	add	r2, sp, #(SVC_REGS_SIZE + \stack_hole - 4)
+	.endif
+#else
+	add	r2, sp, #(SVC_REGS_SIZE + \stack_hole - 4)
+#endif
  SPFIX(	addeq	r2, r2, #4	)
 	str	r3, [sp, #-4]!		@ save the "real" r0 copied
 					@ from the exception stack
@@ -185,7 +216,44 @@ ENDPROC(__und_invalid)
 	@
 	stmia	r7, {r2 - r6}
 
+#ifdef CONFIG_AMLOGIC_VMAP
+	.if \vmap
+	/*
+	 * get fault task thread info
+	 */
+	ldr	r0, [sp, #(SVC_REGS_SIZE + TI_VMAP_BACK_SP)]
+	mrc	p15, 0, r1, c6, c0, 0		@ get FAR
+	bl	pmd_check
+	mov	tsk, r0
+	mov 	tsk, tsk, lsr #THREAD_SIZE_ORDER + PAGE_SHIFT
+	mov	tsk, tsk, lsl #THREAD_SIZE_ORDER + PAGE_SHIFT
+	add	tsk, tsk, #TI_THREAD_SIZE
+	sub	tsk, tsk, #TI_THREAD_INFO_SIZE
+
+	/*
+	 * copy some important member of thread_info from current
+	 * task to vmap stack
+	 */
+	ldr	r0, [tsk, #TI_FLAGS]
+	ldr	r1, [tsk, #TI_PREEMPT]
+	str	r0, [sp, #(SVC_REGS_SIZE + TI_VMAP_RESERVE_LEN + TI_FLAGS)]
+	str	r1, [sp, #(SVC_REGS_SIZE + TI_VMAP_RESERVE_LEN + TI_PREEMPT)]
+
+	ldr	r0, [tsk, #TI_ADDR_LIMIT]
+	ldr	r1, [tsk, #TI_TASK]
+	str	r0, [sp, #(SVC_REGS_SIZE + TI_VMAP_RESERVE_LEN + TI_ADDR_LIMIT)]
+	str	r1, [sp, #(SVC_REGS_SIZE + TI_VMAP_RESERVE_LEN + TI_TASK)]
+
+	ldr	r0, [tsk, #TI_CPU]
+	ldr	r1, [tsk, #TI_CPU_DOMAIN]
+	str	r0, [sp, #(SVC_REGS_SIZE + TI_VMAP_RESERVE_LEN + TI_CPU)]
+	str	r1, [sp, #(SVC_REGS_SIZE + TI_VMAP_RESERVE_LEN + TI_CPU_DOMAIN)]
+	.else
 	get_thread_info tsk
+	.endif
+#else
+	get_thread_info tsk
+#endif
 	ldr	r0, [tsk, #TI_ADDR_LIMIT]
 	mov	r1, #TASK_SIZE
 	str	r1, [tsk, #TI_ADDR_LIMIT]
@@ -205,7 +273,28 @@ ENDPROC(__und_invalid)
 
 	.align	5
 __dabt_svc:
+#ifdef CONFIG_AMLOGIC_VMAP
+	svc_entry uaccess=0, vmap=1
+	mrc	p15, 0, r1, c5, c0, 0		@ get FSR
+	mrc	p15, 0, r0, c6, c0, 0		@ get FAR
+	mov	r2, sp
+	uaccess_disable ip			@ disable userspace access
+	bl	handle_vmap_fault
+	cmp	r0, #0
+	bne	.L__dabt_svc_next
+	/* handled by vmap fault handler */
+	svc_exit r5, vmap=1			@ return from exception
+.L__dabt_svc_next:
+	/* re-build context for normal abort handler */
+	ldr	r0, [sp, #(SVC_REGS_SIZE + TI_VMAP_BACK_SP)]
+	sub	r0, #SVC_REGS_SIZE
+	mov	r1, sp
+	mov	r2, #SVC_REGS_SIZE
+	bl	memcpy			/* copy back sp	*/
+	mov	sp, r0
+#else
 	svc_entry uaccess=0
+#endif
 	mov	r2, sp
 	dabt_helper
  THUMB(	ldr	r5, [sp, #S_PSR]	)	@ potentially updated CPSR
