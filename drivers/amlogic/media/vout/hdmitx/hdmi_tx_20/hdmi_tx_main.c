@@ -84,7 +84,9 @@ static struct vinfo_s *hdmitx_get_current_vinfo(void);
 static DEFINE_MUTEX(setclk_mutex);
 static DEFINE_MUTEX(getedid_mutex);
 
-static struct hdmitx_dev hdmitx_device;
+static struct hdmitx_dev hdmitx_device = {
+	.frac_rate_policy = 1,
+};
 
 struct vout_device_s hdmitx_vdev = {
 	.dv_info = &(hdmitx_device.RXCap.dv_info),
