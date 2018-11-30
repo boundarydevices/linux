@@ -60,7 +60,8 @@ struct spi_imx_data;
 struct spi_imx_devtype_data {
 	void (*intctrl)(struct spi_imx_data *, int);
 	int (*prepare_message)(struct spi_imx_data *, struct spi_message *);
-	int (*config)(struct spi_device *);
+	int (*prepare_transfer)(struct spi_imx_data *, struct spi_device *,
+				struct spi_transfer *);
 	void (*trigger)(struct spi_imx_data *);
 	int (*rx_available)(struct spi_imx_data *);
 	void (*reset)(struct spi_imx_data *);
@@ -585,9 +586,10 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 	return 0;
 }
 
-static int mx51_ecspi_config(struct spi_device *spi)
+static int mx51_ecspi_prepare_transfer(struct spi_imx_data *spi_imx,
+				       struct spi_device *spi,
+				       struct spi_transfer *t)
 {
-	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	u32 ctrl = readl(spi_imx->base + MX51_ECSPI_CTRL);
 	u32 clk = spi_imx->speed_hz, delay;
 	u32 bits = spi_imx->bits_per_word;
@@ -748,9 +750,10 @@ static int mx31_prepare_message(struct spi_imx_data *spi_imx,
 	return 0;
 }
 
-static int mx31_config(struct spi_device *spi)
+static int mx31_prepare_transfer(struct spi_imx_data *spi_imx,
+				 struct spi_device *spi,
+				 struct spi_transfer *t)
 {
-	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	unsigned int reg = MX31_CSPICTRL_ENABLE | MX31_CSPICTRL_MASTER;
 	unsigned int clk;
 
@@ -852,9 +855,10 @@ static int mx21_prepare_message(struct spi_imx_data *spi_imx,
 	return 0;
 }
 
-static int mx21_config(struct spi_device *spi)
+static int mx21_prepare_transfer(struct spi_imx_data *spi_imx,
+				 struct spi_device *spi,
+				 struct spi_transfer *t)
 {
-	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	unsigned int reg = MX21_CSPICTRL_ENABLE | MX21_CSPICTRL_MASTER;
 	unsigned int max = is_imx27_cspi(spi_imx) ? 16 : 18;
 	unsigned int clk;
@@ -927,9 +931,10 @@ static int mx1_prepare_message(struct spi_imx_data *spi_imx,
 	return 0;
 }
 
-static int mx1_config(struct spi_device *spi)
+static int mx1_prepare_transfer(struct spi_imx_data *spi_imx,
+				struct spi_device *spi,
+				struct spi_transfer *t)
 {
-	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	unsigned int reg = MX1_CSPICTRL_ENABLE | MX1_CSPICTRL_MASTER;
 	unsigned int clk;
 
@@ -962,7 +967,7 @@ static void mx1_reset(struct spi_imx_data *spi_imx)
 static struct spi_imx_devtype_data imx1_cspi_devtype_data = {
 	.intctrl = mx1_intctrl,
 	.prepare_message = mx1_prepare_message,
-	.config = mx1_config,
+	.prepare_transfer = mx1_prepare_transfer,
 	.trigger = mx1_trigger,
 	.rx_available = mx1_rx_available,
 	.reset = mx1_reset,
@@ -975,7 +980,7 @@ static struct spi_imx_devtype_data imx1_cspi_devtype_data = {
 static struct spi_imx_devtype_data imx21_cspi_devtype_data = {
 	.intctrl = mx21_intctrl,
 	.prepare_message = mx21_prepare_message,
-	.config = mx21_config,
+	.prepare_transfer = mx21_prepare_transfer,
 	.trigger = mx21_trigger,
 	.rx_available = mx21_rx_available,
 	.reset = mx21_reset,
@@ -989,7 +994,7 @@ static struct spi_imx_devtype_data imx27_cspi_devtype_data = {
 	/* i.mx27 cspi shares the functions with i.mx21 one */
 	.intctrl = mx21_intctrl,
 	.prepare_message = mx21_prepare_message,
-	.config = mx21_config,
+	.prepare_transfer = mx21_prepare_transfer,
 	.trigger = mx21_trigger,
 	.rx_available = mx21_rx_available,
 	.reset = mx21_reset,
@@ -1002,7 +1007,7 @@ static struct spi_imx_devtype_data imx27_cspi_devtype_data = {
 static struct spi_imx_devtype_data imx31_cspi_devtype_data = {
 	.intctrl = mx31_intctrl,
 	.prepare_message = mx31_prepare_message,
-	.config = mx31_config,
+	.prepare_transfer = mx31_prepare_transfer,
 	.trigger = mx31_trigger,
 	.rx_available = mx31_rx_available,
 	.reset = mx31_reset,
@@ -1016,7 +1021,7 @@ static struct spi_imx_devtype_data imx35_cspi_devtype_data = {
 	/* i.mx35 and later cspi shares the functions with i.mx31 one */
 	.intctrl = mx31_intctrl,
 	.prepare_message = mx31_prepare_message,
-	.config = mx31_config,
+	.prepare_transfer = mx31_prepare_transfer,
 	.trigger = mx31_trigger,
 	.rx_available = mx31_rx_available,
 	.reset = mx31_reset,
@@ -1030,7 +1035,7 @@ static struct spi_imx_devtype_data imx35_cspi_devtype_data = {
 static struct spi_imx_devtype_data imx51_ecspi_devtype_data = {
 	.intctrl = mx51_ecspi_intctrl,
 	.prepare_message = mx51_ecspi_prepare_message,
-	.config = mx51_ecspi_config,
+	.prepare_transfer = mx51_ecspi_prepare_transfer,
 	.trigger = mx51_ecspi_trigger,
 	.rx_available = mx51_ecspi_rx_available,
 	.reset = mx51_ecspi_reset,
@@ -1047,7 +1052,7 @@ static struct spi_imx_devtype_data imx51_ecspi_devtype_data = {
 static struct spi_imx_devtype_data imx53_ecspi_devtype_data = {
 	.intctrl = mx51_ecspi_intctrl,
 	.prepare_message = mx51_ecspi_prepare_message,
-	.config = mx51_ecspi_config,
+	.prepare_transfer = mx51_ecspi_prepare_transfer,
 	.trigger = mx51_ecspi_trigger,
 	.rx_available = mx51_ecspi_rx_available,
 	.reset = mx51_ecspi_reset,
@@ -1063,7 +1068,8 @@ static struct spi_imx_devtype_data imx53_ecspi_devtype_data = {
 
 static struct spi_imx_devtype_data imx6ul_ecspi_devtype_data = {
 	.intctrl = mx51_ecspi_intctrl,
-	.config = mx51_ecspi_config,
+	.prepare_message = mx51_ecspi_prepare_message,
+	.prepare_transfer = mx51_ecspi_prepare_transfer,
 	.trigger = mx51_ecspi_trigger,
 	.rx_available = mx51_ecspi_rx_available,
 	.reset = mx51_ecspi_reset,
@@ -1300,7 +1306,9 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 		spi_imx->tx = mx53_ecspi_tx_slave;
 		spi_imx->slave_burst = t->len;
 	}
-	spi_imx->devtype_data->config(spi);
+
+	spi_imx->devtype_data->prepare_transfer(spi_imx, spi, t);
+
 	return 0;
 }
 
