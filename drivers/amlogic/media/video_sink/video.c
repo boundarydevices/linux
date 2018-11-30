@@ -999,6 +999,11 @@ static u32 vsync_pts_112;
 static u32 vsync_pts_101;
 static u32 vsync_pts_100;
 static u32 vsync_freerun;
+/* extend this value to support both slow and fast playback
+ * 0,1: normal playback
+ * [2,1000]: speed/vsync_slow_factor
+ * >1000: speed*(vsync_slow_factor/1000000)
+ */
 static u32 vsync_slow_factor = 1;
 
 /* pts alignment */
@@ -2472,8 +2477,18 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 	ori_start_y_lines = 0;
 	ori_end_y_lines = ((vf->type & VIDTYPE_COMPRESS) ?
 		vf->compHeight : vf->height) - 1;
-	if (debug_flag & DEBUG_FLAG_PRINT_TOGGLE_FRAME)
-		pr_info("%s()\n", __func__);
+	if (debug_flag & DEBUG_FLAG_PRINT_TOGGLE_FRAME) {
+		u32 pcr = timestamp_pcrscr_get();
+		u32 vpts = timestamp_vpts_get();
+		u32 apts = timestamp_apts_get();
+
+		pr_info("%s pts:%d.%06d pcr:%d.%06d vpts:%d.%06d apts:%d.%06d\n",
+				__func__, (vf->pts) / 90000,
+				((vf->pts) % 90000) * 1000 / 90, (pcr) / 90000,
+				((pcr) % 90000) * 1000 / 90, (vpts) / 90000,
+				((vpts) % 90000) * 1000 / 90, (apts) / 90000,
+				((apts) % 90000) * 1000 / 90);
+	}
 
 	if (trickmode_i || trickmode_fffb)
 		trickmode_duration_count = trickmode_duration;
@@ -4095,6 +4110,10 @@ static inline bool duration_expire(struct vframe_s *cur_vf,
 	static s32 rpt_tab_idx;
 	static const u32 rpt_tab[4] = { 0x100, 0x100, 0x300, 0x300 };
 
+	/* do not switch to new frames in none-normal speed */
+	if (vsync_slow_factor > 1000)
+		return false;
+
 	if ((cur_vf == NULL) || (cur_dispbuf == &vf_local))
 		return true;
 
@@ -5187,11 +5206,18 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 
 		if (vsync_slow_factor == 1) {
 			timestamp_pcrscr_inc_scale(vsync_pts_inc_scale,
-						   vsync_pts_inc_scale_base);
-		} else
-			timestamp_pcrscr_inc(
-				vsync_pts_inc / vsync_slow_factor);
-		timestamp_apts_inc(vsync_pts_inc / vsync_slow_factor);
+					vsync_pts_inc_scale_base);
+			timestamp_apts_inc(vsync_pts_inc / vsync_slow_factor);
+		} else if (vsync_slow_factor > 1000) {
+			u32 inc = (vsync_slow_factor / 1000)
+				* vsync_pts_inc / 1000;
+
+			timestamp_pcrscr_inc(inc);
+			timestamp_apts_inc(inc);
+		} else {
+			timestamp_pcrscr_inc(vsync_pts_inc / vsync_slow_factor);
+			timestamp_apts_inc(vsync_pts_inc / vsync_slow_factor);
+		}
 	}
 	if (omx_secret_mode == true) {
 		u32 system_time = timestamp_pcrscr_get();
