@@ -1119,6 +1119,7 @@
 					<&clk IMX8MQ_CLK_CSI1_ROOT>,
 					<&clk IMX8MQ_CLK_DUMMY>;
 				clock-names = "disp-axi", "csi_mclk", "disp_dcic";
+				dma-coherent;
 				status = "disabled";
 			};
 
@@ -1189,6 +1190,7 @@
 					<&clk IMX8MQ_CLK_CSI2_ROOT>,
 					<&clk IMX8MQ_CLK_DUMMY>;
 				clock-names = "disp-axi", "csi_mclk", "disp_dcic";
+				dma-coherent;
 				status = "disabled";
 			};
 
