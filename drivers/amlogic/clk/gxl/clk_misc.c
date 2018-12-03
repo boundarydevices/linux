@@ -486,7 +486,7 @@ void amlogic_init_misc(void)
 		&clk_divider_ops,
 		saradc_hws[CLKID_SARADC_GATE - CLKID_SARADC_MUX],
 		&clk_gate_ops, 0);
-	if (IS_ERR(clks[CLKID_PDM_COMP]))
+	if (IS_ERR(clks[CLKID_SARADC_COMP]))
 		pr_err("%s: %d clk_register_composite saradc_composite error\n",
 		__func__, __LINE__);
 
