@@ -99,7 +99,11 @@ enum {
 #define VPP_POST_FG_SEL_MASK        (1 << 4)
 #define VPP_POST_FG_OSD2            (1 << 4)
 #define VPP_POST_FG_OSD1            (0 << 4)
+#define DNLP_SR1_CM			(1 << 3)
+#define SR1_AFTER_POSTBLEN		(0 << 3)
 #define VPP_FIFO_RESET_DE           (1 << 2)
+#define PREBLD_SR0_VD1_SCALER		(1 << 1)
+#define SR0_AFTER_DNLP                (0 << 1)
 #define VPP_OUT_SATURATE            (1 << 0)
 
 #define VDIF_RESET_ON_GO_FIELD       (1<<29)

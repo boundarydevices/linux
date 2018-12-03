@@ -151,6 +151,9 @@ struct vpp_frame_par_s {
 
 	bool nocomp;
 
+	u8 sr0_position;
+	u8 sr1_position;
+	u8 sr_core_support;
 };
 
 struct disp_info_s {
@@ -198,6 +201,7 @@ enum select_scaler_path_e {
 	/*tl1 have core0/core1, support below mode*/
 	PPS_CORE0_CORE1,
 	PPS_CORE0_POSTBLEND_CORE1,
+	CORE0_PPS_POSTBLEND_CORE1,
 	SCALER_PATH_MAX,
 };
 /*

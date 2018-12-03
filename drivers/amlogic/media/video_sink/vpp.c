@@ -1776,39 +1776,16 @@ int vpp_set_super_scaler_regs(
 		data_path_chose = 6;
 	else
 		data_path_chose = 5;
-	if (is_meson_tl1_cpu()) {
-		if (scaler_path_sel == CORE0_PPS_CORE1) {
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 3, 1);
-		} else if (scaler_path_sel == CORE0_CORE1_PPS) {
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 3, 1);
-
-		} else if (scaler_path_sel == PPS_CORE0_CORE1) {
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 3, 1);
-
-		} else if (scaler_path_sel == PPS_CORE0_POSTBLEND_CORE1) {
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 3, 1);
-		}
-	} else if ((scaler_path_sel == CORE0_PPS_CORE1) ||
-		(scaler_path_sel == CORE1_BEFORE_PPS) ||
-		(scaler_path_sel == CORE0_BEFORE_PPS)) {
-		if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
-			VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
-		else
+	if (get_cpu_type() <= MESON_CPU_MAJOR_ID_TXHD) {
+		if ((scaler_path_sel == CORE0_PPS_CORE1) ||
+			(scaler_path_sel == CORE1_BEFORE_PPS) ||
+			(scaler_path_sel == CORE0_BEFORE_PPS)) {
 			VSYNC_WR_MPEG_REG_BITS(VPP_VE_ENABLE_CTRL,
 				0, data_path_chose, 1);
-	} else {
-		if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
-			if (scaler_path_sel == CORE0_AFTER_PPS)
-				VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 0, 1, 1);
-			else
-				VSYNC_WR_MPEG_REG_BITS(VPP_MISC, 1, 1, 1);
-		} else
+		} else {
 			VSYNC_WR_MPEG_REG_BITS(VPP_VE_ENABLE_CTRL,
 				1, data_path_chose, 1);
+		}
 	}
 	if (super_scaler == 0) {
 		VSYNC_WR_MPEG_REG(VPP_SRSHARP0_CTRL, 0);
@@ -1831,9 +1808,12 @@ static void vpp_set_super_scaler(
 		next_frame_par->VPP_vsc_startp + 1;
 	u32 src_width = next_frame_par->video_input_w;
 	u32 src_height = next_frame_par->video_input_h;
+	u32 sr_path;
 
 	/*for sr adjust*/
 	vpp_super_scaler_support();
+
+	next_frame_par->sr_core_support = sr_support;
 
 	hor_sc_multiple_num = (1 << PPS_FRAC_BITS) /
 		next_frame_par->vpp_filter.vpp_hsc_start_phase_step;
@@ -2148,6 +2128,62 @@ static void vpp_set_super_scaler(
 		next_frame_par->VPP_pic_in_height_ <<=
 			next_frame_par->supsc1_vert_ratio;
 	}
+
+	sr_path = next_frame_par->supscl_path;
+	/* path config */
+	if (is_meson_tl1_cpu()) {
+		if (sr_path == CORE0_PPS_CORE1) {
+			next_frame_par->sr0_position = 1;
+			next_frame_par->sr1_position = 1;
+		} else if (sr_path == PPS_CORE0_CORE1) {
+			next_frame_par->sr0_position = 0;
+			next_frame_par->sr1_position = 1;
+		} else if (sr_path ==
+			PPS_CORE0_POSTBLEND_CORE1) {
+			next_frame_par->sr0_position = 0;
+			next_frame_par->sr1_position = 0;
+		} else if (sr_path ==
+			CORE0_PPS_POSTBLEND_CORE1) {
+			next_frame_par->sr0_position = 1;
+			next_frame_par->sr1_position = 0;
+		} else {
+			next_frame_par->sr0_position = 1;
+			next_frame_par->sr1_position = 1;
+		}
+	} else if (is_meson_txhd_cpu()
+		|| is_meson_g12a_cpu()
+		|| is_meson_g12b_cpu()) {
+		if (sr_path == CORE0_BEFORE_PPS)
+			next_frame_par->sr0_position = 1;
+		else if (sr_path == CORE0_AFTER_PPS)
+			next_frame_par->sr0_position = 0;
+		else
+			next_frame_par->sr0_position = 1;
+		next_frame_par->sr1_position = 0;
+	} else if (is_meson_gxlx_cpu()) {
+		if (sr_path == CORE1_BEFORE_PPS)
+			next_frame_par->sr1_position = 1;
+		else if (sr_path == CORE1_AFTER_PPS)
+			next_frame_par->sr1_position = 0;
+		else
+			next_frame_par->sr1_position = 1;
+		next_frame_par->sr0_position = 0;
+	} else if (is_meson_txlx_cpu()
+		|| is_meson_txl_cpu()
+		|| is_meson_gxtvbb_cpu()) {
+		if (sr_path == CORE0_PPS_CORE1) {
+			next_frame_par->sr0_position = 1;
+			next_frame_par->sr1_position = 1;
+		} else if (sr_path ==
+			CORE0_PPS_POSTBLEND_CORE1) {
+			next_frame_par->sr0_position = 1;
+			next_frame_par->sr1_position = 0;
+		} else {
+			next_frame_par->sr0_position = 1;
+			next_frame_par->sr1_position = 1;
+		}
+	}
+
 	if (super_debug) {
 		pr_info("layer0: spsc0_w_in=%u, spsc0_h_in=%u, spsc1_w_in=%u, spsc1_h_in=%u.\n",
 			next_frame_par->spsc0_w_in, next_frame_par->spsc0_h_in,

@@ -7573,6 +7573,33 @@ SET_FILTER:
 		u32 set_value = 0;
 		force_flush |= vpp_zorder_check();
 
+		/* for sr core0, put it between prebld & pps as default */
+		if (cur_frame_par &&
+			(cur_frame_par->sr_core_support &
+			SUPER_CORE0_SUPPORT))
+			if (cur_frame_par->sr0_position)
+				vpp_misc_set |=
+					PREBLD_SR0_VD1_SCALER;
+			else
+				vpp_misc_set &=
+					~SR0_AFTER_DNLP;
+		else
+			vpp_misc_set |=
+				PREBLD_SR0_VD1_SCALER;
+		/* for sr core1, put it before post blend as default */
+		if (cur_frame_par &&
+			(cur_frame_par->sr_core_support &
+			SUPER_CORE1_SUPPORT))
+			if (cur_frame_par->sr1_position)
+				vpp_misc_set |=
+					DNLP_SR1_CM;
+			else
+				vpp_misc_set &=
+					~SR1_AFTER_POSTBLEN;
+		else
+			vpp_misc_set |=
+				DNLP_SR1_CM;
+
 		vpp_misc_set &=
 			((1 << 29) | VPP_CM_ENABLE |
 			(0x1ff << VPP_VD2_ALPHA_BIT) |
