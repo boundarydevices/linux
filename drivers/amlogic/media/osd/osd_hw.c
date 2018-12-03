@@ -1259,15 +1259,20 @@ void osd_set_enable_hw(u32 index, u32 enable)
 	if (osd_hw.hwc_enable) {
 		if (index > OSD_MAX)
 			return;
+		if ((osd_hw.osd_meson_dev.osd_ver < OSD_HIGH_ONE)
+			&& (index == OSD2))
+			osd_enable_hw(index, enable);
+		else {
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
-		mutex_lock(&post_fence_list_lock);
-		map_layers.layer_map[index].fb_index = index;
-		map_layers.layer_map[index].enable = enable;
-		map_layers.cmd = BLANK_CMD;
-		mutex_unlock(&post_fence_list_lock);
-		osd_log_dbg("osd_set_enable_hw: osd%d,enable=%d\n",
-			index, enable);
+			mutex_lock(&post_fence_list_lock);
+			map_layers.layer_map[index].fb_index = index;
+			map_layers.layer_map[index].enable = enable;
+			map_layers.cmd = BLANK_CMD;
+			mutex_unlock(&post_fence_list_lock);
+			osd_log_dbg("osd_set_enable_hw: osd%d,enable=%d\n",
+				index, enable);
 #endif
+		}
 	} else
 		osd_enable_hw(index, enable);
 }
