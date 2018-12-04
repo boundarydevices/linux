@@ -391,8 +391,6 @@ static int v4l2_ioctl_enum_frameintervals(struct file *file, void *fh,
 
 	if (!fival)
 		return -EINVAL;
-	if (fival->index < 0)
-		return -EINVAL;
 	if (!vdev)
 		return -EINVAL;
 
@@ -932,7 +930,7 @@ static struct vb2_buffer *cvrt_v4l2_to_vb2_buffer(struct vb2_queue *vq,
 	if (!vq || !buf)
 		return NULL;
 
-	if (buf->index < 0 || buf->index >= vq->num_buffers)
+	if (buf->index >= vq->num_buffers)
 		return NULL;
 
 	return vq->bufs[buf->index];
@@ -1287,6 +1285,8 @@ static void clear_core_hang(struct core_device *core)
 
 static void wait_for_stop_done(struct vpu_ctx *ctx)
 {
+	int ret;
+
 	WARN_ON(!ctx);
 
 	if (!test_bit(VPU_ENC_STATUS_START_SEND, &ctx->status))
@@ -1294,7 +1294,10 @@ static void wait_for_stop_done(struct vpu_ctx *ctx)
 	if (test_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status))
 		return;
 
-	wait_for_completion_timeout(&ctx->stop_cmp, msecs_to_jiffies(500));
+	ret = wait_for_completion_timeout(&ctx->stop_cmp,
+						msecs_to_jiffies(500));
+	if (!ret)
+		vpu_err("wait for stop done timeout\n");
 }
 
 static int v4l2_ioctl_encoder_cmd(struct file *file,
@@ -2247,6 +2250,9 @@ static bool process_frame_done(struct queue_data *queue)
 		return false;
 
 	frame = list_first_entry(&queue->frame_q, typeof(*frame), list);
+	if (!frame)
+		return false;
+
 	frame->rptr = get_ptr(stream_buffer_desc->rptr);
 
 	if (precheck_frame(ctx, frame)) {
@@ -2267,7 +2273,7 @@ static bool process_frame_done(struct queue_data *queue)
 		transfer_stream_output(ctx, frame, p_data_req);
 
 	stream_buffer_desc->rptr = frame->rptr;
-	if (frame && !frame->bytesleft) {
+	if (!frame->bytesleft) {
 		put_frame_idle(frame);
 		frame = NULL;
 	}
@@ -4296,30 +4302,27 @@ static unsigned int vpu_enc_v4l2_poll(struct file *filp, poll_table *wait)
 
 	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
 
-	if (ctx) {
-		poll_wait(filp, &ctx->fh.wait, wait);
+	poll_wait(filp, &ctx->fh.wait, wait);
 
-		if (v4l2_event_pending(&ctx->fh)) {
-			vpu_dbg(LVL_DEBUG, "%s() v4l2_event_pending\n", __func__);
-			rc |= POLLPRI;
-		}
+	if (v4l2_event_pending(&ctx->fh)) {
+		vpu_dbg(LVL_DEBUG, "%s() v4l2_event_pending\n", __func__);
+		rc |= POLLPRI;
+	}
 
-		src_q = &ctx->q_data[V4L2_SRC].vb2_q;
-		dst_q = &ctx->q_data[V4L2_DST].vb2_q;
+	src_q = &ctx->q_data[V4L2_SRC].vb2_q;
+	dst_q = &ctx->q_data[V4L2_DST].vb2_q;
 
-		if ((!src_q->streaming || list_empty(&src_q->queued_list))
-				&& (!dst_q->streaming || list_empty(&dst_q->queued_list))) {
-			return rc;
-		}
+	if ((!src_q->streaming || list_empty(&src_q->queued_list))
+		&& (!dst_q->streaming || list_empty(&dst_q->queued_list))) {
+		return rc;
+	}
 
-		poll_wait(filp, &src_q->done_wq, wait);
-		if (!list_empty(&src_q->done_list))
-			rc |= POLLOUT | POLLWRNORM;
-		poll_wait(filp, &dst_q->done_wq, wait);
-		if (!list_empty(&dst_q->done_list))
-			rc |= POLLIN | POLLRDNORM;
-	} else
-		rc = POLLERR;
+	poll_wait(filp, &src_q->done_wq, wait);
+	if (!list_empty(&src_q->done_list))
+		rc |= POLLOUT | POLLWRNORM;
+	poll_wait(filp, &dst_q->done_wq, wait);
+	if (!list_empty(&dst_q->done_list))
+		rc |= POLLIN | POLLRDNORM;
 
 	return rc;
 }
