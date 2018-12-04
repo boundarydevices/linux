@@ -13,6 +13,7 @@
  *
  */
 
+#include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/imx_rpmsg.h>
@@ -152,6 +153,8 @@ struct rpmsg_vehicle_drvdata {
 	u32 resources_count;
 	u32 *resource;
 	bool register_ready;
+	struct clk *clk_core;
+	struct clk *clk_esc;
 };
 
 #ifdef CONFIG_EXTCON
@@ -249,6 +252,26 @@ static void force_power_on(void)
 	}
 }
 
+static void sync_hw_clk(void)
+{
+	struct device *dev = vehicle_rpmsg->vehicle_dev;
+	vehicle_rpmsg->clk_core = devm_clk_get(dev, "clk_core");
+	if (IS_ERR(vehicle_rpmsg->clk_core)) {
+		dev_err(dev, "failed to get csi core clk\n");
+		return;
+	}
+
+	vehicle_rpmsg->clk_esc = devm_clk_get(dev, "clk_esc");
+	if (IS_ERR(vehicle_rpmsg->clk_esc)) {
+		dev_err(dev, "failed to get csi esc clk\n");
+		return;
+	}
+
+	/* clk_get_rate will sync scu clk into linux software clk tree*/
+	clk_get_rate(vehicle_rpmsg->clk_core);
+	clk_get_rate(vehicle_rpmsg->clk_esc);
+}
+
 static void notice_evs_released(struct rpmsg_device *rpdev)
 {
 	int count = of_get_available_child_count(vehicle_rpmsg->vehicle_dev->of_node);
@@ -272,6 +295,7 @@ static int vehicle_rpmsg_cb(struct rpmsg_device *rpdev,
 		if (msg->retcode == 0) {
 			if (msg->devicestate == RESOURCE_FREE) {
 				force_power_on();
+				sync_hw_clk();
 				notice_evs_released(rpdev);
 #ifdef CONFIG_EXTCON
 				extcon_set_state_sync(rg_edev, EXTCON_VEHICLE_RPMSG_REGISTER, 1);
@@ -314,6 +338,7 @@ static int vehicle_rpmsg_cb(struct rpmsg_device *rpdev,
 			if (msg->statevalue == VEHICLE_GEAR_DRIVE) {
 				if (vehicle_rpmsg->register_ready) {
 					force_power_on();
+					sync_hw_clk();
 					notice_evs_released(rpdev);
 #ifdef CONFIG_EXTCON
 					extcon_set_state_sync(rg_edev, EXTCON_VEHICLE_RPMSG_REGISTER, 1);
