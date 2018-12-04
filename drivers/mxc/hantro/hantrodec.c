@@ -414,7 +414,7 @@ static void ReadCoreConfig(hantrodec_t *dev)
 			cfg[c] |= tmp ? 1 << DWL_CLIENT_TYPE_RV_DEC : 0;
 
 			/* Post-processor configuration */
-			reg = ioread32(dev->hwregs[c] + HANTROPP_SYNTH_CFG * 4);
+			//reg = ioread32(dev->hwregs[c] + HANTROPP_SYNTH_CFG * 4);
 		} else {
 			reg = ioread32(dev->hwregs[c] + HANTRODEC_SYNTH_CFG_2 * 4);
 
@@ -461,7 +461,8 @@ int GetDecCore(long Core, hantrodec_t *dev, struct file *filp)
 }
 
 int GetDecCoreAny(long *Core, hantrodec_t *dev, struct file *filp,
-			unsigned long format) {
+			unsigned long format)
+{
 	int success = 0;
 	long c;
 
@@ -479,7 +480,8 @@ int GetDecCoreAny(long *Core, hantrodec_t *dev, struct file *filp,
 	return success;
 }
 int GetDecCoreID(hantrodec_t *dev, struct file *filp,
-			unsigned long format) {
+			unsigned long format)
+{
 	long c;
 
 	int core_id = -1;
@@ -510,8 +512,6 @@ static int hantrodec_choose_core(int is_g1)
 
 	if (reg == NULL) {
 		pr_err("blk_ctl: failed to ioremap HW regs\n");
-		if (reg)
-			iounmap((void *)reg);
 		release_mem_region(blk_base, 0x1000);
 		return -EBUSY;
 	}
@@ -1098,6 +1098,9 @@ static long hantrodec_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			return -EFAULT;
 		}
 
+		if (Core.id >= hantrodec_data.cores)
+			return -EFAULT;
+
 		DecFlushRegs(&hantrodec_data, &Core);
 		break;
 	}
@@ -1110,6 +1113,9 @@ static long hantrodec_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			pr_err("copy_from_user failed, returned %li\n", tmp);
 			return -EFAULT;
 		}
+
+		if (Core.id >= hantrodec_data.cores)
+			return -EFAULT;
 
 		PPFlushRegs(&hantrodec_data, &Core);
 		break;
@@ -1124,6 +1130,9 @@ static long hantrodec_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			return -EFAULT;
 		}
 
+		if (Core.id >= hantrodec_data.cores)
+			return -EFAULT;
+
 		return DecRefreshRegs(&hantrodec_data, &Core);
 	}
 	case _IOC_NR(HANTRODEC_IOCS_PP_PULL_REG): {
@@ -1135,6 +1144,9 @@ static long hantrodec_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			pr_err("copy_from_user failed, returned %li\n", tmp);
 			return -EFAULT;
 		}
+
+		if (Core.id >= hantrodec_data.cores)
+			return -EFAULT;
 
 		return PPRefreshRegs(&hantrodec_data, &Core);
 	}
@@ -1176,6 +1188,9 @@ static long hantrodec_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			return -EFAULT;
 		}
 
+		if (Core.id >= hantrodec_data.cores)
+			return -EFAULT;
+
 		return WaitDecReadyAndRefreshRegs(&hantrodec_data, &Core);
 	}
 	case _IOC_NR(HANTRODEC_IOCX_PP_WAIT): {
@@ -1187,6 +1202,9 @@ static long hantrodec_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 			pr_err("copy_from_user failed, returned %li\n", tmp);
 			return -EFAULT;
 		}
+
+		if (Core.id >= hantrodec_data.cores)
+			return -EFAULT;
 
 		return WaitPPReadyAndRefreshRegs(&hantrodec_data, &Core);
 	}
