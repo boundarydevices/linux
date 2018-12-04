@@ -499,12 +499,20 @@ static int usbmisc_imx6q_init(struct imx_usbmisc_data *data)
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
 
-	reg = readl(usbmisc->base + index * 4) & ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
+	reg = readl(usbmisc->base + index * 4);
 	if (data->disable_oc) {
 		reg |= MX6_BM_OVER_CUR_DIS;
-	} else if (data->oc_polarity == 0) {
-		/* low active */
-		reg |= MX6_BM_OVER_CUR_POLARITY;
+	} else {
+		reg &= ~MX6_BM_OVER_CUR_DIS;
+
+		/*
+		 * If the polarity is not configured keep it as setup by the
+		 * bootloader.
+		 */
+		if (data->oc_pol_configured && data->oc_pol_active_low)
+			reg |= MX6_BM_OVER_CUR_POLARITY;
+		else if (data->oc_pol_configured)
+			reg &= ~MX6_BM_OVER_CUR_POLARITY;
 	}
 	writel(reg, usbmisc->base + index * 4);
 
@@ -632,12 +640,20 @@ static int usbmisc_imx7d_init(struct imx_usbmisc_data *data)
 		return -EINVAL;
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
-	reg = readl(usbmisc->base) & ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
+	reg = readl(usbmisc->base);
 	if (data->disable_oc) {
 		reg |= MX6_BM_OVER_CUR_DIS;
-	} else if (data->oc_polarity == 0) {
-		/* low active */
-		reg |= MX6_BM_OVER_CUR_POLARITY;
+	} else {
+		reg &= ~MX6_BM_OVER_CUR_DIS;
+
+		/*
+		 * If the polarity is not configured keep it as setup by the
+		 * bootloader.
+		 */
+		if (data->oc_pol_configured && data->oc_pol_active_low)
+			reg |= MX6_BM_OVER_CUR_POLARITY;
+		else if (data->oc_pol_configured)
+			reg &= ~MX6_BM_OVER_CUR_POLARITY;
 	}
 
 	if (data->pwr_pol)
@@ -942,12 +958,20 @@ static int usbmisc_imx7ulp_init(struct imx_usbmisc_data *data)
 		return -EINVAL;
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
-	reg = readl(usbmisc->base) & ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
+	reg = readl(usbmisc->base);
 	if (data->disable_oc) {
 		reg |= MX6_BM_OVER_CUR_DIS;
-	} else if (data->oc_polarity == 0) {
-		/* low active */
-		reg |= MX6_BM_OVER_CUR_POLARITY;
+	} else {
+		reg &= ~MX6_BM_OVER_CUR_DIS;
+
+		/*
+		 * If the polarity is not configured keep it as setup by the
+		 * bootloader.
+		 */
+		if (data->oc_pol_configured && data->oc_pol_active_low)
+			reg |= MX6_BM_OVER_CUR_POLARITY;
+		else if (data->oc_pol_configured)
+			reg &= ~MX6_BM_OVER_CUR_POLARITY;
 	}
 
 	if (data->pwr_pol)
