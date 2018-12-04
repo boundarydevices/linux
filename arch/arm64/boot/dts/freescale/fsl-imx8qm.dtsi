@@ -226,6 +226,9 @@
 				 SC_R_ISI_CH1 SC_R_ISI_CH2
 				 SC_R_ISI_CH3 SC_R_CSI_0>;
 		fsl,resources-num = <10>;
+		clocks = <&clk IMX8QM_CSI0_CORE_CLK>,
+				<&clk IMX8QM_CSI0_ESC_CLK>;
+		clock-names = "clk_core", "clk_esc";
 		status = "disabled";
 	};
 
