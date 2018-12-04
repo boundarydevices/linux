@@ -7489,7 +7489,10 @@ static int di_probe(struct platform_device *pdev)
 	di_devp->flags |= DI_SUSPEND_FLAG;
 	cdev_init(&(di_devp->cdev), &di_fops);
 	di_devp->cdev.owner = THIS_MODULE;
-	cdev_add(&(di_devp->cdev), di_devno, DI_COUNT);
+	ret = cdev_add(&(di_devp->cdev), di_devno, DI_COUNT);
+	if (ret)
+		goto fail_cdev_add;
+
 	di_devp->devt = MKDEV(MAJOR(di_devno), 0);
 	di_devp->dev = device_create(di_clsp, &pdev->dev,
 		di_devp->devt, di_devp, "di%d", 0);
@@ -7640,6 +7643,14 @@ static int di_probe(struct platform_device *pdev)
 		pr_err("%s create kthread error.\n", __func__);
 	di_debugfs_init();	/*2018-07-18 add debugfs*/
 	di_patch_post_update_mc_sw(DI_MC_SW_IC, true);
+
+	pr_info("%s:ok\n", __func__);
+	return ret;
+
+fail_cdev_add:
+	pr_info("%s:fail_cdev_add\n", __func__);
+	kfree(di_devp);
+
 fail_kmalloc_dev:
 	return ret;
 }
