@@ -2940,6 +2940,7 @@ void di_hw_disable(bool mc_enable)
 		/* DI inp(current data) switch to memory */
 		DI_Wr_reg_bits(VIUB_MISC_CTRL0, 0, 16, 1);
 	}
+	DI_Wr(DI_POST_CTRL, 0);
 }
 /*
  * old pulldown windows share below ctrl
