@@ -1139,9 +1139,9 @@ static inline void clkoff_callback(struct work_struct *w)
 	pxp_clk_disable(pxp);
 }
 
-static void pxp_clkoff_timer(unsigned long arg)
+static void pxp_clkoff_timer(struct timer_list *t)
 {
-	struct pxps *pxp = (struct pxps *)arg;
+	struct pxps *pxp = from_timer(pxp, t, clk_timer);
 
 	if ((pxp->pxp_ongoing == 0) && list_empty(&head))
 		schedule_work(&pxp->work);
@@ -1747,9 +1747,7 @@ static int pxp_probe(struct platform_device *pdev)
 	pxp_clk_disable(pxp);
 
 	INIT_WORK(&pxp->work, clkoff_callback);
-	init_timer(&pxp->clk_timer);
-	pxp->clk_timer.function = pxp_clkoff_timer;
-	pxp->clk_timer.data = (unsigned long)pxp;
+	timer_setup(&pxp->clk_timer, pxp_clkoff_timer, 0);
 
 	init_waitqueue_head(&pxp->thread_waitq);
 	/* allocate a kernel thread to dispatch pxp conf */
