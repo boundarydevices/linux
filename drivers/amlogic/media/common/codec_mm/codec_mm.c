@@ -1760,7 +1760,10 @@ static ssize_t tvp_enable_help_show(struct class *class,
 {
 	ssize_t size = 0;
 
-	size += sprintf(buf, "tvp enable help:\n");
+	struct codec_mm_mgt_s *mgt = get_mem_mgt();
+
+	size += sprintf(buf, "tvp_flag=%d\n", mgt->tvp_enable);
+	size += sprintf(buf + size, "tvp enable help:\n");
 	size += sprintf(buf + size, "echo n > tvp_enable\n");
 	size += sprintf(buf + size, "0: disable tvp(tvp size to 0)\n");
 	size += sprintf(buf + size,
