@@ -458,6 +458,10 @@ static const unsigned int tdmc_dout1_z_pins[] = {GPIOZ_3};
 static const unsigned int tdmc_dout2_z_pins[] = {GPIOZ_4};
 static const unsigned int tdmc_dout3_z_pins[] = {GPIOZ_5};
 
+/* gen_clk_ee */
+static const unsigned int gen_clk_ee_x_pins[] = {GPIOX_19};
+static const unsigned int gen_clk_ee_z_pins[] = {GPIOZ_13};
+
 /* introduce extra ee pin-groups for G12B based on G12A */
 
 /* ir_out */
@@ -678,6 +682,7 @@ static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GROUP(pwm_d_z,		2),
 	GROUP(pwm_f_z,		5),
 	GROUP(clk12_24_z,	2),
+	GROUP(gen_clk_ee_z,	7),
 
 	/* bank GPIOX */
 	GROUP(sdio_d0,		1),
@@ -733,6 +738,7 @@ static struct meson_pmx_group meson_g12a_periphs_groups[] = {
 	GROUP(tdma_dout0,	1),
 	GROUP(tdma_dout1,	1),
 	GROUP(mclk1_x,		2),
+	GROUP(gen_clk_ee_x,	7),
 
 	/* bank GPIOC */
 	GROUP(sdcard_d0_c,	1),
@@ -923,6 +929,12 @@ static const unsigned int tdmb_slv_sclk_ao_pins[] = {GPIOAO_8};
 /* mclk0_ao */
 static const unsigned int mclk0_ao_pins[] = {GPIOAO_9};
 
+/* gen_clk_ee_ao */
+static const unsigned int gen_clk_ee_ao_pins[] = {GPIOAO_11};
+
+/* gen_clk_ao */
+static const unsigned int gen_clk_ao_pins[] = {GPIOAO_11};
+
 /* introduce extra ao pin-groups for G12B based on G12A */
 
 /* ir_out */
@@ -1003,6 +1015,8 @@ static struct meson_pmx_group meson_g12a_aobus_groups[] = {
 	GROUP(pwm_a_e2,		3),
 	GROUP(clk12_24_ao,	7),
 	GROUP(clk12_24_e,	2),
+	GROUP(gen_clk_ee_ao,	4),
+	GROUP(gen_clk_ao,	5),
 };
 
 static const char * const gpio_periphs_groups[] = {
@@ -1256,6 +1270,10 @@ static const char * const remote_out_groups[] = {
 	"remote_out_h", "remote_out_z",
 };
 
+static const char * const gen_clk_ee_groups[] = {
+	"gen_clk_ee_x", "gen_clk_ee_z",
+};
+
 static const char * const gpio_aobus_groups[] = {
 	"GPIOAO_0", "GPIOAO_1", "GPIOAO_2", "GPIOAO_3", "GPIOAO_4",
 	"GPIOAO_5", "GPIOAO_6", "GPIOAO_7", "GPIOAO_8", "GPIOAO_9",
@@ -1351,6 +1369,14 @@ static const char * const clk12_24_ao_groups[] = {
 	"clk12_24_ao", "clk12_24_e",
 };
 
+static const char * const gen_clk_ee_ao_groups[] = {
+	"gen_clk_ee_ao",
+};
+
+static const char * const gen_clk_ao_groups[] = {
+	"gen_clk_ao",
+};
+
 static struct meson_pmx_func meson_g12a_periphs_functions[] = {
 	FUNCTION(gpio_periphs),
 	FUNCTION(emmc),
@@ -1395,6 +1421,7 @@ static struct meson_pmx_func meson_g12a_periphs_functions[] = {
 	FUNCTION(tdmc_out),
 	FUNCTION(remote_out),
 	FUNCTION(clk12_24_ee),
+	FUNCTION(gen_clk_ee),
 };
 
 static struct meson_pmx_func meson_g12a_aobus_functions[] = {
@@ -1418,6 +1445,8 @@ static struct meson_pmx_func meson_g12a_aobus_functions[] = {
 	FUNCTION(mclk0_ao),
 	FUNCTION(pwm_a_gpioe),
 	FUNCTION(clk12_24_ao),
+	FUNCTION(gen_clk_ee_ao),
+	FUNCTION(gen_clk_ao),
 };
 
 static struct meson_bank meson_g12a_periphs_banks[] = {
