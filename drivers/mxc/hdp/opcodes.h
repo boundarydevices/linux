@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (C) 2016-2017 Cadence Design Systems, Inc.
+ * Copyright (C) 2016-2018 Cadence Design Systems, Inc.
  * All rights reserved worldwide.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -52,7 +52,7 @@
 #define OPCODES_H_
 
 #define DP_TX_MAIL_HANDLER_H
-#define DP_TX_MAIL_HANDLER_REQUEST_BUFFER_LEN 256
+#define DP_TX_MAIL_HANDLER_REQUEST_BUFFER_LEN 1024
 #define DPTX_SET_POWER_MNG              0x00
 #define DPTX_SET_HOST_CAPABILITIES      0x01
 #define DPTX_GET_EDID                   0x02
@@ -64,27 +64,27 @@
 #define DPTX_WRITE_FIELD                0x08
 #define DPTX_TRAINING_CONTROL           0x09
 #define DPTX_READ_EVENT                 0x0A
-#define DPTX_READ_LINK_STAT                0x0B
-#define DPTX_SET_VIDEO                    0x0C
-#define DPTX_SET_AUDIO                    0x0D
-#define DPTX_GET_LAST_AUX_STAUS            0x0E
-#define DPTX_SET_LINK_BREAK_POINT        0x0F
+#define DPTX_READ_LINK_STAT             0x0B
+#define DPTX_SET_VIDEO                  0x0C
+#define DPTX_SET_AUDIO                  0x0D
+#define DPTX_GET_LAST_AUX_STAUS         0x0E
+#define DPTX_SET_LINK_BREAK_POINT       0x0F
 #define DPTX_FORCE_LANES                0x10
-#define DPTX_HPD_STATE                             0x11
+#define DPTX_HPD_STATE                  0x11
 #define DPTX_EDP_RATE_TRAINING          0x12
 #define DPTX_SET_PHY_COEFFICIENTS       0x13
+#define DPTX_I2C_READ                   0x15
+#define DPTX_I2C_WRITE                  0x16
+#define DPTX_GET_LAST_I2C_STATUS        0x17
 #define DPTX_DBG_SET                               0xF0
-#define DP_TX_OPCODE_READ_I2C_REQUEST              0xA5
-#define DP_TX_OPCODE_WRITE_I2C_REQUEST             0xA6
-#define DP_TX_OPCODE_MESSAGE_FILTER                0xA7
 #define DPTX_EDID_RESP                             0x02
 #define DPTX_DPCD_READ_RESP                        0x03
 #define DPTX_DPCD_WRITE_RESP                       0x04
 #define DPTX_READ_EVENT_RESP                       0x0A
 #define DPTX_READ_REGISTER_RESP                    0x07
-#define DP_TX_OPCODE_MESSAGE                       0x10
-#define DP_TX_OPCODE_READ_I2C_RESPONSE             0x50
-#define DP_TX_OPCODE_WRITE_I2C_RESPONSE            0x60
+#define DPTX_MESSAGE                               0x10
+#define DPTX_I2C_READ_RESP                         0x15
+#define DPTX_I2C_WRITE_RESP                        0x16
 #define DP_TX_OPCODE_LOOPBACK_TEST                 0xFE
 #define DP_TX_OPCODE_BIT_TEST                      0xFF
 #define DP_TX_EVENT_ENABLE_HPD_BIT                 0x00
