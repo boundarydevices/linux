@@ -1703,6 +1703,10 @@ endif
 
 KBUILD_CPPFLAGS += $(CDEFINES)
 
+ifeq ($(CONFIG_CLD_HL_SDIO_CORE), y)
+CDEFINES += -DWLAN_FEATURE_SDIO
+endif
+
 # Currently, for versions of gcc which support it, the kernel Makefile
 # is disabling the maybe-uninitialized warning.  Re-enable it for the
 # WLAN driver.  Note that we must use EXTRA_CFLAGS here so that it
