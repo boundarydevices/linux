@@ -19,7 +19,16 @@
 #include <linux/errno.h>
 #include <linux/slab.h>
 
-#define DUMMY_POWER_NUM 1
+#define DUMMY_POWER_NUM 2
+#define POWER_SUPPLY_PROP_CAPACITY_VALUE 85
+#define POWER_SUPPLY_PROP_VOLTAGE_NOW_VALUE 3600
+#define POWER_SUPPLY_PROP_CURRENT_NOW_VALUE 400000
+#define POWER_SUPPLY_PROP_CYCLE_COUNT_VALUE 32
+#define POWER_SUPPLY_PROP_TEMP_VALUE 350
+#define POWER_SUPPLY_PROP_CHARGE_FULL_VALUE 4000000
+#define POWER_SUPPLY_PROP_CHARGE_COUNTER_VALUE 1900000
+#define POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX_VALUE 500000
+#define POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX_VALUE 5000000
 
 static enum power_supply_property dummy_battery_props[] = {
     POWER_SUPPLY_PROP_STATUS,
@@ -27,6 +36,15 @@ static enum power_supply_property dummy_battery_props[] = {
     POWER_SUPPLY_PROP_PRESENT,
     POWER_SUPPLY_PROP_TECHNOLOGY,
     POWER_SUPPLY_PROP_CAPACITY,
+    POWER_SUPPLY_PROP_VOLTAGE_NOW,
+    POWER_SUPPLY_PROP_CURRENT_NOW,
+    POWER_SUPPLY_PROP_CYCLE_COUNT,
+    POWER_SUPPLY_PROP_TEMP,
+    POWER_SUPPLY_PROP_CHARGE_FULL,
+    POWER_SUPPLY_PROP_CHARGE_COUNTER,
+    POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
+    POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX,
+    POWER_SUPPLY_PROP_ONLINE,
 };
 
 static enum power_supply_property dummy_usb_props[] = {
@@ -62,13 +80,40 @@ static int dummy_battery_get_property(struct power_supply *psy,
             val->intval = POWER_SUPPLY_HEALTH_GOOD;
             break;
         case POWER_SUPPLY_PROP_PRESENT:
-            val->intval = 0;
+            val->intval = true;
             break;
         case POWER_SUPPLY_PROP_TECHNOLOGY:
             val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
             break;
         case POWER_SUPPLY_PROP_CAPACITY:
-            val->intval = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
+            val->intval = POWER_SUPPLY_PROP_CAPACITY_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+            val->intval = POWER_SUPPLY_PROP_VOLTAGE_NOW_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_CURRENT_NOW:
+            val->intval = POWER_SUPPLY_PROP_CURRENT_NOW_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_CYCLE_COUNT:
+            val->intval = POWER_SUPPLY_PROP_CYCLE_COUNT_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_TEMP:
+            val->intval = POWER_SUPPLY_PROP_TEMP_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_CHARGE_FULL:
+            val->intval = POWER_SUPPLY_PROP_CHARGE_FULL_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_CHARGE_COUNTER:
+            val->intval = POWER_SUPPLY_PROP_CHARGE_COUNTER_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
+            val->intval = POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
+            val->intval = POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX_VALUE;
+            break;
+        case POWER_SUPPLY_PROP_ONLINE:
+            val->intval = true;
             break;
         default:
             ret = -EINVAL;
@@ -79,6 +124,13 @@ static int dummy_battery_get_property(struct power_supply *psy,
 
 static struct power_supply *dummy_power_supplies[DUMMY_POWER_NUM];
 static const struct power_supply_desc dummy_power_desc[] = {
+    {
+        .properties = dummy_battery_props,
+        .num_properties = ARRAY_SIZE(dummy_battery_props),
+        .get_property = dummy_battery_get_property,
+        .name = "battery",
+        .type = POWER_SUPPLY_TYPE_BATTERY,
+    },
     {
         .properties = dummy_usb_props,
         .num_properties = ARRAY_SIZE(dummy_usb_props),
