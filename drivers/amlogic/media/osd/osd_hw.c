@@ -7175,6 +7175,8 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 #else
 	u32 osd_count = osd_hw.osd_meson_dev.viu1_osd_count;
 #endif
+	u32 dv_core2_hsize;
+	u32 dv_core2_vsize;
 
 	if (!blend_reg)
 		return;
@@ -7246,6 +7248,23 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 		}
 #endif
 	}
+	dv_core2_vsize = (blend_reg->vpp_osd1_blend_v_scope & 0xfff)
+		- ((blend_reg->vpp_osd1_blend_v_scope >> 16) & 0xfff) + 1;
+	dv_core2_hsize = (blend_reg->vpp_osd1_blend_h_scope & 0xfff)
+		- ((blend_reg->vpp_osd1_blend_h_scope >> 16) & 0xfff) + 1;
+	if (osd_hw.osd_meson_dev.has_dolby_vision) {
+		VSYNCOSD_WR_MPEG_REG(
+			DOLBY_CORE2A_SWAP_CTRL1,
+			((dv_core2_vsize + 0x40) << 16)
+			| (dv_core2_hsize + 0x80 + 0));
+		VSYNCOSD_WR_MPEG_REG(
+			DOLBY_CORE2A_SWAP_CTRL2,
+			(dv_core2_vsize << 16) | (dv_core2_hsize + 0));
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		update_graphic_width_height(dv_core2_vsize, dv_core2_hsize);
+#endif
+	}
+
 }
 
 static void uniformization_fb(u32 index,
@@ -7882,19 +7901,6 @@ static void osd_basic_update_disp_geometry(u32 index)
 		osd_hw.src_data[index].h - 1) & 0x1fff) << 16;
 	VSYNCOSD_WR_MPEG_REG(osd_reg->osd_blk0_cfg_w2, data32);
 	buffer_h = ((data32 >> 16) & 0x1fff) - (data32 & 0x1fff) + 1;
-	if (osd_hw.osd_meson_dev.has_dolby_vision) {
-		VSYNCOSD_WR_MPEG_REG(
-			DOLBY_CORE2A_SWAP_CTRL1,
-			((buffer_w + 0x40) << 16)
-			| (buffer_h + 0x80 + 0));
-		VSYNCOSD_WR_MPEG_REG(
-			DOLBY_CORE2A_SWAP_CTRL2,
-			(buffer_w << 16) | (buffer_h + 0));
-
-#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-		update_graphic_width_height(buffer_w, buffer_h);
-#endif
-	}
 	data32 = VSYNCOSD_RD_MPEG_REG(osd_reg->osd_ctrl_stat);
 	data32 &= ~0x1ff008;//0x1ff00e;
 	data32 |= osd_hw.gbl_alpha[index] << 12;
