@@ -1597,8 +1597,16 @@ static int osd_cursor(struct fb_info *fbi, struct fb_cursor *var)
 		startx = fb_dev->osd_ctl.disp_start_x;
 		starty = fb_dev->osd_ctl.disp_start_y;
 	}
-	osd_cursor_hw(fbi->node, (s16)var->hot.x, (s16)var->hot.y, (s16)startx,
-		      (s16)starty, fbi->var.xres, fbi->var.yres);
+
+	if (osd_hw.hwc_enable)
+		osd_cursor_hw_no_scale(fbi->node, (s16)var->hot.x,
+			(s16)var->hot.y, (s16)startx, (s16)starty,
+			fbi->var.xres, fbi->var.yres);
+	else
+		osd_cursor_hw(fbi->node, (s16)var->hot.x,
+			(s16)var->hot.y, (s16)startx, (s16)starty,
+			fbi->var.xres, fbi->var.yres);
+
 	return 0;
 }
 
