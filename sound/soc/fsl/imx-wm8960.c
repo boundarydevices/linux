@@ -335,23 +335,25 @@ static int imx_wm8960_late_probe(struct snd_soc_card *card)
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
 		&card->rtd_list, struct snd_soc_pcm_runtime, list);
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_component *component = codec_dai->component;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 
 	/*
 	 * codec ADCLRC pin configured as GPIO, DACLRC pin is used as a frame
 	 * clock for ADCs and DACs
 	 */
-	snd_soc_update_bits(codec, WM8960_IFACE2, 1<<6, 1<<6);
+	snd_soc_component_update_bits(component, WM8960_IFACE2, 1<<6, 1<<6);
 
 	/* GPIO1 used as headphone detect output */
-	snd_soc_update_bits(codec, WM8960_ADDCTL4, 7<<4, 3<<4);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL4, 7<<4, 3<<4);
 
 	/* Enable headphone jack detect */
-	snd_soc_update_bits(codec, WM8960_ADDCTL2, 1<<6, 1<<6);
-	snd_soc_update_bits(codec, WM8960_ADDCTL2, 1<<5, data->hp_det[1]<<5);
-	snd_soc_update_bits(codec, WM8960_ADDCTL4, 3<<2, data->hp_det[0]<<2);
-	snd_soc_update_bits(codec, WM8960_ADDCTL1, 3, 3);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL2, 1<<6, 1<<6);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL2, 1<<5,
+				      data->hp_det[1]<<5);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL4, 3<<2,
+				      data->hp_det[0]<<2);
+	snd_soc_component_update_bits(component, WM8960_ADDCTL1, 3, 3);
 
 	return 0;
 }
