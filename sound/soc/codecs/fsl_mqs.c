@@ -48,8 +48,8 @@ static int fsl_mqs_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params,
 			    struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct fsl_mqs *mqs_priv = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct fsl_mqs *mqs_priv = snd_soc_component_get_drvdata(component);
 	int div, res;
 
 	mqs_priv->mclk_rate = clk_get_rate(mqs_priv->mclk);
@@ -105,8 +105,8 @@ static int fsl_mqs_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 static int fsl_mqs_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 				 unsigned int freq, int dir)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct fsl_mqs *mqs_priv = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct fsl_mqs *mqs_priv = snd_soc_component_get_drvdata(component);
 
 	mqs_priv->sysclk_rate = freq;
 
@@ -116,8 +116,8 @@ static int fsl_mqs_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 static int fsl_mqs_startup(struct snd_pcm_substream *substream,
 			    struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct fsl_mqs *mqs_priv = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct fsl_mqs *mqs_priv = snd_soc_component_get_drvdata(component);
 
 	regmap_update_bits(mqs_priv->gpr, IOMUXC_GPR2, IMX6SX_GPR2_MQS_EN_MASK,
 					1 << IMX6SX_GPR2_MQS_EN_SHIFT);
@@ -127,8 +127,8 @@ static int fsl_mqs_startup(struct snd_pcm_substream *substream,
 static void fsl_mqs_shutdown(struct snd_pcm_substream *substream,
 			    struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct fsl_mqs *mqs_priv = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct fsl_mqs *mqs_priv = snd_soc_component_get_drvdata(component);
 
 	regmap_update_bits(mqs_priv->gpr, IOMUXC_GPR2,
 					IMX6SX_GPR2_MQS_EN_MASK, 0);
@@ -136,7 +136,7 @@ static void fsl_mqs_shutdown(struct snd_pcm_substream *substream,
 }
 
 
-static struct snd_soc_codec_driver soc_codec_fsl_mqs;
+static struct snd_soc_component_driver soc_codec_fsl_mqs;
 
 static const struct snd_soc_dai_ops fsl_mqs_dai_ops = {
 	.startup = fsl_mqs_startup,
@@ -196,7 +196,7 @@ static int fsl_mqs_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, mqs_priv);
 	pm_runtime_enable(&pdev->dev);
 
-	return snd_soc_register_codec(&pdev->dev, &soc_codec_fsl_mqs,
+	return devm_snd_soc_register_component(&pdev->dev, &soc_codec_fsl_mqs,
 			&fsl_mqs_dai, 1);
 
 out:
@@ -208,7 +208,6 @@ out:
 
 static int fsl_mqs_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
 }
 
