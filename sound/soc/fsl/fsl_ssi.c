@@ -814,7 +814,7 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	u32 scr_val;
 	int enabled;
 	u8 i2smode = ssi->i2s_net;
-	struct fsl_ssi_rxtx_reg_val *reg = &ssi->rxtx_reg_val;
+	struct fsl_ssi_regvals *reg = ssi->regvals;
 
 	if (fsl_ssi_is_i2s_master(ssi)) {
 		ret = fsl_ssi_set_bclk(substream, dai, hw_params);
@@ -876,17 +876,17 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		if (channels == 1) {
 			ssi->dma_params_tx.fifo_num  = 1;
 			ssi->dma_params_rx.fifo_num  = 1;
-			reg->rx.srcr &= ~SSI_SRCR_RFEN1;
-			reg->tx.stcr &= ~SSI_STCR_TFEN1;
-			reg->rx.scr  &= ~SSI_SCR_TCH_EN;
-			reg->tx.scr  &= ~SSI_SCR_TCH_EN;
+			reg[RX].srcr &= ~SSI_SRCR_RFEN1;
+			reg[TX].stcr &= ~SSI_STCR_TFEN1;
+			reg[RX].scr  &= ~SSI_SCR_TCH_EN;
+			reg[TX].scr  &= ~SSI_SCR_TCH_EN;
 		} else {
 			ssi->dma_params_tx.fifo_num  = 2;
 			ssi->dma_params_rx.fifo_num  = 2;
-			reg->rx.srcr |= SSI_SRCR_RFEN1;
-			reg->tx.stcr |= SSI_STCR_TFEN1;
-			reg->rx.scr  |= SSI_SCR_TCH_EN;
-			reg->tx.scr  |= SSI_SCR_TCH_EN;
+			reg[RX].srcr |= SSI_SRCR_RFEN1;
+			reg[TX].stcr |= SSI_STCR_TFEN1;
+			reg[RX].scr  |= SSI_SCR_TCH_EN;
+			reg[TX].scr  |= SSI_SCR_TCH_EN;
 		}
 	}
 
