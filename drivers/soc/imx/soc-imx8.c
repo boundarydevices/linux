@@ -293,7 +293,6 @@ static void __init imx8mq_noc_init(void)
 				NOC_GPU_PRIORITY, prop, 0, 0, 0, 0, &res);
 			if (res.a0)
 				pr_err("Config NOC for GPU fail!\n");
-			return;
 		}
 	}
 
