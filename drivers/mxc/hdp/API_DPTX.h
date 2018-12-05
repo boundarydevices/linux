@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (C) 2016-2017 Cadence Design Systems, Inc.
+ * Copyright (C) 2016-2018 Cadence Design Systems, Inc.
  * All rights reserved worldwide.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -62,6 +62,61 @@
  */
 typedef u8 CDN_API_PWR_MODE;
 typedef u32 CDN_EVENT;
+
+/**
+ * reply data struct for #CDN_API_DPTX_I2C_Read
+ */
+typedef struct
+{
+    /** buffer where data will be stored, will become invalid after next call to API */
+    u8  *buff;
+    int addr;
+    int size;
+} DPTX_I2C_Read_response;
+/**
+ *  \brief Cadence API for DP TX to read bytes using I2C-over-AUX
+ *
+ *  \param [in] numOfBytes - number of bytes to read
+ *  \param [in] addr - I2C slave address to read from, placed at bits 0-6 (without direction bit).
+ *  \param [in] mot - Whether (1) or not (0) to set MoT (Middle-of-Transaction) flag during the last I2C-over-AUX transaction handling this operation.
+ *  \param [out] resp - pointer to store response
+ *  \return status
+ *
+ */
+CDN_API_STATUS CDN_API_DPTX_I2C_Read(state_struct *state, u32 numOfBytes,
+						u8 addr, u8 mot, DPTX_I2C_Read_response *resp);
+/**
+ * blocking version of #CDN_API_DPTX_I2C_Read
+ */
+CDN_API_STATUS CDN_API_DPTX_I2C_Read_blocking(state_struct *state, u32 numOfBytes,
+						u8 addr, u8 mot, DPTX_I2C_Read_response *resp);
+
+/**
+ * reply data struct for #CDN_API_DPTX_I2C_Write
+ */
+typedef struct
+{
+    int addr;
+    int size;
+} DPTX_I2C_Write_response;
+/**
+ *  \brief Cadence API for DP TX to write bytes using I2C-over-AUX
+ *
+ *  \param [in] numOfBytes - number of bytes to write
+ *  \param [in] addr - I2C slave address to write to, placed at bits 0-6 (without direction bit).
+ *  \param [in] mot - Whether (1) or not (0) to set MoT (Middle-of-Transaction) flag during the last I2C-over-AUX transaction handling this operation.
+ *  \param [in] buff - buffer with the data to write
+ *  \param [out] resp - pointer to store response
+ *  \return status
+ *
+ */
+CDN_API_STATUS CDN_API_DPTX_I2C_Write(state_struct *state, u32 numOfBytes,
+						u8 addr, u8 mot, u8 *buff, DPTX_I2C_Write_response *resp);
+/**
+ * blocking version of #CDN_API_DPTX_I2C_Write
+ */
+CDN_API_STATUS CDN_API_DPTX_I2C_Write_blocking(state_struct *state, u32 numOfBytes,
+						u8 addr, u8 mot, u8 *buff, DPTX_I2C_Write_response *resp);
 
 /**
  * reply data struct for CDN_API_DPTX_READ_EDID
@@ -394,6 +449,17 @@ CDN_API_STATUS CDN_API_DPTX_GetLastAuxStatus(state_struct *state, u8 *resp);
  */
 CDN_API_STATUS CDN_API_DPTX_GetLastAuxStatus_blocking(state_struct *state,
 						      u8 *resp);
+
+/**
+ * \brief Get status of latest I2C-over-AUX transaction.
+ *
+ * \param [out] resp - pointer to store response. 0 - I2C_ACK, 1 - I2C_NACK, 2 - I2C_DEFER.
+ */
+CDN_API_STATUS CDN_API_DPTX_GetLastI2cStatus(state_struct *state, u8 *resp);
+/**
+ * \brief blocking version of #CDN_API_DPTX_GetLastI2cStatus
+ */
+CDN_API_STATUS CDN_API_DPTX_GetLastI2cStatus_blocking(state_struct *state, u8 *resp);
 
 /**
  * \brief get current hpd status
