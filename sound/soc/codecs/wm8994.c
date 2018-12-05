@@ -3211,9 +3211,9 @@ static int wm8994_load_context(struct wm8994 *wm8994)
 	return 0;
 }
 
-static int wm8994_codec_suspend(struct snd_soc_codec *codec)
+static int wm8994_component_suspend(struct snd_soc_component *component)
 {
-	struct wm8994_priv *wm8994 = snd_soc_codec_get_drvdata(codec);
+	struct wm8994_priv *wm8994 = snd_soc_component_get_drvdata(component);
 	struct wm8994 *control = wm8994->wm8994;
 	int i, ret;
 
@@ -3228,7 +3228,7 @@ static int wm8994_codec_suspend(struct snd_soc_codec *codec)
 
 	wm8994_store_context(control);
 
-	snd_soc_codec_force_bias_level(codec, SND_SOC_BIAS_OFF);
+	snd_soc_component_force_bias_level(component, SND_SOC_BIAS_OFF);
 
 	return 0;
 }
@@ -3241,7 +3241,7 @@ static int wm8994_component_resume(struct snd_soc_component *component)
 
 	ret = wm8994_load_context(control);
 	if (ret != 0) {
-		dev_err(codec->dev, "Failed to load context: %d\n", ret);
+		dev_err(component->dev, "Failed to load context: %d\n", ret);
 		return ret;
 	}
 
