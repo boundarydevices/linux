@@ -31,6 +31,8 @@
 #include "../codecs/wm8962.h"
 #include "imx-audmux.h"
 
+#include "fsl_dma_workaround.h"
+
 #define DAI_NAME_SIZE	32
 
 struct imx_wm8962_data {
