@@ -425,8 +425,6 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 		}
 	}
 
-	dapm->bias_level = level;
-
 	return 0;
 }
 
@@ -809,11 +807,6 @@ fail:
 clk_fail:
 	if (!IS_ERR(data->codec_clk))
 		clk_disable_unprepare(data->codec_clk);
-fail:
-	if (ssi_np)
-		of_node_put(ssi_np);
-	if (codec_np)
-		of_node_put(codec_np);
 
 	return ret;
 }
