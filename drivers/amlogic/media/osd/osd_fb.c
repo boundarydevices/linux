@@ -356,6 +356,8 @@ static struct delayed_work osd_dwork;
 static int osd_shutdown_flag;
 
 unsigned int osd_log_level;
+unsigned int osd_log_module = 1;
+
 int int_viu_vsync = -ENXIO;
 int int_viu2_vsync = -ENXIO;
 int int_rdma = INT_RDMA;
@@ -535,7 +537,7 @@ _find_color_format(struct fb_var_screeninfo *var)
 	    || (var->blue.length == 0) ||
 	    var->bits_per_pixel != (var->red.length + var->green.length +
 		    var->blue.length + var->transp.length)) {
-		osd_log_dbg("not provide color length, use default color\n");
+		osd_log_dbg(MODULE_BASE, "not provide color length, use default color\n");
 		found = &default_color_format_array[upper_margin];
 	} else {
 		for (i = upper_margin; i >= lower_margin; i--) {
@@ -605,7 +607,7 @@ static int osd_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	if (color_format_pt == NULL || color_format_pt->color_index == 0)
 		return -EFAULT;
 
-	osd_log_dbg("select color format :index %d, bpp %d\n",
+	osd_log_dbg(MODULE_BASE, "select color format :index %d, bpp %d\n",
 		    color_format_pt->color_index,
 		    color_format_pt->bpp);
 	fbdev->color = color_format_pt;
@@ -622,7 +624,7 @@ static int osd_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	var->transp.length = color_format_pt->transp_length;
 	var->transp.msb_right = color_format_pt->transp_msb_right;
 	var->bits_per_pixel = color_format_pt->bpp;
-	osd_log_dbg("rgba(L/O):%d/%d-%d/%d-%d/%d-%d/%d\n",
+	osd_log_dbg(MODULE_BASE, "rgba(L/O):%d/%d-%d/%d-%d/%d-%d/%d\n",
 		    var->red.length, var->red.offset,
 		    var->green.length, var->green.offset,
 		    var->blue.length, var->blue.offset,
@@ -630,7 +632,7 @@ static int osd_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	fix->visual = color_format_pt->color_type;
 	/* adjust memory length. */
 	fix->line_length = var->xres_virtual * var->bits_per_pixel / 8;
-	osd_log_dbg("xvirtual=%d, bpp:%d, line_length=%d\n",
+	osd_log_dbg(MODULE_BASE, "xvirtual=%d, bpp:%d, line_length=%d\n",
 		var->xres_virtual, var->bits_per_pixel, fix->line_length);
 
 	if (var->xres_virtual < var->xres)
@@ -866,7 +868,8 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		case COLOR_INDEX_24_888_B:
 		case COLOR_INDEX_24_RGB:
 		case COLOR_INDEX_YUV_422:
-			osd_log_dbg("set osd color key 0x%x\n", src_colorkey);
+			osd_log_dbg(MODULE_BASE,
+				"set osd color key 0x%x\n", src_colorkey);
 			fbdev->color_key = src_colorkey;
 			osd_set_color_key_hw(info->node,
 				fbdev->color->color_index, src_colorkey);
@@ -883,7 +886,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 		case COLOR_INDEX_24_888_B:
 		case COLOR_INDEX_24_RGB:
 		case COLOR_INDEX_YUV_422:
-			osd_log_dbg("set osd color key %s\n",
+			osd_log_dbg(MODULE_BASE, "set osd color key %s\n",
 					srckey_enable ? "enable" : "disable");
 			if (srckey_enable != 0) {
 				fbdev->enable_key_flag |= KEYCOLOR_FLAG_TARGET;
@@ -1262,7 +1265,7 @@ static int malloc_osd_memory(struct fb_info *info)
 				osd_log_err("fb[%d] ioremap error", fb_index);
 			pr_info("%s, reserved mem\n", __func__);
 #endif
-			osd_log_dbg("fb_index=%d dma_alloc=%zu\n",
+			osd_log_dbg(MODULE_BASE, "fb_index=%d dma_alloc=%zu\n",
 				fb_index, fb_rmem_size[fb_index]);
 		}
 	} else {
@@ -1447,7 +1450,7 @@ static int osd_open(struct fb_info *info, int arg)
 
 	fbdev = (struct osd_fb_dev_s *)info->par;
 	fbdev->open_count++;
-	osd_log_dbg("osd_open index=%d,open_count=%d\n",
+	osd_log_dbg(MODULE_BASE, "osd_open index=%d,open_count=%d\n",
 		fbdev->fb_index, fbdev->open_count);
 	if (info->screen_base != NULL)
 		return 0;
@@ -1583,7 +1586,7 @@ static int osd_pan_display(struct fb_var_screeninfo *var,
 			   struct fb_info *fbi)
 {
 	osd_pan_display_hw(fbi->node, var->xoffset, var->yoffset);
-	osd_log_dbg("osd_pan_display:=>osd%d xoff=%d, yoff=%d\n",
+	osd_log_dbg(MODULE_BASE, "osd_pan_display:=>osd%d xoff=%d, yoff=%d\n",
 			fbi->node, var->xoffset, var->yoffset);
 	return 0;
 }
@@ -1740,7 +1743,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 			*/
 			fb_dev->osd_ctl.disp_start_x = disp_rect->x;
 			fb_dev->osd_ctl.disp_start_y = disp_rect->y;
-			osd_log_dbg("set disp axis: x:%d y:%d w:%d h:%d\n",
+			osd_log_dbg(MODULE_BASE, "set disp axis: x:%d y:%d w:%d h:%d\n",
 				    disp_rect->x, disp_rect->y,
 				    disp_rect->w, disp_rect->h);
 			if (disp_rect->x + disp_rect->w > vinfo->width)
@@ -1756,7 +1759,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
 					fb_dev->osd_ctl.disp_start_y +
 					disp_rect->h - 1;
 			disp_rect++;
-			osd_log_dbg("new disp axis: x0:%d y0:%d x1:%d y1:%d\n",
+			osd_log_dbg(MODULE_BASE, "new disp axis: x0:%d y0:%d x1:%d y1:%d\n",
 				    fb_dev->osd_ctl.disp_start_x,
 				    fb_dev->osd_ctl.disp_start_y,
 				    fb_dev->osd_ctl.disp_end_x,
@@ -1929,7 +1932,7 @@ int osd_notify_callback_viu2(struct notifier_block *block, unsigned long cmd,
 		 */
 		fb_dev->osd_ctl.disp_start_x = disp_rect->x;
 		fb_dev->osd_ctl.disp_start_y = disp_rect->y;
-		osd_log_dbg("set disp axis: x:%d y:%d w:%d h:%d\n",
+		osd_log_dbg(MODULE_BASE, "set disp axis: x:%d y:%d w:%d h:%d\n",
 			disp_rect->x, disp_rect->y,
 			disp_rect->w, disp_rect->h);
 		if (disp_rect->x + disp_rect->w > vinfo->width)
@@ -1944,7 +1947,7 @@ int osd_notify_callback_viu2(struct notifier_block *block, unsigned long cmd,
 			fb_dev->osd_ctl.disp_end_y =
 				fb_dev->osd_ctl.disp_start_y +
 				disp_rect->h - 1;
-		osd_log_dbg("new disp axis: x0:%d y0:%d x1:%d y1:%d\n",
+		osd_log_dbg(MODULE_BASE, "new disp axis: x0:%d y0:%d x1:%d y1:%d\n",
 			fb_dev->osd_ctl.disp_start_x,
 			fb_dev->osd_ctl.disp_start_y,
 			fb_dev->osd_ctl.disp_end_x,
@@ -2409,6 +2412,27 @@ static ssize_t store_log_level(struct device *device,
 	ret = kstrtoint(buf, 0, &res);
 	osd_log_info("log_level: %d->%d\n", osd_log_level, res);
 	osd_log_level = res;
+
+	return count;
+}
+
+static ssize_t show_log_module(struct device *device,
+			  struct device_attribute *attr,
+			  char *buf)
+{
+	return snprintf(buf, 40, "0x%x\n", osd_log_module);
+}
+
+static ssize_t store_log_module(struct device *device,
+			   struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	osd_log_info("log_module: 0x%x->0x%x\n", osd_log_module, res);
+	osd_log_module = res;
 
 	return count;
 }
@@ -3194,6 +3218,8 @@ static struct device_attribute osd_attrs[] = {
 			show_debug, store_debug),
 	__ATTR(log_level, 0644,
 			show_log_level, store_log_level),
+	__ATTR(log_module, 0644,
+			show_log_module, store_log_module),
 	__ATTR(window_axis, 0664,
 			show_window_axis, store_window_axis),
 	__ATTR(freescale_mode, 0664,
@@ -3264,6 +3290,8 @@ static struct device_attribute osd_attrs_viu2[] = {
 			show_debug, store_debug),
 	__ATTR(log_level, 0644,
 			show_log_level, store_log_level),
+	__ATTR(log_module, 0644,
+			show_log_module, store_log_module),
 	__ATTR(flush_rate, 0444,
 			show_flush_rate, NULL),
 	__ATTR(osd_reverse, 0644,
@@ -3705,7 +3733,6 @@ static int osd_probe(struct platform_device *pdev)
 		} else
 			osd_log_info("viu2 vsync irq: %d\n", int_viu2_vsync);
 	}
-
 	if (osd_meson_dev.has_rdma) {
 		int_rdma = platform_get_irq_byname(pdev, "rdma");
 		if (int_viu_vsync  == -ENXIO) {
@@ -3772,7 +3799,7 @@ static int osd_probe(struct platform_device *pdev)
 					pr_err("allocate buffer failed:%d\n",
 						fb_memsize[0]);
 				}
-				osd_log_dbg("logo dma_alloc=%d\n",
+				osd_log_dbg(MODULE_BASE, "logo dma_alloc=%d\n",
 					fb_memsize[0]);
 			}
 		} else

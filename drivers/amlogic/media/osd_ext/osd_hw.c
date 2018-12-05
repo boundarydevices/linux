@@ -285,8 +285,8 @@ static int out_ext_fence_create(int *release_fence_fd, u32 *val, u32 buf_num)
 	}
 
 	sync_fence_install(outer_fence, out_fence_fd);
-	osd_log_dbg("---------------------------------------\n");
-	osd_log_dbg("return out fence fd:%d\n", out_fence_fd);
+	osd_log_dbg(MODULE_FENCE, "---------------------------------------\n");
+	osd_log_dbg(MODULE_FENCE, "return out fence fd:%d\n", out_fence_fd);
 	*release_fence_fd = out_fence_fd;
 	return out_fence_fd;
 
@@ -1229,7 +1229,7 @@ void osd_ext_pan_display_fence(struct osd_fence_map_s *fence_map)
 		ret = osd_ext_wait_buf_ready(fence_map);
 
 		if (ret < 0)
-			osd_log_dbg("fence wait ret %d\n", ret);
+			osd_log_dbg(MODULE_FENCE, "fence wait ret %d\n", ret);
 	}
 
 	if (ret) {
@@ -1254,7 +1254,7 @@ void osd_ext_pan_display_fence(struct osd_fence_map_s *fence_map)
 			osd_log_err("------NOT signal out_fence ERROR\n");
 	}
 
-	osd_log_dbg("offset[%d-%d]x[%d-%d]y[%d-%d]\n",
+	osd_log_dbg(MODULE_FENCE, "offset[%d-%d]x[%d-%d]y[%d-%d]\n",
 		    xoffset, yoffset, osd_ext_hw.pandata[index].x_start,
 		    osd_ext_hw.pandata[index].x_end,
 		    osd_ext_hw.pandata[index].y_start,

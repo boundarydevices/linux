@@ -115,6 +115,34 @@ static ssize_t loglevel_write_file(
 	return count;
 }
 
+static ssize_t logmodule_read_file(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
+{
+	char buf[128];
+	ssize_t len;
+
+	len = snprintf(buf, 128, "%d\n", osd_log_module);
+	return simple_read_from_buffer(userbuf, count, ppos, buf, len);
+}
+
+static ssize_t logmodule_write_file(
+	struct file *file, const char __user *userbuf,
+	size_t count, loff_t *ppos)
+{
+	unsigned int log_module;
+	char buf[128];
+	int ret = 0;
+
+	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+	buf[count] = 0;
+	ret = kstrtoint(buf, 0, &log_module);
+	osd_log_info("log_level: %d->%d\n", osd_log_module, log_module);
+	osd_log_module = log_module;
+	return count;
+}
+
 static ssize_t debug_read_file(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
@@ -577,6 +605,12 @@ static const struct file_operations loglevel_file_ops = {
 	.write		= loglevel_write_file,
 };
 
+static const struct file_operations logmodule_file_ops = {
+	.open		= simple_open,
+	.read		= logmodule_read_file,
+	.write		= logmodule_write_file,
+};
+
 static const struct file_operations debug_file_ops = {
 	.open		= simple_open,
 	.read		= debug_read_file,
@@ -671,6 +705,7 @@ struct osd_drm_debugfs_files_s {
 
 static struct osd_drm_debugfs_files_s osd_drm_debugfs_files[] = {
 	{"loglevel", S_IFREG | 0640, &loglevel_file_ops},
+	{"logmodule", S_IFREG | 0640, &logmodule_file_ops},
 	{"debug", S_IFREG | 0640, &debug_file_ops},
 	{"osd_display_debug", S_IFREG | 0640, &osd_display_debug_file_ops},
 	{"reset_status", S_IFREG | 0440, &reset_status_file_ops},

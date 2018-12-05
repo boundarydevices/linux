@@ -175,7 +175,7 @@ _find_color_format(struct fb_var_screeninfo *var)
 	    || (var->blue.length == 0) ||
 	    var->bits_per_pixel != (var->red.length + var->green.length +
 		    var->blue.length + var->transp.length)) {
-		osd_log_dbg("not provide color length, use default color\n");
+		osd_log_dbg(MODULE_BASE, "not provide color length, use default color\n");
 		found = &default_color_format_array[upper_margin];
 	} else {
 		for (i = upper_margin; i >= lower_margin; i--) {
@@ -216,7 +216,7 @@ static int osd_ext_check_var(struct fb_var_screeninfo *var,
 	color_format_pt = _find_color_format(var);
 	if (color_format_pt == NULL || color_format_pt->color_index == 0)
 		return -EFAULT;
-	osd_log_dbg("select color format :index %d, bpp %d\n",
+	osd_log_dbg(MODULE_BASE, "select color format :index %d, bpp %d\n",
 		    color_format_pt->color_index,
 		    color_format_pt->bpp);
 	fbdev->color = color_format_pt;
@@ -233,7 +233,7 @@ static int osd_ext_check_var(struct fb_var_screeninfo *var,
 	var->transp.length = color_format_pt->transp_length;
 	var->transp.msb_right = color_format_pt->transp_msb_right;
 	var->bits_per_pixel = color_format_pt->bpp;
-	osd_log_dbg("rgba(L/O):%d/%d-%d/%d-%d/%d-%d/%d\n",
+	osd_log_dbg(MODULE_BASE, "rgba(L/O):%d/%d-%d/%d-%d/%d-%d/%d\n",
 		    var->red.length, var->red.offset,
 		    var->green.length, var->green.offset,
 		    var->blue.length, var->blue.offset,
@@ -431,7 +431,8 @@ static int osd_ext_ioctl(struct fb_info *info, unsigned int cmd,
 		case COLOR_INDEX_24_888_B:
 		case COLOR_INDEX_24_RGB:
 		case COLOR_INDEX_YUV_422:
-			osd_log_dbg("set osd color key 0x%x\n", src_colorkey);
+			osd_log_dbg(MODULE_BASE,
+				"set osd color key 0x%x\n", src_colorkey);
 			fbdev->color_key = src_colorkey;
 			osd_ext_set_color_key_hw(info->node - 2,
 				fbdev->color->color_index, src_colorkey);
@@ -448,7 +449,7 @@ static int osd_ext_ioctl(struct fb_info *info, unsigned int cmd,
 		case COLOR_INDEX_24_888_B:
 		case COLOR_INDEX_24_RGB:
 		case COLOR_INDEX_YUV_422:
-			osd_log_dbg("set osd color key %s\n",
+			osd_log_dbg(MODULE_BASE, "set osd color key %s\n",
 					srckey_enable ? "enable" : "disable");
 			if (srckey_enable != 0) {
 				fbdev->enable_key_flag |= KEYCOLOR_FLAG_TARGET;
@@ -1408,7 +1409,8 @@ osd_ext_probe(struct platform_device *pdev)
 		osd_log_err("not found mem_size from dt\n");
 		osd_ext_memory = 0;
 	} else {
-		osd_log_dbg("mem_size: 0x%x, 0x%x\n", memsize[0], memsize[1]);
+		osd_log_dbg(MODULE_BASE,
+			"mem_size: 0x%x, 0x%x\n", memsize[0], memsize[1]);
 		fb_rmem_size[0] = memsize[0];
 		fb_rmem_paddr[0] = fb_rmem.base;
 		if ((OSD_COUNT == 2) && ((memsize[0] + memsize[1]) <=

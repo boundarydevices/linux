@@ -26,7 +26,14 @@
 #define OSD_LOG_LEVEL_DEBUG2 2
 #define OSD_LOG_LEVEL_DEBUG3 3
 
+#define MODULE_BASE   (1 << 0)
+#define MODULE_RENDER (1 << 1)
+#define MODULE_FENCE  (1 << 2)
+#define MODULE_BLEND  (1 << 3)
+#define MODULE_CURSOR (1 << 4)
+
 extern unsigned int osd_log_level;
+extern unsigned int osd_log_module;
 
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -37,25 +44,30 @@ extern unsigned int osd_log_level;
 #define osd_log_err(fmt, ...) \
 	pr_err(fmt, ##__VA_ARGS__)
 
-#define osd_log_dbg(fmt, ...) \
+#define osd_log_dbg(moudle, fmt, ...) \
 	do { \
 		if (osd_log_level >= OSD_LOG_LEVEL_DEBUG) { \
-			pr_info(fmt, ##__VA_ARGS__); \
+			if (moudle & osd_log_module) { \
+				pr_info(fmt, ##__VA_ARGS__); \
+			} \
 		} \
 	} while (0)
 
-#define osd_log_dbg2(fmt, ...) \
+#define osd_log_dbg2(moudle, fmt, ...) \
 	do { \
 		if (osd_log_level >= OSD_LOG_LEVEL_DEBUG2) { \
-			pr_info(fmt, ##__VA_ARGS__); \
+			if (moudle & osd_log_module) { \
+				pr_info(fmt, ##__VA_ARGS__); \
+			} \
 		} \
 	} while (0)
 
-#define osd_log_dbg3(fmt, ...) \
+#define osd_log_dbg3(moudle, fmt, ...) \
 	do { \
 		if (osd_log_level >= OSD_LOG_LEVEL_DEBUG3) { \
-			pr_info(fmt, ##__VA_ARGS__); \
+			if (moudle & osd_log_module) { \
+				pr_info(fmt, ##__VA_ARGS__); \
+			} \
 		} \
 	} while (0)
-
 #endif

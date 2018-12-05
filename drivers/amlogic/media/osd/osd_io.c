@@ -72,7 +72,7 @@ uint32_t osd_cbus_read(uint32_t reg)
 
 	} else
 		ret = (uint32_t)aml_read_cbus(reg);
-	osd_log_dbg3("%s(0x%x)=0x%x\n", __func__, reg, ret);
+	osd_log_dbg3(MODULE_BASE, "%s(0x%x)=0x%x\n", __func__, reg, ret);
 
 	return ret;
 };
@@ -87,7 +87,7 @@ void osd_cbus_write(uint32_t reg,
 		writel(val, osd_reg_map.vir_addr + addr);
 	} else
 		aml_write_cbus(reg, val);
-	osd_log_dbg3("%s(0x%x, 0x%x)\n", __func__, reg, val);
+	osd_log_dbg3(MODULE_BASE, "%s(0x%x, 0x%x)\n", __func__, reg, val);
 };
 
 
@@ -104,7 +104,7 @@ uint32_t osd_reg_read(uint32_t reg)
 
 	} else
 		ret = (uint32_t)aml_read_vcbus(reg);
-	osd_log_dbg3("%s(0x%x)=0x%x\n", __func__, reg, ret);
+	osd_log_dbg3(MODULE_BASE, "%s(0x%x)=0x%x\n", __func__, reg, ret);
 
 	return ret;
 };
@@ -120,7 +120,7 @@ void osd_reg_write(uint32_t reg,
 	} else
 		aml_write_vcbus(reg, val);
 	update_backup_reg(reg, val);
-	osd_log_dbg3("%s(0x%x, 0x%x)\n", __func__, reg, val);
+	osd_log_dbg3(MODULE_BASE, "%s(0x%x, 0x%x)\n", __func__, reg, val);
 };
 
 void osd_reg_set_mask(uint32_t reg,
