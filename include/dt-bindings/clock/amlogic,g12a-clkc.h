@@ -265,9 +265,13 @@
 #define CLKID_24M               (CLKID_MISC_BASE + 9)
 #define CLKID_12M_DIV           (CLKID_MISC_BASE + 10)
 #define CLKID_12M_GATE          (CLKID_MISC_BASE + 11)
+/* gen clock */
+#define CLKID_GEN_CLK_SEL	(CLKID_MISC_BASE + 12)
+#define	CLKID_GEN_CLK_DIV	(CLKID_MISC_BASE + 13)
+#define CLKID_GEN_CLK		(CLKID_MISC_BASE + 14)
 
 /*G12B clk*/
-#define CLKID_G12B_ADD_BASE           (CLKID_MISC_BASE + 12)
+#define CLKID_G12B_ADD_BASE           (CLKID_MISC_BASE + 15)
 #define CLKID_CPUB_FCLK_P             (CLKID_G12B_ADD_BASE + 0)
 #define CLKID_CPUB_CLK                (CLKID_G12B_ADD_BASE + 1)
 /*G12B gate*/
