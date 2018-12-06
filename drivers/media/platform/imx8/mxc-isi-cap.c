@@ -1723,7 +1723,7 @@ static void mxc_isi_subdev_unregistered(struct v4l2_subdev *sd)
 	dev_dbg(&mxc_isi->pdev->dev, "%s\n", __func__);
 	mutex_lock(&mxc_isi->lock);
 
-	if (mxc_isi->id == 0)
+	if (mxc_isi->id == 0 && mxc_isi->skip_m2m == 0)
 		mxc_isi_unregister_m2m_device(mxc_isi);
 
 	vdev = &mxc_isi->isi_cap.vdev;
