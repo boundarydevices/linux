@@ -387,9 +387,11 @@ static int get_input_format(struct vframe_s *vf)
 static void dma_flush(u32 buf_start, u32 buf_size)
 {
 	return;
+	/*
 	dma_sync_single_for_device(
 		&ppmgr_device.pdev->dev, buf_start,
 		buf_size, DMA_TO_DEVICE);
+	*/
 }
 
 /* extern int get_property_change(void); */

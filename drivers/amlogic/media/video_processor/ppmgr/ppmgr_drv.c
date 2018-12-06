@@ -239,44 +239,41 @@ static ssize_t _ppmgr_angle_write(unsigned long val)
 #define	PPMGR_CLASS_NAME				"ppmgr"
 static int parse_para(const char *para, int para_num, int *result)
 {
-	char *endp = NULL;
-	const char *startp = para;
+	char *token = NULL;
+	char *params, *params_base;
 	int *out = result;
 	int len = 0, count = 0;
-	long tmp;
-	int ret;
+	int res = 0;
+	int ret = 0;
 
-	if (!startp)
+	if (!para)
 		return 0;
 
-	len = strlen(startp);
-
+	params = kstrdup(para, GFP_KERNEL);
+	params_base = params;
+	token = params;
+	len = strlen(token);
 	do {
-		/*filter space out*/
-		while (startp && (isspace(*startp) || !isgraph(*startp))
-			&& len) {
-			startp++;
+		token = strsep(&params, " ");
+		while (token && (isspace(*token)
+				|| !isgraph(*token)) && len) {
+			token++;
 			len--;
 		}
-
-		if (len == 0)
+		if ((len == 0) || (!token))
 			break;
-
-		/* *out++ = simple_strtol(startp, &endp, 0); */
-
-		ret = kstrtol(startp, 0, &tmp);
-		if (ret != 0) {
-			PPMGRDRV_ERR("ERR convert %s to long int!\n", startp);
-			return ret;
+		ret = kstrtoint(token, 0, &res);
+		if (ret < 0) {
+			PPMGRDRV_ERR("ERR convert %s to long int!\n", token);
+			break;
 		}
-		*out++ = tmp;
 
-		len -= endp - startp;
-		startp = endp;
+		len = strlen(token);
+		*out++ = res;
 		count++;
+	} while ((token) && (count < para_num) && (len > 0));
 
-	} while ((endp) && (count < para_num) && (len > 0));
-
+	kfree(params_base);
 	return count;
 }
 
@@ -304,10 +301,12 @@ static ssize_t angle_read(struct class *cla, struct class_attribute *attr,
 static ssize_t angle_write(struct class *cla, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
-	/* unsigned long angle = simple_strtoul(buf, &endp, 0); */
-	unsigned long angle;
+	unsigned long angle = simple_strtoul(buf, &endp, 0);
+	*/
+	long angle;
 	int ret = kstrtoul(buf, 0, &angle);
 
 	if (ret != 0) {
@@ -315,14 +314,14 @@ static ssize_t angle_write(struct class *cla, struct class_attribute *attr,
 		return ret;
 	}
 	if (angle > 3 || angle < 0) {
-		size = endp - buf;
+		/* size = endp - buf; */
 		return count;
 	}
 
 	if (_ppmgr_angle_write(angle) < 0)
 		return -EINVAL;
 
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -368,8 +367,8 @@ static ssize_t orientation_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
-	ssize_t ret = -EINVAL, size;
-	char *endp;
+	ssize_t ret = -EINVAL; /* , size; */
+	/* char *endp; */
 	unsigned long tmp;
 	/* unsigned angle = simple_strtoul(buf, &endp, 0); */
 	unsigned int angle;
@@ -403,7 +402,7 @@ static ssize_t orientation_write(struct class *cla,
 	PPMGRDRV_INFO("angle:%d,orientation:%d,videoangle:%d\n",
 		ppmgr_device.angle, ppmgr_device.orientation,
 		ppmgr_device.videoangle);
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -417,8 +416,10 @@ static ssize_t bypass_read(struct class *cla, struct class_attribute *attr,
 static ssize_t bypass_write(struct class *cla, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	long tmp;
 
 	/* ppmgr_device.bypass = simple_strtoul(buf, &endp, 0); */
@@ -429,7 +430,7 @@ static ssize_t bypass_write(struct class *cla, struct class_attribute *attr,
 		return ret;
 	}
 	ppmgr_device.bypass = tmp;
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -539,8 +540,10 @@ static ssize_t ppscaler_read(struct class *cla, struct class_attribute *attr,
 static ssize_t ppscaler_write(struct class *cla, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	long tmp;
 	/* int flag simple_strtoul(buf, &endp, 0); */
 	int flag;
@@ -560,7 +563,7 @@ static ssize_t ppscaler_write(struct class *cla, struct class_attribute *attr,
 		if (ppmgr_device.ppscaler_flag == 0)
 			set_scaler_pos_reset(true);
 	}
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -617,8 +620,10 @@ static ssize_t receiver_read(struct class *cla, struct class_attribute *attr,
 static ssize_t receiver_write(struct class *cla, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	long tmp;
 	int ret;
 
@@ -636,7 +641,7 @@ static ssize_t receiver_write(struct class *cla, struct class_attribute *attr,
 	}
 	ppmgr_device.receiver = tmp;
 	vf_ppmgr_reset(0);
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -657,8 +662,10 @@ static ssize_t platform_type_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	long tmp;
 	/* platform_type = simple_strtoul(buf, &endp, 0); */
 	int ret = kstrtoul(buf, 0, &tmp);
@@ -668,7 +675,7 @@ static ssize_t platform_type_write(struct class *cla,
 		return ret;
 	}
 	platform_type = tmp;
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -685,8 +692,10 @@ static ssize_t tb_detect_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	unsigned long tmp;
 	int ret = kstrtoul(buf, 0, &tmp);
 
@@ -695,7 +704,7 @@ static ssize_t tb_detect_write(struct class *cla,
 		return ret;
 	}
 	ppmgr_device.tb_detect = tmp;
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -712,8 +721,10 @@ static ssize_t tb_detect_period_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	unsigned long tmp;
 	/* platform_type = simple_strtoul(buf, &endp, 0); */
 	int ret = kstrtoul(buf, 0, &tmp);
@@ -723,7 +734,7 @@ static ssize_t tb_detect_period_write(struct class *cla,
 		return ret;
 	}
 	ppmgr_device.tb_detect_period = tmp;
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -740,8 +751,10 @@ static ssize_t tb_detect_len_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	unsigned long tmp;
 	/* platform_type = simple_strtoul(buf, &endp, 0); */
 	int ret = kstrtoul(buf, 0, &tmp);
@@ -756,7 +769,7 @@ static ssize_t tb_detect_len_write(struct class *cla,
 		tmp = 6;
 	}
 	ppmgr_device.tb_detect_buf_len = tmp;
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -773,8 +786,10 @@ static ssize_t tb_detect_mute_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	unsigned long tmp;
 	/* platform_type = simple_strtoul(buf, &endp, 0); */
 	int ret = kstrtoul(buf, 0, &tmp);
@@ -787,7 +802,7 @@ static ssize_t tb_detect_mute_write(struct class *cla,
 	PPMGRDRV_INFO(
 		"tb detect init mute is  %ld\n", tmp);
 	ppmgr_device.tb_detect_init_mute = tmp;
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -1185,8 +1200,10 @@ static ssize_t mirror_read(struct class *cla, struct class_attribute *attr,
 static ssize_t mirror_write(struct class *cla, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	long tmp;
 	int ret = kstrtol(buf, 0, &tmp);
 	/* ppmgr_device.mirror_flag = simple_strtoul(buf, &endp, 0); */
@@ -1197,7 +1214,7 @@ static ssize_t mirror_write(struct class *cla, struct class_attribute *attr,
 	ppmgr_device.mirror_flag = tmp;
 	if (ppmgr_device.mirror_flag > 2)
 		ppmgr_device.mirror_flag = 0;
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
