@@ -290,6 +290,7 @@ struct mxc_isi_dev {
 
 	u32 interface[MAX_PORTS];
 	u32 flags;
+	u32 skip_m2m;
 	u8 chain_buf;
 
 	atomic_t open_count;
