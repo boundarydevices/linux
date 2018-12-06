@@ -18,12 +18,26 @@
 /dts-v1/;
 /plugin/;
 
-&amlogic_battery {
-	compatible = "amlogic, dummy-battery";
-	status = "okay";
-};
+/ {
+	fragment@0 {
+		//target = <&some_node>;
+		target-path="/";
+		__overlay__ {
+			dummy-battery {
+				compatible = "amlogic, dummy-battery";
+				status = "okay";
+			};
+		};
+	};
 
-&amlogic_charger {
-	compatible = "amlogic, dummy-charger";
-	status = "okay";
+	fragment@1 {
+		//target = <&some_node>;
+		target-path="/";
+		__overlay__ {
+			dummy-charger {
+				compatible = "amlogic, dummy-charger";
+				status = "okay";
+			};
+		};
+	};
 };
