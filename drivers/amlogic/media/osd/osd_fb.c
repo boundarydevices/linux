@@ -1492,7 +1492,7 @@ static int osd_open(struct fb_info *info, int arg)
 			fb_ion_client = meson_ion_client_create(-1, "meson-fb");
 	}
 	if (get_logo_loaded()) {
-		u32 logo_index;
+		s32 logo_index;
 
 		logo_index = osd_get_logo_index();
 		if (logo_index < 0) {
@@ -2147,13 +2147,11 @@ static int parse_para(const char *para, int para_num, int *result)
 			token++;
 			len--;
 		}
-		if (len == 0)
+		if ((len == 0) || (!token))
 			break;
 		ret = kstrtoint(token, 0, &res);
 		if (ret < 0)
 			break;
-		if (!token)
-			return 0;
 		len = strlen(token);
 		*out++ = res;
 		count++;
@@ -3786,8 +3784,8 @@ static int osd_probe(struct platform_device *pdev)
 		b_reserved_mem = true;
 #ifdef CONFIG_CMA
 		cma = dev_get_cma_area(&pdev->dev);
-		base_addr = cma_get_base(cma);
 		if (cma) {
+			base_addr = cma_get_base(cma);
 			pr_info("reserved memory base:%pa, size:%lx\n",
 				&base_addr, cma_get_size(cma));
 			if (fb_memsize[0] > 0) {

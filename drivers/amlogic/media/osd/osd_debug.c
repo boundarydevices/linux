@@ -570,7 +570,7 @@ static void osd_test_rect(void)
 	color = 0x0;
 	osd_log_info("- BLACK -");
 	osd_log_info("- (%d, %d)-(%d, %d) -\n", x, y, w, h);
-	fillrect(context, x, y, h, w, color);
+	fillrect(context, x, y, w, h, color);
 	msleep(OSD_TEST_DURATION);
 
 	x = 100;
@@ -580,21 +580,21 @@ static void osd_test_rect(void)
 	color = 0xFF0000FF;
 	osd_log_info("- RED -\n");
 	osd_log_info("- (%d, %d)-(%d, %d) -\n", x, y, w, h);
-	fillrect(context, x, y, h, w, color);
+	fillrect(context, x, y, w, h, color);
 	msleep(OSD_TEST_DURATION);
 
 	x += 100;
 	color = 0x00FF00FF;
 	osd_log_info("- GREEN -\n");
 	osd_log_info("- (%d, %d)-(%d, %d) -\n", x, y, w, h);
-	fillrect(context, x, y, h, w, color);
+	fillrect(context, x, y, w, h, color);
 	msleep(OSD_TEST_DURATION);
 
 	x += 100;
 	color = 0x0000FFFF;
 	osd_log_info("- BlUE -\n");
 	osd_log_info("- (%d, %d)-(%d, %d) -\n", x, y, w, h);
-	fillrect(context, x, y, h, w, color);
+	fillrect(context, x, y, w, h, color);
 	msleep(OSD_TEST_DURATION);
 
 	memset(cfg_ex, 0, sizeof(struct config_para_ex_s));
