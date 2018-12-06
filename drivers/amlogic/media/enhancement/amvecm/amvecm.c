@@ -5421,7 +5421,10 @@ void init_pq_setting(void)
 	}
 	/*probe close sr0 peaking for switch on video*/
 	WRITE_VPP_REG_BITS(VPP_SRSHARP0_CTRL, 1, 0, 1);
-	WRITE_VPP_REG_BITS(VPP_SRSHARP1_CTRL, 0, 0, 1);
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+		WRITE_VPP_REG_BITS(VPP_SRSHARP1_CTRL, 0, 0, 1);
+	else
+		WRITE_VPP_REG_BITS(VPP_SRSHARP1_CTRL, 1, 0, 1);
 	/*default dnlp off*/
 	WRITE_VPP_REG_BITS(SRSHARP0_PK_NR_ENABLE + sr_offset[0],
 		0, 1, 1);

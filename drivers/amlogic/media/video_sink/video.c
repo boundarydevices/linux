@@ -6331,8 +6331,11 @@ SET_FILTER:
 				vpp_misc_set &= ~(VPP_VD2_PREBLEND |
 					VPP_VD2_POSTBLEND | VPP_PREBLEND_EN);
 			/*auto disable sr when video off*/
-			VSYNC_WR_MPEG_REG(VPP_SRSHARP0_CTRL, 0);
-			VSYNC_WR_MPEG_REG(VPP_SRSHARP1_CTRL, 0);
+			if (!is_meson_txl_cpu() &&
+				!is_meson_txlx_cpu()) {
+				VSYNC_WR_MPEG_REG(VPP_SRSHARP0_CTRL, 0);
+				VSYNC_WR_MPEG_REG(VPP_SRSHARP1_CTRL, 0);
+			}
 			video_onoff_state = VIDEO_ENABLE_STATE_IDLE;
 			video_onoff_time = jiffies_to_msecs(jiffies);
 			vpu_delay_work_flag |=
