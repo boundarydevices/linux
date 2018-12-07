@@ -1858,7 +1858,7 @@ int  destroy_ge2d_work_queue(struct ge2d_context_s *ge2d_work_queue)
 {
 	struct ge2d_queue_item_s *pitem, *tmp;
 	struct list_head		*head;
-	int empty;
+	int empty, timeout = 0;
 
 	if (ge2d_work_queue) {
 		/* first detatch it from the process queue,then delete it . */
@@ -1870,9 +1870,11 @@ int  destroy_ge2d_work_queue(struct ge2d_context_s *ge2d_work_queue)
 		if ((ge2d_manager.current_wq == ge2d_work_queue) &&
 		    (ge2d_manager.ge2d_state == GE2D_STATE_RUNNING)) {
 			ge2d_work_queue->ge2d_request_exit = 1;
-			wait_for_completion_timeout(
-				&ge2d_manager.event.process_complete,
-				msecs_to_jiffies(500));
+			timeout = wait_for_completion_timeout(
+					&ge2d_manager.event.process_complete,
+					msecs_to_jiffies(500));
+			if (!timeout)
+				ge2d_log_err("wait timeout\n");
 			/* condition so complex ,simplify it . */
 			ge2d_manager.last_wq = NULL;
 		} /* else we can delete it safely. */
