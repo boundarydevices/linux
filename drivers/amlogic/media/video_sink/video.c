@@ -6426,7 +6426,7 @@ SET_FILTER:
 			VPP_VD1_POSTBLEND |
 			VPP_PREBLEND_EN |
 			VPP_POSTBLEND_EN |
-			7);
+			0xf);
 		vpp_misc_save &=
 			((1 << 29) | VPP_CM_ENABLE |
 			(0x1ff << VPP_VD2_ALPHA_BIT) |
@@ -6436,7 +6436,7 @@ SET_FILTER:
 			VPP_VD1_POSTBLEND |
 			VPP_PREBLEND_EN |
 			VPP_POSTBLEND_EN |
-			7);
+			0xf);
 		if (vpp_misc_set != vpp_misc_save) {
 			/* vd1 need always enable pre bld */
 			if (vpp_misc_set & VPP_VD1_POSTBLEND)
