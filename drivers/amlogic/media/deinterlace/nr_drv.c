@@ -779,10 +779,10 @@ void adaptive_cue_adjust(unsigned int frame_diff, unsigned int field_diff)
 		/* for clockfuliness clip */
 		if (pcue_parm->field_count >
 				(pcue_parm->glb_mot_fieldnum - 6)) {
-			Wr(NR2_CUE_MODE, 0x50323|(Rd(NR2_CUE_MODE)&0xc00));
+			Wr(NR2_CUE_MODE, mask1|(Rd(NR2_CUE_MODE)&0xc00));
 			Wr(NR2_CUE_CON_MOT_TH, 0x03010e01);
 		} else {
-			Wr(NR2_CUE_MODE, 0x00054375|(Rd(NR2_CUE_MODE)&0xc00));
+			Wr(NR2_CUE_MODE, mask2|(Rd(NR2_CUE_MODE)&0xc00));
 			Wr(NR2_CUE_CON_MOT_TH, 0xa03c8c3c);
 		}
 	}
