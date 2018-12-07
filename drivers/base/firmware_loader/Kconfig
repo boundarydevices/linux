@@ -137,7 +137,9 @@ config FW_LOADER_USER_HELPER
 
 config FW_LOADER_USER_HELPER_FALLBACK
 	bool "Force the firmware sysfs fallback mechanism when possible"
-	depends on FW_LOADER_USER_HELPER
+	depends on FW_LOADER
+	default y
+	select FW_LOADER_USER_HELPER
 	help
 	  Enabling this option forces a sysfs userspace fallback mechanism
 	  to be used for all firmware requests which explicitly do not disable a
