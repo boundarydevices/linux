@@ -286,6 +286,7 @@ static int dwmac_meson_cfg_analog(void __iomem *base_addr,
 }
 
 /*for newer then g12a use this dts architecture for dts*/
+void __iomem *phy_analog_config_addr;
 static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -330,7 +331,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	}
 
 	ETH_PHY_config_addr = addr;
-
+	phy_analog_config_addr = addr;
 	/*PRG_ETH_REG0*/
 	if (of_property_read_u32(np, "mc_val", &mc_val))
 		pr_info("Miss mc_val for REG0\n");
@@ -384,17 +385,8 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	return REG_ETH_reg0_addr;
 }
 
-void __iomem *phy_analog_config_addr;
 static int dwmac_meson_disable_analog(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	void __iomem *phy_analog_config_addr = NULL;
-
-	/*map ETH_PLL address*/
-	phy_analog_config_addr = devm_ioremap_nocache
-					(&pdev->dev,
-					(resource_size_t)0xff64c000, 4);
-
 	writel(0x00000000, phy_analog_config_addr + 0x0);
 	writel(0x003e0000, phy_analog_config_addr + 0x4);
 	writel(0x12844008, phy_analog_config_addr + 0x8);
@@ -408,13 +400,6 @@ static int dwmac_meson_disable_analog(struct device *dev)
 
 static int dwmac_meson_recover_analog(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	void __iomem *phy_analog_config_addr = NULL;
-
-	/*map ETH_PLL address*/
-	phy_analog_config_addr = devm_ioremap_nocache
-					(&pdev->dev,
-					(resource_size_t)0xff64c000, 4);
 	pr_info("recover %p\n", phy_analog_config_addr);
 
 	writel(0x19c0040a, phy_analog_config_addr + 0x44);
