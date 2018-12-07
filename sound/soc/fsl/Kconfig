@@ -387,6 +387,7 @@ config SND_SOC_IMX_WM8962
 	select SND_SOC_IMX_AUDMUX
 	select SND_SOC_FSL_SSI
 	select SND_KCTL_JACK
+	select SND_SOC_FSL_ASRC
 	help
 	  Say Y if you want to add support for SoC audio on an i.MX board with
 	  a wm8962 codec.
