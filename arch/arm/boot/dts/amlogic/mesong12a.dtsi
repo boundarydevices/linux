@@ -1792,8 +1792,8 @@
 	defendkey: defendkey {
 	compatible = "amlogic, defendkey";
 	reg = <0xff630218 0x4>; /*RNG_USR_DATA*/
-	mem_size = <0x1000>;
-	status = "disabled";
+	mem_size = <0 0x100000>;
+	status = "okay";
 	};
 
 	aml_dma {
