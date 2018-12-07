@@ -340,8 +340,10 @@ static int render_frame(struct ge2d_context_s *context,
 	new_vf->index = index;
 	new_vf->pts = 0;
 	new_vf->pts_us64 = 0;
+	/*
 	new_vf->ratio_control = DISP_RATIO_FORCECONFIG |
 	DISP_RATIO_FORCE_NORMALWIDE;
+	*/
 	new_vf->ratio_control = 0;
 	vfbuf_use[index]++;
 	picdec_fill_buffer(new_vf, context, ge2d_config);
@@ -541,7 +543,7 @@ static int picdec_start(void)
 	if (picdec_device.use_reserved) {
 		picdec_device.mapping = io_mapping_create_wc(map_start,
 		map_size);
-		if (picdec_device.mapping <= 0) {
+		if (picdec_device.mapping == NULL) {
 			aml_pr_info(1, "mapping failed!!!!!!!!!!!!\n");
 			return -1;
 		}
@@ -1085,7 +1087,7 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 					if (ret < 0)
 						pr_err("write NV21 Y to file failed\n");
 				}
-				pos = cs0.width * cs0.height;
+				pos = (loff_t)cs0.width * cs0.height;
 				if (!cma_layout_flag) {
 					p = phys_to_virt(cs1.addr);
 					vfs_write(filp, (char *)p,
@@ -1648,7 +1650,7 @@ static int parse_para(const char *para, int para_num, int *result)
 			token++;
 			len--;
 		}
-		if (len == 0)
+		if ((len == 0) || (!token))
 			break;
 		ret = kstrtoint(token, 0, &res);
 		if (ret < 0)
@@ -1675,8 +1677,10 @@ static ssize_t frame_render_write(struct class *cla,
 		struct class_attribute *attr,
 		const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	int parsed[4];
 
 	if (likely(parse_para(buf, 4, parsed) == 4)) {
@@ -1696,7 +1700,7 @@ static ssize_t frame_render_write(struct class *cla,
 #else
 	up(&pic_vb_start_sema);
 #endif
-	size = endp - buf;
+	/* size = endp - buf; */
 	return count;
 }
 
@@ -1739,8 +1743,10 @@ static ssize_t test_color_write(struct class *cla,
 		struct class_attribute *attr,
 		const char *buf, size_t count)
 {
+	/*
 	ssize_t size;
 	char *endp;
+	*/
 	int parsed[3];
 
 	if (likely(parse_para(buf, 3, parsed) == 3)) {
@@ -1749,7 +1755,7 @@ static ssize_t test_color_write(struct class *cla,
 		test_b = parsed[2];
 	} else
 		return count;
-	size = endp - buf;
+	/*size = endp - buf;*/
 	return count;
 }
 
