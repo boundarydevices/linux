@@ -1891,6 +1891,13 @@
 					"csi-host1-intr1";
 		link-device = <&adapter>;
 	};
+
+	defendkey: defendkey {
+		compatible = "amlogic, defendkey";
+		reg = <0xff630218 0x4>; /*RNG_USR_DATA*/
+		mem_size = <0 0x100000>;
+		status = "okay";
+	};
 };/* end of / */
 
 &pinctrl_aobus {
