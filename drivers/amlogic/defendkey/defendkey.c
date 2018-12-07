@@ -35,13 +35,20 @@
 #include <linux/sysfs.h>
 #include <asm/cacheflush.h>
 #include "securekey.h"
+#include <linux/memblock.h>
 
 #define DEFENDKEY_DEVICE_NAME	"defendkey"
 #define DEFENDKEY_CLASS_NAME "defendkey"
 void __iomem *mem_base_virt;
 unsigned long mem_size;
 unsigned long random_virt;
-static struct reserved_mem defendkey_rmem;
+
+struct defendkey_mem {
+	unsigned long	base;
+	unsigned long	size;
+};
+
+struct defendkey_mem defendkey_rmem;
 
 #define CMD_SECURE_CHECK _IO('d', 0x01)
 #define CMD_DECRYPT_DTB  _IO('d', 0x02)
@@ -170,7 +177,10 @@ static ssize_t defendkey_write(struct file *file,
 	unsigned long mem_base_phy, copy_base, copy_size;
 	uint64_t option = 0, random = 0, option_random = 0;
 	int i;
+	struct cpumask task_cpumask;
 
+	cpumask_copy(&task_cpumask, &current->cpus_allowed);
+	set_cpus_allowed_ptr(current, cpumask_of(0));
 
 	mem_base_phy = defendkey_rmem.base;
 	mem_base_virt = phys_to_virt(mem_base_phy);
@@ -257,6 +267,7 @@ static ssize_t defendkey_write(struct file *file,
 		ret_value = ret_success;
 	}
 exit:
+	set_cpus_allowed_ptr(current, &task_cpumask);
 	return ret_value;
 }
 
@@ -343,17 +354,35 @@ static struct class defendkey_class = {
 	.class_attrs = defendkey_class_attrs,
 };
 
-static int __init rmem_defendkey_setup(struct reserved_mem *rmem)
+static int __init early_defendkey_para(char *buf)
 {
-	defendkey_rmem.base = rmem->base;
-	defendkey_rmem.size = rmem->size;
+	int ret;
 
-	pr_info("Reserved memory: created defendkey at 0x%p, size %ld MiB\n",
-		     (void *)rmem->base, (unsigned long)rmem->size / SZ_1M);
+	if (!buf)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%lx,%lx",
+		&defendkey_rmem.base, &defendkey_rmem.size);
+	if (ret != 2) {
+		pr_err("invalid boot args \"defendkey\"\n");
+		return -EINVAL;
+	}
+
+	pr_info("%s, base:%lx, size:%lx\n",
+		__func__, defendkey_rmem.base, defendkey_rmem.size);
+
+	ret = memblock_reserve(defendkey_rmem.base,
+		PAGE_ALIGN(defendkey_rmem.size));
+	if (ret < 0) {
+		pr_info("reserve memblock %lx - %lx failed\n",
+			defendkey_rmem.base,
+			defendkey_rmem.base + PAGE_ALIGN(defendkey_rmem.size));
+		return -EINVAL;
+	}
 
 	return 0;
 }
-RESERVEDMEM_OF_DECLARE(defendkey, "amlogic, defendkey", rmem_defendkey_setup);
+early_param("defendkey", early_defendkey_para);
 
 static int aml_defendkey_probe(struct platform_device *pdev)
 {
