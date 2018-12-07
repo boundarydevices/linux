@@ -1,0 +1,108 @@
+/*
+ * Copyright 2018 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "fsl-imx8qxp-mek.dts"
+/ {
+	trusty {
+		compatible = "android,trusty-smc-v1";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		trusty-virtio {
+			compatible = "android,trusty-virtio-v1";
+		};
+	};
+	trusty_ipi: interrupt-controller@0 {
+		compatible = "android,CustomIPI";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+};
+
+&i2c0 {
+	clock-frequency = <1000000>;
+};
+
+&i2c1 {
+	clock-frequency = <1000000>;
+};
+
+&i2c2 {
+	clock-frequency = <1000000>;
+};
+
+&i2c3 {
+	clock-frequency = <1000000>;
+};
+
+&i2c0_cm40 {
+	clock-frequency = <1000000>;
+};
+
+&i2c0_csi0 {
+	clock-frequency = <1000000>;
+};
+
+&i2c0_mipi_lvds0 {
+	clock-frequency = <400000>;
+};
+
+&pwm_mipi_lvds1 {
+	status = "disabled";
+};
+
+&ldb2_phy {
+   status = "disabled";
+};
+
+&ldb2 {
+   status = "disabled";
+};
+
+&mipi_dsi_phy2 {
+   status = "disabled";
+};
+
+&mipi_dsi2 {
+   status = "disabled";
+};
+
+&mipi_dsi_bridge2 {
+   status = "disabled";
+};
+
+&usdhc2 {
+   status = "disabled";
+};
+
+&amix {
+   status = "disabled";
+};
+
+&asrc0 {
+   status = "disabled";
+};
+
+&i2c0_mipi_lvds1 {
+	status = "disabled";
+};
+
+&jpegdec {
+	status = "disabled";
+};
+
+&jpegenc {
+	status = "disabled";
+};
+
