@@ -152,9 +152,16 @@ struct rpmsg_vehicle_drvdata {
 	struct completion cmd_complete;
 	u32 resources_count;
 	u32 *resource;
+	/*
+	 * register_ready means ap have been registered as client and been ready
+	 * load camera/display modoules. When it get the driver signal first time
+	 * and register_ready is true, it will loader related moduled.
+	 */
 	bool register_ready;
 	struct clk *clk_core;
 	struct clk *clk_esc;
+	/* register_ready means ap have been registered as client */
+	bool vehicle_client_registered;
 };
 
 #ifdef CONFIG_EXTCON
@@ -302,13 +309,16 @@ static int vehicle_rpmsg_cb(struct rpmsg_device *rpdev,
 #endif
 			} else
 				vehicle_rpmsg->register_ready = true;
+			vehicle_rpmsg->vehicle_client_registered = true;
 		}
 	} else if (msg->header.cmd == VEHICLE_RPMSG_UNREGISTER) {
 		complete(&vehicle_rpmsg->cmd_complete);
+		if (msg->retcode == 0) {
 #ifdef CONFIG_EXTCON
-		if (msg->retcode == 0)
 			extcon_set_state_sync(rg_edev, EXTCON_VEHICLE_RPMSG_REGISTER, 0);
 #endif
+			vehicle_rpmsg->vehicle_client_registered = false;
+		}
 	} else if (msg->header.cmd == VEHICLE_RPMSG_CONTROL) {
 		complete(&vehicle_rpmsg->cmd_complete);
 		dev_dbg(&rpdev->dev, "get vehicle control signal %d", msg->result);
@@ -402,9 +412,11 @@ static void vehicle_init_handler(struct work_struct *work)
 	} else {
 		msg.partition_id = os_part;
 	}
-
-	while (vehicle_send_message(&msg, vehicle_rpmsg, true)) {
-		msleep(REGISTER_PERIOD);
+	/* need check whether ap have been unregistered before register the ap*/
+	if (!vehicle_rpmsg->vehicle_client_registered) {
+		while (vehicle_send_message(&msg, vehicle_rpmsg, true)) {
+			msleep(REGISTER_PERIOD);
+		}
 	}
 }
 
@@ -425,8 +437,11 @@ static void vehicle_deinit_handler(struct work_struct *work)
 	msg.reserved1 = 0;
 	msg.reason = 0;
 
-	while (vehicle_send_message(&msg, vehicle_rpmsg, true)) {
-		msleep(REGISTER_PERIOD);
+	/* need check whether ap have been registered before deregister the ap*/
+	if (vehicle_rpmsg->vehicle_client_registered) {
+		if (vehicle_send_message(&msg, vehicle_rpmsg, true)) {
+			pr_err("unregister vehicle device failed!\n");
+		}
 	}
 }
 
@@ -562,6 +577,7 @@ static int vehicle_probe(struct platform_device *pdev)
 	vehicle_rpmsg = ddata;
 	vehicle_rpmsg->vehicle_dev = dev;
 	vehicle_rpmsg->register_ready = false;
+	vehicle_rpmsg->vehicle_client_registered = false;
 	platform_set_drvdata(pdev, ddata);
 
 	vehicle_rpmsg_class = class_create(THIS_MODULE, "vehicle_rpmsg");
