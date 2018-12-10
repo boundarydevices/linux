@@ -42,16 +42,14 @@ static struct free_node_t *get_free_node(struct mtd_info *mtd)
 	pr_info("%s %d: bitmap=%llx\n", __func__, __LINE__,
 		aml_chip->freeNodeBitmask);
 
-	index = find_first_zero_bit((void *)&aml_chip->freeNodeBitmask, 64);
+	index = find_first_zero_bit((void *)&aml_chip->freeNodeBitmask,
+				    RESERVED_BLOCK_NUM);
 	if (index > RESERVED_BLOCK_NUM) {
 		pr_info("%s %d: index is greater than max! error",
 			__func__, __LINE__);
 		return NULL;
 	}
-	if (test_and_set_bit(index, (void *)&aml_chip->freeNodeBitmask)) {
-		pr_info("%s %d: error!!!\n", __func__, __LINE__);
-		return NULL;
-	}
+	WARN_ON(test_and_set_bit(index, (void *)&aml_chip->freeNodeBitmask));
 
 	pr_info("%s %d: bitmap=%llx\n", __func__, __LINE__,
 		aml_chip->freeNodeBitmask);
@@ -73,9 +71,8 @@ static void release_free_node(struct mtd_info *mtd,
 		pr_info("%s %d: index=%d is greater than max! error",
 			__func__, __LINE__, free_node->index);
 
-	if (test_and_clear_bit(free_node->index,
-		(void *)&aml_chip->freeNodeBitmask))
-		return;
+	WARN_ON(!test_and_clear_bit(free_node->index,
+				(void *)&aml_chip->freeNodeBitmask));
 
 	/*memset zero to protect from dead-loop*/
 	memset(free_node, 0, sizeof(struct free_node_t));
