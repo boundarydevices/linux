@@ -746,7 +746,7 @@
 					    QORIQ_CLK_PLL_DIV(2)>;
 		};
 
-		usb_aux_bus: usb_aux_bus {
+		aux_bus: aux_bus {
 			#address-cells = <2>;
 			#size-cells = <2>;
 			compatible = "simple-bus";
@@ -785,16 +785,16 @@
 				snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
 				usb3-lpm-capable;
 			};
-		};
 
-		sata: sata@3200000 {
-			compatible = "fsl,ls1046a-ahci";
-			reg = <0x0 0x3200000 0x0 0x10000>,
-				<0x0 0x20140520 0x0 0x4>;
-			reg-names = "ahci", "sata-ecc";
-			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
-					    QORIQ_CLK_PLL_DIV(2)>;
+			sata: sata@3200000 {
+				compatible = "fsl,ls1046a-ahci";
+				reg = <0x0 0x3200000 0x0 0x10000>,
+					<0x0 0x20140520 0x0 0x4>;
+				reg-names = "ahci", "sata-ecc";
+				interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
+						    QORIQ_CLK_PLL_DIV(2)>;
+			};
 		};
 
 		msi1: msi-controller@1580000 {
