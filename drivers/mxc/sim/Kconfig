@@ -4,10 +4,14 @@
 
 menu "MXC SIM Support"
 
-config MXC_SIM
-	tristate "MXC SIM support"
+config MXC_SIMv2
+	tristate "MXC SIMv2 support"
+	depends on ARCH_MXC && MXC_SIM
 	default n
 	help
-	Say Y to get MXC SIM support.
+	Say Y if you want to use the SIMv2 on NXP i.MX6/7 processors.
+
+	This driver can also be built as a module. If so, the module
+	will be called imx_sim.
 
 endmenu
