@@ -22,6 +22,7 @@
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/rpmsg.h>
 #include <linux/slab.h>
@@ -527,7 +528,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	ret = imx_rpmsg_mu_init(rpdev);
 	if (ret) {
 		pr_err("unable to initialize mu module.\n");
-		return ret;
+		goto vdev_err_out;
 	}
 	INIT_DELAYED_WORK(&(rpdev->rpmsg_work), rpmsg_work_handler);
 	BLOCKING_INIT_NOTIFIER_HEAD(&(rpdev->notifier));
@@ -539,7 +540,8 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		rpdev->vdev_nums = 1;
 	if (rpdev->vdev_nums > MAX_VDEV_NUMS) {
 		pr_err("vdev-nums exceed the max %d\n", MAX_VDEV_NUMS);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto vdev_err_out;
 	}
 	rpdev->first_notify = rpdev->vdev_nums;
 
@@ -548,13 +550,24 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 					rpdev->vdev_nums);
 		if (ret) {
 			pr_err("No vring buffer.\n");
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto vdev_err_out;
 		}
 	} else {
 		pr_err("No remote m4 processor.\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto vdev_err_out;
 	}
 
+
+	if (rpdev->variant == IMX8QM || rpdev->variant == IMX8QXP) {
+		if (of_reserved_mem_device_init(&pdev->dev)) {
+			dev_err(&pdev->dev,
+			"dev doesn't have specific DMA pool.\n");
+			ret = -ENOMEM;
+			goto vdev_err_out;
+		}
+	}
 	for (j = 0; j < rpdev->vdev_nums; j++) {
 		pr_debug("%s rpdev%d vdev%d: vring0 0x%x, vring1 0x%x\n",
 			 __func__, rpdev->core_id, rpdev->vdev_nums,
@@ -570,12 +583,21 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		if (ret) {
 			pr_err("%s failed to register rpdev: %d\n",
 					__func__, ret);
-			return ret;
+			goto err_out;
 		}
-
 	}
+
 	platform_set_drvdata(pdev, rpdev);
 
+	return ret;
+
+err_out:
+	if (rpdev->variant == IMX8QM || rpdev->variant == IMX8QXP)
+		of_reserved_mem_device_release(&pdev->dev);
+vdev_err_out:
+	if (rpdev->variant == IMX7D || rpdev->variant == IMX8QXP
+			|| rpdev->variant == IMX8QM)
+		clk_disable_unprepare(rpdev->mu_clk);
 	return ret;
 }
 
