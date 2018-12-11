@@ -5832,13 +5832,14 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	/* box sdr_mode:auto, tv sdr_mode:off */
 	/* disable contrast and saturation adjustment for HDR on TV */
 	/* disable SDR to HDR convert on TV */
-	if (is_meson_gxl_cpu() || is_meson_gxm_cpu()) {
-		sdr_mode = 0;
+	if (is_meson_gxl_cpu() || is_meson_gxm_cpu())
 		hdr_flag = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3);
-	} else {
-		sdr_mode = 0;
+	else
 		hdr_flag = (1 << 0) | (1 << 1) | (0 << 2) | (0 << 3);
-	}
+
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
+		sdr_mode = 2;
+
 	/*config vlock mode*/
 	/*todo:txlx & g9tv support auto pll,*/
 	/*but support not good,need vlsi support optimize*/
