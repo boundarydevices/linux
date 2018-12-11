@@ -2680,7 +2680,7 @@ static long hdmitx_cec_ioctl(struct file *f,
 	void __user *argp = (void __user *)arg;
 	unsigned int tmp;
 	struct hdmi_port_info *port;
-	unsigned int a, b, c, d;
+	unsigned int a, b, c, d, i = 0;
 	struct hdmitx_dev *tx_dev;
 	/*unsigned int tx_hpd;*/
 
@@ -2815,8 +2815,14 @@ static long hdmitx_cec_ioctl(struct file *f,
 		/* mixed for rx & tx */
 		/* a is current port idx, 0: tx device */
 		if (a != 0) {
-			tmp = hdmirx_get_connect_info();
-			if (tmp & (1 << (a - 1)))
+			tmp = hdmirx_get_connect_info() & 0xF;
+			for (i = 0; i < CEC_PHY_PORT_NUM; i++) {
+				if (((cec_dev->port_seq >> i*4) & 0xF) == a)
+					break;
+			}
+			CEC_INFO("phy port:%d, ui port:%d\n", i, a);
+
+			if ((tmp & (1 << i)) && (a != 0xF))
 				tmp = 1;
 			else
 				tmp = 0;
